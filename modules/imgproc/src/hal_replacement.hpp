@@ -113,10 +113,10 @@ struct cvhalFilter2D {};
    @param allowInplace indicates whether the inplace operation will be possible
    @sa cv::filter2D, cv::hal::Filter2D
  */
-inline int hal_ni_filter_stateless(uchar * src_data, size_t src_step, int src_type,
+inline int hal_ni_filter_stateless(const uchar * src_data, size_t src_step, int src_type,
                                    uchar * dst_data, size_t dst_step, int dst_type,
                                    int width, int height, int full_width, int full_height, int offset_x, int offset_y,
-                                   uchar * kernel_data, size_t kernel_step, int kernel_type, int kernel_width, int kernel_height,
+                                   const uchar * kernel_data, size_t kernel_step, int kernel_type, int kernel_width, int kernel_height,
                                    int anchor_x, int anchor_y, double delta, int borderType, bool isSubmatrix, bool allowInplace)
 { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
@@ -196,11 +196,12 @@ inline int hal_ni_filterFree(cvhalFilter2D *context) { return CV_HAL_ERROR_NOT_I
    @param borderType border processing mode (CV_HAL_BORDER_REFLECT, ...)
    @sa cv::sepFilter2D, cv::hal::SepFilter2D
  */
-inline int hal_ni_sepFilter_stateless(uchar * src_data, size_t src_step, int src_type,
+inline int hal_ni_sepFilter_stateless(const uchar * src_data, size_t src_step, int src_type,
                                       uchar * dst_data, size_t dst_step, int dst_type,
                                       int width, int height, int full_width, int full_height, int offset_x, int offset_y,
-                                      uchar * kernelx_data, int kernelx_len, uchar * kernely_data, int kernely_len, int kernel_type,
-                                      int anchor_x, int anchor_y, double delta, int borderType)
+                                      const uchar * kernelx_data, int kernelx_len,
+                                      const uchar * kernely_data, int kernely_len,
+                                      int kernel_type, int anchor_x, int anchor_y, double delta, int borderType)
 { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 /**
@@ -253,12 +254,12 @@ inline int hal_ni_sepFilterFree(cvhalFilter2D *context) { return CV_HAL_ERROR_NO
 /**
    @brief morphology in a stateless manner
    @param operation morphology operation CV_HAL_MORPH_ERODE or CV_HAL_MORPH_DILATE
-   @param dst_type destination image type
    @param src_data source image data
    @param src_step source image step
+   @param src_type source image type
    @param dst_data destination image data
    @param dst_step destination image step
-   @param src_type source image type
+   @param dst_type destination image type
    @param width images width
    @param height images height
    @param src_full_width full width of source image (outside the ROI)
@@ -283,11 +284,11 @@ inline int hal_ni_sepFilterFree(cvhalFilter2D *context) { return CV_HAL_ERROR_NO
    @param allowInplace indicates whether the inplace operation will be possible
    @sa cv::erode, cv::dilate, cv::morphologyEx, cv::hal::Morph
  */
-inline int hal_ni_morph_stateless(int operation, uchar * src_data, size_t src_step, int src_type,
+inline int hal_ni_morph_stateless(int operation, const uchar * src_data, size_t src_step, int src_type,
                                   uchar * dst_data, size_t dst_step, int dst_type,
                                   int width, int height, int src_full_width, int src_full_height, int src_roi_x, int src_roi_y,
                                   int dst_full_width, int dst_full_height, int dst_roi_x, int dst_roi_y,
-                                  uchar * kernel_data, size_t kernel_step, int kernel_type, int kernel_width, int kernel_height,
+                                  const uchar * kernel_data, size_t kernel_step, int kernel_type, int kernel_width, int kernel_height,
                                   int anchor_x, int anchor_y, int borderType, const double borderValue[4],
                                   int iterations, bool allowSubmatrix, bool allowInplace)
 { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
