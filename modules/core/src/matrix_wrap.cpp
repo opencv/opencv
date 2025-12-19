@@ -663,7 +663,7 @@ bool _InputArray::empty(int i) const
             CV_Assert((size_t)i < mv->size());
             return mv->at(i).empty();
         }
-        else if (k == STD_VECTOR_MAT) {
+        else if (k == STD_VECTOR_UMAT) {
             auto umv = reinterpret_cast<const std::vector<UMat>*>(obj);
             CV_Assert((size_t)i < umv->size());
             return umv->at(i).empty();
