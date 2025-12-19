@@ -24,12 +24,14 @@ public:
         hasSeed = params.has("seed");
         if (hasSeed)
         {
-            double seedAttr = params.get<double>("seed");
-            uint64_t s = static_cast<uint64_t>(std::llround(seedAttr));
-            seed = s ? s : 1;
+            seed = params.get<double>("seed");
         }
 
         depth = params.get<int>("depth", CV_32F);
+        if (params.has("dtype"))
+        {
+            depth = onnxDataTypeToCV(static_cast<OnnxDataType>(params.get<int>("dtype")));
+        }
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
@@ -65,25 +67,45 @@ public:
         CV_Assert(!inputs.empty());
         CV_Assert(!outputs.empty());
 
-        Mat& out = outputs[0];
+        Mat out = outputs[0];
+        const int desiredDepth = depth;
+        const bool needRecreate = out.depth() != desiredDepth;
+        Mat outBlob;
+        if (needRecreate)
+        {
+            const int dims = out.dims;
+            const int* sizes = out.size.p;
+            outBlob = Mat(dims, sizes, CV_MAKETYPE(desiredDepth, out.channels()));
+        }
+        else
+        {
+            outBlob = out;
+        }
 
         RNG seededRng;
         RNG* rng = &theRNG();
         if (hasSeed)
         {
-            seededRng = RNG(static_cast<uint64>(seed));
+            Cv64suf u;
+            u.f = seed;
+            seededRng = RNG(u.u ? u.u : 1);
             rng = &seededRng;
         }
 
-        if (out.depth() == CV_32F || out.depth() == CV_64F || out.depth() == CV_16F)
+        if (outBlob.depth() == CV_32F || outBlob.depth() == CV_64F || outBlob.depth() == CV_16F)
         {
-            rng->fill(out, RNG::NORMAL, mean, scale);
+            rng->fill(outBlob, RNG::NORMAL, mean, scale);
         }
         else
         {
-            Mat tmp(out.size.dims(), out.size.p, CV_32F);
+            Mat tmp(outBlob.size.dims(), outBlob.size.p, CV_32F);
             rng->fill(tmp, RNG::NORMAL, mean, scale);
-            tmp.convertTo(out, out.type());
+            tmp.convertTo(outBlob, outBlob.type());
+        }
+
+        if (needRecreate)
+        {
+            outputs_arr.assign(std::vector<Mat>{outBlob});
         }
     }
 
@@ -91,7 +113,7 @@ private:
     double mean;
     double scale;
     bool hasSeed = false;
-    uint64_t seed = 0;
+    double seed = 0.0;
     int depth;
 };
 

@@ -59,6 +59,74 @@ namespace cv
 {
 namespace dnn
 {
+
+enum OnnxDataType
+{
+    ONNX_UNDEFINED  = 0,
+    ONNX_FLOAT      = 1,   // float
+    ONNX_UINT8      = 2,   // uint8_t
+    ONNX_INT8       = 3,   // int8_t
+    ONNX_UINT16     = 4,   // uint16_t
+    ONNX_INT16      = 5,   // int16_t
+    ONNX_INT32      = 6,   // int32_t
+    ONNX_INT64      = 7,   // int64_t
+    ONNX_STRING     = 8,   // string
+    ONNX_BOOL       = 9,   // bool
+    ONNX_FLOAT16    = 10,
+    ONNX_DOUBLE     = 11,
+    ONNX_UINT32     = 12,
+    ONNX_UINT64     = 13,
+    ONNX_BFLOAT16   = 14
+};
+
+inline int onnxDataTypeToCV(OnnxDataType dt)
+{
+    switch (dt)
+    {
+    case ONNX_UINT8:      return CV_8U;
+    case ONNX_INT8:       return CV_8S;
+    case ONNX_UINT16:     return CV_16U;
+    case ONNX_INT16:      return CV_16S;
+    case ONNX_UINT32:
+#ifdef CV_32U
+        return CV_32U;
+#else
+        return CV_32S;
+#endif
+    case ONNX_INT32:      return CV_32S;
+    case ONNX_UINT64:
+#ifdef CV_64U
+        return CV_64U;
+#else
+        return CV_32S;
+#endif
+    case ONNX_INT64:
+#ifdef CV_64S
+        return CV_64S;
+#else
+        return CV_32S;
+#endif
+    case ONNX_FLOAT:      return CV_32F;
+    case ONNX_DOUBLE:     return CV_64F;
+    case ONNX_FLOAT16:    return CV_16F;
+    case ONNX_BFLOAT16:
+#ifdef CV_16BF
+        return CV_16BF;
+#else
+        return CV_16F;
+#endif
+    case ONNX_BOOL:
+#ifdef CV_Bool
+        return CV_Bool;
+#else
+        return CV_8U;
+#endif
+    default:
+        // Fallback to default ONNX FLOAT if value is unknown.
+        return CV_32F;
+    }
+}
+
 void getConvolutionKernelParams(const LayerParams &params, std::vector<size_t>& kernel, std::vector<size_t>& pads_begin,
                                 std::vector<size_t>& pads_end, std::vector<size_t>& strides, std::vector<size_t>& dilations,
                                 cv::String &padMode, std::vector<size_t>& adjust_pads, bool& useWinograd);

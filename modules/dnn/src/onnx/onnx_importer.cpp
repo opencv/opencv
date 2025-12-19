@@ -2957,27 +2957,6 @@ void ONNXImporter::parseRandomNormalLike(LayerParams& layerParams, const opencv_
 {
     CV_CheckEQ(node_proto.input_size(), 1, "RandomNormalLike: one input is required");
 
-    if (layerParams.has("dtype"))
-    {
-        int onnx_dtype = layerParams.get<int>("dtype");
-        int cvDepth = CV_32F;
-        switch (onnx_dtype)
-        {
-        case opencv_onnx::TensorProto_DataType_FLOAT16: cvDepth = CV_16F; break;
-        case opencv_onnx::TensorProto_DataType_FLOAT:   cvDepth = CV_32F; break;
-        case opencv_onnx::TensorProto_DataType_DOUBLE:  cvDepth = CV_64F; break;
-        case opencv_onnx::TensorProto_DataType_UINT8:   cvDepth = CV_8U;  break;
-        case opencv_onnx::TensorProto_DataType_INT8:    cvDepth = CV_8S;  break;
-        case opencv_onnx::TensorProto_DataType_UINT16:  cvDepth = CV_16U; break;
-        case opencv_onnx::TensorProto_DataType_INT16:   cvDepth = CV_16S; break;
-        case opencv_onnx::TensorProto_DataType_INT32:   cvDepth = CV_32S; break;
-        case opencv_onnx::TensorProto_DataType_INT64:   cvDepth = CV_32S; break;
-        default:
-            cvDepth = CV_32F;
-        }
-        layerParams.set("depth", cvDepth);
-    }
-
     layerParams.type = "RandomNormalLike";
     addLayer(layerParams, node_proto);
 }
