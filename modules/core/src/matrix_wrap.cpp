@@ -1555,8 +1555,11 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
         size_t len = sizes[0]*sizes[1] > 0 ? sizes[0] + sizes[1] - 1 : 0;
         int esz = CV_ELEM_SIZE(flags);
 
-        int type0 = CV_MAT_TYPE(flags);
-        CV_Assert( mtype == type0 || (CV_MAT_CN(mtype) == CV_MAT_CN(type0) && ((1 << type0) & fixedDepthMask) != 0) );
+        if( k == STD_VECTOR || (k == STD_VECTOR_VECTOR && i >= 0) )
+        {
+            int type0 = CV_MAT_TYPE(flags);
+            CV_Assert( mtype == type0 || (CV_MAT_CN(mtype) == CV_MAT_CN(type0) && ((1 << type0) & fixedDepthMask) != 0) );
+        }
 
     #undef RESIZE_VEC
     #define RESIZE_VEC(T) \
