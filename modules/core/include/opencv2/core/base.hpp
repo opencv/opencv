@@ -317,7 +317,8 @@ inline int cv_absdiff(schar x, schar y) { return (int)std::abs((int)x - (int)y);
 inline int cv_absdiff(ushort x, ushort y) { return (int)std::abs((int)x - (int)y); }
 inline int cv_absdiff(short x, short y) { return (int)std::abs((int)x - (int)y); }
 inline unsigned cv_absdiff(int x,int y){
-    return (unsigned)std::max(x,y)-(unsigned)std::min(x,y);
+    int64_t d=(int64_t)x-(int64_t)y;
+    return (unsigned)(d<0?-d:d);
 }
 inline unsigned cv_absdiff(unsigned x, unsigned y) { return std::max(x, y) - std::min(x, y); }
 inline uint64 cv_absdiff(uint64 x, uint64 y) { return std::max(x, y) - std::min(x, y); }
