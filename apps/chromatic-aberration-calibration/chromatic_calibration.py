@@ -640,7 +640,7 @@ def cmd_calibrate(parsed_args: argparse.Namespace) -> None:
 def cmd_correct(parsed_args: argparse.Namespace) -> None:
     path = parsed_args.image
 
-    fs = cv.FileStorage(self.test_yaml_file, cv.FileStorage_READ)
+    fs = cv2.FileStorage(parsed_args.coeffs_file, cv2.FileStorage_READ)
     if not fs.isOpened():
         print(f"Could not calibration coefficients from {parsed_args.coeffs_file}")
         return
