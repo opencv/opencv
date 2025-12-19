@@ -1638,9 +1638,9 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
         // cubic equation
         // Normalize coefficients in-place to prevent overflow/instability
         double scale = 1.0 / max_coeff;
-        a0 *= scale; 
-        a1 *= scale; 
-        a2 *= scale; 
+        a0 *= scale;
+        a1 *= scale;
+        a2 *= scale;
         a3 *= scale;
 
         a0 = 1./a0;
