@@ -107,7 +107,7 @@ public:
                 // reduce all axes
                 MatShape shape_output;
                 if (keepdims) {
-                    MatShape shape_output = inputs[0];
+                    shape_output = inputs[0];
                     for (size_t i = 0; i < shape_output.size(); ++i)
                         shape_output[i] = 1;
                     outputs.assign(1, shape_output);
