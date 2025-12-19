@@ -105,7 +105,7 @@ Mat _InputArray::getMat_(int i) const
     {
         int t = CV_MAT_TYPE(flags);
         int esz = CV_ELEM_SIZE(t);
-        
+
     #undef GET_MAT
     #define GET_MAT(T) \
         { \
@@ -1540,8 +1540,8 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
             else
             {
                 CV_Check(requested_size,
-                        (requested_size == sz || (requested_size.height == sz.width && requested_size.width == sz.height)),
-                        "");
+                         (requested_size == sz || (requested_size.height == sz.width && requested_size.width == sz.height)),
+                         "");
             }
         }
         return;
@@ -1554,19 +1554,29 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
         CV_Assert(d == 2 && (sizes[0] == 1 || sizes[1] == 1 || sizes[0]*sizes[1] == 0));
         size_t len = sizes[0]*sizes[1] > 0 ? sizes[0] + sizes[1] - 1 : 0;
         int esz = CV_ELEM_SIZE(flags);
-        
+
+        int type0 = CV_MAT_TYPE(flags);
+        CV_Assert( mtype == type0 || (CV_MAT_CN(mtype) == CV_MAT_CN(type0) && ((1 << type0) & fixedDepthMask) != 0) );
+
     #undef RESIZE_VEC
     #define RESIZE_VEC(T) \
-        if (k == STD_VECTOR_VECTOR) { \
-            std::vector<std::vector<T> >* vv = reinterpret_cast<std::vector<std::vector<T> >*>(obj); \
-            if (i < 0) \
-                vv->resize(len); \
-            else { \
-                CV_Assert((size_t)i < vv->size()); \
-                vv->at(i).resize(len); \
+        { \
+            std::vector<T>* v; \
+            if (k == STD_VECTOR_VECTOR) { \
+                std::vector<std::vector<T> >* vv = reinterpret_cast<std::vector<std::vector<T> >*>(obj); \
+                if (i < 0) { \
+                    CV_Assert(!fixedSize() || len == vv->size()); \
+                    vv->resize(len); \
+                    return; \
+                } \
+                CV_Assert(size_t(i) < vv->size()); \
+                v = &vv->at(i); \
+            } else { \
+                v = reinterpret_cast<std::vector<T>*>(obj); \
             } \
-        } else \
-            reinterpret_cast<std::vector<T>*>(obj)->resize(len); \
+            CV_Assert(!fixedSize() || len == v->size()); \
+            v->resize(len); \
+        } \
         break
 
         STD_VECTOR_SWITCH(esz, RESIZE_VEC)
