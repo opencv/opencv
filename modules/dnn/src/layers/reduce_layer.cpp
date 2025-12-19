@@ -133,8 +133,10 @@ public:
                 } else
                     shape_output.push_back(shape_output_[i]);
             }
-            if (shape_output.empty())
-                shape_output = MatShape(1, 1);
+            if (shape_output.empty()){
+                shape_output.resize(1);
+                shape_output[0] = 1;
+            }
             outputs.assign(1, shape_output);
         }
 
