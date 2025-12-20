@@ -722,11 +722,15 @@ class JSWrapperGenerator(object):
             ret_type = 'void' if variant.rettype.strip() == '' else variant.rettype
 
             ret_type = ret_type.strip()
-            # Same namespace fix for factory methods: Ptr<EdgeDrawing> -> Ptr<cv::ximgproc::EdgeDrawing>
+            # Same namespace fix for factory methods
             if factory and class_info is not None and ret_type.startswith('Ptr<'):
                 inner = ret_type[len('Ptr<'):-1].strip()
-                if '::' not in inner and inner == class_info.name:
-                    ret_type = 'Ptr<%s>' % class_info.cname
+
+            # Only rewrite if the pointee class is known and unqualified
+                if '::' not in inner and inner in self.classes:
+                    ret_type = f"Ptr<{self.classes[inner].cname}>"
+            # else: leave ret_type unchanged
+
 
             if ret_type.startswith('Ptr'): #smart pointer
                 ptr_type = ret_type.replace('Ptr<', '').replace('>', '')
