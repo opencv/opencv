@@ -41,6 +41,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "opencv2/core/hal/intrin.hpp"
 
 #include <iostream>
+#include <algorithm>
 
 using namespace std;
 
