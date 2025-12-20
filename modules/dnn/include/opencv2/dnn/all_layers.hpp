@@ -658,7 +658,7 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<RequantizeLayer> create(const LayerParams &params);
     };
 
-    // Forward declaration for computational Graph used by IfLayer
+    // Forward declaration for computational Graph used by If/Loop layers
     class Graph;
 
     class CV_EXPORTS IfLayer : public Layer
@@ -668,6 +668,20 @@ CV__DNN_INLINE_NS_BEGIN
 
         /** Factory: creates an IfLayer implementation. */
         static Ptr<IfLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS LoopLayer : public Layer
+    {
+    public:
+        /**
+         * @brief Evaluate loop condition tensor as a boolean flag.
+         *
+         * The input tensor must contain exactly one element of an integral or floating type.
+         */
+        virtual bool cond(InputArray arr) const = 0;
+
+        /** Factory: creates a LoopLayer implementation. */
+        static Ptr<LoopLayer> create(const LayerParams& params);
     };
 
     class CV_EXPORTS ConcatLayer : public Layer

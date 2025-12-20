@@ -180,6 +180,7 @@ protected:
     void parseCastLike             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseClip                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConcat               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseLoop                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseIf                   (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConstant             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConstantOfShape      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -1553,6 +1554,34 @@ void ONNXImporter2::parseConcat(LayerParams& layerParams, const opencv_onnx::Nod
     addLayer(layerParams, node_proto);
 }
 
+void ONNXImporter2::parseLoop(LayerParams& layerParams,
+                              const opencv_onnx::NodeProto& node_proto)
+{
+    // ONNX Loop: inputs = [M, cond, v0, v1, ...]; attribute "body" is a GraphProto.
+    CV_Assert(node_proto.input_size() >= 2);
+    layerParams.type = "Loop";
+
+    // Create Loop layer node in the current graph.
+    addLayer(layerParams, node_proto);
+
+    std::vector<Ptr<Graph> > subgraphs(1);
+    for (int i = 0; i < node_proto.attribute_size(); ++i)
+    {
+        const auto& attr = node_proto.attribute(i);
+        if (attr.name() == "body")
+        {
+            opencv_onnx::GraphProto body = attr.g();
+            Ptr<Graph> graph = parseGraph(&body, false);
+            subgraphs[0] = graph;
+        }
+    }
+
+    CV_Assert(!subgraphs[0].empty());
+
+    Ptr<Layer>& loopLayer = curr_prog.back();
+    *loopLayer->subgraphs() = subgraphs;
+}
+
 void ONNXImporter2::parseIf(LayerParams& layerParams,
                             const opencv_onnx::NodeProto& node_proto)
 {
@@ -2689,6 +2718,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["Gather"] = &ONNXImporter2::parseGather;
     dispatch["GatherElements"] = &ONNXImporter2::parseGatherElements;
     dispatch["Concat"] = &ONNXImporter2::parseConcat;
+    dispatch["Loop"] = &ONNXImporter2::parseLoop;
     dispatch["If"] = &ONNXImporter2::parseIf;
     dispatch["Resize"] = &ONNXImporter2::parseResize2;
     dispatch["Size"] = &ONNXImporter2::parseSize;
