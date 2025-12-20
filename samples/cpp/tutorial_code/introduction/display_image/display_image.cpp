@@ -24,6 +24,8 @@ int main()
     //! [empty]
 
     //! [imshow]
+// Display the loaded image in a window on the screen
+
     imshow("Display window", img);
     int k = waitKey(0); // Wait for a keystroke in the window
     //! [imshow]
