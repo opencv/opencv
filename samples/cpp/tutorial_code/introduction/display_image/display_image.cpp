@@ -26,7 +26,7 @@ int main()
     //! [imshow]
 // Display the loaded image in a window on the screen
 
-    imshow("Display window", img);
+    imshow("Display window", img);    
     int k = waitKey(0); // Wait for a keystroke in the window
     //! [imshow]
 
@@ -38,4 +38,5 @@ int main()
     //! [imsave]
 
     return 0;
+// End of display_image tutorial
 }
