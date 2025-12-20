@@ -1195,7 +1195,56 @@ void ONNXImporter2::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodeP
  // BUG: https://github.com/opencv/opencv/issues/26309
 void ONNXImporter2::parseGRU(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
 {
-    rememberMissingOp(node_proto_.op_type());
+    layerParams.type = "GRU";
+
+    int n_inputs = node_proto.input_size();
+    CV_Assert(n_inputs >= 3);
+
+    // Extract W (Input Weights)
+    if (!net.isConstArg(node_inputs[1]))
+        CV_Error(Error::StsNotImplemented, "GRU: Non-constant W (weights) are not supported");
+    Mat Wx = net.argTensor(node_inputs[1]);
+
+    // Extract R (Recurrent Weights)
+    if (!net.isConstArg(node_inputs[2]))
+        CV_Error(Error::StsNotImplemented, "GRU: Non-constant R (recurrent weights) are not supported");
+    Mat Wh = net.argTensor(node_inputs[2]);
+
+    // Extract B (Bias)
+    Mat b;
+    if (n_inputs >= 4 && !node_proto.input(3).empty())
+    {
+        if (!net.isConstArg(node_inputs[3]))
+             CV_Error(Error::StsNotImplemented, "GRU: Non-constant B (bias) is not supported");
+        b = net.argTensor(node_inputs[3]);
+    }
+
+    Mat h0;
+    if (n_inputs >= 6 && !node_proto.input(5).empty())
+    {
+         if (!net.isConstArg(node_inputs[5]))
+             CV_Error(Error::StsNotImplemented, "GRU: Non-constant initial_h is not supported");
+         h0 = net.argTensor(node_inputs[5]);
+    }
+
+    Wx = Wx.reshape(1, Wx.size[0] * Wx.size[1]);
+    Wh = Wh.reshape(1, Wh.size[0] * Wh.size[1]);
+
+    if (!b.empty())
+        b = b.reshape(1, b.size[0]);
+
+    if (!h0.empty())
+        h0 = h0.reshape(1, h0.size[0] * h0.size[1]);
+
+    layerParams.blobs.resize(4);
+    layerParams.blobs[0] = Wh;
+    layerParams.blobs[1] = Wx;
+    layerParams.blobs[2] = b;
+    layerParams.blobs[3] = h0;
+
+    layerParams.set("bidirectional", layerParams.get<String>("direction", "") == "bidirectional");
+
+    addLayer(layerParams, node_proto, 1);
 }
 
 void ONNXImporter2::parseImageScaler(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
