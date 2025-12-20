@@ -28,6 +28,13 @@ int main()
 
     imshow("Display window", img);    
     int k = waitKey(0); // Wait for a keystroke in the window
+if (k < 0)
+{
+    std::cout << "No key was pressed. Exiting." << std::endl;
+    return 0;
+}
+
+
     //! [imshow]
 
     //! [imsave]
