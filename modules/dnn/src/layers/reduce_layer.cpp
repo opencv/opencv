@@ -105,17 +105,15 @@ public:
                 outputs.assign(1, inputs[0]);
             } else {
                 // reduce all axes
-                MatShape shape_output;
                 if (keepdims) {
-                    shape_output = inputs[0];
+                    MatShape shape_output = inputs[0];
                     for (size_t i = 0; i < shape_output.size(); ++i)
                         shape_output[i] = 1;
                     outputs.assign(1, shape_output);
                 } else {
                     // scalar output (ONNX semantics)
-                    outputs.assign(1, MatShape(1, 1));
+                    outputs.assign(1, MatShape());
                 }
-                outputs.assign(1, shape_output);
             }
         } else {
             auto shape_output_ = inputs[0];
@@ -133,10 +131,7 @@ public:
                 } else
                     shape_output.push_back(shape_output_[i]);
             }
-            if (shape_output.empty()){
-                shape_output.resize(1);
-                shape_output[0] = 1;
-            }
+            // keep scalar output shape empty (rank-0)
             outputs.assign(1, shape_output);
         }
 
