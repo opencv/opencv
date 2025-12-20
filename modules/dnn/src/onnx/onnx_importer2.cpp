@@ -257,7 +257,7 @@ protected:
     //void parseQAvgPool             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     //void parseQConcat              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     //void parseQConv                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
-    //void parseQEltwise             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseQEltwise             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     //void parseQGemm                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     //void parseQLeakyRelu           (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     //void parseQMatMul              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -2219,149 +2219,81 @@ void ONNXImporter2::parseQGemm(LayerParams& layerParams, const opencv_onnx::Node
     layerParams.blobs.push_back(biasFused);
     layerParams.blobs.push_back(outputMultiplier);
     addLayer(layerParams, node_proto);
-}
+}*/
 
-void ONNXImporter2::parseQEltwise(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
+void ONNXImporter2::parseQEltwise(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    opencv_onnx::NodeProto node_proto = node_proto_;
-    CV_Assert(node_proto.input_size() == 7 || node_proto.input_size() == 8);
+
+    CV_Assert(node_proto.input_size() == 8);
     std::string op = (node_proto.op_type() == "QLinearAdd") ? "sum" : "prod";
-    int constId = -1;
-    for (int i = 0; i < 4; i += 3)
-    {
-        if (constBlobs.find(node_proto.input(i)) != constBlobs.end())
-            constId = i;
-    }
 
-    float inp_0_sc = getScalarFromMat<float>(getBlob(node_proto, 1));
-    int8_t inp_0_zp = getScalarFromMat<int8_t>(getBlob(node_proto, 2));
+    // 1. Extract Scales and ZeroPoints (Constants)
+    auto get_const_float = [&](int idx) {
+        CV_Assert(net.isConstArg(node_inputs[idx]));
+        return getScalarFromMat<float>(net.argTensor(node_inputs[idx]));
+    };
+    auto get_const_int8 = [&](int idx) {
+        CV_Assert(net.isConstArg(node_inputs[idx]));
+        return getScalarFromMat<int8_t>(net.argTensor(node_inputs[idx]));
+    };
 
-    float inp_1_sc = getScalarFromMat<float>(getBlob(node_proto, 4));
-    int8_t inp_1_zp = getScalarFromMat<int8_t>(getBlob(node_proto, 5));
+    float inp_0_sc = get_const_float(1);
+    int8_t inp_0_zp = get_const_int8(2);
 
-    // Set 2nd input as the const input
-    if (constId == 0)
-    {
-        cv::swap(inp_0_sc, inp_1_sc);
-        cv::swap(inp_0_zp, inp_1_zp);
-    }
+    float inp_1_sc = get_const_float(4);
+    int8_t inp_1_zp = get_const_int8(5);
 
-    float out_sc = getScalarFromMat<float>(getBlob(node_proto, 6));
+    float out_sc = get_const_float(6);
+    int8_t out_zp = get_const_int8(7);
 
-    int8_t out_zp = 0;
-    if (node_proto.input_size() == 8)
-        out_zp = getScalarFromMat<int8_t>(getBlob(node_proto, 7));
-
-    std::vector<float> inp_scales = {inp_0_sc, inp_1_sc};
-    std::vector<int8_t> inp_zps = {inp_0_zp, inp_1_zp};
-
+    // 2. Calculate Coefficients for EltwiseInt8
     std::vector<float> coeffs;
     float offset;
     if (op == "sum")
     {
-        coeffs = {inp_scales[0]/out_sc, inp_scales[1]/out_sc};
-        offset = out_zp - coeffs[0]*inp_zps[0] - coeffs[1]*inp_zps[1];
+        // Add: (S1(q1-z1) + S2(q2-z2)) / So + zo
+        // Coeff1 = S1/So, Coeff2 = S2/So
+        coeffs = {inp_0_sc / out_sc, inp_1_sc / out_sc};
+        // Offset = zo - (S1/So)*z1 - (S2/So)*z2
+        offset = out_zp - coeffs[0] * inp_0_zp - coeffs[1] * inp_1_zp;
     }
     else
     {
-        coeffs = {inp_scales[0]/out_sc, inp_scales[1]};
+        // Mul: (S1(q1-z1) * S2(q2-z2)) / So + zo
+        coeffs = {inp_0_sc / out_sc, inp_1_sc}; 
         offset = out_zp;
     }
 
-    if (constId != -1)
-    {
-        Mat blob = getBlob(node_proto, constId);
-        if (blob.total() == 1)
-        {
-            float val = inp_scales[1] * (blob.at<int8_t>(0) - inp_zps[1]);
-            float scale = inp_scales[0] / out_sc;
-            if (op == "prod")
-                scale *= val;
+    // 3. Setup LayerParams
+    layerParams.type = "EltwiseInt8";
+    layerParams.set("operation", op);
+    layerParams.set("coeff", DictValue::arrayReal(coeffs.data(), coeffs.size()));
+    layerParams.set("offset", offset);
 
-            float shift = out_zp - scale*inp_zps[0];
-            if (op == "sum")
-                shift += (val/out_sc);
-
-            LayerParams rescaleParams;
-            rescaleParams.name = layerParams.name;
-            rescaleParams.type = "Requantize";
-            rescaleParams.set("depth", CV_8S);
-            rescaleParams.set("scale", scale);
-            rescaleParams.set("shift", shift);
-            rescaleParams.set("isEltwise", true);
-            addLayer(rescaleParams, node_proto);
-            return;
-        }
-        else
-        {
-            MatShape inpShape = outShapes[node_proto.input(3 - constId)];
-            if (blob.dims == 2)
-                blob = blob.t();
-
-            if (shape(blob) == inpShape)
-            {
-                LayerParams constParams;
-                constParams.name = layerParams.name + "/const";
-                constParams.type = "ConstInt8";
-                constParams.set("depth", CV_8S);
-                constParams.set("scales", inp_1_sc);
-                constParams.set("zeropoints", inp_1_zp);
-                constParams.blobs.push_back(blob);
-
-                int id = net.addLayer(constParams.name, constParams.type, CV_8S, constParams);
-                layer_id.insert(std::make_pair(constParams.name, LayerInfo(id, 0, CV_8S)));
-                outShapes[constParams.name] = shape(blob);
-                node_proto.set_input(constId, constParams.name);
-
-                layerParams.type = "EltwiseInt8";
-                layerParams.set("operation", op);
-                layerParams.set("coeff", DictValue::arrayReal(coeffs.data(), coeffs.size()));
-                layerParams.set("offset", offset);
-            }
-            else
-            {
-                layerParams.type = "ScaleInt8";
-                layerParams.set("bias_term", op == "sum");
-                int axis = 1;
-                for (int i = 0; i < graph_proto->initializer_size(); i++)
-                {
-                    opencv_onnx::TensorProto tensor_proto = graph_proto->initializer(i);
-                    if (tensor_proto.name() == node_proto.input(constId))
-                    {
-                        axis = inpShape.size() - tensor_proto.dims_size();
-                        break;
-                    }
-                }
-                layerParams.set("axis", axis);
-                blob = blob.reshape(1, 1);
-                Mat blob_dequantized;
-                blob.convertTo(blob_dequantized, CV_32F, inp_scales[1], -(inp_scales[1] * inp_zps[1]));
-                layerParams.blobs.push_back(blob_dequantized);
-            }
-        }
-    }
-    else if (outShapes[node_proto.input(0)] == outShapes[node_proto.input(3)])
-    {
-        layerParams.type = "EltwiseInt8";
-        layerParams.set("operation", op);
-        layerParams.set("coeff", DictValue::arrayReal(coeffs.data(), coeffs.size()));
-        layerParams.set("offset", offset);
-    }
-    else
-    {
-        layerParams.type = "ScaleInt8";
-        layerParams.set("bias_term", op == "sum");
-    }
+    std::vector<float> inp_scales = {inp_0_sc, inp_1_sc};
+    std::vector<int> inp_zps = {inp_0_zp, inp_1_zp};
 
     layerParams.set("input_scales", DictValue::arrayReal(inp_scales.data(), inp_scales.size()));
     layerParams.set("input_zeropoints", DictValue::arrayInt(inp_zps.data(), inp_zps.size()));
     layerParams.set("scales", out_sc);
     layerParams.set("zeropoints", out_zp);
 
-    addLayer(layerParams, node_proto);
+    opencv_onnx::NodeProto modified_proto = node_proto;
+    modified_proto.clear_input();
+    modified_proto.add_input(node_proto.input(0)); // A
+    modified_proto.add_input(node_proto.input(3)); // B
+
+    std::vector<Arg> original_inputs = node_inputs;
+    node_inputs.clear();
+    node_inputs.push_back(original_inputs[0]); // A
+    node_inputs.push_back(original_inputs[3]); // B
+
+    addLayer(layerParams, modified_proto);
+
+    node_inputs = original_inputs;
 }
 
-void ONNXImporter2::parseQLeakyRelu(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+/*void ONNXImporter2::parseQLeakyRelu(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     CV_Assert(node_proto.input_size() == 4 || node_proto.input_size() == 5);
 
@@ -2736,7 +2668,7 @@ void ONNXImporter2::buildDispatchMap_COM_MICROSOFT()
     DispatchMap dispatch;
 
     // BUG: https://github.com/opencv/opencv/issues/26310
-    //dispatch["QLinearAdd"] = dispatch["QLinearMul"] = &ONNXImporter2::parseQEltwise;
+    dispatch["QLinearAdd"] = dispatch["QLinearMul"] = &ONNXImporter2::parseQEltwise;
     //dispatch["QLinearAveragePool"] = dispatch["QLinearGlobalAveragePool"] = &ONNXImporter2::parseQAvgPool;
     //dispatch["QLinearLeakyRelu"] = &ONNXImporter2::parseQLeakyRelu;
     //dispatch["QLinearSigmoid"] = &ONNXImporter2::parseQSigmoid;
