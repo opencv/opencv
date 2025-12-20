@@ -172,6 +172,15 @@ endif()
 
 ocv_create_module(${extra_libs})
 
+# Optional C++20 module interface unit for opencv_core
+if(OPENCV_ENABLE_CXX_MODULES AND OPENCV_HAVE_CXX_MODULES)
+  set(_ocv_core_module_if "${CMAKE_CURRENT_SOURCE_DIR}/src/opencv_core.cppm")
+  if(EXISTS "${_ocv_core_module_if}")
+    target_sources(${the_module} PRIVATE "${_ocv_core_module_if}")
+    set_source_files_properties("${_ocv_core_module_if}" PROPERTIES LANGUAGE CXX)
+  endif()
+endif()
+
 ocv_target_link_libraries(${the_module} PRIVATE
     "${ZLIB_LIBRARIES}" "${OPENCL_LIBRARIES}" "${VA_LIBRARIES}"
     "${OPENGL_LIBRARIES}"

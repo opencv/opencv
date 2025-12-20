@@ -68,6 +68,17 @@ foreach(sample_filename ${cpp_samples})
   endif()
 endforeach()
 
+# Experimental C++20 modules example (only when modules are available)
+if(OPENCV_ENABLE_CXX_MODULES AND OPENCV_HAVE_CXX_MODULES)
+  set(_ocv_cxx_modules_example "cxx_modules_core_example.cpp")
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${_ocv_cxx_modules_example}")
+    ocv_define_sample(tgt ${_ocv_cxx_modules_example} cpp)
+    set(deps opencv_core)
+    ocv_target_link_libraries(${tgt} PRIVATE ${OPENCV_LINKER_LIBS} ${deps})
+    set_property(TARGET ${tgt} PROPERTY CXX_STANDARD 20)
+  endif()
+endif()
+
 include("tutorial_code/calib3d/real_time_pose_estimation/CMakeLists.txt" OPTIONAL)
 
 # Standalone samples only

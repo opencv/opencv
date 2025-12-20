@@ -236,6 +236,34 @@ if(CMAKE_CXX17_COMPILE_FEATURES OR ("cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATU
   endif()
 endif()
 
+# Optional C++20 modules support (experimental, auto-detected)
+option(OPENCV_ENABLE_CXX_MODULES "Enable experimental C++20 modules support when available" ON)
+
+if(OPENCV_ENABLE_CXX_MODULES)
+  # Require at least C++20 when an explicit standard is set
+  if(DEFINED CMAKE_CXX_STANDARD AND CMAKE_CXX_STANDARD LESS 20)
+    set(OPENCV_ENABLE_CXX_MODULES OFF)
+  else()
+    include(CheckCXXSourceCompiles)
+    set(_ocv_saved_required_flags "${CMAKE_REQUIRED_FLAGS}")
+    # Do not force a particular standard flag here; rely on user / toolchain.
+    # This will succeed only on compilers that both define __cpp_modules and
+    # are invoked with module support enabled (e.g. C++20).
+    check_cxx_source_compiles(
+      "#ifndef __cpp_modules
+      #error \"C++20 modules are not available\"
+      #endif
+      export module ocv_check_modules;
+      export int ocv_mod_foo() { return 0; }
+      int main() { return ocv_mod_foo(); }"
+      OPENCV_HAVE_CXX_MODULES
+    )
+    set(CMAKE_REQUIRED_FLAGS "${_ocv_saved_required_flags}")
+  endif()
+endif()
+
+set(OPENCV_HAVE_CXX_MODULES ${OPENCV_HAVE_CXX_MODULES} CACHE BOOL "Compiler and configuration support C++20 modules" FORCE)
+
 if(NOT HAVE_CXX11)
   message(FATAL_ERROR "OpenCV 4.x requires C++11, but your compiler does not support it")
 endif()
