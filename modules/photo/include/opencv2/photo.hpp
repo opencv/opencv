@@ -943,7 +943,7 @@ CV_EXPORTS_W void correctChromaticAberration(InputArray input_image, InputArray 
  row 2 = red  dx coefficients
  row 3 = red  dy coefficients
 
- @param FileNode   Node of opened cv::FileStorage object.
+ @param node       Node of opened cv::FileStorage object.
  @param coeffMat   Output 4xN coefficient matrix (CV_32F).
  @param degree     Polynomial degree inferred from N.
  @param calib_size Calibration image size read from file.
