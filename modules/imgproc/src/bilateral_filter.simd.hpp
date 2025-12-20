@@ -549,8 +549,8 @@ public:
                         //0th
                         v_float32 val0 = vx_load(ksptr);
                         v_float32 knan0 = v_not_nan(val0);
-                        v_float32 alpha0 = v_min(v_and(v_and(v_mul(v_absdiff(val0, rval0), sindex), v_not_nan(rval0)), knan0), vx_setall_f32((float)kExpNumBins));
-                        v_int32 idx0 = v_trunc(alpha0);
+                        v_float32 alpha0 = v_and(v_and(v_mul(v_absdiff(val0, rval0), sindex), v_not_nan(rval0)), knan0);
+                        v_int32 idx0 = v_min(v_trunc(alpha0), vx_setall_s32(kExpNumBins));
                         alpha0 = v_sub(alpha0, v_cvt_f32(idx0));
                         v_float32 w0 = v_and(v_mul(kweight, v_muladd(v_lut(this->expLUT + 1, idx0), alpha0, v_mul(v_lut(this->expLUT, idx0), v_sub(v_one, alpha0)))), knan0);
                         v_wsum0 = v_add(v_wsum0, w0);
@@ -559,8 +559,8 @@ public:
                         //1st
                         v_float32 val1 = vx_load(ksptr + nlanes);
                         v_float32 knan1 = v_not_nan(val1);
-                        v_float32 alpha1 = v_min(v_and(v_and(v_mul(v_absdiff(val1, rval1), sindex), v_not_nan(rval1)), knan1), vx_setall_f32((float)kExpNumBins));
-                        v_int32 idx1 = v_trunc(alpha1);
+                        v_float32 alpha1 = v_and(v_and(v_mul(v_absdiff(val1, rval1), sindex), v_not_nan(rval1)), knan1);
+                        v_int32 idx1 = v_min(v_trunc(alpha1), vx_setall_s32(kExpNumBins));
                         alpha1 = v_sub(alpha1, v_cvt_f32(idx1));
                         v_float32 w1 = v_and(v_mul(kweight, v_muladd(v_lut(this->expLUT + 1, idx1), alpha1, v_mul(v_lut(this->expLUT, idx1), v_sub(v_one, alpha1)))), knan1);
                         v_wsum1 = v_add(v_wsum1, w1);
@@ -569,8 +569,8 @@ public:
                         //2nd
                         v_float32 val2 = vx_load(ksptr + nlanes_2);
                         v_float32 knan2 = v_not_nan(val2);
-                        v_float32 alpha2 = v_min(v_and(v_and(v_mul(v_absdiff(val2, rval2), sindex), v_not_nan(rval2)), knan2), vx_setall_f32((float)kExpNumBins));
-                        v_int32 idx2 = v_trunc(alpha2);
+                        v_float32 alpha2 = v_and(v_and(v_mul(v_absdiff(val2, rval2), sindex), v_not_nan(rval2)), knan2);
+                        v_int32 idx2 = v_min(v_trunc(alpha2), vx_setall_s32(kExpNumBins));
                         alpha2 = v_sub(alpha2, v_cvt_f32(idx2));
                         v_float32 w2 = v_and(v_mul(kweight, v_muladd(v_lut(this->expLUT + 1, idx2), alpha2, v_mul(v_lut(this->expLUT, idx2), v_sub(v_one, alpha2)))), knan2);
                         v_wsum2 = v_add(v_wsum2, w2);
@@ -579,8 +579,8 @@ public:
                         //3rd
                         v_float32 val3 = vx_load(ksptr + nlanes_3);
                         v_float32 knan3 = v_not_nan(val3);
-                        v_float32 alpha3 = v_min(v_and(v_and(v_mul(v_absdiff(val3, rval3), sindex), v_not_nan(rval3)), knan3), vx_setall_f32((float)kExpNumBins));
-                        v_int32 idx3 = v_trunc(alpha3);
+                        v_float32 alpha3 = v_and(v_and(v_mul(v_absdiff(val3, rval3), sindex), v_not_nan(rval3)), knan3);
+                        v_int32 idx3 = v_min(v_trunc(alpha3), vx_setall_s32(kExpNumBins));
                         alpha3 = v_sub(alpha3, v_cvt_f32(idx3));
                         v_float32 w3 = v_and(v_mul(kweight, v_muladd(v_lut(this->expLUT + 1, idx3), alpha3, v_mul(v_lut(this->expLUT, idx3), v_sub(v_one, alpha3)))), knan3);
                         v_wsum3 = v_add(v_wsum3, w3);
@@ -610,8 +610,8 @@ public:
                         //0th
                         v_float32 val0 = vx_load(ksptr);
                         v_float32 knan0 = v_not_nan(val0);
-                        v_float32 alpha0 = v_min(v_and(v_and(v_mul(v_absdiff(val0, rval0), sindex), rval0_not_nan), knan0), vx_setall_f32((float)kExpNumBins));
-                        v_int32 idx0 = v_trunc(alpha0);
+                        v_float32 alpha0 = v_and(v_and(v_mul(v_absdiff(val0, rval0), sindex), rval0_not_nan), knan0);
+                        v_int32 idx0 = v_min(v_trunc(alpha0), vx_setall_s32(kExpNumBins));
                         alpha0 = v_sub(alpha0, v_cvt_f32(idx0));
                         v_float32 w0 = v_and(v_mul(kweight, v_muladd(v_lut(this->expLUT + 1, idx0), alpha0, v_mul(v_lut(this->expLUT, idx0), v_sub(v_one, alpha0)))), knan0);
                         v_wsum0 = v_add(v_wsum0, w0);
@@ -620,8 +620,8 @@ public:
                         //1st
                         v_float32 val1 = vx_load(ksptr + nlanes);
                         v_float32 knan1 = v_not_nan(val1);
-                        v_float32 alpha1 = v_min(v_and(v_and(v_mul(v_absdiff(val1, rval1), sindex), rval1_not_nan), knan1), vx_setall_f32((float)kExpNumBins));
-                        v_int32 idx1 = v_trunc(alpha1);
+                        v_float32 alpha1 = v_and(v_and(v_mul(v_absdiff(val1, rval1), sindex), rval1_not_nan), knan1);
+                        v_int32 idx1 = v_min(v_trunc(alpha1), vx_setall_s32(kExpNumBins));
                         alpha1 = v_sub(alpha1, v_cvt_f32(idx1));
                         v_float32 w1 = v_and(v_mul(kweight, v_muladd(v_lut(this->expLUT + 1, idx1), alpha1, v_mul(v_lut(this->expLUT, idx1), v_sub(v_one, alpha1)))), knan1);
                         v_wsum1 = v_add(v_wsum1, w1);
@@ -680,8 +680,8 @@ public:
                         v_load_deinterleave(rsptr, rb, rg, rr);
 
                         v_float32 knan = v_and(v_and(v_not_nan(kb), v_not_nan(kg)), v_not_nan(kr));
-                        v_float32 alpha = v_min(v_and(v_and(v_and(v_and(v_mul(v_add(v_add(v_absdiff(kb, rb), v_absdiff(kg, rg)), v_absdiff(kr, rr)), sindex), v_not_nan(rb)), v_not_nan(rg)), v_not_nan(rr)), knan), vx_setall_f32((float)kExpNumBins));
-                        v_int32 idx = v_trunc(alpha);
+                        v_float32 alpha = v_and(v_and(v_and(v_and(v_mul(v_add(v_add(v_absdiff(kb, rb), v_absdiff(kg, rg)), v_absdiff(kr, rr)), sindex), v_not_nan(rb)), v_not_nan(rg)), v_not_nan(rr)), knan);
+                        v_int32 idx = v_min(v_trunc(alpha), vx_setall_s32(kExpNumBins));
                         alpha = v_sub(alpha, v_cvt_f32(idx));
 
                         v_float32 w = v_and(v_mul(kweight, v_muladd(v_lut(this->expLUT + 1, idx), alpha, v_mul(v_lut(this->expLUT, idx), v_sub(v_one, alpha)))), knan);

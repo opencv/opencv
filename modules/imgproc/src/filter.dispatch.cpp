@@ -1171,8 +1171,24 @@ static bool replacementFilter2D(int stype, int dtype, int kernel_type,
                                 int anchor_x, int anchor_y,
                                 double delta, int borderType, bool isSubmatrix)
 {
+    // Prioritize stateless implementation
+    int res = cv_hal_filter_stateless(src_data, src_step, stype,
+                                      dst_data, dst_step, dtype, width, height,
+                                      full_width, full_height, offset_x, offset_y,
+                                      kernel_data, kernel_step, kernel_type,
+                                      kernel_width, kernel_height, anchor_x, anchor_y,
+                                      delta, borderType, isSubmatrix, src_data == dst_data);
+    if (res == CV_HAL_ERROR_OK)
+    {
+        return true;
+    } else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED)
+    {
+        CV_Error_(cv::Error::StsInternal,
+                  ("HAL implementation filter_stateless ==> " CVAUX_STR(cv_hal_filter_stateless) " returned %d (0x%08x)", res, res));
+    }
+
     cvhalFilter2D* ctx;
-    int res = cv_hal_filterInit(&ctx, kernel_data, kernel_step, kernel_type, kernel_width, kernel_height, width, height,
+    res = cv_hal_filterInit(&ctx, kernel_data, kernel_step, kernel_type, kernel_width, kernel_height, width, height,
                                 stype, dtype, borderType, delta, anchor_x, anchor_y, isSubmatrix, src_data == dst_data);
     if (res == CV_HAL_ERROR_NOT_IMPLEMENTED)
     {
@@ -1385,8 +1401,23 @@ static bool replacementSepFilter(int stype, int dtype, int ktype,
                                  uchar * kernely_data, int kernely_len,
                                  int anchor_x, int anchor_y, double delta, int borderType)
 {
+    // Prioritize stateless implementation
+    int res = cv_hal_sepFilter_stateless(src_data, src_step, stype,
+                                         dst_data, dst_step, dtype,
+                                         width, height, full_width, full_height, offset_x, offset_y,
+                                         kernelx_data, kernelx_len, kernely_data, kernely_len, ktype,
+                                         anchor_x, anchor_y, delta, borderType);
+    if (res == CV_HAL_ERROR_OK)
+    {
+        return true;
+    } else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED)
+    {
+        CV_Error_(cv::Error::StsInternal,
+                  ("HAL implementation sepFilter_stateless ==> " CVAUX_STR(cv_hal_sepFilter_stateless) " returned %d (0x%08x)", res, res));
+    }
+
     cvhalFilter2D *ctx;
-    int res = cv_hal_sepFilterInit(&ctx, stype, dtype, ktype,
+    res = cv_hal_sepFilterInit(&ctx, stype, dtype, ktype,
                                    kernelx_data, kernelx_len,
                                    kernely_data, kernely_len,
                                    anchor_x, anchor_y, delta, borderType);
