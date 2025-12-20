@@ -509,7 +509,7 @@ bool  PngDecoder::readData( Mat& img )
                     dop = chunk.p[32];
                     bop = chunk.p[33];
 
-                    if (int(x0 + w0) > img.cols || int(y0 + h0) > img.rows || dop > 2 || bop > 1)
+                    if ((int64_t)x0 + w0 > img.cols || (int64_t)y0 + h0 > img.rows || dop > 2 || bop > 1)
                     {
                         return false;
                     }
