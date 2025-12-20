@@ -60,6 +60,7 @@ class DISOpticalFlowImpl CV_FINAL : public DISOpticalFlow
 
   protected: //!< algorithm parameters
     int finest_scale, coarsest_scale;
+    int user_coarsest_scale;
     int patch_size;
     int patch_stride;
     int grad_descent_iter;
@@ -79,6 +80,8 @@ class DISOpticalFlowImpl CV_FINAL : public DISOpticalFlow
   public:
     int getFinestScale() const CV_OVERRIDE { return finest_scale; }
     void setFinestScale(int val) CV_OVERRIDE { finest_scale = val; }
+    int getCoarsestScale() const CV_OVERRIDE { return user_coarsest_scale; }
+    void setCoarsestScale(int val) CV_OVERRIDE { user_coarsest_scale = val; }
     int getPatchSize() const CV_OVERRIDE { return patch_size; }
     void setPatchSize(int val) CV_OVERRIDE { patch_size = val; }
     int getPatchStride() const CV_OVERRIDE { return patch_stride; }
@@ -228,6 +231,7 @@ DISOpticalFlowImpl::DISOpticalFlowImpl()
     use_mean_normalization = true;
     use_spatial_propagation = true;
     coarsest_scale = 10;
+    user_coarsest_scale = -1;
 
     /* Use separate variational refinement instances for different scales to avoid repeated memory allocation: */
     int max_possible_scales = 10;
@@ -1367,8 +1371,14 @@ bool DISOpticalFlowImpl::ocl_calc(InputArray I0, InputArray I1, InputOutputArray
     bool use_input_flow = false;
     if (flow.sameSize(I0) && flow.depth() == CV_32F && flow.channels() == 2)
         use_input_flow = true;
-    coarsest_scale = min((int)(log(max(I0Mat.cols, I0Mat.rows) / (4.0 * patch_size)) / log(2.0) + 0.5), /* Original code search for maximal movement of width/4 */
-                         (int)(log(min(I0Mat.cols, I0Mat.rows) / patch_size) / log(2.0)));              /* Deepest pyramid level greater or equal than patch*/
+
+    int max_possible_scale = min((int)(log(max(I0Mat.cols, I0Mat.rows) / (4.0 * patch_size)) / log(2.0) + 0.5), /* Original code search for maximal movement of width/4 */
+                                 (int)(log(min(I0Mat.cols, I0Mat.rows) / patch_size) / log(2.0)));              /* Deepest pyramid level greater or equal than patch*/
+
+    if (user_coarsest_scale != -1)
+        coarsest_scale = min(user_coarsest_scale, max_possible_scale);
+    else
+        coarsest_scale = max_possible_scale;
 
     if (coarsest_scale<0)
         CV_Error(cv::Error::StsBadSize, "The input image must have either width or height >= 12");
@@ -1449,9 +1459,14 @@ void DISOpticalFlowImpl::calc(InputArray I0, InputArray I1, InputOutputArray flo
     else
         flow.create(I1Mat.size(), CV_32FC2);
     Mat flowMat = flow.getMat();
-    coarsest_scale = min((int)(log(max(I0Mat.cols, I0Mat.rows) / (4.0 * patch_size)) / log(2.0) + 0.5), /* Original code search for maximal movement of width/4 */
-                         (int)(log(min(I0Mat.cols, I0Mat.rows) / patch_size) / log(2.0)));              /* Deepest pyramid level greater or equal than patch*/
 
+    int max_possible_scale = min((int)(log(max(I0Mat.cols, I0Mat.rows) / (4.0 * patch_size)) / log(2.0) + 0.5), /* Original code search for maximal movement of width/4 */
+                                 (int)(log(min(I0Mat.cols, I0Mat.rows) / patch_size) / log(2.0)));              /* Deepest pyramid level greater or equal than patch*/
+
+    if (user_coarsest_scale != -1)
+        coarsest_scale = min(user_coarsest_scale, max_possible_scale);
+    else
+        coarsest_scale = max_possible_scale;
     if (coarsest_scale<0)
         CV_Error(cv::Error::StsBadSize, "The input image must have either width or height >= 12");
 
