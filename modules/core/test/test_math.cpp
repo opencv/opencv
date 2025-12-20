@@ -2635,11 +2635,11 @@ TEST(Core_SolveCubic, regression_27748)
     // Expecting quadratic behavior (2 roots)
     EXPECT_GE(n, 2);
 
-    // Verify roots satisfy the quadratic part of the equation (since a*x^3 is negligible)
+    // Verify roots satisfy the FULL cubic equation
     for(int i = 0; i < n; i++)
     {
         double x = roots.at<double>(i);
-        double val = b*x*x + c*x + d;
+        double val = a*x*x*x + b*x*x + c*x + d;
         // Check residual is small
         EXPECT_LE(fabs(val), 1e-6) << "Root " << x << " does not satisfy the equation";
     }
