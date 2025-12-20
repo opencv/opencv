@@ -678,6 +678,16 @@ public:
     /** @copybrief getFinestScale @see getFinestScale */
     CV_WRAP virtual void setFinestScale(int val) = 0;
 
+    /** @brief Sets the coarsest scale
+    @param val Coarsest level of the Gaussian pyramid on which the flow is computed.
+    If set to -1, the auto-computed coarsest scale will be used.
+    */
+    CV_WRAP virtual void setCoarsestScale(int val) = 0;
+
+    /** @brief Gets the coarsest scale
+    */
+    CV_WRAP virtual int getCoarsestScale() const = 0;
+
     /** @brief Size of an image patch for matching (in pixels). Normally, default 8x8 patches work well
         enough in most cases.
         @see setPatchSize */
