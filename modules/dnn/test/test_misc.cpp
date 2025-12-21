@@ -89,7 +89,11 @@ TEST(blobFromImage_4ch, Regression)
     merge(ch, 4, img);
     Mat blob = dnn::blobFromImage(img, 1., Size(), Scalar(), false, false);
 
-    for (int i = 0; i < 4; i++)
+    // Alpha channel should be dropped - blob should have 3 channels, not 4
+    ASSERT_EQ(blob.size[1], 3);
+
+    // Verify RGB channels are correct (alpha is dropped)
+    for (int i = 0; i < 3; i++)
     {
         ch[i] = Mat(img.rows, img.cols, CV_32F, blob.ptr(0, i));
         ASSERT_DOUBLE_EQ(cvtest::norm(ch[i], cv::NORM_INF), i);
