@@ -1449,6 +1449,11 @@ void ONNXImporter2::parseConvTranspose(LayerParams& layerParams, const opencv_on
     else if (layerParams.has("output_padding"))
     {
         replaceLayerParam(layerParams, "output_padding", "adj");
+        DictValue adj = layerParams.get("adj");
+        if (adj.size() == 2) {
+            layerParams.set("adj_h", adj.get<int>(0));
+            layerParams.set("adj_w", adj.get<int>(1));
+        }
     }
     addLayer(layerParams, node_proto, n_inputs);
 }
