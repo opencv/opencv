@@ -1419,8 +1419,23 @@ void ONNXImporter2::parseConvTranspose(LayerParams& layerParams, const opencv_on
     }
 
     if (!layerParams.has("kernel_size"))
-        CV_Error(Error::StsNotImplemented,
-                 "Required attribute 'kernel_size' is not present.");
+    {
+        if (!layerParams.blobs.empty())
+        {
+            const Mat& weights = layerParams.blobs[0];
+            std::vector<int> kernel_size;
+            for (int i = 2; i < weights.dims; i++)
+            {
+                kernel_size.push_back(weights.size[i]);
+            }
+            layerParams.set("kernel_size", DictValue::arrayInt(kernel_size.data(), kernel_size.size()));
+        }
+        else
+        {
+            CV_Error(Error::StsNotImplemented,
+                     "Required attribute 'kernel_size' is not present.");
+        }
+    }
 
     if (layerParams.has("output_shape"))
     {
