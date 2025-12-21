@@ -128,7 +128,9 @@ int KAZEFeatures::Create_Nonlinear_Scale_Space(const Mat &img)
             pm_g2(evolution_[i].Lx, evolution_[i].Ly, Lflow, options_.kcontrast);
         else if (options_.diffusivity == KAZE::DIFF_WEICKERT)
             weickert_diffusivity(evolution_[i].Lx, evolution_[i].Ly, Lflow, options_.kcontrast);
-
+        else if (options_.diffusivity == KAZE::DIFF_CHARBONNIER)
+            charbonnier_diffusivity(evolution_[i].Lx, evolution_[i].Ly, Lflow, options_.kcontrast);
+        
         // Perform FED n inner steps
         for (int j = 0; j < nsteps_[i - 1]; j++)
             nld_step_scalar(evolution_[i].Lt, Lflow, Lstep, tsteps_[i - 1][j]);
