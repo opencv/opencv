@@ -345,10 +345,6 @@
 "test_gridsample_bicubic_align_corners_1_additional_1",
 "test_group_normalization_epsilon_expanded",
 "test_group_normalization_example_expanded",
-"test_gru_batchwise",  // Issues::Parser::node_proto.input_size() == 6 in function 'parseGRU'
-"test_gru_defaults",  // ---- same as above ---
-"test_gru_seq_length",  // ---- same as above ---
-"test_gru_with_initial_bias",  // ---- same as above ---
 "test_hammingwindow",
 "test_hammingwindow_expanded",
 "test_hammingwindow_symmetric",
