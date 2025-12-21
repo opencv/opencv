@@ -301,19 +301,8 @@
 "test_constantofshape_int_shape_zero",  // Issue::Parser::Weights are required as inputs
 "test_convinteger_with_padding",  // Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "ConvInteger" in function 'getLayerInstance'
 "test_convinteger_without_padding",  //Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "ConvInteger" in function 'getLayerInstance'
-"test_convtranspose",  // Issue::Parser::Weights are required as inputs
-"test_convtranspose_1d",  // Issue::Parser::Weights are required as inputs
-"test_convtranspose_3d",  // Issue::Parser::Weights are required as inputs
-"test_convtranspose_autopad_same",  // Issue::Parser::Weights are required as inputs
-"test_convtranspose_dilations",  // Issue::Parser::Weights are required as inputs
 "test_convtranspose_group_2",
 "test_convtranspose_group_2_image_3",
-"test_convtranspose_kernel_shape",  // Issue::Parser::Weights are required as inputs
-"test_convtranspose_output_shape",  // Issue::Parser::Weights are required as inputs
-"test_convtranspose_pad",  // Issue::Parser::Weights are required as inputs
-"test_convtranspose_pads",  // Issue::Parser::Weights are required as inputs
-"test_convtranspose_with_kernel",  // Issue::Parser::Weights are required as inputs
-"test_deform_conv_with_mask_bias",
 "test_deform_conv_with_multiple_offset_groups",
 "test_dequantizelinear_e4m3fn",
 "test_dequantizelinear_e4m3fn_float16",
