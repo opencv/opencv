@@ -2260,7 +2260,7 @@ void ONNXImporter2::parseQEltwise(LayerParams& layerParams, const opencv_onnx::N
     else
     {
         // Mul: (S1(q1-z1) * S2(q2-z2)) / So + zo
-        coeffs = {inp_0_sc / out_sc, inp_1_sc}; 
+        coeffs = {inp_0_sc / out_sc, inp_1_sc};
         offset = out_zp;
     }
 
