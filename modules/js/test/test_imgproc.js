@@ -558,6 +558,19 @@ QUnit.test('test_filter', function(assert) {
         src.delete();
     }
 
+    {
+        let src = cv.matFromArray(1, 1, cv.CV_8UC1, [123]);
+        let dst = new cv.Mat();
+
+        cv.stackBlur(src, dst, new cv.Size(9, 1));
+
+        let expected = new Uint8Array([123]);
+        assert.deepEqual(dst.data, expected);
+
+        src.delete();
+        dst.delete();
+    }
+
     // medianBlur
     {
         let mat1 = cv.Mat.ones(9, 9, cv.CV_8UC3);
