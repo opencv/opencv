@@ -311,5 +311,18 @@ TEST_P(StackBlur_GaussianBlur, compare)
 }
 
 INSTANTIATE_TEST_CASE_P(Imgproc, StackBlur_GaussianBlur, testing::Values(CV_8U, CV_16S, CV_16U, CV_32F));
+
+TEST(Imgproc_StackBlur, regression_28233)
+{
+    Mat src1(1, 1, CV_8UC1, Scalar(123));
+    Mat dst1;
+    EXPECT_NO_THROW(stackBlur(src1, dst1, Size(9, 1)));
+    EXPECT_EQ(dst1.at<uchar>(0, 0), 123);
+
+    Mat src2(3, 3, CV_8UC1, Scalar(50));
+    Mat dst2;
+    EXPECT_NO_THROW(stackBlur(src2, dst2, Size(11, 11)));
+    EXPECT_EQ(dst2.at<uchar>(1, 1), 50);
+}
 }
 }

@@ -552,7 +552,7 @@ QUnit.test('test_filter', function(assert) {
         cv.stackBlur(src, src, new cv.Size(3, 3));
 
         // Verify result.
-        let expected = new Uint8Array([22,29,36,38,43,50]);
+        let expected = new Uint8Array([14,22,29,46,51,58]);
 
         assert.deepEqual(src.data, expected);
         src.delete();
