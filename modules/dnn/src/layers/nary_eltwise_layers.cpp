@@ -466,8 +466,8 @@ public:
         int nplanes = std::accumulate(shape.begin(), shape.end() - 1, 1, std::multiplies<int>());
 
         if (nplanes == 1) { // parallelize within the plane
-            AutoBuffer<char> buf_ptrs(steps.size());
-            auto ptrs = (char**)buf_ptrs.data();
+            AutoBuffer<char*> buf_ptrs(steps.size());
+            char** ptrs = buf_ptrs.data();
             ptrs[0] = out;
             for (int i = 0; i < ninputs; i++) {
                 ptrs[i+1] = (char*)inp[i];
@@ -481,7 +481,7 @@ public:
                         ptr[i] = op(ptr1[i], ptr2[i]);
                     }
                     for (int j = 2; j < ninputs; j++) {
-                        int dpj = steps[j + 1].back();
+                        size_t dpj = steps[j + 1].back() / sizeof(T);
                         const T* ptrj = (const T*)(ptrs[j + 1]);
                         if (dpj == 1) {
                             for (int i = r.start; i < r.end; i++) {
@@ -500,7 +500,7 @@ public:
                     }
                     ptr = tmp;
                     for (int j = 2; j < ninputs; j++) {
-                        int dpj = steps[j + 1].back();
+                        size_t dpj = steps[j + 1].back() / sizeof(T);
                         const T* ptr_j = (const T*)(ptrs[j + 1]);
                         for (int i = r.start; i < r.end; i++, ptr += dp, ptr_j += dpj) {
                             *ptr = saturate_cast<T>(op(*ptr, *ptr_j) * scale);
@@ -512,8 +512,8 @@ public:
             parallel_for_(Range(0, plane_size), worker, nstripes);
         } else { // parallelize across the plane
             auto worker = [&](const Range &r) {
-                AutoBuffer<char> buf_ptrs(steps.size());
-                auto ptrs = (char**)buf_ptrs.data();
+                AutoBuffer<char*> buf_ptrs(steps.size());
+                char** ptrs = buf_ptrs.data();
                 for (int plane_idx = r.start; plane_idx < r.end; plane_idx++) {
                     ptrs[0] = out;
                     for (int i = 0; i < ninputs; i++) ptrs[i+1] = (char*)inp[i];
@@ -535,7 +535,7 @@ public:
                             ptr[i] = saturate_cast<T>(op(ptr1[i], ptr2[i]) * scale);
                         }
                         for (int j = 2; j < ninputs; j++) {
-                            int dpj = steps[j + 1].back();
+                            size_t dpj = steps[j + 1].back() / sizeof(T);
                             const T* ptrj = (const T*)(ptrs[j + 1]);
                             if (dpj == 1) {
                                 for (int i = 0; i < plane_size; i++) {
@@ -554,7 +554,7 @@ public:
                         }
                         ptr = tmp;
                         for (int j = 2; j < ninputs; j++) {
-                            int dpj = steps[j + 1].back();
+                            size_t dpj = steps[j + 1].back() / sizeof(T);
                             const T* ptrj = (const T*)(ptrs[j + 1]);
                             for (int i = 0; i < plane_size; i++, ptr += dp, ptrj += dpj) {
                                 *ptr = op(*ptr, saturate_cast<T>(*ptrj * scale));
