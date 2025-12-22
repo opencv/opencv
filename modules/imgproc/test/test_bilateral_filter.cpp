@@ -295,14 +295,12 @@ namespace opencv_test { namespace {
     // Out-of-bounds read in AVX2 bilateralFilter 32f path with BORDER_CONSTANT
     TEST(Imgproc_BilateralFilter, regression_28254_oob_read)
     {
-        // Create a small 2x2 CV_32FC1 image with values in range [100, 200]
-        // This ensures BORDER_CONSTANT padding (default value 0) is outside the range,
-        // which triggers the out-of-bounds condition in the LUT access
-        cv::Mat src(2, 2, CV_32FC1);
-        src.at<float>(0, 0) = 100.0f;
-        src.at<float>(0, 1) = 150.0f;
-        src.at<float>(1, 0) = 175.0f;
-        src.at<float>(1, 1) = 200.0f;
+        // Create a 64x64 CV_32FC1 image with values in range [100, 200]
+        // Image must be large enough (width >= 32) to trigger SIMD/AVX2 code path.
+        // Values are set so BORDER_CONSTANT padding (default 0) is outside the range,
+        // which triggers the out-of-bounds condition in the LUT access.
+        cv::Mat src(64, 64, CV_32FC1);
+        cv::randu(src, 100.0f, 200.0f);
         cv::Mat dst;
 
         // Parameters that trigger the bug
