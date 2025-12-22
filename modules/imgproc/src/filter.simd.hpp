@@ -283,7 +283,7 @@ int FilterEngine__proceed(FilterEngine& this_, const uchar* src, int srcstep, in
     int xofs1 = std::min(this_.roi.x, this_.anchor.x);
     bool isSep = this_.isSeparable();
     bool makeBorder = (_dx1 > 0 || _dx2 > 0) && this_.rowBorderType != BORDER_CONSTANT;
-    int dy = 0, i = 0, yidx = 0;
+    int dy = 0, i = 0, yidx = this_.roi.y;
     int startY0 = this_.startY0;
     int bufStep = this_.bufStep;
 
@@ -295,7 +295,7 @@ int FilterEngine__proceed(FilterEngine& this_, const uchar* src, int srcstep, in
     CV_Assert(src && dst && count > 0);
     bool isRowColumnSeparable = this_.isRowColumnSeparable();
 
-    if(width <= 32 || this_.wholeSize.height <=2 || dst_ == src_) // in-place computation and small image size avoided.
+    if(width <= 32 || this_.roi.height <=2 || dst_ == src_ ) // in-place computation and small image size avoided.
         isRowColumnSeparable = false;
     bool processInnerRegion = true;
 
@@ -313,7 +313,7 @@ int FilterEngine__proceed(FilterEngine& this_, const uchar* src, int srcstep, in
             for( ; dcount-- > 0; src += srcstep )
             {
                 processInnerRegion = true;
-                if(isRowColumnSeparable && (yidx>(kheight-2)) && (yidx < (this_.roi.height-kheight+1)))
+                if(isRowColumnSeparable && (yidx>(kheight-2)) && (yidx < (this_.wholeSize.height-kheight+1)))
                 {
                     // skip processing inner region in row filter.
                     processInnerRegion = false;
@@ -333,7 +333,7 @@ int FilterEngine__proceed(FilterEngine& this_, const uchar* src, int srcstep, in
             int kcn = 0;
             processInnerRegion = true;
             int yidxColFilter = yidx - i - 1;
-            if(isRowColumnSeparable && (yidxColFilter>kheight/2) && (yidx < (this_.roi.height-kheight+2)))
+            if(isRowColumnSeparable && (yidxColFilter>kheight/2) && (yidx < (this_.wholeSize.height-kheight+2)))
             {
                 // skip processing inner region in column filter.
                 // Group of rows (i) are processed together in columnFilter, skipping bottom border is done approximately here based on start yidxColFilter.
@@ -361,7 +361,7 @@ int FilterEngine__proceed(FilterEngine& this_, const uchar* src, int srcstep, in
 
     // Process inner region with row-column filter.
     if(isRowColumnSeparable)
-        (*this_.rowColumnFilter)(src_, dst_, srcstep, dststep, this_.roi.width, this_.roi.height, cn);
+        (*this_.rowColumnFilter)(src_, dst_, srcstep, dststep, this_.roi.width, this_.roi.height, this_.roi.y, this_.wholeSize.height, cn);
 
     this_.dstY += dy;
     CV_Assert(this_.dstY <= this_.roi.height);
