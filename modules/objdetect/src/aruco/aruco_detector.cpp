@@ -314,7 +314,8 @@ static void _detectInitialCandidates(const Mat &grey, vector<vector<Point2f> > &
   * the border bits
   */
 static Mat _extractBits(InputArray _image, const vector<Point2f>& corners, int markerSize,
-                        int markerBorderBits, int cellSize, double cellMarginRate, double minStdDevOtsu, OutputArray _cellPixelRatio = noArray()) {
+                        int markerBorderBits, int cellSize, double cellMarginRate, double minStdDevOtsu,
+                        OutputArray _cellPixelRatio = noArray()) {
     CV_Assert(_image.getMat().channels() == 1);
     CV_Assert(corners.size() == 4ull);
     CV_Assert(markerBorderBits > 0 && cellSize > 0 && cellMarginRate >= 0 && cellMarginRate <= 0.5);
@@ -340,7 +341,7 @@ static Mat _extractBits(InputArray _image, const vector<Point2f>& corners, int m
 
     // output image containing the bits
     Mat bits(markerSizeWithBorders, markerSizeWithBorders, CV_8UC1, Scalar::all(0));
-    Mat cellPixelRatio(markerSizeWithBorders, markerSizeWithBorders, CV_32FC1, Scalar::all(0));
+    //Mat cellPixelRatio(markerSizeWithBorders, markerSizeWithBorders, CV_32FC1, Scalar::all(0));
 
     // check if standard deviation is enough to apply Otsu
     // if not enough, it probably means all bits are the same color (black or white)
@@ -351,20 +352,23 @@ static Mat _extractBits(InputArray _image, const vector<Point2f>& corners, int m
     meanStdDev(innerRegion, mean, stddev);
     if(stddev.ptr< double >(0)[0] < minStdDevOtsu) {
         // all black or all white, depending on mean value
-        if(mean.ptr< double >(0)[0] > 127){
+        if(mean.ptr< double >(0)[0] > 127)
             bits.setTo(1);
-            cellPixelRatio.setTo(1);
-        }
-        else {
+        else
             bits.setTo(0);
-            cellPixelRatio.setTo(0);
-        }
-        if(_cellPixelRatio.needed()) cellPixelRatio.copyTo(_cellPixelRatio);
+        if(_cellPixelRatio.needed()) bits.convertTo(_cellPixelRatio, CV_32F);
         return bits;
+    }
+
+    Mat cellPixelRatio;
+    if (_cellPixelRatio.needed()) {
+        _cellPixelRatio.create(markerSizeWithBorders, markerSizeWithBorders, CV_32FC1);
+        cellPixelRatio = _cellPixelRatio.getMatRef();
     }
 
     // now extract code, first threshold using Otsu
     threshold(resultImg, resultImg, 125, 255, THRESH_BINARY | THRESH_OTSU);
+
 
     // for each cell
     for(int y = 0; y < markerSizeWithBorders; y++) {
@@ -381,8 +385,6 @@ static Mat _extractBits(InputArray _image, const vector<Point2f>& corners, int m
             if(_cellPixelRatio.needed()) cellPixelRatio.at<float>(y, x) = (nZ / (float)square.total());
         }
     }
-
-    if(_cellPixelRatio.needed()) cellPixelRatio.copyTo(_cellPixelRatio);
 
     return bits;
 }
@@ -470,7 +472,7 @@ static float _getMarkerConfidence(const Mat& groundTruthbits, const Mat &cellPix
 static uint8_t _identifyOneCandidate(const Dictionary& dictionary, const Mat& _image,
                                      const vector<Point2f>& _corners, int& idx,
                                      const DetectorParameters& params, int& rotation,
-                                     float &markerConfidence,
+                                     float &markerConfidence, bool confidenceNeeded,
                                      const float scale = 1.f) {
     CV_DbgAssert(params.markerBorderBits > 0);
     uint8_t typ=1;
@@ -524,7 +526,8 @@ static uint8_t _identifyOneCandidate(const Dictionary& dictionary, const Mat& _i
     Mat groundTruthbits;
     Mat bitsUints = dictionary.getBitsFromByteList(dictionary.bytesList.rowRange(idx, idx + 1), dictionary.markerSize, rotation);
     bitsUints.convertTo(groundTruthbits, CV_32F);
-    markerConfidence = _getMarkerConfidence(groundTruthbits, cellPixelRatio, dictionary.markerSize, params.markerBorderBits);
+    if(confidenceNeeded)
+        markerConfidence = _getMarkerConfidence(groundTruthbits, cellPixelRatio, dictionary.markerSize, params.markerBorderBits);
 
     return typ;
 }
@@ -807,7 +810,7 @@ struct ArucoDetector::ArucoDetectorImpl {
 
             /// STEP 2: Check candidate codification (identify markers)
             identifyCandidates(grey, grey_pyramid, selectedCandidates, candidates, contours,
-                    ids, dictionary, rejectedImgPoints, markersConfidence);
+                    ids, dictionary, rejectedImgPoints, markersConfidence, _markersConfidence.needed());
 
             /// STEP 3: Corner refinement :: use corner subpix
             if (detectorParams.cornerRefinementMethod == (int)CORNER_REFINE_SUBPIX) {
@@ -835,7 +838,7 @@ struct ArucoDetector::ArucoDetectorImpl {
                 // temporary variable to store the current candidates
                 vector<vector<Point2f>> currentCandidates;
                 identifyCandidates(grey, grey_pyramid, candidatesPerDictionarySize.at(currentDictionary.markerSize), currentCandidates, contours,
-                        ids, currentDictionary, rejectedImgPoints, markersConfidence);
+                        ids, currentDictionary, rejectedImgPoints, markersConfidence, _markersConfidence.needed());
                 if (_dictIndices.needed()) {
                     dictIndices.insert(dictIndices.end(), currentCandidates.size(), dictIndex);
                 }
@@ -1054,7 +1057,7 @@ struct ArucoDetector::ArucoDetectorImpl {
      */
     void identifyCandidates(const Mat& grey, const vector<Mat>& image_pyr, vector<MarkerCandidateTree>& selectedContours,
                             vector<vector<Point2f> >& accepted, vector<vector<Point> >& contours,
-                            vector<int>& ids, const Dictionary& currentDictionary, vector<vector<Point2f>>& rejected, vector<float>& markersConfidence) const {
+                            vector<int>& ids, const Dictionary& currentDictionary, vector<vector<Point2f>>& rejected, vector<float>& markersConfidence, bool confidenceNeeded) const {
         size_t ncandidates = selectedContours.size();
 
         vector<float> markersConfidenceTmp(ncandidates, 0.f);
@@ -1091,11 +1094,11 @@ struct ArucoDetector::ArucoDetectorImpl {
                     }
                     const float scale = detectorParams.useAruco3Detection ? img.cols / static_cast<float>(grey.cols) : 1.f;
 
-                    validCandidates[v] = _identifyOneCandidate(currentDictionary, img, selectedContours[v].corners, idsTmp[v], detectorParams, rotated[v], markersConfidenceTmp[v], scale);
+                    validCandidates[v] = _identifyOneCandidate(currentDictionary, img, selectedContours[v].corners, idsTmp[v], detectorParams, rotated[v], markersConfidenceTmp[v], confidenceNeeded, scale);
 
                     if (validCandidates[v] == 0 && checkCloseContours) {
                         for (const MarkerCandidate& closeMarkerCandidate: selectedContours[v].closeContours) {
-                            validCandidates[v] = _identifyOneCandidate(currentDictionary, img, closeMarkerCandidate.corners, idsTmp[v], detectorParams, rotated[v], markersConfidenceTmp[v], scale);
+                            validCandidates[v] = _identifyOneCandidate(currentDictionary, img, closeMarkerCandidate.corners, idsTmp[v], detectorParams, rotated[v], markersConfidenceTmp[v], confidenceNeeded, scale);
                             if (validCandidates[v] > 0) {
                                 selectedContours[v].corners = closeMarkerCandidate.corners;
                                 selectedContours[v].contour = closeMarkerCandidate.contour;
@@ -1131,9 +1134,16 @@ struct ArucoDetector::ArucoDetectorImpl {
                 accepted.push_back(selectedContours[i].corners);
                 contours.push_back(selectedContours[i].contour);
                 ids.push_back(idsTmp[i]);
-                markersConfidence.push_back(markersConfidenceTmp[i]);
             } else {
                 rejected.push_back(selectedContours[i].corners);
+            }
+        }
+
+        if(confidenceNeeded) {
+            for (size_t i = 0ull; i < selectedContours.size(); i++) {
+                if (validCandidates[i] > 0) {
+                    markersConfidence.push_back(markersConfidenceTmp[i]);
+                }
             }
         }
     }
