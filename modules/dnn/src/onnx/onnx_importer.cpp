@@ -2018,6 +2018,16 @@ void ONNXImporter::parseConv(LayerParams& layerParams, const opencv_onnx::NodePr
     int outCn = layerParams.blobs.empty() ? outShapes[node_proto.input(1)][0] : layerParams.blobs[0].size[0];
     layerParams.set("num_output", outCn);
 
+    if (!layerParams.has("kernel_h") || !layerParams.has("kernel_w"))
+    {
+        CV_Assert(!layerParams.blobs.empty());
+        const Mat& weights = layerParams.blobs[0];
+        CV_Assert(weights.dims == 4);
+
+        layerParams.set("kernel_h", weights.size[2]);
+        layerParams.set("kernel_w", weights.size[3]);
+    }
+
     addLayer(layerParams, node_proto);
 }
 
