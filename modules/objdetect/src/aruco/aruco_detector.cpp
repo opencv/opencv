@@ -341,7 +341,6 @@ static Mat _extractBits(InputArray _image, const vector<Point2f>& corners, int m
 
     // output image containing the bits
     Mat bits(markerSizeWithBorders, markerSizeWithBorders, CV_8UC1, Scalar::all(0));
-    //Mat cellPixelRatio(markerSizeWithBorders, markerSizeWithBorders, CV_32FC1, Scalar::all(0));
 
     // check if standard deviation is enough to apply Otsu
     // if not enough, it probably means all bits are the same color (black or white)
@@ -368,7 +367,6 @@ static Mat _extractBits(InputArray _image, const vector<Point2f>& corners, int m
 
     // now extract code, first threshold using Otsu
     threshold(resultImg, resultImg, 125, 255, THRESH_BINARY | THRESH_OTSU);
-
 
     // for each cell
     for(int y = 0; y < markerSizeWithBorders; y++) {
@@ -523,11 +521,12 @@ static uint8_t _identifyOneCandidate(const Dictionary& dictionary, const Mat& _i
         return 0;
 
     // compute the candidate's confidence
-    Mat groundTruthbits;
-    Mat bitsUints = dictionary.getBitsFromByteList(dictionary.bytesList.rowRange(idx, idx + 1), dictionary.markerSize, rotation);
-    bitsUints.convertTo(groundTruthbits, CV_32F);
-    if(confidenceNeeded)
+    if(confidenceNeeded) {
+        Mat groundTruthbits;
+        Mat bitsUints = dictionary.getBitsFromByteList(dictionary.bytesList.rowRange(idx, idx + 1), dictionary.markerSize, rotation);
+        bitsUints.convertTo(groundTruthbits, CV_32F);
         markerConfidence = _getMarkerConfidence(groundTruthbits, cellPixelRatio, dictionary.markerSize, params.markerBorderBits);
+    }
 
     return typ;
 }

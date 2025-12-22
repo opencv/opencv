@@ -198,7 +198,8 @@ Mat Dictionary::getBitsFromByteList(const Mat &byteList, int markerSize, int rot
     CV_Assert(byteList.total() > 0 &&
               byteList.total() >= (unsigned int)markerSize * markerSize / 8 &&
               byteList.total() <= (unsigned int)markerSize * markerSize / 8 + 1);
-    CV_Assert(rotationId < 4);
+
+    CV_Assert(rotationId >=0 && rotationId < 4);
 
     Mat bits(markerSize, markerSize, CV_8UC1, Scalar::all(0));
 
