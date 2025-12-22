@@ -213,6 +213,9 @@ enum VideoCaptureProperties {
        CAP_PROP_N_THREADS = 70, //!< (**open-only**) Set the maximum number of threads to use. Use 0 to use as many threads as CPU cores (applicable for FFmpeg back-end only).
        CAP_PROP_PTS = 71, //!<  (read-only) FFmpeg back-end only - presentation timestamp of the most recently read frame using the FPS time base.  e.g. fps = 25, VideoCapture::get(\ref CAP_PROP_PTS) = 3, presentation time = 3/25 seconds.
        CAP_PROP_DTS_DELAY = 72, //!<  (read-only) FFmpeg back-end only - maximum difference between presentation (pts) and decompression timestamps (dts) using FPS time base.  e.g. delay is maximum when frame_num = 0, if true, VideoCapture::get(\ref CAP_PROP_PTS) = 0 and VideoCapture::get(\ref CAP_PROP_DTS_DELAY) = 2, dts = -2.  Non zero values usually imply the stream is encoded using B-frames which are not decoded in presentation order.
+       CAP_PROP_CODEC_COLOR_PRIMARIES = 73, //!< (read-only) Color primaries. See [AVCOL_PRI_*](https://github.com/FFmpeg/FFmpeg/blob/n8.0/libavutil/pixfmt.h)
+       CAP_PROP_CODEC_COLOR_TRANSFER = 74, //!< (read-only) Color Transfer Characteristic. See [AVCOL_TRC_*](https://github.com/FFmpeg/FFmpeg/blob/n8.0/libavutil/pixfmt.h)
+       CAP_PROP_CODEC_COLOR_RANGE = 75, //!< (read-only) Visual content value range. See [AVCOL_RANGE_*](https://github.com/FFmpeg/FFmpeg/blob/n8.0/libavutil/pixfmt.h)
 #ifndef CV_DOXYGEN
        CV__CAP_PROP_LATEST
 #endif
