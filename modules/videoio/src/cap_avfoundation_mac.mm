@@ -359,9 +359,21 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
 #endif
 
     // Always refresh camera-device list for reconnect support
-    NSArray *devices_video = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
-    NSArray *devices_muxed = [AVCaptureDevice devicesWithMediaType:AVMediaTypeMuxed];
-    NSArray *devices = [devices_video arrayByAddingObjectsFromArray:devices_muxed];
+    NSArray *devices = nil;
+#if defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 101500
+    if (@available(macOS 10.15, *)) {
+        AVCaptureDeviceDiscoverySession *discoverySession = [AVCaptureDeviceDiscoverySession
+            discoverySessionWithDeviceTypes:@[AVCaptureDeviceTypeBuiltInWideAngleCamera, AVCaptureDeviceTypeExternalUnknown]
+            mediaType:AVMediaTypeVideo
+            position:AVCaptureDevicePositionUnspecified];
+        devices = discoverySession.devices;
+    }
+#endif
+    if (devices == nil) {
+        NSArray *devices_video = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
+        NSArray *devices_muxed = [AVCaptureDevice devicesWithMediaType:AVMediaTypeMuxed];
+        devices = [devices_video arrayByAddingObjectsFromArray:devices_muxed];
+    }
 
     // Debug logging
     fprintf(stderr, "[DEBUG-AVF] startCaptureDevice: devices.count=%ld cameraNum=%d\n",
@@ -464,36 +476,11 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
 
     [mCaptureSession startRunning];
 
-// Try grabbing a frame to verify the camera is REALLY delivering video
-bool ok = grabFrame(1);
-if (!ok)
-{
-    fprintf(stderr, "[DEBUG-AVF] Camera present in device list but NOT delivering frames – treating as disconnected.\n");
-    started = 0;
-
-    // Clean up the failed session completely
-    [mCaptureSession stopRunning];
-    [mCaptureSession release];
-    mCaptureSession = nil;
-
-    [mCaptureDeviceInput release];
-    mCaptureDeviceInput = nil;
-
-    [mCaptureVideoDataOutput release];
-    mCaptureVideoDataOutput = nil;
-
-    [mCapture release];
-    mCapture = nil;
-
-    [localpool drain];
-    return 0;   
-}
-
+// flush old frame
+grabFrame(1);
 
 [localpool drain];
 return 1;
-
-
 }
 
 void CvCaptureCAM::setWidthHeight() {
