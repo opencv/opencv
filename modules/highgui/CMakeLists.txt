@@ -1,5 +1,27 @@
 set(the_description "High-level GUI")
 
+
+if(NOT HAVE_GTK)
+  ocv_check_modules(GTK4 gtk4)
+  if(HAVE_GTK4)
+    set(HAVE_GTK ON)
+    set(HighGUI_CAN_DIAGNOSE_VERSIONS ON)
+    add_definitions(-DHAVE_GTK4)
+    # We add the new file to the list of sources
+    list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_gtk4.cpp)
+    list(APPEND highgui_libs ${GTK4_LIBRARIES})
+  endif()
+endif()
+
+
+if(ANDROID)
+  ocv_add_module(highgui opencv_imgproc OPTIONAL opencv_imgcodecs opencv_videoio WRAP python)
+else()
+# ... rest of the file ...
+
+
+set(the_description "High-level GUI")
+
 if(ANDROID)
   ocv_add_module(highgui opencv_imgproc OPTIONAL opencv_imgcodecs opencv_videoio WRAP python)
 else()
