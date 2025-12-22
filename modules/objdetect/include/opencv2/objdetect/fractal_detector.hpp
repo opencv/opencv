@@ -103,7 +103,8 @@ public:
     /**
      * @brief Default constructor for FractalDetector.
      */
-    CV_WRAP FractalDetector(const FractalMarkerDictionary &dictionary = getPredefinedFractalArucoDictionary(FRACTAL_4L_6));
+    CV_WRAP FractalDetector(const FractalMarkerDictionary &dictionary = getPredefinedFractalArucoDictionary(FRACTAL_4L_6),
+                            int minInternalDistSq = 150, float markerSize = -1);
     /**
      * @brief Detects fractal markers in the input image.
      * @param img Input image (grayscale or color).

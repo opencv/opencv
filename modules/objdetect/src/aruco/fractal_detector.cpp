@@ -310,10 +310,14 @@ FractalMarkerDictionary getPredefinedFractalArucoDictionary(PredefinedFractalDic
 }
 
 // Implementation of FractalDetector methods
-FractalDetector::FractalDetector(const FractalMarkerDictionary &dictionary)
+FractalDetector::FractalDetector(const FractalMarkerDictionary &dictionary, int minInternalDistSq, float markerSize)
     : impl(makePtr<FractalDetectorImpl>())
 {
     impl->fractalMarkerDictionary = dictionary;
+    impl->minInternalDistSq = minInternalDistSq;
+    if (markerSize != -1) {
+        impl->fractalMarkerDictionary.impl->convertToMeters(markerSize);
+    }
 }
 
 void FractalDetector::setParams(int minInternalDistSq_, float markerSize) {
