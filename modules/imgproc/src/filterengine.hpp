@@ -128,7 +128,7 @@ public:
     //! the destructor
     virtual ~BaseRowColumnFilter();
     //! the filtering operator. Must be overridden in the derived classes. All border interpolation is done outside of the class.
-    virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int cn) = 0;
+    virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int yidx, int wholeHeight, int cn) = 0;
     //! resets the internal buffers, if any
     virtual void reset();
 
