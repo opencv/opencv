@@ -262,9 +262,6 @@ public:
 };
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-v_float64 vx_setall(double value) {
-    return vx_setall_f64(value);
-}
 v_uint32 vx_setall(unsigned value) {
     return vx_setall_u32(value);
 }
@@ -273,6 +270,11 @@ v_int32 vx_setall(int value) {
 }
 v_uint16 vx_setall(ushort value) {
     return vx_setall_u16(value);
+}
+#endif
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+v_float64 vx_setall(double value) {
+    return vx_setall_f64(value);
 }
 #endif
 
@@ -339,18 +341,24 @@ struct Sum3x3 :
     }
 #endif
 
-    virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int cn) CV_OVERRIDE
+    virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int yidx, int wholeHeight, int cn) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
         double _scale = scale;
+        int yTopOffset = 1;
+        int yBottomOffset = 1;
+        if(yidx >0)
+            yTopOffset = 0;
+        if( (yidx + height) < wholeHeight)
+            yBottomOffset = 0;
+        int maxRow = height-yTopOffset-yBottomOffset;
+        int idst = yTopOffset;
 
-        int idst = 1;
-        int offset = 1;
-        int dstOffset = 1;
-        int v = idst - dstOffset;
-        int len = (width - offset) * cn;
-        int x = offset * cn;
-        int maxRow = height-2;
+        int xoffset = 1;
+        int v = idst - yTopOffset;
+        int len = (width - xoffset) * cn;
+        int x = xoffset * cn;
+
         const int ETSZ = sizeof(ET);
         const int src_inc = src_stride / ETSZ;
         int j = v;
@@ -387,7 +395,7 @@ struct Sum3x3 :
         {
             if ( x > len - VECSZ_4 )
             {
-                if (x == cn*offset || src == dst)
+                if (x == cn*xoffset || src == dst)
                     break;
                 x = len - VECSZ_4;
             }
@@ -502,17 +510,24 @@ struct Sum3x3_64f :
     }
     virtual void reset() CV_OVERRIDE { }
 
-    virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int cn) CV_OVERRIDE
+    virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int yidx, int wholeHeight, int cn) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
         double _scale = scale;
-        int idst = 1;
-        int offset = 1;
-        int idstOffset = 1;
-        int v = idst - idstOffset;
-        int len = (width - offset) * cn;
-        int x = offset * cn;
-        int maxRow = height-2;
+        int yTopOffset = 1;
+        int yBottomOffset = 1;
+        if(yidx >0)
+            yTopOffset = 0;
+        if( (yidx + height) < wholeHeight)
+            yBottomOffset = 0;
+        int maxRow = height-yTopOffset-yBottomOffset;
+        int idst = yTopOffset;
+
+        int xoffset = 1;
+        int v = idst - yTopOffset;
+        int len = (width - xoffset) * cn;
+        int x = xoffset * cn;
+
         const int ETSZ = sizeof(ET);
         const int src_inc = src_stride / ETSZ;
         const int dst_inc = dst_stride / ETSZ;
@@ -530,7 +545,7 @@ struct Sum3x3_64f :
         ET* dstx = (ET*)(dst + (idst_ * dst_stride));
         for (; j < min(maxRow,v+1); j++, idst_++) //1st Row
         {
-            x = offset * cn;
+            x = xoffset * cn;
             int x_st = 0;
             const ET* src_0 = src_j0 + x;
             const ET* src_1 = src_j1 + x;
@@ -563,7 +578,7 @@ struct Sum3x3_64f :
         int r0_idx = 0;
         for (; j < maxRow; j++, idst_++)
         {
-            x = offset * cn;
+            x = xoffset * cn;
             int x_st = 0;
             int idx_offset = r0_idx * len;
 
@@ -669,18 +684,25 @@ struct Sum3x3sameType :
     }
 #endif
 
-    virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int cn) CV_OVERRIDE
+    virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int yidx, int wholeHeight, int cn) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
         double _scale = scale;
 
-        int idst = 1;
-        int offset = 1;
-        int idstOffset = 1;
-        int v = idst - idstOffset;
-        int len = (width - offset) * cn;
-        int x = offset * cn;
-        int maxRow = height-2;
+        int yTopOffset = 1;
+        int yBottomOffset = 1;
+        if(yidx >0)
+            yTopOffset = 0;
+        if( (yidx + height) < wholeHeight)
+            yBottomOffset = 0;
+        int maxRow = height-yTopOffset-yBottomOffset;
+        int idst = yTopOffset;
+
+        int xoffset = 1;
+        int v = idst - yTopOffset;
+        int len = (width - xoffset) * cn;
+        int x = xoffset * cn;
+
         const int ETSZ = sizeof(ET);
         const int src_inc = src_stride / ETSZ;
         int j = v;
@@ -702,7 +724,7 @@ struct Sum3x3sameType :
         {
             if ( x > len - VECSZ_4 )
             {
-                if (x == cn*offset || src == dst)
+                if (x == cn*xoffset || src == dst)
                     break;
                 x = len - VECSZ_4;
             }
@@ -833,17 +855,25 @@ struct Sum5x5 :
     }
 #endif
 
-    virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int cn) CV_OVERRIDE
+    virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int yidx, int wholeHeight, int cn) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
         double _scale = scale;
-        int idst = 2;
-        int offset = 2;
-        int idstOffset = 2;
-        int v = idst - idstOffset;
-        int len = (width - offset) * cn;
-        int x = offset * cn;
-        int maxRow = height-4;
+        int yTopOffset = 2;
+        int yBottomOffset = 2;
+        if(yidx >1)
+            yTopOffset = 0;
+        if( (yidx + height+1) < wholeHeight)
+            yBottomOffset = 0;
+        int maxRow = height-yTopOffset-yBottomOffset;
+        int idst = yTopOffset;
+
+
+        int xoffset = 2;
+        int v = idst - yTopOffset;
+        int len = (width - xoffset) * cn;
+        int x = xoffset * cn;
+
         const int ETSZ = sizeof(ET);
         const int src_inc = src_stride / ETSZ;
         const int dst_inc = dst_stride / ETSZ;
@@ -879,7 +909,7 @@ struct Sum5x5 :
         {
             if (x > len - VECSZ)
             {
-                if (x == cn*offset || src == dst)
+                if (x == cn*xoffset || src == dst)
                     break;
                 x = len - VECSZ;
             }
@@ -975,17 +1005,24 @@ struct Sum5x5_64f :
     }
     virtual void reset() CV_OVERRIDE { }
 
-    virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int cn) CV_OVERRIDE
+    virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int yidx, int wholeHeight, int cn) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
         double _scale = scale;
-        int idst = 2;
-        int offset = 2;
-        int idstOffset = 2;
-        int v = idst - idstOffset;
-        int len = (width - offset) * cn;
-        int x = offset * cn;
-        int maxRow = height-4;
+        int yTopOffset = 2;
+        int yBottomOffset = 2;
+        if(yidx >1)
+            yTopOffset = 0;
+        if( (yidx + height+1) < wholeHeight)
+            yBottomOffset = 0;
+        int maxRow = height-yTopOffset-yBottomOffset;
+        int idst = yTopOffset;
+
+        int xoffset = 2;
+        int v = idst - yTopOffset;
+        int len = (width - xoffset) * cn;
+        int x = xoffset * cn;
+
         const int ETSZ = sizeof(ET);
         const int src_inc = src_stride / ETSZ;
         const int dst_inc = dst_stride / ETSZ;
@@ -1008,7 +1045,7 @@ struct Sum5x5_64f :
         ET* dstx = (ET*)(dst + (idst_ * dst_stride));
         for (; j < min(maxRow,v+1); j++, idst_++) //1st Row
         {
-            x = offset * cn;
+            x = xoffset * cn;
 
             int x_st = 0;
             for (; x < len; x++, x_st++)
@@ -1049,7 +1086,7 @@ struct Sum5x5_64f :
         int r0_idx = 0;
         for (; j < maxRow; j++, idst_++)
         {
-            x = offset * cn;
+            x = xoffset * cn;
             int x_st = 0;
             int idx_offset = r0_idx * len;
 
@@ -1163,19 +1200,25 @@ struct Sum5x5sameType :
         // No scaling for other integer types
     }
 #endif
-    virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int cn) CV_OVERRIDE
+    virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int yidx, int wholeHeight, int cn) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
         double _scale = scale;
-        int idst = 2;
+        int yTopOffset = 2;
+        int yBottomOffset = 2;
+        if(yidx >1)
+            yTopOffset = 0;
+        if( (yidx + height+1) < wholeHeight)
+            yBottomOffset = 0;
+        int maxRow = height-yTopOffset-yBottomOffset;
+        int idst = yTopOffset;
 
-        int offset = 2;
-        int idstOffset = 2;
-        int v = idst - idstOffset;
+        int xoffset = 2;
+        int v = idst - yTopOffset;
         int j = v;
-        int len = (width - offset) * cn;
-        int x = offset * cn;
-        int maxRow = height-4;
+        int len = (width - xoffset) * cn;
+        int x = xoffset * cn;
+
         const int ETSZ = sizeof(ET);
         const int src_inc = src_stride / ETSZ;
         int cn2 = cn*2;
@@ -1189,7 +1232,7 @@ struct Sum5x5sameType :
         {
             if (x > len - VECSZ_4)
             {
-                if (x == cn*offset || src == dst)
+                if (x == cn*xoffset || src == dst)
                     break;
                 x = len - VECSZ_4;
             }
