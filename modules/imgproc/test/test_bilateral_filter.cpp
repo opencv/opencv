@@ -291,4 +291,33 @@ namespace opencv_test { namespace {
         test.safe_run();
     }
 
+    // Regression test for issue #28254
+    // Out-of-bounds read in AVX2 bilateralFilter 32f path with BORDER_CONSTANT
+    TEST(Imgproc_BilateralFilter, regression_28254_oob_read)
+    {
+        // Create a 64x64 CV_32FC1 image with values in range [100, 200]
+        // Image must be large enough (width >= 32) to trigger SIMD/AVX2 code path.
+        // Values are set so BORDER_CONSTANT padding (default 0) is outside the range,
+        // which triggers the out-of-bounds condition in the LUT access.
+        cv::Mat src(64, 64, CV_32FC1);
+        cv::randu(src, 100.0f, 200.0f);
+        cv::Mat dst;
+
+        // Parameters that trigger the bug
+        int d = -1;
+        double sigmaColor = 2.7;
+        double sigmaSpace = 44.5;
+        int borderType = cv::BORDER_CONSTANT;
+
+        // This should not crash or trigger AddressSanitizer
+        EXPECT_NO_THROW(
+            cv::bilateralFilter(src, dst, d, sigmaColor, sigmaSpace, borderType)
+        );
+
+        // Verify output is valid
+        EXPECT_FALSE(dst.empty());
+        EXPECT_EQ(dst.size(), src.size());
+        EXPECT_EQ(dst.type(), src.type());
+    }
+
 }} // namespace
