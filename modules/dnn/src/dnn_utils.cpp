@@ -134,9 +134,7 @@ void blobFromImagesNCHWImpl(const std::vector<Mat>& images, Mat& blob_, const Im
     int wh = w * h;
     int nch = images[0].channels();
     CV_Assert(nch == 1 || nch == 3 || nch == 4);
-    // Drop alpha channel for 4-channel (RGBA) images as DNN models expect 3 channels (RGB)
-    int blob_nch = (nch == 4) ? 3 : nch;
-    int sz[] = { (int)images.size(), blob_nch, h, w};
+    int sz[] = { (int)images.size(), nch, h, w};
     blob_.create(4, sz, param.ddepth);
 
     for (size_t k = 0; k < images.size(); ++k)
@@ -145,11 +143,11 @@ void blobFromImagesNCHWImpl(const std::vector<Mat>& images, Mat& blob_, const Im
         CV_Assert(images[k].channels() == images[0].channels());
         CV_Assert(images[k].size() == images[0].size());
 
-        Tout* p_blob = blob_.ptr<Tout>() + k * blob_nch * wh;
+        Tout* p_blob = blob_.ptr<Tout>() + k * nch * wh;
         Tout* p_blob_r = p_blob;
         Tout* p_blob_g = p_blob + wh;
         Tout* p_blob_b = p_blob + 2 * wh;
-        // Tout* p_blob_a = p_blob + 3 * wh;
+        Tout* p_blob_a = p_blob + 3 * wh;
 
         if (param.swapRB)
             std::swap(p_blob_r, p_blob_b);
@@ -181,7 +179,7 @@ void blobFromImagesNCHWImpl(const std::vector<Mat>& images, Mat& blob_, const Im
                     p_blob_r[i * w + j] = p_img_row[j * 4    ];
                     p_blob_g[i * w + j] = p_img_row[j * 4 + 1];
                     p_blob_b[i * w + j] = p_img_row[j * 4 + 2];
-                    // Alpha channel (index 3) is intentionally dropped
+                    p_blob_a[i * w + j] = p_img_row[j * 4 + 3];
                 }
             }
         }
@@ -193,11 +191,11 @@ void blobFromImagesNCHWImpl(const std::vector<Mat>& images, Mat& blob_, const Im
 
     for (size_t k = 0; k < images.size(); ++k)
     {
-        for (size_t ch = 0; ch < blob_nch; ++ch)
+        for (size_t ch = 0; ch < nch; ++ch)
         {
             float cur_mean = param.mean[ch];
             float cur_scale = param.scalefactor[ch];
-            Tout* p_blob = blob_.ptr<Tout>() + k * blob_nch * wh + ch * wh;
+            Tout* p_blob = blob_.ptr<Tout>() + k * nch * wh + ch * wh;
             for (size_t i = 0; i < wh; ++i)
             {
                 p_blob[i] = (p_blob[i] - cur_mean) * cur_scale;
