@@ -2618,6 +2618,33 @@ TEST(Core_SolveCubic, regression_27323)
     }
 }
 
+TEST(Core_SolveCubic, regression_27748)
+{
+    // a is extremely small relative to others (approx 1.8e-19 ratio),
+    // causing instability in standard cubic formula.
+    double a = 1.56041e-17;
+    double b = 84.4504;
+    double c = -96.795;
+    double d = 13.6826;
+
+    Mat coeffs = (Mat_<double>(1, 4) << a, b, c, d);
+    Mat roots;
+
+    int n = solveCubic(coeffs, roots);
+
+    // Expecting quadratic behavior (2 roots)
+    EXPECT_GE(n, 2);
+
+    // Verify roots satisfy the FULL cubic equation
+    for(int i = 0; i < n; i++)
+    {
+        double x = roots.at<double>(i);
+        double val = a*x*x*x + b*x*x + c*x + d;
+        // Check residual is small
+        EXPECT_LE(fabs(val), 1e-6) << "Root " << x << " does not satisfy the equation";
+    }
+}
+
 TEST(Core_SolvePoly, regression_5599)
 {
     // x^4 - x^2 = 0, roots: 1, -1, 0, 0
