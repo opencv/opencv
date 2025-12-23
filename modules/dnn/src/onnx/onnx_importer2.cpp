@@ -1238,12 +1238,12 @@ void ONNXImporter2::parseGRU(LayerParams& layerParams, const opencv_onnx::NodePr
         {
             if (net.isConstArg(node_inputs[3])) {
                 Mat B = net.argTensor(node_inputs[3]);
-                
+
                 // CRITICAL SAFEGUARD: Clone to ensure contiguous memory, 
                 // then reshape to Row Vector (1 x N).
                 // Do not sum biases; OpenCV expects [W_b, R_b] concatenated.
                 B = B.clone().reshape(1, 1);
-                
+
                 layerParams.blobs.push_back(B);
             }
         }
