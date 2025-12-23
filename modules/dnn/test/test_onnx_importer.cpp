@@ -3188,6 +3188,11 @@ TEST_P(Test_ONNX_nets, VitTrack) {
     normAssert(ref_output3, outputs[2], "VitTrack output3");
 }
 
+TEST_P(Test_ONNX_nets, Swish)
+{
+    testONNXModels("swish");
+}
+
 TEST_P(Test_ONNX_layers, LayerNormNoFusion) {
     testONNXModels("layer_norm_no_fusion");
 }
