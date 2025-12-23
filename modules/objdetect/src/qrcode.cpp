@@ -2217,11 +2217,11 @@ bool QRDecode::straightenQRCodeInParts()
 
         vector<Point2f> perspective_points;
 
-        perspective_points.emplace_back(0.0, start_cut);
+        perspective_points.emplace_back(0.0f, start_cut);
         perspective_points.emplace_back(perspective_curved_size, start_cut);
 
         perspective_points.emplace_back(perspective_curved_size, start_cut + dist);
-        perspective_points.emplace_back(0.0, start_cut+dist);
+        perspective_points.emplace_back(0.0f, start_cut+dist);
 
         perspective_points.emplace_back(perspective_curved_size * 0.5f, start_cut + dist * 0.5f);
 
