@@ -1845,16 +1845,28 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
     // if hardware frame, copy it to system memory
     if (picture && picture->hw_frames_ctx) {
         sw_picture = av_frame_alloc();
+        if (!sw_picture) {
+            CV_LOG_ERROR(NULL, "av_frame_alloc failed");
+            return false;
+        }
         //if (av_hwframe_map(sw_picture, picture, AV_HWFRAME_MAP_READ) < 0) {
         if (av_hwframe_transfer_data(sw_picture, picture, 0) < 0) {
             CV_LOG_ERROR(NULL, "Error copying data from GPU to CPU (av_hwframe_transfer_data)");
+            av_frame_free(&sw_picture);
             return false;
         }
     }
 #endif
 
     if (!sw_picture || !sw_picture->data[0])
+    {
+#if USE_AV_HW_CODECS
+        if (sw_picture != picture)
+            av_frame_free(&sw_picture);
+#endif
+        CV_LOG_ERROR(NULL, "Picture does not contain data");
         return false;
+    }
 
 #if LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(56, 72, 0)
     const char* color_space_name = av_color_space_name(sw_picture->colorspace);
@@ -1905,7 +1917,14 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
 
         img_convert_ctx = sws_alloc_context();
         if (img_convert_ctx == NULL)
-            return false;//CV_Error(0, "Cannot initialize the conversion context!");
+        {
+            CV_LOG_ERROR(NULL, "Cannot initialize the conversion context!");
+#if USE_AV_HW_CODECS
+            if (sw_picture != picture)
+                av_frame_free(&sw_picture);
+#endif
+            return false;
+        }
 
         av_opt_set_int(img_convert_ctx, "sws_flags", SWS_BICUBIC, 0);
         av_opt_set_int(img_convert_ctx, "threads", requestedThreads, 0);
