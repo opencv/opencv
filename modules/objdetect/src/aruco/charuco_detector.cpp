@@ -316,8 +316,8 @@ struct CharucoDetector::CharucoDetectorImpl {
         CV_Assert((markerCorners.empty() && markerIds.empty() && !image.empty()) || (markerCorners.total() == markerIds.total()));
         vector<vector<Point2f>> tmpMarkerCorners;
         vector<int> tmpMarkerIds;
-        InputOutputArrayOfArrays _markerCorners = markerCorners.needed() ? markerCorners : tmpMarkerCorners;
-        InputOutputArray _markerIds = markerIds.needed() ? markerIds : tmpMarkerIds;
+        InputOutputArrayOfArrays _markerCorners = markerCorners.needed() ? markerCorners : _InputOutputArray(tmpMarkerCorners);
+        InputOutputArray _markerIds = markerIds.needed() ? markerIds : _InputOutputArray(tmpMarkerIds);
 
         if (markerCorners.empty() && markerIds.empty()) {
             vector<vector<Point2f> > rejectedMarkers;
@@ -341,8 +341,8 @@ struct CharucoDetector::CharucoDetectorImpl {
                               InputOutputArrayOfArrays markerCorners, InputOutputArray markerIds) {
         vector<vector<Point2f>> tmpMarkerCorners;
         vector<int> tmpMarkerIds;
-        InputOutputArrayOfArrays _markerCorners = markerCorners.needed() ? markerCorners : tmpMarkerCorners;
-        InputOutputArray _markerIds = markerIds.needed() ? markerIds : tmpMarkerIds;
+        InputOutputArrayOfArrays _markerCorners = markerCorners.needed() ? markerCorners : _InputOutputArray(tmpMarkerCorners);
+        InputOutputArray _markerIds = markerIds.needed() ? markerIds : _InputOutputArray(tmpMarkerIds);
         detectBoard(image, charucoCorners, charucoIds, _markerCorners, _markerIds);
         if (charucoParameters.checkMarkers && checkBoard(_markerCorners, _markerIds, charucoCorners, charucoIds) == false) {
             CV_LOG_DEBUG(NULL, "ChArUco board is built incorrectly");
@@ -402,8 +402,8 @@ void CharucoDetector::detectDiamonds(InputArray image, OutputArrayOfArrays _diam
 
     vector<vector<Point2f>> tmpMarkerCorners;
     vector<int> tmpMarkerIds;
-    InputOutputArrayOfArrays _markerCorners = inMarkerCorners.needed() ? inMarkerCorners : tmpMarkerCorners;
-    InputOutputArray _markerIds = inMarkerIds.needed() ? inMarkerIds : tmpMarkerIds;
+    InputOutputArrayOfArrays _markerCorners = inMarkerCorners.needed() ? inMarkerCorners : _InputOutputArray(tmpMarkerCorners);
+    InputOutputArray _markerIds = inMarkerIds.needed() ? inMarkerIds : _InputOutputArray(tmpMarkerIds);
     if (_markerCorners.empty() && _markerIds.empty()) {
         charucoDetectorImpl->arucoDetector.detectMarkers(image, _markerCorners, _markerIds);
     }
