@@ -2831,4 +2831,33 @@ TEST(ConvolutionWinograd, Accuracy)
     normAssert(outLarge, refLarge, "Large input after small", 0.0, 0.0);
 }
 
+TEST(Layer_SiLU, AliasOfSwish)
+{
+    using namespace cv;
+    using namespace cv::dnn;
+
+    Net net;
+
+    // Explicit SiLU layer (alias of Swish)
+    LayerParams lp;
+    lp.name = "silu";
+    lp.type = "SiLU";
+
+    net.addLayerToPrev(lp.name, lp.type, lp);
+
+    // Proper 4D input blob (NCHW)
+    int dims[] = {1, 1, 1, 1};
+    Mat input(4, dims, CV_32F, Scalar(1.0f));
+    net.setInput(input);
+
+    Mat output = net.forward();
+
+    // Expected: x * sigmoid(x)
+    float x = 1.0f;
+    float expected = x / (1.0f + std::exp(-x));
+
+    ASSERT_EQ(output.total(), 1u);
+    EXPECT_NEAR(output.at<float>(0), expected, 1e-6);
+}
+
 }} // namespace
