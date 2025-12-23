@@ -72,7 +72,17 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         if (backendId == DNN_BACKEND_CUDA)
-            return interpolation == "nearest" || interpolation == "bilinear" || interpolation == "opencv_linear";
+        {
+            // CUDA Resize supports only simple, static scale-based cases
+            if (!(interpolation == "nearest" || interpolation == "bilinear" || interpolation == "opencv_linear"))
+                return false;
+
+            // Reject ONNX Resize with dynamic or explicit sizes
+            if (scaleWidth <= 0 || scaleHeight <= 0)
+                return false;
+
+            return true;
+        }
 
         if (backendId == DNN_BACKEND_CANN)
             return interpolation == "nearest" || interpolation == "bilinear" || interpolation == "opencv_linear";
