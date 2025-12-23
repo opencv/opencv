@@ -2639,6 +2639,11 @@ TEST_P(Test_ONNX_layers, CumSum)
     testONNXModels("cumsum_3d_dim_2");
 }
 
+TEST_P(Test_ONNX_nets, Swish)
+{
+    testONNXModels("swish");
+}
+
 static void testYOLO(const std::string& weightPath, const std::vector<int>& refClassIds,
                      const std::vector<float>& refScores, const std::vector<Rect2d>& refBoxes,
                      Image2BlobParams imgParams, float conf_threshold = 0.3, float iou_threshold = 0.5,
