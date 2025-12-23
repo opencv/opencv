@@ -27,12 +27,12 @@ Theory
    The explanation below belongs to the book [Computer Vision: Algorithms and
     Applications](http://szeliski.org/Book/) by Richard Szeliski
 
-From our previous tutorial, we know already a bit of *Pixel operators*. An interesting dyadic
+From our previous tutorial, we already know a bit of *Pixel operators*. An interesting dyadic
 (two-input) operator is the *linear blend operator*:
 
 \f[g(x) = (1 - \alpha)f_{0}(x) + \alpha f_{1}(x)\f]
 
-By varying \f$\alpha\f$ from \f$0 \rightarrow 1\f$ this operator can be used to perform a temporal
+By varying \f$\alpha\f$ from \f$0 \rightarrow 1\f$, this operator can be used to perform a temporal
 *cross-dissolve* between two images or videos, as seen in slide shows and film productions (cool,
 eh?)
 
