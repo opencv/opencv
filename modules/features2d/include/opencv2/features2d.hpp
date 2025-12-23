@@ -769,9 +769,9 @@ public:
       CV_PROP_RW bool filterByConvexity;
       CV_PROP_RW float minConvexity, maxConvexity;
 
-      /** @brief Flag to enable contour collection. 
-      If set to true, the detector will store the contours of the detected blobs in memory, 
-      which can be retrieved after the detect() call using getBlobContours(). 
+      /** @brief Flag to enable contour collection.
+      If set to true, the detector will store the contours of the detected blobs in memory,
+      which can be retrieved after the detect() call using getBlobContours().
       @note Default value is false.
       */
       CV_PROP_RW bool collectContours;
@@ -789,8 +789,7 @@ public:
   CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 
   /** @brief Returns the contours of the blobs detected during the last call to detect().
-  
-  @note The @ref Params::collectContours parameter must be set to true before calling 
+  @note The @ref Params::collectContours parameter must be set to true before calling
   detect() for this method to return any data.
   */
   CV_WRAP virtual const std::vector<std::vector<cv::Point> >& getBlobContours() const;
