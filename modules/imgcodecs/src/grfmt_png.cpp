@@ -121,6 +121,12 @@
 #define mingw_getsp(...) 0
 #define __builtin_frame_address(...) 0
 
+static bool isLittleEndian()
+{
+    uint16_t x = 0x0001;
+    return *((uint8_t*)&x) != 0;
+}
+
 namespace cv
 {
 
@@ -1724,7 +1730,7 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
         if (animation.frames[i].channels() == 3)
             cvtColor(animation.frames[i], tmpframes[i], COLOR_BGR2RGB);
 
-        if (tmpframes[i].depth() == CV_16U)
+        if (tmpframes[i].depth() == CV_16U && isLittleEndian())
         {
             Mat& m = tmpframes[i];
             for (int y = 0; y < m.rows; ++y)
@@ -1854,7 +1860,7 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
             if (tmp.channels() > 2)
                 cvtColor(tmp, tmp, COLOR_BGRA2RGBA);
 
-            if (tmp.depth() == CV_16U)
+            if (tmp.depth() == CV_16U && isLittleEndian())
             {
                 for (int y = 0; y < tmp.rows; ++y)
                 {
@@ -1865,7 +1871,7 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
                     }
                 }
             }
-            
+
             apngFrame.setMat(tmp);
 
             deflateRectOp(apngFrame.getPixels(), x0, y0, w0, h0, bpp, rowbytes, zbuf_size, 0);
