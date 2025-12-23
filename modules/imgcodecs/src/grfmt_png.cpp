@@ -1697,6 +1697,8 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
     uint32_t bpp = (coltype == 6) ? 4 : (coltype == 2) ? 3
         : (coltype == 4) ? 2
         : 1;
+    if (animation.frames[0].depth() == CV_16U) 
+        bpp *= 2;
     uint32_t has_tcolor = (coltype >= 4 || (coltype <= 2 && trnssize)) ? 1 : 0;
     uint32_t tcolor = 0;
     uint32_t rowbytes = width * bpp;
@@ -1722,8 +1724,6 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
         if (animation.frames[i].channels() == 3)
             cvtColor(animation.frames[i], tmpframes[i], COLOR_BGR2RGB);
 
-        if (tmpframes[i].depth() != CV_8U)
-            tmpframes[i].convertTo(tmpframes[i], CV_8U, 1.0 / 255);
         apngFrame.setMat(tmpframes[i], animation.durations[i]);
 
         if (i > 0 && !getRect(width, height, frames.back().getPixels(), apngFrame.getPixels(), over1.data(), bpp, rowbytes, 0, 0, 0, 3))
@@ -1761,7 +1761,7 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
 
         png_save_uint_32(buf_IHDR, width);
         png_save_uint_32(buf_IHDR + 4, height);
-        buf_IHDR[8] = 8;
+        buf_IHDR[8] = (animation.frames[0].depth() == CV_16U) ? 16 : 8;
         buf_IHDR[9] = coltype;
         buf_IHDR[10] = 0;
         buf_IHDR[11] = 0;
@@ -1836,13 +1836,7 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
         {
             CV_Assert(animation.still_image.type() == animation.frames[0].type() && animation.still_image.size() == animation.frames[0].size());
             APNGFrame apngFrame;
-            Mat tmp;
-            if (animation.still_image.depth() == CV_16U)
-            {
-                animation.still_image.convertTo(tmp, CV_8U, 1.0 / 255);
-            }
-            else
-                tmp = animation.still_image;
+            Mat tmp = animation.still_image;
 
             if (tmp.channels() > 2)
                 cvtColor(tmp, tmp, COLOR_BGRA2RGBA);
