@@ -28,25 +28,32 @@ public:
                                  std::vector<MatShape> &outputs,
                                  std::vector<MatShape> &internals) const CV_OVERRIDE
     {
+        if (inputs.empty())
+            CV_Error(Error::StsBadArg, "Accum layer requires at least one input");
+        // Validate input dimensions
+        for (size_t i = 0; i < inputs.size(); ++i)
+        {
+            if (inputs[i].size() != 4)
+                CV_Error(Error::StsBadArg, "Accum layer supports only 4D inputs");
+        }
+
         std::vector<int> outShape;
         int batch = inputs[0][0];
         outShape.push_back(batch);
 
         if (have_reference)
         {
-            CV_Assert(inputs.size() >= 2);
+            if (inputs.size() < 2)
+                CV_Error(Error::StsBadArg, "Accum layer with reference requires at least 2 inputs");
             int totalchannels = 0;
-            for (int i = 0; i < inputs.size() - 1; i++) {
-                CV_Assert(inputs[i][0] == batch);
+            for (size_t i = 0; i < inputs.size() - 1; i++) {
+                if (inputs[i][0] != batch)
+                    CV_Error(Error::StsBadArg, "All inputs must have the same batch size in Accum layer");
                 totalchannels += inputs[i][1];
             }
             outShape.push_back(totalchannels);
-
-            int height = inputs.back()[2];
-            int width = inputs.back()[3];
-
-            outShape.push_back(height);
-            outShape.push_back(width);
+            outShape.push_back(inputs.back()[2]);
+            outShape.push_back(inputs.back()[3]);
         }
         else
         {
@@ -55,12 +62,13 @@ public:
             int totalchannels = 0;
 
             // Find largest blob size and count total channels
-            for (int i = 0; i < inputs.size(); ++i)
+            for (size_t i = 0; i < inputs.size(); ++i)
             {
+                if (inputs[i][0] != batch)
+                    CV_Error(Error::StsBadArg,"All inputs must have the same batch size in Accum layer");
                 totalchannels += inputs[i][1];
                 maxheight = std::max(maxheight, inputs[i][2]);
                 maxwidth = std::max(maxwidth, inputs[i][3]);
-                CV_Assert(inputs[i][0] == batch);
             }
             outShape.push_back(totalchannels);
 
