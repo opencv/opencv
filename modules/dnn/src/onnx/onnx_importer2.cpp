@@ -1196,55 +1196,59 @@ void ONNXImporter2::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodeP
 void ONNXImporter2::parseGRU(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "GRU";
+    layerParams.set("is_onnx", true);
+
+    String direction = layerParams.get<String>("direction", "forward");
+    layerParams.set("bidirectional", direction == "bidirectional");
+    layerParams.set("reverse", direction == "reverse");
+
+    if (layerParams.has("linear_before_reset")) {
+        layerParams.set("linear_before_reset", layerParams.get<int>("linear_before_reset"));
+    }
 
     int n_inputs = node_proto.input_size();
-    CV_Assert(n_inputs >= 3);
 
-    // Extract W (Input Weights)
-    if (!net.isConstArg(node_inputs[1]))
-        CV_Error(Error::StsNotImplemented, "GRU: Non-constant W (weights) are not supported");
-    Mat Wx = net.argTensor(node_inputs[1]);
-
-    // Extract R (Recurrent Weights)
-    if (!net.isConstArg(node_inputs[2]))
-        CV_Error(Error::StsNotImplemented, "GRU: Non-constant R (recurrent weights) are not supported");
-    Mat Wh = net.argTensor(node_inputs[2]);
-
-    // Extract B (Bias)
-    Mat b;
-    if (n_inputs >= 4 && !node_proto.input(3).empty())
+    if (n_inputs >= 3)
     {
-        if (!net.isConstArg(node_inputs[3]))
-             CV_Error(Error::StsNotImplemented, "GRU: Non-constant B (bias) is not supported");
-        b = net.argTensor(node_inputs[3]);
+        CV_Assert(net.isConstArg(node_inputs[1]));
+        CV_Assert(net.isConstArg(node_inputs[2]));
+
+        Mat W = net.argTensor(node_inputs[1]);
+        Mat R = net.argTensor(node_inputs[2]);
+
+        // 1. Reshape 3D -> 2D
+        if (W.dims == 3) W = W.reshape(0, W.size[0] * W.size[1]);
+        if (R.dims == 3) R = R.reshape(0, R.size[0] * R.size[1]);
+
+        // 2. CRITICAL: Push Recurrent (R) FIRST, then Input (W)
+        layerParams.blobs.push_back(R);
+        layerParams.blobs.push_back(W);
+
+        // 3. Infer hidden_size from R
+        if (!layerParams.has("hidden_size"))
+        {
+            int num_directions = (direction == "bidirectional") ? 2 : 1;
+            int total_rows = R.size[0];
+            int gate_size = total_rows / num_directions;
+            layerParams.set("hidden_size", gate_size / 3);
+        }
+
+        // 4. Bias Handling
+        if (n_inputs >= 4 && !node_proto.input(3).empty())
+        {
+            if (net.isConstArg(node_inputs[3])) {
+                Mat B = net.argTensor(node_inputs[3]);
+                
+                // CRITICAL SAFEGUARD: Clone to ensure contiguous memory, 
+                // then reshape to Row Vector (1 x N).
+                // Do not sum biases; OpenCV expects [W_b, R_b] concatenated.
+                B = B.clone().reshape(1, 1);
+                
+                layerParams.blobs.push_back(B);
+            }
+        }
     }
-
-    Mat h0;
-    if (n_inputs >= 6 && !node_proto.input(5).empty())
-    {
-         if (!net.isConstArg(node_inputs[5]))
-             CV_Error(Error::StsNotImplemented, "GRU: Non-constant initial_h is not supported");
-         h0 = net.argTensor(node_inputs[5]);
-    }
-
-    Wx = Wx.reshape(1, Wx.size[0] * Wx.size[1]);
-    Wh = Wh.reshape(1, Wh.size[0] * Wh.size[1]);
-
-    if (!b.empty())
-        b = b.reshape(1, b.size[0]);
-
-    if (!h0.empty())
-        h0 = h0.reshape(1, h0.size[0] * h0.size[1]);
-
-    layerParams.blobs.resize(4);
-    layerParams.blobs[0] = Wh;
-    layerParams.blobs[1] = Wx;
-    layerParams.blobs[2] = b;
-    layerParams.blobs[3] = h0;
-
-    layerParams.set("bidirectional", layerParams.get<String>("direction", "") == "bidirectional");
-
-    addLayer(layerParams, node_proto, 1);
+    addLayer(layerParams, node_proto);
 }
 
 void ONNXImporter2::parseImageScaler(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
