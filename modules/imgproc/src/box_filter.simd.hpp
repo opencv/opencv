@@ -303,20 +303,14 @@ struct Sum3x3 :
         r1 = v_add(r1,  v_add(a1, b1));
     }
     void inline loadRowAdd(const ET* src, int VECSZ,
-                           int cn, VFT &r0, VFT &r1, VFT &r0v1, VFT &r1v1, VFT &r0v2, VFT &r1v2, VFT &r0v3, VFT &r1v3)
+                           int cn, VFT &r0, VFT &r1, VFT &r0v1, VFT &r1v1)
     {
         VFT a0, a1, b0, b1;
         VFT a0v1, a1v1, b0v1, b1v1;
-        VFT a0v2, a1v2, b0v2, b1v2;
-        VFT a0v3, a1v3, b0v3, b1v3;
         loadRow(src, cn, a0, a1, b0, b1, r0, r1);
         loadRow(src+VECSZ, cn, a0v1, a1v1, b0v1, b1v1, r0v1, r1v1);
-        loadRow(src+(VECSZ*2), cn, a0v2, a1v2, b0v2, b1v2, r0v2, r1v2);
-        loadRow(src+(VECSZ*3), cn, a0v3, a1v3, b0v3, b1v3, r0v3, r1v3);
         addRow(a0, a1, b0, b1, r0, r1);
         addRow(a0v1, a1v1, b0v1, b1v1, r0v1, r1v1);
-        addRow(a0v2, a1v2, b0v2, b1v2, r0v2, r1v2);
-        addRow(a0v3, a1v3, b0v3, b1v3, r0v3, r1v3);
     }
     void inline scaleVal3x3(VFT &b0, const VFT &v_32768, const VFT &v_mulFactor)
     {
@@ -383,20 +377,18 @@ struct Sum3x3 :
         }
         const int VECSZ = VTraits<VET>::vlanes();
         const int VECSZ_2 = VECSZ << 1;
-        const int VECSZ_3 = VECSZ * 3;
-        const int VECSZ_4 = VECSZ << 2;
 
-        VFT b00, b01, b00v1, b01v1, b00v2, b01v2, b00v3, b01v3;
-        VFT b10, b11, b10v1, b11v1, b10v2, b11v2, b10v3, b11v3;
-        VFT b20, b21, b20v1, b21v1, b20v2, b21v2, b20v3, b21v3;
+        VFT b00, b01, b00v1, b01v1;
+        VFT b10, b11, b10v1, b11v1;
+        VFT b20, b21, b20v1, b21v1;
 
-        for (; x < len; x += (VECSZ_4))
+        for (; x < len; x += (VECSZ_2))
         {
-            if ( x > len - VECSZ_4 )
+            if ( x > len - VECSZ_2 )
             {
                 if (x == cn*xoffset || src == dst)
                     break;
-                x = len - VECSZ_4;
+                x = len - VECSZ_2;
             }
             int idst_ = idst;
             j = v;
@@ -405,8 +397,8 @@ struct Sum3x3 :
             const ET* src_2 = src_1 + src_inc;
 
             //row 0 and 1
-            loadRowAdd(src_0, VECSZ, cn, b00, b01, b00v1, b01v1, b00v2, b01v2, b00v3, b01v3 );
-            loadRowAdd(src_1, VECSZ, cn, b10, b11, b10v1, b11v1, b10v2, b11v2, b10v3, b11v3 );
+            loadRowAdd(src_0, VECSZ, cn, b00, b01, b00v1, b01v1);
+            loadRowAdd(src_1, VECSZ, cn, b10, b11, b10v1, b11v1);
 
             for (; j < maxRow; j++, idst_++)
             {
@@ -414,52 +406,31 @@ struct Sum3x3 :
                 dstx += x;
                 b00   = v_add(b00, b10);
                 b00v1 = v_add(b00v1, b10v1);
-                b00v2 = v_add(b00v2, b10v2);
-                b00v3 = v_add(b00v3, b10v3);
-
                 b01   = v_add(b01, b11);
                 b01v1 = v_add(b01v1, b11v1);
-                b01v2 = v_add(b01v2, b11v2);
-                b01v3 = v_add(b01v3, b11v3);
 
-                loadRowAdd(src_2, VECSZ, cn, b20, b21, b20v1, b21v1, b20v2, b21v2, b20v3, b21v3);
+                loadRowAdd(src_2, VECSZ, cn, b20, b21, b20v1, b21v1);
                 src_2 += src_inc;
 
                 b00   = v_add(b20, b00);
                 b00v1 = v_add(b20v1, b00v1);
-                b00v2 = v_add(b20v2, b00v2);
-                b00v3 = v_add(b20v3, b00v3);
                 b01   = v_add(b21, b01);
                 b01v1 = v_add(b21v1, b01v1);
-                b01v2 = v_add(b21v2, b01v2);
-                b01v3 = v_add(b21v3, b01v3);
+
                 if (SCALE_T==APPLY_SCALING)
                 {
                     scaleVal3x3(b00, v_32768, v_mulFactor);
                     scaleVal3x3(b00v1, v_32768, v_mulFactor);
-                    scaleVal3x3(b00v2, v_32768, v_mulFactor);
-                    scaleVal3x3(b00v3, v_32768, v_mulFactor);
                     scaleVal3x3(b01, v_32768, v_mulFactor);
                     scaleVal3x3(b01v1, v_32768, v_mulFactor);
-                    scaleVal3x3(b01v2, v_32768, v_mulFactor);
-                    scaleVal3x3(b01v3, v_32768, v_mulFactor);
                 }
                 v_store(dstx, v_pack(b00, b01));
                 v_store(dstx + VECSZ, v_pack(b00v1, b01v1));
-                v_store(dstx + VECSZ_2, v_pack(b00v2, b01v2));
-                v_store(dstx + VECSZ_3, v_pack(b00v3, b01v3));
 
                 b00 = b10; b01 = b11;
                 b10 = b20; b11 = b21;
-
                 b00v1 = b10v1; b01v1 = b11v1;
                 b10v1 = b20v1; b11v1 = b21v1;
-
-                b00v2 = b10v2; b01v2 = b11v2;
-                b10v2 = b20v2; b11v2 = b21v2;
-
-                b00v3 = b10v3; b01v3 = b11v3;
-                b10v3 = b20v3; b11v3 = b21v3;
             }
         }
 #endif
