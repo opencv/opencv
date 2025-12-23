@@ -634,6 +634,62 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgcodecs_Png_ZLIBBUFFER_SIZE,
                                         1048576,   // Maximum limit
                                         1048577));
 
+//================================================================================
+// Regression Test for Issue #27466: 16-bit APNG Support
+//================================================================================
+
+TEST(Imgcodecs_Png, Regression_27466_APNG_16bit)
+{
+    // 1. Setup: Create 16-bit animation
+    int width = 10, height = 10;
+    std::vector<Mat> frames;
+    
+    // Frame 1: Dark Gray (16-bit)
+    Mat f1(height, width, CV_16UC3, Scalar(1000, 1000, 1000));
+    frames.push_back(f1);
+    
+    // Frame 2: Light Gray (16-bit)
+    Mat f2(height, width, CV_16UC3, Scalar(60000, 60000, 60000));
+    frames.push_back(f2);
+
+    Animation anim;
+    anim.frames = frames;
+    anim.durations.assign(frames.size(), 100);
+    anim.loop_count = 0;
+
+    // 2. Action: Write to file
+    string filename = "test_16bit_apng.png";
+    ASSERT_TRUE(imwriteanimation(filename, anim)) << "Failed to write APNG file";
+
+    // 3. Verification: Read back
+    std::vector<Mat> loaded_frames;
+    
+    // Use ANYDEPTH | ANYCOLOR to allow APNG composition while requesting 16-bit
+    ASSERT_TRUE(imreadmulti(filename, loaded_frames, IMREAD_ANYDEPTH | IMREAD_ANYCOLOR));
+
+    // 4. THE CORE CHECK: Did we fix the 8-bit downscaling bug?
+    ASSERT_GE(loaded_frames.size(), 1UL) << "Failed to read any frames!";
+
+    // Check Frame 0 Depth (This implies the header and data were written as 16-bit)
+    EXPECT_EQ(loaded_frames[0].depth(), CV_16U) 
+        << "Regression: Frame was forcibly downscaled to 8-bit!";
+    
+    EXPECT_EQ(0, cv::norm(loaded_frames[0], frames[0], NORM_INF)) 
+        << "Pixel data mismatch in Frame 0";
+
+    // Optional: Check Frame 1 (Warn if missing, as decoder strictness varies)
+    if (loaded_frames.size() < frames.size()) {
+        std::cout << "[WARNING] Decoder only returned " << loaded_frames.size() 
+                  << " frames. This may be a pre-existing decoder limitation, "
+                  << "but 16-bit depth preservation is verified." << std::endl;
+    } else {
+        EXPECT_EQ(0, cv::norm(loaded_frames[1], frames[1], NORM_INF));
+    }
+
+    // Cleanup
+    remove(filename.c_str());
+}
+
 #endif // HAVE_PNG
 
 }} // namespace

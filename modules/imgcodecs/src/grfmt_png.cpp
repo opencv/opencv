@@ -1724,6 +1724,19 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
         if (animation.frames[i].channels() == 3)
             cvtColor(animation.frames[i], tmpframes[i], COLOR_BGR2RGB);
 
+        if (tmpframes[i].depth() == CV_16U)
+        {
+            Mat& m = tmpframes[i];
+            for (int y = 0; y < m.rows; ++y)
+            {
+                uint16_t* row = m.ptr<uint16_t>(y);
+                for (int x = 0; x < m.cols * m.channels(); ++x)
+                {
+                    row[x] = (uint16_t)((row[x] << 8) | (row[x] >> 8));
+                }
+            }
+        }
+
         apngFrame.setMat(tmpframes[i], animation.durations[i]);
 
         if (i > 0 && !getRect(width, height, frames.back().getPixels(), apngFrame.getPixels(), over1.data(), bpp, rowbytes, 0, 0, 0, 3))
@@ -1840,6 +1853,19 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
 
             if (tmp.channels() > 2)
                 cvtColor(tmp, tmp, COLOR_BGRA2RGBA);
+
+            if (tmp.depth() == CV_16U)
+            {
+                for (int y = 0; y < tmp.rows; ++y)
+                {
+                    uint16_t* row = tmp.ptr<uint16_t>(y);
+                    for (int x = 0; x < tmp.cols * tmp.channels(); ++x)
+                    {
+                        row[x] = (uint16_t)((row[x] << 8) | (row[x] >> 8));
+                    }
+                }
+            }
+            
             apngFrame.setMat(tmp);
 
             deflateRectOp(apngFrame.getPixels(), x0, y0, w0, h0, bpp, rowbytes, zbuf_size, 0);
