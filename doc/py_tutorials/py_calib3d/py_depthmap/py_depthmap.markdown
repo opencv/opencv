@@ -4,8 +4,7 @@ Depth Map from Stereo Images {#tutorial_py_depthmap}
 Goal
 ----
 
-In this session,
-    -   We will learn to create a depth map from stereo images.
+We will learn to create a depth map from stereo images.
 
 Basics
 ------
@@ -57,7 +56,10 @@ Below is a stereo view of the scene.
 
 Then, using the below code, we arrive at the following depth map.
 
-![image](images/depth_map.png)
+![image](images/depth_map_comparison.png)
+
+> **__Note:__**
+> OpenCV offers two stereo corespondence objects: `StereoBM` and `StereoSGBM`, which implement a block matching algorithm and a modified H. Hirschmuller algorithm respectively. StereoBM depends heavily on block size: a smaller block size will result in more detail and more noise in the disparity map than a large block size. StereoSGBM takes less influence from block size because it strives to minimize global energy cost across the image, not across blocks, which produces smoother disparity maps. StereoSGBM is more computationally expensive but it can be hardware-optimized. StereoBM is suitable for real-time applications but at the cost of a certain level of detail. As you can see in the above image, one drawback to the BM algorithm is that it struggles to calculate disparity on certain surface textures, which results in well defined object edges but gaps in their interiors. The following code example uses StereoSGBM. 
 
 The code includes multiple parameters and post processing steps that are essential for creating a clear depth map with minimal noise. These parameters must be tuned to each scene to get the optimal depth map. 
 
