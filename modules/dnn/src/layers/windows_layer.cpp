@@ -308,13 +308,25 @@ static void HammingWindowFill(Mat& out, int N, double N1, bool useDouble)
     }
 }
 
-class WindowLayerCommon
+template<typename BaseLayer>
+class WindowLayerImpl CV_FINAL : public BaseLayer
 {
 public:
-    WindowLayerCommon(int outputType_, int periodic_, WindowKind kind_)
-        : outputType(outputType_), periodic(periodic_), kind(kind_) {}
+    WindowLayerImpl(const LayerParams& params, WindowKind kind_)
+        : outputType(onnxDataTypeToCV(static_cast<OnnxDataType>(
+              params.get<int>("output_type", static_cast<int>(ONNX_FLOAT))))),
+          periodic(params.get<int>("periodic", 1)),
+          kind(kind_)
+    {
+        this->setParamsFrom(params);
+    }
 
-    bool dynamicOutputShapes() const
+    bool supportBackend(int backendId) CV_OVERRIDE
+    {
+        return backendId == DNN_BACKEND_OPENCV;
+    }
+
+    bool dynamicOutputShapes() const CV_OVERRIDE
     {
         return true;
     }
@@ -322,7 +334,7 @@ public:
     bool getMemoryShapes(const std::vector<MatShape>& inputs,
                          const int /*requiredOutputs*/,
                          std::vector<MatShape>& outputs,
-                         std::vector<MatShape>& internals) const
+                         std::vector<MatShape>& internals) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() == 1);
         outputs.assign(1, MatShape());
@@ -334,7 +346,7 @@ public:
                   const int requiredOutputs,
                   const int requiredInternals,
                   std::vector<MatType>& outputs,
-                  std::vector<MatType>& internals) const
+                  std::vector<MatType>& internals) const CV_OVERRIDE
     {
         int t = outputType;
         if (t < 0)
@@ -344,10 +356,18 @@ public:
         internals.assign(requiredInternals, MatType(-1));
     }
 
-    void forward(const String& name,
-                 int outputType_,
-                 InputArrayOfArrays inputs_arr,
-                 OutputArrayOfArrays outputs_arr) const
+    void forward(InputArrayOfArrays inputs_arr,
+                 OutputArrayOfArrays outputs_arr,
+                 OutputArrayOfArrays /*internals_arr*/) CV_OVERRIDE
+    {
+        forwardImpl(this->name, outputType, inputs_arr, outputs_arr);
+    }
+
+private:
+    void forwardImpl(const String& name,
+                     int outputType_,
+                     InputArrayOfArrays inputs_arr,
+                     OutputArrayOfArrays outputs_arr) const
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(layer_name, "name", name.c_str());
@@ -453,184 +473,24 @@ public:
         }
     }
 
-private:
     int outputType;
     int periodic;
     WindowKind kind;
 };
 
-class BlackmanWindowLayerImpl CV_FINAL : public BlackmanWindowLayer
-{
-public:
-    BlackmanWindowLayerImpl(const LayerParams& params)
-        : outputType(onnxDataTypeToCV(static_cast<OnnxDataType>(
-              params.get<int>("output_type", static_cast<int>(ONNX_FLOAT))))),
-          common(onnxDataTypeToCV(static_cast<OnnxDataType>(
-                    params.get<int>("output_type", static_cast<int>(ONNX_FLOAT)))),
-                 params.get<int>("periodic", 1),
-                 WindowKind::Blackman)
-    {
-        setParamsFrom(params);
-    }
-
-    bool supportBackend(int backendId) CV_OVERRIDE
-    {
-        return backendId == DNN_BACKEND_OPENCV;
-    }
-
-    bool dynamicOutputShapes() const CV_OVERRIDE
-    {
-        return common.dynamicOutputShapes();
-    }
-
-    bool getMemoryShapes(const std::vector<MatShape>& inputs,
-                         const int requiredOutputs,
-                         std::vector<MatShape>& outputs,
-                         std::vector<MatShape>& internals) const CV_OVERRIDE
-    {
-        return common.getMemoryShapes(inputs, requiredOutputs, outputs, internals);
-    }
-
-    void getTypes(const std::vector<MatType>& inputs,
-                  const int requiredOutputs,
-                  const int requiredInternals,
-                  std::vector<MatType>& outputs,
-                  std::vector<MatType>& internals) const CV_OVERRIDE
-    {
-        common.getTypes(inputs, requiredOutputs, requiredInternals, outputs, internals);
-    }
-
-    void forward(InputArrayOfArrays inputs_arr,
-                 OutputArrayOfArrays outputs_arr,
-                 OutputArrayOfArrays /*internals_arr*/) CV_OVERRIDE
-    {
-        common.forward(name, outputType, inputs_arr, outputs_arr);
-    }
-
-private:
-    int outputType;
-    WindowLayerCommon common;
-};
-
-class HannWindowLayerImpl CV_FINAL : public HannWindowLayer
-{
-public:
-    HannWindowLayerImpl(const LayerParams& params)
-        : outputType(onnxDataTypeToCV(static_cast<OnnxDataType>(
-              params.get<int>("output_type", static_cast<int>(ONNX_FLOAT))))),
-          common(onnxDataTypeToCV(static_cast<OnnxDataType>(
-                    params.get<int>("output_type", static_cast<int>(ONNX_FLOAT)))),
-                 params.get<int>("periodic", 1),
-                 WindowKind::Hann)
-    {
-        setParamsFrom(params);
-    }
-
-    bool supportBackend(int backendId) CV_OVERRIDE
-    {
-        return backendId == DNN_BACKEND_OPENCV;
-    }
-
-    bool dynamicOutputShapes() const CV_OVERRIDE
-    {
-        return common.dynamicOutputShapes();
-    }
-
-    bool getMemoryShapes(const std::vector<MatShape>& inputs,
-                         const int requiredOutputs,
-                         std::vector<MatShape>& outputs,
-                         std::vector<MatShape>& internals) const CV_OVERRIDE
-    {
-        return common.getMemoryShapes(inputs, requiredOutputs, outputs, internals);
-    }
-
-    void getTypes(const std::vector<MatType>& inputs,
-                  const int requiredOutputs,
-                  const int requiredInternals,
-                  std::vector<MatType>& outputs,
-                  std::vector<MatType>& internals) const CV_OVERRIDE
-    {
-        common.getTypes(inputs, requiredOutputs, requiredInternals, outputs, internals);
-    }
-
-    void forward(InputArrayOfArrays inputs_arr,
-                 OutputArrayOfArrays outputs_arr,
-                 OutputArrayOfArrays /*internals_arr*/) CV_OVERRIDE
-    {
-        common.forward(name, outputType, inputs_arr, outputs_arr);
-    }
-
-private:
-    int outputType;
-    WindowLayerCommon common;
-};
-
-class HammingWindowLayerImpl CV_FINAL : public HammingWindowLayer
-{
-public:
-    HammingWindowLayerImpl(const LayerParams& params)
-        : outputType(onnxDataTypeToCV(static_cast<OnnxDataType>(
-              params.get<int>("output_type", static_cast<int>(ONNX_FLOAT))))),
-          common(onnxDataTypeToCV(static_cast<OnnxDataType>(
-                    params.get<int>("output_type", static_cast<int>(ONNX_FLOAT)))),
-                 params.get<int>("periodic", 1),
-                 WindowKind::Hamming)
-    {
-        setParamsFrom(params);
-    }
-
-    bool supportBackend(int backendId) CV_OVERRIDE
-    {
-        return backendId == DNN_BACKEND_OPENCV;
-    }
-
-    bool dynamicOutputShapes() const CV_OVERRIDE
-    {
-        return common.dynamicOutputShapes();
-    }
-
-    bool getMemoryShapes(const std::vector<MatShape>& inputs,
-                         const int requiredOutputs,
-                         std::vector<MatShape>& outputs,
-                         std::vector<MatShape>& internals) const CV_OVERRIDE
-    {
-        return common.getMemoryShapes(inputs, requiredOutputs, outputs, internals);
-    }
-
-    void getTypes(const std::vector<MatType>& inputs,
-                  const int requiredOutputs,
-                  const int requiredInternals,
-                  std::vector<MatType>& outputs,
-                  std::vector<MatType>& internals) const CV_OVERRIDE
-    {
-        common.getTypes(inputs, requiredOutputs, requiredInternals, outputs, internals);
-    }
-
-    void forward(InputArrayOfArrays inputs_arr,
-                 OutputArrayOfArrays outputs_arr,
-                 OutputArrayOfArrays /*internals_arr*/) CV_OVERRIDE
-    {
-        common.forward(name, outputType, inputs_arr, outputs_arr);
-    }
-
-private:
-    int outputType;
-    WindowLayerCommon common;
-};
-
 Ptr<BlackmanWindowLayer> BlackmanWindowLayer::create(const LayerParams& params)
 {
-    return makePtr<BlackmanWindowLayerImpl>(params);
+    return makePtr<WindowLayerImpl<BlackmanWindowLayer>>(params, WindowKind::Blackman);
 }
 
 Ptr<HannWindowLayer> HannWindowLayer::create(const LayerParams& params)
 {
-    return makePtr<HannWindowLayerImpl>(params);
+    return makePtr<WindowLayerImpl<HannWindowLayer>>(params, WindowKind::Hann);
 }
 
 Ptr<HammingWindowLayer> HammingWindowLayer::create(const LayerParams& params)
 {
-    return makePtr<HammingWindowLayerImpl>(params);
+    return makePtr<WindowLayerImpl<HammingWindowLayer>>(params, WindowKind::Hamming);
 }
 
 }} // namespace cv::dnn
