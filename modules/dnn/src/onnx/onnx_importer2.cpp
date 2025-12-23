@@ -1236,7 +1236,8 @@ void ONNXImporter2::parseGRU(LayerParams& layerParams, const opencv_onnx::NodePr
         // 4. Bias Handling
         if (n_inputs >= 4 && !node_proto.input(3).empty())
         {
-            if (net.isConstArg(node_inputs[3])) {
+            if (net.isConstArg(node_inputs[3]))
+            {
                 Mat B = net.argTensor(node_inputs[3]);
 
                 // CRITICAL SAFEGUARD: Clone to ensure contiguous memory, 
