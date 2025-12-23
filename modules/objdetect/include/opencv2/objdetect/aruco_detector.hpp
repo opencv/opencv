@@ -57,6 +57,7 @@ struct CV_EXPORTS_W_SIMPLE DetectorParameters {
         useAruco3Detection = false;
         minSideLengthCanonicalImg = 32;
         minMarkerLengthRatioOriginalImg = 0.0;
+        validBitIdThreshold = 0.50;
     }
 
     /** @brief Read a new set of DetectorParameters from FileNode (use FileStorage.root()).
@@ -231,6 +232,9 @@ struct CV_EXPORTS_W_SIMPLE DetectorParameters {
 
     /// range [0,1], eq (2) from paper. The parameter tau_i has a direct influence on the processing speed.
     CV_PROP_RW float minMarkerLengthRatioOriginalImg;
+
+    /// range [0,1], define the acceptable threshold when comparing the detected marker to the dictionary during marker identification.
+    CV_PROP_RW float validBitIdThreshold;
 };
 
 /** @brief struct RefineParameters is used by ArucoDetector

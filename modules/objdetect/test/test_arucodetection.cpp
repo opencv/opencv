@@ -473,7 +473,7 @@ markerDetectionGT applyTemperingToMarkerCells(cv::Mat &marker,
                 ++cellsTempered;
 
                 // cell too tempered, no detection expected
-                if(cellTempConfig.cellRatioToTemper > 0.5f) {
+                if(cellTempConfig.cellRatioToTemper > params.validBitIdThreshold) {
                     if(isBorder){
                         ++borderErrors;
                     } else {
@@ -556,7 +556,7 @@ static void runArucoDetectionConfidence(ArucoAlgParams arucoAlgParam) {
     // make sure there are no bits have any detection errors
     params.maxErroneousBitsInBorderRate = 0.0;
     params.errorCorrectionRate = 0.0;
-    params.perspectiveRemovePixelPerCell = 8; // esnsure that there is enough resolution to properly handle distortions
+    params.perspectiveRemovePixelPerCell = 8; // ensure that there is enough resolution to properly handle distortions
     aruco::ArucoDetector detector(aruco::getPredefinedDictionary(aruco::DICT_6X6_250), params);
 
     const bool detectInvertedMarker = (arucoAlgParam == ArucoAlgParams::DETECT_INVERTED_MARKER);
@@ -673,6 +673,144 @@ static void runArucoDetectionConfidence(ArucoAlgParams arucoAlgParam) {
         }
     }
 }
+
+
+// Helper struc and functions for CV_ArucoDetectionUnc
+struct ArucoThresholdTestConfig {
+    MarkerTemperingConfig markerTemperingConfig; // Configuration of cells to invert (percentage, number and markerRegionToTemper)
+    float validBitIdThreshold;                   // range [0,1], define the acceptable threshold when comparing the detected marker to the dictionary during marker identification.
+    float perspectiveRemoveIgnoredMarginPerCell; // Width of the margin of pixels on each cell not considered for the marker identification
+    int markerBorderBits;                        // Number of bits of the marker border
+    float distortionRatio;                       // Percentage of offset used for perspective distortion, bigger means more distorted
+};
+
+/**
+ * @brief Test the param validBitIdThreshold
+ * Loops over a set of detector configurations (validBitIdThreshold, distortion, DetectorParameters such as markerBorderBits)
+ * For each configuration, it creates a synthetic image containing four markers arranged in a 2x2 grid.
+ * Each marker is generated with its own configuration (id, size, rotation).
+ * Make sure that markers are detected or not based on validBitIdThreshold and percentage of tempering.
+ * Finally, it runs the detector and checks that each marker is detected or not based on the threshold.
+ *
+ */
+static void runArucoDetectionThreshold(ArucoAlgParams arucoAlgParam) {
+
+    aruco::DetectorParameters params;
+    // make sure there are no bits have any detection errors
+    params.perspectiveRemovePixelPerCell = 20; // ensure that there is enough resolution to properly handle distortions
+    params.maxErroneousBitsInBorderRate = 0.f;
+    params.errorCorrectionRate = 0.f;
+    aruco::ArucoDetector detector(aruco::getPredefinedDictionary(aruco::DICT_5X5_250), params); // Max correction: 6bits
+
+    const bool detectInvertedMarker = (arucoAlgParam == ArucoAlgParams::DETECT_INVERTED_MARKER);
+
+    // define several detector configurations to test different settings
+    // {{MarkerTemperingConfig}, validBitIdThreshold, perspectiveRemoveIgnoredMarginPerCell, markerBorderBits, distortionRatio}
+
+    vector<ArucoThresholdTestConfig> detectorConfigs = {
+        // No tempering, expect detection for every threshold
+        {{0.f, 0, MarkerRegionToTemper::ALL}, 0.3f, 0.f, 1, 0.f},
+        {{0.f, 0, MarkerRegionToTemper::ALL}, 0.5f, 0.f, 1, 0.f},
+        {{0.f, 0, MarkerRegionToTemper::ALL}, 0.9f, 0.f, 1, 0.f},
+        // Include distortions
+        {{0.f, 0, MarkerRegionToTemper::ALL}, 0.3f, 0.f, 1, 0.05f},
+        {{0.f, 0, MarkerRegionToTemper::ALL}, 0.5f, 0.f, 1, 0.1f},
+        {{0.f, 0, MarkerRegionToTemper::ALL}, 0.9f, 0.f, 1, 0.2f},
+
+        // 20% temper, expect detection with threshold above 0.2
+        {{0.2f, 5, MarkerRegionToTemper::BORDER}, 0.30f, 0.f, 1, 0.f}, // Detection
+
+        {{0.2f, 1, MarkerRegionToTemper::BORDER}, 0.18f, 0.f, 1, 0.f}, // No detection
+        {{0.2f, 1, MarkerRegionToTemper::BORDER}, 0.18f, 0.f, 1, 0.f}, // No detection
+        {{0.2f, 10, MarkerRegionToTemper::INNER}, 0.22f, 0.f, 1, 0.f}, // Detection
+        {{0.2f, 1, MarkerRegionToTemper::INNER},  0.18f, 0.f, 1, 0.f}  // No detection
+
+        // distortions
+    };
+
+    // define marker configurations for the 4 markers in each image
+    const int markerSidePixels = 700; // To simplify the cell division, markerSidePixels is a multiple of 7. (5x5 dict + 2 border bits)
+    vector<MarkerCreationConfig> markerCreationConfig = {
+        {0, markerSidePixels, markerRot::ROT_90},     // {id, markerSidePixels, rotation}
+        {1, markerSidePixels, markerRot::ROT_270},
+        {2, markerSidePixels, markerRot::NONE},
+        {3, markerSidePixels, markerRot::ROT_180}
+    };
+
+    // loop over each detector configuration
+    for (size_t cfgIdx = 0; cfgIdx < detectorConfigs.size(); cfgIdx++) {
+        ArucoThresholdTestConfig detCfg = detectorConfigs[cfgIdx];
+
+        // update detector parameters
+        params.validBitIdThreshold =detCfg.validBitIdThreshold;
+        params.perspectiveRemoveIgnoredMarginPerCell = detCfg.perspectiveRemoveIgnoredMarginPerCell;
+        params.markerBorderBits = detCfg.markerBorderBits;
+        params.detectInvertedMarker = detectInvertedMarker;
+        detector.setDetectorParameters(params);
+
+        // create a blank image large enough to hold 4 markers in a 2x2 grid
+        const int margin = markerSidePixels / 2;
+        const int imageSize = (markerSidePixels * 2) + margin * 3;
+        Mat img(imageSize, imageSize, CV_8UC1, Scalar(255));
+
+        vector<markerDetectionGT> groundTruths;
+        const aruco::Dictionary &dictionary = detector.getDictionary();
+
+        // place each marker into the image
+        for (int row = 0; row < 2; row++) {
+            for (int col = 0; col < 2; col++) {
+                int index = row * 2 + col;
+                MarkerCreationConfig markerCfg = markerCreationConfig[index];
+                // adjust marker id to be unique for each detector configuration
+                markerCfg.id += static_cast<int>(cfgIdx * markerCreationConfig.size());
+
+                // generate img
+                Mat markerImg;
+                markerDetectionGT gt = generateTemperedMarkerImage(markerImg, markerCfg, detCfg.markerTemperingConfig, params, dictionary, detCfg.distortionRatio);
+
+                groundTruths.push_back(gt);
+
+                // place marker in the image
+                Point2f topLeft(margin + col * (markerSidePixels + margin),
+                                margin + row * (markerSidePixels + margin));
+                placeMarker(img, markerImg, topLeft);
+            }
+        }
+
+        // if testing inverted markers globally, invert the whole image
+        if (detectInvertedMarker) {
+            bitwise_not(img, img);
+        }
+
+        // run detection.
+        vector<vector<Point2f>> corners, rejected;
+        vector<int> ids;
+        vector<float> markerConfidence;
+        detector.detectMarkersWithConfidence(img, corners, ids, markerConfidence, rejected);
+
+        ASSERT_EQ(ids.size(), corners.size());
+        ASSERT_EQ(ids.size(), markerConfidence.size());
+
+        std::map<int, float> confidenceById;
+        for (size_t i = 0; i < ids.size(); i++) {
+            confidenceById[ids[i]] = markerConfidence[i];
+        }
+
+        // verify that every marker is detected and its confidence is within tolerance
+        for (const auto& currentGT : groundTruths) {
+            const auto it = confidenceById.find(currentGT.id);
+            const bool detected = it != confidenceById.end();
+            EXPECT_EQ(currentGT.expectDetection, detected)
+                << "Marker id: " << currentGT.id << " (detector config " << cfgIdx << ")";
+
+            if (currentGT.expectDetection && detected) {
+                EXPECT_NEAR(currentGT.confidence, it->second, 0.05)
+                    << "Marker id: " << currentGT.id << " (detector config " << cfgIdx << ")";
+            }
+        }
+    }
+}
+
 
 /**
  * @brief Check max and min size in marker detection parameters
@@ -979,6 +1117,14 @@ TEST(CV_InvertedFlagArucoDetectionConfidence, algorithmic) {
         EXPECT_GT(confInvertedFlag, 0.8f) << "Marker id: " << id;
         EXPECT_NEAR(confDefault, confInvertedFlag, 0.2f) << "Marker id: " << id;
     }
+}
+
+TEST(CV_ArucoDetectionThreshold, algorithmic) {
+    runArucoDetectionThreshold(ArucoAlgParams::USE_DEFAULT);
+}
+
+TEST(CV_InvertedArucoDetectionThreshold, algorithmic) {
+    runArucoDetectionThreshold(ArucoAlgParams::DETECT_INVERTED_MARKER);
 }
 
 TEST(CV_ArucoDetectMarkers, regression_3192)
