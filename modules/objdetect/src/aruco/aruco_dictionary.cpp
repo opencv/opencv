@@ -73,7 +73,7 @@ void Dictionary::writeDictionary(FileStorage& fs, const String &name)
 }
 
 
-bool Dictionary::identify(const Mat &onlyBits, int &idx, int &rotation, double maxCorrectionRate, float validBitIdThreshold) const {
+bool Dictionary::identify(const Mat &onlyBits, CV_OUT int &idx, CV_OUT int &rotation, double maxCorrectionRate, float validBitIdThreshold) const {
     CV_Assert(onlyBits.rows == markerSize && onlyBits.cols == markerSize);
 
     int maxCorrectionRecalculed = int(double(maxCorrectionBits) * maxCorrectionRate);
