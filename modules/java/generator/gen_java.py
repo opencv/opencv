@@ -110,6 +110,10 @@ ManualFuncs = {}
 # { class : { func : { arg_name : {"ctype" : ctype, "attrib" : [attrib]} } } }
 func_arg_fix = {}
 
+# Override type names obtained from C++ code parsing with specified type names in add_class() and FuncInfo.__init__()
+# { original_type_name : new_type_name }
+type_override = {}
+
 def read_contents(fname):
     with open(fname, 'r') as f:
         data = f.read()
@@ -230,6 +234,13 @@ def normalize_class_name(name):
 
 def get_cname(name):
     return name.replace(".", "::")
+
+def apply_type_override(type_name):
+    if type_name in type_override:
+        new_type_name = type_override[type_name]
+        logging.info("TYPE_OVERRIDE: %s -> %s", type_name, new_type_name)
+        return new_type_name
+    return type_name
 
 def cast_from(t):
     if t in type_dict and "cast_from" in type_dict[t]:
@@ -428,12 +439,16 @@ class FuncInfo(GeneralInfo):
 
         self.static = ["","static"][ "/S" in decl[2] ]
         self.ctype = re.sub(r"^CvTermCriteria", "TermCriteria", decl[1] or "")
+        # Apply type override to return type
+        self.ctype = apply_type_override(self.ctype)
         self.args = []
         func_fix_map = func_arg_fix.get(self.jname, {})
         for a in decl[3]:
             arg = a[:]
             arg_fix_map = func_fix_map.get(arg[1], {})
             arg[0] = arg_fix_map.get('ctype',  arg[0]) #fixing arg type
+            # Apply type override to argument type
+            arg[0] = apply_type_override(arg[0])
             arg[3] = arg_fix_map.get('attrib', arg[3]) #fixing arg attrib
             if arg[0] == 'dnn_Net':
                 arg[0] = 'Net'
@@ -472,6 +487,9 @@ class JavaWrapperGenerator(object):
         if classinfo.name in class_ignore_list:
             logging.info('ignored: %s', classinfo)
             return
+        # Apply type override
+        classinfo.name = apply_type_override(classinfo.name)
+        classinfo.jname = apply_type_override(classinfo.jname)
         name = classinfo.name
         if self.isWrapped(name) and not classinfo.base:
             logging.warning('duplicated: %s', classinfo)
@@ -1534,6 +1552,7 @@ if __name__ == "__main__":
             ManualFuncs.update(gen_type_dict.get("ManualFuncs", {}))
             func_arg_fix.update(gen_type_dict.get("func_arg_fix", {}))
             namespaces_dict.update(gen_type_dict.get("namespaces_dict", {}))
+            type_override.update(gen_type_dict.get("type_override", {}))
             if 'module_j_code' in gen_type_dict:
                 module_j_code = read_contents(checkFileRemap(os.path.join(misc_location, gen_type_dict['module_j_code'])))
             if 'module_jn_code' in gen_type_dict:
