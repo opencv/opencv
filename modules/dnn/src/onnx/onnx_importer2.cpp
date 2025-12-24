@@ -1425,8 +1425,23 @@ void ONNXImporter2::parseConvTranspose(LayerParams& layerParams, const opencv_on
     }
 
     if (!layerParams.has("kernel_size"))
-        CV_Error(Error::StsNotImplemented,
-                 "Required attribute 'kernel_size' is not present.");
+    {
+        if (!layerParams.blobs.empty())
+        {
+            const Mat& weights = layerParams.blobs[0];
+            std::vector<int> kernel_size;
+            for (int i = 2; i < weights.dims; i++)
+            {
+                kernel_size.push_back(weights.size[i]);
+            }
+            layerParams.set("kernel_size", DictValue::arrayInt(kernel_size.data(), kernel_size.size()));
+        }
+        else
+        {
+            CV_Error(Error::StsNotImplemented,
+                     "Required attribute 'kernel_size' is not present.");
+        }
+    }
 
     if (layerParams.has("output_shape"))
     {
@@ -1455,6 +1470,11 @@ void ONNXImporter2::parseConvTranspose(LayerParams& layerParams, const opencv_on
     else if (layerParams.has("output_padding"))
     {
         replaceLayerParam(layerParams, "output_padding", "adj");
+        DictValue adj = layerParams.get("adj");
+        if (adj.size() == 2) {
+            layerParams.set("adj_h", adj.get<int>(0));
+            layerParams.set("adj_w", adj.get<int>(1));
+        }
     }
     addLayer(layerParams, node_proto, n_inputs);
 }
