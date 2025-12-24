@@ -578,7 +578,7 @@ TEST_F(fisheyeTest, Calibration)
     cv::FileStorage fs_left(left_file, cv::FileStorage::READ);
     if (!fs_left.isOpened())
     {
-        GTEST_SKIP() << "Test data not found at: " << left_file << "\n"
+        FAIL() << "Test data not found at: " << left_file << "\n"
                     << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata\n"
                     << "See https://github.com/opencv/opencv_extra for test data repository";
     }
@@ -591,7 +591,7 @@ TEST_F(fisheyeTest, Calibration)
     cv::FileStorage fs_object(object_file, cv::FileStorage::READ);
     if (!fs_object.isOpened())
     {
-        GTEST_SKIP() << "Test data not found at: " << object_file << "\n"
+        FAIL() << "Test data not found at: " << object_file << "\n"
                     << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata";
     }
 
@@ -626,7 +626,7 @@ TEST_F(fisheyeTest, CalibrationWithFixedFocalLength)
     cv::FileStorage fs_left(left_file, cv::FileStorage::READ);
     if (!fs_left.isOpened())
     {
-        GTEST_SKIP() << "Test data not found at: " << left_file << "\n"
+        FAIL() << "Test data not found at: " << left_file << "\n"
                     << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata\n"
                     << "See https://github.com/opencv/opencv_extra for test data repository";
     }
@@ -639,7 +639,7 @@ TEST_F(fisheyeTest, CalibrationWithFixedFocalLength)
     cv::FileStorage fs_object(object_file, cv::FileStorage::READ);
     if (!fs_object.isOpened())
     {
-        GTEST_SKIP() << "Test data not found at: " << object_file << "\n"
+        FAIL() << "Test data not found at: " << object_file << "\n"
                     << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata";
     }
 
@@ -686,7 +686,7 @@ TEST_F(fisheyeTest, Homography)
     cv::FileStorage fs_left(left_file, cv::FileStorage::READ);
     if (!fs_left.isOpened())
     {
-        GTEST_SKIP() << "Test data not found at: " << left_file << "\n"
+        FAIL() << "Test data not found at: " << left_file << "\n"
                     << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata\n"
                     << "See https://github.com/opencv/opencv_extra for test data repository";
     }
@@ -699,7 +699,7 @@ TEST_F(fisheyeTest, Homography)
     cv::FileStorage fs_object(object_file, cv::FileStorage::READ);
     if (!fs_object.isOpened())
     {
-        GTEST_SKIP() << "Test data not found at: " << object_file << "\n"
+        FAIL() << "Test data not found at: " << object_file << "\n"
                     << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata";
     }
 
@@ -760,7 +760,7 @@ TEST_F(fisheyeTest, EstimateUncertainties)
     cv::FileStorage fs_left(left_file, cv::FileStorage::READ);
     if (!fs_left.isOpened())
     {
-        GTEST_SKIP() << "Test data not found at: " << left_file << "\n"
+        FAIL() << "Test data not found at: " << left_file << "\n"
                     << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata\n"
                     << "See https://github.com/opencv/opencv_extra for test data repository";
     }
@@ -773,7 +773,7 @@ TEST_F(fisheyeTest, EstimateUncertainties)
     cv::FileStorage fs_object(object_file, cv::FileStorage::READ);
     if (!fs_object.isOpened())
     {
-        GTEST_SKIP() << "Test data not found at: " << object_file << "\n"
+        FAIL() << "Test data not found at: " << object_file << "\n"
                     << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata";
     }
 
@@ -938,7 +938,7 @@ TEST_F(fisheyeTest, stereoCalibrate)
     cv::FileStorage fs_left(left_file, cv::FileStorage::READ);
     if (!fs_left.isOpened())
     {
-        GTEST_SKIP() << "Test data not found at: " << left_file << "\n"
+        FAIL() << "Test data not found at: " << left_file << "\n"
                     << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata\n"
                     << "See https://github.com/opencv/opencv_extra for test data repository";
     }
@@ -951,7 +951,7 @@ TEST_F(fisheyeTest, stereoCalibrate)
     cv::FileStorage fs_right(right_file, cv::FileStorage::READ);
     if (!fs_right.isOpened())
     {
-        GTEST_SKIP() << "Test data not found at: " << right_file << "\n"
+        FAIL() << "Test data not found at: " << right_file << "\n"
                     << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata\n"
                     << "See https://github.com/opencv/opencv_extra for test data repository";
     }
@@ -964,7 +964,7 @@ TEST_F(fisheyeTest, stereoCalibrate)
     cv::FileStorage fs_object(object_file, cv::FileStorage::READ);
     if (!fs_object.isOpened())
     {
-        GTEST_SKIP() << "Test data not found at: " << object_file << "\n"
+        FAIL() << "Test data not found at: " << object_file << "\n"
                     << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata";
     }
 
@@ -1025,7 +1025,7 @@ TEST_F(fisheyeTest, stereoCalibrateFixIntrinsic)
     cv::FileStorage fs_left(left_file, cv::FileStorage::READ);
     if (!fs_left.isOpened())
     {
-        GTEST_SKIP() << "Test data not found at: " << left_file << "\n"
+        FAIL() << "Test data not found at: " << left_file << "\n"
                     << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata\n"
                     << "See https://github.com/opencv/opencv_extra for test data repository";
     }
@@ -1038,7 +1038,7 @@ TEST_F(fisheyeTest, stereoCalibrateFixIntrinsic)
     cv::FileStorage fs_right(right_file, cv::FileStorage::READ);
     if (!fs_right.isOpened())
     {
-        GTEST_SKIP() << "Test data not found at: " << right_file << "\n"
+        FAIL() << "Test data not found at: " << right_file << "\n"
                     << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata\n"
                     << "See https://github.com/opencv/opencv_extra for test data repository";
     }
@@ -1051,7 +1051,7 @@ TEST_F(fisheyeTest, stereoCalibrateFixIntrinsic)
     cv::FileStorage fs_object(object_file, cv::FileStorage::READ);
     if (!fs_object.isOpened())
     {
-        GTEST_SKIP() << "Test data not found at: " << object_file << "\n"
+        FAIL() << "Test data not found at: " << object_file << "\n"
                     << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata";
     }
 
@@ -1149,7 +1149,7 @@ TEST_F(fisheyeTest, stereoCalibrateWithPerViewTransformations)
     cv::FileStorage fs_left(left_file, cv::FileStorage::READ);
     if (!fs_left.isOpened())
     {
-        GTEST_SKIP() << "Test data not found at: " << left_file << "\n"
+        FAIL() << "Test data not found at: " << left_file << "\n"
                     << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata\n"
                     << "See https://github.com/opencv/opencv_extra for test data repository";
     }
@@ -1162,7 +1162,7 @@ TEST_F(fisheyeTest, stereoCalibrateWithPerViewTransformations)
     cv::FileStorage fs_right(right_file, cv::FileStorage::READ);
     if (!fs_right.isOpened())
     {
-        GTEST_SKIP() << "Test data not found at: " << right_file << "\n"
+        FAIL() << "Test data not found at: " << right_file << "\n"
                     << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata\n"
                     << "See https://github.com/opencv/opencv_extra for test data repository";
     }
@@ -1175,7 +1175,7 @@ TEST_F(fisheyeTest, stereoCalibrateWithPerViewTransformations)
     cv::FileStorage fs_object(object_file, cv::FileStorage::READ);
     if (!fs_object.isOpened())
     {
-        GTEST_SKIP() << "Test data not found at: " << object_file << "\n"
+        FAIL() << "Test data not found at: " << object_file << "\n"
                     << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata";
     }
 
