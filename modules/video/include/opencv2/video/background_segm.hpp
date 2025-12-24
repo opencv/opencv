@@ -117,7 +117,7 @@ public:
     CV_WRAP virtual int getNMixtures() const = 0;
     /** @brief Sets the number of gaussian components in the background model.
 
-    The model needs to be reinitalized to reserve memory.
+    The model needs to be reinitialized to reserve memory.
     */
     CV_WRAP virtual void setNMixtures(int nmixtures) = 0;//needs reinitialization!
 
@@ -268,7 +268,7 @@ public:
     CV_WRAP virtual int getNSamples() const = 0;
     /** @brief Sets the number of data samples in the background model.
 
-    The model needs to be reinitalized to reserve memory.
+    The model needs to be reinitialized to reserve memory.
     */
     CV_WRAP virtual void setNSamples(int _nN) = 0;//needs reinitialization!
 
