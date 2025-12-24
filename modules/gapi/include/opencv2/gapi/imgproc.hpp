@@ -217,7 +217,7 @@ namespace imgproc {
                 GAPI_Assert (in.depth == CV_32S || in.depth == CV_32F);
                 int amount = detail::checkVector(in, 2u);
                 GAPI_Assert(amount != -1 &&
-                            "Input Mat can't be described as vector of 2-dimentional points");
+                            "Input Mat can't be described as vector of 2-dimensional points");
             }
             return empty_gopaque_desc();
         }
@@ -242,7 +242,7 @@ namespace imgproc {
         static GOpaqueDesc outMeta(GMatDesc in,DistanceTypes,double,double,double) {
             int amount = detail::checkVector(in, 2u);
             GAPI_Assert(amount != -1 &&
-                        "Input Mat can't be described as vector of 2-dimentional points");
+                        "Input Mat can't be described as vector of 2-dimensional points");
             return empty_gopaque_desc();
         }
     };
@@ -276,7 +276,7 @@ namespace imgproc {
         static GOpaqueDesc outMeta(GMatDesc in,int,double,double,double) {
             int amount = detail::checkVector(in, 3u);
             GAPI_Assert(amount != -1 &&
-                        "Input Mat can't be described as vector of 3-dimentional points");
+                        "Input Mat can't be described as vector of 3-dimensional points");
             return empty_gopaque_desc();
         }
     };
@@ -1235,7 +1235,7 @@ weights \f$w_i\f$ are adjusted to be inversely proportional to \f$\rho(r_i)\f$ .
 
 @note
  - Function textual ID is "org.opencv.imgproc.shape.fitLine2DMat"
- - In case of an N-dimentional points' set given, Mat should be 2-dimensional, have a single row
+ - In case of an N-dimensional points' set given, Mat should be 2-dimensional, have a single row
 or column if there are N channels, or have N columns if there is a single channel.
 
 @param src Input set of 2D points stored in one of possible containers: Mat,
@@ -1307,7 +1307,7 @@ weights \f$w_i\f$ are adjusted to be inversely proportional to \f$\rho(r_i)\f$ .
 
 @note
  - Function textual ID is "org.opencv.imgproc.shape.fitLine3DMat"
- - In case of an N-dimentional points' set given, Mat should be 2-dimensional, have a single row
+ - In case of an N-dimensional points' set given, Mat should be 2-dimensional, have a single row
 or column if there are N channels, or have N columns if there is a single channel.
 
 @param src Input set of 3D points stored in one of possible containers: Mat,

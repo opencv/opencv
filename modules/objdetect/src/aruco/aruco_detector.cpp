@@ -125,7 +125,7 @@ static void _threshold(InputArray _in, OutputArray _out, int winSize, double con
 
 
 /**
-  * @brief Given a tresholded image, find the contours, calculate their polygonal approximation
+  * @brief Given a thresholded image, find the contours, calculate their polygonal approximation
   * and take those that accomplish some conditions
   */
 static void _findMarkerContours(const Mat &in, vector<vector<Point2f> > &candidates,
