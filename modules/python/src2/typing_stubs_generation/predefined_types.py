@@ -51,6 +51,11 @@ _PREDEFINED_TYPES = (
         export_name="MatLike"
     ),
     AliasTypeNode.sequence_("MatShape", PrimitiveTypeNode.int_()),
+    # CUDA ND helpers
+    AliasTypeNode.sequence_("SizeArray", PrimitiveTypeNode.int_(),
+                            doc="Variable-length array of ints representing N-D shape"),
+    AliasTypeNode.sequence_("StepArray", PrimitiveTypeNode.int_(),
+                            doc="Variable-length array of strides (bytes) for N-D tensors"),
     AliasTypeNode.sequence_("Size", PrimitiveTypeNode.int_(),
                             doc="Required length is 2"),
     AliasTypeNode.sequence_("Size2f", PrimitiveTypeNode.float_(),
