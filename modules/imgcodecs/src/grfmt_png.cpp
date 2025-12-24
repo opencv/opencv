@@ -1570,6 +1570,77 @@ bool PngEncoder::getRect(uint32_t w, uint32_t h, unsigned char* pimage1, unsigne
                 *pc++ = c2;
             }
     }
+    else if (bpp == 6)
+    {
+        unsigned short* pa = (unsigned short*)pimage1;
+        unsigned short* pb = (unsigned short*)pimage2;
+        unsigned short* pc = (unsigned short*)ptemp;
+
+        for (j = 0; j < h; j++)
+            for (i = 0; i < w; i++)
+            {
+                unsigned short r1 = pa[0], g1 = pa[1], b1 = pa[2];
+                unsigned short r2 = pb[0], g2 = pb[1], b2 = pb[2];
+                bool diff = (r1 != r2 || g1 != g2 || b1 != b2);
+                if (diff)
+                {
+                    diffnum++;
+                    if (has_tcolor)
+                        over_is_possible = 0;
+                    if (i < x_min) 
+                        x_min = i;
+                    if (i > x_max) 
+                        x_max = i;
+                    if (j < y_min) 
+                        y_min = j;
+                    if (j > y_max) 
+                        y_max = j;
+                }
+                else
+                {
+                    r2 = 0; g2 = 0; b2 = 0;
+                }
+
+                pc[0] = r2; pc[1] = g2; pc[2] = b2;  
+                pa += 3; pb += 3; pc += 3;
+            }
+    }
+    else if (bpp == 8)
+    {
+        unsigned short* pa = (unsigned short*)pimage1;
+        unsigned short* pb = (unsigned short*)pimage2;
+        unsigned short* pc = (unsigned short*)ptemp;
+
+        for (j = 0; j < h; j++)
+            for (i = 0; i < w; i++)
+            {
+                unsigned short r1 = pa[0], g1 = pa[1], b1 = pa[2], a1 = pa[3];
+                unsigned short r2 = pb[0], g2 = pb[1], b2 = pb[2], a2 = pb[3];
+                bool diff = (r1 != r2 || g1 != g2 || b1 != b2 || a1 != a2);
+                bool visible = (a1 != 0 || a2 != 0);
+                if (diff && visible)
+                {
+                    diffnum++;
+                    if (a2 != 0xFFFF)
+                        over_is_possible = 0;
+                    if (i < x_min) 
+                        x_min = i;
+                    if (i > x_max) 
+                        x_max = i;
+                    if (j < y_min) 
+                        y_min = j;
+                    if (j > y_max) 
+                        y_max = j;
+                }
+                else 
+                {
+                    r2 = 0; g2 = 0; b2 = 0; a2 = 0;
+                }
+                
+                pc[0] = r2; pc[1] = g2; pc[2] = b2; pc[3] = a2;
+                pa += 4; pb += 4; pc += 4;
+            }
+    }
 
     if (diffnum == 0)
     {
