@@ -95,6 +95,17 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<ConstantOfShapeLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS RandomNormalLikeLayer : public Layer
+    {
+    public:
+        static Ptr<Layer> create(const LayerParams& params);
+
+        float mean;
+        float scale;
+        bool has_seed;
+        float seed;
+    };
+
     //! LSTM recurrent layer
     class CV_EXPORTS LSTMLayer : public Layer
     {
@@ -1313,6 +1324,24 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<SizeLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS BlackmanWindowLayer : public Layer
+    {
+    public:
+        static Ptr<BlackmanWindowLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS HannWindowLayer : public Layer
+    {
+    public:
+        static Ptr<HannWindowLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS HammingWindowLayer : public Layer
+    {
+    public:
+        static Ptr<HammingWindowLayer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS DetLayer : public Layer
     {
     public:
@@ -1542,6 +1571,13 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         static Ptr<TopK2Layer> create(const LayerParams &params);
+    };
+
+
+    class CV_EXPORTS RMSNormLayer : public Layer
+    {
+    public:
+        static Ptr<RMSNormLayer> create(const LayerParams& params);
     };
 
 //! @}

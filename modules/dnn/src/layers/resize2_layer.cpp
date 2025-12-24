@@ -53,6 +53,16 @@ enum class NearestMode {
     ROUND_PREFER_FLOOR
 };
 
+#if __cplusplus < 201703L
+template<typename T>
+static T clamp(T d, T min, T max)
+{
+    return std::min(std::max(d, min), max);
+}
+#else
+#define clamp std::clamp
+#endif
+
 static inline NearestMode parseNearestMode(const String& s)
 {
     if (s == "floor") return NearestMode::FLOOR;
@@ -106,7 +116,7 @@ static inline void buildNearestIndexMap(std::vector<int>& map,
         } else {
             idx = (abs(frac - 0.5f) <= eps) ? f : cvRound(src);
         }
-        return std::clamp(idx, 0, inLen - 1);
+        return clamp(idx, 0, inLen - 1);
     };
 
     map.resize(outLen);
@@ -168,7 +178,7 @@ static inline void buildBilinearIndexAndLerp(std::vector<int>& i0,
             src = std::min(std::max(src, 0.f), float(inLen - 1) - 1e-6f);
             int base = int(std::floor(src));
             i0[o] = base;
-            i1[o] = std::clamp(base + 1, 0, inLen - 1);
+            i1[o] = clamp(base + 1, 0, inLen - 1);
             frac[o] = src - float(base);
         }
     }
@@ -215,7 +225,7 @@ static inline void buildCubicIndexAndWeights(std::vector<std::array<int,4>>& ids
         {
             for (int k = -1; k <= 2; ++k)
             {
-                int idx = std::clamp(i + k, 0, inLen - 1);
+                int idx = clamp(i + k, 0, inLen - 1);
                 ids[o][k+1] = idx;
                 sw += weights[o][k+1];
             }

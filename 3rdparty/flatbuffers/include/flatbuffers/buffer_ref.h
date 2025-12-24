@@ -27,23 +27,24 @@ namespace flatbuffers {
 // A BufferRef does not own its buffer.
 struct BufferRefBase {};  // for std::is_base_of
 
-template<typename T> struct BufferRef : BufferRefBase {
+template <typename T>
+struct BufferRef : BufferRefBase {
   BufferRef() : buf(nullptr), len(0), must_free(false) {}
-  BufferRef(uint8_t *_buf, uoffset_t _len)
+  BufferRef(uint8_t* _buf, uoffset_t _len)
       : buf(_buf), len(_len), must_free(false) {}
 
   ~BufferRef() {
     if (must_free) free(buf);
   }
 
-  const T *GetRoot() const { return flatbuffers::GetRoot<T>(buf); }
+  const T* GetRoot() const { return flatbuffers::GetRoot<T>(buf); }
 
   bool Verify() {
     Verifier verifier(buf, len);
     return verifier.VerifyBuffer<T>(nullptr);
   }
 
-  uint8_t *buf;
+  uint8_t* buf;
   uoffset_t len;
   bool must_free;
 };

@@ -220,6 +220,9 @@ protected:
     void parseOneHot               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDFT                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDet                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseBlackmanWindow       (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseHannWindow           (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseHammingWindow        (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseCenterCropPad        (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseGridSample           (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseNegativeLogLikelihoodLoss(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -247,7 +250,10 @@ protected:
     void parseBitShift             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseBitwise              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseBitwiseNot           (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseRMSNormalization     (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseRotaryEmbedding      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseRandomNormalLike     (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+
     // Domain: com.microsoft
     // URL: https://github.com/microsoft/onnxruntime/blob/master/docs/ContribOperators.md
     void parseAttention            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -1584,6 +1590,10 @@ void ONNXImporter2::parseGather(LayerParams& layerParams, const opencv_onnx::Nod
 {
     layerParams.type = "Gather2";
     CV_CheckEQ(node_proto.input_size(), 2, "");
+    // Diagnostics: log axis used by this Gather node (attribute may be absent -> default 0)
+    int axis = layerParams.get<int>("axis", 0);
+    const std::string node_name = node_proto.has_name() ? node_proto.name() : std::string();
+    CV_LOG_WARNING(NULL, "DNN/ONNX: Gather node '" << node_name << "' axis=" << axis << ", outputs=" << (node_proto.output_size() > 0 ? node_proto.output(0) : std::string("")));
     addLayer(layerParams, node_proto);
 }
 
@@ -1817,6 +1827,24 @@ void ONNXImporter2::parseOneHot(LayerParams& layerParams, const opencv_onnx::Nod
 void ONNXImporter2::parseDet(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "Det";
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseBlackmanWindow(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "BlackmanWindow";
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseHannWindow(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "HannWindow";
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseHammingWindow(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "HammingWindow";
     addLayer(layerParams, node_proto);
 }
 
@@ -2065,6 +2093,27 @@ void ONNXImporter2::parseQuantizeLinear(LayerParams& layerParams, const opencv_o
     {
         layerParams.set<int>("output_dtype", dataType2cv((opencv_onnx::TensorProto_DataType)dt));
     }
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseRMSNormalization(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseRandomNormalLike(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    if (layerParams.has("dtype"))
+    {
+        int dt = layerParams.get<int>("dtype", -1);
+        if (dt >= 0)
+        {
+            layerParams.set<int>("output_dtype", dataType2cv((opencv_onnx::TensorProto_DataType)dt));
+        }
+        layerParams.erase("dtype");
+    }
+
+    layerParams.type = "RandomNormalLike";
     addLayer(layerParams, node_proto);
 }
 
@@ -2726,6 +2775,9 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["OneHot"] = &ONNXImporter2::parseOneHot;
     dispatch["DFT"] = &ONNXImporter2::parseDFT;
     dispatch["Det"] = &ONNXImporter2::parseDet;
+    dispatch["BlackmanWindow"] = &ONNXImporter2::parseBlackmanWindow;
+    dispatch["HannWindow"] = &ONNXImporter2::parseHannWindow;
+    dispatch["HammingWindow"] = &ONNXImporter2::parseHammingWindow;
     dispatch["GridSample"] = &ONNXImporter2::parseGridSample;
     dispatch["AffineGrid"] = &ONNXImporter2::parseAffineGrid;
     dispatch["Upsample"] = &ONNXImporter2::parseUpsample;
@@ -2755,6 +2807,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["Range"] = &ONNXImporter2::parseRange;
     dispatch["Einsum"] = &ONNXImporter2::parseEinsum;
     dispatch["TopK"] = &ONNXImporter2::parseTopK2;
+    dispatch["RandomNormalLike"] = &ONNXImporter2::parseRandomNormalLike;
 
     std::vector<std::string> simpleLayers {
         "Acos", "Acosh", "Asin", "Asinh", "Atan", "Atanh", "Ceil", "Celu", "Cos",

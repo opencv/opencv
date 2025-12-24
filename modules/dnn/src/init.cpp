@@ -88,6 +88,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Concat,         ConcatLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Concat2,        Concat2Layer);
     CV_DNN_REGISTER_LAYER_CLASS(ConstantOfShape, ConstantOfShapeLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(RandomNormalLike, RandomNormalLikeLayer);
     CV_DNN_REGISTER_LAYER_CLASS(CropAndResize,  CropAndResizeLayer);
     CV_DNN_REGISTER_LAYER_CLASS(DequantizeLinear, DequantizeLinearLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Expand2,        Expand2Layer);
@@ -117,6 +118,9 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(IsInf,          IsInfLayer);
     CV_DNN_REGISTER_LAYER_CLASS(OneHot,         OneHotLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Det,            DetLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(BlackmanWindow, BlackmanWindowLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(HannWindow,     HannWindowLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(HammingWindow,  HammingWindowLayer);
     CV_DNN_REGISTER_LAYER_CLASS(CenterCropPad,  CenterCropPadLayer);
     CV_DNN_REGISTER_LAYER_CLASS(DFT,            DFTLayer);
     CV_DNN_REGISTER_LAYER_CLASS(BitShift,       BitShiftLayer);
@@ -195,6 +199,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Gather2,        Gather2Layer);
     CV_DNN_REGISTER_LAYER_CLASS(GatherElements, GatherElementsLayer);
     CV_DNN_REGISTER_LAYER_CLASS(LayerNormalization, LayerNormLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(RMSNormalization, RMSNormLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Expand,         ExpandLayer);
     CV_DNN_REGISTER_LAYER_CLASS(InstanceNormalization, InstanceNormLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Attention,      AttentionLayer);
