@@ -11,16 +11,18 @@ Basics
 
 In the last session, we saw basic concepts like epipolar constraints and other related terms. We also
 saw that if we have two images of same scene, we can get depth information from that in an intuitive
-way. Below is an image and some simple mathematical formulas which prove that intuition. 
+way. Below is an image and some simple mathematical formulas which prove that intuition.
 
 ![image](images/stereo_depth.jpg)
 
-The above diagram contains equivalent triangles. 
+The above diagram contains equivalent triangles.
 
 Writing their equivalent equations will yield us
 following result:
 
-$$disparity = x - x' = \frac{Bf}{Z}$$
+$$
+disparity = x - x' = \frac{Bf}{Z}
+$$
 
 $x$ and $x'$ are the distance between points in image plane corresponding to the scene point 3D and
 their camera center. $B$ is the distance between two cameras (which we know) and $f$ is the focal
@@ -50,7 +52,7 @@ vmin=90
 vmax=280
 ```
 
-Below is a stereo view of the scene. 
+Below is a stereo view of the scene.
 
 ![image](images/stereo_chess_images.png)
 
@@ -59,9 +61,9 @@ Then, using the below code, we arrive at the following depth map.
 ![image](images/depth_map_comparison.png)
 
 > **__Note:__**
-> OpenCV offers two stereo corespondence objects: `StereoBM` and `StereoSGBM`, which implement a block matching algorithm and a modified H. Hirschmuller algorithm respectively. StereoBM depends heavily on block size: a smaller block size will result in more detail and more noise in the disparity map than a large block size. StereoSGBM takes less influence from block size because it strives to minimize global energy cost across the image, not across blocks, which produces smoother disparity maps. StereoSGBM is more computationally expensive but it can be hardware-optimized. StereoBM is suitable for real-time applications but at the cost of a certain level of detail. As you can see in the above image, one drawback to the BM algorithm is that it struggles to calculate disparity on certain surface textures, which results in well defined object edges but gaps in their interiors. The following code example uses StereoSGBM. 
+> OpenCV offers two stereo corespondence objects: `StereoBM` and `StereoSGBM`, which implement a block matching algorithm and a modified H. Hirschmuller algorithm respectively. StereoBM depends heavily on block size: a smaller block size will result in more detail and more noise in the disparity map than a large block size. StereoSGBM takes less influence from block size because it strives to minimize global energy cost across the image, not across blocks, which produces smoother disparity maps. StereoSGBM is more computationally expensive but it can be hardware-optimized. StereoBM is suitable for real-time applications but at the cost of a certain level of detail. As you can see in the above image, one drawback to the BM algorithm is that it struggles to calculate disparity on certain surface textures, which results in well defined object edges but gaps in their interiors. The following code example uses StereoSGBM.
 
-The code includes multiple parameters and post processing steps that are essential for creating a clear depth map with minimal noise. These parameters must be tuned to each scene to get the optimal depth map. 
+The code includes multiple parameters and post processing steps that are essential for creating a clear depth map with minimal noise. These parameters must be tuned to each scene to get the optimal depth map.
 
 ```
 import numpy as np
@@ -70,7 +72,7 @@ from matplotlib import pyplot as plt
 
 
 #units must be pixels, not milimeters
-focalLength = 1758.23 
+focalLength = 1758.23
 #units are meters, this will match the units of the depth map
 baseline = 0.12486
 nDisparities = 16*20
