@@ -20,9 +20,9 @@ The above diagram contains equivalent triangles.
 Writing their equivalent equations will yield us
 following result:
 
-$$
+\f[
 disparity = x - x' = \frac{Bf}{Z}
-$$
+\f]
 
 $x$ and $x'$ are the distance between points in image plane corresponding to the scene point 3D and
 their camera center. $B$ is the distance between two cameras (which we know) and $f$ is the focal
