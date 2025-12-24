@@ -779,7 +779,7 @@ namespace gl
     // Extension: 1.1
 
     static void CODEGEN_FUNCPTR Switch_CullFace(GLenum mode)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -789,7 +789,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_FrontFace(GLenum mode)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -799,7 +799,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Hint(GLenum target, GLenum mode)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -809,7 +809,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_LineWidth(GLfloat width)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -819,7 +819,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_PointSize(GLfloat size)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -829,7 +829,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_PolygonMode(GLenum face, GLenum mode)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -839,7 +839,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Scissor(GLint x, GLint y, GLsizei width, GLsizei height)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -849,7 +849,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_TexParameterf(GLenum target, GLenum pname, GLfloat param)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -859,7 +859,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_TexParameterfv(GLenum target, GLenum pname, const GLfloat *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -869,7 +869,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_TexParameteri(GLenum target, GLenum pname, GLint param)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -879,7 +879,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_TexParameteriv(GLenum target, GLenum pname, const GLint *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -889,7 +889,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_TexImage1D(GLenum target, GLint level, GLint internalformat, GLsizei width, GLint border, GLenum format, GLenum type, const GLvoid *pixels)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -899,7 +899,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_TexImage2D(GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid *pixels)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -909,7 +909,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_DrawBuffer(GLenum mode)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -919,7 +919,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Clear(GLbitfield mask)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -929,7 +929,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_ClearColor(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -939,7 +939,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_ClearStencil(GLint s)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -949,7 +949,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_ClearDepth(GLdouble depth)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -959,7 +959,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_StencilMask(GLuint mask)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -969,7 +969,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_ColorMask(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -979,7 +979,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_DepthMask(GLboolean flag)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -989,7 +989,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Disable(GLenum cap)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -999,7 +999,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Enable(GLenum cap)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1021,7 +1021,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_BlendFunc(GLenum sfactor, GLenum dfactor)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1031,7 +1031,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_LogicOp(GLenum opcode)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1041,7 +1041,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_StencilFunc(GLenum func, GLint ref, GLuint mask)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1051,7 +1051,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_StencilOp(GLenum fail, GLenum zfail, GLenum zpass)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1061,7 +1061,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_DepthFunc(GLenum func)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1071,7 +1071,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_PixelStoref(GLenum pname, GLfloat param)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1081,7 +1081,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_PixelStorei(GLenum pname, GLint param)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1091,7 +1091,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_ReadBuffer(GLenum mode)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1101,7 +1101,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_ReadPixels(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid *pixels)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1111,7 +1111,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetBooleanv(GLenum pname, GLboolean *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1121,7 +1121,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetDoublev(GLenum pname, GLdouble *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1137,7 +1137,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetFloatv(GLenum pname, GLfloat *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1147,7 +1147,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetIntegerv(GLenum pname, GLint *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1163,7 +1163,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetTexImage(GLenum target, GLint level, GLenum format, GLenum type, GLvoid *pixels)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1173,7 +1173,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetTexParameterfv(GLenum target, GLenum pname, GLfloat *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1183,7 +1183,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetTexParameteriv(GLenum target, GLenum pname, GLint *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1193,7 +1193,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetTexLevelParameterfv(GLenum target, GLint level, GLenum pname, GLfloat *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1203,7 +1203,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetTexLevelParameteriv(GLenum target, GLint level, GLenum pname, GLint *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1219,7 +1219,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_DepthRange(GLdouble ren_near, GLdouble ren_far)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1229,7 +1229,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Viewport(GLint x, GLint y, GLsizei width, GLsizei height)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1239,7 +1239,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_DrawArrays(GLenum mode, GLint first, GLsizei count)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1249,7 +1249,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_DrawElements(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1259,7 +1259,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetPointerv(GLenum pname, GLvoid* *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1269,7 +1269,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_PolygonOffset(GLfloat factor, GLfloat units)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1279,7 +1279,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_CopyTexImage1D(GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLint border)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1289,7 +1289,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_CopyTexImage2D(GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLsizei height, GLint border)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1299,7 +1299,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_CopyTexSubImage1D(GLenum target, GLint level, GLint xoffset, GLint x, GLint y, GLsizei width)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1309,7 +1309,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_CopyTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint x, GLint y, GLsizei width, GLsizei height)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1319,7 +1319,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_TexSubImage1D(GLenum target, GLint level, GLint xoffset, GLsizei width, GLenum format, GLenum type, const GLvoid *pixels)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1329,7 +1329,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_TexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid *pixels)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1339,7 +1339,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_BindTexture(GLenum target, GLuint texture)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1349,7 +1349,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_DeleteTextures(GLsizei n, const GLuint *textures)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1359,7 +1359,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GenTextures(GLsizei n, GLuint *textures)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1375,7 +1375,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Indexub(GLubyte c)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1385,7 +1385,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Indexubv(const GLubyte *c)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1397,7 +1397,7 @@ namespace gl
     // Extension: 1.2
 
     static void CODEGEN_FUNCPTR Switch_BlendColor(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1407,7 +1407,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_BlendEquation(GLenum mode)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1417,7 +1417,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_DrawRangeElements(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const GLvoid *indices)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1427,7 +1427,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_TexSubImage3D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const GLvoid *pixels)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1437,7 +1437,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_CopyTexSubImage3D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLint x, GLint y, GLsizei width, GLsizei height)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1449,7 +1449,7 @@ namespace gl
     // Extension: 1.3
 
     static void CODEGEN_FUNCPTR Switch_ActiveTexture(GLenum texture)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1459,7 +1459,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_SampleCoverage(GLfloat value, GLboolean invert)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1469,7 +1469,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_CompressedTexImage3D(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLsizei imageSize, const GLvoid *data)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1479,7 +1479,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_CompressedTexImage2D(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border, GLsizei imageSize, const GLvoid *data)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1489,7 +1489,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_CompressedTexImage1D(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLint border, GLsizei imageSize, const GLvoid *data)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1499,7 +1499,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_CompressedTexSubImage3D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLsizei imageSize, const GLvoid *data)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1509,7 +1509,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_CompressedTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLsizei imageSize, const GLvoid *data)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1519,7 +1519,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_CompressedTexSubImage1D(GLenum target, GLint level, GLint xoffset, GLsizei width, GLenum format, GLsizei imageSize, const GLvoid *data)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1529,7 +1529,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetCompressedTexImage(GLenum target, GLint level, GLvoid *img)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1541,7 +1541,7 @@ namespace gl
     // Extension: 1.4
 
     static void CODEGEN_FUNCPTR Switch_BlendFuncSeparate(GLenum sfactorRGB, GLenum dfactorRGB, GLenum sfactorAlpha, GLenum dfactorAlpha)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1551,7 +1551,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_MultiDrawArrays(GLenum mode, const GLint *first, const GLsizei *count, GLsizei drawcount)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1561,7 +1561,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_MultiDrawElements(GLenum mode, const GLsizei *count, GLenum type, const GLvoid* const *indices, GLsizei drawcount)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1571,7 +1571,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_PointParameterf(GLenum pname, GLfloat param)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1581,7 +1581,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_PointParameterfv(GLenum pname, const GLfloat *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1591,7 +1591,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_PointParameteri(GLenum pname, GLint param)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1601,7 +1601,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_PointParameteriv(GLenum pname, const GLint *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1613,7 +1613,7 @@ namespace gl
     // Extension: 1.5
 
     static void CODEGEN_FUNCPTR Switch_GenQueries(GLsizei n, GLuint *ids)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1623,7 +1623,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_DeleteQueries(GLsizei n, const GLuint *ids)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1639,7 +1639,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_BeginQuery(GLenum target, GLuint id)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1649,7 +1649,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_EndQuery(GLenum target)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1659,7 +1659,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetQueryiv(GLenum target, GLenum pname, GLint *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1669,7 +1669,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetQueryObjectiv(GLuint id, GLenum pname, GLint *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1679,7 +1679,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetQueryObjectuiv(GLuint id, GLenum pname, GLuint *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1689,7 +1689,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_BindBuffer(GLenum target, GLuint buffer)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1699,7 +1699,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_DeleteBuffers(GLsizei n, const GLuint *buffers)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1709,7 +1709,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GenBuffers(GLsizei n, GLuint *buffers)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1725,7 +1725,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_BufferData(GLenum target, GLsizeiptr size, const GLvoid *data, GLenum usage)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1735,7 +1735,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_BufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid *data)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1745,7 +1745,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetBufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, GLvoid *data)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1767,7 +1767,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetBufferParameteriv(GLenum target, GLenum pname, GLint *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1777,7 +1777,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetBufferPointerv(GLenum target, GLenum pname, GLvoid* *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1789,7 +1789,7 @@ namespace gl
     // Extension: 2.0
 
     static void CODEGEN_FUNCPTR Switch_BlendEquationSeparate(GLenum modeRGB, GLenum modeAlpha)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1799,7 +1799,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_DrawBuffers(GLsizei n, const GLenum *bufs)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1809,7 +1809,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_StencilOpSeparate(GLenum face, GLenum sfail, GLenum dpfail, GLenum dppass)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1819,7 +1819,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_StencilFuncSeparate(GLenum face, GLenum func, GLint ref, GLuint mask)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1829,7 +1829,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_StencilMaskSeparate(GLenum face, GLuint mask)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1839,7 +1839,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_AttachShader(GLuint program, GLuint shader)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1849,7 +1849,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_BindAttribLocation(GLuint program, GLuint index, const GLchar *name)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1859,7 +1859,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_CompileShader(GLuint shader)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1881,7 +1881,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_DeleteProgram(GLuint program)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1900,7 +1900,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_DetachShader(GLuint program, GLuint shader)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1910,7 +1910,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_DisableVertexAttribArray(GLuint index)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1920,7 +1920,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_EnableVertexAttribArray(GLuint index)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1930,7 +1930,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetActiveAttrib(GLuint program, GLuint index, GLsizei bufSize, GLsizei *length, GLint *size, GLenum *type, GLchar *name)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1940,7 +1940,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetActiveUniform(GLuint program, GLuint index, GLsizei bufSize, GLsizei *length, GLint *size, GLenum *type, GLchar *name)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1950,7 +1950,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetAttachedShaders(GLuint program, GLsizei maxCount, GLsizei *count, GLuint *obj)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1966,7 +1966,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetProgramiv(GLuint program, GLenum pname, GLint *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1976,7 +1976,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetProgramInfoLog(GLuint program, GLsizei bufSize, GLsizei *length, GLchar *infoLog)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1986,7 +1986,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetShaderiv(GLuint shader, GLenum pname, GLint *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -1996,7 +1996,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetShaderInfoLog(GLuint shader, GLsizei bufSize, GLsizei *length, GLchar *infoLog)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2006,7 +2006,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetShaderSource(GLuint shader, GLsizei bufSize, GLsizei *length, GLchar *source)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2022,7 +2022,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetUniformfv(GLuint program, GLint location, GLfloat *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2032,7 +2032,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetUniformiv(GLuint program, GLint location, GLint *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2042,7 +2042,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetVertexAttribdv(GLuint index, GLenum pname, GLdouble *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2052,7 +2052,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetVertexAttribfv(GLuint index, GLenum pname, GLfloat *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2062,7 +2062,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetVertexAttribiv(GLuint index, GLenum pname, GLint *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2072,7 +2072,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetVertexAttribPointerv(GLuint index, GLenum pname, GLvoid* *pointer)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2094,7 +2094,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_LinkProgram(GLuint program)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2104,7 +2104,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_ShaderSource(GLuint shader, GLsizei count, const GLchar* const *string, const GLint *length)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2114,7 +2114,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_UseProgram(GLuint program)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2124,7 +2124,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform1f(GLint location, GLfloat v0)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2134,7 +2134,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform2f(GLint location, GLfloat v0, GLfloat v1)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2144,7 +2144,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform3f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2154,7 +2154,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform4f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2164,7 +2164,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform1i(GLint location, GLint v0)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2174,7 +2174,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform2i(GLint location, GLint v0, GLint v1)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2184,7 +2184,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform3i(GLint location, GLint v0, GLint v1, GLint v2)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2194,7 +2194,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform4i(GLint location, GLint v0, GLint v1, GLint v2, GLint v3)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2204,7 +2204,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform1fv(GLint location, GLsizei count, const GLfloat *value)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2214,7 +2214,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform2fv(GLint location, GLsizei count, const GLfloat *value)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2224,7 +2224,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform3fv(GLint location, GLsizei count, const GLfloat *value)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2234,7 +2234,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform4fv(GLint location, GLsizei count, const GLfloat *value)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2244,7 +2244,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform1iv(GLint location, GLsizei count, const GLint *value)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2254,7 +2254,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform2iv(GLint location, GLsizei count, const GLint *value)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2264,7 +2264,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform3iv(GLint location, GLsizei count, const GLint *value)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2274,7 +2274,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform4iv(GLint location, GLsizei count, const GLint *value)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2284,7 +2284,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_UniformMatrix2fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2294,7 +2294,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_UniformMatrix3fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2304,7 +2304,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_UniformMatrix4fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2314,7 +2314,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_ValidateProgram(GLuint program)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2324,7 +2324,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribPointer(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const GLvoid *pointer)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2336,7 +2336,7 @@ namespace gl
     // Extension: 2.1
 
     static void CODEGEN_FUNCPTR Switch_UniformMatrix2x3fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2346,7 +2346,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_UniformMatrix3x2fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2356,7 +2356,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_UniformMatrix2x4fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2366,7 +2366,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_UniformMatrix4x2fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2376,7 +2376,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_UniformMatrix3x4fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2386,7 +2386,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_UniformMatrix4x3fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2398,7 +2398,7 @@ namespace gl
     // Extension: ARB_vertex_array_object
 
     static void CODEGEN_FUNCPTR Switch_BindVertexArray(GLuint ren_array)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2408,7 +2408,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_DeleteVertexArrays(GLsizei n, const GLuint *arrays)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2418,7 +2418,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GenVertexArrays(GLsizei n, GLuint *arrays)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2442,7 +2442,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_FlushMappedBufferRange(GLenum target, GLintptr offset, GLsizeiptr length)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2460,7 +2460,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_BindRenderbuffer(GLenum target, GLuint renderbuffer)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2470,7 +2470,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_DeleteRenderbuffers(GLsizei n, const GLuint *renderbuffers)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2480,7 +2480,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GenRenderbuffers(GLsizei n, GLuint *renderbuffers)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2490,7 +2490,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_RenderbufferStorage(GLenum target, GLenum internalformat, GLsizei width, GLsizei height)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2500,7 +2500,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetRenderbufferParameteriv(GLenum target, GLenum pname, GLint *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2516,7 +2516,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_BindFramebuffer(GLenum target, GLuint framebuffer)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2526,7 +2526,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_DeleteFramebuffers(GLsizei n, const GLuint *framebuffers)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2536,7 +2536,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GenFramebuffers(GLsizei n, GLuint *framebuffers)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2552,7 +2552,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_FramebufferTexture1D(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2562,7 +2562,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_FramebufferTexture2D(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2572,7 +2572,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_FramebufferTexture3D(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint zoffset)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2582,7 +2582,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_FramebufferRenderbuffer(GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2592,7 +2592,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetFramebufferAttachmentParameteriv(GLenum target, GLenum attachment, GLenum pname, GLint *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2602,7 +2602,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GenerateMipmap(GLenum target)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2612,7 +2612,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_BlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1, GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1, GLbitfield mask, GLenum filter)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2622,7 +2622,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_RenderbufferStorageMultisample(GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2632,7 +2632,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_FramebufferTextureLayer(GLenum target, GLenum attachment, GLuint texture, GLint level, GLint layer)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2644,7 +2644,7 @@ namespace gl
     // Extension: 3.0
 
     static void CODEGEN_FUNCPTR Switch_ColorMaski(GLuint index, GLboolean r, GLboolean g, GLboolean b, GLboolean a)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2654,7 +2654,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetBooleani_v(GLenum target, GLuint index, GLboolean *data)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2664,7 +2664,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetIntegeri_v(GLenum target, GLuint index, GLint *data)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2674,7 +2674,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Enablei(GLenum target, GLuint index)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2684,7 +2684,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Disablei(GLenum target, GLuint index)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2700,7 +2700,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_BeginTransformFeedback(GLenum primitiveMode)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2716,7 +2716,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_BindBufferRange(GLenum target, GLuint index, GLuint buffer, GLintptr offset, GLsizeiptr size)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2726,7 +2726,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_BindBufferBase(GLenum target, GLuint index, GLuint buffer)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2736,7 +2736,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_TransformFeedbackVaryings(GLuint program, GLsizei count, const GLchar* const *varyings, GLenum bufferMode)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2746,7 +2746,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetTransformFeedbackVarying(GLuint program, GLuint index, GLsizei bufSize, GLsizei *length, GLsizei *size, GLenum *type, GLchar *name)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2756,7 +2756,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_ClampColor(GLenum target, GLenum clamp)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2766,7 +2766,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_BeginConditionalRender(GLuint id, GLenum mode)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2782,7 +2782,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribIPointer(GLuint index, GLint size, GLenum type, GLsizei stride, const GLvoid *pointer)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2792,7 +2792,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetVertexAttribIiv(GLuint index, GLenum pname, GLint *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2802,7 +2802,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetVertexAttribIuiv(GLuint index, GLenum pname, GLuint *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2812,7 +2812,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI1i(GLuint index, GLint x)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2822,7 +2822,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI2i(GLuint index, GLint x, GLint y)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2832,7 +2832,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI3i(GLuint index, GLint x, GLint y, GLint z)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2842,7 +2842,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI4i(GLuint index, GLint x, GLint y, GLint z, GLint w)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2852,7 +2852,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI1ui(GLuint index, GLuint x)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2862,7 +2862,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI2ui(GLuint index, GLuint x, GLuint y)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2872,7 +2872,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI3ui(GLuint index, GLuint x, GLuint y, GLuint z)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2882,7 +2882,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI4ui(GLuint index, GLuint x, GLuint y, GLuint z, GLuint w)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2892,7 +2892,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI1iv(GLuint index, const GLint *v)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2902,7 +2902,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI2iv(GLuint index, const GLint *v)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2912,7 +2912,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI3iv(GLuint index, const GLint *v)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2922,7 +2922,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI4iv(GLuint index, const GLint *v)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2932,7 +2932,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI1uiv(GLuint index, const GLuint *v)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2942,7 +2942,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI2uiv(GLuint index, const GLuint *v)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2952,7 +2952,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI3uiv(GLuint index, const GLuint *v)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2962,7 +2962,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI4uiv(GLuint index, const GLuint *v)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2972,7 +2972,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI4bv(GLuint index, const GLbyte *v)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2982,7 +2982,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI4sv(GLuint index, const GLshort *v)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -2992,7 +2992,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI4ubv(GLuint index, const GLubyte *v)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3002,7 +3002,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexAttribI4usv(GLuint index, const GLushort *v)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3012,7 +3012,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetUniformuiv(GLuint program, GLint location, GLuint *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3022,7 +3022,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_BindFragDataLocation(GLuint program, GLuint color, const GLchar *name)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3038,7 +3038,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform1ui(GLint location, GLuint v0)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3048,7 +3048,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform2ui(GLint location, GLuint v0, GLuint v1)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3058,7 +3058,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform3ui(GLint location, GLuint v0, GLuint v1, GLuint v2)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3068,7 +3068,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform4ui(GLint location, GLuint v0, GLuint v1, GLuint v2, GLuint v3)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3078,7 +3078,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform1uiv(GLint location, GLsizei count, const GLuint *value)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3088,7 +3088,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform2uiv(GLint location, GLsizei count, const GLuint *value)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3098,7 +3098,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform3uiv(GLint location, GLsizei count, const GLuint *value)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3108,7 +3108,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Uniform4uiv(GLint location, GLsizei count, const GLuint *value)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3118,7 +3118,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_TexParameterIiv(GLenum target, GLenum pname, const GLint *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3128,7 +3128,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_TexParameterIuiv(GLenum target, GLenum pname, const GLuint *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3138,7 +3138,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetTexParameterIiv(GLenum target, GLenum pname, GLint *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3148,7 +3148,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetTexParameterIuiv(GLenum target, GLenum pname, GLuint *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3158,7 +3158,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_ClearBufferiv(GLenum buffer, GLint drawbuffer, const GLint *value)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3168,7 +3168,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_ClearBufferuiv(GLenum buffer, GLint drawbuffer, const GLuint *value)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3178,7 +3178,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_ClearBufferfv(GLenum buffer, GLint drawbuffer, const GLfloat *value)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3188,7 +3188,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_ClearBufferfi(GLenum buffer, GLint drawbuffer, GLfloat depth, GLint stencil)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3206,7 +3206,7 @@ namespace gl
     // Extension: ARB_uniform_buffer_object
 
     static void CODEGEN_FUNCPTR Switch_GetUniformIndices(GLuint program, GLsizei uniformCount, const GLchar* const *uniformNames, GLuint *uniformIndices)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3216,7 +3216,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetActiveUniformsiv(GLuint program, GLsizei uniformCount, const GLuint *uniformIndices, GLenum pname, GLint *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3226,7 +3226,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetActiveUniformName(GLuint program, GLuint uniformIndex, GLsizei bufSize, GLsizei *length, GLchar *uniformName)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3242,7 +3242,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetActiveUniformBlockiv(GLuint program, GLuint uniformBlockIndex, GLenum pname, GLint *params)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3252,7 +3252,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_GetActiveUniformBlockName(GLuint program, GLuint uniformBlockIndex, GLsizei bufSize, GLsizei *length, GLchar *uniformBlockName)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3262,7 +3262,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_UniformBlockBinding(GLuint program, GLuint uniformBlockIndex, GLuint uniformBlockBinding)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3274,7 +3274,7 @@ namespace gl
     // Extension: ARB_copy_buffer
 
     static void CODEGEN_FUNCPTR Switch_CopyBufferSubData(GLenum readTarget, GLenum writeTarget, GLintptr readOffset, GLintptr writeOffset, GLsizeiptr size)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3286,7 +3286,7 @@ namespace gl
     // Extension: 3.1
 
     static void CODEGEN_FUNCPTR Switch_DrawArraysInstanced(GLenum mode, GLint first, GLsizei count, GLsizei instancecount)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3296,7 +3296,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_DrawElementsInstanced(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices, GLsizei instancecount)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3306,7 +3306,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_TexBuffer(GLenum target, GLenum internalformat, GLuint buffer)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3316,7 +3316,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_PrimitiveRestartIndex(GLuint index)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3328,7 +3328,7 @@ namespace gl
     // Legacy
 
     static void CODEGEN_FUNCPTR Switch_EnableClientState(GLenum cap)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3338,7 +3338,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_DisableClientState(GLenum cap)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3348,7 +3348,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_VertexPointer(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3358,7 +3358,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_NormalPointer(GLenum type, GLsizei stride, const GLvoid *ptr)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3368,7 +3368,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_ColorPointer(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3378,7 +3378,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_TexCoordPointer(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3388,7 +3388,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_TexEnvi(GLenum target, GLenum pname, GLint param)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3398,7 +3398,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_MatrixMode(GLenum mode)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3414,7 +3414,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Ortho(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble near_val, GLdouble far_val)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
@@ -3424,7 +3424,7 @@ namespace gl
     }
 
     static void CODEGEN_FUNCPTR Switch_Color3d(GLdouble red, GLdouble green, GLdouble blue)
-    
+
     {
         static std::once_flag flag;
         std::call_once(flag, []() {
