@@ -106,9 +106,6 @@ inline const int& MatShape::operator [](size_t idx) const
 
 inline Size MatShape::operator()() const
 {
-    // For compatibility with legacy MatSize::operator() this treats
-    // scalar tensors (dims == 0) as a 1x1 "matrix" and only supports
-    // up to 2 explicit dimensions here.
     CV_Assert(dims <= 2);
     int cols = dims > 0 ? p[dims > 1] : int(dims >= 0);
     int rows = dims > 1 ? p[0] : int(dims >= 0);
