@@ -1965,8 +1965,14 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
                 );
 #endif
 
-        if (img_convert_ctx == NULL)
-            return false;//CV_Error(0, "Cannot initialize the conversion context!");
+        if (img_convert_ctx == NULL) {
+CV_LOG_ERROR(NULL, "Cannot initialize the conversion context!");
+            #if USE_AV_HW_CODECS
+            if (sw_picture != picture)
+                av_frame_free(&sw_picture);
+#endif
+            return false;
+        }
 
 #if USE_AV_FRAME_GET_BUFFER
         av_frame_unref(&rgb_picture);
@@ -1975,7 +1981,11 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
         rgb_picture.height = buffer_height;
         if (0 != av_frame_get_buffer(&rgb_picture, 32))
         {
-            CV_WARN("OutOfMemory");
+            CV_LOG_ERROR(NULL, "Out of memory issue on av_frame_get_buffer!");
+#if USE_AV_HW_CODECS
+            if (sw_picture != picture)
+                av_frame_free(&sw_picture);
+#endif
             return false;
         }
 #else
