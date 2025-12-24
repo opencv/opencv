@@ -574,14 +574,27 @@ TEST_F(fisheyeTest, Calibration)
     std::vector<std::vector<cv::Point3d> > objectPoints(n_images);
 
     const std::string folder = combine(datasets_repository_path, "calib-3_stereo_from_JY");
-    cv::FileStorage fs_left(combine(folder, "left.xml"), cv::FileStorage::READ);
-    CV_Assert(fs_left.isOpened());
+    const std::string left_file = combine(folder, "left.xml");
+    cv::FileStorage fs_left(left_file, cv::FileStorage::READ);
+    if (!fs_left.isOpened())
+    {
+        GTEST_SKIP() << "Test data not found at: " << left_file << "\n"
+                    << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata\n"
+                    << "See https://github.com/opencv/opencv_extra for test data repository";
+    }
+
     for(int i = 0; i < n_images; ++i)
         fs_left[cv::format("image_%d", i )] >> imagePoints[i];
     fs_left.release();
 
-    cv::FileStorage fs_object(combine(folder, "object.xml"), cv::FileStorage::READ);
-    CV_Assert(fs_object.isOpened());
+    const std::string object_file = combine(folder, "object.xml");
+    cv::FileStorage fs_object(object_file, cv::FileStorage::READ);
+    if (!fs_object.isOpened())
+    {
+        GTEST_SKIP() << "Test data not found at: " << object_file << "\n"
+                    << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata";
+    }
+
     for(int i = 0; i < n_images; ++i)
         fs_object[cv::format("image_%d", i )] >> objectPoints[i];
     fs_object.release();
@@ -609,14 +622,27 @@ TEST_F(fisheyeTest, CalibrationWithFixedFocalLength)
     std::vector<std::vector<cv::Point3d> > objectPoints(n_images);
 
     const std::string folder =combine(datasets_repository_path, "calib-3_stereo_from_JY");
-    cv::FileStorage fs_left(combine(folder, "left.xml"), cv::FileStorage::READ);
-    CV_Assert(fs_left.isOpened());
+    const std::string left_file = combine(folder, "left.xml");
+    cv::FileStorage fs_left(left_file, cv::FileStorage::READ);
+    if (!fs_left.isOpened())
+    {
+        GTEST_SKIP() << "Test data not found at: " << left_file << "\n"
+                    << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata\n"
+                    << "See https://github.com/opencv/opencv_extra for test data repository";
+    }
+
     for(int i = 0; i < n_images; ++i)
         fs_left[cv::format("image_%d", i )] >> imagePoints[i];
     fs_left.release();
 
-    cv::FileStorage fs_object(combine(folder, "object.xml"), cv::FileStorage::READ);
-    CV_Assert(fs_object.isOpened());
+    const std::string object_file = combine(folder, "object.xml");
+    cv::FileStorage fs_object(object_file, cv::FileStorage::READ);
+    if (!fs_object.isOpened())
+    {
+        GTEST_SKIP() << "Test data not found at: " << object_file << "\n"
+                    << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata";
+    }
+
     for(int i = 0; i < n_images; ++i)
         fs_object[cv::format("image_%d", i )] >> objectPoints[i];
     fs_object.release();
@@ -656,14 +682,27 @@ TEST_F(fisheyeTest, Homography)
     std::vector<std::vector<cv::Point3d> > objectPoints(n_images);
 
     const std::string folder = combine(datasets_repository_path, "calib-3_stereo_from_JY");
-    cv::FileStorage fs_left(combine(folder, "left.xml"), cv::FileStorage::READ);
-    CV_Assert(fs_left.isOpened());
+    const std::string left_file = combine(folder, "left.xml");
+    cv::FileStorage fs_left(left_file, cv::FileStorage::READ);
+    if (!fs_left.isOpened())
+    {
+        GTEST_SKIP() << "Test data not found at: " << left_file << "\n"
+                    << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata\n"
+                    << "See https://github.com/opencv/opencv_extra for test data repository";
+    }
+
     for(int i = 0; i < n_images; ++i)
         fs_left[cv::format("image_%d", i )] >> imagePoints[i];
     fs_left.release();
 
-    cv::FileStorage fs_object(combine(folder, "object.xml"), cv::FileStorage::READ);
-    CV_Assert(fs_object.isOpened());
+    const std::string object_file = combine(folder, "object.xml");
+    cv::FileStorage fs_object(object_file, cv::FileStorage::READ);
+    if (!fs_object.isOpened())
+    {
+        GTEST_SKIP() << "Test data not found at: " << object_file << "\n"
+                    << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata";
+    }
+
     for(int i = 0; i < n_images; ++i)
         fs_object[cv::format("image_%d", i )] >> objectPoints[i];
     fs_object.release();
@@ -717,14 +756,27 @@ TEST_F(fisheyeTest, EstimateUncertainties)
     std::vector<std::vector<cv::Point3d> > objectPoints(n_images);
 
     const std::string folder =combine(datasets_repository_path, "calib-3_stereo_from_JY");
-    cv::FileStorage fs_left(combine(folder, "left.xml"), cv::FileStorage::READ);
-    CV_Assert(fs_left.isOpened());
+    const std::string left_file = combine(folder, "left.xml");
+    cv::FileStorage fs_left(left_file, cv::FileStorage::READ);
+    if (!fs_left.isOpened())
+    {
+        GTEST_SKIP() << "Test data not found at: " << left_file << "\n"
+                    << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata\n"
+                    << "See https://github.com/opencv/opencv_extra for test data repository";
+    }
+
     for(int i = 0; i < n_images; ++i)
         fs_left[cv::format("image_%d", i )] >> imagePoints[i];
     fs_left.release();
 
-    cv::FileStorage fs_object(combine(folder, "object.xml"), cv::FileStorage::READ);
-    CV_Assert(fs_object.isOpened());
+    const std::string object_file = combine(folder, "object.xml");
+    cv::FileStorage fs_object(object_file, cv::FileStorage::READ);
+    if (!fs_object.isOpened())
+    {
+        GTEST_SKIP() << "Test data not found at: " << object_file << "\n"
+                    << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata";
+    }
+
     for(int i = 0; i < n_images; ++i)
         fs_object[cv::format("image_%d", i )] >> objectPoints[i];
     fs_object.release();
@@ -882,20 +934,40 @@ TEST_F(fisheyeTest, stereoCalibrate)
     std::vector<std::vector<cv::Point2d> > rightPoints(n_images);
     std::vector<std::vector<cv::Point3d> > objectPoints(n_images);
 
-    cv::FileStorage fs_left(combine(folder, "left.xml"), cv::FileStorage::READ);
-    CV_Assert(fs_left.isOpened());
+    const std::string left_file = combine(folder, "left.xml");
+    cv::FileStorage fs_left(left_file, cv::FileStorage::READ);
+    if (!fs_left.isOpened())
+    {
+        GTEST_SKIP() << "Test data not found at: " << left_file << "\n"
+                    << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata\n"
+                    << "See https://github.com/opencv/opencv_extra for test data repository";
+    }
+
     for(int i = 0; i < n_images; ++i)
         fs_left[cv::format("image_%d", i )] >> leftPoints[i];
     fs_left.release();
 
-    cv::FileStorage fs_right(combine(folder, "right.xml"), cv::FileStorage::READ);
-    CV_Assert(fs_right.isOpened());
+    const std::string right_file = combine(folder, "right.xml");
+    cv::FileStorage fs_right(right_file, cv::FileStorage::READ);
+    if (!fs_right.isOpened())
+    {
+        GTEST_SKIP() << "Test data not found at: " << right_file << "\n"
+                    << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata\n"
+                    << "See https://github.com/opencv/opencv_extra for test data repository";
+    }
+
     for(int i = 0; i < n_images; ++i)
         fs_right[cv::format("image_%d", i )] >> rightPoints[i];
     fs_right.release();
 
-    cv::FileStorage fs_object(combine(folder, "object.xml"), cv::FileStorage::READ);
-    CV_Assert(fs_object.isOpened());
+    const std::string object_file = combine(folder, "object.xml");
+    cv::FileStorage fs_object(object_file, cv::FileStorage::READ);
+    if (!fs_object.isOpened())
+    {
+        GTEST_SKIP() << "Test data not found at: " << object_file << "\n"
+                    << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata";
+    }
+
     for(int i = 0; i < n_images; ++i)
         fs_object[cv::format("image_%d", i )] >> objectPoints[i];
     fs_object.release();
@@ -949,20 +1021,40 @@ TEST_F(fisheyeTest, stereoCalibrateFixIntrinsic)
     std::vector<std::vector<cv::Point2d> > rightPoints(n_images);
     std::vector<std::vector<cv::Point3d> > objectPoints(n_images);
 
-    cv::FileStorage fs_left(combine(folder, "left.xml"), cv::FileStorage::READ);
-    CV_Assert(fs_left.isOpened());
+    const std::string left_file = combine(folder, "left.xml");
+    cv::FileStorage fs_left(left_file, cv::FileStorage::READ);
+    if (!fs_left.isOpened())
+    {
+        GTEST_SKIP() << "Test data not found at: " << left_file << "\n"
+                    << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata\n"
+                    << "See https://github.com/opencv/opencv_extra for test data repository";
+    }
+
     for(int i = 0; i < n_images; ++i)
         fs_left[cv::format("image_%d", i )] >> leftPoints[i];
     fs_left.release();
 
-    cv::FileStorage fs_right(combine(folder, "right.xml"), cv::FileStorage::READ);
-    CV_Assert(fs_right.isOpened());
+    const std::string right_file = combine(folder, "right.xml");
+    cv::FileStorage fs_right(right_file, cv::FileStorage::READ);
+    if (!fs_right.isOpened())
+    {
+        GTEST_SKIP() << "Test data not found at: " << right_file << "\n"
+                    << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata\n"
+                    << "See https://github.com/opencv/opencv_extra for test data repository";
+    }
+
     for(int i = 0; i < n_images; ++i)
         fs_right[cv::format("image_%d", i )] >> rightPoints[i];
     fs_right.release();
 
-    cv::FileStorage fs_object(combine(folder, "object.xml"), cv::FileStorage::READ);
-    CV_Assert(fs_object.isOpened());
+    const std::string object_file = combine(folder, "object.xml");
+    cv::FileStorage fs_object(object_file, cv::FileStorage::READ);
+    if (!fs_object.isOpened())
+    {
+        GTEST_SKIP() << "Test data not found at: " << object_file << "\n"
+                    << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata";
+    }
+
     for(int i = 0; i < n_images; ++i)
         fs_object[cv::format("image_%d", i )] >> objectPoints[i];
     fs_object.release();
@@ -1053,20 +1145,40 @@ TEST_F(fisheyeTest, stereoCalibrateWithPerViewTransformations)
     std::vector<std::vector<cv::Point2d> > rightPoints(n_images);
     std::vector<std::vector<cv::Point3d> > objectPoints(n_images);
 
-    cv::FileStorage fs_left(combine(folder, "left.xml"), cv::FileStorage::READ);
-    CV_Assert(fs_left.isOpened());
+    const std::string left_file = combine(folder, "left.xml");
+    cv::FileStorage fs_left(left_file, cv::FileStorage::READ);
+    if (!fs_left.isOpened())
+    {
+        GTEST_SKIP() << "Test data not found at: " << left_file << "\n"
+                    << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata\n"
+                    << "See https://github.com/opencv/opencv_extra for test data repository";
+    }
+
     for(int i = 0; i < n_images; ++i)
         fs_left[cv::format("image_%d", i )] >> leftPoints[i];
     fs_left.release();
 
-    cv::FileStorage fs_right(combine(folder, "right.xml"), cv::FileStorage::READ);
-    CV_Assert(fs_right.isOpened());
+    const std::string right_file = combine(folder, "right.xml");
+    cv::FileStorage fs_right(right_file, cv::FileStorage::READ);
+    if (!fs_right.isOpened())
+    {
+        GTEST_SKIP() << "Test data not found at: " << right_file << "\n"
+                    << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata\n"
+                    << "See https://github.com/opencv/opencv_extra for test data repository";
+    }
+
     for(int i = 0; i < n_images; ++i)
         fs_right[cv::format("image_%d", i )] >> rightPoints[i];
     fs_right.release();
 
-    cv::FileStorage fs_object(combine(folder, "object.xml"), cv::FileStorage::READ);
-    CV_Assert(fs_object.isOpened());
+    const std::string object_file = combine(folder, "object.xml");
+    cv::FileStorage fs_object(object_file, cv::FileStorage::READ);
+    if (!fs_object.isOpened())
+    {
+        GTEST_SKIP() << "Test data not found at: " << object_file << "\n"
+                    << "Please set OPENCV_TEST_DATA_PATH environment variable to opencv_extra/testdata";
+    }
+
     for(int i = 0; i < n_images; ++i)
         fs_object[cv::format("image_%d", i )] >> objectPoints[i];
     fs_object.release();
