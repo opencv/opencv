@@ -1366,15 +1366,15 @@ public:
 
     /** @overload
      * @param cn New number of channels. If the parameter is 0, the number of channels remains the same.
-     * @param newndims New number of dimentions.
-     * @param newsz Array with new matrix size by all dimentions. If some sizes are zero,
+     * @param newndims New number of dimensions.
+     * @param newsz Array with new matrix size by all dimensions. If some sizes are zero,
      * the original sizes in those dimensions are presumed.
      */
     Mat reshape(int cn, int newndims, const int* newsz) const;
 
     /** @overload
      * @param cn New number of channels. If the parameter is 0, the number of channels remains the same.
-     * @param newshape Vector with new matrix size by all dimentions. If some sizes are zero,
+     * @param newshape Vector with new matrix size by all dimensions. If some sizes are zero,
      * the original sizes in those dimensions are presumed.
      */
     Mat reshape(int cn, const std::vector<int>& newshape) const;
