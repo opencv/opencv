@@ -1103,7 +1103,7 @@ bool CvCaptureCAM_V4L::grabFrame()
         FirstCapture = false;
 
 #if defined(V4L_ABORT_BADJPEG)
-        // skip first frame. it is often bad -- this is unnotied in traditional apps,
+        // skip first frame. it is often bad -- this is unnoticed in traditional apps,
         //  but could be fatal if bad jpeg is enabled
         if (!read_frame_v4l2())
             return false;

@@ -1053,7 +1053,7 @@ TEST_P(minEnclosingTriangle_Modes, accuracy)
             const Mat midPoint = (cur + next) / 2;
             EXPECT_TRUE(isPointOnHull(hull, midPoint));
 
-            // at least one of hull edges must be on tirangle edge
+            // at least one of hull edges must be on triangle edge
             hasEdgeOnHull = hasEdgeOnHull || isEdgeOnHull(hull, cur, next);
         }
         EXPECT_TRUE(hasEdgeOnHull);
