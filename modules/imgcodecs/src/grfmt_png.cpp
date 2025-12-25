@@ -1587,13 +1587,13 @@ bool PngEncoder::getRect(uint32_t w, uint32_t h, unsigned char* pimage1, unsigne
                     diffnum++;
                     if (has_tcolor)
                         over_is_possible = 0;
-                    if (i < x_min) 
+                    if (i < x_min)
                         x_min = i;
-                    if (i > x_max) 
+                    if (i > x_max)
                         x_max = i;
-                    if (j < y_min) 
+                    if (j < y_min)
                         y_min = j;
-                    if (j > y_max) 
+                    if (j > y_max)
                         y_max = j;
                 }
                 else
@@ -1601,7 +1601,7 @@ bool PngEncoder::getRect(uint32_t w, uint32_t h, unsigned char* pimage1, unsigne
                     r2 = 0; g2 = 0; b2 = 0;
                 }
 
-                pc[0] = r2; pc[1] = g2; pc[2] = b2;  
+                pc[0] = r2; pc[1] = g2; pc[2] = b2;
                 pa += 3; pb += 3; pc += 3;
             }
     }
@@ -1623,20 +1623,20 @@ bool PngEncoder::getRect(uint32_t w, uint32_t h, unsigned char* pimage1, unsigne
                     diffnum++;
                     if (a2 != 0xFFFF)
                         over_is_possible = 0;
-                    if (i < x_min) 
+                    if (i < x_min)
                         x_min = i;
-                    if (i > x_max) 
+                    if (i > x_max)
                         x_max = i;
-                    if (j < y_min) 
+                    if (j < y_min)
                         y_min = j;
-                    if (j > y_max) 
+                    if (j > y_max)
                         y_max = j;
                 }
-                else 
+                else
                 {
                     r2 = 0; g2 = 0; b2 = 0; a2 = 0;
                 }
-                
+
                 pc[0] = r2; pc[1] = g2; pc[2] = b2; pc[3] = a2;
                 pa += 4; pb += 4; pc += 4;
             }
@@ -1774,7 +1774,7 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
     uint32_t bpp = (coltype == 6) ? 4 : (coltype == 2) ? 3
         : (coltype == 4) ? 2
         : 1;
-    if (animation.frames[0].depth() == CV_16U) 
+    if (animation.frames[0].depth() == CV_16U)
         bpp *= 2;
     uint32_t has_tcolor = (coltype >= 4 || (coltype <= 2 && trnssize)) ? 1 : 0;
     uint32_t tcolor = 0;
