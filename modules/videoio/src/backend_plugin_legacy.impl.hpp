@@ -81,8 +81,8 @@ public:
     bool retrieveFrame(int idx, cv::OutputArray img) CV_OVERRIDE
     {
         bool res = false;
-        if (plugin_api_->v0.Capture_retreive)
-            if (CV_ERROR_OK == plugin_api_->v0.Capture_retreive(capture_, idx, retrieve_callback, (cv::_OutputArray*)&img))
+        if (plugin_api_->v0.Capture_retrieve)
+            if (CV_ERROR_OK == plugin_api_->v0.Capture_retrieve(capture_, idx, retrieve_callback, (cv::_OutputArray*)&img))
                 res = true;
         return res;
     }
