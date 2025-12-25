@@ -30,6 +30,7 @@ public:
         return id == other.id;
     }
 };
+
 class WorkloadType {
     std::vector<WorkloadListener> listeners;
     uint64_t nextId = 1;
@@ -48,7 +49,7 @@ public:
         }
     }
 
-    void notify(const std::string &type) {
+    void set(const std::string &type) {
         for (const auto &listener : listeners) {
             listener(type);
         }
