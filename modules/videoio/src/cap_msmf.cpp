@@ -789,7 +789,7 @@ protected:
     bool checkAudioProperties();
 
     template <typename CtrlT>
-    bool readComplexPropery(long prop, long& val) const;
+    bool readComplexProperty(long prop, long& val) const;
     template <typename CtrlT>
     bool writeComplexProperty(long prop, double val, long flags);
     _ComPtr<IMFAttributes> getDefaultSourceConfig(UINT32 num = 10);
@@ -2120,7 +2120,7 @@ bool CvCapture_MSMF::setTime(int numberFrame)
 }
 
 template <typename CtrlT>
-bool CvCapture_MSMF::readComplexPropery(long prop, long & val) const
+bool CvCapture_MSMF::readComplexProperty(long prop, long & val) const
 {
     _ComPtr<CtrlT> ctrl;
     if (FAILED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&ctrl))))
@@ -2188,64 +2188,64 @@ double CvCapture_MSMF::getProperty( int property_id ) const
             else
                 break;
         case CAP_PROP_BRIGHTNESS:
-            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Brightness, cVal))
+            if (readComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Brightness, cVal))
                 return cVal;
             break;
         case CAP_PROP_CONTRAST:
-            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Contrast, cVal))
+            if (readComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Contrast, cVal))
                 return cVal;
             break;
         case CAP_PROP_SATURATION:
-            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Saturation, cVal))
+            if (readComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Saturation, cVal))
                 return cVal;
             break;
         case CAP_PROP_HUE:
-            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Hue, cVal))
+            if (readComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Hue, cVal))
                 return cVal;
             break;
         case CAP_PROP_GAIN:
-            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Gain, cVal))
+            if (readComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Gain, cVal))
                 return cVal;
             break;
         case CAP_PROP_SHARPNESS:
-            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Sharpness, cVal))
+            if (readComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Sharpness, cVal))
                 return cVal;
             break;
         case CAP_PROP_GAMMA:
-            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Gamma, cVal))
+            if (readComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Gamma, cVal))
                 return cVal;
             break;
         case CAP_PROP_BACKLIGHT:
-            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_BacklightCompensation, cVal))
+            if (readComplexProperty<IAMVideoProcAmp>(VideoProcAmp_BacklightCompensation, cVal))
                 return cVal;
             break;
         case CAP_PROP_MONOCHROME:
-            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_ColorEnable, cVal))
+            if (readComplexProperty<IAMVideoProcAmp>(VideoProcAmp_ColorEnable, cVal))
                 return cVal == 0 ? 1 : 0;
             break;
         case CAP_PROP_TEMPERATURE:
-            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_WhiteBalance, cVal))
+            if (readComplexProperty<IAMVideoProcAmp>(VideoProcAmp_WhiteBalance, cVal))
                 return cVal;
             break;
         case CAP_PROP_PAN:
-            if (readComplexPropery<IAMCameraControl>(CameraControl_Pan, cVal))
+            if (readComplexProperty<IAMCameraControl>(CameraControl_Pan, cVal))
                 return cVal;
             break;
         case CAP_PROP_TILT:
-            if (readComplexPropery<IAMCameraControl>(CameraControl_Tilt, cVal))
+            if (readComplexProperty<IAMCameraControl>(CameraControl_Tilt, cVal))
                 return cVal;
             break;
         case CAP_PROP_ROLL:
-            if (readComplexPropery<IAMCameraControl>(CameraControl_Roll, cVal))
+            if (readComplexProperty<IAMCameraControl>(CameraControl_Roll, cVal))
                 return cVal;
             break;
         case CAP_PROP_IRIS:
-            if (readComplexPropery<IAMCameraControl>(CameraControl_Iris, cVal))
+            if (readComplexProperty<IAMCameraControl>(CameraControl_Iris, cVal))
                 return cVal;
             break;
         case CAP_PROP_EXPOSURE:
         case CAP_PROP_AUTO_EXPOSURE:
-            if (readComplexPropery<IAMCameraControl>(CameraControl_Exposure, cVal))
+            if (readComplexProperty<IAMCameraControl>(CameraControl_Exposure, cVal))
             {
                 if (property_id == CAP_PROP_EXPOSURE)
                     return cVal;
@@ -2254,12 +2254,12 @@ double CvCapture_MSMF::getProperty( int property_id ) const
             }
             break;
         case CAP_PROP_ZOOM:
-            if (readComplexPropery<IAMCameraControl>(CameraControl_Zoom, cVal))
+            if (readComplexProperty<IAMCameraControl>(CameraControl_Zoom, cVal))
                 return cVal;
             break;
         case CAP_PROP_FOCUS:
         case CAP_PROP_AUTOFOCUS:
-            if (readComplexPropery<IAMCameraControl>(CameraControl_Focus, cVal))
+            if (readComplexProperty<IAMCameraControl>(CameraControl_Focus, cVal))
             {
                 if (property_id == CAP_PROP_FOCUS)
                     return cVal;
