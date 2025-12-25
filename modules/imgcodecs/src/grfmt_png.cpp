@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "utils.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -120,12 +121,6 @@
 // see http://gcc.gnu.org/ml/gcc/2011-10/msg00324.html for some details
 #define mingw_getsp(...) 0
 #define __builtin_frame_address(...) 0
-
-static bool isLittleEndian()
-{
-    uint16_t x = 0x0001;
-    return *((uint8_t*)&x) != 0;
-}
 
 namespace cv
 {
@@ -1801,7 +1796,7 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
         if (animation.frames[i].channels() == 3)
             cvtColor(animation.frames[i], tmpframes[i], COLOR_BGR2RGB);
 
-        if (tmpframes[i].depth() == CV_16U && isLittleEndian())
+        if (tmpframes[i].depth() == CV_16U && !isBigEndian())
         {
             Mat& m = tmpframes[i];
             for (int y = 0; y < m.rows; ++y)
@@ -1931,7 +1926,7 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
             if (tmp.channels() > 2)
                 cvtColor(tmp, tmp, COLOR_BGRA2RGBA);
 
-            if (tmp.depth() == CV_16U && isLittleEndian())
+            if (tmp.depth() == CV_16U && !isBigEndian())
             {
                 for (int y = 0; y < tmp.rows; ++y)
                 {
