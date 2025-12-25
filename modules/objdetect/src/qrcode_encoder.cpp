@@ -1576,7 +1576,7 @@ bool QRCodeDecoderImpl::errorCorrectionBlock(std::vector<uint8_t>& codewords) {
     uint8_t b = 1;  // discrepancy from last L update
 
     std::vector<uint8_t> C(numSyndromes, 0);  // Error locator polynomial
-    std::vector<uint8_t> B(numSyndromes, 0);  // A copy of error locator from previos L update
+    std::vector<uint8_t> B(numSyndromes, 0);  // A copy of error locator from previous L update
     C[0] = B[0] = 1;
     for (size_t i = 0; i < numSyndromes; ++i) {
         CV_Assert(m + L - 1 < C.size());  // m >= 1 on any iteration

@@ -401,10 +401,10 @@ std::string ext_mem_frame_type_to_cstr(int type) {
     std::stringstream ss;
     APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_DXVA2_DECODER_TARGET);
     APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_DXVA2_PROCESSOR_TARGET);
-    // NB: according to VPL source the commented MFX_* constane below are belong to the
+    // NB: according to VPL source the commented MFX_* constant below are belong to the
     // same actual integral value as condition abobe. So it is impossible
     // to distinct them in condition branch.  Just put this comment and possible
-    // constans here...
+    // constants here...
     //APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_VIDEO_MEMORY_DECODER_TARGET);
     //APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_VIDEO_MEMORY_PROCESSOR_TARGET);
     APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_SYSTEM_MEMORY);
