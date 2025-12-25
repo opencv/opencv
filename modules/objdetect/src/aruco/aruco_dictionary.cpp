@@ -73,8 +73,8 @@ void Dictionary::writeDictionary(FileStorage& fs, const String &name)
 }
 
 
-bool Dictionary::identify(const Mat &onlyBits, CV_OUT int &idx, CV_OUT int &rotation, double maxCorrectionRate, float validBitIdThreshold) const {
-    CV_Assert(onlyBits.rows == markerSize && onlyBits.cols == markerSize);
+bool Dictionary::identify(const Mat &onlyCellPixelRatio, CV_OUT int &idx, CV_OUT int &rotation, double maxCorrectionRate, float validBitIdThreshold) const {
+    CV_Assert(onlyCellPixelRatio.rows == markerSize && onlyCellPixelRatio.cols == markerSize);
 
     int maxCorrectionRecalculed = int(double(maxCorrectionBits) * maxCorrectionRate);
 
@@ -89,12 +89,12 @@ bool Dictionary::identify(const Mat &onlyBits, CV_OUT int &idx, CV_OUT int &rota
             Mat bitsRot = getBitsFromByteList(bytesList.rowRange(m, m + 1), markerSize, r);
             bitsRot.convertTo(bitsRot, CV_32F);
 
-            // Loop over all bits dictBitsList [m, markerSize * markerSize, 4]; onlyBits [markerSize, markerSize]
+            // Loop over all bits dictBitsList [m, markerSize * markerSize, 4]; onlyCellPixelRatio [markerSize, markerSize]
             int currentHamming = 0;
             for(int i = 0; i < markerSize; i++) {
                 for(int j = 0; j < markerSize; j++) {
                     // If detected bit is too far from the ground truth, consider it false.
-                    if(fabs(onlyBits.at<float>(i, j) - static_cast<float>(bitsRot.at<float>(i, j))) > validBitIdThreshold){
+                    if(fabs(onlyCellPixelRatio.at<float>(i, j) - static_cast<float>(bitsRot.at<float>(i, j))) > validBitIdThreshold){
                         currentHamming++;
                     }
                 }
@@ -123,7 +123,7 @@ bool Dictionary::identify(const Mat &onlyBits, CV_OUT int &idx, CV_OUT int &rota
 
     Mat candidateBitRatio;
     onlyBits.convertTo(candidateBitRatio, CV_32F);
-    const float validBitIdThreshold = 0.5f;
+    const float validBitIdThreshold = kDefaultValidBitIdThreshold;
     return identify(candidateBitRatio, idx, rotation, maxCorrectionRate, validBitIdThreshold);
 }
 

@@ -650,7 +650,6 @@ TEST(Charuco, issue_14014)
     aruco::DetectorParameters detectorParams;
     detectorParams.cornerRefinementMethod = (int)aruco::CORNER_REFINE_SUBPIX;
     detectorParams.cornerRefinementMinAccuracy = 0.01;
-    detectorParams.validBitIdThreshold = 0.499f;
     aruco::ArucoDetector detector(aruco::getPredefinedDictionary(aruco::DICT_7X7_250), detectorParams);
     aruco::CharucoBoard board(Size(8, 5), 0.03455f, 0.02164f, detector.getDictionary());
 
