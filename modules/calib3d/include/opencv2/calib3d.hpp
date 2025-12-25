@@ -1411,7 +1411,7 @@ CV_EXPORTS_W bool checkChessboard(InputArray img, Size size);
 -   @ref CALIB_CB_LARGER The detected pattern is allowed to be larger than patternSize (see description).
 -   @ref CALIB_CB_MARKER The detected pattern must have a marker (see description).
 This should be used if an accurate camera calibration is required.
-@param meta Optional output arrray of detected corners (CV_8UC1 and size = cv::Size(columns,rows)).
+@param meta Optional output array of detected corners (CV_8UC1 and size = cv::Size(columns,rows)).
 Each entry stands for one corner of the pattern and can have one of the following values:
 -   0 = no meta data attached
 -   1 = left-top corner of a black cell

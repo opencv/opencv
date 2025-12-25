@@ -1036,7 +1036,7 @@ public:
         else if (op == OPERATION::LESS_EQUAL)
             node = std::make_shared<ov::op::v1::LessEqual>(inp0, inp1);
         // Ideally we should do this but int32 internal blobs are converted to float32 data type in inference.
-        // TODO: Remove data type convertion when we have type inference.
+        // TODO: Remove data type conversion when we have type inference.
         else if (op == OPERATION::MOD) {
             auto inp0_i64 = std::make_shared<ov::op::v0::Convert>(inp0, ov::element::i64);
             auto inp1_i64 = std::make_shared<ov::op::v0::Convert>(inp1, ov::element::i64);
