@@ -988,7 +988,7 @@ bool  TiffDecoder::readData( Mat& img )
                                         break;
 
                                     default:
-                                        CV_LOG_ONCE_ERROR(NULL, "OpenCV TIFF(line " << __LINE__ << "): Unsupported convertion :"
+                                        CV_LOG_ONCE_ERROR(NULL, "OpenCV TIFF(line " << __LINE__ << "): Unsupported conversion :"
                                                                << " bpp = " << bpp << " ncn = " << (int)ncn
                                                                << " wanted_channels =" << wanted_channels  );
                                         break;

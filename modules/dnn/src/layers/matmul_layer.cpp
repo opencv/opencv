@@ -423,7 +423,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         op->set_input_x1_by_name(*input_A_node, input_A_wrapper->name.c_str());
         op->update_input_desc_x1(*input_A_desc);
         // set inputs : x2
-        if (blobs.empty()) { // varaible input B
+        if (blobs.empty()) { // variable input B
             auto input_B_wrapper = inputs[1].dynamicCast<CannBackendWrapper>();
             auto input_B_desc = input_B_wrapper->getTensorDesc();
             auto input_B_node = nodes[1].dynamicCast<CannBackendNode>()->getOp();
