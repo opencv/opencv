@@ -1966,8 +1966,8 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
 #endif
 
         if (img_convert_ctx == NULL) {
-CV_LOG_ERROR(NULL, "Cannot initialize the conversion context!");
-            #if USE_AV_HW_CODECS
+            CV_LOG_ERROR(NULL, "Cannot initialize the conversion context!");
+#if USE_AV_HW_CODECS
             if (sw_picture != picture)
                 av_frame_free(&sw_picture);
 #endif
