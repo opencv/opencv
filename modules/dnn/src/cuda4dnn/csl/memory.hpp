@@ -46,8 +46,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
         /** allocates device memory for \p count number of element */
         ManagedPtr(size_type count) {
-            if (count <= 0) {
-                CV_Error(Error::StsBadArg, "number of elements is zero or negative");
+            if (count == 0) {
+                CV_Error(Error::StsBadArg,"ManagedPtr: number of elements must be greater than zero");
             }
 
             void* temp = nullptr;
@@ -143,6 +143,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
      */
     template <class T>
     void memcpy(T *dest, const ManagedPtr<T>& src) {
+        CV_Assert(dest);
+        CV_Assert(src);
         memcpy<T>(dest, src.get(), src.size());
     }
 
@@ -158,6 +160,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
      */
     template <class T>
     void memcpy(const ManagedPtr<T>& dest, const T* src) {
+        CV_Assert(dest);
+        CV_Assert(src);
         memcpy<T>(dest.get(), src, dest.size());
     }
 
@@ -173,6 +177,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
      */
     template <class T>
     void memcpy(const ManagedPtr<T>& dest, const ManagedPtr<T>& src) {
+        CV_Assert(dest);
+        CV_Assert(src);
         memcpy<T>(dest.get(), src.get(), std::min(dest.size(), src.size()));
     }
 
@@ -185,6 +191,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
      */
     template <class T>
     void memset(const ManagedPtr<T>& dest, std::int8_t ch) {
+        CV_Assert(dest);
         memset<T>(dest.get(), ch, dest.size());
     }
 
@@ -202,6 +209,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
      */
     template <class T>
     void memcpy(T *dest, const ManagedPtr<T>& src, const Stream& stream) {
+        CV_Assert(dest);
+        CV_Assert(src);
         CV_Assert(stream);
         memcpy<T>(dest, src.get(), src.size(), stream);
     }
@@ -221,6 +230,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
     template <class T>
     void memcpy(const ManagedPtr<T>& dest, const T* src, const Stream& stream) {
         CV_Assert(stream);
+        CV_Assert(dest);
+        CV_Assert(src);
         memcpy<T>(dest.get(), src, dest.size(), stream);
     }
 
@@ -238,6 +249,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
     template <class T>
     void memcpy(ManagedPtr<T>& dest, const ManagedPtr<T>& src, const Stream& stream) {
         CV_Assert(stream);
+        CV_Assert(dest);
+        CV_Assert(src);
         memcpy<T>(dest.get(), src.get(), std::min(dest.size(), src.size()), stream);
     }
 
@@ -252,6 +265,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
     template <class T>
     void memset(const ManagedPtr<T>& dest, int ch, const Stream& stream) {
         CV_Assert(stream);
+        CV_Assert(dest);
         memset<T>(dest.get(), ch, dest.size(), stream);
     }
 
