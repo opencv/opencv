@@ -338,8 +338,8 @@ void DpSeamFinder::findComponents()
                     states_.push_back(SECOND);
 
                 floodFill(labels_, Point(x, y), ++ncomps_);
-                tls_.push_back(Point(x, y));
-                brs_.push_back(Point(x+1, y+1));
+                tls_.emplace_back(x,y);
+                brs_.emplace_back(x+1, y+1);
                 contours_.push_back(std::vector<Point>());
             }
 
@@ -356,7 +356,7 @@ void DpSeamFinder::findComponents()
                 if ((x == 0 || labels_(y, x-1) != l) || (x == unionSize_.width-1 || labels_(y, x+1) != l) ||
                     (y == 0 || labels_(y-1, x) != l) || (y == unionSize_.height-1 || labels_(y+1, x) != l))
                 {
-                    contours_[ci].push_back(Point(x, y));
+                    contours_[ci].emplace_back(x,y);
                 }
             }
         }
@@ -517,7 +517,7 @@ void DpSeamFinder::resolveConflicts(
                             if ((x == 0 || labels_(y, x-1) != l[i]) || (x == unionSize_.width-1 || labels_(y, x+1) != l[i]) ||
                                 (y == 0 || labels_(y-1, x) != l[i]) || (y == unionSize_.height-1 || labels_(y+1, x) != l[i]))
                             {
-                                contours_[c[i]].push_back(Point(x, y));
+                                contours_[c[i]].emplace_back(x,y);
                             }
                         }
                     }
@@ -637,7 +637,7 @@ bool DpSeamFinder::getSeamTips(int comp1, int comp2, Point &p1, Point &p2)
              (x < unionSize_.width-1 && labels_(y, x+1) == l2) ||
              (y < unionSize_.height-1 && labels_(y+1, x) == l2)))
         {
-            specialPoints.push_back(Point(x, y));
+            specialPoints.emplace_back(x,y);
         }
     }
 

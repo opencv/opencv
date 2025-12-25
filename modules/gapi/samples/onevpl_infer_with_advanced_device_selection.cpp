@@ -434,7 +434,7 @@ int main(int argc, char *argv[]) {
     //
     // - you should pass such wrappers as constructor arguments for each component in pipeline:
     //      a) use extended constructor for `onevpl::GSource` for activating predefined device & context
-    //      b) use `cfgContextParams` method of `cv::gapi::ie::Params` to enable `PreprocesingEngine`
+    //      b) use `cfgContextParams` method of `cv::gapi::ie::Params` to enable `PreprocessingEngine`
     // for predefined device & context
     //      c) use `InferenceEngine::ParamMap` to activate remote ctx in Inference Engine for given
     // device & context
@@ -577,14 +577,14 @@ int main(int argc, char *argv[]) {
     }
 #endif // HAVE_INF_ENGINE
 
-    // turn on VPP PreprocesingEngine if available & requested
+    // turn on VPP PreprocessingEngine if available & requested
     if (flow_settings->vpl_preproc_enable) {
         if (is_gpu(preproc_device)) {
-            // activate VPP PreprocesingEngine on GPU
+            // activate VPP PreprocessingEngine on GPU
             face_net.cfgPreprocessingParams(gpu_accel_device.value(),
                                             gpu_accel_ctx.value());
         } else {
-            // activate VPP PreprocesingEngine on CPU
+            // activate VPP PreprocessingEngine on CPU
             face_net.cfgPreprocessingParams(cpu_accel_device,
                                             cpu_accel_ctx);
         }

@@ -3876,6 +3876,18 @@ used for images only.
 @note Only applicable to contour moments calculations from Python bindings: Note that the numpy
 type for the input array should be either np.int32 or np.float32.
 
+@note For contour-based moments, the zeroth-order moment \c m00 represents
+the contour area.
+
+If the input contour is degenerate (for example, a single point or all points
+are collinear), the area is zero and therefore \c m00 == 0.
+
+In this case, the centroid coordinates (\c m10/m00, \c m01/m00) are undefined
+and must be handled explicitly by the caller.
+
+A common workaround is to compute the center using cv::boundingRect() or by
+averaging the input points.
+
 @sa  contourArea, arcLength
  */
 CV_EXPORTS_W Moments moments( InputArray array, bool binaryImage = false );
@@ -4278,7 +4290,7 @@ area. It takes the set of points and the parameter k as input and returns the ar
 enclosing polygon.
 
 The Implementation is based on a paper by Aggarwal, Chang and Yap @cite Aggarwal1985. They
-provide a \f$\theta(n²log(n)log(k))\f$ algorighm for finding the minimal convex polygon with k
+provide a \f$\theta(n²log(n)log(k))\f$ algorithm for finding the minimal convex polygon with k
 vertices enclosing a 2D convex polygon with n vertices (k < n). Since the #minEnclosingConvexPolygon
 function takes a 2D point set as input, an additional preprocessing step of computing the convex hull
 of the 2D point set is required. The complexity of the #convexHull function is \f$O(n log(n))\f$ which

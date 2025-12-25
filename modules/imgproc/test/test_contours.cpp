@@ -593,5 +593,20 @@ TEST(Imgproc_PointPolygonTest, regression_10222)
     EXPECT_GT(result, 0) << "Desired result: point is inside polygon - actual result: point is not inside polygon";
 }
 
+TEST(Imgproc_Moments, degenerateContours)
+{
+    std::vector<cv::Point> c1;
+    c1.push_back(cv::Point(10,10));
+    cv::Moments m1 = cv::moments(c1, false);
+    EXPECT_EQ(m1.m00, 0);
+
+    std::vector<cv::Point> c2;
+    c2.push_back(cv::Point(0,0));
+    c2.push_back(cv::Point(5,5));
+    c2.push_back(cv::Point(10,10));
+    cv::Moments m2 = cv::moments(c2, false);
+    EXPECT_EQ(m2.m00, 0);
+}
+
 }} // namespace
 /* End of file. */

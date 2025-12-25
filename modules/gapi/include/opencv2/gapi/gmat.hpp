@@ -245,7 +245,7 @@ struct GAPI_EXPORTS_W_SIMPLE GMatDesc
 static inline GMatDesc empty_gmat_desc() { return GMatDesc{-1,-1,{-1,-1}}; }
 
 namespace gapi { namespace detail {
-/** Checks GMatDesc fields if the passed matrix is a set of n-dimentional points.
+/** Checks GMatDesc fields if the passed matrix is a set of n-dimensional points.
 @param in GMatDesc to check.
 @param n expected dimensionality.
 @return the amount of points. In case input matrix can't be described as vector of points

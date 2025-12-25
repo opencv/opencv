@@ -416,7 +416,7 @@ public:
         if (layout == BATCH_SEQ_HID){
             //swap axis 0 and 1 input x
             cv::Mat tmp;
-            // Since python input is 4 dimentional and C++ input 3 dimentinal
+            // Since python input is 4 dimensional and C++ input 3 dimensional
             // we need to process each differently
             if (input[0].dims == 4){
                 // here !!!
