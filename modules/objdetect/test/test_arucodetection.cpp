@@ -1450,6 +1450,7 @@ TEST_P(ArucoThreading, number_of_threads_does_not_change_results)
 
     aruco::DetectorParameters detectorParameters = detector.getDetectorParameters();
     detectorParameters.cornerRefinementMethod = (int)GetParam();
+    detectorParameters.validBitIdThreshold = 0.5f;
     detector.setDetectorParameters(detectorParameters);
 
     vector<vector<Point2f> > original_corners;
