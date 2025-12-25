@@ -523,8 +523,27 @@ template<typename _Tp, typename _AccTp> static inline
 _AccTp normInf(const _Tp* a, int n)
 {
     _AccTp s = 0;
-    for( int i = 0; i < n; i++ )
+    int i = 0;
+#if CV_ENABLE_UNROLLED
+    for (; i <= n - 8; i += 8) {
+        _AccTp t0 = (_AccTp)cv_abs(a[i]);
+        _AccTp t1 = (_AccTp)cv_abs(a[i + 1]);
+        _AccTp t2 = (_AccTp)cv_abs(a[i + 2]);
+        _AccTp t3 = (_AccTp)cv_abs(a[i + 3]);
+        _AccTp t4 = (_AccTp)cv_abs(a[i + 4]);
+        _AccTp t5 = (_AccTp)cv_abs(a[i + 5]);
+        _AccTp t6 = (_AccTp)cv_abs(a[i + 6]);
+        _AccTp t7 = (_AccTp)cv_abs(a[i + 7]);
+        _AccTp blockMax = std::max(
+        std::max(std::max(t0, t1), std::max(t2, t3)),
+        std::max(std::max(t4, t5), std::max(t6, t7))
+        );
+        s = std::max(s, blockMax);
+    }
+#endif
+    for (; i < n; i++) {
         s = std::max(s, (_AccTp)cv_abs(a[i]));
+    }
     return s;
 }
 
