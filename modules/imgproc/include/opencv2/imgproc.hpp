@@ -4290,7 +4290,7 @@ area. It takes the set of points and the parameter k as input and returns the ar
 enclosing polygon.
 
 The Implementation is based on a paper by Aggarwal, Chang and Yap @cite Aggarwal1985. They
-provide a \f$\theta(n²log(n)log(k))\f$ algorighm for finding the minimal convex polygon with k
+provide a \f$\theta(n²log(n)log(k))\f$ algorithm for finding the minimal convex polygon with k
 vertices enclosing a 2D convex polygon with n vertices (k < n). Since the #minEnclosingConvexPolygon
 function takes a 2D point set as input, an additional preprocessing step of computing the convex hull
 of the 2D point set is required. The complexity of the #convexHull function is \f$O(n log(n))\f$ which
