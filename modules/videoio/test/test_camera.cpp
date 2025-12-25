@@ -55,7 +55,7 @@ static void test_readFrames(/*const*/ VideoCapture& capture, const int N = 100, 
             // Check that the time between two camera frames and two system time calls
             // are within 1.5 frame periods of one another.
             //
-            // 1.5x is chosen to accomodate for a dropped frame, and an additional 50%
+            // 1.5x is chosen to accommodate for a dropped frame, and an additional 50%
             // to account for drift in the scale of the camera and system time domains.
             EXPECT_NEAR(sysTimeElapsedSecs, camTimeElapsedSecs, framePeriod * 1.5);
         }

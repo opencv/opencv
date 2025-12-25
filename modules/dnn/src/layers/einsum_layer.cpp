@@ -1179,7 +1179,7 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
                                                                 shape(currentLeft),
                                                                 reshaped_dims))
         {
-            // This can be done because curent_* tensors (if they exist) and output tensors are
+            // This can be done because current_* tensors (if they exist) and output tensors are
             // intermediate tensors and cannot be input tensors to the Einsum node itself
             // (which are immutable).
             currentLeft = currentLeft.reshape(1, reshaped_dims.size(), reshaped_dims.data());

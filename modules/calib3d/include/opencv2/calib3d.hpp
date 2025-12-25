@@ -3866,7 +3866,7 @@ void initUndistortRectifyMap(InputArray cameraMatrix, InputArray distCoeffs,
                              Size size, int m1type, OutputArray map1, OutputArray map2);
 
 /** @brief Computes the projection and inverse-rectification transformation map. In essense, this is the inverse of
-#initUndistortRectifyMap to accomodate stereo-rectification of projectors ('inverse-cameras') in projector-camera pairs.
+#initUndistortRectifyMap to accommodate stereo-rectification of projectors ('inverse-cameras') in projector-camera pairs.
 
 The function computes the joint projection and inverse rectification transformation and represents the
 result in the form of maps for #remap. The projected image looks like a distorted version of the original which,
