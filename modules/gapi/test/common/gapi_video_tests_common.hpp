@@ -381,7 +381,7 @@ inline void testBackgroundSubtractorStreaming(cv::GStreamingCompiled& gapiBackSu
 
     compare_f cmpF = AbsSimilarPoints(tolerance, numDiff).to_compare_f();
 
-    // Comparison of G-API and OpenCV substractors
+    // Comparison of G-API and OpenCV subtractors
     std::size_t frames = 0u;
     while (frames <= testNumFrames && gapiBackSub.pull(cv::gout(frame, gapiForeground)))
     {
