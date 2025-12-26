@@ -283,24 +283,40 @@ inline IppCmpOp arithm_ipp_convert_cmp(int cmpop)
 inline int arithm_ipp_cmp8u(const uchar* src1, size_t step1, const uchar* src2, size_t step2,
                             uchar* dst, size_t step, int width, int height, int cmpop)
 {
+    // perf regression with AVX512: https://github.com/opencv/opencv/issues/28251
+    if (ippCPUID_AVX512F&cv::ipp::getIppFeatures())
+        return 0;
+
     ARITHM_IPP_CMP(ippiCompare_8u_C1R, src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(width, height));
 }
 
 inline int arithm_ipp_cmp16u(const ushort* src1, size_t step1, const ushort* src2, size_t step2,
                             uchar* dst, size_t step, int width, int height, int cmpop)
 {
+    // perf regression with AVX512: https://github.com/opencv/opencv/issues/28251
+    if (ippCPUID_AVX512F&cv::ipp::getIppFeatures())
+        return 0;
+
     ARITHM_IPP_CMP(ippiCompare_16u_C1R, src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(width, height));
 }
 
 inline int arithm_ipp_cmp16s(const short* src1, size_t step1, const short* src2, size_t step2,
                              uchar* dst, size_t step, int width, int height, int cmpop)
 {
+    // perf regression with AVX512: https://github.com/opencv/opencv/issues/28251
+    if (ippCPUID_AVX512F&cv::ipp::getIppFeatures())
+        return 0;
+
     ARITHM_IPP_CMP(ippiCompare_16s_C1R, src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(width, height));
 }
 
 inline int arithm_ipp_cmp32f(const float* src1, size_t step1, const float* src2, size_t step2,
                              uchar* dst, size_t step, int width, int height, int cmpop)
 {
+    // perf regression with AVX512: https://github.com/opencv/opencv/issues/28251
+    if (ippCPUID_AVX512F&cv::ipp::getIppFeatures())
+        return 0;
+
     ARITHM_IPP_CMP(ippiCompare_32f_C1R, src1, (int)step1, src2, (int)step2, dst, (int)step, ippiSize(width, height));
 }
 
