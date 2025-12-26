@@ -2594,7 +2594,7 @@ int Net::Impl::getLayersCount(const String& layerType) const
 void Net::Impl::syncToGPU(int tensorId)
 {
     CV_Assert(tensorId >= 0 && tensorId < __tensors__.size());
-    
+
     // Resize GPU vector if needed
     if (__tensors_gpu__.size() != __tensors__.size()) {
         __tensors_gpu__.resize(__tensors__.size());
@@ -2604,7 +2604,7 @@ void Net::Impl::syncToGPU(int tensorId)
 
     // Upload CPU Mat to GPU GpuMat
     __tensors_gpu__[tensorId].upload(__tensors__[tensorId]);
-    
+
     CV_LOG_INFO(NULL, "Tensor " << tensorId << " uploaded to GPU.");
 }
 
@@ -2616,7 +2616,7 @@ void Net::Impl::syncToCPU(int tensorId)
 
     // Download GPU GpuMat back to CPU Mat
     __tensors_gpu__[tensorId].download(__tensors__[tensorId]);
-    
+
     CV_LOG_INFO(NULL, "Tensor " << tensorId << " downloaded from GPU.");
 }
 #endif
