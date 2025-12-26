@@ -276,6 +276,16 @@ enum ImageMetadataType
     IMAGE_METADATA_MAX = 3       // Highest valid index (usually used for bounds checking)
 };
 
+enum DecoderStatus
+{
+    DECODER_OK = 0,                      ///< No error.
+    DECODER_UNINITIALIZED = 1,           ///< The object has not been properly initialized.
+    DECODER_SOURCE_NOT_OPENED = 2,       ///< Failed to open the input source file or buffer.
+    DECODER_UNKNOWN_SOURCE_FORMAT = 3,   ///< The source format could not be determined or is unsupported.
+    DECODER_READ_HEADER_FAILED = 4,      ///< An error occurred while reading the data header.
+    DECODER_READ_DATA_FAILED = 5         ///< An error occurred while reading the data content.
+};
+
 //! @} imgcodecs_flags
 
 /** @brief Represents an animation with multiple frames.
@@ -716,20 +726,21 @@ It does not check for the actual existence of the file but rather the ability to
 */
 CV_EXPORTS_W bool haveImageWriter( const String& filename );
 
-/** @brief To read multi-page images on demand
+/** @brief Iterator-based interface for reading multi-page and animated images on demand.
 
-The ImageCollection class provides iterator API to read multi-page images on demand. Create iterator
-to the collection of the images and iterate over the collection. Decode the necessary page with operator*.
+The `ImageCollection` class provides a lazy-decoding (on-demand decoding) interface for accessing individual frames in
+multi-page or animated image formats (e.g., TIFF, animated WebP, GIF, APNG). Internally, animated
+formats are supported via the `Animation` class.
 
-The performance of page decoding is O(1) if collection is increment sequentially. If the user wants to access random page,
-then the time Complexity is O(n) because the collection has to be reinitialized every time in order to go to the correct page.
-However, the intermediate pages are not decoded during the process, so typically it's quite fast.
-This is required because multi-page codecs does not support going backwards.
-After decoding the one page, it is stored inside the collection cache. Hence, trying to get Mat object from already decoded page is O(1).
-If you need memory, you can use .releaseCache() method to release cached index.
-The space complexity is O(n) if all pages are decoded into memory. The user is able to decode and release images on demand.
+Only the currently accessed frame is decoded when needed. This enables efficient memory use and
+fast iteration without fully loading the image sequence into memory. The actual decoding behavior may vary
+depending on the image decoder implementation.
+
+Sequential access via iterators is fast (O(1)), while random access (e.g., accessing frame N directly)
+has linear complexity (O(n)) due to the need to advance the decoder sequentially. Previously decoded frames
+are cached and can be released manually using `releaseCache()`.
 */
-class CV_EXPORTS ImageCollection {
+class CV_EXPORTS_W ImageCollection {
 public:
     struct CV_EXPORTS iterator {
         iterator(ImageCollection* col);
@@ -746,14 +757,157 @@ public:
         int m_curr;
     };
 
-    ImageCollection();
-    ImageCollection(const String& filename, int flags);
-    void init(const String& img, int flags);
-    size_t size() const;
-    const Mat& at(int index);
+    /** @brief Default constructor. Creates an uninitialized ImageCollection.
+
+    Use `init()` or assignment to load image data before use.
+     */
+    CV_WRAP ImageCollection();
+
+    /** @brief Constructs an ImageCollection from a file.
+
+    @param filename Path to the multi-page or animated image file.
+    @param flags Flag specifying the color type of the loaded image (e.g., IMREAD_COLOR, IMREAD_UNCHANGED).
+
+    This constructor initializes the collection and prepares the internal iterator.
+    Only image header read initially; individual pages or frames are decoded on access.
+     */
+    CV_WRAP ImageCollection(const String& filename, int flags = IMREAD_UNCHANGED);
+
+    /** @brief Constructs an ImageCollection from an in-memory image buffer.
+
+    @param buffer Input buffer containing encoded image data (e.g., from a file or network stream).
+           This must be a 1D `cv::Mat`, `std::vector<uchar>`, or similar supported type.
+    @param flags Flag specifying the color type of the loaded image (e.g., IMREAD_COLOR, IMREAD_UNCHANGED).
+
+     This constructor enables reading multi-page or animated images directly from memory,
+     without the need to write them to disk. The buffer header is parsed, but no frame is decoded until accessed.
+     */
+    CV_WRAP ImageCollection(InputArray buffer, int flags = IMREAD_UNCHANGED);
+
+    /** @brief Initializes the ImageCollection with a new file.
+
+    @param filename Path to the multi-page or animated image file.
+    @param flags Flag that can take values of cv::ImreadModes
+
+    Clears any existing data and loads the specified image.
+     */
+    CV_WRAP void init(const String& filename, int flags = IMREAD_UNCHANGED);
+
+    /** @brief Initializes the ImageCollection with a new in-memory image buffer.
+
+    @param buffer Input buffer containing encoded image data (e.g., from a file or network stream).
+           This must be a 1D `cv::Mat`, `std::vector<uchar>`, or similar supported type.
+    @param flags Flag that can take values of cv::ImreadModes
+
+    Clears any existing data and loads the specified image.
+     */
+    CV_WRAP void init(InputArray buffer, int flags = IMREAD_UNCHANGED);
+
+    /** @brief Closes the ImageCollection and releases internal resources.
+
+    After calling this, the ImageCollection becomes uninitialized.
+     */
+    CV_WRAP void close();
+
+    /** @brief Returns the number of pages/frames in the image collection.
+
+    @return Total number of frames.
+     */
+    CV_WRAP size_t size() const;
+
+    /** @brief Returns the current status of the ImageCollection.
+
+    @return A value from the cv::DecoderStatus enumeration indicating the current state of the ImageCollection:
+
+    This function can be used to verify whether the ImageCollection was opened successfully and
+    to diagnose initialization or decoding errors.
+*/
+    CV_WRAP int getStatus() const;
+
+    /** @brief Returns the width of frames in the collection.
+
+    @return Width in pixels.
+
+    Assumes all frames have consistent dimensions except TIFF files.
+     */
+    CV_WRAP int getWidth() const;
+
+    /** @brief Returns the height of frames in the collection.
+
+    @return Height in pixels.
+
+    Assumes all frames have consistent dimensions except TIFF files.
+     */
+    CV_WRAP int getHeight() const;
+
+    /** @brief Returns the OpenCV type (`CV_8UC3`, etc.) of the frames.
+
+    @return OpenCV matrix type.
+
+    This is determined from the first frame and assumed consistent across all frames except TIFF files.
+     */
+    CV_WRAP int getType() const;
+
+    /** @brief Extracts metadata items if available (e.g., EXIF, XMP, ICCP).
+
+    @param metadata_types Output vector of metadata type identifiers.
+    @param metadata Output array containing the corresponding metadata entries.
+
+    @return Number of metadata items extracted.
+     */
+    CV_WRAP int getMetadata(std::vector<int>& metadata_types, OutputArrayOfArrays metadata);
+
+    /** @brief Returns a reference to the decoded frame at the given index.
+
+    @param index Zero-based frame index.
+    @return Constant reference to the decoded frame (`cv::Mat`).
+
+    If the frame is not already decoded, it is loaded and cached.
+    Throws an exception if the index is out of range.
+     */
+    CV_WRAP const Mat& at(int index);
+
+    /** @brief Returns a reference to the decoded frame at the given index.
+
+    @param index Zero-based frame index.
+    @return Constant reference to the decoded frame.
+
+    Equivalent to `at(index)`. Provided for convenience.
+     */
     const Mat& operator[](int index);
-    void releaseCache(int index);
+
+    /** @brief Sets a custom Animation for this ImageCollection.
+
+    @param animation Animation object containing frames and timing information.
+
+    This method overrides the internal decoder and uses the provided animation data.
+     */
+    CV_WRAP void setAnimation(Animation& animation);
+
+    CV_WRAP bool readFrames(int start = 0, int count = INT16_MAX);
+
+    /** @brief Releases the cached frame at the specified index.
+
+    @param index Index of the frame to remove from the cache.
+
+    Frees memory for the specified frame without affecting other cached pages.
+     */
+    CV_WRAP void releaseCache(int index);
+
+    /** @brief Returns an iterator to the first frame in the collection.
+
+    @return Iterator pointing to the beginning of the collection.
+
+    Can be used in range-based or manual loops.
+     */
     iterator begin();
+
+    /** @brief Returns an iterator to one past the last frame.
+
+    @return Iterator pointing past the end of the collection.
+
+    Used for terminating iterator-based loops.
+     */
     iterator end();
 
     class Impl;
