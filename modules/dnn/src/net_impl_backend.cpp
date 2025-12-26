@@ -190,9 +190,11 @@ void Net::Impl::setPreferableBackend(Net& net, int backendId)
     {
         if (mainGraph)
         {
-            CV_LOG_WARNING(NULL, "Back-ends are not supported by the new graph engine for now");
-            preferableBackend = backendId;
-            return;
+            if (preferableBackend != DNN_BACKEND_CUDA) {
+                 CV_LOG_WARNING(NULL, "Back-ends are not supported by the new graph engine for now");
+                 preferableBackend = backendId;
+                 return;
+            }
         }
 
         clear();
