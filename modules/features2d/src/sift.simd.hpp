@@ -604,7 +604,7 @@ public:
                         }
                     }
 
-                } else  { // val cant be zero here (first abs took care of zero), must be negative
+                } else  { // val can't be zero here (first abs took care of zero), must be negative
                     sift_wt vmin = std::min(std::min(std::min(_00,_01),std::min(_02,_10)),std::min(std::min(_12,_20),std::min(_21,_22)));
                     if (val <= vmin)
                     {

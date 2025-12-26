@@ -117,7 +117,7 @@ struct CharucoDetector::CharucoDetectorImpl {
                     minDist = min(dist, minDist);
                     counter++;
                 }
-                // if this is the first closest marker, dont do anything
+                // if this is the first closest marker, don't do anything
                 if(counter == 0)
                     continue;
                 else {

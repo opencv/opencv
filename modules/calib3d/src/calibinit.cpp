@@ -671,7 +671,7 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
     std::vector<cv::Point2f> out_corners;
 
     if (is_plain)
-      CV_CheckType(type, depth == CV_8U && cn == 1, "Only 8-bit grayscale images are supported whith CALIB_CB_PLAIN flag enable");
+      CV_CheckType(type, depth == CV_8U && cn == 1, "Only 8-bit grayscale images are supported with CALIB_CB_PLAIN flag enable");
 
     if (img.channels() != 1)
     {

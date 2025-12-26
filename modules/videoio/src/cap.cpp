@@ -231,7 +231,7 @@ bool VideoCapture::open(const String& filename, int apiPreference, const std::ve
     }
     else
     {
-        CV_LOG_DEBUG(NULL, "VIDEOIO: choosen backend does not work or wrong. "
+        CV_LOG_DEBUG(NULL, "VIDEOIO: chosen backend does not work or wrong. "
             "Please make sure that your computer support chosen backend and OpenCV built "
             "with right flags.");
     }
@@ -356,7 +356,7 @@ bool VideoCapture::open(const Ptr<IStreamReader>& stream, int apiPreference, con
     }
     else
     {
-        CV_LOG_DEBUG(NULL, "VIDEOIO: choosen backend does not work or wrong. "
+        CV_LOG_DEBUG(NULL, "VIDEOIO: chosen backend does not work or wrong. "
             "Please make sure that your computer support chosen backend and OpenCV built "
             "with right flags.");
     }
@@ -494,7 +494,7 @@ bool VideoCapture::open(int cameraNum, int apiPreference, const std::vector<int>
     }
     else
     {
-        CV_LOG_DEBUG(NULL, "VIDEOIO: choosen backend does not work or wrong."
+        CV_LOG_DEBUG(NULL, "VIDEOIO: chosen backend does not work or wrong."
             "Please make sure that your computer support chosen backend and OpenCV built "
             "with right flags.");
     }
@@ -811,7 +811,7 @@ bool VideoWriter::open(const String& filename, int apiPreference, int fourcc, do
     }
     else
     {
-        CV_LOG_DEBUG(NULL, "VIDEOIO: choosen backend does not work or wrong."
+        CV_LOG_DEBUG(NULL, "VIDEOIO: chosen backend does not work or wrong."
             "Please make sure that your computer support chosen backend and OpenCV built "
             "with right flags.");
     }
