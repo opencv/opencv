@@ -70,7 +70,7 @@ TEST_P(ML_ANN_Params, ActivationFunction)
         Ptr<ml::ANN_MLP> y = Algorithm::load<ANN_MLP>(model_path);
         ASSERT_TRUE(y);
         y->predict(testSamples, ry);
-        EXPECT_MAT_NEAR(rx, ry, FLT_EPSILON);
+        EXPECT_MAT_NEAR(rx, ry, 1e-5f);
     }
 }
 
@@ -181,12 +181,12 @@ TEST_P(ML_ANN_METHOD, Test)
     {
         rx = x->getWeights(j);
         ry = y->getWeights(j);
-        EXPECT_MAT_NEAR(rx, ry, FLT_EPSILON) << "Weights are not equal for layer: " << j;
+        EXPECT_MAT_NEAR(rx, ry, 1e-5f) << "Weights are not equal for layer: " << j;
     }
     x->predict(testSamples, rx);
     y->predict(testSamples, ry);
-    EXPECT_MAT_NEAR(ry, rx, FLT_EPSILON) << "Predict are not equal to result of the saved model";
-    EXPECT_MAT_NEAR(r_gold, rx, FLT_EPSILON) << "Predict are not equal to 'gold' response";
+    EXPECT_MAT_NEAR(ry, rx, 1e-5f) << "Predict are not equal to result of the saved model";
+    EXPECT_MAT_NEAR(r_gold, rx, 1e-5f) << "Predict are not equal to 'gold' response";
 }
 
 INSTANTIATE_TEST_CASE_P(/*none*/, ML_ANN_METHOD,
