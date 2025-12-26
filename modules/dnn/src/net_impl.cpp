@@ -130,6 +130,9 @@ void Net::Impl::clear()
     __tensors__ = std::vector<Mat>();
     bufidxs = std::vector<int>();
     buffers = std::vector<Mat>();
+#ifdef HAVE_CUDA
+    __tensors_gpu__ = std::vector<cuda::GpuMat>();
+#endif
 
     mainGraph = Ptr<Graph>();
 
@@ -988,6 +991,18 @@ void Net::Impl::forwardToLayer(LayerData& ld, bool clearFlags)
 Mat Net::Impl::forward(const String& outputName)
 {
     CV_Assert(!empty());
+
+    #ifdef HAVE_CUDA
+        if (preferableBackend == DNN_BACKEND_CUDA) {
+            CV_LOG_INFO(NULL, "New Engine: Attempting CUDA Prototype Sync...");
+
+            if (!__tensors__.empty()) {
+                syncToGPU(0); // Upload input to GPU
+
+                syncToCPU(0); // Download it back
+            }
+        }
+    #endif
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
     if (mainGraph) {
@@ -2575,6 +2590,36 @@ int Net::Impl::getLayersCount(const String& layerType) const
     return count;
 }
 
+#ifdef HAVE_CUDA
+void Net::Impl::syncToGPU(int tensorId)
+{
+    CV_Assert(tensorId >= 0 && tensorId < __tensors__.size());
+    
+    // Resize GPU vector if needed
+    if (__tensors_gpu__.size() != __tensors__.size()) {
+        __tensors_gpu__.resize(__tensors__.size());
+    }
+
+    if (__tensors__[tensorId].empty()) return;
+
+    // Upload CPU Mat to GPU GpuMat
+    __tensors_gpu__[tensorId].upload(__tensors__[tensorId]);
+    
+    CV_LOG_INFO(NULL, "Tensor " << tensorId << " uploaded to GPU.");
+}
+
+void Net::Impl::syncToCPU(int tensorId)
+{
+    CV_Assert(tensorId >= 0 && tensorId < __tensors_gpu__.size());
+
+    if (__tensors_gpu__[tensorId].empty()) return;
+
+    // Download GPU GpuMat back to CPU Mat
+    __tensors_gpu__[tensorId].download(__tensors__[tensorId]);
+    
+    CV_LOG_INFO(NULL, "Tensor " << tensorId << " downloaded from GPU.");
+}
+#endif
 
 CV__DNN_INLINE_NS_END
 }}  // namespace cv::dnn

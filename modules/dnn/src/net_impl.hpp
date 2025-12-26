@@ -82,6 +82,9 @@ struct Net::Impl : public detail::NetImplBase
     std::vector<std::string> dimnames_vec;
     std::vector<ArgData> args;
     std::vector<Mat> __tensors__;
+#ifdef HAVE_CUDA
+    std::vector<cuda::GpuMat> __tensors_gpu__;
+#endif
     std::vector<int> bufidxs;
     std::vector<Mat> buffers;
     std::vector<Mat> scratchBufs;
