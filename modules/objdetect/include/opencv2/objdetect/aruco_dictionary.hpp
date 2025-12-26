@@ -67,7 +67,7 @@ class CV_EXPORTS_W_SIMPLE Dictionary {
 
     /** @brief Returns Hamming distance of the input bits to the specific id.
      *
-     * If `allRotations` flag is set, the four posible marker rotations are considered
+     * If `allRotations` flag is set, the four possible marker rotations are considered
      */
     CV_WRAP int getDistanceToId(InputArray bits, int id, bool allRotations = true) const;
 
