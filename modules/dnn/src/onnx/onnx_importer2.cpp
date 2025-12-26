@@ -262,13 +262,13 @@ protected:
     void parseCustomLayer          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     //void parseQAvgPool             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     //void parseQConcat              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
-    //void parseQConv                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
-    //void parseQEltwise             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
-    //void parseQGemm                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseQConv                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseQEltwise             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseQGemm                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     //void parseQLeakyRelu           (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
-    //void parseQMatMul              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseQMatMul              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     //void parseQSigmoid             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
-    //void parseQSoftmax             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseQSoftmax             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 
     std::map<std::string, int> onnx_opset_map;  // map from OperatorSetIdProto
     void parseOperatorSet();
@@ -277,6 +277,14 @@ protected:
     const std::string str_domain_com_microsoft = "com.microsoft";
 
     bool useLegacyNames;
+    Mat getBlob(const opencv_onnx::NodeProto& node_proto, int i)
+    {
+        CV_Assert(i < (int)node_inputs.size());
+        if (net.isConstArg(node_inputs[i]))
+            return net.argTensor(node_inputs[i]);
+        CV_Error(Error::StsBadArg, format("Input [%d] (%s) of node %s is not a constant",
+                                          i, node_proto.input(i).c_str(), node_proto.name().c_str()));
+    }
     bool getParamUseLegacyNames()
     {
         //bool param = utils::getConfigurationParameterBool("OPENCV_DNN_ONNX_USE_LEGACY_NAMES", false);
@@ -2064,7 +2072,7 @@ void ONNXImporter2::parseRandomNormalLike(LayerParams& layerParams, const opencv
 }
 
 // BUG: https://github.com/opencv/opencv/issues/26310
-/*void ONNXImporter2::parseQConv(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
+void ONNXImporter2::parseQConv(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
 {
     opencv_onnx::NodeProto node_proto = node_proto_;
     int ninputs = node_proto.input_size();
@@ -2072,45 +2080,6 @@ void ONNXImporter2::parseRandomNormalLike(LayerParams& layerParams, const opencv
 
     float inp_sc = getScalarFromMat<float>(getBlob(node_proto, 1));
     int inp_zp = (int)getScalarFromMat<int8_t>(getBlob(node_proto, 2));
-
-    if (layerParams.has("pad"))
-    {
-        bool asymmetricPadding = false;
-        DictValue pads = layerParams.get("pad");
-        const int dims = pads.size() / 2;
-
-        for (int i = 0; i < dims; ++i)
-        {
-            if (pads.get<int>(i) != pads.get<int>(i + dims))
-            {
-                asymmetricPadding = true;
-                break;
-            }
-        }
-        if (asymmetricPadding && pads.size() == 4)
-        {
-            layerParams.erase("pad");
-            std::vector<int> paddings(4, 0);
-            for (int i = 0; i < dims; ++i)
-            {
-                paddings.push_back(pads.get<int>(i));
-                paddings.push_back(pads.get<int>(dims + i));
-            }
-            LayerParams padLp;
-            padLp.name = layerParams.name + "/pad";
-            padLp.type = "PaddingInt8";
-            padLp.set("paddings", DictValue::arrayInt(&paddings[0], paddings.size()));
-            padLp.set("depth", CV_8S);
-            padLp.set<double>("value", (double)inp_zp);
-
-            opencv_onnx::NodeProto proto;
-            proto.add_input(node_proto.input(0));
-            proto.add_output(padLp.name);
-
-            addLayer(padLp, proto);
-            node_proto.set_input(0, padLp.name);
-        }
-    }
 
     Mat weights = getBlob(node_proto, 3);
     int outCn = weights.size[0];
@@ -2124,6 +2093,7 @@ void ONNXImporter2::parseRandomNormalLike(LayerParams& layerParams, const opencv
 
     Mat bias = (ninputs == 9) ? getBlob(node_proto, 8) : Mat::zeros(1, outCn, CV_32S);
 
+    // Reshape weights to 2D: [OutCn, InCn*kH*kW]
     Mat weights_2d = weights.reshape(1, outCn);
     Mat biasFused(1, outCn, CV_32S);
     Mat outputMultiplier(1, outCn, CV_32F);
@@ -2136,7 +2106,7 @@ void ONNXImporter2::parseRandomNormalLike(LayerParams& layerParams, const opencv
     layerParams.type = "ConvolutionInt8";
     layerParams.set("num_output", outCn);
     layerParams.set("input_zeropoint", inp_zp);
-    layerParams.set("input_scale",inp_sc);
+    layerParams.set("input_scale", inp_sc);
     layerParams.set("zeropoints", out_zp);
     layerParams.set("scales", out_sc);
     layerParams.set("per_channel", per_channel);
@@ -2151,11 +2121,9 @@ void ONNXImporter2::parseQMatMul(LayerParams& layerParams, const opencv_onnx::No
     int ninputs = node_proto.input_size();
     CV_Assert(ninputs == 8);
 
-    if (constBlobs.find(node_proto.input(3)) == constBlobs.end())
-        CV_Error(Error::StsNotImplemented, "Variable weights is not supported");
+    std::vector<Arg> original_inputs = node_inputs;
 
-    int firstInpDims = outShapes[node_proto.input(0)].size();
-
+    int firstInpDims = netimpl->args[node_inputs[0].idx].shape.size();
     float inp_sc = getScalarFromMat<float>(getBlob(node_proto, 1));
     int8_t inp_zp = getScalarFromMat<int8_t>(getBlob(node_proto, 2));
 
@@ -2164,9 +2132,8 @@ void ONNXImporter2::parseQMatMul(LayerParams& layerParams, const opencv_onnx::No
     int secondInpDims = weights.dims;
 
     Mat w_scale = getBlob(node_proto, 4);
-    CV_Assert(w_scale.total() == 1 || w_scale.total() == outCn);
-    bool per_channel = w_scale.total() == outCn ? true : false;
     Mat wt_sc = (w_scale.total() == outCn) ? w_scale : Mat(1, outCn, CV_32F, Scalar(w_scale.at<float>(0)));
+    bool per_channel = w_scale.total() == outCn;
 
     float out_sc = getScalarFromMat<float>(getBlob(node_proto, 6));
     int8_t out_zp = getScalarFromMat<int8_t>(getBlob(node_proto, 7));
@@ -2187,15 +2154,18 @@ void ONNXImporter2::parseQMatMul(LayerParams& layerParams, const opencv_onnx::No
     layerParams.set("zeropoints", out_zp);
     layerParams.set("scales", out_sc);
     layerParams.set("per_channel", per_channel);
-
     layerParams.blobs.push_back(weights);
     layerParams.blobs.push_back(bias);
     layerParams.blobs.push_back(outputMultiplier);
+
+    node_inputs.clear();
+    node_inputs.push_back(original_inputs[0]);
+
     addLayer(layerParams, node_proto);
+
+    node_inputs = original_inputs;
 }
 
-// A * B + C = Y, we require that the dimension of A is [m, k], and the dimension of B is [n, k].
-// And the dim of output Y is [m, n]
 void ONNXImporter2::parseQGemm(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     int ninputs = node_proto.input_size();
@@ -2203,59 +2173,66 @@ void ONNXImporter2::parseQGemm(LayerParams& layerParams, const opencv_onnx::Node
 
     layerParams.type = "InnerProductInt8";
 
-    if (constBlobs.find(node_proto.input(3)) == constBlobs.end())
-        CV_Error(Error::StsNotImplemented, "Variable weights is not supported");
+    // 1. Save original inputs (we need them to parse params, but don't feed them all to the layer)
+    std::vector<Arg> original_inputs = node_inputs;
+
+    // Weights must be constant
+    if (!net.isConstArg(node_inputs[3]))
+        CV_Error(Error::StsNotImplemented, "Variable weights is not supported in QGemm");
 
     Mat weights = getBlob(node_proto, 3);
 
-    if (!layerParams.get<int>("transB", 0))
-    {
+    // Handle transpose
+    if (!layerParams.get<int>("transB", 0)) {
         transpose(weights, weights);
     }
 
     CV_Assert(layerParams.get<float>("alpha", 1) == 1.0f);
     CV_Assert(layerParams.get<int>("transA", 0) == 0);
 
-    int firstInpDims = outShapes[node_proto.input(0)].size();
-
+    // Input A Info
+    int firstInpDims = netimpl->args[node_inputs[0].idx].shape.size();
     float inp_sc = getScalarFromMat<float>(getBlob(node_proto, 1));
     int8_t inp_zp = getScalarFromMat<int8_t>(getBlob(node_proto, 2));
 
+    // Weight B Info
     int outCn = weights.size[0];
     int secondInpDims = weights.dims;
-
     Mat w_scale = getBlob(node_proto, 4);
-    CV_Assert(w_scale.total() == 1 || w_scale.total() == outCn);
-    bool per_channel = w_scale.total() == outCn;
     Mat wt_sc = (w_scale.total() == outCn) ? w_scale : Mat(1, outCn, CV_32F, Scalar(w_scale.at<float>(0)));
+    bool per_channel = w_scale.total() == outCn;
 
+    // Validate Weight ZP
     Mat w_zp = getBlob(node_proto, 5);
-    int8_t* ptrZp = w_zp.ptr<int8_t>(0);
-
-    for (int i = 0; i < w_zp.total(); i++)
-    {
-        if (ptrZp[i] != (int8_t)0)
-            CV_Error(Error::StsUnsupportedFormat, "The zero-point non-zero case of W is not supported!");
+    if (!w_zp.empty()) {
+        int8_t* ptrZp = w_zp.ptr<int8_t>(0);
+        for (int i = 0; i < w_zp.total(); i++) {
+            if (ptrZp[i] != (int8_t)0)
+                CV_Error(Error::StsUnsupportedFormat, "Non-zero zero-point for weights in QGemm is not supported!");
+        }
     }
 
+    // Output C Info
     float out_sc = getScalarFromMat<float>(getBlob(node_proto, 7));
     int8_t out_zp = ninputs == 9 ? getScalarFromMat<int8_t>(getBlob(node_proto, 8)) : 0;
 
+    // Bias
     Mat bias;
-    if (constBlobs.find(node_proto.input(6)) != constBlobs.end())
+    if (net.haveArg(node_proto.input(6)) && net.isConstArg(node_inputs[6]))
         bias = getBlob(node_proto, 6);
     if (bias.empty())
         bias = Mat::zeros(1, outCn, CV_32S);
 
+    // Fuse Bias and Quantization Offset
     Mat biasFused(1, outCn, CV_32S);
     Mat outputMultiplier(1, outCn, CV_32F);
     for (int i = 0; i < outCn; i++)
     {
-        biasFused.at<int>(i) = bias.at<int>(i) - inp_zp*(cv::sum(weights.row(i))[0]);
+        double w_sum = cv::sum(weights.row(i))[0];
+        biasFused.at<int>(i) = bias.at<int>(i) - inp_zp * w_sum;
         outputMultiplier.at<float>(i) = (inp_sc * wt_sc.at<float>(i)) / out_sc;
     }
 
-    layerParams.type = "InnerProductInt8";
     layerParams.set("num_output", outCn);
     layerParams.set("axis", firstInpDims - secondInpDims + 1);
     layerParams.set("input_scale", inp_sc);
@@ -2267,150 +2244,169 @@ void ONNXImporter2::parseQGemm(LayerParams& layerParams, const opencv_onnx::Node
     layerParams.blobs.push_back(weights);
     layerParams.blobs.push_back(biasFused);
     layerParams.blobs.push_back(outputMultiplier);
+
+    node_inputs.clear();
+    node_inputs.push_back(original_inputs[0]); 
+
     addLayer(layerParams, node_proto);
+
+    node_inputs = original_inputs;
 }
 
-void ONNXImporter2::parseQEltwise(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
+void ONNXImporter2::parseQEltwise(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    opencv_onnx::NodeProto node_proto = node_proto_;
-    CV_Assert(node_proto.input_size() == 7 || node_proto.input_size() == 8);
+    CV_Assert(node_proto.input_size() == 8);
     std::string op = (node_proto.op_type() == "QLinearAdd") ? "sum" : "prod";
-    int constId = -1;
-    for (int i = 0; i < 4; i += 3)
+
+    std::vector<Arg> original_inputs = node_inputs;
+    std::vector<Arg> original_outputs = node_outputs;
+
+    auto get_const_float = [&](int idx) {
+        CV_Assert(net.isConstArg(original_inputs[idx]));
+        return getScalarFromMat<float>(net.argTensor(original_inputs[idx]));
+    };
+
+    float inp_0_sc = get_const_float(1);
+    float inp_1_sc = get_const_float(4);
+    float out_sc = get_const_float(6);
+    int8_t inp_0_zp = 0, inp_1_zp = 0, out_zp = 0;
+    
+    std::string inp0_name = node_proto.input(0);
+    std::string inp1_name = node_proto.input(3);
+    std::string final_output_name = node_proto.output(0);
+    std::string eltwise_output_name = final_output_name;
+
+    auto process_input = [&](int input_idx, int zp_idx, int8_t& zp_out, std::string& input_name) {
+        Mat zpMat = net.argTensor(original_inputs[zp_idx]);
+
+        int input_dtype = netimpl->args[original_inputs[input_idx].idx].type;
+        bool is_u8 = (input_dtype == CV_8U) || (zpMat.depth() == CV_8U);
+
+        if (is_u8) {
+            uint8_t zp_val = getScalarFromMat<uint8_t>(zpMat);
+            zp_out = (int8_t)((int)zp_val - 128); 
+
+            if (net.isConstArg(original_inputs[input_idx])) {
+                Mat blob = net.argTensor(original_inputs[input_idx]);
+                Mat blob_s8;
+                blob.convertTo(blob_s8, CV_8S, 1.0, -128.0);
+                std::string const_name = node_proto.input(input_idx) + "_shifted";
+                netimpl->newConstArg(const_name, blob_s8);
+                input_name = const_name;
+            } else {
+                LayerParams rp;
+                rp.name = node_proto.input(input_idx) + "/shift_to_int8";
+                rp.type = "Requantize";
+                rp.set("scale", 1.0f);
+                rp.set("shift", 128.0f); 
+                rp.set("depth", CV_8S); 
+                
+                opencv_onnx::NodeProto rp_proto;
+                rp_proto.add_input(node_proto.input(input_idx));
+                rp_proto.add_output(rp.name);
+                
+                node_inputs.clear();
+                node_inputs.push_back(original_inputs[input_idx]);
+                node_outputs.clear();
+                Arg outArg = netimpl->newArg(rp.name, DNN_ARG_TEMP);
+                node_outputs.push_back(outArg);
+
+                addLayer(rp, rp_proto);
+                input_name = rp.name;
+            }
+        } else {
+            zp_out = getScalarFromMat<int8_t>(zpMat);
+            input_name = node_proto.input(input_idx);
+        }
+    };
+
+    process_input(0, 2, inp_0_zp, inp0_name);
+    process_input(3, 5, inp_1_zp, inp1_name);
+
+    // Process Output ZP
+    bool shift_output = false;
     {
-        if (constBlobs.find(node_proto.input(i)) != constBlobs.end())
-            constId = i;
+        Mat zpMat = net.argTensor(original_inputs[7]);
+        if (zpMat.depth() == CV_8U) {
+            uint8_t zp_u8 = getScalarFromMat<uint8_t>(zpMat);
+            out_zp = (int8_t)((int)zp_u8 - 128);
+            shift_output = true;
+            eltwise_output_name = layerParams.name + "_s8";
+        } else {
+            out_zp = getScalarFromMat<int8_t>(zpMat);
+        }
     }
 
-    float inp_0_sc = getScalarFromMat<float>(getBlob(node_proto, 1));
-    int8_t inp_0_zp = getScalarFromMat<int8_t>(getBlob(node_proto, 2));
-
-    float inp_1_sc = getScalarFromMat<float>(getBlob(node_proto, 4));
-    int8_t inp_1_zp = getScalarFromMat<int8_t>(getBlob(node_proto, 5));
-
-    // Set 2nd input as the const input
-    if (constId == 0)
-    {
-        cv::swap(inp_0_sc, inp_1_sc);
-        cv::swap(inp_0_zp, inp_1_zp);
-    }
-
-    float out_sc = getScalarFromMat<float>(getBlob(node_proto, 6));
-
-    int8_t out_zp = 0;
-    if (node_proto.input_size() == 8)
-        out_zp = getScalarFromMat<int8_t>(getBlob(node_proto, 7));
-
-    std::vector<float> inp_scales = {inp_0_sc, inp_1_sc};
-    std::vector<int8_t> inp_zps = {inp_0_zp, inp_1_zp};
-
+    // Configure Eltwise Layer
     std::vector<float> coeffs;
     float offset;
-    if (op == "sum")
-    {
-        coeffs = {inp_scales[0]/out_sc, inp_scales[1]/out_sc};
-        offset = out_zp - coeffs[0]*inp_zps[0] - coeffs[1]*inp_zps[1];
-    }
-    else
-    {
-        coeffs = {inp_scales[0]/out_sc, inp_scales[1]};
+    if (op == "sum") {
+        coeffs = {inp_0_sc / out_sc, inp_1_sc / out_sc};
+        offset = out_zp - coeffs[0] * inp_0_zp - coeffs[1] * inp_1_zp;
+    } else {
+        coeffs = {inp_0_sc / out_sc, inp_1_sc};
         offset = out_zp;
     }
 
-    if (constId != -1)
-    {
-        Mat blob = getBlob(node_proto, constId);
-        if (blob.total() == 1)
-        {
-            float val = inp_scales[1] * (blob.at<int8_t>(0) - inp_zps[1]);
-            float scale = inp_scales[0] / out_sc;
-            if (op == "prod")
-                scale *= val;
-
-            float shift = out_zp - scale*inp_zps[0];
-            if (op == "sum")
-                shift += (val/out_sc);
-
-            LayerParams rescaleParams;
-            rescaleParams.name = layerParams.name;
-            rescaleParams.type = "Requantize";
-            rescaleParams.set("depth", CV_8S);
-            rescaleParams.set("scale", scale);
-            rescaleParams.set("shift", shift);
-            rescaleParams.set("isEltwise", true);
-            addLayer(rescaleParams, node_proto);
-            return;
-        }
-        else
-        {
-            MatShape inpShape = outShapes[node_proto.input(3 - constId)];
-            if (blob.dims == 2)
-                blob = blob.t();
-
-            if (shape(blob) == inpShape)
-            {
-                LayerParams constParams;
-                constParams.name = layerParams.name + "/const";
-                constParams.type = "ConstInt8";
-                constParams.set("depth", CV_8S);
-                constParams.set("scales", inp_1_sc);
-                constParams.set("zeropoints", inp_1_zp);
-                constParams.blobs.push_back(blob);
-
-                int id = net.addLayer(constParams.name, constParams.type, CV_8S, constParams);
-                layer_id.insert(std::make_pair(constParams.name, LayerInfo(id, 0, CV_8S)));
-                outShapes[constParams.name] = shape(blob);
-                node_proto.set_input(constId, constParams.name);
-
-                layerParams.type = "EltwiseInt8";
-                layerParams.set("operation", op);
-                layerParams.set("coeff", DictValue::arrayReal(coeffs.data(), coeffs.size()));
-                layerParams.set("offset", offset);
-            }
-            else
-            {
-                layerParams.type = "ScaleInt8";
-                layerParams.set("bias_term", op == "sum");
-                int axis = 1;
-                for (int i = 0; i < graph_proto->initializer_size(); i++)
-                {
-                    opencv_onnx::TensorProto tensor_proto = graph_proto->initializer(i);
-                    if (tensor_proto.name() == node_proto.input(constId))
-                    {
-                        axis = inpShape.size() - tensor_proto.dims_size();
-                        break;
-                    }
-                }
-                layerParams.set("axis", axis);
-                blob = blob.reshape(1, 1);
-                Mat blob_dequantized;
-                blob.convertTo(blob_dequantized, CV_32F, inp_scales[1], -(inp_scales[1] * inp_zps[1]));
-                layerParams.blobs.push_back(blob_dequantized);
-            }
-        }
-    }
-    else if (outShapes[node_proto.input(0)] == outShapes[node_proto.input(3)])
-    {
-        layerParams.type = "EltwiseInt8";
-        layerParams.set("operation", op);
-        layerParams.set("coeff", DictValue::arrayReal(coeffs.data(), coeffs.size()));
-        layerParams.set("offset", offset);
-    }
-    else
-    {
-        layerParams.type = "ScaleInt8";
-        layerParams.set("bias_term", op == "sum");
-    }
-
+    layerParams.type = "EltwiseInt8";
+    layerParams.set("operation", op);
+    layerParams.set("coeff", DictValue::arrayReal(coeffs.data(), coeffs.size()));
+    layerParams.set("offset", offset);
+    
+    std::vector<float> inp_scales = {inp_0_sc, inp_1_sc};
+    std::vector<int> inp_zps = {inp_0_zp, inp_1_zp};
     layerParams.set("input_scales", DictValue::arrayReal(inp_scales.data(), inp_scales.size()));
     layerParams.set("input_zeropoints", DictValue::arrayInt(inp_zps.data(), inp_zps.size()));
     layerParams.set("scales", out_sc);
     layerParams.set("zeropoints", out_zp);
 
-    addLayer(layerParams, node_proto);
-}
+    opencv_onnx::NodeProto modified_proto = node_proto;
+    modified_proto.clear_input();
+    modified_proto.add_input(inp0_name);
+    modified_proto.add_input(inp1_name);
+    modified_proto.clear_output();
+    modified_proto.add_output(eltwise_output_name);
 
-void ONNXImporter2::parseQLeakyRelu(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+    node_inputs.clear();
+    if (net.haveArg(inp0_name)) node_inputs.push_back(net.getArg(inp0_name));
+    else CV_Error(Error::StsError, "Input 0 not found: " + inp0_name);
+    if (net.haveArg(inp1_name)) node_inputs.push_back(net.getArg(inp1_name));
+    else CV_Error(Error::StsError, "Input 1 not found: " + inp1_name);
+    
+    node_outputs.clear();
+    if (shift_output) {
+        Arg outArg = netimpl->newArg(eltwise_output_name, DNN_ARG_TEMP);
+        node_outputs.push_back(outArg);
+    } else {
+        node_outputs.push_back(original_outputs[0]);
+    }
+
+    addLayer(layerParams, modified_proto);
+
+    if (shift_output) {
+        LayerParams rp;
+        rp.name = layerParams.name + "/shift_to_uint8";
+        rp.type = "Requantize";
+        rp.set("scale", 1.0f);
+        rp.set("shift", -128.0f); // Shift: x + 128
+        rp.set("depth", CV_8U); 
+
+        opencv_onnx::NodeProto rp_proto;
+        rp_proto.add_input(eltwise_output_name);
+        rp_proto.add_output(final_output_name);
+        
+        node_inputs.clear();
+        node_inputs.push_back(net.getArg(eltwise_output_name));
+        node_outputs.clear();
+        node_outputs.push_back(original_outputs[0]);
+
+        addLayer(rp, rp_proto);
+    }
+
+    node_inputs = original_inputs;
+    node_outputs = original_outputs;
+}
+/*void ONNXImporter2::parseQLeakyRelu(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     CV_Assert(node_proto.input_size() == 4 || node_proto.input_size() == 5);
 
@@ -2591,16 +2587,13 @@ void ONNXImporter2::parseQConcat(LayerParams& layerParams, const opencv_onnx::No
     layerParams.set("scales", out_scale);
     layerParams.set("zeropoints", out_zp);
     addLayer(layerParams, node_proto);
-}
+}*/
 
 void ONNXImporter2::parseQSoftmax(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    CV_CheckEQ(node_proto.input_size(), 5, "DNN/ONNX: QLinearSoftmax requires 5 inputs, X, X_scale, X_zero_point, Y_scale, Y_zero_point");
-
-    int opset = layerParams.get<int>("opset");
-    if (opset < 13) {
-        layerParams.set("coerced_2d", true);
-    }
+    CV_CheckEQ(node_proto.input_size(), 5, "DNN/ONNX: QLinearSoftmax requires 5 inputs");
+    int opset = layerParams.get<int>("opset", 13);
+    if (opset < 13) layerParams.set("coerced_2d", true);
 
     float x_scale = getScalarFromMat<float>(getBlob(node_proto, 1));
     int8_t x_zero_point = getScalarFromMat<int8_t>(getBlob(node_proto, 2));
@@ -2608,13 +2601,12 @@ void ONNXImporter2::parseQSoftmax(LayerParams& layerParams, const opencv_onnx::N
     int8_t y_zero_point = getScalarFromMat<int8_t>(getBlob(node_proto, 4));
 
     layerParams.type = "SoftmaxInt8";
-    // layerParams also has "axis" and "opset" attrs
     layerParams.set("input_scale", x_scale);
     layerParams.set("input_zeropoint", x_zero_point);
     layerParams.set("scales", y_scale);
     layerParams.set("zeropoints", y_zero_point);
     addLayer(layerParams, node_proto);
-}*/
+}
 
 
 void ONNXImporter2::parseRotaryEmbedding(LayerParams& params, const opencv_onnx::NodeProto& node_proto) {
@@ -2771,8 +2763,8 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     // ai.onnx: opset 10+
     dispatch["DequantizeLinear"] = &ONNXImporter2::parseDequantizeLinear;
     dispatch["QuantizeLinear"] = &ONNXImporter2::parseQuantizeLinear;
-    //dispatch["QLinearConv"] = &ONNXImporter2::parseQConv;
-    //dispatch["QLinearMatMul"] = &ONNXImporter2::parseQMatMul;
+    dispatch["QLinearConv"] = &ONNXImporter2::parseQConv;
+    dispatch["QLinearMatMul"] = &ONNXImporter2::parseQMatMul;
 
     // com.microsft: This operator is added for compatibility via onnx graph simplifier.
     //               Opset domain cannot be modified from onnx_graph_simplifier.cpp so this
@@ -2789,13 +2781,13 @@ void ONNXImporter2::buildDispatchMap_COM_MICROSOFT()
     DispatchMap dispatch;
 
     // BUG: https://github.com/opencv/opencv/issues/26310
-    //dispatch["QLinearAdd"] = dispatch["QLinearMul"] = &ONNXImporter2::parseQEltwise;
+    dispatch["QLinearAdd"] = dispatch["QLinearMul"] = &ONNXImporter2::parseQEltwise;
     //dispatch["QLinearAveragePool"] = dispatch["QLinearGlobalAveragePool"] = &ONNXImporter2::parseQAvgPool;
     //dispatch["QLinearLeakyRelu"] = &ONNXImporter2::parseQLeakyRelu;
     //dispatch["QLinearSigmoid"] = &ONNXImporter2::parseQSigmoid;
     //dispatch["QLinearConcat"] = &ONNXImporter2::parseQConcat;
-    //dispatch["QGemm"] = &ONNXImporter2::parseQGemm;
-    //dispatch["QLinearSoftmax"] = &ONNXImporter2::parseQSoftmax;
+    dispatch["QGemm"] = &ONNXImporter2::parseQGemm;
+    dispatch["QLinearSoftmax"] = &ONNXImporter2::parseQSoftmax;
     dispatch["Attention"] = &ONNXImporter2::parseAttention;
 
     domain_dispatch_map[str_domain_com_microsoft] = dispatch;
