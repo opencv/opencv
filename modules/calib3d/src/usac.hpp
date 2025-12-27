@@ -68,7 +68,7 @@ class NormTransform : public Algorithm {
 public:
     /*
      * @norm_points is output matrix of size pts_size x 4
-     * @sample constains indices of points
+     * @sample contains indices of points
      * @sample_number is number of used points in sample <0; sample_number)
      * @T1, T2 are output transformation matrices
      */

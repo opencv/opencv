@@ -2242,7 +2242,7 @@ int Chessboard::Board::detectMarkers(cv::InputArray image)
             cv::bitwise_and(field,mask2,temp);
             double noise= cv::sum(temp)[0]/noise_size;
 
-            // calc refrence value
+            // calc reference value
             Cell *cell2 = getCell(y,abs(x-1));
             src[0] = *cell2->top_left;
             src[1] = *cell2->top_right;
