@@ -862,9 +862,11 @@ cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
         params.confidence = confidence;
         params.maxIterations = maxIters;
 
-        // Fix for Issue #27388: Restore deterministic behavior
+        // Fix for Issue #27388
         params.isParallel = false;
-        params.randomGeneratorState = (int)cv::theRNG();
+
+        // Use the current state of the global RNG without advancing it.
+        params.randomGeneratorState = static_cast<int>(cv::theRNG().state);
 
         // Map the legacy 'method' flag to UsacParams settings
         switch (method)
