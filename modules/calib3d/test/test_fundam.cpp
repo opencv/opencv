@@ -1672,6 +1672,33 @@ TEST(Calib3d_FindFundamentalMat, correctMatches)
     cout << np1 << endl;
     cout << np2 << endl;
 }
+TEST(Calib3d_FindFundamentalMat, Regression_27388_Deterministic)
+{
+    const int npoints = 100;
+    Mat points1(1, npoints, CV_32FC2);
+    Mat points2(1, npoints, CV_32FC2);
 
+    // Initialize data with a fixed local RNG
+    cv::RNG rng(2025);
+    rng.fill(points1, RNG::UNIFORM, 0, 640);
+    rng.fill(points2, RNG::UNIFORM, 0, 480);
+
+    // --- Run 1 ---
+    // Force the GLOBAL OpenCV RNG to a known state before the call
+    cv::theRNG().state = 12345;
+    Mat F1 = findFundamentalMat(points1, points2, USAC_MAGSAC, 1.0, 0.99);
+
+    // --- Run 2 ---
+    // Reset the GLOBAL OpenCV RNG to the SAME state
+    cv::theRNG().state = 12345;
+    Mat F2 = findFundamentalMat(points1, points2, USAC_MAGSAC, 1.0, 0.99);
+
+    EXPECT_FALSE(F1.empty());
+    EXPECT_FALSE(F2.empty());
+
+    // With parallel off and same seed, these must now be identical
+    double diff = cv::norm(F1, F2, NORM_INF);
+    EXPECT_EQ(diff, 0.0) << "Legacy findFundamentalMat result is not deterministic! Diff: " << diff;
+}
 }} // namespace
 /* End of file. */
