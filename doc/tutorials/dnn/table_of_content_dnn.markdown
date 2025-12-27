@@ -14,6 +14,18 @@ Deep Neural Networks (dnn module) {#tutorial_table_of_content_dnn}
 -   @subpage tutorial_dnn_text_spotting
 -   @subpage tutorial_dnn_face
 
+### Backend selection and fallback behavior
+
+When using the DNN module, selecting a preferred backend (for example, OpenVINO,
+CUDA, or the default OpenCV backend) represents a request rather than a strict
+guarantee. If the selected backend cannot support certain layers, model
+configurations, or execution requirements, OpenCV may automatically fall back to
+another backend to ensure successful execution.
+
+This fallback may occur without an explicit error or warning. Users who rely on a
+specific backend for performance evaluation or benchmarking are encouraged to
+verify which backend is actually used at runtime.
+
 #### PyTorch models with OpenCV
 In this section you will find the guides, which describe how to run classification, segmentation and detection PyTorch DNN models with OpenCV.
 -   @subpage pytorch_cls_tutorial_dnn_conversion
