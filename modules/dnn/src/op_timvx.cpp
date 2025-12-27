@@ -535,7 +535,7 @@ TimVXBackendNode::TimVXBackendNode(const Ptr<TimVXGraph>& tvGraph_,
 }
 
 TimVXBackendNode::TimVXBackendNode(const Ptr<TimVXGraph>& tvGraph_, std::shared_ptr<tim::vx::Operation>& op_,
-                                   std::vector<int>& inputsIndex, std::vector<int>& outpusIndex)
+                                   std::vector<int>& inputsIndex, std::vector<int>& outputsIndex)
                                    :BackendNode(DNN_BACKEND_TIMVX)
 {
     tvGraph = tvGraph_;
@@ -545,8 +545,8 @@ TimVXBackendNode::TimVXBackendNode(const Ptr<TimVXGraph>& tvGraph_, std::shared_
     if (!inputsIndex.empty())
         inputIndexList.assign(inputsIndex.begin(), inputsIndex.end());
 
-    if (!outpusIndex.empty())
-        outputIndexList.assign(outpusIndex.begin(), outpusIndex.end());
+    if (!outputsIndex.empty())
+        outputIndexList.assign(outputsIndex.begin(), outputsIndex.end());
 }
 
 bool TimVXBackendNode::opBinding()
@@ -905,7 +905,7 @@ void forwardTimVX(std::vector<Ptr<BackendWrapper> >& outputs, const Ptr<BackendN
     else
         return;
 
-    // set ouput
+    // set output
     Ptr<TimVXBackendWrapper> outWarpper;
     for (int i = 0; i < outputs.size(); i++)
     {
