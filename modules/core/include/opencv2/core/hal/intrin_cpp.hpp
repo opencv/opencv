@@ -81,9 +81,26 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 
 "Universal intrinsics" is a types and functions set intended to simplify vectorization of code on
 different platforms. Currently a few different SIMD extensions on different architectures are supported.
-128 bit registers of various types support is implemented for a wide range of architectures
-including x86(__SSE/SSE2/SSE4.2__), ARM(__NEON__), PowerPC(__VSX__), MIPS(__MSA__).
-256 bit long registers are supported on x86(__AVX2__) and 512 bit long registers are supported on x86(__AVX512__).
+
+OpenCV Universal Intrinsics support the following instruction sets:
+
+- *128 bit* registers of various types support is implemented for a wide range of architectures including
+  - x86(SSE/SSE2/SSE4.2),
+  - ARM(NEON): 64-bit float (64F) requires AArch64,
+  - PowerPC(VSX),
+  - MIPS(MSA),
+  - LoongArch(LSX),
+  - RISC-V(RVV 0.7.1): Fixed-length implementation,
+  - WASM: 64-bit float (64F) is not supported,
+- *256 bit* registers are supported on
+  - x86(AVX2),
+  - LoongArch (LASX),
+- *512 bit* registers are supported on
+  - x86(AVX512),
+- *Vector Length Agnostic (VLA)* registers are supported on
+  - RISC-V(RVV 1.0)
+  - ARM(SVE/SVE2): Powered by Arm KleidiCV integration (OpenCV 4.11+),
+
 In case when there is no SIMD extension available during compilation, fallback C++ implementation of intrinsics
 will be chosen and code will work as expected although it could be slower.
 
