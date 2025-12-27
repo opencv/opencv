@@ -724,6 +724,21 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
             }
             else
             {
+                int sx = XY[dx*2] + (isRelative ? (_offset.x+dx) : 0);
+                int sy = XY[dx*2+1] + off_y;
+
+                // fractional parts index into wtab
+                const AT* w = wtab + FXY[dx]*4;
+
+                // If exactly aligned on pixel center → no interpolation
+                if (w[1] == 0 && w[2] == 0 && w[3] == 0)
+                {
+                    const T* S = S0 + sy*sstep + sx*cn;
+                    for(int k = 0; k < cn; k++)
+                        D[k] = S[k];
+                    D += cn;
+                    continue;
+                }
                 if (borderType == BORDER_TRANSPARENT) {
                     for (; dx < X1; dx++, D += cn) {
                         if (dx >= dsize.width) continue;
