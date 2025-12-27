@@ -3174,7 +3174,7 @@ TEST_F(AgeGenderInferTest, ChangeOutputPrecision) {
     validate();
 }
 
-TEST_F(AgeGenderInferTest, ChangeSpecificOutputPrecison) {
+TEST_F(AgeGenderInferTest, ChangeSpecificOutputPrecision) {
     auto pp = cv::gapi::ie::Params<AgeGender> {
         m_params.model_path, m_params.weights_path, m_params.device_id
     }.cfgOutputLayers({ "age_conv3", "prob" })
