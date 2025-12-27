@@ -553,6 +553,39 @@ void Net::Impl::allocateLayer(int lid, const LayersShapesMap& layersShapes)
 
     ld.flag = 1;
 }
+void Net::Impl::buildHybridBlocks(std::vector<ExecutionBlock>& blocks)
+{
+    blocks.clear();
+
+    ExecutionBlock current;
+    current.backend = -1;
+
+    for (auto& it : layers)
+    {
+        int lid = it.first;
+        int backend = layerPreferredBackend[lid];
+
+        if (current.layers.empty())
+        {
+            current.backend = backend;
+            current.layers.push_back(lid);
+        }
+        else if (current.backend == backend)
+        {
+            current.layers.push_back(lid);
+        }
+        else
+        {
+            blocks.push_back(current);
+            current.layers.clear();
+            current.backend = backend;
+            current.layers.push_back(lid);
+        }
+    }
+
+    if (!current.layers.empty())
+        blocks.push_back(current);
+}
 
 
 void Net::Impl::allocateLayers(const std::vector<LayerPin>& blobsToKeep_)
@@ -588,6 +621,28 @@ void Net::Impl::allocateLayers(const std::vector<LayerPin>& blobsToKeep_)
         ld.inputBlobsWrappers.clear();
         ld.outputBlobsWrappers.clear();
         ld.internalBlobsWrappers.clear();
+    }
+
+    layerPreferredBackend.clear();
+    layerPreferredBackend.resize(layers.size(), DNN_BACKEND_OPENCV);
+
+    for (auto& it : layers)
+    {
+        int lid = it.first;
+        LayerData& ld = it.second;
+
+        layerPreferredBackend[lid] = DNN_BACKEND_OPENCV; // default
+
+    #ifdef HAVE_CUDA
+        if (preferableBackend == DNN_BACKEND_CUDA && cudaInfo)
+        {
+            Ptr<Layer> layer = getLayerInstance(ld);
+            if (layer && layer->supportBackend(DNN_BACKEND_CUDA))
+            {
+                layerPreferredBackend[lid] = DNN_BACKEND_CUDA;
+            }   
+        }
+    #endif
     }
 
     // Fake references to input blobs.
@@ -893,23 +948,53 @@ void Net::Impl::forwardToLayer(LayerData& ld, bool clearFlags)
 
 Mat Net::Impl::forward(const String& outputName)
 {
-    CV_Assert(!empty());
-    FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
-
-    String layerName = outputName;
-
-    if (layerName.empty())
+    if (!hybrid.enabled)
     {
-        std::vector<String> layerNames = getLayerNames();
-        CV_Assert(!layerNames.empty());
-        layerName = layerNames.back();
+        forwardToLayer(getLayerData(outputName));
+        return getBlob(outputName);
     }
 
-    std::vector<LayerPin> pins(1, getPinByAlias(layerName));
-    setUpNet(pins);
-    forwardToLayer(getLayerData(layerName));
+    std::vector<ExecutionBlock> blocks;
+    buildHybridBlocks(blocks);
 
-    return getBlob(layerName);
+    int transitions = static_cast<int>(blocks.size()) - 1;
+    if (transitions > hybrid.maxTransitions)
+    {
+        CV_LOG_WARNING(NULL,
+            "Hybrid backend disabled due to excessive backend transitions");
+        hybrid.enabled = false;
+        forwardToLayer(getLayerData(outputName));
+        return getBlob(outputName);
+    }
+
+    for (size_t bi = 0; bi < blocks.size(); ++bi)
+    {
+        const auto& block = blocks[bi];
+
+        if (block.backend == DNN_BACKEND_CUDA)
+        {
+            // Ensure data is on CUDA (reuse existing wrappers)
+            for (int lid : block.layers)
+            {
+                forwardLayer(getLayerData(lid));
+            }
+            hybridStats.cudaBlocks++;
+        }
+        else
+        {
+            // CPU block
+            for (int lid : block.layers)
+            {
+                forwardLayer(getLayerData(lid));
+            }
+            hybridStats.cpuBlocks++;
+        }
+
+        if (bi + 1 < blocks.size())
+            hybridStats.transitions++;
+    }
+
+    return getBlob(outputName);
 }
 
 

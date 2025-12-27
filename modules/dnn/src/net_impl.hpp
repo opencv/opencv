@@ -39,6 +39,25 @@ struct Net::Impl : public detail::NetImplBase
     typedef std::map<int, LayerShapes> LayersShapesMap;
     typedef std::map<int, LayerData> MapIdToLayerData;
 
+    struct HybridConfig
+    {
+        bool enabled = false;
+        int maxTransitions = 2;
+    };
+
+    struct HybridStats
+    {
+        int cpuBlocks = 0;
+        int cudaBlocks = 0;
+        int transitions = 0;
+    };
+
+    struct ExecutionBlock
+    {
+        int backend;
+        std::vector<int> layers;
+    };
+
     virtual ~Impl();
     Impl();
     Impl(const Impl&) = delete;
@@ -49,11 +68,17 @@ struct Net::Impl : public detail::NetImplBase
     Ptr<DataLayer> netInputLayer;
     std::vector<LayerPin> blobsToKeep;
     MapIdToLayerData layers;
+    std::vector<int> layerPreferredBackend;
     std::map<String, int> layerNameToId;
     std::map<std::string, int> outputNameToId;  // use registerOutput() to populate outputs
     BlobManager blobManager;
     int preferableBackend;
     int preferableTarget;
+
+    // Hybrid execution (CPU + CUDA)
+    HybridConfig hybrid;
+    HybridStats hybridStats;
+
     String halideConfigFile;
     bool hasDynamicShapes;
     // Map host data to backend specific wrapper.
@@ -218,6 +243,8 @@ struct Net::Impl : public detail::NetImplBase
 
     void allocateLayers(const std::vector<LayerPin>& blobsToKeep_);
 
+    void buildHybridBlocks(std::vector<ExecutionBlock>& blocks);
+
     virtual void forwardLayer(LayerData& ld);
 
     void forwardToLayer(LayerData& ld, bool clearFlags = true);
@@ -286,7 +313,6 @@ struct Net::Impl : public detail::NetImplBase
     Net quantize(Net& net, InputArrayOfArrays calibData, int inputsDtype, int outputsDtype, bool perChannel) /*const*/;
     void getInputDetails(std::vector<float>& scales, std::vector<int>& zeropoints) /*const*/;
     void getOutputDetails(std::vector<float>& scales, std::vector<int>& zeropoints) /*const*/;
-
 };  // Net::Impl
 
 
