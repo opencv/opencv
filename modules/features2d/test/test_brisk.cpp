@@ -105,4 +105,45 @@ void CV_BRISKTest::run( int )
 
 TEST(Features2d_BRISK, regression) { CV_BRISKTest test; test.safe_run(); }
 
+TEST(Features2d_BRISK, compute_preserves_input_angle)
+{
+    cv::Mat img(100, 100, CV_8UC1);
+    cv::randu(img, 0, 255);
+
+    std::vector<cv::KeyPoint> kp_in;
+    kp_in.emplace_back(50.f, 50.f, 20.f, 45.f);
+    kp_in.emplace_back(30.f, 70.f, 20.f, 90.f);
+
+    // Ensure input angles are valid
+    ASSERT_NE(kp_in[0].angle, -1.f);
+    ASSERT_NE(kp_in[1].angle, -1.f);
+
+    cv::Ptr<cv::BRISK> brisk = cv::BRISK::create();
+
+    std::vector<cv::KeyPoint> kp_out = kp_in;
+    cv::Mat desc;
+    brisk->compute(img, kp_out, desc);
+
+    // BRISK is allowed to drop keypoints during compute()
+    ASSERT_FALSE(kp_out.empty());
+    ASSERT_FALSE(desc.empty());
+    ASSERT_EQ(desc.rows, static_cast<int>(kp_out.size()));
+
+    // For each surviving keypoint, verify angle was not overwritten
+    for (const auto& kp : kp_out)
+    {
+        bool matched = false;
+        for (const auto& in_kp : kp_in)
+        {
+            if (cv::norm(kp.pt - in_kp.pt) < 1e-3f)
+            {
+                EXPECT_NEAR(kp.angle, in_kp.angle, 1e-3f);
+                matched = true;
+                break;
+            }
+        }
+        EXPECT_TRUE(matched);
+    }
+}
+
 }} // namespace
