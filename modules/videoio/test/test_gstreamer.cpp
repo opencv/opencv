@@ -151,6 +151,95 @@ TEST(videoio_gstreamer, gray16_writing)
     EXPECT_EQ(0, remove(temp_file.c_str()));
 }
 
+// Test 4-channel format support (BGRA, RGBA, BGRX, RGBX) - Issue #28296
+typedef testing::TestWithParam<string> videoio_gstreamer_4channel;
+
+TEST_P(videoio_gstreamer_4channel, write_4channel)
+{
+    if (!videoio_registry::hasBackend(CAP_GSTREAMER))
+        throw SkipTestException("GStreamer backend was not found");
+
+    string format = GetParam();
+    Size frame_size(320, 240);
+    int num_frames = 5;
+
+    // Generate a temp filename for raw output
+    cv::String temp_file = cv::tempfile(".raw");
+    std::replace(temp_file.begin(), temp_file.end(), '\\', '/');
+
+    // Create a simple pipeline that writes raw data to file
+    // This allows us to verify the data was written correctly
+    std::ostringstream writer_pipeline;
+    writer_pipeline << "appsrc ! "
+                    << "video/x-raw, format=" << format 
+                    << ", width=" << frame_size.width 
+                    << ", height=" << frame_size.height 
+                    << ", framerate=30/1 ! "
+                    << "filesink location=" << temp_file;
+
+    // Create 4-channel test frames (CV_8UC4)
+    Mat frame(frame_size, CV_8UC4);
+    
+    VideoWriter writer;
+    ASSERT_NO_THROW(writer.open(writer_pipeline.str(), CAP_GSTREAMER, 0/*fourcc*/, 30.0/*fps*/, frame_size));
+    ASSERT_TRUE(writer.isOpened()) << "Failed to open VideoWriter for format " << format;
+
+    // Write multiple frames with different patterns
+    for (int i = 0; i < num_frames; ++i)
+    {
+        // Fill frame with a pattern that changes per frame
+        for (int y = 0; y < frame_size.height; ++y)
+        {
+            for (int x = 0; x < frame_size.width; ++x)
+            {
+                Vec4b& pixel = frame.at<Vec4b>(y, x);
+                pixel[0] = (x * 255 / frame_size.width + i * 10) % 256;  // B
+                pixel[1] = (y * 255 / frame_size.height + i * 15) % 256; // G
+                pixel[2] = ((x + y) * 255 / (frame_size.width + frame_size.height) + i * 20) % 256; // R
+                pixel[3] = 255; // A
+            }
+        }
+        
+        // Verify frame is correct type before writing
+        ASSERT_EQ(frame.type(), CV_8UC4) << "Frame type should be CV_8UC4";
+        ASSERT_EQ(frame.channels(), 4) << "Frame should have 4 channels";
+        
+        // Write the frame - this should not fail with our fix
+        ASSERT_NO_THROW(writer.write(frame)) << "Failed to write frame " << i << " for format " << format;
+    }
+    
+    ASSERT_NO_THROW(writer.release());
+
+    // Verify output file was created and has expected size
+    // For 4-channel 8-bit: width * height * 4 bytes per frame * num_frames
+    size_t expected_size = frame_size.width * frame_size.height * 4 * num_frames;
+    
+    std::ifstream fs(temp_file, std::ios::in | std::ios::binary | std::ios::ate);
+    if (fs.is_open())
+    {
+        size_t actual_size = fs.tellg();
+        fs.close();
+        EXPECT_GE(actual_size, expected_size * 0.9) << "Output file too small for format " << format;
+        EXPECT_LE(actual_size, expected_size * 1.1) << "Output file too large for format " << format;
+    }
+    else
+    {
+        ADD_FAILURE() << "Could not open output file to verify size for format " << format;
+    }
+
+    // Clean up
+    EXPECT_EQ(0, remove(temp_file.c_str()));
+}
+
+static const string four_channel_formats[] = {
+    string("BGRA"),
+    string("RGBA"),
+    string("BGRx"),
+    string("RGBx")
+};
+
+INSTANTIATE_TEST_CASE_P(videoio, videoio_gstreamer_4channel, testing::ValuesIn(four_channel_formats));
+
 TEST(videoio_gstreamer, timeout_property)
 {
     if (!videoio_registry::hasBackend(CAP_GSTREAMER))

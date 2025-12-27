@@ -2481,6 +2481,11 @@ bool CvVideoWriter_GStreamer::open( const std::string &filename, int fourcc,
             return false;
         }
         pipeline.swap(encodebin);
+        
+        // For manual pipelines, try to detect the format from appsrc caps
+        // This will be set later when pipeline is in PLAYING state and caps are negotiated
+        // For now, set to 0 (unknown) - it will be detected after pipeline starts
+        input_pix_fmt = 0;
     }
     else
     {
@@ -2637,6 +2642,80 @@ bool CvVideoWriter_GStreamer::open( const std::string &filename, int fourcc,
 
     handleMessage(pipeline);
 
+    // For manual pipelines, detect the format from appsrc caps
+    if (manualpipeline && input_pix_fmt == 0)
+    {
+        GSafePtr<GstCaps> appsrc_caps;
+        appsrc_caps.attach(gst_app_src_get_caps(GST_APP_SRC(source.get())));
+        if (!appsrc_caps)
+        {
+            // If caps aren't set on appsrc, try to get them from the pad
+            GSafePtr<GstPad> pad;
+            pad.attach(gst_element_get_static_pad(source.get(), "src"));
+            if (pad)
+            {
+                appsrc_caps.attach(gst_pad_get_current_caps(pad));
+            }
+        }
+        
+        if (appsrc_caps)
+        {
+            const GstStructure* structure = gst_caps_get_structure(appsrc_caps, 0);
+            if (structure)
+            {
+                const gchar* caps_name = gst_structure_get_name(structure);
+                if (caps_name && strcmp(caps_name, "video/x-raw") == 0)
+                {
+                    const gchar* format_str = gst_structure_get_string(structure, "format");
+                    if (format_str)
+                    {
+                        GstVideoFormat format = gst_video_format_from_string(format_str);
+                        if (format != GST_VIDEO_FORMAT_UNKNOWN)
+                        {
+                            input_pix_fmt = format;
+                            // Set ipl_depth based on format
+                            if (format == GST_VIDEO_FORMAT_BGRA || format == GST_VIDEO_FORMAT_RGBA ||
+                                format == GST_VIDEO_FORMAT_BGRx || format == GST_VIDEO_FORMAT_RGBx ||
+                                format == GST_VIDEO_FORMAT_BGR || format == GST_VIDEO_FORMAT_GRAY8)
+                            {
+                                ipl_depth = CV_8U;
+                            }
+                            else if (format == GST_VIDEO_FORMAT_GRAY16_LE || format == GST_VIDEO_FORMAT_GRAY16_BE)
+                            {
+                                ipl_depth = CV_16U;
+                            }
+                            // For other formats, ipl_depth remains at default CV_8U
+                        }
+                        else
+                        {
+                            // Fallback: manually map format strings to enum values
+                            std::string format_upper = toUpperCase(std::string(format_str));
+                            if (format_upper == "BGRA")
+                                input_pix_fmt = GST_VIDEO_FORMAT_BGRA;
+                            else if (format_upper == "RGBA")
+                                input_pix_fmt = GST_VIDEO_FORMAT_RGBA;
+                            else if (format_upper == "BGRX")
+                                input_pix_fmt = GST_VIDEO_FORMAT_BGRx;
+                            else if (format_upper == "RGBX")
+                                input_pix_fmt = GST_VIDEO_FORMAT_RGBx;
+                            
+                            if (input_pix_fmt == GST_VIDEO_FORMAT_BGRA || input_pix_fmt == GST_VIDEO_FORMAT_RGBA ||
+                                input_pix_fmt == GST_VIDEO_FORMAT_BGRx || input_pix_fmt == GST_VIDEO_FORMAT_RGBx)
+                            {
+                                ipl_depth = CV_8U;
+                            }
+                        }
+                    }
+                }
+                else if (caps_name && strcmp(caps_name, "image/jpeg") == 0)
+                {
+                    input_pix_fmt = GST_VIDEO_FORMAT_ENCODED;
+                    ipl_depth = CV_8U;
+                }
+            }
+        }
+    }
+
     if (pipeline)
     {
         VideoAccelerationType actual_va_type = VIDEO_ACCELERATION_NONE;
@@ -2688,6 +2767,13 @@ void CvVideoWriter_GStreamer::write(InputArray image)
     if(input_pix_fmt == GST_VIDEO_FORMAT_BGR) {
         if (image.type() != CV_8UC3) {
             CV_WARN("write frame skipped - expected CV_8UC3");
+            return;
+        }
+    }
+    else if (input_pix_fmt == GST_VIDEO_FORMAT_BGRA || input_pix_fmt == GST_VIDEO_FORMAT_RGBA ||
+             input_pix_fmt == GST_VIDEO_FORMAT_BGRx || input_pix_fmt == GST_VIDEO_FORMAT_RGBx) {
+        if (image.type() != CV_8UC4) {
+            CV_WARN("write frame skipped - expected CV_8UC4 for 4-channel format");
             return;
         }
     }
