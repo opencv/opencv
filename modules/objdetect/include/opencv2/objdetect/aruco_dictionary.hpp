@@ -65,6 +65,12 @@ class CV_EXPORTS_W_SIMPLE Dictionary {
      */
     CV_WRAP bool identify(const Mat &onlyBits, CV_OUT int &idx, CV_OUT int &rotation, double maxCorrectionRate) const;
 
+    /** @brief Given a matrix of pixel ratio raging from 0 to 1. Returns whether if marker is identified or not.
+     *
+     * Returns reference to the marker id in the dictionary (if any) and its rotation.
+     */
+    CV_WRAP bool identify(const Mat &onlyCellPixelRatio, CV_OUT int &idx, CV_OUT int &rotation, double maxCorrectionRate, float validBitIdThreshold) const;
+
     /** @brief Returns Hamming distance of the input bits to the specific id.
      *
      * If `allRotations` flag is set, the four posible marker rotations are considered
@@ -84,6 +90,10 @@ class CV_EXPORTS_W_SIMPLE Dictionary {
     /** @brief Transform list of bytes to matrix of bits
       */
     CV_WRAP static Mat getBitsFromByteList(const Mat &byteList, int markerSize, int rotationId = 0);
+
+    /** @brief Get ground truth bits float
+      */
+     CV_WRAP Mat getGroundTruthBits(int markerId, int rotationId = 0) const;
 };
 
 
