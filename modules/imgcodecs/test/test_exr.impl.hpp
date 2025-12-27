@@ -184,7 +184,7 @@ TEST(Imgcodecs_EXR, readWrite_32FC1_PIZ)
 // Note: YC to GRAYSCALE (IMREAD_GRAYSCALE | IMREAD_ANYDEPTH)
 // outputs a black image,
 // as does Y to RGB (IMREAD_COLOR | IMREAD_ANYDEPTH).
-// This behavoir predates adding EXR alpha support issue
+// This behavior predates adding EXR alpha support issue
 // 16115.
 
 TEST(Imgcodecs_EXR, read_YA_ignore_alpha)
