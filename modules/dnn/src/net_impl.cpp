@@ -1208,12 +1208,12 @@ void Net::Impl::forward(std::vector<std::vector<Mat>>& outputBlobs,
             else
             {
 
-                if (haveArg(reqName)) 
+                if (haveArg(reqName))
                 {
                     outputBlobs[i].resize(1);
                     outputBlobs[i][0] = argTensor(getArg(reqName));
-                } 
-                else 
+                }
+                else
                 {
                     CV_Error(Error::StsObjectNotFound, "Layer or Tensor '" + reqName + "' not found in new DNN engine");
                 }

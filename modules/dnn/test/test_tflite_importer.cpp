@@ -180,7 +180,7 @@ TEST_P(Test_TFLite, max_unpooling)
     if (poolInp.size != unpoolOut.size) {
         // If we reached here, forward(layerName) worked successfully, but the output shapes differ.
         // We consider the feature test passed.
-        return; 
+        return;
     }
     ASSERT_EQ(poolInp.size, unpoolOut.size);
     ASSERT_EQ(poolOut.size, poolIds.size);
