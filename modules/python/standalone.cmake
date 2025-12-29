@@ -29,6 +29,7 @@ if(NOT PYTHON_NUMPY_INCLUDE_DIRS)
   message(FATAL_ERROR "Can't find Python 'numpy' development files")
 endif()
 
+include("${OpenCV_SOURCE_DIR}/cmake/OpenCVInstallLayout.cmake")
 include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectDLPack.cmake")
 
 status("-----------------------------------------------------------------")
