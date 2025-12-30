@@ -45,12 +45,24 @@ PARAM_TEST_CASE(HoughLines, double, double, int)
         src_size = randomSize(500, 1920);
         src.create(src_size, CV_8UC1);
         src.setTo(Scalar::all(0));
-        line(src, Point(0, 100), Point(100, 100), Scalar::all(255), 1);
-        line(src, Point(0, 200), Point(100, 200), Scalar::all(255), 1);
-        line(src, Point(0, 400), Point(100, 400), Scalar::all(255), 1);
-        line(src, Point(100, 0), Point(100, 200), Scalar::all(255), 1);
-        line(src, Point(200, 0), Point(200, 200), Scalar::all(255), 1);
-        line(src, Point(400, 0), Point(400, 200), Scalar::all(255), 1);
+
+        // Horizontal lines (theta ≈ π, ~180°) - should be filtered when max_theta < π
+        line(src, Point(0, 100), Point(200, 100), Scalar::all(255), 1);
+        line(src, Point(0, 200), Point(200, 200), Scalar::all(255), 1);
+        line(src, Point(0, 400), Point(200, 400), Scalar::all(255), 1);
+
+        // Vertical lines (theta ≈ π/2, ~90°) - should be filtered when max_theta < π/2
+        line(src, Point(100, 50), Point(100, 250), Scalar::all(255), 1);
+        line(src, Point(200, 50), Point(200, 250), Scalar::all(255), 1);
+        line(src, Point(400, 50), Point(400, 250), Scalar::all(255), 1);
+
+        // Diagonal lines at ~30° (theta ≈ π/6, should pass when max_theta > π/6)
+        line(src, Point(50, 50), Point(200, 137), Scalar::all(255), 1);
+        line(src, Point(250, 150), Point(400, 237), Scalar::all(255), 1);
+
+        // Diagonal lines at ~60° (theta ≈ π/3, should pass when min_theta < π/3 and max_theta > π/3)
+        line(src, Point(50, 250), Point(108, 350), Scalar::all(255), 1);
+        line(src, Point(300, 150), Point(358, 250), Scalar::all(255), 1);
 
         src.copyTo(usrc);
     }
@@ -169,6 +181,77 @@ OCL_TEST_P(HoughLinesP, RealImage)
     OCL_ON(cv::HoughLinesP(usrc, udst, rhoStep, thetaStep, threshold, minLineLength, maxGap));
 
     Near(0.25);
+}
+
+OCL_TEST_P(HoughLines, ThetaRange)
+{
+    // Test that min_theta and max_theta parameters are correctly used
+    // Create test image with lines at specific angles
+    src_size = Size(400, 400);
+    src.create(src_size, CV_8UC1);
+    src.setTo(Scalar::all(0));
+
+    // Draw lines at angles within the test range (0 to 45 degrees)
+    // Line at ~15 degrees (theta ≈ 0.26 rad)
+    line(src, Point(50, 50), Point(350, 131), Scalar::all(255), 1);
+    // Line at ~30 degrees (theta ≈ 0.52 rad)
+    line(src, Point(50, 150), Point(350, 323), Scalar::all(255), 1);
+    // Line at ~45 degrees (theta ≈ 0.79 rad)
+    line(src, Point(50, 250), Point(300, 500), Scalar::all(255), 1);
+
+    src.copyTo(usrc);
+
+    // Test with restricted theta range (0 to 45 degrees)
+    double min_theta = 0.0;
+    double max_theta = CV_PI / 4;  // 0 to 45 degrees
+
+    OCL_OFF(cv::HoughLines(src, dst, rhoStep, thetaStep, threshold, 0, min_theta, max_theta));
+    OCL_ON(cv::HoughLines(usrc, udst, rhoStep, thetaStep, threshold, 0, min_theta, max_theta));
+
+    // Verify that all detected lines have theta within the specified range
+    Mat lines_gpu;
+    udst.copyTo(lines_gpu);
+    for (int i = 0; i < lines_gpu.rows; i++)
+    {
+        Vec2f line = lines_gpu.at<Vec2f>(i);
+        double theta = line[1];
+        EXPECT_GE(theta, min_theta) << "Line " << i << " has theta " << theta << " which is less than min_theta " << min_theta;
+        EXPECT_LE(theta, max_theta) << "Line " << i << " has theta " << theta << " which is greater than max_theta " << max_theta;
+    }
+
+    Near(1e-5);
+
+    // Test with different theta range (60 to 120 degrees)
+    // Create new test image with lines at different angles
+    src.setTo(Scalar::all(0));
+
+    // Draw lines at angles within 60-120 degrees range
+    // Line at ~60 degrees (theta ≈ 1.05 rad)
+    line(src, Point(50, 50), Point(108, 350), Scalar::all(255), 1);
+    // Line at ~75 degrees (theta ≈ 1.31 rad)
+    line(src, Point(150, 50), Point(183, 350), Scalar::all(255), 1);
+    // Line at ~90 degrees (theta ≈ 1.57 rad)
+    line(src, Point(250, 50), Point(250, 350), Scalar::all(255), 1);
+
+    src.copyTo(usrc);
+
+    min_theta = CV_PI / 3;  // 60 degrees
+    max_theta = 2 * CV_PI / 3;  // 120 degrees
+
+    OCL_OFF(cv::HoughLines(src, dst, rhoStep, thetaStep, threshold, 0, min_theta, max_theta));
+    OCL_ON(cv::HoughLines(usrc, udst, rhoStep, thetaStep, threshold, 0, min_theta, max_theta));
+
+    // Verify that all detected lines have theta within the specified range
+    udst.copyTo(lines_gpu);
+    for (int i = 0; i < lines_gpu.rows; i++)
+    {
+        Vec2f line = lines_gpu.at<Vec2f>(i);
+        double theta = line[1];
+        EXPECT_GE(theta, min_theta) << "Line " << i << " has theta " << theta << " which is less than min_theta " << min_theta;
+        EXPECT_LE(theta, max_theta) << "Line " << i << " has theta " << theta << " which is greater than max_theta " << max_theta;
+    }
+
+    Near(1e-5);
 }
 
 OCL_INSTANTIATE_TEST_CASE_P(Imgproc, HoughLines, Combine(Values(1, 0.5),                        // rhoStep
