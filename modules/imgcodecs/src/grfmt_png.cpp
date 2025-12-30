@@ -320,7 +320,8 @@ bool  PngDecoder::readHeader()
         if (id == id_acTL)
         {
             // https://wiki.mozilla.org/APNG_Specification#%60acTL%60:_The_Animation_Control_Chunk
-            m_animation.loop_count = png_get_uint_32(&chunk.p[12]);
+            if (m_animationRef)
+                m_animationRef->loop_count = png_get_uint_32(&chunk.p[12]);
 
             m_frame_count = png_get_uint_32(&chunk.p[8]);
             if (m_frame_count == 0)
@@ -369,8 +370,17 @@ bool  PngDecoder::readHeader()
         return false;
 
     png_color_16p background_color;
-    if (png_get_bKGD(m_png_ptr, m_info_ptr, &background_color))
-        m_animation.bgcolor = Scalar(background_color->blue, background_color->green, background_color->red);
+    if (m_animationRef)
+    {
+        if (png_get_bKGD(m_png_ptr, m_info_ptr, &background_color))
+            m_animationRef->bgcolor = cv::Scalar(
+                background_color->blue,
+                background_color->green,
+                background_color->red
+            );
+        else
+            m_animationRef->bgcolor = cv::Scalar();
+    }
 
     if (bit_depth <= 8 || bit_depth == 16)
     {
@@ -448,7 +458,8 @@ bool  PngDecoder::readData( Mat& img )
                 {
                     if (!m_is_fcTL_loaded)
                     {
-                        m_mat_raw.copyTo(m_animation.still_image);
+                        if (m_animationRef)
+                            m_mat_raw.copyTo(m_animationRef->still_image);
                     }
                     else
                     {
@@ -463,7 +474,9 @@ bool  PngDecoder::readData( Mat& img )
                             compose_frame(frameCur.getRows(), frameRaw.getRows(), bop, x0, y0, w0, h0, mat_cur);
                             if (!delay_den)
                                 delay_den = 100;
-                            m_animation.durations.push_back(cvRound(1000. * delay_num / delay_den));
+
+                            if (m_animationRef)
+                                m_animationRef->durations.push_back(cvRound(1000. * delay_num / delay_den));
 
                             if (mat_cur.channels() == img.channels())
                             {
@@ -545,7 +558,9 @@ bool  PngDecoder::readData( Mat& img )
                         compose_frame(frameCur.getRows(), frameRaw.getRows(), bop, x0, y0, w0, h0, mat_cur);
                         if (!delay_den)
                             delay_den = 100;
-                        m_animation.durations.push_back(cvRound(1000.*delay_num/delay_den));
+
+                        if (m_animationRef)
+                            m_animationRef->durations.push_back(cvRound(1000. * delay_num / delay_den));
 
                         if (mat_cur.depth() == CV_16U && img.depth() == CV_8U && mat_cur.channels() == img.channels())
                             mat_cur.convertTo(img, CV_8U, 1. / 255);
@@ -688,6 +703,9 @@ bool  PngDecoder::readData( Mat& img )
             result = true;
         }
     }
+
+    if (m_animationRef)
+        m_animationRef->durations.push_back(1000);
 
     return result;
 }
