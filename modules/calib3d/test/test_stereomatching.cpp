@@ -219,7 +219,7 @@ void computeOcclusionBasedMasks( const Mat& leftDisp, const Mat& _rightDisp,
 }
 
 /*
-  Calculate depth discontinuty regions: pixels whose neiboring disparities differ by more than
+  Calculate depth discontinuity regions: pixels whose neighboring disparities differ by more than
   dispGap, dilated by window of width discontWidth.
 */
 void computeDepthDiscontMask( const Mat& disp, Mat& depthDiscontMask, const Mat& unknDispMask = Mat(),

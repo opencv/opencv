@@ -168,12 +168,12 @@ struct CV_EXPORTS_W_SIMPLE DetectorParameters {
      */
     CV_PROP_RW double maxErroneousBitsInBorderRate;
 
-    /** @brief minimun standard deviation in pixels values during the decodification step to apply Otsu
+    /** @brief minimum standard deviation in pixels values during the decodification step to apply Otsu
      * thresholding (otherwise, all the bits are set to 0 or 1 depending on mean higher than 128 or not) (default 5.0)
      */
     CV_PROP_RW double minOtsuStdDev;
 
-    /// error correction rate respect to the maximun error correction capability for each dictionary (default 0.6).
+    /// error correction rate respect to the maximum error correction capability for each dictionary (default 0.6).
     CV_PROP_RW double errorCorrectionRate;
 
     /** @brief April :: User-configurable parameters.
