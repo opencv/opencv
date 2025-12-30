@@ -62,20 +62,24 @@ class CV_ECC_BaseTest : public cvtest::BaseTest {
 
     bool checkMap(const Mat& map, const Mat& ground);
 
+    double MIN_ECC;      // Worst possible ECC for check passing
     double MAX_RMS_ECC;  // upper bound for RMS error
     int ntests;          // number of tests per motion type
     int ECC_iterations;  // number of iterations for ECC
     double ECC_epsilon;  // we choose a negative value, so that
     // ECC_iterations are always executed
-    TermCriteria criteria;
+    TermCriteria fullRunCriteria;
+    TermCriteria singleRunCriteria;
 };
 
 CV_ECC_BaseTest::CV_ECC_BaseTest() {
     MAX_RMS_ECC = 0.1;
+    MIN_ECC = 0.999;
     ntests = 3;
     ECC_iterations = 50;
     ECC_epsilon = -1;  //-> negative value means that ECC_Iterations will be executed
-    criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, ECC_iterations, ECC_epsilon);
+    fullRunCriteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, ECC_iterations, ECC_epsilon);
+    singleRunCriteria = TermCriteria(cv::TermCriteria::COUNT, 1, 0);
 }
 
 CV_ECC_BaseTest::~CV_ECC_BaseTest() {}
@@ -174,15 +178,39 @@ bool CV_ECC_Test_Translation::test(const Mat testImg) {
         ts->update_context(this, k, true);
         progress = update_progress(progress, k, ntests, 0);
 
-        Mat translationGround = (Mat_<float>(2, 3) << 1, 0, (rng.uniform(10.f, 20.f)), 0, 1, (rng.uniform(10.f, 20.f)));
+        float tx = rng.uniform(10.f, 20.f);
+        float ty = rng.uniform(10.f, 20.f);
+
+        Mat translationGround = (Mat_<float>(2, 3) << 1.0, 0.0, tx,
+                                                      0.0, 1.0, ty);
 
         Mat warpedImage;
-
         warpAffine(testImg, warpedImage, translationGround, Size(200, 200), INTER_LINEAR + WARP_INVERSE_MAP);
 
-        Mat mapTranslation = (Mat_<float>(2, 3) << 1, 0, 0, 0, 1, 0);
+        // Check warpMatrix initialization. A good initial guess should not be destroyed
+        // Perform a single iteration, making sure the warp is perfect and the initial matrix is ​​returned.
+        Mat mapTranslation = translationGround.clone();
+        double ecc = findTransformECC(warpedImage, testImg, mapTranslation, MOTION_TRANSLATION, singleRunCriteria);
+        if (ecc < MIN_ECC)
+            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+        if (!checkMap(mapTranslation, translationGround))
+            return false;
 
-        findTransformECC(warpedImage, testImg, mapTranslation, 0, criteria);
+        // Check behavior for wrong initial warp. Expected behavior is that the matrix will be forced to a pure translation
+        mapTranslation = (Mat_<float>(2, 3) << 5.0, 10.0, tx,
+                                               1.0, 2.0, ty);
+        ecc = findTransformECC(warpedImage, testImg, mapTranslation, MOTION_TRANSLATION, singleRunCriteria);
+        if (ecc < MIN_ECC)
+            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+        if (!checkMap(mapTranslation, translationGround))
+            return false;
+
+        // Check convergence
+        mapTranslation = (Mat_<float>(2, 3) << 1.0, 0.0, 0.0,
+                                               0.0, 1.0, 0.0);
+        ecc =  findTransformECC(warpedImage, testImg, mapTranslation, MOTION_TRANSLATION, fullRunCriteria);
+        if (ecc < MIN_ECC)
+            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
 
         if (!checkMap(mapTranslation, translationGround))
             return false;
@@ -208,18 +236,40 @@ bool CV_ECC_Test_Euclidean::test(const Mat testImg) {
         ts->update_context(this, k, true);
         progress = update_progress(progress, k, ntests, 0);
 
-        double angle = CV_PI / 30 + CV_PI * rng.uniform((double)-2.f, (double)2.f) / 180;
+        float tx = rng.uniform(10.f, 20.f);
+        float ty = rng.uniform(10.f, 20.f);
+        float angle = (float)(CV_PI / 30 + CV_PI * rng.uniform(-2.f, 2.f) / 180);
 
-        Mat euclideanGround = (Mat_<float>(2, 3) << cos(angle), -sin(angle), (rng.uniform(10.f, 20.f)), sin(angle),
-                               cos(angle), (rng.uniform(10.f, 20.f)));
+        Mat euclideanGround = (Mat_<float>(2, 3) << cos(angle), -sin(angle), tx,
+                                                    sin(angle), cos(angle), ty);
 
         Mat warpedImage;
-
         warpAffine(testImg, warpedImage, euclideanGround, Size(200, 200), INTER_LINEAR + WARP_INVERSE_MAP);
 
-        Mat mapEuclidean = (Mat_<float>(2, 3) << 1, 0, 0, 0, 1, 0);
+        // Check warpMatrix initialization. A good initial guess should not be destroyed
+        // Perform a single iteration, making sure the warp is perfect and the initial matrix is ​​returned.
+        Mat mapEuclidean = euclideanGround.clone();
+        double ecc = findTransformECC(warpedImage, testImg, mapEuclidean, MOTION_EUCLIDEAN, singleRunCriteria);
+        if (ecc < MIN_ECC)
+            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+        if (!checkMap(mapEuclidean, euclideanGround))
+            return false;
 
-        findTransformECC(warpedImage, testImg, mapEuclidean, 1, criteria);
+        // Check behavior for wrong initial warp. Expected behavior is that the matrix will be forced to a pure rotation + translation
+        mapEuclidean =  (Mat_<float>(2, 3) << 5.0f * cos(angle), -5.0f * sin(angle), tx,
+                                              2.0f * sin(angle),  2.0f * cos(angle), ty);
+        ecc = findTransformECC(warpedImage, testImg, mapEuclidean, MOTION_EUCLIDEAN, singleRunCriteria);
+        if (ecc < MIN_ECC)
+            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+        if (!checkMap(mapEuclidean, euclideanGround))
+            return false;
+
+        // Check convergence
+        mapEuclidean = (Mat_<float>(2, 3) << 1, 0, 0, 0, 1, 0);
+        ecc = findTransformECC(warpedImage, testImg, mapEuclidean, MOTION_EUCLIDEAN, fullRunCriteria);
+        if (ecc < MIN_ECC)
+            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+
 
         if (!checkMap(mapEuclidean, euclideanGround))
             return false;
@@ -250,12 +300,24 @@ bool CV_ECC_Test_Affine::test(const Mat testImg) {
                             (rng.uniform(10.f, 20.f)));
 
         Mat warpedImage;
-
         warpAffine(testImg, warpedImage, affineGround, Size(200, 200), INTER_LINEAR + WARP_INVERSE_MAP);
 
-        Mat mapAffine = (Mat_<float>(2, 3) << 1, 0, 0, 0, 1, 0);
+        // Check warpMatrix initialization. A good initial guess should not be destroyed
+        // Perform a single iteration, making sure the warp is perfect and the initial matrix is ​​returned.
+        Mat mapAffine = affineGround.clone();
+        double ecc = findTransformECC(warpedImage, testImg, mapAffine, MOTION_AFFINE, singleRunCriteria);
+        if (ecc < MIN_ECC)
+            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
 
-        findTransformECC(warpedImage, testImg, mapAffine, 2, criteria);
+        if (!checkMap(mapAffine, affineGround))
+            return false;
+
+        // Check convergence
+        mapAffine = (Mat_<float>(2, 3) << 1.0, 0.0, 0.0,
+                                          0.0, 1.0, 0.0);
+        ecc = findTransformECC(warpedImage, testImg, mapAffine, MOTION_AFFINE, fullRunCriteria);
+        if (ecc < MIN_ECC)
+            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
 
         if (!checkMap(mapAffine, affineGround))
             return false;
@@ -288,12 +350,22 @@ bool CV_ECC_Test_Homography::test(const Mat testImg) {
              (rng.uniform(10.f, 20.f)), (rng.uniform(0.0001f, 0.0003f)), (rng.uniform(0.0001f, 0.0003f)), 1.f);
 
         Mat warpedImage;
-
         warpPerspective(testImg, warpedImage, homoGround, Size(200, 200), INTER_LINEAR + WARP_INVERSE_MAP);
 
-        Mat mapHomography = Mat::eye(3, 3, CV_32F);
+        // Check warpMatrix initialization. A good initial guess should not be destroyed
+        // Perform a single iteration, making sure the warp is perfect and the initial matrix is ​​returned.
+        Mat mapHomography = homoGround.clone();
+        double ecc = findTransformECC(warpedImage, testImg, mapHomography, MOTION_HOMOGRAPHY, singleRunCriteria);
+        if (ecc < MIN_ECC)
+            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+        if (!checkMap(mapHomography, homoGround))
+            return false;
 
-        findTransformECC(warpedImage, testImg, mapHomography, 3, criteria);
+        // Check convergence from identity transform
+        mapHomography = Mat::eye(3, 3, CV_32F);
+        ecc = findTransformECC(warpedImage, testImg, mapHomography, MOTION_HOMOGRAPHY, fullRunCriteria);
+        if (ecc < MIN_ECC)
+            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
 
         if (!checkMap(mapHomography, homoGround))
             return false;
@@ -334,14 +406,16 @@ bool CV_ECC_Test_Mask::test(const Mat testImg) {
         rectangle(testImg, region, Scalar::all(0), FILLED);
         rectangle(mask, region, Scalar(0), FILLED);
 
-        findTransformECC(warpedImage, testImg, mapTranslation, 0, criteria, mask);
-
+        double ecc = findTransformECC(warpedImage, testImg, mapTranslation, 0, fullRunCriteria, mask);
+        if (ecc < MIN_ECC)
+            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
         if (!checkMap(mapTranslation, translationGround))
             return false;
 
         // Test with non-default gaussian blur.
-        findTransformECC(warpedImage, testImg, mapTranslation, 0, criteria, mask, 1);
-
+        ecc = findTransformECC(warpedImage, testImg, mapTranslation, 0, fullRunCriteria, mask, 1);
+        if (ecc < MIN_ECC)
+            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
         if (!checkMap(mapTranslation, translationGround))
             return false;
 
@@ -353,15 +427,17 @@ bool CV_ECC_Test_Mask::test(const Mat testImg) {
             }
         }
 
-        findTransformECCWithMask(warpedImage, testImg, warpedMask, mask, mapTranslation, 0,
+        ecc = findTransformECCWithMask(warpedImage, testImg, warpedMask, mask, mapTranslation, 0,
                     TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, ECC_iterations, ECC_epsilon));
-
+        if (ecc < MIN_ECC)
+            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
         if (!checkMap(mapTranslation, translationGround))
             return false;
 
         // Test with non-default gaussian blur.
-        findTransformECCWithMask(warpedImage, testImg, warpedMask,  mask, mapTranslation, 0, criteria, 1);
-
+        ecc = findTransformECCWithMask(warpedImage, testImg, warpedMask,  mask, mapTranslation, 0, fullRunCriteria, 1);
+        if (ecc < MIN_ECC)
+            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
         if (!checkMap(mapTranslation, translationGround))
             return false;
     }
