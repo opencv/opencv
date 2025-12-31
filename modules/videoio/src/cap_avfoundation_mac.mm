@@ -358,30 +358,52 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
     }
 #endif
 
-    // get capture device
-    NSArray *devices = [[AVCaptureDevice devicesWithMediaType: AVMediaTypeVideo]
-            arrayByAddingObjectsFromArray:[AVCaptureDevice devicesWithMediaType:AVMediaTypeMuxed]];
+    // Always refresh camera-device list for reconnect support
+    NSArray *devices = nil;
+#if defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 101500
+    if (@available(macOS 10.15, *)) {
+        AVCaptureDeviceDiscoverySession *discoverySession = [AVCaptureDeviceDiscoverySession
+            discoverySessionWithDeviceTypes:@[AVCaptureDeviceTypeBuiltInWideAngleCamera, AVCaptureDeviceTypeExternalUnknown]
+            mediaType:AVMediaTypeVideo
+            position:AVCaptureDevicePositionUnspecified];
+        devices = discoverySession.devices;
+    }
+#endif
+    if (devices == nil) {
+        NSArray *devices_video = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
+        NSArray *devices_muxed = [AVCaptureDevice devicesWithMediaType:AVMediaTypeMuxed];
+        devices = [devices_video arrayByAddingObjectsFromArray:devices_muxed];
+    }
+
+    // Debug logging
+    fprintf(stderr, "[DEBUG-AVF] startCaptureDevice: devices.count=%ld cameraNum=%d\n",
+            (long)devices.count, cameraNum);
+    fflush(stderr);
+
 
     if ( devices.count == 0 ) {
         fprintf(stderr, "OpenCV: AVFoundation didn't find any attached Video Input Devices!\n");
+        started = 0;
         [localpool drain];
         return 0;
     }
+    
+    // Preserve devices ordering on the system
 
+      devices = [devices
+        sortedArrayUsingComparator:^NSComparisonResult(AVCaptureDevice *d1,
+                                                       AVCaptureDevice *d2) {
+            return [d1.uniqueID compare:d2.uniqueID];
+        }
+    ];
+
+    
+    // Validate camera index AFTER sorting
     if ( cameraNum < 0 || devices.count <= NSUInteger(cameraNum) ) {
         fprintf(stderr, "OpenCV: out device of bound (0-%ld): %d\n", devices.count-1, cameraNum);
         [localpool drain];
         return 0;
     }
-
-    // Preserve devices ordering on the system
-    // see AVCaptureDevice::uniqueID property documentation for more info
-    devices = [devices
-        sortedArrayUsingComparator:^NSComparisonResult(AVCaptureDevice *d1,
-                                                     AVCaptureDevice *d2) {
-          return [d1.uniqueID compare:d2.uniqueID];
-        }
-    ];
 
     mCaptureDevice = devices[cameraNum];
 
@@ -391,6 +413,23 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
         return 0;
     }
 
+    // Reset stale AVFoundation session on reconnect
+    if (mCaptureSession) {
+        [mCaptureSession stopRunning];
+        [mCaptureSession release];
+        mCaptureSession = nil;
+    }
+
+    if (mCaptureDeviceInput) {
+        [mCaptureDeviceInput release];
+        mCaptureDeviceInput = nil;
+    }
+
+    if (mCaptureVideoDataOutput) {             
+        [mCaptureVideoDataOutput release];
+        mCaptureVideoDataOutput = nil;
+    }
+
     // get input device
     NSError *error = nil;
     mCaptureDeviceInput = [[AVCaptureDeviceInput alloc] initWithDevice: mCaptureDevice
@@ -398,6 +437,7 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
     if ( error ) {
         fprintf(stderr, "OpenCV: error in [AVCaptureDeviceInput initWithDevice:error:]\n");
         NSLog(@"OpenCV: %@", error.localizedDescription);
+        started = 0;
         [localpool drain];
         return 0;
     }
@@ -436,11 +476,11 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
 
     [mCaptureSession startRunning];
 
-    // flush old position image
-    grabFrame(1);
+// flush old frame
+grabFrame(1);
 
-    [localpool drain];
-    return 1;
+[localpool drain];
+return 1;
 }
 
 void CvCaptureCAM::setWidthHeight() {
