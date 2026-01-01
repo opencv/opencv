@@ -42,6 +42,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../net_impl.hpp"
 #include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
@@ -63,6 +64,20 @@
 using namespace cv::dnn::cuda4dnn;
 #endif
 #include <opencv2/core/utils/logger.hpp>
+
+#ifdef HAVE_CUDA
+#include <opencv2/core/cuda.hpp>
+#include "../cuda/layer_cudnn.hpp"
+#include "../net_impl.hpp"
+#include <cudnn.h>
+#endif
+
+#ifdef HAVE_DNN_NGRAPH
+#include <openvino/op/roi_pooling.hpp>
+#include <openvino/op/psroi_pooling.hpp>
+#endif
+
+#include <type_traits>
 
 namespace cv
 {
@@ -92,6 +107,8 @@ using std::erf;
 using std::sin;
 using std::sinh;
 using std::tan;
+
+struct ReLUFunctor;
 
 template<typename Func>
 class ElementWiseLayer : public Func::Layer
@@ -146,6 +163,12 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+        if (backendId == DNN_BACKEND_CUDA)
+        {
+            EngineType engine_forced = getForcedDnnEngine();
+            if (engine_forced != ENGINE_CLASSIC)
+                return false;
+        }
         return func.supportBackend(backendId, this->preferableTarget);
     }
 
@@ -209,6 +232,54 @@ public:
 
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(this->preferableTarget),
                    func.applyOCL(inputs_arr, outputs_arr, internals_arr))
+
+#ifdef HAVE_CUDA
+        if (std::is_same<Func, ReLUFunctor>::value) {
+            if (outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT_ND)
+            {
+                Net::Impl* netimpl = getNetImpl(this);
+                CV_Assert(netimpl && "DNN/CUDA: missing Net::Impl");
+                netimpl->ensureCudaReady();
+                CV_Assert(netimpl->cudaInfo);
+                cudnnHandle_t cudnnHandle = netimpl->cudaInfo->context.cudnn_handle.get();
+
+                Arg xArg = this->inputs.empty() ? Arg() : this->inputs[0];
+                Arg yArg = this->outputs.empty() ? Arg() : this->outputs[0];
+                const ArgData& xAd = netimpl->argData(xArg);
+                const ArgData& yAd = netimpl->argData(yArg);
+                CV_Assert(!xAd.shape.empty() && !yAd.shape.empty());
+                cudnnTensorDescriptor_t xDesc = netimpl->argTensorCuDNN(
+                    xArg, xAd.shape, CUDNN_DATA_FLOAT);
+                cudnnTensorDescriptor_t yDesc = netimpl->argTensorCuDNN(
+                    yArg, yAd.shape, CUDNN_DATA_FLOAT);
+
+                cudnnActivationDescriptor_t reluActDesc =
+                    netimpl->activationDescCuDNN(
+                        CUDNN_ACTIVATION_RELU,
+                        CUDNN_PROPAGATE_NAN,
+                        0.0);
+
+                // Pure GpuMatND IO: inputs and outputs are vectors of GpuMatND.
+                std::vector<cv::cuda::GpuMatND> gin_nd;
+                inputs_arr.getGpuMatNDVector(gin_nd);
+                std::vector<cv::cuda::GpuMatND>& gout_nd = outputs_arr.getGpuMatNDVecRef();
+                CV_Assert(gout_nd.size() == 1 && gin_nd.size() == 1);
+
+                cv::cuda::GpuMatND& gin0_nd = gin_nd[0];
+                cv::cuda::GpuMatND& dst_nd  = gout_nd[0];
+                CV_Assert(!gin0_nd.empty());
+
+                cv::dnn::cuda::relu(
+                    cudnnHandle,
+                    reluActDesc,
+                    xDesc,
+                    yDesc,
+                    (const void*)gin0_nd.getDevicePtr(),
+                    (void*)dst_nd.getDevicePtr());
+                return;
+            }
+        }
+#endif
 
         if (inputs_arr.depth() == CV_16F)
         {
@@ -324,8 +395,10 @@ struct ReLUFunctor : public BaseFunctor
             return slope == 0;
         }
 #endif
+        // For CUDA backend, disable when slope != 0 (LeakyReLU) per test exclusions
+        if (backendId == DNN_BACKEND_CUDA)
+            return slope == 0.0f;
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_CANN;
     }
 
@@ -2537,7 +2610,6 @@ struct ChannelsPReLUFunctor : public BaseFunctor
             return true;
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_CANN;
     }
 

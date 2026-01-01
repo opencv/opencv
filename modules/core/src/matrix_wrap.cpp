@@ -985,6 +985,22 @@ int _InputArray::type(int i) const
 #endif
     }
 
+    if (k == STD_VECTOR_CUDA_GPU_MAT_ND)
+    {
+#ifdef HAVE_CUDA
+        const std::vector<cuda::GpuMatND>& vv = *(const std::vector<cuda::GpuMatND>*)obj;
+        if (vv.empty())
+        {
+            CV_Assert((flags & FIXED_TYPE) != 0);
+            return CV_MAT_TYPE(flags);
+        }
+        CV_Assert(i < (int)vv.size());
+        return vv[i >= 0 ? i : 0].type();
+#else
+        CV_Error(Error::StsNotImplemented, "CUDA support is not enabled in this OpenCV build (missing HAVE_CUDA)");
+#endif
+    }
+
     if( k == OPENGL_BUFFER )
         return ((const ogl::Buffer*)obj)->type();
 
@@ -1398,7 +1414,7 @@ void _OutputArray::create(Size _sz, int mtype, int i, bool allowTransposed, _Out
         CV_Assert(!fixedSize() || ((((cuda::GpuMatND*)obj)->dims == 2) && (((cuda::GpuMatND*)obj)->size[0] == _sz.height) && (((cuda::GpuMatND*)obj)->size[1] == _sz.width)));
         CV_Assert(!fixedType() || ((cuda::GpuMatND*)obj)->type() == mtype);
 #ifdef HAVE_CUDA
-        cuda::GpuMatND::SizeArray sizes = {_sz.height, _sz.width};
+        cuda::GpuMatND::SizeArray sizes({_sz.height, _sz.width});
         ((cuda::GpuMatND*)obj)->create(sizes, mtype);
         return;
 #else
@@ -1464,7 +1480,7 @@ void _OutputArray::create(int _rows, int _cols, int mtype, int i, bool allowTran
         CV_Assert(!fixedSize() || ((((cuda::GpuMatND*)obj)->dims == 2) && (((cuda::GpuMatND*)obj)->size[0] == _rows) && (((cuda::GpuMatND*)obj)->size[1] == _cols)));
         CV_Assert(!fixedType() || ((cuda::GpuMatND*)obj)->type() == mtype);
 #ifdef HAVE_CUDA
-        cuda::GpuMatND::SizeArray sizes = {_rows, _cols};
+        cuda::GpuMatND::SizeArray sizes({_rows, _cols});
         ((cuda::GpuMatND*)obj)->create(sizes, mtype);
         return;
 #else
