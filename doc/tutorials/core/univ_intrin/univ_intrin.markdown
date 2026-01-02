@@ -7,7 +7,7 @@ Vectorizing your code using Universal Intrinsics {#tutorial_univ_intrin}
 
 |    |    |
 | -: | :- |
-| Compatibility | OpenCV >= 3.0 |
+| Compatibility | OpenCV >= 4.11 |
 
 Goal
 ----
@@ -28,19 +28,16 @@ SIMD stands for **Single Instruction, Multiple Data**. SIMD Intrinsics allow the
 
 Depending on what *Instruction Sets* your CPU supports, you may be able to use the different registers. To learn more, look [here](https://en.wikipedia.org/wiki/Instruction_set_architecture)
 
+### VLA
+VLA stands for **Vector Length Agnostic** .
+A mechanism where the register width is determined by the hardware at runtime rather than being fixed at compile time.
+This allows a single binary to scale its performance across different CPUs within the same architecture (e.g., RVV or SVE).
+
 Universal Intrinsics
 --------------------
 
-OpenCVs universal intrinsics provides an abstraction to SIMD vectorization methods and allows the user to use intrinsics without the need to write system specific code.
-
-OpenCV Universal Intrinsics support the following instruction sets:
-* *128 bit* registers of various types support is implemented for a wide range of architectures including
-    * x86(SSE/SSE2/SSE4.2),
-    * ARM(NEON),
-    * PowerPC(VSX),
-    * MIPS(MSA).
-* *256 bit* registers are supported on x86(AVX2) and
-* *512 bit* registers are supported on x86(AVX512)
+OpenCV's universal intrinsics provides an abstraction to SIMD and VLA vectorization methods and allows the user to use intrinsics without the need to write system specific code.
+Supported SIMD/VLA technologies are detailed in @ref core_hal_intrin .
 
 **We will now introduce the available structures and functions:**
 * Register structures
@@ -150,33 +147,35 @@ Now that we know how registers work, let us look at the functions used for filli
 
 The universal intrinsics set provides element wise binary and unary operations.
 
+@note Since OpenCV 4.11, C++ operator overloading (e.g., +, ) in Universal Intrinsics has been deprecated in favor of explicit wrapper functions (e.g., v_add, v_mul) to ensure compatibility with VLA architectures.
+See also: https://github.com/opencv/opencv/issues/27267
+
 * **Arithmetics**: We can add, subtract, multiply and divide two registers element-wise. The registers must be of the same width and hold the same type. To multiply two registers, for example:
 
         v_float32 a, b;                          // {a1, ..., an}, {b1, ..., bn}
-        v_float32 c;
-        c = a + b                                // {a1 + b1, ..., an + bn}
-        c = a * b;                               // {a1 * b1, ..., an * bn}
+        v_float32 c = v_add(a, b);               // {a1 + b1, ..., an + bn}
+        v_flaot32 d = v_mul(a, b);               // {a1 * b1, ..., an * bn}
 
 <br>
 
-* **Bitwise Logic and Shifts**: We can left shift or right shift the bits of each element of the register. We can also apply bitwise &, |, ^ and ~ operators between two registers element-wise:
+* **Bitwise Logic and Shifts**: We can left shift or right shift the bits of each element of the register. We can also apply bitwise and, or, xor and not operators between two registers element-wise:
 
         v_int32 as;                              // {a1, ..., an}
-        v_int32 al = as << 2;                    // {a1 << 2, ..., an << 2}
-        v_int32 bl = as >> 2;                    // {a1 >> 2, ..., an >> 2}
+        v_int32 al = v_shl(as, 2);               // {a1 << 2, ..., an << 2}
+        v_int32 bl = v_shr(as, 2);               // {a1 >> 2, ..., an >> 2}
 
         v_int32 a, b;
-        v_int32 a_and_b = a & b;                 // {a1 & b1, ..., an & bn}
+        v_int32 a_and_b = v_and(a, b);           // {a1 & b1, ..., an & bn}
 
 <br>
 
-* **Comparison Operators**: We can compare values between two registers using the <, >, <= , >=, == and != operators. Since each register contains multiple values, we don't get a single bool for these operations. Instead, for true values, all bits are converted to one (0xff for 8 bits, 0xffff for 16 bits, etc), while false values return bits converted to zero.
+* **Comparison Operators**: We can compare values between two registers using the v_lt(<), v_gt(>), v_le(<=) , v_ge(>=), v_eq(==) and v_ne(!=). Since each register contains multiple values, we don't get a single bool for these operations. Instead, for true values, all bits are converted to one (0xff for 8 bits, 0xffff for 16 bits, etc), while false values return bits converted to zero.
 
         // let us consider the following code is run in a 128-bit register
-        v_uint8 a;                               // a = {0, 1, 2, ..., 15}
-        v_uint8 b;                               // b = {15, 14, 13, ..., 0}
+        v_uint8 a;                               // a = {0, 1, 2, ..., 13, 14, 15}
+        v_uint8 b;                               // b = {15, 14, 13, ..., 2, 1, 0}
 
-        v_uint8 c = a < b;
+        v_uint8 c = v_lt(a, b);                  // c = {255, 255, 255, ..., 0, 0, 0}
 
         /*
             let us look at the first 4 values in binary
@@ -192,7 +191,7 @@ The universal intrinsics set provides element wise binary and unary operations.
         v_int32 a;                               // a = {1, 2, 3, 4, 5, 6, 7, 8}
         v_int32 b;                               // b = {8, 7, 6, 5, 4, 3, 2, 1}
 
-        v_int32 c = (a < b);                     // c = {-1, -1, -1, -1, 0, 0, 0, 0}
+        v_int32 c = v_lt(a, b);                  // c = {-1, -1, -1, -1, 0, 0, 0, 0}
 
         /*
             The true values are 0xffffffff, which in signed 32-bit integer representation is equal to -1.
