@@ -87,7 +87,7 @@ Range normalizeRange(const Range& input_range, int n)
 }
 
 // TODO: support cv::Range with steps and negative steps to get rid of this transformation
-void tranformForNegSteps(const MatShape& inpShape, std::vector<std::vector<Range> >& sliceRanges, std::vector<std::vector<int> >& sliceSteps)
+void transformForNegSteps(const MatShape& inpShape, std::vector<std::vector<Range> >& sliceRanges, std::vector<std::vector<int> >& sliceSteps)
 {
     // in case of negative steps,
     // x of shape [5, 10], x[5:0:-1, 10:1:-3] <=> np.flip(x[1:5:1, 2:10:3], aixs=(0, 1))
@@ -248,7 +248,7 @@ public:
         std::vector<std::vector<int> > sliceSteps_ = sliceSteps;
         std::vector<std::vector<cv::Range> > sliceRanges_ = sliceRanges;
         if (hasSteps && !neg_step_dims.empty())
-            tranformForNegSteps(inpShape, sliceRanges_, sliceSteps_);
+            transformForNegSteps(inpShape, sliceRanges_, sliceSteps_);
 
         int axis_rw = axis;
         std::vector<std::vector<cv::Range> > sliceRanges_rw = finalizeSliceRange(inpShape, axis_rw, sliceRanges_);
@@ -300,7 +300,7 @@ public:
         MatShape inpShape = shape(inputs[0]);
 
         if (hasSteps && !neg_step_dims.empty())
-            tranformForNegSteps(inpShape, sliceRanges, sliceSteps);
+            transformForNegSteps(inpShape, sliceRanges, sliceSteps);
 
         finalSliceRanges = finalizeSliceRange(shape(inputs[0]), axis, sliceRanges);
 
