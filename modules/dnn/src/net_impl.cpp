@@ -991,8 +991,6 @@ Mat Net::Impl::forward(const String& outputName)
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
     if (mainGraph) {
-        if (!outputName.empty())
-            CV_Error(Error::StsNotImplemented, "The new dnn engine doesn't support inference until a specified layer. If you want to run the whole model, please don't set the outputName argument in the forward() call. If you want to run the model until a specified layer, please use the old dnn engine");
         return forwardWithSingleOutput(outputName);
     }
 
@@ -1050,9 +1048,12 @@ void Net::Impl::forward(OutputArrayOfArrays outputBlobs, const String& outputNam
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
     if (mainGraph) {
+        std::vector<String> outNames;
         if (!outputName.empty())
-            CV_Error(Error::StsNotImplemented, "The new dnn engine doesn't support inference until a specified layer. If you want to run the whole model, please don't set the outputName argument in the forward() call. If you want to run the model until a specified layer, please use the old dnn engine");
-        forwardWithMultipleOutputs(outputBlobs, {});
+        {
+            outNames.push_back(outputName);
+        }
+        forwardWithMultipleOutputs(outputBlobs, outNames);
         return;
     }
 
@@ -1183,7 +1184,44 @@ void Net::Impl::forward(std::vector<std::vector<Mat>>& outputBlobs,
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
     if (mainGraph)
-        CV_Error(Error::StsNotImplemented, "The new dnn engine doesn't support inference until a specified layer. If you want to run the whole model, please don't set the outputName argument in the forward() call. If you want to run the model until a specified layer, please use the old dnn engine");
+    {
+
+        std::vector<Mat> inps, dummy_outs;
+        forwardMainGraph(inps, dummy_outs);
+
+        outputBlobs.resize(outBlobNames.size());
+        for (size_t i = 0; i < outBlobNames.size(); i++)
+        {
+            String reqName = outBlobNames[i];
+
+            int lid = getLayerId(reqName);
+            if (lid >= 0)
+            {
+                Ptr<Layer> layer = getLayer(lid);
+                outputBlobs[i].resize(layer->outputs.size());
+                for (size_t j = 0; j < layer->outputs.size(); j++)
+                {
+
+                    outputBlobs[i][j] = argTensor(layer->outputs[j]);
+                }
+            }
+            else
+            {
+
+                if (haveArg(reqName))
+                {
+                    outputBlobs[i].resize(1);
+                    outputBlobs[i][0] = argTensor(getArg(reqName));
+                }
+                else
+                {
+                    CV_Error(Error::StsObjectNotFound, "Layer or Tensor '" + reqName + "' not found in new DNN engine");
+                }
+            }
+        }
+        return;
+    }
+
 
     std::vector<LayerPin> pins;
     for (int i = 0; i < outBlobNames.size(); i++)

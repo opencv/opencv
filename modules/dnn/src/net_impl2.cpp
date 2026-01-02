@@ -404,49 +404,45 @@ void Net::Impl::forwardWithMultipleOutputs(OutputArrayOfArrays outblobs, const s
     if (!mainGraph) {
         CV_Error(Error::StsNullPtr, "the model was not loaded");
     }
-    const std::vector<Arg>& outargs = mainGraph->outputs();
-    std::vector<int> outidxs;
-    int i, j, noutputs = (int)outargs.size();
-    if (!outnames.empty()) {
-        CV_CheckEQ((int)outnames.size(), noutputs, "the number of requested and actual outputs must be the same");
-        if (noutputs == 1 && outnames[0].empty())
-            ;
-        else {
-            for (i = 0; i < noutputs; i++) {
-                const std::string& outname = outnames[i];
-                for (j = 0; j < noutputs; j++) {
-                    const ArgData& adata = args.at(outargs[j].idx);
-                    if (adata.name == outname) {
-                        outidxs.push_back((int)j);
-                        break;
-                    }
-                }
-                if (j == noutputs) {
-                    CV_Error_(Error::StsObjectNotFound, ("the required output '%s' is not found", outname.c_str()));
-                }
+
+    std::vector<Mat> inps = {}, default_outs;
+    forwardMainGraph(inps, default_outs);
+
+    std::vector<Mat> results;
+
+    if (outnames.empty()) {
+
+        results = default_outs;
+    } else {
+        results.reserve(outnames.size());
+        for (const std::string& name : outnames) {
+            if (!haveArg(name)) {
+                 CV_Error_(Error::StsObjectNotFound, ("the required output '%s' is not found", name.c_str()));
             }
+            Arg arg = getArg(name);
+            results.push_back(argTensor(arg));
         }
     }
-    std::vector<Mat> inps={}, outs;
-    forwardMainGraph(inps, outs);
-    CV_Assert(outs.size() == noutputs);
+
+    int n_ret = (int)results.size();
+
     std::vector<Mat>* outMats = nullptr;
     std::vector<UMat>* outUMats = nullptr;
-    _InputArray::KindFlag outKind = outblobs.kind();
-    if (outKind == _InputArray::STD_VECTOR_MAT) {
+
+    if (outblobs.isMatVector()) {
         outMats = &outblobs.getMatVecRef();
-        outMats->resize(noutputs);
-    } else if (outKind == _InputArray::STD_VECTOR_UMAT) {
+        outMats->resize(n_ret);
+    } else if (outblobs.isUMatVector()) {
         outUMats = &outblobs.getUMatVecRef();
-        outUMats->resize(noutputs);
-    } else if (outKind == _InputArray::MAT || outKind == _InputArray::UMAT) {
-        CV_Assert(noutputs == 1);
+        outUMats->resize(n_ret);
+    } else if (outblobs.isMat() || outblobs.isUMat()) {
+         CV_Assert(n_ret == 1);
     } else {
-        CV_Error(Error::StsBadArg, "outputs must be Mat, UMat, a vector of Mat's or a vector of UMat's");
+         CV_Error(Error::StsBadArg, "outputs must be Mat, UMat, a vector of Mat's or a vector of UMat's");
     }
-    for (i = 0; i < noutputs; i++) {
-        int j = outidxs.empty() ? i : outidxs[i];
-        Mat src = outs[j];
+
+    for (int i = 0; i < n_ret; i++) {
+        Mat src = results[i];
         if (outMats) {
             src.copyTo(outMats->at(i));
         } else if (outUMats) {
@@ -456,7 +452,6 @@ void Net::Impl::forwardWithMultipleOutputs(OutputArrayOfArrays outblobs, const s
         }
     }
 }
-
 /*void Net::Impl::checkAndUpdateDim(const Ptr<Graph>& g, const Ptr<Layer>& layer, Arg inp, int j, int value)
 {
     const ArgData& adata = args[inp.idx];
