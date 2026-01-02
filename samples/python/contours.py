@@ -2,12 +2,17 @@
 
 '''
 This program illustrates the use of findContours and drawContours.
-The original image is put up along with the image of drawn contours.
+
+A contour is a curve joining all continuous points along a boundary with the same intensity.
+In this sample, contours are extracted from a synthetic image and drawn on a separate visualization.
+
+The original image is displayed along with an image where detected contours are drawn.
+A trackbar allows interactive control of the contour hierarchy level being displayed.
 
 Usage:
     contours.py
-A trackbar is put up which controls the contour level from -3 to 3
 '''
+
 
 # Python 2/3 compatibility
 from __future__ import print_function
@@ -16,8 +21,8 @@ PY3 = sys.version_info[0] == 3
 
 if PY3:
     xrange = range
-
-import numpy as np
+   
+import numpy as np   
 import cv2 as cv
 
 def make_image():
