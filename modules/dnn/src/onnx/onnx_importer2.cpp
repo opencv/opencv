@@ -1199,9 +1199,63 @@ void ONNXImporter2::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodeP
 }
 
  // BUG: https://github.com/opencv/opencv/issues/26309
-void ONNXImporter2::parseGRU(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
+void ONNXImporter2::parseGRU(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    rememberMissingOp(node_proto_.op_type());
+    layerParams.type = "GRU";
+    layerParams.set("is_onnx", true);
+
+    String direction = layerParams.get<String>("direction", "forward");
+    layerParams.set("bidirectional", direction == "bidirectional");
+    layerParams.set("reverse", direction == "reverse");
+
+    if (layerParams.has("linear_before_reset")) {
+        layerParams.set("linear_before_reset", layerParams.get<int>("linear_before_reset"));
+    }
+
+    int n_inputs = node_proto.input_size();
+
+    if (n_inputs >= 3)
+    {
+        CV_Assert(net.isConstArg(node_inputs[1]));
+        CV_Assert(net.isConstArg(node_inputs[2]));
+
+        Mat W = net.argTensor(node_inputs[1]);
+        Mat R = net.argTensor(node_inputs[2]);
+
+        // 1. Reshape 3D -> 2D
+        if (W.dims == 3) W = W.reshape(0, W.size[0] * W.size[1]);
+        if (R.dims == 3) R = R.reshape(0, R.size[0] * R.size[1]);
+
+        // 2. CRITICAL: Push Recurrent (R) FIRST, then Input (W)
+        layerParams.blobs.push_back(R);
+        layerParams.blobs.push_back(W);
+
+        // 3. Infer hidden_size from R
+        if (!layerParams.has("hidden_size"))
+        {
+            int num_directions = (direction == "bidirectional") ? 2 : 1;
+            int total_rows = R.size[0];
+            int gate_size = total_rows / num_directions;
+            layerParams.set("hidden_size", gate_size / 3);
+        }
+
+        // 4. Bias Handling
+        if (n_inputs >= 4 && !node_proto.input(3).empty())
+        {
+            if (net.isConstArg(node_inputs[3]))
+            {
+                Mat B = net.argTensor(node_inputs[3]);
+
+                // CRITICAL SAFEGUARD: Clone to ensure contiguous memory,
+                // then reshape to Row Vector (1 x N).
+                // Do not sum biases; OpenCV expects [W_b, R_b] concatenated.
+                B = B.clone().reshape(1, 1);
+
+                layerParams.blobs.push_back(B);
+            }
+        }
+    }
+    addLayer(layerParams, node_proto);
 }
 
 void ONNXImporter2::parseImageScaler(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
