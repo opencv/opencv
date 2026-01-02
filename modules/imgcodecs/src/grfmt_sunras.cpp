@@ -133,8 +133,21 @@ bool  SunRasterDecoder::readData( Mat& img )
     size_t step = img.step;
     uchar  gray_palette[256] = {0};
     bool   result = false;
-    int  src_pitch = ((m_width*m_bpp + 7)/8 + 1) & -2;
+    int64_t bitsPerLine = (int64_t)m_width * m_bpp;
+    if (bitsPerLine <= 0)
+        return false;
+
+    int64_t bytesPerLine = (bitsPerLine + 7) / 8;
+    bytesPerLine = (bytesPerLine + 1) & ~1;
+
+    if (bytesPerLine > INT_MAX)
+        return false;
+
+    int src_pitch = (int)bytesPerLine;
     int  nch = color ? 3 : 1;
+
+    if (m_width > INT_MAX / nch)
+        return false;
     int  width3 = m_width*nch;
     int  y;
 
