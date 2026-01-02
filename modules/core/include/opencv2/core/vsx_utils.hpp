@@ -258,7 +258,7 @@ VSX_IMPL_1VRG(vec_udword2, vec_dword2,  vpopcntd, vec_popcntu)
 
 // converts between single and double-precision
 // vec_floate and vec_doubleo are available since Power10 and z14
-#if defined(__POWER10__) || (defined(__powerpc64__) && defined(__ARCH_PWR10__)
+#if defined(__POWER10__) || (defined(__powerpc64__) && defined(__ARCH_PWR10__))
 //  Use VSX double<->float conversion instructions (if supported by the architecture)
     VSX_REDIRECT_1RG(vec_float4,  vec_double2, vec_cvfo, vec_floate)
     VSX_REDIRECT_1RG(vec_double2, vec_float4,  vec_cvfo, vec_doubleo)
