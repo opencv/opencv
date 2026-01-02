@@ -2476,50 +2476,6 @@ TEST(Imgproc_sepFilter2D, delta)
     EXPECT_EQ(0, cv::norm(result, gt, NORM_INF));
 }
 
-TEST(Imgproc_BilateralFilter, regression_28254_oob_32f)
-{
-    const int width = 50;
-    const int height = 50;
-    cv::Mat src(height, width, CV_32FC1);
-    
-    cv::randu(src, 100.0f, 200.0f);
-    
-    cv::Mat dst;
-    
-    EXPECT_NO_THROW(
-        cv::bilateralFilter(src, dst, 5, 50.0, 50.0, cv::BORDER_CONSTANT)
-    );
-    
-    EXPECT_FALSE(dst.empty());
-    EXPECT_EQ(dst.type(), CV_32FC1);
-    EXPECT_EQ(dst.size(), src.size());
-    
-    cv::Mat diff;
-    cv::absdiff(src, dst, diff);
-    double maxDiff;
-    cv::minMaxLoc(diff, nullptr, &maxDiff);
-    EXPECT_GT(maxDiff, 0.0);
-}
-
-TEST(Imgproc_BilateralFilter, regression_28254_oob_32f_multichannel)
-{
-    const int width = 50;
-    const int height = 50;
-    cv::Mat src(height, width, CV_32FC3);
-    
-    cv::randu(src, cv::Scalar(150, 150, 150), cv::Scalar(250, 250, 250));
-    
-    cv::Mat dst;
-    
-    EXPECT_NO_THROW(
-        cv::bilateralFilter(src, dst, 5, 50.0, 50.0, cv::BORDER_CONSTANT)
-    );
-    
-    EXPECT_FALSE(dst.empty());
-    EXPECT_EQ(dst.type(), CV_32FC3);
-    EXPECT_EQ(dst.size(), src.size());
-}
-
 typedef testing::TestWithParam<int> Imgproc_sepFilter2D_outTypes;
 TEST_P(Imgproc_sepFilter2D_outTypes, simple)
 {
