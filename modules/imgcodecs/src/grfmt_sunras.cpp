@@ -5,6 +5,9 @@
 #include "precomp.hpp"
 #include "grfmt_sunras.hpp"
 
+#include <limits>
+#include <climits>
+
 #ifdef HAVE_IMGCODEC_SUNRASTER
 
 namespace cv

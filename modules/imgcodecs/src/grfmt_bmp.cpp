@@ -44,6 +44,9 @@
 #include "grfmt_bmp.hpp"
 #include "opencv2/core/utils/logger.hpp"
 
+#include <limits>
+#include <climits>
+
 namespace cv
 {
 

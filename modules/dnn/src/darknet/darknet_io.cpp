@@ -1023,7 +1023,7 @@ namespace cv {
                             CV_Assert(tensor_shape[0] > 0);
                             CV_Assert(tensor_shape[0] % groups == 0);
 
-                            weights_size = filters * (tensor_shape[0] / groups) * kernel_size * kernel_size;
+                            weights_size = static_cast<size_t>(filters) * (tensor_shape[0] / groups) * kernel_size * kernel_size;
                             int sizes_weights[] = { filters, tensor_shape[0] / groups, kernel_size, kernel_size };
                             weightsBlob.create(4, sizes_weights, CV_32F);
                         }
@@ -1034,11 +1034,12 @@ namespace cv {
 
                             CV_Assert(filters>0);
 
-                            weights_size = total(tensor_shape) * filters;
+                            weights_size = static_cast<size_t>(total(tensor_shape)) * filters;
                             int sizes_weights[] = { filters, total(tensor_shape) };
                             weightsBlob.create(2, sizes_weights, CV_32F);
                         }
                         CV_Assert(weightsBlob.isContinuous());
+                        CV_Assert(weightsBlob.total() == weights_size);
 
                         cv::Mat meanData_mat(1, filters, CV_32F);	// mean
                         cv::Mat stdData_mat(1, filters, CV_32F);	// variance
