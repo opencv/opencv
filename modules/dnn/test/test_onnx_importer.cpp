@@ -3276,6 +3276,21 @@ TEST_P(Test_ONNX_layers, RandomNormalLike_complex)
     EXPECT_EQ(countNonZero(out != out2), 0);
 }
 
+TEST(DNN_ONNX, ConvKernelInferredFromWeights)
+{
+    const std::string model = cvtest::findDataFile("dnn/onnx/conv_kernel_infer.onnx", false);
+    Net net = readNetFromONNX(model);
+    ASSERT_FALSE(net.empty());
+
+    int inpDims[] = {1, 3, 8, 8};
+    Mat input = Mat::ones(4, inpDims, CV_32F);
+    net.setInput(input);
+
+    Mat out = net.forward();
+    EXPECT_EQ(out.dims, 4);
+    EXPECT_EQ(out.size[1], 2);
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
 }} // namespace
