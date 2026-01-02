@@ -24,6 +24,7 @@ namespace cv
 int ipp_hal_transpose2d(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int src_width,
                         int src_height, int element_size)
 {
+    CV_HAL_CHECK_USE_IPP();
     typedef IppStatus (CV_STDCALL * IppiTranspose)(const void * pSrc, int srcStep, void * pDst, int dstStep, IppiSize roiSize);
     typedef IppStatus (CV_STDCALL * IppiTransposeI)(const void * pSrcDst, int srcDstStep, IppiSize roiSize);
     IppiTranspose ippiTranspose = nullptr;
@@ -99,6 +100,7 @@ int ipp_hal_flip(int src_type, const uchar* src_data, size_t src_step, int src_w
                  uchar* dst_data, size_t dst_step, int flip_mode)
 
 {
+    CV_HAL_CHECK_USE_IPP();
     int64_t total = src_step*src_height*CV_ELEM_SIZE(src_type);
     // Details: https://github.com/opencv/opencv/issues/12943
     if (flip_mode <= 0 /* swap rows */
