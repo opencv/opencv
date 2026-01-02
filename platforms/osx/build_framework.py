@@ -128,5 +128,5 @@ if __name__ == "__main__":
     if catalyst_archs:
         targets.append((catalyst_archs, "Catalyst")),
 
-    b = OSXBuilder(args.opencv, args.contrib, args.dynamic, True, args.without, args.disable, args.enablenonfree, targets, args.debug, args.debug_info, args.framework_name, args.run_tests, args.build_docs, args.swiftdisabled)
+    b = OSXBuilder(args.opencv, args.contrib, args.dynamic, args.without, args.disable, args.enablenonfree, targets, args.debug, args.debug_info, args.framework_name, args.run_tests, args.build_docs, args.swiftdisabled)
     b.build(args.out)
