@@ -245,6 +245,13 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 
     // Normalize strides in case NPY_RELAXED_STRIDES is set
     size_t default_step = elemsize;
+
+    // Ensure that 2-D numpy arrays are treated as single-channel grayscale images
+    if(ndims == 2)
+    {
+        isMultiChannel = false;
+    }
+
     for ( int i = ndims - 1; i >= 0; --i )
     {
         size[i] = (int)_sizes[i];
