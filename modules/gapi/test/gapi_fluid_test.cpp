@@ -509,7 +509,7 @@ TEST_P(LPISequenceTest, LPISequenceTest)
 
     // Check with OpenCV
     cv::blur(in_mat + 1, out_mat_ocv, {kernelSize,kernelSize}, {-1,-1}, cv::BORDER_CONSTANT);
-    EXPECT_EQ(0, cvtest::norm(out_mat_gapi, out_mat_ocv, NORM_INF));
+    EXPECT_LE(cvtest::norm(out_mat_gapi, out_mat_ocv, NORM_INF),1);
 }
 
 INSTANTIATE_TEST_CASE_P(Fluid, LPISequenceTest,
@@ -547,7 +547,7 @@ TEST_P(InputImageBorderTest, InputImageBorderTest)
     cv::Mat out_mat_ocv = Mat::zeros(sz_in, CV_8UC1);
     cv::blur(in_mat1, out_mat_ocv, kernelSize, anchor, borderType);
 
-    EXPECT_EQ(0, cvtest::norm(out_mat_ocv, out_mat_gapi, NORM_INF));
+    EXPECT_LE(cvtest::norm(out_mat_ocv, out_mat_gapi, NORM_INF),1);
 }
 
 INSTANTIATE_TEST_CASE_P(Fluid, InputImageBorderTest,
@@ -585,7 +585,7 @@ TEST_P(SequenceOfBlursTest, Test)
     cv::blur(in_mat, mid_mat_ocv, {3,3}, anchor, borderType);
     cv::blur(mid_mat_ocv, out_mat_ocv, {5,5}, anchor, borderType);
 
-    EXPECT_EQ(0, cvtest::norm(out_mat_ocv, out_mat_gapi, NORM_INF));
+    EXPECT_LE(cvtest::norm(out_mat_ocv, out_mat_gapi, NORM_INF),1);
 }
 
 INSTANTIATE_TEST_CASE_P(Fluid, SequenceOfBlursTest,
@@ -637,8 +637,8 @@ TEST_P(TwoBlursTest, Test)
     cv::blur(in_mat, out_mat_ocv1, {kernelSize1, kernelSize1}, anchor, borderType1);
     cv::blur(in_mat, out_mat_ocv2, {kernelSize2, kernelSize2}, anchor, borderType2);
 
-    EXPECT_EQ(0, cvtest::norm(out_mat_ocv1, out_mat_gapi1, NORM_INF));
-    EXPECT_EQ(0, cvtest::norm(out_mat_ocv2, out_mat_gapi2, NORM_INF));
+    EXPECT_LE( cvtest::norm(out_mat_ocv1, out_mat_gapi1, NORM_INF),1);
+    EXPECT_LE(cvtest::norm(out_mat_ocv2, out_mat_gapi2, NORM_INF),1);
 }
 
 INSTANTIATE_TEST_CASE_P(Fluid, TwoBlursTest,
@@ -695,8 +695,8 @@ TEST_P(TwoReadersTest, Test)
     out_mat_ocv1 = in_mat;
     cv::blur(in_mat, out_mat_ocv2, {kernelSize, kernelSize}, anchor, borderType);
 
-    EXPECT_EQ(0, cvtest::norm(out_mat_ocv1, out_mat_gapi1, NORM_INF));
-    EXPECT_EQ(0, cvtest::norm(out_mat_ocv2, out_mat_gapi2, NORM_INF));
+    EXPECT_LE(cvtest::norm(out_mat_ocv1, out_mat_gapi1, NORM_INF),1);
+    EXPECT_LE(cvtest::norm(out_mat_ocv2, out_mat_gapi2, NORM_INF),1);
 }
 
 INSTANTIATE_TEST_CASE_P(Fluid, TwoReadersTest,

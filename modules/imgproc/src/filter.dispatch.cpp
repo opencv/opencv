@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2025, Advanced Micro Devices, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -70,6 +71,10 @@ BaseColumnFilter::BaseColumnFilter() { ksize = anchor = -1; }
 BaseColumnFilter::~BaseColumnFilter() {}
 void BaseColumnFilter::reset() {}
 
+BaseRowColumnFilter::BaseRowColumnFilter() { ksize = anchor = -1; }
+BaseRowColumnFilter::~BaseRowColumnFilter() {}
+void BaseRowColumnFilter::reset() {}
+
 BaseFilter::BaseFilter() { ksize = Size(-1,-1); anchor = Point(-1,-1); }
 BaseFilter::~BaseFilter() {}
 void BaseFilter::reset() {}
@@ -85,6 +90,7 @@ FilterEngine::FilterEngine()
 FilterEngine::FilterEngine( const Ptr<BaseFilter>& _filter2D,
                             const Ptr<BaseRowFilter>& _rowFilter,
                             const Ptr<BaseColumnFilter>& _columnFilter,
+                            const Ptr<BaseRowColumnFilter>& _rowColumnFilter,
                             int _srcType, int _dstType, int _bufType,
                             int _rowBorderType, int _columnBorderType,
                             const Scalar& _borderValue )
@@ -92,7 +98,7 @@ FilterEngine::FilterEngine( const Ptr<BaseFilter>& _filter2D,
       rowBorderType(BORDER_REPLICATE), columnBorderType(BORDER_REPLICATE),
       borderElemSize(0), bufStep(0), startY(0), startY0(0), endY(0), rowCount(0), dstY(0)
 {
-    init(_filter2D, _rowFilter, _columnFilter, _srcType, _dstType, _bufType,
+    init(_filter2D, _rowFilter, _columnFilter, _rowColumnFilter, _srcType, _dstType, _bufType,
          _rowBorderType, _columnBorderType, _borderValue);
 }
 
@@ -104,6 +110,7 @@ FilterEngine::~FilterEngine()
 void FilterEngine::init( const Ptr<BaseFilter>& _filter2D,
                          const Ptr<BaseRowFilter>& _rowFilter,
                          const Ptr<BaseColumnFilter>& _columnFilter,
+                         const Ptr<BaseRowColumnFilter>& _rowColumnFilter,
                          int _srcType, int _dstType, int _bufType,
                          int _rowBorderType, int _columnBorderType,
                          const Scalar& _borderValue )
@@ -120,6 +127,7 @@ void FilterEngine::init( const Ptr<BaseFilter>& _filter2D,
     filter2D = _filter2D;
     rowFilter = _rowFilter;
     columnFilter = _columnFilter;
+    rowColumnFilter = _rowColumnFilter;
 
     if( _columnBorderType < 0 )
         _columnBorderType = _rowBorderType;
@@ -378,7 +386,7 @@ Ptr<FilterEngine> createSeparableLinearFilter(
     Ptr<BaseColumnFilter> _columnFilter = getLinearColumnFilter(
         _bufType, _dstType, columnKernel, _anchor.y, ctype, _delta, bits );
 
-    return Ptr<FilterEngine>( new FilterEngine(Ptr<BaseFilter>(), _rowFilter, _columnFilter,
+    return Ptr<FilterEngine>( new FilterEngine(Ptr<BaseFilter>(), _rowFilter, _columnFilter,  Ptr<BaseRowColumnFilter>(),
         _srcType, _dstType, _bufType, _rowBorderType, _columnBorderType, _borderValue ));
 }
 
@@ -1151,7 +1159,7 @@ Ptr<cv::FilterEngine> createLinearFilter(
         kernel, _anchor, _delta, bits);
 
     return makePtr<FilterEngine>(_filter2D, Ptr<BaseRowFilter>(),
-        Ptr<BaseColumnFilter>(), _srcType, _dstType, _srcType,
+        Ptr<BaseColumnFilter>(), Ptr<BaseRowColumnFilter>(), _srcType, _dstType, _srcType,
         _rowBorderType, _columnBorderType, _borderValue );
 }
 
