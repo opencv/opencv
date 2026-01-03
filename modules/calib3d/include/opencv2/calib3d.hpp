@@ -505,40 +505,131 @@ This latter conversion can be useful when using a rendering software to mimic a 
     -   (Python) A camera calibration sample can be found at
         opencv_source_code/samples/python/calibrate.py
 
-  @{
-    @defgroup calib3d_fisheye Fisheye camera model
+@defgroup calib3d_fisheye Fisheye camera model
+### Definitions:
+We work with two cameras:
+- T-camera: target, a rectified pinhole camera
+- S-camera: source, a distorted fisheye camera
 
-    Definitions: Let P be a point in 3D of coordinates X in the world reference frame (stored in the
-    matrix X) The coordinate vector of P in the camera reference frame is:
+Camera intrinsics have the form,
+\f[
+K =
+\begin{bmatrix}
+f_x & 0   & c_x \\
+0   & f_y & c_y \\
+0   & 0   & 1
+\end{bmatrix},
+\f]
+with \f$K_T\f$ and \f$K_S\f$ denoting the intrinsics of the T- and S-cameras.
 
-    \f[Xc = R X + T\f]
+A 3D rotation that maps a direction expressed in the T-camera frame into
+the S-camera frame is written \f$R_{S \leftarrow T}\f$.
 
-    where R is the rotation matrix corresponding to the rotation vector om: R = rodrigues(om); call x, y
-    and z the 3 coordinates of Xc:
+### Goal:
+We aim to construct the backward mapping, \f$F\f$, from a homogenous point in the
+rectified pinhole frame, \f$p_T\f$, to the point, \f$p_S\f$, in the distorted
+source frame.
+\f[
+p_S = \begin{bmatrix} u \\ v \\ 1 \end{bmatrix},
+p_T = \begin{bmatrix} j \\ i \\ 1 \end{bmatrix},
+p_S = F\left(p_T\right).
+\f]
 
-    \f[\begin{array}{l} x = Xc_1 \\ y = Xc_2 \\ z = Xc_3 \end{array} \f]
+### Back-projection and frame transform:
 
-    The pinhole projection coordinates of P is [a; b] where
+The inverse transform of the 3D direction in the S-camera corresponding to \f$p_T\f$ is:
+\f[
+X_S = R_{T\leftarrow S}^{-1} \, K_T^{-1} p_T
+  =
+  \begin{bmatrix}
+  x \\ y \\ z
+  \end{bmatrix}.
+\f]
 
-    \f[\begin{array}{l} a = x / z \ and \ b = y / z \\ r^2 = a^2 + b^2 \\ \theta = atan(r) \end{array} \f]
+Thus \f$X_S = (x, y, z)^T\f$ is the 3D direction associated with
+\f$p_T\f$.
 
-    Fisheye distortion:
+### Fisheye angle coordinates:
 
-    \f[\theta_d = \theta (1 + k_1 \theta^2 + k_2 \theta^4 + k_3 \theta^6 + k_4 \theta^8)\f]
+From \f$X_S\f$ we compute the transverse radius and incidence angle relative to
+the S-camera optical axis:
+\f[
+\rho = \sqrt{x^2 + y^2}, \qquad
+\theta = \mathrm{atan2}(\rho, z).
+\f]
 
-    The distorted point coordinates are [x'; y'] where
+Here, \f$\theta\f$ is the angle between the ray \f$X_S\f$ and the optical axis
+\f$(0, 0, 1)^T\f$.
 
-    \f[\begin{array}{l} x' = (\theta_d / r) a \\ y' = (\theta_d / r) b \end{array} \f]
+### Kannala-Brandt distortion:
 
-    Finally, conversion into pixel coordinates: The final pixel coordinates vector [u; v] where:
+The Kannala-Brandt fisheye model with four radial coefficients
+\f$k_1, k_2, k_3, k_4\f$ is applied in angle space:
+\f[
+\theta_d
+ = \theta \left(
+     1
+   + k_1 \theta^2
+   + k_2 \theta^4
+   + k_3 \theta^6
+   + k_4 \theta^8
+   \right).
+\f]
 
-    \f[\begin{array}{l} u = f_x (x' + \alpha y') + c_x \\
-    v = f_y y' + c_y \end{array} \f]
+The distorted normalized point is then defined as:
+\f[
+X_S' =
+\begin{bmatrix}
+x' \\[2pt] y' \\[2pt] 1
+\end{bmatrix}
+=
+\begin{bmatrix}
+(\theta_d / \rho)\, x \\[2pt]
+(\theta_d / \rho)\, y \\[2pt]
+1
+\end{bmatrix}.
+\f]
 
-    Summary:
-    Generic camera model @cite Kannala2006 with perspective projection and without distortion correction
+### Projection into the source image plane:
 
-  @}
+Finally, the distorted normalized point is mapped into the source fisheye
+image plane using \f$K_S\f$:
+\f[
+p_S =
+K_S X_S'
+ =
+K_S
+\begin{bmatrix}
+(\theta_d / \rho)\, x \\
+(\theta_d / \rho)\, y \\
+1
+\end{bmatrix}
+=
+\begin{bmatrix}
+f_x^S (\theta_d / \rho)\, x + c_x^S \\
+f_y^S (\theta_d / \rho)\, y + c_y^S \\
+1
+\end{bmatrix},
+\f]
+taken together this produces the desired mapping \f$F: \ p_T \mapsto p_S\f$.
+
+#### Notes:
+In the case \f$\rho = 0\f$: if \f$x = y = 0\f$, the ray lies on the
+S-camera optical axis. Then \f$\theta = 0\f$ and \f$\theta_d = 0\f$,
+the apparent singularity at here is removable as,
+\f[
+\lim_{\rho \rightarrow 0}(\theta_d / \rho)
+\begin{bmatrix}
+x \\ y
+\end {bmatrix}
+=
+\begin{bmatrix}
+0 \\ 0
+\end{bmatrix},
+\f]
+Notice the constraint on \f$x, y\f$ given by \f$\rho\f$. The code handles this
+as a special case to avoid division by zero. Geometrically this is a point that
+coincides with the optical axis.
  */
 
 namespace cv
@@ -4154,9 +4245,13 @@ namespace fisheye
     for details.
     @param map1 The first output map.
     @param map2 The second output map.
+    @param inputImageSize Input image size used to gate out-of-bounds map values. When non-empty,
+    coordinates below 0 become -inf and coordinates above the size become +inf. When empty, the
+    legacy w<=0 gating is used.
      */
     CV_EXPORTS_W void initUndistortRectifyMap(InputArray K, InputArray D, InputArray R, InputArray P,
-        const cv::Size& size, int m1type, OutputArray map1, OutputArray map2);
+        const cv::Size& size, int m1type, OutputArray map1, OutputArray map2,
+        const cv::Size& inputImageSize = Size());
 
     /** @brief Transforms an image to compensate for fisheye lens distortion.
 
