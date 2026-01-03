@@ -312,7 +312,7 @@ struct Sum3x3 :
         addRow(a0, a1, b0, b1, r0, r1);
         addRow(a0v1, a1v1, b0v1, b1v1, r0v1, r1v1);
     }
-    void inline scaleVal3x3(VFT &b0, const VFT &v_32768, const VFT &v_mulFactor)
+    void inline scaleVal3x3(VFT &b0, const VFT &v_64, const VFT &v_32768, const VFT &v_mulFactor)
     {
         if (SCALE_T==APPLY_SCALING)
         {
@@ -323,7 +323,7 @@ struct Sum3x3 :
                 if (std::is_same<ET, uchar>::value || std::is_same<ET, char>::value)
                 {
                     VFT bsub = v_shr<1>(b0); // 1/2
-                    b0 = v_shr<8>(v_sub(v_mul(b0, v_mulFactor), bsub));
+                    b0 = v_shr<8>(v_add(v_sub(v_mul(b0, v_mulFactor), bsub),v_64));
                 }
                 else if (std::is_same<ET, ushort>::value)
                     b0 = v_shr<16>(v_sub(v_mul(b0, v_mulFactor), v_32768));
@@ -360,6 +360,8 @@ struct Sum3x3 :
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         WET val_32768 = 32768;
         VFT v_32768 = vx_setall(val_32768);
+        WET val_64 = 64;
+        VFT v_64 = vx_setall(val_64);
         VFT v_mulFactor;
         if (SCALE_T==APPLY_SCALING)
         {
@@ -419,10 +421,10 @@ struct Sum3x3 :
 
                 if (SCALE_T==APPLY_SCALING)
                 {
-                    scaleVal3x3(b00, v_32768, v_mulFactor);
-                    scaleVal3x3(b00v1, v_32768, v_mulFactor);
-                    scaleVal3x3(b01, v_32768, v_mulFactor);
-                    scaleVal3x3(b01v1, v_32768, v_mulFactor);
+                    scaleVal3x3(b00, v_64, v_32768, v_mulFactor);
+                    scaleVal3x3(b00v1, v_64, v_32768, v_mulFactor);
+                    scaleVal3x3(b01, v_64, v_32768, v_mulFactor);
+                    scaleVal3x3(b01v1, v_64, v_32768, v_mulFactor);
                 }
                 v_store(dstx, v_pack(b00, b01));
                 v_store(dstx + VECSZ, v_pack(b00v1, b01v1));
