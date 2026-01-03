@@ -15,6 +15,11 @@ from tf_text_graph_common import readTextMessage
 from tf_text_graph_ssd import createSSDGraph
 from tf_text_graph_faster_rcnn import createFasterRCNNGraph
 
+def check_file(path, name):
+    if path and not os.path.isfile(path):
+        print(f"Error: {name} file not found: {path}")
+        sys.exit(1)
+
 backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_HALIDE, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_BACKEND_OPENCV,
             cv.dnn.DNN_BACKEND_VKCOM, cv.dnn.DNN_BACKEND_CUDA)
 targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD, cv.dnn.DNN_TARGET_HDDL,
@@ -62,9 +67,14 @@ parser = argparse.ArgumentParser(parents=[parser],
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 args = parser.parse_args()
 
+check_file(args.model, "Model")
+check_file(args.config, "Config")
+check_file(args.classes, "Classes")
+
 args.model = findFile(args.model)
 args.config = findFile(args.config)
 args.classes = findFile(args.classes)
+
 
 # If config specified, try to load it as TensorFlow Object Detection API's pipeline.
 config = readTextMessage(args.config)
