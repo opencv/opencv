@@ -44,6 +44,9 @@
 #include "grfmt_bmp.hpp"
 #include "opencv2/core/utils/logger.hpp"
 
+#include <limits>
+#include <climits>
+
 namespace cv
 {
 
@@ -233,9 +236,22 @@ bool  BmpDecoder::readData( Mat& img )
     bool color = img.channels() > 1;
     uchar  gray_palette[256] = {0};
     bool   result = false;
-    int  src_pitch = ((m_width*(m_bpp != 15 ? m_bpp : 16) + 7)/8 + 3) & -4;
+    int64_t bitsPerLine = (int64_t)m_width * (m_bpp != 15 ? m_bpp : 16);
+    if (bitsPerLine <= 0)
+        return false;
+
+    int64_t bytesPerLine = (bitsPerLine + 7) / 8;
+    bytesPerLine = (bytesPerLine + 3) & ~3;
+
+    if (bytesPerLine > INT_MAX)
+        return false;
+
+    int src_pitch = (int)bytesPerLine;
     int  nch = color ? 3 : 1;
-    int  y, width3 = m_width*nch;
+
+    if (m_width > INT_MAX / nch)
+        return false;
+    int  width3 = m_width*nch;
 
     if( m_offset < 0 || !m_strm.isOpened())
         return false;
