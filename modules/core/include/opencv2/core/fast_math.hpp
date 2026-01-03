@@ -237,6 +237,8 @@ CV_INLINE int cvFloor( double value )
 #if defined CV__FASTMATH_ENABLE_GCC_MATH_BUILTINS || \
     defined CV__FASTMATH_ENABLE_CLANG_MATH_BUILTINS
     return (int)__builtin_floor(value);
+#elif defined(_MSC_VER) && (defined(_M_ARM64) || defined(_M_ARM64EC))
+    return (int)vcvtmd_s64_f64(value);
 #elif defined __loongarch64
     int i;
     double tmp;
@@ -264,6 +266,8 @@ CV_INLINE int cvCeil( double value )
 #if defined CV__FASTMATH_ENABLE_GCC_MATH_BUILTINS || \
     defined CV__FASTMATH_ENABLE_CLANG_MATH_BUILTINS
     return (int)__builtin_ceil(value);
+#elif defined(_MSC_VER) && (defined(_M_ARM64) || defined(_M_ARM64EC))
+    return (int)vcvtpd_s64_f64(value);
 #elif defined __loongarch64
     int i;
     double tmp;
@@ -362,6 +366,8 @@ CV_INLINE int cvFloor( float value )
 #if defined CV__FASTMATH_ENABLE_GCC_MATH_BUILTINS || \
     defined CV__FASTMATH_ENABLE_CLANG_MATH_BUILTINS
     return (int)__builtin_floorf(value);
+#elif defined(_MSC_VER) && (defined(_M_ARM64) || defined(_M_ARM64EC))
+    return (int)vcvtms_s32_f32(value);
 #elif defined __loongarch__
     int i;
     float tmp;
@@ -389,6 +395,8 @@ CV_INLINE int cvCeil( float value )
 #if defined CV__FASTMATH_ENABLE_GCC_MATH_BUILTINS || \
     defined CV__FASTMATH_ENABLE_CLANG_MATH_BUILTINS
     return (int)__builtin_ceilf(value);
+#elif defined(_MSC_VER) && (defined(_M_ARM64) || defined(_M_ARM64EC))
+    return (int)vcvtps_s32_f32(value);
 #elif defined __loongarch__
     int i;
     float tmp;
