@@ -856,8 +856,45 @@ cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
     CV_INSTRUMENT_REGION();
 
     if (method >= USAC_DEFAULT && method <= USAC_MAGSAC)
-        return usac::findFundamentalMat(_points1, _points2, method,
-            ransacReprojThreshold, confidence, maxIters, _mask);
+    {
+        UsacParams params;
+        params.threshold = ransacReprojThreshold;
+        params.confidence = confidence;
+        params.maxIterations = maxIters;
+
+        // Fix for Issue #27388
+        params.isParallel = false;
+
+        // Use the current state of the global RNG without advancing it.
+        params.randomGeneratorState = static_cast<int>(cv::theRNG().state);
+
+        // Map the legacy 'method' flag to UsacParams settings
+        switch (method)
+        {
+        case USAC_MAGSAC:
+            params.score = SCORE_METHOD_MAGSAC;
+            break;
+        case USAC_ACCURATE:
+            params.score = SCORE_METHOD_MSAC;
+            params.loMethod = LOCAL_OPTIM_GC;
+            break;
+        case USAC_FAST:
+            params.score = SCORE_METHOD_MSAC;
+            params.loIterations = 5;
+            params.loSampleSize = 12;
+            break;
+        case USAC_PROSAC:
+            params.sampler = SAMPLING_PROSAC;
+            params.score = SCORE_METHOD_MSAC;
+            break;
+        default: // USAC_DEFAULT, USAC_PARALLEL, USAC_FM_8PTS
+            params.score = SCORE_METHOD_MSAC;
+            params.sampler = SAMPLING_UNIFORM;
+            break;
+        }
+
+        return cv::findFundamentalMat(_points1, _points2, _mask, params);
+    }
 
     Mat points1 = _points1.getMat(), points2 = _points2.getMat();
     Mat m1, m2, F;
