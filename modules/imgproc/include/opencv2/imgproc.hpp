@@ -2372,7 +2372,7 @@ structuring element is used. Kernel can be created using #getStructuringElement
 @param anchor position of the anchor within the element; default value (-1, -1) means that the
 anchor is at the element center.
 @param iterations number of times dilation is applied.
-@param borderType pixel extrapolation method, see #BorderTypes. #BORDER_WRAP is not suported.
+@param borderType pixel extrapolation method, see #BorderTypes. #BORDER_WRAP is not supported.
 @param borderValue border value in case of a constant border
 @sa  erode, morphologyEx, getStructuringElement
  */
