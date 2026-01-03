@@ -4257,6 +4257,52 @@ The function finds the minimal enclosing circle of a 2D point set using an itera
 CV_EXPORTS_W void minEnclosingCircle( InputArray points,
                                       CV_OUT Point2f& center, CV_OUT float& radius );
 
+//! Sorting options for minEnclosingCircles
+enum MinEnclosingCircleSortBy {
+    MEC_SORT_NONE = 0,       //!< No sorting
+    MEC_SORT_BY_X = 1,       //!< Sort by center x coordinate (ascending)
+    MEC_SORT_BY_Y = 2,       //!< Sort by center y coordinate (ascending)
+    MEC_SORT_BY_RADIUS = 3   //!< Sort by radius (ascending)
+};
+
+/** @brief Finds minimum enclosing circles for multiple contours.
+
+The function processes multiple contours at once, computing the minimum enclosing circle for each.
+Optionally filters by minimum radius and sorts results. This is more efficient than manually
+looping through contours and eliminates the need to call minEnclosingCircle twice for filtering.
+
+@param contours Input vector of contours (e.g., from findContours)
+@param centers Output array of circle centers. Will be Nx2 matrix of type CV_32F where N is the
+               number of circles after filtering.
+@param radii Output array of circle radii. Will be Nx1 matrix of type CV_32F.
+@param minRadius Minimum radius filter. Circles with radius < minRadius are excluded.
+                 Default: 0 (no filtering)
+@param sortBy Sort order for results. See #MinEnclosingCircleSortBy. Default: MEC_SORT_NONE
+
+Example usage:
+@code
+    vector<vector<Point>> contours;
+    findContours(image, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+    
+    Mat centers, radii;
+    minEnclosingCircles(contours, centers, radii, 30.0, cv::MEC_SORT_BY_X);
+    
+    // Access results
+    for (int i = 0; i < centers.rows; i++) {
+        Point2f center(centers.at<float>(i, 0), centers.at<float>(i, 1));
+        float radius = radii.at<float>(i, 0);
+        circle(output, center, (int)radius, Scalar(0, 255, 0), 2);
+    }
+@endcode
+
+@sa minEnclosingCircle, findContours
+ */
+CV_EXPORTS_W void minEnclosingCircles( InputArrayOfArrays contours,
+                                       OutputArray centers,
+                                       OutputArray radii,
+                                       double minRadius = 0,
+                                       int sortBy = MEC_SORT_NONE );
+
 /** @example samples/cpp/minarea.cpp
 */
 
@@ -4290,12 +4336,12 @@ area. It takes the set of points and the parameter k as input and returns the ar
 enclosing polygon.
 
 The Implementation is based on a paper by Aggarwal, Chang and Yap @cite Aggarwal1985. They
-provide a \f$\theta(nÂ²log(n)log(k))\f$ algorithm for finding the minimal convex polygon with k
+provide a \f$\theta(n-¦log(n)log(k))\f$ algorithm for finding the minimal convex polygon with k
 vertices enclosing a 2D convex polygon with n vertices (k < n). Since the #minEnclosingConvexPolygon
 function takes a 2D point set as input, an additional preprocessing step of computing the convex hull
 of the 2D point set is required. The complexity of the #convexHull function is \f$O(n log(n))\f$ which
-is lower than \f$\theta(nÂ²log(n)log(k))\f$. Thus the overall complexity of the function is
-\f$O(nÂ²log(n)log(k))\f$.
+is lower than \f$\theta(n-¦log(n)log(k))\f$. Thus the overall complexity of the function is
+\f$O(n-¦log(n)log(k))\f$.
 
 @param points   Input vector of 2D points, stored in std::vector\<\> or Mat
 @param polygon  Output vector of 2D points defining the vertices of the enclosing polygon

@@ -215,6 +215,96 @@ void cv::minEnclosingCircle( InputArray _points, Point2f& _center, float& _radiu
 }
 
 
+void cv::minEnclosingCircles( InputArrayOfArrays _contours,
+                              OutputArray _centers,
+                              OutputArray _radii,
+                              double minRadius,
+                              int sortBy )
+{
+    CV_INSTRUMENT_REGION();
+
+    // Get number of contours
+    int ncontours = (int)_contours.total();
+
+    if (ncontours == 0)
+    {
+        _centers.create(0, 2, CV_32F);
+        _radii.create(0, 1, CV_32F);
+        return;
+    }
+
+    // Temporary storage for all circles before filtering
+    struct CircleData {
+        Point2f center;
+        float radius;
+    };
+    std::vector<CircleData> circles;
+    circles.reserve(ncontours);
+
+    // Process each contour
+    for (int i = 0; i < ncontours; i++)
+    {
+        Mat contour = _contours.getMat(i);
+        if (contour.empty())
+            continue;
+
+        Point2f center;
+        float radius;
+        minEnclosingCircle(contour, center, radius);
+
+        // Apply minimum radius filter
+        if (radius >= minRadius)
+        {
+            CircleData cd;
+            cd.center = center;
+            cd.radius = radius;
+            circles.push_back(cd);
+        }
+    }
+
+    // Sort if requested
+    if (sortBy != MEC_SORT_NONE && !circles.empty())
+    {
+        switch (sortBy)
+        {
+        case MEC_SORT_BY_X:
+            std::sort(circles.begin(), circles.end(),
+                [](const CircleData& a, const CircleData& b) { return a.center.x < b.center.x; });
+            break;
+        case MEC_SORT_BY_Y:
+            std::sort(circles.begin(), circles.end(),
+                [](const CircleData& a, const CircleData& b) { return a.center.y < b.center.y; });
+            break;
+        case MEC_SORT_BY_RADIUS:
+            std::sort(circles.begin(), circles.end(),
+                [](const CircleData& a, const CircleData& b) { return a.radius < b.radius; });
+            break;
+        default:
+            break;
+        }
+    }
+
+    // Prepare output arrays
+    int n = (int)circles.size();
+    _centers.create(n, 2, CV_32F);
+    _radii.create(n, 1, CV_32F);
+
+    if (n > 0)
+    {
+        Mat centers = _centers.getMat();
+        Mat radii = _radii.getMat();
+
+        for (int i = 0; i < n; i++)
+        {
+            centers.at<float>(i, 0) = circles[i].center.x;
+            centers.at<float>(i, 1) = circles[i].center.y;
+            radii.at<float>(i, 0) = circles[i].radius;
+        }
+    }
+}
+
+
+
 // calculates length of a curve (e.g. contour perimeter)
 double cv::arcLength( InputArray _curve, bool is_closed )
 {
