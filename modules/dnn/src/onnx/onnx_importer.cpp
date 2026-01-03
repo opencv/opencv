@@ -2033,6 +2033,23 @@ void ONNXImporter::parseConv(LayerParams& layerParams, const opencv_onnx::NodePr
                 kernel[i] = weights.size[2 + i];
             layerParams.set("kernel_size", DictValue::arrayInt(kernel.data(), static_cast<int>(kernel.size())));
         }
+        else
+        {
+            const std::string& weightName = node_proto.input(1);
+            auto shapeIt = outShapes.find(weightName);
+            if (shapeIt != outShapes.end())
+            {
+                const MatShape& weightShape = shapeIt->second;
+                if (weightShape.size() >= 3)
+                {
+                    const int kDims = static_cast<int>(weightShape.size()) - 2;
+                    std::vector<int32_t> kernel(kDims);
+                    for (int i = 0; i < kDims; ++i)
+                        kernel[i] = weightShape[2 + i];
+                    layerParams.set("kernel_size", DictValue::arrayInt(kernel.data(), kDims));
+                }
+            }
+        }
     }
     int outCn = layerParams.blobs.empty() ? outShapes[node_proto.input(1)][0] : layerParams.blobs[0].size[0];
     layerParams.set("num_output", outCn);
