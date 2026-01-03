@@ -73,13 +73,10 @@ void Dictionary::writeDictionary(FileStorage& fs, const String &name)
 }
 
 
-bool Dictionary::identify(const Mat &onlyBits, int &idx, int &rotation, double maxCorrectionRate) const {
-    CV_Assert(onlyBits.rows == markerSize && onlyBits.cols == markerSize);
+bool Dictionary::identify(const Mat &onlyCellPixelRatio, CV_OUT int &idx, CV_OUT int &rotation, double maxCorrectionRate, float validBitIdThreshold) const {
+    CV_Assert(onlyCellPixelRatio.rows == markerSize && onlyCellPixelRatio.cols == markerSize);
 
     int maxCorrectionRecalculed = int(double(maxCorrectionBits) * maxCorrectionRate);
-
-    // get as a byte list
-    Mat candidateBytes = getByteListFromBits(onlyBits);
 
     idx = -1; // by default, not found
 
@@ -87,11 +84,21 @@ bool Dictionary::identify(const Mat &onlyBits, int &idx, int &rotation, double m
     for(int m = 0; m < bytesList.rows; m++) {
         int currentMinDistance = markerSize * markerSize + 1;
         int currentRotation = -1;
-        for(unsigned int r = 0; r < 4; r++) {
-            int currentHamming = cv::hal::normHamming(
-                    bytesList.ptr(m)+r*candidateBytes.cols,
-                    candidateBytes.ptr(),
-                    candidateBytes.cols);
+        for(int r = 0; r < 4; r++) {
+
+            Mat bitsRot = getBitsFromByteList(bytesList.rowRange(m, m + 1), markerSize, r);
+            bitsRot.convertTo(bitsRot, CV_32F);
+
+            // Loop over all bits dictBitsList [m, markerSize * markerSize, 4]; onlyCellPixelRatio [markerSize, markerSize]
+            int currentHamming = 0;
+            for(int i = 0; i < markerSize; i++) {
+                for(int j = 0; j < markerSize; j++) {
+                    // If detected bit is too far from the ground truth, consider it false.
+                    if(fabs(onlyCellPixelRatio.at<float>(i, j) - static_cast<float>(bitsRot.at<float>(i, j))) > validBitIdThreshold){
+                        currentHamming++;
+                    }
+                }
+            }
 
             if(currentHamming < currentMinDistance) {
                 currentMinDistance = currentHamming;
@@ -108,6 +115,16 @@ bool Dictionary::identify(const Mat &onlyBits, int &idx, int &rotation, double m
     }
 
     return idx != -1;
+}
+
+
+bool Dictionary::identify(const Mat &onlyBits, CV_OUT int &idx, CV_OUT int &rotation, double maxCorrectionRate) const {
+    CV_Assert(onlyBits.rows == markerSize && onlyBits.cols == markerSize);
+
+    Mat candidateBitRatio;
+    onlyBits.convertTo(candidateBitRatio, CV_32F);
+    const float validBitIdThreshold = kDefaultValidBitIdThreshold;
+    return identify(candidateBitRatio, idx, rotation, maxCorrectionRate, validBitIdThreshold);
 }
 
 
@@ -147,7 +164,8 @@ void Dictionary::generateImageMarker(int id, int sidePixels, OutputArray _img, i
     Mat innerRegion = tinyMarker.rowRange(borderBits, tinyMarker.rows - borderBits)
                           .colRange(borderBits, tinyMarker.cols - borderBits);
     // put inner bits
-    Mat bits = 255 * getBitsFromByteList(bytesList.rowRange(id, id + 1), markerSize);
+    Mat bits = getGroundTruthBits(id);
+    bits.convertTo(bits, CV_8U, 255.0);
     CV_Assert(innerRegion.total() == bits.total());
     bits.copyTo(innerRegion);
 
@@ -194,12 +212,28 @@ Mat Dictionary::getByteListFromBits(const Mat &bits) {
 }
 
 
+Mat Dictionary::getGroundTruthBits(int markerId, int rotationId) const {
+
+    const int nbRotations = 4;
+    CV_Assert(markerId < bytesList.rows);
+    CV_Assert(rotationId < nbRotations);
+
+    Mat bits(markerSize, markerSize, CV_32F, Scalar::all(0));
+    Mat bitsUints = getBitsFromByteList(bytesList.rowRange(markerId, markerId + 1), markerSize, rotationId);
+    bitsUints.convertTo(bits, CV_32F);
+
+    CV_Assert(bits.rows == markerSize && bits.cols == markerSize);
+    return bits;
+}
+
+
 Mat Dictionary::getBitsFromByteList(const Mat &byteList, int markerSize, int rotationId) {
     CV_Assert(byteList.total() > 0 &&
               byteList.total() >= (unsigned int)markerSize * markerSize / 8 &&
               byteList.total() <= (unsigned int)markerSize * markerSize / 8 + 1);
 
-    CV_Assert(rotationId >=0 && rotationId < 4);
+    CV_Assert(byteList.channels() >= 4);
+    CV_Assert(rotationId >= 0 && rotationId < 4);
 
     Mat bits(markerSize, markerSize, CV_8UC1, Scalar::all(0));
 

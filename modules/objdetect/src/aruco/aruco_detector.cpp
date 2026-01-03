@@ -310,12 +310,11 @@ static void _detectInitialCandidates(const Mat &grey, vector<vector<Point2f> > &
 
 
 /**
-  * @brief Given an input image and candidate corners, extract the bits of the candidate, including
+  * @brief Given an input image and candidate corners, extract the cell pixel ratio of the candidate, including
   * the border bits
   */
-static Mat _extractBits(InputArray _image, const vector<Point2f>& corners, int markerSize,
-                        int markerBorderBits, int cellSize, double cellMarginRate, double minStdDevOtsu,
-                        OutputArray _cellPixelRatio = noArray()) {
+static Mat _extractCellPixelRatio(InputArray _image, const vector<Point2f>& corners, int markerSize,
+                                   int markerBorderBits, int cellSize, double cellMarginRate, double minStdDevOtsu) {
     CV_Assert(_image.getMat().channels() == 1);
     CV_Assert(corners.size() == 4ull);
     CV_Assert(markerBorderBits > 0 && cellSize > 0 && cellMarginRate >= 0 && cellMarginRate <= 0.5);
@@ -339,11 +338,11 @@ static Mat _extractBits(InputArray _image, const vector<Point2f>& corners, int m
     warpPerspective(_image, resultImg, transformation, Size(resultImgSize, resultImgSize),
                     INTER_NEAREST);
 
-    // output image containing the bits
-    Mat bits(markerSizeWithBorders, markerSizeWithBorders, CV_8UC1, Scalar::all(0));
+    // output image containing the ratio of white pixels in each cell
+    Mat cellPixelRatio(markerSizeWithBorders, markerSizeWithBorders, CV_32FC1, Scalar::all(0));
 
     // check if standard deviation is enough to apply Otsu
-    // if not enough, it probably means all bits are the same color (black or white)
+    // if not enough, it probably means all pixels are the same color (black or white)
     Mat mean, stddev;
     // Remove some border just to avoid border noise from perspective transformation
     Mat innerRegion = resultImg.colRange(cellSize / 2, resultImg.cols - cellSize / 2)
@@ -351,18 +350,13 @@ static Mat _extractBits(InputArray _image, const vector<Point2f>& corners, int m
     meanStdDev(innerRegion, mean, stddev);
     if(stddev.ptr< double >(0)[0] < minStdDevOtsu) {
         // all black or all white, depending on mean value
-        if(mean.ptr< double >(0)[0] > 127)
-            bits.setTo(1);
-        else
-            bits.setTo(0);
-        if(_cellPixelRatio.needed()) bits.convertTo(_cellPixelRatio, CV_32F);
-        return bits;
-    }
+        if(mean.ptr< double >(0)[0] > 127){
+            cellPixelRatio.setTo(1);
+        } else {
+            cellPixelRatio.setTo(0);
+        }
 
-    Mat cellPixelRatio;
-    if (_cellPixelRatio.needed()) {
-        _cellPixelRatio.create(markerSizeWithBorders, markerSizeWithBorders, CV_32FC1);
-        cellPixelRatio = _cellPixelRatio.getMatRef();
+        return cellPixelRatio;
     }
 
     // now extract code, first threshold using Otsu
@@ -377,38 +371,40 @@ static Mat _extractBits(InputArray _image, const vector<Point2f>& corners, int m
                                         cellSize - 2 * cellMarginPixels));
             // count white pixels on each cell to assign its value
             size_t nZ = (size_t) countNonZero(square);
-            if(nZ > square.total() / 2) bits.at<unsigned char>(y, x) = 1;
 
             // define the cell pixel ratio as the ratio of the white pixels. For inverted markers, the ratio will be inverted.
-            if(_cellPixelRatio.needed()) cellPixelRatio.at<float>(y, x) = (nZ / (float)square.total());
+            cellPixelRatio.at<float>(y, x) = (nZ / (float)square.total());
         }
     }
 
-    return bits;
+    return cellPixelRatio;
 }
 
 
 
 /**
-  * @brief Return number of erroneous bits in border, i.e. number of white bits in border.
+  * @brief Return number of erroneous bits in border, i.e. bits for which pixel ratio > validBitIdThreshold.
   */
-static int _getBorderErrors(const Mat &bits, int markerSize, int borderSize) {
+ static int _getBorderErrors(const Mat &cellPixelRatio, int markerSize, int borderSize, float validBitIdThreshold) {
 
     int sizeWithBorders = markerSize + 2 * borderSize;
 
-    CV_Assert(markerSize > 0 && bits.cols == sizeWithBorders && bits.rows == sizeWithBorders);
+    CV_Assert(markerSize > 0 && cellPixelRatio.cols == sizeWithBorders && cellPixelRatio.rows == sizeWithBorders);
 
+    // Get border error. cellPixelRatio has the opposite color as the borders.
     int totalErrors = 0;
     for(int y = 0; y < sizeWithBorders; y++) {
         for(int k = 0; k < borderSize; k++) {
-            if(bits.ptr<unsigned char>(y)[k] != 0) totalErrors++;
-            if(bits.ptr<unsigned char>(y)[sizeWithBorders - 1 - k] != 0) totalErrors++;
+            // Left and right vertical sides
+            if(cellPixelRatio.ptr<float>(y)[k] > validBitIdThreshold)  totalErrors++;
+            if(cellPixelRatio.ptr<float>(y)[sizeWithBorders - 1 - k] > validBitIdThreshold) totalErrors++;
         }
     }
     for(int x = borderSize; x < sizeWithBorders - borderSize; x++) {
         for(int k = 0; k < borderSize; k++) {
-            if(bits.ptr<unsigned char>(k)[x] != 0) totalErrors++;
-            if(bits.ptr<unsigned char>(sizeWithBorders - 1 - k)[x] != 0) totalErrors++;
+            // Top and bottom horizontal sides
+            if(cellPixelRatio.ptr<float>(k)[x] > validBitIdThreshold) totalErrors++;
+            if(cellPixelRatio.ptr<float>(sizeWithBorders - 1 - k)[x] > validBitIdThreshold) totalErrors++;
         }
     }
     return totalErrors;
@@ -482,49 +478,43 @@ static uint8_t _identifyOneCandidate(const Dictionary& dictionary, const Mat& _i
         scaled_corners[i].y = _corners[i].y * scale;
     }
 
-    Mat cellPixelRatio;
-    Mat candidateBits =
-        _extractBits(_image, scaled_corners, dictionary.markerSize, params.markerBorderBits,
-                     params.perspectiveRemovePixelPerCell,
-                     params.perspectiveRemoveIgnoredMarginPerCell, params.minOtsuStdDev,
-                     cellPixelRatio);
+    Mat cellPixelRatio =
+        _extractCellPixelRatio(_image, scaled_corners, dictionary.markerSize, params.markerBorderBits,
+                               params.perspectiveRemovePixelPerCell,
+                               params.perspectiveRemoveIgnoredMarginPerCell, params.minOtsuStdDev);
 
     // analyze border bits
     int maximumErrorsInBorder =
-        int(dictionary.markerSize * dictionary.markerSize * params.maxErroneousBitsInBorderRate);
+    int(dictionary.markerSize * dictionary.markerSize * params.maxErroneousBitsInBorderRate);
     int borderErrors =
-        _getBorderErrors(candidateBits, dictionary.markerSize, params.markerBorderBits);
+        _getBorderErrors(cellPixelRatio, dictionary.markerSize, params.markerBorderBits, params.validBitIdThreshold);
 
     // check if it is a white marker
     if(params.detectInvertedMarker){
-        // to get from 255 to 1
-        Mat invertedImg = ~candidateBits-254;
-        int invBError = _getBorderErrors(invertedImg, dictionary.markerSize, params.markerBorderBits);
+        Mat invCellPixelRatio = 1.f - cellPixelRatio;
+        int invBError = _getBorderErrors(invCellPixelRatio, dictionary.markerSize, params.markerBorderBits, params.validBitIdThreshold);
         // white marker
         if(invBError<borderErrors){
-            cellPixelRatio = 1.f - cellPixelRatio;
             borderErrors = invBError;
-            invertedImg.copyTo(candidateBits);
+            invCellPixelRatio.copyTo(cellPixelRatio);
             typ=2;
         }
     }
     if(borderErrors > maximumErrorsInBorder) return 0; // border is wrong
 
     // take only inner bits
-    Mat onlyBits =
-        candidateBits.rowRange(params.markerBorderBits,
-                               candidateBits.rows - params.markerBorderBits)
-            .colRange(params.markerBorderBits, candidateBits.cols - params.markerBorderBits);
+    Mat onlyCellPixelRatio =
+        cellPixelRatio.rowRange(params.markerBorderBits,
+                                cellPixelRatio.rows - params.markerBorderBits)
+            .colRange(params.markerBorderBits, cellPixelRatio.cols - params.markerBorderBits);
 
-    // try to indentify the marker
-    if(!dictionary.identify(onlyBits, idx, rotation, params.errorCorrectionRate))
+    // try to identify the marker
+    if(!dictionary.identify(onlyCellPixelRatio, idx, rotation, params.errorCorrectionRate, params.validBitIdThreshold))
         return 0;
 
     // compute the candidate's confidence
     if(confidenceNeeded) {
-        Mat groundTruthbits;
-        Mat bitsUints = dictionary.getBitsFromByteList(dictionary.bytesList.rowRange(idx, idx + 1), dictionary.markerSize, rotation);
-        bitsUints.convertTo(groundTruthbits, CV_32F);
+        Mat groundTruthbits = dictionary.getGroundTruthBits(idx, rotation);
         markerConfidence = _getMarkerConfidence(groundTruthbits, cellPixelRatio, dictionary.markerSize, params.markerBorderBits);
     }
 
@@ -1403,10 +1393,13 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Board& _board
             if(refineParams.errorCorrectionRate >= 0) {
 
                 // extract bits
-                Mat bits = _extractBits(
+                Mat cellPixelRatio = _extractCellPixelRatio(
                     grey, rotatedMarker, dictionary.markerSize, detectorParams.markerBorderBits,
                     detectorParams.perspectiveRemovePixelPerCell,
                     detectorParams.perspectiveRemoveIgnoredMarginPerCell, detectorParams.minOtsuStdDev);
+
+                Mat bits;
+                cellPixelRatio.convertTo(bits, CV_8UC1);
 
                 Mat onlyBits =
                     bits.rowRange(detectorParams.markerBorderBits, bits.rows - detectorParams.markerBorderBits)
