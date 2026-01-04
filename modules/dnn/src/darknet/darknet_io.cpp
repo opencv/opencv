@@ -1023,7 +1023,13 @@ namespace cv {
                             CV_Assert(tensor_shape[0] > 0);
                             CV_Assert(tensor_shape[0] % groups == 0);
 
-                            weights_size = filters * (tensor_shape[0] / groups) * kernel_size * kernel_size;
+                            // Use size_t arithmetic to prevent integer overflow (issue #28352)
+                            size_t channels_per_group = static_cast<size_t>(tensor_shape[0] / groups);
+                            size_t kernel_area = static_cast<size_t>(kernel_size) * static_cast<size_t>(kernel_size);
+                            weights_size = static_cast<size_t>(filters) * channels_per_group * kernel_area;
+                            // Validate weights_size to prevent heap buffer over-read
+                            const size_t MAX_WEIGHTS = static_cast<size_t>(1) << 29;
+                            CV_CheckLT(weights_size, MAX_WEIGHTS, "Darknet weight size too large");
                             int sizes_weights[] = { filters, tensor_shape[0] / groups, kernel_size, kernel_size };
                             weightsBlob.create(4, sizes_weights, CV_32F);
                         }
@@ -1034,7 +1040,12 @@ namespace cv {
 
                             CV_Assert(filters>0);
 
-                            weights_size = total(tensor_shape) * filters;
+                            // Use size_t arithmetic to prevent integer overflow (issue #28352)
+                            size_t tensor_total = static_cast<size_t>(total(tensor_shape));
+                            weights_size = tensor_total * static_cast<size_t>(filters);
+                            // Validate weights_size to prevent heap buffer over-read
+                            const size_t MAX_WEIGHTS = static_cast<size_t>(1) << 29;
+                            CV_CheckLT(weights_size, MAX_WEIGHTS, "Darknet weight size too large");
                             int sizes_weights[] = { filters, total(tensor_shape) };
                             weightsBlob.create(2, sizes_weights, CV_32F);
                         }
