@@ -11,6 +11,7 @@ static void help(char** argv)
     "Usage:\n"
     "   %s\n", argv[0]);
 }
+// Note: OpenCV uses BGR (Blue, Green, Red) color order for Scalar
 static Scalar randomColor(RNG& rng)
 {
     int icolor = (unsigned)rng;
