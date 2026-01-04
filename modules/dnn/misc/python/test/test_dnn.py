@@ -545,5 +545,11 @@ class dnn_test(NewOpenCVTests):
         out = net.forward()
         self.assertEqual(out.shape, (1, 2, 3, 4))
 
+    def test_blobFromImage_accepts_2d_grayscale(self):
+        H, W = 64, 64
+        img = np.random.randint(0, 256, (H, W), dtype=np.uint8)
+        blob = cv.dnn.blobFromImage(img)
+        self.assertEqual(blob.shape, (1, 1, H, W))# blob shape should be (N, C, H, W)
+
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

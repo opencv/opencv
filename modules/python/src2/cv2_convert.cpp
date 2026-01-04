@@ -220,6 +220,13 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
         elemsize = CV_ELEM_SIZE(type);
     }
 
+    // Explicitly preserve single-channel intent for 2-D NumPy arrays
+    if (ndims == 2 && !ismultichannel)
+    {
+        type |= CV_MAKETYPE(0, 1);
+    }
+
+
     if (needcopy)
     {
         if (info.outputarg)
