@@ -74,6 +74,14 @@ g_dnnBackendsAndTargets = None
 
 class dnn_test(NewOpenCVTests):
 
+    def test_blobfromimage_grayscale_channel_count(self):
+        import cv2
+        import numpy as np
+
+        img = np.random.randint(0, 255, (128, 128), dtype=np.uint8)
+        blob = cv2.dnn.blobFromImage(img)
+        self.assertEqual(blob.shape, (1, 1, 128, 128))
+
     def setUp(self):
         super(dnn_test, self).setUp()
 
@@ -547,11 +555,3 @@ class dnn_test(NewOpenCVTests):
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
-
-def test_blobfromimage_grayscale_channel_count():
-    import cv2
-    import numpy as np
-
-    img = np.random.randint(0, 255, (128, 128), dtype=np.uint8)
-    blob = cv2.dnn.blobFromImage(img)
-    assert blob.shape == (1, 1, 128, 128)
