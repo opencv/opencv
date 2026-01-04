@@ -1744,7 +1744,7 @@ static inline unsigned sacCalcIterBound(double   confidence,
      * \[ k = \frac{\log{(1-confidence)}}{\log{(1-inlierRate**sampleSize)}} \]
      */
 
-    double atLeastOneOutlierProbability = 1.-pow(inlierRate, (double)sampleSize);
+    double atLeastOneOutlierProbability = 1.-std::pow(inlierRate, (double)sampleSize);
 
     /**
      * There are two special cases: When argument to log() is 0 and when it is 1.

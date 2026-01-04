@@ -598,7 +598,7 @@ static bool ipp_cornerHarris( Mat &src, Mat &dst, int blockSize, int ksize, doub
                 scale *= 2.0;
             if (depth == CV_8U)
                 scale *= 255.0;
-            scale = std::pow(scale, -4.0);
+            scale = std::pow(scale, -4);
 
             if (ippiHarrisCornerGetBufferSize(roisize, masksize, blockSize, datatype, cn, &bufsize) >= 0)
             {

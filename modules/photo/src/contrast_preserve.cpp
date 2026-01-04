@@ -102,7 +102,7 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
     vector <double> temp2(EXPsum.size());
     vector <double> wei1(polyGrad.size());
 
-    while(sqrt(pow(E-pre_E,2)) > tol)
+    while(std::abs(E-pre_E) > tol)
     {
         iterCount +=1;
         pre_E = E;

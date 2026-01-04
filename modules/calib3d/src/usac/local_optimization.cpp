@@ -454,7 +454,7 @@ public:
         DoF = DoF_; C = C_;
         max_sigma = max_sigma_;
         squared_sigma_max_2 = max_sigma * max_sigma * 2.0;
-        one_over_sigma = C * pow(2.0, (DoF - 1.0) * 0.5) / max_sigma;
+        one_over_sigma = C * std::pow(2, (DoF - 1.0) * 0.5) / max_sigma;
         max_sigma_sqr = squared_sigma_max_2 * 0.5;
         rescale_err = scale_of_stored_gammas / squared_sigma_max_2;
     }
@@ -464,7 +464,7 @@ public:
     int getInliersWeights (const std::vector<float> &errors, std::vector<int> &inliers, std::vector<double> &weights, double thr_sqr) const override {
         const auto _max_sigma = thr_sqr;
         const auto _squared_sigma_max_2 = _max_sigma * _max_sigma * 2.0;
-        const auto _one_over_sigma = C * pow(2.0, (DoF - 1.0) * 0.5) / _max_sigma;
+        const auto _one_over_sigma = C * std::pow(2, (DoF - 1.0) * 0.5) / _max_sigma;
         const auto _max_sigma_sqr = _squared_sigma_max_2 * 0.5;
         const auto _rescale_err = scale_of_stored_gammas / _squared_sigma_max_2;
         return getInliersWeights(errors, inliers, weights, _one_over_sigma, _rescale_err, _max_sigma_sqr);

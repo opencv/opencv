@@ -141,7 +141,7 @@ __kernel void PowForward(const int n, __global const T* in, __global T* out,
 {
   int index = get_global_id(0);
   if (index < n)
-    out[index] = pow(shift + scale * in[index], power);
+    out[index] = std::pow(shift + scale * in[index], power);
 }
 
 __kernel void ELUForward(const int n, __global const T* in, __global T* out,
