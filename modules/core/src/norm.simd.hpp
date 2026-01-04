@@ -77,32 +77,6 @@ struct NormDiffL1_SIMD {
     }
 };
 
-// This specialization is needed because https://github.com/opencv/opencv/issues/27080
-template <>
-struct NormDiffL1_SIMD<int, double> {
-    inline double operator() (const int* src1, const int* src2, int n) const {
-        double s = 0;
-        int j = 0;
-#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-        v_float64 r0 = vx_setzero_f64(), r1 = vx_setzero_f64();
-        for (; j <= n - VTraits<v_int32>::vlanes(); j += VTraits<v_int32>::vlanes()) {
-            v_int32 v01 = vx_load(src1 + j), v02 = vx_load(src2 + j);
-            v_uint32 v0 = v_absdiff(v01, v02);
-            v_uint64 ev0, ev1;
-            v_expand(v0, ev0, ev1);
-            r0 = v_add(r0, v_cvt_f64(v_reinterpret_as_s64(ev0)));
-            r1 = v_add(r1, v_cvt_f64(v_reinterpret_as_s64(ev1)));
-        }
-        s += v_reduce_sum(v_add(r0, r1));
-#endif
-        for (; j < n; j++) {
-            double d1 = (double)src1[j], d2 = (double)src2[j];
-            s += (double)std::abs(d1 - d2);
-        }
-        return s;
-    }
-};
-
 template <typename T, typename ST>
 struct NormDiffL2_SIMD {
     inline ST operator() (const T* src1, const T* src2, int n) const {
@@ -1340,27 +1314,6 @@ normDiffL1_(const T* src1, const T* src2, const uchar* mask, ST* _result, int le
             if( mask[i] ) {
                 for( int k = 0; k < cn; k++ ) {
                     result += (ST)cv_absdiff(src1[k], src2[k]);
-                }
-            }
-        }
-    }
-    *_result = result;
-    return 0;
-}
-
-// This specialization is needed because https://github.com/opencv/opencv/issues/27080
-template<> int
-normDiffL1_(const int* src1, const int* src2, const uchar* mask, double* _result, int len, int cn) {
-    double result = *_result;
-    if( !mask ) {
-        NormDiffL1_SIMD<int, double> op;
-        result += op(src1, src2, len*cn);
-    } else {
-        for( int i = 0; i < len; i++, src1 += cn, src2 += cn ) {
-            if( mask[i] ) {
-                for( int k = 0; k < cn; k++ ) {
-                    double d1 = (double)src1[k], d2 = (double)src2[k];
-                    result += (double)std::abs(d1 - d2);
                 }
             }
         }
