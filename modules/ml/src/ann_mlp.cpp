@@ -276,7 +276,7 @@ public:
         {
             int n1 = layer_sizes[i-1];
             int n2 = layer_sizes[i];
-            double val = 0, G = n2 > 2 ? 0.7*pow((double)n1,1./(n2-1)) : 1.;
+            double val = 0, G = n2 > 2 ? 0.7*std::pow(n1,1./(n2-1)) : 1.;
             double* w = weights[i].ptr<double>();
 
             // initialize weights using Nguyen-Widrow algorithm

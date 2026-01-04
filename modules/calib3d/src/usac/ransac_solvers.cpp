@@ -1014,14 +1014,14 @@ public:
                          _quality->getInliers(best_model, temp_inliers));
             // quick test on lambda from all inliers (= upper bound of independent inliers)
             // if model with independent inliers is not random for Poisson with all inliers then it is not random using independent inliers too
-            if (pow(Utils::getPoissonCDF(lambda_non_random_all_inliers, non_random_inls_best_model), num_total_tested_models) < 0.9999) {
+            if (std::pow(Utils::getPoissonCDF(lambda_non_random_all_inliers, non_random_inls_best_model), num_total_tested_models) < 0.9999) {
                 std::vector<int> inliers_list(models_for_random_test.size());
                 for (int m = 0; m < (int)models_for_random_test.size(); m++)
                     inliers_list[m] = getIndependentInliers(models_for_random_test[m], samples_for_random_test[m],
                         temp_inliers, _quality->getInliers(models_for_random_test[m], temp_inliers));
                 int min_non_rand_inliers;
                 const double lambda = getLambda(inliers_list, 1.644, points_size, sample_size, true, min_non_rand_inliers);
-                const double cdf_lambda = Utils::getPoissonCDF(lambda, non_random_inls_best_model), cdf_N = pow(cdf_lambda, num_total_tested_models);
+                const double cdf_lambda = Utils::getPoissonCDF(lambda, non_random_inls_best_model), cdf_N = std::pow(cdf_lambda, num_total_tested_models);
                 model_conf = cdf_N < 0.9999 ? ModelConfidence ::RANDOM : ModelConfidence ::NON_RANDOM;
             } else model_conf = ModelConfidence ::NON_RANDOM;
         }

@@ -156,7 +156,7 @@ bool calibrateRotatingCamera(const std::vector<Mat> &Hs, Mat &K)
     for (int i = 0; i < m; ++i)
     {
         CV_Assert(Hs[i].size() == Size(3, 3) && Hs[i].type() == CV_64F);
-        Hs_[i] = Hs[i] / std::pow(determinant(Hs[i]), 1./3.);
+        Hs_[i] = Hs[i] / std::cbrt(determinant(Hs[i]));
     }
 
     const int idx_map[3][3] = {{0, 1, 2}, {1, 3, 4}, {2, 4, 5}};

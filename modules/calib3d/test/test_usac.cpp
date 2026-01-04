@@ -182,8 +182,8 @@ static double getError (TestSolver test_case, int pt_idx, const cv::Mat &pts1, c
         cv::Mat l2 = model     * pt1;
         cv::Mat l1 = model.t() * pt2;
         // Sampson error
-        return fabs(pt2.dot(l2)) / sqrt(pow(l1.at<double>(0), 2) + pow(l1.at<double>(1), 2) +
-                                  pow(l2.at<double>(0), 2) + pow(l2.at<double>(1), 2));
+        return fabs(pt2.dot(l2)) / sqrt(std::pow(l1.at<double>(0), 2) + std::pow(l1.at<double>(1), 2) +
+                                  std::pow(l2.at<double>(0), 2) + std::pow(l2.at<double>(1), 2));
     } else
     if (test_case == TestSolver::PnP) { // PnP, reprojection error
         cv::Mat img_pt = model * pt2; img_pt /= img_pt.at<double>(2);
@@ -233,7 +233,7 @@ TEST(usac_Homography, accuracy) {
            pts_size, TestSolver ::Homogr, inl_ratio/*inl ratio*/, 0.1 /*noise std*/, gt_inliers);
         // compute max_iters with standard upper bound rule for RANSAC with 1.5x tolerance
         const double conf = 0.99, thr = 2., max_iters = 1.3 * log(1 - conf) /
-                 log(1 - pow(inl_ratio, 4 /* sample size */));
+                 log(1 - std::pow(inl_ratio, 4 /* sample size */));
         for (auto flag : flags) {
             cv::Mat mask, H = cv::findHomography(pts1, pts2,flag, thr, mask,
                                                        int(max_iters), conf);
@@ -257,7 +257,7 @@ TEST(usac_Fundamental, accuracy) {
         for (auto flag : flags) {
             const int sample_size = flag == USAC_FM_8PTS ? 8 : 7;
             const double max_iters = 1.25 * log(1 - conf) /
-                    log(1 - pow(inl_ratio, sample_size));
+                    log(1 - std::pow(inl_ratio, sample_size));
             cv::Mat mask, F = cv::findFundamentalMat(pts1, pts2,flag, thr, conf,
                                                            int(max_iters), mask);
             checkInliersMask(TestSolver::Fundam, inl_size, thr, pts1, pts2, F, mask);
@@ -374,7 +374,7 @@ TEST(usac_P3P, accuracy) {
         int inl_size = generatePoints(rng, img_pts, obj_pts, K1, K2, false /*two calib*/,
                                       pts_size, TestSolver ::PnP, inl_ratio, 0.15 /*noise std*/, gt_inliers);
         const double conf = 0.99, thr = 2., max_iters = 1.3 * log(1 - conf) /
-                   log(1 - pow(inl_ratio, 3 /* sample size */));
+                   log(1 - std::pow(inl_ratio, 3 /* sample size */));
 
         for (auto flag : flags) {
             std::vector<int> inliers;
@@ -402,7 +402,7 @@ TEST (usac_Affine2D, accuracy) {
         int inl_size = generatePoints(rng, pts1, pts2, K1, K2, false /*two calib*/,
                   pts_size, TestSolver ::Affine, inl_ratio, 0.15 /*noise std*/, gt_inliers);
         const double conf = 0.99, thr = 2., max_iters = 1.3 * log(1 - conf) /
-                log(1 - pow(inl_ratio, 3 /* sample size */));
+                log(1 - std::pow(inl_ratio, 3 /* sample size */));
         for (auto flag : flags) {
             cv::Mat mask, A = cv::estimateAffine2D(pts1, pts2, mask, flag, thr, (size_t)max_iters, conf, 0);
             cv::vconcat(A, cv::Mat(cv::Matx13d(0,0,1)), A);
@@ -493,7 +493,7 @@ TEST(usac_solvePnPRansac, regression_21105) {
     generatePoints(rng, img_pts, obj_pts, K1, K2, false /*two calib*/,
                    pts_size, TestSolver ::PnP, inl_ratio, 0.15 /*noise std*/, gt_inliers);
     const double conf = 0.99, thr = 2., max_iters = 1.3 * log(1 - conf) /
-                log(1 - pow(inl_ratio, 3 /* sample size */));
+                log(1 - std::pow(inl_ratio, 3 /* sample size */));
     const int flag = USAC_DEFAULT;
     std::vector<int> inliers;
     cv::Matx31d rvec, tvec;

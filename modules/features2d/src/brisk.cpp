@@ -446,7 +446,7 @@ BRISK_Impl::generateKernel(const std::vector<float> &radiusList,
   const float sigma_scale = 1.3f;
 
   for (unsigned int scale = 0; scale < scales_; ++scale) {
-      scaleList_[scale] = (float) std::pow((double) 2.0, (double) (scale * lb_scale_step));
+      scaleList_[scale] = (float) std::pow(2, scale * lb_scale_step);
       sizeList_[scale] = 0;
       BriskPatternPoint *patternIteratorOuter = patternPoints_ + (scale * n_rot_ * points_);
       // generate the pattern points look-up

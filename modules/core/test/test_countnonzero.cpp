@@ -265,7 +265,7 @@ TEST_P (CountNonZeroND, ndim)
     data = 0;
     EXPECT_EQ(0, cv::countNonZero(data));
     data = Scalar::all(1);
-    int expected = static_cast<int>(pow(static_cast<float>(ONE_SIZE), dims));
+    int expected = static_cast<int>(std::pow(static_cast<float>(ONE_SIZE), dims));
     EXPECT_EQ(expected, cv::countNonZero(data));
 }
 

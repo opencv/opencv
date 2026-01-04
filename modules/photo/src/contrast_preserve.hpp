@@ -91,7 +91,7 @@ double Decolor::energyCalcu(const vector <double> &Cg, const vector < vector <do
     }
 
     for(size_t i=0;i<polyGrad[0].size();i++)
-        energy[i] = -1.0*log(exp(-1.0*pow(temp[i],2)/sigma) + exp(-1.0*pow(temp1[i],2)/sigma));
+        energy[i] = -1.0*log(exp(-1.0*std::pow(temp[i],2)/sigma) + exp(-1.0*std::pow(temp1[i],2)/sigma));
 
     double sum = 0.0;
     for(size_t i=0;i<polyGrad[0].size();i++)
@@ -187,7 +187,7 @@ void Decolor::colorGrad(const Mat &img, vector <double> &Cg) const
     Cg.resize(ImL.size());
     for(size_t i=0;i<ImL.size();i++)
     {
-        const double res = sqrt(pow(ImL[i],2) + pow(Ima[i],2) + pow(Imb[i],2))/100;
+        const double res = sqrt(std::pow(ImL[i],2) + std::pow(Ima[i],2) + std::pow(Imb[i],2))/100;
         Cg[i] = res;
     }
 }
@@ -288,8 +288,8 @@ void Decolor::grad_system(const Mat &im, vector < vector < double > > &polyGrad,
                     for(int i = 0;i<h;i++)
                         for(int j=0;j<w;j++)
                             curIm.at<float>(i,j)=static_cast<float>(
-                                pow(rgb_channel[2].at<float>(i,j),r)*pow(rgb_channel[1].at<float>(i,j),g)*
-                                pow(rgb_channel[0].at<float>(i,j),b));
+                                std::pow(rgb_channel[2].at<float>(i,j),r)*std::pow(rgb_channel[1].at<float>(i,j),g)*
+                                std::pow(rgb_channel[0].at<float>(i,j),b));
                     vector <double> curGrad;
                     gradvector(curIm,curGrad);
                     add_to_vector_poly(polyGrad,curGrad,idx1);
@@ -366,8 +366,8 @@ void Decolor::grayImContruct(vector <double> &wei, const Mat &img, Mat &Gray) co
                     for(int i = 0;i<h;i++)
                         for(int j=0;j<w;j++)
                             Gray.at<float>(i,j)=static_cast<float>(Gray.at<float>(i,j) +
-                                static_cast<float>(wei[kk])*pow(rgb_channel[2].at<float>(i,j),r)*pow(rgb_channel[1].at<float>(i,j),g)*
-                                pow(rgb_channel[0].at<float>(i,j),b));
+                                static_cast<float>(wei[kk])*std::pow(rgb_channel[2].at<float>(i,j),r)*std::pow(rgb_channel[1].at<float>(i,j),g)*
+                                std::pow(rgb_channel[0].at<float>(i,j),b));
 
                     kk=kk+1;
                 }

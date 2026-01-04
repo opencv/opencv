@@ -286,8 +286,8 @@ void ClfOnlineStump::update(const Mat& posx, const Mat& negx, const Mat_<float>&
 
         _q = (_mu1 - _mu0) / 2;
         _s = sign(_mu1 - _mu0);
-        _log_n0 = std::log(float(1.0f / pow(_sig0, 0.5f)));
-        _log_n1 = std::log(float(1.0f / pow(_sig1, 0.5f)));
+        _log_n0 = std::log(float(1.0f / std::pow(_sig0, 0.5f)));
+        _log_n1 = std::log(float(1.0f / std::pow(_sig1, 0.5f)));
         //_e1 = -1.0f/(2.0f*_sig1+1e-99f);
         //_e0 = -1.0f/(2.0f*_sig0+1e-99f);
         _e1 = -1.0f / (2.0f * _sig1 + std::numeric_limits<float>::min());
@@ -314,8 +314,8 @@ void ClfOnlineStump::update(const Mat& posx, const Mat& negx, const Mat_<float>&
 
         _q = (_mu1 - _mu0) / 2;
         _s = sign(_mu1 - _mu0);
-        _log_n0 = std::log(float(1.0f / pow(_sig0, 0.5f)));
-        _log_n1 = std::log(float(1.0f / pow(_sig1, 0.5f)));
+        _log_n0 = std::log(float(1.0f / std::pow(_sig0, 0.5f)));
+        _log_n1 = std::log(float(1.0f / std::pow(_sig1, 0.5f)));
         //_e1 = -1.0f/(2.0f*_sig1+1e-99f);
         //_e0 = -1.0f/(2.0f*_sig0+1e-99f);
         _e1 = -1.0f / (2.0f * _sig1 + std::numeric_limits<float>::min());

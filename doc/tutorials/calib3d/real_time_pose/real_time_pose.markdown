@@ -631,9 +631,9 @@ Here is explained in detail the code for the real time application:
       KF.transitionMatrix.at<double>(3,6) = dt;
       KF.transitionMatrix.at<double>(4,7) = dt;
       KF.transitionMatrix.at<double>(5,8) = dt;
-      KF.transitionMatrix.at<double>(0,6) = 0.5*pow(dt,2);
-      KF.transitionMatrix.at<double>(1,7) = 0.5*pow(dt,2);
-      KF.transitionMatrix.at<double>(2,8) = 0.5*pow(dt,2);
+      KF.transitionMatrix.at<double>(0,6) = 0.5*std::pow(dt,2);
+      KF.transitionMatrix.at<double>(1,7) = 0.5*std::pow(dt,2);
+      KF.transitionMatrix.at<double>(2,8) = 0.5*std::pow(dt,2);
 
       // orientation
       KF.transitionMatrix.at<double>(9,12) = dt;
@@ -642,9 +642,9 @@ Here is explained in detail the code for the real time application:
       KF.transitionMatrix.at<double>(12,15) = dt;
       KF.transitionMatrix.at<double>(13,16) = dt;
       KF.transitionMatrix.at<double>(14,17) = dt;
-      KF.transitionMatrix.at<double>(9,15) = 0.5*pow(dt,2);
-      KF.transitionMatrix.at<double>(10,16) = 0.5*pow(dt,2);
-      KF.transitionMatrix.at<double>(11,17) = 0.5*pow(dt,2);
+      KF.transitionMatrix.at<double>(9,15) = 0.5*std::pow(dt,2);
+      KF.transitionMatrix.at<double>(10,16) = 0.5*std::pow(dt,2);
+      KF.transitionMatrix.at<double>(11,17) = 0.5*std::pow(dt,2);
 
 
            /* MEASUREMENT MODEL */
