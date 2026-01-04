@@ -198,7 +198,7 @@ bool CvCascadeClassifier::train( const string _cascadeDirName,
     else if ( startNumStages == 1)
         cout << endl << "Stage 0 is loaded" << endl;
 
-    double requiredLeafFARate = pow( (double) stageParams->maxFalseAlarm, (double) numStages ) /
+    double requiredLeafFARate = std::pow( stageParams->maxFalseAlarm, numStages ) /
                                 (double)stageParams->max_depth;
     double tempLeafFARate;
 

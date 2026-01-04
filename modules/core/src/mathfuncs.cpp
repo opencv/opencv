@@ -1675,16 +1675,8 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
         }
         else if( d == 0 )
         {
-            if(R >= 0)
-            {
-                x0 = -2*pow(R, 1./3) - a1/3;
-                x1 = pow(R, 1./3) - a1/3;
-            }
-            else
-            {
-                x0 = 2*pow(-R, 1./3) - a1/3;
-                x1 = -pow(-R, 1./3) - a1/3;
-            }
+            x0 = -2*std::cbrt(R) - a1/3;
+            x1 = std::cbrt(R) - a1/3;
             x2 = 0;
             n = x0 == x1 ? 1 : 2;
             x1 = x0 == x1 ? 0 : x1;
@@ -1693,7 +1685,7 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
         {
             double e;
             d = sqrt(-d);
-            e = pow(d + fabs(R), 1./3);
+            e = std::cbrt(d + fabs(R));
             if( R > 0 )
                 e = -e;
             x0 = (e + Q / e) - a1 * (1./3);
@@ -1808,15 +1800,14 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
                 if( num_same_root % 2 != 0){
                     Mat cube_coefs(4, 1, CV_64FC1);
                     Mat cube_roots(3, 1, CV_64FC2);
-                    cube_coefs.at<double>(3) = -(pow(old_num_re, 3));
-                    cube_coefs.at<double>(2) = -(15*pow(old_num_re, 2) + 27*pow(old_num_im, 2));
+                    cube_coefs.at<double>(3) = -(std::pow(old_num_re, 3));
+                    cube_coefs.at<double>(2) = -(15*std::pow(old_num_re, 2) + 27*std::pow(old_num_im, 2));
                     cube_coefs.at<double>(1) = -48*old_num_re;
                     cube_coefs.at<double>(0) = 64;
                     solveCubic(cube_coefs, cube_roots);
 
-                    if(cube_roots.at<double>(0) >= 0) num.re = pow(cube_roots.at<double>(0), 1./3);
-                    else num.re = -pow(-cube_roots.at<double>(0), 1./3);
-                    num.im = sqrt(pow(num.re, 2) / 3 - old_num_re / (3*num.re));
+                    num.re = std::cbrt(cube_roots.at<double>(0));
+                    num.im = sqrt(std::pow(num.re, 2) / 3 - old_num_re / (3*num.re));
                 }
             }
             roots[i] = p - num;

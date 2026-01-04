@@ -554,9 +554,9 @@ TEST(Drawing, _914)
     line(img, Point(-5, 20), Point(260, 20), Scalar(0), 2, 4);
     line(img, Point(10, 0), Point(10, 255), Scalar(0), 2, 4);
 
-    double x0 = 0.0/pow(2.0, -2.0);
-    double x1 = 255.0/pow(2.0, -2.0);
-    double y = 30.5/pow(2.0, -2.0);
+    double x0 = 0.0/std::pow(2, -2);
+    double x1 = 255.0/std::pow(2, -2);
+    double y = 30.5/std::pow(2, -2);
 
     line(img, Point(int(x0), int(y)), Point(int(x1), int(y)), Scalar(0), 2, 4, 2);
 

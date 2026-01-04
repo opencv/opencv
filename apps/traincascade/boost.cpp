@@ -942,7 +942,7 @@ void CvCascadeBoostTree::write( FileStorage &fs, const Mat& featureMap )
     int maxCatCount = ((CvCascadeBoostTrainData*)data)->featureEvaluator->getMaxCatCount();
     int subsetN = (maxCatCount + 31)/32;
     queue<CvDTreeNode*> internalNodesQueue;
-    int size = (int)pow( 2.f, (float)ensemble->get_params().max_depth);
+    int size = (int)std::pow( 2, ensemble->get_params().max_depth);
     std::vector<float> leafVals(size);
     int leafValIdx = 0;
     int internalNodeIdx = 1;

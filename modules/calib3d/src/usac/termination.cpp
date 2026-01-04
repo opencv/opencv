@@ -42,7 +42,7 @@ public:
     }
 
     static int getMaxIterations (int inlier_number, int sample_size, int points_size, double conf) {
-        const double pred_iters = log(1 - conf) / log(1 - pow(static_cast<double>(inlier_number)/points_size, sample_size));
+        const double pred_iters = log(1 - conf) / log(1 - std::pow(static_cast<double>(inlier_number)/points_size, sample_size));
         if (std::isinf(pred_iters))
             return INT_MAX;
         return (int) pred_iters + 1;
@@ -322,7 +322,7 @@ public:
                     continue;
 
                 // add 1 to termination length since num_inliers_under_termination_len is updated
-                const double new_max_samples = log_conf/log(1-pow(static_cast<double>(num_inliers_under_termination_len)
+                const double new_max_samples = log_conf/log(1-std::pow(static_cast<double>(num_inliers_under_termination_len)
                         / (termination_len+1), sample_size));
 
                 if (! std::isinf(new_max_samples) && predicted_iterations > new_max_samples) {

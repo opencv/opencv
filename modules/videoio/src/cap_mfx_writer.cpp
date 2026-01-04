@@ -21,11 +21,11 @@ static float estimateBitrate(int codecId, size_t pixelNum, float fps)
     }
     else if (codecId == MFX_CODEC_AVC)
     {
-        bitrate = (mp * 140 + 19) * pow(fps, 0.60f);
+        bitrate = (mp * 140 + 19) * std::pow(fps, 0.60f);
     }
     else if (codecId == MFX_CODEC_HEVC)
     {
-        bitrate = (mp * 63 + 45) * pow(fps, 0.60f);
+        bitrate = (mp * 63 + 45) * std::pow(fps, 0.60f);
     }
     else
     {

@@ -55,7 +55,7 @@
 #define ACTIVATION_RELU_FUNCTION(x, c) ((Dtype)(x) > 0 ? (Dtype)(x) : ((Dtype)(x) * (negative_slope[c])))
 #define FUSED_ARG __global const KERNEL_ARG_DTYPE* negative_slope,
 #elif defined(FUSED_CONV_POWER)
-#define ACTIVATION_RELU_FUNCTION(x, c) pow(x, (Dtype)power)
+#define ACTIVATION_RELU_FUNCTION(x, c) std::pow(x, (Dtype)power)
 #define FUSED_ARG KERNEL_ARG_DTYPE power,
 #elif defined(FUSED_CONV_TANH)
 #define ACTIVATION_RELU_FUNCTION(x, c) tanh(x)

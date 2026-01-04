@@ -319,9 +319,9 @@ icvCorrectMatches(CvMat *F_, CvMat *points1_, CvMat *points2_, CvMat *new_points
         x1 = tmp31_2->data.db[0];
         y1 = tmp31_2->data.db[1];
 
-        tmp31->data.db[0] = f2*pow(c*t_min+d,2);
+        tmp31->data.db[0] = f2*std::pow(c*t_min+d,2);
         tmp31->data.db[1] = -(a*t_min+b)*(c*t_min+d);
-        tmp31->data.db[2] = f2*f2*pow(c*t_min+d,2) + pow(a*t_min+b,2);
+        tmp31->data.db[2] = f2*f2*std::pow(c*t_min+d,2) + std::pow(a*t_min+b,2);
         tmp31->data.db[0] /= tmp31->data.db[2];
         tmp31->data.db[1] /= tmp31->data.db[2];
         tmp31->data.db[2] /= tmp31->data.db[2];
