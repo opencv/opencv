@@ -613,6 +613,32 @@ Following options can be used to change installation layout for common scenarios
 | `BUILD_opencv_python2` | _ON_ | Build python2 bindings (deprecated). Python with development files and numpy must be installed. |
 | `BUILD_opencv_python3` | _ON_ | Build python3 bindings. Python with development files and numpy must be installed. |
 
+#### Python bindings build notes
+
+OpenCV Python bindings are built as part of the main OpenCV build when
+`BUILD_opencv_python3` is enabled. In addition to a compatible Python
+interpreter, the corresponding Python development headers and NumPy
+must be available at configuration time.
+
+When multiple Python versions are installed on the system, explicitly
+specifying Python-related CMake variables helps avoid accidental
+detection of an unintended interpreter.
+
+Typical configuration options for building Python 3 bindings:
+
+```sh
+cmake \
+  -DBUILD_opencv_python3=ON \
+  -DPYTHON3_EXECUTABLE=$(which python3) \
+  -DPYTHON3_INCLUDE_DIR=$(python3 -c "from sysconfig import get_paths; print(get_paths()['include'])") \
+  -DPYTHON3_PACKAGES_PATH=$(python3 -c "import site; print(site.getsitepackages()[0])") \
+  ../opencv
+```
+
+The resulting Python module is installed into the configured Python
+packages directory when the `install` target is executed.
+
+
 TODO: need separate tutorials covering bindings builds
 
 
