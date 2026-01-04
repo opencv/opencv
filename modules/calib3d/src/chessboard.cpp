@@ -725,7 +725,7 @@ void FastX::detectImpl(const cv::Mat& _gray_image,
             // calc images
             // for each angle step
             int scale_id = scale-parameters.min_scale;
-            int scale_size = int(pow(2.0,scale+1+super_res));
+            int scale_size = int(std::pow(2,scale+1+super_res));
             int scale_size2 = int((scale_size/7)*2+1);
             std::vector<cv::UMat> images;
             images.resize(2*num);
