@@ -44,6 +44,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/core/hal/intrin.hpp"
+#include <cstddef>
 
 namespace cv {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
@@ -1513,7 +1514,7 @@ void BlockSum(const Mat& _src, Mat& _dst, Size ksize, Point anchor, const Size &
                                       borderLeft*sizeof(T), inplace);
         }
         else
-            ref = (const T*)(src+(srcY-roi.y)*srcStep);
+            ref = (const T*)(src+(srcY-roi.y)*(ptrdiff_t)srcStep);
 
         S = ref;
         R = (T*)alignPtr(border, VEC_ALIGN);
