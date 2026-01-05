@@ -236,6 +236,38 @@ TEST_P(Test_ONNX_layers, Convolution_variable_weight_bias)
     }
 }
 
+TEST_P(Test_ONNX_layers, Convolution_variable_weight_no_kernel_shape)
+{
+    // Test Conv without kernel_shape attribute when weights are graph inputs.
+    // kernel_size should be inferred from weight tensor shape in outShapes map.
+    // Fixes: https://github.com/opencv/opencv/issues/28321
+    if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
+         backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019) && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+
+    if (backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); // not supported
+    if (backend == DNN_BACKEND_VKCOM)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN); // not supported
+
+    String basename = "conv_variable_w_no_kernel_shape";
+    Net net = readNetFromONNX(_tf("models/" + basename + ".onnx"));
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat input = blobFromNPY(_tf("data/input_" + basename + "_0.npy"));
+    Mat weights = blobFromNPY(_tf("data/input_" + basename + "_1.npy"));
+    Mat ref = blobFromNPY(_tf("data/output_" + basename + ".npy"));
+
+    net.setInput(input, "0");
+    net.setInput(weights, "1");
+
+    Mat out = net.forward();
+    normAssert(ref, out, "", default_l1, default_lInf);
+}
+
 TEST_P(Test_ONNX_layers, Gather)
 {
     testONNXModels("gather", npy, 0, 0, false, false);
