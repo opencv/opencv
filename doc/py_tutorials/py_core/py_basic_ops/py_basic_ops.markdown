@@ -108,6 +108,8 @@ channels to create a BGR image. You can do this simply by:
 >>> b,g,r = cv.split(img)
 >>> img = cv.merge((b,g,r))
 @endcode
+@note In Python, `cv.split()` returns a tuple of single-channel arrays. If you need a mutable container
+(e.g. to replace/mask a channel before merging), use `channels = list(cv.split(img))`.
 Or
 @code
 >>> b = img[:,:,0]
