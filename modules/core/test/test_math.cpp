@@ -146,7 +146,7 @@ void Core_PowTest::get_minmax_bounds( int /*i*/, int /*j*/, int type, Scalar& lo
     if( power > 0 )
     {
         double mval = cvtest::getMaxVal(type);
-        double u1 = pow(mval,1./power)*2;
+        double u1 = std::pow(mval,1./power)*2;
         u = MIN(u,u1);
     }
 
@@ -322,7 +322,7 @@ void Core_PowTest::prepare_to_validation( int /*test_case_idx*/ )
                     for( j = 0; j < ncols; j++ )
                     {
                         double val = ((float*)a_data)[j];
-                        val = pow( fabs(val), power );
+                        val = std::pow( fabs(val), power );
                         ((float*)b_data)[j] = (float)val;
                     }
                 else
@@ -340,7 +340,7 @@ void Core_PowTest::prepare_to_validation( int /*test_case_idx*/ )
                     for( j = 0; j < ncols; j++ )
                     {
                         double val = ((double*)a_data)[j];
-                        val = pow( fabs(val), power );
+                        val = std::pow( fabs(val), power );
                         ((double*)b_data)[j] = (double)val;
                     }
                 else
@@ -2394,7 +2394,7 @@ void Core_SolvePolyTest::run( int )
             for (int j = 0; j < n; ++j)
             {
                 s += fabs(r[j].real()) + fabs(r[j].imag());
-                div += sqrt(pow(r[j].real() - ar[j].real(), 2) + pow(r[j].imag() - ar[j].imag(), 2));
+                div += sqrt(std::pow(r[j].real() - ar[j].real(), 2) + std::pow(r[j].imag() - ar[j].imag(), 2));
             }
             div /= s;
             pass = pass && div < err_eps;

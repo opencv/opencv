@@ -11,7 +11,7 @@ namespace ot {
 
 RgbHistogram::RgbHistogram(int32_t rgb_bin_size)
     : rgb_bin_size_(rgb_bin_size), rgb_num_bins_(256 / rgb_bin_size),
-      rgb_hist_size_(static_cast<int32_t>(pow(rgb_num_bins_, 3))) {
+      rgb_hist_size_(static_cast<int32_t>(std::pow(rgb_num_bins_, 3))) {
 }
 
 RgbHistogram::~RgbHistogram(void) {

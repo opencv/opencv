@@ -138,7 +138,7 @@ inline double get_limit(cv::Point2d p, int row, double slope) {
 inline double log_gamma_windschitl(const double& x)
 {
     return 0.918938533204673 + (x-0.5)*log(x) - x
-         + 0.5*x*log(x*sinh(1/x) + 1/(810.0*pow(x, 6.0)));
+         + 0.5*x*log(x*sinh(1/x) + 1/(810.0*std::pow(x, 6)));
 }
 
 /**
@@ -156,7 +156,7 @@ inline double log_gamma_lanczos(const double& x)
     for(int n = 0; n < 7; ++n)
     {
         a -= log(x + double(n));
-        b += q[n] * pow(x, double(n));
+        b += q[n] * std::pow(x, n);
     }
     return a + log(b);
 }
@@ -1037,7 +1037,7 @@ double LineSegmentDetectorImpl::nfa(const int& n, const int& k, const double& p)
         bin_tail += term;
         if(bin_term < 1)
         {
-            double err = term * ((1 - pow(mult_term, double(n-i+1))) / (1 - mult_term) - 1);
+            double err = term * ((1 - std::pow(mult_term, double(n-i+1))) / (1 - mult_term) - 1);
             if(err < tolerance * fabs(-log10(bin_tail) - LOG_NT) * bin_tail) break;
         }
 
