@@ -1394,6 +1394,25 @@ TEST(Core_Mat, copyToConvertTo_Empty)
     ASSERT_EQ(C.type(), CV_32SC2);
 }
 
+// Regression test for https://github.com/opencv/opencv/issues/28343
+// copyTo on empty fixed-type matrices should be a no-op and succeed
+template <typename T> class Core_Mat_copyTo : public testing::Test {};
+TYPED_TEST_CASE_P(Core_Mat_copyTo);
+
+TYPED_TEST_P(Core_Mat_copyTo, EmptyFixedType)
+{
+    cv::Mat_<TypeParam> a;
+    cv::Mat_<TypeParam> b;
+    EXPECT_NO_THROW(a.copyTo(b));
+    EXPECT_TRUE(b.empty());
+    // Verify type is still consistent after copyTo
+    EXPECT_EQ(b.type(), cv::traits::Type<TypeParam>::value);
+}
+
+REGISTER_TYPED_TEST_CASE_P(Core_Mat_copyTo, EmptyFixedType);
+typedef ::testing::Types<uchar, schar, ushort, short, int, float, double> AllMatDepths;
+INSTANTIATE_TYPED_TEST_CASE_P(CopyToTest, Core_Mat_copyTo, AllMatDepths);
+
 TEST(Core_Mat, copyNx1ToVector)
 {
     cv::Mat_<uchar> src(5, 1);
