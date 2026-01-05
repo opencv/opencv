@@ -194,7 +194,7 @@ TEST_F(UndistortPointsTest, stop_criteria)
     projectPoints(pt_undist_vec_homogeneous, -rVec,
                   Mat::zeros(3,1,CV_64F), cameraMatrix, distCoeffs, pt_redistorted_vec);
 
-    const double obtainedError = sqrt( pow(pt_distorted.x - pt_redistorted_vec[0].x, 2) + pow(pt_distorted.y - pt_redistorted_vec[0].y, 2) );
+    const double obtainedError = sqrt( std::pow(pt_distorted.x - pt_redistorted_vec[0].x, 2) + std::pow(pt_distorted.y - pt_redistorted_vec[0].y, 2) );
 
     ASSERT_LE(obtainedError, maxError);
 }

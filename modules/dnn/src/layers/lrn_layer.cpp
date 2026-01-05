@@ -396,7 +396,7 @@ public:
             base = alphaSize * sum(padded_sq(x + r.x, y + r.y, c, n));
         }
         base += static_cast<float>(bias);
-        top(x, y, c, n) = inputBuffer(x, y, c, n) / pow(base, beta);
+        top(x, y, c, n) = inputBuffer(x, y, c, n) / std::pow(base, beta);
         return Ptr<BackendNode>(new HalideBackendNode({ padded_sq, top }));
 #endif  // HAVE_HALIDE
         return Ptr<BackendNode>();

@@ -142,7 +142,7 @@ void CV_BaseHistTest::get_hist_params( int /*test_case_idx*/ )
 
     cdims = cvtest::randInt(rng) % max_cdims + 1;
     hist_size = exp(cvtest::randReal(rng)*max_log_size*CV_LOG2);
-    max_dim_size = cvRound(pow(hist_size,1./cdims));
+    max_dim_size = cvRound(std::pow(hist_size,1./cdims));
     total_size = 1;
     uniform = cvtest::randInt(rng) % 2;
     hist_type = cvtest::randInt(rng) % 2 ? CV_HIST_SPARSE : CV_HIST_ARRAY;
@@ -208,7 +208,7 @@ float** CV_BaseHistTest::get_hist_ranges( int /*test_case_idx*/ )
             for( j = 0; j < 10; j++ )
             {
                 q = 1. + (j+1)*0.1;
-                if( (pow(q,(double)n)-1)/(q-1.) >= _high-_low )
+                if( (std::pow(q,n)-1)/(q-1.) >= _high-_low )
                     break;
             }
 
@@ -220,7 +220,7 @@ float** CV_BaseHistTest::get_hist_ranges( int /*test_case_idx*/ )
             else
             {
                 q = 1 + j*0.1;
-                delta = cvFloor((_high-_low)*(q-1)/(pow(q,(double)n) - 1));
+                delta = cvFloor((_high-_low)*(q-1)/(std::pow(q,n) - 1));
                 delta = MAX(delta, 1.);
             }
             val = _low;
