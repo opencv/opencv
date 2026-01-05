@@ -36,6 +36,7 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
     CV_Assert(C0_ == 8);
     CV_Assert(C0_ == nlanes_ || C0_ == nlanes_*2 || C0_ % (nlanes_*4) == 0);
     CV_Assert(cs.activation == nullptr || cs.fastActivation == FAST_ACTIV_NONE);
+    CV_Assert(0 <= cs.nspatialdims && cs.nspatialdims <= ConvState::MAX_CONV_DIMS);
 
     parallel_for_(Range(0, NK1), [&](const Range& range) {
         const float* scale_ = scale__;
@@ -50,7 +51,7 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
         for (int i = 0; i < nspatialdims; i++) {
             planesize *= cs.outshape[i + 2];
             iplanesize *= cs.inpshape[i + 2];
-            ksize *= cs.kshape[i];
+            ksize *= cs.kshape[ConvState::MAX_CONV_DIMS - nspatialdims + i];
         }
         int C1 = cs.inpshape[1], K1 = cs.outshape[1];
         int ngroups = cs.ngroups, K1g = K1/ngroups, C1g = C1/ngroups;
@@ -300,7 +301,7 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
                 vx_store(sum + 8*5, s50); vx_store(sum + 8*5 + 4, s51);
                 vx_store(sum + 8*6, s60); vx_store(sum + 8*6 + 4, s61);
                 vx_store(sum + 8*7, s70); vx_store(sum + 8*7 + 4, s71);
-            #else
+#else
                 for (int i = 0; i < BLOCK_SIZE*K0; i++)
                     sum[i] = 0.f;
 
@@ -318,7 +319,7 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
                         }
                     }
                 }
-            #endif
+#endif
 
                 if (activation) {
                     if (resptr) {

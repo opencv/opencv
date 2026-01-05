@@ -20,6 +20,7 @@ namespace dnn
     Opset's 1 to 22 are covered.
 */
 
+#if 0
 static MatShape fastConv2dInferShape(const MatShape& inpshape, const MatShape& wshape,
                                      const int* strides,
                                      const int* dilations,
@@ -46,14 +47,14 @@ static MatShape fastConv2dInferShape(const MatShape& inpshape, const MatShape& w
     return outshape;
 }
 
-static void refConv2d(const Mat& inp, const Mat& weights, const Mat& bias, Mat& out,
+static void refConv2d(const Mat& inp, const Mat& weights0, const Mat& weights, const Mat& bias, Mat& out,
                       const int* strides, const int* dilations,
                       const int* pads, FastActivation activation,
                       float activParam=0.f)
 {
     CV_Assert(inp.type() == CV_32F);
 
-    MatShape inpshape = inp.size, wshape = weights.size;
+    MatShape inpshape = inp.size, wshape = weights0.size;
     int ndims = inpshape.dims, wdims = wshape.dims;
     CV_Assert(ndims == 4 && wdims == 4);
 
@@ -63,30 +64,34 @@ static void refConv2d(const Mat& inp, const Mat& weights, const Mat& bias, Mat& 
     out.fit(outshape, inp.type());
 
     parallel_for_(Range(0, wshape[0]), [&](const Range& range) {
+        int C0 = weights.size.back();
         int K = wshape[0], WC = wshape[1], Hk = wshape[2], Wk = wshape[3];
         int N = inpshape[0], C = inpshape[1];
         int Hi = inpshape[2], Wi = inpshape[3];
         int H0 = outshape[2], W0 = outshape[3];
         int ngroups = C/WC;
         int Cg = C/ngroups, Kg = K/ngroups;
+        int WCg = (Cg + C0 - 1)/C0;
         int Sy = strides[1], Sx = strides[2];
         int Dy = dilations[1], Dx = dilations[2];
         int pady = pads[1], padx = pads[2];
         float minval = activation == FAST_ACTIV_RELU || activation == FAST_ACTIV_CLIP ? 0.f : -FLT_MAX;
         float maxval = activation == FAST_ACTIV_CLIP ? activParam : FLT_MAX;
+        const float* wptr0 = weights0.ptr<float>();
         const float* wptr = weights.ptr<float>();
         const float* biasptr = bias.ptr<float>();
         const float* inptr = inp.ptr<float>();
         float* outptr = out.ptr<float>();
 
         for (int k = range.start; k < range.end; k++) {
+            int k1 = k / C0, k0 = k % C0;
             int g = k/Kg;
             for (int n = 0; n < N; n++) {
                 for (int y0 = 0; y0 < H0; y0++) {
                     for (int x0 = 0; x0 < W0; x0++) {
                         int yi_ = y0*Sy - pady;
                         int xi_ = x0*Sx - padx;
-                        float s = biasptr ? biasptr[k] : 0.f;
+                        float s = 0.f;
 
                         for (int ky = 0; ky < Hk; ky++) {
                             int yi = yi_ + ky*Dy;
@@ -100,11 +105,16 @@ static void refConv2d(const Mat& inp, const Mat& weights, const Mat& bias, Mat& 
                                 for (int c = 0; c < Cg; c++) {
                                     size_t ofs = (((n*ngroups + g)*Cg + c)*Hi + yi)*Wi + xi;
                                     float inpval = inptr[ofs];
-                                    float w = wptr[((k*Cg + c)*Hk+ky)*Wk + kx];
+                                    int c1 = c / C0, c0 = c % C0;
+                                    float w0 = wptr0[((k*Cg + c)*Hk+ky)*Wk + kx];
+                                    float w = wptr[(((k1*WCg + c1)*Hk+ky)*Wk + kx)*C0*C0 + c0*C0 + k0];
+                                    CV_Assert(w == w0);
                                     s += inpval*w;
                                 }
                             }
                         }
+                        if (biasptr)
+                            s += biasptr[k];
                         outptr[((n*K + k)*H0 + y0)*W0 + x0] = std::min(std::max(s, minval), maxval);
                     }
                 }
@@ -112,6 +122,7 @@ static void refConv2d(const Mat& inp, const Mat& weights, const Mat& bias, Mat& 
         }
     });
 }
+#endif
 
 class Conv2LayerImpl : public Conv2Layer
 {
@@ -438,36 +449,17 @@ public:
             func(inptr, resptr, outptr, cs, wptr, scale_data, bias_data);
         } else {
             // [TODO] add special 1x1 convolution kernels that don't need inpofs & ofsofs
-            if (/*!conv1x1 &&*/ (inpofs.empty() || !cs.sameShape(prev_cs))) {
+            if (inpofs.empty() || !cs.sameShape(prev_cs)) {
                 initConvTables(cs, inpofs, ofsofs);
                 prev_cs = cs;
             }
 
-            if (cs.kshape[1] != 1)
             {
-                Mat weights0 = inputs_arr.getMat(1);
-                Mat bias0 = ninputs > 2 ? inputs_arr.getMat(2) : Mat();
-                Mat inp0, out0;
-                transformLayout(inp, inp0, DATA_LAYOUT_NCHW,
-                                DATA_LAYOUT_NCHW, inp.size.C);
-                refConv2d(inp0, weights0, bias0, out0,
-                          cs.strides, cs.dilations, cs.pads,
-                          FAST_ACTIV_NONE, 0.f);
-                //transformLayout(out0, refout, DATA_LAYOUT_BLOCK,
-                //                DATA_LAYOUT_NCHW, out.size.back());
-                transformLayout(out0, out, DATA_LAYOUT_BLOCK,
-                                DATA_LAYOUT_NCHW, out.size.back());
-            } else {
                 ConvFunc func = getConvFunc(inptype, C0);
                 CV_Assert(func != nullptr);
-                
                 func(inptr, resptr, outptr, cs, wptr, scale_data, bias_data,
                      inpofs.data(), ofsofs.data());
             }
-            
-            //double err = norm(refout, out, NORM_INF);
-            //CV_Assert(err < 1e-3);
-            //printf("max err=%.5g\n", err);
         }
 
         if (uouts) {

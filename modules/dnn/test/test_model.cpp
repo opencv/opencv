@@ -871,41 +871,37 @@ TEST_P(Reproducibility_ResNet50_ONNX, Accuracy)
         net.enableWinograd(false);
 
     //net.dumpToStream(std::cout);
-    net.setTracingMode(DNN_TRACE_ALL);
-
-    float l1 = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_CPU_FP16) ? 3e-5 : 1e-5;
-    float lInf = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_CPU_FP16) ? 6e-3 : 1e-4;
+    //net.setTracingMode(DNN_TRACE_ALL);
 
     Mat image = imread(_tf("sqcat.png"));
     Mat input = blobFromImage(image, 0.017, Size(224,224),
                               Scalar(103.939, 116.779, 123.68),
                               false, true, CV_32F);
     ASSERT_TRUE(!input.empty());
+    
+    Mat out;
+    double min_t = 0;
+    
+    for (int i = 0; i < 10; i++) {
+        double t = (double)getTickCount();
+        net.setInput(input);
+        out = net.forward();
+        t = (double)getTickCount() - t;
+        min_t = i == 0 ? t : std::min(min_t, t);
+    }
+    printf("run time = %.2fms\n", min_t*1000./getTickFrequency());
 
-    net.setInput(input);
-    Mat out = net.forward();
-
+    std::vector<std::pair<int, float> > ref = {{285, 10.13}, {287, 9.68}, {283, 8.83}, {278, 8.56}, {279, 8.34}};
     std::vector<std::pair<int, float> > res;
     const int K = 5;
 
     topK(out, res, K);
-    for (auto p: res) {
-        printf("%d. prob=%.2f\n", p.first, p.second);
-    }
+    const float eps = 0.1f;
     
-    /*Mat ref = blobFromNPY(_tf("resnet50_prob.npy"));
-    normAssert(ref, out, "", l1, lInf);
-
-    if (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16)
-    {
-        UMat out_umat;
-        net.forward(out_umat);
-        normAssert(ref, out_umat, "out_umat", l1, lInf);
-
-        std::vector<UMat> out_umats;
-        net.forward(out_umats);
-        normAssert(ref, out_umats[0], "out_umat_vector", l1, lInf);
-    }*/
+    for (int i = 0; i < K; i++) {
+        EXPECT_EQ(ref[i].first, res[i].first);
+        EXPECT_NEAR(ref[i].second, res[i].second, eps);
+    }
 }
 INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_ResNet50_ONNX,
                         testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));

@@ -122,12 +122,16 @@ static inline void getPadding(const std::vector<int>& pads,
 
 bool ConvState::sameShape(const ConvState& cs) const
 {
-    return kshape == cs.kshape &&
-           inpshape == cs.inpshape &&
-           outshape == cs.outshape &&
-           strides == cs.strides &&
-           dilations == cs.dilations &&
-           pads == cs.pads;
+    for (int i = 0; i < ConvState::MAX_CONV_DIMS; i++) {
+        if (kshape[i] != cs.kshape[i] ||
+            strides[i] != cs.strides[i] ||
+            dilations[i] != cs.dilations[i] ||
+            pads[i] != cs.pads[i] ||
+            pads[i + MAX_CONV_DIMS] != cs.pads[i + MAX_CONV_DIMS]) {
+            return false;
+        }
+    }
+    return inpshape == cs.inpshape && outshape == cs.outshape;
 }
 
 void ConvState::initConv(const MatShape& inpshape_,
@@ -241,11 +245,15 @@ void initConvTables(const ConvState& cs,
     
     if (have_inner) {
         for (int c = 0, k = 0; c < C1g; c++) {
-            for (int dy = 0; dy < Hk; dy++) {
-                int yi = dy*DY;
-                for (int dx = 0; dx < Wk; dx++, k++) {
-                    int xi = dx*DX;
-                    inpofs_[k] = (int32_t)(((c*Hi + yi)*Wi + xi)*C0);
+            for (int dz = 0; dz < Dk; dz++) {
+                int zi = dz*DZ;
+                for (int dy = 0; dy < Hk; dy++) {
+                    int yi = dy*DY;
+                    for (int dx = 0; dx < Wk; dx++, k++) {
+                        int xi = dx*DX;
+                        int ofs = (((c*Di + zi)*Hi + yi)*Wi + xi)*C0;
+                        inpofs_[k] = (int32_t)ofs;
+                    }
                 }
             }
         }
