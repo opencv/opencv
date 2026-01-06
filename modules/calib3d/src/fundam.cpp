@@ -806,7 +806,7 @@ public:
         Mat F(count == 7 ? 9 : 3, 3, CV_64F, f);
         int n = count == 7 ? run7Point(m1, m2, F) : run8Point(m1, m2, F);
 
-        if( n == 0 )
+        if( n <= 0 )
             _model.release();
         else
             F.rowRange(0, n*3).copyTo(_model);

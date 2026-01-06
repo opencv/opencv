@@ -1673,5 +1673,13 @@ TEST(Calib3d_FindFundamentalMat, correctMatches)
     cout << np2 << endl;
 }
 
+TEST(Calib3d_FindFundamentalMat, Crash)
+{
+    vector<Point2f> m1 = {{245, 128},{284, 226},{140, 60},{133, 127},{71, 218},{152, 138},{181, 106}};
+    vector<Point2f> m2 = m1;
+    vector<uchar> mask;
+    findFundamentalMat(m1, m2, mask, FM_LMEDS, 1, 0.99);
+}
+
 }} // namespace
 /* End of file. */
