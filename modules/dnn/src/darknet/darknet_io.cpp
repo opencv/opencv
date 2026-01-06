@@ -992,11 +992,9 @@ namespace cv {
                         int output_filters = getParam<int>(layer_params, "output", 256);
                         int pad = getParam<int>(layer_params, "pad", 1);
                         int padding = getParam<int>(layer_params, "padding", 0);
-                        bool batch_normalize =
-                            getParam<int>(layer_params, "batch_normalize", 0) == 1;
+                        bool batch_normalize = getParam<int>(layer_params, "batch_normalize", 0) == 1;
                         int peephole = getParam<int>(layer_params, "peephole", 0);
-                        float state_constrain =
-                            getParam<float>(layer_params, "state_constrain", 0.0f);
+                        float state_constrain = getParam<float>(layer_params, "state_constrain", 0.0f);
 
                         if (pad)
                             padding = kernel_size / 2;

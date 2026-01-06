@@ -1336,12 +1336,8 @@ public:
         outputs.assign(1, outputShape);
 
         // Internal memory for gates and intermediate computations
-        // f, i, g, o gates: [N, numOutput, H, W]
-        internals.push_back({N, numOutput, H, W}); // f gate
-        internals.push_back({N, numOutput, H, W}); // i gate
-        internals.push_back({N, numOutput, H, W}); // g gate
-        internals.push_back({N, numOutput, H, W}); // o gate
-        internals.push_back({N, numOutput, H, W}); // temp for convolution results
+        const MatShape gateShape{N, numOutput, H, W};
+        internals.insert(internals.end(), 5, gateShape);
 
         return false;
     }
@@ -1362,9 +1358,9 @@ public:
         int W = input.size[4];
 
         // Initialize hidden and cell states to zero
-        int stateShape[] = {N, numOutput, H, W};
-        hState = Mat::zeros(4, stateShape, CV_32F);
-        cState = Mat::zeros(4, stateShape, CV_32F);
+        MatShape stateShape = {N, numOutput, H, W};
+        hState = Mat::zeros(4, stateShape.data(), CV_32F);
+        cState = Mat::zeros(4, stateShape.data(), CV_32F);
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr,
@@ -1393,11 +1389,11 @@ public:
         int W = input.size[4];
 
         // Ensure states are properly sized
-        int stateShape[] = {N, numOutput, H, W};
+        MatShape stateShape = {N, numOutput, H, W};
         if (hState.empty() || hState.size[0] != N || hState.size[2] != H ||
             hState.size[3] != W) {
-            hState = Mat::zeros(4, stateShape, CV_32F);
-            cState = Mat::zeros(4, stateShape, CV_32F);
+            hState = Mat::zeros(4, stateShape.data(), CV_32F);
+            cState = Mat::zeros(4, stateShape.data(), CV_32F);
         }
 
         // Get gate internals
@@ -1455,9 +1451,7 @@ public:
             multiply(gateO, temp, hState);
 
             // Copy hidden state to output
-            Range outRanges[] = {Range(t, t + 1), Range::all(), Range::all(),
-                                 Range::all(), Range::all()};
-            Mat outSlice = output(outRanges);
+            Mat outSlice = output(ranges);
             hState.reshape(1, {1, N, numOutput, H, W}).copyTo(outSlice);
         }
     }
