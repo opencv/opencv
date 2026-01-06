@@ -23,7 +23,7 @@ OpMatMul::OpMatMul(std::vector<Mat>& matBlobs, const int _M, const int _K, const
     {
         Tensor weightTensor;
         CV_Assert(matBlobs[0].isContinuous() && matBlobs[0].type() == CV_32F);
-        std::vector<int> matShape = shape(matBlobs[0]);
+        std::vector<int> matShape = shape(matBlobs[0]).vec();
         weightTensor.reshape((const char*)matBlobs[0].data, matShape); // This code will copy the src data from Mat to VkBuffer.
 
         weightTensorPtr = makePtr<Tensor>(weightTensor);
