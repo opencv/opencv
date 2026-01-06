@@ -160,7 +160,7 @@ static inline double dotProd_32f(const float *a, const float *b, int len) {
             auto va = __riscv_vle32_v_f32m4(a + j, vl);
             auto vb = __riscv_vle32_v_f32m4(b + j, vl);
 
-            s = __riscv_vfmacc(s, va, vb, vl);
+            s = __riscv_vfmacc_vv_f32m4_tu(s, va, vb, vl);
         }
         r += (double)__riscv_vfmv_f(__riscv_vfredusum(s, __riscv_vfmv_v_f_f32m1(0.f, __riscv_vsetvlmax_e32m1()), __riscv_vsetvlmax_e32m4()));
 
