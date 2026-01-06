@@ -585,6 +585,19 @@ TEST(Imgproc_minAreaRect, reproducer_19769)
     EXPECT_TRUE(checkMinAreaRect(rr, contour)) << rr.center << " " << rr.size << " " << rr.angle;
 }
 
+TEST(Imgproc_minAreaRect, roundtrip_accuracy)
+{
+    RotatedRect rect(Point2f(12.f, 56.f), Size2f(10.f, 25.f), -45.f);
+    std::vector<Point2f> points;
+    rect.points(points);
+    RotatedRect rect_out = minAreaRect(points);
+    EXPECT_LT(std::abs(rect.center.x - rect_out.center.x), 1e-5);
+    EXPECT_LT(std::abs(rect.center.y - rect_out.center.y), 1e-5);
+    EXPECT_LT(std::abs(rect.size.width - rect_out.size.width), 1e-5);
+    EXPECT_LT(std::abs(rect.size.height - rect_out.size.height), 1e-5);
+    EXPECT_LT(std::abs(rect.angle - rect_out.angle), 1e-5);
+}
+
 TEST(Imgproc_minEnclosingTriangle, regression_17585)
 {
     const int N = 3;
