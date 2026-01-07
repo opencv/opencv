@@ -233,9 +233,19 @@ bool  BmpDecoder::readData( Mat& img )
     bool color = img.channels() > 1;
     uchar  gray_palette[256] = {0};
     bool   result = false;
-    int  src_pitch = ((m_width*(m_bpp != 15 ? m_bpp : 16) + 7)/8 + 3) & -4;
     int  nch = color ? 3 : 1;
-    int  y, width3 = m_width*nch;
+
+    const int effective_bpp = (m_bpp != 15) ? m_bpp : 16;
+    const size_t bits_per_row = static_cast<size_t>(m_width) * static_cast<size_t>(effective_bpp);
+    const size_t src_pitch_size = ((bits_per_row + 7) / 8 + 3) & ~static_cast<size_t>(3);
+    const size_t MAX_SRC_PITCH = static_cast<size_t>(1) << 28;
+    CV_CheckLT(src_pitch_size, MAX_SRC_PITCH, "BMP: src_pitch exceeds maximum allowed size");
+    const int src_pitch = validateToInt(src_pitch_size);
+
+    const size_t width3_size = static_cast<size_t>(m_width) * static_cast<size_t>(nch);
+    CV_CheckLT(width3_size, MAX_SRC_PITCH, "BMP: row size exceeds maximum allowed size");
+    const int width3 = validateToInt(width3_size);
+    int y;
 
     if( m_offset < 0 || !m_strm.isOpened())
         return false;
@@ -255,7 +265,9 @@ bool  BmpDecoder::readData( Mat& img )
         {
             CvtPaletteToGray( m_palette, gray_palette, 1 << m_bpp );
         }
-        _bgr.allocate(m_width*3 + 32);
+        const size_t bgr_size = static_cast<size_t>(m_width) * 3 + 32;
+        CV_CheckLT(bgr_size, MAX_SRC_PITCH, "BMP: bgr buffer size exceeds maximum allowed size");
+        _bgr.allocate(bgr_size);
     }
     uchar *src = _src.data(), *bgr = _bgr.data();
 
