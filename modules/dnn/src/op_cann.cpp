@@ -215,7 +215,7 @@ void CannNet::forward()
     ACL_CHECK_RET(aclmdlExecute(model_id, inputs, outputs));
     CV_LOG_DEBUG(NULL, "DNN/CANN: finished network forward");
 
-    // fetch ouputs from device to host
+    // fetch outputs from device to host
     CV_LOG_DEBUG(NULL, "DNN/CANN: start fetching outputs to host");
     for (size_t i = 0; i < output_wrappers.size(); ++i)
     {

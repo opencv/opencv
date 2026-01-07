@@ -373,7 +373,7 @@ void MSMFStreamChannel::start(const StreamProfile& profile, FrameCallback frameC
             break;
         }
     }
-    streamState_ = quit ? streamState_ : STREAM_STOPED;
+    streamState_ = quit ? streamState_ : STREAM_STOPPED;
 }
 
 void MSMFStreamChannel::stop()
@@ -385,7 +385,7 @@ void MSMFStreamChannel::stop()
         streamReader_->Flush(currentStreamIndex_);
         std::unique_lock<std::mutex> lk(streamStateMutex_);
         streamStateCv_.wait_for(lk, std::chrono::milliseconds(1000), [&]() {
-            return streamState_ == STREAM_STOPED;
+            return streamState_ == STREAM_STOPPED;
         });
     }
 }
@@ -474,7 +474,7 @@ STDMETHODIMP MSMFStreamChannel::OnReadSample(HRESULT hrStatus, DWORD dwStreamInd
         streamStateCv_.notify_all();
     }
 
-    if (streamState_ != STREAM_STOPPING && streamState_ != STREAM_STOPED)
+    if (streamState_ != STREAM_STOPPING && streamState_ != STREAM_STOPPED)
     {
         HR_FAILED_LOG(streamReader_->ReadSample(dwStreamIndex, 0, nullptr, nullptr, nullptr, nullptr));
         if (sample)
@@ -505,10 +505,10 @@ STDMETHODIMP MSMFStreamChannel::OnEvent(DWORD /*sidx*/, IMFMediaEvent* /*event*/
 
 STDMETHODIMP MSMFStreamChannel::OnFlush(DWORD)
 {
-    if (streamState_ != STREAM_STOPED)
+    if (streamState_ != STREAM_STOPPED)
     {
         std::unique_lock<std::mutex> lock(streamStateMutex_);
-        streamState_ = STREAM_STOPED;
+        streamState_ = STREAM_STOPPED;
         streamStateCv_.notify_all();
     }
     return S_OK;
