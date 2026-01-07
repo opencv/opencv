@@ -1,7 +1,7 @@
-#ifndef OPENCV_FEATURES2D_DISK_HPP
-#define OPENCV_FEATURES2D_DISK_HPP
+#ifndef OPENCV_FEATURES_DISK_HPP
+#define OPENCV_FEATURES_DISK_HPP
 
-#include "opencv2/features2d.hpp"
+#include "opencv2/features.hpp"
 
 namespace cv {
 

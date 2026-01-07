@@ -6,7 +6,7 @@ set(debug_modules "")
 if(DEBUG_opencv_features)
   list(APPEND debug_modules opencv_highgui)
 endif()
-ocv_define_module(features opencv_imgproc ${debug_modules} OPTIONAL opencv_flann WRAP java objc python js)
+ocv_define_module(features opencv_imgproc opencv_dnn ${debug_modules} OPTIONAL opencv_flann WRAP java objc js)
 
 ocv_install_3rdparty_licenses(mscr "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/mscr/chi_table_LICENSE.txt")
 ocv_install_3rdparty_licenses(annoylib "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/annoy/LICENSE")
