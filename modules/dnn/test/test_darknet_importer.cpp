@@ -59,6 +59,40 @@ TEST(Test_Darknet, read_tiny_yolo_voc)
     ASSERT_FALSE(net.empty());
 }
 
+TEST(Test_Darknet, read_conv_lstm)
+{
+    // Test that ConvLSTM layer can be parsed from Darknet config
+    std::string cfg = R"(
+[net]
+channels=3
+width=10
+height=10
+
+[conv_lstm]
+size=3
+output=16
+pad=1
+peephole=0
+state_constrain=5.0
+)";
+
+    std::vector<char> cfg_vec(cfg.begin(), cfg.end());
+    Net net = readNetFromDarknet(cfg_vec.data(), cfg_vec.size(), nullptr, 0);
+    ASSERT_FALSE(net.empty());
+
+    // Verify layer was created
+    std::vector<String> layerNames = net.getLayerNames();
+    bool hasConvLSTM = false;
+    for (const auto& name : layerNames) {
+        Ptr<Layer> layer = net.getLayer(net.getLayerId(name));
+        if (layer->type == "ConvLSTM") {
+            hasConvLSTM = true;
+            break;
+        }
+    }
+    ASSERT_TRUE(hasConvLSTM);
+}
+
 TEST(Test_Darknet, read_yolo_voc)
 {
     Net net = readNetFromDarknet(_tf("yolo-voc.cfg"));

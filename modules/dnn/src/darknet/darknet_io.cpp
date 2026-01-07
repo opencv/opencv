@@ -263,6 +263,35 @@ namespace cv {
                     fused_layer_names.back() = last_layer;
                 }
 
+                void setConvLSTM(int kernel_size, int num_output, int padding,
+                                bool use_peephole, float state_constrain,
+                                bool batch_normalize) {
+                    cv::dnn::LayerParams convlstm_param;
+                    convlstm_param.name = "ConvLSTM-name";
+                    convlstm_param.type = "ConvLSTM";
+                    convlstm_param.set<int>("kernel_size", kernel_size);
+                    convlstm_param.set<int>("num_output", num_output);
+                    convlstm_param.set<int>("pad", padding);
+                    convlstm_param.set<bool>("use_peephole", use_peephole);
+                    convlstm_param.set<float>("state_constrain", state_constrain);
+                    convlstm_param.set<bool>("batch_normalize", batch_normalize);
+
+                    darknet::LayerParameter lp;
+                    std::string layer_name = cv::format("conv_lstm_%d", layer_id);
+                    lp.layer_name = layer_name;
+                    lp.layer_type = convlstm_param.type;
+                    lp.layerParams = convlstm_param;
+                    lp.bottom_indexes.push_back(last_layer);
+                    last_layer = layer_name;
+                    net->layers.push_back(lp);
+
+                    if (batch_normalize)
+                        setBatchNorm();
+
+                    layer_id++;
+                    fused_layer_names.push_back(last_layer);
+                }
+
                 void setMaxpool(int kernel, int pad, int stride)
                 {
                     cv::dnn::LayerParams maxpool_param;
@@ -955,6 +984,28 @@ namespace cv {
 
                         setParams.setPermute(false);
                         setParams.setYolo(classes, mask_vec, anchors_vec, thresh, nms_threshold, scale_x_y, new_coords);
+                    }
+                    else if (layer_type == "conv_lstm")
+                    {
+                        // Parse conv_lstm layer parameters
+                        int kernel_size = getParam<int>(layer_params, "size", 3);
+                        int output_filters = getParam<int>(layer_params, "output", 256);
+                        int pad = getParam<int>(layer_params, "pad", 1);
+                        int padding = getParam<int>(layer_params, "padding", 0);
+                        bool batch_normalize = getParam<int>(layer_params, "batch_normalize", 0) == 1;
+                        int peephole = getParam<int>(layer_params, "peephole", 0);
+                        float state_constrain = getParam<float>(layer_params, "state_constrain", 0.0f);
+
+                        if (pad)
+                            padding = kernel_size / 2;
+
+                        CV_Assert(kernel_size > 0 && output_filters > 0);
+
+                        setParams.setConvLSTM(kernel_size, output_filters, padding, peephole == 1,
+                                              state_constrain, batch_normalize);
+
+                        // Update tensor shape - ConvLSTM preserves spatial dimensions
+                        tensor_shape[0] = output_filters;
                     }
                     else {
                         CV_Error(cv::Error::StsParseError, "Unknown layer type: " + layer_type);

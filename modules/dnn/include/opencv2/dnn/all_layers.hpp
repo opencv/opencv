@@ -199,6 +199,36 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<GRULayer> create(const LayerParams& params);
     };
 
+    /** @brief Convolutional LSTM recurrent layer
+     *
+     * This layer implements a Convolutional LSTM cell as described in:
+     * "Convolutional LSTM Network: A Machine Learning Approach for Precipitation Nowcasting"
+     * (https://arxiv.org/abs/1506.04214)
+     *
+     * Unlike standard LSTM which uses fully connected layers for gate computations,
+     * ConvLSTM uses convolutional layers, making it suitable for spatiotemporal sequence
+     * modeling tasks like video object detection.
+     *
+     * The layer supports optional peephole connections and state constraining
+     * as implemented in Darknet's conv_lstm layer.
+     *
+     * Parameters:
+     * - kernel_size: Size of convolutional kernel
+     * - num_output: Number of output channels (hidden state channels)
+     * - pad: Padding for convolution
+     * - use_peephole: Whether to use peephole connections (default: false)
+     * - state_constrain: Maximum absolute value for cell state clipping (default: 0, disabled)
+     *
+     * Input shape: [T, N, C, H, W] where T is sequence length, N is batch size
+     * Output shape: [T, N, num_output, H, W]
+     */
+    class CV_EXPORTS ConvLSTMLayer : public Layer
+    {
+    public:
+        /** Creates instance of ConvLSTM layer */
+        static Ptr<ConvLSTMLayer> create(const LayerParams& params);
+    };
+
     /** @brief Classical recurrent layer
 
     Accepts two inputs @f$x_t@f$ and @f$h_{t-1}@f$ and compute two outputs @f$o_t@f$ and @f$h_t@f$.

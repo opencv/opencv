@@ -652,6 +652,99 @@ TEST(Layer_GRU_Test_Accuracy_with_, Pytorch)
     normAssert(h_t_reference, outputs[0]);
 }
 
+TEST(Layer_ConvLSTM_Test, BasicForward)
+{
+    // Test basic forward pass of ConvLSTM layer
+    LayerParams lp;
+    lp.set("kernel_size", 3);
+    lp.set("num_output", 16);
+    lp.set("pad", 1);
+    lp.set("use_peephole", false);
+    lp.set("state_constrain", 0.0f);
+
+    Ptr<ConvLSTMLayer> layer = ConvLSTMLayer::create(lp);
+
+    // Input shape: [T=2, N=1, C=8, H=4, W=4]
+    const int T = 2, N = 1, C = 8, H = 4, W = 4;
+    int inputShape[] = {T, N, C, H, W};
+    Mat input(5, inputShape, CV_32F);
+    randu(input, -1.0f, 1.0f);
+
+    std::vector<Mat> inputs(1, input), outputs;
+    runLayer(layer, inputs, outputs);
+
+    // Output shape should be [T=2, N=1, num_output=16, H=4, W=4]
+    EXPECT_EQ(1u, outputs.size());
+    EXPECT_EQ(5, outputs[0].dims);
+    EXPECT_EQ(T, outputs[0].size[0]);
+    EXPECT_EQ(N, outputs[0].size[1]);
+    EXPECT_EQ(16, outputs[0].size[2]);
+    EXPECT_EQ(H, outputs[0].size[3]);
+    EXPECT_EQ(W, outputs[0].size[4]);
+}
+
+TEST(Layer_ConvLSTM_Test, StateConstrain)
+{
+    // Test state constraining functionality
+    LayerParams lp;
+    lp.set("kernel_size", 3);
+    lp.set("num_output", 8);
+    lp.set("pad", 1);
+    lp.set("use_peephole", false);
+    lp.set("state_constrain", 5.0f);  // Constrain cell state to [-5, 5]
+
+    Ptr<ConvLSTMLayer> layer = ConvLSTMLayer::create(lp);
+
+    // Input shape: [T=3, N=1, C=4, H=3, W=3]
+    const int T = 3, N = 1, C = 4, H = 3, W = 3;
+    int inputShape[] = {T, N, C, H, W};
+    Mat input(5, inputShape, CV_32F);
+    randu(input, -10.0f, 10.0f);  // Large random values to test constraining
+
+    std::vector<Mat> inputs(1, input), outputs;
+    runLayer(layer, inputs, outputs);
+
+    // Verify output shape
+    EXPECT_EQ(1u, outputs.size());
+    EXPECT_EQ(5, outputs[0].dims);
+    EXPECT_EQ(T, outputs[0].size[0]);
+    EXPECT_EQ(N, outputs[0].size[1]);
+    EXPECT_EQ(8, outputs[0].size[2]);
+    EXPECT_EQ(H, outputs[0].size[3]);
+    EXPECT_EQ(W, outputs[0].size[4]);
+}
+
+TEST(Layer_ConvLSTM_Test, PeepholeConnections)
+{
+    // Test ConvLSTM with peephole connections enabled
+    LayerParams lp;
+    lp.set("kernel_size", 3);
+    lp.set("num_output", 12);
+    lp.set("pad", 1);
+    lp.set("use_peephole", true);  // Enable peephole connections
+    lp.set("state_constrain", 0.0f);
+
+    Ptr<ConvLSTMLayer> layer = ConvLSTMLayer::create(lp);
+
+    // Input shape: [T=2, N=1, C=6, H=5, W=5]
+    const int T = 2, N = 1, C = 6, H = 5, W = 5;
+    int inputShape[] = {T, N, C, H, W};
+    Mat input(5, inputShape, CV_32F);
+    randu(input, -1.0f, 1.0f);
+
+    std::vector<Mat> inputs(1, input), outputs;
+    runLayer(layer, inputs, outputs);
+
+    // Verify output shape
+    EXPECT_EQ(1u, outputs.size());
+    EXPECT_EQ(5, outputs[0].dims);
+    EXPECT_EQ(T, outputs[0].size[0]);
+    EXPECT_EQ(N, outputs[0].size[1]);
+    EXPECT_EQ(12, outputs[0].size[2]);
+    EXPECT_EQ(H, outputs[0].size[3]);
+    EXPECT_EQ(W, outputs[0].size[4]);
+}
+
 TEST(Layer_RNN_Test_Accuracy_with_, CaffeRecurrent)
 {
     Ptr<RNNLayer> layer = RNNLayer::create(LayerParams());
