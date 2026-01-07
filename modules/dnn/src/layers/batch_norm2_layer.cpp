@@ -86,82 +86,82 @@ public:
     {
     }
 
-        std::vector<Mat> inputs;
-        inputs_arr.getMatVector(inputs);
+    virtual void forward(InputArrayOfArrays inputs_arr,
+                 OutputArrayOfArrays outputs_arr,
+                 OutputArrayOfArrays) CV_OVERRIDE
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        const Mat &X = inputs[0];
-        Mat Y;
-        Mat w, b;
+        size_t ninputs = inputs_arr.total(-1);
+        CV_Assert(ninputs > 0);
 
-        if (dynamicInputs) {
-            CV_Assert(inputs.size() == 5);
-
-            const Mat& scale   = inputs[1];
-            const Mat& beta    = inputs[2];
-            const Mat& mean    = inputs[3];
-            const Mat& var     = inputs[4];
-
-            w.create(scale.size(), CV_32F);
-            b.create(scale.size(), CV_32F);
-
-            cv::sqrt(var + epsilon, b);
-            cv::divide(scale, b, w);
-            b = beta - mean.mul(w);
-        } else {
-            w = weights_;
-            b = bias_;
+        if (ninputs > 1) {
+            CV_Assert(ninputs == 5);
+            Mat scale_ = inputs_arr.getMat(1);
+            Mat bias_ = inputs_arr.getMat(2);
+            Mat mean_ = inputs_arr.getMat(3);
+            Mat var_ = inputs_arr.getMat(4);
+            BatchNorm2Layer::getScaleBias(scale_, bias_, mean_, var_, epsilon, scale, bias);
         }
 
-        if (w.empty() || b.empty())
-             CV_Error(Error::StsBadArg, "BatchNorm2Layer: Weights not initialized");
+        MatShape inpShape = inputs_arr.shape(0);
+        int inpType = inputs_arr.type(0);
 
-        MatShape outShape = shape(X);
-        auto kind = outputs_arr.kind();
-        if (kind == _InputArray::STD_VECTOR_MAT) {
+        MatShape outShape = getOutShape(inpShape);
+        int outKind = outputs_arr.kind();
+
+        CV_Assert(outKind == _InputArray::STD_VECTOR_MAT ||
+                  outKind == _InputArray::STD_VECTOR_UMAT);
+
+        if (outKind == _InputArray::STD_VECTOR_MAT) {
+            Mat inp = inputs_arr.getMat(0);
             std::vector<Mat>& outs = outputs_arr.getMatVecRef();
-            CV_Assert(outs.size() >= 1);
-            outs[0].fit(outShape, X.type());
-            Y = outs[0];
-        } else if (kind == _InputArray::STD_VECTOR_UMAT) {
-            std::vector<UMat>& uouts = outputs_arr.getUMatVecRef();
-            CV_Assert(uouts.size() >= 1);
-            uouts[0].fit(outShape, X.type());
-            Y = uouts[0].getMat(ACCESS_WRITE);
+            outs.resize(1);
+            outs[0].fit(outShape, inpType);
+            runOp(inp, outs[0]);
         } else {
-            CV_Error(Error::StsBadArg, "Unsupported output array kind");
+            // [TODO] more efficient OpenCL implementation
+            Mat inp = inputs_arr.getMat(0);
+            std::vector<UMat>& outs = outputs_arr.getUMatVecRef();
+            outs.resize(1);
+            outs[0].fit(outShape, inpType);
+            Mat temp(outShape, inpType);
+            runOp(inp, temp);
+            temp.copyTo(outs[0]);
         }
+    }
 
-        const int C = (X.dims >= 2) ? X.size[1] : 1;
-        const int N = X.size[0];
-        const size_t planeSize = X.total() / (N * C);
+    void runOp(const Mat& inp, Mat& out)
+    {
+        auto netimpl_ = getNetImpl(this);
+        batchnorm(inp, out, scale, bias, netimpl_->originalLayout);
+    }
 
-        CV_Assert(w.total() == C);
+    virtual bool freezeScaleBias() CV_OVERRIDE
+    {
+        auto netimpl_ = getNetImpl(this);
+        size_t ninputs = inputs.size();
+        if (ninputs != 5)
+            return false;
+        if (netimpl_->isConstArg(inputs[1]) ||
+            netimpl_->isConstArg(inputs[2]) ||
+            netimpl_->isConstArg(inputs[3]) ||
+            netimpl_->isConstArg(inputs[4]))
+            return false;
+        Mat scale_ = netimpl_->argTensor(inputs[1]);
+        Mat bias_ = netimpl_->argTensor(inputs[2]);
+        Mat mean_ = netimpl_->argTensor(inputs[3]);
+        Mat var_ = netimpl_->argTensor(inputs[4]);
+        BatchNorm2Layer::getScaleBias(scale_, bias_, mean_, var_, epsilon, scale, bias);
+        inputs.resize(1);
+        return true;
+    }
 
-        parallel_for_(Range(0, N * C), [&](const Range& r) {
-            for (int i = r.start; i < r.end; ++i) {
-                int c = i % C;
-
-                float scale_val = w.ptr<float>()[c];
-                float shift_val = b.ptr<float>()[c];
-
-                const float* srcPtr = X.ptr<float>() + i * planeSize;
-                float* dstPtr = Y.ptr<float>() + i * planeSize;
-
-                int j = 0;
-#if CV_SIMD128
-                v_float32x4 v_scale = v_setall_f32(scale_val);
-                v_float32x4 v_shift = v_setall_f32(shift_val);
-                for (; j <= (int)planeSize - 4; j += 4) {
-                    v_float32x4 v_src = v_load(srcPtr + j);
-                    v_float32x4 v_dst = v_muladd(v_src, v_scale, v_shift);
-                    v_store(dstPtr + j, v_dst);
-                }
-#endif
-                for (; j < (int)planeSize; ++j) {
-                    dstPtr[j] = srcPtr[j] * scale_val + shift_val;
-                }
-            }
-        });
+    virtual void getScaleBias(OutputArray scale_, OutputArray bias_) const CV_OVERRIDE
+    {
+        scale.copyTo(scale_);
+        bias.copyTo(bias_);
     }
 private:
     bool dynamicInputs;

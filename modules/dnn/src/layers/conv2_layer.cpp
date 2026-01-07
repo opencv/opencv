@@ -138,6 +138,9 @@ public:
         ngroups = params.get<int>("group", 1);
         fused_batch_norm = false;
         add_residual = false;
+        fused_batch_norm = false;
+        fast_activation = FAST_ACTIV_NONE;
+        memset(fast_activ_params, 0, sizeof(fast_activ_params));
     }
 
     virtual std::ostream& dumpAttrs(std::ostream& strm, int indent) const CV_OVERRIDE
@@ -292,14 +295,17 @@ public:
         return true;
     }
 
-    /*virtual bool fuseActivation(const Ptr<layer>& activ) override
+    virtual bool fuseActivation(const Ptr<Layer>& activlayer) override
     {
-        ElemwiseOp* activ_ptr = dynamic_cast<ElemwiseOp*>(op.get());
-        if (activ || activ_ptr->maxNumInputs() != 1 || !activ_ptr || !activ_ptr->getActivation(CV_32F))
+        ActivationLayer* activ_ptr = dynamic_cast<ActivationLayer*>(activlayer.get());
+        if (!activ_ptr || fast_activation != FAST_ACTIV_NONE)
             return false;
-        activ = op;
+        if (dynamic_cast<ReLULayer*>(activ_ptr)) {
+            fast_activation = FAST_ACTIV_RELU;
+        }
+        activ = activlayer;
         return true;
-    }*/
+    }
 
     virtual int64_t getFLOPS(const std::vector<MatShape>& inputs,
                              const std::vector<MatShape>& outputs) const CV_OVERRIDE
@@ -410,7 +416,7 @@ public:
 
         cs.initConv(inpshape, wshape0, outshape, ngroups,
                     strides, dilations, pads, auto_pad, ceil_mode,
-                    FAST_ACTIV_NONE, nullptr, 0);
+                    fast_activation, fast_activ_params, 0);
         //bool conv1x1 = cs.kshape[0]*cs.kshape[1]*cs.kshape[2] == 1;
         bool depthwise = ngroups == cs.inpshape.C;
 
@@ -482,6 +488,8 @@ public:
     std::vector<int32_t> inpofs;
     std::vector<int32_t> ofsofs;
     bool fused_batch_norm;
+    FastActivation fast_activation;
+    float fast_activ_params[ConvState::MAX_ACTIV_PARAMS];
 };
 
 Ptr<Conv2Layer> Conv2Layer::create(const LayerParams& params)

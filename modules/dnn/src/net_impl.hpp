@@ -443,10 +443,15 @@ struct Net::Impl : public detail::NetImplBase
     void inferShapes(bool symbolic);
     // sets certain buffer index for each intermediate argument (Arg)
     void assignBuffers();
-    //void useBlockLayout();
-    void fuse();
+    // fuse batch norm, add bias and activation to convolution
+    void fuseBasic();
+    // replace constant sub-expressions with their results
     void constFold();
+    // make some operations (activation, batch norm, convolution) unary if
+    // all their arguments except for the 1st one are constant.
     void constArgs();
+    // insert transformLayout operations where necessary;
+    // use block layout for convolution, pooling and some other operations where it matters
     void useBlockLayout();
 
 };  // Net::Impl

@@ -325,7 +325,7 @@ public:
         prindent(strm, subindent);
         strm << "],\n";
         prindent(strm, subindent);
-        strm << "nodes: [\n";
+        strm << "layers: [\n";
         size_t nlayers = prog_.size();
         for (size_t i = 0; i < nlayers; i++) {
             prindent(strm, argindent);
@@ -498,10 +498,8 @@ void Net::Impl::prepareForInference()
 
     if (!prepared) {
         constFold();
-        //inferTypes();
-        //constArgs();
-        //inferShapes(true);
-        //fuse();
+        constArgs();
+        fuseBasic();
         useBlockLayout();
         assignBuffers();
         totalLayers = updateGraphOfs(mainGraph, 0, true);

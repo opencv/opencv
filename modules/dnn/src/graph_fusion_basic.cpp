@@ -8,7 +8,6 @@
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
-#if 0
 using std::vector;
 using std::string;
 
@@ -17,7 +16,7 @@ typedef std::pair<int, Arg> int_arg_pair;
 
 struct ModelFusionBasic
 {
-    ModelFusionBasic(Net* net_) : net(net_), netimpl(net_->getImpl()) {}
+    ModelFusionBasic(Net::Impl* netimpl_) : netimpl(netimpl_) {}
 
     void fuse()
     {
@@ -34,9 +33,9 @@ struct ModelFusionBasic
     {
         const Mat* m;
         void* data;
-        if (!net->isConstArg(arg))
+        if (!netimpl->isConstArg(arg))
             return false;
-        m = &netimpl->tensors.at(arg.idx);
+        m = &netimpl->__tensors__.at(arg.idx);
         data = m->data;
         if (m->total() != 1 || m->type() != CV_32F)
             return false;
@@ -45,9 +44,10 @@ struct ModelFusionBasic
         return true;
     }
 
-    Layer* getLayer(std::vector<Ptr<Layer> >& newprog, int op_idx) const
+    template<typename _LayerType> _LayerType*
+    getLayer(std::vector<Ptr<Layer> >& newprog, int op_idx) const
     {
-        return op_idx >= 0 ? newprog.at(op_idx).get() : 0;
+        return op_idx >= 0 ? dynamic_cast<_LayerType*>(newprog.at(op_idx).get()) : 0;
     }
 
     /*template<typename _OpType>
@@ -78,6 +78,7 @@ struct ModelFusionBasic
         for (i = 0; i < nops; i++) {
             const Ptr<Layer>& layer = prog[i];
             Layer* layer_ptr = (Layer*)layer.get();
+            int fused_layer_idx = -1;
             std::vector<Ptr<Graph> >* subgraphs = layer->subgraphs();
             if (subgraphs) {
                 for (Ptr<Graph>& g: *subgraphs) {
@@ -88,27 +89,23 @@ struct ModelFusionBasic
             const std::vector<Arg>& inputs = layer->inputs;
             const std::vector<Arg>& outputs = layer->outputs;
             size_t ninputs = inputs.size();
-            Ptr<Layer> fused_layer;
-            int fused_node_idx = -1;
             removed_args.clear();
             fused_inputs.clear(); // leave it empty in the merge patterns below to re-use original fused node inputs as-is.
 
             for(;;) {
-                BatchNormLayer* bn = dynamic_cast<BatchNormLayer*>(layer_ptr);
-                EltW  emwiseOp* elemwise = getOp<ElemwiseOp>(&node);
+                BatchNorm2Layer* bn = dynamic_cast<BatchNorm2Layer*>(layer_ptr);
+                ActivationLayer* activ = dynamic_cast<ActivationLayer*>(layer_ptr);
 
                 // merge convolution and batch norm
                 if (bn && ninputs == 1 &&
                     usecounts.at(inputs[0].idx) == 1) {
                     Arg bn_inp = inputs[0];
-                    int conv_node_idx = producer_of.at(bn_inp.idx);
-                    Node* conv_node = getNode(newprog, conv_node_idx);
-                    ConvOp* conv_op = getOp<ConvOp>(conv_node);
-                    if (conv_op && (*conv_node)->ninputs() == 1) {
-                        bool ok = conv_op->fuseBatchNorm(node->op());
+                    int conv_layer_idx = producer_of.at(bn_inp.idx);
+                    Conv2Layer* conv = getLayer<Conv2Layer>(newprog, conv_layer_idx);
+                    if (conv) {
+                        bool ok = conv->fuseBatchNorm(layer);
                         if (ok) {
-                            fused_node_idx = conv_node_idx;
-                            fused_op = (*conv_node)->op();
+                            fused_layer_idx = conv_layer_idx;
                             removed_args.push_back(bn_inp);
                             break;
                         }
@@ -116,7 +113,7 @@ struct ModelFusionBasic
                 }
 
                 // merge residual 'add' into 'conv' node
-                if (elemwise && elemwise->opcode == ELWISE_ADD && ninputs == 2) {
+                /*if (elemwise && elemwise->opcode == ELWISE_ADD && ninputs == 2) {
                     ArgData& adata0 = netimpl->args[inputs[0].idx];
                     ArgData& adata1 = netimpl->args[inputs[1].idx];
 
@@ -149,20 +146,18 @@ struct ModelFusionBasic
                             break;
                         }
                     }
-                }
+                }*/
 
                 // merge convolution and activation
-                if (elemwise && ninputs == 1 &&
+                if (activ && ninputs == 1 &&
                     usecounts.at(inputs[0].idx) == 1) {
                     Arg activ_inp = inputs[0];
-                    int conv_node_idx = producer_of.at(activ_inp.idx);
-                    Node* conv_node = getNode(newprog, conv_node_idx);
-                    ConvOp* conv_op = getOp<ConvOp>(conv_node);
-                    if (conv_op) {
-                        bool ok = conv_op->fuseActivation(node->op());
+                    int conv_layer_idx = producer_of.at(activ_inp.idx);
+                    Conv2Layer* conv = getLayer<Conv2Layer>(newprog, conv_layer_idx);
+                    if (conv) {
+                        bool ok = conv->fuseActivation(layer);
                         if (ok) {
-                            fused_node_idx = conv_node_idx;
-                            fused_op = (*conv_node)->op();
+                            fused_layer_idx = conv_layer_idx;
                             removed_args.push_back(activ_inp);
                             break;
                         }
@@ -171,19 +166,12 @@ struct ModelFusionBasic
                 break;
             }
 
-            if (fused_node_idx >= 0) {
+            if (fused_layer_idx >= 0) {
                 modified = true;
-                const Node& orig_node = newprog.at(fused_node_idx);
-                if (fused_inputs.empty()) {
-                    const std::vector<Arg>& orig_inputs = orig_node->inputs();
-                    fused_inputs.assign(orig_inputs.begin(), orig_inputs.end());
-                }
-                Node fused_node = NodeData::create(orig_node->name(), fused_op,
-                                                   fused_inputs, outputs,
-                                                   orig_node->subgraphs());
-                newprog.at(fused_node_idx) = fused_node;
+                Layer* fused_layer = newprog[fused_layer_idx];
+                fused_layer->outputs = outputs;
                 for (Arg new_out: outputs)
-                    producer_of[new_out.idx] = fused_node_idx;
+                    producer_of[new_out.idx] = fused_layer_idx;
                 for (Arg old_out: removed_args) {
                     usecounts.at(old_out.idx) = 0;
                     producer_of.at(old_out.idx) = -1;
@@ -191,39 +179,37 @@ struct ModelFusionBasic
             } else {
                 for (auto out: outputs)
                     producer_of[out.idx] = (int)newprog.size();
-                newprog.push_back(node);
+                newprog.push_back(layer);
             }
         }
 
         if (modified) {
-            size_t i, j = 0, nops = newprog.size();
-            for (i = 0; i < nops; i++) {
-                if (newprog[i]->op()) {
+            size_t i, j = 0, newops = newprog.size();
+            for (i = 0; i < newops; i++) {
+                if (!newprog[i].empty()) {
                     if (j < i)
                         newprog[j] = newprog[i];
                     j++;
                 }
             }
             newprog.resize(j);
-            printf("fused some ops in graph %s. size before: %zu ops, size after: %zu ops\n",
-                   graph->name().data(), nops, j);
+            //printf("fused some ops in graph %s. size before: %zu ops, size after: %zu ops\n",
+            //       graph->name().data(), nops, j);
             graph->setProg(newprog);
         }
 
         return modified;
     }
 
-    Net* net;
     Net::Impl* netimpl;
     vector<int> usecounts;
 };
 
-void Net::Impl::fuse()
+void Net::Impl::fuseBasic()
 {
-    ModelFusionBasic basicFusion(net);
+    ModelFusionBasic basicFusion(this);
     basicFusion.fuse();
 }
-#endif
 
 CV__DNN_INLINE_NS_END
 }}

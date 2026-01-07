@@ -373,7 +373,7 @@ CV__DNN_INLINE_NS_BEGIN
                                 int C0, int accuracy) = 0;
         virtual bool fuseAddBias(InputArray bias) = 0;
         virtual bool fuseBatchNorm(const Ptr<Layer>& bn) = 0;
-        //virtual bool fuseActivation(const Ptr<Layer>& activ) = 0;
+        virtual bool fuseActivation(const Ptr<Layer>& activ) = 0;
         //virtual bool fuseAddResidual(const Ptr<Layer>& addres) = 0;
 
         std::vector<int> strides, dilations, pads;
