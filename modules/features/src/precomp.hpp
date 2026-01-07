@@ -45,7 +45,7 @@
 
 #include "opencv2/features.hpp"
 #include "opencv2/imgproc.hpp"
-
+#include "opencv2/dnn.hpp"
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/private.hpp"
 #include "opencv2/core/ocl.hpp"
