@@ -2215,7 +2215,7 @@ bool findCirclesGrid( InputArray _image, Size patternSize,
     {
         SimpleBlobDetector::Params params;
         // Allow huge circles (up to image size)
-        params.maxArea = std::numeric_limits<float>::max(); 
+        params.maxArea = std::numeric_limits<float>::max();
         params.minArea = 10.0f;
         params.filterByArea = true;
 
