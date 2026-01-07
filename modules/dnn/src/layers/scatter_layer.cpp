@@ -40,7 +40,7 @@ public:
         else if (reduction_name == "min")
             reduction = REDUCTION::MIN;
         else
-            CV_Error(cv::Error::StsBadArg, "Unkown reduction \"" + reduction_name + "\"");
+            CV_Error(cv::Error::StsBadArg, "Unknown reduction \"" + reduction_name + "\"");
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
