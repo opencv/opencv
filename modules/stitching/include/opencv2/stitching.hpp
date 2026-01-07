@@ -299,7 +299,7 @@ public:
      */
     CV_WRAP Status stitch(InputArrayOfArrays images, InputArrayOfArrays masks, OutputArray pano);
 
-    /** @brief Returns indeces of input images used in panorama stitching
+    /** @brief Returns indices of input images used in panorama stitching
      */
     CV_WRAP std::vector<int> component() const { return indices_; }
 

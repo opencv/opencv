@@ -100,7 +100,7 @@ struct OpenCV_VideoIO_Capture_Plugin_API_v1_0_api_entries
 
     @note API-CALL 7, API-Version == 0
      */
-    CvResult (CV_API_CALL *Capture_retreive)(CvPluginCapture handle, int stream_idx, cv_videoio_capture_retrieve_cb_t callback, void* userdata);
+    CvResult (CV_API_CALL *Capture_retrieve)(CvPluginCapture handle, int stream_idx, cv_videoio_capture_retrieve_cb_t callback, void* userdata);
 }; // OpenCV_VideoIO_Capture_Plugin_API_v1_0_api_entries
 
 struct OpenCV_VideoIO_Capture_Plugin_API_v1_1_api_entries

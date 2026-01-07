@@ -18,7 +18,7 @@
 //    software: "Method and apparatus for identifying scale invariant features
 //    in an image and use of same for locating an object in an image," David
 //    G. Lowe, US Patent 6,711,293 (March 23, 2004). Provisional application
-//    filed March 8, 1999. Asignee: The University of British Columbia. For
+//    filed March 8, 1999. Assignee: The University of British Columbia. For
 //    further details, contact David Lowe (lowe@cs.ubc.ca) or the
 //    University-Industry Liaison Office of the University of British
 //    Columbia.
