@@ -80,26 +80,41 @@ public:
 
   static void validateParameters(const SimpleBlobDetector::Params& p)
   {
-      if (p.thresholdStep <= 0)
-          CV_Error(Error::StsBadArg, "thresholdStep>0");
+      if (p.useAdaptiveThreshold)
+      {
+          if (p.method != AdaptiveThresholdTypes::ADAPTIVE_THRESH_MEAN_C && p.method != AdaptiveThresholdTypes::ADAPTIVE_THRESH_GAUSSIAN_C)
+                CV_Error(Error::StsBadArg, "method should be ADAPTIVE_THRESH_MEAN_C or ADAPTIVE_THRESH_GAUSSIAN_C");
 
-      if (p.minThreshold > p.maxThreshold || p.minThreshold < 0)
-          CV_Error(Error::StsBadArg, "0<=minThreshold<=maxThreshold");
+          if (p.type != ThresholdTypes::THRESH_BINARY && p.type != ThresholdTypes::THRESH_BINARY_INV)
+                CV_Error(Error::StsBadArg, "type should be THRESH_BINARY or THRESH_BINARY_INV");
 
-      if (p.minDistBetweenBlobs <=0 )
-          CV_Error(Error::StsBadArg, "minDistBetweenBlobs>0");
+          if (p.blockSize % 2 == 0 || p.blockSize <= 1)
+                CV_Error(Error::StsBadArg, "blockSize should be positive and odd");
 
-      if (p.minArea > p.maxArea || p.minArea <=0)
-          CV_Error(Error::StsBadArg, "0<minArea<=maxArea");
+      }
+      else
+      {
+          if (p.thresholdStep <= 0)
+              CV_Error(Error::StsBadArg, "thresholdStep>0");
 
-      if (p.minCircularity > p.maxCircularity || p.minCircularity <= 0)
-          CV_Error(Error::StsBadArg, "0<minCircularity<=maxCircularity");
+          if (p.minThreshold > p.maxThreshold || p.minThreshold < 0)
+              CV_Error(Error::StsBadArg, "0<=minThreshold<=maxThreshold");
 
-      if (p.minInertiaRatio > p.maxInertiaRatio || p.minInertiaRatio <= 0)
-          CV_Error(Error::StsBadArg, "0<minInertiaRatio<=maxInertiaRatio");
+          if (p.minDistBetweenBlobs <= 0)
+              CV_Error(Error::StsBadArg, "minDistBetweenBlobs>0");
 
-      if (p.minConvexity > p.maxConvexity || p.minConvexity <= 0)
-          CV_Error(Error::StsBadArg, "0<minConvexity<=maxConvexity");
+          if (p.minArea > p.maxArea || p.minArea <= 0)
+              CV_Error(Error::StsBadArg, "0<minArea<=maxArea");
+
+          if (p.minCircularity > p.maxCircularity || p.minCircularity <= 0)
+              CV_Error(Error::StsBadArg, "0<minCircularity<=maxCircularity");
+
+          if (p.minInertiaRatio > p.maxInertiaRatio || p.minInertiaRatio <= 0)
+              CV_Error(Error::StsBadArg, "0<minInertiaRatio<=maxInertiaRatio");
+
+          if (p.minConvexity > p.maxConvexity || p.minConvexity <= 0)
+              CV_Error(Error::StsBadArg, "0<minConvexity<=maxConvexity");
+      }
   }
 
 protected:
@@ -124,6 +139,12 @@ protected:
 */
 SimpleBlobDetector::Params::Params()
 {
+    useAdaptiveThreshold = true;
+    method = ADAPTIVE_THRESH_GAUSSIAN_C;
+    type = THRESH_BINARY;
+    blockSize = 3;
+    delta = 0;
+
     thresholdStep = 10;
     minThreshold = 50;
     maxThreshold = 220;
@@ -156,6 +177,12 @@ SimpleBlobDetector::Params::Params()
 
 void SimpleBlobDetector::Params::read(const cv::FileNode& fn )
 {
+    useAdaptiveThreshold = (int)fn["useAdaptiveThreshold"] != 0 ? true : false;
+    method = fn["method"];
+    type = fn["type"];
+    blockSize = fn["blockSize"];
+    delta = fn["delta"];
+
     thresholdStep = fn["thresholdStep"];
     minThreshold = fn["minThreshold"];
     maxThreshold = fn["maxThreshold"];
@@ -187,6 +214,12 @@ void SimpleBlobDetector::Params::read(const cv::FileNode& fn )
 
 void SimpleBlobDetector::Params::write(cv::FileStorage& fs) const
 {
+    fs << "useAdaptiveThreshold" << useAdaptiveThreshold;
+    fs << "method" << method;
+    fs << "type" << type;
+    fs << "blockSize" << blockSize;
+    fs << "delta" << delta;
+
     fs << "thresholdStep" << thresholdStep;
     fs << "minThreshold" << minThreshold;
     fs << "maxThreshold" << maxThreshold;
@@ -377,97 +410,119 @@ void SimpleBlobDetectorImpl::detect(InputArray image, std::vector<cv::KeyPoint>&
         CV_Error(Error::StsUnsupportedFormat, "Blob detector only supports 8-bit images!");
     }
 
-    CV_CheckGT(params.thresholdStep, 0.0f, "");
-    if (params.minThreshold + params.thresholdStep >= params.maxThreshold)
-    {
-        // https://github.com/opencv/opencv/issues/6667
-        CV_LOG_ONCE_INFO(NULL, "SimpleBlobDetector: params.minDistBetweenBlobs is ignored for case with single threshold");
-#if 0  // OpenCV 5.0
-        CV_CheckEQ(params.minRepeatability, 1u, "Incompatible parameters for case with single threshold");
-#else
-        if (params.minRepeatability != 1)
-            CV_LOG_WARNING(NULL, "SimpleBlobDetector: params.minRepeatability=" << params.minRepeatability << " is incompatible for case with single threshold. Empty result is expected.");
-#endif
-    }
-
-    std::vector < std::vector<Center> > centers;
     std::vector<Moments> momentss;
-    for (double thresh = params.minThreshold; thresh < params.maxThreshold; thresh += params.thresholdStep)
+
+    if (params.useAdaptiveThreshold)
     {
-        Mat binarizedImage;
-        threshold(grayscaleImage, binarizedImage, thresh, 255, THRESH_BINARY);
-
-        std::vector < Center > curCenters;
-        std::vector<std::vector<Point> > curContours;
-        std::vector<Moments> curMomentss;
-        findBlobs(grayscaleImage, binarizedImage, curCenters, curContours, curMomentss);
-        std::vector < std::vector<Center> > newCenters;
-        std::vector<std::vector<Point> > newContours;
-        std::vector<Moments> newMomentss;
-        for (size_t i = 0; i < curCenters.size(); i++)
-        {
-            bool isNew = true;
-            for (size_t j = 0; j < centers.size(); j++)
-            {
-                double dist = norm(centers[j][ centers[j].size() / 2 ].location - curCenters[i].location);
-                isNew = dist >= params.minDistBetweenBlobs && dist >= centers[j][ centers[j].size() / 2 ].radius && dist >= curCenters[i].radius;
-                if (!isNew)
-                {
-                    centers[j].push_back(curCenters[i]);
-
-                    size_t k = centers[j].size() - 1;
-                    while( k > 0 && curCenters[i].radius < centers[j][k-1].radius )
-                    {
-                        centers[j][k] = centers[j][k-1];
-                        k--;
-                    }
-
-                    if (params.collectContours)
-                    {
-                        if (curCenters[i].confidence > centers[j][k].confidence
-                            || (curCenters[i].confidence == centers[j][k].confidence && curMomentss[i].m00 > momentss[j].m00))
-                        {
-                            blobContours[j] = curContours[i];
-                            momentss[j] = curMomentss[i];
-                        }
-                    }
-                    centers[j][k] = curCenters[i];
-
-                    break;
-                }
-            }
-            if (isNew)
-            {
-                newCenters.push_back(std::vector<Center> (1, curCenters[i]));
-                if (params.collectContours)
-                {
-                    newContours.push_back(curContours[i]);
-                    newMomentss.push_back(curMomentss[i]);
-                }
-            }
-        }
-        std::copy(newCenters.begin(), newCenters.end(), std::back_inserter(centers));
+        std::vector<Center> centers;
+        Mat binaryImage;
+        adaptiveThreshold(grayscaleImage, binaryImage, 255, params.method, params.type, params.blockSize, params.delta);
+        std::vector<std::vector<Point> > contours;
+        findBlobs(grayscaleImage, binaryImage, centers, contours, momentss);
         if (params.collectContours)
         {
-            std::copy(newContours.begin(), newContours.end(), std::back_inserter(blobContours));
-            std::copy(newMomentss.begin(), newMomentss.end(), std::back_inserter(momentss));
+            blobContours = contours;
+        }
+        for (size_t i = 0; i < centers.size(); i++)
+        {
+            KeyPoint kpt(centers[i].location, (float)(centers[i].radius) * 2.0f);
+            keypoints.push_back(kpt);
         }
     }
 
-    for (size_t i = 0; i < centers.size(); i++)
+    else
     {
-        if (centers[i].size() < params.minRepeatability)
-            continue;
-        Point2d sumPoint(0, 0);
-        double normalizer = 0;
-        for (size_t j = 0; j < centers[i].size(); j++)
+        std::vector < std::vector<Center> > centers;
+        CV_CheckGT(params.thresholdStep, 0.0f, "");
+        if (params.minThreshold + params.thresholdStep >= params.maxThreshold)
         {
-            sumPoint += centers[i][j].confidence * centers[i][j].location;
-            normalizer += centers[i][j].confidence;
+            // https://github.com/opencv/opencv/issues/6667
+            CV_LOG_ONCE_INFO(NULL, "SimpleBlobDetector: params.minDistBetweenBlobs is ignored for case with single threshold");
+#if 0  // OpenCV 5.0
+            CV_CheckEQ(params.minRepeatability, 1u, "Incompatible parameters for case with single threshold");
+#else
+            if (params.minRepeatability != 1)
+                CV_LOG_WARNING(NULL, "SimpleBlobDetector: params.minRepeatability=" << params.minRepeatability << " is incompatible for case with single threshold. Empty result is expected.");
+#endif
         }
-        sumPoint *= (1. / normalizer);
-        KeyPoint kpt(sumPoint, (float)(centers[i][centers[i].size() / 2].radius) * 2.0f);
-        keypoints.push_back(kpt);
+
+        for (double thresh = params.minThreshold; thresh < params.maxThreshold; thresh += params.thresholdStep)
+        {
+            Mat binarizedImage;
+            threshold(grayscaleImage, binarizedImage, thresh, 255, THRESH_BINARY);
+
+            std::vector < Center > curCenters;
+            std::vector<std::vector<Point> > curContours;
+            std::vector<Moments> curMomentss;
+            findBlobs(grayscaleImage, binarizedImage, curCenters, curContours, curMomentss);
+            std::vector < std::vector<Center> > newCenters;
+            std::vector<std::vector<Point> > newContours;
+            std::vector<Moments> newMomentss;
+            for (size_t i = 0; i < curCenters.size(); i++)
+            {
+                bool isNew = true;
+                for (size_t j = 0; j < centers.size(); j++)
+                {
+                    double dist = norm(centers[j][centers[j].size() / 2].location - curCenters[i].location);
+                    isNew = dist >= params.minDistBetweenBlobs && dist >= centers[j][centers[j].size() / 2].radius && dist >= curCenters[i].radius;
+                    if (!isNew)
+                    {
+                        centers[j].push_back(curCenters[i]);
+
+                        size_t k = centers[j].size() - 1;
+                        while (k > 0 && curCenters[i].radius < centers[j][k - 1].radius)
+                        {
+                            centers[j][k] = centers[j][k - 1];
+                            k--;
+                        }
+
+                        if (params.collectContours)
+                        {
+                            if (curCenters[i].confidence > centers[j][k].confidence
+                                || (curCenters[i].confidence == centers[j][k].confidence && curMomentss[i].m00 > momentss[j].m00))
+                            {
+                                blobContours[j] = curContours[i];
+                                momentss[j] = curMomentss[i];
+                            }
+                        }
+                        centers[j][k] = curCenters[i];
+
+                        break;
+                    }
+                }
+                if (isNew)
+                {
+                    newCenters.push_back(std::vector<Center>(1, curCenters[i]));
+                    if (params.collectContours)
+                    {
+                        newContours.push_back(curContours[i]);
+                        newMomentss.push_back(curMomentss[i]);
+                    }
+                }
+            }
+            std::copy(newCenters.begin(), newCenters.end(), std::back_inserter(centers));
+            if (params.collectContours)
+            {
+                std::copy(newContours.begin(), newContours.end(), std::back_inserter(blobContours));
+                std::copy(newMomentss.begin(), newMomentss.end(), std::back_inserter(momentss));
+            }
+        }
+
+        for (size_t i = 0; i < centers.size(); i++)
+        {
+            if (centers[i].size() < params.minRepeatability)
+                continue;
+            Point2d sumPoint(0, 0);
+            double normalizer = 0;
+            for (size_t j = 0; j < centers[i].size(); j++)
+            {
+                sumPoint += centers[i][j].confidence * centers[i][j].location;
+                normalizer += centers[i][j].confidence;
+            }
+            sumPoint *= (1. / normalizer);
+            KeyPoint kpt(sumPoint, (float)(centers[i][centers[i].size() / 2].radius) * 2.0f);
+            keypoints.push_back(kpt);
+        }
     }
 
     if (!mask.empty())
