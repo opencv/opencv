@@ -1236,6 +1236,11 @@ CV__DNN_INLINE_NS_BEGIN
                                            const uchar* bufferWeightsPtr, size_t bufferWeightsSize);
 
 
+
+
+    CV_EXPORTS_W Net readNetFromGGUF(CV_WRAP_FILE_PATH const String &ggufFile);
+
+
     /** @brief Reads a network model <a href="https://onnx.ai/">ONNX</a>.
      *  @param onnxFile path to the .onnx file with text description of the network architecture.
      *  @param engine select DNN engine to be used. With auto selection the new engine is used first and falls back to classic.
