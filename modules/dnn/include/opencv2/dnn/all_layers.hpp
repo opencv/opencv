@@ -1229,6 +1229,9 @@ CV__DNN_INLINE_NS_BEGIN
             ADD,
             DIV,
             WHERE,
+            BITWISE_AND,
+            BITWISE_OR,
+            BITWISE_XOR
         };
         OPERATION op;
         
