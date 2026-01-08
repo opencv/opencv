@@ -414,7 +414,7 @@ void testECCProperties(Mat x, float eps) {
     EXPECT_NEAR(computeECC(X, 2 * Y + X), 1.0 / sqrt(5.0), eps);
 }
 
-TEST(Video_ECC_Test_Compute, properies) {
+TEST(Video_ECC_Test_Compute, properties) {
     Mat xline(1, 100, CV_32F), x;
     for (int i = 0; i < xline.cols; ++i) xline.at<float>(0, i) =  (float)i;
 

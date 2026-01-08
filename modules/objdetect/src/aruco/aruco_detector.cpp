@@ -1399,7 +1399,7 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Board& _board
 
             // last filter, check if inner code is close enough to the assigned marker code
             int codeDistance = 0;
-            // if errorCorrectionRate, dont check code
+            // if errorCorrectionRate, don't check code
             if(refineParams.errorCorrectionRate >= 0) {
 
                 // extract bits

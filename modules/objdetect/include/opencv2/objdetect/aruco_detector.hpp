@@ -258,7 +258,7 @@ struct CV_EXPORTS_W_SIMPLE RefineParameters {
      */
     CV_PROP_RW float errorCorrectionRate;
 
-    /** @brief checkAllOrders consider the four posible corner orders in the rejectedCorners array.
+    /** @brief checkAllOrders consider the four possible corner orders in the rejectedCorners array.
      *
      * If it set to false, only the provided corner order is considered (default true).
      */
