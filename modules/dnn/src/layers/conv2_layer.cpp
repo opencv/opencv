@@ -137,10 +137,10 @@ public:
         pads = params.getVector<int>("pad");
         ngroups = params.get<int>("group", 1);
         fused_batch_norm = false;
-        add_residual = false;
         fused_batch_norm = false;
         fast_activation = FAST_ACTIV_NONE;
         memset(fast_activ_params, 0, sizeof(fast_activ_params));
+        add_residual = false;
     }
 
     virtual std::ostream& dumpAttrs(std::ostream& strm, int indent) const CV_OVERRIDE
@@ -300,11 +300,29 @@ public:
         ActivationLayer* activ_ptr = dynamic_cast<ActivationLayer*>(activlayer.get());
         if (!activ_ptr || fast_activation != FAST_ACTIV_NONE)
             return false;
-        if (dynamic_cast<ReLULayer*>(activ_ptr)) {
-            fast_activation = FAST_ACTIV_RELU;
+        ReLULayer* relu = dynamic_cast<ReLULayer*>(activ_ptr);
+        if (relu) {
+            float alpha = relu->negativeSlope;
+            if (alpha > 0.f) {
+                fast_activation = FAST_ACTIV_LEAKY_RELU;
+                fast_activ_params[0] = alpha;
+            } else {
+                fast_activation = FAST_ACTIV_RELU;
+            }
+        } else {
+            activ = activlayer;
         }
-        activ = activlayer;
         return true;
+    }
+    
+    virtual bool fuseAddResidual(Arg residual) CV_OVERRIDE
+    {
+        if (activ.empty() && fast_activation == FAST_ACTIV_NONE && !add_residual && residual.idx >= 0) {
+            add_residual = true;
+            inputs.push_back(residual);
+            return true;
+        }
+        return false;
     }
 
     virtual int64_t getFLOPS(const std::vector<MatShape>& inputs,
@@ -337,6 +355,8 @@ public:
                                  std::vector<MatShape> &tempshapes) const CV_OVERRIDE
     {
         size_t ninputs = inpshapes.size();
+        if (add_residual)
+            ninputs--;
         CV_Assert(ninputs >= 1);
 
         MatShape wshape = ninputs > 1 ? inpshapes[1] : wshape0;
@@ -380,7 +400,7 @@ public:
         MatShape inpshape = inp.shape();
         CV_Assert(inpshape.layout == DATA_LAYOUT_BLOCK);
         CV_Assert(inp.isContinuous());
-
+        
         if (add_residual) {
             residual = inputs_arr.getMat(ninputs-1);
             resptr = residual.data;
@@ -405,10 +425,14 @@ public:
         int outkind = outputs_arr.kind();
         CV_Assert(outkind == _InputArray::STD_VECTOR_MAT ||
                   outkind == _InputArray::STD_VECTOR_UMAT);
-
-        if (add_residual) {
-            CV_Assert(outshape == residual.shape());
-            CV_Assert(outtype == residual.type());
+        
+        if (add_residual && (residual.size != outshape || residual.type() != outtype))
+        {
+            CV_Error(Error::StsBadArg,
+                    "residual added after convolution must have the same shape and the "
+                    "same type as the convolution output. If this error occurs, the only "
+                    "solution for now is to edit the model and add 'Expand' and/or 'Cast' "
+                    "operators to make the residual tensor match the convolution shape and type");
         }
 
         int nspatialdims = inpshape.dims - 3;
@@ -490,6 +514,7 @@ public:
     bool fused_batch_norm;
     FastActivation fast_activation;
     float fast_activ_params[ConvState::MAX_ACTIV_PARAMS];
+    bool add_residual;
 };
 
 Ptr<Conv2Layer> Conv2Layer::create(const LayerParams& params)

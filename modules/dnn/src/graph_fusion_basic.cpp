@@ -29,41 +29,11 @@ struct ModelFusionBasic
         }
     }
 
-    bool isConstScalarTensor(Arg arg, float* compare_with) const
-    {
-        const Mat* m;
-        void* data;
-        if (!netimpl->isConstArg(arg))
-            return false;
-        m = &netimpl->__tensors__.at(arg.idx);
-        data = m->data;
-        if (m->total() != 1 || m->type() != CV_32F)
-            return false;
-        if (compare_with && *(float*)data != *compare_with)
-            return false;
-        return true;
-    }
-
     template<typename _LayerType> _LayerType*
     getLayer(std::vector<Ptr<Layer> >& newprog, int op_idx) const
     {
         return op_idx >= 0 ? dynamic_cast<_LayerType*>(newprog.at(op_idx).get()) : 0;
     }
-
-    /*template<typename _OpType>
-    int_arg_pair isUnary(std::vector<Node>& newprog, const std::vector<int>& producer_of,
-                         int t_inp, bool check_used_once) const
-    {
-        int op_idx;
-        const Node* node;
-        if (t_inp < 0) return std::make_pair(-1, Arg());
-        op_idx = producer_of.at(t_inp);
-        node = getNode(newprog, op_idx);
-        if (!node || (*node)->ninputs() != 1 || !getOp<_OpType>(node) ||
-            (check_used_once && usecounts.at((*node)->inputs(0).idx) != 1))
-            return std::make_pair(-1, Arg());
-        return std::make_pair(op_idx, (*node)->inputs(0));
-    }*/
 
     bool fuseGraph(Ptr<Graph>& graph)
     {
@@ -95,6 +65,7 @@ struct ModelFusionBasic
             for(;;) {
                 BatchNorm2Layer* bn = dynamic_cast<BatchNorm2Layer*>(layer_ptr);
                 ActivationLayer* activ = dynamic_cast<ActivationLayer*>(layer_ptr);
+                NaryEltwiseLayer* elemwise = dynamic_cast<NaryEltwiseLayer*>(layer_ptr);
 
                 // merge convolution and batch norm
                 if (bn && ninputs == 1 &&
@@ -113,40 +84,36 @@ struct ModelFusionBasic
                 }
 
                 // merge residual 'add' into 'conv' node
-                /*if (elemwise && elemwise->opcode == ELWISE_ADD && ninputs == 2) {
-                    ArgData& adata0 = netimpl->args[inputs[0].idx];
-                    ArgData& adata1 = netimpl->args[inputs[1].idx];
+                if (elemwise && (elemwise->op == NaryEltwiseLayer::OPERATION::ADD ||
+                    elemwise->op == NaryEltwiseLayer::OPERATION::SUM) &&
+                    ninputs == 2) {
 
-                    if (adata0.type == adata1.type && adata0.shape == adata1.shape) {
-                        int op0 = producer_of.at(inputs[0].idx);
-                        int op1 = producer_of.at(inputs[1].idx);
-                        int conv_node_idx;
+                    int op0 = producer_of.at(inputs[0].idx);
+                    int op1 = producer_of.at(inputs[1].idx);
+                    
+                    if (op0 >= 0 && op1 >= 0) {
+                        int conv_layer_idx;
                         Arg residual, conv_out;
-
+                        
                         if (op0 > op1) { // choose the latter op to ensure that the other component is already computed
-                            conv_node_idx = op0;
+                            conv_layer_idx = op0;
                             conv_out = inputs[0];
                             residual = inputs[1];
                         } else {
-                            conv_node_idx = op1;
+                            conv_layer_idx = op1;
                             conv_out = inputs[1];
                             residual = inputs[0];
                         }
-
-                        Node* conv_node = getNode(newprog, conv_node_idx);
-                        ConvOp* conv_op = getOp<ConvOp>(conv_node);
-                        if (conv_op && !conv_op->activ && !conv_op->add_residual && usecounts[conv_out.idx] == 1) {
-                            conv_op->add_residual = true;
-                            fused_node_idx = conv_node_idx;
-                            fused_op = (*conv_node)->op();
-                            const std::vector<Arg>& conv_inputs = (*conv_node)->inputs();
-                            fused_inputs.assign(conv_inputs.begin(), conv_inputs.end());
-                            fused_inputs.push_back(residual);
+                        
+                        Conv2Layer* conv = getLayer<Conv2Layer>(newprog, conv_layer_idx);
+                        if (conv && usecounts[conv_out.idx] == 1 &&
+                            conv->fuseAddResidual(residual)) {
+                            fused_layer_idx = conv_layer_idx;
                             removed_args.push_back(conv_out);
                             break;
                         }
                     }
-                }*/
+                }
 
                 // merge convolution and activation
                 if (activ && ninputs == 1 &&

@@ -374,13 +374,12 @@ CV__DNN_INLINE_NS_BEGIN
         virtual bool fuseAddBias(InputArray bias) = 0;
         virtual bool fuseBatchNorm(const Ptr<Layer>& bn) = 0;
         virtual bool fuseActivation(const Ptr<Layer>& activ) = 0;
-        //virtual bool fuseAddResidual(const Ptr<Layer>& addres) = 0;
+        virtual bool fuseAddResidual(Arg residual) = 0;
 
         std::vector<int> strides, dilations, pads;
         int ngroups;
         AutoPadding auto_pad;
         bool ceil_mode;
-        bool add_residual;
     };
 
     class CV_EXPORTS LRNLayer : public Layer
@@ -1207,6 +1206,32 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS NaryEltwiseLayer : public Layer
     {
     public:
+        enum class OPERATION
+        {
+            AND = 0,
+            EQUAL,
+            GREATER,
+            GREATER_EQUAL,
+            LESS,
+            LESS_EQUAL,
+            OR,
+            POW,
+            XOR,
+            BITSHIFT,
+            MAX,
+            MEAN,
+            MIN,
+            MOD,  // Integer Mod. Reminder's sign = Divisor's sign.
+            FMOD, // Floating-point Mod. Reminder's sign = Dividend's sign.
+            PROD,
+            SUB,
+            SUM,
+            ADD,
+            DIV,
+            WHERE,
+        };
+        OPERATION op;
+        
         static Ptr<NaryEltwiseLayer> create(const LayerParams &params);
     };
 

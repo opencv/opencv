@@ -171,39 +171,11 @@ class NaryEltwiseLayerImpl CV_FINAL : public NaryEltwiseLayer
 {
     NaryEltwiseHelper helper;
 public:
-    enum class OPERATION
-    {
-        AND = 0,
-        EQUAL,
-        GREATER,
-        GREATER_EQUAL,
-        LESS,
-        LESS_EQUAL,
-        OR,
-        POW,
-        XOR,
-        BITSHIFT,
-        MAX,
-        MEAN,
-        MIN,
-        MOD,  // Integer Mod. Reminder's sign = Divisor's sign.
-        FMOD, // Floating-point Mod. Reminder's sign = Dividend's sign.
-        PROD,
-        SUB,
-        SUM,
-        ADD,
-        DIV,
-        WHERE,
-        BITWISE_AND,
-        BITWISE_OR,
-        BITWISE_XOR,
-    } op;
     std::string operation;
 
     NaryEltwiseLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
-
         operation = toLowerCase(params.get<String>("operation", "sum"));
 
         if (operation == "equal")
