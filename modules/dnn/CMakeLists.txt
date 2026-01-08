@@ -234,6 +234,20 @@ ocv_list_filterout_ex(dnn_plugin_srcs
     "/src/(cuda|cuda4dnn|ocl4dnn|vkcom|webnn)/"
 )
 
+if(HAVE_CUDA)
+  list(APPEND dnn_srcs "${CMAKE_CURRENT_LIST_DIR}/src/cuda/conv_cudnn.cu")
+  list(APPEND dnn_srcs "${CMAKE_CURRENT_LIST_DIR}/src/cuda/activation_cudnn.cu")
+  list(APPEND dnn_srcs "${CMAKE_CURRENT_LIST_DIR}/src/cuda/binary_ops_cudnn.cu")
+  list(APPEND dnn_srcs "${CMAKE_CURRENT_LIST_DIR}/src/cuda/pooling_cudnn.cu")
+  list(APPEND dnn_srcs "${CMAKE_CURRENT_LIST_DIR}/src/cuda/matmul_cudnn.cu")
+  list(APPEND dnn_int_hdrs "${CMAKE_CURRENT_LIST_DIR}/src/cuda/layer_cudnn.hpp")
+  set_source_files_properties("${CMAKE_CURRENT_LIST_DIR}/src/cuda/conv_cudnn.cu" PROPERTIES LANGUAGE CUDA)
+  set_source_files_properties("${CMAKE_CURRENT_LIST_DIR}/src/cuda/activation_cudnn.cu" PROPERTIES LANGUAGE CUDA)
+  set_source_files_properties("${CMAKE_CURRENT_LIST_DIR}/src/cuda/binary_ops_cudnn.cu" PROPERTIES LANGUAGE CUDA)
+  set_source_files_properties("${CMAKE_CURRENT_LIST_DIR}/src/cuda/pooling_cudnn.cu" PROPERTIES LANGUAGE CUDA)
+  set_source_files_properties("${CMAKE_CURRENT_LIST_DIR}/src/cuda/matmul_cudnn.cu" PROPERTIES LANGUAGE CUDA)
+endif()
+
 ocv_option(OPENCV_DNN_OPENVINO "Build with OpenVINO support (2021.4+)" (TARGET ocv.3rdparty.openvino))
 if(TARGET ocv.3rdparty.openvino AND OPENCV_DNN_OPENVINO)
   if(NOT HAVE_OPENVINO AND NOT HAVE_NGRAPH)

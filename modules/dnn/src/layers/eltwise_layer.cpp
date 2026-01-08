@@ -46,6 +46,7 @@
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_cann.hpp"
+#include "../net_impl.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -177,6 +178,12 @@ public:
 
         if (backendId == DNN_BACKEND_CUDA)
         {
+            EngineType engine_forced = getForcedDnnEngine();
+            if (engine_forced != ENGINE_CLASSIC){
+                Net::Impl* ni = getNetImpl(this);
+                if (ni && (ni->modelFormat == DNN_MODEL_TF || ni->modelFormat == DNN_MODEL_CAFFE))
+                    return false;
+            }
             if(channelsModeInput == ELTWISE_CHANNNELS_INPUT_0 || channelsModeInput == ELTWISE_CHANNNELS_INPUT_0_TRUNCATE)
                 return op == SUM && coeffs.empty();
             return channelsModeInput == ELTWISE_CHANNNELS_SAME;

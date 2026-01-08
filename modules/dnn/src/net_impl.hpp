@@ -26,6 +26,10 @@
 #include "legacy_backend.hpp"  // wrapMat BlobManager OpenCLBackendWrapper
 
 #include <unordered_map>
+#ifdef HAVE_CUDA
+#include <opencv2/core/cuda.hpp>
+#include <cudnn.h>
+#endif
 
 namespace cv {
 namespace dnn {
@@ -100,12 +104,62 @@ struct Net::Impl : public detail::NetImplBase
     std::ostream* dump_strm;
     int dump_indent;
 
+#ifdef HAVE_CUDA
+    std::vector<cv::cuda::GpuMatND> gpuTensorsND;
+    std::vector<cv::cuda::GpuMatND> gpuBuffersND;
+    std::vector<cv::cuda::GpuMatND> layerTempGpuND;
+
+    std::vector<cudnnTensorDescriptor_t> cudnnTensors;
+
+    cudnnFilterDescriptor_t      cudnnFilterDesc = nullptr;
+    cudnnConvolutionDescriptor_t cudnnConvDesc   = nullptr;
+    cudnnActivationDescriptor_t  cudnnActDesc    = nullptr;
+    cudnnOpTensorDescriptor_t    cudnnOpDesc     = nullptr;
+    cudnnPoolingDescriptor_t     cudnnPoolDesc   = nullptr;
+#endif
+
     virtual bool empty() const;
     virtual void setPreferableBackend(Net& net, int backendId);
     virtual void setPreferableTarget(int targetId);
 
     // FIXIT use inheritance
     virtual Ptr<BackendWrapper> wrap(Mat& host);
+
+#ifdef HAVE_CUDA
+    cudnnTensorDescriptor_t argTensorCuDNN(Arg a,
+                                           const MatShape& shape,
+                                           cudnnDataType_t dtype);
+
+    bool ensureCudaReady();
+
+    cudnnTensorDescriptor_t tensorDesc(Arg arg,
+                                       const MatShape& shape,
+                                       cudnnDataType_t dtype);
+
+    cudnnTensorDescriptor_t tensorDesc2D(Arg arg,
+                                         int rows, int cols, int row_stride,
+                                         cudnnDataType_t dtype);
+
+    cudnnFilterDescriptor_t filterDescCuDNN(cudnnDataType_t dtype,
+                                            cudnnTensorFormat_t layout,
+                                            int outC, int inC, int kH, int kW);
+    cudnnConvolutionDescriptor_t convDescCuDNN(const std::vector<size_t>& pads_begin,
+                                               const std::vector<size_t>& strides,
+                                               const std::vector<size_t>& dilations,
+                                               int groups, cudnnDataType_t computeType);
+    cudnnActivationDescriptor_t activationDescCuDNN(cudnnActivationMode_t mode,
+                                                    cudnnNanPropagation_t nanOpt,
+                                                    double coef);
+    cudnnOpTensorDescriptor_t opTensorDescCuDNN(cudnnOpTensorOp_t op,
+                                                cudnnDataType_t dtype,
+                                                cudnnNanPropagation_t nanOpt);
+    cudnnPoolingDescriptor_t poolingDescCuDNN(cudnnPoolingMode_t mode,
+                                              cudnnNanPropagation_t nanOpt,
+                                              const std::vector<size_t>& kernel_size,
+                                              const std::vector<size_t>& pads_begin,
+                                              const std::vector<size_t>& strides);
+#endif
+    void ensureBufferWrapper(int bufidx);
 
 
     virtual void clear();
@@ -126,7 +180,11 @@ struct Net::Impl : public detail::NetImplBase
         CV_TRACE_ARG_VALUE(type, "type", ld.type.c_str());
 
         if (ld.layerInstance)
+        {
+            if (!ld.layerInstance->netimpl)
+                ld.layerInstance->netimpl = const_cast<Net::Impl*>(this);
             return ld.layerInstance;
+        }
 
         ld.layerInstance = createLayerInstance(ld);
         if (!ld.layerInstance && basePtr_)
@@ -138,6 +196,9 @@ struct Net::Impl : public detail::NetImplBase
         {
             CV_Error(Error::StsError, "Can't create layer \"" + ld.name + "\" of type \"" + ld.type + "\"");
         }
+
+        if (!ld.layerInstance->netimpl)
+            ld.layerInstance->netimpl = const_cast<Net::Impl*>(this);
 
         return ld.layerInstance;
     }
@@ -214,6 +275,17 @@ struct Net::Impl : public detail::NetImplBase
     void tvUpdateConfictMap(int graphIndex, LayerData& ld, std::vector<std::vector<int> >& graphConflictMap);
     void tvConvertToOutputNode(const LayerData& ld, Ptr<TimVXBackendWrapper>& targetWrap);
     void initTimVXBackend();
+#endif
+
+#ifdef HAVE_CUDA
+    void allocateLayerGpuOutputs(
+            const Ptr<Layer>& layer,
+            const std::vector<int>& inpTypes,
+            const std::vector<MatShape>& inpShapes,
+            std::vector<int>& outTypes,
+            std::vector<MatShape>& outShapes,
+            std::vector<int>& tempTypes,
+            std::vector<MatShape>& tempShapes);
 #endif
 
 #ifdef HAVE_CUDA

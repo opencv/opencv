@@ -30,26 +30,25 @@ GpuData::~GpuData()
 /////////////////////////////////////////////////////
 /// create
 
-void GpuMatND::create(SizeArray _size, int _type)
+void GpuMatND::create(const MatShape& _shape, int _type)
 {
     {
-        auto elements_nonzero = [](SizeArray& v)
+        auto elements_nonzero = [](const MatShape& v)
         {
-            return std::all_of(v.begin(), v.end(),
-                [](unsigned u){ return u > 0; });
+            return std::all_of(v.begin(), v.end(), [](int u){ return u > 0; });
         };
-        CV_Assert(!_size.empty());
-        CV_Assert(elements_nonzero(_size));
+        CV_Assert(!_shape.empty());
+        CV_Assert(elements_nonzero(_shape));
     }
 
     _type &= Mat::TYPE_MASK;
 
-    if (size == _size && type() == _type && !empty() && !external() && isContinuous() && !isSubmatrix())
+    if (size == _shape && type() == _type && !empty() && !external() && isContinuous() && !isSubmatrix())
         return;
 
     release();
 
-    setFields(std::move(_size), _type);
+    setFields(_shape, _type);
 
     data_ = std::make_shared<GpuData>(totalMemSize());
     data = data_->data;
@@ -206,10 +205,9 @@ void GpuMatND::upload(InputArray src)
     if (!mat.isContinuous())
         mat = mat.clone();
 
-    SizeArray _size(mat.dims);
-    std::copy_n(mat.size.p, mat.dims, _size.data());
+    MatShape _shape(mat.size.p, mat.size.p + mat.dims);
 
-    create(std::move(_size), mat.type());
+    create(_shape, mat.type());
 
     CV_CUDEV_SAFE_CALL(cudaMemcpy(getDevicePtr(), mat.data, totalMemSize(), cudaMemcpyHostToDevice));
 }
@@ -223,10 +221,9 @@ void GpuMatND::upload(InputArray src, Stream& stream)
     if (!mat.isContinuous())
         mat = mat.clone();
 
-    SizeArray _size(mat.dims);
-    std::copy_n(mat.size.p, mat.dims, _size.data());
+    MatShape _shape(mat.size.p, mat.size.p + mat.dims);
 
-    create(std::move(_size), mat.type());
+    create(_shape, mat.type());
 
     cudaStream_t _stream = StreamAccessor::getStream(stream);
     CV_CUDEV_SAFE_CALL(cudaMemcpyAsync(getDevicePtr(), mat.data, totalMemSize(), cudaMemcpyHostToDevice, _stream));
@@ -264,6 +261,37 @@ void GpuMatND::download(OutputArray dst, Stream& stream) const
 
     cudaStream_t _stream = StreamAccessor::getStream(stream);
     CV_CUDEV_SAFE_CALL(cudaMemcpyAsync(mat.data, gmat.getDevicePtr(), mat.total() * mat.elemSize(), cudaMemcpyDeviceToHost, _stream));
+}
+
+void GpuMatND::fit(const MatShape& _shape, int _type)
+{
+    {
+        auto elements_nonzero = [](const MatShape& v)
+        {
+            return std::all_of(v.begin(), v.end(), [](int u){ return u > 0; });
+        };
+        CV_Assert(!_shape.empty());
+        CV_Assert(elements_nonzero(_shape));
+    }
+
+    _type &= Mat::TYPE_MASK;
+
+    const size_t esz = (size_t)CV_ELEM_SIZE(_type);
+    size_t step0 = esz;
+    for (int i = (int)_shape.size() - 2; i >= 0; --i)
+        step0 *= (size_t)_shape[(size_t)i + 1];
+    const size_t requiredBytes = (size_t)_shape[0] * step0;
+
+    const bool canReuse = !empty() && !external() && isContinuous() && !isSubmatrix() && offset == 0;
+    const size_t oldCapacity = canReuse ? totalMemSize() : 0;
+
+    if (!canReuse || requiredBytes > oldCapacity)
+    {
+        create(_shape, _type);
+        return;
+    }
+
+    setFields(_shape, _type);
 }
 
 #endif

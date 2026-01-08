@@ -131,6 +131,13 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+        if (backendId == DNN_BACKEND_CUDA)
+        {
+            EngineType engine_forced = getForcedDnnEngine();
+            if (engine_forced != ENGINE_CLASSIC)
+                return false;
+            return true;
+        }
 #ifdef HAVE_TIMVX
         if (backendId == DNN_BACKEND_TIMVX && haveTimVX() && !padding)
         {
@@ -151,7 +158,6 @@ public:
             return true;
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_WEBNN && !padding) ||
                (backendId == DNN_BACKEND_CANN && !padding);
     }

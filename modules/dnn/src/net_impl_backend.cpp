@@ -109,6 +109,49 @@ Ptr<BackendWrapper> Net::Impl::wrap(Mat& host)
     return wrapper;
 }
 
+void Net::Impl::ensureBufferWrapper(int bufidx)
+{
+#ifdef HAVE_CUDA
+    if (bufidx < 0)
+        return;
+    if (gpuBuffersND.size() <= (size_t)bufidx)
+        gpuBuffersND.resize((size_t)bufidx + 1);
+    // If this TEMP buffer already has a valid GPU tensor produced by a previous GPU layer,
+    // don't override it by uploading the stale/placeholder host Mat (which can be 1x1).
+    if (!gpuBuffersND[(size_t)bufidx].empty())
+        return;
+    Mat& host = buffers.at((size_t)bufidx);
+    try
+    {
+        cv::cuda::GpuMatND& nd = gpuBuffersND[(size_t)bufidx];
+
+        if (!host.empty())
+        {
+            nd.upload(host);
+
+            MatShape shp = host.shape();
+            size_t totalElems = nd.total();
+            int rows = shp.dims > 0 ? shp[0] : 1;
+            if (rows <= 0) rows = 1;
+            size_t cols_sz = rows > 0 ? (totalElems / (size_t)rows) : totalElems;
+            int cols = (int)cols_sz;
+            if (cols <= 0) cols = 1;
+            size_t esz = (size_t)CV_ELEM_SIZE(nd.type());
+            size_t step_bytes = (size_t)cols * esz;
+
+            CV_UNUSED(step_bytes); // layout information for potential future use
+        }
+        CV_LOG_INFO(NULL, "DNN/CUDA: uploaded TEMP buffer " << bufidx << " to GPU (" << cv::typeToString(host.type()) << ") on device " << cv::cuda::getDevice());
+    }
+    catch (const cv::Exception& e)
+    {
+        CV_LOG_WARNING(NULL, "DNN/CUDA: failed to allocate/upload GpuMatND for TEMP buffer " << bufidx << ": " << e.what() << ". Falling back to CPU Mat.");
+        gpuBuffersND[(size_t)bufidx].release();
+    }
+#else
+    (void)bufidx;
+#endif
+}
 
 void Net::Impl::initBackend(const std::vector<LayerPin>& blobsToKeep_)
 {

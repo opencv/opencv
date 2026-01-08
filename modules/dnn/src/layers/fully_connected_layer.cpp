@@ -48,6 +48,7 @@
 #include "../op_webnn.hpp"
 #include "../op_cann.hpp"
 #include "../op_vkcom.hpp"
+#include "../net_impl.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -59,6 +60,9 @@ using namespace cv::dnn::ocl4dnn;
 #ifdef HAVE_CUDA
 #include "../cuda4dnn/primitives/matmul.hpp"
 #include "../cuda4dnn/primitives/inner_product.hpp"
+#include "../cuda/layer_cudnn.hpp"
+#include <opencv2/core/cuda.hpp>
+#include <cudnn.h>
 using namespace cv::dnn::cuda4dnn;
 #endif
 
@@ -179,6 +183,12 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+        if (backendId == DNN_BACKEND_CUDA)
+        {
+            EngineType engine_forced = getForcedDnnEngine();
+            if (engine_forced != ENGINE_CLASSIC)
+                return false;
+        }
         bool tranAorB = transA || transB;
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
@@ -547,6 +557,70 @@ public:
 
                 for (size_t i = 0; i < input.size(); i++)
                 {
+#if defined(HAVE_CUDA)
+                    EngineType engine_forced = getForcedDnnEngine();
+                    if (engine_forced != ENGINE_CLASSIC &&
+                        outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT_ND)
+                    {
+                        MatShape outShapeNet = outputs_arr.shape((int)i);
+                        CV_Assert(outShapeNet.size() >= 2);
+                        int N = outShapeNet[0];
+                        int M = outShapeNet[1];
+
+                        Net::Impl* netimpl = getNetImpl(this);
+                        CV_Assert(netimpl && "DNN/CUDA: missing Net::Impl");
+                        netimpl->ensureCudaReady();
+                        CV_Assert(netimpl->cudaInfo);
+                        cublasHandle_t blasHandle = netimpl->cudaInfo->context.cublas_handle.get();
+                        cudnnHandle_t cudnnHandle = netimpl->cudaInfo->context.cudnn_handle.get();
+
+                        MatShape yShape({N, M});
+                        Arg yArg = this->outputs.empty() ? Arg() : this->outputs[0];
+                        cudnnTensorDescriptor_t yDesc = netimpl->argTensorCuDNN(
+                            yArg, yShape, CUDNN_DATA_FLOAT);
+
+                        cv::cuda::GpuMat weightsGpuMat, biasGpuMat;
+                        weightsGpuMat.upload(weightsMat);
+                        if (bias && !biasMat.empty())
+                            biasGpuMat.upload(biasMat);
+
+                        cudnnTensorDescriptor_t bDesc = nullptr;
+                        if (!biasGpuMat.empty())
+                        {
+                            Arg bArg = netimpl->getArg(this->name + ":bias");
+                            MatShape bShape({1, M});
+                            bDesc = netimpl->argTensorCuDNN(
+                                bArg, bShape, CUDNN_DATA_FLOAT);
+                        }
+
+                        // Pure GpuMatND IO: inputs and outputs are vectors of GpuMatND.
+                        std::vector<cv::cuda::GpuMatND> gin_nd;
+                        inputs_arr.getGpuMatNDVector(gin_nd);
+                        std::vector<cv::cuda::GpuMatND>& gout_nd = outputs_arr.getGpuMatNDVecRef();
+                        CV_Assert(gin_nd.size() == gout_nd.size());
+                        cv::cuda::GpuMatND& src_nd = gin_nd[i];
+                        cv::cuda::GpuMatND& dst_nd = gout_nd[i];
+
+                        CV_Assert(!src_nd.empty());
+
+                        // Create lightweight 2D headers over the same underlying storage.
+                        cv::cuda::GpuMat src = src_nd.createGpuMatHeader();
+                        cv::cuda::GpuMat dst = dst_nd.createGpuMatHeader();
+                        CV_Assert(src.type() == CV_32F && dst.type() == CV_32F);
+
+                        cv::dnn::cuda::matMul(
+                            blasHandle,
+                            cudnnHandle,
+                            yDesc,
+                            bDesc,
+                            src,
+                            weightsGpuMat,
+                            dst,
+                            biasGpuMat);
+
+                        return;
+                    }
+#endif
                     Mat srcMat = input[i].reshape(1, outerSize);
                     Mat dstMat = output[i].reshape(1, outerSize);
 

@@ -72,6 +72,10 @@ using namespace cv::dnn::ocl4dnn;
 #include "../cuda4dnn/primitives/roi_pooling.hpp"
 #include "../cuda4dnn/primitives/max_unpooling.hpp"
 using namespace cv::dnn::cuda4dnn;
+#include <opencv2/core/cuda.hpp>
+#include "../cuda/layer_cudnn.hpp"
+#include "../net_impl.hpp"
+#include <cudnn.h>
 #endif
 #include <opencv2/core/utils/logger.hpp>
 
@@ -135,7 +139,6 @@ public:
         spatialScale = params.get<float>("spatial_scale", 1);
         avePoolPaddedArea = params.get<bool>("ave_pool_padded_area", true);
     }
-
 #ifdef HAVE_OPENCL
     Ptr<OCL4DNNPool<float> > poolOp;
 #endif
@@ -184,6 +187,9 @@ public:
     {
         if (backendId == DNN_BACKEND_CUDA)
         {
+            EngineType engine_forced = getForcedDnnEngine();
+            if (engine_forced != ENGINE_CLASSIC)
+                return false;
             return type == MAX || type == AVE || type == ROI;
         }
 #ifdef HAVE_CANN
@@ -333,6 +339,61 @@ public:
             CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                        forward_ocl(inputs_arr, outputs_arr, internals_arr))
         }
+#ifdef HAVE_CUDA
+        if ((type == MAX || type == AVE) &&
+            outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT_ND &&
+            inputs_arr.kind()  == _InputArray::STD_VECTOR_CUDA_GPU_MAT_ND)
+        {
+            Net::Impl* netimpl = getNetImpl(this);
+            CV_Assert(netimpl && "DNN/CUDA: missing Net::Impl");
+
+            Arg xArg = this->inputs.empty() ? Arg() : this->inputs[0];
+            const ArgData& xAd = netimpl->argData(xArg);
+            MatShape xShape = xAd.shape;
+            bool is2D = xShape.size() == 4 && kernel_size.size() == 2 && strides.size() == 2;
+
+            if (ceilMode || globalPooling || computeMaxIdx || !is2D)
+            {
+                CV_Error(Error::StsNotImplemented, "DNN/CUDA: pooling config not supported by cuDNN helper");
+            }
+
+            std::vector<cv::cuda::GpuMatND> gin_nd;
+            inputs_arr.getGpuMatNDVector(gin_nd);
+            std::vector<cv::cuda::GpuMatND>& gout_nd = outputs_arr.getGpuMatNDVecRef();
+            CV_Assert(!gin_nd.empty() && gin_nd.size() == 1);
+            CV_Assert(gout_nd.size() == 1);
+
+            cv::cuda::GpuMatND& gin0_nd = gin_nd[0];
+            cv::cuda::GpuMatND& dst_nd  = gout_nd[0];
+            CV_Assert(!gin0_nd.empty());
+
+            netimpl->ensureCudaReady();
+            CV_Assert(netimpl->cudaInfo);
+            cudnnHandle_t cudnnHandle = netimpl->cudaInfo->context.cudnn_handle.get();
+
+            Arg yArg = this->outputs.empty() ? Arg() : this->outputs[0];
+            const ArgData& yAd = netimpl->argData(yArg);
+            MatShape yShape = yAd.shape;
+            CV_Assert(xShape.size() == 4 && yShape.size() == 4);
+
+            cudnnTensorDescriptor_t xDesc = netimpl->tensorDesc(
+                xArg, xShape, CUDNN_DATA_FLOAT);
+            cudnnTensorDescriptor_t yDesc = netimpl->tensorDesc(
+                yArg, yShape, CUDNN_DATA_FLOAT);
+
+            cudnnPoolingMode_t mode = (type == MAX) ? CUDNN_POOLING_MAX : CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
+            cudnnPoolingDescriptor_t cudnnPoolDesc = netimpl->poolingDescCuDNN(
+                mode, CUDNN_PROPAGATE_NAN,
+                kernel_size, pads_begin, strides);
+
+            cv::dnn::cuda::pool(
+                cudnnHandle,
+                xDesc, yDesc, cudnnPoolDesc,
+                (const void*)gin0_nd.getDevicePtr(),
+                (void*)dst_nd.getDevicePtr());
+            return;
+        }
+#endif
         if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
