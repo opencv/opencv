@@ -166,12 +166,17 @@ __kernel void remap_2_32FC1(__global const uchar * srcptr, int src_step, int src
                 __global const float * map2 = (__global const float *)(map2ptr + map2_index);
                 __global T * dst = (__global T *)(dstptr + dst_index);
 
-                int gx = convert_int_sat_rte(map1[0]);
-                int gy = convert_int_sat_rte(map2[0]);
+                // Use explicit rounding for better cross-platform consistency
+                // Particularly important for Mali GPUs
+                float fx = map1[0];
+                float fy = map2[0];
                 #if WARP_RELATIVE
-                gx += x;
-                gy += y;
+                fx += x;
+                fy += y;
                 #endif
+                
+                int gx = (int)(fx + (fx >= 0 ? 0.5f : -0.5f));
+                int gy = (int)(fy + (fy >= 0 ? 0.5f : -0.5f));
 
                 if (NEED_EXTRAPOLATION(gx, gy))
                 {
@@ -213,13 +218,16 @@ __kernel void remap_32FC2(__global const uchar * srcptr, int src_step, int src_o
                 __global const float2 * map = (__global const float2 *)(mapptr + map_index);
                 __global T * dst = (__global T *)(dstptr + dst_index);
 
-                int2 gxy = convert_int2_sat_rte(map[0]);
+                // Use explicit rounding for better cross-platform consistency
+                float2 mapval = map[0];
                 #if WARP_RELATIVE
-                gxy.x += x;
-                gxy.y += y;
+                mapval.x += x;
+                mapval.y += y;
                 #endif
-
-                int gx = gxy.x, gy = gxy.y;
+                
+                int gx = (int)(mapval.x + (mapval.x >= 0 ? 0.5f : -0.5f));
+                int gy = (int)(mapval.y + (mapval.y >= 0 ? 0.5f : -0.5f));
+                int2 gxy = (int2)(gx, gy);
 
                 if (NEED_EXTRAPOLATION(gx, gy))
                 {
