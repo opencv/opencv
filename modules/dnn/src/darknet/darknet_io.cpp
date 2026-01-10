@@ -1008,7 +1008,6 @@ namespace cv {
 
                     if (layer_type == "convolutional" || layer_type == "connected")
                     {
-                        size_t weights_size;
                         int filters;
                         bool use_batch_normalize;
                         cv::Mat weightsBlob;
@@ -1023,7 +1022,6 @@ namespace cv {
                             CV_Assert(tensor_shape[0] > 0);
                             CV_Assert(tensor_shape[0] % groups == 0);
 
-                            weights_size = filters * (tensor_shape[0] / groups) * kernel_size * kernel_size;
                             int sizes_weights[] = { filters, tensor_shape[0] / groups, kernel_size, kernel_size };
                             weightsBlob.create(4, sizes_weights, CV_32F);
                         }
@@ -1034,7 +1032,6 @@ namespace cv {
 
                             CV_Assert(filters>0);
 
-                            weights_size = total(tensor_shape) * filters;
                             int sizes_weights[] = { filters, total(tensor_shape) };
                             weightsBlob.create(2, sizes_weights, CV_32F);
                         }
@@ -1051,7 +1048,7 @@ namespace cv {
                             ifile.read(reinterpret_cast<char *>(meanData_mat.ptr<float>()), sizeof(float)*filters);
                             ifile.read(reinterpret_cast<char *>(stdData_mat.ptr<float>()), sizeof(float)*filters);
                         }
-                        ifile.read(reinterpret_cast<char *>(weightsBlob.ptr<float>()), sizeof(float)*weights_size);
+                        ifile.read(reinterpret_cast<char *>(weightsBlob.ptr<float>()), sizeof(float)*weightsBlob.total());
 
                         // set conv/connected weights
                         std::vector<cv::Mat> layer_blobs;
