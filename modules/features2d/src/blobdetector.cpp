@@ -475,7 +475,7 @@ void SimpleBlobDetectorImpl::detect(InputArray image, std::vector<cv::KeyPoint>&
         double avgArea = sumArea / normalizer;
 
         KeyPoint kpt(sumPoint, (float)(centers[i][centers[i].size() / 2].radius) * 2.0f);
-        
+
         kpt.response = (float)avgArea;
 
         keypoints.push_back(kpt);
