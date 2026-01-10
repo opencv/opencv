@@ -43,4 +43,42 @@ TEST(Features2d_BlobDetector, withContours)
                                 return abs(p.x - 30) < 2 && abs(p.y - 50) < 2;
                             }));
 }
+TEST(Features2d_BlobDetector, AreaInResponse)
+{
+    // 1. Create a black image with a white circle
+    cv::Mat image = cv::Mat::zeros(200, 200, CV_8UC1);
+    cv::Point center(100, 100);
+    int radius = 30;
+    cv::circle(image, center, radius, cv::Scalar(255), -1);
+
+    // 2. Setup Detector
+    SimpleBlobDetector::Params params;
+
+    params.filterByColor = true;
+    params.blobColor = 255;  // Look for WHITE blobs
+
+    params.filterByArea = true;
+    params.minArea = 100;
+    params.maxArea = 5000;
+
+    // Disable other filters to be safe (optional but recommended for unit tests)
+    params.filterByCircularity = false;
+    params.filterByInertia = false;
+    params.filterByConvexity = false;
+
+    cv::Ptr<SimpleBlobDetector> detector = SimpleBlobDetector::create(params);
+
+    // 3. Detect
+    std::vector<cv::KeyPoint> keypoints;
+    detector->detect(image, keypoints);
+
+    // 4. Validate
+    ASSERT_EQ(keypoints.size(), 1u);
+
+    // Expected area is Pi * r^2
+    double expectedArea = CV_PI * radius * radius;
+    double detectedArea = (double)keypoints[0].response;
+
+    EXPECT_NEAR(detectedArea, expectedArea, 100.0);
+}
 }} // namespace
