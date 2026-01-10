@@ -47,11 +47,11 @@ public class SIMPLEBLOBFeatureDetectorTest extends OpenCVTestCase {
         detector = SimpleBlobDetector.create();
         matSize = 200;
         truth = new KeyPoint[] {
-                new KeyPoint(140, 100, 41.036568f, -1, 0, 0, -1),
-                new KeyPoint(60, 100, 48.538486f, -1, 0, 0, -1),
-                new KeyPoint(100, 60, 36.769554f, -1, 0, 0, -1),
-                new KeyPoint(100, 140, 28.635643f, -1, 0, 0, -1),
-                new KeyPoint(100, 100, 20.880613f, -1, 0, 0, -1)
+                new KeyPoint(140, 100, 41.036568f, -1, 1314.0f, 0, -1), 
+                new KeyPoint(60, 100, 48.538486f, -1, 1860.0f, 0, -1),
+                new KeyPoint(100, 60, 36.769554f, -1, 1063.0f, 0, -1),
+                new KeyPoint(100, 140, 28.635643f, -1, 648.0f, 0, -1),
+                new KeyPoint(100, 100, 20.880613f, -1, 343.0f, 0, -1)
             };
     }
 
