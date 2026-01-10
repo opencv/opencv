@@ -51,7 +51,7 @@ public class SIMPLEBLOBFeatureDetectorTest extends OpenCVTestCase {
                 new KeyPoint(60, 100, 48.538486f, -1, 1860.0f, 0, -1),
                 new KeyPoint(100, 60, 36.769554f, -1, 1060.0f, 0, -1),
                 new KeyPoint(100, 140, 28.635643f, -1, 652.0f, 0, -1),
-                new KeyPoint(100, 100, 20.880613f, -1, 343.0f, 0, -1)
+                new KeyPoint(100, 100, 20.880613f, -1, 346.0f, 0, -1)
             };
     }
 

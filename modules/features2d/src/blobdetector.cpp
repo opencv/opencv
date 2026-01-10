@@ -314,7 +314,6 @@ void SimpleBlobDetectorImpl::findBlobs(InputArray _image, InputArray _binaryImag
         {
             std::vector < Point > hull;
             convexHull(contours[contourIdx], hull);
-            double area = moms.m00;
             double hullArea = contourArea(hull);
             if (fabs(hullArea) < DBL_EPSILON)
                 continue;
