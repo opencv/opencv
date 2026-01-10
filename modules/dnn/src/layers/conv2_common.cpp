@@ -11,9 +11,22 @@
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
+std::string fastActivationToString(FastActivation fastActivation)
+{
+    return fastActivation == FAST_ACTIV_RELU ? "ReLU" :
+           fastActivation == FAST_ACTIV_LEAKY_RELU ? "LeakyReLU" :
+           fastActivation == FAST_ACTIV_CLIP ? "Clip" :
+           fastActivation == FAST_ACTIV_NONE ? "None" : format("unknown(%d)", int(fastActivation));
+}
+
 AutoPadding getAutoPadding(const LayerParams& params)
 {
     std::string auto_pad = params.get<std::string>("auto_pad", "NOTSET");
+    std::string pad_mode = params.get<std::string>("pad_mode", "");
+    if (pad_mode == "SAME")
+        return AUTO_PAD_SAME_UPPER;
+    if (pad_mode == "VALID")
+        return AUTO_PAD_VALID;
     if (auto_pad == "NOTSET")
         return AUTO_PAD_NONE;
     if (auto_pad == "SAME_UPPER")
@@ -153,14 +166,29 @@ void ConvState::initConv(const MatShape& inpshape_,
     CV_Assert(pads_.empty() || (pads_.size() == size_t(nspatialdims*2)));
     CV_Assert(inpshape_.dims == outshape_.dims);
     CV_Assert(nspatialdims == inpshape_.dims - 3);
-    CV_Assert(inpshape_[1] % ngroups_ == 0);
-    CV_Assert(outshape_[1] % ngroups_ == 0);
-    CV_Assert(inpshape_[0] == outshape_[0]);
-    CV_Assert(inpshape_.back() == outshape_.back());
 
     inpshape = inpshape_;
     outshape = outshape_;
     ngroups = ngroups_;
+    
+    int C = inpshape.layout == DATA_LAYOUT_BLOCK ? inpshape.C :
+        inpshape.layout == DATA_LAYOUT_NHWC ? inpshape.back() : inpshape[1];
+    int Cout = outshape.layout == DATA_LAYOUT_BLOCK ? outshape.C :
+        outshape.layout == DATA_LAYOUT_NHWC ? outshape.back() : outshape[1];
+    
+    bool depthwise = ngroups == C && ngroups == Cout;
+
+    CV_Assert(inpshape_[0] == outshape_[0]);
+    if (inpshape.layout == DATA_LAYOUT_BLOCK) {
+        CV_Assert(inpshape.back() == outshape.back());
+    }
+    
+    if (depthwise) {
+        CV_Assert(outshape[1] == inpshape[1]);
+    } else {
+        CV_Assert(inpshape[1] % ngroups == 0);
+        CV_Assert(outshape[1] % ngroups == 0);
+    }
 
     fastActivation = fastActivation_;
     activation = nullptr;
@@ -191,7 +219,7 @@ void ConvState::initConv(const MatShape& inpshape_,
         CV_Assert(dilations[j] > 0);
 
         int pad0, pad1;
-        getPadding(pads_, i, nspatialdims, autoPad, kshape[i], pad0, pad1);
+        getPadding(pads_, i, nspatialdims, autoPad, kshape[j], pad0, pad1);
         CV_Assert_N(pad0 >= 0, pad1 >= 0);
         pads[j] = pad0;
         pads[j + MAX_CONV_DIMS] = pad1;
@@ -206,10 +234,7 @@ void ConvState::initConv(const MatShape& inpshape_,
         inner[j] = inner0;
         inner[j + MAX_CONV_DIMS] = inner1;
     }
-    
-    int C = inpshape.layout == DATA_LAYOUT_BLOCK ? inpshape.C :
-        inpshape.layout == DATA_LAYOUT_NHWC ? inpshape.back() : inpshape[1];
-    bool depthwise = ngroups == C;
+        
     if (depthwise) {
         initOfs();
     }
@@ -439,7 +464,7 @@ void ConvState::initPooling(const MatShape& inpshape_,
         CV_Assert(dilations[j] > 0);
 
         int pad0, pad1;
-        getPadding(pads_, i, nspatialdims, autoPad, kshape[i], pad0, pad1);
+        getPadding(pads_, i, nspatialdims, autoPad, kshape[j], pad0, pad1);
         CV_Assert_N(pad0 >= 0, pad1 >= 0);
         pads[j] = pad0;
         pads[j + MAX_CONV_DIMS] = pad1;

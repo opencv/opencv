@@ -427,7 +427,7 @@ public:
         auto* netimpl_ = getNetImpl(this);
         DataLayout defaultLayout = netimpl_->originalLayout;
         size_t ninputs = actualInputs.size(), nblockInputs = 0;
-        CV_Assert(ninputs > 1u);
+        CV_Assert(ninputs >= 1u);
         for (size_t i = 0; i < ninputs; i++) {
             DataLayout layout = actualInputs[i];
             nblockInputs += layout == DATA_LAYOUT_BLOCK;

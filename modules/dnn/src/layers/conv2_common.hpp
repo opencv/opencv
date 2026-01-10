@@ -30,6 +30,8 @@ enum FastActivation {
     FAST_ACTIV_CLIP
 };
 
+std::string fastActivationToString(FastActivation fastActivation);
+
 typedef void (*activation_func_t)(const void* input, void* output,
                                   size_t len, const float* params);
 

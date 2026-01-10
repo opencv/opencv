@@ -499,8 +499,8 @@ void Net::Impl::prepareForInference()
     if (!prepared) {
         constFold();
         constArgs();        
+        useBlockLayout();
         fuseBasic();
-        useBlockLayout();        
         assignBuffers();
         totalLayers = updateGraphOfs(mainGraph, 0, true);
         prepared = true;
@@ -1142,8 +1142,12 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         Arg out = gr_outputs[i];
         const Mat& outm = argTensor(out);
         if (isMainGraph) {
-            outputsVec[i].fit(outm.shape(), outm.type());
-            outm.copyTo(outputsVec[i]);
+            if (outm.size.layout == DATA_LAYOUT_BLOCK) {
+                transformLayout(outm, outputsVec[i], originalLayout, originalLayout, outm.size.C);
+            } else {
+                outputsVec[i].fit(outm.shape(), outm.type());
+                outm.copyTo(outputsVec[i]);
+            }
         } else {
             outputsVec[i] = outm;
         }

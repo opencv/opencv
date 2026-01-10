@@ -109,7 +109,7 @@ static void maxPool32f(const void* inp_, void* out_, const ConvState& cs)
                         if (nlanes == C0) {
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
-                                const float* inp_xi = inp + ((Hi*zi_ + Wi)*yi_ + xi_)*C0;
+                                const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
                                 
                                 v_float32 s0 = vx_load(inp_xi + ofstab[0]);
                                 for (int k = 1; k < ksize; k++)
@@ -119,7 +119,7 @@ static void maxPool32f(const void* inp_, void* out_, const ConvState& cs)
                         } else if (nlanes*2 == C0) {
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
-                                const float* inp_xi = inp + ((Hi*zi_ + Wi)*yi_ + xi_)*C0;
+                                const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
                                 
                                 int ofs_k = ofstab[0];
                                 v_float32 s0 = vx_load(inp_xi + ofs_k);
@@ -136,7 +136,7 @@ static void maxPool32f(const void* inp_, void* out_, const ConvState& cs)
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
                                 for (int c = 0; c < C0; c += nlanes*4) {
-                                    const float* inp_xi = inp + ((Hi*zi_ + Wi)*yi_ + xi_)*C0;
+                                    const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
                                     
                                     int ofs_k = ofstab[0];
                                     v_float32 s0 = vx_load(inp_xi + ofs_k);
@@ -262,7 +262,7 @@ static void maxPool16xf(const _Tp* inp_, _Tp* out_, const ConvState& cs)
                         if (nlanes == C0) {
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
-                                const _Tp* inp_xi = inp + ((Hi*zi_ + Wi)*yi_ + xi_)*C0;
+                                const _Tp* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
                                 
                                 v_float32 s0 = vx_load_expand(inp_xi + ofstab[0]);
                                 for (int k = 1; k < ksize; k++)
@@ -272,7 +272,7 @@ static void maxPool16xf(const _Tp* inp_, _Tp* out_, const ConvState& cs)
                         } else if (nlanes*2 == C0) {
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
-                                const _Tp* inp_xi = inp + ((Hi*zi_ + Wi)*yi_ + xi_)*C0;
+                                const _Tp* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
                                 
                                 int ofs_k = ofstab[0];
                                 v_float32 s0 = vx_load_expand(inp_xi + ofs_k);
@@ -289,7 +289,7 @@ static void maxPool16xf(const _Tp* inp_, _Tp* out_, const ConvState& cs)
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
                                 for (int c = 0; c < C0; c += nlanes*4) {
-                                    const _Tp* inp_xi = inp + ((Hi*zi_ + Wi)*yi_ + xi_)*C0;
+                                    const _Tp* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
                                     
                                     int ofs_k = ofstab[0];
                                     v_float32 s0 = vx_load_expand(inp_xi + ofs_k);

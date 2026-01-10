@@ -1054,6 +1054,9 @@ void ONNXImporter2::parseMaxPool(LayerParams& layerParams, const opencv_onnx::No
 void ONNXImporter2::parseAveragePool(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "AveragePool";
+    if (!layerParams.has("count_include_pad")) {
+        layerParams.set("count_include_pad", framework_name == "pytorch");
+    }
     addLayer(layerParams, node_proto);
 }
 

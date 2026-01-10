@@ -132,8 +132,26 @@ struct BlockLayoutTransformer
 
             if (subgraphs) {
                 for (PGraph& subgraph: *subgraphs) {
+                    size_t nargsBefore = netimpl->args.size();
+                    CV_Assert_N(nargsBefore == blockCache.size(), nargsBefore == nonblockCache.size());
                     transformGraph(subgraph);
-                    nchanges++;
+                    size_t nargsAfter = netimpl->args.size();
+                    CV_Assert_N(nargsAfter == blockCache.size(), nargsAfter == nonblockCache.size());
+                    // after transforming a subgraph we 'forget' all cached transformations,
+                    // because they need to be redone in the outer graph and/or other subgraphs.
+                    // however, we cannot remove the newly added arguments, because we need to properly
+                    // assign memory buffers for them etc.
+                    for (size_t i = nargsBefore; i < nargsAfter; i++) {
+                        Arg b = blockCache[i];
+                        Arg nb = nonblockCache[i];
+                        if (size_t(b.idx) < nargsBefore) {
+                            nonblockCache[b.idx] = Arg();
+                        }
+                        if (size_t(nb.idx) < nargsBefore) {
+                            blockCache[nb.idx] = Arg();
+                        }
+                    }
+                    nchanges += nargsAfter > nargsBefore;
                 }
             }
 

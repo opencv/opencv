@@ -68,6 +68,7 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
         float maxval = fastActivation == FAST_ACTIV_CLIP ? activParams[1] : FLT_MAX;
         float alpha = fastActivation == FAST_ACTIV_LEAKY_RELU ? activParams[0] :
                     fastActivation == FAST_ACTIV_NONE ? 1.f : 0.f;
+        int nlanes = nlanes_;
 
         for (int j = 0; j < BLOCK_SIZE*K0; j++) {
             scale[j] = 1.f;
@@ -323,12 +324,44 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
 
                 if (activation) {
                     if (resptr) {
-                        for (j = 0; j < blocksize*K0; j++) {
+                        j = 0;
+                    #if CV_SIMD || CV_SIMD_SCALABLE
+                        for (; j <= blocksize*K0 - nlanes*2; j += nlanes*2) {
+                            v_float32 v0 = vx_load(sum + j);
+                            v_float32 v1 = vx_load(sum + j + nlanes);
+                            v_float32 scale0 = vx_load(scale + j);
+                            v_float32 scale1 = vx_load(scale + j + nlanes);
+                            v_float32 bias0 = vx_load(bias + j);
+                            v_float32 bias1 = vx_load(bias + j + nlanes);
+                            v_float32 res0 = vx_load(resptr + j);
+                            v_float32 res1 = vx_load(resptr + j + nlanes);
+                            v0 = v_fma(v0, scale0, v_add(bias0, res0));
+                            v1 = v_fma(v1, scale1, v_add(bias1, res1));
+                            vx_store(sum + j, v0);
+                            vx_store(sum + j + nlanes, v1);
+                        }
+                    #endif
+                        for (; j < blocksize*K0; j++) {
                             float v = sum[j]*scale[j] + bias[j] + resptr[j];
                             sum[j] = v;
                         }
                     } else {
-                        for (j = 0; j < blocksize*K0; j++) {
+                        j = 0;
+                    #if CV_SIMD || CV_SIMD_SCALABLE
+                        for (; j <= blocksize*K0 - nlanes*2; j += nlanes*2) {
+                            v_float32 v0 = vx_load(sum + j);
+                            v_float32 v1 = vx_load(sum + j + nlanes);
+                            v_float32 scale0 = vx_load(scale + j);
+                            v_float32 scale1 = vx_load(scale + j + nlanes);
+                            v_float32 bias0 = vx_load(bias + j);
+                            v_float32 bias1 = vx_load(bias + j + nlanes);
+                            v0 = v_fma(v0, scale0, bias0);
+                            v1 = v_fma(v1, scale1, bias1);
+                            vx_store(sum + j, v0);
+                            vx_store(sum + j + nlanes, v1);
+                        }
+                    #endif
+                        for (; j < blocksize*K0; j++) {
                             float v = sum[j]*scale[j] + bias[j];
                             sum[j] = v;
                         }
@@ -336,13 +369,67 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
                     activation(sum, out, blocksize*K0, activParams);
                 } else {
                     if (resptr) {
-                        for (j = 0; j < blocksize*K0; j++) {
+                        j = 0;
+                    #if CV_SIMD || CV_SIMD_SCALABLE
+                        v_float32 valpha = v_setall_f32(alpha);
+                        v_float32 vmaxval = v_setall_f32(maxval);
+                        v_float32 vzero = v_setzero_f32();
+                        
+                        for (; j < blocksize*K0; j += nlanes*2) {
+                            if (j + nlanes*2 > blocksize*K0) {
+                                if (j == 0)
+                                    break;
+                                j = blocksize*K0 - nlanes*2;
+                            }
+                            v_float32 v0 = vx_load(sum + j);
+                            v_float32 v1 = vx_load(sum + j + nlanes);
+                            v_float32 scale0 = vx_load(scale + j);
+                            v_float32 scale1 = vx_load(scale + j + nlanes);
+                            v_float32 bias0 = vx_load(bias + j);
+                            v_float32 bias1 = vx_load(bias + j + nlanes);
+                            v_float32 res0 = vx_load(resptr + j);
+                            v_float32 res1 = vx_load(resptr + j + nlanes);
+                            v0 = v_fma(v0, scale0, v_add(bias0, res0));
+                            v1 = v_fma(v1, scale1, v_add(bias1, res1));
+                            v0 = v_min(v_select(v_ge(v0, vzero), v0, v_mul(v0, valpha)), vmaxval);
+                            v1 = v_min(v_select(v_ge(v1, vzero), v1, v_mul(v1, valpha)), vmaxval);
+                            vx_store(out + j, v0);
+                            vx_store(out + j + nlanes, v1);
+                        }
+                    #endif
+                        for (; j < blocksize*K0; j++) {
                             float v = sum[j]*scale[j] + bias[j] + resptr[j];
                             v = std::min(v*(v >= 0 ? 1.f : alpha), maxval);
                             out[j] = v;
                         }
                     } else {
-                        for (j = 0; j < blocksize*K0; j++) {
+                        j = 0;
+                    #if CV_SIMD || CV_SIMD_SCALABLE
+                        v_float32 valpha = v_setall_f32(alpha);
+                        v_float32 vmaxval = v_setall_f32(maxval);
+                        v_float32 vzero = v_setzero_f32();
+                        
+                        for (; j < blocksize*K0; j += nlanes*2) {
+                            if (j + nlanes*2 > blocksize*K0) {
+                                if (j == 0)
+                                    break;
+                                j = blocksize*K0 - nlanes*2;
+                            }
+                            v_float32 v0 = vx_load(sum + j);
+                            v_float32 v1 = vx_load(sum + j + nlanes);
+                            v_float32 scale0 = vx_load(scale + j);
+                            v_float32 scale1 = vx_load(scale + j + nlanes);
+                            v_float32 bias0 = vx_load(bias + j);
+                            v_float32 bias1 = vx_load(bias + j + nlanes);
+                            v0 = v_fma(v0, scale0, bias0);
+                            v1 = v_fma(v1, scale1, bias1);
+                            v0 = v_min(v_select(v_ge(v0, vzero), v0, v_mul(v0, valpha)), vmaxval);
+                            v1 = v_min(v_select(v_ge(v1, vzero), v1, v_mul(v1, valpha)), vmaxval);
+                            vx_store(out + j, v0);
+                            vx_store(out + j + nlanes, v1);
+                        }
+                    #endif
+                        for (; j < blocksize*K0; j++) {
                             float v = sum[j]*scale[j] + bias[j];
                             v = std::min(v*(v >= 0 ? 1.f : alpha), maxval);
                             out[j] = v;

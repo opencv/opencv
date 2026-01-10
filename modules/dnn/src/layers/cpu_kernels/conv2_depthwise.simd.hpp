@@ -169,7 +169,7 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
                             v_float32 sc0 = vx_load(scale), b0 = vx_load(bias);
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
-                                const float* inp_xi = inp + ((Hi*zi_ + Wi)*yi_ + xi_)*C0;
+                                const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
                                 
                                 v_float32 s0 = z;
                                 for (int k = 0; k < ksize; k++) {
@@ -188,7 +188,7 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
                             v_float32 b0 = vx_load(bias), b1 = vx_load(bias + nlanes);
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
-                                const float* inp_xi = inp + ((Hi*zi_ + Wi)*yi_ + xi_)*C0;
+                                const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
                                 
                                 v_float32 s0 = z, s1 = z;
                                 for (int k = 0; k < ksize; k++) {
@@ -215,7 +215,7 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
                                 for (int c = 0; c < C0; c += nlanes*4) {
-                                    const float* inp_xi = inp + ((Hi*zi_ + Wi)*yi_ + xi_)*C0;
+                                    const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
                                     v_float32 s0 = z, s1 = z, s2 = z, s3 = z;
                                     for (int k = 0; k < ksize; k++) {
                                         int ofs_k = ofstab[k], ofs_w = k*C0 + c;

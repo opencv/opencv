@@ -47,25 +47,25 @@ static MatShape fastConv2dInferShape(const MatShape& inpshape, const MatShape& w
     return outshape;
 }
 
-static void refConv2d(const Mat& inp, const Mat& weights0, const Mat& weights, const Mat& bias, Mat& out,
+static void refConv2d(const Mat& inp, const Mat& weights, const MatShape& wshape0, const Mat& bias, Mat& out,
                       const int* strides, const int* dilations,
                       const int* pads, FastActivation activation,
                       float activParam=0.f)
 {
     CV_Assert(inp.type() == CV_32F);
 
-    MatShape inpshape = inp.size, wshape = weights0.size;
-    int ndims = inpshape.dims, wdims = wshape.dims;
-    CV_Assert(ndims == 4 && wdims == 4);
+    MatShape inpshape = inp.size;
+    int ndims = inpshape.dims;
+    CV_Assert(ndims == 4 && wshape0.dims == 4);
 
-    MatShape outshape = fastConv2dInferShape(inpshape, wshape, strides, dilations, pads);
-    CV_Assert(wshape[0] == outshape[1] && inpshape[0] == outshape[0]);
+    MatShape outshape = fastConv2dInferShape(inpshape, wshape0, strides, dilations, pads);
+    CV_Assert(wshape0[0] == outshape[1] && inpshape[0] == outshape[0]);
 
     out.fit(outshape, inp.type());
 
-    parallel_for_(Range(0, wshape[0]), [&](const Range& range) {
+    parallel_for_(Range(0, wshape0[0]), [&](const Range& range) {
         int C0 = weights.size.back();
-        int K = wshape[0], WC = wshape[1], Hk = wshape[2], Wk = wshape[3];
+        int K = wshape0[0], WC = wshape0[1], Hk = wshape0[2], Wk = wshape0[3];
         int N = inpshape[0], C = inpshape[1];
         int Hi = inpshape[2], Wi = inpshape[3];
         int H0 = outshape[2], W0 = outshape[3];
@@ -77,7 +77,6 @@ static void refConv2d(const Mat& inp, const Mat& weights0, const Mat& weights, c
         int pady = pads[1], padx = pads[2];
         float minval = activation == FAST_ACTIV_RELU || activation == FAST_ACTIV_CLIP ? 0.f : -FLT_MAX;
         float maxval = activation == FAST_ACTIV_CLIP ? activParam : FLT_MAX;
-        const float* wptr0 = weights0.ptr<float>();
         const float* wptr = weights.ptr<float>();
         const float* biasptr = bias.ptr<float>();
         const float* inptr = inp.ptr<float>();
@@ -106,9 +105,7 @@ static void refConv2d(const Mat& inp, const Mat& weights0, const Mat& weights, c
                                     size_t ofs = (((n*ngroups + g)*Cg + c)*Hi + yi)*Wi + xi;
                                     float inpval = inptr[ofs];
                                     int c1 = c / C0, c0 = c % C0;
-                                    float w0 = wptr0[((k*Cg + c)*Hk+ky)*Wk + kx];
                                     float w = wptr[(((k1*WCg + c1)*Hk+ky)*Wk + kx)*C0*C0 + c0*C0 + k0];
-                                    CV_Assert(w == w0);
                                     s += inpval*w;
                                 }
                             }
@@ -148,11 +145,13 @@ public:
         prindent(strm, indent);
         strm << "group: " << ngroups << ",\n";
 
-        /*prindent(strm, indent);
-        strm << "ksizes: [";
-        for (int k = 0; k < wshape0.ndims; k++)
-            strm << (k > 0 ? ", " : "") << wshape0.size[k];
-        strm << "],\n";*/
+        if (!wshape0.empty()) {
+            prindent(strm, indent);
+            strm << "ksize: [";
+            for (int k = 0; k < wshape0.dims; k++)
+                strm << (k > 0 ? ", " : "") << wshape0[k];
+            strm << "],\n";
+        }
 
         prindent(strm, indent);
         strm << "stride: [";
@@ -175,6 +174,13 @@ public:
         if (fused_batch_norm) {
             prindent(strm, indent);
             strm << "batch_norm: true,\n";
+        }
+        
+        if (fast_activation != FAST_ACTIV_NONE || !activ.empty()) {
+            prindent(strm, indent);
+            strm << "fused_activation: " <<
+                (fast_activation != FAST_ACTIV_NONE ? fastActivationToString(fast_activation) :
+                 activ->type) << ",\n";
         }
 
         if (add_residual) {
@@ -310,7 +316,8 @@ public:
                 fast_activation = FAST_ACTIV_RELU;
             }
         } else {
-            activ = activlayer;
+            //activ = activlayer;
+            return false;
         }
         return true;
     }
@@ -489,6 +496,18 @@ public:
                 CV_Assert(func != nullptr);
                 func(inptr, resptr, outptr, cs, wptr, scale_data, bias_data,
                      inpofs.data(), ofsofs.data());
+#if 0
+                Mat inp0, out0, temp;
+                transformLayout(inp, inp0, DATA_LAYOUT_NCHW,
+                                DATA_LAYOUT_NCHW, inp.size.C);
+                refConv2d(inp0, weights, wshape0, bias, out0,
+                          cs.strides, cs.dilations, cs.pads,
+                          fast_activation, 0.f);
+                transformLayout(out0, temp, DATA_LAYOUT_BLOCK,
+                                DATA_LAYOUT_NCHW, out.size.back());
+                double err = norm(temp, out, NORM_INF);
+                CV_Assert(err < 1e-4);
+#endif
             }
         }
 

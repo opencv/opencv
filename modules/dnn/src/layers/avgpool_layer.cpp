@@ -104,6 +104,7 @@ static void avgPool32f(const void* inp_, void* out_,
                                         v1 = vx_load(inp + ofs_k + nlanes);
                                         s0 = v_add(s0, v0);
                                         s1 = v_add(s1, v1);
+                                        nitems++;
                                     }
                                     v_float32 vscale = count_include_pad ? vscale0 : vx_setall_f32(1.f/nitems);
                                     s0 = v_mul(s0, vscale);
@@ -119,7 +120,7 @@ static void avgPool32f(const void* inp_, void* out_,
                         if (nlanes == C0) {
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
-                                const float* inp_xi = inp + ((Hi*zi_ + Wi)*yi_ + xi_)*C0;
+                                const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
                                 
                                 v_float32 s0 = vx_load(inp_xi + ofstab[0]);
                                 for (int k = 1; k < ksize; k++)
@@ -129,7 +130,7 @@ static void avgPool32f(const void* inp_, void* out_,
                         } else if (nlanes*2 == C0) {
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
-                                const float* inp_xi = inp + ((Hi*zi_ + Wi)*yi_ + xi_)*C0;
+                                const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
                                 
                                 int ofs_k = ofstab[0];
                                 v_float32 s0 = vx_load(inp_xi + ofs_k);
@@ -148,7 +149,7 @@ static void avgPool32f(const void* inp_, void* out_,
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
                                 for (int c = 0; c < C0; c += nlanes*4) {
-                                    const float* inp_xi = inp + ((Hi*zi_ + Wi)*yi_ + xi_)*C0;
+                                    const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
                                     
                                     int ofs_k = ofstab[0];
                                     v_float32 s0 = vx_load(inp_xi + ofs_k);
@@ -288,7 +289,7 @@ static void avgPool16xf(const _Tp* inp_, _Tp* out_,
                         if (nlanes == C0) {
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
-                                const _Tp* inp_xi = inp + ((Hi*zi_ + Wi)*yi_ + xi_)*C0;
+                                const _Tp* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
                                 
                                 v_float32 s0 = vx_load_expand(inp_xi + ofstab[0]);
                                 for (int k = 1; k < ksize; k++)
@@ -298,7 +299,7 @@ static void avgPool16xf(const _Tp* inp_, _Tp* out_,
                         } else if (nlanes*2 == C0) {
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
-                                const _Tp* inp_xi = inp + ((Hi*zi_ + Wi)*yi_ + xi_)*C0;
+                                const _Tp* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
                                 
                                 int ofs_k = ofstab[0];
                                 v_float32 s0 = vx_load_expand(inp_xi + ofs_k);
@@ -317,7 +318,7 @@ static void avgPool16xf(const _Tp* inp_, _Tp* out_,
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
                                 for (int c = 0; c < C0; c += nlanes*4) {
-                                    const _Tp* inp_xi = inp + ((Hi*zi_ + Wi)*yi_ + xi_)*C0;
+                                    const _Tp* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
                                     
                                     int ofs_k = ofstab[0];
                                     v_float32 s0 = vx_load_expand(inp_xi + ofs_k);
@@ -377,6 +378,7 @@ public:
         dilations = params.getVector<int>("dilation");
         pads = params.getVector<int>("pad");
         ceil_mode = params.get<bool>("ceil_mode", false);
+        count_include_pad = params.get<bool>("count_include_pad", false);
     }
 
     virtual std::ostream& dumpAttrs(std::ostream& strm, int indent) const CV_OVERRIDE

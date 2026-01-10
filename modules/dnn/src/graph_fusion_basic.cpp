@@ -65,7 +65,7 @@ struct ModelFusionBasic
             for(;;) {
                 BatchNorm2Layer* bn = dynamic_cast<BatchNorm2Layer*>(layer_ptr);
                 ActivationLayer* activ = dynamic_cast<ActivationLayer*>(layer_ptr);
-                //NaryEltwiseLayer* elemwise = dynamic_cast<NaryEltwiseLayer*>(layer_ptr);
+                NaryEltwiseLayer* elemwise = dynamic_cast<NaryEltwiseLayer*>(layer_ptr);
 
                 // merge convolution and batch norm
                 if (bn && ninputs == 1 &&
@@ -84,7 +84,7 @@ struct ModelFusionBasic
                 }
 
                 // merge residual 'add' into 'conv' node
-                /*if (elemwise && (elemwise->op == NaryEltwiseLayer::OPERATION::ADD ||
+                if (elemwise && (elemwise->op == NaryEltwiseLayer::OPERATION::ADD ||
                     elemwise->op == NaryEltwiseLayer::OPERATION::SUM) &&
                     ninputs == 2) {
 
@@ -113,7 +113,7 @@ struct ModelFusionBasic
                             break;
                         }
                     }
-                }*/
+                }
 
                 // merge convolution and activation
                 if (activ && ninputs == 1 &&

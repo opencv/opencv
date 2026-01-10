@@ -105,6 +105,11 @@ void transform_layout_(const _Tp* inp_, int istep, int istep0, int istep1,
                     _Tp x0 = inp[0], x1 = inp[istep0], x2 = inp[istep0*2];
                     out[0] = x0; out[1] = x1; out[2] = x2;
                 }
+            } else if (dc == 1 && ostep0 == 1 && ostep == C0) {
+                memset(out, 0, npix*C0*sizeof(out[0]));
+                for (int i = 0; i < npix; i++, inp += istep, out += ostep) {
+                    out[0] = inp[0];
+                }
             } else {
                 for (int i = 0; i < npix; i++, inp += istep, out += ostep) {
                     int c = 0;
@@ -350,6 +355,12 @@ public:
     {
         DataLayout origLayout = getNetImpl(this)->originalLayout;
         transformLayout(inp, out, layout, origLayout, C0);
+#if 0
+        Mat temp;
+        transformLayout(out, temp, layout == DATA_LAYOUT_BLOCK ? origLayout : DATA_LAYOUT_BLOCK, origLayout, C0);
+        double err = norm(temp, inp, NORM_INF);
+        CV_Assert(err == 0.);
+#endif
     }
 };
 
