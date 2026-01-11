@@ -3276,6 +3276,38 @@ TEST_P(Test_ONNX_layers, RandomNormalLike_complex)
     EXPECT_EQ(countNonZero(out != out2), 0);
 }
 
+// TEST FOR OPSET 21 EXTERNAL WEIGHTS
+TEST(Test_ONNX_Importer, Load_External_Weights)
+{
+    // Use standard OpenCV test data locator
+    // This looks for "dnn/onnx/test_external.onnx" in the opencv_extra repo
+    String model_file = findDataFile("dnn/onnx/test_external.onnx", false);
+    
+    // Check if file exists (Standard practice to avoid crashing if data is missing)
+    std::ifstream ifile(model_file);
+    if (!ifile.good()) {
+        // If the data isn't there (which it won't be yet), we skip gracefully
+        throw SkipTestException("Test model not found");
+    }
+
+    Net net = readNetFromONNX(model_file);
+    ASSERT_FALSE(net.empty());
+
+    int sizes[] = {1, 1, 5, 5};
+    Mat input(4, sizes, CV_32F, Scalar(1.0f));
+    net.setInput(input);
+
+    Mat output = net.forward();
+
+    EXPECT_EQ(output.size[2], 5);
+    EXPECT_EQ(output.size[3], 5);
+    
+    // Verify convolution result
+    const int idx[] = {0, 0, 2, 2};
+    float center_val = output.at<float>(idx);
+    EXPECT_NEAR(center_val, 9.0f, 1e-5);
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
 }} // namespace
