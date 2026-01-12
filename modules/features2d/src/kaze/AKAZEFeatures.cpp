@@ -73,7 +73,7 @@ void AKAZEFeatures::Allocate_Memory_Evolution(void) {
     for (int j = 0; j < options_.nsublevels; j++) {
       MEvolution step;
       step.size = Size(level_width, level_height);
-      step.esigma = options_.soffset*pow(2.f, (float)(j) / (float)(options_.nsublevels) + i);
+      step.esigma = (float)(options_.soffset*std::pow(2, (float)(j) / (float)(options_.nsublevels) + i));
       step.sigma_size = cvRound(step.esigma * options_.derivative_factor / power);  // In fact sigma_size only depends on j
       step.etime = 0.5f * (step.esigma * step.esigma);
       step.octave = i;

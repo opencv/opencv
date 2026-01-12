@@ -508,7 +508,7 @@ size_t DNNTestLayer::getTopMemoryUsageMB()
 #ifdef _WIN32
     PROCESS_MEMORY_COUNTERS proc;
     GetProcessMemoryInfo(GetCurrentProcess(), &proc, sizeof(proc));
-    return proc.PeakWorkingSetSize / pow(1024, 2);  // bytes to megabytes
+    return proc.PeakWorkingSetSize / std::pow(1024, 2);  // bytes to megabytes
 #else
     std::ifstream status("/proc/self/status");
     std::string line, title;

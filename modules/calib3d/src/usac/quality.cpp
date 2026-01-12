@@ -197,7 +197,7 @@ public:
         const auto maximum_sigma_2 = (float) (maximum_sigma * maximum_sigma);
         maximum_sigma_2_per_2 = maximum_sigma_2 / 2.f;
         const auto maximum_sigma_2_times_2 = maximum_sigma_2 * 2.f;
-        two_ad_dof_plus_one_per_maximum_sigma = pow(2.0, (DoF + 1.0)*.5)/maximum_sigma;
+        two_ad_dof_plus_one_per_maximum_sigma = std::pow(2, (DoF + 1.0)*.5)/maximum_sigma;
         rescale_err = gamma_generator->getScaleOfGammaCompleteValues() / maximum_sigma_2_times_2;
         stored_incomplete_gamma_number_min1 = static_cast<unsigned int>(gamma_generator->getTableSize()-1);
 

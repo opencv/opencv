@@ -2619,7 +2619,7 @@ struct PowerFunctor : public BaseFunctor
                 for( int i = 0; i < len; i++ )
                 {
                     float x = srcptr[i];
-                    dstptr[i] = pow(a*x + b, p);
+                    dstptr[i] = std::pow(a*x + b, p);
                 }
             }
         }
@@ -2674,7 +2674,7 @@ struct PowerFunctor : public BaseFunctor
         }
         if (power != 1.0f)
         {
-            topExpr = pow(topExpr, power);
+            topExpr = std::pow(topExpr, power);
         }
         top(x, y, c, n) = topExpr;
     }
