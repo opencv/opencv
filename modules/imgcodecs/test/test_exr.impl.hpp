@@ -210,7 +210,7 @@ TEST(Imgcodecs_EXR, read_YA_unchanged)
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(CV_32FC2, img.type());
 
-    // Cannot test writing, 2 channel writing not suppported by loadsave
+    // Cannot test writing, 2 channel writing not supported by loadsave
 }
 
 TEST(Imgcodecs_EXR, read_YC_changeDepth)
