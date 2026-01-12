@@ -101,3 +101,47 @@ function addTutorialsButtons() {
     }
     return;
 }
+
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("pre").forEach(function (block) {
+        if (block.querySelector(".copy-button")) return;
+
+        // Save original code text
+        const codeText = block.textContent;
+
+        const button = document.createElement("button");
+        button.className = "copy-button";
+
+        const copyIcon = `
+          <svg class="copy-icon" viewBox="0 0 24 24">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+            <rect x="3" y="3" width="13" height="13" rx="2" ry="2"/>
+          </svg>
+        `;
+
+        const tickIcon = `
+          <svg class="tick-icon" viewBox="0 0 24 24">
+            <polyline points="4,12 9,17 20,6" />
+          </svg>
+        `;
+
+        button.innerHTML = `
+          <span class="icon-wrapper">${copyIcon}</span>
+          <span class="copy-tooltip">Copy</span>
+        `;
+
+        button.addEventListener("click", function () {
+            navigator.clipboard.writeText(codeText);
+
+            const iconWrapper = button.querySelector(".icon-wrapper");
+            iconWrapper.innerHTML = tickIcon;
+
+            setTimeout(function () {
+                iconWrapper.innerHTML = copyIcon;
+            }, 1200);
+        });
+
+        block.style.position = "relative";
+        block.appendChild(button);
+    });
+});

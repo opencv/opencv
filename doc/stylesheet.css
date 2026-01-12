@@ -2290,3 +2290,53 @@ body {
 ::-webkit-scrollbar-corner {
     background-color: var(--scrollbar-background-color);
 }
+
+.copy-button {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    z-index: 10;
+}
+
+.copy-icon, .tick-icon {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke-width: 2;
+}
+
+.copy-icon {
+    stroke: white;
+    opacity: 0.85;
+}
+
+.copy-button:hover .copy-icon {
+    opacity: 1;
+}
+
+.tick-icon {
+    stroke: #00ff66; /* green tick */
+}
+
+.copy-tooltip {
+    position: absolute;
+    top: -26px;
+    right: 0;
+    background: black;
+    color: white;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    opacity: 0;
+    white-space: nowrap;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+}
+
+.copy-button:hover .copy-tooltip {
+    opacity: 1;
+}
