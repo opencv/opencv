@@ -22,6 +22,7 @@
 #include <opencv2/core/utils/logger.hpp>
 
 #include "layer_internals.hpp"  // LayerPin LayerData DataLayer
+#include "kv_cache_manager.hpp"
 
 #include "legacy_backend.hpp"  // wrapMat BlobManager OpenCLBackendWrapper
 
@@ -70,6 +71,10 @@ struct Net::Impl : public detail::NetImplBase
     bool useWinograd;
     std::vector<int64> layersTimings;
 
+    // for LLM inference
+    KVCacheManager kvCacheManager;
+    bool useKVCache;
+
     std::string modelFileName;
     ModelFormat modelFormat;
     DataLayout originalLayout;
@@ -106,7 +111,6 @@ struct Net::Impl : public detail::NetImplBase
 
     // FIXIT use inheritance
     virtual Ptr<BackendWrapper> wrap(Mat& host);
-
 
     virtual void clear();
 
