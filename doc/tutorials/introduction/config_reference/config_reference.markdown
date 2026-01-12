@@ -317,7 +317,7 @@ Following formats can be read by OpenCV without help of any third-party library:
 | [PFM](https://en.wikipedia.org/wiki/Netpbm#File_formats) | `WITH_IMGCODEC_PFM` | _ON_ |
 | [GIF](https://en.wikipedia.org/wiki/GIF) | `WITH_IMGCODEC_GIF` | _ON_ |
 
-### PNG, JPEG, TIFF, WEBP, JPEG 2000, EXR, JPEG XL support
+### PNG, JPEG, TIFF, WEBP, JPEG 2000, EXR, JPEG XL, AVIF support
 
 | Formats | Library | Option | Default | Force build own |
 | --------| ------- | ------ | ------- | --------------- |
