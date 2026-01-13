@@ -360,7 +360,7 @@ medianBlur_8u_Om( const Mat& _src, Mat& _dst, int m )
     uchar*  dst = _dst.ptr();
     int     src_step = (int)_src.step, dst_step = (int)_dst.step;
     int     cn = _src.channels();
-    const uchar*  src_max = src + size.height*src_step;
+    const uchar*  src_max = src + (size_t)size.height*src_step;
     CV_Assert(cn > 0 && cn <= 4);
 
     #define UPDATE_ACC01( pix, cn, op ) \
@@ -381,8 +381,8 @@ medianBlur_8u_Om( const Mat& _src, Mat& _dst, int m )
 
         if( x % 2 != 0 )
         {
-            src_bottom = src_top += src_step*(size.height-1);
-            dst_cur += dst_step*(size.height-1);
+            src_bottom = src_top += (size_t)src_step*(size.height-1);
+            dst_cur += (size_t)dst_step*(size.height-1);
             src_step1 = -src_step1;
             dst_step1 = -dst_step1;
         }
