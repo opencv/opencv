@@ -67,6 +67,12 @@ By declaring `using namespace cv;`, in the following, the library functions can 
 
 @add_toggle_python
 As a first step, the OpenCV python library is imported.
+
+@note
+When installing OpenCV via PyPI('pip install opencv-python'), sample images such as 'starry_night.jpg' are not included in the package.
+If the example fails to locate the image, download it manually from:
+https://github.com/opencv/opencv/blob/4.x/samples/data/starry_night.jpg
+
 The proper way to do this is to additionally assign it the name *cv*, which is used in the following to reference the library.
 
 @snippet samples/python/tutorial_code/introduction/display_image/display_image.py imports
