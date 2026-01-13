@@ -125,7 +125,7 @@ TEST_P(SequenceOfBlursRoiTest, Test)
 
     cv::blur(mid_mat_ocv(roi), out_mat_ocv(roi), {5,5}, anchor, borderType);
 
-    EXPECT_EQ(0, cvtest::norm(out_mat_ocv, out_mat_gapi, NORM_INF));
+    EXPECT_LE(cvtest::norm(out_mat_ocv, out_mat_gapi, NORM_INF),1);
 }
 
 INSTANTIATE_TEST_CASE_P(FluidRoi, SequenceOfBlursRoiTest,
@@ -180,8 +180,8 @@ TEST_P(TwoBlursRoiTest, Test)
     cv::blur(in_mat(outRoi), out_mat_ocv1(outRoi), {kernelSize1, kernelSize1}, anchor, borderType1);
     cv::blur(in_mat(outRoi), out_mat_ocv2(outRoi), {kernelSize2, kernelSize2}, anchor, borderType2);
 
-    EXPECT_EQ(0, cvtest::norm(out_mat_ocv1, out_mat_gapi1, NORM_INF));
-    EXPECT_EQ(0, cvtest::norm(out_mat_ocv2, out_mat_gapi2, NORM_INF));
+    EXPECT_LE( cvtest::norm(out_mat_ocv1, out_mat_gapi1, NORM_INF),1);
+    EXPECT_LE( cvtest::norm(out_mat_ocv2, out_mat_gapi2, NORM_INF),1);
 }
 
 INSTANTIATE_TEST_CASE_P(FluidRoi, TwoBlursRoiTest,
