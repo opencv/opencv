@@ -520,6 +520,9 @@ CV_EXPORTS_W void selectROIs(const String& windowName, InputArray img,
 
 /** @brief Creates a trackbar and attaches it to the specified window.
 
+@par Python:
+    cv.createTrackbar(trackbarname, winname, value, count, onChange) -> None
+
 The function createTrackbar creates a trackbar (a slider or range control) with the specified name
 and range, assigns a variable value to be a position synchronized with the trackbar and specifies
 the callback function onChange to be called on the trackbar position change. The created trackbar is
