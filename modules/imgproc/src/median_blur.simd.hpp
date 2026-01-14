@@ -388,12 +388,19 @@ medianBlur_8u_Om( const Mat& _src, Mat& _dst, int m )
         const uchar* src_top = src;
         const uchar* src_bottom = src;
         int k, c;
-        int src_step1 = (int)src_step, dst_step1 = (int)dst_step;
+        ptrdiff_t src_step1 = (ptrdiff_t)src_step, dst_step1 = (ptrdiff_t)dst_step;
 
         if( x % 2 != 0 )
         {
-            src_bottom = src_top += src_step*(size.height-1);
-            dst_cur += dst_step*(size.height-1);
+            size_t src_off = (size_t)src_step * (size_t)(size.height - 1);
+            CV_Assert(src_off == 0 || src_off / src_step == (size_t)(size.height - 1));
+            src_top += src_off;
+            src_bottom = src_top;
+
+            size_t dst_off = (size_t)dst_step * (size_t)(size.height - 1);
+            CV_Assert(dst_off == 0 || dst_off / dst_step == (size_t)(size.height - 1));
+            dst_cur += dst_off;
+
             src_step1 = -src_step1;
             dst_step1 = -dst_step1;
         }
