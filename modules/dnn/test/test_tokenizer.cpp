@@ -102,4 +102,13 @@ TEST(Tokenizer_BPE, CatastrophicallyRepetitive_GPT2) {
         EXPECT_EQ(with_newline, gpt2_tok.decode(gpt2_tok.encode(with_newline)));
     }
 }
+
+TEST(Tokenizer_BPE, ExplicitEnumLoad) {
+    std::string gpt2_model = _tf("gpt2/config.json");
+    // Explicitly using the new Enum we just added
+    Tokenizer tok = Tokenizer::load(gpt2_model, Tokenizer::BPE); 
+    
+    std::vector<int> tokens = tok.encode("Enum works");
+    EXPECT_FALSE(tokens.empty());
+}
 }
