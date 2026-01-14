@@ -13,10 +13,10 @@ namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
 // Registry of implementations (method -> methodImpl)
-using ImplRegestry = std::function<Ptr<Tokenizer::Impl>(const FileStorage& cfg, const std::string& dir)>;
+using ImplRegistry = std::function<Ptr<Tokenizer::Impl>(const FileStorage& cfg, const std::string& dir)>;
 
-static std::unordered_map<std::string, ImplRegestry>& tokenizerRegistry() {
-    static std::unordered_map<std::string, ImplRegestry> reg;
+static std::unordered_map<std::string, ImplRegistry>& tokenizerRegistry() {
+    static std::unordered_map<std::string, ImplRegistry> reg;
     return reg;
 }
 
@@ -70,7 +70,8 @@ static void registerDefaultTokenizers() {
     }
 }
 
-Tokenizer::Tokenizer(TokenizeMethod ) : impl_(nullptr) {}
+// Constructor Implementation
+Tokenizer::Tokenizer(Tokenizer::TokenizeMethod) : impl_(nullptr) {}
 
 std::vector<int> Tokenizer::encode(const std::string& text) {
     if (!impl_) CV_Error(cv::Error::StsError, "Tokenizer impl null");
@@ -81,6 +82,38 @@ std::string Tokenizer::decode(const std::vector<int>& tokens) {
     if (!impl_) CV_Error(cv::Error::StsError, "Tokenizer impl null");
     return impl_->decode(tokens);
 };
+
+// The Load Function - Updated to match new Header API
+Tokenizer Tokenizer::load(const std::string& model_config, Tokenizer::TokenizeMethod method) {
+    cv::FileStorage cfg(model_config, cv::FileStorage::READ | cv::FileStorage::FORMAT_JSON);
+    if (!cfg.isOpened())
+        CV_Error(cv::Error::StsError, "Could not open config.json: " + model_config);
+
+    std::string dir = model_config;
+    size_t pos = dir.find_last_of("/\\");
+    dir = (pos == std::string::npos) ? std::string() : dir.substr(0, pos + 1);
+
+    // Map Enum to internal string key
+    std::string methodType;
+    switch (method) {
+        case Tokenizer::BPE: 
+            methodType = "BPE"; 
+            break;
+        default: 
+            CV_Error(cv::Error::StsBadArg, "Unknown TokenizeMethod");
+    }
+
+    registerDefaultTokenizers();
+    auto& reg = tokenizerRegistry();
+    auto it = reg.find(methodType);
+    if (it == reg.end())
+        CV_Error(cv::Error::StsError,
+            "Unsupported tokenizer method: '" + methodType + "'. Supported: BPE");
+
+    Tokenizer tok;
+    tok.impl_ = it->second(cfg, dir);
+    return tok;
+}
 
 CoreBPE buildTokenizerGPT(const std::string& model_type, const std::string& json_path) {
     cv::FileStorage fs(json_path, cv::FileStorage::READ | cv::FileStorage::FORMAT_JSON);
@@ -146,29 +179,5 @@ CoreBPE buildTokenizerGPT(const std::string& model_type, const std::string& json
     return CoreBPE(std::move(mergeableRanks), std::move(specialTokens), pattern);
 }
 
-Tokenizer Tokenizer::load(const std::string& model_config) {
-    cv::FileStorage cfg(model_config, cv::FileStorage::READ | cv::FileStorage::FORMAT_JSON);
-    if (!cfg.isOpened())
-        CV_Error(cv::Error::StsError, "Could not open config.json: " + model_config);
-
-    std::string dir = model_config;
-    size_t pos = dir.find_last_of("/\\");
-    dir = (pos == std::string::npos) ? std::string() : dir.substr(0, pos + 1);
-
-    std::string methodType = "BPE";
-    if (!cfg["method"].empty())
-        cfg["method"] >> methodType;
-
-    registerDefaultTokenizers();
-    auto& reg = tokenizerRegistry();
-    auto it = reg.find(methodType);
-    if (it == reg.end())
-        CV_Error(cv::Error::StsError,
-            "Unsupported tokenizer method: '" + methodType + "'. Supported: BPE");
-
-    Tokenizer tok;
-    tok.impl_ = it->second(cfg, dir);
-    return tok;
-}
 CV__DNN_INLINE_NS_END
 }}
