@@ -70,10 +70,10 @@ static void registerDefaultTokenizers() {
     }
 }
 
-// Constructor Implementation - Updated
+// Constructor
 Tokenizer::Tokenizer(TokenizeMethod) : impl_(nullptr) {}
 
-// The Load Function - Updated to use global enum
+// The Load Function
 Tokenizer Tokenizer::load(const std::string& model_config, TokenizeMethod method) {
     cv::FileStorage cfg(model_config, cv::FileStorage::READ | cv::FileStorage::FORMAT_JSON);
     if (!cfg.isOpened())
@@ -86,7 +86,8 @@ Tokenizer Tokenizer::load(const std::string& model_config, TokenizeMethod method
     // Map Enum to internal string key
     std::string methodType;
     switch (method) {
-        case DNN_TOKENIZER_BPE: // Correct usage of global enum
+        // FIX: Use scoped name
+        case TokenizeMethod::DNN_TOKENIZER_BPE: 
             methodType = "BPE"; 
             break;
         default: 
