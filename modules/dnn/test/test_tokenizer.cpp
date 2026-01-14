@@ -105,8 +105,10 @@ TEST(Tokenizer_BPE, CatastrophicallyRepetitive_GPT2) {
 
 TEST(Tokenizer_BPE, ExplicitEnumLoad) {
     std::string gpt2_model = _tf("gpt2/config.json");
-    // FIX: Use scoped name
-    Tokenizer tok = Tokenizer::load(gpt2_model, Tokenizer::TokenizeMethod::DNN_TOKENIZER_BPE); 
+    
+    // CORRECTED LINE: Removed 'Tokenizer::' prefix
+    // Since the Enum is now outside the class, we access it directly.
+    Tokenizer tok = Tokenizer::load(gpt2_model, TokenizeMethod::DNN_TOKENIZER_BPE); 
     
     std::vector<int> tokens = tok.encode("Enum works");
     EXPECT_FALSE(tokens.empty());
