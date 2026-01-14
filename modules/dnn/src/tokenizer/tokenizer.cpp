@@ -86,8 +86,7 @@ Tokenizer Tokenizer::load(const std::string& model_config, TokenizeMethod method
     // Map Enum to internal string key
     std::string methodType;
     switch (method) {
-        // FIX: Use scoped name
-        case TokenizeMethod::DNN_TOKENIZER_BPE: 
+        case DNN_TOKENIZER_BPE: // Works directly now
             methodType = "BPE"; 
             break;
         default: 
