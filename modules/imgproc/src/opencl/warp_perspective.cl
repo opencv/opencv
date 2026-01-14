@@ -92,12 +92,19 @@ __kernel void warpPerspective(__global const uchar * srcptr, int src_step, int s
 
     if (dx < dst_cols && dy < dst_rows)
     {
-        CT X0 = M[0] * dx + M[1] * dy + M[2];
-        CT Y0 = M[3] * dx + M[4] * dy + M[5];
-        CT W = M[6] * dx + M[7] * dy + M[8];
-        W = W != 0.0f ? 1.f / W : 0.0f;
-        short sx = convert_short_sat_rte(X0*W);
-        short sy = convert_short_sat_rte(Y0*W);
+        // Ensure consistent precision across different OpenCL implementations
+        // Cast to CT explicitly to avoid precision variations
+        CT X0 = M[0] * (CT)dx + M[1] * (CT)dy + M[2];
+        CT Y0 = M[3] * (CT)dx + M[4] * (CT)dy + M[5];
+        CT W = M[6] * (CT)dx + M[7] * (CT)dy + M[8];
+        W = (W != (CT)0.0) ? ((CT)1.0 / W) : (CT)0.0;
+        
+        // Use explicit float intermediate for better cross-platform consistency
+        // Particularly important for Mali GPUs which may handle rounding differently
+        float fx = (float)(X0 * W);
+        float fy = (float)(Y0 * W);
+        int sx = (int)(fx + (fx >= 0 ? 0.5f : -0.5f));
+        int sy = (int)(fy + (fy >= 0 ? 0.5f : -0.5f));
 
         int dst_index = mad24(dy, dst_step, dx * pixsize + dst_offset);
 
