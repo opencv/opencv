@@ -25,3 +25,15 @@ build
 node_modules
 CMakeSettings.json
 xcuserdata/
+
+xcuserdata/
+
+/test/
+
+# General compiled files
+*.exe
+
+*.exe
+*.out
+*.app
+compile_commands.json

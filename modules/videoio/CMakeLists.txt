@@ -108,6 +108,22 @@ if(TARGET ocv.3rdparty.dshow)
   list(APPEND tgts ocv.3rdparty.dshow)
 endif()
 
+if(TARGET ocv.3rdparty.libcamera)
+  if("libcamera" IN_LIST VIDEOIO_PLUGIN_LIST OR VIDEOIO_PLUGIN_LIST STREQUAL "all")
+    ocv_create_builtin_videoio_plugin("opencv_videoio_libcamera" ocv.3rdparty.libcamera "cap_libcamera.cpp" "cap_libcamera_plugin.cpp")
+    # Force C++17 for the plugin target
+    set_target_properties(ocv.3rdparty.libcamera PROPERTIES
+      CXX_STANDARD 17
+      CXX_STANDARD_REQUIRED ON
+      CXX_EXTENSIONS OFF
+    )
+  else()
+    list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_libcamera.cpp)
+    list(APPEND videoio_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/cap_libcamera.hpp)
+    list(APPEND tgts ocv.3rdparty.libcamera)
+  endif()
+endif()
+
 if(TARGET ocv.3rdparty.msmf)
   if("msmf" IN_LIST VIDEOIO_PLUGIN_LIST OR VIDEOIO_PLUGIN_LIST STREQUAL "all")
     ocv_create_builtin_videoio_plugin("opencv_videoio_msmf" ocv.3rdparty.msmf "cap_msmf.cpp")
