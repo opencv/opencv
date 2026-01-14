@@ -4,7 +4,7 @@
 
 #include "test_precomp.hpp"
 
-namespace opencv_test { namespace  {
+namespace opencv_test {
 
 template<typename TString>
 static String _tf(TString filename) {
@@ -40,6 +40,8 @@ TEST(Tokenizer_BPE, Tokenizer_GPT4) {
 TEST(Tokenizer_BPE, Tokenizer_GPT2) {
     std::string gpt2_model = _tf("gpt2/config.json");
     Tokenizer tok = Tokenizer::load(gpt2_model);
+
+    //Test 1: Basic English
     auto ids = tok.encode("hello world");
     for (auto id : ids) std::cout << id << " ";
     std::cout << std::endl;
@@ -47,9 +49,13 @@ TEST(Tokenizer_BPE, Tokenizer_GPT2) {
     EXPECT_EQ(txt, "hello world");
 
     // "Long characters" in Chinese
-    auto ids_j = tok.encode("\xe9\x95\xbf\xe5\xad\x97\xe7\xac\xa6");
+    //constructing the string explicitly to avoid MSVC c2001 errors.
+    std::string chinese_text = "\xe9\x95\xbf\xe5\xad\x97\xe7\xac\xa6";
+
+    auto ids_j = tok.encode(chinese_text);
     std::string word = tok.decode(ids_j);
-    std::cout << word << std::endl;
+    // We just check it doesn't crash; strict equality might depend on terminal encoding
+    EXPECT_FALSE(word.empty());
 }
 
 TEST(Tokenizer_BPE, Tokenizer_GPT2_Model) {
@@ -96,4 +102,4 @@ TEST(Tokenizer_BPE, CatastrophicallyRepetitive_GPT2) {
         EXPECT_EQ(with_newline, gpt2_tok.decode(gpt2_tok.encode(with_newline)));
     }
 }
-}}
+}
