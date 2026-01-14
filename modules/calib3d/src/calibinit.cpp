@@ -2194,28 +2194,53 @@ bool findCirclesGrid( InputArray _image, Size patternSize,
 {
     CV_INSTRUMENT_REGION();
 
-    CirclesGridFinderParameters parameters = parameters_; // parameters.gridType is amended below
+    CirclesGridFinderParameters parameters = parameters_;
 
     bool isAsymmetricGrid = (flags & CALIB_CB_ASYMMETRIC_GRID) ? true : false;
     bool isSymmetricGrid  = (flags & CALIB_CB_SYMMETRIC_GRID ) ? true : false;
     CV_Assert(isAsymmetricGrid ^ isSymmetricGrid);
 
     std::vector<Point2f> centers;
-
     std::vector<Point2f> points;
-    if (blobDetector)
+    std::vector<KeyPoint> keypoints;
+
+    Ptr<FeatureDetector> bd = blobDetector;
+
+    if (bd)
     {
-        std::vector<KeyPoint> keypoints;
-        blobDetector->detect(_image, keypoints);
-        for (size_t i = 0; i < keypoints.size(); i++)
-        {
-            points.push_back(keypoints[i].pt);
-        }
+        bd->detect(_image, keypoints);
     }
-    else
+
+    if (keypoints.empty() && _image.depth() == CV_8U)
     {
-        CV_CheckTypeEQ(_image.type(), CV_32FC2, "blobDetector must be provided or image must contains Point2f array (std::vector<Point2f>) with candidates");
-        _image.copyTo(points);
+        SimpleBlobDetector::Params params;
+        // Allow huge circles (up to image size)
+        params.maxArea = std::numeric_limits<float>::max();
+        params.minArea = 10.0f;
+        params.filterByArea = true;
+
+        // Disable shape restrictions to catch distorted circles
+        params.filterByCircularity = false;
+        params.filterByInertia = false;
+        params.filterByConvexity = false;
+
+        // Look for black blobs (0) on white background
+        params.filterByColor = true;
+        params.blobColor = 0;
+
+        Ptr<FeatureDetector> relaxedBD = SimpleBlobDetector::create(params);
+        relaxedBD->detect(_image, keypoints);
+    }
+
+    if (keypoints.empty())
+    {
+        _centers.release();
+        return false;
+    }
+
+    for (size_t i = 0; i < keypoints.size(); i++)
+    {
+        points.push_back(keypoints[i].pt);
     }
 
     if(flags & CALIB_CB_ASYMMETRIC_GRID)
@@ -2264,7 +2289,6 @@ bool findCirclesGrid( InputArray _image, Size patternSize,
         {
             CV_UNUSED(e);
             CV_LOG_DEBUG(NULL, "findCirclesGrid2: attempt=" << i << ": " << e.what());
-            // nothing, next attempt
         }
 
         boxFinder.getHoles(centers);
@@ -2276,7 +2300,7 @@ bool findCirclesGrid( InputArray _image, Size patternSize,
         }
     }
 
-    if (!centers.empty() && !H.empty())  // undone rectification
+    if (!centers.empty() && !H.empty())
     {
         Mat orgPointsMat;
         transform(centers, orgPointsMat, H.inv());
