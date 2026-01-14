@@ -133,10 +133,19 @@ bool  SunRasterDecoder::readData( Mat& img )
     size_t step = img.step;
     uchar  gray_palette[256] = {0};
     bool   result = false;
-    int  src_pitch = ((m_width*m_bpp + 7)/8 + 1) & -2;
     int  nch = color ? 3 : 1;
-    int  width3 = m_width*nch;
-    int  y;
+
+    const size_t bits_per_row = static_cast<size_t>(m_width) * static_cast<size_t>(m_bpp);
+    const size_t bytes_per_row = (bits_per_row + 7) / 8;
+    const size_t src_pitch_size = (bytes_per_row + 1) & ~static_cast<size_t>(1);
+    const size_t MAX_SRC_PITCH = static_cast<size_t>(1) << 28;
+    CV_CheckLT(src_pitch_size, MAX_SRC_PITCH, "SunRaster: src_pitch exceeds maximum allowed size");
+    const int src_pitch = validateToInt(src_pitch_size);
+
+    const size_t width3_size = static_cast<size_t>(m_width) * static_cast<size_t>(nch);
+    CV_CheckLT(width3_size, MAX_SRC_PITCH, "SunRaster: row size exceeds maximum allowed size");
+    const int width3 = validateToInt(width3_size);
+    int y;
 
     if( m_offset < 0 || !m_strm.isOpened())
         return false;
@@ -169,7 +178,7 @@ bool  SunRasterDecoder::readData( Mat& img )
             }
             else
             {
-                uchar* line_end = src + (m_width*m_bpp + 7)/8;
+                uchar* line_end = src + bytes_per_row;
                 uchar* tsrc = src;
                 y = 0;
 
