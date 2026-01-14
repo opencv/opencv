@@ -72,7 +72,8 @@ def main():
     show_glitch = False
     use_spatial_propagation = False
     use_temporal_propagation = True
-    cur_glitch = prev.copy()
+    # No deep copy needed here: prev is not modified and this avoids unnecessary memory overhead
+    cur_glitch = prev
     inst = cv.DISOpticalFlow.create(cv.DISOPTICAL_FLOW_PRESET_MEDIUM)
     inst.setUseSpatialPropagation(use_spatial_propagation)
 
