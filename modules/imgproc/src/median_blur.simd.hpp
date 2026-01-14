@@ -128,8 +128,17 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
 # define CV_ALIGNMENT 16
 #endif
 
-    std::vector<HT> _h_coarse(1 * 16 * (STRIPE_SIZE + 2*r) * cn + CV_ALIGNMENT);
-    std::vector<HT> _h_fine(16 * 16 * (STRIPE_SIZE + 2*r) * cn + CV_ALIGNMENT);
+    size_t stripe_with_border = (size_t)STRIPE_SIZE + (size_t)2*r;
+    size_t channels = (size_t)cn;
+    CV_Assert(stripe_with_border == 0 || stripe_with_border <= std::numeric_limits<size_t>::max() / (16 * channels));
+    size_t coarse_elems = 16 * stripe_with_border * channels;
+    CV_Assert(coarse_elems <= std::numeric_limits<size_t>::max() - (size_t)CV_ALIGNMENT);
+    std::vector<HT> _h_coarse(coarse_elems + (size_t)CV_ALIGNMENT);
+
+    CV_Assert(stripe_with_border == 0 || stripe_with_border <= std::numeric_limits<size_t>::max() / (16 * 16 * channels));
+    size_t fine_elems = 16 * 16 * stripe_with_border * channels;
+    CV_Assert(fine_elems <= std::numeric_limits<size_t>::max() - (size_t)CV_ALIGNMENT);
+    std::vector<HT> _h_fine(fine_elems + (size_t)CV_ALIGNMENT);
     HT* h_coarse = alignPtr(&_h_coarse[0], CV_ALIGNMENT);
     HT* h_fine = alignPtr(&_h_fine[0], CV_ALIGNMENT);
 
@@ -358,10 +367,12 @@ medianBlur_8u_Om( const Mat& _src, Mat& _dst, int m )
     Size    size = _dst.size();
     const uchar* src = _src.ptr();
     uchar*  dst = _dst.ptr();
-    int     src_step = (int)_src.step, dst_step = (int)_dst.step;
+    size_t  src_step = _src.step, dst_step = _dst.step;
     int     cn = _src.channels();
-    const uchar*  src_max = src + size.height*src_step;
     CV_Assert(cn > 0 && cn <= 4);
+    CV_Assert(size.height >= 0);
+    CV_Assert(src_step == 0 || (size.height <= 0 || src_step <= std::numeric_limits<size_t>::max() / (size_t)size.height));
+    const uchar*  src_max = src + src_step * (size.height > 0 ? (size_t)size.height : 0);
 
     #define UPDATE_ACC01( pix, cn, op ) \
     {                                   \
@@ -377,12 +388,19 @@ medianBlur_8u_Om( const Mat& _src, Mat& _dst, int m )
         const uchar* src_top = src;
         const uchar* src_bottom = src;
         int k, c;
-        int src_step1 = src_step, dst_step1 = dst_step;
+        ptrdiff_t src_step1 = (ptrdiff_t)src_step, dst_step1 = (ptrdiff_t)dst_step;
 
         if( x % 2 != 0 )
         {
-            src_bottom = src_top += src_step*(size.height-1);
-            dst_cur += dst_step*(size.height-1);
+            size_t src_off = (size_t)src_step * (size_t)(size.height - 1);
+            CV_Assert(src_off == 0 || src_off / src_step == (size_t)(size.height - 1));
+            src_top += src_off;
+            src_bottom = src_top;
+
+            size_t dst_off = (size_t)dst_step * (size_t)(size.height - 1);
+            CV_Assert(dst_off == 0 || dst_off / dst_step == (size_t)(size.height - 1));
+            dst_cur += dst_off;
+
             src_step1 = -src_step1;
             dst_step1 = -dst_step1;
         }
@@ -631,8 +649,8 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
 
     const T* src = _src.ptr<T>();
     T* dst = _dst.ptr<T>();
-    int sstep = (int)(_src.step/sizeof(T));
-    int dstep = (int)(_dst.step/sizeof(T));
+    size_t sstep = _src.step / sizeof(T);
+    size_t dstep = _dst.step / sizeof(T);
     Size size = _dst.size();
     int i, j, k, cn = _src.channels();
     Op op;
@@ -643,9 +661,9 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
         if( size.width == 1 || size.height == 1 )
         {
             int len = size.width + size.height - 1;
-            int sdelta = size.height == 1 ? cn : sstep;
-            int sdelta0 = size.height == 1 ? 0 : sstep - cn;
-            int ddelta = size.height == 1 ? cn : dstep;
+            int sdelta = size.height == 1 ? cn : (int)sstep;
+            int sdelta0 = size.height == 1 ? 0 : (int)sstep - cn;
+            int ddelta = size.height == 1 ? cn : (int)dstep;
 
             for( i = 0; i < len; i++, src += sdelta0, dst += ddelta )
                 for( j = 0; j < cn; j++, src++ )
@@ -663,9 +681,9 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
         size.width *= cn;
         for( i = 0; i < size.height; i++, dst += dstep )
         {
-            const T* row0 = src + std::max(i - 1, 0)*sstep;
-            const T* row1 = src + i*sstep;
-            const T* row2 = src + std::min(i + 1, size.height-1)*sstep;
+            const T* row0 = src + (size_t)std::max(i - 1, 0)*sstep;
+            const T* row1 = src + (size_t)i*sstep;
+            const T* row2 = src + (size_t)std::min(i + 1, size.height-1)*sstep;
             int limit = cn;
 
             for(j = 0;; )
