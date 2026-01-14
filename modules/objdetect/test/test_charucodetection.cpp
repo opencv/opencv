@@ -602,16 +602,18 @@ TEST(Charuco, testBoardSubpixelCoords)
         0, 0, 1);
 
     // set expected_corners values
+    // Note: Values adjusted by -0.5px after fixing the systematic offset bug in charuco_detector.cpp
+    // The fix removes the incorrect +0.5 offset that was added after cornerSubPix
     cv::Mat expected_corners = (cv::Mat_<float>(9,2) <<
-        200, 200,
-        250, 200,
-        300, 200,
-        200, 250,
-        250, 250,
-        300, 250,
-        200, 300,
-        250, 300,
-        300, 300
+        199.5, 199.5,
+        249.5, 199.5,
+        299.5, 199.5,
+        199.5, 249.5,
+        249.5, 249.5,
+        299.5, 249.5,
+        199.5, 299.5,
+        249.5, 299.5,
+        299.5, 299.5
     );
 
     cv::Mat gray;
@@ -639,7 +641,7 @@ TEST(Charuco, testBoardSubpixelCoords)
 
     ASSERT_EQ(ids.size(), size_t(8));
     ASSERT_EQ(c_corners.rows, expected_corners.rows);
-    EXPECT_NEAR(0, cvtest::norm(expected_corners, c_corners.reshape(1), NORM_INF), 1e-1);
+    EXPECT_NEAR(0, cvtest::norm(expected_corners, c_corners.reshape(1), NORM_INF), 0.1);
 }
 
 TEST(Charuco, issue_14014)
@@ -900,16 +902,18 @@ TEST(Charuco, testSeveralBoardsWithCustomIds)
         0, 0.5*res.height, 0.5*res.height,
         0, 0, 1);
 
+    // Expected corner coordinates adjusted by -0.5px after fixing the systematic offset bug
+    // The fix removes the incorrect +0.5 offset that was added after cornerSubPix
     Mat expected_corners = (Mat_<float>(9,2) <<
-        200, 200,
-        250, 200,
-        300, 200,
-        200, 250,
-        250, 250,
-        300, 250,
-        200, 300,
-        250, 300,
-        300, 300
+        199.5, 199.5,
+        249.5, 199.5,
+        299.5, 199.5,
+        199.5, 249.5,
+        249.5, 249.5,
+        299.5, 249.5,
+        199.5, 299.5,
+        249.5, 299.5,
+        299.5, 299.5
     );
 
 
@@ -941,11 +945,11 @@ TEST(Charuco, testSeveralBoardsWithCustomIds)
     // In 4.x detectBoard() returns the charuco corners in a 2D Mat with shape (N_corners, 1)
     // In 5.x, after PR #23473, detectBoard() returns the charuco corners in a 1D Mat with shape (1, N_corners)
     ASSERT_EQ(expected_corners.total(), c_corners1.total()*c_corners1.channels());
-    EXPECT_NEAR(0., cvtest::norm(expected_corners.reshape(1, 1), c_corners1.reshape(1, 1), NORM_INF), 3e-1);
+    EXPECT_NEAR(0., cvtest::norm(expected_corners.reshape(1, 1), c_corners1.reshape(1, 1), NORM_INF), 0.1);
 
     ASSERT_EQ(expected_corners.total(), c_corners2.total()*c_corners2.channels());
     expected_corners.col(0) += 500;
-    EXPECT_NEAR(0., cvtest::norm(expected_corners.reshape(1, 1), c_corners2.reshape(1, 1), NORM_INF), 3e-1);
+    EXPECT_NEAR(0., cvtest::norm(expected_corners.reshape(1, 1), c_corners2.reshape(1, 1), NORM_INF), 0.1);
 }
 
 }} // namespace
