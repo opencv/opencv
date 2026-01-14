@@ -2078,8 +2078,10 @@ public:
 };
 
 enum class TokenizeMethod {
-    BPE = 0,
+    DNN_TOKENIZER_BPE = 0,
 };
+// Register it globally so Python can see it as cv.dnn.DNN_TOKENIZER_BPE
+CV_ENUM(TokenizeMethod, DNN_TOKENIZER_BPE);
 
 /**
  * @brief High-level tokenizer wrapper for DNN usage.
@@ -2096,18 +2098,12 @@ enum class TokenizeMethod {
  */
 class CV_EXPORTS_W_SIMPLE Tokenizer {
 public:
-    // 1. Enum moved INSIDE the class
-    enum TokenizeMethod {
-        BPE = 0,
-    };
-    // 2. Register Enum for Python bindings
-    CV_ENUM(TokenizeMethod, BPE);
+    // REMOVE the enum definition from inside here
 
     /**
      * @brief Construct a tokenizer with a given method default BPE.
-     * For BPE method you normally call Tokenizer::load() to initialize model data.
      */
-    CV_WRAP Tokenizer(TokenizeMethod method = BPE);
+    CV_WRAP Tokenizer(TokenizeMethod method = DNN_TOKENIZER_BPE);
 
     /**
      * @brief Load a tokenizer from a model directory.
@@ -2121,23 +2117,12 @@ public:
      * end with an appropriate path separator.
      *
      * @param model_config  Path to config.json for model.
-     * @param method        Tokenization method (default: BPE).
-     * @return A Tokenizer ready for use. Throws cv::Exception if files are missing or `model_type` is unsupported.
+     * @param method        Tokenization method (default: DNN_TOKENIZER_BPE).
      */
-    // 3. Updated load to accept 'method' as requested by dkurt
     CV_WRAP static Tokenizer load(CV_WRAP_FILE_PATH const std::string& model_config, 
-                                  TokenizeMethod method = BPE);
+                                  TokenizeMethod method = DNN_TOKENIZER_BPE);
 
-    /**
-     * @brief Encode UTF-8 text to token ids (special tokens currently disabled).
-     *
-     * Calls the underlying `CoreBPE::encode` with an empty allowed-special set.
-     *
-     * @param text  UTF-8 input string.
-     * @return Vector of token ids (32-bit ids narrowed to int for convenience).
-     */
     CV_WRAP std::vector<int> encode(const std::string& text);
-
     CV_WRAP std::string decode(const std::vector<int>& tokens);
     
     struct Impl;

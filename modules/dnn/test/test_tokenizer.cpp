@@ -105,8 +105,8 @@ TEST(Tokenizer_BPE, CatastrophicallyRepetitive_GPT2) {
 
 TEST(Tokenizer_BPE, ExplicitEnumLoad) {
     std::string gpt2_model = _tf("gpt2/config.json");
-    // Explicitly using the new Enum we just added
-    Tokenizer tok = Tokenizer::load(gpt2_model, Tokenizer::BPE); 
+    // Updated: Use global enum DNN_TOKENIZER_BPE
+    Tokenizer tok = Tokenizer::load(gpt2_model, DNN_TOKENIZER_BPE); 
     
     std::vector<int> tokens = tok.encode("Enum works");
     EXPECT_FALSE(tokens.empty());

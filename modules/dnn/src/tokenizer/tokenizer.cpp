@@ -70,21 +70,11 @@ static void registerDefaultTokenizers() {
     }
 }
 
-// Constructor Implementation
-Tokenizer::Tokenizer(Tokenizer::TokenizeMethod) : impl_(nullptr) {}
+// Constructor Implementation - Updated
+Tokenizer::Tokenizer(TokenizeMethod) : impl_(nullptr) {}
 
-std::vector<int> Tokenizer::encode(const std::string& text) {
-    if (!impl_) CV_Error(cv::Error::StsError, "Tokenizer impl null");
-    return impl_->encode(text);
-}
-
-std::string Tokenizer::decode(const std::vector<int>& tokens) {
-    if (!impl_) CV_Error(cv::Error::StsError, "Tokenizer impl null");
-    return impl_->decode(tokens);
-};
-
-// The Load Function - Updated to match new Header API
-Tokenizer Tokenizer::load(const std::string& model_config, Tokenizer::TokenizeMethod method) {
+// The Load Function - Updated to use global enum
+Tokenizer Tokenizer::load(const std::string& model_config, TokenizeMethod method) {
     cv::FileStorage cfg(model_config, cv::FileStorage::READ | cv::FileStorage::FORMAT_JSON);
     if (!cfg.isOpened())
         CV_Error(cv::Error::StsError, "Could not open config.json: " + model_config);
@@ -96,7 +86,7 @@ Tokenizer Tokenizer::load(const std::string& model_config, Tokenizer::TokenizeMe
     // Map Enum to internal string key
     std::string methodType;
     switch (method) {
-        case Tokenizer::BPE: 
+        case DNN_TOKENIZER_BPE: // Correct usage of global enum
             methodType = "BPE"; 
             break;
         default: 
@@ -114,6 +104,16 @@ Tokenizer Tokenizer::load(const std::string& model_config, Tokenizer::TokenizeMe
     tok.impl_ = it->second(cfg, dir);
     return tok;
 }
+
+std::vector<int> Tokenizer::encode(const std::string& text) {
+    if (!impl_) CV_Error(cv::Error::StsError, "Tokenizer impl null");
+    return impl_->encode(text);
+}
+
+std::string Tokenizer::decode(const std::vector<int>& tokens) {
+    if (!impl_) CV_Error(cv::Error::StsError, "Tokenizer impl null");
+    return impl_->decode(tokens);
+};
 
 CoreBPE buildTokenizerGPT(const std::string& model_type, const std::string& json_path) {
     cv::FileStorage fs(json_path, cv::FileStorage::READ | cv::FileStorage::FORMAT_JSON);
