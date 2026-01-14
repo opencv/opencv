@@ -110,7 +110,7 @@ cvt_( const _Ts* src, size_t sstep, _Td* dst, size_t dstep, Size size )
         int j = 0;
 // Excluding GNU in CV_SIMD_SCALABLE because of "opencv/issues/26936"
 #if (CV_SIMD || (CV_SIMD_SCALABLE && !(defined(__GNUC__) && !defined(__clang__))) )
-        const int VECSZ = VTraits<_Twvec>::vlanes()*2*sizeof(_Td) / sizeof(_Ts);
+        const int VECSZ = VTraits<_Twvec>::vlanes()*2;
         for( ; j < size.width; j += VECSZ )
         {
             if( j > size.width - VECSZ )
