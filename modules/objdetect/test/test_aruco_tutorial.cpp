@@ -189,6 +189,7 @@ TEST(CV_ArucoTutorial, can_find_diamondmarkers)
     aruco::DetectorParameters detectorParams;
     detectorParams.readDetectorParameters(fs.root());
     detectorParams.cornerRefinementMethod = aruco::CORNER_REFINE_APRILTAG;
+    detectorParams.validBitIdThreshold = 0.5f;
 
     aruco::CharucoBoard charucoBoard(Size(3, 3), 0.4f, 0.25f, dictionary);
     aruco::CharucoDetector detector(charucoBoard, aruco::CharucoParameters(), detectorParams);

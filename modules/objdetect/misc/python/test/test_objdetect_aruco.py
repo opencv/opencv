@@ -319,6 +319,7 @@ class aruco_objdetect_test(NewOpenCVTests):
         imgSize = (500, 500)
         params = cv.aruco.DetectorParameters()
         params.minDistanceToBorder = 3
+        params.validBitIdThreshold = 0.5
 
         board = cv.aruco.CharucoBoard((4, 4), 0.03, 0.015, cv.aruco.getPredefinedDictionary(cv.aruco.DICT_6X6_250))
         detector = cv.aruco.CharucoDetector(board, detectorParams=params)

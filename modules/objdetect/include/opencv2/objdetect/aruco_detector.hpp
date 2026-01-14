@@ -20,6 +20,8 @@ enum CornerRefineMethod{
     CORNER_REFINE_APRILTAG, ///< Tag and corners detection based on the AprilTag 2 approach @cite wang2016iros
 };
 
+static constexpr float kDefaultValidBitIdThreshold{0.49f};
+
 /** @brief struct DetectorParameters is used by ArucoDetector
  */
 struct CV_EXPORTS_W_SIMPLE DetectorParameters {
@@ -49,7 +51,7 @@ struct CV_EXPORTS_W_SIMPLE DetectorParameters {
         aprilTagQuadSigma = 0.0;
         aprilTagMinClusterPixels = 5;
         aprilTagMaxNmaxima = 10;
-        aprilTagCriticalRad = (float)(10* CV_PI /180);
+        aprilTagCriticalRad = (float)(10 * CV_PI / 180);
         aprilTagMaxLineFitMse = 10.0;
         aprilTagMinWhiteBlackDiff = 5;
         aprilTagDeglitch = 0;
@@ -57,6 +59,7 @@ struct CV_EXPORTS_W_SIMPLE DetectorParameters {
         useAruco3Detection = false;
         minSideLengthCanonicalImg = 32;
         minMarkerLengthRatioOriginalImg = 0.0;
+        validBitIdThreshold = kDefaultValidBitIdThreshold;
     }
 
     /** @brief Read a new set of DetectorParameters from FileNode (use FileStorage.root()).
@@ -231,6 +234,9 @@ struct CV_EXPORTS_W_SIMPLE DetectorParameters {
 
     /// range [0,1], eq (2) from paper. The parameter tau_i has a direct influence on the processing speed.
     CV_PROP_RW float minMarkerLengthRatioOriginalImg;
+
+    /// range [0,1], define the acceptable threshold when comparing the detected marker to the dictionary during marker identification.
+    CV_PROP_RW float validBitIdThreshold;
 };
 
 /** @brief struct RefineParameters is used by ArucoDetector
