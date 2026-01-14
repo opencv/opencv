@@ -1859,7 +1859,10 @@ inline _Tpwvec v_expand_high(const _Tpvec& a)                        \
 { return _Tpwvec(__CV_CAT(intrin, _high)(a.val)); }                  \
 inline _Tpwvec v_load_expand(const _Tp* ptr)                         \
 {                                                                    \
-    v128_t a = wasm_v128_load(ptr);                                  \
+    alignas(16) _Tp tmp[_Tpwvec::nlanes] = {};
+    for(int i = 0; i < _Tpwvec::nlanes; i++)
+        tmp[i] = ptr[i];
+    v128_t a = wasm_v128_load(tmp);                                  \
     return _Tpwvec(intrin(a));                                       \
 }
 
