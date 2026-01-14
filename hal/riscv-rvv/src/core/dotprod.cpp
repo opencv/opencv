@@ -137,7 +137,7 @@ static inline double dotProd_32s(const int *a, const int *b, int len) {
         auto va = __riscv_vle32_v_i32m4(a + j, vl);
         auto vb = __riscv_vle32_v_i32m4(b + j, vl);
 
-        s = __riscv_vfadd(s, __riscv_vfcvt_f(__riscv_vwmul(va, vb, vl), vl), vl);
+        s = __riscv_vfadd_vv_f64m8_tu(s, s, __riscv_vfcvt_f(__riscv_vwmul(va, vb, vl), vl), vl);
     }
     r = __riscv_vfmv_f(__riscv_vfredosum(s, __riscv_vfmv_v_f_f64m1(0.f, __riscv_vsetvlmax_e64m1()), __riscv_vsetvlmax_e64m8()));
 
@@ -160,7 +160,7 @@ static inline double dotProd_32f(const float *a, const float *b, int len) {
             auto va = __riscv_vle32_v_f32m4(a + j, vl);
             auto vb = __riscv_vle32_v_f32m4(b + j, vl);
 
-            s = __riscv_vfmacc(s, va, vb, vl);
+            s = __riscv_vfmacc_vv_f32m4_tu(s, va, vb, vl);
         }
         r += (double)__riscv_vfmv_f(__riscv_vfredusum(s, __riscv_vfmv_v_f_f32m1(0.f, __riscv_vsetvlmax_e32m1()), __riscv_vsetvlmax_e32m4()));
 
