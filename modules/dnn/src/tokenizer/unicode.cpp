@@ -443,22 +443,51 @@ static std::vector<size_t> unicode_regex_split_stl(const std::wstring & wtext, c
     bpe_offsets.reserve(offsets.size()); // Reserve memory for the approximate size
     size_t start = 0;
     for (auto offset : offsets) {
-        std::wcregex_iterator it(wtext.data() + start, wtext.data() + start + offset, expr);
+        // Ensure we don't read past the string end
+        if (start + offset > wtext.size()) {
+            offset = wtext.size() - start;
+        }
+
+        // Skip empty ranges to avoid iterator confusion
+        if (offset == 0) {
+            start += offset;
+            continue;
+        }
+
+        const wchar_t* range_begin = wtext.data() + start;
+        const wchar_t* range_end = wtext.data() + start + offset;
+
+        std::wcregex_iterator it(range_begin, range_end, expr);
         std::wcregex_iterator end;
 
-        int64_t start_idx = 0;
+        int64_t last_pos = 0;
         while (it != end) {
             std::wcmatch match = *it;
-            if (match.position() > start_idx) {
-                bpe_offsets.emplace_back(match.position() - start_idx);
+
+            // Explicitly validate position to silence GCC -Warray-bounds
+            // match.position() returns difference_type (signed), we cast safely
+            long long pos_raw = match.position();
+            if (pos_raw < 0) {
+                ++it;
+                continue; // Should never happen, but prevents crash
             }
-            bpe_offsets.emplace_back(match.length());
-            start_idx = match.position() + match.length();
+
+            int64_t pos = static_cast<int64_t>(pos_raw);
+
+            // Capture the text BEFORE the match (This was missing in your file!)
+            if (pos > last_pos) {
+                bpe_offsets.emplace_back(static_cast<size_t>(pos - last_pos));
+            }
+
+            // match.length() returns signed/unsigned depending on impl, cast to size_t
+            bpe_offsets.emplace_back(static_cast<size_t>(match.length()));
+
+            last_pos = pos + static_cast<int64_t>(match.length());
             ++it;
         }
 
-        if (start_idx < (int64_t) offset) {
-            bpe_offsets.emplace_back(offset - start_idx);
+        if (last_pos < (int64_t)offset) {
+            bpe_offsets.emplace_back(static_cast<size_t>(offset - last_pos));
         }
         start += offset;
     }
@@ -473,22 +502,50 @@ static std::vector<size_t> unicode_regex_split_stl(const std::string & text, con
     bpe_offsets.reserve(offsets.size()); // Reserve memory for the approximate size
     size_t start = 0;
     for (auto offset : offsets) {
-        std::cregex_iterator it(text.data() + start, text.data() + start + offset, expr);
+
+        // Ensure we don't read past the string end
+        if (start + offset > text.size()) {
+            offset = text.size() - start;
+        }
+
+        // Skip empty ranges
+        if (offset == 0) {
+            start += offset;
+            continue;
+        }
+
+        const char* range_begin = text.data() + start;
+        const char* range_end = text.data() + start + offset;
+
+        std::cregex_iterator it(range_begin, range_end, expr);
         std::cregex_iterator end;
 
-        int64_t start_idx = 0;
+        int64_t last_pos = 0; // Renamed
         while (it != end) {
             std::cmatch match = *it;
-            if (match.position() > start_idx) {
-                bpe_offsets.emplace_back(match.position() - start_idx);
+
+            // Validate position
+            long long pos_raw = match.position();
+            if (pos_raw < 0) {
+                ++it;
+                continue; 
             }
-            bpe_offsets.emplace_back(match.length());
-            start_idx = match.position() + match.length();
+
+            int64_t pos = static_cast<int64_t>(pos_raw);
+
+            // Capture the text BEFORE the match
+            if (pos > last_pos) {
+                bpe_offsets.emplace_back(static_cast<size_t>(pos - last_pos));
+            }
+
+            bpe_offsets.emplace_back(static_cast<size_t>(match.length()));
+
+            last_pos = pos + static_cast<int64_t>(match.length());
             ++it;
         }
 
-        if (start_idx < (int64_t) offset) {
-            bpe_offsets.emplace_back(offset - start_idx);
+        if (last_pos < (int64_t) offset) {
+            bpe_offsets.emplace_back(static_cast<size_t>(offset - last_pos));
         }
         start += offset;
     }
