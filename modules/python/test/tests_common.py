@@ -29,6 +29,10 @@ class NewOpenCVTests(unittest.TestCase):
     repoUrl = 'https://raw.github.com/opencv/opencv/4.x'
 
     def find_file(self, filename, searchPaths=[], required=True):
+        # Load OPENCV_TEST_DATA_PATH during pytest (bootstrap() is not called)
+        if NewOpenCVTests.extraTestDataPath is None:
+            NewOpenCVTests.extraTestDataPath = os.environ.get("OPENCV_TEST_DATA_PATH", None)
+       
         searchPaths = searchPaths if searchPaths else [self.repoPath, self.extraTestDataPath, self.extraDnnTestDataPath]
         for path in searchPaths:
             if path is not None:
