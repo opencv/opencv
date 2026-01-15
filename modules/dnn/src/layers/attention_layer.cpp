@@ -13,14 +13,15 @@ namespace cv { namespace dnn {
 static void packWeight(size_t num_heads, size_t head_size, size_t input_hidden_size,
                        const float *weight_data, size_t hidden_size, std::vector<float> &packed_weight, const FastGemmOpt &opt) {
     // num_heads * pack(head_size, input_hidden_size)
-    size_t pack_size = fastGemmPackBSize(head_size, input_hidden_size, opt);
-    size_t packed_weight_size = num_heads * pack_size;
-    packed_weight.resize(packed_weight_size, 0.f);
-    auto *packed_weight_data = packed_weight.data();
+    const size_t pack_size = fastGemmPackBSize(head_size, input_hidden_size, opt);
+    const size_t packed_weight_size = num_heads * pack_size;
+    packed_weight.resize(packed_weight_size);
+    float *base_packed_dst = packed_weight.data();
     for (size_t i = 0; i < num_heads; i++) {
-        fastGemmPackB(false, head_size, input_hidden_size, weight_data, hidden_size, packed_weight_data, opt);
-        packed_weight_data += pack_size;
-        weight_data += head_size;
+        const float *current_src = weight_data + i * head_size;
+        float *current_dst = base_packed_dst + i * pack_size;
+
+        fastGemmPackB(false, head_size, input_hidden_size, current_src, hidden_size, current_dst, opt);
     }
 }
 
