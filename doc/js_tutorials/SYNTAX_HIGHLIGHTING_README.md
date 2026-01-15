@@ -1,6 +1,6 @@
 # Syntax Highlighting for OpenCV.js Tutorials
 
-This contribution addresses [GitHub Issue #18402](https://github.com/opencv/opencv/issues/18402) - "Add Syntax highlighting for opentype.js tutorials".
+This contribution addresses [GitHub Issue #18402](https://github.com/opencv/opencv/issues/18402) - "Add Syntax highlighting for OpenCV.js tutorials".
 
 ## Summary
 

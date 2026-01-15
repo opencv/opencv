@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Script to add Prism.js syntax highlighting to OpenCV.js tutorial HTML files.
-This addresses GitHub issue #18402 - "Add Syntax highlighting for opentype.js tutorials"
+This addresses GitHub issue #18402 - "Add Syntax highlighting for OpenCV.js tutorials"
 """
 
 import re
