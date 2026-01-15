@@ -1859,12 +1859,12 @@ inline _Tpwvec v_expand_high(const _Tpvec& a)                        \
 { return _Tpwvec(__CV_CAT(intrin, _high)(a.val)); }                  \
 inline _Tpwvec v_load_expand(const _Tp* ptr)                         \
 {                                                                    \
-    alignas(16) _Tp tmp[_Tpwvec::nlanes] = {};
-    for(int i = 0; i < _Tpwvec::nlanes; i++)
-        tmp[i] = ptr[i];
-    v128_t a = wasm_v128_load(tmp);                                  \
-    return _Tpwvec(intrin(a));                                       \
-}
+    using lane_t = typename _Tpwvec::lane_type;                      \
+    alignas(16) lane_t tmp[_Tpwvec::nlanes];                         \
+    for(int i = 0; i < _Tpwvec::nlanes; i++)                         \
+        tmp[i] = static_cast<lane_t>(ptr[i]);                        \
+    return _Tpwvec(wasm_v128_load(tmp));                             \
+}                                                                    \
 
 OPENCV_HAL_IMPL_WASM_EXPAND(v_uint8x16, v_uint16x8, uchar, v128_cvtu8x16_i16x8)
 OPENCV_HAL_IMPL_WASM_EXPAND(v_int8x16,  v_int16x8,  schar, v128_cvti8x16_i16x8)
