@@ -38,7 +38,7 @@ static void Threshold_Demo( int, void* )
      3: Threshold to Zero
      4: Threshold to Zero Inverted
     */
-    threshold( src_gray, dst, threshold_value, max_binary_value, threshold_type );
+    threshold( src_gray, dst, (double)threshold_value, (double)max_binary_value, threshold_type );
     imshow( window_name, dst );
 }
 //![Threshold_Demo]
@@ -49,16 +49,27 @@ static void Threshold_Demo( int, void* )
 int main( int argc, char** argv )
 {
     //! [load]
-    String imageName("stuff.jpg"); // by default
+    // Modernization: Switched default to 'smarties.png' for better thresholding demos [#25635]
+    String imageName("smarties.png"); 
     if (argc > 1)
     {
         imageName = argv[1];
     }
-    src = imread( samples::findFile( imageName ), IMREAD_COLOR ); // Load an image
+
+    // Robustness: Use false for 'required' to prevent C++ exception crashes
+    String image_path = samples::findFile( imageName, false ); 
+
+    if (image_path.empty())
+    {
+        cout << "Cannot find sample image: " << imageName << std::endl;
+        return -1;
+    }
+
+    src = imread( image_path, IMREAD_COLOR ); // Load an image
 
     if (src.empty())
     {
-        cout << "Cannot read the image: " << imageName << std::endl;
+        cout << "Cannot read the image: " << image_path << std::endl;
         return -1;
     }
 

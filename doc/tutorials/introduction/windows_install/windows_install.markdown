@@ -124,11 +124,11 @@ solutions described in those videos are no longer supported and may even break y
 If you are building your own libraries you can take the source files from our [Git
 repository](https://github.com/opencv/opencv.git).
 
-Building the OpenCV library from scratch requires a couple of tools installed beforehand:
+-Building the OpenCV library from scratch requires a couple of tools installed beforehand:
 
--   An IDE of choice (preferably), or just a CC++ compiler that will actually make the binary files.
+-   An IDE of choice (preferably), or just a C++ compiler that will actually make the binary files.
     Here we will use the [Microsoft Visual Studio](https://www.microsoft.com/visualstudio/en-us).
-    However, you can use any other IDE that has a valid CC++ compiler.
+    However, you can use any other IDE that has a valid C++ compiler.
 -   [CMake](http://www.cmake.org/cmake/resources/software.html), which is a neat tool to make the project files (for your chosen IDE) from the OpenCV
     source files. It will also allow an easy configuration of the OpenCV build files, in order to
     make binary files that fits exactly to your needs.
@@ -363,7 +363,7 @@ libraries). If you do not need the support for some of these, you can just freel
     caused mostly by old video card drivers. For testing the GPU (if built) run the
     *performance_gpu.exe* sample application.
 
-## Set the OpenCV environment variable and add it to the systems path {#tutorial_windows_install_path}
+## Set the OpenCV environment variable and add it to the system PATH {#tutorial_windows_install_path}
 
 First, we set an environment variable to make our work easier. This will hold the build directory of
 our OpenCV library that we use in our projects. Start up a command window and enter:
@@ -380,20 +380,20 @@ our OpenCV library that we use in our projects. Start up a command window and en
     setx OpenCV_DIR D:\OpenCV\build\x64\vc17     (suggested for Visual Studio 2022 - 64 bit Windows)
     setx OpenCV_DIR D:\OpenCV\build\x86\vc17     (suggested for Visual Studio 2022 - 32 bit Windows)
 
-    setx OpenCV_DIR D:\OpenCV\build\x64\vc18     (suggested for Visual Studio 2026 - 64 bit Windows)
-    setx OpenCV_DIR D:\OpenCV\build\x86\vc18     (suggested for Visual Studio 2026 - 32 bit Windows)
+    setx OpenCV_DIR D:\OpenCV\build\x64\vc18     (suggested for Visual Studio 2022 - 64 bit Windows)
+    setx OpenCV_DIR D:\OpenCV\build\x86\vc18     (suggested for Visual Studio 2022 - 32 bit Windows)
 @endcode
 Here the directory is where you have your OpenCV binaries (*extracted* or *built*). You can have
 different platform (e.g. x64 instead of x86) or compiler type, so substitute appropriate value.
 Inside this, you should have two folders called *lib* and *bin*.
 
 If you built static libraries then you are done. Otherwise, you need to add the *bin* folders path
-to the systems path. This is because you will use the OpenCV library in form of *"Dynamic-link
+to the system PATH. This is because you will use the OpenCV library in form of *"Dynamic-link
 libraries"* (also known as **DLL**). Inside these are stored all the algorithms and information the
 OpenCV library contains. The operating system will load them only on demand, during runtime.
-However, to do this the operating system needs to know where they are. The systems **PATH** contains
+However, to do this the operating system needs to know where they are. The system **PATH** contains
 a list of folders where DLLs can be found. Add the OpenCV library path to this and the OS will know
-where to look if he ever needs the OpenCV binaries. Otherwise, you will need to copy the used DLLs
+where to look if the OS ever needs the OpenCV binaries. Otherwise, you will need to copy the used DLLs
 right beside the applications executable file (*exe*) for the OS to find it, which is highly
 unpleasant if you work on many projects. To do this start up again the [PathEditor](http://www.redfernplace.com/software-projects/patheditor/) and add the
 following new entry (right click in the application to bring up the menu):
