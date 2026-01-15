@@ -1876,9 +1876,12 @@ OPENCV_HAL_IMPL_WASM_EXPAND(v_int32x4,  v_int64x2,  int, v128_cvti32x4_i64x2)
 #define OPENCV_HAL_IMPL_WASM_EXPAND_Q(_Tpvec, _Tp, intrin)  \
 inline _Tpvec v_load_expand_q(const _Tp* ptr)               \
 {                                                           \
-    v128_t a = wasm_v128_load(ptr);                         \
-    return _Tpvec(intrin(a));                               \
-}
+    using lane_t =  typename _Tpvec::lane_type;             \
+    alignas(16) lane_t tmp[_Tpvec::nlanes];                 \
+    for(int i = 0; i < _Tpvec::nlanes; i++)                 \
+        tmp[i] = static_cast<lane_t>(ptr[i]);               \
+    return _Tpvec(wasm_v128_load(tmp));                     \
+}                                                           \
 
 OPENCV_HAL_IMPL_WASM_EXPAND_Q(v_uint32x4, uchar, v128_cvtu8x16_i32x4)
 OPENCV_HAL_IMPL_WASM_EXPAND_Q(v_int32x4, schar, v128_cvti8x16_i32x4)
