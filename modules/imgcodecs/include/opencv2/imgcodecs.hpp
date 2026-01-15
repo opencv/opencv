@@ -44,6 +44,7 @@
 #define OPENCV_IMGCODECS_HPP
 
 #include "opencv2/core.hpp"
+#include <map>
 
 /**
   @defgroup imgcodecs Image file reading and writing
@@ -264,6 +265,10 @@ enum ImwriteGIFCompressionFlags {
     IMWRITE_GIF_COLORTABLE_SIZE_256  = 8
 };
 
+//! @} imgcodecs_flags
+
+//! @addtogroup imgcodecs_metadata
+//! @{
 enum ImageMetadataType
 {
     IMAGE_METADATA_UNKNOWN = -1, // Used when metadata type is unrecognized or not set
@@ -276,7 +281,312 @@ enum ImageMetadataType
     IMAGE_METADATA_MAX = 3       // Highest valid index (usually used for bounds checking)
 };
 
-//! @} imgcodecs_flags
+enum ExifTagType
+{
+    TAG_TYPE_NOTYPE = 0,  // Invalid or undefined type
+    TAG_TYPE_BYTE = 1,  // 8-bit unsigned integer
+    TAG_TYPE_ASCII = 2,  // 8-bit ASCII string, null-terminated
+    TAG_TYPE_SHORT = 3,  // 16-bit unsigned integer
+    TAG_TYPE_LONG = 4,  // 32-bit unsigned integer
+    TAG_TYPE_RATIONAL = 5,  // Two LONGs: numerator and denominator (64-bit unsigned fraction)
+    TAG_TYPE_SBYTE = 6,  // 8-bit signed integer
+    TAG_TYPE_UNDEFINED = 7,  // 8-bit untyped data
+    TAG_TYPE_SSHORT = 8,  // 16-bit signed integer
+    TAG_TYPE_SLONG = 9,  // 32-bit signed integer
+    TAG_TYPE_SRATIONAL = 10, // Two SLONGs: signed 64-bit fraction
+    TAG_TYPE_FLOAT = 11, // IEEE 32-bit float
+    TAG_TYPE_DOUBLE = 12, // IEEE 64-bit float
+    TAG_TYPE_IFD = 13, // 32-bit offset to IFD
+    TAG_TYPE_LONG8 = 16, // BigTIFF: 64-bit unsigned integer
+    TAG_TYPE_SLONG8 = 17, // BigTIFF: 64-bit signed integer
+    TAG_TYPE_IFD8 = 18  // BigTIFF: 64-bit offset to IFD
+};
+
+/**
+ * @brief Picture orientation which may be taken from EXIF
+ *      Orientation usually matters when the picture is taken by
+ *      smartphone or other camera with orientation sensor support
+ *      Corresponds to EXIF 2.3 Specification
+ */
+enum ImageOrientation
+{
+    IMAGE_ORIENTATION_TL = 1, ///< Horizontal (normal)
+    IMAGE_ORIENTATION_TR = 2, ///< Mirrored horizontal
+    IMAGE_ORIENTATION_BR = 3, ///< Rotate 180
+    IMAGE_ORIENTATION_BL = 4, ///< Mirrored vertical
+    IMAGE_ORIENTATION_LT = 5, ///< Mirrored horizontal & rotate 270 CW
+    IMAGE_ORIENTATION_RT = 6, ///< Rotate 90 CW
+    IMAGE_ORIENTATION_RB = 7, ///< Mirrored horizontal & rotate 90 CW
+    IMAGE_ORIENTATION_LB = 8  ///< Rotate 270 CW
+};
+
+/**
+ * @brief Base Exif tags used by IFD0 (main image)
+ */
+enum ExifTagId
+{
+    TAG_EMPTY = 0,
+    TAG_SUB_FILE_TYPE = 254,
+    TAG_IMAGE_WIDTH = 256,
+    TAG_IMAGE_LENGTH = 257,
+    TAG_BITS_PER_SAMPLE = 258,
+    TAG_COMPRESSION = 259,
+    TAG_PHOTOMETRIC = 262,
+    TAG_THRESHOLDING = 263,
+    TAG_CELL_WIDTH = 264,
+    TAG_CELL_LENGTH = 265,
+    TAG_FILL_ORDER = 266,
+    TAG_DOCUMENT_NAME = 269,
+    TAG_IMAGE_DESCRIPTION = 270,
+    TAG_MAKE = 271,
+    TAG_MODEL = 272,
+    TAG_STRIP_OFFSET = 273,
+    TAG_ORIENTATION = 274,
+    TAG_SAMPLES_PER_PIXEL = 277,
+    TAG_ROWS_PER_STRIP = 278,
+    TAG_STRIP_BYTE_COUNTS = 279,
+
+    TAG_X_RESOLUTION = 282,
+    TAG_Y_RESOLUTION = 283,
+    TAG_PLANAR_CONFIG = 284,
+    TAG_PAGE_NAME = 285,
+    TAG_X_POSITION = 286,
+    TAG_Y_POSITION = 287,
+    TAG_GRAY_RESPONSE_UNIT = 290,
+    TAG_GRAY_RESPONSE_CURVE = 291,
+    TAG_T4_OPTIONS = 292,
+    TAG_T6_OPTIONS = 293,
+    TAG_RESOLUTION_UNIT = 296,
+    TAG_PAGE_NUMBER = 297,
+    TAG_TRANSFER_FUNCTION = 301,
+    TAG_SOFTWARE = 305,
+    TAG_MODIFY_DATE = 306,
+    TAG_ARTIST = 315,
+    TAG_HOST_COMPUTER = 316,
+
+    TAG_WHITE_POINT = 318,
+    TAG_PRIMARY_CHROMATICITIES = 319,
+
+    TAG_SAMPLE_FORMAT = 339,
+    TAG_JPGFROMRAWSTART = 513,
+    TAG_JPGFROMRAWLENGTH = 514,
+
+    TAG_YCBCR_COEFFICIENTS = 529,
+    TAG_YCBCR_SUBSAMPLING = 530,
+    TAG_YCBCR_POSITIONING = 531,
+    TAG_REFERENCE_BLACK_WHITE = 532,
+
+    // DNG extension
+    TAG_CFA_REPEAT_PATTERN_DIM = 33421,
+    TAG_CFA_PATTERN = 33422,
+
+    TAG_COPYRIGHT = 33432,
+    TAG_EXPOSURE_TIME = 33434,
+    TAG_F_NUMBER = 33437,
+
+    TAG_EXIF_OFFSET = 34665,
+    TAG_EXPOSURE_PROGRAM = 34850,
+    TAG_GPS_INFO = 34853,
+    TAG_ISO_SPEED = 34855,
+
+    TAG_EXIF_VERSION = 36864,
+    TAG_DATETIME_ORIGINAL = 36867,
+    TAG_DATETIME_CREATE = 36868,
+
+    TAG_OFFSETTIME = 36880,
+    TAG_OFFSETTIME_ORIGINAL = 36881,
+    TAG_OFFSETTIME_DIGITIZED = 36882,
+
+    TAG_COMPONENTS_CONFIGURATION = 37121,
+    TAG_COMPRESSED_BITS_PER_PIXEL = 37122,
+
+    TAG_SHUTTER_SPEED = 37377,
+    TAG_APERTURE_VALUE = 37378,
+    TAG_BRIGHTNESS_VALUE = 37379,
+    TAG_EXPOSURE_BIAS_VALUE = 37380,
+    TAG_MAX_APERTURE_VALUE = 37381,
+    TAG_SUBJECT_DISTANCE = 37382,
+    TAG_METERING_MODE = 37383,
+    TAG_LIGHT_SOURCE = 37384,
+    TAG_FLASH = 37385,
+    TAG_FOCAL_LENGTH = 37386,
+
+    TAG_SUBJECT_AREA = 37396,
+
+    TAG_EP_STANDARD_ID = 37398,
+
+    TAG_MAKER_NOTE = 37500,
+    TAG_USER_COMMENT = 37510,
+
+    TAG_SUBSECTIME = 37520,
+
+    TAG_SUBSECTIME_ORIGINAL = 37521,
+    TAG_SUBSECTIME_DIGITIZED = 37522,
+
+    TAG_FLASH_PIX_VERSION = 40960,
+    TAG_COLOR_SPACE = 40961,
+    TAG_EXIF_IMAGE_WIDTH = 40962,
+    TAG_EXIF_IMAGE_HEIGHT = 40963,
+
+    TAG_INTEROPERABILITY = 40965,
+
+    TAG_FILE_SOURCE = 41728,
+
+    TAG_FOCAL_PLANE_X_RESOLUTION = 41486,
+    TAG_FOCAL_PLANE_Y_RESOLUTION = 41487,
+    TAG_FOCAL_PLANE_RESOLUTION_UNIT = 41488,
+
+    TAG_SUBJECT_LOCATION = 41492,
+    TAG_EXPOSURE_INDEX = 41493,
+    TAG_SENSING_METHOD = 41495,
+
+    TAG_SCENE_TYPE = 41729,
+    TAG_PHOTO_CFA_PATTERN = 41730,
+
+    TAG_CUSTOM_RENDERED = 41985,
+    TAG_EXPOSURE_MODE = 41986,
+    TAG_WHITE_BALANCE = 41987,
+    TAG_DIGITAL_ZOOM_RATIO = 41988,
+    TAG_FOCAL_LENGHT_IN_35MM = 41989,
+    TAG_SCENE_CAPTURE_TYPE = 41990,
+    TAG_GAIN_CONTROL = 41991,
+    TAG_CONTRAST = 41992,
+    TAG_SATURATION = 41993,
+    TAG_SHARPNESS = 41994,
+
+    TAG_DISTANCE_RANGE = 41996,
+
+    TAG_IMAGE_UNIQUE_ID = 42016,
+
+    TAG_BODY_SERIAL_NUMBER = 42033,
+    TAG_LENS_SPECIFICATION = 42034,
+    TAG_LENS_MAKE = 42035,
+    TAG_LENS_MODEL = 42036,
+
+    TAG_COMPOSITE_IMAGE = 42080,
+
+    TAG_GAMMA = 42240,
+
+    TAG_PRINT_IMAGE_MATCHING = 50341,
+
+    TAG_CHROMA_BLUR_RADIUS = 50703,
+    TAG_DNG_VERSION = 50706,
+    TAG_DNG_BACKWARD_VERSION = 50707,
+    TAG_UNIQUE_CAMERA_MODEL = 50708,
+    TAG_CFA_PLANECOLOR = 50710,
+    TAG_CFA_LAYOUT = 50711,
+    TAG_BLACK_LEVEL_REPEAT_DIM = 50713,
+    TAG_BLACK_LEVEL = 50714,
+    TAG_WHITE_LEVEL = 50717,
+    TAG_DEFAULT_SCALE = 50718,
+    TAG_DEFAULT_CROP_ORIGIN = 50719,
+    TAG_DEFAULT_CROP_SIZE = 50720,
+    TAG_COLOR_MATRIX1 = 50721,
+    TAG_COLOR_MATRIX2 = 50722,
+    TAG_CAMERA_CALIBRATION1 = 50723,
+    TAG_CAMERA_CALIBRATION2 = 50724,
+
+    TAG_ANALOG_BALANCE = 50727,
+    TAG_AS_SHOT_NEUTRAL = 50728,
+    TAG_AS_SHOT_WHITE_XY = 50729,
+    TAG_BASELINE_EXPOSURE = 50730,
+
+    TAG_CALIBRATION_ILLUMINANT1 = 50778,
+    TAG_CALIBRATION_ILLUMINANT2 = 50779,
+
+    TAG_ACTIVE_AREA = 50829,
+
+    TAG_EXTRA_CAMERA_PROFILES = 50933,
+    TAG_AS_SHOT_PROFILE_NAME = 50934,
+    TAG_PROFILE_NAME = 50936,
+
+    TAG_FORWARD_MATRIX1 = 50964,
+    TAG_FORWARD_MATRIX2 = 50965,
+    TAG_PREVIEW_COLORSPACE = 50970,
+    TAG_OPCODE_LIST2 = 51009,
+    TAG_NOISE_PROFILE = 51041,
+    TAG_DEFAULT_BLACK_RENDER = 51110,
+
+    TAG_INVALID_TAG = 65535
+};
+
+struct CV_EXPORTS_W_SIMPLE Rational
+{
+    CV_WRAP Rational() { num = 1; denom = 1; }
+    CV_WRAP Rational(int numerator, int denominator) { num = numerator; denom = denominator; }
+    CV_PROP_RW int num;
+    CV_PROP_RW int denom;
+};
+
+struct CV_EXPORTS_W_SIMPLE SRational
+{
+    CV_WRAP SRational() { num = 1; denom = 1; }
+    CV_WRAP SRational(int numerator, int denominator) { num = numerator; denom = denominator; }
+    CV_PROP_RW int num;
+    CV_PROP_RW int denom;
+};
+
+struct CV_EXPORTS_W_SIMPLE ExifEntry
+{
+public:
+    ExifEntry()
+        : tagId(TAG_EMPTY), type(TAG_TYPE_NOTYPE), count(1),
+        value_str(), value_u32(0), vec_int(), vec_raw(), vec_srational() {}
+    ~ExifEntry() = default;
+
+    CV_PROP_RW int tagId;
+    CV_PROP_RW int type;
+    CV_PROP_RW int count;
+
+    CV_WRAP int getValueAsInt() const;
+    CV_WRAP std::string getValueAsString() const;
+    CV_WRAP std::vector<int> getValueAsIntVector() const;
+    CV_WRAP std::vector<uchar> getValueAsRaw() const;
+    CV_WRAP std::vector<SRational> getValueAsRational() const;
+
+    CV_WRAP void setValueAsInt(int value);
+    CV_WRAP void setValueAsString(const std::string& value);
+    CV_WRAP void setValueAsIntVector(const std::vector<int>& value);
+    CV_WRAP void setValueAsRaw(const std::vector<uchar>& value);
+    CV_WRAP void setValueAsRational(const std::vector<SRational>& value);
+
+    CV_WRAP bool empty() const;
+    CV_WRAP std::string getTagIdAsString() const;
+    CV_WRAP std::string getTagTypeAsString() const;
+    CV_WRAP std::string dumpAsString() const;
+    std::ostream& dump(std::ostream& strm) const;
+
+private:
+    std::string value_str;
+    int value_u32;
+    std::vector<int> vec_int;
+    std::vector<uchar> vec_raw;
+    std::vector<SRational> vec_srational;
+};
+
+/** @brief Decodes EXIF metadata from binary data into structured ExifEntry entries.
+
+This function parses raw EXIF binary data and extracts metadata tags as structured `ExifEntry` objects.
+The extracted entries are organized as a vector of IFD (Image File Directory) blocks, where each IFD is a vector of `ExifEntry`.
+
+@param data The input binary EXIF data buffer.
+@param exif_entries Output vector of IFD blocks. Each IFD block is a vector of `ExifEntry` objects containing decoded tag information (tag ID, type, count, and value).
+@return Returns `true` if decoding was successful, `false` otherwise.
+ */
+CV_EXPORTS_W bool decodeExif(const std::vector<uchar>& data, CV_OUT std::vector< std::vector<ExifEntry> >& exif_entries);
+
+/** @brief Encodes structured ExifEntry metadata into binary EXIF data.
+
+This function serializes a collection of ExifEntry objects into a binary EXIF data block.
+The input entries are expected to be organized as a vector of IFD blocks, matching the EXIF file structure (e.g., primary IFD, Exif IFD, GPS IFD).
+
+@param exif_entries Input vector of IFD blocks. Each IFD block is a vector of ExifEntry objects containing tag metadata to be encoded.
+@param data Output buffer where the encoded EXIF binary data will be stored.
+@return Returns `true` if decoding was successful, `false` otherwise.
+ */
+CV_EXPORTS_W bool encodeExif(const std::vector<std::vector<ExifEntry>>& exif_entries, CV_OUT std::vector<uchar>& data);
+
+//! @} imgcodecs_metadata
 
 /** @brief Represents an animation with multiple frames.
 The `Animation` struct is designed to store and manage data for animated sequences such as those from animated formats (e.g., GIF, AVIF, APNG, WebP).

@@ -430,6 +430,110 @@ TEST(Imgcodecs_Jpeg, Read_Write_With_Exif)
     remove(outputname.c_str());
 }
 
+TEST(Imgcodecs_Png, encodeExif)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    //string filename = root + "../stitching/boat2.jpg";
+    string filename = root + "readwrite/testExifOrientation_7.png";
+    std::vector<int> metadata_types;
+    std::vector<std::vector<uchar>> metadata;
+
+    Mat img1 = imreadWithMetadata(filename, metadata_types, metadata, IMREAD_UNCHANGED);
+    std::vector<std::vector<ExifEntry> > exif_entries_vec;
+    decodeExif(metadata[0], exif_entries_vec);
+
+#if 0
+    ExifEntry exifEntry = exif_entries_vec[0][4];
+    exifEntry.dump(std::cout);
+    exif_entries_vec[0][4].type = TAG_TYPE_ASCII;
+    exif_entries_vec[0][4].setValueAsString("OpenCV 4.13");
+    exifEntry = exif_entries_vec[0][4];
+    exifEntry.dump(std::cout);
+#endif
+
+    std::vector<uchar> exif_data;
+    encodeExif(exif_entries_vec, exif_data);
+
+    std::vector<int> metadata_types2 = { IMAGE_METADATA_EXIF };
+    std::vector<std::vector<uchar>> metadata2 = { exif_data };
+
+    const string outputname = cv::tempfile(".png");
+    imwriteWithMetadata(outputname, img1, metadata_types2, metadata2);
+
+    std::vector<int> metadata_types3;
+    std::vector<std::vector<uchar>> metadata3;
+    Mat img2 = imreadWithMetadata(outputname, metadata_types3, metadata3, IMREAD_UNCHANGED);
+
+    EXPECT_EQ(metadata[0].size(), metadata3[0].size());
+    EXPECT_EQ(0, cvtest::norm(img1, img2, NORM_INF));
+
+    // Clean up by removing the temporary file.
+    EXPECT_EQ(0, remove(outputname.c_str()));
+}
+
+TEST(Imgcodecs_Png, Write_And_Read_Custom_Exif)
+{
+    const std::string root = cvtest::TS::ptr()->get_data_path();
+    const std::string filename = root + "readwrite/testExifOrientation_7.png";
+
+    // Create custom EXIF entries
+    ExifEntry exifEntry0, exifEntry1, exifEntry2;
+    exifEntry0.tagId = TAG_IMAGE_DESCRIPTION;
+    exifEntry0.type = TAG_TYPE_ASCII;
+    exifEntry0.setValueAsString("Test - Writing Custom Exif");
+
+    exifEntry1.tagId = TAG_SOFTWARE;
+    exifEntry1.type = TAG_TYPE_ASCII;
+    exifEntry1.setValueAsString("OpenCV 4.13");
+
+    exifEntry2.tagId = TAG_ORIENTATION;
+    exifEntry2.type = TAG_TYPE_SHORT;
+    exifEntry2.setValueAsInt(7); // orientation 7 expected
+
+    std::vector<ExifEntry> ifd0;
+    ifd0.push_back(exifEntry0);
+    ifd0.push_back(exifEntry1);
+    ifd0.push_back(exifEntry2);
+
+    std::vector<std::vector<ExifEntry>> exif_entries_vec;
+    exif_entries_vec.push_back(ifd0);
+
+    // Encode to binary EXIF segment
+    std::vector<uchar> exif_data;
+    encodeExif(exif_entries_vec, exif_data);
+
+    std::vector<int> metadata_types = { IMAGE_METADATA_EXIF };
+    std::vector<std::vector<uchar>> metadata = { exif_data };
+
+    Mat img = imread(filename, IMREAD_UNCHANGED);
+    ASSERT_FALSE(img.empty());
+
+    const std::string outputname = cv::tempfile(".png");
+    imwriteWithMetadata(outputname, img, metadata_types, metadata);
+
+    Mat img1 = imread(filename);
+    Mat img2 = imread(outputname);
+    EXPECT_EQ(0, cvtest::norm(img1, img2, cv::NORM_INF));
+
+    // Read back and validate EXIF
+    std::vector<int> read_metadata_types;
+    std::vector<std::vector<uchar>> read_metadata;
+    imreadWithMetadata(outputname, read_metadata_types, read_metadata);
+
+    ASSERT_FALSE(read_metadata.empty());
+    ASSERT_EQ(read_metadata_types[0], IMAGE_METADATA_EXIF);
+
+    std::vector<std::vector<ExifEntry>> read_exif_entries;
+    bool parse_result = decodeExif(read_metadata[0], read_exif_entries);
+    ASSERT_TRUE(parse_result);
+
+    EXPECT_EQ(read_exif_entries[0][0].getValueAsString(), "Test - Writing Custom Exif");
+    EXPECT_EQ(read_exif_entries[0][1].getValueAsString(), "OpenCV 4.13");
+    EXPECT_EQ(read_exif_entries[0][2].getValueAsInt(), 7);
+
+    EXPECT_EQ(0, remove(outputname.c_str()));
+}
+
 TEST(Imgcodecs_Png, Read_Write_With_Exif)
 {
     int png_compression = 3;
@@ -592,18 +696,32 @@ TEST_P(ReadExif_Sanity, Check)
         size_t iccp_size = iccp.total() * iccp.elemSize();
         EXPECT_EQ(expected_iccp_size, iccp_size);
     }
+
+    std::vector< std::vector<ExifEntry> > exif_entries_vec;
+    decodeExif(metadata[IMAGE_METADATA_EXIF], exif_entries_vec);
+
+    std::cout << "\n------- decoded Exif IFD count : " << (int)exif_entries_vec.size() << std::endl;
+    for (size_t i = 0; i < exif_entries_vec.size(); i++)
+        for (size_t j = 0; j < exif_entries_vec[i].size(); j++)
+        {
+            std::cout << exif_entries_vec[i][j].dumpAsString() << std::endl;
+        }
 }
 
 static const std::vector<ReadExif_Sanity_Params> exif_sanity_params
 {
 #ifdef HAVE_JPEG
     ReadExif_Sanity_Params("readwrite/testExifOrientation_3.jpg", 916, "Photoshop", 120, 3597, 940),
+    ReadExif_Sanity_Params("../stitching/boat2.jpg", 10630, "Photoshop", 152, 9118, 3144),
 #endif
 #ifdef OPENCV_IMGCODECS_PNG_WITH_EXIF
     ReadExif_Sanity_Params("readwrite/testExifOrientation_5.png", 112, "ExifTool", 102, 505, 0),
 #endif
 #ifdef HAVE_AVIF
     ReadExif_Sanity_Params("readwrite/testExifOrientation_7.avif", 913, "Photoshop", 120, 3597, 940),
+#endif
+#ifdef HAVE_WEBP
+    ReadExif_Sanity_Params("readwrite/testExifOrientation_2.webp", 112, "ExifTool", 102, 3597, 940),
 #endif
 };
 
