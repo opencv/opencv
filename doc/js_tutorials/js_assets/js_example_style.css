@@ -54,13 +54,83 @@ button[disabled] {
     margin: 4px 8px 4px 2px;
     background-color: #FBFCFD;
     border: 1px solid #C4CFE5;
-    font-family: monospace, fixed;
+    font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
     font-size: 13px;
     min-height: 13px;
-    line-height: 1.0;
+    line-height: 1.4;
     text-wrap: unrestricted;
     padding-bottom: 0px;
     margin: 0px;
+}
+
+/* Syntax highlighting for code blocks */
+.code.language-javascript {
+    background-color: #FBFCFD;
+}
+
+/* Syntax highlighting tokens */
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+    color: #708090;
+}
+
+.token.punctuation {
+    color: #999;
+}
+
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol,
+.token.deleted {
+    color: #905;
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted {
+    color: #690;
+}
+
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string {
+    color: #9a6e3a;
+}
+
+.token.atrule,
+.token.attr-value,
+.token.keyword {
+    color: #07a;
+}
+
+.token.function,
+.token.class-name {
+    color: #dd4a68;
+}
+
+.token.regex,
+.token.important,
+.token.variable {
+    color: #e90;
+}
+
+.token.important,
+.token.bold {
+    font-weight: bold;
+}
+
+.token.italic {
+    font-style: italic;
 }
 .hidden {
     display: none;

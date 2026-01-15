@@ -110,6 +110,13 @@ function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
             throw Error('Unknown code snippet type');
         }
         textArea.value = scriptNode.text.replace(/^\n/, '');
+        
+        // Apply syntax highlighting class if Prism.js is available
+        // Prism will automatically highlight <code class="language-javascript"> elements
+        // For textarea elements, the class is added for potential future enhancements
+        if (typeof Prism !== 'undefined') {
+            textArea.classList.add('language-javascript');
+        }
     };
 
     this.addFileInputHandler = function(fileInputId, canvasId) {
