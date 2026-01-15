@@ -1,7 +1,6 @@
 from __future__ import print_function
 import sys
 import time
-
 import numpy as np
 import cv2 as cv
 
@@ -9,21 +8,19 @@ import cv2 as cv
 def is_grayscale(my_image):
     return len(my_image.shape) < 3
 
-
 def saturated(sum_value):
     if sum_value > 255:
         sum_value = 255
     if sum_value < 0:
         sum_value = 0
-
     return sum_value
-
 
 def sharpen(my_image):
     if is_grayscale(my_image):
         height, width = my_image.shape
     else:
-        my_image = cv.cvtColor(my_image, cv.CV_8U)
+        # Modernization: Ensure correct type for color conversion
+        my_image = cv.convertScaleAbs(my_image)
         height, width, n_channels = my_image.shape
 
     result = np.zeros(my_image.shape, my_image.dtype)
@@ -45,27 +42,35 @@ def sharpen(my_image):
 ## [basic_method]
 
 def main(argv):
-    filename = 'lena.jpg'
+    # Modernization: Switched default from 'lena.jpg' to 'starry_night.jpg' [#25635]
+    filename = 'starry_night.jpg'
 
     img_codec = cv.IMREAD_COLOR
     if argv:
-        filename = sys.argv[1]
-        if len(argv) >= 2 and sys.argv[2] == "G":
+        filename = argv[0]
+        if len(argv) >= 2 and argv[1] == "G":
             img_codec = cv.IMREAD_GRAYSCALE
 
-    src = cv.imread(cv.samples.findFile(filename), img_codec)
+    # Robustness: Use required=False to prevent C++ exception crashes
+    img_path = cv.samples.findFile(filename, required=False)
+
+    if not img_path:
+        print("Can't find sample image: [" + filename + "]")
+        print("Usage:")
+        print("mat_mask_operations.py [image_path -- default starry_night.jpg] [G -- grayscale]")
+        return -1
+
+    src = cv.imread(img_path, img_codec)
 
     if src is None:
-        print("Can't open image [" + filename + "]")
-        print("Usage:")
-        print("mat_mask_operations.py [image_path -- default lena.jpg] [G -- grayscale]")
+        print("Can't open image [" + img_path + "]")
         return -1
 
     cv.namedWindow("Input", cv.WINDOW_AUTOSIZE)
     cv.namedWindow("Output", cv.WINDOW_AUTOSIZE)
 
     cv.imshow("Input", src)
-    t = round(time.time())
+    t = time.time()
 
     dst0 = sharpen(src)
 
@@ -94,7 +99,6 @@ def main(argv):
     cv.waitKey(0)
     cv.destroyAllWindows()
     return 0
-
 
 if __name__ == "__main__":
     main(sys.argv[1:])

@@ -1,19 +1,22 @@
-## [imports]
 import cv2 as cv
 import sys
-## [imports]
-## [imread]
-img = cv.imread(cv.samples.findFile("starry_night.jpg"))
-## [imread]
-## [empty]
+
+# Use required=False to prevent a C++ exception crash. 
+# It will return an empty string if the file is not found.
+img_path = cv.samples.findFile("starry_night.jpg", required=False)
+
+if not img_path:
+    print("Could not find 'starry_night.jpg'.")
+    print("Please download it from: https://github.com/opencv/opencv/blob/4.x/samples/data/starry_night.jpg")
+    sys.exit(1)
+
+img = cv.imread(img_path)
+
 if img is None:
     sys.exit("Could not read the image.")
-## [empty]
-## [imshow]
+
 cv.imshow("Display window", img)
 k = cv.waitKey(0)
-## [imshow]
-## [imsave]
+
 if k == ord("s"):
     cv.imwrite("starry_night.png", img)
-## [imsave]

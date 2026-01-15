@@ -1,6 +1,7 @@
 from __future__ import print_function
 import cv2 as cv
 import argparse
+import sys
 
 max_value = 255
 max_type = 4
@@ -11,11 +12,11 @@ window_name = 'Threshold Demo'
 
 ## [Threshold_Demo]
 def Threshold_Demo(val):
-    #0: Binary
-    #1: Binary Inverted
-    #2: Threshold Truncated
-    #3: Threshold to Zero
-    #4: Threshold to Zero Inverted
+    # 0: Binary
+    # 1: Binary Inverted
+    # 2: Threshold Truncated
+    # 3: Threshold to Zero
+    # 4: Threshold to Zero Inverted
     threshold_type = cv.getTrackbarPos(trackbar_type, window_name)
     threshold_value = cv.getTrackbarPos(trackbar_value, window_name)
     _, dst = cv.threshold(src_gray, threshold_value, max_binary_value, threshold_type )
@@ -23,15 +24,24 @@ def Threshold_Demo(val):
 ## [Threshold_Demo]
 
 parser = argparse.ArgumentParser(description='Code for Basic Thresholding Operations tutorial.')
-parser.add_argument('--input', help='Path to input image.', default='stuff.jpg')
+# Modernization: Switched default from 'stuff.jpg' to 'smarties.png' [#25635]
+parser.add_argument('--input', help='Path to input image.', default='smarties.png')
 args = parser.parse_args()
 
 ## [load]
+# Robustness: Use required=False to prevent runtime errors if sample is missing
+img_path = cv.samples.findFile(args.input, required=False)
+
+if not img_path:
+    print('Could not find sample image:', args.input)
+    sys.exit(-1)
+
 # Load an image
-src = cv.imread(cv.samples.findFile(args.input))
+src = cv.imread(img_path)
 if src is None:
-    print('Could not open or find the image: ', args.input)
-    exit(0)
+    print('Could not open or find the image: ', img_path)
+    sys.exit(-1)
+
 # Convert the image to Gray
 src_gray = cv.cvtColor(src, cv.COLOR_BGR2GRAY)
 ## [load]
