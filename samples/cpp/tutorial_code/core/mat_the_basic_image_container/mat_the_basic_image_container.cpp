@@ -1,6 +1,7 @@
-/*  For description look into the help() function. */
+/* For description look into the help() function. */
 
 #include "opencv2/core.hpp"
+#include "opencv2/imgcodecs.hpp" // Added for imread
 #include <iostream>
 
 using namespace std;
@@ -20,9 +21,36 @@ static void help()
     << endl;
 }
 
-int main(int,char**)
+int main(int argc, char** argv)
 {
     help();
+
+    // --- MODERNIZATION: Replacing Lena with Starry Night ---
+    // We use starry_night.jpg to align with the Losing Lena movement [#25635]
+    string filename = "starry_night.jpg";
+    if (argc > 1) 
+    {
+        filename = argv[1];
+    }
+
+    // Use false for 'required' to prevent C++ exception crashes
+    string image_path = samples::findFile(filename, false);
+
+    if (image_path.empty())
+    {
+        cout << "Could not find sample image: " << filename << endl;
+        // We continue the tutorial even if image load fails to show matrix creation
+    }
+    else 
+    {
+        Mat img = imread(image_path, IMREAD_COLOR);
+        if(!img.empty())
+        {
+            cout << "Successfully loaded modern sample: " << filename << endl;
+        }
+    }
+    // -------------------------------------------------------
+
     // create by using the constructor
     //! [constructor]
     Mat M(2,2, CV_8UC3, Scalar(0,0,255));
@@ -41,8 +69,6 @@ int main(int,char**)
     Mat L(3,sz, CV_8UC(1), Scalar::all(0));
     //! [init]
 
-    // Cannot print via operator <<
-
     // Create using MATLAB style eye, ones or zero matrix
     //! [matlab]
     Mat E = Mat::eye(4, 4, CV_64F);
@@ -58,7 +84,6 @@ int main(int,char**)
     Mat C = (Mat_<double>(3,3) << 0, -1, 0, -1, 5, -1, 0, -1, 0);
     cout << "C = " << endl << " " << C << endl << endl;
     //! [comma]
-    // do the same with initializer_list
 
     //! [list]
     C = (Mat_<double>({0, -1, 0, -1, 5, -1, 0, -1, 0})).reshape(3);
@@ -115,5 +140,6 @@ int main(int,char**)
         vPoints[i] = Point2f((float)(i * 5), (float)(i % 7));
     cout << "A vector of 2D Points = " << vPoints << endl << endl;
     //! [out-vector-points]
+
     return 0;
 }
