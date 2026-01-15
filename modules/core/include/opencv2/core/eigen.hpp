@@ -426,7 +426,7 @@ template<typename _Tp, int _Rows, int _Cols, int _Options, int _MaxRows, int _Ma
 class EigenInputArray : public _InputArray
 {
     // We need to hold a header if we do a zero-copy wrap
-    Mat header; 
+    Mat header;
     // Or a full copy if the layout is incompatible (Col-Major vs Row-Major)
     Mat temporaryCopy;
 
@@ -443,7 +443,7 @@ public:
         {
             // Map Eigen data to OpenCV Mat header
             eigen2cv(src, header);
-            init(MAT, &header); 
+            init(MAT, &header);
         }
         else
         {
@@ -462,7 +462,7 @@ public:
   * @endcode
   */
 template<typename _Tp, int _Rows, int _Cols, int _Options, int _MaxRows, int _MaxCols>
-static inline EigenInputArray<_Tp, _Rows, _Cols, _Options, _MaxRows, _MaxCols> 
+static inline EigenInputArray<_Tp, _Rows, _Cols, _Options, _MaxRows, _MaxCols>
 eigen2input(const Eigen::Matrix<_Tp, _Rows, _Cols, _Options, _MaxRows, _MaxCols>& src)
 {
     return EigenInputArray<_Tp, _Rows, _Cols, _Options, _MaxRows, _MaxCols>(src);
