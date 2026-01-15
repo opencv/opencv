@@ -419,6 +419,54 @@ void cv2eigen( const Matx<_Tp, 1, _cols>& src,
 }
 
 //! @}
+/** @brief Proxy class for passing Eigen matrices as InputArray
+  * usage: cv::function(cv::eigen2input(my_eigen_mat));
+  */
+template<typename _Tp, int _Rows, int _Cols, int _Options, int _MaxRows, int _MaxCols>
+class EigenInputArray : public _InputArray
+{
+    // We need to hold a header if we do a zero-copy wrap
+    Mat header;
+    // Or a full copy if the layout is incompatible (Col-Major vs Row-Major)
+    Mat temporaryCopy;
+
+public:
+    EigenInputArray(const Eigen::Matrix<_Tp, _Rows, _Cols, _Options, _MaxRows, _MaxCols>& src)
+    {
+        // 1. Try to wrap directly (Zero-Copy)
+        // Eigen is Col-Major by default, OpenCV is Row-Major.
+        // We can only wrap if it's RowMajor OR a vector (1D).
+        bool isRowMajor = (_Options & Eigen::RowMajor);
+        bool isVector = (src.cols() == 1 || src.rows() == 1);
+
+        if (isRowMajor || isVector)
+        {
+            // Map Eigen data to OpenCV Mat header
+            eigen2cv(src, header);
+            init(MAT, &header);
+        }
+        else
+        {
+            // 2. Incompatible layout (Col-Major) -> Must perform deep copy (Transpose)
+            eigen2cv(src, temporaryCopy);
+            init(MAT, &temporaryCopy);
+        }
+    }
+};
+
+/** @brief Helper function to create an InputArray from an Eigen matrix
+  *
+  * @code
+  * Eigen::Matrix3f m = Eigen::Matrix3f::Identity();
+  * cv::imshow("Eigen Matrix", cv::eigen2input(m));
+  * @endcode
+  */
+template<typename _Tp, int _Rows, int _Cols, int _Options, int _MaxRows, int _MaxCols>
+static inline EigenInputArray<_Tp, _Rows, _Cols, _Options, _MaxRows, _MaxCols>
+eigen2input(const Eigen::Matrix<_Tp, _Rows, _Cols, _Options, _MaxRows, _MaxCols>& src)
+{
+    return EigenInputArray<_Tp, _Rows, _Cols, _Options, _MaxRows, _MaxCols>(src);
+}
 
 } // cv
 
