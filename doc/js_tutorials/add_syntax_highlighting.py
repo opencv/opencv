@@ -4,7 +4,6 @@ Script to add Prism.js syntax highlighting to OpenCV.js tutorial HTML files.
 This addresses GitHub issue #18402 - "Add Syntax highlighting for opentype.js tutorials"
 """
 
-import os
 import re
 from pathlib import Path
 
