@@ -43,4 +43,30 @@ TEST(Features2d_BlobDetector, withContours)
                                 return abs(p.x - 30) < 2 && abs(p.y - 50) < 2;
                             }));
 }
+
+TEST(Features2d_BlobDetector, withAdaptiveThreshold)
+{
+    cv::Mat image = cv::Mat(cv::Size(100, 100), CV_8UC1, cv::Scalar(255, 255, 255));
+    cv::circle(image, Point(50, 50), 20, cv::Scalar(0), -1);
+    SimpleBlobDetector::Params params;
+    params.useAdaptiveThreshold = true;
+	params.method = AdaptiveThresholdTypes::ADAPTIVE_THRESH_MEAN_C;
+	params.type = ThresholdTypes::THRESH_BINARY;
+	params.blockSize = 3;
+	params.minRepeatability = 1; 
+    params.collectContours = true;
+    std::vector<KeyPoint> keypoints;
+
+    Ptr<SimpleBlobDetector> detector = SimpleBlobDetector::create(params);
+    detector->detect(image, keypoints);
+    ASSERT_NE((int)keypoints.size(), 0);
+
+    ASSERT_GT((int)detector->getBlobContours().size(), 0);
+    std::vector<Point> contour = detector->getBlobContours()[0];
+    ASSERT_TRUE(std::any_of(contour.begin(), contour.end(),
+                            [](Point p)
+                            {
+                                return abs(p.x - 30) < 2 && abs(p.y - 50) < 2;
+                            }));
+}
 }} // namespace
