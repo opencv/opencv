@@ -420,6 +420,12 @@ std::map<std::string, Mat> ONNXImporter::getGraphTensors(
         const opencv_onnx::TensorProto& tensor_proto = graph_proto.initializer(i);
         dumpTensorProto(i, tensor_proto, "initializer");
         Mat mat = getMatFromTensor(tensor_proto);
+        if (mat.empty())
+        {
+            CV_Error(Error::StsBadArg,
+                cv::format("ONNX initializer '%s' has empty tensor data",
+                        tensor_proto.name().c_str()));
+        }
         releaseONNXTensor(const_cast<opencv_onnx::TensorProto&>(tensor_proto));  // drop already loaded data
 
         if (DNN_DIAGNOSTICS_RUN && mat.empty())

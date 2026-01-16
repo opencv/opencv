@@ -3276,6 +3276,13 @@ TEST_P(Test_ONNX_layers, RandomNormalLike_complex)
     EXPECT_EQ(countNonZero(out != out2), 0);
 }
 
+TEST(ONNX_Importer, EmptyInitializer)
+{
+    const std::string model =
+        findDataFile("dnn/onnx/conv_empty_initializer.onnx");
+    EXPECT_THROW(readNetFromONNX(model), cv::Exception);
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
 }} // namespace
