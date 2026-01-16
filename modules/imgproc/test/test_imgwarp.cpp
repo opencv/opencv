@@ -1385,6 +1385,17 @@ INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_RemapRelative, testing::Combine(
 
 TEST(Imgproc_Resize, accuracy) { CV_ResizeTest test; test.safe_run(); }
 TEST(Imgproc_ResizeExact, accuracy) { CV_ResizeExactTest test; test.safe_run(); }
+
+
+TEST(Imgproc_Resize,EmptyInputReturnsEmpty)
+{
+    Mat src,dst;
+    EXPECT_NO_THROW(resize(src,dst,Size(10,10)));
+    EXPECT_TRUE(dst.empty());
+
+}
+
+
 TEST(Imgproc_WarpAffine, accuracy) { CV_WarpAffineTest test; test.safe_run(); }
 TEST(Imgproc_WarpPerspective, accuracy) { CV_WarpPerspectiveTest test; test.safe_run(); }
 TEST(Imgproc_Remap, accuracy) { CV_RemapTest test; test.safe_run(); }
@@ -1800,5 +1811,5 @@ TEST(Imgproc_getPerspectiveTransform, issue_26916)
     EXPECT_MAT_NEAR(obtained_homogeneous_dst_points, expected_homogeneous_dst_points, 1e-10);
 }
 
-}} // namespace
+}}  // namespace
 /* End of file. */
