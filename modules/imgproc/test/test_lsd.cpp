@@ -416,4 +416,44 @@ TEST_F(Imgproc_LSD_Common, drawSegmentsEmpty)
     );
 }
 
-}} // namespace
+}}
+
+TEST(Imgproc_LSD, InvalidScaleThrows)
+{
+    EXPECT_THROW(
+        {
+            Ptr<LineSegmentDetector> detector = 
+                createLineSegmentDetector(
+                    LSD_REFINE_STD,
+                    0.0,     // Scale must be >0
+                    0.6,
+                    2.0,
+                    22.5,
+                    0.7,
+                    1024
+                );
+        },
+    cv::Exception);
+}
+
+
+TEST(Imgproc_LSD, InvalidBinsThrows)
+{
+    EXPECT_THROW(
+        {
+            Ptr<LineSegmentDetector> detector = 
+                createLineSegmentDetector(
+                    LSD_REFINE_STD,
+                    0.8,      
+                    0.6,
+                    2.0,
+                    22.5,
+                    0.7,
+                    0         // n_bins must be >0    
+                );
+        },
+    cv::Exception);
+}
+
+
+// namespace
