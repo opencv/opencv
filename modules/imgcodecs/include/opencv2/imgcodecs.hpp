@@ -367,10 +367,10 @@ The imread() function follows this internal processing pipeline:
    from the decoder and returned alongside the image.
 
 9. **Image Scaling**: If IMREAD_REDUCED_* flags were specified and the decoder doesn't support native
-   downsampling, the image is resized using INTER_LINEAR_EXACT interpolation to the requested scale:
-   - IMREAD_REDUCED_*_2 flags: 1/2 scale (50% of original size)
-   - IMREAD_REDUCED_*_4 flags: 1/4 scale (25% of original size)
-   - IMREAD_REDUCED_*_8 flags: 1/8 scale (12.5% of original size)
+   downsampling, the image is resized using @ref INTER_LINEAR_EXACT interpolation to the requested scale:
+   - @ref IMREAD_REDUCED_GRAYSCALE_2, @ref IMREAD_REDUCED_COLOR_2: 1/2 scale (50% of original size)
+   - @ref IMREAD_REDUCED_GRAYSCALE_4, @ref IMREAD_REDUCED_COLOR_4: 1/4 scale (25% of original size)
+   - @ref IMREAD_REDUCED_GRAYSCALE_8, @ref IMREAD_REDUCED_COLOR_8: 1/8 scale (12.5% of original size)
 
 10. **EXIF Orientation**: If EXIF orientation metadata is present and IMREAD_IGNORE_ORIENTATION flag
     is not set, the image is transformed (rotated/flipped) to match the correct visual orientation
