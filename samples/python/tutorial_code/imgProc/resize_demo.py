@@ -12,6 +12,7 @@ import cv2 as cv
 import numpy as np
 import sys
 import argparse
+import time
 
 def main():
     # Parse command line arguments
@@ -103,36 +104,34 @@ def main():
     cv.imshow('Non-uniform Scale', dst_aspect)
     
     # 6. Demonstrate timing comparison
-    import time
-    
     print('\n6. Performance comparison (1000 iterations):')
     iterations = 1000
     
     # Time INTER_NEAREST
     start = time.time()
     for _ in range(iterations):
-        _ = cv.resize(src, upscale_size, interpolation=cv.INTER_NEAREST)
+        result = cv.resize(src, upscale_size, interpolation=cv.INTER_NEAREST)
     nearest_time = time.time() - start
     print(f'   INTER_NEAREST:  {nearest_time:.3f}s ({nearest_time/iterations*1000:.2f}ms per resize)')
     
     # Time INTER_LINEAR
     start = time.time()
     for _ in range(iterations):
-        _ = cv.resize(src, upscale_size, interpolation=cv.INTER_LINEAR)
+        result = cv.resize(src, upscale_size, interpolation=cv.INTER_LINEAR)
     linear_time = time.time() - start
     print(f'   INTER_LINEAR:   {linear_time:.3f}s ({linear_time/iterations*1000:.2f}ms per resize)')
     
     # Time INTER_CUBIC
     start = time.time()
     for _ in range(iterations):
-        _ = cv.resize(src, upscale_size, interpolation=cv.INTER_CUBIC)
+        result = cv.resize(src, upscale_size, interpolation=cv.INTER_CUBIC)
     cubic_time = time.time() - start
     print(f'   INTER_CUBIC:    {cubic_time:.3f}s ({cubic_time/iterations*1000:.2f}ms per resize)')
     
     # Time INTER_LANCZOS4
     start = time.time()
     for _ in range(iterations):
-        _ = cv.resize(src, upscale_size, interpolation=cv.INTER_LANCZOS4)
+        result = cv.resize(src, upscale_size, interpolation=cv.INTER_LANCZOS4)
     lanczos_time = time.time() - start
     print(f'   INTER_LANCZOS4: {lanczos_time:.3f}s ({lanczos_time/iterations*1000:.2f}ms per resize)')
     
