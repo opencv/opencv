@@ -349,9 +349,9 @@ The imread() function follows this internal processing pipeline:
    - Other format-specific metadata (XMP, ICC Profile, etc.)
 
 4. **Image Size Validation**: The extracted dimensions are validated against maximum limits:
-   - Maximum width: 2^20 pixels (configurable via OPENCV_IO_MAX_IMAGE_WIDTH)
-   - Maximum height: 2^20 pixels (configurable via OPENCV_IO_MAX_IMAGE_HEIGHT)
-   - Maximum total pixels: 2^30 pixels (configurable via OPENCV_IO_MAX_IMAGE_PIXELS)
+   - Maximum width: 2^20 (1,048,576) pixels (configurable via OPENCV_IO_MAX_IMAGE_WIDTH)
+   - Maximum height: 2^20 (1,048,576) pixels (configurable via OPENCV_IO_MAX_IMAGE_HEIGHT)
+   - Maximum total pixels: 2^30 (1,073,741,824) pixels (configurable via OPENCV_IO_MAX_IMAGE_PIXELS)
 
 5. **Type Calculation**: The output image type is determined based on:
    - The decoder's reported type (from the file format)
@@ -367,8 +367,10 @@ The imread() function follows this internal processing pipeline:
    from the decoder and returned alongside the image.
 
 9. **Image Scaling**: If IMREAD_REDUCED_* flags were specified and the decoder doesn't support native
-   downsampling, the image is resized using INTER_LINEAR_EXACT interpolation to the requested scale
-   (1/2, 1/4, or 1/8 of the original size).
+   downsampling, the image is resized using INTER_LINEAR_EXACT interpolation to the requested scale:
+   - IMREAD_REDUCED_*_2 flags: 1/2 scale (50% of original size)
+   - IMREAD_REDUCED_*_4 flags: 1/4 scale (25% of original size)
+   - IMREAD_REDUCED_*_8 flags: 1/8 scale (12.5% of original size)
 
 10. **EXIF Orientation**: If EXIF orientation metadata is present and IMREAD_IGNORE_ORIENTATION flag
     is not set, the image is transformed (rotated/flipped) to match the correct visual orientation
