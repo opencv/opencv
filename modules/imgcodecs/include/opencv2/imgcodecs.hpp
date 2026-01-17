@@ -328,6 +328,52 @@ The `imread` function loads an image from the specified file and returns OpenCV 
 read (because of a missing file, improper permissions, or unsupported/invalid format), the function
 returns an empty matrix.
 
+**Pipeline:**
+
+The imread() function follows this internal processing pipeline:
+
+1. **Decoder Selection**: The function reads the file signature (magic bytes) from the beginning of the file
+   and matches it against registered image decoders to identify the appropriate codec for the file format.
+   If IMREAD_LOAD_GDAL flag is set, the GDAL decoder is used directly.
+
+2. **Source Configuration**: The selected decoder is configured with:
+   - The source filename
+   - Scale denominator (if IMREAD_REDUCED_* flags are used)
+   - RGB/BGR preference (based on IMREAD_COLOR_RGB flag)
+   - Metadata reading options (if metadata is requested)
+
+3. **Header Reading**: The decoder reads and parses the image file header to extract:
+   - Image dimensions (width and height)
+   - Pixel data type and channel count
+   - EXIF metadata (including orientation)
+   - Other format-specific metadata (XMP, ICC Profile, etc.)
+
+4. **Image Size Validation**: The extracted dimensions are validated against maximum limits:
+   - Maximum width: 2^20 pixels (configurable via OPENCV_IO_MAX_IMAGE_WIDTH)
+   - Maximum height: 2^20 pixels (configurable via OPENCV_IO_MAX_IMAGE_HEIGHT)
+   - Maximum total pixels: 2^30 pixels (configurable via OPENCV_IO_MAX_IMAGE_PIXELS)
+
+5. **Type Calculation**: The output image type is determined based on:
+   - The decoder's reported type (from the file format)
+   - The imread flags (IMREAD_GRAYSCALE, IMREAD_COLOR, IMREAD_ANYDEPTH, etc.)
+   - Conversion rules (e.g., forcing 8-bit depth unless IMREAD_ANYDEPTH is set)
+
+6. **Memory Allocation**: An output Mat object is created or reused with the calculated dimensions and type.
+
+7. **Data Reading**: The decoder reads the pixel data from the file and writes it into the Mat object.
+   The decoded image will have channels in BGR order for color images (unless IMREAD_COLOR_RGB is specified).
+
+8. **Metadata Extraction**: If requested, metadata chunks (EXIF, XMP, ICC Profile, etc.) are extracted
+   from the decoder and returned alongside the image.
+
+9. **Image Scaling**: If IMREAD_REDUCED_* flags were specified and the decoder doesn't support native
+   downsampling, the image is resized using INTER_LINEAR_EXACT interpolation to the requested scale
+   (1/2, 1/4, or 1/8 of the original size).
+
+10. **EXIF Orientation**: If EXIF orientation metadata is present and IMREAD_IGNORE_ORIENTATION flag
+    is not set, the image is transformed (rotated/flipped) to match the correct visual orientation
+    specified in the EXIF data.
+
 Currently, the following file formats are supported:
 
 -   Windows bitmaps - \*.bmp, \*.dib (always supported)
