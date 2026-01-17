@@ -1,7 +1,7 @@
 /**
- * file Smoothing.cpp
- * brief Sample code for simple filters
- * author OpenCV team
+ * @file Smoothing.cpp
+ * @brief Sample code for simple filters
+ * @author OpenCV team
  */
 
 #include <iostream>
@@ -26,22 +26,32 @@ int display_dst( int delay );
 
 
 /**
- * function main
+ * @function main
  */
 int main( int argc, char ** argv )
 {
     namedWindow( window_name, WINDOW_AUTOSIZE );
 
-    /// Load the source image
-    const char* filename = argc >=2 ? argv[1] : "lena.jpg";
+    //! [load]
+    // Modernization: Switched default to 'gauss.png' for better smoothing demos [#25635]
+    const char* filename = argc >=2 ? argv[1] : "gauss.png";
 
-    src = imread( samples::findFile( filename ), IMREAD_COLOR );
-    if (src.empty())
+    // Robustness: Use false for 'required' to prevent C++ exception crashes
+    String image_path = samples::findFile( filename, false );
+
+    if (image_path.empty())
     {
-        printf(" Error opening image\n");
-        printf(" Usage:\n %s [image_name-- default lena.jpg] \n", argv[0]);
+        cout << "Cannot find sample image: " << filename << endl;
         return EXIT_FAILURE;
     }
+
+    src = imread( image_path, IMREAD_COLOR );
+    if (src.empty())
+    {
+        printf(" Error opening image: %s\n", image_path.c_str());
+        return EXIT_FAILURE;
+    }
+    //! [load]
 
     if( display_caption( "Original Image" ) != 0 )
     {
