@@ -2,8 +2,6 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
-#include <opencv2/imgproc.hpp>
-#include <opencv2/imgproc/segmentation.hpp>
 
 namespace opencv_test { namespace {
 
@@ -424,7 +422,7 @@ TEST(Imgproc_LSD, InvalidScaleThrows)
 {
     EXPECT_THROW(
         {
-            cv::Ptr<cv::LineSegmentDetector> detector = 
+            cv::Ptr<cv::LineSegmentDetector> detector =
                 cv::createLineSegmentDetector(
                     LSD_REFINE_STD,
                     0.0,     // Scale must be >0
@@ -437,8 +435,4 @@ TEST(Imgproc_LSD, InvalidScaleThrows)
         },
     cv::Exception);
 }
-
-
-
-
 }// namespace
