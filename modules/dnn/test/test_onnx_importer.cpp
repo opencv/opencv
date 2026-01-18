@@ -1187,6 +1187,7 @@ TEST_P(Test_ONNX_layers, Squeeze)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     testONNXModels("squeeze");
     testONNXModels("squeeze_axes_op13");
+    testONNXModels("squeeze_no_axes");
 }
 
 TEST_P(Test_ONNX_layers, ReduceL2)
