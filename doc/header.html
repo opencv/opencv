@@ -6,6 +6,27 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen $doxygenversion"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
+<script type="text/javascript">
+//<![CDATA[
+(function() {
+  var storedTheme = null;
+  try {
+    if (window.localStorage) {
+      storedTheme = localStorage.getItem('theme');
+    }
+  } catch (e) {
+    storedTheme = null;
+  }
+  if (storedTheme === 'dark') {
+    document.documentElement.className += ' dark-mode';
+  } else if (storedTheme === 'light') {
+    document.documentElement.className += ' light-mode';
+  } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    document.documentElement.className += ' dark-mode';
+  }
+})();
+//]]>
+</script>
 <!--BEGIN PROJECT_NAME--><title>$projectname: $title</title><!--END PROJECT_NAME-->
 <!--BEGIN !PROJECT_NAME--><title>$title</title><!--END !PROJECT_NAME-->
 <!--BEGIN PROJECT_ICON-->
@@ -69,6 +90,30 @@ $extrastylesheet
      <!--END !FULL_SIDEBAR-->
    <!--END SEARCHENGINE-->
   <!--END DISABLE_INDEX-->
+  <!--BEGIN THEME_TOGGLE-->
+  <td id="theme-toggle-cell">
+    <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle dark mode" aria-pressed="false">
+      <span class="theme-icon-light" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+          <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
+          <line x1="12" y1="2" x2="12" y2="5" stroke="currentColor" stroke-width="2"/>
+          <line x1="12" y1="19" x2="12" y2="22" stroke="currentColor" stroke-width="2"/>
+          <line x1="2" y1="12" x2="5" y2="12" stroke="currentColor" stroke-width="2"/>
+          <line x1="19" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="2"/>
+          <line x1="4.2" y1="4.2" x2="6.4" y2="6.4" stroke="currentColor" stroke-width="2"/>
+          <line x1="17.6" y1="17.6" x2="19.8" y2="19.8" stroke="currentColor" stroke-width="2"/>
+          <line x1="17.6" y1="6.4" x2="19.8" y2="4.2" stroke="currentColor" stroke-width="2"/>
+          <line x1="4.2" y1="19.8" x2="6.4" y2="17.6" stroke="currentColor" stroke-width="2"/>
+        </svg>
+      </span>
+      <span class="theme-icon-dark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+          <path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7z" fill="none" stroke="currentColor" stroke-width="2"/>
+        </svg>
+      </span>
+    </button>
+  </td>
+  <!--END THEME_TOGGLE-->
  </tr>
   <!--BEGIN SEARCHENGINE-->
    <!--BEGIN FULL_SIDEBAR-->
@@ -79,4 +124,61 @@ $extrastylesheet
 </table>
 </div>
 <!--END TITLEAREA-->
+<script type="text/javascript">
+//<![CDATA[
+(function() {
+  var storageKey = 'theme';
+  var docEl = document.documentElement;
+  var toggle = null;
+
+  function updateToggle(theme) {
+    if (!toggle) {
+      return;
+    }
+    toggle.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false');
+  }
+
+  function setTheme(theme, persist) {
+    docEl.classList.remove('dark-mode');
+    docEl.classList.remove('light-mode');
+    if (theme === 'dark') {
+      docEl.classList.add('dark-mode');
+    } else if (theme === 'light') {
+      docEl.classList.add('light-mode');
+    }
+    updateToggle(theme);
+    if (persist) {
+      try {
+        if (window.localStorage) {
+          localStorage.setItem(storageKey, theme);
+        }
+      } catch (e) {
+      }
+    }
+  }
+
+  function currentTheme() {
+    if (docEl.classList.contains('dark-mode')) {
+      return 'dark';
+    }
+    if (docEl.classList.contains('light-mode')) {
+      return 'light';
+    }
+    return null;
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    toggle = document.getElementById('theme-toggle');
+    if (!toggle) {
+      return;
+    }
+    updateToggle(currentTheme());
+    toggle.addEventListener('click', function() {
+      var nextTheme = currentTheme() === 'dark' ? 'light' : 'dark';
+      setTheme(nextTheme, true);
+    }, false);
+  }, false);
+})();
+//]]>
+</script>
 <!-- end header part -->
