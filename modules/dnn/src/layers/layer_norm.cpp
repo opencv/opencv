@@ -64,7 +64,7 @@ public:
                                  std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         int noutputs = std::max(requiredOutputs > 0 ? requiredOutputs : (int)this->outputs.size(), 1);
-        CV_Assert(noutputs == 1 || noutputs == 3);
+        CV_Assert(noutputs == 1 || noutputs == 2 || noutputs == 3);
 
         // check shapes of weight and bias if existed
         // inputs >= 2 (X and Weight are required, bias is optional)
@@ -137,6 +137,11 @@ public:
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
+
+        for (size_t i = 1; i < outputs.size(); i++)
+        {
+            outputs[i].setTo(0);
+        }
 
         const auto &input = inputs[0];
         const auto &scale = blobs.empty() ? inputs[1] : blobs.front();
