@@ -424,7 +424,7 @@ void BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFea
     }
 
     // Find pair-wise motion
-    matches_info.H = findHomography(src_points, dst_points, matches_info.inliers_mask, RANSAC);
+    matches_info.H = findHomography(src_points, dst_points, USAC_MAGSAC, 3.0, matches_info.inliers_mask);
     if (matches_info.H.empty() || std::abs(determinant(matches_info.H)) < std::numeric_limits<double>::epsilon())
         return;
 
@@ -471,7 +471,7 @@ void BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFea
     }
 
     // Rerun motion estimation on inliers only
-    matches_info.H = findHomography(src_points, dst_points, RANSAC);
+    matches_info.H = findHomography(src_points, dst_points, USAC_MAGSAC, 3.0);
 }
 
 void BestOf2NearestMatcher::collectGarbage()
