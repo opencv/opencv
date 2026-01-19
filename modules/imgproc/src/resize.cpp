@@ -1174,18 +1174,17 @@ resizeNN( const Mat& src, Mat& dst, double fx, double fy )
 class resizeNN_bitexactInvoker : public ParallelLoopBody
 {
 public:
-    resizeNN_bitexactInvoker(const Mat& _src, Mat& _dst, int* _x_ofse, int _ify, int _ify0)
-        : src(_src), dst(_dst), x_ofse(_x_ofse), ify(_ify), ify0(_ify0) {}
+    resizeNN_bitexactInvoker(const Mat& _src, Mat& _dst, int* _x_ofse, int* _y_ofse)
+        : src(_src), dst(_dst), x_ofse(_x_ofse), y_ofse(_y_ofse) {}
 
     virtual void operator() (const Range& range) const CV_OVERRIDE
     {
-        Size ssize = src.size(), dsize = dst.size();
+        Size dsize = dst.size();
         int pix_size = (int)src.elemSize();
         for( int y = range.start; y < range.end; y++ )
         {
             uchar* D = dst.ptr(y);
-            int _sy = (ify * y + ify0) >> 16;
-            int sy = std::min(_sy, ssize.height-1);
+            int sy = y_ofse[y];
             const uchar* S = src.ptr(sy);
 
             int x = 0;
@@ -1260,30 +1259,45 @@ private:
     const Mat& src;
     Mat& dst;
     int* x_ofse;
-    const int ify;
-    const int ify0;
+    int* y_ofse;
 };
 
 static void resizeNN_bitexact( const Mat& src, Mat& dst, double /*fx*/, double /*fy*/ )
 {
     Size ssize = src.size(), dsize = dst.size();
-    int ifx = ((ssize.width << 16) + dsize.width / 2) / dsize.width; // 16bit fixed-point arithmetic
-    int ifx0 = ifx / 2 - ssize.width % 2;                       // This method uses center pixel coordinate as Pillow and scikit-images do.
-    int ify = ((ssize.height << 16) + dsize.height / 2) / dsize.height;
-    int ify0 = ify / 2 - ssize.height % 2;
+
+    // Use double-precision iterative accumulation to match PIL/Pillow's behavior exactly.
+    // PIL computes source coordinates using iterative floating-point addition which
+    // accumulates rounding errors differently than direct computation. To match PIL
+    // exactly, we must replicate this behavior.
+    double scale_x = static_cast<double>(ssize.width) / static_cast<double>(dsize.width);
+    double scale_y = static_cast<double>(ssize.height) / static_cast<double>(dsize.height);
 
     cv::utils::BufferArea area;
     int* x_ofse = 0;
+    int* y_ofse = 0;
     area.allocate(x_ofse, dsize.width, CV_SIMD_WIDTH);
+    area.allocate(y_ofse, dsize.height, CV_SIMD_WIDTH);
     area.commit();
 
+    // Compute x offsets using iterative accumulation (like PIL)
+    double xo = scale_x * 0.5;
     for( int x = 0; x < dsize.width; x++ )
     {
-        int sx = (ifx * x + ifx0) >> 16;
-        x_ofse[x] = std::min(sx, ssize.width-1);    // offset in element (not byte)
+        x_ofse[x] = std::min(static_cast<int>(xo), ssize.width - 1);
+        xo += scale_x;
     }
+
+    // Compute y offsets using iterative accumulation (like PIL)
+    double yo = scale_y * 0.5;
+    for( int y = 0; y < dsize.height; y++ )
+    {
+        y_ofse[y] = std::min(static_cast<int>(yo), ssize.height - 1);
+        yo += scale_y;
+    }
+
     Range range(0, dsize.height);
-    resizeNN_bitexactInvoker invoker(src, dst, x_ofse, ify, ify0);
+    resizeNN_bitexactInvoker invoker(src, dst, x_ofse, y_ofse);
     parallel_for_(range, invoker, dst.total()/(double)(1<<16));
 }
 

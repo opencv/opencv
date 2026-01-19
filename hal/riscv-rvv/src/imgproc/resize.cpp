@@ -40,15 +40,15 @@ static inline int invoke(int height, std::function<int(int, int, Args...)> func,
 }
 
 template<int cn>
-static inline int resizeNN(int start, int end, const uchar *src_data, size_t src_step, int src_height, uchar *dst_data, size_t dst_step, int dst_width, int dst_height, double scale_y, int interpolation, const ushort* x_ofs)
+static inline int resizeNN(int start, int end, const uchar *src_data, size_t src_step, int src_height, uchar *dst_data, size_t dst_step, int dst_width, int dst_height, int interpolation, const ushort* x_ofs, const ushort* y_ofs_arr)
 {
-    const int ify = ((src_height << 16) + dst_height / 2) / dst_height;
-    const int ify0 = ify / 2 - src_height % 2;
+    (void)src_height;  // Already used in precomputed y_ofs_arr
+    (void)dst_height;  // Already used in precomputed y_ofs_arr
+    (void)interpolation;  // Already handled in precomputed arrays
 
     for (int i = start; i < end; i++)
     {
-        int y_ofs = interpolation == CV_HAL_INTER_NEAREST ? static_cast<int>(std::floor(i * scale_y)) : (ify * i + ify0) >> 16;
-        y_ofs = std::min(y_ofs, src_height - 1);
+        int y_ofs = y_ofs_arr[i];
 
         int vl;
         switch (cn)
@@ -744,24 +744,48 @@ static inline int resizeNN(int src_type, const uchar *src_data, size_t src_step,
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
     std::vector<ushort> x_ofs(dst_width);
-    const int ifx = ((src_width << 16) + dst_width / 2) / dst_width;
-    const int ifx0 = ifx / 2 - src_width % 2;
-    for (int i = 0; i < dst_width; i++)
+    std::vector<ushort> y_ofs(dst_height);
+
+    if (interpolation == CV_HAL_INTER_NEAREST)
     {
-        x_ofs[i] = interpolation == CV_HAL_INTER_NEAREST ? static_cast<ushort>(std::floor(i * scale_x)) : (ifx * i + ifx0) >> 16;
-        x_ofs[i] = std::min(x_ofs[i], static_cast<ushort>(src_width - 1)) * cn;
+        for (int i = 0; i < dst_width; i++)
+        {
+            x_ofs[i] = static_cast<ushort>(std::min(static_cast<int>(std::floor(i * scale_x)), src_width - 1)) * cn;
+        }
+        for (int i = 0; i < dst_height; i++)
+        {
+            y_ofs[i] = static_cast<ushort>(std::min(static_cast<int>(std::floor(i * scale_y)), src_height - 1));
+        }
+    }
+    else // CV_HAL_INTER_NEAREST_EXACT
+    {
+        // Use double-precision iterative accumulation to match PIL/Pillow's behavior exactly.
+        // PIL computes source coordinates using iterative floating-point addition which
+        // accumulates rounding errors differently than direct computation.
+        double xo = scale_x * 0.5;
+        for (int i = 0; i < dst_width; i++)
+        {
+            x_ofs[i] = static_cast<ushort>(std::min(static_cast<int>(xo), src_width - 1)) * cn;
+            xo += scale_x;
+        }
+        double yo = scale_y * 0.5;
+        for (int i = 0; i < dst_height; i++)
+        {
+            y_ofs[i] = static_cast<ushort>(std::min(static_cast<int>(yo), src_height - 1));
+            yo += scale_y;
+        }
     }
 
     switch (src_type)
     {
     case CV_8UC1:
-        return invoke(dst_height, {resizeNN<1>}, src_data, src_step, src_height, dst_data, dst_step, dst_width, dst_height, scale_y, interpolation, x_ofs.data());
+        return invoke(dst_height, {resizeNN<1>}, src_data, src_step, src_height, dst_data, dst_step, dst_width, dst_height, interpolation, x_ofs.data(), y_ofs.data());
     case CV_8UC2:
-        return invoke(dst_height, {resizeNN<2>}, src_data, src_step, src_height, dst_data, dst_step, dst_width, dst_height, scale_y, interpolation, x_ofs.data());
+        return invoke(dst_height, {resizeNN<2>}, src_data, src_step, src_height, dst_data, dst_step, dst_width, dst_height, interpolation, x_ofs.data(), y_ofs.data());
     case CV_8UC3:
-        return invoke(dst_height, {resizeNN<3>}, src_data, src_step, src_height, dst_data, dst_step, dst_width, dst_height, scale_y, interpolation, x_ofs.data());
+        return invoke(dst_height, {resizeNN<3>}, src_data, src_step, src_height, dst_data, dst_step, dst_width, dst_height, interpolation, x_ofs.data(), y_ofs.data());
     case CV_8UC4:
-        return invoke(dst_height, {resizeNN<4>}, src_data, src_step, src_height, dst_data, dst_step, dst_width, dst_height, scale_y, interpolation, x_ofs.data());
+        return invoke(dst_height, {resizeNN<4>}, src_data, src_step, src_height, dst_data, dst_step, dst_width, dst_height, interpolation, x_ofs.data(), y_ofs.data());
     }
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
 }
