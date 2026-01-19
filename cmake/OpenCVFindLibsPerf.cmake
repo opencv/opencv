@@ -56,10 +56,10 @@ endif(WITH_CUDA)
 # --- Eigen ---
 if(WITH_EIGEN AND NOT HAVE_EIGEN)
   if((OPENCV_FORCE_EIGEN_FIND_PACKAGE_CONFIG
-      OR NOT (CMAKE_VERSION VERSION_LESS "3.0.0")  # Eigen3Targets.cmake required CMake 3.0.0+
+      OR NOT (CMAKE_VERSION VERSION_LESS "3.0.0")  
       ) AND NOT OPENCV_SKIP_EIGEN_FIND_PACKAGE_CONFIG
   )
-    find_package(Eigen3 CONFIG QUIET)  # Ceres 2.0.0 CMake scripts doesn't work with CMake's FindEigen3.cmake module (due to missing EIGEN3_VERSION_STRING)
+    find_package(Eigen3 CONFIG QUIET) 
   endif()
   if(NOT Eigen3_FOUND)
     find_package(Eigen3 QUIET)
@@ -80,17 +80,15 @@ if(WITH_EIGEN AND NOT HAVE_EIGEN)
       endif()
     endif()
     if(HAVE_EIGEN)
-      if(DEFINED EIGEN3_WORLD_VERSION)  # CMake module
+      if(DEFINED EIGEN3_WORLD_VERSION)
         set(EIGEN_WORLD_VERSION ${EIGEN3_WORLD_VERSION})
         set(EIGEN_MAJOR_VERSION ${EIGEN3_MAJOR_VERSION})
         set(EIGEN_MINOR_VERSION ${EIGEN3_MINOR_VERSION})
-      elseif(DEFINED Eigen3_VERSION_MAJOR) # Recommended package config variables
-        # see https://github.com/opencv/opencv/issues/27530
+      elseif(DEFINED Eigen3_VERSION_MAJOR) 
         set(EIGEN_WORLD_VERSION ${Eigen3_VERSION_MAJOR})
         set(EIGEN_MAJOR_VERSION ${Eigen3_VERSION_MINOR})
         set(EIGEN_MINOR_VERSION ${Eigen3_VERSION_PATCH})
-      else()  # Deprecated package config variables
-        # Removed on master at https://gitlab.com/libeigen/eigen/-/commit/f2984cd0778dd0a1d7e74216d826eaff2bc6bfab
+      else() 
         set(EIGEN_WORLD_VERSION ${EIGEN3_VERSION_MAJOR})
         set(EIGEN_MAJOR_VERSION ${EIGEN3_VERSION_MINOR})
         set(EIGEN_MINOR_VERSION ${EIGEN3_VERSION_PATCH})
@@ -133,50 +131,27 @@ endif()
 # --- Clp ---
 # Ubuntu: sudo apt-get install coinor-libclp-dev coinor-libcoinutils-dev
 ocv_clear_vars(HAVE_CLP)
-if(WITH_CLP)
+if(WITH_CLP AND NOT ANDROID AND NOT IOS)
   # Try modern CMake config first (vcpkg, system packages with CMake support)
   find_package(Clp CONFIG QUIET)
   if(Clp_FOUND AND TARGET Coin::Clp AND TARGET Coin::CoinUtils)
-    set(HAVE_CLP TRUE)
+    set(HAVE_CLP 1)
     list(APPEND OPENCV_LINKER_LIBS Coin::Clp Coin::CoinUtils)
   else()
-    # Fallback to pkg-config for Unix systems
+    # Fallback to pkg-config for Unix systems only
     if(UNIX)
-      ocv_check_modules(CLP clp)
-      if(CLP_FOUND)
-        set(HAVE_CLP TRUE)
-        if(NOT ${CLP_INCLUDE_DIRS} STREQUAL "")
-          ocv_include_directories(${CLP_INCLUDE_DIRS})
+      find_package(PkgConfig QUIET)
+      if(PKG_CONFIG_FOUND)
+        pkg_check_modules(CLP QUIET clp)
+        if(CLP_FOUND)
+          set(HAVE_CLP 1)
+          ocv_include_directories(SYSTEM ${CLP_INCLUDE_DIRS})
+          list(APPEND OPENCV_LINKER_LIBS ${CLP_LIBRARIES})
         endif()
-        list(APPEND OPENCV_LINKER_LIBS ${CLP_LIBRARIES})
-      endif()
-    endif()
-
-    # Manual search fallback
-    if(NOT CLP_FOUND)
-      find_path(CLP_INCLUDE_PATH "coin"
-                PATHS "/usr/local/include" "/usr/include" "/opt/include"
-                DOC "The path to Clp headers")
-      if(CLP_INCLUDE_PATH)
-        ocv_include_directories(${CLP_INCLUDE_PATH} "${CLP_INCLUDE_PATH}/coin")
-        get_filename_component(_CLP_LIBRARY_DIR "${CLP_INCLUDE_PATH}/../lib" ABSOLUTE)
-        set(CLP_LIBRARY_DIR "${_CLP_LIBRARY_DIR}" CACHE PATH "Full path of Clp library directory")
-        link_directories(${CLP_LIBRARY_DIR})
-        if(UNIX)
-          set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} Clp CoinUtils m)
-        else()
-          # Windows: Check for vcpkg naming first, then fallback to traditional naming
-          if(EXISTS "${CLP_LIBRARY_DIR}/Clp.lib")
-            set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} Clp CoinUtils)
-          else()
-            set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} libClp libCoinUtils)
-          endif()
-        endif()
-        set(HAVE_CLP TRUE)
       endif()
     endif()
   endif()
-endif(WITH_CLP)
+endif()
 
 # --- ARM KleidiCV
 if(WITH_KLEIDICV)
