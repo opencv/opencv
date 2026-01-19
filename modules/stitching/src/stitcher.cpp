@@ -54,7 +54,7 @@ Ptr<Stitcher> Stitcher::create(Mode mode)
     stitcher->setPanoConfidenceThresh(1);
     stitcher->setSeamFinder(makePtr<detail::GraphCutSeamFinder>(detail::GraphCutSeamFinderBase::COST_COLOR));
     stitcher->setBlender(makePtr<detail::MultiBandBlender>(false));
-    stitcher->setFeaturesFinder(SIFT::create());
+    stitcher->setFeaturesFinder(ORB::create());
     stitcher->setInterpolationFlags(INTER_LINEAR);
 
     stitcher->work_scale_ = 1;

@@ -340,6 +340,7 @@ void FeaturesMatcher::match(const std::vector<ImageFeatures> &features, std::vec
 {
     const int num_images = static_cast<int>(features.size());
 
+    // Updated: Allow CV_8U or CV_Bool for OpenCV 5.0 compatibility
     CV_Assert(mask.empty() || ((mask.type() == CV_8U || mask.type() == CV_Bool) && mask.cols == num_images && mask.rows));
     Mat_<uchar> mask_(mask.getMat(ACCESS_READ));
     if (mask_.empty())
@@ -424,7 +425,7 @@ void BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFea
     }
 
     // Find pair-wise motion
-    matches_info.H = findHomography(src_points, dst_points, USAC_MAGSAC, 3.0, matches_info.inliers_mask);
+    matches_info.H = findHomography(src_points, dst_points, RANSAC, 3.0, matches_info.inliers_mask);
     if (matches_info.H.empty() || std::abs(determinant(matches_info.H)) < std::numeric_limits<double>::epsilon())
         return;
 
@@ -471,7 +472,7 @@ void BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFea
     }
 
     // Rerun motion estimation on inliers only
-    matches_info.H = findHomography(src_points, dst_points, USAC_MAGSAC, 3.0);
+    matches_info.H = findHomography(src_points, dst_points, RANSAC, 3.0);
 }
 
 void BestOf2NearestMatcher::collectGarbage()
@@ -491,6 +492,7 @@ void BestOf2NearestRangeMatcher::match(const std::vector<ImageFeatures> &feature
 {
     const int num_images = static_cast<int>(features.size());
 
+    // Updated: Allow CV_8U or CV_Bool for OpenCV 5.0 compatibility
     CV_Assert(mask.empty() || ((mask.type() == CV_8U || mask.type() == CV_Bool) && mask.cols == num_images && mask.rows));
     Mat_<uchar> mask_(mask.getMat(ACCESS_READ));
     if (mask_.empty())
