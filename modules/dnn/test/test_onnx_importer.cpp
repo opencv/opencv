@@ -3465,6 +3465,41 @@ TEST_P(Test_ONNX_layers, TopK) {
     test("top_k_smallest");
 }
 
+TEST(Test_ONNX_layers, LayerNorm_2Outputs)
+{
+    Net net = readNetFromONNX(findDataFile("dnn/onnx/layer_norm_2outputs.onnx"));
+
+    // creates a 3d blob [1, 3, 5]
+    int sizes[] = {1, 3, 5};
+    Mat input(3, sizes, CV_32F);
+    randu(input, 0, 1);
+    
+    net.setInput(input, "input");
+
+    // request result (Y) and Mean
+    std::vector<String> outNames;
+    outNames.push_back("Y");
+    outNames.push_back("Mean");
+
+    std::vector<Mat> outs;
+    net.forward(outs, outNames);
+
+    // check we got 2 outputs
+    ASSERT_EQ(outs.size(), 2);
+
+    // check shapes
+    // [1, 3, 5]
+    EXPECT_EQ(outs[0].size[0], 1);
+    EXPECT_EQ(outs[0].size[2], 5);
+    
+    // Mean: [1, 3, 1]
+    EXPECT_EQ(outs[1].size[0], 1);
+    EXPECT_EQ(outs[1].size[2], 1);
+
+    // check safety fix (zeros)
+    EXPECT_EQ(cv::countNonZero(outs[1]), 0);
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
 }} // namespace
