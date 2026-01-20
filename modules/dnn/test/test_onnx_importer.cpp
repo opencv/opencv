@@ -3473,7 +3473,7 @@ TEST(Test_ONNX_layers, LayerNorm_2Outputs)
     int sizes[] = {1, 3, 5};
     Mat input(3, sizes, CV_32F);
     randu(input, 0, 1);
-    
+
     net.setInput(input, "input");
 
     // request result (Y) and Mean
@@ -3491,7 +3491,7 @@ TEST(Test_ONNX_layers, LayerNorm_2Outputs)
     // [1, 3, 5]
     EXPECT_EQ(outs[0].size[0], 1);
     EXPECT_EQ(outs[0].size[2], 5);
-    
+
     // Mean: [1, 3, 1]
     EXPECT_EQ(outs[1].size[0], 1);
     EXPECT_EQ(outs[1].size[2], 1);
