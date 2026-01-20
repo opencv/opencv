@@ -365,7 +365,7 @@ TEST_P(usac_Essential, maxiters) {
 INSTANTIATE_TEST_CASE_P(Calib3d, usac_Essential, UsacMethod::all());
 
 TEST(usac_P3P, accuracy) {
-    cv::setRNGSeed(42);
+    cv::setRNGSeed(2025);
     std::vector<int> gt_inliers;
     const int pts_size = 3000;
     cv::Mat img_pts, obj_pts, K1, K2;
