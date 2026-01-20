@@ -486,8 +486,8 @@ TEST(usac_testUsacParams, accuracy) {
 }
 
 TEST(usac_solvePnPRansac, regression_21105) {
-    cv::setRNGSeed(2021); 
-    
+    cv::setRNGSeed(2021);
+
     std::vector<int> gt_inliers;
     const int pts_size = 100;
     double inl_ratio = 0.1;
@@ -501,7 +501,7 @@ TEST(usac_solvePnPRansac, regression_21105) {
     std::vector<int> inliers;
     cv::Matx31d rvec, tvec;
 
-    const uint64 seed = cv::theRNG().state; 
+    const uint64 seed = cv::theRNG().state;
 
     CV_Assert(cv::solvePnPRansac(obj_pts, img_pts, K1, cv::noArray(), rvec, tvec,
             false, (int)max_iters, (float)thr, conf, inliers, flag));
@@ -512,10 +512,10 @@ TEST(usac_solvePnPRansac, regression_21105) {
     std::vector<int> inliers_copy;
     cv::Matx31d rvec_copy, tvec_copy;
 
-    cv::theRNG().state = seed; 
+    cv::theRNG().state = seed;
     CV_Assert(cv::solvePnPRansac(obj_pts, img_pts, K1_copy, cv::noArray(), rvec_copy, tvec_copy,
               false, (int)max_iters, (float)thr, conf, inliers_copy, flag));
-    
+
     EXPECT_EQ(rvec, rvec_copy);
     EXPECT_EQ(tvec, tvec_copy);
     EXPECT_EQ(inliers, inliers_copy);
