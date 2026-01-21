@@ -138,22 +138,20 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        for (size_t i = 1; i < outputs.size(); i++)
-        {
-            outputs[i].setTo(0);
-        }
-
         const auto &input = inputs[0];
         const auto &scale = blobs.empty() ? inputs[1] : blobs.front();
         auto &output = outputs[0];
 
         axis = normalize_axis(axis0, input.dims);
 
+        Mat* meanMat = outputs.size() > 1 ? &outputs[1] : nullptr;
+        Mat* stdMat  = outputs.size() > 2 ? &outputs[2] : nullptr;
+
         if ((inputs.size() + blobs.size()) >= 3) {
             const auto &bias = blobs.empty() ? inputs[2] : blobs.back();
-            fastNorm(input, scale, bias, output, epsilon, static_cast<size_t>(axis));
+            fastNorm(input, scale, bias, output, epsilon, static_cast<size_t>(axis), meanMat, stdMat);
         } else {
-            fastNorm(input, scale, output, epsilon, static_cast<size_t>(axis));
+            fastNorm(input, scale, output, epsilon, static_cast<size_t>(axis), true, meanMat, stdMat);
         }
     }
 

@@ -42,13 +42,17 @@ void fastNorm(const Mat &input, Mat &output, float epsilon, size_t normalized_ax
     parallel_for_(Range(0, loops), fn, nstripes);
 }
 
-void fastNorm(const Mat &input, const Mat &scale, Mat &output, float epsilon, size_t normalized_axis, bool recenter) {
+void fastNorm(const Mat &input, const Mat &scale, Mat &output, float epsilon, size_t normalized_axis, bool recenter, Mat* mean_mat, Mat* std_mat) {
     const auto input_shape = shape(input);
     CV_CheckLT(normalized_axis, input_shape.size(), "fastNorm: axis out of range");
 
     size_t loops = static_cast<size_t>(total(input_shape, 0, static_cast<int>(normalized_axis))),
            norm_size = static_cast<size_t>(total(input_shape, static_cast<int>(normalized_axis)));
     float inv_norm_size = 1.0 / norm_size;
+
+    // get output pointers if available
+    float* mean_ptr = mean_mat ? mean_mat->ptr<float>() : nullptr;
+    float* std_ptr  = std_mat ? std_mat->ptr<float>() : nullptr;
 
     auto fn = [&](const Range &r) {
         const auto *input_data = input.ptr<const float>();
@@ -70,6 +74,9 @@ void fastNorm(const Mat &input, const Mat &scale, Mat &output, float epsilon, si
             mean_square = std::sqrt(std::max(0.f, mean_square * inv_norm_size - mean * mean) + epsilon);
             float inv_stdev = 1.f / mean_square;
 
+            if (mean_ptr) mean_ptr[i] = mean;
+            if (std_ptr)  std_ptr[i]  = mean_square;
+
             for (size_t j = 0; j < norm_size; j++) {
                 y[j] = scale_data[j] * (x[j] - mean) * inv_stdev;
             }
@@ -79,7 +86,7 @@ void fastNorm(const Mat &input, const Mat &scale, Mat &output, float epsilon, si
     parallel_for_(Range(0, loops), fn, nstripes);
 }
 
-void fastNorm(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, float epsilon, size_t normalized_axis) {
+void fastNorm(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, float epsilon, size_t normalized_axis, Mat* mean_mat, Mat* std_mat) {
     const auto input_shape = shape(input);
     CV_CheckLT(normalized_axis, input_shape.size(), "fastNorm: axis out of range");
     CV_CheckEQ(scale.total(), bias.total(), "fastNorm: scale and bias should have the same shape");
@@ -87,6 +94,9 @@ void fastNorm(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, 
     size_t loops = static_cast<size_t>(total(input_shape, 0, static_cast<int>(normalized_axis))),
            norm_size = static_cast<size_t>(total(input_shape, static_cast<int>(normalized_axis)));
     float inv_norm_size = 1.0 / norm_size;
+
+    float* mean_ptr = mean_mat ? mean_mat->ptr<float>() : nullptr;
+    float* std_ptr  = std_mat ? std_mat->ptr<float>() : nullptr;
 
     auto fn = [&](const Range &r) {
         const auto *input_data = input.ptr<const float>();
@@ -107,6 +117,9 @@ void fastNorm(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, 
             mean *= inv_norm_size;
             mean_square = std::sqrt(std::max(0.f, mean_square * inv_norm_size - mean * mean) + epsilon);
             float inv_stdev = 1.f / mean_square;
+
+            if (mean_ptr) mean_ptr[i] = mean;
+            if (std_ptr)  std_ptr[i]  = mean_square;
 
             for (size_t j = 0; j < norm_size; j++) {
                 y[j] = scale_data[j] * (x[j] - mean) * inv_stdev + bias_data[j];
@@ -204,6 +217,51 @@ void fastNormGroup(const Mat &input, const Mat &scale, const Mat &bias, Mat &out
 
     double nstripes = loops * norm_size * (1 / 1024.0);
     parallel_for_(Range(0, loops), fn, nstripes);
+}
+
+void fastNorm(const float* src, float* dst, float epsilon, size_t normalized_size, size_t count, float* mean_ptr_arg, float* std_ptr_arg)
+{
+    int norm_size = (int)normalized_size;
+    for (size_t i = 0; i < count; ++i)
+    {
+        const float* x = src + i * normalized_size;
+        float* y = dst + i * normalized_size;
+
+        float mean = 0.f;
+        float mean_square = 0.f;
+
+        // Calculate Sum and Squared Sum
+        for (int k = 0; k < norm_size; k++)
+        {
+            float v = x[k];
+            mean += v;
+            mean_square += v * v;
+        }
+
+        // Calculate Mean and Variance
+        mean /= norm_size;
+        mean_square /= norm_size;
+        float var = std::max(0.f, mean_square - mean * mean);
+
+        // Save Mean (If requested) - Output #1
+        if (mean_ptr_arg)
+        {
+            mean_ptr_arg[i] = mean;
+        }
+
+        // Save StdDev (If requested) - Output #2
+        // We use sqrt(var + epsilon) to match standard definitions
+        float std_val = std::sqrt(var + epsilon);
+        if (std_ptr_arg)
+            std_ptr_arg[i] = std_val;
+
+        // Normalize
+        float inv_std = 1.f / std_val;
+        for (int k = 0; k < norm_size; k++)
+        {
+            y[k] = (x[k] - mean) * inv_std;
+        }
+    }
 }
 
 }} // cv::dnn

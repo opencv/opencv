@@ -13,16 +13,19 @@ namespace cv { namespace dnn {
 void fastNorm(const Mat &input, Mat &output, float epsilon, size_t normalized_axis = 0, bool normalize_variance = true);
 
 // Normalization speedup by multi-threading with absent bias. Mainly for LayerNormalization.
-void fastNorm(const Mat &input, const Mat &scale, Mat &output, float epsilon, size_t normalized_axis = 0, bool recenter=true);
+void fastNorm(const Mat &input, const Mat &scale, Mat &output, float epsilon, size_t normalized_axis = 0, bool recenter=true, Mat* mean_mat = nullptr, Mat* std_mat = nullptr);
 
 // Normalization speedup by multi-threading with scale and bias. Mainly for LayerNormalization.
-void fastNorm(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, float epsilon, size_t normalized_axis = 0);
+void fastNorm(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, float epsilon, size_t normalized_axis = 0, Mat* mean_mat = nullptr, Mat* std_mat = nullptr);
 
 // Channel-wise Normalization speedup by multi-threading. Scale and bias should have the same shape (C). Input should have dimension >= 3.
 void fastNormChannel(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, float epsilon);
 
 // Group-wise Normalization speedup by multi-threading. Scale and bias should have the same shape (C). Input should have dimension >= 3.
 void fastNormGroup(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, float epsilon, size_t num_groups);
+
+// Computes Layer Normalization, optionally saving Mean and StdDev if pointers are provided.
+void fastNorm(const float* src, float* dst, float epsilon, size_t normalized_size, size_t count, float* mean_ptr_arg = nullptr, float* std_ptr_arg = nullptr);
 
 }} // cv::dnn
 
