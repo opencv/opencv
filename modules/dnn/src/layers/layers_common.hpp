@@ -94,6 +94,48 @@ template<typename _Tp> _Tp tensorToScalar(const Mat& tensor)
 // tensor to mat shape
 MatShape tensorToShape(const Mat& shapeTensor);
 
+enum OnnxDataType
+{
+    ONNX_UNDEFINED  = 0,
+    ONNX_FLOAT      = 1,   // float
+    ONNX_UINT8      = 2,   // uint8_t
+    ONNX_INT8       = 3,   // int8_t
+    ONNX_UINT16     = 4,   // uint16_t
+    ONNX_INT16      = 5,   // int16_t
+    ONNX_INT32      = 6,   // int32_t
+    ONNX_INT64      = 7,   // int64_t
+    ONNX_STRING     = 8,   // string
+    ONNX_BOOL       = 9,   // bool
+    ONNX_FLOAT16    = 10,
+    ONNX_DOUBLE     = 11,
+    ONNX_UINT32     = 12,
+    ONNX_UINT64     = 13,
+    ONNX_BFLOAT16   = 14
+};
+
+inline int onnxDataTypeToCV(OnnxDataType dt)
+{
+    switch (dt)
+    {
+    case ONNX_UINT8:      return CV_8U;
+    case ONNX_INT8:       return CV_8S;
+    case ONNX_UINT16:     return CV_16U;
+    case ONNX_INT16:      return CV_16S;
+    case ONNX_UINT32:     return CV_32U;
+    case ONNX_INT32:      return CV_32S;
+    case ONNX_UINT64:     return CV_64U;
+    case ONNX_INT64:      return CV_64S;
+    case ONNX_FLOAT:      return CV_32F;
+    case ONNX_DOUBLE:     return CV_64F;
+    case ONNX_FLOAT16:    return CV_16F;
+    case ONNX_BFLOAT16:   return CV_16BF;
+    case ONNX_BOOL:       return CV_Bool;
+    default:
+        // Fallback to default ONNX FLOAT if value is unknown.
+        return CV_32F;
+    }
+}
+
 // inputs and outputs are both vector<Mat>'s or both are vector<UMat>'s.
 // the function does the following:
 //
@@ -107,7 +149,6 @@ MatShape tensorToShape(const Mat& shapeTensor);
 void reshapeAndCopyFirst(InputArrayOfArrays inputs,
                          OutputArrayOfArrays outputs,
                          const MatShape& shape);
-
 }
 }
 

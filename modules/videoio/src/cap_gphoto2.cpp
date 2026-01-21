@@ -153,7 +153,7 @@ public:
 
 protected:
     // Known widget names
-    static const char * PROP_EXPOSURE_COMPENSACTION;
+    static const char * PROP_EXPOSURE_COMPENSATION;
     static const char * PROP_SELF_TIMER_DELAY;
     static const char * PROP_MANUALFOCUS;
     static const char * PROP_AUTOFOCUS;
@@ -294,7 +294,7 @@ const char * DigitalCameraCapture::lineDelimiter = "\n";
  * Those are actually substrings of widget name.
  * ie. for VIEWFINDER, Nikon uses "viewfinder", while Canon can use "eosviewfinder".
  */
-const char * DigitalCameraCapture::PROP_EXPOSURE_COMPENSACTION =
+const char * DigitalCameraCapture::PROP_EXPOSURE_COMPENSATION =
         "exposurecompensation";
 const char * DigitalCameraCapture::PROP_SELF_TIMER_DELAY = "selftimerdelay";
 const char * DigitalCameraCapture::PROP_MANUALFOCUS = "manualfocusdrive";
@@ -555,7 +555,7 @@ CameraWidget * DigitalCameraCapture::getGenericProperty(int propertyId,
             return NULL;
         }
         case CAP_PROP_EXPOSURE:
-            return findWidgetByName(PROP_EXPOSURE_COMPENSACTION);
+            return findWidgetByName(PROP_EXPOSURE_COMPENSATION);
         case CAP_PROP_TRIGGER_DELAY:
             return findWidgetByName(PROP_SELF_TIMER_DELAY);
         case CAP_PROP_ZOOM:
@@ -692,7 +692,7 @@ CameraWidget * DigitalCameraCapture::setGenericProperty(int propertyId,
             output = false;
             return NULL;
         case CAP_PROP_EXPOSURE:
-            return findWidgetByName(PROP_EXPOSURE_COMPENSACTION);
+            return findWidgetByName(PROP_EXPOSURE_COMPENSATION);
         case CAP_PROP_TRIGGER_DELAY:
             return findWidgetByName(PROP_SELF_TIMER_DELAY);
         case CAP_PROP_ZOOM:

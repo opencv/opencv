@@ -2544,7 +2544,7 @@ void undistortPoints(InputArray src, OutputArray dst,
 CV_EXPORTS_W
 void undistortImagePoints(InputArray src, OutputArray dst, InputArray cameraMatrix,
                           InputArray distCoeffs,
-                          TermCriteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 0.01));
+                          TermCriteria = TermCriteria(TermCriteria::MAX_ITER, 5, 0.01));
 
 namespace fisheye {
 

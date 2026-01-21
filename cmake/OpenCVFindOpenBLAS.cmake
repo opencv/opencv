@@ -20,8 +20,10 @@ if(NOT OpenBLAS_FOUND)
 endif()
 
 if(NOT OpenBLAS_FOUND)
-  find_library(OpenBLAS_LIBRARIES NAMES openblas)
-  find_path(OpenBLAS_INCLUDE_DIRS NAMES cblas.h)
+  find_library(OpenBLAS_LIBRARIES NAMES openblasp openblas)
+  find_path(OpenBLAS_INCLUDE_DIRS
+            NAMES cblas.h
+            PATH_SUFFIXES openblas)
   find_path(OpenBLAS_LAPACKE_DIR NAMES lapacke.h PATHS "${OpenBLAS_INCLUDE_DIRS}")
   if(OpenBLAS_LIBRARIES AND OpenBLAS_INCLUDE_DIRS)
     message(STATUS "Found OpenBLAS in the system")

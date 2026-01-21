@@ -79,8 +79,6 @@ ocv_add_module(js BINDINGS PRIVATE_REQUIRED opencv_js_bindings_generator)
 
 ocv_module_include_directories(${EMSCRIPTEN_INCLUDE_DIR})
 
-add_definitions("-std=c++11")
-
 set(deps ${OPENCV_MODULE_${the_module}_DEPS})
 list(REMOVE_ITEM deps opencv_js_bindings_generator)  # don't add dummy module
 link_libraries(${deps})

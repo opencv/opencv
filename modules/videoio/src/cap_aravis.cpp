@@ -127,6 +127,8 @@ protected:
 
     void autoExposureControl(const Mat &);
 
+    double getExpectedMidGrey(ArvPixelFormat fmt) const;
+
     ArvCamera       *camera;                // Camera to control.
     ArvStream       *stream;                // Object for video stream reception.
     void            *framebuffer;           //
@@ -269,6 +271,19 @@ bool CvCaptureCAM_Aravis::open( int index )
 
         // get initial values
         pixelFormat = arv_camera_get_pixel_format(camera, NULL);
+
+        // If camera's pixel format is not one of the supported formats, set a default
+        if (pixelFormat != ARV_PIXEL_FORMAT_MONO_8 &&
+            pixelFormat != ARV_PIXEL_FORMAT_BAYER_GR_8 &&
+            pixelFormat != ARV_PIXEL_FORMAT_MONO_12 &&
+            pixelFormat != ARV_PIXEL_FORMAT_MONO_16) {
+            pixelFormat = ARV_PIXEL_FORMAT_MONO_8;
+            arv_camera_set_pixel_format(camera, pixelFormat, NULL);
+            CV_LOG_WARNING(NULL, "Current camera pixel format is not supported. Failed back to MONO_8.");
+        }
+
+        midGrey = getExpectedMidGrey(pixelFormat);
+
         exposure = exposureAvailable ? arv_camera_get_exposure_time(camera, NULL) : 0;
         gain = gainAvailable ? arv_camera_get_gain(camera, NULL) : 0;
         fps = arv_camera_get_frame_rate(camera, NULL);
@@ -489,6 +504,26 @@ double CvCaptureCAM_Aravis::getProperty( int property_id ) const
     return -1.0;
 }
 
+double CvCaptureCAM_Aravis::getExpectedMidGrey(ArvPixelFormat fmt) const
+{
+    double grey = 0.;
+    switch(fmt)
+    {
+        case ARV_PIXEL_FORMAT_MONO_8:
+        case ARV_PIXEL_FORMAT_BAYER_GR_8:
+            grey = 128.;
+            break;
+        case ARV_PIXEL_FORMAT_MONO_12:
+            grey = 2048.;
+            break;
+        case ARV_PIXEL_FORMAT_MONO_16:
+            grey = 32768.;
+            break;
+    }
+
+    return grey;
+}
+
 bool CvCaptureCAM_Aravis::setProperty( int property_id, double value )
 {
     switch(property_id) {
@@ -535,24 +570,22 @@ bool CvCaptureCAM_Aravis::setProperty( int property_id, double value )
                     case MODE_GREY:
                     case MODE_Y800:
                         newFormat = ARV_PIXEL_FORMAT_MONO_8;
-                        targetGrey = 128;
                         break;
                     case MODE_Y12:
                         newFormat = ARV_PIXEL_FORMAT_MONO_12;
-                        targetGrey = 2048;
                         break;
                     case MODE_Y16:
                         newFormat = ARV_PIXEL_FORMAT_MONO_16;
-                        targetGrey = 32768;
                         break;
                     case MODE_GRBG:
                         newFormat = ARV_PIXEL_FORMAT_BAYER_GR_8;
-                        targetGrey = 128;
                         break;
                 }
+
                 if(newFormat != pixelFormat) {
                     stopCapture();
                     arv_camera_set_pixel_format(camera, pixelFormat = newFormat, NULL);
+                    midGrey = getExpectedMidGrey(newFormat);
                     startCapture();
                 }
             }

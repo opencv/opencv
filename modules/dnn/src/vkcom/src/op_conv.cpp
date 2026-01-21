@@ -84,7 +84,7 @@ OpConv::OpConv(const Mat& weightBlob, const std::vector<float>& biasvec, int _ac
         // Create weightTensor
         Tensor weightTensor;
         CV_Assert(weightBlob.isContinuous() && weightBlob.type() == CV_32F);
-        std::vector<int> matShape = shape(weightBlob);
+        std::vector<int> matShape = shape(weightBlob).vec();
         weightTensor.reshape((const char*)weightBlob.data, matShape); // This code will copy the src data from Mat to VkBuffer.
 
         weightTensorPtr = makePtr<Tensor>(weightTensor);
