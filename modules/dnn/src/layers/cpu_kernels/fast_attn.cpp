@@ -147,7 +147,7 @@ void run_fused_softmax(
             maxVal = v_reduce_max(v_max_val);
 #endif
             for (; tk < tmax; tk++){
-                if (threshold) {
+                if (mask_data) {
                     size_t mask_idx = mask_offset_q + (mask_step_k ? tk : 0);
                     data[offset + tk] = Policy::apply_scalar(data[offset + tk], mask_data[mask_idx], min_val);
                 }
