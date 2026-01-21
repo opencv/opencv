@@ -533,8 +533,11 @@ void PoseGraphImpl::applyMST(const std::vector<cv::MSTEdge>& resultingEdges, con
         if (it == adj.end())
             continue;
 
-        for (const auto& [neighbor, relativePose] : it->second)
+        for (const auto& pr : it->second)
         {
+            auto neighbor = pr.first;
+            auto relativePose = pr.second;
+
             if (visited.count(neighbor))
                 continue;
             newPoses[neighbor] = currentPose * relativePose;
@@ -543,8 +546,11 @@ void PoseGraphImpl::applyMST(const std::vector<cv::MSTEdge>& resultingEdges, con
     }
 
     // Apply the new poses
-    for (const auto& [nodeId, pose] : newPoses)
+    for (const auto& np : newPoses)
     {
+        auto nodeId = np.first;
+        auto pose = np.second;
+
         if (!nodes.at(nodeId).isFixed)
             nodes.at(nodeId).setPose(pose.getAffine());
     }

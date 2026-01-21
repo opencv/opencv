@@ -109,7 +109,10 @@ bool buildMSTPrim(int numNodes,
 
     while (!pq.empty())
     {
-        auto [w, u, v] = pq.top();
+        HeapElem he = pq.top();
+        double w = std::get<0>(he);
+        int u = std::get<1>(he);
+        int v = std::get<2>(he);
         pq.pop();
 
         if (inMST[v])
