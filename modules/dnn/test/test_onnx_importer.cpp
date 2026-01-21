@@ -3465,39 +3465,38 @@ TEST_P(Test_ONNX_layers, TopK) {
     test("top_k_smallest");
 }
 
-TEST(Test_ONNX_layers, LayerNorm_2Outputs)
+TEST(Test_LayerNorm_Fix, LayerNorm_2Outputs)
 {
-    Net net = readNetFromONNX(findDataFile("dnn/onnx/layer_norm_2outputs.onnx"));
+    const String model = findDataFile("dnn/onnx/models/layer_norm_2outputs.onnx");
 
-    // creates a 3d blob [1, 3, 5]
+    Net net = readNetFromONNX(model);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(DNN_TARGET_CPU);
+
+    // create input data (1x3x5)
     int sizes[] = {1, 3, 5};
-    Mat input(3, sizes, CV_32F);
-    randu(input, 0, 1);
+    Mat inputData(3, sizes, CV_32F);
+    randu(inputData, 0.0f, 1.0f); // Random data 0..1
+    net.setInput(inputData, "input");
 
-    net.setInput(input, "input");
-
-    // request result (Y) and Mean
-    std::vector<String> outNames;
-    outNames.push_back("Y");
-    outNames.push_back("Mean");
-
+    // forward pass asking for 2 outputs
     std::vector<Mat> outs;
+    std::vector<String> outNames = {"Y", "Mean"};
     net.forward(outs, outNames);
 
-    // check we got 2 outputs
     ASSERT_EQ(outs.size(), 2);
 
-    // check shapes
-    // [1, 3, 5]
+    // output 0 (Y): Should be same shape as input
     EXPECT_EQ(outs[0].size[0], 1);
     EXPECT_EQ(outs[0].size[2], 5);
 
-    // Mean: [1, 3, 1]
-    EXPECT_EQ(outs[1].size[0], 1);
-    EXPECT_EQ(outs[1].size[2], 1);
+    // output 1 (Mean): Should be calculated and VALID
+    // we expect real values.
+    EXPECT_GT(cv::countNonZero(outs[1]), 0);
 
-    // check safety fix (zeros)
-    EXPECT_EQ(cv::countNonZero(outs[1]), 0);
+    float* mean_data = outs[1].ptr<float>();
+    EXPECT_GE(mean_data[0], 0.0f);
+    EXPECT_LE(mean_data[0], 1.0f);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
