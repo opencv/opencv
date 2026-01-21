@@ -120,7 +120,6 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE {
-        Net::Impl* netimpl_ = getNetImpl(this);
         opt.init();
 
         if (inputs_arr.depth() == CV_16F)
@@ -159,40 +158,9 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
                                 inputs[1].size[2];
         const auto seq_len_square = seq_len_q * seq_len_kv;
 
-
-        Mat input_keys = inputs[1];
-        Mat input_values = inputs[2];
-
-        Mat keys_with_cache, values_with_cache;
-
-        if (netimpl_->useKVCache) {
-            // Append cached key and value to the current key and value
-            KVCacheManager& kvCacheManager = netimpl_->kvCacheManager;
-            CV_Assert(kvCacheManager.initialized);
-            CV_Assert(kvCacheManager.batchSize == batch_size);
-
-            auto kData = kvCacheManager.kData.find(this->name);
-            auto vData = kvCacheManager.vData.find(this->name);
-            CV_Assert(kData != kvCacheManager.kData.end());
-            CV_Assert(vData != kvCacheManager.vData.end());
-
-            kvCacheManager.updateCache(this->name, input_keys, input_values);
-
-            if (kvCacheManager.curPageOffset > 0){
-                keys_with_cache = kvCacheManager.getKeyCache(this->name);
-                values_with_cache = kvCacheManager.getValueCache(this->name);
-            } else {
-                keys_with_cache =  input_keys;
-                values_with_cache =  input_values;
-            }
-        } else {
-            keys_with_cache =  input_keys;
-            values_with_cache =  input_values;
-        }
-
         const auto* Q =  inputs[0].ptr<const float>();
-        const auto* K =  keys_with_cache.ptr<const float>();
-        const auto* V =  values_with_cache.ptr<const float>();
+        const auto* K =  inputs[1].ptr<const float>();
+        const auto* V =  inputs[2].ptr<const float>();
 
         scale = is_scale_set ? scale : 1.0f / std::sqrt(static_cast<float>(qk_head_size));
 

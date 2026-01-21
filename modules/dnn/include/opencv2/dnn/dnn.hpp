@@ -1016,36 +1016,6 @@ CV__DNN_INLINE_NS_BEGIN
         Ptr<Impl> impl;
     };
 
-
-    class CV_EXPORTS vLMSession
-    {
-    public:
-
-        vLMSession(const String &languageModelPath);
-        ~vLMSession();
-
-        void setPrompt(Mat inputEmbedding);
-        void generate();
-
-        std::vector<int> getGeneratedTokens() const;
-        std::vector<Mat> getGeneratedTokenEmbeddings() const;
-
-        int maxTokens;
-        int finalTokenId = 1;
-        bool isDummy = false;
-    private:
-
-        Net net;
-        String languageModelPath;
-        Mat inputEmbedding;
-
-        std::vector<Mat> generatedTokenEmbeddings;
-        std::vector<int> generatedTokens;
-
-        int nGeneratedTokens = 0;
-    };
-
-
     enum EngineType
     {
         ENGINE_CLASSIC=1, //!< Force use the old dnn engine similar to 4.x branch
