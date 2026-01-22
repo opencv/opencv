@@ -130,29 +130,70 @@ if(HAVE_EIGEN)
   endif()
 endif()
 
+
 # --- Clp ---
 # Ubuntu: sudo apt-get install coinor-libclp-dev coinor-libcoinutils-dev
 ocv_clear_vars(HAVE_CLP)
+
 if(WITH_CLP AND NOT ANDROID AND NOT IOS)
-  # Try modern CMake config first (vcpkg, system packages with CMake support)
+
+  # 1. Modern CMake config (vcpkg / system packages)
   find_package(Clp CONFIG QUIET)
   if(Clp_FOUND AND TARGET Coin::Clp AND TARGET Coin::CoinUtils)
     set(HAVE_CLP 1)
     list(APPEND OPENCV_LINKER_LIBS Coin::Clp Coin::CoinUtils)
-  else()
-    # Fallback to pkg-config for Unix systems only
-    if(UNIX)
-      find_package(PkgConfig QUIET)
-      if(PKG_CONFIG_FOUND)
-        pkg_check_modules(CLP QUIET clp)
-        if(CLP_FOUND)
-          set(HAVE_CLP 1)
-          ocv_include_directories(SYSTEM ${CLP_INCLUDE_DIRS})
-          list(APPEND OPENCV_LINKER_LIBS ${CLP_LIBRARIES})
+  endif()
+
+  # 2. pkg-config fallback (Unix)
+  if(NOT HAVE_CLP AND UNIX)
+    find_package(PkgConfig QUIET)
+    if(PKG_CONFIG_FOUND)
+      pkg_check_modules(CLP QUIET clp)
+      if(CLP_FOUND)
+        set(HAVE_CLP 1)
+        ocv_include_directories(SYSTEM ${CLP_INCLUDE_DIRS})
+        list(APPEND OPENCV_LINKER_LIBS ${CLP_LIBRARIES})
+      endif()
+    endif()
+  endif()
+
+  # 3. Manual fallback (last resort)
+  if(NOT HAVE_CLP)
+    find_path(CLP_INCLUDE_PATH
+      NAMES coin/ClpSimplex.hpp
+      PATHS /usr/include /usr/local/include /opt/include
+      DOC "The path to Clp headers"
+    )
+
+    if(CLP_INCLUDE_PATH)
+      # Support both:
+      #   /usr/include/coin/ClpSimplex.hpp
+      #   /usr/local/include/ClpSimplex.hpp + /coin
+      ocv_include_directories(
+        ${CLP_INCLUDE_PATH}
+        "${CLP_INCLUDE_PATH}/coin"
+      )
+
+      find_library(CLP_LIBRARY
+        NAMES Clp libClp
+      )
+      find_library(COINUTILS_LIBRARY
+        NAMES CoinUtils libCoinUtils
+      )
+
+      if(CLP_LIBRARY AND COINUTILS_LIBRARY)
+        set(HAVE_CLP 1)
+        list(APPEND OPENCV_LINKER_LIBS
+          ${CLP_LIBRARY}
+          ${COINUTILS_LIBRARY}
+        )
+        if(UNIX)
+          list(APPEND OPENCV_LINKER_LIBS m)
         endif()
       endif()
     endif()
   endif()
+
 endif()
 
 # --- ARM KleidiCV
