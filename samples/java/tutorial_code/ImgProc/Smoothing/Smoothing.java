@@ -2,6 +2,7 @@ import org.opencv.core.*;
 import org.opencv.highgui.HighGui;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
+import org.opencv.utils.TestUtils; // Note: Ensure your environment supports the samples utility
 
 class SmoothingRun {
 
@@ -15,14 +16,25 @@ class SmoothingRun {
 
     public void run(String[] args) {
 
-        String filename = ((args.length > 0) ? args[0] : "../data/lena.jpg");
+        //! [load]
+        // Modernization: Switched default to 'gauss.png' for better smoothing demos [#25635]
+        String filename = ((args.length > 0) ? args[0] : "gauss.png");
 
-        src = Imgcodecs.imread(filename, Imgcodecs.IMREAD_COLOR);
-        if( src.empty() ) {
-            System.out.println("Error opening image");
-            System.out.println("Usage: ./Smoothing [image_name -- default ../data/lena.jpg] \n");
+        // Robustness: Use the samples utility to find the file safely
+        // In Java, this typically maps to the internal samples helper
+        String imagePath = org.opencv.utils.Converters.findFile(filename, false);
+
+        if (imagePath.isEmpty()) {
+            System.out.println("Cannot find sample image: " + filename);
             System.exit(-1);
         }
+
+        src = Imgcodecs.imread(imagePath, Imgcodecs.IMREAD_COLOR);
+        if( src.empty() ) {
+            System.out.println("Error opening image: " + imagePath);
+            System.exit(-1);
+        }
+        //! [load]
 
         if( displayCaption( "Original Image" ) != 0 ) { System.exit(0); }
 
