@@ -33,15 +33,24 @@ def cornerHarris_demo(val):
     cv.namedWindow(corners_window)
     cv.imshow(corners_window, dst_norm_scaled)
 
-# Load source image and convert it to gray
+# ![load]
+# Modernization: Switched default to 'pic3.png' for clearer corner detection [#25635]
 parser = argparse.ArgumentParser(description='Code for Harris corner detector tutorial.')
-parser.add_argument('--input', help='Path to input image.', default='building.jpg')
+parser.add_argument('--input', help='Path to input image.', default='pic3.png')
 args = parser.parse_args()
 
-src = cv.imread(cv.samples.findFile(args.input))
-if src is None:
-    print('Could not open or find the image:', args.input)
+# Robustness: Use required=False to handle missing samples gracefully
+image_path = cv.samples.findFile(args.input, required=False)
+
+if not image_path:
+    print('Cannot find sample image:', args.input)
     exit(0)
+
+src = cv.imread(image_path)
+if src is None:
+    print('Could not open or find the image:', image_path)
+    exit(0)
+# ![load]
 
 src_gray = cv.cvtColor(src, cv.COLOR_BGR2GRAY)
 

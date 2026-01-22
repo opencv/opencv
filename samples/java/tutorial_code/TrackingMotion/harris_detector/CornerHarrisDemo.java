@@ -33,12 +33,24 @@ class CornerHarris {
 
     public CornerHarris(String[] args) {
         /// Load source image and convert it to gray
-        String filename = args.length > 0 ? args[0] : "../data/building.jpg";
-        Mat src = Imgcodecs.imread(filename);
-        if (src.empty()) {
-            System.err.println("Cannot read image: " + filename);
+        //! [load]
+        // Modernization: Switched default to 'pic3.png' for clearer corner detection [#25635]
+        String filename = args.length > 0 ? args[0] : "pic3.png";
+
+        // Robustness: Use the samples utility to find the file safely
+        String imagePath = org.opencv.utils.Converters.findFile(filename, false);
+
+        if (imagePath.isEmpty()) {
+            System.err.println("Cannot find sample image: " + filename);
             System.exit(0);
         }
+
+        Mat src = Imgcodecs.imread(imagePath);
+        if (src.empty()) {
+            System.err.println("Error opening image: " + imagePath);
+            System.exit(0);
+        }
+        //! [load]
 
         Imgproc.cvtColor(src, srcGray, Imgproc.COLOR_BGR2GRAY);
 
@@ -48,9 +60,7 @@ class CornerHarris {
         // Set up the content pane.
         Image img = HighGui.toBufferedImage(src);
         addComponentsToPane(frame.getContentPane(), img);
-        // Use the content pane's default BorderLayout. No need for
-        // setLayout(new BorderLayout());
-        // Display the window.
+        
         frame.pack();
         frame.setVisible(true);
         update();

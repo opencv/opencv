@@ -28,14 +28,27 @@ void cornerHarris_demo( int, void* );
 int main( int argc, char** argv )
 {
     /// Load source image and convert it to gray
-    CommandLineParser parser( argc, argv, "{@input | building.jpg | input image}" );
-    src = imread( samples::findFile( parser.get<String>( "@input" ) ) );
-    if ( src.empty() )
+    //! [load]
+    // Modernization: Switched default to 'pic3.png' for clearer corner detection [#25635]
+    CommandLineParser parser( argc, argv, "{@input | pic3.png | input image}" );
+    
+    // Robustness: Use false for 'required' to prevent C++ exception crashes
+    String filename = samples::findFile( parser.get<String>( "@input" ), false );
+
+    if ( filename.empty() )
     {
-        cout << "Could not open or find the image!\n" << endl;
-        cout << "Usage: " << argv[0] << " <Input image>" << endl;
+        cout << "Cannot find sample image: " << parser.get<String>( "@input" ) << endl;
         return -1;
     }
+
+    src = imread( filename );
+    if ( src.empty() )
+    {
+        cout << "Could not open or find the image: " << filename << endl;
+        return -1;
+    }
+    //! [load]
+    
     cvtColor( src, src_gray, COLOR_BGR2GRAY );
 
     /// Create a window and a trackbar
