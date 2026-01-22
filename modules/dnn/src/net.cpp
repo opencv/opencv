@@ -131,6 +131,19 @@ void Net::setPreferableTarget(int targetId)
     return impl->setPreferableTarget(targetId);
 }
 
+void Net::finalize()
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+#ifdef HAVE_ONNXRUNTIME
+    if (impl->mainGraph && impl->modelFormat == DNN_MODEL_ONNX && !impl->modelFileName.empty())
+    {
+        impl->finalizeOrt();
+        return;
+    }
+#endif
+}
+
 void Net::setInputsNames(const std::vector<String>& inputBlobNames)
 {
     CV_TRACE_FUNCTION();

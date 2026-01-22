@@ -4144,8 +4144,8 @@ Net readNetFromONNX(const String& onnxFile, int engine)
             Net net = readNetFromONNX2_ORT(onnxFile);
             if (net.empty())
                 CV_Error(Error::StsError, "DNN/ONNX/ORT: failed to load model");
-            if (!net.getImpl() || !net.getImpl()->ort_session)
-                CV_Error(Error::StsError, "DNN/ONNX/ORT: ONNX Runtime session was not initialized");
+            if (!net.getImpl() || net.getImpl()->modelFileName.empty())
+                CV_Error(Error::StsError, "DNN/ONNX/ORT: ONNX Runtime model metadata was not initialized");
             return net;
 #else
             CV_LOG_WARNING(NULL, "DNN/ONNX/ORT: OpenCV was built without ONNX Runtime (WITH_ONNXRUNTIME=OFF). Falling back to ENGINE_AUTO.");
