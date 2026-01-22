@@ -110,6 +110,38 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS
 set(include_dirs "")
 set(libs "")
 
+# ONNX Runtime
+ocv_option(WITH_ONNXRUNTIME "Build with ONNX Runtime support" OFF)
+if(WITH_ONNXRUNTIME)
+  set(ORT_VERSION "1.17.1")
+  set(ORT_FILENAME "onnxruntime-linux-x64-${ORT_VERSION}.tgz")
+  set(ORT_URL "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/${ORT_FILENAME}")
+  set(ORT_MD5 "405e3ef137247c5229207da596ac45c0")
+
+  ocv_download(FILENAME ${ORT_FILENAME}
+               URL ${ORT_URL}
+               DESTINATION_DIR "${OpenCV_BINARY_DIR}/3rdparty/onnxruntime"
+               ID "ORT"
+               HASH ${ORT_MD5}
+               UNPACK)
+
+  set(ORT_INSTALL_DIR "${OpenCV_BINARY_DIR}/3rdparty/onnxruntime/onnxruntime-linux-x64-${ORT_VERSION}")
+
+  if(EXISTS "${ORT_INSTALL_DIR}/include" AND EXISTS "${ORT_INSTALL_DIR}/lib/libonnxruntime.so")
+    set(HAVE_ONNXRUNTIME 1 CACHE INTERNAL "ONNX Runtime availability")
+
+    list(APPEND include_dirs "${ORT_INSTALL_DIR}/include")
+    list(APPEND libs "${ORT_INSTALL_DIR}/lib/libonnxruntime.so")
+
+    add_definitions(-DHAVE_ONNXRUNTIME=1)
+
+    if(NOT APPLE)
+      set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-rpath,'$ORIGIN/../3rdparty/onnxruntime/onnxruntime-linux-x64-${ORT_VERSION}/lib'")
+    endif()
+    message(STATUS "DNN: ONNX Runtime acquired and enabled")
+  endif()
+endif()
+
 if(HAVE_PROTOBUF)
   ocv_target_compile_definitions(${the_module} PRIVATE "HAVE_PROTOBUF=1")
 

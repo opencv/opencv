@@ -5,6 +5,10 @@
 #include "../precomp.hpp"
 #include "../net_impl.hpp"
 
+#ifdef HAVE_ONNXRUNTIME
+#include <onnxruntime_cxx_api.h>
+#endif
+
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/dnn/layer_reg.private.hpp>
 #include <opencv2/core/utils/filesystem.hpp>
@@ -2835,6 +2839,28 @@ void ONNXImporter2::buildDispatchMap_COM_MICROSOFT()
 
 Net readNetFromONNX2(const String& onnxFile)
 {
+#ifdef HAVE_ONNXRUNTIME
+    try {
+        static auto s_ort_env = std::make_shared<Ort::Env>(ORT_LOGGING_LEVEL_WARNING, "OpenCV_DNN_ORT");
+
+        Net net;
+        auto impl = net.getImpl();
+
+        impl->ort_env = s_ort_env;
+        impl->ort_session_options = std::make_shared<Ort::SessionOptions>();
+        impl->ort_session = std::make_shared<Ort::Session>(*s_ort_env, onnxFile.c_str(), *impl->ort_session_options);
+
+        impl->modelFileName = onnxFile;
+        impl->modelFormat = DNN_MODEL_ONNX;
+        impl->newGraph("ort_session_active", {}, true);
+
+        CV_LOG_INFO(NULL, "DNN/ONNX: Successfully initialized ORT Session for " << onnxFile);
+        return net; 
+    }
+    catch (const std::exception& e) {
+        CV_LOG_WARNING(NULL, "DNN/ONNX: ORT initialization failed (" << e.what() << "). Fallback to native parser.");
+    }
+#endif
     ONNXImporter2 importer;
     Net net = importer.parseFile(onnxFile.c_str());
     if (net.getMainGraph()) {

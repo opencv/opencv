@@ -27,6 +27,14 @@
 
 #include <unordered_map>
 
+#ifdef HAVE_ONNXRUNTIME
+namespace Ort {
+    class Env;
+    class Session;
+    class SessionOptions;
+}
+#endif
+
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -35,6 +43,10 @@ using std::make_pair;
 using std::string;
 
 typedef std::unordered_map<std::string, int64_t> NamesHash;
+
+#ifdef HAVE_ONNXRUNTIME
+struct OrtNamesCache;
+#endif
 
 // NB: Implementation is divided between of multiple .cpp files
 struct Net::Impl : public detail::NetImplBase
@@ -230,6 +242,13 @@ struct Net::Impl : public detail::NetImplBase
     std::unique_ptr<CudaInfo_t> cudaInfo;
 
     void initCUDABackend(const std::vector<LayerPin>& blobsToKeep_);
+#endif
+
+    #ifdef HAVE_ONNXRUNTIME
+    std::shared_ptr<Ort::Env> ort_env;
+    std::shared_ptr<Ort::Session> ort_session;
+    std::shared_ptr<Ort::SessionOptions> ort_session_options;
+    std::shared_ptr<OrtNamesCache> ort_names_cache;
 #endif
 
     void allocateLayer(int lid, const LayersShapesMap& layersShapes);
