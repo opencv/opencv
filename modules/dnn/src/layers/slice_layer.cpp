@@ -636,31 +636,18 @@ public:
                 }
             }
         }
-        else
+        if (hasSteps)
         {
-            int dimsNum = inpMat.dims;
+            if (inpMat.depth() == CV_32S) run_parallel<int32_t>(inpMat, outputs);
+            else if (inpMat.depth() == CV_64S) run_parallel<int64_t>(inpMat, outputs);
+            else if (inpMat.depth() == CV_16F) run_parallel<int16_t>(inpMat, outputs);
+            else if (inpMat.depth() == CV_8S) run_parallel<int8_t>(inpMat, outputs);
+            else if (inpMat.depth() == CV_8U) run_parallel<uint8_t>(inpMat, outputs);
+            else if (inpMat.depth() == CV_Bool) run_parallel<uint8_t>(inpMat, outputs);
+            else run_parallel<float>(inpMat, outputs);
 
             for (size_t i = 0; i < outputs.size(); i++)
-            {
-                std::vector<int> inpIdx(dimsNum, 0);
-                std::vector<int> outIdx(dimsNum, 0);
-                if (inpMat.type() == CV_32S)
-                    getSliceRecursive<int32_t>(inpMat, inpIdx, finalSliceRanges[i], sliceSteps[i], 0, dimsNum, outputs[i], outIdx);
-                else if (inpMat.type() == CV_64S)
-                    getSliceRecursive<int64_t>(inpMat, inpIdx, finalSliceRanges[i], sliceSteps[i], 0, dimsNum, outputs[i], outIdx);
-                else if (inpMat.type() == CV_16F)
-                    getSliceRecursive<int16_t>(inpMat, inpIdx, finalSliceRanges[i], sliceSteps[i], 0, dimsNum, outputs[i], outIdx);
-                else if (inpMat.type() == CV_8S)
-                    getSliceRecursive<int8_t>(inpMat, inpIdx, finalSliceRanges[i], sliceSteps[i], 0, dimsNum, outputs[i], outIdx);
-                else if (inpMat.type() == CV_8U)
-                    getSliceRecursive<uint8_t>(inpMat, inpIdx, finalSliceRanges[i], sliceSteps[i], 0, dimsNum, outputs[i], outIdx);
-                else if (inpMat.type() == CV_Bool)
-                    getSliceRecursive<bool>(inpMat, inpIdx, finalSliceRanges[i], sliceSteps[i], 0, dimsNum, outputs[i], outIdx);
-                else
-                    getSliceRecursive<float>(inpMat, inpIdx, finalSliceRanges[i], sliceSteps[i], 0, dimsNum, outputs[i], outIdx);
-                // flip for negative steps
                 flip(outputs[i]);
-            }
         }
     }
 
@@ -844,28 +831,138 @@ public:
 
 private:
     template <typename T>
-    void getSliceRecursive(const Mat &inpMat, std::vector<int> &inpIdx,
-                           const std::vector<Range> &sliceRanges,
-                           const std::vector<int> &sliceSteps, int dim, int dimsNum,
-                           Mat &outputs, std::vector<int> &outIdx)
+    class ParallelSlice : public cv::ParallelLoopBody
     {
-        int begin = sliceRanges[dim].start;
-        int end = sliceRanges[dim].end;
-        int step = !sliceSteps.empty() ? sliceSteps[dim] : 1;
-
-        // TODO optimization is required (for 2D tail case at least)
-        for (int k = begin, j = 0; k < end; k += step, j++)
+    public:
+        ParallelSlice(const Mat& inp, Mat& out,
+                      const std::vector<Range>& ranges,
+                      const std::vector<int>& steps)
+            : inp_(inp), out_(out), ranges_(ranges), steps_(steps)
         {
-            inpIdx[dim] = k;
-            outIdx[dim] = j;
+            dims_ = inp.dims;
+            es_ = inp.elemSize();
 
-            if (dim + 1 < dimsNum)
-                getSliceRecursive<T>(inpMat, inpIdx, sliceRanges, sliceSteps, dim + 1, dimsNum, outputs, outIdx);
-            else
-                outputs.at<T>(outIdx.data()) = inpMat.at<T>(inpIdx.data());
+            inp_strides_.resize(dims_);
+            out_strides_.resize(dims_);
+            for(int i=0; i<dims_; ++i) {
+                inp_strides_[i] = inp.step.p[i];
+                out_strides_[i] = out.step.p[i];
+            }
+        }
+
+        void operator()(const Range& range) const CV_OVERRIDE
+        {
+            int b = ranges_[0].start;
+            int s = steps_[0];
+
+            const uchar* src_base = inp_.ptr();
+            uchar* dst_base = out_.ptr();
+
+            for (int i = range.start; i < range.end; ++i)
+            {
+                int k = b + i * s;
+                size_t src_offset = k * inp_strides_[0];
+                size_t dst_offset = i * out_strides_[0];
+                recursive_copy(1, src_base + src_offset, dst_base + dst_offset);
+            }
+        }
+
+        void recursive_copy(int dim, const uchar* src_ptr, uchar* dst_ptr) const
+        {
+            if (dim >= dims_) return;
+
+            int begin = ranges_[dim].start;
+            int end = ranges_[dim].end;
+            int step = steps_[dim];
+
+            if (dim == dims_ - 1)
+            {
+                if (step == 1)
+                {
+                    size_t count = end - begin;
+                    std::memcpy(dst_ptr, src_ptr + begin * inp_strides_[dim], count * es_);
+                }
+                else
+                {
+                    const uchar* s_ptr = src_ptr + begin * inp_strides_[dim];
+                    uchar* d_ptr = dst_ptr;
+                    size_t s_stride = step * inp_strides_[dim];
+                    size_t d_stride = out_strides_[dim];
+
+                    for (int k = begin; k < end; k += step)
+                    {
+                        *(T*)d_ptr = *(const T*)s_ptr;
+                        s_ptr += s_stride;
+                        d_ptr += d_stride;
+                    }
+                }
+                return;
+            }
+
+            if (step == 1 && is_fully_contiguous(dim))
+            {
+               size_t count = end - begin;
+               size_t bytes = count * inp_strides_[dim];
+               std::memcpy(dst_ptr, src_ptr + begin * inp_strides_[dim], bytes);
+               return;
+            }
+
+            size_t src_stride = step * inp_strides_[dim];
+            size_t dst_stride = out_strides_[dim];
+
+            const uchar* s_ptr = src_ptr + begin * inp_strides_[dim];
+            uchar* d_ptr = dst_ptr;
+
+            for (int k = begin; k < end; k += step)
+            {
+                recursive_copy(dim + 1, s_ptr, d_ptr);
+                s_ptr += src_stride;
+                d_ptr += dst_stride;
+            }
+        }
+
+        bool is_fully_contiguous(int dim) const
+        {
+            size_t expected_step = es_;
+            for (int d = dims_ - 1; d >= dim; --d)
+            {
+                 if (inp_.step[d] != expected_step) return false;
+                 if (d > dim) {
+                     if (steps_[d] != 1) return false;
+                     if (ranges_[d].start != 0 || ranges_[d].end != inp_.size[d]) return false;
+                     expected_step *= inp_.size[d];
+                 }
+            }
+            return true;
+        }
+
+    private:
+        const Mat& inp_;
+        Mat& out_;
+        const std::vector<Range>& ranges_;
+        const std::vector<int>& steps_;
+        int dims_;
+        size_t es_;
+        std::vector<size_t> inp_strides_;
+        std::vector<size_t> out_strides_;
+    };
+
+    template <typename T>
+    void run_parallel(const Mat& inp, std::vector<Mat>& outputs)
+    {
+        int dimsNum = inp.dims;
+        for(size_t i=0; i<outputs.size(); ++i) {
+             std::vector<int> steps;
+             if (!sliceSteps.empty() && i < sliceSteps.size() && !sliceSteps[i].empty())
+                 steps = sliceSteps[i];
+             else
+                 steps.assign(dimsNum, 1);
+
+             ParallelSlice<T> body(inp, outputs[i], finalSliceRanges[i], steps);
+             int dim0_size = outputs[i].size[0];
+             parallel_for_(Range(0, dim0_size), body);
         }
     }
-
     void flip(Mat& output) // break if 1d tensor?
     {
         for (int i = 0; i < neg_step_dims.size(); ++i)
