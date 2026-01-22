@@ -2855,7 +2855,7 @@ Net readNetFromONNX2(const String& onnxFile)
         impl->newGraph("ort_session_active", {}, true);
 
         CV_LOG_INFO(NULL, "DNN/ONNX: Successfully initialized ORT Session for " << onnxFile);
-        return net; 
+        return net;
     }
     catch (const std::exception& e) {
         CV_LOG_WARNING(NULL, "DNN/ONNX: ORT initialization failed (" << e.what() << "). Fallback to native parser.");

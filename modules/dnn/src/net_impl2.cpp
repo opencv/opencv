@@ -416,7 +416,7 @@ Ptr<Graph> Net::Impl::newGraph(const std::string& name_, const std::vector<Arg>&
 void Net::Impl::prepareForInference()
 {
 #ifdef HAVE_ONNXRUNTIME
-    if (this->ort_session) 
+    if (this->ort_session)
     {
         prepared = true;
         finalizeLayers = false;
