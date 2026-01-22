@@ -1282,8 +1282,7 @@ void error( const Exception& exc )
 
     if(breakOnError)
     {
-        static volatile int* p = 0;
-        *p = 0;
+        std::terminate();
     }
 
     throw exc;
