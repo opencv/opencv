@@ -101,8 +101,8 @@ void run_fused_softmax(
             const int tmax = is_causal ? std::min(tq + 1, seq_len_kv) : seq_len_kv;
             float maxVal = -FLT_MAX;
             int tk = 0;
-#if CV_SIMD
-            const int w = VTraits<v_float32>::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            const int w = VTraits<v_float32>::vlanes();
             v_float32 v_max_val = vx_setall_f32(maxVal);
             v_float32 v_softcap = vx_setall_f32(softcap);
             v_float32 v_inv_softcap = vx_setall_f32(1.f / softcap);
@@ -171,7 +171,7 @@ void run_fused_softmax(
 
             float sum = 0.f;
             tk = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
             v_float32 v_sum = vx_setzero_f32();
             v_float32 v_max_val_shift = vx_setall_f32(maxVal);
             for (; tk <= seq_len_kv - w; tk += w) {
@@ -190,7 +190,7 @@ void run_fused_softmax(
 
             float inv_sum = 1.f / sum;
             tk = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
             v_float32 v_inv_sum = vx_setall_f32(inv_sum);
             for (; tk <= seq_len_kv - w; tk += w) {
                 v_float32 v_val = vx_load(&data[offset + tk]);
