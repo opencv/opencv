@@ -2663,8 +2663,6 @@ void ONNXImporter2::parseAttention(LayerParams& params, const opencv_onnx::NodeP
 
 void ONNXImporter2::parseAttentionOnnxAi(LayerParams& params, const opencv_onnx::NodeProto& node_proto) {
     int i, n_inputs = node_proto.input_size();
-    // CV_CheckTrue(params.has("kv_num_heads"), "ONNXImporter2/parseAttention: kv_num_heads is required but missing");
-    // CV_CheckTrue(params.has("q_num_heads"), "ONNXImporter2/parseAttention: q_num_heads is required but missing");
 
     for (i = 1; i < n_inputs; i++) {
         if (!net.isConstArg(node_inputs[i]))
