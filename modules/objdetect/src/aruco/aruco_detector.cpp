@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <cmath>
 #include <map>
+#include <mutex>
 
 namespace cv {
 namespace aruco {
@@ -282,23 +283,15 @@ static void _detectInitialCandidates(const Mat &grey, vector<vector<Point2f> > &
     vector<vector<vector<Point> > > contoursArrays((size_t) nScales);
 
     ////for each value in the interval of thresholding window sizes
-    parallel_for_(Range(0, nScales), [&](const Range& range) {
-        const int begin = range.start;
-        const int end = range.end;
-
-        for (int i = begin; i < end; i++) {
-            int currScale = params.adaptiveThreshWinSizeMin + i * params.adaptiveThreshWinSizeStep;
-            // threshold
-            Mat thresh;
-            _threshold(grey, thresh, currScale, params.adaptiveThreshConstant);
-
-            // detect rectangles
-            _findMarkerContours(thresh, candidatesArrays[i], contoursArrays[i],
-                                params.minMarkerPerimeterRate, params.maxMarkerPerimeterRate,
-                                params.polygonalApproxAccuracyRate, params.minCornerDistanceRate,
-                                params.minSideLengthCanonicalImg);
-        }
-    });
+    for (int i = 0; i < nScales; i++) {
+        int currScale = params.adaptiveThreshWinSizeMin + i * params.adaptiveThreshWinSizeStep;
+        Mat thresh;
+        _threshold(grey, thresh, currScale, params.adaptiveThreshConstant);
+        _findMarkerContours(thresh, candidatesArrays[i], contoursArrays[i],
+                            params.minMarkerPerimeterRate, params.maxMarkerPerimeterRate,
+                            params.polygonalApproxAccuracyRate, params.minCornerDistanceRate,
+                            params.minSideLengthCanonicalImg);
+    }
     // join candidates
     for(int i = 0; i < nScales; i++) {
         for(unsigned int j = 0; j < candidatesArrays[i].size(); j++) {
@@ -791,7 +784,16 @@ struct ArucoDetector::ArucoDetectorImpl {
 
         /// STEP 2.a Detect marker candidates :: using AprilTag
         if(detectorParams.cornerRefinementMethod == (int)CORNER_REFINE_APRILTAG){
-            _apriltag(grey, detectorParams, candidates, contours);
+            {
+                static std::mutex g_apriltag_mutex;
+                std::lock_guard<std::mutex> lock(g_apriltag_mutex);
+                struct NumThreadsScope {
+                    int prev;
+                    explicit NumThreadsScope(int n) : prev(cv::getNumThreads()) { cv::setNumThreads(n); }
+                    ~NumThreadsScope() { cv::setNumThreads(prev); }
+                } _nts(1);
+                _apriltag(grey, detectorParams, candidates, contours);
+            }
         }
         /// STEP 2.b Detect marker candidates :: traditional way
         else {
