@@ -11,7 +11,7 @@ ocv_add_dispatched_file(matmul SSE2 SSE4_1 AVX2 AVX512_SKX NEON_DOTPROD LASX)
 ocv_add_dispatched_file(mean SSE2 AVX2 LASX)
 ocv_add_dispatched_file(merge SSE2 AVX2 LASX)
 ocv_add_dispatched_file(split SSE2 AVX2 LASX)
-ocv_add_dispatched_file(sum SSE2 AVX2 LASX)
+ocv_add_dispatched_file(sum SSE2 AVX2 LASX AVX512_SKX)
 ocv_add_dispatched_file(norm SSE2 SSE4_1 AVX AVX2 NEON_DOTPROD LASX)
 
 # dispatching for accuracy tests
