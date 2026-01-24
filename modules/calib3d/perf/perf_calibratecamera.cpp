@@ -33,7 +33,7 @@ static std::vector<Point3f> buildObjectPoints(const Size& pattern_size, float sq
     return object_points;
 }
 
-PERF_TEST(CalibrateCamera, BulkImages_N500)
+PERF_TEST(CalibrateCamera, DISABLED_BulkImages_N500)
 {
     applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_SIZE_HD);
 

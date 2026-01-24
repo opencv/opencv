@@ -913,21 +913,21 @@ static double calibrateCameraInternal( const Mat& objectPoints,
         // Apply the initial step
         param_m.copyTo(prev_param);
         // 1. Global parameters (Intrinsics + Objects)
-        for (int k = 0; k < NINTRINSIC; k++)
-            param_m(k) -= solver.getGlobalUpdate().at<double>(k);
+        for (int kk = 0; kk < NINTRINSIC; kk++)
+            param_m(kk) -= solver.getGlobalUpdate().at<double>(kk);
 
         if (releaseObject)
         {
              int param_obj_start = NINTRINSIC + nimages * 6;
              int num_obj_params = solver.n_global - NINTRINSIC;
-             for (int k = 0; k < num_obj_params; k++)
-                 param_m(param_obj_start + k) -= solver.getGlobalUpdate().at<double>(NINTRINSIC + k);
+             for (int kk = 0; kk < num_obj_params; kk++)
+                 param_m(param_obj_start + kk) -= solver.getGlobalUpdate().at<double>(NINTRINSIC + kk);
         }
         for (int i = 0; i < nimages; i++)
         {
             int si = NINTRINSIC + i * 6;
-            for (int k = 0; k < 6; k++)
-                param_m(si + k) -= solver.getLocalUpdate(i).at<double>(k);
+            for (int kk = 0; kk < 6; kk++)
+                param_m(si + kk) -= solver.getLocalUpdate(i).at<double>(kk);
         }
 
 
@@ -939,7 +939,7 @@ static double calibrateCameraInternal( const Mat& objectPoints,
             }
 
             reprojErr = 0;
-            int pos = 0;
+            int pos_iter = 0;
             for (int i = 0; i < nimages; i++)
             {
                 int ni = npoints.at<int>(i);
@@ -948,13 +948,13 @@ static double calibrateCameraInternal( const Mat& objectPoints,
                 Mat _ri = param_m.rowRange(si, si + 3);
                 Mat _ti = param_m.rowRange(si + 3, si + 6);
 
-                Mat _Mi = matM.colRange(pos, pos + ni);
+                Mat _Mi = matM.colRange(pos_iter, pos_iter + ni);
                 if (releaseObject)
                 {
                     _Mi = param_m.rowRange(so, so + ni * 3).reshape(3, 1);
                 }
-                Mat _mi = _m.colRange(pos, pos + ni);
-                Mat _me = allErrorsBuf.colRange(pos, pos + ni);
+                Mat _mi = _m.colRange(pos_iter, pos_iter + ni);
+                Mat _me = allErrorsBuf.colRange(pos_iter, pos_iter + ni);
 
                 double fx = param_m(0), fy = param_m(1), cx = param_m(2), cy = param_m(3);
                 Matx33d intrin(fx, 0, cx, 0, fy, cy, 0, 0, 1);
@@ -972,7 +972,7 @@ static double calibrateCameraInternal( const Mat& objectPoints,
                     perViewErr.at<double>(i) = std::sqrt(viewErr / ni);
                 }
                 reprojErr += viewErr;
-                pos += ni;
+                pos_iter += ni;
             }
 
             // Accept or reject the step
@@ -1020,9 +1020,9 @@ static double calibrateCameraInternal( const Mat& objectPoints,
             // param_m: [Intrinsics | Extrinsic parameters | Object points]
 
             // Apply Intrinsics update
-            for (int k = 0; k < NINTRINSIC; k++)
+            for (int kk = 0; kk < NINTRINSIC; kk++)
             {
-                param_m(k) -= solver.getGlobalUpdate().at<double>(k);
+                param_m(kk) -= solver.getGlobalUpdate().at<double>(kk);
             }
 
             // Apply Objects update (if any)
@@ -1030,9 +1030,9 @@ static double calibrateCameraInternal( const Mat& objectPoints,
             {
                  int param_obj_start = NINTRINSIC + nimages * 6;
                  int num_obj_params = solver.n_global - NINTRINSIC;
-                 for (int k = 0; k < num_obj_params; k++)
+                 for (int kk = 0; kk < num_obj_params; kk++)
                  {
-                     param_m(param_obj_start + k) -= solver.getGlobalUpdate().at<double>(NINTRINSIC + k);
+                     param_m(param_obj_start + kk) -= solver.getGlobalUpdate().at<double>(NINTRINSIC + kk);
                  }
             }
 
@@ -1040,8 +1040,8 @@ static double calibrateCameraInternal( const Mat& objectPoints,
             for (int i = 0; i < nimages; i++)
             {
                 int si = NINTRINSIC + i * 6;
-                for (int k = 0; k < 6; k++)
-                    param_m(si + k) -= solver.getLocalUpdate(i).at<double>(k);
+                for (int kk = 0; kk < 6; kk++)
+                    param_m(si + kk) -= solver.getLocalUpdate(i).at<double>(kk);
             }
 
 
@@ -1135,17 +1135,17 @@ static double calibrateCameraInternal( const Mat& objectPoints,
 
         if (releaseObject)
         {
-            int so = NINTRINSIC + nimages * 6;
+            int obj_start = NINTRINSIC + nimages * 6;
 
             // Manual copy for U (extended) parts
             // Top-right block
             Mat srcU_tr = solver.U(Rect(NINTRINSIC, 0, maxPoints * 3, NINTRINSIC));
-            Mat dstU_tr = JtJ(Rect(so, 0, maxPoints * 3, NINTRINSIC));
+            Mat dstU_tr = JtJ(Rect(obj_start, 0, maxPoints * 3, NINTRINSIC));
             srcU_tr.copyTo(dstU_tr);
 
             // Bottom-right block
             Mat srcU_br = solver.U(Rect(NINTRINSIC, NINTRINSIC, maxPoints * 3, maxPoints * 3));
-            Mat dstU_br = JtJ(Rect(so, so, maxPoints * 3, maxPoints * 3));
+            Mat dstU_br = JtJ(Rect(obj_start, obj_start, maxPoints * 3, maxPoints * 3));
             srcU_br.copyTo(dstU_br);
 
             for (int i = 0; i < nimages; i++)
@@ -1153,7 +1153,7 @@ static double calibrateCameraInternal( const Mat& objectPoints,
                 int si = NINTRINSIC + i * 6;
                 // Manual copy for W extended part
                 Mat srcW_ext = solver.W[i].rowRange(NINTRINSIC, solver.W[i].rows);
-                Mat dstJ_ext = JtJ(Rect(so, si, maxPoints * 3, 6));
+                Mat dstJ_ext = JtJ(Rect(obj_start, si, maxPoints * 3, 6));
                 cv::transpose(srcW_ext, dstJ_ext);
             }
         }
