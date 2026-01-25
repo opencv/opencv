@@ -1174,18 +1174,18 @@ resizeNN( const Mat& src, Mat& dst, double fx, double fy )
 class resizeNN_bitexactInvoker : public ParallelLoopBody
 {
 public:
-    resizeNN_bitexactInvoker(const Mat& _src, Mat& _dst, int* _x_ofse, int _ify, int _ify0)
-        : src(_src), dst(_dst), x_ofse(_x_ofse), ify(_ify), ify0(_ify0) {}
+    resizeNN_bitexactInvoker(const Mat& _src, Mat& _dst, int* _x_ofse, int* _y_ofse)
+        : src(_src), dst(_dst), x_ofse(_x_ofse), y_ofse(_y_ofse) {}
 
     virtual void operator() (const Range& range) const CV_OVERRIDE
     {
-        Size ssize = src.size(), dsize = dst.size();
+        Size dsize = dst.size();
         int pix_size = (int)src.elemSize();
+        
         for( int y = range.start; y < range.end; y++ )
         {
             uchar* D = dst.ptr(y);
-            int _sy = (ify * y + ify0) >> 16;
-            int sy = std::min(_sy, ssize.height-1);
+            int sy = y_ofse[y];
             const uchar* S = src.ptr(sy);
 
             int x = 0;
@@ -1260,30 +1260,45 @@ private:
     const Mat& src;
     Mat& dst;
     int* x_ofse;
-    const int ify;
-    const int ify0;
+    int* y_ofse;
 };
 
 static void resizeNN_bitexact( const Mat& src, Mat& dst, double /*fx*/, double /*fy*/ )
 {
     Size ssize = src.size(), dsize = dst.size();
-    int ifx = ((ssize.width << 16) + dsize.width / 2) / dsize.width; // 16bit fixed-point arithmetic
-    int ifx0 = ifx / 2 - ssize.width % 2;                       // This method uses center pixel coordinate as Pillow and scikit-images do.
-    int ify = ((ssize.height << 16) + dsize.height / 2) / dsize.height;
-    int ify0 = ify / 2 - ssize.height % 2;
+
+    // 1. Define Scales with Specific Precision Logic
+    int64_t ifx = ((int64_t)ssize.width << 32) / dsize.width;
+
+    // Y-Axis: Use Double Precision then Round.
+    int64_t ify = (int64_t)((double)ssize.height * 4294967296.0 / dsize.height + 0.5);
 
     cv::utils::BufferArea area;
     int* x_ofse = 0;
+    int* y_ofse = 0;
     area.allocate(x_ofse, dsize.width, CV_SIMD_WIDTH);
+    area.allocate(y_ofse, dsize.height, CV_SIMD_WIDTH);
     area.commit();
 
+    // 2. X-Axis Loop: 32-bit Fixed Point (Truncated Scale)
+    // Formula: floor( (x + 0.5) * scale_truncated )
     for( int x = 0; x < dsize.width; x++ )
     {
-        int sx = (ifx * x + ifx0) >> 16;
-        x_ofse[x] = std::min(sx, ssize.width-1);    // offset in element (not byte)
+        int64_t val = (int64_t)x * ifx + ifx / 2;
+        int sx = (int)(val >> 32);
+        x_ofse[x] = std::min(std::max(sx, 0), ssize.width - 1);
+    }
+
+    // 3. Y-Axis Loop: 32-bit Fixed Point (Rounded Scale)
+    // Formula: floor( (y + 0.5) * scale_rounded )
+    for( int y = 0; y < dsize.height; y++ )
+    {
+        int64_t val = (int64_t)y * ify + ify / 2;
+        int sy = (int)(val >> 32);
+        y_ofse[y] = std::min(std::max(sy, 0), ssize.height - 1);
     }
     Range range(0, dsize.height);
-    resizeNN_bitexactInvoker invoker(src, dst, x_ofse, ify, ify0);
+    resizeNN_bitexactInvoker invoker(src, dst, x_ofse, y_ofse);
     parallel_for_(range, invoker, dst.total()/(double)(1<<16));
 }
 
