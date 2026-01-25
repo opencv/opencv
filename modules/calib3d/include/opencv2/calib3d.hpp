@@ -627,7 +627,8 @@ enum { CALIB_NINTRINSIC          = 18,
        // for stereo rectification
        CALIB_ZERO_DISPARITY      = 0x00400,
        CALIB_USE_LU              = (1 << 17), //!< use LU instead of SVD decomposition for solving. much faster but potentially less precise
-       CALIB_USE_EXTRINSIC_GUESS = (1 << 22)  //!< for stereoCalibrate
+       CALIB_USE_EXTRINSIC_GUESS = (1 << 22), //!< for stereoCalibrate
+       CALIB_USE_LEGACY          = (1 << 23)  //!< use legacy calibrateCamera implementation
      };
 
 //! the algorithm for finding fundamental matrix
@@ -1651,6 +1652,7 @@ fx, fy, cx, cy that are optimized further. Otherwise, (cx, cy) is initially set 
 center ( imageSize is used), and focal distances are computed in a least-squares fashion.
 Note, that if intrinsic parameters are known, there is no need to use this function just to
 estimate extrinsic parameters. Use @ref solvePnP instead.
+-   @ref CALIB_USE_LEGACY Use the legacy calibrateCamera implementation.
 -   @ref CALIB_FIX_PRINCIPAL_POINT The principal point is not changed during the global
 optimization. It stays at the center or at a different location specified when
  @ref CALIB_USE_INTRINSIC_GUESS is set too.
