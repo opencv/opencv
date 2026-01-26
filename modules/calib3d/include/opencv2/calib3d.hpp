@@ -1499,7 +1499,7 @@ CV_EXPORTS_W bool find4QuadCornerSubpix( InputArray img, InputOutputArray corner
 
 @param image Destination image. It must be an 8-bit color image.
 @param patternSize Number of inner corners per a chessboard row and column
-(patternSize = cv::Size(points_per_row,points_per_columnn)).
+(patternSize = cv::Size(points_per_row,points_per_column)).
 @param corners Array of detected corners, the output of #findChessboardCorners.
 @param patternWasFound Parameter indicating whether the complete board was found or not. The
 return value of #findChessboardCorners should be passed here.
