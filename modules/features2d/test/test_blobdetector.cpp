@@ -43,6 +43,7 @@ TEST(Features2d_BlobDetector, withContours)
                                 return abs(p.x - 30) < 2 && abs(p.y - 50) < 2;
                             }));
 }
+
 TEST(Features2d_BlobDetector, AreaInResponse)
 {
     // 1. Create a black image with a white circle
