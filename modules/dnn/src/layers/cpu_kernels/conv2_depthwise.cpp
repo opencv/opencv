@@ -33,7 +33,6 @@ void repackDepthwiseConvWeights(const void* inpw__, int inptype_, void* outw__, 
 {
     CV_Assert(inptype_ == CV_32F || inptype_ == CV_16F || inptype_ == CV_16BF);
     CV_Assert(outtype_ == CV_32F || outtype_ == CV_16F || outtype_ == CV_16BF);
-    CV_Assert(wshape.dims == 4 && wshape[1] == 1);
 
     int C1_ = (wshape[0] + C0_ - 1)/C0_;
     parallel_for_(Range(0, C1_), [&](const Range& r) {
@@ -41,7 +40,9 @@ void repackDepthwiseConvWeights(const void* inpw__, int inptype_, void* outw__, 
         size_t inpEsz = CV_ELEM_SIZE(inptype);
         size_t outEsz = CV_ELEM_SIZE(outtype);
         int C = wshape[0], C0 = C0_;
-        int ksize = wshape[2]*wshape[3];
+        int ksize = 1;
+        for (int k = 2; k < wshape.dims; k++)
+            ksize *= wshape[k];
 
         for (int c1 = r.start; c1 < r.end; c1++) {
             const uint8_t* inpw_ = (const uint8_t*)inpw__ + c1*ksize*C0*inpEsz;

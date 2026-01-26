@@ -448,8 +448,6 @@ public:
         cs.initConv(inpshape, wshape0, outshape, ngroups,
                     strides, dilations, pads, auto_pad, ceil_mode,
                     fast_activation, fast_activ_params, 0);
-        //bool conv1x1 = cs.kshape[0]*cs.kshape[1]*cs.kshape[2] == 1;
-        bool depthwise = ngroups == cs.inpshape.C;
 
         const float* scale_data = nullptr;
         const float* bias_data = bias.ptr<float>();
@@ -479,7 +477,7 @@ public:
         void* outptr = out.data;
         const void* wptr = weights.data;
 
-        if (depthwise) {
+        if (cs.depthwise) {
             DepthwiseConvFunc func = getDepthwiseConvFunc(inptype);
             CV_Assert(func != nullptr);
 

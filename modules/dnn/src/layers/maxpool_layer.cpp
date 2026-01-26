@@ -415,6 +415,7 @@ public:
                                  std::vector<MatShape> &outshapes,
                                  std::vector<MatShape> &tempshapes) const CV_OVERRIDE
     {
+        CV_Assert(outputs.size() == 1u);
         size_t ninputs = inpshapes.size();
         CV_Assert(ninputs == 1);
 

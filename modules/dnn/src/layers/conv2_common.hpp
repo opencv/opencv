@@ -38,6 +38,7 @@ typedef void (*activation_func_t)(const void* input, void* output,
 struct ConvState
 {
     enum { MAX_CONV_DIMS = 3 };
+    bool depthwise;
     int ngroups, nspatialdims;
     int kshape[MAX_CONV_DIMS];
     int strides[MAX_CONV_DIMS];

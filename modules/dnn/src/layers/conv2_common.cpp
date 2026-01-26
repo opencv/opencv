@@ -176,7 +176,7 @@ void ConvState::initConv(const MatShape& inpshape_,
     int Cout = outshape.layout == DATA_LAYOUT_BLOCK ? outshape.C :
         outshape.layout == DATA_LAYOUT_NHWC ? outshape.back() : outshape[1];
     
-    bool depthwise = ngroups == C && ngroups == Cout;
+    depthwise = ngroups == C && ngroups == Cout;
 
     CV_Assert(inpshape_[0] == outshape_[0]);
     if (inpshape.layout == DATA_LAYOUT_BLOCK) {
@@ -392,8 +392,9 @@ void repackConvWeights(const void* inpw__, int inptype_,
         int C0 = C0_, K0 = C0_;
         int K = wshape[0], Cg = wshape[1];
         int C1g = (Cg + C0 - 1)/C0;
-        int Hk = wshape[2], Wk = wshape[3];
-        int ksize = Hk*Wk;
+        int ksize = 1;
+        for (int k = 2; k < wshape.dims; k++)
+            ksize *= wshape[k];
         size_t inp_step_c = ksize, inp_step_k = Cg*ksize;
         size_t out_microplane_size = ksize*C0*K0*out_esz;
 
@@ -444,6 +445,7 @@ void ConvState::initPooling(const MatShape& inpshape_,
     inpshape = inpshape_;
     outshape = outshape_;
     ngroups = C;
+    depthwise = true;
     
     for (int i = 0; i < MAX_CONV_DIMS; i++) {
         kshape[i] = strides[i] = dilations[i] = 1;
