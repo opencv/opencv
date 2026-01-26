@@ -40,6 +40,8 @@
 //
 //M*/
 #include "test_precomp.hpp"
+#include <Eigen/Core>
+#include <opencv2/core/eigen.hpp>
 
 namespace opencv_test { namespace {
 
@@ -540,6 +542,30 @@ TEST(Core_EigenNonSymmetric, convergence)
     {
         FAIL() << "Unknown exception has been raised";
     }
+}
+
+TEST(Core_Eigen, InputArray_Direct_Support)
+{
+    Eigen::Matrix<float, 3, 3, Eigen::RowMajor> m_row;
+    m_row << 1, 2, 3, 
+             4, 5, 6, 
+             7, 8, 9;
+    
+    cv::Scalar sum_row = cv::sum(cv::eigen2input(m_row));
+    EXPECT_NEAR(sum_row[0], 45.0, 1e-5);
+
+    Eigen::Matrix3f m_col;
+    m_col << 1, 2, 3, 
+             4, 5, 6, 
+             7, 8, 9;
+
+    cv::Scalar sum_col = cv::sum(cv::eigen2input(m_col));
+    EXPECT_NEAR(sum_col[0], 45.0, 1e-5);
+
+    Eigen::Vector3f v;
+    v << 10, 20, 30;
+    cv::Scalar sum_v = cv::sum(cv::eigen2input(v));
+    EXPECT_NEAR(sum_v[0], 60.0, 1e-5);
 }
 
 }} // namespace
