@@ -105,7 +105,7 @@ html {
     --toc-down-arrow-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' version='1.1' height='10px' width='5px' fill='grey'><text x='0' y='5' font-size='10'>&%238595;</text></svg>");
 
     /** search field */
-    --search-background-color: white;
+    --search-background-color: #E4E9F2;
     --search-foreground-color: #909090;
     --search-magnification-image: url('mag.svg');
     --search-magnification-select-image: url('mag_sel.svg');
@@ -274,8 +274,8 @@ html.dark-mode {
     --nav-background-color: #101826;
     --nav-foreground-color: #364D7C;
     --nav-gradient-image: url('tab_bd.png');
-    --nav-gradient-hover-image: url('tab_hd.png');
-    --nav-gradient-active-image: url('tab_ad.png');
+    --nav-gradient-hover-image: linear-gradient(180deg, #182235 0%, #0C121D 100%);
+    --nav-gradient-active-image: linear-gradient(180deg, #1D2A42 0%, #0E1522 100%);
     --nav-gradient-active-image-parent: url("../tab_ad.png");
     --nav-separator-image: url('tab_sd.png');
     --nav-breadcrumb-image: url('bc_sd.png');
@@ -470,7 +470,7 @@ html.dark-mode {
         --nav-background-color: #101826;
         --nav-foreground-color: #364D7C;
         --nav-gradient-image: url('tab_bd.png');
-        --nav-gradient-hover-image: url('tab_hd.png');
+        --nav-gradient-hover-image: linear-gradient(180deg, #2A3A5E 0%, #1A253B 100%);
         --nav-gradient-active-image: url('tab_ad.png');
         --nav-gradient-active-image-parent: url("../tab_ad.png");
         --nav-separator-image: url('tab_sd.png');
@@ -712,7 +712,7 @@ div.navtab {
 }
 
 html.dark-mode div.navtab {
-    background-image: var(--nav-gradient-image);
+    background-image: var(--nav-gradient-image, url('tab_bd.png'));
     background-repeat: repeat-x;
 }
 
@@ -726,7 +726,7 @@ td.navtab {
 }
 
 html.dark-mode td.navtab {
-    background-image: var(--nav-gradient-image);
+    background-image: var(--nav-gradient-image, url('tab_bd.png'));
     background-repeat: repeat-x;
 }
 
@@ -738,7 +738,7 @@ td.navtabHL {
 }
 
 html.dark-mode td.navtabHL {
-    background-image: var(--nav-gradient-active-image);
+    background-image: var(--nav-gradient-active-image, url('tab_ad.png'));
     background-repeat: repeat-x;
 }
 
@@ -750,57 +750,57 @@ td.navtabHL a:visited {
 
 html.dark-mode td.navtab a,
 html.dark-mode td.navtab a:visited {
-    color: var(--nav-text-normal-color);
-    text-shadow: var(--nav-text-normal-shadow);
+    color: var(--nav-text-normal-color, #B6C4DF);
+    text-shadow: var(--nav-text-normal-shadow, 0px 1px 1px black);
 }
 
 html.dark-mode td.navtab a:hover {
-    color: var(--nav-text-hover-color);
-    text-shadow: var(--nav-text-hover-shadow);
+    color: var(--nav-text-hover-color, #DCE2EF);
+    text-shadow: var(--nav-text-hover-shadow, 0px 1px 1px rgba(0, 0, 0, 1.0));
 }
 
 html.dark-mode td.navtabHL a,
 html.dark-mode td.navtabHL a:visited {
-    color: var(--nav-text-active-color);
-    text-shadow: var(--nav-text-active-shadow);
+    color: var(--nav-text-active-color, #DCE2EF);
+    text-shadow: var(--nav-text-active-shadow, 0px 1px 1px rgba(0, 0, 0, 1.0));
 }
 
 html.dark-mode #navrow1,
 html.dark-mode #navrow2,
 html.dark-mode #navrow3 {
-    background-color: var(--nav-background-color);
-    background-image: var(--nav-gradient-image);
+    background-color: var(--nav-background-color, #101826);
+    background-image: var(--nav-gradient-image, url('tab_bd.png'));
     background-repeat: repeat-x;
 }
 
 html.dark-mode ul.tablist {
-    background-color: var(--nav-background-color);
-    background-image: var(--nav-gradient-image);
+    background-color: var(--nav-background-color, #101826);
+    background-image: var(--nav-gradient-image, url('tab_bd.png'));
     background-repeat: repeat-x;
 }
 
 html.dark-mode ul.tablist li {
-    background-image: var(--nav-separator-image);
+    background-image: var(--nav-separator-image, url('tab_sd.png'));
     background-repeat: no-repeat;
     background-position: right;
 }
 
 html.dark-mode ul.tablist a,
 html.dark-mode ul.tablist a:visited {
-    color: var(--nav-text-normal-color);
-    text-shadow: var(--nav-text-normal-shadow);
+    color: var(--nav-text-normal-color, #B6C4DF);
+    text-shadow: var(--nav-text-normal-shadow, 0px 1px 1px black);
 }
 
 html.dark-mode ul.tablist a:hover {
-    color: var(--nav-text-hover-color);
-    text-shadow: var(--nav-text-hover-shadow);
+    color: var(--nav-text-hover-color, #DCE2EF);
+    text-shadow: var(--nav-text-hover-shadow, 0px 1px 1px rgba(0, 0, 0, 1.0));
 }
 
 html.dark-mode ul.tablist li.current a,
 html.dark-mode ul.tablist li.current a:visited {
-    color: var(--nav-text-active-color);
-    text-shadow: var(--nav-text-active-shadow);
-    background-image: var(--nav-gradient-active-image);
+    color: var(--nav-text-active-color, #DCE2EF);
+    text-shadow: var(--nav-text-active-shadow, 0px 1px 1px rgba(0, 0, 0, 1.0));
+    background-image: var(--nav-gradient-active-image, url('tab_ad.png'));
     background-repeat: repeat-x;
 }
 
@@ -958,28 +958,37 @@ ul.multicol {
     /* reset ul rule for the navigation bar drop down lists */
 }
 
+html:not(.dark-mode) .sm-dox ul a:hover,
+html:not(.dark-mode) .sm-dox ul a:focus,
+html:not(.dark-mode) .sm-dox ul a:active {
+    color: var(--nav-text-hover-color);
+    text-shadow: var(--nav-text-hover-shadow);
+    background-image: var(--nav-gradient-hover-image, url('tab_h.png'));
+    background-repeat: repeat-x;
+}
+
 html.dark-mode #main-nav {
-    background-color: var(--header-background-color);
+    background-color: var(--header-background-color, #070B11);
     background-image: none;
 }
 
 html.dark-mode #main-menu,
 html.dark-mode #main-menu ul {
-    background-color: var(--header-background-color);
+    background-color: var(--header-background-color, #070B11);
 }
 
 html.dark-mode .sm-dox a,
 html.dark-mode .sm-dox a:visited {
-    color: var(--nav-text-normal-color);
-    text-shadow: var(--nav-text-normal-shadow);
+    color: var(--nav-text-normal-color, #B6C4DF);
+    text-shadow: var(--nav-text-normal-shadow, 0px 1px 1px black);
 }
 
 html.dark-mode .sm-dox a:hover,
 html.dark-mode .sm-dox a:focus,
 html.dark-mode .sm-dox a:active {
-    color: var(--nav-text-hover-color);
-    text-shadow: var(--nav-text-hover-shadow);
-    background-image: var(--nav-gradient-hover-image);
+    color: var(--nav-text-hover-color, #DCE2EF);
+    text-shadow: var(--nav-text-hover-shadow, 0px 1px 1px rgba(0, 0, 0, 1.0));
+    background-image: var(--nav-gradient-hover-image, url('tab_hd.png'));
     background-repeat: repeat-x;
 }
 
@@ -987,35 +996,54 @@ html.dark-mode .sm-dox a.has-submenu {
     background-image: none;
 }
 
+html.dark-mode .sm-dox a.has-submenu:hover,
+html.dark-mode .sm-dox a.has-submenu:focus,
+html.dark-mode .sm-dox a.has-submenu:active {
+    background-image: var(--nav-gradient-hover-image, url('tab_hd.png'));
+    background-repeat: repeat-x;
+}
+
 html.dark-mode .sm-dox li.current > a,
 html.dark-mode .sm-dox li.current > a:visited {
-    color: var(--nav-text-active-color);
-    text-shadow: var(--nav-text-active-shadow);
-    background-image: var(--nav-gradient-active-image);
+    color: var(--nav-text-active-color, #DCE2EF);
+    text-shadow: var(--nav-text-active-shadow, 0px 1px 1px rgba(0, 0, 0, 1.0));
+    background-image: var(--nav-gradient-active-image, url('tab_ad.png'));
     background-repeat: repeat-x;
 }
 
 html.dark-mode .sm-dox ul {
-    background-color: var(--nav-menu-background-color);
-    border-color: var(--nav-breadcrumb-border-color);
+    background-color: var(--nav-menu-background-color, #05070C);
+    border-color: var(--nav-breadcrumb-border-color, #2A3D61);
+}
+
+html.dark-mode .sm-dox ul li {
+    background-color: #0D1117;
 }
 
 html.dark-mode .sm-dox ul a,
 html.dark-mode .sm-dox ul a:visited {
-    color: var(--nav-menu-foreground-color);
+    color: var(--nav-menu-foreground-color, #E0E0E0);
     text-shadow: none;
+    background-color: #0D1117;
 }
 
 html.dark-mode .sm-dox ul a:hover,
 html.dark-mode .sm-dox ul a:focus,
 html.dark-mode .sm-dox ul a:active {
-    color: var(--nav-text-hover-color);
-    background-image: var(--nav-gradient-hover-image);
+    color: var(--nav-text-hover-color, #DCE2EF);
+    background-color: #1C2128;
+    background-image: none;
+}
+
+html.dark-mode .sm-dox ul a.has-submenu:hover,
+html.dark-mode .sm-dox ul a.has-submenu:focus,
+html.dark-mode .sm-dox ul a.has-submenu:active {
+    background-image: var(--nav-gradient-hover-image, url('tab_hd.png'));
     background-repeat: repeat-x;
 }
 
 html.dark-mode .sm-dox .sub-arrow {
-    border-color: var(--nav-arrow-color) transparent transparent transparent;
+    border-color: var(--nav-arrow-color, #334975) transparent transparent transparent;
     border-style: solid;
     border-width: 4px 4px 0 4px;
     width: 0;
@@ -1027,7 +1055,20 @@ html.dark-mode .sm-dox a:hover .sub-arrow,
 html.dark-mode .sm-dox a:focus .sub-arrow,
 html.dark-mode .sm-dox a:active .sub-arrow,
 html.dark-mode .sm-dox li.current > a .sub-arrow {
-    border-color: var(--nav-arrow-selected-color) transparent transparent transparent;
+    border-color: var(--nav-arrow-selected-color, #90A5CE) transparent transparent transparent;
+}
+
+html.dark-mode #MSearchBox {
+    background-color: var(--search-background-color, black);
+}
+
+html.dark-mode #MSearchField {
+    background-color: var(--search-background-color, black);
+    color: var(--search-foreground-color, #C5C5C5);
+}
+
+html.dark-mode .folder-icon {
+    filter: invert(0.8) hue-rotate(180deg);
 }
 
 .fragment {
@@ -2123,20 +2164,20 @@ dl.post dt {
 
 .theme-toggle {
     background: none;
-    border: 1px solid var(--title-separator-color);
+    border: 1px solid var(--title-separator-color, #5373B4);
     border-radius: 12px;
-    color: var(--page-foreground-color);
+    color: var(--page-foreground-color, #C9D1D9);
     cursor: pointer;
     line-height: 1;
     padding: 4px 6px;
 }
 
 .theme-toggle:hover {
-    background-color: var(--header-background-color);
+    background-color: var(--header-background-color, #070B11);
 }
 
 .theme-toggle:focus {
-    outline: 1px dotted var(--page-foreground-color);
+    outline: 1px dotted var(--page-foreground-color, #C9D1D9);
     outline-offset: 2px;
 }
 
@@ -2642,7 +2683,7 @@ html.dark-mode code,
 html.dark-mode kbd,
 html.dark-mode samp {
     background-color: #2a303d;
-    color: var(--fragment-foreground-color);
+    color: var(--fragment-foreground-color, #C9D1D9);
     border-radius: 2px;
     padding: 1px 3px;
 }

@@ -9,21 +9,42 @@
 <script type="text/javascript">
 //<![CDATA[
 (function() {
-  var storedTheme = null;
-  try {
-    if (window.localStorage) {
-      storedTheme = localStorage.getItem('theme');
+  var storageKey = 'theme';
+  function readStoredTheme() {
+    try {
+      if (window.localStorage) {
+        return localStorage.getItem(storageKey);
+      }
+    } catch (e) {
+      console.error('Failed to read theme from localStorage', e);
     }
-  } catch (e) {
-    storedTheme = null;
+    return null;
   }
-  if (storedTheme === 'dark') {
-    document.documentElement.className += ' dark-mode';
-  } else if (storedTheme === 'light') {
-    document.documentElement.className += ' light-mode';
-  } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    document.documentElement.className += ' dark-mode';
+
+  function detectTheme() {
+    var storedTheme = readStoredTheme();
+    if (storedTheme === 'dark' || storedTheme === 'light') {
+      return storedTheme;
+    }
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      return 'dark';
+    }
+    return null;
   }
+
+  function applyInitialTheme(theme) {
+    if (theme === 'dark') {
+      document.documentElement.className += ' dark-mode';
+    } else if (theme === 'light') {
+      document.documentElement.className += ' light-mode';
+    }
+  }
+
+  window.__doxygenTheme = window.__doxygenTheme || {};
+  window.__doxygenTheme.storageKey = storageKey;
+  window.__doxygenTheme.detectTheme = detectTheme;
+
+  applyInitialTheme(detectTheme());
 })();
 //]]>
 </script>
@@ -127,8 +148,9 @@ $extrastylesheet
 <script type="text/javascript">
 //<![CDATA[
 (function() {
-  var storageKey = 'theme';
   var docEl = document.documentElement;
+  var themeApi = window.__doxygenTheme || {};
+  var storageKey = themeApi.storageKey || 'theme';
   var toggle = null;
 
   function updateToggle(theme) {
@@ -138,7 +160,7 @@ $extrastylesheet
     toggle.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false');
   }
 
-  function setTheme(theme, persist) {
+  function applyTheme(theme) {
     docEl.classList.remove('dark-mode');
     docEl.classList.remove('light-mode');
     if (theme === 'dark') {
@@ -146,14 +168,23 @@ $extrastylesheet
     } else if (theme === 'light') {
       docEl.classList.add('light-mode');
     }
+  }
+
+  function setStoredTheme(theme) {
+    try {
+      if (window.localStorage) {
+        localStorage.setItem(storageKey, theme);
+      }
+    } catch (e) {
+      console.error('Failed to persist theme to localStorage', e);
+    }
+  }
+
+  function setTheme(theme, persist) {
+    applyTheme(theme);
     updateToggle(theme);
     if (persist) {
-      try {
-        if (window.localStorage) {
-          localStorage.setItem(storageKey, theme);
-        }
-      } catch (e) {
-      }
+      setStoredTheme(theme);
     }
   }
 
@@ -167,12 +198,18 @@ $extrastylesheet
     return null;
   }
 
+  function detectTheme() {
+    return themeApi.detectTheme ? themeApi.detectTheme() : null;
+  }
+
+  themeApi.applyTheme = applyTheme;
+
   document.addEventListener('DOMContentLoaded', function() {
     toggle = document.getElementById('theme-toggle');
     if (!toggle) {
       return;
     }
-    updateToggle(currentTheme());
+    updateToggle(currentTheme() || detectTheme());
     toggle.addEventListener('click', function() {
       var nextTheme = currentTheme() === 'dark' ? 'light' : 'dark';
       setTheme(nextTheme, true);
