@@ -23,13 +23,12 @@ Theory
 ------
 
 For distortion, OpenCV takes into account both radial and tangential factors. For the radial
-factor one uses the following formula:
+factor one uses the following formulas:
 
 \f[r^2 = x^2 + y^2\f]
 
 \f[x_{distorted} = x( 1 + k_1 r^2 + k_2 r^4 + k_3 r^6) \\
 y_{distorted} = y( 1 + k_1 r^2 + k_2 r^4 + k_3 r^6)\f]
-
 
 So for an undistorted pixel point at \f$(x,y)\f$ coordinates, its position on the distorted image
 will be \f$(x_{distorted} y_{distorted})\f$. The presence of the radial distortion manifests in form
@@ -69,8 +68,8 @@ objects. Currently OpenCV supports three types of objects for calibration:
 
 In practice, you need to capture multiple images of these patterns using your camera and let OpenCV find them.
 Each found pattern results in a new equation. To solve the equation you need at least a
-predetermined number of pattern snapshots to form a well-posed equation system. This number is higher for the chessboard pattern and lower for circle-based patterns.
-For example, in theory the
+predetermined number of pattern snapshots to form a well-posed equation system. This number is
+higher for the chessboard pattern and lower for circle-based patterns.For example, in theory the
 chessboard pattern requires at least two snapshots. However, in practice we have a good amount of
 noise present in our input images, so for good results you will probably need at least 10 good
 snapshots of the input pattern in different positions.
@@ -98,7 +97,7 @@ essential argument: the name of its configuration file. If none is given then it
 one named "default.xml". [Here's a sample configuration file
 ](https://github.com/opencv/opencv/tree/4.x/samples/cpp/tutorial_code/calib3d/camera_calibration/in_VID5.xml) in XML format. In the
 configuration file you may choose to use camera as an input, a video file or an image list. If you
-opt for the last one, you will need to create a configuration file where you enumerate the images to 
+opt for the last one, you will need to create a configuration file where you enumerate the images to
 use. Here's [an example of this ](https://github.com/opencv/opencv/tree/4.x/samples/cpp/tutorial_code/calib3d/camera_calibration/VID5.xml).
 The important part to remember is that the images need to be specified using the absolute path or
 the relative one from your application's working directory. You may find all this in the samples
@@ -151,10 +150,8 @@ Explanation
     is defined in squares, but detection result is list of inner corners and that's why is smaller
     by 1 in both dimensions.
 
-    In the case of live cameras, we only capture images
- when an input delay time is passed.
-    This is done to allow the user to move the chessboard around
- and getting different images.
+    In the case of live cameras, we only capture images when an input delay time is passed.
+    This is done to allow the user to move the chessboard around and getting different images.
     Similar images result in similar equations, and similar equations at the calibration step will
     form an ill-posed problem, so the calibration will fail. For square images the positions of the
     corners are only approximate. We may improve this by calling the @ref cv::cornerSubPix function.
@@ -165,6 +162,7 @@ Explanation
     visualization feedback purposes we will draw the found points on the input image using @ref
     cv::findChessboardCorners function.
     @snippet samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp pattern_found
+
 -#  **Show state and result to the user, plus command line control of the application**
 
     This part shows text output on the image.
@@ -175,6 +173,7 @@ Explanation
     Then we show the image and wait for an input key and if this is *u* we toggle the distortion removal,
     if it is *g* we start again the detection process, and finally for the *ESC* key we quit the application:
     @snippet samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp await_input
+
 -#  **Show the distortion removal for the images too**
 
     When you work with an image list it is not
