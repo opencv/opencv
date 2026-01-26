@@ -2291,11 +2291,15 @@ void ONNXImporter2::parseQEltwise(LayerParams& layerParams, const opencv_onnx::N
     // Configure Eltwise Layer
     std::vector<float> coeffs;
     float offset;
+
     if (op == "sum") {
+        // Sum: S1/So * (x - z1) + S2/So * (y - z2) + zo
         coeffs = {inp_0_sc / out_sc, inp_1_sc / out_sc};
         offset = out_zp - coeffs[0] * inp_0_zp - coeffs[1] * inp_1_zp;
     } else {
-        coeffs = {inp_0_sc / out_sc, inp_1_sc};
+        // Prod: (S1 * S2 / So) * [(x - z1) * (y - z2)] + zo
+        float prod_scale = (inp_0_sc * inp_1_sc) / out_sc;
+        coeffs = {prod_scale, 1.0f}; 
         offset = out_zp;
     }
 
