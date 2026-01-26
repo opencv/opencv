@@ -1700,7 +1700,7 @@ static double stereoCalibrateImpl(
     int NINTRINSIC = CALIB_NINTRINSIC;
     double reprojErr = 0;
 
-    // Initial camera intrinsics
+    // initial camera intrinsicss
     Vec<double, 14> distInitial[2];
     Matx33d A[2];
     int pointsTotal = 0, maxPoints = 0, nparams;
@@ -1802,12 +1802,12 @@ static double stereoCalibrateImpl(
 
     recomputeIntrinsics = (flags & CALIB_FIX_INTRINSIC) == 0;
 
-    /**
-     * Parameter vector mapping:
-     * - [0, 6): Stereo pair rotation/translation (R_LR, T_LR)
-     * - [6, 6 + nimages * 6): Per-view extrinsic parameters (R_i, T_i) for the first camera
-     * - [6 * (nimages + 1), ...): Intrinsic parameters for camera 1 and camera 2 (if optimized)
-     */
+    // we optimize for the inter-camera R(3),t(3), then, optionally,
+    // for intrinisic parameters of each camera ((fx,fy,cx,cy,k1,k2,p1,p2) ~ 8 parameters).
+    // Param mapping is:
+    // - from 0 next 6: stereo pair Rt, from 6+i*6 next 6: Rt for each ith camera of nimages,
+    // - from 6*(nimages+1) next NINTRINSICS: intrinsics for 1st camera: fx, fy, cx, cy, 14 x dist
+    // - next NINTRINSICS: the same for for 2nd camera
     nparams = 6 * (nimages + 1) + (recomputeIntrinsics ? NINTRINSIC * 2 : 0);
 
     CvLevMarq solver( nparams, 0, cvTermCriteria(termCrit) );
@@ -2457,54 +2457,22 @@ double calibrateCameraRO(InputArrayOfArrays _objectPoints,
     // 1. Setup rvecM/tvecM buffers
     if( rvecs_needed )
     {
-        if( rvecs_mat_vec )
-        {
-            _rvecs.create(nimages, 1, 0); // Resize vector<Mat>
+        _rvecs.create(nimages, 1, CV_64FC3);
+
+        if(rvecs_mat_vec)
             rvecM.create(nimages, 3, CV_64F);
-            if( flags & CALIB_USE_EXTRINSIC_GUESS )
-            {
-                 for(int i = 0; i < nimages; i++)
-                 {
-                     Mat r = _rvecs.getMat(i);
-                     if( !r.empty() )
-                     {
-                         r = r.reshape(1, 1);
-                         r.convertTo(rvecM.row(i), CV_64F);
-                     }
-                 }
-            }
-        }
         else
-        {
-            _rvecs.create(nimages, 1, CV_64FC3);
             rvecM = _rvecs.getMat();
-        }
     }
 
     if( tvecs_needed )
     {
-        if( tvecs_mat_vec )
-        {
-            _tvecs.create(nimages, 1, 0); // Resize vector<Mat>
+        _tvecs.create(nimages, 1, CV_64FC3);
+
+        if(tvecs_mat_vec)
             tvecM.create(nimages, 3, CV_64F);
-            if( flags & CALIB_USE_EXTRINSIC_GUESS )
-            {
-                 for(int i = 0; i < nimages; i++)
-                 {
-                     Mat t = _tvecs.getMat(i);
-                     if( !t.empty() )
-                     {
-                         t = t.reshape(1, 1);
-                         t.convertTo(tvecM.row(i), CV_64F);
-                     }
-                 }
-            }
-        }
         else
-        {
-            _tvecs.create(nimages, 1, CV_64FC3);
             tvecM = _tvecs.getMat();
-        }
     }
 
     collectCalibrationData( _objectPoints, _imagePoints, noArray(), iFixedPoint,
