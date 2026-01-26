@@ -133,7 +133,15 @@ public:
         {
             cv::Mat V_reg = V[i].clone();
             V_reg.diag() *= (1.0 + lambda);
-            cv::invert(V_reg, V_inv[i], solveMethod);
+            if (solveMethod == cv::DECOMP_QR)
+            {
+                cv::Mat I = cv::Mat::eye(6, 6, CV_64F);
+                cv::solve(V_reg, I, V_inv[i], solveMethod);
+            }
+            else
+            {
+                cv::invert(V_reg, V_inv[i], solveMethod);
+            }
         }
 
         // Form Schur complement S and reduced RHS e
@@ -262,6 +270,7 @@ public:
 
     cv::Mat getGlobalUpdate() const { return deltaGlobal; }
     cv::Mat getLocalUpdate(int i) const { return deltaLocal[i]; }
+    void setSolveMethod(int method) { solveMethod = method; }
 
     cv::Mat U;
     std::vector<cv::Mat> V;
@@ -1209,6 +1218,10 @@ static double calibrateCameraInternal( const Mat& objectPoints,
 
     SchurLMSolver solver;
     solver.init(nimages, NINTRINSIC, releaseObject ? maxPoints : 0, termCrit);
+    if (flags & CALIB_USE_LU)
+        solver.setSolveMethod(cv::DECOMP_LU);
+    else if (flags & CALIB_USE_QR)
+        solver.setSolveMethod(cv::DECOMP_QR);
 
     Mat_<double> param_m(nparams, 1);
     std::vector<uchar> mask_vec(nparams, 1);
@@ -1353,6 +1366,7 @@ static double calibrateCameraInternal( const Mat& objectPoints,
     }
 
     bool recomputeFinalErrors = (termCrit.maxCount == 0);
+    bool jacobianAtCurrentParams = false;
     if (termCrit.maxCount > 0)
     {
         solver.reset();
@@ -1361,6 +1375,7 @@ static double calibrateCameraInternal( const Mat& objectPoints,
                       JAccumulator(solver, matM, _m, npoints, param_m,
                                    flags, aspectRatio, NINTRINSIC,
                                    releaseObject, maxPoints, globalMutex));
+        jacobianAtCurrentParams = true;
         // JAccumulator acc(solver, matM, _m, npoints, param_m,
         //                         flags, aspectRatio, NINTRINSIC,
         //                         releaseObject, maxPoints, globalMutex);
@@ -1387,6 +1402,7 @@ static double calibrateCameraInternal( const Mat& objectPoints,
             for (int kk = 0; kk < 6; kk++)
                 param_m(si + kk) -= solver.getLocalUpdate(i).at<double>(kk);
         }
+        jacobianAtCurrentParams = false;
 
 
         for (int iter = 0; iter < termCrit.maxCount; iter++)
@@ -1455,6 +1471,7 @@ static double calibrateCameraInternal( const Mat& objectPoints,
                               JAccumulator(solver, matM, _m, npoints, param_m,
                                            flags, aspectRatio, NINTRINSIC,
                                            releaseObject, maxPoints, globalMutex));
+                jacobianAtCurrentParams = true;
             }else
             {
                 // Step rejected, increase lambda and recompute step
@@ -1501,6 +1518,7 @@ static double calibrateCameraInternal( const Mat& objectPoints,
                 for (int kk = 0; kk < 6; kk++)
                     param_m(si + kk) -= solver.getLocalUpdate(i).at<double>(kk);
             }
+            jacobianAtCurrentParams = false;
 
 
 
@@ -1563,6 +1581,15 @@ static double calibrateCameraInternal( const Mat& objectPoints,
 
     if (!stdDevs.empty())
     {
+        if (!jacobianAtCurrentParams)
+        {
+            solver.reset();
+            parallel_for_(Range(0, nimages),
+                          JAccumulator(solver, matM, _m, npoints, param_m,
+                                       flags, aspectRatio, NINTRINSIC,
+                                       releaseObject, maxPoints, globalMutex));
+            jacobianAtCurrentParams = true;
+        }
         Mat JtJ = Mat::zeros(nparams, nparams, CV_64F);
 
         // Manual copy for U to avoid assertion
