@@ -905,7 +905,7 @@ struct ArucoDetector::ArucoDetectorImpl {
             // only CORNER_REFINE_SUBPIX implement correctly for useAruco3Detection
             // Todo: update other CORNER_REFINE methods
 
-            // scale to orignal size, this however will lead to inaccurate detections!
+            // scale to original size, this however will lead to inaccurate detections!
             for (auto &vecPoints : candidates)
                 for (auto &point : vecPoints)
                     point *= 1.f/fxfy;

@@ -1337,7 +1337,7 @@ CV_EXPORTS_W Mat initCameraMatrix2D( InputArrayOfArrays objectPoints,
 
 @param image Source chessboard view. It must be an 8-bit grayscale or color image.
 @param patternSize Number of inner corners per a chessboard row and column
-( patternSize = cv::Size(points_per_row,points_per_colum) = cv::Size(columns,rows) ).
+( patternSize = cv::Size(points_per_row,points_per_column) = cv::Size(columns,rows) ).
 @param corners Output array of detected corners.
 @param flags Various operation flags that can be zero or a combination of the following values:
 -   @ref CALIB_CB_ADAPTIVE_THRESH Use adaptive thresholding to convert the image to black
@@ -1402,7 +1402,7 @@ CV_EXPORTS_W bool checkChessboard(InputArray img, Size size);
 
 @param image Source chessboard view. It must be an 8-bit grayscale or color image.
 @param patternSize Number of inner corners per a chessboard row and column
-( patternSize = cv::Size(points_per_row,points_per_colum) = cv::Size(columns,rows) ).
+( patternSize = cv::Size(points_per_row,points_per_column) = cv::Size(columns,rows) ).
 @param corners Output array of detected corners.
 @param flags Various operation flags that can be zero or a combination of the following values:
 -   @ref CALIB_CB_NORMALIZE_IMAGE Normalize the image gamma with equalizeHist before detection.
@@ -1564,7 +1564,7 @@ typedef CirclesGridFinderParameters CirclesGridFinderParameters2;
 
 @param image grid view of input circles; it must be an 8-bit grayscale or color image.
 @param patternSize number of circles per row and column
-( patternSize = Size(points_per_row, points_per_colum) ).
+( patternSize = Size(points_per_row, points_per_column) ).
 @param centers output array of detected centers.
 @param flags various operation flags that can be one of the following values:
 -   @ref CALIB_CB_SYMMETRIC_GRID uses symmetric pattern of circles.
