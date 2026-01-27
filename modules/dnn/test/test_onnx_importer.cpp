@@ -3467,7 +3467,7 @@ TEST_P(Test_ONNX_layers, TopK) {
 
 TEST(Test_LayerNorm_Fix, LayerNorm_2Outputs)
 {
-    const String model = findDataFile("dnn/onnx/models/layer_norm_2outputs.onnx");
+    const String model = findDataFile("dnn/onnx/layer_norm_2outputs.onnx");
 
     Net net = readNetFromONNX(model);
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
