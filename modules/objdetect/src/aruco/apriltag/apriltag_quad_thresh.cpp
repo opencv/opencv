@@ -18,6 +18,7 @@
 
 #include "../../precomp.hpp"
 #include "apriltag_quad_thresh.hpp"
+#include <vector>
 #include "unionfind.hpp"
 
 //#define APRIL_DEBUG
@@ -1082,8 +1083,16 @@ void threshold(const Mat mIm, const DetectorParameters &parameters, Mat& mThresh
     int tw = w / tilesz;
     int th = h / tilesz;
 
-    uint8_t *im_max = (uint8_t*)calloc(tw*th, sizeof(uint8_t));
-    uint8_t *im_min = (uint8_t*)calloc(tw*th, sizeof(uint8_t));
+    const size_t tiles_n = (size_t)tw * (size_t)th;
+    // Reuse scratch buffers to avoid repeated calloc/free churn under external concurrency.
+    static thread_local std::vector<uint8_t> tl_im_max, tl_im_min, tl_im_max_tmp, tl_im_min_tmp;
+    if (tl_im_max.size() < tiles_n) tl_im_max.resize(tiles_n);
+    if (tl_im_min.size() < tiles_n) tl_im_min.resize(tiles_n);
+    if (tl_im_max_tmp.size() < tiles_n) tl_im_max_tmp.resize(tiles_n);
+    if (tl_im_min_tmp.size() < tiles_n) tl_im_min_tmp.resize(tiles_n);
+
+    uint8_t *im_max = tl_im_max.data();
+    uint8_t *im_min = tl_im_min.data();
 
 
     // first, collect min/max statistics for each tile
@@ -1110,8 +1119,8 @@ void threshold(const Mat mIm, const DetectorParameters &parameters, Mat& mThresh
     // second, apply 3x3 max/min convolution to "blur" these values
     // over larger areas. This reduces artifacts due to abrupt changes
     // in the threshold value.
-    uint8_t *im_max_tmp = (uint8_t*)calloc(tw*th, sizeof(uint8_t));
-    uint8_t *im_min_tmp = (uint8_t*)calloc(tw*th, sizeof(uint8_t));
+    uint8_t *im_max_tmp = tl_im_max_tmp.data();
+    uint8_t *im_min_tmp = tl_im_min_tmp.data();
 
     for (int ty = 0; ty < th; ty++) {
         for (int tx = 0; tx < tw; tx++) {
@@ -1137,10 +1146,10 @@ void threshold(const Mat mIm, const DetectorParameters &parameters, Mat& mThresh
             im_min_tmp[ty*tw + tx] = min;
         }
     }
-    free(im_max);
-    free(im_min);
-    im_max = im_max_tmp;
-    im_min = im_min_tmp;
+    tl_im_max.swap(tl_im_max_tmp);
+    tl_im_min.swap(tl_im_min_tmp);
+    im_max = tl_im_max.data();
+    im_min = tl_im_min.data();
 
     for (int ty = 0; ty < th; ty++) {
         for (int tx = 0; tx < tw; tx++) {
@@ -1218,8 +1227,6 @@ void threshold(const Mat mIm, const DetectorParameters &parameters, Mat& mThresh
             }
         }
     }
-    free(im_min);
-    free(im_max);
 
     // this is a dilate/erode deglitching scheme that does not improve
     // anything as far as I can tell.
