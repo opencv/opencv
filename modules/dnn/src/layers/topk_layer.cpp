@@ -97,9 +97,9 @@ public:
         // Normalize axis
         int axis_normalized = normalize_axis(axis, input_shape.size());
 
-        // Check if K is in range (0, input_shape[axis])
+        // Check if K is in range (0, input_shape[axis]]
         CV_CheckGT(K, 0, "TopK: K needs to be a positive integer");
-        CV_CheckLT(K, input_shape[axis_normalized], "TopK: K is out of range");
+        CV_CheckLE(K, input_shape[axis_normalized], "TopK: K is out of range");
 
         // Assign output shape
         auto output_shape = input_shape;
