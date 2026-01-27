@@ -1475,14 +1475,12 @@ out = Mat::zeros(h, w, CV_8UC3);
 
     zarray_t *quads = _zarray_create(sizeof(struct sQuad));
 
-    //int chunksize = 1 + sz / (APRILTAG_TASKS_PER_THREAD_TARGET * numberOfThreads);
-    int chunksize = std::max(1, h / (10 * getNumThreads()));
     int sz = _zarray_size(clusters);
 
-    // TODO PARALLELIZE
-    for (int i = 0; i < sz; i += chunksize) {
-        int min = sz < (i+chunksize)? sz: (i+chunksize);
-        do_quad(i, min, *clusters, w, h, quads, parameters, mImg);
+    // Current code is single-threaded (TODO PARALLELIZE). Avoid chunking based on global thread count,
+    // which can cause excessive repeated allocations when called concurrently.
+    if (sz > 0) {
+        do_quad(0, sz, *clusters, w, h, quads, parameters, mImg);
     }
 
 #ifdef APRIL_DEBUG
