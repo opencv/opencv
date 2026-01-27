@@ -124,6 +124,66 @@ struct RowSum :
                 D[i] = (ST)s[i] + (ST)s[i+cn] + (ST)s[i+cn*2] + (ST)s[i + cn*3] + (ST)s[i + cn*4];
             }
         }
+        else if( cn == 1 )
+        {
+            ST sum = 0;
+            for( i = 0; i < kcn; i++ )
+                sum += (ST)s[i];
+            D[0] = sum;
+            for( i = 0; i < len-cn; i++ )
+            {
+                sum += (ST)s[i + kcn] - (ST)s[i];
+                D[i+1] = sum;
+            }
+        }
+        else if( cn == 3 )
+        {
+            ST s0 = 0, s1 = 0, s2 = 0;
+            for( i = 0; i < kcn; i += 3 )
+            {
+                s0 += (ST)s[i];
+                s1 += (ST)s[i+1];
+                s2 += (ST)s[i+2];
+            }
+            D[0] = s0;
+            D[1] = s1;
+            D[2] = s2;
+            for( i = 0; i < len-cn; i += 3 )
+            {
+                s0 += (ST)s[i + kcn] - (ST)s[i];
+                s1 += (ST)s[i + kcn + 1] - (ST)s[i + 1];
+                s2 += (ST)s[i + kcn + 2] - (ST)s[i + 2];
+                D[i+3] = s0;
+                D[i+4] = s1;
+                D[i+5] = s2;
+            }
+        }
+        else if( cn == 4 )
+        {
+            ST s0 = 0, s1 = 0, s2 = 0, s3 = 0;
+            for( i = 0; i < kcn; i += 4 )
+            {
+                s0 += (ST)s[i];
+                s1 += (ST)s[i+1];
+                s2 += (ST)s[i+2];
+                s3 += (ST)s[i+3];
+            }
+            D[0] = s0;
+            D[1] = s1;
+            D[2] = s2;
+            D[3] = s3;
+            for( i = 0; i < len-cn; i += 4 )
+            {
+                s0 += (ST)s[i + kcn] - (ST)s[i];
+                s1 += (ST)s[i + kcn + 1] - (ST)s[i + 1];
+                s2 += (ST)s[i + kcn + 2] - (ST)s[i + 2];
+                s3 += (ST)s[i + kcn + 3] - (ST)s[i + 3];
+                D[i+4] = s0;
+                D[i+5] = s1;
+                D[i+6] = s2;
+                D[i+7] = s3;
+            }
+        }
         else
         {
             for( k = 0; k < cn; k++, s++, D++ )
