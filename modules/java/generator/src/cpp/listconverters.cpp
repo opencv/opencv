@@ -7,6 +7,74 @@
 #define LOG_TAG "org.opencv.utils.Converters"
 #include "common.h"
 
+// Helper function to safely create a Java string from raw bytes.
+// NewStringUTF expects valid Modified UTF-8, but QR codes may contain
+// non-UTF-8 data (e.g., GB2312/GBK Chinese encoding). This function
+// uses a byte array and lets Java handle the charset conversion.
+static jstring safeNewString(JNIEnv* env, const char* str, size_t len) {
+    // First, try NewStringUTF for valid UTF-8 strings (most common case)
+    // Check if the string is valid UTF-8
+    bool isValidUtf8 = true;
+    for (size_t i = 0; i < len && isValidUtf8; ) {
+        unsigned char c = (unsigned char)str[i];
+        if (c < 0x80) {
+            // ASCII
+            i += 1;
+        } else if ((c & 0xE0) == 0xC0) {
+            // 2-byte sequence
+            if (i + 1 >= len || (str[i + 1] & 0xC0) != 0x80) {
+                isValidUtf8 = false;
+            }
+            i += 2;
+        } else if ((c & 0xF0) == 0xE0) {
+            // 3-byte sequence
+            if (i + 2 >= len || (str[i + 1] & 0xC0) != 0x80 || (str[i + 2] & 0xC0) != 0x80) {
+                isValidUtf8 = false;
+            }
+            i += 3;
+        } else if ((c & 0xF8) == 0xF0) {
+            // 4-byte sequence
+            if (i + 3 >= len || (str[i + 1] & 0xC0) != 0x80 || (str[i + 2] & 0xC0) != 0x80 || (str[i + 3] & 0xC0) != 0x80) {
+                isValidUtf8 = false;
+            }
+            i += 4;
+        } else {
+            isValidUtf8 = false;
+        }
+    }
+
+    if (isValidUtf8) {
+        return env->NewStringUTF(str);
+    }
+
+    // For non-UTF-8 data, create a byte array and use String(byte[], charset)
+    // Using ISO-8859-1 to preserve all byte values
+    jbyteArray byteArray = env->NewByteArray(len);
+    if (byteArray == NULL) {
+        return env->NewStringUTF(""); // Out of memory
+    }
+    env->SetByteArrayRegion(byteArray, 0, len, (const jbyte*)str);
+
+    static jclass stringClass = NULL;
+    static jmethodID stringConstructor = NULL;
+
+    if (stringClass == NULL) {
+        jclass localClass = env->FindClass("java/lang/String");
+        stringClass = (jclass)env->NewGlobalRef(localClass);
+        env->DeleteLocalRef(localClass);
+        stringConstructor = env->GetMethodID(stringClass, "<init>", "([BLjava/lang/String;)V");
+    }
+
+    // Use ISO-8859-1 charset to preserve all byte values
+    jstring charset = env->NewStringUTF("ISO-8859-1");
+    jstring result = (jstring)env->NewObject(stringClass, stringConstructor, byteArray, charset);
+
+    env->DeleteLocalRef(byteArray);
+    env->DeleteLocalRef(charset);
+
+    return result;
+}
+
 
 jobject vector_String_to_List(JNIEnv* env, std::vector<cv::String>& vs) {
 
@@ -16,7 +84,7 @@ jobject vector_String_to_List(JNIEnv* env, std::vector<cv::String>& vs) {
 
     jobject result = env->NewObject(juArrayList, m_create, vs.size());
     for (std::vector<cv::String>::iterator it = vs.begin(); it != vs.end(); ++it) {
-        jstring element = env->NewStringUTF((*it).c_str());
+        jstring element = safeNewString(env, (*it).c_str(), (*it).size());
         env->CallBooleanMethod(result, m_add, element);
         env->DeleteLocalRef(element);
     }
@@ -52,7 +120,7 @@ void Copy_vector_String_to_List(JNIEnv* env, std::vector<cv::String>& vs, jobjec
     env->CallVoidMethod(list, m_clear);
     for (std::vector<cv::String>::iterator it = vs.begin(); it != vs.end(); ++it)
     {
-        jstring element = env->NewStringUTF((*it).c_str());
+        jstring element = safeNewString(env, (*it).c_str(), (*it).size());
         env->CallBooleanMethod(list, m_add, element);
         env->DeleteLocalRef(element);
     }
@@ -67,7 +135,7 @@ jobject vector_string_to_List(JNIEnv* env, std::vector<std::string>& vs) {
 
     jobject result = env->NewObject(juArrayList, m_create, vs.size());
     for (std::vector<std::string>::iterator it = vs.begin(); it != vs.end(); ++it) {
-        jstring element = env->NewStringUTF((*it).c_str());
+        jstring element = safeNewString(env, (*it).c_str(), (*it).size());
         env->CallBooleanMethod(result, m_add, element);
         env->DeleteLocalRef(element);
     }
@@ -103,7 +171,7 @@ void Copy_vector_string_to_List(JNIEnv* env, std::vector<std::string>& vs, jobje
     env->CallVoidMethod(list, m_clear);
     for (std::vector<std::string>::iterator it = vs.begin(); it != vs.end(); ++it)
     {
-        jstring element = env->NewStringUTF((*it).c_str());
+        jstring element = safeNewString(env, (*it).c_str(), (*it).size());
         env->CallBooleanMethod(list, m_add, element);
         env->DeleteLocalRef(element);
     }
