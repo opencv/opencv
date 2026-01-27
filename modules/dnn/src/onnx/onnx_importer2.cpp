@@ -1993,6 +1993,10 @@ void ONNXImporter2::parseLayerNorm(LayerParams& layerParams, const opencv_onnx::
         }
         n_inputs = 1;
     }
+    if (node_proto.output_size() > 1) 
+    {
+        layerParams.set("output_mean_var", true);
+    }
     addLayer(layerParams, node_proto, n_inputs);
 }
 

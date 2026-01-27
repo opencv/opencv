@@ -31,12 +31,13 @@ namespace cv { namespace dnn {
 // https://github.com/onnx/onnx/blob/main/docs/Operators.md#LayerNormalization
 class LayerNormLayerImpl CV_FINAL : public LayerNormLayer
 {
+
 #ifdef HAVE_OPENCL
     UMat weight_umat, bias_umat;
 #endif
-
 public:
     int axis0;
+    bool use_mean_var = false;
 
     LayerNormLayerImpl(const LayerParams& params)
     {
@@ -45,6 +46,8 @@ public:
         // standard attr
         axis = axis0 = params.get<int>("axis", -1);
         epsilon = params.get<float>("epsilon", 1e-5);
+
+        use_mean_var = params.get<bool>("output_mean_var", false);
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
@@ -64,6 +67,11 @@ public:
                                  std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         int noutputs = std::max(requiredOutputs > 0 ? requiredOutputs : (int)this->outputs.size(), 1);
+
+        if (use_mean_var) {
+            noutputs = std::max(noutputs, 2);
+        }
+
         CV_Assert(noutputs == 1 || noutputs == 2 || noutputs == 3);
 
         // check shapes of weight and bias if existed
