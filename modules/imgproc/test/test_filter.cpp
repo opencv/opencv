@@ -2266,6 +2266,8 @@ TEST(Imgproc_MedianBlur, hires_regression_13409)
 
 TEST(Imgproc_MedianBlur, regression_28385)
 {
+    applyTestTag(CV_TEST_TAG_MEMORY_6GB);
+
     Mat out;
     // create a matrix larger than 2^31 to check for signed 32 bit integer overflow
     Mat img(50000, 50000, CV_8U);
