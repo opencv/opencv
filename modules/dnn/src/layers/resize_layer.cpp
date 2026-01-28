@@ -248,7 +248,7 @@ public:
             size_t nbatch = inputs[0].size[0];
             size_t nch = inputs[0].size[1];
             size_t total_planes = nbatch * nch;
-            
+
             parallel_for_(Range(0, (int)total_planes), [&](const Range& range){
                 for (int i = range.start; i < range.end; ++i)
                 {
