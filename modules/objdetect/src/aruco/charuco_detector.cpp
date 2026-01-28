@@ -163,7 +163,7 @@ struct CharucoDetector::CharucoDetectorImpl {
             const int end = range.end;
             for (int i = begin; i < end; i++) {
                 vector<Point2f> in;
-                in.push_back(filteredChessboardImgPoints[i] - Point2f(0.5, 0.5)); // adjust sub-pixel coordinates for cornerSubPix
+                in.push_back(filteredChessboardImgPoints[i]);
                 Size winSize = filteredWinSizes[i];
                 if (winSize.height == -1 || winSize.width == -1)
                     winSize = Size(arucoDetector.getDetectorParameters().cornerRefinementWinSize,
@@ -172,7 +172,7 @@ struct CharucoDetector::CharucoDetectorImpl {
                              TermCriteria(TermCriteria::MAX_ITER | TermCriteria::EPS,
                                           arucoDetector.getDetectorParameters().cornerRefinementMaxIterations,
                                           arucoDetector.getDetectorParameters().cornerRefinementMinAccuracy));
-                filteredChessboardImgPoints[i] = in[0] + Point2f(0.5, 0.5);
+                filteredChessboardImgPoints[i] = in[0];
             }
         });
         // parse output
