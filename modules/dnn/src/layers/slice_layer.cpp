@@ -191,7 +191,7 @@ public:
                     CV_Assert(step != 0);
                     if (step < 0)
                         neg_step_dims.push_back(i);
-                    if (std::abs(step) > 1)
+                    if (std::abs(step) > 1 || step < 0)
                         hasSteps = true;
                     sliceSteps[0][i] = step;
                 }
@@ -863,7 +863,10 @@ private:
                 int k = b + i * s;
                 size_t src_offset = k * inp_strides_[0];
                 size_t dst_offset = i * out_strides_[0];
-                recursive_copy(1, src_base + src_offset, dst_base + dst_offset);
+                if (dims_ == 1)
+                    std::memcpy(dst_base + dst_offset, src_base + src_offset, es_);
+                else
+                    recursive_copy(1, src_base + src_offset, dst_base + dst_offset);
             }
         }
 

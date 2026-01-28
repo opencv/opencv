@@ -214,7 +214,10 @@ private:
                 int k = b + i * s;
                 size_t src_offset = k * inp_strides_[0];
                 size_t dst_offset = i * out_strides_[0];
-                recursive_copy(1, src_base + src_offset, dst_base + dst_offset);
+                if (dims_ == 1)
+                    std::memcpy(dst_base + dst_offset, src_base + src_offset, es_);
+                else
+                    recursive_copy(1, src_base + src_offset, dst_base + dst_offset);
             }
         }
 
@@ -240,11 +243,23 @@ private:
                     size_t s_stride = step * inp_strides_[dim];
                     size_t d_stride = out_strides_[dim];
 
-                    for (int k = begin; k < end; k += step)
+                    if (step > 0)
                     {
-                        *(T*)d_ptr = *(const T*)s_ptr;
-                        s_ptr += s_stride;
-                        d_ptr += d_stride;
+                        for (int k = begin; k < end; k += step)
+                        {
+                            *(T*)d_ptr = *(const T*)s_ptr;
+                            s_ptr += s_stride;
+                            d_ptr += d_stride;
+                        }
+                    }
+                    else
+                    {
+                        for (int k = begin; k > end; k += step)
+                        {
+                            *(T*)d_ptr = *(const T*)s_ptr;
+                            s_ptr += s_stride;
+                            d_ptr += d_stride;
+                        }
                     }
                 }
                 return;
@@ -264,11 +279,23 @@ private:
             const uchar* s_ptr = src_ptr + begin * inp_strides_[dim];
             uchar* d_ptr = dst_ptr;
 
-            for (int k = begin; k < end; k += step)
+            if (step > 0)
             {
-                recursive_copy(dim + 1, s_ptr, d_ptr);
-                s_ptr += src_stride;
-                d_ptr += dst_stride;
+                for (int k = begin; k < end; k += step)
+                {
+                    recursive_copy(dim + 1, s_ptr, d_ptr);
+                    s_ptr += src_stride;
+                    d_ptr += dst_stride;
+                }
+            }
+            else
+            {
+                for (int k = begin; k > end; k += step)
+                {
+                    recursive_copy(dim + 1, s_ptr, d_ptr);
+                    s_ptr += src_stride;
+                    d_ptr += dst_stride;
+                }
             }
         }
 
