@@ -388,7 +388,7 @@ private:
             std::vector<Mat>& outs = outputs_arr.getMatVecRef();
             outs.resize(1);
             outs[0].fit(outShape, inpType);
-            
+
             if (inp.depth() == CV_32S) run_parallel<int32_t>(inp, outs[0], ranges, steps_vec);
             else if (inp.depth() == CV_64S) run_parallel<int64_t>(inp, outs[0], ranges, steps_vec);
             else if (inp.depth() == CV_16F) run_parallel<int16_t>(inp, outs[0], ranges, steps_vec);
@@ -402,7 +402,7 @@ private:
              outs.resize(1);
              outs[0].fit(outShape, inpType);
              Mat temp(outShape, inpType);
-             
+
              if (inp.depth() == CV_32S) run_parallel<int32_t>(inp, temp, ranges, steps_vec);
              else if (inp.depth() == CV_64S) run_parallel<int64_t>(inp, temp, ranges, steps_vec);
              else if (inp.depth() == CV_16F) run_parallel<int16_t>(inp, temp, ranges, steps_vec);
@@ -410,7 +410,7 @@ private:
              else if (inp.depth() == CV_8U) run_parallel<uint8_t>(inp, temp, ranges, steps_vec);
              else if (inp.depth() == CV_Bool) run_parallel<uint8_t>(inp, temp, ranges, steps_vec);
              else run_parallel<float>(inp, temp, ranges, steps_vec);
-             
+
              temp.copyTo(outs[0]);
         }
     }

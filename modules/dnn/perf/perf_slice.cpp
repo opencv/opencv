@@ -21,11 +21,11 @@ struct Layer_Slice : public TestBaseWithParam<tuple<Backend, Target>>
         lp.type = "Slice";
         lp.name = "testLayer";
         lp.set("axis", axis);
-        
+
         std::vector<int> begins(input_shape.size(), 0);
         std::vector<int> ends = input_shape;
         std::vector<int> steps(input_shape.size(), 1);
-        
+
         begins[axis] = begin;
         ends[axis] = end;
         steps[axis] = step;
@@ -38,7 +38,7 @@ struct Layer_Slice : public TestBaseWithParam<tuple<Backend, Target>>
 
         int id = net.addLayerToPrev(lp.name, lp.type, lp);
         net.connect(0, 0, id, 0);
-        
+
         net.setInputsNames({"data"});
 
         // warmup
