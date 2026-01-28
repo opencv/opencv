@@ -23,7 +23,7 @@ struct Layer_Resize : public TestBaseWithParam<tuple<Backend, Target>>
         lp.set("interpolation", interp);
         lp.set("width", outW);
         lp.set("height", outH);
-        
+
 
 
         int id = net.addLayerToPrev(lp.name, lp.type, lp);
@@ -60,6 +60,6 @@ PERF_TEST_P_(Layer_Resize, Resize_Downsample_Nearest)
     test_layer({4, 128, 128, 128}, 64, 64, "nearest");
 }
 
-INSTANTIATE_TEST_CASE_P(/**/, Layer_Resize, dnnBackendsAndTargets(false, false, true, false, false, false, false, false));
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Resize, dnnBackendsAndTargets());
 
 } // namespace opencv_test
