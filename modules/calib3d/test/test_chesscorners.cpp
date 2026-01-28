@@ -864,9 +864,9 @@ TEST(Calib3d_CornerOrdering, issue_26830) {
 
 TEST(Calib3d_ChessboardDetector, regression_28028)
 {
-    const cv::String dataDir = std::string(TS::ptr()->get_data_path()) + "cv/cameracalibration/";
-    const cv::Mat image = cv::imread(dataDir + "inputimage.jpg");
-
+   const cv::String dataDir = std::string(TS::ptr()->get_data_path()) + "calib3d/";
+   const cv::Mat image = cv::imread(dataDir + "inputimage.jpg");
+    
     ASSERT_FALSE(image.empty()) << "Could not load inputimage.jpg";
 
     Size patternSize(13, 9);
