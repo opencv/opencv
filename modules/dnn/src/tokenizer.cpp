@@ -17,7 +17,7 @@ Mat Tokenizer::tokensToMat(const std::vector<int>& tokens) {
     // Create a 1 x N matrix of type 32-bit Signed Integer.
     // We use .clone() so the Mat owns its data independently of the input vector.
     Mat m(1, (int)tokens.size(), CV_32S, (void*)tokens.data());
-    return m.clone(); 
+    return m.clone();
 }
 
 // --- BPE Implementation Class ---
@@ -69,7 +69,7 @@ public:
             symbols.push_back(std::string(1, c));
         }
 
-        
+
 
         while (symbols.size() > 1) {
             int best_rank = std::numeric_limits<int>::max();
@@ -90,7 +90,7 @@ public:
             for (int i = 0; i < (int)symbols.size(); ++i) {
                 if (i == best_idx) {
                     next_symbols.push_back(symbols[i] + symbols[i+1]);
-                    i++; 
+                    i++;
                 } else {
                     next_symbols.push_back(symbols[i]);
                 }
