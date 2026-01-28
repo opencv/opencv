@@ -2264,6 +2264,19 @@ TEST(Imgproc_MedianBlur, hires_regression_13409)
     ASSERT_EQ(0.0, cvtest::norm(dst_hires(Rect(516, 516, 1016, 1016)), dst_ref(Rect(4, 4, 1016, 1016)), NORM_INF));
 }
 
+TEST(Imgproc_MedianBlur, regression_28385)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_6GB);
+
+    Mat out;
+    // create a matrix larger than 2^31 to check for signed 32 bit integer overflow
+    Mat img(50000, 50000, CV_8U);
+    Mat sub = img(Rect(0, 0, 100, 50000));
+    // this crashes in case of overflow because of out-of-bounds memory access
+    medianBlur(sub, out, 3);
+    ASSERT_EQ(out.size(), Size(100, 50000));
+}
+
 TEST(Imgproc_Sobel, s16_regression_13506)
 {
     Mat src = (Mat_<short>(8, 16) << 127, 138, 130, 102, 118,  97,  76,  84, 124,  90, 146,  63, 130,  87, 212,  85,
