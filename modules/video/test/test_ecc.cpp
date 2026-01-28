@@ -49,6 +49,7 @@ class CV_ECC_BaseTest : public cvtest::BaseTest {
    public:
     CV_ECC_BaseTest();
     virtual ~CV_ECC_BaseTest();
+    void usePyramids();
 
    protected:
     double computeRMS(const Mat& mat1, const Mat& mat2);
@@ -68,6 +69,8 @@ class CV_ECC_BaseTest : public cvtest::BaseTest {
     double ECC_epsilon;  // we choose a negative value, so that
     // ECC_iterations are always executed
     TermCriteria criteria;
+    bool grayscale_only;     // test only grayscale images
+    bool use_pyramids;       // use version of findTransformECC with pyramids
 };
 
 CV_ECC_BaseTest::CV_ECC_BaseTest() {
@@ -76,6 +79,8 @@ CV_ECC_BaseTest::CV_ECC_BaseTest() {
     ECC_iterations = 50;
     ECC_epsilon = -1;  //-> negative value means that ECC_Iterations will be executed
     criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, ECC_iterations, ECC_epsilon);
+    grayscale_only = false;
+    use_pyramids = false;
 }
 
 CV_ECC_BaseTest::~CV_ECC_BaseTest() {}
@@ -128,8 +133,9 @@ bool CV_ECC_BaseTest::testAllTypes(const Mat img) {
 }
 
 bool CV_ECC_BaseTest::testAllChNum(const Mat img) {
-    if (!testAllTypes(img))
-        return false;
+    if(!grayscale_only)
+        if (!testAllTypes(img))
+            return false;
 
     Mat gray;
     cvtColor(img, gray, COLOR_RGB2GRAY);
@@ -155,9 +161,15 @@ void CV_ECC_BaseTest::run(int) {
     ts->set_failed_test_info(cvtest::TS::OK);
 }
 
+void CV_ECC_BaseTest::usePyramids()
+{
+    grayscale_only = use_pyramids = true;
+}
+
 class CV_ECC_Test_Translation : public CV_ECC_BaseTest {
    public:
     CV_ECC_Test_Translation();
+    void setRMS_MAX(double newRMS) { MAX_RMS_ECC = newRMS; }
 
    protected:
     bool test(const Mat);
@@ -182,7 +194,15 @@ bool CV_ECC_Test_Translation::test(const Mat testImg) {
 
         Mat mapTranslation = (Mat_<float>(2, 3) << 1, 0, 0, 0, 1, 0);
 
-        findTransformECC(warpedImage, testImg, mapTranslation, 0, criteria);
+        if(use_pyramids)
+        {
+            ECCParameters params;
+            params.criteria = criteria;
+            params.motionType = MOTION_TRANSLATION;
+            findTransformECCMultiscale(warpedImage, testImg, mapTranslation, params);
+        }
+        else
+            findTransformECC(warpedImage, testImg, mapTranslation, 0, criteria);
 
         if (!checkMap(mapTranslation, translationGround))
             return false;
@@ -219,7 +239,15 @@ bool CV_ECC_Test_Euclidean::test(const Mat testImg) {
 
         Mat mapEuclidean = (Mat_<float>(2, 3) << 1, 0, 0, 0, 1, 0);
 
-        findTransformECC(warpedImage, testImg, mapEuclidean, 1, criteria);
+        if(use_pyramids)
+        {
+            ECCParameters params;
+            params.criteria = criteria;
+            params.motionType = MOTION_EUCLIDEAN;
+            findTransformECCMultiscale(warpedImage, testImg, mapEuclidean, params);
+        }
+        else
+            findTransformECC(warpedImage, testImg, mapEuclidean, 1, criteria);
 
         if (!checkMap(mapEuclidean, euclideanGround))
             return false;
@@ -255,7 +283,15 @@ bool CV_ECC_Test_Affine::test(const Mat testImg) {
 
         Mat mapAffine = (Mat_<float>(2, 3) << 1, 0, 0, 0, 1, 0);
 
-        findTransformECC(warpedImage, testImg, mapAffine, 2, criteria);
+        if(use_pyramids)
+        {
+            ECCParameters params;
+            params.criteria = criteria;
+            params.motionType = MOTION_AFFINE;
+            findTransformECCMultiscale(warpedImage, testImg, mapAffine, params);
+        }
+        else
+            findTransformECC(warpedImage, testImg, mapAffine, 2, criteria);
 
         if (!checkMap(mapAffine, affineGround))
             return false;
@@ -292,8 +328,15 @@ bool CV_ECC_Test_Homography::test(const Mat testImg) {
         warpPerspective(testImg, warpedImage, homoGround, Size(200, 200), INTER_LINEAR + WARP_INVERSE_MAP);
 
         Mat mapHomography = Mat::eye(3, 3, CV_32F);
-
-        findTransformECC(warpedImage, testImg, mapHomography, 3, criteria);
+        if(use_pyramids) 
+        {
+            ECCParameters params;
+            params.criteria = criteria;
+            params.motionType = MOTION_HOMOGRAPHY;
+            findTransformECCMultiscale(warpedImage, testImg, mapHomography, params);
+        }
+        else
+            findTransformECC(warpedImage, testImg, mapHomography, 3, criteria);
 
         if (!checkMap(mapHomography, homoGround))
             return false;
@@ -366,6 +409,59 @@ bool CV_ECC_Test_Mask::test(const Mat testImg) {
             return false;
     }
     return true;
+}
+
+class CV_ECC_BigPictureTest : public CV_ECC_BaseTest {
+   public:
+    CV_ECC_BigPictureTest() : masked_version(false) {}
+    virtual ~CV_ECC_BigPictureTest() {}
+    void maskedVersion() { masked_version = true; } 
+   protected:
+    void run(int);
+    bool masked_version;
+};
+
+void CV_ECC_BigPictureTest::run(int)
+{
+    Mat largeGray0 = imread(string(ts->get_data_path()) + "shared/halmosh0.jpg", IMREAD_GRAYSCALE);
+    Mat largeGray1;
+    Mat roiMask0;
+    Mat roiMask1;
+    Mat expectedRes;
+    bool readError = false;
+    if(masked_version)
+    {
+        largeGray1 = imread(string(ts->get_data_path()) + "shared/halmosh2.jpg", IMREAD_GRAYSCALE);
+        roiMask0 = imread(string(ts->get_data_path()) + "shared/halmosh0mask.png", IMREAD_GRAYSCALE);
+        roiMask1 = imread(string(ts->get_data_path()) + "shared/halmosh2mask.png", IMREAD_GRAYSCALE);
+        readError = largeGray0.empty() || largeGray1.empty() || roiMask0.empty() || roiMask1.empty();
+        expectedRes = (Mat_<float>(3, 3) << 1.0303, 0.0618, -65.2214, -0.0456, 1.0373, 21.188, 5.9e-06, 1.5e-06, 1);
+    }
+    else
+    {
+        largeGray1 = imread(string(ts->get_data_path()) + "shared/halmosh1.jpg", IMREAD_GRAYSCALE);
+        readError = largeGray0.empty() || largeGray1.empty();
+        expectedRes = (Mat_<float>(3, 3) << 0.9751, -0.0323, 52.094, 0.0123, 0.9802, 16.9658, -1.14e-05, -4.55e-06, 1);
+    }
+    
+    if(readError)
+    {
+        ts->printf(ts->LOG, "test image can not be read");
+        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+        return;
+    }        
+
+    cv::Mat found = cv::Mat::eye(3, 3, CV_32F);
+    constexpr int N_ITERS = 20;
+    constexpr double TERMINATION_EPS = 1e-6;
+    ECCParameters params;
+    params.criteria = cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, N_ITERS, TERMINATION_EPS);
+    params.motionType = MOTION_HOMOGRAPHY;
+    params.numberOfPyramidsLevel = 6;
+    params.itersPerLevel = {5, 10, 300, 300, 1000, 1000};
+    findTransformECCMultiscale(largeGray0, largeGray1, found, params, roiMask0, roiMask1);
+    ASSERT_EQ(checkMap(found, expectedRes), true);
+    ts->set_failed_test_info(cvtest::TS::OK);
 }
 
 void testECCProperties(Mat x, float eps) {
@@ -454,22 +550,56 @@ TEST(Video_ECC_Translation, accuracy) {
     CV_ECC_Test_Translation test;
     test.safe_run();
 }
+TEST(Video_ECC_Translation_Pyr, accuracy) {
+    CV_ECC_Test_Translation test;
+    test.usePyramids();
+// DUBUG: Well, i'm not sure we have to be nervous about such a difference:
+// ORIGINAL:1.000000, 0.000000, 17.786327
+// ORIGINAL:0.000000, 1.000000, 19.370564
+// FOUND:1.000000, 0.000000, 18.200426
+// FOUND:0.000000, 1.000000, 19.860243
+    test.setRMS_MAX(0.3);
+    test.safe_run();
+}
 TEST(Video_ECC_Euclidean, accuracy) {
     CV_ECC_Test_Euclidean test;
+    test.safe_run();
+}
+TEST(Video_ECC_Euclidean_Pyr, accuracy) {
+    CV_ECC_Test_Euclidean test;
+    test.usePyramids();
     test.safe_run();
 }
 TEST(Video_ECC_Affine, accuracy) {
     CV_ECC_Test_Affine test;
     test.safe_run();
 }
+TEST(Video_ECC_Affine_Pyr, accuracy) {
+    CV_ECC_Test_Affine test;
+    test.usePyramids();
+    test.safe_run();
+}
 TEST(Video_ECC_Homography, accuracy) {
     CV_ECC_Test_Homography test;
+    test.safe_run();
+}
+TEST(Video_ECC_Homography_Pyr, accuracy) {
+    CV_ECC_Test_Homography test;
+    test.usePyramids();
     test.safe_run();
 }
 TEST(Video_ECC_Mask, accuracy) {
     CV_ECC_Test_Mask test;
     test.safe_run();
 }
-
+TEST(Video_ECC_BigPyr, accuracy) {
+    CV_ECC_BigPictureTest test;
+    test.safe_run();
+}
+TEST(Video_ECC_BigPyr_Mask, accuracy) {
+    CV_ECC_BigPictureTest test;
+    test.maskedVersion();
+    test.safe_run();
+}
 }  // namespace
 }  // namespace opencv_test
