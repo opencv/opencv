@@ -45,7 +45,6 @@
 #include "distortion_model.hpp"
 #include "opencv2/core/core_c.h"
 #include "opencv2/calib3d/calib3d_c.h"
-
 #include <iterator>
 
 /*
@@ -570,7 +569,14 @@ static void subMatrix(const Mat& src, Mat& dst,
     }
 }
 
-static double calibrateCameraInternalLegacy( const Mat& objectPoints,
+/*
+    This is straight-forward port v3 of Matlab calibration engine by Jean-Yves Bouguet
+    that is (in a large extent) based on the paper:
+    Z. Zhang. "A flexible new technique for camera calibration".
+    IEEE Transactions on Pattern Analysis and Machine Intelligence, 22(11):1330-1334, 2000.
+    The 1st initial port was done by Valery Mosyagin.
+*/
+static double calibrateCameraInternalBouguet( const Mat& objectPoints,
                                              const Mat& imagePoints, const Mat& npoints,
                                              Size imageSize, int iFixedPoint, Mat& cameraMatrix, Mat& distCoeffs,
                                              Mat rvecs, Mat tvecs, Mat newObjPoints, Mat stdDevs,
@@ -1028,7 +1034,7 @@ static double calibrateCameraInternalLegacy( const Mat& objectPoints,
     return std::sqrt(reprojErr/total);
 }
 
-static double calibrateCameraInternal( const Mat& objectPoints,
+static double calibrateCameraInternalSchur( const Mat& objectPoints,
                                        const Mat& imagePoints, const Mat& npoints,
                                        Size imageSize, int iFixedPoint, Mat& cameraMatrix, Mat& distCoeffs,
                                        Mat rvecs, Mat tvecs, Mat newObjPoints, Mat stdDevs,
@@ -1355,13 +1361,10 @@ static double calibrateCameraInternal( const Mat& objectPoints,
         Matx33d intrin(fx, 0, cx, 0, fy, cy, 0, 0, 1);
         Mat dist = param_m.rowRange(4, 4 + 14);
 
-        Mat err(ni * 2, 1, CV_64F);
-        Mat _mp = err.reshape(2, 1);
-        projectPoints(_Mi, _ri, _ti, intrin, dist, _mp);
-        subtract(_mp, _mi, _mp);
-        _mp.copyTo(_me);
+        projectPoints(_Mi, _ri, _ti, intrin, dist, _me);
+        subtract(_me, _mi, _me);
 
-        reprojErr += norm(err, NORM_L2SQR);
+        reprojErr += norm(_me, NORM_L2SQR);
         pos += ni;
     }
 
@@ -1403,8 +1406,6 @@ static double calibrateCameraInternal( const Mat& objectPoints,
                 param_m(si + kk) -= solver.getLocalUpdate(i).at<double>(kk);
         }
         jacobianAtCurrentParams = false;
-
-
         for (int iter = 0; iter < termCrit.maxCount; iter++)
         {
             if (flags & CALIB_FIX_ASPECT_RATIO)
@@ -1434,13 +1435,10 @@ static double calibrateCameraInternal( const Mat& objectPoints,
                 Matx33d intrin(fx, 0, cx, 0, fy, cy, 0, 0, 1);
                 Mat dist = param_m.rowRange(4, 4 + 14);
 
-                Mat err(ni * 2, 1, CV_64F);
-                Mat _mp = err.reshape(2, 1);
-                projectPoints(_Mi, _ri, _ti, intrin, dist, _mp);
-                subtract(_mp, _mi, _mp);
-                _mp.copyTo(_me);
+                projectPoints(_Mi, _ri, _ti, intrin, dist, _me);
+                subtract(_me, _mi, _me);
 
-                double viewErr = norm(err, NORM_L2SQR);
+                double viewErr = norm(_me, NORM_L2SQR);
                 if (!perViewErr.empty())
                 {
                     perViewErr.at<double>(i) = std::sqrt(viewErr / ni);
@@ -1519,9 +1517,6 @@ static double calibrateCameraInternal( const Mat& objectPoints,
                     param_m(si + kk) -= solver.getLocalUpdate(i).at<double>(kk);
             }
             jacobianAtCurrentParams = false;
-
-
-
         }
     }
 
@@ -1563,13 +1558,10 @@ static double calibrateCameraInternal( const Mat& objectPoints,
             Matx33d intrin(fx, 0, cx, 0, fy, cy, 0, 0, 1);
             Mat dist = param_m.rowRange(4, 4 + 14);
 
-            Mat err(ni * 2, 1, CV_64F);
-            Mat _mp = err.reshape(2, 1);
-            projectPoints(_Mi, _ri, _ti, intrin, dist, _mp);
-            subtract(_mp, _mi, _mp);
-            _mp.copyTo(_me);
+            projectPoints(_Mi, _ri, _ti, intrin, dist, _me);
+            subtract(_me, _mi, _me);
 
-            double viewErr = norm(err, NORM_L2SQR);
+            double viewErr = norm(_me, NORM_L2SQR);
             if (!perViewErr.empty())
             {
                 perViewErr.at<double>(i) = std::sqrt(viewErr / ni);
@@ -1608,7 +1600,9 @@ static double calibrateCameraInternal( const Mat& objectPoints,
             Mat srcV = solver.V[i];
             Mat dstV = JtJ(Rect(si, si, 6, 6));
             for(int r=0; r<srcV.rows; r++) {
-                srcV.copyTo(dstV);
+                const double* sptr = srcV.ptr<double>(r);
+                double* dptr = dstV.ptr<double>(r);
+                for(int c=0; c<srcV.cols; c++) dptr[c] = sptr[c];
             }
 
             Mat srcW = solver.W[i].rowRange(0, NINTRINSIC);
@@ -1803,14 +1797,19 @@ static double stereoCalibrateImpl(
             distCoeffs.convertTo(tdist, CV_64F);
         }
 
-        if( !(flags & (CALIB_FIX_INTRINSIC | CALIB_USE_INTRINSIC_GUESS)))
-        {
-            Mat mIntr(A[k], /* copyData = */ false);
-            Mat mDist(distInitial[k], /* copyData = */ false);
-            calibrateCameraInternal(objectPoints, imagePoints[k],
-                                    _npoints, imageSize, 0, mIntr, mDist,
-                                    Mat(), Mat(), Mat(), Mat(), Mat(), flags, termCrit);
-        }
+          if( !(flags & (CALIB_FIX_INTRINSIC | CALIB_USE_INTRINSIC_GUESS)))
+          {
+              Mat mIntr(A[k], /* copyData = */ false);
+              Mat mDist(distInitial[k], /* copyData = */ false);
+              if( flags & CALIB_DISABLE_SCHUR_COMPLEMENT )
+                  calibrateCameraInternalBouguet(objectPoints, imagePoints[k],
+                                      _npoints, imageSize, 0, mIntr, mDist,
+                                      Mat(), Mat(), Mat(), Mat(), Mat(), flags, termCrit);
+              else
+                  calibrateCameraInternalSchur(objectPoints, imagePoints[k],
+                                      _npoints, imageSize, 0, mIntr, mDist,
+                                      Mat(), Mat(), Mat(), Mat(), Mat(), flags, termCrit);
+          }
     }
 
     if( flags & CALIB_SAME_FOCAL_LENGTH )
@@ -1835,7 +1834,7 @@ static double stereoCalibrateImpl(
     // - from 0 next 6: stereo pair Rt, from 6+i*6 next 6: Rt for each ith camera of nimages,
     // - from 6*(nimages+1) next NINTRINSICS: intrinsics for 1st camera: fx, fy, cx, cy, 14 x dist
     // - next NINTRINSICS: the same for for 2nd camera
-    nparams = 6 * (nimages + 1) + (recomputeIntrinsics ? NINTRINSIC * 2 : 0);
+    nparams = 6*(nimages+1) + (recomputeIntrinsics ? NINTRINSIC*2 : 0);
 
     CvLevMarq solver( nparams, 0, cvTermCriteria(termCrit) );
     double * param = solver.param->data.db;
@@ -2481,7 +2480,6 @@ double calibrateCameraRO(InputArrayOfArrays _objectPoints,
     bool rvecs_mat_vec = _rvecs.isMatVector();
     bool tvecs_mat_vec = _tvecs.isMatVector();
 
-    // 1. Setup rvecM/tvecM buffers
     if( rvecs_needed )
     {
         _rvecs.create(nimages, 1, CV_64FC3);
@@ -2529,9 +2527,9 @@ double calibrateCameraRO(InputArrayOfArrays _objectPoints,
     }
 
     double reprojErr = 0;
-    if( flags & CALIB_USE_LEGACY )
+    if( flags & CALIB_DISABLE_SCHUR_COMPLEMENT )
     {
-        reprojErr = calibrateCameraInternalLegacy(
+        reprojErr = calibrateCameraInternalBouguet(
                 objPt, imgPt, npoints, imageSize, iFixedPoint,
                 cameraMatrix, distCoeffs,
                 rvecM, tvecM,
@@ -2541,7 +2539,7 @@ double calibrateCameraRO(InputArrayOfArrays _objectPoints,
     }
     else
     {
-        reprojErr = calibrateCameraInternal(
+        reprojErr = calibrateCameraInternalSchur(
                 objPt, imgPt, npoints, imageSize, iFixedPoint,
                 cameraMatrix, distCoeffs,
                 rvecM, tvecM,
