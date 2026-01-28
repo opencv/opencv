@@ -4,7 +4,7 @@
 
 #include "../precomp.hpp"
 #include <opencv2/calib3d.hpp>
-
+#include <mutex>
 #include "opencv2/objdetect/aruco_detector.hpp"
 #include "opencv2/objdetect/aruco_board.hpp"
 #include "apriltag/apriltag_quad_thresh.hpp"
@@ -789,6 +789,13 @@ struct ArucoDetector::ArucoDetectorImpl {
         vector<int> ids;
         vector<float> markersConfidence;
 
+        // Scoped clamp: prevent catastrophic nested parallelism under external concurrency.
+        // Save/restore to avoid permanent global side effects.
+        static std::mutex g_threads_guard;
+        std::unique_lock<std::mutex> lk(g_threads_guard);
+        const int prevThreads = cv::getNumThreads();
+        if (prevThreads > 1) cv::setNumThreads(1);
+
         /// STEP 2.a Detect marker candidates :: using AprilTag
         if(detectorParams.cornerRefinementMethod == (int)CORNER_REFINE_APRILTAG){
             // Avoid nested OpenCV parallelism: run APRILTAG candidate detection in a 1-stripe region
@@ -814,11 +821,14 @@ struct ArucoDetector::ArucoDetectorImpl {
             identifyCandidates(grey, grey_pyramid, selectedCandidates, candidates, contours,
                     ids, dictionary, rejectedImgPoints, markersConfidence, _markersConfidence.needed());
 
+            if (prevThreads > 1) cv::setNumThreads(prevThreads);
+
             /// STEP 3: Corner refinement :: use corner subpix
             if (detectorParams.cornerRefinementMethod == (int)CORNER_REFINE_SUBPIX) {
                 performCornerSubpixRefinement(grey, grey_pyramid, closest_pyr_image_idx, candidates, dictionary);
             }
         } else if (DictionaryMode::Multi == dictMode) {
+            if (prevThreads > 1) cv::setNumThreads(prevThreads);
             map<int, vector<MarkerCandidateTree>> candidatesPerDictionarySize;
             for (const Dictionary& dictionary : dictionaries) {
                 candidatesPerDictionarySize.emplace(dictionary.markerSize, vector<MarkerCandidateTree>());
