@@ -791,7 +791,10 @@ struct ArucoDetector::ArucoDetectorImpl {
 
         /// STEP 2.a Detect marker candidates :: using AprilTag
         if(detectorParams.cornerRefinementMethod == (int)CORNER_REFINE_APRILTAG){
-            _apriltag(grey, detectorParams, candidates, contours);
+            // Avoid nested OpenCV parallelism: run APRILTAG candidate detection in a 1-stripe region
+            cv::parallel_for_(cv::Range(0, 1), [&](const cv::Range&) {
+                _apriltag(grey, detectorParams, candidates, contours);
+            }, 1);
         }
         /// STEP 2.b Detect marker candidates :: traditional way
         else {
