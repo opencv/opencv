@@ -224,10 +224,62 @@ if(DOXYGEN_FOUND)
   # js tutorial assets
   set(opencv_tutorial_html_dir "${CMAKE_CURRENT_BINARY_DIR}/doxygen/html")
   set(js_tutorials_assets_dir "${CMAKE_CURRENT_SOURCE_DIR}/js_tutorials/js_assets")
+  set(prismjs_3rdparty_dir "${OpenCV_SOURCE_DIR}/3rdparty/prismjs")
   set(js_tutorials_assets_deps "")
 
   # make sure the build directory exists
   file(MAKE_DIRECTORY "${opencv_tutorial_html_dir}")
+
+  # minify prism.js files from 3rdparty for syntax highlighting
+  if(PYTHON_DEFAULT_EXECUTABLE)
+    # Minify prism.js
+    set(prism_src "${prismjs_3rdparty_dir}/prism.js")
+    set(prism_min "${CMAKE_CURRENT_BINARY_DIR}/prism.min.js")
+    add_custom_command(
+      OUTPUT "${prism_min}"
+      COMMAND "${PYTHON_DEFAULT_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/minify_js.py" "${prism_src}" "${prism_min}"
+      DEPENDS "${prism_src}" "${CMAKE_CURRENT_SOURCE_DIR}/minify_js.py"
+      COMMENT "Minifying prism.js from 3rdparty"
+    )
+    list(APPEND js_tutorials_assets_deps "${prism_min}")
+    
+    # Minify prism-textarea.js
+    set(prism_textarea_src "${prismjs_3rdparty_dir}/prism-textarea.js")
+    set(prism_textarea_min "${CMAKE_CURRENT_BINARY_DIR}/prism-textarea.min.js")
+    add_custom_command(
+      OUTPUT "${prism_textarea_min}"
+      COMMAND "${PYTHON_DEFAULT_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/minify_js.py" "${prism_textarea_src}" "${prism_textarea_min}"
+      DEPENDS "${prism_textarea_src}" "${CMAKE_CURRENT_SOURCE_DIR}/minify_js.py"
+      COMMENT "Minifying prism-textarea.js from 3rdparty"
+    )
+    list(APPEND js_tutorials_assets_deps "${prism_textarea_min}")
+    
+    # Copy minified files to output
+    add_custom_command(
+      OUTPUT "${opencv_tutorial_html_dir}/prism.min.js"
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different "${prism_min}" "${opencv_tutorial_html_dir}/prism.min.js"
+      DEPENDS "${prism_min}"
+      COMMENT "Copying minified prism.js"
+    )
+    list(APPEND js_tutorials_assets_deps "${opencv_tutorial_html_dir}/prism.min.js")
+    
+    add_custom_command(
+      OUTPUT "${opencv_tutorial_html_dir}/prism-textarea.min.js"
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different "${prism_textarea_min}" "${opencv_tutorial_html_dir}/prism-textarea.min.js"
+      DEPENDS "${prism_textarea_min}"
+      COMMENT "Copying minified prism-textarea.js"
+    )
+    list(APPEND js_tutorials_assets_deps "${opencv_tutorial_html_dir}/prism-textarea.min.js")
+    
+    # Copy prism.css (already minified in 3rdparty)
+    add_custom_command(
+      OUTPUT "${opencv_tutorial_html_dir}/prism.min.css"
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different "${prismjs_3rdparty_dir}/prism.css" "${opencv_tutorial_html_dir}/prism.min.css"
+      DEPENDS "${prismjs_3rdparty_dir}/prism.css"
+      COMMENT "Copying prism.css"
+    )
+    list(APPEND js_tutorials_assets_deps "${opencv_tutorial_html_dir}/prism.min.css")
+  endif()
 
   # gather and copy specific files for js tutorials
   file(GLOB_RECURSE js_assets "${js_tutorials_assets_dir}/*")
