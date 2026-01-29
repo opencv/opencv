@@ -199,7 +199,7 @@ bool CV_ECC_Test_Translation::test(const Mat testImg) {
             ECCParameters params;
             params.criteria = criteria;
             params.motionType = MOTION_TRANSLATION;
-            findTransformECCMultiscale(warpedImage, testImg, mapTranslation, params);
+            findTransformECCMultiScale(warpedImage, testImg, mapTranslation, params);
         }
         else
             findTransformECC(warpedImage, testImg, mapTranslation, 0, criteria);
@@ -244,7 +244,7 @@ bool CV_ECC_Test_Euclidean::test(const Mat testImg) {
             ECCParameters params;
             params.criteria = criteria;
             params.motionType = MOTION_EUCLIDEAN;
-            findTransformECCMultiscale(warpedImage, testImg, mapEuclidean, params);
+            findTransformECCMultiScale(warpedImage, testImg, mapEuclidean, params);
         }
         else
             findTransformECC(warpedImage, testImg, mapEuclidean, 1, criteria);
@@ -288,7 +288,7 @@ bool CV_ECC_Test_Affine::test(const Mat testImg) {
             ECCParameters params;
             params.criteria = criteria;
             params.motionType = MOTION_AFFINE;
-            findTransformECCMultiscale(warpedImage, testImg, mapAffine, params);
+            findTransformECCMultiScale(warpedImage, testImg, mapAffine, params);
         }
         else
             findTransformECC(warpedImage, testImg, mapAffine, 2, criteria);
@@ -333,7 +333,7 @@ bool CV_ECC_Test_Homography::test(const Mat testImg) {
             ECCParameters params;
             params.criteria = criteria;
             params.motionType = MOTION_HOMOGRAPHY;
-            findTransformECCMultiscale(warpedImage, testImg, mapHomography, params);
+            findTransformECCMultiScale(warpedImage, testImg, mapHomography, params);
         }
         else
             findTransformECC(warpedImage, testImg, mapHomography, 3, criteria);
@@ -459,7 +459,7 @@ void CV_ECC_BigPictureTest::run(int)
     params.motionType = MOTION_HOMOGRAPHY;
     params.numberOfPyramidsLevel = 6;
     params.itersPerLevel = {5, 10, 300, 300, 1000, 1000};
-    findTransformECCMultiscale(largeGray0, largeGray1, found, params, roiMask0, roiMask1);
+    findTransformECCMultiScale(largeGray0, largeGray1, found, params, roiMask0, roiMask1);
     ASSERT_EQ(checkMap(found, expectedRes), true);
     ts->set_failed_test_info(cvtest::TS::OK);
 }
@@ -550,7 +550,7 @@ TEST(Video_ECC_Translation, accuracy) {
     CV_ECC_Test_Translation test;
     test.safe_run();
 }
-TEST(Video_ECC_Translation_Pyr, accuracy) {
+TEST(Video_ECC_Translation_MS, accuracy) {
     CV_ECC_Test_Translation test;
     test.usePyramids();
 // DUBUG: Well, i'm not sure we have to be nervous about such a difference:
@@ -565,7 +565,7 @@ TEST(Video_ECC_Euclidean, accuracy) {
     CV_ECC_Test_Euclidean test;
     test.safe_run();
 }
-TEST(Video_ECC_Euclidean_Pyr, accuracy) {
+TEST(Video_ECC_Euclidean_MS, accuracy) {
     CV_ECC_Test_Euclidean test;
     test.usePyramids();
     test.safe_run();
@@ -574,7 +574,7 @@ TEST(Video_ECC_Affine, accuracy) {
     CV_ECC_Test_Affine test;
     test.safe_run();
 }
-TEST(Video_ECC_Affine_Pyr, accuracy) {
+TEST(Video_ECC_Affine_MS, accuracy) {
     CV_ECC_Test_Affine test;
     test.usePyramids();
     test.safe_run();
@@ -583,7 +583,7 @@ TEST(Video_ECC_Homography, accuracy) {
     CV_ECC_Test_Homography test;
     test.safe_run();
 }
-TEST(Video_ECC_Homography_Pyr, accuracy) {
+TEST(Video_ECC_Homography_MS, accuracy) {
     CV_ECC_Test_Homography test;
     test.usePyramids();
     test.safe_run();
@@ -592,11 +592,11 @@ TEST(Video_ECC_Mask, accuracy) {
     CV_ECC_Test_Mask test;
     test.safe_run();
 }
-TEST(Video_ECC_BigPyr, accuracy) {
+TEST(Video_ECC_BigMS, accuracy) {
     CV_ECC_BigPictureTest test;
     test.safe_run();
 }
-TEST(Video_ECC_BigPyr_Mask, accuracy) {
+TEST(Video_ECC_BigMS_Mask, accuracy) {
     CV_ECC_BigPictureTest test;
     test.maskedVersion();
     test.safe_run();

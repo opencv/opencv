@@ -419,7 +419,7 @@ CV_EXPORTS_W double findTransformECCWithMask( InputArray templateImage,
                                  TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 50, 1e-6),
                                  int gaussFiltSize = 5 );
 
-/** @brief struct ECCParameters is used by findTransformECCMultiscale
+/** @brief struct ECCParameters is used by findTransformECCMultiScale
 
 @param motionType parameter, specifying the type of motion:
  -   **MOTION_TRANSLATION** sets a translational motion model; warpMatrix is \f$2\times 3\f$ with
@@ -474,7 +474,7 @@ correlation coefficient, that is the correlation coefficient between the templat
 final warped input image. When a \f$3\times 3\f$ matrix is given with motionType =0, 1 or 2, the third
 row is ignored.
 
-Unlike findHomography and estimateRigidTransform, the function findTransformECCMultiscale implements
+Unlike findHomography and estimateRigidTransform, the function findTransformECCMultiScale implements
 an area-based alignment that builds on intensity similarities. In essence, the function updates the
 initial transformation that roughly aligns the images. If this information is missing, the identity
 warp (unity matrix) is used as an initialization. Note that if images undergo strong
@@ -484,19 +484,19 @@ content approximately). Use inverse warping in the second image to take an image
 one, i.e. use the flag WARP_INVERSE_MAP with warpAffine or warpPerspective. See also the OpenCV
 sample image_alignment.cpp that demonstrates the use of the function. Note that the function throws
 an exception if algorithm does not converges. 
-Unlike findTransformECC, the findTransformECCMultiscale uses pyramids, making function more stable 
+Unlike findTransformECC, the findTransformECCMultiScale uses pyramids, making function more stable 
 and able to handle correctly more sophisticated cases.
 
 @sa
 computeECC, estimateAffine2D, estimateAffinePartial2D, findHomography
 */
 
-CV_EXPORTS_W double findTransformECCMultiscale(InputArray reference,
+CV_EXPORTS_W double findTransformECCMultiScale(InputArray reference,
                         InputArray sample,
                         InputOutputArray warpMatrix,
                         const ECCParameters& eccParams = ECCParameters(),
-                        InputArray referenceMask = cv::Mat(),
-                        InputArray sampleMask = cv::Mat());
+                        InputArray referenceMask = _InputArray(),
+                        InputArray sampleMask = _InputArray());
 
 /** @example samples/cpp/kalman.cpp
 An example using the standard Kalman filter

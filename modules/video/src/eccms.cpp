@@ -1,43 +1,6 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
-//
-//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
-//
-//  By downloading, copying, installing or using the software you agree to this license.
-//  If you do not agree to this license, do not download, install,
-//  copy or use the software.
-//
-//
-//                        Intel License Agreement
-//                For Open Source Computer Vision Library
-//
-// Copyright (C) 2000, Intel Corporation, all rights reserved.
-// Third party copyrights are property of their respective owners.
-//
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-//
-//   * Redistribution's of source code must retain the above copyright notice,
-//     this list of conditions and the following disclaimer.
-//
-//   * Redistribution's in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
-//
-//   * The name of Intel Corporation may not be used to endorse or promote products
-//     derived from this software without specific prior written permission.
-//
-// This software is provided by the copyright holders and contributors "as is" and
-// any express or implied warranties, including, but not limited to, the implied
-// warranties of merchantability and fitness for a particular purpose are disclaimed.
-// In no event shall the Intel Corporation or contributors be liable for any direct,
-// indirect, incidental, special, exemplary, or consequential damages
-// (including, but not limited to, procurement of substitute goods or services;
-// loss of use, data, or profits; or business interruption) however caused
-// and on any theory of liability, whether in contract, strict liability,
-// or tort (including negligence or otherwise) arising in any way out of
-// the use of this software, even if advised of the possibility of such damage.
-//
-//M*/
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html
 
 #include "precomp.hpp"
 
@@ -45,15 +8,14 @@
 *                    Image Alignment (ECC algorithm, pyramidal version)                  *
 \****************************************************************************************/
 
-using namespace cv;
-
+namespace cv { 
 typedef std::vector<cv::Mat> MatPyramid; //DUBUG: Well, i don't know, what standart type to use for pyramid representation.
 
 template<int motionType> struct MotionTraits {};
 
 template<> struct MotionTraits<MOTION_TRANSLATION> {
     enum { paramAmount = 2 };
-    static inline void tail_handler_get_coord(float& sx,
+    static inline void tailHandlerGetCoord(float& sx,
                                               float& sy,
                                               float& denominator,
                                               int col, 
@@ -79,7 +41,7 @@ template<> struct MotionTraits<MOTION_TRANSLATION> {
 
 template<> struct MotionTraits<MOTION_EUCLIDEAN> {
     enum { paramAmount = 3 };
-    static inline void tail_handler_get_coord(float& sx,
+    static inline void tailHandlerGetCoord(float& sx,
                                               float& sy,
                                               float& denominator,
                                               int col, 
@@ -109,7 +71,7 @@ template<> struct MotionTraits<MOTION_EUCLIDEAN> {
 
 template<> struct MotionTraits<MOTION_AFFINE> {
     enum { paramAmount = 6};
-    static inline void tail_handler_get_coord(float& sx,
+    static inline void tailHandlerGetCoord(float& sx,
                                               float& sy,
                                               float& denominator,
                                               int col, 
@@ -136,7 +98,7 @@ template<> struct MotionTraits<MOTION_AFFINE> {
 
 template<> struct MotionTraits<MOTION_HOMOGRAPHY> {
     enum { paramAmount = 8};
-    static inline void tail_handler_get_coord(float& sx,
+    static inline void tailHandlerGetCoord(float& sx,
                                               float& sy,
                                               float& denominator,
                                               int col, 
@@ -185,7 +147,7 @@ public:
 };
 
 template<int N, class F>
-constexpr void constexpr_for(F&& fVal) {
+constexpr void constexprFor(F&& fVal) {
     constexprForClass<N, F>::execute(std::forward<F>(fVal));
 }
 template<int R, int C, class F>
@@ -223,17 +185,17 @@ public:
 };
 
 template<int M, class F>
-constexpr void constexpr_for_upper_triangle(F&& fVal) {
+constexpr void constexprForUpperTriangle(F&& fVal) {
     constexprForUpperTriangleClass<M,M,F>::execute(std::forward<F>(fVal));
 }
 
 template<int MotionType>
-constexpr int hessian_row_start(int row) {
-    return row == 0 ? 0 : (MotionTraits<MotionType>::paramAmount - row + 1 + hessian_row_start<MotionType>(row - 1));
+constexpr int hessianRowStart(int row) {
+    return row == 0 ? 0 : (MotionTraits<MotionType>::paramAmount - row + 1 + hessianRowStart<MotionType>(row - 1));
 }
 
 template<int motionType, typename elemtype>
-static double image_hessian_proj_ECC(const Mat& map,
+static double imageHessianProjECC(const Mat& map,
                            const Mat& sampleWithGrad,
                            const Mat& ref,
                            double& sampSum,
@@ -325,7 +287,7 @@ static double image_hessian_proj_ECC(const Mat& map,
             int x = 0;
             for (; x < wr; x++) { //Tail handler
                 float sx, sy, denominator;
-                MotionTraits<motionType>::tail_handler_get_coord(sx, sy, denominator, x, numeratorX0, numeratorY0,
+                MotionTraits<motionType>::tailHandlerGetCoord(sx, sy, denominator, x, numeratorX0, numeratorY0,
                                                 denominator0, a00, a10, a20);
                 unsigned int ix = saturate_cast<unsigned>(sx);
                 unsigned int iy = saturate_cast<unsigned>(sy);
@@ -347,10 +309,10 @@ static double image_hessian_proj_ECC(const Mat& map,
                     std::array<float, NPARAMS> jac = MotionTraits<motionType>::fillJacobian(x, y, sx, sy, 
                                                                                             fVal, samplePtr, a00,
                                                                                             a10, denominator);
-                    constexpr_for_upper_triangle<NPARAMS>([&](int row_i, int col_i) {
-                        hessPcache[hessian_row_start<motionType>(row_i) + (col_i - row_i)] += jac[row_i] * jac[col_i];
+                    constexprForUpperTriangle<NPARAMS>([&](int row_i, int col_i) {
+                        hessPcache[hessianRowStart<motionType>(row_i) + (col_i - row_i)] += jac[row_i] * jac[col_i];
                     });
-                    constexpr_for<NPARAMS>([&](int elem) {
+                    constexprFor<NPARAMS>([&](int elem) {
                         iprojCache[elem] += jac[elem] * sampleVal;
                         tprojCache[elem] += jac[elem] * refVal;
                         projSubCache[elem] += jac[elem] * fVal;
@@ -359,10 +321,10 @@ static double image_hessian_proj_ECC(const Mat& map,
                 }
             }
 
-            constexpr_for_upper_triangle<NPARAMS>([&](int row, int col) {
-                hessPs[stripeIdx](row, col) += hessPcache[hessian_row_start<motionType>(row) + (col - row)];
+            constexprForUpperTriangle<NPARAMS>([&](int row, int col) {
+                hessPs[stripeIdx](row, col) += hessPcache[hessianRowStart<motionType>(row) + (col - row)];
             });
-            constexpr_for<NPARAMS>([&](int elem) {
+            constexprFor<NPARAMS>([&](int elem) {
                 iprojs[stripeIdx][elem] += iprojCache[elem];
                 tprojs[stripeIdx][elem] += tprojCache[elem];
                 projSubs[stripeIdx][elem] += projSubCache[elem];
@@ -400,13 +362,13 @@ static double image_hessian_proj_ECC(const Mat& map,
             refProjPtr[projNum] += tprojs[stripeIdx][projNum] - projSubs[stripeIdx][projNum] * refMean;
         }
     }
-    constexpr_for_upper_triangle<NPARAMS>([&](int row, int col) {
+    constexprForUpperTriangle<NPARAMS>([&](int row, int col) {
         hessPtr[col * NPARAMS + row] = hessPtr[row * NPARAMS + col];
     });
     return correlation;
 }
 
-static void update_warping_matrix_ECC_double(Mat& map_matrix, const Mat& update, const int motionType) {
+static void updateWarpingMatrixECC(Mat& map_matrix, const Mat& update, const int motionType) {
     CV_Assert(map_matrix.type() == CV_64FC1);
     CV_Assert(update.type() == CV_64FC1);
 
@@ -464,7 +426,7 @@ static void update_warping_matrix_ECC_double(Mat& map_matrix, const Mat& update,
     }
 }
 
-static void optimize_ECC(Mat& sampleWithGrad,
+static void optimizeECC(Mat& sampleWithGrad,
                  const Mat& reference,
                  Mat& map,
                  int motionType,
@@ -492,7 +454,7 @@ static void optimize_ECC(Mat& sampleWithGrad,
 
     {  // if(imageWithGrad.type() == CV_32FC4)
         if (motionType == MOTION_TRANSLATION) {
-            correlation = image_hessian_proj_ECC<MOTION_TRANSLATION, float>(map,
+            correlation = imageHessianProjECC<MOTION_TRANSLATION, float>(map,
                                                                        sampleWithGrad,
                                                                        reference,
                                                                        sampSum,
@@ -505,7 +467,7 @@ static void optimize_ECC(Mat& sampleWithGrad,
                                                                        referenceProjection,
                                                                        deltaY);
         } else if (motionType == MOTION_EUCLIDEAN) {
-            correlation = image_hessian_proj_ECC<MOTION_EUCLIDEAN, float>(map,
+            correlation = imageHessianProjECC<MOTION_EUCLIDEAN, float>(map,
                                                                        sampleWithGrad,
                                                                        reference,
                                                                        sampSum,
@@ -518,7 +480,7 @@ static void optimize_ECC(Mat& sampleWithGrad,
                                                                        referenceProjection,
                                                                        deltaY);
         } else if (motionType == MOTION_AFFINE) {
-            correlation = image_hessian_proj_ECC<MOTION_AFFINE, float>(map,
+            correlation = imageHessianProjECC<MOTION_AFFINE, float>(map,
                                                                        sampleWithGrad,
                                                                        reference,
                                                                        sampSum,
@@ -531,7 +493,7 @@ static void optimize_ECC(Mat& sampleWithGrad,
                                                                        referenceProjection,
                                                                        deltaY);
         } else {
-            correlation = image_hessian_proj_ECC<MOTION_HOMOGRAPHY, float>(map,
+            correlation = imageHessianProjECC<MOTION_HOMOGRAPHY, float>(map,
                                                                         sampleWithGrad,
                                                                         reference,
                                                                         sampSum,
@@ -579,10 +541,10 @@ static void optimize_ECC(Mat& sampleWithGrad,
     gemm(hessianInv, errorProjection, 1., noArray(), 0., deltaP);
 
     // update warping matrix
-    update_warping_matrix_ECC_double(map, deltaP, motionType);
+    updateWarpingMatrixECC(map, deltaP, motionType);
 }
 
-static Mat prepare_gradients(const Mat& sample) {
+static Mat prepareGradients(const Mat& sample) {
     CV_Assert(sample.type() == CV_32FC2 || sample.type() == CV_16FC2);
 
     const int ws = sample.cols;
@@ -619,7 +581,7 @@ static Mat prepare_gradients(const Mat& sample) {
     return sampleWithGrad;
 }
 
-static void build_pyramid(InputArray inputImage,
+static void buildPyramidECC(InputArray inputImage,
                   MatPyramid& imgPyramid,
                   InputArray& mask,
                   MatPyramid& maskPyramid,
@@ -640,7 +602,7 @@ static void build_pyramid(InputArray inputImage,
     }
 }
 
-static Mat splice_with_mask(const Mat& image, const Mat& mask) {
+static Mat spliceWithMask(const Mat& image, const Mat& mask) {
     CV_Assert(image.type() == CV_32F && (mask.empty() || mask.type() == CV_8U));
     if (!mask.empty() && image.size() != mask.size()) {
         CV_Error(Error::BadImageSize, "spliceWithMask: Mask and image have to be of same size.");
@@ -675,7 +637,7 @@ static Mat splice_with_mask(const Mat& image, const Mat& mask) {
     return result;
 }
 
-static void scale_warp_matrix(Mat& warpMatrix, float scale) {
+static void scaleWarpMatrix(Mat& warpMatrix, float scale) {
     if (warpMatrix.rows == 3) {
         Mat invertScaleMat = Mat(3, 3, CV_64F, 0.f);
         invertScaleMat.at<double>(0, 0) = 1.f / scale;
@@ -698,7 +660,7 @@ static void scale_warp_matrix(Mat& warpMatrix, float scale) {
     }
 }
 
-static void check_params(const MatPyramid& referencePyramid,
+static void checkParams(const MatPyramid& referencePyramid,
                  const MatPyramid& samplePyramid,
                  Mat& map,
                  int motionType,
@@ -749,21 +711,21 @@ static MatPyramid prepareECCPyramid(InputArray image,
                              int gaussFiltSize,
                              int numberOfPyramidsLevel) {
     MatPyramid imagePyramid, maskPyramid;
-    build_pyramid(image, imagePyramid, imageMask, maskPyramid, numberOfPyramidsLevel);
+    buildPyramidECC(image, imagePyramid, imageMask, maskPyramid, numberOfPyramidsLevel);
     for (int lvl = 0; lvl < numberOfPyramidsLevel; lvl++) {
         Mat imgFloat;
         imagePyramid[lvl].convertTo(imgFloat, CV_32F, 1. / 255.);
         if (gaussFiltSize != 0) {
             GaussianBlur(imgFloat, imgFloat, Size(gaussFiltSize, gaussFiltSize), 0, 0);
         }
-        imagePyramid[lvl] = splice_with_mask(
+        imagePyramid[lvl] = spliceWithMask(
             imgFloat,
             (static_cast<int>(maskPyramid.size()) > lvl && !maskPyramid[lvl].empty()) ? maskPyramid[lvl] : Mat());
     }
     return imagePyramid;
 }
 
-double cv::findTransformECCMultiscale(InputArray reference,
+double findTransformECCMultiScale(InputArray reference,
                         InputArray sample,
                         InputOutputArray warpMatrixA,
                         const ECCParameters& eccParams,
@@ -785,7 +747,7 @@ double cv::findTransformECCMultiscale(InputArray reference,
         warpMatrix.convertTo(warpMatrix, CV_64FC1);
     }
 
-    check_params(referencePyramid,
+    checkParams(referencePyramid,
                 samplePyramid,
                 warpMatrix,
                 eccParams.motionType,
@@ -813,13 +775,13 @@ double cv::findTransformECCMultiscale(InputArray reference,
 
     // Scale warp matrix multiple times to lower pyramid level
     for (int pyrLevel = 0; pyrLevel < eccParams.numberOfPyramidsLevel - 1; pyrLevel++) {
-        scale_warp_matrix(warpMatrix, 0.5);
+        scaleWarpMatrix(warpMatrix, 0.5);
     }
     double rho = -1;
     for (int pyrLevel = eccParams.numberOfPyramidsLevel - 1; pyrLevel >= 0; --pyrLevel) {
         const int hr = referencePyramid[pyrLevel].rows;
 
-        Mat sampleWithGrad = prepare_gradients(samplePyramid[pyrLevel]);
+        Mat sampleWithGrad = prepareGradients(samplePyramid[pyrLevel]);
 
         const int LOW_SIZE = 200;
         int deltaY = hr < LOW_SIZE ? 1 : 2;
@@ -827,10 +789,10 @@ double cv::findTransformECCMultiscale(InputArray reference,
         // iteratively update mapMatrix
         double lastRho = -terminationEPS;
         for (int i = 1; (i <= numberOfIterations[pyrLevel]) && (fabs(rho - lastRho) >= terminationEPS); i++) {
-            optimize_ECC(sampleWithGrad, referencePyramid[pyrLevel], warpMatrix, eccParams.motionType, &rho, &lastRho, deltaY, nparams);
+            optimizeECC(sampleWithGrad, referencePyramid[pyrLevel], warpMatrix, eccParams.motionType, &rho, &lastRho, deltaY, nparams);
         }
         if (pyrLevel > 0) {
-            scale_warp_matrix(warpMatrix, 2);
+            scaleWarpMatrix(warpMatrix, 2);
         }
     }
     if(warpMatrixType != CV_64FC1)
@@ -840,4 +802,5 @@ double cv::findTransformECCMultiscale(InputArray reference,
     // return final correlation coefficient
     return rho;
 }
+};
 /* End of file. */

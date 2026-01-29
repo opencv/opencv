@@ -5,12 +5,12 @@ using namespace perf;
 
 CV_ENUM(MotionType, MOTION_TRANSLATION, MOTION_EUCLIDEAN, MOTION_AFFINE, MOTION_HOMOGRAPHY)
 CV_ENUM(ReadFlag, IMREAD_GRAYSCALE, IMREAD_COLOR)
-CV_ENUM(PyramidFlag, false, true)
+CV_ENUM(MultiScaleFlag, false, true)
 
 typedef std::tuple<MotionType, ReadFlag> TestParams;
-typedef std::tuple<MotionType, PyramidFlag> TestParamsPyr;
+typedef std::tuple<MotionType, MultiScaleFlag> TestParamsMS;
 typedef perf::TestBaseWithParam<TestParams> ECCPerfTest;
-typedef perf::TestBaseWithParam<TestParamsPyr> ECCPerfTestPyr;
+typedef perf::TestBaseWithParam<TestParamsMS> ECCPerfTestMS;
 
 typedef std::tuple<MotionType, ReadFlag> TestParams;
 
@@ -72,11 +72,11 @@ PERF_TEST_P(ECCPerfTest, findTransformECC,
     }
 }
 
-PERF_TEST_P(ECCPerfTestPyr, findTransformECCMultiscale,
+PERF_TEST_P(ECCPerfTestMS, findTransformECCMultiScale,
             testing::Combine(testing::Values(MOTION_TRANSLATION, MOTION_EUCLIDEAN, MOTION_AFFINE, MOTION_HOMOGRAPHY),
                              testing::Values(false, true))) {
     int transform_type = get<0>(GetParam());
-    bool pyramidFlag = get<1>(GetParam());
+    bool multiscaleFlag = get<1>(GetParam());
 
     Mat img = imread(getDataPath("cv/shared/3MP.png"), IMREAD_GRAYSCALE);
     Mat templateImage;
@@ -113,12 +113,12 @@ PERF_TEST_P(ECCPerfTestPyr, findTransformECCMultiscale,
         else
             warpMat = Mat::eye(3, 3, CV_32F);
 
-        if(pyramidFlag) {
+        if(multiscaleFlag) {
             ECCParameters params;
             params.criteria = cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 5, -1);
             params.motionType = transform_type;
             params.itersPerLevel = {1, 2, 2, 2};
-            findTransformECCMultiscale(templateImage, img, warpMat, params);
+            findTransformECCMultiScale(templateImage, img, warpMat, params);
         }
         else {
             findTransformECC(templateImage, img, warpMat, transform_type,
