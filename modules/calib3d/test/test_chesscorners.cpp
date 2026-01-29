@@ -865,9 +865,9 @@ TEST(Calib3d_CornerOrdering, issue_26830) {
 TEST(Calib3d_ChessboardDetector, regression_28028)
 {
    const cv::String dataDir = std::string(TS::ptr()->get_data_path()) + "calib3d/";
-   const cv::Mat image = cv::imread(dataDir + "inputimage.jpg");
-    
-    ASSERT_FALSE(image.empty()) << "Could not load inputimage.jpg";
+   const cv::Mat image = cv::imread(dataDir + "chessboard_13x9_28028.jpg");
+
+    ASSERT_FALSE(image.empty()) << "Could not load chessboard_13x9_28028.jpg";
 
     Size patternSize(13, 9);
     std::vector<Point2f> corners;
