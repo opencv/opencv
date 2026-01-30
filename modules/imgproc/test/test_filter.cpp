@@ -1236,18 +1236,25 @@ INSTANTIATE_TEST_CASE_P(/**/, Imgproc_sepFilter2D_types,
 
 TEST(Imgproc_MedianBlur, LargeKernel_Regression_26407)
 {
-    // Create a black 8-bit image
-    cv::Mat src = cv::Mat::zeros(1000, 1000, CV_8U);
-    cv::Mat dst;
+    cv::Mat src(1000, 1000, CV_8UC1);
+    cv::randu(src, 0, 256);
 
-    // ksize=257 previously caused a crash in the O(1) implementation
+    cv::Mat dst;
     int ksize = 257;
 
-    // This should not crash or throw an assertion
     ASSERT_NO_THROW(cv::medianBlur(src, dst, ksize));
 
-    // Verify output (median of zeros is zero)
-    ASSERT_EQ(0, dst.at<uchar>(500, 500));
+    int cx = 500, cy = 500;
+    int r = ksize / 2;
+
+    cv::Mat window = src(cv::Rect(cx - r, cy - r, ksize, ksize)).clone();
+
+    std::vector<uchar> vec;
+    window.reshape(1, 1).copyTo(vec);
+    std::nth_element(vec.begin(), vec.begin() + vec.size() / 2, vec.end());
+    uchar true_median = vec[vec.size() / 2];
+
+    ASSERT_EQ(true_median, dst.at<uchar>(cy, cx));
 }
 
 }} // namespace
