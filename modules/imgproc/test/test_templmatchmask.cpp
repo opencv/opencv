@@ -58,7 +58,7 @@ void Imgproc_MatchTemplateWithMask::SetUp()
     img_testtype_.convertTo(img_, CV_32F);
     templ_testtype_.convertTo(templ_, CV_32F);
     mask_testtype_.convertTo(mask_, CV_32F);
-    if (CV_MAT_DEPTH(type_mask) == CV_8U)
+    if (CV_MAT_DEPTH(type_mask) == CV_8U || CV_MAT_DEPTH(type_mask) == CV_Bool)
     {
         // CV_8U masks are interpreted as binary masks
         mask_.setTo(Scalar::all(1), mask_ != 0);
@@ -189,7 +189,7 @@ TEST_P(Imgproc_MatchTemplateWithMask, CompareNaiveImplCCOEFF_NORMED)
 INSTANTIATE_TEST_CASE_P(SingleChannelMask, Imgproc_MatchTemplateWithMask,
     Combine(
         Values(CV_32FC1, CV_32FC3, CV_8UC1, CV_8UC3),
-        Values(CV_32FC1, CV_8UC1)));
+        Values(CV_32FC1, CV_8UC1, CV_BoolC1)));
 
 INSTANTIATE_TEST_CASE_P(MultiChannelMask, Imgproc_MatchTemplateWithMask,
     Combine(

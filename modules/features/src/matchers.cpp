@@ -636,7 +636,7 @@ void DescriptorMatcher::checkMasks( InputArrayOfArrays _masks, int queryDescript
             if (hasTrainDesc || hasUTrainDesc)
             {
                 const int rows = hasTrainDesc ? trainDescCollection[i].rows : utrainDescCollection[i].rows;
-                CV_Assert(masks[i].type() == CV_8UC1
+                CV_Assert((masks[i].type() == CV_8UC1 || masks[i].type() == CV_BoolC1)
                     && masks[i].rows == queryDescriptorsCount
                     && masks[i].cols == rows);
             }
