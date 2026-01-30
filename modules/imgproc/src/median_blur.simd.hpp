@@ -427,13 +427,13 @@ static void medianBlur_8u_O1_Large( const Mat& _src, Mat& _dst, int ksize )
 
                 // First column initialization (Scalar version)
                 for (k = 0; k < 16; ++k) {
-                    for (int ind = 0; ind < 16; ++ind) 
+                    for (int ind = 0; ind < 16; ++ind)
                         H.fine[k][ind] = (HT)(H.fine[k][ind] + (2 * r + 1) * h_fine[16 * n*(16 * c + k) + ind]);
                 }
 
                 HT* px = h_coarse + 16 * n*c;
                 for( j = 0; j < 2*r; ++j, px += 16 ) {
-                    for (int ind = 0; ind < 16; ++ind) 
+                    for (int ind = 0; ind < 16; ++ind)
                         H.coarse[ind] += px[ind];
                 }
 
@@ -443,8 +443,8 @@ static void medianBlur_8u_O1_Large( const Mat& _src, Mat& _dst, int ksize )
                     HT* segment;
 
                     px = h_coarse + 16 * (n*c + std::min(j + r, n - 1));
-                    
-                    for (int ind = 0; ind < 16; ++ind) 
+
+                    for (int ind = 0; ind < 16; ++ind)
                         H.coarse[ind] += px[ind];
 
                     // Find median at coarse level
@@ -489,7 +489,7 @@ static void medianBlur_8u_O1_Large( const Mat& _src, Mat& _dst, int ksize )
                     }
 
                     px = h_coarse + 16 * (n*c + std::max(j - r, 0));
-                    for (int ind = 0; ind < 16; ++ind) 
+                    for (int ind = 0; ind < 16; ++ind)
                         H.coarse[ind] -= px[ind];
 
                     /* Find median in segment */
