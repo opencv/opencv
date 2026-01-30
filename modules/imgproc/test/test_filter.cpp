@@ -1234,4 +1234,20 @@ INSTANTIATE_TEST_CASE_P(/**/, Imgproc_sepFilter2D_types,
     testing::Values(CV_16S, CV_32F, CV_64F),
 );
 
+TEST(Imgproc_MedianBlur, LargeKernel_Regression_26407)
+{
+    // Create a black 8-bit image
+    cv::Mat src = cv::Mat::zeros(1000, 1000, CV_8U);
+    cv::Mat dst;
+
+    // ksize=257 previously caused a crash in the O(1) implementation
+    int ksize = 257;
+
+    // This should not crash or throw an assertion
+    ASSERT_NO_THROW(cv::medianBlur(src, dst, ksize));
+
+    // Verify output (median of zeros is zero)
+    ASSERT_EQ(0, dst.at<uchar>(500, 500));
+}
+
 }} // namespace
