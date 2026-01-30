@@ -379,6 +379,7 @@ def _find_argument_index(arguments: Sequence[FunctionNode.Arg],
 NODES_TO_REFINE = {
     SymbolName(("cv", ), (), "resize"): make_optional_arg("dsize"),
     SymbolName(("cv", ), (), "calcHist"): make_optional_arg("mask"),
+    SymbolName(("cv", ), (), "calibrateCamera"): make_optional_arg("cameraMatrix", "distCoeffs"),
     SymbolName(("cv", ), (), "floodFill"): make_optional_arg("mask"),
     SymbolName(("cv", ), ("Feature2D", ), "detectAndCompute"): make_optional_arg("mask"),
     SymbolName(("cv", ), (), "findEssentialMat"): make_optional_arg(
