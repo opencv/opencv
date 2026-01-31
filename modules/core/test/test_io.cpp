@@ -2207,4 +2207,50 @@ INSTANTIATE_TEST_CASE_P(Core_InputOutput,
     FileStorage_exact_type, Values(".yml", ".xml", ".json")
 );
 
+TEST(Core_InputOutput, YAML_1_2_Compatibility)
+{
+    string filename = cv::tempfile(".yaml");
+
+    {
+        FileStorage fs(filename, FileStorage::WRITE | FileStorage::FORMAT_YAML_1_2);
+        ASSERT_TRUE(fs.isOpened());
+
+        fs << "bool_true" << true;
+        fs << "bool_false" << false;
+        fs << "some_int" << 42;
+
+        fs.release();
+    }
+
+    {
+        std::ifstream file(filename.c_str());
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        std::string content = buffer.str();
+
+        EXPECT_EQ(content.find("%YAML:1.0"), std::string::npos);
+
+        EXPECT_NE(content.find("bool_true: true"), std::string::npos);
+        EXPECT_NE(content.find("bool_false: false"), std::string::npos);
+    }
+
+    {
+        FileStorage fs(filename, FileStorage::READ | FileStorage::FORMAT_YAML_1_2);
+        ASSERT_TRUE(fs.isOpened());
+
+        int val_true = (int)fs["bool_true"];
+        EXPECT_EQ(val_true, 1);
+
+        int val_false = (int)fs["bool_false"];
+        EXPECT_EQ(val_false, 0);
+
+        int val_int = (int)fs["some_int"];
+        EXPECT_EQ(val_int, 42);
+
+        fs.release();
+    }
+
+    remove(filename.c_str());
+}
+
 }} // namespace
