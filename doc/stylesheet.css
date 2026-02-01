@@ -1805,6 +1805,82 @@ dl.post dt {
     padding: 0px;
 }
 
+.sm-dox {
+    background-image: var(--nav-gradient-image)
+}
+
+.sm-dox a,.sm-dox a:focus,.sm-dox a:hover,.sm-dox a:active {
+    text-shadow: var(--nav-text-normal-shadow);
+    color: var(--nav-text-normal-color);
+}
+
+.sm-dox a:hover {
+    background-image: var(--nav-gradient-active-image);
+    color: var(--nav-text-hover-color);
+    text-shadow: var(--nav-text-hover-shadow)
+}
+
+.sm-dox ul {
+    background: var(--nav-menu-background-color)
+}
+
+.sm-dox ul a,.sm-dox ul a:focus,.sm-dox ul a:hover,.sm-dox ul a:active {
+    background-color: var(--nav-menu-background-color);
+}
+
+.sm-dox ul a:hover {
+    background-image: var(--nav-gradient-active-image);
+    color: var(--nav-text-hover-color);
+}
+
+
+@media(min-width: 768px) {
+    .sm-dox {
+        background-image: var(--nav-gradient-image);
+    }
+
+    .sm-dox a,.sm-dox a:focus,.sm-dox a:active,.sm-dox a:hover,.sm-dox a.highlighted {
+        background-image: var(--nav-separator-image);
+    }
+
+    .sm-dox a:hover {
+        background-image: var(--nav-gradient-active-image);
+        color: var(--nav-text-hover-color);
+        text-shadow: var(--nav-text-hover-shadow)
+    }
+
+    .sm-dox>li>ul:after {
+        border-color: transparent transparent var(--nav-menu-background-color) transparent
+    }
+
+    .sm-dox ul {
+        background: var(--nav-menu-background-color);
+    }
+
+    .sm-dox ul a,.sm-dox ul a:hover,.sm-dox ul a:focus,.sm-dox ul a:active,.sm-dox ul a.highlighted {
+        color: var(--nav-menu-foreground-color);
+    }
+
+    .sm-dox ul a:hover {
+        background-image: var(--nav-gradient-active-image);
+        color: var(--nav-text-hover-color);
+        text-shadow: var(--nav-text-hover-shadow)
+    }
+
+    .sm-dox span.scroll-up,.sm-dox span.scroll-down {
+        background: var(--nav-menu-background-color);
+    }
+
+    .sm-dox.sm-vertical a.disabled {
+        background-image: var(--nav-gradient-image)
+    }
+
+    .sm-dox.sm-vertical ul a.disabled {
+        background: var(--nav-menu-background-color)
+    }
+}
+
+
 #titlearea {
     padding: 0px;
     margin: 0px;
