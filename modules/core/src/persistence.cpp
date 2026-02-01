@@ -755,7 +755,12 @@ bool FileStorage::Impl::open(const char *filename_or_buf, int _flags, const char
         size_t bufOffset = bufPtr - buf;
 
         if (strncmp(bufPtr, yaml_signature, strlen(yaml_signature)) == 0)
-            fmt = FileStorage::FORMAT_YAML;
+        {
+            if (strncmp(bufPtr, "%YAML 1.2", 9) == 0)
+                fmt = FileStorage::FORMAT_YAML_1_2;
+            else
+                fmt = FileStorage::FORMAT_YAML;
+        }
         else if (strncmp(bufPtr, json_signature, strlen(json_signature)) == 0)
             fmt = FileStorage::FORMAT_JSON;
         else if (strncmp(bufPtr, xml_signature, strlen(xml_signature)) == 0)
