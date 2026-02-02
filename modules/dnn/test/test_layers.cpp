@@ -2949,4 +2949,95 @@ TEST(ConvolutionWinograd, Accuracy)
     normAssert(outLarge, refLarge, "Large input after small", 0.0, 0.0);
 }
 
+// With KV-Cache
+
+TEST(Layer_Test_AttentionOnnxAi, KVCache_Concatenation)
+{
+
+    LayerParams lp;
+    lp.type = "AttentionOnnxAi";
+    lp.name = "test_attention";
+    lp.set("num_heads", 1);
+
+    int hidden_sizes[] = {32, 32, 32};
+    lp.set("qkv_hidden_sizes", DictValue::arrayInt(hidden_sizes, 3)); 
+
+    int batch = 1;
+    int num_heads = 1;
+    int dims = 32;
+    int seq_len = 1; // Current step (generating 1 token)
+    int past_seq_len = 5;
+
+    std::vector<int> q_shape = {batch, num_heads, seq_len, dims};
+    std::vector<int> kv_shape = {batch, num_heads, seq_len, dims};
+    std::vector<int> past_shape = {batch, num_heads, past_seq_len, dims};
+
+    Mat Q(q_shape, CV_32F);
+    Mat K(kv_shape, CV_32F);
+    Mat V(kv_shape, CV_32F);
+
+    randu(Q, 0.0f, 1.0f);
+    K = 1.0f;
+    V = 1.0f;
+
+    Mat PastK(past_shape, CV_32F);
+    Mat PastV(past_shape, CV_32F);
+
+    PastK = 0.5f;
+    randu(PastV, 0.0f, 1.0f);
+
+    std::vector<Mat> inputs = {Q, K, V};
+
+    inputs.push_back(Mat()); 
+
+    inputs.push_back(PastK); 
+    inputs.push_back(PastV); 
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    std::vector<Mat> outputs;
+    std::vector<Mat> internals;
+
+    runLayer(layer, inputs, outputs);
+
+    ASSERT_EQ(outputs.size(), 3); 
+
+    EXPECT_EQ(outputs[1].size[2], past_seq_len + seq_len); 
+
+    Mat present_k = outputs[1];
+
+    int idx_start[] = {0, 0, 0, 0};
+    EXPECT_NEAR(present_k.at<float>(idx_start), 0.5f, 1e-5);
+
+    int idx_end[] = {0, 0, past_seq_len, 0};
+    EXPECT_NEAR(present_k.at<float>(idx_end), 1.0f, 1e-5);
+}
+
+// Test Without KV-Cache
+
+TEST(Layer_Test_AttentionOnnxAi, Standard_NoCache)
+{
+    LayerParams lp;
+    lp.type = "AttentionOnnxAi";
+    lp.name = "test_attention_std";
+    lp.set("num_heads", 1);
+    int hidden_sizes[] = {32, 32, 32};
+    lp.set("qkv_hidden_sizes", DictValue::arrayInt(hidden_sizes, 3)); 
+
+    int batch = 1, num_heads = 1, seq_len = 10, dims = 32;
+    std::vector<int> shape = {batch, num_heads, seq_len, dims};
+
+    Mat Q(shape, CV_32F); randu(Q, 0.f, 1.f);
+    Mat K(shape, CV_32F); randu(K, 0.f, 1.f);
+    Mat V(shape, CV_32F); randu(V, 0.f, 1.f);
+
+    std::vector<Mat> inputs = {Q, K, V};
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+
+    ASSERT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs[0].size[2], seq_len);
+}
+
 }} // namespace
