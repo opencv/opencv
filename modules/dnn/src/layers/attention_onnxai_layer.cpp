@@ -68,7 +68,6 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
                                  std::vector<MatShape> &outputs,
                                  std::vector<MatShape> &internals) const CV_OVERRIDE {
         CV_CheckTrue(inputs.size() >= 3, "At least three inputs (query, key, value) are required");
-        CV_CheckTrue(inputs.size() < 5, "past key and past value are not supported yet");
         CV_CheckTrue(inputs[0].dims == inputs[1].dims &&
                      inputs[0].dims == inputs[2].dims,
                      "Query, key and value must have the same number of dimensions");
@@ -81,14 +80,17 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
 
         const int batch_size = inputs[0][0];
         const int seq_len_q = inputs[0][input_dims - 2];
-        const int seq_len_kv = inputs[1][input_dims - 2];
+        int seq_len_kv = inputs[1][input_dims - 2];
+        if (inputs.size() >= 6){
+            seq_len_kv += inputs[4][input_dims - 2];
+        }
 
         const int q_hn = input_dims == 4 ?
             inputs[0][1] : q_num_heads;
         const int kv_hn =input_dims == 4 ?
             inputs[1][1] : kv_num_heads;
 
-        CV_CheckTrue(inputs[2][input_dims - 2] == seq_len_kv,
+        CV_CheckTrue(inputs[2][input_dims - 2] == inputs[1][input_dims - 2],
                      "Key and query sequence lengths must be equal");
         const int nhq = input_dims == 4 ? inputs[0][1] : q_num_heads;
 
@@ -111,6 +113,18 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
             int v_head_size = inputs[2][3];
             MatShape output_shape{batch_size, nhq, seq_len_q, v_head_size};
             outputs.push_back(output_shape);
+        }
+
+        if (requiredOutputs > 1 || inputs.size() >= 6) {
+            // Shape matches Input K but with updated sequence length
+            MatShape k_shape = inputs[1]; 
+            k_shape[input_dims - 2] = seq_len_kv; // Total length
+            outputs.push_back(k_shape); 
+
+            // Shape matches Input V but with updated sequence length
+            MatShape v_shape = inputs[2];
+            v_shape[input_dims - 2] = seq_len_kv; // Total length
+            outputs.push_back(v_shape);
         }
 
         MatShape attention_prob_shape{batch_size , nhq, seq_len_q, seq_len_kv};
@@ -153,14 +167,41 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
         const int seq_len_q = input_dims == 3 ?
                                 inputs[0].size[1]:
                                 inputs[0].size[2];
-        const int seq_len_kv = input_dims == 3 ?
+        int seq_len_kv = input_dims == 3 ?
                                 inputs[1].size[1]:
                                 inputs[1].size[2];
-        const auto seq_len_square = seq_len_q * seq_len_kv;
 
-        const auto* Q =  inputs[0].ptr<const float>();
-        const auto* K =  inputs[1].ptr<const float>();
-        const auto* V =  inputs[2].ptr<const float>();
+        const float* Q =  inputs[0].ptr<const float>();
+        const float* K =  inputs[1].ptr<const float>();
+        const float* V =  inputs[2].ptr<const float>();
+
+        if (inputs.size() >= 6 && outputs.size() >= 3 && !inputs[4].empty())
+        {
+            int axis = input_dims == 3 ? 1 : 2;
+
+            Mat& past_k = inputs[4];
+            Mat& past_v = inputs[5];
+            Mat& present_k = outputs[1]; // Output blob for K
+            Mat& present_v = outputs[2]; // Output blob for V
+
+            std::vector<Range> ranges_past(input_dims, Range::all());
+            ranges_past[axis] = Range(0, past_k.size[axis]);
+            past_k.copyTo(present_k(ranges_past));
+
+            std::vector<Range> ranges_new(input_dims, Range::all());
+            ranges_new[axis] = Range(past_k.size[axis], present_k.size[axis]);
+            inputs[1].copyTo(present_k(ranges_new));
+
+            past_v.copyTo(present_v(ranges_past));
+            inputs[2].copyTo(present_v(ranges_new));
+
+            K = present_k.ptr<const float>();
+            V = present_v.ptr<const float>();
+
+            seq_len_kv = present_k.size[axis];
+        }
+
+        const auto seq_len_square = seq_len_q * seq_len_kv;
 
         scale = is_scale_set ? scale : 1.0f / std::sqrt(static_cast<float>(qk_head_size));
 
@@ -170,6 +211,7 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
                 _v_offsets(nhq * batch_size),
                 _o_offsets(nhq * batch_size);
 
+        
         for (int b = 0; b < batch_size; b++)
             for (int n = 0; n < nhq; n++){
                 _q_offsets[b * nhq + n] =
