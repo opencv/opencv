@@ -322,6 +322,664 @@ public:
 };
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
+static inline void vx_store_t(short*D, v_int16 value) {
+    return v_store(D, value);
+}
+static inline void vx_store_t(ushort*D, v_uint16 value) {
+    return v_store(D, value);
+}
+static inline void vx_store_t(uchar*D, v_uint16 value) {
+    return v_pack_store(D, value);
+}
+static inline void vx_store_t(short*D, v_int16x8 value) {
+    return v_store(D, value);
+}
+static inline void vx_store_t(ushort*D, v_uint16x8 value) {
+    return v_store(D, value);
+}
+static inline void vx_store_t(uchar*D, v_uint16x8 value) {
+    return v_pack_store(D, value);
+}
+
+static inline void v_pack_t(v_int32 a, v_int32 b, v_uint16& dst) {
+    dst = v_pack(v_reinterpret_as_u32(a), v_reinterpret_as_u32(b));
+}
+static inline void v_pack_t(v_int32 a, v_int32 b, v_int16& dst) {
+    dst = v_pack(a, b);
+}
+static inline void v_pack_t(v_uint32 a, v_uint32 b, v_uint16& dst) {
+    dst = v_pack(a, b);
+}
+static inline void v_pack_t(v_int32x4 a, v_int32x4 b, v_uint16x8& dst) {
+    dst = v_pack(v_reinterpret_as_u32(a), v_reinterpret_as_u32(b));
+}
+static inline void v_pack_t(v_int32x4 a, v_int32x4 b, v_int16x8& dst) {
+    dst = v_pack(a, b);
+}
+static inline void v_pack_t(v_uint32x4 a, v_uint32x4 b, v_uint16x8& dst) {
+    dst = v_pack(a, b);
+}
+
+static inline void v_reinterpret_t(v_int32 a, v_uint32 &b) {
+    b = v_reinterpret_as_u32(a);
+}
+static inline void v_reinterpret_t(v_uint32 a, v_uint32 &b) {
+    b = a;
+}
+static inline void v_reinterpret_t(v_int32 a, v_int32 &b) {
+    b = a;
+}
+
+static inline void v_reinterpret_t(v_int32x4 a, v_uint32x4 &b) {
+    b = v_reinterpret_as_u32(a);
+}
+static inline void v_reinterpret_t(v_uint32x4 a, v_uint32x4 &b) {
+    b = a;
+}
+static inline void v_reinterpret_t(v_int32x4 a, v_int32x4 &b) {
+    b = a;
+}
+#endif
+
+//generic template to handle ddepth == CV_16U/CV_16S && sdepth == CV_32S
+template<int SCALE_T, typename T, typename VT, typename VTX4, typename VT16, typename VT16X8>
+struct ColumnSum16US :
+        public BaseColumnFilter
+{
+    ColumnSum16US( int _ksize, int _anchor, double _scale ) :
+        BaseColumnFilter()
+    {
+        ksize = _ksize;
+        anchor = _anchor;
+        scale = _scale;
+        kernelSizeLog2 = (int)_scale;
+        sumCount = 0;
+        processInnerRegionPrevRow = true;
+    }
+
+    virtual void reset() CV_OVERRIDE { sumCount = 0; }
+
+    T inline cast_scale(int v)
+    {
+        if(SCALE_T == APPLY_SCALING)
+            return saturate_cast<T>(v*scale);
+        else if(SCALE_T == APPLY_SCALING_WITH_SHIFT)
+            return saturate_cast<T>(v >> kernelSizeLog2);
+        else
+            return saturate_cast<T>(v);
+    }
+
+    virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width, int kcn, bool processInnerRegion) CV_OVERRIDE
+    {
+        CV_INSTRUMENT_REGION();
+        int i;
+        int* SUM;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int vlane = VTraits<VT>::vlanes();
+        const int vlane16 = VTraits<VT16>::vlanes();
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
+        const int vlanex4 = VTraits<VTX4>::vlanes();
+        const int vlane16x8 = VTraits<VT16X8>::vlanes();
+#endif
+#endif
+        if( width != (int)sum.size() )
+        {
+            sum.resize(width);
+            sumCount = 0;
+        }
+
+        if( processInnerRegion==true && processInnerRegionPrevRow==false)
+        {
+            sumCount = 0;
+        }
+        SUM = &sum[0];
+        if( sumCount == 0 )
+        {
+            memset((void*)SUM, 0, width*sizeof(int));
+            for( ; sumCount < ksize - 1; sumCount++, src++ )
+            {
+                const int* Sp = (const int*)src[0];
+                i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                for( ; i <= width - vlane; i+=vlane )
+                {
+                    v_store(SUM + i, v_add(vx_load(SUM + i), vx_load(Sp + i)));
+                }
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
+                for( ; i <= width - vlanex4; i+=vlanex4 )
+                {
+                    v_store(SUM + i, v_add(v_load(SUM + i), v_load(Sp + i)));
+                }
+#endif
+#endif
+                for( ; i < width; i++ )
+                    SUM[i] += Sp[i];
+            }
+        }
+        else
+        {
+            CV_Assert( sumCount == ksize-1 );
+            src += ksize-1;
+        }
+
+        for( ; count--; src++ )
+        {
+            const int* Sp = (const int*)src[0];
+            const int* Sm = (const int*)src[1-ksize];
+            T* D = (T*)dst;
+
+            i = 0;
+            for( ; i < kcn; i++ )
+            {
+                int s0 = SUM[i] + Sp[i];
+                D[i] = cast_scale(s0);
+                SUM[i] = s0 - Sm[i];
+            }
+
+            if(processInnerRegion)
+            {
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                v_float32 _v_scale = vx_setall_f32((float)scale);
+                for( ; i <= width-vlane16; i+=vlane16 )
+                {
+                    VT16 v_dst;
+                    VT v_s0d, v_s01d;
+                    v_int32 v_s0 = v_add(vx_load(SUM + i), vx_load(Sp + i));
+                    v_int32 v_s01 = v_add(vx_load(SUM + i + vlane), vx_load(Sp + i + vlane));
+
+                    if(SCALE_T == APPLY_SCALING)
+                    {
+                        v_reinterpret_t(v_round(v_mul(v_cvt_f32(v_s0), _v_scale)), v_s0d);
+                        v_reinterpret_t(v_round(v_mul(v_cvt_f32(v_s01), _v_scale)), v_s01d);
+                        v_pack_t(v_s0d, v_s01d, v_dst);
+                    }
+                    else if(SCALE_T == APPLY_SCALING_WITH_SHIFT)
+                    {
+                        v_reinterpret_t(v_shr(v_s0, kernelSizeLog2), v_s0d);
+                        v_reinterpret_t(v_shr(v_s01, kernelSizeLog2), v_s01d);
+                        v_pack_t(v_s0d, v_s01d, v_dst);
+                    }
+                    else
+                    {
+                        v_pack_t(v_s0, v_s01, v_dst);
+                    }
+                    vx_store_t(D + i, v_dst);
+                    v_store(SUM + i, v_sub(v_s0, vx_load(Sm + i)));
+                    v_store(SUM + i + vlane, v_sub(v_s01, vx_load(Sm + i + vlane)));
+                }
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
+                v_float32x4 v_scale = v_setall_f32((float)scale);
+                for( ; i <= width-vlane16x8; i+=vlane16x8 )
+                {
+                    VTX4 v_s0d, v_s01d;
+                    VT16X8 v_dst;
+                    v_int32x4 v_s0 = v_add(v_load(SUM + i), v_load(Sp + i));
+                    v_int32x4 v_s01 = v_add(v_load(SUM + i + vlanex4), v_load(Sp + i + vlanex4));
+
+                    if(SCALE_T == APPLY_SCALING)
+                    {
+                        v_reinterpret_t(v_round(v_mul(v_cvt_f32(v_s0), v_scale)), v_s0d);
+                        v_reinterpret_t(v_round(v_mul(v_cvt_f32(v_s01), v_scale)), v_s01d);
+                        v_pack_t(v_s0d, v_s01d, v_dst);
+                    }
+                    else if(SCALE_T == APPLY_SCALING_WITH_SHIFT)
+                    {
+                        v_reinterpret_t(v_shr(v_s0, kernelSizeLog2), v_s0d);
+                        v_reinterpret_t(v_shr(v_s01, kernelSizeLog2), v_s01d);
+                        v_pack_t(v_s0d, v_s01d, v_dst);
+                    }
+                    else
+                    {
+                        v_pack_t(v_s0, v_s01, v_dst);
+                    }
+
+                    vx_store_t(D + i, v_dst);
+
+                    v_store(SUM + i, v_sub(v_s0, v_load(Sm + i)));
+                    v_store(SUM + i + vlanex4, v_sub(v_s01, v_load(Sm + i + vlanex4)));
+                }
+#endif
+#endif
+                for( ; i < width-kcn; i++ )
+                {
+                    int s0 = SUM[i] + Sp[i];
+                    D[i] = cast_scale(s0);
+                    SUM[i] = s0 - Sm[i];
+                }
+            }//processInnerRegion
+
+            for(i = width-kcn ; i < width; i++ )
+            {
+                int s0 = SUM[i] + Sp[i];
+                D[i] = cast_scale(s0);
+                SUM[i] = s0 - Sm[i];
+            }
+            dst += dststep;
+        }
+        processInnerRegionPrevRow = processInnerRegion;
+    }
+
+private:
+    double scale;
+    int kernelSizeLog2;
+    int sumCount;
+    bool processInnerRegionPrevRow;
+    std::vector<int> sum;
+};
+
+struct ColumnSumUcharUshortScaling :
+public BaseColumnFilter
+{
+    enum { SHIFT = 23 };
+    ColumnSumUcharUshortScaling( int _ksize, int _anchor, double _scale ) :
+    BaseColumnFilter()
+    {
+        ksize = _ksize;
+        anchor = _anchor;
+        scale = _scale;
+        sumCount = 0;
+        processInnerRegionPrevRow = true;
+        divDelta = 0;
+        divScale = 1;
+        if( scale != 1 )
+        {
+            int d = cvRound(1./scale);
+            double scalef = ((double)(1 << SHIFT))/d;
+            divScale = cvFloor(scalef);
+            scalef -= divScale;
+            divDelta = d/2;
+            if( scalef < 0.5 )
+                divDelta++;
+            else
+                divScale++;
+        }
+    }
+
+    virtual void reset() CV_OVERRIDE { sumCount = 0; }
+
+    virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width, int kcn, bool processInnerRegion) CV_OVERRIDE
+    {
+        CV_INSTRUMENT_REGION();
+
+        const int ds = divScale;
+        const int dd = divDelta;
+        ushort* SUM;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int vlane = VTraits<v_uint16>::vlanes();
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
+        const int vlane16x8 = VTraits<v_uint16x8>::vlanes();
+#endif
+#endif
+        if( width != (int)sum.size() )
+        {
+            sum.resize(width);
+            sumCount = 0;
+        }
+
+        if( processInnerRegion==true && processInnerRegionPrevRow==false)
+        {
+            sumCount = 0;
+        }
+        SUM = &sum[0];
+        if( sumCount == 0 )
+        {
+            memset((void*)SUM, 0, width*sizeof(SUM[0]));
+            for( ; sumCount < ksize - 1; sumCount++, src++ )
+            {
+                const ushort* Sp = (const ushort*)src[0];
+                int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                for( ; i <= width - vlane; i += vlane )
+                {
+                    v_store(SUM + i, v_add(vx_load(SUM + i), vx_load(Sp + i)));
+                }
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
+                for( ; i <= width - vlane16x8; i += vlane16x8 )
+                {
+                    v_store(SUM + i, v_add(v_load(SUM + i), v_load(Sp + i)));
+                }
+#endif
+#endif
+                for( ; i < width; i++ )
+                    SUM[i] += Sp[i];
+            }
+        }
+        else
+        {
+            CV_Assert( sumCount == ksize-1 );
+            src += ksize-1;
+        }
+
+        for( ; count--; src++ )
+        {
+            const ushort* Sp = (const ushort*)src[0];
+            const ushort* Sm = (const ushort*)src[1-ksize];
+            uchar* D = (uchar*)dst;
+
+            int i = 0;
+            for( ; i < kcn; i++ )
+            {
+                int s0 = SUM[i] + Sp[i];
+                D[i] = (uchar)((s0 + dd)*ds >> SHIFT);
+                SUM[i] = (ushort)(s0 - Sm[i]);
+            }
+            if(processInnerRegion)
+            {
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                v_uint32 _ds4 = vx_setall_u32((unsigned)ds);
+                v_uint16 _dd8 = vx_setall_u16((ushort)dd);
+
+                for( ; i <= width-VTraits<v_uint8>::vlanes(); i+=VTraits<v_uint8>::vlanes() )
+                {
+                    v_uint16 _sm0 = vx_load(Sm + i);
+                    v_uint16 _sm1 = vx_load(Sm + i + vlane);
+
+                    v_uint16 _s0 = v_add_wrap(vx_load(SUM + i), vx_load(Sp + i));
+                    v_uint16 _s1 = v_add_wrap(vx_load(SUM + i + vlane), vx_load(Sp + i + vlane));
+
+                    v_uint32 _s00, _s01, _s10, _s11;
+
+                    v_expand(v_add(_s0, _dd8), _s00, _s01);
+                    v_expand(v_add(_s1, _dd8), _s10, _s11);
+
+                    _s00 = v_shr<SHIFT>(v_mul(_s00, _ds4));
+                    _s01 = v_shr<SHIFT>(v_mul(_s01, _ds4));
+                    _s10 = v_shr<SHIFT>(v_mul(_s10, _ds4));
+                    _s11 = v_shr<SHIFT>(v_mul(_s11, _ds4));
+
+                    v_int16 r0 = v_pack(v_reinterpret_as_s32(_s00), v_reinterpret_as_s32(_s01));
+                    v_int16 r1 = v_pack(v_reinterpret_as_s32(_s10), v_reinterpret_as_s32(_s11));
+
+                    _s0 = v_sub_wrap(_s0, _sm0);
+                    _s1 = v_sub_wrap(_s1, _sm1);
+
+                    v_store(D + i, v_pack_u(r0, r1));
+                    v_store(SUM + i, _s0);
+                    v_store(SUM + i + vlane, _s1);
+                }
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
+                v_uint32x4 ds4 = v_setall_u32((unsigned)ds);
+                v_uint16x8 dd8 = v_setall_u16((ushort)dd);
+                for( ; i <= width-VTraits<v_uint8x16>::vlanes(); i+=VTraits<v_uint8x16>::vlanes() )
+                {
+                    v_uint16x8 _sm0 = v_load(Sm + i);
+                    v_uint16x8 _sm1 = v_load(Sm + i + vlane16x8);
+
+                    v_uint16x8 _s0 = v_add_wrap(v_load(SUM + i), v_load(Sp + i));
+                    v_uint16x8 _s1 = v_add_wrap(v_load(SUM + i + vlane16x8), v_load(Sp + i + vlane16x8));
+
+                    v_uint32x4 _s00, _s01, _s10, _s11;
+
+                    v_expand(v_add(_s0, dd8), _s00, _s01);
+                    v_expand(v_add(_s1, dd8), _s10, _s11);
+
+                    _s00 = v_shr<SHIFT>(v_mul(_s00, ds4));
+                    _s01 = v_shr<SHIFT>(v_mul(_s01, ds4));
+                    _s10 = v_shr<SHIFT>(v_mul(_s10, ds4));
+                    _s11 = v_shr<SHIFT>(v_mul(_s11, ds4));
+
+                    v_int16x8 r0 = v_pack(v_reinterpret_as_s32(_s00), v_reinterpret_as_s32(_s01));
+                    v_int16x8 r1 = v_pack(v_reinterpret_as_s32(_s10), v_reinterpret_as_s32(_s11));
+
+                    _s0 = v_sub_wrap(_s0, _sm0);
+                    _s1 = v_sub_wrap(_s1, _sm1);
+
+                    v_store(D + i, v_pack_u(r0, r1));
+                    v_store(SUM + i, _s0);
+                    v_store(SUM + i + vlane16x8, _s1);
+                }
+#endif
+#endif
+                for( ; i < width-kcn; i++ )
+                {
+                    int s0 = SUM[i] + Sp[i];
+                    D[i] = (uchar)((s0 + dd)*ds >> SHIFT);
+                    SUM[i] = (ushort)(s0 - Sm[i]);
+                }
+            }//processInnerRegion
+            for(i = width-kcn ; i < width; i++ )
+            {
+                int s0 = SUM[i] + Sp[i];
+                D[i] = (uchar)((s0 + dd)*ds >> SHIFT);
+                SUM[i] = (ushort)(s0 - Sm[i]);
+            }
+            dst += dststep;
+        }
+        processInnerRegionPrevRow = processInnerRegion;
+    }
+
+    double scale;
+    int sumCount;
+    int divDelta;
+    int divScale;
+    bool processInnerRegionPrevRow;
+    std::vector<ushort> sum;
+};
+
+#if 0// generic template for ddepth==CV_32S && sdepth==CV_32S and ddepth==CV_32F && sdepth==CV_32S
+static inline void v_cvt_f32_t(v_int32 a, v_int32 &b) {
+    b = a;
+}
+static inline void v_cvt_f32_t(v_int32 a, v_float32 &b) {
+    b = v_cvt_f32(a);
+}
+static inline void v_cvt_f32_t(v_float32 a, v_float32 &b) {
+    b = a;
+}
+
+static inline void v_cvt_f32_t(v_int32x4 a, v_int32x4 &b) {
+    b = a;
+}
+static inline void v_cvt_f32_t(v_int32x4 a, v_float32x4 &b) {
+    b = v_cvt_f32(a);
+}
+static inline void v_cvt_f32_t(v_float32x4 a, v_float32x4 &b) {
+    b = a;
+}
+
+static inline void v_round_t(v_float32 a, v_int32 &b) {
+    b = v_round(a);
+}
+static inline void v_round_t(v_float32 a, v_float32 &b) {
+    b = a;
+}
+static inline void v_round_t(v_int32 a, v_int32 &b) {
+    b = a;
+}
+
+static inline void v_round_t(v_float32x4 a, v_int32x4 &b) {
+    b = v_round(a);
+}
+static inline void v_round_t(v_float32x4 a, v_float32x4 &b) {
+    b = a;
+}
+
+template<typename ST, typename T, typename VST, typename VSTX4, typename K, typename KX4> //VSTX4-can be avoided if compiler issue is fixed
+struct ColumnSumIntInt_IntFloat : // handles ddepth==CV_32S && sdepth==CV_32S and ddepth==CV_32F && sdepth==CV_32S
+        public BaseColumnFilter
+{
+    ColumnSumIntInt_IntFloat( int _ksize, int _anchor, double _scale ) :
+        BaseColumnFilter()
+    {
+        ksize = _ksize;
+        anchor = _anchor;
+        scale = _scale;
+        sumCount = 0;
+        processInnerRegionPrevRow = true;
+    }
+
+    virtual void reset() CV_OVERRIDE { sumCount = 0; }
+
+    virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width, int kcn, bool processInnerRegion) CV_OVERRIDE
+    {
+        CV_INSTRUMENT_REGION();
+
+        ST* SUM;
+        bool haveScale = scale != 1;
+        double _scale = scale;
+
+        if( width != (int)sum.size() )
+        {
+            sum.resize(width);
+            sumCount = 0;
+        }
+        if( processInnerRegion==true && processInnerRegionPrevRow==false)
+        {
+            sumCount = 0;
+        }
+        SUM = &sum[0];
+        if( sumCount == 0 )
+        {
+            memset((void*)SUM, 0, width*sizeof(ST));
+
+            for( ; sumCount < ksize - 1; sumCount++, src++ )
+            {
+                const ST* Sp = (const ST*)src[0];
+                int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                for( ; i <= width - VTraits<VST>::vlanes(); i+=VTraits<v_int32>::vlanes() )
+                {
+                    v_store(SUM + i, v_add(vx_load(SUM + i), vx_load(Sp + i)));
+                }
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
+                for( ; i <= width - VTraits<VSTX4>::vlanes(); i+=VTraits<v_int32x4>::vlanes() )
+                {
+                    v_store(SUM + i, v_add(v_load(SUM + i), v_load(Sp + i)));
+                }
+#endif
+#endif
+                for( ; i < width; i++ )
+                    SUM[i] += Sp[i];
+            }
+        }
+        else
+        {
+            CV_Assert( sumCount == ksize-1 );
+            src += ksize-1;
+        }
+
+        for( ; count--; src++ )
+        {
+            const ST* Sp = (const ST*)src[0];
+            const ST* Sm = (const ST*)src[1-ksize];
+            T* D = (T*)dst;
+            if( haveScale )
+            {
+                int i = 0;
+                for( ; i < kcn; i++ )
+                {
+                    ST s0 = SUM[i] + Sp[i];
+                    D[i] = saturate_cast<T>(s0*_scale);
+                    SUM[i] = s0 - Sm[i];
+                }
+
+                if(processInnerRegion)
+                {
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                    v_float32 _v_scale = vx_setall_f32((float)_scale);//scale always in float
+                    for (; i <= width - VTraits<VST>::vlanes(); i += VTraits<v_int32>::vlanes())
+                    {
+                        VST v_s0 = v_add(vx_load(SUM + i), vx_load(Sp + i));
+                        K v_s0d;
+                        v_round_t(v_mul(v_cvt_f32(v_s0), _v_scale), v_s0d);//cvt_f32 always, v_round for same input & output datatype not needed.
+                        v_store(D + i, v_s0d);
+
+                        v_store(SUM + i, v_sub(v_s0, vx_load(Sm + i)));
+
+                    }
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
+                    v_float32x4 v_scale = v_setall_f32((float)_scale);//scale always in float
+                    for (; i <= width - VTraits<VSTX4>::vlanes(); i += VTraits<VSTX4>::vlanes())
+                    {
+                        VSTX4 v_s0 = v_add(v_load(SUM + i), v_load(Sp + i));
+                        KX4 v_s0d;
+                        v_round_t(v_mul(v_cvt_f32(v_s0), v_scale), v_s0d);
+                        v_store(D + i, v_s0d);
+
+                        v_store(SUM + i, v_sub(v_s0, v_load(Sm + i)));
+
+                    }
+#endif
+#endif
+                    for( ; i < width-kcn; i++ )
+                    {
+                        ST s0 = SUM[i] + Sp[i];
+                        D[i] = saturate_cast<T>(s0*_scale);
+                        SUM[i] = s0 - Sm[i];
+                    }
+                }//processInnerRegion
+
+                for(i = width-kcn ; i < width; i++ )
+                {
+                    ST s0 = SUM[i] + Sp[i];
+                    D[i] = saturate_cast<T>(s0*_scale);
+                    SUM[i] = s0 - Sm[i];
+                }
+            }
+            else
+            {
+                int i = 0;
+                for( ; i < kcn; i++ )
+                {
+                    ST s0 = SUM[i] + Sp[i];
+                    D[i] = saturate_cast<T>(s0);
+                    SUM[i] = s0 - Sm[i];
+                }
+
+                if(processInnerRegion)
+                {
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                    for( ; i <= width-VTraits<VST>::vlanes(); i+=VTraits<VST>::vlanes() )
+                    {
+                        VST v_s0 = v_add(vx_load(SUM + i), vx_load(Sp + i));
+                        K v_s0d;
+                        v_cvt_f32_t(v_s0, v_s0d);
+                        v_store(D + i, v_s0d);
+
+                        v_store(SUM + i, v_sub(v_s0, vx_load(Sm + i)));
+
+                    }
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
+                    for( ; i <= width-VTraits<VSTX4>::vlanes(); i+=VTraits<VSTX4>::vlanes() )
+                    {
+                        VSTX4 v_s0 = v_add(v_load(SUM + i), v_load(Sp + i));
+                        KX4 v_s0d;
+                        v_cvt_f32_t(v_s0, v_s0d);
+                        v_store(D + i, v_s0d);
+
+                        v_store(SUM + i, v_sub(v_s0, v_load(Sm + i)));
+
+                    }
+#endif
+#endif
+                    for( ; i < width-kcn; i++ )
+                    {
+                        ST s0 = SUM[i] + Sp[i];
+                        D[i] = saturate_cast<T>(s0);
+                        SUM[i] = s0 - Sm[i];
+                    }
+                }//processInnerRegion
+
+                for(i = width-kcn ; i < width; i++ )
+                {
+                    ST s0 = SUM[i] + Sp[i];
+                    D[i] = saturate_cast<T>(s0);
+                    SUM[i] = s0 - Sm[i];
+                }
+            }
+            dst += dststep;
+        }
+        processInnerRegionPrevRow = processInnerRegion;
+    }
+
+    double scale;
+    int sumCount;
+    bool processInnerRegionPrevRow;
+    std::vector<ST> sum;
+};
+#endif//0
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 v_uint32 vx_setall(unsigned value) {
     return vx_setall_u32(value);
 }
@@ -355,7 +1013,7 @@ struct Sum3x3 :
     {
         const ET* src_ptr = src - cn;
         v_expand(vx_load(src_ptr), a0, a1);
-        v_expand(vx_load(src_ptr+cn),      b0, b1);
+        v_expand(vx_load(src_ptr+cn), b0, b1);
         v_expand(vx_load(src_ptr+cn*2), c0, c1);
     }
     void inline addRow(const VFT &a0, const VFT &a1, const VFT &b0, const VFT &b1, VFT &r0, VFT &r1)
@@ -430,10 +1088,8 @@ struct Sum3x3 :
                 v_mulFactor = vx_setall((WET)scale);
             else
             {
-                WET val = 29;
-                if (std::is_same<ET, uchar>::value || std::is_same<ET, char>::value)
-                    val = 29;
-                else if (std::is_same<ET, ushort>::value || std::is_same<ET, short>::value)
+                WET val = 29;//default uchar or char
+                if (std::is_same<ET, ushort>::value || std::is_same<ET, short>::value)
                     val = 7282;
                 v_mulFactor = vx_setall(val);
             }
@@ -1698,7 +2354,7 @@ Ptr<BaseColumnFilter> getColumnSumFilter(int sumType, int dstType, int ksize, in
     if( anchor < 0 )
         anchor = ksize/2;
 
-    if(scale==1)
+    if(scale==1)//box
     {
         if( ddepth == CV_8U && sdepth == CV_32S )
             return makePtr<ColumnSum<SKIP_SCALING, int, uchar> >(ksize, anchor, scale);
@@ -1707,17 +2363,19 @@ Ptr<BaseColumnFilter> getColumnSumFilter(int sumType, int dstType, int ksize, in
         if( ddepth == CV_8U && sdepth == CV_64F )
             return makePtr<ColumnSum<SKIP_SCALING, double, uchar> >(ksize, anchor, scale);
         if( ddepth == CV_16U && sdepth == CV_32S )
-            return makePtr<ColumnSum<SKIP_SCALING, int, ushort> >(ksize, anchor, scale);
+            return makePtr<ColumnSum16US<SKIP_SCALING, ushort, v_uint32, v_uint32x4, v_uint16, v_uint16x8> >(ksize, anchor, scale);
         if( ddepth == CV_16U && sdepth == CV_64F )
             return makePtr<ColumnSum<SKIP_SCALING, double, ushort> >(ksize, anchor, scale);
         if( ddepth == CV_16S && sdepth == CV_32S )
-            return makePtr<ColumnSum<SKIP_SCALING, int, short> >(ksize, anchor, scale);
+            return makePtr<ColumnSum16US<SKIP_SCALING, short, v_int32, v_int32x4, v_int16, v_int16x8> >(ksize, anchor, scale);
         if( ddepth == CV_16S && sdepth == CV_64F )
             return makePtr<ColumnSum<SKIP_SCALING, double, short> >(ksize, anchor, scale);
         if( ddepth == CV_32S && sdepth == CV_32S )
             return makePtr<ColumnSum<SKIP_SCALING, int, int> >(ksize, anchor, scale);
+            //return makePtr<ColumnSumIntInt_IntFloat<int, int, v_int32, v_int32x4, v_int32, v_int32x4> >(ksize, anchor, scale);
         if( ddepth == CV_32F && sdepth == CV_32S )
             return makePtr<ColumnSum<SKIP_SCALING, int, float> >(ksize, anchor, scale);
+            //return makePtr<ColumnSumIntInt_IntFloat<int, float, v_int32, v_int32x4, v_float32, v_float32x4> >(ksize, anchor, scale);
         if( ddepth == CV_32F && sdepth == CV_64F )
             return makePtr<ColumnSum<SKIP_SCALING, double, float> >(ksize, anchor, scale);
         if( ddepth == CV_64F && sdepth == CV_32S )
@@ -1727,17 +2385,17 @@ Ptr<BaseColumnFilter> getColumnSumFilter(int sumType, int dstType, int ksize, in
     }
     else
     {
-        if(kernelSizeLog2 && !(sdepth==CV_64F || sdepth==CV_32F))
+        //kernel size power of 2
+        if(kernelSizeLog2 && !(sdepth==CV_64F || sdepth==CV_32F)
+        && !(ddepth == CV_8U && sdepth == CV_16U)) // uchar case: generic ColumnSum perf is lower than ColumnSumUcharUshortScaling
         {
             scale = (double)kernelSizeLog2;
             if( ddepth == CV_8U && sdepth == CV_32S )
                 return makePtr<ColumnSum<APPLY_SCALING_WITH_SHIFT, int, uchar> >(ksize, anchor, scale);
-            if( ddepth == CV_8U && sdepth == CV_16U )
-                return makePtr<ColumnSum<APPLY_SCALING_WITH_SHIFT, ushort, uchar> >(ksize, anchor, scale);
             if( ddepth == CV_16U && sdepth == CV_32S )
-                return makePtr<ColumnSum<APPLY_SCALING_WITH_SHIFT, int, ushort> >(ksize, anchor, scale);
+                return makePtr<ColumnSum16US<APPLY_SCALING_WITH_SHIFT, ushort, v_uint32, v_uint32x4, v_uint16, v_uint16x8> >(ksize, anchor, scale);
             if( ddepth == CV_16S && sdepth == CV_32S )
-                return makePtr<ColumnSum<APPLY_SCALING_WITH_SHIFT, int, short> >(ksize, anchor, scale);
+                return makePtr<ColumnSum16US<APPLY_SCALING_WITH_SHIFT, short, v_int32, v_int32x4, v_int16, v_int16x8> >(ksize, anchor, scale);
             if( ddepth == CV_32S && sdepth == CV_32S )
                 return makePtr<ColumnSum<APPLY_SCALING_WITH_SHIFT, int, int> >(ksize, anchor, scale);
             if( ddepth == CV_32F && sdepth == CV_32S )
@@ -1750,13 +2408,13 @@ Ptr<BaseColumnFilter> getColumnSumFilter(int sumType, int dstType, int ksize, in
             if( ddepth == CV_8U && sdepth == CV_32S )
                 return makePtr<ColumnSum<APPLY_SCALING, int, uchar> >(ksize, anchor, scale);
             if( ddepth == CV_8U && sdepth == CV_16U )
-                return makePtr<ColumnSum<APPLY_SCALING, ushort, uchar> >(ksize, anchor, scale);
+                return makePtr<ColumnSumUcharUshortScaling >(ksize, anchor, scale);
             if( ddepth == CV_8U && sdepth == CV_64F )
                 return makePtr<ColumnSum<APPLY_SCALING, double, uchar> >(ksize, anchor, scale);
             if( ddepth == CV_16U && sdepth == CV_32S )
-                return makePtr<ColumnSum<APPLY_SCALING, int, ushort> >(ksize, anchor, scale);
+                return makePtr<ColumnSum16US<APPLY_SCALING, ushort, v_uint32, v_uint32x4, v_uint16, v_uint16x8> >(ksize, anchor, scale);
             if( ddepth == CV_16U && sdepth == CV_64F )
-                return makePtr<ColumnSum<APPLY_SCALING, double, ushort> >(ksize, anchor, scale);
+                return makePtr<ColumnSum16US<APPLY_SCALING, short, v_int32, v_int32x4, v_int16, v_int16x8> >(ksize, anchor, scale);
             if( ddepth == CV_16S && sdepth == CV_32S )
                 return makePtr<ColumnSum<APPLY_SCALING, int, short> >(ksize, anchor, scale);
             if( ddepth == CV_16S && sdepth == CV_64F )
