@@ -2275,6 +2275,12 @@ TEST(Imgproc_MedianBlur, regression_28385)
     // this crashes in case of overflow because of out-of-bounds memory access
     medianBlur(sub, out, 3);
     ASSERT_EQ(out.size(), Size(100, 50000));
+TEST(Imgproc_MedianBlur, emptyInput)
+{
+    cv::Mat empty;
+    cv::Mat dst;
+
+    EXPECT_THROW(cv::medianBlur(empty, dst, 3), cv::Exception);
 }
 
 TEST(Imgproc_Sobel, s16_regression_13506)
