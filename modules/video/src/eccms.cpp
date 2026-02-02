@@ -9,7 +9,7 @@
 \****************************************************************************************/
 
 namespace cv { 
-typedef std::vector<cv::Mat> MatPyramid; //DUBUG: Well, i don't know, what standart type to use for pyramid representation.
+typedef std::vector<cv::Mat> MatPyramid;
 
 template<int motionType> struct MotionTraits {};
 

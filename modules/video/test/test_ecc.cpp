@@ -553,11 +553,16 @@ TEST(Video_ECC_Translation, accuracy) {
 TEST(Video_ECC_Translation_MS, accuracy) {
     CV_ECC_Test_Translation test;
     test.usePyramids();
-// DUBUG: Well, i'm not sure we have to be nervous about such a difference:
+// There is such a difference.
 // ORIGINAL:1.000000, 0.000000, 17.786327
 // ORIGINAL:0.000000, 1.000000, 19.370564
 // FOUND:1.000000, 0.000000, 18.200426
 // FOUND:0.000000, 1.000000, 19.860243
+// Pyramids version uses nearest neighbour interpolation for
+// speed. It's so much infromation, that error is automatically
+// fixed, but for transition this error is regular, so it's 
+// impossible to compesate it. Therefore, subpixel accuracy cannot 
+// be achieved on transition.
     test.setRMS_MAX(0.3);
     test.safe_run();
 }
