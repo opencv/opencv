@@ -284,10 +284,14 @@ if(DOXYGEN_FOUND)
   # gather and copy specific files for js tutorials
   file(GLOB_RECURSE js_assets "${js_tutorials_assets_dir}/*")
   ocv_list_filterout(js_assets "\\\\.eslintrc.json")
-  # Exclude prism files that are handled separately
-  ocv_list_filterout(js_assets "prism\\\\.min\\\\.js")
-  ocv_list_filterout(js_assets "prism\\\\.min\\\\.css")
-  ocv_list_filterout(js_assets "prism-textarea\\\\.min\\\\.js")
+  # Exclude prism files that are handled separately by minification rules
+  # This prevents conflicts with add_custom_command outputs
+  ocv_list_filterout(js_assets "prism\\\\.js$")
+  ocv_list_filterout(js_assets "prism-textarea\\\\.js$")
+  ocv_list_filterout(js_assets "prism\\\\.css$")
+  ocv_list_filterout(js_assets "prism\\\\.min\\\\.js$")
+  ocv_list_filterout(js_assets "prism\\\\.min\\\\.css$")
+  ocv_list_filterout(js_assets "prism-textarea\\\\.min\\\\.js$")
   list(APPEND js_assets "${OpenCV_SOURCE_DIR}/samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/Data/box.mp4")
 
   if(BUILD_opencv_js)
@@ -304,8 +308,17 @@ if(DOXYGEN_FOUND)
   list(APPEND js_tutorials_assets_deps "${data_harrcascades_path}/haarcascade_frontalface_default.xml" "${data_harrcascades_path}/haarcascade_eye.xml")
   list(APPEND js_assets "${data_harrcascades_path}/haarcascade_frontalface_default.xml" "${data_harrcascades_path}/haarcascade_eye.xml")
 
+  # Define protected filenames handled by dedicated minification rules
+  set(protected_files "prism.min.js" "prism-textarea.min.js" "prism.min.css")
+
   foreach(f ${js_assets})
     get_filename_component(fname "${f}" NAME)
+    
+    # Skip files with dedicated custom commands to avoid duplicate rules
+    if(fname IN_LIST protected_files)
+      continue()
+    endif()
+    
     add_custom_command(OUTPUT "${opencv_tutorial_html_dir}/${fname}"
                        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${f}" "${opencv_tutorial_html_dir}/${fname}"
                        DEPENDS "${f}"

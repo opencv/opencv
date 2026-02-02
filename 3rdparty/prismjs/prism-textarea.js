@@ -25,17 +25,20 @@
         pre.style.position = 'absolute';
         pre.style.top = '0';
         pre.style.left = '0';
-        pre.style.right = '0';
-        pre.style.bottom = '0';
+        pre.style.width = '100%';
+        pre.style.height = '100%';
         pre.style.margin = '0';
         pre.style.padding = computedStyle.padding;
         pre.style.border = '1px solid transparent';
         pre.style.font = computedStyle.font;
+        pre.style.fontSize = computedStyle.fontSize;
+        pre.style.lineHeight = computedStyle.lineHeight;
         pre.style.whiteSpace = 'pre-wrap';
         pre.style.wordWrap = 'break-word';
         pre.style.overflow = 'hidden';
         pre.style.pointerEvents = 'none';
         pre.style.background = computedStyle.backgroundColor;
+        pre.style.boxSizing = 'border-box';
         
         textarea.style.background = 'transparent';
         textarea.style.position = 'relative';
@@ -46,6 +49,7 @@
         textarea.style.webkitTextFillColor = 'rgba(0,0,0,0.01)';
         textarea.style.textShadow = '0 0 0 transparent';
         textarea.style.cursor = 'text';
+        textarea.style.boxSizing = 'border-box';
 
         textarea.parentNode.insertBefore(wrapper, textarea);
         wrapper.appendChild(pre);
