@@ -273,7 +273,7 @@ public:
         FORMAT_XML  = (1<<3), //!< flag, XML format
         FORMAT_YAML = (2<<3), //!< flag, YAML format
         FORMAT_JSON = (3<<3), //!< flag, JSON format
-        FORMAT_YAML_1_2 = (4<<3), //!< flag, YAML 1.2 format (no header, strict booleans) [NEW]
+        FORMAT_YAML_1_0 = (4<<3), //!< flag, Legacy YAML 1.0 format (strict headers, booleans as ints)
 
         BASE64      = 64,     //!< flag, write rawdata in Base64 by default. (consider using WRITE_BASE64)
         WRITE_BASE64 = BASE64 | WRITE, //!< flag, enable both WRITE and BASE64

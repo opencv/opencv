@@ -695,13 +695,13 @@ bool FileStorage::Impl::open(const char *filename_or_buf, int _flags, const char
             }
 
             emitter_do_not_use_direct_dereference = createXMLEmitter(this);
-        } else if (fmt == FileStorage::FORMAT_YAML || fmt == FileStorage::FORMAT_YAML_1_2) {
-            if (!append) {
-                if (fmt == FileStorage::FORMAT_YAML_1_2)
-                    puts("%YAML 1.2\n---\n");
-                else
-                    puts("%YAML:1.0\n---\n");
-            }
+        } else if (fmt == FileStorage::FORMAT_YAML || fmt == FileStorage::FORMAT_YAML_1_0) {
+                if (!append) {
+                    if (fmt == FileStorage::FORMAT_YAML_1_0)
+                        puts("%YAML:1.0\n---\n"); // Legacy Flag -> Legacy Header
+                    else
+                        puts("%YAML 1.2\n---\n"); // Default -> Modern Header
+                }
             else
                 puts("...\n---\n");
 
@@ -756,17 +756,14 @@ bool FileStorage::Impl::open(const char *filename_or_buf, int _flags, const char
 
         if (strncmp(bufPtr, yaml_signature, strlen(yaml_signature)) == 0)
         {
-            if (strncmp(bufPtr, "%YAML 1.2", 9) == 0)
-                fmt = FileStorage::FORMAT_YAML_1_2;
-            else
-                fmt = FileStorage::FORMAT_YAML;
+            fmt = FileStorage::FORMAT_YAML;
         }
         else if (strncmp(bufPtr, json_signature, strlen(json_signature)) == 0)
             fmt = FileStorage::FORMAT_JSON;
         else if (strncmp(bufPtr, xml_signature, strlen(xml_signature)) == 0)
             fmt = FileStorage::FORMAT_XML;
-        else if ((flags & FileStorage::FORMAT_MASK) == FileStorage::FORMAT_YAML_1_2)
-            fmt = FileStorage::FORMAT_YAML_1_2;
+        else if ((flags & FileStorage::FORMAT_MASK) == FileStorage::FORMAT_YAML_1_0)
+            fmt = FileStorage::FORMAT_YAML_1_0;
         else if (strbufsize == bufOffset)
             CV_Error(cv::Error::StsBadArg, "Input file is invalid");
         else
@@ -793,7 +790,7 @@ bool FileStorage::Impl::open(const char *filename_or_buf, int _flags, const char
                     parser_do_not_use_direct_dereference = createXMLParser(this);
                     break;
                 case FileStorage::FORMAT_YAML:
-                case FileStorage::FORMAT_YAML_1_2:
+                case FileStorage::FORMAT_YAML_1_0:
                     parser_do_not_use_direct_dereference = createYAMLParser(this);
                     break;
                 case FileStorage::FORMAT_JSON:
@@ -2914,15 +2911,16 @@ void read(const FileNode& node, std::string& val, const std::string& default_val
 void FileStorage::Impl::write(const String &key, bool value)
 {
     CV_Assert(write_mode);
-    if (fmt == FileStorage::FORMAT_YAML_1_2)
-    {
-        // Write as unquoted string "true" or "false"
-        getEmitter().write(key.c_str(), value ? "true" : "false", false);
-    }
-    else
+    // [SWAP LOGIC]
+    if (fmt == FileStorage::FORMAT_YAML_1_0)
     {
         // Legacy behavior: Write as integer 1 or 0
         getEmitter().write(key.c_str(), (int)value);
+    }
+    else
+    {
+        // Default/Modern behavior: Write as "true" or "false"
+        getEmitter().write(key.c_str(), value ? "true" : "false", false);
     }
 }
 

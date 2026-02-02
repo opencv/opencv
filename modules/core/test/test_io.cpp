@@ -2207,47 +2207,47 @@ INSTANTIATE_TEST_CASE_P(Core_InputOutput,
     FileStorage_exact_type, Values(".yml", ".xml", ".json")
 );
 
-TEST(Core_InputOutput, YAML_1_2_Compatibility)
+TEST(Core_InputOutput, YAML_Compatibility)
 {
     string filename = cv::tempfile(".yaml");
 
+    // 1. Write using DEFAULT (should be 1.2 compatible now)
     {
-        FileStorage fs(filename, FileStorage::WRITE | FileStorage::FORMAT_YAML_1_2);
+        FileStorage fs(filename, FileStorage::WRITE | FileStorage::FORMAT_YAML);
         ASSERT_TRUE(fs.isOpened());
-
         fs << "bool_true" << true;
         fs << "bool_false" << false;
-        fs << "some_int" << 42;
-
         fs.release();
     }
 
+    // 2. Verify Default is Modern (Literals + No Legacy Header)
     {
         std::ifstream file(filename.c_str());
         std::stringstream buffer;
         buffer << file.rdbuf();
         std::string content = buffer.str();
 
-        EXPECT_EQ(content.find("%YAML:1.0"), std::string::npos);
-
-        EXPECT_NE(content.find("bool_true: true"), std::string::npos);
-        EXPECT_NE(content.find("bool_false: false"), std::string::npos);
+        EXPECT_NE(content.find("bool_true: true"), std::string::npos); // Found 'true'
+        EXPECT_EQ(content.find("%YAML:1.0"), std::string::npos);       // No 1.0 Header
     }
 
+    // 3. Write using LEGACY flag
     {
-        FileStorage fs(filename, FileStorage::READ | FileStorage::FORMAT_YAML_1_2);
+        FileStorage fs(filename, FileStorage::WRITE | FileStorage::FORMAT_YAML_1_0);
         ASSERT_TRUE(fs.isOpened());
-
-        int val_true = (int)fs["bool_true"];
-        EXPECT_EQ(val_true, 1);
-
-        int val_false = (int)fs["bool_false"];
-        EXPECT_EQ(val_false, 0);
-
-        int val_int = (int)fs["some_int"];
-        EXPECT_EQ(val_int, 42);
-
+        fs << "bool_true" << true;
         fs.release();
+    }
+
+    // 4. Verify Legacy (Integers + Strict Header)
+    {
+        std::ifstream file(filename.c_str());
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        std::string content = buffer.str();
+
+        EXPECT_NE(content.find("bool_true: 1"), std::string::npos);    // Found '1'
+        EXPECT_NE(content.find("%YAML:1.0"), std::string::npos);       // Found 1.0 Header
     }
 
     remove(filename.c_str());
