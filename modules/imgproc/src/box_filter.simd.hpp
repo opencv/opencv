@@ -400,6 +400,7 @@ static inline void vx_store_t(ushort*D, v_uint16 value) {
 static inline void vx_store_t(uchar*D, v_uint16 value) {
     return v_pack_store(D, value);
 }
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
 static inline void vx_store_t(short*D, v_int16x8 value) {
     return v_store(D, value);
 }
@@ -409,6 +410,7 @@ static inline void vx_store_t(ushort*D, v_uint16x8 value) {
 static inline void vx_store_t(uchar*D, v_uint16x8 value) {
     return v_pack_store(D, value);
 }
+#endif
 
 static inline void v_pack_t(v_int32 a, v_int32 b, v_uint16& dst) {
     dst = v_pack(v_reinterpret_as_u32(a), v_reinterpret_as_u32(b));
@@ -419,6 +421,7 @@ static inline void v_pack_t(v_int32 a, v_int32 b, v_int16& dst) {
 static inline void v_pack_t(v_uint32 a, v_uint32 b, v_uint16& dst) {
     dst = v_pack(a, b);
 }
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
 static inline void v_pack_t(v_int32x4 a, v_int32x4 b, v_uint16x8& dst) {
     dst = v_pack(v_reinterpret_as_u32(a), v_reinterpret_as_u32(b));
 }
@@ -428,6 +431,7 @@ static inline void v_pack_t(v_int32x4 a, v_int32x4 b, v_int16x8& dst) {
 static inline void v_pack_t(v_uint32x4 a, v_uint32x4 b, v_uint16x8& dst) {
     dst = v_pack(a, b);
 }
+#endif
 
 static inline void v_reinterpret_t(v_int32 a, v_uint32 &b) {
     b = v_reinterpret_as_u32(a);
@@ -438,7 +442,7 @@ static inline void v_reinterpret_t(v_uint32 a, v_uint32 &b) {
 static inline void v_reinterpret_t(v_int32 a, v_int32 &b) {
     b = a;
 }
-
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
 static inline void v_reinterpret_t(v_int32x4 a, v_uint32x4 &b) {
     b = v_reinterpret_as_u32(a);
 }
@@ -448,6 +452,7 @@ static inline void v_reinterpret_t(v_uint32x4 a, v_uint32x4 &b) {
 static inline void v_reinterpret_t(v_int32x4 a, v_int32x4 &b) {
     b = a;
 }
+#endif
 #endif
 
 //generic template to handle ddepth == CV_16U/CV_16S && sdepth == CV_32S
