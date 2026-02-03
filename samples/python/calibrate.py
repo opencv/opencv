@@ -174,6 +174,11 @@ def main():
         img_points.append(corners)
         obj_points.append(pattern_points)
 
+    # Ensure at least one valid image was processed
+    if h is None or w is None:
+        print("Error: No valid images were loaded. Please check your image files.")
+        return None
+
     # calculate camera distortion
     rms, camera_matrix, dist_coefs, _rvecs, _tvecs = cv.calibrateCamera(obj_points, img_points, (w, h), None, None)
 
