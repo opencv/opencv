@@ -165,15 +165,21 @@ def main():
         chessboards = [processImage(fn) for fn in img_names]
     else:
         print("Run with %d threads..." % threads_num)
-        # Process first image sequentially to set dimensions (avoid race condition)
-        first_result = processImage(img_names[0]) if img_names else None
-        chessboards = [first_result] if first_result else []
-        
-        # Process remaining images in parallel
-        if len(img_names) > 1:
+        chessboards = []
+        # Process images sequentially until we get the first valid result
+        first_valid_index = 0
+        for idx, fn in enumerate(img_names):
+            result = processImage(fn)
+            chessboards.append(result)
+            first_valid_index = idx + 1
+            if result is not None:
+                # Assume h and w are initialized inside processImage when it returns a valid result
+                break
+        # If there are remaining images, process them in parallel
+        if first_valid_index < len(img_names):
             from multiprocessing.dummy import Pool as ThreadPool
             pool = ThreadPool(threads_num)
-            remaining_boards = pool.map(processImage, img_names[1:])
+            remaining_boards = pool.map(processImage, img_names[first_valid_index:])
             chessboards.extend(remaining_boards)
 
     chessboards = [x for x in chessboards if x is not None]
