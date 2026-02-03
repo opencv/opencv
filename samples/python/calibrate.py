@@ -172,9 +172,10 @@ def main():
             result = processImage(fn)
             chessboards.append(result)
             first_valid_index = idx + 1
-            if result is not None:
-                # Assume h and w are initialized inside processImage when it returns a valid result
+            if result is not None and h is not None:
+                # h and w are now initialized, safe to parallelize
                 break
+        
         # If there are remaining images, process them in parallel
         if first_valid_index < len(img_names):
             from multiprocessing.dummy import Pool as ThreadPool
