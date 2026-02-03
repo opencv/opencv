@@ -118,11 +118,11 @@ def main():
             print("Failed to load", fn)
             return None
 
-        # Set dimensions from first valid image
-        if h is None:
+        # Set dimensions from first valid image and ensure they are initialized
+        if h is None or w is None:
             h, w = img.shape[:2]
-        
-        assert w == img.shape[1] and h == img.shape[0], ("size: %d x %d ... " % (img.shape[1], img.shape[0]))
+        else:
+            assert w == img.shape[1] and h == img.shape[0], ("size: %d x %d ... " % (img.shape[1], img.shape[0]))
         found = False
         corners = 0
         if pattern_type == 'chessboard':
@@ -165,18 +165,25 @@ def main():
         chessboards = [processImage(fn) for fn in img_names]
     else:
         print("Run with %d threads..." % threads_num)
-        from multiprocessing.dummy import Pool as ThreadPool
-        pool = ThreadPool(threads_num)
-        chessboards = pool.map(processImage, img_names)
+        # Process first image sequentially to set dimensions (avoid race condition)
+        first_result = processImage(img_names[0]) if img_names else None
+        chessboards = [first_result] if first_result else []
+        
+        # Process remaining images in parallel
+        if len(img_names) > 1:
+            from multiprocessing.dummy import Pool as ThreadPool
+            pool = ThreadPool(threads_num)
+            remaining_boards = pool.map(processImage, img_names[1:])
+            chessboards.extend(remaining_boards)
 
     chessboards = [x for x in chessboards if x is not None]
     for (corners, pattern_points) in chessboards:
         img_points.append(corners)
         obj_points.append(pattern_points)
 
-    # Ensure at least one valid image was processed
-    if h is None or w is None:
-        print("Error: No valid images were loaded. Please check your image files.")
+    # Ensure at least one valid image and pattern were processed
+    if h is None or w is None or not obj_points or not img_points:
+        print("Error: No valid calibration patterns were detected. Please check your image files and pattern settings.")
         return None
 
     # calculate camera distortion
