@@ -447,7 +447,7 @@ public:
 
         cs.initConv(inpshape, wshape0, outshape, ngroups,
                     strides, dilations, pads, auto_pad, ceil_mode,
-                    fast_activation, fast_activ_params, 0);
+                    fast_activation, fast_activ_params, ConvState::MAX_ACTIV_PARAMS);
 
         const float* scale_data = nullptr;
         const float* bias_data = bias.ptr<float>();

@@ -1047,6 +1047,7 @@ void ONNXImporter2::parseMaxUnpool(LayerParams& layerParams, const opencv_onnx::
 
 void ONNXImporter2::parseMaxPool(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
+    CV_CheckEQ(node_outputs.size(), 1u, "the new engine does not support MaxPool with 2 outputs yet");
     layerParams.type = "MaxPool";
     addLayer(layerParams, node_proto);
 }
@@ -2806,6 +2807,7 @@ Net readNetFromONNX2(const String& onnxFile)
     Net net = importer.parseFile(onnxFile.c_str());
     if (net.getMainGraph()) {
         net.getImpl()->modelFileName = onnxFile;
+        //net.setTracingMode(DNN_TRACE_ALL);
     }
     return net;
 }
