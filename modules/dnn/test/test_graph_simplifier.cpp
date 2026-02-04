@@ -145,8 +145,12 @@ TEST_F(Test_Graph_Simplifier, AttentionSubgraph) {
         - AttentionSubgraph
         - AttentionSingleHeadSubgraph
     */
-    test("attention", "Attention");
-    test("attention_single_head", "Attention");
+
+    const char* force_engine_env = std::getenv("OPENCV_FORCE_DNN_ENGINE");
+    bool is_old_engine = (force_engine_env && std::string(force_engine_env) == "1");
+    std::string expected_layer = is_old_engine ? "Attention" : "AttentionOnnxAi";
+    test("attention", expected_layer);
+    test("attention_single_head", expected_layer);
 }
 
 TEST_F(Test_Graph_Simplifier, BiasedMatMulSubgraph) {
