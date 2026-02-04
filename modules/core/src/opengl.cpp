@@ -1821,6 +1821,22 @@ void convertToGLTexture2D(InputArray src, Texture2D& texture)
     if (status != CL_SUCCESS)
         CV_Error_(cv::Error::OpenCLApiCallError, ("OpenCL: clCreateFromGLTexture failed: %d", status));
 
+    struct CLMemWrapper
+    {
+        cl_mem mem;
+        CLMemWrapper(cl_mem m) : mem(m) {}
+        ~CLMemWrapper()
+        {
+            if (mem)
+            {
+                cl_int status = clReleaseMemObject(mem);
+                if (status != CL_SUCCESS)
+                    CV_Error_(cv::Error::OpenCLApiCallError, ("OpenCL: clReleaseMemObject failed: %d", status));
+            }
+        }
+    };
+    CLMemWrapper clImageWrapper(clImage);
+
     cl_mem clBuffer = (cl_mem)u.handle(ACCESS_READ);
 
     cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
@@ -1840,10 +1856,6 @@ void convertToGLTexture2D(InputArray src, Texture2D& texture)
     status = clFinish(q); // TODO Use events
     if (status != CL_SUCCESS)
         CV_Error_(cv::Error::OpenCLApiCallError, ("OpenCL: clFinish failed: %d", status));
-
-    status = clReleaseMemObject(clImage); // TODO RAII
-    if (status != CL_SUCCESS)
-        CV_Error_(cv::Error::OpenCLApiCallError, ("OpenCL: clReleaseMemObject failed: %d", status));
 #endif
 }
 
@@ -1883,6 +1895,22 @@ void convertFromGLTexture2D(const Texture2D& texture, OutputArray dst)
     if (status != CL_SUCCESS)
         CV_Error_(cv::Error::OpenCLApiCallError, ("OpenCL: clCreateFromGLTexture failed: %d", status));
 
+    struct CLMemWrapper
+    {
+        cl_mem mem;
+        CLMemWrapper(cl_mem m) : mem(m) {}
+        ~CLMemWrapper()
+        {
+            if (mem)
+            {
+                cl_int status = clReleaseMemObject(mem);
+                if (status != CL_SUCCESS)
+                    CV_Error_(cv::Error::OpenCLApiCallError, ("OpenCL: clReleaseMemObject failed: %d", status));
+            }
+        }
+    };
+    CLMemWrapper clImageWrapper(clImage);
+
     cl_mem clBuffer = (cl_mem)u.handle(ACCESS_READ);
 
     cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
@@ -1902,10 +1930,6 @@ void convertFromGLTexture2D(const Texture2D& texture, OutputArray dst)
     status = clFinish(q); // TODO Use events
     if (status != CL_SUCCESS)
         CV_Error_(cv::Error::OpenCLApiCallError, ("OpenCL: clFinish failed: %d", status));
-
-    status = clReleaseMemObject(clImage); // TODO RAII
-    if (status != CL_SUCCESS)
-        CV_Error_(cv::Error::OpenCLApiCallError, ("OpenCL: clReleaseMemObject failed: %d", status));
 #endif
 }
 

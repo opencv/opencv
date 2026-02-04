@@ -1,6 +1,5 @@
 ## OpenCV: Open Source Computer Vision Library
 
-
 ### Resources
 
 * Homepage: <https://opencv.org>
@@ -12,6 +11,13 @@
 * Additional OpenCV functionality: <https://github.com/opencv/opencv_contrib>
 * Donate to OpenCV: <https://opencv.org/support/>
 
+### Getting Started
+
+For build instructions, please refer to the official documentation or use the `CMakeLists.txt` provided.
+
+**Note for Contributors:**
+This repository follows the standard contribution guidelines. Please check `CONTRIBUTING.md` for details.
+We are actively working on improving code quality, including RAII adoption and GSoC project ideas (see Wiki).
 
 ### Contributing
 
