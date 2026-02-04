@@ -220,11 +220,9 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
 
                 _q_offsets[b * nhq + n] = b * seq_len_q * qk_head_size * nhq + n * q_stride_n;
 
-                _k_offsets[b * nhq + n] = b * seq_len_kv * qk_head_size * nhkv + 
-                                          (n / num_gq_groups) * kv_stride_n;
+                _k_offsets[b * nhq + n] = b * seq_len_kv * qk_head_size * nhkv + (n / num_gq_groups) * kv_stride_n;
 
-                _v_offsets[b * nhq + n] = b * seq_len_kv * v_head_size * nhkv + 
-                                          (n / num_gq_groups) * v_stride_n;
+                _v_offsets[b * nhq + n] = b * seq_len_kv * v_head_size * nhkv + (n / num_gq_groups) * v_stride_n;
 
                 _a_offsets[b * nhq + n] = b * seq_len_square * nhq + n * seq_len_square;
 
