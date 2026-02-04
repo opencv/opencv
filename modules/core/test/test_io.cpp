@@ -499,7 +499,7 @@ TEST(Core_InputOutput, FileStorageKey)
     EXPECT_NO_THROW(f << "key1" << "value1");
     EXPECT_NO_THROW(f << "_key2" << "value2");
     EXPECT_NO_THROW(f << "key_3" << "value3");
-    const std::string expected = "%YAML:1.0\n---\nkey1: value1\n_key2: value2\nkey_3: value3\n";
+    const std::string expected = "%YAML 1.2\n---\nkey1: value1\n_key2: value2\nkey_3: value3\n";
     ASSERT_STREQ(f.releaseAndGetString().c_str(), expected.c_str());
 }
 
@@ -1199,7 +1199,7 @@ TEST(Core_InputOutput, FileStorage_DMatch)
 
     EXPECT_NO_THROW(fs << "d" << d);
     cv::String fs_result = fs.releaseAndGetString();
-    EXPECT_STREQ(fs_result.c_str(), "%YAML:1.0\n---\nd: [ 1, 2, 3, -1.5 ]\n");
+    EXPECT_STREQ(fs_result.c_str(), "%YAML 1.2\n---\nd: [ 1, 2, 3, -1.5 ]\n");
 
     cv::FileStorage fs_read(fs_result, cv::FileStorage::READ | cv::FileStorage::MEMORY);
 
@@ -1227,7 +1227,7 @@ TEST(Core_InputOutput, FileStorage_DMatch_vector)
     EXPECT_NO_THROW(fs << "dv" << dv);
     cv::String fs_result = fs.releaseAndGetString();
     EXPECT_STREQ(fs_result.c_str(),
-"%YAML:1.0\n"
+"%YAML 1.2\n"
 "---\n"
 "dv:\n"
 "   - [ 1, 2, 3, -1.5 ]\n"
@@ -1274,7 +1274,7 @@ TEST(Core_InputOutput, FileStorage_DMatch_vector_vector)
     cv::String fs_result = fs.releaseAndGetString();
 #ifndef OPENCV_TRAITS_ENABLE_DEPRECATED
     EXPECT_STREQ(fs_result.c_str(),
-"%YAML:1.0\n"
+"%YAML 1.2\n"
 "---\n"
 "dvv:\n"
 "   -\n"
