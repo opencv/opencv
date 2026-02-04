@@ -1994,6 +1994,7 @@ void ONNXImporter2::parseLayerNorm(LayerParams& layerParams, const opencv_onnx::
         }
         n_inputs = 1;
     }
+    layerParams.type = "LayerNormalization2";
     addLayer(layerParams, node_proto, n_inputs);
 }
 
