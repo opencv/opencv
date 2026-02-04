@@ -68,62 +68,63 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
                                  std::vector<MatShape> &outputs,
                                  std::vector<MatShape> &internals) const CV_OVERRIDE {
         CV_CheckTrue(inputs.size() >= 3, "At least three inputs (query, key, value) are required");
-        CV_CheckTrue(inputs[0].dims == inputs[1].dims &&
-                     inputs[0].dims == inputs[2].dims,
-                     "Query, key and value must have the same number of dimensions");
 
-        const int input_dims = inputs[0].dims;
-        CV_CheckTrue(
-            input_dims == 4 ||  (q_num_heads > 0 && kv_num_heads > 0 && input_dims == 3),
-            "Input dimensions must be 4D or 3D (in the latter case, q_num_heads and kv_num_heads must be set)"
-        );
+        const int q_dims = inputs[0].dims;
+        const int k_dims = inputs[1].dims;
+        const int v_dims = inputs[2].dims;
+
+        CV_CheckTrue(q_dims >= 2 || q_dims <= 4, "Query must be 2D, 3D or 4D");
+        CV_CheckTrue(k_dims >= 2 || k_dims <= 4, "Key must be 2D, 3D or 4D");
+        //CV_CheckTrue(v_dims >= 3 || v_dims == 4, "Value must be 3D or 4D");
 
         const int batch_size = inputs[0][0];
-        const int seq_len_q = inputs[0][input_dims - 2];
-        int seq_len_kv = inputs[1][input_dims - 2];
-        if (inputs.size() >= 6){
-            seq_len_kv += inputs[4][input_dims - 2];
+        const int seq_len_q = (q_dims >= 3) ? inputs[0][q_dims - 2] : 1;
+        int seq_len_kv = (k_dims >= 3) ? inputs[1][k_dims - 2] : 1;
+
+        if (inputs.size() >= 6 && !inputs[4].empty()){
+            int past_dim = inputs[4].dims;
+            int past_len = (past_dim >= 3) ? inputs[4][past_dim - 2] : inputs[4][0];
+            seq_len_kv += past_len;
         }
 
-        const int q_hn = input_dims == 4 ?
-            inputs[0][1] : q_num_heads;
-        const int kv_hn =input_dims == 4 ?
-            inputs[1][1] : kv_num_heads;
+        const int q_hn = q_dims == 4 ? inputs[0][1] : q_num_heads;
+        int kv_hn = k_dims == 4 ? inputs[1][1] : kv_num_heads;
+        if (kv_hn == 0 && q_hn > 0) kv_hn = q_hn;
 
-        CV_CheckTrue(inputs[2][input_dims - 2] == inputs[1][input_dims - 2],
-                     "Key and query sequence lengths must be equal");
-        const int nhq = input_dims == 4 ? inputs[0][1] : q_num_heads;
+        if (v_dims >= 3 && k_dims >= 3) {
+            CV_CheckTrue(inputs[2][v_dims - 2] == inputs[1][k_dims - 2],  "Key and Value sequence lengths must be equal");
+        }
 
-        CV_CheckTrue(q_hn % kv_hn == 0,
-                     "q_num_heads must be divisible by kv_num_heads");
+        if (q_hn > 0 && kv_hn > 0) {
+            CV_CheckTrue(q_hn % kv_hn == 0, "q_num_heads must be divisible by kv_num_heads");
+        }
 
-        if (input_dims == 3)
+        const int nhq = q_hn;
+
+        if (q_dims == 4)
         {
-            CV_CheckTrue(kv_hn > 0,
-                         "For 3D input, kv_num_heads must be greater than 0 (this normally means that kv_num_heads is not set)");
-            CV_CheckTrue(q_hn > 0,
-                         "For 3D input, q_num_heads must be greater than 0 (this normally means that q_num_heads is not set)");
-
-            int v_head_size = inputs[2][2] / kv_hn;
-            MatShape output_shape{batch_size, seq_len_q, v_head_size * q_num_heads};
+            int v_head_size = inputs[2][2];
+            MatShape output_shape{batch_size, nhq, seq_len_q, v_head_size};
             outputs.push_back(output_shape);
         }
         else
         {
-            int v_head_size = inputs[2][3];
-            MatShape output_shape{batch_size, nhq, seq_len_q, v_head_size};
+            CV_CheckTrue(kv_hn > 0, "kv_num_heads must be set for non-4D inputs");
+            int total_v_dim = inputs[2][v_dims - 1];
+            int v_head_size = total_v_dim / kv_hn;
+            MatShape output_shape{batch_size, seq_len_q, v_head_size * q_num_heads};
             outputs.push_back(output_shape);
         }
 
         if (requiredOutputs > 1 || inputs.size() >= 6) {
             // Shape matches Input K but with updated sequence length
-            MatShape k_shape = inputs[1]; 
-            k_shape[input_dims - 2] = seq_len_kv; // Total length
-            outputs.push_back(k_shape); 
+            MatShape k_shape = inputs[1];
+            k_shape[k_dims - 2] = seq_len_kv; // Total length
+            outputs.push_back(k_shape);
 
             // Shape matches Input V but with updated sequence length
             MatShape v_shape = inputs[2];
-            v_shape[input_dims - 2] = seq_len_kv; // Total length
+            v_shape[v_dims - 2] = seq_len_kv; // Total length
             outputs.push_back(v_shape);
         }
 
@@ -150,34 +151,28 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
         const int input_dims = inputs[0].dims;
         const int batch_size = inputs[0].size[0];
 
-        const int nhq = input_dims == 3 ?
-                         q_num_heads :
-                         inputs[0].size[1];
-        const int nhkv = input_dims == 3 ?
-                         kv_num_heads :
-                         inputs[1].size[1];
+        const int nhq = (input_dims == 4) ? inputs[0].size[1] : q_num_heads;
+        int nhkv = (inputs[1].dims == 4) ? inputs[1].size[1] : kv_num_heads;
+        if (nhkv == 0 && nhq > 0) nhkv = nhq;
 
-        const int qk_head_size = input_dims == 3 ?
-                                 inputs[0].size[2] / nhq :
-                                 inputs[0].size[3];
-        const int v_head_size  = input_dims == 3 ?
-                                 inputs[2].size[2] / nhkv :
-                                 inputs[2].size[3];
+        const int seq_len_q = (input_dims >= 3) ? inputs[0].size[input_dims - 2] : 1;
+        int seq_len_kv = (inputs[1].dims >= 3) ? inputs[1].size[inputs[1].dims - 2] : 1;
+
+        int last_dim_q = inputs[0].size[input_dims - 1];
+        const int qk_head_size = (input_dims == 4) ? last_dim_q : (last_dim_q / nhq);
+
+        int last_dim_v = inputs[2].size[inputs[2].dims - 1];
+        const int v_head_size = (inputs[2].dims == 4) ? last_dim_v : (last_dim_v / nhkv);
+
         const int num_gq_groups = nhq / nhkv;
-        const int seq_len_q = input_dims == 3 ?
-                                inputs[0].size[1]:
-                                inputs[0].size[2];
-        int seq_len_kv = input_dims == 3 ?
-                                inputs[1].size[1]:
-                                inputs[1].size[2];
 
-        const float* Q =  inputs[0].ptr<const float>();
-        const float* K =  inputs[1].ptr<const float>();
-        const float* V =  inputs[2].ptr<const float>();
+        const float* Q = inputs[0].ptr<const float>();
+        const float* K = inputs[1].ptr<const float>();
+        const float* V = inputs[2].ptr<const float>();
 
         if (inputs.size() >= 6 && outputs.size() >= 3 && !inputs[4].empty())
         {
-            int axis = input_dims == 3 ? 1 : 2;
+            int axis = (input_dims >= 3) ? (input_dims - 2) : 0;
 
             Mat& past_k = inputs[4];
             Mat& past_v = inputs[5];
@@ -205,34 +200,39 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
 
         scale = is_scale_set ? scale : 1.0f / std::sqrt(static_cast<float>(qk_head_size));
 
-        std::vector<size_t> _q_offsets(nhq * batch_size),
-                _k_offsets(nhq * batch_size),
-                _a_offsets(nhq * batch_size),
-                _v_offsets(nhq * batch_size),
-                _o_offsets(nhq * batch_size);
+        size_t required_size = batch_size * nhq;
 
-        
+        if (_q_offsets.size() != required_size) {
+            _q_offsets.resize(required_size);
+            _k_offsets.resize(required_size);
+            _a_offsets.resize(required_size);
+            _v_offsets.resize(required_size);
+            _o_offsets.resize(required_size);
+        }
+
         for (int b = 0; b < batch_size; b++)
-            for (int n = 0; n < nhq; n++){
-                _q_offsets[b * nhq + n] =
-                    b * seq_len_q * qk_head_size * nhq +
-                    (input_dims == 3 ? n * qk_head_size : n * qk_head_size * seq_len_q);
-                _k_offsets[b * nhq + n] =
-                    b * seq_len_kv * qk_head_size * nhkv +
-                    (n / num_gq_groups * qk_head_size) * (input_dims == 3 ? 1 : seq_len_kv);
-                _v_offsets[b * nhq + n] =
-                    b * seq_len_kv * v_head_size * nhkv +
-                    (n / num_gq_groups * v_head_size) * (input_dims == 3 ? 1 : seq_len_kv);
-                _a_offsets[b * nhq + n] =
-                    b * seq_len_square * nhq +
-                    n * seq_len_square;
-                _o_offsets[b * nhq + n] =
-                    b * seq_len_q * v_head_size * nhq +
-                    (input_dims == 3 ? n * v_head_size : n * v_head_size * seq_len_q);
+            for (int n = 0; n < nhq; n++) {
+                // FIX 5: Robust Offsets (Handle different strides for 4D vs 2D/3D)
+                int q_stride_n = (input_dims == 4) ? (qk_head_size * seq_len_q) : qk_head_size;
+                int kv_stride_n = (inputs[1].dims == 4) ? (qk_head_size * seq_len_kv) : qk_head_size;
+                int v_stride_n = (inputs[2].dims == 4) ? (v_head_size * seq_len_kv) : v_head_size;
+                int o_stride_n = (input_dims == 4) ? (v_head_size * seq_len_q) : v_head_size;
+
+                _q_offsets[b * nhq + n] = b * seq_len_q * qk_head_size * nhq + n * q_stride_n;
+
+                _k_offsets[b * nhq + n] = b * seq_len_kv * qk_head_size * nhkv + 
+                                          (n / num_gq_groups) * kv_stride_n;
+
+                _v_offsets[b * nhq + n] = b * seq_len_kv * v_head_size * nhkv + 
+                                          (n / num_gq_groups) * v_stride_n;
+
+                _a_offsets[b * nhq + n] = b * seq_len_square * nhq + n * seq_len_square;
+
+                _o_offsets[b * nhq + n] = b * seq_len_q * v_head_size * nhq + n * o_stride_n;
             }
 
-        const int ldq0 = input_dims == 3 ? qk_head_size * nhq : qk_head_size;
-        const int ldk0 = input_dims == 3 ? qk_head_size * nhkv : qk_head_size;
+        const int ldq0 = (input_dims == 4) ? qk_head_size : (qk_head_size * nhq);
+        const int ldk0 = (inputs[1].dims == 4) ? qk_head_size : (qk_head_size * nhkv);
         auto &attention_prob = internals[internals.size() - 1];
 
         fastGemmBatch(
@@ -251,15 +251,15 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
             attention_prob,
             inputs.size() > 3 ? inputs[3] : Mat(),
             softcap, softcap > 0.f,
-            9.f,
+            static_cast<float>(nhq),
             -FLT_MAX,
             inputs.size() > 3,
             is_causal
         );
 
 
-        const int ldv0 = input_dims == 3 ? v_head_size * nhkv : v_head_size;
-        const int ldout = input_dims == 3 ? v_head_size * nhq : v_head_size;
+        const int ldv0 = (inputs[2].dims == 4) ? v_head_size : (v_head_size * nhkv);
+        const int ldout = (input_dims == 4) ? v_head_size : (v_head_size * nhq);
 
         fastGemmBatch(
             batch_size * nhq,
@@ -283,6 +283,8 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
     float softcap;
     int softmax_precision;
     FastGemmOpt opt;
+
+    std::vector<size_t> _q_offsets, _k_offsets, _a_offsets, _v_offsets, _o_offsets;
 };
 
 Ptr<AttentionOnnxAiLayer> AttentionOnnxAiLayer::create(const LayerParams &params) {
