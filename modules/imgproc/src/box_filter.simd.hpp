@@ -2146,12 +2146,20 @@ Ptr<BaseColumnFilter> getColumnSumFilter(int sumType, int dstType, int ksize, in
         if( ddepth == CV_8U && sdepth == CV_64F )
             return makePtr<ColumnSum<SKIP_SCALING, double, uchar> >(ksize, anchor, scale);
         if( ddepth == CV_16U && sdepth == CV_32S )
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
             return makePtr<ColumnSum16US<SKIP_SCALING, ushort, v_uint32, v_uint32x4, v_uint16, v_uint16x8> >(ksize, anchor, scale);
-        if( ddepth == CV_16U && sdepth == CV_64F )
+#else
+            return makePtr<ColumnSum16US<SKIP_SCALING, ushort, v_uint32, v_uint32, v_uint16, v_uint16> >(ksize, anchor, scale);
+#endif
+            if( ddepth == CV_16U && sdepth == CV_64F )
             return makePtr<ColumnSum<SKIP_SCALING, double, ushort> >(ksize, anchor, scale);
         if( ddepth == CV_16S && sdepth == CV_32S )
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
             return makePtr<ColumnSum16US<SKIP_SCALING, short, v_int32, v_int32x4, v_int16, v_int16x8> >(ksize, anchor, scale);
-        if( ddepth == CV_16S && sdepth == CV_64F )
+#else
+            return makePtr<ColumnSum16US<SKIP_SCALING, short, v_int32, v_int32, v_int16, v_int16> >(ksize, anchor, scale);
+#endif
+            if( ddepth == CV_16S && sdepth == CV_64F )
             return makePtr<ColumnSum<SKIP_SCALING, double, short> >(ksize, anchor, scale);
         if( ddepth == CV_32S && sdepth == CV_32S )
             return makePtr<ColumnSum<SKIP_SCALING, int, int> >(ksize, anchor, scale);
@@ -2174,9 +2182,17 @@ Ptr<BaseColumnFilter> getColumnSumFilter(int sumType, int dstType, int ksize, in
             if( ddepth == CV_8U && sdepth == CV_32S )
                 return makePtr<ColumnSum<APPLY_SCALING_WITH_SHIFT, int, uchar> >(ksize, anchor, scale);
             if( ddepth == CV_16U && sdepth == CV_32S )
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
                 return makePtr<ColumnSum16US<APPLY_SCALING_WITH_SHIFT, ushort, v_uint32, v_uint32x4, v_uint16, v_uint16x8> >(ksize, anchor, scale);
+#else
+                return makePtr<ColumnSum16US<APPLY_SCALING_WITH_SHIFT, ushort, v_uint32, v_uint32, v_uint16, v_uint16> >(ksize, anchor, scale);
+#endif
             if( ddepth == CV_16S && sdepth == CV_32S )
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
                 return makePtr<ColumnSum16US<APPLY_SCALING_WITH_SHIFT, short, v_int32, v_int32x4, v_int16, v_int16x8> >(ksize, anchor, scale);
+#else
+                return makePtr<ColumnSum16US<APPLY_SCALING_WITH_SHIFT, short, v_int32, v_int32, v_int16, v_int16> >(ksize, anchor, scale);
+#endif
             if( ddepth == CV_32S && sdepth == CV_32S )
                 return makePtr<ColumnSum<APPLY_SCALING_WITH_SHIFT, int, int> >(ksize, anchor, scale);
             if( ddepth == CV_32F && sdepth == CV_32S )
@@ -2193,9 +2209,17 @@ Ptr<BaseColumnFilter> getColumnSumFilter(int sumType, int dstType, int ksize, in
             if( ddepth == CV_8U && sdepth == CV_64F )
                 return makePtr<ColumnSum<APPLY_SCALING, double, uchar> >(ksize, anchor, scale);
             if( ddepth == CV_16U && sdepth == CV_32S )
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
                 return makePtr<ColumnSum16US<APPLY_SCALING, ushort, v_uint32, v_uint32x4, v_uint16, v_uint16x8> >(ksize, anchor, scale);
+#else
+                return makePtr<ColumnSum16US<APPLY_SCALING, ushort, v_uint32, v_uint32, v_uint16, v_uint16> >(ksize, anchor, scale);
+#endif
             if( ddepth == CV_16U && sdepth == CV_64F )
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
                 return makePtr<ColumnSum16US<APPLY_SCALING, short, v_int32, v_int32x4, v_int16, v_int16x8> >(ksize, anchor, scale);
+#else
+                return makePtr<ColumnSum16US<APPLY_SCALING, short, v_int32, v_int32, v_int16, v_int16> >(ksize, anchor, scale);
+#endif
             if( ddepth == CV_16S && sdepth == CV_32S )
                 return makePtr<ColumnSum<APPLY_SCALING, int, short> >(ksize, anchor, scale);
             if( ddepth == CV_16S && sdepth == CV_64F )
