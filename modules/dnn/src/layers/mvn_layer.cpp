@@ -116,7 +116,6 @@ public:
     {
         std::vector<Mat> inputs;
         inputs_arr.getMatVector(inputs);
-        CV_Assert(!inputs.empty());
         int splitDim = (acrossChannels) ? 1 : 2;
         int i, newRows = 1;
         for( i = 0; i < splitDim; i++ )
