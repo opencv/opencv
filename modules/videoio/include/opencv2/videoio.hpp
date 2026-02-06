@@ -66,9 +66,6 @@
 
 ////////////////////////////////// video io /////////////////////////////////
 
-typedef struct CvCapture CvCapture;
-typedef struct CvVideoWriter CvVideoWriter;
-
 namespace cv
 {
 
@@ -1060,7 +1057,6 @@ public:
             int64 timeoutNs = 0);
 
 protected:
-    Ptr<CvCapture> cap;
     Ptr<IVideoCapture> icap;
     bool throwOnFail;
 
@@ -1239,17 +1235,11 @@ public:
     CV_WRAP String getBackendName() const;
 
 protected:
-    Ptr<CvVideoWriter> writer;
     Ptr<IVideoWriter> iwriter;
 
     static Ptr<IVideoWriter> create(const String& filename, int fourcc, double fps,
                                     Size frameSize, bool isColor = true);
 };
-
-//! @cond IGNORED
-template<> struct DefaultDeleter<CvCapture>{ CV_EXPORTS void operator ()(CvCapture* obj) const; };
-template<> struct DefaultDeleter<CvVideoWriter>{ CV_EXPORTS void operator ()(CvVideoWriter* obj) const; };
-//! @endcond IGNORED
 
 //! @} videoio
 
