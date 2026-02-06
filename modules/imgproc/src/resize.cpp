@@ -3975,8 +3975,7 @@ void resize(int src_type,
 
     if (interpolation == INTER_LINEAR_EXACT)
     {
-        // in case of inv_scale_x && inv_scale_y is equal to 0.5
-        // INTER_AREA (fast) is equal to bit exact INTER_LINEAR
+
         if (is_area_fast && iscale_x == 2 && iscale_y == 2 && cn != 2)//Area resize implementation for 2-channel images isn't bit-exact
             interpolation = INTER_AREA;
         else
@@ -4221,7 +4220,10 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
     }
 
     if (interpolation == INTER_LINEAR_EXACT && (_src.depth() == CV_32F || _src.depth() == CV_64F))
-        interpolation = INTER_LINEAR; // If depth isn't supported fallback to generic resize
+        interpolation = INTER_LINEAR;
+
+    if (interpolation == INTER_LINEAR && _src.depth() == CV_8U)
+        interpolation = INTER_LINEAR_EXACT;
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() && _src.cols() > 10 && _src.rows() > 10,
                ocl_resize(_src, _dst, dsize, inv_scale_x, inv_scale_y, interpolation))
