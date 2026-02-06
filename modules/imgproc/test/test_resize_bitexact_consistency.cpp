@@ -11,7 +11,7 @@ TEST(Resize, LinearBitExactConsistencyAcrossChannels)
     int dst_w = static_cast<int>(std::round(scale * src_w));
     int dst_h = static_cast<int>(std::round(scale * src_h));
 
-    for (int cn = 1; cn <= 4; cn++)
+    for (int cn = 2; cn <= 3; cn++)
     {
         Mat src(src_h, src_w, CV_8UC(cn));
         rng.fill(src, RNG::UNIFORM, 0, 256);

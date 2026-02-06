@@ -4223,7 +4223,11 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
         interpolation = INTER_LINEAR;
 
     if (interpolation == INTER_LINEAR && _src.depth() == CV_8U)
-        interpolation = INTER_LINEAR_EXACT;
+         {
+        int cn = CV_MAT_CN(_src.type());
+        if (cn == 2 || cn == 3)
+            interpolation = INTER_LINEAR_EXACT;
+        }
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() && _src.cols() > 10 && _src.rows() > 10,
                ocl_resize(_src, _dst, dsize, inv_scale_x, inv_scale_y, interpolation))
