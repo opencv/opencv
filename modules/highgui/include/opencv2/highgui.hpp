@@ -365,6 +365,13 @@ For example, **waitKey(0)** will display the window infinitely until any keypres
 for image display). **waitKey(25)** will display a frame and wait approximately 25 ms for a key
 press (suitable for displaying a video frame-by-frame). To remove the window, use cv::destroyWindow.
 
+@note HighGUI user interface functions (such as cv::imshow, cv::waitKey, and window
+management functions) are expected to be called from the main thread.
+Calling them from worker threads may result in undefined behavior or
+platform-specific errors, particularly on macOS, due to limitations of the
+underlying GUI frameworks.
+
+
 @note [__Windows Backend Only__] Pressing Ctrl+C will copy the image to the clipboard. Pressing Ctrl+S will show a dialog to save the image.
 @note [__Wayland Backend Only__] Supoorting format is extended.
 -   If the image is 8-bit signed, the pixels are biased by 128. That is, the
