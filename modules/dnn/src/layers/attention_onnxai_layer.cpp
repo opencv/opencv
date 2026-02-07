@@ -103,7 +103,7 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
 
         if (q_dims == 4)
         {
-            int v_head_size = inputs[2][2];
+            int v_head_size = inputs[2][v_dims - 1];
             MatShape output_shape{batch_size, nhq, seq_len_q, v_head_size};
             outputs.push_back(output_shape);
         }
