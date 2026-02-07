@@ -105,7 +105,9 @@ public:
         Mat out = net.forward("");
 
         if (!expectedOutputShape.empty())
+        {
             ASSERT_EQ(shape(out), expectedOutputShape);
+        }
 
         if (useSoftmax)
         {
