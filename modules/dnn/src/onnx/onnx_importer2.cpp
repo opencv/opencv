@@ -2639,7 +2639,7 @@ void ONNXImporter2::parseRotaryEmbedding(LayerParams& params, const opencv_onnx:
 }
 
 void ONNXImporter2::parseAttention(LayerParams& params, const opencv_onnx::NodeProto& node_proto) {
-    /*int i, n_inputs = node_proto.input_size();
+    int i, n_inputs = node_proto.input_size();
     CV_CheckTrue(params.has("num_heads"), "ONNXImporter2/parseAttention: num_heads is required but missing");
     CV_CheckTrue(params.has("qkv_hidden_sizes"), "ONNXImporter2/parseAttention: qkv_hidden_sizes is required but missing");
 
@@ -2657,13 +2657,12 @@ void ONNXImporter2::parseAttention(LayerParams& params, const opencv_onnx::NodeP
             params.blobs.push_back(blob);
         }
         n_inputs = 1;
-    }*/
-    params.type = "AttentionOnnxAi";
-    addLayer(params, node_proto);
+    }
+    addLayer(params, node_proto, n_inputs);
 }
 
 void ONNXImporter2::parseAttentionOnnxAi(LayerParams& params, const opencv_onnx::NodeProto& node_proto) {
-    int i, n_inputs = node_proto.input_size();
+    /*int i, n_inputs = node_proto.input_size();
 
     for (i = 1; i < n_inputs; i++) {
         if (!net.isConstArg(node_inputs[i]))
@@ -2676,10 +2675,10 @@ void ONNXImporter2::parseAttentionOnnxAi(LayerParams& params, const opencv_onnx:
             params.blobs.push_back(blob);
         }
         n_inputs = 1;
-    }
+    }*/
     params.type = "AttentionOnnxAi";
 
-    addLayer(params, node_proto, n_inputs);
+    addLayer(params, node_proto);
 }
 
 // Domain: ai.onnx (default)

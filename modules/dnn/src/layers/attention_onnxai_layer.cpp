@@ -135,18 +135,24 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE {
-        opt.init();
-
-        if (inputs_arr.depth() == CV_16F)
-        {
-            forward_fallback(inputs_arr, outputs_arr, internals_arr);
-            return;
-        }
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
         std::vector<Mat> inputs, outputs, internals;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
         internals_arr.getMatVector(internals);
+
+        if (inputs.size() < 3) {
+            CV_Error(Error::StsBadArg, format("AttentionOnnxAiLayer: Expected at least 3 inputs (Q, K, V), but got %zu.", inputs.size()));
+        }
+
+        opt.init();
+
+        if (inputs[0].depth() == CV_16F) {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
 
         const int input_dims = inputs[0].dims;
         const int batch_size = inputs[0].size[0];
@@ -176,8 +182,23 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
 
             Mat& past_k = inputs[4];
             Mat& past_v = inputs[5];
-            Mat& present_k = outputs[1]; // Output blob for K
-            Mat& present_v = outputs[2]; // Output blob for V
+            Mat& present_k = outputs[1];
+            Mat& present_v = outputs[2];
+
+            if (present_k.empty()) {
+                std::vector<int> k_shape(inputs[1].dims);
+                for (int i = 0; i < inputs[1].dims; i++) k_shape[i] = inputs[1].size[i];
+                k_shape[axis] = past_k.size[axis] + inputs[1].size[axis];
+                present_k.create(inputs[1].dims, k_shape.data(), inputs[1].type());
+            }
+
+            if (present_v.empty()) {
+                std::vector<int> v_shape(inputs[2].dims);
+                for (int i = 0; i < inputs[2].dims; i++) v_shape[i] = inputs[2].size[i];
+                v_shape[axis] = past_v.size[axis] + inputs[2].size[axis]; // Sum: Past + New
+
+                present_v.create(inputs[2].dims, v_shape.data(), inputs[2].type());
+            }
 
             std::vector<Range> ranges_past(input_dims, Range::all());
             ranges_past[axis] = Range(0, past_k.size[axis]);
@@ -196,12 +217,10 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
             seq_len_kv = present_k.size[axis];
         }
 
-        const auto seq_len_square = seq_len_q * seq_len_kv;
-
+        const size_t seq_len_square = (size_t)seq_len_q * seq_len_kv;
         scale = is_scale_set ? scale : 1.0f / std::sqrt(static_cast<float>(qk_head_size));
 
-        size_t required_size = batch_size * nhq;
-
+        size_t required_size = (size_t)batch_size * nhq;
         if (_q_offsets.size() != required_size) {
             _q_offsets.resize(required_size);
             _k_offsets.resize(required_size);
@@ -210,33 +229,30 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
             _o_offsets.resize(required_size);
         }
 
-        for (int b = 0; b < batch_size; b++)
+        for (int b = 0; b < batch_size; b++) {
             for (int n = 0; n < nhq; n++) {
-                // FIX 5: Robust Offsets (Handle different strides for 4D vs 2D/3D)
-                int q_stride_n = (input_dims == 4) ? (qk_head_size * seq_len_q) : qk_head_size;
-                int kv_stride_n = (inputs[1].dims == 4) ? (qk_head_size * seq_len_kv) : qk_head_size;
-                int v_stride_n = (inputs[2].dims == 4) ? (v_head_size * seq_len_kv) : v_head_size;
-                int o_stride_n = (input_dims == 4) ? (v_head_size * seq_len_q) : v_head_size;
+                // Strides as size_t
+                size_t q_stride_n = (input_dims == 4) ? ((size_t)qk_head_size * seq_len_q) : (size_t)qk_head_size;
+                size_t kv_stride_n = (inputs[1].dims == 4) ? ((size_t)qk_head_size * seq_len_kv) : (size_t)qk_head_size;
+                size_t v_stride_n = (inputs[2].dims == 4) ? ((size_t)v_head_size * seq_len_kv) : (size_t)v_head_size;
+                size_t o_stride_n = (input_dims == 4) ? ((size_t)v_head_size * seq_len_q) : (size_t)v_head_size;
 
-                _q_offsets[b * nhq + n] = b * seq_len_q * qk_head_size * nhq + n * q_stride_n;
-
-                _k_offsets[b * nhq + n] = b * seq_len_kv * qk_head_size * nhkv + (n / num_gq_groups) * kv_stride_n;
-
-                _v_offsets[b * nhq + n] = b * seq_len_kv * v_head_size * nhkv + (n / num_gq_groups) * v_stride_n;
-
-                _a_offsets[b * nhq + n] = b * seq_len_square * nhq + n * seq_len_square;
-
-                _o_offsets[b * nhq + n] = b * seq_len_q * v_head_size * nhq + n * o_stride_n;
+                _q_offsets[(size_t)b * nhq + n] = (size_t)b * seq_len_q * qk_head_size * nhq + (size_t)n * q_stride_n;
+                _k_offsets[(size_t)b * nhq + n] = (size_t)b * seq_len_kv * qk_head_size * nhkv + ((size_t)n / num_gq_groups) * kv_stride_n;
+                _v_offsets[(size_t)b * nhq + n] = (size_t)b * seq_len_kv * v_head_size * nhkv + ((size_t)n / num_gq_groups) * v_stride_n;
+                _a_offsets[(size_t)b * nhq + n] = (size_t)b * seq_len_square * nhq + (size_t)n * seq_len_square;
+                _o_offsets[(size_t)b * nhq + n] = (size_t)b * seq_len_q * v_head_size * nhq + (size_t)n * o_stride_n;
             }
+        }
 
         const int ldq0 = (input_dims == 4) ? qk_head_size : (qk_head_size * nhq);
         const int ldk0 = (inputs[1].dims == 4) ? qk_head_size : (qk_head_size * nhkv);
         auto &attention_prob = internals[internals.size() - 1];
 
         fastGemmBatch(
-            batch_size * nhq,
+            (size_t)batch_size * nhq,
             _q_offsets.data(), _k_offsets.data(), _a_offsets.data(),
-            seq_len_q, seq_len_kv, qk_head_size , scale,
+            seq_len_q, seq_len_kv, qk_head_size, scale,
             Q, ldq0, 1,
             K, 1, ldk0,
             0.f,
@@ -244,23 +260,28 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
             opt
         );
 
-
+        bool use_mask = (inputs.size() > 3 && !inputs[3].empty());
+    
         fused_softmax_softcap_mask(
             attention_prob,
-            inputs.size() > 3 ? inputs[3] : Mat(),
+            use_mask ? inputs[3] : Mat(), 
             softcap, softcap > 0.f,
             static_cast<float>(nhq),
             -FLT_MAX,
-            inputs.size() > 3,
+            use_mask, 
             is_causal
         );
-
 
         const int ldv0 = (inputs[2].dims == 4) ? v_head_size : (v_head_size * nhkv);
         const int ldout = (input_dims == 4) ? v_head_size : (v_head_size * nhq);
 
+        if (outputs[0].empty() || outputs[0].total() != (size_t)batch_size * nhq * seq_len_q * v_head_size) {
+            int out_sz[] = {batch_size, nhq, seq_len_q, v_head_size}; 
+            outputs[0].create(4, out_sz, inputs[0].type());
+        }
+
         fastGemmBatch(
-            batch_size * nhq,
+            (size_t)batch_size * nhq,
             _a_offsets.data(), _v_offsets.data(), _o_offsets.data(),
             seq_len_q, v_head_size, seq_len_kv, 1.f,
             attention_prob.ptr<float>(), seq_len_kv, 1,
