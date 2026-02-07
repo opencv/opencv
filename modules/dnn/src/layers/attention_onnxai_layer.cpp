@@ -261,14 +261,14 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
         );
 
         bool use_mask = (inputs.size() > 3 && !inputs[3].empty());
-    
+
         fused_softmax_softcap_mask(
             attention_prob,
-            use_mask ? inputs[3] : Mat(), 
+            use_mask ? inputs[3] : Mat(),
             softcap, softcap > 0.f,
             static_cast<float>(nhq),
             -FLT_MAX,
-            use_mask, 
+            use_mask,
             is_causal
         );
 
@@ -276,7 +276,7 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
         const int ldout = (input_dims == 4) ? v_head_size : (v_head_size * nhq);
 
         if (outputs[0].empty() || outputs[0].total() != (size_t)batch_size * nhq * seq_len_q * v_head_size) {
-            int out_sz[] = {batch_size, nhq, seq_len_q, v_head_size}; 
+            int out_sz[] = {batch_size, nhq, seq_len_q, v_head_size};
             outputs[0].create(4, out_sz, inputs[0].type());
         }
 
