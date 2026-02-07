@@ -558,6 +558,20 @@ void cv::grabCut( InputArray _img, InputOutputArray _mask, Rect rect,
     if( img.type() != CV_8UC3 )
         CV_Error( cv::Error::StsBadArg, "image must have CV_8UC3 type" );
 
+    // In init modes, models are scratch buffers. If user passes pre-allocated (but possibly
+    // uninitialized) mats, the garbage contents can trigger singular covariances in GMM.
+    // Reset models here BEFORE constructing GMM wrappers.
+    if( mode == GC_INIT_WITH_RECT || mode == GC_INIT_WITH_MASK )
+    {
+        if( bgdModel.empty() || bgdModel.rows != 1 || bgdModel.cols != 65 || bgdModel.type() != CV_64FC1 )
+            bgdModel.create( 1, 65, CV_64FC1 );
+        if( fgdModel.empty() || fgdModel.rows != 1 || fgdModel.cols != 65 || fgdModel.type() != CV_64FC1 )
+            fgdModel.create( 1, 65, CV_64FC1 );
+
+        bgdModel.setTo( Scalar::all(0) );
+        fgdModel.setTo( Scalar::all(0) );
+    }
+
     GMM bgdGMM( bgdModel ), fgdGMM( fgdModel );
     Mat compIdxs( img.size(), CV_32SC1 );
 
@@ -570,7 +584,7 @@ void cv::grabCut( InputArray _img, InputOutputArray _mask, Rect rect,
         initGMMs( img, mask, bgdGMM, fgdGMM );
     }
 
-    if( iterCount <= 0)
+    if( iterCount <= 0 )
         return;
 
     if( mode == GC_EVAL_FREEZE_MODEL )
@@ -592,7 +606,9 @@ void cv::grabCut( InputArray _img, InputOutputArray _mask, Rect rect,
         assignGMMsComponents( img, mask, bgdGMM, fgdGMM, compIdxs );
         if( mode != GC_EVAL_FREEZE_MODEL )
             learnGMMs( img, mask, compIdxs, bgdGMM, fgdGMM );
-        constructGCGraph(img, mask, bgdGMM, fgdGMM, lambda, leftW, upleftW, upW, uprightW, graph );
+        constructGCGraph( img, mask, bgdGMM, fgdGMM, lambda, leftW, upleftW, upW, uprightW, graph );
         estimateSegmentation( graph, mask );
     }
 }
+
+/* End of file. */
