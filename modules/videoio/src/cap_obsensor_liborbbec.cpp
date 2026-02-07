@@ -42,9 +42,9 @@ VideoCapture_obsensor::VideoCapture_obsensor(int, const cv::VideoCaptureParamete
     alignFilter = std::make_shared<ob::Align>(OB_STREAM_COLOR);
 #endif
 
-    int color_width = params.get<double>(CAP_PROP_FRAME_WIDTH, OB_WIDTH_ANY);
-    int color_height = params.get<double>(CAP_PROP_FRAME_HEIGHT, OB_HEIGHT_ANY);
-    int color_fps = params.get<double>(CAP_PROP_FPS, OB_FPS_ANY);
+    int color_width = params.get<int>(CAP_PROP_FRAME_WIDTH, OB_WIDTH_ANY);
+    int color_height = params.get<int>(CAP_PROP_FRAME_HEIGHT, OB_HEIGHT_ANY);
+    int color_fps = params.get<int>(CAP_PROP_FPS, OB_FPS_ANY);
 
     auto colorProfiles = pipe->getStreamProfileList(OB_SENSOR_COLOR);
     if (color_width == OB_WIDTH_ANY && color_height == OB_HEIGHT_ANY && color_fps == OB_FPS_ANY)
@@ -60,9 +60,9 @@ VideoCapture_obsensor::VideoCapture_obsensor(int, const cv::VideoCaptureParamete
         config->enableStream(colorProfile->as<ob::VideoStreamProfile>());
     }
 
-    int depth_width = params.get<double>(CAP_PROP_OBSENSOR_DEPTH_WIDTH, OB_WIDTH_ANY);
-    int depth_height = params.get<double>(CAP_PROP_OBSENSOR_DEPTH_HEIGHT, OB_HEIGHT_ANY);
-    int depth_fps = params.get<double>(CAP_PROP_OBSENSOR_DEPTH_FPS, OB_FPS_ANY);
+    int depth_width = params.get<int>(CAP_PROP_OBSENSOR_DEPTH_WIDTH, OB_WIDTH_ANY);
+    int depth_height = params.get<int>(CAP_PROP_OBSENSOR_DEPTH_HEIGHT, OB_HEIGHT_ANY);
+    int depth_fps = params.get<int>(CAP_PROP_OBSENSOR_DEPTH_FPS, OB_FPS_ANY);
 
     auto depthProfiles = pipe->getStreamProfileList(OB_SENSOR_DEPTH);
     if (depth_width == OB_WIDTH_ANY && depth_height == OB_HEIGHT_ANY && depth_fps == OB_FPS_ANY)
