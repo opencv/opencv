@@ -168,24 +168,64 @@ public:
 
     void operator()(const Range& range) const CV_OVERRIDE
     {
-        size_t total = 1;
-        for (int i = 0; i < dims_; ++i) {
+        // Parallelize over outer dims, process inner dim as block
+        // Total tasks = product of dimensions except the last one
+        size_t total_outer = 1;
+        for (int i = 0; i < dims_ - 1; ++i)
+        {
              int n = ranges_[i].end - ranges_[i].start;
              int s = steps_[i];
              if (s == 1)
-                 total *= n;
+                 total_outer *= n;
              else
-                 total *= (n - 1) / s + 1;
+                 total_outer *= (n - 1) / s + 1;
         }
 
-        size_t stripeSize = (total + nstripes_ - 1) / nstripes_;
+        // Special case for 1D: total_outer is 1, we just run the loop once for the single dim
+        if (dims_ == 1) total_outer = 1;
+
+        size_t stripeSize = (total_outer + nstripes_ - 1) / nstripes_;
         size_t stripeStart = range.start * stripeSize;
-        size_t stripeEnd = std::min(total, range.end * stripeSize);
+        size_t stripeEnd = std::min(total_outer, range.end * stripeSize);
 
         const uchar* src_base = inp_.ptr();
         uchar* dst_base = out_.ptr();
 
-        std::vector<int> counters(dims_, 0);
+        int inner_dim = dims_ - 1;
+        int inner_len = ranges_[inner_dim].end - ranges_[inner_dim].start;
+        int inner_step = steps_[inner_dim];
+        int inner_count = (inner_step == 1) ? inner_len : ((inner_len - 1) / inner_step + 1);
+        size_t inner_src_step = inner_step * inp_strides_[inner_dim];
+        size_t inner_dst_step = out_strides_[inner_dim];
+
+        if (dims_ == 1)
+        {
+            // pure 1D handling
+            // For 1D, "outer" loop is just 1 iteration
+            if (stripeStart >= 1) return;
+
+             // Logic for inner loop same as below
+            int begin = ranges_[0].start;
+            size_t src_offset = begin * inp_strides_[0];
+            size_t dst_offset = 0;
+
+            if (inner_step == 1)
+            {
+                std::memcpy(dst_base + dst_offset, src_base + src_offset, inner_count * es_);
+            }
+            else
+            {
+                 const uchar* s = src_base + src_offset;
+                 uchar* d = dst_base + dst_offset;
+                 for (int i = 0; i < inner_count; ++i)
+                 {
+                     std::memcpy(d, s, es_);
+                     s += inner_src_step;
+                     d += inner_dst_step;
+                 }
+            }
+            return;
+        }
 
         for (size_t i = stripeStart; i < stripeEnd; ++i)
         {
@@ -193,7 +233,8 @@ public:
             size_t src_offset = 0;
             size_t dst_offset = 0;
 
-            for (int d = dims_ - 1; d >= 0; --d)
+            // Reconstruct indices for outer dims
+            for (int d = dims_ - 2; d >= 0; --d)
             {
                 int range_len = ranges_[d].end - ranges_[d].start;
                 int step = steps_[d];
@@ -206,7 +247,26 @@ public:
                 dst_offset += k * out_strides_[d];
             }
 
-            std::memcpy(dst_base + dst_offset, src_base + src_offset, es_);
+            // Process inner dimension
+            int begin = ranges_[inner_dim].start;
+            // Add bias for inner dim start
+            src_offset += begin * inp_strides_[inner_dim];
+
+            if (inner_step == 1)
+            {
+                std::memcpy(dst_base + dst_offset, src_base + src_offset, inner_count * es_);
+            }
+            else
+            {
+                const uchar* s = src_base + src_offset;
+                uchar* d = dst_base + dst_offset;
+                for (int k = 0; k < inner_count; ++k)
+                {
+                   std::memcpy(d, s, es_);
+                   s += inner_src_step;
+                   d += inner_dst_step;
+                }
+            }
         }
     }
 
