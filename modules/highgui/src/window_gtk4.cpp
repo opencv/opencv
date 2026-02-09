@@ -345,13 +345,17 @@ GTK4Trackbar::~GTK4Trackbar()
 
 void GTK4Trackbar::destroy()
 {
-    if (container_)
+    if (container_ && GTK_IS_WIDGET(container_))
     {
-        gtk_widget_unparent(container_);
+        if (gtk_widget_get_parent(container_))
+            gtk_widget_unparent(container_);
+
         container_ = NULL;
         scale_ = NULL;
     }
 }
+
+
 
 void GTK4Trackbar::setPos(int pos)
 {

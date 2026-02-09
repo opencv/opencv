@@ -7,7 +7,7 @@ if(HAVE_GTK4)
     gtk4
     "${GTK4_INCLUDE_DIRS}"
     "${GTK4_LIBRARIES}"
-    "HAVE_GTK4;HAVE_GTK"
+    "HAVE_GTK"
   )
   set(HAVE_GTK TRUE)
 endif()
