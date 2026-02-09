@@ -3035,12 +3035,12 @@ TEST(Layer_Test_AttentionOnnxAi, KVCache_Math_Verification)
     // We want to verify that Q attends to BOTH PastK and NewK.
 
     // Query: Matches the "Past" key perfectly
-    float q_data[] = {1, 0, 0, 0}; 
+    float q_data[] = {1, 0, 0, 0};
     Mat Q(4, std::vector<int>{batch, heads, 1, dim}.data(), CV_32F, q_data);
 
     // New Key/Value: Something totally different
-    float k_data[] = {0, 1, 0, 0}; 
-    float v_data[] = {0, 0, 0, 10}; 
+    float k_data[] = {0, 1, 0, 0};
+    float v_data[] = {0, 0, 0, 10};
     Mat K(4, std::vector<int>{batch, heads, 1, dim}.data(), CV_32F, k_data);
     Mat V(4, std::vector<int>{batch, heads, 1, dim}.data(), CV_32F, v_data);
 
