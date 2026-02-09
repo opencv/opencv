@@ -974,4 +974,29 @@ TEST(Calib3d_StereoSGBM_HH4, regression)
     CV_Assert( countNonZero(diff)==0);
 }
 
-}} // namespace
+TEST(Calib3d_ValidateDisparity, HandlesValidCostsWithoutCrash)
+{
+    const int rows = 1;
+    const int cols = 8;
+
+    // create valid disparity values
+    cv::Mat disparity(rows, cols, CV_16S);
+    for (int i = 0; i < cols; ++i)
+        disparity.at<short>(0, i) = static_cast<short>(i << 4);  // scaled disparity
+
+    // create realistic matching costs
+    cv::Mat cost(rows, cols, CV_32S);
+    for (int i = 0; i < cols; ++i)
+        cost.at<int>(0, i) = i * 10;
+
+    EXPECT_NO_THROW(
+        cv::validateDisparity(disparity, cost, 0, 16, 1)
+    );
+
+    // ensure disparities remain valid after processing
+    for (int i = 0; i < cols; ++i)
+    {
+        EXPECT_NE(disparity.at<short>(0, i), SHRT_MIN);
+    }
+
+}}} // namespace

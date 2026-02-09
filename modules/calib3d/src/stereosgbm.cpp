@@ -2520,7 +2520,6 @@ void cv::validateDisparity( InputOutputArray _disp, InputArray _cost, int minDis
     AutoBuffer<int> _disp2buf(cols*2);
     int* disp2buf = _disp2buf.data();
     int* disp2cost = disp2buf + cols;
-    std::fill(disp2cost, disp2cost + cols, INT_MAX);
     const int DISP_SHIFT = 4, DISP_SCALE = 1 << DISP_SHIFT;
     int INVALID_DISP = minD - 1, INVALID_DISP_SCALED = INVALID_DISP*DISP_SCALE;
     int costType = cost.type();
