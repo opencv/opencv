@@ -144,6 +144,84 @@ std::vector<std::vector<cv::Range> > finalizeSliceRange(const MatShape& inpShape
     return sliceRanges;
 }
 
+
+template <typename T>
+class ParallelSlice : public cv::ParallelLoopBody
+{
+public:
+    ParallelSlice(const Mat& inp, Mat& out,
+                  const std::vector<Range>& ranges,
+                  const std::vector<int>& steps,
+                  int nstripes)
+        : inp_(inp), out_(out), ranges_(ranges), steps_(steps), nstripes_(nstripes)
+    {
+        dims_ = inp.dims;
+        es_ = inp.elemSize();
+
+        inp_strides_.resize(dims_);
+        out_strides_.resize(dims_);
+        for(int i=0; i<dims_; ++i) {
+            inp_strides_[i] = inp.step.p[i];
+            out_strides_[i] = out.step.p[i];
+        }
+    }
+
+    void operator()(const Range& range) const CV_OVERRIDE
+    {
+        size_t total = 1;
+        for (int i = 0; i < dims_; ++i) {
+             int n = ranges_[i].end - ranges_[i].start;
+             int s = steps_[i];
+             if (s == 1)
+                 total *= n;
+             else
+                 total *= (n - 1) / s + 1;
+        }
+
+        size_t stripeSize = (total + nstripes_ - 1) / nstripes_;
+        size_t stripeStart = range.start * stripeSize;
+        size_t stripeEnd = std::min(total, range.end * stripeSize);
+
+        const uchar* src_base = inp_.ptr();
+        uchar* dst_base = out_.ptr();
+
+        std::vector<int> counters(dims_, 0);
+
+        for (size_t i = stripeStart; i < stripeEnd; ++i)
+        {
+            size_t idx = i;
+            size_t src_offset = 0;
+            size_t dst_offset = 0;
+
+            for (int d = dims_ - 1; d >= 0; --d)
+            {
+                int range_len = ranges_[d].end - ranges_[d].start;
+                int step = steps_[d];
+                int count = (step == 1) ? range_len : ((range_len - 1) / step + 1);
+
+                int k = idx % count;
+                idx /= count;
+
+                src_offset += (ranges_[d].start + k * step) * inp_strides_[d];
+                dst_offset += k * out_strides_[d];
+            }
+
+            std::memcpy(dst_base + dst_offset, src_base + src_offset, es_);
+        }
+    }
+
+private:
+    const Mat& inp_;
+    Mat& out_;
+    const std::vector<Range>& ranges_;
+    const std::vector<int>& steps_;
+    int nstripes_;
+    int dims_;
+    size_t es_;
+    std::vector<size_t> inp_strides_;
+    std::vector<size_t> out_strides_;
+};
+
 class SliceLayerImpl : public SliceLayer
 {
 public:
@@ -620,17 +698,17 @@ public:
         else
         {
             int dimsNum = inpMat.dims;
+            int nstripes = getNumThreads();
+            std::vector<int> dummy_steps(dimsNum, 1);
 
             for (size_t i = 0; i < outputs.size(); i++)
             {
-                std::vector<int> inpIdx(dimsNum, 0);
-                std::vector<int> outIdx(dimsNum, 0);
                 if (inpMat.type() == CV_16F)
-                    getSliceRecursive<int16_t>(inpMat, inpIdx, finalSliceRanges[i], sliceSteps[i], 0, dimsNum, outputs[i], outIdx);
+                    parallel_for_(Range(0, nstripes), ParallelSlice<int16_t>(inpMat, outputs[i], finalSliceRanges[i], sliceSteps.empty() ? dummy_steps : sliceSteps[i], nstripes), nstripes);
                 else if (inpMat.type() == CV_8S)
-                    getSliceRecursive<int8_t>(inpMat, inpIdx, finalSliceRanges[i], sliceSteps[i], 0, dimsNum, outputs[i], outIdx);
+                    parallel_for_(Range(0, nstripes), ParallelSlice<int8_t>(inpMat, outputs[i], finalSliceRanges[i], sliceSteps.empty() ? dummy_steps : sliceSteps[i], nstripes), nstripes);
                 else
-                    getSliceRecursive<float>(inpMat, inpIdx, finalSliceRanges[i], sliceSteps[i], 0, dimsNum, outputs[i], outIdx);
+                    parallel_for_(Range(0, nstripes), ParallelSlice<float>(inpMat, outputs[i], finalSliceRanges[i], sliceSteps.empty() ? dummy_steps : sliceSteps[i], nstripes), nstripes);
                 // flip for negative steps
                 flip(outputs[i]);
             }
@@ -826,28 +904,7 @@ public:
     }
 
 private:
-    template <typename T>
-    void getSliceRecursive(const Mat &inpMat, std::vector<int> &inpIdx,
-                           const std::vector<Range> &sliceRanges,
-                           const std::vector<int> &sliceSteps, int dim, int dimsNum,
-                           Mat &outputs, std::vector<int> &outIdx)
-    {
-        int begin = sliceRanges[dim].start;
-        int end = sliceRanges[dim].end;
-        int step = !sliceSteps.empty() ? sliceSteps[dim] : 1;
 
-        // TODO optimization is required (for 2D tail case at least)
-        for (int k = begin, j = 0; k < end; k += step, j++)
-        {
-            inpIdx[dim] = k;
-            outIdx[dim] = j;
-
-            if (dim + 1 < dimsNum)
-                getSliceRecursive<T>(inpMat, inpIdx, sliceRanges, sliceSteps, dim + 1, dimsNum, outputs, outIdx);
-            else
-                outputs.at<T>(outIdx.data()) = inpMat.at<T>(inpIdx.data());
-        }
-    }
 
     void flip(Mat& output) // break if 1d tensor?
     {
