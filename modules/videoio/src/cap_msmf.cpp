@@ -1388,9 +1388,9 @@ bool CvCapture_MSMF::configureStreams(const cv::VideoCaptureParameters& params)
 {
     if (params.has(CAP_PROP_VIDEO_STREAM))
     {
-        double value = params.get<double>(CAP_PROP_VIDEO_STREAM);
+        int value = params.get<int>(CAP_PROP_VIDEO_STREAM);
         if (value == -1 || value == 0)
-            videoStream = static_cast<int>(value);
+            videoStream = value;
         else
         {
             CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: CAP_PROP_VIDEO_STREAM parameter value is invalid/unsupported: " << value);
@@ -1399,8 +1399,8 @@ bool CvCapture_MSMF::configureStreams(const cv::VideoCaptureParameters& params)
     }
     if (params.has(CAP_PROP_AUDIO_STREAM))
     {
-        double value = params.get<double>(CAP_PROP_AUDIO_STREAM);
-        if (value == -1 || value > -1)
+        int value = params.get<int>(CAP_PROP_AUDIO_STREAM);
+        if (value == -1 || value >= 0)
             audioStream = static_cast<int>(value);
         else
         {
@@ -1414,7 +1414,7 @@ bool CvCapture_MSMF::setAudioProperties(const cv::VideoCaptureParameters& params
 {
     if (params.has(CAP_PROP_AUDIO_DATA_DEPTH))
     {
-        int value = static_cast<int>(params.get<double>(CAP_PROP_AUDIO_DATA_DEPTH));
+        int value = params.get<int>(CAP_PROP_AUDIO_DATA_DEPTH);
         if (value != CV_8S && value != CV_16S && value != CV_32S && value != CV_32F)
         {
             CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: CAP_PROP_AUDIO_DATA_DEPTH parameter value is invalid/unsupported: " << value);
@@ -1427,7 +1427,7 @@ bool CvCapture_MSMF::setAudioProperties(const cv::VideoCaptureParameters& params
     }
     if (params.has(CAP_PROP_AUDIO_SAMPLES_PER_SECOND))
     {
-        int value = static_cast<int>(params.get<double>(CAP_PROP_AUDIO_SAMPLES_PER_SECOND));
+        int value = params.get<int>(CAP_PROP_AUDIO_SAMPLES_PER_SECOND);
         if (value < 0)
         {
             CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: CAP_PROP_AUDIO_SAMPLES_PER_SECOND parameter can't be negative: " << value);
@@ -1440,8 +1440,7 @@ bool CvCapture_MSMF::setAudioProperties(const cv::VideoCaptureParameters& params
     }
     if (params.has(CAP_PROP_AUDIO_SYNCHRONIZE))
     {
-        int value = static_cast<UINT32>(params.get<double>(CAP_PROP_AUDIO_SYNCHRONIZE));
-        syncLastFrame = (value != 0) ? true : false;
+        syncLastFrame = params.get<bool>(CAP_PROP_AUDIO_SYNCHRONIZE);
     }
     return true;
 }
