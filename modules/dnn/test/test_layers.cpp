@@ -3022,4 +3022,48 @@ TEST(Layer_Test_AttentionOnnxAi, Standard_NoCache)
     EXPECT_EQ(outputs[0].size[2], seq_len);
 }
 
+TEST(Layer_Test_AttentionOnnxAi, KVCache_Math_Verification)
+{
+    // 1. Setup Layer
+    LayerParams lp;
+    lp.type = "AttentionOnnxAi";
+    lp.name = "test_attention_math";
+    lp.set("num_heads", 1);
+
+    // 2. Define Data (Batch=1, Heads=1, Dim=4 for simplicity)
+    int batch=1, heads=1, dim=4;
+    // We want to verify that Q attends to BOTH PastK and NewK.
+
+    // Query: Matches the "Past" key perfectly
+    float q_data[] = {1, 0, 0, 0}; 
+    Mat Q(4, std::vector<int>{batch, heads, 1, dim}.data(), CV_32F, q_data);
+
+    // New Key/Value: Something totally different
+    float k_data[] = {0, 1, 0, 0}; 
+    float v_data[] = {0, 0, 0, 10}; 
+    Mat K(4, std::vector<int>{batch, heads, 1, dim}.data(), CV_32F, k_data);
+    Mat V(4, std::vector<int>{batch, heads, 1, dim}.data(), CV_32F, v_data);
+
+    // Past Key/Value: Matches the Query!
+    float past_k_data[] = {1, 0, 0, 0}; // Query matches this!
+    float past_v_data[] = {50, 0, 0, 0}; // We expect this value in output
+    Mat PastK(4, std::vector<int>{batch, heads, 1, dim}.data(), CV_32F, past_k_data);
+    Mat PastV(4, std::vector<int>{batch, heads, 1, dim}.data(), CV_32F, past_v_data);
+
+    // 3. Run With Cache
+    std::vector<Mat> inputs = {Q, K, V, Mat(), PastK, PastV};
+    std::vector<Mat> outputs;
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    runLayer(layer, inputs, outputs);
+
+    // 4. Verify Result
+    // If cache works, Q(1,0,0,0) should attend strongly to PastK(1,0,0,0).
+    // So output should be close to PastV (50,0,0,0).
+    // If cache was ignored, Q would attend to NewK (0,1,0,0) -> Low score -> output would be different.
+
+    float* out_ptr = outputs[0].ptr<float>();
+    // Just check the first element. If it's high (near 50), the cache was used.
+    EXPECT_GT(out_ptr[0], 25.0f);
+}
+
 }} // namespace
