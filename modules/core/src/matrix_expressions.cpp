@@ -1844,4 +1844,35 @@ _InputArray::_InputArray(const MatExpr& expr)
     init(FIXED_TYPE + FIXED_SIZE + MAT + ACCESS_READ, &expr.a);
 }
 
+//! Compound assignment operators for MatExpr
+//! These preserve lazy evaluation by creating new expressions instead of materializing
+
+MatExpr& MatExpr::operator += (const Mat& m)
+{
+    // Preserve lazy evaluation: expr += m  becomes  expr = expr + m
+    *this = *this + m;
+    return *this;
+}
+
+MatExpr& MatExpr::operator -= (const Mat& m)
+{
+    // Preserve lazy evaluation: expr -= m  becomes  expr = expr - m
+    *this = *this - m;
+    return *this;
+}
+
+MatExpr& MatExpr::operator *= (double s)
+{
+    // Preserve lazy evaluation: expr *= s  becomes  expr = expr * s
+    *this = *this * s;
+    return *this;
+}
+
+MatExpr& MatExpr::operator /= (double s)
+{
+    // Preserve lazy evaluation: expr /= s  becomes  expr = expr / s
+    *this = *this / s;
+    return *this;
+}
+
 } // cv::

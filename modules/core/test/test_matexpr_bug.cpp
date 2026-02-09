@@ -4,33 +4,33 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
+namespace opencv_test { namespace {
 
 TEST(MatExpr_CompoundAssign, BasicOps)
 {
     MatExpr expr = Mat1f::ones(3, 3);
-    expr.operator += (Mat1f::ones(3, 3));
+    expr += Mat(Mat1f::ones(3, 3));
     EXPECT_FLOAT_EQ(static_cast<Mat1f>(expr)(0, 0), 2.0f);
 
     expr = Mat1f::ones(3, 3) * 5;
-    expr.operator -= (Mat1f::ones(3, 3) * 2);
+    expr -= Mat(Mat1f::ones(3, 3) * 2);
     EXPECT_FLOAT_EQ(static_cast<Mat1f>(expr)(0, 0), 3.0f);
 
     expr = Mat1f::ones(3, 3) * 3;
-    expr.operator *= (2);
+    expr *= 2;
     EXPECT_FLOAT_EQ(static_cast<Mat1f>(expr)(0, 0), 6.0f);
 
     expr = Mat1f::ones(3, 3) * 8;
-    expr.operator /= (2);
+    expr /= 2;
     EXPECT_FLOAT_EQ(static_cast<Mat1f>(expr)(0, 0), 4.0f);
 }
 
 TEST(MatExpr_CompoundAssign, ChainedOps)
 {
     MatExpr expr = Mat1f::ones(3, 3);
-    expr.operator += (Mat1f::ones(3, 3));  // 1 + 1 = 2
-    expr.operator *= (3);                  // 2 * 3 = 6
-    expr.operator -= (Mat1f::ones(3, 3));  // 6 - 1 = 5
+    expr += Mat(Mat1f::ones(3, 3));  // 1 + 1 = 2
+    expr *= 3;                  // 2 * 3 = 6
+    expr -= Mat(Mat1f::ones(3, 3));  // 6 - 1 = 5
     EXPECT_FLOAT_EQ(static_cast<Mat1f>(expr)(0, 0), 5.0f);
 }
 
@@ -43,3 +43,4 @@ TEST(MatExpr_CompoundAssign, OriginalBugCase)
         a += Mat1f::ones(3,3);
     EXPECT_FLOAT_EQ(static_cast<Mat1f>(a)(0, 0), 2.0f);
 }
+}} // namespace opencv_test

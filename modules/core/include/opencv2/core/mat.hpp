@@ -3678,6 +3678,11 @@ public:
     double dot(const Mat& m) const;
 
     void swap(MatExpr& b);
+    
+    MatExpr& operator += (const Mat& m);
+    MatExpr& operator -= (const Mat& m);
+    MatExpr& operator *= (double s);
+    MatExpr& operator /= (double s);
 
     const MatOp* op;
     int flags;

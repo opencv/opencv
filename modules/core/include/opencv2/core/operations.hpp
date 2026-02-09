@@ -343,6 +343,9 @@ CV_MAT_AUG_OPERATOR_TN(^=, cv::bitwise_xor(a, Mat(b), (const Mat&)a), Mat_<_Tp>)
 #undef CV_MAT_AUG_OPERATOR
 #undef CV_MAT_AUG_OPERATOR1
 
+// MatExpr compound assignment operators are declared in mat.hpp
+// and implemented in matrix_expressions.cpp
+
 
 
 ///////////////////////////////////////////// SVD /////////////////////////////////////////////
