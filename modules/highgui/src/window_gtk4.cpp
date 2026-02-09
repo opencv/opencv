@@ -54,8 +54,10 @@
 namespace cv {
 namespace highgui_backend {
 
-//Global State
+// Forward declarations
+class GTK4Trackbar;
 
+// Global state
 static std::mutex g_mutex;
 static int g_last_key = -1;
 static bool g_gtk_initialized = false;
@@ -74,8 +76,7 @@ static void ensureGtkInitialized()
     g_gtk_initialized = true;
 }
 
-//Gtk4 Window
-
+// GTK4Window class
 class GTK4Window : public UIWindow
 {
 public:
@@ -98,11 +99,9 @@ public:
     Rect getImageRect() const CV_OVERRIDE;
 
     std::shared_ptr<UITrackbar> createTrackbar(
-        const std::string&, int, TrackbarCallback, void*) CV_OVERRIDE
-    { return std::shared_ptr<UITrackbar>(); }
-
-    std::shared_ptr<UITrackbar> findTrackbar(const std::string&) CV_OVERRIDE
-    { return std::shared_ptr<UITrackbar>(); }
+        const std::string& name, int count, TrackbarCallback callback, void* userdata) CV_OVERRIDE;
+    
+    std::shared_ptr<UITrackbar> findTrackbar(const std::string& name) CV_OVERRIDE;
 
     void onKeyPressed(guint keyval);
 
@@ -111,10 +110,10 @@ private:
     int flags_;
     GtkWidget* window_;
     GtkWidget* picture_;
+    GtkWidget* main_box_; 
+    std::map<std::string, std::shared_ptr<GTK4Trackbar>> trackbars_;
 
-    static gboolean on_key_pressed_cb(GtkEventControllerKey*,
-                                        guint keyval,
-                                        guint,
+    static gboolean on_key_pressed_cb(GtkEventControllerKey*,guint keyval,guint,
                                         GdkModifierType,
                                         gpointer userdata)
     {
@@ -124,7 +123,7 @@ private:
 };
 
 GTK4Window::GTK4Window(const std::string& name, int flags)
-    : name_(name), flags_(flags), window_(NULL), picture_(NULL)
+    : name_(name), flags_(flags), window_(NULL), picture_(NULL), main_box_(NULL)
 {
     ensureGtkInitialized();
 
@@ -132,14 +131,16 @@ GTK4Window::GTK4Window(const std::string& name, int flags)
     gtk_window_set_title(GTK_WINDOW(window_), name.c_str());
     gtk_window_set_default_size(GTK_WINDOW(window_), 640, 480);
 
+    main_box_ = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+    gtk_window_set_child(GTK_WINDOW(window_), main_box_);
+
     picture_ = gtk_picture_new();
     gtk_widget_set_hexpand(picture_, TRUE);
     gtk_widget_set_vexpand(picture_, TRUE);
-    gtk_window_set_child(GTK_WINDOW(window_), picture_);
+    gtk_box_append(GTK_BOX(main_box_), picture_);
 
     GtkEventController* key_ctrl = gtk_event_controller_key_new();
-    g_signal_connect(key_ctrl, "key-pressed",
-                        G_CALLBACK(on_key_pressed_cb), this);
+    g_signal_connect(key_ctrl, "key-pressed",G_CALLBACK(on_key_pressed_cb), this);
     gtk_widget_add_controller(window_, key_ctrl);
 
     gtk_window_present(GTK_WINDOW(window_));
@@ -163,30 +164,70 @@ void GTK4Window::imshow(InputArray image)
 {
     cv::Mat mat = image.getMat();
     if (mat.empty())
+    {
+        gtk_picture_set_paintable(GTK_PICTURE(picture_), NULL);
         return;
+    }
+
+    cv::Mat display_mat;
+    
+    if (mat.depth() == CV_8U || mat.depth() == CV_16U || mat.depth() == CV_32F)
+    {
+        display_mat = mat;
+    }
+    else if (mat.depth() == CV_8S)
+    {
+        mat.convertTo(display_mat, CV_8U, 1, 128);
+    }
+    else if (mat.depth() == CV_16S)
+    {
+        mat.convertTo(display_mat, CV_16U, 1, 32768);
+    }
+    else if (mat.depth() == CV_32S || mat.depth() == CV_64F)
+    {
+        double minVal, maxVal;
+        cv::minMaxLoc(mat, &minVal, &maxVal);
+        double scale = (maxVal > minVal) ? 255.0 / (maxVal - minVal) : 1.0;
+        double shift = -minVal * scale;
+        mat.convertTo(display_mat, CV_8U, scale, shift);
+    }
+    else
+    {
+        mat.convertTo(display_mat, CV_8U);
+    }
+    if (display_mat.depth() == CV_32F || display_mat.depth() == CV_16U)
+    {
+        cv::Mat normalized;
+        double minVal, maxVal;
+        cv::minMaxLoc(display_mat, &minVal, &maxVal);
+        if (maxVal > minVal)
+        {
+            double scale = 255.0 / (maxVal - minVal);
+            double shift = -minVal * scale;
+            display_mat.convertTo(normalized, CV_8U, scale, shift);
+            display_mat = normalized;
+        }
+        else
+        {
+            display_mat.convertTo(normalized, CV_8U);
+            display_mat = normalized;
+        }
+    }
 
     cv::Mat rgb;
-    if (mat.channels() == 3)
-        cv::cvtColor(mat, rgb, cv::COLOR_BGR2RGB);
-    else if (mat.channels() == 4)
-        cv::cvtColor(mat, rgb, cv::COLOR_BGRA2RGBA);
-    else if (mat.channels() == 1)
-        cv::cvtColor(mat, rgb, cv::COLOR_GRAY2RGB);
+    if (display_mat.channels() == 3)
+        cv::cvtColor(display_mat, rgb, cv::COLOR_BGR2RGB);
+    else if (display_mat.channels() == 4)
+        cv::cvtColor(display_mat, rgb, cv::COLOR_BGRA2RGBA);
+    else if (display_mat.channels() == 1)
+        cv::cvtColor(display_mat, rgb, cv::COLOR_GRAY2RGB);
     else
         return;
 
     cv::Mat continuous = rgb.isContinuous() ? rgb : rgb.clone();
 
-    GBytes* bytes = g_bytes_new(continuous.data,
-                               continuous.total() * continuous.elemSize());
-
-    GdkTexture* texture = gdk_memory_texture_new(
-        continuous.cols,
-        continuous.rows,
-        (continuous.channels() == 3) ? GDK_MEMORY_R8G8B8
-                                        : GDK_MEMORY_R8G8B8A8,
-        bytes,
-        continuous.step[0]);
+    GBytes* bytes = g_bytes_new(continuous.data, continuous.total() * continuous.elemSize());
+    GdkTexture* texture = gdk_memory_texture_new(continuous.cols, continuous.rows, GDK_MEMORY_R8G8B8, bytes, continuous.step[0]);
 
     gtk_picture_set_paintable(GTK_PICTURE(picture_), GDK_PAINTABLE(texture));
 
@@ -228,9 +269,14 @@ Rect GTK4Window::getImageRect() const
 {
     if (!picture_)
         return Rect();
-    return Rect(0, 0,
-                gtk_widget_get_width(picture_),
-                gtk_widget_get_height(picture_));
+    
+    GdkPaintable* paintable = gtk_picture_get_paintable(GTK_PICTURE(picture_));
+    if (!paintable)
+        return Rect(0, 0, 640, 480);
+    
+    return Rect(0, 0, 
+                gdk_paintable_get_intrinsic_width(paintable),
+                gdk_paintable_get_intrinsic_height(paintable));
 }
 
 void GTK4Window::onKeyPressed(guint keyval)
@@ -239,8 +285,140 @@ void GTK4Window::onKeyPressed(guint keyval)
     g_last_key = (int)keyval;
 }
 
-//Gtk4 Backend UI
+// GTK4Trackbar class
+class GTK4Trackbar : public UITrackbar
+{
+public:
+    GTK4Trackbar(const std::string& name, GtkWidget* parent, int* value, int count,TrackbarCallback callback, void* userdata);
+    virtual ~GTK4Trackbar() CV_OVERRIDE;
 
+    virtual const std::string& getID() const CV_OVERRIDE { return name_; }
+    virtual bool isActive() const CV_OVERRIDE { return scale_ != NULL; }
+    virtual void destroy() CV_OVERRIDE;
+    
+    virtual void setPos(int pos) CV_OVERRIDE;
+    virtual int getPos() const CV_OVERRIDE;
+    virtual void setRange(const Range& range) CV_OVERRIDE;
+    virtual Range getRange() const CV_OVERRIDE;
+
+private:
+    std::string name_;
+    GtkWidget* container_;
+    GtkWidget* scale_;
+    int* value_ptr_;
+    TrackbarCallback callback_;
+    void* userdata_;
+    
+    static void on_value_changed(GtkRange* range, gpointer user_data);
+};
+
+GTK4Trackbar::GTK4Trackbar(const std::string& name, GtkWidget* parent,
+                            int* value, int count,
+                            TrackbarCallback callback, void* userdata)
+    : name_(name), container_(NULL), scale_(NULL),
+        value_ptr_(value), callback_(callback), userdata_(userdata)
+{
+    container_ = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+    
+    GtkWidget* label = gtk_label_new(name.c_str());
+    gtk_box_append(GTK_BOX(container_), label);
+    
+    scale_ = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, 0, count, 1);
+    gtk_widget_set_hexpand(scale_, TRUE);
+    gtk_scale_set_draw_value(GTK_SCALE(scale_), TRUE);
+    
+    if (value)
+        gtk_range_set_value(GTK_RANGE(scale_), *value);
+    
+    g_signal_connect(scale_, "value-changed", G_CALLBACK(on_value_changed), this);
+    
+    gtk_box_append(GTK_BOX(container_), scale_);
+    
+    // Insert trackbar BEFORE picture widget
+    gtk_box_prepend(GTK_BOX(parent), container_);
+}
+
+GTK4Trackbar::~GTK4Trackbar()
+{
+    destroy();
+}
+
+void GTK4Trackbar::destroy()
+{
+    if (container_)
+    {
+        gtk_widget_unparent(container_);
+        container_ = NULL;
+        scale_ = NULL;
+    }
+}
+
+void GTK4Trackbar::setPos(int pos)
+{
+    if (scale_)
+        gtk_range_set_value(GTK_RANGE(scale_), pos);
+}
+
+int GTK4Trackbar::getPos() const
+{
+    if (!scale_) return 0;
+    return (int)gtk_range_get_value(GTK_RANGE(scale_));
+}
+
+void GTK4Trackbar::setRange(const Range& range)
+{
+    if (scale_)
+        gtk_range_set_range(GTK_RANGE(scale_), range.start, range.end);
+}
+
+Range GTK4Trackbar::getRange() const
+{
+    if (!scale_) return Range(0, 100);
+    
+    GtkAdjustment* adj = gtk_range_get_adjustment(GTK_RANGE(scale_));
+    return Range(
+        (int)gtk_adjustment_get_lower(adj),
+        (int)gtk_adjustment_get_upper(adj)
+    );
+}
+
+
+void GTK4Trackbar::on_value_changed(GtkRange* range, gpointer user_data)
+{
+    GTK4Trackbar* trackbar = static_cast<GTK4Trackbar*>(user_data);
+    int pos = (int)gtk_range_get_value(range);
+    
+    if (trackbar->value_ptr_)
+        *trackbar->value_ptr_ = pos;
+    
+    if (trackbar->callback_)
+        trackbar->callback_(pos, trackbar->userdata_);
+}
+
+// GTK4Window trackbar methods implementation
+std::shared_ptr<UITrackbar> GTK4Window::createTrackbar(
+    const std::string& name, int count, TrackbarCallback callback, void* userdata)
+{
+    auto it = trackbars_.find(name);
+    if (it != trackbars_.end())
+        return it->second;
+    
+    int* value_ptr = nullptr;
+    
+    auto trackbar = std::make_shared<GTK4Trackbar>(name, main_box_, value_ptr, count, callback, userdata);
+    trackbars_[name] = trackbar;
+    return trackbar;
+}
+
+std::shared_ptr<UITrackbar> GTK4Window::findTrackbar(const std::string& name)
+{
+    auto it = trackbars_.find(name);
+    if (it != trackbars_.end())
+        return it->second;
+    return std::shared_ptr<UITrackbar>();
+}
+
+// GTK4BackendUI class
 class GTK4BackendUI : public UIBackend
 {
 public:
@@ -308,8 +486,6 @@ int GTK4BackendUI::waitKeyEx(int delay)
     }
 }
 
-//Factory
-
 std::shared_ptr<UIBackend> createUIBackendGTK4()
 {
     return std::make_shared<GTK4BackendUI>();
@@ -318,8 +494,7 @@ std::shared_ptr<UIBackend> createUIBackendGTK4()
 } // namespace highgui_backend
 } // namespace cv
 
-//These below are stub implemetations without which the build wont run since gtk4 is backend compatible, i am looking to implement these in phase 2 or i could do whatever the maintainer asks for - @AdityaMishra3000
-
+// Legacy C API stubs
 CV_IMPL int cvNamedWindow(const char* name, int flags)
 {
     if (!name) return 0;
