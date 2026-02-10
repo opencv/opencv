@@ -168,11 +168,11 @@ public:
 
     /** @brief get CharucoBoard::nearestMarkerIdx, for each charuco corner, nearest marker index in ids array
      */
-    CV_PROP std::vector<std::vector<int> > getNearestMarkerIdx() const;
+    CV_WRAP std::vector<std::vector<int> > getNearestMarkerIdx() const;
 
     /** @brief get CharucoBoard::nearestMarkerCorners, for each charuco corner, nearest marker corner id of each marker
      */
-    CV_PROP std::vector<std::vector<int> > getNearestMarkerCorners() const;
+    CV_WRAP std::vector<std::vector<int> > getNearestMarkerCorners() const;
 
     /** @brief check whether the ChArUco markers are collinear
      *
