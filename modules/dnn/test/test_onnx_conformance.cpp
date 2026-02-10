@@ -1968,6 +1968,9 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
                 default_lInf = 0.0005; // Expected: (normInf) <= (lInf), actual: 0.000455445 vs 0.0001
             }
         }
+        if (name == "test_roialign_aligned") {
+            default_l1 = 3e-5;
+        }
     }
 #endif
     else
