@@ -993,8 +993,9 @@ void pagedAttnQKGemmKernel(
 
             // save result to A[b, n_q, : , T_s * s : T_s * (s + 1)]
             const int a_offset = b * Nq * T_q * T +
-                                 nq * T_q * T      +
-                                 T_s * s;
+                                 nq * T_q * T     +
+                                 T_s * s          +
+                                 i0 * T + j0;
             char* a_block = A + a_offset  * esz;
 
             int _nc = static_cast<int>((nc + GEMM_NR - 1) / GEMM_NR) * GEMM_NR * esz;

@@ -527,15 +527,17 @@ void pagedAttnQKGemmKernel(
             size_t mc = T_q - i0 < MC ? T_q - i0 : MC;
             size_t nc = T_s - j0 < NC ? T_s - j0 : NC;
 
-            const int q_offset = D * (T_q * (b * Nq  + nq + i0));
+            const int q_offset = D * (i0 + T_q * (b * Nq + nq));
             const char *q_block = Q + q_offset * esz;
-            const int k_offset = b * N_k * T_s * D + n_k * T_s * D + j0;
+
+            const int k_offset = b * N_k * T_s * D + n_k * T_s * D + j0 * D;
             const char *k_block = (const char *)K[s] + k_offset * esz;
 
             // save result to A[b, n_q, : , T_s * s : T_s * (s + 1)]
             const int a_offset = b * Nq * T_q * T +
                                  nq * T_q * T     +
-                                 T_s * s;
+                                 T_s * s          +
+                                 i0 * T + j0;
             char* a_block = A + a_offset  * esz;
 
             int _nc = static_cast<int>((nc + GEMM_NR - 1) / GEMM_NR) * GEMM_NR * esz;

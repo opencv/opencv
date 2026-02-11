@@ -14,7 +14,7 @@ TEST(DNN_Kernels_FastGemm, pagedAttnQKGemm_Q4D)
 {
     FastGemmOpt opt;
     opt.init();
-    const int S = 1; // 16 pages
+    const int S = 8; // 8 pages
     const int B = 1;
     const int D = 16;
     // Q : B x Nq x T_q x D
@@ -56,7 +56,7 @@ TEST(DNN_Kernels_FastGemm, pagedAttnQKGemm_Q4D)
     std::vector<size_t> A_offsets, Q_offsets, K_offsets;
 
     const size_t mat_size_a = T * T_q;
-    const size_t mat_size_k = T_s * D;
+    const size_t mat_size_k = T * D;
     const size_t mat_size_q = D * T_q;
 
     size_t cur_offset_a = 0, cur_offset_q = 0;
@@ -77,7 +77,7 @@ TEST(DNN_Kernels_FastGemm, pagedAttnQKGemm_Q4D)
 
     fastGemmBatch(A_offsets.size(),
                   Q_offsets, K_offsets, A_offsets,
-                  T_q, T_s, D, 1.f, Q, D, 1,
+                  T_q, T, D, 1.f, Q, D, 1,
                   K, T, 1, 0.f, A_ref, T, opt);
 
 
