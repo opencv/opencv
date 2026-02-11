@@ -4093,6 +4093,7 @@ Net readNetFromONNX(const String& onnxFile, int engine)
             CV_LOG_WARNING(NULL, "DNN/ONNX/ORT: OpenCV was built without ONNX Runtime (WITH_ONNXRUNTIME=OFF). Falling back to ENGINE_AUTO.");
 #endif
         }
+        /* fall through */
         case ENGINE_AUTO:
         {
             Net net = readNetFromONNX2(onnxFile);
@@ -4124,6 +4125,7 @@ Net readNetFromONNX(const char* buffer, size_t sizeBuffer, int engine)
 #else
             CV_LOG_WARNING(NULL, "DNN/ONNX/ORT: OpenCV was built without ONNX Runtime (WITH_ONNXRUNTIME=OFF). Falling back to ENGINE_AUTO.");
 #endif
+            /* fall through */
         case ENGINE_AUTO:
         {
             Net net = readNetFromONNX2(buffer, sizeBuffer);
@@ -4155,6 +4157,7 @@ Net readNetFromONNX(const std::vector<uchar>& buffer, int engine)
 #else
             CV_LOG_WARNING(NULL, "DNN/ONNX/ORT: OpenCV was built without ONNX Runtime (WITH_ONNXRUNTIME=OFF). Falling back to ENGINE_AUTO.");
 #endif
+            /* fall through */
         case ENGINE_AUTO:
         {
             Net net = readNetFromONNX2(buffer);
