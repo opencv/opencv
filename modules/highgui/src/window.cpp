@@ -1110,7 +1110,7 @@ const std::string cv::currentUIFramework()
     CV_Assert(false); // backend-compatible
 #elif defined(HAVE_GTK4)
     return std::string("GTK4");
-#elif defined (HAVE_GTK)
+#elif defined (HAVE_GTK) && !defined(HAVE_GTK4)
     CV_Assert(false); // backend-compatible
 #elif defined (HAVE_QT)
     return std::string("QT");
@@ -1261,7 +1261,7 @@ int cv::createButton(const String&, ButtonCallback, void*, int , bool )
 #if   defined (HAVE_WIN32UI)  // see window_w32.cpp
 
 #elif defined (HAVE_GTK4)     //see window_gtk4.cpp
-#elif defined (HAVE_GTK)      // see window_gtk.cpp
+#elif defined (HAVE_GTK) && !defined(HAVE_GTK4)      // see window_gtk.cpp
 #elif defined (HAVE_COCOA)    // see window_cocoa.mm
 #elif defined (HAVE_QT)       // see window_QT.cpp
 #elif defined (HAVE_WAYLAND)  // see window_wayland.cpp
