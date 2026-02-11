@@ -1,0 +1,13 @@
+name: 5.x
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  CodeQL:
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-CodeQL.yaml@main
+    with:
+      target_branch: '5.x'
+      workflow_branch: main

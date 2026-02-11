@@ -1,5 +1,5 @@
 ;
-; jquanti.asm - sample data conversion and quantization (64-bit SSE2)
+; Sample data conversion and quantization (64-bit SSE2)
 ;
 ; Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
 ; Copyright (C) 2009, 2016, 2024, D. R. Commander.

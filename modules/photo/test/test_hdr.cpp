@@ -209,6 +209,68 @@ TEST(Photo_MergeRobertson, regression)
     checkEqual(expected, result, eps, "MergeRobertson");
 }
 
+TEST(Photo_MergeDebevec, regression_depth_consistency)
+{
+    string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
+
+    vector<Mat> images8;
+    vector<float> times;
+    loadExposureSeq(test_path + "exposures/", images8, times);
+
+    vector<Mat> images16(images8.size()), images32(images8.size());
+    for (size_t i = 0; i < images8.size(); ++i)
+    {
+        images8[i].convertTo(images16[i], CV_16UC3, 257.0);
+        images8[i].convertTo(images32[i], CV_32FC3, 1.0 / 255.0);
+    }
+
+    Ptr<MergeDebevec> merge = createMergeDebevec();
+    Ptr<Tonemap> map = createTonemap();
+
+    Mat hdr8, hdr16, hdr32;
+    merge->process(images8,  hdr8,  times);
+    merge->process(images16, hdr16, times);
+    merge->process(images32, hdr32, times);
+
+    map->process(hdr8,  hdr8);
+    map->process(hdr16, hdr16);
+    map->process(hdr32, hdr32);
+
+    checkEqual(hdr8, hdr16, 2e-2f, "Debevec realdata 16U vs 8U");
+    checkEqual(hdr8, hdr32, 2e-2f, "Debevec realdata 32F vs 8U");
+}
+
+TEST(Photo_MergeRobertson, regression_depth_consistency)
+{
+    string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
+
+    vector<Mat> images8;
+    vector<float> times;
+    loadExposureSeq(test_path + "exposures/", images8, times);
+
+    vector<Mat> images16(images8.size()), images32(images8.size());
+    for (size_t i = 0; i < images8.size(); ++i)
+    {
+        images8[i].convertTo(images16[i], CV_16UC3, 257.0);
+        images8[i].convertTo(images32[i], CV_32FC3, 1.0 / 255.0);
+    }
+
+    Ptr<MergeRobertson> merge = createMergeRobertson();
+    Ptr<Tonemap> map = createTonemap();
+
+    Mat hdr8, hdr16, hdr32;
+    merge->process(images8,  hdr8,  times);
+    merge->process(images16, hdr16, times);
+    merge->process(images32, hdr32, times);
+
+    map->process(hdr8,  hdr8);
+    map->process(hdr16, hdr16);
+    map->process(hdr32, hdr32);
+
+    checkEqual(hdr8, hdr16, 3e-2f, "Robertson realdata 16U vs 8U");
+    checkEqual(hdr8, hdr32, 3e-2f, "Robertson realdata 32F vs 8U");
+}
+
 TEST(Photo_CalibrateDebevec, regression)
 {
     string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";

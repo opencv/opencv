@@ -1622,7 +1622,7 @@ endfunction()
 set(__OPENCV_EXPORTED_EXTERNAL_TARGETS "" CACHE INTERNAL "")
 function(ocv_install_used_external_targets)
   if(NOT BUILD_SHARED_LIBS)
-    foreach(tgt in ${ARGN})
+    foreach(tgt IN LISTS ARGN)
       if(tgt MATCHES "^ocv\.3rdparty\.")
         list(FIND __OPENCV_EXPORTED_EXTERNAL_TARGETS "${tgt}" _found)
         if(_found EQUAL -1)  # don't export target twice

@@ -1,8 +1,8 @@
 /*
- * jcsample-neon.c - downsampling (Arm Neon)
+ * Downsampling (Arm Neon)
  *
  * Copyright (C) 2020, Arm Limited.  All Rights Reserved.
- * Copyright (C) 2024, D. R. Commander.  All Rights Reserved.
+ * Copyright (C) 2024-2025, D. R. Commander.  All Rights Reserved.
  *
  * This software is provided 'as-is', without any express or implied
  * warranty.  In no event will the authors be held liable for any damages
@@ -107,7 +107,7 @@ void jsimd_h2v1_downsample_neon(JDIMENSION image_width, int max_v_samp_factor,
 
     /* Load pixels in last DCT block into a table. */
     uint8x16_t pixels = vld1q_u8(inptr + (width_in_blocks - 1) * 2 * DCTSIZE);
-#if defined(__aarch64__) || defined(_M_ARM64)
+#if defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)
     /* Pad the empty elements with the value of the last pixel. */
     pixels = vqtbl1q_u8(pixels, expand_mask);
 #else
@@ -169,7 +169,7 @@ void jsimd_h2v2_downsample_neon(JDIMENSION image_width, int max_v_samp_factor,
       vld1q_u8(inptr0 + (width_in_blocks - 1) * 2 * DCTSIZE);
     uint8x16_t pixels_r1 =
       vld1q_u8(inptr1 + (width_in_blocks - 1) * 2 * DCTSIZE);
-#if defined(__aarch64__) || defined(_M_ARM64)
+#if defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)
     /* Pad the empty elements with the value of the last pixel. */
     pixels_r0 = vqtbl1q_u8(pixels_r0, expand_mask);
     pixels_r1 = vqtbl1q_u8(pixels_r1, expand_mask);

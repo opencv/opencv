@@ -410,3 +410,19 @@ if (
     if (cv.UMat) cv.UMat.prototype[Symbol.dispose] = cv.UMat.prototype.delete;
     // Add more as OpenCV gains new manual-cleanup classes
 }
+
+// Override Emscripten's shallow clone() with OpenCV's deep copy mat_clone()
+// This restores the expected behavior where clone() performs a deep copy.
+// Background: Emscripten 3.1.71+ added ClassHandle.clone() which only does shallow copy.
+// See: https://github.com/opencv/opencv/pull/26643
+// See: https://github.com/opencv/opencv/issues/27572
+var _opencv_onRuntimeInitialized_backup = Module['onRuntimeInitialized'];
+Module['onRuntimeInitialized'] = function() {
+    if (_opencv_onRuntimeInitialized_backup) {
+        _opencv_onRuntimeInitialized_backup();
+    }
+    if (typeof cv !== 'undefined' && cv.Mat &&
+        typeof cv.Mat.prototype.mat_clone === 'function') {
+        cv.Mat.prototype.clone = cv.Mat.prototype.mat_clone;
+    }
+};

@@ -149,7 +149,7 @@ Pairwise images are matched using an homography --matcher homography and estimat
 
 Confidence for feature matching step is 0.3 : --match_conf 0.3. You can decrease this value if you have some difficulties to match images
 
-Threshold for two images are from the same panorama confidence is 0. : --conf_thresh 0.3 You can decrease this value if you have some difficulties to match images
+Threshold for two images are from the same panorama confidence is 0. : --conf_thresh 0.3 You can decrease this value if you have some difficulties to match images
 
 Bundle adjustment cost function is ray --ba ray
 

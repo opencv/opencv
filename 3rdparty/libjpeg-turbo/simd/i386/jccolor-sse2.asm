@@ -1,5 +1,5 @@
 ;
-; jccolor.asm - colorspace conversion (SSE2)
+; Colorspace conversion (SSE2)
 ;
 ; Copyright (C) 2009, 2016, 2024, D. R. Commander.
 ;

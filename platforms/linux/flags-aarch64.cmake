@@ -1,6 +1,9 @@
 # see https://gcc.gnu.org/onlinedocs/gcc/AArch64-Options.html#index-march
 function(ocv_set_platform_flags VAR)
   unset(flags)
+  if(ENABLE_SVE)
+   set(flags "${flags}+sve")
+  endif()
   if(ENABLE_BF16)
     set(flags "${flags}+bf16")
   endif()

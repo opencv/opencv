@@ -1,5 +1,5 @@
 ;
-; jidctint.asm - accurate integer IDCT (64-bit SSE2)
+; Accurate integer IDCT (64-bit SSE2)
 ;
 ; Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
 ; Copyright (C) 2009, 2016, 2020, 2024, D. R. Commander.
