@@ -100,7 +100,6 @@ public:
 
     std::shared_ptr<UITrackbar> createTrackbar(
         const std::string& name, int count, TrackbarCallback callback, void* userdata) CV_OVERRIDE;
-    
     std::shared_ptr<UITrackbar> findTrackbar(const std::string& name) CV_OVERRIDE;
 
     void onKeyPressed(guint keyval);
@@ -110,12 +109,9 @@ private:
     int flags_;
     GtkWidget* window_;
     GtkWidget* picture_;
-    GtkWidget* main_box_; 
+    GtkWidget* main_box_;
     std::map<std::string, std::shared_ptr<GTK4Trackbar>> trackbars_;
-
-    static gboolean on_key_pressed_cb(GtkEventControllerKey*,guint keyval,guint,
-                                        GdkModifierType,
-                                        gpointer userdata)
+    static gboolean on_key_pressed_cb(GtkEventControllerKey*,guint keyval,guint,GdkModifierType,gpointer userdata)
     {
         static_cast<GTK4Window*>(userdata)->onKeyPressed(keyval);
         return TRUE;
@@ -168,9 +164,7 @@ void GTK4Window::imshow(InputArray image)
         gtk_picture_set_paintable(GTK_PICTURE(picture_), NULL);
         return;
     }
-
     cv::Mat display_mat;
-    
     if (mat.depth() == CV_8U || mat.depth() == CV_16U || mat.depth() == CV_32F)
     {
         display_mat = mat;
@@ -269,12 +263,10 @@ Rect GTK4Window::getImageRect() const
 {
     if (!picture_)
         return Rect();
-    
     GdkPaintable* paintable = gtk_picture_get_paintable(GTK_PICTURE(picture_));
     if (!paintable)
         return Rect(0, 0, 640, 480);
-    
-    return Rect(0, 0, 
+    return Rect(0, 0,
                 gdk_paintable_get_intrinsic_width(paintable),
                 gdk_paintable_get_intrinsic_height(paintable));
 }
@@ -291,11 +283,9 @@ class GTK4Trackbar : public UITrackbar
 public:
     GTK4Trackbar(const std::string& name, GtkWidget* parent, int* value, int count,TrackbarCallback callback, void* userdata);
     virtual ~GTK4Trackbar() CV_OVERRIDE;
-
     virtual const std::string& getID() const CV_OVERRIDE { return name_; }
     virtual bool isActive() const CV_OVERRIDE { return scale_ != NULL; }
     virtual void destroy() CV_OVERRIDE;
-    
     virtual void setPos(int pos) CV_OVERRIDE;
     virtual int getPos() const CV_OVERRIDE;
     virtual void setRange(const Range& range) CV_OVERRIDE;
@@ -308,32 +298,24 @@ private:
     int* value_ptr_;
     TrackbarCallback callback_;
     void* userdata_;
-    
+
     static void on_value_changed(GtkRange* range, gpointer user_data);
 };
 
-GTK4Trackbar::GTK4Trackbar(const std::string& name, GtkWidget* parent,
-                            int* value, int count,
-                            TrackbarCallback callback, void* userdata)
+GTK4Trackbar::GTK4Trackbar(const std::string& name, GtkWidget* parent,int* value, int count,TrackbarCallback callback, void* userdata)
     : name_(name), container_(NULL), scale_(NULL),
         value_ptr_(value), callback_(callback), userdata_(userdata)
 {
     container_ = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-    
     GtkWidget* label = gtk_label_new(name.c_str());
     gtk_box_append(GTK_BOX(container_), label);
-    
     scale_ = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, 0, count, 1);
     gtk_widget_set_hexpand(scale_, TRUE);
     gtk_scale_set_draw_value(GTK_SCALE(scale_), TRUE);
-    
     if (value)
-        gtk_range_set_value(GTK_RANGE(scale_), *value);
-    
+    gtk_range_set_value(GTK_RANGE(scale_), *value);
     g_signal_connect(scale_, "value-changed", G_CALLBACK(on_value_changed), this);
-    
     gtk_box_append(GTK_BOX(container_), scale_);
-    
     // Insert trackbar BEFORE picture widget
     gtk_box_prepend(GTK_BOX(parent), container_);
 }
@@ -378,7 +360,6 @@ void GTK4Trackbar::setRange(const Range& range)
 Range GTK4Trackbar::getRange() const
 {
     if (!scale_) return Range(0, 100);
-    
     GtkAdjustment* adj = gtk_range_get_adjustment(GTK_RANGE(scale_));
     return Range(
         (int)gtk_adjustment_get_lower(adj),
@@ -386,15 +367,14 @@ Range GTK4Trackbar::getRange() const
     );
 }
 
-
 void GTK4Trackbar::on_value_changed(GtkRange* range, gpointer user_data)
 {
     GTK4Trackbar* trackbar = static_cast<GTK4Trackbar*>(user_data);
     int pos = (int)gtk_range_get_value(range);
-    
+
     if (trackbar->value_ptr_)
         *trackbar->value_ptr_ = pos;
-    
+
     if (trackbar->callback_)
         trackbar->callback_(pos, trackbar->userdata_);
 }
@@ -406,9 +386,9 @@ std::shared_ptr<UITrackbar> GTK4Window::createTrackbar(
     auto it = trackbars_.find(name);
     if (it != trackbars_.end())
         return it->second;
-    
+
     int* value_ptr = nullptr;
-    
+
     auto trackbar = std::make_shared<GTK4Trackbar>(name, main_box_, value_ptr, count, callback, userdata);
     trackbars_[name] = trackbar;
     return trackbar;
@@ -465,19 +445,23 @@ int GTK4BackendUI::waitKeyEx(int delay)
         std::lock_guard<std::mutex> lock(g_mutex);
         g_last_key = -1;
     }
-
+    if (delay < 0)
+    {
+        while (g_main_context_pending(NULL))
+            g_main_context_iteration(NULL, FALSE);
+        std::lock_guard<std::mutex> lock(g_mutex);
+        return g_last_key;
+    }
     auto start = std::chrono::steady_clock::now();
     while (true)
     {
         while (g_main_context_pending(NULL))
             g_main_context_iteration(NULL, FALSE);
-
         {
             std::lock_guard<std::mutex> lock(g_mutex);
             if (g_last_key != -1)
                 return g_last_key;
         }
-
         if (delay > 0)
         {
             auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -485,7 +469,6 @@ int GTK4BackendUI::waitKeyEx(int delay)
             if (elapsed >= delay)
                 return -1;
         }
-
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
@@ -580,11 +563,9 @@ CV_IMPL int cvStartWindowThread()
 CV_IMPL int cvWaitKey(int delay)
 {
     CV_TRACE_FUNCTION();
-    
     auto backend = cv::highgui_backend::getCurrentUIBackend();
     if (backend)
         return backend->waitKeyEx(delay);
-    
     return -1;
 }
 
