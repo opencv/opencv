@@ -577,6 +577,17 @@ CV_IMPL int cvStartWindowThread()
     return 0;
 }
 
+CV_IMPL int cvWaitKey(int delay)
+{
+    CV_TRACE_FUNCTION();
+    
+    auto backend = cv::highgui_backend::getCurrentUIBackend();
+    if (backend)
+        return backend->waitKeyEx(delay);
+    
+    return -1;
+}
+
 #endif // HAVE_GTK4
 
 /* End of file. */

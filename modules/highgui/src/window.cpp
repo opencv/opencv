@@ -639,31 +639,6 @@ double cv::getWindowProperty(const String& winname, int prop_id)
     return cvGetWindowProperty(winname.c_str(), prop_id);
 }
 
-CV_IMPL int cvWaitKey(int delay)
-{
-    CV_TRACE_FUNCTION();
-
-    // 1. Modern backend path (GTK4, QT, etc.)
-    if (auto backend = cv::highgui_backend::getCurrentUIBackend())
-        return backend->waitKeyEx(delay);
-
-    // 2. Legacy fallback ONLY
-#if defined(HAVE_GTK) && !defined(HAVE_GTK4)
-    return cvWaitKey_GTK(delay);
-#elif defined(HAVE_WIN32UI)
-    return cvWaitKey_W32(delay);
-#elif defined(HAVE_QT)
-    return cvWaitKey_QT(delay);
-#elif defined(HAVE_COCOA)
-    return cvWaitKey_COCOA(delay);
-#elif defined(HAVE_WAYLAND)
-    return cvWaitKey_WAYLAND(delay);
-#else
-    return -1;
-#endif
-}
-
-
 int cv::waitKeyEx(int delay)
 {
     CV_TRACE_FUNCTION();
