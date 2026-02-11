@@ -397,6 +397,7 @@ NODES_TO_REFINE = {
     SymbolName(("cv", ), (), "solvePnPRefineVVS"): make_optional_arg("distCoeffs"),
     SymbolName(("cv", ), (), "undistort"): make_optional_arg("distCoeffs"),
     SymbolName(("cv", ), (), "undistortPoints"): make_optional_arg("distCoeffs"),
+    SymbolName(("cv", ), (), "calibrateCamera"): make_optional_arg("cameraMatrix", "distCoeffs"),
     SymbolName(("cv", "fisheye"), (), "initUndistortRectifyMap"): make_optional_arg("D"),
     SymbolName(("cv", ), (), "imread"): make_optional_none_return,
     SymbolName(("cv", ), (), "imdecode"): make_optional_none_return,
