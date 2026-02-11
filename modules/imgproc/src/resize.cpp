@@ -1785,7 +1785,7 @@ struct HResizeLinearVecU8_X4
                 }
             }
         }
-        else if(cn == 3)
+        else if(cn == 3 && 0) // Disabled due to Issue #28495 (inconsistency)
         {
             /* Peek at the last x offset to find the maximal s offset.  We know the loop
                will terminate prior to value which may be 1 or more elements prior to the
