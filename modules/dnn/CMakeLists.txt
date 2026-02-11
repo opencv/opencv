@@ -112,33 +112,86 @@ set(libs "")
 
 # ONNX Runtime
 ocv_option(WITH_ONNXRUNTIME "Build with ONNX Runtime support" OFF)
+ocv_option(DOWNLOAD_ONNXRUNTIME "Download ONNX Runtime prebuilt binaries" OFF IF WITH_ONNXRUNTIME)
+
+set(ONNXRUNTIME_VERSION "1.17.1" CACHE STRING "ONNX Runtime version to download (prebuilt binaries)")
+
 if(WITH_ONNXRUNTIME)
-  set(ORT_VERSION "1.17.1")
-  set(ORT_FILENAME "onnxruntime-linux-x64-${ORT_VERSION}.tgz")
-  set(ORT_URL "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/${ORT_FILENAME}")
-  set(ORT_MD5 "405e3ef137247c5229207da596ac45c0")
+  if(DOWNLOAD_ONNXRUNTIME)
+    set(_ort_filename "")
+    set(_ort_md5 "")
 
-  ocv_download(FILENAME ${ORT_FILENAME}
-               URL ${ORT_URL}
-               DESTINATION_DIR "${OpenCV_BINARY_DIR}/3rdparty/onnxruntime"
-               ID "ORT"
-               HASH ${ORT_MD5}
-               UNPACK)
+    if(WIN32)
+      if(X86_64 OR CMAKE_SIZEOF_VOID_P EQUAL 8)
+        set(_ort_filename "onnxruntime-win-x64-${ONNXRUNTIME_VERSION}.zip")
+        set(_ort_md5 "26138ecd0cb6d4abe00c4070a27e5234")
+      elseif(X86 OR CMAKE_SIZEOF_VOID_P EQUAL 4)
+        set(_ort_filename "onnxruntime-win-x86-${ONNXRUNTIME_VERSION}.zip")
+        set(_ort_md5 "56287d15a0dd3fa7c49aed9db4e277ed")
+      elseif(ARM64 OR AARCH64)
+        set(_ort_filename "onnxruntime-win-arm64-${ONNXRUNTIME_VERSION}.zip")
+        set(_ort_md5 "a56c42ff0620d0076e9ad76f5bafc06a")
+      endif()
+    elseif(APPLE)
+      set(_ort_filename "onnxruntime-osx-universal2-${ONNXRUNTIME_VERSION}.tgz")
+      set(_ort_md5 "6530984d3a5ad06ae07c881e0b4a1197")
+    elseif(UNIX)
+      if(X86_64)
+        set(_ort_filename "onnxruntime-linux-x64-${ONNXRUNTIME_VERSION}.tgz")
+        set(_ort_md5 "405e3ef137247c5229207da596ac45c0")
+      elseif(AARCH64 OR ARM64)
+        set(_ort_filename "onnxruntime-linux-aarch64-${ONNXRUNTIME_VERSION}.tgz")
+        set(_ort_md5 "5114906a066e977d1bc07c9c82cbe8c6")
+      endif()
+    endif()
 
-  set(ORT_INSTALL_DIR "${OpenCV_BINARY_DIR}/3rdparty/onnxruntime/onnxruntime-linux-x64-${ORT_VERSION}")
+    if(NOT _ort_filename)
+      message(FATAL_ERROR
+        "DNN: DOWNLOAD_ONNXRUNTIME=ON, but there is no official ONNX Runtime prebuilt package for "
+        "CMAKE_SYSTEM_NAME='${CMAKE_SYSTEM_NAME}', CMAKE_SYSTEM_PROCESSOR='${CMAKE_SYSTEM_PROCESSOR}'. "
+        "Disable DOWNLOAD_ONNXRUNTIME and provide an installed ORT via ONNXRT_ROOT_DIR, or use a supported platform."
+      )
+    endif()
 
-  if(EXISTS "${ORT_INSTALL_DIR}/include" AND EXISTS "${ORT_INSTALL_DIR}/lib/libonnxruntime.so")
+    set(_ort_url "https://github.com/microsoft/onnxruntime/releases/download/v${ONNXRUNTIME_VERSION}/${_ort_filename}")
+    string(REGEX REPLACE "\\.(tgz|zip)$" "" _ort_unpack_dirname "${_ort_filename}")
+
+    ocv_download(
+      FILENAME ${_ort_filename}
+      URL ${_ort_url}
+      DESTINATION_DIR "${OpenCV_BINARY_DIR}/3rdparty/onnxruntime"
+      ID "ORT"
+      HASH ${_ort_md5}
+      UNPACK
+    )
+
+    set(ONNXRT_ROOT_DIR "${OpenCV_BINARY_DIR}/3rdparty/onnxruntime/${_ort_unpack_dirname}"
+        CACHE PATH "ONNX Runtime install directory" FORCE)
+
+    if(NOT APPLE AND NOT WIN32)
+      set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-rpath,'$ORIGIN/../3rdparty/onnxruntime/${_ort_unpack_dirname}/lib'")
+    endif()
+  endif()  # DOWNLOAD_ONNXRUNTIME
+
+  include("${OpenCV_SOURCE_DIR}/cmake/FindONNX.cmake")
+
+  if(HAVE_ONNX)
     set(HAVE_ONNXRUNTIME 1 CACHE INTERNAL "ONNX Runtime availability")
 
-    list(APPEND include_dirs "${ORT_INSTALL_DIR}/include")
-    list(APPEND libs "${ORT_INSTALL_DIR}/lib/libonnxruntime.so")
+    if(ONNX_INCLUDE_DIR)
+      list(APPEND include_dirs "${ONNX_INCLUDE_DIR}")
+    endif()
+    if(ONNX_LIBRARIES)
+      list(APPEND libs "${ONNX_LIBRARIES}")
+    endif()
 
     add_definitions(-DHAVE_ONNXRUNTIME=1)
-
-    if(NOT APPLE)
-      set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-rpath,'$ORIGIN/../3rdparty/onnxruntime/onnxruntime-linux-x64-${ORT_VERSION}/lib'")
-    endif()
-    message(STATUS "DNN: ONNX Runtime acquired and enabled")
+    message(STATUS "DNN: ONNX Runtime enabled")
+  else()
+    message(SEND_ERROR
+      "DNN: ONNX Runtime support was requested (WITH_ONNXRUNTIME=ON), but it was not found. "
+      "Set ONNXRT_ROOT_DIR to an existing installation or enable DOWNLOAD_ONNXRUNTIME=ON."
+    )
   endif()
 endif()
 

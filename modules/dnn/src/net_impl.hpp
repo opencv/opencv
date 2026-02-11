@@ -392,6 +392,11 @@ struct Net::Impl : public detail::NetImplBase
     void forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs, OutputArrayOfArrays outputs, bool isMainGraph);
     // run the whole model
     void forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays outputs);
+#ifdef HAVE_ONNXRUNTIME
+    // Run inference through ONNX Runtime session (if configured).
+    // If outIdxs is empty, returns all ORT outputs in ORT-defined order.
+    std::vector<Mat> runOrtSession(std::vector<Mat> inputBlobs, const std::vector<int>& outIdxs);
+#endif
     // run the whole model, convenience wrapper
     Mat forwardWithSingleOutput(const std::string& outname);
     // run the whole model, convenience wrapper

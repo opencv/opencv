@@ -1020,7 +1020,8 @@ CV__DNN_INLINE_NS_BEGIN
     {
         ENGINE_CLASSIC=1, //!< Force use the old dnn engine similar to 4.x branch
         ENGINE_NEW=2,     //!< Force use the new dnn engine. The engine does not support non CPU back-ends for now.
-        ENGINE_AUTO=3     //!< Try to use the new engine and then fall back to the classic version.
+        ENGINE_AUTO=3,    //!< Try to use the new engine and then fall back to the classic version.
+        ENGINE_ORT=4      //!< Try to use ONNX Runtime wrapper (ONNX only, requires build with WITH_ONNXRUNTIME=ON).
     };
 
     /** @brief Reads a network model stored in <a href="https://pjreddie.com/darknet/">Darknet</a> model files.

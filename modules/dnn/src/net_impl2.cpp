@@ -6,6 +6,8 @@
 
 #include "net_impl.hpp"
 
+#include <limits>
+
 #ifdef HAVE_ONNXRUNTIME
 #include <onnxruntime_cxx_api.h>
 #endif
@@ -17,22 +19,34 @@ CV__DNN_INLINE_NS_BEGIN
 #ifdef HAVE_ONNXRUNTIME
 struct OrtNamesCache
 {
-    Ort::AllocatorWithDefaultOptions allocator;
-    char* input0 = nullptr;
-    char* output0 = nullptr;
+    std::vector<std::string> input_names;
+    std::vector<std::string> output_names;
+    std::unordered_map<std::string, int> input_name_to_index;
+    std::unordered_map<std::string, int> output_name_to_index;
 
     explicit OrtNamesCache(Ort::Session& session)
     {
-        Ort::AllocatedStringPtr in = session.GetInputNameAllocated(0, allocator);
-        Ort::AllocatedStringPtr out = session.GetOutputNameAllocated(0, allocator);
-        input0 = in ? in.release() : nullptr;
-        output0 = out ? out.release() : nullptr;
-    }
+        Ort::AllocatorWithDefaultOptions allocator;
 
-    ~OrtNamesCache()
-    {
-        if (input0) allocator.Free(input0);
-        if (output0) allocator.Free(output0);
+        const size_t ninputs = session.GetInputCount();
+        input_names.reserve(ninputs);
+        for (size_t i = 0; i < ninputs; ++i)
+        {
+            Ort::AllocatedStringPtr in = session.GetInputNameAllocated(i, allocator);
+            std::string n = in ? std::string(in.get()) : std::string();
+            input_name_to_index[n] = (int)i;
+            input_names.push_back(std::move(n));
+        }
+
+        const size_t noutputs = session.GetOutputCount();
+        output_names.reserve(noutputs);
+        for (size_t i = 0; i < noutputs; ++i)
+        {
+            Ort::AllocatedStringPtr out = session.GetOutputNameAllocated(i, allocator);
+            std::string n = out ? std::string(out.get()) : std::string();
+            output_name_to_index[n] = (int)i;
+            output_names.push_back(std::move(n));
+        }
     }
 };
 #endif
@@ -61,12 +75,13 @@ static int cvTypeFromONNXElemType(const ONNXTensorElementDataType t)
 }
 
 static Ort::Value createOrtTensorFromMat(Ort::Session& session,
+                                        size_t inputIdx,
                                         const Ort::MemoryInfo& memory_info,
                                         Mat& inputBlob,
                                         std::vector<int64_t>& inputDims,
                                         ONNXTensorElementDataType& in_elem_type)
 {
-    Ort::TypeInfo in_type_info = session.GetInputTypeInfo(0);
+    Ort::TypeInfo in_type_info = session.GetInputTypeInfo(inputIdx);
     Ort::ConstTensorTypeAndShapeInfo in_tensor_info = in_type_info.GetTensorTypeAndShapeInfo();
     in_elem_type = in_tensor_info.GetElementType();
 
@@ -98,42 +113,99 @@ static Ort::Value createOrtTensorFromMat(Ort::Session& session,
     return Ort::Value(input_tensor_raw);
 }
 
-static Mat runOrtSession(Net::Impl& self,
-                                      Ort::Session& session,
-                                      OrtNamesCache& names,
-                                      const Ort::Value& input_tensor,
-                                      OutputArrayOfArrays outputs)
+std::vector<Mat> Net::Impl::runOrtSession(std::vector<Mat> inputBlobs, const std::vector<int>& outIdxs)
 {
-    const char* in_names[] = { names.input0 };
-    const char* out_names[] = { names.output0 };
+    CV_Assert(this->ort_session);
+    Ort::Session& session = *this->ort_session;
 
-    std::vector<Ort::Value> output_tensors = session.Run(
-        Ort::RunOptions{nullptr}, in_names, &input_tensor, 1, out_names, 1);
+    if (!this->ort_names_cache)
+        this->ort_names_cache = std::make_shared<OrtNamesCache>(session);
 
-    Ort::TensorTypeAndShapeInfo shape_info = output_tensors.front().GetTensorTypeAndShapeInfo();
-    std::vector<int64_t> out_shape = shape_info.GetShape();
-    std::vector<int> out_dims(out_shape.begin(), out_shape.end());
+    OrtNamesCache& names = *this->ort_names_cache;
+    if (names.input_names.empty())
+        CV_Error(Error::StsError, "DNN/ORT: ORT session has no inputs");
+    if (names.output_names.empty())
+        CV_Error(Error::StsError, "DNN/ORT: ORT session has no outputs");
 
-    const ONNXTensorElementDataType out_elem_type = shape_info.GetElementType();
-    const int cvOutType = cvTypeFromONNXElemType(out_elem_type);
-    if (cvOutType < 0)
-        CV_Error_(Error::StsNotImplemented, ("DNN/ORT: unsupported ORT output element type: %d", (int)out_elem_type));
+    const size_t ninputs = names.input_names.size();
+    if (inputBlobs.size() != ninputs)
+        CV_Error_(Error::StsBadArg, ("DNN/ORT: expected %zu inputs, but got %zu", ninputs, inputBlobs.size()));
 
-    uint8_t* out_bytes = output_tensors.front().GetTensorMutableData<uint8_t>();
-    Mat result(out_dims, cvOutType, out_bytes);
+    std::vector<const char*> in_names;
+    in_names.reserve(ninputs);
+    for (size_t i = 0; i < ninputs; ++i)
+        in_names.push_back(names.input_names[i].c_str());
 
-    if (outputs.kind() == _InputArray::STD_VECTOR_MAT)
+    std::vector<const char*> out_names;
+    if (outIdxs.empty())
     {
-        std::vector<Mat>& out_vec = *(std::vector<Mat>*)outputs.getObj();
-        out_vec.resize(1);
-        result.copyTo(out_vec[0]);
+        out_names.reserve(names.output_names.size());
+        for (const std::string& n : names.output_names)
+            out_names.push_back(n.c_str());
     }
     else
     {
-        result.copyTo(outputs);
+        out_names.reserve(outIdxs.size());
+        for (int idx : outIdxs)
+        {
+            CV_CheckGE(idx, 0, "DNN/ORT: output index must be non-negative");
+            CV_CheckLT((size_t)idx, names.output_names.size(), "DNN/ORT: output index is out of range");
+            out_names.push_back(names.output_names[(size_t)idx].c_str());
+        }
     }
 
-    return result;
+    static const Ort::MemoryInfo memory_info =
+        Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
+
+    std::vector<Ort::Value> input_tensors;
+    input_tensors.reserve(ninputs);
+    for (size_t i = 0; i < ninputs; ++i)
+    {
+        if (inputBlobs[i].empty())
+            CV_Error_(Error::StsError, ("DNN/ORT: input '%s' is empty", names.input_names[i].c_str()));
+
+        std::vector<int64_t> inputDims;
+        ONNXTensorElementDataType in_elem_type = ONNX_TENSOR_ELEMENT_DATA_TYPE_UNDEFINED;
+        input_tensors.push_back(createOrtTensorFromMat(session, i, memory_info, inputBlobs[i], inputDims, in_elem_type));
+    }
+
+    std::vector<Ort::Value> output_tensors = session.Run(
+        Ort::RunOptions{nullptr},
+        in_names.data(), input_tensors.data(), input_tensors.size(),
+        out_names.data(), out_names.size());
+
+    CV_CheckEQ(output_tensors.size(), out_names.size(), "DNN/ORT: ORT returned unexpected number of outputs");
+
+    std::vector<Mat> results;
+    results.reserve(output_tensors.size());
+
+    for (Ort::Value& outv : output_tensors)
+    {
+        Ort::TensorTypeAndShapeInfo shape_info = outv.GetTensorTypeAndShapeInfo();
+        std::vector<int64_t> out_shape = shape_info.GetShape();
+
+        std::vector<int> out_dims;
+        out_dims.reserve(out_shape.size());
+        for (int64_t d : out_shape)
+        {
+            if (d < 0)
+                CV_Error(Error::StsError, "DNN/ORT: dynamic output shapes are not supported at runtime");
+            if (d > (int64_t)std::numeric_limits<int>::max())
+                CV_Error(Error::StsError, "DNN/ORT: output shape dimension is too large");
+            out_dims.push_back((int)d);
+        }
+
+        const ONNXTensorElementDataType out_elem_type = shape_info.GetElementType();
+        const int cvOutType = cvTypeFromONNXElemType(out_elem_type);
+        if (cvOutType < 0)
+            CV_Error_(Error::StsNotImplemented, ("DNN/ORT: unsupported ORT output element type: %d", (int)out_elem_type));
+
+        uint8_t* out_bytes = outv.GetTensorMutableData<uint8_t>();
+        Mat view(out_dims, cvOutType, out_bytes);
+        results.push_back(view.clone());  // detach from ORT-owned memory
+    }
+
+    return results;
 }
 #endif
 
@@ -501,25 +573,37 @@ void Net::Impl::allocateLayerOutputs(
 void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays outputs)
 {
 #ifdef HAVE_ONNXRUNTIME
-    bool session_exists = (this->ort_session != nullptr);
-    CV_LOG_INFO(NULL, "[DEBUG] ORT Enabled. Session Exists: " << (session_exists ? "YES" : "NO"));
-
     if (this->ort_session)
     {
         if (!netInputLayer || netInputLayer->blobs.empty())
             CV_Error(Error::StsError, "DNN/ORT: No input data found");
 
-        static const Ort::MemoryInfo memory_info = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
+        std::vector<Mat> ortOuts = runOrtSession(netInputLayer->blobs, std::vector<int>());
 
-        if (!this->ort_names_cache)
-            this->ort_names_cache = std::make_shared<OrtNamesCache>(*this->ort_session);
-
-        Mat inputBlob = netInputLayer->blobs[0];
-        std::vector<int64_t> inputDims;
-        ONNXTensorElementDataType in_elem_type = ONNX_TENSOR_ELEMENT_DATA_TYPE_UNDEFINED;
-        Ort::Value input_tensor = createOrtTensorFromMat(*this->ort_session, memory_info, inputBlob, inputDims, in_elem_type);
-
-        runOrtSession(*this, *this->ort_session, *this->ort_names_cache, input_tensor, outputs);
+        std::vector<Mat>* outMats = nullptr;
+        std::vector<UMat>* outUMats = nullptr;
+        _InputArray::KindFlag outKind = outputs.kind();
+        if (outKind == _InputArray::STD_VECTOR_MAT)
+        {
+            outMats = &outputs.getMatVecRef();
+            *outMats = ortOuts;
+        }
+        else if (outKind == _InputArray::STD_VECTOR_UMAT)
+        {
+            outUMats = &outputs.getUMatVecRef();
+            outUMats->resize(ortOuts.size());
+            for (size_t i = 0; i < ortOuts.size(); ++i)
+                ortOuts[i].copyTo(outUMats->at(i));
+        }
+        else if (outKind == _InputArray::MAT || outKind == _InputArray::UMAT)
+        {
+            CV_CheckEQ((int)ortOuts.size(), 1, "DNN/ORT: single Mat/UMat output requires exactly one ORT output");
+            ortOuts[0].copyTo(outputs);
+        }
+        else
+        {
+            CV_Error(Error::StsBadArg, "DNN/ORT: outputs must be Mat, UMat, a vector of Mat's or a vector of UMat's");
+        }
         return;
     }
 
@@ -546,7 +630,29 @@ void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays 
 Mat Net::Impl::forwardWithSingleOutput(const std::string& outname)
 {
 #ifdef HAVE_ONNXRUNTIME
-    if (!this->ort_session)
+    if (this->ort_session)
+    {
+        if (!netInputLayer || netInputLayer->blobs.empty())
+            CV_Error(Error::StsError, "DNN/ORT: No input data found");
+
+        if (!this->ort_names_cache)
+            this->ort_names_cache = std::make_shared<OrtNamesCache>(*this->ort_session);
+
+        int outIdx = 0;
+        if (!outname.empty())
+        {
+            OrtNamesCache& names = *this->ort_names_cache;
+            auto it = names.output_name_to_index.find(outname);
+            if (it == names.output_name_to_index.end())
+                CV_Error_(Error::StsObjectNotFound, ("DNN/ORT: output '%s' is not found", outname.c_str()));
+            outIdx = it->second;
+        }
+
+        std::vector<int> outIdxs(1, outIdx);
+        std::vector<Mat> outs = runOrtSession(netInputLayer->blobs, outIdxs);
+        CV_Assert(outs.size() == 1);
+        return outs[0];
+    }
 #endif
     {
         if (!mainGraph) {
@@ -568,6 +674,70 @@ Mat Net::Impl::forwardWithSingleOutput(const std::string& outname)
 
 void Net::Impl::forwardWithMultipleOutputs(OutputArrayOfArrays outblobs, const std::vector<std::string>& outnames)
 {
+#ifdef HAVE_ONNXRUNTIME
+    if (this->ort_session)
+    {
+        if (!netInputLayer || netInputLayer->blobs.empty())
+            CV_Error(Error::StsError, "DNN/ORT: No input data found");
+
+        if (!this->ort_names_cache)
+            this->ort_names_cache = std::make_shared<OrtNamesCache>(*this->ort_session);
+
+        OrtNamesCache& names = *this->ort_names_cache;
+        const int totalOutputs = (int)names.output_names.size();
+        if (totalOutputs <= 0)
+            CV_Error(Error::StsError, "DNN/ORT: ORT session has no outputs");
+
+        std::vector<int> outIdxs;
+        if (outnames.empty())
+        {
+            outIdxs.resize((size_t)totalOutputs);
+            for (int i = 0; i < totalOutputs; ++i)
+                outIdxs[(size_t)i] = i;
+        }
+        else
+        {
+            outIdxs.reserve(outnames.size());
+            for (const std::string& n : outnames)
+            {
+                auto it = names.output_name_to_index.find(n);
+                if (it == names.output_name_to_index.end())
+                    CV_Error_(Error::StsObjectNotFound, ("DNN/ORT: output '%s' is not found", n.c_str()));
+                outIdxs.push_back(it->second);
+            }
+        }
+
+        std::vector<Mat> outs = runOrtSession(netInputLayer->blobs, outIdxs);
+
+        std::vector<Mat>* outMats = nullptr;
+        std::vector<UMat>* outUMats = nullptr;
+        _InputArray::KindFlag outKind = outblobs.kind();
+        if (outKind == _InputArray::STD_VECTOR_MAT) {
+            outMats = &outblobs.getMatVecRef();
+            outMats->resize(outs.size());
+        } else if (outKind == _InputArray::STD_VECTOR_UMAT) {
+            outUMats = &outblobs.getUMatVecRef();
+            outUMats->resize(outs.size());
+        } else if (outKind == _InputArray::MAT || outKind == _InputArray::UMAT) {
+            CV_CheckEQ((int)outs.size(), 1, "DNN/ORT: Mat/UMat output requires exactly one output");
+        } else {
+            CV_Error(Error::StsBadArg, "outputs must be Mat, UMat, a vector of Mat's or a vector of UMat's");
+        }
+
+        for (size_t i = 0; i < outs.size(); ++i) {
+            Mat src = outs[i];
+            if (outMats) {
+                src.copyTo(outMats->at(i));
+            } else if (outUMats) {
+                src.copyTo(outUMats->at(i));
+            } else {
+                src.copyTo(outblobs);
+            }
+        }
+        return;
+    }
+#endif
+
     if (!mainGraph) {
         CV_Error(Error::StsNullPtr, "the model was not loaded");
     }
@@ -685,6 +855,14 @@ void Net::Impl::setMainGraphInput(InputArray m, const std::string& inpname)
 #ifdef HAVE_ONNXRUNTIME
     if (this->ort_session)
     {
+        if (!this->ort_names_cache)
+            this->ort_names_cache = std::make_shared<OrtNamesCache>(*this->ort_session);
+
+        OrtNamesCache& names = *this->ort_names_cache;
+        const size_t ninputs = names.input_names.size();
+        if (ninputs == 0)
+            CV_Error(Error::StsError, "DNN/ORT: ORT session has no inputs");
+
         if (!netInputLayer) {
             netInputLayer = Ptr<DataLayer>(new DataLayer());
             netInputLayer->name = "ort_data_layer";
@@ -695,11 +873,25 @@ void Net::Impl::setMainGraphInput(InputArray m, const std::string& inpname)
         if (inputMat.empty())
             CV_Error(Error::StsBadArg, "DNN/ORT: Input blob is empty");
 
-        if (netInputLayer->blobs.empty()) {
-            netInputLayer->blobs.resize(1);
+        if (netInputLayer->blobs.size() != ninputs)
+            netInputLayer->blobs.resize(ninputs);
+
+        size_t inputIdx = 0;
+        if (inpname.empty())
+        {
+            if (ninputs != 1)
+                CV_Error(Error::StsBadArg, "DNN/ORT: input name must be specified for models with multiple inputs");
+            inputIdx = 0;
+        }
+        else
+        {
+            auto it = names.input_name_to_index.find(inpname);
+            if (it == names.input_name_to_index.end())
+                CV_Error_(Error::StsObjectNotFound, ("DNN/ORT: input '%s' is not found", inpname.c_str()));
+            inputIdx = (size_t)it->second;
         }
 
-        inputMat.copyTo(netInputLayer->blobs[0]);
+        inputMat.copyTo(netInputLayer->blobs[inputIdx]);
         return;
     }
 #endif
