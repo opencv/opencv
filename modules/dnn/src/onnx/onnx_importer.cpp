@@ -4083,7 +4083,7 @@ Net readNetFromONNX(const String& onnxFile, int engine)
         case ENGINE_ORT:
         {
 #ifdef HAVE_ONNXRUNTIME
-            Net net = readNetFromONNX2(onnxFile);
+            Net net = readNetFromONNX2_ORT(onnxFile);
             if (net.empty())
                 CV_Error(Error::StsError, "DNN/ONNX/ORT: failed to load model");
             if (!net.getImpl() || !net.getImpl()->ort_session)

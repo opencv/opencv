@@ -451,6 +451,9 @@ inline Net::Impl* getNetImpl(const Layer* layer)
 Net readNetFromONNX2(const String&);
 Net readNetFromONNX2(const char*, size_t);
 Net readNetFromONNX2(const std::vector<uchar>&);
+#ifdef HAVE_ONNXRUNTIME
+Net readNetFromONNX2_ORT(const String& onnxFile);
+#endif
 
 CV__DNN_INLINE_NS_END
 }}  // namespace cv::dnn

@@ -2839,8 +2839,19 @@ void ONNXImporter2::buildDispatchMap_COM_MICROSOFT()
 
 Net readNetFromONNX2(const String& onnxFile)
 {
+    ONNXImporter2 importer;
+    Net net = importer.parseFile(onnxFile.c_str());
+    if (net.getMainGraph()) {
+        net.getImpl()->modelFileName = onnxFile;
+    }
+    return net;
+}
+
 #ifdef HAVE_ONNXRUNTIME
-    try {
+Net readNetFromONNX2_ORT(const String& onnxFile)
+{
+    try
+    {
         static auto s_ort_env = std::make_shared<Ort::Env>(ORT_LOGGING_LEVEL_WARNING, "OpenCV_DNN_ORT");
 
         Net net;
@@ -2852,22 +2863,41 @@ Net readNetFromONNX2(const String& onnxFile)
 
         impl->modelFileName = onnxFile;
         impl->modelFormat = DNN_MODEL_ONNX;
-        impl->newGraph("ort_session_active", {}, true);
+        Ptr<Graph> g = impl->newGraph("ort_session_active", {}, true);
+
+        Ort::Session& session = *impl->ort_session;
+        Ort::AllocatorWithDefaultOptions allocator;
+        const size_t noutputs = session.GetOutputCount();
+        if (noutputs == 0)
+            CV_Error(Error::StsError, "DNN/ONNX/ORT: ORT session has no outputs");
+
+        std::vector<Arg> outs;
+        outs.reserve(noutputs);
+        for (size_t i = 0; i < noutputs; ++i)
+        {
+            Ort::AllocatedStringPtr out = session.GetOutputNameAllocated(i, allocator);
+            std::string n = out ? std::string(out.get()) : std::string();
+            if (n.empty())
+                n = format("output_%zu", i);
+
+            if (impl->haveArg(n))
+                n = format("%s_%zu", n.c_str(), i);
+
+            outs.push_back(impl->newArg(n, DNN_ARG_OUTPUT));
+        }
+        if (g)
+            g->setOutputs(outs);
 
         CV_LOG_INFO(NULL, "DNN/ONNX: Successfully initialized ORT Session for " << onnxFile);
         return net;
     }
-    catch (const std::exception& e) {
-        CV_LOG_WARNING(NULL, "DNN/ONNX: ORT initialization failed (" << e.what() << "). Fallback to native parser.");
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "DNN/ONNX/ORT: ORT initialization failed (" << e.what() << ")");
+        return Net();
     }
-#endif
-    ONNXImporter2 importer;
-    Net net = importer.parseFile(onnxFile.c_str());
-    if (net.getMainGraph()) {
-        net.getImpl()->modelFileName = onnxFile;
-    }
-    return net;
 }
+#endif  // HAVE_ONNXRUNTIME
 
 Net readNetFromONNX2(const char* buffer, size_t size)
 {
