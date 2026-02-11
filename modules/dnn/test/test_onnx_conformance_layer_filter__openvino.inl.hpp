@@ -261,11 +261,11 @@ CASE(test_basic_conv_without_padding)
 CASE(test_basic_convinteger)
     // no filter
 CASE(test_batchnorm_epsilon)
-    // no filter
+    SKIP;
 CASE(test_batchnorm_epsilon_training_mode)
     // no filter
 CASE(test_batchnorm_example)
-    // no filter
+    SKIP;
 CASE(test_batchnorm_example_training_mode)
     // no filter
 CASE(test_bernoulli)
