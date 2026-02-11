@@ -183,11 +183,12 @@ void ConvState::initConv(const MatShape& inpshape_,
         CV_Assert(inpshape.back() == outshape.back());
     }
     
+    repackInp = repackOut = false;
     if (depthwise) {
         CV_Assert(outshape[1] == inpshape[1]);
     } else {
-        CV_Assert(inpshape[1] % ngroups == 0);
-        CV_Assert(outshape[1] % ngroups == 0);
+        repackInp = inpshape[1] % ngroups != 0;
+        repackOut = outshape[1] % ngroups != 0;
     }
 
     fastActivation = fastActivation_;
@@ -446,6 +447,7 @@ void ConvState::initPooling(const MatShape& inpshape_,
     outshape = outshape_;
     ngroups = C;
     depthwise = true;
+    repackInp = repackOut = false;
     
     for (int i = 0; i < MAX_CONV_DIMS; i++) {
         kshape[i] = strides[i] = dilations[i] = 1;

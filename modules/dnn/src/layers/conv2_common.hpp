@@ -53,6 +53,8 @@ struct ConvState
     enum {MAX_ACTIV_PARAMS = 16};
     float activParams[MAX_ACTIV_PARAMS];
     activation_func_t activation;
+    
+    bool unevenGroupedConv;
 
     std::ostream& dump(std::ostream& strm);
     bool sameShape(const ConvState& cs) const;

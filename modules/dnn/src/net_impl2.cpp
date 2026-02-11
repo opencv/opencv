@@ -1122,6 +1122,16 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                 __tensors__.at(out.idx) = m;
             }
         }
+        
+        size_t ntemps = tempMats.size();
+        scratchBufs.resize(std::max(ntemps, scratchBufs.size()));
+        for (size_t i = 0; i < ntemps; i++) {
+            size_t newtotal_i = tempMats[i].total()*tempMats[i].elemSize();
+            size_t total_i = scratchBufs[i].total()*scratchBufs[i].elemSize();
+            if (newtotal_i > total_i) {
+                scratchBufs[i] = tempMats[i];
+            }
+        }
 
         timestamp = getTickCount() - timestamp;
         layersTimings[opidx + graph_ofs + 1] += timestamp;

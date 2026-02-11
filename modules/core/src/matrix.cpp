@@ -335,39 +335,65 @@ bool MatShape::hasSymbols() const
     return false;
 }
 
-MatShape MatShape::toBlock(int C0) const
+int MatShape::channels() const
 {
-    CV_Assert(dims >= 3);
-    // C0 should be > 1 and be a power-of-2: 2, 4, 8, ...
-    CV_Assert(C0 > 1 && (C0 & (C0-1)) == 0);
-    CV_Assert(layout == DATA_LAYOUT_NCHW || layout == DATA_LAYOUT_NHWC);
-    int c_idx = layout == DATA_LAYOUT_NCHW ? 1 : dims-1;
-
-    MatShape newsize = *this;
-    newsize.layout = DATA_LAYOUT_BLOCK;
-    newsize.C = p[c_idx];
-    newsize.p[newsize.dims++] = C0;
-    newsize.p[c_idx] = (p[c_idx] + C0 - 1)/C0;
-
-    return newsize;
+    CV_Assert(layout == DATA_LAYOUT_BLOCK || layout == DATA_LAYOUT_NCHW || layout == DATA_LAYOUT_NHWC);
+    return layout == DATA_LAYOUT_BLOCK ? C : p[layout == DATA_LAYOUT_NCHW ? 1 : dims-1];
 }
 
-MatShape MatShape::fromBlock(DataLayout newLayout) const
+MatShape MatShape::toLayout(DataLayout newLayout, int C0, int ngroups) const
 {
-    CV_Assert(dims >= 4);
-    CV_Assert(layout == DATA_LAYOUT_BLOCK);
-    // C0 should be > 1 and be a power-of-2: 2, 4, 8, ...
-    int C0 = p[dims-1];
-    CV_Assert(C0 > 1 && (C0 & (C0-1)) == 0);
-    CV_Assert(p[1] == (C + C0-1)/C0);
-    CV_Assert(newLayout == DATA_LAYOUT_NCHW || newLayout == DATA_LAYOUT_NHWC);
-    int c_idx = newLayout == DATA_LAYOUT_NCHW ? 1 : dims-2;
-
+    CV_Assert(layout == DATA_LAYOUT_BLOCK || layout == DATA_LAYOUT_NCHW || layout == DATA_LAYOUT_NHWC);
+    CV_Assert(newLayout == DATA_LAYOUT_BLOCK || newLayout == DATA_LAYOUT_NCHW || newLayout == DATA_LAYOUT_NHWC);
+    
     MatShape newsize = *this;
     newsize.layout = newLayout;
-    newsize.C = 0;
-    newsize.p[c_idx] = C;
-    newsize.dims--;
+    
+    if (newLayout == DATA_LAYOUT_BLOCK) {
+        // any => BLOCK
+        CV_Assert_N(C0 > 1, (C0 & (C0-1)) == 0);
+        int Corig = channels();
+        CV_Assert_N(ngroups > 0, Corig % ngroups == 0);
+        newsize.C = Corig;
+        
+        if (layout == DATA_LAYOUT_NHWC) {
+            for (int i = 2; i < dims; i++) {
+                newsize.p[i] = p[i-1];
+            }
+        }
+        
+        newsize.dims += layout != DATA_LAYOUT_BLOCK;
+        newsize.p[1] = ((Corig/ngroups + C0 - 1)/C0)*ngroups;
+        newsize.p[newsize.dims-1] = C0;
+    } else if (layout == DATA_LAYOUT_BLOCK) {
+        // BLOCK => any (except for BLOCK, which is handled above)
+        CV_Assert(ngroups == 1);
+        newsize.C = 0;
+        if (newLayout == DATA_LAYOUT_NHWC) {
+            for (int i = 2; i < dims; i++) {
+                newsize.p[i-1] = p[i];
+            }
+        }
+        newsize.p[newLayout == DATA_LAYOUT_NCHW ? 1 : dims-2] = C;
+        newsize.dims--;
+    } else {
+        CV_Assert_N(C0 <= 1, ngroups == 1);
+        
+        if (newLayout == layout)
+            return newsize;
+        
+        // NHWC => NCHW
+        if (newLayout == DATA_LAYOUT_NCHW) {
+            for (int i = 2; i < dims; i++)
+                newsize.p[i] = p[i-1];
+            newsize.p[1] = p[dims-1];
+        } else {
+            // NCHW => NHWC
+            for (int i = 2; i < dims; i++)
+                newsize.p[i-1] = p[i];
+            newsize.p[dims-1] = p[1];
+        }
+    }
 
     return newsize;
 }

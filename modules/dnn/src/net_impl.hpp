@@ -471,9 +471,8 @@ Net readNetFromONNX2_ORT(const String& onnxFile);
 CV__DNN_INLINE_NS_END
 
 void transformLayout(const Mat& inp, Mat& out,
-                     DataLayout outlayout,
-                     DataLayout defaultLayout,
-                     int C0);
+                     DataLayout outlayout, DataLayout defaultLayout,
+                     int C0, int ninpgroups=1, int noutgroups=1);
 
 }}  // namespace cv::dnn
 #endif  // __OPENCV_DNN_SRC_NET_IMPL_HPP__

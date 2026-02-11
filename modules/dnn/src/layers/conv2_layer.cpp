@@ -20,33 +20,170 @@ namespace dnn
     Opset's 1 to 22 are covered.
 */
 
-#if 0
-static MatShape fastConv2dInferShape(const MatShape& inpshape, const MatShape& wshape,
-                                     const int* strides,
-                                     const int* dilations,
-                                     const int* pads)
+static void refConv32f(const void* inp__, const void* residual__, void* out__,
+                       const ConvState& cs, const void* weights__,
+                       const float* scale__, const float* bias__,
+                       const int32_t* inpofs__, const int32_t* ofsofs__)
 {
-    int ndims = inpshape.dims, wdims = wshape.dims;
-    CV_Assert(ndims == 4 && wdims == 4);
+    int C0_ = cs.inpshape.back();
+    int K1_ = cs.outshape[1];
 
-    int N = inpshape[0], C = inpshape[1], H = inpshape[2], W = inpshape[3];
-    int K = wshape[0], WCg = wshape[1], Hk = wshape[2], Wk = wshape[3];
-    int ngroups = C/WCg;
+    CV_Assert(C0_ == 8);
+    CV_Assert(cs.activation == nullptr || cs.fastActivation == FAST_ACTIV_NONE);
+    CV_Assert(0 <= cs.nspatialdims && cs.nspatialdims <= ConvState::MAX_CONV_DIMS);
+    
+    parallel_for_(Range(0, K1_), [&](const Range& range) {
+        int sdims = cs.nspatialdims;
+        int C0 = C0_, K0 = C0_;
+        int K1 = K1_, C1 = cs.inpshape[1];
+        int K = cs.outshape.C, C = cs.inpshape.C;
+        int N = cs.inpshape[0];
+        
+        int Di = sdims > 2 ? cs.inpshape[sdims - 1] : 1;
+        int Hi = sdims > 1 ? cs.inpshape[sdims] : 1;
+        int Wi = cs.inpshape[sdims + 1];
+        int D = sdims > 2 ? cs.outshape[sdims - 1] : 1;
+        int H = sdims > 1 ? cs.outshape[sdims] : 1;
+        int W = cs.outshape[sdims + 1];
+        int iplanesize = Di*Hi*Wi*C0;
+        int planesize = D*H*W*C0;
+        
+        int ngroups = cs.ngroups;
+        int Cg = C/ngroups, Kg = K/ngroups;
+        int WCg = (Cg + C0 - 1)/C0;
+        int Sz = cs.strides[0], Sy = cs.strides[1], Sx = cs.strides[2];
+        int Dz = cs.dilations[0], Dy = cs.dilations[1], Dx = cs.dilations[2];
+        int padz = cs.pads[0], pady = cs.pads[1], padx = cs.pads[2];
+        
+        const float* scale_ = scale__;
+        const float* bias_ = bias__;
+        constexpr int BLOCK_SIZE = 8;
+        
+        AutoBuffer<float> sumbuf(BLOCK_SIZE*K0*3);
+        
+        int k1start = range.start, nk1 = range.end;
+        constexpr int C0 = 8, K0 = C0;
+        int planesize = 1, iplanesize = 1, ksize = 1;
+        int nspatialdims = cs.nspatialdims;
+        int C1 = cs.inpshape[1], K1 = cs.outshape[1];
+        int ngroups = cs.ngroups, K1g = K1/ngroups, C1g = C1/ngroups;
+        int nC = C1g*ksize*C0*K0;
+        
+        float* sum = sumbuf.data();
+        float* scale = sum + BLOCK_SIZE*K0;
+        float* bias = sum + BLOCK_SIZE*K0*2;
+        const float* inptrs[BLOCK_SIZE];
+        const int32_t* ofsptrs[BLOCK_SIZE];
+        FastActivation fastActivation = cs.fastActivation;
+        const float* activParams = cs.activParams;
+        activation_func_t activation = cs.activation;
+        float maxval = fastActivation == FAST_ACTIV_CLIP ? activParams[1] : FLT_MAX;
+        float alpha = fastActivation == FAST_ACTIV_LEAKY_RELU ? activParams[0] :
+                    fastActivation == FAST_ACTIV_NONE ? 1.f : 0.f;
 
-    int pad_y = pads[1] + pads[4];
-    int pad_x = pads[2] + pads[5];
-    int H0 = (H + pad_y - dilations[1]*(Hk - 1) - 1)/strides[1] + 1;
-    int W0 = (W + pad_x - dilations[2]*(Wk - 1) - 1)/strides[2] + 1;
-    MatShape outshape(4);
-    outshape.layout = inpshape.layout;
-    outshape[0] = inpshape[0];
-    outshape[1] = K;
-    outshape[2] = H0;
-    outshape[3] = W0;
+        for (int j = 0; j < BLOCK_SIZE*K0; j++) {
+            scale[j] = 1.f;
+            bias[j] = 0.f;
+        }
 
-    return outshape;
+        for (int k1 = range.start; k1 < range.end; k1++) {
+            for (int n = 0; n < N; n++) {
+                float* out = (float*)out__ + n*k1*planesize*K0;
+                const float* resptr = residual__ ? (const float*)residual__ + n*k1*planesize*K0 : nullptr;
+                
+                
+                
+            }
+            int n = nk/K1, k1 = nk - n*K1;
+            int g = k1/K1g;
+            
+            const float* inp0 = (const float*)inp__ + (n*C1 + g*C1g)*iplanesize*C0;
+            
+            const float* wptr = (const float*)weights__ + k1*nC;
+
+            if (scale_) {
+                for (int b = 0; b < BLOCK_SIZE; b++)
+                    for (int k = 0; k < K0; k++)
+                        scale[b*K0 + k] = scale_[k1*K0 + k];
+            }
+
+            if (bias_) {
+                for (int b = 0; b < BLOCK_SIZE; b++)
+                    for (int k = 0; k < K0; k++)
+                        bias[b*K0 + k] = bias_[k1*K0 + k];
+            }
+
+            for (int xy0 = 0; xy0 < planesize; xy0 += BLOCK_SIZE, out += K0*BLOCK_SIZE,
+                 resptr += (resptr ? K0*BLOCK_SIZE : 0)) {
+                int j = 0, blocksize = std::min(planesize - xy0, BLOCK_SIZE);
+
+                for (; j < blocksize; j++) {
+                    int jj = (xy0 + j)*2;
+                    inptrs[j] = inp0 + ofsofs_[jj];
+                    ofsptrs[j] = inpofs_ + ofsofs_[jj+1];
+                }
+
+                if (j < BLOCK_SIZE) {
+                    const float* last_inptr = inptrs[blocksize-1];
+                    const int32_t* last_ofsptr = ofsptrs[blocksize-1];
+                    for (; j < BLOCK_SIZE; j++) {
+                        inptrs[j] = last_inptr;
+                        ofsptrs[j] = last_ofsptr;
+                    }
+                }
+
+                for (int i = 0; i < BLOCK_SIZE*K0; i++)
+                    sum[i] = 0.f;
+
+                for (int c1 = 0, i = 0; c1 < nC; c1 += K0*C0, i++) {
+                    for (j = 0; j < BLOCK_SIZE; j++) {
+                        int32_t ofs_ij = ofsptrs[j][i];
+                        const float* x = &inptrs[j][std::max(ofs_ij, 0)];
+                        float mij = (float)(ofs_ij >= 0);
+                        for (int c0 = 0; c0 < C0; c0++) {
+                            float xc = x[c0]*mij;
+                            for (int k = 0; k < K0; k++) {
+                                float w = wptr[c1 + c0*K0 + k];
+                                sum[K0*j + k] += xc*w;
+                            }
+                        }
+                    }
+                }
+
+                if (activation) {
+                    if (resptr) {
+                        for (j = 0; j < blocksize*K0; j++) {
+                            float v = sum[j]*scale[j] + bias[j] + resptr[j];
+                            sum[j] = v;
+                        }
+                    } else {
+                        for (j = 0; j < blocksize*K0; j++) {
+                            float v = sum[j]*scale[j] + bias[j];
+                            sum[j] = v;
+                        }
+                    }
+                    activation(sum, out, blocksize*K0, activParams);
+                } else {
+                    if (resptr) {
+                        for (j = 0; j < blocksize*K0; j++) {
+                            float v = sum[j]*scale[j] + bias[j] + resptr[j];
+                            v = std::min(v*(v >= 0 ? 1.f : alpha), maxval);
+                            out[j] = v;
+                        }
+                    } else {
+                        for (j = 0; j < blocksize*K0; j++) {
+                            float v = sum[j]*scale[j] + bias[j];
+                            v = std::min(v*(v >= 0 ? 1.f : alpha), maxval);
+                            out[j] = v;
+                        }
+                    }
+                }
+            }
+        }
+    });
 }
 
+/*
 static void refConv2d(const Mat& inp, const Mat& weights, const MatShape& wshape0, const Mat& bias, Mat& out,
                       const int* strides, const int* dilations,
                       const int* pads, FastActivation activation,
@@ -118,8 +255,7 @@ static void refConv2d(const Mat& inp, const Mat& weights, const MatShape& wshape
             }
         }
     });
-}
-#endif
+}*/
 
 class Conv2LayerImpl : public Conv2Layer
 {
@@ -393,14 +529,17 @@ public:
     {
     }
 
-    void forward(InputArrayOfArrays inputs_arr,
-                 OutputArrayOfArrays outputs_arr,
-                 OutputArrayOfArrays) CV_OVERRIDE
+    void forward(InputArrayOfArrays input_arrs,
+                 OutputArrayOfArrays output_arrs,
+                 OutputArrayOfArrays temp_arrs) CV_OVERRIDE
     {
         auto* netimpl_ = getNetImpl(this);
-        int ninputs = (int)inputs_arr.total();
+        DataLayout origLayout = netimpl_->originalLayout;
+        std::vector<Mat>* temp_mats = &temp_arrs.getMatVecRef();
+        temp_mats->resize(2);
+        int ninputs = (int)input_arrs.total();
         CV_Assert(ninputs >= 1);
-        const Mat& inp = inputs_arr.getMat(0);
+        const Mat& inp = input_arrs.getMat(0);
         Mat residual;
         const void* resptr = nullptr;
         int inptype = inp.type();
@@ -409,18 +548,18 @@ public:
         CV_Assert(inp.isContinuous());
         
         if (add_residual) {
-            residual = inputs_arr.getMat(ninputs-1);
+            residual = input_arrs.getMat(ninputs-1);
             resptr = residual.data;
             ninputs--;
         }
 
-        bool dynamic_weights = false;
+        bool dynamicWeights = false;
         for (int i = 1; i < ninputs; i++) {
             if (!netimpl_->isConstArg(inputs[i]))
-                dynamic_weights = true;
+                dynamicWeights = true;
         }
-        if (dynamic_weights || weights.empty()) {
-            setWeights(inputs_arr.getMat(1), ninputs > 2 ? inputs_arr.getMat(2) : Mat(),
+        if (dynamicWeights || weights.empty()) {
+            setWeights(input_arrs.getMat(1), ninputs > 2 ? input_arrs.getMat(2) : Mat(),
                        inpshape.back(), netimpl_->accuracy);
         }
 
@@ -429,7 +568,7 @@ public:
                                            pads, auto_pad, ceil_mode);
         int outtype = inferType(inptype);
         int C0 = inpshape.back();
-        int outkind = outputs_arr.kind();
+        int outkind = output_arrs.kind();
         CV_Assert(outkind == _InputArray::STD_VECTOR_MAT ||
                   outkind == _InputArray::STD_VECTOR_UMAT);
         
@@ -448,7 +587,7 @@ public:
         cs.initConv(inpshape, wshape0, outshape, ngroups,
                     strides, dilations, pads, auto_pad, ceil_mode,
                     fast_activation, fast_activ_params, ConvState::MAX_ACTIV_PARAMS);
-
+        
         const float* scale_data = nullptr;
         const float* bias_data = bias.ptr<float>();
 
@@ -462,12 +601,12 @@ public:
         Mat out;
 
         if (outkind == _InputArray::STD_VECTOR_MAT) {
-            outs = &outputs_arr.getMatVecRef();
+            outs = &output_arrs.getMatVecRef();
             outs->resize(1);
             outs->at(0).fit(outshape, outtype);
             out = outs->at(0);
         } else {
-            uouts = &outputs_arr.getUMatVecRef();
+            uouts = &output_arrs.getUMatVecRef();
             uouts->resize(1);
             uouts->at(0).fit(outshape, outtype);
             out.fit(outshape, outtype);
@@ -490,10 +629,11 @@ public:
             }
 
             {
-                ConvFunc func = getConvFunc(inptype, C0);
+                ConvFunc func = cs.unevenGroupedConv ? refConv32f : getConvFunc(inptype, C0);
                 CV_Assert(func != nullptr);
                 func(inptr, resptr, outptr, cs, wptr, scale_data, bias_data,
                      inpofs.data(), ofsofs.data());
+
 #if 0
                 Mat inp0, out0, temp;
                 transformLayout(inp, inp0, DATA_LAYOUT_NCHW,
@@ -513,7 +653,7 @@ public:
             out.copyTo(uouts->at(0));
         }
 
-        if (dynamic_weights) {
+        if (dynamicWeights) {
             // to keep memory footprint low in the case of
             // very rare situation of dynamic convolution weights,
             // we release temporarily allocated and reordered copy of the weights
