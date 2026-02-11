@@ -57,9 +57,18 @@ size_t KeyPoint::hash() const
     u.f = size; _Val = (scale * _Val) ^ u.u;
     u.f = angle; _Val = (scale * _Val) ^ u.u;
     u.f = response; _Val = (scale * _Val) ^ u.u;
+    u.f = area; _Val = (scale * _Val) ^ u.u;
     _Val = (scale * _Val) ^ ((size_t) octave);
     _Val = (scale * _Val) ^ ((size_t) class_id);
     return _Val;
+}
+
+float keypointArea(const KeyPoint& kp)
+{
+    if (kp.area > 0)
+        return kp.area;
+    else
+        return (float)(CV_PI * 0.25 * kp.size * kp.size);
 }
 
 void KeyPoint::convert(const std::vector<KeyPoint>& keypoints, std::vector<Point2f>& points2f,

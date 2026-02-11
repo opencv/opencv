@@ -816,7 +816,15 @@ public:
     CV_PROP_RW float response; //!< the response by which the most strong keypoints have been selected. Can be used for the further sorting or subsampling
     CV_PROP_RW int octave; //!< octave (pyramid layer) from which the keypoint has been extracted
     CV_PROP_RW int class_id; //!< object class (if the keypoints need to be clustered by an object they belong to)
+    CV_PROP_RW float area; //!< area (in pixel^2) of the keypoint region, if known
 };
+
+/** @brief Returns the area of the keypoint.
+If the keypoint has a valid area set (area>0), returns it.
+Otherwise, computes the area from the keypoint size assuming a circular region.
+@param kp KeyPoint
+*/
+CV_EXPORTS_W float keypointArea(const KeyPoint& kp);
 
 #ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
 template<> class DataType<KeyPoint>
@@ -2432,15 +2440,15 @@ Scalar operator * (const Matx<double, 4, 4>& a, const Scalar& b)
 
 inline
 KeyPoint::KeyPoint()
-    : pt(0,0), size(0), angle(-1), response(0), octave(0), class_id(-1) {}
+    : pt(0,0), size(0), angle(-1), response(0), octave(0), class_id(-1), area(0) {}
 
 inline
 KeyPoint::KeyPoint(Point2f _pt, float _size, float _angle, float _response, int _octave, int _class_id)
-    : pt(_pt), size(_size), angle(_angle), response(_response), octave(_octave), class_id(_class_id) {}
+    : pt(_pt), size(_size), angle(_angle), response(_response), octave(_octave), class_id(_class_id), area(0) {}
 
 inline
 KeyPoint::KeyPoint(float x, float y, float _size, float _angle, float _response, int _octave, int _class_id)
-    : pt(x, y), size(_size), angle(_angle), response(_response), octave(_octave), class_id(_class_id) {}
+    : pt(x, y), size(_size), angle(_angle), response(_response), octave(_octave), class_id(_class_id), area(0) {}
 
 
 

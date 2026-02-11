@@ -108,6 +108,7 @@ protected:
       Point2d location;
       double radius;
       double confidence;
+      double area;
   };
 
   virtual void detect( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) CV_OVERRIDE;
@@ -323,6 +324,7 @@ void SimpleBlobDetectorImpl::findBlobs(InputArray _image, InputArray _binaryImag
         if(moms.m00 == 0.0)
             continue;
         center.location = Point2d(moms.m10 / moms.m00, moms.m01 / moms.m00);
+        center.area = moms.m00;
 
         if (params.filterByColor)
         {
@@ -467,6 +469,7 @@ void SimpleBlobDetectorImpl::detect(InputArray image, std::vector<cv::KeyPoint>&
         }
         sumPoint *= (1. / normalizer);
         KeyPoint kpt(sumPoint, (float)(centers[i][centers[i].size() / 2].radius) * 2.0f);
+        kpt.area = (float)centers[i][centers[i].size() / 2].area;
         keypoints.push_back(kpt);
     }
 
