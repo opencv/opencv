@@ -162,7 +162,7 @@ private:
         int n1 = nn - 1;
         int low = 0;
         int high = nn - 1;
-        double eps = std::pow(2.0, -52.0);
+        double eps = std::pow(2, -52);
         double exshift = 0.0;
         double p = 0, q = 0, r = 0, s = 0, z = 0, t, w, x, y;
 

@@ -86,15 +86,12 @@ AvifImageUniquePtr ConvertToAvif(const cv::Mat &img, bool lossless, int bit_dept
     result->yuvFormat = AVIF_PIXEL_FORMAT_YUV400;
     result->colorPrimaries = AVIF_COLOR_PRIMARIES_UNSPECIFIED;
     result->transferCharacteristics = AVIF_TRANSFER_CHARACTERISTICS_UNSPECIFIED;
-    result->matrixCoefficients = AVIF_MATRIX_COEFFICIENTS_IDENTITY;
+    result->matrixCoefficients = AVIF_MATRIX_COEFFICIENTS_UNSPECIFIED;
     result->yuvRange = AVIF_RANGE_FULL;
     result->yuvPlanes[0] = img.data;
     result->yuvRowBytes[0] = img.step[0];
     result->imageOwnsYUVPlanes = AVIF_FALSE;
-    return AvifImageUniquePtr(result);
-  }
-
-  if (lossless) {
+  } else if (lossless) {
     result =
         avifImageCreate(width, height, bit_depth, AVIF_PIXEL_FORMAT_YUV444);
     if (result == nullptr) return nullptr;
@@ -139,22 +136,24 @@ AvifImageUniquePtr ConvertToAvif(const cv::Mat &img, bool lossless, int bit_dept
 #endif
   }
 
-  avifRGBImage rgba;
-  avifRGBImageSetDefaults(&rgba, result);
-  if (img.channels() == 3) {
-    rgba.format = AVIF_RGB_FORMAT_BGR;
-  } else {
-    CV_Assert(img.channels() == 4);
-    rgba.format = AVIF_RGB_FORMAT_BGRA;
-  }
-  rgba.rowBytes = (uint32_t)img.step[0];
-  rgba.depth = bit_depth;
-  rgba.pixels =
-      const_cast<uint8_t *>(reinterpret_cast<const uint8_t *>(img.data));
+  if (img.channels() > 1) {
+    avifRGBImage rgba;
+    avifRGBImageSetDefaults(&rgba, result);
+    if (img.channels() == 3) {
+      rgba.format = AVIF_RGB_FORMAT_BGR;
+    } else {
+      CV_Assert(img.channels() == 4);
+      rgba.format = AVIF_RGB_FORMAT_BGRA;
+    }
+    rgba.rowBytes = (uint32_t)img.step[0];
+    rgba.depth = bit_depth;
+    rgba.pixels =
+        const_cast<uint8_t *>(reinterpret_cast<const uint8_t *>(img.data));
 
-  if (avifImageRGBToYUV(result, &rgba) != AVIF_RESULT_OK) {
-    avifImageDestroy(result);
-    return nullptr;
+    if (avifImageRGBToYUV(result, &rgba) != AVIF_RESULT_OK) {
+      avifImageDestroy(result);
+      return nullptr;
+    }
   }
   return AvifImageUniquePtr(result);
 }
@@ -212,6 +211,10 @@ bool AvifDecoder::readHeader() {
     return true;
 
   decoder_ = avifDecoderCreate();
+  if (!decoder_) {
+    CV_Error(Error::StsNoMem, "Failed to create AVIF decoder");
+    return false;
+  }
   decoder_->strictFlags = AVIF_STRICT_DISABLED;
   if (!m_buf.empty()) {
     CV_Assert(m_buf.type() == CV_8UC1);
@@ -226,6 +229,11 @@ bool AvifDecoder::readHeader() {
                 m_buf.total()),
       decoder_);
   OPENCV_AVIF_CHECK_STATUS(avifDecoderParse(decoder_), decoder_);
+
+  if (!decoder_->image) {
+    CV_Error(Error::StsParseError, "AVIF image is null after parsing");
+    return false;
+  }
 
   m_width = decoder_->image->width;
   m_height = decoder_->image->height;
@@ -381,7 +389,6 @@ bool AvifEncoder::writeanimation(const Animation& animation,
                                      ? AVIF_ADD_IMAGE_FLAG_SINGLE
                                      : AVIF_ADD_IMAGE_FLAG_NONE;
   std::vector<AvifImageUniquePtr> images;
-  std::vector<cv::Mat> imgs_scaled;
   for (const cv::Mat &img : animation.frames) {
     CV_CheckType(
         img.type(),
@@ -389,11 +396,17 @@ bool AvifEncoder::writeanimation(const Animation& animation,
             ((bit_depth == 10 || bit_depth == 12) && img.depth() == CV_16U),
         "AVIF only supports bit depth of 8 with CV_8U input or "
         "bit depth of 10 or 12 with CV_16U input");
+
     CV_Check(img.channels(),
              img.channels() == 1 || img.channels() == 3 || img.channels() == 4,
              "AVIF only supports 1, 3, 4 channels");
 
-    images.emplace_back(ConvertToAvif(img, do_lossless, bit_depth, m_metadata));
+    auto avifImg = ConvertToAvif(img, do_lossless, bit_depth, m_metadata);
+    if (!avifImg) {
+        CV_Error(Error::StsError, "Failed to convert Mat to AVIF image");
+        return false;
+    }
+    images.emplace_back(std::move(avifImg));
   }
 
   for (size_t i = 0; i < images.size(); i++)

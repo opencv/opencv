@@ -228,7 +228,7 @@ void blobFromImagesNCHW(const std::vector<Mat>& images, Mat& blob_, const Image2
 template<typename Tout>
 void blobFromImagesNCHW(const std::vector<UMat>& images, UMat& blob_, const Image2BlobParams& param)
 {
-    CV_Error(Error::StsNotImplemented, "");
+    CV_Error(Error::StsNotImplemented, "blobFromImagesNCHW is not implemented for UMat inputs");
 }
 
 template<class Tmat>

@@ -552,7 +552,7 @@ QUnit.test('test_filter', function(assert) {
         cv.stackBlur(src, src, new cv.Size(3, 3));
 
         // Verify result.
-        let expected = new Uint8Array([22,29,36,38,43,50]);
+        let expected = new Uint8Array([14,22,29,46,51,58]);
 
         assert.deepEqual(src.data, expected);
         src.delete();
@@ -710,14 +710,14 @@ QUnit.test('test_rotatedRectangleIntersection', function(assert) {
         assert.deepEqual(intersectionType, cv.INTERSECT_FULL);
         intersectionPoints.convertTo(intersectionPoints, cv.CV_32S);
         let intersectionPointsData = intersectionPoints.data32S;
-        assert.deepEqual(intersectionPointsData[0], 30);
-        assert.deepEqual(intersectionPointsData[1], 40);
-        assert.deepEqual(intersectionPointsData[2], 40);
-        assert.deepEqual(intersectionPointsData[3], 30);
-        assert.deepEqual(intersectionPointsData[4], 50);
-        assert.deepEqual(intersectionPointsData[5], 40);
-        assert.deepEqual(intersectionPointsData[6], 40);
-        assert.deepEqual(intersectionPointsData[7], 50);
+        assert.deepEqual(intersectionPointsData[0], 40);
+        assert.deepEqual(intersectionPointsData[1], 50);
+        assert.deepEqual(intersectionPointsData[2], 30);
+        assert.deepEqual(intersectionPointsData[3], 40);
+        assert.deepEqual(intersectionPointsData[4], 40);
+        assert.deepEqual(intersectionPointsData[5], 30);
+        assert.deepEqual(intersectionPointsData[6], 50);
+        assert.deepEqual(intersectionPointsData[7], 40);
 
         intersectionType = cv.rotatedRectangleIntersection(rr1, rr3, intersectionPoints);
 

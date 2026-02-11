@@ -488,9 +488,9 @@ bool GStreamerCapture::configureStreamsProperty(const cv::VideoCaptureParameters
 {
     if (params.has(CAP_PROP_VIDEO_STREAM))
     {
-        double value = params.get<double>(CAP_PROP_VIDEO_STREAM);
+        gint value = params.get<gint>(CAP_PROP_VIDEO_STREAM);
         if (value == -1 || value == 0)
-            videoStream = static_cast<gint>(value);
+            videoStream = value;
         else
         {
             CV_LOG_ERROR(NULL, "VIDEOIO/Gstreamer: CAP_PROP_VIDEO_STREAM parameter value is invalid/unsupported: " << value);
@@ -499,9 +499,9 @@ bool GStreamerCapture::configureStreamsProperty(const cv::VideoCaptureParameters
     }
     if (params.has(CAP_PROP_AUDIO_STREAM))
     {
-        double value = params.get<double>(CAP_PROP_AUDIO_STREAM);
-        if (value == -1 || value > -1)
-            audioStream = static_cast<gint>(value);
+        gint value = params.get<gint>(CAP_PROP_AUDIO_STREAM);
+        if (value == -1 || value >= 0)
+            audioStream = value;
         else
         {
             CV_LOG_ERROR(NULL, "VIDEOIO/Gstreamer: CAP_PROP_AUDIO_STREAM parameter value is invalid/unsupported: " << value);
@@ -515,7 +515,7 @@ bool GStreamerCapture::setAudioProperties(const cv::VideoCaptureParameters& para
 {
     if (params.has(CAP_PROP_AUDIO_DATA_DEPTH))
     {
-        gint value = static_cast<gint>(params.get<double>(CAP_PROP_AUDIO_DATA_DEPTH));
+        gint value = params.get<gint>(CAP_PROP_AUDIO_DATA_DEPTH);
         if (value != CV_8S && value != CV_16S && value != CV_32S && value != CV_32F)
         {
             CV_LOG_ERROR(NULL, "VIDEOIO/Gstreamer: CAP_PROP_AUDIO_DATA_DEPTH parameter value is invalid/unsupported: " << value);
@@ -528,7 +528,7 @@ bool GStreamerCapture::setAudioProperties(const cv::VideoCaptureParameters& para
     }
     if (params.has(CAP_PROP_AUDIO_SAMPLES_PER_SECOND))
     {
-        int value = static_cast<int>(params.get<double>(CAP_PROP_AUDIO_SAMPLES_PER_SECOND));
+        int value = params.get<int>(CAP_PROP_AUDIO_SAMPLES_PER_SECOND);
         if (value < 0)
         {
             CV_LOG_ERROR(NULL, "VIDEOIO/Gstreamer: CAP_PROP_AUDIO_SAMPLES_PER_SECOND parameter can't be negative: " << value);
@@ -541,8 +541,7 @@ bool GStreamerCapture::setAudioProperties(const cv::VideoCaptureParameters& para
     }
     if (params.has(CAP_PROP_AUDIO_SYNCHRONIZE))
     {
-        int value = static_cast<uint32_t>(params.get<double>(CAP_PROP_AUDIO_SYNCHRONIZE));
-        syncLastFrame = (value != 0) ? true : false;
+        syncLastFrame = params.get<bool>(CAP_PROP_AUDIO_SYNCHRONIZE);
     }
     return true;
 }

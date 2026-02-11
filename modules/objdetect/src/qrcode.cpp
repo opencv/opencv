@@ -83,8 +83,10 @@ static Point2f intersectionLines(Point2f a1, Point2f a2, Point2f b1, Point2f b2)
 //    /   |
 //  a/    | c
 
-static inline double getCosVectors(Point2f a, Point2f b, Point2f c)
+static inline double getCosVectors(Point a, Point b, Point c)
 {
+    CV_DbgCheckNE(a, b, "Angle between vector and point is undetermined");
+    CV_DbgCheckNE(b, c, "Angle between vector and point is undetermined");
     return ((a - b).x * (c - b).x + (a - b).y * (c - b).y) / (norm(a - b) * norm(c - b));
 }
 
@@ -410,9 +412,9 @@ void QRDetect::fixationPoints(vector<Point2f> &local_point)
         list_area_pnt.push_back(current_point);
 
         vector<LineIterator> list_line_iter;
-        list_line_iter.push_back(LineIterator(bin_barcode, current_point, left_point));
-        list_line_iter.push_back(LineIterator(bin_barcode, current_point, central_point));
-        list_line_iter.push_back(LineIterator(bin_barcode, current_point, right_point));
+        list_line_iter.emplace_back(bin_barcode, current_point, left_point);
+        list_line_iter.emplace_back(bin_barcode, current_point, central_point);
+        list_line_iter.emplace_back(bin_barcode, current_point, right_point);
 
         for (size_t k = 0; k < list_line_iter.size(); k++)
         {
@@ -755,7 +757,7 @@ vector<Point2f> QRDetect::getQuadrilateral(vector<Point2f> angle_list)
     {
         int x = cvRound(angle_list[i].x);
         int y = cvRound(angle_list[i].y);
-        locations.push_back(Point(x, y));
+        locations.emplace_back(x,y);
     }
 
     vector<Point> integer_hull;
@@ -772,21 +774,27 @@ vector<Point2f> QRDetect::getQuadrilateral(vector<Point2f> angle_list)
     const double experimental_area = fabs(contourArea(hull));
 
     vector<Point2f> result_hull_point(angle_size);
+    vector<bool> used_hull_point(hull_size, false);
     double min_norm;
     for (size_t i = 0; i < angle_size; i++)
     {
         min_norm = std::numeric_limits<double>::max();
-        Point closest_pnt;
+        int closest_pnt_idx = -1;
         for (int j = 0; j < hull_size; j++)
         {
+            if (used_hull_point[j])
+            {
+                continue;
+            }
             double temp_norm = norm(hull[j] - angle_list[i]);
             if (min_norm > temp_norm)
             {
                 min_norm = temp_norm;
-                closest_pnt = hull[j];
+                closest_pnt_idx = j;
             }
         }
-        result_hull_point[i] = closest_pnt;
+        result_hull_point[i] = hull[closest_pnt_idx];
+        used_hull_point[closest_pnt_idx] = true;
     }
 
     int start_line[2] = { 0, 0 }, finish_line[2] = { 0, 0 }, unstable_pnt = 0;
@@ -819,7 +827,11 @@ vector<Point2f> QRDetect::getQuadrilateral(vector<Point2f> angle_list)
         Point intrsc_line_hull =
         intersectionLines(hull[index_hull], hull[next_index_hull],
                           angle_list[1], angle_list[2]);
-        double temp_norm = getCosVectors(hull[index_hull], intrsc_line_hull, angle_closest_pnt);
+        double temp_norm = min_norm;
+        if (intrsc_line_hull != angle_closest_pnt)
+        {
+            temp_norm = getCosVectors(hull[index_hull], intrsc_line_hull, angle_closest_pnt);
+        }
         if (min_norm > temp_norm &&
             norm(hull[index_hull] - hull[next_index_hull]) >
             norm(angle_list[1] - angle_list[2]) * 0.1)
@@ -857,7 +869,11 @@ vector<Point2f> QRDetect::getQuadrilateral(vector<Point2f> angle_list)
         Point intrsc_line_hull =
         intersectionLines(hull[index_hull], hull[next_index_hull],
                           angle_list[0], angle_list[1]);
-        double temp_norm = getCosVectors(hull[index_hull], intrsc_line_hull, angle_closest_pnt);
+        double temp_norm = min_norm;
+        if (intrsc_line_hull != angle_closest_pnt)
+        {
+            temp_norm = getCosVectors(hull[index_hull], intrsc_line_hull, angle_closest_pnt);
+        }
         if (min_norm > temp_norm &&
             norm(hull[index_hull] - hull[next_index_hull]) >
             norm(angle_list[0] - angle_list[1]) * 0.05)
@@ -2201,13 +2217,13 @@ bool QRDecode::straightenQRCodeInParts()
 
         vector<Point2f> perspective_points;
 
-        perspective_points.push_back(Point2f(0.0, start_cut));
-        perspective_points.push_back(Point2f(perspective_curved_size, start_cut));
+        perspective_points.emplace_back(0.0f, start_cut);
+        perspective_points.emplace_back(perspective_curved_size, start_cut);
 
-        perspective_points.push_back(Point2f(perspective_curved_size, start_cut + dist));
-        perspective_points.push_back(Point2f(0.0, start_cut+dist));
+        perspective_points.emplace_back(perspective_curved_size, start_cut + dist);
+        perspective_points.emplace_back(0.0f, start_cut+dist);
 
-        perspective_points.push_back(Point2f(perspective_curved_size * 0.5f, start_cut + dist * 0.5f));
+        perspective_points.emplace_back(perspective_curved_size * 0.5f, start_cut + dist * 0.5f);
 
         if (i == 1)
         {
@@ -2278,13 +2294,13 @@ bool QRDecode::straightenQRCodeInParts()
     }
 
     vector<Point2f> perspective_straight_points;
-    perspective_straight_points.push_back(Point2f(0.f, 0.f));
-    perspective_straight_points.push_back(Point2f(perspective_curved_size, 0.f));
+    perspective_straight_points.emplace_back(0.f, 0.f);
+    perspective_straight_points.emplace_back(perspective_curved_size, 0.f);
 
-    perspective_straight_points.push_back(Point2f(perspective_curved_size, perspective_curved_size));
-    perspective_straight_points.push_back(Point2f(0.f, perspective_curved_size));
+    perspective_straight_points.emplace_back(perspective_curved_size, perspective_curved_size);
+    perspective_straight_points.emplace_back(0.f, perspective_curved_size);
 
-    perspective_straight_points.push_back(Point2f(perspective_curved_size * 0.5f, perspective_curved_size * 0.5f));
+    perspective_straight_points.emplace_back(perspective_curved_size * 0.5f, perspective_curved_size * 0.5f);
 
     Mat H = findHomography(original_curved_points, perspective_straight_points);
     if (H.empty())
@@ -2958,12 +2974,7 @@ std::string ImplContour::decode(InputArray in, InputArray points, OutputArray st
     vector<Point2f> src_points;
     points.copyTo(src_points);
     CV_Assert(src_points.size() == 4);
-    if (contourArea(src_points) <= 0.0)
-    {
-        if (straight_qrcode.needed())
-            straight_qrcode.release();
-        return std::string();
-    }
+    CV_CheckGT(contourArea(src_points), 0.0, "Invalid QR code source points");
 
     QRDecode qrdec(useAlignmentMarkers);
     qrdec.init(inarr, src_points);
@@ -3308,9 +3319,9 @@ void QRDetectMulti::fixationPoints(vector<Point2f> &local_point)
         list_area_pnt.push_back(current_point);
 
         vector<LineIterator> list_line_iter;
-        list_line_iter.push_back(LineIterator(bin_barcode_temp, current_point, left_point));
-        list_line_iter.push_back(LineIterator(bin_barcode_temp, current_point, central_point));
-        list_line_iter.push_back(LineIterator(bin_barcode_temp, current_point, right_point));
+        list_line_iter.emplace_back(bin_barcode_temp, current_point, left_point);
+        list_line_iter.emplace_back(bin_barcode_temp, current_point, central_point);
+        list_line_iter.emplace_back(bin_barcode_temp, current_point, right_point);
 
         for (size_t k = 0; k < list_line_iter.size(); k++)
         {

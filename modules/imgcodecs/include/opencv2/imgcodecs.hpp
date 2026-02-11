@@ -113,7 +113,7 @@ enum ImwriteFlags {
        IMWRITE_TIFF_PREDICTOR      = 317,//!< For TIFF, use to specify predictor. See cv::ImwriteTiffPredictorFlags. Default is IMWRITE_TIFF_PREDICTOR_HORIZONTAL .
        IMWRITE_JPEG2000_COMPRESSION_X1000 = 272,//!< For JPEG2000, use to specify the target compression rate (multiplied by 1000). The value can be from 0 to 1000. Default is 1000.
        IMWRITE_AVIF_QUALITY        = 512,//!< For AVIF, it can be a quality between 0 and 100 (the higher the better). Default is 95.
-       IMWRITE_AVIF_DEPTH          = 513,//!< For AVIF, it can be 8, 10 or 12. If >8, it is stored/read as CV_32F. Default is 8.
+       IMWRITE_AVIF_DEPTH          = 513,//!< For AVIF, it can be 8, 10 or 12. If >8, it is stored/read as CV_16U. Default is 8.
        IMWRITE_AVIF_SPEED          = 514,//!< For AVIF, it is between 0 (slowest) and 10(fastest). Default is 9.
        IMWRITE_JPEGXL_QUALITY      = 640,//!< For JPEG XL, it can be a quality from 0 to 100 (the higher is the better). Default value is 95. If set, distance parameter is re-calicurated from quality level automatically. This parameter request libjxl v0.10 or later.
        IMWRITE_JPEGXL_EFFORT       = 641,//!< For JPEG XL, encoder effort/speed level without affecting decoding speed; it is between 1 (fastest) and 10 (slowest). Default is 7.
@@ -538,6 +538,11 @@ can be saved using this function, with these exceptions:
     To achieve this, create an 8-bit 4-channel (CV_8UC4) BGRA image, ensuring the alpha channel is the last component.
     Fully transparent pixels should have an alpha value of 0, while fully opaque pixels should have an alpha value of 255.
   - 8-bit single-channel images (CV_8UC1) are not supported due to GIF's limitation to indexed color formats.
+- With AVIF encoder, 8-bit unsigned (CV_8U) and 16-bit unsigned (CV_16U) images can be saved.
+  - CV_16U images can be saved as only 10-bit or 12-bit (not 16-bit). See IMWRITE_AVIF_DEPTH.
+  - AVIF images with an alpha channel can be saved using this function.
+    To achieve this, create an 8-bit 4-channel (CV_8UC4) / 16-bit 4-channel (CV_16UC4) BGRA image, ensuring the alpha channel is the last component.
+    Fully transparent pixels should have an alpha value of 0, while fully opaque pixels should have an alpha value of 255 (8-bit) / 1023 (10-bit) / 4095 (12-bit) (see the code sample below).
 
 If the image format is not supported, the image will be converted to 8-bit unsigned (CV_8U) and saved that way.
 
@@ -551,6 +556,7 @@ It also demonstrates how to save multiple images in a TIFF file:
 @param filename Name of the file.
 @param img (Mat or vector of Mat) Image or Images to be saved.
 @param params Format-specific parameters encoded as pairs (paramId_1, paramValue_1, paramId_2, paramValue_2, ... .) see cv::ImwriteFlags
+@return true if the image is successfully written to the specified file; false otherwise.
 */
 CV_EXPORTS_W bool imwrite( const String& filename, InputArray img,
               const std::vector<int>& params = std::vector<int>());

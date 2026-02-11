@@ -102,14 +102,14 @@ public:
         {
             case CV_32F: break;
             case CV_32S: ge_dtype = ge::DT_INT32; break;
-            default: CV_Error(Error::StsNotImplemented, "Unsuppported data type");
+            default: CV_Error(Error::StsNotImplemented, "Unsupported data type");
         }
         auto size_of_type = sizeof(float);
         switch (blobs[0].type())
         {
             case CV_32F: break;
             case CV_32S: size_of_type = sizeof(int); break;
-            default: CV_Error(Error::StsNotImplemented, "Unsuppported data type");
+            default: CV_Error(Error::StsNotImplemented, "Unsupported data type");
         }
 
         auto desc = std::make_shared<ge::TensorDesc>(ge_shape, ge::FORMAT_NCHW, ge_dtype);

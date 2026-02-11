@@ -74,8 +74,13 @@ endif()
 
 # Set definitions and sources for PowerPC.
 if(TARGET_ARCH MATCHES "^(powerpc|ppc64)")
+  if (CPU_VSX_SUPPORTED)
+    set(CPU_VSX_SUPPORTED_STR "on")
+  else()
+    set(CPU_VSX_SUPPORTED_STR "off")
+  endif()
   set(PNG_POWERPC_VSX_POSSIBLE_VALUES on off)
-  set(PNG_POWERPC_VSX "on"
+  set(PNG_POWERPC_VSX ${CPU_VSX_SUPPORTED_STR}
       CACHE STRING "Enable POWERPC VSX optimizations: on|off; on is default")
   set_property(CACHE PNG_POWERPC_VSX
                PROPERTY STRINGS ${PNG_POWERPC_VSX_POSSIBLE_VALUES})
@@ -114,8 +119,13 @@ endif()
 
 # Set definitions and sources for MIPS.
 if(TARGET_ARCH MATCHES "^(mipsel|mips64el)")
+  if (CPU_MSA_SUPPORTED)
+    set(CPU_MSA_SUPPORTED_STR "on")
+  else()
+    set(CPU_MSA_SUPPORTED_STR "off")
+  endif()
   set(PNG_MIPS_MSA_POSSIBLE_VALUES on off)
-  set(PNG_MIPS_MSA "on"
+  set(PNG_MIPS_MSA ${CPU_MSA_SUPPORTED_STR}
       CACHE STRING "Enable MIPS_MSA optimizations: on|off; on is default")
   set_property(CACHE PNG_MIPS_MSA
                PROPERTY STRINGS ${PNG_MIPS_MSA_POSSIBLE_VALUES})
@@ -154,9 +164,14 @@ endif()
 
 # Set definitions and sources for LoongArch.
 if(TARGET_ARCH MATCHES "^(loongarch)")
+  if (CPU_LSX_SUPPORTED)
+    set(CPU_LSX_SUPPORTED_STR "on")
+  else()
+    set(CPU_LSX_SUPPORTED_STR "off")
+  endif()
   include(CheckCCompilerFlag)
   set(PNG_LOONGARCH_LSX_POSSIBLE_VALUES on off)
-  set(PNG_LOONGARCH_LSX "on"
+  set(PNG_LOONGARCH_LSX ${CPU_LSX_SUPPORTED_STR}
       CACHE STRING "Enable LOONGARCH_LSX optimizations: on|off; on is default")
   set_property(CACHE PNG_LOONGARCH_LSX
                PROPERTY STRINGS ${PNG_LOONGARCH_LSX_POSSIBLE_VALUES})
@@ -172,13 +187,54 @@ if(TARGET_ARCH MATCHES "^(loongarch)")
       set_source_files_properties(${libpng_loongarch_sources}
                                   PROPERTIES
                                   COMPILE_FLAGS "-mlsx")
-    list(APPEND lib_srcs ${libpng_loongarch_sources})
+      list(APPEND lib_srcs ${libpng_loongarch_sources})
       add_definitions(-DPNG_LOONGARCH_LSX_OPT=1)
     else()
       message(FATAL_ERROR "Compiler does not support -mlsx option")
     endif()
   else()
     add_definitions(-DPNG_LOONGARCH_LSX_OPT=0)
+  endif()
+endif()
+
+# Set definitions and sources for RISC-V.
+if(TARGET_ARCH MATCHES "^(riscv)")
+  if (CPU_RVV_SUPPORTED)
+    set(CPU_RVV_SUPPORTED_STR "on")
+  else()
+    set(CPU_RVV_SUPPORTED_STR "off")
+  endif()
+  include(CheckCCompilerFlag)
+  set(PNG_RISCV_RVV_POSSIBLE_VALUES on off)
+  set(PNG_RISCV_RVV ${CPU_RVV_SUPPORTED_STR}
+    CACHE STRING "Enable RISC-V Vector optimizations: on|off; off is default")
+  set_property(CACHE PNG_RISCV_RVV
+              PROPERTY STRINGS ${PNG_RISCV_RVV_POSSIBLE_VALUES})
+  list(FIND PNG_RISCV_RVV_POSSIBLE_VALUES ${PNG_RISCV_RVV} index)
+  if(index EQUAL -1)
+    message(FATAL_ERROR "PNG_RISCV_RVV must be one of [${PNG_RISCV_RVV_POSSIBLE_VALUES}]")
+  elseif(NOT PNG_RISCV_RVV STREQUAL "off")
+    check_c_source_compiles("
+      #include <riscv_vector.h>
+      int main() {
+        const float src[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+        uint64_t ptr[2] = {0x0908060504020100, 0xFFFFFFFF0E0D0C0A};
+        vuint8m1_t a = __riscv_vreinterpret_v_u64m1_u8m1(__riscv_vle64_v_u64m1(ptr, 2));
+        vfloat32m1_t val = __riscv_vle32_v_f32m1((const float*)(src), 4);
+        return (int)__riscv_vfmv_f_s_f32m1_f32(val);
+    }" COMPILER_SUPPORTS_RVV)
+
+    if(NOT COMPILER_SUPPORTS_RVV)
+      message(FATAL_ERROR "Compiler does not support RISC-V Vector extension or its unable to detect it")
+    endif()
+    list(APPEND lib_srcs riscv/filter_rvv_intrinsics.c riscv/riscv_init.c)
+    if(PNG_RISCV_RVV STREQUAL "on")
+      add_definitions(-DPNG_RISCV_RVV_OPT=2)
+    else()
+      add_definitions(-DPNG_RISCV_RVV_OPT=0)
+    endif()
+  else()
+    add_definitions(-DPNG_RISCV_RVV_OPT=0)
   endif()
 endif()
 
@@ -207,6 +263,11 @@ endif()
 # Set definitions and sources for LoongArch.
 if(TARGET_ARCH MATCHES "^(loongarch)")
   add_definitions(-DPNG_LOONGARCH_LSX_OPT=0)
+endif()
+
+# Set definitions and sources for RISC-V.
+if(TARGET_ARCH MATCHES "^(riscv)")
+  add_definitions(-DPNG_RISCV_RVV_OPT=0)
 endif()
 
 endif(PNG_HARDWARE_OPTIMIZATIONS)

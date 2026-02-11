@@ -1374,7 +1374,7 @@ test_cornerEigenValsVecs( const Mat& src, Mat& eigenv, Mat& ocv_eigenv,
                           int block_size, int _aperture_size, int mode )
 {
     int i, j;
-    int aperture_size = _aperture_size < 0 ? 3 : _aperture_size;
+    int aperture_size = _aperture_size <= 0 ? 3 : _aperture_size;
     Point anchor( aperture_size/2, aperture_size/2 );
 
     CV_Assert( src.type() == CV_8UC1 || src.type() == CV_32FC1 );
@@ -2262,6 +2262,19 @@ TEST(Imgproc_MedianBlur, hires_regression_13409)
     medianBlur(src(Rect(512, 512, 1024, 1024)), dst_ref, 9);
 
     ASSERT_EQ(0.0, cvtest::norm(dst_hires(Rect(516, 516, 1016, 1016)), dst_ref(Rect(4, 4, 1016, 1016)), NORM_INF));
+}
+
+TEST(Imgproc_MedianBlur, regression_28385)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_6GB);
+
+    Mat out;
+    // create a matrix larger than 2^31 to check for signed 32 bit integer overflow
+    Mat img(50000, 50000, CV_8U);
+    Mat sub = img(Rect(0, 0, 100, 50000));
+    // this crashes in case of overflow because of out-of-bounds memory access
+    medianBlur(sub, out, 3);
+    ASSERT_EQ(out.size(), Size(100, 50000));
 }
 
 TEST(Imgproc_Sobel, s16_regression_13506)

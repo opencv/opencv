@@ -905,7 +905,7 @@ void forwardTimVX(std::vector<Ptr<BackendWrapper> >& outputs, const Ptr<BackendN
     else
         return;
 
-    // set ouput
+    // set output
     Ptr<TimVXBackendWrapper> outWarpper;
     for (int i = 0; i < outputs.size(); i++)
     {

@@ -523,13 +523,20 @@ class JSWrapperGenerator(object):
 
             # Return type
             ret_type = 'void' if variant.rettype.strip() == '' else variant.rettype
-            if ret_type.startswith('Ptr'): #smart pointer
+            # FIX: Ensure namespaced smart-pointer return types in factory methods, e.g.:
+            #      Ptr<EdgeDrawing> → Ptr<cv::ximgproc::EdgeDrawing>
+            if factory and class_info is not None and ret_type.startswith('Ptr<'):
+                inner = ret_type[len('Ptr<'):-1].strip()
+                if '::' not in inner and inner == class_info.name:
+                    ret_type = 'Ptr<%s>' % class_info.cname
+
+            if ret_type.startswith('Ptr'):  # smart pointer
                 ptr_type = ret_type.replace('Ptr<', '').replace('>', '')
                 if ptr_type in type_dict:
                     ret_type = type_dict[ptr_type]
-            for key in type_dict:
-                if key in ret_type:
-                    ret_type = re.sub(r"\b" + key + r"\b", type_dict[key], ret_type)
+                for key in type_dict:
+                    if key in ret_type:
+                        ret_type = re.sub(r"\b" + key + r"\b", type_dict[key], ret_type)
             arg_types = []
             unwrapped_arg_types = []
             for arg in variant.args:
@@ -708,6 +715,12 @@ class JSWrapperGenerator(object):
             ret_type = 'void' if variant.rettype.strip() == '' else variant.rettype
 
             ret_type = ret_type.strip()
+            # Same namespace fix for factory methods: Ptr<EdgeDrawing> -> Ptr<cv::ximgproc::EdgeDrawing>
+            if factory and class_info is not None and ret_type.startswith('Ptr<'):
+                inner = ret_type[len('Ptr<'):-1].strip()
+                if '::' not in inner and inner == class_info.name:
+                    ret_type = 'Ptr<%s>' % class_info.cname
+
             if ret_type.startswith('Ptr'): #smart pointer
                 ptr_type = ret_type.replace('Ptr<', '').replace('>', '')
                 if ptr_type in type_dict:
@@ -849,6 +862,10 @@ class JSWrapperGenerator(object):
                         # Register the smart pointer
                         base_class_name = variant.rettype
                         base_class_name = base_class_name.replace("Ptr<","").replace(">","").strip()
+                        if base_class_name not in self.classes:
+                            new_base_class_name = '%s_%s' % (ns_id, base_class_name)
+                            print(base_class_name, ' not found in classes for registering smart pointer using ', new_base_class_name, 'instead')
+                            base_class_name = new_base_class_name
                         self.classes[base_class_name].has_smart_ptr = True
 
                         # Adds the external constructor

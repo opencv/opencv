@@ -71,6 +71,21 @@ public:
      */
     CV_WRAP virtual void apply(InputArray image, OutputArray fgmask, double learningRate=-1) = 0;
 
+    /** @brief Computes a foreground mask with known foreground mask input.
+
+    @param image Next video frame. Floating point frame will be used without scaling and should be in range \f$[0,255]\f$.
+    @param fgmask The output foreground mask as an 8-bit binary image.
+    @param knownForegroundMask The mask for inputting already known foreground, allows model to ignore pixels.
+    @param learningRate The value between 0 and 1 that indicates how fast the background model is
+    learnt. Negative parameter value makes the algorithm to use some automatically chosen learning
+    rate. 0 means that the background model is not updated at all, 1 means that the background model
+    is completely reinitialized from the last frame.
+
+    @note This method has a default virtual implementation that throws a "not impemented" error.
+    Foreground masking may not be supported by all background subtractors.
+    */
+    CV_WRAP virtual void apply(InputArray image, InputArray knownForegroundMask, OutputArray fgmask, double learningRate=-1) = 0;
+
     /** @brief Computes a background image.
 
     @param backgroundImage The output background image.
@@ -102,7 +117,7 @@ public:
     CV_WRAP virtual int getNMixtures() const = 0;
     /** @brief Sets the number of gaussian components in the background model.
 
-    The model needs to be reinitalized to reserve memory.
+    The model needs to be reinitialized to reserve memory.
     */
     CV_WRAP virtual void setNMixtures(int nmixtures) = 0;//needs reinitialization!
 
@@ -206,6 +221,18 @@ public:
     is completely reinitialized from the last frame.
      */
     CV_WRAP virtual void apply(InputArray image, OutputArray fgmask, double learningRate=-1) CV_OVERRIDE = 0;
+
+    /** @brief Computes a foreground mask and skips known foreground in evaluation.
+
+    @param image Next video frame. Floating point frame will be used without scaling and should be in range \f$[0,255]\f$.
+    @param fgmask The output foreground mask as an 8-bit binary image.
+    @param knownForegroundMask The mask for inputting already known foreground, allows model to ignore pixels.
+    @param learningRate The value between 0 and 1 that indicates how fast the background model is
+    learnt. Negative parameter value makes the algorithm to use some automatically chosen learning
+    rate. 0 means that the background model is not updated at all, 1 means that the background model
+    is completely reinitialized from the last frame.
+     */
+    CV_WRAP virtual void apply(InputArray image, InputArray knownForegroundMask, OutputArray fgmask, double learningRate=-1) CV_OVERRIDE = 0;
 };
 
 /** @brief Creates MOG2 Background Subtractor
@@ -241,7 +268,7 @@ public:
     CV_WRAP virtual int getNSamples() const = 0;
     /** @brief Sets the number of data samples in the background model.
 
-    The model needs to be reinitalized to reserve memory.
+    The model needs to be reinitialized to reserve memory.
     */
     CV_WRAP virtual void setNSamples(int _nN) = 0;//needs reinitialization!
 

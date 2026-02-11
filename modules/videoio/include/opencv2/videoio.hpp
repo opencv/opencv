@@ -66,9 +66,6 @@
 
 ////////////////////////////////// video io /////////////////////////////////
 
-typedef struct CvCapture CvCapture;
-typedef struct CvVideoWriter CvVideoWriter;
-
 namespace cv
 {
 
@@ -156,7 +153,7 @@ enum VideoCaptureProperties {
        CAP_PROP_HUE           =13, //!< Hue of the image (only for cameras).
        CAP_PROP_GAIN          =14, //!< Gain of the image (only for those cameras that support).
        CAP_PROP_EXPOSURE      =15, //!< Exposure (only for those cameras that support).
-       CAP_PROP_CONVERT_RGB   =16, //!< Boolean flags indicating whether images should be converted to RGB. <br/>
+       CAP_PROP_CONVERT_RGB   =16, //!< Boolean flags indicating whether images should be converted to BGR. <br/>
                                    //!< *GStreamer note*: The flag is ignored in case if custom pipeline is used. It's user responsibility to interpret pipeline output.
        CAP_PROP_WHITE_BALANCE_BLUE_U =17, //!< Currently unsupported.
        CAP_PROP_RECTIFICATION =18, //!< Rectification flag for stereo cameras (note: only supported by DC1394 v 2.x backend currently).
@@ -1060,7 +1057,6 @@ public:
             int64 timeoutNs = 0);
 
 protected:
-    Ptr<CvCapture> cap;
     Ptr<IVideoCapture> icap;
     bool throwOnFail;
 
@@ -1239,17 +1235,11 @@ public:
     CV_WRAP String getBackendName() const;
 
 protected:
-    Ptr<CvVideoWriter> writer;
     Ptr<IVideoWriter> iwriter;
 
     static Ptr<IVideoWriter> create(const String& filename, int fourcc, double fps,
                                     Size frameSize, bool isColor = true);
 };
-
-//! @cond IGNORED
-template<> struct DefaultDeleter<CvCapture>{ CV_EXPORTS void operator ()(CvCapture* obj) const; };
-template<> struct DefaultDeleter<CvVideoWriter>{ CV_EXPORTS void operator ()(CvVideoWriter* obj) const; };
-//! @endcond IGNORED
 
 //! @} videoio
 

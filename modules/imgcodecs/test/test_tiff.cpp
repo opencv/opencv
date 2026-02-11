@@ -1282,6 +1282,17 @@ TEST(Imgcodecs_Tiff, read_bigtiff_images)
     }
 }
 
+TEST(Imgcodecs_Tiff, read_junk) {
+    // Test exercises the tiff error handler integration.
+    // Error messages can be seen with OPENCV_LOG_LEVEL=DEBUG
+    const char junk[] = "II\x2a\x00\x08\x00\x00\x00\x00\x00\x00\x00";
+    cv::Mat junkInputArray(1, sizeof(junk) - 1, CV_8UC1, (void*)junk);
+
+    cv::Mat img;
+    ASSERT_NO_THROW(img = cv::imdecode(junkInputArray, IMREAD_UNCHANGED));
+    ASSERT_TRUE(img.empty());
+}
+
 #endif
 
 }} // namespace

@@ -191,6 +191,7 @@ private:
     void parseElementWise          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDepthSpaceOps        (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseRange                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseRandomNormalLike     (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseScatter              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseTile                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseLayerNorm            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -1298,7 +1299,7 @@ void ONNXImporter::parseSlice(LayerParams& layerParams, const opencv_onnx::NodeP
     {
         // dims should be added to the negative axes
         cur_axe = axes_.getIntValue(i) < 0 ? axes_.getIntValue(i) + dims : axes_.getIntValue(i);
-        CV_CheckGE(cur_axe, 0, "Axes should be grater or equal to '-dims'.");
+        CV_CheckGE(cur_axe, 0, "Axes should be greater or equal to '-dims'.");
         CV_CheckLT(cur_axe, dims, "Axes should be less than 'dim'.");
         CV_CheckEQ(flag[cur_axe], false, "Axes shouldn't have duplicated values.");
         flag[cur_axe] = true;
@@ -2014,6 +2015,25 @@ void ONNXImporter::parseConv(LayerParams& layerParams, const opencv_onnx::NodePr
             layerParams.blobs.push_back(getBlob(node_proto, j));
         }
     }
+    // ONNX allows omitting 'kernel_shape' attribute for Conv. In that case, it should be inferred from weights.
+    // See: https://onnx.ai/onnx/operators/onnx__Conv.html
+    if (!layerParams.has("kernel_size"))
+    {
+        Mat weights;
+        if (!layerParams.blobs.empty())
+            weights = layerParams.blobs[0];
+        else if (constBlobs.find(node_proto.input(1)) != constBlobs.end())
+            weights = getBlob(node_proto, 1);
+
+        if (!weights.empty() && weights.dims >= 3)
+        {
+            const int kDims = weights.dims - 2;
+            std::vector<int32_t> kernel(kDims);
+            for (int i = 0; i < kDims; ++i)
+                kernel[i] = weights.size[2 + i];
+            layerParams.set("kernel_size", DictValue::arrayInt(kernel.data(), static_cast<int>(kernel.size())));
+        }
+    }
     int outCn = layerParams.blobs.empty() ? outShapes[node_proto.input(1)][0] : layerParams.blobs[0].size[0];
     layerParams.set("num_output", outCn);
 
@@ -2029,6 +2049,20 @@ void ONNXImporter::parseConvTranspose(LayerParams& layerParams, const opencv_onn
     }
     layerParams.set("num_output", layerParams.blobs[0].size[1] * layerParams.get<int>("group", 1));
     layerParams.set("bias_term", node_proto.input_size() == 3);
+
+    // ONNX allows omitting 'kernel_shape' attribute for ConvTranspose. Infer it from weights if needed.
+    if (!layerParams.has("kernel_size"))
+    {
+        const Mat& weights = layerParams.blobs[0];
+        if (!weights.empty() && weights.dims >= 3)
+        {
+            const int kDims = weights.dims - 2;
+            std::vector<int32_t> kernel(kDims);
+            for (int i = 0; i < kDims; ++i)
+                kernel[i] = weights.size[2 + i];
+            layerParams.set("kernel_size", DictValue::arrayInt(kernel.data(), static_cast<int>(kernel.size())));
+        }
+    }
 
     if (!layerParams.has("kernel_size"))
         CV_Error(Error::StsNotImplemented,
@@ -2950,6 +2984,14 @@ void ONNXImporter::parseRange(LayerParams& layerParams, const opencv_onnx::NodeP
     }
     addConstant(node_proto.output(0), r);
     constBlobsExtraInfo.insert(std::make_pair(node_proto.output(0), TensorInfo(1)));
+}
+
+void ONNXImporter::parseRandomNormalLike(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    CV_CheckEQ(node_proto.input_size(), 1, "RandomNormalLike: one input is required");
+
+    layerParams.type = "RandomNormalLike";
+    addLayer(layerParams, node_proto);
 }
 
 void ONNXImporter::parseScatter(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
@@ -3958,6 +4000,7 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["Sum"] = dispatch["Min"] = dispatch["Max"] = dispatch["Mean"] = &ONNXImporter::parseElementWise;
     dispatch["Where"] = &ONNXImporter::parseElementWise;
     dispatch["Range"] = &ONNXImporter::parseRange;
+    dispatch["RandomNormalLike"] = &ONNXImporter::parseRandomNormalLike;
     dispatch["Einsum"] = &ONNXImporter::parseEinsum;
 
     std::vector<std::string> simpleLayers{"Acos", "Acosh", "Asin", "Asinh", "Atan", "Atanh", "Ceil", "Celu", "Cos",

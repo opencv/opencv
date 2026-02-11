@@ -321,7 +321,7 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
         }
 
     // parallel_for usage
-    CV_CPU_DISPATCH(bilateralFilterInvoker_32f, (cn, radius, maxk, space_ofs, temp, dst, scale_index, space_weight, expLUT),
+    CV_CPU_DISPATCH(bilateralFilterInvoker_32f, (cn, radius, maxk, space_ofs, temp, dst, scale_index, space_weight, expLUT, kExpNumBins),
         CV_CPU_DISPATCH_MODES_ALL);
 }
 

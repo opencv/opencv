@@ -524,9 +524,20 @@ inline static std::string _opencv_ffmpeg_get_error_string(int error_code)
         return std::string("Unknown error");
 }
 
+static inline int64_t to_avtb(int64_t ts, AVRational tb)
+{
+    return av_rescale_q(ts, tb, AV_TIME_BASE_Q);
+}
+
+static inline int64_t from_avtb(int64_t ts_avtb, AVRational tb)
+{
+    return av_rescale_q(ts_avtb, AV_TIME_BASE_Q, tb);
+}
+
+
 struct CvCapture_FFMPEG
 {
-    bool open(const char* filename, const Ptr<IStreamReader>& stream, const VideoCaptureParameters& params);
+    bool open(const char* filename, int index, const Ptr<IStreamReader>& stream, const VideoCaptureParameters& params);
     void close();
 
     double getProperty(int) const;
@@ -562,6 +573,10 @@ struct CvCapture_FFMPEG
     int64_t           picture_pts;
     int64_t           pts_in_fps_time_base;
     int64_t           dts_delay_in_fps_time_base;
+
+    /// Timestamp offset in AV_TIME_BASE units for normalization
+    int64_t ts_offset_avtb = 0;
+    bool    ts_offset_decided = false;
 
     AVIOContext     * avio_context;
 
@@ -623,6 +638,8 @@ void CvCapture_FFMPEG::init()
     picture_pts = AV_NOPTS_VALUE_;
     pts_in_fps_time_base = 0;
     dts_delay_in_fps_time_base = 0;
+    ts_offset_avtb = 0;
+    ts_offset_decided = false;
     first_frame_number = -1;
     memset( &rgb_picture, 0, sizeof(rgb_picture) );
     memset( &frame, 0, sizeof(frame) );
@@ -1043,7 +1060,7 @@ static bool isThreadSafe() {
     return threadSafe;
 }
 
-bool CvCapture_FFMPEG::open(const char* _filename, const Ptr<IStreamReader>& stream, const VideoCaptureParameters& params)
+bool CvCapture_FFMPEG::open(const char* _filename, int index, const Ptr<IStreamReader>& stream, const VideoCaptureParameters& params)
 {
     const bool threadSafe = isThreadSafe();
     InternalFFMpegRegister::init(threadSafe);
@@ -1145,16 +1162,6 @@ bool CvCapture_FFMPEG::open(const char* _filename, const Ptr<IStreamReader>& str
         }
     }
 
-#if USE_AV_INTERRUPT_CALLBACK
-    /* interrupt callback */
-    interrupt_metadata.timeout_after_ms = open_timeout;
-    get_monotonic_time(&interrupt_metadata.value);
-
-    ic = avformat_alloc_context();
-    ic->interrupt_callback.callback = _opencv_ffmpeg_interrupt_callback;
-    ic->interrupt_callback.opaque = &interrupt_metadata;
-#endif
-
     std::string options = utils::getConfigurationParameterString("OPENCV_FFMPEG_CAPTURE_OPTIONS");
     if (options.empty())
     {
@@ -1180,7 +1187,55 @@ bool CvCapture_FFMPEG::open(const char* _filename, const Ptr<IStreamReader>& str
       input_format = av_find_input_format(entry->value);
     }
 
-    if (!_filename)
+#ifdef HAVE_FFMPEG_LIBAVDEVICE
+    AVDeviceInfoList* device_list = nullptr;
+#endif
+    if (index >= 0)
+    {
+#ifdef HAVE_FFMPEG_LIBAVDEVICE
+        entry = av_dict_get(dict, "f", NULL, 0);
+        const char* backend = nullptr;
+        if (entry)
+        {
+            backend = entry->value;
+        }
+        else
+        {
+#ifdef __linux__
+            backend = "v4l2";
+#endif
+#ifdef _WIN32
+            backend = "dshow";
+#endif
+#ifdef __APPLE__
+            backend = "avfoundation";
+#endif
+        }
+        avdevice_list_input_sources(nullptr, backend, nullptr, &device_list);
+        if (!device_list)
+        {
+            CV_LOG_ONCE_WARNING(NULL, "VIDEOIO/FFMPEG: Failed list devices for backend " << backend);
+            return false;
+        }
+        CV_CheckLT(index, device_list->nb_devices, "VIDEOIO/FFMPEG: Camera index out of range");
+        _filename = device_list->devices[index]->device_name;
+#else
+        CV_LOG_ONCE_WARNING(NULL, "VIDEOIO/FFMPEG: OpenCV should be configured with libavdevice to open a camera device");
+        return false;
+#endif
+    }
+
+#if USE_AV_INTERRUPT_CALLBACK
+    /* interrupt callback */
+    interrupt_metadata.timeout_after_ms = open_timeout;
+    get_monotonic_time(&interrupt_metadata.value);
+
+    ic = avformat_alloc_context();
+    ic->interrupt_callback.callback = _opencv_ffmpeg_interrupt_callback;
+    ic->interrupt_callback.opaque = &interrupt_metadata;
+#endif
+
+    if (stream)
     {
         size_t avio_ctx_buffer_size = 4096;
         uint8_t* avio_ctx_buffer = (uint8_t*)av_malloc(avio_ctx_buffer_size);
@@ -1231,6 +1286,13 @@ bool CvCapture_FFMPEG::open(const char* _filename, const Ptr<IStreamReader>& str
         ic->pb = avio_context;
     }
     int err = avformat_open_input(&ic, _filename, input_format, &dict);
+#ifdef HAVE_FFMPEG_LIBAVDEVICE
+    if (device_list)
+    {
+        avdevice_free_list_devices(&device_list);
+        device_list = nullptr;
+    }
+#endif
 
     if (err < 0)
     {
@@ -1660,15 +1722,74 @@ bool CvCapture_FFMPEG::grabFrame()
         if (picture_pts == AV_NOPTS_VALUE_) {
             int64_t dts = 0;
             if (!rawMode) {
-                picture_pts = picture->CV_FFMPEG_PTS_FIELD != AV_NOPTS_VALUE_ && picture->CV_FFMPEG_PTS_FIELD != 0 ? picture->CV_FFMPEG_PTS_FIELD : picture->pkt_dts;
-                if(frame_number == 0) dts = picture->pkt_dts;
-            }
-            else {
-                const AVPacket& packet_raw = packet.data != 0 ? packet : packet_filtered;
-                picture_pts = packet_raw.pts != AV_NOPTS_VALUE_ && packet_raw.pts != 0 ? packet_raw.pts : packet_raw.dts;
+                picture_pts = (picture->CV_FFMPEG_PTS_FIELD != AV_NOPTS_VALUE_)
+                                ? picture->CV_FFMPEG_PTS_FIELD
+                                : picture->pkt_dts;
+                if (frame_number == 0) dts = picture->pkt_dts;
+            } else {
+                const AVPacket& packet_raw = (packet.data != 0) ? packet : packet_filtered;
+                picture_pts = (packet_raw.pts != AV_NOPTS_VALUE_)
+                                ? packet_raw.pts
+                                : packet_raw.dts;
                 if (frame_number == 0) dts = packet_raw.dts;
-                if (picture_pts < 0) picture_pts = 0;
             }
+
+            // Decide timestamp offset once on first frame to normalize all timestamps to start at zero.
+            // This handles videos with negative DTS values (e.g., from B-frame reordering) or non-zero
+            // start_time. Similar to FFmpeg's -avoid_negative_ts make_zero option.
+            if (!ts_offset_decided)
+            {
+                int64_t min_start_avtb = INT64_MAX;
+
+                // Check container start_time (already in AV_TIME_BASE units)
+                if (ic && ic->start_time != AV_NOPTS_VALUE_)
+                {
+                    min_start_avtb = ic->start_time;
+                }
+
+                // Check stream start_time
+                AVStream* st = ic->streams[video_stream];
+                if (st->start_time != AV_NOPTS_VALUE_)
+                {
+                    int64_t s = to_avtb(st->start_time, st->time_base);
+                    if (s < min_start_avtb) min_start_avtb = s;
+                }
+
+                // Check first observed timestamp (PTS preferred, else DTS from frame 0)
+                int64_t first_ts_stream = picture_pts;
+                if (first_ts_stream == AV_NOPTS_VALUE_ && dts != AV_NOPTS_VALUE_)
+                {
+                    first_ts_stream = dts;
+                }
+                if (first_ts_stream != AV_NOPTS_VALUE_)
+                {
+                    int64_t t = to_avtb(first_ts_stream, st->time_base);
+                    if (t < min_start_avtb) min_start_avtb = t;
+                }
+
+                // Compute offset to shift negative timestamps to zero
+                ts_offset_avtb = (min_start_avtb != INT64_MAX && min_start_avtb < 0) ? -min_start_avtb : 0;
+                ts_offset_decided = true;
+            }
+
+            // Apply normalization to picture_pts
+            if (picture_pts != AV_NOPTS_VALUE_)
+            {
+                int64_t t = to_avtb(picture_pts, video_st->time_base);
+                t += ts_offset_avtb;
+                picture_pts = from_avtb(t, video_st->time_base);
+            }
+
+            // Also normalize dts
+            if (dts != AV_NOPTS_VALUE_)
+            {
+                int64_t t = to_avtb(dts, video_st->time_base);
+                t += ts_offset_avtb;
+                dts = from_avtb(t, video_st->time_base);
+            }
+
+
+
 #if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(54, 1, 0) || LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
             AVRational frame_rate = video_st->avg_frame_rate;
 #else
@@ -1724,16 +1845,28 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
     // if hardware frame, copy it to system memory
     if (picture && picture->hw_frames_ctx) {
         sw_picture = av_frame_alloc();
+        if (!sw_picture) {
+            CV_LOG_ERROR(NULL, "av_frame_alloc failed");
+            return false;
+        }
         //if (av_hwframe_map(sw_picture, picture, AV_HWFRAME_MAP_READ) < 0) {
         if (av_hwframe_transfer_data(sw_picture, picture, 0) < 0) {
             CV_LOG_ERROR(NULL, "Error copying data from GPU to CPU (av_hwframe_transfer_data)");
+            av_frame_free(&sw_picture);
             return false;
         }
     }
 #endif
 
     if (!sw_picture || !sw_picture->data[0])
+    {
+#if USE_AV_HW_CODECS
+        if (sw_picture != picture)
+            av_frame_free(&sw_picture);
+#endif
+        CV_LOG_ERROR(NULL, "Picture does not contain data");
         return false;
+    }
 
 #if LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(56, 72, 0)
     const char* color_space_name = av_color_space_name(sw_picture->colorspace);
@@ -1784,7 +1917,14 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
 
         img_convert_ctx = sws_alloc_context();
         if (img_convert_ctx == NULL)
-            return false;//CV_Error(0, "Cannot initialize the conversion context!");
+        {
+            CV_LOG_ERROR(NULL, "Cannot initialize the conversion context!");
+#if USE_AV_HW_CODECS
+            if (sw_picture != picture)
+                av_frame_free(&sw_picture);
+#endif
+            return false;
+        }
 
         av_opt_set_int(img_convert_ctx, "sws_flags", SWS_BICUBIC, 0);
         av_opt_set_int(img_convert_ctx, "threads", requestedThreads, 0);
@@ -1825,8 +1965,14 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
                 );
 #endif
 
-        if (img_convert_ctx == NULL)
-            return false;//CV_Error(0, "Cannot initialize the conversion context!");
+        if (img_convert_ctx == NULL) {
+            CV_LOG_ERROR(NULL, "Cannot initialize the conversion context!");
+#if USE_AV_HW_CODECS
+            if (sw_picture != picture)
+                av_frame_free(&sw_picture);
+#endif
+            return false;
+        }
 
 #if USE_AV_FRAME_GET_BUFFER
         av_frame_unref(&rgb_picture);
@@ -1835,7 +1981,11 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
         rgb_picture.height = buffer_height;
         if (0 != av_frame_get_buffer(&rgb_picture, 32))
         {
-            CV_WARN("OutOfMemory");
+            CV_LOG_ERROR(NULL, "Out of memory issue on av_frame_get_buffer!");
+#if USE_AV_HW_CODECS
+            if (sw_picture != picture)
+                av_frame_free(&sw_picture);
+#endif
             return false;
         }
 #else
@@ -2075,8 +2225,13 @@ int64_t CvCapture_FFMPEG::dts_to_frame_number(int64_t dts)
 
 double CvCapture_FFMPEG::dts_to_sec(int64_t dts) const
 {
-    return (double)(dts - ic->streams[video_stream]->start_time) *
-        r2d(ic->streams[video_stream]->time_base);
+    const AVStream* st = ic->streams[video_stream];
+    int64_t ts = dts;
+
+    if (ts_offset_avtb == 0 && st->start_time != AV_NOPTS_VALUE_)
+        ts -= st->start_time;
+
+    return ts * r2d(st->time_base);
 }
 
 void CvCapture_FFMPEG::get_rotation_angle()
@@ -2129,9 +2284,19 @@ void CvCapture_FFMPEG::seek(int64_t _frame_number)
     {
         int64_t _frame_number_temp = std::max(_frame_number-delta, (int64_t)0);
         double sec = (double)_frame_number_temp / get_fps();
-        int64_t time_stamp = ic->streams[video_stream]->start_time;
-        double  time_base  = r2d(ic->streams[video_stream]->time_base);
-        time_stamp += (int64_t)(sec / time_base + 0.5);
+
+        AVStream* st = ic->streams[video_stream];
+        int64_t time_stamp = st->start_time;
+        double  time_base  = r2d(st->time_base);
+        int64_t ts_norm = (int64_t)(sec / time_base + 0.5);
+
+        if (ts_offset_avtb != 0) {
+            // map normalized target back to original demux timeline
+            time_stamp += ts_norm - from_avtb(ts_offset_avtb, st->time_base);
+        } else {
+            time_stamp += ts_norm;
+        }
+
         if (get_total_frames() > 1) av_seek_frame(ic, video_stream, time_stamp, AVSEEK_FLAG_BACKWARD);
         if(!rawMode)
             avcodec_flush_buffers(context);
@@ -3447,7 +3612,22 @@ CvCapture_FFMPEG* cvCreateFileCaptureWithParams_FFMPEG(const char* filename, con
     if (!capture)
         return 0;
     capture->init();
-    if (capture->open(filename, nullptr, params))
+    if (capture->open(filename, -1, nullptr, params))
+        return capture;
+
+    capture->close();
+    delete capture;
+    return 0;
+}
+
+static
+CvCapture_FFMPEG* cvCreateFileCaptureWithParams_FFMPEG(int index, const VideoCaptureParameters& params)
+{
+    CvCapture_FFMPEG* capture = new CvCapture_FFMPEG();
+    if (!capture)
+        return 0;
+    capture->init();
+    if (capture->open(nullptr, index, nullptr, params))
         return capture;
 
     capture->close();
@@ -3462,7 +3642,7 @@ CvCapture_FFMPEG* cvCreateStreamCaptureWithParams_FFMPEG(const Ptr<IStreamReader
     if (!capture)
         return 0;
     capture->init();
-    if (capture->open(nullptr, stream, params))
+    if (capture->open(nullptr, -1, stream, params))
         return capture;
 
     capture->close();

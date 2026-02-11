@@ -687,7 +687,7 @@ public:
     CV_WRAP static Ptr<GFTTDetector> create( int maxCorners=1000, double qualityLevel=0.01, double minDistance=1,
                                              int blockSize=3, bool useHarrisDetector=false, double k=0.04 );
     CV_WRAP static Ptr<GFTTDetector> create( int maxCorners, double qualityLevel, double minDistance,
-                                             int blockSize, int gradiantSize, bool useHarrisDetector=false, double k=0.04 );
+                                             int blockSize, int gradientSize, bool useHarrisDetector=false, double k=0.04 );
     CV_WRAP virtual void setMaxFeatures(int maxFeatures) = 0;
     CV_WRAP virtual int getMaxFeatures() const = 0;
 
@@ -769,6 +769,11 @@ public:
       CV_PROP_RW bool filterByConvexity;
       CV_PROP_RW float minConvexity, maxConvexity;
 
+      /** @brief Flag to enable contour collection.
+      If set to true, the detector will store the contours of the detected blobs in memory,
+      which can be retrieved after the detect() call using getBlobContours().
+      @note Default value is false.
+      */
       CV_PROP_RW bool collectContours;
 
       void read( const FileNode& fn );
@@ -782,9 +787,13 @@ public:
   CV_WRAP virtual SimpleBlobDetector::Params getParams() const = 0;
 
   CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
+
+  /** @brief Returns the contours of the blobs detected during the last call to detect().
+  @note The @ref Params::collectContours parameter must be set to true before calling
+  detect() for this method to return any data.
+  */
   CV_WRAP virtual const std::vector<std::vector<cv::Point> >& getBlobContours() const;
 };
-
 
 /** @brief Class implementing the KAZE keypoint detector and descriptor extractor, described in @cite ABD12 .
 

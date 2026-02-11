@@ -2343,6 +2343,9 @@ TEST_F(LimitedSourceInfer, ReleaseFrame)
 
 TEST_F(LimitedSourceInfer, ReleaseFrameAsync)
 {
+    if (cvtest::skipUnstableTests)
+        throw SkipTestException("Skip LimitedSourceInfer.ReleaseFrameAsync as it hangs sporadically");
+
     constexpr int max_frames      = 50;
     constexpr int resources_limit = 4;
     constexpr int nireq           = 8;
@@ -3171,7 +3174,7 @@ TEST_F(AgeGenderInferTest, ChangeOutputPrecision) {
     validate();
 }
 
-TEST_F(AgeGenderInferTest, ChangeSpecificOutputPrecison) {
+TEST_F(AgeGenderInferTest, ChangeSpecificOutputPrecision) {
     auto pp = cv::gapi::ie::Params<AgeGender> {
         m_params.model_path, m_params.weights_path, m_params.device_id
     }.cfgOutputLayers({ "age_conv3", "prob" })

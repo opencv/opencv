@@ -67,6 +67,9 @@ Explanation
 
    Each frame in the `animation.frames` vector can be displayed as a standalone image. This loop iterates through each frame, displaying it in a window with a short delay to simulate the animation.
 
+> **Note:** Frame durations in `cv::Animation` are expressed in milliseconds.
+> When displaying frames manually using `cv::waitKey`, make sure to use the corresponding duration value to preserve the original animation timing.
+
 @add_toggle_cpp
 @snippet cpp/tutorial_code/imgcodecs/animations.cpp show_animation
 @end_toggle

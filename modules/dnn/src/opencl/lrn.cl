@@ -28,7 +28,7 @@ __kernel void LRNComputeOutput(const int nthreads, __global T* in, __global T* s
   int index = get_global_id(0);
   int tmp = get_global_size(0);
   for(index; index < nthreads; index += tmp)
-  out[index] = in[index] * pow(scale[index], negative_beta);
+  out[index] = in[index] * std::pow(scale[index], negative_beta);
 }
 
 __kernel void LRNFillScale(const int nthreads, __global T* in, const int num, const int channels, const int height, const int width, const int size, const T alpha_over_size, const T k, __global T* scale) {

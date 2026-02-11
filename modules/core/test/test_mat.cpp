@@ -1385,6 +1385,34 @@ TEST(Core_Mat, push_back)
     }
 }
 
+TEST(Core_Mat, copyToConvertTo_Empty)
+{
+    cv::Mat A(0, 0, CV_16SC2), B, C;
+    A.copyTo(B);
+    ASSERT_EQ(A.type(), B.type());
+    A.convertTo(C, CV_32SC2);
+    ASSERT_EQ(C.type(), CV_32SC2);
+}
+
+// Regression test for https://github.com/opencv/opencv/issues/28343
+// copyTo on empty fixed-type matrices should be a no-op and succeed
+template <typename T> class Core_Mat_copyTo : public testing::Test {};
+TYPED_TEST_CASE_P(Core_Mat_copyTo);
+
+TYPED_TEST_P(Core_Mat_copyTo, EmptyFixedType)
+{
+    cv::Mat_<TypeParam> a;
+    cv::Mat_<TypeParam> b;
+    EXPECT_NO_THROW(a.copyTo(b));
+    EXPECT_TRUE(b.empty());
+    // Verify type is still consistent after copyTo
+    EXPECT_EQ(b.type(), cv::traits::Type<TypeParam>::value);
+}
+
+REGISTER_TYPED_TEST_CASE_P(Core_Mat_copyTo, EmptyFixedType);
+typedef ::testing::Types<uchar, schar, ushort, short, int, float, double> AllMatDepths;
+INSTANTIATE_TYPED_TEST_CASE_P(CopyToTest, Core_Mat_copyTo, AllMatDepths);
+
 TEST(Core_Mat, copyNx1ToVector)
 {
     cv::Mat_<uchar> src(5, 1);
@@ -2702,6 +2730,131 @@ TEST(Mat, Recreate1DMatWithSameMeta)
     m.dims = 1;
 
     EXPECT_NO_THROW(m.create(dims, depth));
+}
+
+// see https://github.com/opencv/opencv/issues/27298
+TEST(Mat, copyAt_regression27298)
+{
+    cv::Mat src(40/*height*/, 30/*width*/, CV_8UC1, Scalar(255));
+    // Normal
+    {
+        cv::Mat dst(100, 100, CV_8UC1, Scalar(0));
+        cv::Mat roi(dst, cv::Rect(0, 0, 30/*width*/, 40/*height*/));
+        void* roiData = roi.data;
+        EXPECT_NO_THROW(src.copyTo(roi));
+        EXPECT_EQ(roi.data, roiData);
+        EXPECT_EQ(countNonZero(roi), roi.size().width * roi.size().height) << roi;
+    }
+    {
+        cv::Mat dst(100, 100, CV_8UC1, Scalar(0));
+        cv::Mat roi(dst, cv::Rect(0, 0, 30/*width*/, 40/*height*/));
+        void* roiData = roi.data;
+        EXPECT_NO_THROW(src.copyAt(roi));
+        EXPECT_EQ(roi.data, roiData);
+        EXPECT_EQ(countNonZero(roi), roi.size().width * roi.size().height) << roi;
+    }
+
+    // Empty
+    {
+        cv::Mat roi; // empty
+        EXPECT_NO_THROW(src.copyTo(roi));
+        EXPECT_NE(roi.data, nullptr); // Allocated
+        EXPECT_EQ(countNonZero(roi), roi.size().width * roi.size().height) << roi;
+    }
+    {
+        cv::Mat roi; // empty
+        EXPECT_ANY_THROW(src.copyAt(roi));
+    }
+
+    // Different Type
+    {
+        cv::Mat dst(100, 100, CV_16UC1, Scalar(0));
+        cv::Mat roi(dst, cv::Rect(0, 0, 30/*width*/, 40/*height*/));
+        void* roiData = roi.data;
+        EXPECT_NO_THROW(src.copyTo(roi));
+        EXPECT_NE(roi.data, roiData); // Reallocated
+        EXPECT_EQ(countNonZero(roi), roi.size().width * roi.size().height) << roi;
+    }
+    {
+        cv::Mat dst(100, 100, CV_16UC1, Scalar(0));
+        cv::Mat roi(dst, cv::Rect(0, 0, 30/*width*/, 40/*height*/));
+        EXPECT_ANY_THROW(src.copyAt(roi));
+    }
+
+    // Different Size
+    {
+        cv::Mat dst(100, 100, CV_8UC1, Scalar(0));
+        cv::Mat roi(dst, cv::Rect(0, 0, 40/*width*/, 30/*height*/));
+        void* roiData = roi.data;
+        EXPECT_NO_THROW(src.copyTo(roi));
+        EXPECT_NE(roi.data, roiData); // Reallocated
+        EXPECT_EQ(countNonZero(roi), roi.size().width * roi.size().height) << roi;
+    }
+    {
+        cv::Mat dst(100, 100, CV_8UC1, Scalar(0));
+        cv::Mat roi(dst, cv::Rect(0, 0, 40/*width*/, 30/*height*/));
+        EXPECT_ANY_THROW(src.copyAt(roi));
+    }
+}
+
+template<typename _Tp, int cn> static void make_vector(std::vector<cv::Vec<_Tp, cn> >& v, int n)
+{
+    v.clear();
+    v.resize(n);
+    _Tp* data = &v[0][0];
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < cn; j++) {
+            int k = j % 4;
+            int val = (k == 0 ? 1 : k == 1 ? -1 : k == 2 ? (i+1) : -(i+1))*(i+1);
+            data[i*cn + j] = (_Tp)val;
+        }
+    }
+}
+
+TEST(Core_InputOutputArray, std_vector_vector)
+{
+    std::vector<Vec3s> vv0_s, vv1_s;
+    std::vector<std::vector<short> > cn_s;
+    make_vector(vv0_s, 100);
+
+    split(vv0_s, cn_s);
+    merge(cn_s, vv1_s);
+
+    double err0 = cvtest::norm(vv0_s, vv1_s, NORM_INF);
+    EXPECT_EQ(0, err0);
+
+    _InputArray iarr_s(cn_s);
+    _OutputArray oarr_s(cn_s);
+    EXPECT_EQ(3u, iarr_s.total(-1));
+    size_t newsize_s = vv0_s.size()*2;
+    oarr_s.create(Size((int)newsize_s, 1), CV_16S, 2);
+    EXPECT_EQ(newsize_s, cn_s[2].size());
+    cn_s[1].clear();
+    EXPECT_EQ(true, oarr_s.empty(1));
+
+    std::vector<Vec4d> vv0_d, vv1_d;
+    std::vector<std::vector<double> > cn_d;
+    make_vector(vv0_d, 1000);
+
+    split(vv0_d, cn_d);
+    merge(cn_d, vv1_d);
+
+    double err1 = cvtest::norm(vv0_d, vv1_d, NORM_INF);
+    EXPECT_EQ(0., err1);
+
+    _InputArray iarr_d(cn_d);
+    _OutputArray oarr_d(cn_d);
+    EXPECT_EQ(4u, iarr_d.total(-1));
+    size_t newsize_d = vv0_d.size()*3;
+    oarr_d.create(Size((int)newsize_d, 1), CV_64F, 3);
+    EXPECT_EQ(newsize_d, cn_d[3].size());
+    cn_d[1].clear();
+    EXPECT_EQ(true, oarr_d.empty(1));
+    Mat m2 = oarr_d.getMat(2);
+
+    double err2 = cvtest::norm(m2, Mat(cn_d[2]).t(), NORM_INF);
+    EXPECT_EQ(m2.ptr<double>(), &cn_d[2][0]);
+    EXPECT_EQ(0., err2);
 }
 
 }} // namespace

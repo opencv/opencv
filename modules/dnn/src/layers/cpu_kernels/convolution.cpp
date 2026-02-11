@@ -2048,6 +2048,85 @@ static inline void convBlock4x4(int np, const float* a, const float* b, float* c
 }
 #endif
 
+#if defined(__EMSCRIPTEN__)
+template<int RowBase, int NR = 24>
+static inline void conv2xNR(
+    int np,
+    const float* a,
+    const float* b,
+    float* c, int ldc,
+    bool init_c)
+{
+    static_assert(NR % 8 == 0, "NR must be a multiple of 8");
+    float* d0 = c + (RowBase + 0) * ldc;
+    float* d1 = c + (RowBase + 1) * ldc;
+
+    // p = 0
+    {
+        const float* bp = b;
+        const float a0 = a[RowBase + 0];
+        const float a1 = a[RowBase + 1];
+
+        if (init_c)
+        {
+            for (int j = 0; j < NR; j += 8)
+            {
+                const float b0=bp[j+0], b1=bp[j+1], b2=bp[j+2], b3=bp[j+3];
+                const float b4=bp[j+4], b5=bp[j+5], b6=bp[j+6], b7=bp[j+7];
+                d0[j+0] = b0*a0; d0[j+1] = b1*a0; d0[j+2] = b2*a0; d0[j+3] = b3*a0;
+                d0[j+4] = b4*a0; d0[j+5] = b5*a0; d0[j+6] = b6*a0; d0[j+7] = b7*a0;
+                d1[j+0] = b0*a1; d1[j+1] = b1*a1; d1[j+2] = b2*a1; d1[j+3] = b3*a1;
+                d1[j+4] = b4*a1; d1[j+5] = b5*a1; d1[j+6] = b6*a1; d1[j+7] = b7*a1;
+            }
+        } else
+        {
+            for (int j = 0; j < NR; j += 8)
+            {
+                const float b0=bp[j+0], b1=bp[j+1], b2=bp[j+2], b3=bp[j+3];
+                const float b4=bp[j+4], b5=bp[j+5], b6=bp[j+6], b7=bp[j+7];
+                d0[j+0] += b0*a0; d0[j+1] += b1*a0; d0[j+2] += b2*a0; d0[j+3] += b3*a0;
+                d0[j+4] += b4*a0; d0[j+5] += b5*a0; d0[j+6] += b6*a0; d0[j+7] += b7*a0;
+                d1[j+0] += b0*a1; d1[j+1] += b1*a1; d1[j+2] += b2*a1; d1[j+3] += b3*a1;
+                d1[j+4] += b4*a1; d1[j+5] += b5*a1; d1[j+6] += b6*a1; d1[j+7] += b7*a1;
+            }
+        }
+    }
+
+    // p = 1..np-1
+    for (int p = 1; p < np; ++p)
+    {
+        const float* bp = b + p * NR;
+        const int aoff = p * 4 + RowBase;
+        const float a0 = a[aoff + 0];
+        const float a1 = a[aoff + 1];
+
+        for (int j = 0; j < NR; j += 8)
+        {
+            const float b0=bp[j+0], b1=bp[j+1], b2=bp[j+2], b3=bp[j+3];
+            const float b4=bp[j+4], b5=bp[j+5], b6=bp[j+6], b7=bp[j+7];
+            d0[j+0] += b0*a0; d0[j+1] += b1*a0; d0[j+2] += b2*a0; d0[j+3] += b3*a0;
+            d0[j+4] += b4*a0; d0[j+5] += b5*a0; d0[j+6] += b6*a0; d0[j+7] += b7*a0;
+            d1[j+0] += b0*a1; d1[j+1] += b1*a1; d1[j+2] += b2*a1; d1[j+3] += b3*a1;
+            d1[j+4] += b4*a1; d1[j+5] += b5*a1; d1[j+6] += b6*a1; d1[j+7] += b7*a1;
+        }
+    }
+}
+
+// MR == 4, outLen == 24, scalar (no SIMD128)
+static inline void convBlockNoSIMD4x24(
+    int np,
+    const float*  a,
+    const float*  b,
+    float*  c, int ldc,
+    bool init_c,
+    int convNR)
+{
+    CV_Assert(np > 0 && convNR == 24);
+    conv2xNR<0, 24>(np, a, b, c, ldc, init_c); // rows 0 & 1
+    conv2xNR<2, 24>(np, a, b, c, ldc, init_c); // rows 2 & 3
+}
+#endif
+
 static inline void convBlockNoSIMD(int np, const float* a, const float* b, float* c, int ldc, bool init_c, const int outLen,
                             const int convMR, const int convNR)
 {
@@ -2107,8 +2186,17 @@ void convBlock_F32(int np, const float* a, const float* b, float* c, int ldc, bo
         return;
     }
     convBlockNoSIMD(np, a, b, c, ldc, init_c, outLen, convMR, convNR);
+#elif defined(__EMSCRIPTEN__)
+    CV_Assert(convMR == 4);
+    if (outLen == 24 && convNR == 24)
+    {
+        convBlockNoSIMD4x24(np, a, b, c, ldc, init_c, convNR);
+        return;
+    }
+    convBlockNoSIMD(np, a, b, c, ldc, init_c, outLen, convMR, convNR);
 #else
     convBlockNoSIMD(np, a, b, c, ldc, init_c, outLen, convMR, convNR);
+    return;
 #endif
 }
 

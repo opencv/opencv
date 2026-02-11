@@ -452,8 +452,8 @@ int solveP3P( InputArray _opoints, InputArray _ipoints,
     int solutions = 0;
     if (flags == SOLVEPNP_P3P)
     {
-        p3p P3Psolver(cameraMatrix);
-        solutions = P3Psolver.solve(Rs, ts, opoints, undistortedPoints);
+        p3p P3Psolver;
+        solutions = P3Psolver.estimate(Rs, ts, opoints, undistortedPoints);
     }
     else if (flags == SOLVEPNP_AP3P)
     {

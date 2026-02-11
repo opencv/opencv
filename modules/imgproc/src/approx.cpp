@@ -586,26 +586,40 @@ approxPolyDP_( const Point_<T>* src_contour, int count0, Point_<T>* dst_contour,
 
         if( pos != slice.end )
         {
-            double dx, dy, dist, max_dist = 0;
+            double dx, dy, max_dist_2_mul_segment_len_2 = 0;
 
             dx = end_pt.x - start_pt.x;
             dy = end_pt.y - start_pt.y;
+            double segment_len_2 = dx * dx + dy * dy;
 
             CV_Assert( dx != 0 || dy != 0 );
 
             while( pos != slice.end )
             {
                 READ_PT(pt, pos);
-                dist = fabs((pt.y - start_pt.y) * dx - (pt.x - start_pt.x) * dy);
+                double projection = ((pt.x - start_pt.x) * dx + (pt.y - start_pt.y) * dy);
 
-                if( dist > max_dist )
+                double dist_2_mul_segment_len_2;
+                if ( projection < 0 )
                 {
-                    max_dist = dist;
+                    dist_2_mul_segment_len_2 = ((pt.x - start_pt.x) * (pt.x - start_pt.x) + (pt.y - start_pt.y) * (pt.y - start_pt.y)) * segment_len_2;
+                } else if ( projection > segment_len_2 )
+                {
+                    dist_2_mul_segment_len_2 = ((pt.x - end_pt.x) * (pt.x - end_pt.x) + (pt.y - end_pt.y) * (pt.y - end_pt.y)) * segment_len_2;
+                } else
+                {
+                    double dist = ((pt.y - start_pt.y) * dx - (pt.x - start_pt.x) * dy);
+                    dist_2_mul_segment_len_2 = dist * dist;
+                }
+
+                if( dist_2_mul_segment_len_2 > max_dist_2_mul_segment_len_2 )
+                {
+                    max_dist_2_mul_segment_len_2 = dist_2_mul_segment_len_2;
                     right_slice.start = (pos+count-1)%count;
                 }
             }
 
-            le_eps = max_dist * max_dist <= eps * (dx * dx + dy * dy);
+            le_eps = max_dist_2_mul_segment_len_2 <= eps * segment_len_2;
         }
         else
         {
@@ -779,16 +793,13 @@ cvApproxPoly( const void* array, int header_size,
     {
         CvSeq *contour = 0;
 
-        switch (method)
+        if( parameter < 0 )
+            CV_Error( cv::Error::StsOutOfRange, "Accuracy must be non-negative" );
+
+        CV_Assert( CV_SEQ_ELTYPE(src_seq) == CV_32SC2 ||
+                    CV_SEQ_ELTYPE(src_seq) == CV_32FC2 );
+
         {
-        case CV_POLY_APPROX_DP:
-            if( parameter < 0 )
-                CV_Error( cv::Error::StsOutOfRange, "Accuracy must be non-negative" );
-
-            CV_Assert( CV_SEQ_ELTYPE(src_seq) == CV_32SC2 ||
-                      CV_SEQ_ELTYPE(src_seq) == CV_32FC2 );
-
-            {
             int npoints = src_seq->total, nout = 0;
             _buf.allocate(npoints*2);
             cv::Point *src = _buf.data(), *dst = src + npoints;
@@ -803,17 +814,13 @@ cvApproxPoly( const void* array, int header_size,
                 nout = cv::approxPolyDP_(src, npoints, dst, closed, parameter, stack);
             else if( CV_SEQ_ELTYPE(src_seq) == CV_32FC2 )
                 nout = cv::approxPolyDP_((cv::Point2f*)src, npoints,
-                                         (cv::Point2f*)dst, closed, parameter, stack);
+                                            (cv::Point2f*)dst, closed, parameter, stack);
             else
                 CV_Error( cv::Error::StsUnsupportedFormat, "" );
 
             contour = cvCreateSeq( src_seq->flags, header_size,
-                                  src_seq->elem_size, storage );
+                                    src_seq->elem_size, storage );
             cvSeqPushMulti(contour, dst, nout);
-            }
-            break;
-        default:
-            CV_Error( cv::Error::StsBadArg, "Invalid approximation method" );
         }
 
         CV_Assert( contour );

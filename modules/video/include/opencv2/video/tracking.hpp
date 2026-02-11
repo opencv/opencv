@@ -268,17 +268,43 @@ enum
     MOTION_HOMOGRAPHY  = 3
 };
 
-/** @brief Computes the Enhanced Correlation Coefficient value between two images @cite EP08 .
+/**
+@brief Computes the Enhanced Correlation Coefficient (ECC) value between two images
 
-@param templateImage single-channel template image; CV_8U or CV_32F array.
-@param inputImage single-channel input image to be warped to provide an image similar to
- templateImage, same type as templateImage.
-@param inputMask An optional mask to indicate valid values of inputImage.
+The Enhanced Correlation Coefficient (ECC) is a normalized measure of similarity between two images @cite EP08.
+The result lies in the range [-1, 1], where 1 corresponds to perfect similarity (modulo affine shift and scale),
+0 indicates no correlation, and -1 indicates perfect negative correlation.
 
-@sa
-findTransformECC
- */
+For single-channel images, the ECC is defined as:
 
+\f[
+\mathrm{ECC}(I, T) = \frac{\sum_{x} (I(x) - \mu_I)(T(x) - \mu_T)}
+{\sqrt{\sum_{x} (I(x) - \mu_I)^2} \cdot \sqrt{\sum_{x} (T(x) - \mu_T)^2}}
+\f]
+
+For multi-channel images (e.g., 3-channel RGB), the formula generalizes to:
+
+\f[
+\mathrm{ECC}(I, T) =
+\frac{\sum_{x} \sum_{c=1}^{C} (I_c(x) - \mu_{I_c})(T_c(x) - \mu_{T_c})}
+{\sqrt{\sum_{x} \sum_{c=1}^{C} (I_c(x) - \mu_{I_c})^2} \cdot
+ \sqrt{\sum_{x} \sum_{c=1}^{C} (T_c(x) - \mu_{T_c})^2}}
+\f]
+
+Where:
+- \f$I_c(x), T_c(x)\f$ are the values of channel \f$c\f$ at spatial location \f$x\f$,
+- \f$\mu_{I_c}, \mu_{T_c}\f$ are the mean values of channel \f$c\f$ over the masked region (if provided),
+- \f$C\f$ is the number of channels (only 1 and 3 are currently supported),
+- The sums run over all pixels \f$x\f$ in the image domain (optionally restricted by mask).
+
+@param templateImage Input template image; must have either 1 or 3 channels and be of type CV_8U, CV_16U, CV_32F, or CV_64F.
+@param inputImage Input image to be compared with the template; must have the same type and number of channels as templateImage.
+@param inputMask Optional single-channel mask to specify the valid region of interest in inputImage and templateImage.
+
+@return The ECC similarity coefficient in the range [-1, 1].
+
+@sa findTransformECC
+*/
 CV_EXPORTS_W double computeECC(InputArray templateImage, InputArray inputImage, InputArray inputMask = noArray());
 
 /** @example samples/cpp/image_alignment.cpp
@@ -287,8 +313,8 @@ An example using the image alignment ECC algorithm
 
 /** @brief Finds the geometric transform (warp) between two images in terms of the ECC criterion @cite EP08 .
 
-@param templateImage single-channel template image; CV_8U or CV_32F array.
-@param inputImage single-channel input image which should be warped with the final warpMatrix in
+@param templateImage 1 or 3 channel template image; CV_8U, CV_16U, CV_32F, CV_64F type.
+@param inputImage input image which should be warped with the final warpMatrix in
 order to provide an image similar to templateImage, same type as templateImage.
 @param warpMatrix floating-point \f$2\times 3\f$ or \f$3\times 3\f$ mapping matrix (warp).
 @param motionType parameter, specifying the type of motion:
@@ -305,7 +331,7 @@ order to provide an image similar to templateImage, same type as templateImage.
 criteria.epsilon defines the threshold of the increment in the correlation coefficient between two
 iterations (a negative criteria.epsilon makes criteria.maxcount the only termination criterion).
 Default values are shown in the declaration above.
-@param inputMask An optional mask to indicate valid values of inputImage.
+@param inputMask An optional single channel mask to indicate valid values of inputImage.
 @param gaussFiltSize An optional value indicating size of gaussian blur filter; (DEFAULT: 5)
 
 The function estimates the optimum transformation (warpMatrix) with respect to ECC criterion
@@ -347,6 +373,51 @@ double findTransformECC(InputArray templateImage, InputArray inputImage,
     InputOutputArray warpMatrix, int motionType = MOTION_AFFINE,
     TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 50, 0.001),
     InputArray inputMask = noArray());
+
+/** @brief Finds the geometric transform (warp) between two images in terms of the ECC criterion @cite EP08
+using validity masks for both the template and the input images.
+
+This function extends findTransformECC() by adding a mask for the template image.
+The Enhanced Correlation Coefficient is evaluated only over pixels that are valid in both images:
+on each iteration inputMask is warped into the template frame and combined with templateMask, and
+only the intersection of these masks contributes to the objective function.
+
+@param templateImage 1 or 3 channel template image; CV_8U, CV_16U, CV_32F, CV_64F type.
+@param inputImage input image which should be warped with the final warpMatrix in
+order to provide an image similar to templateImage, same type as templateImage.
+@param templateMask single-channel 8-bit mask for templateImage indicating valid pixels
+to be used in the alignment. Must have the same size as templateImage.
+@param inputMask single-channel 8-bit mask for inputImage indicating valid pixels
+before warping. Must have the same size as inputImage.
+@param warpMatrix floating-point \f$2\times 3\f$ or \f$3\times 3\f$ mapping matrix (warp).
+@param motionType parameter, specifying the type of motion:
+ -   **MOTION_TRANSLATION** sets a translational motion model; warpMatrix is \f$2\times 3\f$ with
+     the first \f$2\times 2\f$ part being the unity matrix and the rest two parameters being
+     estimated.
+ -   **MOTION_EUCLIDEAN** sets a Euclidean (rigid) transformation as motion model; three
+     parameters are estimated; warpMatrix is \f$2\times 3\f$.
+ -   **MOTION_AFFINE** sets an affine motion model (DEFAULT); six parameters are estimated;
+     warpMatrix is \f$2\times 3\f$.
+ -   **MOTION_HOMOGRAPHY** sets a homography as a motion model; eight parameters are
+     estimated; warpMatrix is \f$3\times 3\f$.
+@param criteria parameter, specifying the termination criteria of the ECC algorithm;
+criteria.epsilon defines the threshold of the increment in the correlation coefficient between two
+iterations (a negative criteria.epsilon makes criteria.maxcount the only termination criterion).
+Default values are shown in the declaration above.
+@param gaussFiltSize size of the Gaussian blur filter used for smoothing images and masks
+before computing the alignment (DEFAULT: 5).
+
+@sa
+findTransformECC, computeECC, estimateAffine2D, estimateAffinePartial2D, findHomography
+*/
+CV_EXPORTS_W double findTransformECCWithMask( InputArray templateImage,
+                                 InputArray inputImage,
+                                 InputArray templateMask,
+                                 InputArray inputMask,
+                                 InputOutputArray warpMatrix,
+                                 int motionType = MOTION_AFFINE,
+                                 TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 50, 1e-6),
+                                 int gaussFiltSize = 5 );
 
 /** @example samples/cpp/kalman.cpp
 An example using the standard Kalman filter
@@ -606,6 +677,16 @@ public:
     CV_WRAP virtual int getFinestScale() const = 0;
     /** @copybrief getFinestScale @see getFinestScale */
     CV_WRAP virtual void setFinestScale(int val) = 0;
+
+    /** @brief Sets the coarsest scale
+    @param val Coarsest level of the Gaussian pyramid on which the flow is computed.
+    If set to -1, the auto-computed coarsest scale will be used.
+    */
+    CV_WRAP virtual void setCoarsestScale(int val) = 0;
+
+    /** @brief Gets the coarsest scale
+    */
+    CV_WRAP virtual int getCoarsestScale() const = 0;
 
     /** @brief Size of an image patch for matching (in pixels). Normally, default 8x8 patches work well
         enough in most cases.

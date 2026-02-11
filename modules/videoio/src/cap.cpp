@@ -62,9 +62,6 @@ static bool param_VIDEOWRITER_DEBUG = utils::getConfigurationParameterBool("OPEN
         CV_LOG_WARNING(nullptr, __VA_ARGS__)            \
     }
 
-void DefaultDeleter<CvCapture>::operator ()(CvCapture* obj) const { cvReleaseCapture(&obj); }
-void DefaultDeleter<CvVideoWriter>::operator ()(CvVideoWriter* obj) const { cvReleaseVideoWriter(&obj); }
-
 IStreamReader::~IStreamReader()
 {
     // nothing
@@ -231,7 +228,7 @@ bool VideoCapture::open(const String& filename, int apiPreference, const std::ve
     }
     else
     {
-        CV_LOG_DEBUG(NULL, "VIDEOIO: choosen backend does not work or wrong. "
+        CV_LOG_DEBUG(NULL, "VIDEOIO: chosen backend does not work or wrong. "
             "Please make sure that your computer support chosen backend and OpenCV built "
             "with right flags.");
     }
@@ -356,7 +353,7 @@ bool VideoCapture::open(const Ptr<IStreamReader>& stream, int apiPreference, con
     }
     else
     {
-        CV_LOG_DEBUG(NULL, "VIDEOIO: choosen backend does not work or wrong. "
+        CV_LOG_DEBUG(NULL, "VIDEOIO: chosen backend does not work or wrong. "
             "Please make sure that your computer support chosen backend and OpenCV built "
             "with right flags.");
     }
@@ -494,7 +491,7 @@ bool VideoCapture::open(int cameraNum, int apiPreference, const std::vector<int>
     }
     else
     {
-        CV_LOG_DEBUG(NULL, "VIDEOIO: choosen backend does not work or wrong."
+        CV_LOG_DEBUG(NULL, "VIDEOIO: chosen backend does not work or wrong."
             "Please make sure that your computer support chosen backend and OpenCV built "
             "with right flags.");
     }
@@ -811,7 +808,7 @@ bool VideoWriter::open(const String& filename, int apiPreference, int fourcc, do
     }
     else
     {
-        CV_LOG_DEBUG(NULL, "VIDEOIO: choosen backend does not work or wrong."
+        CV_LOG_DEBUG(NULL, "VIDEOIO: chosen backend does not work or wrong."
             "Please make sure that your computer support chosen backend and OpenCV built "
             "with right flags.");
     }

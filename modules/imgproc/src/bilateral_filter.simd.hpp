@@ -58,7 +58,7 @@ void bilateralFilterInvoker_8u(
         int* space_ofs, float *space_weight, float *color_weight);
 void bilateralFilterInvoker_32f(
         int cn, int radius, int maxk, int *space_ofs,
-        const Mat& temp, Mat& dst, float scale_index, float *space_weight, float *expLUT);
+        const Mat& temp, Mat& dst, float scale_index, float *space_weight, float *expLUT, int kExpNumBins);
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
@@ -495,9 +495,9 @@ class BilateralFilter_32f_Invoker :
 public:
 
     BilateralFilter_32f_Invoker(int _cn, int _radius, int _maxk, int *_space_ofs,
-        const Mat& _temp, Mat& _dest, float _scale_index, float *_space_weight, float *_expLUT) :
+        const Mat& _temp, Mat& _dest, float _scale_index, float *_space_weight, float *_expLUT, int _kExpNumBins) :
         cn(_cn), radius(_radius), maxk(_maxk), space_ofs(_space_ofs),
-        temp(&_temp), dest(&_dest), scale_index(_scale_index), space_weight(_space_weight), expLUT(_expLUT)
+        temp(&_temp), dest(&_dest), scale_index(_scale_index), space_weight(_space_weight), expLUT(_expLUT), kExpNumBins(_kExpNumBins)
     {
     }
 
@@ -512,6 +512,9 @@ public:
         int nlanes_2 = 2 * nlanes;
         int nlanes_3 = 3 * nlanes;
         int nlanes_4 = 4 * nlanes;
+        v_float32 v_one = vx_setall_f32(1.f);
+        v_float32 sindex = vx_setall_f32(scale_index);
+
 #endif
         for( i = range.start; i < range.end; i++ )
         {
@@ -523,9 +526,6 @@ public:
                 j = 0;
                 const float* sptr_j = sptr;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-                v_float32 v_one = vx_setall_f32(1.f);
-                v_float32 sindex = vx_setall_f32(scale_index);
-
                 for(; j <= size.width - nlanes_4; j += nlanes_4, sptr_j += nlanes_4, dptr += nlanes_4)
                 {
                     v_float32 v_wsum0 = vx_setzero_f32();
@@ -545,45 +545,37 @@ public:
                     {
                         const float* ksptr = sptr_j + space_ofs[k];
                         v_float32 kweight = vx_setall_f32(space_weight[k]);
-
-                        //0th
                         v_float32 val0 = vx_load(ksptr);
-                        v_float32 knan0 = v_not_nan(val0);
-                        v_float32 alpha0 = v_and(v_and(v_mul(v_absdiff(val0, rval0), sindex), v_not_nan(rval0)), knan0);
-                        v_int32 idx0 = v_trunc(alpha0);
-                        alpha0 = v_sub(alpha0, v_cvt_f32(idx0));
-                        v_float32 w0 = v_and(v_mul(kweight, v_muladd(v_lut(this->expLUT + 1, idx0), alpha0, v_mul(v_lut(this->expLUT, idx0), v_sub(v_one, alpha0)))), knan0);
-                        v_wsum0 = v_add(v_wsum0, w0);
-                        v_sum0 = v_muladd(v_and(val0, knan0), w0, v_sum0);
-
-                        //1st
                         v_float32 val1 = vx_load(ksptr + nlanes);
-                        v_float32 knan1 = v_not_nan(val1);
-                        v_float32 alpha1 = v_and(v_and(v_mul(v_absdiff(val1, rval1), sindex), v_not_nan(rval1)), knan1);
-                        v_int32 idx1 = v_trunc(alpha1);
-                        alpha1 = v_sub(alpha1, v_cvt_f32(idx1));
-                        v_float32 w1 = v_and(v_mul(kweight, v_muladd(v_lut(this->expLUT + 1, idx1), alpha1, v_mul(v_lut(this->expLUT, idx1), v_sub(v_one, alpha1)))), knan1);
-                        v_wsum1 = v_add(v_wsum1, w1);
-                        v_sum1 = v_muladd(v_and(val1, knan1), w1, v_sum1);
-
-                        //2nd
                         v_float32 val2 = vx_load(ksptr + nlanes_2);
-                        v_float32 knan2 = v_not_nan(val2);
-                        v_float32 alpha2 = v_and(v_and(v_mul(v_absdiff(val2, rval2), sindex), v_not_nan(rval2)), knan2);
-                        v_int32 idx2 = v_trunc(alpha2);
-                        alpha2 = v_sub(alpha2, v_cvt_f32(idx2));
-                        v_float32 w2 = v_and(v_mul(kweight, v_muladd(v_lut(this->expLUT + 1, idx2), alpha2, v_mul(v_lut(this->expLUT, idx2), v_sub(v_one, alpha2)))), knan2);
-                        v_wsum2 = v_add(v_wsum2, w2);
-                        v_sum2 = v_muladd(v_and(val2, knan2), w2, v_sum2);
-
-                        //3rd
                         v_float32 val3 = vx_load(ksptr + nlanes_3);
+                        v_float32 knan0 = v_not_nan(val0);
+                        v_float32 knan1 = v_not_nan(val1);
+                        v_float32 knan2 = v_not_nan(val2);
                         v_float32 knan3 = v_not_nan(val3);
+                        v_float32 alpha0 = v_and(v_and(v_mul(v_absdiff(val0, rval0), sindex), v_not_nan(rval0)), knan0);
+                        v_float32 alpha1 = v_and(v_and(v_mul(v_absdiff(val1, rval1), sindex), v_not_nan(rval1)), knan1);
+                        v_float32 alpha2 = v_and(v_and(v_mul(v_absdiff(val2, rval2), sindex), v_not_nan(rval2)), knan2);
                         v_float32 alpha3 = v_and(v_and(v_mul(v_absdiff(val3, rval3), sindex), v_not_nan(rval3)), knan3);
-                        v_int32 idx3 = v_trunc(alpha3);
+                        v_int32 idx0 = v_min(v_trunc(alpha0), vx_setall_s32(kExpNumBins));
+                        v_int32 idx1 = v_min(v_trunc(alpha1), vx_setall_s32(kExpNumBins));
+                        v_int32 idx2 = v_min(v_trunc(alpha2), vx_setall_s32(kExpNumBins));
+                        v_int32 idx3 = v_min(v_trunc(alpha3), vx_setall_s32(kExpNumBins));
+                        alpha0 = v_sub(alpha0, v_cvt_f32(idx0));
+                        alpha1 = v_sub(alpha1, v_cvt_f32(idx1));
+                        alpha2 = v_sub(alpha2, v_cvt_f32(idx2));
                         alpha3 = v_sub(alpha3, v_cvt_f32(idx3));
+                        v_float32 w0 = v_and(v_mul(kweight, v_muladd(v_lut(this->expLUT + 1, idx0), alpha0, v_mul(v_lut(this->expLUT, idx0), v_sub(v_one, alpha0)))), knan0);
+                        v_float32 w1 = v_and(v_mul(kweight, v_muladd(v_lut(this->expLUT + 1, idx1), alpha1, v_mul(v_lut(this->expLUT, idx1), v_sub(v_one, alpha1)))), knan1);
+                        v_float32 w2 = v_and(v_mul(kweight, v_muladd(v_lut(this->expLUT + 1, idx2), alpha2, v_mul(v_lut(this->expLUT, idx2), v_sub(v_one, alpha2)))), knan2);
                         v_float32 w3 = v_and(v_mul(kweight, v_muladd(v_lut(this->expLUT + 1, idx3), alpha3, v_mul(v_lut(this->expLUT, idx3), v_sub(v_one, alpha3)))), knan3);
+                        v_wsum0 = v_add(v_wsum0, w0);
+                        v_wsum1 = v_add(v_wsum1, w1);
+                        v_wsum2 = v_add(v_wsum2, w2);
                         v_wsum3 = v_add(v_wsum3, w3);
+                        v_sum0 = v_muladd(v_and(val0, knan0), w0, v_sum0);
+                        v_sum1 = v_muladd(v_and(val1, knan1), w1, v_sum1);
+                        v_sum2 = v_muladd(v_and(val2, knan2), w2, v_sum2);
                         v_sum3 = v_muladd(v_and(val3, knan3), w3, v_sum3);
                     }
                     v_store(dptr , v_div(v_add(v_sum0, v_and(rval0, v_not_nan(rval0))), v_add(v_wsum0, v_and(v_one, v_not_nan(rval0)))));
@@ -607,24 +599,21 @@ public:
                         v_float32 kweight = vx_setall_f32(space_weight[k]);
                         const float* ksptr = sptr_j + space_ofs[k];
 
-                        //0th
                         v_float32 val0 = vx_load(ksptr);
-                        v_float32 knan0 = v_not_nan(val0);
-                        v_float32 alpha0 = v_and(v_and(v_mul(v_absdiff(val0, rval0), sindex), rval0_not_nan), knan0);
-                        v_int32 idx0 = v_trunc(alpha0);
-                        alpha0 = v_sub(alpha0, v_cvt_f32(idx0));
-                        v_float32 w0 = v_and(v_mul(kweight, v_muladd(v_lut(this->expLUT + 1, idx0), alpha0, v_mul(v_lut(this->expLUT, idx0), v_sub(v_one, alpha0)))), knan0);
-                        v_wsum0 = v_add(v_wsum0, w0);
-                        v_sum0 = v_muladd(v_and(val0, knan0), w0, v_sum0);
-
-                        //1st
                         v_float32 val1 = vx_load(ksptr + nlanes);
+                        v_float32 knan0 = v_not_nan(val0);
                         v_float32 knan1 = v_not_nan(val1);
+                        v_float32 alpha0 = v_and(v_and(v_mul(v_absdiff(val0, rval0), sindex), rval0_not_nan), knan0);
                         v_float32 alpha1 = v_and(v_and(v_mul(v_absdiff(val1, rval1), sindex), rval1_not_nan), knan1);
-                        v_int32 idx1 = v_trunc(alpha1);
+                        v_int32 idx0 = v_min(v_trunc(alpha0), vx_setall_s32(kExpNumBins));
+                        v_int32 idx1 = v_min(v_trunc(alpha1), vx_setall_s32(kExpNumBins));
+                        alpha0 = v_sub(alpha0, v_cvt_f32(idx0));
                         alpha1 = v_sub(alpha1, v_cvt_f32(idx1));
+                        v_float32 w0 = v_and(v_mul(kweight, v_muladd(v_lut(this->expLUT + 1, idx0), alpha0, v_mul(v_lut(this->expLUT, idx0), v_sub(v_one, alpha0)))), knan0);
                         v_float32 w1 = v_and(v_mul(kweight, v_muladd(v_lut(this->expLUT + 1, idx1), alpha1, v_mul(v_lut(this->expLUT, idx1), v_sub(v_one, alpha1)))), knan1);
+                        v_wsum0 = v_add(v_wsum0, w0);
                         v_wsum1 = v_add(v_wsum1, w1);
+                        v_sum0 = v_muladd(v_and(val0, knan0), w0, v_sum0);
                         v_sum1 = v_muladd(v_and(val1, knan1), w1, v_sum1);
                     }
                     v_store(dptr, v_div(v_add(v_sum0, v_and(rval0, rval0_not_nan)), v_add(v_wsum0, v_and(v_one, rval0_not_nan))));
@@ -640,7 +629,7 @@ public:
                     {
                         const float* ksptr = sptr_j + space_ofs[k];
                         float val = *ksptr;
-                        float alpha = std::abs(val - rval) * scale_index;
+                        float alpha = std::min(std::abs(val - rval) * scale_index, (float)kExpNumBins);
                         int idx = cvFloor(alpha);
                         alpha -= idx;
                         if (!cvIsNaN(val))
@@ -660,42 +649,61 @@ public:
                 j = 0;
                 const float* sptr_j = sptr;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-                v_float32 v_one = vx_setall_f32(1.f);
-                v_float32 sindex = vx_setall_f32(scale_index);
 
-                for (; j <= size.width - nlanes; j += nlanes, sptr_j += nlanes_3, dptr += nlanes_3)
+                for (; j <= size.width - nlanes_2; j += nlanes_2, sptr_j += (nlanes_3*2), dptr += (nlanes_3*2))
                 {
+                    v_float32 kb, kg, kr, kb1, kg1, kr1;
+                    v_float32 rb, rg, rr, rb1, rg1, rr1;
                     const float* rsptr = sptr_j;
                     v_float32 v_wsum = vx_setzero_f32();
                     v_float32 v_sum_b = vx_setzero_f32();
                     v_float32 v_sum_g = vx_setzero_f32();
                     v_float32 v_sum_r = vx_setzero_f32();
+                    v_float32 v_wsum1 = vx_setzero_f32();
+                    v_float32 v_sum_b1 = vx_setzero_f32();
+                    v_float32 v_sum_g1 = vx_setzero_f32();
+                    v_float32 v_sum_r1 = vx_setzero_f32();
+                    v_load_deinterleave(rsptr, rb, rg, rr);
+                    v_load_deinterleave(rsptr + nlanes_3, rb1, rg1, rr1);
+
                     for (k = 0; k < maxk; k++)
                     {
                         const float* ksptr = sptr_j + space_ofs[k];
                         v_float32 kweight = vx_setall_f32(space_weight[k]);
 
-                        v_float32 kb, kg, kr, rb, rg, rr;
                         v_load_deinterleave(ksptr, kb, kg, kr);
-                        v_load_deinterleave(rsptr, rb, rg, rr);
+                        v_load_deinterleave(ksptr + nlanes_3, kb1, kg1, kr1);
 
                         v_float32 knan = v_and(v_and(v_not_nan(kb), v_not_nan(kg)), v_not_nan(kr));
+                        v_float32 knan1 = v_and(v_and(v_not_nan(kb1), v_not_nan(kg1)), v_not_nan(kr1));
                         v_float32 alpha = v_and(v_and(v_and(v_and(v_mul(v_add(v_add(v_absdiff(kb, rb), v_absdiff(kg, rg)), v_absdiff(kr, rr)), sindex), v_not_nan(rb)), v_not_nan(rg)), v_not_nan(rr)), knan);
-                        v_int32 idx = v_trunc(alpha);
+                        v_float32 alpha1 = v_and(v_and(v_and(v_and(v_mul(v_add(v_add(v_absdiff(kb1, rb1), v_absdiff(kg1, rg1)), v_absdiff(kr1, rr1)), sindex), v_not_nan(rb1)), v_not_nan(rg1)), v_not_nan(rr1)), knan1);
+                        v_int32 idx = v_min(v_trunc(alpha), vx_setall_s32(kExpNumBins));
+                        v_int32 idx1 = v_min(v_trunc(alpha1), vx_setall_s32(kExpNumBins));
                         alpha = v_sub(alpha, v_cvt_f32(idx));
-
+                        alpha1 = v_sub(alpha1, v_cvt_f32(idx1));
                         v_float32 w = v_and(v_mul(kweight, v_muladd(v_lut(this->expLUT + 1, idx), alpha, v_mul(v_lut(this->expLUT, idx), v_sub(v_one, alpha)))), knan);
+                        v_float32 w1 = v_and(v_mul(kweight, v_muladd(v_lut(this->expLUT + 1, idx1), alpha1, v_mul(v_lut(this->expLUT, idx1), v_sub(v_one, alpha1)))), knan1);
                         v_wsum = v_add(v_wsum, w);
+                        v_wsum1 = v_add(v_wsum1, w1);
                         v_sum_b = v_muladd(v_and(kb, knan), w, v_sum_b);
                         v_sum_g = v_muladd(v_and(kg, knan), w, v_sum_g);
                         v_sum_r = v_muladd(v_and(kr, knan), w, v_sum_r);
+                        v_sum_b1 = v_muladd(v_and(kb1, knan1), w1, v_sum_b1);
+                        v_sum_g1 = v_muladd(v_and(kg1, knan1), w1, v_sum_g1);
+                        v_sum_r1 = v_muladd(v_and(kr1, knan1), w1, v_sum_r1);
                     }
 
                     v_float32 b, g, r;
+                    v_float32 b1, g1, r1;
                     v_load_deinterleave(sptr_j, b, g, r);
+                    v_load_deinterleave(sptr_j + nlanes_3, b1, g1, r1);
                     v_float32 mask = v_and(v_and(v_not_nan(b), v_not_nan(g)), v_not_nan(r));
+                    v_float32 mask1 = v_and(v_and(v_not_nan(b1), v_not_nan(g1)), v_not_nan(r1));
                     v_float32 w = v_div(v_one, v_add(v_wsum, v_and(v_one, mask)));
+                    v_float32 w1 = v_div(v_one, v_add(v_wsum1, v_and(v_one, mask1)));
                     v_store_interleave(dptr, v_mul(v_add(v_sum_b, v_and(b, mask)), w), v_mul(v_add(v_sum_g, v_and(g, mask)), w), v_mul(v_add(v_sum_r, v_and(r, mask)), w));
+                    v_store_interleave(dptr + nlanes_3, v_mul(v_add(v_sum_b1, v_and(b1, mask1)), w1), v_mul(v_add(v_sum_g1, v_and(g1, mask1)), w1), v_mul(v_add(v_sum_r1, v_and(r1, mask1)), w1));
                 }
 #endif
                 for (; j < size.width; j++, sptr_j += 3)
@@ -709,7 +717,7 @@ public:
                         bool v_NAN = cvIsNaN(b) || cvIsNaN(g) || cvIsNaN(r);
                         float rb = rsptr[0], rg = rsptr[1], rr = rsptr[2];
                         bool r_NAN = cvIsNaN(rb) || cvIsNaN(rg) || cvIsNaN(rr);
-                        float alpha = (std::abs(b - rb) + std::abs(g - rg) + std::abs(r - rr)) * scale_index;
+                        float alpha = std::min((std::abs(b - rb) + std::abs(g - rg) + std::abs(r - rr)) * scale_index, (float)kExpNumBins);
                         int idx = cvFloor(alpha);
                         alpha -= idx;
                         if (!v_NAN)
@@ -753,17 +761,18 @@ private:
     const Mat* temp;
     Mat *dest;
     float scale_index, *space_weight, *expLUT;
+    int kExpNumBins;
 };
 
 } // namespace anon
 
 void bilateralFilterInvoker_32f(
         int cn, int radius, int maxk, int *space_ofs,
-        const Mat& temp, Mat& dst, float scale_index, float *space_weight, float *expLUT)
+        const Mat& temp, Mat& dst, float scale_index, float *space_weight, float *expLUT, int kExpNumBins)
 {
     CV_INSTRUMENT_REGION();
 
-    BilateralFilter_32f_Invoker body(cn, radius, maxk, space_ofs, temp, dst, scale_index, space_weight, expLUT);
+    BilateralFilter_32f_Invoker body(cn, radius, maxk, space_ofs, temp, dst, scale_index, space_weight, expLUT, kExpNumBins);
     parallel_for_(Range(0, dst.rows), body, dst.total()/(double)(1<<16));
 }
 

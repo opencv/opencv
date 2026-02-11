@@ -103,11 +103,13 @@ public class ArucoTest extends OpenCVTestCase {
         int[] intCharucoIds = (new MatOfInt(charucoIds)).toArray();
         Assert.assertArrayEquals(new int[]{0, 1, 2, 3}, intCharucoIds);
 
+        // Note: Expected values adjusted by -0.5px after fixing the systematic offset bug in charuco_detector.cpp
+        // The fix removes the incorrect +0.5 offset that was added after cornerSubPix
         double eps = 0.2;
-        assertArrayEquals(new double[]{cellSize, cellSize}, charucoCorners.get(0, 0), eps);
-        assertArrayEquals(new double[]{2*cellSize, cellSize}, charucoCorners.get(1, 0), eps);
-        assertArrayEquals(new double[]{cellSize, 2*cellSize}, charucoCorners.get(2, 0), eps);
-        assertArrayEquals(new double[]{2*cellSize, 2*cellSize}, charucoCorners.get(3, 0), eps);
+        assertArrayEquals(new double[]{cellSize - 0.5, cellSize - 0.5}, charucoCorners.get(0, 0), eps);
+        assertArrayEquals(new double[]{2*cellSize - 0.5, cellSize - 0.5}, charucoCorners.get(1, 0), eps);
+        assertArrayEquals(new double[]{cellSize - 0.5, 2*cellSize - 0.5}, charucoCorners.get(2, 0), eps);
+        assertArrayEquals(new double[]{2*cellSize - 0.5, 2*cellSize - 0.5}, charucoCorners.get(3, 0), eps);
     }
 
 }

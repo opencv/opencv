@@ -38,10 +38,13 @@ VideoCapture_obsensor::VideoCapture_obsensor(int, const cv::VideoCaptureParamete
     ob::Context::setLoggerToFile(OB_LOG_SEVERITY_OFF, "");
     config = std::make_shared<ob::Config>();
     pipe = std::make_shared<ob::Pipeline>();
+#if ORBBEC_SDK_VERSION_MAJOR != 1
+    alignFilter = std::make_shared<ob::Align>(OB_STREAM_COLOR);
+#endif
 
-    int color_width = params.get<double>(CAP_PROP_FRAME_WIDTH, OB_WIDTH_ANY);
-    int color_height = params.get<double>(CAP_PROP_FRAME_HEIGHT, OB_HEIGHT_ANY);
-    int color_fps = params.get<double>(CAP_PROP_FPS, OB_FPS_ANY);
+    int color_width = params.get<int>(CAP_PROP_FRAME_WIDTH, OB_WIDTH_ANY);
+    int color_height = params.get<int>(CAP_PROP_FRAME_HEIGHT, OB_HEIGHT_ANY);
+    int color_fps = params.get<int>(CAP_PROP_FPS, OB_FPS_ANY);
 
     auto colorProfiles = pipe->getStreamProfileList(OB_SENSOR_COLOR);
     if (color_width == OB_WIDTH_ANY && color_height == OB_HEIGHT_ANY && color_fps == OB_FPS_ANY)
@@ -57,9 +60,9 @@ VideoCapture_obsensor::VideoCapture_obsensor(int, const cv::VideoCaptureParamete
         config->enableStream(colorProfile->as<ob::VideoStreamProfile>());
     }
 
-    int depth_width = params.get<double>(CAP_PROP_OBSENSOR_DEPTH_WIDTH, OB_WIDTH_ANY);
-    int depth_height = params.get<double>(CAP_PROP_OBSENSOR_DEPTH_HEIGHT, OB_HEIGHT_ANY);
-    int depth_fps = params.get<double>(CAP_PROP_OBSENSOR_DEPTH_FPS, OB_FPS_ANY);
+    int depth_width = params.get<int>(CAP_PROP_OBSENSOR_DEPTH_WIDTH, OB_WIDTH_ANY);
+    int depth_height = params.get<int>(CAP_PROP_OBSENSOR_DEPTH_HEIGHT, OB_HEIGHT_ANY);
+    int depth_fps = params.get<int>(CAP_PROP_OBSENSOR_DEPTH_FPS, OB_FPS_ANY);
 
     auto depthProfiles = pipe->getStreamProfileList(OB_SENSOR_DEPTH);
     if (depth_width == OB_WIDTH_ANY && depth_height == OB_HEIGHT_ANY && depth_fps == OB_FPS_ANY)
@@ -75,12 +78,25 @@ VideoCapture_obsensor::VideoCapture_obsensor(int, const cv::VideoCaptureParamete
         config->enableStream(depthProfile->as<ob::VideoStreamProfile>());
     }
 
+#if ORBBEC_SDK_VERSION_MAJOR == 1
     config->setAlignMode(ALIGN_D2C_SW_MODE);
+#else
+    config->setFrameAggregateOutputMode(OB_FRAME_AGGREGATE_OUTPUT_ALL_TYPE_FRAME_REQUIRE);
+    pipe->enableFrameSync();
+#endif
 
     pipe->start(config, [&](std::shared_ptr<ob::FrameSet> frameset) {
         std::unique_lock<std::mutex> lk(videoFrameMutex);
+#if ORBBEC_SDK_VERSION_MAJOR == 1
         colorFrame = frameset->colorFrame();
         depthFrame = frameset->depthFrame();
+#else
+        auto alignFrameSet = alignFilter->process(frameset);
+        if (alignFrameSet) {
+            colorFrame = alignFrameSet->as<ob::FrameSet>()->colorFrame();
+            depthFrame = alignFrameSet->as<ob::FrameSet>()->depthFrame();
+        }
+#endif
     });
 
     auto param = pipe->getCameraParam();

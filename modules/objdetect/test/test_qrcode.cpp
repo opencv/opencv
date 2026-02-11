@@ -470,7 +470,7 @@ TEST(Objdetect_QRCode_basic, not_found_qrcode)
     QRCodeDetector qrcode;
     EXPECT_FALSE(qrcode.detect(zero_image, corners));
     corners = std::vector<Point>(4);
-    EXPECT_NO_THROW(qrcode.decode(zero_image, corners, straight_barcode));
+    EXPECT_ANY_THROW(qrcode.decode(zero_image, corners, straight_barcode));
 }
 
 TEST(Objdetect_QRCode_detect, detect_regression_21287)

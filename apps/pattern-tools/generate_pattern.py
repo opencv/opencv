@@ -207,12 +207,36 @@ class PatternMaker:
                     square = SVG("rect", x=x_pos+ch_ar_border, y=y_pos+ch_ar_border, width=self.aruco_marker_size,
                                              height=self.aruco_marker_size, fill="black", stroke="none")
                     self.g.append(square)
+
+                    # BUG: https://github.com/opencv/opencv/issues/27871
+                    # The loop bellow merges white squares horizontally and vertically to exclude visible grid on the final pattern
                     for x_ in range(len(img_mark[0])):
-                        for y_ in range(len(img_mark)):
-                            if (img_mark[y_][x_] != 0):
-                                square = SVG("rect", x=x_pos+ch_ar_border+(x_)*side, y=y_pos+ch_ar_border+(y_)*side, width=side,
-                                             height=side, fill="white", stroke="white", stroke_width = spacing*0.01)
-                                self.g.append(square)
+                        y_ = 0
+                        while y_ < len(img_mark):
+                            y_start = y_
+                            while y_ < len(img_mark) and img_mark[y_][x_] != 0:
+                                y_ += 1
+
+                            if y_ > y_start:
+                                rect = SVG("rect", x=x_pos+ch_ar_border+(x_)*side, y=y_pos+ch_ar_border+(y_start)*side, width=side,
+                                           height=(y_ - y_start)*side, fill="white", stroke="none")
+                                self.g.append(rect)
+
+                            y_ += 1
+
+                    for y_ in range(len(img_mark)):
+                        x_ = 0
+                        while x_ < len(img_mark[0]):
+                            x_start = x_
+                            while x_ < len(img_mark[0]) and img_mark[y_][x_] != 0:
+                                x_ += 1
+
+                            if x_ > x_start:
+                                rect = SVG("rect", x=x_pos+ch_ar_border+(x_start)*side, y=y_pos+ch_ar_border+(y_)*side, width=(x_-x_start)*side,
+                                           height=side, fill="white", stroke="none")
+                                self.g.append(rect)
+
+                            x_ += 1
 
     def save(self):
         c = canvas(self.g, width="%d%s" % (self.width, self.units), height="%d%s" % (self.height, self.units),

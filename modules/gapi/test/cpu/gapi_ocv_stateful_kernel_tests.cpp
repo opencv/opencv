@@ -103,8 +103,10 @@ namespace
     GAPI_OCV_KERNEL_ST(GOCVStInvalidResize, GStInvalidResize, int)
     {
         static void setup(const cv::GMatDesc, cv::Size, double, double, int,
-                          std::shared_ptr<int> &/* state */)
-        {  }
+                          std::shared_ptr<int> &state)
+        {
+            state = std::make_shared<int>();
+        }
 
         static void run(const cv::Mat& in, cv::Size sz, double fx, double fy, int interp,
                         cv::Mat &out, int& /* state */)
@@ -150,9 +152,10 @@ namespace
 
     GAPI_OCV_KERNEL_ST(GOCVCountStateSetups, GCountStateSetups, int)
     {
-        static void setup(const cv::GMatDesc &, std::shared_ptr<int> &,
+        static void setup(const cv::GMatDesc &, std::shared_ptr<int> &state,
                           const cv::GCompileArgs &compileArgs)
         {
+            state = std::make_shared<int>();
             auto params = cv::gapi::getCompileArg<CountStateSetupsParams>(compileArgs)
                 .value_or(CountStateSetupsParams { });
             if (params.pSetupsCount != nullptr) {
@@ -572,7 +575,7 @@ TEST(StatefulKernel, StateIsResetOnceOnReshapeInStreaming)
 
     run("cv/video/768x576.avi", 1);
     // FIXME: it should be 2, not 3 for expectedSetupsCount here.
-    // With current implemention both GCPUExecutable reshape() and
+    // With current implementation both GCPUExecutable reshape() and
     // handleNewStream() call setupKernelStates()
     run("cv/video/1920x1080.avi", 3);
 }

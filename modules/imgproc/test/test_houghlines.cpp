@@ -340,6 +340,69 @@ TEST(HoughLines, regression_21983)
     EXPECT_NEAR(lines[0][1], 1.57179642, 1e-4);
 }
 
+TEST(HoughLines, regression_25038_vertical)
+{
+    cv::Mat img = cv::Mat::zeros(8, 8, CV_8UC1);
+    img.col(3).setTo(255);
+
+    cv::Mat lines;
+    cv::HoughLines(img, lines, 0.5, CV_PI/4., 2);
+    EXPECT_EQ(1, lines.cols);
+    EXPECT_EQ(1, lines.rows);
+    EXPECT_EQ(2, lines.channels());
+    EXPECT_NEAR(3, lines.at<cv::Vec2f>(0)[0], 1e-5);
+    EXPECT_NEAR(0, lines.at<cv::Vec2f>(0)[1], 1e-5);
+
+    cv::HoughLines(img, lines, 0.05, CV_PI/4., 2);
+    EXPECT_EQ(1, lines.cols);
+    EXPECT_EQ(1, lines.rows);
+    EXPECT_EQ(2, lines.channels());
+    EXPECT_NEAR(3, lines.at<cv::Vec2f>(0)[0], 1e-5);
+    EXPECT_NEAR(0, lines.at<cv::Vec2f>(0)[1], 1e-5);
+}
+
+TEST(HoughLines, regression_25038_even)
+{
+    cv::Mat img = cv::Mat::zeros(8, 8, CV_8UC1);
+    img.col(4).setTo(255);
+
+    cv::Mat lines;
+    cv::HoughLines(img, lines, 0.5, CV_PI/4., 2);
+    EXPECT_EQ(1, lines.cols);
+    EXPECT_EQ(1, lines.rows);
+    EXPECT_EQ(2, lines.channels());
+    EXPECT_NEAR(4, lines.at<cv::Vec2f>(0)[0], 1e-5);
+    EXPECT_NEAR(0, lines.at<cv::Vec2f>(0)[1], 1e-5);
+
+    cv::HoughLines(img, lines, 0.05, CV_PI/4., 2);
+    EXPECT_EQ(1, lines.cols);
+    EXPECT_EQ(1, lines.rows);
+    EXPECT_EQ(2, lines.channels());
+    EXPECT_NEAR(4, lines.at<cv::Vec2f>(0)[0], 1e-5);
+    EXPECT_NEAR(0, lines.at<cv::Vec2f>(0)[1], 1e-5);
+}
+
+TEST(HoughLines, regression_25038_horizontal)
+{
+    cv::Mat img = cv::Mat::zeros(8, 8, CV_8UC1);
+    img.row(3).setTo(255);
+
+    cv::Mat lines;
+    cv::HoughLines(img, lines, 0.5, CV_PI/4., 2);
+    EXPECT_EQ(1, lines.cols);
+    EXPECT_EQ(1, lines.rows);
+    EXPECT_EQ(2, lines.channels());
+    EXPECT_NEAR(3, lines.at<cv::Vec2f>(0)[0], 1e-5);
+    EXPECT_NEAR(CV_PI/2., lines.at<cv::Vec2f>(0)[1], 1e-5);
+
+    cv::HoughLines(img, lines, 0.05, CV_PI/4., 2);
+    EXPECT_EQ(1, lines.cols);
+    EXPECT_EQ(1, lines.rows);
+    EXPECT_EQ(2, lines.channels());
+    EXPECT_NEAR(3, lines.at<cv::Vec2f>(0)[0], 1e-5);
+    EXPECT_NEAR(CV_PI/2., lines.at<cv::Vec2f>(0)[1], 1e-5);
+}
+
 TEST(WeightedHoughLines, horizontal)
 {
     Mat img(25, 25, CV_8UC1, Scalar(0));

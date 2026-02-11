@@ -232,7 +232,7 @@ public:
         log_img.release();
 
         float key = (log_max - log_mean) / (log_max - log_min);
-        float map_key = 0.3f + 0.7f * pow(key, 1.4f);
+        float map_key = 0.3f + 0.7f * std::pow(key, 1.4f);
         intensity = exp(-intensity);
         Scalar chan_mean = mean(img);
         float gray_mean = static_cast<float>(mean(gray_img)[0]);

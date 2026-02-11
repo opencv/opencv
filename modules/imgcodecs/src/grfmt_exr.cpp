@@ -151,9 +151,6 @@ bool  ExrDecoder::readHeader()
 
     m_file = new InputFile( m_filename.c_str() );
 
-    if( !m_file ) // probably paranoid
-        return false;
-
     m_datawindow = m_file->header().dataWindow();
     m_width = m_datawindow.max.x - m_datawindow.min.x + 1;
     m_height = m_datawindow.max.y - m_datawindow.min.y + 1;

@@ -46,6 +46,8 @@
 #include <atomic>
 #include <limits>
 #include <iostream>
+#include <algorithm>
+#include <cmath>
 #include "mathfuncs.hpp"
 
 namespace cv
@@ -1586,12 +1588,21 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
         a3 = coeffs.at<double>(i+3);
     }
 
-    if( a0 == 0 )
+    // Fix for Issue #27748: Normalize coefficients to avoid overflow/underflow
+    // and correctly detect negligible cubic terms.
+    double max_coeff = std::max({std::abs(a0), std::abs(a1), std::abs(a2), std::abs(a3)});
+
+    // If max_coeff is effectively zero, the equation is 0=0
+    if (max_coeff < std::numeric_limits<double>::epsilon())
+        return -1;
+
+    // Check if the cubic term is negligible relative to the largest coefficient
+    if( std::abs(a0) < std::numeric_limits<double>::epsilon() * max_coeff )
     {
-        if( a1 == 0 )
+        if( std::abs(a1) < std::numeric_limits<double>::epsilon() * max_coeff )
         {
-            if( a2 == 0 ) // constant
-                n = a3 == 0 ? -1 : 0;
+            if( std::abs(a2) < std::numeric_limits<double>::epsilon() * max_coeff )
+                n = std::abs(a3) < std::numeric_limits<double>::epsilon() * max_coeff ? -1 : 0;
             else
             {
                 // linear equation
@@ -1608,7 +1619,7 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
                 d = std::sqrt(d);
                 double q1 = (-a2 + d) * 0.5;
                 double q2 = (a2 + d) * -0.5;
-                if( fabs(q1) > fabs(q2) )
+                if( std::abs(q1) > std::abs(q2) )
                 {
                     x0 = q1 / a1;
                     x1 = a3 / q1;
@@ -1625,6 +1636,13 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
     else
     {
         // cubic equation
+        // Normalize coefficients in-place to prevent overflow/instability
+        double scale = 1.0 / max_coeff;
+        a0 *= scale;
+        a1 *= scale;
+        a2 *= scale;
+        a3 *= scale;
+
         a0 = 1./a0;
         a1 *= a0;
         a2 *= a0;
@@ -1633,6 +1651,7 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
         double Q = (a1 * a1 - 3 * a2) * (1./9);
         double R = (a1 * (2 * a1 * a1 - 9 * a2) + 27 * a3) * (1./54);
         double Qcubed = Q * Q * Q;
+
         /*
           Here we expand expression `Qcubed - R * R` for `d` variable
           to reduce common terms `a1^6 / 729` and `-a1^4 * a2 / 81`
@@ -1656,16 +1675,8 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
         }
         else if( d == 0 )
         {
-            if(R >= 0)
-            {
-                x0 = -2*pow(R, 1./3) - a1/3;
-                x1 = pow(R, 1./3) - a1/3;
-            }
-            else
-            {
-                x0 = 2*pow(-R, 1./3) - a1/3;
-                x1 = -pow(-R, 1./3) - a1/3;
-            }
+            x0 = -2*std::cbrt(R) - a1/3;
+            x1 = std::cbrt(R) - a1/3;
             x2 = 0;
             n = x0 == x1 ? 1 : 2;
             x1 = x0 == x1 ? 0 : x1;
@@ -1674,7 +1685,7 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
         {
             double e;
             d = sqrt(-d);
-            e = pow(d + fabs(R), 1./3);
+            e = std::cbrt(d + fabs(R));
             if( R > 0 )
                 e = -e;
             x0 = (e + Q / e) - a1 * (1./3);
@@ -1789,15 +1800,14 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
                 if( num_same_root % 2 != 0){
                     Mat cube_coefs(4, 1, CV_64FC1);
                     Mat cube_roots(3, 1, CV_64FC2);
-                    cube_coefs.at<double>(3) = -(pow(old_num_re, 3));
-                    cube_coefs.at<double>(2) = -(15*pow(old_num_re, 2) + 27*pow(old_num_im, 2));
+                    cube_coefs.at<double>(3) = -(std::pow(old_num_re, 3));
+                    cube_coefs.at<double>(2) = -(15*std::pow(old_num_re, 2) + 27*std::pow(old_num_im, 2));
                     cube_coefs.at<double>(1) = -48*old_num_re;
                     cube_coefs.at<double>(0) = 64;
                     solveCubic(cube_coefs, cube_roots);
 
-                    if(cube_roots.at<double>(0) >= 0) num.re = pow(cube_roots.at<double>(0), 1./3);
-                    else num.re = -pow(-cube_roots.at<double>(0), 1./3);
-                    num.im = sqrt(pow(num.re, 2) / 3 - old_num_re / (3*num.re));
+                    num.re = std::cbrt(cube_roots.at<double>(0));
+                    num.im = sqrt(std::pow(num.re, 2) / 3 - old_num_re / (3*num.re));
                 }
             }
             roots[i] = p - num;

@@ -553,7 +553,7 @@ void Mat::release()
     for(int i = 0; i < dims; i++)
         size.p[i] = 0;
 #ifdef _DEBUG
-    flags = MAGIC_VAL;
+    flags = (flags & CV_MAT_TYPE_MASK) | MAGIC_VAL;
     dims = rows = cols = 0;
     if(step.p != step.buf)
     {

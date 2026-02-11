@@ -626,7 +626,7 @@ void CV_CameraCalibrationTest::run( int start_from )
         if( code < 0 )
             break;
 
-        /* ----- Compare rot matrixs ----- */
+        /* ----- Compare rot matrices ----- */
         CV_Assert(rotMatrs.size() == (size_t)numImages);
         CV_Assert(transVects.size() == (size_t)numImages);
 
@@ -646,7 +646,7 @@ void CV_CameraCalibrationTest::run( int start_from )
         if( code < 0 )
             break;
 
-        /* ----- Compare rot matrixs ----- */
+        /* ----- Compare rot matrices ----- */
         code = compare(transVects[0].val, goodTransVects[0].val, 3*numImages, 0.1, "translation vectors");
         if( code < 0 )
             break;
