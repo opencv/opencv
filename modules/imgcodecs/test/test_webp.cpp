@@ -114,6 +114,35 @@ TEST(Imgcodecs_WebP, encode_decode_with_alpha_webp)
     EXPECT_EQ(512, img_webp_bgr.rows);
 }
 
+// See https://github.com/opencv/opencv/issues/28503
+TEST(Imgcodecs_WebP, encode_decode_LOSSLESS_MODE)
+{
+    cv::Mat img(cv::Size(64,4), CV_8UC4, cv::Scalar(124,64,67,0) );
+    for(int ix = 0; ix < img.size().width; ix++)
+    {
+        img.at<Vec4b>(0, ix)[3] = 0;   // Transpacency pixel
+        img.at<Vec4b>(1, ix)[3] = 1;
+        img.at<Vec4b>(2, ix)[3] = 254;
+        img.at<Vec4b>(3, ix)[3] = 255;
+    }
+
+    std::vector<uint8_t> work;
+    EXPECT_NO_THROW(cv::imencode(".webp", img, work, {IMWRITE_WEBP_LOSSLESS_MODE, IMWRITE_WEBP_LOSSLESS_ON}));
+    cv::Mat img_ON = cv::imdecode(work, IMREAD_UNCHANGED);
+    EXPECT_NO_THROW(cv::imencode(".webp", img, work, {IMWRITE_WEBP_LOSSLESS_MODE, IMWRITE_WEBP_LOSSLESS_PRESERVE_COLOR}));
+    cv::Mat img_PRESERVE_COLOR = cv::imdecode(work, IMREAD_UNCHANGED);
+
+    for(int ix = 0; ix < img.size().width; ix++)
+    {
+        EXPECT_EQ(img_ON.at<Vec4b>(0, ix),             Vec4b(0, 0, 0, 0));  // LOSSLESS_ON -> COLOR will be optimized/dropped.
+        EXPECT_EQ(img_PRESERVE_COLOR.at<Vec4b>(0, ix), Vec4b(124,64,67,0)); // PRESERVE_COLOR
+
+        EXPECT_EQ(img_ON.at<Vec4b>(1, ix), img_PRESERVE_COLOR.at<Vec4b>(1, ix) );
+        EXPECT_EQ(img_ON.at<Vec4b>(2, ix), img_PRESERVE_COLOR.at<Vec4b>(2, ix) );
+        EXPECT_EQ(img_ON.at<Vec4b>(3, ix), img_PRESERVE_COLOR.at<Vec4b>(3, ix) );
+    }
+}
+
 #endif // HAVE_WEBP
 
 }} // namespace
