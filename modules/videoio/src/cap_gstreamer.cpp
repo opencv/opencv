@@ -2512,19 +2512,20 @@ bool CvVideoWriter_GStreamer::open( const std::string &filename, int fourcc,
             CV_WARN("OpenCV backend does not support this file type (extension): " << filename);
             return false;
         }
-
-        //create pipeline elements
+        // 1. Initialize encodebin
         encodebin.reset(gst_element_factory_make("encodebin", NULL));
 
+                // 2. Declare profiles and caps
         GSafePtr<GstCaps> containercaps;
         GSafePtr<GstEncodingContainerProfile> containerprofile;
         GSafePtr<GstEncodingVideoProfile> videoprofile;
 
+        // 3. Setup container profile
         containercaps.attach(gst_caps_from_string(mime));
-
-        //create encodebin profile
         containerprofile.attach(gst_encoding_container_profile_new("container", "container", containercaps.get(), NULL));
-        videoprofile.reset(gst_encoding_video_profile_new(videocaps.get(), NULL, NULL, 1));
+        GSafePtr<GstCaps> prof_caps;
+        prof_caps.attach(gst_caps_from_string("video/x-raw, format=I420"));
+        videoprofile.reset(gst_encoding_video_profile_new(prof_caps.get(), NULL, NULL, 1));
         gst_encoding_container_profile_add_profile(containerprofile.get(), (GstEncodingProfile*)videoprofile.get());
 
         g_object_set(G_OBJECT(encodebin.get()), "profile", containerprofile.get(), NULL);
@@ -2709,21 +2710,22 @@ void CvVideoWriter_GStreamer::write(InputArray image)
 
     Mat imageMat = image.getMat();
     const size_t buf_size = imageMat.total() * imageMat.elemSize();
-    duration = ((double)1/framerate) * GST_SECOND;
-    timestamp = num_frames * duration;
+    duration = gst_util_uint64_scale_int(GST_SECOND, 1, framerate);
+    timestamp = gst_util_uint64_scale_int(num_frames, GST_SECOND, framerate);
 
     //gst_app_src_push_buffer takes ownership of the buffer, so we need to supply it a copy
     GstBuffer *buffer = gst_buffer_new_allocate(NULL, buf_size, NULL);
     GstMapInfo info;
-    gst_buffer_map(buffer, &info, (GstMapFlags)GST_MAP_READ);
-    memcpy(info.data, (guint8*)imageMat.data, buf_size);
-    gst_buffer_unmap(buffer, &info);
+    if (gst_buffer_map(buffer, &info, (GstMapFlags)GST_MAP_WRITE)) {
+        memcpy(info.data, (guint8*)imageMat.data, buf_size);
+        gst_buffer_unmap(buffer, &info);
+    }
     GST_BUFFER_DURATION(buffer) = duration;
     GST_BUFFER_PTS(buffer) = timestamp;
     GST_BUFFER_DTS(buffer) = timestamp;
     //set the current number in the frame
     GST_BUFFER_OFFSET(buffer) = num_frames;
-
+    GST_BUFFER_OFFSET_END(buffer) = num_frames + 1;
     ret = gst_app_src_push_buffer(GST_APP_SRC(source.get()), buffer);
     if (ret != GST_FLOW_OK)
     {
