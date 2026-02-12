@@ -50,19 +50,46 @@ endif()
 
 #=================================
 # Versions check.
+# Updated to support FFmpeg 4.x, 5.x, and 6.x (Ubuntu 22.04, 24.04 compatibility)
 if(HAVE_FFMPEG AND NOT HAVE_FFMPEG_WRAPPER)
+  # Set minimum supported versions (FFmpeg 1.x/libav 9.x)
   set(_min_libavcodec_version 54.35.0)
   set(_min_libavformat_version 54.20.4)
   set(_min_libavutil_version 52.3.0)
   set(_min_libswscale_version 2.1.1)
   set(_min_libavdevice_version 53.2.0)
+  
+  # Set maximum tested versions (FFmpeg 6.x)
+  # This is informational only - we'll warn but not fail for newer versions
+  set(_max_libavcodec_version 61.99.99)
+  set(_max_libavformat_version 60.99.99)
+  set(_max_libavutil_version 58.99.99)
+  set(_max_libswscale_version 7.99.99)
+  
   foreach(ffmpeg_lib ${_used_ffmpeg_libraries})
+    # Check minimum version
     if(FFMPEG_${ffmpeg_lib}_VERSION VERSION_LESS _min_${ffmpeg_lib}_version)
       message(STATUS "FFMPEG is disabled. Can't find suitable ${ffmpeg_lib} library"
               " (minimal ${_min_${ffmpeg_lib}_version}, found ${FFMPEG_${ffmpeg_lib}_VERSION}).")
       set(HAVE_FFMPEG FALSE)
+    # Check maximum version (warning only, not fatal)
+    elseif(DEFINED _max_${ffmpeg_lib}_version AND 
+           FFMPEG_${ffmpeg_lib}_VERSION VERSION_GREATER _max_${ffmpeg_lib}_version)
+      message(WARNING "FFMPEG library ${ffmpeg_lib} version ${FFMPEG_${ffmpeg_lib}_VERSION} "
+              "is newer than tested version ${_max_${ffmpeg_lib}_version}. "
+              "OpenCV may not work correctly. Please report issues to OpenCV GitHub.")
     endif()
   endforeach()
+  
+  # Log detected FFmpeg version for debugging
+  if(HAVE_FFMPEG)
+    message(STATUS "FFMPEG version info:")
+    message(STATUS "  libavcodec: ${FFMPEG_libavcodec_VERSION}")
+    message(STATUS "  libavformat: ${FFMPEG_libavformat_VERSION}")
+    message(STATUS "  libavutil: ${FFMPEG_libavutil_VERSION}")
+    message(STATUS "  libswscale: ${FFMPEG_libswscale_VERSION}")
+  endif()
+  
   if(NOT HAVE_FFMPEG)
     message(STATUS "FFMPEG libraries version check failed "
             "(minimal libav release 9.20, minimal FFMPEG release 1.1.16).")
@@ -72,6 +99,10 @@ if(HAVE_FFMPEG AND NOT HAVE_FFMPEG_WRAPPER)
   unset(_min_libavutil_version)
   unset(_min_libswscale_version)
   unset(_min_libavdevice_version)
+  unset(_max_libavcodec_version)
+  unset(_max_libavformat_version)
+  unset(_max_libavutil_version)
+  unset(_max_libswscale_version)
 endif()
 
 #==================================
