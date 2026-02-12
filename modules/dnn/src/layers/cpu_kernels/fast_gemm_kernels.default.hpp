@@ -511,6 +511,7 @@ void pagedAttnQKGemmKernel(
 
         size_t start = r.start;
         size_t end = r.end;
+        size_t ldq0 = isQ3d ? Nq * D : D;
 
         for (size_t tile_idx = start; tile_idx < end; tile_idx++) {
             size_t idx = tile_idx / tiles_per_mat;
@@ -527,12 +528,15 @@ void pagedAttnQKGemmKernel(
             size_t mc = T_q - i0 < MC ? T_q - i0 : MC;
             size_t nc = T_s - j0 < NC ? T_s - j0 : NC;
 
-            const int q_offset = D * (i0 + T_q * (b * Nq + nq));
+            size_t q_offset = b * Nq * T_q * D              +
+                              (isQ3d ? nq * D : nq * T_q * D);
             const char *q_block = Q + q_offset * esz;
 
-            const int k_offset = b * N_k * T_s * D + n_k * T_s * D + j0 * D;
+            size_t k_offset = b * N_k * T_s * D +
+                              n_k * T_s * D     +
+                              j0 * D;
             const char *k_block = (const char *)K[s] + k_offset * esz;
-
+            
             // save result to A[b, n_q, : , T_s * s : T_s * (s + 1)]
             const int a_offset = b * Nq * T_q * T +
                                  nq * T_q * T     +
@@ -546,8 +550,8 @@ void pagedAttnQKGemmKernel(
             {
                 int kc = D - k0 < KC ? D - k0 : KC;
                 // pack q
-                size_t step_q =  (i0 * D + k0) * esz;
-                fast_gemm_pack8_f32(mc, kc, q_block + step_q, D, 1, packed_q);
+                size_t step_q = (i0 * ldq0 + k0) * esz;
+                fast_gemm_pack8_f32(mc, kc, q_block + step_q, ldq0, 1, packed_q);
                 // run kernel
                 fast_gemm_macro_kernel(mc, nc, kc, packed_q, k_block, 1.f, a_block, T, esz);
                 k_block += _nc * kc;

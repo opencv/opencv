@@ -968,7 +968,7 @@ void pagedAttnQKGemmKernel(
 
         size_t start = r.start;
         size_t end = r.end;
-        size_t ldq0 = isQ3d ? D : Nq * D;
+        size_t ldq0 = isQ3d ? Nq * D : D;
 
         for (size_t tile_idx = start; tile_idx < end; tile_idx++) {
             size_t idx = tile_idx / tiles_per_mat;
@@ -1006,7 +1006,7 @@ void pagedAttnQKGemmKernel(
             {
                 int kc = D - k0 < KC ? D - k0 : KC;
                 // pack q
-                size_t step_q = isQ3d ? (i0 * D + k0) * esz : (i0 * D + k0) * esz;
+                size_t step_q = (i0 * ldq0 + k0) * esz;
 #if CV_NEON && CV_NEON_AARCH64
                 fast_gemm_pack8_f32(mc, kc, q_block + step_q, ldq0, 1, packed_q);
 #elif CV_AVX
@@ -1020,8 +1020,6 @@ void pagedAttnQKGemmKernel(
                 fast_gemm_macro_kernel(mc, nc, kc, packed_q, k_block, 1.f, a_block, T, esz);
                 k_block += _nc * kc;
             }
-
-            q_offset += T_q * D;
         }
 
         if (!use_stackbuff) {
