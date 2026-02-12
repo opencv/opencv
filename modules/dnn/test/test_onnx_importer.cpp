@@ -3465,8 +3465,7 @@ TEST_P(Test_ONNX_layers, TopK) {
     test("top_k_smallest");
 }
 
-// BUG: https://github.com/opencv/opencv/issues/28532
-TEST_P(Test_ONNX_layers, DISABLED_RandomNormalLike_basic)
+TEST_P(Test_ONNX_layers, RandomNormalLike_basic)
 {
     Net net = readNetFromONNX(findDataFile("dnn/onnx/models/random_normal_like.onnx", true));
 
@@ -3488,8 +3487,7 @@ TEST_P(Test_ONNX_layers, DISABLED_RandomNormalLike_basic)
     EXPECT_EQ(countNonZero(out != out2), 0);
 }
 
-// BUG: https://github.com/opencv/opencv/issues/28532
-TEST_P(Test_ONNX_layers, DISABLED_RandomNormalLike_complex)
+TEST_P(Test_ONNX_layers, RandomNormalLike_complex)
 {
     Net net = readNetFromONNX(findDataFile("dnn/onnx/models/random_normal_like_complex.onnx", true));
 
