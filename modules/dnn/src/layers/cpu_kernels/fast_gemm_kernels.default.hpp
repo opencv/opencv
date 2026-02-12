@@ -482,7 +482,7 @@ void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_
 void pagedAttnQKGemmKernel(
     const char *Q, const std::vector<const char *> &K, char *A,
     size_t B, size_t T_q, size_t Nq, size_t N_k, size_t T_s, size_t D,
-    size_t esz
+    size_t esz, bool isQ3d
 ) {
     size_t GEMM_MC = static_cast<size_t>(FAST_GEMM_F32_MC),
         GEMM_NC = static_cast<size_t>(FAST_GEMM_F32_NC),

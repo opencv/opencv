@@ -190,6 +190,14 @@ CV_EXPORTS void pagedAttnQKGemm(
     size_t esz, FastGemmOpt &opts
 );
 
+// void pagedAttnAVGemmKernel(
+//     const Mat& A,
+//     const std::vector<const Mat> &K, const std::vector<size_t> &K_offsets,
+//     Mat& Out, const std::vector<size_t> &Out_offsets,
+//     int B, size_t T_q, size_t Nq, size_t T_s, size_t D,
+//     size_t esz
+// );
+
 }} // cv::dnn
 
 #endif // OPENCV_DNN_FAST_GEMM_HPP

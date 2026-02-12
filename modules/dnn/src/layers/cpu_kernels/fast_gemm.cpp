@@ -522,13 +522,13 @@ void pagedAttnQKGemm(
     }
 
     char*a = A.ptr<char>();
-
-    #if CV_TRY_NEON
+    bool isQ3D = shape_q.size() == 3;
+#if CV_TRY_NEON
     if (opt.use_neon)
         opt_NEON::pagedAttnQKGemmKernel(
             Q.ptr<const char>(), packed_K, a,
             B, T_q, Nq, N_k, T_s, D,
-            esz
+            esz, isQ3D
         );
     else
 #endif
@@ -537,7 +537,7 @@ void pagedAttnQKGemm(
         opt_AVX2::pagedAttnQKGemmKernel(
             Q.ptr<const char>(), packed_K, a,
             B, T_q, Nq, N_k, T_s, D,
-            esz
+            esz, isQ3D
         );
 #endif
 #if CV_TRY_AVX
@@ -545,7 +545,7 @@ void pagedAttnQKGemm(
         opt_AVX::pagedAttnQKGemmKernel(
             Q.ptr<const char>(), packed_K, a,
             B, T_q, Nq, N_k, T_s, D,
-            esz
+            esz, isQ3D
         );
 #endif
 #if CV_TRY_LASX
@@ -553,14 +553,14 @@ void pagedAttnQKGemm(
         opt_LASX::pagedAttnQKGemmKernel(
             Q.ptr<const char>(), packed_K, a,
             B, T_q, Nq, N_k, T_s, D,
-            esz
+            esz, isQ3D
         );
     else
 #endif
     cpu_baseline::pagedAttnQKGemmKernel(
         Q.ptr<const char>(), packed_K, a,
         B, T_q, Nq, N_k, T_s, D,
-        esz
+        esz, isQ3D
     );
 
 

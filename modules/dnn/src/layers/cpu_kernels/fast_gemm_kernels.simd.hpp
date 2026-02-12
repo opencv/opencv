@@ -140,7 +140,7 @@ void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_
 void pagedAttnQKGemmKernel(
     const char *Q, const std::vector<const char *> &K, char *A,
     size_t B, size_t T_q, size_t Nq, size_t N_k, size_t T_s, size_t D,
-    size_t esz
+    size_t esz, bool isQ3d
 );
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
@@ -939,7 +939,7 @@ void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_
 void pagedAttnQKGemmKernel(
     const char *Q, const std::vector<const char *> &K, char *A,
     size_t B, size_t T_q, size_t Nq, size_t N_k, size_t T_s, size_t D,
-    size_t esz
+    size_t esz, bool isQ3d
 ) {
     size_t GEMM_MC = static_cast<size_t>(FAST_GEMM_F32_MC),
         GEMM_NC = static_cast<size_t>(FAST_GEMM_F32_NC),
@@ -968,6 +968,7 @@ void pagedAttnQKGemmKernel(
 
         size_t start = r.start;
         size_t end = r.end;
+        size_t ldq0 = isQ3d ? D : Nq * D;
 
         for (size_t tile_idx = start; tile_idx < end; tile_idx++) {
             size_t idx = tile_idx / tiles_per_mat;
@@ -984,11 +985,13 @@ void pagedAttnQKGemmKernel(
             size_t mc = T_q - i0 < MC ? T_q - i0 : MC;
             size_t nc = T_s - j0 < NC ? T_s - j0 : NC;
 
-
-            size_t q_offset = D * (i0 + T_q * (b * Nq + nq));
+            size_t q_offset = b * Nq * T_q * D              +
+                              (isQ3d ? nq * D : nq * T_q * D);
             const char *q_block = Q + q_offset * esz;
 
-            size_t k_offset = b * N_k * T_s * D + n_k * T_s * D + j0 * D;
+            size_t k_offset = b * N_k * T_s * D +
+                              n_k * T_s * D     +
+                              j0 * D;
             const char *k_block = (const char *)K[s] + k_offset * esz;
 
             // save result to A[b, n_q, : , T_s * s : T_s * (s + 1)]
@@ -1003,16 +1006,15 @@ void pagedAttnQKGemmKernel(
             {
                 int kc = D - k0 < KC ? D - k0 : KC;
                 // pack q
-                size_t step_q =  (i0 * D + k0) * esz;
-                fast_gemm_pack8_f32(mc, kc, q_block + step_q, D, 1, packed_q);
+                size_t step_q = isQ3d ? (i0 * D + k0) * esz : (i0 * D + k0) * esz;
 #if CV_NEON && CV_NEON_AARCH64
-                fast_gemm_pack8_f32(mc, kc, q_block + step_q, D, 1, packed_q);
+                fast_gemm_pack8_f32(mc, kc, q_block + step_q, ldq0, 1, packed_q);
 #elif CV_AVX
-                fast_gemm_pack12_f32(mc, kc, q_block + step_q, D, 1, packed_q);
+                fast_gemm_pack12_f32(mc, kc, q_block + step_q, ldq0, 1, packed_q);
 #elif CV_LASX
-                fast_gemm_pack12_f32(mc, kc, q_block + step_q, D, 1, packed_q);
+                fast_gemm_pack12_f32(mc, kc, q_block + step_q, ldq0, 1, packed_q);
 #elif CV_SIMD128
-                fast_gemm_pack8_f32(mc, kc, q_block + step_q, D, 1, packed_q);
+                fast_gemm_pack8_f32(mc, kc, q_block + step_q, ldq0, 1, packed_q);
 #endif
                 // run kernel
                 fast_gemm_macro_kernel(mc, nc, kc, packed_q, k_block, 1.f, a_block, T, esz);
