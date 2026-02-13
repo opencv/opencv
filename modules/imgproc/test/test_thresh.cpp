@@ -706,4 +706,46 @@ TEST(Imgproc_AdaptiveThreshold, gauss_inv)
     EXPECT_EQ(0, cv::norm(result, gt, NORM_INF));
 }
 
+TEST(Imgproc_AdaptiveThreshold, invalid_even_blocksize)
+{
+    Mat src = Mat::zeros(5, 5, CV_8UC1);
+    Mat dst;
+
+    EXPECT_THROW(
+        cv::adaptiveThreshold(src, dst, 255,
+                              ADAPTIVE_THRESH_MEAN_C,
+                              THRESH_BINARY,
+                              10,  // even block size
+                              5),
+        cv::Exception);
+}
+
+TEST(Imgproc_AdaptiveThreshold, invalid_small_blocksize)
+{
+    Mat src = Mat::zeros(5, 5, CV_8UC1);
+    Mat dst;
+
+    EXPECT_THROW(
+        cv::adaptiveThreshold(src, dst, 255,
+                              ADAPTIVE_THRESH_MEAN_C,
+                              THRESH_BINARY,
+                              1,   // invalid
+                              5),
+        cv::Exception);
+}
+
+TEST(Imgproc_AdaptiveThreshold, invalid_multichannel_input)
+{
+    Mat src = Mat::zeros(5, 5, CV_8UC3);
+    Mat dst;
+
+    EXPECT_THROW(
+        cv::adaptiveThreshold(src, dst, 255,
+                              ADAPTIVE_THRESH_MEAN_C,
+                              THRESH_BINARY,
+                              3,
+                              5),
+        cv::Exception);
+}
+
 }} // namespace
