@@ -214,7 +214,7 @@ public:
 
     This function is used to ensure that all tensors in the model have names.
     It goes through all input and output nodes of the model and sets the names
-    if they are not set. This is neccessary for models with nameless tensors.
+    if they are not set. This is necessary for models with nameless tensors.
 
     If a tensor does not have a name, it will be assigned a default name
     based on the producer node's friendly name. If the producer node has multiple
