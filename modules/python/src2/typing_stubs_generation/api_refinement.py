@@ -8,7 +8,7 @@ from .nodes import (NamespaceNode, FunctionNode, OptionalTypeNode, TypeNode,
                     ClassProperty, PrimitiveTypeNode, ASTNodeTypeNode,
                     AggregatedTypeNode, CallableTypeNode, AnyTypeNode,
                     TupleTypeNode, UnionTypeNode, ProtocolClassNode,
-                    DictTypeNode, ClassTypeNode)
+                    DictTypeNode, ClassTypeNode, AliasRefTypeNode)
 from .ast_utils import (find_function_node, SymbolName,
                         for_each_function_overload)
 from .types_conversion import create_type_node
@@ -378,16 +378,16 @@ def _find_argument_index(arguments: Sequence[FunctionNode.Arg],
 
 def make_matlike_or_scalar_arg(*arg_names: str) -> Callable[[NamespaceNode, SymbolName], None]:
     """Make arguments accept both MatLike and Scalar types.
-    
+
     This is used for functions like inRange where the C++ InputArray parameter
     can accept both Mat objects and Scalar values (tuples, floats, etc.).
-    
+
     Example: cv2.inRange(img, (0, 0, 0), (255, 255, 255)) should be valid.
     """
     def _make_matlike_or_scalar_arg(root_node: NamespaceNode,
                                      function_symbol_name: SymbolName) -> None:
         from .predefined_types import PREDEFINED_TYPES
-        
+
         function = find_function_node(root_node, function_symbol_name)
         for arg_name in arg_names:
             found_overload_with_arg = False
@@ -400,7 +400,7 @@ def make_matlike_or_scalar_arg(*arg_names: str) -> Callable[[NamespaceNode, Symb
                     continue
 
                 current_type = overload.arguments[arg_idx].type_node
-                
+
                 # Check if it's already a union or if it already includes Scalar
                 if isinstance(current_type, UnionTypeNode):
                     # Check if Scalar is already in the union
