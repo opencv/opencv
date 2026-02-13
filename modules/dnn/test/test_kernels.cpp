@@ -111,7 +111,7 @@ TEST(DNN_Kernels_FastGemm, pagedAttnQKGemm_Q3D)
 
         std::vector<float> packed;
         fastGemmPackB(K_page, packed, false, opt);
-        Mat packedK({B, Nk, D, T_s}, CV_32F);
+        Mat packedK({B, Nk, D * T_s}, CV_32F);
         std::memcpy(packedK.data, packed.data(), packed.size() * sizeof(float));
 
         K_pages.push_back(packedK);
