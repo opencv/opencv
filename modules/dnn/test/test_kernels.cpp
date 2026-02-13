@@ -16,7 +16,7 @@ TEST(DNN_Kernels_FastGemm, pagedAttnQKGemm_Q4D)
     opt.init();
     const int S = 8; // 8 pages
     const int B = 1;
-    const int D = 16;
+    const int D = 256;
     // Q : B x Nq x T_q x D
     const int T_q = 1, // 4
               Nq = 8;
@@ -37,7 +37,7 @@ TEST(DNN_Kernels_FastGemm, pagedAttnQKGemm_Q4D)
 
         std::vector<float> packed;
         fastGemmPackB(K_page, packed, false, opt);
-        Mat packedK({B, Nk, D, T_s}, CV_32F);
+        Mat packedK({B, Nk, D * T_s}, CV_32F);
         std::memcpy(packedK.data, packed.data(), packed.size() * sizeof(float));
 
         K_pages.push_back(packedK);

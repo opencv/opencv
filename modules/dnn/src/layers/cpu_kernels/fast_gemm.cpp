@@ -508,12 +508,12 @@ void pagedAttnQKGemm(
     for (size_t s = 0; s < K.size(); s++) {
         const auto shape_k = shape(K[s]);
         CV_CheckTrue(
-            shape_k.size() == 4,
+            shape_k.size() == 3,
             "pagedAttnQKGemmKernel: each K must be 4D (B x N_k x T_s x D)"
         );
         CV_CheckEQ(shape_k[0], B, "pagedAttnQKGemmKernel: the batch size of K should be the same as A");
         CV_CheckEQ(shape_k[1], N_k, "pagedAttnQKGemmKernel: the number of heads in K should match that of Q");
-        CV_CheckEQ(shape_k[2], D, "pagedAttnQKGemmKernel: the head dimension of K should match that of Q and A");
+        CV_CheckEQ(shape_k[2], D * T_s, "pagedAttnQKGemmKernel: the head dimension of K should match that of Q and A");
     }
 
     std::vector<const char*> packed_K;
@@ -539,6 +539,7 @@ void pagedAttnQKGemm(
             B, T_q, Nq, N_k, T_s, D,
             esz, isQ3D
         );
+    else
 #endif
 #if CV_TRY_AVX
     if (opt.use_avx)
@@ -547,6 +548,7 @@ void pagedAttnQKGemm(
             B, T_q, Nq, N_k, T_s, D,
             esz, isQ3D
         );
+    else
 #endif
 #if CV_TRY_LASX
     if (opt.use_lasx)
