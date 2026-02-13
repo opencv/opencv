@@ -536,7 +536,7 @@ void pagedAttnQKGemmKernel(
                               n_k * T_s * D     +
                               j0 * D;
             const char *k_block = (const char *)K[s] + k_offset * esz;
-            
+
             // save result to A[b, n_q, : , T_s * s : T_s * (s + 1)]
             const int a_offset = b * Nq * T_q * T +
                                  nq * T_q * T     +
