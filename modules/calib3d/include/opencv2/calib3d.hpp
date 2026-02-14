@@ -4148,7 +4148,7 @@ namespace fisheye
 
     This function performs undistortion for fisheye camera models, which use a different distortion model
     compared to the standard pinhole camera model used by #undistortPoints. The fisheye model is suitable
-    for cameras with a field of view (FOV) greater than approximately 180 degrees.
+    for wide-angle cameras.
 
     The function transforms points from the distorted fisheye image to undistorted coordinates, optionally
     applying a rectification transformation (R) and projecting to a new image plane (P).
@@ -4163,7 +4163,7 @@ namespace fisheye
         which are dimensionless coordinates in the camera's focal plane, independent of intrinsic parameters.
 
     @note **Fisheye vs. Standard Model:**
-    Use this function (#fisheye::undistortPoints) for fisheye cameras (wide-angle lenses with FOV > 180°).
+    Use this function (#fisheye::undistortPoints) for fisheye cameras (wide-angle lenses).
     For standard pinhole cameras, use #undistortPoints instead. The fisheye model uses a different distortion
     parameterization (4 coefficients) compared to the standard model (4-14 coefficients).
 
