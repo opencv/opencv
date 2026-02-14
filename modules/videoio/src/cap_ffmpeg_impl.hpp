@@ -2119,6 +2119,30 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
         unsigned int fourcc_tag = avcodec_pix_fmt_to_codec_tag(pix_fmt);
         return (fourcc_tag == 0) ? (double)-1 : (double)fourcc_tag;
     }
+    case CAP_PROP_CODEC_COLOR_RANGE:
+    {
+#ifdef CV_FFMPEG_CODECPAR
+        return video_st->codecpar->color_range;
+#else
+        return video_st->codec->color_range;
+#endif
+    }
+    case CAP_PROP_CODEC_COLOR_PRIMARIES:
+    {
+#ifdef CV_FFMPEG_CODECPAR
+        return video_st->codecpar->color_primaries;
+#else
+        return video_st->codec->color_primaries;
+#endif
+    }
+    case CAP_PROP_CODEC_COLOR_TRANSFER:
+    {
+#ifdef CV_FFMPEG_CODECPAR
+        return video_st->codecpar->color_trc;
+#else
+        return video_st->codec->color_trc;
+#endif
+    }
     case CAP_PROP_FORMAT:
         if (rawMode)
             return -1;
