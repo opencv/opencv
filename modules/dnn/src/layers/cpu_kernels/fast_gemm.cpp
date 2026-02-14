@@ -72,6 +72,32 @@ int fastGemmNC(FastGemmOpt &opt) {
     }
 }
 
+int fastGemmKC(FastGemmOpt &opt) {
+#if CV_TRY_NEON
+    if (opt.use_neon) {
+        return opt_NEON::fastGemmKC();
+    } else
+#endif
+#if CV_TRY_AVX2
+    if (opt.use_avx2) {
+        return opt_AVX2::fastGemmKC();
+    } else
+#endif
+#if CV_TRY_AVX
+    if (opt.use_avx) {
+        return opt_AVX::fastGemmKC();
+    } else
+#endif
+#if CV_TRY_LASX
+    if (opt.use_lasx) {
+        return opt_LASX::fastGemmKC();
+    } else
+#endif
+    {
+        return cpu_baseline::fastGemmKC();
+    }
+}
+
 size_t fastGemmPackBSize(size_t N, size_t K, const FastGemmOpt &opt) {
 #if CV_TRY_NEON
     if (opt.use_neon) {
@@ -486,7 +512,6 @@ void fastGemmBatch(size_t batch,
 }
 
 
-
 void pagedAttnQKGemm(
     const Mat& Q,const std::vector<Mat> &K, Mat& A,
     int T_q, int Nq, int N_k, int T_s, int D,
@@ -495,6 +520,11 @@ void pagedAttnQKGemm(
     for (size_t s = 0; s < K.size(); s++)
         CV_CheckTypeEQ(Q.type(), K[s].type(), "pagedAttnQKGemmKernel: Q and K should have the same type");
     CV_CheckTypeEQ(Q.type(), A.type(), "pagedAttnQKGemmKernel: Q and A should have the same type");
+
+    CV_CheckTrue(
+        T_s % fastGemmNC(opt) == 0,
+        "pagedAttnQKGemmKernel: T_s should be divisible by the macro tile size"
+    );
 
     const auto shape_q = shape(Q);
     CV_CheckTrue(
@@ -568,5 +598,89 @@ void pagedAttnQKGemm(
 
 }
 
+
+void pagedAttnAVGemm(
+    const Mat& A,const std::vector<Mat> &V, Mat& Out,
+    int T_q, int Nq, int N_k, int T_s, int D,
+    size_t esz, FastGemmOpt &opt
+) {
+    for (size_t s = 0; s < V.size(); s++)
+        CV_CheckTypeEQ(A.type(), V[s].type(), "pagedAttnAVGemmKernel: A and V should have the same type");
+    CV_CheckTypeEQ(A.type(), Out.type(), "pagedAttnAVGemmKernel: A and Out should have the same type");
+
+    CV_CheckTrue(
+        T_s % fastGemmKC(opt) == 0,
+        "pagedAttnAVGemmKernel: T_s should be divisible by the macro tile size"
+    );
+
+    const auto shape_a = shape(A);
+    CV_CheckTrue(
+        shape_a.size() == 4,
+        "pagedAttnAVGemmKernel: A must be 4D (B x n_q x T_q x D)"
+    );
+
+    const int B = shape_a[0];
+    for (size_t s = 0; s < V.size(); s++) {
+        const auto shape_v = shape(V[s]);
+        CV_CheckTrue(
+            shape_v.size() == 3,
+            "pagedAttnAVGemmKernel: each V must be 3D (B x N_k x (T_s * D))"
+        );
+        CV_CheckEQ(shape_v[0], B, "pagedAttnAVGemmKernel: the batch size of V should be the same as A");
+        CV_CheckEQ(shape_v[1], N_k, "pagedAttnAVGemmKernel: the number of heads in V should match that of A");
+        CV_CheckEQ(shape_v[2], (int)fastGemmPackBSize(D, T_s, opt),
+                    "pagedAttnAVGemmKernel: the last dimension of V-pages should be be equal to packed D x T_s Mat size");
+    }
+
+    std::vector<const char*> packed_V;
+    for (size_t s = 0; s < V.size(); s++){
+        packed_V.push_back(V[s].ptr<const char>());
+    }
+
+    bool canonical_layout = shape(Out).size() == 3;
+#if CV_TRY_NEON
+    if (opt.use_neon)
+        opt_NEON::pagedAttnAVGemmKernel(
+            A.ptr<const char>(), packed_V, Out.ptr<char>(),
+            B, T_q, Nq, N_k, T_s, D,
+            esz, canonical_layout
+        );
+    else
+#endif
+#if CV_TRY_AVX2
+    if (opt.use_avx2)
+        opt_AVX2::pagedAttnAVGemmKernel(
+            A.ptr<const char>(), packed_V, Out.ptr<char>(),
+            B, T_q, Nq, N_k, T_s, D,
+            esz, canonical_layout
+        );
+    else
+#endif
+#if CV_TRY_AVX
+    if (opt.use_avx)
+        opt_AVX::pagedAttnAVGemmKernel(
+            A.ptr<const char>(), packed_V, Out.ptr<char>(),
+            B, T_q, Nq, N_k, T_s, D,
+            esz, canonical_layout
+        );
+    else
+#endif
+#if CV_TRY_LASX
+    if (opt.use_lasx)
+        opt_LASX::pagedAttnAVGemmKernel(
+            A.ptr<const char>(), packed_V, Out.ptr<char>(),
+            B, T_q, Nq, N_k, T_s, D,
+            esz, canonical_layout
+        );
+    else
+#endif
+    cpu_baseline::pagedAttnAVGemmKernel(
+            A.ptr<const char>(), packed_V, Out.ptr<char>(),
+            B, T_q, Nq, N_k, T_s, D,
+            esz, canonical_layout
+        );
+
+
+}
 
 }} // cv::dnn

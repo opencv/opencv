@@ -119,6 +119,7 @@ size_t fastGemmPackBSize(int N, int K);
 
 int fastGemmMC();
 int fastGemmNC();
+int fastGemmKC();
 
 void fastGemmPackBKernel(const char *B, char *packed_B, size_t N, size_t K, size_t ldb0, size_t ldb1, size_t esz);
 
@@ -141,6 +142,12 @@ void pagedAttnQKGemmKernel(
     const char *Q, const std::vector<const char *> &K, char *A,
     size_t B, size_t T_q, size_t Nq, size_t N_k, size_t T_s, size_t D,
     size_t esz, bool isQ3d
+);
+
+void pagedAttnAVGemmKernel(
+    const char* A, const std::vector<const char *> &K, char*Out,
+    size_t B, size_t T_a, size_t Nq, size_t N_k, size_t T_s, size_t D,
+    size_t esz, bool canonical_layout
 );
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
@@ -549,6 +556,7 @@ size_t fastGemmPackBSize(int N, int K) {
 
 int fastGemmMC() {return FAST_GEMM_F32_MC;}
 int fastGemmNC() {return FAST_GEMM_F32_NC;}
+int fastGemmKC() {return FAST_GEMM_F32_PACKED_STRIDE_K;}
 
 void fastGemmPackBKernel(const char *B, char *packed_B, size_t N, size_t K, size_t ldb0, size_t ldb1, size_t esz) {
     size_t GEMM_NC = FAST_GEMM_F32_NC, GEMM_NR = FAST_GEMM_F32_NR;
@@ -1040,79 +1048,97 @@ void pagedAttnQKGemmKernel(
 // pages in K are always of shape [B, N_kv, T_s, D]
 // tot. seq len T = T_s * S
 void pagedAttnAVGemmKernel(
-    const char* A,
-    const std::vector<const char *> &K, const std::vector<size_t> &K_offsets,
-    char*Out, const std::vector<size_t> &Out_offsets,
-    size_t B, size_t T_q, size_t Nq, size_t T_s, size_t D,
-    size_t esz
+    const char* A, const std::vector<const char *> &V, char*Out,
+    size_t B, size_t T_a, size_t Nq, size_t N_k, size_t T_s, size_t D,
+    size_t esz, bool canonical_layout
 ) {
     size_t GEMM_MC = static_cast<size_t>(FAST_GEMM_F32_MC),
         GEMM_NC = static_cast<size_t>(FAST_GEMM_F32_NC),
         GEMM_MR = static_cast<size_t>(FAST_GEMM_F32_MR),
         GEMM_NR = static_cast<size_t>(FAST_GEMM_F32_NR);
 
-    const size_t S = K.size();
+    const size_t S = V.size();
     const size_t T = S * T_s;
-    size_t batch = Out_offsets.size();
 
-    size_t MC = (((GEMM_MC < T_q ? GEMM_MC : T_q) + GEMM_MR - 1) / GEMM_MR) * GEMM_MR;
+    size_t MC = (((GEMM_MC < T_a ? GEMM_MC : T_a) + GEMM_MR - 1) / GEMM_MR) * GEMM_MR;
     size_t NC = (((GEMM_NC < D ? GEMM_NC : D) + GEMM_NR - 1) / GEMM_NR) * GEMM_NR;
     size_t KC = std::min( static_cast<size_t>(FAST_GEMM_F32_PACKED_STRIDE_K), T);
-
-    const size_t m_tiles = (T_q + MC - 1) / MC;
-    const size_t n_tiles = (T_s + NC - 1) / NC;
-    const size_t tiles_per_mat = m_tiles * n_tiles;
 
     size_t buff_size = KC * MC * esz;
     bool use_stackbuff = buff_size <= FAST_GEMM_MAX_STACKBUF;
 
+    const size_t m_tiles = (T_a + MC - 1) / MC;
+    const size_t n_tiles = (D + NC - 1) / NC;
+    const size_t tiles_per_mat = m_tiles * n_tiles;
+    const int n_kq_groups = Nq / N_k;
+    size_t batch = Nq * B;
     int total = batch * tiles_per_mat;
 
     auto fn = [&](const Range &r) {
         char* packed_a = (char*)(use_stackbuff ? alloca(buff_size) : malloc(buff_size));
         size_t start = r.start;
         size_t end = r.end;
+        size_t ldc0 = canonical_layout ? D : Nq * D;
 
         for (size_t tile_idx = start; tile_idx < end; tile_idx++) {
             size_t idx = tile_idx / tiles_per_mat;
             size_t b = idx / Nq;
             size_t nq = idx % Nq;
+            size_t n_k = nq / n_kq_groups;
 
             size_t m_tiles_index = (tile_idx - idx * tiles_per_mat) / n_tiles;
             size_t n_tiles_index = tile_idx % n_tiles;
 
             size_t i0 = m_tiles_index * MC;
             size_t j0 = n_tiles_index * NC;
-            size_t mc = T_q - i0 < MC ? T_q - i0 : MC;
+
+            size_t mc = T_a - i0 < MC ? T_a - i0 : MC;
             size_t nc = D - j0 < NC ? D - j0 : NC;
 
-            const size_t a_offset =  (nq * T_q * T * (b+ 1)) + i0 * T ;
-            const char*a_block = A + a_offset * esz;
+            const size_t a_offset = b * Nq * T_a * T +
+                                    nq * T_a * T     +
+                                    i0 * T;
+            const char*a_block    = A + a_offset * esz;
+
+            // start at the 0th row
+            // column offset is determined according to packed layout
+            size_t packed_stride = fastGemmPackBSize(D, T_s);
+            size_t v_offset_base = b * N_k * packed_stride  +
+                                   n_k * packed_stride      +
+                                   n_tiles_index * T_s * NC;
+
+            size_t o_offset = b * Nq * T_a * D;
+            if (canonical_layout)
+                o_offset += nq * T_a * D +
+                            i0 * D + j0;
+            else
+                o_offset += i0 * Nq * D +
+                            nq * D + j0;
+            char* out_block = Out + o_offset * esz;
+
+            int _nc = static_cast<int>((nc + GEMM_NR - 1) / GEMM_NR) * GEMM_NR * esz;
 
             for(int k0 = 0; k0 < T; k0 += KC)
             {
-                size_t kc = T - k0 < KC ? T - k0 : KC;
-                // pack a
-                size_t step_a = k0  + i0 * T;
-#if CV_NEON && CV_NEON_AARCH64
-                fast_gemm_pack8_f32(mc, kc, a_block + step_a * esz, T, 1, packed_a);
-#elif CV_AVX
-                fast_gemm_pack12_f32(mc, kc, a_block + step_a * esz, T, 1, packed_a);
-#elif CV_LASX
-                fast_gemm_pack12_f32(mc, kc, a_block + step_a * esz, T, 1, packed_a);
-#elif CV_SIMD128
-                fast_gemm_pack8_f32(mc, kc, a_block + step_a * esz, T, 1, packed_a);
-#endif
-
                 // get the k-block
-                const size_t sk = (k0 / T_s);
-                const size_t t_k = k0 % T_s;
+                size_t sk = k0 / T_s; // which page
+                size_t k = k0 % T_s;
+                size_t v_offset = v_offset_base * esz + k * _nc;
+                const char *v_block = V[sk] + v_offset;
 
-                const char *k_block = K[sk] + K_offsets[b * Nq + nq] + (t_k * D) * esz;
-
+                // T_s should be divisible by KC
+                // pack
+#if CV_NEON && CV_NEON_AARCH64
+                fast_gemm_pack8_f32(mc, KC, a_block + k0 * esz, T, 1, packed_a);
+#elif CV_AVX
+                fast_gemm_pack12_f32(mc, KC, a_block + k0 * esz, T, 1, packed_a);
+#elif CV_LASX
+                fast_gemm_pack12_f32(mc, KC, a_block + k0 * esz, T, 1, packed_a);
+#elif CV_SIMD128
+                fast_gemm_pack8_f32(mc, KC, a_block + k0 * esz, T, 1, packed_a);
+#endif
                 // run kernel
-                char* out_block = Out + Out_offsets[b * Nq + nq] * esz + (i0 * D + j0) * esz;
-                fast_gemm_macro_kernel(mc, nc, kc, packed_a, k_block, 1.f / T, out_block, D, esz);
+                fast_gemm_macro_kernel(mc, nc, KC, packed_a, v_block, 1.f, out_block, ldc0, esz);
             }
         }
 

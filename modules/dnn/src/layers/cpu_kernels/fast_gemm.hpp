@@ -157,6 +157,7 @@ CV_EXPORTS void fastGemmPackB(const Mat &m, std::vector<float> &packed_B, bool t
 
 CV_EXPORTS int fastGemmMC(FastGemmOpt &opt);
 CV_EXPORTS int fastGemmNC(FastGemmOpt &opt);
+CV_EXPORTS int fastGemmKC(FastGemmOpt &opt);
 
 void fastGemmPackB(bool trans, size_t N, size_t K, const float *B, size_t ldb, float *packed_B, const FastGemmOpt &opt);
 
@@ -189,14 +190,12 @@ CV_EXPORTS void pagedAttnQKGemm(
     int T_q, int Nq, int N_k, int T_s, int D,
     size_t esz, FastGemmOpt &opts
 );
+CV_EXPORTS void pagedAttnAVGemm(
+    const Mat& A,const std::vector<Mat> &V, Mat& Out,
+    int T_q, int Nq, int N_k, int T_s, int D,
+    size_t esz, FastGemmOpt &opt
+);
 
-// void pagedAttnAVGemmKernel(
-//     const Mat& A,
-//     const std::vector<const Mat> &K, const std::vector<size_t> &K_offsets,
-//     Mat& Out, const std::vector<size_t> &Out_offsets,
-//     int B, size_t T_q, size_t Nq, size_t T_s, size_t D,
-//     size_t esz
-// );
 
 }} // cv::dnn
 
