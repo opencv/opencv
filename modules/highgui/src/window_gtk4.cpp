@@ -144,15 +144,27 @@ GTK4Window::GTK4Window(const std::string& name, int flags)
 
 GTK4Window::~GTK4Window()
 {
-    destroy();
+    if (window_)
+    {
+        g_signal_handlers_disconnect_by_data(window_, this);
+        window_ = NULL;
+        picture_ = NULL;
+        main_box_ = NULL;
+    }
 }
 
 void GTK4Window::destroy()
 {
-    if (window_)
+    if (window_ && GTK_IS_WINDOW(window_))
     {
-        gtk_window_destroy(GTK_WINDOW(window_));
+        GdkDisplay* display = gtk_widget_get_display(window_);
+        if (display && !gdk_display_is_closed(display))
+        {
+            gtk_window_destroy(GTK_WINDOW(window_));
+        }
         window_ = NULL;
+        picture_ = NULL;
+        main_box_ = NULL;
     }
 }
 
@@ -322,7 +334,8 @@ GTK4Trackbar::GTK4Trackbar(const std::string& name, GtkWidget* parent,int* value
 
 GTK4Trackbar::~GTK4Trackbar()
 {
-    destroy();
+    container_ = NULL;
+    scale_ = NULL;
 }
 
 void GTK4Trackbar::destroy()
@@ -331,7 +344,6 @@ void GTK4Trackbar::destroy()
     {
         if (gtk_widget_get_parent(container_))
             gtk_widget_unparent(container_);
-
         container_ = NULL;
         scale_ = NULL;
     }
@@ -406,7 +418,7 @@ std::shared_ptr<UITrackbar> GTK4Window::findTrackbar(const std::string& name)
 class GTK4BackendUI : public UIBackend
 {
 public:
-    ~GTK4BackendUI() CV_OVERRIDE { destroyAllWindows(); }
+    ~GTK4BackendUI() CV_OVERRIDE {}
     const std::string getName() const CV_OVERRIDE { return "GTK4"; }
 
     std::shared_ptr<UIWindow> createWindow(const std::string& winname, int flags) CV_OVERRIDE;
