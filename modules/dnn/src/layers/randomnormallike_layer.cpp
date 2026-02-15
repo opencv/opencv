@@ -63,7 +63,7 @@ public:
 
         mean = params.get<float>("mean", 0.f);
         scale = params.get<float>("scale", 1.f);
-        int dt = params.get<int>("output_dtype", -1);
+        int dt = params.get<int>("dtype", -1);
         outputType = dt >= 0 ? onnxDataTypeToCV(static_cast<OnnxDataType>(dt)) : -1;
         has_seed = params.has("seed");
         seed = has_seed ? params.get<float>("seed") : 0.f;
@@ -87,7 +87,8 @@ public:
                          std::vector<MatShape>& internals) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() == (size_t)1);
-        CV_Assert(requiredOutputs == 1);
+        CV_Check(requiredOutputs, requiredOutputs == 0 || requiredOutputs == 1,
+                 "RandomNormalLike layer expects one output");
         outputs.assign(1, inputs[0]);
         internals.clear();
         return true;

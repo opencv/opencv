@@ -2045,16 +2045,6 @@ void ONNXImporter2::parseRMSNormalization(LayerParams& layerParams, const opencv
 
 void ONNXImporter2::parseRandomNormalLike(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    if (layerParams.has("dtype"))
-    {
-        int dt = layerParams.get<int>("dtype", -1);
-        if (dt >= 0)
-        {
-            layerParams.set<int>("output_dtype", dataType2cv((opencv_onnx::TensorProto_DataType)dt));
-        }
-        layerParams.erase("dtype");
-    }
-
     layerParams.type = "RandomNormalLike";
     addLayer(layerParams, node_proto);
 }
