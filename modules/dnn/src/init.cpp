@@ -189,6 +189,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Gelu,           GeluLayer);
     CV_DNN_REGISTER_LAYER_CLASS(GeluApproximation, GeluApproximationLayer);
     CV_DNN_REGISTER_LAYER_CLASS(BatchNorm,      BatchNormLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(BatchNorm2,     BatchNorm2Layer);
     CV_DNN_REGISTER_LAYER_CLASS(MaxUnpool,      MaxUnpoolLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Dropout,        BlankLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Identity,       BlankLayer);
