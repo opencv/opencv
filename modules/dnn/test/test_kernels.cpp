@@ -170,8 +170,7 @@ TEST(DNN_Kernels_FastGemm, pagedAttnAVGemm_O4D)
               Nq = 8;
 
     // construct pages of V
-    // a page is 8 Nc block wide
-    const int T_s = fastGemmKC(opt) * 2;
+    const int T_s = fastGemmKC(opt) * 7;
     const int Nkv = 4;
 
     Mat V({B, Nkv, S * T_s, D}, CV_32F);
@@ -195,7 +194,8 @@ TEST(DNN_Kernels_FastGemm, pagedAttnAVGemm_O4D)
     Mat A({B, Nq, T_a, S * T_s}, CV_32F, Scalar(0.f));
     randu(A, -1.f, 1.f);
 
-    Mat Out({B, Nq, T_a, D}, CV_32F);
+    Mat Out({B, Nq, T_a, D}, CV_32F, Scalar(0.f));
+
 
     pagedAttnAVGemm(
         A, V_pages, Out,
