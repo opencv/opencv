@@ -2918,48 +2918,68 @@ cv::Matx23d cv::getRotationMatrix2D_(Point2f center, double angle, double scale)
  * where:
  *   cij - matrix coefficients, c00^2 + c01^2 + c02^2 + c10^2 + c11^2 + c12^2 + c20^2 + c21^2 + c22^2 = 1
  */
-cv::Mat cv::getPerspectiveTransform(const Point2f src[], const Point2f dst[], int solveMethod)
+cv::Mat cv::getPerspectiveTransform(InputArray _src, InputArray _dst, int solveMethod)
 {
-    CV_INSTRUMENT_REGION();
+    Mat src = _src.getMat(), dst = _dst.getMat();
 
-    // try c22 = 1
-    Mat M(3, 3, CV_64F), X8(8, 1, CV_64F, M.ptr());
-    double a[8][8], b[8];
-    Mat A(8, 8, CV_64F, a), B(8, 1, CV_64F, b);
+    Mat src64, dst64;
+    int type = src.type();
 
-    for( int i = 0; i < 4; ++i )
-    {
-        a[i][0] = a[i+4][3] = src[i].x;
-        a[i][1] = a[i+4][4] = src[i].y;
-        a[i][2] = a[i+4][5] = 1;
-        a[i][3] = a[i][4] = a[i][5] =
-        a[i+4][0] = a[i+4][1] = a[i+4][2] = 0;
-        a[i][6] = -src[i].x*dst[i].x;
-        a[i][7] = -src[i].y*dst[i].x;
-        a[i+4][6] = -src[i].x*dst[i].y;
-        a[i+4][7] = -src[i].y*dst[i].y;
-        b[i] = dst[i].x;
-        b[i+4] = dst[i].y;
+    // 1. Promote to Double (CV_64F) for precision
+    if (src.depth() == CV_32F) {
+        src.convertTo(src64, CV_64F);
+        dst.convertTo(dst64, CV_64F);
+    } else {
+        src64 = src;
+        dst64 = dst;
+        // 2. Ensure continuity for pointer access
+        if (!src64.isContinuous()) src64 = src64.clone();
+        if (!dst64.isContinuous()) dst64 = dst64.clone();
     }
 
-    if (solve(A, B, X8, solveMethod) && norm(A * X8, B) < 1e-8)
-    {
-        M.ptr<double>()[8] = 1.;
+    CV_Assert( src64.checkVector(2, CV_64F) == 4 && dst64.checkVector(2, CV_64F) == 4 );
 
-        return M;
+    Mat X = Mat::zeros(8, 1, CV_64FC1);
+    Mat A = Mat::zeros(8, 8, CV_64FC1);
+    Mat B = Mat::zeros(8, 1, CV_64FC1);
+
+    // 3. Use pointers (safe now that we checked continuity)
+    const Point2d* s = src64.ptr<Point2d>();
+    const Point2d* d = dst64.ptr<Point2d>();
+
+    for( int i = 0; i < 4; i++ )
+    {
+        A.at<double>(2*i, 0) = A.at<double>(2*i+1, 3) = s[i].x;
+        A.at<double>(2*i, 1) = A.at<double>(2*i+1, 4) = s[i].y;
+        A.at<double>(2*i, 2) = A.at<double>(2*i+1, 5) = 1;
+
+        A.at<double>(2*i, 6) = -s[i].x * d[i].x;
+        A.at<double>(2*i, 7) = -s[i].y * d[i].x;
+
+        A.at<double>(2*i+1, 6) = -s[i].x * d[i].y;
+        A.at<double>(2*i+1, 7) = -s[i].y * d[i].y;
+
+        B.at<double>(2*i) = d[i].x;
+        B.at<double>(2*i+1) = d[i].y;
     }
 
-    // c00^2 + c01^2 + c02^2 + c10^2 + c11^2 + c12^2 + c20^2 + c21^2 + c22^2 = 1
-    hconcat(A, -B, A);
+    solve( A, B, X, solveMethod );
 
-    Mat AtA;
-    mulTransposed(A, AtA, true);
+    Mat M = Mat::zeros(3, 3, CV_64FC1);
+    M.at<double>(0) = X.at<double>(0);
+    M.at<double>(1) = X.at<double>(1);
+    M.at<double>(2) = X.at<double>(2);
+    M.at<double>(3) = X.at<double>(3);
+    M.at<double>(4) = X.at<double>(4);
+    M.at<double>(5) = X.at<double>(5);
+    M.at<double>(6) = X.at<double>(6);
+    M.at<double>(7) = X.at<double>(7);
+    M.at<double>(8) = 1.0;
 
-    Mat D, U;
-    SVDecomp(AtA, D, U, noArray());
-
-    Mat X9(9, 1, CV_64F, M.ptr());
-    U.col(8).copyTo(X9);
+    // 4. Convert back to float if input was float
+    if (type == CV_32FC2 || type == CV_32FC1) {
+        M.convertTo(M, CV_32F);
+    }
 
     return M;
 }
@@ -3047,11 +3067,11 @@ void cv::invertAffineTransform(InputArray _matM, OutputArray __iM)
         CV_Error( cv::Error::StsUnsupportedFormat, "" );
 }
 
-cv::Mat cv::getPerspectiveTransform(InputArray _src, InputArray _dst, int solveMethod)
+cv::Mat cv::getPerspectiveTransform(const Point2f src[], const Point2f dst[], int solveMethod)
 {
-    Mat src = _src.getMat(), dst = _dst.getMat();
-    CV_Assert(src.checkVector(2, CV_32F) == 4 && dst.checkVector(2, CV_32F) == 4);
-    return getPerspectiveTransform((const Point2f*)src.data, (const Point2f*)dst.data, solveMethod);
+    Mat s(4, 1, CV_32FC2, (void*)src);
+    Mat d(4, 1, CV_32FC2, (void*)dst);
+    return cv::getPerspectiveTransform(s, d, solveMethod);
 }
 
 cv::Mat cv::getAffineTransform(InputArray _src, InputArray _dst)

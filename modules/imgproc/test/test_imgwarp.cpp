@@ -1826,6 +1826,35 @@ TEST(Imgproc_getPerspectiveTransform, issue_26916)
 
     EXPECT_MAT_NEAR(obtained_homogeneous_dst_points, expected_homogeneous_dst_points, 1e-10);
 }
+TEST(Imgproc_GetPerspectiveTransform, Regression_27553_MatInput_Float)
+{
+    // 1. Mimic the EXACT Java input: 4x1 Matrix, 2 Channels, Float (CV_32FC2)
+    Mat src(4, 1, CV_32FC2);
+    src.at<Vec2f>(0, 0) = Vec2f(139.767125f, 35.681236f);
+    src.at<Vec2f>(1, 0) = Vec2f(139.777125f, 35.681236f);
+    src.at<Vec2f>(2, 0) = Vec2f(139.767125f, 35.691236f);
+    src.at<Vec2f>(3, 0) = Vec2f(139.777125f, 35.691236f);
+
+    Mat dst(4, 1, CV_32FC2);
+    dst.at<Vec2f>(0, 0) = Vec2f(0.0f, 0.0f);
+    dst.at<Vec2f>(1, 0) = Vec2f(100.0f, 0.0f);
+    dst.at<Vec2f>(2, 0) = Vec2f(0.0f, 100.0f);
+    dst.at<Vec2f>(3, 0) = Vec2f(100.0f, 100.0f);
+
+    // 2. Call the function using Mat inputs
+    Mat m = getPerspectiveTransform(src, dst);
+
+    // 3. Check for the bug (all zeros)
+    double sum_elems = sum(abs(m))[0];
+    EXPECT_GT(sum_elems, 1e-5) << "Transformation matrix is all zeros when using Mat input!";
+
+    // 4. Debug print if it fails
+    if (sum_elems <= 1e-5) {
+        std::cout << "Src: " << src << std::endl;
+        std::cout << "Dst: " << dst << std::endl;
+        std::cout << "Result: " << m << std::endl;
+    }
+}
 
 }} // namespace
 /* End of file. */
