@@ -231,12 +231,12 @@ if(TARGET ocv.3rdparty.gtk4 OR TARGET ocv.3rdparty.gtk3 OR TARGET ocv.3rdparty.g
     else()
       set(OPENCV_HIGHGUI_BUILTIN_BACKEND "GTK")
     endif()
-  if(__gtk_dependency STREQUAL "ocv.3rdparty.gtk4")
-    list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_gtk4.cpp)
-  else()
-    list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_gtk.cpp)
-  endif()
-    list(APPEND tgts ${__gtk_dependency})
+    if(__gtk_dependency STREQUAL "ocv.3rdparty.gtk4")
+      list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_gtk4.cpp)
+    else()
+      list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_gtk.cpp)
+    endif()
+      list(APPEND tgts ${__gtk_dependency})
     if(TARGET ocv.3rdparty.gtkglext
         AND __gtk_dependency STREQUAL "ocv.3rdparty.gtk2"
         AND NOT OPENCV_GTK_DISABLE_GTKGLEXT
