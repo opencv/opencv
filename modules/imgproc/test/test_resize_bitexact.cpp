@@ -240,4 +240,27 @@ TEST(Resize_Bitexact, Nearest8U)
     }
 }
 
+TEST(Resize_Bitexact, Regression_28495)
+{
+    Mat rgb(4160, 3120, CV_8UC3);
+    randu(rgb, Scalar::all(0), Scalar::all(255));
+
+    Mat rgba;
+    cvtColor(rgb, rgba, COLOR_RGB2RGBA);
+
+    const double scale = std::min(640.0 / rgb.cols, 640.0 / rgb.rows);
+    const int newWidth = static_cast<int>(std::round(scale * rgb.cols));
+    const int newHeight = static_cast<int>(std::round(scale * rgb.rows));
+
+    Mat rgbResized, rgbaResized;
+
+    cv::resize(rgb, rgbResized, Size(newWidth, newHeight), 0, 0, INTER_LINEAR);
+    cv::resize(rgba, rgbaResized, Size(newWidth, newHeight), 0, 0, INTER_LINEAR);
+
+    Mat rgba2rgbResized;
+    cvtColor(rgbaResized, rgba2rgbResized, COLOR_RGBA2RGB);
+
+    EXPECT_EQ(cv::norm(rgbResized, rgba2rgbResized, NORM_INF), 0.0);
+}
+
 }} // namespace
