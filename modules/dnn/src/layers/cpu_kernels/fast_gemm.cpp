@@ -649,7 +649,6 @@ void pagedAttnAVGemm(
 #endif
 #if CV_TRY_AVX2
     if (opt.use_avx2) {
-        std::cout << "Using AVX2 pagedAttnAVGemmKernel" << std::endl;
         opt_AVX2::pagedAttnAVGemmKernel(
             A.ptr<const char>(), packed_V, Out.ptr<char>(),
             B, T_q, Nq, N_k, T_s, D,
@@ -660,7 +659,6 @@ void pagedAttnAVGemm(
 #endif
 #if CV_TRY_AVX
     if (opt.use_avx){
-        std::cout << "Using AVX pagedAttnAVGemmKernel" << std::endl;
         opt_AVX::pagedAttnAVGemmKernel(
             A.ptr<const char>(), packed_V, Out.ptr<char>(),
             B, T_q, Nq, N_k, T_s, D,
@@ -671,7 +669,6 @@ void pagedAttnAVGemm(
 #endif
 #if CV_TRY_LASX
     if (opt.use_lasx){
-        std::cout << "Using LASX pagedAttnAVGemmKernel" << std::endl;
         opt_LASX::pagedAttnAVGemmKernel(
             A.ptr<const char>(), packed_V, Out.ptr<char>(),
             B, T_q, Nq, N_k, T_s, D,
@@ -681,7 +678,6 @@ void pagedAttnAVGemm(
     else
 #endif
     {
-        std::cout << "Using baseline pagedAttnAVGemmKernel" << std::endl;
         cpu_baseline::pagedAttnAVGemmKernel(
                 A.ptr<const char>(), packed_V, Out.ptr<char>(),
                 B, T_q, Nq, N_k, T_s, D,
