@@ -147,7 +147,7 @@ void pagedAttnQKGemmKernel(
 void pagedAttnAVGemmKernel(
     const char* A, const std::vector<const char *> &K, char*Out,
     size_t B, size_t T_a, size_t Nq, size_t N_k, size_t T_s, size_t D,
-    size_t esz, bool canonical_layout
+    size_t esz, bool canonical_layout, size_t packed_stride
 );
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
@@ -1050,7 +1050,7 @@ void pagedAttnQKGemmKernel(
 void pagedAttnAVGemmKernel(
     const char* A, const std::vector<const char *> &V, char*Out,
     size_t B, size_t T_a, size_t Nq, size_t N_k, size_t T_s, size_t D,
-    size_t esz, bool canonical_layout
+    size_t esz, bool canonical_layout, size_t packed_stride
 ) {
     size_t GEMM_MC = static_cast<size_t>(FAST_GEMM_F32_MC),
         GEMM_NC = static_cast<size_t>(FAST_GEMM_F32_NC),
@@ -1102,7 +1102,6 @@ void pagedAttnAVGemmKernel(
 
             // start at the 0th row
             // column offset is determined according to packed layout
-            size_t packed_stride = fastGemmPackBSize(D, T_s);
             size_t v_offset_base = b * N_k * packed_stride  +
                                    n_k * packed_stride      +
                                    n_tiles_index * T_s * NC;

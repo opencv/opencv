@@ -643,7 +643,7 @@ void pagedAttnAVGemm(
         opt_NEON::pagedAttnAVGemmKernel(
             A.ptr<const char>(), packed_V, Out.ptr<char>(),
             B, T_q, Nq, N_k, T_s, D,
-            esz, canonical_layout
+            esz, canonical_layout, fastGemmPackBSize(D, T_s, opt)
         );
     else
 #endif
@@ -653,7 +653,7 @@ void pagedAttnAVGemm(
         opt_AVX2::pagedAttnAVGemmKernel(
             A.ptr<const char>(), packed_V, Out.ptr<char>(),
             B, T_q, Nq, N_k, T_s, D,
-            esz, canonical_layout
+            esz, canonical_layout, fastGemmPackBSize(D, T_s, opt)
         );
     }
     else
@@ -664,7 +664,7 @@ void pagedAttnAVGemm(
         opt_AVX::pagedAttnAVGemmKernel(
             A.ptr<const char>(), packed_V, Out.ptr<char>(),
             B, T_q, Nq, N_k, T_s, D,
-            esz, canonical_layout
+            esz, canonical_layout, fastGemmPackBSize(D, T_s, opt)
         );
     }
     else
@@ -675,7 +675,7 @@ void pagedAttnAVGemm(
         opt_LASX::pagedAttnAVGemmKernel(
             A.ptr<const char>(), packed_V, Out.ptr<char>(),
             B, T_q, Nq, N_k, T_s, D,
-            esz, canonical_layout
+            esz, canonical_layout, fastGemmPackBSize(D, T_s, opt)
         );
     }
     else
@@ -685,7 +685,7 @@ void pagedAttnAVGemm(
         cpu_baseline::pagedAttnAVGemmKernel(
                 A.ptr<const char>(), packed_V, Out.ptr<char>(),
                 B, T_q, Nq, N_k, T_s, D,
-                esz, canonical_layout
+                esz, canonical_layout, fastGemmPackBSize(D, T_s, opt)
             );
 
     }
