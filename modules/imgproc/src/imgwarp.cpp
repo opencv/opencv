@@ -2921,67 +2921,56 @@ cv::Matx23d cv::getRotationMatrix2D_(Point2f center, double angle, double scale)
 cv::Mat cv::getPerspectiveTransform(InputArray _src, InputArray _dst, int solveMethod)
 {
     Mat src = _src.getMat(), dst = _dst.getMat();
-
     Mat src64, dst64;
-    int type = src.type();
 
     // 1. Promote to Double (CV_64F) for precision
+    // This fixes the Android/ARM regression #27553
+    int type = src.type();
     if (src.depth() == CV_32F) {
         src.convertTo(src64, CV_64F);
         dst.convertTo(dst64, CV_64F);
     } else {
         src64 = src;
         dst64 = dst;
-        // 2. Ensure continuity for pointer access
         if (!src64.isContinuous()) src64 = src64.clone();
         if (!dst64.isContinuous()) dst64 = dst64.clone();
     }
 
     CV_Assert( src64.checkVector(2, CV_64F) == 4 && dst64.checkVector(2, CV_64F) == 4 );
 
-    Mat X = Mat::zeros(8, 1, CV_64FC1);
-    Mat A = Mat::zeros(8, 8, CV_64FC1);
-    Mat B = Mat::zeros(8, 1, CV_64FC1);
-
-    // 3. Use pointers (safe now that we checked continuity)
+    // 2. Construct the 8x9 Matrix A for the homogeneous system Ah = 0
+    // This handles cases where H_33 is 0 (fixing issue #26916)
+    Mat A = Mat::zeros(8, 9, CV_64F);
     const Point2d* s = src64.ptr<Point2d>();
     const Point2d* d = dst64.ptr<Point2d>();
 
     for( int i = 0; i < 4; i++ )
     {
-        A.at<double>(2*i, 0) = A.at<double>(2*i+1, 3) = s[i].x;
-        A.at<double>(2*i, 1) = A.at<double>(2*i+1, 4) = s[i].y;
-        A.at<double>(2*i, 2) = A.at<double>(2*i+1, 5) = 1;
+        A.at<double>(2*i, 0) = s[i].x;
+        A.at<double>(2*i, 1) = s[i].y;
+        A.at<double>(2*i, 2) = 1;
+        A.at<double>(2*i, 6) = -d[i].x * s[i].x;
+        A.at<double>(2*i, 7) = -d[i].x * s[i].y;
+        A.at<double>(2*i, 8) = -d[i].x;
 
-        A.at<double>(2*i, 6) = -s[i].x * d[i].x;
-        A.at<double>(2*i, 7) = -s[i].y * d[i].x;
-
-        A.at<double>(2*i+1, 6) = -s[i].x * d[i].y;
-        A.at<double>(2*i+1, 7) = -s[i].y * d[i].y;
-
-        B.at<double>(2*i) = d[i].x;
-        B.at<double>(2*i+1) = d[i].y;
+        A.at<double>(2*i+1, 3) = s[i].x;
+        A.at<double>(2*i+1, 4) = s[i].y;
+        A.at<double>(2*i+1, 5) = 1;
+        A.at<double>(2*i+1, 6) = -d[i].y * s[i].x;
+        A.at<double>(2*i+1, 7) = -d[i].y * s[i].y;
+        A.at<double>(2*i+1, 8) = -d[i].y;
     }
 
-    solve( A, B, X, solveMethod );
+    // 3. Solve using SVD
+    // The solution is the right singular vector corresponding to the smallest singular value
+    Mat w, u, vt;
+    SVD::compute(A, w, u, vt, SVD::FULL_UV);
 
-    Mat M = Mat::zeros(3, 3, CV_64FC1);
-    M.at<double>(0) = X.at<double>(0);
-    M.at<double>(1) = X.at<double>(1);
-    M.at<double>(2) = X.at<double>(2);
-    M.at<double>(3) = X.at<double>(3);
-    M.at<double>(4) = X.at<double>(4);
-    M.at<double>(5) = X.at<double>(5);
-    M.at<double>(6) = X.at<double>(6);
-    M.at<double>(7) = X.at<double>(7);
-    M.at<double>(8) = 1.0;
+    // vt is 9x9. The last row (index 8) is the solution vector h.
+    Mat H = vt.row(8).reshape(1, 3);
 
-    // 4. Convert back to float if input was float
-    if (type == CV_32FC2 || type == CV_32FC1) {
-        M.convertTo(M, CV_32F);
-    }
-
-    return M;
+    // Result is already CV_64F and normalized (norm=1)
+    return H;
 }
 
 /* Calculates coefficients of affine transformation
