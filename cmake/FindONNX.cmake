@@ -7,7 +7,6 @@ if(ORT_INSTALL_DIR AND NOT ONNXRT_ROOT_DIR)
   set(ONNXRT_ROOT_DIR ${ORT_INSTALL_DIR})
 endif()
 
-# If the binaries were downloaded into the build tree, try to auto-detect the extracted directory
 if(NOT ONNXRT_ROOT_DIR AND DEFINED OpenCV_BINARY_DIR)
   if(EXISTS "${OpenCV_BINARY_DIR}/3rdparty/onnxruntime")
     file(GLOB __ort_candidates LIST_DIRECTORIES true
@@ -26,9 +25,7 @@ if(ONNXRT_ROOT_DIR)
   list(APPEND __ort_hint_roots "${ONNXRT_ROOT_DIR}")
 endif()
 
-# 1) Prefer CMake config packages if present (system-installed ORT)
-# The official onnxruntime build may or may not ship CMake package configs,
-# so treat this as best-effort.
+Prefer CMake config packages if present i.e system-installed ORT
 find_package(onnxruntime CONFIG QUIET)
 find_package(ONNXRuntime CONFIG QUIET)
 
@@ -58,7 +55,7 @@ if(__ort_target)
   endif()
 endif()
 
-# 2) Fallback: locate headers and libraries via find_* in system paths and/or ONNXRT_ROOT_DIR.
+# Locate headers and libraries via find_* in system paths and/or ONNXRT_ROOT_DIR.
 if(NOT ORT_LIB)
   find_library(ORT_LIB NAMES onnxruntime
     HINTS ${__ort_hint_roots}
@@ -66,7 +63,6 @@ if(NOT ORT_LIB)
     CMAKE_FIND_ROOT_PATH_BOTH)
 endif()
 
-# The location of headers varies across different versions of ONNX Runtime.
 if(NOT ORT_INCLUDE)
   find_path(ORT_INCLUDE NAMES onnxruntime_cxx_api.h
     HINTS ${__ort_hint_roots}
@@ -89,8 +85,6 @@ endmacro()
 if(ORT_LIB AND ORT_INCLUDE)
   set(__ort_root_for_ep "${ONNXRT_ROOT_DIR}")
   if(NOT __ort_root_for_ep)
-    # Try to guess root from include path:
-    # <root>/include/onnxruntime/... -> <root>
     set(__ort_root_for_ep "${ORT_INCLUDE}")
     string(REGEX REPLACE "(/include/onnxruntime.*)$" "" __ort_root_for_ep "${__ort_root_for_ep}")
   endif()

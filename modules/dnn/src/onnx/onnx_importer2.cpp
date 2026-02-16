@@ -2859,8 +2859,12 @@ Net readNetFromONNX2_ORT(const String& onnxFile)
 
         impl->ort_env = s_ort_env;
         impl->ort_session_options = std::make_shared<Ort::SessionOptions>();
+#ifdef _WIN32
+        std::wstring w_onnxFile(onnxFile.begin(), onnxFile.end());
+        impl->ort_session = std::make_shared<Ort::Session>(*s_ort_env, w_onnxFile.c_str(), *impl->ort_session_options);
+#else
         impl->ort_session = std::make_shared<Ort::Session>(*s_ort_env, onnxFile.c_str(), *impl->ort_session_options);
-
+#endif
         impl->modelFileName = onnxFile;
         impl->modelFormat = DNN_MODEL_ONNX;
         Ptr<Graph> g = impl->newGraph("ort_session_active", {}, true);
