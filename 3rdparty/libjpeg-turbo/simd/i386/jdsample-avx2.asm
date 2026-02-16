@@ -1,5 +1,5 @@
 ;
-; jdsample.asm - upsampling (AVX2)
+; Upsampling (AVX2)
 ;
 ; Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
 ; Copyright (C) 2015, Intel Corporation.

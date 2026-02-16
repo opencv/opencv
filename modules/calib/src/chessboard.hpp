@@ -149,7 +149,7 @@ class Chessboard: public cv::Feature2D
             int max_tests;            //!< maximal number of tested hypothesis
             bool super_resolution;    //!< use super-repsolution for chessboard detection
             bool larger;              //!< indicates if larger boards should be returned
-            bool marker;              //!< indicates that valid boards must have a white and black cirlce marker used for orientation
+            bool marker;              //!< indicates that valid boards must have a white and black circle marker used for orientation
 
             Parameters()
             {

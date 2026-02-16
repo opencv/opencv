@@ -239,7 +239,6 @@ FarnebackUpdateMatrices( const Mat& _R0, const Mat& _R1, const Mat& _flow, Mat& 
 
 #if 1
             int x1 = cvFloor(fx), y1 = cvFloor(fy);
-            const float* ptr = R1 + y1*step1 + x1*5;
             float r2, r3, r4, r5, r6;
 
             fx -= x1; fy -= y1;
@@ -247,6 +246,7 @@ FarnebackUpdateMatrices( const Mat& _R0, const Mat& _R1, const Mat& _flow, Mat& 
             if( (unsigned)x1 < (unsigned)(width-1) &&
                 (unsigned)y1 < (unsigned)(height-1) )
             {
+                const float* ptr = R1 + y1*step1 + x1*5;
                 float a00 = (1.f-fx)*(1.f-fy), a01 = fx*(1.f-fy),
                       a10 = (1.f-fx)*fy, a11 = fx*fy;
 
@@ -262,12 +262,12 @@ FarnebackUpdateMatrices( const Mat& _R0, const Mat& _R1, const Mat& _flow, Mat& 
             }
 #else
             int x1 = cvRound(fx), y1 = cvRound(fy);
-            const float* ptr = R1 + y1*step1 + x1*5;
             float r2, r3, r4, r5, r6;
 
             if( (unsigned)x1 < (unsigned)width &&
                 (unsigned)y1 < (unsigned)height )
             {
+                const float* ptr = R1 + y1*step1 + x1*5;
                 r2 = ptr[0];
                 r3 = ptr[1];
                 r4 = (R0[x*5+2] + ptr[2])*0.5f;

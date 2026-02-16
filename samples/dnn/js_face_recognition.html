@@ -132,7 +132,7 @@ function main() {
       var cell = document.getElementById("targetNames").insertCell(0);
       cell.innerHTML = name;
 
-      persons[name] = face2vec(face).mat_clone();
+      persons[name] = face2vec(face).clone();
 
       var canvas = document.createElement("canvas");
       canvas.setAttribute("width", 112);

@@ -1024,7 +1024,7 @@ void HoughLinesPointSet( InputArray _point, OutputArray _lines, int lines_max, i
         int r = idx - (n+1)*(numrho+2) - 1;
         line.rho = static_cast<float>(min_rho) + r * (float)rho_step;
         line.angle = static_cast<float>(min_theta) + n * (float)theta_step;
-        lines.push_back(Vec3d((double)accum[idx], (double)line.rho, (double)line.angle));
+        lines.emplace_back((double)accum[idx], (double)line.rho, (double)line.angle);
     }
 
     Mat(lines).copyTo(_lines);
@@ -1125,7 +1125,7 @@ public:
             {
                 if (ptr[x])
                 {
-                    list.push_back(Point(x, y));
+                    list.emplace_back(x, y);
                 }
             }
         }
@@ -1489,7 +1489,7 @@ protected:
             // Check if the circle has enough support
             if(maxCount > accThreshold)
             {
-                circlesLocal.push_back(EstimatedCircle(Vec3f(curCenter.x, curCenter.y, rBest), maxCount));
+                circlesLocal.emplace_back(Vec3f(curCenter.x, curCenter.y, rBest), maxCount);
             }
         }
 
@@ -1847,7 +1847,7 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
                 continue;
 
             mdata[y*mstep + x] = (uchar)1;
-            stack.push_back(Point(x, y));
+            stack.emplace_back(x, y);
             bool backtrace_mode = false;
 
             do
@@ -1858,7 +1858,7 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
                 int vy = dyData[p.y*dxystep + p.x];
 
                 float mag = std::sqrt((float)vx*vx+(float)vy*vy);
-                nz.push_back(Vec4f((float)p.x, (float)p.y, (float)vx, (float)vy));
+                nz.emplace_back((float)p.x, (float)p.y, (float)vx, (float)vy);
                 CV_Assert(mdata[p.y*mstep + p.x] == 1);
 
                 int sx = cvRound(vx * RAY_FP_SCALE / mag);
@@ -1903,7 +1903,7 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
                     if( mdata[y_*mstep + x_] || !edgeData[y_*estep + x_])
                         continue;
                     mdata[y_*mstep + x_] = (uchar)1;
-                    stack.push_back(Point(x_, y_));
+                    stack.emplace_back(x_, y_);
                     neighbors++;
                 }
 
@@ -1919,7 +1919,7 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
             // insert a special "stop marker" in the end of each
             // connected component to make sure we
             // finalize and analyze the arc segment
-            nz.push_back(Vec4f(0.f, 0.f, 0.f, 0.f));
+            nz.emplace_back(0.f, 0.f, 0.f, 0.f);
         }
     }
 
@@ -1951,7 +1951,7 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
             {
                 float cx = (float)((left + x - 1)*dp*0.5f);
                 float cy = (float)(y*dp);
-                centers.push_back(Point2f(cx, cy));
+                centers.emplace_back(cx, cy);
                 left = -1;
             }
         }
@@ -2223,7 +2223,7 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
                 //       (accepted ? '+' : '-'), cx, cy, rk, cjk.weight, count, max_runlen, cjk.mask);
 
                 if( accepted )
-                    local_circles.push_back(EstimatedCircle(Vec3f(cx, cy, (float)rk), cjk.weight));
+                    local_circles.emplace_back(Vec3f(cx, cy, (float)rk), cjk.weight);
             }
         }
     }

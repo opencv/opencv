@@ -1,5 +1,5 @@
 /*
- * jfdctint-neon.c - accurate integer FDCT (Arm Neon)
+ * Accurate integer FDCT (Arm Neon)
  *
  * Copyright (C) 2020, Arm Limited.  All Rights Reserved.
  * Copyright (C) 2020, 2024, D. R. Commander.  All Rights Reserved.

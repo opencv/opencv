@@ -1,5 +1,5 @@
 ;
-; jfdctint.asm - accurate integer FDCT (AVX2)
+; Accurate integer FDCT (AVX2)
 ;
 ; Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
 ; Copyright (C) 2009, 2016, 2018, 2020, 2024, D. R. Commander.

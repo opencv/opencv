@@ -172,4 +172,29 @@ TEST(DenseOpticalFlow_VariationalRefinement, ReferenceAccuracy)
     EXPECT_LE(calcRMSE(GT, flow), target_RMSE);
 }
 
+TEST(DenseOpticalFlow_DIS, ManualCoarsestScale)
+{
+    Mat prev = Mat::zeros(Size(320, 240), CV_8UC1);
+    Mat next = Mat::zeros(Size(320, 240), CV_8UC1);
+    randu(prev, 0, 255);
+    randu(next, 0, 255);
+
+    Ptr<DISOpticalFlow> dis = DISOpticalFlow::create(DISOpticalFlow::PRESET_FAST);
+
+    EXPECT_EQ(dis->getCoarsestScale(), -1);
+
+    Mat flow;
+    dis->calc(prev, next, flow);
+    EXPECT_FALSE(flow.empty());
+    int manual_scale = 3;
+    dis->setCoarsestScale(manual_scale);
+    EXPECT_EQ(dis->getCoarsestScale(), manual_scale);
+
+    dis->calc(prev, next, flow);
+    EXPECT_FALSE(flow.empty());
+
+    dis->setCoarsestScale(-1);
+    EXPECT_EQ(dis->getCoarsestScale(), -1);
+}
+
 }} // namespace

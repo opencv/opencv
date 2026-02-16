@@ -330,6 +330,10 @@ class AudioDrawing:
         """
 
         time_step = self.windLen - self.overlap
+        if time_step <= 0:
+            raise ValueError(
+                "Invalid STFT parameters: overlap must be smaller than window length"
+            )
         stft = []
 
         if self.windowType == "Hann":

@@ -1,5 +1,5 @@
 /*
- * jccolext-neon.c - colorspace conversion (32-bit Arm Neon)
+ * Colorspace conversion (32-bit Arm Neon)
  *
  * Copyright (C) 2020, Arm Limited.  All Rights Reserved.
  * Copyright (C) 2020, D. R. Commander.  All Rights Reserved.
