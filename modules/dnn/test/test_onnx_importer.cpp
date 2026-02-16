@@ -3465,6 +3465,163 @@ TEST_P(Test_ONNX_layers, TopK) {
     test("top_k_smallest");
 }
 
+TEST_P(Test_ONNX_layers, QLinearConv)
+{
+    String model_path = "dnn/onnx/models/single_qlinearconv.onnx"; 
+
+    Net net;
+
+    ASSERT_NO_THROW(net = readNetFromONNX(model_path)) << "Failed to parse QLinearConv node.";
+}
+
+TEST_P(Test_ONNX_layers, QLinearAdd_DynamicEngine)
+{
+    String model_path = "dnn/onnx/models/single_qlinearadd.onnx"; 
+
+    Net net;
+    try {
+        net = readNetFromONNX(model_path);
+    } catch (const cv::Exception& e) {
+        FAIL() << "Engine crashed during parsing! Error: " << e.what();
+    }
+
+    ASSERT_FALSE(net.empty()) << "Network is empty. Importer failed silently.";
+
+    int sizes[] = {1, 1, 3, 3};
+    Mat inputA(4, sizes, CV_8S, Scalar(3));
+    Mat inputB(4, sizes, CV_8S, Scalar(2));
+
+    net.setInput(inputA, "A");
+    net.setInput(inputB, "B");
+
+    Mat output;
+    try {
+        output = net.forward();
+    } catch (const cv::Exception& e) {
+        FAIL() << "Engine crashed during forward pass! Error: " << e.what();
+    }
+    EXPECT_EQ(output.dims, 4) << "Output should be 4-dimensional";
+    EXPECT_EQ(output.size[0], 1);
+    EXPECT_EQ(output.size[1], 1);
+    EXPECT_EQ(output.size[2], 3);
+    EXPECT_EQ(output.size[3], 3);
+}
+
+TEST_P(Test_ONNX_layers, QLinearPool_DynamicEngine)
+{
+    String model_path = "dnn/onnx/models/single_qpool.onnx"; 
+
+    Net net;
+    try {
+        net = readNetFromONNX(model_path);
+    } catch (const cv::Exception& e) {
+        FAIL() << "Parsing failed! Error: " << e.what();
+    }
+
+    int sizes[] = {1, 1, 3, 3};
+    Mat input(4, sizes, CV_8S, Scalar(10)); 
+
+    net.setInput(input, "X");
+
+    Mat output;
+    try {
+        output = net.forward();
+    } catch (const cv::Exception& e) {
+        FAIL() << "Forward pass crashed! Error: " << e.what();
+    }
+
+    ASSERT_EQ(output.total(), 1);
+    int8_t result = output.at<int8_t>(0);
+
+    EXPECT_EQ(result, 10) << "Pooling math is wrong! Expected 10, got " << (int)result;
+}
+
+TEST_P(Test_ONNX_layers, QGemm_DynamicEngine)
+{
+    String model_path = "dnn/onnx/models/single_qgemm.onnx"; 
+
+    Net net;
+    try {
+        net = readNetFromONNX(model_path);
+    } catch (const cv::Exception& e) {
+        FAIL() << "Parsing failed! Error: " << e.what();
+    }
+
+    ASSERT_FALSE(net.empty()) << "Network is empty. Importer failed silently.";
+
+    Mat input(1, 2, CV_8S);
+    input.at<int8_t>(0, 0) = 2;
+    input.at<int8_t>(0, 1) = 3;
+
+    net.setInput(input, "A");
+
+    Mat output;
+    try {
+        output = net.forward();
+    } catch (const cv::Exception& e) {
+        FAIL() << "Forward pass crashed! Error: " << e.what();
+    }
+
+    ASSERT_EQ(output.dims, 2) << "Output should be 2-dimensional (1x3)";
+    ASSERT_EQ(output.size[0], 1);
+    ASSERT_EQ(output.size[1], 3);
+
+    EXPECT_EQ(output.at<int8_t>(0, 0), 6)  << "Math failed on index 0";
+    EXPECT_EQ(output.at<int8_t>(0, 1), 12) << "Math failed on index 1";
+    EXPECT_EQ(output.at<int8_t>(0, 2), 18) << "Math failed on index 2";
+}
+
+TEST_P(Test_ONNX_layers, MobileNet_QDQ)
+{
+    String model_path = "dnn/onnx/models/mobilenetv2-12-int8.onnx";
+    String image_path = "dnn/dog.jpg";
+    String labels_path = "dnn/imagenet_classes.txt";
+
+    Net net;
+    try {
+        net = readNetFromONNX(model_path);
+    } catch (const cv::Exception& e) {
+        FAIL() << "Engine crashed during parsing! Error: " << e.what();
+    }
+    ASSERT_FALSE(net.empty()) << "Network is empty. Parsing failed silently.";
+
+    Mat img = imread(image_path);
+    ASSERT_FALSE(img.empty()) << "Could not read the dog image! Check the path.";
+
+    Mat blob = blobFromImage(img, 1.0/255.0, Size(224, 224), Scalar(0, 0, 0), true, false);
+    net.setInput(blob);
+
+    Mat prob;
+    try {
+        prob = net.forward();
+    } catch (const cv::Exception& e) {
+        FAIL() << "Engine crashed during forward pass! Error: " << e.what();
+    }
+
+    double minVal, maxVal;
+    Point minLoc, maxLoc;
+    minMaxLoc(prob, &minVal, &maxVal, &minLoc, &maxLoc);
+    int classId = maxLoc.x;
+
+    std::ifstream file(labels_path);
+    std::string line;
+    std::string predicted_class = "Unknown";
+
+    if (file.is_open()) {
+        for (int i = 0; std::getline(file, line); ++i) {
+            if (i == classId) {
+                predicted_class = line;
+                break;
+            }
+        }
+    } else {
+        predicted_class = "Error: Could not open labels file!";
+    }
+
+    std::cout << "Outcomes:" << std::endl;
+    std::cout << "Top Prediction : " << predicted_class << " (Class " << classId << ")" << std::endl;
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
 }} // namespace
