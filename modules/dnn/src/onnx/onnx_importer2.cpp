@@ -2381,10 +2381,10 @@ void ONNXImporter2::parseQAvgPool(LayerParams& layerParams, const opencv_onnx::N
         CV_Error(Error::StsNotImplemented, "V2 Engine currently strictly enforces signed int8 (CV_8S). Falling back to V1.");
     }
 
-    float inp_sc  = getScalarFromMat<float>(getBlob(node_proto, 1));
-    int8_t inp_zp = getScalarFromMat<int8_t>(getBlob(node_proto, 2));
-    float out_sc  = getScalarFromMat<float>(getBlob(node_proto, 3));
-    int8_t out_zp = (node_proto.input_size() == 4) ? 0 : getScalarFromMat<int8_t>(getBlob(node_proto, 4));
+    float inp_sc  = getBlob(node_proto, 1).ptr<float>()[0];
+    int8_t inp_zp = getBlob(node_proto, 2).ptr<int8_t>()[0];
+    float out_sc  = getBlob(node_proto, 3).ptr<float>()[0];
+    int8_t out_zp = (node_proto.input_size() == 4) ? 0 : getBlob(node_proto, 4).ptr<int8_t>()[0];
 
     layerParams.type = "PoolingInt8";
     layerParams.set("pool", "ave");
