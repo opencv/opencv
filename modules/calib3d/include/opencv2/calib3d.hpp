@@ -971,7 +971,7 @@ parameters.
 - **Output (`imagePoints`)**: 2D projections in **pixel coordinates** of the image plane, with distortion applied.
   The coordinates \f$(u, v)\f$ are measured in pixels from the top-left corner of the image.
 
-The transformation chain is: World coordinates → Camera coordinates (via rvec/tvec) → Normalized camera coordinates 
+The transformation chain is: World coordinates → Camera coordinates (via rvec/tvec) → Normalized camera coordinates
 → Distortion applied → Pixel coordinates (via cameraMatrix).
 
 @param objectPoints Array of object points expressed wrt. the world coordinate frame. A 3xN/Nx3
@@ -4015,18 +4015,18 @@ coordinates do not depend on the camera matrix).
 The function can be used for both a stereo camera head or a monocular camera (when R is empty).
 
 @note **Coordinate Systems:**
-- **Input (`src`)**: Points are expected in **pixel coordinates** of the distorted image, i.e., 
+- **Input (`src`)**: Points are expected in **pixel coordinates** of the distorted image, i.e.,
   coordinates \f$(u, v)\f$ measured in pixels from the top-left corner of the image.
 - **Output (`dst`)**: The coordinate system of output points depends on parameter `P`:
   - If `P` is provided (not empty): Output points are in **pixel coordinates** of the rectified/undistorted image plane, using the camera matrix `P`.
-  - If `P` is empty or identity: Output points are in **normalized camera coordinates** (also called "normalized image coordinates"), 
+  - If `P` is empty or identity: Output points are in **normalized camera coordinates** (also called "normalized image coordinates"),
     which are dimensionless coordinates \f$(x, y)\f$ in the camera's focal plane, related to pixel coordinates by:
     \f$x = (u - c_x) / f_x\f$ and \f$y = (v - c_y) / f_y\f$. These normalized coordinates are independent of the camera's intrinsic parameters and are useful for 3D reconstruction or epipolar geometry.
 
 @param src Observed point coordinates in **pixel coordinates** of the distorted image, 2xN/Nx2 1-channel or 1xN/Nx1 2-channel (CV_32FC2 or CV_64FC2) (or
 vector\<Point2f\> ).
 @param dst Output ideal point coordinates (1xN/Nx1 2-channel or vector\<Point2f\> ) after undistortion and reverse perspective
-transformation. If matrix P is identity or omitted, dst will contain **normalized camera coordinates** (normalized image coordinates), 
+transformation. If matrix P is identity or omitted, dst will contain **normalized camera coordinates** (normalized image coordinates),
 otherwise it contains pixel coordinates in the coordinate system defined by P.
 @param cameraMatrix Camera matrix \f$\vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
 @param distCoeffs Input vector of distortion coefficients
