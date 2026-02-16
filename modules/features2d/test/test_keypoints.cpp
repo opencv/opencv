@@ -182,5 +182,41 @@ TEST(Features2d_Detector_Keypoints_SIFT, validation)
     test.safe_run();
 }
 
+TEST(Features2d_KeyPoint, keypointArea)
+{
+    {
+        KeyPoint kp(100.0f, 100.0f, 10.0f, -1, 0, 0, -1, 123.45f);
+        float area = keypointArea(kp);
+        EXPECT_FLOAT_EQ(area, 123.45f);
+    }
+
+    {
+        float size = 10.0f;
+        KeyPoint kp(100.0f, 100.0f, size);
+        float area = keypointArea(kp);
+        float expected_area = (float)CV_PI * (size * 0.5f) * (size * 0.5f);
+        EXPECT_FLOAT_EQ(area, expected_area);
+    }
+
+    {
+        KeyPoint kp;
+        kp.size = 20.0f;
+        float area = keypointArea(kp);
+        float expected_area = (float)CV_PI * (kp.size * 0.5f) * (kp.size * 0.5f);
+        EXPECT_FLOAT_EQ(area, expected_area);
+    }
+
+    {
+        KeyPoint kp(0.0f, 0.0f, 6.0f);
+        float area = keypointArea(kp);
+        EXPECT_NEAR(area, 28.274333882308138f, 1e-5f);
+    }
+
+    {
+        KeyPoint kp;
+        EXPECT_FLOAT_EQ(kp.area, 0.0f);
+    }
+}
+
 
 }} // namespace

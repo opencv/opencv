@@ -59,6 +59,7 @@ size_t KeyPoint::hash() const
     u.f = response; _Val = (scale * _Val) ^ u.u;
     _Val = (scale * _Val) ^ ((size_t) octave);
     _Val = (scale * _Val) ^ ((size_t) class_id);
+    u.f = area; _Val = (scale * _Val) ^ u.u;
     return _Val;
 }
 
@@ -140,6 +141,15 @@ float KeyPoint::overlap( const KeyPoint& kp1, const KeyPoint& kp2 )
     }
 
     return ovrl;
+}
+
+float keypointArea(const KeyPoint& kp)
+{
+    if (kp.area > 0.0f)
+        return kp.area;
+    
+    float radius = kp.size * 0.5f;
+    return (float)CV_PI * radius * radius;
 }
 
 ////////////////////// RotatedRect //////////////////////
