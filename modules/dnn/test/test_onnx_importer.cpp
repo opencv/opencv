@@ -65,8 +65,7 @@ public:
     void testONNXModels(const String& basename, const Extension ext = npy,
                         double l1 = 0, double lInf = 0, const bool useSoftmax = false,
                         bool checkNoFallbacks = true, int numInps = 1,
-                        bool testShapes = true, bool useWinograd = true,
-                        const std::vector<int>& expectedOutputShape = {})
+                        bool testShapes = true, bool useWinograd = true)
     {
         String onnxmodel = _tf("models/" + basename + ".onnx", required);
         std::vector<Mat> inps(numInps);
@@ -104,10 +103,7 @@ public:
             net.setInput(inps[i], inputNames[i]);
         Mat out = net.forward("");
 
-        if (!expectedOutputShape.empty())
-        {
-            ASSERT_EQ(shape(out), expectedOutputShape);
-        }
+        EXPECT_EQ(shape(out), shape(ref));
 
         if (useSoftmax)
         {
@@ -1193,7 +1189,7 @@ TEST_P(Test_ONNX_layers, Squeeze)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     testONNXModels("squeeze");
     testONNXModels("squeeze_axes_op13");
-    testONNXModels("squeeze_no_axes", npy, 0, 0, false, true, 1, true, true, {2, 4});
+    testONNXModels("squeeze_no_axes");
 }
 
 TEST_P(Test_ONNX_layers, ReduceL2)
