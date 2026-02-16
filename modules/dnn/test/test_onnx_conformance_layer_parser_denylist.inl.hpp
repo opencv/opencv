@@ -124,9 +124,7 @@
 "test_basic_convinteger",  // Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "ConvInteger" in function 'getLayerInstance'
 "test_basic_deform_conv_with_padding",
 "test_basic_deform_conv_without_padding",
-"test_batchnorm_epsilon",  // Issue:: Unkonwn error::Blob mean not found in const blobs in function 'getBlob'
 "test_batchnorm_epsilon_training_mode",  // ---- same as above ---
-"test_batchnorm_example",  // ---- same as above ---
 "test_batchnorm_example_training_mode",  // ---- same as above ---
 "test_bernoulli",  // Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "Bernoulli" in function 'getLayerInstance'
 "test_bernoulli_double",  // ---- same as above ---

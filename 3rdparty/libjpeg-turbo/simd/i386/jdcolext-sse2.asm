@@ -1,5 +1,5 @@
 ;
-; jdcolext.asm - colorspace conversion (SSE2)
+; Colorspace conversion (SSE2)
 ;
 ; Copyright 2009, 2012 Pierre Ossman <ossman@cendio.se> for Cendio AB
 ; Copyright (C) 2012, 2016, 2024, D. R. Commander.

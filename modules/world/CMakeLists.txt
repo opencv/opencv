@@ -83,6 +83,11 @@ endif()
 
 ocv_target_compile_definitions(${the_module} PRIVATE OPENCV_MODULE_IS_PART_OF_WORLD=1)
 
+# NOTE: https://github.com/opencv/opencv/issues/25543
+if (WITH_QT)
+  qt_disable_unicode_defines(${the_module})
+endif()
+
 if(BUILD_opencv_imgcodecs AND OPENCV_MODULE_opencv_imgcodecs_IS_PART_OF_WORLD)
   ocv_imgcodecs_configure_target()
 endif()

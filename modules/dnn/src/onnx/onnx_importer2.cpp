@@ -1321,38 +1321,31 @@ void ONNXImporter2::parseInstanceNormalization(LayerParams& layerParams, const o
 void ONNXImporter2::parseBatchNormalization(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     if (node_proto.input_size() != 5)
-        CV_Error(Error::StsNotImplemented,
-                 "Expected input, scale, bias, mean and var");
+        CV_Error(Error::StsNotImplemented, "Expected input, scale, bias, mean and var");
 
-    layerParams.type = "BatchNorm";
-    replaceLayerParam(layerParams, "epsilon", "eps");
-    replaceLayerParam(layerParams, "spatial", "use_global_stats");
+    layerParams.type = "BatchNorm2";
 
-    CV_Assert(net.isConstArg(node_inputs[3]));
-    CV_Assert(net.isConstArg(node_inputs[4]));
+    float eps = 1e-5f;
+    for (int i = 0; i < node_proto.attribute_size(); i++) {
+        const opencv_onnx::AttributeProto& attr = node_proto.attribute(i);
+        if (attr.name() == "epsilon") eps = attr.f();
+    }
+    layerParams.set("epsilon", eps);
 
-    Mat meanData = net.argTensor(node_inputs[3]);
-    Mat stdData =  net.argTensor(node_inputs[4]);
+    bool isStatic = net.isConstArg(node_inputs[1]) && // scale
+                    net.isConstArg(node_inputs[2]) && // bias
+                    net.isConstArg(node_inputs[3]) && // mean
+                    net.isConstArg(node_inputs[4]);   // var
 
-    layerParams.blobs.push_back(meanData);
-    layerParams.blobs.push_back(stdData);
-
-    if (!node_proto.input(1).empty()) {
-        layerParams.set("has_weight", true);
-        CV_Assert(net.isConstArg(node_inputs[1]));
-        layerParams.blobs.push_back(net.argTensor(node_inputs[1]));  // weightData
-    } else {
-        layerParams.set("has_weight", false);
+    if (isStatic) {
+        layerParams.blobs.resize(4);
+        layerParams.blobs[0] = net.argTensor(node_inputs[3]); // mean
+        layerParams.blobs[1] = net.argTensor(node_inputs[4]); // var
+        layerParams.blobs[2] = net.argTensor(node_inputs[1]); // scale
+        layerParams.blobs[3] = net.argTensor(node_inputs[2]); // bias
     }
 
-    if (!node_proto.input(2).empty()) {
-        layerParams.set("has_bias", true);
-        CV_Assert(net.isConstArg(node_inputs[1]));
-        layerParams.blobs.push_back(net.argTensor(node_inputs[2]));  // biasData
-    } else {
-        layerParams.set("has_bias", false);
-    }
-    addLayer(layerParams, node_proto, 1);
+    addLayer(layerParams, node_proto);
 }
 
 void ONNXImporter2::parseGemm(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
@@ -2052,16 +2045,6 @@ void ONNXImporter2::parseRMSNormalization(LayerParams& layerParams, const opencv
 
 void ONNXImporter2::parseRandomNormalLike(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    if (layerParams.has("dtype"))
-    {
-        int dt = layerParams.get<int>("dtype", -1);
-        if (dt >= 0)
-        {
-            layerParams.set<int>("output_dtype", dataType2cv((opencv_onnx::TensorProto_DataType)dt));
-        }
-        layerParams.erase("dtype");
-    }
-
     layerParams.type = "RandomNormalLike";
     addLayer(layerParams, node_proto);
 }

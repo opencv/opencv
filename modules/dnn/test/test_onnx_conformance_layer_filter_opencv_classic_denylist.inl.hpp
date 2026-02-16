@@ -712,3 +712,5 @@
 "test_roialign_aligned_false",
 "test_roialign_aligned_true",
 "test_roialign_mode_max",
+"test_batchnorm_example",
+"test_batchnorm_epsilon",

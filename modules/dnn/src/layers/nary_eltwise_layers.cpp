@@ -548,8 +548,8 @@ public:
         int nplanes = std::accumulate(shape.begin(), shape.end() - 1, 1, std::multiplies<int>());
 
         if (nplanes == 1) { // parallelize within the plane
-            AutoBuffer<char> buf_ptrs(steps.size());
-            auto ptrs = (char**)buf_ptrs.data();
+            AutoBuffer<char*> buf_ptrs(steps.size());
+            char** ptrs = buf_ptrs.data();
             ptrs[0] = out;
             for (int i = 0; i < ninputs; i++) {
                 ptrs[i+1] = (char*)inp[i];
@@ -594,8 +594,8 @@ public:
             parallel_for_(Range(0, plane_size), worker, nstripes);
         } else { // parallelize across the plane
             auto worker = [&](const Range &r) {
-                AutoBuffer<char> buf_ptrs(steps.size());
-                auto ptrs = (char**)buf_ptrs.data();
+                AutoBuffer<char*> buf_ptrs(steps.size());
+                char** ptrs = buf_ptrs.data();
                 for (int plane_idx = r.start; plane_idx < r.end; plane_idx++) {
                     ptrs[0] = out;
                     for (int i = 0; i < ninputs; i++) ptrs[i+1] = (char*)inp[i];
@@ -1318,7 +1318,7 @@ public:
             node = std::make_shared<ov::op::v1::Select>(inp0, inp1, inp2);
         }
         // Ideally we should do this but int32 internal blobs are converted to float32 data type in inference.
-        // TODO: Remove data type convertion when we have type inference.
+        // TODO: Remove data type conversion when we have type inference.
         else if (op == OPERATION::MOD) {
             auto inp0_i64 = std::make_shared<ov::op::v0::Convert>(inp0, ov::element::i64);
             auto inp1_i64 = std::make_shared<ov::op::v0::Convert>(inp1, ov::element::i64);

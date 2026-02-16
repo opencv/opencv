@@ -53,7 +53,7 @@ canvas.addEventListener('click', e => {
 });
 canvas.addEventListener('mousemove', e => {
     let x = e.offsetX, y = e.offsetY; //console.log(x, y);
-    let dst = src.mat_clone();
+    let dst = src.clone();
     if (hasMap && x >= 0 && x < src.cols && y >= 0 && y < src.rows)
     {
         let contour = new cv.Mat();

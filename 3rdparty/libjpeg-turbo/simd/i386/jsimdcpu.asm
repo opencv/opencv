@@ -1,5 +1,5 @@
 ;
-; jsimdcpu.asm - SIMD instruction support check
+; SIMD instruction support check
 ;
 ; Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
 ; Copyright (C) 2016, D. R. Commander.
