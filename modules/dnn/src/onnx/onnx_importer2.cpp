@@ -2149,7 +2149,7 @@ void ONNXImporter2::parseQMatMul(LayerParams& layerParams, const opencv_onnx::No
 
 void ONNXImporter2::parseQGemm(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
 {
-    opencv_onnx::NodeProto node_proto = node_proto_; 
+    opencv_onnx::NodeProto node_proto = node_proto_;
 
     int ninputs = node_proto.input_size();
     CV_Assert(ninputs == 8 || ninputs == 9);
@@ -2225,13 +2225,13 @@ void ONNXImporter2::parseQGemm(LayerParams& layerParams, const opencv_onnx::Node
     layerParams.blobs.push_back(biasFused);
     layerParams.blobs.push_back(outputMultiplier);
 
-    auto dataInput = node_inputs[0]; 
+    auto dataInput = node_inputs[0];
     node_inputs.clear();
-    node_inputs.push_back(dataInput); 
+    node_inputs.push_back(dataInput);
 
     opencv_onnx::NodeProto clean_proto;
     clean_proto.set_name(node_proto.name());
-    clean_proto.add_input(node_proto.input(0)); 
+    clean_proto.add_input(node_proto.input(0));
     clean_proto.add_output(node_proto.output(0));
 
     addLayer(layerParams, clean_proto);
@@ -2281,7 +2281,7 @@ void ONNXImporter2::parseQEltwise(LayerParams& layerParams, const opencv_onnx::N
         offset = out_zp;
     }
 
-    std::vector<int> int_zps = {inp_0_zp, inp_1_zp}; 
+    std::vector<int> int_zps = {inp_0_zp, inp_1_zp};
     layerParams.set("input_scales", DictValue::arrayReal(&inp_scales[0], (int)inp_scales.size()));
     layerParams.set("input_zeropoints", DictValue::arrayInt(&int_zps[0], (int)int_zps.size()));
     layerParams.set("scales", out_sc);
@@ -2296,9 +2296,9 @@ void ONNXImporter2::parseQEltwise(LayerParams& layerParams, const opencv_onnx::N
 
     opencv_onnx::NodeProto clean_proto;
     clean_proto.set_name(node_proto.name());
-    clean_proto.add_input(node_proto.input(0)); 
-    clean_proto.add_input(node_proto.input(3)); 
-    clean_proto.add_output(node_proto.output(0)); 
+    clean_proto.add_input(node_proto.input(0));
+    clean_proto.add_input(node_proto.input(3));
+    clean_proto.add_output(node_proto.output(0));
 
     layerParams.type = "EltwiseInt8";
     layerParams.set("operation", op);
@@ -2377,6 +2377,10 @@ void ONNXImporter2::parseQAvgPool(LayerParams& layerParams, const opencv_onnx::N
         return net.argTensor(node_inputs[index]);
     };
 
+    if (getBlob(node_proto, 2).type() == CV_8U) {
+        CV_Error(Error::StsNotImplemented, "V2 Engine currently strictly enforces signed int8 (CV_8S). Falling back to V1.");
+    }
+
     float inp_sc  = getScalarFromMat<float>(getBlob(node_proto, 1));
     int8_t inp_zp = getScalarFromMat<int8_t>(getBlob(node_proto, 2));
     float out_sc  = getScalarFromMat<float>(getBlob(node_proto, 3));
@@ -2397,7 +2401,7 @@ void ONNXImporter2::parseQAvgPool(LayerParams& layerParams, const opencv_onnx::N
 
     opencv_onnx::NodeProto clean_proto;
     clean_proto.set_name(node_proto.name());
-    clean_proto.add_input(node_proto.input(0)); 
+    clean_proto.add_input(node_proto.input(0));
     clean_proto.add_output(node_proto.output(0));
 
     addLayer(layerParams, clean_proto);
