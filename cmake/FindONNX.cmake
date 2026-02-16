@@ -25,7 +25,7 @@ if(ONNXRT_ROOT_DIR)
   list(APPEND __ort_hint_roots "${ONNXRT_ROOT_DIR}")
 endif()
 
-Prefer CMake config packages if present i.e system-installed ORT
+# Prefer CMake config packages if present i.e system-installed ORT
 find_package(onnxruntime CONFIG QUIET)
 find_package(ONNXRuntime CONFIG QUIET)
 
