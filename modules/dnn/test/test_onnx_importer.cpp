@@ -3465,35 +3465,71 @@ TEST_P(Test_ONNX_layers, TopK) {
     test("top_k_smallest");
 }
 
+TEST_P(Test_ONNX_layers, RandomNormalLike_basic)
+{
+    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/random_normal_like.onnx", true));
+
+    Mat input(2, 3, CV_32F, Scalar(0));
+    net.setInput(input);
+    Mat out = net.forward();
+
+    EXPECT_EQ(out.rows, 2);
+    EXPECT_EQ(out.cols, 3);
+    EXPECT_EQ(out.type(), CV_32F);
+
+    double minVal, maxVal;
+    minMaxLoc(out, &minVal, &maxVal);
+    EXPECT_NE(minVal, 0.0);
+    EXPECT_NE(maxVal, 0.0);
+    EXPECT_NE(minVal, maxVal);
+
+    Mat out2 = net.forward();
+    EXPECT_EQ(countNonZero(out != out2), 0);
+}
+
+TEST_P(Test_ONNX_layers, RandomNormalLike_complex)
+{
+    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/random_normal_like_complex.onnx", true));
+
+    Mat input(2, 3, CV_32F, Scalar(0));
+    net.setInput(input);
+    Mat out = net.forward();
+
+    EXPECT_EQ(out.rows, 2);
+    EXPECT_EQ(out.cols, 3);
+    EXPECT_EQ(out.type(), CV_32F);
+
+    double minVal, maxVal;
+    minMaxLoc(out, &minVal, &maxVal);
+    EXPECT_NE(minVal, maxVal);
+
+    net.setInput(input);
+    Mat out2 = net.forward();
+    EXPECT_EQ(countNonZero(out != out2), 0);
+}
+
 TEST_P(Test_ONNX_layers, QLinearConv)
 {
-    String model_path = "dnn/onnx/models/single_qlinearconv.onnx"; 
-
+    String model_path = findDataFile("dnn/onnx/models/single_qlinearconv.onnx", true);
     Net net;
-
     ASSERT_NO_THROW(net = readNetFromONNX(model_path)) << "Failed to parse QLinearConv node.";
 }
 
 TEST_P(Test_ONNX_layers, QLinearAdd_DynamicEngine)
 {
-    String model_path = "dnn/onnx/models/single_qlinearadd.onnx"; 
-
+    String model_path = findDataFile("dnn/onnx/models/single_qlinearadd.onnx", true);
     Net net;
     try {
         net = readNetFromONNX(model_path);
     } catch (const cv::Exception& e) {
         FAIL() << "Engine crashed during parsing! Error: " << e.what();
     }
-
     ASSERT_FALSE(net.empty()) << "Network is empty. Importer failed silently.";
-
     int sizes[] = {1, 1, 3, 3};
     Mat inputA(4, sizes, CV_8S, Scalar(3));
     Mat inputB(4, sizes, CV_8S, Scalar(2));
-
     net.setInput(inputA, "A");
     net.setInput(inputB, "B");
-
     Mat output;
     try {
         output = net.forward();
@@ -3509,8 +3545,7 @@ TEST_P(Test_ONNX_layers, QLinearAdd_DynamicEngine)
 
 TEST_P(Test_ONNX_layers, QLinearPool_DynamicEngine)
 {
-    String model_path = "dnn/onnx/models/single_qpool.onnx"; 
-
+    String model_path = findDataFile("dnn/onnx/models/single_qpool.onnx", true);
     Net net;
     try {
         net = readNetFromONNX(model_path);
@@ -3519,7 +3554,7 @@ TEST_P(Test_ONNX_layers, QLinearPool_DynamicEngine)
     }
 
     int sizes[] = {1, 1, 3, 3};
-    Mat input(4, sizes, CV_8S, Scalar(10)); 
+    Mat input(4, sizes, CV_8S, Scalar(10));
 
     net.setInput(input, "X");
 
@@ -3538,8 +3573,7 @@ TEST_P(Test_ONNX_layers, QLinearPool_DynamicEngine)
 
 TEST_P(Test_ONNX_layers, QGemm_DynamicEngine)
 {
-    String model_path = "dnn/onnx/models/single_qgemm.onnx"; 
-
+    String model_path = findDataFile("dnn/onnx/models/single_qgemm.onnx", true);
     Net net;
     try {
         net = readNetFromONNX(model_path);
@@ -3573,10 +3607,9 @@ TEST_P(Test_ONNX_layers, QGemm_DynamicEngine)
 
 TEST_P(Test_ONNX_layers, MobileNet_QDQ)
 {
-    String model_path = "dnn/onnx/models/mobilenetv2-12-int8.onnx";
-    String image_path = "dnn/dog.jpg";
-    String labels_path = "dnn/imagenet_classes.txt";
-
+    String model_path = findDataFile("dnn/onnx/models/mobilenetv2-12-qdq.onnx", true);
+    String image_path = findDataFile("dnn/dog.jpg", true);
+    String labels_path = findDataFile("dnn/imagenet_classes.txt", true);
     Net net;
     try {
         net = readNetFromONNX(model_path);
@@ -3597,9 +3630,8 @@ TEST_P(Test_ONNX_layers, MobileNet_QDQ)
     } catch (const cv::Exception& e) {
         FAIL() << "Engine crashed during forward pass! Error: " << e.what();
     }
-
-    double minVal, maxVal;
     Point minLoc, maxLoc;
+    double minVal, maxVal;
     minMaxLoc(prob, &minVal, &maxVal, &minLoc, &maxLoc);
     int classId = maxLoc.x;
 
@@ -3617,7 +3649,6 @@ TEST_P(Test_ONNX_layers, MobileNet_QDQ)
     } else {
         predicted_class = "Error: Could not open labels file!";
     }
-
     std::cout << "Outcomes:" << std::endl;
     std::cout << "Top Prediction : " << predicted_class << " (Class " << classId << ")" << std::endl;
 }
