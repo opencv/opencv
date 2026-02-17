@@ -134,9 +134,16 @@ static void findMinEnclosingCircle(const PT *pts_in, int count, Point2f &center,
 {
     // Welzl's algorithm requires random permutation for expected O(n) time.
     // Without shuffling, sorted inputs trigger O(n^3) worst case.
-    std::vector<PT> pts(pts_in, pts_in + count);
-    cv::randShuffle(pts);
-    const PT *pts_ptr = &pts[0];
+    cv::AutoBuffer<PT, 1024> pts(count);
+
+    std::copy(pts_in, pts_in + count, pts.data());
+    cv::RNG& rng = cv::theRNG();
+    for(int i = count - 1; i > 0; --i)
+    {
+        int j = rng.uniform(0, i + 1);
+        std::swap(pts[i], pts[j]);
+    }
+    const PT *pts_ptr = pts.data();
 
     center.x = (float)(pts_ptr[0].x + pts_ptr[1].x) / 2.0f;
     center.y = (float)(pts_ptr[0].y + pts_ptr[1].y) / 2.0f;
