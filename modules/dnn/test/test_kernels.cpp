@@ -10,39 +10,43 @@ namespace opencv_test { namespace {
 
 using namespace cv::dnn;
 
-TEST(DNN_Kernels_FastGemm, pagedAttnQKGemm_Q4D)
-{
-    FastGemmOpt opt;
-    opt.init();
+
+class pagedAttentionQKTest : public ::testing::Test {
+protected:
     const int S = 8; // 8 pages
     const int B = 1;
-    const int D = 256;
-    // Q : B x Nq x T_q x D
-    const int T_q = 1, // 4
-              Nq = 8;
-
-    // construct pages of K
-    // a page is 8 Nc block wide
-    const int T_s = fastGemmNC(opt) * 4;
+    const int D = 16;
+    const int T_q = 1; // 4
+    const int Nq = 8;
     const int Nk = 4;
-
-    Mat K({B, Nk, D, S * T_s}, CV_32F);
+    int T_s;
+    Mat K;
     std::vector<Mat> K_pages;
+    FastGemmOpt opt;
 
-    for (int s = 0; s < S; s++) {
-        Mat K_page({B, Nk, D, T_s}, CV_32F);
-        randu(K_page, -1.f, 1.f);
-        Range ranges[] = {Range::all(), Range::all(), Range::all(), Range(s * T_s, (s + 1) * T_s)};
-        K_page.copyTo(K(ranges));
+    virtual void SetUp() {
+        opt.init();
+        T_s = fastGemmNC(opt) * 4;
+        K = Mat({B, Nk, D, S * T_s}, CV_32F);
+        for (int s = 0; s < S; s++) {
+            Mat K_page({B, Nk, D, T_s}, CV_32F);
+            randu(K_page, -1.f, 1.f);
+            Range ranges[] = {Range::all(), Range::all(), Range::all(), Range(s * T_s, (s + 1) * T_s)};
+            K_page.copyTo(K(ranges));
 
-        std::vector<float> packed;
-        fastGemmPackB(K_page, packed, false, opt);
-        Mat packedK({B, Nk, D * T_s}, CV_32F);
-        std::memcpy(packedK.data, packed.data(), packed.size() * sizeof(float));
+            std::vector<float> packed;
+            fastGemmPackB(K_page, packed, false, opt);
+            Mat packedK({B, Nk, D * T_s}, CV_32F);
+            std::memcpy(packedK.data, packed.data(), packed.size() * sizeof(float));
 
-        K_pages.push_back(packedK);
+            K_pages.push_back(packedK);
+        }
     }
+};
 
+
+TEST_F(pagedAttentionQKTest, pagedAttnQKGemm_Q4D)
+{
     Mat Q({B, Nq, T_q, D}, CV_32F);
     randu(Q, -1.f, 1.f);
 
@@ -84,39 +88,8 @@ TEST(DNN_Kernels_FastGemm, pagedAttnQKGemm_Q4D)
     EXPECT_LE(cvtest::norm(A, A_ref, NORM_INF), 1e-3);
 }
 
-TEST(DNN_Kernels_FastGemm, pagedAttnQKGemm_Q3D)
+TEST_F(pagedAttentionQKTest, pagedAttnQKGemm_Q3D)
 {
-    FastGemmOpt opt;
-    opt.init();
-    const int S = 8; // 8 pages
-    const int B = 1;
-    const int D = 16;
-    // Q : B x Nq x T_q x D
-    const int T_q = 1, // 4
-              Nq = 8;
-
-    // construct pages of K
-    // a page is 8 Nc block wide
-    const int T_s = fastGemmNC(opt) * 4;
-    const int Nk = 4;
-
-    Mat K({B, Nk, D, S * T_s}, CV_32F);
-    std::vector<Mat> K_pages;
-
-    for (int s = 0; s < S; s++) {
-        Mat K_page({B, Nk, D, T_s}, CV_32F);
-        randu(K_page, -1.f, 1.f);
-        Range ranges[] = {Range::all(), Range::all(), Range::all(), Range(s * T_s, (s + 1) * T_s)};
-        K_page.copyTo(K(ranges));
-
-        std::vector<float> packed;
-        fastGemmPackB(K_page, packed, false, opt);
-        Mat packedK({B, Nk, D * T_s}, CV_32F);
-        std::memcpy(packedK.data, packed.data(), packed.size() * sizeof(float));
-
-        K_pages.push_back(packedK);
-    }
-
     Mat Q({B, T_q, Nq * D}, CV_32F);
     randu(Q, -1.f, 1.f);
 
@@ -158,44 +131,48 @@ TEST(DNN_Kernels_FastGemm, pagedAttnQKGemm_Q3D)
     EXPECT_LE(cvtest::norm(A, A_ref, NORM_INF), 1e-3);
 }
 
-TEST(DNN_Kernels_FastGemm, pagedAttnAVGemm_O4D)
-{
-    FastGemmOpt opt;
-    opt.init();
+
+class pagedAttentionAVTest : public ::testing::Test {
+protected:
     const int S = 8; // 8 pages
     const int B = 1;
     const int D = 16;
-    // A : B x Nq x T_q x T
-    const int T_a = 1, // 4
-              Nq = 8;
-
-    // construct pages of V
-    const int T_s = fastGemmKC(opt) * 7;
+    const int T_a = 1; // 4
+    const int Nq = 8;
     const int Nkv = 4;
-
-    Mat V({B, Nkv, S * T_s, D}, CV_32F);
+    int T_s;
+    Mat V;
     std::vector<Mat> V_pages;
+    FastGemmOpt opt;
 
-    for (int s = 0; s < S; s++) {
-        Mat V_page({B, Nkv, T_s, D}, CV_32F);
-        randu(V_page, -1.f, 1.f);
-        Range ranges[] = {Range::all(), Range::all(), Range(s * T_s, (s + 1) * T_s), Range::all()};
-        V_page.copyTo(V(ranges));
+    virtual void SetUp() {
+        opt.init();
+        T_s = fastGemmKC(opt) * 7;
+        V = Mat({B, Nkv, S * T_s, D}, CV_32F, Scalar(0.f));
+        for (int s = 0; s < S; s++) {
+            Mat V_page({B, Nkv, T_s, D}, CV_32F);
+            randu(V_page, -1.f, 1.f);
+            Range ranges[] = {Range::all(), Range::all(), Range(s * T_s, (s + 1) * T_s), Range::all()};
+            V_page.copyTo(V(ranges));
 
-        std::vector<float> packed;
-        fastGemmPackB(V_page, packed, false, opt);
-        int packed_size = fastGemmPackBSize(D, T_s, opt);
-        Mat packedV({B, Nkv, packed_size}, CV_32F);
-        std::memcpy(packedV.data, packed.data(), packed.size() * sizeof(float));
+            std::vector<float> packed;
+            fastGemmPackB(V_page, packed, false, opt);
+            int packed_size = fastGemmPackBSize(D, T_s, opt);
+            Mat packedV({B, Nkv, packed_size}, CV_32F);
+            std::memcpy(packedV.data, packed.data(), packed.size() * sizeof(float));
 
-        V_pages.push_back(packedV);
+            V_pages.push_back(packedV);
+        }
     }
+};
 
+
+TEST_F(pagedAttentionAVTest, pagedAttnAVGemm_O4D)
+{
     Mat A({B, Nq, T_a, S * T_s}, CV_32F, Scalar(0.f));
     randu(A, -1.f, 1.f);
 
     Mat Out({B, Nq, T_a, D}, CV_32F, Scalar(0.f));
-
 
     pagedAttnAVGemm(
         A, V_pages, Out,
@@ -239,39 +216,8 @@ TEST(DNN_Kernels_FastGemm, pagedAttnAVGemm_O4D)
 }
 
 
-TEST(DNN_Kernels_FastGemm, pagedAttnAVGemm_O3D)
+TEST_F(pagedAttentionAVTest, pagedAttnAVGemm_O3D)
 {
-    FastGemmOpt opt;
-    opt.init();
-    const int S = 8; // 8 pages
-    const int B = 1;
-    const int D = 16;
-    // A : B x Nq x T_q x T
-    const int T_a = 1, // 4
-              Nq = 8;
-
-    // construct pages of V
-    const int T_s = fastGemmKC(opt) * 7;
-    const int Nkv = 4;
-
-    Mat V({B, Nkv, S * T_s, D}, CV_32F);
-    std::vector<Mat> V_pages;
-
-    for (int s = 0; s < S; s++) {
-        Mat V_page({B, Nkv, T_s, D}, CV_32F);
-        randu(V_page, -1.f, 1.f);
-        Range ranges[] = {Range::all(), Range::all(), Range(s * T_s, (s + 1) * T_s), Range::all()};
-        V_page.copyTo(V(ranges));
-
-        std::vector<float> packed;
-        fastGemmPackB(V_page, packed, false, opt);
-        int packed_size = fastGemmPackBSize(D, T_s, opt);
-        Mat packedV({B, Nkv, packed_size}, CV_32F);
-        std::memcpy(packedV.data, packed.data(), packed.size() * sizeof(float));
-
-        V_pages.push_back(packedV);
-    }
-
     Mat A({B, Nq, T_a, S * T_s}, CV_32F, Scalar(0.f));
     randu(A, -1.f, 1.f);
 
