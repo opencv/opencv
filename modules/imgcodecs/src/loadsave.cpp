@@ -56,6 +56,11 @@
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/imgcodecs.hpp>
 
+#ifdef CV_HAS_FILESYSTEM_PATH
+#include <filesystem>
+#include <string_view>
+#endif
+
 
 
 /****************************************************************************************\
