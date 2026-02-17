@@ -45,6 +45,12 @@
 
 #include "opencv2/core.hpp"
 
+#if __cplusplus >= 201703L || (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L)
+#include <filesystem>
+#include <string_view>
+#define CV_HAS_FILESYSTEM_PATH 1
+#endif
+
 /**
   @defgroup imgcodecs Image file reading and writing
   @{
@@ -755,6 +761,126 @@ public:
 protected:
     Ptr<Impl> pImpl;
 };
+
+#ifdef CV_HAS_FILESYSTEM_PATH
+
+/** @brief Loads an image from a file (std::string_view overload).
+
+@overload
+@param filename Name of file to be loaded (as std::string_view).
+@param flags Flag that can take values of cv::ImreadModes, default with cv::IMREAD_COLOR_BGR.
+*/
+CV_EXPORTS Mat imread( std::string_view filename, int flags = IMREAD_COLOR_BGR );
+
+/** @brief Loads an image from a file (std::string_view overload).
+
+@overload
+@param filename Name of file to be loaded (as std::string_view).
+@param dst object in which the image will be loaded.
+@param flags Flag that can take values of cv::ImreadModes, default with cv::IMREAD_COLOR_BGR.
+*/
+CV_EXPORTS void imread( std::string_view filename, OutputArray dst, int flags = IMREAD_COLOR_BGR );
+
+/** @brief Loads an image from a file (std::filesystem::path overload).
+
+@overload
+@param filename Name of file to be loaded (as std::filesystem::path).
+@param flags Flag that can take values of cv::ImreadModes, default with cv::IMREAD_COLOR_BGR.
+*/
+CV_EXPORTS Mat imread( const std::filesystem::path& filename, int flags = IMREAD_COLOR_BGR );
+
+/** @brief Loads an image from a file (std::filesystem::path overload).
+
+@overload
+@param filename Name of file to be loaded (as std::filesystem::path).
+@param dst object in which the image will be loaded.
+@param flags Flag that can take values of cv::ImreadModes, default with cv::IMREAD_COLOR_BGR.
+*/
+CV_EXPORTS void imread( const std::filesystem::path& filename, OutputArray dst, int flags = IMREAD_COLOR_BGR );
+
+/** @brief Saves an image to a specified file (std::string_view overload).
+
+@overload
+@param filename Name of the file (as std::string_view).
+@param img (Mat or vector of Mat) Image or Images to be saved.
+@param params Format-specific parameters encoded as pairs (paramId_1, paramValue_1, paramId_2, paramValue_2, ... .) see cv::ImwriteFlags
+*/
+CV_EXPORTS bool imwrite( std::string_view filename, InputArray img,
+                         const std::vector<int>& params = std::vector<int>());
+
+/** @brief Saves an image to a specified file (std::filesystem::path overload).
+
+@overload
+@param filename Name of the file (as std::filesystem::path).
+@param img (Mat or vector of Mat) Image or Images to be saved.
+@param params Format-specific parameters encoded as pairs (paramId_1, paramValue_1, paramId_2, paramValue_2, ... .) see cv::ImwriteFlags
+*/
+CV_EXPORTS bool imwrite( const std::filesystem::path& filename, InputArray img,
+                         const std::vector<int>& params = std::vector<int>());
+
+/** @brief Loads a multi-page image from a file (std::string_view overload).
+
+@overload
+@param filename Name of file to be loaded (as std::string_view).
+@param mats A vector of Mat objects holding each page.
+@param flags Flag that can take values of cv::ImreadModes, default with cv::IMREAD_ANYCOLOR.
+*/
+CV_EXPORTS bool imreadmulti(std::string_view filename, CV_OUT std::vector<Mat>& mats, int flags = IMREAD_ANYCOLOR);
+
+/** @brief Loads a multi-page image from a file (std::filesystem::path overload).
+
+@overload
+@param filename Name of file to be loaded (as std::filesystem::path).
+@param mats A vector of Mat objects holding each page.
+@param flags Flag that can take values of cv::ImreadModes, default with cv::IMREAD_ANYCOLOR.
+*/
+CV_EXPORTS bool imreadmulti(const std::filesystem::path& filename, CV_OUT std::vector<Mat>& mats, int flags = IMREAD_ANYCOLOR);
+
+/** @brief Returns the number of images inside the given file (std::string_view overload).
+
+@overload
+@param filename Name of file to be loaded (as std::string_view).
+@param flags Flag that can take values of cv::ImreadModes, default with cv::IMREAD_ANYCOLOR.
+*/
+CV_EXPORTS size_t imcount(std::string_view filename, int flags = IMREAD_ANYCOLOR);
+
+/** @brief Returns the number of images inside the given file (std::filesystem::path overload).
+
+@overload
+@param filename Name of file to be loaded (as std::filesystem::path).
+@param flags Flag that can take values of cv::ImreadModes, default with cv::IMREAD_ANYCOLOR.
+*/
+CV_EXPORTS size_t imcount(const std::filesystem::path& filename, int flags = IMREAD_ANYCOLOR);
+
+/** @brief Checks if the specified image file can be decoded by OpenCV (std::string_view overload).
+
+@overload
+@param filename File name (as std::string_view).
+*/
+CV_EXPORTS bool haveImageReader( std::string_view filename );
+
+/** @brief Checks if the specified image file can be decoded by OpenCV (std::filesystem::path overload).
+
+@overload
+@param filename File name (as std::filesystem::path).
+*/
+CV_EXPORTS bool haveImageReader( const std::filesystem::path& filename );
+
+/** @brief Checks if the specified image file can be encoded by OpenCV (std::string_view overload).
+
+@overload
+@param filename File name or extension (as std::string_view).
+*/
+CV_EXPORTS bool haveImageWriter( std::string_view filename );
+
+/** @brief Checks if the specified image file can be encoded by OpenCV (std::filesystem::path overload).
+
+@overload
+@param filename File name or extension (as std::filesystem::path).
+*/
+CV_EXPORTS bool haveImageWriter( const std::filesystem::path& filename );
+
+#endif // CV_HAS_FILESYSTEM_PATH
 
 //! @} imgcodecs
 

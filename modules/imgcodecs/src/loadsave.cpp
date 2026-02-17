@@ -2007,6 +2007,82 @@ Animation::Animation(int loopCount, Scalar bgColor)
         this->loop_count = 0; // loop_count should be non-negative
 }
 
+#ifdef CV_HAS_FILESYSTEM_PATH
+
+// std::string_view overloads
+Mat imread( std::string_view filename, int flags )
+{
+    return imread( String(filename), flags );
+}
+
+void imread( std::string_view filename, OutputArray dst, int flags )
+{
+    imread( String(filename), dst, flags );
+}
+
+bool imwrite( std::string_view filename, InputArray img, const std::vector<int>& params )
+{
+    return imwrite( String(filename), img, params );
+}
+
+bool imreadmulti(std::string_view filename, std::vector<Mat>& mats, int flags)
+{
+    return imreadmulti( String(filename), mats, flags );
+}
+
+size_t imcount(std::string_view filename, int flags)
+{
+    return imcount( String(filename), flags );
+}
+
+bool haveImageReader( std::string_view filename )
+{
+    return haveImageReader( String(filename) );
+}
+
+bool haveImageWriter( std::string_view filename )
+{
+    return haveImageWriter( String(filename) );
+}
+
+// std::filesystem::path overloads
+Mat imread( const std::filesystem::path& filename, int flags )
+{
+    return imread( filename.string(), flags );
+}
+
+void imread( const std::filesystem::path& filename, OutputArray dst, int flags )
+{
+    imread( filename.string(), dst, flags );
+}
+
+bool imwrite( const std::filesystem::path& filename, InputArray img, const std::vector<int>& params )
+{
+    return imwrite( filename.string(), img, params );
+}
+
+bool imreadmulti(const std::filesystem::path& filename, std::vector<Mat>& mats, int flags)
+{
+    return imreadmulti( filename.string(), mats, flags );
+}
+
+size_t imcount(const std::filesystem::path& filename, int flags)
+{
+    return imcount( filename.string(), flags );
+}
+
+bool haveImageReader( const std::filesystem::path& filename )
+{
+    return haveImageReader( filename.string() );
+}
+
+bool haveImageWriter( const std::filesystem::path& filename )
+{
+    return haveImageWriter( filename.string() );
+}
+
+#endif // CV_HAS_FILESYSTEM_PATH
+
 }
 
 /* End of file. */
