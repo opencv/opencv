@@ -958,6 +958,22 @@ CV_EXPORTS_W void composeRT( InputArray rvec1, InputArray tvec1,
 
 /** @brief Projects 3D points to an image plane.
 
+The function computes the 2D projections of 3D points to the image plane, given intrinsic and
+extrinsic camera parameters. Optionally, the function computes Jacobians -matrices of partial
+derivatives of image points coordinates (as functions of all the input parameters) with respect to
+the particular parameters, intrinsic and/or extrinsic. The Jacobians are used during the global
+optimization in @ref calibrateCamera, @ref solvePnP, and @ref stereoCalibrate. The function itself
+can also be used to compute a re-projection error, given the current intrinsic and extrinsic
+parameters.
+
+@note **Coordinate Systems:**
+- **Input (`objectPoints`)**: 3D points in the **world coordinate frame**.
+- **Output (`imagePoints`)**: 2D projections in **pixel coordinates** of the image plane, with distortion applied.
+  The coordinates \f$(u, v)\f$ are measured in pixels from the top-left corner of the image.
+
+The transformation chain is: World coordinates → Camera coordinates (via rvec/tvec) → Normalized camera coordinates
+→ Distortion applied → Pixel coordinates (via cameraMatrix).
+
 @param objectPoints Array of object points expressed wrt. the world coordinate frame. A 3xN/Nx3
 1-channel or 1xN/Nx1 3-channel (or vector\<Point3f\> ), where N is the number of points in the view.
 @param rvec The rotation vector (@ref Rodrigues) that, together with tvec, performs a change of
@@ -966,7 +982,7 @@ basis from world to camera coordinate system, see @ref calibrateCamera for detai
 @param cameraMatrix Camera intrinsic matrix \f$\cameramatrix{A}\f$ .
 @param distCoeffs Input vector of distortion coefficients
 \f$\distcoeffs\f$ . If the vector is empty, the zero distortion coefficients are assumed.
-@param imagePoints Output array of image points, 1xN/Nx1 2-channel, or
+@param imagePoints Output array of image points in **pixel coordinates**, 1xN/Nx1 2-channel, or
 vector\<Point2f\> .
 @param jacobian Optional output 2Nx(10+\<numDistCoeffs\>) jacobian matrix of derivatives of image
 points with respect to components of the rotation vector, translation vector, focal lengths,
@@ -975,14 +991,6 @@ components of the jacobian are returned via different output parameters.
 @param aspectRatio Optional "fixed aspect ratio" parameter. If the parameter is not 0, the
 function assumes that the aspect ratio (\f$f_x / f_y\f$) is fixed and correspondingly adjusts the
 jacobian matrix.
-
-The function computes the 2D projections of 3D points to the image plane, given intrinsic and
-extrinsic camera parameters. Optionally, the function computes Jacobians -matrices of partial
-derivatives of image points coordinates (as functions of all the input parameters) with respect to
-the particular parameters, intrinsic and/or extrinsic. The Jacobians are used during the global
-optimization in @ref calibrateCamera, @ref solvePnP, and @ref stereoCalibrate. The function itself
-can also be used to compute a re-projection error, given the current intrinsic and extrinsic
-parameters.
 
 @note By setting rvec = tvec = \f$[0, 0, 0]\f$, or by setting cameraMatrix to a 3x3 identity matrix,
 or by passing zero distortion coefficients, one can get various useful partial cases of the
@@ -4005,10 +4013,21 @@ point coordinates out of the normalized distorted point coordinates ("normalized
 coordinates do not depend on the camera matrix).
 
 The function can be used for both a stereo camera head or a monocular camera (when R is empty).
-@param src Observed point coordinates, 2xN/Nx2 1-channel or 1xN/Nx1 2-channel (CV_32FC2 or CV_64FC2) (or
+
+@note **Coordinate Systems:**
+- **Input (`src`)**: Points are expected in **pixel coordinates** of the distorted image, i.e.,
+  coordinates \f$(u, v)\f$ measured in pixels from the top-left corner of the image.
+- **Output (`dst`)**: The coordinate system of output points depends on parameter `P`:
+  - If `P` is provided (not empty): Output points are in **pixel coordinates** of the rectified/undistorted image plane, using the camera matrix `P`.
+  - If `P` is empty or identity: Output points are in **normalized camera coordinates** (also called "normalized image coordinates"),
+    which are dimensionless coordinates \f$(x, y)\f$ in the camera's focal plane, related to pixel coordinates by:
+    \f$x = (u - c_x) / f_x\f$ and \f$y = (v - c_y) / f_y\f$. These normalized coordinates are independent of the camera's intrinsic parameters and are useful for 3D reconstruction or epipolar geometry.
+
+@param src Observed point coordinates in **pixel coordinates** of the distorted image, 2xN/Nx2 1-channel or 1xN/Nx1 2-channel (CV_32FC2 or CV_64FC2) (or
 vector\<Point2f\> ).
 @param dst Output ideal point coordinates (1xN/Nx1 2-channel or vector\<Point2f\> ) after undistortion and reverse perspective
-transformation. If matrix P is identity or omitted, dst will contain normalized point coordinates.
+transformation. If matrix P is identity or omitted, dst will contain **normalized camera coordinates** (normalized image coordinates),
+otherwise it contains pixel coordinates in the coordinate system defined by P.
 @param cameraMatrix Camera matrix \f$\vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
 @param distCoeffs Input vector of distortion coefficients
 \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
@@ -4016,7 +4035,7 @@ of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion 
 @param R Rectification transformation in the object space (3x3 matrix). R1 or R2 computed by
 #stereoRectify can be passed here. If the matrix is empty, the identity transformation is used.
 @param P New camera matrix (3x3) or new projection matrix (3x4) \f$\begin{bmatrix} {f'}_x & 0 & {c'}_x & t_x \\ 0 & {f'}_y & {c'}_y & t_y \\ 0 & 0 & 1 & t_z \end{bmatrix}\f$. P1 or P2 computed by
-#stereoRectify can be passed here. If the matrix is empty, the identity new camera matrix is used.
+#stereoRectify can be passed here. If the matrix is empty, the identity new camera matrix is used and output will be in normalized coordinates.
  */
 CV_EXPORTS_W
 void undistortPoints(InputArray src, OutputArray dst,
@@ -4125,17 +4144,40 @@ namespace fisheye
     */
     CV_EXPORTS_W void distortPoints(InputArray undistorted, OutputArray distorted, InputArray Kundistorted, InputArray K, InputArray D, double alpha = 0);
 
-    /** @brief Undistorts 2D points using fisheye model
+    /** @brief Undistorts 2D points using fisheye camera model
 
-    @param distorted Array of object points, 1xN/Nx1 2-channel (or vector\<Point2f\> ), where N is the
-    number of points in the view.
-    @param K Camera intrinsic matrix \f$\cameramatrix{K}\f$.
-    @param D Input vector of distortion coefficients \f$\distcoeffsfisheye\f$.
+    This function performs undistortion for fisheye camera models, which use a different distortion model
+    compared to the standard pinhole camera model used by #undistortPoints. The fisheye model is suitable
+    for wide-angle cameras.
+
+    The function transforms points from the distorted fisheye image to undistorted coordinates, optionally
+    applying a rectification transformation (R) and projecting to a new image plane (P).
+
+    @note **Coordinate Systems:**
+    - **Input (`distorted`)**: Points are expected in **pixel coordinates** of the distorted fisheye image,
+      i.e., coordinates measured in pixels from the top-left corner of the image.
+    - **Output (`undistorted`)**: The coordinate system depends on parameter `P`:
+      - If `P` is provided (not empty): Output points are in **pixel coordinates** of the rectified/undistorted
+        image plane, using the camera matrix `P`.
+      - If `P` is empty or identity: Output points are in **normalized camera coordinates** (normalized image coordinates),
+        which are dimensionless coordinates in the camera's focal plane, independent of intrinsic parameters.
+
+    @note **Fisheye vs. Standard Model:**
+    Use this function (#fisheye::undistortPoints) for fisheye cameras (wide-angle lenses).
+    For standard pinhole cameras, use #undistortPoints instead. The fisheye model uses a different distortion
+    parameterization (4 coefficients) compared to the standard model (4-14 coefficients).
+
+    @param distorted Array of distorted point coordinates in **pixel coordinates** of the fisheye image,
+    1xN/Nx1 2-channel (or vector\<Point2f\> ), where N is the number of points in the view.
+    @param K Camera intrinsic matrix \f$\cameramatrix{K}\f$ of the fisheye camera.
+    @param D Input vector of fisheye distortion coefficients \f$\distcoeffsfisheye\f$ (must contain exactly 4 coefficients).
     @param R Rectification transformation in the object space: 3x3 1-channel, or vector: 3x1/1x3
-    1-channel or 1x1 3-channel
-    @param P New camera intrinsic matrix (3x3) or new projection matrix (3x4)
-    @param criteria Termination criteria
-    @param undistorted Output array of image points, 1xN/Nx1 2-channel, or vector\<Point2f\> .
+    1-channel or 1x1 3-channel. If empty, the identity transformation is used.
+    @param P New camera intrinsic matrix (3x3) or new projection matrix (3x4). If empty or identity,
+    output will be in normalized camera coordinates.
+    @param criteria Termination criteria for the iterative undistortion algorithm.
+    @param undistorted Output array of undistorted image points, 1xN/Nx1 2-channel, or vector\<Point2f\> .
+    The coordinate system depends on parameter P (see above).
      */
     CV_EXPORTS_W void undistortPoints(InputArray distorted, OutputArray undistorted,
         InputArray K, InputArray D, InputArray R = noArray(), InputArray P  = noArray(),
