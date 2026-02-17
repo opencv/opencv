@@ -3566,7 +3566,7 @@ TEST_P(Test_ONNX_layers, QLinearPool_DynamicEngine)
     }
 
     ASSERT_EQ(output.total(), 1);
-    int8_t result = output.at<int8_t>(0);
+    int8_t result = output.ptr<int8_t>()[0];
 
     EXPECT_EQ(result, 10) << "Pooling math is wrong! Expected 10, got " << (int)result;
 }
