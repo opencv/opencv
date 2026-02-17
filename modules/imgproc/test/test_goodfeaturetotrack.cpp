@@ -523,5 +523,36 @@ int CV_GoodFeatureToTTest::validate_test_results( int test_case_idx )
 TEST(Imgproc_GoodFeatureToT, accuracy) { CV_GoodFeatureToTTest test; test.safe_run(); }
 
 
+TEST(Imgproc_GoodFeatureToT, adaptive_tile_distribution)
+{
+    Mat image = Mat::zeros(160, 160, CV_8UC1);
+
+    rectangle(image, Rect(12, 12, 44, 44), Scalar(255), FILLED);
+    rectangle(image, Rect(104, 104, 44, 44), Scalar(80), FILLED);
+
+    std::vector<Point2f> cornersGlobal;
+    std::vector<Point2f> cornersAdaptive;
+
+    goodFeaturesToTrack(image, cornersGlobal, 40, 0.10, 2.0);
+    goodFeaturesToTrackAdaptive(image, cornersAdaptive, 40, 0.10, 2.0, Size(2, 2));
+
+    int globalBottomRight = 0;
+    for (size_t i = 0; i < cornersGlobal.size(); ++i)
+    {
+        if (cornersGlobal[i].x > 80.f && cornersGlobal[i].y > 80.f)
+            ++globalBottomRight;
+    }
+
+    int adaptiveBottomRight = 0;
+    for (size_t i = 0; i < cornersAdaptive.size(); ++i)
+    {
+        if (cornersAdaptive[i].x > 80.f && cornersAdaptive[i].y > 80.f)
+            ++adaptiveBottomRight;
+    }
+
+    EXPECT_EQ(0, globalBottomRight);
+    EXPECT_GE(adaptiveBottomRight, 4);
+}
+
 }} // namespace
 /* End of file. */

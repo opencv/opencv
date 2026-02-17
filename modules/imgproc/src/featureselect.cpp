@@ -547,6 +547,152 @@ void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
     }
 }
 
+void cv::goodFeaturesToTrackAdaptive(InputArray _image, OutputArray _corners,
+                                     int maxCorners, double qualityLevel, double minDistance,
+                                     Size tileGridSize, InputArray _mask,
+                                     int blockSize, int gradientSize,
+                                     bool useHarrisDetector, double harrisK)
+{
+    CV_INSTRUMENT_REGION();
+
+    CV_Assert(qualityLevel > 0 && minDistance >= 0 && maxCorners >= 0);
+    CV_Assert(tileGridSize.width > 0 && tileGridSize.height > 0);
+    CV_Assert(_mask.empty() || (_mask.type() == CV_8UC1 && _mask.sameSize(_image)));
+
+    Mat image = _image.getMat(), eig, tmp;
+    if (image.empty())
+    {
+        _corners.release();
+        return;
+    }
+
+    if (useHarrisDetector)
+        cornerHarris(image, eig, blockSize, gradientSize, harrisK);
+    else
+        cornerMinEigenVal(image, eig, blockSize, gradientSize);
+
+    dilate(eig, tmp, Mat());
+
+    Mat mask = _mask.getMat();
+    Size imgsize = image.size();
+    std::vector<double> tileMax(tileGridSize.area(), 0.0);
+
+    for (int y = 0; y < imgsize.height; ++y)
+    {
+        const float* eig_data = eig.ptr<float>(y);
+        const uchar* mask_data = mask.data ? mask.ptr<uchar>(y) : 0;
+        const int tileY = std::min((y * tileGridSize.height) / imgsize.height, tileGridSize.height - 1);
+
+        for (int x = 0; x < imgsize.width; ++x)
+        {
+            if (mask_data && !mask_data[x])
+                continue;
+
+            const int tileX = std::min((x * tileGridSize.width) / imgsize.width, tileGridSize.width - 1);
+            double& currentMax = tileMax[tileY * tileGridSize.width + tileX];
+            currentMax = std::max(currentMax, static_cast<double>(eig_data[x]));
+        }
+    }
+
+    std::vector<const float*> tmpCorners;
+    for (int y = 1; y < imgsize.height - 1; ++y)
+    {
+        const float* eig_data = eig.ptr<float>(y);
+        const float* tmp_data = tmp.ptr<float>(y);
+        const uchar* mask_data = mask.data ? mask.ptr<uchar>(y) : 0;
+        const int tileY = std::min((y * tileGridSize.height) / imgsize.height, tileGridSize.height - 1);
+
+        for (int x = 1; x < imgsize.width - 1; ++x)
+        {
+            if (mask_data && !mask_data[x])
+                continue;
+
+            const int tileX = std::min((x * tileGridSize.width) / imgsize.width, tileGridSize.width - 1);
+            const double localThreshold = tileMax[tileY * tileGridSize.width + tileX] * qualityLevel;
+            const float val = eig_data[x];
+            if (val > localThreshold && val == tmp_data[x])
+                tmpCorners.push_back(eig_data + x);
+        }
+    }
+
+    if (tmpCorners.empty())
+    {
+        _corners.release();
+        return;
+    }
+
+    std::sort(tmpCorners.begin(), tmpCorners.end(), greaterThanPtr());
+
+    std::vector<Point2f> corners;
+    corners.reserve(tmpCorners.size());
+
+    if (minDistance >= 1)
+    {
+        const int cell_size = cvRound(minDistance);
+        const int grid_width = (image.cols + cell_size - 1) / cell_size;
+        const int grid_height = (image.rows + cell_size - 1) / cell_size;
+        std::vector<std::vector<Point2f> > grid(grid_width * grid_height);
+        const double minDistanceSq = minDistance * minDistance;
+
+        for (size_t i = 0; i < tmpCorners.size(); ++i)
+        {
+            int ofs = (int)((const uchar*)tmpCorners[i] - eig.ptr());
+            int y = (int)(ofs / eig.step);
+            int x = (int)((ofs - y * eig.step) / sizeof(float));
+
+            const int x_cell = x / cell_size;
+            const int y_cell = y / cell_size;
+
+            const int x1 = std::max(0, x_cell - 1);
+            const int y1 = std::max(0, y_cell - 1);
+            const int x2 = std::min(grid_width - 1, x_cell + 1);
+            const int y2 = std::min(grid_height - 1, y_cell + 1);
+
+            bool good = true;
+            for (int yy = y1; yy <= y2 && good; ++yy)
+            {
+                for (int xx = x1; xx <= x2 && good; ++xx)
+                {
+                    const std::vector<Point2f>& m = grid[yy * grid_width + xx];
+                    for (size_t j = 0; j < m.size(); ++j)
+                    {
+                        const float dx = x - m[j].x;
+                        const float dy = y - m[j].y;
+                        if (dx * dx + dy * dy < minDistanceSq)
+                        {
+                            good = false;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!good)
+                continue;
+
+            grid[y_cell * grid_width + x_cell].push_back(Point2f((float)x, (float)y));
+            corners.push_back(Point2f((float)x, (float)y));
+            if (maxCorners > 0 && (int)corners.size() == maxCorners)
+                break;
+        }
+    }
+    else
+    {
+        for (size_t i = 0; i < tmpCorners.size(); ++i)
+        {
+            int ofs = (int)((const uchar*)tmpCorners[i] - eig.ptr());
+            int y = (int)(ofs / eig.step);
+            int x = (int)((ofs - y * eig.step) / sizeof(float));
+
+            corners.push_back(Point2f((float)x, (float)y));
+            if (maxCorners > 0 && (int)corners.size() == maxCorners)
+                break;
+        }
+    }
+
+    Mat(corners).convertTo(_corners, _corners.fixedType() ? _corners.type() : CV_32F);
+}
+
 CV_IMPL void
 cvGoodFeaturesToTrack( const void* _image, void*, void*,
                        CvPoint2D32f* _corners, int *_corner_count,
