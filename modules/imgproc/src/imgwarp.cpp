@@ -2920,12 +2920,12 @@ cv::Matx23d cv::getRotationMatrix2D_(Point2f center, double angle, double scale)
  */
 cv::Mat cv::getPerspectiveTransform(InputArray _src, InputArray _dst, int solveMethod)
 {
+    CV_UNUSED(solveMethod);
+
     Mat src = _src.getMat(), dst = _dst.getMat();
     Mat src64, dst64;
 
     // 1. Promote to Double (CV_64F) for precision
-    // This fixes the Android/ARM regression #27553
-    int type = src.type();
     if (src.depth() == CV_32F) {
         src.convertTo(src64, CV_64F);
         dst.convertTo(dst64, CV_64F);
@@ -2939,7 +2939,6 @@ cv::Mat cv::getPerspectiveTransform(InputArray _src, InputArray _dst, int solveM
     CV_Assert( src64.checkVector(2, CV_64F) == 4 && dst64.checkVector(2, CV_64F) == 4 );
 
     // 2. Construct the 8x9 Matrix A for the homogeneous system Ah = 0
-    // This handles cases where H_33 is 0 (fixing issue #26916)
     Mat A = Mat::zeros(8, 9, CV_64F);
     const Point2d* s = src64.ptr<Point2d>();
     const Point2d* d = dst64.ptr<Point2d>();
@@ -2962,7 +2961,6 @@ cv::Mat cv::getPerspectiveTransform(InputArray _src, InputArray _dst, int solveM
     }
 
     // 3. Solve using SVD
-    // The solution is the right singular vector corresponding to the smallest singular value
     Mat w, u, vt;
     SVD::compute(A, w, u, vt, SVD::FULL_UV);
 
