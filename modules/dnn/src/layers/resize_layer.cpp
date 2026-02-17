@@ -140,14 +140,20 @@ public:
         {
             // INTER_LINEAR Resize mode does not support INT8 inputs
             InterpolationFlags mode = interpolation == "nearest" ? INTER_NEAREST : INTER_LINEAR;
-            for (size_t n = 0; n < inputs[0].size[0]; ++n)
-            {
-                for (size_t ch = 0; ch < inputs[0].size[1]; ++ch)
+
+            size_t nbatch = inputs[0].size[0];
+            size_t nch = inputs[0].size[1];
+            size_t total_planes = nbatch * nch;
+
+            parallel_for_(Range(0, (int)total_planes), [&](const Range& range){
+                for (int i = range.start; i < range.end; ++i)
                 {
+                    int n = i / nch;
+                    int ch = i % nch;
                     resize(getPlane(inp, n, ch), getPlane(out, n, ch),
                            Size(outWidth, outHeight), 0, 0, mode);
                 }
-            }
+            });
         }
         else if (interpolation == "nearest")
         {
