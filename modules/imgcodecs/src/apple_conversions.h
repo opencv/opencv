@@ -2,10 +2,18 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
+#ifndef OPENCV_IMGCODECS_APPLE_CONVERSIONS_H
+#define OPENCV_IMGCODECS_APPLE_CONVERSIONS_H
+
 #include "opencv2/core.hpp"
 #import <Accelerate/Accelerate.h>
+
+#ifdef HAVE_AVFOUNDATION
 #import <AVFoundation/AVFoundation.h>
+#endif
 #import <ImageIO/ImageIO.h>
 
 CV_EXPORTS CGImageRef MatToCGImage(const cv::Mat& image) CF_RETURNS_RETAINED;
 CV_EXPORTS void CGImageToMat(const CGImageRef image, cv::Mat& m, bool alphaExist);
+
+#endif // OPENCV_IMGCODECS_APPLE_CONVERSIONS_H
