@@ -1790,7 +1790,8 @@ struct HResizeLinearVecU8_X4
             // Fix #28495:
             // 1. Process 4 pixels at a time (step=4) to match SIMD width.
             // 2. Perform a manual gather to load pairs: (R, R_next), (G, G_next), etc.
-            //    This avoids v_load_expand mixing channels and avoids v_pack/shift type issues on NEON.
+            //    This is required because 'xofs' may skip pixels (scaling), so we cannot
+            //    assume contiguous memory (which v_load/v_extract would require).
 
             const int step = 4;
             const int len0 = xmax & -step;
@@ -1813,6 +1814,8 @@ struct HResizeLinearVecU8_X4
                     int o3 = xofs[dx+3];
 
                     // Gather Row 0
+                    // We cast to ushort to ensure the v_uint16x8 constructor handles the promotion correctly
+                    // before v_reinterpret_as_s16 is used by v_dotprod.
                     v_uint16x8 v_src0((ushort)S0[o0], (ushort)S0[o0+3], (ushort)S0[o1], (ushort)S0[o1+3],
                                       (ushort)S0[o2], (ushort)S0[o2+3], (ushort)S0[o3], (ushort)S0[o3+3]);
                     v_store(&D0[dx], v_dotprod(v_reinterpret_as_s16(v_src0), a));

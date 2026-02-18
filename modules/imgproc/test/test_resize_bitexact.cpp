@@ -264,8 +264,8 @@ TEST(Resize_Bitexact, Regression_28495)
     Mat rgba2rgbResized;
     cvtColor(rgbaResized, rgba2rgbResized, COLOR_RGBA2RGB);
 
-    // 5. Compare using L-infinity norm (max absolute difference)
-    EXPECT_LE(cv::norm(rgbResized, rgba2rgbResized, NORM_INF), 1.0);
+    // 5. Compare using L-infinity norm. We expect 0 difference (bit-exact).
+    EXPECT_EQ(cv::norm(rgbResized, rgba2rgbResized, NORM_INF), 0.0);
 }
 
 }} // namespace
