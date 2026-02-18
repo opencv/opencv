@@ -508,7 +508,6 @@ void pagedAttnQKGemmKernel(
     size_t KC = std::min( static_cast<size_t>(FAST_GEMM_F32_PACKED_STRIDE_K), D);
 
     size_t buff_size = KC * MC * esz;
-    bool use_stackbuff = buff_size <= FAST_GEMM_MAX_STACKBUF;
 
     const size_t m_tiles = (T_q + MC - 1) / MC;
     const size_t n_tiles = (T_s + NC - 1) / NC;
@@ -521,7 +520,9 @@ void pagedAttnQKGemmKernel(
     int total = S *  batch * tiles_per_mat;
 
     auto fn = [&](const Range &r) {
-        char* packed_q = (char*)(use_stackbuff ? alloca(buff_size) : malloc(buff_size));
+        cv::AutoBuffer<char, FAST_GEMM_MAX_STACKBUF> packed_q_buff;
+        packed_q_buff.allocate(buff_size);
+        char*packed_q = packed_q_buff.data();
 
         size_t start = r.start;
         size_t end = r.end;
@@ -572,9 +573,6 @@ void pagedAttnQKGemmKernel(
             }
         }
 
-        if (!use_stackbuff) {
-            free(packed_q);
-        }
     };
 
     int cost_per_thread = static_cast<int>((D / KC) * (MC / GEMM_MR) * (NC / GEMM_NR));
@@ -608,7 +606,6 @@ void pagedAttnAVGemmKernel(
     size_t KC = std::min( static_cast<size_t>(FAST_GEMM_F32_PACKED_STRIDE_K), T);
 
     size_t buff_size = KC * MC * esz;
-    bool use_stackbuff = buff_size <= FAST_GEMM_MAX_STACKBUF;
 
     const size_t m_tiles = (T_a + MC - 1) / MC;
     const size_t n_tiles = (D + NC - 1) / NC;
@@ -618,7 +615,10 @@ void pagedAttnAVGemmKernel(
     int total = batch * tiles_per_mat;
 
     auto fn = [&](const Range &r) {
-        char* packed_a = (char*)(use_stackbuff ? alloca(buff_size) : malloc(buff_size));
+        cv::AutoBuffer<char, FAST_GEMM_MAX_STACKBUF> packed_a_buff;
+        packed_a_buff.allocate(buff_size);
+        char* packed_a = packed_a_buff.data();
+
         size_t start = r.start;
         size_t end = r.end;
         size_t ldc0 = canonical_layout ? D : Nq * D;
@@ -677,9 +677,6 @@ void pagedAttnAVGemmKernel(
             }
         }
 
-        if (!use_stackbuff) {
-            free(packed_a);
-        }
     };
 
     int cost_per_thread = static_cast<int>((T / KC) * (MC / GEMM_MR) * (NC / GEMM_NR));
