@@ -139,25 +139,36 @@ static void findMinEnclosingCircle(const PT *pts_in, int count, Point2f &center,
     PT* pts = pts_buf.data();
     if (count > 10)
     {
-        cv::RNG rng(cv::theRNG().next());
+        uint64_t seed = (uint64_t)count;
+        int sample = std::min(count, 8);
+        for(int k = 0; k < sample; k++)
+        {
+            uint32_t ix = 0, iy = 0;
+            std::memcpy(&ix, &pts[k].x, sizeof(pts[k].x));
+            std::memcpy(&iy, &pts[k].y, sizeof(pts[k].y));
+            seed = seed * 31 + (uint64_t)ix;
+            seed = seed * 31 + ((uint64_t)iy << 16);
+        }
+
+        cv::RNG rng((uint32_t)seed);
+
         for (int i = count - 1; i > 0; --i)
         {
-            int j = (unsigned int)rng % (i + 1);
+            int j = rng.uniform(0, i + 1);
             std::swap(pts[i], pts[j]);
         }
     }
-    const PT *pts_ptr = pts;
 
-    center.x = (float)(pts_ptr[0].x + pts_ptr[1].x) / 2.0f;
-    center.y = (float)(pts_ptr[0].y + pts_ptr[1].y) / 2.0f;
-    float dx = (float)(pts_ptr[0].x - pts_ptr[1].x);
-    float dy = (float)(pts_ptr[0].y - pts_ptr[1].y);
+    center.x = (float)(pts[0].x + pts[1].x) / 2.0f;
+    center.y = (float)(pts[0].y + pts[1].y) / 2.0f;
+    float dx = (float)(pts[0].x - pts[1].x);
+    float dy = (float)(pts[0].y - pts[1].y);
     radius = (float)norm(Point2f(dx, dy)) / 2.0f + EPS;
 
     for (int i = 2; i < count; ++i)
     {
-        dx = (float)pts_ptr[i].x - center.x;
-        dy = (float)pts_ptr[i].y - center.y;
+        dx = (float)pts[i].x - center.x;
+        dy = (float)pts[i].y - center.y;
         float d = (float)norm(Point2f(dx, dy));
         if (d < radius)
         {
@@ -165,7 +176,7 @@ static void findMinEnclosingCircle(const PT *pts_in, int count, Point2f &center,
         }
         else
         {
-            findSecondPoint(pts_ptr, i, center, radius);
+            findSecondPoint(pts, i, center, radius);
         }
     }
 }
