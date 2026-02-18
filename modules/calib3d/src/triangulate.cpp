@@ -343,29 +343,62 @@ icvCorrectMatches(CvMat *F_, CvMat *points1_, CvMat *points2_, CvMat *new_points
         cvConvert( points2, new_points2 );
 }
 
-void cv::triangulatePoints( InputArray _projMatr1, InputArray _projMatr2,
-                            InputArray _projPoints1, InputArray _projPoints2,
-                            OutputArray _points4D )
+void cv::triangulatePoints(InputArray _projMatr1, InputArray _projMatr2,
+                           InputArray _projPoints1, InputArray _projPoints2,
+                           OutputArray _points4D)
 {
     CV_INSTRUMENT_REGION();
 
-    Mat matr1 = _projMatr1.getMat(), matr2 = _projMatr2.getMat();
-    Mat points1 = _projPoints1.getMat(), points2 = _projPoints2.getMat();
+    Mat P1 = _projMatr1.getMat().clone();
+    Mat P2 = _projMatr2.getMat().clone();
+    Mat pts1 = _projPoints1.getMat().clone();
+    Mat pts2 = _projPoints2.getMat().clone();
 
-    if((points1.rows == 1 || points1.cols == 1) && points1.channels() == 2)
-        points1 = points1.reshape(1, static_cast<int>(points1.total())).t();
+    CV_Assert(P1.rows == 3 && P1.cols == 4);
+    CV_Assert(P2.rows == 3 && P2.cols == 4);
 
-    if((points2.rows == 1 || points2.cols == 1) && points2.channels() == 2)
-        points2 = points2.reshape(1, static_cast<int>(points2.total())).t();
+    // ensure safe numeric type
+    P1.convertTo(P1, CV_64F);
+    P2.convertTo(P2, CV_64F);
+    pts1.convertTo(pts1, CV_64F);
+    pts2.convertTo(pts2, CV_64F);
 
-    CvMat cvMatr1 = cvMat(matr1), cvMatr2 = cvMat(matr2);
-    CvMat cvPoints1 = cvMat(points1), cvPoints2 = cvMat(points2);
+    // ensure memory continuity (prevents CvMat reinterpretation issues)
+    if (!P1.isContinuous()) P1 = P1.clone();
+    if (!P2.isContinuous()) P2 = P2.clone();
+    if (!pts1.isContinuous()) pts1 = pts1.clone();
+    if (!pts2.isContinuous()) pts2 = pts2.clone();
 
-    _points4D.create(4, points1.cols, points1.type());
-    Mat cvPoints4D_ = _points4D.getMat();
-    CvMat cvPoints4D = cvMat(cvPoints4D_);
+    if ((pts1.rows == 1 || pts1.cols == 1) && pts1.channels() == 2)
+        pts1 = pts1.reshape(1, (int)pts1.total()).t();
 
-    icvTriangulatePoints(&cvMatr1, &cvMatr2, &cvPoints1, &cvPoints2, &cvPoints4D);
+    if ((pts2.rows == 1 || pts2.cols == 1) && pts2.channels() == 2)
+        pts2 = pts2.reshape(1, (int)pts2.total()).t();
+
+    CV_Assert(pts1.rows == 2 && pts2.rows == 2);
+    CV_Assert(pts1.cols == pts2.cols);
+
+    Mat points4D = Mat::zeros(4, pts1.cols, CV_64F);
+
+    CvMat cvP1 = cvMat(P1);
+    CvMat cvP2 = cvMat(P2);
+    CvMat cvPts1 = cvMat(pts1);
+    CvMat cvPts2 = cvMat(pts2);
+    CvMat cvPoints4D = cvMat(points4D);
+
+    icvTriangulatePoints(&cvP1, &cvP2, &cvPts1, &cvPts2, &cvPoints4D);
+
+    // normalize homogeneous coordinates safely
+    for (int i = 0; i < points4D.cols; i++)
+    {
+        double w = points4D.at<double>(3,i);
+        if (fabs(w) > DBL_EPSILON)
+            points4D.col(i) /= w;
+        else
+            points4D.col(i).setTo(0);
+    }
+
+    points4D.copyTo(_points4D);
 }
 
 void cv::correctMatches( InputArray _F, InputArray _points1, InputArray _points2,

@@ -2224,7 +2224,10 @@ TEST(Calib3d_Triangulate, accuracy)
     cout << "\tres0: " << res0 << endl;
     cout << "\tres: " << res << endl;
 
-    ASSERT_LE(cvtest::norm(res, res0, NORM_INF), 1e-1);
+    Mat res64a, res064a;
+    res.convertTo(res64a, CV_64F);
+    res0.convertTo(res064a, CV_64F);
+    ASSERT_LE(cvtest::norm(res64a, res064a,NORM_INF), 1e-1);
     }
 
     // another testcase http://code.opencv.org/issues/3461
@@ -2264,7 +2267,10 @@ TEST(Calib3d_Triangulate, accuracy)
     cout << "\tres0: " << res0 << endl;
     cout << "\tres: " << res << endl;
 
-    ASSERT_LE(cvtest::norm(res, res0, NORM_INF), 2);
+    Mat res64b, res064b;
+    res.convertTo(res64b, CV_64F);
+    res0.convertTo(res064b, CV_64F);
+    ASSERT_LE(cvtest::norm(res64b, res064b,NORM_INF), 2);
     }
 }
 
