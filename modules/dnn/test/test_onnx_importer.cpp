@@ -3608,7 +3608,7 @@ TEST_P(Test_ONNX_layers, QGemm_DynamicEngine)
 TEST_P(Test_ONNX_layers, MobileNet_QDQ)
 {
     String model_path = findDataFile("dnn/onnx/models/mobilenetv2-12-qdq.onnx", true);
-    String image_path = findDataFile("dnn/dog.jpg", true);
+    String image_path = findDataFile("dnn/dog416.png", true);
     String labels_path = findDataFile("dnn/imagenet_classes.txt", true);
     Net net;
     try {
@@ -3649,8 +3649,6 @@ TEST_P(Test_ONNX_layers, MobileNet_QDQ)
     } else {
         predicted_class = "Error: Could not open labels file!";
     }
-    std::cout << "Outcomes:" << std::endl;
-    std::cout << "Top Prediction : " << predicted_class << " (Class " << classId << ")" << std::endl;
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
