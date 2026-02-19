@@ -47,7 +47,8 @@ namespace
             }
             else
             {
-                Mat src32; src.convertTo(src32, CV_32F);
+                Mat src32(shape(src), CV_32F);
+                convertToND(src, src32, CV_32F);
                 MatConstIterator_<float> sIt = src32.begin<float>(), sEnd = src32.end<float>();
                 MatIterator_<float> dIt = dst.begin<float>();
                 for (; sIt != sEnd; ++sIt, ++dIt)
@@ -66,33 +67,27 @@ namespace
                 CV_Error(Error::StsNotImplemented, "Unsupported destination depth for BF16 cast");
             }
 
-            Mat dst_bits(dst.size(), CV_MAKETYPE(CV_16U, dst.channels()), dst.data, dst.step);
-
             const Mat* src32p;
             Mat src32;
             if (src.depth() == CV_32F)
                 src32p = &src;
             else
             {
-                src.convertTo(src32, CV_32F);
+                src32.create(shape(src), CV_32F);
+                convertToND(src, src32, CV_32F);
                 src32p = &src32;
             }
 
-            const int rows = src32p->rows;
-            const int cols_x_cn = src32p->cols * src32p->channels();
-            for (int r = 0; r < rows; ++r)
+            MatConstIterator_<float> sIt = src32p->begin<float>(), sEnd = src32p->end<float>();
+            MatIterator_<ushort> dIt = dst.begin<ushort>();
+            for (; sIt != sEnd; ++sIt, ++dIt)
             {
-                const float* in = src32p->ptr<float>(r);
-                ushort* out = dst_bits.ptr<ushort>(r);
-                for (int i = 0; i < cols_x_cn; ++i)
-                {
-                    Cv32suf u; u.f = in[i];
-                    out[i] = (ushort)(u.u >> 16);
-                }
+                Cv32suf u; u.f = *sIt;
+                *dIt = static_cast<ushort>(u.u >> 16);
             }
             return;
         }
-        src.convertTo(dst, dst.depth());
+        convertToND(src, dst, dst.depth());
     }
 }
 
@@ -262,7 +257,7 @@ public:
         int plannedDDepth = (runtimeTargetDepth == CV_16F) ? CV_32F :
                             (runtimeTargetDepth == CV_16BF ? CV_16U : runtimeTargetDepth);
         if (dst0.depth() != plannedDDepth)
-            dst0.create(dst0.size(), CV_MAKETYPE(plannedDDepth, src0.channels()));
+            dst0.create(shape(src0), CV_MAKETYPE(plannedDDepth, src0.channels()));
 
         Mat src = src0;
         Mat dst = dst0;
@@ -282,7 +277,7 @@ public:
         }
         else if (sdepth == CV_16BF)
         {
-            src.convertTo(dst, ddepth);
+            convertToND(src, dst, ddepth);
         }
         else if (runtimeTargetDepth == CV_16F && ddepth == CV_32F)
         {
@@ -295,11 +290,11 @@ public:
                 castQuantized(src, dst, CV_16BF);
             }
             else
-                src.convertTo(dst, ddepth);
+                convertToND(src, dst, ddepth);
         }
         else
         {
-            src.convertTo(dst, ddepth);
+            convertToND(src, dst, ddepth);
         }
     }
 

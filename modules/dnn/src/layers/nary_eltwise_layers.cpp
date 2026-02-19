@@ -117,8 +117,6 @@ public:
                 assert(st_i % elemsize[k] == 0);
                 this->shapes[k][i] = sz_i;
                 this->steps[k][i] = st_i;
-                if (this->shapes[k][i] == 0)
-                    return false;
             }
         }
 
@@ -316,7 +314,8 @@ public:
                 if (shape[i] != outShape[i])
                 {
                     CV_Assert(shape[i] == 1 || outShape[i] == 1);
-                    outShape[i] = std::max(outShape[i], shape[i]);
+                    if (outShape[i] == 1)
+                        outShape[i] = shape[i];
                 }
             }
         }

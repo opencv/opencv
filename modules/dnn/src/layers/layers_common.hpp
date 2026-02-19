@@ -149,6 +149,11 @@ inline int onnxDataTypeToCV(OnnxDataType dt)
 void reshapeAndCopyFirst(InputArrayOfArrays inputs,
                          OutputArrayOfArrays outputs,
                          const MatShape& shape);
+
+// Convert between data types for arbitrary-dimensional continuous tensors.
+// cv::Mat::convertTo has 2D assumptions in some code paths, so this helper
+// flattens N-D tensors to a 2D single-channel header over the same memory.
+void convertToND(const Mat& src, Mat& dst, int rtype, double alpha = 1.0, double beta = 0.0);
 }
 }
 
