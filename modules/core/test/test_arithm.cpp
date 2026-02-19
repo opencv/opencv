@@ -3409,6 +3409,20 @@ TEST_P(Core_LUT, accuracy_multi2)
     ASSERT_EQ(0, cv::norm(output, gt, cv::NORM_INF));
 }
 
+TEST(Core_Arithm, mul_overflow_28557)
+{
+    cv::setUseOptimized(false); // Force scalar fallback
+
+    uint16_t data[] = {5000, 60000, 5000, 60000, 5000, 60000};
+    cv::Mat m(1, 6, CV_16U, data);
+    cv::Mat res = m.mul(m);
+
+    cv::setUseOptimized(true);
+
+    EXPECT_EQ(65535, res.at<uint16_t>(0, 1));
+    EXPECT_EQ(65535, res.at<uint16_t>(0, 3));
+    EXPECT_EQ(65535, res.at<uint16_t>(0, 5));
+}
 INSTANTIATE_TEST_CASE_P(/**/, Core_LUT, testing::Combine( LutIdxType::all(), LutMatType::all()));
 
 }} // namespace

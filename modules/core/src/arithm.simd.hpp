@@ -1433,8 +1433,14 @@ struct op_mul
 {
     static inline Tvec r(const Tvec& a, const Tvec& b)
     { return v_mul(a, b); }
+
     static inline T1 r(T1 a, T1 b)
-    { return saturate_cast<T1>(a * b); }
+    {
+        // Safely promote to 64-bit for integers to prevent overflow before saturation.
+        // Floating point types remain as double to preserve precision.
+        using work_type = typename std::conditional<std::is_floating_point<T1>::value, double, int64_t>::type;
+        return saturate_cast<T1>((work_type)a * (work_type)b);
+    }
 };
 
 template<typename T1, typename T2, typename Tvec>
