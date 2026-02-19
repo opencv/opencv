@@ -147,7 +147,7 @@ public:
             {
                 // add eps to avoid overflow
                 float absSum = sum(buffer)[0] + epsilon;
-                float norm = pow(absSum, 1.0f / pnorm);
+                float norm = std::pow(absSum, 1.0f / pnorm);
                 multiply(src, 1.0f / norm, dst);
             }
             else
@@ -229,7 +229,7 @@ public:
             {
                 // add eps to avoid overflow
                 float absSum = sum(buffer)[0] + epsilon;
-                float norm = pow(absSum, 1.0f / pnorm);
+                float norm = std::pow(absSum, 1.0f / pnorm);
                 multiply(src, 1.0f / norm, dst);
             }
             else

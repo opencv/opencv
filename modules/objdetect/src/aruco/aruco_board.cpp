@@ -518,9 +518,9 @@ void CharucoBoardImpl::generateImage(Size outSize, OutputArray img, int marginSi
         for(int x = 0; x < size.width; x++) {
 
             if(legacyPattern && (size.height % 2 == 0)) { // legacy behavior only for even row count patterns
-                if((y + 1) % 2 != x % 2) continue; // white corner, dont do anything
+                if((y + 1) % 2 != x % 2) continue; // white corner, don't do anything
             } else {
-                if(y % 2 != x % 2) continue; // white corner, dont do anything
+                if(y % 2 != x % 2) continue; // white corner, don't do anything
             }
 
             float startX = pixInSquare * float(x);

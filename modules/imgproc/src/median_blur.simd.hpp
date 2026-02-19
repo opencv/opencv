@@ -360,7 +360,7 @@ medianBlur_8u_Om( const Mat& _src, Mat& _dst, int m )
     uchar*  dst = _dst.ptr();
     int     src_step = (int)_src.step, dst_step = (int)_dst.step;
     int     cn = _src.channels();
-    const uchar*  src_max = src + size.height*src_step;
+    const uchar*  src_max = src + (size_t)size.height*src_step;
     CV_Assert(cn > 0 && cn <= 4);
 
     #define UPDATE_ACC01( pix, cn, op ) \
@@ -381,8 +381,8 @@ medianBlur_8u_Om( const Mat& _src, Mat& _dst, int m )
 
         if( x % 2 != 0 )
         {
-            src_bottom = src_top += src_step*(size.height-1);
-            dst_cur += dst_step*(size.height-1);
+            src_bottom = src_top += (size_t)src_step*(size.height-1);
+            dst_cur += (size_t)dst_step*(size.height-1);
             src_step1 = -src_step1;
             dst_step1 = -dst_step1;
         }
@@ -663,9 +663,9 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
         size.width *= cn;
         for( i = 0; i < size.height; i++, dst += dstep )
         {
-            const T* row0 = src + std::max(i - 1, 0)*sstep;
-            const T* row1 = src + i*sstep;
-            const T* row2 = src + std::min(i + 1, size.height-1)*sstep;
+            const T* row0 = src + (size_t)std::max(i - 1, 0)*sstep;
+            const T* row1 = src + (size_t)i*sstep;
+            const T* row2 = src + (size_t)std::min(i + 1, size.height-1)*sstep;
             int limit = cn;
 
             for(j = 0;; )
@@ -750,11 +750,11 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
         for( i = 0; i < size.height; i++, dst += dstep )
         {
             const T* row[5];
-            row[0] = src + std::max(i - 2, 0)*sstep;
-            row[1] = src + std::max(i - 1, 0)*sstep;
-            row[2] = src + i*sstep;
-            row[3] = src + std::min(i + 1, size.height-1)*sstep;
-            row[4] = src + std::min(i + 2, size.height-1)*sstep;
+            row[0] = src + (size_t)std::max(i - 2, 0)*sstep;
+            row[1] = src + (size_t)std::max(i - 1, 0)*sstep;
+            row[2] = src + (size_t)i*sstep;
+            row[3] = src + (size_t)std::min(i + 1, size.height-1)*sstep;
+            row[4] = src + (size_t)std::min(i + 2, size.height-1)*sstep;
             int limit = cn*2;
 
             for(j = 0;; )

@@ -519,7 +519,7 @@ fb_fix_screeninfo &FramebufferBackend::getFixInfo()
     return fixInfo;
 }
 
-int FramebufferBackend::getFramebuffrerID()
+int FramebufferBackend::getFramebufferID()
 {
     return fbID;
 }

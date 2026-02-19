@@ -989,7 +989,7 @@ void Mat::release()
     datastart = dataend = datalimit = data = 0;
     for(int i = 0; i < dims; i++)
         size.p[i] = 0;
-    flags = MAGIC_VAL;
+    flags = (flags & CV_MAT_TYPE_MASK) | MAGIC_VAL;
     dims = rows = cols = 0;
     size.clear();
 }

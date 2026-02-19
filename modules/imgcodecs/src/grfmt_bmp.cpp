@@ -233,9 +233,13 @@ bool  BmpDecoder::readData( Mat& img )
     bool color = img.channels() > 1;
     uchar  gray_palette[256] = {0};
     bool   result = false;
-    int  src_pitch = ((m_width*(m_bpp != 15 ? m_bpp : 16) + 7)/8 + 3) & -4;
     int  nch = color ? 3 : 1;
-    int  y, width3 = m_width*nch;
+
+    const int effective_bpp = (m_bpp != 15) ? m_bpp : 16;
+    const RowPitchParams pitch_params = calculateRowPitch(m_width, effective_bpp, 4, "BMP");
+    const int src_pitch = pitch_params.src_pitch;
+    const int width3 = calculateRowSize(m_width, nch, "BMP");
+    int y;
 
     if( m_offset < 0 || !m_strm.isOpened())
         return false;
@@ -255,7 +259,9 @@ bool  BmpDecoder::readData( Mat& img )
         {
             CvtPaletteToGray( m_palette, gray_palette, 1 << m_bpp );
         }
-        _bgr.allocate(m_width*3 + 32);
+        const size_t bgr_size = static_cast<size_t>(m_width) * 3 + 32;
+        CV_CheckLT(bgr_size, MAX_IMAGE_ROW_SIZE, "BMP: bgr buffer size exceeds maximum allowed size");
+        _bgr.allocate(bgr_size);
     }
     uchar *src = _src.data(), *bgr = _bgr.data();
 

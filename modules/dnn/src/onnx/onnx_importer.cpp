@@ -1327,7 +1327,7 @@ void ONNXImporter::parseSlice(LayerParams& layerParams, const opencv_onnx::NodeP
     {
         // dims should be added to the negative axes
         cur_axe = axes_.getIntValue(i) < 0 ? axes_.getIntValue(i) + dims : axes_.getIntValue(i);
-        CV_CheckGE(cur_axe, 0, "Axes should be grater or equal to '-dims'.");
+        CV_CheckGE(cur_axe, 0, "Axes should be greater or equal to '-dims'.");
         CV_CheckLT(cur_axe, dims, "Axes should be less than 'dim'.");
         CV_CheckEQ(flag[cur_axe], false, "Axes shouldn't have duplicated values.");
         flag[cur_axe] = true;
@@ -2192,6 +2192,14 @@ void ONNXImporter::parseSqueeze(LayerParams& layerParams, const opencv_onnx::Nod
         }
         else
             CV_Error(Error::StsNotImplemented, cv::format("ONNX/Squeeze: doesn't support non-constant 'axes' input"));
+    }
+    else
+    {
+        for (int i = 0; i < inpShape.size(); ++i)
+        {
+            if (inpShape[i] == 1)
+                maskedAxes[i] = true;
+        }
     }
 
     MatShape outShape;

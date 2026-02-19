@@ -155,7 +155,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         std::shared_ptr<UniqueHandle> handle;
     };
 
-    /** @brief GEMM for colummn-major matrices
+    /** @brief GEMM for column-major matrices
      *
      * \f$ C = \alpha AB + \beta C \f$
      *
@@ -248,7 +248,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         );
     }
 
-    /** @brief Strided batched GEMM for colummn-major matrices
+    /** @brief Strided batched GEMM for column-major matrices
      *
      * \f$ C_i = \alpha A_i B_i + \beta C_i \f$ for a stack of matrices A, B and C indexed by i
      *
@@ -364,7 +364,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         );
     }
 
-    /** @brief Strided batched GEMM for colummn-major matrices
+    /** @brief Strided batched GEMM for column-major matrices
      *
      * \f$ C_i = \alpha A_i B_i + \beta C_i \f$ for a stack of matrices A, B and C indexed by i
      *

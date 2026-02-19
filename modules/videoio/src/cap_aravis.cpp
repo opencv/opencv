@@ -383,7 +383,7 @@ void CvCaptureCAM_Aravis::autoExposureControl(const Mat & image)
     midGrey = brightness;
 
     double maxe = 1e6 / fps;
-    double ne = CLIP( ( exposure * d ) / ( dmid * pow(sqrt(2), -2 * exposureCompensation) ), exposureMin, maxe);
+    double ne = CLIP( ( exposure * d ) / ( dmid * std::pow(sqrt(2), -2 * exposureCompensation) ), exposureMin, maxe);
 
     // if change of value requires intervention
     if(std::fabs(d-dmid) > 5) {

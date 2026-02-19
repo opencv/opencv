@@ -68,7 +68,7 @@ CV_EXPORTS void replaceWriteLogMessage(WriteLogMessageFuncType f);
 
 /**
  * @brief Replaces the OpenCV writeLogMessageEx function with a user-defined function.
- * @note The user-defined function must have the same signature as writeLogMessage.
+ * @note The user-defined function must have the same signature as writeLogMessageEx.
  * @note The user-defined function must accept arguments that can be potentially null.
  * @note The user-defined function must be thread-safe, as OpenCV logging may be called
  *       from multiple threads.

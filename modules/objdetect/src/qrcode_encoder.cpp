@@ -1576,7 +1576,7 @@ bool QRCodeDecoderImpl::errorCorrectionBlock(std::vector<uint8_t>& codewords) {
     uint8_t b = 1;  // discrepancy from last L update
 
     std::vector<uint8_t> C(numSyndromes, 0);  // Error locator polynomial
-    std::vector<uint8_t> B(numSyndromes, 0);  // A copy of error locator from previos L update
+    std::vector<uint8_t> B(numSyndromes, 0);  // A copy of error locator from previous L update
     C[0] = B[0] = 1;
     for (size_t i = 0; i < numSyndromes; ++i) {
         CV_Assert(m + L - 1 < C.size());  // m >= 1 on any iteration
@@ -1629,9 +1629,15 @@ bool QRCodeDecoderImpl::errorCorrectionBlock(std::vector<uint8_t>& codewords) {
     std::vector<uint8_t> errEval;
     gfPolyMul(C, syndromes, errEval);
 
+    // Precompute all X values for error locations to avoid duplicated computation
+    std::vector<uint8_t> X_values(errLocs.size());
+    for (size_t j = 0; j < errLocs.size(); ++j) {
+        X_values[j] = gfPow(2, static_cast<int>(codewords.size() - 1 - errLocs[j]));
+    }
+
     for (size_t i = 0; i < errLocs.size(); ++i) {
         uint8_t numenator = 0, denominator = 0;
-        uint8_t X = gfPow(2, static_cast<int>(codewords.size() - 1 - errLocs[i]));
+        uint8_t X = X_values[i];
         uint8_t inv_X = gfDiv(1, X);
 
         for (size_t j = 0; j < L; ++j) {
@@ -1639,12 +1645,11 @@ bool QRCodeDecoderImpl::errorCorrectionBlock(std::vector<uint8_t>& codewords) {
         }
 
         // Compute demoninator as a product of (1-X_i * X_k) for i != k
-        // TODO: optimize, there is a dubplicated compute
         denominator = 1;
         for (size_t j = 0; j < errLocs.size(); ++j) {
             if (i == j)
                 continue;
-            uint8_t Xj = gfPow(2, static_cast<int>(codewords.size() - 1 - errLocs[j]));
+            uint8_t Xj = X_values[j];
             denominator = gfMul(denominator, 1 ^ gfMul(inv_X, Xj));
         }
 

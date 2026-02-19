@@ -106,7 +106,7 @@ bool OpMatMul::forward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
     }
 
     desSet->writeTensor(outs[0], 2);
-    desSet->writeTensor(paramTensor, 3); // TODO change the parameter from pushconstance to buffer.
+    desSet->writeTensor(paramTensor, 3); // TODO change the parameter from pushconstant to buffer.
 
     cmdBuffer->beginRecord();
     pipeline->bind(cmdBufferReal, desSet->get());

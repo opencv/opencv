@@ -205,9 +205,11 @@ TEST(CV_ArucoTutorial, can_find_diamondmarkers)
 
     const size_t diamondsN = 3;
     // corners of diamonds with Vec4i indices
-    const float goldDiamondCorners[diamondsN][8] = {{195.6f,150.9f, 213.5f,201.2f, 136.4f,215.3f, 122.4f,163.5f},
-                                            {501.1f,171.3f, 501.9f,208.5f, 446.2f,199.8f, 447.8f,163.3f},
-                                            {343.4f,361.2f, 359.7f,328.7f, 400.8f,344.6f, 385.7f,378.4f}};
+    // Note: Values adjusted by -0.5px after fixing the systematic offset bug in charuco_detector.cpp
+    // The fix removes the incorrect +0.5 offset that was added after cornerSubPix
+    const float goldDiamondCorners[diamondsN][8] = {{195.1f,150.4f, 213.0f,200.7f, 135.9f,214.8f, 121.9f,163.0f},
+                                            {500.6f,170.8f, 501.4f,208.0f, 445.7f,199.3f, 447.3f,162.8f},
+                                            {342.9f,360.7f, 359.2f,328.2f, 400.3f,344.1f, 385.2f,377.9f}};
     auto comp = [](const Vec4i& a, const Vec4i& b) {
         for (int i = 0; i < 3; i++)
             if (a[i] != b[i]) return a[i] < b[i];
