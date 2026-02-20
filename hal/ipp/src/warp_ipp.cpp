@@ -112,7 +112,7 @@ int ipp_hal_warpAffine(int src_type, const uchar *src_data, size_t src_step, int
         iwSrc.Init({src_width, src_height}, ippiGetDataType(src_type), CV_MAT_CN(src_type), NULL, src_data, IwSize(src_step));
         ::ipp::IwiImage        iwDst({dst_width, dst_height}, ippiGetDataType(src_type), CV_MAT_CN(src_type), NULL, dst_data, dst_step);
         ::ipp::IwiBorderType   ippBorder(ippiGetBorderType(borderType), {borderValue[0], borderValue[1], borderValue[2], borderValue[3]});
-        IwTransDirection       iwTransDirection = iwTransForward;
+        IwTransDirection       iwTransDirection = iwTransInverse;
 
         if((int)ippBorder == -1)
             return CV_HAL_ERROR_NOT_IMPLEMENTED;
