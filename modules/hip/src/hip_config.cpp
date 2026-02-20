@@ -1,4 +1,4 @@
-#include "../include/opencv2/hip/hip_config.hpp"
+#include <opencv2/hip/hip_config.hpp>
 
 namespace cv {
 namespace hip {

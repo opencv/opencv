@@ -1,4 +1,4 @@
-#include "../include/opencv2/hip/hip_kernels.hpp"
+#include <opencv2/hip/hip_kernels.hpp>
 #include <hip/hip_runtime.h>
 #include <hip/hip_common.h>
 #include <opencv2/imgproc.hpp>

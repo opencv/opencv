@@ -1,5 +1,5 @@
-#include "../include/opencv2/hip/hip_kernels.hpp"
-#include "../include/opencv2/hip/hip_dispatcher.hpp"
+#include <opencv2/hip/hip_kernels.hpp>
+#include <opencv2/hip/hip_dispatcher.hpp>
 #include <hip/hip_runtime.h>
 #include <hip/hip_threads.hpp>
 #include <opencv2/imgproc.hpp>

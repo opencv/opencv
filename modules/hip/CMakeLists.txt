@@ -20,6 +20,7 @@ set(HIP_SRCS
     src/hip_gaussian_blur.cpp
     src/hip_resize.cpp
     src/hip_color_convert.cpp
+    src/hip_config.cpp
 )
 
 # Headers
@@ -36,8 +37,19 @@ ocv_add_module(hip
     DEPENDS core imgproc
 )
 
+# Add include directory for opencv2 headers from this module
+target_include_directories(${the_module} 
+    PUBLIC 
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+)
+
 # Link HIP and HIP Threads
-target_link_libraries(${the_module} PUBLIC HIP::HIP hipthreads::hipthreads)
+target_link_libraries(${the_module} 
+    PUBLIC HIP::HIP hipthreads::hipthreads
+    PRIVATE opencv_core opencv_imgproc
+)
+
 target_include_directories(${the_module} PRIVATE ${HIP_INCLUDE_DIR})
 
 # Compiler flags for HIP

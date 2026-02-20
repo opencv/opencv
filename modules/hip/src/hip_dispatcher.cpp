@@ -1,4 +1,4 @@
-#include "../include/opencv2/hip/hip_dispatcher.hpp"
+#include <opencv2/hip/hip_dispatcher.hpp>
 #include <hip/hip_runtime.h>
 #include <sstream>
 
