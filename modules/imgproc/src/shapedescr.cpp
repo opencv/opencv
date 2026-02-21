@@ -139,20 +139,16 @@ static void findMinEnclosingCircle(const PT *pts_in, int count, Point2f &center,
     PT* pts = pts_buf.data();
     if (count > 10)
     {
-        uint64_t seed = (uint64_t)count;
-        int sample = std::min(count, 8);
-        for(int k = 0; k < sample; k++)
-        {
-            uint32_t ix = 0, iy = 0;
-            std::memcpy(&ix, &pts[k].x, sizeof(pts[k].x));
-            std::memcpy(&iy, &pts[k].y, sizeof(pts[k].y));
-            seed = seed * 31 + (uint64_t)ix;
-            seed = seed * 31 + ((uint64_t)iy << 16);
-        }
+        uint32_t x0 = 0, y0 = 0, xn = 0, yn = 0;
+        std::memcpy(&x0, &pts[0].x, sizeof(pts[0].x));
+        std::memcpy(&y0, &pts[0].y, sizeof(pts[0].y));
+        std::memcpy(&xn, &pts[count-1].x, sizeof(pts[count-1].x));
+        std::memcpy(&yn, &pts[count-1].y, sizeof(pts[count-1].y));
 
-        cv::RNG rng((uint32_t)seed);
+        uint32_t seed = (uint32_t)count ^ x0 ^ (y0 << 8) ^ (xn << 16) ^ (yn << 24);
+        cv::RNG rng(seed);
 
-        for (int i = count - 1; i > 0; --i)
+        for (int i = 1; i < count; ++i)
         {
             int j = rng.uniform(0, i + 1);
             std::swap(pts[i], pts[j]);
