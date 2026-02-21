@@ -45,4 +45,45 @@ TEST(Features2d_AKAZE, uninitialized_and_nans)
     akaze->detectAndCompute(b1, noArray(), keypoints, desc);
 }
 
+// Test for https://github.com/opencv/opencv/issues/27134
+TEST(Features2d_KAZE, diffusivity_charbonnier)
+{
+    Mat testImg(200, 200, CV_8U);
+    RNG rng(42);
+    rng.fill(testImg, RNG::UNIFORM, Scalar(0), Scalar(255), true);
+
+    // KAZE with DIFF_CHARBONNIER
+    Ptr<KAZE> kaze_charbonnier = KAZE::create(false, false, 0.001f, 4, 4, KAZE::DIFF_CHARBONNIER);
+    vector<KeyPoint> kps_charbonnier;
+    Mat desc_charbonnier;
+    kaze_charbonnier->detectAndCompute(testImg, noArray(), kps_charbonnier, desc_charbonnier);
+
+    // KAZE with DIFF_PM_G2 (default)
+    Ptr<KAZE> kaze_pm_g2 = KAZE::create(false, false, 0.001f, 4, 4, KAZE::DIFF_PM_G2);
+    vector<KeyPoint> kps_pm_g2;
+    Mat desc_pm_g2;
+    kaze_pm_g2->detectAndCompute(testImg, noArray(), kps_pm_g2, desc_pm_g2);
+
+    // Both should detect keypoints
+    ASSERT_FALSE(kps_charbonnier.empty());
+    ASSERT_FALSE(kps_pm_g2.empty());
+
+    // Check subpixel accuracy for DIFF_CHARBONNIER (issue #27134)
+    bool hasSubpixel = false;
+    for (size_t i = 0; i < kps_charbonnier.size(); i++)
+    {
+        float fx = kps_charbonnier[i].pt.x - std::floor(kps_charbonnier[i].pt.x);
+        float fy = kps_charbonnier[i].pt.y - std::floor(kps_charbonnier[i].pt.y);
+        if (fx > 1e-5f || fy > 1e-5f)
+        {
+            hasSubpixel = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(hasSubpixel) << "KAZE with DIFF_CHARBONNIER should have subpixel keypoint coordinates";
+
+    // Descriptor dimensions should match
+    ASSERT_EQ(desc_charbonnier.cols, desc_pm_g2.cols);
+}
+
 }} // namespace
