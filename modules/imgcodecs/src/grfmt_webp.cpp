@@ -398,8 +398,8 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
 
     const int width = img.cols, height = img.rows;
 
-    int lossless_mode = IMWRITE_WEBP_LOSSLESS_ON;
-    float quality = 101.0f;
+    int lossless_mode = -1; // not specified
+    float quality = 0.0f; // not specified
 
     for(size_t i = 0; i < params.size(); i += 2)
     {
@@ -420,38 +420,48 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
         }
         if (params[i] == IMWRITE_WEBP_QUALITY)
         {
-            if (value > 100)
+            if (value < 1)
             {
-                lossless_mode = IMWRITE_WEBP_LOSSLESS_ON;
-                quality = 101.0f; // dummy
+                CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_WEBP_QUALITY must be between 1 to 100(lossy) or more(lossless). It is fallbacked to 1", value));
+                quality = 1.0f;
             }
-            else
+            else if (value > 100)
             {
-                lossless_mode = IMWRITE_WEBP_LOSSLESS_OFF;
-                if (value <= 0) {
-                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_WEBP_QUALITY must be between 1 to 100(lossy) or more(lossless). It is fallbacked to 1", value));
-                    quality = 1.0f;
-                }
-                else // value is 1 to 100
-                {
-                    quality = static_cast<float>(value);
-                }
+                quality = 101.0f;
+            }
+            else // value is 1 to 100
+            {
+                quality = static_cast<float>(value);
             }
         }
     }
 
     switch(lossless_mode)
     {
+        case -1: // not specified by user
         case IMWRITE_WEBP_LOSSLESS_OFF:
-            CV_CheckGE(quality,   1.0f, "Unexpected quality is used");
-            CV_CheckLE(quality, 100.0f, "Unexpected quality is used");
+            // Fallback to lossless if quality is not specified (-1.0f) or out of lossy range (>100.0f).
+            // This maintains backward compatibility where WebP defaults to lossless.
+            if ((quality < 1.0f) || (quality > 100.0f))
+            {
+                lossless_mode = IMWRITE_WEBP_LOSSLESS_ON;
+                quality = 101.0f;
+            }
+            else
+            {
+                lossless_mode = IMWRITE_WEBP_LOSSLESS_OFF;
+                // Use specified quality for lossy compression.
+            }
             break;
+
         case IMWRITE_WEBP_LOSSLESS_ON:
         case IMWRITE_WEBP_LOSSLESS_PRESERVE_COLOR:
-            CV_CheckGT(quality, 100.0f, "Unexpected quality is used");
+            // Force quality value to lossless range when explicit lossless mode is selected.
+            quality = 101.0f;
             break;
+
         default:
-            CV_Error(Error::StsError, cv::format("Unexcepted lossless_mode(%d)", lossless_mode));
+            CV_Error(Error::StsError, cv::format("Unexpected lossless_mode(%d)", lossless_mode));
             break;
     }
 

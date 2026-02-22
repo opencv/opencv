@@ -244,6 +244,7 @@ enum ImwritePAMFlags {
 //! Imwrite WEBP specific values for IMWRITE_WEBP_LOSSLESS_MODE parameter key.
 enum ImwriteWEBPLosslessMode {
     IMWRITE_WEBP_LOSSLESS_OFF            = 0, //!< Lossy compression mode. Uses IMWRITE_WEBP_QUALITY to control compression. (Default)
+                                              //!< @note If IMWRITE_WEBP_QUALITY is not specified, it falls back to IMWRITE_WEBP_LOSSLESS_ON to maintain backward compatibility.
     IMWRITE_WEBP_LOSSLESS_ON             = 1, //!< Standard lossless compression. May modify or discard RGB values of fully transparent pixels to improve compression ratio.
     IMWRITE_WEBP_LOSSLESS_PRESERVE_COLOR = 2, //!< Exact lossless compression. Preserves all RGB data even for pixels with 0 alpha (equivalent to WebP's exact flag).
 };
