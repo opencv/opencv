@@ -1,4 +1,4 @@
-ocv_clear_vars(HAVE_ONNX ORT_LIB ORT_INCLUDE ONNX_LIBRARIES ONNX_INCLUDE_DIR)
+ocv_clear_vars(HAVE_ONNX ORT_LIB ORT_INCLUDE ONNX_LIBRARIES ONNX_INCLUDE_DIR ONNX_VERSION)
 
 set(ONNXRT_ROOT_DIR "" CACHE PATH "ONNX Runtime install directory")
 
@@ -106,9 +106,40 @@ if(ORT_LIB AND ORT_INCLUDE)
   )
 
   set(HAVE_ONNX TRUE)
+  # Try to report a human-readable ONNX Runtime version in diagnostics/build info.
+  if(DEFINED onnxruntime_VERSION AND onnxruntime_VERSION)
+    set(ONNX_VERSION "${onnxruntime_VERSION}")
+  elseif(DEFINED ONNXRuntime_VERSION AND ONNXRuntime_VERSION)
+    set(ONNX_VERSION "${ONNXRuntime_VERSION}")
+  elseif(DEFINED ONNXRUNTIME_VERSION AND ONNXRUNTIME_VERSION)
+    set(ONNX_VERSION "${ONNXRUNTIME_VERSION}")
+  else()
+    set(__ort_version_candidates "")
+    if(ONNXRT_ROOT_DIR)
+      list(APPEND __ort_version_candidates "${ONNXRT_ROOT_DIR}")
+    endif()
+    if(ORT_LIB)
+      list(APPEND __ort_version_candidates "${ORT_LIB}")
+    endif()
+    foreach(__ort_version_candidate ${__ort_version_candidates})
+      string(REGEX MATCH "([0-9]+\\.[0-9]+\\.[0-9]+([.-][0-9A-Za-z]+)?)" __ort_version_match "${__ort_version_candidate}")
+      if(__ort_version_match)
+        set(ONNX_VERSION "${__ort_version_match}")
+        break()
+      endif()
+    endforeach()
+    unset(__ort_version_candidate)
+    unset(__ort_version_candidates)
+    unset(__ort_version_match)
+  endif()
+
   # For CMake output only
   set(ONNX_LIBRARIES "${ORT_LIB}" CACHE STRING "ONNX Runtime libraries")
   set(ONNX_INCLUDE_DIR "${ORT_INCLUDE}" CACHE STRING "ONNX Runtime include path")
+  if(NOT ONNX_VERSION)
+    set(ONNX_VERSION "unknown")
+  endif()
+  set(ONNX_VERSION "${ONNX_VERSION}" CACHE STRING "ONNX Runtime version")
 
   # Link target with associated interface headers
   set(ONNX_LIBRARY "onnxruntime" CACHE STRING "ONNX Link Target")
@@ -143,5 +174,5 @@ if(ORT_LIB AND ORT_INCLUDE)
 endif()
 
 if(NOT HAVE_ONNX)
-  ocv_clear_vars(HAVE_ONNX ORT_LIB ORT_INCLUDE ONNX_LIBRARIES ONNX_INCLUDE_DIR)
+  ocv_clear_vars(HAVE_ONNX ORT_LIB ORT_INCLUDE ONNX_LIBRARIES ONNX_INCLUDE_DIR ONNX_VERSION)
 endif()

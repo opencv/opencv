@@ -117,7 +117,19 @@ ocv_option(DOWNLOAD_ONNXRUNTIME "Download ONNX Runtime prebuilt binaries" OFF IF
 set(ONNXRUNTIME_VERSION "1.17.1" CACHE STRING "ONNX Runtime version to download (prebuilt binaries)")
 
 if(WITH_ONNXRUNTIME)
+  include("${OpenCV_SOURCE_DIR}/cmake/FindONNX.cmake")
+
+  set(_ort_download_requested OFF)
+  set(_ort_download_forced OFF)
   if(DOWNLOAD_ONNXRUNTIME)
+    set(_ort_download_requested ON)
+    set(_ort_download_forced ON)
+  elseif(NOT HAVE_ONNXRUNTIME)
+    set(_ort_download_requested ON)
+    message(STATUS "DNN: ONNX Runtime was not found in system paths, attempting to download prebuilt package")
+  endif()
+
+  if(_ort_download_requested)
     set(_ort_filename "")
     set(_ort_md5 "")
 
@@ -146,34 +158,36 @@ if(WITH_ONNXRUNTIME)
     endif()
 
     if(NOT _ort_filename)
-      message(FATAL_ERROR
-        "DNN: DOWNLOAD_ONNXRUNTIME=ON, but there is no official ONNX Runtime prebuilt package for "
-        "CMAKE_SYSTEM_NAME='${CMAKE_SYSTEM_NAME}', CMAKE_SYSTEM_PROCESSOR='${CMAKE_SYSTEM_PROCESSOR}'. "
-        "Disable DOWNLOAD_ONNXRUNTIME and provide an installed ORT via ONNXRT_ROOT_DIR, or use a supported platform."
+      if(_ort_download_forced OR NOT HAVE_ONNXRUNTIME)
+        message(FATAL_ERROR
+          "DNN: there is no official ONNX Runtime prebuilt package for "
+          "CMAKE_SYSTEM_NAME='${CMAKE_SYSTEM_NAME}', CMAKE_SYSTEM_PROCESSOR='${CMAKE_SYSTEM_PROCESSOR}'. "
+          "Provide an installed ORT via ONNXRT_ROOT_DIR, or use a supported platform."
+        )
+      endif()
+    else()
+      set(_ort_url "https://github.com/microsoft/onnxruntime/releases/download/v${ONNXRUNTIME_VERSION}/${_ort_filename}")
+      string(REGEX REPLACE "\\.(tgz|zip)$" "" _ort_unpack_dirname "${_ort_filename}")
+
+      ocv_download(
+        FILENAME ${_ort_filename}
+        URL ${_ort_url}
+        DESTINATION_DIR "${OpenCV_BINARY_DIR}/3rdparty/onnxruntime"
+        ID "ORT"
+        HASH ${_ort_md5}
+        UNPACK
       )
+
+      set(ONNXRT_ROOT_DIR "${OpenCV_BINARY_DIR}/3rdparty/onnxruntime/${_ort_unpack_dirname}"
+          CACHE PATH "ONNX Runtime install directory" FORCE)
+
+      if(NOT APPLE AND NOT WIN32)
+        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-rpath,'$ORIGIN/../3rdparty/onnxruntime/${_ort_unpack_dirname}/lib'")
+      endif()
+
+      include("${OpenCV_SOURCE_DIR}/cmake/FindONNX.cmake")
     endif()
-
-    set(_ort_url "https://github.com/microsoft/onnxruntime/releases/download/v${ONNXRUNTIME_VERSION}/${_ort_filename}")
-    string(REGEX REPLACE "\\.(tgz|zip)$" "" _ort_unpack_dirname "${_ort_filename}")
-
-    ocv_download(
-      FILENAME ${_ort_filename}
-      URL ${_ort_url}
-      DESTINATION_DIR "${OpenCV_BINARY_DIR}/3rdparty/onnxruntime"
-      ID "ORT"
-      HASH ${_ort_md5}
-      UNPACK
-    )
-
-    set(ONNXRT_ROOT_DIR "${OpenCV_BINARY_DIR}/3rdparty/onnxruntime/${_ort_unpack_dirname}"
-        CACHE PATH "ONNX Runtime install directory" FORCE)
-
-    if(NOT APPLE AND NOT WIN32)
-      set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-rpath,'$ORIGIN/../3rdparty/onnxruntime/${_ort_unpack_dirname}/lib'")
-    endif()
-  endif()  # DOWNLOAD_ONNXRUNTIME
-
-  include("${OpenCV_SOURCE_DIR}/cmake/FindONNX.cmake")
+  endif()  # _ort_download_requested
 
   if(HAVE_ONNX)
     set(HAVE_ONNXRUNTIME 1 CACHE INTERNAL "ONNX Runtime availability")
@@ -187,12 +201,60 @@ if(WITH_ONNXRUNTIME)
 
     add_definitions(-DHAVE_ONNXRUNTIME=1)
     message(STATUS "DNN: ONNX Runtime enabled")
+
+    # Ensure runtime ORT binaries are deployed into OpenCV install tree
+    set(_ort_runtime_libs "")
+    if(WIN32)
+      if(ONNXRT_ROOT_DIR)
+        file(GLOB _ort_runtime_libs "${ONNXRT_ROOT_DIR}/bin/onnxruntime*.dll")
+      endif()
+      if(_ort_runtime_libs)
+        install(FILES ${_ort_runtime_libs} DESTINATION ${OPENCV_BIN_INSTALL_PATH} COMPONENT libs)
+      endif()
+    elseif(APPLE)
+      if(ONNXRT_ROOT_DIR)
+        file(GLOB _ort_runtime_libs "${ONNXRT_ROOT_DIR}/lib/libonnxruntime*.dylib")
+      endif()
+      if(NOT _ort_runtime_libs AND ONNX_LIBRARIES)
+        foreach(_ort_lib ${ONNX_LIBRARIES})
+          get_filename_component(_ort_lib_dir "${_ort_lib}" DIRECTORY)
+          file(GLOB _ort_runtime_libs "${_ort_lib_dir}/libonnxruntime*.dylib")
+          if(_ort_runtime_libs)
+            break()
+          endif()
+        endforeach()
+      endif()
+      if(_ort_runtime_libs)
+        install(FILES ${_ort_runtime_libs} DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT libs)
+      endif()
+    else()
+      if(ONNXRT_ROOT_DIR)
+        file(GLOB _ort_runtime_libs "${ONNXRT_ROOT_DIR}/lib/libonnxruntime.so*")
+      endif()
+      if(NOT _ort_runtime_libs AND ONNX_LIBRARIES)
+        foreach(_ort_lib ${ONNX_LIBRARIES})
+          get_filename_component(_ort_lib_dir "${_ort_lib}" DIRECTORY)
+          file(GLOB _ort_runtime_libs "${_ort_lib_dir}/libonnxruntime.so*")
+          if(_ort_runtime_libs)
+            break()
+          endif()
+        endforeach()
+      endif()
+      if(_ort_runtime_libs)
+        install(FILES ${_ort_runtime_libs} DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT libs)
+      endif()
+    endif()
+    unset(_ort_runtime_libs)
   else()
     message(SEND_ERROR
       "DNN: ONNX Runtime support was requested (WITH_ONNXRUNTIME=ON), but it was not found. "
-      "Set ONNXRT_ROOT_DIR to an existing installation or enable DOWNLOAD_ONNXRUNTIME=ON."
+      "Set ONNXRT_ROOT_DIR to an existing installation. "
+      "OpenCV attempts to download supported prebuilt ONNX Runtime packages automatically when needed."
     )
   endif()
+
+  unset(_ort_download_requested)
+  unset(_ort_download_forced)
 endif()
 
 if(HAVE_PROTOBUF)
