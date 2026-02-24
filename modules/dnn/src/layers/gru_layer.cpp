@@ -28,9 +28,50 @@ static void tanh(const Mat &src, Mat &dst)
 
 static void sigmoid(const Mat &src, Mat &dst)
 {
-    cv::exp(-src, dst);
-    cv::pow(1 + dst, -1, dst);
+    CV_Assert(src.type() == CV_32F);
+    dst.create(src.size(), src.type());
+    const int nrows = src.rows;
+    const int cols = src.cols;
+    parallel_for_(Range(0, nrows), [&](const Range& range) {
+        for (int row = range.start; row < range.end; ++row)
+        {
+            const float* srcptr = src.ptr<float>(row);
+            float* dstptr = dst.ptr<float>(row);
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            const int vlanes = VTraits<v_float32>::vlanes();
+            v_float32 one = vx_setall_f32(1.f), zero = vx_setzero_f32();
+            for (; i <= cols - vlanes; i += vlanes)
+            {
+                v_float32 x = vx_load(srcptr + i);
+                v_float32 t = v_exp(v_sub(zero, x));       // exp(-x)
+                t = v_div(one, v_add(one, t));              // 1 / (1 + exp(-x))
+                vx_store(dstptr + i, t);
+            }
+#endif
+            for (; i < cols; ++i)
+                dstptr[i] = 1.f / (1.f + std::exp(-srcptr[i]));
+        }
+    });
 }
+
+// Fused computation of h_t = z (*) h_(t-1) + (1 - z) (*) n_t
+// Single pass over elements instead of 4 separate multiply/subtract/multiply/add calls.
+template<typename Dtype>
+static void gruComputeH(const Mat &z, const Mat &n, Mat &h)
+{
+    CV_Assert(z.rows == n.rows && z.rows == h.rows);
+    CV_Assert(z.cols == n.cols && z.cols == h.cols);
+    for (int row = 0; row < z.rows; ++row)
+    {
+        const Dtype* zPtr = z.ptr<Dtype>(row);
+        const Dtype* nPtr = n.ptr<Dtype>(row);
+        Dtype* hPtr = h.ptr<Dtype>(row);
+        for (int col = 0; col < z.cols; ++col)
+            hPtr[col] = zPtr[col] * hPtr[col] + (Dtype(1) - zPtr[col]) * nPtr[col];
+    }
+}
+
 
 class GRULayerImpl CV_FINAL : public GRULayer
 {
@@ -181,7 +222,6 @@ public:
         internals.push_back(shape(_numSamples, 2 * _numOut)); // gates
         internals.push_back(shape(_numSamples, 2 * _numOut)); // gates_b
         internals.push_back(shape(_numSamples, 1 * _numOut)); // h_linear
-        internals.push_back(shape(_numSamples, _numOut));     // ones
 
         return false;
     }
@@ -287,10 +327,9 @@ public:
             const Mat &bh = bias.colRange(bias.cols / 2, bias.cols);
 
             Mat hInternal = internals[0], dummyOnes = internals[1], gates = internals[2],
-                b_rz = internals[3], n_t = internals[4], ones = internals[5];
+                b_rz = internals[3], n_t = internals[4];
             h_0.copyTo(hInternal);
             dummyOnes.setTo(1.);
-            ones.setTo(1.);
 
             CV_CheckLE(3 * numOut, Wx.rows, "Invalid Wx shape for GRU gates");
             CV_CheckLE(3 * numOut, Wh.rows, "Invalid Wh shape for GRU gates");
@@ -303,6 +342,20 @@ public:
             const Mat& wh_n = Wh.rowRange(2 * numOut, 3 * numOut);
             const Mat& b_in = bx.colRange(2 * numOut, 3 * numOut);
             const Mat& b_hn = bh.colRange(2 * numOut, 3 * numOut);
+
+            // Precompute input projections for all timesteps at once (batched GEMM).
+            const int totalRows = numTimeStamps * numSamples;
+            Mat dummyOnesAll = Mat::ones(totalRows, 1, Wh.type());
+
+            // xProj_rz[t] = x[t] * Wx_rz^T + b_rz   for all t
+            Mat xProj_rz(totalRows, 2 * numOut, Wh.type());
+            gemm(xTs, wx_rz, 1, xProj_rz, 0, xProj_rz, GEMM_2_T);
+            gemm(dummyOnesAll, b_rz, 1, xProj_rz, 1, xProj_rz);
+
+            // xProj_n[t] = x[t] * Wx_n^T + b_in   for all t
+            Mat xProj_n(totalRows, numOut, Wh.type());
+            gemm(xTs, wx_n, 1, xProj_n, 0, xProj_n, GEMM_2_T);
+            gemm(dummyOnesAll, b_in, 1, xProj_n, 1, xProj_n);
 
             int tsStart, tsEnd, tsInc;
             if (i == 1) {
@@ -318,12 +371,14 @@ public:
             for (int ts = tsStart; ts != tsEnd; ts += tsInc)
             {
                 Range curRowRange(ts * numSamples, (ts + 1) * numSamples);
-                Mat xCurr = xTs.rowRange(curRowRange);
 
-                gemm(xCurr, wx_rz, 1, gates, 0, gates, GEMM_2_T);      // x * Wx_rz
-                gemm(hInternal, wh_rz, 1, gates, 1, gates, GEMM_2_T);  // + h_(t-1) * Wh_rz
-                gemm(dummyOnes, b_rz, 1, gates, 1, gates);             // + b_rz
-                sigmoid(gates, gates);                                 // sigmoid()
+                // Use precomputed input projection for this timestep
+                Mat xCurrProj_rz = xProj_rz.rowRange(curRowRange);
+                Mat xCurrProj_n  = xProj_n.rowRange(curRowRange);
+
+                xCurrProj_rz.copyTo(gates);                                // x * Wx_rz + b_rz (precomputed)
+                gemm(hInternal, wh_rz, 1, gates, 1, gates, GEMM_2_T);     // + h_(t-1) * Wh_rz
+                sigmoid(gates, gates);                                     // sigmoid()
 
                 Mat z = gates.colRange(0, gates.cols / 2);
                 Mat r = gates.colRange(gates.cols / 2, gates.cols);
@@ -331,28 +386,26 @@ public:
                 if (useLinearBeforeReset)
                 {
                     // n_t = tanh(r (*) (h_(t-1) * Wh_n + b_hn) + x * Wx_n + b_in)
-                    gemm(hInternal, wh_n, 1, n_t, 0, n_t, GEMM_2_T);   // h_(t-1) * Wh_n
-                    gemm(dummyOnes, b_hn, 1, n_t, 1, n_t);             // + b_hn
-                    multiply(r, n_t, n_t);                             // r (*) (...)
-                    gemm(xCurr, wx_n, 1, n_t, 1, n_t, GEMM_2_T);       // + x * Wx_n
-                    gemm(dummyOnes, b_in, 1, n_t, 1, n_t);             // + b_in
+                    gemm(hInternal, wh_n, 1, n_t, 0, n_t, GEMM_2_T);      // h_(t-1) * Wh_n
+                    gemm(dummyOnes, b_hn, 1, n_t, 1, n_t);                // + b_hn
+                    multiply(r, n_t, n_t);                                 // r (*) (...)
+                    add(n_t, xCurrProj_n, n_t);                            // + x * Wx_n + b_in (precomputed)
                 }
                 else
                 {
                     // n_t = tanh((r (*) h_(t-1)) * Wh_n + x * Wx_n + b_in + b_hn)
-                    multiply(r, hInternal, n_t);                        // r (*) h_(t-1)
-                    gemm(n_t, wh_n, 1, n_t, 0, n_t, GEMM_2_T);         // (r*h_(t-1)) * Wh_n
-                    gemm(xCurr, wx_n, 1, n_t, 1, n_t, GEMM_2_T);       // + x * Wx_n
-                    gemm(dummyOnes, b_in, 1, n_t, 1, n_t);             // + b_in
-                    gemm(dummyOnes, b_hn, 1, n_t, 1, n_t);             // + b_hn
+                    multiply(r, hInternal, n_t);                           // r (*) h_(t-1)
+                    gemm(n_t, wh_n, 1, n_t, 0, n_t, GEMM_2_T);            // (r*h_(t-1)) * Wh_n
+                    add(n_t, xCurrProj_n, n_t);                            // + x * Wx_n + b_in (precomputed)
+                    gemm(dummyOnes, b_hn, 1, n_t, 1, n_t);                // + b_hn
                 }
-                tanh(n_t, n_t);                                       // tanh()
+                tanh(n_t, n_t);                                            // tanh()
 
-                //compute next h_t = z (*) h_(t-1) + (1 - z) (*) n_t
-                multiply(z, hInternal, hInternal);                    // z (*) h_{t-1}
-                subtract(ones, z, z);                                 // 1 - z
-                multiply(z, n_t, z);                                  // (1 - z) * n
-                add(z, hInternal, hInternal);                         // z (*) h_(t-1) + (1 - z) (*) n_t
+                // h_t = z (*) h_(t-1) + (1 - z) (*) n_t  (fused single-pass)
+                if (z.type() == CV_32F)
+                    gruComputeH<float>(z, n_t, hInternal);
+                else
+                    gruComputeH<double>(z, n_t, hInternal);
 
                 writeYStep(y, y3d2d, ts, i, numOut, hInternal);
             }
