@@ -5,25 +5,33 @@
 namespace cv {
 namespace dnn {
 
-template<typename Dtype>
 static void tanh(const Mat &src, Mat &dst)
 {
-    MatConstIterator_<Dtype> itSrc = src.begin<Dtype>();
-    MatIterator_<Dtype> itDst = dst.begin<Dtype>();
-
-    for (; itSrc != src.end<Dtype>(); itSrc++, itDst++)
-        *itDst = std::tanh(*itSrc);
-}
-
-static void tanh(const Mat &src, Mat &dst)
-{
-    dst.create(src.size, src.type());
-    if (src.type() == CV_32F)
-        tanh<float>(src, dst);
-    else if (src.type() == CV_64F)
-        tanh<double>(src, dst);
-    else
-        CV_Error(Error::StsUnsupportedFormat, "Function supports only floating point types");
+    CV_Assert(src.type() == CV_32F);
+    dst.create(src.size(), src.type());
+    const int nrows = src.rows;
+    const int cols = src.cols;
+    parallel_for_(Range(0, nrows), [&](const Range& range) {
+        for (int row = range.start; row < range.end; ++row)
+        {
+            const float* srcptr = src.ptr<float>(row);
+            float* dstptr = dst.ptr<float>(row);
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            const int vlanes = VTraits<v_float32>::vlanes();
+            v_float32 one = vx_setall_f32(1.f), two = vx_setall_f32(2.f), minus_two = vx_setall_f32(-2.f);
+            for (; i <= cols - vlanes; i += vlanes)
+            {
+                v_float32 x = vx_load(srcptr + i);
+                v_float32 e = v_exp(v_mul(minus_two, x));        // exp(-2x)
+                v_float32 t = v_sub(v_div(two, v_add(one, e)), one); // 2/(1+exp(-2x)) - 1
+                vx_store(dstptr + i, t);
+            }
+#endif
+            for (; i < cols; ++i)
+                dstptr[i] = std::tanh(srcptr[i]);
+        }
+    });
 }
 
 static void sigmoid(const Mat &src, Mat &dst)
@@ -72,7 +80,6 @@ static void gruComputeH(const Mat &z, const Mat &n, Mat &h)
     }
 }
 
-
 class GRULayerImpl CV_FINAL : public GRULayer
 {
     enum layout_t : int {
@@ -82,7 +89,6 @@ class GRULayerImpl CV_FINAL : public GRULayer
 
     int numTimeStamps, numSamples;
     layout_t layout;
-
     MatShape outTailShape;
     bool bidirectional;
     bool linearBeforeReset;
@@ -118,7 +124,6 @@ public:
                 CV_CheckTypeEQ(Wx.type(), hInternal.type(), "");
             }
         }
-
         outTailShape.clear();
     }
 
