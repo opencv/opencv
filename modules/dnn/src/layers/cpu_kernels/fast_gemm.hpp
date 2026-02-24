@@ -43,6 +43,7 @@ struct CV_EXPORTS FastGemmOpt {
     bool all() {
         return use_avx || use_avx2 || use_neon || use_lasx;
     }
+
 };
 
 struct MatMulHelper {
@@ -155,9 +156,9 @@ CV_EXPORTS size_t fastGemmPackBSize(size_t N, size_t K, const FastGemmOpt &opt);
 
 CV_EXPORTS void fastGemmPackB(const Mat &m, std::vector<float> &packed_B, bool trans, FastGemmOpt &opt);
 
-CV_EXPORTS int fastGemmMC(FastGemmOpt &opt);
-CV_EXPORTS int fastGemmNC(FastGemmOpt &opt);
-CV_EXPORTS int fastGemmKC(FastGemmOpt &opt);
+CV_EXPORTS int fastGemmMC(const FastGemmOpt &opt);
+CV_EXPORTS int fastGemmNC(const FastGemmOpt &opt);
+CV_EXPORTS int fastGemmKC(const FastGemmOpt &opt);
 
 void fastGemmPackB(bool trans, size_t N, size_t K, const float *B, size_t ldb, float *packed_B, const FastGemmOpt &opt);
 
@@ -188,12 +189,12 @@ CV_EXPORTS void fastGemmBatch(size_t batch,
 CV_EXPORTS void pagedAttnQKGemm(
     const Mat& Q, const std::vector<Mat> &K, Mat& A,
     int T_q, int Nq, int N_k, int T_s, int D,
-    size_t esz, FastGemmOpt &opts
+    const FastGemmOpt &opts
 );
 CV_EXPORTS void pagedAttnAVGemm(
     const Mat& A,const std::vector<Mat> &V, Mat& Out,
     int T_q, int Nq, int N_k, int T_s, int D,
-    size_t esz, FastGemmOpt &opt
+    const FastGemmOpt &opt
 );
 
 

@@ -87,7 +87,7 @@ TEST_F(pagedAttentionQKTest, pagedAttnQKGemm_Q4D)
 
     Mat A({B, Nq, T_q, T}, CV_32F, Scalar(0.f));
 
-    pagedAttnQKGemm(Q, K_pages, A, T_q, Nq, Nk, T_s, D, sizeof(float), opt);
+    pagedAttnQKGemm(Q, K_pages, A, T_q, Nq, Nk, T_s, D, opt);
 
     validate(A, Q);
 }
@@ -99,7 +99,7 @@ TEST_F(pagedAttentionQKTest, pagedAttnQKGemm_Q3D)
 
     Mat A({B, Nq, T_q, T}, CV_32F, Scalar(0.f));
 
-    pagedAttnQKGemm(Q, K_pages, A, T_q, Nq, Nk, T_s, D, sizeof(float), opt);
+    pagedAttnQKGemm(Q, K_pages, A, T_q, Nq, Nk, T_s, D, opt);
 
     validate(A, Q);
 }
@@ -183,7 +183,7 @@ TEST_F(pagedAttentionAVTest, pagedAttnAVGemm_O4D)
     pagedAttnAVGemm(
         A, V_pages, Out,
         T_a, Nq, Nkv, T_s, D,
-        sizeof(float), opt
+        opt
     );
 
     validate(Out, A);
@@ -200,7 +200,7 @@ TEST_F(pagedAttentionAVTest, pagedAttnAVGemm_O3D)
     pagedAttnAVGemm(
         A, V_pages, Out,
         T_a, Nq, Nkv, T_s, D,
-        sizeof(float), opt
+        opt
     );
 
     validate(Out, A);

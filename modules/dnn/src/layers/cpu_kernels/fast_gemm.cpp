@@ -20,7 +20,7 @@
 
 namespace cv { namespace dnn {
 
-int fastGemmMC(FastGemmOpt &opt) {
+int fastGemmMC(const FastGemmOpt &opt) {
 #if CV_TRY_NEON
     if (opt.use_neon) {
         return opt_NEON::fastGemmMC();
@@ -46,7 +46,7 @@ int fastGemmMC(FastGemmOpt &opt) {
     }
 }
 
-int fastGemmNC(FastGemmOpt &opt) {
+int fastGemmNC(const FastGemmOpt &opt) {
 #if CV_TRY_NEON
     if (opt.use_neon) {
         return opt_NEON::fastGemmNC();
@@ -72,7 +72,7 @@ int fastGemmNC(FastGemmOpt &opt) {
     }
 }
 
-int fastGemmKC(FastGemmOpt &opt) {
+int fastGemmKC(const FastGemmOpt &opt) {
 #if CV_TRY_NEON
     if (opt.use_neon) {
         return opt_NEON::fastGemmKC();
@@ -515,10 +515,14 @@ void fastGemmBatch(size_t batch,
 void pagedAttnQKGemm(
     const Mat& Q,const std::vector<Mat> &K, Mat& A,
     int T_q, int Nq, int N_k, int T_s, int D,
-    size_t esz, FastGemmOpt &opt
+    const FastGemmOpt &opt
 ) {
-    for (size_t s = 0; s < K.size(); s++)
+    size_t esz = Q.elemSize();
+
+    for (size_t s = 0; s < K.size(); s++){
         CV_CheckTypeEQ(Q.type(), K[s].type(), "pagedAttnQKGemmKernel: Q and K should have the same type");
+        CV_CheckTrue(esz == K[s].elemSize(), "pagedAttnQKGemmKernel: Q and K should have the same element size");
+    }
     CV_CheckTypeEQ(Q.type(), A.type(), "pagedAttnQKGemmKernel: Q and A should have the same type");
 
     CV_CheckTrue(
@@ -602,10 +606,14 @@ void pagedAttnQKGemm(
 void pagedAttnAVGemm(
     const Mat& A,const std::vector<Mat> &V, Mat& Out,
     int T_q, int Nq, int N_k, int T_s, int D,
-    size_t esz, FastGemmOpt &opt
+    const FastGemmOpt &opt
 ) {
-    for (size_t s = 0; s < V.size(); s++)
+    size_t esz = A.elemSize();
+
+    for (size_t s = 0; s < V.size(); s++) {
         CV_CheckTypeEQ(A.type(), V[s].type(), "pagedAttnAVGemmKernel: A and V should have the same type");
+        CV_CheckTrue(esz == V[s].elemSize(), "pagedAttnAVGemmKernel: A and V should have the same element size");
+    }
     CV_CheckTypeEQ(A.type(), Out.type(), "pagedAttnAVGemmKernel: A and Out should have the same type");
 
     CV_CheckTrue(
