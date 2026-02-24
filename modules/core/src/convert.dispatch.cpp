@@ -134,8 +134,16 @@ void Mat::convertTo(OutputArray dst, int type_, double alpha, double beta) const
 
     if (empty())
     {
+        int ddepth = CV_MAT_DEPTH(type_);
+        if (ddepth < 0)
+            ddepth = dst.fixedType() ? dst.depth() : depth();
+        const int dtype = CV_MAKETYPE(ddepth, channels());
+
         dst.release();
-        dst.create(size(), type_ >= 0 ? type_ : type());
+        if (dims <= 2)
+            dst.create(size(), dtype);
+        else
+            dst.create(dims, size.p, dtype);
         return;
     }
 

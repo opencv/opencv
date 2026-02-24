@@ -330,24 +330,6 @@ void reshapeAndCopyFirst(InputArrayOfArrays inputs,
     }
 }
 
-void convertToND(const Mat& src, Mat& dst, int rtype, double alpha, double beta)
-{
-    CV_Assert(src.isContinuous());
-    CV_Assert(dst.isContinuous());
-    if (src.dims <= 2 && dst.dims <= 2)
-    {
-        src.convertTo(dst, rtype, alpha, beta);
-        return;
-    }
-
-    const size_t nvals = src.total() * (size_t)src.channels();
-    CV_CheckLE(nvals, (size_t)INT_MAX, "");
-    int flatSizes[] = {1, (int)nvals};
-    Mat srcFlat(2, flatSizes, CV_MAKETYPE(src.depth(), 1), (void*)src.data);
-    Mat dstFlat(2, flatSizes, CV_MAKETYPE(dst.depth(), 1), dst.data);
-    srcFlat.convertTo(dstFlat, rtype, alpha, beta);
-}
-
 MatShape tensorToShape(const Mat& shapeTensor)
 {
     std::vector<int> shapeSpecVec;

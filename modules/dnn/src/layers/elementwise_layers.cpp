@@ -247,13 +247,12 @@ public:
 
             if (src.type() == CV_64F && dst.type() == CV_64F)
             {
-                Mat src_f(shape(src), CV_32F);
-                Mat dst_f(shape(dst), CV_32F);
-                convertToND(src, src_f, CV_32F);
+                Mat src_f, dst_f(dst.size, CV_32F);
+                src.convertTo(src_f, CV_32F);
                 const int nstripes = getNumThreads();
                 PBody body(func, src_f, dst_f, nstripes);
                 parallel_for_(Range(0, nstripes), body, nstripes);
-                convertToND(dst_f, dst, CV_64F);
+                dst_f.convertTo(dst, CV_64F);
                 continue;
             }
 
