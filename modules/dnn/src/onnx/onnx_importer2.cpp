@@ -1191,6 +1191,7 @@ void ONNXImporter2::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodeP
 
     layerParams.set("produce_cell_output", need_yc);
     layerParams.set("produce_output_yh", need_yh);
+    layerParams.set("produce_sequence_y", need_y);
 
 
     if (lstm_proto.input_size() == 8)
@@ -1200,10 +1201,10 @@ void ONNXImporter2::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodeP
     addLayer(layerParams, lstm_proto);
 }
 
- // BUG: https://github.com/opencv/opencv/issues/26309
-void ONNXImporter2::parseGRU(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
+void ONNXImporter2::parseGRU(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    rememberMissingOp(node_proto_.op_type());
+    layerParams.type = "GRU";
+    addLayer(layerParams, node_proto);
 }
 
 void ONNXImporter2::parseImageScaler(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)

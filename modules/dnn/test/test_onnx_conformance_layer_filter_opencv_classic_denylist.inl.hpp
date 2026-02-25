@@ -714,3 +714,7 @@
 "test_roialign_mode_max",
 "test_batchnorm_example",
 "test_batchnorm_epsilon",
+"test_gru_batchwise",
+"test_gru_defaults",
+"test_gru_seq_length",
+"test_gru_with_initial_bias",
