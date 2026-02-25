@@ -2137,6 +2137,8 @@ CASE(test_reduce_l2_empty_set)
     SKIP;
 CASE(test_reduce_l2_empty_set_expanded)
     SKIP;
+CASE(test_reduce_log_sum_empty_set)
+    SKIP;
 CASE(test_reduce_log_sum_empty_set_expanded)
     SKIP;
 CASE(test_reduce_log_sum_exp_empty_set)
