@@ -66,7 +66,7 @@ protected:
         }
     }
 
-    void validate(Mat &A, Mat &Q) {
+    void validate(Mat &A, Mat &Q, float eps = 1e-3) {
         Mat A_ref({B, Nq, T_q, T}, CV_32F, Scalar(0.f));
 
         fastGemmBatch(A_offsets.size(),
@@ -74,7 +74,7 @@ protected:
                     T_q, T, D, 1.f, Q, D, 1,
                     K, T, 1, 0.f, A_ref, T, opt);
 
-        EXPECT_LE(cvtest::norm(A, A_ref, NORM_INF), 1e-3);
+        EXPECT_LE(cvtest::norm(A, A_ref, NORM_INF), eps);
     }
 
 };
@@ -161,14 +161,14 @@ protected:
         }
     }
 
-    void validate(Mat &Out, Mat &A) {
+    void validate(Mat &Out, Mat &A, float eps = 1e-3) {
         Mat Out_ref(Out.size, CV_32F, Scalar(0.f));
         fastGemmBatch(Out_offsets.size(),
                       A_offsets, V_offsets, Out_offsets,
                       T_a, D, S * T_s, 1.f, A, S * T_s, 1,
                       V, D, 1, 0.f, Out_ref, D, opt);
 
-        EXPECT_LE(cvtest::norm(Out, Out_ref, NORM_INF), 1e-3);
+        EXPECT_LE(cvtest::norm(Out, Out_ref, NORM_INF), eps);
     }
 };
 
