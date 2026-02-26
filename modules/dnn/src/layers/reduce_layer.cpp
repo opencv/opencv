@@ -118,7 +118,7 @@ public:
                     for (auto i = 0; i < shape_output.size(); ++i)
                         shape_output[i] = 1;
                 } else {
-                    shape_output.push_back(1);
+                    shape_output = MatShape::scalar();
                 }
                 outputs.assign(1, shape_output);
             }
@@ -139,7 +139,7 @@ public:
                     shape_output.push_back(shape_output_[i]);
             }
             if (shape_output.empty())
-                shape_output.push_back(1);
+                shape_output = MatShape::scalar();
 
             outputs.assign(1, shape_output);
         }

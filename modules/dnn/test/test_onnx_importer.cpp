@@ -118,8 +118,12 @@ public:
             net.setInput(inps[i], inputNames[i]);
         Mat out = net.forward("");
 
-        // BUG: https://github.com/opencv/opencv/issues/28563
-        // EXPECT_EQ(shape(out), shape(ref));
+        MatShape outShape = shape(out);
+        MatShape refShape = shape(ref);
+        bool scalar1dCompatible =
+            (outShape.isScalar() && refShape.size() == 1 && refShape[0] == 1) ||
+            (refShape.isScalar() && outShape.size() == 1 && outShape[0] == 1);
+        EXPECT_TRUE(outShape == refShape || scalar1dCompatible);
 
         if (useSoftmax)
         {

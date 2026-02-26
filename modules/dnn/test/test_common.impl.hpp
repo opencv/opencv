@@ -79,11 +79,27 @@ void normAssert(
         cv::InputArray ref, cv::InputArray test, const char *comment /*= ""*/,
         double l1 /*= 0.00001*/, double lInf /*= 0.0001*/)
 {
-    double normL1 = cvtest::norm(ref, test, cv::NORM_L1) / ref.getMat().total();
-    EXPECT_LE(normL1, l1) << comment << "  |ref| = " << cvtest::norm(ref, cv::NORM_INF);
+    cv::Mat refMat = ref.getMat();
+    cv::Mat testMat = test.getMat();
+    const cv::MatShape refShape = refMat.shape();
+    const cv::MatShape testShape = testMat.shape();
+    const bool scalar1dCompatible =
+        (refShape.isScalar() && testShape.size() == 1 && testShape[0] == 1) ||
+        (testShape.isScalar() && refShape.size() == 1 && refShape[0] == 1);
+    if (scalar1dCompatible)
+    {
+        const cv::MatShape oneShape{1};
+        if (refShape.isScalar())
+            refMat = refMat.reshape(1, oneShape);
+        if (testShape.isScalar())
+            testMat = testMat.reshape(1, oneShape);
+    }
 
-    double normInf = cvtest::norm(ref, test, cv::NORM_INF);
-    EXPECT_LE(normInf, lInf) << comment << "  |ref| = " << cvtest::norm(ref, cv::NORM_INF);
+    double normL1 = cvtest::norm(refMat, testMat, cv::NORM_L1) / refMat.total();
+    EXPECT_LE(normL1, l1) << comment << "  |ref| = " << cvtest::norm(refMat, cv::NORM_INF);
+
+    double normInf = cvtest::norm(refMat, testMat, cv::NORM_INF);
+    EXPECT_LE(normInf, lInf) << comment << "  |ref| = " << cvtest::norm(refMat, cv::NORM_INF);
 }
 
 std::vector<cv::Rect2d> matToBoxes(const cv::Mat& m)

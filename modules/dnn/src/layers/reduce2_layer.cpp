@@ -122,7 +122,7 @@ public:
                     std::fill(shape_out.begin(), shape_out.end(), 1);
                     outs[0] = shape_out;
                 } else {
-                    outs[0] = MatShape(1, 1);
+                    outs[0] = MatShape::scalar();
                 }
             }
             return false;
@@ -142,7 +142,7 @@ public:
                 shape_output.push_back(shape_output_[i]);
             }
         }
-        if (shape_output.empty()) shape_output.push_back(1);
+        if (shape_output.empty()) shape_output = MatShape::scalar();
         outs[0] = shape_output;
         return false;
     }
@@ -471,7 +471,7 @@ public:
                     outShape = inpShape;
                     for (int i = 0; i < (int)outShape.size(); ++i) outShape[i] = 1;
                 } else {
-                    outShape.assign(1, 1);
+                    outShape = MatShape::scalar();
                 }
             }
         } else {
@@ -487,7 +487,7 @@ public:
                     outShape.push_back(tmp[i]);
                 }
             }
-            if (outShape.empty()) outShape.push_back(1);
+            if (outShape.empty()) outShape = MatShape::scalar();
             axes = norm_axes;
         }
 
