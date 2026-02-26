@@ -26,7 +26,7 @@ import sys
 def main():
     try:
         fn = sys.argv[1]
-    except:
+    except Exception:
         fn = 0
 
     def nothing(*arg):

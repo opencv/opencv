@@ -215,7 +215,7 @@ class BuilderDLDT:
         try:
             import hashlib
             patch_hashsum = hashlib.md5(self.patch_file_contents.encode('utf-8')).hexdigest()
-        except:
+        except Exception:
             log.warn("Can't compute hashsum of patches: %s", self.patch_file)
         self.patch_hashsum = self.config.override_patch_hashsum if self.config.override_patch_hashsum else patch_hashsum
 
@@ -312,7 +312,7 @@ class BuilderDLDT:
             # install ngraph only
             cmd = [self.cmake_path, '-DBUILD_TYPE=' + build_config, '-P', 'cmake_install.cmake']
             execute(cmd, cwd=build_dir / 'ngraph')
-        except:
+        except Exception:
             raise
 
         log.info('DLDT build completed')
@@ -561,7 +561,7 @@ def main():
         builder_opencv.build(builder_dldt)
         builder_opencv.copy_sysroot(builder_dldt)
         builder_opencv.package_sources()
-    except:
+    except Exception:
         builder_dldt.cleanup()
         raise
 
@@ -573,6 +573,6 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except:
+    except Exception:
         log.info('FATAL: Error occurred. To investigate problem try to change logging level using LOGLEVEL=DEBUG environment variable.')
         raise

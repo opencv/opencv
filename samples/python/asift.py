@@ -114,7 +114,7 @@ def main():
     feature_name = opts.get('--feature', 'brisk-flann')
     try:
         fn1, fn2 = args
-    except:
+    except Exception:
         fn1 = 'aero1.jpg'
         fn2 = 'aero3.jpg'
 

@@ -107,7 +107,7 @@ class TestSuite(object):
         try:
             if 0 == execute(cmd, cwd=workingDir):
                 return True
-        except:
+        except Exception:
             pass
         return False
 
@@ -160,7 +160,7 @@ class TestSuite(object):
                     trace = trace_profiler.Trace(env['OPENCV_TRACE_LOCATION']+'.txt')
                     trace.process()
                     trace.dump(max_entries=int(self.options.trace_dump))
-            except:
+            except Exception:
                 import traceback
                 traceback.print_exc()
                 pass

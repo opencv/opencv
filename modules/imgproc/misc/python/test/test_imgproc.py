@@ -17,5 +17,5 @@ class Imgproc_Tests(NewOpenCVTests):
         try:
             cv.fillPoly(img, cnts, color)
             assert False
-        except:
+        except Exception:
             assert True

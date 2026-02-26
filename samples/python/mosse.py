@@ -192,7 +192,7 @@ if __name__ == '__main__':
     opts = dict(opts)
     try:
         video_src = args[0]
-    except:
+    except Exception:
         video_src = '0'
 
     App(video_src, paused = '--pause' in opts).run()

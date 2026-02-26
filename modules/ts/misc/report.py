@@ -76,7 +76,7 @@ if __name__ == "__main__":
             if cases:
                 files.append(os.path.basename(arg))
                 tests.extend(cases)
-        except:
+        except Exception:
             pass
 
     if options.filter:

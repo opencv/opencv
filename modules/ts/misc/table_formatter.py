@@ -623,7 +623,7 @@ def getStdoutFilename():
             return nameBuffer.value
         else:
             return os.readlink('/proc/self/fd/1')
-    except:
+    except Exception:
         return ""
 
 def detectHtmlOutputType(requestedType):

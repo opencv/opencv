@@ -26,7 +26,7 @@ import sys
 def main():
     try:
         video_src = sys.argv[1]
-    except:
+    except Exception:
         video_src = 0
 
     cam = video.create_capture(video_src)

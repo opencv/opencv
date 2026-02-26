@@ -386,7 +386,7 @@ def main():
         if first_frame:
             try:
                 init_rect = cv.selectROI('SiamRPN++ Tracker', frame, False, False)
-            except:
+            except Exception:
                 exit()
             tracker.init(frame, init_rect)
             first_frame = False

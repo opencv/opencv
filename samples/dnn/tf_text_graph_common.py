@@ -218,7 +218,7 @@ class GraphDef:
                             if isinstance(v, str) and not v.startswith('DT_'):
                                 try:
                                     float(v)
-                                except:
+                                except Exception:
                                     isString = True
 
                             if isinstance(v, bool):
@@ -315,7 +315,7 @@ def writeTextGraph(modelPath, outputPath, outNodes):
         import cv2 as cv
 
         cv.dnn.writeTextGraph(modelPath, outputPath)
-    except:
+    except Exception:
         import tensorflow as tf
         from tensorflow.tools.graph_transforms import TransformGraph
 

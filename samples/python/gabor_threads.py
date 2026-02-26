@@ -54,7 +54,7 @@ def main():
 
     try:
         img_fn = sys.argv[1]
-    except:
+    except Exception:
         img_fn = 'baboon.jpg'
 
     img = cv.imread(cv.samples.findFile(img_fn))

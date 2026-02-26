@@ -886,7 +886,7 @@ class CppHeaderParser(object):
                 stmt_type = "struct"
                 try:
                     classname, bases, modlist = self.parse_class_decl(stmt[len("typedef "):])
-                except:
+                except Exception:
                     print("Error at %s:%d" % (self.hname, self.lineno))
                     exit(1)
                 if classname.startswith("_Ipl"):
@@ -901,7 +901,7 @@ class CppHeaderParser(object):
                 if stmt.strip() != stmt_type:
                     try:
                         classname, bases, modlist = self.parse_class_decl(stmt)
-                    except:
+                    except Exception:
                         print("Error at %s:%d" % (self.hname, self.lineno))
                         exit(1)
                     decl = []

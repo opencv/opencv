@@ -19,7 +19,7 @@ else:
 
 try:
     from io import StringIO # Python 3
-except:
+except Exception:
     from io import BytesIO as StringIO
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))

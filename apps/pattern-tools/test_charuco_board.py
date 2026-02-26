@@ -12,7 +12,7 @@ class aruco_objdetect_test(NewOpenCVTests):
     def test_aruco_dicts(self):
         try:
             import cairosvg
-        except:
+        except Exception:
             raise self.skipTest("cairosvg library was not found")
         else:
             cols = 3
@@ -71,7 +71,7 @@ class aruco_objdetect_test(NewOpenCVTests):
     def test_aruco_marker_sizes(self):
         try:
             import cairosvg
-        except:
+        except Exception:
             raise self.skipTest("cairosvg library was not found")
         else:
             cols = 3

@@ -50,7 +50,7 @@ def main():
 
     try:
         fn = sys.argv[1]
-    except:
+    except Exception:
         fn = 0
     cap = video.create_capture(fn)
 

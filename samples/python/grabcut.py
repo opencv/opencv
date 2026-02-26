@@ -167,7 +167,7 @@ class App():
                         self.rect_or_mask = 1
                     elif (self.rect_or_mask == 1):       # grabcut with mask
                         cv.grabCut(self.img2, self.mask, self.rect, bgdmodel, fgdmodel, 1, cv.GC_INIT_WITH_MASK)
-                except:
+                except Exception:
                     import traceback
                     traceback.print_exc()
 

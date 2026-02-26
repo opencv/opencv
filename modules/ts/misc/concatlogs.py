@@ -37,7 +37,7 @@ if __name__ == "__main__":
             idx1 = text.find("<tbody>") + len("<tbody>")
             idx2 = html.rfind("</tbody>")
             html = html[:idx2] + re.sub(r"[ \t\n\r]+", " ", text[idx1:])
-        except:
+        except Exception:
             pass
 
     if html:

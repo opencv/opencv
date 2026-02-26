@@ -47,7 +47,7 @@ class App():
     def run(self):
         try:
             fn = sys.argv[1]
-        except:
+        except Exception:
             fn = 'fruits.jpg'
 
         self.img = cv.imread(cv.samples.findFile(fn))

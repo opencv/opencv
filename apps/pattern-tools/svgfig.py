@@ -49,7 +49,7 @@ if re.search("windows", platform.system(), re.I):
 #   tmpdir = _winreg.QueryValueEx(_winreg.OpenKey(_winreg.HKEY_CURRENT_USER, "Environment"), "TEMP")[0]
 #   if tmpdir[0:13] != "%USERPROFILE%":
 #     tmpdir = os.path.expanduser("~") + tmpdir[13:]
-    except:
+    except Exception:
         _default_directory = os.path.expanduser("~") + os.sep + "Desktop"
 
 _default_fileName = "tmp.svg"

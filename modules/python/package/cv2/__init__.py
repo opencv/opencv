@@ -125,7 +125,7 @@ def bootstrap():
             BASE_DIR = os.path.dirname(LOADER_DIR)
             if sys.path[0] == BASE_DIR or os.path.realpath(sys.path[0]) == BASE_DIR:
                 applySysPathWorkaround = True
-        except:
+        except Exception:
             if DEBUG: print('OpenCV loader: exception during checking workaround for sys.path[0]')
             pass  # applySysPathWorkaround is False
 

@@ -105,7 +105,7 @@ class App(object):
                     vis[:] = prob[...,np.newaxis]
                 try:
                     cv.ellipse(vis, track_box, (0, 0, 255), 2)
-                except:
+                except Exception:
                     print(track_box)
 
             cv.imshow('camshift', vis)
@@ -123,6 +123,6 @@ if __name__ == '__main__':
     import sys
     try:
         video_src = sys.argv[1]
-    except:
+    except Exception:
         video_src = 0
     App(video_src).run()

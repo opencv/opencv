@@ -80,6 +80,6 @@ if __name__ == '__main__':
     import sys
     try:
         fn = sys.argv[1]
-    except:
+    except Exception:
         fn = 'fruits.jpg'
     App(cv.samples.findFile(fn)).run()

@@ -289,7 +289,7 @@ class Trace:
             try:
                 task.duration = task.endTimestamp - task.beginTimestamp
                 task.selfDuration = task.duration
-            except:
+            except Exception:
                 task.duration = None
                 task.selfDuration = None
             task.totalTimeIPP = task.selfTimeIPP

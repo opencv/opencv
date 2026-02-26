@@ -50,7 +50,7 @@ def main():
     import sys
     try:
         fn = sys.argv[1]
-    except:
+    except Exception:
         fn = 'baboon.jpg'
 
     src = cv.imread(cv.samples.findFile(fn))

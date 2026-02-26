@@ -41,7 +41,7 @@ class App():
 
         try:
             fn = sys.argv[1]
-        except:
+        except Exception:
             fn = 0
         cam = video.create_capture(fn, fallback='synth:bg=baboon.jpg:class=chess:noise=0.05')
 

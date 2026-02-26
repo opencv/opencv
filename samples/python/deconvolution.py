@@ -71,7 +71,7 @@ def main():
     opts = dict(opts)
     try:
         fn = args[0]
-    except:
+    except Exception:
         fn = 'licenseplate_motion.jpg'
 
     win = 'deconvolution'

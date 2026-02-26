@@ -28,7 +28,7 @@ def main():
 
     try:
         fn = sys.argv[1]
-    except:
+    except Exception:
         fn = 'baboon.jpg'
 
     img = cv.imread(cv.samples.findFile(fn))
@@ -53,7 +53,7 @@ def main():
         try: # do not get trackbar position while trackbar is not created
             sz = cv.getTrackbarPos('op/size', 'morphology')
             iters = cv.getTrackbarPos('iters', 'morphology')
-        except:
+        except Exception:
             return
         opers = cur_mode.split('/')
         if len(opers) > 1:

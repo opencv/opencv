@@ -20,7 +20,7 @@ try:
             f = sys.stdin
     else:
         sys.exit("ERROR. Specify output file")
-except:
+except Exception:
     sys.exit("ERROR. Can't open input/output file, check parameters")
 
 fns = []

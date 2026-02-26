@@ -106,6 +106,6 @@ if __name__ == '__main__':
     import sys
     try:
         video_src = sys.argv[1]
-    except:
+    except Exception:
         video_src = 0
     App(video_src).run()

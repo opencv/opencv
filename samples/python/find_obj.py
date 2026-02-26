@@ -146,7 +146,7 @@ def main():
     feature_name = opts.get('--feature', 'brisk')
     try:
         fn1, fn2 = args
-    except:
+    except Exception:
         fn1 = 'box.png'
         fn2 = 'box_in_scene.png'
 

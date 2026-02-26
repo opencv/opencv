@@ -27,7 +27,7 @@ from digits import *
 def main():
     try:
         src = sys.argv[1]
-    except:
+    except Exception:
         src = 0
     cap = video.create_capture(src, fallback='synth:bg={}:noise=0.05'.format(cv.samples.findFile('sudoku.png')))
 
@@ -48,7 +48,7 @@ def main():
         contours, heirs = cv.findContours( bin.copy(), cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE)
         try:
             heirs = heirs[0]
-        except:
+        except Exception:
             heirs = []
 
         for cnt, heir in zip(contours, heirs):

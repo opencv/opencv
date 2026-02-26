@@ -20,7 +20,7 @@ def main():
     import sys
     try:
         fn = sys.argv[1]
-    except:
+    except Exception:
         fn = 'starry_night.jpg'
 
     img = cv.imread(cv.samples.findFile(fn))

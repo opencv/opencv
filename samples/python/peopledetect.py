@@ -47,7 +47,7 @@ def main():
             if img is None:
                 print('Failed to load image file:', fn)
                 continue
-        except:
+        except Exception:
             print('loading error')
             continue
 

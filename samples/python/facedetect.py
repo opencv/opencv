@@ -36,7 +36,7 @@ def main():
     args, video_src = getopt.getopt(sys.argv[1:], '', ['cascade=', 'nested-cascade='])
     try:
         video_src = video_src[0]
-    except:
+    except Exception:
         video_src = 0
     args = dict(args)
     cascade_fn = args.get('--cascade', "haarcascades/haarcascade_frontalface_alt.xml")

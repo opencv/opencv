@@ -84,7 +84,7 @@ def postProcessParameters(fns):
 def readFunctionFilter(fns, fileName):
     try:
         f = open(fileName, "r")
-    except:
+    except Exception:
         print("ERROR: Can't open filter file: %s" % fileName)
         return 0
 

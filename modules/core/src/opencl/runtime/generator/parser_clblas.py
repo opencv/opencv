@@ -11,7 +11,7 @@ try:
         f = open(sys.argv[1], "r")
     else:
         f = sys.stdin
-except:
+except Exception:
     sys.exit("ERROR. Can't open input file")
 
 fns = []

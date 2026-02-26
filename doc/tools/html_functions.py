@@ -59,7 +59,7 @@ def process_fn(soup, anchor, python_signature, symbol):
     try:
         r = anchor.find_next_sibling(class_='memitem').find(class_='memproto').find('table')
         insert_python_fn_signature(soup, r, python_signature, symbol)
-    except:
+    except Exception:
         logging.error("Can't process: %s" % symbol)
         traceback.print_exc()
         pprint(anchor)
@@ -76,7 +76,7 @@ def process_const(soup, anchor, python_signature, symbol):
         else:
             old.replace_with(description)
         #pprint(anchor.parent)
-    except:
+    except Exception:
         logging.error("Can't process: %s" % symbol)
         traceback.print_exc()
         pprint(anchor)

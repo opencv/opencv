@@ -198,7 +198,7 @@ class TempEnvDir:
             del os.environ[self.envname]
         try:
             shutil.rmtree(self.new_name)
-        except:
+        except Exception:
             pass
 
 

@@ -27,7 +27,7 @@ def main():
     import sys
     try:
         fn = sys.argv[1]
-    except:
+    except Exception:
         fn = 'fruits.jpg'
 
     img = cv.imread(cv.samples.findFile(fn))
