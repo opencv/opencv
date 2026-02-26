@@ -257,6 +257,7 @@ int main(int argc, char **argv)
         //! [Set input blob]
         net.setInput(blob);
         //! [Set input blob]
+        int64 t0 = getTickCount();
 
         if (modelName == "u2netp")
         {
@@ -291,9 +292,7 @@ int main(int argc, char **argv)
         }
 
         // Put efficiency information.
-        vector<double> layersTimes;
-        double freq = getTickFrequency() / 1000;
-        double t = net.getPerfProfile(layersTimes) / freq;
+        double t = (getTickCount() - t0) * 1000.0 / getTickFrequency();
         string label = format("Inference time: %.2f ms", t);
         Rect r = getTextSize(Size(), label, Point(), fontFace, fontSize, fontWeight);
         r.height += fontSize; // padding

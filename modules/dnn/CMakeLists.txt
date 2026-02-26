@@ -113,8 +113,9 @@ set(libs "")
 # ONNX Runtime
 ocv_option(WITH_ONNXRUNTIME "Build with ONNX Runtime support" OFF)
 ocv_option(DOWNLOAD_ONNXRUNTIME "Download ONNX Runtime prebuilt binaries" OFF IF WITH_ONNXRUNTIME)
+ocv_option(ONNXRUNTIME_PREFER_STATIC "Prefer static ONNX Runtime library when available" ON IF WITH_ONNXRUNTIME)
 
-set(ONNXRUNTIME_VERSION "1.17.1" CACHE STRING "ONNX Runtime version to download (prebuilt binaries)")
+set(ONNXRUNTIME_VERSION "1.24.2" CACHE STRING "ONNX Runtime version to download (prebuilt binaries)")
 
 if(WITH_ONNXRUNTIME)
   include("${OpenCV_SOURCE_DIR}/cmake/FindONNX.cmake")
@@ -136,24 +137,23 @@ if(WITH_ONNXRUNTIME)
     if(WIN32)
       if(X86_64 OR CMAKE_SIZEOF_VOID_P EQUAL 8)
         set(_ort_filename "onnxruntime-win-x64-${ONNXRUNTIME_VERSION}.zip")
-        set(_ort_md5 "26138ecd0cb6d4abe00c4070a27e5234")
-      elseif(X86 OR CMAKE_SIZEOF_VOID_P EQUAL 4)
-        set(_ort_filename "onnxruntime-win-x86-${ONNXRUNTIME_VERSION}.zip")
-        set(_ort_md5 "56287d15a0dd3fa7c49aed9db4e277ed")
+        set(_ort_md5 "c535ec65cf6f850f2a70b4029acdc5d7")
       elseif(ARM64 OR AARCH64)
         set(_ort_filename "onnxruntime-win-arm64-${ONNXRUNTIME_VERSION}.zip")
-        set(_ort_md5 "a56c42ff0620d0076e9ad76f5bafc06a")
+        set(_ort_md5 "01df64c14cf9285a6b23744f1b2ddf63")
       endif()
     elseif(APPLE)
-      set(_ort_filename "onnxruntime-osx-universal2-${ONNXRUNTIME_VERSION}.tgz")
-      set(_ort_md5 "6530984d3a5ad06ae07c881e0b4a1197")
+      if(ARM64 OR AARCH64 OR CMAKE_OSX_ARCHITECTURES MATCHES "arm64")
+        set(_ort_filename "onnxruntime-osx-arm64-${ONNXRUNTIME_VERSION}.tgz")
+        set(_ort_md5 "44302ee5651926ba6b0a3e92a3a303db")
+      endif()
     elseif(UNIX)
       if(X86_64)
         set(_ort_filename "onnxruntime-linux-x64-${ONNXRUNTIME_VERSION}.tgz")
-        set(_ort_md5 "405e3ef137247c5229207da596ac45c0")
+        set(_ort_md5 "8e444d3ed1ea286013e339132ed4f08e")
       elseif(AARCH64 OR ARM64)
         set(_ort_filename "onnxruntime-linux-aarch64-${ONNXRUNTIME_VERSION}.tgz")
-        set(_ort_md5 "5114906a066e977d1bc07c9c82cbe8c6")
+        set(_ort_md5 "857b0fbb35f9d4cc117033242fc2a3da")
       endif()
     endif()
 
@@ -191,6 +191,38 @@ if(WITH_ONNXRUNTIME)
 
   if(HAVE_ONNX)
     set(HAVE_ONNXRUNTIME 1 CACHE INTERNAL "ONNX Runtime availability")
+
+    if(ONNXRUNTIME_PREFER_STATIC)
+      set(_ort_static_lib "")
+      if(ONNXRT_ROOT_DIR)
+        find_file(_ort_static_lib
+          NAMES libonnxruntime.a
+          HINTS "${ONNXRT_ROOT_DIR}"
+          PATH_SUFFIXES lib lib64
+          NO_DEFAULT_PATH
+        )
+      endif()
+      if(NOT _ort_static_lib AND ONNX_LIBRARIES)
+        foreach(_ort_lib ${ONNX_LIBRARIES})
+          get_filename_component(_ort_lib_dir "${_ort_lib}" DIRECTORY)
+          find_file(_ort_static_candidate
+            NAMES libonnxruntime.a
+            HINTS "${_ort_lib_dir}"
+            NO_DEFAULT_PATH
+          )
+          if(_ort_static_candidate AND _ort_static_candidate MATCHES "\\.a$")
+            set(_ort_static_lib "${_ort_static_candidate}")
+            break()
+          endif()
+        endforeach()
+      endif()
+      if(_ort_static_lib AND _ort_static_lib MATCHES "\\.a$")
+        set(ONNX_LIBRARIES "${_ort_static_lib}" CACHE STRING "ONNX Runtime libraries" FORCE)
+        message(STATUS "DNN: ONNX Runtime static library selected: ${_ort_static_lib}")
+      endif()
+      unset(_ort_static_candidate)
+      unset(_ort_static_lib)
+    endif()
 
     if(ONNX_INCLUDE_DIR)
       list(APPEND include_dirs "${ONNX_INCLUDE_DIR}")
