@@ -160,7 +160,7 @@ struct CV_EXPORTS_W_SIMPLE MatShape
     CV_WRAP MatShape expand(const MatShape& another) const;
 
     // convert shape between layouts
-    CV_WRAP MatShape toLayout(DataLayout newLayout, int C0=0, int ngroups=1) const;
+    CV_WRAP MatShape toLayout(DataLayout newLayout, int C0=0) const;
 
     size_t total() const; // returns the total number of elements in the tensor (including padding elements, i.e. the method ignores 'C' in the case of block layout). Returns 1 for scalar tensors. Returns 0 for empty shapes.
 

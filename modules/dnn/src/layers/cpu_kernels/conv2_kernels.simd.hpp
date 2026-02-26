@@ -11,7 +11,7 @@ namespace cv {
 namespace dnn {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
-cv::dnn::ConvFunc getConvFunc_(int depth, int C0);
+cv::dnn::ConvFunc getConvFunc_(int depth, int C0, ConvKind convkind);
 
 CV_CPU_OPTIMIZATION_NAMESPACE_END
 }} // cv::dnn::
@@ -441,9 +441,293 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
     });
 }
 
-cv::dnn::ConvFunc getConvFunc_(int depth, int C0)
+#undef __ARM_NEON
+
+static void convAlt32fC8(const void* inp__, const void* residual__, void* out__,
+                         const ConvState& cs, const void* weights__,
+                         const float* scale__, const float* bias__,
+                         const int32_t* inpofs__, const int32_t* ofsofs__)
 {
-    ConvFunc func = depth == CV_32F && C0 == 8 ? conv32fC8 : nullptr;
+    using FT = float;
+    constexpr int C0shift = 3, K0shift = C0shift;
+    constexpr int C0 = 1 << C0shift;
+    constexpr int K0 = C0;
+    const MatShape& inpshape = cs.inpshape;
+    const MatShape& outshape = cs.outshape;
+    
+    CV_Assert_N(inpshape.layout == DATA_LAYOUT_BLOCK, outshape.layout == DATA_LAYOUT_BLOCK);
+    CV_Assert_N(inpshape.back() == C0, outshape.back() == K0);
+    CV_Assert(!scale__ && !residual__ && cs.fastActivation == FAST_ACTIV_NONE && !cs.activation);
+    
+    int N = inpshape[0];
+    
+    int ksize_ = 1;
+    for (int i = 0; i < ConvState::MAX_CONV_DIMS; i++)
+        ksize_ *= cs.kshape[i];
+    
+    int Dk_ = cs.kshape[0], Hk_ = cs.kshape[1], Wk_ = cs.kshape[2];
+
+    // precompute (oz,oy,ox) for each i
+    AutoBuffer<int> ofsZYXbuf(ksize_ * 3);
+    for (int zk = 0, i3 = 0; zk < Dk_; zk++) {
+        int oz = zk * cs.dilations[0] - cs.pads[0];
+        for (int yk = 0; yk < Hk_; yk++) {
+            int oy = yk * cs.dilations[1] - cs.pads[1];
+            for (int xk = 0; xk < Wk_; xk++, i3 += 3) {
+                int ox = xk * cs.dilations[2] - cs.pads[2];
+                ofsZYXbuf[i3] = oz;
+                ofsZYXbuf[i3 + 1] = oy;
+                ofsZYXbuf[i3 + 2] = ox;
+            }
+        }
+    }
+
+    const int total_blocks = N * cs.ngroups * cs.Kblk;
+    memset(out__, 0, outshape.total()*sizeof(FT));
+
+    parallel_for_(Range(0, total_blocks), [&](const Range& range) {
+        constexpr int MAX_CONV_DIMS = ConvState::MAX_CONV_DIMS;
+        const int C = inpshape.channels(), K = outshape.channels();
+        const int C1 = (C + C0 - 1)/C0, K1 = (K + K0 - 1)/K0;
+        const int ngroups = cs.ngroups, Kblk = cs.Kblk, C1Max = cs.C1Max;
+        const int Cg = C / ngroups;
+        const int Kg = K / ngroups;
+        int ksize = ksize_;
+        int ndims = inpshape.dims;
+        const int D = ndims >= 6 ? outshape[ndims-4] : 1;
+        const int H = ndims >= 5 ? outshape[ndims-3] : 1;
+        const int W = outshape[ndims-2];
+        const int Di = ndims >= 6 ? inpshape[ndims-4] : 1;
+        const int Hi = ndims >= 5 ? inpshape[ndims-3] : 1;
+        const int Wi = inpshape[ndims-2];
+        //const int Dk = cs.kshape[0], Hk = cs.kshape[1], Wk = cs.kshape[2];
+        const int Sz = cs.strides[0], Sy = cs.strides[1], Sx = cs.strides[2];
+        //const int Dz = cs.dilations[0], Dy = cs.dilations[1], Dx = cs.dilations[2];
+        //const int padZ = cs.pads[0], padY = cs.pads[1], padX = cs.pads[2];
+        const float* biasptr = (const float*)bias__;
+        const int* ofsZYX = ofsZYXbuf.data();
+        int planesize = D*H*W*K0;
+        int iplanesize = Di*Hi*Wi*C0;
+        
+        int innerZ0 = cs.inner[0], innerZ1 = cs.inner[MAX_CONV_DIMS];
+        int innerY0 = cs.inner[1], innerY1 = cs.inner[MAX_CONV_DIMS+1];
+        int innerX0 = cs.inner[2], innerX1 = cs.inner[MAX_CONV_DIMS+2];
+        
+        for (int t = range.start; t < range.end; ++t) {
+            const int n = t / (ngroups * Kblk);
+            const int rem = t - n * (ngroups * Kblk);
+            const int g = rem / Kblk;
+            const int kblk = rem - g * Kblk;
+
+            const int k_base = g * Kg + kblk * K0;
+            if (k_base >= K) continue;
+
+            const int k_count = std::min(std::min(K0, Kg - kblk*K0), K - k_base);
+            //printf("(%d,%d). t=%d, n=%d, g=%d, kblk=%d, k_base=%d, k_count=%d\n", begin, end, t, n, g, kblk, k_base, k_count);
+
+            const int c_start  = g * Cg;
+            const int c00      = c_start & (C0-1);
+            const int c1_start = c_start >> C0shift;
+            const int cblocks  = (c00 + Cg + C0 - 1) >> C0shift;
+            const float* inptr0 = (float*)inp__ + (n * C1 + c1_start) * iplanesize;
+            const float* wptr0 = (float*)weights__ + (g*Kblk + kblk)*(ksize*C1Max*C0*K0);
+            const int b_count = biasptr ? k_count : 0;
+
+#ifdef __ARM_NEON
+            float32x4_t vbias_lo = {
+                (b_count > 0) ? biasptr[k_base + 0] : 0.0f,
+                (b_count > 1) ? biasptr[k_base + 1] : 0.0f,
+                (b_count > 2) ? biasptr[k_base + 2] : 0.0f,
+                (b_count > 3) ? biasptr[k_base + 3] : 0.0f
+            };
+            float32x4_t vbias_hi = {
+                (b_count > 4) ? biasptr[k_base + 4] : 0.0f,
+                (b_count > 5) ? biasptr[k_base + 5] : 0.0f,
+                (b_count > 6) ? biasptr[k_base + 6] : 0.0f,
+                (b_count > 7) ? biasptr[k_base + 7] : 0.0f
+            };
+            const int xi_step = Sx * C0;
+#endif
+
+            for (int z = 0; z < D; z++) {
+                const int zi_base = z * Sz;
+                const bool z_inner = (z >= innerZ0 && z < innerZ1);
+
+                for (int y = 0; y < H; y++) {
+                    const int yi_base = y * Sy;
+                    const bool zy_inner = z_inner && (y >= innerY0 && y < innerY1);
+
+                    int dx = 1;
+                    float* outptr0 = (float*)out__ + n*(K1*planesize) + (z*H + y)*(W*K0);
+
+                    for (int x = 0; x < W; x += dx) {
+                        float* outptr = outptr0 + x*K0;
+                        const int xi_base = x * Sx;
+
+#ifdef __ARM_NEON
+                        const int SPAT_BLOCK_SIZE = 6;
+                        if (zy_inner &&
+                            innerX0 <= x &&
+                            x + SPAT_BLOCK_SIZE <= innerX1) {
+                            dx = SPAT_BLOCK_SIZE;
+
+                            float32x4_t acc0_lo = vbias_lo, acc0_hi = vbias_hi;
+                            float32x4_t acc1_lo = vbias_lo, acc1_hi = vbias_hi;
+                            float32x4_t acc2_lo = vbias_lo, acc2_hi = vbias_hi;
+                            float32x4_t acc3_lo = vbias_lo, acc3_hi = vbias_hi;
+                            float32x4_t acc4_lo = vbias_lo, acc4_hi = vbias_hi;
+                            float32x4_t acc5_lo = vbias_lo, acc5_hi = vbias_hi;
+
+                            for (int i = 0; i < ksize; ++i) {
+                                const int zi = zi_base + ofsZYX[i * 3 + 0];
+                                const int yi = yi_base + ofsZYX[i * 3 + 1];
+                                const int xi = xi_base + ofsZYX[i * 3 + 2];
+
+                                const float* inptr = inptr0 + (((zi * Hi) + yi) * Wi + xi) * C0;
+                                const float* wptr = wptr0 + i*C1Max*K0*C0;
+
+                                for (int c1 = 0; c1 < cblocks; ++c1, wptr += C0*K0, inptr += iplanesize) {
+                                    float32x4_t x0_lo = vld1q_f32(inptr + 0);
+                                    float32x4_t x0_hi = vld1q_f32(inptr + 4);
+                                    float32x4_t x1_lo = vld1q_f32(inptr + xi_step + 0);
+                                    float32x4_t x1_hi = vld1q_f32(inptr + xi_step + 4);
+                                    float32x4_t x2_lo = vld1q_f32(inptr + xi_step*2 + 0);
+                                    float32x4_t x2_hi = vld1q_f32(inptr + xi_step*2 + 4);
+                                    float32x4_t x3_lo = vld1q_f32(inptr + xi_step*3 + 0);
+                                    float32x4_t x3_hi = vld1q_f32(inptr + xi_step*3 + 4);
+                                    float32x4_t x4_lo = vld1q_f32(inptr + xi_step*4 + 0);
+                                    float32x4_t x4_hi = vld1q_f32(inptr + xi_step*4 + 4);
+                                    float32x4_t x5_lo = vld1q_f32(inptr + xi_step*5 + 0);
+                                    float32x4_t x5_hi = vld1q_f32(inptr + xi_step*5 + 4);
+                                    float32x4_t w_lo, w_hi;
+
+#undef ACCROW6
+#define ACCROW6(w_ofs, suffix, lane) \
+    w_lo = vld1q_f32(wptr + w_ofs*K0 + 0); \
+    w_hi = vld1q_f32(wptr + w_ofs*K0 + 4); \
+    acc0_lo = vfmaq_laneq_f32(acc0_lo, w_lo, x0_##suffix, lane); \
+    acc0_hi = vfmaq_laneq_f32(acc0_hi, w_hi, x0_##suffix, lane); \
+    acc1_lo = vfmaq_laneq_f32(acc1_lo, w_lo, x1_##suffix, lane); \
+    acc1_hi = vfmaq_laneq_f32(acc1_hi, w_hi, x1_##suffix, lane); \
+    acc2_lo = vfmaq_laneq_f32(acc2_lo, w_lo, x2_##suffix, lane); \
+    acc2_hi = vfmaq_laneq_f32(acc2_hi, w_hi, x2_##suffix, lane); \
+    acc3_lo = vfmaq_laneq_f32(acc3_lo, w_lo, x3_##suffix, lane); \
+    acc3_hi = vfmaq_laneq_f32(acc3_hi, w_hi, x3_##suffix, lane); \
+    acc4_lo = vfmaq_laneq_f32(acc4_lo, w_lo, x4_##suffix, lane); \
+    acc4_hi = vfmaq_laneq_f32(acc4_hi, w_hi, x4_##suffix, lane); \
+    acc5_lo = vfmaq_laneq_f32(acc5_lo, w_lo, x5_##suffix, lane); \
+    acc5_hi = vfmaq_laneq_f32(acc5_hi, w_hi, x5_##suffix, lane); \
+
+                                    ACCROW6(0, lo, 0);
+                                    ACCROW6(1, lo, 1);
+                                    ACCROW6(2, lo, 2);
+                                    ACCROW6(3, lo, 3);
+
+                                    ACCROW6(4, hi, 0);
+                                    ACCROW6(5, hi, 1);
+                                    ACCROW6(6, hi, 2);
+                                    ACCROW6(7, hi, 3);
+                                }
+                            }
+
+                            float tmp[SPAT_BLOCK_SIZE*C0];
+                            vst1q_f32(tmp + 0, acc0_lo); vst1q_f32(tmp + 4, acc0_hi);
+                            vst1q_f32(tmp + 8, acc1_lo); vst1q_f32(tmp + 8 + 4, acc1_hi);
+                            vst1q_f32(tmp + 8*2, acc2_lo); vst1q_f32(tmp + 8*2 + 4, acc2_hi);
+                            vst1q_f32(tmp + 8*3, acc3_lo); vst1q_f32(tmp + 8*3 + 4, acc3_hi);
+                            vst1q_f32(tmp + 8*4, acc4_lo); vst1q_f32(tmp + 8*4 + 4, acc4_hi);
+                            vst1q_f32(tmp + 8*5, acc5_lo); vst1q_f32(tmp + 8*5 + 4, acc5_hi);
+
+                            for (int kk = 0; kk < k_count; ++kk) {
+                                const int k = k_base + kk;
+                                int kofs = (k >> K0shift) * planesize + (k & (K0-1));
+                                outptr[kofs + 0 * 8] = tmp[kk];
+                                outptr[kofs + 1 * 8] = tmp[kk+8];
+                                outptr[kofs + 2 * 8] = tmp[kk+8*2];
+                                outptr[kofs + 3 * 8] = tmp[kk+8*3];
+                                outptr[kofs + 4 * 8] = tmp[kk+8*4];
+                                outptr[kofs + 5 * 8] = tmp[kk+8*5];
+                            }
+
+                            continue;
+                        }
+#endif
+                        dx = 1;
+
+                        float accs[8];
+
+#ifdef __ARM_NEON
+                        float32x4_t acc0 = vbias_lo, acc1 = vbias_hi;
+#else
+                        for (int kk = 0; kk < K0; ++kk)
+                            accs[kk] = (kk < b_count) ? biasptr[k_base + kk] : 0.0f;
+#endif
+
+                        for (int i = 0; i < ksize; ++i) {
+                            size_t i3 = size_t(i)*3u;
+                            const int zi = zi_base + ofsZYX[i3 + 0];
+                            const int yi = yi_base + ofsZYX[i3 + 1];
+                            const int xi = xi_base + ofsZYX[i3 + 2];
+                            if ((((unsigned)zi >= (unsigned)Di) |
+                                ((unsigned)yi >= (unsigned)Hi) |
+                                ((unsigned)xi >= (unsigned)Wi)) != 0)
+                                continue;
+
+                            const float* inptr = inptr0 + (((zi * Hi) + yi) * Wi + xi) * C0;
+                            const float* wptr = wptr0 + i*C1Max*K0*C0;
+
+#ifdef __ARM_NEON
+                            for (int c1 = 0; c1 < cblocks; ++c1, inptr += iplanesize, wptr += K0*C0) {
+                                float32x4_t x0 = vld1q_f32(inptr), x1 = vld1q_f32(inptr + 4);
+                                float32x4_t w0, w1;
+#undef ACCROW1
+#define ACCROW1(w_ofs, idx, lane) \
+    w0 = vld1q_f32(wptr + w_ofs*K0); \
+    w1 = vld1q_f32(wptr + w_ofs*K0 + 4); \
+    acc0 = vfmaq_laneq_f32(acc0, w0, x##idx, lane); \
+    acc1 = vfmaq_laneq_f32(acc1, w1, x##idx, lane)
+
+                                ACCROW1(0, 0, 0);
+                                ACCROW1(1, 0, 1);
+                                ACCROW1(2, 0, 2);
+                                ACCROW1(3, 0, 3);
+                                ACCROW1(4, 1, 0);
+                                ACCROW1(5, 1, 1);
+                                ACCROW1(6, 1, 2);
+                                ACCROW1(7, 1, 3);
+                            }
+#else
+                            for (int c1 = 0; c1 < cblocks; ++c1, inptr += iplanesize, wptr += K0*C0) {
+                                for (int c0 = 0; c0 < C0; ++c0) {
+                                    const float xval = inptr[c0];
+                                    for (int kk = 0; kk < K0; ++kk)
+                                        accs[kk] += xval * wptr[c0*K0 + kk];
+                                }
+                            }
+#endif
+                        }
+#ifdef __ARM_NEON
+                        vst1q_f32(accs, acc0);
+                        vst1q_f32(accs + 4, acc1);
+#endif
+                        for (int kk = 0; kk < k_count; ++kk) {
+                            const int k = k_base + kk;
+                            int kofs = (k >> K0shift) * planesize + (k & (K0-1));
+                            outptr[kofs] = accs[kk];
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+cv::dnn::ConvFunc getConvFunc_(int depth, int C0, ConvKind convkind)
+{
+    ConvFunc func = nullptr;
+    if (depth == CV_32F && C0 == 8) {
+        func = convkind == CONV_KIND_MAIN ? conv32fC8 : convAlt32fC8;
+    }
     return func;
 }
 

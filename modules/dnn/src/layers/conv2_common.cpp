@@ -147,6 +147,24 @@ bool ConvState::sameShape(const ConvState& cs) const
     return inpshape == cs.inpshape && outshape == cs.outshape;
 }
 
+static MatShape getWpackShapeAlt(const MatShape& wshape, int ngroups, int C0)
+{
+    CV_Assert(wshape.dims >= 3);
+    int K = wshape[0], Cg = wshape[1], C = Cg*ngroups;
+    int ksize = int(wshape.total())/(K*Cg);
+    CV_Assert_N(K % ngroups == 0);
+    int Kg = K / ngroups, K0 = C0;
+    int Kblk = (Kg + K0 - 1)/K0;
+    int C1Max = 0;
+    for (int g = 0; g < ngroups; ++g) {
+        int c_start = g * Cg;
+        int c00 = c_start & (C0 - 1);
+        int cblocks = (c00 + Cg + C0 - 1)/C0;
+        C1Max = std::max(C1Max, cblocks);
+    }
+    return MatShape({ngroups, Kblk, ksize, C1Max, C0*K0}, DATA_LAYOUT_UNKNOWN);
+}
+
 void ConvState::initConv(const MatShape& inpshape_,
                          const MatShape& wshape_,
                          const MatShape& outshape_,
@@ -165,32 +183,24 @@ void ConvState::initConv(const MatShape& inpshape_,
     CV_Assert(dilations_.empty() || (dilations_.size() == size_t(nspatialdims)));
     CV_Assert(pads_.empty() || (pads_.size() == size_t(nspatialdims*2)));
     CV_Assert(inpshape_.dims == outshape_.dims);
-    CV_Assert(nspatialdims == inpshape_.dims - 3);
+    CV_Assert(inpshape_.dims == nspatialdims + 2 + int(inpshape_.layout == DATA_LAYOUT_BLOCK));
+    CV_Assert_N(inpshape_.layout == outshape_.layout,
+                inpshape_[0] == outshape_[0]);
 
     inpshape = inpshape_;
     outshape = outshape_;
     ngroups = ngroups_;
+    Kblk = C1Max = 0;
     
-    int C = inpshape.layout == DATA_LAYOUT_BLOCK ? inpshape.C :
-        inpshape.layout == DATA_LAYOUT_NHWC ? inpshape.back() : inpshape[1];
-    int Cout = outshape.layout == DATA_LAYOUT_BLOCK ? outshape.C :
-        outshape.layout == DATA_LAYOUT_NHWC ? outshape.back() : outshape[1];
+    int C = inpshape.channels();
+    int K = outshape.channels();
     
-    depthwise = ngroups == C && ngroups == Cout;
-
-    CV_Assert(inpshape_[0] == outshape_[0]);
+    depthwise = ngroups == C && ngroups == K;
+    
     if (inpshape.layout == DATA_LAYOUT_BLOCK) {
         CV_Assert(inpshape.back() == outshape.back());
     }
     
-    repackInp = repackOut = false;
-    if (depthwise) {
-        CV_Assert(outshape[1] == inpshape[1]);
-    } else {
-        repackInp = inpshape[1] % ngroups != 0;
-        repackOut = outshape[1] % ngroups != 0;
-    }
-
     fastActivation = fastActivation_;
     activation = nullptr;
     memset(activParams, 0, sizeof(activParams));
@@ -235,9 +245,15 @@ void ConvState::initConv(const MatShape& inpshape_,
         inner[j] = inner0;
         inner[j + MAX_CONV_DIMS] = inner1;
     }
+    
+    initOfs();
+    if (!depthwise && inpshape.layout == DATA_LAYOUT_BLOCK) {
+        int C0 = inpshape.back();
+        MatShape wpackShape = getWpackShapeAlt(wshape_, ngroups, C0);
         
-    if (depthwise) {
-        initOfs();
+        CV_Assert(wpackShape.dims == 5);
+        Kblk = wpackShape[1];
+        C1Max = wpackShape[3];
     }
 }
 
@@ -426,6 +442,58 @@ void repackConvWeights(const void* inpw__, int inptype_,
     });
 }
 
+void repackConvWeightsAlt(const Mat& weights, Mat& Wpack, int outtype, int ngroups, int C0_)
+{
+    CV_Assert(weights.isContinuous());
+    CV_Assert_N(weights.type() == CV_32F, outtype == CV_32F);
+    CV_Assert(ngroups > 0);
+    CV_Assert((C0_ & (C0_ - 1)) == 0 && C0_ >= 4);
+    
+    MatShape wshape = weights.shape();
+    CV_Assert(wshape.dims >= 3);
+    
+    int K = wshape[0];
+    CV_Assert(K % ngroups == 0);
+
+    if (!Wpack.isContinuous()) {
+        Wpack.release();
+    }
+    MatShape wpackShape = getWpackShapeAlt(weights.shape(), ngroups, C0_);
+    Wpack.create(wpackShape, CV_32F);
+    Wpack.setZero();
+
+    parallel_for_(Range(0, K), [&](const Range& range) {
+        int Cg = wshape[1], Kg = K / ngroups;
+        int ksize = wpackShape[2], Kblk = wpackShape[1], C1Max = wpackShape[3];
+        int C0 = C0_, K0 = C0;
+        const float* wdata = weights.ptr<float>();
+        float* Wpackdata = Wpack.ptr<float>();
+
+        for (int k = range.start; k < range.end; ++k) {
+            int g = k / Kg;
+            int kin = k - g * Kg;
+            int kblk = kin / K0;
+            int k0   = kin & (K0 - 1);
+
+            int c_start = g * Cg;
+            int c00 = c_start & (C0 - 1);
+
+            for (int c = 0; c < Cg; ++c) {
+                int ch = c00 + c;
+                int c1  = ch / C0;
+                int c0  = ch & (C0 - 1);
+
+                const float* wptr = wdata + ((k * Cg + c) * ksize);
+                float* wpackptr = Wpackdata + (((g * Kblk + kblk) * ksize * C1Max + c1) * C0 + c0)*K0 + k0;
+                for (int i = 0; i < ksize; ++i) {
+                    wpackptr[i*(C1Max*C0*K0)] = wptr[i];
+                }
+            }
+        }
+    });
+}
+
+
 void ConvState::initPooling(const MatShape& inpshape_,
                             const MatShape& outshape_,
                             const std::vector<int>& kshape_,
@@ -447,7 +515,6 @@ void ConvState::initPooling(const MatShape& inpshape_,
     outshape = outshape_;
     ngroups = C;
     depthwise = true;
-    repackInp = repackOut = false;
     
     for (int i = 0; i < MAX_CONV_DIMS; i++) {
         kshape[i] = strides[i] = dilations[i] = 1;

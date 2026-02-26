@@ -20,243 +20,6 @@ namespace dnn
     Opset's 1 to 22 are covered.
 */
 
-static void refConv32f(const void* inp__, const void* residual__, void* out__,
-                       const ConvState& cs, const void* weights__,
-                       const float* scale__, const float* bias__,
-                       const int32_t* inpofs__, const int32_t* ofsofs__)
-{
-    int C0_ = cs.inpshape.back();
-    int K1_ = cs.outshape[1];
-
-    CV_Assert(C0_ == 8);
-    CV_Assert(cs.activation == nullptr || cs.fastActivation == FAST_ACTIV_NONE);
-    CV_Assert(0 <= cs.nspatialdims && cs.nspatialdims <= ConvState::MAX_CONV_DIMS);
-    
-    parallel_for_(Range(0, K1_), [&](const Range& range) {
-        int sdims = cs.nspatialdims;
-        int C0 = C0_, K0 = C0_;
-        int K1 = K1_, C1 = cs.inpshape[1];
-        int K = cs.outshape.C, C = cs.inpshape.C;
-        int N = cs.inpshape[0];
-        
-        int Di = sdims > 2 ? cs.inpshape[sdims - 1] : 1;
-        int Hi = sdims > 1 ? cs.inpshape[sdims] : 1;
-        int Wi = cs.inpshape[sdims + 1];
-        int D = sdims > 2 ? cs.outshape[sdims - 1] : 1;
-        int H = sdims > 1 ? cs.outshape[sdims] : 1;
-        int W = cs.outshape[sdims + 1];
-        int iplanesize = Di*Hi*Wi*C0;
-        int planesize = D*H*W*C0;
-        
-        int ngroups = cs.ngroups;
-        int Cg = C/ngroups, Kg = K/ngroups;
-        int WCg = (Cg + C0 - 1)/C0;
-        int Sz = cs.strides[0], Sy = cs.strides[1], Sx = cs.strides[2];
-        int Dz = cs.dilations[0], Dy = cs.dilations[1], Dx = cs.dilations[2];
-        int padz = cs.pads[0], pady = cs.pads[1], padx = cs.pads[2];
-        
-        const float* scale_ = scale__;
-        const float* bias_ = bias__;
-        constexpr int BLOCK_SIZE = 8;
-        
-        AutoBuffer<float> sumbuf(BLOCK_SIZE*K0*3);
-        
-        int k1start = range.start, nk1 = range.end;
-        constexpr int C0 = 8, K0 = C0;
-        int planesize = 1, iplanesize = 1, ksize = 1;
-        int nspatialdims = cs.nspatialdims;
-        int C1 = cs.inpshape[1], K1 = cs.outshape[1];
-        int ngroups = cs.ngroups, K1g = K1/ngroups, C1g = C1/ngroups;
-        int nC = C1g*ksize*C0*K0;
-        
-        float* sum = sumbuf.data();
-        float* scale = sum + BLOCK_SIZE*K0;
-        float* bias = sum + BLOCK_SIZE*K0*2;
-        const float* inptrs[BLOCK_SIZE];
-        const int32_t* ofsptrs[BLOCK_SIZE];
-        FastActivation fastActivation = cs.fastActivation;
-        const float* activParams = cs.activParams;
-        activation_func_t activation = cs.activation;
-        float maxval = fastActivation == FAST_ACTIV_CLIP ? activParams[1] : FLT_MAX;
-        float alpha = fastActivation == FAST_ACTIV_LEAKY_RELU ? activParams[0] :
-                    fastActivation == FAST_ACTIV_NONE ? 1.f : 0.f;
-
-        for (int j = 0; j < BLOCK_SIZE*K0; j++) {
-            scale[j] = 1.f;
-            bias[j] = 0.f;
-        }
-
-        for (int k1 = range.start; k1 < range.end; k1++) {
-            for (int n = 0; n < N; n++) {
-                float* out = (float*)out__ + n*k1*planesize*K0;
-                const float* resptr = residual__ ? (const float*)residual__ + n*k1*planesize*K0 : nullptr;
-                
-                
-                
-            }
-            int n = nk/K1, k1 = nk - n*K1;
-            int g = k1/K1g;
-            
-            const float* inp0 = (const float*)inp__ + (n*C1 + g*C1g)*iplanesize*C0;
-            
-            const float* wptr = (const float*)weights__ + k1*nC;
-
-            if (scale_) {
-                for (int b = 0; b < BLOCK_SIZE; b++)
-                    for (int k = 0; k < K0; k++)
-                        scale[b*K0 + k] = scale_[k1*K0 + k];
-            }
-
-            if (bias_) {
-                for (int b = 0; b < BLOCK_SIZE; b++)
-                    for (int k = 0; k < K0; k++)
-                        bias[b*K0 + k] = bias_[k1*K0 + k];
-            }
-
-            for (int xy0 = 0; xy0 < planesize; xy0 += BLOCK_SIZE, out += K0*BLOCK_SIZE,
-                 resptr += (resptr ? K0*BLOCK_SIZE : 0)) {
-                int j = 0, blocksize = std::min(planesize - xy0, BLOCK_SIZE);
-
-                for (; j < blocksize; j++) {
-                    int jj = (xy0 + j)*2;
-                    inptrs[j] = inp0 + ofsofs_[jj];
-                    ofsptrs[j] = inpofs_ + ofsofs_[jj+1];
-                }
-
-                if (j < BLOCK_SIZE) {
-                    const float* last_inptr = inptrs[blocksize-1];
-                    const int32_t* last_ofsptr = ofsptrs[blocksize-1];
-                    for (; j < BLOCK_SIZE; j++) {
-                        inptrs[j] = last_inptr;
-                        ofsptrs[j] = last_ofsptr;
-                    }
-                }
-
-                for (int i = 0; i < BLOCK_SIZE*K0; i++)
-                    sum[i] = 0.f;
-
-                for (int c1 = 0, i = 0; c1 < nC; c1 += K0*C0, i++) {
-                    for (j = 0; j < BLOCK_SIZE; j++) {
-                        int32_t ofs_ij = ofsptrs[j][i];
-                        const float* x = &inptrs[j][std::max(ofs_ij, 0)];
-                        float mij = (float)(ofs_ij >= 0);
-                        for (int c0 = 0; c0 < C0; c0++) {
-                            float xc = x[c0]*mij;
-                            for (int k = 0; k < K0; k++) {
-                                float w = wptr[c1 + c0*K0 + k];
-                                sum[K0*j + k] += xc*w;
-                            }
-                        }
-                    }
-                }
-
-                if (activation) {
-                    if (resptr) {
-                        for (j = 0; j < blocksize*K0; j++) {
-                            float v = sum[j]*scale[j] + bias[j] + resptr[j];
-                            sum[j] = v;
-                        }
-                    } else {
-                        for (j = 0; j < blocksize*K0; j++) {
-                            float v = sum[j]*scale[j] + bias[j];
-                            sum[j] = v;
-                        }
-                    }
-                    activation(sum, out, blocksize*K0, activParams);
-                } else {
-                    if (resptr) {
-                        for (j = 0; j < blocksize*K0; j++) {
-                            float v = sum[j]*scale[j] + bias[j] + resptr[j];
-                            v = std::min(v*(v >= 0 ? 1.f : alpha), maxval);
-                            out[j] = v;
-                        }
-                    } else {
-                        for (j = 0; j < blocksize*K0; j++) {
-                            float v = sum[j]*scale[j] + bias[j];
-                            v = std::min(v*(v >= 0 ? 1.f : alpha), maxval);
-                            out[j] = v;
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-/*
-static void refConv2d(const Mat& inp, const Mat& weights, const MatShape& wshape0, const Mat& bias, Mat& out,
-                      const int* strides, const int* dilations,
-                      const int* pads, FastActivation activation,
-                      float activParam=0.f)
-{
-    CV_Assert(inp.type() == CV_32F);
-
-    MatShape inpshape = inp.size;
-    int ndims = inpshape.dims;
-    CV_Assert(ndims == 4 && wshape0.dims == 4);
-
-    MatShape outshape = fastConv2dInferShape(inpshape, wshape0, strides, dilations, pads);
-    CV_Assert(wshape0[0] == outshape[1] && inpshape[0] == outshape[0]);
-
-    out.fit(outshape, inp.type());
-
-    parallel_for_(Range(0, wshape0[0]), [&](const Range& range) {
-        int C0 = weights.size.back();
-        int K = wshape0[0], WC = wshape0[1], Hk = wshape0[2], Wk = wshape0[3];
-        int N = inpshape[0], C = inpshape[1];
-        int Hi = inpshape[2], Wi = inpshape[3];
-        int H0 = outshape[2], W0 = outshape[3];
-        int ngroups = C/WC;
-        int Cg = C/ngroups, Kg = K/ngroups;
-        int WCg = (Cg + C0 - 1)/C0;
-        int Sy = strides[1], Sx = strides[2];
-        int Dy = dilations[1], Dx = dilations[2];
-        int pady = pads[1], padx = pads[2];
-        float minval = activation == FAST_ACTIV_RELU || activation == FAST_ACTIV_CLIP ? 0.f : -FLT_MAX;
-        float maxval = activation == FAST_ACTIV_CLIP ? activParam : FLT_MAX;
-        const float* wptr = weights.ptr<float>();
-        const float* biasptr = bias.ptr<float>();
-        const float* inptr = inp.ptr<float>();
-        float* outptr = out.ptr<float>();
-
-        for (int k = range.start; k < range.end; k++) {
-            int k1 = k / C0, k0 = k % C0;
-            int g = k/Kg;
-            for (int n = 0; n < N; n++) {
-                for (int y0 = 0; y0 < H0; y0++) {
-                    for (int x0 = 0; x0 < W0; x0++) {
-                        int yi_ = y0*Sy - pady;
-                        int xi_ = x0*Sx - padx;
-                        float s = 0.f;
-
-                        for (int ky = 0; ky < Hk; ky++) {
-                            int yi = yi_ + ky*Dy;
-                            if (yi < 0 || yi >= Hi)
-                                continue;
-
-                            for (int kx = 0; kx < Wk; kx++) {
-                                int xi = xi_ + kx*Dx;
-                                if (xi < 0 || xi >= Wi)
-                                    continue;
-                                for (int c = 0; c < Cg; c++) {
-                                    size_t ofs = (((n*ngroups + g)*Cg + c)*Hi + yi)*Wi + xi;
-                                    float inpval = inptr[ofs];
-                                    int c1 = c / C0, c0 = c % C0;
-                                    float w = wptr[(((k1*WCg + c1)*Hk+ky)*Wk + kx)*C0*C0 + c0*C0 + k0];
-                                    s += inpval*w;
-                                }
-                            }
-                        }
-                        if (biasptr)
-                            s += biasptr[k];
-                        outptr[((n*K + k)*H0 + y0)*W0 + x0] = std::min(std::max(s, minval), maxval);
-                    }
-                }
-            }
-        }
-    });
-}*/
-
 class Conv2LayerImpl : public Conv2Layer
 {
 public:
@@ -349,10 +112,10 @@ public:
         int wtype = accuracy < 0 ? CV_32F : accuracy;
 
         wshape0 = weights_.shape();
-        MatShape wshape1 = wshape0;
         bool depthwise = ngroups == wshape0[0] && wshape0[1] == 1;
 
         if (depthwise) {
+            MatShape wshape1 = wshape0;
             wshape1.layout = DATA_LAYOUT_BLOCK;
             wshape1.C = wshape1[0];
             wshape1[0] = (wshape1[0] + C0 - 1)/C0;
@@ -363,13 +126,14 @@ public:
 
             repackDepthwiseConvWeights(weights_.data, wtype0, weights.data, wtype, wshape0, C0);
         } else {
-            wshape1.dims += 2;
+            /*wshape1.dims += 2;
             wshape1[wshape1.dims-1] = wshape1[wshape1.dims-2] = C0;
             wshape1[0] = (wshape1[0] + C0 - 1)/C0;
             wshape1[1] = (wshape1[1] + C0 - 1)/C0;
             weights.fit(wshape1, wtype);
 
-            repackConvWeights(weights_.data, wtype0, weights.data, wtype, wshape0, C0);
+            repackConvWeights(weights_.data, wtype0, weights.data, wtype, wshape0, C0);*/
+            repackConvWeightsAlt(weights_, weights, wtype, ngroups, C0);
         }
 
         if (!bias_.empty()) {
@@ -629,7 +393,7 @@ public:
             }
 
             {
-                ConvFunc func = cs.unevenGroupedConv ? refConv32f : getConvFunc(inptype, C0);
+                ConvFunc func = getConvFunc(inptype, C0, CONV_KIND_ALT);
                 CV_Assert(func != nullptr);
                 func(inptr, resptr, outptr, cs, wptr, scale_data, bias_data,
                      inpofs.data(), ofsofs.data());

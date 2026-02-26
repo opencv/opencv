@@ -54,7 +54,7 @@ struct ConvState
     float activParams[MAX_ACTIV_PARAMS];
     activation_func_t activation;
     
-    bool unevenGroupedConv;
+    int Kblk, C1Max;
 
     std::ostream& dump(std::ostream& strm);
     bool sameShape(const ConvState& cs) const;
@@ -103,7 +103,14 @@ typedef void (*DepthwiseConvFunc)(const void* inp, const void* residual,
                                   const float* bias);
 
 DepthwiseConvFunc getDepthwiseConvFunc(int depth);
-ConvFunc getConvFunc(int depth, int C0);
+
+enum ConvKind {
+    CONV_KIND_MAIN = 0, // main convolution kernel
+    CONV_KIND_ALT = 1   // alternative, more universal, but a bit slower convolution kernel.
+                        // does not require precomputed tables of offsets
+};
+
+ConvFunc getConvFunc(int depth, int C0, ConvKind convkind);
 
 void repackDepthwiseConvWeights(const void* inpw, int inptype,
                                 void* outw, int outtype,
@@ -111,6 +118,7 @@ void repackDepthwiseConvWeights(const void* inpw, int inptype,
 void repackConvWeights(const void* inpw, int inptype,
                        void* outw, int outtype,
                        const MatShape& wshape, int C0);
+void repackConvWeightsAlt(const Mat& weights, Mat& Wpack, int outtype, int ngroups, int C0);
 
 CV__DNN_INLINE_NS_END
 }

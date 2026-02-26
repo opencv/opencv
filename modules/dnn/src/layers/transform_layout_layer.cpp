@@ -14,225 +14,278 @@ namespace dnn
 static MatShape inferTransformLayoutShape(const MatShape& inpshape_,
                                           DataLayout outlayout,
                                           DataLayout defaultLayout,
-                                          int C0, int ninpgroups, int noutgroups)
+                                          int C0)
 {
     MatShape inpshape = inpshape_;
     if (inpshape.layout == DATA_LAYOUT_UNKNOWN) {
         inpshape.layout = defaultLayout;
     }
 
-    if (ninpgroups > 1) {
-        CV_Assert(inpshape.layout == DATA_LAYOUT_BLOCK);
-        inpshape = inpshape.toLayout(DATA_LAYOUT_NCHW);
-    }
-
-    return inpshape.toLayout(outlayout, C0, noutgroups);
+    return inpshape.toLayout(outlayout, C0);
 }
 
-// NCHW <=> NHWC or
-// NCHW/NHWC <=> BLOCK
-template <typename _Tp>
-void transformLayout_(const _Tp* inp_, size_t istep, size_t istep0, size_t istep1,
-                      _Tp* out_, size_t ostep, size_t ostep0, size_t ostep1,
-                      size_t npix, int C0, int C1g, int Cg, int ngroups)
+template<typename _Tp>
+static inline void transpose8x8(const _Tp* inp_, size_t istep,
+                                _Tp* out_, size_t ostep)
 {
-    int C = ngroups*Cg;
-    CV_Assert(C0 % 8 == 0 || C0 == 4 || C == C0);
-    CV_Assert(istep0 == 1u || ostep0 == 1u);
-    const int dC0 = std::min(C0, 8);
-    for (int g = 0; g < ngroups; g++) {
-        for (int c1 = 0; c1 < C1g; c1++) {
-            for (int c0 = 0; c0 < C0; c0 += dC0) {
-                int dc = std::min(Cg - g*C1g - c0, dC0);
-                const _Tp* inp = inp_ + istep0*c0 + istep1*c1 + istepg*g;
-                _Tp* out = out_ + ostep0*c0 + ostep1*c1 + ostepg*g;
-                
-                if (dc == 8) {
-                    if (istep0 == 1) {
-                        for (size_t i = 0; i < npix; i++, inp += istep, out += ostep) {
-                            _Tp x0 = inp[0], x1 = inp[1], x2 = inp[2], x3 = inp[3];
-                            _Tp x4 = inp[4], x5 = inp[5], x6 = inp[6], x7 = inp[7];
-                            out[0] = x0; out[ostep0] = x1; out[ostep0*2] = x2; out[ostep0*3] = x3;
-                            out[ostep0*4] = x4; out[ostep0*5] = x5; out[ostep0*6] = x6; out[ostep0*7] = x7;
-                        }
-                    } else {
-                        for (size_t i = 0; i < npix; i++, inp += istep, out += ostep) {
-                            _Tp x0 = inp[0], x1 = inp[istep0], x2 = inp[istep0*2], x3 = inp[istep0*3];
-                            _Tp x4 = inp[istep0*4], x5 = inp[istep0*5], x6 = inp[istep0*6], x7 = inp[istep0*7];
-                            out[0] = x0; out[1] = x1; out[2] = x2; out[3] = x3;
-                            out[4] = x4; out[5] = x5; out[6] = x6; out[7] = x7;
-                        }
-                    }
-                } else if (dc == 4) {
-                    if (istep0 == 1) {
-                        for (size_t i = 0; i < npix; i++, inp += istep, out += ostep) {
-                            _Tp x0 = inp[0], x1 = inp[1], x2 = inp[2], x3 = inp[3];
-                            out[0] = x0; out[ostep0] = x1; out[ostep0*2] = x2; out[ostep0*3] = x3;
-                        }
-                    } else {
-                        for (size_t i = 0; i < npix; i++, inp += istep, out += ostep) {
-                            _Tp x0 = inp[0], x1 = inp[istep0], x2 = inp[istep0*2], x3 = inp[istep0*3];
-                            out[0] = x0; out[1] = x1; out[2] = x2; out[3] = x3;
-                        }
-                    }
-                } else if (dc == 3 && ostep0 == 1 && ostep == C0) {
-                    memset(out, 0, npix*C0*sizeof(out[0]));
-                    for (size_t i = 0; i < npix; i++, inp += istep, out += ostep) {
-                        _Tp x0 = inp[0], x1 = inp[istep0], x2 = inp[istep0*2];
-                        out[0] = x0; out[1] = x1; out[2] = x2;
-                    }
-                } else if (dc == 1 && ostep0 == 1 && ostep == C0) {
-                    memset(out, 0, npix*C0*sizeof(out[0]));
-                    for (size_t i = 0; i < npix; i++, inp += istep, out += ostep) {
-                        out[0] = inp[0];
-                    }
-                } else {
-                    for (size_t i = 0; i < npix; i++, inp += istep, out += ostep) {
-                        int c = 0;
-                        for (; c < dc; c++)
-                            out[ostep0*c] = inp[istep0*c];
-                        if (ostep == C0) {
-                            for (; c < dC0; c++)
-                                out[ostep0*c] = 0;
-                        }
-                    }
-                }
-            }
+#if CV_SIMD128
+    if constexpr (sizeof(_Tp) == 4u) {
+        const uint32_t* inp = (const uint32_t*)inp_;
+        uint32_t* out = (uint32_t*)out_;
+        v_uint32 a0, a1, a2, a3, b0, b1, b2, b3;
+        
+        a0 = vx_load(inp + istep*0);
+        a1 = vx_load(inp + istep*1);
+        a2 = vx_load(inp + istep*2);
+        a3 = vx_load(inp + istep*3);
+        v_transpose4x4(a0, a1, a2, a3, b0, b1, b2, b3);
+        v_store(out + ostep*0, b0);
+        v_store(out + ostep*1, b1);
+        v_store(out + ostep*2, b2);
+        v_store(out + ostep*3, b3);
+        
+        a0 = vx_load(inp + istep*0 + 4);
+        a1 = vx_load(inp + istep*1 + 4);
+        a2 = vx_load(inp + istep*2 + 4);
+        a3 = vx_load(inp + istep*3 + 4);
+        v_transpose4x4(a0, a1, a2, a3, b0, b1, b2, b3);
+        v_store(out + ostep*4, b0);
+        v_store(out + ostep*5, b1);
+        v_store(out + ostep*6, b2);
+        v_store(out + ostep*7, b3);
+        
+        a0 = vx_load(inp + istep*4);
+        a1 = vx_load(inp + istep*5);
+        a2 = vx_load(inp + istep*6);
+        a3 = vx_load(inp + istep*7);
+        v_transpose4x4(a0, a1, a2, a3, b0, b1, b2, b3);
+        v_store(out + ostep*0 + 4, b0);
+        v_store(out + ostep*1 + 4, b1);
+        v_store(out + ostep*2 + 4, b2);
+        v_store(out + ostep*3 + 4, b3);
+        
+        a0 = vx_load(inp + istep*4 + 4);
+        a1 = vx_load(inp + istep*5 + 4);
+        a2 = vx_load(inp + istep*6 + 4);
+        a3 = vx_load(inp + istep*7 + 4);
+        v_transpose4x4(a0, a1, a2, a3, b0, b1, b2, b3);
+        v_store(out + ostep*4 + 4, b0);
+        v_store(out + ostep*5 + 4, b1);
+        v_store(out + ostep*6 + 4, b2);
+        v_store(out + ostep*7 + 4, b3);
+    } else
+#endif
+    {
+    for (int i = 0; i < 8; i++)
+        for (int j = 0; j < 8; j++)
+            out_[i * ostep + j] = inp_[j * istep + i];
+    }
+}
+
+template <typename _Tp>
+void transformLayoutInterleave_(const _Tp* inp_base, _Tp* out_base, int C, size_t len,
+                                int nc, int nzc, size_t dlen)
+{
+    size_t i = 0;
+#if 0
+    for (; i + 7u < dlen; i += 8u)
+    {
+        int c = 0;
+        
+        for (; c + 7u < nzc; c += 8u) {
+            transpose8x8<_Tp>(inp_base + c * len + i, len, out_base + i * nc + c, nc);
+        }
+        
+        for (; c < nzc; ++c) {
+            _Tp* outptr = out_base + i * nc + c;
+            const _Tp* inptr = inp_base + c * len + i;
+            outptr[0 * nc] = inptr[0];
+            outptr[1 * nc] = inptr[1];
+            outptr[2 * nc] = inptr[2];
+            outptr[3 * nc] = inptr[3];
+            outptr[4 * nc] = inptr[4];
+            outptr[5 * nc] = inptr[5];
+            outptr[6 * nc] = inptr[6];
+            outptr[7 * nc] = inptr[7];
+        }
+        
+        for (; c < nc; ++c) {
+            _Tp* outptr = out_base + i * nc + c;
+            outptr[0 * nc] = (_Tp)0; outptr[1 * nc] = (_Tp)0; outptr[2 * nc] = (_Tp)0; outptr[3 * nc] = (_Tp)0;
+            outptr[4 * nc] = (_Tp)0; outptr[5 * nc] = (_Tp)0; outptr[6 * nc] = (_Tp)0; outptr[7 * nc] = (_Tp)0;
+        }
+    }
+#endif
+    for (; i < dlen; ++i) {
+        _Tp* outptr = out_base + i * nc;
+        for (int c = 0; c < nc; ++c) {
+            outptr[c] = c < nzc ? inp_base[c*len + i] : (_Tp)0;
         }
     }
 }
 
-#undef CV_TRANSFORM_LAYOUT_IMPL
-#define CV_TRANSFORM_LAYOUT_IMPL(typ, suffix) \
-static void transformLayout##suffix(const void* inp_, size_t istep, size_t istep0, \
-                                    size_t istep1, size_t istepg, \
-                                    void* out_, size_t ostep, size_t ostep0, \
-                                    size_t ostep1, size_t ostepg, \
-                                    size_t npix, int C0, int C1g, int Cg, int ngroups) \
-{ \
-    transformLayout_((const typ*)inp_, istep, istep0, istep1, istepg, \
-                     (typ*)out_, ostep, ostep0, ostep1, ostepg, \
-                     npix, C0, C1g, Cg, ngroups); \
+template <typename _Tp>
+void transformLayoutDeinterleave_(const _Tp* inp_base, _Tp* out_base, int C, size_t len,
+                                  int nc, int nzc, size_t dlen)
+{
+    size_t i = 0;
+#if 0
+    for (; i + 7u < dlen; i += 8u)
+    {
+        int c = 0;
+
+        for (; c + 7u < nzc; c += 8u)
+        {
+            transpose8x8<_Tp>(inp_base + i * nc + c, nc, out_base + c * len + i, len);
+        }
+
+        for (; c < nzc; ++c)
+        {
+            const _Tp* inptr = inp_base + i * nc + c;
+            _Tp* outptr = out_base + c * len + i;
+            outptr[0] = inptr[0 * nc];
+            outptr[1] = inptr[1 * nc];
+            outptr[2] = inptr[2 * nc];
+            outptr[3] = inptr[3 * nc];
+            outptr[4] = inptr[4 * nc];
+            outptr[5] = inptr[5 * nc];
+            outptr[6] = inptr[6 * nc];
+            outptr[7] = inptr[7 * nc];
+        }
+    }
+#endif
+    for (; i < dlen; ++i)
+    {
+        const _Tp* inptr = inp_base + i * nc;
+        for (int c = 0; c < nzc; ++c) {
+            out_base[c*len + i] = inptr[c];
+        }
+    }
 }
 
-CV_TRANSFORM_LAYOUT_IMPL(uint8_t, 8u)
-CV_TRANSFORM_LAYOUT_IMPL(uint16_t, 16u)
-CV_TRANSFORM_LAYOUT_IMPL(uint32_t, 32u)
-CV_TRANSFORM_LAYOUT_IMPL(uint64_t, 64u)
+typedef void (*TransformLayoutFunc)(const void* inp, void* out, int C, size_t planesize,
+                                    int nc, int nzc, size_t dlen);
 
-typedef void (*TransformLayoutFunc)(const void*, size_t, size_t, size_t, size_t,
-                                    void*, size_t, size_t, size_t, size_t,
-                                    size_t, int, int, int, int);
+#undef DECL_TRANSFORM_LAYOUT
+#define DECL_TRANSFORM_LAYOUT(suffix, _Tp) \
+static void transformLayoutInterleave_##suffix(const void* inp, void* out, int C, size_t planesize, \
+                                               int nc, int nzc, size_t dlen) \
+{ \
+    transformLayoutInterleave_((const _Tp*)inp, (_Tp*)out, C, planesize, nc, nzc, dlen); \
+} \
+static void transformLayoutDeinterleave_##suffix(const void* inp, void* out, int C, size_t planesize, \
+                                                 int nc, int nzc, size_t dlen) \
+{ \
+    transformLayoutDeinterleave_((const _Tp*)inp, (_Tp*)out, C, planesize, nc, nzc, dlen); \
+}
+
+DECL_TRANSFORM_LAYOUT(8u, uint8_t)
+DECL_TRANSFORM_LAYOUT(16u, uint16_t)
+DECL_TRANSFORM_LAYOUT(32u, uint32_t)
+DECL_TRANSFORM_LAYOUT(64u, uint64_t)
+
+TransformLayoutFunc getTransformLayoutFunc(DataLayout inplayout, DataLayout outlayout, size_t esz)
+{
+    if (inplayout == DATA_LAYOUT_NCHW &&
+        (outlayout == DATA_LAYOUT_BLOCK || outlayout == DATA_LAYOUT_NHWC)) {
+        return esz == 1u ? transformLayoutInterleave_8u :
+               esz == 2u ? transformLayoutInterleave_16u :
+               esz == 4u ? transformLayoutInterleave_32u :
+               esz == 8u ? transformLayoutInterleave_64u : nullptr;
+    }
+    if ((inplayout == DATA_LAYOUT_BLOCK || inplayout == DATA_LAYOUT_NHWC) &&
+        outlayout == DATA_LAYOUT_NCHW) {
+        return esz == 1u ? transformLayoutDeinterleave_8u :
+               esz == 2u ? transformLayoutDeinterleave_16u :
+               esz == 4u ? transformLayoutDeinterleave_32u :
+               esz == 8u ? transformLayoutDeinterleave_64u : nullptr;
+    }
+    return nullptr;
+}
 
 void transformLayout(const Mat& inp, Mat& out,
                      DataLayout outlayout,
                      DataLayout defaultLayout,
-                     int C0, int ninpgroups, int noutgroups)
+                     int C0)
 {
     CV_Assert(defaultLayout == DATA_LAYOUT_NCHW || defaultLayout == DATA_LAYOUT_NHWC);
     CV_Assert(outlayout == DATA_LAYOUT_BLOCK || outlayout == DATA_LAYOUT_NCHW || outlayout == DATA_LAYOUT_NHWC);
 
     MatShape inpshape = inp.size;
+    if (inpshape.layout == DATA_LAYOUT_NCHW &&
+        inpshape.dims == 4 && inpshape[1] == 272 && inpshape[2] == 14 && inpshape[3] == 14) {
+        putchar('.');
+    }
 
     if (inpshape.layout == DATA_LAYOUT_UNKNOWN) {
         inpshape.layout = defaultLayout;
     }
     DataLayout inplayout = inpshape.layout;
-    MatShape outshape = inferTransformLayoutShape(inpshape, outlayout, defaultLayout,
-                                                  C0, ninpgroups, noutgroups);
+    MatShape outshape = inferTransformLayoutShape(inpshape, outlayout, defaultLayout, C0);
     out.fit(outshape, inp.type());
 
     if (inp.empty())
         return;
 
-    int inp_ndims = inpshape.dims;
-    int out_ndims = outshape.dims;
-    int C = inplayout == DATA_LAYOUT_BLOCK ? inpshape.C :
-        inpshape[inplayout == DATA_LAYOUT_NCHW ? 1 : inp_ndims-1];
-    int inpC0 = inplayout == DATA_LAYOUT_BLOCK ? inpshape.back() : inplayout == DATA_LAYOUT_NCHW ? 1 : C;
-    int outC0 = outlayout == DATA_LAYOUT_BLOCK ? C0 : outlayout == DATA_LAYOUT_NCHW ? 1 : C;
-
-    if (inplayout == outlayout && inpC0 == outC0 && ninpgroups == noutgroups) {
+    if (inplayout == outlayout) {
         inp.copyTo(out);
         return;
     }
-
-    CV_Assert(ninpgroups == 1 || inplayout == DATA_LAYOUT_BLOCK);
-    CV_Assert(noutgroups == 1 || outlayout == DATA_LAYOUT_BLOCK);
-    CV_Assert_N(ninpgroups > 0, C % ninpgroups == 0);
-    CV_Assert_N(noutgroups > 0, C % noutgroups == 0);
+    
+    CV_Assert_N(inp.isContinuous(), out.isContinuous());
+    
+    size_t esz = inp.elemSize();
+    TransformLayoutFunc kernel = getTransformLayoutFunc(inplayout, outlayout, esz);
+    CV_Assert(kernel != nullptr);
 
     int N = inpshape[0];
-    size_t inptotal = inp.total();
-    size_t outtotal = out.total();
-    size_t inplanesize_C = inptotal / N;
-    size_t outplanesize_C = outtotal / N;
+    int C = inpshape.channels();
+    C0 = inplayout == DATA_LAYOUT_BLOCK ? inpshape.back() : C0;
+    int C1 = (C + C0 - 1) / C0;
+    
     size_t planesize = 1;
     int inp_sp0 = inplayout == DATA_LAYOUT_NHWC ? 1 : 2;
-    int inp_sp1 = inplayout == DATA_LAYOUT_NCHW ? inp_ndims : inp_ndims-1;
+    int inp_sp1 = inplayout == DATA_LAYOUT_NCHW ? inpshape.dims : inpshape.dims-1;
     for (int i = inp_sp0; i < inp_sp1; i++) {
         planesize *= (size_t)inpshape[i];
     }
+    
+    /*size_t total = N*C1*planesize*C0;
+    constexpr size_t min_elems_per_chunk = 1 << 17;
+    size_t nblocks = (total + min_elems_per_chunk/2) / min_elems_per_chunk;
+    nblocks = std::clamp(nblocks, size_t(1), size_t(128));
+    nblocks = (nblocks + N*C1 - 1)/(N*C1);*/
+    int nblocks = 1;
 
-    size_t allplanes = planesize*N;
+    //parallel_for_(Range(0, N*C1*nblocks), [&](const Range& range) {
+    {
+        Range range(0, N*C1*nblocks);
+        int dchunk = 1u;
+        bool interleave = inplayout == DATA_LAYOUT_NCHW;
+        const uint8_t* inptr = (const uint8_t*)inp.data;
+        uint8_t* outptr = (uint8_t*)out.data;
+        
+        for (int chunk = range.start; chunk < range.end; chunk += dchunk)
+        {
+            int n = chunk/(C1*nblocks);
+            int c1 = (chunk % (C1*nblocks))/nblocks;
+            int block = chunk % nblocks;
+            int nc = C0;
+            int nzc = std::min(nc, C - c1*C0);
+            dchunk = std::min(nblocks - block, range.end - chunk);
+            size_t block_start = block * planesize / nblocks;
+            size_t block_end = (block + dchunk) * planesize / nblocks;
+            size_t dlen = block_end - block_start;
+            size_t inpofs = ((n * C1 + c1) * planesize + block_start) * nc * esz;
+            size_t outofs = ((n * C + c1 * C0) * planesize + block_start) * esz;
+            if (interleave) {
+                std::swap(inpofs, outofs);
+            }
 
-    constexpr size_t BLOCK_SIZE = 1u << 17;
-    size_t nblocks = (outtotal + BLOCK_SIZE - 1)/BLOCK_SIZE;
-    nblocks = std::min(nblocks, allplanes);
-
-    size_t esz = inp.elemSize();
-    size_t istep0, istep1, istepg, istep;
-    size_t ostep0, ostep1, ostepg, ostep;
-
-    if (inplayout == DATA_LAYOUT_NCHW) {
-        istep = 1;
-        istep0 = planesize;
-    } else if (inplayout == DATA_LAYOUT_NHWC) {
-        istep = C;
-        istep0 = 1;
-    } else {
-        istep = inpC0;
-        istep0 = 1;
-    }
-
-    if (outlayout == DATA_LAYOUT_NCHW) {
-        ostep = 1;
-        ostep0 = planesize;
-    } else if (outlayout == DATA_LAYOUT_NHWC) {
-        ostep = C;
-        ostep0 = 1;
-    } else {
-        ostep = outC0;
-        ostep0 = 1;
-    }
-
-    const char* inptr0 = (const char*)inp.data;
-    char* outptr0 = (char*)out.data;
-
-    TransformLayoutFunc transformLayoutFunc =
-        esz == 1 ? transformLayout8u :
-        esz == 2 ? transformLayout16u :
-        esz == 4 ? transformLayout32u :
-        esz == 8 ? transformLayout64u : nullptr;
-
-    CV_Assert(transformLayoutFunc != nullptr);
-
-    parallel_for_(Range(0, int(nblocks)), [&](const Range& range) {
-        size_t start = range.start*allplanes/nblocks;
-        size_t end = range.end*allplanes/nblocks;
-        size_t npix = 0;
-
-        for (size_t ofs = start; ofs < end; ofs += npix) {
-            size_t sample_idx = ofs/planesize;
-            size_t rawofs = ofs - sample_idx*planesize;
-            npix = std::min(planesize - rawofs, end - ofs);
-            const char* inptr = inptr0 + (inplanesize_C*sample_idx + istep*rawofs)*esz;
-            char* outptr = outptr0 + (outplanesize_C*sample_idx + ostep*rawofs)*esz;
-            transformLayoutFunc(inptr, istep, istep0, istep1, istepg,
-                                outptr, ostep, ostep0, ostep1, ostepg,
-                                npix, C0, C1g, Cg, ngroups);
+            kernel(inptr + inpofs, outptr + outofs, C, planesize, nc, nzc, dlen);
         }
-    });
+    }
+    //);
 }
 
 class TransformLayoutLayerImpl : public TransformLayoutLayer
@@ -286,7 +339,7 @@ public:
     MatShape inferShape(const MatShape& inpshape_) const
     {
         return inferTransformLayoutShape(inpshape_, layout,
-                                         getNetImpl(this)->originalLayout, C0, 1, 1);
+                                         getNetImpl(this)->originalLayout, C0);
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape>& inpshapes,
@@ -342,10 +395,16 @@ public:
     {
         DataLayout origLayout = getNetImpl(this)->originalLayout;
         transformLayout(inp, out, layout, origLayout, C0);
-#if 0
+#if 1
         Mat temp;
         transformLayout(out, temp, layout == DATA_LAYOUT_BLOCK ? origLayout : DATA_LAYOUT_BLOCK, origLayout, C0);
         double err = norm(temp, inp, NORM_INF);
+        size_t i, N = inp.total();
+        const float* inpdata = inp.ptr<float>();
+        const float* tempdata = temp.ptr<float>();
+        for (i = 0; i < N; i++) {
+            CV_Assert_N(!cvIsNaN(inpdata[i]), !cvIsNaN(tempdata[i]));
+        }
         CV_Assert(err == 0.);
 #endif
     }

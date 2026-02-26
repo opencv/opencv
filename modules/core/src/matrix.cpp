@@ -341,7 +341,7 @@ int MatShape::channels() const
     return layout == DATA_LAYOUT_BLOCK ? C : p[layout == DATA_LAYOUT_NCHW ? 1 : dims-1];
 }
 
-MatShape MatShape::toLayout(DataLayout newLayout, int C0, int ngroups) const
+MatShape MatShape::toLayout(DataLayout newLayout, int C0) const
 {
     CV_Assert(layout == DATA_LAYOUT_BLOCK || layout == DATA_LAYOUT_NCHW || layout == DATA_LAYOUT_NHWC);
     CV_Assert(newLayout == DATA_LAYOUT_BLOCK || newLayout == DATA_LAYOUT_NCHW || newLayout == DATA_LAYOUT_NHWC);
@@ -353,7 +353,6 @@ MatShape MatShape::toLayout(DataLayout newLayout, int C0, int ngroups) const
         // any => BLOCK
         CV_Assert_N(C0 > 1, (C0 & (C0-1)) == 0);
         int Corig = channels();
-        CV_Assert_N(ngroups > 0, Corig % ngroups == 0);
         newsize.C = Corig;
         
         if (layout == DATA_LAYOUT_NHWC) {
@@ -363,11 +362,10 @@ MatShape MatShape::toLayout(DataLayout newLayout, int C0, int ngroups) const
         }
         
         newsize.dims += layout != DATA_LAYOUT_BLOCK;
-        newsize.p[1] = ((Corig/ngroups + C0 - 1)/C0)*ngroups;
+        newsize.p[1] = (Corig + C0 - 1)/C0;
         newsize.p[newsize.dims-1] = C0;
     } else if (layout == DATA_LAYOUT_BLOCK) {
         // BLOCK => any (except for BLOCK, which is handled above)
-        CV_Assert(ngroups == 1);
         newsize.C = 0;
         if (newLayout == DATA_LAYOUT_NHWC) {
             for (int i = 2; i < dims; i++) {
@@ -377,7 +375,7 @@ MatShape MatShape::toLayout(DataLayout newLayout, int C0, int ngroups) const
         newsize.p[newLayout == DATA_LAYOUT_NCHW ? 1 : dims-2] = C;
         newsize.dims--;
     } else {
-        CV_Assert_N(C0 <= 1, ngroups == 1);
+        CV_Assert_N(C0 <= 1);
         
         if (newLayout == layout)
             return newsize;

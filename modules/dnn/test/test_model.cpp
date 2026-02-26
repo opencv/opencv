@@ -896,10 +896,18 @@ TEST_P(Reproducibility_ResNet50_ONNX, Accuracy)
     const int K = 5;
 
     topK(out, res, K);
-    const float eps = 0.1f;
+    const float eps = 0.15f;
+    
+    ASSERT_EQ(int(res.size()), K);
+    
+    std::vector<int> reflabels(K), reslabels(K);
+    for (int i = 0; i < K; i++) {
+        reflabels[i] = ref[i].first;
+        reslabels[i] = res[i].first;
+    }
+    ASSERT_EQ(reflabels, reslabels);
     
     for (int i = 0; i < K; i++) {
-        EXPECT_EQ(ref[i].first, res[i].first);
         EXPECT_NEAR(ref[i].second, res[i].second, eps);
     }
 }

@@ -500,7 +500,7 @@ void Net::Impl::prepareForInference()
         constFold();
         constArgs();        
         useBlockLayout();
-        fuseBasic();
+        //fuseBasic();
         assignBuffers();
         totalLayers = updateGraphOfs(mainGraph, 0, true);
         prepared = true;
