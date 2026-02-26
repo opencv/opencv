@@ -590,10 +590,6 @@ void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
             Mat tmp(mshape, CV_16F, (void*)m.data);
             tmp.convertTo(inp_t, adata_type);
         }
-        else if (m.empty())
-        {
-            // Empty tensor detected, bypassing convertTo.
-        }
         else
         {
             m.convertTo(inp_t, adata_type);

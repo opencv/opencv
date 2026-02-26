@@ -507,7 +507,7 @@ public:
                     outShape.push_back(tmp[i]);
                 }
             }
-            if (outShape.empty()) outShape = MatShape::scalar();
+            if (outShape.size() == 0) outShape = MatShape{1};
             axes = norm_axes;
         }
 
