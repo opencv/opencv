@@ -2512,20 +2512,22 @@ bool CvVideoWriter_GStreamer::open( const std::string &filename, int fourcc,
             CV_WARN("OpenCV backend does not support this file type (extension): " << filename);
             return false;
         }
-        // 1. Initialize encodebin
         encodebin.reset(gst_element_factory_make("encodebin", NULL));
-
-                // 2. Declare profiles and caps
+        if (!encodebin)
+        {
+            CV_WARN("GStreamer: cannot create encodebin element");
+            return false;
+        }
+        
         GSafePtr<GstCaps> containercaps;
         GSafePtr<GstEncodingContainerProfile> containerprofile;
         GSafePtr<GstEncodingVideoProfile> videoprofile;
 
-        // 3. Setup container profile
         containercaps.attach(gst_caps_from_string(mime));
         containerprofile.attach(gst_encoding_container_profile_new("container", "container", containercaps.get(), NULL));
         GSafePtr<GstCaps> prof_caps;
         prof_caps.attach(gst_caps_from_string("video/x-raw, format=I420"));
-        videoprofile.reset(gst_encoding_video_profile_new(prof_caps.get(), NULL, NULL, 1));
+        videoprofile.attach(gst_encoding_video_profile_new(prof_caps.get(), NULL, NULL, 1));
         gst_encoding_container_profile_add_profile(containerprofile.get(), (GstEncodingProfile*)videoprofile.get());
 
         g_object_set(G_OBJECT(encodebin.get()), "profile", containerprofile.get(), NULL);
