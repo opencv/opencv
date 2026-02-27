@@ -438,6 +438,7 @@ struct Net::Impl : public detail::NetImplBase
     void assignBuffers();
     //void useBlockLayout();
     void fuse();
+    void fuseQDQ();
     void constFold();
     void constArgs();
 

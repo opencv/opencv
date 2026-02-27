@@ -22,10 +22,10 @@ public:
     {
         setParamsFrom(params);
 
-        input_sc = params.get<float>("input_scale");
-        input_zp = params.get<int>("input_zeropoint");
-        output_zp = params.get<int>("zeropoints");
-        output_sc = params.get<float>("scales");
+        input_sc = params.get<float>("input_scale", 1.0f);
+        input_zp = params.get<int>("input_zeropoint", 0);
+        output_zp = params.get<int>("zeropoints", 0);
+        output_sc = params.get<float>("scales", 1.0f);
         axis = params.get<int>("axis", 1);
         per_channel = params.get<bool>("per_channel", true);
 
