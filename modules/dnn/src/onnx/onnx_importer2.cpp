@@ -5,6 +5,10 @@
 #include "../precomp.hpp"
 #include "../net_impl.hpp"
 
+#ifdef HAVE_ONNXRUNTIME
+#include <onnxruntime_cxx_api.h>
+#endif
+
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/dnn/layer_reg.private.hpp>
 #include <opencv2/core/utils/filesystem.hpp>
@@ -2826,6 +2830,62 @@ Net readNetFromONNX2(const String& onnxFile)
     }
     return net;
 }
+
+#ifdef HAVE_ONNXRUNTIME
+Net readNetFromONNX2_ORT(const String& onnxFile)
+{
+    try
+    {
+        static auto s_ort_env = std::make_shared<Ort::Env>(ORT_LOGGING_LEVEL_WARNING, "OpenCV_DNN_ORT");
+
+        Net net;
+        auto impl = net.getImpl();
+
+        impl->ort_env = s_ort_env;
+        impl->ort_session_options = std::make_shared<Ort::SessionOptions>();
+#ifdef _WIN32
+        std::wstring w_onnxFile(onnxFile.begin(), onnxFile.end());
+        impl->ort_session = std::make_shared<Ort::Session>(*s_ort_env, w_onnxFile.c_str(), *impl->ort_session_options);
+#else
+        impl->ort_session = std::make_shared<Ort::Session>(*s_ort_env, onnxFile.c_str(), *impl->ort_session_options);
+#endif
+        impl->modelFileName = onnxFile;
+        impl->modelFormat = DNN_MODEL_ONNX;
+        Ptr<Graph> g = impl->newGraph("ort_session_active", {}, true);
+
+        Ort::Session& session = *impl->ort_session;
+        Ort::AllocatorWithDefaultOptions allocator;
+        const size_t noutputs = session.GetOutputCount();
+        if (noutputs == 0)
+            CV_Error(Error::StsError, "DNN/ONNX/ORT: ORT session has no outputs");
+
+        std::vector<Arg> outs;
+        outs.reserve(noutputs);
+        for (size_t i = 0; i < noutputs; ++i)
+        {
+            Ort::AllocatedStringPtr out = session.GetOutputNameAllocated(i, allocator);
+            std::string n = out ? std::string(out.get()) : std::string();
+            if (n.empty())
+                n = format("output_%zu", i);
+
+            if (impl->haveArg(n))
+                n = format("%s_%zu", n.c_str(), i);
+
+            outs.push_back(impl->newArg(n, DNN_ARG_OUTPUT));
+        }
+        if (g)
+            g->setOutputs(outs);
+
+        CV_LOG_INFO(NULL, "DNN/ONNX: Successfully initialized ORT Session for " << onnxFile);
+        return net;
+    }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "DNN/ONNX/ORT: ORT initialization failed (" << e.what() << ")");
+        return Net();
+    }
+}
+#endif  // HAVE_ONNXRUNTIME
 
 Net readNetFromONNX2(const char* buffer, size_t size)
 {

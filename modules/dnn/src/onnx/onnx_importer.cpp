@@ -4131,6 +4131,20 @@ Net readNetFromONNX(const String& onnxFile, int engine)
             return detail::readNetDiagnostic<ONNXImporter>(onnxFile.c_str());
         case ENGINE_NEW:
             return readNetFromONNX2(onnxFile);
+        case ENGINE_ORT:
+        {
+#ifdef HAVE_ONNXRUNTIME
+            Net net = readNetFromONNX2_ORT(onnxFile);
+            if (net.empty())
+                CV_Error(Error::StsError, "DNN/ONNX/ORT: failed to load model");
+            if (!net.getImpl() || !net.getImpl()->ort_session)
+                CV_Error(Error::StsError, "DNN/ONNX/ORT: ONNX Runtime session was not initialized");
+            return net;
+#else
+            CV_LOG_WARNING(NULL, "DNN/ONNX/ORT: OpenCV was built without ONNX Runtime (WITH_ONNXRUNTIME=OFF). Falling back to ENGINE_AUTO.");
+#endif
+        }
+        /* fall through */
         case ENGINE_AUTO:
         {
             Net net = readNetFromONNX2(onnxFile);
@@ -4156,6 +4170,13 @@ Net readNetFromONNX(const char* buffer, size_t sizeBuffer, int engine)
             return detail::readNetDiagnostic<ONNXImporter>(buffer, sizeBuffer);
         case ENGINE_NEW:
             return readNetFromONNX2(buffer, sizeBuffer);
+        case ENGINE_ORT:
+#ifdef HAVE_ONNXRUNTIME
+            CV_Error(Error::StsNotImplemented, "DNN/ONNX/ORT: loading from memory buffer is not supported");
+#else
+            CV_LOG_WARNING(NULL, "DNN/ONNX/ORT: OpenCV was built without ONNX Runtime (WITH_ONNXRUNTIME=OFF). Falling back to ENGINE_AUTO.");
+#endif
+            /* fall through */
         case ENGINE_AUTO:
         {
             Net net = readNetFromONNX2(buffer, sizeBuffer);
@@ -4181,6 +4202,13 @@ Net readNetFromONNX(const std::vector<uchar>& buffer, int engine)
             return readNetFromONNX(reinterpret_cast<const char*>(buffer.data()), buffer.size());
         case ENGINE_NEW:
             return readNetFromONNX2(buffer);
+        case ENGINE_ORT:
+#ifdef HAVE_ONNXRUNTIME
+            CV_Error(Error::StsNotImplemented, "DNN/ONNX/ORT: loading from memory buffer is not supported");
+#else
+            CV_LOG_WARNING(NULL, "DNN/ONNX/ORT: OpenCV was built without ONNX Runtime (WITH_ONNXRUNTIME=OFF). Falling back to ENGINE_AUTO.");
+#endif
+            /* fall through */
         case ENGINE_AUTO:
         {
             Net net = readNetFromONNX2(buffer);

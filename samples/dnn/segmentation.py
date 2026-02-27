@@ -135,6 +135,7 @@ def main(func_args=None):
         blob = cv.dnn.blobFromImage(frame, args.scale, (inpWidth, inpHeight), args.mean, args.rgb, crop=False)
         net.setInput(blob)
 
+        t0 = cv.getTickCount()
         if args.alias == 'u2netp':
             output = net.forward(net.getUnconnectedOutLayersNames())
             pred = output[0][0, 0, :, :]
@@ -167,9 +168,7 @@ def main(func_args=None):
 
             showLegend(labels, colors, legend)
 
-        # Put efficiency information.
-        t, _ = net.getPerfProfile()
-        label = 'Inference time: %.2f ms' % (t * 1000.0 / cv.getTickFrequency())
+        label = 'Inference time: %.2f ms' % ((cv.getTickCount() - t0) * 1000.0 / cv.getTickFrequency())
         labelSize, _ = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, fontSize, fontThickness)
         cv.rectangle(frame, (0, 0), (labelSize[0]+10, labelSize[1]), (255,255,255), cv.FILLED)
         cv.putText(frame, label, (10, int(25*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)

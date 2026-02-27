@@ -27,6 +27,14 @@
 
 #include <unordered_map>
 
+#ifdef HAVE_ONNXRUNTIME
+namespace Ort {
+    class Env;
+    class Session;
+    class SessionOptions;
+}
+#endif
+
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -35,6 +43,10 @@ using std::make_pair;
 using std::string;
 
 typedef std::unordered_map<std::string, int64_t> NamesHash;
+
+#ifdef HAVE_ONNXRUNTIME
+struct OrtNamesCache;
+#endif
 
 // NB: Implementation is divided between of multiple .cpp files
 struct Net::Impl : public detail::NetImplBase
@@ -232,6 +244,13 @@ struct Net::Impl : public detail::NetImplBase
     void initCUDABackend(const std::vector<LayerPin>& blobsToKeep_);
 #endif
 
+    #ifdef HAVE_ONNXRUNTIME
+    std::shared_ptr<Ort::Env> ort_env;
+    std::shared_ptr<Ort::Session> ort_session;
+    std::shared_ptr<Ort::SessionOptions> ort_session_options;
+    std::shared_ptr<OrtNamesCache> ort_names_cache;
+#endif
+
     void allocateLayer(int lid, const LayersShapesMap& layersShapes);
 
     // TODO add getter
@@ -373,6 +392,11 @@ struct Net::Impl : public detail::NetImplBase
     void forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs, OutputArrayOfArrays outputs, bool isMainGraph);
     // run the whole model
     void forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays outputs);
+#ifdef HAVE_ONNXRUNTIME
+    // Run inference through ONNX Runtime session (if configured).
+    // If outIdxs is empty, returns all ORT outputs in ORT-defined order.
+    std::vector<Mat> runOrtSession(std::vector<Mat> inputBlobs, const std::vector<int>& outIdxs);
+#endif
     // run the whole model, convenience wrapper
     Mat forwardWithSingleOutput(const std::string& outname);
     // run the whole model, convenience wrapper
@@ -427,6 +451,9 @@ inline Net::Impl* getNetImpl(const Layer* layer)
 Net readNetFromONNX2(const String&);
 Net readNetFromONNX2(const char*, size_t);
 Net readNetFromONNX2(const std::vector<uchar>&);
+#ifdef HAVE_ONNXRUNTIME
+Net readNetFromONNX2_ORT(const String& onnxFile);
+#endif
 
 CV__DNN_INLINE_NS_END
 }}  // namespace cv::dnn

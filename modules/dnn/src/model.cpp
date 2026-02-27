@@ -732,19 +732,39 @@ struct TextRecognitionModel_Impl : public Model::Impl
         return decodeSeq;
     }
 
+    static Mat ensureFloat32Prediction(const Mat& prediction)
+    {
+        CV_Assert(!prediction.empty());
+        if (prediction.type() == CV_32FC1)
+            return prediction;
+
+        const int depth = prediction.depth();
+        if (depth == CV_16F || depth == CV_16BF)
+        {
+            Mat prediction32f;
+            prediction.convertTo(prediction32f, CV_32F);
+            return prediction32f;
+        }
+
+        CV_CheckType(prediction.type(), CV_32FC1, "");
+        return prediction;
+    }
+
     virtual
     std::string ctcGreedyDecode(const Mat& prediction)
     {
+        Mat prediction32f = ensureFloat32Prediction(prediction);
+        const Mat& probs = prediction32f;
+
         std::string decodeSeq;
-        CV_CheckEQ(prediction.dims, 3, "");
-        CV_CheckType(prediction.type(), CV_32FC1, "");
+        CV_CheckEQ(probs.dims, 3, "");
         const int vocLength = (int)(vocabulary.size());
-        CV_CheckLE(prediction.size[1], vocLength, "");
+        CV_CheckLE(probs.size[1], vocLength, "");
         bool ctcFlag = true;
         int lastLoc = 0;
-        for (int i = 0; i < prediction.size[0]; i++)
+        for (int i = 0; i < probs.size[0]; i++)
         {
-            const float* pred = prediction.ptr<float>(i);
+            const float* pred = probs.ptr<float>(i);
             int maxLoc = 0;
             float maxScore = pred[0];
             for (int j = 1; j < vocLength + 1; j++)
@@ -853,6 +873,9 @@ struct TextRecognitionModel_Impl : public Model::Impl
 
     virtual
     std::string ctcPrefixBeamSearchDecode(const Mat& prediction) {
+          Mat prediction32f = ensureFloat32Prediction(prediction);
+          const Mat& probs = prediction32f;
+
           // CTC prefix beam search decode.
           // For more detail, refer to:
           // https://distill.pub/2017/ctc/#inference
@@ -860,18 +883,17 @@ struct TextRecognitionModel_Impl : public Model::Impl
           using Beam = std::vector<std::pair<std::vector<int>, PrefixScore>>;
           using BeamInDict = std::unordered_map<std::vector<int>, PrefixScore, PrefixHash>;
 
-          CV_CheckType(prediction.type(), CV_32FC1, "");
-          CV_CheckEQ(prediction.dims, 3, "");
-          CV_CheckEQ(prediction.size[1], 1, "");
-          CV_CheckEQ(prediction.size[2], (int)vocabulary.size() + 1, "");  // Length add 1 for ctc blank
+          CV_CheckEQ(probs.dims, 3, "");
+          CV_CheckEQ(probs.size[1], 1, "");
+          CV_CheckEQ(probs.size[2], (int)vocabulary.size() + 1, "");  // Length add 1 for ctc blank
 
           std::string decodeSeq;
           Beam beam = {std::make_pair(std::vector<int>(), PrefixScore(0.0, kNegativeInfinity))};
-          for (int i = 0; i < prediction.size[0]; i++)
+          for (int i = 0; i < probs.size[0]; i++)
           {
               // Loop over time
               BeamInDict nextBeam;
-              const float* pred = prediction.ptr<float>(i);
+              const float* pred = probs.ptr<float>(i);
               std::vector<std::pair<float, int>> topkPreds =
                   TopK(pred, vocabulary.size() + 1, vocPruneSize);
               for (const auto& each : topkPreds)
