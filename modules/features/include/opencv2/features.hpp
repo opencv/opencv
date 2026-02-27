@@ -587,6 +587,21 @@ public:
     CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 };
 
+class CV_EXPORTS_W DISK : public Feature2D
+{
+public:
+    /**
+     * @param modelPath Path to the ONNX model file.
+     * @param backendId The DNN backend to use (default: DNN_BACKEND_DEFAULT = 0).
+     * @param targetId The DNN target to use (default: DNN_TARGET_CPU = 0).
+     */
+    static Ptr<DISK> create(const String& modelPath,
+                            int backendId = 0,  // DNN_BACKEND_DEFAULT
+                            int targetId = 0);  // DNN_TARGET_CPU
+
+    virtual String getDefaultName() const CV_OVERRIDE;
+};
+
 /** @brief Class for extracting blobs from an image. :
 
 The class implements a simple algorithm for extracting blobs from an image:
