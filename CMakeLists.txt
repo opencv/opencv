@@ -390,9 +390,19 @@ OCV_OPTION(WITH_ANDROID_MEDIANDK "Use Android Media NDK for Video I/O (Android)"
 OCV_OPTION(WITH_ANDROID_NATIVE_CAMERA "Use Android NDK for Camera I/O (Android)" (ANDROID_NATIVE_API_LEVEL GREATER 23)
   VISIBLE_IF ANDROID
   VERIFY HAVE_ANDROID_NATIVE_CAMERA)
-OCV_OPTION(WITH_ONNX "Include Microsoft ONNX Runtime support" OFF
+OCV_OPTION(WITH_ONNXRUNTIME "Include Microsoft ONNX Runtime support" OFF
   VISIBLE_IF TRUE
   VERIFY HAVE_ONNX)
+OCV_OPTION(DOWNLOAD_ONNXRUNTIME "Download ONNX Runtime prebuilt binaries" OFF
+  VISIBLE_IF WITH_ONNXRUNTIME)
+OCV_OPTION(ONNXRUNTIME_PREFER_STATIC "Prefer static ONNX Runtime library when available" ON
+  VISIBLE_IF WITH_ONNXRUNTIME)
+set(ONNXRUNTIME_VERSION "1.24.2" CACHE STRING "ONNX Runtime version to download (prebuilt binaries)")
+
+# Backward compatibility for previous option name.
+if(DEFINED WITH_ONNX AND WITH_ONNX AND NOT WITH_ONNXRUNTIME)
+  set(WITH_ONNXRUNTIME ON CACHE BOOL "Include Microsoft ONNX Runtime support" FORCE)
+endif()
 OCV_OPTION(WITH_TIMVX "Include Tim-VX support" OFF
   VISIBLE_IF TRUE
   VERIFY HAVE_TIMVX)
@@ -849,7 +859,7 @@ if(WITH_VTK)
   include(cmake/OpenCVDetectVTK.cmake)
 endif()
 
-if(WITH_ONNX)
+if(WITH_ONNXRUNTIME)
   include(cmake/FindONNX.cmake)
 endif()
 

@@ -110,13 +110,6 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS
 set(include_dirs "")
 set(libs "")
 
-# ONNX Runtime
-ocv_option(WITH_ONNXRUNTIME "Build with ONNX Runtime support" OFF)
-ocv_option(DOWNLOAD_ONNXRUNTIME "Download ONNX Runtime prebuilt binaries" OFF IF WITH_ONNXRUNTIME)
-ocv_option(ONNXRUNTIME_PREFER_STATIC "Prefer static ONNX Runtime library when available" ON IF WITH_ONNXRUNTIME)
-
-set(ONNXRUNTIME_VERSION "1.24.2" CACHE STRING "ONNX Runtime version to download (prebuilt binaries)")
-
 if(WITH_ONNXRUNTIME)
   include("${OpenCV_SOURCE_DIR}/cmake/FindONNX.cmake")
 

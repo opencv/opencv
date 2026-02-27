@@ -519,6 +519,10 @@ OpenCV have own DNN inference module which have own build-in engine, but can als
 | `INF_ENGINE_RELEASE` | _2020040000_ | **Deprecated since OpenVINO 2022.1** Defines version of Inference Engine library which is tied to OpenVINO toolkit version. Must be a 10-digit string, e.g. _2020040000_ for OpenVINO 2020.4. |
 | `WITH_NGRAPH` | _OFF_ | **Deprecated since OpenVINO 2022.1** Enables Intel NGraph library support. This library is part of Inference Engine backend which allows executing arbitrary networks read from files in multiple formats supported by OpenCV: Caffe, TensorFlow, PyTorch, Darknet, etc.. NGraph library must be installed, it is included into Inference Engine. |
 | `WITH_OPENVINO` | _OFF_ | Enable Intel OpenVINO Toolkit support. Should be used for OpenVINO>=2022.1 instead of `WITH_INF_ENGINE` and `WITH_NGRAPH`. |
+| `WITH_ONNXRUNTIME` | _OFF_ | Enable Microsoft ONNX Runtime backend support for OpenCV DNN. |
+| `DOWNLOAD_ONNXRUNTIME` | _OFF_ | Download official ONNX Runtime prebuilt binaries when enabled (or when ONNX Runtime is not available in system paths). |
+| `ONNXRUNTIME_PREFER_STATIC` | _ON_ | Prefer static `libonnxruntime.a` when both static and shared ONNX Runtime libraries are available. |
+| `ONNXRUNTIME_VERSION` | _1.24.2_ | ONNX Runtime version to download for prebuilt packages. |
 | `OPENCV_DNN_CUDA` | _OFF_ | Enable CUDA backend. [CUDA](https://en.wikipedia.org/wiki/CUDA), CUBLAS and [CUDNN](https://developer.nvidia.com/cudnn) must be installed. |
 | `WITH_VULKAN` | _OFF_ | Enable experimental [Vulkan](https://en.wikipedia.org/wiki/Vulkan_(API)) backend. Does not require additional dependencies, but can use external Vulkan headers (`VULKAN_INCLUDE_DIRS`). |
 
