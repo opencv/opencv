@@ -232,6 +232,10 @@ public:
         {
             const Mat &src = inputs[i];
             Mat &dst = outputs[i];
+
+            if (src.total() == 0)
+                continue;
+
             CV_Assert_N(src.size == dst.size, src.isContinuous(), dst.isContinuous());
 
             if (ElementWiseIntDispatch<Func>::apply(func, src, dst))
