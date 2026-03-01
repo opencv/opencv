@@ -17,7 +17,7 @@
 
 namespace cv { namespace dnn {
 
-struct FastGemmOpt {
+struct CV_EXPORTS FastGemmOpt {
     bool use_avx;
     bool use_avx2;
     bool use_neon;
@@ -43,6 +43,7 @@ struct FastGemmOpt {
     bool all() {
         return use_avx || use_avx2 || use_neon || use_lasx;
     }
+
 };
 
 struct MatMulHelper {
@@ -151,9 +152,14 @@ struct MatMulHelper {
     }
 };
 
-size_t fastGemmPackBSize(size_t N, size_t K, const FastGemmOpt &opt);
+CV_EXPORTS size_t fastGemmPackBSize(size_t N, size_t K, const FastGemmOpt &opt);
 
-void fastGemmPackB(const Mat &m, std::vector<float> &packed_B, bool trans, FastGemmOpt &opt);
+CV_EXPORTS void fastGemmPackB(const Mat &m, std::vector<float> &packed_B, bool trans, FastGemmOpt &opt);
+
+CV_EXPORTS int fastGemmMC(const FastGemmOpt &opt);
+CV_EXPORTS int fastGemmNC(const FastGemmOpt &opt);
+CV_EXPORTS int fastGemmKC(const FastGemmOpt &opt);
+
 void fastGemmPackB(bool trans, size_t N, size_t K, const float *B, size_t ldb, float *packed_B, const FastGemmOpt &opt);
 
 void fastGemm(bool trans_a, int M, int N, int K,
@@ -175,6 +181,22 @@ void fastGemmBatch(size_t batch, const size_t *A_offsets, const size_t *B_offset
                    const float *packed_B, float beta, float *C, int ldc, FastGemmOpt &opt);
 void fastGemmBatch(bool trans_a, bool trans_b, float alpha, const Mat &A,
                    const Mat &B, float beta, Mat &C, FastGemmOpt &opt);
+CV_EXPORTS void fastGemmBatch(size_t batch,
+                   const std::vector<size_t> &A_offsets, const std::vector<size_t> &B_offsets, const std::vector<size_t> &C_offsets,
+                   int M, int N, int K, float alpha, const Mat&A, int lda0, int lda1,
+                   const Mat&B, int ldb0, int ldb1, float beta, Mat&C, int ldc, FastGemmOpt &opt);
+
+CV_EXPORTS void pagedAttnQKGemm(
+    const Mat& Q, const std::vector<Mat> &K, Mat& A,
+    int T_q, int Nq, int N_k, int T_s, int D,
+    const FastGemmOpt &opts
+);
+CV_EXPORTS void pagedAttnAVGemm(
+    const Mat& A,const std::vector<Mat> &V, Mat& Out,
+    int T_q, int Nq, int N_k, int T_s, int D,
+    const FastGemmOpt &opt
+);
+
 
 }} // cv::dnn
 
