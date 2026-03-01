@@ -499,7 +499,7 @@ TEST(Core_InputOutput, FileStorageKey)
     EXPECT_NO_THROW(f << "key1" << "value1");
     EXPECT_NO_THROW(f << "_key2" << "value2");
     EXPECT_NO_THROW(f << "key_3" << "value3");
-    const std::string expected = "%YAML:1.0\n---\nkey1: value1\n_key2: value2\nkey_3: value3\n";
+    const std::string expected = "%YAML 1.2\n---\nkey1: value1\n_key2: value2\nkey_3: value3\n";
     ASSERT_STREQ(f.releaseAndGetString().c_str(), expected.c_str());
 }
 
@@ -1199,7 +1199,7 @@ TEST(Core_InputOutput, FileStorage_DMatch)
 
     EXPECT_NO_THROW(fs << "d" << d);
     cv::String fs_result = fs.releaseAndGetString();
-    EXPECT_STREQ(fs_result.c_str(), "%YAML:1.0\n---\nd: [ 1, 2, 3, -1.5 ]\n");
+    EXPECT_STREQ(fs_result.c_str(), "%YAML 1.2\n---\nd: [ 1, 2, 3, -1.5 ]\n");
 
     cv::FileStorage fs_read(fs_result, cv::FileStorage::READ | cv::FileStorage::MEMORY);
 
@@ -1227,7 +1227,7 @@ TEST(Core_InputOutput, FileStorage_DMatch_vector)
     EXPECT_NO_THROW(fs << "dv" << dv);
     cv::String fs_result = fs.releaseAndGetString();
     EXPECT_STREQ(fs_result.c_str(),
-"%YAML:1.0\n"
+"%YAML 1.2\n"
 "---\n"
 "dv:\n"
 "   - [ 1, 2, 3, -1.5 ]\n"
@@ -1274,7 +1274,7 @@ TEST(Core_InputOutput, FileStorage_DMatch_vector_vector)
     cv::String fs_result = fs.releaseAndGetString();
 #ifndef OPENCV_TRAITS_ENABLE_DEPRECATED
     EXPECT_STREQ(fs_result.c_str(),
-"%YAML:1.0\n"
+"%YAML 1.2\n"
 "---\n"
 "dvv:\n"
 "   -\n"
@@ -2206,5 +2206,51 @@ TEST_P(FileStorage_exact_type, long_int_mat)
 INSTANTIATE_TEST_CASE_P(Core_InputOutput,
     FileStorage_exact_type, Values(".yml", ".xml", ".json")
 );
+
+TEST(Core_InputOutput, YAML_Compatibility)
+{
+    string filename = cv::tempfile(".yaml");
+
+    // 1. Write using DEFAULT (should be 1.2 compatible now)
+    {
+        FileStorage fs(filename, FileStorage::WRITE | FileStorage::FORMAT_YAML);
+        ASSERT_TRUE(fs.isOpened());
+        fs << "bool_true" << true;
+        fs << "bool_false" << false;
+        fs.release();
+    }
+
+    // 2. Verify Default is Modern (Literals + No Legacy Header)
+    {
+        std::ifstream file(filename.c_str());
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        std::string content = buffer.str();
+
+        EXPECT_NE(content.find("bool_true: true"), std::string::npos); // Found 'true'
+        EXPECT_EQ(content.find("%YAML:1.0"), std::string::npos);       // No 1.0 Header
+    }
+
+    // 3. Write using LEGACY flag
+    {
+        FileStorage fs(filename, FileStorage::WRITE | FileStorage::FORMAT_YAML_1_0);
+        ASSERT_TRUE(fs.isOpened());
+        fs << "bool_true" << true;
+        fs.release();
+    }
+
+    // 4. Verify Legacy (Integers + Strict Header)
+    {
+        std::ifstream file(filename.c_str());
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        std::string content = buffer.str();
+
+        EXPECT_NE(content.find("bool_true: 1"), std::string::npos);    // Found '1'
+        EXPECT_NE(content.find("%YAML:1.0"), std::string::npos);       // Found 1.0 Header
+    }
+
+    remove(filename.c_str());
+}
 
 }} // namespace

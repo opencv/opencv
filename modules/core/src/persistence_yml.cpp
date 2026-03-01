@@ -727,10 +727,30 @@ public:
                 if( is_parent_flow || c != ':' )
                 {
                     char* str_end = endptr;
-                    // strip spaces in the end of string
                     do c = *--str_end;
                     while( str_end > ptr && c == ' ' );
                     str_end++;
+                    if ((fs->getFormat() & FileStorage::FORMAT_MASK) != FileStorage::FORMAT_YAML_1_0)
+                    {
+                        size_t len = str_end - ptr;
+                        if (len == 4 && memcmp(ptr, "true", 4) == 0) {
+                            int64_t ival = 1;
+                            node.setValue(FileNode::INT, &ival);
+                            ptr = endptr;
+                            return ptr;
+                        }
+                        else if (len == 5 && memcmp(ptr, "false", 5) == 0) {
+                            int64_t ival = 0;
+                            node.setValue(FileNode::INT, &ival);
+                            ptr = endptr;
+                            return ptr;
+                        }
+                        else if (len == 4 && memcmp(ptr, "null", 4) == 0) {
+                            ptr = endptr;
+                            return ptr;
+                        }
+                    }
+
                     node.setValue(FileNode::STRING, ptr, (int)(str_end - ptr));
                     ptr = endptr;
                     return ptr;
@@ -805,7 +825,10 @@ public:
                     if( memcmp( ptr, "%YAML", 5 ) == 0 &&
                         memcmp( ptr, "%YAML:1.", 8 ) != 0 &&
                         memcmp( ptr, "%YAML 1.", 8 ) != 0)
-                        CV_PARSE_ERROR_CPP( "Unsupported YAML version (it must be 1.x)" );
+                    {
+                        if ((fs->getFormat() & FileStorage::FORMAT_MASK) == FileStorage::FORMAT_YAML_1_0)
+                            CV_PARSE_ERROR_CPP( "Unsupported YAML version (it must be 1.x)" );
+                    }
                     *ptr = '\0';
                 }
                 else if( *ptr == '-' )
