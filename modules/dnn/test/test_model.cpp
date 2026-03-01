@@ -881,8 +881,14 @@ TEST_P(Reproducibility_ResNet50_ONNX, Accuracy)
     
     Mat out;
     double min_t = 0;
-    
-    for (int i = 0; i < 30; i++) {
+    const int niters =
+#ifdef _DEBUG
+        1;
+#else
+        30;
+#endif
+
+    for (int i = 0; i < niters; i++) {
         double t = (double)getTickCount();
         net.setInput(input);
         out = net.forward();

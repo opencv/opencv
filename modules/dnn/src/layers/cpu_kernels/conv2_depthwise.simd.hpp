@@ -125,7 +125,7 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
                                 }
                                 s0 = v_fma(s0, sc0, b0);
                                 if (residual)
-                                    s0 = v_add(s0, v_load(residual + x0*C0));
+                                    s0 = v_add(s0, vx_load(residual + x0*C0));
                                 s0 = v_min(v_select(v_ge(s0, z), s0, v_mul(s0, v_alpha)), v_maxval);
                                 vx_store(out + x0*C0, s0);
                             }
@@ -155,8 +155,8 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
                                     s0 = v_fma(s0, vx_load(scale + c), vx_load(bias + c));
                                     s1 = v_fma(s1, vx_load(scale + c + nlanes), vx_load(bias + c + nlanes));
                                     if (residual) {
-                                        s0 = v_add(s0, v_load(residual + x0*C0 + c));
-                                        s1 = v_add(s1, v_load(residual + x0*C0 + c + nlanes));
+                                        s0 = v_add(s0, vx_load(residual + x0*C0 + c));
+                                        s1 = v_add(s1, vx_load(residual + x0*C0 + c + nlanes));
                                     }
                                     s0 = v_min(v_select(v_ge(s0, z), s0, v_mul(s0, v_alpha)), v_maxval);
                                     s1 = v_min(v_select(v_ge(s1, z), s1, v_mul(s1, v_alpha)), v_maxval);
@@ -182,7 +182,7 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
                                 }
                                 s0 = v_fma(s0, sc0, b0);
                                 if (residual)
-                                    s0 = v_add(s0, v_load(residual + x0*C0));
+                                    s0 = v_add(s0, vx_load(residual + x0*C0));
                                 s0 = v_min(v_select(v_ge(s0, z), s0, v_mul(s0, v_alpha)), v_maxval);
                                 vx_store(out + x0*C0, s0);
                             }
@@ -206,8 +206,8 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
                                 s0 = v_fma(s0, sc0, b0);
                                 s1 = v_fma(s1, sc1, b1);
                                 if (residual) {
-                                    s0 = v_add(s0, v_load(residual + x0*C0));
-                                    s1 = v_add(s1, v_load(residual + x0*C0 + nlanes));
+                                    s0 = v_add(s0, vx_load(residual + x0*C0));
+                                    s1 = v_add(s1, vx_load(residual + x0*C0 + nlanes));
                                 }
                                 s0 = v_min(v_select(v_ge(s0, z), s0, v_mul(s0, v_alpha)), v_maxval);
                                 s1 = v_min(v_select(v_ge(s1, z), s1, v_mul(s1, v_alpha)), v_maxval);
@@ -241,10 +241,10 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
                                     s3 = v_fma(s3, vx_load(scale + c + nlanes*3), vx_load(bias + c + nlanes*3));
                                     
                                     if (residual) {
-                                        s0 = v_add(s0, v_load(residual + x0*C0 + c));
-                                        s1 = v_add(s1, v_load(residual + x0*C0 + c + nlanes));
-                                        s2 = v_add(s2, v_load(residual + x0*C0 + c + nlanes*2));
-                                        s3 = v_add(s3, v_load(residual + x0*C0 + c + nlanes*3));
+                                        s0 = v_add(s0, vx_load(residual + x0*C0 + c));
+                                        s1 = v_add(s1, vx_load(residual + x0*C0 + c + nlanes));
+                                        s2 = v_add(s2, vx_load(residual + x0*C0 + c + nlanes*2));
+                                        s3 = v_add(s3, vx_load(residual + x0*C0 + c + nlanes*3));
                                     }
                                     
                                     s0 = v_min(v_select(v_ge(s0, z), s0, v_mul(s0, v_alpha)), v_maxval);

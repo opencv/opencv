@@ -160,6 +160,109 @@ CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
         CONV_FINALIZE_OUT2(8, 9, CONV_ADD_NO_RESIDUAL2); \
     }
 
+#elif CV_SIMD256
+
+///////////// generic branch for arch's with 256-bit SIMD (however, it's tweaked for AVX2 with just 16 registers) ////////////////
+
+#undef CONV_INIT_SUMS
+#define CONV_INIT_SUMS() \
+    v_float32x8 zz = v256_setzero_f32(); \
+    v_float32x8 s0 = zz, s1 = zz, s2 = zz, s3 = zz, s4 = zz; \
+    v_float32x8 s5 = zz, s6 = zz, s7 = zz, s8 = zz, s9 = zz
+
+#undef CONV_UPDATE_BLOCK
+#define CONV_UPDATE_BLOCK2x8(ofs, idx0, idx1) \
+    x0 = v256_setall_f32(inptr[idx0][ofs]); \
+    x1 = v256_setall_f32(inptr[idx1][ofs]); \
+    s##idx0 = v_fma(x0, w0, s##idx0); \
+    s##idx1 = v_fma(x1, w0, s##idx1); \
+    x0 = v256_setall_f32(inptr[idx0][ofs+1]); \
+    x1 = v256_setall_f32(inptr[idx1][ofs+1]); \
+    s##idx0 = v_fma(x0, w1, s##idx0); \
+    s##idx1 = v_fma(x1, w1, s##idx1); \
+    x0 = v256_setall_f32(inptr[idx0][ofs+2]); \
+    x1 = v256_setall_f32(inptr[idx1][ofs+2]); \
+    s##idx0 = v_fma(x0, w2, s##idx0); \
+    s##idx1 = v_fma(x1, w2, s##idx1); \
+    x0 = v256_setall_f32(inptr[idx0][ofs+3]); \
+    x1 = v256_setall_f32(inptr[idx1][ofs+3]); \
+    s##idx0 = v_fma(x0, w3, s##idx0); \
+    s##idx1 = v_fma(x1, w3, s##idx1)
+
+#undef CONV_UPDATE_LOOP_BODY
+#define CONV_UPDATE_LOOP_BODY() \
+    v_float32x8 x0, x1; \
+    v_float32x8 w0, w1, w2, w3; \
+    \
+    w0 = v256_load(wptr + 0*K0); \
+    w1 = v256_load(wptr + 1*K0); \
+    w2 = v256_load(wptr + 2*K0); \
+    w3 = v256_load(wptr + 3*K0); \
+    \
+    CONV_UPDATE_BLOCK2x8(0, 0, 1); \
+    CONV_UPDATE_BLOCK2x8(0, 2, 3); \
+    CONV_UPDATE_BLOCK2x8(0, 4, 5); \
+    CONV_UPDATE_BLOCK2x8(0, 6, 7); \
+    CONV_UPDATE_BLOCK2x8(0, 8, 9); \
+    \
+    w0 = v256_load(wptr + 4*K0); \
+    w1 = v256_load(wptr + 5*K0); \
+    w2 = v256_load(wptr + 6*K0); \
+    w3 = v256_load(wptr + 7*K0); \
+    \
+    CONV_UPDATE_BLOCK2x8(4, 0, 1); \
+    CONV_UPDATE_BLOCK2x8(4, 2, 3); \
+    CONV_UPDATE_BLOCK2x8(4, 4, 5); \
+    CONV_UPDATE_BLOCK2x8(4, 6, 7); \
+    CONV_UPDATE_BLOCK2x8(4, 8, 9); \
+    \
+    inptr[0] += inpstep[0]; inptr[1] += inpstep[1]; \
+    inptr[2] += inpstep[2]; inptr[3] += inpstep[3]; \
+    inptr[4] += inpstep[4]; inptr[5] += inpstep[5]; \
+    inptr[6] += inpstep[6]; inptr[7] += inpstep[7]; \
+    inptr[8] += inpstep[8]; inptr[9] += inpstep[9]
+
+#undef CONV_START_FINALIZE_OUT
+#define CONV_START_FINALIZE_OUT() \
+    v_float32x8 vscale = v256_load(scalebuf); \
+    v_float32x8 vbias = v256_load(biasbuf); \
+    v_float32x8 valpha = v256_setall_f32(alpha); \
+    v_float32x8 vmaxval = v256_setall_f32(maxval)
+
+#define CONV_ADD_RESIDUAL2(idx0, idx1) \
+    s##idx0 = v_add(s##idx0, v256_load(tmpbuf + idx0*K0)); \
+    s##idx1 = v_add(s##idx1, v256_load(tmpbuf + idx1*K0))
+
+#undef CONV_FINALIZE_OUT2
+#define CONV_FINALIZE_OUT2(idx0, idx1, add_residual2) \
+    s##idx0 = v_fma(s##idx0, vscale, vbias); \
+    s##idx1 = v_fma(s##idx1, vscale, vbias); \
+    add_residual2(idx0, idx1); \
+    s##idx0 = v_select(v_ge(s##idx0, zz), s##idx0, v_mul(s##idx0, valpha)); \
+    s##idx1 = v_select(v_ge(s##idx1, zz), s##idx1, v_mul(s##idx1, valpha)); \
+    s##idx0 = v_min(s##idx0, vmaxval); \
+    s##idx1 = v_min(s##idx1, vmaxval); \
+    v_store(outbuf + idx0*K0, s##idx0); \
+    v_store(outbuf + idx1*K0, s##idx1)
+
+#undef CONV_FINALIZE_OUT_ALL
+#define CONV_FINALIZE_OUT_ALL() \
+    CONV_START_FINALIZE_OUT(); \
+    if (resptr) { \
+        CONV_FINALIZE_OUT2(0, 1, CONV_ADD_RESIDUAL2); \
+        CONV_FINALIZE_OUT2(2, 3, CONV_ADD_RESIDUAL2); \
+        CONV_FINALIZE_OUT2(4, 5, CONV_ADD_RESIDUAL2); \
+        CONV_FINALIZE_OUT2(6, 7, CONV_ADD_RESIDUAL2); \
+        CONV_FINALIZE_OUT2(8, 9, CONV_ADD_RESIDUAL2); \
+    } else { \
+        CONV_FINALIZE_OUT2(0, 1, CONV_ADD_NO_RESIDUAL2); \
+        CONV_FINALIZE_OUT2(2, 3, CONV_ADD_NO_RESIDUAL2); \
+        CONV_FINALIZE_OUT2(4, 5, CONV_ADD_NO_RESIDUAL2); \
+        CONV_FINALIZE_OUT2(6, 7, CONV_ADD_NO_RESIDUAL2); \
+        CONV_FINALIZE_OUT2(8, 9, CONV_ADD_NO_RESIDUAL2); \
+    }
+
+
 #elif CV_SIMD128
 
 /////////////////////////// generic branch for arch's with 128-bit SIMD /////////////////////////////
@@ -523,7 +626,10 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
                 int yi_base = yj*Sy - padY;
                 int xi_base = xj*Sx - padX;
 
-            #if CV_SIMD128
+            #if CV_SIMD256
+                v_float32x8 zz = v256_setzero_f32();
+                v_float32x8 s0 = zz;
+            #elif CV_SIMD128
                 v_float32x4 zz = v_setzero_f32();
                 v_float32x4 s0 = zz, s1 = zz;
             #else
@@ -554,7 +660,22 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
                     const float* wptr = wbaseptr + i*C1Max*K0*C0;
 
                     for (int c1 = 0; c1 < cblocks; ++c1, inptr += iplanesize, wptr += K0*C0) {
-                    #if CV_SIMD128
+                    #if CV_SIMD256
+                        v_float32x8 w, x;
+                        #undef CONV_UPDATE_BLOCK1
+                        #define CONV_UPDATE_BLOCK1(ofs) \
+                            w = v256_load(wptr + ofs*K0); \
+                            x = v256_setall_f32(inptr[ofs]); \
+                            s0 = v_fma(x, w, s0)
+                        CONV_UPDATE_BLOCK1(0);
+                        CONV_UPDATE_BLOCK1(1);
+                        CONV_UPDATE_BLOCK1(2);
+                        CONV_UPDATE_BLOCK1(3);
+                        CONV_UPDATE_BLOCK1(4);
+                        CONV_UPDATE_BLOCK1(5);
+                        CONV_UPDATE_BLOCK1(6);
+                        CONV_UPDATE_BLOCK1(7);
+                    #elif CV_SIMD128
                         v_float32x4 w0, w1, x;
                         #undef CONV_UPDATE_BLOCK1
                         #define CONV_UPDATE_BLOCK1(ofs) \
@@ -581,7 +702,18 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
 
                 float* outbuf = aligned_k ? outptr + k_base*planeblocks : tmpbuf;
 
-            #if CV_SIMD128
+            #if CV_SIMD256
+                v_float32x8 vscale = v256_load(scalebuf);
+                v_float32x8 vbias = v256_load(biasbuf);
+                v_float32x8 valpha = v256_setall_f32(alpha);
+                v_float32x8 vmaxval = v256_setall_f32(maxval);
+
+                s0 = v_fma(s0, vscale, vbias);
+                s0 = v_add(s0, v256_load(resbuf));
+                s0 = v_select(v_ge(s0, zz), s0, v_mul(s0, valpha));
+                s0 = v_min(s0, vmaxval);
+                v_store(outbuf, s0);
+            #elif CV_SIMD128
                 v_float32x4 vscale_lo = v_load(scalebuf), vscale_hi = v_load(scalebuf + 4);
                 v_float32x4 vbias_lo = v_load(biasbuf), vbias_hi = v_load(biasbuf + 4);
                 v_float32x4 valpha = v_setall_f32(alpha);
