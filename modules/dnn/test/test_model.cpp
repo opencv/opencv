@@ -882,7 +882,7 @@ TEST_P(Reproducibility_ResNet50_ONNX, Accuracy)
     Mat out;
     double min_t = 0;
     
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 30; i++) {
         double t = (double)getTickCount();
         net.setInput(input);
         out = net.forward();

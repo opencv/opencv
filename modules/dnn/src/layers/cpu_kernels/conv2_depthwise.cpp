@@ -11,7 +11,7 @@
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
-DepthwiseConvFunc getDepthwiseConvFunc(int depth)
+ConvFunc getDepthwiseConvFunc(int depth)
 {
     CV_CPU_DISPATCH(getDepthwiseConvFunc_, (depth), CV_CPU_DISPATCH_MODES_ALL);
 }
@@ -27,26 +27,35 @@ static void repackDepthwiseWeightsBlock(const InpT* inpw, OutT* outw,
     }
 }
 
-// C x 1 x Hk x Wk => C1 x Hk x Wk x C0
-void repackDepthwiseConvWeights(const void* inpw__, int inptype_, void* outw__, int outtype_,
-                                const MatShape& wshape, int C0_)
+// C x 1 x ksize ... => C1 x ksize x C0
+void repackDepthwiseConvWeights(const Mat& weights, Mat& wpack, int outtype_, int C0_)
 {
+    int inptype_ = weights.type();
+    MatShape wshape = weights.shape();
+    CV_Assert(wshape.dims >= 3);
     CV_Assert(inptype_ == CV_32F || inptype_ == CV_16F || inptype_ == CV_16BF);
     CV_Assert(outtype_ == CV_32F || outtype_ == CV_16F || outtype_ == CV_16BF);
+    int ksize_ = 1;
+    for (int i = 2; i < wshape.dims; i++)
+        ksize_ *= wshape[i];
 
     int C1_ = (wshape[0] + C0_ - 1)/C0_;
+
+    if (!wpack.isContinuous())
+        wpack.release();
+
+    wpack.create(MatShape({C1_, ksize_, C0_}, DATA_LAYOUT_UNKNOWN), outtype_);
+
     parallel_for_(Range(0, C1_), [&](const Range& r) {
         int inptype = inptype_, outtype = outtype_;
         size_t inpEsz = CV_ELEM_SIZE(inptype);
         size_t outEsz = CV_ELEM_SIZE(outtype);
         int C = wshape[0], C0 = C0_;
-        int ksize = 1;
-        for (int k = 2; k < wshape.dims; k++)
-            ksize *= wshape[k];
+        int ksize = ksize_;
 
         for (int c1 = r.start; c1 < r.end; c1++) {
-            const uint8_t* inpw_ = (const uint8_t*)inpw__ + c1*ksize*C0*inpEsz;
-            uint8_t* outw_ = (uint8_t*)outw__ + c1*ksize*C0*outEsz;
+            const uint8_t* inpw_ = (const uint8_t*)weights.data + c1*ksize*C0*inpEsz;
+            uint8_t* outw_ = (uint8_t*)wpack.data + c1*ksize*C0*outEsz;
             int currC0 = std::min(C - c1*C0, C0);
             if (currC0 < C0)
                 memset(outw_, 0, ksize*C0*outEsz);

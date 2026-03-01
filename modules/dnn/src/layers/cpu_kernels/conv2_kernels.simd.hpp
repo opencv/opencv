@@ -11,7 +11,7 @@ namespace cv {
 namespace dnn {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
-cv::dnn::ConvFunc getConvFunc_(int depth, int C0, ConvKind convkind);
+cv::dnn::ConvFunc getConvFunc_(int depth, int C0);
 
 CV_CPU_OPTIMIZATION_NAMESPACE_END
 }} // cv::dnn::
@@ -24,429 +24,274 @@ namespace cv {
 namespace dnn {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
-static void conv32fC8(const void* inp__, const void* residual__, void* out__,
-                      const ConvState& cs, const void* weights__,
-                      const float* scale__, const float* bias__,
-                      const int32_t* inpofs__, const int32_t* ofsofs__)
-{
-    int nlanes_ = VTraits<v_float32>::vlanes();
-    int C0_ = cs.inpshape.back();
-    int NK1 = cs.outshape[0]*cs.outshape[1];
+#define CONV_ENABLE_SIMD 1
 
-    CV_Assert(C0_ == 8);
-    CV_Assert(C0_ == nlanes_ || C0_ == nlanes_*2 || C0_ % (nlanes_*4) == 0);
-    CV_Assert(cs.activation == nullptr || cs.fastActivation == FAST_ACTIV_NONE);
-    CV_Assert(0 <= cs.nspatialdims && cs.nspatialdims <= ConvState::MAX_CONV_DIMS);
+#undef CONV_ADD_NO_RESIDUAL2
+#define CONV_ADD_NO_RESIDUAL2(idx0, idx1) /* empty */
 
-    parallel_for_(Range(0, NK1), [&](const Range& range) {
-        const float* scale_ = scale__;
-        const float* bias_ = bias__;
-        const int32_t* inpofs_ = inpofs__;
-        const int32_t* ofsofs_ = ofsofs__;
-        constexpr int BLOCK_SIZE = 8;
-        int nk0 = range.start, nk1 = range.end;
-        constexpr int C0 = 8, K0 = C0;
-        int planesize = 1, iplanesize = 1, ksize = 1;
-        int nspatialdims = cs.nspatialdims;
-        for (int i = 0; i < nspatialdims; i++) {
-            planesize *= cs.outshape[i + 2];
-            iplanesize *= cs.inpshape[i + 2];
-            ksize *= cs.kshape[ConvState::MAX_CONV_DIMS - nspatialdims + i];
-        }
-        int C1 = cs.inpshape[1], K1 = cs.outshape[1];
-        int ngroups = cs.ngroups, K1g = K1/ngroups, C1g = C1/ngroups;
-        int nC = C1g*ksize*C0*K0;
-        AutoBuffer<float> sumbuf(BLOCK_SIZE*K0*3);
-        float* sum = sumbuf.data();
-        float* scale = sum + BLOCK_SIZE*K0;
-        float* bias = sum + BLOCK_SIZE*K0*2;
-        const float* inptrs[BLOCK_SIZE];
-        const int32_t* ofsptrs[BLOCK_SIZE];
-        FastActivation fastActivation = cs.fastActivation;
-        const float* activParams = cs.activParams;
-        activation_func_t activation = cs.activation;
-        float maxval = fastActivation == FAST_ACTIV_CLIP ? activParams[1] : FLT_MAX;
-        float alpha = fastActivation == FAST_ACTIV_LEAKY_RELU ? activParams[0] :
-                    fastActivation == FAST_ACTIV_NONE ? 1.f : 0.f;
-        int nlanes = nlanes_;
+#if CV_NEON_AARCH64
 
-        for (int j = 0; j < BLOCK_SIZE*K0; j++) {
-            scale[j] = 1.f;
-            bias[j] = 0.f;
-        }
+/////////////////////////// AARH64-optimized implementation /////////////////////////////
 
-        for (int nk = nk0; nk < nk1; nk++) {
-            int n = nk/K1, k1 = nk - n*K1;
-            int g = k1/K1g;
-            float* out = (float*)out__ + nk*planesize*K0;
-            const float* inp0 = (const float*)inp__ + (n*C1 + g*C1g)*iplanesize*C0;
-            const float* resptr = residual__ ? (const float*)residual__ + nk*planesize*K0 : nullptr;
-            const float* wptr = (const float*)weights__ + k1*nC;
+#undef CONV_INIT_SUMS
+#define CONV_INIT_SUMS() \
+    float32x4_t zz = vdupq_n_f32(0.f); \
+    float32x4_t s0l = zz, s0h = zz, s1l = zz, s1h = zz; \
+    float32x4_t s2l = zz, s2h = zz, s3l = zz, s3h = zz; \
+    float32x4_t s4l = zz, s4h = zz, s5l = zz, s5h = zz; \
+    float32x4_t s6l = zz, s6h = zz, s7l = zz, s7h = zz; \
+    float32x4_t s8l = zz, s8h = zz, s9l = zz, s9h = zz
 
-            if (scale_) {
-                for (int b = 0; b < BLOCK_SIZE; b++)
-                    for (int k = 0; k < K0; k++)
-                        scale[b*K0 + k] = scale_[k1*K0 + k];
-            }
+#undef CONV_UPDATE_BLOCK
+#define CONV_UPDATE_BLOCK(w_ofs, lane) \
+    wl = vld1q_f32(wptr + w_ofs*K0 + 0); \
+    wh = vld1q_f32(wptr + w_ofs*K0 + 4); \
+    s0l = vfmaq_laneq_f32(s0l, wl, x0, lane); \
+    s0h = vfmaq_laneq_f32(s0h, wh, x0, lane); \
+    s1l = vfmaq_laneq_f32(s1l, wl, x1, lane); \
+    s1h = vfmaq_laneq_f32(s1h, wh, x1, lane); \
+    s2l = vfmaq_laneq_f32(s2l, wl, x2, lane); \
+    s2h = vfmaq_laneq_f32(s2h, wh, x2, lane); \
+    s3l = vfmaq_laneq_f32(s3l, wl, x3, lane); \
+    s3h = vfmaq_laneq_f32(s3h, wh, x3, lane); \
+    s4l = vfmaq_laneq_f32(s4l, wl, x4, lane); \
+    s4h = vfmaq_laneq_f32(s4h, wh, x4, lane); \
+    s5l = vfmaq_laneq_f32(s5l, wl, x5, lane); \
+    s5h = vfmaq_laneq_f32(s5h, wh, x5, lane); \
+    s6l = vfmaq_laneq_f32(s6l, wl, x6, lane); \
+    s6h = vfmaq_laneq_f32(s6h, wh, x6, lane); \
+    s7l = vfmaq_laneq_f32(s7l, wl, x7, lane); \
+    s7h = vfmaq_laneq_f32(s7h, wh, x7, lane); \
+    s8l = vfmaq_laneq_f32(s8l, wl, x8, lane); \
+    s8h = vfmaq_laneq_f32(s8h, wh, x8, lane); \
+    s9l = vfmaq_laneq_f32(s9l, wl, x9, lane); \
+    s9h = vfmaq_laneq_f32(s9h, wh, x9, lane)
 
-            if (bias_) {
-                for (int b = 0; b < BLOCK_SIZE; b++)
-                    for (int k = 0; k < K0; k++)
-                        bias[b*K0 + k] = bias_[k1*K0 + k];
-            }
+#undef CONV_UPDATE_LOOP_BODY
+#define CONV_UPDATE_LOOP_BODY() \
+    float32x4_t x0, x1, x2, x3, x4, x5, x6, x7, x8, x9; \
+    float32x4_t wl, wh; \
+    \
+    x0 = vld1q_f32(inptr[0]); \
+    x1 = vld1q_f32(inptr[1]); \
+    x2 = vld1q_f32(inptr[2]); \
+    x3 = vld1q_f32(inptr[3]); \
+    x4 = vld1q_f32(inptr[4]); \
+    x5 = vld1q_f32(inptr[5]); \
+    x6 = vld1q_f32(inptr[6]); \
+    x7 = vld1q_f32(inptr[7]); \
+    x8 = vld1q_f32(inptr[8]); \
+    x9 = vld1q_f32(inptr[9]); \
+    \
+    CONV_UPDATE_BLOCK(0, 0); \
+    CONV_UPDATE_BLOCK(1, 1); \
+    CONV_UPDATE_BLOCK(2, 2); \
+    CONV_UPDATE_BLOCK(3, 3); \
+    \
+    x0 = vld1q_f32(inptr[0] + 4); \
+    x1 = vld1q_f32(inptr[1] + 4); \
+    x2 = vld1q_f32(inptr[2] + 4); \
+    x3 = vld1q_f32(inptr[3] + 4); \
+    x4 = vld1q_f32(inptr[4] + 4); \
+    x5 = vld1q_f32(inptr[5] + 4); \
+    x6 = vld1q_f32(inptr[6] + 4); \
+    x7 = vld1q_f32(inptr[7] + 4); \
+    x8 = vld1q_f32(inptr[8] + 4); \
+    x9 = vld1q_f32(inptr[9] + 4); \
+    \
+    inptr[0] += inpstep[0]; inptr[1] += inpstep[1]; \
+    inptr[2] += inpstep[2]; inptr[3] += inpstep[3]; \
+    inptr[4] += inpstep[4]; inptr[5] += inpstep[5]; \
+    inptr[6] += inpstep[6]; inptr[7] += inpstep[7]; \
+    inptr[8] += inpstep[8]; inptr[9] += inpstep[9]; \
+    \
+    CONV_UPDATE_BLOCK(4, 0); \
+    CONV_UPDATE_BLOCK(5, 1); \
+    CONV_UPDATE_BLOCK(6, 2); \
+    CONV_UPDATE_BLOCK(7, 3)
 
-            for (int xy0 = 0; xy0 < planesize; xy0 += BLOCK_SIZE, out += K0*BLOCK_SIZE,
-                 resptr += (resptr ? K0*BLOCK_SIZE : 0)) {
-                int j = 0, blocksize = std::min(planesize - xy0, BLOCK_SIZE);
+#undef CONV_START_FINALIZE_OUT
+#define CONV_START_FINALIZE_OUT() \
+    float32x4_t vscale_lo = vld1q_f32(scalebuf), vscale_hi = vld1q_f32(scalebuf + 4); \
+    float32x4_t vbias_lo = vld1q_f32(biasbuf), vbias_hi = vld1q_f32(biasbuf + 4); \
+    float32x4_t valpha = vdupq_n_f32(alpha); \
+    float32x4_t vmaxval = vdupq_n_f32(maxval)
 
-                for (; j < blocksize; j++) {
-                    int jj = (xy0 + j)*2;
-                    inptrs[j] = inp0 + ofsofs_[jj];
-                    ofsptrs[j] = inpofs_ + ofsofs_[jj+1];
-                }
+#define CONV_ADD_RESIDUAL2(idx0, idx1) \
+    s##idx0##l = vaddq_f32(s##idx0##l, vld1q_f32(tmpbuf + idx0*K0)); \
+    s##idx0##h = vaddq_f32(s##idx0##h, vld1q_f32(tmpbuf + idx0*K0 + 4)); \
+    s##idx1##l = vaddq_f32(s##idx1##l, vld1q_f32(tmpbuf + idx1*K0)); \
+    s##idx1##h = vaddq_f32(s##idx1##h, vld1q_f32(tmpbuf + idx1*K0 + 4))
 
-                if (j < BLOCK_SIZE) {
-                    const float* last_inptr = inptrs[blocksize-1];
-                    const int32_t* last_ofsptr = ofsptrs[blocksize-1];
-                    for (; j < BLOCK_SIZE; j++) {
-                        inptrs[j] = last_inptr;
-                        ofsptrs[j] = last_ofsptr;
-                    }
-                }
+#undef CONV_FINALIZE_OUT2
+#define CONV_FINALIZE_OUT2(idx0, idx1, add_residual2) \
+    s##idx0##l = vfmaq_f32(vbias_lo, s##idx0##l, vscale_lo); \
+    s##idx0##h = vfmaq_f32(vbias_hi, s##idx0##h, vscale_hi); \
+    s##idx1##l = vfmaq_f32(vbias_lo, s##idx1##l, vscale_lo); \
+    s##idx1##h = vfmaq_f32(vbias_hi, s##idx1##h, vscale_hi); \
+    add_residual2(idx0, idx1); \
+    s##idx0##l = vbslq_f32(vcgeq_f32(s##idx0##l, zz), s##idx0##l, vmulq_f32(s##idx0##l, valpha)); \
+    s##idx0##h = vbslq_f32(vcgeq_f32(s##idx0##h, zz), s##idx0##h, vmulq_f32(s##idx0##h, valpha)); \
+    s##idx1##l = vbslq_f32(vcgeq_f32(s##idx1##l, zz), s##idx1##l, vmulq_f32(s##idx1##l, valpha)); \
+    s##idx1##h = vbslq_f32(vcgeq_f32(s##idx1##h, zz), s##idx1##h, vmulq_f32(s##idx1##h, valpha)); \
+    s##idx0##l = vminq_f32(s##idx0##l, vmaxval); \
+    s##idx0##h = vminq_f32(s##idx0##h, vmaxval); \
+    s##idx1##l = vminq_f32(s##idx1##l, vmaxval); \
+    s##idx1##h = vminq_f32(s##idx1##h, vmaxval); \
+    vst1q_f32(outbuf + idx0*K0, s##idx0##l); \
+    vst1q_f32(outbuf + idx0*K0 + 4, s##idx0##h); \
+    vst1q_f32(outbuf + idx1*K0, s##idx1##l); \
+    vst1q_f32(outbuf + idx1*K0 + 4, s##idx1##h)
 
-#ifdef __ARM_NEON
-                float32x4_t z = vdupq_n_f32(0.f);
-                float32x4_t s00 = z, s01 = z, s10 = z, s11 = z;
-                float32x4_t s20 = z, s21 = z, s30 = z, s31 = z;
-                float32x4_t s40 = z, s41 = z, s50 = z, s51 = z;
-                float32x4_t s60 = z, s61 = z, s70 = z, s71 = z;
-                const int32_t *ofs0 = ofsptrs[0], *ofs1 = ofsptrs[1];
-                const int32_t *ofs2 = ofsptrs[2], *ofs3 = ofsptrs[3];
-                const int32_t *ofs4 = ofsptrs[4], *ofs5 = ofsptrs[5];
-                const int32_t *ofs6 = ofsptrs[6], *ofs7 = ofsptrs[7];
+#undef CONV_FINALIZE_OUT_ALL
+#define CONV_FINALIZE_OUT_ALL() \
+    CONV_START_FINALIZE_OUT(); \
+    if (resptr) { \
+        CONV_FINALIZE_OUT2(0, 1, CONV_ADD_RESIDUAL2); \
+        CONV_FINALIZE_OUT2(2, 3, CONV_ADD_RESIDUAL2); \
+        CONV_FINALIZE_OUT2(4, 5, CONV_ADD_RESIDUAL2); \
+        CONV_FINALIZE_OUT2(6, 7, CONV_ADD_RESIDUAL2); \
+        CONV_FINALIZE_OUT2(8, 9, CONV_ADD_RESIDUAL2); \
+    } else { \
+        CONV_FINALIZE_OUT2(0, 1, CONV_ADD_NO_RESIDUAL2); \
+        CONV_FINALIZE_OUT2(2, 3, CONV_ADD_NO_RESIDUAL2); \
+        CONV_FINALIZE_OUT2(4, 5, CONV_ADD_NO_RESIDUAL2); \
+        CONV_FINALIZE_OUT2(6, 7, CONV_ADD_NO_RESIDUAL2); \
+        CONV_FINALIZE_OUT2(8, 9, CONV_ADD_NO_RESIDUAL2); \
+    }
 
-                const float *inptr0 = inptrs[0], *inptr1 = inptrs[1];
-                const float *inptr2 = inptrs[2], *inptr3 = inptrs[3];
-                const float *inptr4 = inptrs[4], *inptr5 = inptrs[5];
-                const float *inptr6 = inptrs[6], *inptr7 = inptrs[7];
-
-                for (int c1 = 0, i = 0; c1 < nC; c1 += K0*C0, i++) {
-                    float32x4_t w00 = vld1q_f32(wptr + c1 + 8*0), w01 = vld1q_f32(wptr + c1 + 8*0 + 4);
-                    float32x4_t w10 = vld1q_f32(wptr + c1 + 8*1), w11 = vld1q_f32(wptr + c1 + 8*1 + 4);
-                    float32x4_t w20 = vld1q_f32(wptr + c1 + 8*2), w21 = vld1q_f32(wptr + c1 + 8*2 + 4);
-                    float32x4_t w30 = vld1q_f32(wptr + c1 + 8*3), w31 = vld1q_f32(wptr + c1 + 8*3 + 4);
-                    float32x4_t w40 = vld1q_f32(wptr + c1 + 8*4), w41 = vld1q_f32(wptr + c1 + 8*4 + 4);
-                    float32x4_t w50 = vld1q_f32(wptr + c1 + 8*5), w51 = vld1q_f32(wptr + c1 + 8*5 + 4);
-                    float32x4_t w60 = vld1q_f32(wptr + c1 + 8*6), w61 = vld1q_f32(wptr + c1 + 8*6 + 4);
-                    float32x4_t w70 = vld1q_f32(wptr + c1 + 8*7), w71 = vld1q_f32(wptr + c1 + 8*7 + 4);
-
-                    int32_t ofs0i, ofs1i, ofs0p, ofs1p;
-                    float m0, m1;
-                    float32x4_t x0, x1;
-
-#undef UPDATE_SUM
-#define UPDATE_SUM(a, b) \
-    ofs0i = ofs##a[i]; ofs1i = ofs##b[i]; \
-    m0 = float(ofs0i >= 0); m1 = float(ofs1i >= 0); \
-    ofs0p = std::max(ofs0i, 0); ofs1p = std::max(ofs1i, 0); \
-    x0 = vld1q_f32(inptr##a + ofs0p); \
-    x1 = vld1q_f32(inptr##b + ofs1p); \
-    x0 = vmulq_n_f32(x0, m0); \
-    x1 = vmulq_n_f32(x1, m1); \
-    s##a##0 = vfmaq_laneq_f32(s##a##0, w00, x0, 0); \
-    s##a##1 = vfmaq_laneq_f32(s##a##1, w01, x0, 0); \
-    s##b##0 = vfmaq_laneq_f32(s##b##0, w00, x1, 0); \
-    s##b##1 = vfmaq_laneq_f32(s##b##1, w01, x1, 0); \
-    s##a##0 = vfmaq_laneq_f32(s##a##0, w10, x0, 1); \
-    s##a##1 = vfmaq_laneq_f32(s##a##1, w11, x0, 1); \
-    s##b##0 = vfmaq_laneq_f32(s##b##0, w10, x1, 1); \
-    s##b##1 = vfmaq_laneq_f32(s##b##1, w11, x1, 1); \
-    s##a##0 = vfmaq_laneq_f32(s##a##0, w20, x0, 2); \
-    s##a##1 = vfmaq_laneq_f32(s##a##1, w21, x0, 2); \
-    s##b##0 = vfmaq_laneq_f32(s##b##0, w20, x1, 2); \
-    s##b##1 = vfmaq_laneq_f32(s##b##1, w21, x1, 2); \
-    s##a##0 = vfmaq_laneq_f32(s##a##0, w30, x0, 3); \
-    s##a##1 = vfmaq_laneq_f32(s##a##1, w31, x0, 3); \
-    s##b##0 = vfmaq_laneq_f32(s##b##0, w30, x1, 3); \
-    s##b##1 = vfmaq_laneq_f32(s##b##1, w31, x1, 3); \
-    x0 = vld1q_f32(inptr##a + ofs0p + 4); \
-    x1 = vld1q_f32(inptr##b + ofs1p + 4); \
-    x0 = vmulq_n_f32(x0, m0); \
-    x1 = vmulq_n_f32(x1, m1); \
-    s##a##0 = vfmaq_laneq_f32(s##a##0, w40, x0, 0); \
-    s##a##1 = vfmaq_laneq_f32(s##a##1, w41, x0, 0); \
-    s##b##0 = vfmaq_laneq_f32(s##b##0, w40, x1, 0); \
-    s##b##1 = vfmaq_laneq_f32(s##b##1, w41, x1, 0); \
-    s##a##0 = vfmaq_laneq_f32(s##a##0, w50, x0, 1); \
-    s##a##1 = vfmaq_laneq_f32(s##a##1, w51, x0, 1); \
-    s##b##0 = vfmaq_laneq_f32(s##b##0, w50, x1, 1); \
-    s##b##1 = vfmaq_laneq_f32(s##b##1, w51, x1, 1); \
-    s##a##0 = vfmaq_laneq_f32(s##a##0, w60, x0, 2); \
-    s##a##1 = vfmaq_laneq_f32(s##a##1, w61, x0, 2); \
-    s##b##0 = vfmaq_laneq_f32(s##b##0, w60, x1, 2); \
-    s##b##1 = vfmaq_laneq_f32(s##b##1, w61, x1, 2); \
-    s##a##0 = vfmaq_laneq_f32(s##a##0, w70, x0, 3); \
-    s##a##1 = vfmaq_laneq_f32(s##a##1, w71, x0, 3); \
-    s##b##0 = vfmaq_laneq_f32(s##b##0, w70, x1, 3); \
-    s##b##1 = vfmaq_laneq_f32(s##b##1, w71, x1, 3)
-
-                    UPDATE_SUM(0, 1);
-                    UPDATE_SUM(2, 3);
-                    UPDATE_SUM(4, 5);
-                    UPDATE_SUM(6, 7);
-                }
-
-                vst1q_f32(sum + 8*0, s00); vst1q_f32(sum + 8*0 + 4, s01);
-                vst1q_f32(sum + 8*1, s10); vst1q_f32(sum + 8*1 + 4, s11);
-                vst1q_f32(sum + 8*2, s20); vst1q_f32(sum + 8*2 + 4, s21);
-                vst1q_f32(sum + 8*3, s30); vst1q_f32(sum + 8*3 + 4, s31);
-                vst1q_f32(sum + 8*4, s40); vst1q_f32(sum + 8*4 + 4, s41);
-                vst1q_f32(sum + 8*5, s50); vst1q_f32(sum + 8*5 + 4, s51);
-                vst1q_f32(sum + 8*6, s60); vst1q_f32(sum + 8*6 + 4, s61);
-                vst1q_f32(sum + 8*7, s70); vst1q_f32(sum + 8*7 + 4, s71);
 #elif CV_SIMD128
-                v_float32 z = vx_setzero_f32();
-                v_float32 s00 = z, s01 = z, s10 = z, s11 = z;
-                v_float32 s20 = z, s21 = z, s30 = z, s31 = z;
-                v_float32 s40 = z, s41 = z, s50 = z, s51 = z;
-                v_float32 s60 = z, s61 = z, s70 = z, s71 = z;
-                const int32_t *ofs0 = ofsptrs[0], *ofs1 = ofsptrs[1];
-                const int32_t *ofs2 = ofsptrs[2], *ofs3 = ofsptrs[3];
-                const int32_t *ofs4 = ofsptrs[4], *ofs5 = ofsptrs[5];
-                const int32_t *ofs6 = ofsptrs[6], *ofs7 = ofsptrs[7];
 
-                const float *inptr0 = inptrs[0], *inptr1 = inptrs[1];
-                const float *inptr2 = inptrs[2], *inptr3 = inptrs[3];
-                const float *inptr4 = inptrs[4], *inptr5 = inptrs[5];
-                const float *inptr6 = inptrs[6], *inptr7 = inptrs[7];
+/////////////////////////// generic branch for arch's with 128-bit SIMD /////////////////////////////
 
-                for (int c1 = 0, i = 0; c1 < nC; c1 += K0*C0, i++) {
-                    v_float32 w00 = vx_load(wptr + c1 + 8*0), w01 = vx_load(wptr + c1 + 8*0 + 4);
-                    v_float32 w10 = vx_load(wptr + c1 + 8*1), w11 = vx_load(wptr + c1 + 8*1 + 4);
-                    v_float32 w20 = vx_load(wptr + c1 + 8*2), w21 = vx_load(wptr + c1 + 8*2 + 4);
-                    v_float32 w30 = vx_load(wptr + c1 + 8*3), w31 = vx_load(wptr + c1 + 8*3 + 4);
-                    v_float32 w40 = vx_load(wptr + c1 + 8*4), w41 = vx_load(wptr + c1 + 8*4 + 4);
-                    v_float32 w50 = vx_load(wptr + c1 + 8*5), w51 = vx_load(wptr + c1 + 8*5 + 4);
-                    v_float32 w60 = vx_load(wptr + c1 + 8*6), w61 = vx_load(wptr + c1 + 8*6 + 4);
-                    v_float32 w70 = vx_load(wptr + c1 + 8*7), w71 = vx_load(wptr + c1 + 8*7 + 4);
+#undef CONV_INIT_SUMS
+#define CONV_INIT_SUMS() \
+    v_float32x4 zz = v_setzero_f32(); \
+    v_float32x4 s0l = zz, s0h = zz, s1l = zz, s1h = zz; \
+    v_float32x4 s2l = zz, s2h = zz, s3l = zz, s3h = zz; \
+    v_float32x4 s4l = zz, s4h = zz, s5l = zz, s5h = zz; \
+    v_float32x4 s6l = zz, s6h = zz, s7l = zz, s7h = zz; \
+    v_float32x4 s8l = zz, s8h = zz, s9l = zz, s9h = zz
 
-                    int32_t ofs0i, ofs1i, ofs0p, ofs1p;
-                    float m0, m1;
-                    v_float32 x0, x1;
+#undef CONV_UPDATE_BLOCK
+#define CONV_UPDATE_BLOCK2x8(ofs, idx0, idx1) \
+    x0 = v_setall_f32(inptr[idx0][ofs]); \
+    x1 = v_setall_f32(inptr[idx1][ofs]); \
+    s##idx0##l = v_fma(x0, w0l, s##idx0##l); \
+    s##idx0##h = v_fma(x0, w0h, s##idx0##h); \
+    s##idx1##l = v_fma(x1, w0l, s##idx1##l); \
+    s##idx1##h = v_fma(x1, w0h, s##idx1##h); \
+    x0 = v_setall_f32(inptr[idx0][ofs+1]); \
+    x1 = v_setall_f32(inptr[idx1][ofs+1]); \
+    s##idx0##l = v_fma(x0, w1l, s##idx0##l); \
+    s##idx0##h = v_fma(x0, w1h, s##idx0##h); \
+    s##idx1##l = v_fma(x1, w1l, s##idx1##l); \
+    s##idx1##h = v_fma(x1, w1h, s##idx1##h); \
+    x0 = v_setall_f32(inptr[idx0][ofs+2]); \
+    x1 = v_setall_f32(inptr[idx1][ofs+2]); \
+    s##idx0##l = v_fma(x0, w2l, s##idx0##l); \
+    s##idx0##h = v_fma(x0, w2h, s##idx0##h); \
+    s##idx1##l = v_fma(x1, w2l, s##idx1##l); \
+    s##idx1##h = v_fma(x1, w2h, s##idx1##h); \
+    x0 = v_setall_f32(inptr[idx0][ofs+3]); \
+    x1 = v_setall_f32(inptr[idx1][ofs+3]); \
+    s##idx0##l = v_fma(x0, w3l, s##idx0##l); \
+    s##idx0##h = v_fma(x0, w3h, s##idx0##h); \
+    s##idx1##l = v_fma(x1, w3l, s##idx1##l); \
+    s##idx1##h = v_fma(x1, w3h, s##idx1##h)
 
-#undef UPDATE_SUM
-#define UPDATE_SUM(a, b) \
-    ofs0i = ofs##a[i]; ofs1i = ofs##b[i]; \
-    m0 = float(ofs0i >= 0); m1 = float(ofs1i >= 0); \
-    ofs0p = std::max(ofs0i, 0); ofs1p = std::max(ofs1i, 0); \
-    x0 = vx_setall_f32(inptr##a[ofs0p]*m0); \
-    x1 = vx_setall_f32(inptr##b[ofs1p]*m1); \
-    s##a##0 = v_fma(w00, x0, s##a##0); \
-    s##a##1 = v_fma(w01, x0, s##a##1); \
-    s##b##0 = v_fma(w00, x1, s##b##0); \
-    s##b##1 = v_fma(w01, x1, s##b##1); \
-    x0 = vx_setall_f32(inptr##a[ofs0p+1]*m0); \
-    x1 = vx_setall_f32(inptr##b[ofs1p+1]*m1); \
-    s##a##0 = v_fma(w10, x0, s##a##0); \
-    s##a##1 = v_fma(w11, x0, s##a##1); \
-    s##b##0 = v_fma(w10, x1, s##b##0); \
-    s##b##1 = v_fma(w11, x1, s##b##1); \
-    x0 = vx_setall_f32(inptr##a[ofs0p+2]*m0); \
-    x1 = vx_setall_f32(inptr##b[ofs1p+2]*m1); \
-    s##a##0 = v_fma(w20, x0, s##a##0); \
-    s##a##1 = v_fma(w21, x0, s##a##1); \
-    s##b##0 = v_fma(w20, x1, s##b##0); \
-    s##b##1 = v_fma(w21, x1, s##b##1); \
-    x0 = vx_setall_f32(inptr##a[ofs0p+3]*m0); \
-    x1 = vx_setall_f32(inptr##b[ofs1p+3]*m1); \
-    s##a##0 = v_fma(w30, x0, s##a##0); \
-    s##a##1 = v_fma(w31, x0, s##a##1); \
-    s##b##0 = v_fma(w30, x1, s##b##0); \
-    s##b##1 = v_fma(w31, x1, s##b##1); \
-    x0 = vx_setall_f32(inptr##a[ofs0p+4]*m0); \
-    x1 = vx_setall_f32(inptr##b[ofs1p+4]*m1); \
-    s##a##0 = v_fma(w40, x0, s##a##0); \
-    s##a##1 = v_fma(w41, x0, s##a##1); \
-    s##b##0 = v_fma(w40, x1, s##b##0); \
-    s##b##1 = v_fma(w41, x1, s##b##1); \
-    x0 = vx_setall_f32(inptr##a[ofs0p+5]*m0); \
-    x1 = vx_setall_f32(inptr##b[ofs1p+5]*m1); \
-    s##a##0 = v_fma(w50, x0, s##a##0); \
-    s##a##1 = v_fma(w51, x0, s##a##1); \
-    s##b##0 = v_fma(w50, x1, s##b##0); \
-    s##b##1 = v_fma(w51, x1, s##b##1); \
-    x0 = vx_setall_f32(inptr##a[ofs0p+6]*m0); \
-    x1 = vx_setall_f32(inptr##b[ofs1p+6]*m1); \
-    s##a##0 = v_fma(w60, x0, s##a##0); \
-    s##a##1 = v_fma(w61, x0, s##a##1); \
-    s##b##0 = v_fma(w60, x1, s##b##0); \
-    s##b##1 = v_fma(w61, x1, s##b##1); \
-    x0 = vx_setall_f32(inptr##a[ofs0p+7]*m0); \
-    x1 = vx_setall_f32(inptr##b[ofs1p+7]*m1); \
-    s##a##0 = v_fma(w70, x0, s##a##0); \
-    s##a##1 = v_fma(w71, x0, s##a##1); \
-    s##b##0 = v_fma(w70, x1, s##b##0); \
-    s##b##1 = v_fma(w71, x1, s##b##1)
+#undef CONV_UPDATE_LOOP_BODY
+#define CONV_UPDATE_LOOP_BODY() \
+    v_float32x4 x0, x1; \
+    v_float32x4 w0l, w0h, w1l, w1h, w2l, w2h, w3l, w3h; \
+    \
+    w0l = v_load(wptr + 0*K0); w0h = v_load(wptr + 0*K0 + 4); \
+    w1l = v_load(wptr + 1*K0); w1h = v_load(wptr + 1*K0 + 4); \
+    w2l = v_load(wptr + 2*K0); w2h = v_load(wptr + 2*K0 + 4); \
+    w3l = v_load(wptr + 3*K0); w3h = v_load(wptr + 3*K0 + 4); \
+    \
+    CONV_UPDATE_BLOCK2x8(0, 0, 1); \
+    CONV_UPDATE_BLOCK2x8(0, 2, 3); \
+    CONV_UPDATE_BLOCK2x8(0, 4, 5); \
+    CONV_UPDATE_BLOCK2x8(0, 6, 7); \
+    CONV_UPDATE_BLOCK2x8(0, 8, 9); \
+    \
+    w0l = v_load(wptr + 4*K0); w0h = v_load(wptr + 4*K0 + 4); \
+    w1l = v_load(wptr + 5*K0); w1h = v_load(wptr + 5*K0 + 4); \
+    w2l = v_load(wptr + 6*K0); w2h = v_load(wptr + 6*K0 + 4); \
+    w3l = v_load(wptr + 7*K0); w3h = v_load(wptr + 7*K0 + 4); \
+    \
+    CONV_UPDATE_BLOCK2x8(4, 0, 1); \
+    CONV_UPDATE_BLOCK2x8(4, 2, 3); \
+    CONV_UPDATE_BLOCK2x8(4, 4, 5); \
+    CONV_UPDATE_BLOCK2x8(4, 6, 7); \
+    CONV_UPDATE_BLOCK2x8(4, 8, 9); \
+    \
+    inptr[0] += inpstep[0]; inptr[1] += inpstep[1]; \
+    inptr[2] += inpstep[2]; inptr[3] += inpstep[3]; \
+    inptr[4] += inpstep[4]; inptr[5] += inpstep[5]; \
+    inptr[6] += inpstep[6]; inptr[7] += inpstep[7]; \
+    inptr[8] += inpstep[8]; inptr[9] += inpstep[9]
 
-                    UPDATE_SUM(0, 1);
-                    UPDATE_SUM(2, 3);
-                    UPDATE_SUM(4, 5);
-                    UPDATE_SUM(6, 7);
-                }
+#undef CONV_START_FINALIZE_OUT
+#define CONV_START_FINALIZE_OUT() \
+    v_float32x4 vscale_lo = v_load(scalebuf), vscale_hi = v_load(scalebuf + 4); \
+    v_float32x4 vbias_lo = v_load(biasbuf), vbias_hi = v_load(biasbuf + 4); \
+    v_float32x4 valpha = v_setall_f32(alpha); \
+    v_float32x4 vmaxval = v_setall_f32(maxval)
 
-                vx_store(sum + 8*0, s00); vx_store(sum + 8*0 + 4, s01);
-                vx_store(sum + 8*1, s10); vx_store(sum + 8*1 + 4, s11);
-                vx_store(sum + 8*2, s20); vx_store(sum + 8*2 + 4, s21);
-                vx_store(sum + 8*3, s30); vx_store(sum + 8*3 + 4, s31);
-                vx_store(sum + 8*4, s40); vx_store(sum + 8*4 + 4, s41);
-                vx_store(sum + 8*5, s50); vx_store(sum + 8*5 + 4, s51);
-                vx_store(sum + 8*6, s60); vx_store(sum + 8*6 + 4, s61);
-                vx_store(sum + 8*7, s70); vx_store(sum + 8*7 + 4, s71);
+#define CONV_ADD_RESIDUAL2(idx0, idx1) \
+    s##idx0##l = v_add(s##idx0##l, v_load(tmpbuf + idx0*K0)); \
+    s##idx0##h = v_add(s##idx0##h, v_load(tmpbuf + idx0*K0 + 4)); \
+    s##idx1##l = v_add(s##idx1##l, v_load(tmpbuf + idx1*K0)); \
+    s##idx1##h = v_add(s##idx1##h, v_load(tmpbuf + idx1*K0 + 4))
+
+#undef CONV_FINALIZE_OUT2
+#define CONV_FINALIZE_OUT2(idx0, idx1, add_residual2) \
+    s##idx0##l = v_fma(s##idx0##l, vscale_lo, vbias_lo); \
+    s##idx0##h = v_fma(s##idx0##h, vscale_hi, vbias_hi); \
+    s##idx1##l = v_fma(s##idx1##l, vscale_lo, vbias_lo); \
+    s##idx1##h = v_fma(s##idx1##h, vscale_hi, vbias_hi); \
+    add_residual2(idx0, idx1); \
+    s##idx0##l = v_select(v_ge(s##idx0##l, zz), s##idx0##l, v_mul(s##idx0##l, valpha)); \
+    s##idx0##h = v_select(v_ge(s##idx0##h, zz), s##idx0##h, v_mul(s##idx0##h, valpha)); \
+    s##idx1##l = v_select(v_ge(s##idx1##l, zz), s##idx1##l, v_mul(s##idx1##l, valpha)); \
+    s##idx1##h = v_select(v_ge(s##idx1##h, zz), s##idx1##h, v_mul(s##idx1##h, valpha)); \
+    s##idx0##l = v_min(s##idx0##l, vmaxval); \
+    s##idx0##h = v_min(s##idx0##h, vmaxval); \
+    s##idx1##l = v_min(s##idx1##l, vmaxval); \
+    s##idx1##h = v_min(s##idx1##h, vmaxval); \
+    v_store(outbuf + idx0*K0, s##idx0##l); \
+    v_store(outbuf + idx0*K0 + 4, s##idx0##h); \
+    v_store(outbuf + idx1*K0, s##idx1##l); \
+    v_store(outbuf + idx1*K0 + 4, s##idx1##h)
+
+#undef CONV_FINALIZE_OUT_ALL
+#define CONV_FINALIZE_OUT_ALL() \
+    CONV_START_FINALIZE_OUT(); \
+    if (resptr) { \
+        CONV_FINALIZE_OUT2(0, 1, CONV_ADD_RESIDUAL2); \
+        CONV_FINALIZE_OUT2(2, 3, CONV_ADD_RESIDUAL2); \
+        CONV_FINALIZE_OUT2(4, 5, CONV_ADD_RESIDUAL2); \
+        CONV_FINALIZE_OUT2(6, 7, CONV_ADD_RESIDUAL2); \
+        CONV_FINALIZE_OUT2(8, 9, CONV_ADD_RESIDUAL2); \
+    } else { \
+        CONV_FINALIZE_OUT2(0, 1, CONV_ADD_NO_RESIDUAL2); \
+        CONV_FINALIZE_OUT2(2, 3, CONV_ADD_NO_RESIDUAL2); \
+        CONV_FINALIZE_OUT2(4, 5, CONV_ADD_NO_RESIDUAL2); \
+        CONV_FINALIZE_OUT2(6, 7, CONV_ADD_NO_RESIDUAL2); \
+        CONV_FINALIZE_OUT2(8, 9, CONV_ADD_NO_RESIDUAL2); \
+    }
+
 #else
-                for (int i = 0; i < BLOCK_SIZE*K0; i++)
-                    sum[i] = 0.f;
 
-                for (int c1 = 0, i = 0; c1 < nC; c1 += K0*C0, i++) {
-                    for (j = 0; j < BLOCK_SIZE; j++) {
-                        int32_t ofs_ij = ofsptrs[j][i];
-                        const float* x = &inptrs[j][std::max(ofs_ij, 0)];
-                        float mij = (float)(ofs_ij >= 0);
-                        for (int c0 = 0; c0 < C0; c0++) {
-                            float xc = x[c0]*mij;
-                            for (int k = 0; k < K0; k++) {
-                                float w = wptr[c1 + c0*K0 + k];
-                                sum[K0*j + k] += xc*w;
-                            }
-                        }
-                    }
-                }
+#undef CONV_ENABLE_SIMD
+
 #endif
 
-                if (activation) {
-                    if (resptr) {
-                        j = 0;
-                    #if CV_SIMD || CV_SIMD_SCALABLE
-                        for (; j <= blocksize*K0 - nlanes*2; j += nlanes*2) {
-                            v_float32 v0 = vx_load(sum + j);
-                            v_float32 v1 = vx_load(sum + j + nlanes);
-                            v_float32 scale0 = vx_load(scale + j);
-                            v_float32 scale1 = vx_load(scale + j + nlanes);
-                            v_float32 bias0 = vx_load(bias + j);
-                            v_float32 bias1 = vx_load(bias + j + nlanes);
-                            v_float32 res0 = vx_load(resptr + j);
-                            v_float32 res1 = vx_load(resptr + j + nlanes);
-                            v0 = v_fma(v0, scale0, v_add(bias0, res0));
-                            v1 = v_fma(v1, scale1, v_add(bias1, res1));
-                            vx_store(sum + j, v0);
-                            vx_store(sum + j + nlanes, v1);
-                        }
-                    #endif
-                        for (; j < blocksize*K0; j++) {
-                            float v = sum[j]*scale[j] + bias[j] + resptr[j];
-                            sum[j] = v;
-                        }
-                    } else {
-                        j = 0;
-                    #if CV_SIMD || CV_SIMD_SCALABLE
-                        for (; j <= blocksize*K0 - nlanes*2; j += nlanes*2) {
-                            v_float32 v0 = vx_load(sum + j);
-                            v_float32 v1 = vx_load(sum + j + nlanes);
-                            v_float32 scale0 = vx_load(scale + j);
-                            v_float32 scale1 = vx_load(scale + j + nlanes);
-                            v_float32 bias0 = vx_load(bias + j);
-                            v_float32 bias1 = vx_load(bias + j + nlanes);
-                            v0 = v_fma(v0, scale0, bias0);
-                            v1 = v_fma(v1, scale1, bias1);
-                            vx_store(sum + j, v0);
-                            vx_store(sum + j + nlanes, v1);
-                        }
-                    #endif
-                        for (; j < blocksize*K0; j++) {
-                            float v = sum[j]*scale[j] + bias[j];
-                            sum[j] = v;
-                        }
-                    }
-                    activation(sum, out, blocksize*K0, activParams);
-                } else {
-                    if (resptr) {
-                        j = 0;
-                    #if CV_SIMD || CV_SIMD_SCALABLE
-                        v_float32 valpha = v_setall_f32(alpha);
-                        v_float32 vmaxval = v_setall_f32(maxval);
-                        v_float32 vzero = v_setzero_f32();
-                        
-                        for (; j < blocksize*K0; j += nlanes*2) {
-                            if (j + nlanes*2 > blocksize*K0) {
-                                if (j == 0)
-                                    break;
-                                j = blocksize*K0 - nlanes*2;
-                            }
-                            v_float32 v0 = vx_load(sum + j);
-                            v_float32 v1 = vx_load(sum + j + nlanes);
-                            v_float32 scale0 = vx_load(scale + j);
-                            v_float32 scale1 = vx_load(scale + j + nlanes);
-                            v_float32 bias0 = vx_load(bias + j);
-                            v_float32 bias1 = vx_load(bias + j + nlanes);
-                            v_float32 res0 = vx_load(resptr + j);
-                            v_float32 res1 = vx_load(resptr + j + nlanes);
-                            v0 = v_fma(v0, scale0, v_add(bias0, res0));
-                            v1 = v_fma(v1, scale1, v_add(bias1, res1));
-                            v0 = v_min(v_select(v_ge(v0, vzero), v0, v_mul(v0, valpha)), vmaxval);
-                            v1 = v_min(v_select(v_ge(v1, vzero), v1, v_mul(v1, valpha)), vmaxval);
-                            vx_store(out + j, v0);
-                            vx_store(out + j + nlanes, v1);
-                        }
-                    #endif
-                        for (; j < blocksize*K0; j++) {
-                            float v = sum[j]*scale[j] + bias[j] + resptr[j];
-                            v = std::min(v*(v >= 0 ? 1.f : alpha), maxval);
-                            out[j] = v;
-                        }
-                    } else {
-                        j = 0;
-                    #if CV_SIMD || CV_SIMD_SCALABLE
-                        v_float32 valpha = v_setall_f32(alpha);
-                        v_float32 vmaxval = v_setall_f32(maxval);
-                        v_float32 vzero = v_setzero_f32();
-                        
-                        for (; j < blocksize*K0; j += nlanes*2) {
-                            if (j + nlanes*2 > blocksize*K0) {
-                                if (j == 0)
-                                    break;
-                                j = blocksize*K0 - nlanes*2;
-                            }
-                            v_float32 v0 = vx_load(sum + j);
-                            v_float32 v1 = vx_load(sum + j + nlanes);
-                            v_float32 scale0 = vx_load(scale + j);
-                            v_float32 scale1 = vx_load(scale + j + nlanes);
-                            v_float32 bias0 = vx_load(bias + j);
-                            v_float32 bias1 = vx_load(bias + j + nlanes);
-                            v0 = v_fma(v0, scale0, bias0);
-                            v1 = v_fma(v1, scale1, bias1);
-                            v0 = v_min(v_select(v_ge(v0, vzero), v0, v_mul(v0, valpha)), vmaxval);
-                            v1 = v_min(v_select(v_ge(v1, vzero), v1, v_mul(v1, valpha)), vmaxval);
-                            vx_store(out + j, v0);
-                            vx_store(out + j + nlanes, v1);
-                        }
-                    #endif
-                        for (; j < blocksize*K0; j++) {
-                            float v = sum[j]*scale[j] + bias[j];
-                            v = std::min(v*(v >= 0 ? 1.f : alpha), maxval);
-                            out[j] = v;
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-#undef __ARM_NEON
-
-static void convAlt32fC8(const void* inp__, const void* residual__, void* out__,
-                         const ConvState& cs, const void* weights__,
-                         const float* scale__, const float* bias__,
-                         const int32_t* inpofs__, const int32_t* ofsofs__)
+static void conv32fC8(const void* inp__, const void* residual__, void* out__,
+                      const ConvState& cs, const void* weights__,
+                      const float* scale__, const float* bias__)
 {
     using FT = float;
     constexpr int C0shift = 3, K0shift = C0shift;
@@ -454,36 +299,22 @@ static void convAlt32fC8(const void* inp__, const void* residual__, void* out__,
     constexpr int K0 = C0;
     const MatShape& inpshape = cs.inpshape;
     const MatShape& outshape = cs.outshape;
-    
+
     CV_Assert_N(inpshape.layout == DATA_LAYOUT_BLOCK, outshape.layout == DATA_LAYOUT_BLOCK);
     CV_Assert_N(inpshape.back() == C0, outshape.back() == K0);
-    CV_Assert(!scale__ && !residual__ && cs.fastActivation == FAST_ACTIV_NONE && !cs.activation);
-    
-    int N = inpshape[0];
-    
-    int ksize_ = 1;
-    for (int i = 0; i < ConvState::MAX_CONV_DIMS; i++)
-        ksize_ *= cs.kshape[i];
-    
-    int Dk_ = cs.kshape[0], Hk_ = cs.kshape[1], Wk_ = cs.kshape[2];
 
-    // precompute (oz,oy,ox) for each i
-    AutoBuffer<int> ofsZYXbuf(ksize_ * 3);
-    for (int zk = 0, i3 = 0; zk < Dk_; zk++) {
-        int oz = zk * cs.dilations[0] - cs.pads[0];
-        for (int yk = 0; yk < Hk_; yk++) {
-            int oy = yk * cs.dilations[1] - cs.pads[1];
-            for (int xk = 0; xk < Wk_; xk++, i3 += 3) {
-                int ox = xk * cs.dilations[2] - cs.pads[2];
-                ofsZYXbuf[i3] = oz;
-                ofsZYXbuf[i3 + 1] = oy;
-                ofsZYXbuf[i3 + 2] = ox;
-            }
-        }
-    }
+    int K_ = outshape.channels();
+    int N = inpshape[0];
 
     const int total_blocks = N * cs.ngroups * cs.Kblk;
-    memset(out__, 0, outshape.total()*sizeof(FT));
+
+    if ((K_/cs.ngroups) % K0 != 0) {
+        // if there could be 'padding' channels in the output,
+        // clear the output before the parallel loop
+        // to make sure that all the padding channels are cleared.
+        size_t outtotal = outshape.total()*sizeof(FT);
+        memset(out__, 0, outtotal);
+    }
 
     parallel_for_(Range(0, total_blocks), [&](const Range& range) {
         constexpr int MAX_CONV_DIMS = ConvState::MAX_CONV_DIMS;
@@ -492,28 +323,53 @@ static void convAlt32fC8(const void* inp__, const void* residual__, void* out__,
         const int ngroups = cs.ngroups, Kblk = cs.Kblk, C1Max = cs.C1Max;
         const int Cg = C / ngroups;
         const int Kg = K / ngroups;
-        int ksize = ksize_;
+        int ksize = 1;
+        for (int i = 0; i < MAX_CONV_DIMS; i++)
+            ksize *= cs.kshape[i];
         int ndims = inpshape.dims;
-        const int D = ndims >= 6 ? outshape[ndims-4] : 1;
-        const int H = ndims >= 5 ? outshape[ndims-3] : 1;
-        const int W = outshape[ndims-2];
-        const int Di = ndims >= 6 ? inpshape[ndims-4] : 1;
-        const int Hi = ndims >= 5 ? inpshape[ndims-3] : 1;
-        const int Wi = inpshape[ndims-2];
-        //const int Dk = cs.kshape[0], Hk = cs.kshape[1], Wk = cs.kshape[2];
+        int D = ndims >= 6 ? outshape[ndims-4] : 1;
+        int H = ndims >= 5 ? outshape[ndims-3] : 1;
+        int W = outshape[ndims-2];
+        int Di = ndims >= 6 ? inpshape[ndims-4] : 1;
+        int Hi = ndims >= 5 ? inpshape[ndims-3] : 1;
+        int Wi = inpshape[ndims-2];
         const int Sz = cs.strides[0], Sy = cs.strides[1], Sx = cs.strides[2];
-        //const int Dz = cs.dilations[0], Dy = cs.dilations[1], Dx = cs.dilations[2];
-        //const int padZ = cs.pads[0], padY = cs.pads[1], padX = cs.pads[2];
+        const int padZ = cs.pads[0], padY = cs.pads[1], padX = cs.pads[2];
+        const float* scaleptr = (const float*)scale__;
         const float* biasptr = (const float*)bias__;
-        const int* ofsZYX = ofsZYXbuf.data();
-        int planesize = D*H*W*K0;
+        const int* ofsZYX = cs.coordtab.data();
+        int planeblocks = D*H*W;
+        int planesize = planeblocks*K0;
         int iplanesize = Di*Hi*Wi*C0;
-        
+
+    #if CONV_ENABLE_SIMD
         int innerZ0 = cs.inner[0], innerZ1 = cs.inner[MAX_CONV_DIMS];
         int innerY0 = cs.inner[1], innerY1 = cs.inner[MAX_CONV_DIMS+1];
         int innerX0 = cs.inner[2], innerX1 = cs.inner[MAX_CONV_DIMS+2];
-        
-        for (int t = range.start; t < range.end; ++t) {
+        float zbuf[C0] = {};
+    #endif
+
+        FastActivation fastActivation = cs.fastActivation;
+        const float* activParams = cs.activParams;
+        activation_func_t activation = cs.activation;
+        float maxval = fastActivation == FAST_ACTIV_CLIP ? activParams[1] : FLT_MAX;
+        float alpha = fastActivation == FAST_ACTIV_LEAKY_RELU ? activParams[0] :
+                    fastActivation == FAST_ACTIV_NONE ? 1.f : 0.f;
+        float scalebuf[K0], biasbuf[K0];
+
+        // 1x1x1 convolution with (1,1,1) strides:
+        // flatten input/output tensors in this case to accelerate address computations
+        if (ksize == 1 && Sz*Sy*Sx == 1) {
+            W *= D*H;
+            Wi *= Di*Hi;
+            D = Di = H = Hi = 1;
+        #if CONV_ENABLE_SIMD
+            innerZ1 = innerY1 = 1;
+            innerX1 = W;
+        #endif
+        }
+
+        for (int t = range.start; t < range.end; t++) {
             const int n = t / (ngroups * Kblk);
             const int rem = t - n * (ngroups * Kblk);
             const int g = rem / Kblk;
@@ -523,198 +379,237 @@ static void convAlt32fC8(const void* inp__, const void* residual__, void* out__,
             if (k_base >= K) continue;
 
             const int k_count = std::min(std::min(K0, Kg - kblk*K0), K - k_base);
-            //printf("(%d,%d). t=%d, n=%d, g=%d, kblk=%d, k_base=%d, k_count=%d\n", begin, end, t, n, g, kblk, k_base, k_count);
+            bool aligned_k = (k_base & (K0-1)) == 0 && k_count == K0;
 
             const int c_start  = g * Cg;
             const int c00      = c_start & (C0-1);
             const int c1_start = c_start >> C0shift;
             const int cblocks  = (c00 + Cg + C0 - 1) >> C0shift;
-            const float* inptr0 = (float*)inp__ + (n * C1 + c1_start) * iplanesize;
-            const float* wptr0 = (float*)weights__ + (g*Kblk + kblk)*(ksize*C1Max*C0*K0);
-            const int b_count = biasptr ? k_count : 0;
+            const float* inpbaseptr = (float*)inp__ + (n * C1 + c1_start) * iplanesize;
+            const float* wbaseptr = (float*)weights__ + (g*Kblk + kblk)*(ksize*C1Max*C0*K0);
 
-#ifdef __ARM_NEON
-            float32x4_t vbias_lo = {
-                (b_count > 0) ? biasptr[k_base + 0] : 0.0f,
-                (b_count > 1) ? biasptr[k_base + 1] : 0.0f,
-                (b_count > 2) ? biasptr[k_base + 2] : 0.0f,
-                (b_count > 3) ? biasptr[k_base + 3] : 0.0f
-            };
-            float32x4_t vbias_hi = {
-                (b_count > 4) ? biasptr[k_base + 4] : 0.0f,
-                (b_count > 5) ? biasptr[k_base + 5] : 0.0f,
-                (b_count > 6) ? biasptr[k_base + 6] : 0.0f,
-                (b_count > 7) ? biasptr[k_base + 7] : 0.0f
-            };
-            const int xi_step = Sx * C0;
-#endif
+            {
+                int kk = 0;
+                for (; kk < k_count; kk++) {
+                    scalebuf[kk] = scaleptr ? scaleptr[k_base + kk] : 1.f;
+                    biasbuf[kk] = biasptr ? biasptr[k_base + kk] : 0.f;
+                }
+                for (; kk < K0; kk++) {
+                    scalebuf[kk] = 0.f;
+                    biasbuf[kk] = 0.f;
+                }
+            }
 
-            for (int z = 0; z < D; z++) {
-                const int zi_base = z * Sz;
-                const bool z_inner = (z >= innerZ0 && z < innerZ1);
+            constexpr int SPAT_BLOCK_SIZE = 10;
+            float* outptr = (float*)out__ + n*(K1*planesize);
+            const float* resptr = residual__ ? (float*)residual__ + n*(K1*planesize) : nullptr;
+            float tmpbuf[SPAT_BLOCK_SIZE*K0] = {};
+            int p = 0;
 
-                for (int y = 0; y < H; y++) {
-                    const int yi_base = y * Sy;
-                    const bool zy_inner = z_inner && (y >= innerY0 && y < innerY1);
+        #if CONV_ENABLE_SIMD
+            for (; p < planeblocks; p += SPAT_BLOCK_SIZE,
+                                    outptr += SPAT_BLOCK_SIZE*K0)
+            {
+                Vec3i pt[SPAT_BLOCK_SIZE];
+                bool inner[SPAT_BLOCK_SIZE];
 
-                    int dx = 1;
-                    float* outptr0 = (float*)out__ + n*(K1*planesize) + (z*H + y)*(W*K0);
+                if (p + SPAT_BLOCK_SIZE > planeblocks) {
+                    if (p == 0)
+                        break;
+                    int p_new = planeblocks - SPAT_BLOCK_SIZE;
+                    int dp = p_new - p;
+                    outptr += dp*K0;
+                    resptr += (resptr ? dp*K0 : 0);
+                    p = p_new;
+                }
 
-                    for (int x = 0; x < W; x += dx) {
-                        float* outptr = outptr0 + x*K0;
-                        const int xi_base = x * Sx;
-
-#ifdef __ARM_NEON
-                        const int SPAT_BLOCK_SIZE = 6;
-                        if (zy_inner &&
-                            innerX0 <= x &&
-                            x + SPAT_BLOCK_SIZE <= innerX1) {
-                            dx = SPAT_BLOCK_SIZE;
-
-                            float32x4_t acc0_lo = vbias_lo, acc0_hi = vbias_hi;
-                            float32x4_t acc1_lo = vbias_lo, acc1_hi = vbias_hi;
-                            float32x4_t acc2_lo = vbias_lo, acc2_hi = vbias_hi;
-                            float32x4_t acc3_lo = vbias_lo, acc3_hi = vbias_hi;
-                            float32x4_t acc4_lo = vbias_lo, acc4_hi = vbias_hi;
-                            float32x4_t acc5_lo = vbias_lo, acc5_hi = vbias_hi;
-
-                            for (int i = 0; i < ksize; ++i) {
-                                const int zi = zi_base + ofsZYX[i * 3 + 0];
-                                const int yi = yi_base + ofsZYX[i * 3 + 1];
-                                const int xi = xi_base + ofsZYX[i * 3 + 2];
-
-                                const float* inptr = inptr0 + (((zi * Hi) + yi) * Wi + xi) * C0;
-                                const float* wptr = wptr0 + i*C1Max*K0*C0;
-
-                                for (int c1 = 0; c1 < cblocks; ++c1, wptr += C0*K0, inptr += iplanesize) {
-                                    float32x4_t x0_lo = vld1q_f32(inptr + 0);
-                                    float32x4_t x0_hi = vld1q_f32(inptr + 4);
-                                    float32x4_t x1_lo = vld1q_f32(inptr + xi_step + 0);
-                                    float32x4_t x1_hi = vld1q_f32(inptr + xi_step + 4);
-                                    float32x4_t x2_lo = vld1q_f32(inptr + xi_step*2 + 0);
-                                    float32x4_t x2_hi = vld1q_f32(inptr + xi_step*2 + 4);
-                                    float32x4_t x3_lo = vld1q_f32(inptr + xi_step*3 + 0);
-                                    float32x4_t x3_hi = vld1q_f32(inptr + xi_step*3 + 4);
-                                    float32x4_t x4_lo = vld1q_f32(inptr + xi_step*4 + 0);
-                                    float32x4_t x4_hi = vld1q_f32(inptr + xi_step*4 + 4);
-                                    float32x4_t x5_lo = vld1q_f32(inptr + xi_step*5 + 0);
-                                    float32x4_t x5_hi = vld1q_f32(inptr + xi_step*5 + 4);
-                                    float32x4_t w_lo, w_hi;
-
-#undef ACCROW6
-#define ACCROW6(w_ofs, suffix, lane) \
-    w_lo = vld1q_f32(wptr + w_ofs*K0 + 0); \
-    w_hi = vld1q_f32(wptr + w_ofs*K0 + 4); \
-    acc0_lo = vfmaq_laneq_f32(acc0_lo, w_lo, x0_##suffix, lane); \
-    acc0_hi = vfmaq_laneq_f32(acc0_hi, w_hi, x0_##suffix, lane); \
-    acc1_lo = vfmaq_laneq_f32(acc1_lo, w_lo, x1_##suffix, lane); \
-    acc1_hi = vfmaq_laneq_f32(acc1_hi, w_hi, x1_##suffix, lane); \
-    acc2_lo = vfmaq_laneq_f32(acc2_lo, w_lo, x2_##suffix, lane); \
-    acc2_hi = vfmaq_laneq_f32(acc2_hi, w_hi, x2_##suffix, lane); \
-    acc3_lo = vfmaq_laneq_f32(acc3_lo, w_lo, x3_##suffix, lane); \
-    acc3_hi = vfmaq_laneq_f32(acc3_hi, w_hi, x3_##suffix, lane); \
-    acc4_lo = vfmaq_laneq_f32(acc4_lo, w_lo, x4_##suffix, lane); \
-    acc4_hi = vfmaq_laneq_f32(acc4_hi, w_hi, x4_##suffix, lane); \
-    acc5_lo = vfmaq_laneq_f32(acc5_lo, w_lo, x5_##suffix, lane); \
-    acc5_hi = vfmaq_laneq_f32(acc5_hi, w_hi, x5_##suffix, lane); \
-
-                                    ACCROW6(0, lo, 0);
-                                    ACCROW6(1, lo, 1);
-                                    ACCROW6(2, lo, 2);
-                                    ACCROW6(3, lo, 3);
-
-                                    ACCROW6(4, hi, 0);
-                                    ACCROW6(5, hi, 1);
-                                    ACCROW6(6, hi, 2);
-                                    ACCROW6(7, hi, 3);
-                                }
-                            }
-
-                            float tmp[SPAT_BLOCK_SIZE*C0];
-                            vst1q_f32(tmp + 0, acc0_lo); vst1q_f32(tmp + 4, acc0_hi);
-                            vst1q_f32(tmp + 8, acc1_lo); vst1q_f32(tmp + 8 + 4, acc1_hi);
-                            vst1q_f32(tmp + 8*2, acc2_lo); vst1q_f32(tmp + 8*2 + 4, acc2_hi);
-                            vst1q_f32(tmp + 8*3, acc3_lo); vst1q_f32(tmp + 8*3 + 4, acc3_hi);
-                            vst1q_f32(tmp + 8*4, acc4_lo); vst1q_f32(tmp + 8*4 + 4, acc4_hi);
-                            vst1q_f32(tmp + 8*5, acc5_lo); vst1q_f32(tmp + 8*5 + 4, acc5_hi);
-
-                            for (int kk = 0; kk < k_count; ++kk) {
-                                const int k = k_base + kk;
-                                int kofs = (k >> K0shift) * planesize + (k & (K0-1));
-                                outptr[kofs + 0 * 8] = tmp[kk];
-                                outptr[kofs + 1 * 8] = tmp[kk+8];
-                                outptr[kofs + 2 * 8] = tmp[kk+8*2];
-                                outptr[kofs + 3 * 8] = tmp[kk+8*3];
-                                outptr[kofs + 4 * 8] = tmp[kk+8*4];
-                                outptr[kofs + 5 * 8] = tmp[kk+8*5];
-                            }
-
-                            continue;
-                        }
-#endif
-                        dx = 1;
-
-                        float accs[8];
-
-#ifdef __ARM_NEON
-                        float32x4_t acc0 = vbias_lo, acc1 = vbias_hi;
-#else
-                        for (int kk = 0; kk < K0; ++kk)
-                            accs[kk] = (kk < b_count) ? biasptr[k_base + kk] : 0.0f;
-#endif
-
-                        for (int i = 0; i < ksize; ++i) {
-                            size_t i3 = size_t(i)*3u;
-                            const int zi = zi_base + ofsZYX[i3 + 0];
-                            const int yi = yi_base + ofsZYX[i3 + 1];
-                            const int xi = xi_base + ofsZYX[i3 + 2];
-                            if ((((unsigned)zi >= (unsigned)Di) |
-                                ((unsigned)yi >= (unsigned)Hi) |
-                                ((unsigned)xi >= (unsigned)Wi)) != 0)
-                                continue;
-
-                            const float* inptr = inptr0 + (((zi * Hi) + yi) * Wi + xi) * C0;
-                            const float* wptr = wptr0 + i*C1Max*K0*C0;
-
-#ifdef __ARM_NEON
-                            for (int c1 = 0; c1 < cblocks; ++c1, inptr += iplanesize, wptr += K0*C0) {
-                                float32x4_t x0 = vld1q_f32(inptr), x1 = vld1q_f32(inptr + 4);
-                                float32x4_t w0, w1;
-#undef ACCROW1
-#define ACCROW1(w_ofs, idx, lane) \
-    w0 = vld1q_f32(wptr + w_ofs*K0); \
-    w1 = vld1q_f32(wptr + w_ofs*K0 + 4); \
-    acc0 = vfmaq_laneq_f32(acc0, w0, x##idx, lane); \
-    acc1 = vfmaq_laneq_f32(acc1, w1, x##idx, lane)
-
-                                ACCROW1(0, 0, 0);
-                                ACCROW1(1, 0, 1);
-                                ACCROW1(2, 0, 2);
-                                ACCROW1(3, 0, 3);
-                                ACCROW1(4, 1, 0);
-                                ACCROW1(5, 1, 1);
-                                ACCROW1(6, 1, 2);
-                                ACCROW1(7, 1, 3);
-                            }
-#else
-                            for (int c1 = 0; c1 < cblocks; ++c1, inptr += iplanesize, wptr += K0*C0) {
-                                for (int c0 = 0; c0 < C0; ++c0) {
-                                    const float xval = inptr[c0];
-                                    for (int kk = 0; kk < K0; ++kk)
-                                        accs[kk] += xval * wptr[c0*K0 + kk];
-                                }
-                            }
-#endif
-                        }
-#ifdef __ARM_NEON
-                        vst1q_f32(accs, acc0);
-                        vst1q_f32(accs + 4, acc1);
-#endif
+                if (resptr) {
+                    if (aligned_k) {
+                        memcpy(tmpbuf, resptr + k_base*planeblocks, SPAT_BLOCK_SIZE*K0*sizeof(FT));
+                    } else {
                         for (int kk = 0; kk < k_count; ++kk) {
                             const int k = k_base + kk;
                             int kofs = (k >> K0shift) * planesize + (k & (K0-1));
-                            outptr[kofs] = accs[kk];
+                            for (int j = 0; j < SPAT_BLOCK_SIZE; j++)
+                                tmpbuf[kk + j*K0] = resptr[kofs + j*K0];
                         }
+                    }
+                    resptr += SPAT_BLOCK_SIZE*K0;
+                }
+
+                if ((p % W) + SPAT_BLOCK_SIZE <= W) {
+                    int zj = p / (H*W);
+                    int yxj = p - zj*(H*W);
+                    int yj = yxj / W;
+                    int x = yxj - yj*W;
+                    const bool zy_inner = (zj >= innerZ0 && zj < innerZ1) && (yj >= innerY0 && yj < innerY1);
+                    for (int j = 0; j < SPAT_BLOCK_SIZE; j++) {
+                        int xj = x + j;
+                        pt[j] = Vec3i(zj*Sz - padZ, yj*Sy - padY, xj*Sx - padX);
+                        inner[j] = zy_inner && (xj >= innerX0 && xj < innerX1);
+                    }
+                } else {
+                    for (int j = 0; j < SPAT_BLOCK_SIZE; j++) {
+                        int pj = p + j;
+                        int zj = pj / (H*W);
+                        int yxj = pj - zj*(H*W);
+                        int yj = yxj / W;
+                        int xj = yxj - yj*W;
+                        pt[j] = Vec3i(zj*Sz - padZ, yj*Sy - padY, xj*Sx - padX);
+                        inner[j] = (zj >= innerZ0 && zj < innerZ1) &&
+                                   (yj >= innerY0 && yj < innerY1) &&
+                                   (xj >= innerX0 && xj < innerX1);
+                    }
+                }
+
+                CONV_INIT_SUMS();
+
+                for (int i = 0; i < ksize; i++) {
+                    const float* inptr[SPAT_BLOCK_SIZE];
+                    int inpstep[SPAT_BLOCK_SIZE];
+                    for (int j = 0; j < SPAT_BLOCK_SIZE; j++) {
+                        Vec3i ptj = pt[j];
+                        int zij = ptj[0] + ofsZYX[i*3 + 0];
+                        int yij = ptj[1] + ofsZYX[i*3 + 1];
+                        int xij = ptj[2] + ofsZYX[i*3 + 2];
+                        if (inner[j] || ((((unsigned)zij < (unsigned)Di)&
+                                          ((unsigned)yij < (unsigned)Hi)&
+                                          ((unsigned)xij < (unsigned)Wi)) != 0)) {
+                            inptr[j] = inpbaseptr + (((zij * Hi) + yij) * Wi + xij) * C0;
+                            inpstep[j] = iplanesize;
+                        } else {
+                            inptr[j] = zbuf;
+                            inpstep[j] = 0;
+                        }
+                    }
+                    const float* wptr = wbaseptr + i*C1Max*K0*C0;
+
+                    for (int c1 = 0; c1 < cblocks; c1++, wptr += C0*K0) {
+                        CONV_UPDATE_LOOP_BODY();
+                    }
+                }
+
+                float* outbuf = aligned_k ? outptr + k_base*planeblocks : tmpbuf;
+                CONV_FINALIZE_OUT_ALL();
+
+                if (activation) {
+                    activation(outbuf, outbuf, SPAT_BLOCK_SIZE*K0, activParams);
+                }
+
+                if (!aligned_k) {
+                    for (int kk = 0; kk < k_count; ++kk) {
+                        const int k = k_base + kk;
+                        int kofs = (k >> K0shift) * planesize + (k & (K0-1));
+                        for (int j = 0; j < SPAT_BLOCK_SIZE; j++)
+                            outptr[kofs + j*K0] = tmpbuf[kk + j*K0];
+                    }
+                }
+            }
+        #endif
+
+            float resbuf[K0] = {};
+
+            for (; p < planeblocks; p++, outptr += K0, resptr += (resptr ? K0 : 0))
+            {
+                int zj = p / (H*W);
+                int yxj = p - zj*(H*W);
+                int yj = yxj / W;
+                int xj = yxj - yj*W;
+                int zi_base = zj*Sz - padZ;
+                int yi_base = yj*Sy - padY;
+                int xi_base = xj*Sx - padX;
+
+            #if CV_SIMD128
+                v_float32x4 zz = v_setzero_f32();
+                v_float32x4 s0 = zz, s1 = zz;
+            #else
+                for (int kk = 0; kk < K0; kk++) {
+                    tmpbuf[kk] = 0.f;
+                }
+            #endif
+
+                if (resptr) {
+                    for (int kk = 0; kk < k_count; ++kk) {
+                        const int k = k_base + kk;
+                        int kofs = (k >> K0shift) * planesize + (k & (K0-1));
+                        resbuf[kk] = resptr[kofs];
+                    }
+                }
+
+                for (int i = 0; i < ksize; i++) {
+                    int zi = zi_base + ofsZYX[i*3 + 0];
+                    int yi = yi_base + ofsZYX[i*3 + 1];
+                    int xi = xi_base + ofsZYX[i*3 + 2];
+
+                    if ((((unsigned)zi >= (unsigned)Di) |
+                         ((unsigned)yi >= (unsigned)Hi) |
+                         ((unsigned)xi >= (unsigned)Wi)) != 0)
+                        continue;
+
+                    const float* inptr = inpbaseptr + (((zi * Hi) + yi) * Wi + xi) * C0;
+                    const float* wptr = wbaseptr + i*C1Max*K0*C0;
+
+                    for (int c1 = 0; c1 < cblocks; ++c1, inptr += iplanesize, wptr += K0*C0) {
+                    #if CV_SIMD128
+                        v_float32x4 w0, w1, x;
+                        #undef CONV_UPDATE_BLOCK1
+                        #define CONV_UPDATE_BLOCK1(ofs) \
+                            w0 = v_load(wptr + ofs*K0); w1 = v_load(wptr + ofs*K0 + 4); \
+                            x = v_setall_f32(inptr[ofs]); \
+                            s0 = v_fma(x, w0, s0); s1 = v_fma(x, w1, s1)
+                        CONV_UPDATE_BLOCK1(0);
+                        CONV_UPDATE_BLOCK1(1);
+                        CONV_UPDATE_BLOCK1(2);
+                        CONV_UPDATE_BLOCK1(3);
+                        CONV_UPDATE_BLOCK1(4);
+                        CONV_UPDATE_BLOCK1(5);
+                        CONV_UPDATE_BLOCK1(6);
+                        CONV_UPDATE_BLOCK1(7);
+                    #else
+                        for (int c0 = 0; c0 < C0; ++c0) {
+                            const float xval = inptr[c0];
+                            for (int kk = 0; kk < K0; ++kk)
+                                tmpbuf[kk] += xval * wptr[c0*K0 + kk];
+                        }
+                    #endif
+                    }
+                }
+
+                float* outbuf = aligned_k ? outptr + k_base*planeblocks : tmpbuf;
+
+            #if CV_SIMD128
+                v_float32x4 vscale_lo = v_load(scalebuf), vscale_hi = v_load(scalebuf + 4);
+                v_float32x4 vbias_lo = v_load(biasbuf), vbias_hi = v_load(biasbuf + 4);
+                v_float32x4 valpha = v_setall_f32(alpha);
+                v_float32x4 vmaxval = v_setall_f32(maxval);
+
+                s0 = v_fma(s0, vscale_lo, vbias_lo);
+                s1 = v_fma(s1, vscale_hi, vbias_hi);
+                s0 = v_add(s0, v_load(resbuf));
+                s1 = v_add(s1, v_load(resbuf + 4));
+                s0 = v_select(v_ge(s0, zz), s0, v_mul(s0, valpha));
+                s1 = v_select(v_ge(s1, zz), s1, v_mul(s1, valpha));
+                s0 = v_min(s0, vmaxval);
+                s1 = v_min(s1, vmaxval);
+                v_store(outbuf, s0);
+                v_store(outbuf + 4, s1);
+            #else
+                for (int kk = 0; kk < K0; kk++) {
+                    float v = tmpbuf[kk]*scalebuf[kk] + biasbuf[kk] + resbuf[kk];
+                    v = std::min(v*(v >= 0 ? 1.f : alpha), maxval);
+                    outbuf[kk] = v;
+                }
+            #endif
+
+                if (activation) {
+                    activation(outbuf, outbuf, K0, activParams);
+                }
+
+                if (!aligned_k) {
+                    for (int kk = 0; kk < k_count; kk++) {
+                        const int k = k_base + kk;
+                        int kofs = (k >> K0shift) * planesize + (k & (K0-1));
+                        outptr[kofs] = tmpbuf[kk];
                     }
                 }
             }
@@ -722,11 +617,11 @@ static void convAlt32fC8(const void* inp__, const void* residual__, void* out__,
     });
 }
 
-cv::dnn::ConvFunc getConvFunc_(int depth, int C0, ConvKind convkind)
+cv::dnn::ConvFunc getConvFunc_(int depth, int C0)
 {
     ConvFunc func = nullptr;
     if (depth == CV_32F && C0 == 8) {
-        func = convkind == CONV_KIND_MAIN ? conv32fC8 : convAlt32fC8;
+        func = conv32fC8;
     }
     return func;
 }

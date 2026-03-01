@@ -11,7 +11,7 @@ namespace cv {
 namespace dnn {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
-cv::dnn::DepthwiseConvFunc getDepthwiseConvFunc_(int depth);
+cv::dnn::ConvFunc getDepthwiseConvFunc_(int depth);
 
 CV_CPU_OPTIMIZATION_NAMESPACE_END
 }} // cv::dnn::
@@ -24,6 +24,9 @@ namespace cv {
 namespace dnn {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
+//
+// [TODO] add special branch for 3x3 depthwise convolution
+//
 static void depthwiseConv32f(const void* inp__, const void* residual__,
                              void* out__, const ConvState& cs,
                              const void* weights__, const float* scale__,
@@ -267,9 +270,9 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
     });
 }
 
-DepthwiseConvFunc getDepthwiseConvFunc_(int depth)
+ConvFunc getDepthwiseConvFunc_(int depth)
 {
-    DepthwiseConvFunc func = depth == CV_32F ? depthwiseConv32f : nullptr;
+    ConvFunc func = depth == CV_32F ? depthwiseConv32f : nullptr;
     return func;
 }
 

@@ -13,7 +13,7 @@ namespace cv
 namespace dnn
 {
 CV__DNN_INLINE_NS_BEGIN
-    
+
 // computes shape of the output tensor of convolution
 // (including depth-wise convolution), max pooling or average pooling operations
 MatShape convInferShape(const MatShape& inpshape, const MatShape& wshape,
@@ -53,7 +53,7 @@ struct ConvState
     enum {MAX_ACTIV_PARAMS = 16};
     float activParams[MAX_ACTIV_PARAMS];
     activation_func_t activation;
-    
+
     int Kblk, C1Max;
 
     std::ostream& dump(std::ostream& strm);
@@ -79,7 +79,7 @@ struct ConvState
                      const std::vector<int>& dilations,
                      const std::vector<int>& pads,
                      AutoPadding auto_pad, bool ceil_mode);
-    
+
     // internal-use method to initialize coordtab and ofstab.
     // it's called from initConv and initPooling
     void initOfs();
@@ -87,38 +87,15 @@ struct ConvState
 
 AutoPadding getAutoPadding(const LayerParams& params);
 
-void initConvTables(const ConvState& cs,
-                    std::vector<int32_t>& inpofs,
-                    std::vector<int32_t>& ofsofs);
-
 typedef void (*ConvFunc)(const void* inp, const void* residual, void* out,
                          const ConvState& cs, const void* weights,
-                         const float* scale, const float* bias,
-                         const int32_t* ofs, const int32_t* ofsofs);
+                         const float* scale, const float* bias);
 
-typedef void (*DepthwiseConvFunc)(const void* inp, const void* residual,
-                                  void* out, const ConvState& cs,
-                                  const void* weights,
-                                  const float* scale,
-                                  const float* bias);
+ConvFunc getConvFunc(int depth, int C0);
+ConvFunc getDepthwiseConvFunc(int depth);
 
-DepthwiseConvFunc getDepthwiseConvFunc(int depth);
-
-enum ConvKind {
-    CONV_KIND_MAIN = 0, // main convolution kernel
-    CONV_KIND_ALT = 1   // alternative, more universal, but a bit slower convolution kernel.
-                        // does not require precomputed tables of offsets
-};
-
-ConvFunc getConvFunc(int depth, int C0, ConvKind convkind);
-
-void repackDepthwiseConvWeights(const void* inpw, int inptype,
-                                void* outw, int outtype,
-                                const MatShape& wsize, int C0);
-void repackConvWeights(const void* inpw, int inptype,
-                       void* outw, int outtype,
-                       const MatShape& wshape, int C0);
-void repackConvWeightsAlt(const Mat& weights, Mat& Wpack, int outtype, int ngroups, int C0);
+void repackDepthwiseConvWeights(const Mat& weights, Mat& Wpack, int outtype, int C0);
+void repackConvWeights(const Mat& weights, Mat& Wpack, int outtype, int ngroups, int C0);
 
 CV__DNN_INLINE_NS_END
 }

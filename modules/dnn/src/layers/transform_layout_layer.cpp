@@ -33,7 +33,7 @@ static inline void transpose8x8(const _Tp* inp_, size_t istep,
         const uint32_t* inp = (const uint32_t*)inp_;
         uint32_t* out = (uint32_t*)out_;
         v_uint32 a0, a1, a2, a3, b0, b1, b2, b3;
-        
+
         a0 = vx_load(inp + istep*0);
         a1 = vx_load(inp + istep*1);
         a2 = vx_load(inp + istep*2);
@@ -43,7 +43,7 @@ static inline void transpose8x8(const _Tp* inp_, size_t istep,
         v_store(out + ostep*1, b1);
         v_store(out + ostep*2, b2);
         v_store(out + ostep*3, b3);
-        
+
         a0 = vx_load(inp + istep*0 + 4);
         a1 = vx_load(inp + istep*1 + 4);
         a2 = vx_load(inp + istep*2 + 4);
@@ -53,7 +53,7 @@ static inline void transpose8x8(const _Tp* inp_, size_t istep,
         v_store(out + ostep*5, b1);
         v_store(out + ostep*6, b2);
         v_store(out + ostep*7, b3);
-        
+
         a0 = vx_load(inp + istep*4);
         a1 = vx_load(inp + istep*5);
         a2 = vx_load(inp + istep*6);
@@ -63,7 +63,7 @@ static inline void transpose8x8(const _Tp* inp_, size_t istep,
         v_store(out + ostep*1 + 4, b1);
         v_store(out + ostep*2 + 4, b2);
         v_store(out + ostep*3 + 4, b3);
-        
+
         a0 = vx_load(inp + istep*4 + 4);
         a1 = vx_load(inp + istep*5 + 4);
         a2 = vx_load(inp + istep*6 + 4);
@@ -87,15 +87,14 @@ void transformLayoutInterleave_(const _Tp* inp_base, _Tp* out_base, int C, size_
                                 int nc, int nzc, size_t dlen)
 {
     size_t i = 0;
-#if 0
     for (; i + 7u < dlen; i += 8u)
     {
         int c = 0;
-        
+
         for (; c + 7u < nzc; c += 8u) {
             transpose8x8<_Tp>(inp_base + c * len + i, len, out_base + i * nc + c, nc);
         }
-        
+
         for (; c < nzc; ++c) {
             _Tp* outptr = out_base + i * nc + c;
             const _Tp* inptr = inp_base + c * len + i;
@@ -108,14 +107,13 @@ void transformLayoutInterleave_(const _Tp* inp_base, _Tp* out_base, int C, size_
             outptr[6 * nc] = inptr[6];
             outptr[7 * nc] = inptr[7];
         }
-        
+
         for (; c < nc; ++c) {
             _Tp* outptr = out_base + i * nc + c;
             outptr[0 * nc] = (_Tp)0; outptr[1 * nc] = (_Tp)0; outptr[2 * nc] = (_Tp)0; outptr[3 * nc] = (_Tp)0;
             outptr[4 * nc] = (_Tp)0; outptr[5 * nc] = (_Tp)0; outptr[6 * nc] = (_Tp)0; outptr[7 * nc] = (_Tp)0;
         }
     }
-#endif
     for (; i < dlen; ++i) {
         _Tp* outptr = out_base + i * nc;
         for (int c = 0; c < nc; ++c) {
@@ -212,10 +210,10 @@ void transformLayout(const Mat& inp, Mat& out,
     CV_Assert(outlayout == DATA_LAYOUT_BLOCK || outlayout == DATA_LAYOUT_NCHW || outlayout == DATA_LAYOUT_NHWC);
 
     MatShape inpshape = inp.size;
-    if (inpshape.layout == DATA_LAYOUT_NCHW &&
+    /*if (inpshape.layout == DATA_LAYOUT_NCHW &&
         inpshape.dims == 4 && inpshape[1] == 272 && inpshape[2] == 14 && inpshape[3] == 14) {
         putchar('.');
-    }
+    }*/
 
     if (inpshape.layout == DATA_LAYOUT_UNKNOWN) {
         inpshape.layout = defaultLayout;
@@ -231,9 +229,9 @@ void transformLayout(const Mat& inp, Mat& out,
         inp.copyTo(out);
         return;
     }
-    
+
     CV_Assert_N(inp.isContinuous(), out.isContinuous());
-    
+
     size_t esz = inp.elemSize();
     TransformLayoutFunc kernel = getTransformLayoutFunc(inplayout, outlayout, esz);
     CV_Assert(kernel != nullptr);
@@ -242,29 +240,27 @@ void transformLayout(const Mat& inp, Mat& out,
     int C = inpshape.channels();
     C0 = inplayout == DATA_LAYOUT_BLOCK ? inpshape.back() : C0;
     int C1 = (C + C0 - 1) / C0;
-    
+
     size_t planesize = 1;
     int inp_sp0 = inplayout == DATA_LAYOUT_NHWC ? 1 : 2;
     int inp_sp1 = inplayout == DATA_LAYOUT_NCHW ? inpshape.dims : inpshape.dims-1;
     for (int i = inp_sp0; i < inp_sp1; i++) {
         planesize *= (size_t)inpshape[i];
     }
-    
-    /*size_t total = N*C1*planesize*C0;
-    constexpr size_t min_elems_per_chunk = 1 << 17;
-    size_t nblocks = (total + min_elems_per_chunk/2) / min_elems_per_chunk;
-    nblocks = std::clamp(nblocks, size_t(1), size_t(128));
-    nblocks = (nblocks + N*C1 - 1)/(N*C1);*/
-    int nblocks = 1;
 
-    //parallel_for_(Range(0, N*C1*nblocks), [&](const Range& range) {
+    size_t total = N*C1*planesize*C0;
+    constexpr size_t min_elems_per_chunk = 1 << 17;
+    int nblocks = int((total + min_elems_per_chunk/2) / min_elems_per_chunk);
+    nblocks = std::clamp(nblocks, 1, 128);
+    nblocks = (nblocks + N*C1 - 1)/(N*C1);
+
+    parallel_for_(Range(0, N*C1*nblocks), [&](const Range& range)
     {
-        Range range(0, N*C1*nblocks);
         int dchunk = 1u;
         bool interleave = inplayout == DATA_LAYOUT_NCHW;
         const uint8_t* inptr = (const uint8_t*)inp.data;
         uint8_t* outptr = (uint8_t*)out.data;
-        
+
         for (int chunk = range.start; chunk < range.end; chunk += dchunk)
         {
             int n = chunk/(C1*nblocks);
@@ -284,8 +280,7 @@ void transformLayout(const Mat& inp, Mat& out,
 
             kernel(inptr + inpofs, outptr + outofs, C, planesize, nc, nzc, dlen);
         }
-    }
-    //);
+    });
 }
 
 class TransformLayoutLayerImpl : public TransformLayoutLayer
@@ -395,7 +390,7 @@ public:
     {
         DataLayout origLayout = getNetImpl(this)->originalLayout;
         transformLayout(inp, out, layout, origLayout, C0);
-#if 1
+#if 0
         Mat temp;
         transformLayout(out, temp, layout == DATA_LAYOUT_BLOCK ? origLayout : DATA_LAYOUT_BLOCK, origLayout, C0);
         double err = norm(temp, inp, NORM_INF);

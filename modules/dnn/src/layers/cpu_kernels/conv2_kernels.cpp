@@ -11,9 +11,9 @@
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
-ConvFunc getConvFunc(int depth, int C0, ConvKind convkind)
+ConvFunc getConvFunc(int depth, int C0)
 {
-    CV_CPU_DISPATCH(getConvFunc_, (depth, C0, convkind), CV_CPU_DISPATCH_MODES_ALL);
+    CV_CPU_DISPATCH(getConvFunc_, (depth, C0), CV_CPU_DISPATCH_MODES_ALL);
 }
 
 CV__DNN_INLINE_NS_END

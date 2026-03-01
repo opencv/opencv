@@ -74,7 +74,7 @@ public:
             prindent(strm, indent);
             strm << "batch_norm: true,\n";
         }
-        
+
         if (fast_activation != FAST_ACTIV_NONE || !activ.empty()) {
             prindent(strm, indent);
             strm << "fused_activation: " <<
@@ -115,25 +115,9 @@ public:
         bool depthwise = ngroups == wshape0[0] && wshape0[1] == 1;
 
         if (depthwise) {
-            MatShape wshape1 = wshape0;
-            wshape1.layout = DATA_LAYOUT_BLOCK;
-            wshape1.C = wshape1[0];
-            wshape1[0] = (wshape1[0] + C0 - 1)/C0;
-            for (int i = 2; i < wshape1.dims; i++)
-                wshape1[i-1] = wshape1[i];
-            wshape1[wshape1.dims-1] = C0;
-            weights.fit(wshape1, wtype);
-
-            repackDepthwiseConvWeights(weights_.data, wtype0, weights.data, wtype, wshape0, C0);
+            repackDepthwiseConvWeights(weights_, weights, wtype, C0);
         } else {
-            /*wshape1.dims += 2;
-            wshape1[wshape1.dims-1] = wshape1[wshape1.dims-2] = C0;
-            wshape1[0] = (wshape1[0] + C0 - 1)/C0;
-            wshape1[1] = (wshape1[1] + C0 - 1)/C0;
-            weights.fit(wshape1, wtype);
-
-            repackConvWeights(weights_.data, wtype0, weights.data, wtype, wshape0, C0);*/
-            repackConvWeightsAlt(weights_, weights, wtype, ngroups, C0);
+            repackConvWeights(weights_, weights, wtype, ngroups, C0);
         }
 
         if (!bias_.empty()) {
@@ -221,7 +205,7 @@ public:
         }
         return true;
     }
-    
+
     virtual bool fuseAddResidual(Arg residual) CV_OVERRIDE
     {
         if (activ.empty() && fast_activation == FAST_ACTIV_NONE && !add_residual && residual.idx >= 0) {
@@ -310,7 +294,7 @@ public:
         MatShape inpshape = inp.shape();
         CV_Assert(inpshape.layout == DATA_LAYOUT_BLOCK);
         CV_Assert(inp.isContinuous());
-        
+
         if (add_residual) {
             residual = input_arrs.getMat(ninputs-1);
             resptr = residual.data;
@@ -335,7 +319,7 @@ public:
         int outkind = output_arrs.kind();
         CV_Assert(outkind == _InputArray::STD_VECTOR_MAT ||
                   outkind == _InputArray::STD_VECTOR_UMAT);
-        
+
         if (add_residual && (residual.size != outshape || residual.type() != outtype))
         {
             CV_Error(Error::StsBadArg,
@@ -351,7 +335,7 @@ public:
         cs.initConv(inpshape, wshape0, outshape, ngroups,
                     strides, dilations, pads, auto_pad, ceil_mode,
                     fast_activation, fast_activ_params, ConvState::MAX_ACTIV_PARAMS);
-        
+
         const float* scale_data = nullptr;
         const float* bias_data = bias.ptr<float>();
 
@@ -380,38 +364,9 @@ public:
         void* outptr = out.data;
         const void* wptr = weights.data;
 
-        if (cs.depthwise) {
-            DepthwiseConvFunc func = getDepthwiseConvFunc(inptype);
-            CV_Assert(func != nullptr);
-
-            func(inptr, resptr, outptr, cs, wptr, scale_data, bias_data);
-        } else {
-            // [TODO] add special 1x1 convolution kernels that don't need inpofs & ofsofs
-            if (inpofs.empty() || !cs.sameShape(prev_cs)) {
-                initConvTables(cs, inpofs, ofsofs);
-                prev_cs = cs;
-            }
-
-            {
-                ConvFunc func = getConvFunc(inptype, C0, CONV_KIND_ALT);
-                CV_Assert(func != nullptr);
-                func(inptr, resptr, outptr, cs, wptr, scale_data, bias_data,
-                     inpofs.data(), ofsofs.data());
-
-#if 0
-                Mat inp0, out0, temp;
-                transformLayout(inp, inp0, DATA_LAYOUT_NCHW,
-                                DATA_LAYOUT_NCHW, inp.size.C);
-                refConv2d(inp0, weights, wshape0, bias, out0,
-                          cs.strides, cs.dilations, cs.pads,
-                          fast_activation, 0.f);
-                transformLayout(out0, temp, DATA_LAYOUT_BLOCK,
-                                DATA_LAYOUT_NCHW, out.size.back());
-                double err = norm(temp, out, NORM_INF);
-                CV_Assert(err < 1e-4);
-#endif
-            }
-        }
+        ConvFunc func = cs.depthwise ? getDepthwiseConvFunc(inptype) : getConvFunc(inptype, C0);
+        CV_Assert(func != nullptr);
+        func(inptr, resptr, outptr, cs, wptr, scale_data, bias_data);
 
         if (uouts) {
             out.copyTo(uouts->at(0));
@@ -429,9 +384,7 @@ public:
     Ptr<Layer> activ, batchNorm;
     Mat weights, bias, fused_scale, fused_bias;
     MatShape wshape0;
-    ConvState cs, prev_cs;
-    std::vector<int32_t> inpofs;
-    std::vector<int32_t> ofsofs;
+    ConvState cs;
     bool fused_batch_norm;
     FastActivation fast_activation;
     float fast_activ_params[ConvState::MAX_ACTIV_PARAMS];

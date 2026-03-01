@@ -147,10 +147,10 @@ bool ConvState::sameShape(const ConvState& cs) const
     return inpshape == cs.inpshape && outshape == cs.outshape;
 }
 
-static MatShape getWpackShapeAlt(const MatShape& wshape, int ngroups, int C0)
+static MatShape getWpackShape(const MatShape& wshape, int ngroups, int C0)
 {
     CV_Assert(wshape.dims >= 3);
-    int K = wshape[0], Cg = wshape[1], C = Cg*ngroups;
+    int K = wshape[0], Cg = wshape[1];
     int ksize = int(wshape.total())/(K*Cg);
     CV_Assert_N(K % ngroups == 0);
     int Kg = K / ngroups, K0 = C0;
@@ -191,16 +191,16 @@ void ConvState::initConv(const MatShape& inpshape_,
     outshape = outshape_;
     ngroups = ngroups_;
     Kblk = C1Max = 0;
-    
+
     int C = inpshape.channels();
     int K = outshape.channels();
-    
+
     depthwise = ngroups == C && ngroups == K;
-    
+
     if (inpshape.layout == DATA_LAYOUT_BLOCK) {
         CV_Assert(inpshape.back() == outshape.back());
     }
-    
+
     fastActivation = fastActivation_;
     activation = nullptr;
     memset(activParams, 0, sizeof(activParams));
@@ -245,220 +245,35 @@ void ConvState::initConv(const MatShape& inpshape_,
         inner[j] = inner0;
         inner[j + MAX_CONV_DIMS] = inner1;
     }
-    
+
     initOfs();
     if (!depthwise && inpshape.layout == DATA_LAYOUT_BLOCK) {
         int C0 = inpshape.back();
-        MatShape wpackShape = getWpackShapeAlt(wshape_, ngroups, C0);
-        
+        MatShape wpackShape = getWpackShape(wshape_, ngroups, C0);
+
         CV_Assert(wpackShape.dims == 5);
         Kblk = wpackShape[1];
         C1Max = wpackShape[3];
     }
 }
 
-void initConvTables(const ConvState& cs,
-                    std::vector<int32_t>& inpofs_,
-                    std::vector<int32_t>& ofsofs_)
-{
-    int sdims = cs.nspatialdims;
-    CV_Assert(sdims + 3 == cs.inpshape.dims);
-    int Dk = cs.kshape[0], Hk = cs.kshape[1], Wk = cs.kshape[2];
-    int DZ = cs.dilations[0], DY = cs.dilations[1], DX = cs.dilations[2];
-    int SZ = cs.strides[0], SY = cs.strides[1], SX = cs.strides[2];
-    int pad_z0 = cs.pads[0], pad_y0 = cs.pads[1], pad_x0 = cs.pads[2];
-    int Di = sdims > 2 ? cs.inpshape[sdims - 1] : 1;
-    int Hi = sdims > 1 ? cs.inpshape[sdims] : 1;
-    int Wi = cs.inpshape[sdims+1];
-    int D = sdims > 2 ? cs.outshape[sdims - 1] : 1;
-    int H = sdims > 1 ? cs.outshape[sdims] : 1;
-    int W = cs.outshape[sdims + 1];
-    int C0 = cs.inpshape.back(), C1 = cs.inpshape[1];
-    int ngroups = cs.ngroups, C1g = C1/ngroups;
-    int inner_z0 = cs.inner[0], inner_y0 = cs.inner[1], inner_x0 = cs.inner[2];
-    int inner_z1 = cs.inner[3], inner_y1 = cs.inner[4], inner_x1 = cs.inner[5];
-
-    ofsofs_.resize(D*H*W*2);
-
-    int ofs_blocksize = C1g*Dk*Hk*Wk;
-    bool have_inner = inner_z0 < inner_z1 && inner_y0 < inner_y1 && inner_x0 < inner_x1;
-
-    inpofs_.resize(ofs_blocksize);
-    
-    if (have_inner) {
-        for (int c = 0, k = 0; c < C1g; c++) {
-            for (int dz = 0; dz < Dk; dz++) {
-                int zi = dz*DZ;
-                for (int dy = 0; dy < Hk; dy++) {
-                    int yi = dy*DY;
-                    for (int dx = 0; dx < Wk; dx++, k++) {
-                        int xi = dx*DX;
-                        int ofs = (((c*Di + zi)*Hi + yi)*Wi + xi)*C0;
-                        inpofs_[k] = (int32_t)ofs;
-                    }
-                }
-            }
-        }
-    }
-
-    int32_t* ofsofs = ofsofs_.data();
-    int64_t curr_block = 1;
-
-    bool prev_z_inside = false;
-    for (int z0 = 0; z0 < D; z0++) {
-        int zi_ = z0*SZ - pad_z0;
-        bool z_inside = inner_z0 <= z0 && z0 < inner_z1;
-        bool prev_y_inside = false;
-
-        for (int y0 = 0; y0 < H; y0++) {
-            int yi_ = y0*SY - pad_y0;
-            bool y_inside = inner_y0 <= y0 && y0 < inner_y1;
-            bool prev_x_inside = false;
-
-            for (int x0 = 0; x0 < W; x0++) {
-                int xi_ = x0*SX - pad_x0;
-                bool x_inside = inner_x0 <= x0 && x0 < inner_x1;
-                int idx = ((z0*H + y0)*W + x0)*2;
-
-                if (x_inside && y_inside && z_inside) {
-                    ofsofs[idx] = (int32_t)(((zi_*Hi + yi_)*Wi + xi_)*C0);
-                    ofsofs[idx + 1] = 0;
-                } else if (z_inside && prev_z_inside) {
-                    ofsofs[idx] = ofsofs[idx - W*H*2] + Wi*Hi*SZ*C0;
-                    ofsofs[idx + 1] = ofsofs[idx - W*H*2 + 1];
-                } else if (y_inside && prev_y_inside) {
-                    ofsofs[idx] = ofsofs[idx - W*2] + Wi*SY*C0;
-                    ofsofs[idx + 1] = ofsofs[idx - W*2 + 1];
-                } else if (x_inside && prev_x_inside) {
-                    ofsofs[idx] = ofsofs[idx - 2] + SX*C0;
-                    ofsofs[idx + 1] = ofsofs[idx - 1];
-                } else {
-                    int64_t curr_ofs = curr_block*ofs_blocksize;
-                    ofsofs[idx] = 0;
-                    ofsofs[idx + 1] = int(curr_ofs);
-                    curr_block++;
-                    inpofs_.resize(curr_ofs + ofs_blocksize);
-                    int32_t* inpofs = &inpofs_[curr_ofs];
-
-                    int firstofs = -1;
-                    for (int c = 0, k = 0; c < C1g; c++) {
-                        for (int dz = 0; dz < Dk; dz++) {
-                            int zi = zi_ + dz*DZ;
-                            bool zi_inside = 0 <= zi && zi < Di;
-
-                            for (int dy = 0; dy < Hk; dy++) {
-                                int yi = yi_ + dy*DY;
-                                bool yi_inside = 0 <= yi && yi < Hi;
-
-                                for (int dx = 0; dx < Wk; dx++, k++) {
-                                    int xi = xi_ + dx*DX;
-                                    bool xi_inside = 0 <= xi && xi < Wi;
-
-                                    if (zi_inside && yi_inside && xi_inside) {
-                                        int ofs = (((c*Di + zi)*Hi + yi)*Wi + xi)*C0;
-                                        if (firstofs < 0)
-                                            ofsofs[idx] = firstofs = ofs;
-                                        inpofs[k] = (int32_t)(ofs - firstofs);
-                                    } else {
-                                        inpofs[k] = INT_MIN/2;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                prev_x_inside = x_inside;
-            }
-            prev_y_inside = y_inside;
-        }
-        prev_z_inside = z_inside;
-    }
-}
-
-template<typename _InpT, typename _OutT> void
-repackConvWeights_(const _InpT* inpw_, _OutT* outw_,
-                   size_t inp_step_c, size_t inp_step_k, int ksize,
-                   int C0, int K0, int curr_C0, int curr_K0)
-{
-    const _InpT* inpw = inpw_;
-    _OutT* outw = outw_;
-    for (int xy = 0; xy < ksize; xy++, inpw++, outw += C0*K0) {
-        for (int c0 = 0; c0 < curr_C0; c0++) {
-            for (int k0 = 0; k0 < curr_K0; k0++) {
-                outw[c0*K0 + k0] = _OutT(inpw[inp_step_k*k0 + inp_step_c*c0]);
-            }
-        }
-    }
-}
-
-
-// K x (C/ngroups) x Dk x Hk x Wk => K1 x C1/ngroups x Dk x Hk x Wk x C0 x K0,
-// where K0 == C0
-void repackConvWeights(const void* inpw__, int inptype_,
-                       void* outw__, int outtype_,
-                       const MatShape& wshape, int C0_)
-{
-    CV_Assert(inptype_ == CV_32F || inptype_ == CV_16F);
-    CV_Assert(outtype_ == CV_32F || outtype_ == CV_16F);
-
-    int K1 = (wshape[0] + C0_ - 1)/C0_;
-    parallel_for_(Range(0, K1), [&](const Range& r) {
-        int inptype = inptype_, outtype = outtype_;
-        size_t inp_esz = CV_ELEM_SIZE(inptype);
-        size_t out_esz = CV_ELEM_SIZE(outtype);
-        int C0 = C0_, K0 = C0_;
-        int K = wshape[0], Cg = wshape[1];
-        int C1g = (Cg + C0 - 1)/C0;
-        int ksize = 1;
-        for (int k = 2; k < wshape.dims; k++)
-            ksize *= wshape[k];
-        size_t inp_step_c = ksize, inp_step_k = Cg*ksize;
-        size_t out_microplane_size = ksize*C0*K0*out_esz;
-
-        for (int k1 = r.start; k1 < r.end; k1++) {
-            int curr_K0 = std::min(K - k1*K0, K0);
-            for (int c1g = 0; c1g < C1g; c1g++) {
-                uint8_t* inpw_ = (uint8_t*)inpw__ + (k1*K0*inp_step_k + c1g*C0*inp_step_c)*inp_esz;
-                uint8_t* outw_ = (uint8_t*)outw__ + (k1*C1g + c1g)*out_microplane_size;
-                int curr_C0 = std::min(Cg - c1g*C0, C0);
-                if (curr_K0 != K0 || curr_C0 != C0)
-                    memset(outw_, 0, out_microplane_size);
-
-                if (inptype == CV_32F && outtype == CV_32F)
-                    repackConvWeights_((const float*)inpw_, (float*)outw_, inp_step_c,
-                                        inp_step_k, ksize, C0, K0, curr_C0, curr_K0);
-                else if (inptype == CV_32F && outtype == CV_16F)
-                    repackConvWeights_((const float*)inpw_, (hfloat*)outw_, inp_step_c,
-                                        inp_step_k, ksize, C0, K0, curr_C0, curr_K0);
-                else if (inptype == CV_16F && outtype == CV_32F)
-                    repackConvWeights_((const hfloat*)inpw_, (float*)outw_, inp_step_c,
-                                        inp_step_k, ksize, C0, K0, curr_C0, curr_K0);
-                else if (inptype == CV_16F && outtype == CV_16F)
-                    repackConvWeights_((const hfloat*)inpw_, (hfloat*)outw_, inp_step_c,
-                                        inp_step_k, ksize, C0, K0, curr_C0, curr_K0);
-                else break;
-            }
-        }
-    });
-}
-
-void repackConvWeightsAlt(const Mat& weights, Mat& Wpack, int outtype, int ngroups, int C0_)
+void repackConvWeights(const Mat& weights, Mat& Wpack, int outtype, int ngroups, int C0_)
 {
     CV_Assert(weights.isContinuous());
     CV_Assert_N(weights.type() == CV_32F, outtype == CV_32F);
     CV_Assert(ngroups > 0);
     CV_Assert((C0_ & (C0_ - 1)) == 0 && C0_ >= 4);
-    
+
     MatShape wshape = weights.shape();
     CV_Assert(wshape.dims >= 3);
-    
+
     int K = wshape[0];
     CV_Assert(K % ngroups == 0);
 
     if (!Wpack.isContinuous()) {
         Wpack.release();
     }
-    MatShape wpackShape = getWpackShapeAlt(weights.shape(), ngroups, C0_);
+    MatShape wpackShape = getWpackShape(weights.shape(), ngroups, C0_);
     Wpack.create(wpackShape, CV_32F);
     Wpack.setZero();
 
@@ -515,7 +330,7 @@ void ConvState::initPooling(const MatShape& inpshape_,
     outshape = outshape_;
     ngroups = C;
     depthwise = true;
-    
+
     for (int i = 0; i < MAX_CONV_DIMS; i++) {
         kshape[i] = strides[i] = dilations[i] = 1;
         pads[i] = pads[i + MAX_CONV_DIMS] = 0;
