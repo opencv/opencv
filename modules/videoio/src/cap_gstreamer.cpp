@@ -2518,7 +2518,6 @@ bool CvVideoWriter_GStreamer::open( const std::string &filename, int fourcc,
             CV_WARN("GStreamer: cannot create encodebin element");
             return false;
         }
-        
         GSafePtr<GstCaps> containercaps;
         GSafePtr<GstEncodingContainerProfile> containerprofile;
         GSafePtr<GstEncodingVideoProfile> videoprofile;
