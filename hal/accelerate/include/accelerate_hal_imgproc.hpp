@@ -7,6 +7,12 @@
 
 #include <opencv2/core/base.hpp>
 
+
+#if ((defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= __MAC_11_0) || \
+     (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_14_0) || \
+     (defined(__WATCH_OS_VERSION_MAX_ALLOWED) && __WATCH_OS_VERSION_MAX_ALLOWED >= __WATCHOS_7_0) || \
+     (defined(__TV_OS_VERSION_MAX_ALLOWED) && __TV_OS_VERSION_MAX_ALLOWED >= __TVOS_14_0))
+
 int accelerate_hal_sepFilter_stateless(const uchar* src_data, size_t src_step, int src_type,
                                        uchar* dst_data, size_t dst_step, int dst_type,
                                        int width, int height, int full_width, int full_height, int offset_x, int offset_y,
@@ -16,5 +22,7 @@ int accelerate_hal_sepFilter_stateless(const uchar* src_data, size_t src_step, i
 
 #undef cv_hal_sepFilter_stateless
 #define cv_hal_sepFilter_stateless accelerate_hal_sepFilter_stateless
+
+#endif
 
 #endif

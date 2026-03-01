@@ -11,6 +11,11 @@
 #include <Accelerate/Accelerate.h>
 
 
+#if ((defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= __MAC_11_0) || \
+     (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_14_0) || \
+     (defined(__WATCH_OS_VERSION_MAX_ALLOWED) && __WATCH_OS_VERSION_MAX_ALLOWED >= __WATCHOS_7_0) || \
+     (defined(__TV_OS_VERSION_MAX_ALLOWED) && __TV_OS_VERSION_MAX_ALLOWED >= __TVOS_14_0))
+
 int accelerate_hal_sepFilter_stateless(const uchar* src_data, size_t src_step, int src_type,
                                        uchar* dst_data, size_t dst_step, int dst_type,
                                        int width, int height, int full_width, int full_height, int offset_x, int offset_y,
@@ -55,11 +60,18 @@ int accelerate_hal_sepFilter_stateless(const uchar* src_data, size_t src_step, i
             reinterpret_cast<const float*>(kernely_data), kernely_len,
             delta, Pixel_F{}, flags);
     } else if (src_type == CV_16F && dst_type == CV_16F) {
+#if ((defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= __MAC_13_0) || \
+     (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_16_0) || \
+     (defined(__WATCH_OS_VERSION_MAX_ALLOWED) && __WATCH_OS_VERSION_MAX_ALLOWED >= __WATCHOS_9_0) || \
+     (defined(__TV_OS_VERSION_MAX_ALLOWED) && __TV_OS_VERSION_MAX_ALLOWED >= __TVOS_16_0))
         result = vImageSepConvolve_Planar16F(&src_buffer, &dst_buffer, nullptr,
             offset_x, offset_y,
             reinterpret_cast<const float*>(kernelx_data), kernelx_len,
             reinterpret_cast<const float*>(kernely_data), kernely_len,
             delta, Pixel_F{}, flags);
+#else
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+#endif
     } else if (src_type == CV_32F && dst_type == CV_32F) {
         result = vImageSepConvolve_PlanarF(&src_buffer, &dst_buffer, nullptr,
             offset_x, offset_y,
@@ -86,3 +98,5 @@ int accelerate_hal_sepFilter_stateless(const uchar* src_data, size_t src_step, i
 
     return result == kvImageNoError ? CV_HAL_ERROR_OK : CV_HAL_ERROR_NOT_IMPLEMENTED;
 }
+
+#endif
