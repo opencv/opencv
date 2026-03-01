@@ -190,7 +190,6 @@ void ConvState::initConv(const MatShape& inpshape_,
     inpshape = inpshape_;
     outshape = outshape_;
     ngroups = ngroups_;
-    Kblk = C1Max = 0;
 
     int C = inpshape.channels();
     int K = outshape.channels();
@@ -249,11 +248,9 @@ void ConvState::initConv(const MatShape& inpshape_,
     initOfs();
     if (!depthwise && inpshape.layout == DATA_LAYOUT_BLOCK) {
         int C0 = inpshape.back();
-        MatShape wpackShape = getWpackShape(wshape_, ngroups, C0);
+        wshape = getWpackShape(wshape_, ngroups, C0);
 
-        CV_Assert(wpackShape.dims == 5);
-        Kblk = wpackShape[1];
-        C1Max = wpackShape[3];
+        CV_Assert(wshape.dims == 5);
     }
 }
 

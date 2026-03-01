@@ -293,6 +293,7 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
                       const ConvState& cs, const void* weights__,
                       const float* scale__, const float* bias__)
 {
+    constexpr int SPAT_BLOCK_SIZE = 10;
     using FT = float;
     constexpr int C0shift = 3, K0shift = C0shift;
     constexpr int C0 = 1 << C0shift;
@@ -304,32 +305,35 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
     CV_Assert_N(inpshape.back() == C0, outshape.back() == K0);
 
     int K_ = outshape.channels();
-    int N = inpshape[0];
+    int ndims_ = outshape.dims;
+    int N = outshape[0];
+    int D_ = ndims_ >= 6 ? outshape[ndims_ - 4] : 1;
+    int H_ = ndims_ >= 5 ? outshape[ndims_ - 3] : 1;
+    int W_ = outshape[ndims_-2];
+    int planeblocks_ = D_*H_*W_;
+    size_t outtotal = outshape.total();
 
-    const int total_blocks = N * cs.ngroups * cs.Kblk;
+    int Kblk_ = cs.wshape[1];
+    int C1Max_ = cs.wshape[3];
+    int total_blocks = N * cs.ngroups * Kblk_;
 
     if ((K_/cs.ngroups) % K0 != 0) {
         // if there could be 'padding' channels in the output,
         // clear the output before the parallel loop
         // to make sure that all the padding channels are cleared.
-        size_t outtotal = outshape.total()*sizeof(FT);
-        memset(out__, 0, outtotal);
+        memset(out__, 0, outtotal*sizeof(FT));
     }
 
     parallel_for_(Range(0, total_blocks), [&](const Range& range) {
         constexpr int MAX_CONV_DIMS = ConvState::MAX_CONV_DIMS;
         const int C = inpshape.channels(), K = outshape.channels();
         const int C1 = (C + C0 - 1)/C0, K1 = (K + K0 - 1)/K0;
-        const int ngroups = cs.ngroups, Kblk = cs.Kblk, C1Max = cs.C1Max;
+        const int ngroups = cs.ngroups, Kblk = Kblk_, C1Max = C1Max_;
         const int Cg = C / ngroups;
         const int Kg = K / ngroups;
-        int ksize = 1;
-        for (int i = 0; i < MAX_CONV_DIMS; i++)
-            ksize *= cs.kshape[i];
-        int ndims = inpshape.dims;
-        int D = ndims >= 6 ? outshape[ndims-4] : 1;
-        int H = ndims >= 5 ? outshape[ndims-3] : 1;
-        int W = outshape[ndims-2];
+        int ksize = cs.wshape[2];
+        int ndims = ndims_;
+        int D = D_, H = H_, W = W_;
         int Di = ndims >= 6 ? inpshape[ndims-4] : 1;
         int Hi = ndims >= 5 ? inpshape[ndims-3] : 1;
         int Wi = inpshape[ndims-2];
@@ -338,7 +342,7 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
         const float* scaleptr = (const float*)scale__;
         const float* biasptr = (const float*)bias__;
         const int* ofsZYX = cs.coordtab.data();
-        int planeblocks = D*H*W;
+        int planeblocks = planeblocks_;
         int planesize = planeblocks*K0;
         int iplanesize = Di*Hi*Wi*C0;
 
@@ -370,6 +374,7 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
         }
 
         for (int t = range.start; t < range.end; t++) {
+            const int p0 = 0, p1 = planeblocks;
             const int n = t / (ngroups * Kblk);
             const int rem = t - n * (ngroups * Kblk);
             const int g = rem / Kblk;
@@ -400,23 +405,22 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
                 }
             }
 
-            constexpr int SPAT_BLOCK_SIZE = 10;
-            float* outptr = (float*)out__ + n*(K1*planesize);
-            const float* resptr = residual__ ? (float*)residual__ + n*(K1*planesize) : nullptr;
+            float* outptr = (float*)out__ + n*(K1*planesize) + p0*K0;
+            const float* resptr = residual__ ? (float*)residual__ + n*(K1*planesize) + p0*K0 : nullptr;
             float tmpbuf[SPAT_BLOCK_SIZE*K0] = {};
-            int p = 0;
+            int p = p0;
 
         #if CONV_ENABLE_SIMD
-            for (; p < planeblocks; p += SPAT_BLOCK_SIZE,
-                                    outptr += SPAT_BLOCK_SIZE*K0)
+            for (; p < p1; p += SPAT_BLOCK_SIZE,
+                           outptr += SPAT_BLOCK_SIZE*K0)
             {
                 Vec3i pt[SPAT_BLOCK_SIZE];
                 bool inner[SPAT_BLOCK_SIZE];
 
-                if (p + SPAT_BLOCK_SIZE > planeblocks) {
-                    if (p == 0)
+                if (p + SPAT_BLOCK_SIZE > p1) {
+                    if (p == p0)
                         break;
-                    int p_new = planeblocks - SPAT_BLOCK_SIZE;
+                    int p_new = p1 - SPAT_BLOCK_SIZE;
                     int dp = p_new - p;
                     outptr += dp*K0;
                     resptr += (resptr ? dp*K0 : 0);
@@ -509,7 +513,7 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
 
             float resbuf[K0] = {};
 
-            for (; p < planeblocks; p++, outptr += K0, resptr += (resptr ? K0 : 0))
+            for (; p < p1; p++, outptr += K0, resptr += (resptr ? K0 : 0))
             {
                 int zj = p / (H*W);
                 int yxj = p - zj*(H*W);

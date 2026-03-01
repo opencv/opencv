@@ -45,6 +45,7 @@ struct ConvState
     int dilations[MAX_CONV_DIMS];
     int pads[MAX_CONV_DIMS*2];
     MatShape inpshape, outshape;
+    MatShape wshape; // (ngroups, Kblk, ksize, C1Max, C0*K0) in the case of non-depthwise convolution
     int inner[MAX_CONV_DIMS*2];
     std::vector<int> coordtab;
     std::vector<int> ofstab;
@@ -53,8 +54,6 @@ struct ConvState
     enum {MAX_ACTIV_PARAMS = 16};
     float activParams[MAX_ACTIV_PARAMS];
     activation_func_t activation;
-
-    int Kblk, C1Max;
 
     std::ostream& dump(std::ostream& strm);
     bool sameShape(const ConvState& cs) const;
