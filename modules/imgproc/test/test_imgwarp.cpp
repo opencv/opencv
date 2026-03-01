@@ -1561,6 +1561,33 @@ TEST(Imgproc_Warp, regression_19566)  // valgrind should detect problem if any
 }
 
 
+TEST(Imgproc_Warp, regression_28554)
+{
+    const Size inSize(128, 128);
+    const Size outSize(256, 256);
+
+    Mat inMat = Mat::ones(inSize, CV_16S);
+    Mat outMat = Mat(outSize, CV_16S);
+    Mat coeffs = Mat::eye(2, 3, CV_64F);
+    coeffs.at<double>(0, 2) = 64.;
+    coeffs.at<double>(1, 2) = 64.;
+
+    warpAffine(
+        inMat,
+        outMat,
+        coeffs,
+        outSize,
+        INTER_NEAREST,
+        cv::BORDER_CONSTANT,
+        0.0
+    );
+
+    Mat reference = Mat::zeros(outSize, CV_16S);
+    reference(cv::Rect(64, 64, 128, 128)) = 1;
+    ASSERT_EQ(0.0, cvtest::norm(reference, outMat, NORM_INF));
+}
+
+
 TEST(Imgproc_GetAffineTransform, singularity)
 {
     Point2f A_sample[3];

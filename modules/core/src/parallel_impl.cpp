@@ -53,6 +53,8 @@ DECLARE_CV_PAUSE
 #   define CV_PAUSE(v) do { for (int __delay = (v); __delay > 0; --__delay) { asm volatile("" ::: "memory"); } } while (0)
 # elif defined __GNUC__ && defined __mips__ && __mips_isa_rev >= 2
 #   define CV_PAUSE(v) do { for (int __delay = (v); __delay > 0; --__delay) { asm volatile("pause" ::: "memory"); } } while (0)
+# elif defined __APPLE__ && defined __POWERPC__
+#   define CV_PAUSE(v) do { for (int __delay = (v); __delay > 0; --__delay) { asm volatile("or r27,r27,r27" ::: "memory"); } } while (0)
 # elif defined __GNUC__ && defined __PPC64__
 #   define CV_PAUSE(v) do { for (int __delay = (v); __delay > 0; --__delay) { asm volatile("or 27,27,27" ::: "memory"); } } while (0)
 # elif defined __GNUC__ && defined __riscv

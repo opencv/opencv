@@ -3411,4 +3411,16 @@ TEST_P(Core_LUT, accuracy_multi2)
 
 INSTANTIATE_TEST_CASE_P(/**/, Core_LUT, testing::Combine( LutIdxType::all(), LutMatType::all()));
 
+TEST(Core_Arithm, mul_overflow_28557)
+{
+    uint16_t data[] = {5000, 60000, 5000, 60000, 5000, 60000};
+    cv::Mat m(1, 6, CV_16U, data);
+    cv::Mat res = m.mul(m);
+
+    for (int i = 0; i < 6; i++)
+    {
+        EXPECT_EQ(65535, res.at<uint16_t>(0, i));
+    }
+}
+
 }} // namespace

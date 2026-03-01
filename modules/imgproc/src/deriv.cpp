@@ -715,15 +715,30 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
         ddepth = sdepth;
     _dst.create( _src.size(), CV_MAKETYPE(ddepth, cn) );
 
+    int ktype = std::max(CV_32F, std::max(ddepth, sdepth));
+    Mat kernel;
+
     if( ksize == 1 || ksize == 3 )
     {
-        float K[2][9] =
+        static const double K[2][9] =
         {
             { 0, 1, 0, 1, -4, 1, 0, 1, 0 },
             { 2, 0, 2, 0, -8, 0, 2, 0, 2 }
         };
 
-        Mat kernel(3, 3, CV_32F, K[ksize == 3]);
+        kernel.create(3, 3, ktype);
+        if (ktype == CV_32F)
+        {
+            float* kptr = kernel.ptr<float>();
+            for (int i = 0; i < 9; ++i)
+                kptr[i] = static_cast<float>(K[ksize == 3][i]);
+        }
+        else
+        {
+            double* kptr = kernel.ptr<double>();
+            for (int i = 0; i < 9; ++i)
+                kptr[i] = K[ksize == 3][i];
+        }
         if( scale != 1 )
             kernel *= scale;
 
@@ -735,20 +750,10 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
 
     if( ksize == 1 || ksize == 3 )
     {
-        float K[2][9] =
-        {
-            { 0, 1, 0, 1, -4, 1, 0, 1, 0 },
-            { 2, 0, 2, 0, -8, 0, 2, 0, 2 }
-        };
-        Mat kernel(3, 3, CV_32F, K[ksize == 3]);
-        if( scale != 1 )
-            kernel *= scale;
-
         filter2D( _src, _dst, ddepth, kernel, Point(-1, -1), delta, borderType );
     }
     else
     {
-        int ktype = std::max(CV_32F, std::max(ddepth, sdepth));
         int wdepth = sdepth == CV_8U && ksize <= 5 ? CV_16S : sdepth <= CV_32F ? CV_32F : CV_64F;
         int wtype = CV_MAKETYPE(wdepth, cn);
         Mat kd, ks;

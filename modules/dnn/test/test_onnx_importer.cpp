@@ -103,6 +103,8 @@ public:
             net.setInput(inps[i], inputNames[i]);
         Mat out = net.forward("");
 
+        EXPECT_EQ(shape(out), shape(ref));
+
         if (useSoftmax)
         {
             LayerParams lp;
@@ -1187,6 +1189,7 @@ TEST_P(Test_ONNX_layers, Squeeze)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     testONNXModels("squeeze");
     testONNXModels("squeeze_axes_op13");
+    testONNXModels("squeeze_no_axes");
 }
 
 TEST_P(Test_ONNX_layers, ReduceL2)

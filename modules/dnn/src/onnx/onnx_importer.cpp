@@ -2163,6 +2163,14 @@ void ONNXImporter::parseSqueeze(LayerParams& layerParams, const opencv_onnx::Nod
         else
             CV_Error(Error::StsNotImplemented, cv::format("ONNX/Squeeze: doesn't support non-constant 'axes' input"));
     }
+    else
+    {
+        for (int i = 0; i < inpShape.size(); ++i)
+        {
+            if (inpShape[i] == 1)
+                maskedAxes[i] = true;
+        }
+    }
 
     MatShape outShape;
     for (int i = 0; i < inpShape.size(); ++i)

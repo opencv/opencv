@@ -1437,6 +1437,15 @@ struct op_mul
     { return saturate_cast<T1>(a * b); }
 };
 
+template<typename Tvec>
+struct op_mul<uint16_t, Tvec>
+{
+    static inline Tvec r(const Tvec& a, const Tvec& b)
+    { return v_mul(a, b); }
+    static inline uint16_t r(uint16_t a, uint16_t b)
+    { return saturate_cast<uint16_t>(static_cast<uint32_t>(a) * static_cast<uint32_t>(b)); }
+};
+
 template<typename T1, typename T2, typename Tvec>
 struct op_mul_scale
 {

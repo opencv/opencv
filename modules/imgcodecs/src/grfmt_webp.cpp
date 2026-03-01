@@ -338,7 +338,7 @@ WebPEncoder::WebPEncoder()
     m_support_metadata[IMAGE_METADATA_EXIF] = true;
     m_support_metadata[IMAGE_METADATA_XMP] = true;
     m_support_metadata[IMAGE_METADATA_ICCP] = true;
-    m_supported_encode_key = {IMWRITE_WEBP_QUALITY};
+    m_supported_encode_key = {IMWRITE_WEBP_QUALITY, IMWRITE_WEBP_LOSSLESS_MODE};
 }
 
 WebPEncoder::~WebPEncoder() { }
@@ -348,32 +348,121 @@ ImageEncoder WebPEncoder::newEncoder() const
     return makePtr<WebPEncoder>();
 }
 
+// Simple API style
+static size_t cvEncodeLosslessExactBGRA(const uint8_t* rgba, int width, int height, int stride, uint8_t** output)
+{
+    WebPConfig config;
+    WebPPicture pic;
+    WebPMemoryWriter wrt;
+
+    // 6 is the default value for speed/compression balance in lossless mode.
+    // It doesn't affect visual quality, only file size and encoding time.
+    if (!WebPConfigInit(&config) || !WebPConfigLosslessPreset(&config, 6))
+    {
+        return 0;
+    }
+    config.exact = 1;
+
+    if (!WebPPictureInit(&pic))
+    {
+        return 0;
+    }
+    pic.width = width;
+    pic.height = height;
+    pic.use_argb = 1; // BGRA
+    if (!WebPPictureImportBGRA(&pic, rgba, stride))
+    {
+        return 0;
+    }
+
+    WebPMemoryWriterInit(&wrt);
+    pic.writer = WebPMemoryWrite;
+    pic.custom_ptr = &wrt;
+
+    if (!WebPEncode(&config, &pic))
+    {
+        WebPMemoryWriterClear(&wrt);
+        WebPPictureFree(&pic);
+        return 0;
+    }
+
+    *output = wrt.mem;
+    size_t size = wrt.size;
+    WebPPictureFree(&pic);
+    return size;
+}
+
 bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
 {
     CV_CheckDepthEQ(img.depth(), CV_8U, "WebP codec supports 8U images only");
 
     const int width = img.cols, height = img.rows;
 
-    bool comp_lossless = true;
-    float quality = 100.0f;
+    int lossless_mode = -1; // not specified
+    float quality = 0.0f; // not specified
 
     for(size_t i = 0; i < params.size(); i += 2)
     {
         const int value = params[i+1];
-        if (params[i] == IMWRITE_WEBP_QUALITY)
+        if (params[i] == IMWRITE_WEBP_LOSSLESS_MODE)
         {
-            comp_lossless = false;
-            quality = static_cast<float>(value);
-            if (quality < 1.0f)
+            switch(value)
             {
-                quality = 1.0f;
-                CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_WEBP_QUALITY must be between 1 to 100(lossy) or more(lossless). It is fallbacked to 1", value));
-            }
-            if (quality > 100.0f)
-            {
-                comp_lossless = true;
+                case IMWRITE_WEBP_LOSSLESS_ON:
+                case IMWRITE_WEBP_LOSSLESS_OFF:
+                case IMWRITE_WEBP_LOSSLESS_PRESERVE_COLOR:
+                    lossless_mode = value;
+                    break;
+                default:
+                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_WEBP_LOSSLESS_MODE must be one of ImwriteWEBPLosslessMode. It is ignored", value));
+                    break;
             }
         }
+        if (params[i] == IMWRITE_WEBP_QUALITY)
+        {
+            if (value < 1)
+            {
+                CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_WEBP_QUALITY must be between 1 to 100(lossy) or more(lossless). It is fallbacked to 1", value));
+                quality = 1.0f;
+            }
+            else if (value > 100)
+            {
+                quality = 101.0f;
+            }
+            else // value is 1 to 100
+            {
+                quality = static_cast<float>(value);
+            }
+        }
+    }
+
+    switch(lossless_mode)
+    {
+        case -1: // not specified by user
+        case IMWRITE_WEBP_LOSSLESS_OFF:
+            // Fallback to lossless if quality is not specified (-1.0f) or out of lossy range (>100.0f).
+            // This maintains backward compatibility where WebP defaults to lossless.
+            if ((quality < 1.0f) || (quality > 100.0f))
+            {
+                lossless_mode = IMWRITE_WEBP_LOSSLESS_ON;
+                quality = 101.0f;
+            }
+            else
+            {
+                lossless_mode = IMWRITE_WEBP_LOSSLESS_OFF;
+                // Use specified quality for lossy compression.
+            }
+            break;
+
+        case IMWRITE_WEBP_LOSSLESS_ON:
+        case IMWRITE_WEBP_LOSSLESS_PRESERVE_COLOR:
+            // Force quality value to lossless range when explicit lossless mode is selected.
+            quality = 101.0f;
+            break;
+
+        default:
+            CV_Error(Error::StsError, cv::format("Unexpected lossless_mode(%d)", lossless_mode));
+            break;
     }
 
     int channels = img.channels();
@@ -391,27 +480,43 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
 
     uint8_t *encoder_out = NULL;
     size_t size = 0;
-    if (comp_lossless)
+    if (channels == 3)
     {
-        if (channels == 3)
+        switch(lossless_mode)
         {
-            size = WebPEncodeLosslessBGR(image->ptr(), width, height, (int)image->step, &encoder_out);
-        }
-        else if (channels == 4)
-        {
-            size = WebPEncodeLosslessBGRA(image->ptr(), width, height, (int)image->step, &encoder_out);
+            case IMWRITE_WEBP_LOSSLESS_OFF:
+                size = WebPEncodeBGR(image->ptr(), width, height, (int)image->step, quality, &encoder_out);
+                break;
+            case IMWRITE_WEBP_LOSSLESS_ON:
+            case IMWRITE_WEBP_LOSSLESS_PRESERVE_COLOR:
+                size = WebPEncodeLosslessBGR(image->ptr(), width, height, (int)image->step, &encoder_out);
+                break;
+            default:
+                CV_Error(Error::StsError, cv::format("Unexcepted lossless_mode(%d)", lossless_mode));
+                break;
         }
     }
     else
     {
-        if (channels == 3)
+        CV_CheckEQ(channels, 4, "Unexpected channels is used");
+        switch(lossless_mode)
         {
-            size = WebPEncodeBGR(image->ptr(), width, height, (int)image->step, quality, &encoder_out);
+            case IMWRITE_WEBP_LOSSLESS_OFF:
+                size = WebPEncodeBGRA(image->ptr(), width, height, (int)image->step, quality, &encoder_out);
+                break;
+            case IMWRITE_WEBP_LOSSLESS_ON:
+                size = WebPEncodeLosslessBGRA(image->ptr(), width, height, (int)image->step, &encoder_out);
+                break;
+            case IMWRITE_WEBP_LOSSLESS_PRESERVE_COLOR:
+                size = cvEncodeLosslessExactBGRA(image->ptr(), width, height, (int)image->step, &encoder_out);
+                break;
         }
-        else if (channels == 4)
-        {
-            size = WebPEncodeBGRA(image->ptr(), width, height, (int)image->step, quality, &encoder_out);
-        }
+    }
+
+    if (size == 0)
+    {
+        CV_LOG_ERROR(NULL, cv::format("WebP encoding failed with lossless_mode=%d", lossless_mode));
+        return false;
     }
 
 #if WEBP_DECODER_ABI_VERSION >= 0x0206

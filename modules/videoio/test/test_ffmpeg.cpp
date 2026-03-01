@@ -851,7 +851,7 @@ TEST(videoio_ffmpeg, DISABLED_open_from_web)
     if (!videoio_registry::hasBackend(CAP_FFMPEG))
         throw SkipTestException("FFmpeg backend was not found");
 
-    string video_file = "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4";
+    string video_file = "https://dl.opencv.org/data/BigBuckBunny.mp4";
     VideoCapture cap(video_file, CAP_FFMPEG);
     int n_frames = -1;
     EXPECT_NO_THROW(n_frames = (int)cap.get(CAP_PROP_FRAME_COUNT));
