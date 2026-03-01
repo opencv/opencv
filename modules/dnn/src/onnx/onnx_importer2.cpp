@@ -2663,12 +2663,11 @@ void ONNXImporter2::parseAttention(LayerParams& params, const opencv_onnx::NodeP
         }
         n_inputs = 1;
     }
-
     addLayer(params, node_proto, n_inputs);
 }
 
 void ONNXImporter2::parseAttentionOnnxAi(LayerParams& params, const opencv_onnx::NodeProto& node_proto) {
-    int i, n_inputs = node_proto.input_size();
+    /*int i, n_inputs = node_proto.input_size();
 
     for (i = 1; i < n_inputs; i++) {
         if (!net.isConstArg(node_inputs[i]))
@@ -2681,10 +2680,10 @@ void ONNXImporter2::parseAttentionOnnxAi(LayerParams& params, const opencv_onnx:
             params.blobs.push_back(blob);
         }
         n_inputs = 1;
-    }
+    }*/
     params.type = "AttentionOnnxAi";
 
-    addLayer(params, node_proto, n_inputs);
+    addLayer(params, node_proto);
 }
 
 void ONNXImporter2::parseRoiAlign(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)

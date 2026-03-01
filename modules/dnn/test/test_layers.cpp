@@ -2949,4 +2949,121 @@ TEST(ConvolutionWinograd, Accuracy)
     normAssert(outLarge, refLarge, "Large input after small", 0.0, 0.0);
 }
 
+// With KV-Cache
+
+TEST(Layer_Test_AttentionOnnxAi, KVCache_Concatenation)
+{
+    LayerParams lp;
+    lp.type = "AttentionOnnxAi";
+    lp.name = "test_attention";
+    lp.set("num_heads", 1);
+    int hidden_sizes[] = {32, 32, 32};
+    lp.set("qkv_hidden_sizes", DictValue::arrayInt(hidden_sizes, 3));
+    int batch = 1;
+    int num_heads = 1;
+    int dims = 32;
+    int seq_len = 1; // Current step (generating 1 token)
+    int past_seq_len = 5;
+    std::vector<int> q_shape = {batch, num_heads, seq_len, dims};
+    std::vector<int> kv_shape = {batch, num_heads, seq_len, dims};
+    std::vector<int> past_shape = {batch, num_heads, past_seq_len, dims};
+    Mat Q(q_shape, CV_32F);
+    Mat K(kv_shape, CV_32F);
+    Mat V(kv_shape, CV_32F);
+    randu(Q, 0.0f, 1.0f);
+    K = 1.0f;
+    V = 1.0f;
+    Mat PastK(past_shape, CV_32F);
+    Mat PastV(past_shape, CV_32F);
+    PastK = 0.5f;
+    randu(PastV, 0.0f, 1.0f);
+    std::vector<Mat> inputs = {Q, K, V};
+    inputs.push_back(Mat());
+    inputs.push_back(PastK);
+    inputs.push_back(PastV);
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    std::vector<Mat> outputs;
+    std::vector<Mat> internals;
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(outputs.size(), 3);
+    EXPECT_EQ(outputs[1].size[2], past_seq_len + seq_len);
+    Mat present_k = outputs[1];
+    int idx_start[] = {0, 0, 0, 0};
+    EXPECT_NEAR(present_k.at<float>(idx_start), 0.5f, 1e-5);
+    int idx_end[] = {0, 0, past_seq_len, 0};
+    EXPECT_NEAR(present_k.at<float>(idx_end), 1.0f, 1e-5);
+}
+
+// Test Without KV-Cache
+
+TEST(Layer_Test_AttentionOnnxAi, Standard_NoCache)
+{
+    LayerParams lp;
+    lp.type = "AttentionOnnxAi";
+    lp.name = "test_attention_std";
+    lp.set("num_heads", 1);
+    int hidden_sizes[] = {32, 32, 32};
+    lp.set("qkv_hidden_sizes", DictValue::arrayInt(hidden_sizes, 3));
+
+    int batch = 1, num_heads = 1, seq_len = 10, dims = 32;
+    std::vector<int> shape = {batch, num_heads, seq_len, dims};
+
+    Mat Q(shape, CV_32F); randu(Q, 0.f, 1.f);
+    Mat K(shape, CV_32F); randu(K, 0.f, 1.f);
+    Mat V(shape, CV_32F); randu(V, 0.f, 1.f);
+
+    std::vector<Mat> inputs = {Q, K, V};
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+
+    ASSERT_EQ(outputs.size(), 1);
+    EXPECT_EQ(outputs[0].size[2], seq_len);
+}
+
+TEST(Layer_Test_AttentionOnnxAi, KVCache_Math_Verification)
+{
+    // 1. Setup Layer
+    LayerParams lp;
+    lp.type = "AttentionOnnxAi";
+    lp.name = "test_attention_math";
+    lp.set("num_heads", 1);
+
+    // 2. Define Data (Batch=1, Heads=1, Dim=4 for simplicity)
+    int batch=1, heads=1, dim=4;
+    // We want to verify that Q attends to BOTH PastK and NewK.
+
+    // Query: Matches the "Past" key perfectly
+    float q_data[] = {1, 0, 0, 0};
+    Mat Q(4, std::vector<int>{batch, heads, 1, dim}.data(), CV_32F, q_data);
+
+    // New Key/Value: Something totally different
+    float k_data[] = {0, 1, 0, 0};
+    float v_data[] = {0, 0, 0, 10};
+    Mat K(4, std::vector<int>{batch, heads, 1, dim}.data(), CV_32F, k_data);
+    Mat V(4, std::vector<int>{batch, heads, 1, dim}.data(), CV_32F, v_data);
+
+    // Past Key/Value: Matches the Query!
+    float past_k_data[] = {1, 0, 0, 0}; // Query matches this!
+    float past_v_data[] = {50, 0, 0, 0}; // We expect this value in output
+    Mat PastK(4, std::vector<int>{batch, heads, 1, dim}.data(), CV_32F, past_k_data);
+    Mat PastV(4, std::vector<int>{batch, heads, 1, dim}.data(), CV_32F, past_v_data);
+
+    // 3. Run With Cache
+    std::vector<Mat> inputs = {Q, K, V, Mat(), PastK, PastV};
+    std::vector<Mat> outputs;
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    runLayer(layer, inputs, outputs);
+
+    // 4. Verify Result
+    // If cache works, Q(1,0,0,0) should attend strongly to PastK(1,0,0,0).
+    // So output should be close to PastV (50,0,0,0).
+    // If cache was ignored, Q would attend to NewK (0,1,0,0) -> Low score -> output would be different.
+
+    float* out_ptr = outputs[0].ptr<float>();
+    // Just check the first element. If it's high (near 50), the cache was used.
+    EXPECT_GT(out_ptr[0], 25.0f);
+}
+
 }} // namespace
