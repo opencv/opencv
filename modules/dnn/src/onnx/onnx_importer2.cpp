@@ -734,8 +734,24 @@ bool ONNXImporter2::parseValueInfo(const opencv_onnx::ValueInfoProto& valueInfoP
             const std::string& param_j = dimension.dim_param();
             val_j = net.findDim(param_j, true);
         } else {
-            raiseError();
-            return false;
+            // ONNX allows dimensions without dim_value and dim_param.
+            // Treat them as unnamed symbolic dimensions.
+            // NOTE: LSTM with unnamed dimensions is not ready in the new graph
+            // engine yet, so force fallback to classic parser.
+            if (curr_graph_proto)
+            {
+                const int n_nodes = curr_graph_proto->node_size();
+                for (int i = 0; i < n_nodes; ++i)
+                {
+                    const std::string& op = curr_graph_proto->node(i).op_type();
+                    if (op == "LSTM")
+                    {
+                        raiseError();
+                        return false;
+                    }
+                }
+            }
+            val_j = net.findDim("", true);
         }
         //CV_Assert(0 <= val_j && val_j <= INT_MAX);
         shape[j] = (int)val_j;

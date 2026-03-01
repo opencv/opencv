@@ -2129,6 +2129,36 @@ CASE(test_reduce_log_sum_exp_negative_axes_keepdims_random_expanded)
     SKIP;
 CASE(test_reduce_sum_empty_axes_input_noop)
     SKIP;
+CASE(test_reduce_l1_empty_set)
+    SKIP;
+CASE(test_reduce_l1_empty_set_expanded)
+    SKIP;
+CASE(test_reduce_l2_empty_set)
+    SKIP;
+CASE(test_reduce_l2_empty_set_expanded)
+    SKIP;
+CASE(test_reduce_log_sum_empty_set)
+    SKIP;
+CASE(test_reduce_log_sum_empty_set_expanded)
+    SKIP;
+CASE(test_reduce_log_sum_exp_empty_set)
+    SKIP;
+CASE(test_reduce_max_empty_set)
+    SKIP;
+CASE(test_reduce_min_empty_set)
+    SKIP;
+CASE(test_reduce_prod_empty_set)
+    SKIP;
+CASE(test_reduce_sum_empty_set)
+    SKIP;
+CASE(test_reduce_sum_empty_set_non_reduced_axis_zero)
+    SKIP;
+CASE(test_reduce_sum_square_empty_set)
+    SKIP;
+CASE(test_reduce_sum_square_empty_set_expanded)
+    SKIP;
+CASE(test_reduce_log_sum_exp_empty_set_expanded)
+    SKIP;
 CASE(test_reduce_sum_square_default_axes_keepdims_random)
 #if SKIP_SET_1
     if (target == DNN_TARGET_MYRIAD)

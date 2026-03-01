@@ -95,6 +95,15 @@ void normAssert(
             testMat = testMat.reshape(1, oneShape);
     }
 
+    // Empty tensors are valid for ONNX conformance tests. Avoid 0/0 in normL1
+    // and verify emptiness compatibility directly.
+    if (refMat.total() == 0 || testMat.total() == 0)
+    {
+        EXPECT_EQ(refMat.total(), testMat.total()) << comment;
+        EXPECT_EQ(refMat.size, testMat.size) << comment;
+        return;
+    }
+
     double normL1 = cvtest::norm(refMat, testMat, cv::NORM_L1) / refMat.total();
     EXPECT_LE(normL1, l1) << comment << "  |ref| = " << cvtest::norm(refMat, cv::NORM_INF);
 

@@ -167,6 +167,8 @@ public:
         using dtype_input = T;
         using work_type = WT;
         using acc_type = AccT;
+        typedef T dtype;
+        typedef WT WorkT;
         ReduceBase(size_t n, const T& init) : n_(n), accumulator_(static_cast<AccT>(static_cast<WT>(init))) {}
         AccT finalize() const { return accumulator_; }
     protected:
@@ -179,7 +181,8 @@ public:
     public:
         using Base = ReduceBase<T, WT, AccT>;
         ReduceMin(size_t n, const WT& init) : Base(n, static_cast<T>(init)) { this->accumulator_ = static_cast<AccT>(init); }
-        inline void update(const WT& a) { this->accumulator_ = a > static_cast<WT>(this->accumulator_) ? this->accumulator_ : static_cast<AccT>(a); }
+        inline void update(const WT& a) { this->accumulator_ = a < static_cast<WT>(this->accumulator_) ? static_cast<AccT>(a) : this->accumulator_; }
+        static WT identity() { return std::numeric_limits<WT>::has_infinity ? std::numeric_limits<WT>::infinity() : std::numeric_limits<WT>::max(); }
     };
 
     template <typename T, typename WT, typename AccT>
@@ -188,6 +191,7 @@ public:
         using Base = ReduceBase<T, WT, AccT>;
         ReduceMax(size_t n, const WT& init) : Base(n, static_cast<T>(init)) { this->accumulator_ = static_cast<AccT>(init); }
         inline void update(const WT& a) { this->accumulator_ = a > static_cast<WT>(this->accumulator_) ? static_cast<AccT>(a) : this->accumulator_; }
+        static WT identity() { return std::numeric_limits<WT>::has_infinity ? -std::numeric_limits<WT>::infinity() : std::numeric_limits<WT>::lowest(); }
     };
 
     template <typename T, typename WT, typename AccT>
@@ -196,6 +200,7 @@ public:
         using Base = ReduceBase<T, WT, AccT>;
         ReduceSum(size_t n, const WT&) : Base(n, static_cast<T>(0)) { this->accumulator_ = AccT(0); }
         inline void update(const WT& a) { this->accumulator_ += static_cast<AccT>(a); }
+        static WT identity() { return WT(0); }
     };
 
     template <typename T, typename WT, typename AccT>
@@ -203,7 +208,10 @@ public:
     public:
         using Base = ReduceSum<T, WT, AccT>;
         ReduceMean(size_t n, const WT& init) : Base(n, init) {}
-        inline AccT finalize() const { return this->accumulator_ / static_cast<AccT>(this->n_); }
+       inline AccT finalize() const {
+        return (this->n_ > 0) ? (this->accumulator_ / static_cast<AccT>(this->n_)) : AccT(0);
+    }
+        static WT identity() { return WT(0); }
     };
 
     template <typename T, typename WT, typename AccT>
@@ -212,6 +220,7 @@ public:
         using Base = ReduceBase<T, WT, AccT>;
         ReduceSumSquare(size_t n, const WT&) : Base(n, static_cast<T>(0)) { this->accumulator_ = AccT(0); }
         inline void update(const WT& a) { this->accumulator_ += static_cast<AccT>(a) * static_cast<AccT>(a); }
+        static WT identity() { return WT(0); }
     };
 
     template <typename T, typename WT, typename AccT>
@@ -220,6 +229,7 @@ public:
         using Base = ReduceBase<T, WT, AccT>;
         ReduceL1(size_t n, const WT&) : Base(n, static_cast<T>(0)) { this->accumulator_ = AccT(0); }
         inline void update(const WT& a) { this->accumulator_ += static_cast<AccT>(a >= WT(0) ? a : -a); }
+        static WT identity() { return WT(0); }
     };
 
     template <typename T, typename WT, typename AccT>
@@ -229,6 +239,7 @@ public:
         ReduceL2(size_t n, const WT&) : Base(n, static_cast<T>(0)) { this->accumulator_ = AccT(0); }
         inline void update(const WT& a) { this->accumulator_ += static_cast<AccT>(a) * static_cast<AccT>(a); }
         inline AccT finalize() const { return static_cast<AccT>(std::sqrt(this->accumulator_)); }
+        static WT identity() { return WT(0); }
     };
 
     template <typename T, typename WT, typename AccT>
@@ -237,6 +248,7 @@ public:
         using Base = ReduceBase<T, WT, AccT>;
         ReduceProd(size_t n, const WT&) : Base(n, static_cast<T>(1)) { this->accumulator_ = static_cast<AccT>(WT(1)); }
         inline void update(const WT& a) { this->accumulator_ = static_cast<AccT>(this->accumulator_) * static_cast<AccT>(a); }
+        static WT identity() { return WT(1); }
     };
 
     template <typename T, typename WT, typename AccT>
@@ -245,7 +257,10 @@ public:
         using Base = ReduceBase<T, WT, AccT>;
         ReduceLogSum(size_t n, const WT&) : Base(n, static_cast<T>(0)) { this->accumulator_ = AccT(0); }
         inline void update(const WT& a) { this->accumulator_ += static_cast<AccT>(a); }
-        inline AccT finalize() const { return static_cast<AccT>(std::log(this->accumulator_)); }
+       inline AccT finalize() const {
+        return (this->n_ > 0) ? static_cast<AccT>(std::log(this->accumulator_)) : -std::numeric_limits<AccT>::infinity();
+    }
+        static WT identity() { return -std::numeric_limits<WT>::infinity(); }
     };
 
     template <typename T, typename WT, typename AccT>
@@ -255,6 +270,7 @@ public:
         ReduceLogSumExp(size_t n, const WT&) : Base(n, static_cast<T>(0)) { this->accumulator_ = AccT(0); }
         inline void update(const WT& a) { this->accumulator_ += static_cast<AccT>(std::exp(static_cast<AccT>(a))); }
         inline AccT finalize() const { return static_cast<AccT>(std::log(this->accumulator_)); }
+        static WT identity() { return -std::numeric_limits<WT>::infinity(); }
     };
 
     template <typename Op>
@@ -388,6 +404,11 @@ public:
         static void run(const Mat& src, Mat& dst, std::vector<int> axes, bool noop_with_empty_axes) {
             CV_Assert(src.isContinuous());
             CV_Assert(dst.isContinuous());
+            if (src.total() == 0) {
+                dst.setTo(Scalar(static_cast<double>(Op::identity())));
+                return;
+            }
+
             if (shape(src).empty() || (shape(src).size() == 1)){
                 ReduceAllInvoker<Op> p(src, dst);
                 p(Range(0, p.total));
@@ -468,8 +489,7 @@ public:
                 outShape = inpShape;
             } else {
                 if (keepdims) {
-                    outShape = inpShape;
-                    for (int i = 0; i < (int)outShape.size(); ++i) outShape[i] = 1;
+                    outShape.assign(inpShape.size(), 1);
                 } else {
                     outShape = MatShape::scalar();
                 }
@@ -487,7 +507,7 @@ public:
                     outShape.push_back(tmp[i]);
                 }
             }
-            if (outShape.empty()) outShape = MatShape::scalar();
+            if (outShape.size() == 0) outShape = MatShape{1};
             axes = norm_axes;
         }
 

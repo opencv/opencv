@@ -64,6 +64,25 @@ static T getScalarFromMat(Mat m)
     return m.at<T>(0);
 }
 
+static int onnxDataTypeToCvDepth(int onnxType)
+{
+    switch (onnxType)
+    {
+        case opencv_onnx::TensorProto_DataType_FLOAT:    return CV_32F;
+        case opencv_onnx::TensorProto_DataType_UINT8:    return CV_8U;
+        case opencv_onnx::TensorProto_DataType_UINT16:   return CV_16U;
+        case opencv_onnx::TensorProto_DataType_FLOAT16:  return CV_16F;
+        case opencv_onnx::TensorProto_DataType_INT8:     return CV_8S;
+        case opencv_onnx::TensorProto_DataType_INT16:    return CV_16S;
+        case opencv_onnx::TensorProto_DataType_INT32:    return CV_32S;
+        case opencv_onnx::TensorProto_DataType_INT64:    return CV_64S;
+        case opencv_onnx::TensorProto_DataType_BOOL:     return CV_Bool;
+        case opencv_onnx::TensorProto_DataType_DOUBLE:   return CV_64F;
+        case opencv_onnx::TensorProto_DataType_BFLOAT16: return CV_16BF;
+        default: return CV_32F;
+    }
+}
+
 class ONNXImporter
 {
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
@@ -2525,19 +2544,7 @@ void ONNXImporter::parseShape(LayerParams& layerParams, const opencv_onnx::NodeP
 
 void ONNXImporter::parseCast(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    int type;
-    switch (layerParams.get<int>("to"))
-    {
-        case opencv_onnx::TensorProto_DataType_FLOAT:   type = CV_32F; break;
-        case opencv_onnx::TensorProto_DataType_UINT8:   type = CV_8U;  break;
-        case opencv_onnx::TensorProto_DataType_UINT16:  type = CV_16U; break;
-        case opencv_onnx::TensorProto_DataType_FLOAT16: type = CV_16F; break;
-        case opencv_onnx::TensorProto_DataType_INT8:    type = CV_8S;  break;
-        case opencv_onnx::TensorProto_DataType_INT16:   type = CV_16S; break;
-        case opencv_onnx::TensorProto_DataType_INT32:   type = CV_32S; break;
-        case opencv_onnx::TensorProto_DataType_INT64:   type = CV_64S; break;
-        default: CV_Error(Error::BadDepth, "Unsupported type");
-    }
+    const int type = onnxDataTypeToCvDepth(layerParams.get<int>("to"));
 
     if (constBlobs.find(node_proto.input(0)) != constBlobs.end())
     {
@@ -4236,6 +4243,14 @@ Mat readTensorFromONNX(const String& path)
         CV_Error(Error::StsUnsupportedFormat, cv::format("Failed to parse ONNX data: %s", path.c_str()));
     }
     Mat mat = getMatFromTensor(tensor_proto, false);
+    int dims = (int)tensor_proto.dims_size();
+    if (dims > 0 && mat.total() == 0) {
+        int cv_type = onnxDataTypeToCvDepth(tensor_proto.data_type());
+
+        std::vector<int> sizes(dims);
+        for (int i = 0; i < dims; ++i) sizes[i] = (int)tensor_proto.dims(i);
+        mat.create(dims, sizes.data(), cv_type);
+    }
     releaseONNXTensor(tensor_proto);
     return mat;
 }
