@@ -123,7 +123,7 @@ bool Dictionary::identify(const Mat &onlyBits, CV_OUT int &idx, CV_OUT int &rota
 
     Mat candidateBitRatio;
     onlyBits.convertTo(candidateBitRatio, CV_32F);
-    const float validBitIdThreshold = kDefaultValidBitIdThreshold;
+    const float validBitIdThreshold = DEFAULT_VALID_BIT_ID_THRESHOLD;
     return identify(candidateBitRatio, idx, rotation, maxCorrectionRate, validBitIdThreshold);
 }
 

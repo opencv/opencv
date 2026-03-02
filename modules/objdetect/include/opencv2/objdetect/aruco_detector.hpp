@@ -20,7 +20,7 @@ enum CornerRefineMethod{
     CORNER_REFINE_APRILTAG, ///< Tag and corners detection based on the AprilTag 2 approach @cite wang2016iros
 };
 
-static constexpr float kDefaultValidBitIdThreshold{0.49f};
+static constexpr float DEFAULT_VALID_BIT_ID_THRESHOLD{0.49f};
 
 /** @brief struct DetectorParameters is used by ArucoDetector
  */
@@ -59,7 +59,7 @@ struct CV_EXPORTS_W_SIMPLE DetectorParameters {
         useAruco3Detection = false;
         minSideLengthCanonicalImg = 32;
         minMarkerLengthRatioOriginalImg = 0.0;
-        validBitIdThreshold = kDefaultValidBitIdThreshold;
+        validBitIdThreshold = DEFAULT_VALID_BIT_ID_THRESHOLD;
     }
 
     /** @brief Read a new set of DetectorParameters from FileNode (use FileStorage.root()).
