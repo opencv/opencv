@@ -2532,7 +2532,17 @@ bool CvVideoWriter_GStreamer::open( const std::string &filename, int fourcc,
         g_object_set(G_OBJECT(encodebin.get()), "profile", containerprofile.get(), NULL);
 
         source.reset(gst_element_factory_make("appsrc", NULL));
+        if (!source)
+        {
+            CV_WARN("GStreamer: cannot create appsrc element");
+            return false;
+        }
         file.reset(gst_element_factory_make("filesink", NULL));
+        if (!file)
+        {
+            CV_WARN("GStreamer: cannot create filesink element");
+            return false;
+        }
         g_object_set(G_OBJECT(file.get()), "location", (const char*)filename.c_str(), NULL);
     }
 
