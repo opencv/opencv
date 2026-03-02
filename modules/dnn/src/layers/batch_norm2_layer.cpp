@@ -6,6 +6,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../net_impl.hpp"
 
 namespace cv {
 namespace dnn {
@@ -348,29 +349,7 @@ class BatchNorm2LayerImpl CV_FINAL : public BatchNorm2Layer
 public:
     BatchNorm2LayerImpl(const LayerParams& params) {
         setParamsFrom(params);
-
-        epsilon = params.get<float>("epsilon", params.get<float>("eps", 1e-5f));
-        useGlobalStats = params.get<bool>("use_global_stats", true);
-        hasWeights = params.get<bool>("has_weight", false);
-        hasBias = params.get<bool>("has_bias", false);
-
-        if (blobs.size() >= 4) {
-            dynamicInputs = false;
-
-            const Mat& mean  = blobs[0];
-            const Mat& var   = blobs[1];
-            const Mat& scale = blobs[2];
-            const Mat& beta  = blobs[3];
-
-            weights_.create(scale.size(), CV_32F);
-            bias_.create(scale.size(), CV_32F);
-
-            cv::sqrt(var + epsilon, bias_);
-            cv::divide(scale, bias_, weights_);
-            bias_ = beta - mean.mul(weights_);
-        } else {
-            dynamicInputs = true;
-        }
+        epsilon = params.get<float>("epsilon", 1e-5);
     }
 
     bool supportBackend(int backendId) CV_OVERRIDE
@@ -378,29 +357,32 @@ public:
         return backendId == DNN_BACKEND_OPENCV;
     }
 
-    bool dynamicOutputShapes() const CV_OVERRIDE
+    MatShape getOutShape(const MatShape& inpShape) const
     {
-        return dynamicInputs;
+        return inpShape;
     }
 
-    bool getMemoryShapes(const std::vector<MatShape>& inputs,
-                                 const int requiredOutputs,
-                                 std::vector<MatShape>& outputs,
-                                 std::vector<MatShape>& internals) const CV_OVERRIDE
+    virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
+                         const int,
+                         std::vector<MatShape> &outputs,
+                         std::vector<MatShape> &internals) const CV_OVERRIDE
+    {
+        CV_Assert(!inputs.empty());
+        outputs.assign(1, getOutShape(inputs[0]));
+        internals.clear();
+        return true;
+    }
+
+    virtual void getTypes(const std::vector<MatType>& inputs,
+        const int requiredOutputs,
+        const int requiredInternals,
+        std::vector<MatType>& outputs,
+        std::vector<MatType>& internals) const CV_OVERRIDE
     {
         CV_Assert(!inputs.empty());
         outputs.assign(requiredOutputs, inputs[0]);
-        return false;
-    }
-
-    void getTypes(const std::vector<MatType>& inputs,
-                          const int requiredOutputs,
-                          const int requiredInternals,
-                          std::vector<MatType>& outputs,
-                          std::vector<MatType>& internals) const CV_OVERRIDE
-    {
-        CV_Assert(!inputs.empty());
-        outputs.assign(requiredOutputs, inputs[0]);
+        CV_Assert(requiredInternals == 0);
+        internals.clear();
     }
 
     int getLayouts(const std::vector<DataLayout>& actualInputs,
@@ -478,10 +460,10 @@ public:
         size_t ninputs = inputs.size();
         if (ninputs != 5)
             return false;
-        if (netimpl_->isConstArg(inputs[1]) ||
-            netimpl_->isConstArg(inputs[2]) ||
-            netimpl_->isConstArg(inputs[3]) ||
-            netimpl_->isConstArg(inputs[4]))
+        if (!netimpl_->isConstArg(inputs[1]) ||
+            !netimpl_->isConstArg(inputs[2]) ||
+            !netimpl_->isConstArg(inputs[3]) ||
+            !netimpl_->isConstArg(inputs[4]))
             return false;
         Mat scale_ = netimpl_->argTensor(inputs[1]);
         Mat bias_ = netimpl_->argTensor(inputs[2]);
@@ -497,10 +479,60 @@ public:
         scale.copyTo(scale_);
         bias.copyTo(bias_);
     }
-private:
-    bool dynamicInputs;
-    Mat weights_, bias_;
+
+    Mat scale, bias;
 };
+
+void BatchNorm2Layer::getScaleBias(InputArray scale_, InputArray bias_,
+                                   InputArray mean_, InputArray variance_, float eps,
+                                   OutputArray outscale_, OutputArray outbias_)
+{
+    Mat scale = scale_.getMat(), bias = bias_.getMat();
+    Mat mean = mean_.getMat(), var = variance_.getMat();
+
+    int sctype = scale.type(), btype = bias.type();
+    int mtype = mean.type(), vtype = var.type();
+
+    CV_Assert(sctype == CV_32F || sctype == CV_16F || sctype == CV_16BF);
+    CV_Assert(btype == CV_32F || btype == CV_16F || btype == CV_16BF);
+    CV_Assert(mtype == CV_32F || mtype == CV_16F || mtype == CV_16BF);
+    CV_Assert(vtype == CV_32F || vtype == CV_16F || vtype == CV_16BF);
+
+    CV_Assert_N(scale.dims == 1, bias.dims == 1, mean.dims == 1, var.dims == 1);
+    int C = scale.cols;
+    CV_Assert_N(bias.cols == C, mean.cols == C, var.cols == C);
+
+    Mat outscale(1, &C, CV_32F);
+    Mat outbias(1, &C, CV_32F);
+
+    const uchar* scdata = scale.data;
+    const uchar* bdata = bias.data;
+    const uchar* mdata = mean.data;
+    const uchar* vdata = var.data;
+    float* outsc = outscale.ptr<float>();
+    float* outb = outbias.ptr<float>();
+
+    #undef LOAD_AS_FLOAT
+    #define LOAD_AS_FLOAT(typ, ptr, i) \
+        (typ == CV_32F ? ((const float*)ptr)[i] : \
+         typ == CV_16F ? float(((const hfloat*)ptr)[i]) : \
+         float(((const bfloat*)ptr)[i]))
+
+    // ONNX documentation: Y = (X - input_mean) / sqrt(input_var + epsilon) * scale + B
+    for (int i = 0; i < C; i++) {
+        float sc = LOAD_AS_FLOAT(sctype, scdata, i);
+        float b = LOAD_AS_FLOAT(btype, bdata, i);
+        float m = LOAD_AS_FLOAT(mtype, mdata, i);
+        float v = LOAD_AS_FLOAT(vtype, vdata, i);
+
+        float outscval = sc/sqrtf(fabsf(v) + eps);
+        float outbval = b - m*outscval;
+        outsc[i] = outscval;
+        outb[i] = outbval;
+    }
+    outscale.copyTo(outscale_);
+    outbias.copyTo(outbias_);
+}
 
 Ptr<BatchNorm2Layer> BatchNorm2Layer::create(const LayerParams& params)
 {
