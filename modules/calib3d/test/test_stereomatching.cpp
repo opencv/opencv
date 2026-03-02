@@ -976,10 +976,13 @@ TEST(Calib3d_StereoSGBM_HH4, regression)
 
 TEST(Calib3d_ValidateDisparity, HandlesValidCostsWithoutCrash)
 {
+    // Regression test for issue #25367: undefined behavior in validateDisparity
+    // This test verifies that the function safely handles valid disparity and cost data
+    // without crashes or undefined behavior
     const int rows = 1;
     const int cols = 8;
 
-    // create valid disparity values
+    // create valid disparity values (scaled by 16)
     cv::Mat disparity(rows, cols, CV_16S);
     for (int i = 0; i < cols; ++i)
         disparity.at<short>(0, i) = static_cast<short>(i << 4);  // scaled disparity
@@ -989,14 +992,17 @@ TEST(Calib3d_ValidateDisparity, HandlesValidCostsWithoutCrash)
     for (int i = 0; i < cols; ++i)
         cost.at<int>(0, i) = i * 10;
 
+    // minDisparity=0, numberOfDisparities=16, disp12MaxDisp=1
+    // This exercises the bounds checking code paths 
     EXPECT_NO_THROW(
         cv::validateDisparity(disparity, cost, 0, 16, 1)
     );
 
-    // ensure disparities remain valid after processing
+    // Verify that disparities remain valid after processing
     for (int i = 0; i < cols; ++i)
     {
         EXPECT_NE(disparity.at<short>(0, i), SHRT_MIN);
     }
 
-}}} // namespace
+}
+}}// namespace

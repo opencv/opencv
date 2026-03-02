@@ -2553,6 +2553,8 @@ void cv::validateDisparity( InputOutputArray _disp, InputArray _cost, int minDis
 
                 int x2 = x - ((d + DISP_SCALE/2) >> DISP_SHIFT);
 
+                // Prevent out-of-bounds access when x2 is negative or >= cols
+                // Using unsigned cast to safely check both conditions
                 if((unsigned)x2 < (unsigned)cols)
                 {
                      if( disp2cost[x2] > c )
@@ -2594,6 +2596,8 @@ void cv::validateDisparity( InputOutputArray _disp, InputArray _cost, int minDis
                 continue;
             int d0 = d >> DISP_SHIFT;
             int d1 = (d + DISP_SCALE-1) >> DISP_SHIFT;
+            // Skip disparities outside the valid range to prevent out-of-bounds access
+            // when computing x0 and x1 indices
             if(d0 < minD || d1 >= maxD)
                    continue;
             int x0 = x - d0, x1 = x - d1;
