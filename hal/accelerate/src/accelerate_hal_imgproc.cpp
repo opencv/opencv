@@ -11,10 +11,10 @@
 #include <Accelerate/Accelerate.h>
 
 
-#if ((defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= __MAC_11_0) || \
-     (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_14_0) || \
-     (defined(__WATCH_OS_VERSION_MAX_ALLOWED) && __WATCH_OS_VERSION_MAX_ALLOWED >= __WATCHOS_7_0) || \
-     (defined(__TV_OS_VERSION_MAX_ALLOWED) && __TV_OS_VERSION_MAX_ALLOWED >= __TVOS_14_0))
+#if ((defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && defined(__MAC_11_0) && __MAC_OS_X_VERSION_MAX_ALLOWED >= __MAC_11_0) || \
+     (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && defined(__IPHONE_14_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_14_0) || \
+     (defined(__WATCH_OS_VERSION_MAX_ALLOWED) && defined(__WATCHOS_7_0) && __WATCH_OS_VERSION_MAX_ALLOWED >= __WATCHOS_7_0) || \
+     (defined(__TV_OS_VERSION_MAX_ALLOWED) && defined(__TVOS_14_0) && __TV_OS_VERSION_MAX_ALLOWED >= __TVOS_14_0))
 
 int accelerate_hal_sepFilter_stateless(const uchar* src_data, size_t src_step, int src_type,
                                        uchar* dst_data, size_t dst_step, int dst_type,
@@ -60,10 +60,10 @@ int accelerate_hal_sepFilter_stateless(const uchar* src_data, size_t src_step, i
             reinterpret_cast<const float*>(kernely_data), kernely_len,
             delta, Pixel_F{}, flags);
     } else if (src_type == CV_16F && dst_type == CV_16F) {
-#if ((defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= __MAC_13_0) || \
-     (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_16_0) || \
-     (defined(__WATCH_OS_VERSION_MAX_ALLOWED) && __WATCH_OS_VERSION_MAX_ALLOWED >= __WATCHOS_9_0) || \
-     (defined(__TV_OS_VERSION_MAX_ALLOWED) && __TV_OS_VERSION_MAX_ALLOWED >= __TVOS_16_0))
+#if ((defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && defined(__MAC_13_0) && __MAC_OS_X_VERSION_MAX_ALLOWED >= __MAC_13_0) || \
+     (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && defined(__IPHONE_16_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_16_0) || \
+     (defined(__WATCH_OS_VERSION_MAX_ALLOWED) && defined(__WATCHOS_9_0) && __WATCH_OS_VERSION_MAX_ALLOWED >= __WATCHOS_9_0) || \
+     (defined(__TV_OS_VERSION_MAX_ALLOWED) && defined(__TVOS_16_0) && __TV_OS_VERSION_MAX_ALLOWED >= __TVOS_16_0))
         result = vImageSepConvolve_Planar16F(&src_buffer, &dst_buffer, nullptr,
             offset_x, offset_y,
             reinterpret_cast<const float*>(kernelx_data), kernelx_len,

@@ -7,8 +7,8 @@
 
 #include <opencv2/core/base.hpp>
 
-#if ((defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= __MAC_10_4) || \
-     (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_4_0))
+#if ((defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && defined(__MAC_10_4) && __MAC_OS_X_VERSION_MAX_ALLOWED >= __MAC_10_4) || \
+     (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && defined(__IPHONE_4_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_4_0))
 
 int accelerate_hal_meanStdDev(const uchar* src_data, size_t src_step, int width, int height, int src_type,
                               double* mean_val, double* stddev_val, uchar* mask, size_t mask_step);
