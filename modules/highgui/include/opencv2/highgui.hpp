@@ -372,6 +372,32 @@ press (suitable for displaying a video frame-by-frame). To remove the window, us
 -   If the image is 16-bit signed, the pixels are divided by 256 and biased by 128. That is, the
     value range [-32768,32767] is mapped to [0,255].
 
+@note **Python usage example:**
+The following example demonstrates the recommended way to display an image using Python,
+including proper window cleanup to avoid freezing the Python kernel:
+@code{.py}
+import cv2 as cv
+
+# Read the image
+img = cv.imread('image.jpg')
+
+# Create a named window (optional, allows resizing)
+cv.namedWindow('Display', cv.WINDOW_NORMAL)
+
+# Display the image
+cv.imshow('Display', img)
+
+# Wait for a key press indefinitely (0 means wait forever)
+# Use waitKey(25) for video frame-by-frame display
+cv.waitKey(0)
+
+# Always destroy windows when done to free resources
+cv.destroyAllWindows()
+@endcode
+It is crucial to call cv.waitKey() after cv.imshow() in Python; otherwise the image
+window will not be rendered and the application may become unresponsive. Always call
+cv.destroyAllWindows() at the end to properly release window resources.
+
 @param winname Name of the window.
 @param mat Image to be shown.
  */
@@ -530,6 +556,23 @@ control panel.
 
 Clicking the label of each trackbar enables editing the trackbar values manually.
 
+@note **Python signature:**
+@code{.py}
+cv.createTrackbar(trackbarName, windowName, value, count, onChange) -> None
+@endcode
+**Python example:**
+@code{.py}
+import cv2 as cv
+
+def on_trackbar(val):
+    print('Trackbar value:', val)
+
+cv.namedWindow('window')
+cv.createTrackbar('brightness', 'window', 50, 100, on_trackbar)
+@endcode
+In Python, the `value` parameter sets the initial position of the trackbar, and the `onChange`
+callback receives only the trackbar position as its argument (no userdata parameter).
+
 @param trackbarname Name of the created trackbar.
 @param winname Name of the window that will contain the trackbar.
 @param value Pointer to the integer value that will be changed by the trackbar.
@@ -545,6 +588,7 @@ updated automatically.
 @note If the `value` pointer is `nullptr`, the trackbar position must be manually managed.
 Call the callback function manually with the desired initial value to avoid runtime warnings.
 @see \ref tutorial_trackbar
+@see \ref tutorial_py_trackbar
  */
 CV_EXPORTS int createTrackbar(const String& trackbarname, const String& winname,
                               int* value, int count,
