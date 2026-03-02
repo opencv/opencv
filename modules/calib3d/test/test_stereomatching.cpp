@@ -993,7 +993,7 @@ TEST(Calib3d_ValidateDisparity, HandlesValidCostsWithoutCrash)
         cost.at<int>(0, i) = i * 10;
 
     // minDisparity=0, numberOfDisparities=16, disp12MaxDisp=1
-    // This exercises the bounds checking code paths 
+    // This exercises the bounds checking code paths
     EXPECT_NO_THROW(
         cv::validateDisparity(disparity, cost, 0, 16, 1)
     );
@@ -1005,4 +1005,4 @@ TEST(Calib3d_ValidateDisparity, HandlesValidCostsWithoutCrash)
     }
 
 }
-}}// namespace
+}} // namespace
