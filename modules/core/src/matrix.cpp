@@ -427,7 +427,7 @@ MatShape MatShape::expand(const MatShape& another) const
         int sz2 = i2 < 0 ? 1 : another.p[i2];
         CV_Assert(sz1 == sz2 || sz1 == 1 || sz2 == 1);
         // [TODO] handle symbolic shapes
-        result.p[i] = std::max(sz1, sz2);
+        result.p[i] = sz1 != 1 ? sz1 : sz2;
     }
     return result;
 }

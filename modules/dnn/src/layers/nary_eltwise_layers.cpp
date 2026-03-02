@@ -308,7 +308,7 @@ public:
                 int inpsz = j < delta ? 1 : inpShape[j - delta];
                 int outsz = outShape[j];
                 CV_Assert(inpsz == outsz || inpsz == 1 || outsz == 1);
-                outShape[j] = std::max(outsz, inpsz);
+                outShape[j] = inpsz != 1 ? inpsz : outsz;
             }
         }
 
