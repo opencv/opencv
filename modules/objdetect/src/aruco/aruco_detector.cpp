@@ -514,7 +514,7 @@ static uint8_t _identifyOneCandidate(const Dictionary& dictionary, const Mat& _i
 
     // compute the candidate's confidence
     if(confidenceNeeded) {
-        Mat groundTruthbits = dictionary.getGroundTruthBits(idx, rotation);
+        Mat groundTruthbits = dictionary.getMarkerBits(idx, rotation);
         markerConfidence = _getMarkerConfidence(groundTruthbits, cellPixelRatio, dictionary.markerSize, params.markerBorderBits);
     }
 

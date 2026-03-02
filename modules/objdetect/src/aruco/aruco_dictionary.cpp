@@ -164,7 +164,7 @@ void Dictionary::generateImageMarker(int id, int sidePixels, OutputArray _img, i
     Mat innerRegion = tinyMarker.rowRange(borderBits, tinyMarker.rows - borderBits)
                           .colRange(borderBits, tinyMarker.cols - borderBits);
     // put inner bits
-    Mat bits = getGroundTruthBits(id);
+    Mat bits = getMarkerBits(id);
     bits.convertTo(bits, CV_8U, 255.0);
     CV_Assert(innerRegion.total() == bits.total());
     bits.copyTo(innerRegion);
@@ -212,7 +212,7 @@ Mat Dictionary::getByteListFromBits(const Mat &bits) {
 }
 
 
-Mat Dictionary::getGroundTruthBits(int markerId, int rotationId) const {
+Mat Dictionary::getMarkerBits(int markerId, int rotationId) const {
 
     const int nbRotations = 4;
     CV_Assert(markerId < bytesList.rows);

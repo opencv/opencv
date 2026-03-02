@@ -93,7 +93,7 @@ class CV_EXPORTS_W_SIMPLE Dictionary {
 
     /** @brief Get ground truth bits float
       */
-     CV_WRAP Mat getGroundTruthBits(int markerId, int rotationId = 0) const;
+     CV_WRAP Mat getMarkerBits(int markerId, int rotationId = 0) const;
 };
 
 
