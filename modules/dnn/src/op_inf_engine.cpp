@@ -53,7 +53,10 @@ Mat infEngineBlobToMat(const ov::Tensor& blob)
         default:
             CV_Error(Error::StsNotImplemented, "Unsupported blob precision");
     }
-    return Mat(size, type, blob.data());
+    // OpenVINO 2026 changed Tensor::data() to return const void*.
+    // Tensor memory for input/output blobs remains mutable.
+    // Cast is required to preserve zero-copy semantics.
+    return Mat(size, type, const_cast<void*>(blob.data()));
 }
 
 void infEngineBlobsToMats(const ov::TensorVector& blobs,
