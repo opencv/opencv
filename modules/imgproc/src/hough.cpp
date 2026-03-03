@@ -1650,7 +1650,7 @@ template <typename CircleType>
 static void HoughCirclesGradient(InputArray _image, OutputArray _circles,
                                  float dp, float minDist,
                                  int minRadius, int maxRadius, int cannyThreshold,
-                                 int accThreshold, int maxCircles, int kernelSize, bool centersOnly)
+                                 int accThreshold, int maxCircles, int kernelSize, bool centersOnly, InputArray _edges = noArray())
 {
     CV_Assert(kernelSize == -1 || kernelSize == 3 || kernelSize == 5 || kernelSize == 7);
 
@@ -1661,7 +1661,12 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles,
 
     Sobel(_image, dx, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REPLICATE);
     Sobel(_image, dy, CV_16S, 0, 1, kernelSize, 1, 0, BORDER_REPLICATE);
-    Canny(dx, dy, edges, std::max(1, cannyThreshold / 2), cannyThreshold, false);
+
+    if (!_edges.empty()) {
+        edges = _edges.getMat();
+    } else {
+        Canny(dx, dy, edges, std::max(1, cannyThreshold / 2), cannyThreshold, false);
+    }
 
     Mutex mtx;
     int numThreads = std::max(1, getNumThreads());
@@ -2270,7 +2275,7 @@ static void HoughCircles( InputArray _image, OutputArray _circles,
                           int method, double dp, double minDist,
                           double param1, double param2,
                           int minRadius, int maxRadius,
-                          int maxCircles, double param3 )
+                          int maxCircles, double param3, InputArray _edges )
 {
     CV_INSTRUMENT_REGION();
 
@@ -2309,11 +2314,11 @@ static void HoughCircles( InputArray _image, OutputArray _circles,
         if (type == CV_32FC3)
             HoughCirclesGradient<Vec3f>(_image, _circles, (float)dp, (float)minDist,
                                         minRadius, maxRadius, cannyThresh,
-                                        accThresh, maxCircles, kernelSize, centersOnly);
+                                        accThresh, maxCircles, kernelSize, centersOnly, _edges);
         else if (type == CV_32FC4)
             HoughCirclesGradient<Vec4f>(_image, _circles, (float)dp, (float)minDist,
                                         minRadius, maxRadius, cannyThresh,
-                                        accThresh, maxCircles, kernelSize, centersOnly);
+                                        accThresh, maxCircles, kernelSize, centersOnly, _edges);
         else
             CV_Error(Error::StsError, "Internal error");
         }
@@ -2357,9 +2362,9 @@ static void HoughCircles( InputArray _image, OutputArray _circles,
 void HoughCircles( InputArray _image, OutputArray _circles,
                    int method, double dp, double minDist,
                    double param1, double param2,
-                   int minRadius, int maxRadius )
+                   int minRadius, int maxRadius, InputArray _edges)
 {
-    HoughCircles(_image, _circles, method, dp, minDist, param1, param2, minRadius, maxRadius, -1, 3);
+    HoughCircles(_image, _circles, method, dp, minDist, param1, param2, minRadius, maxRadius, -1, 3, _edges);
 }
 } // \namespace cv
 
@@ -2481,11 +2486,16 @@ CV_IMPL CvSeq*
 cvHoughCircles( CvArr* src_image, void* circle_storage,
                 int method, double dp, double min_dist,
                 double param1, double param2,
-                int min_radius, int max_radius )
+                int min_radius, int max_radius , CvArr* edges)
 {
     CvSeq* circles = NULL;
     int circles_max = INT_MAX;
     cv::Mat src = cv::cvarrToMat(src_image), circles_mat;
+    cv::Mat edgesMat = cv::cvarrToMat(edges);
+
+    if (edges != nullptr) {
+        edgesMat = cv::cvarrToMat(edges);
+    }
 
     if( !circle_storage )
         CV_Error( cv::Error::StsNullPtr, "NULL destination" );
@@ -2514,7 +2524,7 @@ cvHoughCircles( CvArr* src_image, void* circle_storage,
         cvClearSeq( circles );
     }
 
-    cv::HoughCircles(src, circles_mat, method, dp, min_dist, param1, param2, min_radius, max_radius, circles_max, 3);
+    cv::HoughCircles(src, circles_mat, method, dp, min_dist, param1, param2, min_radius, max_radius, circles_max, 3, edgesMat);
     cvSeqPushMulti(circles, circles_mat.data, (int)circles_mat.total());
     return circles;
 }
