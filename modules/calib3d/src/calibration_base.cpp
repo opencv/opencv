@@ -1527,7 +1527,7 @@ void cv::getUndistortRectangles(InputArray _cameraMatrix, InputArray _distCoeffs
 {
     const int N = 9;
     int x, y, k;
-    Mat _pts(1, 4*(N-1), CV_64FC2);
+    Mat _pts(1, 4*(N-2), CV_64FC2);
     Point2d* pts = _pts.ptr<Point2d>();
 
     // generate a grid of points across the image to estimate the distortion deformation
@@ -1541,6 +1541,12 @@ void cv::getUndistortRectangles(InputArray _cameraMatrix, InputArray _distCoeffs
             {
                 // skip all points except those on the image border, because inner grid points
                 // have no influence on the two deformation rectangles that are calculated below
+                continue;
+            }
+            if ((x == 0 || x == N - 1) && (y == 0 || y == N - 1))
+            {
+                // skip corners, because undistortPoints is likely to fail and return the same
+                // value
                 continue;
             }
             pts[k++] = Point2d(x * stepX, y * stepY);
@@ -1558,6 +1564,10 @@ void cv::getUndistortRectangles(InputArray _cameraMatrix, InputArray _distCoeffs
         for( x = 0; x < N; x++ )
         {
             if (x != 0 && x != N - 1 && y != 0 && y != N - 1)
+            {
+                continue;
+            }
+            if ((x == 0 || x == N - 1) && (y == 0 || y == N - 1))
             {
                 continue;
             }
