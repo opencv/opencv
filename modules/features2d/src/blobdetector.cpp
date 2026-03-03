@@ -108,6 +108,7 @@ protected:
       Point2d location;
       double radius;
       double confidence;
+      double area;
   };
 
   virtual void detect( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) CV_OVERRIDE;
@@ -264,16 +265,18 @@ void SimpleBlobDetectorImpl::findBlobs(InputArray _image, InputArray _binaryImag
         Center center;
         center.confidence = 1;
         Moments moms = moments(contours[contourIdx]);
+
+        double area = moms.m00;
+        center.area = area;
+
         if (params.filterByArea)
         {
-            double area = moms.m00;
             if (area < params.minArea || area >= params.maxArea)
                 continue;
         }
 
         if (params.filterByCircularity)
         {
-            double area = moms.m00;
             double perimeter = arcLength(contours[contourIdx], true);
             double ratio = 4 * CV_PI * area / (perimeter * perimeter);
             if (ratio < params.minCircularity || ratio >= params.maxCircularity)
@@ -311,7 +314,6 @@ void SimpleBlobDetectorImpl::findBlobs(InputArray _image, InputArray _binaryImag
         {
             std::vector < Point > hull;
             convexHull(contours[contourIdx], hull);
-            double area = moms.m00;
             double hullArea = contourArea(hull);
             if (fabs(hullArea) < DBL_EPSILON)
                 continue;
@@ -460,13 +462,21 @@ void SimpleBlobDetectorImpl::detect(InputArray image, std::vector<cv::KeyPoint>&
             continue;
         Point2d sumPoint(0, 0);
         double normalizer = 0;
+        double sumArea = 0.0;
+
         for (size_t j = 0; j < centers[i].size(); j++)
         {
             sumPoint += centers[i][j].confidence * centers[i][j].location;
             normalizer += centers[i][j].confidence;
+            sumArea += centers[i][j].confidence * centers[i][j].area;
         }
         sumPoint *= (1. / normalizer);
+        double avgArea = sumArea / normalizer;
+
         KeyPoint kpt(sumPoint, (float)(centers[i][centers[i].size() / 2].radius) * 2.0f);
+
+        kpt.response = (float)avgArea;
+
         keypoints.push_back(kpt);
     }
 
