@@ -498,7 +498,7 @@ void Net::Impl::prepareForInference()
 
     if (!prepared) {
         constFold();
-        constArgs();        
+        constArgs();
         useBlockLayout();
         fuseBasic();
         assignBuffers();
@@ -1122,7 +1122,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                 __tensors__.at(out.idx) = m;
             }
         }
-        
+
         size_t ntemps = tempMats.size();
         scratchBufs.resize(std::max(ntemps, scratchBufs.size()));
         for (size_t i = 0; i < ntemps; i++) {

@@ -16,20 +16,17 @@ namespace dnn
 static void maxPool32f(const void* inp_, void* out_, const ConvState& cs)
 {
     constexpr int MAX_POOL_DIMS = ConvState::MAX_CONV_DIMS;
-    int C0_ = cs.inpshape.back();
-    int NC = cs.inpshape[0]*cs.inpshape[1];
-    int nlanes_ = VTraits<v_float32>::vlanes();
+    int NC1 = cs.inpshape[0]*cs.inpshape[1];
 
-    CV_Assert(C0_ == nlanes_ || C0_ == nlanes_*2 || C0_ % (nlanes_*4) == 0);
     CV_Assert(cs.nspatialdims <= MAX_POOL_DIMS && MAX_POOL_DIMS == 3);
     CV_Assert(cs.inpshape.layout == DATA_LAYOUT_BLOCK);
     CV_Assert(cs.outshape.layout == DATA_LAYOUT_BLOCK);
     CV_Assert(cs.inpshape.dims == cs.outshape.dims);
 
-    parallel_for_(Range(0, NC), [&](const Range& r) {
+    parallel_for_(Range(0, NC1), [&](const Range& r) {
         int sdims = cs.nspatialdims;
         int nc0 = r.start, nc1 = r.end;
-        int nlanes = nlanes_, C0 = cs.inpshape.back();
+        int C0 = cs.inpshape.back();
         int Di = sdims > 2 ? cs.inpshape[sdims - 1] : 1;
         int Hi = sdims > 1 ? cs.inpshape[sdims] : 1;
         int Wi = cs.inpshape[sdims + 1];
@@ -49,7 +46,13 @@ static void maxPool32f(const void* inp_, void* out_, const ConvState& cs)
 
         const float* inp = (const float*)inp_ + nc0*iplanesize;
         float* out = (float*)out_ + nc0*planesize;
-        v_float32 s_min = vx_setall_f32(-FLT_MAX);
+        const float INITVAL = -FLT_MAX;
+
+    #if CV_SIMD || CV_SIMD_SCALABLE
+        int nlanes = VTraits<v_float32>::vlanes();
+        v_float32 s_min = vx_setall_f32(INITVAL);
+        CV_Assert(C0 == nlanes || C0 == nlanes*2 || C0 % (nlanes*4) == 0);
+    #endif
 
         for (int nc = nc0; nc < nc1; nc++, inp += iplanesize) {
             for (int z0 = 0; z0 < D; z0++) {
@@ -59,7 +62,14 @@ static void maxPool32f(const void* inp_, void* out_, const ConvState& cs)
                     int x1 = z0 >= inner_z0 && z0 < inner_z1 &&
                         y0 >= inner_y0 && y0 < inner_y1 ? inner_x0 : W;
                     int yi_ = y0*SY - padY0;
+
+                #if !(CV_SIMD || CV_SIMD_SCALABLE)
+                    for (int c = 0; c < C0*W; c++)
+                        out[c] = INITVAL;
+                #endif
+
                     for(;;) {
+                    #if CV_SIMD || CV_SIMD_SCALABLE
                         if (nlanes == C0) {
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
@@ -103,14 +113,33 @@ static void maxPool32f(const void* inp_, void* out_, const ConvState& cs)
                                 }
                             }
                         }
+                    #else
+                        for (; x0 < x1; x0++) {
+                            int xi_ = x0*SX - padX0;
+                            for (int k = 0; k < ksize; k++) {
+                                int zi = zi_ + zyxtab[k*MAX_POOL_DIMS];
+                                int yi = yi_ + zyxtab[k*MAX_POOL_DIMS+1];
+                                int xi = xi_ + zyxtab[k*MAX_POOL_DIMS+2];
+                                if ((unsigned)zi >= (unsigned)Di ||
+                                    (unsigned)yi >= (unsigned)Hi ||
+                                    (unsigned)xi >= (unsigned)Wi)
+                                    continue;
+                                const float* inptr = inp + ((zi*Hi + yi)*Wi + xi)*C0;
+                                for (int c = 0; c < C0; c++)
+                                    out[x0*C0 + c] = std::max(out[x0*C0 + c], inptr[c]);
+                            }
+                        }
+                    #endif
                         if (x0 == W)
                             break;
                         x1 = inner_x1;
+
+                    #if CV_SIMD || CV_SIMD_SCALABLE
                         if (nlanes == C0) {
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
                                 const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
-                                
+
                                 v_float32 s0 = vx_load(inp_xi + ofstab[0]);
                                 for (int k = 1; k < ksize; k++)
                                     s0 = v_max(s0, vx_load(inp_xi + ofstab[k]));
@@ -120,7 +149,7 @@ static void maxPool32f(const void* inp_, void* out_, const ConvState& cs)
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
                                 const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
-                                
+
                                 int ofs_k = ofstab[0];
                                 v_float32 s0 = vx_load(inp_xi + ofs_k);
                                 v_float32 s1 = vx_load(inp_xi + ofs_k + nlanes);
@@ -136,8 +165,8 @@ static void maxPool32f(const void* inp_, void* out_, const ConvState& cs)
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
                                 for (int c = 0; c < C0; c += nlanes*4) {
-                                    const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
-                                    
+                                    const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0 + c;
+
                                     int ofs_k = ofstab[0];
                                     v_float32 s0 = vx_load(inp_xi + ofs_k);
                                     v_float32 s1 = vx_load(inp_xi + ofs_k + nlanes);
@@ -157,6 +186,17 @@ static void maxPool32f(const void* inp_, void* out_, const ConvState& cs)
                                 }
                             }
                         }
+                    #else
+                        for (; x0 < x1; x0++) {
+                            int xi_ = x0*SX - padX0;
+                            const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
+                            for (int k = 0; k < ksize; k++) {
+                                const float* inptr = inp_xi + ofstab[k];
+                                for (int c = 0; c < C0; c++)
+                                    out[x0*C0 + c] = std::max(out[x0*C0 + c], inptr[c]);
+                            }
+                        }
+                    #endif
                         x1 = W;
                     }
                 }
@@ -165,6 +205,9 @@ static void maxPool32f(const void* inp_, void* out_, const ConvState& cs)
     });
 }
 
+// temporarily exclude fp16/bf16 versions,
+// since convolution and other layers don't support those types yet
+#if 0
 template<typename _Tp>
 static void maxPool16xf(const _Tp* inp_, _Tp* out_, const ConvState& cs)
 {
@@ -263,7 +306,7 @@ static void maxPool16xf(const _Tp* inp_, _Tp* out_, const ConvState& cs)
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
                                 const _Tp* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
-                                
+
                                 v_float32 s0 = vx_load_expand(inp_xi + ofstab[0]);
                                 for (int k = 1; k < ksize; k++)
                                     s0 = v_max(s0, vx_load_expand(inp_xi + ofstab[k]));
@@ -273,7 +316,7 @@ static void maxPool16xf(const _Tp* inp_, _Tp* out_, const ConvState& cs)
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
                                 const _Tp* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
-                                
+
                                 int ofs_k = ofstab[0];
                                 v_float32 s0 = vx_load_expand(inp_xi + ofs_k);
                                 v_float32 s1 = vx_load_expand(inp_xi + ofs_k + nlanes);
@@ -290,7 +333,7 @@ static void maxPool16xf(const _Tp* inp_, _Tp* out_, const ConvState& cs)
                                 int xi_ = x0*SX - padX0;
                                 for (int c = 0; c < C0; c += nlanes*4) {
                                     const _Tp* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
-                                    
+
                                     int ofs_k = ofstab[0];
                                     v_float32 s0 = vx_load_expand(inp_xi + ofs_k);
                                     v_float32 s1 = vx_load_expand(inp_xi + ofs_k + nlanes);
@@ -327,8 +370,9 @@ static void maxPool16bf(const void* inp_, void* out_, const ConvState& cs)
 {
     maxPool16xf((const bfloat*)inp_, (bfloat*)out_, cs);
 }
+#endif
 
-typedef void (*maxpool_func_t)(const void* inp, void* out, const ConvState& cs);
+typedef void (*MaxPoolFunc)(const void* inp, void* out, const ConvState& cs);
 
 class MaxPoolLayerImpl : public MaxPoolLayer
 {
@@ -482,10 +526,11 @@ public:
     void runOp(const Mat& inp, Mat& out, const ConvState& cs)
     {
         int inptype = inp.type();
-        maxpool_func_t func =
+        MaxPoolFunc func =
             inptype == CV_32F ? maxPool32f :
-            inptype == CV_16F ? maxPool16f :
-            inptype == CV_16BF ? maxPool16bf : nullptr;
+            /*inptype == CV_16F ? maxPool16f :
+            inptype == CV_16BF ? maxPool16bf :*/
+            nullptr;
 
         CV_Assert(func != nullptr && "MaxPool: unsupported data type");
         func(inp.data, out.data, cs);

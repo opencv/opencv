@@ -106,4 +106,3 @@ void Net::Impl::constArgs()
 
 CV__DNN_INLINE_NS_END
 }}
-

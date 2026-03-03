@@ -878,7 +878,7 @@ TEST_P(Reproducibility_ResNet50_ONNX, Accuracy)
                               Scalar(103.939, 116.779, 123.68),
                               false, true, CV_32F);
     ASSERT_TRUE(!input.empty());
-    
+
     Mat out;
     double min_t = 0;
     const int niters =
@@ -903,16 +903,16 @@ TEST_P(Reproducibility_ResNet50_ONNX, Accuracy)
 
     topK(out, res, K);
     const float eps = 0.15f;
-    
+
     ASSERT_EQ(int(res.size()), K);
-    
+
     std::vector<int> reflabels(K), reslabels(K);
     for (int i = 0; i < K; i++) {
         reflabels[i] = ref[i].first;
         reslabels[i] = res[i].first;
     }
     ASSERT_EQ(reflabels, reslabels);
-    
+
     for (int i = 0; i < K; i++) {
         EXPECT_NEAR(ref[i].second, res[i].second, eps);
     }

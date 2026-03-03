@@ -17,21 +17,18 @@ static void avgPool32f(const void* inp_, void* out_,
                        const ConvState& cs, bool count_include_pad_)
 {
     constexpr int MAX_POOL_DIMS = ConvState::MAX_CONV_DIMS;
-    int C0_ = cs.inpshape.back();
-    int NC = cs.inpshape[0]*cs.inpshape[1];
-    int nlanes_ = VTraits<v_float32>::vlanes();
+    int NC1 = cs.inpshape[0]*cs.inpshape[1];
 
-    CV_Assert(C0_ == nlanes_ || C0_ == nlanes_*2 || C0_ % (nlanes_*4) == 0);
     CV_Assert(cs.nspatialdims <= MAX_POOL_DIMS && MAX_POOL_DIMS == 3);
     CV_Assert(cs.inpshape.layout == DATA_LAYOUT_BLOCK);
     CV_Assert(cs.outshape.layout == DATA_LAYOUT_BLOCK);
     CV_Assert(cs.inpshape.dims == cs.outshape.dims);
 
-    parallel_for_(Range(0, NC), [&](const Range& r) {
+    parallel_for_(Range(0, NC1), [&](const Range& r) {
         bool count_include_pad = count_include_pad_;
         int sdims = cs.nspatialdims;
         int nc0 = r.start, nc1 = r.end;
-        int nlanes = nlanes_, C0 = cs.inpshape.back();
+        int C0 = cs.inpshape.back();
         int Di = sdims > 2 ? cs.inpshape[sdims - 1] : 1;
         int Hi = sdims > 1 ? cs.inpshape[sdims] : 1;
         int Wi = cs.inpshape[sdims + 1];
@@ -51,8 +48,14 @@ static void avgPool32f(const void* inp_, void* out_,
 
         const float* inp = (const float*)inp_ + nc0*iplanesize;
         float* out = (float*)out_ + nc0*planesize;
+        float iksize = 1.f/ksize;
+
+#if CV_SIMD || CV_SIMD_SCALABLE
+        int nlanes = VTraits<v_float32>::vlanes();
+        CV_Assert(C0 == nlanes || C0 == nlanes*2 || C0 % (nlanes*4) == 0);
         v_float32 z = vx_setzero_f32();
-        v_float32 vscale0 = vx_setall_f32(1.f/ksize);
+        v_float32 vscale0 = vx_setall_f32(iksize);
+#endif
 
         for (int nc = nc0; nc < nc1; nc++, inp += iplanesize) {
             for (int z0 = 0; z0 < D; z0++) {
@@ -62,7 +65,13 @@ static void avgPool32f(const void* inp_, void* out_,
                     int x1 = z0 >= inner_z0 && z0 < inner_z1 &&
                         y0 >= inner_y0 && y0 < inner_y1 ? inner_x0 : W;
                     int yi_ = y0*SY - padY0;
+
+                #if !(CV_SIMD || CV_SIMD_SCALABLE)
+                    memset(out, 0, W*C0*sizeof(out[0]));
+                #endif
+
                     for(;;) {
+                    #if CV_SIMD || CV_SIMD_SCALABLE
                         if (nlanes == C0) {
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
@@ -114,14 +123,39 @@ static void avgPool32f(const void* inp_, void* out_,
                                 }
                             }
                         }
+                    #else
+                        for (; x0 < x1; x0++) {
+                            int xi_ = x0*SX - padX0;
+                            int nitems = 0;
+                            for (int k = 0; k < ksize; k++) {
+                                int zi = zi_ + zyxtab[k*MAX_POOL_DIMS];
+                                int yi = yi_ + zyxtab[k*MAX_POOL_DIMS+1];
+                                int xi = xi_ + zyxtab[k*MAX_POOL_DIMS+2];
+                                if ((unsigned)zi >= (unsigned)Di ||
+                                    (unsigned)yi >= (unsigned)Hi ||
+                                    (unsigned)xi >= (unsigned)Wi)
+                                    continue;
+                                const float* inptr = inp + ((zi*Hi + yi)*Wi + xi)*C0;
+                                for (int c = 0; c < C0; c++)
+                                    out[x0*C0 + c] += inptr[c];
+                                nitems++;
+                            }
+                            float scale = count_include_pad ? iksize : 1.f/nitems;
+                            for (int c = 0; c < C0; c++)
+                                out[x0*C0 + c] *= scale;
+                        }
+                    #endif
+
                         if (x0 == W)
                             break;
                         x1 = inner_x1;
+
+                    #if CV_SIMD || CV_SIMD_SCALABLE
                         if (nlanes == C0) {
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
                                 const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
-                                
+
                                 v_float32 s0 = vx_load(inp_xi + ofstab[0]);
                                 for (int k = 1; k < ksize; k++)
                                     s0 = v_add(s0, vx_load(inp_xi + ofstab[k]));
@@ -131,7 +165,7 @@ static void avgPool32f(const void* inp_, void* out_,
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
                                 const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
-                                
+
                                 int ofs_k = ofstab[0];
                                 v_float32 s0 = vx_load(inp_xi + ofs_k);
                                 v_float32 s1 = vx_load(inp_xi + ofs_k + nlanes);
@@ -149,8 +183,8 @@ static void avgPool32f(const void* inp_, void* out_,
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
                                 for (int c = 0; c < C0; c += nlanes*4) {
-                                    const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
-                                    
+                                    const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0 + c;
+
                                     int ofs_k = ofstab[0];
                                     v_float32 s0 = vx_load(inp_xi + ofs_k);
                                     v_float32 s1 = vx_load(inp_xi + ofs_k + nlanes);
@@ -174,6 +208,19 @@ static void avgPool32f(const void* inp_, void* out_,
                                 }
                             }
                         }
+                    #else
+                        for (; x0 < x1; x0++) {
+                            int xi_ = x0*SX - padX0;
+                            const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
+                            for (int k = 0; k < ksize; k++) {
+                                const float* inptr = inp_xi + ofstab[k];
+                                for (int c = 0; c < C0; c++)
+                                    out[x0*C0 + c] += inptr[c];
+                            }
+                            for (int c = 0; c < C0; c++)
+                                out[x0*C0 + c] *= iksize;
+                        }
+                    #endif
                         x1 = W;
                     }
                 }
@@ -182,6 +229,9 @@ static void avgPool32f(const void* inp_, void* out_,
     });
 }
 
+// temporarily exclude fp16/bf16 versions,
+// since convolution and other layers don't support those types yet
+#if 0
 template<typename _Tp>
 static void avgPool16xf(const _Tp* inp_, _Tp* out_,
                         const ConvState& cs, bool count_include_pad_)
@@ -290,7 +340,7 @@ static void avgPool16xf(const _Tp* inp_, _Tp* out_,
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
                                 const _Tp* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
-                                
+
                                 v_float32 s0 = vx_load_expand(inp_xi + ofstab[0]);
                                 for (int k = 1; k < ksize; k++)
                                     s0 = v_add(s0, vx_load_expand(inp_xi + ofstab[k]));
@@ -300,7 +350,7 @@ static void avgPool16xf(const _Tp* inp_, _Tp* out_,
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
                                 const _Tp* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
-                                
+
                                 int ofs_k = ofstab[0];
                                 v_float32 s0 = vx_load_expand(inp_xi + ofs_k);
                                 v_float32 s1 = vx_load_expand(inp_xi + ofs_k + nlanes);
@@ -319,7 +369,7 @@ static void avgPool16xf(const _Tp* inp_, _Tp* out_,
                                 int xi_ = x0*SX - padX0;
                                 for (int c = 0; c < C0; c += nlanes*4) {
                                     const _Tp* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
-                                    
+
                                     int ofs_k = ofstab[0];
                                     v_float32 s0 = vx_load_expand(inp_xi + ofs_k);
                                     v_float32 s1 = vx_load_expand(inp_xi + ofs_k + nlanes);
@@ -362,6 +412,7 @@ static void avgPool16bf(const void* inp_, void* out_,
 {
     avgPool16xf((const bfloat*)inp_, (bfloat*)out_, cs, countIncludePadding);
 }
+#endif
 
 typedef void (*AvgPoolFunc)(const void* inp, void* out,
                             const ConvState& cs, bool countIncludePadding);
@@ -505,8 +556,9 @@ public:
         int inptype = inp.type();
         AvgPoolFunc func =
             inptype == CV_32F ? avgPool32f :
-            inptype == CV_16F ? avgPool16f :
-            inptype == CV_16BF ? avgPool16bf : nullptr;
+            /*inptype == CV_16F ? avgPool16f :
+            inptype == CV_16BF ? avgPool16bf :*/
+            nullptr;
 
         CV_Assert(func != nullptr && "AveragePool: unsupported data type");
         func(inp.data, out.data, cs, count_include_pad);

@@ -151,7 +151,7 @@ struct CV_EXPORTS_W_SIMPLE MatShape
     const int& operator [](size_t idx) const;
     int& operator [](size_t idx);
     Size operator()() const; // for compatibility with MatSize
-    
+
     CV_WRAP int channels() const; // returns the number of channels
 
     CV_WRAP bool hasSymbols() const; // negative elements in the shape may denote 'symbols' instead of actual values.

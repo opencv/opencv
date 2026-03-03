@@ -90,11 +90,11 @@ struct ModelFusionBasic
 
                     int op0 = producer_of.at(inputs[0].idx);
                     int op1 = producer_of.at(inputs[1].idx);
-                    
+
                     if (op0 >= 0 && op1 >= 0) {
                         int conv_layer_idx;
                         Arg residual, conv_out;
-                        
+
                         if (op0 > op1) { // choose the latter op to ensure that the other component is already computed
                             conv_layer_idx = op0;
                             conv_out = inputs[0];
@@ -104,7 +104,7 @@ struct ModelFusionBasic
                             conv_out = inputs[1];
                             residual = inputs[0];
                         }
-                        
+
                         Conv2Layer* conv = getLayer<Conv2Layer>(newprog, conv_layer_idx);
                         if (conv && usecounts[conv_out.idx] == 1 &&
                             conv->fuseAddResidual(residual)) {

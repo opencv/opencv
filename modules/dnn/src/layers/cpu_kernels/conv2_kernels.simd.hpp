@@ -29,7 +29,7 @@ CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 #undef CONV_ADD_NO_RESIDUAL2
 #define CONV_ADD_NO_RESIDUAL2(idx0, idx1) /* empty */
 
-#if CV_NEON_AARCH64
+#if (defined CV_NEON_AARCH64) && CV_NEON_AARCH64
 
 /////////////////////////// AARH64-optimized implementation /////////////////////////////
 
@@ -396,16 +396,14 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
                       const ConvState& cs, const void* weights__,
                       const float* scale__, const float* bias__)
 {
-    constexpr int SPAT_BLOCK_SIZE = 10;
     using FT = float;
-    constexpr int C0shift = 3, K0shift = C0shift;
-    constexpr int C0 = 1 << C0shift;
-    constexpr int K0 = C0;
+    constexpr int C0shift_ = 3;
+    constexpr int C0_ = 1 << C0shift_;
     const MatShape& inpshape = cs.inpshape;
     const MatShape& outshape = cs.outshape;
 
     CV_Assert_N(inpshape.layout == DATA_LAYOUT_BLOCK, outshape.layout == DATA_LAYOUT_BLOCK);
-    CV_Assert_N(inpshape.back() == C0, outshape.back() == K0);
+    CV_Assert_N(inpshape.back() == C0_, outshape.back() == C0_);
 
     int K_ = outshape.channels();
     int ndims_ = outshape.dims;
@@ -420,7 +418,7 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
     int C1Max_ = cs.wshape[3];
     int total_blocks = N * cs.ngroups * Kblk_;
 
-    if ((K_/cs.ngroups) % K0 != 0) {
+    if ((K_/cs.ngroups) % C0_ != 0) {
         // if there could be 'padding' channels in the output,
         // clear the output before the parallel loop
         // to make sure that all the padding channels are cleared.
@@ -428,6 +426,9 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
     }
 
     parallel_for_(Range(0, total_blocks), [&](const Range& range) {
+        constexpr int SPAT_BLOCK_SIZE = 10;
+        constexpr int C0shift = C0shift_, K0shift = C0shift_;
+        constexpr int C0 = C0_, K0 = C0_;
         constexpr int MAX_CONV_DIMS = ConvState::MAX_CONV_DIMS;
         const int C = inpshape.channels(), K = outshape.channels();
         const int C1 = (C + C0 - 1)/C0, K1 = (K + K0 - 1)/K0;
@@ -449,7 +450,7 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
         int planesize = planeblocks*K0;
         int iplanesize = Di*Hi*Wi*C0;
 
-    #if CONV_ENABLE_SIMD
+    #ifdef CONV_ENABLE_SIMD
         int innerZ0 = cs.inner[0], innerZ1 = cs.inner[MAX_CONV_DIMS];
         int innerY0 = cs.inner[1], innerY1 = cs.inner[MAX_CONV_DIMS+1];
         int innerX0 = cs.inner[2], innerX1 = cs.inner[MAX_CONV_DIMS+2];
@@ -470,7 +471,7 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
             W *= D*H;
             Wi *= Di*Hi;
             D = Di = H = Hi = 1;
-        #if CONV_ENABLE_SIMD
+        #ifdef CONV_ENABLE_SIMD
             innerZ1 = innerY1 = 1;
             innerX1 = W;
         #endif
@@ -513,7 +514,7 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
             float tmpbuf[SPAT_BLOCK_SIZE*K0] = {};
             int p = p0;
 
-        #if CONV_ENABLE_SIMD
+        #ifdef CONV_ENABLE_SIMD
             for (; p < p1; p += SPAT_BLOCK_SIZE,
                            outptr += SPAT_BLOCK_SIZE*K0)
             {

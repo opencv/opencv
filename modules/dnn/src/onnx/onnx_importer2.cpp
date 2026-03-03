@@ -997,19 +997,6 @@ void ONNXImporter2::parseArgMinMax(LayerParams& layerParams, const opencv_onnx::
     addLayer(layerParams, node_proto);
 }
 
-static void setCeilMode(LayerParams& layerParams)
-{
-    // auto_pad attribute is deprecated and uses ceil
-    if (layerParams.has("pad_mode"))
-    {
-        layerParams.set("ceil_mode", true);
-    }
-    else if (!layerParams.has("ceil_mode"))
-    {
-        layerParams.set("ceil_mode", false);
-    }
-}
-
 void ONNXImporter2::parseMaxUnpool(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "MaxUnpool";

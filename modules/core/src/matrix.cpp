@@ -345,22 +345,22 @@ MatShape MatShape::toLayout(DataLayout newLayout, int C0) const
 {
     CV_Assert(layout == DATA_LAYOUT_BLOCK || layout == DATA_LAYOUT_NCHW || layout == DATA_LAYOUT_NHWC);
     CV_Assert(newLayout == DATA_LAYOUT_BLOCK || newLayout == DATA_LAYOUT_NCHW || newLayout == DATA_LAYOUT_NHWC);
-    
+
     MatShape newsize = *this;
     newsize.layout = newLayout;
-    
+
     if (newLayout == DATA_LAYOUT_BLOCK) {
         // any => BLOCK
         CV_Assert_N(C0 > 1, (C0 & (C0-1)) == 0);
         int Corig = channels();
         newsize.C = Corig;
-        
+
         if (layout == DATA_LAYOUT_NHWC) {
             for (int i = 2; i < dims; i++) {
                 newsize.p[i] = p[i-1];
             }
         }
-        
+
         newsize.dims += layout != DATA_LAYOUT_BLOCK;
         newsize.p[1] = (Corig + C0 - 1)/C0;
         newsize.p[newsize.dims-1] = C0;
@@ -376,10 +376,10 @@ MatShape MatShape::toLayout(DataLayout newLayout, int C0) const
         newsize.dims--;
     } else {
         CV_Assert_N(C0 <= 1);
-        
+
         if (newLayout == layout)
             return newsize;
-        
+
         // NHWC => NCHW
         if (newLayout == DATA_LAYOUT_NCHW) {
             for (int i = 2; i < dims; i++)

@@ -67,10 +67,11 @@ static void batchnorm(const Mat& inp, Mat& out, const Mat& scale,
         int C0 = C0_, C1 = C1_, C = C_;
         int planesize_C0 = planesize_*C0;
         int type = type_;
-        CV_SIMD_ONLY(int vlanes = vlanes_);
+        CV_SIMD_ONLY(int vlanes = vlanes_;
         constexpr int max_lanes = VTraits<v_float32>::max_nlanes;
         constexpr int MAX_UNROLL = 4;
-        float scalebuf[max_lanes*MAX_UNROLL], biasbuf[max_lanes*MAX_UNROLL];
+        float scalebuf[max_lanes*MAX_UNROLL];
+        float biasbuf[max_lanes*MAX_UNROLL]);
 
         for (int k = r.start; k < r.end; k++) {
             int i = 0, n = k/C1, c1 = k % C1;

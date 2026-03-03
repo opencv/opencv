@@ -356,7 +356,7 @@ CV__DNN_INLINE_NS_BEGIN
     public:
         static Ptr<BaseConvolutionLayer> create(const LayerParams& params);
     };
-    
+
     enum AutoPadding
     {
         AUTO_PAD_NONE = 0,
@@ -468,7 +468,7 @@ CV__DNN_INLINE_NS_BEGIN
         float input_sc, output_sc;
         static Ptr<PoolingLayerInt8> create(const LayerParams& params);
     };
-    
+
     class CV_EXPORTS AveragePoolLayer : public Layer
     {
     public:
@@ -1234,7 +1234,7 @@ CV__DNN_INLINE_NS_BEGIN
             BITWISE_XOR
         };
         OPERATION op;
-        
+
         static Ptr<NaryEltwiseLayer> create(const LayerParams &params);
     };
 
@@ -1254,7 +1254,7 @@ CV__DNN_INLINE_NS_BEGIN
         int input_zp, output_zp;
         static Ptr<BatchNormLayerInt8> create(const LayerParams &params);
     };
-    
+
     class CV_EXPORTS BatchNorm2Layer : public Layer
     {
     public:
@@ -1556,7 +1556,7 @@ CV__DNN_INLINE_NS_BEGIN
     public:
         static Ptr<Tile2Layer> create(const LayerParams& params);
     };
-    
+
     class CV_EXPORTS TransformLayoutLayer : public Layer
     {
     public:

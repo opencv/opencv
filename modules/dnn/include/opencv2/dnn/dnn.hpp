@@ -459,7 +459,7 @@ CV__DNN_INLINE_NS_BEGIN
                               const int requiredInternals,
                               std::vector<MatType>&outputs,
                               std::vector<MatType>&internals) const;
-                              
+
         // this is the method for Layer to express its attitude to the block layout
         // or any other special form of layout. It takes
         // layouts of the inputs and should return the desired layouts of
