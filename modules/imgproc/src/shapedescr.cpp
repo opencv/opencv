@@ -139,13 +139,13 @@ static void findMinEnclosingCircle(const PT *pts_in, int count, Point2f &center,
     PT* pts = pts_buf.data();
     if (count > 10)
     {
-        uint32_t x0 = 0, y0 = 0, xn = 0, yn = 0;
-        std::memcpy(&x0, &pts[0].x, sizeof(pts[0].x));
-        std::memcpy(&y0, &pts[0].y, sizeof(pts[0].y));
-        std::memcpy(&xn, &pts[count-1].x, sizeof(pts[count-1].x));
-        std::memcpy(&yn, &pts[count-1].y, sizeof(pts[count-1].y));
+        Cv32suf x0, y0, xn, yn;
+        x0.f = (float)pts[0].x;
+        y0.f = (float)pts[0].y;
+        xn.f = (float)pts[count-1].x;
+        yn.f = (float)pts[count-1].y;
 
-        uint32_t seed = (uint32_t)count ^ x0 ^ (y0 << 8) ^ (xn << 16) ^ (yn << 24);
+        uint32_t seed = (uint32_t)count ^ x0.u ^ (y0.u << 8) ^ (xn.u << 16) ^ (yn.u << 24);
         cv::RNG rng(seed);
 
         for (int i = 1; i < count; ++i)
