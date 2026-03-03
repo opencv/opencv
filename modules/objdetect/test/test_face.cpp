@@ -175,10 +175,10 @@ TEST(Objdetect_face_recognition, regression)
     }
 
     // Initialize detector
-    std::string detect_model = findDataFile("dnn/onnx/models/yunet-202303.onnx", false);
+    std::string detect_model = findDataFile("../dnn/onnx/models/yunet-202303.onnx", false);
     Ptr<FaceDetectorYN> faceDetector = FaceDetectorYN::create(detect_model, "", Size(150, 150), score_thresh, nms_thresh);
 
-    std::string recog_model = findDataFile("dnn/onnx/models/face_recognizer_fast.onnx", false);
+    std::string recog_model = findDataFile("../dnn/onnx/models/face_recognizer_fast.onnx", false);
     Ptr<FaceRecognizerSF> faceRecognizer = FaceRecognizerSF::create(recog_model, "");
 
     // Detect and match
@@ -189,6 +189,8 @@ TEST(Objdetect_face_recognition, regression)
 
         Mat faces;
         faceDetector->detect(image, faces);
+
+        ASSERT_EQ(faces.rows, 1);
 
         Mat aligned_face;
         faceRecognizer->alignCrop(image, faces.row(0), aligned_face);

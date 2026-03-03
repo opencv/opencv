@@ -32,11 +32,9 @@ public:
         dilations = params.getVector<int>("dilation");
         pads = params.getVector<int>("pad");
         ngroups = params.get<int>("group", 1);
-        fused_batch_norm = false;
-        fused_batch_norm = false;
-        fast_activation = FAST_ACTIV_NONE;
-        memset(fast_activ_params, 0, sizeof(fast_activ_params));
-        add_residual = false;
+        fusedBatchNorm = false;
+        fastActivation = FAST_ACTIV_NONE;
+        addResidual = false;
     }
 
     virtual std::ostream& dumpAttrs(std::ostream& strm, int indent) const CV_OVERRIDE
@@ -70,21 +68,21 @@ public:
             strm << (k > 0 ? ", " : "") << pads[k];
         strm << "],\n";
 
-        if (fused_batch_norm) {
+        if (fusedBatchNorm) {
             prindent(strm, indent);
             strm << "batch_norm: true,\n";
         }
 
-        if (fast_activation != FAST_ACTIV_NONE || !activ.empty()) {
+        if (fastActivation != FAST_ACTIV_NONE || !activ.empty()) {
             prindent(strm, indent);
             strm << "fused_activation: " <<
-                (fast_activation != FAST_ACTIV_NONE ? fastActivationToString(fast_activation) :
+                (fastActivation != FAST_ACTIV_NONE ? fastActivationToString(fastActivation) :
                  activ->type) << ",\n";
         }
 
-        if (add_residual) {
+        if (addResidual) {
             prindent(strm, indent);
-            strm << "add_residual: true,\n";
+            strm << "addResidual: true,\n";
         }
 
         if (activ) {
@@ -138,13 +136,13 @@ public:
         CV_Assert(bias.empty() || (bias.type() == CV_32F && bias.total() == (size_t)K));
         const float* bias_data = bias.data ? bias.ptr<float>() : nullptr;
 
-        fused_scale.fit(1, &K, CV_32F);
-        fused_bias.fit(1, &K, CV_32F);
+        fusedScale.fit(1, &K, CV_32F);
+        fusedBias.fit(1, &K, CV_32F);
 
         const float* bn_scale_data = bn_scale.ptr<float>();
         const float* bn_bias_data = bn_bias.ptr<float>();
-        float* fused_scale_data = fused_scale.ptr<float>();
-        float* fused_bias_data = fused_bias.ptr<float>();
+        float* fused_scale_data = fusedScale.ptr<float>();
+        float* fused_bias_data = fusedBias.ptr<float>();
 
         // (sum(x*w) + bias)*bn_scale + bn_bias => sum(x*w)*fused_scale + fused_bias,
         // where fused_scale = bn_scale and fused_bias = bias*bn_scale + bn_bias.
@@ -157,16 +155,16 @@ public:
     virtual bool fuseBatchNorm(const Ptr<Layer>& bnlayer) override
     {
         BatchNorm2Layer* bn = dynamic_cast<BatchNorm2Layer*>(bnlayer.get());
-        if (fused_batch_norm || !bn || bn->inputs.size() > 1)
+        if (fusedBatchNorm || !bn || bn->inputs.size() > 1)
             return false;
         fuseBatchNormWeights(bn);
-        fused_batch_norm = true;
+        fusedBatchNorm = true;
         return true;
     }
 
     virtual bool fuseAddBias(InputArray arr) CV_OVERRIDE
     {
-        if (inputs.size() > 1 || fused_batch_norm || add_residual)
+        if (inputs.size() > 1 || fusedBatchNorm || addResidual)
             return false;
         Mat new_bias = arr.getMat();
         CV_Assert(new_bias.isContinuous() && new_bias.dims == 1);
@@ -188,17 +186,29 @@ public:
     virtual bool fuseActivation(const Ptr<Layer>& activlayer) override
     {
         ActivationLayer* activ_ptr = dynamic_cast<ActivationLayer*>(activlayer.get());
-        if (!activ_ptr || fast_activation != FAST_ACTIV_NONE)
+        if (!activ_ptr || fastActivation != FAST_ACTIV_NONE || !activ.empty())
             return false;
-        ReLULayer* relu = dynamic_cast<ReLULayer*>(activ_ptr);
-        if (relu) {
-            float alpha = relu->negativeSlope;
-            if (alpha > 0.f) {
-                fast_activation = FAST_ACTIV_LEAKY_RELU;
-                fast_activ_params[0] = alpha;
+        ReLULayer* activRelu = dynamic_cast<ReLULayer*>(activ_ptr);
+        ReLU6Layer* activClip = dynamic_cast<ReLU6Layer*>(activ_ptr);
+        ChannelsPReLULayer* activPRelu = dynamic_cast<ChannelsPReLULayer*>(activ_ptr);
+        if (activRelu) {
+            float alpha = activRelu->negativeSlope;
+            if (alpha == 0.f) {
+                fastActivation = FAST_ACTIV_RELU;
             } else {
-                fast_activation = FAST_ACTIV_RELU;
+                fastActivation = FAST_ACTIV_LEAKY_RELU;
+                activParams = {alpha};
             }
+        } else if (activClip && activClip->minValue == 0.f) {
+            fastActivation = FAST_ACTIV_CLIP;
+            activParams = {activClip->minValue, activClip->maxValue};
+        } else if (activPRelu && activPRelu->blobs.size() == 1) {
+            fastActivation = FAST_ACTIV_PRELU;
+            const Mat& slopes = activPRelu->blobs[0];
+            int slopesType = slopes.type();
+            CV_Assert_N((slopesType == CV_32F || slopesType == CV_16F || slopesType == CV_16BF),
+                        (slopes.rows == 1 || slopes.cols == 1));
+            slopes.convertTo(activParams, CV_32F);
         } else {
             //activ = activlayer;
             return false;
@@ -208,8 +218,8 @@ public:
 
     virtual bool fuseAddResidual(Arg residual) CV_OVERRIDE
     {
-        if (activ.empty() && fast_activation == FAST_ACTIV_NONE && !add_residual && residual.idx >= 0) {
-            add_residual = true;
+        if (activ.empty() && fastActivation == FAST_ACTIV_NONE && !addResidual && residual.idx >= 0) {
+            addResidual = true;
             inputs.push_back(residual);
             return true;
         }
@@ -246,12 +256,12 @@ public:
                                  std::vector<MatShape> &tempshapes) const CV_OVERRIDE
     {
         size_t ninputs = inpshapes.size();
-        if (add_residual)
+        if (addResidual)
             ninputs--;
         CV_Assert(ninputs >= 1);
 
         MatShape wshape = ninputs > 1 ? inpshapes[1] : wshape0;
-        outshapes.assign(1, convInferShape(inpshapes[0], wshape, empty_kernel_shape,
+        outshapes.assign(1, convInferShape(inpshapes[0], wshape, emptyKernelShape,
                                            ngroups, strides, dilations,
                                            pads, auto_pad, ceil_mode));
         tempshapes.clear();
@@ -282,7 +292,6 @@ public:
                  OutputArrayOfArrays temp_arrs) CV_OVERRIDE
     {
         auto* netimpl_ = getNetImpl(this);
-        DataLayout origLayout = netimpl_->originalLayout;
         std::vector<Mat>* temp_mats = &temp_arrs.getMatVecRef();
         temp_mats->resize(2);
         int ninputs = (int)input_arrs.total();
@@ -295,7 +304,7 @@ public:
         CV_Assert(inpshape.layout == DATA_LAYOUT_BLOCK);
         CV_Assert(inp.isContinuous());
 
-        if (add_residual) {
+        if (addResidual) {
             residual = input_arrs.getMat(ninputs-1);
             resptr = residual.data;
             ninputs--;
@@ -311,7 +320,7 @@ public:
                        inpshape.back(), netimpl_->accuracy);
         }
 
-        MatShape outshape = convInferShape(inpshape, wshape0, empty_kernel_shape,
+        MatShape outshape = convInferShape(inpshape, wshape0, emptyKernelShape,
                                            ngroups, strides, dilations,
                                            pads, auto_pad, ceil_mode);
         int outtype = inferType(inptype);
@@ -320,7 +329,7 @@ public:
         CV_Assert(outkind == _InputArray::STD_VECTOR_MAT ||
                   outkind == _InputArray::STD_VECTOR_UMAT);
 
-        if (add_residual && (residual.size != outshape || residual.type() != outtype))
+        if (addResidual && (residual.size != outshape || residual.type() != outtype))
         {
             CV_Error(Error::StsBadArg,
                     "residual added after convolution must have the same shape and the "
@@ -332,16 +341,19 @@ public:
         int nspatialdims = inpshape.dims - 3;
         CV_Assert(wshape0.dims == nspatialdims+2);
 
-        cs.initConv(inpshape, wshape0, outshape, ngroups,
-                    strides, dilations, pads, auto_pad, ceil_mode,
-                    fast_activation, fast_activ_params, ConvState::MAX_ACTIV_PARAMS);
+        if (inpshape != prevInpshape) {
+            cs.initConv(inpshape, wshape0, outshape, ngroups,
+                        strides, dilations, pads, auto_pad, ceil_mode,
+                        fastActivation, activParams);
+            prevInpshape = inpshape;
+        }
 
         const float* scale_data = nullptr;
         const float* bias_data = bias.ptr<float>();
 
-        if (fused_batch_norm) {
-            scale_data = fused_scale.ptr<float>();
-            bias_data = fused_bias.ptr<float>();
+        if (fusedBatchNorm) {
+            scale_data = fusedScale.ptr<float>();
+            bias_data = fusedBias.ptr<float>();
         }
 
         std::vector<Mat>* outs = nullptr;
@@ -380,15 +392,15 @@ public:
         }
     }
 
-    std::vector<int> empty_kernel_shape;
+    std::vector<int> emptyKernelShape;
     Ptr<Layer> activ, batchNorm;
-    Mat weights, bias, fused_scale, fused_bias;
-    MatShape wshape0;
+    Mat weights, bias, fusedScale, fusedBias;
+    MatShape wshape0, prevInpshape;
     ConvState cs;
-    bool fused_batch_norm;
-    FastActivation fast_activation;
-    float fast_activ_params[ConvState::MAX_ACTIV_PARAMS];
-    bool add_residual;
+    bool fusedBatchNorm;
+    FastActivation fastActivation;
+    std::vector<float> activParams;
+    bool addResidual;
 };
 
 Ptr<Conv2Layer> Conv2Layer::create(const LayerParams& params)

@@ -15,6 +15,7 @@ std::string fastActivationToString(FastActivation fastActivation)
 {
     return fastActivation == FAST_ACTIV_RELU ? "ReLU" :
            fastActivation == FAST_ACTIV_LEAKY_RELU ? "LeakyReLU" :
+           fastActivation == FAST_ACTIV_PRELU ? "PReLU" :
            fastActivation == FAST_ACTIV_CLIP ? "Clip" :
            fastActivation == FAST_ACTIV_NONE ? "None" : format("unknown(%d)", int(fastActivation));
 }
@@ -174,8 +175,7 @@ void ConvState::initConv(const MatShape& inpshape_,
                          const std::vector<int>& pads_,
                          AutoPadding autoPad, bool ceilMode,
                          FastActivation fastActivation_,
-                         const float* activParams_,
-                         size_t nactivParams_)
+                         const std::vector<float>& activParams_)
 {
     nspatialdims = wshape_.dims - 2;
     CV_Assert(0 < nspatialdims && nspatialdims <= ConvState::MAX_CONV_DIMS);
@@ -202,12 +202,7 @@ void ConvState::initConv(const MatShape& inpshape_,
 
     fastActivation = fastActivation_;
     activation = nullptr;
-    memset(activParams, 0, sizeof(activParams));
-    if (activParams_ && nactivParams_ > 0) {
-        CV_Assert(nactivParams_ <= (size_t)MAX_ACTIV_PARAMS);
-        for (size_t i = 0; i < nactivParams_; i++)
-            activParams[i] = activParams_[i];
-    }
+    activParams = activParams_;
 
     CV_Assert(wshape_[0] > 0 && wshape_[1] > 0);
     for (int i = 0; i < MAX_CONV_DIMS; i++) {

@@ -40,11 +40,11 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
     CV_Assert(cs.outshape.layout == DATA_LAYOUT_BLOCK);
     CV_Assert(cs.inpshape.dims == cs.outshape.dims);
 
-    parallel_for_(Range(0, NC1), [&](const Range& r)
+    parallel_for_(Range(0, NC1), [&](const Range& range)
     {
         int sdims = cs.nspatialdims;
-        int nc0 = r.start, nc1 = r.end;
         constexpr int C0 = 8;
+        int C = cs.inpshape.C;
         int C1 = cs.inpshape[1];
         CV_Assert(C0 == cs.inpshape.back());
         int Di = sdims > 2 ? cs.inpshape[sdims - 1] : 1;
@@ -65,37 +65,56 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
         const int* ofstab = cs.ofstab.data();
         const float* scale_ = scale__;
         const float* bias_ = bias__;
-        AutoBuffer<float> buf(C0*2);
-        float* scale = buf.data();
-        float* bias = scale + C0;
 
-        const float* inp = (const float*)inp__ + nc0*iplanesize;
-        float* out = (float*)out__ + nc0*planesize;
-        const float* residual = residual__ ? (const float*)residual__ + nc0*planesize : nullptr;
+        const float* inp = (const float*)inp__ + range.start*iplanesize;
+        float* out = (float*)out__ + range.start*planesize;
+        const float* residual = residual__ ? (const float*)residual__ + range.start*planesize : nullptr;
 
         FastActivation fastActivation = cs.fastActivation;
-        const float* activParams = cs.activParams;
-        activation_func_t activation = cs.activation;
-        float maxval = fastActivation == FAST_ACTIV_CLIP ? activParams[1] : FLT_MAX;
-        float alpha = fastActivation == FAST_ACTIV_LEAKY_RELU ? activParams[0] :
-                    fastActivation == FAST_ACTIV_NONE ? 1.f : 0.f;
+        const float* activParams = cs.activParams.data();
+        ActivationFunc activation = cs.activation;
+        float maxval = FLT_MAX, defaultAlpha = 0.f;
+        float scalebuf[C0], biasbuf[C0], alphabuf[C0];
+        if (fastActivation == FAST_ACTIV_CLIP) {
+            CV_Assert(cs.activParams.size() == 2u);
+            maxval = activParams[1];
+        } else if (fastActivation == FAST_ACTIV_RELU) {
+            CV_Assert(!activParams);
+        } else if (fastActivation == FAST_ACTIV_LEAKY_RELU) {
+            CV_Assert(cs.activParams.size() == 1u);
+            defaultAlpha = activParams[0];
+        } else if (fastActivation == FAST_ACTIV_PRELU) {
+            CV_Assert(cs.activParams.size() == size_t(C));
+        } else {
+            CV_Assert(fastActivation == FAST_ACTIV_NONE);
+            defaultAlpha = 1.f;
+        }
 
     #if CV_SIMD || CV_SIMD_SCALABLE
         v_float32 v_maxval = vx_setall_f32(maxval);
-        v_float32 v_alpha = vx_setall_f32(alpha);
         v_float32 z = vx_setzero_f32();
         const int nlanes = VTraits<v_float32>::vlanes();
         CV_Assert(C0 == nlanes || C0 == nlanes*2 || C0 % (nlanes*4) == 0);
     #endif
 
-        for (int nc = nc0; nc < nc1; nc++, inp += iplanesize) {
-            int n = nc / C1;
-            int c0 = (nc - n*C1)*C0;
-            const float* weights = (const float*)weights__ + (c0/C0)*ksize*C0;
+        for (int nc1 = range.start; nc1 < range.end; nc1++, inp += iplanesize) {
+            int n = nc1 / C1;
+            int c_base = (nc1 - n*C1)*C0;
+            int c_count = std::min(C0, C - c_base);
+            const float* weights = (const float*)weights__ + (c_base/C0)*ksize*C0;
 
-            for (int c = 0; c < C0; c++) {
-                scale[c] = scale_ ? scale_[c0 + c] : 1.f;
-                bias[c] = bias_ ? bias_[c0 + c] : 0.f;
+            {
+                int c = 0;
+                for (; c < c_count; c++) {
+                    scalebuf[c] = scale_ ? scale_[c_base + c] : 1.f;
+                    biasbuf[c] = bias_ ? bias_[c_base + c] : 0.f;
+                    alphabuf[c] = fastActivation == FAST_ACTIV_PRELU ? activParams[c_base + c] : defaultAlpha;
+                }
+                for (; c < C0; c++) {
+                    scalebuf[c] = 0.f;
+                    biasbuf[c] = 0.f;
+                    alphabuf[c] = 0.f;
+                }
             }
 
             for (int z0 = 0; z0 < D; z0++) {
@@ -115,7 +134,8 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
                     for(;;) {
                     #if CV_SIMD || CV_SIMD_SCALABLE
                         if (nlanes == C0) {
-                            v_float32 sc0 = vx_load(scale), b0 = vx_load(bias);
+                            v_float32 sc0 = vx_load(scalebuf), b0 = vx_load(biasbuf);
+                            v_float32 alpha0 = vx_load(alphabuf);
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
                                 v_float32 s0 = z;
@@ -135,7 +155,7 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
                                 s0 = v_fma(s0, sc0, b0);
                                 if (residual)
                                     s0 = v_add(s0, vx_load(residual + x0*C0));
-                                s0 = v_min(v_select(v_ge(s0, z), s0, v_mul(s0, v_alpha)), v_maxval);
+                                s0 = v_min(v_select(v_ge(s0, z), s0, v_mul(s0, alpha0)), v_maxval);
                                 vx_store(out + x0*C0, s0);
                             }
                         } else {
@@ -161,14 +181,17 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
                                         s0 = v_fma(v0, w0, s0);
                                         s1 = v_fma(v1, w1, s1);
                                     }
-                                    s0 = v_fma(s0, vx_load(scale + c), vx_load(bias + c));
-                                    s1 = v_fma(s1, vx_load(scale + c + nlanes), vx_load(bias + c + nlanes));
+                                    s0 = v_fma(s0, vx_load(scalebuf + c), vx_load(biasbuf + c));
+                                    s1 = v_fma(s1, vx_load(scalebuf + c + nlanes), vx_load(biasbuf + c + nlanes));
                                     if (residual) {
                                         s0 = v_add(s0, vx_load(residual + x0*C0 + c));
                                         s1 = v_add(s1, vx_load(residual + x0*C0 + c + nlanes));
                                     }
-                                    s0 = v_min(v_select(v_ge(s0, z), s0, v_mul(s0, v_alpha)), v_maxval);
-                                    s1 = v_min(v_select(v_ge(s1, z), s1, v_mul(s1, v_alpha)), v_maxval);
+                                    v_float32 alpha0 = vx_load(alphabuf + c);
+                                    v_float32 alpha1 = vx_load(alphabuf + c + nlanes);
+
+                                    s0 = v_min(v_select(v_ge(s0, z), s0, v_mul(s0, alpha0)), v_maxval);
+                                    s1 = v_min(v_select(v_ge(s1, z), s1, v_mul(s1, alpha1)), v_maxval);
                                     vx_store(out + x0*C0 + c, s0);
                                     vx_store(out + x0*C0 + c + nlanes, s1);
                                 }
@@ -198,7 +221,7 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
 
                     #if CV_SIMD || CV_SIMD_SCALABLE
                         if (nlanes == C0) {
-                            v_float32 sc0 = vx_load(scale), b0 = vx_load(bias);
+                            v_float32 sc0 = vx_load(scalebuf), b0 = vx_load(biasbuf), alpha0 = vx_load(alphabuf);
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
                                 const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
@@ -212,12 +235,13 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
                                 s0 = v_fma(s0, sc0, b0);
                                 if (residual)
                                     s0 = v_add(s0, vx_load(residual + x0*C0));
-                                s0 = v_min(v_select(v_ge(s0, z), s0, v_mul(s0, v_alpha)), v_maxval);
+                                s0 = v_min(v_select(v_ge(s0, z), s0, v_mul(s0, alpha0)), v_maxval);
                                 vx_store(out + x0*C0, s0);
                             }
                         } else if (nlanes*2 == C0) {
-                            v_float32 sc0 = vx_load(scale), sc1 = vx_load(scale + nlanes);
-                            v_float32 b0 = vx_load(bias), b1 = vx_load(bias + nlanes);
+                            v_float32 sc0 = vx_load(scalebuf), sc1 = vx_load(scalebuf + nlanes);
+                            v_float32 b0 = vx_load(biasbuf), b1 = vx_load(biasbuf + nlanes);
+                            v_float32 alpha0 = vx_load(alphabuf), alpha1 = vx_load(alphabuf + nlanes);
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
                                 const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
@@ -238,8 +262,8 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
                                     s0 = v_add(s0, vx_load(residual + x0*C0));
                                     s1 = v_add(s1, vx_load(residual + x0*C0 + nlanes));
                                 }
-                                s0 = v_min(v_select(v_ge(s0, z), s0, v_mul(s0, v_alpha)), v_maxval);
-                                s1 = v_min(v_select(v_ge(s1, z), s1, v_mul(s1, v_alpha)), v_maxval);
+                                s0 = v_min(v_select(v_ge(s0, z), s0, v_mul(s0, alpha0)), v_maxval);
+                                s1 = v_min(v_select(v_ge(s1, z), s1, v_mul(s1, alpha1)), v_maxval);
                                 vx_store(out + x0*C0, s0);
                                 vx_store(out + x0*C0 + nlanes, s1);
                             }
@@ -264,10 +288,14 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
                                         s2 = v_fma(v2, w2, s2);
                                         s3 = v_fma(v3, w3, s3);
                                     }
-                                    s0 = v_fma(s0, vx_load(scale + c), vx_load(bias + c));
-                                    s1 = v_fma(s1, vx_load(scale + c + nlanes), vx_load(bias + c + nlanes));
-                                    s2 = v_fma(s2, vx_load(scale + c + nlanes*2), vx_load(bias + c + nlanes*2));
-                                    s3 = v_fma(s3, vx_load(scale + c + nlanes*3), vx_load(bias + c + nlanes*3));
+                                    s0 = v_fma(s0, vx_load(scalebuf + c),
+                                               vx_load(biasbuf + c));
+                                    s1 = v_fma(s1, vx_load(scalebuf + c + nlanes),
+                                               vx_load(biasbuf + c + nlanes));
+                                    s2 = v_fma(s2, vx_load(scalebuf + c + nlanes*2),
+                                               vx_load(biasbuf + c + nlanes*2));
+                                    s3 = v_fma(s3, vx_load(scalebuf + c + nlanes*3),
+                                               vx_load(biasbuf + c + nlanes*3));
 
                                     if (residual) {
                                         s0 = v_add(s0, vx_load(residual + x0*C0 + c));
@@ -276,10 +304,15 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
                                         s3 = v_add(s3, vx_load(residual + x0*C0 + c + nlanes*3));
                                     }
 
-                                    s0 = v_min(v_select(v_ge(s0, z), s0, v_mul(s0, v_alpha)), v_maxval);
-                                    s1 = v_min(v_select(v_ge(s1, z), s1, v_mul(s1, v_alpha)), v_maxval);
-                                    s2 = v_min(v_select(v_ge(s2, z), s2, v_mul(s2, v_alpha)), v_maxval);
-                                    s3 = v_min(v_select(v_ge(s3, z), s3, v_mul(s3, v_alpha)), v_maxval);
+                                    v_float32 alpha0 = vx_load(alphabuf + c);
+                                    v_float32 alpha1 = vx_load(alphabuf + c + nlanes);
+                                    v_float32 alpha2 = vx_load(alphabuf + c + nlanes*2);
+                                    v_float32 alpha3 = vx_load(alphabuf + c + nlanes*3);
+
+                                    s0 = v_min(v_select(v_ge(s0, z), s0, v_mul(s0, alpha0)), v_maxval);
+                                    s1 = v_min(v_select(v_ge(s1, z), s1, v_mul(s1, alpha1)), v_maxval);
+                                    s2 = v_min(v_select(v_ge(s2, z), s2, v_mul(s2, alpha2)), v_maxval);
+                                    s3 = v_min(v_select(v_ge(s3, z), s3, v_mul(s3, alpha3)), v_maxval);
                                     vx_store(out + x0*C0 + c, s0);
                                     vx_store(out + x0*C0 + c + nlanes, s1);
                                     vx_store(out + x0*C0 + c + nlanes*2, s2);
@@ -307,16 +340,16 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
                     if (residual) {
                         for (int x = 0; x < W*C0; x += C0) {
                             for (int c = 0; c < C0; c++) {
-                                float v = out[x + c]*scale[c] + bias[c] + residual[x + c];
-                                v = std::min(v*(v >= 0 ? 1.f : alpha), maxval);
+                                float v = out[x + c]*scalebuf[c] + biasbuf[c] + residual[x + c];
+                                v = std::min(v*(v >= 0 ? 1.f : alphabuf[c]), maxval);
                                 out[x + c] = v;
                             }
                         }
                     } else {
                         for (int x = 0; x < W*C0; x += C0) {
                             for (int c = 0; c < C0; c++) {
-                                float v = out[x + c]*scale[c] + bias[c];
-                                v = std::min(v*(v >= 0 ? 1.f : alpha), maxval);
+                                float v = out[x + c]*scalebuf[c] + biasbuf[c];
+                                v = std::min(v*(v >= 0 ? 1.f : alphabuf[c]), maxval);
                                 out[x + c] = v;
                             }
                         }

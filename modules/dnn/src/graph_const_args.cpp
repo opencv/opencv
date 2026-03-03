@@ -51,7 +51,6 @@ struct ConstArgs
                 }
             }
             const std::vector<Arg>& inputs = layer->inputs;
-            const std::vector<Arg>& outputs = layer->outputs;
             size_t j, ninputs = inputs.size();
             if (ninputs == 1) {
                 continue;

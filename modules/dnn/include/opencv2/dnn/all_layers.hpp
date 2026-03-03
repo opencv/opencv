@@ -888,12 +888,12 @@ CV__DNN_INLINE_NS_BEGIN
                                 std::vector<DataLayout>& desiredInputs,
                                 const int requiredOutputs,
                                 std::vector<DataLayout>& outputs) const CV_OVERRIDE;
-        virtual void forwardSlice(const float* src, float* dst, int len,
-                                  size_t outPlaneSize, int cn0, int cn1) const {}
-        virtual void forwardSlice(const int* src, const int* lut, int* dst, int len,
-                                  size_t outPlaneSize, int cn0, int cn1) const {}
-        virtual void forwardSlice(const int8_t* src, const int8_t* lut, int8_t* dst, int len,
-                                  size_t outPlaneSize, int cn0, int cn1) const {}
+        virtual void forwardSlice(const float* /*src*/, float* /*dst*/, int /*len*/,
+                                  size_t /*outPlaneSize*/, int /*cn0*/, int /*cn1*/) const {}
+        virtual void forwardSlice(const int* /*src*/, const int* /*lut*/, int* /*dst*/, int /*len*/,
+                                  size_t /*outPlaneSize*/, int /*cn0*/, int /*cn1*/) const {}
+        virtual void forwardSlice(const int8_t* /*src*/, const int8_t* /*lut*/, int8_t* /*dst*/, int /*len*/,
+                                  size_t /*outPlaneSize*/, int /*cn0*/, int /*cn1*/) const {}
     };
 
     class CV_EXPORTS ReLULayer : public ActivationLayer

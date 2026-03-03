@@ -114,7 +114,7 @@ CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 #define CONV_START_FINALIZE_OUT() \
     float32x4_t vscale_lo = vld1q_f32(scalebuf), vscale_hi = vld1q_f32(scalebuf + 4); \
     float32x4_t vbias_lo = vld1q_f32(biasbuf), vbias_hi = vld1q_f32(biasbuf + 4); \
-    float32x4_t valpha = vdupq_n_f32(alpha); \
+    float32x4_t valpha_lo = vld1q_f32(alphabuf), valpha_hi = vld1q_f32(alphabuf + 4); \
     float32x4_t vmaxval = vdupq_n_f32(maxval)
 
 #define CONV_ADD_RESIDUAL2(idx0, idx1) \
@@ -130,10 +130,10 @@ CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
     s##idx1##l = vfmaq_f32(vbias_lo, s##idx1##l, vscale_lo); \
     s##idx1##h = vfmaq_f32(vbias_hi, s##idx1##h, vscale_hi); \
     add_residual2(idx0, idx1); \
-    s##idx0##l = vbslq_f32(vcgeq_f32(s##idx0##l, zz), s##idx0##l, vmulq_f32(s##idx0##l, valpha)); \
-    s##idx0##h = vbslq_f32(vcgeq_f32(s##idx0##h, zz), s##idx0##h, vmulq_f32(s##idx0##h, valpha)); \
-    s##idx1##l = vbslq_f32(vcgeq_f32(s##idx1##l, zz), s##idx1##l, vmulq_f32(s##idx1##l, valpha)); \
-    s##idx1##h = vbslq_f32(vcgeq_f32(s##idx1##h, zz), s##idx1##h, vmulq_f32(s##idx1##h, valpha)); \
+    s##idx0##l = vbslq_f32(vcgeq_f32(s##idx0##l, zz), s##idx0##l, vmulq_f32(s##idx0##l, valpha_lo)); \
+    s##idx0##h = vbslq_f32(vcgeq_f32(s##idx0##h, zz), s##idx0##h, vmulq_f32(s##idx0##h, valpha_hi)); \
+    s##idx1##l = vbslq_f32(vcgeq_f32(s##idx1##l, zz), s##idx1##l, vmulq_f32(s##idx1##l, valpha_lo)); \
+    s##idx1##h = vbslq_f32(vcgeq_f32(s##idx1##h, zz), s##idx1##h, vmulq_f32(s##idx1##h, valpha_hi)); \
     s##idx0##l = vminq_f32(s##idx0##l, vmaxval); \
     s##idx0##h = vminq_f32(s##idx0##h, vmaxval); \
     s##idx1##l = vminq_f32(s##idx1##l, vmaxval); \
@@ -226,7 +226,7 @@ CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 #define CONV_START_FINALIZE_OUT() \
     v_float32x8 vscale = v256_load(scalebuf); \
     v_float32x8 vbias = v256_load(biasbuf); \
-    v_float32x8 valpha = v256_setall_f32(alpha); \
+    v_float32x8 valpha = v256_load(alphabuf); \
     v_float32x8 vmaxval = v256_setall_f32(maxval)
 
 #define CONV_ADD_RESIDUAL2(idx0, idx1) \
@@ -340,7 +340,7 @@ CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 #define CONV_START_FINALIZE_OUT() \
     v_float32x4 vscale_lo = v_load(scalebuf), vscale_hi = v_load(scalebuf + 4); \
     v_float32x4 vbias_lo = v_load(biasbuf), vbias_hi = v_load(biasbuf + 4); \
-    v_float32x4 valpha = v_setall_f32(alpha); \
+    v_float32x4 valpha_lo = v_load(alphabuf), valpha_hi = v_load(alphabuf + 4); \
     v_float32x4 vmaxval = v_setall_f32(maxval)
 
 #define CONV_ADD_RESIDUAL2(idx0, idx1) \
@@ -356,10 +356,10 @@ CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
     s##idx1##l = v_fma(s##idx1##l, vscale_lo, vbias_lo); \
     s##idx1##h = v_fma(s##idx1##h, vscale_hi, vbias_hi); \
     add_residual2(idx0, idx1); \
-    s##idx0##l = v_select(v_ge(s##idx0##l, zz), s##idx0##l, v_mul(s##idx0##l, valpha)); \
-    s##idx0##h = v_select(v_ge(s##idx0##h, zz), s##idx0##h, v_mul(s##idx0##h, valpha)); \
-    s##idx1##l = v_select(v_ge(s##idx1##l, zz), s##idx1##l, v_mul(s##idx1##l, valpha)); \
-    s##idx1##h = v_select(v_ge(s##idx1##h, zz), s##idx1##h, v_mul(s##idx1##h, valpha)); \
+    s##idx0##l = v_select(v_ge(s##idx0##l, zz), s##idx0##l, v_mul(s##idx0##l, valpha_lo)); \
+    s##idx0##h = v_select(v_ge(s##idx0##h, zz), s##idx0##h, v_mul(s##idx0##h, valpha_hi)); \
+    s##idx1##l = v_select(v_ge(s##idx1##l, zz), s##idx1##l, v_mul(s##idx1##l, valpha_lo)); \
+    s##idx1##h = v_select(v_ge(s##idx1##h, zz), s##idx1##h, v_mul(s##idx1##h, valpha_hi)); \
     s##idx0##l = v_min(s##idx0##l, vmaxval); \
     s##idx0##h = v_min(s##idx0##h, vmaxval); \
     s##idx1##l = v_min(s##idx1##l, vmaxval); \
@@ -458,12 +458,24 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
     #endif
 
         FastActivation fastActivation = cs.fastActivation;
-        const float* activParams = cs.activParams;
-        activation_func_t activation = cs.activation;
-        float maxval = fastActivation == FAST_ACTIV_CLIP ? activParams[1] : FLT_MAX;
-        float alpha = fastActivation == FAST_ACTIV_LEAKY_RELU ? activParams[0] :
-                    fastActivation == FAST_ACTIV_NONE ? 1.f : 0.f;
-        float scalebuf[K0], biasbuf[K0];
+        const float* activParams = cs.activParams.data();
+        ActivationFunc activation = cs.activation;
+        float maxval = FLT_MAX, defaultAlpha = 0.f;
+        float scalebuf[K0], biasbuf[K0], alphabuf[K0];
+        if (fastActivation == FAST_ACTIV_CLIP) {
+            CV_Assert(cs.activParams.size() == 2u);
+            maxval = activParams[1];
+        } else if (fastActivation == FAST_ACTIV_RELU) {
+            CV_Assert(!activParams);
+        } else if (fastActivation == FAST_ACTIV_LEAKY_RELU) {
+            CV_Assert(cs.activParams.size() == 1u);
+            defaultAlpha = activParams[0];
+        } else if (fastActivation == FAST_ACTIV_PRELU) {
+            CV_Assert(cs.activParams.size() == size_t(K));
+        } else {
+            CV_Assert(fastActivation == FAST_ACTIV_NONE);
+            defaultAlpha = 1.f;
+        }
 
         // 1x1x1 convolution with (1,1,1) strides:
         // flatten input/output tensors in this case to accelerate address computations
@@ -502,10 +514,12 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
                 for (; kk < k_count; kk++) {
                     scalebuf[kk] = scaleptr ? scaleptr[k_base + kk] : 1.f;
                     biasbuf[kk] = biasptr ? biasptr[k_base + kk] : 0.f;
+                    alphabuf[kk] = fastActivation == FAST_ACTIV_PRELU ? activParams[k_base + kk] : defaultAlpha;
                 }
                 for (; kk < K0; kk++) {
                     scalebuf[kk] = 0.f;
                     biasbuf[kk] = 0.f;
+                    alphabuf[kk] = 0.f;
                 }
             }
 
@@ -706,7 +720,7 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
             #if CV_SIMD256
                 v_float32x8 vscale = v256_load(scalebuf);
                 v_float32x8 vbias = v256_load(biasbuf);
-                v_float32x8 valpha = v256_setall_f32(alpha);
+                v_float32x8 valpha = v256_load(alphabuf);
                 v_float32x8 vmaxval = v256_setall_f32(maxval);
 
                 s0 = v_fma(s0, vscale, vbias);
@@ -717,15 +731,15 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
             #elif CV_SIMD128
                 v_float32x4 vscale_lo = v_load(scalebuf), vscale_hi = v_load(scalebuf + 4);
                 v_float32x4 vbias_lo = v_load(biasbuf), vbias_hi = v_load(biasbuf + 4);
-                v_float32x4 valpha = v_setall_f32(alpha);
+                v_float32x4 valpha_lo = v_load(alphabuf), valpha_hi = v_load(alphabuf + 4);
                 v_float32x4 vmaxval = v_setall_f32(maxval);
 
                 s0 = v_fma(s0, vscale_lo, vbias_lo);
                 s1 = v_fma(s1, vscale_hi, vbias_hi);
                 s0 = v_add(s0, v_load(resbuf));
                 s1 = v_add(s1, v_load(resbuf + 4));
-                s0 = v_select(v_ge(s0, zz), s0, v_mul(s0, valpha));
-                s1 = v_select(v_ge(s1, zz), s1, v_mul(s1, valpha));
+                s0 = v_select(v_ge(s0, zz), s0, v_mul(s0, valpha_lo));
+                s1 = v_select(v_ge(s1, zz), s1, v_mul(s1, valpha_hi));
                 s0 = v_min(s0, vmaxval);
                 s1 = v_min(s1, vmaxval);
                 v_store(outbuf, s0);
@@ -733,7 +747,7 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
             #else
                 for (int kk = 0; kk < K0; kk++) {
                     float v = tmpbuf[kk]*scalebuf[kk] + biasbuf[kk] + resbuf[kk];
-                    v = std::min(v*(v >= 0 ? 1.f : alpha), maxval);
+                    v = std::min(v*(v >= 0 ? 1.f : alphabuf[kk]), maxval);
                     outbuf[kk] = v;
                 }
             #endif

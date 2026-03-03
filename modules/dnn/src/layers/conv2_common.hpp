@@ -27,18 +27,19 @@ enum FastActivation {
     FAST_ACTIV_NONE=0,
     FAST_ACTIV_RELU,
     FAST_ACTIV_LEAKY_RELU,
+    FAST_ACTIV_PRELU,
     FAST_ACTIV_CLIP
 };
 
 std::string fastActivationToString(FastActivation fastActivation);
 
-typedef void (*activation_func_t)(const void* input, void* output,
-                                  size_t len, const float* params);
+typedef void (*ActivationFunc)(const void* input, void* output,
+                               size_t len, const float* params);
 
 struct ConvState
 {
     enum { MAX_CONV_DIMS = 3 };
-    bool depthwise;
+    bool depthwise = true;
     int ngroups, nspatialdims;
     int kshape[MAX_CONV_DIMS];
     int strides[MAX_CONV_DIMS];
@@ -50,10 +51,9 @@ struct ConvState
     std::vector<int> coordtab;
     std::vector<int> ofstab;
 
-    FastActivation fastActivation;
-    enum {MAX_ACTIV_PARAMS = 16};
-    float activParams[MAX_ACTIV_PARAMS];
-    activation_func_t activation;
+    FastActivation fastActivation = FAST_ACTIV_NONE;
+    ActivationFunc activation = nullptr;
+    std::vector<float> activParams;
 
     std::ostream& dump(std::ostream& strm);
     bool sameShape(const ConvState& cs) const;
@@ -67,8 +67,7 @@ struct ConvState
                   const std::vector<int>& pads,
                   AutoPadding autoPad, bool ceilMode,
                   FastActivation fastActivation,
-                  const float* activParams,
-                  size_t nactivParams);
+                  const std::vector<float>& activParams);
 
     // initializes the structure of parameters for 1D/2D/3D
     // depth-wise convolution, max pooling or average pooling
