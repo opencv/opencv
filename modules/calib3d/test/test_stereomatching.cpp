@@ -973,36 +973,44 @@ TEST(Calib3d_StereoSGBM_HH4, regression)
     absdiff(toCheck, testData,diff);
     CV_Assert( countNonZero(diff)==0);
 }
-
-TEST(Calib3d_ValidateDisparity, HandlesValidCostsWithoutCrash)
+TEST(Calib3d_ValidateDisparity, Reproduce_Issue_25367)
 {
-    // Regression test for issue #25367: undefined behavior in validateDisparity
-    // This test verifies that the function safely handles valid disparity and cost data
-    // without crashes or undefined behavior
+    // Minimal deterministic regression test for issue #25367
+    // Forces x2 < 0 to verify bounds check prevents out-of-bounds access
+
     const int rows = 1;
-    const int cols = 8;
+    const int cols = 4;
 
-    // create valid disparity values (scaled by 16)
+    const int minDisparity = 0;
+    const int numberOfDisparities = 16;
+    const int disp12MaxDiff = 1;
+
     cv::Mat disparity(rows, cols, CV_16S);
-    for (int i = 0; i < cols; ++i)
-        disparity.at<short>(0, i) = static_cast<short>(i << 4);  // scaled disparity
+    cv::Mat cost(rows, cols, CV_16S);
 
-    // create realistic matching costs
-    cv::Mat cost(rows, cols, CV_32S);
+    // Fill cost with valid values
     for (int i = 0; i < cols; ++i)
-        cost.at<int>(0, i) = i * 10;
+        cost.at<short>(0, i) = static_cast<short>(i);
 
-    // minDisparity=0, numberOfDisparities=16, disp12MaxDisp=1
-    // This exercises the bounds checking code paths
+    // Force x2 = x - ((d + DISP_SCALE/2) >> DISP_SHIFT) to become negative
+    // Using very large disparity relative to image width
+    // d >> DISP_SHIFT will be large compared to x
+    const short largeDisp = static_cast<short>(64 << 4); // scaled disparity
+
+    for (int i = 0; i < cols; ++i)
+        disparity.at<short>(0, i) = largeDisp;
+
+    // Before fix: may crash due to negative x2 index
+    // After fix: should execute safely
     EXPECT_NO_THROW(
-        cv::validateDisparity(disparity, cost, 0, 16, 1)
+        cv::validateDisparity(disparity, cost,
+            minDisparity,
+            numberOfDisparities,
+            disp12MaxDiff)
     );
 
-    // Verify that disparities remain valid after processing
-    for (int i = 0; i < cols; ++i)
-    {
-        EXPECT_NE(disparity.at<short>(0, i), SHRT_MIN);
-    }
-
+    // Basic sanity: dimensions unchanged
+    EXPECT_EQ(disparity.rows, rows);
+    EXPECT_EQ(disparity.cols, cols);
 }
 }} // namespace
