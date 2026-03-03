@@ -355,7 +355,7 @@ template<> struct CompileArgTag<cv::gapi::video::BackgroundSubtractorParams>
 {
     static const char* tag()
     {
-        return "org.opencv.video.background_substractor_params";
+        return "org.opencv.video.background_subtractor_params";
     }
 };
 }  // namespace detail

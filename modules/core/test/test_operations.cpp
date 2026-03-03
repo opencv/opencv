@@ -69,7 +69,7 @@ protected:
     bool TestSparseMat();
     bool TestVec();
     bool TestMatxMultiplication();
-    bool TestMatxElementwiseDivison();
+    bool TestMatxElementwiseDivision();
     bool TestDivisionByValue();
     bool TestInplaceDivisionByValue();
     bool TestMatMatxCastSum();
@@ -957,7 +957,7 @@ bool CV_OperationsTest::TestMatMatxCastSum()
     return true;
 }
 
-bool CV_OperationsTest::TestMatxElementwiseDivison()
+bool CV_OperationsTest::TestMatxElementwiseDivision()
 {
     try
     {
@@ -1248,7 +1248,7 @@ void CV_OperationsTest::run( int /* start_from */)
     if (!TestMatxMultiplication())
         return;
 
-    if (!TestMatxElementwiseDivison())
+    if (!TestMatxElementwiseDivision())
         return;
 
     if (!TestDivisionByValue())

@@ -42,7 +42,7 @@ struct UvcDeviceInfo
 
 enum StreamState
 {
-    STREAM_STOPED = 0, // stoped or ready
+    STREAM_STOPPED = 0, // stopped or ready
     STREAM_STARTING = 1,
     STREAM_STARTED = 2,
     STREAM_STOPPING = 3,

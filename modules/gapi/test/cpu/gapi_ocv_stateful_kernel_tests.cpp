@@ -37,7 +37,7 @@ namespace cv
         {
             static const char* tag()
             {
-                return "org.opencv.test.background_substractor_state_params";
+                return "org.opencv.test.background_subtractor_state_params";
             }
         };
 
@@ -115,7 +115,7 @@ namespace
         }
     };
 
-    G_TYPED_KERNEL(GBackSub, <GMat(GMat)>, "org.opencv.test.background_substractor")
+    G_TYPED_KERNEL(GBackSub, <GMat(GMat)>, "org.opencv.test.background_subtractor")
     {
          static GMatDesc outMeta(GMatDesc in) { return in.withType(CV_8U, 1); }
     };
@@ -438,10 +438,10 @@ namespace
         gapiBackSub.start();
         EXPECT_TRUE(gapiBackSub.running());
 
-        // OpenCV reference substractor
+        // OpenCV reference subtractor
         auto pOCVBackSub = createBackgroundSubtractorKNN();
 
-        // Comparison of G-API and OpenCV substractors
+        // Comparison of G-API and OpenCV subtractors
         std::size_t frames = 0u;
         while (gapiBackSub.pull(cv::gout(frame, gapiForeground))) {
             pOCVBackSub->apply(frame, ocvForeground, -1);
@@ -503,7 +503,7 @@ TEST(StatefulKernel, StateIsChangedViaCompArgsOnReshape)
 
     const auto pkg = cv::gapi::kernels<GOCVBackSub>();
 
-    // OpenCV reference substractor
+    // OpenCV reference subtractor
     auto pOCVBackSubKNN = createBackgroundSubtractorKNN();
     auto pOCVBackSubMOG2 = createBackgroundSubtractorMOG2();
 

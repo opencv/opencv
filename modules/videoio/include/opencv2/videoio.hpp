@@ -614,9 +614,19 @@ enum { CAP_PROP_IOS_DEVICE_FOCUS        = 9001,
 enum { CAP_PROP_GIGA_FRAME_OFFSET_X   = 10001,
        CAP_PROP_GIGA_FRAME_OFFSET_Y   = 10002,
        CAP_PROP_GIGA_FRAME_WIDTH_MAX  = 10003,
-       CAP_PROP_GIGA_FRAME_HEIGH_MAX  = 10004,
+       CAP_PROP_GIGA_FRAME_HEIGHT_MAX  = 10004,
+// Typo in pre-5.x sources. Remain for source compatibility
+#if CV_VERSION_MAJOR <= 4
+       CAP_PROP_GIGA_FRAME_HEIGH_MAX = CAP_PROP_GIGA_FRAME_HEIGHT_MAX, //!< @deprecated
+#endif
+
        CAP_PROP_GIGA_FRAME_SENS_WIDTH = 10005,
-       CAP_PROP_GIGA_FRAME_SENS_HEIGH = 10006
+       CAP_PROP_GIGA_FRAME_SENS_HEIGHT = 10006
+// Typo in pre-5.x sources. Remain for source compatibility
+#if CV_VERSION_MAJOR <= 4
+       ,
+       CAP_PROP_GIGA_FRAME_SENS_HEIGH = CAP_PROP_GIGA_FRAME_SENS_HEIGHT //!< @deprecated
+#endif
      };
 
 //! @} Smartek
