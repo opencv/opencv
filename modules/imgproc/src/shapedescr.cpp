@@ -750,7 +750,7 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
         M(2,1) = (DM(0,1) + (DM(0,3)*TM(0,1) + DM(0,4)*TM(1,1) + DM(0,5)*TM(2,1))/Ts)/2.;
         M(2,2) = (DM(0,2) + (DM(0,3)*TM(0,2) + DM(0,4)*TM(1,2) + DM(0,5)*TM(2,2))/Ts)/2.;
 
-        double det = fabs(cv::determinant(M));
+        double det = cv::determinant(M);
         if (fabs(det) > 1.0e-10)
             break;
         eps = (float)(s/(n*2)*1e-2);
