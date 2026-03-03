@@ -53,7 +53,7 @@ Mat infEngineBlobToMat(const ov::Tensor& blob)
         default:
             CV_Error(Error::StsNotImplemented, "Unsupported blob precision");
     }
-    return Mat(size, type, blob.data());
+    return Mat(size, type, const_cast<void*>(blob.data()));
 }
 
 void infEngineBlobsToMats(const ov::TensorVector& blobs,
