@@ -1,0 +1,16 @@
+%YAML:1.0
+cameras:
+- name: cam1
+  yaml: /Users/Downloads/chessboard_yaml/cam1.yaml
+- name: cam2
+  yaml: /Users/Downloads/chessboard_yaml/cam2.yaml
+- name: cam3
+  yaml: /Users/Downloads/chessboard_yaml/cam3.yaml
+- name: cam4
+  yaml: /Users/Downloads/chessboard_yaml/cam4.yaml
+- name: cam5
+  yaml: /Users/Downloads/chessboard_yaml/cam5.yaml
+- name: cam6
+  yaml: /Users/Downloads/chessboard_yaml/cam6.yaml
+- name: cam7
+  yaml: /Users/Downloads/chessboard_yaml/cam7.yaml
