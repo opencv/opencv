@@ -77,7 +77,7 @@ def main():
 
     obj_points = []
     img_points = []
-    h, w = cv.imread(img_names[0], cv.IMREAD_GRAYSCALE).shape[:2]  # TODO: use imquery call to retrieve results
+    h, w = None, None  # Will be set from first valid image
 
     aruco_dicts = {
         'DICT_4X4_50': cv.aruco.DICT_4X4_50,
@@ -111,12 +111,17 @@ def main():
     charuco_detector = cv.aruco.CharucoDetector(board)
 
     def processImage(fn):
+        nonlocal h, w
         print('processing %s... ' % fn)
         img = cv.imread(fn, cv.IMREAD_GRAYSCALE)
         if img is None:
             print("Failed to load", fn)
             return None
 
+        # Set dimensions from first valid image
+        if h is None:
+            h, w = img.shape[:2]
+        
         assert w == img.shape[1] and h == img.shape[0], ("size: %d x %d ... " % (img.shape[1], img.shape[0]))
         found = False
         corners = 0
