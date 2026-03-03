@@ -207,8 +207,9 @@ public:
             const Mat& slopes = activPRelu->blobs[0];
             int slopesType = slopes.type();
             CV_Assert_N((slopesType == CV_32F || slopesType == CV_16F || slopesType == CV_16BF),
-                        (slopes.rows == 1 || slopes.cols == 1));
-            slopes.convertTo(activParams, CV_32F);
+                        slopes.isContinuous());
+            int nslopes = int(slopes.total());
+            Mat(1, &nslopes, slopesType, (void*)slopes.data).convertTo(activParams, CV_32F);
         } else {
             //activ = activlayer;
             return false;

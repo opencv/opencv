@@ -16,15 +16,17 @@ namespace dnn
 static void avgPool32f(const void* inp_, void* out_,
                        const ConvState& cs, bool count_include_pad_)
 {
-    constexpr int MAX_POOL_DIMS = ConvState::MAX_CONV_DIMS;
     int NC1 = cs.inpshape[0]*cs.inpshape[1];
 
-    CV_Assert(cs.nspatialdims <= MAX_POOL_DIMS && MAX_POOL_DIMS == 3);
     CV_Assert(cs.inpshape.layout == DATA_LAYOUT_BLOCK);
     CV_Assert(cs.outshape.layout == DATA_LAYOUT_BLOCK);
     CV_Assert(cs.inpshape.dims == cs.outshape.dims);
 
     parallel_for_(Range(0, NC1), [&](const Range& r) {
+        constexpr int MAX_POOL_DIMS = ConvState::MAX_CONV_DIMS;
+
+        CV_Assert(cs.nspatialdims <= MAX_POOL_DIMS && MAX_POOL_DIMS == 3);
+
         bool count_include_pad = count_include_pad_;
         int sdims = cs.nspatialdims;
         int nc0 = r.start, nc1 = r.end;
