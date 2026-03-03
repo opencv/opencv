@@ -997,19 +997,6 @@ void ONNXImporter2::parseArgMinMax(LayerParams& layerParams, const opencv_onnx::
     addLayer(layerParams, node_proto);
 }
 
-static void setCeilMode(LayerParams& layerParams)
-{
-    // auto_pad attribute is deprecated and uses ceil
-    if (layerParams.has("pad_mode"))
-    {
-        layerParams.set("ceil_mode", true);
-    }
-    else if (!layerParams.has("ceil_mode"))
-    {
-        layerParams.set("ceil_mode", false);
-    }
-}
-
 void ONNXImporter2::parseMaxUnpool(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "MaxUnpool";
@@ -1047,19 +1034,17 @@ void ONNXImporter2::parseMaxUnpool(LayerParams& layerParams, const opencv_onnx::
 
 void ONNXImporter2::parseMaxPool(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    int depth = layerParams.get<int>("depth", CV_32F);
-    layerParams.type = (depth == CV_8S) ? "PoolingInt8" : "Pooling";
-    layerParams.set("pool", "MAX");
-    setCeilMode(layerParams);
+    CV_CheckEQ(node_outputs.size(), 1u, "the new engine does not support MaxPool with 2 outputs yet");
+    layerParams.type = "MaxPool";
     addLayer(layerParams, node_proto);
 }
 
 void ONNXImporter2::parseAveragePool(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    layerParams.type = "Pooling";
-    layerParams.set("pool", "AVE");
-    setCeilMode(layerParams);
-    layerParams.set("ave_pool_padded_area", framework_name == "pytorch");
+    layerParams.type = "AveragePool";
+    if (!layerParams.has("count_include_pad")) {
+        layerParams.set("count_include_pad", framework_name == "pytorch");
+    }
     addLayer(layerParams, node_proto);
 }
 
@@ -1341,31 +1326,7 @@ void ONNXImporter2::parseInstanceNormalization(LayerParams& layerParams, const o
 
 void ONNXImporter2::parseBatchNormalization(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    if (node_proto.input_size() != 5)
-        CV_Error(Error::StsNotImplemented, "Expected input, scale, bias, mean and var");
-
     layerParams.type = "BatchNorm2";
-
-    float eps = 1e-5f;
-    for (int i = 0; i < node_proto.attribute_size(); i++) {
-        const opencv_onnx::AttributeProto& attr = node_proto.attribute(i);
-        if (attr.name() == "epsilon") eps = attr.f();
-    }
-    layerParams.set("epsilon", eps);
-
-    bool isStatic = net.isConstArg(node_inputs[1]) && // scale
-                    net.isConstArg(node_inputs[2]) && // bias
-                    net.isConstArg(node_inputs[3]) && // mean
-                    net.isConstArg(node_inputs[4]);   // var
-
-    if (isStatic) {
-        layerParams.blobs.resize(4);
-        layerParams.blobs[0] = net.argTensor(node_inputs[3]); // mean
-        layerParams.blobs[1] = net.argTensor(node_inputs[4]); // var
-        layerParams.blobs[2] = net.argTensor(node_inputs[1]); // scale
-        layerParams.blobs[3] = net.argTensor(node_inputs[2]); // bias
-    }
-
     addLayer(layerParams, node_proto);
 }
 
@@ -1408,18 +1369,8 @@ void ONNXImporter2::parseConv(LayerParams& layerParams, const opencv_onnx::NodeP
 {
     int n_inputs = node_proto.input_size();
     CV_Assert(2 <= n_inputs && n_inputs <= 3);
-    layerParams.type = "Convolution";
-
-    if (net.isConstArg(node_inputs[1]) && (n_inputs == 2 || net.isConstArg(node_inputs[2]))) {
-        Mat weights = net.argTensor(node_inputs[1]);
-        layerParams.blobs.push_back(weights);
-        if (n_inputs > 2) {
-            Mat bias = net.argTensor(node_inputs[2]);
-            layerParams.blobs.push_back(bias);
-        }
-        n_inputs = 1;
-    }
-    addLayer(layerParams, node_proto, n_inputs);
+    layerParams.type = "Conv2";
+    addLayer(layerParams, node_proto);
 }
 
 void ONNXImporter2::parseConvTranspose(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
@@ -2843,6 +2794,7 @@ Net readNetFromONNX2(const String& onnxFile)
     Net net = importer.parseFile(onnxFile.c_str());
     if (net.getMainGraph()) {
         net.getImpl()->modelFileName = onnxFile;
+        //net.setTracingMode(DNN_TRACE_ALL);
     }
     return net;
 }

@@ -152,14 +152,15 @@ struct CV_EXPORTS_W_SIMPLE MatShape
     int& operator [](size_t idx);
     Size operator()() const; // for compatibility with MatSize
 
+    CV_WRAP int channels() const; // returns the number of channels
+
     CV_WRAP bool hasSymbols() const; // negative elements in the shape may denote 'symbols' instead of actual values.
 
     // compute shape of the result with possible broadcasting
     CV_WRAP MatShape expand(const MatShape& another) const;
 
-    // convert shape to/from block layout
-    CV_WRAP MatShape toBlock(int C0) const;
-    CV_WRAP MatShape fromBlock(DataLayout newLayout) const;
+    // convert shape between layouts
+    CV_WRAP MatShape toLayout(DataLayout newLayout, int C0=0) const;
 
     size_t total() const; // returns the total number of elements in the tensor (including padding elements, i.e. the method ignores 'C' in the case of block layout). Returns 1 for scalar tensors. Returns 0 for empty shapes.
 

@@ -67,6 +67,7 @@ Net::Impl::Impl()
     // onnx_opset = 0;
 
     accuracy = CV_32F;
+    defaultC0 = DEFAULT_C0;
     enableFP16 = haveFP16 = false;
     // FP16 is not ready yet in the new DNN engine
     // Ticket: https://github.com/opencv/opencv/issues/26196

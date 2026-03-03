@@ -436,7 +436,7 @@ inline Arg::Arg(int idx_) : idx(idx_) {}
 
 inline bool Arg::empty() const { return idx == 0; }
 
-inline Arg::operator bool() const { return idx != 0; }
+inline Arg::operator int() const { return idx; }
 
 inline bool operator == (const Arg& a, const Arg& b) { return a.idx == b.idx; }
 

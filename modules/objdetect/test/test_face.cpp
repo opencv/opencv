@@ -190,6 +190,8 @@ TEST(Objdetect_face_recognition, regression)
         Mat faces;
         faceDetector->detect(image, faces);
 
+        ASSERT_EQ(faces.rows, 1);
+
         Mat aligned_face;
         faceRecognizer->alignCrop(image, faces.row(0), aligned_face);
 

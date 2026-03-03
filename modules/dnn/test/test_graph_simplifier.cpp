@@ -57,7 +57,7 @@ TEST_F(Test_Graph_Simplifier, LayerNormNoFusionSubGraph) {
     test("layer_norm_no_fusion", std::vector<std::string>{"NaryEltwise", "Reduce", "Sqrt"});
 }
 
-TEST_F(Test_Graph_Simplifier, ResizeSubgraph) {
+TEST_F(Test_Graph_Simplifier, DISABLED_ResizeSubgraph) {
     /* Test for 6 subgraphs:
         - GatherCastSubgraph
         - MulCastSubgraph

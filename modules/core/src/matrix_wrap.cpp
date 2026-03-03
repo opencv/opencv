@@ -709,12 +709,52 @@ bool _InputArray::empty(int i) const
 
 MatShape _InputArray::shape(int i) const
 {
-    int sizes[CV_MAX_DIM];
-    int dims = sizend(sizes, i);
+    _InputArray::KindFlag k = kind();
+    MatShape shape;
 
-    if (dims == 0 && empty(i))
-        return MatShape();
-    return MatShape(dims, sizes);
+    if( k == NONE )
+        ;
+    else if( k == MAT )
+    {
+        CV_Assert( i < 0 );
+        const Mat& m = *(const Mat*)obj;
+        shape = m.size;
+    }
+    else if( k == UMAT )
+    {
+        CV_Assert( i < 0 );
+        const UMat& m = *(const UMat*)obj;
+        shape = m.size;
+    }
+    else if( k == STD_VECTOR_MAT && i >= 0 )
+    {
+        const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
+        CV_Assert( (size_t)i < vv.size() );
+        const Mat& m = vv[i];
+        shape = m.size;
+    }
+    else if( k == STD_ARRAY_MAT && i >= 0 )
+    {
+        const Mat* vv = (const Mat*)obj;
+        CV_Assert( i < sz.height );
+        const Mat& m = vv[i];
+        shape = m.size;
+    }
+    else if( k == STD_VECTOR_UMAT && i >= 0 )
+    {
+        const std::vector<UMat>& vv = *(const std::vector<UMat>*)obj;
+        CV_Assert( (size_t)i < vv.size() );
+        const UMat& m = vv[i];
+        shape = m.size;
+    }
+    else
+    {
+        int sizes[CV_MAX_DIM];
+        int dims = sizend(sizes, i);
+        shape = MatShape(dims, sizes);
+    }
+
+    return shape;
 }
 
 bool _InputArray::sameSize(const _InputArray& arr) const

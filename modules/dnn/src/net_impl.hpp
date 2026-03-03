@@ -103,6 +103,11 @@ struct Net::Impl : public detail::NetImplBase
     int globGraphIdx;
 
     int accuracy;
+    // if you change DEFAULT_C0/defaultC0, don't forget to update
+    // implementation of convolution, convTranspose,
+    // maxpool, avgpool, resize, pad ... where defaultC0 is accessed and used.
+    enum { DEFAULT_C0 = 8 };
+    int defaultC0;
     bool enableFP16, haveFP16;
     bool prepared; // need to rerun graph transformations/optimizations
     bool finalizeLayers; // need to initialize each layer
@@ -430,16 +435,24 @@ struct Net::Impl : public detail::NetImplBase
     std::ostream& dumpTypeShape(std::ostream& strm, int type, const MatShape& shape) const;
     std::ostream& dump(std::ostream& strm);
 
+    ///////////////// various graph transformations ///////////////////////
+
     // infers all types
     void inferTypes();
     // infers all shapes
     void inferShapes(bool symbolic);
     // sets certain buffer index for each intermediate argument (Arg)
     void assignBuffers();
-    //void useBlockLayout();
-    void fuse();
+    // fuse batch norm, add bias and activation to convolution
+    void fuseBasic();
+    // replace constant sub-expressions with their results
     void constFold();
+    // make some operations (activation, batch norm, convolution) unary if
+    // all their arguments except for the 1st one are constant.
     void constArgs();
+    // insert transformLayout operations where necessary;
+    // use block layout for convolution, pooling and some other operations where it matters
+    void useBlockLayout();
 
 };  // Net::Impl
 
@@ -456,5 +469,9 @@ Net readNetFromONNX2_ORT(const String& onnxFile);
 #endif
 
 CV__DNN_INLINE_NS_END
+
+void transformLayout(const Mat& inp, Mat& out,
+                     DataLayout outlayout, DataLayout defaultLayout, int C0);
+
 }}  // namespace cv::dnn
 #endif  // __OPENCV_DNN_SRC_NET_IMPL_HPP__
