@@ -29,6 +29,16 @@ class imread_test(NewOpenCVTests):
         self.assertTrue(meta_types is not None)
         self.assertTrue(meta_data is not None)
 
+        result, exif_entries = cv.decodeExif(meta_data[0][0])
+        self.assertTrue(result)
+        entry = exif_entries[0][0]
+        self.assertEqual(entry.tagId, 274)
+        self.assertEqual(entry.getValueAsInt(), 1)
+        entry = exif_entries[0][4]
+        self.assertEqual(entry.tagId, 305)
+        self.assertEqual(entry.getTagIdAsString(), 'Software')
+        self.assertEqual(entry.getValueAsString(), 'Adobe Photoshop CC 2015 (Windows)')
+
         path = self.extraTestDataPath + '/highgui/readwrite/testExifOrientation_1.png'
         img, meta_types, meta_data = cv.imreadWithMetadata(path)
         self.assertTrue(img is not None)
