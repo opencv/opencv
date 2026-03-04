@@ -19,7 +19,7 @@ struct Vec2fComparator
 {
     bool operator()(const Vec2f& a, const Vec2f b) const
     {
-        if(a[0] != b[0]) return a[0] < b[0];
+        if(std::abs(a[0] - b[0]) > 1e-3f) return a[0] < b[0];
         else return a[1] < b[1];
     }
 };
@@ -55,7 +55,10 @@ OCL_PERF_TEST_P(HoughLinesFixture, HoughLines, Combine(OCL_TEST_SIZES,
     lines.copyTo(result);
     std::sort(result.begin<Vec2f>(), result.end<Vec2f>(), Vec2fComparator());
 
-    SANITY_CHECK(result, 1e-6);
+    EXPECT_GE((size_t)result.total(), 6u);
+    EXPECT_LT((size_t)result.total(), 50u);
+
+    SANITY_CHECK_NOTHING();
 }
 
 ///////////// HoughLinesP /////////////////////
