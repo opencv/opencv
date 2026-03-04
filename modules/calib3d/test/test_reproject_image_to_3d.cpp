@@ -41,6 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include <cmath>
 
 namespace opencv_test { namespace {
 
@@ -169,5 +170,37 @@ protected:
 };
 
 TEST(Calib3d_ReprojectImageTo3D, accuracy) { CV_ReprojectImageTo3DTest test; test.safe_run(); }
+
+TEST(Calib3d_TriangulatePoints, regression_nanNormalization)
+{
+    Mat P1 = (Mat_<double>(3,4) <<
+        1,0,0,0,
+        0,1,0,0,
+        0,0,1,0);
+
+    Mat P2 = (Mat_<double>(3,4) <<
+        1,0,0,-1e-9,
+        0,1,0,0,
+        0,0,1,0);
+
+    std::vector<Point2d> pts1{ Point2d(100, 50) };
+    std::vector<Point2d> pts2{ Point2d(100 + 1e-12, 50 + 1e-12) };
+
+    Mat pts4D;
+    triangulatePoints(P1, P2, pts1, pts2, pts4D);
+
+    ASSERT_EQ(pts4D.cols, 1);
+    ASSERT_EQ(pts4D.rows, 4);
+
+    double w = pts4D.at<double>(3,0);
+    ASSERT_TRUE(std::isfinite(w));
+    ASSERT_NE(w, 0.0);
+
+    Mat X = pts4D.col(0)/w;
+
+    for (int i = 0; i < 3; i++)
+        ASSERT_TRUE(std::isfinite(X.at<double>(i,0)));
+        ASSERT_LT(std::abs(X.at<double>(2,0)),1e12);
+}
 
 }} // namespace
