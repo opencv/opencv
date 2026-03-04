@@ -24,6 +24,30 @@ class Dictionary;
  */
 class CV_EXPORTS_W_SIMPLE Board {
 public:
+
+    /** @brief Set the object points of all markers in the board.
+     *
+     * This method allows modification of the 3D coordinates of the marker
+     * corners after board construction. Useful for custom 3D reconstruction,
+     * markers on curved surfaces, and projection-based calibration.
+     *
+     * @param objPoints array of object points of all the marker corners in the board.
+     * Each marker must have 4 corners (as std::vector<Point3f> or Mat of size 4x1/1x4).
+     * The size must match getIds().size().
+     */
+    CV_WRAP void setObjPoints(InputArrayOfArrays objPoints);
+
+    /** @brief Set the marker identifiers of the board.
+     *
+     * This method allows modification of marker IDs after board construction.
+     * Useful for composite boards, split projection setups, or remapping
+     * marker IDs to match a physical layout.
+     *
+     * @param ids vector of the identifiers of the markers in the board
+     * (should be the same size as getObjPoints().size()).
+     */
+    CV_WRAP void setIds(InputArray ids);
+
     /** @brief Common Board constructor
      *
      * @param objPoints array of object points of all the marker corners in the board

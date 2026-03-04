@@ -576,6 +576,50 @@ void CharucoBoard::setLegacyPattern(bool legacyPattern) {
     }
 }
 
+void Board::setObjPoints(InputArrayOfArrays newObjPoints)
+{
+    CV_Assert(this->impl);
+    CV_Assert(newObjPoints.total() > 0);
+
+    std::vector<std::vector<Point3f>> tmpObjPoints;
+    size_t nMarkers = newObjPoints.total();
+
+    if (!this->impl->ids.empty())
+    {
+        CV_Assert(nMarkers == this->impl->ids.size());
+    }
+
+    tmpObjPoints.resize(nMarkers);
+    for (size_t i = 0; i < nMarkers; i++)
+    {
+        Mat objPointsMat = newObjPoints.getMat((int)i);
+        CV_Assert(objPointsMat.total() == 4);
+        objPointsMat.reshape(3, 1).copyTo(tmpObjPoints[i]);
+    }
+
+    this->impl->objPoints = std::move(tmpObjPoints);
+}
+
+void Board::setIds(InputArray newIds)
+{
+    CV_Assert(this->impl);
+    Mat idsMat = newIds.getMat();
+    CV_Assert(idsMat.total() > 0);
+
+    if (!this->impl->objPoints.empty())
+    {
+        CV_Assert(idsMat.total() == this->impl->objPoints.size());
+    }
+
+    this->impl->ids.clear();
+    this->impl->ids.resize(idsMat.total());
+    for (size_t i = 0; i < idsMat.total(); i++)
+    {
+        this->impl->ids[i] = idsMat.at<int>((int)i);
+    }
+}
+
+
 bool CharucoBoard::getLegacyPattern() const {
     CV_Assert(impl);
     return static_pointer_cast<CharucoBoardImpl>(impl)->legacyPattern;
