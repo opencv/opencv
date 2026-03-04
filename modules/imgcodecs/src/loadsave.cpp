@@ -754,6 +754,7 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats, int star
 Mat imread( const String& filename, int flags )
 {
     CV_TRACE_FUNCTION();
+	std::cout<< "Mahadev" << std::endl;
 
     /// create the basic container
     Mat img;
