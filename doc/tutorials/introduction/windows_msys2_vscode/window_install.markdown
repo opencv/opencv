@@ -40,14 +40,11 @@ This method produces native Windows binaries linked against the Universal C Runt
 - MSYS2
 - Git
 - Python
-@image html images/MSYS2-download.png "MSYS2"
 
 ### After installing MSYS2, always open:
 
     MSYS2 UCRT64
 [MSYS2](https://www.msys2.org/)
-
-@image html images/UCRT64-shell.png "UCRT64"
 
 @note  Do not use the MSYS, MinGW64, or CLANG64 shells for this build.
 
@@ -154,7 +151,7 @@ Check this PATH in your `opencv/build` and copy the full path and Add to the ENV
 
 ---
 
-Step 8: Use Opencv in cpp project {#tutorial_windows_install_verify}
+## Step 8: Use Opencv in cpp project {#tutorial_windows_install_verify}
 
 1. Make a folder `first project`
 2. Create a file named test.cpp
@@ -181,7 +178,7 @@ Step 8: Use Opencv in cpp project {#tutorial_windows_install_verify}
     cmake_minimum_required(VERSION 3.10)
     project(OpenCVApp)
 
-    // 🔽 ADD THIS LINE (change path to yours)
+    # 🔽 ADD THIS LINE (change path to yours)
     set(OpenCV_DIR "D:/open-source/opencv/build-new/install")
 
     find_package(OpenCV REQUIRED)
