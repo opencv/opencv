@@ -130,8 +130,31 @@ void findSecondPoint(const PT *pts, int i, Point2f &center, float &radius)
 
 
 template<typename PT>
-static void findMinEnclosingCircle(const PT *pts, int count, Point2f &center, float &radius)
+static void findMinEnclosingCircle(const PT *pts_in, int count, Point2f &center, float &radius)
 {
+    // Welzl's algorithm requires random permutation for expected O(n) time.
+    // Without shuffling, sorted inputs trigger O(n^3) worst case.
+    cv::AutoBuffer<PT, 1024> pts_buf(count);
+    std::copy(pts_in, pts_in + count, pts_buf.data());
+    PT* pts = pts_buf.data();
+    if (count > 10)
+    {
+        Cv32suf x0, y0, xn, yn;
+        x0.f = (float)pts[0].x;
+        y0.f = (float)pts[0].y;
+        xn.f = (float)pts[count-1].x;
+        yn.f = (float)pts[count-1].y;
+
+        uint32_t seed = (uint32_t)count ^ x0.u ^ (y0.u << 8) ^ (xn.u << 16) ^ (yn.u << 24);
+        cv::RNG rng(seed);
+
+        for (int i = 1; i < count; ++i)
+        {
+            int j = rng.uniform(0, i + 1);
+            std::swap(pts[i], pts[j]);
+        }
+    }
+
     center.x = (float)(pts[0].x + pts[1].x) / 2.0f;
     center.y = (float)(pts[0].y + pts[1].y) / 2.0f;
     float dx = (float)(pts[0].x - pts[1].x);
