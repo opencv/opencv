@@ -252,7 +252,7 @@ struct Net::Impl : public detail::NetImplBase
     std::shared_ptr<Ort::Env> ort_env;
     std::shared_ptr<Ort::Session> ort_session;
     std::shared_ptr<OrtNamesCache> ort_names_cache;
-    bool ortNeedsReinit = true;  // session needs (re)creation on next finalize
+    bool ortNeedsReinit = true;  // session needs (re)creation on next finalizeNet
 #endif
 
     void allocateLayer(int lid, const LayersShapesMap& layersShapes);

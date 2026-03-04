@@ -131,7 +131,7 @@ void Net::setPreferableTarget(int targetId)
     return impl->setPreferableTarget(targetId);
 }
 
-void Net::finalize()
+void Net::finalizeNet()
 {
     CV_TRACE_FUNCTION();
     CV_Assert(impl);

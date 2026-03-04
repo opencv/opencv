@@ -756,10 +756,10 @@ CV__DNN_INLINE_NS_BEGIN
          * Runtime session) on the configured backend/target. If not called
          * explicitly, the first forward() will call it automatically.
          *
-         * Calling finalize() early lets you pay the one-time setup cost at a
+         * Calling finalizeNet() early lets you pay the one-time setup cost at a
          * predictable point and catch configuration errors before inference.
          */
-        CV_WRAP void finalize();
+        CV_WRAP void finalizeNet();
 
         /**
          * @brief Set the tracing mode

@@ -276,7 +276,7 @@ void Net::Impl::setPreferableBackend(Net& net, int backendId)
     if (mainGraph && modelFormat == DNN_MODEL_ONNX && !modelFileName.empty())
     {
         preferableBackend = backendId;
-        ortNeedsReinit = true;  // will be applied on finalize()
+        ortNeedsReinit = true;  // will be applied on finalizeNet()
         return;
     }
 #endif
@@ -323,7 +323,7 @@ void Net::Impl::setPreferableTarget(int targetId)
         if (preferableTarget != resolved)
         {
             preferableTarget = resolved;
-            ortNeedsReinit = true;  // will be applied on finalize()
+            ortNeedsReinit = true;  // will be applied on finalizeNet()
         }
         return;
     }
