@@ -1,4 +1,4 @@
-Building OpenCV on Windows using MSYS2 UCRT64 {#tutorial_windows_msys2_vscode}
+# Building OpenCV on Windows using MSYS2 UCRT64 {#tutorial_windows_msys2_vscode}
 ==================
 
 @prev_tutorial{tutorial_linux_eclipse}
@@ -21,7 +21,7 @@ best to help you out.
 
 ## Introduction {#tutorial_windows_install_intro}
 
-# This tutorial describes how to build OpenCV from source on Windows using the MSYS2 UCRT64 environment.
+ This tutorial describes how to build OpenCV from source on Windows using the MSYS2 UCRT64 environment.
 
 ### The build configuration uses:
 
@@ -44,6 +44,7 @@ This method produces native Windows binaries linked against the Universal C Runt
 ### After installing MSYS2, always open:
 
     MSYS2 UCRT64
+
 [MSYS2](https://www.msys2.org/)
 
 @note  Do not use the MSYS, MinGW64, or CLANG64 shells for this build.
@@ -70,15 +71,17 @@ This method produces native Windows binaries linked against the Universal C Runt
     @endcode
 
 ### Verify installation in UCRT64 SHELL:
-
-    `gcc --version` or `g++ --version`
+    @code{.bash}
+    gcc --version or g++ --version
     # gcc.exe (Revxx, Built by MSYS2 porject) version
 
-    `cmake --version`
+    cmake --version
     # cmake version 4.x
 
-    `mingw32-make --version`
+    mingw32-make --version
     # GNU Mkae 4.x
+
+    @endcode
 
 ### Setup System Environment Variables:
     Add this in path: `C:\msys64\ucrt64\bin`
@@ -182,7 +185,7 @@ Check this PATH in your `opencv/build` and copy the full path and Add to the ENV
     set(OpenCV_DIR "D:/open-source/opencv/build-new/install")
 
     find_package(OpenCV REQUIRED)
-    add_executable(app main.cpp) // app is your project name 
+    add_executable(app main.cpp) # app is your project name 
     target_link_libraries(app ${OpenCV_LIBS})
 
     @endcode
@@ -195,7 +198,7 @@ Check this PATH in your `opencv/build` and copy the full path and Add to the ENV
 
 If successful, the installed OpenCV version will be printed.
 
-@note Note :- When make changes in cpp file then run again `mingw32-make` for compilation and run `app.exe`
+@note :- When make changes in cpp file then run again `mingw32-make` for compilation and run `app.exe`
 ---
 
 
