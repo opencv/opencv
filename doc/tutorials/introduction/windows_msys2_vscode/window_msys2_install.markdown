@@ -161,20 +161,20 @@ Check this PATH in your `opencv/build` and copy the full path and Add to the ENV
     @code{.cpp}
     #include <opencv2/opencv.hpp>
     #include <iostream>
-    
+
     using namespace std;
     using namespace cv;
-    
+
     int main() {
     cout << CV_VERSION << endl;
-    
+
     return 0;
     }
 
     @endcode
 
 4. Create `CmakeLists.txt` and copy this:
- 
+
    @code{.cmake}
     cmake_minimum_required(VERSION 3.10)
     project(OpenCVApp)
@@ -183,7 +183,7 @@ Check this PATH in your `opencv/build` and copy the full path and Add to the ENV
     set(OpenCV_DIR "D:/open-source/opencv/build-new/install")
 
     find_package(OpenCV REQUIRED)
-    add_executable(app main.cpp) # app is your project name 
+    add_executable(app main.cpp) # app is your project name
     target_link_libraries(app ${OpenCV_LIBS})
 
     @endcode
