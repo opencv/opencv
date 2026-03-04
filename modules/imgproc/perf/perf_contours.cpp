@@ -106,4 +106,39 @@ PERF_TEST_P(TestBoundingRect, BoundingRect,
     SANITY_CHECK_NOTHING();
 }
 
+typedef TestBaseWithParam< tuple<MatDepth, int> > TestMinEnclosingCircle;
+PERF_TEST_P(TestMinEnclosingCircle, minEnclosingCircle,
+    Combine(
+        testing::Values(CV_32S, CV_32F),
+        Values(400, 1000, 10000, 100000)
+    ))
+{
+    int ptType = get<0>(GetParam());
+    int n = get<1>(GetParam());
+    Mat pts(n, 2, ptType);
+    declare.in(pts, WARMUP_RNG);
+
+    Point2f center;
+    float radius;
+    TEST_CYCLE() minEnclosingCircle(pts, center, radius);
+    SANITY_CHECK_NOTHING();
+}
+
+typedef TestBaseWithParam<int> TestMinEnclosingCircleWorstCase;
+PERF_TEST_P(TestMinEnclosingCircleWorstCase, minEnclosingCircle_sequential,
+    Values(400, 1000, 5000, 10000))
+{
+    int n = GetParam();
+    vector<Point2f> contour;
+    for(int i = 0; i < n; ++i) {
+        float angle = (float)(i * 2 * CV_PI / n);
+        contour.push_back(Point2f(cos(angle) * 100, sin(angle) * 100));
+    }
+
+    Point2f center;
+    float radius;
+    TEST_CYCLE() minEnclosingCircle(contour, center, radius);
+    SANITY_CHECK_NOTHING();
+}
+
 } } // namespace
