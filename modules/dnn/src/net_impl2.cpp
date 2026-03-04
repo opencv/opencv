@@ -655,11 +655,35 @@ Mat Net::Impl::forwardWithSingleOutput(const std::string& outname)
         if (!mainGraph) {
             CV_Error(Error::StsNullPtr, "the model was not loaded");
         }
-        const std::vector<Arg>& outargs = mainGraph->outputs();
-        CV_Assert(outargs.size() > 0);
         if (!outname.empty()) {
-            const ArgData& outdata = args.at(outargs[0].idx);
-            CV_Assert(outdata.name == outname);
+            auto it = argnames.find(outname);
+            if (it == argnames.end()) {
+                size_t excl = outname.rfind('!');
+                if (excl != std::string::npos) {
+                    it = argnames.find(outname.substr(excl + 1));
+                }
+            }
+            if (it == argnames.end())
+                CV_Error_(Error::StsObjectNotFound,
+                          ("DNN: tensor '%s' is not found in the graph", outname.c_str()));
+
+            Arg targetArg((int)it->second);
+
+            std::vector<Mat> inps, outs;
+            forwardMainGraph(inps, outs);
+
+            const std::vector<Arg>& gr_outputs = mainGraph->outputs();
+            for (size_t i = 0; i < gr_outputs.size(); i++)
+                if (gr_outputs[i].idx == targetArg.idx)
+                    return outs[i];
+
+            const ArgData& adata = args.at(targetArg.idx);
+            if (adata.kind == DNN_ARG_TEMP) {
+                int bufidx = bufidxs.at(targetArg.idx);
+                CV_Assert(bufidx >= 0 && bufidx < (int)buffers.size());
+                return buffers[bufidx].clone();
+            }
+            return __tensors__.at(targetArg.idx).clone();
         }
     }
 
@@ -1037,7 +1061,6 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
 
         for (i = 0; i < ninputs; i++) {
             Arg inp = inputs[i];
-            //const ArgData& adata = args[inp.idx];
             const Mat& m = argTensor(inp);
             inpMats[i] = m;
             inpTypes[i] = m.type();

@@ -59,10 +59,7 @@ class TrackerDaSiamRPNImpl : public TrackerDaSiamRPN
 public:
     TrackerDaSiamRPNImpl(const TrackerDaSiamRPN::Params& parameters)
     {
-        // the tracker uses DNN models in quite sophisticated way,
-        // so it's not supported yet by the new engine.
-        // BUG: https://github.com/opencv/opencv/issues/26201
-        dnn::EngineType engine = dnn::ENGINE_CLASSIC;
+        dnn::EngineType engine = dnn::ENGINE_AUTO;
         siamRPN = dnn::readNet(parameters.model, "", "", engine);
         siamKernelCL1 = dnn::readNet(parameters.kernel_cls1, "", "", engine);
         siamKernelR1 = dnn::readNet(parameters.kernel_r1, "", "", engine);
@@ -180,8 +177,8 @@ void TrackerDaSiamRPNImpl::trackerInit(Mat img)
     Mat r1 = siamKernelR1.forward();
     std::vector<int> r1_shape = { 20, 256, 4, 4 }, cls1_shape = { 10, 256, 4, 4 };
 
-    siamRPN.setParam(siamRPN.getLayerId("onnx_node_output_0!65"), 0, r1.reshape(0, r1_shape));
-    siamRPN.setParam(siamRPN.getLayerId("onnx_node_output_0!68"), 0, cls1.reshape(0, cls1_shape));
+    siamRPN.setParam("onnx_node_output_0!65", 0, r1.reshape(0, r1_shape));
+    siamRPN.setParam("onnx_node_output_0!68", 0, cls1.reshape(0, cls1_shape));
 }
 
 bool TrackerDaSiamRPNImpl::update(InputArray image, Rect& boundingBox)

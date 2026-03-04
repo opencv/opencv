@@ -203,6 +203,7 @@ struct Net::Impl : public detail::NetImplBase
     virtual void setInput(InputArray blob, const String& name, double scalefactor, const Scalar& mean);
     Mat getParam(int layer, int numParam) const;
     void setParam(int layer, int numParam, const Mat& blob);
+    void setParam(const std::string& outputTensorName, int numParam, const Mat& blob);
     std::vector<Ptr<Layer>> getLayerInputs(int layerId) const;
     std::vector<String> getLayerNames() const;
 
