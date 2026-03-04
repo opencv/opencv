@@ -43,9 +43,7 @@ This method produces native Windows binaries linked against the Universal C Runt
 
 ### After installing MSYS2, always open:
 
-    MSYS2 UCRT64
-
-[MSYS2 UCRT64](https://www.msys2.org/)
+    [MSYS2 UCRT64](https://www.msys2.org/)
 
 @note  Do not use the MSYS, MinGW64, or CLANG64 shells for this build.
 
@@ -73,13 +71,13 @@ This method produces native Windows binaries linked against the Universal C Runt
 ### Verify installation in UCRT64 SHELL:
     @code{.bash}
     gcc --version # or g++ --version
-    # gcc.exe (Revxx, Built by MSYS2 porject) version
+    # gcc.exe (Revxx, Built by MSYS2 project) version
 
     cmake --version
     # cmake version 4.x
 
     mingw32-make --version
-    # GNU Mkae 4.x
+    # GNU Make 4.x
 
     @endcode
 
@@ -143,7 +141,7 @@ This method produces native Windows binaries linked against the Universal C Runt
 
 ---
 
-## Step 7: Install Compiled lib {#tutorial_windows_install_install}
+## Step 7: Install Compiled Libraries {#tutorial_windows_install_install}
 
     mingw32-make install
 
@@ -198,7 +196,7 @@ Check this PATH in your `opencv/build` and copy the full path and Add to the ENV
 
 If successful, the installed OpenCV version will be printed.
 
-@note When make changes in cpp file then run again `mingw32-make` for compilation and run `app.exe`
+@note When make changes in the cpp file then run again `mingw32-make` for compilation and run `app.exe`
 ---
 
 
