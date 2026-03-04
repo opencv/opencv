@@ -1,9 +1,7 @@
 @page tutorial_windows_visual_studio Building OpenCV on Windows using MSYS2 UCRT64
 
 @tableofcontents
-- Introduction
-- Prerequisites
-- Step by Step process
+
 
 @section tutorial_windows_install_intro Introduction
 
