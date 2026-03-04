@@ -627,7 +627,8 @@ enum { CALIB_NINTRINSIC          = 18,
        // for stereo rectification
        CALIB_ZERO_DISPARITY      = 0x00400,
        CALIB_USE_LU              = (1 << 17), //!< use LU instead of SVD decomposition for solving. much faster but potentially less precise
-       CALIB_USE_EXTRINSIC_GUESS = (1 << 22)  //!< for stereoCalibrate
+       CALIB_USE_EXTRINSIC_GUESS = (1 << 22), //!< for stereoCalibrate
+       CALIB_DISABLE_SCHUR_COMPLEMENT = (1 << 23)  //!< disable Schur complement (use Bouguet calibration engine)
      };
 
 //! the algorithm for finding fundamental matrix
@@ -1659,6 +1660,7 @@ fx, fy, cx, cy that are optimized further. Otherwise, (cx, cy) is initially set 
 center ( imageSize is used), and focal distances are computed in a least-squares fashion.
 Note, that if intrinsic parameters are known, there is no need to use this function just to
 estimate extrinsic parameters. Use @ref solvePnP instead.
+-   @ref CALIB_DISABLE_SCHUR_COMPLEMENT Disable Schur complement and use the Bouguet calibration engine (@cite Zhang2000, @cite BouguetMCT).
 -   @ref CALIB_FIX_PRINCIPAL_POINT The principal point is not changed during the global
 optimization. It stays at the center or at a different location specified when
  @ref CALIB_USE_INTRINSIC_GUESS is set too.
@@ -1693,7 +1695,9 @@ supplied distCoeffs matrix is used. Otherwise, it is set to 0.
 @return the overall RMS re-projection error.
 
 The function estimates the intrinsic camera parameters and extrinsic parameters for each of the
-views. The algorithm is based on @cite Zhang2000 and @cite BouguetMCT . The coordinates of 3D object
+views. By default, the optimization follows a sparse bundle adjustment formulation with Schur
+complement; see @cite Triggs2000_bundle_adjustment and @cite Lourakis2009_sba for background. Use
+@ref CALIB_DISABLE_SCHUR_COMPLEMENT to switch to the Bouguet calibration engine. The coordinates of 3D object
 points and their corresponding 2D projections in each view must be specified. That may be achieved
 by using an object with known geometry and easily detectable feature points. Such an object is
 called a calibration rig or calibration pattern, and OpenCV has built-in support for a chessboard as
@@ -1715,6 +1719,10 @@ The algorithm performs the following steps:
     that is, the total sum of squared distances between the observed feature points imagePoints and
     the projected (using the current estimates for camera parameters and the poses) object points
     objectPoints. See @ref projectPoints for details.
+
+-   In practice, robust acquisition is essential for stable results: use multiple board poses with
+    significant tilt, avoid collecting all views at a single working distance, span the expected
+    working-distance range (a larger board with larger squares can help for longer distances).
 
 @note
     If you use a non-square (i.e. non-N-by-N) grid and @ref findChessboardCorners for calibration,
@@ -1801,8 +1809,8 @@ less precise and less stable in some rare cases.
 @return the overall RMS re-projection error.
 
 The function estimates the intrinsic camera parameters and extrinsic parameters for each of the
-views. The algorithm is based on @cite Zhang2000, @cite BouguetMCT and @cite strobl2011iccv. See
-#calibrateCamera for other detailed explanations.
+views. The object-releasing extension follows @cite strobl2011iccv and uses the same optimization
+core as #calibrateCamera. See #calibrateCamera for other detailed explanations.
 @sa
    calibrateCamera, findChessboardCorners, solvePnP, initCameraMatrix2D, stereoCalibrate, undistort
  */
