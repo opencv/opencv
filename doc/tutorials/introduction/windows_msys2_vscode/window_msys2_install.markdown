@@ -1,4 +1,4 @@
-Building OpenCV on Windows with sources code using MSYS2-UCRT64 in "VS-CODE"and CPP
+Building OpenCV on Windows from sources code using MSYS2-UCRT64 in "VS-CODE"and CPP {#tutorial_windows_msys2_vscode}
 =====================================================================
 
 @prev_tutorial{tutorial_windows_install}
