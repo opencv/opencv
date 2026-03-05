@@ -23,7 +23,16 @@ template <typename T, typename ST>
 struct NormInf_SIMD {
     inline ST operator() (const T* src, int n) const {
         ST s = 0;
-        for (int i = 0; i < n; i++) {
+        int i = 0;
+#if CV_ENABLE_UNROLLED
+        for (; i <= n - 4; i += 4) {
+            s = std::max(s, (ST)cv_abs(src[i]));
+            s = std::max(s, (ST)cv_abs(src[i+1]));
+            s = std::max(s, (ST)cv_abs(src[i+2]));
+            s = std::max(s, (ST)cv_abs(src[i+3]));
+        }
+#endif
+        for (; i < n; i++) {
             s = std::max(s, (ST)cv_abs(src[i]));
         }
         return s;
@@ -34,7 +43,16 @@ template <typename T, typename ST>
 struct NormL1_SIMD {
     inline ST operator() (const T* src, int n) const {
         ST s = 0;
-        for (int i = 0; i < n; i++) {
+        int i = 0;
+#if CV_ENABLE_UNROLLED
+        for (; i <= n - 4; i += 4) {
+            s += cv_abs(src[i]);
+            s += cv_abs(src[i+1]);
+            s += cv_abs(src[i+2]);
+            s += cv_abs(src[i+3]);
+        }
+#endif
+        for (; i < n; i++) {
             s += cv_abs(src[i]);
         }
         return s;
@@ -45,7 +63,16 @@ template <typename T, typename ST>
 struct NormL2_SIMD {
     inline ST operator() (const T* src, int n) const {
         ST s = 0;
-        for (int i = 0; i < n; i++) {
+        int i = 0;
+#if CV_ENABLE_UNROLLED
+        for (; i <= n - 4; i += 4) {
+            ST v0 = src[i];     s += v0 * v0;
+            ST v1 = src[i+1];   s += v1 * v1;
+            ST v2 = src[i+2];   s += v2 * v2;
+            ST v3 = src[i+3];   s += v3 * v3;
+        }
+#endif
+        for (; i < n; i++) {
             ST v = src[i];
             s += v * v;
         }
@@ -1167,6 +1194,677 @@ struct NormDiffL2_SIMD<double, double> {
 
 #endif
 
+template <typename T, typename ST>
+struct MaskedNormInf_SIMD {
+    inline ST operator() (const T* src, const uchar* mask, int len, int cn) const {
+        ST s = 0;
+        if (cn == 1) {
+            for (int i = 0; i < len; i++) {
+                if (mask[i]) {
+                    s = std::max(s, (ST)cv_abs(src[i]));
+                }
+            }
+        } 
+        else {
+            for (int i = 0; i < len; i++) {
+                if (mask[i]) {
+                    const T* elem = src + i * cn;
+                    int k = 0;
+                    for (; k <= cn - 4; k += 4) {
+                        s = std::max(s, (ST)cv_abs(elem[k]));
+                        s = std::max(s, (ST)cv_abs(elem[k + 1]));
+                        s = std::max(s, (ST)cv_abs(elem[k + 2]));
+                        s = std::max(s, (ST)cv_abs(elem[k + 3]));
+                    }
+                    for (; k < cn; k++) {
+                        s = std::max(s, (ST)cv_abs(elem[k]));
+                    }
+                }
+            }
+        }
+        return s;
+    }
+};
+
+template <typename T, typename ST>
+struct MaskedNormL1_SIMD {
+    inline ST operator() (const T* src, const uchar* mask, int len, int cn) const {
+        ST s = 0;
+        if (cn == 1) {
+            for (int i = 0; i < len; i++) {
+                if (mask[i]) {
+                    s += (ST)cv_abs(src[i]);
+                }
+            }
+        } 
+        else {
+            for (int i = 0; i < len; i++) {
+                if (mask[i]) {
+                    const T* elem = src + i * cn;
+                    int k = 0;
+                    for (; k <= cn - 4; k += 4) {
+                        s += (ST)cv_abs(elem[k]);
+                        s += (ST)cv_abs(elem[k + 1]);
+                        s += (ST)cv_abs(elem[k + 2]);
+                        s += (ST)cv_abs(elem[k + 3]);
+                    }
+                    for (; k < cn; k++) {
+                        s += (ST)cv_abs(elem[k]);
+                    }
+                }
+            }
+        }
+        return s;
+    }
+};
+
+template <typename T, typename ST>
+struct MaskedNormL2_SIMD {
+    inline ST operator() (const T* src, const uchar* mask, int len, int cn) const {
+        ST s = 0;
+        if (cn == 1) {
+            int i = 0;
+            for (; i <= len - 4; i += 4) {
+                if (mask[i])     { T v0 = src[i];     s += (ST)v0 * v0; }
+                if (mask[i + 1]) { T v1 = src[i + 1]; s += (ST)v1 * v1; }
+                if (mask[i + 2]) { T v2 = src[i + 2]; s += (ST)v2 * v2; }
+                if (mask[i + 3]) { T v3 = src[i + 3]; s += (ST)v3 * v3; }
+            }
+            for (; i < len; i++) {
+                if (mask[i]) {
+                    T v = src[i];
+                    s += (ST)v * v;
+                }
+            }
+        } 
+        else {
+            for (int i = 0; i < len; i++) {
+                if (mask[i]) {
+                    const T* elem = src + i * cn;
+                    int k = 0;
+                    for (; k <= cn - 4; k += 4) {
+                        T v0 = elem[k];     s += (ST)v0 * v0;
+                        T v1 = elem[k + 1]; s += (ST)v1 * v1;
+                        T v2 = elem[k + 2]; s += (ST)v2 * v2;
+                        T v3 = elem[k + 3]; s += (ST)v3 * v3;
+                    }
+                    for (; k < cn; k++) {
+                        T v = elem[k];
+                        s += (ST)v * v;
+                    }
+                }
+            }
+        }
+        return s;
+    }
+};
+#if CV_NEON
+
+template <>
+struct MaskedNormInf_SIMD<float, float> {
+    inline float operator()(const float* src, const uchar* mask, int len, int cn) const {
+        float result = 0.0f;
+        if (cn == 1) {
+            int i = 0;
+            float32x4_t acc = vdupq_n_f32(0.0f);
+            for (; i <= len - 4; i += 4) {
+                uint32x4_t cmp = vcgtq_u32(vmovl_u16(vget_low_u16(vmovl_u8(vld1_u8(mask + i)))), vdupq_n_u32(0));
+                float32x4_t s  = vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(vabsq_f32(vld1q_f32(src + i))), cmp));
+                acc = vmaxq_f32(acc, s);
+            }
+            float32x2_t acc2 = vpmax_f32(vget_low_f32(acc), vget_high_f32(acc));
+            acc2 = vpmax_f32(acc2, acc2);
+            result = vget_lane_f32(acc2, 0);
+
+            for (; i < len; i++) {
+                if (mask[i])
+                    result = std::max(result, std::abs(src[i]));
+            }
+        } else {
+            for (int i = 0; i < len; i++) {
+                if (mask[i]) {
+                    const float* elem = src + i * cn;
+                    int k = 0;
+                    float32x4_t acc = vdupq_n_f32(0.0f);
+
+                    for (; k <= cn - 4; k += 4)
+                        acc = vmaxq_f32(acc, vabsq_f32(vld1q_f32(elem + k)));
+
+                    float32x2_t acc2 = vpmax_f32(vget_low_f32(acc), vget_high_f32(acc));
+                    acc2 = vpmax_f32(acc2, acc2);
+                    result = std::max(result, vget_lane_f32(acc2, 0));
+
+                    for (; k < cn; k++)
+                        result = std::max(result, std::abs(elem[k]));
+                }
+            }
+        }
+        return result;
+    }
+};
+
+template <>
+struct MaskedNormL1_SIMD<float, double> {
+    inline double operator()(const float* src, const uchar* mask, int len, int cn) const {
+        double result = 0.0;
+        if (cn == 1) {
+            int i = 0;
+            float64x2_t acc = vdupq_n_f64(0.0);
+
+            for (; i <= len - 4; i += 4) {
+                uint32x4_t cmp = vcgtq_u32(vmovl_u16(vget_low_u16(vmovl_u8(vld1_u8(mask + i)))), vdupq_n_u32(0));
+                float32x4_t s  = vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(vabsq_f32(vld1q_f32(src + i))), cmp));
+                acc = vaddq_f64(acc, vcvt_f64_f32(vget_low_f32(s)));
+                acc = vaddq_f64(acc, vcvt_f64_f32(vget_high_f32(s)));
+            }
+
+            result = vgetq_lane_f64(acc, 0) + vgetq_lane_f64(acc, 1);
+
+            for (; i < len; i++) {
+                if (mask[i])
+                    result += std::abs(src[i]);
+            }
+        } 
+        else {
+            for (int i = 0; i < len; i++) {
+                if (mask[i]) {
+                    const float* elem = src + i * cn;
+                    int k = 0;
+                    float64x2_t acc = vdupq_n_f64(0.0);
+
+                    for (; k <= cn - 4; k += 4) {
+                        float32x4_t s = vabsq_f32(vld1q_f32(elem + k));
+                        acc = vaddq_f64(acc, vcvt_f64_f32(vget_low_f32(s)));
+                        acc = vaddq_f64(acc, vcvt_f64_f32(vget_high_f32(s)));
+                    }
+
+                    result += vgetq_lane_f64(acc, 0) + vgetq_lane_f64(acc, 1);
+
+                    for (; k < cn; k++)
+                        result += std::abs(elem[k]);
+                }
+            }
+        }
+        return result;
+    }
+};
+
+template <>
+struct MaskedNormL2_SIMD<float, double> {
+    inline double operator()(const float* src, const uchar* mask, int len, int cn) const {
+        double result = 0.0;
+        if (cn == 1) {
+            int i = 0;
+            float32x4_t facc = vdupq_n_f32(0.0f);
+            float64x2_t dacc = vdupq_n_f64(0.0);
+            int flush = 0;
+
+            for (; i <= len - 4; i += 4, flush += 4) {
+                if (flush >= 64) {
+                    dacc = vaddq_f64(dacc, vcvt_f64_f32(vget_low_f32(facc)));
+                    dacc = vaddq_f64(dacc, vcvt_f64_f32(vget_high_f32(facc)));
+                    facc = vdupq_n_f32(0.0f);
+                    flush = 0;
+                }
+                uint32x4_t cmp = vcgtq_u32(vmovl_u16(vget_low_u16(vmovl_u8(vld1_u8(mask + i)))), vdupq_n_u32(0));
+                float32x4_t s  = vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(vld1q_f32(src + i)), cmp));
+                facc = vmlaq_f32(facc, s, s);
+            }
+
+            dacc = vaddq_f64(dacc, vcvt_f64_f32(vget_low_f32(facc)));
+            dacc = vaddq_f64(dacc, vcvt_f64_f32(vget_high_f32(facc)));
+            result = vgetq_lane_f64(dacc, 0) + vgetq_lane_f64(dacc, 1);
+
+            for (; i < len; i++) {
+                if (mask[i]) {
+                    double v = src[i];
+                    result += v * v;
+                }
+            }
+        } 
+        else {
+            for (int i = 0; i < len; i++) {
+                if (mask[i]) {
+                    const float* elem = src + i * cn;
+                    int k = 0;
+                    float32x4_t facc = vdupq_n_f32(0.0f);
+
+                    for (; k <= cn - 4; k += 4) {
+                        float32x4_t s = vld1q_f32(elem + k);
+                        facc = vmlaq_f32(facc, s, s);
+                    }
+
+                    float64x2_t dacc = vaddq_f64(vcvt_f64_f32(vget_low_f32(facc)),
+                                                  vcvt_f64_f32(vget_high_f32(facc)));
+                    result += vgetq_lane_f64(dacc, 0) + vgetq_lane_f64(dacc, 1);
+
+                    for (; k < cn; k++) {
+                        double v = elem[k];
+                        result += v * v;
+                    }
+                }
+            }
+        }
+        return result;
+    }
+};
+
+template <>
+struct MaskedNormInf_SIMD<uchar, int> {
+    inline int operator()(const uchar* src, const uchar* mask, int len, int cn) const {
+        int result = 0;
+        if (cn == 1) {
+            int i = 0;
+            uint8x16_t acc = vdupq_n_u8(0);
+
+            for (; i <= len - 16; i += 16) {
+                uint8x16_t m   = vld1q_u8(mask + i);
+                uint8x16_t s   = vld1q_u8(src + i);
+                uint8x16_t sel = vandq_u8(s, vcgtq_u8(m, vdupq_n_u8(0)));
+                acc = vmaxq_u8(acc, sel);
+            }
+
+            uint8x8_t acc2 = vpmax_u8(vget_low_u8(acc), vget_high_u8(acc));
+            acc2 = vpmax_u8(acc2, acc2);
+            acc2 = vpmax_u8(acc2, acc2);
+            acc2 = vpmax_u8(acc2, acc2);
+            result = vget_lane_u8(acc2, 0);
+
+            for (; i < len; i++) {
+                if (mask[i])
+                    result = std::max(result, (int)src[i]);
+            }
+        } else {
+            for (int i = 0; i < len; i++) {
+                if (mask[i]) {
+                    const uchar* elem = src + i * cn;
+                    int k = 0;
+                    uint8x8_t acc = vdup_n_u8(0);
+
+                    for (; k <= cn - 4; k += 4) {
+                        uint32_t word;
+                        memcpy(&word, elem + k, 4);
+                        uint8x8_t s = vcreate_u8((uint64_t)word);
+                        acc = vmax_u8(acc, s);
+                    }
+
+                    uint8x8_t acc2 = vpmax_u8(acc, acc);
+                    acc2 = vpmax_u8(acc2, acc2);
+                    acc2 = vpmax_u8(acc2, acc2);
+                    result = std::max(result, (int)vget_lane_u8(acc2, 0));
+
+                    for (; k < cn; k++)
+                        result = std::max(result, (int)elem[k]);
+                }
+            }
+        }
+        return result;
+    }
+};
+
+template <>
+struct MaskedNormL1_SIMD<uchar, int> {
+    inline int operator()(const uchar* src, const uchar* mask, int len, int cn) const {
+        int result = 0;
+        if (cn == 1) {
+            int i = 0;
+            uint32x4_t acc = vdupq_n_u32(0);
+
+            for (; i <= len - 16; i += 16) {
+                uint8x16_t m   = vld1q_u8(mask + i);
+                uint8x16_t s   = vld1q_u8(src + i);
+                uint8x16_t sel = vandq_u8(s, vcgtq_u8(m, vdupq_n_u8(0)));
+                acc = vpadalq_u16(acc, vpaddlq_u8(sel));
+            }
+            result = (int)(vgetq_lane_u32(acc, 0) + vgetq_lane_u32(acc, 1) +
+                           vgetq_lane_u32(acc, 2) + vgetq_lane_u32(acc, 3));
+            for (; i < len; i++) {
+                if (mask[i])
+                    result += src[i];
+            }
+        } else {
+            for (int i = 0; i < len; i++) {
+                if (mask[i]) {
+                    const uchar* elem = src + i * cn;
+                    int k = 0;
+                    uint16x4_t acc = vdup_n_u16(0);
+
+                    for (; k <= cn - 4; k += 4) {
+                        uint32_t word;
+                        memcpy(&word, elem + k, 4);
+                        uint8x8_t s = vcreate_u8((uint64_t)word);
+                        acc = vadd_u16(acc, vpaddl_u8(s));
+                    }
+
+                    result += (int)(vget_lane_u16(acc, 0) + vget_lane_u16(acc, 1) +
+                                    vget_lane_u16(acc, 2) + vget_lane_u16(acc, 3));
+
+                    for (; k < cn; k++)
+                        result += elem[k];
+                }
+            }
+        }
+        return result;
+    }
+};
+
+template <>
+struct MaskedNormL2_SIMD<uchar, int> {
+    inline int operator()(const uchar* src, const uchar* mask, int len, int cn) const {
+        int result = 0;
+        if (cn == 1) {
+            int i = 0;
+            uint32x4_t acc = vdupq_n_u32(0);
+
+            for (; i <= len - 16; i += 16) {
+                uint8x16_t m   = vld1q_u8(mask + i);
+                uint8x16_t s   = vld1q_u8(src + i);
+                uint8x16_t sel = vandq_u8(s, vcgtq_u8(m, vdupq_n_u8(0)));
+                uint16x8_t lo  = vmull_u8(vget_low_u8(sel),  vget_low_u8(sel));
+                uint16x8_t hi  = vmull_u8(vget_high_u8(sel), vget_high_u8(sel));
+                acc = vpadalq_u16(acc, lo);
+                acc = vpadalq_u16(acc, hi);
+            }
+
+            result = (int)(vgetq_lane_u32(acc, 0) + vgetq_lane_u32(acc, 1) +
+                           vgetq_lane_u32(acc, 2) + vgetq_lane_u32(acc, 3));
+
+            for (; i < len; i++) {
+                if (mask[i])
+                    result += (int)src[i] * src[i];
+            }
+        } else {
+            for (int i = 0; i < len; i++) {
+                if (mask[i]) {
+                    const uchar* elem = src + i * cn;
+                    int k = 0;
+                    uint32x4_t acc = vdupq_n_u32(0);
+
+                    for (; k <= cn - 4; k += 4) {
+                        uint32_t word;
+                        memcpy(&word, elem + k, 4);
+                        uint8x8_t s  = vcreate_u8((uint64_t)word);
+                        uint16x8_t sq = vmull_u8(s, s);
+                        acc = vpadalq_u16(acc, sq);
+                    }
+
+                    result += (int)(vgetq_lane_u32(acc, 0) + vgetq_lane_u32(acc, 1) +
+                                    vgetq_lane_u32(acc, 2) + vgetq_lane_u32(acc, 3));
+
+                    for (; k < cn; k++)
+                        result += (int)elem[k] * elem[k];
+                }
+            }
+        }
+        return result;
+    }
+};
+
+template <>
+struct MaskedNormInf_SIMD<ushort, int> {
+    inline int operator()(const ushort* src, const uchar* mask, int len, int cn) const {
+        int result = 0;
+        if (cn == 1) {
+            int i = 0;
+            uint16x8_t acc = vdupq_n_u16(0);
+
+            for (; i <= len - 8; i += 8) {
+                uint8x8_t  m8  = vld1_u8(mask + i);
+                uint16x8_t cmp = vcgtq_u16(vmovl_u8(m8), vdupq_n_u16(0));
+                uint16x8_t s   = vld1q_u16(src + i);
+                uint16x8_t sel = vandq_u16(s, cmp);
+                acc = vmaxq_u16(acc, sel);
+            }
+
+            uint16x4_t acc2 = vpmax_u16(vget_low_u16(acc), vget_high_u16(acc));
+            acc2 = vpmax_u16(acc2, acc2);
+            acc2 = vpmax_u16(acc2, acc2);
+            result = (int)vget_lane_u16(acc2, 0);
+
+            for (; i < len; i++) {
+                if (mask[i])
+                    result = std::max(result, (int)src[i]);
+            }
+        } else {
+            for (int i = 0; i < len; i++) {
+                if (mask[i]) {
+                    const ushort* elem = src + i * cn;
+                    int k = 0;
+                    uint16x4_t acc = vdup_n_u16(0);
+
+                    for (; k <= cn - 4; k += 4) {
+                        uint16x4_t s = vld1_u16(elem + k);
+                        acc = vmax_u16(acc, s);
+                    }
+
+                    uint16x4_t acc2 = vpmax_u16(acc, acc);
+                    acc2 = vpmax_u16(acc2, acc2);
+                    result = std::max(result, (int)vget_lane_u16(acc2, 0));
+
+                    for (; k < cn; k++)
+                        result = std::max(result, (int)elem[k]);
+                }
+            }
+        }
+        return result;
+    }
+};
+
+template <>
+struct MaskedNormL1_SIMD<ushort, int> {
+    inline int operator()(const ushort* src, const uchar* mask, int len, int cn) const {
+        int result = 0;
+        if (cn == 1) {
+            int i = 0;
+            uint32x4_t acc32 = vdupq_n_u32(0);
+            uint64x2_t acc64 = vdupq_n_u64(0);
+            int flush = 0;
+
+            for (; i <= len - 8; i += 8, flush += 8) {
+                if (flush >= 512) {
+                    acc64 = vaddq_u64(acc64, vmovl_u32(vget_low_u32(acc32)));
+                    acc64 = vaddq_u64(acc64, vmovl_u32(vget_high_u32(acc32)));
+                    acc32 = vdupq_n_u32(0);
+                    flush = 0;
+                }
+                uint8x8_t  m8  = vld1_u8(mask + i);
+                uint16x8_t cmp = vcgtq_u16(vmovl_u8(m8), vdupq_n_u16(0));
+                uint16x8_t s   = vandq_u16(vld1q_u16(src + i), cmp);
+                acc32 = vpadalq_u16(acc32, s);
+            }
+
+            acc64 = vaddq_u64(acc64, vmovl_u32(vget_low_u32(acc32)));
+            acc64 = vaddq_u64(acc64, vmovl_u32(vget_high_u32(acc32)));
+            result = (int)(vgetq_lane_u64(acc64, 0) + vgetq_lane_u64(acc64, 1));
+
+            for (; i < len; i++) {
+                if (mask[i])
+                    result += src[i];
+            }
+        } else {
+            for (int i = 0; i < len; i++) {
+                if (mask[i]) {
+                    const ushort* elem = src + i * cn;
+                    int k = 0;
+                    uint32x4_t acc = vdupq_n_u32(0);
+
+                    for (; k <= cn - 4; k += 4)
+                        acc = vaddw_u16(acc, vld1_u16(elem + k));
+
+                    result += (int)(vgetq_lane_u32(acc, 0) + vgetq_lane_u32(acc, 1) +
+                                    vgetq_lane_u32(acc, 2) + vgetq_lane_u32(acc, 3));
+
+                    for (; k < cn; k++)
+                        result += elem[k];
+                }
+            }
+        }
+        return result;
+    }
+};
+
+template <>
+struct MaskedNormL2_SIMD<ushort, int> {
+    inline int operator()(const ushort* src, const uchar* mask, int len, int cn) const {
+        int result = 0;
+        if (cn == 1) {
+            int i = 0;
+            uint64x2_t acc0 = vdupq_n_u64(0);
+            uint64x2_t acc1 = vdupq_n_u64(0);
+            uint64x2_t acc2 = vdupq_n_u64(0);
+            uint64x2_t acc3 = vdupq_n_u64(0);
+            for (; i <= len - 32; i += 32) {
+                uint8x8_t  m0   = vld1_u8(mask + i);
+                uint16x8_t cmp0 = vcgtq_u16(vmovl_u8(m0), vdupq_n_u16(0));
+                uint16x8_t s0   = vandq_u16(vld1q_u16(src + i), cmp0);
+                acc0 = vpadalq_u32(acc0, vmull_u16(vget_low_u16(s0),  vget_low_u16(s0)));
+                acc0 = vpadalq_u32(acc0, vmull_u16(vget_high_u16(s0), vget_high_u16(s0)));
+
+                uint8x8_t  m1   = vld1_u8(mask + i + 8);
+                uint16x8_t cmp1 = vcgtq_u16(vmovl_u8(m1), vdupq_n_u16(0));
+                uint16x8_t s1   = vandq_u16(vld1q_u16(src + i + 8), cmp1);
+                acc1 = vpadalq_u32(acc1, vmull_u16(vget_low_u16(s1),  vget_low_u16(s1)));
+                acc1 = vpadalq_u32(acc1, vmull_u16(vget_high_u16(s1), vget_high_u16(s1)));
+
+                uint8x8_t  m2   = vld1_u8(mask + i + 16);
+                uint16x8_t cmp2 = vcgtq_u16(vmovl_u8(m2), vdupq_n_u16(0));
+                uint16x8_t s2   = vandq_u16(vld1q_u16(src + i + 16), cmp2);
+                acc2 = vpadalq_u32(acc2, vmull_u16(vget_low_u16(s2),  vget_low_u16(s2)));
+                acc2 = vpadalq_u32(acc2, vmull_u16(vget_high_u16(s2), vget_high_u16(s2)));
+
+                uint8x8_t  m3   = vld1_u8(mask + i + 24);
+                uint16x8_t cmp3 = vcgtq_u16(vmovl_u8(m3), vdupq_n_u16(0));
+                uint16x8_t s3   = vandq_u16(vld1q_u16(src + i + 24), cmp3);
+                acc3 = vpadalq_u32(acc3, vmull_u16(vget_low_u16(s3),  vget_low_u16(s3)));
+                acc3 = vpadalq_u32(acc3, vmull_u16(vget_high_u16(s3), vget_high_u16(s3)));
+            }
+            for (; i <= len - 8; i += 8) {
+                uint8x8_t  m8  = vld1_u8(mask + i);
+                uint16x8_t cmp = vcgtq_u16(vmovl_u8(m8), vdupq_n_u16(0));
+                uint16x8_t s   = vandq_u16(vld1q_u16(src + i), cmp);
+                acc0 = vpadalq_u32(acc0, vmull_u16(vget_low_u16(s),  vget_low_u16(s)));
+                acc0 = vpadalq_u32(acc0, vmull_u16(vget_high_u16(s), vget_high_u16(s)));
+            }
+            uint64x2_t acc01 = vaddq_u64(acc0, acc1);
+            uint64x2_t acc23 = vaddq_u64(acc2, acc3);
+            uint64x2_t acc   = vaddq_u64(acc01, acc23);
+            result = (int)(vgetq_lane_u64(acc, 0) + vgetq_lane_u64(acc, 1));
+
+            for (; i < len; i++) {
+                if (mask[i])
+                    result += (int)src[i] * src[i];
+            }
+        } else {
+            for (int i = 0; i < len; i++) {
+                if (mask[i]) {
+                    const ushort* elem = src + i * cn;
+                    int k = 0;
+                    uint64x2_t acc64 = vdupq_n_u64(0);
+
+                    for (; k <= cn - 4; k += 4) {
+                        uint16x4_t s  = vld1_u16(elem + k);
+                        uint32x4_t sq = vmull_u16(s, s);
+                        acc64 = vpadalq_u32(acc64, sq);
+                    }
+
+                    result += (int)(vgetq_lane_u64(acc64, 0) + vgetq_lane_u64(acc64, 1));
+
+                    for (; k < cn; k++)
+                        result += (int)elem[k] * elem[k];
+                }
+            }
+        }
+        return result;
+    }
+};
+
+template <>
+struct MaskedNormL2_SIMD<ushort, double> {
+    inline double operator()(const ushort* src, const uchar* mask, int len, int cn) const {
+        double result = 0.0;
+        
+        if (cn == 1) {
+            int i = 0;
+            
+            uint64x2_t acc0 = vdupq_n_u64(0);
+            uint64x2_t acc1 = vdupq_n_u64(0);
+            uint64x2_t acc2 = vdupq_n_u64(0);
+            uint64x2_t acc3 = vdupq_n_u64(0);
+
+            for (; i <= len - 32; i += 32) {
+                uint8x8_t  m0   = vld1_u8(mask + i);
+                uint16x8_t cmp0 = vcgtq_u16(vmovl_u8(m0), vdupq_n_u16(0));
+                uint16x8_t s0   = vandq_u16(vld1q_u16(src + i), cmp0);
+                acc0 = vpadalq_u32(acc0, vmull_u16(vget_low_u16(s0),  vget_low_u16(s0)));
+                acc0 = vpadalq_u32(acc0, vmull_u16(vget_high_u16(s0), vget_high_u16(s0)));
+
+                uint8x8_t  m1   = vld1_u8(mask + i + 8);
+                uint16x8_t cmp1 = vcgtq_u16(vmovl_u8(m1), vdupq_n_u16(0));
+                uint16x8_t s1   = vandq_u16(vld1q_u16(src + i + 8), cmp1);
+                acc1 = vpadalq_u32(acc1, vmull_u16(vget_low_u16(s1),  vget_low_u16(s1)));
+                acc1 = vpadalq_u32(acc1, vmull_u16(vget_high_u16(s1), vget_high_u16(s1)));
+
+                uint8x8_t  m2   = vld1_u8(mask + i + 16);
+                uint16x8_t cmp2 = vcgtq_u16(vmovl_u8(m2), vdupq_n_u16(0));
+                uint16x8_t s2   = vandq_u16(vld1q_u16(src + i + 16), cmp2);
+                acc2 = vpadalq_u32(acc2, vmull_u16(vget_low_u16(s2),  vget_low_u16(s2)));
+                acc2 = vpadalq_u32(acc2, vmull_u16(vget_high_u16(s2), vget_high_u16(s2)));
+
+                uint8x8_t  m3   = vld1_u8(mask + i + 24);
+                uint16x8_t cmp3 = vcgtq_u16(vmovl_u8(m3), vdupq_n_u16(0));
+                uint16x8_t s3   = vandq_u16(vld1q_u16(src + i + 24), cmp3);
+                acc3 = vpadalq_u32(acc3, vmull_u16(vget_low_u16(s3),  vget_low_u16(s3)));
+                acc3 = vpadalq_u32(acc3, vmull_u16(vget_high_u16(s3), vget_high_u16(s3)));
+            }
+
+            for (; i <= len - 8; i += 8) {
+                uint8x8_t  m8  = vld1_u8(mask + i);
+                uint16x8_t cmp = vcgtq_u16(vmovl_u8(m8), vdupq_n_u16(0));
+                uint16x8_t s   = vandq_u16(vld1q_u16(src + i), cmp);
+                acc0 = vpadalq_u32(acc0, vmull_u16(vget_low_u16(s),  vget_low_u16(s)));
+                acc0 = vpadalq_u32(acc0, vmull_u16(vget_high_u16(s), vget_high_u16(s)));
+            }
+
+            uint64x2_t acc01 = vaddq_u64(acc0, acc1);
+            uint64x2_t acc23 = vaddq_u64(acc2, acc3);
+            uint64x2_t acc   = vaddq_u64(acc01, acc23);
+            result = (double)(vgetq_lane_u64(acc, 0) + vgetq_lane_u64(acc, 1));
+
+            for (; i < len; i++) {
+                if (mask[i]) {
+                    double v = src[i];
+                    result += v * v;
+                }
+            }
+        } else {
+            for (int i = 0; i < len; i++) {
+                if (mask[i]) {
+                    const ushort* elem = src + i * cn;
+                    int k = 0;
+                    uint64x2_t acc64 = vdupq_n_u64(0);
+
+                    for (; k <= cn - 4; k += 4) {
+                        uint16x4_t s  = vld1_u16(elem + k);
+                        uint32x4_t sq = vmull_u16(s, s);
+                        acc64 = vpadalq_u32(acc64, sq);
+                    }
+
+                    result += (double)(vgetq_lane_u64(acc64, 0) + vgetq_lane_u64(acc64, 1));
+
+                    for (; k < cn; k++) {
+                        double v = elem[k];
+                        result += v * v;
+                    }
+                }
+            }
+        }
+        
+        return result;
+    }
+};
+
+#endif
+
 template<typename T, typename ST> int
 normInf_(const T* src, const uchar* mask, ST* _result, int len, int cn) {
     ST result = *_result;
@@ -1174,13 +1872,8 @@ normInf_(const T* src, const uchar* mask, ST* _result, int len, int cn) {
         NormInf_SIMD<T, ST> op;
         result = std::max(result, op(src, len*cn));
     } else {
-        for( int i = 0; i < len; i++, src += cn ) {
-            if( mask[i] ) {
-                for( int k = 0; k < cn; k++ ) {
-                    result = std::max(result, ST(cv_abs(src[k])));
-                }
-            }
-        }
+        MaskedNormInf_SIMD<T, ST> op;
+        result = std::max(result, op(src, mask, len, cn));
     }
     *_result = result;
     return 0;
@@ -1193,13 +1886,8 @@ normL1_(const T* src, const uchar* mask, ST* _result, int len, int cn) {
         NormL1_SIMD<T, ST> op;
         result += op(src, len*cn);
     } else {
-        for( int i = 0; i < len; i++, src += cn ) {
-            if( mask[i] ) {
-                for( int k = 0; k < cn; k++ ) {
-                    result += cv_abs(src[k]);
-                }
-            }
-        }
+        MaskedNormL1_SIMD<T, ST> op;
+        result += op(src, mask, len, cn);
     }
     *_result = result;
     return 0;
@@ -1212,14 +1900,8 @@ normL2_(const T* src, const uchar* mask, ST* _result, int len, int cn) {
         NormL2_SIMD<T, ST> op;
         result += op(src, len*cn);
     } else {
-        for( int i = 0; i < len; i++, src += cn ) {
-            if( mask[i] ) {
-                for( int k = 0; k < cn; k++ ) {
-                    T v = src[k];
-                    result += (ST)v*v;
-                }
-            }
-        }
+        MaskedNormL2_SIMD<T, ST> op;
+        result += op(src, mask, len, cn);
     }
     *_result = result;
     return 0;
