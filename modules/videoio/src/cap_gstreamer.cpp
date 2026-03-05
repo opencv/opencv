@@ -2527,7 +2527,7 @@ bool CvVideoWriter_GStreamer::open( const std::string &filename, int fourcc,
         GSafePtr<GstCaps> prof_caps;
         prof_caps.attach(gst_caps_from_string("video/x-raw, format=I420"));
         videoprofile.attach(gst_encoding_video_profile_new(prof_caps.get(), NULL, NULL, 1));
-        gst_encoding_container_profile_add_profile(containerprofile.get(), (GstEncodingProfile*)videoprofile.get());
+        gst_encoding_container_profile_add_profile(containerprofile.get(), (GstEncodingProfile*)videoprofile.release());
 
         g_object_set(G_OBJECT(encodebin.get()), "profile", containerprofile.get(), NULL);
 
