@@ -172,6 +172,4 @@ mingw32-make
 ./app.exe
 @endcode
 
-@image html images/build-complete.png "Successful build output"
-
 */
