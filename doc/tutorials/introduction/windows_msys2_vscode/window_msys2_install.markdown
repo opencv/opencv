@@ -1,9 +1,6 @@
 Building OpenCV on Windows from Source Code using MSYS2 UCRT64 and VS Code (C++) {#tutorial_windows_msys2_vscode}
 =====================================================================
 
-@prev_tutorial{tutorial_windows_install}
-@next_tutorial{tutorial_windows_visual_studio_image_watch}
-
 | | |
 | -: | :- |
 | Original author | Mahadev Kumar |
@@ -12,7 +9,7 @@ Building OpenCV on Windows from Source Code using MSYS2 UCRT64 and VS Code (C++)
 @tableofcontents
 
 @note
-This tutorial was tested on **Windows 10/11** using the **MSYS2 UCRT64 environment**.
+This tutorial was tested on **Windows >= 7** using the **MSYS2 UCRT64 environment**.
 
 ---
 
@@ -166,11 +163,9 @@ C:\path\to\opencv\build\install\x64/mingw/bin
 
 ## Step 8: Verify with a C++ Example {#tutorial_windows_msys2_install_verify}
 
-Create a folder outside the OpenCV source directory.
-
+- Create a folder outside the OpenCV source directory.
 Example: `first-project`
-
-Inside the folder create **main.cpp**
+- Inside the folder create **main.cpp**
 
 @code{.cpp}
 #include <opencv2/opencv.hpp>
@@ -189,7 +184,7 @@ int main()
 }
 @endcode
 
-Create **CMakeLists.txt**
+- Create **CMakeLists.txt**
 
 @code{.cmake}
 cmake_minimum_required(VERSION 3.10)
@@ -205,17 +200,15 @@ add_executable(app main.cpp)
 target_link_libraries(app ${OpenCV_LIBS})
 @endcode
 
-Build the project.
+- Build the project.
 
 @code{.bash}
-mkdir build
-cd build
-
+mkdir build && cd build
 cmake -G "MinGW Makefiles" ..
 mingw32-make
 @endcode
 
-Run the program.
+- Run the program.
 
 @code{.bash}
 ./app.exe
