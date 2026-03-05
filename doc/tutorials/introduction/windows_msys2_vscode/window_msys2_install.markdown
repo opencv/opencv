@@ -158,6 +158,7 @@ add_executable(app main.cpp)
 target_link_libraries(app ${OpenCV_LIBS})
 @endcode
 
+@note Set the path of `OpenCV_DIR` to where OpenCV installed. This path is same as your opencv folder.
 4. Build:
 
 @code{.bash}
