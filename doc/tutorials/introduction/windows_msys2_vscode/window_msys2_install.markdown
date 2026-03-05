@@ -40,8 +40,6 @@ This method produces native Windows binaries linked against the Universal C Runt
 **After installing MSYS2, always open:**
 The **MSYS2 UCRT64** terminal.
 
-
-
 @note Do not use the MSYS, MinGW64, or CLANG64 shells for this build.
 
 ---
