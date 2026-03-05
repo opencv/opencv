@@ -2166,6 +2166,40 @@ CV_EXPORTS CV_WRAP_AS(goodFeaturesToTrackWithQuality) void goodFeaturesToTrack(
         InputArray mask, OutputArray cornersQuality, int blockSize = 3,
         int gradientSize = 3, bool useHarrisDetector = false, double k = 0.04);
 
+/** @brief Determines strong corners with adaptive per-tile quality thresholding.
+
+This function extends #goodFeaturesToTrack by estimating a local maximum response in each tile
+of the image and applying the quality threshold relative to this local maximum. It helps preserve
+corners in low-texture regions while still suppressing weak responses inside each tile.
+
+@param image Input 8-bit or floating-point 32-bit, single-channel image.
+@param corners Output vector of detected corners.
+@param maxCorners Maximum number of corners to return. If there are more corners than are found,
+the strongest of them is returned. `maxCorners <= 0` implies that no limit on the maximum is set.
+@param qualityLevel Minimal accepted quality relative to each tile-local maximum response.
+@param minDistance Minimum possible Euclidean distance between the returned corners.
+@param tileGridSize Number of tiles in X and Y direction. Must be positive.
+@param mask Optional region of interest. If not empty, it needs type CV_8UC1 and image size.
+@param blockSize Size of an average block for computing a derivative covariation matrix.
+@param gradientSize Aperture parameter for Sobel derivatives computation.
+@param useHarrisDetector Parameter indicating whether to use #cornerHarris or
+#cornerMinEigenVal.
+@param k Free parameter of the Harris detector.
+
+@code{.cpp}
+cv::Mat gray = cv::imread("frame.png", cv::IMREAD_GRAYSCALE);
+std::vector<cv::Point2f> corners;
+cv::goodFeaturesToTrackAdaptive(gray, corners, 500, 0.02, 5.0,
+                                cv::Size(6, 4), cv::noArray(), 3, 3, false);
+@endcode
+ */
+CV_EXPORTS_W void goodFeaturesToTrackAdaptive(
+        InputArray image, OutputArray corners,
+        int maxCorners, double qualityLevel, double minDistance,
+        Size tileGridSize = Size(4, 4), InputArray mask = noArray(),
+        int blockSize = 3, int gradientSize = 3,
+        bool useHarrisDetector = false, double k = 0.04);
+
 /** @example samples/cpp/tutorial_code/ImgTrans/houghlines.cpp
 An example using the Hough line detector
 ![Sample input image](Hough_Lines_Tutorial_Original_Image.jpg) ![Output image](Hough_Lines_Tutorial_Result.jpg)
