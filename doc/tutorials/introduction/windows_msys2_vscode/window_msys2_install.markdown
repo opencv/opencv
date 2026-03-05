@@ -6,7 +6,7 @@
 
 | | |
 | -: | :- |
-| Original author | Your Name |
+| Original author | M |
 | Compatibility | OpenCV >= 4.0 |
 
 @tableofcontents
@@ -34,7 +34,7 @@ This method produces native Windows binaries linked against the Universal C Runt
 **Install the following software before proceeding:**
 
 - [MSYS2](https://www.msys2.org/)
-- [Git](https://git-scm.com/)
+- [Git](https://git-scm.com/install/)
 - [Python](https://www.python.org/)
 
 **After installing MSYS2, always open:**
@@ -115,7 +115,7 @@ cmake -G "MinGW Makefiles" \
 ## Step 6: Build OpenCV {#tutorial_windows_msys2_install_build}
 
 @code{.bash}
-mingw32-make -j6
+mingw32-make -j 6
 @endcode
 
 @note If the build fails due to memory exhaustion, decrease the job count (e.g., `-j4` or `-j2`).
@@ -135,13 +135,12 @@ mingw32-make install
 
 ## Step 8: Verify with a C++ Project {#tutorial_windows_msys2_install_verify}
 
-1. Create a folder named `first_project`.
-2. Create `main.cpp`:
+1. Create a folder named `first_project`, outside the opencv folder.
+2. Create `main.cpp` and add this code:
 
 @code{.cpp}
 #include <opencv2/opencv.hpp>
 #include <iostream>
-
 int main() {
     std::cout << "OpenCV Version: " << cv::CV_VERSION << std::endl;
     return 0;
@@ -153,21 +152,28 @@ int main() {
 @code{.cmake}
 cmake_minimum_required(VERSION 3.10)
 project(OpenCVApp)
-
-# Set the path to where OpenCV was installed
-set(OpenCV_DIR "C:/path/to/your/opencv/build/install")
-
+set(OpenCV_DIR "C:/path/to/your/opencv/build/install") # Set the path to where OpenCV was intalled
 find_package(OpenCV REQUIRED)
 add_executable(app main.cpp)
 target_link_libraries(app ${OpenCV_LIBS})
 @endcode
 
-4. Build and run:
+4. Build:
+
 @code{.bash}
 mkdir build && cd build
 cmake -G "MinGW Makefiles" ..
+@endcode
+
+5. Compile:
+@code{.bash}
 mingw32-make
-./app.exe
+@endcode
+
+6. Run:
+
+@code{.bash}
+./app.exe # app.exe
 @endcode
 
 */
