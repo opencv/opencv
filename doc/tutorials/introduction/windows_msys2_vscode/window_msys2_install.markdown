@@ -1,13 +1,13 @@
-/**
-@page tutorial_windows_msys2_vscode Building OpenCV on Windows using MSYS2 UCRT64
+Building OpenCV on Windows with sources code using MSYS2-UCRT64 in "VS-CODE"and CPP
+=====================================================================
 
-@prev_tutorial{tutorial_linux_eclipse}
-@next_tutorial{tutorial_windows_visual_studio_opencv}
+@prev_tutorial{tutorial_windows_install}
+@next_tutorial{tutorial_windows_visual_studio_image_watch}
 
 | | |
 | -: | :- |
 | Original author | M |
-| Compatibility | OpenCV >= 4.0 |
+| Compatibility | OpenCV >= 3.0 |
 
 @tableofcontents
 
@@ -25,8 +25,7 @@ This tutorial describes how to build OpenCV from source on Windows using the MSY
 - CMake
 - mingw32-make
 
-This method produces native Windows binaries linked against the Universal C Runtime (UCRT).
-
+@note This method produces native Windows binaries linked against the Universal C Runtime (UCRT).
 ---
 
 ## Prerequisites {#tutorial_windows_install_msys2_prerequisites}
@@ -41,7 +40,6 @@ This method produces native Windows binaries linked against the Universal C Runt
 The **MSYS2 UCRT64** terminal.
 
 @note Do not use the MSYS, MinGW64, or CLANG64 shells for this build.
-
 ---
 
 ## Step 1: Update MSYS2 {#tutorial_windows_msys2_install_update}
@@ -51,7 +49,6 @@ Open the MSYS2 UCRT64 shell and update the system:
 @code{.bash}
 pacman -Syu
 @endcode
-
 ---
 
 ## Step 2: Install Required Packages {#tutorial_windows_msys2_install_packages}
@@ -74,7 +71,6 @@ mingw32-make --version
 
 **Setup System Environment Variables:**
 Add the following to your Windows System PATH: `C:\msys64\ucrt64\bin`
-
 ---
 
 ## Step 3: Clone OpenCV {#tutorial_windows_msys2_install_clone}
@@ -83,7 +79,6 @@ Add the following to your Windows System PATH: `C:\msys64\ucrt64\bin`
 git clone https://github.com/opencv/opencv.git
 git clone https://github.com/opencv/opencv_contrib.git
 @endcode
-
 ---
 
 ## Step 4: Create Build Directory {#tutorial_windows_msys2_install_build_dir}
@@ -92,7 +87,6 @@ git clone https://github.com/opencv/opencv_contrib.git
 cd opencv
 mkdir build && cd build
 @endcode
-
 ---
 
 ## Step 5: Configure with CMake {#tutorial_windows_msys2_install_configure}
@@ -109,7 +103,6 @@ cmake -G "MinGW Makefiles" \
 @endcode
 
 @note If not using `opencv_contrib`, remove the `OPENCV_EXTRA_MODULES_PATH` option.
-
 ---
 
 ## Step 6: Build OpenCV {#tutorial_windows_msys2_install_build}
@@ -119,7 +112,6 @@ mingw32-make -j 6
 @endcode
 
 @note If the build fails due to memory exhaustion, decrease the job count (e.g., `-j4` or `-j2`).
-
 ---
 
 ## Step 7: Install Compiled Libraries {#tutorial_windows_msys2_install_mingw32}
@@ -130,7 +122,6 @@ mingw32-make install
 
 **Post-Install:** Add the install bin folder to your Windows PATH:
 `C:\your_path\opencv\build\install\x64\mingw\bin`
-
 ---
 
 ## Step 8: Verify with a C++ Project {#tutorial_windows_msys2_install_verify}
@@ -176,5 +167,4 @@ mingw32-make
 @code{.bash}
 ./app.exe # app.exe
 @endcode
-
-*/
+---
