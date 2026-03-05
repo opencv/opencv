@@ -1,29 +1,24 @@
-Building OpenCV on Windows using MSYS2 UCRT64 {#tutorial_windows_msys2_vscode}
-==================
+/**
+@page tutorial_windows_msys2_vscode Building OpenCV on Windows using MSYS2 UCRT64
 
 @prev_tutorial{tutorial_linux_eclipse}
 @next_tutorial{tutorial_windows_visual_studio_opencv}
 
-|    |    |
+| | |
 | -: | :- |
-| Original author |  |
+| Original author | Your Name |
 | Compatibility | OpenCV >= 4.0 |
 
 @tableofcontents
 
 @warning
-This tutorial can contain obsolete information.
-
-The description here was tested on Windows 7 SP1. Nevertheless, it should also work on any other
-relatively modern version of Windows OS. If you encounter errors after following the steps described
-below, feel free to contact us via our [OpenCV Q&A forum](https://forum.opencv.org). We'll do our
-best to help you out.
+This tutorial can contain obsolete information. The description here was tested on Windows 7 SP1. Nevertheless, it should also work on any other relatively modern version of Windows OS. If you encounter errors, feel free to contact us via the [OpenCV Q&A forum](https://forum.opencv.org).
 
 ## Introduction {#tutorial_windows_msys2_install_intro}
 
- This tutorial describes how to build OpenCV from source on Windows using the MSYS2 UCRT64 environment.
+This tutorial describes how to build OpenCV from source on Windows using the MSYS2 UCRT64 environment.
 
-** The build configuration uses:**
+**The build configuration uses:**
 
 - MSYS2 (UCRT64 shell)
 - GCC (UCRT toolchain)
@@ -33,169 +28,150 @@ best to help you out.
 This method produces native Windows binaries linked against the Universal C Runtime (UCRT).
 
 ---
+
 ## Prerequisites {#tutorial_windows_install_msys2_prerequisites}
 
-** Install the following software before proceeding:**
+**Install the following software before proceeding:**
 
-- MSYS2
-- Git
-- Python
+- [MSYS2](https://www.msys2.org/)
+- [Git](https://git-scm.com/)
+- [Python](https://www.python.org/)
 
-** After installing MSYS2, always open:**
+**After installing MSYS2, always open:**
+The **MSYS2 UCRT64** terminal.
 
-    [MSYS2 UCRT64](https://www.msys2.org/)
 
-@note  Do not use the MSYS, MinGW64, or CLANG64 shells for this build.
+
+@note Do not use the MSYS, MinGW64, or CLANG64 shells for this build.
 
 ---
 
 ## Step 1: Update MSYS2 {#tutorial_windows_msys2_install_update}
 
-** Open the MSYS2 UCRT64 shell and update the system:**
+Open the MSYS2 UCRT64 shell and update the system:
 
-    @code{.bash}
-    pacman -Syu
-    @endcode
+@code{.bash}
+pacman -Syu
+@endcode
 
 ---
 
 ## Step 2: Install Required Packages {#tutorial_windows_msys2_install_packages}
 
-** Inside the UCRT64 shell, install required packages:**
-    @code{.bash}
-    pacman -S mingw-w64-ucrt-x86_64-gcc
-    pacman -S mingw-w64-ucrt-x86_64-cmake
-    pacman -S mingw-w64-ucrt-x86_64-make
-    @endcode
+Inside the UCRT64 shell, install the required toolchain:
 
-** Verify installation in UCRT64 SHELL:**
-    @code{.bash}
-    gcc --version # or g++ --version
-    # gcc.exe (Revxx, Built by MSYS2 project) version
+@code{.bash}
+pacman -S mingw-w64-ucrt-x86_64-gcc \
+          mingw-w64-ucrt-x86_64-cmake \
+          mingw-w64-ucrt-x86_64-make
+@endcode
 
-    cmake --version
-    # cmake version 4.x
+**Verify installation:**
 
-    mingw32-make --version
-    # GNU Make 4.x
+@code{.bash}
+gcc --version
+cmake --version
+mingw32-make --version
+@endcode
 
-    @endcode
-
-** Setup System Environment Variables:**
-    Add this in path: `C:\msys64\ucrt64\bin`
-
-** Verify Installation in Visual Studio Code:**
-
-    @code{.bash}
-    gcc --version
-    g++ --version
-    cmake --version
-    mingw32-make --version
-    @endcode
+**Setup System Environment Variables:**
+Add the following to your Windows System PATH: `C:\msys64\ucrt64\bin`
 
 ---
 
-## Step 3: Clone Opencv {#tutorial_windows_msys2_install_clone}
+## Step 3: Clone OpenCV {#tutorial_windows_msys2_install_clone}
 
-** Clone the OpenCV repository:**
-    @code{.bash}
-    git clone https://github.com/opencv/opencv.git
-    cd opencv
-    @endcode
-
-** (Optional) Clone extra modules:**
-
-    git clone https://github.com/opencv/opencv_contrib.git
+@code{.bash}
+git clone https://github.com/opencv/opencv.git
+git clone https://github.com/opencv/opencv_contrib.git
+@endcode
 
 ---
 
 ## Step 4: Create Build Directory {#tutorial_windows_msys2_install_build_dir}
-    @code{.bash}
-    mkdir build && cd build
-    @endcode
+
+@code{.bash}
+cd opencv
+mkdir build && cd build
+@endcode
 
 ---
 
-## Step 5: Configure with `Mingw32-Cmake` {#tutorial_windows_msys2_install_configure}
+## Step 5: Configure with CMake {#tutorial_windows_msys2_install_configure}
 
-    @code{.cmake}
-    cmake -G "MinGW Makefiles" ^
-      -DCMAKE_BUILD_TYPE=Release ^
-      -DCMAKE_INSTALL_PREFIX=install ^
-      -DBUILD_opencv_python3=ON ^
-      -DOPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules ^
-      ../
-    @endcode
+Use the following command to configure the build. Note the use of `MinGW Makefiles`.
+
+@code{.bash}
+cmake -G "MinGW Makefiles" \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX=install \
+  -DBUILD_opencv_python3=ON \
+  -DOPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules \
+  ../
+@endcode
 
 @note If not using `opencv_contrib`, remove the `OPENCV_EXTRA_MODULES_PATH` option.
 
 ---
 
-## Step 6: Build Opencv with mingw32-make  {#tutorial_windows_msys2_install_build}
+## Step 6: Build OpenCV {#tutorial_windows_msys2_install_build}
 
-    @code{.bash}
-    mingw32-make -j 6
-    @endcode
+@code{.bash}
+mingw32-make -j6
+@endcode
 
-@note If failed then decrease the job count. Ex. `mingw32-make -j 4`
+@note If the build fails due to memory exhaustion, decrease the job count (e.g., `-j4` or `-j2`).
 
 ---
 
 ## Step 7: Install Compiled Libraries {#tutorial_windows_msys2_install_mingw32}
 
-    mingw32-make install
+@code{.bash}
+mingw32-make install
+@endcode
 
-@note For using Opencv Outside, Add this path in System Variable Path:
-    ./opencv/build/install/x64/mingw/bin
-
-Check this PATH in your `opencv/build` and copy the full path and Add to the ENV Variable
+**Post-Install:** Add the install bin folder to your Windows PATH:
+`C:\your_path\opencv\build\install\x64\mingw\bin`
 
 ---
 
-## Step 8: Use Opencv in cpp project {#tutorial_windows_msys2_install_verify}
+## Step 8: Verify with a C++ Project {#tutorial_windows_msys2_install_verify}
 
-1. Make a folder `first project`
-2. Create a file named test.cpp
-3. Copy the code below:
+1. Create a folder named `first_project`.
+2. Create `main.cpp`:
 
-    @code{.cpp}
-    #include <opencv2/opencv.hpp>
-    #include <iostream>
+@code{.cpp}
+#include <opencv2/opencv.hpp>
+#include <iostream>
 
-    using namespace std;
-    using namespace cv;
-
-    int main() {
-    cout << CV_VERSION << endl;
-
+int main() {
+    std::cout << "OpenCV Version: " << cv::CV_VERSION << std::endl;
     return 0;
-    }
+}
+@endcode
 
-    @endcode
+3. Create `CMakeLists.txt`:
 
-4. Create `CmakeLists.txt` and copy this:
+@code{.cmake}
+cmake_minimum_required(VERSION 3.10)
+project(OpenCVApp)
 
-   @code{.cmake}
-    cmake_minimum_required(VERSION 3.10)
-    project(OpenCVApp)
+# Set the path to where OpenCV was installed
+set(OpenCV_DIR "C:/path/to/your/opencv/build/install")
 
-    # 🔽 ADD THIS LINE (change path to yours)
-    set(OpenCV_DIR "D:/open-source/opencv/build-new/install")
+find_package(OpenCV REQUIRED)
+add_executable(app main.cpp)
+target_link_libraries(app ${OpenCV_LIBS})
+@endcode
 
-    find_package(OpenCV REQUIRED)
-    add_executable(app main.cpp) # app is your project name
-    target_link_libraries(app ${OpenCV_LIBS})
+4. Build and run:
+@code{.bash}
+mkdir build && cd build
+cmake -G "MinGW Makefiles" ..
+mingw32-make
+./app.exe
+@endcode
 
-    @endcode
+@image html images/build-complete.png "Successful build output"
 
-5. Make a folder `build` inside the first-project
-6. Inside build Run ` cmake -G "MinGW Makefiles"` ../
-6. Run this in build folder `mingw32-make`
-@image html images/build-complete.png "build"
-7. app.exe
-
-If successful, the installed OpenCV version will be printed.
-
-@note When make changes in the cpp file then run again `mingw32-make` for compilation and run `app.exe`
----
-
+*/
