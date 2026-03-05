@@ -70,7 +70,7 @@ static void
 distanceTransform_3x3( const Mat& _src, Mat& _temp, Mat& _dist, const float* metrics )
 {
     const int BORDER = 1;
-    int i, j;
+
     const unsigned int HV_DIST = CV_FLT_TO_FIX( metrics[0], DIST_SHIFT );
     const unsigned int DIAG_DIST = CV_FLT_TO_FIX( metrics[1], DIST_SHIFT );
     const unsigned int DIST_MAX = UINT_MAX - DIAG_DIST;
@@ -79,65 +79,190 @@ distanceTransform_3x3( const Mat& _src, Mat& _temp, Mat& _dist, const float* met
     const uchar* src = _src.ptr();
     int* temp = _temp.ptr<int>();
     float* dist = _dist.ptr<float>(_dist.rows - 1);
-    int srcstep = (int)(_src.step/sizeof(src[0]));
-    int step = (int)(_temp.step/sizeof(temp[0]));
-    int dststep = (int)(_dist.step/sizeof(dist[0]));
-    Size size = _src.size();
+
+    const int srcstep = (int)_src.step;
+    const int step = (int)(_temp.step / sizeof(int));
+    const int dststep = (int)(_dist.step / sizeof(float));
+
+    const int width = _src.cols;
+    const int height = _src.rows;
 
     initTopBottom( _temp, BORDER, DIST_MAX );
 
     // forward pass
-    unsigned int* tmp = (unsigned int*)(temp + BORDER*step) + BORDER;
-    const uchar* s = src;
-    for( i = 0; i < size.height; i++ )
-    {
-        for( j = 0; j < BORDER; j++ )
-            tmp[-j-1] = tmp[size.width + j] = DIST_MAX;
+    unsigned int* row = (unsigned int*)(temp + BORDER * step) + BORDER;
+    const uchar* srow = src;
 
-        for( j = 0; j < size.width; j++ )
+    for (int i = 0; i < height; i++)
+    {
+        unsigned int* cur = row;
+        const uchar* s = srow;
+        const unsigned int* top = (const unsigned int*)(cur - step);
+
+        // set horizontal border sentinels
+        cur[-1] = DIST_MAX;
+        cur[width] = DIST_MAX;
+
+        unsigned int left = cur[-1];
+
+#if CV_SIMD
+        const int BLOCK = 8;
+        int j = 0;
+        const v_uint32 v_diag = vx_setall<v_uint32>(DIAG_DIST);
+        const v_uint32 v_hv = vx_setall<v_uint32>(HV_DIST);
+
+        for (; j <= width - BLOCK; j += BLOCK)
         {
-            if( !s[j] )
-                tmp[j] = 0;
-            else
+            v_uint32 tl0 = vx_load(top + j - 1);
+            v_uint32 t0  = vx_load(top + j);
+            v_uint32 tr0 = vx_load(top + j + 1);
+            v_uint32 tl1 = vx_load(top + j + 3);
+            v_uint32 t1  = vx_load(top + j + 4);
+            v_uint32 tr1 = vx_load(top + j + 5);
+            tl0 = v_add(tl0, v_diag);
+            t0  = v_add(t0, v_hv);
+            tr0 = v_add(tr0, v_diag);
+            tl1 = v_add(tl1, v_diag);
+            t1  = v_add(t1, v_hv);
+            tr1 = v_add(tr1, v_diag);
+            v_uint32 m0 = v_min(tl0, t0);
+            m0 = v_min(m0, tr0);
+            v_uint32 m1 = v_min(tl1, t1);
+            m1 = v_min(m1, tr1);
+            v_store(cur + j, m0);
+            v_store(cur + j + 4, m1);
+
+            for (int k = 0; k < BLOCK; k++)
             {
-                unsigned int t0 = tmp[j-step-1] + DIAG_DIST;
-                unsigned int t = tmp[j-step] + HV_DIST;
-                if( t0 > t ) t0 = t;
-                t = tmp[j-step+1] + DIAG_DIST;
-                if( t0 > t ) t0 = t;
-                t = tmp[j-1] + HV_DIST;
-                if( t0 > t ) t0 = t;
-                tmp[j] = (t0 > DIST_MAX) ? DIST_MAX : t0;
+                int idx = j + k;
+                if (!s[idx])
+                {
+                    cur[idx] = 0;
+                    left = 0;
+                }
+                else
+                {
+                    unsigned int m = cur[idx];
+                    unsigned int lm = left + HV_DIST;
+                    if (lm < m) m = lm;
+                    if (m > DIST_MAX) m = DIST_MAX;
+                    cur[idx] = m;
+                    left = m;
+                }
             }
         }
-        tmp += step;
-        s += srcstep;
+
+        for (; j < width; j++)
+        {
+            if (!s[j])
+            {
+                cur[j] = 0;
+                left = 0;
+            }
+            else
+            {
+                unsigned int t0 = top[j - 1] + DIAG_DIST;
+                unsigned int t1 = top[j]     + HV_DIST;
+                unsigned int t2 = top[j + 1] + DIAG_DIST;
+                unsigned int t3 = left       + HV_DIST;
+
+                unsigned int m = t0 < t1 ? t0 : t1;
+                m = m < t2 ? m : t2;
+                m = m < t3 ? m : t3;
+
+                cur[j] = m > DIST_MAX ? DIST_MAX : m;
+                left = cur[j];
+            }
+        }
+#else
+        for (int j = 0; j < width; j++)
+        {
+            if (!s[j])
+            {
+                cur[j] = 0;
+                left = 0;
+            }
+            else
+            {
+                unsigned int t0 = top[j - 1] + DIAG_DIST;
+                unsigned int t1 = top[j]     + HV_DIST;
+                unsigned int t2 = top[j + 1] + DIAG_DIST;
+                unsigned int t3 = left       + HV_DIST;
+
+                unsigned int m = t0 < t1 ? t0 : t1;
+                m = m < t2 ? m : t2;
+                m = m < t3 ? m : t3;
+
+                cur[j] = m > DIST_MAX ? DIST_MAX : m;
+                left = cur[j];
+            }
+        }
+#endif
+
+        row += step;
+        srow += srcstep;
     }
 
     // backward pass
-    float* d = (float*)dist;
-    for( i = size.height - 1; i >= 0; i-- )
+    float* drow = dist;
+    unsigned int* cur = row - step;
+#if CV_SIMD
+    const v_float32 scale_v = vx_setall<v_float32>(scale);
+#endif
+    for (int i = height - 1; i >= 0; i--)
     {
-        tmp -= step;
+        unsigned int* bottom = cur + step;
 
-        for( j = size.width - 1; j >= 0; j-- )
+        unsigned int right = cur[width];
+        for (int j = width - 1; j >= 0; j--)
         {
-            unsigned int t0 = tmp[j];
-            if( t0 > HV_DIST )
+            unsigned int t0 = cur[j];
+
+            if (t0 > HV_DIST)
             {
-                unsigned int t = tmp[j+step+1] + DIAG_DIST;
-                if( t0 > t ) t0 = t;
-                t = tmp[j+step] + HV_DIST;
-                if( t0 > t ) t0 = t;
-                t = tmp[j+step-1] + DIAG_DIST;
-                if( t0 > t ) t0 = t;
-                t = tmp[j+1] + HV_DIST;
-                if( t0 > t ) t0 = t;
-                tmp[j] = t0;
+                unsigned int b1 = bottom[j + 1] + DIAG_DIST;
+                unsigned int b2 = bottom[j]     + HV_DIST;
+                unsigned int b3 = bottom[j - 1] + DIAG_DIST;
+                unsigned int r  = right        + HV_DIST;
+
+                unsigned int t = b1 < b2 ? b1 : b2;
+                t = t < b3 ? t : b3;
+                t = t < r  ? t : r;
+
+                if (t < t0)
+                {
+                    t0 = t;
+                    cur[j] = t0;
+                }
             }
-            d[j] = (float)(t0 * scale);
+
+            right = cur[j];
         }
-        d -= dststep;
+
+#if CV_SIMD
+        int j = 0;
+        const uint32_t* tptr = (const uint32_t*)cur;
+        float* dptr = drow;
+
+        for (; j <= width - 8; j += 8)
+        {
+            v_uint32 v0 = vx_load(tptr + j);
+            v_uint32 v1 = vx_load(tptr + j + 4);
+            v_float32 f0 = v_mul(v_cvt_f32(v0), scale_v);
+            v_float32 f1 = v_mul(v_cvt_f32(v1), scale_v);
+            v_store(dptr + j, f0);
+            v_store(dptr + j + 4, f1);
+        }
+
+        for (; j < width; j++)
+            dptr[j] = (float)(tptr[j] * scale);
+#else
+        for (int j = 0; j < width; j++)
+            drow[j] = (float)(cur[j] * scale);
+#endif
+
+        cur -= step;
+        drow -= dststep;
     }
 }
 
@@ -146,91 +271,247 @@ static void
 distanceTransform_5x5( const Mat& _src, Mat& _temp, Mat& _dist, const float* metrics )
 {
     const int BORDER = 2;
-    int i, j;
+
     const unsigned int HV_DIST = CV_FLT_TO_FIX( metrics[0], DIST_SHIFT );
     const unsigned int DIAG_DIST = CV_FLT_TO_FIX( metrics[1], DIST_SHIFT );
     const unsigned int LONG_DIST = CV_FLT_TO_FIX( metrics[2], DIST_SHIFT );
     const unsigned int DIST_MAX = UINT_MAX - LONG_DIST;
     const float scale = 1.f/(1 << DIST_SHIFT);
 
-    const uchar* src = _src.ptr();
+    const uchar* src = _src.ptr<uchar>();
     int* temp = _temp.ptr<int>();
     float* dist = _dist.ptr<float>(_dist.rows - 1);
-    int srcstep = (int)(_src.step/sizeof(src[0]));
-    int step = (int)(_temp.step/sizeof(temp[0]));
-    int dststep = (int)(_dist.step/sizeof(dist[0]));
-    Size size = _src.size();
 
-    initTopBottom( _temp, BORDER, DIST_MAX );
+    const int srcstep = (int)_src.step;
+    const int step    = (int)(_temp.step / sizeof(int));
+    const int dststep = (int)(_dist.step / sizeof(float));
+
+    const int width  = _src.cols;
+    const int height = _src.rows;
+
+    initTopBottom(_temp, BORDER, DIST_MAX);
 
     // forward pass
-    unsigned int* tmp = (unsigned int*)(temp + BORDER*step) + BORDER;
-    const uchar* s = src;
-    for( i = 0; i < size.height; i++ )
-    {
-        for( j = 0; j < BORDER; j++ )
-            tmp[-j-1] = tmp[size.width + j] = DIST_MAX;
+    unsigned int* row = (unsigned int*)(temp + BORDER * step) + BORDER;
+    const uchar* srow = src;
 
-        for( j = 0; j < size.width; j++ )
+    for (int i = 0; i < height; i++)
+    {
+        unsigned int* cur  = row;
+        const uchar*  s    = srow;
+        const unsigned int* top1 = cur - step;
+        const unsigned int* top2 = cur - step * 2;
+        cur[-1] = cur[-2] = DIST_MAX;
+        cur[width] = cur[width + 1] = DIST_MAX;
+#if CV_SIMD
+        unsigned int left1 = DIST_MAX;
+        unsigned int left2 = DIST_MAX;
+        const int BLOCK = 8;
+        int j = 0;
+        const v_uint32 v_hv   = vx_setall<v_uint32>(HV_DIST);
+        const v_uint32 v_diag = vx_setall<v_uint32>(DIAG_DIST);
+        const v_uint32 v_long = vx_setall<v_uint32>(LONG_DIST);
+        const v_uint32 v_max  = vx_setall<v_uint32>(DIST_MAX);
+
+        for (; j <= width - BLOCK; j += BLOCK)
         {
-            if( !s[j] )
-                tmp[j] = 0;
-            else
+            v_uint32 t2m1_0 = vx_load(top2 + j - 1);
+            v_uint32 t2p1_0 = vx_load(top2 + j + 1);
+            v_uint32 t1m2_0 = vx_load(top1 + j - 2);
+            v_uint32 t1m1_0 = vx_load(top1 + j - 1);
+            v_uint32 t1_0   = vx_load(top1 + j);
+            v_uint32 t1p1_0 = vx_load(top1 + j + 1);
+            v_uint32 t1p2_0 = vx_load(top1 + j + 2);
+
+            t2m1_0 = v_add(t2m1_0, v_long);
+            t2p1_0 = v_add(t2p1_0, v_long);
+            t1m2_0 = v_add(t1m2_0, v_long);
+            t1m1_0 = v_add(t1m1_0, v_diag);
+            t1_0   = v_add(t1_0,   v_hv);
+            t1p1_0 = v_add(t1p1_0, v_diag);
+            t1p2_0 = v_add(t1p2_0, v_long);
+
+            v_uint32 m0 = v_min(t2m1_0, t2p1_0);
+            m0 = v_min(m0, t1m2_0);
+            m0 = v_min(m0, t1m1_0);
+            m0 = v_min(m0, t1_0);
+            m0 = v_min(m0, t1p1_0);
+            m0 = v_min(m0, t1p2_0);
+            m0 = v_min(m0, v_max);
+
+            v_uint32 t2m1_1 = vx_load(top2 + j + 3);
+            v_uint32 t2p1_1 = vx_load(top2 + j + 5);
+            v_uint32 t1m2_1 = vx_load(top1 + j + 2);
+            v_uint32 t1m1_1 = vx_load(top1 + j + 3);
+            v_uint32 t1_1   = vx_load(top1 + j + 4);
+            v_uint32 t1p1_1 = vx_load(top1 + j + 5);
+            v_uint32 t1p2_1 = vx_load(top1 + j + 6);
+
+            t2m1_1 = v_add(t2m1_1, v_long);
+            t2p1_1 = v_add(t2p1_1, v_long);
+            t1m2_1 = v_add(t1m2_1, v_long);
+            t1m1_1 = v_add(t1m1_1, v_diag);
+            t1_1   = v_add(t1_1,   v_hv);
+            t1p1_1 = v_add(t1p1_1, v_diag);
+            t1p2_1 = v_add(t1p2_1, v_long);
+
+            v_uint32 m1 = v_min(t2m1_1, t2p1_1);
+            m1 = v_min(m1, t1m2_1);
+            m1 = v_min(m1, t1m1_1);
+            m1 = v_min(m1, t1_1);
+            m1 = v_min(m1, t1p1_1);
+            m1 = v_min(m1, t1p2_1);
+            m1 = v_min(m1, v_max);
+
+            v_store(cur + j,     m0);
+            v_store(cur + j + 4, m1);
+
+            for (int k = 0; k < BLOCK; k++)
             {
-                unsigned int t0 = tmp[j-step*2-1] + LONG_DIST;
-                unsigned int t = tmp[j-step*2+1] + LONG_DIST;
-                if( t0 > t ) t0 = t;
-                t = tmp[j-step-2] + LONG_DIST;
-                if( t0 > t ) t0 = t;
-                t = tmp[j-step-1] + DIAG_DIST;
-                if( t0 > t ) t0 = t;
-                t = tmp[j-step] + HV_DIST;
-                if( t0 > t ) t0 = t;
-                t = tmp[j-step+1] + DIAG_DIST;
-                if( t0 > t ) t0 = t;
-                t = tmp[j-step+2] + LONG_DIST;
-                if( t0 > t ) t0 = t;
-                t = tmp[j-1] + HV_DIST;
-                if( t0 > t ) t0 = t;
-                tmp[j] = (t0 > DIST_MAX) ? DIST_MAX : t0;
+                int idx = j + k;
+                if (!s[idx])
+                {
+                    cur[idx] = 0;
+                    left1 = 0;
+                    left2 = 0;
+                }
+                else
+                {
+                    unsigned int m = cur[idx];
+                    unsigned int lm = left1 + HV_DIST;
+                    if (lm < m) m = lm;
+                    if (m > DIST_MAX) m = DIST_MAX;
+                    cur[idx] = m;
+                    left2 = left1;
+                    left1 = m;
+                }
             }
         }
-        tmp += step;
-        s += srcstep;
+
+        for (; j < width; j++)
+        {
+            if (!s[j])
+            {
+                cur[j] = 0;
+                left1 = left2 = 0;
+            }
+            else
+            {
+                unsigned int t0 = top2[j - 1] + LONG_DIST;
+                unsigned int t  = top2[j + 1] + LONG_DIST;
+                if (t < t0) t0 = t;
+                t = top1[j - 2] + LONG_DIST;               if (t < t0) t0 = t;
+                t = top1[j - 1] + DIAG_DIST;               if (t < t0) t0 = t;
+                t = top1[j]     + HV_DIST;                  if (t < t0) t0 = t;
+                t = top1[j + 1] + DIAG_DIST;               if (t < t0) t0 = t;
+                t = top1[j + 2] + LONG_DIST;               if (t < t0) t0 = t;
+                t = left1       + HV_DIST;                  if (t < t0) t0 = t;
+
+                cur[j] = t0 > DIST_MAX ? DIST_MAX : t0;
+                left2 = left1;
+                left1 = cur[j];
+            }
+        }
+#else
+        unsigned int left = DIST_MAX;
+        for (int j = 0; j < width; j++)
+        {
+            if (!s[j])
+            {
+                cur[j] = 0;
+                left = 0;
+            }
+            else
+            {
+                unsigned int t0 = top2[j - 1] + LONG_DIST;
+                unsigned int t  = top2[j + 1] + LONG_DIST;
+                if (t < t0) t0 = t;
+                t = top1[j - 2] + LONG_DIST;
+                if (t < t0) t0 = t;
+                t = top1[j - 1] + DIAG_DIST;
+                if (t < t0) t0 = t;
+                t = top1[j]     + HV_DIST;
+                if (t < t0) t0 = t;
+                t = top1[j + 1] + DIAG_DIST;
+                if (t < t0) t0 = t;
+                t = top1[j + 2] + LONG_DIST;
+                if (t < t0) t0 = t;
+                t = left        + HV_DIST;
+                if (t < t0) t0 = t;
+                cur[j] = t0 > DIST_MAX ? DIST_MAX : t0;
+                left = cur[j];
+            }
+        }
+#endif
+        row  += step;
+        srow += srcstep;
     }
 
     // backward pass
-    float* d = (float*)dist;
-    for( i = size.height - 1; i >= 0; i-- )
-    {
-        tmp -= step;
+    float* drow = dist;
+    unsigned int* cur = row - step;
 
-        for( j = size.width - 1; j >= 0; j-- )
+#if CV_SIMD
+    const v_float32 scale_v = vx_setall<v_float32>(scale);
+#endif
+
+    for (int i = height - 1; i >= 0; i--)
+    {
+        unsigned int* bot1 = cur + step;
+        unsigned int* bot2 = cur + step * 2;
+        unsigned int right = DIST_MAX;
+
+        for (int j = width - 1; j >= 0; j--)
         {
-            unsigned int t0 = tmp[j];
+            unsigned int t0 = cur[j];
             if( t0 > HV_DIST )
             {
-                unsigned int t = tmp[j+step*2+1] + LONG_DIST;
-                if( t0 > t ) t0 = t;
-                t = tmp[j+step*2-1] + LONG_DIST;
-                if( t0 > t ) t0 = t;
-                t = tmp[j+step+2] + LONG_DIST;
-                if( t0 > t ) t0 = t;
-                t = tmp[j+step+1] + DIAG_DIST;
-                if( t0 > t ) t0 = t;
-                t = tmp[j+step] + HV_DIST;
-                if( t0 > t ) t0 = t;
-                t = tmp[j+step-1] + DIAG_DIST;
-                if( t0 > t ) t0 = t;
-                t = tmp[j+step-2] + LONG_DIST;
-                if( t0 > t ) t0 = t;
-                t = tmp[j+1] + HV_DIST;
-                if( t0 > t ) t0 = t;
-                tmp[j] = t0;
+                unsigned int t  = bot2[j + 1] + LONG_DIST;
+                if (t < t0) t0 = t;
+                t = bot2[j - 1] + LONG_DIST;
+                if (t < t0) t0 = t;
+                t = bot1[j + 2] + LONG_DIST;
+                if (t < t0) t0 = t;
+                t = bot1[j + 1] + DIAG_DIST;
+                if (t < t0) t0 = t;
+                t = bot1[j]     + HV_DIST;
+                if (t < t0) t0 = t;
+                t = bot1[j - 1] + DIAG_DIST;
+                if (t < t0) t0 = t;
+                t = bot1[j - 2] + LONG_DIST;
+                if (t < t0) t0 = t;
+                t = right       + HV_DIST;
+                if (t < t0) t0 = t;
+
+                cur[j] = t0;
             }
-            d[j] = (float)(t0 * scale);
+            right = cur[j];
         }
-        d -= dststep;
+
+#if CV_SIMD
+        int j = 0;
+        const uint32_t* tptr = (const uint32_t*)cur;
+        float* dptr = drow;
+
+        for (; j <= width - 8; j += 8)
+        {
+            v_uint32 v0 = vx_load(tptr + j);
+            v_uint32 v1 = vx_load(tptr + j + 4);
+            v_float32 f0 = v_mul(v_cvt_f32(v0), scale_v);
+            v_float32 f1 = v_mul(v_cvt_f32(v1), scale_v);
+            v_store(dptr + j,     f0);
+            v_store(dptr + j + 4, f1);
+        }
+
+        for (; j < width; j++)
+            dptr[j] = (float)(tptr[j] * scale);
+#else
+        for (int j = 0; j < width; j++)
+            drow[j] = (float)(cur[j] * scale);
+#endif
+
+        cur  -= step;
+        drow -= dststep;
     }
 }
 
@@ -636,72 +917,118 @@ static void
 distanceATS_L1_8u( const Mat& src, Mat& dst )
 {
     int width = src.cols, height = src.rows;
-
-    int a;
-    uchar lut[256];
     int x, y;
-
     const uchar *sbase = src.ptr();
     uchar *dbase = dst.ptr();
     int srcstep = (int)src.step;
     int dststep = (int)dst.step;
-
     CV_Assert( src.type() == CV_8UC1 && dst.type() == CV_8UC1 );
     CV_Assert( src.size() == dst.size() );
 
-    ////////////////////// forward scan ////////////////////////
-    for( x = 0; x < 256; x++ )
-        lut[x] = cv::saturate_cast<uchar>(x+1);
-
-    //init first pixel to max (we're going to be skipping it)
-    dbase[0] = (uchar)(sbase[0] == 0 ? 0 : 255);
-
-    //first row (scan west only, skip first pixel)
-    for( x = 1; x < width; x++ )
-        dbase[x] = (uchar)(sbase[x] == 0 ? 0 : lut[dbase[x-1]]);
-
-    for( y = 1; y < height; y++ )
+    dbase[0] = (sbase[0] == 0) ? 0 : 255;
     {
-        sbase += srcstep;
-        dbase += dststep;
-
-        //for left edge, scan north only
-        a = sbase[0] == 0 ? 0 : lut[dbase[-dststep]];
-        dbase[0] = (uchar)a;
-
-        for( x = 1; x < width; x++ )
+        uchar prev = dbase[0];
+        for (x = 1; x < width; x++)
         {
-            a = sbase[x] == 0 ? 0 : lut[MIN(a, dbase[x - dststep])];
-            dbase[x] = (uchar)a;
+            prev = (sbase[x] == 0) ? 0u : (prev < 255u ? prev + 1u : 255u);
+            dbase[x] = prev;
         }
     }
 
-    ////////////////////// backward scan ///////////////////////
-
-    a = dbase[width-1];
-
-    // do last row east pixel scan here (skip bottom right pixel)
-    for( x = width - 2; x >= 0; x-- )
+    for (y = 1; y < height; y++)
     {
-        a = lut[a];
-        dbase[x] = (uchar)(CV_CALC_MIN_8U(a, dbase[x]));
+        sbase += srcstep;
+        dbase += dststep;
+        const uchar* sr = sbase;
+        uchar* dr = dbase;
+        const uchar* dr_prev = dbase - dststep;
+        {
+#if CV_SIMD
+            const int vstep = v_uint8::nlanes;
+            const v_uint8 v_one  = vx_setall_u8(1);
+            const v_uint8 v_zero = vx_setall_u8(0);
+            const v_uint8 v_255  = vx_setall_u8(255);
+
+            x = 0;
+            for (; x <= width - vstep; x += vstep)
+            {
+                v_uint8 s   = vx_load(sr + x);
+                v_uint8 n   = vx_load(dr_prev + x);
+                v_uint8 np1 = v_min(v_add(n, v_one), v_255);
+                v_uint8 msk = v_eq(s, v_zero);
+                v_uint8 res = v_and(np1, v_not(msk));
+                v_store(dr + x, res);
+            }
+#else
+            x = 0;
+#endif
+            for (; x < width; x++)
+                dr[x] = (sr[x] == 0) ? 0u
+                       : (dr_prev[x] < 255u ? dr_prev[x] + 1u : 255u);
+        }
+
+        {
+            uchar wa = dr[0];
+            for (x = 1; x < width; x++)
+            {
+                uchar west1 = (wa < 255u) ? wa + 1u : 255u;
+                uchar cur   = dr[x];
+                wa = (cur < west1) ? cur : west1;
+                dr[x] = wa;
+            }
+        }
     }
 
-    // right edge is the only error case
-    for( y = height - 2; y >= 0; y-- )
+    {
+        uchar* dr = dbase;
+        uchar  ea = dr[width - 1];
+        for (x = width - 2; x >= 0; x--)
+        {
+            uchar east1 = (ea < 255u) ? ea + 1u : 255u;
+            ea = dr[x] < east1 ? dr[x] : east1;
+            dr[x] = ea;
+        }
+    }
+
+    for (y = height - 2; y >= 0; y--)
     {
         dbase -= dststep;
+        uchar* dr = dbase;
+        const uchar* dr_next = dbase + dststep;
 
-        // do right edge
-        a = lut[dbase[width-1+dststep]];
-        a = dbase[width-1] = (uchar)(MIN(a, dbase[width-1]));
-
-        for( x = width - 2; x >= 0; x-- )
         {
-            int b = dbase[x+dststep];
-            a = lut[MIN(a, b)];
-            a = MIN(a, dbase[x]);
-            dbase[x] = (uchar)(a);
+#if CV_SIMD
+            const int vstep = v_uint8::nlanes;
+            const v_uint8 v_one = vx_setall_u8(1);
+            const v_uint8 v_255 = vx_setall_u8(255);
+
+            x = 0;
+            for (; x <= width - vstep; x += vstep)
+            {
+                v_uint8 cur = vx_load(dr + x);
+                v_uint8 s   = vx_load(dr_next + x);
+                v_uint8 sp1 = v_min(v_add(s, v_one), v_255);
+                v_uint8 res = v_min(cur, sp1);
+                v_store(dr + x, res);
+            }
+#else
+            x = 0;
+#endif
+            for (; x < width; x++)
+            {
+                uchar sp1 = (dr_next[x] < 255u) ? dr_next[x] + 1u : 255u;
+                if (sp1 < dr[x]) dr[x] = sp1;
+            }
+        }
+
+        {
+            uchar ea = dr[width - 1];
+            for (x = width - 2; x >= 0; x--)
+            {
+                uchar east1 = (ea < 255u) ? ea + 1u : 255u;
+                ea = dr[x] < east1 ? dr[x] : east1;
+                dr[x] = ea;
+            }
         }
     }
 }
