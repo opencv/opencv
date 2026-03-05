@@ -13,11 +13,336 @@
 namespace cv {
 
 ////////////////////////////////////// transpose /////////////////////////////////////////
+#ifdef CV_NEON
+
+static void transpose8x8_u8( uint8x8_t& r0, uint8x8_t& r1, uint8x8_t& r2, uint8x8_t& r3,
+    uint8x8_t& r4, uint8x8_t& r5, uint8x8_t& r6, uint8x8_t& r7 )
+{
+    uint8x8x2_t  t01 = vtrn_u8 (r0, r1);
+    uint8x8x2_t  t23 = vtrn_u8 (r2, r3);
+    uint8x8x2_t  t45 = vtrn_u8 (r4, r5);
+    uint8x8x2_t  t67 = vtrn_u8 (r6, r7);
+    uint16x4x2_t s01 = vtrn_u16(vreinterpret_u16_u8(t01.val[0]), vreinterpret_u16_u8(t23.val[0]));
+    uint16x4x2_t s23 = vtrn_u16(vreinterpret_u16_u8(t01.val[1]), vreinterpret_u16_u8(t23.val[1]));
+    uint16x4x2_t s45 = vtrn_u16(vreinterpret_u16_u8(t45.val[0]), vreinterpret_u16_u8(t67.val[0]));
+    uint16x4x2_t s67 = vtrn_u16(vreinterpret_u16_u8(t45.val[1]), vreinterpret_u16_u8(t67.val[1]));
+    uint32x2x2_t u0  = vtrn_u32(vreinterpret_u32_u16(s01.val[0]), vreinterpret_u32_u16(s45.val[0]));
+    uint32x2x2_t u1  = vtrn_u32(vreinterpret_u32_u16(s01.val[1]), vreinterpret_u32_u16(s45.val[1]));
+    uint32x2x2_t u2  = vtrn_u32(vreinterpret_u32_u16(s23.val[0]), vreinterpret_u32_u16(s67.val[0]));
+    uint32x2x2_t u3  = vtrn_u32(vreinterpret_u32_u16(s23.val[1]), vreinterpret_u32_u16(s67.val[1]));
+    r0 = vreinterpret_u8_u32(u0.val[0]);
+    r1 = vreinterpret_u8_u32(u2.val[0]);
+    r2 = vreinterpret_u8_u32(u1.val[0]);
+    r3 = vreinterpret_u8_u32(u3.val[0]);
+    r4 = vreinterpret_u8_u32(u0.val[1]);
+    r5 = vreinterpret_u8_u32(u2.val[1]);
+    r6 = vreinterpret_u8_u32(u1.val[1]);
+    r7 = vreinterpret_u8_u32(u3.val[1]);
+}
+
+static void transpose8x8_u16( uint16x8_t& r0, uint16x8_t& r1, uint16x8_t& r2, uint16x8_t& r3,
+    uint16x8_t& r4, uint16x8_t& r5, uint16x8_t& r6, uint16x8_t& r7 )
+{
+    uint16x8x2_t t01 = vtrnq_u16(r0, r1);
+    uint16x8x2_t t23 = vtrnq_u16(r2, r3);
+    uint16x8x2_t t45 = vtrnq_u16(r4, r5);
+    uint16x8x2_t t67 = vtrnq_u16(r6, r7);
+    uint32x4x2_t s01 = vtrnq_u32(vreinterpretq_u32_u16(t01.val[0]), vreinterpretq_u32_u16(t23.val[0]));
+    uint32x4x2_t s23 = vtrnq_u32(vreinterpretq_u32_u16(t01.val[1]), vreinterpretq_u32_u16(t23.val[1]));
+    uint32x4x2_t s45 = vtrnq_u32(vreinterpretq_u32_u16(t45.val[0]), vreinterpretq_u32_u16(t67.val[0]));
+    uint32x4x2_t s67 = vtrnq_u32(vreinterpretq_u32_u16(t45.val[1]), vreinterpretq_u32_u16(t67.val[1]));
+    r0 = vreinterpretq_u16_u32(vcombine_u32(vget_low_u32(s01.val[0]), vget_low_u32(s45.val[0])));
+    r1 = vreinterpretq_u16_u32(vcombine_u32(vget_low_u32(s23.val[0]), vget_low_u32(s67.val[0])));
+    r2 = vreinterpretq_u16_u32(vcombine_u32(vget_low_u32(s01.val[1]), vget_low_u32(s45.val[1])));
+    r3 = vreinterpretq_u16_u32(vcombine_u32(vget_low_u32(s23.val[1]), vget_low_u32(s67.val[1])));
+    r4 = vreinterpretq_u16_u32(vcombine_u32(vget_high_u32(s01.val[0]), vget_high_u32(s45.val[0])));
+    r5 = vreinterpretq_u16_u32(vcombine_u32(vget_high_u32(s23.val[0]), vget_high_u32(s67.val[0])));
+    r6 = vreinterpretq_u16_u32(vcombine_u32(vget_high_u32(s01.val[1]), vget_high_u32(s45.val[1])));
+    r7 = vreinterpretq_u16_u32(vcombine_u32(vget_high_u32(s23.val[1]), vget_high_u32(s67.val[1])));
+}
+
+static void transpose4x4_u32(
+    uint32x4_t& r0, uint32x4_t& r1, uint32x4_t& r2, uint32x4_t& r3)
+{
+    uint32x4x2_t t01 = vtrnq_u32(r0, r1);
+    uint32x4x2_t t23 = vtrnq_u32(r2, r3);
+    r0 = vcombine_u32(vget_low_u32 (t01.val[0]), vget_low_u32 (t23.val[0]));
+    r1 = vcombine_u32(vget_low_u32 (t01.val[1]), vget_low_u32 (t23.val[1]));
+    r2 = vcombine_u32(vget_high_u32(t01.val[0]), vget_high_u32(t23.val[0]));
+    r3 = vcombine_u32(vget_high_u32(t01.val[1]), vget_high_u32(t23.val[1]));
+}
+
+static void transpose_8UC1_neon(const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz)
+{
+    const int m = sz.width, n = sz.height;
+    int i = 0;
+    for (; i <= m - 8; i += 8)
+    {
+        int j = 0;
+        for (; j <= n - 8; j += 8)
+        {
+            uint8x8_t r0 = vld1_u8(src + i + sstep*(j+0));
+            uint8x8_t r1 = vld1_u8(src + i + sstep*(j+1));
+            uint8x8_t r2 = vld1_u8(src + i + sstep*(j+2));
+            uint8x8_t r3 = vld1_u8(src + i + sstep*(j+3));
+            uint8x8_t r4 = vld1_u8(src + i + sstep*(j+4));
+            uint8x8_t r5 = vld1_u8(src + i + sstep*(j+5));
+            uint8x8_t r6 = vld1_u8(src + i + sstep*(j+6));
+            uint8x8_t r7 = vld1_u8(src + i + sstep*(j+7));
+            transpose8x8_u8(r0,r1,r2,r3,r4,r5,r6,r7);
+            vst1_u8(dst + dstep*(i+0) + j, r0);
+            vst1_u8(dst + dstep*(i+1) + j, r1);
+            vst1_u8(dst + dstep*(i+2) + j, r2);
+            vst1_u8(dst + dstep*(i+3) + j, r3);
+            vst1_u8(dst + dstep*(i+4) + j, r4);
+            vst1_u8(dst + dstep*(i+5) + j, r5);
+            vst1_u8(dst + dstep*(i+6) + j, r6);
+            vst1_u8(dst + dstep*(i+7) + j, r7);
+        }
+        for (; j < n; j++)
+            for (int k = 0; k < 8; k++)
+                dst[dstep*(i+k) + j] = src[i + sstep*j + k];
+    }
+    for (; i < m; i++)
+        for (int j = 0; j < n; j++)
+            dst[dstep*i + j] = src[i + sstep*j];
+}
+
+static void transpose_16UC1_neon(const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz)
+{
+    const int m = sz.width, n = sz.height;
+    int i = 0;
+    for (; i <= m - 8; i += 8)
+    {
+        int j = 0;
+        for (; j <= n - 8; j += 8)
+        {
+            uint8x8x2_t p0 = vld2_u8(src + i*2 + sstep*(j+0));
+            uint8x8x2_t p1 = vld2_u8(src + i*2 + sstep*(j+1));
+            uint8x8x2_t p2 = vld2_u8(src + i*2 + sstep*(j+2));
+            uint8x8x2_t p3 = vld2_u8(src + i*2 + sstep*(j+3));
+            uint8x8x2_t p4 = vld2_u8(src + i*2 + sstep*(j+4));
+            uint8x8x2_t p5 = vld2_u8(src + i*2 + sstep*(j+5));
+            uint8x8x2_t p6 = vld2_u8(src + i*2 + sstep*(j+6));
+            uint8x8x2_t p7 = vld2_u8(src + i*2 + sstep*(j+7));
+            uint8x8_t A0=p0.val[0], A1=p1.val[0], A2=p2.val[0], A3=p3.val[0];
+            uint8x8_t A4=p4.val[0], A5=p5.val[0], A6=p6.val[0], A7=p7.val[0];
+            uint8x8_t B0=p0.val[1], B1=p1.val[1], B2=p2.val[1], B3=p3.val[1];
+            uint8x8_t B4=p4.val[1], B5=p5.val[1], B6=p6.val[1], B7=p7.val[1];
+            transpose8x8_u8(A0,A1,A2,A3,A4,A5,A6,A7);
+            transpose8x8_u8(B0,B1,B2,B3,B4,B5,B6,B7);
+            uint8x8x2_t q0; q0.val[0]=A0; q0.val[1]=B0; vst2_u8(dst + dstep*(i+0) + j*2, q0);
+            uint8x8x2_t q1; q1.val[0]=A1; q1.val[1]=B1; vst2_u8(dst + dstep*(i+1) + j*2, q1);
+            uint8x8x2_t q2; q2.val[0]=A2; q2.val[1]=B2; vst2_u8(dst + dstep*(i+2) + j*2, q2);
+            uint8x8x2_t q3; q3.val[0]=A3; q3.val[1]=B3; vst2_u8(dst + dstep*(i+3) + j*2, q3);
+            uint8x8x2_t q4; q4.val[0]=A4; q4.val[1]=B4; vst2_u8(dst + dstep*(i+4) + j*2, q4);
+            uint8x8x2_t q5; q5.val[0]=A5; q5.val[1]=B5; vst2_u8(dst + dstep*(i+5) + j*2, q5);
+            uint8x8x2_t q6; q6.val[0]=A6; q6.val[1]=B6; vst2_u8(dst + dstep*(i+6) + j*2, q6);
+            uint8x8x2_t q7; q7.val[0]=A7; q7.val[1]=B7; vst2_u8(dst + dstep*(i+7) + j*2, q7);
+        }
+        for (; j < n; j++)
+            for (int k = 0; k < 8; k++)
+                memcpy(dst + dstep*(i+k) + j*2, src + i*2 + sstep*j + k*2, 2);
+    }
+    for (; i < m; i++)
+        for (int j = 0; j < n; j++)
+            memcpy(dst + dstep*i + j*2, src + i*2 + sstep*j, 2);
+}
+
+static void transpose_8UC3_neon(const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz)
+{
+    const int m = sz.width, n = sz.height;
+    int i = 0;
+    for (; i <= m - 8; i += 8)
+    {
+        int j = 0;
+        for (; j <= n - 8; j += 8)
+        {
+            uint8x8x3_t p0 = vld3_u8(src + i*3 + sstep*(j+0));
+            uint8x8x3_t p1 = vld3_u8(src + i*3 + sstep*(j+1));
+            uint8x8x3_t p2 = vld3_u8(src + i*3 + sstep*(j+2));
+            uint8x8x3_t p3 = vld3_u8(src + i*3 + sstep*(j+3));
+            uint8x8x3_t p4 = vld3_u8(src + i*3 + sstep*(j+4));
+            uint8x8x3_t p5 = vld3_u8(src + i*3 + sstep*(j+5));
+            uint8x8x3_t p6 = vld3_u8(src + i*3 + sstep*(j+6));
+            uint8x8x3_t p7 = vld3_u8(src + i*3 + sstep*(j+7));
+            uint8x8_t R0=p0.val[0], R1=p1.val[0], R2=p2.val[0], R3=p3.val[0];
+            uint8x8_t R4=p4.val[0], R5=p5.val[0], R6=p6.val[0], R7=p7.val[0];
+            uint8x8_t G0=p0.val[1], G1=p1.val[1], G2=p2.val[1], G3=p3.val[1];
+            uint8x8_t G4=p4.val[1], G5=p5.val[1], G6=p6.val[1], G7=p7.val[1];
+            uint8x8_t B0=p0.val[2], B1=p1.val[2], B2=p2.val[2], B3=p3.val[2];
+            uint8x8_t B4=p4.val[2], B5=p5.val[2], B6=p6.val[2], B7=p7.val[2];
+            transpose8x8_u8(R0,R1,R2,R3,R4,R5,R6,R7);
+            transpose8x8_u8(G0,G1,G2,G3,G4,G5,G6,G7);
+            transpose8x8_u8(B0,B1,B2,B3,B4,B5,B6,B7);
+            uint8x8x3_t q0; q0.val[0]=R0; q0.val[1]=G0; q0.val[2]=B0; vst3_u8(dst + dstep*(i+0) + j*3, q0);
+            uint8x8x3_t q1; q1.val[0]=R1; q1.val[1]=G1; q1.val[2]=B1; vst3_u8(dst + dstep*(i+1) + j*3, q1);
+            uint8x8x3_t q2; q2.val[0]=R2; q2.val[1]=G2; q2.val[2]=B2; vst3_u8(dst + dstep*(i+2) + j*3, q2);
+            uint8x8x3_t q3; q3.val[0]=R3; q3.val[1]=G3; q3.val[2]=B3; vst3_u8(dst + dstep*(i+3) + j*3, q3);
+            uint8x8x3_t q4; q4.val[0]=R4; q4.val[1]=G4; q4.val[2]=B4; vst3_u8(dst + dstep*(i+4) + j*3, q4);
+            uint8x8x3_t q5; q5.val[0]=R5; q5.val[1]=G5; q5.val[2]=B5; vst3_u8(dst + dstep*(i+5) + j*3, q5);
+            uint8x8x3_t q6; q6.val[0]=R6; q6.val[1]=G6; q6.val[2]=B6; vst3_u8(dst + dstep*(i+6) + j*3, q6);
+            uint8x8x3_t q7; q7.val[0]=R7; q7.val[1]=G7; q7.val[2]=B7; vst3_u8(dst + dstep*(i+7) + j*3, q7);
+        }
+        for (; j < n; j++)
+            for (int k = 0; k < 8; k++)
+            {
+                const uchar* s = src + i*3 + sstep*j;
+                uchar* d = dst + dstep*(i+k) + j*3;
+                d[0]=s[k*3]; d[1]=s[k*3+1]; d[2]=s[k*3+2];
+            }
+    }
+    for (; i < m; i++)
+        for (int j = 0; j < n; j++)
+        {
+            const uchar* s = src + i*3 + sstep*j;
+            uchar* d = dst + dstep*i + j*3;
+            d[0]=s[0]; d[1]=s[1]; d[2]=s[2];
+        }
+}
+
+static void transpose_32UC1_neon(const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz)
+{
+    const int m = sz.width, n = sz.height;
+    int i = 0;
+    for (; i <= m - 4; i += 4)
+    {
+        int j = 0;
+        for (; j <= n - 4; j += 4)
+        {
+            uint32x4_t r0 = vld1q_u32(reinterpret_cast<const uint32_t*>(src + i*4 + sstep*(j+0)));
+            uint32x4_t r1 = vld1q_u32(reinterpret_cast<const uint32_t*>(src + i*4 + sstep*(j+1)));
+            uint32x4_t r2 = vld1q_u32(reinterpret_cast<const uint32_t*>(src + i*4 + sstep*(j+2)));
+            uint32x4_t r3 = vld1q_u32(reinterpret_cast<const uint32_t*>(src + i*4 + sstep*(j+3)));
+            transpose4x4_u32(r0,r1,r2,r3);
+            vst1q_u32(reinterpret_cast<uint32_t*>(dst + dstep*(i+0) + j*4), r0);
+            vst1q_u32(reinterpret_cast<uint32_t*>(dst + dstep*(i+1) + j*4), r1);
+            vst1q_u32(reinterpret_cast<uint32_t*>(dst + dstep*(i+2) + j*4), r2);
+            vst1q_u32(reinterpret_cast<uint32_t*>(dst + dstep*(i+3) + j*4), r3);
+        }
+        for (; j < n; j++)
+            for (int k = 0; k < 4; k++)
+                memcpy(dst + dstep*(i+k) + j*4, src + i*4 + sstep*j + k*4, 4);
+    }
+    for (; i < m; i++)
+        for (int j = 0; j < n; j++)
+            memcpy(dst + dstep*i + j*4, src + i*4 + sstep*j, 4);
+}
+
+static void transpose_16SC3_neon(const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz)
+{
+    const int m = sz.width, n = sz.height;
+    int i = 0;
+    for (; i <= m - 8; i += 8)
+    {
+        int j = 0;
+        for (; j <= n - 8; j += 8)
+        {
+            uint16x8x3_t p0 = vld3q_u16(reinterpret_cast<const uint16_t*>(src + i*6 + sstep*(j+0)));
+            uint16x8x3_t p1 = vld3q_u16(reinterpret_cast<const uint16_t*>(src + i*6 + sstep*(j+1)));
+            uint16x8x3_t p2 = vld3q_u16(reinterpret_cast<const uint16_t*>(src + i*6 + sstep*(j+2)));
+            uint16x8x3_t p3 = vld3q_u16(reinterpret_cast<const uint16_t*>(src + i*6 + sstep*(j+3)));
+            uint16x8x3_t p4 = vld3q_u16(reinterpret_cast<const uint16_t*>(src + i*6 + sstep*(j+4)));
+            uint16x8x3_t p5 = vld3q_u16(reinterpret_cast<const uint16_t*>(src + i*6 + sstep*(j+5)));
+            uint16x8x3_t p6 = vld3q_u16(reinterpret_cast<const uint16_t*>(src + i*6 + sstep*(j+6)));
+            uint16x8x3_t p7 = vld3q_u16(reinterpret_cast<const uint16_t*>(src + i*6 + sstep*(j+7)));
+            uint16x8_t R0=p0.val[0], R1=p1.val[0], R2=p2.val[0], R3=p3.val[0];
+            uint16x8_t R4=p4.val[0], R5=p5.val[0], R6=p6.val[0], R7=p7.val[0];
+            uint16x8_t G0=p0.val[1], G1=p1.val[1], G2=p2.val[1], G3=p3.val[1];
+            uint16x8_t G4=p4.val[1], G5=p5.val[1], G6=p6.val[1], G7=p7.val[1];
+            uint16x8_t B0=p0.val[2], B1=p1.val[2], B2=p2.val[2], B3=p3.val[2];
+            uint16x8_t B4=p4.val[2], B5=p5.val[2], B6=p6.val[2], B7=p7.val[2];
+            transpose8x8_u16(R0,R1,R2,R3,R4,R5,R6,R7);
+            transpose8x8_u16(G0,G1,G2,G3,G4,G5,G6,G7);
+            transpose8x8_u16(B0,B1,B2,B3,B4,B5,B6,B7);
+            uint16x8x3_t q0; q0.val[0]=R0; q0.val[1]=G0; q0.val[2]=B0; 
+            vst3q_u16(reinterpret_cast<uint16_t*>(dst + dstep*(i+0) + j*6), q0);
+            uint16x8x3_t q1; q1.val[0]=R1; q1.val[1]=G1; q1.val[2]=B1; 
+            vst3q_u16(reinterpret_cast<uint16_t*>(dst + dstep*(i+1) + j*6), q1);
+            uint16x8x3_t q2; q2.val[0]=R2; q2.val[1]=G2; q2.val[2]=B2; 
+            vst3q_u16(reinterpret_cast<uint16_t*>(dst + dstep*(i+2) + j*6), q2);
+            uint16x8x3_t q3; q3.val[0]=R3; q3.val[1]=G3; q3.val[2]=B3; 
+            vst3q_u16(reinterpret_cast<uint16_t*>(dst + dstep*(i+3) + j*6), q3);
+            uint16x8x3_t q4; q4.val[0]=R4; q4.val[1]=G4; q4.val[2]=B4; 
+            vst3q_u16(reinterpret_cast<uint16_t*>(dst + dstep*(i+4) + j*6), q4);
+            uint16x8x3_t q5; q5.val[0]=R5; q5.val[1]=G5; q5.val[2]=B5; 
+            vst3q_u16(reinterpret_cast<uint16_t*>(dst + dstep*(i+5) + j*6), q5);
+            uint16x8x3_t q6; q6.val[0]=R6; q6.val[1]=G6; q6.val[2]=B6; 
+            vst3q_u16(reinterpret_cast<uint16_t*>(dst + dstep*(i+6) + j*6), q6);
+            uint16x8x3_t q7; q7.val[0]=R7; q7.val[1]=G7; q7.val[2]=B7; 
+            vst3q_u16(reinterpret_cast<uint16_t*>(dst + dstep*(i+7) + j*6), q7);
+        }
+        for (; j < n; j++)
+            for (int k = 0; k < 8; k++)
+                memcpy(dst + dstep*(i+k) + j*6, src + i*6 + sstep*j + k*6, 6);
+    }
+    for (; i < m; i++)
+        for (int j = 0; j < n; j++)
+            memcpy(dst + dstep*i + j*6, src + i*6 + sstep*j, 6);
+}
+
+static void transpose_64UC1_neon(const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz)
+{
+    const int m = sz.width, n = sz.height;
+    int i = 0;
+    for (; i <= m - 4; i += 4)
+    {
+        int j = 0;
+        for (; j <= n - 4; j += 4)
+        {
+
+            uint64x2_t r00 = vld1q_u64(reinterpret_cast<const uint64_t*>(src + i*8 + sstep*(j+0) + 0));
+            uint64x2_t r01 = vld1q_u64(reinterpret_cast<const uint64_t*>(src + i*8 + sstep*(j+0) + 16));
+            uint64x2_t r10 = vld1q_u64(reinterpret_cast<const uint64_t*>(src + i*8 + sstep*(j+1) + 0));
+            uint64x2_t r11 = vld1q_u64(reinterpret_cast<const uint64_t*>(src + i*8 + sstep*(j+1) + 16));
+            uint64x2_t r20 = vld1q_u64(reinterpret_cast<const uint64_t*>(src + i*8 + sstep*(j+2) + 0));
+            uint64x2_t r21 = vld1q_u64(reinterpret_cast<const uint64_t*>(src + i*8 + sstep*(j+2) + 16));
+            uint64x2_t r30 = vld1q_u64(reinterpret_cast<const uint64_t*>(src + i*8 + sstep*(j+3) + 0));
+            uint64x2_t r31 = vld1q_u64(reinterpret_cast<const uint64_t*>(src + i*8 + sstep*(j+3) + 16));
+            uint64x2_t c00 = vzip1q_u64(r00, r10);
+            uint64x2_t c01 = vzip1q_u64(r20, r30);
+            uint64x2_t c10 = vzip2q_u64(r00, r10);
+            uint64x2_t c11 = vzip2q_u64(r20, r30);
+            uint64x2_t c20 = vzip1q_u64(r01, r11);
+            uint64x2_t c21 = vzip1q_u64(r21, r31);
+            uint64x2_t c30 = vzip2q_u64(r01, r11);
+            uint64x2_t c31 = vzip2q_u64(r21, r31);
+            vst1q_u64(reinterpret_cast<uint64_t*>(dst + dstep*(i+0) + j*8 + 0),  c00);
+            vst1q_u64(reinterpret_cast<uint64_t*>(dst + dstep*(i+0) + j*8 + 16), c01);
+            vst1q_u64(reinterpret_cast<uint64_t*>(dst + dstep*(i+1) + j*8 + 0),  c10);
+            vst1q_u64(reinterpret_cast<uint64_t*>(dst + dstep*(i+1) + j*8 + 16), c11);
+            vst1q_u64(reinterpret_cast<uint64_t*>(dst + dstep*(i+2) + j*8 + 0),  c20);
+            vst1q_u64(reinterpret_cast<uint64_t*>(dst + dstep*(i+2) + j*8 + 16), c21);
+            vst1q_u64(reinterpret_cast<uint64_t*>(dst + dstep*(i+3) + j*8 + 0),  c30);
+            vst1q_u64(reinterpret_cast<uint64_t*>(dst + dstep*(i+3) + j*8 + 16), c31);
+        }
+        for (; j < n; j++)
+            for (int k = 0; k < 4; k++)
+                memcpy(dst + dstep*(i+k) + j*8, src + i*8 + sstep*j + k*8, 8);
+    }
+    for (; i < m; i++)
+        for (int j = 0; j < n; j++)
+            memcpy(dst + dstep*i + j*8, src + i*8 + sstep*j, 8);
+}
+#endif // CV_NEON
 
 template<typename T> static void
 transpose_( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz )
 {
-    int i=0, j, m = sz.width, n = sz.height;
+#if CV_NEON
+    switch (sizeof(T))
+    {
+    case 1: transpose_8UC1_neon (src, sstep, dst, dstep, sz); return;
+    case 2: transpose_16UC1_neon(src, sstep, dst, dstep, sz); return;
+    case 3: transpose_8UC3_neon (src, sstep, dst, dstep, sz); return;
+    case 4: transpose_32UC1_neon(src, sstep, dst, dstep, sz); return;
+    case 6: transpose_16SC3_neon(src, sstep, dst, dstep, sz); return;
+    case 8: transpose_64UC1_neon(src, sstep, dst, dstep, sz); return;
+    default: break;
+    }
+#endif
+
+    int i = 0, j, m = sz.width, n = sz.height;
 
     #if CV_ENABLE_UNROLLED
     for(; i <= m - 4; i += 4 )
