@@ -289,7 +289,7 @@ ocv_option(DOWNLOAD_ONNXRUNTIME_GENAI "Download ONNX Runtime GenAI prebuilt bina
 set(ONNXRUNTIME_GENAI_VERSION "0.12.0" CACHE STRING "ONNX Runtime GenAI version to download (prebuilt binaries)")
 
 if(WITH_ONNXRUNTIME_GENAI)
-  include("${OpenCV_SOURCE_DIR}/cmake/FindONNXGenAI.cmake")
+  include("${OpenCV_SOURCE_DIR}/cmake/FindONNX.cmake")
 
   set(_ortga_download_requested OFF)
   set(_ortga_download_forced OFF)
@@ -356,7 +356,7 @@ if(WITH_ONNXRUNTIME_GENAI)
         set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-rpath,'$ORIGIN/../3rdparty/onnxruntime-genai/${_ortga_unpack_dirname}/lib'")
       endif()
 
-      include("${OpenCV_SOURCE_DIR}/cmake/FindONNXGenAI.cmake")
+      include("${OpenCV_SOURCE_DIR}/cmake/FindONNX.cmake")
     endif()
   endif()
 
