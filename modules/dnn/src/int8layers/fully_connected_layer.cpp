@@ -301,12 +301,13 @@ public:
             p.useAVX512 = CV_CPU_HAS_SUPPORT_AVX512_SKX;
             p.useLASX = checkHardwareSupport(CPU_LASX);
             p.useRVV = checkHardwareSupport(CPU_RVV);
-
+            p.useSVE = checkHardwareSupport(CPU_SVE);
             parallel_for_(Range(0, nstripes), p, nstripes);
         }
 
         void operator()(const Range& r) const CV_OVERRIDE
         {
+
             int valign = FullyConnectedLayerInt8Impl::VEC_ALIGN;
             int nsamples = srcMat->rows;
             int nw0 = weights->rows;
@@ -359,6 +360,12 @@ public:
             #if CV_RVP052
                 if( 1 )
                     opt_RVP052::fastGEMM1T( sptr, wptr, wstep, biasptr, multptr, dptr, nw, vecsize, outZp );
+                else
+            #endif
+            #if CV_TRY_SVE && CV_SVE
+                if(useSVE){
+                    opt_SVE::fastGEMM1T( sptr, wptr, wstep, biasptr, multptr, dptr, nw, vecsize, outZp );
+                }
                 else
             #endif
                 {
@@ -417,6 +424,7 @@ public:
         bool useAVX512;
         bool useLASX;
         bool useRVV;
+        bool useSVE;
     };
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
