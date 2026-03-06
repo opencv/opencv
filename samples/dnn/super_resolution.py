@@ -132,12 +132,13 @@ def apply_super_resolution(net, image, args):
     )
 
     net.setInput(blob)
+    t0 = cv.getTickCount()
     output = net.forward()
+    t = (cv.getTickCount() - t0) / cv.getTickFrequency()
 
     result = postprocess_output(output, args, original_shape)
 
-    t, _ = net.getPerfProfile()
-    label = "Inference time: %.2f ms" % (t * 1000.0 / cv.getTickFrequency())
+    label = "Inference time: %.2f ms" % (t * 1000.0)
     cv.putText(result, label, (10, 30), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
     return result

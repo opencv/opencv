@@ -748,6 +748,19 @@ CV__DNN_INLINE_NS_BEGIN
          */
         CV_WRAP void setPreferableTarget(int targetId);
 
+        /** @brief Finalizes the network configuration and prepares it for inference.
+         *
+         * This method must be called after setting backend/target via
+         * setPreferableBackend() and setPreferableTarget(), and before the first
+         * forward() call. It creates the underlying execution session (e.g. ONNX
+         * Runtime session) on the configured backend/target. If not called
+         * explicitly, the first forward() will call it automatically.
+         *
+         * Calling finalizeNet() early lets you pay the one-time setup cost at a
+         * predictable point and catch configuration errors before inference.
+         */
+        CV_WRAP void finalizeNet();
+
         /**
          * @brief Set the tracing mode
          * @param[in] tracingMode the tracing mode, see DNN_TRACE_*

@@ -105,7 +105,9 @@ while cv.waitKey(1) < 0:
 
     # NOTE: In OpenCV 5.0, requesting 'detection_out_final' will fail if the .pbtxt
     # does not register it as an output. See file header for details.
+    t0 = cv.getTickCount()
     boxes, masks = net.forward(['detection_out_final', 'detection_masks'])
+    t = (cv.getTickCount() - t0) / cv.getTickFrequency()
 
     numClasses = masks.shape[1]
     numDetections = boxes.shape[2]
@@ -148,8 +150,7 @@ while cv.waitKey(1) < 0:
         drawBox(*box)
 
     # Put efficiency information.
-    t, _ = net.getPerfProfile()
-    label = 'Inference time: %.2f ms' % (t * 1000.0 / cv.getTickFrequency())
+    label = 'Inference time: %.2f ms' % (t * 1000.0)
     cv.putText(frame, label, (0, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
 
     showLegend(classes)

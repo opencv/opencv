@@ -245,10 +245,14 @@ struct Net::Impl : public detail::NetImplBase
 #endif
 
     #ifdef HAVE_ONNXRUNTIME
+    void finalizeOrt();
+    void refreshOrtMainGraphOutputs();
+    void applyStagedOrtInputs();
+    std::vector<std::pair<std::string, Mat>> ort_staged_inputs;
     std::shared_ptr<Ort::Env> ort_env;
     std::shared_ptr<Ort::Session> ort_session;
-    std::shared_ptr<Ort::SessionOptions> ort_session_options;
     std::shared_ptr<OrtNamesCache> ort_names_cache;
+    bool ortNeedsReinit = true;  // session needs (re)creation on next finalizeNet
 #endif
 
     void allocateLayer(int lid, const LayersShapesMap& layersShapes);

@@ -34,14 +34,14 @@ while cv.waitKey(1) < 0:
                                swapRB=True, crop=False)
 
     net.setInput(inp)
+    t0 = cv.getTickCount()
     out = net.forward()
+    t = (cv.getTickCount() - t0) / cv.getTickFrequency()
 
     out = out.reshape(3, out.shape[2], out.shape[3])
     out = out.transpose(1, 2, 0)
 
-    t, _ = net.getPerfProfile()
-    freq = cv.getTickFrequency() / 1000
-    print(t / freq, 'ms')
+    print('%.2f ms' % (t * 1000.0))
 
     if args.median_filter:
         out = cv.medianBlur(out, args.median_filter)
