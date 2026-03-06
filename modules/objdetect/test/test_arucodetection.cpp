@@ -1408,6 +1408,47 @@ TEST(CV_ArucoMultiDict, serialization)
     }
 }
 
+TEST(objdetect_Board, setObjPointsAndIds)
+{
+    aruco::Dictionary dictionary = aruco::getPredefinedDictionary(aruco::DICT_4X4_50);
+    aruco::GridBoard board(Size(3, 3), 0.04f, 0.01f, dictionary);
+
+    // Verify initial state
+    std::vector<std::vector<Point3f>> origObjPts = board.getObjPoints();
+    std::vector<int> origIds = board.getIds();
+    ASSERT_EQ(origObjPts.size(), (size_t)9);
+    ASSERT_EQ(origIds.size(), (size_t)9);
+
+    // Test setObjPoints: add z-offset to simulate curved surface
+    std::vector<std::vector<Point3f>> newObjPts = origObjPts;
+    for (auto& corners : newObjPts)
+        for (auto& pt : corners)
+            pt.z = 0.01f;
+
+    std::vector<Mat> objPtsMats;
+    for (const auto& pts : newObjPts)
+        objPtsMats.push_back(Mat(pts));
+    board.setObjPoints(objPtsMats);
+
+    std::vector<std::vector<Point3f>> result = board.getObjPoints();
+    for (size_t i = 0; i < result.size(); i++)
+        for (size_t j = 0; j < result[i].size(); j++)
+            EXPECT_FLOAT_EQ(result[i][j].z, 0.01f);
+
+    // Test setIds: remap IDs
+    std::vector<int> newIds = {10, 20, 30, 40, 0, 1, 2, 3, 4};
+    board.setIds(Mat(newIds));
+    std::vector<int> resultIds = board.getIds();
+    for (size_t i = 0; i < resultIds.size(); i++)
+        EXPECT_EQ(resultIds[i], newIds[i]);
+
+    // Test size mismatch throws
+    std::vector<int> badIds = {1, 2};
+    EXPECT_THROW(board.setIds(Mat(badIds)), cv::Exception);
+
+    std::vector<Mat> badObjPts = {Mat(std::vector<Point3f>(4, Point3f(0, 0, 0)))};
+    EXPECT_THROW(board.setObjPoints(badObjPts), cv::Exception);
+}
 
 struct ArucoThreading: public testing::TestWithParam<aruco::CornerRefineMethod>
 {
