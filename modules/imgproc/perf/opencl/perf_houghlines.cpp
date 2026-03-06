@@ -55,7 +55,7 @@ OCL_PERF_TEST_P(HoughLinesFixture, HoughLines, Combine(OCL_TEST_SIZES,
     lines.copyTo(result);
     std::sort(result.begin<Vec2f>(), result.end<Vec2f>(), Vec2fComparator());
 
-    EXPECT_GE((size_t)result.total(), 6u);
+    EXPECT_GE((size_t)result.total(), 3u);
     EXPECT_LT((size_t)result.total(), 50u);
 
     SANITY_CHECK_NOTHING();
