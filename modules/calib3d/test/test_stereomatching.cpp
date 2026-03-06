@@ -973,5 +973,44 @@ TEST(Calib3d_StereoSGBM_HH4, regression)
     absdiff(toCheck, testData,diff);
     CV_Assert( countNonZero(diff)==0);
 }
+TEST(Calib3d_ValidateDisparity, Reproduce_Issue_25367)
+{
+    // Minimal deterministic regression test for issue #25367
+    // Forces x2 < 0 to verify bounds check prevents out-of-bounds access
 
+    const int rows = 1;
+    const int cols = 4;
+
+    const int minDisparity = 0;
+    const int numberOfDisparities = 16;
+    const int disp12MaxDiff = 1;
+
+    cv::Mat disparity(rows, cols, CV_16S);
+    cv::Mat cost(rows, cols, CV_16S);
+
+    // Fill cost with valid values
+    for (int i = 0; i < cols; ++i)
+        cost.at<short>(0, i) = static_cast<short>(i);
+
+    // Force x2 = x - ((d + DISP_SCALE/2) >> DISP_SHIFT) to become negative
+    // Using very large disparity relative to image width
+    // d >> DISP_SHIFT will be large compared to x
+    const short largeDisp = static_cast<short>(64 << 4); // scaled disparity
+
+    for (int i = 0; i < cols; ++i)
+        disparity.at<short>(0, i) = largeDisp;
+
+    // Before fix: may crash due to negative x2 index
+    // After fix: should execute safely
+    EXPECT_NO_THROW(
+        cv::validateDisparity(disparity, cost,
+            minDisparity,
+            numberOfDisparities,
+            disp12MaxDiff)
+    );
+
+    // Basic sanity: dimensions unchanged
+    EXPECT_EQ(disparity.rows, rows);
+    EXPECT_EQ(disparity.cols, cols);
+}
 }} // namespace

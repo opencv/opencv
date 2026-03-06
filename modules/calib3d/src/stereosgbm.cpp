@@ -2553,10 +2553,11 @@ void cv::validateDisparity( InputOutputArray _disp, InputArray _cost, int minDis
 
                 int x2 = x - ((d + DISP_SCALE/2) >> DISP_SHIFT);
 
-                if( disp2cost[x2] > c )
-                {
-                    disp2cost[x2] = c;
-                    disp2buf[x2] = d;
+                if((unsigned)x2 < (unsigned)cols && disp2cost[x2] > c)
+                    {
+                        disp2cost[x2] = c;
+                        disp2buf[x2] = d;
+                    }
                 }
             }
         }
@@ -2591,6 +2592,10 @@ void cv::validateDisparity( InputOutputArray _disp, InputArray _cost, int minDis
                 continue;
             int d0 = d >> DISP_SHIFT;
             int d1 = (d + DISP_SCALE-1) >> DISP_SHIFT;
+            // Skip disparities outside the valid range to prevent out-of-bounds access
+            // when computing x0 and x1 indices
+            if(d0 < minD || d1 >= maxD)
+                   continue;
             int x0 = x - d0, x1 = x - d1;
             if( (0 <= x0 && x0 < cols && disp2buf[x0] > INVALID_DISP_SCALED && std::abs(disp2buf[x0] - d) > disp12MaxDiff) &&
                 (0 <= x1 && x1 < cols && disp2buf[x1] > INVALID_DISP_SCALED && std::abs(disp2buf[x1] - d) > disp12MaxDiff) )
