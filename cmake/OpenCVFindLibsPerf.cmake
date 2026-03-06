@@ -220,3 +220,13 @@ if(WITH_FASTCV)
     endif()
   endif()
 endif(WITH_FASTCV)
+
+# --- Accelerate ---
+if(WITH_ACCELERATE)
+  find_library(ACCELERATE_FRAMEWORK Accelerate)
+  if(ACCELERATE_FRAMEWORK)
+    set(HAVE_ACCELERATE ON CACHE BOOL "Accelerate status")
+  else()
+    set(HAVE_ACCELERATE OFF CACHE BOOL "Accelerate status")
+  endif()
+endif()
