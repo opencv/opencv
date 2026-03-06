@@ -5,6 +5,14 @@
 #include "../precomp.hpp"
 #include "../net_impl.hpp"
 
+#ifdef HAVE_ONNXRUNTIME
+#include <onnxruntime_cxx_api.h>
+#endif
+
+#ifdef HAVE_ONNXRUNTIME_GENAI
+#include <ort_genai.h>
+#endif
+
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/dnn/layer_reg.private.hpp>
 #include <opencv2/core/utils/filesystem.hpp>
@@ -2818,6 +2826,36 @@ Net readNetFromONNX2_ORT(const String& onnxFile)
     return net;
 }
 #endif  // HAVE_ONNXRUNTIME
+
+#ifdef HAVE_ONNXRUNTIME_GENAI
+Net readNetFromONNX2_OGA(const String& modelDir)
+{
+    try
+    {
+        Net net;
+        auto impl = net.getImpl();
+
+        impl->oga_model = std::shared_ptr<OgaModel>(
+            OgaModel::Create(modelDir.c_str()).release(),
+            [](OgaModel* p) { OgaDestroyModel(p); });
+        impl->oga_tokenizer = std::shared_ptr<OgaTokenizer>(
+            OgaTokenizer::Create(*impl->oga_model).release(),
+            [](OgaTokenizer* p) { OgaDestroyTokenizer(p); });
+
+        impl->modelFileName = modelDir;
+        impl->modelFormat   = DNN_MODEL_ONNX;
+        impl->newGraph("oga_session_active", {}, true);
+
+        CV_LOG_INFO(NULL, "DNN/ONNX: Successfully initialized OGA model for " << modelDir);
+        return net;
+    }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "DNN/ONNX/OGA: OGA initialization failed (" << e.what() << ")");
+        return Net();
+    }
+}
+#endif  // HAVE_ONNXRUNTIME_GENAI
 
 Net readNetFromONNX2(const char* buffer, size_t size)
 {

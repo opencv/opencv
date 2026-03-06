@@ -534,5 +534,17 @@ ModelFormat Net::getModelFormat() const
     return impl->modelFormat;
 }
 
+Mat Net::tokenize(const String& text) const
+{
+    CV_Assert(impl);
+    return impl->tokenize(text);
+}
+
+String Net::detokenize(InputArray tokenIds) const
+{
+    CV_Assert(impl);
+    return impl->detokenize(tokenIds);
+}
+
 CV__DNN_INLINE_NS_END
 }}  // namespace cv::dnn
