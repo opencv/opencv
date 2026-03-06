@@ -82,7 +82,9 @@ while cv.waitKey(1) < 0:
     inp = cv.dnn.blobFromImage(frame, inScale, (inWidth, inHeight),
                               (0, 0, 0), swapRB=False, crop=False)
     net.setInput(inp)
+    t0 = cv.getTickCount()
     out = net.forward()
+    t = (cv.getTickCount() - t0) / cv.getTickFrequency()
 
     assert(len(BODY_PARTS) <= out.shape[1])
 
@@ -115,8 +117,6 @@ while cv.waitKey(1) < 0:
             cv.ellipse(frame, points[idFrom], (3, 3), 0, 0, 360, (0, 0, 255), cv.FILLED)
             cv.ellipse(frame, points[idTo], (3, 3), 0, 0, 360, (0, 0, 255), cv.FILLED)
 
-    t, _ = net.getPerfProfile()
-    freq = cv.getTickFrequency() / 1000
-    cv.putText(frame, '%.2fms' % (t / freq), (10, 20), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0))
+    cv.putText(frame, '%.2f ms' % (t * 1000.0), (10, 20), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0))
 
     cv.imshow('OpenPose using OpenCV', frame)

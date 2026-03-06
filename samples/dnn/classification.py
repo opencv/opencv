@@ -135,7 +135,9 @@ def main(func_args=None):
 
         # Run a model
         net.setInput(blob)
+        t0 = cv.getTickCount()
         out = net.forward()
+        t = (cv.getTickCount() - t0) / cv.getTickFrequency()
 
         (h, w, _) = frame.shape
         roi_rows = min(300, h)
@@ -143,8 +145,7 @@ def main(func_args=None):
         frame[:roi_rows,:roi_cols,:] >>= 1
 
         # Put efficiency information.
-        t, _ = net.getPerfProfile()
-        label = 'Inference time: %.1f ms' % (t * 1000.0 / cv.getTickFrequency())
+        label = 'Inference time: %.1f ms' % (t * 1000.0)
         cv.putText(frame, label, (15, 30), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0))
 
         # Print predicted classes.

@@ -367,8 +367,11 @@ int main(int argc, char** argv)
             }
             preprocess(frame, net, Size(inpWidth, inpHeight));
 
+            TickMeter tickMeter;
             vector<Mat> outs;
+            tickMeter.start();
             net.forward(outs, net.getUnconnectedOutLayersNames());
+            tickMeter.stop();
 
             classIds.clear();
             confidences.clear();
@@ -378,13 +381,10 @@ int main(int argc, char** argv)
 
             drawPred(classIds, confidences, boxes, frame, sans, stdSize, stdWeight, stdImgSize, stdThickness);
 
-            vector<double> layersTimes;
             int imgWidth = max(frame.rows, frame.cols);
             int size = static_cast<int>((stdSize * imgWidth) / (stdImgSize * 1.5));
             int weight = static_cast<int>((stdWeight * imgWidth) / (stdImgSize * 1.5));
-            double freq = getTickFrequency() / 1000;
-            double t = net.getPerfProfile(layersTimes) / freq;
-            string label = format("FPS: %.2f", 1000/t);
+            string label = format("FPS: %.2f", 1000.0 / tickMeter.getTimeMilli());
             putText(frame, label, Point(0, size), Scalar(0, 255, 0), sans, size, weight);
             imshow(kWinName, frame);
         }

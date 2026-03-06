@@ -211,24 +211,37 @@ if(WITH_ONNXRUNTIME)
       string(REGEX REPLACE "\\.(tgz|zip)$" "" _ort_unpack_dirname "${_ort_filename}")
 
       set(_ort_download_dir "${OpenCV_BINARY_DIR}/3rdparty/onnxruntime")
-      set(_ort_archive "${_ort_download_dir}/${_ort_filename}")
+      set(_ort_cache_dir "${OPENCV_DOWNLOAD_PATH}/onnxruntime")
+      set(_ort_cache_archive "${_ort_cache_dir}/${_ort_filename}")
       set(_ort_extracted_dir "${_ort_download_dir}/${_ort_unpack_dirname}")
-      file(MAKE_DIRECTORY "${_ort_download_dir}")
 
       message(STATUS "DNN: ONNX Runtime download mode: ${_ort_package_kind}")
       message(STATUS "DNN: ONNX Runtime package: ${_ort_filename}")
-      if(NOT EXISTS "${_ort_archive}")
+
+      # Download to persistent cache if not already present
+      if(NOT EXISTS "${_ort_cache_archive}")
+        file(MAKE_DIRECTORY "${_ort_cache_dir}")
         message(STATUS "DNN: Downloading ONNX Runtime package from ${_ort_url}")
-        file(DOWNLOAD "${_ort_url}" "${_ort_archive}" SHOW_PROGRESS STATUS _ort_download_status LOG _ort_download_log)
+        file(DOWNLOAD "${_ort_url}" "${_ort_cache_archive}"
+             SHOW_PROGRESS
+             STATUS _ort_download_status
+             LOG _ort_download_log)
         list(GET _ort_download_status 0 _ort_download_status_code)
         if(NOT _ort_download_status_code EQUAL 0)
-          message(FATAL_ERROR "DNN: ONNX Runtime download failed. URL='${_ort_url}'. Log: ${_ort_download_log}")
+          file(REMOVE "${_ort_cache_archive}")
+          if(_ort_download_forced)
+            message(FATAL_ERROR "DNN: ONNX Runtime download failed. URL='${_ort_url}'. Log: ${_ort_download_log}")
+          else()
+            message(STATUS "DNN: ONNX Runtime download failed, skipping. Log: ${_ort_download_log}")
+          endif()
         endif()
       else()
-        message(STATUS "DNN: ONNX Runtime package already downloaded: ${_ort_archive}")
+        message(STATUS "DNN: ONNX Runtime package found in cache: ${_ort_cache_archive}")
       endif()
 
-      if(NOT EXISTS "${_ort_extracted_dir}")
+      # Extract to build dir if not already extracted
+      if(EXISTS "${_ort_cache_archive}" AND NOT EXISTS "${_ort_extracted_dir}")
+        file(MAKE_DIRECTORY "${_ort_download_dir}")
         if(_ort_filename MATCHES "\\.zip$")
           set(_ort_tar_flags xvf)
         else()
@@ -236,16 +249,16 @@ if(WITH_ONNXRUNTIME)
         endif()
         message(STATUS "DNN: Extracting ONNX Runtime package to ${_ort_download_dir}")
         execute_process(
-          COMMAND "${CMAKE_COMMAND}" -E tar ${_ort_tar_flags} "${_ort_archive}"
+          COMMAND "${CMAKE_COMMAND}" -E tar ${_ort_tar_flags} "${_ort_cache_archive}"
           WORKING_DIRECTORY "${_ort_download_dir}"
           RESULT_VARIABLE _ort_extract_status
         )
         if(NOT _ort_extract_status EQUAL 0)
-          message(FATAL_ERROR "DNN: ONNX Runtime extraction failed for '${_ort_archive}'.")
+          message(FATAL_ERROR "DNN: ONNX Runtime extraction failed for '${_ort_cache_archive}'.")
         endif()
       endif()
 
-      set(ONNXRT_ROOT_DIR "${OpenCV_BINARY_DIR}/3rdparty/onnxruntime/${_ort_unpack_dirname}"
+      set(ONNXRT_ROOT_DIR "${_ort_extracted_dir}"
           CACHE PATH "ONNX Runtime install directory" FORCE)
 
       if(NOT APPLE AND NOT WIN32)
