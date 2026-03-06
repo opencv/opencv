@@ -35,6 +35,12 @@ namespace Ort {
 }
 #endif
 
+#ifdef HAVE_ONNXRUNTIME_GENAI
+// Forward declarations — avoids including ort_genai.h in the header.
+struct OgaModel;
+struct OgaTokenizer;
+#endif
+
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -46,6 +52,10 @@ typedef std::unordered_map<std::string, int64_t> NamesHash;
 
 #ifdef HAVE_ONNXRUNTIME
 struct OrtNamesCache;
+#endif
+
+#ifdef HAVE_ONNXRUNTIME_GENAI
+struct OgaGenAICache;
 #endif
 
 // NB: Implementation is divided between of multiple .cpp files
@@ -251,6 +261,11 @@ struct Net::Impl : public detail::NetImplBase
     std::shared_ptr<OrtNamesCache> ort_names_cache;
 #endif
 
+#ifdef HAVE_ONNXRUNTIME_GENAI
+    std::shared_ptr<OgaModel> oga_model;
+    std::shared_ptr<OgaTokenizer> oga_tokenizer;
+#endif
+
     void allocateLayer(int lid, const LayersShapesMap& layersShapes);
 
     // TODO add getter
@@ -397,6 +412,17 @@ struct Net::Impl : public detail::NetImplBase
     // If outIdxs is empty, returns all ORT outputs in ORT-defined order.
     std::vector<Mat> runOrtSession(std::vector<Mat> inputBlobs, const std::vector<int>& outIdxs);
 #endif
+
+#ifdef HAVE_ONNXRUNTIME_GENAI
+    // Run a full Generate() call for the OGA engine.
+    // @param inputBlobs  single 1-D CV_32S Mat containing the input token IDs.
+    // @returns           single 1-D CV_32S Mat containing all generated token IDs
+    //                   (including the prompt tokens).
+    std::vector<Mat> runOgaSession(const std::vector<Mat>& inputBlobs);
+#endif
+    Mat tokenize(const String& text) const;
+    String detokenize(InputArray tokenIds) const;
+
     // run the whole model, convenience wrapper
     Mat forwardWithSingleOutput(const std::string& outname);
     // run the whole model, convenience wrapper
@@ -453,6 +479,9 @@ Net readNetFromONNX2(const char*, size_t);
 Net readNetFromONNX2(const std::vector<uchar>&);
 #ifdef HAVE_ONNXRUNTIME
 Net readNetFromONNX2_ORT(const String& onnxFile);
+#endif
+#ifdef HAVE_ONNXRUNTIME_GENAI
+Net readNetFromONNX2_OGA(const String& modelDir);
 #endif
 
 CV__DNN_INLINE_NS_END

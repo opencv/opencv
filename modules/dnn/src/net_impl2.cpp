@@ -12,6 +12,10 @@
 #include <onnxruntime_cxx_api.h>
 #endif
 
+#ifdef HAVE_ONNXRUNTIME_GENAI
+#include <ort_genai.h>
+#endif
+
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -208,6 +212,67 @@ std::vector<Mat> Net::Impl::runOrtSession(std::vector<Mat> inputBlobs, const std
     return results;
 }
 #endif
+
+#ifdef HAVE_ONNXRUNTIME_GENAI
+std::vector<Mat> Net::Impl::runOgaSession(const std::vector<Mat>& inputBlobs)
+{
+    CV_Assert(this->oga_model);
+    CV_Assert(!inputBlobs.empty());
+
+    const Mat& tokenIds = inputBlobs[0];
+    CV_CheckTypeEQ(tokenIds.type(), CV_32S, "DNN/OGA: input token IDs must be CV_32S (int32)");
+    CV_Assert(tokenIds.isContinuous());
+
+    auto sequences = OgaSequences::Create();
+    sequences->Append(tokenIds.ptr<int32_t>(), static_cast<size_t>(tokenIds.total()));
+
+    auto params = OgaGeneratorParams::Create(*this->oga_model);
+
+    auto generator = OgaGenerator::Create(*this->oga_model, *params);
+    generator->AppendTokenSequences(*sequences);
+
+    while (!generator->IsDone())
+        generator->GenerateNextToken();
+
+    const size_t seqLen   = generator->GetSequenceCount(0);
+    const int32_t* seqPtr = generator->GetSequenceData(0);
+
+    Mat output(1, static_cast<int>(seqLen), CV_32S);
+    std::memcpy(output.data, seqPtr, seqLen * sizeof(int32_t));
+
+    return {output};
+}
+#endif
+
+Mat Net::Impl::tokenize(const String& text) const
+{
+#ifdef HAVE_ONNXRUNTIME_GENAI
+    CV_Assert(oga_tokenizer);
+    auto sequences = OgaSequences::Create();
+    oga_tokenizer->Encode(text.c_str(), *sequences);
+    const int32_t* ptr = sequences->SequenceData(0);
+    size_t len = sequences->SequenceCount(0);
+    Mat tokens(1, (int)len, CV_32S);
+    memcpy(tokens.data, ptr, len * sizeof(int32_t));
+    return tokens;
+#else
+    CV_UNUSED(text);
+    CV_Error(Error::StsNotImplemented, "OpenCV was built without ONNX Runtime GenAI");
+#endif
+}
+
+String Net::Impl::detokenize(InputArray tokenIds) const
+{
+#ifdef HAVE_ONNXRUNTIME_GENAI
+    CV_Assert(oga_tokenizer);
+    Mat m = tokenIds.getMat();
+    auto text = oga_tokenizer->Decode(m.ptr<int32_t>(), (size_t)m.total());
+    return String(text);
+#else
+    CV_UNUSED(tokenIds);
+    CV_Error(Error::StsNotImplemented, "OpenCV was built without ONNX Runtime GenAI");
+#endif
+}
 
 std::string modelFormatToString(ModelFormat modelFormat)
 {
@@ -496,6 +561,15 @@ void Net::Impl::prepareForInference()
     }
 #endif
 
+#ifdef HAVE_ONNXRUNTIME_GENAI
+    if (this->oga_model)
+    {
+        prepared = true;
+        finalizeLayers = false;
+        return;
+    }
+#endif
+
     if (!prepared) {
         constFold();
         //inferTypes();
@@ -572,6 +646,39 @@ void Net::Impl::allocateLayerOutputs(
 
 void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays outputs)
 {
+#ifdef HAVE_ONNXRUNTIME_GENAI
+    if (this->oga_model)
+    {
+        if (!netInputLayer || netInputLayer->blobs.empty())
+            CV_Error(Error::StsError, "DNN/OGA: No input data found. Call net.setInput() before forward().");
+
+        std::vector<Mat> ogaOuts = runOgaSession(netInputLayer->blobs);
+
+        _InputArray::KindFlag outKind = outputs.kind();
+        if (outKind == _InputArray::STD_VECTOR_MAT)
+        {
+            outputs.getMatVecRef() = ogaOuts;
+        }
+        else if (outKind == _InputArray::STD_VECTOR_UMAT)
+        {
+            std::vector<UMat>& outUMats = outputs.getUMatVecRef();
+            outUMats.resize(ogaOuts.size());
+            for (size_t i = 0; i < ogaOuts.size(); ++i)
+                ogaOuts[i].copyTo(outUMats[i]);
+        }
+        else if (outKind == _InputArray::MAT || outKind == _InputArray::UMAT)
+        {
+            CV_CheckEQ((int)ogaOuts.size(), 1, "DNN/OGA: single Mat/UMat output requires exactly one OGA output");
+            ogaOuts[0].copyTo(outputs);
+        }
+        else
+        {
+            CV_Error(Error::StsBadArg, "DNN/OGA: outputs must be Mat, UMat, a vector of Mat's or a vector of UMat's");
+        }
+        return;
+    }
+#endif
+
 #ifdef HAVE_ONNXRUNTIME
     if (this->ort_session)
     {
@@ -629,6 +736,17 @@ void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays 
 
 Mat Net::Impl::forwardWithSingleOutput(const std::string& outname)
 {
+#ifdef HAVE_ONNXRUNTIME_GENAI
+    if (this->oga_model)
+    {
+        if (!netInputLayer || netInputLayer->blobs.empty())
+            CV_Error(Error::StsError, "DNN/OGA: No input data found");
+
+        std::vector<Mat> outs = runOgaSession(netInputLayer->blobs);
+        CV_Assert(outs.size() == 1);
+        return outs[0];
+    }
+#endif
 #ifdef HAVE_ONNXRUNTIME
     if (this->ort_session)
     {
@@ -674,6 +792,30 @@ Mat Net::Impl::forwardWithSingleOutput(const std::string& outname)
 
 void Net::Impl::forwardWithMultipleOutputs(OutputArrayOfArrays outblobs, const std::vector<std::string>& outnames)
 {
+#ifdef HAVE_ONNXRUNTIME_GENAI
+    if (this->oga_model)
+    {
+        if (!netInputLayer || netInputLayer->blobs.empty())
+            CV_Error(Error::StsError, "DNN/OGA: No input data found");
+
+        std::vector<Mat> outs = runOgaSession(netInputLayer->blobs);
+        CV_Assert(outs.size() == 1);
+
+        _InputArray::KindFlag outKind = outblobs.kind();
+        if (outKind == _InputArray::STD_VECTOR_MAT) {
+            std::vector<Mat>& outMats = outblobs.getMatVecRef();
+            outMats.resize(1);
+            outs[0].copyTo(outMats[0]);
+        } else if (outKind == _InputArray::STD_VECTOR_UMAT) {
+            std::vector<UMat>& outUMats = outblobs.getUMatVecRef();
+            outUMats.resize(1);
+            outs[0].copyTo(outUMats[0]);
+        } else {
+            outs[0].copyTo(outblobs);
+        }
+        return;
+    }
+#endif
 #ifdef HAVE_ONNXRUNTIME
     if (this->ort_session)
     {
@@ -852,6 +994,26 @@ void Net::Impl::traceArg(std::ostream& strm_, const char* prefix, size_t i, Arg 
 
 void Net::Impl::setMainGraphInput(InputArray m, const std::string& inpname)
 {
+#ifdef HAVE_ONNXRUNTIME_GENAI
+    if (this->oga_model)
+    {
+        if (!netInputLayer) {
+            netInputLayer = Ptr<DataLayer>(new DataLayer());
+            netInputLayer->name = "oga_data_layer";
+            netInputLayer->type = "Data";
+        }
+
+        Mat inputMat = m.getMat();
+        if (inputMat.empty())
+            CV_Error(Error::StsBadArg, "DNN/OGA: Input blob is empty");
+
+        if (netInputLayer->blobs.empty())
+            netInputLayer->blobs.resize(1);
+
+        inputMat.copyTo(netInputLayer->blobs[0]);
+        return;
+    }
+#endif
 #ifdef HAVE_ONNXRUNTIME
     if (this->ort_session)
     {

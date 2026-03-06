@@ -692,6 +692,9 @@ CV__DNN_INLINE_NS_BEGIN
          */
         CV_WRAP Mat forward(const String& outputName = String());
 
+        CV_WRAP Mat tokenize(const String& text) const;
+        CV_WRAP String detokenize(InputArray tokenIds) const;
+
         /** @brief Runs forward pass to compute output of layer with name @p outputName.
          *  @param outputName name for layer which output is needed to get
          *  @details By default runs forward pass for the whole network.
@@ -1021,7 +1024,8 @@ CV__DNN_INLINE_NS_BEGIN
         ENGINE_CLASSIC=1, //!< Force use the old dnn engine similar to 4.x branch
         ENGINE_NEW=2,     //!< Force use the new dnn engine. The engine does not support non CPU back-ends for now.
         ENGINE_AUTO=3,    //!< Try to use the new engine and then fall back to the classic version.
-        ENGINE_ORT=4      //!< Try to use ONNX Runtime wrapper (ONNX only, requires build with WITH_ONNXRUNTIME=ON).
+        ENGINE_ORT=4,     //!< Try to use ONNX Runtime wrapper (ONNX only, requires build with WITH_ONNXRUNTIME=ON).
+        ENGINE_ORT_GENAI=5 //!< Use ONNX Runtime GenAI wrapper for generative AI models (requires build with WITH_ONNXRUNTIME_GENAI=ON).
     };
 
     /** @brief Reads a network model stored in <a href="https://pjreddie.com/darknet/">Darknet</a> model files.
