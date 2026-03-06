@@ -66,8 +66,9 @@ static int countNonZero8u( const uchar* src, int len )
     return nz;
 }
 
-static int countNonZero16u( const ushort* src, int len )
+static int countNonZero16u( const uchar* src_ptr, int len )
 {
+    const ushort* src = reinterpret_cast<const ushort*>(src_ptr);
     int i = 0, nz = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     int len0 = len & -VTraits<v_int8>::vlanes();
@@ -101,8 +102,9 @@ static int countNonZero16u( const ushort* src, int len )
     return nz + countNonZero_(src + i, len - i);
 }
 
-static int countNonZero32s( const int* src, int len )
+static int countNonZero32s( const uchar* src_ptr, int len )
 {
+    const int* src = reinterpret_cast<const int*>(src_ptr);
     int i = 0, nz = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     int len0 = len & -VTraits<v_int8>::vlanes();
@@ -136,8 +138,9 @@ static int countNonZero32s( const int* src, int len )
     return nz + countNonZero_(src + i, len - i);
 }
 
-static int countNonZero32f( const float* src, int len )
+static int countNonZero32f( const uchar* src_ptr, int len )
 {
+    const float* src = reinterpret_cast<const float*>(src_ptr);
     int i = 0, nz = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     int len0 = len & -VTraits<v_int8>::vlanes();
@@ -171,8 +174,9 @@ static int countNonZero32f( const float* src, int len )
     return nz + countNonZero_(src + i, len - i);
 }
 
-static int countNonZero64f( const double* src, int len )
+static int countNonZero64f( const uchar* src_ptr, int len )
 {
+    const double* src = reinterpret_cast<const double*>(src_ptr);
     int nz = 0, i = 0;
 #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
     v_int64 sum1 = vx_setzero_s64();
