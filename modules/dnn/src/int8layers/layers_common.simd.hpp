@@ -2013,5 +2013,87 @@ void fastGEMM1T( const int8_t* vec, const int8_t* weights,
 
 #endif // CV_RVV
 
+#if !defined(CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY) && CV_SVE
+void fastGEMM1T( const int8_t* vec, const int8_t* weights,
+                 size_t wstep, const int* bias, const float* multiplier,
+                 int* dst, int nvecs, int vecsize, int outZp ){
+    int i = 0;
+    int vector_length = svcntb();
+    svbool_t enable_all_predicate = svptrue_b8();
+    int vector_length_32 = svcntw();
+
+    for(; i <= nvecs-8; i += 8){                                                                                                                        
+        int32_t acc_arr[8];
+        const int8_t* wptr = weights + i*wstep;
+        svint32_t vs0 = svdup_n_s32(0), vs1 = vs0,
+                 vs2 = vs0, vs3 = vs0,
+                 vs4 = vs0, vs5 = vs0,
+                 vs6 = vs0, vs7 = vs0;
+         // set outzp and outsc
+        svint32_t voutzp = svdup_s32(outZp);
+        svint32_t outmin = svdup_s32(-128), outmax = svdup_s32(127);
+
+        for(int k = 0; k < vecsize; k+= vector_length, wptr += vector_length){
+            svint8_t v = svld1_s8(enable_all_predicate, vec + k);
+            
+            vs0 = svdot_s32( vs0, v, svld1_s8(enable_all_predicate, wptr));
+            vs1 = svdot_s32( vs1, v, svld1_s8(enable_all_predicate, wptr + wstep));
+            vs2 = svdot_s32( vs2, v, svld1_s8(enable_all_predicate, wptr + wstep * 2));
+            vs3 = svdot_s32( vs3, v, svld1_s8(enable_all_predicate, wptr + wstep * 3));
+            vs4 = svdot_s32( vs4, v, svld1_s8(enable_all_predicate, wptr + wstep * 4));
+            vs5 = svdot_s32( vs5, v, svld1_s8(enable_all_predicate, wptr + wstep * 5));
+            vs6 = svdot_s32( vs6, v, svld1_s8(enable_all_predicate, wptr + wstep * 6));
+            vs7 = svdot_s32( vs7, v, svld1_s8(enable_all_predicate, wptr + wstep * 7));
+        }
+        acc_arr[0] = svaddv_s32(svptrue_b32(), vs0);
+        acc_arr[1] = svaddv_s32(svptrue_b32(), vs1);
+        acc_arr[2] = svaddv_s32(svptrue_b32(), vs2);
+        acc_arr[3] = svaddv_s32(svptrue_b32(), vs3);
+        acc_arr[4] = svaddv_s32(svptrue_b32(), vs4);
+        acc_arr[5] = svaddv_s32(svptrue_b32(), vs5);
+        acc_arr[6] = svaddv_s32(svptrue_b32(), vs6);
+        acc_arr[7] = svaddv_s32(svptrue_b32(), vs7);
+
+        int j = 0;
+        while(j < 8){
+            
+            svbool_t predicate = svwhilelt_b32_s32(j, 8);
+            svint32_t vec_acc_int = svld1_s32(predicate, acc_arr + j);
+            svint32_t vec_bias = svld1_s32(predicate, bias + i + j);
+
+            svfloat32_t vec_acc = svcvt_f32_s32_z(predicate, svadd_s32_z(predicate, vec_acc_int, vec_bias));
+            svfloat32_t vec_out = svmul_f32_z(predicate, vec_acc, svld1_f32(predicate, multiplier + i + j));
+            
+            vec_out = svrintn_f32_z(predicate, vec_out);
+            svint32_t vec_out_s32 = svcvt_s32_f32_z(predicate, vec_out);
+            vec_out_s32 = svadd_s32_z(predicate, voutzp, vec_out_s32);
+            vec_out_s32 = svmax_s32_z(predicate, vec_out_s32, outmin);
+            vec_out_s32 = svmin_s32_z(predicate, vec_out_s32, outmax);
+            
+            svst1_s32(predicate, dst + i + j, vec_out_s32);
+            j += vector_length_32;
+        }
+    }
+
+    for(; i < nvecs; i++){
+        
+        const int8_t* wptr = weights + i * wstep;
+        svint32_t vs0 = svdup_n_s32(0);
+
+        for(int k = 0; k < vecsize; k += vector_length, wptr += vector_length){
+            svint8_t v = svld1_s8(enable_all_predicate, vec + k);
+            svint8_t wt = svld1_s8(enable_all_predicate, wptr);
+            vs0 = svdot_s32(vs0, v, wt);
+        }
+        int32_t acc_result =  svaddv_s32(svptrue_b32(), vs0);
+        acc_result = outZp + (int) std::round((acc_result + bias[i]) * multiplier[i]);
+        dst[i] = std::max(-128, std::min(127, acc_result));
+    }
+    
+}
+
+
+#endif
+
 CV_CPU_OPTIMIZATION_NAMESPACE_END
 }} // namespace

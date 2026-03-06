@@ -147,6 +147,10 @@
 #  include <arm_neon.h>
 #  define CV_NEON 1
 #endif
+#ifdef  __ARM_FEATURE_SVE
+#       include<arm_sve.h>
+#       define CV_SVE 1
+#endif
 
 /* RVV-related macro states with different compiler
 // +--------------------+----------+----------+
