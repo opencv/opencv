@@ -349,6 +349,18 @@ if(NOT HAVE_SPNG AND WITH_PNG)
   endif()
 
   set(HAVE_PNG YES)
+
+  # Detect cICP support in libpng
+  # (1) Save current CMAKE_REQUIRED_INCLUDES
+  set(SAFE_CMAKE_REQUIRED_INCLUDES "${CMAKE_REQUIRED_INCLUDES}")
+  set(CMAKE_REQUIRED_INCLUDES "${PNG_INCLUDE_DIR}")
+  # (2) Check if PNG_cICP_SUPPORTED is defined in headers
+  include(CheckSymbolExists)
+  ocv_clear_vars(PNG_cICP_SUPPORTED)
+  check_symbol_exists(PNG_cICP_SUPPORTED "png.h" PNG_cICP_SUPPORTED)
+  # (3) Restore CMAKE_REQUIRED_INCLUDES
+  set(CMAKE_REQUIRED_INCLUDES "${SAFE_CMAKE_REQUIRED_INCLUDES}")
+  unset(SAFE_CMAKE_REQUIRED_INCLUDES)
 endif()
 
 
