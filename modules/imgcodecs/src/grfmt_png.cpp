@@ -684,6 +684,20 @@ bool  PngDecoder::readData( Mat& img )
                 m_exif.parseExif(exif, num_exif);
             }
 #endif
+#ifdef PNG_cICP_SUPPORTED
+            png_byte prim_id, tran_id, matrix_id, video_full_range_flag;
+            if (png_get_cICP(m_png_ptr, m_info_ptr, &prim_id, &tran_id, &matrix_id, &video_full_range_flag))
+            {
+                uint8_t cicp_data[4] = {
+                    static_cast<uint8_t>(prim_id),
+                    static_cast<uint8_t>(tran_id),
+                    static_cast<uint8_t>(matrix_id),
+                    static_cast<uint8_t>(video_full_range_flag)
+                };
+                auto& out = m_metadata[IMAGE_METADATA_CICP];
+                out.insert(out.end(), cicp_data, cicp_data + 4);
+            }
+#endif
 
             result = true;
         }

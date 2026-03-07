@@ -39,6 +39,11 @@ if(HAVE_PNG)
   add_definitions(${PNG_DEFINITIONS})
   ocv_include_directories(${PNG_INCLUDE_DIR})
   list(APPEND GRFMT_LIBS ${PNG_LIBRARIES})
+
+  if(PNG_cICP_SUPPORTED)
+    set_source_files_properties(${CMAKE_CURRENT_LIST_DIR}/test/test_exif.cpp
+                                PROPERTIES COMPILE_DEFINITIONS "PNG_cICP_SUPPORTED")
+  endif()
 endif()
 
 if(HAVE_GDCM)
