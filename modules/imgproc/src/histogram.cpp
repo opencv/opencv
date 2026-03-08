@@ -260,6 +260,183 @@ calcHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
             for( ; imsize.height--; p0 += step0, mask += mstep )
             {
                 if( !mask )
+                {
+                #if CV_SIMD
+                    if( d0 == 1 && imsize.width >= 16 && sizeof(T) == 2 )
+                    {
+                        const ushort* p = (const ushort*)p0;
+                        const int vstep = 8;
+                        x = 0;
+                        for( ; x <= imsize.width - vstep*4; x += vstep*4 )
+                        {
+                            v_uint16x8 v1 = vx_load(&p[x]);
+                            v_uint16x8 v2 = vx_load(&p[x + vstep]);
+                            v_uint16x8 v3 = vx_load(&p[x + vstep*2]);
+                            v_uint16x8 v4 = vx_load(&p[x + vstep*3]);
+                            for( int k = 0; k < 8; k++ )
+                            {
+                                double v0 = (double)(v1.val[k]);
+                                if( v0 >= v0_lo && v0 < v0_hi )
+                                {
+                                    int idx = cvFloor(v0*a + b);
+                                    idx = CV_CLAMP_INT(idx, 0, sz - 1);
+                                    ((int*)H)[idx]++;
+                                }
+                            }
+                            for( int k = 0; k < 8; k++ )
+                            {
+                                double v0 = (double)(v2.val[k]);
+                                if( v0 >= v0_lo && v0 < v0_hi )
+                                {
+                                    int idx = cvFloor(v0*a + b);
+                                    idx = CV_CLAMP_INT(idx, 0, sz - 1);
+                                    ((int*)H)[idx]++;
+                                }
+                            }
+                            for( int k = 0; k < 8; k++ )
+                            {
+                                double v0 = (double)(v3.val[k]);
+                                if( v0 >= v0_lo && v0 < v0_hi )
+                                {
+                                    int idx = cvFloor(v0*a + b);
+                                    idx = CV_CLAMP_INT(idx, 0, sz - 1);
+                                    ((int*)H)[idx]++;
+                                }
+                            }
+                            for( int k = 0; k < 8; k++ )
+                            {
+                                double v0 = (double)(v4.val[k]);
+                                if( v0 >= v0_lo && v0 < v0_hi )
+                                {
+                                    int idx = cvFloor(v0*a + b);
+                                    idx = CV_CLAMP_INT(idx, 0, sz - 1);
+                                    ((int*)H)[idx]++;
+                                }
+                            }
+                        }
+                        for( ; x <= imsize.width - vstep; x += vstep )
+                        {
+                            v_uint16x8 pixels = vx_load(&p[x]);
+                            for( int k = 0; k < 8; k++ )
+                            {
+                                double v0 = (double)(pixels.val[k]);
+                                if( v0 >= v0_lo && v0 < v0_hi )
+                                {
+                                    int idx = cvFloor(v0*a + b);
+                                    idx = CV_CLAMP_INT(idx, 0, sz - 1);
+                                    ((int*)H)[idx]++;
+                                }
+                            }
+                        }
+                        for( ; x < imsize.width; x++ )
+                        {
+                            double v0 = (double)p[x];
+                            if( v0 >= v0_lo && v0 < v0_hi )
+                            {
+                                int idx = cvFloor(v0*a + b);
+                                idx = CV_CLAMP_INT(idx, 0, sz - 1);
+                                ((int*)H)[idx]++;
+                            }
+                        }
+                    }
+                    else if( d0 == 1 && imsize.width >= 16 && sizeof(T) == 4 )
+                    {
+                        const float* p = (const float*)p0;
+                        const int vstep = 4;
+                        x = 0;
+
+                        float v0_lo_f = (float)v0_lo;
+                        float v0_hi_f = (float)v0_hi;
+                        int* H_int = (int*)H;
+                        for( ; x <= imsize.width - vstep*4; x += vstep*4 )
+                        {
+                            v_float32x4 v1 = vx_load(&p[x]);
+                            v_float32x4 v2 = vx_load(&p[x + vstep]);
+                            v_float32x4 v3 = vx_load(&p[x + vstep*2]);
+                            v_float32x4 v4 = vx_load(&p[x + vstep*3]);
+
+                            for( int k = 0; k < 4; k++ )
+                            {
+                                float val = v1.val[k];
+                                if( val >= v0_lo_f && val < v0_hi_f )
+                                {
+                                    int idx = cvFloor((double)val * a + b);
+                                    if( (unsigned)idx < (unsigned)sz )
+                                        H_int[idx]++;
+                                }
+                            }
+                            for( int k = 0; k < 4; k++ )
+                            {
+                                float val = v2.val[k];
+                                if( val >= v0_lo_f && val < v0_hi_f )
+                                {
+                                    int idx = cvFloor((double)val * a + b);
+                                    if( (unsigned)idx < (unsigned)sz )
+                                        H_int[idx]++;
+                                }
+                            }
+                            for( int k = 0; k < 4; k++ )
+                            {
+                                float val = v3.val[k];
+                                if( val >= v0_lo_f && val < v0_hi_f )
+                                {
+                                    int idx = cvFloor((double)val * a + b);
+                                    if( (unsigned)idx < (unsigned)sz )
+                                        H_int[idx]++;
+                                }
+                            }
+                            for( int k = 0; k < 4; k++ )
+                            {
+                                float val = v4.val[k];
+                                if( val >= v0_lo_f && val < v0_hi_f )
+                                {
+                                    int idx = cvFloor((double)val * a + b);
+                                    if( (unsigned)idx < (unsigned)sz )
+                                        H_int[idx]++;
+                                }
+                            }
+                        }
+                        for( ; x <= imsize.width - vstep; x += vstep )
+                        {
+                            v_float32x4 pixels = vx_load(&p[x]);
+                            for( int k = 0; k < 4; k++ )
+                            {
+                                float val = pixels.val[k];
+                                if( val >= v0_lo_f && val < v0_hi_f )
+                                {
+                                    int idx = cvFloor((double)val * a + b);
+                                    if( (unsigned)idx < (unsigned)sz )
+                                        H_int[idx]++;
+                                }
+                            }
+                        }
+                        for( ; x < imsize.width; x++ )
+                        {
+                            float val = p[x];
+                            if( val >= v0_lo_f && val < v0_hi_f )
+                            {
+                                int idx = cvFloor((double)val * a + b);
+                                if( (unsigned)idx < (unsigned)sz )
+                                    H_int[idx]++;
+                            }
+                        }
+
+                        p0 += imsize.width;
+                    }
+                    else
+                    {
+                        for( x = 0; x < imsize.width; x++, p0 += d0 )
+                        {
+                            double v0 = (double)*p0;
+                            int idx = cvFloor(v0*a + b);
+                            if (v0 < v0_lo || v0 >= v0_hi)
+                                continue;
+                            idx = CV_CLAMP_INT(idx, 0, sz - 1);
+                            CV_DbgAssert((unsigned)idx < (unsigned)sz);
+                            ((int*)H)[idx]++;
+                        }
+                    }
+                #else
                     for( x = 0; x < imsize.width; x++, p0 += d0 )
                     {
                         double v0 = (double)*p0;
@@ -270,7 +447,10 @@ calcHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                         CV_DbgAssert((unsigned)idx < (unsigned)sz);
                         ((int*)H)[idx]++;
                     }
+                #endif
+                }
                 else
+                {
                     for( x = 0; x < imsize.width; x++, p0 += d0 )
                         if( mask[x] )
                         {
@@ -282,6 +462,7 @@ calcHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                             CV_DbgAssert((unsigned)idx < (unsigned)sz);
                             ((int*)H)[idx]++;
                         }
+                }
             }
             return;
         }
@@ -548,6 +729,22 @@ calcHist_8u( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
             {
                 if( d0 == 1 )
                 {
+                #if CV_SIMD
+                    for( x = 0; x <= imsize.width - 16; x += 16 )
+                    {
+                        v_uint8 v = vx_load(p0 + x);
+                        uint8_t buf[16];
+                        v_store(buf, v);
+                        matH[buf[0]]++;  matH[buf[1]]++;
+                        matH[buf[2]]++;  matH[buf[3]]++;
+                        matH[buf[4]]++;  matH[buf[5]]++;
+                        matH[buf[6]]++;  matH[buf[7]]++;
+                        matH[buf[8]]++;  matH[buf[9]]++;
+                        matH[buf[10]]++; matH[buf[11]]++;
+                        matH[buf[12]]++; matH[buf[13]]++;
+                        matH[buf[14]]++; matH[buf[15]]++;
+                    }
+                #else
                     for( x = 0; x <= imsize.width - 4; x += 4 )
                     {
                         int t0 = p0[x], t1 = p0[x+1];
@@ -555,7 +752,10 @@ calcHist_8u( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                         t0 = p0[x+2]; t1 = p0[x+3];
                         matH[t0]++; matH[t1]++;
                     }
-                    p0 += x;
+                #endif
+                    for( ; x < imsize.width; x++ )
+                        matH[p0[x]]++;
+                    p0 += imsize.width;
                 }
                 else
                     for( x = 0; x <= imsize.width - 4; x += 4 )
