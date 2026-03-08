@@ -26,7 +26,7 @@ static const std::string R50K_UTF8 = "'s|'t|'re|'ve|'m|'ll|'d| ?\\p{L}+| ?\\p{N}
 //   4. Unicode classes (`\p{L}`, `\p{N}`) are kept because the tokenizer's implementation handles them via custom llama.cpp logic.
 //
 // The resulting C++ pattern is compatible with std::regex and the tokenizer's Unicode handling logic.
-static const std::string CL100K_BASE = R"CL100K('(?:[sdmt]|ll|ve|re)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]|\s+(?!\S)|\s)CL100K";
+static const std::string CL100K_BASE = R"CL100K('(?:[sSdDmMtT]|[lL][lL]|[vV][eE]|[rR][eE])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]|\s+(?!\S)|\s)CL100K";
 
 }}
 #endif
