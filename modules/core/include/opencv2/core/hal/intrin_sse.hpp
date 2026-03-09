@@ -46,6 +46,7 @@
 #define OPENCV_HAL_SSE_HPP
 
 #include <algorithm>
+#include <cstring>
 #include "opencv2/core/utility.hpp"
 
 #define CV_SIMD128 1
@@ -3072,25 +3073,30 @@ inline v_int8x16 v_lut(const schar* tab, const int* idx)
 }
 inline v_int8x16 v_lut_pairs(const schar* tab, const int* idx)
 {
+    short CV_DECL_ALIGNED(16) tmp[8];
+    for (int i = 0; i < 8; i++)
+        std::memcpy(&tmp[i], tab + idx[i], sizeof(short));
 #if defined(_MSC_VER)
-    return v_int8x16(_mm_setr_epi16(*(const short*)(tab + idx[0]), *(const short*)(tab + idx[1]), *(const short*)(tab + idx[2]), *(const short*)(tab + idx[3]),
-                                    *(const short*)(tab + idx[4]), *(const short*)(tab + idx[5]), *(const short*)(tab + idx[6]), *(const short*)(tab + idx[7])));
+    return v_int8x16(_mm_setr_epi16(tmp[0], tmp[1], tmp[2], tmp[3],
+                                    tmp[4], tmp[5], tmp[6], tmp[7]));
 #else
     return v_int8x16(_mm_setr_epi64(
-                        _mm_setr_pi16(*(const short*)(tab + idx[0]), *(const short*)(tab + idx[1]), *(const short*)(tab + idx[2]), *(const short*)(tab + idx[3])),
-                        _mm_setr_pi16(*(const short*)(tab + idx[4]), *(const short*)(tab + idx[5]), *(const short*)(tab + idx[6]), *(const short*)(tab + idx[7]))
+                        _mm_setr_pi16(tmp[0], tmp[1], tmp[2], tmp[3]),
+                        _mm_setr_pi16(tmp[4], tmp[5], tmp[6], tmp[7])
                     ));
 #endif
 }
 inline v_int8x16 v_lut_quads(const schar* tab, const int* idx)
 {
+    int CV_DECL_ALIGNED(16) tmp[4];
+    for (int i = 0; i < 4; i++)
+        std::memcpy(&tmp[i], tab + idx[i], sizeof(int));
 #if defined(_MSC_VER)
-    return v_int8x16(_mm_setr_epi32(*(const int*)(tab + idx[0]), *(const int*)(tab + idx[1]),
-                                    *(const int*)(tab + idx[2]), *(const int*)(tab + idx[3])));
+    return v_int8x16(_mm_setr_epi32(tmp[0], tmp[1], tmp[2], tmp[3]));
 #else
     return v_int8x16(_mm_setr_epi64(
-                        _mm_setr_pi32(*(const int*)(tab + idx[0]), *(const int*)(tab + idx[1])),
-                        _mm_setr_pi32(*(const int*)(tab + idx[2]), *(const int*)(tab + idx[3]))
+                        _mm_setr_pi32(tmp[0], tmp[1]),
+                        _mm_setr_pi32(tmp[2], tmp[3])
                     ));
 #endif
 }
@@ -3112,19 +3118,24 @@ inline v_int16x8 v_lut(const short* tab, const int* idx)
 }
 inline v_int16x8 v_lut_pairs(const short* tab, const int* idx)
 {
+    int CV_DECL_ALIGNED(16) tmp[4];
+    for (int i = 0; i < 4; i++)
+        std::memcpy(&tmp[i], tab + idx[i], sizeof(int));
 #if defined(_MSC_VER)
-    return v_int16x8(_mm_setr_epi32(*(const int*)(tab + idx[0]), *(const int*)(tab + idx[1]),
-                                    *(const int*)(tab + idx[2]), *(const int*)(tab + idx[3])));
+    return v_int16x8(_mm_setr_epi32(tmp[0], tmp[1], tmp[2], tmp[3]));
 #else
     return v_int16x8(_mm_setr_epi64(
-                        _mm_setr_pi32(*(const int*)(tab + idx[0]), *(const int*)(tab + idx[1])),
-                        _mm_setr_pi32(*(const int*)(tab + idx[2]), *(const int*)(tab + idx[3]))
+                        _mm_setr_pi32(tmp[0], tmp[1]),
+                        _mm_setr_pi32(tmp[2], tmp[3])
                     ));
 #endif
 }
 inline v_int16x8 v_lut_quads(const short* tab, const int* idx)
 {
-    return v_int16x8(_mm_set_epi64x(*(const int64_t*)(tab + idx[1]), *(const int64_t*)(tab + idx[0])));
+    int64_t CV_DECL_ALIGNED(16) tmp[2];
+    std::memcpy(&tmp[0], tab + idx[0], sizeof(int64_t));
+    std::memcpy(&tmp[1], tab + idx[1], sizeof(int64_t));
+    return v_int16x8(_mm_set_epi64x(tmp[1], tmp[0]));
 }
 inline v_uint16x8 v_lut(const ushort* tab, const int* idx) { return v_reinterpret_as_u16(v_lut((const short *)tab, idx)); }
 inline v_uint16x8 v_lut_pairs(const ushort* tab, const int* idx) { return v_reinterpret_as_u16(v_lut_pairs((const short *)tab, idx)); }
@@ -3144,7 +3155,10 @@ inline v_int32x4 v_lut(const int* tab, const int* idx)
 }
 inline v_int32x4 v_lut_pairs(const int* tab, const int* idx)
 {
-    return v_int32x4(_mm_set_epi64x(*(const int64_t*)(tab + idx[1]), *(const int64_t*)(tab + idx[0])));
+    int64_t CV_DECL_ALIGNED(16) tmp[2];
+    std::memcpy(&tmp[0], tab + idx[0], sizeof(int64_t));
+    std::memcpy(&tmp[1], tab + idx[1], sizeof(int64_t));
+    return v_int32x4(_mm_set_epi64x(tmp[1], tmp[0]));
 }
 inline v_int32x4 v_lut_quads(const int* tab, const int* idx)
 {
