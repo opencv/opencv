@@ -457,6 +457,7 @@ NODES_TO_REFINE = {
     SymbolName(("cv", "fisheye"), (), "initUndistortRectifyMap"): make_optional_arg("D"),
     SymbolName(("cv", ), (), "imread"): make_optional_none_return,
     SymbolName(("cv", ), (), "imdecode"): make_optional_none_return,
+    SymbolName(("cv", ), (), "HoughCircles"): make_optional_none_return,
     # Fix for issue #28534: inRange should accept Scalar for lowerb and upperb
     SymbolName(("cv", ), (), "inRange"): make_matlike_or_scalar_arg("lowerb", "upperb"),
 }
