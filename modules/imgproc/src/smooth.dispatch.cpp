@@ -207,13 +207,15 @@ Mat getGaussianKernel(int n, double sigma, int ktype)
 
     if (ktype == CV_32F)
     {
-        for (int i = 0; i < n; i++)
-            kernel.at<float>(i) = (float)kernel_bitexact[i];
         // Renormalize: adjust the center element so float32 kernel sums
         // to exactly 1.0f, compensating for float truncation errors
         float sum = 0.0f;
         for (int i = 0; i < n; i++)
-            sum += kernel.at<float>(i);
+        {
+            const float v = static_cast<float>(kernel_bitexact[i]);
+            kernel.at<float>(i) = v;
+            sum += v;
+        }
         if (sum != 0.0f)
             kernel.at<float>(n / 2) += 1.0f - sum;
     }
