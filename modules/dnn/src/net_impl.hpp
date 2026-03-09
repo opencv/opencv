@@ -300,6 +300,9 @@ struct Net::Impl : public detail::NetImplBase
             const int layerId,
             const std::vector<MatShape>& netInputShapes,
             const std::vector<MatType>& netInputTypes) /*const*/;
+    int64 getFLOPSGraph(const Ptr<Graph>& graph,
+                        const std::vector<MatShape>& shapeCache,
+                        const std::vector<MatType>& typeCache) const;
 
     void getMemoryConsumption(
             const int layerId,
