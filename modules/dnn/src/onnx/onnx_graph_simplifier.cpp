@@ -1246,7 +1246,7 @@ public:
 class GatherCastSubgraph : public Subgraph
 {
 public:
-    GatherCastSubgraph() : axis(0)
+    GatherCastSubgraph()
     {
         int input = addNodeToMatch("");
         int index = addNodeToMatch("Constant");
@@ -1302,14 +1302,12 @@ public:
                           std::vector<Ptr<ImportNodeWrapper> >& /*inputs*/) CV_OVERRIDE
     {
         opencv_onnx::NodeProto* node = fusedNode.dynamicCast<ONNXNodeWrapper>()->node;
-
         opencv_onnx::AttributeProto* new_attr = node->add_attribute();
         new_attr->set_name("axis");
         new_attr->set_i(axis);
     }
 private:
-    int cast, gather;
-    int axis;
+    int cast, gather, axis;
 };
 
 /*  Constant folding shape for Expand.
