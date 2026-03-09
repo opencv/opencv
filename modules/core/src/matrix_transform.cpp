@@ -13,331 +13,405 @@
 namespace cv {
 
 ////////////////////////////////////// transpose /////////////////////////////////////////
-#ifdef CV_NEON
-
-static void transpose8x8_u8( uint8x8_t& r0, uint8x8_t& r1, uint8x8_t& r2, uint8x8_t& r3,
-    uint8x8_t& r4, uint8x8_t& r5, uint8x8_t& r6, uint8x8_t& r7 )
-{
-    uint8x8x2_t  t01 = vtrn_u8 (r0, r1);
-    uint8x8x2_t  t23 = vtrn_u8 (r2, r3);
-    uint8x8x2_t  t45 = vtrn_u8 (r4, r5);
-    uint8x8x2_t  t67 = vtrn_u8 (r6, r7);
-    uint16x4x2_t s01 = vtrn_u16(vreinterpret_u16_u8(t01.val[0]), vreinterpret_u16_u8(t23.val[0]));
-    uint16x4x2_t s23 = vtrn_u16(vreinterpret_u16_u8(t01.val[1]), vreinterpret_u16_u8(t23.val[1]));
-    uint16x4x2_t s45 = vtrn_u16(vreinterpret_u16_u8(t45.val[0]), vreinterpret_u16_u8(t67.val[0]));
-    uint16x4x2_t s67 = vtrn_u16(vreinterpret_u16_u8(t45.val[1]), vreinterpret_u16_u8(t67.val[1]));
-    uint32x2x2_t u0  = vtrn_u32(vreinterpret_u32_u16(s01.val[0]), vreinterpret_u32_u16(s45.val[0]));
-    uint32x2x2_t u1  = vtrn_u32(vreinterpret_u32_u16(s01.val[1]), vreinterpret_u32_u16(s45.val[1]));
-    uint32x2x2_t u2  = vtrn_u32(vreinterpret_u32_u16(s23.val[0]), vreinterpret_u32_u16(s67.val[0]));
-    uint32x2x2_t u3  = vtrn_u32(vreinterpret_u32_u16(s23.val[1]), vreinterpret_u32_u16(s67.val[1]));
-    r0 = vreinterpret_u8_u32(u0.val[0]);
-    r1 = vreinterpret_u8_u32(u2.val[0]);
-    r2 = vreinterpret_u8_u32(u1.val[0]);
-    r3 = vreinterpret_u8_u32(u3.val[0]);
-    r4 = vreinterpret_u8_u32(u0.val[1]);
-    r5 = vreinterpret_u8_u32(u2.val[1]);
-    r6 = vreinterpret_u8_u32(u1.val[1]);
-    r7 = vreinterpret_u8_u32(u3.val[1]);
-}
-
-static void transpose8x8_u16( uint16x8_t& r0, uint16x8_t& r1, uint16x8_t& r2, uint16x8_t& r3,
-    uint16x8_t& r4, uint16x8_t& r5, uint16x8_t& r6, uint16x8_t& r7 )
-{
-    uint16x8x2_t t01 = vtrnq_u16(r0, r1);
-    uint16x8x2_t t23 = vtrnq_u16(r2, r3);
-    uint16x8x2_t t45 = vtrnq_u16(r4, r5);
-    uint16x8x2_t t67 = vtrnq_u16(r6, r7);
-    uint32x4x2_t s01 = vtrnq_u32(vreinterpretq_u32_u16(t01.val[0]), vreinterpretq_u32_u16(t23.val[0]));
-    uint32x4x2_t s23 = vtrnq_u32(vreinterpretq_u32_u16(t01.val[1]), vreinterpretq_u32_u16(t23.val[1]));
-    uint32x4x2_t s45 = vtrnq_u32(vreinterpretq_u32_u16(t45.val[0]), vreinterpretq_u32_u16(t67.val[0]));
-    uint32x4x2_t s67 = vtrnq_u32(vreinterpretq_u32_u16(t45.val[1]), vreinterpretq_u32_u16(t67.val[1]));
-    r0 = vreinterpretq_u16_u32(vcombine_u32(vget_low_u32(s01.val[0]), vget_low_u32(s45.val[0])));
-    r1 = vreinterpretq_u16_u32(vcombine_u32(vget_low_u32(s23.val[0]), vget_low_u32(s67.val[0])));
-    r2 = vreinterpretq_u16_u32(vcombine_u32(vget_low_u32(s01.val[1]), vget_low_u32(s45.val[1])));
-    r3 = vreinterpretq_u16_u32(vcombine_u32(vget_low_u32(s23.val[1]), vget_low_u32(s67.val[1])));
-    r4 = vreinterpretq_u16_u32(vcombine_u32(vget_high_u32(s01.val[0]), vget_high_u32(s45.val[0])));
-    r5 = vreinterpretq_u16_u32(vcombine_u32(vget_high_u32(s23.val[0]), vget_high_u32(s67.val[0])));
-    r6 = vreinterpretq_u16_u32(vcombine_u32(vget_high_u32(s01.val[1]), vget_high_u32(s45.val[1])));
-    r7 = vreinterpretq_u16_u32(vcombine_u32(vget_high_u32(s23.val[1]), vget_high_u32(s67.val[1])));
-}
-
-static void transpose4x4_u32(
-    uint32x4_t& r0, uint32x4_t& r1, uint32x4_t& r2, uint32x4_t& r3)
-{
-    uint32x4x2_t t01 = vtrnq_u32(r0, r1);
-    uint32x4x2_t t23 = vtrnq_u32(r2, r3);
-    r0 = vcombine_u32(vget_low_u32 (t01.val[0]), vget_low_u32 (t23.val[0]));
-    r1 = vcombine_u32(vget_low_u32 (t01.val[1]), vget_low_u32 (t23.val[1]));
-    r2 = vcombine_u32(vget_high_u32(t01.val[0]), vget_high_u32(t23.val[0]));
-    r3 = vcombine_u32(vget_high_u32(t01.val[1]), vget_high_u32(t23.val[1]));
-}
-
-static void transpose_8UC1_neon(const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz)
+#ifdef CV_SIMD
+static void transpose_8UC1_simd(const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz)
 {
     const int m = sz.width, n = sz.height;
     int i = 0;
-    for (; i <= m - 8; i += 8)
+    for (; i <= m - 16; i += 16)
     {
         int j = 0;
-        for (; j <= n - 8; j += 8)
+        for (; j <= n - 16; j += 16)
         {
-            uint8x8_t r0 = vld1_u8(src + i + sstep*(j+0));
-            uint8x8_t r1 = vld1_u8(src + i + sstep*(j+1));
-            uint8x8_t r2 = vld1_u8(src + i + sstep*(j+2));
-            uint8x8_t r3 = vld1_u8(src + i + sstep*(j+3));
-            uint8x8_t r4 = vld1_u8(src + i + sstep*(j+4));
-            uint8x8_t r5 = vld1_u8(src + i + sstep*(j+5));
-            uint8x8_t r6 = vld1_u8(src + i + sstep*(j+6));
-            uint8x8_t r7 = vld1_u8(src + i + sstep*(j+7));
-            transpose8x8_u8(r0,r1,r2,r3,r4,r5,r6,r7);
-            vst1_u8(dst + dstep*(i+0) + j, r0);
-            vst1_u8(dst + dstep*(i+1) + j, r1);
-            vst1_u8(dst + dstep*(i+2) + j, r2);
-            vst1_u8(dst + dstep*(i+3) + j, r3);
-            vst1_u8(dst + dstep*(i+4) + j, r4);
-            vst1_u8(dst + dstep*(i+5) + j, r5);
-            vst1_u8(dst + dstep*(i+6) + j, r6);
-            vst1_u8(dst + dstep*(i+7) + j, r7);
+            v_uint8x16 r0  = vx_load(src + i + sstep*(j+ 0));
+            v_uint8x16 r1  = vx_load(src + i + sstep*(j+ 1));
+            v_uint8x16 r2  = vx_load(src + i + sstep*(j+ 2));
+            v_uint8x16 r3  = vx_load(src + i + sstep*(j+ 3));
+            v_uint8x16 r4  = vx_load(src + i + sstep*(j+ 4));
+            v_uint8x16 r5  = vx_load(src + i + sstep*(j+ 5));
+            v_uint8x16 r6  = vx_load(src + i + sstep*(j+ 6));
+            v_uint8x16 r7  = vx_load(src + i + sstep*(j+ 7));
+            v_uint8x16 r8  = vx_load(src + i + sstep*(j+ 8));
+            v_uint8x16 r9  = vx_load(src + i + sstep*(j+ 9));
+            v_uint8x16 r10 = vx_load(src + i + sstep*(j+10));
+            v_uint8x16 r11 = vx_load(src + i + sstep*(j+11));
+            v_uint8x16 r12 = vx_load(src + i + sstep*(j+12));
+            v_uint8x16 r13 = vx_load(src + i + sstep*(j+13));
+            v_uint8x16 r14 = vx_load(src + i + sstep*(j+14));
+            v_uint8x16 r15 = vx_load(src + i + sstep*(j+15));
+            v_uint8x16 t0, t1, t2, t3, t4, t5, t6, t7,
+                       t8, t9, t10, t11, t12, t13, t14, t15;
+            
+            v_zip(r0,  r1,  t0,  t1);
+            v_zip(r2,  r3,  t2,  t3);
+            v_zip(r4,  r5,  t4,  t5);
+            v_zip(r6,  r7,  t6,  t7);
+            v_zip(r8,  r9,  t8,  t9);
+            v_zip(r10, r11, t10, t11);
+            v_zip(r12, r13, t12, t13);
+            v_zip(r14, r15, t14, t15);
+
+            v_uint16x8 s0, s1, s2, s3, s4, s5, s6, s7,
+                       s8, s9, s10, s11, s12, s13, s14, s15;
+            v_zip(v_reinterpret_as_u16(t0),  v_reinterpret_as_u16(t2),  s0,  s1);
+            v_zip(v_reinterpret_as_u16(t1),  v_reinterpret_as_u16(t3),  s2,  s3);
+            v_zip(v_reinterpret_as_u16(t4),  v_reinterpret_as_u16(t6),  s4,  s5);
+            v_zip(v_reinterpret_as_u16(t5),  v_reinterpret_as_u16(t7),  s6,  s7);
+            v_zip(v_reinterpret_as_u16(t8),  v_reinterpret_as_u16(t10), s8,  s9);
+            v_zip(v_reinterpret_as_u16(t9),  v_reinterpret_as_u16(t11), s10, s11);
+            v_zip(v_reinterpret_as_u16(t12), v_reinterpret_as_u16(t14), s12, s13);
+            v_zip(v_reinterpret_as_u16(t13), v_reinterpret_as_u16(t15), s14, s15);
+
+            v_uint32x4 u0, u1, u2, u3, u4, u5, u6, u7,
+                       u8, u9, u10, u11, u12, u13, u14, u15;
+
+            v_zip(v_reinterpret_as_u32(s0),  v_reinterpret_as_u32(s4),  u0,  u1);
+            v_zip(v_reinterpret_as_u32(s1),  v_reinterpret_as_u32(s5),  u2,  u3);
+            v_zip(v_reinterpret_as_u32(s2),  v_reinterpret_as_u32(s6),  u4,  u5);
+            v_zip(v_reinterpret_as_u32(s3),  v_reinterpret_as_u32(s7),  u6,  u7);
+            v_zip(v_reinterpret_as_u32(s8),  v_reinterpret_as_u32(s12), u8,  u9);
+            v_zip(v_reinterpret_as_u32(s9),  v_reinterpret_as_u32(s13), u10, u11);
+            v_zip(v_reinterpret_as_u32(s10), v_reinterpret_as_u32(s14), u12, u13);
+            v_zip(v_reinterpret_as_u32(s11), v_reinterpret_as_u32(s15), u14, u15);
+
+            v_uint32x4 v0  = v_combine_low (u0,  u8);
+            v_uint32x4 v1  = v_combine_high(u0,  u8);
+            v_uint32x4 v2  = v_combine_low (u1,  u9);
+            v_uint32x4 v3  = v_combine_high(u1,  u9);
+            v_uint32x4 v4  = v_combine_low (u2,  u10);
+            v_uint32x4 v5  = v_combine_high(u2,  u10);
+            v_uint32x4 v6  = v_combine_low (u3,  u11);
+            v_uint32x4 v7  = v_combine_high(u3,  u11);
+            v_uint32x4 v8  = v_combine_low (u4,  u12);
+            v_uint32x4 v9  = v_combine_high(u4,  u12);
+            v_uint32x4 v10 = v_combine_low (u5,  u13);
+            v_uint32x4 v11 = v_combine_high(u5,  u13);
+            v_uint32x4 v12 = v_combine_low (u6,  u14);
+            v_uint32x4 v13 = v_combine_high(u6,  u14);
+            v_uint32x4 v14 = v_combine_low (u7,  u15);
+            v_uint32x4 v15 = v_combine_high(u7,  u15);
+
+            v_store(dst + dstep*(i+ 0) + j, v_reinterpret_as_u8(v0));
+            v_store(dst + dstep*(i+ 1) + j, v_reinterpret_as_u8(v1));
+            v_store(dst + dstep*(i+ 2) + j, v_reinterpret_as_u8(v2));
+            v_store(dst + dstep*(i+ 3) + j, v_reinterpret_as_u8(v3));
+            v_store(dst + dstep*(i+ 4) + j, v_reinterpret_as_u8(v4));
+            v_store(dst + dstep*(i+ 5) + j, v_reinterpret_as_u8(v5));
+            v_store(dst + dstep*(i+ 6) + j, v_reinterpret_as_u8(v6));
+            v_store(dst + dstep*(i+ 7) + j, v_reinterpret_as_u8(v7));
+            v_store(dst + dstep*(i+ 8) + j, v_reinterpret_as_u8(v8));
+            v_store(dst + dstep*(i+ 9) + j, v_reinterpret_as_u8(v9));
+            v_store(dst + dstep*(i+10) + j, v_reinterpret_as_u8(v10));
+            v_store(dst + dstep*(i+11) + j, v_reinterpret_as_u8(v11));
+            v_store(dst + dstep*(i+12) + j, v_reinterpret_as_u8(v12));
+            v_store(dst + dstep*(i+13) + j, v_reinterpret_as_u8(v13));
+            v_store(dst + dstep*(i+14) + j, v_reinterpret_as_u8(v14));
+            v_store(dst + dstep*(i+15) + j, v_reinterpret_as_u8(v15));
         }
         for (; j < n; j++)
-            for (int k = 0; k < 8; k++)
+            for (int k = 0; k < 16; k++)
                 dst[dstep*(i+k) + j] = src[i + sstep*j + k];
     }
     for (; i < m; i++)
         for (int j = 0; j < n; j++)
             dst[dstep*i + j] = src[i + sstep*j];
 }
-
-static void transpose_16UC1_neon(const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz)
+static void transpose_16UC1_simd(const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz)
 {
+    const ushort* src16 = reinterpret_cast<const ushort*>(src);
+    ushort* dst16 = reinterpret_cast<ushort*>(dst);
+
+    const size_t sstep_e = sstep / sizeof(ushort);
+    const size_t dstep_e = dstep / sizeof(ushort);
+
     const int m = sz.width, n = sz.height;
     int i = 0;
+
     for (; i <= m - 8; i += 8)
     {
         int j = 0;
         for (; j <= n - 8; j += 8)
         {
-            uint8x8x2_t p0 = vld2_u8(src + i*2 + sstep*(j+0));
-            uint8x8x2_t p1 = vld2_u8(src + i*2 + sstep*(j+1));
-            uint8x8x2_t p2 = vld2_u8(src + i*2 + sstep*(j+2));
-            uint8x8x2_t p3 = vld2_u8(src + i*2 + sstep*(j+3));
-            uint8x8x2_t p4 = vld2_u8(src + i*2 + sstep*(j+4));
-            uint8x8x2_t p5 = vld2_u8(src + i*2 + sstep*(j+5));
-            uint8x8x2_t p6 = vld2_u8(src + i*2 + sstep*(j+6));
-            uint8x8x2_t p7 = vld2_u8(src + i*2 + sstep*(j+7));
-            uint8x8_t A0=p0.val[0], A1=p1.val[0], A2=p2.val[0], A3=p3.val[0];
-            uint8x8_t A4=p4.val[0], A5=p5.val[0], A6=p6.val[0], A7=p7.val[0];
-            uint8x8_t B0=p0.val[1], B1=p1.val[1], B2=p2.val[1], B3=p3.val[1];
-            uint8x8_t B4=p4.val[1], B5=p5.val[1], B6=p6.val[1], B7=p7.val[1];
-            transpose8x8_u8(A0,A1,A2,A3,A4,A5,A6,A7);
-            transpose8x8_u8(B0,B1,B2,B3,B4,B5,B6,B7);
-            uint8x8x2_t q0; q0.val[0]=A0; q0.val[1]=B0; vst2_u8(dst + dstep*(i+0) + j*2, q0);
-            uint8x8x2_t q1; q1.val[0]=A1; q1.val[1]=B1; vst2_u8(dst + dstep*(i+1) + j*2, q1);
-            uint8x8x2_t q2; q2.val[0]=A2; q2.val[1]=B2; vst2_u8(dst + dstep*(i+2) + j*2, q2);
-            uint8x8x2_t q3; q3.val[0]=A3; q3.val[1]=B3; vst2_u8(dst + dstep*(i+3) + j*2, q3);
-            uint8x8x2_t q4; q4.val[0]=A4; q4.val[1]=B4; vst2_u8(dst + dstep*(i+4) + j*2, q4);
-            uint8x8x2_t q5; q5.val[0]=A5; q5.val[1]=B5; vst2_u8(dst + dstep*(i+5) + j*2, q5);
-            uint8x8x2_t q6; q6.val[0]=A6; q6.val[1]=B6; vst2_u8(dst + dstep*(i+6) + j*2, q6);
-            uint8x8x2_t q7; q7.val[0]=A7; q7.val[1]=B7; vst2_u8(dst + dstep*(i+7) + j*2, q7);
+            v_uint16x8 r0 = vx_load(src16 + i + sstep_e*(j+0));
+            v_uint16x8 r1 = vx_load(src16 + i + sstep_e*(j+1));
+            v_uint16x8 r2 = vx_load(src16 + i + sstep_e*(j+2));
+            v_uint16x8 r3 = vx_load(src16 + i + sstep_e*(j+3));
+            v_uint16x8 r4 = vx_load(src16 + i + sstep_e*(j+4));
+            v_uint16x8 r5 = vx_load(src16 + i + sstep_e*(j+5));
+            v_uint16x8 r6 = vx_load(src16 + i + sstep_e*(j+6));
+            v_uint16x8 r7 = vx_load(src16 + i + sstep_e*(j+7));
+            v_uint16x8 t0, t1, t2, t3, t4, t5, t6, t7;
+            v_zip(r0, r1, t0, t1);
+            v_zip(r2, r3, t2, t3);
+            v_zip(r4, r5, t4, t5);
+            v_zip(r6, r7, t6, t7);
+            v_uint32x4 u0, u1, u2, u3, u4, u5, u6, u7;
+            v_zip(v_reinterpret_as_u32(t0), v_reinterpret_as_u32(t4), u0, u1);
+            v_zip(v_reinterpret_as_u32(t1), v_reinterpret_as_u32(t5), u2, u3);
+            v_zip(v_reinterpret_as_u32(t2), v_reinterpret_as_u32(t6), u4, u5);
+            v_zip(v_reinterpret_as_u32(t3), v_reinterpret_as_u32(t7), u6, u7);
+            v_uint32x4 v0, v1, v2, v3, v4, v5, v6, v7;
+            v_zip(u0, u4, v0, v1);
+            v_zip(u1, u5, v2, v3);
+            v_zip(u2, u6, v4, v5);
+            v_zip(u3, u7, v6, v7);
+
+            v_store(dst16 + dstep_e*(i+0) + j, v_reinterpret_as_u16(v0));
+            v_store(dst16 + dstep_e*(i+1) + j, v_reinterpret_as_u16(v1));
+            v_store(dst16 + dstep_e*(i+2) + j, v_reinterpret_as_u16(v2));
+            v_store(dst16 + dstep_e*(i+3) + j, v_reinterpret_as_u16(v3));
+            v_store(dst16 + dstep_e*(i+4) + j, v_reinterpret_as_u16(v4));
+            v_store(dst16 + dstep_e*(i+5) + j, v_reinterpret_as_u16(v5));
+            v_store(dst16 + dstep_e*(i+6) + j, v_reinterpret_as_u16(v6));
+            v_store(dst16 + dstep_e*(i+7) + j, v_reinterpret_as_u16(v7));
         }
         for (; j < n; j++)
             for (int k = 0; k < 8; k++)
-                memcpy(dst + dstep*(i+k) + j*2, src + i*2 + sstep*j + k*2, 2);
+                dst16[dstep_e*(i+k) + j] = src16[i + sstep_e*j + k];
     }
     for (; i < m; i++)
         for (int j = 0; j < n; j++)
-            memcpy(dst + dstep*i + j*2, src + i*2 + sstep*j, 2);
+            dst16[dstep_e*i + j] = src16[i + sstep_e*j];
 }
 
-static void transpose_8UC3_neon(const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz)
+static void transpose_32FC1_simd(const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz)
 {
+    const float* src32 = reinterpret_cast<const float*>(src);
+    float* dst32 = reinterpret_cast<float*>(dst);
+
+    const size_t sstep_e = sstep / sizeof(float);
+    const size_t dstep_e = dstep / sizeof(float);
+
     const int m = sz.width, n = sz.height;
     int i = 0;
+    for (; i <= m - 4; i += 4)
+    {
+        int j = 0;
+        for (; j <= n - 4; j += 4)
+        {
+            v_float32x4 r0 = vx_load(src32 + i + sstep_e*(j+0));
+            v_float32x4 r1 = vx_load(src32 + i + sstep_e*(j+1));
+            v_float32x4 r2 = vx_load(src32 + i + sstep_e*(j+2));
+            v_float32x4 r3 = vx_load(src32 + i + sstep_e*(j+3));
+
+            v_float32x4 o0, o1, o2, o3;
+            v_transpose4x4(r0, r1, r2, r3, o0, o1, o2, o3);
+
+            v_store(dst32 + dstep_e*(i+0) + j, o0);
+            v_store(dst32 + dstep_e*(i+1) + j, o1);
+            v_store(dst32 + dstep_e*(i+2) + j, o2);
+            v_store(dst32 + dstep_e*(i+3) + j, o3);
+        }
+        for (; j < n; j++)
+            for (int k = 0; k < 4; k++)
+                dst32[dstep_e*(i+k) + j] = src32[i + sstep_e*j + k];
+    }
+    for (; i < m; i++)
+        for (int j = 0; j < n; j++)
+            dst32[dstep_e*i + j] = src32[i + sstep_e*j];
+}
+
+static inline void transposeChannel8x8_16u(
+    const v_uint16x8& r0, const v_uint16x8& r1,
+    const v_uint16x8& r2, const v_uint16x8& r3,
+    const v_uint16x8& r4, const v_uint16x8& r5,
+    const v_uint16x8& r6, const v_uint16x8& r7,
+    v_int16x8& out0, v_int16x8& out1, v_int16x8& out2, v_int16x8& out3,
+    v_int16x8& out4, v_int16x8& out5, v_int16x8& out6, v_int16x8& out7)
+{
+    v_uint16x8 t0, t1, t2, t3, t4, t5, t6, t7;
+    v_zip(r0, r1, t0, t1);
+    v_zip(r2, r3, t2, t3);
+    v_zip(r4, r5, t4, t5);
+    v_zip(r6, r7, t6, t7);
+
+    v_uint32x4 u0, u1, u2, u3, u4, u5, u6, u7;
+    v_zip(v_reinterpret_as_u32(t0), v_reinterpret_as_u32(t4), u0, u1);
+    v_zip(v_reinterpret_as_u32(t1), v_reinterpret_as_u32(t5), u2, u3);
+    v_zip(v_reinterpret_as_u32(t2), v_reinterpret_as_u32(t6), u4, u5);
+    v_zip(v_reinterpret_as_u32(t3), v_reinterpret_as_u32(t7), u6, u7);
+
+    v_uint32x4 s0, s1, s2, s3, s4, s5, s6, s7;
+    v_zip(u0, u4, s0, s1);
+    v_zip(u1, u5, s2, s3);
+    v_zip(u2, u6, s4, s5);
+    v_zip(u3, u7, s6, s7);
+
+    out0 = v_reinterpret_as_s16(s0); out1 = v_reinterpret_as_s16(s1);
+    out2 = v_reinterpret_as_s16(s2); out3 = v_reinterpret_as_s16(s3);
+    out4 = v_reinterpret_as_s16(s4); out5 = v_reinterpret_as_s16(s5);
+    out6 = v_reinterpret_as_s16(s6); out7 = v_reinterpret_as_s16(s7);
+}
+
+static void transpose_16SC3_simd(const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz)
+{
+    const short* src16 = reinterpret_cast<const short*>(src);
+    short* dst16 = reinterpret_cast<short*>(dst);
+
+    const size_t sstep_e = sstep / sizeof(short);
+    const size_t dstep_e = dstep / sizeof(short);
+
+    const int m = sz.width, n = sz.height;
+    int i = 0;
+
     for (; i <= m - 8; i += 8)
     {
         int j = 0;
         for (; j <= n - 8; j += 8)
         {
-            uint8x8x3_t p0 = vld3_u8(src + i*3 + sstep*(j+0));
-            uint8x8x3_t p1 = vld3_u8(src + i*3 + sstep*(j+1));
-            uint8x8x3_t p2 = vld3_u8(src + i*3 + sstep*(j+2));
-            uint8x8x3_t p3 = vld3_u8(src + i*3 + sstep*(j+3));
-            uint8x8x3_t p4 = vld3_u8(src + i*3 + sstep*(j+4));
-            uint8x8x3_t p5 = vld3_u8(src + i*3 + sstep*(j+5));
-            uint8x8x3_t p6 = vld3_u8(src + i*3 + sstep*(j+6));
-            uint8x8x3_t p7 = vld3_u8(src + i*3 + sstep*(j+7));
-            uint8x8_t R0=p0.val[0], R1=p1.val[0], R2=p2.val[0], R3=p3.val[0];
-            uint8x8_t R4=p4.val[0], R5=p5.val[0], R6=p6.val[0], R7=p7.val[0];
-            uint8x8_t G0=p0.val[1], G1=p1.val[1], G2=p2.val[1], G3=p3.val[1];
-            uint8x8_t G4=p4.val[1], G5=p5.val[1], G6=p6.val[1], G7=p7.val[1];
-            uint8x8_t B0=p0.val[2], B1=p1.val[2], B2=p2.val[2], B3=p3.val[2];
-            uint8x8_t B4=p4.val[2], B5=p5.val[2], B6=p6.val[2], B7=p7.val[2];
-            transpose8x8_u8(R0,R1,R2,R3,R4,R5,R6,R7);
-            transpose8x8_u8(G0,G1,G2,G3,G4,G5,G6,G7);
-            transpose8x8_u8(B0,B1,B2,B3,B4,B5,B6,B7);
-            uint8x8x3_t q0; q0.val[0]=R0; q0.val[1]=G0; q0.val[2]=B0; vst3_u8(dst + dstep*(i+0) + j*3, q0);
-            uint8x8x3_t q1; q1.val[0]=R1; q1.val[1]=G1; q1.val[2]=B1; vst3_u8(dst + dstep*(i+1) + j*3, q1);
-            uint8x8x3_t q2; q2.val[0]=R2; q2.val[1]=G2; q2.val[2]=B2; vst3_u8(dst + dstep*(i+2) + j*3, q2);
-            uint8x8x3_t q3; q3.val[0]=R3; q3.val[1]=G3; q3.val[2]=B3; vst3_u8(dst + dstep*(i+3) + j*3, q3);
-            uint8x8x3_t q4; q4.val[0]=R4; q4.val[1]=G4; q4.val[2]=B4; vst3_u8(dst + dstep*(i+4) + j*3, q4);
-            uint8x8x3_t q5; q5.val[0]=R5; q5.val[1]=G5; q5.val[2]=B5; vst3_u8(dst + dstep*(i+5) + j*3, q5);
-            uint8x8x3_t q6; q6.val[0]=R6; q6.val[1]=G6; q6.val[2]=B6; vst3_u8(dst + dstep*(i+6) + j*3, q6);
-            uint8x8x3_t q7; q7.val[0]=R7; q7.val[1]=G7; q7.val[2]=B7; vst3_u8(dst + dstep*(i+7) + j*3, q7);
+            v_int16x8 C0_0, C1_0, C2_0;
+            v_int16x8 C0_1, C1_1, C2_1;
+            v_int16x8 C0_2, C1_2, C2_2;
+            v_int16x8 C0_3, C1_3, C2_3;
+            v_int16x8 C0_4, C1_4, C2_4;
+            v_int16x8 C0_5, C1_5, C2_5;
+            v_int16x8 C0_6, C1_6, C2_6;
+            v_int16x8 C0_7, C1_7, C2_7;
+
+            v_load_deinterleave(src16 + sstep_e*(j+0) + i*3, C0_0, C1_0, C2_0);
+            v_load_deinterleave(src16 + sstep_e*(j+1) + i*3, C0_1, C1_1, C2_1);
+            v_load_deinterleave(src16 + sstep_e*(j+2) + i*3, C0_2, C1_2, C2_2);
+            v_load_deinterleave(src16 + sstep_e*(j+3) + i*3, C0_3, C1_3, C2_3);
+            v_load_deinterleave(src16 + sstep_e*(j+4) + i*3, C0_4, C1_4, C2_4);
+            v_load_deinterleave(src16 + sstep_e*(j+5) + i*3, C0_5, C1_5, C2_5);
+            v_load_deinterleave(src16 + sstep_e*(j+6) + i*3, C0_6, C1_6, C2_6);
+            v_load_deinterleave(src16 + sstep_e*(j+7) + i*3, C0_7, C1_7, C2_7);
+
+            v_uint16x8 t0, t1, t2, t3, t4, t5, t6, t7;
+            v_zip(v_reinterpret_as_u16(C0_0), v_reinterpret_as_u16(C0_1), t0, t1);
+            v_zip(v_reinterpret_as_u16(C0_2), v_reinterpret_as_u16(C0_3), t2, t3);
+            v_zip(v_reinterpret_as_u16(C0_4), v_reinterpret_as_u16(C0_5), t4, t5);
+            v_zip(v_reinterpret_as_u16(C0_6), v_reinterpret_as_u16(C0_7), t6, t7);
+            v_uint32x4 u0, u1, u2, u3, u4, u5, u6, u7;
+            v_zip(v_reinterpret_as_u32(t0), v_reinterpret_as_u32(t4), u0, u1);
+            v_zip(v_reinterpret_as_u32(t1), v_reinterpret_as_u32(t5), u2, u3);
+            v_zip(v_reinterpret_as_u32(t2), v_reinterpret_as_u32(t6), u4, u5);
+            v_zip(v_reinterpret_as_u32(t3), v_reinterpret_as_u32(t7), u6, u7);
+            v_uint32x4 s0, s1, s2, s3, s4, s5, s6, s7;
+            v_zip(u0, u4, s0, s1); v_zip(u1, u5, s2, s3);
+            v_zip(u2, u6, s4, s5); v_zip(u3, u7, s6, s7);
+            v_int16x8 r0_0 = v_reinterpret_as_s16(s0), r0_1 = v_reinterpret_as_s16(s1);
+            v_int16x8 r0_2 = v_reinterpret_as_s16(s2), r0_3 = v_reinterpret_as_s16(s3);
+            v_int16x8 r0_4 = v_reinterpret_as_s16(s4), r0_5 = v_reinterpret_as_s16(s5);
+            v_int16x8 r0_6 = v_reinterpret_as_s16(s6), r0_7 = v_reinterpret_as_s16(s7);
+
+            v_zip(v_reinterpret_as_u16(C1_0), v_reinterpret_as_u16(C1_1), t0, t1);
+            v_zip(v_reinterpret_as_u16(C1_2), v_reinterpret_as_u16(C1_3), t2, t3);
+            v_zip(v_reinterpret_as_u16(C1_4), v_reinterpret_as_u16(C1_5), t4, t5);
+            v_zip(v_reinterpret_as_u16(C1_6), v_reinterpret_as_u16(C1_7), t6, t7);
+            v_zip(v_reinterpret_as_u32(t0), v_reinterpret_as_u32(t4), u0, u1);
+            v_zip(v_reinterpret_as_u32(t1), v_reinterpret_as_u32(t5), u2, u3);
+            v_zip(v_reinterpret_as_u32(t2), v_reinterpret_as_u32(t6), u4, u5);
+            v_zip(v_reinterpret_as_u32(t3), v_reinterpret_as_u32(t7), u6, u7);
+            v_zip(u0, u4, s0, s1); v_zip(u1, u5, s2, s3);
+            v_zip(u2, u6, s4, s5); v_zip(u3, u7, s6, s7);
+            v_int16x8 r1_0 = v_reinterpret_as_s16(s0), r1_1 = v_reinterpret_as_s16(s1);
+            v_int16x8 r1_2 = v_reinterpret_as_s16(s2), r1_3 = v_reinterpret_as_s16(s3);
+            v_int16x8 r1_4 = v_reinterpret_as_s16(s4), r1_5 = v_reinterpret_as_s16(s5);
+            v_int16x8 r1_6 = v_reinterpret_as_s16(s6), r1_7 = v_reinterpret_as_s16(s7);
+
+            v_zip(v_reinterpret_as_u16(C2_0), v_reinterpret_as_u16(C2_1), t0, t1);
+            v_zip(v_reinterpret_as_u16(C2_2), v_reinterpret_as_u16(C2_3), t2, t3);
+            v_zip(v_reinterpret_as_u16(C2_4), v_reinterpret_as_u16(C2_5), t4, t5);
+            v_zip(v_reinterpret_as_u16(C2_6), v_reinterpret_as_u16(C2_7), t6, t7);
+            v_zip(v_reinterpret_as_u32(t0), v_reinterpret_as_u32(t4), u0, u1);
+            v_zip(v_reinterpret_as_u32(t1), v_reinterpret_as_u32(t5), u2, u3);
+            v_zip(v_reinterpret_as_u32(t2), v_reinterpret_as_u32(t6), u4, u5);
+            v_zip(v_reinterpret_as_u32(t3), v_reinterpret_as_u32(t7), u6, u7);
+            v_zip(u0, u4, s0, s1); v_zip(u1, u5, s2, s3);
+            v_zip(u2, u6, s4, s5); v_zip(u3, u7, s6, s7);
+            v_int16x8 r2_0 = v_reinterpret_as_s16(s0), r2_1 = v_reinterpret_as_s16(s1);
+            v_int16x8 r2_2 = v_reinterpret_as_s16(s2), r2_3 = v_reinterpret_as_s16(s3);
+            v_int16x8 r2_4 = v_reinterpret_as_s16(s4), r2_5 = v_reinterpret_as_s16(s5);
+            v_int16x8 r2_6 = v_reinterpret_as_s16(s6), r2_7 = v_reinterpret_as_s16(s7);
+
+            v_store_interleave(dst16 + dstep_e*(i+0) + j*3, r0_0, r1_0, r2_0);
+            v_store_interleave(dst16 + dstep_e*(i+1) + j*3, r0_1, r1_1, r2_1);
+            v_store_interleave(dst16 + dstep_e*(i+2) + j*3, r0_2, r1_2, r2_2);
+            v_store_interleave(dst16 + dstep_e*(i+3) + j*3, r0_3, r1_3, r2_3);
+            v_store_interleave(dst16 + dstep_e*(i+4) + j*3, r0_4, r1_4, r2_4);
+            v_store_interleave(dst16 + dstep_e*(i+5) + j*3, r0_5, r1_5, r2_5);
+            v_store_interleave(dst16 + dstep_e*(i+6) + j*3, r0_6, r1_6, r2_6);
+            v_store_interleave(dst16 + dstep_e*(i+7) + j*3, r0_7, r1_7, r2_7);
         }
         for (; j < n; j++)
             for (int k = 0; k < 8; k++)
             {
-                const uchar* s = src + i*3 + sstep*j;
-                uchar* d = dst + dstep*(i+k) + j*3;
-                d[0]=s[k*3]; d[1]=s[k*3+1]; d[2]=s[k*3+2];
+                dst16[dstep_e*(i+k) + j*3 + 0] = src16[sstep_e*j + (i+k)*3 + 0];
+                dst16[dstep_e*(i+k) + j*3 + 1] = src16[sstep_e*j + (i+k)*3 + 1];
+                dst16[dstep_e*(i+k) + j*3 + 2] = src16[sstep_e*j + (i+k)*3 + 2];
             }
     }
     for (; i < m; i++)
         for (int j = 0; j < n; j++)
         {
-            const uchar* s = src + i*3 + sstep*j;
-            uchar* d = dst + dstep*i + j*3;
-            d[0]=s[0]; d[1]=s[1]; d[2]=s[2];
+            dst16[dstep_e*i + j*3 + 0] = src16[sstep_e*j + i*3 + 0];
+            dst16[dstep_e*i + j*3 + 1] = src16[sstep_e*j + i*3 + 1];
+            dst16[dstep_e*i + j*3 + 2] = src16[sstep_e*j + i*3 + 2];
         }
 }
 
-static void transpose_32UC1_neon(const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz)
+static void transpose_64UC1_simd(const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz)
 {
+    const uint* src32 = reinterpret_cast<const uint*>(src);
+    uint* dst32 = reinterpret_cast<uint*>(dst);
+    const size_t sstep_e = sstep / sizeof(uint);
+    const size_t dstep_e = dstep / sizeof(uint);
+
     const int m = sz.width, n = sz.height;
     int i = 0;
+
     for (; i <= m - 4; i += 4)
     {
         int j = 0;
         for (; j <= n - 4; j += 4)
         {
-            uint32x4_t r0 = vld1q_u32(reinterpret_cast<const uint32_t*>(src + i*4 + sstep*(j+0)));
-            uint32x4_t r1 = vld1q_u32(reinterpret_cast<const uint32_t*>(src + i*4 + sstep*(j+1)));
-            uint32x4_t r2 = vld1q_u32(reinterpret_cast<const uint32_t*>(src + i*4 + sstep*(j+2)));
-            uint32x4_t r3 = vld1q_u32(reinterpret_cast<const uint32_t*>(src + i*4 + sstep*(j+3)));
-            transpose4x4_u32(r0,r1,r2,r3);
-            vst1q_u32(reinterpret_cast<uint32_t*>(dst + dstep*(i+0) + j*4), r0);
-            vst1q_u32(reinterpret_cast<uint32_t*>(dst + dstep*(i+1) + j*4), r1);
-            vst1q_u32(reinterpret_cast<uint32_t*>(dst + dstep*(i+2) + j*4), r2);
-            vst1q_u32(reinterpret_cast<uint32_t*>(dst + dstep*(i+3) + j*4), r3);
+            v_uint32x4 w0r0, w1r0;
+            v_uint32x4 w0r1, w1r1;
+            v_uint32x4 w0r2, w1r2;
+            v_uint32x4 w0r3, w1r3;
+
+            v_load_deinterleave(src32 + sstep_e*(j+0) + i*2, w0r0, w1r0);
+            v_load_deinterleave(src32 + sstep_e*(j+1) + i*2, w0r1, w1r1);
+            v_load_deinterleave(src32 + sstep_e*(j+2) + i*2, w0r2, w1r2);
+            v_load_deinterleave(src32 + sstep_e*(j+3) + i*2, w0r3, w1r3);
+            v_uint32x4 tw0c0, tw0c1, tw0c2, tw0c3;
+            v_uint32x4 tw1c0, tw1c1, tw1c2, tw1c3;
+            v_transpose4x4(w0r0, w0r1, w0r2, w0r3, tw0c0, tw0c1, tw0c2, tw0c3);
+            v_transpose4x4(w1r0, w1r1, w1r2, w1r3, tw1c0, tw1c1, tw1c2, tw1c3);
+            v_store_interleave(dst32 + dstep_e*(i+0) + j*2, tw0c0, tw1c0);
+            v_store_interleave(dst32 + dstep_e*(i+1) + j*2, tw0c1, tw1c1);
+            v_store_interleave(dst32 + dstep_e*(i+2) + j*2, tw0c2, tw1c2);
+            v_store_interleave(dst32 + dstep_e*(i+3) + j*2, tw0c3, tw1c3);
         }
         for (; j < n; j++)
             for (int k = 0; k < 4; k++)
-                memcpy(dst + dstep*(i+k) + j*4, src + i*4 + sstep*j + k*4, 4);
+            {
+                dst32[dstep_e*(i+k) + j*2 + 0] = src32[sstep_e*j + (i+k)*2 + 0];
+                dst32[dstep_e*(i+k) + j*2 + 1] = src32[sstep_e*j + (i+k)*2 + 1];
+            }
     }
     for (; i < m; i++)
         for (int j = 0; j < n; j++)
-            memcpy(dst + dstep*i + j*4, src + i*4 + sstep*j, 4);
-}
-
-static void transpose_16SC3_neon(const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz)
-{
-    const int m = sz.width, n = sz.height;
-    int i = 0;
-    for (; i <= m - 8; i += 8)
-    {
-        int j = 0;
-        for (; j <= n - 8; j += 8)
         {
-            uint16x8x3_t p0 = vld3q_u16(reinterpret_cast<const uint16_t*>(src + i*6 + sstep*(j+0)));
-            uint16x8x3_t p1 = vld3q_u16(reinterpret_cast<const uint16_t*>(src + i*6 + sstep*(j+1)));
-            uint16x8x3_t p2 = vld3q_u16(reinterpret_cast<const uint16_t*>(src + i*6 + sstep*(j+2)));
-            uint16x8x3_t p3 = vld3q_u16(reinterpret_cast<const uint16_t*>(src + i*6 + sstep*(j+3)));
-            uint16x8x3_t p4 = vld3q_u16(reinterpret_cast<const uint16_t*>(src + i*6 + sstep*(j+4)));
-            uint16x8x3_t p5 = vld3q_u16(reinterpret_cast<const uint16_t*>(src + i*6 + sstep*(j+5)));
-            uint16x8x3_t p6 = vld3q_u16(reinterpret_cast<const uint16_t*>(src + i*6 + sstep*(j+6)));
-            uint16x8x3_t p7 = vld3q_u16(reinterpret_cast<const uint16_t*>(src + i*6 + sstep*(j+7)));
-            uint16x8_t R0=p0.val[0], R1=p1.val[0], R2=p2.val[0], R3=p3.val[0];
-            uint16x8_t R4=p4.val[0], R5=p5.val[0], R6=p6.val[0], R7=p7.val[0];
-            uint16x8_t G0=p0.val[1], G1=p1.val[1], G2=p2.val[1], G3=p3.val[1];
-            uint16x8_t G4=p4.val[1], G5=p5.val[1], G6=p6.val[1], G7=p7.val[1];
-            uint16x8_t B0=p0.val[2], B1=p1.val[2], B2=p2.val[2], B3=p3.val[2];
-            uint16x8_t B4=p4.val[2], B5=p5.val[2], B6=p6.val[2], B7=p7.val[2];
-            transpose8x8_u16(R0,R1,R2,R3,R4,R5,R6,R7);
-            transpose8x8_u16(G0,G1,G2,G3,G4,G5,G6,G7);
-            transpose8x8_u16(B0,B1,B2,B3,B4,B5,B6,B7);
-            uint16x8x3_t q0; q0.val[0]=R0; q0.val[1]=G0; q0.val[2]=B0; 
-            vst3q_u16(reinterpret_cast<uint16_t*>(dst + dstep*(i+0) + j*6), q0);
-            uint16x8x3_t q1; q1.val[0]=R1; q1.val[1]=G1; q1.val[2]=B1; 
-            vst3q_u16(reinterpret_cast<uint16_t*>(dst + dstep*(i+1) + j*6), q1);
-            uint16x8x3_t q2; q2.val[0]=R2; q2.val[1]=G2; q2.val[2]=B2; 
-            vst3q_u16(reinterpret_cast<uint16_t*>(dst + dstep*(i+2) + j*6), q2);
-            uint16x8x3_t q3; q3.val[0]=R3; q3.val[1]=G3; q3.val[2]=B3; 
-            vst3q_u16(reinterpret_cast<uint16_t*>(dst + dstep*(i+3) + j*6), q3);
-            uint16x8x3_t q4; q4.val[0]=R4; q4.val[1]=G4; q4.val[2]=B4; 
-            vst3q_u16(reinterpret_cast<uint16_t*>(dst + dstep*(i+4) + j*6), q4);
-            uint16x8x3_t q5; q5.val[0]=R5; q5.val[1]=G5; q5.val[2]=B5; 
-            vst3q_u16(reinterpret_cast<uint16_t*>(dst + dstep*(i+5) + j*6), q5);
-            uint16x8x3_t q6; q6.val[0]=R6; q6.val[1]=G6; q6.val[2]=B6; 
-            vst3q_u16(reinterpret_cast<uint16_t*>(dst + dstep*(i+6) + j*6), q6);
-            uint16x8x3_t q7; q7.val[0]=R7; q7.val[1]=G7; q7.val[2]=B7; 
-            vst3q_u16(reinterpret_cast<uint16_t*>(dst + dstep*(i+7) + j*6), q7);
+            dst32[dstep_e*i + j*2 + 0] = src32[sstep_e*j + i*2 + 0];
+            dst32[dstep_e*i + j*2 + 1] = src32[sstep_e*j + i*2 + 1];
         }
-        for (; j < n; j++)
-            for (int k = 0; k < 8; k++)
-                memcpy(dst + dstep*(i+k) + j*6, src + i*6 + sstep*j + k*6, 6);
-    }
-    for (; i < m; i++)
-        for (int j = 0; j < n; j++)
-            memcpy(dst + dstep*i + j*6, src + i*6 + sstep*j, 6);
 }
 
-static void transpose_64UC1_neon(const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz)
-{
-    const int m = sz.width, n = sz.height;
-    int i = 0;
-    for (; i <= m - 4; i += 4)
-    {
-        int j = 0;
-        for (; j <= n - 4; j += 4)
-        {
-
-            uint64x2_t r00 = vld1q_u64(reinterpret_cast<const uint64_t*>(src + i*8 + sstep*(j+0) + 0));
-            uint64x2_t r01 = vld1q_u64(reinterpret_cast<const uint64_t*>(src + i*8 + sstep*(j+0) + 16));
-            uint64x2_t r10 = vld1q_u64(reinterpret_cast<const uint64_t*>(src + i*8 + sstep*(j+1) + 0));
-            uint64x2_t r11 = vld1q_u64(reinterpret_cast<const uint64_t*>(src + i*8 + sstep*(j+1) + 16));
-            uint64x2_t r20 = vld1q_u64(reinterpret_cast<const uint64_t*>(src + i*8 + sstep*(j+2) + 0));
-            uint64x2_t r21 = vld1q_u64(reinterpret_cast<const uint64_t*>(src + i*8 + sstep*(j+2) + 16));
-            uint64x2_t r30 = vld1q_u64(reinterpret_cast<const uint64_t*>(src + i*8 + sstep*(j+3) + 0));
-            uint64x2_t r31 = vld1q_u64(reinterpret_cast<const uint64_t*>(src + i*8 + sstep*(j+3) + 16));
-            uint64x2_t c00 = vzip1q_u64(r00, r10);
-            uint64x2_t c01 = vzip1q_u64(r20, r30);
-            uint64x2_t c10 = vzip2q_u64(r00, r10);
-            uint64x2_t c11 = vzip2q_u64(r20, r30);
-            uint64x2_t c20 = vzip1q_u64(r01, r11);
-            uint64x2_t c21 = vzip1q_u64(r21, r31);
-            uint64x2_t c30 = vzip2q_u64(r01, r11);
-            uint64x2_t c31 = vzip2q_u64(r21, r31);
-            vst1q_u64(reinterpret_cast<uint64_t*>(dst + dstep*(i+0) + j*8 + 0),  c00);
-            vst1q_u64(reinterpret_cast<uint64_t*>(dst + dstep*(i+0) + j*8 + 16), c01);
-            vst1q_u64(reinterpret_cast<uint64_t*>(dst + dstep*(i+1) + j*8 + 0),  c10);
-            vst1q_u64(reinterpret_cast<uint64_t*>(dst + dstep*(i+1) + j*8 + 16), c11);
-            vst1q_u64(reinterpret_cast<uint64_t*>(dst + dstep*(i+2) + j*8 + 0),  c20);
-            vst1q_u64(reinterpret_cast<uint64_t*>(dst + dstep*(i+2) + j*8 + 16), c21);
-            vst1q_u64(reinterpret_cast<uint64_t*>(dst + dstep*(i+3) + j*8 + 0),  c30);
-            vst1q_u64(reinterpret_cast<uint64_t*>(dst + dstep*(i+3) + j*8 + 16), c31);
-        }
-        for (; j < n; j++)
-            for (int k = 0; k < 4; k++)
-                memcpy(dst + dstep*(i+k) + j*8, src + i*8 + sstep*j + k*8, 8);
-    }
-    for (; i < m; i++)
-        for (int j = 0; j < n; j++)
-            memcpy(dst + dstep*i + j*8, src + i*8 + sstep*j, 8);
-}
-#endif // CV_NEON
+#endif
 
 template<typename T> static void
 transpose_( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz )
 {
-#if CV_NEON
+#if CV_SIMD
     switch (sizeof(T))
     {
-    case 1: transpose_8UC1_neon (src, sstep, dst, dstep, sz); return;
-    case 2: transpose_16UC1_neon(src, sstep, dst, dstep, sz); return;
-    case 3: transpose_8UC3_neon (src, sstep, dst, dstep, sz); return;
-    case 4: transpose_32UC1_neon(src, sstep, dst, dstep, sz); return;
-    case 6: transpose_16SC3_neon(src, sstep, dst, dstep, sz); return;
-    case 8: transpose_64UC1_neon(src, sstep, dst, dstep, sz); return;
+    case 1: transpose_8UC1_simd(src, sstep, dst, dstep, sz); return;
+    case 2: transpose_16UC1_simd(src, sstep, dst, dstep, sz); return;
+    case 4: transpose_32FC1_simd(src, sstep, dst, dstep, sz); return;
+    case 6: transpose_16SC3_simd(src, sstep, dst, dstep, sz); return;
+    case 8: transpose_64UC1_simd(src, sstep, dst, dstep, sz); return;
     default: break;
     }
 #endif
