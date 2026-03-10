@@ -1,0 +1,7 @@
+if(NOT TARGET armpl)
+  add_library(armpl STATIC IMPORTED)
+  set_target_properties(armpl PROPERTIES
+    IMPORTED_LINK_INTERFACE_LIBRARIES ""
+    IMPORTED_LOCATION "${OpenCV_INSTALL_PATH}/@ARMPL_INSTALL_PATH_RELATIVE_CONFIGCMAKE@"
+  )
+endif()

@@ -44,6 +44,10 @@
 #include "opencv2/core/opencl/runtime/opencl_core.hpp"
 #include "opencl_kernels_core.hpp"
 #include <map>
+#if defined(HAVE_ARMPL)
+#include <armpl.h>
+#include <fftw3.h>
+#endif
 
 namespace cv
 {
@@ -66,6 +70,12 @@ namespace cv
 #else
 #define IPP_DISABLE_DFT32F false
 #endif
+#endif
+
+#if defined(HAVE_ARMPL)
+#define USE_ARMPL_DFT 1
+#else
+#undef USE_ARMPL_DFT
 #endif
 
 /****************************************************************************************\
@@ -809,10 +819,16 @@ struct OcvDftOptions {
 
     DFTFunc dft_func;
     bool useIpp;
+    bool useARMPL;
 
 #ifdef USE_IPP_DFT
     uchar* ipp_spec;
     uchar* ipp_work;
+#endif
+
+#ifdef USE_ARMPL_DFT
+    void* armpl_spec;
+    uchar* armpl_work;
 #endif
 
     OcvDftOptions()
@@ -828,9 +844,14 @@ struct OcvDftOptions {
         noPermute = false;
         isComplex = false;
         useIpp = false;
+        useARMPL = false;
 #ifdef USE_IPP_DFT
         ipp_spec = 0;
         ipp_work = 0;
+#endif
+#ifdef USE_ARMPL_DFT
+        armpl_spec = 0;
+        armpl_work = 0;
 #endif
         dft_func = 0;
         haveSSE3 = checkHardwareSupport(CV_CPU_SSE3);
@@ -1235,6 +1256,39 @@ RealDFT(const OcvDftOptions & c, const T* src, T* dst)
         setIppErrorStatus();
 #endif
     }
+    if( c.useARMPL )
+    {
+#ifdef USE_ARMPL_DFT
+        if (armplDFTFwd_RToPack( src, dst, c.armpl_spec, c.armpl_work ) >= 0)
+        {
+            if (scale != 1.0)
+            {
+                const T s = (T)scale;
+                int i = 0;
+                for (; i + 3 < n; i += 4)
+                {
+                    dst[i]     *= s;
+                    dst[i + 1] *= s;
+                    dst[i + 2] *= s;
+                    dst[i + 3] *= s;
+                }
+                for (; i < n; ++i)
+                {
+                    dst[i] *= s;
+                }
+            }
+            if( complex_output )
+            {
+                dst[-1] = dst[0];
+                dst[0] = 0;
+                if( (n & 1) == 0 )
+                    dst[n] = 0;
+            }
+            return;
+        }
+#endif
+    }
+
     CV_Assert( c.tab_size == n );
 
     if( n == 1 )
@@ -1376,6 +1430,33 @@ CCSIDFT(const OcvDftOptions & c, const T* src, T* dst)
         }
 
         setIppErrorStatus();
+#endif
+    }
+    if( c.useARMPL )
+    {
+#ifdef USE_ARMPL_DFT
+        if (armplDFTInv_PackToR(src, dst, c.armpl_spec, c.armpl_work) >= 0)
+        {
+            const T s = (T)scale;
+
+            int i = 0;
+            for (; i + 3 < n; i += 4)
+            {
+                dst[i]     *= s;
+                dst[i + 1] *= s;
+                dst[i + 2] *= s;
+                dst[i + 3] *= s;
+            }
+            for (; i < n; i++)
+            {
+                dst[i] *= s;
+            }
+
+            if (complex_input)
+                ((T*)src)[0] = (T)save_s1;
+
+            return;
+        }
 #endif
     }
     if( n == 1 )
@@ -3240,6 +3321,10 @@ public:
     AutoBuffer<uchar> ippbuf;
     AutoBuffer<uchar> ippworkbuf;
 #endif
+#ifdef USE_ARMPL_DFT
+    AutoBuffer<uchar> armplbuf;
+    AutoBuffer<uchar> armplworkbuf;
+#endif
 
 public:
     OcvDftBasicImpl()
@@ -3262,6 +3347,7 @@ public:
         opt.n = len;
 
         opt.useIpp = false;
+        opt.useARMPL = false;
     #ifdef USE_IPP_DFT
         opt.ipp_spec = 0;
         opt.ipp_work = 0;
@@ -3314,7 +3400,84 @@ public:
         }
     #endif
 
-        if (!opt.useIpp)
+#ifdef USE_ARMPL_DFT
+        opt.armpl_spec = 0;
+        opt.armpl_work = 0;
+
+        if ((opt.n*count >= 64) && real_transform && stage == 0)
+        {
+            bool armpl_init_success = false;
+            bool has_scale_flag = (flags & CV_HAL_DFT_SCALE) != 0;
+            double armpl_scale = 1.0;
+            if(!needAnotherStage && has_scale_flag)
+            {
+                int rowCount = count;
+                if (stage == 0 && (flags & CV_HAL_DFT_ROWS) != 0)
+                    rowCount = 1;
+                armpl_scale = 1.0 / (len * rowCount);
+            }
+            if (depth == CV_32F)
+            {
+                armplbuf.allocate(sizeof(ArmplDFTSpec_R_32f) + 64);
+                opt.armpl_spec = alignPtr(&armplbuf[0], 32);
+                ArmplDFTSpec_R_32f* spec = (ArmplDFTSpec_R_32f*)opt.armpl_spec;
+                memset(spec, 0, sizeof(ArmplDFTSpec_R_32f));
+                float* dummy_in = (float*)fftwf_malloc(sizeof(float) * opt.n);
+                fftwf_complex* dummy_out = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex) * (opt.n/2 + 1));
+                if (dummy_in && dummy_out)
+                {
+                    if (!opt.isInverse) {
+                        spec->plan = fftwf_plan_dft_r2c_1d(opt.n, dummy_in, dummy_out, FFTW_ESTIMATE);
+                    } else {
+                        spec->plan = fftwf_plan_dft_c2r_1d(opt.n, dummy_out, dummy_in, FFTW_ESTIMATE);
+                    }
+                    spec->n = opt.n;
+                    spec->isInverse = opt.isInverse;
+                    spec->scale = armpl_scale;
+                    if (spec->plan)
+                    {
+                        armpl_init_success = true;
+                        opt.useARMPL = true;
+                    }
+                }
+                if (dummy_in) fftwf_free(dummy_in);
+                if (dummy_out) fftwf_free(dummy_out);
+            }
+            else  // CV_64F
+            {
+                armplbuf.allocate(sizeof(ArmplDFTSpec_R_64f) + 64);
+                opt.armpl_spec = alignPtr(&armplbuf[0], 32);
+                ArmplDFTSpec_R_64f* spec = (ArmplDFTSpec_R_64f*)opt.armpl_spec;
+                memset(spec, 0, sizeof(ArmplDFTSpec_R_64f));
+                double* dummy_in = (double*)fftw_malloc(sizeof(double) * opt.n);
+                fftw_complex* dummy_out = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * (opt.n/2 + 1));
+                if (dummy_in && dummy_out)
+                {
+                    if (!opt.isInverse) {
+                        spec->plan = fftw_plan_dft_r2c_1d(opt.n, dummy_in, dummy_out, FFTW_ESTIMATE);
+                    } else {
+                        spec->plan = fftw_plan_dft_c2r_1d(opt.n, dummy_out, dummy_in, FFTW_ESTIMATE);
+                    }
+                    spec->n = opt.n;
+                    spec->isInverse = opt.isInverse;
+                    spec->scale = armpl_scale;
+                    if (spec->plan)
+                    {
+                        armpl_init_success = true;
+                        opt.useARMPL = true;
+                    }
+                }
+                if (dummy_in) fftw_free(dummy_in);
+                if (dummy_out) fftw_free(dummy_out);
+            }
+            if (armpl_init_success)
+            {
+                armplworkbuf.allocate(64);
+                opt.armpl_work = alignPtr(&armplworkbuf[0], 32);
+            }
+        }
+#endif
+        if (!opt.useIpp && !opt.useARMPL)
         {
             if (len != prev_len)
             {
