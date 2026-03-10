@@ -1676,7 +1676,7 @@ TEST(Core_InputOutput, FileStorage_free_file_after_exception)
 TEST(Core_InputOutput, FileStorage_YAML_empty_key)
 {
     const std::string fileName = cv::tempfile("FileStorage_YAML_empty_key_test.yml");
-    const std::string content = "%YAML:1.0\n: 10\n";
+    const std::string content = "%YAML:1.0\n---\nkey1: value1\n: 10\n";
 
     std::fstream testFile;
     testFile.open(fileName.c_str(), std::fstream::out);
