@@ -1282,14 +1282,32 @@ public:
                             }
                         }
                     }
+                    //  extract axis from original Gather node
+                    axis = 0;
+                    opencv_onnx::NodeProto* origGatherNode =
+                        inpNode.dynamicCast<ONNXNodeWrapper>()->node;
+                    for (int i = 0; i < origGatherNode->attribute_size(); i++) {
+                        opencv_onnx::AttributeProto attr = origGatherNode->attribute(i);
+                        if (attr.name() == "axis")
+                            axis = attr.i();
+                    }
                 }
             }
         }
         return retVal;
     }
 
+    virtual void finalize(const Ptr<ImportGraphWrapper>& net,
+                          const Ptr<ImportNodeWrapper>& fusedNode,
+                          std::vector<Ptr<ImportNodeWrapper> >& /*inputs*/) CV_OVERRIDE
+    {
+        opencv_onnx::NodeProto* node = fusedNode.dynamicCast<ONNXNodeWrapper>()->node;
+        opencv_onnx::AttributeProto* new_attr = node->add_attribute();
+        new_attr->set_name("axis");
+        new_attr->set_i(axis);
+    }
 private:
-    int cast, gather;
+    int cast, gather, axis;
 };
 
 /*  Constant folding shape for Expand.
