@@ -32,42 +32,42 @@ static inline void transpose8x8(const _Tp* inp_, size_t istep,
     if constexpr (sizeof(_Tp) == 4u) {
         const uint32_t* inp = (const uint32_t*)inp_;
         uint32_t* out = (uint32_t*)out_;
-        v_uint32 a0, a1, a2, a3, b0, b1, b2, b3;
+        v_uint32x4 a0, a1, a2, a3, b0, b1, b2, b3;
 
-        a0 = vx_load(inp + istep*0);
-        a1 = vx_load(inp + istep*1);
-        a2 = vx_load(inp + istep*2);
-        a3 = vx_load(inp + istep*3);
+        a0 = v_load(inp + istep*0);
+        a1 = v_load(inp + istep*1);
+        a2 = v_load(inp + istep*2);
+        a3 = v_load(inp + istep*3);
         v_transpose4x4(a0, a1, a2, a3, b0, b1, b2, b3);
         v_store(out + ostep*0, b0);
         v_store(out + ostep*1, b1);
         v_store(out + ostep*2, b2);
         v_store(out + ostep*3, b3);
 
-        a0 = vx_load(inp + istep*0 + 4);
-        a1 = vx_load(inp + istep*1 + 4);
-        a2 = vx_load(inp + istep*2 + 4);
-        a3 = vx_load(inp + istep*3 + 4);
+        a0 = v_load(inp + istep*0 + 4);
+        a1 = v_load(inp + istep*1 + 4);
+        a2 = v_load(inp + istep*2 + 4);
+        a3 = v_load(inp + istep*3 + 4);
         v_transpose4x4(a0, a1, a2, a3, b0, b1, b2, b3);
         v_store(out + ostep*4, b0);
         v_store(out + ostep*5, b1);
         v_store(out + ostep*6, b2);
         v_store(out + ostep*7, b3);
 
-        a0 = vx_load(inp + istep*4);
-        a1 = vx_load(inp + istep*5);
-        a2 = vx_load(inp + istep*6);
-        a3 = vx_load(inp + istep*7);
+        a0 = v_load(inp + istep*4);
+        a1 = v_load(inp + istep*5);
+        a2 = v_load(inp + istep*6);
+        a3 = v_load(inp + istep*7);
         v_transpose4x4(a0, a1, a2, a3, b0, b1, b2, b3);
         v_store(out + ostep*0 + 4, b0);
         v_store(out + ostep*1 + 4, b1);
         v_store(out + ostep*2 + 4, b2);
         v_store(out + ostep*3 + 4, b3);
 
-        a0 = vx_load(inp + istep*4 + 4);
-        a1 = vx_load(inp + istep*5 + 4);
-        a2 = vx_load(inp + istep*6 + 4);
-        a3 = vx_load(inp + istep*7 + 4);
+        a0 = v_load(inp + istep*4 + 4);
+        a1 = v_load(inp + istep*5 + 4);
+        a2 = v_load(inp + istep*6 + 4);
+        a3 = v_load(inp + istep*7 + 4);
         v_transpose4x4(a0, a1, a2, a3, b0, b1, b2, b3);
         v_store(out + ostep*4 + 4, b0);
         v_store(out + ostep*5 + 4, b1);
@@ -127,7 +127,6 @@ void transformLayoutDeinterleave_(const _Tp* inp_base, _Tp* out_base, int C, siz
                                   int nc, int nzc, size_t dlen)
 {
     size_t i = 0;
-#if 0
     for (; i + 7u < dlen; i += 8u)
     {
         int c = 0;
@@ -151,7 +150,6 @@ void transformLayoutDeinterleave_(const _Tp* inp_base, _Tp* out_base, int C, siz
             outptr[7] = inptr[7 * nc];
         }
     }
-#endif
     for (; i < dlen; ++i)
     {
         const _Tp* inptr = inp_base + i * nc;
