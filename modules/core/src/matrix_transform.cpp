@@ -432,6 +432,7 @@ CV_ALWAYS_INLINE void flipHoriz_vlanes_match( const uchar* src, size_t sstep, uc
     }
 }
 
+#if CV_SIMD128
 // SIMD flip when ESZ=16 (128-bit)
 template<size_t ESZ>
 CV_ALWAYS_INLINE void flipHoriz_vlanes_match_128( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size)
@@ -451,26 +452,32 @@ CV_ALWAYS_INLINE void flipHoriz_vlanes_match_128( const uchar* src, size_t sstep
         }
     }
 }
+#endif // CV_SIMD128
 
 // SIMD flip for ESZ=16,32
 template<size_t ESZ>
 CV_ALWAYS_INLINE void flipHoriz_vlanes_dispatch( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size )
 {
     const int vlanes = VTraits<v_uint8>::vlanes();
+#if CV_SIMD128
     const int vlanes16 = VTraits<v_uint8x16>::vlanes();
+#endif
     if ( (ESZ == (size_t)vlanes) || (ESZ == 2 * (size_t)vlanes))
     {
         flipHoriz_vlanes_match<ESZ>(src, sstep, dst, dstep, size);
         return;
     }
+#if CV_SIMD128
     else if (ESZ == vlanes16)
     {
         flipHoriz_vlanes_match_128<ESZ>(src, sstep, dst, dstep, size);
         return;
     }
+#endif
     flipHoriz_generic(src, sstep, dst, dstep, size, ESZ);
 }
 
+#if CV_SIMD128
 // SIMD flip for ESZ=24 (CV_64FC3)
 CV_ALWAYS_INLINE void flipHoriz_24( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size )
 {
@@ -500,6 +507,7 @@ CV_ALWAYS_INLINE void flipHoriz_24( const uchar* src, size_t sstep, uchar* dst, 
         }
     }
 }
+#endif // CV_SIMD128
 #endif // CV_SIMD || CV_SIMD_SCALABLE
 
 static void flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, size_t esz )
@@ -516,7 +524,9 @@ static void flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep,
         case 8:   flipHoriz_single<v_uint64>(src, sstep, dst, dstep, size); return;           // CV_16UC4, CV_32SC2, CV_32FC2, CV_64FC1: 16-bit 4-channel, 32-bit 2-channel, or 64-bit 1-channel
         case 12:  flipHoriz_c3<v_uint32>(src, sstep, dst, dstep, size); return;               // CV_32SC3, CV_32FC3: 32-bit, 3 channels
         case 16:  flipHoriz_vlanes_dispatch<16>(src, sstep, dst, dstep, size); return;        // CV_32SC4, CV_32FC4, CV_64FC2: 32-bit 4-channel or 64-bit 2-channel
+#if CV_SIMD128
         case 24:  flipHoriz_24(src, sstep, dst, dstep, size); return;                         // CV_64FC3: 64-bit, 3 channels
+#endif
         case 32:  flipHoriz_vlanes_dispatch<32>(src, sstep, dst, dstep, size); return;        // CV_64FC4: 64-bit, 4 channels
         default:
             break; // Fall through to generic implementation
