@@ -678,7 +678,24 @@ public:
 protected:
     void run_func();
     void prepare_to_validation( int test_case_idx );
+#if defined(HAVE_ARMPL)
+    double get_success_error_level( int test_case_idx, int i, int j );
+#endif
 };
+#if defined(HAVE_ARMPL)
+double CxCore_DFTTest::get_success_error_level( int, int i, int j )
+{
+    CV_Assert(i == OUTPUT);
+    CV_Assert(j == 0);
+
+    int depth = CV_MAT_DEPTH(cvGetElemType(test_array[i][j]));
+
+    if (depth == CV_32F)
+        return 2e-4;
+
+    return 1e-12;
+}
+#endif
 
 
 CxCore_DFTTest::CxCore_DFTTest() : CxCore_DXTBaseTest( true, true, false )
