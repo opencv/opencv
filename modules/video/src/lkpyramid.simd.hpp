@@ -19,7 +19,7 @@ CV_CPU_OPTIMIZATION_NAMESPACE_END
 } // namespace detail
 } // namespace cv
 
-#if !defined(CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY) && CV_SIMD
+#ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
 namespace cv {
 namespace detail {
@@ -115,4 +115,4 @@ CV_CPU_OPTIMIZATION_NAMESPACE_END
 } // namespace detail
 } // namespace cv
 
-#endif // !defined(CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY) && CV_SIMD
+#endif // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
