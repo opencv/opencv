@@ -540,9 +540,14 @@ int main( int argc, char** argv )
         dictionary.readDictionary(fn);
     }
 
-    cv::aruco::CharucoBoard ch_board(boardSize, squareSize, markerSize, dictionary);
+    cv::Ptr<cv::aruco::CharucoBoard> ch_board;
     std::vector<int> markerIds;
-    cv::aruco::CharucoDetector ch_detector(ch_board);
+    cv::Ptr<cv::aruco::CharucoDetector> ch_detector;
+    if (pattern == CHARUCOBOARD) {
+        ch_board = cv::makePtr<cv::aruco::CharucoBoard>(boardSize, squareSize, markerSize, dictionary);
+        ch_detector = cv::makePtr<cv::aruco::CharucoDetector>(cv::aruco::CharucoDetector(*ch_board));
+    }
+
 
     if( !inputFilename.empty() )
     {
@@ -563,7 +568,7 @@ int main( int argc, char** argv )
     if( capture.isOpened() )
         printf( "%s", liveCaptureHelp );
 
-    namedWindow( "Image View", 1 );
+    namedWindow( "Image View", cv::WINDOW_AUTOSIZE );
 
     for(i = 0;;i++)
     {
@@ -612,7 +617,7 @@ int main( int argc, char** argv )
                 break;
             case CHARUCOBOARD:
             {
-                ch_detector.detectBoard(view, pointbuf, markerIds);
+                ch_detector->detectBoard(view, pointbuf, markerIds);
                 found = pointbuf.size() == (size_t)(boardSize.width-1)*(boardSize.height-1);
                 break;
             }
