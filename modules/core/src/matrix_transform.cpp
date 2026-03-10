@@ -486,7 +486,8 @@ CV_ALWAYS_INLINE void flipHoriz_vlanes_dispatch( const uchar* src, size_t sstep,
 CV_ALWAYS_INLINE void flipHoriz_24( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size )
 {
 #if CV_STRONG_ALIGNMENT
-    if (!isAligned<24>(((size_t)src)|((size_t)dst)|sstep|dstep))
+    // This kernel performs 64-bit scalar loads/stores, so require 8-byte alignment.
+    if (!isAligned<8>(((size_t)src)|((size_t)dst)|sstep|dstep))
     {
         flipHoriz_generic(src, sstep, dst, dstep, size, 24);
         return;
