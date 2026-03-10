@@ -862,7 +862,8 @@ TEST_P(Reproducibility_ResNet50_ONNX, Accuracy)
     applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
     ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
 
-    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/resnet50v1.onnx"));
+    std::string modelname = findDataFile("dnn/onnx/models/resnet50v1.onnx", false);
+    Net net = readNetFromONNX(modelname);
 
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);
@@ -873,7 +874,8 @@ TEST_P(Reproducibility_ResNet50_ONNX, Accuracy)
     //net.dumpToStream(std::cout);
     //net.setTracingMode(DNN_TRACE_ALL);
 
-    Mat image = imread(_tf("sqcat.png"));
+    std::string imgname = findDataFile("dnn/sqcat.png", false);
+    Mat image = imread(imgname);
     Mat input = blobFromImage(image, 0.017, Size(224,224),
                               Scalar(103.939, 116.779, 123.68),
                               false, true, CV_32F);
