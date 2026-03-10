@@ -420,14 +420,18 @@ CV_ALWAYS_INLINE void flipHoriz_vlanes_match( const uchar* src, size_t sstep, uc
     int end = (int)(size.width * ESZ);
     int width = end / 2;
     int height = size.height;
+    int eSize = (int)ESZ;
     for( ; height--; src += sstep, dst += dstep )
     {
-        for( int i = 0, j = end - vlanes; i < width; i += vlanes, j -= vlanes )
+        for( int i = 0, j = end - eSize; i < width; i += eSize, j -= eSize )
         {
-            v_uint8 t0 = vx_load(src + i);
-            v_uint8 t1 = vx_load(src + j);
-            v_store(dst + j, t0);
-            v_store(dst + i, t1);
+            for( int k = 0; k < eSize; k += vlanes )
+            {
+                v_uint8 t0 = vx_load(src + i + k);
+                v_uint8 t1 = vx_load(src + j + k);
+                v_store(dst + j + k, t0);
+                v_store(dst + i + k, t1);
+            }
         }
     }
 }
