@@ -44,7 +44,6 @@
 
 #include <ostream>
 #include <vector>
-#include <unordered_set>
 #include <opencv2/core.hpp>
 #include "opencv2/core/async.hpp"
 
