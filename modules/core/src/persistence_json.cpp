@@ -23,7 +23,7 @@ public:
 
         struct_flags = (struct_flags & (FileNode::TYPE_MASK|FileNode::FLOW)) | FileNode::EMPTY;
         if( !FileNode::isCollection(struct_flags))
-            CV_Error( cv::Error::StsBadArg,
+            CV_Error( cv::Errors::StsBadArg,
                      "Some collection type - FileNode::SEQ or FileNode::MAP, must be specified" );
 
         if( type_name && *type_name == '\0' )
@@ -421,17 +421,6 @@ public:
         char * beg = ptr + 1;
         std::string key_name;
         do {
-            // if (*ptr == '\\') { // skip the next character if current is back slash
-            //     ++ptr;
-            //     CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
-            //     key_name += *ptr;
-            //     ++ptr;
-            //     CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
-            // } else {
-            //     ++ptr;
-            //     CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
-            //     if (*ptr != '\\' && *ptr != '"') key_name += *ptr;
-            // }
             if (*ptr == '\\') { // skip the next character if current is back slash
                 ++ptr;
                 CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
