@@ -35,7 +35,7 @@ void ScharrDerivInvoker_SIMD(const Mat& src, Mat& dst, const Range& range)
     AutoBuffer<deriv_type> _tempBuf(delta*2 + 64);
     deriv_type *trow0 = alignPtr(_tempBuf.data() + cn, 16), *trow1 = alignPtr(trow0 + delta, 16);
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD)
     const int vlanes = VTraits<v_int16>::vlanes();
     v_int16 c3 = vx_setall_s16(3), c10 = vx_setall_s16(10);
 #endif
@@ -49,7 +49,7 @@ void ScharrDerivInvoker_SIMD(const Mat& src, Mat& dst, const Range& range)
 
         // do vertical convolution
         x = 0;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD)
         {
             for( ; x <= colsn - vlanes; x += vlanes )
             {
@@ -84,7 +84,7 @@ void ScharrDerivInvoker_SIMD(const Mat& src, Mat& dst, const Range& range)
 
         // do horizontal convolution, interleave the results and store them to dst
         x = 0;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD)
         {
             for( ; x <= colsn - vlanes; x += vlanes )
             {
