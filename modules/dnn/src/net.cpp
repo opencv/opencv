@@ -546,5 +546,48 @@ String Net::detokenize(InputArray tokenIds) const
     return impl->detokenize(tokenIds);
 }
 
+void Net::setPrompt(const String& prompt)
+{
+    CV_Assert(impl);
+    impl->setPrompt(prompt);
+}
+
+void Net::setSearchOption(const String& name, double value)
+{
+    CV_Assert(impl);
+    impl->setSearchOption(name, value);
+}
+
+void Net::setSearchOptionBool(const String& name, bool value)
+{
+    CV_Assert(impl);
+    impl->setSearchOptionBool(name, value);
+}
+
+void Net::setGuidance(const String& type, const String& data, bool enableFfTokens)
+{
+    CV_Assert(impl);
+    impl->setGuidance(type, data, enableFfTokens);
+}
+
+String Net::applyChatTemplate(const String& messages, const String& templateStr,
+                               const String& tools, bool addGenerationPrompt) const
+{
+    CV_Assert(impl);
+    return impl->applyChatTemplate(messages, templateStr, tools, addGenerationPrompt);
+}
+
+String Net::getModelType() const
+{
+    CV_Assert(impl);
+    return impl->getModelType();
+}
+
+String Net::getDeviceType() const
+{
+    CV_Assert(impl);
+    return impl->getDeviceType();
+}
+
 CV__DNN_INLINE_NS_END
 }}  // namespace cv::dnn

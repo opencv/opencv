@@ -13,7 +13,7 @@ ocv_add_dispatched_file_force_all("layers/cpu_kernels/fast_gemm_kernels" AVX AVX
 ocv_add_dispatched_file("layers/cpu_kernels/conv2_depthwise" AVX AVX2 NEON NEON_FP16)
 ocv_add_dispatched_file("layers/cpu_kernels/conv2_kernels" AVX AVX2 NEON NEON_FP16)
 
-ocv_add_module(dnn opencv_core opencv_imgproc WRAP python java objc js)
+ocv_add_module(dnn opencv_core opencv_imgproc WRAP python java objc js OPTIONAL opencv_imgcodecs)
 
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/plugin.cmake)
 
@@ -380,7 +380,7 @@ endif()
 ocv_option(WITH_ONNXRUNTIME_GENAI "Build with ONNX Runtime GenAI support" OFF)
 ocv_option(DOWNLOAD_ONNXRUNTIME_GENAI "Download ONNX Runtime GenAI prebuilt binaries" OFF IF WITH_ONNXRUNTIME_GENAI)
 
-set(ONNXRUNTIME_GENAI_VERSION "0.12.0" CACHE STRING "ONNX Runtime GenAI version to download (prebuilt binaries)")
+set(ONNXRUNTIME_GENAI_VERSION "0.12.1" CACHE STRING "ONNX Runtime GenAI version to download (prebuilt binaries)")
 
 if(WITH_ONNXRUNTIME_GENAI)
   include("${OpenCV_SOURCE_DIR}/cmake/FindONNX.cmake")
@@ -402,22 +402,22 @@ if(WITH_ONNXRUNTIME_GENAI)
     if(WIN32)
       if(X86_64 OR CMAKE_SIZEOF_VOID_P EQUAL 8)
         set(_ortga_filename "onnxruntime-genai-${ONNXRUNTIME_GENAI_VERSION}-win-x64.zip")
-        set(_ortga_md5 "86d42e128c12c6ea4e4028c970a09a58")
+        set(_ortga_md5 "5fd68ddea370e12a391605bf767c2fce")
       elseif(ARM64 OR AARCH64)
         set(_ortga_filename "onnxruntime-genai-${ONNXRUNTIME_GENAI_VERSION}-win-arm64.zip")
-        set(_ortga_md5 "2271dc208373b76ce170ac67b3e8ce39")
+        set(_ortga_md5 "5e6fdfcea9e3668d0f5ef9c6fc071a41")
       endif()
     elseif(APPLE)
       if(ARM64 OR AARCH64 OR CMAKE_OSX_ARCHITECTURES MATCHES "arm64")
         set(_ortga_filename "onnxruntime-genai-${ONNXRUNTIME_GENAI_VERSION}-osx-arm64.tar.gz")
-        set(_ortga_md5 "62c656b1d4b34daef9256a98dcb8bc6c")
+        set(_ortga_md5 "d817ca0181bd617e9c1d38e6221b3fdc")
       endif()
     elseif(UNIX)
       if(X86_64)
         set(_ortga_filename "onnxruntime-genai-${ONNXRUNTIME_GENAI_VERSION}-linux-x64.tar.gz")
-        set(_ortga_md5 "c604834007ac6b63389cb825693ad84d")
+        set(_ortga_md5 "91f59d2f37849729c6c45d15942ec6c6")
       endif()
-      # linux-aarch64 is not available in the official v0.12.0 release assets.
+      # linux-aarch64 is not available in the official v0.12.1 release assets.
       # Users on aarch64 Linux must build from source and point to the
       # installation via -DONNXGENAI_ROOT_DIR=<path>.
     endif()

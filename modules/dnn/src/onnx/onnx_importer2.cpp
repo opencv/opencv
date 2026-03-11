@@ -2844,6 +2844,24 @@ Net readNetFromONNX2_OGA(const String& modelDir)
 
         impl->modelFileName = modelDir;
         impl->modelFormat   = DNN_MODEL_ONNX;
+
+        {
+            OgaMultiModalProcessor* proc = nullptr;
+            OgaResult* r = OgaCreateMultiModalProcessor(impl->oga_model.get(), &proc);
+            if (r == nullptr)
+            {
+                impl->oga_processor = std::shared_ptr<OgaMultiModalProcessor>(
+                    proc, [](OgaMultiModalProcessor* p) { OgaDestroyMultiModalProcessor(p); });
+                impl->oga_is_multimodal = true;
+            }
+            else
+            {
+                std::string errMsg = OgaResultGetError(r);
+                CV_LOG_INFO(NULL, "DNN/OGA: Multimodal processor not loaded: " << errMsg);
+                OgaDestroyResult(r);
+                impl->oga_is_multimodal = false;
+            }
+        }
         impl->newGraph("oga_session_active", {}, true);
 
         CV_LOG_INFO(NULL, "DNN/ONNX: Successfully initialized OGA model for " << modelDir);

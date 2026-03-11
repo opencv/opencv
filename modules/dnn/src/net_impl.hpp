@@ -36,9 +36,9 @@ namespace Ort {
 #endif
 
 #ifdef HAVE_ONNXRUNTIME_GENAI
-// Forward declarations — avoids including ort_genai.h in the header.
 struct OgaModel;
 struct OgaTokenizer;
+struct OgaMultiModalProcessor;
 #endif
 
 namespace cv {
@@ -274,6 +274,15 @@ struct Net::Impl : public detail::NetImplBase
 #ifdef HAVE_ONNXRUNTIME_GENAI
     std::shared_ptr<OgaModel> oga_model;
     std::shared_ptr<OgaTokenizer> oga_tokenizer;
+    std::shared_ptr<OgaMultiModalProcessor> oga_processor;
+    bool oga_is_multimodal = false;
+    Mat oga_image_mat;
+    std::string oga_raw_prompt;
+    std::map<std::string, double> oga_search_options_number;
+    std::map<std::string, bool>   oga_search_options_bool;
+    std::string oga_guidance_type;
+    std::string oga_guidance_data;
+    bool        oga_guidance_ff_tokens = false;
 #endif
 
     void allocateLayer(int lid, const LayersShapesMap& layersShapes);
@@ -432,6 +441,14 @@ struct Net::Impl : public detail::NetImplBase
     // @returns           single 1-D CV_32S Mat containing all generated token IDs
     //                   (including the prompt tokens).
     std::vector<Mat> runOgaSession(const std::vector<Mat>& inputBlobs);
+    void setPrompt(const String& prompt);
+    void setSearchOption(const String& name, double value);
+    void setSearchOptionBool(const String& name, bool value);
+    void setGuidance(const String& type, const String& data, bool enableFfTokens);
+    String applyChatTemplate(const String& messages, const String& templateStr,
+                              const String& tools, bool addGenerationPrompt) const;
+    String getModelType() const;
+    String getDeviceType() const;
 #endif
     Mat tokenize(const String& text) const;
     String detokenize(InputArray tokenIds) const;

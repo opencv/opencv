@@ -14,6 +14,21 @@
 
 #ifdef HAVE_ONNXRUNTIME_GENAI
 #include <ort_genai.h>
+#ifdef HAVE_OPENCV_IMGCODECS
+#include <opencv2/imgcodecs.hpp>
+#endif
+
+#define OGA_CHECK(call) \
+    do \
+    { \
+        OgaResult* _r = (call); \
+        if (_r != nullptr) \
+        { \
+            std::string _msg(OgaResultGetError(_r)); \
+            OgaDestroyResult(_r); \
+            CV_Error(cv::Error::StsError, "ORT-GenAI: " + _msg); \
+        } \
+    } while (0)
 #endif
 
 namespace cv {
@@ -265,16 +280,72 @@ std::vector<Mat> Net::Impl::runOrtSession(std::vector<Mat> inputBlobs, const std
 std::vector<Mat> Net::Impl::runOgaSession(const std::vector<Mat>& inputBlobs)
 {
     CV_Assert(this->oga_model);
-    CV_Assert(!inputBlobs.empty());
 
+    if (oga_is_multimodal && !oga_image_mat.empty() && !oga_raw_prompt.empty())
+    {
+        std::vector<uchar> buf;
+#ifndef HAVE_OPENCV_IMGCODECS
+        CV_Error(Error::StsNotImplemented,
+                 "DNN/OGA: VLM image input requires OpenCV built with imgcodecs support.");
+#endif
+        Mat rgb;
+        cv::cvtColor(oga_image_mat, rgb, cv::COLOR_BGR2RGB);
+        cv::imencode(".png", rgb, buf);
+        const void* ptr = buf.data();
+        size_t sz       = buf.size();
+
+        auto imgs    = OgaImages::Load(&ptr, &sz, 1);
+        auto tensors = oga_processor->ProcessImages(oga_raw_prompt.c_str(), imgs.get());
+
+        auto params = OgaGeneratorParams::Create(*oga_model);
+        for (const auto& opt : oga_search_options_number)
+            params->SetSearchOption(opt.first.c_str(), opt.second);
+        for (const auto& opt : oga_search_options_bool)
+            params->SetSearchOptionBool(opt.first.c_str(), opt.second);
+        if (!oga_guidance_type.empty())
+            params->SetGuidance(oga_guidance_type.c_str(), oga_guidance_data.c_str(), oga_guidance_ff_tokens);
+
+        auto gen = OgaGenerator::Create(*oga_model, *params);
+        gen->SetInputs(*tensors);
+
+        OgaTensor* input_ids_tensor = nullptr;
+        OGA_CHECK(OgaGenerator_GetInput(gen.get(), "input_ids", &input_ids_tensor));
+        size_t shape_rank = 0;
+        OGA_CHECK(OgaTensorGetShapeRank(input_ids_tensor, &shape_rank));
+        std::vector<int64_t> shape(shape_rank);
+        OGA_CHECK(OgaTensorGetShape(input_ids_tensor, shape.data(), shape_rank));
+        const size_t promptLen = (size_t)shape[shape_rank - 1];
+        OgaDestroyTensor(input_ids_tensor);
+
+        while (!gen->IsDone())
+            gen->GenerateNextToken();
+
+        const size_t fullLen   = gen->GetSequenceCount(0);
+        const int32_t* fullPtr = gen->GetSequenceData(0);
+        const size_t newLen    = fullLen > promptLen ? fullLen - promptLen : 0;
+        Mat output(1, (int)newLen, CV_32S);
+        std::memcpy(output.data, fullPtr + promptLen, newLen * sizeof(int32_t));
+        oga_image_mat.release();
+        oga_raw_prompt.clear();
+        return {output};
+    }
+
+    CV_Assert(!inputBlobs.empty());
     const Mat& tokenIds = inputBlobs[0];
     CV_CheckTypeEQ(tokenIds.type(), CV_32S, "DNN/OGA: input token IDs must be CV_32S (int32)");
     CV_Assert(tokenIds.isContinuous());
 
+    const size_t promptLen = (size_t)tokenIds.total();
     auto sequences = OgaSequences::Create();
-    sequences->Append(tokenIds.ptr<int32_t>(), static_cast<size_t>(tokenIds.total()));
+    sequences->Append(tokenIds.ptr<int32_t>(), promptLen);
 
     auto params = OgaGeneratorParams::Create(*this->oga_model);
+    for (const auto& opt : oga_search_options_number)
+        params->SetSearchOption(opt.first.c_str(), opt.second);
+    for (const auto& opt : oga_search_options_bool)
+        params->SetSearchOptionBool(opt.first.c_str(), opt.second);
+    if (!oga_guidance_type.empty())
+        params->SetGuidance(oga_guidance_type.c_str(), oga_guidance_data.c_str(), oga_guidance_ff_tokens);
 
     auto generator = OgaGenerator::Create(*this->oga_model, *params);
     generator->AppendTokenSequences(*sequences);
@@ -282,13 +353,59 @@ std::vector<Mat> Net::Impl::runOgaSession(const std::vector<Mat>& inputBlobs)
     while (!generator->IsDone())
         generator->GenerateNextToken();
 
-    const size_t seqLen   = generator->GetSequenceCount(0);
-    const int32_t* seqPtr = generator->GetSequenceData(0);
-
-    Mat output(1, static_cast<int>(seqLen), CV_32S);
-    std::memcpy(output.data, seqPtr, seqLen * sizeof(int32_t));
-
+    const size_t fullLen   = generator->GetSequenceCount(0);
+    const int32_t* fullPtr = generator->GetSequenceData(0);
+    const size_t newLen    = fullLen > promptLen ? fullLen - promptLen : 0;
+    Mat output(1, static_cast<int>(newLen), CV_32S);
+    std::memcpy(output.data, fullPtr + promptLen, newLen * sizeof(int32_t));
     return {output};
+}
+
+void Net::Impl::setPrompt(const String& prompt)
+{
+    CV_Assert(oga_is_multimodal);
+    oga_raw_prompt = prompt;
+}
+
+void Net::Impl::setSearchOption(const String& name, double value)
+{
+    oga_search_options_number[std::string(name)] = value;
+}
+
+void Net::Impl::setSearchOptionBool(const String& name, bool value)
+{
+    oga_search_options_bool[std::string(name)] = value;
+}
+
+void Net::Impl::setGuidance(const String& type, const String& data, bool enableFfTokens)
+{
+    oga_guidance_type      = std::string(type);
+    oga_guidance_data      = std::string(data);
+    oga_guidance_ff_tokens = enableFfTokens;
+}
+
+String Net::Impl::applyChatTemplate(const String& messages, const String& templateStr,
+                                     const String& tools, bool addGenerationPrompt) const
+{
+    CV_Assert(oga_tokenizer);
+    const char* tmpl = templateStr.empty() ? nullptr : templateStr.c_str();
+    const char* tls  = tools.empty()       ? nullptr : tools.c_str();
+    OgaString result = oga_tokenizer->ApplyChatTemplate(tmpl, messages.c_str(), tls, addGenerationPrompt);
+    return String(result.p_);
+}
+
+String Net::Impl::getModelType() const
+{
+    CV_Assert(oga_model);
+    OgaString t = oga_model->GetType();
+    return String(t.p_);
+}
+
+String Net::Impl::getDeviceType() const
+{
+    CV_Assert(oga_model);
+    OgaString t = oga_model->GetDeviceType();
+    return String(t.p_);
 }
 #endif
 
@@ -312,10 +429,32 @@ Mat Net::Impl::tokenize(const String& text) const
 String Net::Impl::detokenize(InputArray tokenIds) const
 {
 #ifdef HAVE_ONNXRUNTIME_GENAI
-    CV_Assert(oga_tokenizer);
     Mat m = tokenIds.getMat();
-    auto text = oga_tokenizer->Decode(m.ptr<int32_t>(), (size_t)m.total());
-    return String(text);
+    const int32_t* ptr = m.ptr<int32_t>();
+    size_t count = (size_t)m.total();
+
+    if (oga_is_multimodal && oga_processor)
+    {
+        const char* out_str = nullptr;
+        OGA_CHECK(OgaProcessorDecode(oga_processor.get(), ptr, count, &out_str));
+        String result(out_str ? out_str : "");
+        OgaDestroyString(out_str);
+        return result;
+    }
+
+    CV_Assert(oga_tokenizer);
+    OgaTokenizerStream* stream_ptr = nullptr;
+    OGA_CHECK(OgaCreateTokenizerStream(oga_tokenizer.get(), &stream_ptr));
+    std::string result;
+    for (size_t i = 0; i < count; ++i)
+    {
+        const char* chunk = nullptr;
+        OGA_CHECK(OgaTokenizerStreamDecode(stream_ptr, ptr[i], &chunk));
+        if (chunk)
+            result += chunk;
+    }
+    OgaDestroyTokenizerStream(stream_ptr);
+    return String(result);
 #else
     CV_UNUSED(tokenIds);
     CV_Error(Error::StsNotImplemented, "OpenCV was built without ONNX Runtime GenAI");
@@ -695,10 +834,14 @@ void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays 
 #ifdef HAVE_ONNXRUNTIME_GENAI
     if (this->oga_model)
     {
-        if (!netInputLayer || netInputLayer->blobs.empty())
+        bool has_blobs = netInputLayer && !netInputLayer->blobs.empty();
+        bool has_vlm = oga_is_multimodal && !oga_image_mat.empty() && !oga_raw_prompt.empty();
+
+        if (!has_blobs && !has_vlm)
             CV_Error(Error::StsError, "DNN/OGA: No input data found. Call net.setInput() before forward().");
 
-        std::vector<Mat> ogaOuts = runOgaSession(netInputLayer->blobs);
+        std::vector<Mat> empty_blobs;
+        std::vector<Mat> ogaOuts = runOgaSession(has_blobs ? netInputLayer->blobs : empty_blobs);
 
         _InputArray::KindFlag outKind = outputs.kind();
         if (outKind == _InputArray::STD_VECTOR_MAT)
@@ -787,11 +930,14 @@ void Net::Impl::forwardWithSingleOutput(const std::string& outname, OutputArrayO
 #ifdef HAVE_ONNXRUNTIME_GENAI
     if (this->oga_model)
     {
-        if (!netInputLayer || netInputLayer->blobs.empty())
+        bool has_blobs = netInputLayer && !netInputLayer->blobs.empty();
+        bool has_vlm = oga_is_multimodal && !oga_image_mat.empty() && !oga_raw_prompt.empty();
+
+        if (!has_blobs && !has_vlm)
             CV_Error(Error::StsError, "DNN/OGA: No input data found");
 
-        std::vector<Mat> outs = runOgaSession(netInputLayer->blobs);
-        CV_Assert(outs.size() == 1);
+        std::vector<Mat> empty_blobs;
+        std::vector<Mat> outs = runOgaSession(has_blobs ? netInputLayer->blobs : empty_blobs);
         return outs[0];
     }
 #endif
@@ -883,10 +1029,14 @@ void Net::Impl::forwardWithMultipleOutputs(OutputArrayOfArrays outblobs, const s
 #ifdef HAVE_ONNXRUNTIME_GENAI
     if (this->oga_model)
     {
-        if (!netInputLayer || netInputLayer->blobs.empty())
+        bool has_blobs = netInputLayer && !netInputLayer->blobs.empty();
+        bool has_vlm = oga_is_multimodal && !oga_image_mat.empty() && !oga_raw_prompt.empty();
+
+        if (!has_blobs && !has_vlm)
             CV_Error(Error::StsError, "DNN/OGA: No input data found");
 
-        std::vector<Mat> outs = runOgaSession(netInputLayer->blobs);
+        std::vector<Mat> empty_blobs;
+        std::vector<Mat> outs = runOgaSession(has_blobs ? netInputLayer->blobs : empty_blobs);
         CV_Assert(outs.size() == 1);
 
         _InputArray::KindFlag outKind = outblobs.kind();
@@ -1095,6 +1245,12 @@ void Net::Impl::setMainGraphInput(InputArray m, const std::string& inpname)
             netInputLayer = Ptr<DataLayer>(new DataLayer());
             netInputLayer->name = "oga_data_layer";
             netInputLayer->type = "Data";
+        }
+
+        if (inpname == "image" && oga_is_multimodal)
+        {
+            oga_image_mat = m.getMat().clone();
+            return;
         }
 
         Mat inputMat = m.getMat();
