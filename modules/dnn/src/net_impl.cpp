@@ -2408,7 +2408,15 @@ int64 Net::Impl::getFLOPSGraph(const Ptr<Graph>& graph,
                 outShapes[i] = shapeCache[out.idx];
         }
 
-        flops += layer->getFLOPS(inpShapes, outShapes);
+        // Skip FLOPS calculation if any shape is empty (unknown due to dynamic shapes)
+        bool hasEmptyShape = false;
+        for (int i = 0; i < ninputs && !hasEmptyShape; i++)
+            hasEmptyShape = inpShapes[i].empty();
+        for (int i = 0; i < noutputs && !hasEmptyShape; i++)
+            hasEmptyShape = outShapes[i].empty();
+
+        if (!hasEmptyShape)
+            flops += layer->getFLOPS(inpShapes, outShapes);
 
         const std::vector<Ptr<Graph>>* subgraphs = layer->subgraphs();
         if (subgraphs) {
