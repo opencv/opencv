@@ -380,6 +380,140 @@ TEST(Test_GetFLOPS, GemmLayer)
     EXPECT_EQ(flops, expected);
 }
 
+TEST(Test_GetFLOPS, AttentionLayer)
+{
+    LayerParams lp;
+    lp.type = "Attention";
+    lp.name = "attention";
+
+    int num_heads = 4;
+    int D = 32;  // input hidden size
+    int hidden = 48;  // total projected size (q + k + v)
+    // qkv_hidden_sizes: q=16, k=16, v=16
+    int qkv_sizes[] = {16, 16, 16};
+    lp.set("num_heads", num_heads);
+    lp.set("qkv_hidden_sizes", DictValue::arrayInt(qkv_sizes, 3));
+
+    // Weight blob: [D, hidden] = [32, 48]
+    Mat weight(D, hidden, CV_32F);
+    randu(weight, -1, 1);
+    lp.blobs.push_back(weight);
+    // Bias blob: [1, hidden]
+    Mat bias(1, hidden, CV_32F, Scalar(0));
+    lp.blobs.push_back(bias);
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("Attention", lp);
+    ASSERT_TRUE(layer);
+
+    int64 B = 2, S = 8;
+    int64 q_size = 16, k_size = 16;
+    int64 v_size = hidden - q_size - k_size;  // 16
+    int64 q_head = q_size / num_heads;  // 4
+    int64 v_head = v_size / num_heads;  // 4
+
+    std::vector<MatShape> inputs = {MatShape{(int)B, (int)S, D}};
+    std::vector<MatShape> outputs = {MatShape{(int)B, (int)S, (int)(v_head * num_heads)}};
+
+    int64 flops = layer->getFLOPS(inputs, outputs);
+
+    // Input projection: B * S * 2 * D * hidden
+    int64 expected = B * S * (CV_BIG_INT(2) * D * hidden);
+    // QK^T: B * num_heads * 2 * S * S * q_head
+    expected += B * num_heads * CV_BIG_INT(2) * S * S * q_head;
+    // Softmax: B * num_heads * 4 * S * S
+    expected += B * num_heads * 4 * S * S;
+    // Attention * V: B * num_heads * 2 * S * v_head * S
+    expected += B * num_heads * CV_BIG_INT(2) * S * v_head * S;
+
+    EXPECT_EQ(flops, expected);
+}
+
+TEST(Test_GetFLOPS, AttentionOnnxAiLayer)
+{
+    // Test AttentionOnnxAi (multi-head attention with separate Q, K, V inputs)
+    LayerParams lp;
+    lp.type = "AttentionOnnxAi";
+    lp.name = "attn_onnxai";
+
+    int nhq = 4, nhkv = 4;
+    lp.set("q_num_heads", nhq);
+    lp.set("kv_num_heads", nhkv);
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("AttentionOnnxAi", lp);
+    ASSERT_TRUE(layer);
+
+    int64 B = 2, Sq = 8, Skv = 8;
+    int qk_head = 16, v_head = 16;
+
+    // 4D inputs: [B, num_heads, seq_len, head_dim]
+    std::vector<MatShape> inputs = {
+        MatShape{(int)B, nhq, (int)Sq, qk_head},   // Q
+        MatShape{(int)B, nhkv, (int)Skv, qk_head},  // K
+        MatShape{(int)B, nhkv, (int)Skv, v_head}    // V
+    };
+    std::vector<MatShape> outputs = {MatShape{(int)B, nhq, (int)Sq, v_head}};
+
+    int64 flops = layer->getFLOPS(inputs, outputs);
+
+    // QK^T: B * nhq * 2 * Sq * Skv * qk_head
+    int64 expected = B * nhq * CV_BIG_INT(2) * Sq * Skv * qk_head;
+    // Softmax: B * nhq * 4 * Sq * Skv
+    expected += B * nhq * 4 * Sq * Skv;
+    // Attention * V: B * nhq * 2 * Sq * v_head * Skv
+    expected += B * nhq * CV_BIG_INT(2) * Sq * v_head * Skv;
+
+    EXPECT_EQ(flops, expected);
+}
+
+TEST(Test_GetFLOPS, EinsumLayer)
+{
+    // Test Einsum: batch matrix multiply "bij,bjk->bik"
+    LayerParams lp;
+    lp.type = "Einsum";
+    lp.name = "einsum";
+    lp.set("equation", "bij,bjk->bik");
+    lp.set("inputSize", 2);
+    lp.set("outputSize", 1);
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("Einsum", lp);
+    ASSERT_TRUE(layer);
+
+    // A=[2,4,8], B=[2,8,6] => output=[2,4,6]
+    // Indices: b=2, i=4, j=8, k=6
+    std::vector<MatShape> inputs = {MatShape{2, 4, 8}, MatShape{2, 8, 6}};
+    std::vector<MatShape> outputs = {MatShape{2, 4, 6}};
+
+    int64 flops = layer->getFLOPS(inputs, outputs);
+
+    // totalProduct = product of all subscript dims = 2 * 4 * 8 * 6 = 384
+    // flops = 2 * totalProduct = 768
+    int64 expected = CV_BIG_INT(2) * 2 * 4 * 8 * 6;
+    EXPECT_EQ(flops, expected);
+}
+
+TEST(Test_GetFLOPS, EinsumLayerTranspose)
+{
+    // Test Einsum: transpose "ij->ji"
+    LayerParams lp;
+    lp.type = "Einsum";
+    lp.name = "einsum_transpose";
+    lp.set("equation", "ij->ji");
+    lp.set("inputSize", 1);
+    lp.set("outputSize", 1);
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("Einsum", lp);
+    ASSERT_TRUE(layer);
+
+    std::vector<MatShape> inputs = {MatShape{3, 5}};
+    std::vector<MatShape> outputs = {MatShape{5, 3}};
+
+    int64 flops = layer->getFLOPS(inputs, outputs);
+
+    // Indices: i=3, j=5, totalProduct = 15, flops = 2 * 15 = 30
+    int64 expected = CV_BIG_INT(2) * 3 * 5;
+    EXPECT_EQ(flops, expected);
+}
+
 TEST(Test_GetFLOPS, ZeroFlopsLayers)
 {
     // Layers that should return 0 FLOPS (data movement only)
