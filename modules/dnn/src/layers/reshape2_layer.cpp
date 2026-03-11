@@ -52,21 +52,21 @@ public:
             int i, ndims = shapeParam.size();
             newShapeDesc.resize(ndims);
             for (i = 0; i < ndims; i++) {
-                int sz = shapeParam.get<int>(i);
-                if (sz <= 0)
-                    dynamicShapeSpec = true;
-                newShapeDesc[i] = sz;
+                newShapeDesc[i] = shapeParam.get<int>(i);
             }
         }
     }
 
     virtual bool dynamicOutputShapes() const CV_OVERRIDE
     {
-        // [TODO] fix. If the 'shape' spec is attribute,
-        // or if shape is a constant 2nd input of the layer,
-        // then the output shape can be inferred from the input tensor shape.
-        // That is, dynamicShapeSpec is not quite incorrect.
-        return dynamicShapeSpec;
+        if (!dynamicShapeSpec)
+            return false;
+        // When the shape comes from a 2nd input, check if it's a constant tensor.
+        // If so, the output shape can still be inferred.
+        Net::Impl* netimpl_ = getNetImpl(this);
+        if (netimpl_ && this->inputs.size() == 2)
+            return !netimpl_->isConstArg(this->inputs[1]);
+        return true;
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
