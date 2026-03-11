@@ -1,0 +1,1466 @@
+[
+    {
+        "name": "AKAZE.create",
+        "ret": "AKAZE"
+    },
+    {
+        "name": "AKAZE_create",
+        "ret": "AKAZE"
+    },
+    {
+        "name": "AffineFeature.create",
+        "ret": "AffineFeature"
+    },
+    {
+        "name": "AffineFeature_create",
+        "ret": "AffineFeature"
+    },
+    {
+        "name": "AgastFeatureDetector.create",
+        "ret": "AgastFeatureDetector"
+    },
+    {
+        "name": "AgastFeatureDetector_create",
+        "ret": "AgastFeatureDetector"
+    },
+    {
+        "name": "BFMatcher.create",
+        "ret": "BFMatcher"
+    },
+    {
+        "name": "BFMatcher_create",
+        "ret": "BFMatcher"
+    },
+    {
+        "name": "BRISK.create",
+        "ret": "BRISK"
+    },
+    {
+        "name": "BRISK_create",
+        "ret": "BRISK"
+    },
+    {
+        "name": "DISOpticalFlow.create",
+        "ret": "DISOpticalFlow"
+    },
+    {
+        "name": "DISOpticalFlow_create",
+        "ret": "DISOpticalFlow"
+    },
+    {
+        "name": "DescriptorMatcher.create",
+        "ret": "DescriptorMatcher"
+    },
+    {
+        "name": "DescriptorMatcher_create",
+        "ret": "DescriptorMatcher"
+    },
+    {
+        "name": "FaceDetectorYN.create",
+        "ret": "FaceDetectorYN"
+    },
+    {
+        "name": "FaceDetectorYN_create",
+        "ret": "FaceDetectorYN"
+    },
+    {
+        "name": "FaceRecognizerSF.create",
+        "ret": "FaceRecognizerSF"
+    },
+    {
+        "name": "FaceRecognizerSF_create",
+        "ret": "FaceRecognizerSF"
+    },
+    {
+        "name": "FarnebackOpticalFlow.create",
+        "ret": "FarnebackOpticalFlow"
+    },
+    {
+        "name": "FarnebackOpticalFlow_create",
+        "ret": "FarnebackOpticalFlow"
+    },
+    {
+        "name": "FastFeatureDetector.create",
+        "ret": "FastFeatureDetector"
+    },
+    {
+        "name": "FastFeatureDetector_create",
+        "ret": "FastFeatureDetector"
+    },
+    {
+        "name": "FlannBasedMatcher.create",
+        "ret": "FlannBasedMatcher"
+    },
+    {
+        "name": "FlannBasedMatcher_create",
+        "ret": "FlannBasedMatcher"
+    },
+    {
+        "name": "GFTTDetector.create",
+        "ret": "GFTTDetector"
+    },
+    {
+        "name": "GFTTDetector_create",
+        "ret": "GFTTDetector"
+    },
+    {
+        "name": "KAZE.create",
+        "ret": "KAZE"
+    },
+    {
+        "name": "KAZE_create",
+        "ret": "KAZE"
+    },
+    {
+        "name": "MSER.create",
+        "ret": "MSER"
+    },
+    {
+        "name": "MSER_create",
+        "ret": "MSER"
+    },
+    {
+        "name": "ORB.create",
+        "ret": "ORB"
+    },
+    {
+        "name": "ORB_create",
+        "ret": "ORB"
+    },
+    {
+        "name": "QRCodeEncoder.create",
+        "ret": "QRCodeEncoder"
+    },
+    {
+        "name": "QRCodeEncoder_create",
+        "ret": "QRCodeEncoder"
+    },
+    {
+        "name": "SIFT.create",
+        "ret": "SIFT"
+    },
+    {
+        "name": "SIFT_create",
+        "ret": "SIFT"
+    },
+    {
+        "name": "SimpleBlobDetector.create",
+        "ret": "SimpleBlobDetector"
+    },
+    {
+        "name": "SimpleBlobDetector_create",
+        "ret": "SimpleBlobDetector"
+    },
+    {
+        "name": "SparsePyrLKOpticalFlow.create",
+        "ret": "SparsePyrLKOpticalFlow"
+    },
+    {
+        "name": "SparsePyrLKOpticalFlow_create",
+        "ret": "SparsePyrLKOpticalFlow"
+    },
+    {
+        "name": "StereoBM.create",
+        "ret": "StereoBM"
+    },
+    {
+        "name": "StereoBM_create",
+        "ret": "StereoBM"
+    },
+    {
+        "name": "StereoSGBM.create",
+        "ret": "StereoSGBM"
+    },
+    {
+        "name": "StereoSGBM_create",
+        "ret": "StereoSGBM"
+    },
+    {
+        "name": "Stitcher.create",
+        "ret": "Stitcher"
+    },
+    {
+        "name": "Stitcher_create",
+        "ret": "Stitcher"
+    },
+    {
+        "name": "TrackerCSRT.create",
+        "ret": "TrackerCSRT"
+    },
+    {
+        "name": "TrackerCSRT_create",
+        "ret": "TrackerCSRT"
+    },
+    {
+        "name": "TrackerDaSiamRPN.create",
+        "ret": "TrackerDaSiamRPN"
+    },
+    {
+        "name": "TrackerDaSiamRPN_create",
+        "ret": "TrackerDaSiamRPN"
+    },
+    {
+        "name": "TrackerGOTURN.create",
+        "ret": "TrackerGOTURN"
+    },
+    {
+        "name": "TrackerGOTURN_create",
+        "ret": "TrackerGOTURN"
+    },
+    {
+        "name": "TrackerKCF.create",
+        "ret": "TrackerKCF"
+    },
+    {
+        "name": "TrackerKCF_create",
+        "ret": "TrackerKCF"
+    },
+    {
+        "name": "TrackerMIL.create",
+        "ret": "TrackerMIL"
+    },
+    {
+        "name": "TrackerMIL_create",
+        "ret": "TrackerMIL"
+    },
+    {
+        "name": "TrackerNano.create",
+        "ret": "TrackerNano"
+    },
+    {
+        "name": "TrackerNano_create",
+        "ret": "TrackerNano"
+    },
+    {
+        "name": "TrackerVit.create",
+        "ret": "TrackerVit"
+    },
+    {
+        "name": "TrackerVit_create",
+        "ret": "TrackerVit"
+    },
+    {
+        "name": "VariationalRefinement.create",
+        "ret": "VariationalRefinement"
+    },
+    {
+        "name": "VariationalRefinement_create",
+        "ret": "VariationalRefinement"
+    },
+    {
+        "name": "bioinspired.Retina.create",
+        "ret": "Retina"
+    },
+    {
+        "name": "bioinspired.Retina_create",
+        "ret": "Retina"
+    },
+    {
+        "name": "bioinspired.RetinaFastToneMapping.create",
+        "ret": "RetinaFastToneMapping"
+    },
+    {
+        "name": "bioinspired.RetinaFastToneMapping_create",
+        "ret": "RetinaFastToneMapping"
+    },
+    {
+        "name": "bioinspired.TransientAreasSegmentationModule.create",
+        "ret": "TransientAreasSegmentationModule"
+    },
+    {
+        "name": "bioinspired.TransientAreasSegmentationModule_create",
+        "ret": "TransientAreasSegmentationModule"
+    },
+    {
+        "name": "colored_kinfu.ColoredKinFu.create",
+        "ret": "ColoredKinFu"
+    },
+    {
+        "name": "colored_kinfu.ColoredKinFu_create",
+        "ret": "ColoredKinFu"
+    },
+    {
+        "name": "cuda.GpuMat.create",
+        "ret": "None"
+    },
+    {
+        "name": "cuda.HostMem.create",
+        "ret": "None"
+    },
+    {
+        "name": "cuda.HostMem.createMatHeader",
+        "ret": "Mat"
+    },
+    {
+        "name": "cuda.SURF_CUDA.create",
+        "ret": "SURF_CUDA"
+    },
+    {
+        "name": "cuda.SURF_CUDA_create",
+        "ret": "SURF_CUDA"
+    },
+    {
+        "name": "detail.BestOf2NearestMatcher.create",
+        "ret": "BestOf2NearestMatcher"
+    },
+    {
+        "name": "detail.BestOf2NearestMatcher_create",
+        "ret": "BestOf2NearestMatcher"
+    },
+    {
+        "name": "detail.Blender.createDefault",
+        "ret": "Blender"
+    },
+    {
+        "name": "detail.Blender_createDefault",
+        "ret": "Blender"
+    },
+    {
+        "name": "detail.ExposureCompensator.createDefault",
+        "ret": "ExposureCompensator"
+    },
+    {
+        "name": "detail.ExposureCompensator_createDefault",
+        "ret": "ExposureCompensator"
+    },
+    {
+        "name": "detail.SeamFinder.createDefault",
+        "ret": "SeamFinder"
+    },
+    {
+        "name": "detail.SeamFinder_createDefault",
+        "ret": "SeamFinder"
+    },
+    {
+        "name": "detail.Timelapser.createDefault",
+        "ret": "Timelapser"
+    },
+    {
+        "name": "detail.Timelapser_createDefault",
+        "ret": "Timelapser"
+    },
+    {
+        "name": "dnn_superres.DnnSuperResImpl.create",
+        "ret": "DnnSuperResImpl"
+    },
+    {
+        "name": "dnn_superres.DnnSuperResImpl_create",
+        "ret": "DnnSuperResImpl"
+    },
+    {
+        "name": "dynafu.DynaFu.create",
+        "ret": "DynaFu"
+    },
+    {
+        "name": "dynafu.DynaFu_create",
+        "ret": "DynaFu"
+    },
+    {
+        "name": "face.BIF.create",
+        "ret": "BIF"
+    },
+    {
+        "name": "face.BIF_create",
+        "ret": "BIF"
+    },
+    {
+        "name": "face.EigenFaceRecognizer.create",
+        "ret": "EigenFaceRecognizer"
+    },
+    {
+        "name": "face.EigenFaceRecognizer_create",
+        "ret": "EigenFaceRecognizer"
+    },
+    {
+        "name": "face.FisherFaceRecognizer.create",
+        "ret": "FisherFaceRecognizer"
+    },
+    {
+        "name": "face.FisherFaceRecognizer_create",
+        "ret": "FisherFaceRecognizer"
+    },
+    {
+        "name": "face.LBPHFaceRecognizer.create",
+        "ret": "LBPHFaceRecognizer"
+    },
+    {
+        "name": "face.LBPHFaceRecognizer_create",
+        "ret": "LBPHFaceRecognizer"
+    },
+    {
+        "name": "face.MACE.create",
+        "ret": "MACE"
+    },
+    {
+        "name": "face.MACE_create",
+        "ret": "MACE"
+    },
+    {
+        "name": "face.StandardCollector.create",
+        "ret": "StandardCollector"
+    },
+    {
+        "name": "face.StandardCollector_create",
+        "ret": "StandardCollector"
+    },
+    {
+        "name": "hfs.HfsSegment.create",
+        "ret": "HfsSegment"
+    },
+    {
+        "name": "hfs.HfsSegment_create",
+        "ret": "HfsSegment"
+    },
+    {
+        "name": "img_hash.AverageHash.create",
+        "ret": "AverageHash"
+    },
+    {
+        "name": "img_hash.AverageHash_create",
+        "ret": "AverageHash"
+    },
+    {
+        "name": "img_hash.BlockMeanHash.create",
+        "ret": "BlockMeanHash"
+    },
+    {
+        "name": "img_hash.BlockMeanHash_create",
+        "ret": "BlockMeanHash"
+    },
+    {
+        "name": "img_hash.ColorMomentHash.create",
+        "ret": "ColorMomentHash"
+    },
+    {
+        "name": "img_hash.ColorMomentHash_create",
+        "ret": "ColorMomentHash"
+    },
+    {
+        "name": "img_hash.MarrHildrethHash.create",
+        "ret": "MarrHildrethHash"
+    },
+    {
+        "name": "img_hash.MarrHildrethHash_create",
+        "ret": "MarrHildrethHash"
+    },
+    {
+        "name": "img_hash.PHash.create",
+        "ret": "PHash"
+    },
+    {
+        "name": "img_hash.PHash_create",
+        "ret": "PHash"
+    },
+    {
+        "name": "img_hash.RadialVarianceHash.create",
+        "ret": "RadialVarianceHash"
+    },
+    {
+        "name": "img_hash.RadialVarianceHash_create",
+        "ret": "RadialVarianceHash"
+    },
+    {
+        "name": "kinfu.KinFu.create",
+        "ret": "KinFu"
+    },
+    {
+        "name": "kinfu.KinFu_create",
+        "ret": "KinFu"
+    },
+    {
+        "name": "large_kinfu.LargeKinfu.create",
+        "ret": "LargeKinfu"
+    },
+    {
+        "name": "large_kinfu.LargeKinfu_create",
+        "ret": "LargeKinfu"
+    },
+    {
+        "name": "legacy.MultiTracker.create",
+        "ret": "MultiTracker"
+    },
+    {
+        "name": "legacy.MultiTracker_create",
+        "ret": "MultiTracker"
+    },
+    {
+        "name": "legacy.TrackerBoosting.create",
+        "ret": "TrackerBoosting"
+    },
+    {
+        "name": "legacy.TrackerBoosting_create",
+        "ret": "TrackerBoosting"
+    },
+    {
+        "name": "legacy.TrackerCSRT.create",
+        "ret": "TrackerCSRT"
+    },
+    {
+        "name": "legacy.TrackerCSRT_create",
+        "ret": "TrackerCSRT"
+    },
+    {
+        "name": "legacy.TrackerKCF.create",
+        "ret": "TrackerKCF"
+    },
+    {
+        "name": "legacy.TrackerKCF_create",
+        "ret": "TrackerKCF"
+    },
+    {
+        "name": "legacy.TrackerMIL.create",
+        "ret": "TrackerMIL"
+    },
+    {
+        "name": "legacy.TrackerMIL_create",
+        "ret": "TrackerMIL"
+    },
+    {
+        "name": "legacy.TrackerMOSSE.create",
+        "ret": "TrackerMOSSE"
+    },
+    {
+        "name": "legacy.TrackerMOSSE_create",
+        "ret": "TrackerMOSSE"
+    },
+    {
+        "name": "legacy.TrackerMedianFlow.create",
+        "ret": "TrackerMedianFlow"
+    },
+    {
+        "name": "legacy.TrackerMedianFlow_create",
+        "ret": "TrackerMedianFlow"
+    },
+    {
+        "name": "legacy.TrackerTLD.create",
+        "ret": "TrackerTLD"
+    },
+    {
+        "name": "legacy.TrackerTLD_create",
+        "ret": "TrackerTLD"
+    },
+    {
+        "name": "line_descriptor.BinaryDescriptor.createBinaryDescriptor",
+        "ret": "BinaryDescriptor"
+    },
+    {
+        "name": "line_descriptor.BinaryDescriptor_createBinaryDescriptor",
+        "ret": "BinaryDescriptor"
+    },
+    {
+        "name": "line_descriptor.LSDDetector.createLSDDetector",
+        "ret": "LSDDetector"
+    },
+    {
+        "name": "line_descriptor.LSDDetector.createLSDDetectorWithParams",
+        "ret": "LSDDetector"
+    },
+    {
+        "name": "line_descriptor.LSDDetector_createLSDDetector",
+        "ret": "LSDDetector"
+    },
+    {
+        "name": "line_descriptor.LSDDetector_createLSDDetectorWithParams",
+        "ret": "LSDDetector"
+    },
+    {
+        "name": "linemod.ColorGradient.create",
+        "ret": "ColorGradient"
+    },
+    {
+        "name": "linemod.ColorGradient_create",
+        "ret": "ColorGradient"
+    },
+    {
+        "name": "linemod.DepthNormal.create",
+        "ret": "DepthNormal"
+    },
+    {
+        "name": "linemod.DepthNormal_create",
+        "ret": "DepthNormal"
+    },
+    {
+        "name": "linemod.Modality.create",
+        "ret": "Modality"
+    },
+    {
+        "name": "linemod.Modality_create",
+        "ret": "Modality"
+    },
+    {
+        "name": "mcc.CChecker.create",
+        "ret": "CChecker"
+    },
+    {
+        "name": "mcc.CChecker_create",
+        "ret": "CChecker"
+    },
+    {
+        "name": "mcc.CCheckerDetector.create",
+        "ret": "CCheckerDetector"
+    },
+    {
+        "name": "mcc.CCheckerDetector_create",
+        "ret": "CCheckerDetector"
+    },
+    {
+        "name": "mcc.CCheckerDraw.create",
+        "ret": "CCheckerDraw"
+    },
+    {
+        "name": "mcc.CCheckerDraw_create",
+        "ret": "CCheckerDraw"
+    },
+    {
+        "name": "mcc.DetectorParameters.create",
+        "ret": "DetectorParameters"
+    },
+    {
+        "name": "mcc.DetectorParameters_create",
+        "ret": "DetectorParameters"
+    },
+    {
+        "name": "ml.ANN_MLP.create",
+        "ret": "ANN_MLP"
+    },
+    {
+        "name": "ml.ANN_MLP_create",
+        "ret": "ANN_MLP"
+    },
+    {
+        "name": "ml.Boost.create",
+        "ret": "Boost"
+    },
+    {
+        "name": "ml.Boost_create",
+        "ret": "Boost"
+    },
+    {
+        "name": "ml.DTrees.create",
+        "ret": "DTrees"
+    },
+    {
+        "name": "ml.DTrees_create",
+        "ret": "DTrees"
+    },
+    {
+        "name": "ml.EM.create",
+        "ret": "EM"
+    },
+    {
+        "name": "ml.EM_create",
+        "ret": "EM"
+    },
+    {
+        "name": "ml.KNearest.create",
+        "ret": "KNearest"
+    },
+    {
+        "name": "ml.KNearest_create",
+        "ret": "KNearest"
+    },
+    {
+        "name": "ml.LogisticRegression.create",
+        "ret": "LogisticRegression"
+    },
+    {
+        "name": "ml.LogisticRegression_create",
+        "ret": "LogisticRegression"
+    },
+    {
+        "name": "ml.NormalBayesClassifier.create",
+        "ret": "NormalBayesClassifier"
+    },
+    {
+        "name": "ml.NormalBayesClassifier_create",
+        "ret": "NormalBayesClassifier"
+    },
+    {
+        "name": "ml.ParamGrid.create",
+        "ret": "ParamGrid"
+    },
+    {
+        "name": "ml.ParamGrid_create",
+        "ret": "ParamGrid"
+    },
+    {
+        "name": "ml.RTrees.create",
+        "ret": "RTrees"
+    },
+    {
+        "name": "ml.RTrees_create",
+        "ret": "RTrees"
+    },
+    {
+        "name": "ml.SVM.create",
+        "ret": "SVM"
+    },
+    {
+        "name": "ml.SVM_create",
+        "ret": "SVM"
+    },
+    {
+        "name": "ml.SVMSGD.create",
+        "ret": "SVMSGD"
+    },
+    {
+        "name": "ml.SVMSGD_create",
+        "ret": "SVMSGD"
+    },
+    {
+        "name": "ml.TrainData.create",
+        "ret": "TrainData"
+    },
+    {
+        "name": "ml.TrainData_create",
+        "ret": "TrainData"
+    },
+    {
+        "name": "optflow.DenseRLOFOpticalFlow.create",
+        "ret": "DenseRLOFOpticalFlow"
+    },
+    {
+        "name": "optflow.DenseRLOFOpticalFlow_create",
+        "ret": "DenseRLOFOpticalFlow"
+    },
+    {
+        "name": "optflow.DualTVL1OpticalFlow.create",
+        "ret": "DualTVL1OpticalFlow"
+    },
+    {
+        "name": "optflow.DualTVL1OpticalFlow_create",
+        "ret": "DualTVL1OpticalFlow"
+    },
+    {
+        "name": "optflow.RLOFOpticalFlowParameter.create",
+        "ret": "RLOFOpticalFlowParameter"
+    },
+    {
+        "name": "optflow.RLOFOpticalFlowParameter_create",
+        "ret": "RLOFOpticalFlowParameter"
+    },
+    {
+        "name": "optflow.SparseRLOFOpticalFlow.create",
+        "ret": "SparseRLOFOpticalFlow"
+    },
+    {
+        "name": "optflow.SparseRLOFOpticalFlow_create",
+        "ret": "SparseRLOFOpticalFlow"
+    },
+    {
+        "name": "phase_unwrapping.HistogramPhaseUnwrapping.create",
+        "ret": "HistogramPhaseUnwrapping"
+    },
+    {
+        "name": "phase_unwrapping.HistogramPhaseUnwrapping_create",
+        "ret": "HistogramPhaseUnwrapping"
+    },
+    {
+        "name": "plot.Plot2d.create",
+        "ret": "Plot2d"
+    },
+    {
+        "name": "plot.Plot2d_create",
+        "ret": "Plot2d"
+    },
+    {
+        "name": "quality.QualityBRISQUE.create",
+        "ret": "QualityBRISQUE"
+    },
+    {
+        "name": "quality.QualityBRISQUE_create",
+        "ret": "QualityBRISQUE"
+    },
+    {
+        "name": "quality.QualityGMSD.create",
+        "ret": "QualityGMSD"
+    },
+    {
+        "name": "quality.QualityGMSD_create",
+        "ret": "QualityGMSD"
+    },
+    {
+        "name": "quality.QualityMSE.create",
+        "ret": "QualityMSE"
+    },
+    {
+        "name": "quality.QualityMSE_create",
+        "ret": "QualityMSE"
+    },
+    {
+        "name": "quality.QualityPSNR.create",
+        "ret": "QualityPSNR"
+    },
+    {
+        "name": "quality.QualityPSNR_create",
+        "ret": "QualityPSNR"
+    },
+    {
+        "name": "quality.QualitySSIM.create",
+        "ret": "QualitySSIM"
+    },
+    {
+        "name": "quality.QualitySSIM_create",
+        "ret": "QualitySSIM"
+    },
+    {
+        "name": "rapid.GOSTracker.create",
+        "ret": "OLSTracker"
+    },
+    {
+        "name": "rapid.GOSTracker_create",
+        "ret": "OLSTracker"
+    },
+    {
+        "name": "rapid.OLSTracker.create",
+        "ret": "OLSTracker"
+    },
+    {
+        "name": "rapid.OLSTracker_create",
+        "ret": "OLSTracker"
+    },
+    {
+        "name": "rapid.Rapid.create",
+        "ret": "Rapid"
+    },
+    {
+        "name": "rapid.Rapid_create",
+        "ret": "Rapid"
+    },
+    {
+        "name": "rgbd.DepthCleaner.create",
+        "ret": "DepthCleaner"
+    },
+    {
+        "name": "rgbd.DepthCleaner_create",
+        "ret": "DepthCleaner"
+    },
+    {
+        "name": "rgbd.FastICPOdometry.create",
+        "ret": "FastICPOdometry"
+    },
+    {
+        "name": "rgbd.FastICPOdometry_create",
+        "ret": "FastICPOdometry"
+    },
+    {
+        "name": "rgbd.ICPOdometry.create",
+        "ret": "ICPOdometry"
+    },
+    {
+        "name": "rgbd.ICPOdometry_create",
+        "ret": "ICPOdometry"
+    },
+    {
+        "name": "rgbd.Odometry.create",
+        "ret": "Odometry"
+    },
+    {
+        "name": "rgbd.Odometry_create",
+        "ret": "Odometry"
+    },
+    {
+        "name": "rgbd.OdometryFrame.create",
+        "ret": "OdometryFrame"
+    },
+    {
+        "name": "rgbd.OdometryFrame_create",
+        "ret": "OdometryFrame"
+    },
+    {
+        "name": "rgbd.RgbdFrame.create",
+        "ret": "RgbdFrame"
+    },
+    {
+        "name": "rgbd.RgbdFrame_create",
+        "ret": "RgbdFrame"
+    },
+    {
+        "name": "rgbd.RgbdICPOdometry.create",
+        "ret": "RgbdICPOdometry"
+    },
+    {
+        "name": "rgbd.RgbdICPOdometry_create",
+        "ret": "RgbdICPOdometry"
+    },
+    {
+        "name": "rgbd.RgbdNormals.create",
+        "ret": "RgbdNormals"
+    },
+    {
+        "name": "rgbd.RgbdNormals_create",
+        "ret": "RgbdNormals"
+    },
+    {
+        "name": "rgbd.RgbdOdometry.create",
+        "ret": "RgbdOdometry"
+    },
+    {
+        "name": "rgbd.RgbdOdometry_create",
+        "ret": "RgbdOdometry"
+    },
+    {
+        "name": "rgbd.RgbdPlane.create",
+        "ret": "RgbdPlane"
+    },
+    {
+        "name": "rgbd.RgbdPlane_create",
+        "ret": "RgbdPlane"
+    },
+    {
+        "name": "saliency.MotionSaliencyBinWangApr2014.create",
+        "ret": "MotionSaliencyBinWangApr2014"
+    },
+    {
+        "name": "saliency.MotionSaliencyBinWangApr2014_create",
+        "ret": "MotionSaliencyBinWangApr2014"
+    },
+    {
+        "name": "saliency.ObjectnessBING.create",
+        "ret": "ObjectnessBING"
+    },
+    {
+        "name": "saliency.ObjectnessBING_create",
+        "ret": "ObjectnessBING"
+    },
+    {
+        "name": "saliency.StaticSaliencyFineGrained.create",
+        "ret": "StaticSaliencyFineGrained"
+    },
+    {
+        "name": "saliency.StaticSaliencyFineGrained_create",
+        "ret": "StaticSaliencyFineGrained"
+    },
+    {
+        "name": "saliency.StaticSaliencySpectralResidual.create",
+        "ret": "StaticSaliencySpectralResidual"
+    },
+    {
+        "name": "saliency.StaticSaliencySpectralResidual_create",
+        "ret": "StaticSaliencySpectralResidual"
+    },
+    {
+        "name": "stereo.QuasiDenseStereo.create",
+        "ret": "QuasiDenseStereo"
+    },
+    {
+        "name": "stereo.QuasiDenseStereo_create",
+        "ret": "QuasiDenseStereo"
+    },
+    {
+        "name": "structured_light.GrayCodePattern.create",
+        "ret": "GrayCodePattern"
+    },
+    {
+        "name": "structured_light.GrayCodePattern_create",
+        "ret": "GrayCodePattern"
+    },
+    {
+        "name": "structured_light.SinusoidalPattern.create",
+        "ret": "SinusoidalPattern"
+    },
+    {
+        "name": "structured_light.SinusoidalPattern_create",
+        "ret": "SinusoidalPattern"
+    },
+    {
+        "name": "text.OCRBeamSearchDecoder.create",
+        "ret": "OCRBeamSearchDecoder"
+    },
+    {
+        "name": "text.OCRBeamSearchDecoder_create",
+        "ret": "OCRBeamSearchDecoder"
+    },
+    {
+        "name": "text.OCRHMMDecoder.create",
+        "ret": "OCRHMMDecoder"
+    },
+    {
+        "name": "text.OCRHMMDecoder_create",
+        "ret": "OCRHMMDecoder"
+    },
+    {
+        "name": "text.OCRTesseract.create",
+        "ret": "OCRTesseract"
+    },
+    {
+        "name": "text.OCRTesseract_create",
+        "ret": "OCRTesseract"
+    },
+    {
+        "name": "text.TextDetectorCNN.create",
+        "ret": "TextDetectorCNN"
+    },
+    {
+        "name": "text.TextDetectorCNN_create",
+        "ret": "TextDetectorCNN"
+    },
+    {
+        "name": "xfeatures2d.BEBLID.create",
+        "ret": "BEBLID"
+    },
+    {
+        "name": "xfeatures2d.BEBLID_create",
+        "ret": "BEBLID"
+    },
+    {
+        "name": "xfeatures2d.BoostDesc.create",
+        "ret": "BoostDesc"
+    },
+    {
+        "name": "xfeatures2d.BoostDesc_create",
+        "ret": "BoostDesc"
+    },
+    {
+        "name": "xfeatures2d.BriefDescriptorExtractor.create",
+        "ret": "BriefDescriptorExtractor"
+    },
+    {
+        "name": "xfeatures2d.BriefDescriptorExtractor_create",
+        "ret": "BriefDescriptorExtractor"
+    },
+    {
+        "name": "xfeatures2d.DAISY.create",
+        "ret": "DAISY"
+    },
+    {
+        "name": "xfeatures2d.DAISY_create",
+        "ret": "DAISY"
+    },
+    {
+        "name": "xfeatures2d.FREAK.create",
+        "ret": "FREAK"
+    },
+    {
+        "name": "xfeatures2d.FREAK_create",
+        "ret": "FREAK"
+    },
+    {
+        "name": "xfeatures2d.HarrisLaplaceFeatureDetector.create",
+        "ret": "HarrisLaplaceFeatureDetector"
+    },
+    {
+        "name": "xfeatures2d.HarrisLaplaceFeatureDetector_create",
+        "ret": "HarrisLaplaceFeatureDetector"
+    },
+    {
+        "name": "xfeatures2d.LATCH.create",
+        "ret": "LATCH"
+    },
+    {
+        "name": "xfeatures2d.LATCH_create",
+        "ret": "LATCH"
+    },
+    {
+        "name": "xfeatures2d.LUCID.create",
+        "ret": "LUCID"
+    },
+    {
+        "name": "xfeatures2d.LUCID_create",
+        "ret": "LUCID"
+    },
+    {
+        "name": "xfeatures2d.MSDDetector.create",
+        "ret": "MSDDetector"
+    },
+    {
+        "name": "xfeatures2d.MSDDetector_create",
+        "ret": "MSDDetector"
+    },
+    {
+        "name": "xfeatures2d.PCTSignatures.create",
+        "ret": "PCTSignatures"
+    },
+    {
+        "name": "xfeatures2d.PCTSignatures_create",
+        "ret": "PCTSignatures"
+    },
+    {
+        "name": "xfeatures2d.PCTSignaturesSQFD.create",
+        "ret": "PCTSignaturesSQFD"
+    },
+    {
+        "name": "xfeatures2d.PCTSignaturesSQFD_create",
+        "ret": "PCTSignaturesSQFD"
+    },
+    {
+        "name": "xfeatures2d.SURF.create",
+        "ret": "SURF"
+    },
+    {
+        "name": "xfeatures2d.SURF_create",
+        "ret": "SURF"
+    },
+    {
+        "name": "xfeatures2d.StarDetector.create",
+        "ret": "StarDetector"
+    },
+    {
+        "name": "xfeatures2d.StarDetector_create",
+        "ret": "StarDetector"
+    },
+    {
+        "name": "xfeatures2d.TBMR.create",
+        "ret": "TBMR"
+    },
+    {
+        "name": "xfeatures2d.TBMR_create",
+        "ret": "TBMR"
+    },
+    {
+        "name": "xfeatures2d.TEBLID.create",
+        "ret": "TEBLID"
+    },
+    {
+        "name": "xfeatures2d.TEBLID_create",
+        "ret": "TEBLID"
+    },
+    {
+        "name": "xfeatures2d.VGG.create",
+        "ret": "VGG"
+    },
+    {
+        "name": "xfeatures2d.VGG_create",
+        "ret": "VGG"
+    },
+    {
+        "name": "ximgproc.AdaptiveManifoldFilter.create",
+        "ret": "AdaptiveManifoldFilter"
+    },
+    {
+        "name": "ximgproc.AdaptiveManifoldFilter_create",
+        "ret": "AdaptiveManifoldFilter"
+    },
+    {
+        "name": "ximgproc.RidgeDetectionFilter.create",
+        "ret": "RidgeDetectionFilter"
+    },
+    {
+        "name": "ximgproc.RidgeDetectionFilter_create",
+        "ret": "RidgeDetectionFilter"
+    },
+    {
+        "name": "createAffineTransformer",
+        "ret": "AffineTransformer"
+    },
+    {
+        "name": "createAlignMTB",
+        "ret": "AlignMTB"
+    },
+    {
+        "name": "createBackgroundSubtractorKNN",
+        "ret": "BackgroundSubtractorKNN"
+    },
+    {
+        "name": "createBackgroundSubtractorMOG2",
+        "ret": "BackgroundSubtractorMOG2"
+    },
+    {
+        "name": "createCLAHE",
+        "ret": "CLAHE"
+    },
+    {
+        "name": "createCalibrateDebevec",
+        "ret": "CalibrateDebevec"
+    },
+    {
+        "name": "createCalibrateRobertson",
+        "ret": "CalibrateRobertson"
+    },
+    {
+        "name": "createChiHistogramCostExtractor",
+        "ret": "HistogramCostExtractor"
+    },
+    {
+        "name": "createEMDHistogramCostExtractor",
+        "ret": "HistogramCostExtractor"
+    },
+    {
+        "name": "createEMDL1HistogramCostExtractor",
+        "ret": "HistogramCostExtractor"
+    },
+    {
+        "name": "createGeneralizedHoughBallard",
+        "ret": "GeneralizedHoughBallard"
+    },
+    {
+        "name": "createGeneralizedHoughGuil",
+        "ret": "GeneralizedHoughGuil"
+    },
+    {
+        "name": "createHausdorffDistanceExtractor",
+        "ret": "HausdorffDistanceExtractor"
+    },
+    {
+        "name": "createLineSegmentDetector",
+        "ret": "LineSegmentDetector"
+    },
+    {
+        "name": "createMergeDebevec",
+        "ret": "MergeDebevec"
+    },
+    {
+        "name": "createMergeMertens",
+        "ret": "MergeMertens"
+    },
+    {
+        "name": "createMergeRobertson",
+        "ret": "MergeRobertson"
+    },
+    {
+        "name": "createNormHistogramCostExtractor",
+        "ret": "HistogramCostExtractor"
+    },
+    {
+        "name": "createShapeContextDistanceExtractor",
+        "ret": "ShapeContextDistanceExtractor"
+    },
+    {
+        "name": "createThinPlateSplineShapeTransformer",
+        "ret": "ThinPlateSplineShapeTransformer"
+    },
+    {
+        "name": "createTonemap",
+        "ret": "Tonemap"
+    },
+    {
+        "name": "createTonemapDrago",
+        "ret": "TonemapDrago"
+    },
+    {
+        "name": "createTonemapMantiuk",
+        "ret": "TonemapMantiuk"
+    },
+    {
+        "name": "createTonemapReinhard",
+        "ret": "TonemapReinhard"
+    },
+    {
+        "name": "bgsegm.createBackgroundSubtractorCNT",
+        "ret": "BackgroundSubtractorCNT"
+    },
+    {
+        "name": "bgsegm.createBackgroundSubtractorGMG",
+        "ret": "BackgroundSubtractorGMG"
+    },
+    {
+        "name": "bgsegm.createBackgroundSubtractorGSOC",
+        "ret": "BackgroundSubtractorGSOC"
+    },
+    {
+        "name": "bgsegm.createBackgroundSubtractorLSBP",
+        "ret": "BackgroundSubtractorLSBP"
+    },
+    {
+        "name": "bgsegm.createBackgroundSubtractorMOG",
+        "ret": "BackgroundSubtractorMOG"
+    },
+    {
+        "name": "bgsegm.createSyntheticSequenceGenerator",
+        "ret": "SyntheticSequenceGenerator"
+    },
+    {
+        "name": "cuda.createGpuMatFromCudaMemory",
+        "ret": "GpuMat"
+    },
+    {
+        "name": "face.createFacemarkAAM",
+        "ret": "Facemark"
+    },
+    {
+        "name": "face.createFacemarkKazemi",
+        "ret": "Facemark"
+    },
+    {
+        "name": "face.createFacemarkLBF",
+        "ret": "Facemark"
+    },
+    {
+        "name": "ft.FT12D_createPolynomMatrixHorizontal",
+        "ret": "matrix"
+    },
+    {
+        "name": "ft.FT12D_createPolynomMatrixVertical",
+        "ret": "matrix"
+    },
+    {
+        "name": "optflow.createOptFlow_DeepFlow",
+        "ret": "DenseOpticalFlow"
+    },
+    {
+        "name": "optflow.createOptFlow_DenseRLOF",
+        "ret": "DenseOpticalFlow"
+    },
+    {
+        "name": "optflow.createOptFlow_DualTVL1",
+        "ret": "DualTVL1OpticalFlow"
+    },
+    {
+        "name": "optflow.createOptFlow_Farneback",
+        "ret": "DenseOpticalFlow"
+    },
+    {
+        "name": "optflow.createOptFlow_PCAFlow",
+        "ret": "DenseOpticalFlow"
+    },
+    {
+        "name": "optflow.createOptFlow_SimpleFlow",
+        "ret": "DenseOpticalFlow"
+    },
+    {
+        "name": "optflow.createOptFlow_SparseRLOF",
+        "ret": "SparseOpticalFlow"
+    },
+    {
+        "name": "optflow.createOptFlow_SparseToDense",
+        "ret": "DenseOpticalFlow"
+    },
+    {
+        "name": "text.createERFilterNM1",
+        "ret": "ERFilter"
+    },
+    {
+        "name": "text.createERFilterNM2",
+        "ret": "ERFilter"
+    },
+    {
+        "name": "text.createOCRHMMTransitionsTable",
+        "ret": "Mat"
+    },
+    {
+        "name": "ximgproc.createAMFilter",
+        "ret": "AdaptiveManifoldFilter"
+    },
+    {
+        "name": "ximgproc.createContourFitting",
+        "ret": "ContourFitting"
+    },
+    {
+        "name": "ximgproc.createDTFilter",
+        "ret": "DTFilter"
+    },
+    {
+        "name": "ximgproc.createDisparityWLSFilter",
+        "ret": "DisparityWLSFilter"
+    },
+    {
+        "name": "ximgproc.createDisparityWLSFilterGeneric",
+        "ret": "DisparityWLSFilter"
+    },
+    {
+        "name": "ximgproc.createEdgeAwareInterpolator",
+        "ret": "EdgeAwareInterpolator"
+    },
+    {
+        "name": "ximgproc.createEdgeBoxes",
+        "ret": "EdgeBoxes"
+    },
+    {
+        "name": "ximgproc.createEdgeDrawing",
+        "ret": "EdgeDrawing"
+    },
+    {
+        "name": "ximgproc.createFastBilateralSolverFilter",
+        "ret": "FastBilateralSolverFilter"
+    },
+    {
+        "name": "ximgproc.createFastGlobalSmootherFilter",
+        "ret": "FastGlobalSmootherFilter"
+    },
+    {
+        "name": "ximgproc.createFastLineDetector",
+        "ret": "FastLineDetector"
+    },
+    {
+        "name": "ximgproc.createGuidedFilter",
+        "ret": "GuidedFilter"
+    },
+    {
+        "name": "ximgproc.createRFFeatureGetter",
+        "ret": "RFFeatureGetter"
+    },
+    {
+        "name": "ximgproc.createRICInterpolator",
+        "ret": "RICInterpolator"
+    },
+    {
+        "name": "ximgproc.createRightMatcher",
+        "ret": "StereoMatcher"
+    },
+    {
+        "name": "ximgproc.createScanSegment",
+        "ret": "ScanSegment"
+    },
+    {
+        "name": "ximgproc.createStructuredEdgeDetection",
+        "ret": "StructuredEdgeDetection"
+    },
+    {
+        "name": "ximgproc.createSuperpixelLSC",
+        "ret": "SuperpixelLSC"
+    },
+    {
+        "name": "ximgproc.createSuperpixelSEEDS",
+        "ret": "SuperpixelSEEDS"
+    },
+    {
+        "name": "ximgproc.createSuperpixelSLIC",
+        "ret": "SuperpixelSLIC"
+    },
+    {
+        "name": "ximgproc.segmentation.createGraphSegmentation",
+        "ret": "GraphSegmentation"
+    },
+    {
+        "name": "ximgproc.segmentation.createSelectiveSearchSegmentation",
+        "ret": "SelectiveSearchSegmentation"
+    },
+    {
+        "name": "ximgproc.segmentation.createSelectiveSearchSegmentationStrategyColor",
+        "ret": "SelectiveSearchSegmentationStrategyColor"
+    },
+    {
+        "name": "ximgproc.segmentation.createSelectiveSearchSegmentationStrategyFill",
+        "ret": "SelectiveSearchSegmentationStrategyFill"
+    },
+    {
+        "name": "ximgproc.segmentation.createSelectiveSearchSegmentationStrategyMultiple",
+        "ret": "SelectiveSearchSegmentationStrategyMultiple"
+    },
+    {
+        "name": "ximgproc.segmentation.createSelectiveSearchSegmentationStrategySize",
+        "ret": "SelectiveSearchSegmentationStrategySize"
+    },
+    {
+        "name": "ximgproc.segmentation.createSelectiveSearchSegmentationStrategyTexture",
+        "ret": "SelectiveSearchSegmentationStrategyTexture"
+    },
+    {
+        "name": "xphoto.createGrayworldWB",
+        "ret": "GrayworldWB"
+    },
+    {
+        "name": "xphoto.createLearningBasedWB",
+        "ret": "LearningBasedWB"
+    },
+    {
+        "name": "xphoto.createSimpleWB",
+        "ret": "SimpleWB"
+    },
+    {
+        "name": "xphoto.createTonemapDurand",
+        "ret": "TonemapDurand"
+    },
+    {
+        "name":"detail.FeaturesMatcher.apply",
+        "ret":"MatchesInfo"
+    },
+    {
+        "name":"detail.computeImageFeatures",
+        "ret":"ImageFeatures"
+    },
+    {
+        "name": "detail.computeImageFeatures2",
+        "ret":"Sequence[ImageFeatures]"
+    }
+]

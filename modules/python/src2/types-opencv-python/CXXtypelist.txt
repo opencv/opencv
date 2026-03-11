@@ -1,0 +1,418 @@
+AKAZE::DescriptorType
+KAZE::DiffusivityType
+const Ptr< Feature2D > &
+std::vector< float > &
+const std::vector< float > &
+AgastFeatureDetector::DetectorType
+const FileNode &
+const Ptr< FileStorage > &
+FileStorage &
+InputArrayOfArrays
+std::vector< Mat > &
+InputArray
+OutputArray
+const Point
+Scalar
+AsyncArray &&
+const AsyncArray &
+const std::chrono::duration< _Rep, _Period > &
+const Ptr< DescriptorMatcher > &
+const Mat &
+std::vector< KeyPoint > &
+Mat &
+const TermCriteria &
+const std::vector< int > &
+Size
+std::vector< Rect > &
+std::vector< int > &
+std::vector< double > &
+InputOutputArray
+const DescriptorMatcher::MatcherType &
+std::vector< std::vector< DMatch > > &
+std::vector< DMatch > &
+const std::vector< uchar > &
+const Size &
+CV_WRAP_FILE_PATH const String &
+FastFeatureDetector::DetectorType
+std::vector< std::vector< KeyPoint > > &
+OutputArrayOfArrays
+const FileStorage *
+FileStorage::Impl *
+const std::vector< String > &
+const Ptr< flann::IndexParams > &
+const Ptr< flann::SearchParams > &
+T &&
+const Generator &
+const std::vector< GMat > &
+GMat
+GScalar
+GProtoInputArgs &&
+GProtoOutputArgs &&
+const std::vector< cv::Mat > &
+std::vector< cv::Mat > &
+GCompileArgs &&
+cv::Mat
+cv::Mat &
+cv::Scalar &
+GRunArgs &&
+GRunArgsP &&
+const Ts &...
+GMetaArgs &&
+cv::Size
+std::vector< int > &&
+const cv::Scalar &
+cv::Scalar &&
+cv::GOptRunArgsP &&
+cv::GRunArgsP &&
+Args &&...
+const gapi::wip::IStreamSource::Ptr &
+Point
+std::vector< std::string > &
+const HOGDescriptor &
+HOGDescriptor::HistogramNormType
+const std::vector< Point > &
+std::vector< Point > &
+Point2f
+const std::vector< KeyPoint > &
+std::vector< Point2f > &
+const std::vector< Point2f > &
+const KeyPoint &
+std::vector< std::vector< Point > > &
+ORB::ScoreType
+const Point2f &
+const QRCodeDetectorAruco::Params &
+const aruco::DetectorParameters &
+const QRCodeEncoder::Params &
+const Size2f &
+Ptr< HistogramCostExtractor >
+Ptr< ShapeTransformer >
+const Scalar &
+const SimpleBlobDetector::Params &
+TermCriteria
+TermCriteria &
+Rect
+Mode
+InterpolationFlags
+Rect2f
+Point2f *
+std::vector< Vec4f > &
+std::vector< Vec6f > &
+std::vector< std::vector< Point2f > > &
+const Rect &
+Rect &
+const TrackerCSRT::Params &
+const TrackerDaSiamRPN::Params &
+const TrackerGOTURN::Params &
+const TrackerKCF::Params &
+const TrackerMIL::Params &
+const TrackerNano::Params &
+const TrackerVit::Params &
+const std::vector< _Tp > &
+const UMat &
+const Range &
+const Range *
+const std::vector< Range > &
+UMatUsageFlags
+UMat &&
+AccessFlag
+const Ptr< IStreamReader > &
+const std::vector< VideoCapture > &
+const Dictionary &
+const DetectorParameters &
+const RefineParameters &
+const std::vector< Dictionary > &
+const Board &
+InputOutputArrayOfArrays
+const CharucoBoard &
+const CharucoParameters &
+CharucoParameters &
+const cv::FileNode &
+CV_WRAP_FILE_PATH const std::string &
+cv::FileStorage &
+RetinaParameters
+SegmentationParameters
+CONST_COLOR
+Mat
+COLOR_SPACE
+CCM_TYPE
+DISTANCE_TYPE
+const double &
+INITIAL_METHOD_TYPE
+LINEAR_TYPE
+const int &
+const Ptr< Params > &
+const Matx44f &
+Matx33f
+Vec3f
+Matx44f
+Stream &
+const Event::CreateFlags
+const Event &
+const GpuMat &
+Range
+GpuMat::Allocator *
+GpuMat &
+Size &
+Point &
+const HostMem &
+HostMem::AllocType
+HostMem &
+const Ptr< GpuMat::Allocator > &
+const std::vector< Size > &
+CostFunction
+const std::vector< ImageFeatures > &
+const std::vector< MatchesInfo > &
+std::vector< CameraParams > &
+const std::vector< UMat > &
+const std::vector< std::pair< UMat, uchar > > &
+std::vector< UMat > &
+const ImageFeatures &
+MatchesInfo &
+std::vector< MatchesInfo > &
+const cv::UMat &
+const Net &
+const DictValue &
+dnn::DataLayout
+ImagePaddingMode
+const std::vector< Rect > &
+const std::vector< Mat * > &
+const std::vector< Mat > &
+const Model &
+Model &&
+dnn::Backend
+dnn::Target
+LayerParams &
+CV_ND OutputArrayOfArrays
+std::vector< std::vector< Mat > > &
+const MatShape &
+const std::vector< MatShape > &
+const LayerId &
+std::vector< String > &
+std::vector< std::vector< MatShape > > &
+std::vector< size_t > &
+const uchar *
+const std::string &
+CV_ND InputArray
+CV_ND const Mat &
+std::vector< cv::RotatedRect > &
+const std::vector< std::string > &
+const Ptr< kinfu::Params > &
+Ptr< PredictCollector >
+const cv::String &
+cv::InputArray
+cv::InputArrayOfArrays
+std::initializer_list< GNetParam >
+std::vector< GNetParam >
+const cv::Mat &
+TraitAs
+ep::CoreML
+ep::CUDA
+ep::DirectML
+ep::OpenVINO
+ep::TensorRT
+const std::map< std::string, std::string > &
+std::map< std::string, std::string >
+std::map< std::string, std::vector< float > >
+std::vector< float >
+std::map< std::string, int >
+std::map< std::string, std::vector< size_t > >
+std::vector< size_t >
+const cv::Point &
+const cv::Rect &
+const std::vector< cv::Point > &
+cv::OutputArray
+VolumeType
+Ptr< cv::legacy::Tracker >
+const Rect2d &
+std::vector< Ptr< legacy::Tracker > >
+std::vector< Rect2d >
+std::vector< Rect2d > &
+Rect2d &
+const TrackerBoosting::Params &
+const TrackerMedianFlow::Params &
+const TrackerTLD::Params &
+std::vector< KeyLine > &
+std::vector< std::vector< KeyLine > > &
+Params
+LSDParam
+const std::vector< Ptr< Modality > > &
+const std::vector< Template > &
+Rect *
+std::vector< Match > &
+Template &
+std::vector< Point2f >
+TYPECHART
+const TYPECHART
+const Ptr< DetectorParameters > &
+dnn::Net
+Ptr< CChecker >
+cv::Scalar
+const cv::TermCriteria &
+const Ptr< TrainData > &
+ParamGrid
+Ptr< ParamGrid >
+const Device &
+Device &&
+Ptr< RLOFOpticalFlowParameter >
+InterpolationType
+SolverType
+SupportRegionType
+const HistogramPhaseUnwrapping::Params &
+Matx44d &
+std::vector< Pose3DPtr > &
+const double
+Matx33d &
+Vec3d &
+Vec4d &
+const cv::Ptr< cv::ml::SVM > &
+cv::Ptr< Map >
+Ptr< Map >
+Ptr< Mapper >
+Ptr< OdometryFrame > &
+const Point &
+const MatchQuasiDense &
+std::vector< MatchQuasiDense > &
+const GrayCodePattern::Params &
+Ptr< SinusoidalPattern::Params >
+const std::vector< std::vector< Mat > > &
+const Ptr< OCRBeamSearchDecoder::ClassifierCallback >
+text::decoder_mode
+std::vector< Rect > *
+std::vector< std::string > *
+std::vector< float > *
+const Ptr< OCRHMMDecoder::ClassifierCallback >
+std::vector< Size >
+DAISY::NormalizationType
+std::vector< int >
+const EdgeDrawing::Params &
+Ptr< GraphSegmentation >
+Ptr< SelectiveSearchSegmentationStrategy >
+Ptr< float >
+AlgorithmHint
+const Moments &
+const QtFont &
+RotatedRect
+const Mat *
+const SparseMat &
+const float **
+SparseMat &
+HandEyeCalibrationMethod
+RobotWorldHandEyeCalibrationMethod
+Point2d &
+Point *
+Size2l
+Point2l &
+const Ptr< HistogramCostExtractor > &
+const Ptr< ShapeTransformer > &
+const Matx< _Tp, m, m > &
+DrawMatchesFlags
+const std::vector< DMatch > &
+const std::vector< char > &
+const std::vector< std::vector< DMatch > > &
+const std::vector< std::vector< char > > &
+const RotatedRect &
+Point2d
+Size2d
+std::vector< Point2d > &
+const UsacParams &
+const Quat< T > &
+const softdouble &
+const softfloat &
+const Point *
+const Point **
+const Ptr< FeatureDetector > &
+const CirclesGridFinderParameters &
+const Point2f
+std::vector< int > *
+std::vector< double > *
+Mat *
+Animation &
+const cv::Range &
+std::vector< uchar > &
+const Animation &
+const ogl::Texture2D &
+InputArrayOfArrays &
+QuatAssumeType
+const Matx< _Tp, m, n > &
+UMat &
+Point2f &
+const Vec< _Tp, cn > &
+const Point *const *
+RNG *
+const cv::Size &
+SolvePnPMethod
+const Quat< S > &
+const Ptr< Board > &
+const Ptr< CharucoBoard > &
+Ptr< Dictionary >
+const Ptr< Dictionary > &
+Vec4i
+const Ptr< EstimateParameters > &
+PredefinedDictionaryType
+ImageFeatures &
+std::vector< ImageFeatures > &
+WaveCorrectKind
+const std::vector< Rect2d > &
+const std::vector< RotatedRect > &
+const Image2BlobParams &
+SoftNMSMethod
+std::vector< String >
+const Affine3d &
+const GMat &
+const GScalar &
+const GArray< Point2f > &
+const GArray< Point2i > &
+const cv::GKernelPackage &
+Ps &&...
+const GFrame &
+const cv::GArray< cv::Rect > &
+const cv::GInferInputs &
+const cv::GOpaque< cv::Rect > &
+cv::GArray< cv::Rect >
+cv::GOpaque< cv::Rect >
+T
+const Input &
+const cv::GInferListInputs &
+cv::GArray< Args >...
+const GArray< int > &
+const KmeansFlags
+const GArray< Point3f > &
+const MorphTypes
+const BorderTypes
+const GOpaque< Size > &
+const cv::GFrame &
+const cv::GArray< int > &
+const cv::GMat &
+G
+const GOpaque< Rect > &
+cv::Ptr< GStreamerPipeline > &
+const GStreamerSource::OutputType
+const std::map< int, double > &
+const cv::Ptr< cv::gapi::wip::IStreamSource > &
+const Prims &
+cv::GCompileArgs &&
+cv::MediaFrame &
+const GArray< Prim > &
+const Mat
+const VolumeParams &
+Vec3i
+const Ptr< legacy::Tracker > &
+const std::vector< KeyLine > &
+const Point2i &
+const std::shared_ptr< ParallelForAPI > &
+const Vec3f &
+Vec2f &
+const Matx44d &
+const Ptr< ERFilter::Callback > &
+std::vector< cv::String > &
+const Ptr< ERFilter > &
+std::vector< cv::Rect > &
+OutputArray &
+std::vector< std::vector< Point > >
+std::vector< std::vector< ERStat > > &
+std::vector< std::vector< Vec2i > > &
+const std::vector< double > &
+LogLevel
+VideoCaptureAPIs
+Ptr< StereoMatcher >
+Ptr< const RFFeatureGetter >

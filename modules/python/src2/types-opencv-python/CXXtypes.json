@@ -1,0 +1,17 @@
+{
+    "int":[
+        "int","int64","size_t","int64_t","long long","unsigned"
+    ],
+    "float":[
+        "double","float"
+    ],
+    "str":[
+        "char","String","std::string","uchar","cv::String"
+    ],
+    "bool":[
+        "bool"
+    ],
+    "typing.Any":[
+        "void"
+    ]
+}

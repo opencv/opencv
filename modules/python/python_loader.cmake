@@ -151,6 +151,10 @@ if(${PYTHON}_VERSION_STRING VERSION_GREATER "3.6" AND PYTHON_DEFAULT_VERSION VER
             --stubs_dir ${OPENCV_PYTHON_BINDINGS_DIR}/cv2
             --output_dir ${__loader_path}/cv2
   )
+  option(GENERATE_PYTHON_STUBS2 "Stubs generated based on documentation" OFF)
+  if (GENERATE_PYTHON_STUBS2)
+    include("${CMAKE_CURRENT_LIST_DIR}/generate_stubs2.cmake")
+  endif()
   if(DEFINED OPENCV_PYTHON_INSTALL_PATH)
     install(DIRECTORY "${OPENCV_PYTHON_BINDINGS_DIR}/cv2" DESTINATION "${OPENCV_PYTHON_INSTALL_PATH}" COMPONENT python)
   endif()
