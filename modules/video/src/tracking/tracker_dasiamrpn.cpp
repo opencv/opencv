@@ -59,10 +59,9 @@ class TrackerDaSiamRPNImpl : public TrackerDaSiamRPN
 public:
     TrackerDaSiamRPNImpl(const TrackerDaSiamRPN::Params& parameters)
     {
-        dnn::EngineType engine = dnn::ENGINE_AUTO;
-        siamRPN = dnn::readNet(parameters.model, "", "", engine);
-        siamKernelCL1 = dnn::readNet(parameters.kernel_cls1, "", "", engine);
-        siamKernelR1 = dnn::readNet(parameters.kernel_r1, "", "", engine);
+        siamRPN = dnn::readNet(parameters.model);
+        siamKernelCL1 = dnn::readNet(parameters.kernel_cls1);
+        siamKernelR1 = dnn::readNet(parameters.kernel_r1);
 
         CV_Assert(!siamRPN.empty());
         CV_Assert(!siamKernelCL1.empty());

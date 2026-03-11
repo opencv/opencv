@@ -624,7 +624,7 @@ void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays 
     finalizeLayers = false;
 }
 
-Mat Net::Impl::forwardWithSingleOutput(const std::string& outname)
+void Net::Impl::forwardWithSingleOutput(const std::string& outname, OutputArrayOfArrays outputBlobs)
 {
 #ifdef HAVE_ONNXRUNTIME
     if (this->ort_session)
@@ -648,7 +648,8 @@ Mat Net::Impl::forwardWithSingleOutput(const std::string& outname)
         std::vector<int> outIdxs(1, outIdx);
         std::vector<Mat> outs = runOrtSession(netInputLayer->blobs, outIdxs);
         CV_Assert(outs.size() == 1);
-        return outs[0];
+        outputBlobs.assign(outs[0]);
+        return;
     }
 #endif
     {
@@ -673,24 +674,29 @@ Mat Net::Impl::forwardWithSingleOutput(const std::string& outname)
             forwardMainGraph(inps, outs);
 
             const std::vector<Arg>& gr_outputs = mainGraph->outputs();
-            for (size_t i = 0; i < gr_outputs.size(); i++)
-                if (gr_outputs[i].idx == targetArg.idx)
-                    return outs[i];
+            for (size_t i = 0; i < gr_outputs.size(); i++) {
+                if (gr_outputs[i].idx == targetArg.idx) {
+                    outputBlobs.assign(outs[i]);
+                    return;
+                }
+            }
 
             const ArgData& adata = args.at(targetArg.idx);
             if (adata.kind == DNN_ARG_TEMP) {
                 int bufidx = bufidxs.at(targetArg.idx);
                 CV_Assert(bufidx >= 0 && bufidx < (int)buffers.size());
-                return buffers[bufidx].clone();
+                outputBlobs.assign(buffers[bufidx].clone());
+                return;
             }
-            return __tensors__.at(targetArg.idx).clone();
+            outputBlobs.assign(__tensors__.at(targetArg.idx).clone());
+            return;
         }
     }
 
     std::vector<Mat> inps, outs;
     forwardMainGraph(inps, outs);
     CV_Assert(!outs.empty());
-    return outs[0];
+    outputBlobs.assign(outs[0]);
 }
 
 void Net::Impl::forwardWithMultipleOutputs(OutputArrayOfArrays outblobs, const std::vector<std::string>& outnames)

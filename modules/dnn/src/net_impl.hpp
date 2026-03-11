@@ -407,7 +407,7 @@ struct Net::Impl : public detail::NetImplBase
     std::vector<Mat> runOrtSession(std::vector<Mat> inputBlobs, const std::vector<int>& outIdxs);
 #endif
     // run the whole model, convenience wrapper
-    Mat forwardWithSingleOutput(const std::string& outname);
+    void forwardWithSingleOutput(const std::string& outname, OutputArrayOfArrays outputBlobs);
     // run the whole model, convenience wrapper
     void forwardWithMultipleOutputs(OutputArrayOfArrays outputBlobs,
                                     const std::vector<std::string>& outBlobNames);
