@@ -90,6 +90,7 @@ static void help(char** argv)
         "                              # the calibration grid. If this parameter is specified, a more\n"
         "                              # accurate calibration method will be used which may be better\n"
         "                              # with inaccurate, roughly planar target.\n"
+        "     [-imread-apply-exif-rot] # use this flag to apply the exif orientation when reading images from list\n"
         "     [input_data]             # input data, one of the following:\n"
         "                              #  - text file with a list of the images of the board\n"
         "                              #    the text file can be generated with imagelist_creator\n"
@@ -408,6 +409,7 @@ int main( int argc, char** argv )
         "{oo||}{ws|11|}{dt||}"
         "{fx||}{fy||}{cx||}{cy||}"
         "{imshow-scale|1|}{enable-k3|0|}"
+        "{imread-apply-exif-rot||}"
         "{@input_data|0|}");
     if (parser.has("help"))
     {
@@ -497,10 +499,15 @@ int main( int argc, char** argv )
     }
     int viewScaleFactor = parser.get<int>("imshow-scale");
     bool useK3 = parser.get<bool>("enable-k3");
-    std::cout << "Use K3 distortion coefficient? " << useK3 << std::endl;
+    std::cout << "Use K3 distortion coefficient? " << (useK3 ? "yes" : "no") << std::endl;
     if (!useK3)
     {
         flags |= CALIB_FIX_K3;
+    }
+    int imread_flag = IMREAD_COLOR;
+    if (!parser.has("imread-apply-exif-rot"))
+    {
+        imread_flag |= IMREAD_IGNORE_ORIENTATION;
     }
 
     float grid_width = squareSize *(pattern != CHARUCOBOARD ? (boardSize.width - 1): (boardSize.width - 2) );
@@ -529,15 +536,17 @@ int main( int argc, char** argv )
         return fprintf( stderr, "Invalid board height\n" ), -1;
 
     cv::aruco::Dictionary dictionary;
-    if (dictFilename == "None") {
-        std::cout << "Using predefined dictionary with id: " << arucoDict << std::endl;
-        dictionary = aruco::getPredefinedDictionary(arucoDict);
-    }
-    else {
-        std::cout << "Using custom dictionary from file: " << dictFilename << std::endl;
-        cv::FileStorage dict_file(dictFilename, cv::FileStorage::Mode::READ);
-        cv::FileNode fn(dict_file.root());
-        dictionary.readDictionary(fn);
+    if (pattern == CHARUCOBOARD) {
+        if (dictFilename == "None") {
+            std::cout << "Using predefined dictionary with id: " << arucoDict << std::endl;
+            dictionary = aruco::getPredefinedDictionary(arucoDict);
+        }
+        else {
+            std::cout << "Using custom dictionary from file: " << dictFilename << std::endl;
+            cv::FileStorage dict_file(dictFilename, cv::FileStorage::Mode::READ);
+            cv::FileNode fn(dict_file.root());
+            dictionary.readDictionary(fn);
+        }
     }
 
     cv::Ptr<cv::aruco::CharucoBoard> ch_board;
@@ -582,7 +591,7 @@ int main( int argc, char** argv )
             view0.copyTo(view);
         }
         else if( i < (int)imageList.size() )
-            view = imread(imageList[i], IMREAD_COLOR);
+            view = imread(imageList[i], imread_flag);
 
         if(view.empty())
         {
@@ -718,7 +727,7 @@ int main( int argc, char** argv )
 
         for( i = 0; i < (int)imageList.size(); i++ )
         {
-            view = imread(imageList[i], IMREAD_COLOR);
+            view = imread(imageList[i], imread_flag);
             if(view.empty())
                 continue;
             remap(view, rview, map1, map2, INTER_LINEAR);
