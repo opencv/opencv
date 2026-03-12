@@ -260,6 +260,28 @@ TEST(GaussianBlur_Bitexact, overflow_20792)
     EXPECT_GT(count, nintyPercent);
 }
 
+TEST(GaussianBlur_Bitexact, regression_28603_kernel_normalization)
+{
+    // Verify that GaussianBlur with float32 input preserves uniform images
+    // for larger kernel sizes (regression test for kernel sum != 1.0f).
+    const int sizes[] = {11, 13, 15, 21, 31};
+    for (int ksize : sizes)
+    {
+        Mat src(64, 64, CV_32FC1, Scalar(0.5));
+        Mat dst;
+        GaussianBlur(src, dst, Size(ksize, ksize), 0);
+        // Interior pixels (away from border) should stay at 0.5
+        Rect interior(ksize, ksize, 64 - 2*ksize, 64 - 2*ksize);
+        if (interior.width > 0 && interior.height > 0)
+        {
+            double maxDiff = cvtest::norm(dst(interior), src(interior), NORM_INF);
+            EXPECT_LE(maxDiff, 1e-6)
+                << "GaussianBlur with ksize=" << ksize
+                << " drifted uniform 0.5 image by " << maxDiff;
+        }
+    }
+}
+
 CV_ENUM(GaussInputType, CV_8U, CV_16S);
 CV_ENUM(GaussBorder, BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT_101);
 
