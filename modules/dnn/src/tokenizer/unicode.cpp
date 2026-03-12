@@ -478,7 +478,7 @@ static std::vector<size_t> unicode_regex_split_stl(const std::string & text, con
 
         int64_t start_idx = 0;
         while (it != end) {
-            std::cmatch match = *it;
+            std::cmatch&match = const_cast<std::cmatch&>(*it);
             if (match.position() > start_idx) {
                 bpe_offsets.emplace_back(match.position() - start_idx);
             }
