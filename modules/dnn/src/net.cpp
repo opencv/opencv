@@ -546,6 +546,7 @@ String Net::detokenize(InputArray tokenIds) const
     return impl->detokenize(tokenIds);
 }
 
+#ifdef HAVE_ONNXRUNTIME_GENAI
 void Net::setPrompt(const String& prompt)
 {
     CV_Assert(impl);
@@ -588,6 +589,42 @@ String Net::getDeviceType() const
     CV_Assert(impl);
     return impl->getDeviceType();
 }
+#else
+void Net::setPrompt(const String&)
+{
+    CV_Error(cv::Error::StsNotImplemented, "setPrompt requires ONNX Runtime GenAI support");
+}
+
+void Net::setSearchOption(const String&, double)
+{
+    CV_Error(cv::Error::StsNotImplemented, "setSearchOption requires ONNX Runtime GenAI support");
+}
+
+void Net::setSearchOptionBool(const String&, bool)
+{
+    CV_Error(cv::Error::StsNotImplemented, "setSearchOptionBool requires ONNX Runtime GenAI support");
+}
+
+void Net::setGuidance(const String&, const String&, bool)
+{
+    CV_Error(cv::Error::StsNotImplemented, "setGuidance requires ONNX Runtime GenAI support");
+}
+
+String Net::applyChatTemplate(const String&, const String&, const String&, bool) const
+{
+    CV_Error(cv::Error::StsNotImplemented, "applyChatTemplate requires ONNX Runtime GenAI support");
+}
+
+String Net::getModelType() const
+{
+    CV_Error(cv::Error::StsNotImplemented, "getModelType requires ONNX Runtime GenAI support");
+}
+
+String Net::getDeviceType() const
+{
+    CV_Error(cv::Error::StsNotImplemented, "getDeviceType requires ONNX Runtime GenAI support");
+}
+#endif  // HAVE_ONNXRUNTIME_GENAI
 
 CV__DNN_INLINE_NS_END
 }}  // namespace cv::dnn
