@@ -526,6 +526,7 @@ OpenCV have own DNN inference module which have own build-in engine, but can als
 | `WITH_OPENVINO` | _OFF_ | Enable Intel OpenVINO Toolkit support. Should be used for OpenVINO>=2022.1 instead of `WITH_INF_ENGINE` and `WITH_NGRAPH`. |
 | `WITH_ONNXRUNTIME` | _OFF_ | Enable Microsoft ONNX Runtime backend support for OpenCV DNN. |
 | `DOWNLOAD_ONNXRUNTIME` | _OFF_ | Download official ONNX Runtime prebuilt binaries when enabled (or when ONNX Runtime is not available in system paths). |
+| `DOWNLOAD_ONNXRUNTIME_GPU` | _OFF_ | Download GPU-enabled ONNX Runtime prebuilt binaries when available (Windows x64 and Linux x64 only). Requires `WITH_ONNXRUNTIME=ON`. |
 | `ONNXRUNTIME_PREFER_STATIC` | _ON_ | Prefer static `libonnxruntime.a` when both static and shared ONNX Runtime libraries are available. |
 | `ONNXRUNTIME_VERSION` | _1.24.2_ | ONNX Runtime version to download for prebuilt packages. |
 | `OPENCV_DNN_CUDA` | _OFF_ | Enable CUDA backend. [CUDA](https://en.wikipedia.org/wiki/CUDA), CUBLAS and [CUDNN](https://developer.nvidia.com/cudnn) must be installed. |
