@@ -20,6 +20,9 @@
 #include <opencv2/dnn.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
+
+#include "common.hpp"
+
 using namespace cv;
 using namespace cv::dnn;
 
@@ -66,6 +69,26 @@ int main(int argc, char **argv)
         "{ height           |  368      | Preprocess input image by resizing to a specific height. }"
         "{ t threshold      |  0.1      | threshold or confidence value for the heatmap }"
         "{ s scale          |  0.003922 | scale for blob }"
+        "{ backend          |  default  | Choose one of computation backends: "
+                            "default: automatically (by default), "
+                            "openvino: Intel's Deep Learning Inference Engine, "
+                            "opencv: OpenCV implementation, "
+                            "vkcom: VKCOM, "
+                            "cuda: CUDA, "
+                            "webnn: WebNN }"
+        "{ target           |  cpu      | Choose one of target computation devices: "
+                            "cpu: CPU target (by default), "
+                            "opencl: OpenCL, "
+                            "opencl_fp16: OpenCL fp16, "
+                            "vpu: VPU, "
+                            "vulkan: Vulkan, "
+                            "cuda: CUDA, "
+                            "cuda_fp16: CUDA fp16 }"
+        "{ engine           |  auto     | Choose one of DNN engines: "
+                            "auto: automatically (by default), "
+                            "classic: classic DNN engine, "
+                            "new: new graph-based DNN engine, "
+                            "ort: ONNX Runtime }"
     );
 
     String modelTxt = samples::findFile(parser.get<string>("proto"));
@@ -95,7 +118,13 @@ int main(int argc, char **argv)
     }
 
     // read the network model
-    Net net = readNet(modelBin, modelTxt);
+    int engineId = getEngineID(parser.get<String>("engine"));
+    int backendId = getBackendID(parser.get<String>("backend"));
+    int targetId = getTargetID(parser.get<String>("target"));
+    Net net = readNet(modelBin, modelTxt, "", engineId);
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+    printDNNInfo(engineId, backendId, targetId);
     // and the image
     Mat img = imread(imageFile);
     if (img.empty())

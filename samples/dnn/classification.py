@@ -49,6 +49,12 @@ def get_args_parser(func_args):
                          "vulkan: Vulkan, "
                          "cuda: CUDA, "
                          "cuda_fp16: CUDA fp16 (half-float preprocess)")
+    parser.add_argument('--engine', default="auto", type=str, choices=engines,
+                    help="Choose one of DNN engines: "
+                         "auto: automatically (by default), "
+                         "classic: classic DNN engine, "
+                         "new: new graph-based DNN engine, "
+                         "ort: ONNX Runtime")
 
 
     args, _ = parser.parse_known_args()
@@ -82,12 +88,13 @@ def main(func_args=None):
             labels = f.read().rstrip('\n').split('\n')
 
     # Load a network
-    engine = cv.dnn.ENGINE_AUTO
-    if args.backend != "default" or args.target != "cpu":
-        engine = cv.dnn.ENGINE_CLASSIC
+    engine = get_engine_id(args.engine)
+    backend = get_backend_id(args.backend)
+    target = get_target_id(args.target)
     net = cv.dnn.readNetFromONNX(args.model, engine)
-    net.setPreferableBackend(get_backend_id(args.backend))
-    net.setPreferableTarget(get_target_id(args.target))
+    net.setPreferableBackend(backend)
+    net.setPreferableTarget(target)
+    print_dnn_info(engine, backend, target)
 
     winName = 'Deep learning image classification in OpenCV'
     cv.namedWindow(winName, cv.WINDOW_NORMAL)

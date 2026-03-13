@@ -132,7 +132,7 @@ int main(int argc, char **argv)
         "\t./super_resolution --input=image.jpg\n"
         "\t./super_resolution --input=../data/chicky_512.png\n";
 
-    string keys = param_keys + backend_keys + target_keys;
+    string keys = param_keys + backend_keys + target_keys + engine_keys;
 
     CommandLineParser parser(argc, argv, keys);
     if (parser.has("help"))
@@ -168,9 +168,13 @@ int main(int argc, char **argv)
     Net net;
     try
     {
-        net = readNetFromONNX(model);
-        net.setPreferableBackend(getBackendID(backend));
-        net.setPreferableTarget(getTargetID(target));
+        int engineId = getEngineID(parser.get<String>("engine"));
+        int backendId = getBackendID(backend);
+        int targetId = getTargetID(target);
+        net = readNetFromONNX(model, engineId);
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
+        printDNNInfo(engineId, backendId, targetId);
     }
     catch (const Exception &e)
     {

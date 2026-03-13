@@ -1,6 +1,8 @@
 #include <opencv2/core/utils/filesystem.hpp>
+#include <opencv2/dnn.hpp>
 #include<iostream>
 using namespace cv;
+using namespace cv::dnn;
 
 std::string genArgument(const std::string& argName, const std::string& help,
                         const std::string& modelName, const std::string& zooFile,
@@ -46,6 +48,73 @@ inline int getTargetID(const String& target) {
         throw std::invalid_argument("Invalid target name: " + target);
     }
 }
+
+inline int getEngineID(const String& engine) {
+    std::map<String, int> engineIDs = {
+        {"auto", cv::dnn::ENGINE_AUTO},
+        {"classic", cv::dnn::ENGINE_CLASSIC},
+        {"new", cv::dnn::ENGINE_NEW},
+        {"ort", cv::dnn::ENGINE_ORT}
+    };
+    if(engineIDs.find(engine) != engineIDs.end()){
+        return engineIDs[engine];
+    }else {
+        throw std::invalid_argument("Invalid engine name: " + engine);
+    }
+}
+
+inline String getBackendName(int backendId) {
+    switch (backendId) {
+        case cv::dnn::DNN_BACKEND_DEFAULT: return "default";
+        case cv::dnn::DNN_BACKEND_INFERENCE_ENGINE: return "openvino";
+        case cv::dnn::DNN_BACKEND_OPENCV: return "opencv";
+        case cv::dnn::DNN_BACKEND_VKCOM: return "vkcom";
+        case cv::dnn::DNN_BACKEND_CUDA: return "cuda";
+        case cv::dnn::DNN_BACKEND_WEBNN: return "webnn";
+        default: return "unknown";
+    }
+}
+
+inline String getTargetName(int targetId) {
+    switch (targetId) {
+        case cv::dnn::DNN_TARGET_CPU: return "cpu";
+        case cv::dnn::DNN_TARGET_OPENCL: return "opencl";
+        case cv::dnn::DNN_TARGET_OPENCL_FP16: return "opencl_fp16";
+        case cv::dnn::DNN_TARGET_MYRIAD: return "vpu";
+        case cv::dnn::DNN_TARGET_VULKAN: return "vulkan";
+        case cv::dnn::DNN_TARGET_CUDA: return "cuda";
+        case cv::dnn::DNN_TARGET_CUDA_FP16: return "cuda_fp16";
+        default: return "unknown";
+    }
+}
+
+inline String getEngineName(int engineId) {
+    switch (engineId) {
+        case cv::dnn::ENGINE_CLASSIC: return "classic";
+        case cv::dnn::ENGINE_NEW: return "new";
+        case cv::dnn::ENGINE_AUTO: return "auto";
+        case cv::dnn::ENGINE_ORT: return "ort";
+        default: return "unknown";
+    }
+}
+
+inline void printDNNInfo(int engineId, int backendId, int targetId) {
+    std::cout << "[INFO] DNN Engine: " << getEngineName(engineId)
+              << " | Backend: " << getBackendName(backendId)
+              << " | Target: " << getTargetName(targetId) << std::endl;
+}
+
+inline void printDNNInfo(int backendId, int targetId) {
+    std::cout << "[INFO] Backend: " << getBackendName(backendId)
+              << " | Target: " << getTargetName(targetId) << std::endl;
+}
+
+const std::string engine_keys = cv::format(
+    "{ engine | auto | Choose one of DNN engines: "
+                    "auto: automatically (by default), "
+                    "classic: classic DNN engine, "
+                    "new: new graph-based DNN engine, "
+                    "ort: ONNX Runtime }");
 
 std::string genArgument(const std::string& argName, const std::string& help,
                         const std::string& modelName, const std::string& zooFile,

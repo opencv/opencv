@@ -50,7 +50,7 @@ const string target_keys = format(
                     "cuda: CUDA, "
                     "cuda_fp16: CUDA fp16 (half-float preprocess) }");
 
-string keys = param_keys + backend_keys + target_keys;
+string keys = param_keys + backend_keys + target_keys + engine_keys;
 
 static void loadParser(const string &modelName, const string &zooFile)
 {
@@ -77,6 +77,7 @@ static void loadParser(const string &modelName, const string &zooFile)
 static void createTracker(const string &modelName, CommandLineParser &parser, Ptr<Tracker> &tracker) {
     int backend = getBackendID(parser.get<String>("backend"));
     int target = getTargetID(parser.get<String>("target"));
+    printDNNInfo(backend, target);
     if (modelName == "dasiamrpn") {
         const string net = parser.get<String>("dasiamrpn_model");
         const string sha1 = parser.get<String>("dasiamrpn_sha1");

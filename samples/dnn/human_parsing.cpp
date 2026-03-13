@@ -8,10 +8,11 @@
 #include <opencv2/dnn.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
+#include <iostream>
 using namespace cv;
 
 
-static Mat parse_human(const Mat &image, const std::string &model, int backend=dnn::DNN_BACKEND_DEFAULT, int target=dnn::DNN_TARGET_CPU) {
+static Mat parse_human(const Mat &image, const std::string &model, int backend=dnn::DNN_BACKEND_DEFAULT, int target=dnn::DNN_TARGET_CPU, int engine=dnn::ENGINE_AUTO) {
     // this network expects an image and a flipped copy as input
     Mat flipped;
     flip(image, flipped, 1);
@@ -20,7 +21,7 @@ static Mat parse_human(const Mat &image, const std::string &model, int backend=d
     batch.push_back(flipped);
     Mat blob = dnn::blobFromImages(batch, 1.0, Size(), Scalar(104.00698793, 116.66876762, 122.67891434));
 
-    dnn::Net net = dnn::readNet(model);
+    dnn::Net net = dnn::readNet(model, "", "", engine);
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
     net.setInput(blob);
@@ -90,7 +91,15 @@ int main(int argc, char**argv)
                           "%d: Vulkan, "
                           "%d: CUDA, "
                           "%d: CUDA fp16 (half-float preprocess) }", cv::dnn::DNN_TARGET_CPU, cv::dnn::DNN_TARGET_OPENCL, cv::dnn::DNN_TARGET_OPENCL_FP16, cv::dnn::DNN_TARGET_MYRIAD, cv::dnn::DNN_TARGET_VULKAN, cv::dnn::DNN_TARGET_CUDA, cv::dnn::DNN_TARGET_CUDA_FP16);
-    std::string keys = param_keys + backend_keys + target_keys;
+    std::string hp_engine_keys = cv::format(
+        "{ engine | %d | Choose one of DNN engines: "
+                        "%d: auto (by default), "
+                        "%d: classic DNN engine, "
+                        "%d: new graph-based DNN engine, "
+                        "%d: ONNX Runtime }",
+        cv::dnn::ENGINE_AUTO, cv::dnn::ENGINE_AUTO, cv::dnn::ENGINE_CLASSIC,
+        cv::dnn::ENGINE_NEW, cv::dnn::ENGINE_ORT);
+    std::string keys = param_keys + backend_keys + target_keys + hp_engine_keys;
     CommandLineParser parser(argc, argv, keys);
     if (argc == 1 || parser.has("help"))
     {
@@ -101,9 +110,13 @@ int main(int argc, char**argv)
     std::string image = parser.get<std::string>("image");
     int backend = parser.get<int>("backend");
     int target = parser.get<int>("target");
+    int engine = parser.get<int>("engine");
 
     Mat input = imread(image);
-    Mat segm = parse_human(input, model, backend, target);
+    Mat segm = parse_human(input, model, backend, target, engine);
+    std::cout << "[INFO] DNN Engine: " << engine
+              << " | Backend: " << backend
+              << " | Target: " << target << std::endl;
 
     imshow("human parsing", segm);
     waitKey();

@@ -32,6 +32,13 @@ def parse_args():
                              '%d: Vulkan, '
                              '%d: CUDA, '
                              '%d: CUDA fp16 (half-float preprocess)'% targets)
+    engines = (cv.dnn.ENGINE_AUTO, cv.dnn.ENGINE_CLASSIC, cv.dnn.ENGINE_NEW, cv.dnn.ENGINE_ORT)
+    parser.add_argument('--engine', choices=engines, default=cv.dnn.ENGINE_AUTO, type=int,
+                        help="Choose one of DNN engines: "
+                             "%d: auto (by default), "
+                             "%d: classic DNN engine, "
+                             "%d: new graph-based DNN engine, "
+                             "%d: ONNX Runtime" % engines)
     args = parser.parse_args()
     return args
 
@@ -44,12 +51,11 @@ if __name__ == '__main__':
     img_gray_rs *= (100.0 / 255.0)      # Scale L channel to 0-100 range
 
     onnx_model_path = args.onnx_model_path  # Update this path to your ONNX model's path
-    engine = cv.dnn.ENGINE_AUTO
-    if args.backend != 0 or args.target != 0:
-        engine = cv.dnn.ENGINE_CLASSIC
+    engine = args.engine
     session = cv.dnn.readNetFromONNX(onnx_model_path, engine)
     session.setPreferableBackend(args.backend)
     session.setPreferableTarget(args.target)
+    print(f"[INFO] DNN Engine: {engine} | Backend: {args.backend} | Target: {args.target}")
 
     # Process each image in the batch (assuming batch processing is needed)
     blob = cv.dnn.blobFromImage(img_gray_rs, swapRB=False)  # Adjust swapRB according to your model's training

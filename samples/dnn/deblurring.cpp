@@ -67,7 +67,7 @@ const string target_keys = format(
     "cuda: CUDA, "
     "cuda_fp16: CUDA fp16 (half-float preprocess) }");
 
-string keys = param_keys + backend_keys + target_keys;
+string keys = param_keys + backend_keys + target_keys + engine_keys;
 
 
 int main(int argc, char **argv)
@@ -95,14 +95,14 @@ int main(int argc, char **argv)
     bool swapRB = parser.get<bool>("rgb");
     Scalar mean_v = parser.get<Scalar>("mean");
 
-    EngineType engine = ENGINE_AUTO;
-    if (backend != "default" || target != "cpu"){
-        engine = ENGINE_CLASSIC;
-    }
+    int engineId = getEngineID(parser.get<String>("engine"));
+    int backendId = getBackendID(backend);
+    int targetId = getTargetID(target);
 
-    Net net = readNetFromONNX(modelPath, engine);
-    net.setPreferableBackend(getBackendID(backend));
-    net.setPreferableTarget(getTargetID(target));
+    Net net = readNetFromONNX(modelPath, engineId);
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+    printDNNInfo(engineId, backendId, targetId);
 
     Mat inputImage = imread(findFile(imgPath));
     if (inputImage.empty()) {

@@ -58,7 +58,27 @@ string keys =
     "{ polygonThreshold pt            |        0.5          | Confidence threshold for polygons in DB detector. }"
     "{ maxCandidate max               |        200          | Max candidates for polygons in DB detector. }"
     "{ unclipRatio ratio              |        2.0          | Unclip ratio for DB detector. }"
-    "{ vocabularyPath vp              |   alphabet_36.txt   | Path to vocabulary file. }";
+    "{ vocabularyPath vp              |   alphabet_36.txt   | Path to vocabulary file. }"
+    "{ backend                        |       default       | Choose one of computation backends: "
+                                     "default: automatically (by default), "
+                                     "openvino: Intel's Deep Learning Inference Engine, "
+                                     "opencv: OpenCV implementation, "
+                                     "vkcom: VKCOM, "
+                                     "cuda: CUDA, "
+                                     "webnn: WebNN }"
+    "{ target                         |         cpu         | Choose one of target computation devices: "
+                                     "cpu: CPU target (by default), "
+                                     "opencl: OpenCL, "
+                                     "opencl_fp16: OpenCL fp16 (half-float precision), "
+                                     "vpu: VPU, "
+                                     "vulkan: Vulkan, "
+                                     "cuda: CUDA, "
+                                     "cuda_fp16: CUDA fp16 (half-float preprocess) }"
+    "{ engine                         |        auto         | Choose one of DNN engines: "
+                                     "auto: automatically (by default), "
+                                     "classic: classic DNN engine, "
+                                     "new: new graph-based DNN engine, "
+                                     "ort: ONNX Runtime }";
 
 // Function prototype for the four-point perspective transform
 static void fourPointsTransform(const Mat& frame, const Point2f vertices[], Mat& result);
@@ -131,10 +151,17 @@ int main(int argc, char** argv) {
     int weight = (stdWeight*imgWidth)/stdImgSize;
     FontFace fontFace("sans");
 
+    int backendId = getBackendID(parser.get<String>("backend"));
+    int targetId = getTargetID(parser.get<String>("target"));
+    int engineId = getEngineID(parser.get<String>("engine"));
+    printDNNInfo(engineId, backendId, targetId);
+
     // Initializing and configuring the text detection model based on the provided config
     if (modelName == "East") {
         // EAST Detector initialization
         TextDetectionModel_EAST detector(detModelPath);
+        detector.setPreferableBackend(backendId);
+        detector.setPreferableTarget(targetId);
         detector.setConfidenceThreshold(confThreshold)
                 .setNMSThreshold(nmsThreshold);
         // Setting input parameters specific to EAST model
@@ -145,6 +172,8 @@ int main(int argc, char** argv) {
     else if (modelName == "DB") {
         // DB Detector initialization
         TextDetectionModel_DB detector(detModelPath);
+        detector.setPreferableBackend(backendId);
+        detector.setPreferableTarget(targetId);
         detector.setBinaryThreshold(binThresh)
                 .setPolygonThreshold(polyThresh)
                 .setUnclipRatio(unclipRatio)
