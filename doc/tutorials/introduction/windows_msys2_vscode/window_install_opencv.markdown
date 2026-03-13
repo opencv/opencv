@@ -8,7 +8,8 @@ Building OpenCV on Windows from Source Code using MSYS2 UCRT64 and VS Code (C++)
 
 @tableofcontents
 
-@note This tutorial was tested on **Windows >= 7** using the **MSYS2 UCRT64 environment**.
+@note This tutorial was tested on Windows >= 7 using the MSYS2 UCRT64 environment.
+@note The OpenCV team does not maintain MSYS/Cygwin configuration and does not regularly test it with continuous integration.
 
 ---
 
