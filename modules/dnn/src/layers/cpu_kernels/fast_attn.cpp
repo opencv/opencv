@@ -63,7 +63,7 @@ void run_fused_softmax(
     Mat &att_weights, const Mat &att_mask,
     const float softcap, const bool do_softcap,
     const float threshold,
-    const float min_val, const bool is_causal)
+    const float min_val, const bool is_causal, const int past_seq_len)
 {
     const int batch_size = att_weights.size[0];
     const int n_heads = att_weights.size[1];
@@ -98,7 +98,7 @@ void run_fused_softmax(
             size_t mask_offset_q = b * mask_step_b + h * mask_step_h;
 
             for (int tq = 0; tq < seq_len_q; tq++){
-            const int tmax = is_causal ? std::min(tq + 1, seq_len_kv) : seq_len_kv;
+            const int tmax = is_causal ? std::min(past_seq_len + tq + 1, seq_len_kv) : seq_len_kv;
             float maxVal = -FLT_MAX;
             int tk = 0;
 #if CV_SIMD
@@ -213,44 +213,45 @@ void fused_softmax_softcap_mask(
         Mat &att_weights,const Mat &att_mask,
         const float softcap, const bool do_softcap,
         const float threshold,
-        const float min_val, const bool has_mask, const bool is_causal
+        const float min_val, const bool has_mask, const bool is_causal,
+        int past_seq_len
 ){
     if (has_mask) {
         switch(att_mask.depth())
         {
             case CV_32F:
-                run_fused_softmax<float, MaskPolicyFloat<float>>(att_weights, att_mask, softcap, do_softcap, threshold, min_val, is_causal);
+                run_fused_softmax<float, MaskPolicyFloat<float>>(att_weights, att_mask, softcap, do_softcap, threshold, min_val, is_causal, past_seq_len);
                 break;
             case CV_Bool:
             case CV_8U:
-                run_fused_softmax<uint8_t, MaskPolicyInt<uint8_t>>(att_weights, att_mask, softcap, do_softcap, threshold, min_val, is_causal);
+                run_fused_softmax<uint8_t, MaskPolicyInt<uint8_t>>(att_weights, att_mask, softcap, do_softcap, threshold, min_val, is_causal, past_seq_len);
                 break;
             case CV_8S:
-                run_fused_softmax<int8_t, MaskPolicyInt<int8_t>>(att_weights, att_mask, softcap, do_softcap, threshold, min_val, is_causal);
+                run_fused_softmax<int8_t, MaskPolicyInt<int8_t>>(att_weights, att_mask, softcap, do_softcap, threshold, min_val, is_causal, past_seq_len);
                 break;
             case CV_16U:
-                run_fused_softmax<uint16_t, MaskPolicyInt<uint16_t>>(att_weights, att_mask, softcap, do_softcap, threshold, min_val, is_causal);
+                run_fused_softmax<uint16_t, MaskPolicyInt<uint16_t>>(att_weights, att_mask, softcap, do_softcap, threshold, min_val, is_causal, past_seq_len);
                 break;
             case CV_16S:
-                run_fused_softmax<int16_t, MaskPolicyInt<int16_t>>(att_weights, att_mask, softcap, do_softcap, threshold, min_val, is_causal);
+                run_fused_softmax<int16_t, MaskPolicyInt<int16_t>>(att_weights, att_mask, softcap, do_softcap, threshold, min_val, is_causal, past_seq_len);
                 break;
             case CV_32U:
-                run_fused_softmax<uint32_t, MaskPolicyInt<uint32_t>>(att_weights, att_mask, softcap, do_softcap, threshold, min_val, is_causal);
+                run_fused_softmax<uint32_t, MaskPolicyInt<uint32_t>>(att_weights, att_mask, softcap, do_softcap, threshold, min_val, is_causal, past_seq_len);
                 break;
             case CV_32S:
-                run_fused_softmax<int32_t, MaskPolicyInt<int32_t>>(att_weights, att_mask, softcap, do_softcap, threshold, min_val, is_causal);
+                run_fused_softmax<int32_t, MaskPolicyInt<int32_t>>(att_weights, att_mask, softcap, do_softcap, threshold, min_val, is_causal, past_seq_len);
                 break;
             case CV_64U:
-                run_fused_softmax<uint64_t, MaskPolicyInt<uint64_t>>(att_weights, att_mask, softcap, do_softcap, threshold, min_val, is_causal);
+                run_fused_softmax<uint64_t, MaskPolicyInt<uint64_t>>(att_weights, att_mask, softcap, do_softcap, threshold, min_val, is_causal, past_seq_len);
                 break;
             case CV_64S:
-                run_fused_softmax<int64_t, MaskPolicyInt<int64_t>>(att_weights, att_mask, softcap, do_softcap, threshold, min_val, is_causal);
+                run_fused_softmax<int64_t, MaskPolicyInt<int64_t>>(att_weights, att_mask, softcap, do_softcap, threshold, min_val, is_causal, past_seq_len);
                 break;
             default:
                 CV_Error(Error::StsUnsupportedFormat, "Unsupported mask data type in fused_softmax_softcap_mask");
         }
     } else {
-        run_fused_softmax<float, MaskPolicyNone>(att_weights, att_mask, softcap, do_softcap, threshold, min_val, is_causal);
+        run_fused_softmax<float, MaskPolicyNone>(att_weights, att_mask, softcap, do_softcap, threshold, min_val, is_causal, past_seq_len);
     }
 }
 }}

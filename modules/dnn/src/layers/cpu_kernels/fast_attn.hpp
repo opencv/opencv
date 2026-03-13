@@ -15,7 +15,8 @@ void fused_softmax_softcap_mask(
         Mat &att_weights,const Mat &att_mask,
         const float softcap, const bool do_softcap,
         const float threshold,
-        const float min_val, const bool has_mask, const bool is_causal
+        const float min_val, const bool has_mask, const bool is_causal,
+        int past_seq_len = 0
 );
 
 }}
