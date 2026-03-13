@@ -13,7 +13,7 @@ std::string layoutToString(DataLayout layout)
         layout == DATA_LAYOUT_ND ? "ND" :
         layout == DATA_LAYOUT_NCHW ? "NCHW" :
         layout == DATA_LAYOUT_NHWC ? "NHWC" :
-        layout == DATA_LAYOUT_BLOCK ? "NC1HWC0" :
+        layout == DATA_LAYOUT_BLOCK ? "BLOCK" :
         layout == DATA_LAYOUT_NCDHW ? "NCDHW" :
         layout == DATA_LAYOUT_NDHWC ? "NDHWC" :
         layout == DATA_LAYOUT_PLANAR ? "PLANAR" :
@@ -335,39 +335,63 @@ bool MatShape::hasSymbols() const
     return false;
 }
 
-MatShape MatShape::toBlock(int C0) const
+int MatShape::channels() const
 {
-    CV_Assert(dims >= 3);
-    // C0 should be > 1 and be a power-of-2: 2, 4, 8, ...
-    CV_Assert(C0 > 1 && (C0 & (C0-1)) == 0);
-    CV_Assert(layout == DATA_LAYOUT_NCHW || layout == DATA_LAYOUT_NHWC);
-    int c_idx = layout == DATA_LAYOUT_NCHW ? 1 : dims-1;
-
-    MatShape newsize = *this;
-    newsize.layout = DATA_LAYOUT_BLOCK;
-    newsize.C = p[c_idx];
-    newsize.p[newsize.dims++] = C0;
-    newsize.p[c_idx] = (p[c_idx] + C0 - 1)/C0;
-
-    return newsize;
+    CV_Assert(layout == DATA_LAYOUT_BLOCK || layout == DATA_LAYOUT_NCHW || layout == DATA_LAYOUT_NHWC);
+    return layout == DATA_LAYOUT_BLOCK ? C : p[layout == DATA_LAYOUT_NCHW ? 1 : dims-1];
 }
 
-MatShape MatShape::fromBlock(DataLayout newLayout) const
+MatShape MatShape::toLayout(DataLayout newLayout, int C0) const
 {
-    CV_Assert(dims >= 4);
-    CV_Assert(layout == DATA_LAYOUT_BLOCK);
-    // C0 should be > 1 and be a power-of-2: 2, 4, 8, ...
-    int C0 = p[dims-1];
-    CV_Assert(C0 > 1 && (C0 & (C0-1)) == 0);
-    CV_Assert(p[1] == (C + C0-1)/C0);
-    CV_Assert(newLayout == DATA_LAYOUT_NCHW || newLayout == DATA_LAYOUT_NHWC);
-    int c_idx = newLayout == DATA_LAYOUT_NCHW ? 1 : dims-2;
+    CV_Assert(layout == DATA_LAYOUT_BLOCK || layout == DATA_LAYOUT_NCHW || layout == DATA_LAYOUT_NHWC);
+    CV_Assert(newLayout == DATA_LAYOUT_BLOCK || newLayout == DATA_LAYOUT_NCHW || newLayout == DATA_LAYOUT_NHWC);
 
     MatShape newsize = *this;
     newsize.layout = newLayout;
-    newsize.C = 0;
-    newsize.p[c_idx] = C;
-    newsize.dims--;
+
+    if (newLayout == DATA_LAYOUT_BLOCK) {
+        // any => BLOCK
+        CV_Assert_N(C0 > 1, (C0 & (C0-1)) == 0);
+        int Corig = channels();
+        newsize.C = Corig;
+
+        if (layout == DATA_LAYOUT_NHWC) {
+            for (int i = 2; i < dims; i++) {
+                newsize.p[i] = p[i-1];
+            }
+        }
+
+        newsize.dims += layout != DATA_LAYOUT_BLOCK;
+        newsize.p[1] = (Corig + C0 - 1)/C0;
+        newsize.p[newsize.dims-1] = C0;
+    } else if (layout == DATA_LAYOUT_BLOCK) {
+        // BLOCK => any (except for BLOCK, which is handled above)
+        newsize.C = 0;
+        if (newLayout == DATA_LAYOUT_NHWC) {
+            for (int i = 2; i < dims; i++) {
+                newsize.p[i-1] = p[i];
+            }
+        }
+        newsize.p[newLayout == DATA_LAYOUT_NCHW ? 1 : dims-2] = C;
+        newsize.dims--;
+    } else {
+        CV_Assert_N(C0 <= 1);
+
+        if (newLayout == layout)
+            return newsize;
+
+        // NHWC => NCHW
+        if (newLayout == DATA_LAYOUT_NCHW) {
+            for (int i = 2; i < dims; i++)
+                newsize.p[i] = p[i-1];
+            newsize.p[1] = p[dims-1];
+        } else {
+            // NCHW => NHWC
+            for (int i = 2; i < dims; i++)
+                newsize.p[i-1] = p[i];
+            newsize.p[dims-1] = p[1];
+        }
+    }
 
     return newsize;
 }
@@ -403,7 +427,7 @@ MatShape MatShape::expand(const MatShape& another) const
         int sz2 = i2 < 0 ? 1 : another.p[i2];
         CV_Assert(sz1 == sz2 || sz1 == 1 || sz2 == 1);
         // [TODO] handle symbolic shapes
-        result.p[i] = std::max(sz1, sz2);
+        result.p[i] = sz1 != 1 ? sz1 : sz2;
     }
     return result;
 }
@@ -943,6 +967,8 @@ void Mat::fit(const std::vector<int>& _shape, int _type)
 void Mat::fit(const MatShape& _shape, int _type)
 {
     fit(_shape.dims, _shape.p, _type);
+    size.layout = _shape.layout;
+    size.C = _shape.C;
 }
 
 void Mat::fit(std::initializer_list<int> _shape, int _type)
@@ -1129,6 +1155,8 @@ void Mat::create(const MatShape& _shape, int _type)
         return;
     }
     create(_shape.dims, _shape.p, _type);
+    size.layout = _shape.layout;
+    size.C = _shape.C;
 }
 
 void Mat::create(std::initializer_list<int> _shape, int _type)
