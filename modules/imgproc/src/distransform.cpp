@@ -332,12 +332,14 @@ distanceTransform_5x5( const Mat& _src, Mat& _temp, Mat& _dist, const float* met
             t1p2_0 = v_add(t1p2_0, v_long);
 
             v_uint32 m0 = v_min(t2m1_0, t2p1_0);
-            m0 = v_min(m0, t1m2_0);
-            m0 = v_min(m0, t1m1_0);
-            m0 = v_min(m0, t1_0);
-            m0 = v_min(m0, t1p1_0);
-            m0 = v_min(m0, t1p2_0);
+            v_uint32 m0_1 = v_min(t1m2_0, t1m1_0);
+            v_uint32 m0_2 = v_min(t1p1_0, t1p2_0);
+            m0 = v_min(m0, m0_1);
+            m0_2 = v_min(m0_2, t1_0);
+            m0 = v_min(m0, m0_2);
             m0 = v_min(m0, v_max);
+
+            v_store(cur + j,     m0);
 
             v_uint32 t2m1_1 = vx_load(top2 + j + 3);
             v_uint32 t2p1_1 = vx_load(top2 + j + 5);
@@ -356,14 +358,13 @@ distanceTransform_5x5( const Mat& _src, Mat& _temp, Mat& _dist, const float* met
             t1p2_1 = v_add(t1p2_1, v_long);
 
             v_uint32 m1 = v_min(t2m1_1, t2p1_1);
-            m1 = v_min(m1, t1m2_1);
-            m1 = v_min(m1, t1m1_1);
-            m1 = v_min(m1, t1_1);
-            m1 = v_min(m1, t1p1_1);
-            m1 = v_min(m1, t1p2_1);
+            v_uint32 m1_1 = v_min(t1m2_1, t1m1_1);
+            v_uint32 m1_2 = v_min(t1p1_1, t1p2_1);
+            m1 = v_min(m1, m1_1);
+            m1_2 = v_min(m1_2, t1_1);
+            m1 = v_min(m1, m1_2);
             m1 = v_min(m1, v_max);
 
-            v_store(cur + j,     m0);
             v_store(cur + j + 4, m1);
 
             for (int k = 0; k < BLOCK; k++)
