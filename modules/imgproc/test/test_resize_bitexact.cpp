@@ -240,4 +240,37 @@ TEST(Resize_Bitexact, Nearest8U)
     }
 }
 
+// Regression test for #28429: INTER_NEAREST_EXACT gives wrong results
+// for source dimensions that are multiples of 64 (e.g. 128, 192).
+// The center-pixel convention must match PIL/scikit-image exactly.
+TEST(Resize_Bitexact, NearestExact_Dim128)
+{
+    // For src_width=128, dst_width=160, the last few source coordinates
+    // must match floor((x + 0.5) * 128 / 160). The old 16-bit fixed-point
+    // arithmetic produced off-by-one errors at SIMD boundary dimensions.
+    const int src_w = 128, src_h = 147;
+    const int dst_w = 160, dst_h = 160;
+    Mat src(src_h, src_w, CV_8UC3);
+    randu(src, Scalar::all(0), Scalar::all(256));
+
+    Mat result;
+    resize(src, result, Size(dst_w, dst_h), 0, 0, INTER_NEAREST_EXACT);
+
+    // Verify each pixel matches the center-pixel convention
+    for (int y = 0; y < dst_h; y++)
+    {
+        int sy = (int)(((int64_t)(2*y + 1) * src_h) / (2 * dst_h));
+        sy = std::min(sy, src_h - 1);
+        for (int x = 0; x < dst_w; x++)
+        {
+            int sx = (int)(((int64_t)(2*x + 1) * src_w) / (2 * dst_w));
+            sx = std::min(sx, src_w - 1);
+            Vec3b expected = src.at<Vec3b>(sy, sx);
+            Vec3b actual = result.at<Vec3b>(y, x);
+            EXPECT_EQ(expected, actual)
+                << "Mismatch at dst(" << y << "," << x << ") -> src(" << sy << "," << sx << ")";
+        }
+    }
+}
+
 }} // namespace

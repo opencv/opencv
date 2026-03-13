@@ -1174,8 +1174,8 @@ resizeNN( const Mat& src, Mat& dst, double fx, double fy )
 class resizeNN_bitexactInvoker : public ParallelLoopBody
 {
 public:
-    resizeNN_bitexactInvoker(const Mat& _src, Mat& _dst, int* _x_ofse, int _ify, int _ify0)
-        : src(_src), dst(_dst), x_ofse(_x_ofse), ify(_ify), ify0(_ify0) {}
+    resizeNN_bitexactInvoker(const Mat& _src, Mat& _dst, int* _x_ofse)
+        : src(_src), dst(_dst), x_ofse(_x_ofse) {}
 
     virtual void operator() (const Range& range) const CV_OVERRIDE
     {
@@ -1184,8 +1184,8 @@ public:
         for( int y = range.start; y < range.end; y++ )
         {
             uchar* D = dst.ptr(y);
-            int _sy = (ify * y + ify0) >> 16;
-            int sy = std::min(_sy, ssize.height-1);
+            int sy = (int)(((int64_t)(2*y + 1) * ssize.height) / (2 * dsize.height));
+            sy = std::min(sy, ssize.height-1);
             const uchar* S = src.ptr(sy);
 
             int x = 0;
@@ -1260,30 +1260,27 @@ private:
     const Mat& src;
     Mat& dst;
     int* x_ofse;
-    const int ify;
-    const int ify0;
 };
 
 static void resizeNN_bitexact( const Mat& src, Mat& dst, double /*fx*/, double /*fy*/ )
 {
     Size ssize = src.size(), dsize = dst.size();
-    int ifx = ((ssize.width << 16) + dsize.width / 2) / dsize.width; // 16bit fixed-point arithmetic
-    int ifx0 = ifx / 2 - ssize.width % 2;                       // This method uses center pixel coordinate as Pillow and scikit-images do.
-    int ify = ((ssize.height << 16) + dsize.height / 2) / dsize.height;
-    int ify0 = ify / 2 - ssize.height % 2;
 
     cv::utils::BufferArea area;
     int* x_ofse = 0;
     area.allocate(x_ofse, dsize.width, CV_SIMD_WIDTH);
     area.commit();
 
+    // Use exact integer arithmetic to match Pillow/scikit-image center-pixel convention:
+    // src_x = floor((dst_x + 0.5) * src_width / dst_width)
+    //       = (2*dst_x + 1) * src_width / (2 * dst_width)   [integer division]
     for( int x = 0; x < dsize.width; x++ )
     {
-        int sx = (ifx * x + ifx0) >> 16;
+        int sx = (int)(((int64_t)(2*x + 1) * ssize.width) / (2 * dsize.width));
         x_ofse[x] = std::min(sx, ssize.width-1);    // offset in element (not byte)
     }
     Range range(0, dsize.height);
-    resizeNN_bitexactInvoker invoker(src, dst, x_ofse, ify, ify0);
+    resizeNN_bitexactInvoker invoker(src, dst, x_ofse);
     parallel_for_(range, invoker, dst.total()/(double)(1<<16));
 }
 
