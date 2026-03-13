@@ -2565,6 +2565,7 @@ TEST_P(Test_ONNX_nets, MobileNet_v2_FP16)
 
 TEST_P(Test_ONNX_nets, MobileNet_v4)
 {
+    required = true;
     testONNXModels("mobilenetv4", npy, default_l1, default_lInf, true);
 }
 
