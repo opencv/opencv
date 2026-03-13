@@ -2467,7 +2467,6 @@ int64 Net::Impl::getFLOPS(
         tryInferShapes(netInputShapes, netInputTypes, shapes, shapeCache, typeCache);
 
         CV_Assert(0 <= layerId && layerId < (int)totalLayers);
-        int graphIdx = 0;
         int localIdx = layerId;
         for (const Ptr<Graph>& graph : allgraphs) {
             int progSize = (int)graph->prog().size();
@@ -2499,8 +2498,8 @@ int64 Net::Impl::getFLOPS(
                 return layer->getFLOPS(inpShapes, outShapes);
             }
             localIdx -= progSize;
-            graphIdx++;
         }
+
         CV_Error(Error::StsOutOfRange, format("Layer id %d is out of range", layerId));
     }
 
