@@ -105,7 +105,7 @@ distanceTransform_3x3( const Mat& _src, Mat& _temp, Mat& _dist, const float* met
 
         unsigned int left = cur[-1];
 
-#if CV_SIMD
+#if defined(CV_SIMD)
         const int BLOCK = 8;
         int j = 0;
         const v_uint32 v_diag = vx_setall<v_uint32>(DIAG_DIST);
@@ -206,7 +206,7 @@ distanceTransform_3x3( const Mat& _src, Mat& _temp, Mat& _dist, const float* met
     // backward pass
     float* drow = dist;
     unsigned int* cur = row - step;
-#if CV_SIMD
+#if defined(CV_SIMD)
     const v_float32 scale_v = vx_setall<v_float32>(scale);
 #endif
     for (int i = height - 1; i >= 0; i--)
@@ -239,7 +239,7 @@ distanceTransform_3x3( const Mat& _src, Mat& _temp, Mat& _dist, const float* met
             right = cur[j];
         }
 
-#if CV_SIMD
+#if defined(CV_SIMD)
         int j = 0;
         const uint32_t* tptr = (const uint32_t*)cur;
         float* dptr = drow;
@@ -303,7 +303,7 @@ distanceTransform_5x5( const Mat& _src, Mat& _temp, Mat& _dist, const float* met
         const unsigned int* top2 = cur - step * 2;
         cur[-1] = cur[-2] = DIST_MAX;
         cur[width] = cur[width + 1] = DIST_MAX;
-#if CV_SIMD
+#if defined(CV_SIMD)
         unsigned int left1 = DIST_MAX;
         unsigned int left2 = DIST_MAX;
         const int BLOCK = 8;
@@ -451,7 +451,7 @@ distanceTransform_5x5( const Mat& _src, Mat& _temp, Mat& _dist, const float* met
     float* drow = dist;
     unsigned int* cur = row - step;
 
-#if CV_SIMD
+#if defined(CV_SIMD)
     const v_float32 scale_v = vx_setall<v_float32>(scale);
 #endif
 
@@ -488,7 +488,7 @@ distanceTransform_5x5( const Mat& _src, Mat& _temp, Mat& _dist, const float* met
             right = cur[j];
         }
 
-#if CV_SIMD
+#if defined(CV_SIMD)
         int j = 0;
         const uint32_t* tptr = (const uint32_t*)cur;
         float* dptr = drow;
@@ -917,118 +917,72 @@ static void
 distanceATS_L1_8u( const Mat& src, Mat& dst )
 {
     int width = src.cols, height = src.rows;
+
+    int a;
+    uchar lut[256];
     int x, y;
+
     const uchar *sbase = src.ptr();
     uchar *dbase = dst.ptr();
     int srcstep = (int)src.step;
     int dststep = (int)dst.step;
+
     CV_Assert( src.type() == CV_8UC1 && dst.type() == CV_8UC1 );
     CV_Assert( src.size() == dst.size() );
 
-    dbase[0] = (sbase[0] == 0) ? 0 : 255;
-    {
-        uchar prev = dbase[0];
-        for (x = 1; x < width; x++)
-        {
-            prev = (sbase[x] == 0) ? 0u : (prev < 255u ? prev + 1u : 255u);
-            dbase[x] = prev;
-        }
-    }
+    ////////////////////// forward scan ////////////////////////
+    for( x = 0; x < 256; x++ )
+        lut[x] = cv::saturate_cast<uchar>(x+1);
 
-    for (y = 1; y < height; y++)
+    //init first pixel to max (we're going to be skipping it)
+    dbase[0] = (uchar)(sbase[0] == 0 ? 0 : 255);
+
+    //first row (scan west only, skip first pixel)
+    for( x = 1; x < width; x++ )
+        dbase[x] = (uchar)(sbase[x] == 0 ? 0 : lut[dbase[x-1]]);
+
+    for( y = 1; y < height; y++ )
     {
         sbase += srcstep;
         dbase += dststep;
-        const uchar* sr = sbase;
-        uchar* dr = dbase;
-        const uchar* dr_prev = dbase - dststep;
-        {
-#if CV_SIMD
-            const int vstep = v_uint8::nlanes;
-            const v_uint8 v_one  = vx_setall_u8(1);
-            const v_uint8 v_zero = vx_setall_u8(0);
-            const v_uint8 v_255  = vx_setall_u8(255);
 
-            x = 0;
-            for (; x <= width - vstep; x += vstep)
-            {
-                v_uint8 s   = vx_load(sr + x);
-                v_uint8 n   = vx_load(dr_prev + x);
-                v_uint8 np1 = v_min(v_add(n, v_one), v_255);
-                v_uint8 msk = v_eq(s, v_zero);
-                v_uint8 res = v_and(np1, v_not(msk));
-                v_store(dr + x, res);
-            }
-#else
-            x = 0;
-#endif
-            for (; x < width; x++)
-                dr[x] = (sr[x] == 0) ? 0u
-                       : (dr_prev[x] < 255u ? dr_prev[x] + 1u : 255u);
-        }
+        //for left edge, scan north only
+        a = sbase[0] == 0 ? 0 : lut[dbase[-dststep]];
+        dbase[0] = (uchar)a;
 
+        for( x = 1; x < width; x++ )
         {
-            uchar wa = dr[0];
-            for (x = 1; x < width; x++)
-            {
-                uchar west1 = (wa < 255u) ? wa + 1u : 255u;
-                uchar cur   = dr[x];
-                wa = (cur < west1) ? cur : west1;
-                dr[x] = wa;
-            }
+            a = sbase[x] == 0 ? 0 : lut[MIN(a, dbase[x - dststep])];
+            dbase[x] = (uchar)a;
         }
     }
 
+    ////////////////////// backward scan ///////////////////////
+
+    a = dbase[width-1];
+
+    // do last row east pixel scan here (skip bottom right pixel)
+    for( x = width - 2; x >= 0; x-- )
     {
-        uchar* dr = dbase;
-        uchar  ea = dr[width - 1];
-        for (x = width - 2; x >= 0; x--)
-        {
-            uchar east1 = (ea < 255u) ? ea + 1u : 255u;
-            ea = dr[x] < east1 ? dr[x] : east1;
-            dr[x] = ea;
-        }
+        a = lut[a];
+        dbase[x] = (uchar)(CV_CALC_MIN_8U(a, dbase[x]));
     }
 
-    for (y = height - 2; y >= 0; y--)
+    // right edge is the only error case
+    for( y = height - 2; y >= 0; y-- )
     {
         dbase -= dststep;
-        uchar* dr = dbase;
-        const uchar* dr_next = dbase + dststep;
 
+        // do right edge
+        a = lut[dbase[width-1+dststep]];
+        a = dbase[width-1] = (uchar)(MIN(a, dbase[width-1]));
+
+        for( x = width - 2; x >= 0; x-- )
         {
-#if CV_SIMD
-            const int vstep = v_uint8::nlanes;
-            const v_uint8 v_one = vx_setall_u8(1);
-            const v_uint8 v_255 = vx_setall_u8(255);
-
-            x = 0;
-            for (; x <= width - vstep; x += vstep)
-            {
-                v_uint8 cur = vx_load(dr + x);
-                v_uint8 s   = vx_load(dr_next + x);
-                v_uint8 sp1 = v_min(v_add(s, v_one), v_255);
-                v_uint8 res = v_min(cur, sp1);
-                v_store(dr + x, res);
-            }
-#else
-            x = 0;
-#endif
-            for (; x < width; x++)
-            {
-                uchar sp1 = (dr_next[x] < 255u) ? dr_next[x] + 1u : 255u;
-                if (sp1 < dr[x]) dr[x] = sp1;
-            }
-        }
-
-        {
-            uchar ea = dr[width - 1];
-            for (x = width - 2; x >= 0; x--)
-            {
-                uchar east1 = (ea < 255u) ? ea + 1u : 255u;
-                ea = dr[x] < east1 ? dr[x] : east1;
-                dr[x] = ea;
-            }
+            int b = dbase[x+dststep];
+            a = lut[MIN(a, b)];
+            a = MIN(a, dbase[x]);
+            dbase[x] = (uchar)(a);
         }
     }
 }
