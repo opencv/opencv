@@ -492,6 +492,21 @@ public:
         return true;
     } // getMemoryShape
 
+    virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
+                           const std::vector<MatShape> &outputs) const CV_OVERRIDE
+    {
+        computeOutputShape(inputs);
+
+        int64 totalProduct = 1;
+        for (int i = 0; i < numLetterIndices; i++) {
+            int dimVal = subscriptIndicesToDimValue[i];
+            if (dimVal > 0)
+                totalProduct *= dimVal;
+        }
+        // 2 FLOPs per multiply-add in the contraction
+        return CV_BIG_INT(2) * totalProduct;
+    }
+
     // forward
     void forward(InputArrayOfArrays inputs_arr,
                  OutputArrayOfArrays outputs_arr,
