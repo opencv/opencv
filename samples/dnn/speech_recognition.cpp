@@ -520,6 +520,11 @@ int main(int argc, char** argv)
                                                           "dnn::DNN_TARGET_CPU, "
                                                           "dnn::DNN_TARGET_OPENCL, "
                                                           "dnn::DNN_TARGET_OPENCL_FP16 }"
+        "{engine e           | dnn::ENGINE_AUTO         | Select a DNN engine: "
+                                                          "dnn::ENGINE_AUTO, "
+                                                          "dnn::ENGINE_CLASSIC, "
+                                                          "dnn::ENGINE_NEW, "
+                                                          "dnn::ENGINE_ORT }"
         ;
     CommandLineParser parser(argc, argv, keys);
     if (parser.has("help"))
@@ -529,9 +534,15 @@ int main(int argc, char** argv)
     }
 
     // Load Network
-    dnn::Net net = dnn::readNetFromONNX(parser.get<std::string>("model"));
-    net.setPreferableBackend(parser.get<int>("backend"));
-    net.setPreferableTarget(parser.get<int>("target"));
+    int engineId = parser.get<int>("engine");
+    int backendId = parser.get<int>("backend");
+    int targetId = parser.get<int>("target");
+    dnn::Net net = dnn::readNetFromONNX(parser.get<std::string>("model"), engineId);
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+    std::cout << "[INFO] DNN Engine: " << engineId
+              << " | Backend: " << backendId
+              << " | Target: " << targetId << std::endl;
 
     // Get audio
     vector<double>inputAudio = {};
