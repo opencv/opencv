@@ -144,7 +144,7 @@ namespace opencv_test { namespace {
         return iccp_data;
     }
 
-#ifdef PNG_cICP_SUPPORTED
+#ifdef OPENCV_IMGCODECS_PNG_WITH_cICP
     static std::vector<uchar> getSampleCicpData() {
         return {
             9,  // BT.2020 / BT.2100
@@ -479,7 +479,7 @@ TEST(Imgcodecs_Png, Read_Write_With_Exif)
     remove(outputname.c_str());
 }
 
-#ifdef PNG_cICP_SUPPORTED
+#ifdef OPENCV_IMGCODECS_PNG_WITH_cICP
 TEST(Imgcodecs_Png, Read_Write_With_Exif_Xmp_Iccp_cICP)
 #else
 TEST(Imgcodecs_Png, Read_Write_With_Exif_Xmp_Iccp)
@@ -497,7 +497,7 @@ TEST(Imgcodecs_Png, Read_Write_With_Exif_Xmp_Iccp)
         getSampleIccpData(),
     };
 
-#ifdef PNG_cICP_SUPPORTED
+#ifdef OPENCV_IMGCODECS_PNG_WITH_cICP
     metadata_types.push_back(IMAGE_METADATA_CICP);
     metadata.push_back(getSampleCicpData());
 #endif

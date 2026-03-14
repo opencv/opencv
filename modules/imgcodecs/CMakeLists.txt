@@ -39,11 +39,6 @@ if(HAVE_PNG)
   add_definitions(${PNG_DEFINITIONS})
   ocv_include_directories(${PNG_INCLUDE_DIR})
   list(APPEND GRFMT_LIBS ${PNG_LIBRARIES})
-
-  if(PNG_cICP_SUPPORTED)
-    set_source_files_properties(${CMAKE_CURRENT_LIST_DIR}/test/test_exif.cpp
-                                PROPERTIES COMPILE_DEFINITIONS "PNG_cICP_SUPPORTED")
-  endif()
 endif()
 
 if(HAVE_GDCM)
@@ -208,5 +203,10 @@ endif()
 if(TARGET opencv_test_imgcodecs AND ((HAVE_PNG AND NOT (PNG_VERSION_STRING VERSION_LESS "1.6.31")) OR HAVE_SPNG))
   # details: https://github.com/glennrp/libpng/commit/68cb0aaee3de6371b81a4613476d9b33e43e95b1
   ocv_target_compile_definitions(opencv_test_imgcodecs PRIVATE OPENCV_IMGCODECS_PNG_WITH_EXIF=1)
+endif()
+if(TARGET opencv_test_imgcodecs AND ((HAVE_PNG AND NOT (PNG_VERSION_STRING VERSION_LESS "1.6.45")) OR HAVE_SPNG))
+  # cICP does not support in spng
+  # cICP support added in libpng 1.6.45
+  ocv_target_compile_definitions(opencv_test_imgcodecs PRIVATE OPENCV_IMGCODECS_PNG_WITH_cICP=1)
 endif()
 ocv_add_perf_tests()
