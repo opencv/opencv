@@ -1673,6 +1673,21 @@ TEST(Core_InputOutput, FileStorage_free_file_after_exception)
     ASSERT_EQ(0, std::remove(fileName.c_str()));
 }
 
+TEST(Core_InputOutput, FileStorage_YAML_empty_key)
+{
+    const std::string fileName = cv::tempfile("FileStorage_YAML_empty_key_test.yml");
+    const std::string content = "%YAML:1.0\n---\nkey1: value1\n: 10\n";
+
+    std::fstream testFile;
+    testFile.open(fileName.c_str(), std::fstream::out);
+    if(!testFile.is_open()) FAIL();
+    testFile << content;
+    testFile.close();
+
+    EXPECT_THROW(FileStorage(fileName, FileStorage::READ), cv::Exception);
+    ASSERT_EQ(0, std::remove(fileName.c_str()));
+}
+
 TEST(Core_InputOutput, FileStorage_write_to_sequence)
 {
     const std::vector<std::string> formatExts = { ".yml", ".json", ".xml" };
