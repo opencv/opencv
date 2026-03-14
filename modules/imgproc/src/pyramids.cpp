@@ -69,19 +69,13 @@ template<typename T, int shift> struct FltCast
     rtype operator ()(type1 arg) const { return arg*(T)(1./(1 << shift)); }
 };
 
-template<typename T1, typename T2, int cn> int PyrDownVecH(const T1* src, T2* row, int width)
+template<typename T1, typename T2, int cn> int PyrDownVecH(const T1*, T2*, int)
 {
-    int x = 0;
-    int cn2 = cn*2;
-    for(; x < width; x += cn )
-    {
-        const T1* s = src + x*2;
-        for (int k = 0; k < cn; k++)
-        {
-            row[x + k] = s[k+ cn2]*6 + (s[k + cn] + s[k + cn*3])*4 + s[k] + s[k + cn*4];
-        }
-    }
-    return x;
+    //   row[x       ] = src[x * 2 + 2*cn  ] * 6 + (src[x * 2 +   cn  ] + src[x * 2 + 3*cn  ]) * 4 + src[x * 2       ] + src[x * 2 + 4*cn  ];
+    //   row[x +    1] = src[x * 2 + 2*cn+1] * 6 + (src[x * 2 +   cn+1] + src[x * 2 + 3*cn+1]) * 4 + src[x * 2 +    1] + src[x * 2 + 4*cn+1];
+    //   ....
+    //   row[x + cn-1] = src[x * 2 + 3*cn-1] * 6 + (src[x * 2 + 2*cn-1] + src[x * 2 + 4*cn-1]) * 4 + src[x * 2 + cn-1] + src[x * 2 + 5*cn-1];
+    return 0;
 }
 
 template<typename T1, typename T2, int cn> int PyrUpVecH(const T1*, T2*, int)
@@ -1158,33 +1152,9 @@ void PyrDownInvoker<CastOp>::operator()(const Range& range) const
     WT* buf = alignPtr((WT*)_buf.data(), 16);
     CastOp castOp;
 
-    int y_border_top = std::min(PD_SZ/2, dsize.height);
-    int y_border_bottom = std::max(dsize.height - PD_SZ/2, 0);
+    processRows(_src, _dst, range.start, range.end, _borderType,
+                _tabL, _tabM, _tabR, buf, bufstep, castOp);
 
-    // Process top border region
-    int top_end = std::min(y_border_top, range.end);
-    if (range.start < top_end)
-    {
-        processRows(_src, _dst, range.start, top_end, _borderType,
-                    _tabL, _tabM, _tabR, buf, bufstep, castOp);
-    }
-
-    // Process middle region (border-independent)
-    int middle_start = std::max(y_border_top, range.start);
-    int middle_end = std::min(y_border_bottom, range.end);
-    if (middle_start < middle_end)
-    {
-        processRows(_src, _dst, middle_start, middle_end, _borderType,
-                    _tabL, _tabM, _tabR, buf, bufstep, castOp);
-    }
-
-    // Process bottom border region
-    int bottom_start = std::max(y_border_bottom, range.start);
-    if (bottom_start < range.end)
-    {
-        processRows(_src, _dst, bottom_start, range.end, _borderType,
-                    _tabL, _tabM, _tabR, buf, bufstep, castOp);
-    }
 }
 
 
