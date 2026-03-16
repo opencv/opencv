@@ -271,6 +271,38 @@ if(WITH_ONNXRUNTIME)
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath,'$ORIGIN/../3rdparty/onnxruntime/${_ort_unpack_dirname}/lib'")
       endif()
 
+      if(APPLE)
+  set(_ort_dylib "${ONNXRT_ROOT_DIR}/lib/libonnxruntime.${ONNXRUNTIME_VERSION}.dylib")
+
+  if(EXISTS "${_ort_dylib}")
+    execute_process(
+      COMMAND install_name_tool -id "libonnxruntime.dylib" "${_ort_dylib}"
+      RESULT_VARIABLE _ort_patch_result
+      ERROR_QUIET
+    )
+
+    if(_ort_patch_result EQUAL 0)
+      execute_process(
+        COMMAND codesign --force --sign - "${_ort_dylib}"
+        RESULT_VARIABLE _ort_sign_result
+        ERROR_QUIET
+      )
+
+      if(_ort_sign_result EQUAL 0)
+        message(STATUS "DNN/macOS: Patched ORT install name for ORT GenAI dlopen compatibility")
+      else()
+        message(WARNING "DNN/macOS: codesign failed for '${_ort_dylib}'. Workaround: export ORT_LIB_PATH=${_ort_dylib}")
+      endif()
+    else()
+      message(WARNING "DNN/macOS: install_name_tool failed for '${_ort_dylib}'. Workaround: export ORT_LIB_PATH=${_ort_dylib}")
+    endif()
+  endif()
+
+  unset(_ort_dylib)
+endif()
+
+include("${OpenCV_SOURCE_DIR}/cmake/FindONNX.cmake")
+
       include("${OpenCV_SOURCE_DIR}/cmake/FindONNX.cmake")
     endif()
   endif()  # _ort_download_requested
