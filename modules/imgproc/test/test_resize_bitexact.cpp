@@ -240,4 +240,62 @@ TEST(Resize_Bitexact, Nearest8U)
     }
 }
 
+// Regression test for #28429: INTER_NEAREST_EXACT must match Pillow's nearest
+// neighbor resampling. Pillow uses iterative double-precision accumulation
+// (xo = scale*0.5; idx = (int)xo; xo += scale) which produces specific FP
+// rounding at boundaries when dimensions are multiples of 64.
+TEST(Resize_Bitexact, NearestExact_PillowCompat)
+{
+    // Pillow's coordinate mapping for nearest neighbor:
+    //   scale = (double)src_dim / dst_dim
+    //   coord = scale * 0.5
+    //   for each dst pixel: src_idx = (int)coord; coord += scale;
+    auto pillow_map = [](int src_dim, int dst_dim, std::vector<int>& mapping) {
+        mapping.resize(dst_dim);
+        double scale = (double)src_dim / dst_dim;
+        double coord = scale * 0.5;
+        for (int i = 0; i < dst_dim; i++)
+        {
+            mapping[i] = std::min((int)coord, src_dim - 1);
+            coord += scale;
+        }
+    };
+
+    // Test dimension pairs including multiples of 64 that triggered the bug
+    const int cases[][4] = {
+        {128, 147, 160, 160},  // original reproducer from #28429
+        {128, 128, 160, 160},  // square with problematic height
+        {192, 192, 256, 256},  // another multiple of 64
+        {129, 147, 160, 160},  // non-problematic control case
+    };
+
+    for (const auto& c : cases)
+    {
+        int src_h = c[0], src_w = c[1], dst_h = c[2], dst_w = c[3];
+
+        std::vector<int> x_map, y_map;
+        pillow_map(src_w, dst_w, x_map);
+        pillow_map(src_h, dst_h, y_map);
+
+        Mat src(src_h, src_w, CV_8UC3);
+        randu(src, Scalar::all(0), Scalar::all(256));
+
+        Mat result;
+        resize(src, result, Size(dst_w, dst_h), 0, 0, INTER_NEAREST_EXACT);
+
+        for (int y = 0; y < dst_h; y++)
+        {
+            for (int x = 0; x < dst_w; x++)
+            {
+                Vec3b expected = src.at<Vec3b>(y_map[y], x_map[x]);
+                Vec3b actual = result.at<Vec3b>(y, x);
+                EXPECT_EQ(expected, actual)
+                    << "Mismatch at dst(" << y << "," << x << ") -> src("
+                    << y_map[y] << "," << x_map[x] << ") for "
+                    << src_h << "x" << src_w << " -> " << dst_h << "x" << dst_w;
+            }
+        }
+    }
+}
+
 }} // namespace
