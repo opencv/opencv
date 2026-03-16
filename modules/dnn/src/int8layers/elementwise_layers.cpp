@@ -18,8 +18,6 @@ namespace dnn
 class ActivationLayerInt8Impl CV_FINAL : public ActivationLayerInt8
 {
 public:
-    int input_zp, output_zp;
-    float input_sc, output_sc;
     float slope = 0.0f;
 
 #ifdef HAVE_TIMVX
@@ -30,10 +28,10 @@ public:
         setParamsFrom(params);
         activationLUT = !blobs.empty() ? blobs[0] : Mat();
 
-        input_zp = params.get<int>("input_zeropoint");
-        input_sc = params.get<float>("input_scale");
-        output_zp = params.get<int>("zeropoints");
-        output_sc = params.get<float>("scales");
+        input_zp = params.get<int>("input_zeropoint", 0);
+        input_sc = params.get<float>("input_scale", 1.0f);
+        output_zp = params.get<int>("zeropoints", 0);
+        output_sc = params.get<float>("scales", 1.0f);
 
         if (params.has("slope"))
         {
@@ -355,7 +353,6 @@ public:
 
     }
 
-    Mat activationLUT;
 };
 
 Ptr<ActivationLayerInt8> ActivationLayerInt8::create(const LayerParams& params)

@@ -497,6 +497,7 @@ void Net::Impl::prepareForInference()
 #endif
 
     if (!prepared) {
+        fuseQDQ();
         constFold();
         constArgs();
         useBlockLayout();

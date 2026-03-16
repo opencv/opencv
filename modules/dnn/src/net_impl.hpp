@@ -449,6 +449,8 @@ struct Net::Impl : public detail::NetImplBase
     // fuse batch norm, add bias and activation to convolution
     void fuseBasic();
     // replace constant sub-expressions with their results
+
+    void fuseQDQ();
     void constFold();
     // make some operations (activation, batch norm, convolution) unary if
     // all their arguments except for the 1st one are constant.

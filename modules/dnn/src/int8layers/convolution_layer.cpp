@@ -42,16 +42,32 @@ public:
     BaseConvolutionLayerInt8Impl(const LayerParams &params)
     {
         setParamsFrom(params);
-        getConvolutionKernelParams(params, kernel_size, pads_begin, pads_end, strides, dilations, padMode, adjust_pads, useWinograd);
+        const bool hasKernelParams =
+            params.has("kernel") || params.has("kernel_size") || params.has("kernel_h") || params.has("kernel_w");
+        if (hasKernelParams)
+        {
+            getConvolutionKernelParams(params, kernel_size, pads_begin, pads_end, strides, dilations, padMode, adjust_pads, useWinograd);
+        }
+        else
+        {
+            kernel_size.clear();
+            pads_begin.clear();
+            pads_end.clear();
+            strides.clear();
+            dilations.clear();
+            adjust_pads.clear();
+            padMode = params.get<String>("pad_mode", "");
+        }
 
-        numOutput = params.get<int>("num_output");
+        numOutput = params.get<int>("num_output", blobs.empty() ? 0 : blobs[0].size[0]);
         int ngroups = params.get<int>("group", 1);
-        CV_Assert(numOutput % ngroups == 0);
+        if (numOutput > 0)
+            CV_Assert(numOutput % ngroups == 0);
 
-        input_sc = params.get<float>("input_scale");
-        input_zp = params.get<int>("input_zeropoint");
-        output_zp = params.get<int>("zeropoints");
-        output_sc = params.get<float>("scales");
+        input_sc = params.get<float>("input_scale", 1.0f);
+        input_zp = params.get<int>("input_zeropoint", 0);
+        output_zp = params.get<int>("zeropoints", 0);
+        output_sc = params.get<float>("scales", 1.0f);
         per_channel = params.get<bool>("per_channel", true);
 
         if (kernel_size.size() == 2) {
@@ -100,7 +116,8 @@ public:
         }
 
         const Mat &input = inputs[0];
-        CV_Assert(((input.dims == 3 && kernel_size.size() == 1) || input.dims == 4 || input.dims == 5) && input.type() == CV_8S);
+        CV_Assert(((input.dims == 3 && kernel_size.size() == 1) || input.dims == 4 || input.dims == 5) &&
+                  (input.type() == CV_8S || input.type() == CV_8U));
         for (size_t i = 0; i < outputs.size(); i++)
         {
             CV_Assert(inputs[i].type() == input.type());
@@ -124,6 +141,19 @@ public:
             }
             pad = Size(pads_begin[1], pads_begin[0]);
         }
+    }
+
+    void getTypes(const std::vector<MatType>& inputs,
+                  const int requiredOutputs,
+                  const int requiredInternals,
+                  std::vector<MatType>& outputs,
+                  std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        CV_Assert(!inputs.empty());
+        for (auto t : inputs)
+            CV_CheckType(t, t == CV_8S || t == CV_8U, "");
+        outputs.assign(requiredOutputs, inputs[0]);
+        internals.assign(requiredInternals, CV_32S);
     }
 
     virtual MatShape computeColRowShape(const MatShape &inpShape, const MatShape &outShape) const = 0;
@@ -247,13 +277,16 @@ public:
 
         std::vector<Mat> inputs;
         inputs_arr.getMatVector(inputs);
+        const int outCn = numOutput > 0 ? numOutput : blobs[0].size[0];
+        CV_Assert(outCn > 0);
+        numOutput = outCn;
         // prepare weightsMat where each row is aligned and has enough zero padding on the right to
         // use vectorized (i.e. with intrinsics) loops without tail processing
-        Mat wm = blobs[0].reshape(1, numOutput);
+        Mat wm = blobs[0].reshape(1, outCn);
         if( wm.step1() % VEC_ALIGN != 0 )
         {
             int newcols = (int)alignSize(wm.step1(), VEC_ALIGN);
-            Mat wm_buffer = Mat(numOutput, newcols, wm.type());
+            Mat wm_buffer = Mat(outCn, newcols, wm.type());
             Mat wm_padding = wm_buffer.colRange(wm.cols, newcols);
             wm_padding.setTo(Scalar::all(0));
             Mat wm_aligned = wm_buffer.colRange(0, wm.cols);
@@ -263,11 +296,11 @@ public:
         weightsMat = wm;
 
         Mat biasMat = blobs[1];
-        biasvec.resize(numOutput+2);
+        biasvec.resize(outCn + 2);
 
         Mat outMult = blobs[2];
-        outputMultiplier.resize(numOutput+2);
-        for(int i = 0; i < numOutput; i++ )
+        outputMultiplier.resize(outCn + 2);
+        for(int i = 0; i < outCn; i++ )
         {
             biasvec[i] = biasMat.at<int>(i);
             outputMultiplier[i] = outMult.at<float>(i);
@@ -1534,11 +1567,25 @@ public:
 
         int nstripes = std::max(getNumThreads(), 1);
         Mat outputInt32 = Mat(shape(outputs[0]), CV_32S);
-
-        ParallelConv::run(inputs[0], outputInt32, weightsMat, outputMultiplier, biasvec, activationLUT, kernel_size, strides,
-                          pads_begin, pads_end, dilations, activ.get(), ngroups, nstripes, input_zp, output_zp);
-
-        outputInt32.convertTo(outputs[0], CV_8S);
+        if (inputs[0].type() == CV_8U)
+        {
+            // Convert unsigned quantized tensor to signed domain expected by kernels.
+            Mat inpS8;
+            inputs[0].convertTo(inpS8, CV_8S, 1.0, -128.0);
+            const int inpZpS8 = input_zp - 128;
+            const int outZpS8 = output_zp - 128;
+            ParallelConv::run(inpS8, outputInt32, weightsMat, outputMultiplier, biasvec, activationLUT, kernel_size, strides,
+                              pads_begin, pads_end, dilations, activ.get(), ngroups, nstripes, inpZpS8, outZpS8);
+            Mat outS8;
+            outputInt32.convertTo(outS8, CV_8S);
+            outS8.convertTo(outputs[0], CV_8U, 1.0, 128.0);
+        }
+        else
+        {
+            ParallelConv::run(inputs[0], outputInt32, weightsMat, outputMultiplier, biasvec, activationLUT, kernel_size, strides,
+                              pads_begin, pads_end, dilations, activ.get(), ngroups, nstripes, input_zp, output_zp);
+            outputInt32.convertTo(outputs[0], outputs[0].type());
+        }
 
 #if CV_SSE3
         _MM_SET_FLUSH_ZERO_MODE(ftzMode);
