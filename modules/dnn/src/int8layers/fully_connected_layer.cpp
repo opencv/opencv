@@ -28,6 +28,7 @@ public:
         output_sc = params.get<float>("scales", 1.0f);
         axis = params.get<int>("axis", 1);
         per_channel = params.get<bool>("per_channel", true);
+        output_type = CV_8S; // default, may be overridden by fusion code
 
         if (blobs.size() == 3)
         {
@@ -75,6 +76,16 @@ public:
 
         outputs.resize(1, outShape);
         return false;
+    }
+
+    void getTypes(const std::vector<MatType>& inputs,
+                  const int requiredOutputs,
+                  const int requiredInternals,
+                  std::vector<MatType>& outputs,
+                  std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        outputs.assign(requiredOutputs, output_type);
+        internals.clear();
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
@@ -383,14 +394,22 @@ public:
 
         int axisCan = normalize_axis(axis, input[0].dims);
         int outerSize = input[0].total(0, axisCan);
-        Mat srcMat = input[0].reshape(1, outerSize);
+        Mat srcMat0 = input[0].reshape(1, outerSize);
+        Mat srcMat;
+        if (srcMat0.type() == CV_8U) {
+            // Convert uint8 to int8 by subtracting 128.
+            // Zero-point was adjusted at fusion time to compensate.
+            srcMat0.convertTo(srcMat, CV_8S, 1, -128);
+        } else {
+            srcMat = srcMat0;
+        }
 
         Mat dstMat = output[0].reshape(1, outerSize);
         Mat dstMatInt32= Mat(shape(dstMat), CV_32S);
 
-        const int nstripes = getNumThreads();
+        const int nstripes = outerSize <= 4 ? 1 : getNumThreads();
         FullyConnected::run(srcMat, weightsMat, biasMat, outputMultiplier, activationLUT, dstMatInt32, activ.get(), nstripes, output_zp);
-        dstMatInt32.convertTo(dstMat, CV_8S);
+        dstMatInt32.convertTo(dstMat, output_type);
     }
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,

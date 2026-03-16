@@ -382,6 +382,21 @@ CV__DNN_INLINE_NS_BEGIN
         bool ceil_mode;
     };
 
+    class CV_EXPORTS Conv2Int8Layer : public Layer
+    {
+    public:
+        static Ptr<Conv2Int8Layer> create(const LayerParams& params);
+
+        int input_zp, output_zp;
+        float input_sc, output_sc;
+        bool per_channel;
+
+        std::vector<int> strides, dilations, pads;
+        int ngroups;
+        AutoPadding auto_pad;
+        bool ceil_mode;
+    };
+
     class CV_EXPORTS LRNLayer : public Layer
     {
     public:
@@ -467,6 +482,21 @@ CV__DNN_INLINE_NS_BEGIN
         int input_zp, output_zp;
         float input_sc, output_sc;
         static Ptr<PoolingLayerInt8> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS Pool2Int8Layer : public Layer
+    {
+    public:
+        static Ptr<Pool2Int8Layer> create(const LayerParams& params);
+
+        int input_zp, output_zp;
+        float input_sc, output_sc;
+
+        std::vector<int> kernel_shape, strides, dilations, pads;
+        AutoPadding auto_pad;
+        bool ceil_mode;
+        bool is_global_pooling;
+        bool is_max_pool;
     };
 
     class CV_EXPORTS AveragePoolLayer : public Layer
@@ -559,6 +589,7 @@ CV__DNN_INLINE_NS_BEGIN
     public:
         int input_zp, output_zp;
         float input_sc, output_sc;
+        int output_type; // CV_8S or CV_8U
 
         // quantization type flag. The perChannel default is true, that means it contains the parameters
         // of per-Channel quantization. Otherwise, that means this layer contains per-Tensor quantized parameters.
@@ -1212,6 +1243,17 @@ CV__DNN_INLINE_NS_BEGIN
         float offset;
 
         static Ptr<EltwiseLayerInt8> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS Eltwise2Int8Layer : public Layer
+    {
+    public:
+        static Ptr<Eltwise2Int8Layer> create(const LayerParams& params);
+
+        std::vector<float> scales;
+        std::vector<int> zeropoints;
+        float output_sc;
+        int output_zp;
     };
 
     class CV_EXPORTS NaryEltwiseLayer : public Layer
