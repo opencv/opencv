@@ -1937,9 +1937,57 @@ struct InRange_SIMD<bfloat>
     }
 };
 
+
+#if CV_SIMD_64F
+
+template <>
+struct InRange_SIMD<double>
+{
+    int operator () (const double * src1, const double * src2, const double * src3,
+        uchar * dst, int len) const
+    {
+        int x = 0;
+        const int step = VTraits<v_float64>::vlanes();
+        // We need 4 vectors (64-bit each) to produce enough data for 1 final 8-bit pack_store
+        const int width = step * 4; 
+
+        for (; x <= len - width; x += width)
+        {
+            // 1. Load 4 vectors and calculate boolean masks (64-bit)
+            v_float64 v1 = vx_load(src1 + x);
+            v_float64 l1 = vx_load(src2 + x);
+            v_float64 h1 = vx_load(src3 + x);
+            v_uint64 m1 = v_reinterpret_as_u64(v_and(v_ge(v1, l1), v_ge(h1, v1)));
+
+            v_float64 v2 = vx_load(src1 + x + step);
+            v_float64 l2 = vx_load(src2 + x + step);
+            v_float64 h2 = vx_load(src3 + x + step);
+            v_uint64 m2 = v_reinterpret_as_u64(v_and(v_ge(v2, l2), v_ge(h2, v2)));
+
+            v_float64 v3 = vx_load(src1 + x + step * 2);
+            v_float64 l3 = vx_load(src2 + x + step * 2);
+            v_float64 h3 = vx_load(src3 + x + step * 2);
+            v_uint64 m3 = v_reinterpret_as_u64(v_and(v_ge(v3, l3), v_ge(h3, v3)));
+
+            v_float64 v4 = vx_load(src1 + x + step * 3);
+            v_float64 l4 = vx_load(src2 + x + step * 3);
+            v_float64 h4 = vx_load(src3 + x + step * 3);
+            v_uint64 m4 = v_reinterpret_as_u64(v_and(v_ge(v4, l4), v_ge(h4, v4)));
+
+
+            v_pack_store(dst + x, v_pack(v_pack(m1, m2), v_pack(m3, m4)));
+        }
+        vx_cleanup();
+        return x;
+    }
+};
+
+
+#endif 
+
 #endif
 
-template <typename T>
+template <typename T, bool EnableOptimizations = true>
 static void inRange_(const T* src1, size_t step1, const T* src2, size_t step2,
          const T* src3, size_t step3, uchar* dst, size_t step,
          Size size)
@@ -1947,6 +1995,19 @@ static void inRange_(const T* src1, size_t step1, const T* src2, size_t step2,
     step1 /= sizeof(src1[0]);
     step2 /= sizeof(src2[0]);
     step3 /= sizeof(src3[0]);
+
+    if (!EnableOptimizations)
+    {
+        for( ; size.height--; src1 += step1, src2 += step2, src3 += step3, dst += step )
+        {
+            for( int x = 0; x < size.width; x++ ) 
+            {
+                volatile bool in_bounds = (src2[x] <= src1[x] && src1[x] <= src3[x]);
+                dst[x] = in_bounds ? 255 : 0;
+            }
+        }
+        return;
+    }
 
     InRange_SIMD<T> vop;
 
@@ -1998,7 +2059,7 @@ static void inRange16s(const short* src1, size_t step1, const short* src2, size_
 static void inRange32u(const unsigned* src1, size_t step1, const unsigned* src2, size_t step2,
                        const unsigned* src3, size_t step3, uchar* dst, size_t step, Size size)
 {
-    inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
+    inRange_<unsigned, false>(src1, step1, src2, step2, src3, step3, dst, step, size);
 }
 
 static void inRange32s(const int* src1, size_t step1, const int* src2, size_t step2,
@@ -2010,13 +2071,13 @@ static void inRange32s(const int* src1, size_t step1, const int* src2, size_t st
 static void inRange64u(const uint64* src1, size_t step1, const uint64* src2, size_t step2,
                        const uint64* src3, size_t step3, uchar* dst, size_t step, Size size)
 {
-    inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
+    inRange_<uint64, false>(src1, step1, src2, step2, src3, step3, dst, step, size);
 }
 
 static void inRange64s(const int64* src1, size_t step1, const int64* src2, size_t step2,
                        const int64* src3, size_t step3, uchar* dst, size_t step, Size size)
 {
-    inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
+    inRange_<int64, false>(src1, step1, src2, step2, src3, step3, dst, step, size);
 }
 
 static void inRange32f(const float* src1, size_t step1, const float* src2, size_t step2,
@@ -2080,7 +2141,7 @@ static InRangeFunc getInRangeFunc(int depth)
         (InRangeFunc)GET_OPTIMIZED(inRange16s),
         (InRangeFunc)GET_OPTIMIZED(inRange32s),
         (InRangeFunc)GET_OPTIMIZED(inRange32f),
-        (InRangeFunc)inRange64f,
+        (InRangeFunc)GET_OPTIMIZED(inRange64f),
         (InRangeFunc)inRange16f,
         (InRangeFunc)inRange16bf,
         0,
