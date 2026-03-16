@@ -708,7 +708,7 @@ def _generate_typing_module(root: NamespaceNode, output_path: Path) -> None:
     """
 
     def has_all_required_modules(type_node: TypeNode) -> bool:
-        return all(em in root.namespaces for em in node.required_modules)
+        return all(em in root.namespaces for em in type_node.required_modules)
 
     def register_alias_links_from_aggregated_type(type_node: TypeNode) -> None:
         assert isinstance(type_node, AggregatedTypeNode), \
