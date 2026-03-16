@@ -11,6 +11,7 @@
 #include "../op_vkcom.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
+#include "opencv2/core/hal/intrin.hpp"
 
 #include <algorithm>
 #include <iterator>
@@ -468,13 +469,70 @@ public:
             }
         }
 
+    #if CV_SIMD
+        // Fast path: fully contiguous float Add → flatten + SIMD + parallel_for_
+        bool is_add = (this->op == OPERATION::SUM || this->op == OPERATION::ADD);
+        if (is_add && std::is_same<T, float>::value && std::is_same<RESULT_T, float>::value &&
+            dp1 == 1 && dp2 == 1 && dp == 1 && ndims >= 1) {
+            bool contiguous = true;
+            for (int k = ndims - 2; k >= 0; k--) {
+                if (shape[k] <= 1) continue; // size-1 dims have stride 0, skip
+                size_t expected = (size_t)shape[k + 1] * step1[k + 1];
+                if (step1[k] != expected || step2[k] != expected || step[k] != expected) {
+                    contiguous = false;
+                    break;
+                }
+            }
+            if (contiguous) {
+                int64_t total = (int64_t)nplanes * plane_size;
+                const float* p1 = (const float*)data1;
+                const float* p2 = (const float*)data2;
+                float* po = (float*)data;
+                const int64_t chunk = 1024;
+                int64_t nchunks = (total + chunk - 1) / chunk;
+                parallel_for_(Range(0, (int)nchunks), [&](const Range& r) {
+                    for (int c = r.start; c < r.end; c++) {
+                        int64_t start = c * chunk;
+                        int64_t end = std::min(start + chunk, total);
+                        int64_t i = start;
+                        for (; i <= end - (int64_t)VTraits<v_float32>::nlanes * 4; i += VTraits<v_float32>::nlanes * 4) {
+                            v_store(po + i, v_add(vx_load(p1 + i), vx_load(p2 + i)));
+                            v_store(po + i + VTraits<v_float32>::nlanes, v_add(vx_load(p1 + i + VTraits<v_float32>::nlanes), vx_load(p2 + i + VTraits<v_float32>::nlanes)));
+                            v_store(po + i + VTraits<v_float32>::nlanes*2, v_add(vx_load(p1 + i + VTraits<v_float32>::nlanes*2), vx_load(p2 + i + VTraits<v_float32>::nlanes*2)));
+                            v_store(po + i + VTraits<v_float32>::nlanes*3, v_add(vx_load(p1 + i + VTraits<v_float32>::nlanes*3), vx_load(p2 + i + VTraits<v_float32>::nlanes*3)));
+                        }
+                        for (; i < end; i++)
+                            po[i] = p1[i] + p2[i];
+                    }
+                });
+                return;
+            }
+        }
+    #endif
+
         if (nplanes == 1) { // parallelize within the plane
             const T* ptr1 = (const T*)data1;
             const T* ptr2 = (const T*)data2;
             RESULT_T* ptr = (RESULT_T*)data;
             auto worker = [&](const Range &r) {
                 if (dp1 == 1 && dp2 == 1 && dp == 1) {
-                    for(int i = r.start; i < r.end; i++) {
+                    int i = r.start;
+                #if CV_SIMD
+                    if (is_add && std::is_same<T, float>::value && std::is_same<RESULT_T, float>::value) {
+                        const float* p1 = (const float*)(const void*)&ptr1[r.start];
+                        const float* p2 = (const float*)(const void*)&ptr2[r.start];
+                        float* po = (float*)(void*)&ptr[r.start];
+                        int len = r.end - r.start, j = 0;
+                        for (; j <= len - VTraits<v_float32>::nlanes * 4; j += VTraits<v_float32>::nlanes * 4) {
+                            v_store(po + j, v_add(vx_load(p1 + j), vx_load(p2 + j)));
+                            v_store(po + j + VTraits<v_float32>::nlanes, v_add(vx_load(p1 + j + VTraits<v_float32>::nlanes), vx_load(p2 + j + VTraits<v_float32>::nlanes)));
+                            v_store(po + j + VTraits<v_float32>::nlanes*2, v_add(vx_load(p1 + j + VTraits<v_float32>::nlanes*2), vx_load(p2 + j + VTraits<v_float32>::nlanes*2)));
+                            v_store(po + j + VTraits<v_float32>::nlanes*3, v_add(vx_load(p1 + j + VTraits<v_float32>::nlanes*3), vx_load(p2 + j + VTraits<v_float32>::nlanes*3)));
+                        }
+                        i = r.start + j;
+                    }
+                #endif
+                    for(; i < r.end; i++) {
                         ptr[i] = op(ptr1[i], ptr2[i]);
                     }
                 } else if (dp1 == 1 && dp2 == 0 && dp == 1){
@@ -516,7 +574,21 @@ public:
                     const T* ptr2 = (const T*)ptr2_;
                     RESULT_T* ptr = (RESULT_T*)ptr_;
                     if (dp1 == 1 && dp2 == 1 && dp == 1) {
-                        for(int i = 0; i < plane_size; i++) {
+                        int i = 0;
+                    #if CV_SIMD
+                        if (is_add && std::is_same<T, float>::value && std::is_same<RESULT_T, float>::value) {
+                            const float* p1 = (const float*)(const void*)ptr1;
+                            const float* p2 = (const float*)(const void*)ptr2;
+                            float* po = (float*)(void*)ptr;
+                            for (; i <= plane_size - VTraits<v_float32>::nlanes * 4; i += VTraits<v_float32>::nlanes * 4) {
+                                v_store(po + i, v_add(vx_load(p1 + i), vx_load(p2 + i)));
+                                v_store(po + i + VTraits<v_float32>::nlanes, v_add(vx_load(p1 + i + VTraits<v_float32>::nlanes), vx_load(p2 + i + VTraits<v_float32>::nlanes)));
+                                v_store(po + i + VTraits<v_float32>::nlanes*2, v_add(vx_load(p1 + i + VTraits<v_float32>::nlanes*2), vx_load(p2 + i + VTraits<v_float32>::nlanes*2)));
+                                v_store(po + i + VTraits<v_float32>::nlanes*3, v_add(vx_load(p1 + i + VTraits<v_float32>::nlanes*3), vx_load(p2 + i + VTraits<v_float32>::nlanes*3)));
+                            }
+                        }
+                    #endif
+                        for(; i < plane_size; i++) {
                             ptr[i] = op(ptr1[i], ptr2[i]);
                         }
                     } else if (dp1 == 1 && dp2 == 0 && dp == 1){

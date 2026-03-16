@@ -14,6 +14,7 @@
 #include <iostream>
 #include <numeric>
 
+
 namespace cv
 {
 namespace dnn
@@ -193,9 +194,11 @@ public:
     enum { VEC_ALIGN = 32, DFT_TYPE = CV_8S };
     Mat weightsMat;
     std::vector<int> biasvec;
+    std::vector<int> biasvecVNNI; // Bias adjusted for VNNI uint8 direct path
     std::vector<float> outputMultiplier;
     Mat activationLUT;
     Ptr<ActivationLayerInt8> activ;
+    Mat outputInt32Buf_; // pre-allocated scratch buffer for int32 accumulation
 
     ConvolutionLayerInt8Impl(const LayerParams &params) : BaseConvolutionLayerInt8Impl(params){}
 
@@ -720,7 +723,7 @@ public:
     class ParallelConv : public cv::ParallelLoopBody
     {
     public:
-        enum { BLK_SIZE = 32, BLK_SIZE_CN = 64 };
+        enum { BLK_SIZE = 64, BLK_SIZE_CN = 64 };
 
         const Mat* input_;
         const Mat* weights_;
@@ -737,14 +740,16 @@ public:
         bool useAVX512;
         bool useLASX;
         bool useRVV;
+        bool useVNNI;
         int blk_size_cn;
         int inpZp, outZp;
         const std::vector<float>* multiplier;
+        Mat* directU8Out_;
 
         ParallelConv()
             : input_(0), weights_(0), output_(0), ngroups_(0), nstripes_(0),
-              biasvec_(0), activLUT_(0), activ_(0), is1x1_(false), useAVX2(false), useAVX512(false), useLASX(false), useRVV(false)
-            , blk_size_cn(0), inpZp(0), outZp(0), multiplier(0)
+              biasvec_(0), activLUT_(0), activ_(0), is1x1_(false), useAVX2(false), useAVX512(false), useLASX(false), useRVV(false), useVNNI(false)
+            , blk_size_cn(0), inpZp(0), outZp(0), multiplier(0), directU8Out_(0)
         {}
 
         static void run( const Mat& input, Mat& output, const Mat& weights, const std::vector<float>& multipliers,
@@ -752,7 +757,8 @@ public:
                          const std::vector<size_t>& kernel_size, const std::vector<size_t>& strides,
                          const std::vector<size_t>& pads_begin, const std::vector<size_t>& pads_end,
                          const std::vector<size_t>& dilations,
-                         const ActivationLayerInt8* activ, int ngroups, int nstripes, int inp_Zp, int out_Zp)
+                         const ActivationLayerInt8* activ, int ngroups, int nstripes, int inp_Zp, int out_Zp,
+                         Mat* directU8Out = nullptr)
         {
             size_t karea = std::accumulate(kernel_size.begin(), kernel_size.end(),
                                            1, std::multiplies<size_t>());
@@ -764,9 +770,9 @@ public:
                        input.size[0] == output.size[0],
                        weights.rows == output.size[1],
                        weights.cols == (input.size[1]/ngroups)*karea,
-                       input.type() == CV_8SC1,
+                       (input.type() == CV_8SC1 || input.type() == CV_8UC1),
                        output.type() == CV_32SC1,
-                       input.type() == weights.type(),
+                       weights.type() == CV_8SC1,
                        input.isContinuous(),
                        output.isContinuous(),
                        biasvec.size() == (size_t)output.size[1]+2);
@@ -798,7 +804,10 @@ public:
 
             p.useAVX2   = checkHardwareSupport(CPU_AVX2) && isConv2D;
             p.useAVX512 = CV_CPU_HAS_SUPPORT_AVX512_SKX  && isConv2D;
-
+        #if CV_AVXVNNI_AVAILABLE
+            p.useVNNI = p.useAVX2 && checkHardwareSupport(CPU_AVX_VNNI) && isConv2D &&
+                        input.type() == CV_8UC1;
+        #endif
             p.useLASX   = checkHardwareSupport(CPU_LASX) && isConv2D;
             p.useRVV   = checkHardwareSupport(CPU_RVV) && isConv2D;
 
@@ -851,6 +860,7 @@ public:
             p.biasvec_ = &biasvec;
             p.activLUT_ = &activLUT;
             p.activ_ = !activLUT.empty() ? activ : 0;
+            p.directU8Out_ = directU8Out;
 
             parallel_for_(Range(0, nstripes), p, nstripes);
         }
@@ -931,27 +941,18 @@ public:
             const float* multptr_ = &multiplier->at(0);
             const int* lutptr_ = !activLUT_->empty() ? activLUT_->ptr<int>() : 0;
             int* data_out0_ = output_->ptr<int>();
-            AutoBuffer<int8_t> rowbuf0_;
             int8_t* rowbuf0 = 0;
             bool use_rowbuf = !depthWiseConvolution;
             int blk_size = depthWiseConvolution ? outPlaneSize : min((int)BLK_SIZE, stripeSize);
 
             // im2row buffer is not used for depth-wise convolution
+            // Use thread_local to avoid repeated allocation across layers
             if(use_rowbuf)
             {
                 size_t rowbufsz = alignSize(karea*blk_size_cn, valign)*min((int)BLK_SIZE, blk_size);
-                //printf("karea=%d, blk_size_cn=%d, rowbufsz=%d, stripeSize=%d\n", karea, blk_size_cn, (int)rowbufsz, stripeSize);
-                rowbuf0_.allocate(rowbufsz + valign);
-                rowbuf0 = alignPtr(rowbuf0_.data(), (int)(valign*sizeof(int8_t)));
-                // we clear the buffer once; ultimately, it lets us to avoid
-                // tail processing after running the unrolled/vectorized loop.
-                // the main idea is to make sure that the tail (a.k.a. padding) of each row
-                // (i.e. the elements with indices between vsz=karea*ncn and vsz_a)
-                // does not contain NaNs or Infs. Because the padding in the weights
-                // matrix is explicitly initialized with 0's, we handle all other
-                // cases nicely, i.e. we can skip expliciting re-initialization
-                // of the padding - we just retain elements from the previous iteration
-                // of the loop over channels (cn0).
+                thread_local AutoBuffer<int8_t> rowbuf0_tls;
+                rowbuf0_tls.allocate(rowbufsz + valign);
+                rowbuf0 = alignPtr(rowbuf0_tls.data(), (int)(valign*sizeof(int8_t)));
                 memset(rowbuf0, (int8_t)inpZp, rowbufsz*sizeof(rowbuf0[0]) );
             }
 
@@ -1379,8 +1380,12 @@ public:
                                 }
                             }
                         }
-                        // now compute dot product of the weights
-                        // and im2row-transformed part of the tensor
+                    #if CV_AVXVNNI_AVAILABLE
+                        if(useVNNI)
+                            opt_AVX2::fastConvVNNI(wptr, wstep, biasptr, (const uint8_t*)rowbuf0, data_out0 + ofs0,
+                                          outShape, bsz, vsz, vsz_a, outZp, multptr, cn0 == 0, cn1 == inpCn);
+                        else
+                    #endif
                     #if CV_TRY_AVX512_SKX
                         if(useAVX512)
                             opt_AVX2::fastConv(wptr, wstep, biasptr, rowbuf0, data_out0 + ofs0,
@@ -1525,6 +1530,34 @@ public:
                     activ_->forwardSlice(data_out0 + stripeStart, lutptr_,
                                          data_out0 + stripeStart, (int)(stripeEnd - stripeStart),
                                          outPlaneSize, startOutCn, startOutCn + outCn);
+
+                // Fused int32 → uint8 conversion (cache-hot, avoids separate convertTo pass)
+                if( directU8Out_ )
+                {
+                    uint8_t* u8base = directU8Out_->ptr<uint8_t>() + subsampleIdx*outPlaneSize*outCn;
+                    for( int c = 0; c < outCn; c++ )
+                    {
+                        const int* src = data_out0 + c*outPlaneSize + stripeStart;
+                        uint8_t* dst = u8base + c*outPlaneSize + stripeStart;
+                        int len = stripeEnd - stripeStart;
+                        int j = 0;
+                    #if CV_SSE2
+                        __m128i voffset = _mm_set1_epi32(128);
+                        for( ; j <= len - 8; j += 8 )
+                        {
+                            __m128i v0 = _mm_loadu_si128((const __m128i*)(src + j));
+                            __m128i v1 = _mm_loadu_si128((const __m128i*)(src + j + 4));
+                            v0 = _mm_add_epi32(v0, voffset);
+                            v1 = _mm_add_epi32(v1, voffset);
+                            __m128i p16 = _mm_packs_epi32(v0, v1);
+                            __m128i p8 = _mm_packus_epi16(p16, p16);
+                            _mm_storel_epi64((__m128i*)(dst + j), p8);
+                        }
+                    #endif
+                        for( ; j < len; j++ )
+                            dst[j] = (uint8_t)std::min(std::max(src[j] + 128, 0), 255);
+                    }
+                }
             }
         }
     };
@@ -1545,19 +1578,6 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        /*if (inputs[0].dims > 3) {
-            printf("conv %s: input (%d x %d x %d x %d), kernel (%d x %d), pad (%d x %d), stride (%d x %d), dilation (%d x %d)\n",
-                   name.c_str(), inputs[0].size[0], inputs[0].size[1], inputs[0].size[2], inputs[0].size[3],
-                   kernel.width, kernel.height, pad.width, pad.height,
-                   stride.width, stride.height, dilation.width, dilation.height);
-        }
-        else {
-            printf("conv %s: input (%d x %d x %d), kernel (%d x %d), pad (%d x %d), stride (%d x %d), dilation (%d x %d)\n",
-                   name.c_str(), inputs[0].size[0], inputs[0].size[1], inputs[0].size[2],
-                   kernel.width, kernel.height, pad.width, pad.height,
-                   stride.width, stride.height, dilation.width, dilation.height);
-        }*/
-
         int inpGroupCn = blobs[0].size[1];
         CV_Assert_N(inputs.size() == (size_t)1, inputs[0].size[1] % inpGroupCn == 0,
                     outputs.size() == 1, inputs[0].data != outputs[0].data);
@@ -1566,19 +1586,46 @@ public:
         CV_Assert(outputs[0].size[1] % ngroups == 0);
 
         int nstripes = std::max(getNumThreads(), 1);
-        Mat outputInt32 = Mat(shape(outputs[0]), CV_32S);
+        outputInt32Buf_.fit(shape(outputs[0]), CV_32S);
+        Mat outputInt32 = outputInt32Buf_;
         if (inputs[0].type() == CV_8U)
         {
-            // Convert unsigned quantized tensor to signed domain expected by kernels.
-            Mat inpS8;
-            inputs[0].convertTo(inpS8, CV_8S, 1.0, -128.0);
-            const int inpZpS8 = input_zp - 128;
-            const int outZpS8 = output_zp - 128;
-            ParallelConv::run(inpS8, outputInt32, weightsMat, outputMultiplier, biasvec, activationLUT, kernel_size, strides,
-                              pads_begin, pads_end, dilations, activ.get(), ngroups, nstripes, inpZpS8, outZpS8);
-            Mat outS8;
-            outputInt32.convertTo(outS8, CV_8S);
-            outS8.convertTo(outputs[0], CV_8U, 1.0, 128.0);
+        #if CV_AVXVNNI_AVAILABLE
+            // AVX-VNNI path: pass uint8 input directly, skip u8→s8 conversion.
+            if (checkHardwareSupport(CPU_AVX_VNNI) && inputs[0].dims == 4) {
+                if (biasvecVNNI.empty() && !biasvec.empty()) {
+                    int outCn = weightsMat.rows;
+                    biasvecVNNI.resize(biasvec.size());
+                    for (int oc = 0; oc < outCn; oc++) {
+                        const int8_t* wrow = weightsMat.ptr<int8_t>(oc);
+                        int colsum = 0;
+                        for (int j = 0; j < weightsMat.cols; j++)
+                            colsum += (int)wrow[j];
+                        biasvecVNNI[oc] = biasvec[oc] - 128 * colsum;
+                    }
+                    for (size_t oc = outCn; oc < biasvec.size(); oc++)
+                        biasvecVNNI[oc] = biasvecVNNI[outCn > 0 ? outCn - 1 : 0];
+                }
+                const int outZpS8 = output_zp - 128;
+                ParallelConv::run(inputs[0], outputInt32, weightsMat, outputMultiplier,
+                                  biasvecVNNI, activationLUT, kernel_size, strides,
+                                  pads_begin, pads_end, dilations, activ.get(),
+                                  ngroups, nstripes, input_zp, outZpS8,
+                                  &outputs[0]);
+            }
+            else
+        #endif
+            {
+                Mat inpS8;
+                inputs[0].convertTo(inpS8, CV_8S, 1.0, -128.0);
+                const int inpZpS8 = input_zp - 128;
+                const int outZpS8 = output_zp - 128;
+                ParallelConv::run(inpS8, outputInt32, weightsMat, outputMultiplier, biasvec, activationLUT, kernel_size, strides,
+                                  pads_begin, pads_end, dilations, activ.get(), ngroups, nstripes, inpZpS8, outZpS8);
+                Mat outS8;
+                outputInt32.convertTo(outS8, CV_8S);
+                outS8.convertTo(outputs[0], CV_8U, 1.0, 128.0);
+            }
         }
         else
         {
