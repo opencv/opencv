@@ -1948,12 +1948,10 @@ struct InRange_SIMD<double>
     {
         int x = 0;
         const int step = VTraits<v_float64>::vlanes();
-        // We need 4 vectors (64-bit each) to produce enough data for 1 final 8-bit pack_store
-        const int width = step * 4; 
+        const int width = step * 4;
 
         for (; x <= len - width; x += width)
         {
-            // 1. Load 4 vectors and calculate boolean masks (64-bit)
             v_float64 v1 = vx_load(src1 + x);
             v_float64 l1 = vx_load(src2 + x);
             v_float64 h1 = vx_load(src3 + x);
@@ -1983,7 +1981,7 @@ struct InRange_SIMD<double>
 };
 
 
-#endif 
+#endif
 
 #endif
 
@@ -2000,7 +1998,7 @@ static void inRange_(const T* src1, size_t step1, const T* src2, size_t step2,
     {
         for( ; size.height--; src1 += step1, src2 += step2, src3 += step3, dst += step )
         {
-            for( int x = 0; x < size.width; x++ ) 
+            for( int x = 0; x < size.width; x++ )
             {
                 volatile bool in_bounds = (src2[x] <= src1[x] && src1[x] <= src3[x]);
                 dst[x] = in_bounds ? 255 : 0;
