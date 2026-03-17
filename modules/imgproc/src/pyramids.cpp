@@ -122,8 +122,17 @@ template<> int PyrDownVecH<uchar, ushort, 1>(const uchar* src, ushort* row, int 
 
     v_int16 v_1_4 = v_reinterpret_as_s16(vx_setall_u32(0x00040001));
     v_int16 v_6_4 = v_reinterpret_as_s16(vx_setall_u32(0x00040006));
-    for (; x <= width - vlanes16; x += vlanes16, src01 += vlanes8, src23 += vlanes8, src4 += vlanes8, dst += vlanes16)
+    if (width >= vlanes16)
+    for (; x < width; x += vlanes16, src01 += vlanes8, src23 += vlanes8, src4 += vlanes8, dst += vlanes16)
     {
+        bool tail = x > width - vlanes16;
+        if ( tail ) {
+            x = width - vlanes16;
+            src01 = src + x * 2;
+            src23 = src01 + 2;
+            src4 = src01 + 3;
+            dst = row + x;
+        }
         v_int32 s0 = v_add(
             v_add(v_dotprod(v_reinterpret_as_s16(vx_load_expand(src01)), v_1_4),
                   v_dotprod(v_reinterpret_as_s16(vx_load_expand(src23)), v_6_4)),
@@ -135,6 +144,7 @@ template<> int PyrDownVecH<uchar, ushort, 1>(const uchar* src, ushort* row, int 
             v_shr<16>(v_reinterpret_as_s32(vx_load_expand(src4 + vlanes16))));
 
         v_store(dst, v_pack_u(s0, s1));
+        if ( tail ) { x = width; break; }
     }
     vx_cleanup();
     return x;
@@ -155,8 +165,17 @@ template<> int PyrDownVecH<uchar, ushort, 2>(const uchar* src, ushort* row, int 
 
     v_int16 v_1_4 = v_reinterpret_as_s16(vx_setall_u32(0x00040001));
     v_int16 v_6_4 = v_reinterpret_as_s16(vx_setall_u32(0x00040006));
-    for (; x <= width - vlanes16; x += vlanes16, src01 += vlanes8, src23 += vlanes8, src4 += vlanes8, dst += vlanes16)
+    if (width >= vlanes16)
+    for (; x < width; x += vlanes16, src01 += vlanes8, src23 += vlanes8, src4 += vlanes8, dst += vlanes16)
     {
+        bool tail = x > width - vlanes16;
+        if ( tail ) {
+            x = width - vlanes16;
+            src01 = src + x * 2;
+            src23 = src01 + 4;
+            src4 = src01 + 6;
+            dst = row + x;
+        }
         v_int32 s0 = v_add(
             v_add(v_dotprod(v_interleave_pairs(v_reinterpret_as_s16(vx_load_expand(src01))), v_1_4),
                   v_dotprod(v_interleave_pairs(v_reinterpret_as_s16(vx_load_expand(src23))), v_6_4)),
@@ -168,6 +187,7 @@ template<> int PyrDownVecH<uchar, ushort, 2>(const uchar* src, ushort* row, int 
             v_shr<16>(v_reinterpret_as_s32(v_interleave_pairs(vx_load_expand(src4 + vlanes16)))));
 
         v_store(dst, v_pack_u(s0, s1));
+        if ( tail ) { x = width; break; }
     }
     vx_cleanup();
     return x;
@@ -193,8 +213,18 @@ template<> int PyrDownVecH<uchar, ushort, 3>(const uchar* src, ushort* row, int 
 
     int x = 0;
     v_int16 v_6_4 = v_reinterpret_as_s16(vx_setall_u32(0x00040006));
-    for (; x <= width - vlanes8; x += 3*vlanes8/4, src += 6*vlanes8/4, row += 3*vlanes8/4)
+    const uchar* src_base = src;
+    ushort* row_base = row;
+    const int out_per_iter = 3*vlanes8/4;
+    if (width >= out_per_iter)
+    for (; x < width; x += out_per_iter, src += 6*vlanes8/4, row += out_per_iter)
     {
+        bool tail = x > width - out_per_iter;
+        if ( tail ) {
+            x = width - out_per_iter;
+            src = src_base + x * 2;
+            row = row_base + x;
+        }
         v_uint16 r0l, r0h, r1l, r1h, r2l, r2h, r3l, r3h, r4l, r4h;
         v_expand(vx_lut_quads(src, idx              ), r0l, r0h);
         v_expand(vx_lut_quads(src, idx + idx_offset1), r1l, r1h);
@@ -216,6 +246,7 @@ template<> int PyrDownVecH<uchar, ushort, 3>(const uchar* src, ushort* row, int 
 
         v_store(row, v_pack_triplets(result0));
         v_store(row + 3*vlanes16/4, v_pack_triplets(result1));
+        if ( tail ) { x = width; break; }
     }
     vx_cleanup();
 
@@ -236,8 +267,18 @@ template<> int PyrDownVecH<uchar, ushort, 4>(const uchar* src, ushort* row, int 
 
     v_int16 v_1_4 = v_reinterpret_as_s16(vx_setall_u32(0x00040001));
     v_int16 v_6_4 = v_reinterpret_as_s16(vx_setall_u32(0x00040006));
-    for (; x <= width - vlanes16; x += vlanes16, src01 += vlanes8, src23 += vlanes8, src4 += vlanes8, row += vlanes16)
+    ushort* row_start = row;
+    if (width >= vlanes16)
+    for (; x < width; x += vlanes16, src01 += vlanes8, src23 += vlanes8, src4 += vlanes8, row += vlanes16)
     {
+        bool tail = x > width - vlanes16;
+        if ( tail ) {
+            x = width - vlanes16;
+            src01 = src + x * 2;
+            src23 = src01 + 8;
+            src4 = src01 + 12;
+            row = row_start + x;
+        }
         v_int32 s0 = v_add(
             v_add(v_dotprod(v_interleave_quads(v_reinterpret_as_s16(vx_load_expand(src01))), v_1_4),
                   v_dotprod(v_interleave_quads(v_reinterpret_as_s16(vx_load_expand(src23))), v_6_4)),
@@ -249,6 +290,7 @@ template<> int PyrDownVecH<uchar, ushort, 4>(const uchar* src, ushort* row, int 
             v_shr<16>(v_reinterpret_as_s32(v_interleave_quads(vx_load_expand(src4 + vlanes16)))));
 
         v_store(row, v_pack_u(s0, s1));
+        if ( tail ) { x = width; break; }
     }
     vx_cleanup();
     return x;
@@ -956,7 +998,7 @@ struct PyrDownInvoker : ParallelLoopBody
         _tabM = tabM;
         _tabL = tabL;
     }
-
+#if 0
     template<typename T, typename WT, int cn>
     static inline void processHorizontal(
         int& x,
@@ -1092,7 +1134,7 @@ struct PyrDownInvoker : ParallelLoopBody
                 dst[x] = castOp(row2[x]*6 + (row1[x] + row3[x])*4 + row0[x] + row4[x]);
         }
     }
-
+#endif
     void operator()(const Range& range) const CV_OVERRIDE;
 
     int **_tabR;
@@ -1139,7 +1181,127 @@ pyrDown_( const Mat& _src, Mat& _dst, int borderType )
 
     cv::parallel_for_(Range(0,dsize.height), cv::PyrDownInvoker<CastOp>(_src, _dst, borderType, &tabRPtr, &tabM, &tabLPtr), cv::getNumThreads());
 }
+#if 1
+template<class CastOp>
+void PyrDownInvoker<CastOp>::operator()(const Range& range) const
+{
+    const int PD_SZ = 5;
+    typedef typename CastOp::type1 WT;
+    typedef typename CastOp::rtype T;
+    Size ssize = _src->size(), dsize = _dst->size();
+    int cn = _src->channels();
+    int bufstep = (int)alignSize(dsize.width*cn, 16);
+    AutoBuffer<WT> _buf(bufstep*PD_SZ + 16);
+    WT* buf = alignPtr((WT*)_buf.data(), 16);
+    WT* rows[PD_SZ];
+    CastOp castOp;
 
+    int sy0 = -PD_SZ/2, sy = range.start * 2 + sy0, width0 = std::min((ssize.width-PD_SZ/2-1)/2 + 1, dsize.width);
+
+    ssize.width *= cn;
+    dsize.width *= cn;
+    width0 *= cn;
+
+    for (int y = range.start; y < range.end; y++)
+    {
+        T* dst = (T*)_dst->ptr<T>(y);
+        WT *row0, *row1, *row2, *row3, *row4;
+
+        // fill the ring buffer (horizontal convolution and decimation)
+        int sy_limit = y*2 + 2;
+        for( ; sy <= sy_limit; sy++ )
+        {
+            WT* row = buf + ((sy - sy0) % PD_SZ)*bufstep;
+            int _sy = borderInterpolate(sy, ssize.height, _borderType);
+            const T* src = _src->ptr<T>(_sy);
+
+            do {
+                int x = 0;
+                const int* tabL = *_tabL;
+                for( ; x < cn; x++ )
+                {
+                    row[x] = src[tabL[x+cn*2]]*6 + (src[tabL[x+cn]] + src[tabL[x+cn*3]])*4 +
+                        src[tabL[x]] + src[tabL[x+cn*4]];
+                }
+
+                if( x == dsize.width )
+                    break;
+
+                if( cn == 1 )
+                {
+                    x += PyrDownVecH<T, WT, 1>(src + x * 2 - 2, row + x, width0 - x);
+                    for( ; x < width0; x++ )
+                        row[x] = src[x*2]*6 + (src[x*2 - 1] + src[x*2 + 1])*4 +
+                            src[x*2 - 2] + src[x*2 + 2];
+                }
+                else if( cn == 2 )
+                {
+                    x += PyrDownVecH<T, WT, 2>(src + x * 2 - 4, row + x, width0 - x);
+                    for( ; x < width0; x += 2 )
+                    {
+                        const T* s = src + x*2;
+                        WT t0 = s[0] * 6 + (s[-2] + s[2]) * 4 + s[-4] + s[4];
+                        WT t1 = s[1] * 6 + (s[-1] + s[3]) * 4 + s[-3] + s[5];
+                        row[x] = t0; row[x + 1] = t1;
+                    }
+                }
+                else if( cn == 3 )
+                {
+                    x += PyrDownVecH<T, WT, 3>(src + x * 2 - 6, row + x, width0 - x);
+                    for( ; x < width0; x += 3 )
+                    {
+                        const T* s = src + x*2;
+                        WT t0 = s[0]*6 + (s[-3] + s[3])*4 + s[-6] + s[6];
+                        WT t1 = s[1]*6 + (s[-2] + s[4])*4 + s[-5] + s[7];
+                        WT t2 = s[2]*6 + (s[-1] + s[5])*4 + s[-4] + s[8];
+                        row[x] = t0; row[x+1] = t1; row[x+2] = t2;
+                    }
+                }
+                else if( cn == 4 )
+                {
+                    x += PyrDownVecH<T, WT, 4>(src + x * 2 - 8, row + x, width0 - x);
+                    for( ; x < width0; x += 4 )
+                    {
+                        const T* s = src + x*2;
+                        WT t0 = s[0]*6 + (s[-4] + s[4])*4 + s[-8] + s[8];
+                        WT t1 = s[1]*6 + (s[-3] + s[5])*4 + s[-7] + s[9];
+                        row[x] = t0; row[x+1] = t1;
+                        t0 = s[2]*6 + (s[-2] + s[6])*4 + s[-6] + s[10];
+                        t1 = s[3]*6 + (s[-1] + s[7])*4 + s[-5] + s[11];
+                        row[x+2] = t0; row[x+3] = t1;
+                    }
+                }
+                else
+                {
+                    for( ; x < width0; x++ )
+                    {
+                        int sx = (*_tabM)[x];
+                        row[x] = src[sx]*6 + (src[sx - cn] + src[sx + cn])*4 +
+                            src[sx - cn*2] + src[sx + cn*2];
+                    }
+                }
+
+                // tabR
+                const int* tabR = *_tabR;
+                for (int x_ = 0; x < dsize.width; x++, x_++)
+                {
+                    row[x] = src[tabR[x_+cn*2]]*6 + (src[tabR[x_+cn]] + src[tabR[x_+cn*3]])*4 +
+                        src[tabR[x_]] + src[tabR[x_+cn*4]];
+                }
+            } while (0);
+        }
+
+        // do vertical convolution and decimation and write the result to the destination image
+        for (int k = 0; k < PD_SZ; k++)
+            rows[k] = buf + ((y*2 - PD_SZ/2 + k - sy0) % PD_SZ)*bufstep;
+        row0 = rows[0]; row1 = rows[1]; row2 = rows[2]; row3 = rows[3]; row4 = rows[4];
+
+        int x = PyrDownVecV<WT, T>(rows, dst, dsize.width);
+        for (; x < dsize.width; x++ )
+            dst[x] = castOp(row2[x]*6 + (row1[x] + row3[x])*4 + row0[x] + row4[x]);
+    }
+}
+#else
 template<class CastOp>
 void PyrDownInvoker<CastOp>::operator()(const Range& range) const
 {
@@ -1156,7 +1318,7 @@ void PyrDownInvoker<CastOp>::operator()(const Range& range) const
                 _tabL, _tabM, _tabR, buf, bufstep, castOp);
 
 }
-
+#endif
 
 template<class CastOp> void
 pyrUp_( const Mat& _src, Mat& _dst, int)
