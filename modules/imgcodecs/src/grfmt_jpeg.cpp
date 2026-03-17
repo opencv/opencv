@@ -829,6 +829,8 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
             cinfo.comp_info[0].h_samp_factor = (sampling_factor >> 20 ) & 0xF;
             cinfo.comp_info[1].v_samp_factor = 1;
             cinfo.comp_info[1].h_samp_factor = 1;
+            cinfo.comp_info[2].v_samp_factor = 1;
+            cinfo.comp_info[2].h_samp_factor = 1;
         }
 
         if (luma_quality >= 0 && chroma_quality >= 0)
@@ -843,6 +845,8 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
                 cinfo.comp_info[0].h_samp_factor = 1;
                 cinfo.comp_info[1].v_samp_factor = 1;
                 cinfo.comp_info[1].h_samp_factor = 1;
+                cinfo.comp_info[2].v_samp_factor = 1;
+                cinfo.comp_info[2].h_samp_factor = 1;
             }
             jpeg_default_qtables( &cinfo, TRUE );
 #else
