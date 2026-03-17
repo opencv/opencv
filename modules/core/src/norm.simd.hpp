@@ -1307,7 +1307,7 @@ struct MaskedNormL2_SIMD {
     }
 };
 
-#if CV_SIMD
+#if #if CV_SIMD_64F
 
 template <>
 struct MaskedNormInf_SIMD<float, float> {
