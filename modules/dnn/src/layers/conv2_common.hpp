@@ -47,6 +47,7 @@ struct ConvState
     int pads[MAX_CONV_DIMS*2];
     MatShape inpshape, outshape;
     MatShape wshape; // (ngroups, Kblk, ksize, C1Max, C0*K0) in the case of non-depthwise convolution
+    const void* winoWeights = nullptr; // Winograd F(6,3) transformed weights, or nullptr
     int inner[MAX_CONV_DIMS*2];
     std::vector<int> coordtab;
     std::vector<int> ofstab;
@@ -94,6 +95,7 @@ ConvFunc getDepthwiseConvFunc(int depth);
 
 void repackDepthwiseConvWeights(const Mat& weights, Mat& Wpack, int outtype, int C0);
 void repackConvWeights(const Mat& weights, Mat& Wpack, int outtype, int ngroups, int C0);
+void repackConvWeightsWinograd(const Mat& weights, Mat& Wpack, int outtype, int ngroups, int C0);
 
 CV__DNN_INLINE_NS_END
 }

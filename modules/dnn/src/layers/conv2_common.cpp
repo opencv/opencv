@@ -301,6 +301,101 @@ void repackConvWeights(const Mat& weights, Mat& Wpack, int outtype, int ngroups,
 }
 
 
+void repackConvWeightsWinograd(const Mat& weights, Mat& Wpack, int outtype, int ngroups, int C0_)
+{
+    CV_Assert(weights.isContinuous());
+    CV_Assert_N(weights.type() == CV_32F, outtype == CV_32F);
+    CV_Assert(ngroups > 0);
+    CV_Assert((C0_ & (C0_ - 1)) == 0 && C0_ >= 4);
+
+    enum { WINO_SIZE = 8, WINO_AREA = 64 };
+
+    MatShape wshape = weights.shape();
+    CV_Assert(wshape.dims >= 4);
+
+    int K = wshape[0], Cg = wshape[1];
+    int Hk = wshape[wshape.dims - 2], Wk = wshape[wshape.dims - 1];
+    CV_Assert(Hk == 3 && Wk == 3);
+    CV_Assert(K % ngroups == 0);
+
+    int C0 = C0_, K0 = C0;
+    int Kg = K / ngroups;
+    int Kblk = (Kg + K0 - 1) / K0;
+
+    int C1Max = 0;
+    for (int g = 0; g < ngroups; ++g) {
+        int c_start = g * Cg;
+        int c00 = c_start & (C0 - 1);
+        int cblocks = (c00 + Cg + C0 - 1) / C0;
+        C1Max = std::max(C1Max, cblocks);
+    }
+
+    MatShape wpackShape({ngroups, WINO_AREA, Kblk, C1Max, C0 * K0}, DATA_LAYOUT_UNKNOWN);
+
+    if (!Wpack.isContinuous()) {
+        Wpack.release();
+    }
+    Wpack.create(wpackShape, CV_32F);
+    Wpack.setZero();
+
+    static const float G[8][3] = {
+        {1.0f,      0.0f,      0.0f},
+        {-2.0f/9,  -2.0f/9,  -2.0f/9},
+        {-2.0f/9,   2.0f/9,  -2.0f/9},
+        {1.0f/90,   1.0f/45,  2.0f/45},
+        {1.0f/90,  -1.0f/45,  2.0f/45},
+        {32.f/45,  16.f/45,   8.f/45},
+        {32.f/45, -16.f/45,   8.f/45},
+        {0.0f,      0.0f,      1.0f}
+    };
+
+    const float* wdata = weights.ptr<float>();
+    float* Wpackdata = Wpack.ptr<float>();
+    int winoStride = Kblk * C1Max * C0 * K0; // stride per Winograd position
+
+    parallel_for_(Range(0, K), [&](const Range& range) {
+        for (int k = range.start; k < range.end; ++k) {
+            int g = k / Kg;
+            int kin = k - g * Kg;
+            int kblk = kin / K0;
+            int k0 = kin & (K0 - 1);
+
+            int c_start = g * Cg;
+            int c00 = c_start & (C0 - 1);
+
+            for (int c = 0; c < Cg; ++c) {
+                int ch = c00 + c;
+                int c1 = ch / C0;
+                int c0 = ch & (C0 - 1);
+
+                const float* kernel = wdata + (k * Cg + c) * 9;
+                float w33[3][3];
+                for (int i = 0; i < 3; i++)
+                    for (int j = 0; j < 3; j++)
+                        w33[i][j] = kernel[i * 3 + j];
+
+                float tmp[8][3];
+                for (int i = 0; i < 8; i++)
+                    for (int j = 0; j < 3; j++)
+                        tmp[i][j] = G[i][0]*w33[0][j] + G[i][1]*w33[1][j] + G[i][2]*w33[2][j];
+
+                float U[8][8];
+                for (int i = 0; i < 8; i++)
+                    for (int j = 0; j < 8; j++)
+                        U[i][j] = tmp[i][0]*G[j][0] + tmp[i][1]*G[j][1] + tmp[i][2]*G[j][2];
+
+                float* gbase = Wpackdata + g * WINO_AREA * winoStride;
+                for (int i = 0; i < 8; i++) {
+                    for (int j = 0; j < 8; j++) {
+                        int pos = i * 8 + j;
+                        gbase[pos * winoStride + kblk * C1Max * C0 * K0 + c1 * C0 * K0 + c0 * K0 + k0] = U[i][j];
+                    }
+                }
+            }
+        }
+    });
+}
+
 void ConvState::initPooling(const MatShape& inpshape_,
                             const MatShape& outshape_,
                             const std::vector<int>& kshape_,
