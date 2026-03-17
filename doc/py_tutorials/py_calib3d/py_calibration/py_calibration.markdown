@@ -207,16 +207,16 @@ Re-projection Error
 Re-projection error gives a good estimation of just how exact the found parameters are. The closer the re-projection error is to zero, the more accurate the parameters we found are. Given the intrinsic, distortion, rotation and translation matrices,
 we must first transform the object point to image point using **cv.projectPoints()**. Then, we can calculate
 the absolute norm between what we got with our transformation and the corner finding algorithm. To
-find the average error, we calculate the arithmetical mean of the errors calculated for all the
-calibration images.
+find the average error, we calculate the root mean square error (RMSE) over all the points.
 @code{.py}
 mean_error = 0
 for i in range(len(objpoints)):
     imgpoints2, _ = cv.projectPoints(objpoints[i], rvecs[i], tvecs[i], mtx, dist)
-    error = cv.norm(imgpoints[i], imgpoints2, cv.NORM_L2)/len(imgpoints2)
+    error = cv.norm(imgpoints[i], imgpoints2, cv.NORM_L2SQR)
     mean_error += error
 
-print( "total error: {}".format(mean_error/len(objpoints)) )
+total_points = sum(len(pts) for pts in objpoints)
+print( "total error: {}".format(np.sqrt(mean_error/total_points)) )
 @endcode
 
 Exercises
