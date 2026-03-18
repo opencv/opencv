@@ -144,7 +144,7 @@ class DnnCaffeModel(Framework):
     net = object
 
     def __init__(self, prototxt, caffemodel, in_blob_name, out_blob_name):
-        self.net = cv.dnn.readNetFromCaffe(prototxt, caffemodel)
+        self.net = cv.dnn.readNet(prototxt, caffemodel)
         self.in_blob_name = in_blob_name
         self.out_blob_name = out_blob_name
 

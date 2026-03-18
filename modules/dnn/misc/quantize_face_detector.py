@@ -33,7 +33,7 @@ assert(not args.quantize or not args.fp16)
 dtype = tf.float16 if args.fp16 else tf.float32
 
 ################################################################################
-cvNet = cv.dnn.readNetFromCaffe(args.proto, args.model)
+cvNet = cv.dnn.readNet(args.proto, args.model)
 
 def dnnLayer(name):
     return cvNet.getLayer(long(cvNet.getLayerId(name)))

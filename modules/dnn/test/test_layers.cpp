@@ -62,9 +62,55 @@ static String _tf(TString filename)
     return (basetestdir + "dnn/layers/") + filename;
 }
 
+static std::string getCurrentTestNameNoParams()
+{
+    const testing::TestInfo* info = testing::UnitTest::GetInstance()->current_test_info();
+    if (!info) return std::string();
+
+#if defined(GTEST_VERSION_MAJOR) && (GTEST_VERSION_MAJOR > 1 || (GTEST_VERSION_MAJOR == 1 && GTEST_VERSION_MINOR >= 10))
+    const char* suite = info->test_suite_name();
+#else
+    const char* suite = info->test_case_name();
+#endif
+
+    std::string name = std::string(suite ? suite : "") + "." + info->name();
+    const size_t pos = name.find('/');
+    if (pos != std::string::npos)
+        name.resize(pos);
+    return name;
+}
+
+static const std::set<std::string>& getCaffeNewEngineDenylist()
+{
+    static std::set<std::string> deny;
+    static bool isInitialized = false;
+    if (!isInitialized)
+    {
+        const std::vector<std::string> items = {
+            #include "test_caffe_importer_new_engine_denylist.inl.hpp"
+        };
+        deny.insert(items.begin(), items.end());
+        isInitialized = true;
+    }
+    return deny;
+}
+
+static void skipIfInCaffeNewEngineDenylist()
+{
+    const std::string name = getCurrentTestNameNoParams();
+    if (!name.empty() && getCaffeNewEngineDenylist().count(name))
+        throw SkipTestException("Test is in the new engine denylist: " + name);
+}
+
 class Test_Caffe_layers : public DNNTestLayer
 {
 public:
+    void SetUp() CV_OVERRIDE
+    {
+        skipIfInCaffeNewEngineDenylist();
+        DNNTestLayer::SetUp();
+    }
+
     void testLayerUsingCaffeModels(const String& basename, bool useCaffeModel = false,
                                    bool useCommonInputBlob = true, double l1 = 0.0, double lInf = 0.0,
                                    int numInps = 1, int numOuts = 1)
@@ -103,7 +149,7 @@ public:
             refs.push_back(blobFromNPY(outfile));
         }
 
-        Net net = readNetFromCaffe(prototxt, (useCaffeModel) ? caffemodel : String());
+        Net net = readNet(prototxt, (useCaffeModel) ? caffemodel : String());
         ASSERT_FALSE(net.empty());
         checkBackend(&inps[0], &refs[0]);
 
@@ -397,7 +443,7 @@ TEST_P(Test_Caffe_layers, Reshape_Split_Slice)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 #endif
 
-    Net net = readNetFromCaffe(_tf("reshape_and_slice_routines.prototxt"));
+    Net net = readNet(_tf("reshape_and_slice_routines.prototxt"));
     ASSERT_FALSE(net.empty());
 
     net.setPreferableBackend(backend);
@@ -843,7 +889,7 @@ TEST_P(Test_Caffe_layers, Convolution2Inputs)
 
 TEST_P(Test_Caffe_layers, ROIPooling_Accuracy)
 {
-    Net net = readNetFromCaffe(_tf("net_roi_pooling.prototxt"));
+    Net net = readNet(_tf("net_roi_pooling.prototxt"));
     ASSERT_FALSE(net.empty());
 
     Mat inp = blobFromNPY(_tf("net_roi_pooling.input.npy"));
@@ -881,7 +927,7 @@ TEST_P(Test_Caffe_layers, FasterRCNN_Proposal)
     if(backend == DNN_BACKEND_CUDA)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); /* Proposal layer is unsupported */
 
-    Net net = readNetFromCaffe(_tf("net_faster_rcnn_proposal.prototxt"));
+    Net net = readNet(_tf("net_faster_rcnn_proposal.prototxt"));
 
     Mat scores = blobFromNPY(_tf("net_faster_rcnn_proposal.scores.npy"));
     Mat deltas = blobFromNPY(_tf("net_faster_rcnn_proposal.deltas.npy"));

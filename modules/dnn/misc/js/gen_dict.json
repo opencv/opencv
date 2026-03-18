@@ -2,7 +2,7 @@
     "whitelist":
     {
         "dnn_Net": ["setInput", "forward", "setPreferableBackend","getUnconnectedOutLayersNames"],
-        "": ["readNetFromCaffe", "readNetFromTensorflow", "readNetFromTorch", "readNetFromDarknet",
+        "": ["readNetFromTensorflow", "readNetFromDarknet",
             "readNetFromONNX", "readNetFromTFLite", "readNet", "blobFromImage"]
     },
     "namespace_prefix_override":

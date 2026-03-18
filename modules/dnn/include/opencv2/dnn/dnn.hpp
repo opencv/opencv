@@ -1066,43 +1066,6 @@ CV__DNN_INLINE_NS_BEGIN
     CV_EXPORTS Net readNetFromDarknet(const char *bufferCfg, size_t lenCfg,
                                       const char *bufferModel = NULL, size_t lenModel = 0);
 
-    /** @brief Reads a network model stored in <a href="http://caffe.berkeleyvision.org">Caffe</a> framework's format.
-      * @param prototxt   path to the .prototxt file with text description of the network architecture.
-      * @param caffeModel path to the .caffemodel file with learned network.
-      * @param engine select DNN engine to be used. With auto selection the new engine is used.
-      * Please pay attention that the new DNN does not support non-CPU back-ends for now.
-      * @returns Net object.
-      */
-    CV_EXPORTS_W Net readNetFromCaffe(CV_WRAP_FILE_PATH const String &prototxt,
-                                      CV_WRAP_FILE_PATH const String &caffeModel = String(),
-                                      int engine = ENGINE_AUTO);
-
-    /** @brief Reads a network model stored in Caffe model in memory.
-      * @param bufferProto buffer containing the content of the .prototxt file
-      * @param bufferModel buffer containing the content of the .caffemodel file
-      * @param engine select DNN engine to be used. With auto selection the new engine is used.
-      * Please pay attention that the new DNN does not support non-CPU back-ends for now.
-      * @returns Net object.
-      */
-    CV_EXPORTS_W Net readNetFromCaffe(const std::vector<uchar>& bufferProto,
-                                      const std::vector<uchar>& bufferModel = std::vector<uchar>(),
-                                      int engine = ENGINE_AUTO);
-
-    /** @brief Reads a network model stored in Caffe model in memory.
-      * @details This is an overloaded member function, provided for convenience.
-      * It differs from the above function only in what argument(s) it accepts.
-      * @param bufferProto buffer containing the content of the .prototxt file
-      * @param lenProto length of bufferProto
-      * @param bufferModel buffer containing the content of the .caffemodel file
-      * @param lenModel length of bufferModel
-      * @param engine select DNN engine to be used. With auto selection the new engine is used.
-      * Please pay attention that the new DNN does not support non-CPU back-ends for now.
-      * @returns Net object.
-      */
-    CV_EXPORTS Net readNetFromCaffe(const char *bufferProto, size_t lenProto,
-                                    const char *bufferModel = NULL, size_t lenModel = 0,
-                                    int engine = ENGINE_AUTO);
-
     /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/">TensorFlow</a> framework's format.
       * @param model  path to the .pb file with binary protobuf description of the network architecture
       * @param config path to the .pbtxt file that contains text graph definition in protobuf format.
@@ -1445,22 +1408,6 @@ CV__DNN_INLINE_NS_BEGIN
      *  of the blob (batch size). Every image has a number of channels equals to the second dimension of the blob (depth).
      */
     CV_EXPORTS_W void imagesFromBlob(const cv::Mat& blob_, OutputArrayOfArrays images_);
-
-    /** @brief Convert all weights of Caffe network to half precision floating point.
-     * @param src Path to origin model from Caffe framework contains single
-     *            precision floating point weights (usually has `.caffemodel` extension).
-     * @param dst Path to destination model with updated weights.
-     * @param layersTypes Set of layers types which parameters will be converted.
-     *                    By default, converts only Convolutional and Fully-Connected layers'
-     *                    weights.
-     *
-     * @note Shrinked model has no origin float32 weights so it can't be used
-     *       in origin Caffe framework anymore. However the structure of data
-     *       is taken from NVidia's Caffe fork: https://github.com/NVIDIA/caffe.
-     *       So the resulting model may be used there.
-     */
-    CV_EXPORTS_W void shrinkCaffeModel(CV_WRAP_FILE_PATH const String& src, CV_WRAP_FILE_PATH const String& dst,
-                                       const std::vector<String>& layersTypes = std::vector<String>());
 
     /** @brief Create a text representation for a binary network stored in protocol buffer format.
      *  @param[in] model  A path to binary network.

@@ -2424,6 +2424,28 @@ TEST_P(Test_ONNX_nets, CaffeNet)
     testONNXModels("caffenet", pb);
 }
 
+TEST_P(Test_ONNX_layers, ROIPooling)
+{
+    Net net = readNet(_tf("models/net_roi_pooling.onnx"));
+    ASSERT_FALSE(net.empty());
+
+    Mat inp = blobFromNPY(_tf("data/net_roi_pooling.input.npy"));
+    Mat rois = blobFromNPY(_tf("data/net_roi_pooling.rois.npy"));
+    Mat ref = blobFromNPY(_tf("data/net_roi_pooling.npy"));
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    net.setInput(inp, "input");
+    net.setInput(rois, "rois");
+
+    Mat out = net.forward();
+
+    double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1e-3 : 1e-5;
+    double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1e-3 : 1e-4;
+    normAssert(out, ref, "", l1, lInf);
+}
+
 TEST_P(Test_ONNX_nets, RCNN_ILSVRC13)
 {
 #if defined(OPENCV_32BIT_CONFIGURATION) && (defined(HAVE_OPENCL) || defined(_WIN32))

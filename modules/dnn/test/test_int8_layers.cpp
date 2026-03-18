@@ -50,7 +50,7 @@ public:
         {
             String prototxt = _tf("layers/" + basename + ".prototxt");
             String caffemodel = _tf("layers/" + basename + ".caffemodel");
-            net = readNetFromCaffe(prototxt, useCaffeModel ? caffemodel : String());
+            net = readNet(prototxt, useCaffeModel ? caffemodel : String());
 
             inpPath = _tf("layers/" + (useCommonInputBlob ? "blob" : basename + ".input"));
             outPath =  _tf("layers/" + basename);
@@ -778,7 +778,7 @@ TEST_P(Test_Int8_nets, AlexNet)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
 
 
-    Net net = readNetFromCaffe(findDataFile("dnn/bvlc_alexnet.prototxt"),
+    Net net = readNet(findDataFile("dnn/bvlc_alexnet.prototxt"),
                                findDataFile("dnn/bvlc_alexnet.caffemodel", false));
 
     Mat inp = imread(_tf("grace_hopper_227.png"));
@@ -796,7 +796,7 @@ TEST_P(Test_Int8_nets, GoogLeNet)
     if (target == DNN_TARGET_OPENCL && !ocl::Device::getDefault().isIntel())
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
 
-    Net net = readNetFromCaffe(findDataFile("dnn/bvlc_googlenet.prototxt"),
+    Net net = readNet(findDataFile("dnn/bvlc_googlenet.prototxt"),
                                findDataFile("dnn/bvlc_googlenet.caffemodel", false));
 
     std::vector<Mat> inpMats;
@@ -821,7 +821,7 @@ TEST_P(Test_Int8_nets, ResNet50)
     if (target == DNN_TARGET_OPENCL && !ocl::Device::getDefault().isIntel())
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
 
-    Net net = readNetFromCaffe(findDataFile("dnn/ResNet-50-deploy.prototxt"),
+    Net net = readNet(findDataFile("dnn/ResNet-50-deploy.prototxt"),
                                findDataFile("dnn/ResNet-50-model.caffemodel", false));
 
     Mat inp = imread(_tf("googlenet_0.png"));
@@ -848,7 +848,7 @@ TEST_P(Test_Int8_nets, DenseNet121)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 
-    Net net = readNetFromCaffe(findDataFile("dnn/DenseNet_121.prototxt", false),
+    Net net = readNet(findDataFile("dnn/DenseNet_121.prototxt", false),
                                findDataFile("dnn/DenseNet_121.caffemodel", false));
 
     Mat inp = imread(_tf("dog416.png"));
@@ -869,7 +869,7 @@ TEST_P(Test_Int8_nets, SqueezeNet_v1_1)
     if (target == DNN_TARGET_OPENCL && !ocl::Device::getDefault().isIntel())
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
 
-    Net net = readNetFromCaffe(findDataFile("dnn/squeezenet_v1.1.prototxt"),
+    Net net = readNet(findDataFile("dnn/squeezenet_v1.1.prototxt"),
                                findDataFile("dnn/squeezenet_v1.1.caffemodel", false));
 
     Mat inp = imread(_tf("googlenet_0.png"));
@@ -951,7 +951,7 @@ TEST_P(Test_Int8_nets, MobileNet_SSD)
     if (target == DNN_TARGET_OPENCL && !ocl::Device::getDefault().isIntel())
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
 
-    Net net = readNetFromCaffe(findDataFile("dnn/MobileNetSSD_deploy_19e3ec3.prototxt", false),
+    Net net = readNet(findDataFile("dnn/MobileNetSSD_deploy_19e3ec3.prototxt", false),
                                findDataFile("dnn/MobileNetSSD_deploy_19e3ec3.caffemodel", false));
 
     Mat inp = imread(_tf("street.png"));
@@ -1031,7 +1031,7 @@ TEST_P(Test_Int8_nets, opencv_face_detector)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 
-    Net net = readNetFromCaffe(findDataFile("dnn/opencv_face_detector.prototxt"),
+    Net net = readNet(findDataFile("dnn/opencv_face_detector.prototxt"),
                                findDataFile("dnn/opencv_face_detector.caffemodel", false));
 
     Mat inp = imread(findDataFile("gpu/lbpcascade/er.png"));
@@ -1159,7 +1159,7 @@ TEST_P(Test_Int8_nets, FasterRCNN_vgg16)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 
-    Net net = readNetFromCaffe(findDataFile("dnn/faster_rcnn_vgg16.prototxt"),
+    Net net = readNet(findDataFile("dnn/faster_rcnn_vgg16.prototxt"),
                                findDataFile("dnn/VGG16_faster_rcnn_final.caffemodel", false));
 
     Mat ref = (Mat_<float>(3, 7) << 0, 2, 0.949398, 99.2454, 210.141, 601.205, 462.849,
@@ -1188,7 +1188,7 @@ TEST_P(Test_Int8_nets, FasterRCNN_zf)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 
-    Net net = readNetFromCaffe(findDataFile("dnn/faster_rcnn_zf.prototxt"),
+    Net net = readNet(findDataFile("dnn/faster_rcnn_zf.prototxt"),
                                findDataFile("dnn/ZF_faster_rcnn_final.caffemodel", false));
 
     Mat ref = (Mat_<float>(3, 7) << 0, 2, 0.90121, 120.407, 115.83, 570.586, 528.395,
@@ -1212,7 +1212,7 @@ TEST_P(Test_Int8_nets, RFCN)
     if (target == DNN_TARGET_OPENCL && !ocl::Device::getDefault().isIntel())
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
 
-    Net net = readNetFromCaffe(findDataFile("dnn/rfcn_pascal_voc_resnet50.prototxt"),
+    Net net = readNet(findDataFile("dnn/rfcn_pascal_voc_resnet50.prototxt"),
                                findDataFile("dnn/resnet50_rfcn_final.caffemodel", false));
 
     Mat ref = (Mat_<float>(2, 7) << 0, 7, 0.991359, 491.822, 81.1668, 702.573, 178.234,
