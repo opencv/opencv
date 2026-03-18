@@ -2042,7 +2042,7 @@ static void inRange_(const T* src1, size_t step1, const T* src2, size_t step2,
 {
     step1 /= sizeof(src1[0]);
     step2 /= sizeof(src2[0]);
-    step3 /= sizeof(src3[0]);    
+    step3 /= sizeof(src3[0]);
 
     InRange_SIMD<T> vop;
 
