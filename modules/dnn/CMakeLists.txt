@@ -449,9 +449,6 @@ if(WITH_ONNXRUNTIME_GENAI)
         set(_ortga_filename "onnxruntime-genai-${ONNXRUNTIME_GENAI_VERSION}-linux-x64.tar.gz")
         set(_ortga_md5 "91f59d2f37849729c6c45d15942ec6c6")
       endif()
-      # linux-aarch64 is not available in the official v0.12.1 release assets.
-      # Users on aarch64 Linux must build from source and point to the
-      # installation via -DONNXGENAI_ROOT_DIR=<path>.
     endif()
 
     if(NOT _ortga_filename)

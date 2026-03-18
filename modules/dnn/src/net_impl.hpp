@@ -275,7 +275,6 @@ struct Net::Impl : public detail::NetImplBase
     std::shared_ptr<OgaModel> oga_model;
     std::shared_ptr<OgaTokenizer> oga_tokenizer;
     std::shared_ptr<OgaMultiModalProcessor> oga_processor;
-    bool oga_is_multimodal = false;
     Mat oga_image_mat;
     std::string oga_raw_prompt;
     std::map<std::string, double> oga_search_options_number;
@@ -440,6 +439,7 @@ struct Net::Impl : public detail::NetImplBase
     // @param inputBlobs  single 1-D CV_32S Mat containing the input token IDs.
     // @returns           single 1-D CV_32S Mat containing all generated token IDs
     //                   (including the prompt tokens).
+    void initOgaMultiModalProcessor();
     std::vector<Mat> runOgaSession(const std::vector<Mat>& inputBlobs);
     void setPrompt(const String& prompt);
     void setSearchOption(const String& name, double value);
