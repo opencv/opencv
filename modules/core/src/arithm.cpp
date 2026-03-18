@@ -1937,6 +1937,56 @@ struct InRange_SIMD<bfloat>
     }
 };
 
+template <>
+struct InRange_SIMD<unsigned>
+{
+    int operator () (const unsigned * src1, const unsigned * src2, const unsigned * src3,
+        uchar * dst, int len) const
+    {
+        int x = 0;
+        const int width = (int)VTraits<v_uint32>::vlanes() * 2;
+
+        for (; x <= len - width; x += width)
+        {
+            v_uint32 values1 = vx_load(src1 + x);
+            v_uint32 low1 = vx_load(src2 + x);
+            v_uint32 high1 = vx_load(src3 + x);
+
+            v_uint32 values2 = vx_load(src1 + x + VTraits<v_uint32>::vlanes());
+            v_uint32 low2 = vx_load(src2 + x + VTraits<v_uint32>::vlanes());
+            v_uint32 high2 = vx_load(src3 + x + VTraits<v_uint32>::vlanes());
+
+            v_pack_store(dst + x, v_reinterpret_as_u16(v_pack(v_and(v_ge(values1, low1), v_ge(high1, values1)), v_and(v_ge(values2, low2), v_ge(high2, values2)))));
+        }
+        vx_cleanup();
+        return x;
+    }
+};
+
+
+template <>
+struct InRange_SIMD<uint64>
+{
+    int operator () (const uint64 * src1, const uint64 * src2, const uint64 * src3,
+        uchar * dst, int len) const
+    {
+        for (int x = 0; x < len; x++)
+            dst[x] = (src2[x] <= src1[x] && src1[x] <= src3[x]) ? 255 : 0;
+        return len;
+    }
+};
+
+template <>
+struct InRange_SIMD<int64>
+{
+    int operator () (const int64 * src1, const int64 * src2, const int64 * src3,
+        uchar * dst, int len) const
+    {
+        for (int x = 0; x < len; x++)
+            dst[x] = (src2[x] <= src1[x] && src1[x] <= src3[x]) ? 255 : 0;
+        return len;
+    }
+};
 
 #if CV_SIMD_64F
 
@@ -1985,27 +2035,14 @@ struct InRange_SIMD<double>
 
 #endif
 
-template <typename T, bool EnableOptimizations = true>
+template <typename T>
 static void inRange_(const T* src1, size_t step1, const T* src2, size_t step2,
          const T* src3, size_t step3, uchar* dst, size_t step,
          Size size)
 {
     step1 /= sizeof(src1[0]);
     step2 /= sizeof(src2[0]);
-    step3 /= sizeof(src3[0]);
-
-    if (!EnableOptimizations)
-    {
-        for( ; size.height--; src1 += step1, src2 += step2, src3 += step3, dst += step )
-        {
-            for( int x = 0; x < size.width; x++ )
-            {
-                volatile bool in_bounds = (src2[x] <= src1[x] && src1[x] <= src3[x]);
-                dst[x] = in_bounds ? 255 : 0;
-            }
-        }
-        return;
-    }
+    step3 /= sizeof(src3[0]);    
 
     InRange_SIMD<T> vop;
 
@@ -2057,7 +2094,7 @@ static void inRange16s(const short* src1, size_t step1, const short* src2, size_
 static void inRange32u(const unsigned* src1, size_t step1, const unsigned* src2, size_t step2,
                        const unsigned* src3, size_t step3, uchar* dst, size_t step, Size size)
 {
-    inRange_<unsigned, false>(src1, step1, src2, step2, src3, step3, dst, step, size);
+    inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
 }
 
 static void inRange32s(const int* src1, size_t step1, const int* src2, size_t step2,
@@ -2069,13 +2106,13 @@ static void inRange32s(const int* src1, size_t step1, const int* src2, size_t st
 static void inRange64u(const uint64* src1, size_t step1, const uint64* src2, size_t step2,
                        const uint64* src3, size_t step3, uchar* dst, size_t step, Size size)
 {
-    inRange_<uint64, false>(src1, step1, src2, step2, src3, step3, dst, step, size);
+    inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
 }
 
 static void inRange64s(const int64* src1, size_t step1, const int64* src2, size_t step2,
                        const int64* src3, size_t step3, uchar* dst, size_t step, Size size)
 {
-    inRange_<int64, false>(src1, step1, src2, step2, src3, step3, dst, step, size);
+    inRange_(src1, step1, src2, step2, src3, step3, dst, step, size);
 }
 
 static void inRange32f(const float* src1, size_t step1, const float* src2, size_t step2,
@@ -2143,9 +2180,9 @@ static InRangeFunc getInRangeFunc(int depth)
         (InRangeFunc)inRange16f,
         (InRangeFunc)inRange16bf,
         0,
-        (InRangeFunc)inRange64u,
-        (InRangeFunc)inRange64s,
-        (InRangeFunc)inRange32u,
+        (InRangeFunc)GET_OPTIMIZED(inRange64u),
+        (InRangeFunc)GET_OPTIMIZED(inRange64s),
+        (InRangeFunc)GET_OPTIMIZED(inRange32u),
         0,
     };
 
