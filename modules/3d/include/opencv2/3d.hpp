@@ -185,7 +185,7 @@ Z_w \\
 
 The following figure illustrates the pinhole camera model.
 
-![Pinhole camera model](pics/pinhole_camera_model.png)
+![Pinhole camera model](pics/pinhole_camera_model.png) { width=70% }
 
 Real lenses usually have some distortion, mostly radial distortion, and slight tangential distortion.
 So, the above model is extended as:
@@ -979,7 +979,7 @@ Check @ref tutorial_homography "the corresponding tutorial" for more details
 
 /** @brief Finds an object pose \f$ {}^{c}\mathbf{T}_o \f$ from 3D-2D point correspondences:
 
-![Perspective projection, from object to camera frame](pics/pinhole_homogeneous_transformation.png){ width=50% }
+![Perspective projection, from object to camera frame](pics/pinhole_homogeneous_transformation.jpg){ width=50% }
 
 @see @ref calib3d_solvePnP
 
@@ -1049,7 +1049,7 @@ CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
 
 /** @brief Finds an object pose \f$ {}^{c}\mathbf{T}_o \f$ from 3D-2D point correspondences using the RANSAC scheme to deal with bad matches.
 
-![Perspective projection, from object to camera frame](pics/pinhole_homogeneous_transformation.png){ width=50% }
+![Perspective projection, from object to camera frame](pics/pinhole_homogeneous_transformation.jpg){ width=50% }
 
 @see @ref calib3d_solvePnP
 
@@ -1110,7 +1110,7 @@ CV_EXPORTS_W bool solvePnPRansac( InputArray objectPoints, InputArray imagePoint
 
 /** @brief Finds an object pose \f$ {}^{c}\mathbf{T}_o \f$ from **3** 3D-2D point correspondences.
 
-![Perspective projection, from object to camera frame](pics/pinhole_homogeneous_transformation.png){ width=50% }
+![Perspective projection, from object to camera frame](pics/pinhole_homogeneous_transformation.jpg){ width=50% }
 
 @see @ref calib3d_solvePnP
 
@@ -1207,7 +1207,7 @@ CV_EXPORTS_W void solvePnPRefineVVS( InputArray objectPoints, InputArray imagePo
 
 /** @brief Finds an object pose \f$ {}^{c}\mathbf{T}_o \f$ from 3D-2D point correspondences.
 
-![Perspective projection, from object to camera frame](pics/pinhole_homogeneous_transformation.png){ width=50% }
+![Perspective projection, from object to camera frame](pics/pinhole_homogeneous_transformation.jpg){ width=50% }
 
 @see @ref calib3d_solvePnP
 

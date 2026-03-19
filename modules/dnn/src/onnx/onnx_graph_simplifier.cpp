@@ -1282,7 +1282,7 @@ public:
                             }
                         }
                     }
-                    //  extract axis from original Gather node
+                    // extract axis from original Gather node
                     axis = 0;
                     opencv_onnx::NodeProto* origGatherNode =
                         inpNode.dynamicCast<ONNXNodeWrapper>()->node;
@@ -1306,6 +1306,7 @@ public:
         new_attr->set_name("axis");
         new_attr->set_i(axis);
     }
+
 private:
     int cast, gather, axis;
 };

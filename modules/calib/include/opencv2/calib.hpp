@@ -180,7 +180,7 @@ Z_w \\
 
 The following figure illustrates the pinhole camera model.
 
-![Pinhole camera model](pics/pinhole_camera_model.png)
+![Pinhole camera model](pics/pinhole_camera_model.png) { width=70% }
 
 Real lenses usually have some distortion, mostly radial distortion, and slight tangential distortion.
 So, the above model is extended as:
