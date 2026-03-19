@@ -210,13 +210,15 @@ the absolute norm between what we got with our transformation and the corner fin
 find the average error, we calculate the arithmetical mean of the errors calculated for all the
 calibration images.
 @code{.py}
-mean_error = 0
+total_error = 0
+total_points = 0
 for i in range(len(objpoints)):
     imgpoints2, _ = cv.projectPoints(objpoints[i], rvecs[i], tvecs[i], mtx, dist)
-    error = cv.norm(imgpoints[i], imgpoints2, cv.NORM_L2)/len(imgpoints2)
-    mean_error += error
+    error = cv.norm(imgpoints[i], imgpoints2, cv.NORM_L2SQR)
+    total_error += error
+    total_points += len(imgpoints2)
 
-print( "total error: {}".format(mean_error/len(objpoints)) )
+print( "RMSE: {}".format(np.sqrt(total_error/total_points)) )
 @endcode
 
 Exercises
