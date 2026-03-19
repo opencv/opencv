@@ -33,11 +33,12 @@ struct ArmPLDCT2DContext
     bool         inv, no_scale;
     fftwf_plan   plan_fwd, plan_inv;
     float        scale_dc, scale_axis, scale_rest;
+    float       *buf;
 
     ArmPLDCT2DContext()
         : mode(ARMPL_DCT_2D), width(0), height(0), inv(false), no_scale(true),
           plan_fwd(0), plan_inv(0),
-          scale_dc(1.f), scale_axis(1.f), scale_rest(1.f) {}
+          scale_dc(1.f), scale_axis(1.f), scale_rest(1.f), buf(0) {}
 };
 
 struct ArmPLDCT2DContext64
@@ -83,6 +84,7 @@ struct ArmPLDCTRowContext64
           plan_fwd(0), plan_inv(0),
           scale_dc(1.0), scale_rest(1.0), fftw_buf(0) {}
 };
+
 struct ArmPLC2CDFTContext
 {
     ArmPLDFTMode mode;
@@ -823,8 +825,8 @@ int armpl_hal_dftInit1D(cvhalDFT **context, int len, int count,
     const bool isTwoStage   = (flags & CV_HAL_DFT_TWO_STAGE)      != 0;
     const bool isStageCol   = (flags & CV_HAL_DFT_STAGE_COLS)     != 0;
 
-    const bool isRealTransform = isRealOut || isComplexOut;
-    if (isTwoStage)
+    const bool isRealTransform = isRealOut;
+    if (isRealTransform)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (isScaled && !isRows && isRealTransform)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -1104,6 +1106,269 @@ int armplDFTInv_PackToR(const double* src, double* dst,
     fftw_execute_dft_c2r(spec->plan, tmp, dst);
     fftw_free(tmp);
     return 0;
+}
+
+class DctHalRowInvoker : public cv::ParallelLoopBody
+{
+public:
+    DctHalRowInvoker(const uchar *_src, size_t _src_step,
+                           uchar *_dst, size_t _dst_step,
+                     int _width, fftwf_plan _plan, bool *_ok)
+        : src(_src), src_step(_src_step),
+          dst(_dst), dst_step(_dst_step),
+          width(_width), plan(_plan), ok(_ok)
+    { *ok = true; }
+
+    virtual void operator()(const cv::Range& range) const CV_OVERRIDE
+    {
+        if (!*ok) return;
+        cv::AutoBuffer<float> temp_src(width);
+        cv::AutoBuffer<float> temp_dst(width);
+        for (int i = range.start; i < range.end; ++i)
+        {
+            const float *sr = reinterpret_cast<const float*>(src + (size_t)i * src_step);
+            float *dr = reinterpret_cast<float*>(dst + (size_t)i * dst_step);
+            memcpy(temp_src.data(), sr, (size_t)width * sizeof(float));
+            fftwf_execute_r2r(plan, temp_src.data(), temp_dst.data());
+            memcpy(dr, temp_dst.data(), (size_t)width * sizeof(float));
+        }
+    }
+
+private:
+    const uchar *src;
+    size_t       src_step;
+    uchar       *dst;
+    size_t       dst_step;
+    int          width;
+    fftwf_plan   plan;
+    bool        *ok;
+};
+
+class DctHalColInvoker : public cv::ParallelLoopBody
+{
+public:
+    DctHalColInvoker(const uchar *_src, size_t _src_step,
+                           uchar *_dst, size_t _dst_step,
+                     int _height, fftwf_plan _plan, bool *_ok)
+        : src(_src), src_step(_src_step),
+          dst(_dst), dst_step(_dst_step),
+          height(_height), plan(_plan), ok(_ok)
+    { *ok = true; }
+
+    virtual void operator()(const cv::Range& range) const CV_OVERRIDE
+    {
+        if (!*ok) return;
+        cv::AutoBuffer<float> temp_src(height);
+        cv::AutoBuffer<float> temp_dst(height);
+        for (int j = range.start; j < range.end; ++j)
+        {
+            for (int i = 0; i < height; ++i)
+            {
+                const float *sr = reinterpret_cast<const float*>(src + (size_t)i * src_step);
+                temp_src[i] = sr[j];
+            }
+            fftwf_execute_r2r(plan, temp_src.data(), temp_dst.data());
+            for (int i = 0; i < height; ++i)
+            {
+                float *dr = reinterpret_cast<float*>(dst + (size_t)i * dst_step);
+                dr[j] = temp_dst[i];
+            }
+        }
+    }
+
+private:
+    const uchar *src;
+    size_t       src_step;
+    uchar       *dst;
+    size_t       dst_step;
+    int          height;
+    fftwf_plan   plan;
+    bool        *ok;
+};
+
+int armpl_hal_dctInit2D(cvhalDFT **context,
+                        int width, int height,
+                        int depth, int flags)
+{
+    const bool isInverse = (flags & CV_HAL_DFT_INVERSE) != 0;
+    const bool isRowWise = (flags & CV_HAL_DFT_ROWS)    != 0;
+
+    if (depth != CV_32F || isInverse)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    if (!isRowWise)
+    {
+        float *row_buf = (float*)fftwf_malloc(sizeof(float) * (size_t)width * height);
+        if (!row_buf) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+        float *tmp_r = (float*)fftwf_malloc(sizeof(float) * width);
+        float *tmp_c = (float*)fftwf_malloc(sizeof(float) * height);
+        if (!tmp_r || !tmp_c)
+        {
+            fftwf_free(row_buf);
+            if (tmp_r) fftwf_free(tmp_r);
+            if (tmp_c) fftwf_free(tmp_c);
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        }
+
+        fftwf_plan prow = fftwf_plan_r2r_1d(width,  tmp_r, tmp_r, FFTW_REDFT10, FFTW_MEASURE);
+        fftwf_plan pcol = fftwf_plan_r2r_1d(height, tmp_c, tmp_c, FFTW_REDFT10, FFTW_MEASURE);
+        fftwf_free(tmp_r);
+        fftwf_free(tmp_c);
+
+        if (!prow || !pcol)
+        {
+            if (prow) fftwf_destroy_plan(prow);
+            if (pcol) fftwf_destroy_plan(pcol);
+            fftwf_free(row_buf);
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        }
+
+        ArmPLDCT2DContext *ctx = new ArmPLDCT2DContext();
+        ctx->width    = width;
+        ctx->height   = height;
+        ctx->inv      = false;
+        ctx->plan_fwd = prow;
+        ctx->plan_inv = pcol;
+        ctx->buf      = row_buf;
+
+        const float w = (float)width;
+        const float h = (float)height;
+        const float inv_sqrt2 = 1.0f / std::sqrt(2.0f);
+        const float base = 1.0f / (2.0f * std::sqrt(w * h));
+        ctx->scale_dc = base * inv_sqrt2 * inv_sqrt2;
+        ctx->scale_axis = base * inv_sqrt2;
+        ctx->scale_rest = base;
+
+        *context = reinterpret_cast<cvhalDFT*>(ctx);
+        return CV_HAL_ERROR_OK;
+    }
+
+    float *fftw_buf = (float*)fftwf_malloc(sizeof(float) * width);
+    if (!fftw_buf) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    fftwf_plan pf = fftwf_plan_r2r_1d(width, fftw_buf, fftw_buf, FFTW_REDFT10, FFTW_MEASURE);
+    if (!pf)
+    {
+        fftwf_free(fftw_buf);
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    }
+
+    ArmPLDCTRowContext *ctx = new ArmPLDCTRowContext();
+    ctx->width    = width;
+    ctx->height   = height;
+    ctx->inv      = false;
+    ctx->plan_fwd = pf;
+    ctx->fftw_buf = fftw_buf;
+
+    const float w = (float)width;
+    const float inv_sqrt2 = 1.0f / std::sqrt(2.0f);
+    const float base = 1.0f / std::sqrt(2.0f * w);
+    ctx->scale_dc   = base * inv_sqrt2;
+    ctx->scale_rest = base;
+
+    *context = reinterpret_cast<cvhalDFT*>(ctx);
+    return CV_HAL_ERROR_OK;
+}
+
+int armpl_hal_dct2D(cvhalDFT *context,
+                    const unsigned char *src_data, size_t src_step,
+                          unsigned char *dst_data, size_t dst_step)
+{
+    if (!context || !src_data || !dst_data)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    const ArmPLDFTMode mode = *reinterpret_cast<const ArmPLDFTMode*>(context);
+
+    if (mode == ARMPL_DCT_2D)
+    {
+        ArmPLDCT2DContext *ctx = reinterpret_cast<ArmPLDCT2DContext*>(context);
+        const int W = ctx->width;
+        const int H = ctx->height;
+        float *buf = ctx->buf;
+
+        const float sc_dc   = ctx->scale_dc;
+        const float sc_axis = ctx->scale_axis;
+        const float sc_rest = ctx->scale_rest;
+
+        bool ok_row = true;
+        cv::parallel_for_(cv::Range(0, H),
+            DctHalRowInvoker(src_data, src_step, reinterpret_cast<uchar*>(buf),
+                             (size_t)W * sizeof(float), W, ctx->plan_fwd, &ok_row), H / (double)(1 << 4));
+        if (!ok_row) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+        bool ok_col = true;
+        cv::parallel_for_(cv::Range(0, W), DctHalColInvoker(reinterpret_cast<const uchar*>(buf),
+                             (size_t)W * sizeof(float), dst_data, dst_step, H, ctx->plan_inv, &ok_col),
+            W / (double)(1 << 4));
+        if (!ok_col) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+        for (int i = 0; i < H; ++i)
+        {
+            float *dr = reinterpret_cast<float*>(dst_data + (size_t)i * dst_step);
+            const float sc_row = (i == 0) ? sc_axis : sc_rest;
+            dr[0] *= (i == 0) ? sc_dc : sc_axis;
+            for (int j = 1; j < W; ++j)
+                dr[j] *= sc_row;
+        }
+
+        return CV_HAL_ERROR_OK;
+    }
+
+    if (mode == ARMPL_DCT_ROW)
+    {
+        ArmPLDCTRowContext *ctx = reinterpret_cast<ArmPLDCTRowContext*>(context);
+        const int W = ctx->width;
+        const int H = ctx->height;
+        const float sc_dc   = ctx->scale_dc;
+        const float sc_rest = ctx->scale_rest;
+
+        bool ok_row = true;
+        cv::parallel_for_(
+            cv::Range(0, H),
+            DctHalRowInvoker(src_data, src_step,
+                             dst_data, dst_step,
+                             W, ctx->plan_fwd, &ok_row),
+            H / (double)(1 << 4));
+        if (!ok_row) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+        for (int i = 0; i < H; ++i)
+        {
+            float *dr = reinterpret_cast<float*>(dst_data + (size_t)i * dst_step);
+            dr[0] *= sc_dc;
+            for (int j = 1; j < W; ++j)
+                dr[j] *= sc_rest;
+        }
+
+        return CV_HAL_ERROR_OK;
+    }
+
+    return CV_HAL_ERROR_NOT_IMPLEMENTED;
+}
+
+int armpl_hal_dctFree2D(cvhalDFT *context)
+{
+    if (!context) return CV_HAL_ERROR_OK;
+
+    const ArmPLDFTMode mode = *reinterpret_cast<const ArmPLDFTMode*>(context);
+
+    if (mode == ARMPL_DCT_2D)
+    {
+        ArmPLDCT2DContext *ctx = reinterpret_cast<ArmPLDCT2DContext*>(context);
+        if (ctx->plan_fwd) fftwf_destroy_plan(ctx->plan_fwd);
+        if (ctx->plan_inv) fftwf_destroy_plan(ctx->plan_inv);
+        if (ctx->buf)      fftwf_free(ctx->buf);
+        delete ctx;
+    }
+    else if (mode == ARMPL_DCT_ROW)
+    {
+        ArmPLDCTRowContext *ctx = reinterpret_cast<ArmPLDCTRowContext*>(context);
+        if (ctx->plan_fwd) fftwf_destroy_plan(ctx->plan_fwd);
+        if (ctx->fftw_buf) fftwf_free(ctx->fftw_buf);
+        delete ctx;
+    }
+
+    return CV_HAL_ERROR_OK;
 }
 
 #endif // HAVE_ARMPL

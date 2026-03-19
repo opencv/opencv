@@ -9,6 +9,7 @@ if(HAVE_ARMPL)
   add_library(armpl_hal STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${ARMPL_HAL_FILES})
   target_include_directories(armpl_hal PRIVATE
     ${CMAKE_SOURCE_DIR}/modules/core/include
+    ${CMAKE_BINARY_DIR}
     ${ARMPL_HAL_INCLUDE_DIRS}
     ${ARMPL_INCLUDE_PATH})
   target_link_libraries(armpl_hal PUBLIC ${ARMPL_LIBRARY})
