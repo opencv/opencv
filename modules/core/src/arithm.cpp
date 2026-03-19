@@ -1726,9 +1726,11 @@ namespace cv
 template <typename T>
 struct InRange_SIMD
 {
-    int operator () (const T *, const T *, const T *, uchar *, int) const
+    int operator () (const T * src1, const T * src2, const T * src3, uchar * dst, int len) const
     {
-        return 0;
+        for (int x = 0; x < len; x++)
+            dst[x] = (src2[x] <= src1[x] && src1[x] <= src3[x]) ? 255 : 0;
+        return len;
     }
 };
 
@@ -1963,31 +1965,6 @@ struct InRange_SIMD<unsigned>
     }
 };
 
-
-template <>
-struct InRange_SIMD<uint64>
-{
-    int operator () (const uint64 * src1, const uint64 * src2, const uint64 * src3,
-        uchar * dst, int len) const
-    {
-        for (int x = 0; x < len; x++)
-            dst[x] = (src2[x] <= src1[x] && src1[x] <= src3[x]) ? 255 : 0;
-        return len;
-    }
-};
-
-template <>
-struct InRange_SIMD<int64>
-{
-    int operator () (const int64 * src1, const int64 * src2, const int64 * src3,
-        uchar * dst, int len) const
-    {
-        for (int x = 0; x < len; x++)
-            dst[x] = (src2[x] <= src1[x] && src1[x] <= src3[x]) ? 255 : 0;
-        return len;
-    }
-};
-
 #if CV_SIMD_64F
 
 template <>
@@ -2029,7 +2006,6 @@ struct InRange_SIMD<double>
         return x;
     }
 };
-
 
 #endif
 
