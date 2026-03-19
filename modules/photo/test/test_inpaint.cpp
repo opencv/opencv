@@ -183,4 +183,38 @@ TEST_P(Photo_InpaintSmallBorders, regression)
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Photo_InpaintSmallBorders,  Values(CV_8UC1, CV_8UC3));
 
+TEST(Photo_Inpaint_TELEA, no_saturation)
+{
+    Mat image(25, 25, CV_8UC3, Scalar(255, 0, 255));
+
+    std::vector<Point> holes = {
+        {0, 0}, {24, 0}, {1, 1}, {23, 1},
+        {1, 23}, {23, 23}, {0, 24}, {24, 24}
+    };
+
+    for (const auto& pt : holes)
+        image.at<Vec3b>(pt.y, pt.x) = Vec3b(0, 0, 0);
+
+    Mat1b inpaintMask = Mat1b::zeros(25, 25);
+    for (const auto& pt : holes)
+        inpaintMask(pt.y, pt.x) = 255;
+
+    Mat res;
+    inpaint(image, inpaintMask, res, 5, INPAINT_TELEA);
+
+    struct PixelCheck { int y, x, maxVal; };
+    const std::vector<PixelCheck> checks = {
+        {0, 0, 200},   
+        {1, 1, 200}, 
+    };
+
+    for (const auto& c : checks)
+    {
+        Vec3b result = res.at<Vec3b>(c.y, c.x);
+        ASSERT_EQ((int)result[1], 0);
+        ASSERT_LT((int)result[0], c.maxVal);
+        ASSERT_LT((int)result[2], c.maxVal);
+    }
+}
+
 }} // namespace
