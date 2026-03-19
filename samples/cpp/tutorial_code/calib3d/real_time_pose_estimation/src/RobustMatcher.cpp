@@ -84,6 +84,7 @@ void RobustMatcher::symmetryTest( const std::vector<std::vector<cv::DMatch> >& m
     }
 }
 
+//! [robust_match]
 void RobustMatcher::robustMatch( const cv::Mat& frame, std::vector<cv::DMatch>& good_matches,
                                  std::vector<cv::KeyPoint>& keypoints_frame, const cv::Mat& descriptors_model,
                                  const std::vector<cv::KeyPoint>& keypoints_model)
@@ -118,6 +119,7 @@ void RobustMatcher::robustMatch( const cv::Mat& frame, std::vector<cv::DMatch>& 
         cv::drawMatches(frame, keypoints_frame, training_img_, keypoints_model, good_matches, img_matching_);
     }
 }
+//! [robust_match]
 
 void RobustMatcher::fastRobustMatch( const cv::Mat& frame, std::vector<cv::DMatch>& good_matches,
                                      std::vector<cv::KeyPoint>& keypoints_frame,

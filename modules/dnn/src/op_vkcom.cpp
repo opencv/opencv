@@ -83,7 +83,7 @@ void copyToTensor(vkcom::Tensor &dst, const Mat &src)
 {
     CV_Assert(src.isContinuous() && src.type() == CV_32F);
 
-    std::vector<int> mat_shape = shape(src);
+    std::vector<int> mat_shape = shape(src).vec();
 
     // The following code will copy the src data from CPU Mat to GPU VkBuffer.
     dst.reshape((const char*)src.data, mat_shape);
@@ -168,7 +168,7 @@ VkComBackendWrapper::VkComBackendWrapper(const Ptr<BackendWrapper>& baseBuffer, 
     host = &m;
     tensor = base->tensor;
     CV_Assert(tensor.count() >= m.total());
-    tensor.reshape(0, shape(m));
+    tensor.reshape(0, shape(m).vec());
     hostDirty = false;
     deviceDirty = false;
 }

@@ -4,12 +4,14 @@ endif()
 
 set(the_description "Deep neural network module. It allows to load models from different frameworks and to make forward pass")
 
-ocv_add_dispatched_file_force_all("layers/layers_common" AVX AVX2 AVX512_SKX RVV LASX)
-ocv_add_dispatched_file_force_all("int8layers/layers_common" AVX2 AVX512_SKX RVV LASX)
+ocv_add_dispatched_file_force_all("layers/layers_common" AVX AVX2 AVX512_SKX RVV LASX NEON SVE)
+ocv_add_dispatched_file_force_all("int8layers/layers_common" AVX2 AVX512_SKX RVV LASX NEON)
 ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_block" AVX AVX2 NEON NEON_FP16)
 ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_depthwise" AVX AVX2 RVV LASX)
 ocv_add_dispatched_file("layers/cpu_kernels/conv_winograd_f63" AVX AVX2 NEON NEON_FP16)
 ocv_add_dispatched_file_force_all("layers/cpu_kernels/fast_gemm_kernels" AVX AVX2 NEON LASX)
+ocv_add_dispatched_file("layers/cpu_kernels/conv2_depthwise" AVX AVX2 NEON NEON_FP16)
+ocv_add_dispatched_file("layers/cpu_kernels/conv2_kernels" AVX AVX2 NEON NEON_FP16)
 
 ocv_add_module(dnn opencv_core opencv_imgproc WRAP python java objc js)
 
@@ -108,6 +110,178 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS
 set(include_dirs "")
 set(libs "")
 
+if(WITH_ONNXRUNTIME)
+  include("${OpenCV_SOURCE_DIR}/cmake/FindONNX.cmake")
+
+  set(_ort_download_requested OFF)
+  set(_ort_download_forced OFF)
+  if(DOWNLOAD_ONNXRUNTIME)
+    set(_ort_download_requested ON)
+    set(_ort_download_forced ON)
+  elseif(NOT HAVE_ONNXRUNTIME)
+    set(_ort_download_requested ON)
+    message(STATUS "DNN: ONNX Runtime was not found in system paths, attempting to download prebuilt package")
+  endif()
+
+  if(_ort_download_requested)
+    set(_ort_filename "")
+    set(_ort_md5 "")
+
+    if(WIN32)
+      if(X86_64 OR CMAKE_SIZEOF_VOID_P EQUAL 8)
+        set(_ort_filename "onnxruntime-win-x64-${ONNXRUNTIME_VERSION}.zip")
+        set(_ort_md5 "c535ec65cf6f850f2a70b4029acdc5d7")
+      elseif(ARM64 OR AARCH64)
+        set(_ort_filename "onnxruntime-win-arm64-${ONNXRUNTIME_VERSION}.zip")
+        set(_ort_md5 "01df64c14cf9285a6b23744f1b2ddf63")
+      endif()
+    elseif(APPLE)
+      if(ARM64 OR AARCH64 OR CMAKE_OSX_ARCHITECTURES MATCHES "arm64")
+        set(_ort_filename "onnxruntime-osx-arm64-${ONNXRUNTIME_VERSION}.tgz")
+        set(_ort_md5 "44302ee5651926ba6b0a3e92a3a303db")
+      endif()
+    elseif(UNIX)
+      if(X86_64)
+        set(_ort_filename "onnxruntime-linux-x64-${ONNXRUNTIME_VERSION}.tgz")
+        set(_ort_md5 "8e444d3ed1ea286013e339132ed4f08e")
+      elseif(AARCH64 OR ARM64)
+        set(_ort_filename "onnxruntime-linux-aarch64-${ONNXRUNTIME_VERSION}.tgz")
+        set(_ort_md5 "857b0fbb35f9d4cc117033242fc2a3da")
+      endif()
+    endif()
+
+    if(NOT _ort_filename)
+      if(_ort_download_forced OR NOT HAVE_ONNXRUNTIME)
+        message(FATAL_ERROR
+          "DNN: there is no official ONNX Runtime prebuilt package for "
+          "CMAKE_SYSTEM_NAME='${CMAKE_SYSTEM_NAME}', CMAKE_SYSTEM_PROCESSOR='${CMAKE_SYSTEM_PROCESSOR}'. "
+          "Provide an installed ORT via ONNXRT_ROOT_DIR, or use a supported platform."
+        )
+      endif()
+    else()
+      set(_ort_url "https://github.com/microsoft/onnxruntime/releases/download/v${ONNXRUNTIME_VERSION}/${_ort_filename}")
+      string(REGEX REPLACE "\\.(tgz|zip)$" "" _ort_unpack_dirname "${_ort_filename}")
+
+      ocv_download(
+        FILENAME ${_ort_filename}
+        URL ${_ort_url}
+        DESTINATION_DIR "${OpenCV_BINARY_DIR}/3rdparty/onnxruntime"
+        ID "ORT"
+        HASH ${_ort_md5}
+        UNPACK
+      )
+
+      set(ONNXRT_ROOT_DIR "${OpenCV_BINARY_DIR}/3rdparty/onnxruntime/${_ort_unpack_dirname}"
+          CACHE PATH "ONNX Runtime install directory" FORCE)
+
+      if(NOT APPLE AND NOT WIN32)
+        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-rpath,'$ORIGIN/../3rdparty/onnxruntime/${_ort_unpack_dirname}/lib'")
+      endif()
+
+      include("${OpenCV_SOURCE_DIR}/cmake/FindONNX.cmake")
+    endif()
+  endif()  # _ort_download_requested
+
+  if(HAVE_ONNX)
+    set(HAVE_ONNXRUNTIME 1 CACHE INTERNAL "ONNX Runtime availability")
+
+    if(ONNXRUNTIME_PREFER_STATIC)
+      set(_ort_static_lib "")
+      if(ONNXRT_ROOT_DIR)
+        find_file(_ort_static_lib
+          NAMES libonnxruntime.a
+          HINTS "${ONNXRT_ROOT_DIR}"
+          PATH_SUFFIXES lib lib64
+          NO_DEFAULT_PATH
+        )
+      endif()
+      if(NOT _ort_static_lib AND ONNX_LIBRARIES)
+        foreach(_ort_lib ${ONNX_LIBRARIES})
+          get_filename_component(_ort_lib_dir "${_ort_lib}" DIRECTORY)
+          find_file(_ort_static_candidate
+            NAMES libonnxruntime.a
+            HINTS "${_ort_lib_dir}"
+            NO_DEFAULT_PATH
+          )
+          if(_ort_static_candidate AND _ort_static_candidate MATCHES "\\.a$")
+            set(_ort_static_lib "${_ort_static_candidate}")
+            break()
+          endif()
+        endforeach()
+      endif()
+      if(_ort_static_lib AND _ort_static_lib MATCHES "\\.a$")
+        set(ONNX_LIBRARIES "${_ort_static_lib}" CACHE STRING "ONNX Runtime libraries" FORCE)
+        message(STATUS "DNN: ONNX Runtime static library selected: ${_ort_static_lib}")
+      endif()
+      unset(_ort_static_candidate)
+      unset(_ort_static_lib)
+    endif()
+
+    if(ONNX_INCLUDE_DIR)
+      list(APPEND include_dirs "${ONNX_INCLUDE_DIR}")
+    endif()
+    if(ONNX_LIBRARIES)
+      list(APPEND libs "${ONNX_LIBRARIES}")
+    endif()
+
+    add_definitions(-DHAVE_ONNXRUNTIME=1)
+    message(STATUS "DNN: ONNX Runtime enabled")
+
+    # Ensure runtime ORT binaries are deployed into OpenCV install tree
+    set(_ort_runtime_libs "")
+    if(WIN32)
+      if(ONNXRT_ROOT_DIR)
+        file(GLOB _ort_runtime_libs "${ONNXRT_ROOT_DIR}/bin/onnxruntime*.dll")
+      endif()
+      if(_ort_runtime_libs)
+        install(FILES ${_ort_runtime_libs} DESTINATION ${OPENCV_BIN_INSTALL_PATH} COMPONENT libs)
+      endif()
+    elseif(APPLE)
+      if(ONNXRT_ROOT_DIR)
+        file(GLOB _ort_runtime_libs "${ONNXRT_ROOT_DIR}/lib/libonnxruntime*.dylib")
+      endif()
+      if(NOT _ort_runtime_libs AND ONNX_LIBRARIES)
+        foreach(_ort_lib ${ONNX_LIBRARIES})
+          get_filename_component(_ort_lib_dir "${_ort_lib}" DIRECTORY)
+          file(GLOB _ort_runtime_libs "${_ort_lib_dir}/libonnxruntime*.dylib")
+          if(_ort_runtime_libs)
+            break()
+          endif()
+        endforeach()
+      endif()
+      if(_ort_runtime_libs)
+        install(FILES ${_ort_runtime_libs} DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT libs)
+      endif()
+    else()
+      if(ONNXRT_ROOT_DIR)
+        file(GLOB _ort_runtime_libs "${ONNXRT_ROOT_DIR}/lib/libonnxruntime.so*")
+      endif()
+      if(NOT _ort_runtime_libs AND ONNX_LIBRARIES)
+        foreach(_ort_lib ${ONNX_LIBRARIES})
+          get_filename_component(_ort_lib_dir "${_ort_lib}" DIRECTORY)
+          file(GLOB _ort_runtime_libs "${_ort_lib_dir}/libonnxruntime.so*")
+          if(_ort_runtime_libs)
+            break()
+          endif()
+        endforeach()
+      endif()
+      if(_ort_runtime_libs)
+        install(FILES ${_ort_runtime_libs} DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT libs)
+      endif()
+    endif()
+    unset(_ort_runtime_libs)
+  else()
+    message(SEND_ERROR
+      "DNN: ONNX Runtime support was requested (WITH_ONNXRUNTIME=ON), but it was not found. "
+      "Set ONNXRT_ROOT_DIR to an existing installation. "
+      "OpenCV attempts to download supported prebuilt ONNX Runtime packages automatically when needed."
+    )
+  endif()
+
+  unset(_ort_download_requested)
+  unset(_ort_download_forced)
+endif()
+
 if(HAVE_PROTOBUF)
   ocv_target_compile_definitions(${the_module} PRIVATE "HAVE_PROTOBUF=1")
 
@@ -177,7 +351,7 @@ if(OPENCV_DNN_CUDA AND HAVE_CUDA AND HAVE_CUBLAS AND HAVE_CUDNN)
   endforeach()
   unset(CC_LIST)
   if(ENABLE_CUDA_FIRST_CLASS_LANGUAGE)
-    list(APPEND libs ${CUDNN_LIBRARIES} CUDA::cublas${CUDA_LIB_EXT})
+    list(APPEND libs CUDA::cudart${CUDA_LIB_EXT} ${CUDNN_LIBRARIES} CUDA::cublas${CUDA_LIB_EXT})
     if(NOT CUDA_VERSION VERSION_LESS 10.1)
       list(APPEND libs CUDA::cublasLt${CUDA_LIB_EXT})
     endif()

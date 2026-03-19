@@ -9,12 +9,10 @@ endif()
 if(NOT HAVE_ARAVIS_API)
   find_path(ARAVIS_INCLUDE "arv.h"
     PATHS "${ARAVIS_ROOT}" ENV ARAVIS_ROOT
-    PATH_SUFFIXES "include/aravis-0.8"
-    NO_DEFAULT_PATH)
+    PATH_SUFFIXES "include/aravis-0.8")
   find_library(ARAVIS_LIBRARY "aravis-0.8"
     PATHS "${ARAVIS_ROOT}" ENV ARAVIS_ROOT
-    PATH_SUFFIXES "lib"
-    NO_DEFAULT_PATH)
+    PATH_SUFFIXES "lib")
   if(ARAVIS_INCLUDE AND ARAVIS_LIBRARY)
     set(HAVE_ARAVIS_API TRUE)
     file(STRINGS "${ARAVIS_INCLUDE}/arvversion.h" ver_strings REGEX "#define +ARAVIS_(MAJOR|MINOR|MICRO)_VERSION.*")

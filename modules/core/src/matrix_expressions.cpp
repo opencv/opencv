@@ -1679,7 +1679,7 @@ void MatOp_Initializer::assign(const MatExpr& e, Mat& m, int _type) const
     if( _type == -1 )
         _type = e.a.type();
 
-    m.create(e.a.dims, e.a.size, _type);
+    m.create(e.a.size, _type);
 
     if( e.flags == 'I' && e.a.dims <= 2 )
         setIdentity(m, Scalar(e.alpha));
@@ -1767,6 +1767,15 @@ MatExpr Mat::zeros(int ndims, const int* sizes, int type)
     return e;
 }
 
+MatExpr Mat::zeros(const MatShape& shape, int type)
+{
+    CV_INSTRUMENT_REGION();
+
+    MatExpr e;
+    MatOp_Initializer::makeExpr(e, '0', shape.dims, shape.p, type);
+    return e;
+}
+
 MatExpr Mat::ones(int rows, int cols, int type)
 {
     CV_INSTRUMENT_REGION();
@@ -1791,6 +1800,15 @@ MatExpr Mat::ones(int ndims, const int* sizes, int type)
 
     MatExpr e;
     MatOp_Initializer::makeExpr(e, '1', ndims, sizes, type);
+    return e;
+}
+
+MatExpr Mat::ones(const MatShape& shape, int type)
+{
+    CV_INSTRUMENT_REGION();
+
+    MatExpr e;
+    MatOp_Initializer::makeExpr(e, '1', shape.dims, shape.p, type);
     return e;
 }
 

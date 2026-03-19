@@ -55,7 +55,7 @@ class fitline_test(NewOpenCVTests):
         for name in dist_func_names:
             func = getattr(cv, name)
             vx, vy, cx, cy = cv.fitLine(np.float32(points), func, 0, 0.01, 0.01)
-            line = [float(vx), float(vy), float(cx), float(cy)]
+            line = [vx[0], vy[0], cx[0], cy[0]]
             lines.append(line)
 
         eps = 0.05

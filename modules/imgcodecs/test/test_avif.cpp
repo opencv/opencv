@@ -128,12 +128,6 @@ TEST_P(Imgcodecs_Avif_Image_WriteReadSuite, imwrite_imread) {
 
   // Encode.
   const string output = cv::tempfile(".avif");
-  if (!IsBitDepthValid()) {
-    EXPECT_NO_FATAL_FAILURE(
-        cv::imwrite(output, img_original, encoding_params_));
-    EXPECT_NE(0, remove(output.c_str()));
-    return;
-  }
   EXPECT_NO_THROW(cv::imwrite(output, img_original, encoding_params_));
 
   // Read from file.
@@ -164,11 +158,6 @@ TEST_P(Imgcodecs_Avif_Image_EncodeDecodeSuite, imencode_imdecode) {
   bool result = true;
   EXPECT_NO_THROW(
       result = cv::imencode(".avif", img_original, buf, encoding_params_););
-
-  if (!IsBitDepthValid()) {
-    EXPECT_FALSE(result);
-    return;
-  }
   EXPECT_TRUE(result);
 
   // Read back.

@@ -101,7 +101,7 @@ public:
 
     fb_var_screeninfo &getVarInfo();
     fb_fix_screeninfo &getFixInfo();
-    int getFramebuffrerID();
+    int getFramebufferID();
     int getFBWidth();
     int getFBHeight();
     int getFBXOffset();

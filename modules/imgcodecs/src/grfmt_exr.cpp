@@ -130,9 +130,6 @@ bool  ExrDecoder::readHeader()
 
     m_file = new InputFile( m_filename.c_str() );
 
-    if( !m_file ) // probably paranoid
-        return false;
-
     m_datawindow = m_file->header().dataWindow();
     m_width = m_datawindow.max.x - m_datawindow.min.x + 1;
     m_height = m_datawindow.max.y - m_datawindow.min.y + 1;
@@ -719,6 +716,7 @@ ImageDecoder ExrDecoder::newDecoder() const
 ExrEncoder::ExrEncoder()
 {
     m_description = "OpenEXR Image files (*.exr)";
+    m_supported_encode_key = {IMWRITE_EXR_TYPE, IMWRITE_EXR_COMPRESSION, IMWRITE_EXR_DWA_COMPRESSION_LEVEL};
 }
 
 
@@ -745,9 +743,10 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& params )
 
     for( size_t i = 0; i < params.size(); i += 2 )
     {
+        const int value = params[i+1];
         if( params[i] == IMWRITE_EXR_TYPE )
         {
-            switch( params[i+1] )
+            switch( value )
             {
             case IMWRITE_EXR_TYPE_HALF:
                 type = HALF;
@@ -756,12 +755,14 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& params )
                 type = FLOAT;
                 break;
             default:
-                CV_Error(Error::StsBadArg, "IMWRITE_EXR_TYPE is invalid or not supported");
+                type = FLOAT;
+                CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_EXR_TYPE must be one of ImwriteEXRTypeFlags. It is fallbacked to IMWRITE_EXR_TYPE_FLOAT", value));
+                break;
             }
         }
         if ( params[i] == IMWRITE_EXR_COMPRESSION )
         {
-            switch ( params[i + 1] )
+            switch ( value )
             {
             case IMWRITE_EXR_COMPRESSION_NO:
                 header.compression() = NO_COMPRESSION;
@@ -799,7 +800,9 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& params )
                 break;
 #endif
             default:
-                CV_Error(Error::StsBadArg, "IMWRITE_EXR_COMPRESSION is invalid or not supported");
+                header.compression() = ZIP_COMPRESSION;
+                CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_EXR_COMPRESSION must be one of ImwriteEXRCompressionFlags. It is fallbacked to IMWRITE_EXR_COMPRESSION_ZIP", value));
+                break;
             }
         }
         if (params[i] == IMWRITE_EXR_DWA_COMPRESSION_LEVEL)
@@ -809,7 +812,11 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& params )
 #elif OPENEXR_VERSION_MAJOR < 3
             CV_LOG_ONCE_WARNING(NULL, "Setting `IMWRITE_EXR_DWA_COMPRESSION_LEVEL` not supported in OpenEXR version " + std::to_string(OPENEXR_VERSION_MAJOR) + " (version 3 is required)");
 #else
-            header.dwaCompressionLevel() = params[i + 1];
+            // See https://github.com/AcademySoftwareFoundation/openexr/blob/v3.3.5/src/lib/OpenEXR/ImfDwaCompressor.cpp#L85
+            header.dwaCompressionLevel() = std::max(params[i + 1], 0);
+            if(value < 0) {
+                CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_EXR_DWA_COMPRESSION_LEVEL must be 0 or more. It is fallbacked to 0", value));
+            }
 #endif
         }
     }

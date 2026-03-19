@@ -273,7 +273,7 @@ size_t SparseMat::hash(const int* idx) const
 SparseMat::SparseMat(const Mat& m)
 : flags(MAGIC_VAL), hdr(0)
 {
-    create( m.dims, m.size, m.type() );
+    create( m.dims, m.size.p, m.type() );
 
     int i, idx[CV_MAX_DIM] = {0}, d = m.dims, lastSize = m.size[d - 1];
     size_t esz = m.elemSize();

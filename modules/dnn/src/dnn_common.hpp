@@ -147,7 +147,9 @@ static inline std::string toString(const Mat& blob, const std::string& name = st
     else if (blob.dims == 1)
     {
         Mat blob_ = blob;
-        blob_.dims = 2;  // hack
+        blob_.size.dims = blob_.dims = 2;  // hack
+        blob_.size[1] = blob_.size[0];
+        blob_.size[0] = 1;
         ss << blob_.t();
     }
     else

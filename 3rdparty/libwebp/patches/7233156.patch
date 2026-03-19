@@ -1,0 +1,21 @@
+diff --git a/3rdparty/libwebp/src/dsp/cpu.h b/3rdparty/libwebp/src/dsp/cpu.h
+index 7f87d7daaa..f6e3666158 100644
+--- a/3rdparty/libwebp/src/dsp/cpu.h
++++ b/3rdparty/libwebp/src/dsp/cpu.h
+@@ -94,6 +94,15 @@
+ #define WEBP_HAVE_AVX2
+ #endif
+
++#if defined(WEBP_MSC_AVX2) && _MSC_VER <= 1900
++#include <immintrin.h>
++static WEBP_INLINE int _mm256_extract_epi32(__m256i a, const int i) {
++  return a.m256i_i32[i & 7];
++}
++static WEBP_INLINE int _mm256_cvtsi256_si32(__m256i a) {
++  return _mm256_extract_epi32(a, 0);
++}
++#endif
++
+ #undef WEBP_MSC_AVX2
+ #undef WEBP_MSC_SSE41
+ #undef WEBP_MSC_SSE2

@@ -16,7 +16,7 @@ def getPSNR(I1, I2):
     s1 = s1 * s1            # |I1 - I2|^2
     sse = s1.sum()          # sum elements per channel
     if sse <= 1e-10:        # sum channels
-        return 0            # for small values return zero
+        return 360          # For very small SSE, return 360 to cap PSNR (theoretical value is infinity)
     else:
         shape = I1.shape
         mse = 1.0 * sse / (shape[0] * shape[1] * shape[2])

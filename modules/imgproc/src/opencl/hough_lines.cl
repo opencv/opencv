@@ -162,7 +162,7 @@ __kernel void get_lines(__global uchar * accum_ptr, int accum_step, int accum_of
 
                 if (index < linesMax)
                 {
-                    float radius = (x - (accum_cols - 3) * 0.5f) * rho;
+                    float radius = (x - (accum_cols - 3) / 2) * rho;
                     float angle = y * theta;
 
                     lines[index] = (float2)(radius, angle);

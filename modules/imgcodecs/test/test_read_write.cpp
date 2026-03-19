@@ -619,4 +619,13 @@ TEST(Imgcodecs_Params, imencode_regression_22752)
     EXPECT_ANY_THROW(cv::imencode("test.jpg", img, buf, params));  // parameters size or missing JPEG codec
 }
 
+TEST(Imgcodecs, decode_over2GB)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_6GB);
+    // empty buffer more than 2GB size
+    std::vector<uint8_t> buf(size_t(INT_MAX) + 4096);
+    cv::Mat dst;
+    EXPECT_THROW(dst = cv::imdecode(buf, cv::IMREAD_COLOR), cv::Exception);
+}
+
 }} // namespace

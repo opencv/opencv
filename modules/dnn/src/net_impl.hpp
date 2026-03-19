@@ -27,6 +27,14 @@
 
 #include <unordered_map>
 
+#ifdef HAVE_ONNXRUNTIME
+namespace Ort {
+    class Env;
+    class Session;
+    class SessionOptions;
+}
+#endif
+
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -35,6 +43,10 @@ using std::make_pair;
 using std::string;
 
 typedef std::unordered_map<std::string, int64_t> NamesHash;
+
+#ifdef HAVE_ONNXRUNTIME
+struct OrtNamesCache;
+#endif
 
 // NB: Implementation is divided between of multiple .cpp files
 struct Net::Impl : public detail::NetImplBase
@@ -73,7 +85,7 @@ struct Net::Impl : public detail::NetImplBase
     std::string modelFileName;
     ModelFormat modelFormat;
     DataLayout originalLayout;
-    int onnx_opset;
+    // int onnx_opset;
 
     NamesHash argnames;
     NamesHash dimnames;
@@ -91,6 +103,11 @@ struct Net::Impl : public detail::NetImplBase
     int globGraphIdx;
 
     int accuracy;
+    // if you change DEFAULT_C0/defaultC0, don't forget to update
+    // implementation of convolution, convTranspose,
+    // maxpool, avgpool, resize, pad ... where defaultC0 is accessed and used.
+    enum { DEFAULT_C0 = 8 };
+    int defaultC0;
     bool enableFP16, haveFP16;
     bool prepared; // need to rerun graph transformations/optimizations
     bool finalizeLayers; // need to initialize each layer
@@ -106,7 +123,6 @@ struct Net::Impl : public detail::NetImplBase
 
     // FIXIT use inheritance
     virtual Ptr<BackendWrapper> wrap(Mat& host);
-
 
     virtual void clear();
 
@@ -233,6 +249,13 @@ struct Net::Impl : public detail::NetImplBase
     void initCUDABackend(const std::vector<LayerPin>& blobsToKeep_);
 #endif
 
+    #ifdef HAVE_ONNXRUNTIME
+    std::shared_ptr<Ort::Env> ort_env;
+    std::shared_ptr<Ort::Session> ort_session;
+    std::shared_ptr<Ort::SessionOptions> ort_session_options;
+    std::shared_ptr<OrtNamesCache> ort_names_cache;
+#endif
+
     void allocateLayer(int lid, const LayersShapesMap& layersShapes);
 
     // TODO add getter
@@ -282,6 +305,9 @@ struct Net::Impl : public detail::NetImplBase
             const int layerId,
             const std::vector<MatShape>& netInputShapes,
             const std::vector<MatType>& netInputTypes) /*const*/;
+    int64 getFLOPSGraph(const Ptr<Graph>& graph,
+                        const std::vector<MatShape>& shapeCache,
+                        const std::vector<MatType>& typeCache) const;
 
     void getMemoryConsumption(
             const int layerId,
@@ -374,6 +400,11 @@ struct Net::Impl : public detail::NetImplBase
     void forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs, OutputArrayOfArrays outputs, bool isMainGraph);
     // run the whole model
     void forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays outputs);
+#ifdef HAVE_ONNXRUNTIME
+    // Run inference through ONNX Runtime session (if configured).
+    // If outIdxs is empty, returns all ORT outputs in ORT-defined order.
+    std::vector<Mat> runOrtSession(std::vector<Mat> inputBlobs, const std::vector<int>& outIdxs);
+#endif
     // run the whole model, convenience wrapper
     Mat forwardWithSingleOutput(const std::string& outname);
     // run the whole model, convenience wrapper
@@ -407,16 +438,24 @@ struct Net::Impl : public detail::NetImplBase
     std::ostream& dumpTypeShape(std::ostream& strm, int type, const MatShape& shape) const;
     std::ostream& dump(std::ostream& strm);
 
+    ///////////////// various graph transformations ///////////////////////
+
     // infers all types
     void inferTypes();
     // infers all shapes
     void inferShapes(bool symbolic);
     // sets certain buffer index for each intermediate argument (Arg)
     void assignBuffers();
-    //void useBlockLayout();
-    void fuse();
+    // fuse batch norm, add bias and activation to convolution
+    void fuseBasic();
+    // replace constant sub-expressions with their results
     void constFold();
+    // make some operations (activation, batch norm, convolution) unary if
+    // all their arguments except for the 1st one are constant.
     void constArgs();
+    // insert transformLayout operations where necessary;
+    // use block layout for convolution, pooling and some other operations where it matters
+    void useBlockLayout();
 
 };  // Net::Impl
 
@@ -428,7 +467,14 @@ inline Net::Impl* getNetImpl(const Layer* layer)
 Net readNetFromONNX2(const String&);
 Net readNetFromONNX2(const char*, size_t);
 Net readNetFromONNX2(const std::vector<uchar>&);
+#ifdef HAVE_ONNXRUNTIME
+Net readNetFromONNX2_ORT(const String& onnxFile);
+#endif
 
 CV__DNN_INLINE_NS_END
+
+void transformLayout(const Mat& inp, Mat& out,
+                     DataLayout outlayout, DataLayout defaultLayout, int C0);
+
 }}  // namespace cv::dnn
 #endif  // __OPENCV_DNN_SRC_NET_IMPL_HPP__

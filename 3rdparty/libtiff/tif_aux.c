@@ -131,7 +131,10 @@ static int TIFFDefaultTransferFunction(TIFF *tif, TIFFDirectory *td)
     tmsize_t i, n, nbytes;
 
     tf[0] = tf[1] = tf[2] = 0;
-    if (td->td_bitspersample >= sizeof(tmsize_t) * 8 - 2)
+    // Do not try to generate a default TransferFunction beyond 24 bits.
+    // This otherwise leads to insane amounts, resulting in denial of service
+    // See https://github.com/OSGeo/gdal/issues/10875
+    if (td->td_bitspersample > 24)
         return 0;
 
     n = ((tmsize_t)1) << td->td_bitspersample;
@@ -383,53 +386,6 @@ int TIFFGetFieldDefaulted(TIFF *tif, uint32_t tag, ...)
     ok = TIFFVGetFieldDefaulted(tif, tag, ap);
     va_end(ap);
     return (ok);
-}
-
-struct _Int64Parts
-{
-    int32_t low, high;
-};
-
-typedef union
-{
-    struct _Int64Parts part;
-    int64_t value;
-} _Int64;
-
-float _TIFFUInt64ToFloat(uint64_t ui64)
-{
-    _Int64 i;
-
-    i.value = ui64;
-    if (i.part.high >= 0)
-    {
-        return (float)i.value;
-    }
-    else
-    {
-        long double df;
-        df = (long double)i.value;
-        df += 18446744073709551616.0; /* adding 2**64 */
-        return (float)df;
-    }
-}
-
-double _TIFFUInt64ToDouble(uint64_t ui64)
-{
-    _Int64 i;
-
-    i.value = ui64;
-    if (i.part.high >= 0)
-    {
-        return (double)i.value;
-    }
-    else
-    {
-        long double df;
-        df = (long double)i.value;
-        df += 18446744073709551616.0; /* adding 2**64 */
-        return (double)df;
-    }
 }
 
 float _TIFFClampDoubleToFloat(double val)

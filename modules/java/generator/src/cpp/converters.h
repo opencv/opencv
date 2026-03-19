@@ -50,6 +50,9 @@ void vector_Vec6f_to_Mat(std::vector<cv::Vec6f>& v_vec, cv::Mat& mat);
 void Mat_to_vector_Mat(cv::Mat& mat, std::vector<cv::Mat>& v_mat);
 void vector_Mat_to_Mat(std::vector<cv::Mat>& v_mat, cv::Mat& mat);
 
+void Mat_to_vector_vector_Mat(cv::Mat& mat, std::vector< std::vector< cv::Mat > >& vv_mat);
+void vector_vector_Mat_to_Mat(std::vector< std::vector< cv::Mat > >& vv_mat, cv::Mat& mat);
+
 void Mat_to_vector_vector_char(cv::Mat& mat, std::vector< std::vector< char > >& vv_ch);
 void vector_vector_char_to_Mat(std::vector< std::vector< char > >& vv_ch, cv::Mat& mat);
 

@@ -59,7 +59,7 @@ static cv::Point3f get_nearest_3D_point(std::vector<cv::Point3f> &points_list, c
 }
 
 // Custom constructor given the intrinsic camera parameters
-
+//! [pnp_ctor]
 PnPProblem::PnPProblem(const double params[])
 {
     A_matrix_ = cv::Mat::zeros(3, 3, CV_64FC1);   // intrinsic camera parameters
@@ -73,6 +73,7 @@ PnPProblem::PnPProblem(const double params[])
     P_matrix_ = cv::Mat::zeros(3, 4, CV_64FC1);   // rotation-translation matrix
 
 }
+//! [pnp_ctor]
 
 PnPProblem::~PnPProblem()
 {
@@ -122,7 +123,7 @@ bool PnPProblem::estimatePose( const std::vector<cv::Point3f> &list_points3d,
 }
 
 // Estimate the pose given a list of 2D/3D correspondences with RANSAC and the method to use
-
+//! [pnp_ransac]
 void PnPProblem::estimatePoseRANSAC( const std::vector<cv::Point3f> &list_points3d, // list with model 3D coordinates
                                      const std::vector<cv::Point2f> &list_points2d,     // list with scene 2D coordinates
                                      int flags, cv::Mat &inliers, int iterationsCount,  // PnP method; inliers container
@@ -145,6 +146,7 @@ void PnPProblem::estimatePoseRANSAC( const std::vector<cv::Point3f> &list_points
     this->set_P_matrix(R_matrix_, t_matrix_); // set rotation-translation matrix
 
 }
+//! [pnp_ransac]
 
 // Given the mesh, backproject the 3D points to 2D to verify the pose estimation
 std::vector<cv::Point2f> PnPProblem::verify_points(Mesh *mesh)
@@ -161,6 +163,7 @@ std::vector<cv::Point2f> PnPProblem::verify_points(Mesh *mesh)
 }
 
 // Backproject a 3D point to 2D using the estimated pose parameters
+//! [pnp_backproj]
 cv::Point2f PnPProblem::backproject3DPoint(const cv::Point3f &point3d)
 {
     // 3D point vector [x y z 1]'
@@ -181,6 +184,7 @@ cv::Point2f PnPProblem::backproject3DPoint(const cv::Point3f &point3d)
 
     return point2d;
 }
+//! [pnp_backproj]
 
 // Back project a 2D point to 3D and returns if it's on the object surface
 bool PnPProblem::backproject2DPoint(const Mesh *mesh, const cv::Point2f &point2d, cv::Point3f &point3d)

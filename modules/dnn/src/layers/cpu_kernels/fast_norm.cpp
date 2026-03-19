@@ -42,7 +42,50 @@ void fastNorm(const Mat &input, Mat &output, float epsilon, size_t normalized_ax
     parallel_for_(Range(0, loops), fn, nstripes);
 }
 
-void fastNorm(const Mat &input, const Mat &scale, Mat &output, float epsilon, size_t normalized_axis) {
+void fastNormMeanInvStdDev(const Mat& input, Mat& mean, Mat& invStdDev, float epsilon, size_t normalized_axis)
+{
+    CV_Assert(input.type() == CV_32F);
+    CV_Assert(mean.type() == CV_32F);
+    CV_Assert(invStdDev.type() == CV_32F);
+    CV_Assert(input.isContinuous() && mean.isContinuous() && invStdDev.isContinuous());
+
+    const auto input_shape = shape(input);
+    CV_CheckLT(normalized_axis, input_shape.size(), "fastNormMeanInvStdDev: axis out of range");
+
+    const size_t loops = static_cast<size_t>(total(input_shape, 0, static_cast<int>(normalized_axis)));
+    const size_t norm_size = static_cast<size_t>(total(input_shape, static_cast<int>(normalized_axis)));
+    const float inv_norm_size = 1.0f / (float)norm_size;
+
+    CV_CheckEQ((size_t)mean.total(), loops, "fastNormMeanInvStdDev: mean output size mismatch");
+    CV_CheckEQ((size_t)invStdDev.total(), loops, "fastNormMeanInvStdDev: invStdDev output size mismatch");
+
+    auto fn = [&](const Range& r) {
+        const float* input_data = input.ptr<float>();
+        float* mean_data = mean.ptr<float>();
+        float* invstd_data = invStdDev.ptr<float>();
+        for (int i = r.start; i < r.end; ++i)
+        {
+            const float* x = input_data + norm_size * (size_t)i;
+            float m = 0.f, mean_square = 0.f;
+            for (size_t j = 0; j < norm_size; ++j)
+            {
+                float v = x[j];
+                m += v;
+                mean_square += v * v;
+            }
+            m *= inv_norm_size;
+            const float var = std::max(0.f, mean_square * inv_norm_size - m * m);
+            const float stdev = std::sqrt(var + epsilon);
+            mean_data[i] = m;
+            invstd_data[i] = 1.f / stdev;
+        }
+    };
+
+    const double nstripes = loops * norm_size * (1 / 1024.0);
+    parallel_for_(Range(0, (int)loops), fn, nstripes);
+}
+
+void fastNorm(const Mat &input, const Mat &scale, Mat &output, float epsilon, size_t normalized_axis, bool recenter) {
     const auto input_shape = shape(input);
     CV_CheckLT(normalized_axis, input_shape.size(), "fastNorm: axis out of range");
 
@@ -61,7 +104,8 @@ void fastNorm(const Mat &input, const Mat &scale, Mat &output, float epsilon, si
             float mean = 0.f, mean_square = 0.f;
             for (int j = 0; j < norm_size; j++) {
                 float v = x[j];
-                mean += v;
+                if (recenter)
+                    mean += v;
                 mean_square += v * v;
             }
 

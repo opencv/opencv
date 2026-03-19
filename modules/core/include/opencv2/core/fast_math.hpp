@@ -201,7 +201,7 @@ cvRound( double value )
 {
 #if defined CV_INLINE_ROUND_DBL
     CV_INLINE_ROUND_DBL(value);
-#elif defined _MSC_VER && defined _M_ARM64
+#elif defined(_MSC_VER) && (defined(_M_ARM64) || defined(_M_ARM64EC))
     float64x1_t v = vdup_n_f64(value);
     int64x1_t r = vcvtn_s64_f64(v);
     return static_cast<int>(vget_lane_s64(r, 0));
@@ -237,6 +237,8 @@ CV_INLINE int cvFloor( double value )
 #if defined CV__FASTMATH_ENABLE_GCC_MATH_BUILTINS || \
     defined CV__FASTMATH_ENABLE_CLANG_MATH_BUILTINS
     return (int)__builtin_floor(value);
+#elif defined(_MSC_VER) && (defined(_M_ARM64) || defined(_M_ARM64EC))
+    return (int)vcvtmd_s64_f64(value);
 #elif defined __loongarch64
     int i;
     double tmp;
@@ -264,6 +266,8 @@ CV_INLINE int cvCeil( double value )
 #if defined CV__FASTMATH_ENABLE_GCC_MATH_BUILTINS || \
     defined CV__FASTMATH_ENABLE_CLANG_MATH_BUILTINS
     return (int)__builtin_ceil(value);
+#elif defined(_MSC_VER) && (defined(_M_ARM64) || defined(_M_ARM64EC))
+    return (int)vcvtpd_s64_f64(value);
 #elif defined __loongarch64
     int i;
     double tmp;
@@ -327,7 +331,7 @@ CV_INLINE int cvRound(float value)
 {
 #if defined CV_INLINE_ROUND_FLT
     CV_INLINE_ROUND_FLT(value);
-#elif defined _MSC_VER && defined _M_ARM64
+#elif defined(_MSC_VER) && (defined(_M_ARM64) || defined(_M_ARM64EC))
     float32x2_t v = vdup_n_f32(value);
     int32x2_t r = vcvtn_s32_f32(v);
     return vget_lane_s32(r, 0);
@@ -362,6 +366,8 @@ CV_INLINE int cvFloor( float value )
 #if defined CV__FASTMATH_ENABLE_GCC_MATH_BUILTINS || \
     defined CV__FASTMATH_ENABLE_CLANG_MATH_BUILTINS
     return (int)__builtin_floorf(value);
+#elif defined(_MSC_VER) && (defined(_M_ARM64) || defined(_M_ARM64EC))
+    return (int)vcvtms_s32_f32(value);
 #elif defined __loongarch__
     int i;
     float tmp;
@@ -389,6 +395,8 @@ CV_INLINE int cvCeil( float value )
 #if defined CV__FASTMATH_ENABLE_GCC_MATH_BUILTINS || \
     defined CV__FASTMATH_ENABLE_CLANG_MATH_BUILTINS
     return (int)__builtin_ceilf(value);
+#elif defined(_MSC_VER) && (defined(_M_ARM64) || defined(_M_ARM64EC))
+    return (int)vcvtps_s32_f32(value);
 #elif defined __loongarch__
     int i;
     float tmp;

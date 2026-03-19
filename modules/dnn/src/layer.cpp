@@ -269,13 +269,23 @@ void Layer::getTypes(const std::vector<MatType>&inputs,
         if (preferableTarget == DNN_TARGET_CUDA_FP16 || preferableTarget == DNN_TARGET_CUDA)
             CV_CheckTypeEQ(input, CV_32F, "");
         else if (preferableTarget == DNN_TARGET_OPENCL_FP16)
-            CV_CheckType(input, input == CV_16F || input == CV_8S, "");
+            CV_CheckType(input, input == CV_16F || input == CV_8S || input == CV_64F || input == CV_64S, "");
         else
-            CV_CheckType(input, input == CV_32F || input == CV_8S, "");
+            CV_CheckType(input, input == CV_32F || input == CV_64F || input == CV_8S || input == CV_64S, "");
     }
 
     outputs.assign(requiredOutputs, inputs[0]);
     internals.assign(requiredInternals, inputs[0]);
+}
+
+int Layer::getLayouts(const std::vector<DataLayout>& actualInputs,
+                       std::vector<DataLayout>& desiredInputs,
+                       const int requiredOutputs,
+                       std::vector<DataLayout>& outputs) const
+{
+    desiredInputs.assign(actualInputs.size(), DATA_LAYOUT_UNKNOWN);
+    outputs.assign(requiredOutputs, DATA_LAYOUT_UNKNOWN);
+    return 0;
 }
 
 int64 Layer::getFLOPS(const std::vector<MatShape>&,

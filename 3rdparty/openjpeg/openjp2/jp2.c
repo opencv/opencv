@@ -1987,6 +1987,12 @@ OPJ_BOOL opj_jp2_setup_encoder(opj_jp2_t *jp2,
     if (image->icc_profile_len) {
         jp2->meth = 2;
         jp2->enumcs = 0;
+        jp2->color.icc_profile_buf = (OPJ_BYTE *)opj_malloc(image->icc_profile_len);
+        if (jp2->color.icc_profile_buf) {
+            jp2->color.icc_profile_len = image->icc_profile_len;
+            memcpy(jp2->color.icc_profile_buf, image->icc_profile_buf,
+                   image->icc_profile_len);
+        }
     } else {
         jp2->meth = 1;
         if (image->color_space == OPJ_CLRSPC_SRGB) {

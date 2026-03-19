@@ -112,6 +112,12 @@ static const struct VideoBackendInfo builtin_backends[] =
     DECLARE_STATIC_BACKEND(CAP_V4L, "V4L_BSD", MODE_CAPTURE_ALL, create_V4L_capture_file, create_V4L_capture_cam, 0)
 #endif
 
+    // FFmpeg webcamera by underlying backend (DShow, V4L2, AVFoundation)
+#ifdef HAVE_FFMPEG
+    DECLARE_STATIC_BACKEND(CAP_FFMPEG, "FFMPEG", MODE_CAPTURE_BY_INDEX, 0, cvCreateCameraCapture_FFMPEG_proxy, 0)
+#elif defined(ENABLE_PLUGINS) || defined(HAVE_FFMPEG_WRAPPER)
+    DECLARE_DYNAMIC_BACKEND(CAP_FFMPEG, "FFMPEG", MODE_CAPTURE_BY_INDEX)
+#endif
 
     // RGB-D universal
 #ifdef HAVE_OPENNI2

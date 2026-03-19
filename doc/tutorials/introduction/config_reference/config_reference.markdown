@@ -317,7 +317,7 @@ Following formats can be read by OpenCV without help of any third-party library:
 | [PFM](https://en.wikipedia.org/wiki/Netpbm#File_formats) | `WITH_IMGCODEC_PFM` | _ON_ |
 | [GIF](https://en.wikipedia.org/wiki/GIF) | `WITH_IMGCODEC_GIF` | _ON_ |
 
-### PNG, JPEG, TIFF, WEBP, JPEG 2000, EXR, JPEG XL support
+### PNG, JPEG, TIFF, WEBP, JPEG 2000, EXR, JPEG XL, AVIF support
 
 | Formats | Library | Option | Default | Force build own |
 | --------| ------- | ------ | ------- | --------------- |
@@ -331,13 +331,18 @@ Following formats can be read by OpenCV without help of any third-party library:
 |^| [JasPer](https://en.wikipedia.org/wiki/JasPer) | `WITH_JASPER` | _ON_ (see note) | `BUILD_JASPER` |
 | [OpenEXR](https://en.wikipedia.org/wiki/OpenEXR) || `WITH_OPENEXR` | _ON_ | `BUILD_OPENEXR` |
 | [JPEG XL](https://en.wikipedia.org/wiki/JPEG_XL) || `WITH_JPEGXL` | _ON_ | Not supported. (see note) |
+| [AVIF](https://en.wikipedia.org/wiki/AVIF) || `WITH_AVIF` | _ON_ | Not supported. (see note) |
 
-All libraries required to read images in these formats are included into OpenCV and will be built automatically if not found at the configuration stage. Corresponding `BUILD_*` options will force building and using own libraries, they are enabled by default on some platforms, e.g. Windows.
+Most library source codes required to read/write images in these formats are bundled into OpenCV and will be built automatically if not found at the configuration stage
+(except for some codecs that require external libraries, e.g. JPEG XL and AVIF).
+Corresponding BUILD_* options will force building and using the bundled libraries; they are enabled by default on some platforms, e.g. Windows.
 
 @note (All) Only one library for each image format can be enabled(e.g. In order to use JasPer for JPEG 2000 format, OpenJPEG must be disabled).
 @note (JPEG 2000) OpenJPEG have higher priority than JasPer which is deprecated.
 @note (JPEG XL) OpenCV doesn't contain libjxl source code, so `BUILD_JPEGXL` is not supported.
 @note (EXR) OpenCV 5 doesn't contain OpenEXR source code, so `BUILD_OPENEXR` is not supported.
+@note (JPEG XL) OpenCV doesn't contain libjxl source code, so `BUILD_JPEGXL` is not supported. Users must provide a system-wide installation of libjxl.
+@note (AVIF) OpenCV doesn't contain libavif source code, so `BUILD_AVIF` is not supported. Users must provide a system-wide installation of libavif.
 
 @warning OpenEXR ver 2.2 or earlier cannot be used in combination with C++17 or later. In this case, updating OpenEXR ver 2.3.0 or later is required.
 
@@ -519,6 +524,10 @@ OpenCV have own DNN inference module which have own build-in engine, but can als
 | `INF_ENGINE_RELEASE` | _2020040000_ | **Deprecated since OpenVINO 2022.1** Defines version of Inference Engine library which is tied to OpenVINO toolkit version. Must be a 10-digit string, e.g. _2020040000_ for OpenVINO 2020.4. |
 | `WITH_NGRAPH` | _OFF_ | **Deprecated since OpenVINO 2022.1** Enables Intel NGraph library support. This library is part of Inference Engine backend which allows executing arbitrary networks read from files in multiple formats supported by OpenCV: Caffe, TensorFlow, PyTorch, Darknet, etc.. NGraph library must be installed, it is included into Inference Engine. |
 | `WITH_OPENVINO` | _OFF_ | Enable Intel OpenVINO Toolkit support. Should be used for OpenVINO>=2022.1 instead of `WITH_INF_ENGINE` and `WITH_NGRAPH`. |
+| `WITH_ONNXRUNTIME` | _OFF_ | Enable Microsoft ONNX Runtime backend support for OpenCV DNN. |
+| `DOWNLOAD_ONNXRUNTIME` | _OFF_ | Download official ONNX Runtime prebuilt binaries when enabled (or when ONNX Runtime is not available in system paths). |
+| `ONNXRUNTIME_PREFER_STATIC` | _ON_ | Prefer static `libonnxruntime.a` when both static and shared ONNX Runtime libraries are available. |
+| `ONNXRUNTIME_VERSION` | _1.24.2_ | ONNX Runtime version to download for prebuilt packages. |
 | `OPENCV_DNN_CUDA` | _OFF_ | Enable CUDA backend. [CUDA](https://en.wikipedia.org/wiki/CUDA), CUBLAS and [CUDNN](https://developer.nvidia.com/cudnn) must be installed. |
 | `WITH_VULKAN` | _OFF_ | Enable experimental [Vulkan](https://en.wikipedia.org/wiki/Vulkan_(API)) backend. Does not require additional dependencies, but can use external Vulkan headers (`VULKAN_INCLUDE_DIRS`). |
 

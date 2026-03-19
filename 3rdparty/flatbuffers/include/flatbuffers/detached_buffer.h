@@ -36,8 +36,8 @@ class DetachedBuffer {
         cur_(nullptr),
         size_(0) {}
 
-  DetachedBuffer(Allocator *allocator, bool own_allocator, uint8_t *buf,
-                 size_t reserved, uint8_t *cur, size_t sz)
+  DetachedBuffer(Allocator* allocator, bool own_allocator, uint8_t* buf,
+                 size_t reserved, uint8_t* cur, size_t sz)
       : allocator_(allocator),
         own_allocator_(own_allocator),
         buf_(buf),
@@ -45,7 +45,7 @@ class DetachedBuffer {
         cur_(cur),
         size_(sz) {}
 
-  DetachedBuffer(DetachedBuffer &&other) noexcept
+  DetachedBuffer(DetachedBuffer&& other) noexcept
       : allocator_(other.allocator_),
         own_allocator_(other.own_allocator_),
         buf_(other.buf_),
@@ -55,7 +55,7 @@ class DetachedBuffer {
     other.reset();
   }
 
-  DetachedBuffer &operator=(DetachedBuffer &&other) noexcept {
+  DetachedBuffer& operator=(DetachedBuffer&& other) noexcept {
     if (this == &other) return *this;
 
     destroy();
@@ -74,28 +74,35 @@ class DetachedBuffer {
 
   ~DetachedBuffer() { destroy(); }
 
-  const uint8_t *data() const { return cur_; }
+  const uint8_t* data() const { return cur_; }
 
-  uint8_t *data() { return cur_; }
+  uint8_t* data() { return cur_; }
 
   size_t size() const { return size_; }
 
+  uint8_t* begin() { return data(); }
+  const uint8_t* begin() const { return data(); }
+  uint8_t* end() { return data() + size(); }
+  const uint8_t* end() const { return data() + size(); }
+
   // These may change access mode, leave these at end of public section
-  FLATBUFFERS_DELETE_FUNC(DetachedBuffer(const DetachedBuffer &other));
+  FLATBUFFERS_DELETE_FUNC(DetachedBuffer(const DetachedBuffer& other));
   FLATBUFFERS_DELETE_FUNC(
-      DetachedBuffer &operator=(const DetachedBuffer &other));
+      DetachedBuffer& operator=(const DetachedBuffer& other));
 
  protected:
-  Allocator *allocator_;
+  Allocator* allocator_;
   bool own_allocator_;
-  uint8_t *buf_;
+  uint8_t* buf_;
   size_t reserved_;
-  uint8_t *cur_;
+  uint8_t* cur_;
   size_t size_;
 
   inline void destroy() {
     if (buf_) Deallocate(allocator_, buf_, reserved_);
-    if (own_allocator_ && allocator_) { delete allocator_; }
+    if (own_allocator_ && allocator_) {
+      delete allocator_;
+    }
     reset();
   }
 

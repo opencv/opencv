@@ -50,13 +50,13 @@ namespace cv
 
 void checkImageDimensions(const std::vector<Mat>& images);
 
-Mat triangleWeights();
+Mat triangleWeights(int length = LDR_SIZE);
 
 void mapLuminance(Mat src, Mat dst, Mat lum, Mat new_lum, float saturation);
 
-Mat RobertsonWeights();
+Mat RobertsonWeights(int length = LDR_SIZE);
 
-Mat linearResponse(int channels);
+Mat linearResponse(int channels, int length = LDR_SIZE);
 }
 
 #endif

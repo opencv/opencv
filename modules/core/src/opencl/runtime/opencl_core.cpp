@@ -93,7 +93,7 @@ static void* AppleCLGetProcAddress(const char* name)
                 handle = dlopen(path.c_str(), RTLD_LAZY | RTLD_GLOBAL);
             if (handle == NULL)
             {
-                if (path != NULL && path != defaultPath)
+                if (!path.empty() && path != defaultPath)
                     fprintf(stderr, ERROR_MSG_CANT_LOAD);
             }
             else if (dlsym(handle, OPENCL_FUNC_TO_CHECK_1_1) == NULL)

@@ -1,4 +1,4 @@
-Multi-view Camera Calibration Tutorial {#tutorial_multiview_camera_calibration}
+  Multi-view Camera Calibration Tutorial {#tutorial_multiview_camera_calibration}
 ==========================
 
 @tableofcontents
@@ -71,7 +71,7 @@ Assume we have `N` camera views, for each `i`-th view there are `M` images conta
 
 Python example
 --
-There are two options to run the sample code in Python (`opencv/samples/python/multiview_calibration.py`) either with raw images or provided points.
+There are two options to run the sample code in Python (`opencv/apps/multiview-calibration/multiview_calibration.py`) either with raw images or provided points.
 The first option is to prepare `N` files where each file has the path to an image per line (images of a specific camera of the corresponding file). Leave the line empty, if there is no corresponding image for the camera in a certain frame. For example, a file for camera `i` should look like (`file_i.txt`):
 ```
 /path/to/image_1_of_camera_i
@@ -231,25 +231,25 @@ def mutiviewCalibration (pattern_points, image_points, detection_mask):
 Python sample API
 ----
 
-To run the calibration procedure in Python follow the following steps (see sample code in `samples/python/multiview_calibration.py`):
+To run the calibration procedure in Python follow the following steps (see sample code in `apps/multiview-calibration/multiview_calibration.py`):
 
 -# **Prepare data**:
 
-  @snippet samples/python/multiview_calibration.py calib_init
+  @snippet apps/multiview-calibration/multiview_calibration.py calib_init
 
   The detection mask matrix is later built by checking the size of image points after detection:
 
 -# **Detect pattern points on images**:
 
-  @snippet samples/python/multiview_calibration.py detect_pattern
+  @snippet apps/multiview-calibration/multiview_calibration.py detect_pattern
 
 -# **Build detection mask matrix**:
 
-  @snippet samples/python/multiview_calibration.py detection_matrix
+  @snippet apps/multiview-calibration/multiview_calibration.py detection_matrix
 
 -# **Finally, the calibration function is run as follows**:
 
-  @snippet samples/python/multiview_calibration.py multiview_calib
+  @snippet apps/multiview-calibration/multiview_calibration.py multiview_calib
 
 
 C++ sample API
@@ -289,24 +289,24 @@ Practical Debugging Techniques
 
   -# Camera intrinsics can be better estimated when points are more scattered in the image. The following code can be used to plot out the heat map of the observed point
 
-    @snippet samples/python/multiview_calibration.py plot_detection
+    @snippet apps/multiview-calibration/multiview_calibration.py plot_detection
     ![condensely scattered](camera_multiview_calibration/images/count_example.png)
     The left example is not well scattered while the right example shows a better-scattered pattern
 
   -# Plot out the reprojection error to ensure the result is reasonable
   -# If ground truth camera intrinsics are available, a visualization of the estimated error on intrinsics is provided.
 
-    @snippet samples/python/multiview_calibration.py vis_intrinsics_error
+    @snippet apps/multiview-calibration/multiview_calibration.py vis_intrinsics_error
 
     resulting visualization would look similar to
     ![distortion error](camera_multiview_calibration/images/distort_error.jpg)
 
 -# **Multiview calibration**
-  -# Use `plotCamerasPosition` in samples/python/multiview_calibration.py to plot out the graph established for multiview calibration. shows positions of cameras, checkerboard (of a random frame), and pairs of cameras connected by black lines explicitly demonstrating tuples that were used in the initial stage of stereo calibration.
+  -# Use `plotCamerasPosition` in apps/multiview-calibration/multiview_calibration.py to plot out the graph established for multiview calibration. shows positions of cameras, checkerboard (of a random frame), and pairs of cameras connected by black lines explicitly demonstrating tuples that were used in the initial stage of stereo calibration.
   The dashed gray lines demonstrate the non-spanning tree edges that are also used in the optimization.
   The width of these lines indicates the number of co-visible frames i.e. the strength of connection.
   It is more desired if the edges in the graph are dense and thick. ![](camera_multiview_calibration/images/connection_tree.jpg) For the right tree, the connection for camera four is rather limited and can be strengthened
 
-  -# Visulization method for showing the reprojection error with arrows (from a given point to the back-projected one) is provided (see `plotProjection` in samples/python/multiview_calibration.py). The color of the arrows highlights the error values. Additionally, the title reports mean error on this frame and its accuracy among other frames used in calibration.
+  -# Visulization method for showing the reprojection error with arrows (from a given point to the back-projected one) is provided (see `plotProjection` in apps/multiview-calibration/multiview_calibration.py). The color of the arrows highlights the error values. Additionally, the title reports mean error on this frame and its accuracy among other frames used in calibration.
 
   ![](camera_multiview_calibration/images/checkerboard.jpg)

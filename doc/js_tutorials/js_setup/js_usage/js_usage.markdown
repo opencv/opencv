@@ -71,7 +71,7 @@ For example, you can create a cv.Mat from an image by cv.imread.
 @note Because image loading is asynchronous, you need to put cv.Mat creation inside the `onload` callback.
 
 @code{.js}
-imgElement.onload = await function() {
+imgElement.onload = async function() {
   cv = (cv instanceof Promise) ? await cv : cv;
   let mat = cv.imread(imgElement);
 }

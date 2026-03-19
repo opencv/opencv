@@ -1,5 +1,5 @@
 /*
- * jchuff-neon.c - Huffman entropy encoding (32-bit Arm Neon)
+ * Huffman entropy encoding (32-bit Arm Neon)
  *
  * Copyright (C) 2020, Arm Limited.  All Rights Reserved.
  * Copyright (C) 2024, D. R. Commander.  All Rights Reserved.

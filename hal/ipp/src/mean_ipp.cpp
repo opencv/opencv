@@ -196,6 +196,7 @@ static int ipp_meanStdDev(const uchar* src_data, size_t src_step, int width, int
 int ipp_hal_meanStdDev(const uchar* src_data, size_t src_step, int width, int height, int src_type,
                        double* mean_val, double* stddev_val, uchar* mask, size_t mask_step)
 {
+    CV_HAL_CHECK_USE_IPP();
     if (stddev_val)
     {
         return ipp_meanStdDev(src_data, src_step, width, height, src_type, mean_val, stddev_val, mask, mask_step);

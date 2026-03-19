@@ -11,6 +11,10 @@
 #elif defined(HAVE_LAPACK)
 #include "opencv_lapack.h"
 #endif
+#if defined(__APPLE__) && defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
 
 namespace cv { namespace usac {
 class PnPMinimalSolver6PtsImpl : public PnPMinimalSolver6Pts {
@@ -388,7 +392,12 @@ public:
             zw[1] = Zw2(0);     zw[4] = Zw2(1);     zw[7] = Zw2(2);
             zw[2] = Z3crZ1w(0); zw[5] = Z3crZ1w(1); zw[8] = Z3crZ1w(2);
 
-            const Matx33d R = Math::rotVec2RotMat(Math::rotMat2RotVec(Z * Zw.inv()));
+            Matx33d R = Z * Zw.inv();
+            // https://github.com/opencv/opencv/blob/2ba688f23c4e20754f32179d9396ba9b54b3b064/modules/calib3d/src/usac/pnp_solver.cpp#L395
+            // Use directly cv::Rodrigues
+            Matx31d rvec;
+            Rodrigues(R, rvec);
+            Rodrigues(rvec, R);
             Matx33d KR = K * R;
             Matx34d P;
             hconcat(KR, -KR * (X1 - R.t() * nX1), P);
@@ -403,3 +412,7 @@ Ptr<P3PSolver> P3PSolver::create(const Mat &points_, const Mat &calib_norm_pts, 
     return makePtr<P3PSolverImpl>(points_, calib_norm_pts, K);
 }
 }}
+
+#if defined(__APPLE__) && defined(__clang__)
+#pragma clang diagnostic pop
+#endif

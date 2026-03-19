@@ -51,6 +51,37 @@ int validateToInt(size_t sz)
     return valueInt;
 }
 
+RowPitchParams calculateRowPitch(int width, int bpp, int alignment, const char* format_name)
+{
+    CV_Assert(width > 0 && bpp > 0 && alignment > 0);
+    CV_Assert((alignment & (alignment - 1)) == 0);  // must be power of 2
+
+    const size_t bits_per_row = static_cast<size_t>(width) * static_cast<size_t>(bpp);
+    const size_t bytes_per_row = (bits_per_row + 7) / 8;
+    const size_t aligned_pitch = (bytes_per_row + alignment - 1) & ~static_cast<size_t>(alignment - 1);
+
+    if (aligned_pitch >= MAX_IMAGE_ROW_SIZE)
+        CV_Error(cv::Error::StsOutOfRange,
+                 cv::format("%s: src_pitch exceeds maximum allowed size", format_name));
+
+    RowPitchParams result;
+    result.src_pitch = validateToInt(aligned_pitch);
+    result.bytes_per_row = bytes_per_row;
+    return result;
+}
+
+int calculateRowSize(int width, int nch, const char* format_name)
+{
+    CV_Assert(width > 0 && nch > 0);
+
+    const size_t row_size = static_cast<size_t>(width) * static_cast<size_t>(nch);
+    if (row_size >= MAX_IMAGE_ROW_SIZE)
+        CV_Error(cv::Error::StsOutOfRange,
+                 cv::format("%s: row size exceeds maximum allowed size", format_name));
+
+    return validateToInt(row_size);
+}
+
 #define  SCALE  14
 #define  cR  (int)(0.299*(1 << SCALE) + 0.5)
 #define  cG  (int)(0.587*(1 << SCALE) + 0.5)
@@ -435,7 +466,7 @@ bool  IsColorPalette( PaletteEntry* palette, int bpp )
 uchar* FillUniColor( uchar* data, uchar*& line_end,
                      int step, int width3,
                      int& y, int height,
-                     int count3, PaletteEntry clr )
+                     ptrdiff_t count3, PaletteEntry clr )
 {
     do
     {
@@ -444,7 +475,7 @@ uchar* FillUniColor( uchar* data, uchar*& line_end,
         if( end > line_end )
             end = line_end;
 
-        count3 -= (int)(end - data);
+        count3 -= end - data;
 
         for( ; data < end; data += 3 )
         {
@@ -467,7 +498,7 @@ uchar* FillUniColor( uchar* data, uchar*& line_end,
 uchar* FillUniGray( uchar* data, uchar*& line_end,
                     int step, int width,
                     int& y, int height,
-                    int count, uchar clr )
+                    ptrdiff_t count, uchar clr )
 {
     do
     {
@@ -476,7 +507,7 @@ uchar* FillUniGray( uchar* data, uchar*& line_end,
         if( end > line_end )
             end = line_end;
 
-        count -= (int)(end - data);
+        count -= end - data;
 
         for( ; data < end; data++ )
         {

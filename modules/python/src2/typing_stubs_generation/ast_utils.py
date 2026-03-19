@@ -4,7 +4,7 @@ import keyword
 
 from .nodes import (ASTNode, NamespaceNode, ClassNode, FunctionNode,
                     EnumerationNode, ClassProperty, OptionalTypeNode,
-                    TupleTypeNode)
+                    TupleTypeNode, PathLikeTypeNode)
 
 from .types_conversion import create_type_node
 
@@ -167,12 +167,16 @@ def create_function_node_in_scope(scope: Union[NamespaceNode, ClassNode],
                                   func_info) -> FunctionNode:
     def prepare_overload_arguments_and_return_type(variant):
         arguments = []  # type: list[FunctionNode.Arg]
-        # Enumerate is requried, because `argno` in `variant.py_arglist`
+        # Enumerate is required, because `argno` in `variant.py_arglist`
         # refers to position of argument in C++ function interface,
         # but `variant.py_noptargs` refers to position in `py_arglist`
         for i, (_, argno) in enumerate(variant.py_arglist):
             arg_info = variant.args[argno]
             type_node = create_type_node(arg_info.tp)
+            # Special handling for string representation of the file system path
+            if arg_info.pathlike and type_node.typename == "str":
+                type_node = PathLikeTypeNode.string_or_pathlike_()
+
             default_value = None
             if len(arg_info.defval):
                 default_value = arg_info.defval

@@ -9,6 +9,10 @@
 #elif defined(HAVE_LAPACK)
 #include "opencv_lapack.h"
 #endif
+#if defined(__APPLE__) && defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
 
 namespace cv { namespace usac {
 /*
@@ -354,3 +358,7 @@ Ptr<EssentialMinimalSolver5pts> EssentialMinimalSolver5pts::create
     return makePtr<EssentialMinimalSolver5ptsImpl>(points_, use_svd, is_nister);
 }
 }}
+
+#if defined(__APPLE__) && defined(__clang__)
+#pragma clang diagnostic pop
+#endif

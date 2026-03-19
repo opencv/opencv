@@ -1,0 +1,5 @@
+find_package(dlpack QUIET)
+if (NOT dlpack_FOUND)
+    ocv_include_directories("${OpenCV_SOURCE_DIR}/3rdparty/dlpack/include")
+    ocv_install_3rdparty_licenses(dlpack "${OpenCV_SOURCE_DIR}/3rdparty/dlpack/LICENSE")
+endif()

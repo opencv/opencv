@@ -12,6 +12,7 @@ from .nodes import (
     SequenceTypeNode,
     AnyTypeNode,
     AggregatedTypeNode,
+    PathLikeTypeNode,
 )
 
 from .types_conversion import (

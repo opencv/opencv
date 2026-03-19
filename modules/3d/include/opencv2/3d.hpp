@@ -391,22 +391,18 @@ enum SolvePnPMethod {
                               //!< Initial solution for non-planar "objectPoints" needs at least 6 points and uses the DLT algorithm. \n
                               //!< Initial solution for planar "objectPoints" needs at least 4 points and uses pose from homography decomposition.
     SOLVEPNP_EPNP        = 1, //!< EPnP: Efficient Perspective-n-Point Camera Pose Estimation @cite lepetit2009epnp
-    SOLVEPNP_P3P         = 2, //!< Complete Solution Classification for the Perspective-Three-Point Problem @cite gao2003complete
-    SOLVEPNP_DLS         = 3, //!< **Broken implementation. Using this flag will fallback to EPnP.** \n
-                              //!< A Direct Least-Squares (DLS) Method for PnP @cite hesch2011direct
-    SOLVEPNP_UPNP        = 4, //!< **Broken implementation. Using this flag will fallback to EPnP.** \n
-                              //!< Exhaustive Linearization for Robust Camera Pose and Focal Length Estimation @cite penate2013exhaustive
-    SOLVEPNP_AP3P        = 5, //!< An Efficient Algebraic Solution to the Perspective-Three-Point Problem @cite Ke17
-    SOLVEPNP_IPPE        = 6, //!< Infinitesimal Plane-Based Pose Estimation @cite Collins14 \n
+    SOLVEPNP_P3P         = 2, //!< Revisiting the P3P Problem @cite ding2023revisiting
+    SOLVEPNP_AP3P        = 3, //!< An Efficient Algebraic Solution to the Perspective-Three-Point Problem @cite Ke17
+    SOLVEPNP_IPPE        = 4, //!< Infinitesimal Plane-Based Pose Estimation @cite Collins14 \n
                               //!< Object points must be coplanar.
-    SOLVEPNP_IPPE_SQUARE = 7, //!< Infinitesimal Plane-Based Pose Estimation @cite Collins14 \n
+    SOLVEPNP_IPPE_SQUARE = 5, //!< Infinitesimal Plane-Based Pose Estimation @cite Collins14 \n
                               //!< This is a special case suitable for marker pose estimation.\n
                               //!< 4 coplanar object points must be defined in the following order:
                               //!<   - point 0: [-squareLength / 2,  squareLength / 2, 0]
                               //!<   - point 1: [ squareLength / 2,  squareLength / 2, 0]
                               //!<   - point 2: [ squareLength / 2, -squareLength / 2, 0]
                               //!<   - point 3: [-squareLength / 2, -squareLength / 2, 0]
-    SOLVEPNP_SQPNP       = 8, //!< SQPnP: A Consistently Fast and Globally OptimalSolution to the Perspective-n-Point Problem @cite Terzakis2020SQPnP
+    SOLVEPNP_SQPNP       = 6, //!< SQPnP: A Consistently Fast and Globally OptimalSolution to the Perspective-n-Point Problem @cite Terzakis2020SQPnP
 #ifndef CV_DOXYGEN
     SOLVEPNP_MAX_COUNT        //!< Used for count
 #endif
@@ -919,6 +915,22 @@ CV_EXPORTS_W void composeRT( InputArray rvec1, InputArray tvec1,
 
 /** @brief Projects 3D points to an image plane.
 
+The function computes the 2D projections of 3D points to the image plane, given intrinsic and
+extrinsic camera parameters. Optionally, the function computes Jacobians -matrices of partial
+derivatives of image points coordinates (as functions of all the input parameters) with respect to
+the particular parameters, intrinsic and/or extrinsic. The Jacobians are used during the global
+optimization in @ref calibrateCamera, @ref solvePnP, and @ref stereoCalibrate. The function itself
+can also be used to compute a re-projection error, given the current intrinsic and extrinsic
+parameters.
+
+@note **Coordinate Systems:**
+- **Input (`objectPoints`)**: 3D points in the **world coordinate frame**.
+- **Output (`imagePoints`)**: 2D projections in **pixel coordinates** of the image plane, with distortion applied.
+  The coordinates \f$(u, v)\f$ are measured in pixels from the top-left corner of the image.
+
+The transformation chain is: World coordinates → Camera coordinates (via rvec/tvec) → Normalized camera coordinates
+→ Distortion applied → Pixel coordinates (via cameraMatrix).
+
 @param objectPoints Array of object points expressed wrt. the world coordinate frame. A 3xN/Nx3
 1-channel or 1xN/Nx1 3-channel (or vector\<Point3f\> ), where N is the number of points in the view.
 @param rvec The rotation vector (@ref Rodrigues) that, together with tvec, performs a change of
@@ -927,7 +939,7 @@ basis from world to camera coordinate system, see @ref calibrateCamera for detai
 @param cameraMatrix Camera intrinsic matrix \f$\cameramatrix{A}\f$ .
 @param distCoeffs Input vector of distortion coefficients
 \f$\distcoeffs\f$ . If the vector is empty, the zero distortion coefficients are assumed.
-@param imagePoints Output array of image points, 1xN/Nx1 2-channel, or
+@param imagePoints Output array of image points in **pixel coordinates**, 1xN/Nx1 2-channel, or
 vector\<Point2f\> .
 @param jacobian Optional output 2Nx(10+\<numDistCoeffs\>) jacobian matrix of derivatives of image
 points with respect to components of the rotation vector, translation vector, focal lengths,
@@ -936,14 +948,6 @@ components of the jacobian are returned via different output parameters.
 @param aspectRatio Optional "fixed aspect ratio" parameter. If the parameter is not 0, the
 function assumes that the aspect ratio (\f$f_x / f_y\f$) is fixed and correspondingly adjusts the
 jacobian matrix.
-
-The function computes the 2D projections of 3D points to the image plane, given intrinsic and
-extrinsic camera parameters. Optionally, the function computes Jacobians -matrices of partial
-derivatives of image points coordinates (as functions of all the input parameters) with respect to
-the particular parameters, intrinsic and/or extrinsic. The Jacobians are used during the global
-optimization in @ref calibrateCamera, @ref solvePnP, and @ref stereoCalibrate. The function itself
-can also be used to compute a re-projection error, given the current intrinsic and extrinsic
-parameters.
 
 @note By setting rvec = tvec = \f$[0, 0, 0]\f$, or by setting cameraMatrix to a 3x3 identity matrix,
 or by passing zero distortion coefficients, one can get various useful partial cases of the
@@ -1022,15 +1026,13 @@ More information about Perspective-n-Points is described in @ref calib3d_solvePn
         - Thus, given some data D = np.array(...) where D.shape = (N,M), in order to use a subset of
         it as, e.g., imagePoints, one must effectively copy it into a new array: imagePoints =
         np.ascontiguousarray(D[:,:2]).reshape((N,1,2))
-   -   The methods @ref SOLVEPNP_DLS and @ref SOLVEPNP_UPNP cannot be used as the current implementations are
-       unstable and sometimes give completely wrong results. If you pass one of these two
-       flags, @ref SOLVEPNP_EPNP method will be used instead.
    -   The minimum number of points is 4 in the general case. In the case of @ref SOLVEPNP_P3P and @ref SOLVEPNP_AP3P
        methods, it is required to use exactly 4 points (the first 3 points are used to estimate all the solutions
        of the P3P problem, the last one is used to retain the best solution that minimizes the reprojection error).
    -   With @ref SOLVEPNP_ITERATIVE method and `useExtrinsicGuess=true`, the minimum number of points is 3 (3 points
        are sufficient to compute a pose but there are up to 4 solutions). The initial solution should be close to the
-       global solution to converge.
+       global solution to converge. The function returns true if some solution is found. User code is responsible for
+       solution quality assessment.
    -   With @ref SOLVEPNP_IPPE input points must be >= 4 and object points must be coplanar.
    -   With @ref SOLVEPNP_IPPE_SQUARE this is a special case suitable for marker pose estimation.
        Number of input points must be 4. Object points must be defined in the following order:
@@ -1124,8 +1126,8 @@ assumed.
 the model coordinate system to the camera coordinate system. A P3P problem has up to 4 solutions.
 @param tvecs Output translation vectors.
 @param flags Method for solving a P3P problem:
--   @ref SOLVEPNP_P3P Method is based on the paper of X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang
-"Complete Solution Classification for the Perspective-Three-Point Problem" (@cite gao2003complete).
+-   @ref SOLVEPNP_P3P Method is based on the paper of Ding, Y., Yang, J., Larsson, V., Olsson, C., & Åstrom, K.
+"Revisiting the P3P Problem" (@cite ding2023revisiting).
 -   @ref SOLVEPNP_AP3P Method is based on the paper of T. Ke and S. Roumeliotis.
 "An Efficient Algebraic Solution to the Perspective-Three-Point Problem" (@cite Ke17).
 
@@ -1260,9 +1262,6 @@ More information is described in @ref calib3d_solvePnP
         - Thus, given some data D = np.array(...) where D.shape = (N,M), in order to use a subset of
         it as, e.g., imagePoints, one must effectively copy it into a new array: imagePoints =
         np.ascontiguousarray(D[:,:2]).reshape((N,1,2))
-   -   The methods @ref SOLVEPNP_DLS and @ref SOLVEPNP_UPNP cannot be used as the current implementations are
-       unstable and sometimes give completely wrong results. If you pass one of these two
-       flags, @ref SOLVEPNP_EPNP method will be used instead.
    -   The minimum number of points is 4 in the general case. In the case of @ref SOLVEPNP_P3P and @ref SOLVEPNP_AP3P
        methods, it is required to use exactly 4 points (the first 3 points are used to estimate all the solutions
        of the P3P problem, the last one is used to retain the best solution that minimizes the reprojection error).
@@ -2086,6 +2085,78 @@ CV_EXPORTS_W cv::Mat estimateAffinePartial2D(InputArray from, InputArray to, Out
                                   size_t maxIters = 2000, double confidence = 0.99,
                                   size_t refineIters = 10);
 
+/** @brief Computes a pure 2D translation between two 2D point sets.
+
+It computes
+\f[
+\begin{bmatrix}
+x\\
+y
+\end{bmatrix}
+=
+\begin{bmatrix}
+1 & 0\\
+0 & 1
+\end{bmatrix}
+\begin{bmatrix}
+X\\
+Y
+\end{bmatrix}
++
+\begin{bmatrix}
+t_x\\
+t_y
+\end{bmatrix}.
+\f]
+
+@param from First input 2D point set containing \f$(X,Y)\f$.
+@param to Second input 2D point set containing \f$(x,y)\f$.
+@param inliers Output vector indicating which points are inliers (1-inlier, 0-outlier).
+@param method Robust method used to compute the transformation. The following methods are possible:
+-   @ref RANSAC - RANSAC-based robust method
+-   @ref LMEDS - Least-Median robust method
+RANSAC is the default method.
+@param ransacReprojThreshold Maximum reprojection error in the RANSAC algorithm to consider
+a point as an inlier. Applies only to RANSAC.
+@param maxIters The maximum number of robust method iterations.
+@param confidence Confidence level, between 0 and 1, for the estimated transformation. Anything
+between 0.95 and 0.99 is usually good enough. Values too close to 1 can slow down the estimation
+significantly. Values lower than 0.8–0.9 can result in an incorrectly estimated transformation.
+@param refineIters Maximum number of iterations of the refining algorithm. For pure translation
+the least-squares solution on inliers is closed-form, so passing 0 is recommended (no additional refine).
+
+@return A 2D translation vector \f$[t_x, t_y]^T\f$ as `cv::Vec2d`. If the translation could not be
+estimated, both components are set to NaN and, if @p inliers is provided, the mask is filled with zeros.
+
+\par Converting to a 2x3 transformation matrix:
+\f[
+\begin{bmatrix}
+1 & 0 & t_x\\
+0 & 1 & t_y
+\end{bmatrix}
+\f]
+
+@code{.cpp}
+cv::Vec2d t = cv::estimateTranslation2D(from, to, inliers);
+cv::Mat T = (cv::Mat_<double>(2,3) << 1,0,t[0], 0,1,t[1]);
+@endcode
+
+The function estimates a pure 2D translation between two 2D point sets using the selected robust
+algorithm. Inliers are determined by the reprojection error threshold.
+
+@note
+The RANSAC method can handle practically any ratio of outliers but needs a threshold to
+distinguish inliers from outliers. The method LMeDS does not need any threshold but works
+correctly only when there are more than 50% inliers.
+
+@sa estimateAffine2D, estimateAffinePartial2D, getAffineTransform
+*/
+CV_EXPORTS_W cv::Vec2d estimateTranslation2D(InputArray from, InputArray to, OutputArray inliers = noArray(),
+                                             int method = RANSAC,
+                                             double ransacReprojThreshold = 3,
+                                             size_t maxIters = 2000, double confidence = 0.99,
+                                             size_t refineIters = 0);
+
 /** @example samples/cpp/tutorial_code/features/Homography/decompose_homography.cpp
 An example program with homography decomposition.
 
@@ -2449,7 +2520,17 @@ point coordinates out of the normalized distorted point coordinates ("normalized
 coordinates do not depend on the camera matrix).
 
 The function can be used for both a stereo camera head or a monocular camera (when R is empty).
-@param src Observed point coordinates, 2xN/Nx2 1-channel or 1xN/Nx1 2-channel (CV_32FC2 or CV_64FC2) (or
+
+@note **Coordinate Systems:**
+- **Input (`src`)**: Points are expected in **pixel coordinates** of the distorted image, i.e.,
+  coordinates \f$(u, v)\f$ measured in pixels from the top-left corner of the image.
+- **Output (`dst`)**: The coordinate system of output points depends on parameter `P`:
+  - If `P` is provided (not empty): Output points are in **pixel coordinates** of the rectified/undistorted image plane, using the camera matrix `P`.
+  - If `P` is empty or identity: Output points are in **normalized camera coordinates** (also called "normalized image coordinates"),
+    which are dimensionless coordinates \f$(x, y)\f$ in the camera's focal plane, related to pixel coordinates by:
+    \f$x = (u - c_x) / f_x\f$ and \f$y = (v - c_y) / f_y\f$. These normalized coordinates are independent of the camera's intrinsic parameters and are useful for 3D reconstruction or epipolar geometry.
+
+@param src Observed point coordinates in **pixel coordinates** of the distorted image, 2xN/Nx2 1-channel or 1xN/Nx1 2-channel (CV_32FC2 or CV_64FC2) (or
 vector\<Point2f\> ).
 @param dst Output ideal point coordinates (1xN/Nx1 2-channel or vector\<Point2f\> ) after undistortion and reverse perspective
 transformation. If matrix P is identity or omitted, dst will contain normalized point coordinates.
@@ -2460,7 +2541,7 @@ of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion 
 @param R Rectification transformation in the object space (3x3 matrix). R1 or R2 computed by
 #stereoRectify can be passed here. If the matrix is empty, the identity transformation is used.
 @param P New camera matrix (3x3) or new projection matrix (3x4) \f$\begin{bmatrix} {f'}_x & 0 & {c'}_x & t_x \\ 0 & {f'}_y & {c'}_y & t_y \\ 0 & 0 & 1 & t_z \end{bmatrix}\f$. P1 or P2 computed by
-#stereoRectify can be passed here. If the matrix is empty, the identity new camera matrix is used.
+#stereoRectify can be passed here. If the matrix is empty, the identity new camera matrix is used and output will be in normalized coordinates.
 @param criteria termination criteria for the iterative point undistortion algorithm
  */
 CV_EXPORTS_W
@@ -2481,7 +2562,7 @@ void undistortPoints(InputArray src, OutputArray dst,
 CV_EXPORTS_W
 void undistortImagePoints(InputArray src, OutputArray dst, InputArray cameraMatrix,
                           InputArray distCoeffs,
-                          TermCriteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 0.01));
+                          TermCriteria = TermCriteria(TermCriteria::MAX_ITER, 5, 0.01));
 
 namespace fisheye {
 
@@ -2541,17 +2622,40 @@ the number of points in the view.
 */
 CV_EXPORTS_W void distortPoints(InputArray undistorted, OutputArray distorted, InputArray Kundistorted, InputArray K, InputArray D, double alpha = 0);
 
-/** @brief Undistorts 2D points using fisheye model
+/** @brief Undistorts 2D points using fisheye camera model
 
-@param distorted Array of object points, 1xN/Nx1 2-channel (or vector\<Point2f\> ), where N is the
-number of points in the view.
-@param K Camera intrinsic matrix \f$cameramatrix{K}\f$.
-@param D Input vector of distortion coefficients \f$\distcoeffsfisheye\f$.
+This function performs undistortion for fisheye camera models, which use a different distortion model
+compared to the standard pinhole camera model used by #undistortPoints. The fisheye model is suitable
+for wide-angle cameras.
+
+The function transforms points from the distorted fisheye image to undistorted coordinates, optionally
+applying a rectification transformation (R) and projecting to a new image plane (P).
+
+@note **Coordinate Systems:**
+- **Input (`distorted`)**: Points are expected in **pixel coordinates** of the distorted fisheye image,
+    i.e., coordinates measured in pixels from the top-left corner of the image.
+- **Output (`undistorted`)**: The coordinate system depends on parameter `P`:
+    - If `P` is provided (not empty): Output points are in **pixel coordinates** of the rectified/undistorted
+    image plane, using the camera matrix `P`.
+    - If `P` is empty or identity: Output points are in **normalized camera coordinates** (normalized image coordinates),
+    which are dimensionless coordinates in the camera's focal plane, independent of intrinsic parameters.
+
+@note **Fisheye vs. Standard Model:**
+Use this function (#fisheye::undistortPoints) for fisheye cameras (wide-angle lenses).
+For standard pinhole cameras, use #undistortPoints instead. The fisheye model uses a different distortion
+parameterization (4 coefficients) compared to the standard model (4-14 coefficients).
+
+@param distorted Array of distorted point coordinates in **pixel coordinates** of the fisheye image,
+1xN/Nx1 2-channel (or vector\<Point2f\> ), where N is the number of points in the view.
+@param K Camera intrinsic matrix \f$\cameramatrix{K}\f$ of the fisheye camera.
+@param D Input vector of fisheye distortion coefficients \f$\distcoeffsfisheye\f$ (must contain exactly 4 coefficients).
 @param R Rectification transformation in the object space: 3x3 1-channel, or vector: 3x1/1x3
-1-channel or 1x1 3-channel
-@param P New camera intrinsic matrix (3x3) or new projection matrix (3x4)
-@param criteria Termination criteria
-@param undistorted Output array of image points, 1xN/Nx1 2-channel, or vector\<Point2f\> .
+1-channel or 1x1 3-channel. If empty, the identity transformation is used.
+@param P New camera intrinsic matrix (3x3) or new projection matrix (3x4). If empty or identity,
+output will be in normalized camera coordinates.
+@param criteria Termination criteria for the iterative undistortion algorithm.
+@param undistorted Output array of undistorted image points, 1xN/Nx1 2-channel, or vector\<Point2f\> .
+The coordinate system depends on parameter P (see above).
  */
 CV_EXPORTS_W void undistortPoints(InputArray distorted, OutputArray undistorted,
     InputArray K, InputArray D, InputArray R = noArray(), InputArray P  = noArray(),
@@ -2622,7 +2726,7 @@ CV_EXPORTS_W void undistortImage(InputArray distorted, OutputArray undistorted,
     InputArray K, InputArray D, InputArray Knew = cv::noArray(), const Size& new_size = Size());
 
 /**
-@brief Finds an object pose from 3D-2D point correspondences for fisheye camera moodel.
+@brief Finds an object pose from 3D-2D point correspondences for fisheye camera model.
 
 @param objectPoints Array of object points in the object coordinate space, Nx3 1-channel or
 1xN/Nx1 3-channel, where N is the number of points. vector\<Point3d\> can also be passed here.
@@ -2649,7 +2753,7 @@ Number of input points must be 4. Object points must be defined in the following
 - point 3: [-squareLength / 2, -squareLength / 2, 0]
 - for all the other flags, number of input points must be >= 4 and object points can be in any configuration.
 @param criteria Termination criteria for internal undistortPoints call.
-The function interally undistorts points with @ref undistortPoints and call @ref cv::solvePnP,
+The function internally undistorts points with @ref undistortPoints and call @ref cv::solvePnP,
 thus the input are very similar. Check there and Perspective-n-Points is described in @ref calib3d_solvePnP
 for more information.
 */

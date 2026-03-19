@@ -21,13 +21,18 @@ add_library(ipphal STATIC
 #TODO: HAVE_IPP_ICV and HAVE_IPP_IW added as private macro till OpenCV itself is
 #      source of IPP and public definitions lead to redefinition warning
 #      The macro should be redefined as PUBLIC when IPP part is removed from core
-#      to make HAL the source of IPP integration
+#      to make HAL the source of IPP integration. The same is true for WITH_IPP_CALLS_ENFORCED
 if(HAVE_IPP_ICV)
   target_compile_definitions(ipphal PRIVATE HAVE_IPP_ICV)
 endif()
 
 if(HAVE_IPP_IW)
   target_compile_definitions(ipphal PRIVATE HAVE_IPP_IW)
+endif()
+
+if(WITH_IPP_CALLS_ENFORCED)
+  target_compile_definitions(ipphal PRIVATE IPP_CALLS_ENFORCED)
+  message("WITH_IPP_CALLS_ENFORCED=${WITH_IPP_CALLS_ENFORCED}: enforced IPP calls are enabled in IPP HAL")
 endif()
 
 target_include_directories(ipphal PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
@@ -42,7 +47,7 @@ target_include_directories(ipphal PRIVATE
 
 target_link_libraries(ipphal PUBLIC ${IPP_IW_LIBRARY} ${IPP_LIBRARIES})
 
-set_target_properties(ipphal PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${3P_LIBRARY_OUTPUT_PATH})
+set_target_properties(ipphal PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${3P_LIBRARY_OUTPUT_PATH} DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}")
 
 if(NOT BUILD_SHARED_LIBS)
   ocv_install_target(ipphal EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)

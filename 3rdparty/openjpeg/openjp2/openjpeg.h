@@ -635,6 +635,8 @@ typedef void * opj_codec_t;
 
 /*
  * Callback function prototype for read function
+ * @return returns The number of bytes delivered into
+ * \a p_buffer. -1 signals end of stream.
  */
 typedef OPJ_SIZE_T(* opj_stream_read_fn)(void * p_buffer, OPJ_SIZE_T p_nb_bytes,
         void * p_user_data) ;
@@ -1239,7 +1241,6 @@ OPJ_API void OPJ_CALLCONV opj_stream_set_user_data(opj_stream_t* p_stream,
 
 /**
  * Sets the length of the user data for the stream.
- *
  * @param p_stream    the stream to modify
  * @param data_length length of the user_data.
 */
@@ -1436,6 +1437,8 @@ OPJ_API OPJ_BOOL OPJ_CALLCONV opj_set_decoded_components(opj_codec_t *p_codec,
  * The coordinates passed to this function should be expressed in the reference grid,
  * that is to say at the highest resolution level, even if requesting the image at lower
  * resolution levels.
+ *
+ * Note: If p_start_x, p_start_y, p_end_x, p_end_y are all 0, then the whole image is decoded.
  *
  * Generally opj_set_decode_area() should be followed by opj_decode(), and the
  * codec cannot be re-used.

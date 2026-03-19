@@ -280,7 +280,7 @@ public:
                 }
 
                 if (useSoftmax) {  // Yolo v2
-                    Mat _inpBlob = inpBlob.reshape(0, outBlob.dims, outBlob.size);
+                    Mat _inpBlob = inpBlob.reshape(0, outBlob.size);
                     softmax(outBlob, _inpBlob, -1, 5, classes);
                 }
                 else if (useLogistic) {  // Yolo v3

@@ -965,7 +965,7 @@ TEST_P(Scale_untrainable, Accuracy)
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
     Mat out = net.forward();
 
-    Mat ref(input.dims, input.size, CV_32F);
+    Mat ref(input.size, CV_32F);
     float* inpData = (float*)input.data;
     float* refData = (float*)ref.data;
     float* weightsData = (float*)weights.data;
@@ -1060,7 +1060,7 @@ TEST_P(Crop, Accuracy)
     for (int i = axis; i < 4; i++)
         crop_range[i] = Range(offsetVal, sizShape[i] + offsetVal);
 
-    Mat ref(sizImage.dims, sizImage.size, CV_32F);
+    Mat ref(sizImage.size, CV_32F);
     inpImage(&crop_range[0]).copyTo(ref);
     normAssert(out, ref);
 }
@@ -2851,6 +2851,102 @@ TEST(Layer_If, resize)
         EXPECT_EQ(images[0].rows*(4 >> f), src.rows);
         EXPECT_EQ(images[0].cols*(4 >> f), src.cols);
     }
+}
+
+TEST(Layer_Size, onnx_1d)
+{
+    auto engine_forced = static_cast<cv::dnn::EngineType>(
+        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
+    if (engine_forced == cv::dnn::ENGINE_CLASSIC)
+    {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+        return;
+    }
+
+    const std::string modelname = findDataFile("dnn/onnx/models/test_size_1d_model.onnx", true);
+    cv::dnn::Net net = cv::dnn::readNetFromONNX(modelname, ENGINE_NEW);
+
+    int sz1d[1] = {7};
+    cv::Mat x(1, sz1d, CV_32F);
+    cv::randu(x, 0, 1);
+    net.setInput(x);
+
+    std::vector<cv::Mat> outs;
+    net.forward(outs);
+
+    ASSERT_EQ(outs.size(), 1u);
+    EXPECT_EQ(outs[0].total(), (size_t)1);
+    EXPECT_EQ(outs[0].type(), CV_64S);
+    EXPECT_EQ(outs[0].at<int64_t>(0), static_cast<int64_t>(sz1d[0]));
+}
+
+TEST(Layer_Size, onnx_0d_scalar)
+{
+    auto engine_forced = static_cast<cv::dnn::EngineType>(
+        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
+    if (engine_forced == cv::dnn::ENGINE_CLASSIC)
+    {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+        return;
+    }
+
+    const std::string modelname = findDataFile("dnn/onnx/models/test_size_0d_model.onnx", true);
+    cv::dnn::Net net = cv::dnn::readNetFromONNX(modelname, ENGINE_NEW);
+
+    cv::Mat x(1, 1, CV_32F);
+    x.at<float>(0, 0) = 3.14f;
+    net.setInput(x);
+
+    std::vector<cv::Mat> outs;
+    net.forward(outs);
+
+    ASSERT_EQ(outs.size(), 1u);
+    EXPECT_EQ(outs[0].total(), (size_t)1);
+    EXPECT_EQ(outs[0].type(), CV_64S);
+    EXPECT_EQ(outs[0].at<int64_t>(0), 1);
+}
+
+TEST(ConvolutionWinograd, Accuracy)
+{
+    Mat weights({2, 1, 3, 3}, CV_32F);
+    randn(weights, 0, 1);
+
+    // Check convolution can switch between implementations on changed shape.
+    auto getNet = [&]() {
+        Net net;
+        LayerParams lp;
+        lp.name = "conv";
+        lp.type = "Convolution";
+        lp.set("kernel_size", 3);
+        lp.set("num_output", 2);
+        lp.set("pad", 0);
+        lp.set("stride", 1);
+        lp.set("bias_term", false);
+
+        lp.blobs.push_back(weights);
+        net.addLayerToPrev(lp.name, lp.type, lp);
+        return net;
+    };
+
+    Mat inpSmall({1, 1, 5, 5}, CV_32F);
+    Mat inpLarge({1, 1, 64, 64}, CV_32F);
+    randn(inpSmall, 0, 1);
+    randn(inpLarge, 0, 1);
+
+    Net net1 = getNet();
+    Net net2 = getNet();
+    net1.setInput(inpSmall);
+    net2.setInput(inpLarge);
+    Mat refSmall = net1.forward();
+    Mat refLarge = net2.forward();
+
+    net1.setInput(inpLarge);
+    net2.setInput(inpSmall);
+    Mat outLarge = net1.forward();
+    Mat outSmall = net2.forward();
+
+    normAssert(outSmall, refSmall, "Small input after large", 0.0, 0.0);
+    normAssert(outLarge, refLarge, "Large input after small", 0.0, 0.0);
 }
 
 }} // namespace

@@ -761,6 +761,73 @@ public:
     }
 };
 
+/*
+ * Compute
+ *      x      1  0     X     t_x
+ *          =          *    +
+ *      y      0  1     Y     t_y
+ *
+ *  - every element in _m1 contains (X, Y), which are called source points
+ *  - every element in _m2 contains (x, y), which are called destination points
+ *  - _model is of size 2x3, which contains
+ *      1  0  t_x
+ *      0  1  t_y
+ *
+ *  Minimal sample size: 1
+ *  - For a single correspondence, the optimal translation equals the pointwise
+ *    displacement (to - from). The robust framework (RANSAC/LMEDS) selects
+ *    inlier sets using the reprojection error and refits the model.
+ */
+class Translation2DEstimatorCallback : public PointSetRegistrator::Callback
+{
+public:
+    // Fit translation using the minimal subset (1 sample): displacement of the first pair.
+    // The robust framework ensures consensus on larger sets; a closed-form LS refit
+    // (mean displacement) can be applied after inlier selection.
+    int runKernel(InputArray _m1, InputArray _m2, OutputArray _model) const CV_OVERRIDE
+    {
+        Mat m1 = _m1.getMat(), m2 = _m2.getMat();
+        const auto* from = m1.ptr<Point2f>();
+        const auto* to   = m2.ptr<Point2f>();
+        const int n = m1.checkVector(2);
+        if (n < 1) return 0;
+
+        // Minimal model from a single correspondence
+        const double tx = (double)to[0].x - (double)from[0].x;
+        const double ty = (double)to[0].y - (double)from[0].y;
+
+        _model.create(2, 3, CV_64F);
+        double* H = _model.getMat().ptr<double>();
+        H[0]=1.0; H[1]=0.0; H[2]=tx;
+        H[3]=0.0; H[4]=1.0; H[5]=ty;
+        return 1;
+    }
+
+    // Return squared L2 reprojection error (pixels^2), as used by affine estimators.
+    void computeError(InputArray _m1, InputArray _m2,
+                      InputArray _model, OutputArray _err) const CV_OVERRIDE
+    {
+        Mat m1 = _m1.getMat(), m2 = _m2.getMat();
+        const auto* from = m1.ptr<Point2f>();
+        const auto* to   = m2.ptr<Point2f>();
+        const int n = m1.checkVector(2);
+
+        const double* H = _model.getMat().ptr<double>(); // [1 0 tx; 0 1 ty]
+        // Cast once to float for inner loop speed
+        const float tx = (float)H[2];
+        const float ty = (float)H[5];
+
+        _err.create(n, 1, CV_32F);
+        float* e = _err.getMat().ptr<float>();
+
+        for (int i = 0; i < n; ++i) {
+            // residual = (from + t) - to
+            const float rx = (float)from[i].x + tx - (float)to[i].x;
+            const float ry = (float)from[i].y + ty - (float)to[i].y;
+            e[i] = rx*rx + ry*ry;   // squared L2 (pixels^2)
+        }
+    }
+};
 
 int estimateAffine3D(InputArray _from, InputArray _to,
                      OutputArray _out, OutputArray _inliers,
@@ -1167,4 +1234,167 @@ Mat estimateAffinePartial2D(InputArray _from, InputArray _to, OutputArray _inlie
     return H;
 }
 
+Vec2d estimateTranslation2D(InputArray _from, InputArray _to,
+                              OutputArray _inliers,
+                              int method,
+                              double ransacReprojThreshold,
+                              size_t maxIters, double confidence,
+                              size_t refineIters)
+{
+    CV_INSTRUMENT_REGION();
+
+    using std::numeric_limits;
+    const double NaN = numeric_limits<double>::quiet_NaN();
+    Vec2d tvec(NaN, NaN);
+
+    // Normalize input layout and type:
+    // - Accepts various shapes (Nx2, 1xN, etc.); force to CV_32FC2 for the registrator.
+    // - Keep local copies to allow reshaping into N x 1 vectors of Point2f.
+    Mat from = _from.getMat(), to = _to.getMat();
+    int count = from.checkVector(2);
+    bool result = false;
+    CV_Assert(count >= 0 && to.checkVector(2) == count);
+
+    if (from.type() != CV_32FC2 || to.type() != CV_32FC2) {
+        Mat tmp1, tmp2;
+        from.convertTo(tmp1, CV_32FC2); from = tmp1;
+        to.convertTo(tmp2, CV_32FC2);   to   = tmp2;
+    } else {
+        from = from.clone();
+        to   = to.clone();
+    }
+
+    // Convert to N x 1 vectors of Point2f (matches registrator expectations).
+    from = from.reshape(2, count);
+    to   = to.reshape(2, count);
+
+    // Optional inlier mask (1-inlier, 0-outlier). Only allocate if requested.
+    Mat inliers;
+    if (_inliers.needed()) {
+        _inliers.create(count, 1, CV_8U, -1, true);
+        inliers = _inliers.getMat();
+    }
+
+    // Build translation model callback. Minimal sample size is 1.
+    Mat T; // 2x3 output (CV_64F)
+    Ptr<PointSetRegistrator::Callback> cb = makePtr<Translation2DEstimatorCallback>();
+
+    // Create robust estimators with the same semantics as affine functions.
+    if (method == RANSAC)
+        result = createRANSACPointSetRegistrator(cb, 1,
+                     ransacReprojThreshold, confidence, (int)maxIters)->run(from, to, T, inliers);
+    else if (method == LMEDS)
+        result = createLMeDSPointSetRegistrator(cb, 1,
+                     confidence, (int)maxIters)->run(from, to, T, inliers);
+    else
+        CV_Error(Error::StsBadArg, "Unknown or unsupported robust estimation method");
+
+    // Estimation failure: return NaNs and zero inlier mask (if requested).
+    if (!result) {
+        if (_inliers.needed())
+            inliers.setTo(Scalar(0));
+        return tvec;
+    }
+
+    // Post-process: compress inliers to the front (same pattern as affine),
+    // then optionally refine or compute closed-form LS (mean displacement) on inliers.
+    if (count > 0) {
+        // Reorder: pack inliers to the front
+        compressElems(from.ptr<Point2f>(), inliers.ptr<uchar>(), 1, count);
+        int nin = compressElems(to.ptr<Point2f>(), inliers.ptr<uchar>(), 1, count);
+
+        if (nin > 0) {
+            Mat src = from.rowRange(0, nin);
+            Mat dst = to.rowRange(0, nin);
+
+            if (refineIters > 0) {
+                if (T.empty())
+                    T = (Mat_<double>(2,3) << 1,0,0, 0,1,0);
+                // LM refine on translation only.
+                // T is:
+                //   [1 0 tx]
+                //   [0 1 ty]
+                // We optimize the 2-parameter vector (tx, ty).
+                double* Hptr = T.ptr<double>();
+                double Hvec_buf[2] = { Hptr[2], Hptr[5] }; // (tx, ty)
+                Mat Hvec(2, 1, CV_64F, Hvec_buf);
+
+                auto translation2dRefineCallback = [src, dst](InputOutputArray _param, OutputArray _err, OutputArray _Jac) -> bool
+                {
+                    int i, errCount = src.checkVector(2);
+                    Mat param = _param.getMat();
+                    _err.create(errCount * 2, 1, CV_64F);
+                    Mat err = _err.getMat(), J;
+                    if (_Jac.needed())
+                    {
+                        _Jac.create(errCount * 2, param.rows, CV_64F);
+                        J = _Jac.getMat();
+                        CV_Assert(J.isContinuous() && J.cols == 2);
+                    }
+
+                    const Point2f* M = src.ptr<Point2f>();
+                    const Point2f* m = dst.ptr<Point2f>();
+                    const double* h = param.ptr<double>();
+                    double* errptr = err.ptr<double>();
+                    double* Jptr = J.data ? J.ptr<double>() : 0;
+
+                    for (i = 0; i < errCount; i++)
+                    {
+                        double Mx = M[i].x, My = M[i].y;
+                        double xi = Mx + h[0];
+                        double yi = My + h[1];
+                        errptr[i * 2] = xi - m[i].x;
+                        errptr[i * 2 + 1] = yi - m[i].y;
+
+                        /*
+                        Jacobian should be:
+                            {1, 0}
+                            {0, 1}
+                        */
+                        if (Jptr)
+                        {
+                            Jptr[0] = 1; Jptr[1] = 0;
+                            Jptr[2] = 0; Jptr[3] = 1;
+
+                            Jptr += 4;
+                        }
+                    }
+
+                    return true;
+                };
+                LevMarq solver(Hvec, translation2dRefineCallback,
+                            LevMarq::Settings()
+                            .setMaxIterations((unsigned int)refineIters)
+                            .setGeodesic(true));
+                solver.optimize();
+
+                // Update H with refined parameters
+                Hptr[2] = Hvec_buf[0];  // refined tx
+                Hptr[5] = Hvec_buf[1];  // refined ty
+            } else {
+                // Closed-form LS on inliers: mean displacement (optimal in L2 sense).
+                const auto* f = src.ptr<Point2f>();
+                const auto* t = dst.ptr<Point2f>();
+                double sx = 0.0, sy = 0.0;
+                for (int i = 0; i < nin; ++i) {
+                    sx += (double)t[i].x - (double)f[i].x;
+                    sy += (double)t[i].y - (double)f[i].y;
+                }
+                if (T.empty())
+                    T = (Mat_<double>(2,3) << 1,0,0, 0,1,0);
+                double* H = T.ptr<double>();
+                H[2] = sx / nin;  // t_x
+                H[5] = sy / nin;  // t_y
+            }
+        }
+
+        // Extract translation components
+        if (!T.empty()) {
+            tvec[0] = T.at<double>(0, 2);
+            tvec[1] = T.at<double>(1, 2);
+        }
+    }
+
+    return tvec;
+}
 } // namespace cv

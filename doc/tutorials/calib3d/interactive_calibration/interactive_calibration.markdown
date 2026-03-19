@@ -180,34 +180,34 @@ Example of output XML file:
 <framesCount>21</framesCount>
 <cameraResolution>
   1280 720</cameraResolution>
-<cameraMatrix type_id="opencv-matrix">
+<camera_matrix type_id="opencv-matrix">
   <rows>3</rows>
   <cols>3</cols>
   <dt>d</dt>
   <data>
     1.2519588293098975e+03 0. 6.6684948780852471e+02 0.
-    1.2519588293098975e+03 3.6298123112613683e+02 0. 0. 1.</data></cameraMatrix>
-<cameraMatrix_std_dev type_id="opencv-matrix">
+    1.2519588293098975e+03 3.6298123112613683e+02 0. 0. 1.</data></camera_matrix>
+<camera_matrix_std_dev type_id="opencv-matrix">
   <rows>4</rows>
   <cols>1</cols>
   <dt>d</dt>
   <data>
     0. 1.2887048808572649e+01 2.8536856683866230e+00
-    2.8341737483430314e+00</data></cameraMatrix_std_dev>
-<dist_coeffs type_id="opencv-matrix">
+    2.8341737483430314e+00</data></camera_matrix_std_dev>
+<distortion_coefficients type_id="opencv-matrix">
   <rows>1</rows>
   <cols>5</cols>
   <dt>d</dt>
   <data>
     1.3569117181595716e-01 -8.2513063822554633e-01 0. 0.
-    1.6412101575010554e+00</data></dist_coeffs>
-<dist_coeffs_std_dev type_id="opencv-matrix">
+    1.6412101575010554e+00</data></distortion_coefficients>
+<distortion_coefficients_std_dev type_id="opencv-matrix">
   <rows>5</rows>
   <cols>1</cols>
   <dt>d</dt>
   <data>
     1.5570675523402111e-02 8.7229075437543435e-02 0. 0.
-    1.8382427901856876e-01</data></dist_coeffs_std_dev>
+    1.8382427901856876e-01</data></distortion_coefficients_std_dev>
 <avg_reprojection_error>4.2691743074130178e-01</avg_reprojection_error>
 </opencv_storage>
 @endcode

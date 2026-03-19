@@ -18,7 +18,7 @@ if __name__ == '__main__':
     for fn in glob('*.py'):
         print(' --- ', fn)
         code = open(fn).read()
-        found |= set(re.findall('cv2?\.\w+', code))
+        found |= set(re.findall(r'cv2?\.\w+', code))
 
     cv2_used = found & cv2_callable
     cv2_unused = cv2_callable - cv2_used

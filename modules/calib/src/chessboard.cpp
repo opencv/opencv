@@ -725,7 +725,7 @@ void FastX::detectImpl(const cv::Mat& _gray_image,
             // calc images
             // for each angle step
             int scale_id = scale-parameters.min_scale;
-            int scale_size = int(pow(2.0,scale+1+super_res));
+            int scale_size = int(std::pow(2,scale+1+super_res));
             int scale_size2 = int((scale_size/7)*2+1);
             std::vector<cv::UMat> images;
             images.resize(2*num);
@@ -2169,7 +2169,7 @@ cv::Point2f &Chessboard::Board::getCorner(int _row,int _col)
             }
             ++count;
             row_start = row_start->bottom;
-        }while(_row);
+        }while(row_start);
     }
     CV_Error(Error::StsInternal,"cannot find corner");
     // return *top_left->top_left; // never reached
@@ -2242,7 +2242,7 @@ int Chessboard::Board::detectMarkers(cv::InputArray image)
             cv::bitwise_and(field,mask2,temp);
             double noise= cv::sum(temp)[0]/noise_size;
 
-            // calc refrence value
+            // calc reference value
             Cell *cell2 = getCell(y,abs(x-1));
             src[0] = *cell2->top_left;
             src[1] = *cell2->top_right;

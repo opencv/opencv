@@ -580,7 +580,7 @@ CV_EXPORTS_W Mat initCameraMatrix2D( InputArrayOfArrays objectPoints,
 
 @param image Source chessboard view. It must be an 8-bit grayscale or color image.
 @param patternSize Number of inner corners per a chessboard row and column
-( patternSize = cv::Size(points_per_row,points_per_colum) = cv::Size(columns,rows) ).
+( patternSize = cv::Size(points_per_row,points_per_column) = cv::Size(columns,rows) ).
 @param corners Output array of detected corners.
 @param flags Various operation flags that can be zero or a combination of the following values:
 -   @ref CALIB_CB_ADAPTIVE_THRESH Use adaptive thresholding to convert the image to black
@@ -629,7 +629,7 @@ the board to make the detection more robust in various environments. Otherwise, 
 border and the background is dark, the outer black squares cannot be segmented properly and so the
 square grouping and ordering algorithm fails.
 
-Use the `gen_pattern.py` Python script (@ref tutorial_camera_calibration_pattern)
+Use the `generate_pattern.py` Python script (@ref tutorial_camera_calibration_pattern)
 to create the desired checkerboard pattern.
  */
 CV_EXPORTS_W bool findChessboardCorners( InputArray image, Size patternSize, OutputArray corners,
@@ -645,7 +645,7 @@ CV_EXPORTS_W bool checkChessboard(InputArray img, Size size);
 
 @param image Source chessboard view. It must be an 8-bit grayscale or color image.
 @param patternSize Number of inner corners per a chessboard row and column
-( patternSize = cv::Size(points_per_row,points_per_colum) = cv::Size(columns,rows) ).
+( patternSize = cv::Size(points_per_row,points_per_column) = cv::Size(columns,rows) ).
 @param corners Output array of detected corners.
 @param flags Various operation flags that can be zero or a combination of the following values:
 -   @ref CALIB_CB_NORMALIZE_IMAGE Normalize the image gamma with equalizeHist before detection.
@@ -654,7 +654,7 @@ CV_EXPORTS_W bool checkChessboard(InputArray img, Size size);
 -   @ref CALIB_CB_LARGER The detected pattern is allowed to be larger than patternSize (see description).
 -   @ref CALIB_CB_MARKER The detected pattern must have a marker (see description).
 This should be used if an accurate camera calibration is required.
-@param meta Optional output arrray of detected corners (CV_8UC1 and size = cv::Size(columns,rows)).
+@param meta Optional output array of detected corners (CV_8UC1 and size = cv::Size(columns,rows)).
 Each entry stands for one corner of the pattern and can have one of the following values:
 -   0 = no meta data attached
 -   1 = left-top corner of a black cell
@@ -688,7 +688,7 @@ which are located on the outside of the board. The following figure illustrates
 a sample checkerboard optimized for the detection. However, any other checkerboard
 can be used as well.
 
-Use the `gen_pattern.py` Python script (@ref tutorial_camera_calibration_pattern)
+Use the `generate_pattern.py` Python script (@ref tutorial_camera_calibration_pattern)
 to create the corresponding checkerboard pattern:
 \image html pics/checkerboard_radon.png width=60%
  */
@@ -774,7 +774,7 @@ struct CV_EXPORTS_W_SIMPLE CirclesGridFinderParameters
     {
       SYMMETRIC_GRID, ASYMMETRIC_GRID
     };
-    GridType gridType;
+    CV_PROP_RW GridType gridType;
 
     CV_PROP_RW float squareSize; //!< Distance between two adjacent points. Used by CALIB_CB_CLUSTERING.
     CV_PROP_RW float maxRectifiedDistance; //!< Max deviation from prediction. Used by CALIB_CB_CLUSTERING.
@@ -788,7 +788,7 @@ typedef CirclesGridFinderParameters CirclesGridFinderParameters2;
 
 @param image grid view of input circles; it must be an 8-bit grayscale or color image.
 @param patternSize number of circles per row and column
-( patternSize = Size(points_per_row, points_per_colum) ).
+( patternSize = Size(points_per_row, points_per_column) ).
 @param centers output array of detected centers.
 @param flags various operation flags that can be one of the following values:
 -   @ref CALIB_CB_SYMMETRIC_GRID uses symmetric pattern of circles.
@@ -1341,6 +1341,7 @@ See @ref CALIB_USE_INTRINSIC_GUESS and other `CALIB_` constants. Expected shape:
 @param[out] distortions Distortion coefficients. Output size: NUM_CAMERAS x NUM_PARAMS.
 @param[out] perFrameErrors RMSE value for each visible frame, (-1 for non-visible). Output size: NUM_CAMERAS x NUM_FRAMES.
 @param[out] initializationPairs Pairs with camera indices that were used for initial pairwise stereo calibration.
+@param[in] criteria Termination criteria for the iterative optimization algorithm.
 
 Output size: (NUM_CAMERAS-1) x 2.
 
@@ -1382,7 +1383,8 @@ CV_EXPORTS_AS(calibrateMultiviewExtended) double calibrateMultiview (
         InputOutputArrayOfArrays Rs, InputOutputArrayOfArrays Ts,
         OutputArray initializationPairs, OutputArrayOfArrays rvecs0,
         OutputArrayOfArrays tvecs0, OutputArray perFrameErrors,
-        InputArray flagsForIntrinsics=noArray(), int flags = 0);
+        InputArray flagsForIntrinsics=noArray(), int flags = 0,
+        TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100, DBL_EPSILON));
 
 /// @overload
 CV_EXPORTS_W double calibrateMultiview (
@@ -1390,7 +1392,8 @@ CV_EXPORTS_W double calibrateMultiview (
         const std::vector<cv::Size>& imageSize, InputArray detectionMask, InputArray models,
         InputOutputArrayOfArrays Ks, InputOutputArrayOfArrays distortions,
         InputOutputArrayOfArrays Rs, InputOutputArrayOfArrays Ts,
-        InputArray flagsForIntrinsics=noArray(), int flags = 0);
+        InputArray flagsForIntrinsics=noArray(), int flags = 0,
+        TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100, DBL_EPSILON));
 
 
 /** @brief Computes Hand-Eye calibration: \f$_{}^{g}\textrm{T}_c\f$

@@ -212,6 +212,34 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         return false;
     }
 
+    virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
+                           const std::vector<MatShape> &outputs) const CV_OVERRIDE
+    {
+        const auto &input_shape = inputs[0];
+        int64 B = input_shape[0];
+        int64 S = input_shape[1];
+        int64 D = input_shape[2];
+
+        const auto &weight_shape = blobs.empty() ? inputs[1] : shape(blobs.front());
+        int64 hidden = weight_shape[1];
+
+        int64 q_size = (int64)qkv_hidden_sizes[0];
+        int64 k_size = (int64)qkv_hidden_sizes[1];
+        int64 v_size = hidden - q_size - k_size;
+        int64 q_head = (int64)qkv_head_sizes[0];
+        int64 v_head = v_size / (int64)num_heads;
+
+        // Input projection: Q, K, V = input * W + b
+        int64 flops = B * S * (CV_BIG_INT(2) * D * hidden);
+        // QK^T: (B*num_heads) * S * S * q_head_size
+        flops += B * (int64)num_heads * CV_BIG_INT(2) * S * S * q_head;
+        // Softmax: ~4 ops per element
+        flops += B * (int64)num_heads * 4 * S * S;
+        // Attention * V: (B*num_heads) * S * v_head_size * S
+        flops += B * (int64)num_heads * CV_BIG_INT(2) * S * v_head * S;
+        return flops;
+    }
+
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE {
         opt.init();
 

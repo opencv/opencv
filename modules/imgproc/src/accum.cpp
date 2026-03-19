@@ -238,7 +238,7 @@ void cv::accumulate( InputArray _src, InputOutputArray _dst, InputArray _mask )
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
 
     CV_Assert( _src.sameSize(_dst) && dcn == scn );
-    CV_Assert( _mask.empty() || (_src.sameSize(_mask) && _mask.type() == CV_8U) );
+    CV_Assert( _mask.empty() || (_src.sameSize(_mask) && (_mask.type() == CV_8U || _mask.type() == CV_Bool)) );
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_accumulate(_src, noArray(), _dst, 0.0, _mask, ACCUMULATE))
@@ -334,7 +334,7 @@ void cv::accumulateSquare( InputArray _src, InputOutputArray _dst, InputArray _m
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
 
     CV_Assert( _src.sameSize(_dst) && dcn == scn );
-    CV_Assert( _mask.empty() || (_src.sameSize(_mask) && _mask.type() == CV_8U) );
+    CV_Assert( _mask.empty() || (_src.sameSize(_mask) && (_mask.type() == CV_8U || _mask.type() == CV_Bool)) );
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_accumulate(_src, noArray(), _dst, 0.0, _mask, ACCUMULATE_SQUARE))
@@ -437,7 +437,7 @@ void cv::accumulateProduct( InputArray _src1, InputArray _src2,
 
     CV_Assert( _src1.sameSize(_src2) && stype == _src2.type() );
     CV_Assert( _src1.sameSize(_dst) && dcn == scn );
-    CV_Assert( _mask.empty() || (_src1.sameSize(_mask) && _mask.type() == CV_8U) );
+    CV_Assert( _mask.empty() || (_src1.sameSize(_mask) && (_mask.type() == CV_8U || _mask.type() == CV_Bool)) );
 
     CV_OCL_RUN(_src1.dims() <= 2 && _dst.isUMat(),
                ocl_accumulate(_src1, _src2, _dst, 0.0, _mask, ACCUMULATE_PRODUCT))
@@ -536,7 +536,7 @@ void cv::accumulateWeighted( InputArray _src, InputOutputArray _dst,
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
 
     CV_Assert( _src.sameSize(_dst) && dcn == scn );
-    CV_Assert( _mask.empty() || (_src.sameSize(_mask) && _mask.type() == CV_8U) );
+    CV_Assert( _mask.empty() || (_src.sameSize(_mask) && (_mask.type() == CV_8U || _mask.type() == CV_Bool)) );
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_accumulate(_src, noArray(), _dst, alpha, _mask, ACCUMULATE_WEIGHTED))

@@ -79,6 +79,7 @@ public:
     void run();
     void checkUMats();
     void prepareFrameCheck();
+    void processedDepthCheck();
 
     OdometryType otype;
     OdometryAlgoType algtype;
@@ -428,6 +429,32 @@ void OdometryTest::prepareFrameCheck()
     }
 }
 
+
+void OdometryTest::processedDepthCheck()
+{
+    Mat K = getCameraMatrix();
+
+    Mat gtImage, gtDepth;
+    readData(gtImage, gtDepth);
+
+    gtDepth *= 5000.0;
+
+    OdometrySettings ods;
+    ods.setCameraMatrix(K);
+    Odometry odometry = Odometry(otype, ods, algtype);
+    OdometryFrame odf(gtDepth, gtImage);
+
+    odometry.prepareFrame(odf);
+
+    Mat scaled;
+    odf.getProcessedDepth(scaled);
+
+    //TODO: remove this check when depth rescaling is removed
+    double pmax;
+    cv::minMaxLoc(scaled, nullptr, &pmax);
+    EXPECT_LT(pmax, 10.0);
+}
+
 /****************************************************************************************\
 *                                Tests registrations                                     *
 \****************************************************************************************/
@@ -505,6 +532,31 @@ TEST(RGBD_Odometry_FastICP, prepareFrame)
 {
     OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::FAST, 0.99, 0.99, FLT_EPSILON);
     test.prepareFrameCheck();
+}
+
+
+TEST(RGBD_Odometry_Rgb, processedDepth)
+{
+    OdometryTest test(OdometryType::RGB, OdometryAlgoType::COMMON, 0.99, 0.99);
+    test.processedDepthCheck();
+}
+
+TEST(RGBD_Odometry_ICP, processedDepth)
+{
+    OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::COMMON, 0.99, 0.99);
+    test.processedDepthCheck();
+}
+
+TEST(RGBD_Odometry_RgbdICP, processedDepth)
+{
+    OdometryTest test(OdometryType::RGB_DEPTH, OdometryAlgoType::COMMON, 0.99, 0.99);
+    test.processedDepthCheck();
+}
+
+TEST(RGBD_Odometry_FastICP, processedDepth)
+{
+    OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::FAST, 0.99, 0.99, FLT_EPSILON);
+    test.processedDepthCheck();
 }
 
 

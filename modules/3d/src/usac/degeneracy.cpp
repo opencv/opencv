@@ -435,7 +435,7 @@ public:
             const int num_f_inliers_of_h_outliers = getNonPlanarSupport(Mat(F), num_models_used_so_far >= MAX_MODELS_TO_TEST, non_planar_support);
             if (non_planar_support < num_f_inliers_of_h_outliers) {
                 non_planar_support = num_f_inliers_of_h_outliers;
-                const double predicted_iters = log_conf / log(1 - pow(static_cast<double>
+                const double predicted_iters = log_conf / log(1 - std::pow(static_cast<double>
                     (getNonPlanarSupport(Mat(F), non_planar_pts, num_non_planar_pts)) / num_non_planar_pts, 2));
                 if (use_preemptive && ! std::isinf(predicted_iters) && predicted_iters < max_iters)
                     max_iters = static_cast<int>(predicted_iters);

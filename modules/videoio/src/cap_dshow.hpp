@@ -30,7 +30,7 @@ public:
     virtual bool grabFrame() CV_OVERRIDE;
     virtual bool retrieveFrame(int outputType, OutputArray frame) CV_OVERRIDE;
     virtual int getCaptureDomain() CV_OVERRIDE;
-    virtual bool isOpened() const;
+    virtual bool isOpened() const CV_OVERRIDE;
 protected:
     void open(int index);
     void close();

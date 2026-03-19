@@ -188,8 +188,7 @@ void loadMesh(const String &filename, OutputArray vertices, OutputArrayOfArrays 
         }
         else
         {
-            indices.create(1, (int)vec_indices.size(), CV_32SC3);
-            std::vector<Vec3i>& vec = *(std::vector<Vec3i>*)indices.getObj();
+            std::vector<Vec3i> vec(vec_indices.size());
             for (int i = 0; i < vecsz; ++i)
             {
                 Vec3i tri;
@@ -207,6 +206,8 @@ void loadMesh(const String &filename, OutputArray vertices, OutputArrayOfArrays 
                 }
                 vec[i] = tri;
             }
+            indices.create(1, (int)vec_indices.size(), CV_32SC3);
+            Mat(1, static_cast<int>(vec_indices.size()), CV_32SC3, vec.data()).copyTo(indices);
         }
     }
 

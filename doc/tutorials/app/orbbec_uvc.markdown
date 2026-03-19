@@ -34,6 +34,15 @@ make
 sudo make install
 ```
 
+By default, when `-DOBSENSOR_USE_ORBBEC_SDK=ON` is enabled, OrbbecSDK v2 is used (i.e., `ORBBEC_SDK_VERSION` defaults to `2`); it supports the entire Orbbec Gemini 330 series.
+
+If you need legacy cameras such as Orbbec Femto, Gemini2XL, or Astra+, switch to OrbbecSDK v1 with the flag `-DORBBEC_SDK_VERSION=1`:
+```bash
+  cmake -DOBSENSOR_USE_ORBBEC_SDK=ON -DORBBEC_SDK_VERSION=1 ..
+  make -j
+  sudo make install
+```
+
 Code
 ----
 

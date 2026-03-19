@@ -119,9 +119,11 @@ void ReadNetParamsFromTextBufferOrDie(const char* data, size_t len,
 
 // Utility functions used internally by Caffe and TensorFlow loaders
 bool ReadProtoFromTextFile(const char* filename, ::google::protobuf::Message* proto);
-bool ReadProtoFromBinaryFile(const char* filename, ::google::protobuf::Message* proto);
+bool ReadProtoFromTextFile(const char* filename, ::google::protobuf::MessageLite* proto);
+bool ReadProtoFromBinaryFile(const char* filename, ::google::protobuf::MessageLite* proto);
 bool ReadProtoFromTextBuffer(const char* data, size_t len, ::google::protobuf::Message* proto);
-bool ReadProtoFromBinaryBuffer(const char* data, size_t len, ::google::protobuf::Message* proto);
+bool ReadProtoFromTextBuffer(const char* data, size_t len, ::google::protobuf::MessageLite* proto);
+bool ReadProtoFromBinaryBuffer(const char* data, size_t len, ::google::protobuf::MessageLite* proto);
 
 }
 }

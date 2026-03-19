@@ -170,6 +170,27 @@ public:
         return false;
     }
 
+    virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
+                           const std::vector<MatShape> &outputs) const CV_OVERRIDE
+    {
+        CV_Assert(!inputs.empty());
+        LayerGemmOpMode mode_ = getOpMode(inputs.size(), blobs.size());
+        const auto shape_A = inputs[0];
+        const auto shape_B = constB(mode_) ? shape(blobs[0]) : inputs[1];
+        int M = trans_a ? shape_A.back() : shape_A[shape_A.size() - 2];
+        int K = trans_a ? shape_A[shape_A.size() - 2] : shape_A.back();
+        int N = trans_b ? shape_B[shape_B.size() - 2] : shape_B.back();
+
+        int64 batches = std::accumulate(shape_A.begin(), shape_A.end() - 2,
+                                        CV_BIG_INT(1), std::multiplies<int64>());
+
+        // 2*M*N*K multiply-adds, +M*N for bias
+        int64 flops = batches * (CV_BIG_INT(2) * M * N * K);
+        if (have_bias)
+            flops += batches * M * N;
+        return flops;
+    }
+
     // TODO: replace with cv::broadcast() once 1d mat is supported
     // FIXME: fix if conditions if 1d mat is supported properly
     void broadcastCWtihBeta(int M, int N, const Mat &C) {

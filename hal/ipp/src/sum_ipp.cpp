@@ -11,6 +11,7 @@
 
 int ipp_hal_sum(const uchar *src_data, size_t src_step, int src_type, int width, int height, double *result)
 {
+    CV_HAL_CHECK_USE_IPP();
     int cn = CV_MAT_CN(src_type);
     if (cn > 4)
     {

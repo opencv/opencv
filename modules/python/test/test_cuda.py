@@ -52,9 +52,9 @@ class cuda_test(NewOpenCVTests):
         self.assertTrue(asyncstream.cudaPtr() != 0)
 
     def test_cuda_buffer_pool(self):
+        stream_a = cv.cuda.Stream()
         cv.cuda.setBufferPoolUsage(True)
         cv.cuda.setBufferPoolConfig(cv.cuda.getDevice(), 1024 * 1024 * 64, 2)
-        stream_a = cv.cuda.Stream()
         pool_a = cv.cuda.BufferPool(stream_a)
         cuMat = pool_a.getBuffer(1024, 1024, cv.CV_8UC3)
         cv.cuda.setBufferPoolUsage(False)
@@ -142,6 +142,31 @@ class cuda_test(NewOpenCVTests):
         self.assertEqual(True, hasattr(cv.cuda, 'fastNlMeansDenoising'))
         self.assertEqual(True, hasattr(cv.cuda, 'fastNlMeansDenoisingColored'))
         self.assertEqual(True, hasattr(cv.cuda, 'nonLocalMeans'))
+
+    def test_dlpack_GpuMat(self):
+        for dtype in [np.int8, np.uint8, np.int16, np.uint16, np.float16, np.int32, np.float32, np.float64, np.int64, np.uint32, np.uint64, np.bool_]:
+            for channels in [2, 3, 5]:
+                ref = (np.random.random((64, 128, channels)) * 255).astype(dtype)
+                src = cv.cuda_GpuMat()
+                src.upload(ref)
+
+                # workaround int64/uint64 conversion to int32/uint32
+                if dtype == np.int64:
+                    print("skip because of https://github.com/opencv/opencv/issues/27671")
+                    continue
+                    src = src.convertTo(cv.CV_64S)
+                elif dtype == np.uint64:
+                    print("skip because of https://github.com/opencv/opencv/issues/27671")
+                    continue
+                    src = src.convertTo(cv.CV_64U)
+
+                dst = cv.cuda_GpuMat.from_dlpack(src)
+                test = dst.download()
+                self.assertEqual(ref.dtype, test.dtype)
+                equal = np.array_equal(ref, test)
+                if not equal:
+                    print(f"Failed test with dtype {dtype} and {channels} channels")
+                self.assertTrue(equal)
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

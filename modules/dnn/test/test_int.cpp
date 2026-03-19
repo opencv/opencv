@@ -100,7 +100,7 @@ TEST_P(Test_NaryEltwise_Int, random)
     Mat re;
     re = net.forward();
     EXPECT_EQ(re.depth(), matType);
-    EXPECT_EQ(re.size.dims(), 4);
+    EXPECT_EQ(re.size.dims, 4);
     EXPECT_EQ(re.size[0], input1.size[0]);
     EXPECT_EQ(re.size[1], input1.size[1]);
     EXPECT_EQ(re.size[2], input1.size[2]);
@@ -175,7 +175,7 @@ TEST_P(Test_Const_Int, random)
     Mat re;
     re = net.forward();
     EXPECT_EQ(re.depth(), matType);
-    EXPECT_EQ(re.size.dims(), 4);
+    EXPECT_EQ(re.size.dims, 4);
     EXPECT_EQ(re.size[0], input1.size[0]);
     EXPECT_EQ(re.size[1], input1.size[1]);
     EXPECT_EQ(re.size[2], input1.size[2]);
@@ -281,7 +281,7 @@ TEST_P(Test_ScatterND_Int, random)
     Mat re;
     re = net.forward();
     EXPECT_EQ(re.depth(), matType);
-    EXPECT_EQ(re.size.dims(), 4);
+    EXPECT_EQ(re.size.dims, 4);
     ASSERT_EQ(shape(input), shape(re));
 
     std::vector<int> reIndices(4);
@@ -364,7 +364,7 @@ TEST_P(Test_Concat_Int, random)
     Mat re;
     re = net.forward();
     EXPECT_EQ(re.depth(), matType);
-    EXPECT_EQ(re.size.dims(), 4);
+    EXPECT_EQ(re.size.dims, 4);
     EXPECT_EQ(re.size[0], input1.size[0]);
     EXPECT_EQ(re.size[1], input1.size[1] + input2.size[1]);
     EXPECT_EQ(re.size[2], input1.size[2]);
@@ -441,7 +441,7 @@ TEST_P(Test_ArgMax_Int, random)
     Mat re;
     re = net.forward();
     EXPECT_EQ(re.depth(), CV_64S);
-    EXPECT_EQ(re.size.dims(), 3);
+    EXPECT_EQ(re.size.dims, 3);
     EXPECT_EQ(re.size[0], inShape[0]);
     EXPECT_EQ(re.size[1], inShape[2]);
     EXPECT_EQ(re.size[2], inShape[3]);
@@ -510,7 +510,7 @@ TEST_P(Test_Blank_Int, random)
     Mat re;
     re = net.forward();
     EXPECT_EQ(re.depth(), matType);
-    EXPECT_EQ(re.size.dims(), 4);
+    EXPECT_EQ(re.size.dims, 4);
     EXPECT_EQ(re.size[0], 2);
     EXPECT_EQ(re.size[1], 3);
     EXPECT_EQ(re.size[2], 4);
@@ -568,7 +568,7 @@ TEST_P(Test_Expand_Int, random)
     Mat re;
     re = net.forward();
     EXPECT_EQ(re.depth(), matType);
-    EXPECT_EQ(re.size.dims(), 4);
+    EXPECT_EQ(re.size.dims, 4);
     EXPECT_EQ(re.size[0], 2);
     EXPECT_EQ(re.size[1], 3);
     EXPECT_EQ(re.size[2], 4);
@@ -631,7 +631,7 @@ TEST_P(Test_Permute_Int, random)
     Mat re;
     re = net.forward();
     EXPECT_EQ(re.depth(), matType);
-    EXPECT_EQ(re.size.dims(), 4);
+    EXPECT_EQ(re.size.dims, 4);
     EXPECT_EQ(re.size[0], 2);
     EXPECT_EQ(re.size[1], 4);
     EXPECT_EQ(re.size[2], 5);
@@ -705,7 +705,7 @@ TEST_P(Test_GatherElements_Int, random)
     Mat re;
     re = net.forward();
     EXPECT_EQ(re.depth(), matType);
-    EXPECT_EQ(re.size.dims(), 4);
+    EXPECT_EQ(re.size.dims, 4);
     ASSERT_EQ(shape(indicesMat), shape(re));
 
     std::vector<int> inIndices(4);
@@ -823,7 +823,7 @@ TEST_P(Test_Cast_Int, random)
     Mat re;
     re = net.forward();
     EXPECT_EQ(re.depth(), outMatType);
-    EXPECT_EQ(re.size.dims(), 4);
+    EXPECT_EQ(re.size.dims, 4);
 
     ASSERT_EQ(shape(input), shape(re));
     normAssert(outputRef, re);
@@ -865,7 +865,7 @@ TEST_P(Test_Pad_Int, random)
     Mat re;
     re = net.forward();
     EXPECT_EQ(re.depth(), matType);
-    EXPECT_EQ(re.size.dims(), 4);
+    EXPECT_EQ(re.size.dims, 4);
     EXPECT_EQ(re.size[0], 2);
     EXPECT_EQ(re.size[1], 3);
     EXPECT_EQ(re.size[2], 5);
@@ -940,7 +940,7 @@ TEST_P(Test_Slice_Int, random)
     Mat out = net.forward();
 
     Mat gt = input(range);
-    EXPECT_EQ(out.size.dims(), 4);
+    EXPECT_EQ(out.size.dims, 4);
     EXPECT_EQ(out.size[0], gt.size[0]);
     EXPECT_EQ(out.size[1], gt.size[1]);
     EXPECT_EQ(out.size[2], gt.size[2]);
@@ -981,7 +981,7 @@ TEST_P(Test_Reshape_Int, random)
     Mat re;
     re = net.forward();
     EXPECT_EQ(re.depth(), matType);
-    EXPECT_EQ(re.size.dims(), 4);
+    EXPECT_EQ(re.size.dims, 4);
     EXPECT_EQ(re.size[0], outShape[0]);
     EXPECT_EQ(re.size[1], outShape[1]);
     EXPECT_EQ(re.size[2], outShape[2]);
@@ -1022,7 +1022,7 @@ TEST_P(Test_Flatten_Int, random)
     Mat re;
     re = net.forward();
     EXPECT_EQ(re.depth(), matType);
-    EXPECT_EQ(re.size.dims(), 2);
+    EXPECT_EQ(re.size.dims, 2);
     EXPECT_EQ(re.size[0], inShape[0]);
     EXPECT_EQ(re.size[1], inShape[1] * inShape[2] * inShape[3]);
 
@@ -1062,7 +1062,7 @@ TEST_P(Test_Tile_Int, random)
     Mat re;
     re = net.forward();
     EXPECT_EQ(re.depth(), matType);
-    EXPECT_EQ(re.size.dims(), 4);
+    EXPECT_EQ(re.size.dims, 4);
     EXPECT_EQ(re.size[0], inShape[0] * repeats[0]);
     EXPECT_EQ(re.size[1], inShape[1] * repeats[1]);
     EXPECT_EQ(re.size[2], inShape[2] * repeats[2]);
@@ -1142,7 +1142,7 @@ TEST_P(Test_Reduce_Int, random)
     Mat re;
     re = net.forward();
     EXPECT_EQ(re.depth(), matType);
-    EXPECT_EQ(re.size.dims(), 3);
+    EXPECT_EQ(re.size.dims, 3);
     EXPECT_EQ(re.size[0], inShape[0]);
     EXPECT_EQ(re.size[1], inShape[2]);
     EXPECT_EQ(re.size[2], inShape[3]);
@@ -1219,7 +1219,7 @@ TEST_P(Test_Reduce_Int, two_axes)
     Mat re;
     re = net.forward();
     EXPECT_EQ(re.depth(), matType);
-    EXPECT_EQ(re.size.dims(), 2);
+    EXPECT_EQ(re.size.dims, 2);
     EXPECT_EQ(re.size[0], inShape[0]);
     EXPECT_EQ(re.size[1], inShape[2]);
 

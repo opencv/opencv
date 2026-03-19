@@ -71,7 +71,7 @@ std::shared_ptr<ParallelForAPI> createParallelForAPI()
             std::shared_ptr<ParallelForAPI> backend = info.backendFactory->create();
             if (!backend)
             {
-                CV_LOG_VERBOSE(NULL, 0, "core(parallel): not available: " << info.name);
+                CV_LOG_DEBUG(NULL, "core(parallel): not available: " << info.name);
                 continue;
             }
             CV_LOG_INFO(NULL, "core(parallel): using backend: " << info.name << " (priority=" << info.priority << ")");
@@ -95,9 +95,16 @@ std::shared_ptr<ParallelForAPI> createParallelForAPI()
     else
     {
         if (!isKnown)
-            CV_LOG_INFO(NULL, "core(parallel): unknown backend: " << name);
+        {
+            CV_LOG_INFO(NULL, "core(parallel): unknown backend: " << name << ", fallback on builtin code");
+        }
+        else
+        {
+            CV_LOG_INFO(NULL, "core(parallel): backend=" << name << " is not available, fallback on builtin code");
+        }
     }
     g_initializedParallelForAPI = true;
+    getParallelBackendName() = std::string();
     return std::shared_ptr<ParallelForAPI>();
 }
 
@@ -127,6 +134,10 @@ bool setParallelForBackend(const std::string& backendName, bool propagateNumThre
 {
     CV_TRACE_FUNCTION();
 
+    bool saved_initialized = g_initializedParallelForAPI;
+    std::string saved_backendName = getParallelBackendName();
+    std::shared_ptr<ParallelForAPI> saved_backend;  // don't call getCurrentParallelForAPI() if g_initializedParallelForAPI = false to avoid unnecessary "default" initialization
+
     std::string backendName_u = toUpperCase(backendName);
     if (g_initializedParallelForAPI)
     {
@@ -138,8 +149,9 @@ bool setParallelForBackend(const std::string& backendName, bool propagateNumThre
         }
         else
         {
+            saved_backend = getCurrentParallelForAPI();
             // ... re-create new
-            CV_LOG_DEBUG(NULL, "core(parallel): replacing parallel backend...");
+            CV_LOG_DEBUG(NULL, "core(parallel): replacing parallel backend (old=" << saved_backendName << " new=" << backendName << ")...");
             getParallelBackendName() = backendName_u;
             getCurrentParallelForAPI() = createParallelForAPI();
         }
@@ -154,7 +166,19 @@ bool setParallelForBackend(const std::string& backendName, bool propagateNumThre
     {
         if (!backendName.empty())
         {
-            CV_LOG_WARNING(NULL, "core(parallel): backend is not available: " << backendName << " (using builtin legacy code)");
+            // restore previous backend or build default
+            getParallelBackendName() = saved_backendName;
+            if (saved_initialized)
+            {
+                CV_LOG_WARNING(NULL, "core(parallel): backend is not available: " << backendName << " (keep previous)");
+                getCurrentParallelForAPI() = saved_backend;
+            }
+            else
+            {
+                CV_LOG_WARNING(NULL, "core(parallel): backend is not available: " << backendName << " (use default)");
+                g_initializedParallelForAPI = false;
+                getCurrentParallelForAPI() = createDefaultParallelForAPI();
+            }
             return false;
         }
         else

@@ -41,14 +41,14 @@ namespace flatbuffers {
 /// it is the opposite transformation of GetRoot().
 /// This may be useful if you want to pass on a root and have the recipient
 /// delete the buffer afterwards.
-inline const uint8_t *GetBufferStartFromRootPointer(const void *root) {
-  auto table = reinterpret_cast<const Table *>(root);
+inline const uint8_t* GetBufferStartFromRootPointer(const void* root) {
+  auto table = reinterpret_cast<const Table*>(root);
   auto vtable = table->GetVTable();
   // Either the vtable is before the root or after the root.
-  auto start = (std::min)(vtable, reinterpret_cast<const uint8_t *>(root));
+  auto start = (std::min)(vtable, reinterpret_cast<const uint8_t*>(root));
   // Align to at least sizeof(uoffset_t).
-  start = reinterpret_cast<const uint8_t *>(reinterpret_cast<uintptr_t>(start) &
-                                            ~(sizeof(uoffset_t) - 1));
+  start = reinterpret_cast<const uint8_t*>(reinterpret_cast<uintptr_t>(start) &
+                                           ~(sizeof(uoffset_t) - 1));
   // Additionally, there may be a file_identifier in the buffer, and the root
   // offset. The buffer may have been aligned to any size between
   // sizeof(uoffset_t) and FLATBUFFERS_MAX_ALIGNMENT (see "force_align").
@@ -64,7 +64,7 @@ inline const uint8_t *GetBufferStartFromRootPointer(const void *root) {
        possible_roots; possible_roots--) {
     start -= sizeof(uoffset_t);
     if (ReadScalar<uoffset_t>(start) + start ==
-        reinterpret_cast<const uint8_t *>(root))
+        reinterpret_cast<const uint8_t*>(root))
       return start;
   }
   // We didn't find the root, either the "root" passed isn't really a root,
@@ -76,9 +76,20 @@ inline const uint8_t *GetBufferStartFromRootPointer(const void *root) {
 }
 
 /// @brief This return the prefixed size of a FlatBuffer.
-template<typename SizeT = uoffset_t>
-inline SizeT GetPrefixedSize(const uint8_t *buf) {
+template <typename SizeT = uoffset_t>
+inline SizeT GetPrefixedSize(const uint8_t* buf) {
   return ReadScalar<SizeT>(buf);
+}
+
+// Gets the total length of the buffer given a sized prefixed FlatBuffer.
+//
+// This includes the size of the prefix as well as the buffer:
+//
+//  [size prefix][flatbuffer]
+//  |---------length--------|
+template <typename SizeT = uoffset_t>
+inline SizeT GetSizePrefixedBufferLength(const uint8_t* const buf) {
+  return ReadScalar<SizeT>(buf) + sizeof(SizeT);
 }
 
 // Base class for native objects (FlatBuffer data de-serialized into native
@@ -95,9 +106,9 @@ struct NativeTable {};
 /// if you wish. The resolver does the opposite lookup, for when the object
 /// is being serialized again.
 typedef uint64_t hash_value_t;
-typedef std::function<void(void **pointer_adr, hash_value_t hash)>
+typedef std::function<void(void** pointer_adr, hash_value_t hash)>
     resolver_function_t;
-typedef std::function<hash_value_t(void *pointer)> rehasher_function_t;
+typedef std::function<hash_value_t(void* pointer)> rehasher_function_t;
 
 // Helper function to test if a field is present, using any of the field
 // enums in the generated code.
@@ -106,18 +117,18 @@ typedef std::function<hash_value_t(void *pointer)> rehasher_function_t;
 // Note: this function will return false for fields equal to the default
 // value, since they're not stored in the buffer (unless force_defaults was
 // used).
-template<typename T>
-bool IsFieldPresent(const T *table, typename T::FlatBuffersVTableOffset field) {
+template <typename T>
+bool IsFieldPresent(const T* table, typename T::FlatBuffersVTableOffset field) {
   // Cast, since Table is a private baseclass of any table types.
-  return reinterpret_cast<const Table *>(table)->CheckField(
+  return reinterpret_cast<const Table*>(table)->CheckField(
       static_cast<voffset_t>(field));
 }
 
 // Utility function for reverse lookups on the EnumNames*() functions
 // (in the generated C++ code)
 // names must be NULL terminated.
-inline int LookupEnum(const char **names, const char *name) {
-  for (const char **p = names; *p; p++)
+inline int LookupEnum(const char** names, const char* name) {
+  for (const char** p = names; *p; p++)
     if (!strcmp(*p, name)) return static_cast<int>(p - names);
   return -1;
 }
@@ -216,20 +227,20 @@ static_assert(sizeof(TypeCode) == 2, "TypeCode");
 struct TypeTable;
 
 // Signature of the static method present in each type.
-typedef const TypeTable *(*TypeFunction)();
+typedef const TypeTable* (*TypeFunction)();
 
 struct TypeTable {
   SequenceType st;
   size_t num_elems;  // of type_codes, values, names (but not type_refs).
-  const TypeCode *type_codes;     // num_elems count
-  const TypeFunction *type_refs;  // less than num_elems entries (see TypeCode).
-  const int16_t *array_sizes;     // less than num_elems entries (see TypeCode).
-  const int64_t *values;  // Only set for non-consecutive enum/union or structs.
-  const char *const *names;  // Only set if compiled with --reflect-names.
+  const TypeCode* type_codes;     // num_elems count
+  const TypeFunction* type_refs;  // less than num_elems entries (see TypeCode).
+  const int16_t* array_sizes;     // less than num_elems entries (see TypeCode).
+  const int64_t* values;  // Only set for non-consecutive enum/union or structs.
+  const char* const* names;  // Only set if compiled with --reflect-names.
 };
 
 // String which identifies the current version of FlatBuffers.
-inline const char *flatbuffers_version_string() {
+inline const char* flatbuffers_version_string() {
   return "FlatBuffers " FLATBUFFERS_STRING(FLATBUFFERS_VERSION_MAJOR) "."
       FLATBUFFERS_STRING(FLATBUFFERS_VERSION_MINOR) "."
       FLATBUFFERS_STRING(FLATBUFFERS_VERSION_REVISION);
@@ -237,31 +248,31 @@ inline const char *flatbuffers_version_string() {
 
 // clang-format off
 #define FLATBUFFERS_DEFINE_BITMASK_OPERATORS(E, T)\
-    inline E operator | (E lhs, E rhs){\
+    inline FLATBUFFERS_CONSTEXPR_CPP11 E operator | (E lhs, E rhs){\
         return E(T(lhs) | T(rhs));\
     }\
-    inline E operator & (E lhs, E rhs){\
+    inline FLATBUFFERS_CONSTEXPR_CPP11 E operator & (E lhs, E rhs){\
         return E(T(lhs) & T(rhs));\
     }\
-    inline E operator ^ (E lhs, E rhs){\
+    inline FLATBUFFERS_CONSTEXPR_CPP11 E operator ^ (E lhs, E rhs){\
         return E(T(lhs) ^ T(rhs));\
     }\
-    inline E operator ~ (E lhs){\
+    inline FLATBUFFERS_CONSTEXPR_CPP11 E operator ~ (E lhs){\
         return E(~T(lhs));\
     }\
-    inline E operator |= (E &lhs, E rhs){\
+    inline FLATBUFFERS_CONSTEXPR_CPP11 E operator |= (E &lhs, E rhs){\
         lhs = lhs | rhs;\
         return lhs;\
     }\
-    inline E operator &= (E &lhs, E rhs){\
+    inline FLATBUFFERS_CONSTEXPR_CPP11 E operator &= (E &lhs, E rhs){\
         lhs = lhs & rhs;\
         return lhs;\
     }\
-    inline E operator ^= (E &lhs, E rhs){\
+    inline FLATBUFFERS_CONSTEXPR_CPP11 E operator ^= (E &lhs, E rhs){\
         lhs = lhs ^ rhs;\
         return lhs;\
     }\
-    inline bool operator !(E rhs) \
+    inline FLATBUFFERS_CONSTEXPR_CPP11 bool operator !(E rhs) \
     {\
         return !bool(T(rhs)); \
     }

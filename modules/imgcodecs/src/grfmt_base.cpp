@@ -79,6 +79,7 @@ Mat BaseImageDecoder::getMetadata(ImageMetadataType type) const
 
     case IMAGE_METADATA_XMP:
     case IMAGE_METADATA_ICCP:
+    case IMAGE_METADATA_CICP:
         return makeMat(m_metadata[type]);
 
     default:
@@ -153,6 +154,14 @@ BaseImageEncoder::BaseImageEncoder()
 bool  BaseImageEncoder::isFormatSupported( int depth ) const
 {
     return depth == CV_8U;
+}
+
+bool BaseImageEncoder::isValidEncodeKey(const int key) const
+{
+    auto first = m_supported_encode_key.begin();
+    auto last = m_supported_encode_key.end();
+
+    return (std::find(first, last, key) != last);
 }
 
 String BaseImageEncoder::getDescription() const

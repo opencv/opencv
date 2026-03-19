@@ -134,7 +134,16 @@ void Mat::convertTo(OutputArray dst, int type_, double alpha, double beta) const
 
     if (empty())
     {
+        int ddepth = CV_MAT_DEPTH(type_);
+        if (ddepth < 0)
+            ddepth = dst.fixedType() ? dst.depth() : depth();
+        const int dtype = CV_MAKETYPE(ddepth, channels());
+
         dst.release();
+        if (dims <= 2)
+            dst.create(size(), dtype);
+        else
+            dst.create(dims, size.p, dtype);
         return;
     }
 
@@ -164,7 +173,7 @@ void Mat::convertTo(OutputArray dst, int type_, double alpha, double beta) const
     bool allowTransposed = dims == 1 ||
         dst.kind() == _InputArray::STD_VECTOR ||
         (dst.fixedSize() && dst.dims() == 1);
-    dst.create( dims, size, dtype, -1, allowTransposed );
+    dst.create( size, dtype, -1, allowTransposed );
     Mat dstMat = dst.getMat();
 
     if( dims <= 2 )
@@ -204,6 +213,7 @@ void UMat::convertTo(OutputArray dst, int type_, double alpha, double beta) cons
     if (empty())
     {
         dst.release();
+        dst.create(size(), type_ >= 0 ? type_ : type());
         return;
     }
 

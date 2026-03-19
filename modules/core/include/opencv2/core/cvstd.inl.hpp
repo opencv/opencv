@@ -169,16 +169,22 @@ std::ostream& operator << (std::ostream& out, const Rect_<_Tp>& rect)
     return out << "[" << rect.width << " x " << rect.height << " from (" << rect.x << ", " << rect.y << ")]";
 }
 
-static inline std::ostream& operator << (std::ostream& out, const MatSize& msize)
+static inline std::ostream& operator << (std::ostream& strm, const MatShape& shape)
 {
-    int i, dims = msize.dims();
-    for( i = 0; i < dims; i++ )
-    {
-        out << msize[i];
-        if( i < dims-1 )
-            out << " x ";
+    strm << '[';
+    if (shape.empty()) {
+        strm << "<empty>";
+    } else {
+        size_t n = shape.size();
+        if (n == 0) {
+            strm << "<scalar>";
+        } else {
+            for(size_t i = 0; i < n; ++i)
+                strm << (i > 0 ? " x " : "") << shape[i];
+        }
     }
-    return out;
+    strm << "]";
+    return strm;
 }
 
 static inline std::ostream &operator<< (std::ostream &s, cv::Range &r)

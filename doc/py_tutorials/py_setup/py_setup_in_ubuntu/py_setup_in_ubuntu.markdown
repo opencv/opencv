@@ -1,6 +1,8 @@
 Install OpenCV-Python in Ubuntu {#tutorial_py_setup_in_ubuntu}
 ===============================
 
+@note: Please prefer binaries distributed with PyPI, if possible. See @ref tutorial_py_pip_install for details.
+
 Goals
 -----
 

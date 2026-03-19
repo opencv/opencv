@@ -124,9 +124,9 @@ void  FillGrayPalette( PaletteEntry* palette, int bpp, bool negative = false );
 bool  IsColorPalette( PaletteEntry* palette, int bpp );
 void  CvtPaletteToGray( const PaletteEntry* palette, uchar* grayPalette, int entries );
 uchar* FillUniColor( uchar* data, uchar*& line_end, int step, int width3,
-                     int& y, int height, int count3, PaletteEntry clr );
+                     int& y, int height, ptrdiff_t count3, PaletteEntry clr );
 uchar* FillUniGray( uchar* data, uchar*& line_end, int step, int width3,
-                     int& y, int height, int count3, uchar clr );
+                     int& y, int height, ptrdiff_t count3, uchar clr );
 
 uchar* FillColorRow8( uchar* data, uchar* indices, int len, PaletteEntry* palette );
 uchar* FillGrayRow8( uchar* data, uchar* indices, int len, uchar* palette );
@@ -134,6 +134,16 @@ uchar* FillColorRow4( uchar* data, uchar* indices, int len, PaletteEntry* palett
 uchar* FillGrayRow4( uchar* data, uchar* indices, int len, uchar* palette );
 uchar* FillColorRow1( uchar* data, uchar* indices, int len, PaletteEntry* palette );
 uchar* FillGrayRow1( uchar* data, uchar* indices, int len, uchar* palette );
+
+static const size_t MAX_IMAGE_ROW_SIZE = static_cast<size_t>(1) << 28;  // 256 MB
+
+struct RowPitchParams {
+    int src_pitch;
+    size_t bytes_per_row;
+};
+
+RowPitchParams calculateRowPitch(int width, int bpp, int alignment, const char* format_name);
+int calculateRowSize(int width, int nch, const char* format_name);
 
 CV_INLINE bool  isBigEndian( void )
 {

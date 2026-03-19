@@ -501,6 +501,7 @@ class AttentionSubGraph : public Subgraph {
                           std::vector<Ptr<ImportNodeWrapper> >&) CV_OVERRIDE {
         // add attrs
         opencv_onnx::NodeProto* node = fusedNode.dynamicCast<ONNXNodeWrapper>()->node;
+        node->set_domain("com.microsoft");
         opencv_onnx::AttributeProto* attr_num_heads = node->add_attribute();
         attr_num_heads->set_name("num_heads");
         attr_num_heads->set_i(num_heads);
@@ -611,6 +612,7 @@ class AttentionSingleHeadSubGraph : public Subgraph {
                           std::vector<Ptr<ImportNodeWrapper> >&) CV_OVERRIDE {
         // add attrs
         opencv_onnx::NodeProto* node = fusedNode.dynamicCast<ONNXNodeWrapper>()->node;
+        node->set_domain("com.microsoft");
         opencv_onnx::AttributeProto* attr_num_heads = node->add_attribute();
         attr_num_heads->set_name("num_heads");
         attr_num_heads->set_i(num_heads);
@@ -1280,14 +1282,32 @@ public:
                             }
                         }
                     }
+                    //  extract axis from original Gather node
+                    axis = 0;
+                    opencv_onnx::NodeProto* origGatherNode =
+                        inpNode.dynamicCast<ONNXNodeWrapper>()->node;
+                    for (int i = 0; i < origGatherNode->attribute_size(); i++) {
+                        opencv_onnx::AttributeProto attr = origGatherNode->attribute(i);
+                        if (attr.name() == "axis")
+                            axis = attr.i();
+                    }
                 }
             }
         }
         return retVal;
     }
 
+    virtual void finalize(const Ptr<ImportGraphWrapper>& net,
+                          const Ptr<ImportNodeWrapper>& fusedNode,
+                          std::vector<Ptr<ImportNodeWrapper> >& /*inputs*/) CV_OVERRIDE
+    {
+        opencv_onnx::NodeProto* node = fusedNode.dynamicCast<ONNXNodeWrapper>()->node;
+        opencv_onnx::AttributeProto* new_attr = node->add_attribute();
+        new_attr->set_name("axis");
+        new_attr->set_i(axis);
+    }
 private:
-    int cast, gather;
+    int cast, gather, axis;
 };
 
 /*  Constant folding shape for Expand.
@@ -1813,12 +1833,35 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
             Mat(sizes, CV_16FC1, rawdata).convertTo(blob, CV_32FC1);
         }
     }
+    else if (datatype == opencv_onnx::TensorProto_DataType_BFLOAT16)
+    {
+        if (!tensor_proto.raw_data().empty())
+        {
+            blob.create((int)sizes.size(), sizes.data(), CV_16BFC1);
+            size_t bytes = (size_t)blob.total() * blob.elemSize();
+            memcpy(blob.data, rawdata, bytes);
+        }
+        else if (!tensor_proto.int32_data().empty())
+        {
+            const auto& v = tensor_proto.int32_data();
+            blob.create((int)sizes.size(), sizes.data(), CV_16BFC1);
+            uint16_t* dst = reinterpret_cast<uint16_t*>(blob.data);
+            for (size_t i = 0; i < v.size(); ++i)
+            {
+                dst[i] = static_cast<uint16_t>(v[i] & 0xFFFF);
+            }
+        }
+        else
+        {
+            CV_Error(Error::StsNotImplemented, "BFLOAT16 tensor has no raw_data");
+        }
+    }
     else if (datatype == opencv_onnx::TensorProto_DataType_DOUBLE)
     {
         if (!tensor_proto.double_data().empty())
             Mat(sizes, CV_64FC1, (void*)tensor_proto.double_data().data()).convertTo(blob, CV_32FC1);
         else
-            Mat(sizes, CV_64FC1, rawdata).convertTo(blob, CV_32FC1);
+            Mat(sizes, CV_64FC1, rawdata).copyTo(blob);
     }
     else if (datatype == opencv_onnx::TensorProto_DataType_INT32)
     {
@@ -1861,9 +1904,58 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
                 Mat(sizes, CV_8U, rawdata).copyTo(blob);
         }
     }
+    else if (datatype == opencv_onnx::TensorProto_DataType_UINT16)
+    {
+        if (!tensor_proto.int32_data().empty())
+            Mat(sizes, CV_32SC1, (void*)tensor_proto.int32_data().data()).convertTo(blob, CV_16UC1);
+        else
+            Mat(sizes, CV_16UC1, rawdata).copyTo(blob);
+    }
+    else if (datatype == opencv_onnx::TensorProto_DataType_UINT32)
+    {
+        if (!tensor_proto.int32_data().empty())
+            Mat(sizes, CV_32SC1, (void*)tensor_proto.int32_data().data()).convertTo(blob, CV_32UC1);
+        else
+            Mat(sizes, CV_32UC1, rawdata).copyTo(blob);
+    }
+    else if (datatype == opencv_onnx::TensorProto_DataType_UINT64)
+    {
+        if (!tensor_proto.int64_data().empty())
+            Mat(sizes, CV_64SC1, (void*)tensor_proto.int64_data().data()).convertTo(blob, CV_64UC1);
+        else
+            Mat(sizes, CV_64UC1, rawdata).copyTo(blob);
+    }
     else if (datatype == opencv_onnx::TensorProto_DataType_BOOL)
     {
         Mat(sizes, CV_Bool, rawdata).copyTo(blob);
+    }
+    else if (datatype == opencv_onnx::TensorProto_DataType_INT16)
+    {
+        if (!tensor_proto.int32_data().empty())
+            Mat(sizes, CV_32SC1, (void*)tensor_proto.int32_data().data()).convertTo(blob, CV_16SC1);
+        else
+            Mat(sizes, CV_16SC1, rawdata).copyTo(blob);
+    }
+    else if (datatype == opencv_onnx::TensorProto_DataType_UINT16)
+    {
+        if (!tensor_proto.int32_data().empty())
+            Mat(sizes, CV_32SC1, (void*)tensor_proto.int32_data().data()).convertTo(blob, CV_16UC1);
+        else
+            Mat(sizes, CV_16UC1, rawdata).copyTo(blob);
+    }
+    else if (datatype == opencv_onnx::TensorProto_DataType_UINT32)
+    {
+        if (!tensor_proto.int32_data().empty())
+            Mat(sizes, CV_32SC1, (void*)tensor_proto.int32_data().data()).convertTo(blob, CV_32UC1);
+        else
+            Mat(sizes, CV_32UC1, rawdata).copyTo(blob);
+    }
+    else if (datatype == opencv_onnx::TensorProto_DataType_UINT64)
+    {
+        if (!tensor_proto.int64_data().empty())
+            Mat(sizes, CV_64SC1, (void*)tensor_proto.int64_data().data()).convertTo(blob, CV_64UC1);
+        else
+            Mat(sizes, CV_64UC1, rawdata).copyTo(blob);
     }
     else
     {
@@ -1878,8 +1970,9 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
         CV_LOG_ERROR(NULL, errorMsg);
         return blob;
     }
-    if (tensor_proto.dims_size() == 0)
-        blob.dims = 1;  // To force 1-dimensional cv::Mat for scalars.
+    if (tensor_proto.dims_size() == 0) {
+        blob.size.dims = blob.dims = 1;  // To force 1-dimensional cv::Mat for scalars.
+    }
     return blob;
 }
 

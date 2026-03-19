@@ -573,8 +573,13 @@ int TIFFSetupStrips(TIFF *tif)
     }
     if (td->td_planarconfig == PLANARCONFIG_SEPARATE)
         td->td_stripsperimage /= td->td_samplesperpixel;
+
+    if (td->td_stripoffset_p != NULL)
+        _TIFFfreeExt(tif, td->td_stripoffset_p);
     td->td_stripoffset_p = (uint64_t *)_TIFFCheckMalloc(
         tif, td->td_nstrips, sizeof(uint64_t), "for \"StripOffsets\" array");
+    if (td->td_stripbytecount_p != NULL)
+        _TIFFfreeExt(tif, td->td_stripbytecount_p);
     td->td_stripbytecount_p = (uint64_t *)_TIFFCheckMalloc(
         tif, td->td_nstrips, sizeof(uint64_t), "for \"StripByteCounts\" array");
     if (td->td_stripoffset_p == NULL || td->td_stripbytecount_p == NULL)

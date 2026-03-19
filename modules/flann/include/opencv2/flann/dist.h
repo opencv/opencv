@@ -397,7 +397,7 @@ struct MinkowskiDistance
             diff1 = (ResultType)abs(a[1] - b[1]);
             diff2 = (ResultType)abs(a[2] - b[2]);
             diff3 = (ResultType)abs(a[3] - b[3]);
-            result += pow(diff0,order) + pow(diff1,order) + pow(diff2,order) + pow(diff3,order);
+            result += std::pow(diff0,order) + std::pow(diff1,order) + std::pow(diff2,order) + std::pow(diff3,order);
             a += 4;
             b += 4;
 
@@ -408,7 +408,7 @@ struct MinkowskiDistance
         /* Process last 0-3 pixels.  Not needed for standard vector lengths. */
         while (a < last) {
             diff0 = (ResultType)abs(*a++ - *b++);
-            result += pow(diff0,order);
+            result += std::pow(diff0,order);
         }
         return result;
     }
@@ -419,7 +419,7 @@ struct MinkowskiDistance
     template <typename U, typename V>
     inline ResultType accum_dist(const U& a, const V& b, int) const
     {
-        return pow(static_cast<ResultType>(abs(a-b)),order);
+        return std::pow(static_cast<ResultType>(abs(a-b)),order);
     }
 };
 

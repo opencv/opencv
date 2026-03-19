@@ -320,7 +320,6 @@ class Namespace(object):
 
 class JSWrapperGenerator(object):
     def __init__(self, preprocessor_definitions=None):
-
         self.bindings = []
         self.wrapper_funcs = []
 
@@ -332,6 +331,29 @@ class JSWrapperGenerator(object):
             preprocessor_definitions=preprocessor_definitions
         )
         self.class_idx = 0
+
+    def _is_string_type(self, tp: str) -> bool:
+        """Check if a type should be treated as string in bindings."""
+        string_types = {
+            "std::string",
+            "char",
+            "signed char",
+            "unsigned char",
+        }
+        return tp in string_types
+
+    def _generate_class_properties(self, class_info, class_bindings):
+        # Generate bindings for properties
+        for prop in class_info.props:
+            if prop.tp in type_dict and not self._is_string_type(prop.tp):
+                _class_property = class_property_enum_template
+            else:
+                _class_property = class_property_template
+
+            class_bindings.append(_class_property.substitute(
+                js_name=prop.name,
+                cpp_name='::'.join([class_info.cname, prop.name])
+            ))
 
     def add_class(self, stype, name, decl):
         class_info = ClassInfo(name, decl)
@@ -501,13 +523,20 @@ class JSWrapperGenerator(object):
 
             # Return type
             ret_type = 'void' if variant.rettype.strip() == '' else variant.rettype
-            if ret_type.startswith('Ptr'): #smart pointer
+            # FIX: Ensure namespaced smart-pointer return types in factory methods, e.g.:
+            #      Ptr<EdgeDrawing> → Ptr<cv::ximgproc::EdgeDrawing>
+            if factory and class_info is not None and ret_type.startswith('Ptr<'):
+                inner = ret_type[len('Ptr<'):-1].strip()
+                if '::' not in inner and inner == class_info.name:
+                    ret_type = 'Ptr<%s>' % class_info.cname
+
+            if ret_type.startswith('Ptr'):  # smart pointer
                 ptr_type = ret_type.replace('Ptr<', '').replace('>', '')
                 if ptr_type in type_dict:
                     ret_type = type_dict[ptr_type]
-            for key in type_dict:
-                if key in ret_type:
-                    ret_type = re.sub(r"\b" + key + r"\b", type_dict[key], ret_type)
+                for key in type_dict:
+                    if key in ret_type:
+                        ret_type = re.sub(r"\b" + key + r"\b", type_dict[key], ret_type)
             arg_types = []
             unwrapped_arg_types = []
             for arg in variant.args:
@@ -686,6 +715,12 @@ class JSWrapperGenerator(object):
             ret_type = 'void' if variant.rettype.strip() == '' else variant.rettype
 
             ret_type = ret_type.strip()
+            # Same namespace fix for factory methods: Ptr<EdgeDrawing> -> Ptr<cv::ximgproc::EdgeDrawing>
+            if factory and class_info is not None and ret_type.startswith('Ptr<'):
+                inner = ret_type[len('Ptr<'):-1].strip()
+                if '::' not in inner and inner == class_info.name:
+                    ret_type = 'Ptr<%s>' % class_info.cname
+
             if ret_type.startswith('Ptr'): #smart pointer
                 ptr_type = ret_type.replace('Ptr<', '').replace('>', '')
                 if ptr_type in type_dict:
@@ -827,6 +862,10 @@ class JSWrapperGenerator(object):
                         # Register the smart pointer
                         base_class_name = variant.rettype
                         base_class_name = base_class_name.replace("Ptr<","").replace(">","").strip()
+                        if base_class_name not in self.classes:
+                            new_base_class_name = '%s_%s' % (ns_id, base_class_name)
+                            print(base_class_name, ' not found in classes for registering smart pointer using ', new_base_class_name, 'instead')
+                            base_class_name = new_base_class_name
                         self.classes[base_class_name].has_smart_ptr = True
 
                         # Adds the external constructor
@@ -893,11 +932,17 @@ class JSWrapperGenerator(object):
 
 
 
-            # Generate bindings for properties
-            for property in class_info.props:
-                _class_property = class_property_enum_template if property.tp in type_dict else class_property_template
-                class_bindings.append(_class_property.substitute(js_name=property.name, cpp_name='::'.join(
-                    [class_info.cname, property.name])))
+            # Generate bindings for properties(prop)
+            for prop in class_info.props:
+                if prop.tp in type_dict and not self._is_string_type(prop.tp):
+                    _class_property = class_property_enum_template
+                else:
+                    _class_property = class_property_template
+
+                class_bindings.append(_class_property.substitute(
+                    js_name=prop.name,
+                    cpp_name='::'.join([class_info.cname, prop.name])
+                ))
 
             dv = ''
             base = Template("""base<$base>""")

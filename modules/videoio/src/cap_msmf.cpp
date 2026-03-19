@@ -448,50 +448,68 @@ public:
 
     STDMETHODIMP OnReadSample(HRESULT hrStatus, DWORD dwStreamIndex, DWORD dwStreamFlags, LONGLONG llTimestamp, IMFSample *pSample) CV_OVERRIDE
     {
-        HRESULT hr = 0;
-        cv::AutoLock lock(m_mutex);
-
-        if (SUCCEEDED(hrStatus))
+        HRESULT hr = S_OK;
+        try
         {
-            if (pSample)
+            cv::AutoLock lock(m_mutex);
+
+            if (SUCCEEDED(hrStatus))
             {
-                CV_LOG_DEBUG(NULL, "videoio(MSMF): got frame at " << llTimestamp);
-                if (m_capturedFrames.size() >= MSMF_READER_MAX_QUEUE_SIZE)
+                if (pSample)
                 {
+                    CV_LOG_DEBUG(NULL, "videoio(MSMF): got frame at " << llTimestamp);
+                    if (m_capturedFrames.size() >= MSMF_READER_MAX_QUEUE_SIZE)
+                    {
 #if 0
-                    CV_LOG_DEBUG(NULL, "videoio(MSMF): drop frame (not processed). Timestamp=" << m_capturedFrames.front().timestamp);
-                    m_capturedFrames.pop();
+                        CV_LOG_DEBUG(NULL, "videoio(MSMF): drop frame (not processed). Timestamp=" << m_capturedFrames.front().timestamp);
+                        m_capturedFrames.pop();
 #else
-                    // this branch reduces latency if we drop frames due to slow processing.
-                    // avoid fetching of already outdated frames from the queue's front.
-                    CV_LOG_DEBUG(NULL, "videoio(MSMF): drop previous frames (not processed): " << m_capturedFrames.size());
-                    std::queue<CapturedFrameInfo>().swap(m_capturedFrames);  // similar to missing m_capturedFrames.clean();
+
+                        CV_LOG_DEBUG(NULL, "videoio(MSMF): drop previous frames (not processed): " << m_capturedFrames.size());
+                        std::queue<CapturedFrameInfo>().swap(m_capturedFrames);  // similar to missing m_capturedFrames.clean();
 #endif
+                    }
+                    m_capturedFrames.emplace(CapturedFrameInfo{ llTimestamp, _ComPtr<IMFSample>(pSample), hrStatus });
                 }
-                m_capturedFrames.emplace(CapturedFrameInfo{ llTimestamp, _ComPtr<IMFSample>(pSample), hrStatus });
+            }
+            else
+            {
+                CV_LOG_WARNING(NULL, "videoio(MSMF): OnReadSample() is called with error status: " << hrStatus);
+            }
+            if (MF_SOURCE_READERF_ENDOFSTREAM & dwStreamFlags)
+            {
+                // Reached the end of the stream.
+                m_bEOS = true;
+            }
+            m_hrStatus = hrStatus;
+
+            if (FAILED(hr = m_reader->ReadSample(dwStreamIndex, 0, NULL, NULL, NULL, NULL)))
+            {
+                CV_LOG_WARNING(NULL, "videoio(MSMF): async ReadSample() call is failed with error status: " << hr);
+                m_bEOS = true;
+            }
+
+            if (pSample || m_bEOS)
+            {
+                SetEvent(m_hEvent);
             }
         }
-        else
+        catch (const _com_error& e)
         {
-            CV_LOG_WARNING(NULL, "videoio(MSMF): OnReadSample() is called with error status: " << hrStatus);
+            std::string msg;
+#ifdef _UNICODE
+            std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
+            msg = conv.to_bytes(e.ErrorMessage());
+#else
+            msg = std::string(e.ErrorMessage());
+#endif
+            CV_LOG_WARNING(NULL, "videoio(MSMF): _com_error in OnReadSample: " << msg);
+            return S_OK; // Keep callback alive
         }
-
-        if (MF_SOURCE_READERF_ENDOFSTREAM & dwStreamFlags)
+        catch (...)
         {
-            // Reached the end of the stream.
-            m_bEOS = true;
-        }
-        m_hrStatus = hrStatus;
-
-        if (FAILED(hr = m_reader->ReadSample(dwStreamIndex, 0, NULL, NULL, NULL, NULL)))
-        {
-            CV_LOG_WARNING(NULL, "videoio(MSMF): async ReadSample() call is failed with error status: " << hr);
-            m_bEOS = true;
-        }
-
-        if (pSample || m_bEOS)
-        {
-            SetEvent(m_hEvent);
+            CV_LOG_WARNING(NULL, "videoio(MSMF): Unknown exception in OnReadSample");
+            return S_OK;
         }
         return S_OK;
     }
@@ -771,7 +789,7 @@ protected:
     bool checkAudioProperties();
 
     template <typename CtrlT>
-    bool readComplexPropery(long prop, long& val) const;
+    bool readComplexProperty(long prop, long& val) const;
     template <typename CtrlT>
     bool writeComplexProperty(long prop, double val, long flags);
     _ComPtr<IMFAttributes> getDefaultSourceConfig(UINT32 num = 10);
@@ -1370,9 +1388,9 @@ bool CvCapture_MSMF::configureStreams(const cv::VideoCaptureParameters& params)
 {
     if (params.has(CAP_PROP_VIDEO_STREAM))
     {
-        double value = params.get<double>(CAP_PROP_VIDEO_STREAM);
+        int value = params.get<int>(CAP_PROP_VIDEO_STREAM);
         if (value == -1 || value == 0)
-            videoStream = static_cast<int>(value);
+            videoStream = value;
         else
         {
             CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: CAP_PROP_VIDEO_STREAM parameter value is invalid/unsupported: " << value);
@@ -1381,8 +1399,8 @@ bool CvCapture_MSMF::configureStreams(const cv::VideoCaptureParameters& params)
     }
     if (params.has(CAP_PROP_AUDIO_STREAM))
     {
-        double value = params.get<double>(CAP_PROP_AUDIO_STREAM);
-        if (value == -1 || value > -1)
+        int value = params.get<int>(CAP_PROP_AUDIO_STREAM);
+        if (value == -1 || value >= 0)
             audioStream = static_cast<int>(value);
         else
         {
@@ -1396,7 +1414,7 @@ bool CvCapture_MSMF::setAudioProperties(const cv::VideoCaptureParameters& params
 {
     if (params.has(CAP_PROP_AUDIO_DATA_DEPTH))
     {
-        int value = static_cast<int>(params.get<double>(CAP_PROP_AUDIO_DATA_DEPTH));
+        int value = params.get<int>(CAP_PROP_AUDIO_DATA_DEPTH);
         if (value != CV_8S && value != CV_16S && value != CV_32S && value != CV_32F)
         {
             CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: CAP_PROP_AUDIO_DATA_DEPTH parameter value is invalid/unsupported: " << value);
@@ -1409,7 +1427,7 @@ bool CvCapture_MSMF::setAudioProperties(const cv::VideoCaptureParameters& params
     }
     if (params.has(CAP_PROP_AUDIO_SAMPLES_PER_SECOND))
     {
-        int value = static_cast<int>(params.get<double>(CAP_PROP_AUDIO_SAMPLES_PER_SECOND));
+        int value = params.get<int>(CAP_PROP_AUDIO_SAMPLES_PER_SECOND);
         if (value < 0)
         {
             CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: CAP_PROP_AUDIO_SAMPLES_PER_SECOND parameter can't be negative: " << value);
@@ -1422,8 +1440,7 @@ bool CvCapture_MSMF::setAudioProperties(const cv::VideoCaptureParameters& params
     }
     if (params.has(CAP_PROP_AUDIO_SYNCHRONIZE))
     {
-        int value = static_cast<UINT32>(params.get<double>(CAP_PROP_AUDIO_SYNCHRONIZE));
-        syncLastFrame = (value != 0) ? true : false;
+        syncLastFrame = params.get<bool>(CAP_PROP_AUDIO_SYNCHRONIZE);
     }
     return true;
 }
@@ -1569,6 +1586,7 @@ bool CvCapture_MSMF::configureAudioFrame()
 {
     if (!audioSamples.empty() || !bufferAudioData.empty() && aEOS)
     {
+        const int bytesPerSample = (captureAudioFormat.bit_per_sample/8) * captureAudioFormat.nChannels;
         _ComPtr<IMFMediaBuffer> buf = NULL;
         std::vector<BYTE> audioDataInUse;
         BYTE* ptr = NULL;
@@ -1601,20 +1619,19 @@ bool CvCapture_MSMF::configureAudioFrame()
         }
         audioSamples.clear();
 
-        audioSamplePos += chunkLengthOfBytes/((captureAudioFormat.bit_per_sample/8)*captureAudioFormat.nChannels);
-        chunkLengthOfBytes = (videoStream != -1) ? (LONGLONG)((requiredAudioTime*captureAudioFormat.nSamplesPerSec*captureAudioFormat.nChannels*(captureAudioFormat.bit_per_sample)/8)/1e7) : cursize;
-        if ((videoStream != -1) && (chunkLengthOfBytes % ((int)(captureAudioFormat.bit_per_sample)/8* (int)captureAudioFormat.nChannels) != 0))
+        audioSamplePos += chunkLengthOfBytes/bytesPerSample;
+        chunkLengthOfBytes = (videoStream != -1) ? (LONGLONG)((requiredAudioTime*captureAudioFormat.nSamplesPerSec*bytesPerSample)/1e7) : cursize;
+        if ((videoStream != -1) && (chunkLengthOfBytes % bytesPerSample != 0))
         {
             if ( (double)audioSamplePos/captureAudioFormat.nSamplesPerSec + audioStartOffset * 1e-7 - usedVideoSampleTime * 1e-7 >= 0 )
                 chunkLengthOfBytes -= numberOfAdditionalAudioBytes;
-            numberOfAdditionalAudioBytes = ((int)(captureAudioFormat.bit_per_sample)/8* (int)captureAudioFormat.nChannels)
-                                        - chunkLengthOfBytes % ((int)(captureAudioFormat.bit_per_sample)/8* (int)captureAudioFormat.nChannels);
+                numberOfAdditionalAudioBytes = bytesPerSample - chunkLengthOfBytes % bytesPerSample;
             chunkLengthOfBytes += numberOfAdditionalAudioBytes;
         }
         if (lastFrame && !syncLastFrame || aEOS && !vEOS)
         {
             chunkLengthOfBytes = bufferAudioData.size();
-            audioSamplePos += chunkLengthOfBytes/((captureAudioFormat.bit_per_sample/8)*captureAudioFormat.nChannels);
+            audioSamplePos += chunkLengthOfBytes/bytesPerSample;
         }
         CV_Check((double)chunkLengthOfBytes, chunkLengthOfBytes >= INT_MIN || chunkLengthOfBytes <= INT_MAX, "MSMF: The chunkLengthOfBytes is out of the allowed range");
         copy(bufferAudioData.begin(), bufferAudioData.begin() + (int)chunkLengthOfBytes, std::back_inserter(audioDataInUse));
@@ -1758,81 +1775,108 @@ bool CvCapture_MSMF::grabFrame()
 {
     CV_TRACE_FUNCTION();
 
-    if (grabIsDone)
+    try
     {
-        grabIsDone = false;
-        CV_LOG_DEBUG(NULL, "videoio(MSMF): return pre-grabbed frame " << usedVideoSampleTime);
-        return true;
-    }
-
-    audioFrame = Mat();
-    if (readCallback)  // async "live" capture mode
-    {
-        audioSamples.push_back(NULL);
-        HRESULT hr = 0;
-        SourceReaderCB* reader = ((SourceReaderCB*)readCallback.Get());
-        DWORD dwStreamIndex = 0;
-        if (videoStream != -1)
-            dwStreamIndex = dwVideoStreamIndex;
-        if (audioStream != -1)
-            dwStreamIndex = dwAudioStreamIndex;
-        if (!reader->m_reader)
+        if (grabIsDone)
         {
-            // Initiate capturing with async callback
-            reader->m_reader = videoFileSource.Get();
-            reader->m_dwStreamIndex = dwStreamIndex;
-            if (FAILED(hr = videoFileSource->ReadSample(dwStreamIndex, 0, NULL, NULL, NULL, NULL)))
+            grabIsDone = false;
+            CV_LOG_DEBUG(NULL, "videoio(MSMF): return pre-grabbed frame " << usedVideoSampleTime);
+            return true;
+        }
+
+        audioFrame = Mat();
+        if (readCallback)  // async "live" capture mode
+        {
+            audioSamples.push_back(NULL);
+            HRESULT hr = 0;
+            SourceReaderCB* reader = ((SourceReaderCB*)readCallback.Get());
+            DWORD dwStreamIndex = 0;
+            if (videoStream != -1)
+                dwStreamIndex = dwVideoStreamIndex;
+            if (audioStream != -1)
+                dwStreamIndex = dwAudioStreamIndex;
+            if (!reader->m_reader)
             {
-                CV_LOG_ERROR(NULL, "videoio(MSMF): can't grab frame - initial async ReadSample() call failed: " << hr);
-                reader->m_reader = NULL;
+                // Initiate capturing with async callback
+                reader->m_reader = videoFileSource.Get();
+                reader->m_dwStreamIndex = dwStreamIndex;
+                if (FAILED(hr = videoFileSource->ReadSample(dwStreamIndex, 0, NULL, NULL, NULL, NULL)))
+                {
+                    CV_LOG_ERROR(NULL, "videoio(MSMF): can't grab frame - initial async ReadSample() call failed: " << hr);
+                    reader->m_reader = NULL;
+                    return false;
+                }
+            }
+            BOOL bEOS = false;
+            LONGLONG timestamp = 0;
+            if (FAILED(hr = reader->Wait( videoStream == -1 ? INFINITE : 10000, (videoStream != -1) ? usedVideoSample : audioSamples[0], timestamp, bEOS)))  // 10 sec
+            {
+                CV_LOG_WARNING(NULL, "videoio(MSMF): can't grab frame. Error: " << hr);
                 return false;
             }
-        }
-        BOOL bEOS = false;
-        LONGLONG timestamp = 0;
-        if (FAILED(hr = reader->Wait( videoStream == -1 ? INFINITE : 10000, (videoStream != -1) ? usedVideoSample : audioSamples[0], timestamp, bEOS)))  // 10 sec
-        {
-            CV_LOG_WARNING(NULL, "videoio(MSMF): can't grab frame. Error: " << hr);
-            return false;
-        }
-        if (bEOS)
-        {
-            CV_LOG_WARNING(NULL, "videoio(MSMF): EOS signal. Capture stream is lost");
-            return false;
-        }
-        if (videoStream != -1)
-            usedVideoSampleTime = timestamp;
-        if (audioStream != -1)
-            return configureAudioFrame();
-
-        CV_LOG_DEBUG(NULL, "videoio(MSMF): grabbed frame " << usedVideoSampleTime);
-        return true;
-    }
-    else if (isOpen)
-    {
-        if (vEOS)
-            return false;
-
-        bool returnFlag = true;
-
-        if (videoStream != -1)
-        {
-            if (!vEOS)
-                returnFlag &= grabVideoFrame();
-            if (!returnFlag)
+            if (bEOS)
+            {
+                CV_LOG_WARNING(NULL, "videoio(MSMF): EOS signal. Capture stream is lost");
                 return false;
-        }
+            }
+            if (videoStream != -1)
+                usedVideoSampleTime = timestamp;
+            if (audioStream != -1)
+                return configureAudioFrame();
 
-        if (audioStream != -1)
+            CV_LOG_DEBUG(NULL, "videoio(MSMF): grabbed frame " << usedVideoSampleTime);
+            return true;
+        }
+        else if (isOpen)
         {
-            bufferedAudioDuration = (double)(bufferAudioData.size()/((captureAudioFormat.bit_per_sample/8)*captureAudioFormat.nChannels))/captureAudioFormat.nSamplesPerSec;
-            audioFrame.release();
-            if (!aEOS)
-                returnFlag &= grabAudioFrame();
-        }
+            if (vEOS)
+                return false;
 
-        return returnFlag;
+            bool returnFlag = true;
+
+            if (videoStream != -1)
+            {
+                if (!vEOS)
+                    returnFlag &= grabVideoFrame();
+                if (!returnFlag)
+                    return false;
+            }
+
+            if (audioStream != -1)
+            {
+                const int bytesPerSample = (captureAudioFormat.bit_per_sample/8) * captureAudioFormat.nChannels;
+                bufferedAudioDuration = (double)(bufferAudioData.size()/bytesPerSample)/captureAudioFormat.nSamplesPerSec;
+                audioFrame.release();
+                if (!aEOS)
+                    returnFlag &= grabAudioFrame();
+            }
+
+            return returnFlag;
+        }
     }
+    catch (const _com_error& e)
+    {
+        std::string msg;
+#ifdef _UNICODE
+        std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
+        msg = conv.to_bytes(e.ErrorMessage());
+#else
+        msg = std::string(e.ErrorMessage());
+#endif
+        CV_LOG_WARNING(NULL, "videoio(MSMF): _com_error caught in grabFrame: " << msg);
+        return false;
+    }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "videoio(MSMF): std::exception caught in grabFrame: " << e.what());
+        return false;
+    }
+    catch (...)
+    {
+        CV_LOG_WARNING(NULL, "videoio(MSMF): Unknown exception caught in grabFrame");
+        return false;
+    }
+
     return false;
 }
 
@@ -2075,7 +2119,7 @@ bool CvCapture_MSMF::setTime(int numberFrame)
 }
 
 template <typename CtrlT>
-bool CvCapture_MSMF::readComplexPropery(long prop, long & val) const
+bool CvCapture_MSMF::readComplexProperty(long prop, long & val) const
 {
     _ComPtr<CtrlT> ctrl;
     if (FAILED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&ctrl))))
@@ -2143,64 +2187,64 @@ double CvCapture_MSMF::getProperty( int property_id ) const
             else
                 break;
         case CAP_PROP_BRIGHTNESS:
-            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Brightness, cVal))
+            if (readComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Brightness, cVal))
                 return cVal;
             break;
         case CAP_PROP_CONTRAST:
-            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Contrast, cVal))
+            if (readComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Contrast, cVal))
                 return cVal;
             break;
         case CAP_PROP_SATURATION:
-            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Saturation, cVal))
+            if (readComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Saturation, cVal))
                 return cVal;
             break;
         case CAP_PROP_HUE:
-            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Hue, cVal))
+            if (readComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Hue, cVal))
                 return cVal;
             break;
         case CAP_PROP_GAIN:
-            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Gain, cVal))
+            if (readComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Gain, cVal))
                 return cVal;
             break;
         case CAP_PROP_SHARPNESS:
-            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Sharpness, cVal))
+            if (readComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Sharpness, cVal))
                 return cVal;
             break;
         case CAP_PROP_GAMMA:
-            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Gamma, cVal))
+            if (readComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Gamma, cVal))
                 return cVal;
             break;
         case CAP_PROP_BACKLIGHT:
-            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_BacklightCompensation, cVal))
+            if (readComplexProperty<IAMVideoProcAmp>(VideoProcAmp_BacklightCompensation, cVal))
                 return cVal;
             break;
         case CAP_PROP_MONOCHROME:
-            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_ColorEnable, cVal))
+            if (readComplexProperty<IAMVideoProcAmp>(VideoProcAmp_ColorEnable, cVal))
                 return cVal == 0 ? 1 : 0;
             break;
         case CAP_PROP_TEMPERATURE:
-            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_WhiteBalance, cVal))
+            if (readComplexProperty<IAMVideoProcAmp>(VideoProcAmp_WhiteBalance, cVal))
                 return cVal;
             break;
         case CAP_PROP_PAN:
-            if (readComplexPropery<IAMCameraControl>(CameraControl_Pan, cVal))
+            if (readComplexProperty<IAMCameraControl>(CameraControl_Pan, cVal))
                 return cVal;
             break;
         case CAP_PROP_TILT:
-            if (readComplexPropery<IAMCameraControl>(CameraControl_Tilt, cVal))
+            if (readComplexProperty<IAMCameraControl>(CameraControl_Tilt, cVal))
                 return cVal;
             break;
         case CAP_PROP_ROLL:
-            if (readComplexPropery<IAMCameraControl>(CameraControl_Roll, cVal))
+            if (readComplexProperty<IAMCameraControl>(CameraControl_Roll, cVal))
                 return cVal;
             break;
         case CAP_PROP_IRIS:
-            if (readComplexPropery<IAMCameraControl>(CameraControl_Iris, cVal))
+            if (readComplexProperty<IAMCameraControl>(CameraControl_Iris, cVal))
                 return cVal;
             break;
         case CAP_PROP_EXPOSURE:
         case CAP_PROP_AUTO_EXPOSURE:
-            if (readComplexPropery<IAMCameraControl>(CameraControl_Exposure, cVal))
+            if (readComplexProperty<IAMCameraControl>(CameraControl_Exposure, cVal))
             {
                 if (property_id == CAP_PROP_EXPOSURE)
                     return cVal;
@@ -2209,12 +2253,12 @@ double CvCapture_MSMF::getProperty( int property_id ) const
             }
             break;
         case CAP_PROP_ZOOM:
-            if (readComplexPropery<IAMCameraControl>(CameraControl_Zoom, cVal))
+            if (readComplexProperty<IAMCameraControl>(CameraControl_Zoom, cVal))
                 return cVal;
             break;
         case CAP_PROP_FOCUS:
         case CAP_PROP_AUTOFOCUS:
-            if (readComplexPropery<IAMCameraControl>(CameraControl_Focus, cVal))
+            if (readComplexProperty<IAMCameraControl>(CameraControl_Focus, cVal))
             {
                 if (property_id == CAP_PROP_FOCUS)
                     return cVal;

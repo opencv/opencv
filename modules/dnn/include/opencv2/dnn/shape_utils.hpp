@@ -208,24 +208,6 @@ static inline MatShape concat(const MatShape& a, const MatShape& b)
     return c;
 }
 
-static inline std::ostream& operator << (std::ostream& strm, const MatShape& shape)
-{
-    strm << '[';
-    if (shape.empty()) {
-        strm << "<empty>";
-    } else {
-        size_t n = shape.size();
-        if (n == 0) {
-            strm << "<scalar>";
-        } else {
-            for(size_t i = 0; i < n; ++i)
-                strm << (i > 0 ? " x " : "") << shape[i];
-        }
-    }
-    strm << "]";
-    return strm;
-}
-
 static inline std::string toString(const MatShape& shape, const String& name = "")
 {
     std::ostringstream ss;

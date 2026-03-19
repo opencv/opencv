@@ -43,9 +43,14 @@
 #include "precomp.hpp"
 
 #include "opencv2/photo/cuda.hpp"
-#include "opencv2/core/private.cuda.hpp"
 
 #include "opencv2/opencv_modules.hpp"
+
+#if !defined (HAVE_CUDA) || !defined(HAVE_OPENCV_CUDAARITHM) || !defined(HAVE_OPENCV_CUDAIMGPROC)
+#include "opencv2/core/private/cuda_stubs.hpp"
+#else
+#include "opencv2/core/private.cuda.hpp"
+#endif
 
 #ifdef HAVE_OPENCV_CUDAARITHM
 #  include "opencv2/cudaarithm.hpp"

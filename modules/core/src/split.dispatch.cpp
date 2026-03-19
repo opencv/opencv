@@ -132,7 +132,7 @@ void split(const Mat& src, Mat* mv)
 
     for( k = 0; k < cn; k++ )
     {
-        mv[k].create(src.dims, src.size, depth);
+        mv[k].create(src.size, depth);
     }
 
     CV_IPP_RUN_FAST(ipp_split(src, mv, cn));

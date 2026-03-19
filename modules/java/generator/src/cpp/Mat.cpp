@@ -2114,22 +2114,6 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1zeros__I_3II
     return 0;
 }
 
-
-
-//
-//  native support for java finalize()
-//  static void Mat::n_delete( __int64 self )
-//
-
-JNIEXPORT void JNICALL Java_org_opencv_core_Mat_n_1delete
-  (JNIEnv*, jclass, jlong self);
-
-JNIEXPORT void JNICALL Java_org_opencv_core_Mat_n_1delete
-  (JNIEnv*, jclass, jlong self)
-{
-    delete (Mat*) self;
-}
-
 } // extern "C"
 
 namespace {

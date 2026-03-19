@@ -1,5 +1,5 @@
 ;
-; jdmrgext.asm - merged upsampling/color conversion (64-bit SSE2)
+; Merged upsampling/color conversion (64-bit SSE2)
 ;
 ; Copyright 2009, 2012 Pierre Ossman <ossman@cendio.se> for Cendio AB
 ; Copyright (C) 2009, 2012, 2016, 2024, D. R. Commander.

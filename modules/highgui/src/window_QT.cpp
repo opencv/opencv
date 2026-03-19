@@ -790,14 +790,17 @@ GuiReceiver::GuiReceiver() : bTimeOut(false), nb_windows(0)
 
 void GuiReceiver::isLastWindow()
 {
-    if (--nb_windows <= 0)
+    if (qApp->quitOnLastWindowClosed())
     {
-        delete guiMainThread;//delete global_control_panel too
-        guiMainThread = NULL;
-
-        if (doesExternalQAppExist)
+        if (--nb_windows <= 0)
         {
-            qApp->quit();
+            delete guiMainThread; // delete global_control_panel too
+            guiMainThread = NULL;
+
+            if (doesExternalQAppExist)
+            {
+                qApp->quit();
+            }
         }
     }
 }
@@ -1666,6 +1669,10 @@ CvWindow::CvWindow(QString name, int arg2)
     show();
 }
 
+CvWindow::~CvWindow()
+{
+    delete myView;
+}
 
 void CvWindow::setMouseCallBack(CvMouseCallback callback, void* param)
 {

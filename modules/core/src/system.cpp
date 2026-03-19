@@ -179,6 +179,7 @@ const uint64_t AT_HWCAP = NT_GNU_HWCAP;
   #define _WIN32_WINNT 0x0400  // http://msdn.microsoft.com/en-us/library/ms686857(VS.85).aspx
 #endif
 #include <windows.h>
+#include <combaseapi.h>
 #if (_WIN32_WINNT >= 0x0602)
   #include <synchapi.h>
 #endif
@@ -473,11 +474,13 @@ struct HWFeatures
         g_hwFeatureNames[CPU_AVX_512VPOPCNTDQ] = "AVX512VPOPCNTDQ";
         g_hwFeatureNames[CPU_AVX_5124VNNIW] = "AVX5124VNNIW";
         g_hwFeatureNames[CPU_AVX_5124FMAPS] = "AVX5124FMAPS";
+        g_hwFeatureNames[CPU_AVX_VNNI] = "AVX_VNNI";
 
         g_hwFeatureNames[CPU_NEON] = "NEON";
         g_hwFeatureNames[CPU_NEON_DOTPROD] = "NEON_DOTPROD";
         g_hwFeatureNames[CPU_NEON_FP16] = "NEON_FP16";
         g_hwFeatureNames[CPU_NEON_BF16] = "NEON_BF16";
+        g_hwFeatureNames[CPU_SVE] = "SVE";
 
         g_hwFeatureNames[CPU_VSX] = "VSX";
         g_hwFeatureNames[CPU_VSX3] = "VSX3";
@@ -553,6 +556,11 @@ struct HWFeatures
             have[CV_CPU_AVX_5124VNNIW]    = (cpuid_data_ex[3] & (1<<2))  != 0;
             have[CV_CPU_AVX_5124FMAPS]    = (cpuid_data_ex[3] & (1<<3))  != 0;
 
+            // CPUID leaf 7, subleaf 1 for AVX-VNNI
+            int cpuid_data_ex1[4] = { 0, 0, 0, 0 };
+            CV_CPUID_X86(cpuid_data_ex1, 7, 1);
+            have[CV_CPU_AVX_VNNI]         = (cpuid_data_ex1[0] & (1<<4))  != 0;
+
             bool have_AVX_OS_support = true;
             bool have_AVX512_OS_support = true;
             if (!(cpuid_data[2] & (1<<27)))
@@ -577,6 +585,7 @@ struct HWFeatures
                 have[CV_CPU_FP16] = false;
                 have[CV_CPU_AVX2] = false;
                 have[CV_CPU_FMA3] = false;
+                have[CV_CPU_AVX_VNNI] = false;
             }
             if (!have_AVX_OS_support || !have_AVX512_OS_support)
             {
@@ -641,6 +650,7 @@ struct HWFeatures
                 {
                     have[CV_CPU_NEON_DOTPROD] = (auxv.a_un.a_val & (1 << 20)) != 0; // HWCAP_ASIMDDP
                     have[CV_CPU_NEON_FP16] = (auxv.a_un.a_val & (1 << 10)) != 0; // HWCAP_ASIMDHP
+                    have[CV_CPU_SVE] = (auxv.a_un.a_val & (1 << 22)) != 0; // HWCAP_SVE
                 }
 #if defined(AT_HWCAP2)
                 else if (auxv.a_type == AT_HWCAP2)
@@ -1164,20 +1174,31 @@ String tempfile( const char* suffix )
         fname = String(aname);
     }
 #else
+    // Use GUID-based naming to avoid race condition with GetTempFileNameA
+    // See issue #19648
     char temp_dir2[MAX_PATH] = { 0 };
-    char temp_file[MAX_PATH] = { 0 };
 
     if (temp_dir.empty())
     {
         ::GetTempPathA(sizeof(temp_dir2), temp_dir2);
         temp_dir = std::string(temp_dir2);
     }
-    if(0 == ::GetTempFileNameA(temp_dir.c_str(), "ocv", 0, temp_file))
+
+    GUID g;
+    HRESULT hr = CoCreateGuid(&g);
+    if (FAILED(hr))
         return String();
+    char guidStr[40];
+    const char* mask = "%08x_%04x_%04x_%02x%02x_%02x%02x%02x%02x%02x%02x";
+    snprintf(guidStr, sizeof(guidStr), mask,
+            g.Data1, g.Data2, g.Data3, (unsigned int)g.Data4[0], (unsigned int)g.Data4[1],
+            (unsigned int)g.Data4[2], (unsigned int)g.Data4[3], (unsigned int)g.Data4[4],
+            (unsigned int)g.Data4[5], (unsigned int)g.Data4[6], (unsigned int)g.Data4[7]);
 
-    DeleteFileA(temp_file);
-
-    fname = temp_file;
+    fname = temp_dir;
+    if (!fname.empty() && fname[fname.size()-1] != '\\' && fname[fname.size()-1] != '/')
+        fname += "\\";
+    fname = fname + "ocv" + guidStr;
 #endif
 # else
 #  ifdef __ANDROID__
@@ -1326,8 +1347,7 @@ void error( const Exception& exc )
 
     if(breakOnError)
     {
-        static volatile int* p = 0;
-        *p = 0;
+        std::terminate();
     }
 
     throw exc;

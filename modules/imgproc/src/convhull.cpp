@@ -76,12 +76,16 @@ static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int n
 
         if( CV_SIGN( by ) != nsign )
         {
-            _Tp ax = array[pcur]->x - array[pprev]->x;
-            _Tp bx = array[pnext]->x - array[pcur]->x;
-            _Tp ay = cury - array[pprev]->y;
-            _DotTp convexity = (_DotTp)ay*bx - (_DotTp)ax*by; // if >0 then convex angle
+            Vec<_Tp, 2> a(array[pcur]->x - array[pprev]->x, cury - array[pprev]->y);
+            Vec<_Tp, 2> b(array[pnext]->x - array[pcur]->x, by);
+            if (std::is_floating_point<_Tp>::value)
+            {
+                a = normalize(a);
+                b = normalize(b);
+            }
+            _DotTp convexity = (_DotTp)a[1]*b[0] - (_DotTp)a[0]*b[1]; // if >0 then convex angle
 
-            if( CV_SIGN( convexity ) == sign2 && (ax != 0 || ay != 0) )
+            if( CV_SIGN( convexity ) == sign2 && (a[0] != 0 || a[1] != 0) )
             {
                 pprev = pcur;
                 pcur = pnext;
@@ -215,9 +219,9 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         }
 
         for( i = 0; i < tl_count-1; i++ )
-            hullbuf[nout++] = int(pointer[tl_stack[i]] - data0);
+            hullbuf[nout++] = tl_stack[i];
         for( i = tr_count - 1; i > 0; i-- )
-            hullbuf[nout++] = int(pointer[tr_stack[i]] - data0);
+            hullbuf[nout++] = tr_stack[i];
         int stop_idx = tr_count > 2 ? tr_stack[1] : tl_count > 2 ? tl_stack[tl_count - 2] : -1;
 
         // lower half
@@ -253,9 +257,43 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         }
 
         for( i = 0; i < bl_count-1; i++ )
-            hullbuf[nout++] = int(pointer[bl_stack[i]] - data0);
+            hullbuf[nout++] = bl_stack[i];
         for( i = br_count-1; i > 0; i-- )
-            hullbuf[nout++] = int(pointer[br_stack[i]] - data0);
+            hullbuf[nout++] = br_stack[i];
+
+        if (!returnPoints)
+        {
+            // Try keep monotonous indices in case of self-intersection.
+            for (i = 0; i < nout; ++i)
+            {
+                auto prev = pointer[hullbuf[(i == 0 ? nout : i) - 1]];
+                auto next = pointer[hullbuf[(i + 1) % nout]];
+                auto cur = pointer[hullbuf[i]];
+                if ((prev < cur && cur < next) || (prev > cur && cur > next))
+                {
+                    continue;
+                }
+                for (int j = hullbuf[i] + 1; j < total; ++j)
+                {
+                    cur = pointer[j];
+                    if (*pointer[hullbuf[i]] == *cur)
+                    {
+                        if ((prev < cur && cur < next) || (prev > cur && cur > next))
+                        {
+                            hullbuf[i] = j;
+                            break;
+                        }
+                    }
+                    else
+                        break;
+                }
+            }
+
+        }
+        for (i = 0; i < nout; ++i)
+        {
+            hullbuf[i] = int(pointer[hullbuf[i]] - data0);
+        }
 
         // try to make the convex hull indices form
         // an ascending or descending sequence by the cyclic

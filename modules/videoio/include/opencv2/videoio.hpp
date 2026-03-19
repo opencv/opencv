@@ -65,9 +65,6 @@
 
 ////////////////////////////////// video io /////////////////////////////////
 
-typedef struct CvCapture CvCapture;
-typedef struct CvVideoWriter CvVideoWriter;
-
 namespace cv
 {
 
@@ -149,7 +146,7 @@ enum VideoCaptureProperties {
        CAP_PROP_HUE           =13, //!< Hue of the image (only for cameras).
        CAP_PROP_GAIN          =14, //!< Gain of the image (only for those cameras that support).
        CAP_PROP_EXPOSURE      =15, //!< Exposure (only for those cameras that support).
-       CAP_PROP_CONVERT_RGB   =16, //!< Boolean flags indicating whether images should be converted to RGB. <br/>
+       CAP_PROP_CONVERT_RGB   =16, //!< Boolean flags indicating whether images should be converted to BGR. <br/>
                                    //!< *GStreamer note*: The flag is ignored in case if custom pipeline is used. It's user responsibility to interpret pipeline output.
        CAP_PROP_WHITE_BALANCE_BLUE_U =17, //!< Currently unsupported.
        CAP_PROP_RECTIFICATION =18, //!< Rectification flag for stereo cameras (note: only supported by DC1394 v 2.x backend currently).
@@ -711,7 +708,15 @@ enum VideoCaptureOBSensorProperties{
     CAP_PROP_OBSENSOR_DEPTH_POS_MSEC=26006,
     CAP_PROP_OBSENSOR_DEPTH_WIDTH=26007,
     CAP_PROP_OBSENSOR_DEPTH_HEIGHT=26008,
-    CAP_PROP_OBSENSOR_DEPTH_FPS=26009
+    CAP_PROP_OBSENSOR_DEPTH_FPS=26009,
+    CAP_PROP_OBSENSOR_COLOR_DISTORTION_K1=26010,
+    CAP_PROP_OBSENSOR_COLOR_DISTORTION_K2=26011,
+    CAP_PROP_OBSENSOR_COLOR_DISTORTION_K3=26012,
+    CAP_PROP_OBSENSOR_COLOR_DISTORTION_K4=26013,
+    CAP_PROP_OBSENSOR_COLOR_DISTORTION_K5=26014,
+    CAP_PROP_OBSENSOR_COLOR_DISTORTION_K6=26015,
+    CAP_PROP_OBSENSOR_COLOR_DISTORTION_P1=26016,
+    CAP_PROP_OBSENSOR_COLOR_DISTORTION_P2=26017
 };
 
 //! @} OBSENSOR
@@ -1033,7 +1038,6 @@ public:
             int64 timeoutNs = 0);
 
 protected:
-    Ptr<CvCapture> cap;
     Ptr<IVideoCapture> icap;
     bool throwOnFail;
 
@@ -1212,17 +1216,11 @@ public:
     CV_WRAP String getBackendName() const;
 
 protected:
-    Ptr<CvVideoWriter> writer;
     Ptr<IVideoWriter> iwriter;
 
     static Ptr<IVideoWriter> create(const String& filename, int fourcc, double fps,
                                     Size frameSize, bool isColor = true);
 };
-
-//! @cond IGNORED
-template<> struct DefaultDeleter<CvCapture>{ CV_EXPORTS void operator ()(CvCapture* obj) const; };
-template<> struct DefaultDeleter<CvVideoWriter>{ CV_EXPORTS void operator ()(CvVideoWriter* obj) const; };
-//! @endcond IGNORED
 
 //! @} videoio
 

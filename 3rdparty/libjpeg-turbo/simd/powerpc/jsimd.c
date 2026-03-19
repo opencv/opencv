@@ -1,6 +1,4 @@
 /*
- * jsimd_powerpc.c
- *
  * Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
  * Copyright (C) 2009-2011, 2014-2016, 2018, 2022, 2024, D. R. Commander.
  * Copyright (C) 2015-2016, 2018, 2022, Matthieu Darbois.

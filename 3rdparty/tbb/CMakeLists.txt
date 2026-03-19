@@ -106,6 +106,11 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS
 set(TBB_SOURCE_FILES ${lib_srcs} ${lib_hdrs})
 
 set(tbb_version_file "version_string.ver")
+if(NOT BUILD_INFO_SKIP_SYSTEM_VERSION)
+  set(TBB_HOST_VERSION " ${CMAKE_HOST_SYSTEM_VERSION}")
+else()
+  set(TBB_HOST_VERSION "")
+endif()
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/${tbb_version_file}.cmakein" "${CMAKE_CURRENT_BINARY_DIR}/${tbb_version_file}" @ONLY)
 list(APPEND TBB_SOURCE_FILES "${CMAKE_CURRENT_BINARY_DIR}/${tbb_version_file}")
 

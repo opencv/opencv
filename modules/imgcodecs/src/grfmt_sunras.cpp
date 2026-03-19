@@ -94,7 +94,7 @@ bool  SunRasterDecoder::readHeader()
                     m_type = IsColorPalette( m_palette, m_bpp ) ? CV_8UC3 : CV_8UC1;
                     m_offset = m_strm.getPos();
 
-                    CV_Assert(m_offset == 32 + m_maplength);
+                    CV_Assert(m_offset == static_cast<int64_t>(32 + m_maplength));
                     result = true;
                 }
             }
@@ -107,7 +107,7 @@ bool  SunRasterDecoder::readHeader()
 
                 m_offset = m_strm.getPos();
 
-                CV_Assert(m_offset == 32 + m_maplength);
+                CV_Assert(m_offset == static_cast<int64_t>(32 + m_maplength));
                 result = true;
             }
         }
@@ -133,10 +133,13 @@ bool  SunRasterDecoder::readData( Mat& img )
     size_t step = img.step;
     uchar  gray_palette[256] = {0};
     bool   result = false;
-    int  src_pitch = ((m_width*m_bpp + 7)/8 + 1) & -2;
     int  nch = color ? 3 : 1;
-    int  width3 = m_width*nch;
-    int  y;
+
+    const RowPitchParams pitch_params = calculateRowPitch(m_width, m_bpp, 2, "SunRaster");
+    const int src_pitch = pitch_params.src_pitch;
+    const size_t bytes_per_row = pitch_params.bytes_per_row;
+    const int width3 = calculateRowSize(m_width, nch, "SunRaster");
+    int y;
 
     if( m_offset < 0 || !m_strm.isOpened())
         return false;
@@ -169,7 +172,7 @@ bool  SunRasterDecoder::readData( Mat& img )
             }
             else
             {
-                uchar* line_end = src + (m_width*m_bpp + 7)/8;
+                uchar* line_end = src + bytes_per_row;
                 uchar* tsrc = src;
                 y = 0;
 

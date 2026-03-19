@@ -18,3 +18,7 @@ denoising etc.
 -   @subpage tutorial_py_hdr
 
     Learn how to merge exposure sequence and process high dynamic range images.
+
+-   @subpage tutorial_py_chromatic_aberration
+
+    Correct chromatic aberration in your camera's photos by calibrating the camera

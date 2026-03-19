@@ -25,4 +25,6 @@
 
 #define CV_INSTRUMENT_FUN_IPP(FUN, ...) ((FUN)(__VA_ARGS__))
 
+#define CV_HAL_CHECK_USE_IPP() if(!cv::ipp::useIPP()) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
 #endif

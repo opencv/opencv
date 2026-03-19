@@ -493,6 +493,7 @@ bool  Jpeg2KDecoder::readComponent16u( unsigned short *data, void *_buffer,
 Jpeg2KEncoder::Jpeg2KEncoder()
 {
     m_description = "JPEG-2000 files (*.jp2)";
+    m_supported_encode_key = {IMWRITE_JPEG2000_COMPRESSION_X1000};
 }
 
 
@@ -526,10 +527,17 @@ bool  Jpeg2KEncoder::write( const Mat& _img, const std::vector<int>& params )
     double target_compression_rate = 1.0;
     for( size_t i = 0; i < params.size(); i += 2 )
     {
+        const int value = params[i+1];
         switch(params[i])
         {
         case cv::IMWRITE_JPEG2000_COMPRESSION_X1000:
-            target_compression_rate = std::min(std::max(params[i+1], 0), 1000) / 1000.0;
+            {
+                const int compression = std::min(std::max(value, 0), 1000);
+                target_compression_rate = static_cast<double>(compression) / 1000.0;
+                if(value != compression){
+                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_JPEG2000_COMPRESSION_X1000 must be between 0 to 1000. It is fallbacked to %d", value, compression));
+                }
+            }
             break;
         }
     }

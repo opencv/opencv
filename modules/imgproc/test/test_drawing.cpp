@@ -557,9 +557,9 @@ TEST(Drawing, _914)
     line(img, Point(-5, 20), Point(260, 20), Scalar(0), 2, 4);
     line(img, Point(10, 0), Point(10, 255), Scalar(0), 2, 4);
 
-    double x0 = 0.0/pow(2.0, -2.0);
-    double x1 = 255.0/pow(2.0, -2.0);
-    double y = 30.5/pow(2.0, -2.0);
+    double x0 = 0.0/std::pow(2, -2);
+    double x1 = 255.0/std::pow(2, -2);
+    double y = 30.5/std::pow(2, -2);
 
     line(img, Point(int(x0), int(y)), Point(int(x1), int(y)), Scalar(0), 2, 4, 2);
 
@@ -592,7 +592,7 @@ TEST(Drawing, longline)
     Mat mat = Mat::zeros(256, 256, CV_8UC1);
 
     line(mat, cv::Point(34, 204), cv::Point(46400, 47400), cv::Scalar(255), 3);
-    EXPECT_EQ(310, cv::countNonZero(mat));
+    EXPECT_EQ(264, cv::countNonZero(mat));
 
     Point pt[6];
     pt[0].x = 32;
@@ -1279,6 +1279,30 @@ TEST(Drawing, contours_filled)
             drawContours(res, contours, idx + 1, white, -1, cv::LINE_4, hierarchy);
         EXPECT_LT(cvtest::norm(imgi, res, NORM_INF), 1);
     }
+}
+
+// Test for LINE_4 vs LINE_8 connectivity behavior
+// Regression test for issue #26413
+TEST(Drawing, line_connectivity_regression_26413)
+{
+    Mat img4(10, 10, CV_8UC1, Scalar(0));
+    Mat img8(10, 10, CV_8UC1, Scalar(0));
+
+    // Draw a diagonal line from (0,0) to (9,9)
+    // LINE_4 (4-connected) should produce staircase pattern (no diagonals)
+    // LINE_8 (8-connected) should produce diagonal steps
+    line(img4, Point(0, 0), Point(9, 9), Scalar(255), 1, LINE_4);
+    line(img8, Point(0, 0), Point(9, 9), Scalar(255), 1, LINE_8);
+
+    int count4 = countNonZero(img4);
+    int count8 = countNonZero(img8);
+
+    // LINE_8 for a 10-pixel diagonal should have exactly 10 pixels
+    EXPECT_EQ(10, count8) << "LINE_8 diagonal from (0,0) to (9,9) should have 10 pixels";
+
+    // LINE_4 for a 10-pixel diagonal should have approximately 19 pixels
+    // (needs both horizontal and vertical steps)
+    EXPECT_GT(count4, 15) << "LINE_4 diagonal should have significantly more pixels due to staircase";
 }
 
 }} // namespace

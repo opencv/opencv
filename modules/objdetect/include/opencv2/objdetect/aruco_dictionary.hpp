@@ -67,10 +67,9 @@ class CV_EXPORTS_W_SIMPLE Dictionary {
 
     /** @brief Returns Hamming distance of the input bits to the specific id.
      *
-     * If `allRotations` flag is set, the four posible marker rotations are considered
+     * If `allRotations` flag is set, the four possible marker rotations are considered
      */
     CV_WRAP int getDistanceToId(InputArray bits, int id, bool allRotations = true) const;
-
 
     /** @brief Generate a canonical marker image
      */
@@ -84,7 +83,7 @@ class CV_EXPORTS_W_SIMPLE Dictionary {
 
     /** @brief Transform list of bytes to matrix of bits
       */
-    CV_WRAP static Mat getBitsFromByteList(const Mat &byteList, int markerSize);
+    CV_WRAP static Mat getBitsFromByteList(const Mat &byteList, int markerSize, int rotationId = 0);
 };
 
 

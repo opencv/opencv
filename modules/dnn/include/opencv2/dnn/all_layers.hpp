@@ -95,6 +95,17 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<ConstantOfShapeLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS RandomNormalLikeLayer : public Layer
+    {
+    public:
+        static Ptr<Layer> create(const LayerParams& params);
+
+        float mean;
+        float scale;
+        bool has_seed;
+        float seed;
+    };
+
     //! LSTM recurrent layer
     class CV_EXPORTS LSTMLayer : public Layer
     {
@@ -346,6 +357,31 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<BaseConvolutionLayer> create(const LayerParams& params);
     };
 
+    enum AutoPadding
+    {
+        AUTO_PAD_NONE = 0,
+        AUTO_PAD_SAME_UPPER = 1,
+        AUTO_PAD_SAME_LOWER = 2,
+        AUTO_PAD_VALID = 3
+    };
+
+    class CV_EXPORTS Conv2Layer : public Layer
+    {
+    public:
+        static Ptr<Conv2Layer> create(const LayerParams& params);
+        virtual void setWeights(InputArray weights, InputArray bias,
+                                int C0, int accuracy) = 0;
+        virtual bool fuseAddBias(InputArray bias) = 0;
+        virtual bool fuseBatchNorm(const Ptr<Layer>& bn) = 0;
+        virtual bool fuseActivation(const Ptr<Layer>& activ) = 0;
+        virtual bool fuseAddResidual(Arg residual) = 0;
+
+        std::vector<int> strides, dilations, pads;
+        int ngroups;
+        AutoPadding auto_pad;
+        bool ceil_mode;
+    };
+
     class CV_EXPORTS LRNLayer : public Layer
     {
     public:
@@ -433,10 +469,62 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<PoolingLayerInt8> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS AveragePoolLayer : public Layer
+    {
+    public:
+        std::vector<int> kernel_shape, strides, dilations, pads;
+        AutoPadding auto_pad;
+        bool ceil_mode;
+        bool count_include_pad;
+
+        static Ptr<AveragePoolLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS MaxPoolLayer : public Layer
+    {
+    public:
+        std::vector<int> kernel_shape, strides, dilations, pads;
+        AutoPadding auto_pad;
+        bool ceil_mode;
+        int storage_order;
+
+        static Ptr<MaxPoolLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS GlobalAveragePoolLayer : public Layer
+    {
+    public:
+        static Ptr<GlobalAveragePoolLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS ReduceLayer : public Layer
     {
     public:
         static Ptr<ReduceLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS Reduce2Layer : public Layer
+    {
+    public:
+        enum class ReduceType
+        {
+            MAX,
+            MIN,
+            MEAN,
+            SUM,
+            L1,
+            L2,
+            PROD,
+            SUM_SQUARE,
+            LOG_SUM,
+            LOG_SUM_EXP
+        };
+        ReduceType reduce_type;
+        bool keepdims;
+        bool noop_with_empty_axes;
+        std::vector<int> axes;
+
+        static Ptr<Reduce2Layer> create(const LayerParams& params);
     };
 
     class CV_EXPORTS SoftmaxLayer : public Layer
@@ -514,10 +602,48 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<Reshape2Layer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS IsNaNLayer : public Layer
+    {
+    public:
+        static Ptr<IsNaNLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS IsInfLayer : public Layer
+    {
+    public:
+        static Ptr<IsInfLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS GridSampleLayer : public Layer
+    {
+    public:
+        static Ptr<GridSampleLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS OneHotLayer : public Layer
+    {
+    public:
+        int axis;
+        static Ptr<OneHotLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS AffineGridLayer : public Layer
+    {
+    public:
+        bool align_corners;
+        static Ptr<AffineGridLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS FlattenLayer : public Layer
     {
     public:
         static Ptr<FlattenLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS BitShiftLayer : public Layer
+    {
+    public:
+        static Ptr<BitShiftLayer> create(const LayerParams& params);
     };
 
     class CV_EXPORTS SqueezeLayer : public Layer
@@ -758,12 +884,16 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS ActivationLayer : public Layer
     {
     public:
-        virtual void forwardSlice(const float* src, float* dst, int len,
-                                  size_t outPlaneSize, int cn0, int cn1) const {}
-        virtual void forwardSlice(const int* src, const int* lut, int* dst, int len,
-                                  size_t outPlaneSize, int cn0, int cn1) const {}
-        virtual void forwardSlice(const int8_t* src, const int8_t* lut, int8_t* dst, int len,
-                                  size_t outPlaneSize, int cn0, int cn1) const {}
+        virtual int getLayouts(const std::vector<DataLayout>& actualInputs,
+                                std::vector<DataLayout>& desiredInputs,
+                                const int requiredOutputs,
+                                std::vector<DataLayout>& outputs) const CV_OVERRIDE;
+        virtual void forwardSlice(const float* /*src*/, float* /*dst*/, int /*len*/,
+                                  size_t /*outPlaneSize*/, int /*cn0*/, int /*cn1*/) const {}
+        virtual void forwardSlice(const int* /*src*/, const int* /*lut*/, int* /*dst*/, int /*len*/,
+                                  size_t /*outPlaneSize*/, int /*cn0*/, int /*cn1*/) const {}
+        virtual void forwardSlice(const int8_t* /*src*/, const int8_t* /*lut*/, int8_t* /*dst*/, int /*len*/,
+                                  size_t /*outPlaneSize*/, int /*cn0*/, int /*cn1*/) const {}
     };
 
     class CV_EXPORTS ReLULayer : public ActivationLayer
@@ -1076,6 +1206,35 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS NaryEltwiseLayer : public Layer
     {
     public:
+        enum class OPERATION
+        {
+            AND = 0,
+            EQUAL,
+            GREATER,
+            GREATER_EQUAL,
+            LESS,
+            LESS_EQUAL,
+            OR,
+            POW,
+            XOR,
+            BITSHIFT,
+            MAX,
+            MEAN,
+            MIN,
+            MOD,  // Integer Mod. Reminder's sign = Divisor's sign.
+            FMOD, // Floating-point Mod. Reminder's sign = Dividend's sign.
+            PROD,
+            SUB,
+            SUM,
+            ADD,
+            DIV,
+            WHERE,
+            BITWISE_AND,
+            BITWISE_OR,
+            BITWISE_XOR
+        };
+        OPERATION op;
+
         static Ptr<NaryEltwiseLayer> create(const LayerParams &params);
     };
 
@@ -1094,6 +1253,18 @@ CV__DNN_INLINE_NS_BEGIN
         float input_sc, output_sc;
         int input_zp, output_zp;
         static Ptr<BatchNormLayerInt8> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS BatchNorm2Layer : public Layer
+    {
+    public:
+        float epsilon;
+        virtual bool freezeScaleBias() = 0;
+        virtual void getScaleBias(OutputArray scale, OutputArray bias) const = 0;
+        static void getScaleBias(InputArray scale, InputArray bias,
+                                 InputArray mean, InputArray variance, float eps,
+                                 OutputArray outscale, OutputArray outbias);
+        static Ptr<BatchNorm2Layer> create(const LayerParams &params);
     };
 
     class CV_EXPORTS MaxUnpoolLayer : public Layer
@@ -1245,6 +1416,85 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<ResizeLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS SizeLayer : public Layer
+    {
+    public:
+        static Ptr<SizeLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS BlackmanWindowLayer : public Layer
+    {
+    public:
+        static Ptr<BlackmanWindowLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS HannWindowLayer : public Layer
+    {
+    public:
+        static Ptr<HannWindowLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS HammingWindowLayer : public Layer
+    {
+    public:
+        static Ptr<HammingWindowLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS DetLayer : public Layer
+    {
+    public:
+        static Ptr<DetLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS CenterCropPadLayer : public Layer
+    {
+    public:
+        static Ptr<CenterCropPadLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS DFTLayer : public Layer
+    {
+    public:
+        bool inverse;
+        bool onesided;
+        int axis_attr;
+        std::vector<int> axes;
+        static Ptr<DFTLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS Resize2Layer : public Layer
+    {
+    public:
+        static Ptr<Resize2Layer> create(const LayerParams& params);
+    };
+
+    // Shared reduction enum for DNN loss layers
+    enum LossReduction
+    {
+        LOSS_REDUCTION_NONE = 0,
+        LOSS_REDUCTION_MEAN = 1,
+        LOSS_REDUCTION_SUM = 2
+    };
+
+    class CV_EXPORTS NegativeLogLikelihoodLossLayer : public Layer
+    {
+    public:
+        LossReduction reduction;
+        int ignoreIndex;
+
+        static Ptr<NegativeLogLikelihoodLossLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS SoftmaxCrossEntropyLossLayer : public Layer
+    {
+    public:
+        static Ptr<SoftmaxCrossEntropyLossLayer> create(const LayerParams& params);
+        LossReduction reduction;
+        int ignoreIndex;
+        float labelSmoothing;
+        bool softLabel;
+    };
+
     /**
      * @brief Bilinear resize layer from https://github.com/cdmh/deeplab-public-ver2
      *
@@ -1266,6 +1516,12 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         static Ptr<Layer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS RoiAlignLayer : public Layer
+    {
+    public:
+        static Ptr<RoiAlignLayer> create(const LayerParams& params);
     };
 
     class CV_EXPORTS CumSumLayer : public Layer
@@ -1301,6 +1557,20 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<Tile2Layer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS TransformLayoutLayer : public Layer
+    {
+    public:
+        DataLayout layout;
+        int C0;
+        static Ptr<TransformLayoutLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS UniqueLayer : public Layer
+    {
+    public:
+        static Ptr<UniqueLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS LayerNormLayer : public Layer
     {
     public:
@@ -1309,6 +1579,15 @@ CV__DNN_INLINE_NS_BEGIN
         float epsilon;
 
         static Ptr<LayerNormLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS LayerNorm2Layer : public Layer
+    {
+    public:
+        int axis;
+        float epsilon;
+
+        static Ptr<LayerNorm2Layer> create(const LayerParams& params);
     };
 
     class CV_EXPORTS GemmLayer : public Layer {
@@ -1338,6 +1617,12 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<Expand2Layer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS NonZeroLayer : public Layer
+    {
+    public:
+        static Ptr<NonZeroLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS InstanceNormLayer : public Layer {
     public:
         float epsilon;
@@ -1350,6 +1635,16 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<AttentionLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS RotaryEmbeddingLayer : public Layer {
+     public:
+        static Ptr<RotaryEmbeddingLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS AttentionOnnxAiLayer : public Layer {
+     public:
+        static Ptr<AttentionOnnxAiLayer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS GroupNormLayer : public Layer {
     public:
         static Ptr<GroupNormLayer> create(const LayerParams &params);
@@ -1358,6 +1653,22 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS CastLayer : public Layer {
     public:
         static Ptr<CastLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS Cast2Layer : public Layer {
+    public:
+        static Ptr<Cast2Layer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS NonMaxSuppressionLayer : public Layer
+    {
+    public:
+        static Ptr<NonMaxSuppressionLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS ClipLayer : public Layer {
+    public:
+        static Ptr<ClipLayer> create(const LayerParams &params);
     };
 
     class CV_EXPORTS DepthToSpaceLayer : public Layer {
@@ -1386,6 +1697,13 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         static Ptr<TopK2Layer> create(const LayerParams &params);
+    };
+
+
+    class CV_EXPORTS RMSNormLayer : public Layer
+    {
+    public:
+        static Ptr<RMSNormLayer> create(const LayerParams& params);
     };
 
 //! @}

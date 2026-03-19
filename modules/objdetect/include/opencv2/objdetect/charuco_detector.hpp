@@ -62,7 +62,7 @@ public:
 
     /**
      * @brief detect aruco markers and interpolate position of ChArUco board corners
-     * @param image input image necesary for corner refinement. Note that markers are not detected and
+     * @param image input image necessary for corner refinement. Note that markers are not detected and
      * should be sent in corners and ids parameters.
      * @param charucoCorners interpolated chessboard corners.
      * @param charucoIds interpolated chessboard corners identifiers.

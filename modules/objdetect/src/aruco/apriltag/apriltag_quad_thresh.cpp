@@ -18,6 +18,7 @@
 
 #include "../../precomp.hpp"
 #include "apriltag_quad_thresh.hpp"
+#include "unionfind.hpp"
 
 //#define APRIL_DEBUG
 #ifdef APRIL_DEBUG
@@ -93,7 +94,7 @@ void ptsort_(struct pt *pts, int sz)
     // a merge sort with temp storage.
 
     // Use stack storage if it's not too big.
-    cv::AutoBuffer<struct pt, 1024> _tmp_stack(sz);
+    AutoBuffer<struct pt, 1024> _tmp_stack(sz);
     memcpy(_tmp_stack.data(), pts, sizeof(struct pt) * sz);
 
     int asz = sz/2;
@@ -570,31 +571,6 @@ int quad_segment_agg(int sz, struct line_fit_pt *lfps, int indices[4]){
 
     return 1;
 }
-
-#define DO_UNIONFIND(dx, dy) if (im.data[y*s + dy*s + x + dx] == v) unionfind_connect(uf, y*w + x, y*w + dy*w + x + dx);
-static void do_unionfind_line(unionfind_t *uf, Mat &im, int w, int s, int y){
-    CV_Assert(y+1 < im.rows);
-    CV_Assert(!im.empty());
-
-    for (int x = 1; x < w - 1; x++) {
-        uint8_t v = im.data[y*s + x];
-
-        if (v == 127)
-            continue;
-
-        // (dx,dy) pairs for 8 connectivity:
-        //          (REFERENCE) (1, 0)
-        // (-1, 1)    (0, 1)    (1, 1)
-        //
-        DO_UNIONFIND(1, 0);
-        DO_UNIONFIND(0, 1);
-        if (v == 255) {
-            DO_UNIONFIND(-1, 1);
-            DO_UNIONFIND(1, 1);
-        }
-    }
-}
-#undef DO_UNIONFIND
 
 /**
  *  return 1 if the quad looks okay, 0 if it should be discarded
@@ -1309,11 +1285,11 @@ zarray_t *apriltag_quad_thresh(const DetectorParameters &parameters, const Mat &
     ////////////////////////////////////////////////////////
     // step 2. find connected components.
 
-    unionfind_t *uf = unionfind_create(w * h);
+    UnionFind uf(w * h);
 
     // TODO PARALLELIZE
     for (int y = 0; y < h - 1; y++) {
-        do_unionfind_line(uf, thold, w, ts, y);
+        uf.do_line(thold, w, ts, y);
     }
 
     // XXX sizing??
@@ -1329,7 +1305,7 @@ zarray_t *apriltag_quad_thresh(const DetectorParameters &parameters, const Mat &
                 continue;
 
             // XXX don't query this until we know we need it?
-            uint64_t rep0 = unionfind_get_representative(uf, y*w + x);
+            uint64_t rep0 = uf.get_representative(y*w + x);
 
             // whenever we find two adjacent pixels such that one is
             // white and the other black, we add the point half-way
@@ -1356,7 +1332,7 @@ zarray_t *apriltag_quad_thresh(const DetectorParameters &parameters, const Mat &
             uint8_t v1 = thold.data[y*ts + dy*ts + x + dx];         \
             \
             if (v0 + v1 == 255) {                                   \
-                uint64_t rep1 = unionfind_get_representative(uf, y*w + dy*w + x + dx); \
+                uint64_t rep1 = uf.get_representative(y*w + dy*w + x + dx); \
                 uint64_t clusterid;                                 \
                 if (rep0 < rep1)                                    \
                 clusterid = (rep1 << 32) + rep0;                \
@@ -1405,9 +1381,9 @@ uint32_t *colors = (uint32_t*) calloc(w*h, sizeof(*colors));
 
 for (int y = 0; y < h; y++) {
     for (int x = 0; x < w; x++) {
-        uint32_t v = unionfind_get_representative(uf, y*w+x);
+        uint32_t v = uf.get_representative(y*w+x);
 
-        if (unionfind_get_set_size(uf, v) < parameters->aprilTagMinClusterPixels)
+        if (uf.get_set_size(v) < parameters->aprilTagMinClusterPixels)
             continue;
 
         uint32_t color = colors[v];
@@ -1532,8 +1508,6 @@ for (int i = 0; i < _zarray_size(quads); i++) {
 }
 imwrite("2.5 debug_lines.pnm", out);
 #endif
-
-    unionfind_destroy(uf);
 
     for (int i = 0; i < _zarray_size(clusters); i++) {
         zarray_t *cluster;

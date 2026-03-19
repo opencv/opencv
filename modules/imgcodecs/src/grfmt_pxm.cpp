@@ -389,6 +389,7 @@ PxMEncoder::PxMEncoder(PxMMode mode) :
         CV_Error(Error::StsInternal, "");
     }
     m_buf_supported = true;
+    m_supported_encode_key = {IMWRITE_PXM_BINARY};
 }
 
 PxMEncoder::~PxMEncoder()
@@ -414,8 +415,14 @@ bool PxMEncoder::write(const Mat& img, const std::vector<int>& params)
 
     for( size_t i = 0; i < params.size(); i += 2 )
     {
+        const int value = params[i+1];
         if( params[i] == IMWRITE_PXM_BINARY )
-            isBinary = params[i+1] != 0;
+        {
+            isBinary = value != 0;
+            if((value != 0) && (value != 1)) {
+                CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_PXM_BINARY must be 0 or 1. It is fallbacked to 1", value));
+            }
+        }
     }
 
     int mode = mode_;

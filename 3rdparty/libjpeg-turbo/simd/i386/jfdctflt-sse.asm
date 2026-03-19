@@ -1,5 +1,5 @@
 ;
-; jfdctflt.asm - floating-point FDCT (SSE)
+; Floating-point FDCT (SSE)
 ;
 ; Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
 ; Copyright (C) 2016, 2024, D. R. Commander.

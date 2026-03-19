@@ -2394,7 +2394,7 @@ int videoInput::getVideoPropertyFromCV(int cv_property){
         case CAP_PROP_MONOCHROME:
             return VideoProcAmp_ColorEnable;
 
-        case CAP_PROP_WHITE_BALANCE_BLUE_U:
+        case cv::VideoCaptureProperties::CAP_PROP_WB_TEMPERATURE:
             return VideoProcAmp_WhiteBalance;
 
         case cv::VideoCaptureProperties::CAP_PROP_AUTO_WB:
@@ -3422,7 +3422,7 @@ double VideoCapture_DShow::getProperty(int propIdx) const
     case CAP_PROP_SHARPNESS:
     case CAP_PROP_GAMMA:
     case CAP_PROP_MONOCHROME:
-    case CAP_PROP_WHITE_BALANCE_BLUE_U:
+    case cv::VideoCaptureProperties::CAP_PROP_WB_TEMPERATURE:
     case CAP_PROP_BACKLIGHT:
     case CAP_PROP_GAIN:
         if (g_VI.getVideoSettingFilter(m_index, g_VI.getVideoPropertyFromCV(propIdx), min_value, max_value, stepping_delta, current_value, flags, defaultValue))
@@ -3589,7 +3589,7 @@ bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
             else
                 flags = VideoProcAmp_Flags_Manual;
             break;
-        case CAP_PROP_WHITE_BALANCE_BLUE_U:
+        case cv::VideoCaptureProperties::CAP_PROP_WB_TEMPERATURE:
             flags = VideoProcAmp_Flags_Manual;
             break;
     }
@@ -3604,7 +3604,7 @@ bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
     case CAP_PROP_SHARPNESS:
     case CAP_PROP_GAMMA:
     case CAP_PROP_MONOCHROME:
-    case CAP_PROP_WHITE_BALANCE_BLUE_U:
+    case cv::VideoCaptureProperties::CAP_PROP_WB_TEMPERATURE:
     case cv::VideoCaptureProperties::CAP_PROP_AUTO_WB:
     case CAP_PROP_BACKLIGHT:
     case CAP_PROP_GAIN:

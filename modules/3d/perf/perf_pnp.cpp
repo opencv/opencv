@@ -4,7 +4,7 @@ namespace opencv_test
 {
 using namespace perf;
 
-CV_ENUM(pnpAlgo, SOLVEPNP_ITERATIVE, SOLVEPNP_EPNP, SOLVEPNP_P3P, SOLVEPNP_DLS, SOLVEPNP_UPNP)
+CV_ENUM(pnpAlgo, SOLVEPNP_ITERATIVE, SOLVEPNP_EPNP, SOLVEPNP_P3P)
 
 typedef tuple<int, pnpAlgo> PointsNum_Algo_t;
 typedef perf::TestBaseWithParam<PointsNum_Algo_t> PointsNum_Algo;
@@ -14,7 +14,7 @@ typedef perf::TestBaseWithParam<int> PointsNum;
 PERF_TEST_P(PointsNum_Algo, solvePnP,
             testing::Combine( //When non planar, DLT needs at least 6 points for SOLVEPNP_ITERATIVE flag
                 testing::Values(6, 3*9, 7*13), //TODO: find why results on 4 points are too unstable
-                testing::Values((int)SOLVEPNP_ITERATIVE, (int)SOLVEPNP_EPNP, (int)SOLVEPNP_UPNP, (int)SOLVEPNP_DLS)
+                testing::Values((int)SOLVEPNP_ITERATIVE, (int)SOLVEPNP_EPNP)
                 )
             )
 {
@@ -61,7 +61,7 @@ PERF_TEST_P(PointsNum_Algo, solvePnP,
 PERF_TEST_P(PointsNum_Algo, solvePnPSmallPoints,
             testing::Combine(
                 testing::Values(5),
-                testing::Values((int)SOLVEPNP_P3P, (int)SOLVEPNP_EPNP, (int)SOLVEPNP_DLS, (int)SOLVEPNP_UPNP)
+                testing::Values((int)SOLVEPNP_P3P, (int)SOLVEPNP_EPNP)
                 )
             )
 {

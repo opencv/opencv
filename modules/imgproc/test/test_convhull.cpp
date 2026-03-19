@@ -52,31 +52,48 @@ namespace opencv_test { namespace {
 
 TEST(minEnclosingCircle, basic_test)
 {
-    vector<Point2f> pts;
-    pts.push_back(Point2f(0, 0));
-    pts.push_back(Point2f(10, 0));
-    pts.push_back(Point2f(5, 1));
     const float EPS = 1.0e-3f;
     Point2f center;
     float radius;
+
+    {
+        const vector<Point2f> pts = { {5, 10} };
+        minEnclosingCircle(pts, center, radius);
+        EXPECT_NEAR(center.x, 5, EPS);
+        EXPECT_NEAR(center.y, 10, EPS);
+        EXPECT_NEAR(radius, 0, EPS);
+    }
+
+    {
+        const vector<Point2f> pts = { {5, 10}, {11, 18} };
+        minEnclosingCircle(pts, center, radius);
+        EXPECT_NEAR(center.x, 8, EPS);
+        EXPECT_NEAR(center.y, 14, EPS);
+        EXPECT_NEAR(radius, 5, EPS);
+    }
 
     // pts[2] is within the circle with diameter pts[0] - pts[1].
     //        2
     // 0             1
     // NB: The triangle is obtuse, so the only pts[0] and pts[1] are on the circle.
-    minEnclosingCircle(pts, center, radius);
-    EXPECT_NEAR(center.x, 5, EPS);
-    EXPECT_NEAR(center.y, 0, EPS);
-    EXPECT_NEAR(5, radius, EPS);
+    {
+        const vector<Point2f> pts = { {0, 0}, {10, 0}, {5, 1} };
+        minEnclosingCircle(pts, center, radius);
+        EXPECT_NEAR(center.x, 5, EPS);
+        EXPECT_NEAR(center.y, 0, EPS);
+        EXPECT_NEAR(5, radius, EPS);
+    }
 
     // pts[2] is on the circle with diameter pts[0] - pts[1].
     //  2
     // 0 1
-    pts[2] = Point2f(5, 5);
-    minEnclosingCircle(pts, center, radius);
-    EXPECT_NEAR(center.x, 5, EPS);
-    EXPECT_NEAR(center.y, 0, EPS);
-    EXPECT_NEAR(5, radius, EPS);
+    {
+        const vector<Point2f> pts = { {0, 0}, {10, 0}, {5, 5} };
+        minEnclosingCircle(pts, center, radius);
+        EXPECT_NEAR(center.x, 5, EPS);
+        EXPECT_NEAR(center.y, 0, EPS);
+        EXPECT_NEAR(5, radius, EPS);
+    }
 
     // pts[2] is outside the circle with diameter pts[0] - pts[1].
     //   2
@@ -84,32 +101,40 @@ TEST(minEnclosingCircle, basic_test)
     //
     // 0   1
     // NB: The triangle is acute, so all 3 points are on the circle.
-    pts[2] = Point2f(5, 10);
-    minEnclosingCircle(pts, center, radius);
-    EXPECT_NEAR(center.x, 5, EPS);
-    EXPECT_NEAR(center.y, 3.75, EPS);
-    EXPECT_NEAR(6.25f, radius, EPS);
+    {
+        const vector<Point2f> pts = { {0, 0}, {10, 0}, {5, 10} };
+        minEnclosingCircle(pts, center, radius);
+        EXPECT_NEAR(center.x, 5, EPS);
+        EXPECT_NEAR(center.y, 3.75, EPS);
+        EXPECT_NEAR(6.25f, radius, EPS);
+    }
 
     // The 3 points are colinear.
-    pts[2] = Point2f(3, 0);
-    minEnclosingCircle(pts, center, radius);
-    EXPECT_NEAR(center.x, 5, EPS);
-    EXPECT_NEAR(center.y, 0, EPS);
-    EXPECT_NEAR(5, radius, EPS);
+    {
+        const vector<Point2f> pts = { {0, 0}, {10, 0}, {3, 0} };
+        minEnclosingCircle(pts, center, radius);
+        EXPECT_NEAR(center.x, 5, EPS);
+        EXPECT_NEAR(center.y, 0, EPS);
+        EXPECT_NEAR(5, radius, EPS);
+    }
 
     // 2 points are the same.
-    pts[2] = pts[1];
-    minEnclosingCircle(pts, center, radius);
-    EXPECT_NEAR(center.x, 5, EPS);
-    EXPECT_NEAR(center.y, 0, EPS);
-    EXPECT_NEAR(5, radius, EPS);
+    {
+        const vector<Point2f> pts = { {0, 0}, {10, 0}, {10, 0} };
+        minEnclosingCircle(pts, center, radius);
+        EXPECT_NEAR(center.x, 5, EPS);
+        EXPECT_NEAR(center.y, 0, EPS);
+        EXPECT_NEAR(5, radius, EPS);
+    }
 
     // 3 points are the same.
-    pts[0] = pts[1];
-    minEnclosingCircle(pts, center, radius);
-    EXPECT_NEAR(center.x, 10, EPS);
-    EXPECT_NEAR(center.y, 0, EPS);
-    EXPECT_NEAR(0, radius, EPS);
+    {
+        const vector<Point2f> pts = { {10, 0}, {10, 0}, {10, 0} };
+        minEnclosingCircle(pts, center, radius);
+        EXPECT_NEAR(center.x, 10, EPS);
+        EXPECT_NEAR(center.y, 0, EPS);
+        EXPECT_NEAR(0, radius, EPS);
+    }
 }
 
 TEST(Imgproc_minEnclosingCircle, regression_16051) {
@@ -125,6 +150,44 @@ TEST(Imgproc_minEnclosingCircle, regression_16051) {
     EXPECT_NEAR(center.x, 86.9f, 1e-3);
     EXPECT_NEAR(center.y, 1414.1f, 1e-3);
     EXPECT_NEAR(2.1024551f, radius, 1e-3);
+}
+
+TEST(Imgproc_minEnclosingCircle, regression_27891) {
+    {
+        const vector<Point2f> pts = { {219, 301}, {639, 635}, {740, 569}, {740, 569}, {309, 123}, {349, 88} };
+
+        Point2f center;
+        float radius;
+        minEnclosingCircle(pts, center, radius);
+
+        EXPECT_NEAR(center.x, 522.476f, 1e-3f);
+        EXPECT_NEAR(center.y, 346.4029f, 1e-3f);
+        EXPECT_NEAR(radius, 311.2331f, 1e-3f);
+    }
+
+    {
+        const vector<Point2f> pts = { {219, 301}, {639, 635}, {740, 569}, {740, 569}, {349, 88} };
+
+        Point2f center;
+        float radius;
+        minEnclosingCircle(pts, center, radius);
+
+        EXPECT_NEAR(center.x, 522.476f, 1e-3f);
+        EXPECT_NEAR(center.y, 346.4029f, 1e-3f);
+        EXPECT_NEAR(radius, 311.2331f, 1e-3f);
+    }
+
+    {
+        const vector<Point2f> pts = { {639, 635}, {740, 569}, {740, 569}, {349, 88} };
+
+        Point2f center;
+        float radius;
+        minEnclosingCircle(pts, center, radius);
+
+        EXPECT_NEAR(center.x, 522.476f, 1e-3f);
+        EXPECT_NEAR(center.y, 346.4029f, 1e-3f);
+        EXPECT_NEAR(radius, 311.2331f, 1e-3f);
+    }
 }
 
 PARAM_TEST_CASE(ConvexityDefects_regression_5908, bool, int)
@@ -241,9 +304,11 @@ TEST(Imgproc_ConvexityDefects, ordering_4539)
     vector<int> hull_ind;
     vector<Vec4i> defects;
 
+#if 0  // deprecated behavior
     // first, check the original contour as-is, without intermediate fillPoly/drawContours.
     convexHull(contour_, hull_ind, false, false);
     EXPECT_THROW( convexityDefects(contour_, hull_ind, defects), cv::Exception );
+#endif
 
     int scale = 20;
     contour_ *= (double)scale;
@@ -256,10 +321,12 @@ TEST(Imgproc_ConvexityDefects, ordering_4539)
     findContours(canvas_gray, contours, noArray(), RETR_LIST, CHAIN_APPROX_SIMPLE);
     convexHull(contours[0], hull_ind, false, false);
 
+#if 0  // deprecated behavior
     // the original contour contains self-intersections,
     // therefore convexHull does not return a monotonous sequence of points
     // and therefore convexityDefects throws an exception
     EXPECT_THROW( convexityDefects(contours[0], hull_ind, defects), cv::Exception );
+#endif
 
 #if 1
     // one way to eliminate the contour self-intersection in this particular case is to apply dilate(),
@@ -516,6 +583,19 @@ TEST(Imgproc_minAreaRect, reproducer_19769)
     RotatedRect rr = cv::minAreaRect(contour);
 
     EXPECT_TRUE(checkMinAreaRect(rr, contour)) << rr.center << " " << rr.size << " " << rr.angle;
+}
+
+TEST(Imgproc_minAreaRect, roundtrip_accuracy)
+{
+    RotatedRect rect(Point2f(12.f, 56.f), Size2f(10.f, 25.f), -45.f);
+    std::vector<Point2f> points;
+    rect.points(points);
+    RotatedRect rect_out = minAreaRect(points);
+    EXPECT_LT(std::abs(rect.center.x - rect_out.center.x), 1e-5);
+    EXPECT_LT(std::abs(rect.center.y - rect_out.center.y), 1e-5);
+    EXPECT_LT(std::abs(rect.size.width - rect_out.size.width), 1e-5);
+    EXPECT_LT(std::abs(rect.size.height - rect_out.size.height), 1e-5);
+    EXPECT_LT(std::abs(rect.angle - rect_out.angle), 1e-5);
 }
 
 TEST(Imgproc_minEnclosingTriangle, regression_17585)
@@ -986,7 +1066,7 @@ TEST_P(minEnclosingTriangle_Modes, accuracy)
             const Mat midPoint = (cur + next) / 2;
             EXPECT_TRUE(isPointOnHull(hull, midPoint));
 
-            // at least one of hull edges must be on tirangle edge
+            // at least one of hull edges must be on triangle edge
             hasEdgeOnHull = hasEdgeOnHull || isEdgeOnHull(hull, cur, next);
         }
         EXPECT_TRUE(hasEdgeOnHull);
@@ -1069,5 +1149,207 @@ TEST(minEnclosingCircle, three_points)
     EXPECT_LE(delta, 1.f);
 }
 
+
+//============================ minEnclosingPolygon tests ============================
+
+TEST(minEnclosingPolygon, input_errors)
+{
+    std::vector<cv::Point2f> kgon;
+    std::vector<cv::Point2f> ngon {{0.0, 0.0}, {1.0, 1.0}};
+
+    EXPECT_THROW(minEnclosingConvexPolygon(ngon, kgon, 3), cv::Exception);
+
+    ngon = {{0.0, 0.0}, {0.0, 1.0}, {1.0, 0.0}, {1.0, 1.0}};
+    EXPECT_THROW(minEnclosingConvexPolygon(ngon, kgon, 2), cv::Exception);
+    EXPECT_THROW(minEnclosingConvexPolygon(ngon, kgon, 5), cv::Exception);
+}
+
+TEST(minEnclosingPolygon, input_corner_cases)
+{
+    double area = -1.0;
+    std::vector<cv::Point2f> kgon;
+    std::vector<cv::Point2f> ngon = {{0.0, 0.0}, {0.0, 0.0}, {1.0, 1.0}, {1.0, 1.0}};
+
+    EXPECT_NO_THROW(area = minEnclosingConvexPolygon(ngon, kgon, 3))
+    << "unexpected exception: not enough different points in input ngon (double points)";
+    EXPECT_LE(area, 0.);
+    EXPECT_TRUE(kgon.empty());
+
+    ngon = {{0.0, 0.0}, {1.0, 1.0}, {2.0, 2.0}, {3.0, 3.0}, {4.0, 4.0}};
+    EXPECT_NO_THROW(area = minEnclosingConvexPolygon(ngon, kgon, 3))
+    << "unexpected exception: all points on line";
+    EXPECT_LE(area, 0.);
+    EXPECT_TRUE(kgon.empty());
+}
+
+TEST(minEnclosingPolygon, unit_circle)
+{
+    const int n = 64;
+    const int k = 7;
+    double area = -1.0;
+    std::vector<cv::Point2f> kgon;
+    std::vector<cv::Point2f> ngon(n);
+
+    for(int i = 0; i < n; i++)
+    {
+        ngon[i] = { cosf(float(i * 2.f * M_PI / n)), sinf(float(i * 2.f * M_PI / n)) };
+    }
+
+    EXPECT_NO_THROW(area = minEnclosingConvexPolygon(ngon, kgon, k));
+    EXPECT_GT(area, cv::contourArea(ngon));
+    EXPECT_EQ((int)kgon.size(), k);
+}
+
+TEST(minEnclosingPolygon, random_points)
+{
+    const int n = 100;
+    const int k = 7;
+
+    double area = -1.0;
+    std::vector<cv::Point2f> kgon;
+    std::vector<cv::Point2f> ngon(n);
+    std::vector<cv::Point2f> ngonHull;
+
+    cv::randu(ngon, 1, 101);
+    cv::convexHull(ngon, ngonHull, true);
+
+    EXPECT_NO_THROW(area = minEnclosingConvexPolygon(ngon, kgon, k));
+    EXPECT_GT(area, cv::contourArea(ngonHull));
+    EXPECT_EQ(kgon.size(), (size_t)k);
+}
+
+TEST(minEnclosingPolygon, pentagon)
+{
+    double area;
+    std::vector<cv::Point2f> kgon;
+    std::vector<cv::Point2f> expectedKgon;
+    std::vector<cv::Point2f> ngon;
+
+    ngon = {{1, 0}, {0, 8}, {4, 12}, {8, 8}, {7, 0}};
+    EXPECT_NO_THROW({
+        area = minEnclosingConvexPolygon(ngon, kgon, 4);
+    });
+
+    expectedKgon = {{1, 0}, {-0.5, 12}, {8.5, 12}, {7, 0}};
+    EXPECT_EQ(area, cv::contourArea(expectedKgon));
+    ASSERT_EQ((int)kgon.size(), 4);
+
+    for (size_t i = 0; i < 4; i++)
+    {
+        bool match = false;
+        for (size_t j = 0; j < 4; j++)
+        {
+            if(expectedKgon[i].x == kgon[j].x && expectedKgon[i].y == kgon[j].y)
+            {
+                match = true;
+                break;
+            }
+        }
+        EXPECT_EQ(match, true);
+    }
+}
+
+TEST(Imgproc_minAreaRect, reproducer_21482)
+{
+    const int N = 4;
+    float pts_[N][2] = {
+        { 188.8991f, 12.400669f },
+        { 80.64467f, -49.644814f },
+        { 469.59897f, 173.28242f },
+        { 690.4597f, 299.86768f },
+    };
+
+    Mat contour(N, 1, CV_32FC2, (void*)pts_);
+
+    RotatedRect rr = cv::minAreaRect(contour);
+
+    EXPECT_TRUE(checkMinAreaRect(rr, contour)) << rr.center << " " << rr.size << " " << rr.angle;
+    EXPECT_NEAR(min(rr.size.width, rr.size.height), 0, 1e-5);
+    EXPECT_GE(max(rr.size.width, rr.size.height), 702);
+}
+
+TEST(Imgproc_minAreaRect, reproducer_21482_small_values)
+{
+    const int N = 4;
+    float pts_[N][2] = { { 0.f, 0.f }, { 1e-4f, 0.f }, { 1e-4f, 1e-4f }, { 0.f, 1e-4f },};
+
+    Mat contour(N, 1, CV_32FC2, (void*)pts_);
+
+    RotatedRect rr = cv::minAreaRect(contour);
+
+    EXPECT_TRUE(checkMinAreaRect(rr, contour)) << rr.center << " " << rr.size << " " << rr.angle;
+    EXPECT_EQ(rr.size.width, 1e-4f);
+    EXPECT_EQ(rr.size.height, 1e-4f);
+}
+
+typedef testing::TestWithParam<tuple<Point2f, Point2f, Point2f, Size2f, float>> minAreaRect_of_line;
+TEST_P(minAreaRect_of_line, accuracy)
+{
+    Point2f p1 = get<0>(GetParam());
+    Point2f p2 = get<1>(GetParam());
+    RotatedRect out = minAreaRect(std::vector<Point2f>{p1, p2});
+    EXPECT_EQ(out.center, get<2>(GetParam()));
+    EXPECT_EQ(out.size, get<3>(GetParam()));
+    EXPECT_NEAR(out.angle, get<4>(GetParam()), 1e-6);
+}
+INSTANTIATE_TEST_CASE_P(Imgproc, minAreaRect_of_line,
+        testing::Values(
+            std::make_tuple(Point2f(10, 15), Point2f(10, 25), Point2f(10, 20), Size2f(10, 0), -90.f),
+            std::make_tuple(Point2f(450, 500), Point2f(508, 500), Point2f(479, 500), Size2f(0, 58), -90.f),
+            std::make_tuple(Point2f(10, 20), Point2f(13, 16), Point2f(11.5, 18), Size2f(5, 0), -53.1301041f),
+            std::make_tuple(Point2f(9, 19), Point2f(4, 7), Point2f(6.5, 13), Size2f(0, 13), -22.6198654f)
+        ));
+
+typedef testing::TestWithParam<tuple<tuple<std::vector<Point>, Mat>, bool> > convexHull_monotonous;
+TEST_P(convexHull_monotonous, self_intersecting_contour)
+{
+    std::vector<Point> contour = get<0>(get<0>(GetParam()));
+    Mat ref = get<1>(get<0>(GetParam())).clone();
+    bool clockwise = get<1>(GetParam());
+    if (!clockwise)
+    {
+        std::reverse(ref.begin<int>(), ref.end<int>());
+    }
+
+    Mat indices;
+    convexHull(contour, indices, clockwise, false);
+
+    Point minLoc;
+    minMaxLoc(indices, nullptr, nullptr, &minLoc);
+    std::rotate(indices.begin<int>(), indices.begin<int>() + minLoc.y, indices.end<int>());
+
+    minMaxLoc(ref, nullptr, nullptr, &minLoc);
+    std::rotate(ref.begin<int>(), ref.begin<int>() + minLoc.y, ref.end<int>());
+
+    ASSERT_EQ( cvtest::norm(indices, ref, NORM_INF), 0) << indices;
+}
+INSTANTIATE_TEST_CASE_P(Imgproc, convexHull_monotonous,
+    testing::Combine(
+        testing::Values(
+            std::make_tuple(
+                std::vector<Point>{
+                    Point(3, 2), Point(3, 4), Point(2, 5), Point(1, 5),
+                    Point(2, 5), Point(3, 4), Point(6, 4), Point(6, 2)
+                },
+                (Mat_<int>(5, 1) << 0, 3, 4, 6, 7)
+            ),
+            std::make_tuple(
+                std::vector<Point>{
+                    Point(3, -2), Point(3, -4), Point(2, -5), Point(1, -5),
+                    Point(2, -5), Point(3, -4), Point(6, -4), Point(6, -2)
+                },
+                (Mat_<int>(5, 1) << 3, 0, 7, 6, 4)
+            ),
+            std::make_tuple(
+                std::vector<Point>{
+                    Point(1, 1), Point(1, 0), Point(0, 0), Point(1, 0), Point(0, 1)
+                },
+                (Mat_<int>(4, 1) << 0, 1, 2, 4)
+            )
+        ),
+        testing::Bool()
+));
+
 }} // namespace
+
 /* End of file. */

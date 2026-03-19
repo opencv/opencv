@@ -74,6 +74,11 @@ public:
     {
         open(filename, params);
     }
+    CvCapture_FFMPEG_proxy(int index, const cv::VideoCaptureParameters& params)
+        : ffmpegCapture(NULL)
+    {
+        open(index, params);
+    }
     CvCapture_FFMPEG_proxy(const Ptr<IStreamReader>& stream, const cv::VideoCaptureParameters& params)
         : ffmpegCapture(NULL)
     {
@@ -127,6 +132,13 @@ public:
         ffmpegCapture = cvCreateFileCaptureWithParams_FFMPEG(filename.c_str(), params);
         return ffmpegCapture != 0;
     }
+    bool open(int index, const cv::VideoCaptureParameters& params)
+    {
+        close();
+
+        ffmpegCapture = cvCreateFileCaptureWithParams_FFMPEG(index, params);
+        return ffmpegCapture != 0;
+    }
     bool open(const Ptr<IStreamReader>& stream, const cv::VideoCaptureParameters& params)
     {
         close();
@@ -156,6 +168,14 @@ protected:
 cv::Ptr<cv::IVideoCapture> cvCreateFileCapture_FFMPEG_proxy(const std::string &filename, const cv::VideoCaptureParameters& params)
 {
     cv::Ptr<CvCapture_FFMPEG_proxy> capture = cv::makePtr<CvCapture_FFMPEG_proxy>(filename, params);
+    if (capture && capture->isOpened())
+        return capture;
+    return cv::Ptr<cv::IVideoCapture>();
+}
+
+cv::Ptr<cv::IVideoCapture> cvCreateCameraCapture_FFMPEG_proxy(int index, const cv::VideoCaptureParameters& params)
+{
+    cv::Ptr<CvCapture_FFMPEG_proxy> capture = cv::makePtr<CvCapture_FFMPEG_proxy>(index, params);
     if (capture && capture->isOpened())
         return capture;
     return cv::Ptr<cv::IVideoCapture>();
@@ -272,13 +292,15 @@ CvResult CV_API_CALL cv_capture_open(const char* filename, int camera_index, CV_
     if (!handle)
         return CV_ERROR_FAIL;
     *handle = NULL;
-    if (!filename)
+    if (!filename && camera_index < 0)
         return CV_ERROR_FAIL;
-    CV_UNUSED(camera_index);
     CvCapture_FFMPEG_proxy *cap = 0;
     try
     {
-        cap = new CvCapture_FFMPEG_proxy(String(filename), cv::VideoCaptureParameters());
+        if (filename)
+            cap = new CvCapture_FFMPEG_proxy(String(filename), cv::VideoCaptureParameters());
+        else
+            cap = new CvCapture_FFMPEG_proxy(camera_index, cv::VideoCaptureParameters());
         if (cap->isOpened())
         {
             *handle = (CvPluginCapture)cap;
@@ -308,14 +330,16 @@ CvResult CV_API_CALL cv_capture_open_with_params(
     if (!handle)
         return CV_ERROR_FAIL;
     *handle = NULL;
-    if (!filename)
+    if (!filename && camera_index < 0)
         return CV_ERROR_FAIL;
-    CV_UNUSED(camera_index);
     CvCapture_FFMPEG_proxy *cap = 0;
     try
     {
         cv::VideoCaptureParameters parameters(params, n_params);
-        cap = new CvCapture_FFMPEG_proxy(String(filename), parameters);
+        if (filename)
+            cap = new CvCapture_FFMPEG_proxy(String(filename), parameters);
+        else
+            cap = new CvCapture_FFMPEG_proxy(camera_index, parameters);
         if (cap->isOpened())
         {
             *handle = (CvPluginCapture)cap;

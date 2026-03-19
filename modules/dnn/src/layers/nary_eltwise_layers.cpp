@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "../precomp.hpp"
+#include "../net_impl.hpp"
 #include "layers_common.hpp"
 #include "../op_cuda.hpp"
 #include "../op_cann.hpp"
@@ -33,6 +34,7 @@ static int _mod(int x, int y) {
     }
     return res;
 }
+
 }
 
 class NaryEltwiseHelper CV_FINAL
@@ -116,8 +118,6 @@ public:
                 assert(st_i % elemsize[k] == 0);
                 this->shapes[k][i] = sz_i;
                 this->steps[k][i] = st_i;
-                if (this->shapes[k][i] == 0)
-                    return false;
             }
         }
 
@@ -171,36 +171,12 @@ class NaryEltwiseLayerImpl CV_FINAL : public NaryEltwiseLayer
 {
     NaryEltwiseHelper helper;
 public:
-    enum class OPERATION
-    {
-        AND = 0,
-        EQUAL,
-        GREATER,
-        GREATER_EQUAL,
-        LESS,
-        LESS_EQUAL,
-        OR,
-        POW,
-        XOR,
-        BITSHIFT,
-        MAX,
-        MEAN,
-        MIN,
-        MOD,  // Integer Mod. Reminder's sign = Divisor's sign.
-        FMOD, // Floating-point Mod. Reminder's sign = Dividend's sign.
-        PROD,
-        SUB,
-        SUM,
-        ADD,
-        DIV,
-        WHERE,
-    } op;
+    std::string operation;
 
     NaryEltwiseLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
-
-        String operation = toLowerCase(params.get<String>("operation", "sum"));
+        operation = toLowerCase(params.get<String>("operation", "sum"));
 
         if (operation == "equal")
             op = OPERATION::EQUAL;
@@ -244,8 +220,21 @@ public:
             op = OPERATION::XOR;
         else if (operation == "where")
             op = OPERATION::WHERE;
+        else if (operation == "bitwise_and")
+            op = OPERATION::BITWISE_AND;
+        else if (operation == "bitwise_or")
+            op = OPERATION::BITWISE_OR;
+        else if (operation == "bitwise_xor")
+            op = OPERATION::BITWISE_XOR;
         else
             CV_Error(cv::Error::StsBadArg, "Unknown operation type \"" + operation + "\"");
+    }
+
+    virtual std::ostream& dumpAttrs(std::ostream& strm, int indent) const CV_OVERRIDE
+    {
+        prindent(strm, indent);
+        strm << "operation: \"" << operation << "\",\n";
+        return strm;
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
@@ -286,34 +275,45 @@ public:
         return backendId == DNN_BACKEND_OPENCV;
     }
 
-    static MatShape findCommonShape(std::vector<MatShape> shapes)
+    // [TODO] move it to MatShape
+    static MatShape findCommonShape(const std::vector<MatShape>& shapes)
     {
-        CV_Assert(!shapes.empty());
-        const size_t dim = std::max_element(shapes.begin(), shapes.end(),
-                                            [](const MatShape& a, const MatShape& b)
-                                            { return a.size() < b.size(); })->size();
+        size_t i, ninputs = shapes.size();
+        CV_Assert(ninputs > 0u);
 
-        for (auto& shape : shapes)
-        {
-            shape.insert(shape.begin(), dim - shape.size(), 1);
+        int C0 = shapes[0].C, dims0 = shapes[0].dims, maxdims = dims0;
+        bool constC = true;
+        bool allBlock = true;
+        bool constDims = true;
+        for (i = 0; i < ninputs; i++) {
+            const MatShape& inpShape = shapes[i];
+            int dims = inpShape.dims;
+            allBlock = allBlock && inpShape.layout == DATA_LAYOUT_BLOCK;
+            constC = constC && inpShape.C == C0;
+            constDims = constDims && dims == dims0;
+            maxdims = std::max(maxdims, dims);
         }
 
-        MatShape outShape(dim, 1);
-        for (size_t i = 0; i < dim; ++i)
+        MatShape outShape(maxdims, 1);
+        if (allBlock && constC && constDims) {
+            outShape.layout = DATA_LAYOUT_BLOCK;
+            outShape.C = C0;
+        }
+
+        for (i = 0; i < ninputs; i++)
         {
-            for (const auto& shape : shapes)
-            {
-                if (shape[i] != outShape[i])
-                {
-                    CV_Assert(shape[i] == 1 || outShape[i] == 1);
-                    outShape[i] = std::max(outShape[i], shape[i]);
-                }
+            const MatShape& inpShape = shapes[i];
+            int dims = inpShape.dims, delta = maxdims - dims;
+            for (int j = 0; j < maxdims; j++) {
+                int inpsz = j < delta ? 1 : inpShape[j - delta];
+                int outsz = outShape[j];
+                CV_Assert(inpsz == outsz || inpsz == 1 || outsz == 1);
+                outShape[j] = inpsz != 1 ? inpsz : outsz;
             }
         }
 
         return outShape;
     }
-
 
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE {
         std::vector<Mat> inputs, outputs;
@@ -360,13 +360,46 @@ public:
             return;
         }
 
+        if (op == OPERATION::BITWISE_AND || op == OPERATION::BITWISE_OR || op == OPERATION::BITWISE_XOR)
+        {
+            CV_Assert(inputs.size());
+            for (auto input : inputs)
+            {
+                CV_CheckTypeEQ(inputs[0], input, "All inputs should have equal types");
+                CV_CheckType(input, input == CV_8S || input == CV_8U || input == CV_16S || input == CV_16U || input == CV_32S || input == CV_32U || input == CV_64S || input == CV_64U, "");
+            }
+            outputs.assign(requiredOutputs, inputs[0]);
+            return;
+        }
+
         if (op == OPERATION::POW) {
-            /*
-                First input: exponent of Type T;
-                Second input: power of the exponent of Type T1;
-                Output: same type T as first input's.
-            */
-            outputs.assign(1, inputs.front());
+            CV_Assert(inputs.size() == 2);
+            auto isIntegerType = [](int t) {
+                return t == CV_8S || t == CV_8U || t == CV_16S || t == CV_16U || t == CV_32S || t == CV_32U || t == CV_64S || t == CV_64U;
+            };
+            auto isFloatType = [](int t) {
+                return t == CV_32F || t == CV_64F || t == CV_16F || t == CV_16BF;
+            };
+
+            int out_type;
+            const bool baseIsInt   = isIntegerType(inputs[0]);
+            const bool expIsInt    = isIntegerType(inputs[1]);
+            const bool baseIsFloat = isFloatType(inputs[0]);
+            const bool expIsFloat  = isFloatType(inputs[1]);
+
+            if ((baseIsInt && expIsInt) || (baseIsFloat && expIsFloat))
+            {
+                out_type = (inputs[0] == inputs[1]) ? inputs[0] : CV_32F;
+            }
+            else if (baseIsFloat != expIsFloat)
+            {
+                out_type = inputs[0];
+            }
+            else
+            {
+                out_type = CV_32F;
+            }
+            outputs.assign(1, out_type);
             return;
         }
 
@@ -375,9 +408,9 @@ public:
         {
             CV_CheckTypeEQ(inputs[0], input, "All inputs should have equal types");
             if (preferableTarget == DNN_TARGET_OPENCL_FP16)
-                CV_CheckType(input, input == CV_16F || input == CV_8S || input == CV_8U || input == CV_32S || input == CV_64S, "");
+                CV_CheckType(input, input == CV_16F || input == CV_32F || input == CV_64F || input == CV_8S || input == CV_8U || input == CV_16S || input == CV_16U || input == CV_32S || input == CV_32U || input == CV_64S || input == CV_64U, "");
             else
-                CV_CheckType(input, input == CV_32F || input == CV_8S || input == CV_8U || input == CV_32S || input == CV_64S, "");
+                CV_CheckType(input, input == CV_32F || input == CV_64F || input == CV_8S || input == CV_8U || input == CV_16S || input == CV_16U || input == CV_32S || input == CV_32U || input == CV_64S || input == CV_64U, "");
         }
 
         if (op == OPERATION::EQUAL || op == OPERATION::GREATER || op == OPERATION::GREATER_EQUAL || op == OPERATION::LESS || op == OPERATION::LESS_EQUAL)
@@ -386,6 +419,34 @@ public:
             outputs.assign(requiredOutputs, inputs[0]);
     }
 
+    int getLayouts(const std::vector<DataLayout>& actualInputs,
+                   std::vector<DataLayout>& desiredInputs,
+                   const int requiredOutputs,
+                   std::vector<DataLayout>& outputs) const CV_OVERRIDE
+    {
+        auto* netimpl_ = getNetImpl(this);
+        DataLayout defaultLayout = netimpl_->originalLayout;
+        size_t ninputs = actualInputs.size(), nblockInputs = 0;
+        CV_Assert(ninputs >= 1u);
+        for (size_t i = 0; i < ninputs; i++) {
+            DataLayout layout = actualInputs[i];
+            nblockInputs += layout == DATA_LAYOUT_BLOCK;
+        }
+
+        desiredInputs = actualInputs;
+        if (nblockInputs == ninputs) {
+            outputs.assign(requiredOutputs, DATA_LAYOUT_BLOCK);
+        } else {
+            if (nblockInputs < ninputs) {
+                for (size_t i = 0; i < ninputs; i++) {
+                    DataLayout layout = actualInputs[i];
+                    desiredInputs[i] = layout == DATA_LAYOUT_BLOCK ? defaultLayout : layout;
+                }
+            }
+            outputs.assign(requiredOutputs, DATA_LAYOUT_UNKNOWN);
+        }
+        return outputs[0] == DATA_LAYOUT_BLOCK ? netimpl_->defaultC0 : 0;
+    }
 
     template <typename T, typename RESULT_T, typename Functor>
     void binary_forward_impl(const Functor& op, int ndims, const std::vector<int>& shape,
@@ -505,8 +566,8 @@ public:
         int nplanes = std::accumulate(shape.begin(), shape.end() - 1, 1, std::multiplies<int>());
 
         if (nplanes == 1) { // parallelize within the plane
-            AutoBuffer<char> buf_ptrs(steps.size());
-            auto ptrs = (char**)buf_ptrs.data();
+            AutoBuffer<char*> buf_ptrs(steps.size());
+            char** ptrs = buf_ptrs.data();
             ptrs[0] = out;
             for (int i = 0; i < ninputs; i++) {
                 ptrs[i+1] = (char*)inp[i];
@@ -551,8 +612,8 @@ public:
             parallel_for_(Range(0, plane_size), worker, nstripes);
         } else { // parallelize across the plane
             auto worker = [&](const Range &r) {
-                AutoBuffer<char> buf_ptrs(steps.size());
-                auto ptrs = (char**)buf_ptrs.data();
+                AutoBuffer<char*> buf_ptrs(steps.size());
+                char** ptrs = buf_ptrs.data();
                 for (int plane_idx = r.start; plane_idx < r.end; plane_idx++) {
                     ptrs[0] = out;
                     for (int i = 0; i < ninputs; i++) ptrs[i+1] = (char*)inp[i];
@@ -766,12 +827,161 @@ public:
             return;
         }
 
-        int type_for_dispatch = op == OPERATION::WHERE ? outputs.front().type() : inputs.front().type();
-        typeDispatch(type_for_dispatch, inputs.size(), inputs, outputs);
+        std::vector<Mat> used_inputs = inputs;
+        if (op == OPERATION::POW) {
+            CV_Assert(used_inputs.size() == 2);
+            const int out_type = outputs[0].type();
+            if (used_inputs[0].type() != out_type || used_inputs[1].type() != out_type) {
+                Mat a_conv, b_conv;
+                used_inputs[0].convertTo(a_conv, out_type);
+                used_inputs[1].convertTo(b_conv, out_type);
+                used_inputs = {a_conv, b_conv};
+                helper.init(used_inputs, outputs);
+                CV_CheckTrue(helper.prepare_for_broadcast_op(), "NaryEltwiseLayer: Preparation for broadcasting failed");
+            }
+        }
+
+        int type_for_dispatch = (op == OPERATION::WHERE || op == OPERATION::POW) ? outputs.front().type() : used_inputs.front().type();
+        typeDispatch(type_for_dispatch, used_inputs.size(), used_inputs, outputs);
     }
 
     template<typename T, typename... Args>
-    inline void opDispatch(size_t ninputs, Args&&... args)
+    inline typename std::enable_if<std::is_integral<T>::value && !std::is_same<T, bool>::value, void>::type opDispatch(size_t ninputs, Args&&... args)
+    {
+        if (ninputs == 2) {
+            switch (op) {
+                case OPERATION::EQUAL: {
+                    auto equal = [](const T &a, const T &b) { return a == b; };
+                    binary_forward<T, bool>(equal, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::GREATER: {
+                    auto greater = [](const T &a, const T &b) { return a > b; };
+                    binary_forward<T, bool>(greater, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::GREATER_EQUAL: {
+                    auto greater_equal = [](const T &a, const T &b) { return a >= b; };
+                    binary_forward<T, bool>(greater_equal, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::LESS: {
+                    auto less = [](const T &a, const T &b) { return a < b; };
+                    binary_forward<T, bool>(less, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::LESS_EQUAL: {
+                    auto less_equal = [](const T &a, const T &b) { return a <= b; };
+                    binary_forward<T, bool>(less_equal, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::POW: {
+                    auto pow = [] (const T& a, const T& b) { return saturate_cast<T>(std::pow((double)a, (double)b)); };
+                    binary_forward<T, T>(pow, std::forward<Args>(args)..., 1e5);
+                    break;
+                }
+                case OPERATION::BITSHIFT: {
+                    auto bitshift = [] (const uint8_t &a, const uint8_t &b) { return a << b; };
+                    binary_forward<T, T>(bitshift, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::MAX: {
+                    auto max = [](const T &a, const T &b) { return std::max(a, b); };
+                    binary_forward<T, T>(max, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::MEAN: {
+                    auto mean = [](const T &a, const T &b) { return (a + b) / T{2}; };
+                    binary_forward<T, T>(mean, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::MIN: {
+                    auto min = [](const T &a, const T &b) { return std::min(a, b); };
+                    binary_forward<T, T>(min, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::MOD: {
+                    auto mod = [] (const T &a, const T &b) { return static_cast<T>(_mod(int(a), int(b))); };
+                    binary_forward<T, T>(mod, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::FMOD: {
+                    auto fmod = [](const T &a, const T &b) { return std::fmod(a, b); };
+                    binary_forward<T, T>(fmod, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::PROD: {
+                    auto prod = [](const T &a, const T &b) { return a * b; };
+                    binary_forward<T, T>(prod, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::SUB: {
+                    auto sub = [](const T &a, const T &b) { return a - b; };
+                    binary_forward<T, T>(sub, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::ADD:
+                case OPERATION::SUM: {
+                    auto sum = [](const T &a, const T &b) { return a + b; };
+                    binary_forward<T, T>(sum, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::DIV: {
+                    auto div = [](const T &a, const T &b) { return a / b; };
+                    binary_forward<T, T>(div, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::BITWISE_AND: {
+                    auto band = [](const T &a, const T &b) { return (T)(a & b); };
+                    binary_forward<T, T>(band, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::BITWISE_OR: {
+                    auto bor = [](const T &a, const T &b) { return (T)(a | b); };
+                    binary_forward<T, T>(bor, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::BITWISE_XOR: {
+                    auto bxor = [](const T &a, const T &b) { return (T)(a ^ b); };
+                    binary_forward<T, T>(bxor, std::forward<Args>(args)...);
+                    break;
+                }
+                default: CV_Error(Error::StsBadArg, "Unsupported operation");
+            }
+        } else if (ninputs == 3 && op == OPERATION::WHERE) {
+            auto where = [](const T &a, const T &b, const T &c) { return a ? b : c; };
+            ternary_forward<bool, T, T, T>(where, std::forward<Args>(args)...);
+        } else {
+            switch (op)
+            {
+                case OPERATION::MAX: {
+                    auto max = [](const T &a, const T &b) { return std::max(a, b); };
+                    nary_forward<T>(max, T{1}, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::MEAN: {
+                    auto sum = [](const T &a, const T &b) { return a + b; };
+                    nary_forward<T>(sum, T{1} / ninputs, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::MIN: {
+                    auto min = [](const T &a, const T &b) { return std::min(a, b); };
+                    nary_forward<T>(min, T{1}, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::SUM: {
+                    auto sum = [](const T &a, const T &b) { return a + b; };
+                    nary_forward<T>(sum, T{1}, std::forward<Args>(args)...);
+                    break;
+                }
+                default:
+                    CV_Error(Error::StsBadArg, "Unsupported operation.");
+            }
+        };
+    }
+
+    template<typename T, typename... Args>
+    inline typename std::enable_if<!std::is_integral<T>::value || std::is_same<T, bool>::value, void>::type opDispatch(size_t ninputs, Args&&... args)
     {
         if (ninputs == 2) { // Operators that take two operands
             switch (op) {
@@ -801,13 +1011,8 @@ public:
                     break;
                 }
                 case OPERATION::POW: {
-                    auto pow = [] (const T& a, const T& b) { return std::pow(a, b); };
+                    auto pow = [] (const T& a, const T& b) { return saturate_cast<T>(std::pow((double)a, (double)b)); };
                     binary_forward<T, T>(pow, std::forward<Args>(args)..., 1e5);
-                    break;
-                }
-                case OPERATION::BITSHIFT: {
-                    auto bitshift = [] (const uint8_t &a, const uint8_t &b) { return a << b; };
-                    binary_forward<T, T>(bitshift, std::forward<Args>(args)...);
                     break;
                 }
                 case OPERATION::MAX: {
@@ -941,8 +1146,29 @@ public:
                 break;
             case CV_32F:
                 CV_Assert(op != OPERATION::BITSHIFT && op != OPERATION::AND &&
-                          op != OPERATION::OR && op != OPERATION::XOR);
+                          op != OPERATION::OR && op != OPERATION::XOR &&
+                          op != OPERATION::BITWISE_AND && op != OPERATION::BITWISE_OR &&
+                          op != OPERATION::BITWISE_XOR);
                 opDispatch<float>(std::forward<Args>(args)...);
+                break;
+            case CV_64F:
+                CV_Assert(op != OPERATION::BITSHIFT && op != OPERATION::AND &&
+                          op != OPERATION::OR && op != OPERATION::XOR &&
+                          op != OPERATION::BITWISE_AND && op != OPERATION::BITWISE_OR &&
+                          op != OPERATION::BITWISE_XOR);
+                opDispatch<double>(std::forward<Args>(args)...);
+                break;
+            case CV_16S:
+                opDispatch<int16_t>(std::forward<Args>(args)...);
+                break;
+            case CV_16U:
+                opDispatch<uint16_t>(std::forward<Args>(args)...);
+                break;
+            case CV_32U:
+                opDispatch<uint32_t>(std::forward<Args>(args)...);
+                break;
+            case CV_64U:
+                opDispatch<uint64_t>(std::forward<Args>(args)...);
                 break;
             default:
                 CV_Error(cv::Error::BadDepth, "Unsupported type.");
@@ -1110,7 +1336,7 @@ public:
             node = std::make_shared<ov::op::v1::Select>(inp0, inp1, inp2);
         }
         // Ideally we should do this but int32 internal blobs are converted to float32 data type in inference.
-        // TODO: Remove data type convertion when we have type inference.
+        // TODO: Remove data type conversion when we have type inference.
         else if (op == OPERATION::MOD) {
             auto inp0_i64 = std::make_shared<ov::op::v0::Convert>(inp0, ov::element::i64);
             auto inp1_i64 = std::make_shared<ov::op::v0::Convert>(inp1, ov::element::i64);

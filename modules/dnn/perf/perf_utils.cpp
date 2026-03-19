@@ -36,8 +36,14 @@ INSTANTIATE_TEST_CASE_P(/**/, Utils_blobFromImage,
 using Utils_blobFromImages = TestBaseWithParam<std::vector<int>>;
 PERF_TEST_P_(Utils_blobFromImages, HWC_TO_NCHW) {
     std::vector<int> input_shape = GetParam();
+
     int batch = input_shape.front();
     std::vector<int> input_shape_no_batch(input_shape.begin()+1, input_shape.end());
+
+    if (input_shape_no_batch[0]*input_shape_no_batch[1] >= 2048*2048)
+    {
+        applyTestTag( CV_TEST_TAG_MEMORY_2GB);
+    }
 
     std::vector<Mat> inputs;
     for (int i = 0; i < batch; i++) {

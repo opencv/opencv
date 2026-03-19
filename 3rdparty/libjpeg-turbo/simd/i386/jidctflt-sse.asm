@@ -1,5 +1,5 @@
 ;
-; jidctflt.asm - floating-point IDCT (SSE & MMX)
+; Floating-point IDCT (SSE & MMX)
 ;
 ; Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
 ; Copyright (C) 2016, 2024, D. R. Commander.

@@ -1,6 +1,5 @@
 ;
-; jcphuff-sse2.asm - prepare data for progressive Huffman encoding
-; (64-bit SSE2)
+; Prepare data for progressive Huffman encoding (64-bit SSE2)
 ;
 ; Copyright (C) 2016, 2018, Matthieu Darbois
 ; Copyright (C) 2023, Aliaksiej Kandracienka.
