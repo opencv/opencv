@@ -409,12 +409,12 @@ include("${OpenCV_SOURCE_DIR}/cmake/FindONNX.cmake")
 endif()
 
 # ONNX Runtime GenAI
-ocv_option(WITH_ONNXRUNTIME_GENAI "Build with ONNX Runtime GenAI support" OFF)
+ocv_option(WITH_ONNXRUNTIME_GENAI "Build with ONNX Runtime GenAI support" OFF IF WITH_ONNXRUNTIME)
 ocv_option(DOWNLOAD_ONNXRUNTIME_GENAI "Download ONNX Runtime GenAI prebuilt binaries" OFF IF WITH_ONNXRUNTIME_GENAI)
 
 set(ONNXRUNTIME_GENAI_VERSION "0.12.1" CACHE STRING "ONNX Runtime GenAI version to download (prebuilt binaries)")
 
-if(WITH_ONNXRUNTIME_GENAI)
+if(WITH_ONNXRUNTIME_GENAI AND WITH_ONNXRUNTIME)
   include("${OpenCV_SOURCE_DIR}/cmake/FindONNX.cmake")
 
   set(_ortga_download_requested OFF)

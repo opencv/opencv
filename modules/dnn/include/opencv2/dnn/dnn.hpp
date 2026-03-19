@@ -1071,7 +1071,7 @@ CV__DNN_INLINE_NS_BEGIN
         ENGINE_NEW=2,     //!< Force use the new dnn engine. The engine does not support non CPU back-ends for now.
         ENGINE_AUTO=3,    //!< Try to use the new engine and then fall back to the classic version.
         ENGINE_ORT=4,     //!< Try to use ONNX Runtime wrapper (ONNX only, requires build with WITH_ONNXRUNTIME=ON).
-        ENGINE_ORT_GENAI=5 //!< Use ONNX Runtime GenAI wrapper for generative AI models (requires build with WITH_ONNXRUNTIME_GENAI=ON).
+        ENGINE_ORT_GENAI=5 //!< Use ONNX Runtime GenAI wrapper for generative AI models (requires build with WITH_ONNXRUNTIME=ON and WITH_ONNXRUNTIME_GENAI=ON).
     };
 
     /** @brief Reads a network model stored in <a href="https://pjreddie.com/darknet/">Darknet</a> model files.
