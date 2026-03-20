@@ -1726,9 +1726,11 @@ namespace cv
 template <typename T>
 struct InRange_SIMD
 {
-    int operator () (const T *, const T *, const T *, uchar *, int) const
+    int operator () (const T * src1, const T * src2, const T * src3, uchar * dst, int len) const
     {
-        return 0;
+        for (int x = 0; x < len; x++)
+            dst[x] = (src2[x] <= src1[x] && src1[x] <= src3[x]) ? 255 : 0;
+        return len;
     }
 };
 
@@ -1937,6 +1939,76 @@ struct InRange_SIMD<bfloat>
     }
 };
 
+template <>
+struct InRange_SIMD<unsigned>
+{
+    int operator () (const unsigned * src1, const unsigned * src2, const unsigned * src3,
+        uchar * dst, int len) const
+    {
+        int x = 0;
+        const int width = (int)VTraits<v_uint32>::vlanes() * 2;
+
+        for (; x <= len - width; x += width)
+        {
+            v_uint32 values1 = vx_load(src1 + x);
+            v_uint32 low1 = vx_load(src2 + x);
+            v_uint32 high1 = vx_load(src3 + x);
+
+            v_uint32 values2 = vx_load(src1 + x + VTraits<v_uint32>::vlanes());
+            v_uint32 low2 = vx_load(src2 + x + VTraits<v_uint32>::vlanes());
+            v_uint32 high2 = vx_load(src3 + x + VTraits<v_uint32>::vlanes());
+
+            v_pack_store(dst + x, v_reinterpret_as_u16(v_pack(v_and(v_ge(values1, low1), v_ge(high1, values1)), v_and(v_ge(values2, low2), v_ge(high2, values2)))));
+        }
+        vx_cleanup();
+        return x;
+    }
+};
+
+#if CV_SIMD_64F
+
+template <>
+struct InRange_SIMD<double>
+{
+    int operator () (const double * src1, const double * src2, const double * src3,
+        uchar * dst, int len) const
+    {
+        int x = 0;
+        const int step = VTraits<v_float64>::vlanes();
+        const int width = step * 4;
+
+        for (; x <= len - width; x += width)
+        {
+            v_float64 v1 = vx_load(src1 + x);
+            v_float64 l1 = vx_load(src2 + x);
+            v_float64 h1 = vx_load(src3 + x);
+            v_uint64 m1 = v_reinterpret_as_u64(v_and(v_ge(v1, l1), v_ge(h1, v1)));
+
+            v_float64 v2 = vx_load(src1 + x + step);
+            v_float64 l2 = vx_load(src2 + x + step);
+            v_float64 h2 = vx_load(src3 + x + step);
+            v_uint64 m2 = v_reinterpret_as_u64(v_and(v_ge(v2, l2), v_ge(h2, v2)));
+
+            v_float64 v3 = vx_load(src1 + x + step * 2);
+            v_float64 l3 = vx_load(src2 + x + step * 2);
+            v_float64 h3 = vx_load(src3 + x + step * 2);
+            v_uint64 m3 = v_reinterpret_as_u64(v_and(v_ge(v3, l3), v_ge(h3, v3)));
+
+            v_float64 v4 = vx_load(src1 + x + step * 3);
+            v_float64 l4 = vx_load(src2 + x + step * 3);
+            v_float64 h4 = vx_load(src3 + x + step * 3);
+            v_uint64 m4 = v_reinterpret_as_u64(v_and(v_ge(v4, l4), v_ge(h4, v4)));
+
+
+            v_pack_store(dst + x, v_pack(v_pack(m1, m2), v_pack(m3, m4)));
+        }
+        vx_cleanup();
+        return x;
+    }
+};
+
+#endif
+
 #endif
 
 template <typename T>
@@ -2080,13 +2152,13 @@ static InRangeFunc getInRangeFunc(int depth)
         (InRangeFunc)GET_OPTIMIZED(inRange16s),
         (InRangeFunc)GET_OPTIMIZED(inRange32s),
         (InRangeFunc)GET_OPTIMIZED(inRange32f),
-        (InRangeFunc)inRange64f,
+        (InRangeFunc)GET_OPTIMIZED(inRange64f),
         (InRangeFunc)inRange16f,
         (InRangeFunc)inRange16bf,
         0,
-        (InRangeFunc)inRange64u,
-        (InRangeFunc)inRange64s,
-        (InRangeFunc)inRange32u,
+        (InRangeFunc)GET_OPTIMIZED(inRange64u),
+        (InRangeFunc)GET_OPTIMIZED(inRange64s),
+        (InRangeFunc)GET_OPTIMIZED(inRange32u),
         0,
     };
 
