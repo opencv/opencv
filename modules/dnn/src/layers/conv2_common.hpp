@@ -78,9 +78,15 @@ struct ConvState
                      const std::vector<int>& pads,
                      AutoPadding auto_pad, bool ceil_mode);
 
-    // internal-use method to initialize coordtab and ofstab.
-    // it's called from initConv and initPooling
     void initOfs();
+
+    void initDeconv(const MatShape& inpShape,
+                    const MatShape& wshape,
+                    const MatShape& outShape,
+                    int ngroups,
+                    const std::vector<int>& strides,
+                    const std::vector<int>& dilations,
+                    const std::vector<int>& pads);
 };
 
 AutoPadding getAutoPadding(const LayerParams& params);
@@ -94,6 +100,21 @@ ConvFunc getDepthwiseConvFunc(int depth);
 
 void repackDepthwiseConvWeights(const Mat& weights, Mat& Wpack, int outtype, int C0);
 void repackConvWeights(const Mat& weights, Mat& Wpack, int outtype, int ngroups, int C0);
+
+MatShape deconvInferShape(const MatShape& inpShape, const MatShape& wshape,
+                          const std::vector<int>& kernelShape, int ngroups,
+                          const std::vector<int>& strides,
+                          const std::vector<int>& dilations,
+                          const std::vector<int>& pads,
+                          const std::vector<int>& adjustPads,
+                          AutoPadding autoPad);
+
+typedef void (*DeconvFunc)(const void* inp, const void* residual, void* out,
+                           const ConvState& cs, const void* weights,
+                           const float* scale, const float* bias);
+
+DeconvFunc getDeconvFunc(int depth);
+void repackDeconvWeights(const Mat& weights, Mat& Wpack, int outtype, int ngroups, int C0);
 
 CV__DNN_INLINE_NS_END
 }

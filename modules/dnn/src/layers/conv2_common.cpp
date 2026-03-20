@@ -360,6 +360,179 @@ void ConvState::initPooling(const MatShape& inpshape_,
     initOfs();
 }
 
+static MatShape getDeconvWpackShape(const MatShape& wshape, int ngroups, int C0)
+{
+    CV_Assert(wshape.dims >= 3);
+    int C_in = wshape[0], Kg = wshape[1];
+    CV_Assert(C_in % ngroups == 0);
+    int Cg = C_in / ngroups;
+    int ksize = int(wshape.total()) / (C_in * Kg);
+    int K0 = C0;
+    int Kblk = (Kg + K0 - 1) / K0;
+    int C1Max = 0;
+    for (int g = 0; g < ngroups; ++g) {
+        int c_start = g * Cg;
+        int c00 = c_start & (C0 - 1);
+        int cblocks = (c00 + Cg + C0 - 1) / C0;
+        C1Max = std::max(C1Max, cblocks);
+    }
+    return MatShape({ngroups, Kblk, ksize, C1Max, C0 * K0}, DATA_LAYOUT_UNKNOWN);
+}
+
+MatShape deconvInferShape(const MatShape& inpShape, const MatShape& wshape,
+                          const std::vector<int>& kernelShape, int ngroups,
+                          const std::vector<int>& strides,
+                          const std::vector<int>& dilations,
+                          const std::vector<int>& pads,
+                          const std::vector<int>& adjustPads,
+                          AutoPadding autoPad)
+{
+    bool blockLayout = true;
+    int ndims = inpShape.dims;
+    int nspatialdims = ndims - 2 - int(blockLayout);
+    CV_Assert(nspatialdims >= 1);
+    MatShape outshape = inpShape;
+
+    int kshape_[MatShape::MAX_DIMS];
+    if (!kernelShape.empty()) {
+        int kshape_size = (int)kernelShape.size();
+        for (int i = 0; i < nspatialdims; i++)
+            kshape_[i] = kernelShape[kshape_size - nspatialdims + i];
+    } else {
+        CV_Assert(!wshape.empty() && wshape.dims == nspatialdims + 2);
+        for (int i = 0; i < nspatialdims; i++)
+            kshape_[i] = wshape[i + 2];
+    }
+
+    int C0 = inpShape[ndims - 1];
+    int K_out = ngroups * wshape[1];
+    outshape[1] = (K_out + C0 - 1) / C0;
+
+    CV_Assert(strides.empty() || (int)strides.size() == nspatialdims);
+    CV_Assert(dilations.empty() || (int)dilations.size() == nspatialdims);
+    CV_Assert(pads.empty() || (int)pads.size() == nspatialdims * 2);
+    CV_Assert(adjustPads.empty() || (int)adjustPads.size() == nspatialdims);
+
+    for (int i = 0; i < nspatialdims; i++) {
+        int inpsz   = inpShape[i + 2];
+        int k_i     = kshape_[i];
+        int stride  = strides.empty()  ? 1 : strides[i];
+        int dilation = dilations.empty() ? 1 : dilations[i];
+        int adj     = adjustPads.empty() ? 0 : adjustPads[i];
+        int outsz;
+        if (autoPad == AUTO_PAD_NONE || autoPad == AUTO_PAD_VALID) {
+            int pad_total = 0;
+            if (!pads.empty())
+                pad_total = pads[i] + pads[i + nspatialdims];
+            outsz = (inpsz - 1) * stride - pad_total + dilation * (k_i - 1) + 1 + adj;
+        } else {
+            outsz = inpsz * stride;
+        }
+        outshape[i + 2] = outsz;
+    }
+    outshape.C = K_out;
+    return outshape;
+}
+
+void repackDeconvWeights(const Mat& weights, Mat& Wpack, int outtype, int ngroups, int C0_)
+{
+    CV_Assert(weights.isContinuous());
+    CV_Assert_N(weights.type() == CV_32F, outtype == CV_32F);
+    CV_Assert(ngroups > 0);
+    CV_Assert((C0_ & (C0_ - 1)) == 0 && C0_ >= 4);
+
+    MatShape wshape = weights.shape();
+    CV_Assert(wshape.dims >= 3);
+    int C_in = wshape[0], Kg = wshape[1];
+    CV_Assert(C_in % ngroups == 0);
+    int K_out = ngroups * Kg;
+
+    if (!Wpack.isContinuous())
+        Wpack.release();
+
+    MatShape wpackShape = getDeconvWpackShape(wshape, ngroups, C0_);
+    Wpack.create(wpackShape, CV_32F);
+    Wpack.setZero();
+
+    parallel_for_(Range(0, K_out), [&](const Range& range) {
+        int Cg = C_in / ngroups;
+        int ksize = wpackShape[2], Kblk = wpackShape[1], C1Max = wpackShape[3];
+        int C0 = C0_, K0 = C0;
+        const float* wdata = weights.ptr<float>();
+        float* Wpackdata = Wpack.ptr<float>();
+
+        for (int k = range.start; k < range.end; ++k) {
+            int g   = k / Kg;
+            int kin = k - g * Kg;       // output channel within group
+            int kblk = kin / K0;
+            int k0   = kin & (K0 - 1);
+
+            int c_start = g * Cg;
+            int c00 = c_start & (C0 - 1);
+
+            for (int c = 0; c < Cg; ++c) {
+                int ch = c00 + c;
+                int c1  = ch / C0;
+                int c0  = ch & (C0 - 1);
+
+                int c_global = g * Cg + c;
+                const float* wptr = wdata + (c_global * Kg + kin) * ksize;
+                float* wpackptr = Wpackdata + (((g * Kblk + kblk) * ksize * C1Max + c1) * C0 + c0) * K0 + k0;
+                for (int i = 0; i < ksize; ++i) {
+                    wpackptr[i * (C1Max * C0 * K0)] = wptr[i];
+                }
+            }
+        }
+    });
+}
+
+void ConvState::initDeconv(const MatShape& inpshape_,
+                           const MatShape& wshape_,
+                           const MatShape& outshape_,
+                           int ngroups_,
+                           const std::vector<int>& strides_,
+                           const std::vector<int>& dilations_,
+                           const std::vector<int>& pads_)
+{
+    nspatialdims = wshape_.dims - 2;
+    CV_Assert(0 < nspatialdims && nspatialdims <= ConvState::MAX_CONV_DIMS);
+    CV_Assert(strides_.empty()  || (int)strides_.size()   == nspatialdims);
+    CV_Assert(dilations_.empty() || (int)dilations_.size() == nspatialdims);
+    CV_Assert(pads_.empty()     || (int)pads_.size()      == nspatialdims * 2);
+    CV_Assert(inpshape_.dims == outshape_.dims);
+    CV_Assert(inpshape_.dims == nspatialdims + 2 + int(inpshape_.layout == DATA_LAYOUT_BLOCK));
+
+    inpshape = inpshape_;
+    outshape = outshape_;
+    ngroups = ngroups_;
+    depthwise = false;
+
+    fastActivation = FAST_ACTIV_NONE;
+    activation = nullptr;
+    activParams.clear();
+
+    for (int i = 0; i < MAX_CONV_DIMS; i++) {
+        kshape[i] = strides[i] = dilations[i] = 1;
+        pads[i] = pads[i + MAX_CONV_DIMS] = 0;
+        inner[i] = inner[i + MAX_CONV_DIMS] = 0;
+    }
+
+    for (int i = 0; i < nspatialdims; i++) {
+        int j = i + (MAX_CONV_DIMS - nspatialdims);
+        kshape[j]           = wshape_[i + 2];
+        strides[j]          = strides_.empty()   ? 1 : strides_[i];
+        dilations[j]        = dilations_.empty()  ? 1 : dilations_[i];
+        pads[j]             = pads_.empty() ? 0 : pads_[i];
+        pads[j + MAX_CONV_DIMS] = pads_.empty() ? 0 : pads_[i + nspatialdims];
+    }
+
+    if (inpshape.layout == DATA_LAYOUT_BLOCK) {
+        int C0 = inpshape.back();
+        wshape = getDeconvWpackShape(wshape_, ngroups, C0);
+        CV_Assert(wshape.dims == 5);
+    }
+}
+
 void ConvState::initOfs()
 {
     CV_Assert(MAX_CONV_DIMS == 3);

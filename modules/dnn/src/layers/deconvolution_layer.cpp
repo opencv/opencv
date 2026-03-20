@@ -41,7 +41,9 @@
 //M*/
 
 #include "../precomp.hpp"
+#include "../net_impl.hpp"
 #include "layers_common.hpp"
+#include "conv2_common.hpp"
 #include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
@@ -151,6 +153,10 @@ public:
     UMat umat_weights;
     UMat umat_biases;
 
+    Mat weights_blk, bias_blk;
+    ConvState cs_blk;
+    MatShape prevInpshape_blk;
+
     DeConvolutionLayerImpl(const LayerParams& params) : BaseConvolutionLayerImpl(params) {}
 
     MatShape computeColRowShape(const MatShape &inpShape, const MatShape &outShape) const CV_OVERRIDE
@@ -192,6 +198,21 @@ public:
         }
     }
 
+    int getLayouts(const std::vector<DataLayout>& actualInputs,
+                   std::vector<DataLayout>& desiredInputs,
+                   const int requiredOutputs,
+                   std::vector<DataLayout>& outputs) const CV_OVERRIDE
+    {
+        size_t ninputs = actualInputs.size();
+        CV_Assert(ninputs >= 1u && requiredOutputs == 1u);
+        desiredInputs = actualInputs;
+        desiredInputs[0] = DATA_LAYOUT_BLOCK;
+        for (size_t i = 1; i < ninputs; i++)
+            desiredInputs[i] = DATA_LAYOUT_UNKNOWN;
+        outputs.assign(requiredOutputs, DATA_LAYOUT_BLOCK);
+        return getNetImpl(this)->defaultC0;
+    }
+
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
@@ -200,6 +221,24 @@ public:
         CV_Assert(inputs.size() != 0);
         CV_Assert(inputs.size() > 1 || !blobs.empty());
         MatShape weightShape = blobs.empty() ? inputs[1] : blobs[0].shape();
+
+        if (inputs[0].layout == DATA_LAYOUT_BLOCK) {
+            int nsd = inputs[0].dims - 3;
+            std::vector<int> strides_i(strides.begin(), strides.begin() + nsd);
+            std::vector<int> dilations_i(dilations.begin(), dilations.begin() + nsd);
+            std::vector<int> pads_all;
+            for (int i = 0; i < nsd; i++) pads_all.push_back(pads_begin[i]);
+            for (int i = 0; i < nsd; i++) pads_all.push_back(pads_end[i]);
+            std::vector<int> adj(adjust_pads.begin(), adjust_pads.begin() + nsd);
+            AutoPadding ap = padMode == "SAME" ? AUTO_PAD_SAME_UPPER :
+                             padMode == "VALID" ? AUTO_PAD_VALID : AUTO_PAD_NONE;
+            std::vector<int> emptyKS;
+            outputs.assign(1, deconvInferShape(inputs[0], weightShape, emptyKS,
+                                               groups, strides_i, dilations_i,
+                                               pads_all, adj, ap));
+            internals.clear();
+            return false;
+        }
 
         int outCn = numOutput;
         if (outCn < 0) {
@@ -719,10 +758,100 @@ public:
     }
 #endif
 
+    void forwardBlock(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr)
+    {
+        int ninputs = (int)inputs_arr.total();
+        const Mat& inp = inputs_arr.getMat(0);
+        MatShape inpshape = inp.shape();
+        CV_Assert(inpshape.layout == DATA_LAYOUT_BLOCK);
+        CV_Assert(inp.isContinuous());
+
+        bool dynamicWeights = false;
+        for (int i = 1; i < ninputs; i++) {
+            if (!getNetImpl(this)->isConstArg(this->inputs[i]))
+                dynamicWeights = true;
+        }
+
+        Mat rawWeights = !blobs.empty() ? blobs[0] : inputs_arr.getMat(1);
+        Mat rawBias    = blobs.size() >= 2 ? blobs[1] :
+                         ninputs >= 3 ? inputs_arr.getMat(2) : Mat();
+
+        if (dynamicWeights || weights_blk.empty()) {
+            int C0 = inpshape.back();
+            Mat wfloat;
+            if (rawWeights.type() != CV_32F)
+                rawWeights.convertTo(wfloat, CV_32F);
+            else
+                wfloat = rawWeights;
+            repackDeconvWeights(wfloat, weights_blk, CV_32F, groups, C0);
+
+            if (!rawBias.empty())
+                rawBias.convertTo(bias_blk, CV_32F);
+            else
+                bias_blk.release();
+        }
+
+        int nsd = inpshape.dims - 3;
+        std::vector<int> strides_i(strides.begin(), strides.begin() + nsd);
+        std::vector<int> dilations_i(dilations.begin(), dilations.begin() + nsd);
+        std::vector<int> pads_all;
+        for (int i = 0; i < nsd; i++) pads_all.push_back(pads_begin[i]);
+        for (int i = 0; i < nsd; i++) pads_all.push_back(pads_end[i]);
+        std::vector<int> adj(adjust_pads.begin(), adjust_pads.begin() + nsd);
+        AutoPadding ap = padMode == "SAME" ? AUTO_PAD_SAME_UPPER :
+                         padMode == "VALID" ? AUTO_PAD_VALID : AUTO_PAD_NONE;
+        std::vector<int> emptyKS;
+        MatShape wshape = rawWeights.shape();
+        MatShape outshape = deconvInferShape(inpshape, wshape, emptyKS,
+                                             groups, strides_i, dilations_i,
+                                             pads_all, adj, ap);
+
+        if (inpshape != prevInpshape_blk) {
+            cs_blk.initDeconv(inpshape, wshape, outshape, groups,
+                              strides_i, dilations_i, pads_all);
+            prevInpshape_blk = inpshape;
+        }
+
+        int outkind = outputs_arr.kind();
+        CV_Assert(outkind == _InputArray::STD_VECTOR_MAT ||
+                  outkind == _InputArray::STD_VECTOR_UMAT);
+
+        Mat out;
+        if (outkind == _InputArray::STD_VECTOR_MAT) {
+            std::vector<Mat>& outs = outputs_arr.getMatVecRef();
+            outs.resize(1);
+            outs[0].fit(outshape, inp.type());
+            out = outs[0];
+        } else {
+            std::vector<UMat>& uouts = outputs_arr.getUMatVecRef();
+            uouts.resize(1);
+            uouts[0].fit(outshape, inp.type());
+            out.fit(outshape, inp.type());
+        }
+
+        DeconvFunc func = getDeconvFunc(inp.type());
+        CV_Assert(func != nullptr);
+        const float* bias_data = bias_blk.empty() ? nullptr : bias_blk.ptr<float>();
+        func(inp.data, nullptr, out.data, cs_blk, weights_blk.data, nullptr, bias_data);
+
+        if (outkind == _InputArray::STD_VECTOR_UMAT) {
+            std::vector<UMat>& uouts = outputs_arr.getUMatVecRef();
+            out.copyTo(uouts[0]);
+        }
+
+        if (dynamicWeights)
+            weights_blk.release();
+    }
+
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        if (inputs_arr.getMat(0).shape().layout == DATA_LAYOUT_BLOCK) {
+            forwardBlock(inputs_arr, outputs_arr);
+            return;
+        }
 
         // For some reason, tests for deconvolution fail;
         // Also, the current implementation is super-inefficient,
