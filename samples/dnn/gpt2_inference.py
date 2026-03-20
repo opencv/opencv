@@ -10,7 +10,7 @@ To export GPT-2 model to ONNX, you can use the following procedure:
 
 1. Clone fork of Andrej Karpathy's GPT-2 repository:
 
-    git clone -b ash/fix-dynamic-axis-export  https://github.com/nklskyoy/build-nanogpt
+    git clone -b fix-dynamic-axis-export  https://github.com/nklskyoy/build-nanogpt
 
 2. Install the required dependencies:
 
