@@ -276,11 +276,23 @@ static void triangleRasterizeInternal(InputArray _vertices, InputArray _indices,
         float invw = 1.f / vndc[3];
         Vec4f vdiv = {vndc[0] * invw, vndc[1] * invw, vndc[2] * invw, invw};
 
+        // Compute depth using std::fma for the z/w dot products to get consistent
+        // precision regardless of compiler flags. Without this, ASan/RelWithDebInfo
+        // disables compiler-generated FMA, causing larger float rounding than Release
+        // builds, which pushes depth comparisons over test thresholds.
+        float z_num = std::fma(mvpMatrix(2,0), vglobal[0],
+                      std::fma(mvpMatrix(2,1), vglobal[1],
+                      std::fma(mvpMatrix(2,2), vglobal[2], mvpMatrix(2,3))));
+        float w_num = std::fma(mvpMatrix(3,0), vglobal[0],
+                      std::fma(mvpMatrix(3,1), vglobal[1],
+                      std::fma(mvpMatrix(3,2), vglobal[2], mvpMatrix(3,3))));
+        float z_screen = std::fma(z_num / w_num, 0.5f, 0.5f);
+
         // [-1, 1]^3 => [0, width] x [0, height] x [0, 1]
         Vec4f vscreen = {
             (vdiv[0] + 1.f) * 0.5f * (float)imgSize.width,
             (vdiv[1] + 1.f) * 0.5f * (float)imgSize.height,
-            (vdiv[2] + 1.f) * 0.5f,
+            z_screen,
              vdiv[3]
         };
 
