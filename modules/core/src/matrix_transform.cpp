@@ -868,7 +868,7 @@ void broadcast(InputArray _src, InputArray _shape, OutputArray _dst) {
     if (_flatten_for_broadcast(2, max_ndims, all_ndims, orig_shapes, flatten_shapes, flatten_steps)) {
         size_t src_dp = flatten_steps[0][max_ndims - 1];
         size_t dst_dp = flatten_steps[1][max_ndims - 1];
-        CV_Assert(dst_dp == 1);
+        CV_Assert(dst_dp == 1 || dst_dp == 0);
         CV_Assert(max_ndims >= 2); // >= 3?
         size_t rowstep_src = flatten_steps[0][max_ndims - 2];
         size_t rowstep_dst = flatten_steps[1][max_ndims - 2];
