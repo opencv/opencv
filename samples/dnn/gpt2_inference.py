@@ -27,7 +27,7 @@ Run the script:
     pip install tiktoken==0.7.0 numpy tqdm
 
 2. Run the script:
-    python gpt2_inference.py --model=<path-to-onnx-model>  --prompt=<use-promt-of-the-same-length-used-while-exporting>
+    python gpt2_inference.py --model=<path-to-onnx-model> --tokenizer_path=<path-to-tokenizer-config> --prompt=<use-promt-of-the-same-length-used-while-exporting>
 '''
 
 import numpy as np
