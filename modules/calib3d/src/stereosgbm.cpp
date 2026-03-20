@@ -2553,7 +2553,7 @@ void cv::validateDisparity( InputOutputArray _disp, InputArray _cost, int minDis
 
                 int x2 = x - ((d + DISP_SCALE/2) >> DISP_SHIFT);
 
-                if( disp2cost[x2] > c )
+                if((unsigned)x2 < (unsigned)cols && disp2cost[x2] > c )
                 {
                     disp2cost[x2] = c;
                     disp2buf[x2] = d;
@@ -2573,7 +2573,7 @@ void cv::validateDisparity( InputOutputArray _disp, InputArray _cost, int minDis
 
                 int x2 = x - ((d + DISP_SCALE/2) >> DISP_SHIFT);
 
-                if( disp2cost[x2] > c )
+                if((unsigned)x2 < (unsigned)cols && disp2cost[x2] > c )
                 {
                     disp2cost[x2] = c;
                     disp2buf[x2] = d;
