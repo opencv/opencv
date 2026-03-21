@@ -48,6 +48,8 @@
 //
 #include "precomp.hpp"
 #include <vector>
+#include <type_traits>
+#include "opencv2/core/hal/intrin.hpp"
 
 namespace cv{
     namespace connectedcomponents{
@@ -1400,6 +1402,118 @@ namespace cv{
             LabelT nLabels = flattenL(P, lunique);
             sop.init(nLabels);
 
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            if (std::is_same<StatsOp, NoOp>::value && std::is_same<LabelT, int>::value
+                && std::is_same<PixelT, uchar>::value)
+            {
+                // SIMD-optimized second scan for int labels without stats collection.
+                // Processes 2x2 blocks: gather block labels from even columns, resolve
+                // via P[], duplicate for paired columns using v_zip, then mask each row
+                // with the source image.
+                const int vlanes = VTraits<v_int32>::vlanes();
+                const int* Pint = reinterpret_cast<const int*>(P);
+                const v_int32 vzero = vx_setzero_s32();
+
+                int r = 0;
+                for (; r < e_rows; r += 2) {
+                    const uchar * const img_row = img.ptr<uchar>(r);
+                    const uchar * const img_row_fol = (uchar *)(((char*)img_row) + img.step.p[0]);
+                    int * const labels_row = imgLabels.ptr<int>(r);
+                    int * const labels_row_fol = (int *)(((char*)labels_row) + imgLabels.step.p[0]);
+                    int c = 0;
+                    for (; c <= e_cols - 2 * vlanes; c += 2 * vlanes) {
+                        // Gather vlanes block labels from even columns
+                        int lbuf[VTraits<v_int32>::max_nlanes];
+                        for (int i = 0; i < vlanes; i++)
+                            lbuf[i] = labels_row[c + 2 * i];
+                        v_int32 block_labels = vx_load(lbuf);
+                        v_int32 resolved = v_lut(Pint, block_labels);
+
+                        // Duplicate each resolved label for paired columns
+                        v_int32 exp_lo, exp_hi;
+                        v_zip(resolved, resolved, exp_lo, exp_hi);
+
+                        // Row r: load image pixels, expand to int32, mask and store
+                        v_uint16 img16 = vx_load_expand(img_row + c);
+                        v_uint32 img32_lo, img32_hi;
+                        v_expand(img16, img32_lo, img32_hi);
+                        v_store(labels_row + c,
+                            v_select(v_gt(v_reinterpret_as_s32(img32_lo), vzero), exp_lo, vzero));
+                        v_store(labels_row + c + vlanes,
+                            v_select(v_gt(v_reinterpret_as_s32(img32_hi), vzero), exp_hi, vzero));
+
+                        // Row r+1: same resolved labels, different image mask
+                        v_uint16 img_fol16 = vx_load_expand(img_row_fol + c);
+                        v_uint32 img_fol32_lo, img_fol32_hi;
+                        v_expand(img_fol16, img_fol32_lo, img_fol32_hi);
+                        v_store(labels_row_fol + c,
+                            v_select(v_gt(v_reinterpret_as_s32(img_fol32_lo), vzero), exp_lo, vzero));
+                        v_store(labels_row_fol + c + vlanes,
+                            v_select(v_gt(v_reinterpret_as_s32(img_fol32_hi), vzero), exp_hi, vzero));
+                    }
+                    // Scalar tail for remaining columns in the row pair
+                    for (; c < e_cols; c += 2) {
+                        int iLabel = labels_row[c];
+                        if (iLabel > 0) {
+                            iLabel = Pint[iLabel];
+                            labels_row[c] = (img_row[c] > 0) ? iLabel : 0;
+                            labels_row[c + 1] = (img_row[c + 1] > 0) ? iLabel : 0;
+                            labels_row_fol[c] = (img_row_fol[c] > 0) ? iLabel : 0;
+                            labels_row_fol[c + 1] = (img_row_fol[c + 1] > 0) ? iLabel : 0;
+                        }
+                        else {
+                            labels_row[c] = 0;
+                            labels_row[c + 1] = 0;
+                            labels_row_fol[c] = 0;
+                            labels_row_fol[c + 1] = 0;
+                        }
+                    }
+                    // Last column if the number of columns is odd
+                    if (o_cols) {
+                        int iLabel = labels_row[c];
+                        if (iLabel > 0) {
+                            iLabel = Pint[iLabel];
+                            labels_row[c] = (img_row[c] > 0) ? iLabel : 0;
+                            labels_row_fol[c] = (img_row_fol[c] > 0) ? iLabel : 0;
+                        }
+                        else {
+                            labels_row[c] = 0;
+                            labels_row_fol[c] = 0;
+                        }
+                    }
+                }
+                // Last row if the number of rows is odd
+                if (o_rows) {
+                    const uchar * const img_row = img.ptr<uchar>(r);
+                    int * const labels_row = imgLabels.ptr<int>(r);
+                    int c = 0;
+                    for (; c < e_cols; c += 2) {
+                        int iLabel = labels_row[c];
+                        if (iLabel > 0) {
+                            iLabel = Pint[iLabel];
+                            labels_row[c] = (img_row[c] > 0) ? iLabel : 0;
+                            labels_row[c + 1] = (img_row[c + 1] > 0) ? iLabel : 0;
+                        }
+                        else {
+                            labels_row[c] = 0;
+                            labels_row[c + 1] = 0;
+                        }
+                    }
+                    if (o_cols) {
+                        int iLabel = labels_row[c];
+                        if (iLabel > 0) {
+                            iLabel = Pint[iLabel];
+                            labels_row[c] = (img_row[c] > 0) ? iLabel : 0;
+                        }
+                        else {
+                            labels_row[c] = 0;
+                        }
+                    }
+                }
+            }
+            else
+#endif
+            {
             int r = 0;
             for (; r < e_rows; r += 2) {
                 // Get rows pointer
@@ -1539,6 +1653,7 @@ namespace cv{
                         sop(r, c, iLabel);
                     }
                 }
+            }
             }
 
             sop.finish();
@@ -2187,29 +2302,53 @@ namespace cv{
                 int r = range.start;
                 const int rowBegin = r;
                 const int rowEnd = range.end;
+                const int w = imgLabels_.cols;
 
-                if (rowBegin > 0){
-                    sopArray_[rowBegin].initElement(nLabels_);
-                    sopArray_[rowBegin].setNextLoc(rowEnd); //_nextLoc = rowEnd;
-
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                if (std::is_same<StatsOp, NoOp>::value && std::is_same<LabelT, int>::value)
+                {
+                    const int vlanes = VTraits<v_int32>::vlanes();
+                    if (rowBegin > 0)
+                        sopArray_[rowBegin].initElement(nLabels_);
+                    else
+                        sop_.setNextLoc(rowEnd);
                     for (; r < rowEnd; ++r) {
-                        LabelT * img_row_start = imgLabels_.ptr<LabelT>(r);
-                        LabelT * const img_row_end = img_row_start + imgLabels_.cols;
-                        for (int c = 0; img_row_start != img_row_end; ++img_row_start, ++c){
-                            *img_row_start = P_[*img_row_start];
-                            sopArray_[rowBegin](r, c, *img_row_start);
+                        int* imgLabels_row = imgLabels_.ptr<int>(r);
+                        int c = 0;
+                        for (; c <= w - vlanes; c += vlanes) {
+                            v_int32 labels = vx_load(imgLabels_row + c);
+                            v_store(imgLabels_row + c, v_lut(reinterpret_cast<const int*>(P_), labels));
                         }
+                        for (; c < w; c++)
+                            imgLabels_row[c] = P_[imgLabels_row[c]];
                     }
                 }
-                else{
-                    //the first thread uses sop in order to make less merges
-                    sop_.setNextLoc(rowEnd);
-                    for (; r < rowEnd; ++r) {
-                        LabelT * img_row_start = imgLabels_.ptr<LabelT>(r);
-                        LabelT * const img_row_end = img_row_start + imgLabels_.cols;
-                        for (int c = 0; img_row_start != img_row_end; ++img_row_start, ++c){
-                            *img_row_start = P_[*img_row_start];
-                            sop_(r, c, *img_row_start);
+                else
+#endif
+                {
+                    if (rowBegin > 0){
+                        sopArray_[rowBegin].initElement(nLabels_);
+                        sopArray_[rowBegin].setNextLoc(rowEnd); //_nextLoc = rowEnd;
+
+                        for (; r < rowEnd; ++r) {
+                            LabelT * img_row_start = imgLabels_.ptr<LabelT>(r);
+                            LabelT * const img_row_end = img_row_start + w;
+                            for (int c = 0; img_row_start != img_row_end; ++img_row_start, ++c){
+                                *img_row_start = P_[*img_row_start];
+                                sopArray_[rowBegin](r, c, *img_row_start);
+                            }
+                        }
+                    }
+                    else{
+                        //the first thread uses sop in order to make less merges
+                        sop_.setNextLoc(rowEnd);
+                        for (; r < rowEnd; ++r) {
+                            LabelT * img_row_start = imgLabels_.ptr<LabelT>(r);
+                            LabelT * const img_row_end = img_row_start + w;
+                            for (int c = 0; img_row_start != img_row_end; ++img_row_start, ++c){
+                                *img_row_start = P_[*img_row_start];
+                                sop_(r, c, *img_row_start);
+                            }
                         }
                     }
                 }
@@ -2520,12 +2659,31 @@ namespace cv{
             LabelT nLabels = flattenL(P, lunique);
             sop.init(nLabels);
 
-            for (int r = 0; r < h; ++r) {
-                LabelT * img_row_start = imgLabels.ptr<LabelT>(r);
-                LabelT * const img_row_end = img_row_start + w;
-                for (int c = 0; img_row_start != img_row_end; ++img_row_start, ++c){
-                    *img_row_start = P[*img_row_start];
-                    sop(r, c, *img_row_start);
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            if (std::is_same<StatsOp, NoOp>::value && std::is_same<LabelT, int>::value)
+            {
+                const int vlanes = VTraits<v_int32>::vlanes();
+                for (int r = 0; r < h; ++r) {
+                    int* imgLabels_row = imgLabels.ptr<int>(r);
+                    int c = 0;
+                    for (; c <= w - vlanes; c += vlanes) {
+                        v_int32 labels = vx_load(imgLabels_row + c);
+                        v_store(imgLabels_row + c, v_lut(reinterpret_cast<const int*>(P), labels));
+                    }
+                    for (; c < w; c++)
+                        imgLabels_row[c] = P[imgLabels_row[c]];
+                }
+            }
+            else
+#endif
+            {
+                for (int r = 0; r < h; ++r) {
+                    LabelT * img_row_start = imgLabels.ptr<LabelT>(r);
+                    LabelT * const img_row_end = img_row_start + w;
+                    for (int c = 0; img_row_start != img_row_end; ++img_row_start, ++c){
+                        *img_row_start = P[*img_row_start];
+                        sop(r, c, *img_row_start);
+                    }
                 }
             }
 
