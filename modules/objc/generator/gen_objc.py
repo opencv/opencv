@@ -100,6 +100,9 @@ method_dict = {
     ("Mat", "dot") : "-dot:"
 }
 
+enum_value_lookup = {}
+enums = set()
+
 modules = []
 
 
@@ -708,12 +711,25 @@ def see_lookup(objc_class, see):
     if (see_class, see_method) in method_dict:
         method = method_dict[(see_class, see_method)]
         if see_class == objc_class:
-            return method
+            return "``{}``".format(method[1:])
         else:
-            return ("-" if method[0] == "-" else "") + "[" + see_class + " " + method[1:] + "]"
+            return "``{}/{}``".format(see_class, method[1:])
     else:
         return see
 
+def hash_link(link_text, objc_class, function_name):
+    if link_text == function_name:
+        return "*{}*".format(link_text) # make bold
+    elif link_text in enums:
+        return "``{}``".format(link_text)
+    elif link_text in enum_value_lookup:
+        return "``{}/{}``".format(enum_value_lookup[link_text], link_text)
+    elif (objc_class, link_text) in method_dict:
+        return "``{}/{}``".format(objc_class, link_text)
+    elif ("Core", link_text) in method_dict:
+        return "``Core/{}``".format(link_text)
+    else:
+        return "#{}".format(link_text) # leave as is
 
 class ObjectiveCWrapperGenerator(object):
     def __init__(self):
@@ -1115,13 +1131,16 @@ class ObjectiveCWrapperGenerator(object):
             if fi.docstring:
                 lines = fi.docstring.splitlines()
                 toWrite = []
+                last_line_was_param = False
                 for index, line in enumerate(lines):
+                    line = re.sub(r"([(\s])#(.+?)([).,\s]|$)", lambda x: x.group(1) + hash_link(x.group(2), ci.objc_name, fi.name) + x.group(3), line)
                     p0 = line.find("@param")
                     if p0 != -1:
                         p0 += 7 # len("@param" + 1)
                         p1 = line.find(' ', p0)
                         p1 = len(line) if p1 == -1 else p1
                         name = line[p0:p1]
+                        last_line_was_param = True
                         for arg in args:
                             if arg.name == name:
                                 toWrite.append(re.sub(r'\*\s*@param ', '* @param ', line))
@@ -1129,10 +1148,14 @@ class ObjectiveCWrapperGenerator(object):
                     else:
                         s0 = line.find("@see")
                         if s0 != -1:
+                            if last_line_was_param:
+                                # separate from @param lines
+                                toWrite.append(" *")
                             sees = line[(s0 + 5):].split(",")
-                            toWrite.append(line[:(s0 + 5)] + ", ".join(["`" + see_lookup(ci.objc_name, see.strip()) + "`" for see in sees]))
+                            toWrite.append(line[:s0] + "- SeeAlso " + ", ".join([see_lookup(ci.objc_name, see.strip()) for see in sees]))
                         else:
                             toWrite.append(line)
+                        last_line_was_param = False
 
                 for line in toWrite:
                     method_declarations.write(line + "\n")
@@ -1317,6 +1340,10 @@ $unrefined_call$epilogue$ret
                     if ci.cname in enum_fix:
                         typeNameShort = enum_fix[ci.cname].get(typeNameShort, typeNameShort)
 
+                    enums.add(typeNameShort)
+                    for c in consts:
+                        enum_value_lookup[c.name] = typeNameShort
+
                     ci.enum_declarations.write("""
 // C++: enum {1} ({2})
 typedef NS_ENUM(int, {1}) {{
@@ -1462,16 +1489,37 @@ typedef NS_ENUM(int, {1}) {{
         self.save(opencv_modulemap_file, opencv_modulemap)
         available_modules = " ".join(["-DAVAILABLE_" + m['name'].upper() for m in config['modules']])
         cmakelist_template = read_contents(os.path.join(SCRIPT_DIR, 'templates/cmakelists.template'))
-        cmakelist = Template(cmakelist_template).substitute(modules = ";".join(modules), framework = framework_name, objc_target=objc_target, module_availability_defines=available_modules)
+        doc_catalog = output_objc_path + "/../Documentation.docc"
+        doc_resources = os.path.join(doc_catalog, "Resources")
+        cmakelist = Template(cmakelist_template).substitute(
+            modules = ";".join(modules),
+            framework = framework_name,
+            objc_target = objc_target,
+            module_availability_defines = available_modules,
+        )
         self.save(os.path.join(dstdir, "CMakeLists.txt"), cmakelist)
+        mkdir_p(doc_resources)
         mkdir_p(os.path.join(output_objc_build_path, "framework_build"))
         mkdir_p(os.path.join(output_objc_build_path, "test_build"))
-        mkdir_p(os.path.join(output_objc_build_path, "doc_build"))
-        with open(os.path.join(SCRIPT_DIR, '../doc/README.md')) as readme_in:
-            readme_body = readme_in.read()
-        readme_body += "\n\n\n##Modules\n\n" + ", ".join(["`" + m.capitalize() + "`" for m in modules])
-        with open(os.path.join(output_objc_build_path, "doc_build/README.md"), "w") as readme_out:
-            readme_out.write(readme_body)
+        landing_page_body_in = ""
+        if objc_target == "ios" or objc_target == "osx":
+            with open(os.path.join(SCRIPT_DIR, '../doc/LandingPage_' + objc_target + '.md')) as landing_page_in:
+                landing_page_body_in = landing_page_in.read()
+        landing_page_body_out = "# ``" + framework_name + "`` Framework\n\n" + landing_page_body_in
+        landing_page_body_out += "\n\n\n## Modules\n\n" + ", ".join(["``" + m.capitalize() + "``" for m in modules]) + "\n"
+        with open(os.path.join(doc_catalog, "LandingPage.md"), "w") as landing_page_out:
+            landing_page_out.write(landing_page_body_out)
+        for m in config['modules']:
+            pic_files = os.path.join(ROOT_DIR, m['location'], 'doc', 'pics')
+            if os.path.exists(pic_files):
+                copy_tree(pic_files, doc_resources)
+        if objc_target == "ios":
+            copy_tree(os.path.join(SCRIPT_DIR, '../doc/pics/ios'), doc_resources)
+        if objc_target == "osx":
+            copy_tree(os.path.join(SCRIPT_DIR, '../doc/pics/osx'), doc_resources)
+        if objc_target == "ios" or objc_target == "osx":
+            copy_tree(os.path.join(SCRIPT_DIR, '../doc/pics/common'), doc_resources)
+
         if framework_name != "OpenCV":
             for dirname, dirs, files in os.walk(os.path.join(testdir, "test")):
                 if dirname.endswith('/resources'):
@@ -1541,10 +1589,11 @@ def sanitize_documentation_string(doc, type):
     doc = re.sub(re.compile('\\\\f\\$(.*?)\\\\f\\$', re.DOTALL), lambda x: '`$$' + fix_tex(x.group(1)) + '$$`', doc)
     doc = re.sub(re.compile('\\\\f\\[(.*?)\\\\f\\]', re.DOTALL), lambda x: '`$$' + fix_tex(x.group(1)) + '$$`', doc)
     doc = re.sub(re.compile('\\\\f\\{(.*?)\\\\f\\}', re.DOTALL), lambda x: '`$$' + fix_tex(x.group(1)) + '$$`', doc)
+    doc = re.sub(r"!\[(.*)]\((?:.*/)*(.+)\.(?:png|jpg|svg)\)", "![\\1](\\2)", doc)
 
     doc = doc.replace("@anchor", "") \
         .replace("@brief ", "").replace("\\brief ", "") \
-        .replace("@cite", "CITE:") \
+        .replace("@cite", "*Cite:*") \
         .replace("@code{.cpp}", "<code>") \
         .replace("@code{.txt}", "<code>") \
         .replace("@code", "<code>") \
@@ -1556,14 +1605,14 @@ def sanitize_documentation_string(doc, type):
         .replace("@endcode", "</code>") \
         .replace("@endinternal", "") \
         .replace("@file", "") \
-        .replace("@include", "INCLUDE:") \
+        .replace("@include", "Include:") \
         .replace("@ingroup", "") \
         .replace("@internal", "") \
         .replace("@overload", "") \
         .replace("@param[in]", "@param") \
         .replace("@param[out]", "@param") \
-        .replace("@ref", "REF:") \
-        .replace("@note", "NOTE:") \
+        .replace("@ref", "*Ref:*") \
+        .replace("@note", "*Note:*") \
         .replace("@returns", "@return") \
         .replace("@sa ", "@see ") \
         .replace("@snippet", "SNIPPET:") \
