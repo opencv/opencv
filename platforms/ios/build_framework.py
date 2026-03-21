@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 The script builds OpenCV.framework for iOS.
 The built framework is universal, it can be used to build app and run it on either iOS simulator or real device.
