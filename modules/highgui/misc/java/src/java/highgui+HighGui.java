@@ -154,6 +154,7 @@ public final class HighGui {
                 latch.await(delay, TimeUnit.MILLISECONDS);
             }
         } catch (InterruptedException e) {
+            e.printStackTrace();
             Thread.currentThread().interrupt();
         }
 
