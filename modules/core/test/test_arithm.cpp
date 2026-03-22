@@ -2818,6 +2818,39 @@ TEST(BroadcastTo, basic) {
     }
 }
 
+TEST(BroadcastTo, regression_dst_dp_zero_when_last_dim_is_one)
+{
+    std::vector<int> shape_src{10, 1, 1};
+    std::vector<float> data_src(10);
+    for (int i = 0; i < 10; ++i)
+    {
+        data_src[i] = static_cast<float>(i + 1);
+    }
+    Mat src(static_cast<int>(shape_src.size()), shape_src.data(), CV_32FC1, data_src.data());
+
+    std::vector<int> shape_dst{10, 5, 1};
+    Mat dst;
+
+    // Regression for broadcast() path where the innermost destination dimension is 1
+    // and flattened destination step can legitimately be 0.
+    ASSERT_NO_THROW(broadcast(src, shape_dst, dst));
+
+    EXPECT_EQ(dst.dims, 3);
+    EXPECT_EQ(dst.size[0], 10);
+    EXPECT_EQ(dst.size[1], 5);
+    EXPECT_EQ(dst.size[2], 1);
+    EXPECT_EQ(dst.type(), CV_32FC1);
+
+    for (int i = 0; i < shape_dst[0]; ++i)
+    {
+        for (int j = 0; j < shape_dst[1]; ++j)
+        {
+            int idx[] = {i, j, 0};
+            EXPECT_FLOAT_EQ(dst.at<float>(idx), static_cast<float>(i + 1));
+        }
+    }
+}
+
 TEST(Core_minMaxIdx, regression_9207_2)
 {
     const int rows = 13;
