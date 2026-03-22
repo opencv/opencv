@@ -913,6 +913,7 @@ std::vector<Side> Chains::reconstructHSidedChain(int h, int i, int j)
 std::vector<Side> Chains::findKSides(int k, int i, int j)
 {
     std::vector<Side> sides;
+    sides.reserve(k); // Optimization and avoiding GCC's false positive warning (-Wstringop-overflow)
     sides.push_back({i, true});
     sides.push_back({j, true});
 

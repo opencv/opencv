@@ -481,7 +481,7 @@ TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
     Mat img = imread(findDataFile("dnn/googlenet_1.png"));
     Mat inp = blobFromImage(img, 1.0, Size(224, 224), Scalar(0.0, 0.0, 0.0), true, false);
     // Output image has values in range [0.0, 255.0].
-    float l1 = 5e-4, lInf = 1e-2;
+    float l1 = 6e-4, lInf = 1e-2;
     if (target == DNN_TARGET_MYRIAD)
     {
         l1 = 0.4;

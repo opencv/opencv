@@ -325,7 +325,7 @@ public:
         prindent(strm, subindent);
         strm << "],\n";
         prindent(strm, subindent);
-        strm << "nodes: [\n";
+        strm << "layers: [\n";
         size_t nlayers = prog_.size();
         for (size_t i = 0; i < nlayers; i++) {
             prindent(strm, argindent);
@@ -498,12 +498,9 @@ void Net::Impl::prepareForInference()
 
     if (!prepared) {
         constFold();
-        //inferTypes();
-        //constArgs();
-        //inferShapes(true);
-        //fuse();
-        //useBlockLayout();
-        //inferShapes(true);
+        constArgs();
+        useBlockLayout();
+        fuseBasic();
         assignBuffers();
         totalLayers = updateGraphOfs(mainGraph, 0, true);
         prepared = true;
@@ -843,9 +840,13 @@ void Net::Impl::traceArg(std::ostream& strm_, const char* prefix, size_t i, Arg 
     }
     strm_ << "\n  Layout: " << layoutToString(shape.layout) << "\n";
     if (dumpdata && !constArg) {
-        // [TODO] when we support block layout, block-layout tensor
-        // should be converted to the original layout before printing it
-        pprint(strm_, m, 0, PPRINT_CONTEXT, PPRINT_ALL_THRESHOLD, '[');
+        Mat temp;
+        if (m.size.layout == DATA_LAYOUT_BLOCK) {
+            transformLayout(m, temp, originalLayout, originalLayout, m.size.C);
+        } else {
+            temp = m;
+        }
+        pprint(strm_, temp, 0, PPRINT_CONTEXT, PPRINT_ALL_THRESHOLD, '[');
         strm_ << "\n";
     }
 }
@@ -1122,6 +1123,16 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             }
         }
 
+        size_t ntemps = tempMats.size();
+        scratchBufs.resize(std::max(ntemps, scratchBufs.size()));
+        for (size_t i = 0; i < ntemps; i++) {
+            size_t newtotal_i = tempMats[i].total()*tempMats[i].elemSize();
+            size_t total_i = scratchBufs[i].total()*scratchBufs[i].elemSize();
+            if (newtotal_i > total_i) {
+                scratchBufs[i] = tempMats[i];
+            }
+        }
+
         timestamp = getTickCount() - timestamp;
         layersTimings[opidx + graph_ofs + 1] += timestamp;
 
@@ -1141,8 +1152,12 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         Arg out = gr_outputs[i];
         const Mat& outm = argTensor(out);
         if (isMainGraph) {
-            outputsVec[i].fit(outm.shape(), outm.type());
-            outm.copyTo(outputsVec[i]);
+            if (outm.size.layout == DATA_LAYOUT_BLOCK) {
+                transformLayout(outm, outputsVec[i], originalLayout, originalLayout, outm.size.C);
+            } else {
+                outputsVec[i].fit(outm.shape(), outm.type());
+                outm.copyTo(outputsVec[i]);
+            }
         } else {
             outputsVec[i] = outm;
         }

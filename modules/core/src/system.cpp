@@ -474,6 +474,7 @@ struct HWFeatures
         g_hwFeatureNames[CPU_AVX_512VPOPCNTDQ] = "AVX512VPOPCNTDQ";
         g_hwFeatureNames[CPU_AVX_5124VNNIW] = "AVX5124VNNIW";
         g_hwFeatureNames[CPU_AVX_5124FMAPS] = "AVX5124FMAPS";
+        g_hwFeatureNames[CPU_AVX_VNNI] = "AVX_VNNI";
 
         g_hwFeatureNames[CPU_NEON] = "NEON";
         g_hwFeatureNames[CPU_NEON_DOTPROD] = "NEON_DOTPROD";
@@ -555,6 +556,11 @@ struct HWFeatures
             have[CV_CPU_AVX_5124VNNIW]    = (cpuid_data_ex[3] & (1<<2))  != 0;
             have[CV_CPU_AVX_5124FMAPS]    = (cpuid_data_ex[3] & (1<<3))  != 0;
 
+            // CPUID leaf 7, subleaf 1 for AVX-VNNI
+            int cpuid_data_ex1[4] = { 0, 0, 0, 0 };
+            CV_CPUID_X86(cpuid_data_ex1, 7, 1);
+            have[CV_CPU_AVX_VNNI]         = (cpuid_data_ex1[0] & (1<<4))  != 0;
+
             bool have_AVX_OS_support = true;
             bool have_AVX512_OS_support = true;
             if (!(cpuid_data[2] & (1<<27)))
@@ -579,6 +585,7 @@ struct HWFeatures
                 have[CV_CPU_FP16] = false;
                 have[CV_CPU_AVX2] = false;
                 have[CV_CPU_FMA3] = false;
+                have[CV_CPU_AVX_VNNI] = false;
             }
             if (!have_AVX_OS_support || !have_AVX512_OS_support)
             {

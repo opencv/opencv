@@ -119,6 +119,27 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
         return false;
     }
 
+    virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
+                           const std::vector<MatShape> &outputs) const CV_OVERRIDE
+    {
+        const int input_dims = inputs[0].dims;
+        int64 B = inputs[0][0];
+        int64 Sq = inputs[0][input_dims - 2];
+        int64 Skv = inputs[1][input_dims - 2];
+        int64 nhq = input_dims == 4 ? inputs[0][1] : q_num_heads;
+        int64 qk_head = input_dims == 4 ? inputs[0][3] : inputs[0][2] / nhq;
+        int64 nhkv = input_dims == 4 ? inputs[1][1] : kv_num_heads;
+        int64 v_head = input_dims == 4 ? inputs[2][3] : inputs[2][2] / nhkv;
+
+        // QK^T: batch * nhq * (2 * Sq * Skv * qk_head)
+        int64 flops = B * nhq * CV_BIG_INT(2) * Sq * Skv * qk_head;
+        // Softmax: ~4 ops per element
+        flops += B * nhq * 4 * Sq * Skv;
+        // Attention * V: batch * nhq * (2 * Sq * v_head * Skv)
+        flops += B * nhq * CV_BIG_INT(2) * Sq * v_head * Skv;
+        return flops;
+    }
+
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE {
         opt.init();
 

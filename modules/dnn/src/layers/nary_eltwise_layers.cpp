@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "../precomp.hpp"
+#include "../net_impl.hpp"
 #include "layers_common.hpp"
 #include "../op_cuda.hpp"
 #include "../op_cann.hpp"
@@ -170,39 +171,12 @@ class NaryEltwiseLayerImpl CV_FINAL : public NaryEltwiseLayer
 {
     NaryEltwiseHelper helper;
 public:
-    enum class OPERATION
-    {
-        AND = 0,
-        EQUAL,
-        GREATER,
-        GREATER_EQUAL,
-        LESS,
-        LESS_EQUAL,
-        OR,
-        POW,
-        XOR,
-        BITSHIFT,
-        MAX,
-        MEAN,
-        MIN,
-        MOD,  // Integer Mod. Reminder's sign = Divisor's sign.
-        FMOD, // Floating-point Mod. Reminder's sign = Dividend's sign.
-        PROD,
-        SUB,
-        SUM,
-        ADD,
-        DIV,
-        WHERE,
-        BITWISE_AND,
-        BITWISE_OR,
-        BITWISE_XOR,
-    } op;
+    std::string operation;
 
     NaryEltwiseLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
-
-        String operation = toLowerCase(params.get<String>("operation", "sum"));
+        operation = toLowerCase(params.get<String>("operation", "sum"));
 
         if (operation == "equal")
             op = OPERATION::EQUAL;
@@ -256,6 +230,13 @@ public:
             CV_Error(cv::Error::StsBadArg, "Unknown operation type \"" + operation + "\"");
     }
 
+    virtual std::ostream& dumpAttrs(std::ostream& strm, int indent) const CV_OVERRIDE
+    {
+        prindent(strm, indent);
+        strm << "operation: \"" << operation << "\",\n";
+        return strm;
+    }
+
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
 #ifdef HAVE_CANN
@@ -294,35 +275,45 @@ public:
         return backendId == DNN_BACKEND_OPENCV;
     }
 
-    static MatShape findCommonShape(std::vector<MatShape> shapes)
+    // [TODO] move it to MatShape
+    static MatShape findCommonShape(const std::vector<MatShape>& shapes)
     {
-        CV_Assert(!shapes.empty());
-        const size_t dim = std::max_element(shapes.begin(), shapes.end(),
-                                            [](const MatShape& a, const MatShape& b)
-                                            { return a.size() < b.size(); })->size();
+        size_t i, ninputs = shapes.size();
+        CV_Assert(ninputs > 0u);
 
-        for (auto& shape : shapes)
-        {
-            shape.insert(shape.begin(), dim - shape.size(), 1);
+        int C0 = shapes[0].C, dims0 = shapes[0].dims, maxdims = dims0;
+        bool constC = true;
+        bool allBlock = true;
+        bool constDims = true;
+        for (i = 0; i < ninputs; i++) {
+            const MatShape& inpShape = shapes[i];
+            int dims = inpShape.dims;
+            allBlock = allBlock && inpShape.layout == DATA_LAYOUT_BLOCK;
+            constC = constC && inpShape.C == C0;
+            constDims = constDims && dims == dims0;
+            maxdims = std::max(maxdims, dims);
         }
 
-        MatShape outShape(dim, 1);
-        for (size_t i = 0; i < dim; ++i)
+        MatShape outShape(maxdims, 1);
+        if (allBlock && constC && constDims) {
+            outShape.layout = DATA_LAYOUT_BLOCK;
+            outShape.C = C0;
+        }
+
+        for (i = 0; i < ninputs; i++)
         {
-            for (const auto& shape : shapes)
-            {
-                if (shape[i] != outShape[i])
-                {
-                    CV_Assert(shape[i] == 1 || outShape[i] == 1);
-                    if (outShape[i] == 1)
-                        outShape[i] = shape[i];
-                }
+            const MatShape& inpShape = shapes[i];
+            int dims = inpShape.dims, delta = maxdims - dims;
+            for (int j = 0; j < maxdims; j++) {
+                int inpsz = j < delta ? 1 : inpShape[j - delta];
+                int outsz = outShape[j];
+                CV_Assert(inpsz == outsz || inpsz == 1 || outsz == 1);
+                outShape[j] = inpsz != 1 ? inpsz : outsz;
             }
         }
 
         return outShape;
     }
-
 
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE {
         std::vector<Mat> inputs, outputs;
@@ -428,6 +419,34 @@ public:
             outputs.assign(requiredOutputs, inputs[0]);
     }
 
+    int getLayouts(const std::vector<DataLayout>& actualInputs,
+                   std::vector<DataLayout>& desiredInputs,
+                   const int requiredOutputs,
+                   std::vector<DataLayout>& outputs) const CV_OVERRIDE
+    {
+        auto* netimpl_ = getNetImpl(this);
+        DataLayout defaultLayout = netimpl_->originalLayout;
+        size_t ninputs = actualInputs.size(), nblockInputs = 0;
+        CV_Assert(ninputs >= 1u);
+        for (size_t i = 0; i < ninputs; i++) {
+            DataLayout layout = actualInputs[i];
+            nblockInputs += layout == DATA_LAYOUT_BLOCK;
+        }
+
+        desiredInputs = actualInputs;
+        if (nblockInputs == ninputs) {
+            outputs.assign(requiredOutputs, DATA_LAYOUT_BLOCK);
+        } else {
+            if (nblockInputs < ninputs) {
+                for (size_t i = 0; i < ninputs; i++) {
+                    DataLayout layout = actualInputs[i];
+                    desiredInputs[i] = layout == DATA_LAYOUT_BLOCK ? defaultLayout : layout;
+                }
+            }
+            outputs.assign(requiredOutputs, DATA_LAYOUT_UNKNOWN);
+        }
+        return outputs[0] == DATA_LAYOUT_BLOCK ? netimpl_->defaultC0 : 0;
+    }
 
     template <typename T, typename RESULT_T, typename Functor>
     void binary_forward_impl(const Functor& op, int ndims, const std::vector<int>& shape,

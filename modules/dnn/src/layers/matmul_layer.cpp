@@ -118,6 +118,29 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         return false;
     }
 
+    virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
+                           const std::vector<MatShape> &outputs) const CV_OVERRIDE
+    {
+        CV_Assert(!inputs.empty());
+        const auto shape_A = inputs[0], shape_B = blobs.empty() ? inputs[1] : shape(blobs[0]);
+        int mA = shape_A[shape_A.size() - 2], nA = shape_A.back();
+        int mB = shape_B[shape_B.size() - 2], nB = shape_B.back();
+        int M = trans_a ? nA : mA;
+        int N = trans_b ? mB : nB;
+        int K = trans_a ? mA : nA;
+
+        int64 batch = 1;
+        for (size_t i = 0; i + 2 < outputs[0].size(); i++)
+            batch *= outputs[0][i];
+
+        // 2*M*N*K multiply-adds per batch element, +M*N for bias if present
+        int64 flops = batch * (CV_BIG_INT(2) * M * N * K);
+        int num_inputs = (int)inputs.size() + (int)blobs.size();
+        if (num_inputs == 3)
+            flops += batch * M * N;
+        return flops;
+    }
+
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE {
         opt.init();
 

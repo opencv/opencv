@@ -67,6 +67,7 @@ Net::Impl::Impl()
     // onnx_opset = 0;
 
     accuracy = CV_32F;
+    defaultC0 = DEFAULT_C0;
     enableFP16 = haveFP16 = false;
     // FP16 is not ready yet in the new DNN engine
     // Ticket: https://github.com/opencv/opencv/issues/26196
@@ -2374,9 +2375,71 @@ std::vector<String> Net::Impl::getUnconnectedOutLayersNames() /*const*/
 }
 
 
+int64 Net::Impl::getFLOPSGraph(const Ptr<Graph>& graph,
+                               const std::vector<MatShape>& shapeCache,
+                               const std::vector<MatType>& typeCache) const
+{
+    if (!graph)
+        return 0;
+
+    int64 flops = 0;
+    const std::vector<Ptr<Layer>>& prog = graph->prog();
+
+    for (const Ptr<Layer>& layer : prog) {
+        if (!layer)
+            continue;
+
+        const std::vector<Arg>& inputs = layer->inputs;
+        const std::vector<Arg>& outputs = layer->outputs;
+        int ninputs = (int)inputs.size();
+        int noutputs = (int)outputs.size();
+
+        std::vector<MatShape> inpShapes(ninputs), outShapes(noutputs);
+        for (int i = 0; i < ninputs; i++) {
+            Arg inp = inputs[i];
+            const ArgData& adata = args.at(inp.idx);
+            if (adata.kind == DNN_ARG_CONST || adata.kind == DNN_ARG_EMPTY)
+                inpShapes[i] = adata.shape;
+            else
+                inpShapes[i] = shapeCache[inp.idx];
+        }
+        for (int i = 0; i < noutputs; i++) {
+            Arg out = outputs[i];
+            if (out.idx > 0 && out.idx < (int)shapeCache.size())
+                outShapes[i] = shapeCache[out.idx];
+        }
+
+        // Skip FLOPS calculation if any shape is empty (unknown due to dynamic shapes)
+        bool hasEmptyShape = false;
+        for (int i = 0; i < ninputs && !hasEmptyShape; i++)
+            hasEmptyShape = inpShapes[i].empty();
+        for (int i = 0; i < noutputs && !hasEmptyShape; i++)
+            hasEmptyShape = outShapes[i].empty();
+
+        if (!hasEmptyShape)
+            flops += layer->getFLOPS(inpShapes, outShapes);
+
+        const std::vector<Ptr<Graph>>* subgraphs = layer->subgraphs();
+        if (subgraphs) {
+            for (const Ptr<Graph>& sg : *subgraphs)
+                flops += getFLOPSGraph(sg, shapeCache, typeCache);
+        }
+    }
+    return flops;
+}
+
+
 int64 Net::Impl::getFLOPS(const std::vector<MatShape>& netInputShapes,
                           const std::vector<MatType>& netInputTypes) /*const*/
 {
+    if (mainGraph) {
+        LayerShapes shapes;
+        std::vector<MatShape> shapeCache;
+        std::vector<MatType> typeCache;
+        tryInferShapes(netInputShapes, netInputTypes, shapes, shapeCache, typeCache);
+        return getFLOPSGraph(mainGraph, shapeCache, typeCache);
+    }
+
     int64 flops = 0;
     std::vector<int> ids;
     std::vector<std::vector<MatShape>> inShapes, outShapes;
@@ -2398,6 +2461,49 @@ int64 Net::Impl::getFLOPS(
         const std::vector<MatShape>& netInputShapes,
         const std::vector<MatType>& netInputTypes) /*const*/
 {
+    if (mainGraph) {
+        LayerShapes shapes;
+        std::vector<MatShape> shapeCache;
+        std::vector<MatType> typeCache;
+        tryInferShapes(netInputShapes, netInputTypes, shapes, shapeCache, typeCache);
+
+        CV_Assert(0 <= layerId && layerId < (int)totalLayers);
+        int localIdx = layerId;
+        for (const Ptr<Graph>& graph : allgraphs) {
+            int progSize = (int)graph->prog().size();
+            if (localIdx < progSize) {
+                const Ptr<Layer>& layer = graph->prog()[localIdx];
+                if (!layer)
+                    return 0;
+
+                const std::vector<Arg>& inputs = layer->inputs;
+                const std::vector<Arg>& outputs = layer->outputs;
+                int ninputs = (int)inputs.size();
+                int noutputs = (int)outputs.size();
+
+                std::vector<MatShape> inpShapes(ninputs), outShapes(noutputs);
+                for (int i = 0; i < ninputs; i++) {
+                    Arg inp = inputs[i];
+                    const ArgData& adata = args.at(inp.idx);
+                    if (adata.kind == DNN_ARG_CONST || adata.kind == DNN_ARG_EMPTY)
+                        inpShapes[i] = adata.shape;
+                    else
+                        inpShapes[i] = shapeCache[inp.idx];
+                }
+                for (int i = 0; i < noutputs; i++) {
+                    Arg out = outputs[i];
+                    if (out.idx > 0 && out.idx < (int)shapeCache.size())
+                        outShapes[i] = shapeCache[out.idx];
+                }
+
+                return layer->getFLOPS(inpShapes, outShapes);
+            }
+            localIdx -= progSize;
+        }
+
+        CV_Error(Error::StsOutOfRange, format("Layer id %d is out of range", layerId));
+    }
+
     Impl::MapIdToLayerData::const_iterator layer = layers.find(layerId);
     CV_Assert(layer != layers.end());
 

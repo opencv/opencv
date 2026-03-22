@@ -492,6 +492,21 @@ public:
         return true;
     } // getMemoryShape
 
+    virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
+                           const std::vector<MatShape> &outputs) const CV_OVERRIDE
+    {
+        computeOutputShape(inputs);
+
+        int64 totalProduct = 1;
+        for (int i = 0; i < numLetterIndices; i++) {
+            int dimVal = subscriptIndicesToDimValue[i];
+            if (dimVal > 0)
+                totalProduct *= dimVal;
+        }
+        // 2 FLOPs per multiply-add in the contraction
+        return CV_BIG_INT(2) * totalProduct;
+    }
+
     // forward
     void forward(InputArrayOfArrays inputs_arr,
                  OutputArrayOfArrays outputs_arr,
@@ -1267,7 +1282,7 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
                                                                 shape(currentLeft),
                                                                 reshaped_dims))
         {
-            // This can be done because curent_* tensors (if they exist) and output tensors are
+            // This can be done because current_* tensors (if they exist) and output tensors are
             // intermediate tensors and cannot be input tensors to the Einsum node itself
             // (which are immutable).
             currentLeft = currentLeft.reshape(1, reshaped_dims.size(), reshaped_dims.data());

@@ -187,7 +187,7 @@ void blobFromImagesNCHWImpl(const std::vector<Mat>& images, Mat& blob_, const Im
 
     if (param.mean == Scalar() && param.scalefactor == Scalar::all(1.0))
         return;
-    CV_CheckTypeEQ(param.ddepth, CV_32F, "Scaling and mean substraction is supported only for CV_32F blob depth");
+    CV_CheckTypeEQ(param.ddepth, CV_32F, "Scaling and mean subtraction is supported only for CV_32F blob depth");
 
     for (size_t k = 0; k < images.size(); ++k)
     {

@@ -194,6 +194,24 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             internals.assign(4, inputs[0]);
         }
 
+        virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
+                               const std::vector<MatShape> &outputs) const CV_OVERRIDE
+        {
+            // LSTM: 4 gates, each gate = input_size*hidden_size + hidden_size*hidden_size MACs
+            const MatShape& inp0 = inputs[0];
+            const MatShape& Wx = inputs[1];
+            int _hidSize = numHidden;
+            int _inpSize = Wx[2];
+            int _seqLen = inp0[0];
+            int _batchSize = inp0[1];
+            int numDirs = 1 + static_cast<int>(bidirectional);
+
+            // Per timestep: 4 gates * (2*input_size*hidden_size + 2*hidden_size*hidden_size + hidden_size)
+            int64 flopsPerStep = CV_BIG_INT(4) * (CV_BIG_INT(2) * _inpSize * _hidSize +
+                                                   CV_BIG_INT(2) * _hidSize * _hidSize +
+                                                   _hidSize);
+            return (int64)numDirs * _seqLen * _batchSize * flopsPerStep;
+        }
 
         void forward(InputArrayOfArrays inputs_arr,
                      OutputArrayOfArrays outputs_arr,
