@@ -65,7 +65,7 @@ def get_cmake_version():
         raise Exception("Failed to parse CMake version")
 
 def get_current_branch(opencv_dir):
-    ret = check_output(["git", "br", "--show-current"], cwd = opencv_dir).decode('utf-8').strip()
+    ret = check_output(["git", "branch", "--show-current"], cwd = opencv_dir).decode('utf-8').strip()
     if ret != "":
         return ret
     else:
