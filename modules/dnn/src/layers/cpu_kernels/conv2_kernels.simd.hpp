@@ -446,6 +446,7 @@ static void fillCoeffBufs(FastActivation fastActivation, const float* activParam
     }
 }
 
+#ifdef CONV_ENABLE_SIMD
 static bool simdTailAdjust(int spat_block_size, int& p, int p0, int p1, int K0,
                             float*& outptr, const float*& resptr) {
     if (p + spat_block_size > p1) {
@@ -489,6 +490,7 @@ static void scatterOutputBlock(bool aligned_k, int k_base, int k_count, int K0sh
         }
     }
 }
+#endif // CONV_ENABLE_SIMD
 
 static void loadScalarResidual(const float* resptr, int k_base, int k_count, int K0shift,
                                 int K0, int planesize, float* resbuf) {
@@ -795,11 +797,6 @@ static void conv32fC8_3x3s1(const void* inp__, const void* residual__, void* out
         int innerX0 = cs.inner[2], innerX1 = cs.inner[MAX_CONV_DIMS+2];
     #endif
 
-        int inp_ofs[9];
-        for (int ky = 0; ky < 3; ky++)
-            for (int kx = 0; kx < 3; kx++)
-                inp_ofs[ky*3 + kx] = (ky * Wi + kx) * C0;
-
         FastActivation fastActivation;
         const float* activParams;
         ActivationFunc activation;
@@ -835,10 +832,14 @@ static void conv32fC8_3x3s1(const void* inp__, const void* residual__, void* out
             float* outptr = (float*)out__ + n*(K1*planesize) + p0*K0;
             const float* resptr = residual__ ? (float*)residual__ + n*(K1*planesize) + p0*K0 : nullptr;
             float tmpbuf[SPAT_BLOCK_SIZE*K0] = {};
-            float zbuf[C0] = {};
             int p = p0;
 
         #ifdef CONV_ENABLE_SIMD
+            int inp_ofs[9];
+            for (int ky = 0; ky < 3; ky++)
+                for (int kx = 0; kx < 3; kx++)
+                    inp_ofs[ky*3 + kx] = (ky * Wi + kx) * C0;
+            float zbuf[C0] = {};
             for (; p < p1; p += SPAT_BLOCK_SIZE,
                            outptr += SPAT_BLOCK_SIZE*K0)
             {
