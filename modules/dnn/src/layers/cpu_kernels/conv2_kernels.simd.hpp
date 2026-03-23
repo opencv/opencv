@@ -1027,6 +1027,7 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
         return conv32fC8_1x1(inp__, residual__, out__, cs, weights__, scale__, bias__);
     }
     if (ksize == 9 && cs.strides[1] == 1 && cs.strides[2] == 1 &&
+        cs.dilations[1] == 1 && cs.dilations[2] == 1 &&
         cs.outshape.dims <= 5) {
         return conv32fC8_3x3s1(inp__, residual__, out__, cs, weights__, scale__, bias__);
     }
