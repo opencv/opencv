@@ -426,7 +426,7 @@ MatShape deconvInferShape(const MatShape& inpShape, const MatShape& wshape,
                 pad_total = pads[i] + pads[i + nspatialdims];
             outsz = (inpsz - 1) * stride - pad_total + dilation * (k_i - 1) + 1 + adj;
         } else {
-            outsz = inpsz * stride;
+            outsz = (inpsz - 1) * stride + 1 + adj;
         }
         outshape[i + 2] = outsz;
     }

@@ -806,6 +806,30 @@ public:
                                              groups, strides_i, dilations_i,
                                              pads_all, adj, ap);
 
+        if (ap != AUTO_PAD_NONE) {
+            for (int i = 0; i < nsd; i++) {
+                int inpsz   = inpshape[2 + i];
+                int outsz   = outshape[2 + i];
+                int adj_i   = adj[i];
+                int stride  = strides_i[i];
+                int dil     = dilations_i[i];
+                int ki      = wshape[2 + i];
+                int total   = (inpsz - 1) * stride + dil * (ki - 1) + 1 + adj_i - outsz;
+                // For SAME padding, use the same split as getConvPoolPaddings:
+                // pad_begin = (total - (outsz-1+stride)%stride) / 2
+                // This accounts for non-zero adjust_pads (adj) correctly.
+                // For VALID, total==0 so pad_begin==0 regardless of formula used.
+                int pb;
+                if (ap == AUTO_PAD_SAME_UPPER && stride <= ki * dil) {
+                    pb = std::max((total - (outsz - 1 + stride) % stride) / 2, 0);
+                } else {
+                    pb = total / 2;
+                }
+                pads_all[i]       = pb;
+                pads_all[nsd + i] = total - pb;
+            }
+        }
+
         if (inpshape != prevInpshape_blk) {
             cs_blk.initDeconv(inpshape, wshape, outshape, groups,
                               strides_i, dilations_i, pads_all);

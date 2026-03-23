@@ -269,6 +269,7 @@
 "test_constantofshape_int_shape_zero",  // Issue::Parser::Weights are required as inputs
 "test_convinteger_with_padding",  // Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "ConvInteger" in function 'getLayerInstance'
 "test_convinteger_without_padding",  //Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "ConvInteger" in function 'getLayerInstance'
+"test_convtranspose_autopad_same",
 "test_deform_conv_with_mask_bias",
 "test_deform_conv_with_multiple_offset_groups",
 "test_dequantizelinear_e4m3fn",
