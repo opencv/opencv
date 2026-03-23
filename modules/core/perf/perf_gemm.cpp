@@ -6,24 +6,29 @@ using namespace perf;
 
 CV_FLAGS(GemmFlag, 0, GEMM_1_T, GEMM_2_T, GEMM_3_T)
 
-#define GEMM_BODY()                                                             \
-    int M = get<0>(get<0>(GetParam()));                                         \
-    int N = get<1>(get<0>(GetParam()));                                         \
-    int K = get<2>(get<0>(GetParam()));                                         \
-    int type = get<1>(GetParam());                                              \
-    int flags = get<2>(GetParam());                                             \
-                                                                                \
-    Size aSize = (flags & GEMM_1_T) ? Size(M, K) : Size(K, M);                  \
-    Size bSize = (flags & GEMM_2_T) ? Size(K, N) : Size(N, K);                  \
-                                                                                \
-    Mat src1(aSize, type), src2(bSize, type), src3(M, N, type), dst(M, N, type);\
-    declare.in(src1, src2, src3, WARMUP_RNG).out(dst);                          \
-                                                                                \
-    TEST_CYCLE() cv::gemm(src1, src2, 1.0, src3, 1.0, dst, flags);              \
-                                                                                \
-    SANITY_CHECK(dst, 1e-3);
+typedef tuple<tuple<int, int, int>, MatType, GemmFlag> GemmTestParams_t;
+class GemmTest : public perf::TestBaseWithParam<GemmTestParams_t>
+{
+    public:
+    void runGemmTest(const GemmTestParams_t& params)
+    {
+        int M = get<0>(get<0>(params));
+        int N = get<1>(get<0>(params));
+        int K = get<2>(get<0>(params));
+        int type = get<1>(params);
+        int flags = get<2>(params);
 
-using GemmTest = perf::TestBaseWithParam<tuple<tuple<int, int, int>, MatType, GemmFlag>>;
+        Size aSize = (flags & GEMM_1_T) ? Size(M, K) : Size(K, M);
+        Size bSize = (flags & GEMM_2_T) ? Size(K, N) : Size(N, K);
+
+        Mat src1(aSize, type), src2(bSize, type), src3(M, N, type), dst(M, N, type);
+        declare.in(src1, src2, src3, WARMUP_RNG).out(dst);
+
+        TEST_CYCLE() cv::gemm(src1, src2, 1.0, src3, 1.0, dst, flags);
+
+        SANITY_CHECK(dst, 1e-3);
+    };
+};
 
 PERF_TEST_P(GemmTest, gemmTiny,
             testing::Combine(
@@ -37,7 +42,7 @@ PERF_TEST_P(GemmTest, gemmTiny,
                                 (int)(GEMM_1_T | GEMM_2_T))
             ))
 {
-    GEMM_BODY();
+    GemmTest::runGemmTest(GetParam());
 }
 
 PERF_TEST_P(GemmTest, gemmSmall,
@@ -56,7 +61,7 @@ PERF_TEST_P(GemmTest, gemmSmall,
                                 (int)(GEMM_1_T | GEMM_2_T))
             ))
 {
-    GEMM_BODY();
+    GemmTest::runGemmTest(GetParam());
 }
 
 PERF_TEST_P(GemmTest, gemmSquare,
@@ -71,7 +76,7 @@ PERF_TEST_P(GemmTest, gemmSquare,
                                 (int)(GEMM_1_T | GEMM_2_T))
             ))
 {
-    GEMM_BODY();
+    GemmTest::runGemmTest(GetParam());
 }
 
 PERF_TEST_P(GemmTest, gemmRect,
@@ -79,8 +84,12 @@ PERF_TEST_P(GemmTest, gemmRect,
                 testing::Values(
                     // Tall output (M >> N)
                     make_tuple(1024, 64, 256),
+                    make_tuple(1024, 256, 512),
                     make_tuple(512, 32, 512),
+                    make_tuple(512, 128, 256),
                     // Wide output (N >> M)
+                    make_tuple(256, 1024, 512),
+                    make_tuple(128, 512, 256),
                     make_tuple(64, 1024, 256),
                     make_tuple(32, 512, 512)
                 ),
@@ -89,7 +98,7 @@ PERF_TEST_P(GemmTest, gemmRect,
                                 (int)(GEMM_1_T | GEMM_2_T))
             ))
 {
-    GEMM_BODY();
+    GemmTest::runGemmTest(GetParam());
 }
 
 PERF_TEST_P(GemmTest, gemmM1,
@@ -104,7 +113,7 @@ PERF_TEST_P(GemmTest, gemmM1,
                                 (int)(GEMM_1_T | GEMM_2_T))
             ))
 {
-    GEMM_BODY();
+    GemmTest::runGemmTest(GetParam());
 }
 
 PERF_TEST_P(GemmTest, gemmN1,
@@ -118,9 +127,7 @@ PERF_TEST_P(GemmTest, gemmN1,
                                 (int)(GEMM_1_T | GEMM_2_T))
             ))
 {
-    GEMM_BODY();
+    GemmTest::runGemmTest(GetParam());
 }
-
-#undef GEMM_BODY
 
 } // namespace
