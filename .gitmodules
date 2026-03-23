@@ -1,0 +1,3 @@
+[submodule "3rdparty/include/opencl/3.0"]
+	path = 3rdparty/include/opencl/3.0
+	url = https://github.com/KhronosGroup/OpenCL-Headers.git

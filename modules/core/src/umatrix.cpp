@@ -42,6 +42,7 @@
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
 #include "umatrix.hpp"
+#include "external_umat_allocator.hpp"
 
 #include <opencv2/core/utils/tls.hpp>
 
@@ -300,6 +301,66 @@ UMat::UMat(int _dims, const int* _sz, int _type, const Scalar& _s, UMatUsageFlag
 {
     create(_dims, _sz, _type);
     *this = _s;
+}
+
+UMat::UMat(int _rows, int _cols, int _type, void* _data, size_t _step, UMatUsageFlags _usageFlags)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), usageFlags(_usageFlags), u(0), offset(0), size(&rows)
+{
+    CV_Assert(_data != 0);
+    size_t esz = CV_ELEM_SIZE(_type);
+    if (_step == AUTO_STEP)
+        _step = _cols * esz;
+    int sizes[] = {_rows, _cols};
+    size_t steps[] = {_step, esz};
+    u = getExternalUMatAllocator()->allocate(2, sizes, _type, _data, steps, ACCESS_RW, _usageFlags);
+    if (!u)
+        CV_Error(Error::StsError, "Failed to allocate UMatData for external memory");
+    flags = (_type & CV_MAT_TYPE_MASK) | MAGIC_VAL;
+    dims = 2;
+    rows = _rows;
+    cols = _cols;
+    step[0] = _step;
+    step[1] = esz;
+    allocator = getExternalUMatAllocator();
+    offset = 0;
+    updateContinuityFlag();
+    addref();
+}
+
+UMat::UMat(Size _size, int _type, void* _data, size_t _step, UMatUsageFlags _usageFlags)
+    : UMat(_size.height, _size.width, _type, _data, _step, _usageFlags)
+{
+}
+
+UMat::UMat(int _dims, const int* _sizes, int _type, void* _data, const size_t* _steps, UMatUsageFlags _usageFlags)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), usageFlags(_usageFlags), u(0), offset(0), size(&rows)
+{
+    CV_Assert(_data != 0);
+    size_t esz = CV_ELEM_SIZE(_type);
+    AutoBuffer<size_t, CV_MAX_DIM> steps_buf;
+    if (!_steps) {
+        steps_buf.allocate(_dims);
+        size_t total = esz;
+        for (int i = _dims-1; i >= 0; i--) {
+            steps_buf[i] = total;
+            total *= _sizes[i];
+        }
+        _steps = steps_buf.data();
+    }
+    u = getExternalUMatAllocator()->allocate(_dims, _sizes, _type, _data, const_cast<size_t*>(_steps), ACCESS_RW, _usageFlags);
+    if (!u)
+        CV_Error(Error::StsError, "Failed to allocate UMatData for external memory");
+    flags = (_type & CV_MAT_TYPE_MASK) | MAGIC_VAL;
+    setSize(*this, _dims, _sizes, _steps);
+    offset = 0;
+    allocator = getExternalUMatAllocator();
+    updateContinuityFlag();
+    addref();
+}
+
+UMat::UMat(const std::vector<int>& _sizes, int _type, void* _data, const size_t* _steps, UMatUsageFlags _usageFlags)
+    : UMat((int)_sizes.size(), _sizes.data(), _type, _data, _steps, _usageFlags)
+{
 }
 
 UMat::UMat(const UMat& m)

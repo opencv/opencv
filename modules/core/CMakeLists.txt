@@ -172,6 +172,10 @@ endif()
 
 ocv_create_module(${extra_libs})
 
+if(OPENCL_TARGET_DEFINITIONS)
+  ocv_target_compile_definitions(${the_module} PRIVATE ${OPENCL_TARGET_DEFINITIONS})
+endif()
+
 ocv_target_link_libraries(${the_module} PRIVATE
     "${ZLIB_LIBRARIES}" "${OPENCL_LIBRARIES}" "${VA_LIBRARIES}"
     "${OPENGL_LIBRARIES}"

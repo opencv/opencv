@@ -31,7 +31,7 @@ else:
     setattr(SymbolName, "parse", classmethod(parse_symbol_name))
 
 
-forbidden_arg_types = ["void*"]
+forbidden_arg_types = []
 
 ignored_arg_types = ["RNG*"]
 
@@ -599,6 +599,7 @@ class FuncVariant(object):
         self.name = self.wname = name
         self.isconstructor = isconstructor
         self.isphantom = isphantom
+        self.classname = classname
 
         self.docstring = decl[5]
 

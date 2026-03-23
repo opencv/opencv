@@ -17,6 +17,9 @@ public:
     CV_WRAP UMat(int rows, int cols, int type, const Scalar& s, UMatUsageFlags usageFlags = USAGE_DEFAULT);
     CV_WRAP UMat(Size size, int type, const Scalar& s, UMatUsageFlags usageFlags = USAGE_DEFAULT);
 
+    CV_WRAP UMat(int rows, int cols, int type, void* data, size_t step = 0, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    CV_WRAP UMat(Size size, int type, void* data, size_t step = 0, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+
     //! Mat is mappable to UMat
     CV_WRAP_MAPPABLE(Ptr<Mat>);
 

@@ -2512,6 +2512,14 @@ public:
     UMat(int ndims, const int* sizes, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
     UMat(int ndims, const int* sizes, int type, const Scalar& s, UMatUsageFlags usageFlags = USAGE_DEFAULT);
 
+    //! constructs 2D UMat from external memory (no copy)
+    UMat(int rows, int cols, int type, void* data, size_t step = AUTO_STEP, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    UMat(Size size, int type, void* data, size_t step = AUTO_STEP, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+
+    //! constructs n-dimensional UMat from external memory (no copy)
+    UMat(int ndims, const int* sizes, int type, void* data, const size_t* steps = 0, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    UMat(const std::vector<int>& sizes, int type, void* data, const size_t* steps = 0, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+
     //! copy constructor
     UMat(const UMat& m);
 
