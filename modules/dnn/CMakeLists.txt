@@ -15,7 +15,7 @@ ocv_add_dispatched_file("layers/cpu_kernels/conv2_kernels" AVX AVX2 NEON NEON_FP
 ocv_add_dispatched_file_force_all("int8layers/conv2_int8_kernels" AVX2)
 ocv_add_dispatched_file("layers/cpu_kernels/activation_kernels" AVX AVX2 NEON NEON_FP16)
 
-ocv_add_module(dnn opencv_core opencv_imgproc WRAP python java objc js OPTIONAL opencv_imgcodecs)
+ocv_add_module(dnn opencv_core opencv_imgproc WRAP python java objc js)
 
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/plugin.cmake)
 
