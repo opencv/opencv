@@ -548,6 +548,10 @@ CASE(test_convtranspose_dilations)
     SKIP;
 CASE(test_convtranspose_kernel_shape)
     SKIP;
+CASE(test_convtranspose_group_2)
+    SKIP;
+CASE(test_convtranspose_group_2_image_3)
+    SKIP;
 CASE(test_convtranspose_output_shape)
     SKIP;
 CASE(test_convtranspose_pad)
