@@ -457,6 +457,8 @@ struct Net::Impl : public detail::NetImplBase
     // insert transformLayout operations where necessary;
     // use block layout for convolution, pooling and some other operations where it matters
     void useBlockLayout();
+    // fuse BN into following Conv2 weights
+    void fuseBN();
 
 };  // Net::Impl
 
