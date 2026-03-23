@@ -737,6 +737,8 @@
 "test_convtranspose_1d",
 "test_convtranspose_3d",
 "test_convtranspose_dilations",
+"test_convtranspose_group_2",
+"test_convtranspose_group_2_image_3",
 "test_convtranspose_kernel_shape",
 "test_convtranspose_output_shape",
 "test_convtranspose_pad",
