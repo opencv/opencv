@@ -1167,8 +1167,7 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
                 scatterOutputBlock(aligned_k, k_base, k_count, K0shift, K0, planeblocks, planesize, SPAT_BLOCK_SIZE, outptr, tmpbuf);
             }
             } else {
-            int kofs_tab[64];
-            CV_Assert(ksize <= 64);
+            cv::AutoBuffer<int, 64> kofs_tab(ksize);
             for (int i = 0; i < ksize; i++) {
                 kofs_tab[i] = ((ofsZYX[i*3] * Hi + ofsZYX[i*3+1]) * Wi + ofsZYX[i*3+2]) * C0;
             }
