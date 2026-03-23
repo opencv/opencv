@@ -106,7 +106,7 @@ PERF_TEST_P(GemmTest, gemmM1,
                 testing::Values(
                     make_tuple(1, 20, 2500),
                     make_tuple(1, 64, 2500),
-                    make_tuple(1, 80, 10000)
+                    make_tuple(1, 80, 2500)
                 ),
                 testing::Values(CV_32FC1, CV_64FC1, CV_32FC2, CV_64FC2),
                 testing::Values(0, (int)GEMM_1_T, (int)GEMM_2_T,
