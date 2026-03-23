@@ -711,6 +711,7 @@ CV__DNN_INLINE_NS_BEGIN
 
         CV_WRAP Mat tokenize(const String& text) const;
         CV_WRAP String detokenize(InputArray tokenIds) const;
+        CV_WRAP void setInputImagePath(const String& path);
         CV_WRAP void setPrompt(const String& prompt);
         CV_WRAP void setSearchOption(const String& name, double value);
         CV_WRAP void setSearchOptionBool(const String& name, bool value);

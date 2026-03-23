@@ -275,7 +275,7 @@ struct Net::Impl : public detail::NetImplBase
     std::shared_ptr<OgaModel> oga_model;
     std::shared_ptr<OgaTokenizer> oga_tokenizer;
     std::shared_ptr<OgaMultiModalProcessor> oga_processor;
-    Mat oga_image_mat;
+    std::string oga_image_path;
     std::string oga_raw_prompt;
     std::map<std::string, double> oga_search_options_number;
     std::map<std::string, bool>   oga_search_options_bool;
@@ -441,6 +441,7 @@ struct Net::Impl : public detail::NetImplBase
     //                   (including the prompt tokens).
     void initOgaMultiModalProcessor();
     std::vector<Mat> runOgaSession(const std::vector<Mat>& inputBlobs);
+    void setInputImagePath(const String& path);
     void setPrompt(const String& prompt);
     void setSearchOption(const String& name, double value);
     void setSearchOptionBool(const String& name, bool value);

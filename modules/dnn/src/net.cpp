@@ -547,6 +547,12 @@ String Net::detokenize(InputArray tokenIds) const
 }
 
 #ifdef HAVE_ONNXRUNTIME_GENAI
+void Net::setInputImagePath(const String& path)
+{
+    CV_Assert(impl);
+    impl->setInputImagePath(path);
+}
+
 void Net::setPrompt(const String& prompt)
 {
     CV_Assert(impl);
@@ -590,6 +596,11 @@ String Net::getDeviceType() const
     return impl->getDeviceType();
 }
 #else
+void Net::setInputImagePath(const String&)
+{
+    CV_Error(cv::Error::StsNotImplemented, "setInputImagePath requires ONNX Runtime GenAI VLM support");
+}
+
 void Net::setPrompt(const String&)
 {
     CV_Error(cv::Error::StsNotImplemented, "setPrompt requires ONNX Runtime GenAI support");
