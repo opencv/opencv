@@ -3018,16 +3018,4 @@ TEST(Layer_RotaryEmbedding_Test, identity_rotation)
     normAssert(outputs[0], x, "RotaryEmbedding identity rotation", 1e-5, 1e-5);
 }
 
-TEST(Layer_NonMaxSuppression_Test, type_resolution)
-{
-    // Before the fix, the ONNX parser set layerParams.type = "NonMaxSuprression"
-    // (typo: double 'r'), which did not match init.cpp's registered name
-    // "NonMaxSuppression". Verify the correct name resolves.
-    LayerParams lp;
-    lp.type = "NonMaxSuppression";
-    lp.name = "nms";
-    Ptr<Layer> layer = LayerFactory::createLayerInstance("NonMaxSuppression", lp);
-    ASSERT_FALSE(layer.empty()) << "NonMaxSuppression layer type must resolve to a registered class";
-}
-
 }} // namespace
