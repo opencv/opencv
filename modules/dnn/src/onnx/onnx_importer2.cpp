@@ -1780,7 +1780,7 @@ void ONNXImporter2::parseAffineGrid(LayerParams& layerParams, const opencv_onnx:
 
 void ONNXImporter2::parseNonMaxSuprression(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    layerParams.type = "NonMaxSuprression";
+    layerParams.type = "NonMaxSuppression";
     addLayer(layerParams, node_proto);
 }
 
@@ -2717,7 +2717,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["BitwiseOr"] = &ONNXImporter2::parseBitwise;
     dispatch["BitwiseXor"] = &ONNXImporter2::parseBitwise;
     dispatch["BitwiseNot"] = &ONNXImporter2::parseBitwiseNot;
-    dispatch["NonMaxSuprression"] = &ONNXImporter2::parseNonMaxSuprression;
+    dispatch["NonMaxSuppression"] = &ONNXImporter2::parseNonMaxSuprression;
     dispatch["SoftMax"] = dispatch["Softmax"] = dispatch["LogSoftmax"] = &ONNXImporter2::parseSoftMax;
     dispatch["DetectionOutput"] = &ONNXImporter2::parseDetectionOutput;
     dispatch["CumSum"] = &ONNXImporter2::parseCumSum;
@@ -2726,6 +2726,8 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["Tile"] = &ONNXImporter2::parseTile;
     dispatch["LayerNormalization"] = &ONNXImporter2::parseLayerNorm;
     dispatch["GroupNormalization"] = &ONNXImporter2::parseInstanceNormalization;
+    dispatch["RMSNormalization"] = &ONNXImporter2::parseRMSNormalization;
+    dispatch["RotaryEmbedding"] = &ONNXImporter2::parseRotaryEmbedding;
     dispatch["NegativeLogLikelihoodLoss"] = &ONNXImporter2::parseNegativeLogLikelihoodLoss;
     dispatch["SoftmaxCrossEntropyLoss"]   = &ONNXImporter2::parseSoftmaxCrossEntropyLoss;
     // @TODO@ONNX: Add support for SDPA

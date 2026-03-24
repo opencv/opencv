@@ -231,10 +231,10 @@ class RotaryEmbeddingLayerImpl CV_FINAL : public RotaryEmbeddingLayer   {
         );
         CV_CheckTrue(
             cos_cache_shape.dims == 3 || inputs.size() > 3,
-            "RotaryEmbeddingLayer: provide position_ids or specify sin_cache and cos_cahe in format BxTxD"
+            "RotaryEmbeddingLayer: provide position_ids or specify sin_cache and cos_cache in format BxTxD"
         );
         CV_CheckTrue(
-            cos_cache_shape.dims == cos_cache_shape.dims,
+            cos_cache_shape.dims == sin_cache_shape.dims,
             "RotaryEmbeddingLayer: cos_cache and sin_cache must have the same number of dimensions"
         );
         for (int i = 0; i < cos_cache_shape.dims; ++i)
