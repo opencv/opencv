@@ -111,7 +111,6 @@ def main(func_args=None):
     net = cv.dnn.readNetFromONNX(args.model, engine)
     net.setPreferableBackend(backend)
     net.setPreferableTarget(target)
-    print_dnn_info(engine, backend, target)
 
     winName = 'Deep learning semantic segmentation in OpenCV'
     cv.namedWindow(winName, cv.WINDOW_AUTOSIZE)

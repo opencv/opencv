@@ -136,7 +136,6 @@ int main(int argc, char **argv)
     Net net = readNetFromONNX(modelPath, engineId);
     net.setPreferableBackend(backendId);
     net.setPreferableTarget(targetId);
-    printDNNInfo(engineId, backendId, targetId);
 
     FontFace fontFace("sans");
 

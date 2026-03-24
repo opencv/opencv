@@ -264,7 +264,6 @@ int main(int argc, char **argv)
     Net reidNet = readNetFromONNX(modelPath, engineId);
     reidNet.setPreferableBackend(backendId);
     reidNet.setPreferableTarget(targetId);
-    printDNNInfo(engineId, backendId, targetId);
 
     if(yoloPath.empty()){
         cout<<"[ERROR] Please pass path to yolov8.onnx model file using --yolo_model."<<endl;

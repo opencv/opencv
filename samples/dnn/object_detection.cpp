@@ -223,7 +223,6 @@ int main(int argc, char** argv)
     Net net = readNet(modelPath, configPath, "", engine);
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
-    printDNNInfo(engine, backend, target);
     //![read_net]
 
     // Create a window

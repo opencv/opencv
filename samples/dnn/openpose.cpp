@@ -124,7 +124,6 @@ int main(int argc, char **argv)
     Net net = readNet(modelBin, modelTxt, "", engineId);
     net.setPreferableBackend(backendId);
     net.setPreferableTarget(targetId);
-    printDNNInfo(engineId, backendId, targetId);
     // and the image
     Mat img = imread(imageFile);
     if (img.empty())

@@ -188,7 +188,6 @@ int main(int argc, char** argv) {
 
     if (method == "dexined") {
         loadModel(model, backendId, targetId, net, engineId);
-        printDNNInfo(engineId, backendId, targetId);
     }
     else{
         Mat dummy = Mat::zeros(512, 512, CV_8UC3);

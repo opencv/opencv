@@ -149,7 +149,6 @@ int main(int argc, char** argv)
     Net net = readNetFromONNX(model, engineId);
     net.setPreferableBackend(backendId);
     net.setPreferableTarget(targetId);
-    printDNNInfo(engineId, backendId, targetId);
     //! [Read and initialize network]
 
     // Create a window

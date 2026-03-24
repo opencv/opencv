@@ -171,7 +171,6 @@ int main(int argc, char **argv)
 
     Net net;
     loadModel(model, backendId, targetId, net, engineId);
-    printDNNInfo(engineId, backendId, targetId);
 
     string input_path = samples::findFile(parser.get<String>("input"));
     Mat image = imread(input_path);

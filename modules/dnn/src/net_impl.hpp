@@ -76,6 +76,7 @@ struct Net::Impl : public detail::NetImplBase
     int lastLayerId;
 
     bool netWasAllocated;
+    bool backendInfoPrinted;
     bool netWasQuantized;
     bool fusion;
     bool isAsync;  // FIXIT: drop
@@ -131,6 +132,7 @@ struct Net::Impl : public detail::NetImplBase
 
     void setUpNet(const std::vector<LayerPin>& blobsToKeep_ = std::vector<LayerPin>());
 
+    void printBackendInfo();
 
     virtual Ptr<Layer> createLayerInstance(const LayerData& ld) const
     {
