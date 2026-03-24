@@ -4135,9 +4135,15 @@ Net readNetFromONNX(const String& onnxFile, int engine)
     switch(engine)
     {
         case ENGINE_CLASSIC:
+        {
+            std::cout << "[INFO] Engine used: ENGINE_CLASSIC" << std::endl;
             return detail::readNetDiagnostic<ONNXImporter>(onnxFile.c_str());
+        }
         case ENGINE_NEW:
+        {
+            std::cout << "[INFO] Engine used: ENGINE_NEW" << std::endl;
             return readNetFromONNX2(onnxFile);
+        }
         case ENGINE_ORT:
         {
 #ifdef HAVE_ONNXRUNTIME
@@ -4146,6 +4152,7 @@ Net readNetFromONNX(const String& onnxFile, int engine)
                 CV_Error(Error::StsError, "DNN/ONNX/ORT: failed to load model");
             if (!net.getImpl() || !net.getImpl()->ort_session)
                 CV_Error(Error::StsError, "DNN/ONNX/ORT: ONNX Runtime session was not initialized");
+            std::cout << "[INFO] Engine used: ENGINE_ORT" << std::endl;
             return net;
 #else
             CV_LOG_WARNING(NULL, "DNN/ONNX/ORT: OpenCV was built without ONNX Runtime (WITH_ONNXRUNTIME=OFF). Falling back to ENGINE_AUTO.");
@@ -4156,9 +4163,15 @@ Net readNetFromONNX(const String& onnxFile, int engine)
         {
             Net net = readNetFromONNX2(onnxFile);
             if (!net.empty())
+            {
+                std::cout << "[INFO] Engine used: ENGINE_NEW" << std::endl;
                 return net;
+            }
             else
+            {
+                std::cout << "[INFO] Engine used: ENGINE_CLASSIC" << std::endl;
                 return detail::readNetDiagnostic<ONNXImporter>(onnxFile.c_str());
+            }
         }
         default:
             CV_Error(Error::StsBadArg, "Invalid DNN engine selected!");
@@ -4174,9 +4187,15 @@ Net readNetFromONNX(const char* buffer, size_t sizeBuffer, int engine)
     switch(engine)
     {
         case ENGINE_CLASSIC:
+        {
+            std::cout << "[INFO] Engine used: ENGINE_CLASSIC" << std::endl;
             return detail::readNetDiagnostic<ONNXImporter>(buffer, sizeBuffer);
+        }
         case ENGINE_NEW:
+        {
+            std::cout << "[INFO] Engine used: ENGINE_NEW" << std::endl;
             return readNetFromONNX2(buffer, sizeBuffer);
+        }
         case ENGINE_ORT:
 #ifdef HAVE_ONNXRUNTIME
             CV_Error(Error::StsNotImplemented, "DNN/ONNX/ORT: loading from memory buffer is not supported");
@@ -4188,9 +4207,15 @@ Net readNetFromONNX(const char* buffer, size_t sizeBuffer, int engine)
         {
             Net net = readNetFromONNX2(buffer, sizeBuffer);
             if (!net.empty())
+            {
+                std::cout << "[INFO] Engine used: ENGINE_NEW" << std::endl;
                 return net;
+            }
             else
+            {
+                std::cout << "[INFO] Engine used: ENGINE_CLASSIC" << std::endl;
                 return detail::readNetDiagnostic<ONNXImporter>(buffer, sizeBuffer);
+            }
         }
         default:
             CV_Error(Error::StsBadArg, "Invalid DNN engine selected!");
@@ -4206,9 +4231,15 @@ Net readNetFromONNX(const std::vector<uchar>& buffer, int engine)
     switch(engine)
     {
         case ENGINE_CLASSIC:
+        {
+            std::cout << "[INFO] Engine used: ENGINE_CLASSIC" << std::endl;
             return readNetFromONNX(reinterpret_cast<const char*>(buffer.data()), buffer.size());
+        }
         case ENGINE_NEW:
+        {
+            std::cout << "[INFO] Engine used: ENGINE_NEW" << std::endl;
             return readNetFromONNX2(buffer);
+        }
         case ENGINE_ORT:
 #ifdef HAVE_ONNXRUNTIME
             CV_Error(Error::StsNotImplemented, "DNN/ONNX/ORT: loading from memory buffer is not supported");
@@ -4220,9 +4251,15 @@ Net readNetFromONNX(const std::vector<uchar>& buffer, int engine)
         {
             Net net = readNetFromONNX2(buffer);
             if (!net.empty())
+            {
+                std::cout << "[INFO] Engine used: ENGINE_NEW" << std::endl;
                 return net;
+            }
             else
+            {
+                std::cout << "[INFO] Engine used: ENGINE_CLASSIC" << std::endl;
                 return readNetFromONNX(reinterpret_cast<const char*>(buffer.data()), buffer.size());
+            }
         }
         default:
             CV_Error(Error::StsBadArg, "Invalid DNN engine selected!");

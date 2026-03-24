@@ -98,17 +98,6 @@ inline String getEngineName(int engineId) {
     }
 }
 
-inline void printDNNInfo(int engineId, int backendId, int targetId) {
-    std::cout << "[INFO] DNN Engine: " << getEngineName(engineId)
-              << " | Backend: " << getBackendName(backendId)
-              << " | Target: " << getTargetName(targetId) << std::endl;
-}
-
-inline void printDNNInfo(int backendId, int targetId) {
-    std::cout << "[INFO] Backend: " << getBackendName(backendId)
-              << " | Target: " << getTargetName(targetId) << std::endl;
-}
-
 const std::string engine_keys = cv::format(
     "{ engine | auto | Choose one of DNN engines: "
                     "auto: automatically (by default), "

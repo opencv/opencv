@@ -127,7 +127,6 @@ def main():
     net = cv.dnn.readNetFromONNX(args.model, engine)
     net.setPreferableBackend(backend)
     net.setPreferableTarget(target)
-    print_dnn_info(engine, backend, target)
 
     input_image = cv.imread(findFile(args.input))
     aspect_ratio = input_image.shape[0]/input_image.shape[1]

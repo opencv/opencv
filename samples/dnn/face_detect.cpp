@@ -95,7 +95,6 @@ int main(int argc, char** argv)
     int backendId = getBackendID(parser.get<String>("backend"));
     int targetId = getTargetID(parser.get<String>("target"));
     int engineId = getEngineID(parser.get<String>("engine"));
-    printDNNInfo(engineId, backendId, targetId);
 
     //! [initialize_FaceDetectorYN]
     // Initialize FaceDetectorYN

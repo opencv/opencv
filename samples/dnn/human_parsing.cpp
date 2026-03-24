@@ -114,9 +114,6 @@ int main(int argc, char**argv)
 
     Mat input = imread(image);
     Mat segm = parse_human(input, model, backend, target, engine);
-    std::cout << "[INFO] DNN Engine: " << engine
-              << " | Backend: " << backend
-              << " | Target: " << target << std::endl;
 
     imshow("human parsing", segm);
     waitKey();

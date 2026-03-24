@@ -110,7 +110,6 @@ target = get_target_id(args.target)
 net = cv.dnn.readNet(args.model, args.config, "", engine)
 net.setPreferableBackend(backend)
 net.setPreferableTarget(target)
-print_dnn_info(engine, backend, target)
 outNames = net.getUnconnectedOutLayersNames()
 
 confThreshold = args.thr

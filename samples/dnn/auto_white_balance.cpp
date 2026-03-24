@@ -227,7 +227,6 @@ int main(int argc, char **argv) {
         net = readNetFromONNX(model, engineId);
         net.setPreferableBackend(backendId);
         net.setPreferableTarget(targetId);
-        printDNNInfo(engineId, backendId, targetId);
     } catch (const Exception &e) {
         cerr << "Error loading model: " << e.what() << endl;
         return -1;

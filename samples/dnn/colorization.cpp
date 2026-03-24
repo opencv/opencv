@@ -95,7 +95,6 @@ int main(int argc, char** argv) {
     dnn::Net net = dnn::readNetFromONNX(onnxModelPath, engineId);
     net.setPreferableBackend(backendId);
     net.setPreferableTarget(targetId);
-    printDNNInfo(engineId, backendId, targetId);
     //! [Read and initialize network]
 
     // Create blob from the image

@@ -240,6 +240,3 @@ def get_engine_name(engine_id):
         "ort": cv.dnn.ENGINE_ORT
     }.items()}
     return names.get(engine_id, "unknown")
-
-def print_dnn_info(engine_id, backend_id, target_id):
-    print(f"[INFO] DNN Engine: {get_engine_name(engine_id)} | Backend: {get_backend_name(backend_id)} | Target: {get_target_name(target_id)}")

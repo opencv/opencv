@@ -96,7 +96,6 @@ def main():
     net = cv.dnn.readNetFromONNX(args.model, engine)
     net.setPreferableBackend(backend)
     net.setPreferableTarget(target)
-    print_dnn_info(engine, backend, target)
 
     input_image = cv.imread(findFile(args.input))
     image = input_image.copy()

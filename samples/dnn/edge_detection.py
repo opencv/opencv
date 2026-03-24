@@ -118,7 +118,6 @@ def main(func_args=None):
     engine = get_engine_id(args.engine)
     backend = get_backend_id(args.backend)
     target = get_target_id(args.target)
-    print_dnn_info(engine, backend, target)
 
     cap = cv.VideoCapture(cv.samples.findFile(args.input) if args.input else 0)
     if not cap.isOpened():

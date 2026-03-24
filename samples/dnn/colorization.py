@@ -55,7 +55,6 @@ if __name__ == '__main__':
     session = cv.dnn.readNetFromONNX(onnx_model_path, engine)
     session.setPreferableBackend(args.backend)
     session.setPreferableTarget(args.target)
-    print(f"[INFO] DNN Engine: {engine} | Backend: {args.backend} | Target: {args.target}")
 
     # Process each image in the batch (assuming batch processing is needed)
     blob = cv.dnn.blobFromImage(img_gray_rs, swapRB=False)  # Adjust swapRB according to your model's training

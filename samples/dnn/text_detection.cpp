@@ -154,14 +154,13 @@ int main(int argc, char** argv) {
     int backendId = getBackendID(parser.get<String>("backend"));
     int targetId = getTargetID(parser.get<String>("target"));
     int engineId = getEngineID(parser.get<String>("engine"));
-    printDNNInfo(engineId, backendId, targetId);
 
     // Initializing and configuring the text detection model based on the provided config
     if (modelName == "East") {
         // EAST Detector initialization
         TextDetectionModel_EAST detector(detModelPath);
-        detector.setPreferableBackend(backendId);
-        detector.setPreferableTarget(targetId);
+        detector.setPreferableBackend(static_cast<dnn::Backend>(backendId));
+        detector.setPreferableTarget(static_cast<dnn::Target>(targetId));
         detector.setConfidenceThreshold(confThreshold)
                 .setNMSThreshold(nmsThreshold);
         // Setting input parameters specific to EAST model
@@ -172,8 +171,8 @@ int main(int argc, char** argv) {
     else if (modelName == "DB") {
         // DB Detector initialization
         TextDetectionModel_DB detector(detModelPath);
-        detector.setPreferableBackend(backendId);
-        detector.setPreferableTarget(targetId);
+        detector.setPreferableBackend(static_cast<dnn::Backend>(backendId));
+        detector.setPreferableTarget(static_cast<dnn::Target>(targetId));
         detector.setBinaryThreshold(binThresh)
                 .setPolygonThreshold(polyThresh)
                 .setUnclipRatio(unclipRatio)
