@@ -116,14 +116,6 @@ public:
             repackDepthwiseConvWeights(weights_, weights, wtype, C0);
         } else {
             repackConvWeights(weights_, weights, wtype, ngroups, C0);
-            // Create Winograd weights for eligible 3x3 stride-1 convolutions
-            int wdims = wshape0.dims;
-            if (wdims >= 4) {
-                int Hk = wshape0[wdims - 2], Wk = wshape0[wdims - 1];
-                if (Hk == 3 && Wk == 3) {
-                    repackConvWeightsWinograd(weights_, weightsWino, wtype, ngroups, C0);
-                }
-            }
         }
 
         if (!bias_.empty()) {
@@ -385,20 +377,6 @@ public:
         void* outptr = out.data;
         const void* wptr = weights.data;
 
-        // Set Winograd weights if available and eligible (3x3 stride-1 dilation-1)
-        cs.winoWeights = nullptr;
-        if (!weightsWino.empty() && !cs.depthwise) {
-            int nsd = inpshape.dims - 3;
-            bool stride1 = true, dilation1 = true;
-            for (int i = 0; i < nsd; i++) {
-                if (cs.strides[i] != 1) stride1 = false;
-                if (cs.dilations[i] != 1) dilation1 = false;
-            }
-            if (stride1 && dilation1) {
-                cs.winoWeights = weightsWino.data;
-            }
-        }
-
         ConvFunc func = cs.depthwise ? getDepthwiseConvFunc(inptype) : getConvFunc(inptype, C0);
         CV_Assert(func != nullptr);
         func(inptr, resptr, outptr, cs, wptr, scale_data, bias_data);
@@ -412,13 +390,12 @@ public:
             // very rare situation of dynamic convolution weights,
             // we release temporarily allocated and reordered copy of the weights
             weights.release();
-            weightsWino.release();
         }
     }
 
     std::vector<int> emptyKernelShape;
     Ptr<Layer> activ, batchNorm;
-    Mat weights, weightsWino, bias, fusedScale, fusedBias;
+    Mat weights, bias, fusedScale, fusedBias;
     MatShape wshape0, prevInpshape;
     ConvState cs;
     bool fusedBatchNorm;
