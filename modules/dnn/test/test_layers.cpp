@@ -2356,6 +2356,37 @@ TEST_P(Layer_Test_BatchNorm, fusion)
     }
 }
 
+TEST_P(Layer_Test_BatchNorm, bias_blob_validation)
+{
+    // Regression test for PR #28701: the constructor validated
+    // blobs[weightsBlobIndex] instead of blobs[biasBlobIndex] when hasBias was true.
+    // Providing a CV_64F bias blob must trigger the type assertion on the actual
+    // bias blob. Before the fix the weights blob (CV_32F) was checked instead,
+    // so the wrong type went undetected.
+    if (get<0>(GetParam()) != DNN_BACKEND_OPENCV || get<1>(GetParam()) != DNN_TARGET_CPU)
+        return;
+
+    const int ch = 3;
+    Net net;
+    {
+        LayerParams lp;
+        lp.type = "BatchNorm";
+        lp.name = "bn";
+        lp.set("has_weight", true);
+        lp.set("has_bias", true);
+        lp.blobs.push_back(Mat(1, ch, CV_32F, Scalar(0)));   // mean
+        lp.blobs.push_back(Mat(1, ch, CV_32F, Scalar(1)));   // var
+        lp.blobs.push_back(Mat(1, ch, CV_32F, Scalar(1)));   // weights (CV_32F, correct)
+        lp.blobs.push_back(Mat(1, ch, CV_64F, Scalar(0)));   // bias    (CV_64F, wrong)
+        net.addLayerToPrev(lp.name, lp.type, lp);
+    }
+
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(DNN_TARGET_CPU);
+    net.setInput(blobFromImage(Mat(2, 2, CV_32FC(ch), Scalar::all(1.f))));
+    ASSERT_ANY_THROW(net.forward());
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_BatchNorm, dnnBackendsAndTargets());
 
 class TestLayerFusion : public DNNTestLayer {
