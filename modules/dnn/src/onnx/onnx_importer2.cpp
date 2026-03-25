@@ -1370,7 +1370,7 @@ void ONNXImporter2::parseConv(LayerParams& layerParams, const opencv_onnx::NodeP
     int n_inputs = node_proto.input_size();
     CV_Assert(2 <= n_inputs && n_inputs <= 3);
     layerParams.type = "Conv2";
-    addLayer(layerParams, node_proto);
+    addLayer(layerParams, node_proto, n_inputs);
 }
 
 void ONNXImporter2::parseConvTranspose(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
