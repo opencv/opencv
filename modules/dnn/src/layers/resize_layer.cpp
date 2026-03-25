@@ -394,13 +394,27 @@ public:
 
         attrs.nearest_mode = ov::op::v4::Interpolate::NearestMode::ROUND_PREFER_FLOOR;
 
+        int64_t out_h = outHeight;
+        int64_t out_w = outWidth;
+        if (nodes.size() == 2)
+        {
+            auto& ieRefNode = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
+            const auto& ref_ps = ieRefNode.get_partial_shape();
+            if (ref_ps.rank().is_static() && ref_ps.rank().get_length() >= 4)
+            {
+                if (ref_ps[2].is_static())
+                    out_h = ref_ps[2].get_length();
+                if (ref_ps[3].is_static())
+                    out_w = ref_ps[3].get_length();
+            }
+        }
 
-        std::vector<int64_t> shape = {outHeight, outWidth};
+        std::vector<int64_t> shape = {out_h, out_w};
         auto out_shape = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{2}, shape.data());
 
         auto& input_shape = ieInpNode.get_shape();
         CV_Assert_N(input_shape[2] != 0, input_shape[3] != 0);
-        std::vector<float> scales = {static_cast<float>(outHeight) / input_shape[2], static_cast<float>(outWidth) / input_shape[3]};
+        std::vector<float> scales = {static_cast<float>(out_h) / input_shape[2], static_cast<float>(out_w) / input_shape[3]};
         auto scales_shape = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{2}, scales.data());
 
         auto axes = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{2}, std::vector<int64_t>{2, 3});
