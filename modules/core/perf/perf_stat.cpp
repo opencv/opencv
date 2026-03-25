@@ -29,7 +29,7 @@ PERF_TEST_P(Size_MatType, mean, TYPICAL_MATS)
 
     declare.in(src, WARMUP_RNG).out(s);
 
-    TEST_CYCLE() s = mean(src);
+    TEST_CYCLE() s = cv::mean(src);
 
     SANITY_CHECK(s, 1e-5);
 }
@@ -45,7 +45,7 @@ PERF_TEST_P(Size_MatType, mean_mask, TYPICAL_MATS)
 
     declare.in(src, WARMUP_RNG).in(mask).out(s);
 
-    TEST_CYCLE() s = mean(src, mask);
+    TEST_CYCLE() s = cv::mean(src, mask);
 
     SANITY_CHECK(s, 5e-5);
 }
