@@ -260,16 +260,74 @@ calcHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
             for( ; imsize.height--; p0 += step0, mask += mstep )
             {
                 if( !mask )
-                    for( x = 0; x < imsize.width; x++, p0 += d0 )
+                {
+#if CV_SIMD128
+                    if( d0 == 1 && sizeof(T) == 2 )
                     {
-                        double v0 = (double)*p0;
-                        int idx = cvFloor(v0*a + b);
-                        if (v0 < v0_lo || v0 >= v0_hi)
-                            continue;
-                        idx = CV_CLAMP_INT(idx, 0, sz - 1);
-                        CV_DbgAssert((unsigned)idx < (unsigned)sz);
-                        ((int*)H)[idx]++;
+                        const ushort* p  = (const ushort*)p0;
+                        const int nlanes = VTraits<v_uint16>::nlanes;
+
+                        const v_float32x4 va   = v_setall_f32((float)a);
+                        const v_float32x4 vb   = v_setall_f32((float)b);
+                        const v_float32x4 vlo  = v_setall_f32((float)v0_lo);
+                        const v_float32x4 vhi  = v_setall_f32((float)v0_hi);
+                        const v_int32x4   vi0  = v_setall_s32(0);
+                        const v_int32x4   visz = v_setall_s32(sz - 1);
+
+                        int x = 0;
+                        for( ; x <= imsize.width - nlanes; x += nlanes )
+                        {
+                            v_uint16x8 pix = vx_load(&p[x]);
+                            v_uint32x4 lo32, hi32;
+                            v_expand(pix, lo32, hi32);
+                            v_float32x4 flo = v_cvt_f32(v_reinterpret_as_s32(lo32));
+                            v_float32x4 fhi = v_cvt_f32(v_reinterpret_as_s32(hi32));
+                            v_uint32x4 rlo = v_reinterpret_as_u32(v_and(v_ge(flo, vlo), v_lt(flo, vhi)));
+                            v_uint32x4 rhi = v_reinterpret_as_u32(v_and(v_ge(fhi, vlo), v_lt(fhi, vhi)));
+
+                            v_int32x4 idx_lo = v_max(vi0, v_min(visz, v_floor(v_fma(flo, va, vb))));
+                            v_int32x4 idx_hi = v_max(vi0, v_min(visz, v_floor(v_fma(fhi, va, vb))));
+
+                            int idxbuf[8];
+                            v_store(idxbuf, idx_lo);
+                            v_store(idxbuf + 4, idx_hi);
+
+                            if( v_check_all(v_reinterpret_as_s32(rlo)) && v_check_all(v_reinterpret_as_s32(rhi)) )
+                            {
+                                for( int k = 0; k < nlanes; k++ )
+                                    ((int*)H)[idxbuf[k]]++;
+                            }
+                            else
+                            {
+                                int deltabuf[8];
+                                v_store(deltabuf, v_reinterpret_as_s32(rlo));
+                                v_store(deltabuf + 4, v_reinterpret_as_s32(rhi));
+                                for( int k = 0; k < nlanes; k++ )
+                                    ((int*)H)[idxbuf[k]] += (deltabuf[k] != 0);
+                            }
+                        }
+                        for( ; x < imsize.width; x++ )
+                        {
+                            double v0 = (double)p[x];
+                            int delta = int(v0_lo <= v0) & int(v0 < v0_hi);
+                            int idx   = CV_CLAMP_INT(cvFloor(v0*a + b), 0, sz-1);
+                            ((int*)H)[idx] += delta;
+                        }
+                        p0 = (const T*)(p + imsize.width);
                     }
+                    else
+#endif
+                        for( x = 0; x < imsize.width; x++, p0 += d0 )
+                        {
+                            double v0 = (double)*p0;
+                            int idx = cvFloor(v0*a + b);
+                            if (v0 < v0_lo || v0 >= v0_hi)
+                                continue;
+                            idx = CV_CLAMP_INT(idx, 0, sz - 1);
+                            CV_DbgAssert((unsigned)idx < (unsigned)sz);
+                            ((int*)H)[idx]++;
+                        }
+                }
                 else
                     for( x = 0; x < imsize.width; x++, p0 += d0 )
                         if( mask[x] )
@@ -548,6 +606,22 @@ calcHist_8u( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
             {
                 if( d0 == 1 )
                 {
+#if CV_SIMD128
+                    for( x = 0; x <= imsize.width - 16; x += 16 )
+                    {
+                        v_uint8 v = vx_load(p0 + x);
+                        uint8_t buf[16];
+                        v_store(buf, v);
+                        matH[buf[0]]++;  matH[buf[1]]++;
+                        matH[buf[2]]++;  matH[buf[3]]++;
+                        matH[buf[4]]++;  matH[buf[5]]++;
+                        matH[buf[6]]++;  matH[buf[7]]++;
+                        matH[buf[8]]++;  matH[buf[9]]++;
+                        matH[buf[10]]++; matH[buf[11]]++;
+                        matH[buf[12]]++; matH[buf[13]]++;
+                        matH[buf[14]]++; matH[buf[15]]++;
+                    }
+#else
                     for( x = 0; x <= imsize.width - 4; x += 4 )
                     {
                         int t0 = p0[x], t1 = p0[x+1];
@@ -555,7 +629,10 @@ calcHist_8u( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                         t0 = p0[x+2]; t1 = p0[x+3];
                         matH[t0]++; matH[t1]++;
                     }
-                    p0 += x;
+#endif
+                    for( ; x < imsize.width; x++ )
+                        matH[p0[x]]++;
+                    p0 += imsize.width;
                 }
                 else
                     for( x = 0; x <= imsize.width - 4; x += 4 )
