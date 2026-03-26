@@ -1179,6 +1179,11 @@ TEST_P(Test_ONNX_layers, Resize_HumanSeg)
     testONNXModels("resize_humanseg");
 }
 
+TEST_P(Test_ONNX_layers, Resample)
+{
+    testONNXModels("nearest", npy, 0, 0, false, false);
+}
+
 TEST_P(Test_ONNX_layers, Div)
 {
     const String model =  _tf("models/div.onnx");
@@ -2291,6 +2296,31 @@ TEST_P(Test_ONNX_layers, QLinearSoftmax)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     testONNXModels("qlinearsoftmax_v11", npy, 0.002, 0.002); // 2D coerced
     testONNXModels("qlinearsoftmax_v13", npy, 0.002, 0.002);
+}
+
+TEST_P(Test_ONNX_layers, PriorBox_ONNX)
+{
+    Net net = readNetFromONNX(_tf("models/prior_box.onnx"));
+    ASSERT_FALSE(net.empty());
+    int inp_size[] = {1, 3, 10, 10};
+    int shape_size[] = {1, 2, 3, 4};
+    Mat inp(4, inp_size, CV_32F, Scalar(0));
+    Mat shape(4, shape_size, CV_32F, Scalar(0));
+    net.setInput(inp, "input_0");
+    net.setInput(shape, "input_1");
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+    Mat out = net.forward();
+    Mat ref = blobFromNPY(_tf("data/output_prior_box.npy"));
+
+    double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1e-3 : 1e-5;
+    double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1e-3 : 1e-4;
+    if (target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 7e-5;
+        lInf = 0.0005;
+    }
+    normAssert(out, ref, "", l1, lInf);
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
