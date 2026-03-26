@@ -959,6 +959,43 @@ TEST_P(Test_ONNX_layers, BatchNormalization)
     testONNXModels("batch_norm");
 }
 
+TEST_P(Test_ONNX_layers, Colorization)
+{
+    applyTestTag(
+        target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB,
+        CV_TEST_TAG_DEBUG_VERYLONG
+    );
+    checkBackend();
+
+    const String model = findDataFile("dnn/colorization_deploy_v2.onnx", false);
+    Net net = readNetFromONNX(model);
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    if (target == DNN_TARGET_CPU_FP16)
+        net.enableWinograd(false);
+
+    Mat inp = blobFromNPY(findDataFile("dnn/colorization_inp.npy"));
+    Mat ref = blobFromNPY(findDataFile("dnn/colorization_out.npy"));
+
+    net.setInput(inp);
+    Mat out = net.forward();
+
+    double l1 = 4e-4, lInf = 3e-3;
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16)
+    {
+        l1 = 0.25;
+        lInf = 5.3;
+    }
+    else if (target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 0.21;
+        lInf = 4.5;
+    }
+    normAssert(out, ref, "", l1, lInf);
+}
+
 TEST_P(Test_ONNX_layers, BatchNormalization3D)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
