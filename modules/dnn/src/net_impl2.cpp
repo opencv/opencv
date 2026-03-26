@@ -682,13 +682,21 @@ void Net::Impl::forwardWithSingleOutput(const std::string& outname, OutputArrayO
             }
 
             const ArgData& adata = args.at(targetArg.idx);
+            Mat result;
             if (adata.kind == DNN_ARG_TEMP) {
                 int bufidx = bufidxs.at(targetArg.idx);
                 CV_Assert(bufidx >= 0 && bufidx < (int)buffers.size());
-                outputBlobs.assign(buffers[bufidx].clone());
-                return;
+                result = buffers[bufidx];
+            } else {
+                result = __tensors__.at(targetArg.idx);
             }
-            outputBlobs.assign(__tensors__.at(targetArg.idx).clone());
+            if (result.shape().layout == DATA_LAYOUT_BLOCK) {
+                Mat converted;
+                transformLayout(result, converted, originalLayout, originalLayout, defaultC0);
+                outputBlobs.assign(converted);
+            } else {
+                outputBlobs.assign(result.clone());
+            }
             return;
         }
     }
