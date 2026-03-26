@@ -545,6 +545,15 @@ TEST_P(Test_Caffe_nets, Colorization)
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
 
+    // Bug: https://github.com/opencv/opencv/issues/28726
+    if (target == DNN_TARGET_CUDA || target == DNN_TARGET_CUDA_FP16)
+    {
+        auto engine_forced = static_cast<cv::dnn::EngineType>(
+                cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
+        if (engine_forced == cv::dnn::ENGINE_CLASSIC)
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
+    }
+
     // This model has bad accuracy when the FP16 and Winograd are enable at same time.
     if (target == DNN_TARGET_CPU_FP16)
         net.enableWinograd(false);
