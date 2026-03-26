@@ -365,7 +365,7 @@ Ptr<BaseRowFilter> getRowSumFilter(int srcType, int sumType,
 //! returns vertical 1D box filter
 Ptr<BaseColumnFilter> getColumnSumFilter( int sumType, int dstType,
                                                      int ksize, int anchor = -1,
-                                                     double scale = 1, int kernelSizeLog2 = 0);
+                                                     double scale = 1);
 
 //! returns combined Row-column separable filter
 Ptr<BaseRowColumnFilter> getRowColumnSumFilter(int srcType, int dstType,

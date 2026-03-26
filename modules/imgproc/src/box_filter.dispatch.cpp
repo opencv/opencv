@@ -296,11 +296,11 @@ Ptr<BaseRowFilter> getRowSumFilter(int srcType, int sumType, int ksize, int anch
 }
 
 
-Ptr<BaseColumnFilter> getColumnSumFilter(int sumType, int dstType, int ksize, int anchor, double scale, int kernelSizeLog2)
+Ptr<BaseColumnFilter> getColumnSumFilter(int sumType, int dstType, int ksize, int anchor, double scale)
 {
     CV_INSTRUMENT_REGION();
 
-    CV_CPU_DISPATCH(getColumnSumFilter, (sumType, dstType, ksize, anchor, scale, kernelSizeLog2),
+    CV_CPU_DISPATCH(getColumnSumFilter, (sumType, dstType, ksize, anchor, scale),
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
@@ -412,9 +412,13 @@ void boxFilter(InputArray _src, OutputArray _dst, int ddepth,
 
     borderType = (borderType&~BORDER_ISOLATED);
 
-    if(sdepth >= CV_32F && src.type() == dst.type() && (dst.data == src.data) && (ksize.height <= 5 && ksize.width <= 5))
+    if(sdepth >= CV_32F && src.type() == dst.type() && (ksize.height <= 5 && ksize.width <= 5)
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
+       && (src.data == dst.data || !checkHardwareSupport(CV_CPU_LOAD_AGU_GT_2)) //blockSum is effective for x86 arch with AGU<=2.
+#endif
+    )
     {
-        CV_CPU_DISPATCH(blockSumInPlace, (src, dst, ksize, anchor, wsz, ofs, normalize, borderType),
+        CV_CPU_DISPATCH(blockSum, (src, dst, ksize, anchor, wsz, ofs, normalize, borderType),
             CV_CPU_DISPATCH_MODES_ALL);
         return;
     }
@@ -484,7 +488,7 @@ void sqrBoxFilter(InputArray _src, OutputArray _dst, int ddepth,
     Ptr<BaseRowFilter> rowFilter = getSqrRowSumFilter(srcType, sumType, ksize.width, anchor.x );
     Ptr<BaseColumnFilter> columnFilter = getColumnSumFilter(sumType,
                                                             dstType, ksize.height, anchor.y,
-                                                            normalize ? 1./(ksize.width*ksize.height) : 1, 0);
+                                                            normalize ? 1./(ksize.width*ksize.height) : 1);
 
     Ptr<FilterEngine> f = makePtr<FilterEngine>(Ptr<BaseFilter>(), rowFilter, columnFilter, Ptr<BaseRowColumnFilter>(),
                                                 srcType, dstType, sumType, borderType );

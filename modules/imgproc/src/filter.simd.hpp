@@ -264,6 +264,15 @@ void inline incrementRowCount(FilterEngine& this_, int bufRows)
     }
 }
 
+int inline getNextBatchCount(FilterEngine& this_, int bufRows, int kheight, int ay, int &count)
+{
+    int dcount = bufRows - ay - this_.startY - this_.rowCount + this_.roi.y;
+    dcount = dcount > 0 ? dcount : bufRows - kheight + 1;
+    dcount = std::min(dcount, count);
+    count -= dcount;
+    return dcount;
+}
+
 int FilterEngine__proceed(FilterEngine& this_, const uchar* src, int srcstep, int count,
                           uchar* dst, int dststep)
 {
@@ -297,25 +306,52 @@ int FilterEngine__proceed(FilterEngine& this_, const uchar* src, int srcstep, in
 
     if(width <= 32 || this_.roi.height <=2 || dst_ == src_ ) // in-place computation and small image size avoided.
         isRowColumnSeparable = false;
-    bool processInnerRegion = true;
+
+    if(isRowColumnSeparable) {
+        int sdepth = CV_MAT_DEPTH(this_.srcType);
+        if(sdepth == CV_8U && width <= 480)
+            isRowColumnSeparable = false;
+    }
 
     uchar* ringBuf = alignPtr(&this_.ringBuf[0], VEC_ALIGN);
     uchar* srcRow = &this_.srcRow[0];
 
-    for(;; dst += dststep*i, dy += i)
+    if(isSep && !isRowColumnSeparable)
     {
-        int dcount = bufRows - ay - this_.startY - this_.rowCount + this_.roi.y;
-        dcount = dcount > 0 ? dcount : bufRows - kheight + 1;
-        dcount = std::min(dcount, count);
-        count -= dcount;
-        if(isSep)
+        // Streamlined separable path: processInnerRegion always true, no rowColumnFilter.
+        for(;; dst += dststep*i, dy += i)
         {
+            int dcount = getNextBatchCount(this_, bufRows, kheight, ay, count);
+
+            for( ; dcount-- > 0; src += srcstep )
+            {
+                int bi = (this_.startY - startY0 + this_.rowCount) % bufRows;
+                uchar* brow = ringBuf + bi*bufStep;
+                incrementRowCount(this_, bufRows);
+                fillRowData(srcRow, src, width1, _dx1, _dx2, esz, makeBorder, btab, btab_esz, true);
+                (*this_.rowFilter)(srcRow, brow, width, CV_MAT_CN(this_.srcType), true);
+            }
+            fillBrows(this_, brows, i, (this_.dstY + dy + this_.roi.y - ay),  bufRows, dy, kheight);
+            if( i < kheight )
+                break;
+            i -= kheight - 1;
+            (*this_.columnFilter)((const uchar**)brows, dst, dststep, i, this_.roi.width*cn, 0, true);
+        }
+    }
+    else if(isSep && isRowColumnSeparable)
+    {
+        // isRowColumnSeparable path: border rows via RowSum+ColumnSum, inner via rowColumnFilter.
+        bool processInnerRegion = true;
+
+        for(;; dst += dststep*i, dy += i)
+        {
+            int dcount = getNextBatchCount(this_, bufRows, kheight, ay, count);
+
             for( ; dcount-- > 0; src += srcstep )
             {
                 processInnerRegion = true;
-                if(isRowColumnSeparable && (yidx>(kheight-2)) && (yidx < (this_.wholeSize.height-kheight+1)))
+                if((yidx>(kheight-2)) && (yidx < (this_.wholeSize.height-kheight+1)))
                 {
-                    // skip processing inner region in row filter.
                     processInnerRegion = false;
                 }
                 int bi = (this_.startY - startY0 + this_.rowCount) % bufRows;
@@ -333,17 +369,24 @@ int FilterEngine__proceed(FilterEngine& this_, const uchar* src, int srcstep, in
             int kcn = 0;
             processInnerRegion = true;
             int yidxColFilter = yidx - i - 1;
-            if(isRowColumnSeparable && (yidxColFilter>kheight/2) && (yidx < (this_.wholeSize.height-kheight+2)))
+            if((yidxColFilter>kheight/2) && (yidx < (this_.wholeSize.height-kheight+2)))
             {
-                // skip processing inner region in column filter.
-                // Group of rows (i) are processed together in columnFilter, skipping bottom border is done approximately here based on start yidxColFilter.
                 kcn = (kwidth >> 1)*cn;
                 processInnerRegion = false;
             }
             (*this_.columnFilter)((const uchar**)brows, dst, dststep, i, this_.roi.width*cn, kcn, processInnerRegion);
         }
-        else
+
+        // Process inner region with row-column filter.
+        (*this_.rowColumnFilter)(src_, dst_, srcstep, dststep, this_.roi.width, this_.roi.height, this_.roi.y, this_.wholeSize.height, cn);
+    }
+    else
+    {
+        // Non-separable (filter2D) path.
+        for(;; dst += dststep*i, dy += i)
         {
+            int dcount = getNextBatchCount(this_, bufRows, kheight, ay, count);
+
             for( ; dcount-- > 0; src += srcstep )
             {
                 int bi = (this_.startY - startY0 + this_.rowCount) % bufRows;
@@ -358,10 +401,6 @@ int FilterEngine__proceed(FilterEngine& this_, const uchar* src, int srcstep, in
             (*this_.filter2D)((const uchar**)brows, dst, dststep, i, this_.roi.width, cn);
         }
     }
-
-    // Process inner region with row-column filter.
-    if(isRowColumnSeparable)
-        (*this_.rowColumnFilter)(src_, dst_, srcstep, dststep, this_.roi.width, this_.roi.height, this_.roi.y, this_.wholeSize.height, cn);
 
     this_.dstY += dy;
     CV_Assert(this_.dstY <= this_.roi.height);
