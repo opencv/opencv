@@ -163,8 +163,8 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        if (inputs[0].empty()) { // Support for 0D input
-            outputs.push_back(MatShape()); // Output is also a scalar.
+        if (inputs[0].size() == 0) { // Support for 0D input
+            outputs.push_back(MatShape::scalar()); // Output is also a scalar.
             return true;
         }
 

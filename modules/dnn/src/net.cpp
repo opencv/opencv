@@ -165,6 +165,12 @@ void Net::setParam(int layer, int numParam, const Mat& blob)
     return impl->setParam(layer, numParam, blob);
 }
 
+void Net::setParam(const String& name, int numParam, const Mat& blob)
+{
+    CV_Assert(impl);
+    return impl->setParam(name, numParam, blob);
+}
+
 int Net::getLayerId(const String& layer) const
 {
     CV_Assert(impl);

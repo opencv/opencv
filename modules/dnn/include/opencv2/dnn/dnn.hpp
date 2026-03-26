@@ -815,7 +815,12 @@ CV__DNN_INLINE_NS_BEGIN
          *  then the following forward pass may fail.
         */
         CV_WRAP void setParam(int layer, int numParam, CV_ND const Mat &blob);
-        CV_WRAP inline void setParam(const String& layerName, int numParam, CV_ND const Mat &blob) { return setParam(getLayerId(layerName), numParam, blob); }
+        /** @brief Sets the parameter blob of a layer identified by its name or output tensor name.
+         *  @param layerName layer name (classic engine) or raw ONNX output tensor name (ENGINE_NEW).
+         *  @param numParam index of the constant weight input to update (0 = kernel, 1 = bias, etc.).
+         *  @param blob the new parameter value.
+         */
+        CV_WRAP void setParam(const String& layerName, int numParam, CV_ND const Mat &blob);
 
         /** @brief Returns parameter blob of the layer.
          *  @param layer name or id of the layer.

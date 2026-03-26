@@ -203,6 +203,7 @@ struct Net::Impl : public detail::NetImplBase
     virtual void setInput(InputArray blob, const String& name, double scalefactor, const Scalar& mean);
     Mat getParam(int layer, int numParam) const;
     void setParam(int layer, int numParam, const Mat& blob);
+    void setParam(const std::string& outputTensorName, int numParam, const Mat& blob);
     std::vector<Ptr<Layer>> getLayerInputs(int layerId) const;
     std::vector<String> getLayerNames() const;
 
@@ -406,7 +407,7 @@ struct Net::Impl : public detail::NetImplBase
     std::vector<Mat> runOrtSession(std::vector<Mat> inputBlobs, const std::vector<int>& outIdxs);
 #endif
     // run the whole model, convenience wrapper
-    Mat forwardWithSingleOutput(const std::string& outname);
+    void forwardWithSingleOutput(const std::string& outname, OutputArrayOfArrays outputBlobs);
     // run the whole model, convenience wrapper
     void forwardWithMultipleOutputs(OutputArrayOfArrays outputBlobs,
                                     const std::vector<std::string>& outBlobNames);
