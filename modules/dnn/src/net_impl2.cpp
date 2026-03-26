@@ -1146,7 +1146,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                                 buf.type() == m.type(),
                                 (!m.u || m.u->data == outOrigData[i].first),
                                 (!m.u || m.u->size == outOrigData[i].second));
-                } else if (!buf.u || m.u->size > buf.u->size) {
+                } else if (!buf.u || (m.u && m.u->size > buf.u->size)) {
                     buf = m;
                 } else {
                     // this branch means that the layer still calls

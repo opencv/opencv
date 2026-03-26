@@ -129,6 +129,11 @@ public:
             outMat = outputs_arr.getMatRef(0);
         }
 
+        if (K == 0)
+        {
+            return;
+        }
+
         auto* out = outMat.ptr<int64_t>();
         std::vector<int> offsets(tasks + 1, 0);
         for (int t = 0; t < tasks; ++t)

@@ -311,20 +311,30 @@ void reshapeAndCopyFirst(InputArrayOfArrays inputs,
     int inpType = inputs.type(0);
     if (inpKind == _InputArray::STD_VECTOR_MAT) {
         Mat inp = inputs.getMat(0);
+        MatShape inpShape = inp.shape();
+        const size_t inpTotal = inpShape.total();
+        const size_t outTotal = shape.total();
         std::vector<Mat>& outref = outputs.getMatVecRef();
         outref.resize(1);
         outref[0].fit(shape, inpType);
         CV_Assert(outref[0].isContinuous());
+        if (inpTotal == 0 && outTotal == 0)
+            return;
         Mat inp_ = inp.reshape(0, shape);
         if (inp_.data != outref[0].data)
             inp_.copyTo(outref[0]);
     }
     else {
         UMat inp = inputs.getUMat(0);
+        MatShape inpShape = inputs.shape(0);
+        const size_t inpTotal = inpShape.total();
+        const size_t outTotal = shape.total();
         std::vector<UMat>& outref = outputs.getUMatVecRef();
         outref.resize(1);
         outref[0].fit(shape, inpType);
         CV_Assert(outref[0].isContinuous());
+        if (inpTotal == 0 && outTotal == 0)
+            return;
         UMat inp_ = inp.reshape(0, shape);
         inp_.copyTo(outref[0]);
     }
