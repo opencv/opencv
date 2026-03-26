@@ -13,6 +13,7 @@
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Copyright (C) 2015, Itseez Inc., all rights reserved.
+// Copyright (C) 2026, Advanced Micro Devices, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -445,6 +446,8 @@ struct HWFeatures
         g_hwFeatureNames[CPU_AVX512_CLX] = "AVX512-CLX";
         g_hwFeatureNames[CPU_AVX512_ICL] = "AVX512-ICL";
 
+        g_hwFeatureNames[CPU_LOAD_PORTS_GT_2] = "LOAD-PORTS-GT-2";
+
         g_hwFeatureNames[CPU_RVV] = "RVV";
 
         g_hwFeatureNames[CPU_LSX]  = "LSX";
@@ -464,6 +467,17 @@ struct HWFeatures
     #ifdef CV_CPUID_X86
         int cpuid_data[4] = { 0, 0, 0, 0 };
         int cpuid_data_ex[4] = { 0, 0, 0, 0 };
+
+        // Detect CPU vendor via CPUID leaf 0
+        {
+            int vendor_data[4] = { 0, 0, 0, 0 };
+            CV_CPUID_X86(vendor_data, 0, 0);
+            // "AuthenticAMD": EBX=0x68747541 EDX=0x69746E65 ECX=0x444D4163
+            // AMD Zen 2+ has 3 load AGUs vs 2 on Intel
+            have[CV_CPU_LOAD_AGU_GT_2] = (vendor_data[1] == 0x68747541 &&
+                                          vendor_data[3] == 0x69746E65 &&
+                                          vendor_data[2] == 0x444D4163);
+        }
 
         CV_CPUID_X86(cpuid_data, 1, 0/*unused*/);
 

@@ -14,6 +14,7 @@
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Copyright (C) 2015, Itseez Inc., all rights reserved.
+// Copyright (C) 2026, Advanced Micro Devices, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -303,6 +304,9 @@ namespace cv {
 #define CV_CPU_AVX512_CLX       261
 #define CV_CPU_AVX512_ICL       262
 
+// CPU microarchitecture capability flags
+#define CV_CPU_LOAD_AGU_GT_2  263  // > 2 load AGUs (e.g. AMD Zen 2+ has 3)
+
 // when adding to this list remember to update the following enum
 #define CV_HARDWARE_MAX_FEATURE 512
 
@@ -365,6 +369,8 @@ enum CpuFeatures {
     CPU_AVX512_CNL      = 260, //!< Cannon Lake with AVX-512F/CD/BW/DQ/VL/IFMA/VBMI
     CPU_AVX512_CLX      = 261, //!< Cascade Lake with AVX-512F/CD/BW/DQ/VL/VNNI
     CPU_AVX512_ICL      = 262, //!< Ice Lake with AVX-512F/CD/BW/DQ/VL/IFMA/VBMI/VNNI/VBMI2/BITALG/VPOPCNTDQ
+
+    CPU_LOAD_PORTS_GT_2 = 263, //!< > 2 load AGUs (e.g. AMD Zen 2+ has 3)
 
     CPU_MAX_FEATURE     = 512  // see CV_HARDWARE_MAX_FEATURE
 };
