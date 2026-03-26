@@ -209,6 +209,7 @@ private:
     void parseUpsample             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSoftMax              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDetectionOutput      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parsePriorBox             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseCumSum               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseElementWise          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDepthSpaceOps        (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -2445,6 +2446,14 @@ void ONNXImporter::parseReshape(LayerParams& layerParams, const opencv_onnx::Nod
         Mat blob = getIntBlob(node_proto, 1);
         CV_Assert(blob.type() == CV_32SC1);
 
+        // Replace hard-coded flat size with -1 on [1, N] "flatten" nodes so the shape is inferred at runtime.
+        if (blob.total() == 2 &&
+            blob.ptr<int>()[0] == 1 && blob.ptr<int>()[1] > 0 &&
+            node_proto.output(0).find("flatten") != std::string::npos)
+        {
+            blob.ptr<int>()[1] = -1;
+        }
+
         layerParams.set("dim", DictValue::arrayInt<int*>(blob.ptr<int>(), blob.total()));
 
         if (layer_id.find(node_proto.input(0)) == layer_id.end()) {
@@ -2878,6 +2887,14 @@ void ONNXImporter::parseDetectionOutput(LayerParams& layerParams, const opencv_o
 {
     opencv_onnx::NodeProto node_proto = node_proto_;
     CV_CheckEQ(node_proto.input_size(), 3, "");
+
+    // Remap ONNX int code_type (1=CORNER, 2=CENTER_SIZE) to the string DetectionOutputLayerImpl expects.
+    if (layerParams.has("code_type"))
+    {
+        int ct = layerParams.get<int>("code_type");
+        layerParams.set("code_type", ct == 2 ? "CENTER_SIZE" : "CORNER");
+    }
+
     if (constBlobs.find(node_proto.input(2)) != constBlobs.end())
     {
         Mat priors = getBlob(node_proto, 2);
@@ -2893,6 +2910,41 @@ void ONNXImporter::parseDetectionOutput(LayerParams& layerParams, const opencv_o
 
         node_proto.set_input(2, constParams.name);
     }
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter::parsePriorBox(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    // Remap plural Caffe-export attribute names (e.g. "variances") to singular names PriorBoxLayerImpl expects.
+    layerParams.type = "PriorBox";
+
+    for (int i = 0; i < node_proto.attribute_size(); i++)
+    {
+        const opencv_onnx::AttributeProto& attr = node_proto.attribute(i);
+        const std::string& aname = attr.name();
+
+        if (aname == "variances" && attr.floats_size() > 0)
+            layerParams.set("variance", DictValue::arrayReal(attr.floats().data(), attr.floats_size()));
+        else if (aname == "min_sizes" && attr.floats_size() > 0)
+            layerParams.set("min_size", DictValue::arrayReal(attr.floats().data(), attr.floats_size()));
+        else if (aname == "max_sizes" && attr.floats_size() > 0)
+            layerParams.set("max_size", DictValue::arrayReal(attr.floats().data(), attr.floats_size()));
+        else if (aname == "aspect_ratios" && attr.floats_size() > 0)
+            layerParams.set("aspect_ratio", DictValue::arrayReal(attr.floats().data(), attr.floats_size()));
+        else if (aname == "steps" && attr.floats_size() == 2)
+        {
+            layerParams.set("step_h", attr.floats(0));
+            layerParams.set("step_w", attr.floats(1));
+        }
+        else if (aname == "offset" && attr.has_f())
+            layerParams.set("offset", attr.f());
+        else if (aname == "clip" && attr.has_i())
+            layerParams.set("clip", (int)attr.i());
+        else if (aname == "flip" && attr.has_i())
+            layerParams.set("flip", (int)attr.i());
+        // img_sizes ignored: PriorBox reads image dims from inputs[1] at runtime.
+    }
+
     addLayer(layerParams, node_proto);
 }
 
@@ -4064,6 +4116,7 @@ void ONNXImporter::buildDispatchMap_ONNX_AI()
     dispatch["Upsample"] = &ONNXImporter::parseUpsample;
     dispatch["SoftMax"] = dispatch["Softmax"] = dispatch["LogSoftmax"] = &ONNXImporter::parseSoftMax;
     dispatch["DetectionOutput"] = &ONNXImporter::parseDetectionOutput;
+    dispatch["PriorBox"] = &ONNXImporter::parsePriorBox;
     dispatch["CumSum"] = &ONNXImporter::parseCumSum;
     dispatch["SpaceToDepth"] = dispatch["DepthToSpace"] = &ONNXImporter::parseDepthSpaceOps;
     dispatch["ScatterElements"] = dispatch["Scatter"] = dispatch["ScatterND"] = &ONNXImporter::parseScatter;

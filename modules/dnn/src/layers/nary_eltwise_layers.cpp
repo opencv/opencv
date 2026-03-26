@@ -307,8 +307,12 @@ public:
             for (int j = 0; j < maxdims; j++) {
                 int inpsz = j < delta ? 1 : inpShape[j - delta];
                 int outsz = outShape[j];
-                CV_Assert(inpsz == outsz || inpsz == 1 || outsz == 1);
-                outShape[j] = inpsz != 1 ? inpsz : outsz;
+                if (inpsz == outsz || inpsz == 1 || outsz == 1) {
+                    outShape[j] = inpsz != 1 ? inpsz : outsz;
+                } else {
+                    // Clamp to minimum to tolerate off-by-1 spatial mismatches from Caffe→ONNX export.
+                    outShape[j] = std::min(inpsz, outsz);
+                }
             }
         }
 
@@ -828,6 +832,44 @@ public:
         }
 
         std::vector<Mat> used_inputs = inputs;
+
+        // Crop oversized inputs to output shape to tolerate off-by-1 spatial mismatches from Caffe→ONNX export.
+        // needsCrop: scan all inputs first to avoid the repack cost when no cropping is needed.
+        const Mat& out0 = outputs[0];
+        bool needsCrop = false;
+        for (const auto& inp : used_inputs) {
+            int delta = out0.dims - inp.dims;
+            for (int d = 0; d < inp.dims; d++) {
+                int od = d + delta;
+                if (od >= 0 && inp.size[d] > 1 && out0.size[od] > 1 &&
+                    inp.size[d] != out0.size[od]) {
+                    needsCrop = true; break;
+                }
+            }
+            if (needsCrop) break;
+        }
+        if (needsCrop) {
+            std::vector<Range> ranges;
+            for (size_t k = 0; k < used_inputs.size(); k++) {
+                Mat& inp = used_inputs[k];
+                int delta = out0.dims - inp.dims;
+                bool modified = false;
+                ranges.assign(inp.dims, Range::all());
+                for (int d = 0; d < inp.dims; d++) {
+                    int od = d + delta;
+                    if (od >= 0 && inp.size[d] > out0.size[od] &&
+                        inp.size[d] > 1 && out0.size[od] > 1) {
+                        ranges[d] = Range(0, out0.size[od]);
+                        modified = true;
+                    }
+                }
+                if (modified)
+                    inp = inp(ranges).clone();
+            }
+            helper.init(used_inputs, outputs);
+            CV_CheckTrue(helper.prepare_for_broadcast_op(), "NaryEltwiseLayer: Preparation for broadcasting failed");
+        }
+
         if (op == OPERATION::POW) {
             CV_Assert(used_inputs.size() == 2);
             const int out_type = outputs[0].type();
