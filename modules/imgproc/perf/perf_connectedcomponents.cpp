@@ -3,7 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 #include "perf_precomp.hpp"
 
-namespace opencv_test {
+namespace opencv_test { namespace {
 
 CV_ENUM(CCLAlgorithm, CCL_DEFAULT, CCL_WU, CCL_GRANA, CCL_BOLELLI, CCL_SAUF, CCL_BBDT, CCL_SPAGHETTI)
 
@@ -69,4 +69,4 @@ PERF_TEST_P(ConnectedComponentsWithStats_Test, connectedComponentsWithStats,
     SANITY_CHECK_NOTHING();
 }
 
-} // namespace
+}} // namespace
