@@ -271,17 +271,27 @@ static void triangleRasterizeInternal(InputArray _vertices, InputArray _indices,
     {
         Vec3f vglobal = vertices.at<Vec3f>(i);
 
-        Vec4f vndc = mvpMatrix * Vec4f(vglobal[0], vglobal[1], vglobal[2], 1.f);
+        float x_num = std::fma(mvpMatrix(0,0), vglobal[0],
+                      std::fma(mvpMatrix(0,1), vglobal[1],
+                      std::fma(mvpMatrix(0,2), vglobal[2], mvpMatrix(0,3))));
+        float y_num = std::fma(mvpMatrix(1,0), vglobal[0],
+                      std::fma(mvpMatrix(1,1), vglobal[1],
+                      std::fma(mvpMatrix(1,2), vglobal[2], mvpMatrix(1,3))));
+        float z_num = std::fma(mvpMatrix(2,0), vglobal[0],
+                      std::fma(mvpMatrix(2,1), vglobal[1],
+                      std::fma(mvpMatrix(2,2), vglobal[2], mvpMatrix(2,3))));
+        float w_num = std::fma(mvpMatrix(3,0), vglobal[0],
+                      std::fma(mvpMatrix(3,1), vglobal[1],
+                      std::fma(mvpMatrix(3,2), vglobal[2], mvpMatrix(3,3))));
 
-        float invw = 1.f / vndc[3];
-        Vec4f vdiv = {vndc[0] * invw, vndc[1] * invw, vndc[2] * invw, invw};
+        float invw = 1.f / w_num;
 
         // [-1, 1]^3 => [0, width] x [0, height] x [0, 1]
         Vec4f vscreen = {
-            (vdiv[0] + 1.f) * 0.5f * (float)imgSize.width,
-            (vdiv[1] + 1.f) * 0.5f * (float)imgSize.height,
-            (vdiv[2] + 1.f) * 0.5f,
-             vdiv[3]
+            std::fma(x_num * invw, 0.5f * (float)imgSize.width,  0.5f * (float)imgSize.width),
+            std::fma(y_num * invw, 0.5f * (float)imgSize.height, 0.5f * (float)imgSize.height),
+            std::fma(z_num * invw, 0.5f, 0.5f),
+            invw
         };
 
         screenVertices.at<Vec4f>(i) = vscreen;
