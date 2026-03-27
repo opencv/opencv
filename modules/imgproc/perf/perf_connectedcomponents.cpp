@@ -29,11 +29,11 @@ PERF_TEST_P(ConnectedComponents_Test, connectedComponents,
     // Generate a binary image with random blobs to create many connected components.
     // Use threshold on random noise to produce medium-density regions.
     declare.in(src, WARMUP_RNG);
-    threshold(src, src, 200, 255, THRESH_BINARY);
+    cv::threshold(src, src, 200, 255, cv::THRESH_BINARY);
 
     declare.out(labels).time(60);
 
-    TEST_CYCLE() connectedComponents(src, labels, connectivity, CV_32S, algorithm);
+    TEST_CYCLE() cv::connectedComponents(src, labels, connectivity, CV_32S, algorithm);
 
     SANITY_CHECK_NOTHING();
 }
@@ -59,12 +59,12 @@ PERF_TEST_P(ConnectedComponentsWithStats_Test, connectedComponentsWithStats,
     Mat stats, centroids;
 
     declare.in(src, WARMUP_RNG);
-    threshold(src, src, 200, 255, THRESH_BINARY);
+    cv::threshold(src, src, 200, 255, cv::THRESH_BINARY);
 
     declare.out(labels).time(60);
 
-    TEST_CYCLE() connectedComponentsWithStats(src, labels, stats, centroids,
-                                              connectivity, CV_32S, algorithm);
+    TEST_CYCLE() cv::connectedComponentsWithStats(src, labels, stats, centroids,
+                                                  connectivity, CV_32S, algorithm);
 
     SANITY_CHECK_NOTHING();
 }
