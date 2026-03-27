@@ -992,9 +992,9 @@ Mat Net::Impl::forward(const String& outputName)
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
     if (mainGraph) {
-        if (!outputName.empty())
-            CV_Error(Error::StsNotImplemented, "The new dnn engine doesn't support inference until a specified layer. If you want to run the whole model, please don't set the outputName argument in the forward() call. If you want to run the model until a specified layer, please use the old dnn engine");
-        return forwardWithSingleOutput(outputName);
+        Mat result;
+        forwardWithSingleOutput(outputName, result);
+        return result;
     }
 
     String layerName = outputName;
@@ -1051,8 +1051,10 @@ void Net::Impl::forward(OutputArrayOfArrays outputBlobs, const String& outputNam
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
     if (mainGraph) {
-        if (!outputName.empty())
-            CV_Error(Error::StsNotImplemented, "The new dnn engine doesn't support inference until a specified layer. If you want to run the whole model, please don't set the outputName argument in the forward() call. If you want to run the model until a specified layer, please use the old dnn engine");
+        if (!outputName.empty()) {
+            forwardWithSingleOutput(outputName, outputBlobs);
+            return;
+        }
         forwardWithMultipleOutputs(outputBlobs, {});
         return;
     }
@@ -1634,6 +1636,51 @@ void Net::Impl::setParam(int layer, int numParam, const Mat& blob)
     CV_Assert(numParam < (int)layerBlobs.size());
     // we don't make strong checks, use this function carefully
     layerBlobs[numParam] = blob;
+}
+
+void Net::Impl::setParam(const std::string& outputTensorName, int numParam, const Mat& blob)
+{
+    if (mainGraph) {
+        auto it = argnames.find(outputTensorName);
+        if (it == argnames.end()) {
+            size_t excl = outputTensorName.rfind('!');
+            if (excl != std::string::npos)
+                it = argnames.find(outputTensorName.substr(excl + 1));
+        }
+        if (it == argnames.end())
+            CV_Error_(Error::StsObjectNotFound,
+                      ("DNN: tensor '%s' not found in the graph", outputTensorName.c_str()));
+
+        int targetIdx = (int)it->second;
+        const std::vector<Ptr<Layer>>& prog = mainGraph->prog();
+        for (const auto& layer : prog) {
+            bool produces = false;
+            for (const Arg& out : layer->outputs)
+                if (out.idx == targetIdx) { produces = true; break; }
+            if (!produces)
+                continue;
+
+            if (numParam < (int)layer->blobs.size()) {
+                layer->blobs[numParam] = blob;
+                finalizeLayers = true;
+                return;
+            }
+
+            Conv2Layer* conv = dynamic_cast<Conv2Layer*>(layer.get());
+            if (conv && numParam == 0) {
+                conv->setWeights(blob, Mat(), defaultC0, accuracy);
+                finalizeLayers = true;
+                return;
+            }
+
+            CV_Error_(Error::StsOutOfRange,
+                      ("DNN: op producing '%s' has fewer than %d params",
+                       outputTensorName.c_str(), numParam + 1));
+        }
+        CV_Error_(Error::StsObjectNotFound,
+                  ("DNN: no op found in graph producing tensor '%s'", outputTensorName.c_str()));
+    }
+    setParam(getLayerId(outputTensorName), numParam, blob);
 }
 
 

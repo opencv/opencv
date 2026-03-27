@@ -753,8 +753,7 @@ TEST_P(Test_Model, TextRecognitionWithCTCPrefixBeamSearch)
     testTextRecognitionModel(weightPath, "", imgPath, seq, decodeType, vocabulary, size, mean, scale);
 }
 
-// BUG: https://github.com/opencv/opencv/issues/26246
-TEST_P(Test_Model, DISABLED_TextDetectionByDB)
+TEST_P(Test_Model, TextDetectionByDB)
 {
     applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
 

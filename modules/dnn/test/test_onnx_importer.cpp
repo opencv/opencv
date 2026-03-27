@@ -1138,12 +1138,13 @@ TEST_P(Test_ONNX_layers, ResizeUnfusedTwoInputs)
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+#endif
+#ifdef HAVE_INF_ENGINE
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 #endif
     testONNXModels("upsample_unfused_two_inputs_opset9_torch1.4", npy, 0, 0, false, true, 2);
-    // BUG: https://github.com/opencv/opencv/issues/26291
-    // testONNXModels("upsample_unfused_two_inputs_opset11_torch1.4", npy, 0, 0, false, true, 2);
+    testONNXModels("upsample_unfused_two_inputs_opset11_torch1.4", npy, 0, 0, false, true, 2);
 }
 
 TEST_P(Test_ONNX_layers, MultyInputs)
@@ -2561,6 +2562,12 @@ TEST_P(Test_ONNX_nets, MobileNet_v2)
 TEST_P(Test_ONNX_nets, MobileNet_v2_FP16)
 {
     testONNXModels("mobilenetv2_fp16", npy, default_l1, default_lInf, true);
+}
+
+TEST_P(Test_ONNX_nets, MobileNet_v4)
+{
+    required = true;
+    testONNXModels("mobilenetv4", npy, default_l1, default_lInf, true);
 }
 
 TEST_P(Test_ONNX_nets, LResNet100E_IR)

@@ -66,6 +66,7 @@ void CV_ArucoBoardPose::run(int) {
                 vector<vector<Point2f> > corners;
                 vector<int> ids;
                 detectorParameters.markerBorderBits = markerBorder;
+                detectorParameters.validBitIdThreshold = 0.5f;
                 detector.setDetectorParameters(detectorParameters);
                 detector.detectMarkers(img, corners, ids);
 

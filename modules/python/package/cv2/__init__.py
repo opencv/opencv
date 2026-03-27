@@ -26,7 +26,7 @@ def __load_extra_py_code_for_module(base, name, enable_debug_print=False):
     native_module = sys.modules.pop(module_name, None)
     try:
         py_module = importlib.import_module(module_name)
-    except ImportError as err:
+    except (ImportError, AttributeError) as err:
         if enable_debug_print:
             print("Can't load Python code for module:", module_name,
                   ". Reason:", err)

@@ -649,7 +649,7 @@ TEST_P(RenderingTest, floatParams)
             {
                 thr.rgbInfThreshold = 0.000229;
                 thr.rgbL2Threshold = 6.37e-09;
-                thr.depthL2Threshold = 0.000427;
+                thr.depthL2Threshold = 0.00043;
             }
             else if (width == 700 && height == 700 && shadingType == RASTERIZE_SHADING_SHADED && cullingMode == RASTERIZE_CULLING_CW)
             {

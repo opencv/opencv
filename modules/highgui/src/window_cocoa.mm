@@ -236,7 +236,8 @@ void showImageImpl( const char* name, cv::InputArray arr)
                         int y = [window y0];
                         if(x >= 0 && y >= 0)
                         {
-                            y = [[window screen] visibleFrame].size.height - y;
+                            NSRect visibleFrame = [[window screen] visibleFrame];
+                            y = NSMaxY(visibleFrame) - y;
                             [window setFrameTopLeftPoint:NSMakePoint(x, y)];
                         }
                     }
@@ -273,7 +274,8 @@ void moveWindowImpl( const char* name, int x, int y)
                 [window setY0:y];
             }
             else {
-                y = [[window screen] visibleFrame].size.height - y;
+                NSRect visibleFrame = [[window screen] visibleFrame];
+                y = NSMaxY(visibleFrame) - y;
                 [window setFrameTopLeftPoint:NSMakePoint(x, y)];
             }
         }

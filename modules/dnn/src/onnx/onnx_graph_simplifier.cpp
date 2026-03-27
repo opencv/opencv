@@ -1282,7 +1282,7 @@ public:
                             }
                         }
                     }
-                    //  extract axis from original Gather node
+                    // extract axis from original Gather node
                     axis = 0;
                     opencv_onnx::NodeProto* origGatherNode =
                         inpNode.dynamicCast<ONNXNodeWrapper>()->node;
@@ -1306,6 +1306,7 @@ public:
         new_attr->set_name("axis");
         new_attr->set_i(axis);
     }
+
 private:
     int cast, gather, axis;
 };
@@ -1727,6 +1728,15 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net)
 }
 
 
+static std::string getExternalDataValue(const opencv_onnx::TensorProto& tensor_proto, const std::string& key)
+{
+    for (const auto& entry : tensor_proto.external_data())
+    {
+        if (entry.key() == key)
+            return entry.value();
+    }
+    return std::string();
+}
 
 static char* getTensorRAWData(const opencv_onnx::TensorProto& tensor_proto,
                               std::vector<int64_t>& tensor_data, const std::string& base_path = "")
@@ -1734,24 +1744,31 @@ static char* getTensorRAWData(const opencv_onnx::TensorProto& tensor_proto,
     if (tensor_proto.has_data_location() && tensor_proto.data_location() == opencv_onnx::TensorProto::EXTERNAL) {
     #if OPENCV_HAVE_FILESYSTEM_SUPPORT
         CV_Assert(tensor_proto.has_data_location() && tensor_proto.data_location() == opencv_onnx::TensorProto::EXTERNAL);
-        auto it_begin = tensor_proto.external_data().begin();
-        auto it_end = tensor_proto.external_data().end();
-        // file path
-        auto it = std::find_if(it_begin, it_end,[](const auto& entry) { return entry.key() == "location"; });
-        CV_CheckTrue(it != it_end, "External tensor data location is not specified");
+        std::string location_path = getExternalDataValue(tensor_proto, "location");
+        CV_CheckTrue(!location_path.empty(), "External tensor data location is not specified");
 
-
-        std::string location_path = it->value();
         std::string full_path = base_path.empty() ? location_path : utils::fs::join(base_path, location_path);
 
         std::ifstream file(full_path, std::ios::binary | std::ios::ate);
         CV_CheckTrue(file.is_open(), "Failed to open external tensor data file");
 
-        size_t size = file.tellg();
-        file.seekg(0, std::ios::beg);
-        tensor_data.resize(divUp((size_t)size, sizeof(int64_t)));
+        size_t file_size = (size_t)file.tellg();
+        size_t offset = 0;
+        std::string offset_str = getExternalDataValue(tensor_proto, "offset");
+        if (!offset_str.empty())
+            offset = (size_t)std::stoull(offset_str);
 
-        file.read((char*)tensor_data.data(), size);
+        size_t length = file_size - offset;
+        std::string length_str = getExternalDataValue(tensor_proto, "length");
+        if (!length_str.empty())
+            length = (size_t)std::stoull(length_str);
+
+        CV_Check(offset, offset <= file_size, "External data offset exceeds file size");
+        CV_Check(length, length <= file_size - offset, "External data length exceeds available bytes");
+
+        file.seekg(offset, std::ios::beg);
+        tensor_data.resize(divUp(length, sizeof(int64_t)));
+        file.read((char*)tensor_data.data(), length);
         return (char*)tensor_data.data();
     #else
         CV_Error(Error::StsNotImplemented, "External tensor data is not supported without filesystem support");

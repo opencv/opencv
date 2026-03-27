@@ -620,6 +620,8 @@ void inline smooth3N121Impl(const ET* src,  int cn, ET *dst, int ito, int idst, 
     int len = (width - offset) * cn;
     int x = offset * cn;
     int maxRow = min((ito - vOffset),height-vOffset);
+    if (v >= maxRow) return;
+
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     VFT v_8 = vx_setall((WET)8);
     const int VECSZ = VTraits<VET>::vlanes();
@@ -713,6 +715,7 @@ void inline smooth5N14641Impl(const ET* src, int cn, ET* dst, int ito, int idst,
     int len = (width - offset) * cn;
     int x = offset * cn;
     int maxRow = min((ito - vOffset),height-vOffset);
+    if (v >= maxRow) return;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     VFT v_6 = vx_setall((WET)6);

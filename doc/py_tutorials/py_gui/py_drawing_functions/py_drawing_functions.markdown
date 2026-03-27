@@ -52,7 +52,7 @@ cv.circle(img,(447,63), 63, (0,0,255), -1)
 ### Drawing Ellipse
 
 To draw the ellipse, we need to pass several arguments. One argument is the center location (x,y).
-Next argument is axes lengths (major axis length, minor axis length). angle is the angle of rotation
+Next argument is axes lengths (semi-major axis length, semi-minor axis length). angle is the angle of rotation
 of ellipse in anti-clockwise direction. startAngle and endAngle denotes the starting and ending of
 ellipse arc measured in clockwise direction from major axis. i.e. giving values 0 and 360 gives the
 full ellipse. For more details, check the documentation of **cv.ellipse()**. Below example draws a

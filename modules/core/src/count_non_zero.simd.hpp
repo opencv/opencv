@@ -6,7 +6,7 @@
 
 namespace cv {
 
-typedef int (*CountNonZeroFunc)(const uchar*, int);
+typedef int (*CountNonZeroFunc)(const void*, int);
 
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
@@ -32,8 +32,9 @@ static int countNonZero_(const T* src, int len )
 
 #undef DEFINE_NONZERO_FUNC
 #define DEFINE_NONZERO_FUNC(funcname, suffix, ssuffix, T, VT, ST, cmp_op, add_op, update_sum, scalar_cmp_op) \
-static int funcname( const T* src, int len ) \
+static int funcname( const void* src_ptr, int len ) \
 { \
+    const T* src = static_cast<const T*>(src_ptr); \
     int i = 0, nz = 0; \
     SIMD_ONLY( \
     const int vlanes = VTraits<VT>::vlanes(); \
@@ -119,9 +120,9 @@ DEFINE_NONZERO_FUNC(countNonZero16f, u16, u32, ushort, v_uint16, v_uint32, VEC_C
 
 #undef DEFINE_NONZERO_FUNC_NOSIMD
 #define DEFINE_NONZERO_FUNC_NOSIMD(funcname, T) \
-static int funcname(const T* src, int len) \
+static int funcname(const void* src, int len) \
 { \
-    return countNonZero_(src, len); \
+    return countNonZero_(static_cast<const T*>(src), len); \
 }
 
 DEFINE_NONZERO_FUNC_NOSIMD(countNonZero64s, int64)

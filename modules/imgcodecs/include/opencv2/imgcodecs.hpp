@@ -102,7 +102,8 @@ enum ImwriteFlags {
        IMWRITE_EXR_TYPE            = (3 << 4) + 0 /* 48 */, //!< override EXR storage type (FLOAT (FP32) is default)
        IMWRITE_EXR_COMPRESSION     = (3 << 4) + 1 /* 49 */, //!< override EXR compression type (ZIP_COMPRESSION = 3 is default)
        IMWRITE_EXR_DWA_COMPRESSION_LEVEL = (3 << 4) + 2 /* 50 */, //!< override EXR DWA compression level (45 is default)
-       IMWRITE_WEBP_QUALITY        = 64, //!< For WEBP, it can be a quality from 1 to 100 (the higher is the better). By default (without any parameter) and for quality above 100 the lossless compression is used.
+       IMWRITE_WEBP_QUALITY        = 64, //!< For WEBP, it can be a lossy quality from 1 to 100 (the higher is the better) for IMWRITE_WEBP_LOSSLESS_OFF. By default (without this parameter) or if quality > 100, IMWRITE_WEBP_LOSSLESS_ON is used instead.
+       IMWRITE_WEBP_LOSSLESS_MODE  = 65, //!< For WEBP, it can be a lossless compression strategy. See cv::ImwriteWEBPLosslessMode. Default is IMWRITE_WEBP_LOSSLESS_OFF. For Animated WEBP, it is not supported.
        IMWRITE_HDR_COMPRESSION     = (5 << 4) + 0 /* 80 */, //!< specify HDR compression
        IMWRITE_PAM_TUPLETYPE       = 128,//!< For PAM, sets the TUPLETYPE field to the corresponding string value that is defined for the format
        IMWRITE_TIFF_RESUNIT        = 256,//!< For TIFF, use to specify which DPI resolution unit to set. See ImwriteTiffResolutionUnitFlags. Default is IMWRITE_TIFF_RESOLUTION_UNIT_INCH.
@@ -239,6 +240,14 @@ enum ImwritePAMFlags {
        IMWRITE_PAM_FORMAT_RGB             = 4,
        IMWRITE_PAM_FORMAT_RGB_ALPHA       = 5
      };
+
+//! Imwrite WEBP specific values for IMWRITE_WEBP_LOSSLESS_MODE parameter key.
+enum ImwriteWEBPLosslessMode {
+    IMWRITE_WEBP_LOSSLESS_OFF            = 0, //!< Lossy compression mode. Uses IMWRITE_WEBP_QUALITY to control compression. (Default)
+                                              //!< @note If IMWRITE_WEBP_QUALITY is not specified, it falls back to IMWRITE_WEBP_LOSSLESS_ON to maintain backward compatibility.
+    IMWRITE_WEBP_LOSSLESS_ON             = 1, //!< Standard lossless compression. May modify or discard RGB values of fully transparent pixels to improve compression ratio.
+    IMWRITE_WEBP_LOSSLESS_PRESERVE_COLOR = 2, //!< Exact lossless compression. Preserves all RGB data even for pixels with 0 alpha (equivalent to WebP's exact flag).
+};
 
 //! Imwrite HDR specific values for IMWRITE_HDR_COMPRESSION parameter key
 enum ImwriteHDRCompressionFlags {

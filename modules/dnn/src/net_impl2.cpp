@@ -624,7 +624,7 @@ void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays 
     finalizeLayers = false;
 }
 
-Mat Net::Impl::forwardWithSingleOutput(const std::string& outname)
+void Net::Impl::forwardWithSingleOutput(const std::string& outname, OutputArrayOfArrays outputBlobs)
 {
 #ifdef HAVE_ONNXRUNTIME
     if (this->ort_session)
@@ -648,25 +648,63 @@ Mat Net::Impl::forwardWithSingleOutput(const std::string& outname)
         std::vector<int> outIdxs(1, outIdx);
         std::vector<Mat> outs = runOrtSession(netInputLayer->blobs, outIdxs);
         CV_Assert(outs.size() == 1);
-        return outs[0];
+        outputBlobs.assign(outs[0]);
+        return;
     }
 #endif
     {
         if (!mainGraph) {
             CV_Error(Error::StsNullPtr, "the model was not loaded");
         }
-        const std::vector<Arg>& outargs = mainGraph->outputs();
-        CV_Assert(outargs.size() > 0);
         if (!outname.empty()) {
-            const ArgData& outdata = args.at(outargs[0].idx);
-            CV_Assert(outdata.name == outname);
+            auto it = argnames.find(outname);
+            if (it == argnames.end()) {
+                size_t excl = outname.rfind('!');
+                if (excl != std::string::npos) {
+                    it = argnames.find(outname.substr(excl + 1));
+                }
+            }
+            if (it == argnames.end())
+                CV_Error_(Error::StsObjectNotFound,
+                          ("DNN: tensor '%s' is not found in the graph", outname.c_str()));
+
+            Arg targetArg((int)it->second);
+
+            std::vector<Mat> inps, outs;
+            forwardMainGraph(inps, outs);
+
+            const std::vector<Arg>& gr_outputs = mainGraph->outputs();
+            for (size_t i = 0; i < gr_outputs.size(); i++) {
+                if (gr_outputs[i].idx == targetArg.idx) {
+                    outputBlobs.assign(outs[i]);
+                    return;
+                }
+            }
+
+            const ArgData& adata = args.at(targetArg.idx);
+            Mat result;
+            if (adata.kind == DNN_ARG_TEMP) {
+                int bufidx = bufidxs.at(targetArg.idx);
+                CV_Assert(bufidx >= 0 && bufidx < (int)buffers.size());
+                result = buffers[bufidx];
+            } else {
+                result = __tensors__.at(targetArg.idx);
+            }
+            if (result.shape().layout == DATA_LAYOUT_BLOCK) {
+                Mat converted;
+                transformLayout(result, converted, originalLayout, originalLayout, defaultC0);
+                outputBlobs.assign(converted);
+            } else {
+                outputBlobs.assign(result.clone());
+            }
+            return;
         }
     }
 
     std::vector<Mat> inps, outs;
     forwardMainGraph(inps, outs);
     CV_Assert(!outs.empty());
-    return outs[0];
+    outputBlobs.assign(outs[0]);
 }
 
 void Net::Impl::forwardWithMultipleOutputs(OutputArrayOfArrays outblobs, const std::vector<std::string>& outnames)
@@ -1037,7 +1075,6 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
 
         for (i = 0; i < ninputs; i++) {
             Arg inp = inputs[i];
-            //const ArgData& adata = args[inp.idx];
             const Mat& m = argTensor(inp);
             inpMats[i] = m;
             inpTypes[i] = m.type();
