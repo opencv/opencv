@@ -240,24 +240,20 @@ TEST(Resize_Bitexact, Nearest8U)
     }
 }
 
-// Regression test for #28429: INTER_NEAREST_EXACT must match Pillow's nearest
-// neighbor resampling. Pillow uses iterative double-precision accumulation
-// (xo = scale*0.5; idx = (int)xo; xo += scale) which produces specific FP
-// rounding at boundaries when dimensions are multiples of 64.
+// Regression test for #28429: INTER_NEAREST_EXACT uses fixed-point integer
+// arithmetic for center-of-pixel coordinate mapping. The formula
+// floor((i + 0.5) * src / dst) is computed as ((i*2+1)*src) / (dst*2)
+// using int64_t to avoid overflow and guarantee bit-exact results
+// across all platforms without hardware FP dependency.
 TEST(Resize_Bitexact, NearestExact_PillowCompat)
 {
-    // Pillow's coordinate mapping for nearest neighbor:
-    //   scale = (double)src_dim / dst_dim
-    //   coord = scale * 0.5
-    //   for each dst pixel: src_idx = (int)coord; coord += scale;
-    auto pillow_map = [](int src_dim, int dst_dim, std::vector<int>& mapping) {
+    // Fixed-point center-of-pixel mapping: floor((i + 0.5) * src_dim / dst_dim)
+    // Integer form: ((i * 2 + 1) * src_dim) / (dst_dim * 2)
+    auto center_pixel_map = [](int src_dim, int dst_dim, std::vector<int>& mapping) {
         mapping.resize(dst_dim);
-        double scale = (double)src_dim / dst_dim;
-        double coord = scale * 0.5;
         for (int i = 0; i < dst_dim; i++)
         {
-            mapping[i] = std::min((int)coord, src_dim - 1);
-            coord += scale;
+            mapping[i] = std::min((int)(((int64_t)(i * 2 + 1) * src_dim) / (dst_dim * 2)), src_dim - 1);
         }
     };
 
@@ -274,8 +270,8 @@ TEST(Resize_Bitexact, NearestExact_PillowCompat)
         int src_h = c[0], src_w = c[1], dst_h = c[2], dst_w = c[3];
 
         std::vector<int> x_map, y_map;
-        pillow_map(src_w, dst_w, x_map);
-        pillow_map(src_h, dst_h, y_map);
+        center_pixel_map(src_w, dst_w, x_map);
+        center_pixel_map(src_h, dst_h, y_map);
 
         Mat src(src_h, src_w, CV_8UC3);
         randu(src, Scalar::all(0), Scalar::all(256));

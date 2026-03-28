@@ -1174,22 +1174,19 @@ resizeNN( const Mat& src, Mat& dst, double fx, double fy )
 class resizeNN_bitexactInvoker : public ParallelLoopBody
 {
 public:
-    resizeNN_bitexactInvoker(const Mat& _src, Mat& _dst, int* _x_ofse, double _scale_y)
-        : src(_src), dst(_dst), x_ofse(_x_ofse), scale_y(_scale_y) {}
+    resizeNN_bitexactInvoker(const Mat& _src, Mat& _dst, int* _x_ofse, int _src_height, int _dst_height)
+        : src(_src), dst(_dst), x_ofse(_x_ofse), src_height(_src_height), dst_height(_dst_height) {}
 
     virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         Size ssize = src.size(), dsize = dst.size();
         int pix_size = (int)src.elemSize();
-        // Replicate Pillow's iterative FP accumulation from y=0 to match
-        // its exact rounding behavior at pixel boundaries.
-        double yo = scale_y * 0.5;
-        for( int i = 0; i < range.start; i++ )
-            yo += scale_y;
         for( int y = range.start; y < range.end; y++ )
         {
             uchar* D = dst.ptr(y);
-            int sy = std::min((int)yo, ssize.height-1);
+            // Fixed-point coordinate mapping: floor((y + 0.5) * src_height / dst_height)
+            // Using integer arithmetic: ((y * 2 + 1) * src_height) / (dst_height * 2)
+            int sy = std::min((int)(((int64_t)(y * 2 + 1) * src_height) / (dst_height * 2)), ssize.height-1);
             const uchar* S = src.ptr(sy);
 
             int x = 0;
@@ -1258,40 +1255,33 @@ public:
                         D[k] = _tS[k];
                 }
             }
-            yo += scale_y;
         }
     }
 private:
     const Mat& src;
     Mat& dst;
     int* x_ofse;
-    const double scale_y;
+    const int src_height;
+    const int dst_height;
 };
 
 static void resizeNN_bitexact( const Mat& src, Mat& dst, double /*fx*/, double /*fy*/ )
 {
     Size ssize = src.size(), dsize = dst.size();
-    // Use iterative double-precision accumulation to match Pillow's
-    // ImagingTransformAffine nearest-neighbor coordinate mapping exactly.
-    // Pillow computes: xo = scale * 0.5; for each pixel: idx = (int)xo; xo += scale;
-    // The iterative accumulation produces specific FP rounding at boundaries
-    // that differs from direct computation or fixed-point arithmetic.
-    double scale_x = (double)ssize.width / dsize.width;
-    double scale_y = (double)ssize.height / dsize.height;
 
     cv::utils::BufferArea area;
     int* x_ofse = 0;
     area.allocate(x_ofse, dsize.width, CV_SIMD_WIDTH);
     area.commit();
 
-    double xo = scale_x * 0.5;
+    // Fixed-point coordinate mapping: floor((x + 0.5) * src_width / dst_width)
+    // Using integer arithmetic to guarantee bit-exact results across platforms.
     for( int x = 0; x < dsize.width; x++ )
     {
-        x_ofse[x] = std::min((int)xo, ssize.width-1);    // offset in element (not byte)
-        xo += scale_x;
+        x_ofse[x] = std::min((int)(((int64_t)(x * 2 + 1) * ssize.width) / (dsize.width * 2)), ssize.width-1);
     }
     Range range(0, dsize.height);
-    resizeNN_bitexactInvoker invoker(src, dst, x_ofse, scale_y);
+    resizeNN_bitexactInvoker invoker(src, dst, x_ofse, ssize.height, dsize.height);
     parallel_for_(range, invoker, dst.total()/(double)(1<<16));
 }
 
