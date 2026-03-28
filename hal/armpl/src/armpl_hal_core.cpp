@@ -1193,8 +1193,11 @@ int armpl_hal_dctInit2D(cvhalDFT **context,
     const bool isInverse = (flags & CV_HAL_DFT_INVERSE) != 0;
     const bool isRowWise = (flags & CV_HAL_DFT_ROWS)    != 0;
 
-    if (depth != CV_32F || isInverse)
+    if (depth != CV_32F)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    const fftw_r2r_kind kind = isInverse ? FFTW_REDFT01
+                                         : FFTW_REDFT10;
 
     if (!isRowWise)
     {
@@ -1211,8 +1214,8 @@ int armpl_hal_dctInit2D(cvhalDFT **context,
             return CV_HAL_ERROR_NOT_IMPLEMENTED;
         }
 
-        fftwf_plan prow = fftwf_plan_r2r_1d(width,  tmp_r, tmp_r, FFTW_REDFT10, FFTW_MEASURE);
-        fftwf_plan pcol = fftwf_plan_r2r_1d(height, tmp_c, tmp_c, FFTW_REDFT10, FFTW_MEASURE);
+        fftwf_plan prow = fftwf_plan_r2r_1d(width,  tmp_r, tmp_r, kind, FFTW_MEASURE);
+        fftwf_plan pcol = fftwf_plan_r2r_1d(height, tmp_c, tmp_c, kind, FFTW_MEASURE);
         fftwf_free(tmp_r);
         fftwf_free(tmp_c);
 
@@ -1227,7 +1230,7 @@ int armpl_hal_dctInit2D(cvhalDFT **context,
         ArmPLDCT2DContext *ctx = new ArmPLDCT2DContext();
         ctx->width    = width;
         ctx->height   = height;
-        ctx->inv      = false;
+        ctx->inv      = isInverse;
         ctx->plan_fwd = prow;
         ctx->plan_inv = pcol;
         ctx->buf      = row_buf;
@@ -1236,7 +1239,8 @@ int armpl_hal_dctInit2D(cvhalDFT **context,
         const float h = (float)height;
         const float inv_sqrt2 = 1.0f / std::sqrt(2.0f);
         const float base = 1.0f / (2.0f * std::sqrt(w * h));
-        ctx->scale_dc = base * inv_sqrt2 * inv_sqrt2;
+
+        ctx->scale_dc   = base * inv_sqrt2 * inv_sqrt2;
         ctx->scale_axis = base * inv_sqrt2;
         ctx->scale_rest = base;
 
@@ -1247,7 +1251,7 @@ int armpl_hal_dctInit2D(cvhalDFT **context,
     float *fftw_buf = (float*)fftwf_malloc(sizeof(float) * width);
     if (!fftw_buf) return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
-    fftwf_plan pf = fftwf_plan_r2r_1d(width, fftw_buf, fftw_buf, FFTW_REDFT10, FFTW_MEASURE);
+    fftwf_plan pf = fftwf_plan_r2r_1d(width, fftw_buf, fftw_buf, kind, FFTW_MEASURE);
     if (!pf)
     {
         fftwf_free(fftw_buf);
@@ -1257,7 +1261,7 @@ int armpl_hal_dctInit2D(cvhalDFT **context,
     ArmPLDCTRowContext *ctx = new ArmPLDCTRowContext();
     ctx->width    = width;
     ctx->height   = height;
-    ctx->inv      = false;
+    ctx->inv      = isInverse;
     ctx->plan_fwd = pf;
     ctx->fftw_buf = fftw_buf;
 
@@ -1285,33 +1289,80 @@ int armpl_hal_dct2D(cvhalDFT *context,
         ArmPLDCT2DContext *ctx = reinterpret_cast<ArmPLDCT2DContext*>(context);
         const int W = ctx->width;
         const int H = ctx->height;
-        float *buf = ctx->buf;
+        float *buf  = ctx->buf;
 
         const float sc_dc   = ctx->scale_dc;
         const float sc_axis = ctx->scale_axis;
         const float sc_rest = ctx->scale_rest;
 
-        bool ok_row = true;
-        cv::parallel_for_(cv::Range(0, H),
-            DctHalRowInvoker(src_data, src_step, reinterpret_cast<uchar*>(buf),
-                             (size_t)W * sizeof(float), W, ctx->plan_fwd, &ok_row), H / (double)(1 << 4));
-        if (!ok_row) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        if (!ctx->inv)
+        {
+            bool ok_row = true;
+            cv::parallel_for_(cv::Range(0, H),
+                DctHalRowInvoker(src_data, src_step,
+                                 reinterpret_cast<uchar*>(buf),
+                                 (size_t)W * sizeof(float),
+                                 W, ctx->plan_fwd, &ok_row),
+                H / (double)(1 << 4));
+            if (!ok_row) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+            bool ok_col = true;
+            cv::parallel_for_(cv::Range(0, W),
+                DctHalColInvoker(reinterpret_cast<const uchar*>(buf),
+                                 (size_t)W * sizeof(float),
+                                 dst_data, dst_step,
+                                 H, ctx->plan_inv, &ok_col),
+                W / (double)(1 << 4));
+            if (!ok_col) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+            for (int i = 0; i < H; ++i)
+            {
+                float *dr = reinterpret_cast<float*>(dst_data + (size_t)i * dst_step);
+                const float sc_row = (i == 0) ? sc_axis : sc_rest;
+                dr[0] *= (i == 0) ? sc_dc : sc_axis;
+                for (int j = 1; j < W; ++j)
+                    dr[j] *= sc_row;
+            }
+            return CV_HAL_ERROR_OK;
+        }
+
+        const float inv_sc_dc   = 1.0f / sc_dc;
+        const float inv_sc_axis = 1.0f / sc_axis;
+        const float inv_sc_rest = 1.0f / sc_rest;
+        const float postscale   = 1.0f / (4.0f * static_cast<float>(W) * static_cast<float>(H));
+
+        for (int i = 0; i < H; ++i)
+        {
+            const float *sr = reinterpret_cast<const float*>(src_data + (size_t)i * src_step);
+            float       *br = buf + (size_t)i * W;
+            const float  row_inv_sc = (i == 0) ? inv_sc_axis : inv_sc_rest;
+            br[0] = sr[0] * ((i == 0) ? inv_sc_dc : inv_sc_axis);
+            for (int j = 1; j < W; ++j)
+                br[j] = sr[j] * row_inv_sc;
+        }
 
         bool ok_col = true;
-        cv::parallel_for_(cv::Range(0, W), DctHalColInvoker(reinterpret_cast<const uchar*>(buf),
-                             (size_t)W * sizeof(float), dst_data, dst_step, H, ctx->plan_inv, &ok_col),
+        cv::parallel_for_(cv::Range(0, W),
+            DctHalColInvoker(reinterpret_cast<const uchar*>(buf),
+                             (size_t)W * sizeof(float),
+                             dst_data, dst_step,
+                             H, ctx->plan_inv, &ok_col),
             W / (double)(1 << 4));
         if (!ok_col) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        bool ok_row = true;
+        cv::parallel_for_(cv::Range(0, H),
+            DctHalRowInvoker(dst_data, dst_step,
+                             dst_data, dst_step,
+                             W, ctx->plan_fwd, &ok_row),
+            H / (double)(1 << 4));
+        if (!ok_row) return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
         for (int i = 0; i < H; ++i)
         {
             float *dr = reinterpret_cast<float*>(dst_data + (size_t)i * dst_step);
-            const float sc_row = (i == 0) ? sc_axis : sc_rest;
-            dr[0] *= (i == 0) ? sc_dc : sc_axis;
-            for (int j = 1; j < W; ++j)
-                dr[j] *= sc_row;
+            for (int j = 0; j < W; ++j)
+                dr[j] *= postscale;
         }
-
         return CV_HAL_ERROR_OK;
     }
 
@@ -1323,10 +1374,44 @@ int armpl_hal_dct2D(cvhalDFT *context,
         const float sc_dc   = ctx->scale_dc;
         const float sc_rest = ctx->scale_rest;
 
+        if (!ctx->inv)
+        {
+            bool ok_row = true;
+            cv::parallel_for_(
+                cv::Range(0, H),
+                DctHalRowInvoker(src_data, src_step,
+                                 dst_data, dst_step,
+                                 W, ctx->plan_fwd, &ok_row),
+                H / (double)(1 << 4));
+            if (!ok_row) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+            for (int i = 0; i < H; ++i)
+            {
+                float *dr = reinterpret_cast<float*>(dst_data + (size_t)i * dst_step);
+                dr[0] *= sc_dc;
+                for (int j = 1; j < W; ++j)
+                    dr[j] *= sc_rest;
+            }
+            return CV_HAL_ERROR_OK;
+        }
+
+        const float inv_sc_dc   = 1.0f / sc_dc;
+        const float inv_sc_rest = 1.0f / sc_rest;
+        const float postscale   = 1.0f / (2.0f * static_cast<float>(W));
+
+        for (int i = 0; i < H; ++i)
+        {
+            const float *sr = reinterpret_cast<const float*>(src_data + (size_t)i * src_step);
+            float       *dr = reinterpret_cast<float*>(dst_data + (size_t)i * dst_step);
+            dr[0] = sr[0] * inv_sc_dc;
+            for (int j = 1; j < W; ++j)
+                dr[j] = sr[j] * inv_sc_rest;
+        }
+
         bool ok_row = true;
         cv::parallel_for_(
             cv::Range(0, H),
-            DctHalRowInvoker(src_data, src_step,
+            DctHalRowInvoker(dst_data, dst_step,
                              dst_data, dst_step,
                              W, ctx->plan_fwd, &ok_row),
             H / (double)(1 << 4));
@@ -1335,11 +1420,9 @@ int armpl_hal_dct2D(cvhalDFT *context,
         for (int i = 0; i < H; ++i)
         {
             float *dr = reinterpret_cast<float*>(dst_data + (size_t)i * dst_step);
-            dr[0] *= sc_dc;
-            for (int j = 1; j < W; ++j)
-                dr[j] *= sc_rest;
+            for (int j = 0; j < W; ++j)
+                dr[j] *= postscale;
         }
-
         return CV_HAL_ERROR_OK;
     }
 

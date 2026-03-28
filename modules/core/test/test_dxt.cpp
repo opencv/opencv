@@ -760,6 +760,9 @@ public:
 protected:
     void run_func();
     void prepare_to_validation( int test_case_idx );
+#if defined(HAVE_ARMPL)
+    double get_success_error_level( int test_case_idx, int i, int j ) CV_OVERRIDE;
+#endif
 };
 
 
@@ -767,6 +770,20 @@ CxCore_DCTTest::CxCore_DCTTest() : CxCore_DXTBaseTest( false, false, false )
 {
 }
 
+#if defined(HAVE_ARMPL)
+double CxCore_DCTTest::get_success_error_level(int, int i, int j)
+{
+    CV_Assert(i == OUTPUT);
+    CV_Assert(j == 0);
+
+    int depth = CV_MAT_DEPTH(cvGetElemType(test_array[i][j]));
+
+    if (depth == CV_32F)
+        return 1.67e-5;
+
+    return 1e-12;
+}
+#endif
 
 void CxCore_DCTTest::run_func()
 {
