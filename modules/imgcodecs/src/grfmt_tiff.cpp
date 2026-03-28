@@ -1494,6 +1494,13 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
         CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG));
         CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_ROWSPERSTRIP, rowsPerStrip));
 
+        if(channels == 4)
+        {
+            uint16_t extra_samples_num = 1;
+            uint16_t extra_samples[] = {EXTRASAMPLE_UNASSALPHA};
+            CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_EXTRASAMPLES, extra_samples_num, extra_samples));
+        }
+
         CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_SAMPLEFORMAT, sample_format));
 
         if (page_compression == COMPRESSION_LZW || page_compression == COMPRESSION_ADOBE_DEFLATE || page_compression == COMPRESSION_DEFLATE)
