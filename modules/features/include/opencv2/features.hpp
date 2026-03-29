@@ -1294,4 +1294,9 @@ public:
 
 } /* namespace cv */
 
+#include "opencv2/features/feature_extractor.hpp"
+#include "opencv2/features/feature_matcher.hpp"
+#include "opencv2/features/superpoint.hpp"
+#include "opencv2/features/lightglue.hpp"
+
 #endif

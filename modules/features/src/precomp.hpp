@@ -51,6 +51,10 @@
 #include "opencv2/core/ocl.hpp"
 #include "opencv2/core/hal/hal.hpp"
 
+#ifdef HAVE_OPENCV_DNN
+#include "opencv2/dnn.hpp"
+#endif
+
 #include <algorithm>
 
 #endif
