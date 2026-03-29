@@ -808,11 +808,9 @@ static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, doub
 {
     CV_Assert(_src.type() == CV_8UC1);
 
-    if (max_theta < 0 || max_theta > CV_PI ) {
-        CV_Error( Error::StsBadArg, "max_theta must fall between 0 and pi" );
-    }
-    if (min_theta < 0 || min_theta > max_theta ) {
-        CV_Error( Error::StsBadArg, "min_theta must fall between 0 and max_theta" );
+    CV_CheckGE(max_theta, min_theta, "max_theta must be greater than min_theta");
+    if ((max_theta-min_theta-theta/2) > CV_PI ) {
+        CV_Error( Error::StsBadArg, "max_theta-min_theta must fall between 0 and pi" );
     }
     if (!(rho > 0 && theta > 0)) {
         CV_Error( Error::StsBadArg, "rho and theta must be greater 0" );
