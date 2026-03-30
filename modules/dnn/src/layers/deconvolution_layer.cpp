@@ -272,10 +272,20 @@ public:
 
     void fuseWeights(const Mat& w_, const Mat& b_) CV_OVERRIDE
     {
+        if (numOutput < 0) {
+            CV_Assert(!blobs.empty());
+            numOutput = blobs[0].size[1] * groups;
+        }
         weightsMultipliers.assign(numOutput, 1.0);
 
         if (weightsMat.empty() && !blobs.empty())
             transpose(blobs[0].reshape(1, blobs[0].size[0]), weightsMat);
+
+        if (biasesMat.empty()) {
+            Mat inpBias = blobs.size() >= 2 ? blobs[1] : Mat();
+            Mat biasesMat_ = !inpBias.empty() ? inpBias.reshape(1, numOutput) : Mat::zeros(numOutput, 1, CV_32F);
+            biasesMat_.copyTo(biasesMat);
+        }
 
         Mat w = w_.total() == 1 ? Mat(1, numOutput, CV_32F, Scalar(w_.at<float>(0))) : w_;
         Mat b = b_.total() == 1 ? Mat(1, numOutput, CV_32F, Scalar(b_.at<float>(0))) : b_;

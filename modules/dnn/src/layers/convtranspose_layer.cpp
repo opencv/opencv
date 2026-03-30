@@ -1,6 +1,8 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+// Copyright (C) 2026, BigVision LLC, all rights reserved.
+// Third party copyrights are property of their respective owners.
 
 #include "../precomp.hpp"
 #include "../net_impl.hpp"
@@ -13,9 +15,9 @@ namespace dnn
 {
 
 /*
-    ConvTranspose (Deconvolution) layer for the new graph-based engine,
-    as defined in ONNX specification:
-    https://onnx.ai/onnx/operators/onnx__ConvTranspose.html
+    ONNX Det operator
+    Spec: https://onnx.ai/onnx/operators/onnx__ConvTranspose.html
+    Supported opsets: 1-22
 */
 
 class ConvTranspose2LayerImpl : public ConvTranspose2Layer
