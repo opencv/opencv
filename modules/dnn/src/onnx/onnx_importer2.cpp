@@ -1377,54 +1377,28 @@ void ONNXImporter2::parseConvTranspose(LayerParams& layerParams, const opencv_on
 {
     int n_inputs = node_proto.input_size();
     CV_Assert(2 <= n_inputs && n_inputs <= 3);
-    layerParams.type = "Deconvolution";
+    layerParams.type = "ConvTranspose2";
 
-    layerParams.set("bias_term", node_proto.input_size() == 3);
-
-    if (net.isConstArg(node_inputs[1]) && (n_inputs == 2 || net.isConstArg(node_inputs[2]))) {
-        Mat weights = net.argTensor(node_inputs[1]);
-        layerParams.blobs.push_back(weights);
-        if (n_inputs > 2) {
-            Mat bias = net.argTensor(node_inputs[2]);
-            layerParams.blobs.push_back(bias);
-        }
-        n_inputs = 1;
-    }
-
-    if (!layerParams.has("kernel_size"))
+    if (layerParams.has("output_shape"))
     {
-        std::vector<int> kshape;
-        if (!layerParams.blobs.empty())
-        {
-            const Mat& w = layerParams.blobs[0];
-            int kdims = w.dims - 2;
-            kshape.resize(kdims);
-            for (int i = 0; i < kdims; ++i)
-                kshape[i] = w.size[i + 2];
-        }
-        else if (node_inputs.size() >= 2)
+        const DictValue& outShape = layerParams.get("output_shape");
+        DictValue strides = layerParams.get("stride");
+
+        // Infer kernel_size from weight shape if not provided
+        if (!layerParams.has("kernel_size"))
         {
             const Arg& warg = node_inputs[1];
             const ArgData& wdata = netimpl->args.at(warg.idx);
             if (wdata.shape.size() >= 3)
             {
                 int kdims = (int)wdata.shape.size() - 2;
-                kshape.resize(kdims);
+                std::vector<int> kshape(kdims);
                 for (int i = 0; i < kdims; ++i)
                     kshape[i] = wdata.shape[2 + i];
+                layerParams.set("kernel_size", DictValue::arrayInt(kshape.data(), kdims));
             }
         }
 
-        if (!kshape.empty())
-        {
-            layerParams.set("kernel_size", DictValue::arrayInt(kshape.data(), (int)kshape.size()));
-        }
-    }
-
-    if (layerParams.has("output_shape"))
-    {
-        const DictValue& outShape = layerParams.get("output_shape");
-        DictValue strides = layerParams.get("stride");
         DictValue kernel = layerParams.get("kernel_size");
 
         String padMode;

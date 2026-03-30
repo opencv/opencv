@@ -66,6 +66,7 @@ struct ConstArgs
             }
 
             Conv2Layer* conv = dynamic_cast<Conv2Layer*>(layer_ptr);
+            ConvTranspose2Layer* deconv = dynamic_cast<ConvTranspose2Layer*>(layer_ptr);
             BatchNorm2Layer* bn = dynamic_cast<BatchNorm2Layer*>(layer_ptr);
             //ActivationLayer* activ = dynamic_cast<ActivationLayer*>(layer_ptr);
 
@@ -76,6 +77,13 @@ struct ConstArgs
                                      ninputs > 2 ? netimpl->__tensors__[inputs[2]] : Mat(),
                                      netimpl->defaultC0, netimpl->accuracy);
                     conv->inputs.resize(1);
+                    unuse_tail = true;
+                } else if (deconv) {
+                    // deconvolution with constant weights and bias
+                    deconv->setWeights(netimpl->__tensors__[inputs[1]],
+                                       ninputs > 2 ? netimpl->__tensors__[inputs[2]] : Mat(),
+                                       netimpl->defaultC0, netimpl->accuracy);
+                    deconv->inputs.resize(1);
                     unuse_tail = true;
                 } else if (bn && bn->freezeScaleBias()) {
                     // batch norm with constant parameters

@@ -382,6 +382,19 @@ CV__DNN_INLINE_NS_BEGIN
         bool ceil_mode;
     };
 
+    class CV_EXPORTS ConvTranspose2Layer : public Layer
+    {
+    public:
+        static Ptr<ConvTranspose2Layer> create(const LayerParams& params);
+        virtual void setWeights(InputArray weights, InputArray bias,
+                                int C0, int accuracy) = 0;
+        virtual bool fuseAddBias(InputArray bias) = 0;
+
+        std::vector<int> strides, dilations, pads, adjust_pads;
+        int ngroups;
+        AutoPadding auto_pad;
+    };
+
     class CV_EXPORTS LRNLayer : public Layer
     {
     public:
