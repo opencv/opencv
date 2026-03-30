@@ -13,8 +13,8 @@
 namespace cv {
 
 ////////////////////////////////////// transpose /////////////////////////////////////////
-#ifdef CV_SIMD
-static void transpose_8UC1_simd(const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz)
+#if CV_SIMD128
+static void transpose_8bit_simd(const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz)
 {
     const int m = sz.width, n = sz.height;
     int i = 0;
@@ -23,25 +23,26 @@ static void transpose_8UC1_simd(const uchar* src, size_t sstep, uchar* dst, size
         int j = 0;
         for (; j <= n - 16; j += 16)
         {
-            v_uint8x16 r0  = vx_load(src + i + sstep*(j+ 0));
-            v_uint8x16 r1  = vx_load(src + i + sstep*(j+ 1));
-            v_uint8x16 r2  = vx_load(src + i + sstep*(j+ 2));
-            v_uint8x16 r3  = vx_load(src + i + sstep*(j+ 3));
-            v_uint8x16 r4  = vx_load(src + i + sstep*(j+ 4));
-            v_uint8x16 r5  = vx_load(src + i + sstep*(j+ 5));
-            v_uint8x16 r6  = vx_load(src + i + sstep*(j+ 6));
-            v_uint8x16 r7  = vx_load(src + i + sstep*(j+ 7));
-            v_uint8x16 r8  = vx_load(src + i + sstep*(j+ 8));
-            v_uint8x16 r9  = vx_load(src + i + sstep*(j+ 9));
-            v_uint8x16 r10 = vx_load(src + i + sstep*(j+10));
-            v_uint8x16 r11 = vx_load(src + i + sstep*(j+11));
-            v_uint8x16 r12 = vx_load(src + i + sstep*(j+12));
-            v_uint8x16 r13 = vx_load(src + i + sstep*(j+13));
-            v_uint8x16 r14 = vx_load(src + i + sstep*(j+14));
-            v_uint8x16 r15 = vx_load(src + i + sstep*(j+15));
+            v_uint8x16 r0  = v_load(src + i + sstep*(j+ 0));
+            v_uint8x16 r1  = v_load(src + i + sstep*(j+ 1));
+            v_uint8x16 r2  = v_load(src + i + sstep*(j+ 2));
+            v_uint8x16 r3  = v_load(src + i + sstep*(j+ 3));
+            v_uint8x16 r4  = v_load(src + i + sstep*(j+ 4));
+            v_uint8x16 r5  = v_load(src + i + sstep*(j+ 5));
+            v_uint8x16 r6  = v_load(src + i + sstep*(j+ 6));
+            v_uint8x16 r7  = v_load(src + i + sstep*(j+ 7));
+            v_uint8x16 r8  = v_load(src + i + sstep*(j+ 8));
+            v_uint8x16 r9  = v_load(src + i + sstep*(j+ 9));
+            v_uint8x16 r10 = v_load(src + i + sstep*(j+10));
+            v_uint8x16 r11 = v_load(src + i + sstep*(j+11));
+            v_uint8x16 r12 = v_load(src + i + sstep*(j+12));
+            v_uint8x16 r13 = v_load(src + i + sstep*(j+13));
+            v_uint8x16 r14 = v_load(src + i + sstep*(j+14));
+            v_uint8x16 r15 = v_load(src + i + sstep*(j+15));
+
             v_uint8x16 t0, t1, t2, t3, t4, t5, t6, t7,
                        t8, t9, t10, t11, t12, t13, t14, t15;
-            
+
             v_zip(r0,  r1,  t0,  t1);
             v_zip(r2,  r3,  t2,  t3);
             v_zip(r4,  r5,  t4,  t5);
@@ -116,7 +117,8 @@ static void transpose_8UC1_simd(const uchar* src, size_t sstep, uchar* dst, size
         for (int j = 0; j < n; j++)
             dst[dstep*i + j] = src[i + sstep*j];
 }
-static void transpose_16UC1_simd(const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz)
+
+static void transpose_16bit_simd(const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz)
 {
     const ushort* src16 = reinterpret_cast<const ushort*>(src);
     ushort* dst16 = reinterpret_cast<ushort*>(dst);
@@ -132,14 +134,15 @@ static void transpose_16UC1_simd(const uchar* src, size_t sstep, uchar* dst, siz
         int j = 0;
         for (; j <= n - 8; j += 8)
         {
-            v_uint16x8 r0 = vx_load(src16 + i + sstep_e*(j+0));
-            v_uint16x8 r1 = vx_load(src16 + i + sstep_e*(j+1));
-            v_uint16x8 r2 = vx_load(src16 + i + sstep_e*(j+2));
-            v_uint16x8 r3 = vx_load(src16 + i + sstep_e*(j+3));
-            v_uint16x8 r4 = vx_load(src16 + i + sstep_e*(j+4));
-            v_uint16x8 r5 = vx_load(src16 + i + sstep_e*(j+5));
-            v_uint16x8 r6 = vx_load(src16 + i + sstep_e*(j+6));
-            v_uint16x8 r7 = vx_load(src16 + i + sstep_e*(j+7));
+            v_uint16x8 r0 = v_load(src16 + i + sstep_e*(j+0));
+            v_uint16x8 r1 = v_load(src16 + i + sstep_e*(j+1));
+            v_uint16x8 r2 = v_load(src16 + i + sstep_e*(j+2));
+            v_uint16x8 r3 = v_load(src16 + i + sstep_e*(j+3));
+            v_uint16x8 r4 = v_load(src16 + i + sstep_e*(j+4));
+            v_uint16x8 r5 = v_load(src16 + i + sstep_e*(j+5));
+            v_uint16x8 r6 = v_load(src16 + i + sstep_e*(j+6));
+            v_uint16x8 r7 = v_load(src16 + i + sstep_e*(j+7));
+
             v_uint16x8 t0, t1, t2, t3, t4, t5, t6, t7;
             v_zip(r0, r1, t0, t1);
             v_zip(r2, r3, t2, t3);
@@ -174,13 +177,13 @@ static void transpose_16UC1_simd(const uchar* src, size_t sstep, uchar* dst, siz
             dst16[dstep_e*i + j] = src16[i + sstep_e*j];
 }
 
-static void transpose_32FC1_simd(const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz)
+static void transpose_32bit_simd(const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz)
 {
-    const float* src32 = reinterpret_cast<const float*>(src);
-    float* dst32 = reinterpret_cast<float*>(dst);
+    const uint32_t* src32 = reinterpret_cast<const uint32_t*>(src);
+    uint32_t* dst32 = reinterpret_cast<uint32_t*>(dst);
 
-    const size_t sstep_e = sstep / sizeof(float);
-    const size_t dstep_e = dstep / sizeof(float);
+    const size_t sstep_e = sstep / sizeof(uint32_t);
+    const size_t dstep_e = dstep / sizeof(uint32_t);
 
     const int m = sz.width, n = sz.height;
     int i = 0;
@@ -189,12 +192,11 @@ static void transpose_32FC1_simd(const uchar* src, size_t sstep, uchar* dst, siz
         int j = 0;
         for (; j <= n - 4; j += 4)
         {
-            v_float32x4 r0 = vx_load(src32 + i + sstep_e*(j+0));
-            v_float32x4 r1 = vx_load(src32 + i + sstep_e*(j+1));
-            v_float32x4 r2 = vx_load(src32 + i + sstep_e*(j+2));
-            v_float32x4 r3 = vx_load(src32 + i + sstep_e*(j+3));
-
-            v_float32x4 o0, o1, o2, o3;
+            v_uint32x4 r0 = v_load(src32 + i + sstep_e*(j+0));
+            v_uint32x4 r1 = v_load(src32 + i + sstep_e*(j+1));
+            v_uint32x4 r2 = v_load(src32 + i + sstep_e*(j+2));
+            v_uint32x4 r3 = v_load(src32 + i + sstep_e*(j+3));
+            v_uint32x4 o0, o1, o2, o3;
             v_transpose4x4(r0, r1, r2, r3, o0, o1, o2, o3);
 
             v_store(dst32 + dstep_e*(i+0) + j, o0);
@@ -211,39 +213,7 @@ static void transpose_32FC1_simd(const uchar* src, size_t sstep, uchar* dst, siz
             dst32[dstep_e*i + j] = src32[i + sstep_e*j];
 }
 
-static inline void transposeChannel8x8_16u(
-    const v_uint16x8& r0, const v_uint16x8& r1,
-    const v_uint16x8& r2, const v_uint16x8& r3,
-    const v_uint16x8& r4, const v_uint16x8& r5,
-    const v_uint16x8& r6, const v_uint16x8& r7,
-    v_int16x8& out0, v_int16x8& out1, v_int16x8& out2, v_int16x8& out3,
-    v_int16x8& out4, v_int16x8& out5, v_int16x8& out6, v_int16x8& out7)
-{
-    v_uint16x8 t0, t1, t2, t3, t4, t5, t6, t7;
-    v_zip(r0, r1, t0, t1);
-    v_zip(r2, r3, t2, t3);
-    v_zip(r4, r5, t4, t5);
-    v_zip(r6, r7, t6, t7);
-
-    v_uint32x4 u0, u1, u2, u3, u4, u5, u6, u7;
-    v_zip(v_reinterpret_as_u32(t0), v_reinterpret_as_u32(t4), u0, u1);
-    v_zip(v_reinterpret_as_u32(t1), v_reinterpret_as_u32(t5), u2, u3);
-    v_zip(v_reinterpret_as_u32(t2), v_reinterpret_as_u32(t6), u4, u5);
-    v_zip(v_reinterpret_as_u32(t3), v_reinterpret_as_u32(t7), u6, u7);
-
-    v_uint32x4 s0, s1, s2, s3, s4, s5, s6, s7;
-    v_zip(u0, u4, s0, s1);
-    v_zip(u1, u5, s2, s3);
-    v_zip(u2, u6, s4, s5);
-    v_zip(u3, u7, s6, s7);
-
-    out0 = v_reinterpret_as_s16(s0); out1 = v_reinterpret_as_s16(s1);
-    out2 = v_reinterpret_as_s16(s2); out3 = v_reinterpret_as_s16(s3);
-    out4 = v_reinterpret_as_s16(s4); out5 = v_reinterpret_as_s16(s5);
-    out6 = v_reinterpret_as_s16(s6); out7 = v_reinterpret_as_s16(s7);
-}
-
-static void transpose_16SC3_simd(const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz)
+static void transpose_48bit_simd(const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz)
 {
     const short* src16 = reinterpret_cast<const short*>(src);
     short* dst16 = reinterpret_cast<short*>(dst);
@@ -350,69 +320,19 @@ static void transpose_16SC3_simd(const uchar* src, size_t sstep, uchar* dst, siz
             dst16[dstep_e*i + j*3 + 2] = src16[sstep_e*j + i*3 + 2];
         }
 }
-
-static void transpose_64UC1_simd(const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz)
-{
-    const uint* src32 = reinterpret_cast<const uint*>(src);
-    uint* dst32 = reinterpret_cast<uint*>(dst);
-    const size_t sstep_e = sstep / sizeof(uint);
-    const size_t dstep_e = dstep / sizeof(uint);
-
-    const int m = sz.width, n = sz.height;
-    int i = 0;
-
-    for (; i <= m - 4; i += 4)
-    {
-        int j = 0;
-        for (; j <= n - 4; j += 4)
-        {
-            v_uint32x4 w0r0, w1r0;
-            v_uint32x4 w0r1, w1r1;
-            v_uint32x4 w0r2, w1r2;
-            v_uint32x4 w0r3, w1r3;
-
-            v_load_deinterleave(src32 + sstep_e*(j+0) + i*2, w0r0, w1r0);
-            v_load_deinterleave(src32 + sstep_e*(j+1) + i*2, w0r1, w1r1);
-            v_load_deinterleave(src32 + sstep_e*(j+2) + i*2, w0r2, w1r2);
-            v_load_deinterleave(src32 + sstep_e*(j+3) + i*2, w0r3, w1r3);
-            v_uint32x4 tw0c0, tw0c1, tw0c2, tw0c3;
-            v_uint32x4 tw1c0, tw1c1, tw1c2, tw1c3;
-            v_transpose4x4(w0r0, w0r1, w0r2, w0r3, tw0c0, tw0c1, tw0c2, tw0c3);
-            v_transpose4x4(w1r0, w1r1, w1r2, w1r3, tw1c0, tw1c1, tw1c2, tw1c3);
-            v_store_interleave(dst32 + dstep_e*(i+0) + j*2, tw0c0, tw1c0);
-            v_store_interleave(dst32 + dstep_e*(i+1) + j*2, tw0c1, tw1c1);
-            v_store_interleave(dst32 + dstep_e*(i+2) + j*2, tw0c2, tw1c2);
-            v_store_interleave(dst32 + dstep_e*(i+3) + j*2, tw0c3, tw1c3);
-        }
-        for (; j < n; j++)
-            for (int k = 0; k < 4; k++)
-            {
-                dst32[dstep_e*(i+k) + j*2 + 0] = src32[sstep_e*j + (i+k)*2 + 0];
-                dst32[dstep_e*(i+k) + j*2 + 1] = src32[sstep_e*j + (i+k)*2 + 1];
-            }
-    }
-    for (; i < m; i++)
-        for (int j = 0; j < n; j++)
-        {
-            dst32[dstep_e*i + j*2 + 0] = src32[sstep_e*j + i*2 + 0];
-            dst32[dstep_e*i + j*2 + 1] = src32[sstep_e*j + i*2 + 1];
-        }
-}
-
 #endif
 
 template<typename T> static void
 transpose_( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz )
 {
-#if CV_SIMD
+#if CV_SIMD128
     switch (sizeof(T))
     {
-    case 1: transpose_8UC1_simd(src, sstep, dst, dstep, sz); return;
-    case 2: transpose_16UC1_simd(src, sstep, dst, dstep, sz); return;
-    case 4: transpose_32FC1_simd(src, sstep, dst, dstep, sz); return;
-    case 6: transpose_16SC3_simd(src, sstep, dst, dstep, sz); return;
-    case 8: transpose_64UC1_simd(src, sstep, dst, dstep, sz); return;
-    default: break;
+        case 1: transpose_8bit_simd(src, sstep, dst, dstep, sz);  return;
+        case 2: transpose_16bit_simd(src, sstep, dst, dstep, sz); return;
+        case 4: transpose_32bit_simd(src, sstep, dst, dstep, sz); return;
+        case 6: transpose_48bit_simd(src, sstep, dst, dstep, sz); return;
+        default: break;
     }
 #endif
 
