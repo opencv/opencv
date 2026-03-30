@@ -274,7 +274,7 @@ calcHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                         const v_int32x4   vi0  = v_setall_s32(0);
                         const v_int32x4   visz = v_setall_s32(sz - 1);
 
-                        int x = 0;
+                        x = 0;
                         for( ; x <= imsize.width - nlanes; x += nlanes )
                         {
                             v_uint16x8 pix = vx_load(&p[x]);
@@ -607,19 +607,44 @@ calcHist_8u( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                 if( d0 == 1 )
                 {
 #if CV_SIMD128
-                    for( x = 0; x <= imsize.width - 16; x += 16 )
+                    int H0[256]={}, H1[256]={}, H2[256]={}, H3[256]={};
+                    x=0;
+                    for (; x <= imsize.width - 64; x += 64)
                     {
-                        v_uint8 v = vx_load(p0 + x);
-                        uint8_t buf[16];
-                        v_store(buf, v);
-                        matH[buf[0]]++;  matH[buf[1]]++;
-                        matH[buf[2]]++;  matH[buf[3]]++;
-                        matH[buf[4]]++;  matH[buf[5]]++;
-                        matH[buf[6]]++;  matH[buf[7]]++;
-                        matH[buf[8]]++;  matH[buf[9]]++;
-                        matH[buf[10]]++; matH[buf[11]]++;
-                        matH[buf[12]]++; matH[buf[13]]++;
-                        matH[buf[14]]++; matH[buf[15]]++;
+                        v_uint8x16 v0 = v_load(p0 + x);
+                        v_uint8x16 v1 = v_load(p0 + x + 16);
+                        v_uint8x16 v2 = v_load(p0 + x + 32);
+                        v_uint8x16 v3 = v_load(p0 + x + 48);
+
+                        H0[v_extract_n<0>(v0)]++; H1[v_extract_n<1>(v0)]++; H2[v_extract_n<2>(v0)]++; H3[v_extract_n<3>(v0)]++;
+                        H0[v_extract_n<4>(v0)]++; H1[v_extract_n<5>(v0)]++; H2[v_extract_n<6>(v0)]++; H3[v_extract_n<7>(v0)]++;
+                        H0[v_extract_n<8>(v0)]++; H1[v_extract_n<9>(v0)]++; H2[v_extract_n<10>(v0)]++; H3[v_extract_n<11>(v0)]++;
+                        H0[v_extract_n<12>(v0)]++; H1[v_extract_n<13>(v0)]++; H2[v_extract_n<14>(v0)]++; H3[v_extract_n<15>(v0)]++;
+
+                        H0[v_extract_n<0>(v1)]++; H1[v_extract_n<1>(v1)]++; H2[v_extract_n<2>(v1)]++; H3[v_extract_n<3>(v1)]++;
+                        H0[v_extract_n<4>(v1)]++; H1[v_extract_n<5>(v1)]++; H2[v_extract_n<6>(v1)]++; H3[v_extract_n<7>(v1)]++;
+                        H0[v_extract_n<8>(v1)]++; H1[v_extract_n<9>(v1)]++; H2[v_extract_n<10>(v1)]++; H3[v_extract_n<11>(v1)]++;
+                        H0[v_extract_n<12>(v1)]++; H1[v_extract_n<13>(v1)]++; H2[v_extract_n<14>(v1)]++; H3[v_extract_n<15>(v1)]++;
+
+                        H0[v_extract_n<0>(v2)]++; H1[v_extract_n<1>(v2)]++; H2[v_extract_n<2>(v2)]++; H3[v_extract_n<3>(v2)]++;
+                        H0[v_extract_n<4>(v2)]++; H1[v_extract_n<5>(v2)]++; H2[v_extract_n<6>(v2)]++; H3[v_extract_n<7>(v2)]++;
+                        H0[v_extract_n<8>(v2)]++; H1[v_extract_n<9>(v2)]++; H2[v_extract_n<10>(v2)]++; H3[v_extract_n<11>(v2)]++;
+                        H0[v_extract_n<12>(v2)]++; H1[v_extract_n<13>(v2)]++; H2[v_extract_n<14>(v2)]++; H3[v_extract_n<15>(v2)]++;
+
+                        H0[v_extract_n<0>(v3)]++; H1[v_extract_n<1>(v3)]++; H2[v_extract_n<2>(v3)]++; H3[v_extract_n<3>(v3)]++;
+                        H0[v_extract_n<4>(v3)]++; H1[v_extract_n<5>(v3)]++; H2[v_extract_n<6>(v3)]++; H3[v_extract_n<7>(v3)]++;
+                        H0[v_extract_n<8>(v3)]++; H1[v_extract_n<9>(v3)]++; H2[v_extract_n<10>(v3)]++; H3[v_extract_n<11>(v3)]++;
+                        H0[v_extract_n<12>(v3)]++; H1[v_extract_n<13>(v3)]++; H2[v_extract_n<14>(v3)]++; H3[v_extract_n<15>(v3)]++;
+                    }
+                    for (; x < imsize.width; x++)
+                        H0[p0[x]]++;
+                    p0 += imsize.width;
+                    for (int i = 0; i < 256; i += 4)
+                    {
+                        matH[i]     += H0[i]     + H1[i]     + H2[i]     + H3[i];
+                        matH[i + 1] += H0[i + 1] + H1[i + 1] + H2[i + 1] + H3[i + 1];
+                        matH[i + 2] += H0[i + 2] + H1[i + 2] + H2[i + 2] + H3[i + 2];
+                        matH[i + 3] += H0[i + 3] + H1[i + 3] + H2[i + 3] + H3[i + 3];
                     }
 #else
                     for( x = 0; x <= imsize.width - 4; x += 4 )
@@ -629,10 +654,8 @@ calcHist_8u( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                         t0 = p0[x+2]; t1 = p0[x+3];
                         matH[t0]++; matH[t1]++;
                     }
+                    p0 += x;
 #endif
-                    for( ; x < imsize.width; x++ )
-                        matH[p0[x]]++;
-                    p0 += imsize.width;
                 }
                 else
                     for( x = 0; x <= imsize.width - 4; x += 4 )
