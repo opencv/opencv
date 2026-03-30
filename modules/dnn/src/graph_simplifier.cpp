@@ -73,7 +73,7 @@ int Subgraph::getInputNodeId(const Ptr<ImportGraphWrapper>& net,
                 return i;
         }
     }
-    CV_Error(Error::StsParseError, "Input node with name " + name + " not found");
+    return -1;  // not found in this graph — input comes from outer scope (valid for subgraphs)
 }
 
 bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
@@ -139,18 +139,24 @@ bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
             if (inputNodes.size() != 2)
                 CV_Error(Error::StsNotImplemented, "Commutative op fusion with more than 2 inputs");
 
+            int inp0 = getInputNodeId(net, node, 0);
+            int inp1 = getInputNodeId(net, node, 1);
             auto newMatchings = makePtr<std::map<int, int>>(*matchings);
             matchCandidates.push_back(newMatchings);
             state.matchings.push_back(newMatchings);
-            states.push({getInputNodeId(net, node, 0), inputNodes[0], state.matchings});
-            states.push({getInputNodeId(net, node, 1), inputNodes[1], state.matchings});
+            if (inp0 >= 0)
+                states.push({inp0, inputNodes[0], state.matchings});
+            if (inp1 >= 0)
+                states.push({inp1, inputNodes[1], state.matchings});
             state.matchings.pop_back();
 
             newMatchings = makePtr<std::map<int, int>>(*matchings);
             matchCandidates.push_back(newMatchings);
             state.matchings.push_back(newMatchings);
-            states.push({getInputNodeId(net, node, 0), inputNodes[1], state.matchings});
-            states.push({getInputNodeId(net, node, 1), inputNodes[0], state.matchings});
+            if (inp0 >= 0)
+                states.push({inp0, inputNodes[1], state.matchings});
+            if (inp1 >= 0)
+                states.push({inp1, inputNodes[0], state.matchings});
             state.matchings.pop_back();
         }
         else
@@ -158,6 +164,8 @@ bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
             for (int j = 0; j < inputNodes.size(); ++j)
             {
                 nodeId = getInputNodeId(net, node, j);
+                if (nodeId < 0)
+                    continue;
                 states.push({nodeId, inputNodes[j], state.matchings});
             }
         }
@@ -264,8 +272,10 @@ void simplifySubgraphs(const Ptr<ImportGraphWrapper>& net,
             std::string inpName = node->getInputName(i);
             if (inpName.empty())
                 continue;
-            CV_Assert(nodeIds.find(inpName) != nodeIds.end());
-            refcounts[nodeIds[inpName]] += 1;
+            auto it = nodeIds.find(inpName);
+            if (it == nodeIds.end())
+                continue;
+            refcounts[it->second] += 1;
         }
     }
 
@@ -277,7 +287,10 @@ void simplifySubgraphs(const Ptr<ImportGraphWrapper>& net,
             auto node = net->getNode(nodeId);
             for (int i = 0; i < node->getNumInputs(); ++i) {
                 std::string inpName = node->getInputName(i);
-                refcounts[nodeIds[inpName]] -= 1;
+                auto it = nodeIds.find(inpName);
+                if (it == nodeIds.end())
+                    continue;
+                refcounts[it->second] -= 1;
             }
             net->removeNode(nodeId);
             refcounts[nodeId] = -1;  // Same node cannot be removed twice

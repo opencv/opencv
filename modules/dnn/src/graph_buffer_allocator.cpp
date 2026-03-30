@@ -320,8 +320,8 @@ struct BufferAllocator
                 CV_Assert(body_noutputs == noutputs+1);
                 CV_Assert(n_state_vars >= 0 && n_accums >= 0);
                 Arg inp0 = inputs[0];
-                if (inp0.idx > 0 && usecounts[inp0.idx] > 0) {
-                    CV_Assert(!netimpl->isConstArg(inp0));
+                if (inp0.idx > 0 && usecounts[inp0.idx] > 0 &&
+                    !netimpl->isConstArg(inp0)) {
                     if (!netimpl->isConstArg(trip_count) && bufidxs[trip_count.idx] >= 0)
                         shareBuffer(trip_count, inputs[0]);
                     else
