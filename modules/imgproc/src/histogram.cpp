@@ -277,7 +277,7 @@ calcHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                         x = 0;
                         for( ; x <= imsize.width - nlanes; x += nlanes )
                         {
-                            v_uint16x8 pix = vx_load(&p[x]);
+                            v_uint16x8 pix = v_load(&p[x]);
                             v_uint32x4 lo32, hi32;
                             v_expand(pix, lo32, hi32);
                             v_float32x4 flo = v_cvt_f32(v_reinterpret_as_s32(lo32));
