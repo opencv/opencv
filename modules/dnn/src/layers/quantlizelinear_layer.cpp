@@ -7,10 +7,62 @@
 #include "layers_common.hpp"
 #include "../net_impl.hpp"
 
+#if defined(__x86_64__) || defined(_M_X64)
+#include <immintrin.h>
+#endif
+
 namespace cv
 {
 namespace dnn
 {
+
+// Fast path for per-tensor quantization: float → uint8 with AVX2
+#if defined(__x86_64__) || defined(_M_X64)
+#if defined(__GNUC__) || defined(__clang__)
+__attribute__((target("avx2")))
+#endif
+static void quantizeLinearChunk_f32_u8_avx2(const float* src, uint8_t* dst,
+                                             float inv_scale, float zp_f,
+                                             int64_t len)
+{
+    __m256 vscale = _mm256_set1_ps(inv_scale);
+    __m256 vzp = _mm256_set1_ps(zp_f);
+    __m256 vmin = _mm256_setzero_ps();
+    __m256 vmax = _mm256_set1_ps(255.f);
+
+    int64_t j = 0;
+    for (; j <= len - 8; j += 8) {
+        __m256 v = _mm256_loadu_ps(src + j);
+        v = _mm256_add_ps(_mm256_mul_ps(v, vscale), vzp);
+        v = _mm256_min_ps(_mm256_max_ps(v, vmin), vmax);
+        __m256i vi = _mm256_cvtps_epi32(v);
+        __m128i lo = _mm256_castsi256_si128(vi);
+        __m128i hi = _mm256_extracti128_si256(vi, 1);
+        __m128i packed16 = _mm_packs_epi32(lo, hi);
+        __m128i packed8 = _mm_packus_epi16(packed16, packed16);
+        _mm_storel_epi64((__m128i*)(dst + j), packed8);
+    }
+    for (; j < len; j++)
+        dst[j] = saturate_cast<uint8_t>(src[j] * inv_scale + zp_f);
+}
+
+static void quantizeLinearFast_f32_u8_avx2(const float* inp, uint8_t* out,
+                                            float inv_scale, float zp_f,
+                                            int64_t total)
+{
+    const int64_t block = 1024;
+    int64_t nblocks = (total + block - 1) / block;
+
+    parallel_for_(Range(0, (int)nblocks), [&](const Range& r) {
+        for (int i = r.start; i < r.end; i++) {
+            int64_t ofs = i * block;
+            int64_t len = std::min(block, total - ofs);
+            quantizeLinearChunk_f32_u8_avx2(inp + ofs, out + ofs, inv_scale, zp_f, len);
+        }
+    });
+}
+#endif
+
 
 /*
     QuantizeLinear layer, as defined in ONNX specification:
@@ -171,6 +223,20 @@ static void quantizeLinear(const Mat& inp, const Mat& scale_, const Mat& zp,
             }
         }
     }
+
+    // Fast path: per-tensor quantization float→uint8 with AVX2 + proper parallelism
+#if defined(__x86_64__) || defined(_M_X64)
+    if (block_size == 0 && sz_a == 1 && inptype == CV_32F && outtype == CV_8U && sctype == CV_32F
+        && checkHardwareSupport(CV_CPU_AVX2)) {
+        float inv_scale = 1.f / reinterpret_cast<const float*>(scale.data)[0];
+        float zp_f = zp.empty() ? 0.f : (float)reinterpret_cast<const uint8_t*>(zp.data)[0];
+        int64_t total = nslices * slice_size;
+        quantizeLinearFast_f32_u8_avx2(reinterpret_cast<const float*>(inp.data),
+                                        reinterpret_cast<uint8_t*>(out.data),
+                                        inv_scale, zp_f, total);
+        return;
+    }
+#endif
 
     if (outtype == CV_8U && sctype == CV_32F && inptype == CV_32F)
         quantizeLinear(reinterpret_cast<const float*>(inp.data),

@@ -11,6 +11,42 @@ namespace cv
 namespace dnn
 {
 
+#if CV_SIMD || CV_SIMD_SCALABLE
+static void dequantizeLinearChunk_u8_f32(const uint8_t* src, float* dst,
+                                          float scale, int zp, int64_t len)
+{
+    const int vlanes = VTraits<v_float32>::vlanes();
+    v_float32 vscale = vx_setall_f32(scale);
+    v_int32 vzp = vx_setall_s32(zp);
+    int64_t j = 0;
+    for (; j <= len - vlanes; j += vlanes) {
+        v_int32 vi = v_reinterpret_as_s32(vx_load_expand_q(src + j));
+        vi = v_sub(vi, vzp);
+        v_float32 vf = v_mul(v_cvt_f32(vi), vscale);
+        v_store(dst + j, vf);
+    }
+    for (; j < len; j++)
+        dst[j] = (float)(src[j] - zp) * scale;
+}
+
+static void dequantizeLinearFast_u8_f32(const uint8_t* inp, float* out,
+                                         float scale, int zp,
+                                         int64_t total)
+{
+    const int64_t block = 1024;
+    int64_t nblocks = (total + block - 1) / block;
+
+    parallel_for_(Range(0, (int)nblocks), [&](const Range& r) {
+        for (int i = r.start; i < r.end; i++) {
+            int64_t ofs = i * block;
+            int64_t len = std::min(block, total - ofs);
+            dequantizeLinearChunk_u8_f32(inp + ofs, out + ofs, scale, zp, len);
+        }
+    });
+}
+#endif
+
+
 /*
     DequantizeLinear layer, as defined in ONNX specification:
     https://onnx.ai/onnx/operators/onnx__DequantizeLinear.html
@@ -164,6 +200,19 @@ static void dequantizeLinear(const Mat& inp, const Mat& scale_, const Mat& zp,
             }
         }
     }
+
+    // Fast path: per-tensor dequantization uint8→float with universal intrinsics
+#if CV_SIMD || CV_SIMD_SCALABLE
+    if (block_size == 0 && sz_a == 1 && inptype == CV_8U && outtype == CV_32F && sctype == CV_32F) {
+        float sc = reinterpret_cast<const float*>(scale.data)[0];
+        int zpval = zp.empty() ? 0 : (int)reinterpret_cast<const uint8_t*>(zp.data)[0];
+        int64_t total = nslices * slice_size;
+        dequantizeLinearFast_u8_f32(reinterpret_cast<const uint8_t*>(inp.data),
+                                     reinterpret_cast<float*>(out.data),
+                                     sc, zpval, total);
+        return;
+    }
+#endif
 
     if (inptype == CV_8U && sctype == CV_32F && outtype == CV_32F)
         dequantizeLinear(reinterpret_cast<const uint8_t*>(inp.data),

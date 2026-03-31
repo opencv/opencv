@@ -1153,6 +1153,10 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS ActivationLayerInt8 : public ActivationLayer
     {
     public:
+        int input_zp, output_zp;
+        float input_sc, output_sc;
+        Mat activationLUT;
+
         static Ptr<ActivationLayerInt8> create(const LayerParams &params);
     };
 
@@ -1200,6 +1204,13 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS EltwiseLayerInt8 : public Layer
     {
     public:
+        std::vector<float> coeffs;
+        std::vector<int> zeropoints;
+        std::vector<float> scales;
+        float output_sc;
+        int output_zp;
+        float offset;
+
         static Ptr<EltwiseLayerInt8> create(const LayerParams &params);
     };
 

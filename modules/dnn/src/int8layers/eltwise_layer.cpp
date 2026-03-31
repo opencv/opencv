@@ -7,6 +7,8 @@
 #include "../op_timvx.hpp"
 #include "../ie_ngraph.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+#include "opencv2/core/hal/hal.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
 namespace cv
 {
@@ -22,12 +24,6 @@ public:
         SUM = 1,
         MAX = 2
     } op;
-    std::vector<float> coeffs;
-    std::vector<int> zeropoints;
-    std::vector<float> scales;
-
-    int output_zp;
-    float output_sc;
 
     enum OutputChannelsMode
     {
@@ -101,8 +97,8 @@ public:
             }
         }
 
-        output_zp = params.get<int>("zeropoints");
-        output_sc = params.get<float>("scales");
+        output_zp = params.get<int>("zeropoints", 0);
+        output_sc = params.get<float>("scales", 1.0f);
 
         channelsModeInput = ELTWISE_CHANNNELS_SAME;
         if (params.has("output_channels_mode"))
@@ -140,6 +136,56 @@ public:
         if (backendId == DNN_BACKEND_TIMVX && haveTimVX())
             return channelsModeInput == ELTWISE_CHANNNELS_SAME;
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
+    }
+
+    void ensureQuantizationParams()
+    {
+        if (!coeffs.empty())
+            return;
+
+        if (scales.empty())
+            return;
+
+        CV_CheckEQ(scales.size(), zeropoints.size(), "EltwiseInt8: scales and zeropoints sizes must match");
+        CV_Assert(output_sc > 0.0f);
+
+        if (op == SUM)
+        {
+            coeffs.resize(scales.size());
+            offset = (float)output_zp;
+            for (size_t i = 0; i < scales.size(); i++)
+            {
+                coeffs[i] = scales[i] / output_sc;
+                offset -= coeffs[i] * zeropoints[i];
+            }
+        }
+        else if (op == PROD)
+        {
+            coeffs.resize(scales.size());
+            coeffs[0] = scales[0] / output_sc;
+            for (size_t i = 1; i < scales.size(); i++)
+                coeffs[i] = scales[i];
+            offset = (float)output_zp;
+        }
+        else if (op == MAX)
+        {
+            for (size_t i = 0; i < scales.size(); i++)
+            {
+                const bool sameQuant =
+                    std::abs(scales[i] - output_sc) < 1e-6f &&
+                    zeropoints[i] == output_zp;
+                if (!sameQuant)
+                {
+                    CV_Error(Error::StsBadArg,
+                             "EltwiseInt8 'max' requires identical quantization "
+                             "(same scale and zero-point) for all inputs and output.");
+                }
+            }
+        }
+        else
+        {
+            CV_Error(Error::StsNotImplemented, "Unsupported eltwise operation");
+        }
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -248,6 +294,7 @@ public:
                                        bool isLast) CV_OVERRIDE
     {
 #ifdef HAVE_TIMVX
+        ensureQuantizationParams();
         // tvGraph Initialization.
         if (inputsWrapper.size() != 2)
             return Ptr<BackendNode>();
@@ -374,6 +421,7 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
+        ensureQuantizationParams();
         CV_Assert(nodes.size() >= 2);
         std::vector<ov::Output<ov::Node>> ieInpNodes(nodes.size());
         for (size_t i = 0; i < nodes.size(); i++)
@@ -544,6 +592,7 @@ public:
                     size_t dstIdx = delta + (sampleIdx*channels + c)*planeSize;
                     int8_t* dstptr = dstptr0 + dstIdx;
                     float* bufptr = bufptr0 + dstIdx;
+                    bool directOutput = false;
 
                     // process first two inputs
                     {
@@ -589,7 +638,16 @@ public:
                             }
                             else if (op == MAX)
                             {
-                                for (int j = 0; j < blockSize; j++)
+                                int j = 0;
+                            #if CV_SIMD128
+                                for (; j <= blockSize - 16; j += 16)
+                                {
+                                    v_int8x16 va = v_load(srcptr0 + j);
+                                    v_int8x16 vb = v_load(srcptrI + j);
+                                    v_store(dstptr + j, v_max(va, vb));
+                                }
+                            #endif
+                                for (; j < blockSize; j++)
                                 {
                                     dstptr[j] = std::max(srcptr0[j], srcptrI[j]);
                                 }
@@ -598,9 +656,86 @@ public:
                             {
                                 float c0 = coeffsptr[0];
                                 float c1 = coeffsptr[1];
-                                for (int j = 0; j < blockSize; j++)
+                                if (nsrcs == 2)
                                 {
-                                    bufptr[j] = c0*srcptr0[j] + c1*srcptrI[j];
+                                    directOutput = true;
+                                    int j = 0;
+                                #if CV_SIMD128
+                                    {
+                                        v_float32x4 vc0 = v_setall_f32(c0);
+                                        v_float32x4 vc1 = v_setall_f32(c1);
+                                        v_float32x4 voffs = v_setall_f32(offset);
+                                        for (; j <= blockSize - 16; j += 16)
+                                        {
+                                            v_int8x16 va = v_load(srcptr0 + j);
+                                            v_int8x16 vb = v_load(srcptrI + j);
+
+                                            v_int16x8 va_lo, va_hi, vb_lo, vb_hi;
+                                            v_expand(va, va_lo, va_hi);
+                                            v_expand(vb, vb_lo, vb_hi);
+
+                                            v_int32x4 va0, va1, va2, va3, vb0, vb1, vb2, vb3;
+                                            v_expand(va_lo, va0, va1);
+                                            v_expand(va_hi, va2, va3);
+                                            v_expand(vb_lo, vb0, vb1);
+                                            v_expand(vb_hi, vb2, vb3);
+
+                                            v_float32x4 r0 = v_add(v_add(v_mul(v_cvt_f32(va0), vc0),
+                                                                         v_mul(v_cvt_f32(vb0), vc1)), voffs);
+                                            v_float32x4 r1 = v_add(v_add(v_mul(v_cvt_f32(va1), vc0),
+                                                                         v_mul(v_cvt_f32(vb1), vc1)), voffs);
+                                            v_float32x4 r2 = v_add(v_add(v_mul(v_cvt_f32(va2), vc0),
+                                                                         v_mul(v_cvt_f32(vb2), vc1)), voffs);
+                                            v_float32x4 r3 = v_add(v_add(v_mul(v_cvt_f32(va3), vc0),
+                                                                         v_mul(v_cvt_f32(vb3), vc1)), voffs);
+
+                                            v_store(dstptr + j, v_pack(v_pack(v_round(r0), v_round(r1)),
+                                                                       v_pack(v_round(r2), v_round(r3))));
+                                        }
+                                    }
+                                #endif
+                                    for (; j < blockSize; j++)
+                                    {
+                                        dstptr[j] = saturate_cast<int8_t>(std::round(c0*srcptr0[j] + c1*srcptrI[j] + offset));
+                                    }
+                                }
+                                else
+                                {
+                                    int j = 0;
+                                #if CV_SIMD128
+                                    {
+                                        v_float32x4 vc0 = v_setall_f32(c0);
+                                        v_float32x4 vc1 = v_setall_f32(c1);
+                                        for (; j <= blockSize - 16; j += 16)
+                                        {
+                                            v_int8x16 va = v_load(srcptr0 + j);
+                                            v_int8x16 vb = v_load(srcptrI + j);
+
+                                            v_int16x8 va_lo, va_hi, vb_lo, vb_hi;
+                                            v_expand(va, va_lo, va_hi);
+                                            v_expand(vb, vb_lo, vb_hi);
+
+                                            v_int32x4 va0, va1, va2, va3, vb0, vb1, vb2, vb3;
+                                            v_expand(va_lo, va0, va1);
+                                            v_expand(va_hi, va2, va3);
+                                            v_expand(vb_lo, vb0, vb1);
+                                            v_expand(vb_hi, vb2, vb3);
+
+                                            v_store(bufptr + j,      v_add(v_mul(v_cvt_f32(va0), vc0),
+                                                                          v_mul(v_cvt_f32(vb0), vc1)));
+                                            v_store(bufptr + j + 4,  v_add(v_mul(v_cvt_f32(va1), vc0),
+                                                                          v_mul(v_cvt_f32(vb1), vc1)));
+                                            v_store(bufptr + j + 8,  v_add(v_mul(v_cvt_f32(va2), vc0),
+                                                                          v_mul(v_cvt_f32(vb2), vc1)));
+                                            v_store(bufptr + j + 12, v_add(v_mul(v_cvt_f32(va3), vc0),
+                                                                          v_mul(v_cvt_f32(vb3), vc1)));
+                                        }
+                                    }
+                                #endif
+                                    for (; j < blockSize; j++)
+                                    {
+                                        bufptr[j] = c0*srcptr0[j] + c1*srcptrI[j];
+                                    }
                                 }
                             }
                             else
@@ -628,7 +763,14 @@ public:
                         }
                         else if (op == MAX)
                         {
-                            for (int j = 0; j < blockSize; j++)
+                            int j = 0;
+                        #if CV_SIMD128
+                            for (; j <= blockSize - 16; j += 16)
+                            {
+                                v_store(dstptr + j, v_max(v_load(dstptr + j), v_load(srcptrI + j)));
+                            }
+                        #endif
+                            for (; j < blockSize; j++)
                             {
                                 dstptr[j] = std::max(dstptr[j], srcptrI[j]);
                             }
@@ -636,7 +778,31 @@ public:
                         else if (op == SUM)
                         {
                             float cI = coeffsptr[inputIdx];
-                            for (int j = 0; j < blockSize; j++)
+                            int j = 0;
+                        #if CV_SIMD128
+                            {
+                                v_float32x4 vcI = v_setall_f32(cI);
+                                for (; j <= blockSize - 16; j += 16)
+                                {
+                                    v_int8x16 vi = v_load(srcptrI + j);
+                                    v_int16x8 vi_lo, vi_hi;
+                                    v_expand(vi, vi_lo, vi_hi);
+                                    v_int32x4 vi0, vi1, vi2, vi3;
+                                    v_expand(vi_lo, vi0, vi1);
+                                    v_expand(vi_hi, vi2, vi3);
+
+                                    v_store(bufptr + j,      v_add(v_load(bufptr + j),
+                                                                   v_mul(v_cvt_f32(vi0), vcI)));
+                                    v_store(bufptr + j + 4,  v_add(v_load(bufptr + j + 4),
+                                                                   v_mul(v_cvt_f32(vi1), vcI)));
+                                    v_store(bufptr + j + 8,  v_add(v_load(bufptr + j + 8),
+                                                                   v_mul(v_cvt_f32(vi2), vcI)));
+                                    v_store(bufptr + j + 12, v_add(v_load(bufptr + j + 12),
+                                                                   v_mul(v_cvt_f32(vi3), vcI)));
+                                }
+                            }
+                        #endif
+                            for (; j < blockSize; j++)
                             {
                                 bufptr[j] += cI * srcptrI[j];
                             }
@@ -646,9 +812,24 @@ public:
                     }
 
                     // add offset and saturate cast to int8
-                    if (op == SUM || op == PROD)
+                    if ((op == SUM || op == PROD) && !directOutput)
                     {
-                        for (int j = 0; j < blockSize; j++)
+                        int j = 0;
+                    #if CV_SIMD128
+                        {
+                            v_float32x4 voffs = v_setall_f32(offset);
+                            for (; j <= blockSize - 16; j += 16)
+                            {
+                                v_float32x4 r0 = v_add(v_load(bufptr + j), voffs);
+                                v_float32x4 r1 = v_add(v_load(bufptr + j + 4), voffs);
+                                v_float32x4 r2 = v_add(v_load(bufptr + j + 8), voffs);
+                                v_float32x4 r3 = v_add(v_load(bufptr + j + 12), voffs);
+                                v_store(dstptr + j, v_pack(v_pack(v_round(r0), v_round(r1)),
+                                                           v_pack(v_round(r2), v_round(r3))));
+                            }
+                        }
+                    #endif
+                        for (; j < blockSize; j++)
                         {
                             dstptr[j] = saturate_cast<int8_t>(std::round(bufptr[j] + offset));
                         }
@@ -667,6 +848,7 @@ public:
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        ensureQuantizationParams();
 
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
@@ -749,7 +931,6 @@ public:
 
 private:
     bool hasVecInput;
-    float offset;
 };
 
 Ptr<EltwiseLayerInt8> EltwiseLayerInt8::create(const LayerParams& params)
