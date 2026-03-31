@@ -983,15 +983,10 @@ TEST_P(Test_ONNX_layers, Colorization)
     Mat out = net.forward();
 
     double l1 = 4e-4, lInf = 3e-3;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16 || target == DNN_TARGET_CUDA_FP16)
     {
         l1 = 0.25;
         lInf = 5.3;
-    }
-    else if (target == DNN_TARGET_CUDA_FP16)
-    {
-        l1 = 0.21;
-        lInf = 4.5;
     }
     normAssert(out, ref, "", l1, lInf);
 }
