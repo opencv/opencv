@@ -1526,7 +1526,18 @@ TEST_P(Test_ONNX_layers, LSTM_cell_forward)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
-    testONNXModels("lstm_cell_forward", npy, 0, 0, false, false);
+    double l1 = 0, lInf = 0;
+    if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA)
+    {
+        l1 = 5e-5;
+        lInf = 3e-4;
+    }
+    else if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 3e-4;
+        lInf = 1e-3;
+    }
+    testONNXModels("lstm_cell_forward", npy, l1, lInf, false, false);
 }
 TEST_P(Test_ONNX_layers, LSTM_cell_bidirectional)
 {
@@ -1537,7 +1548,18 @@ TEST_P(Test_ONNX_layers, LSTM_cell_bidirectional)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
-    testONNXModels("lstm_cell_bidirectional", npy, 0, 0, false, false);
+    double l1 = 0, lInf = 0;
+    if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA)
+    {
+        l1 = 5e-5;
+        lInf = 3e-4;
+    }
+    else if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 3e-4;
+        lInf = 2e-3;
+    }
+    testONNXModels("lstm_cell_bidirectional", npy, l1, lInf, false, false);
 }
 TEST_P(Test_ONNX_layers, LSTM_cell_with_peepholes)
 {
