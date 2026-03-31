@@ -2524,13 +2524,11 @@ bool CvVideoWriter_GStreamer::open( const std::string &filename, int fourcc,
 
         containercaps.attach(gst_caps_from_string(mime));
         containerprofile.attach(gst_encoding_container_profile_new("container", "container", containercaps.get(), NULL));
-        int colorspace_id = (int)params.get(VIDEOWRITER_PROP_COLOR_SPACE, 0.0);
-        const char* colorspace_formats[] = {"I420", "NV12", "BGRx"};
-        std::string colorspace = (colorspace_id >= 0 && colorspace_id <= 2)
-                                 ? colorspace_formats[colorspace_id]
-                                 : "I420";
+        unsigned int colorspace_fourcc = (unsigned int)params.get(VIDEOWRITER_PROP_COLOR_SPACE, CV_FOURCC('I', '4', '2', '0'));
+        const char* colorspace = gst_video_format_to_string(gst_video_format_from_fourcc(colorspace_fourcc));
+
         GSafePtr<GstCaps> prof_caps;
-        std::string caps_str = "video/x-raw, format=" + colorspace;
+        std::string caps_str = std::string("video/x-raw, format=") + std::string(colorspace);
         prof_caps.attach(gst_caps_from_string(caps_str.c_str()));
         videoprofile.attach(gst_encoding_video_profile_new(prof_caps.get(), NULL, NULL, 1));
         gst_encoding_container_profile_add_profile(
