@@ -211,8 +211,6 @@ static void convInt8BlockVNNI(const void* inp_, const void* residual_,
     const __m256i v_xor = _mm256_set1_epi8((char)0x80);
 
     parallel_for_(Range(0, total_blocks), [&](const Range& range) {
-        alignas(32) int32_t sumbuf[SPAT_BLOCK_SIZE * K0];
-
         int D = D_, H = H_, W = W_;
         int Di = ndims >= 6 ? inpshape[ndims-4] : 1;
         int Hi = ndims >= 5 ? inpshape[ndims-3] : 1;
@@ -484,7 +482,6 @@ static void convInt8Block(const void* inp_, const void* residual_,
 
     constexpr int C0 = 8, K0 = 8;
     constexpr int C0shift = 3;
-    constexpr int MAX_CONV_DIMS = ConvState::MAX_CONV_DIMS;
 
     CV_Assert(cs.inpshape.layout == DATA_LAYOUT_BLOCK);
     CV_Assert(cs.outshape.layout == DATA_LAYOUT_BLOCK);
@@ -512,9 +509,12 @@ static void convInt8Block(const void* inp_, const void* residual_,
     int ksize_ = cs.wshape[2];
     int C1Max = cs.wshape[3];
 
+#if CV_AVX2
+    constexpr int MAX_CONV_DIMS = ConvState::MAX_CONV_DIMS;
     int innerZ0 = cs.inner[0], innerZ1 = cs.inner[MAX_CONV_DIMS];
     int innerY0 = cs.inner[1], innerY1 = cs.inner[MAX_CONV_DIMS+1];
     int innerX0 = cs.inner[2], innerX1 = cs.inner[MAX_CONV_DIMS+2];
+#endif
 
     const int8_t* inp = (const int8_t*)inp_;
     const int8_t* residual = (const int8_t*)residual_;
@@ -530,8 +530,10 @@ static void convInt8Block(const void* inp_, const void* residual_,
     int total_blocks = N * ngroups * Kblk;
 
     parallel_for_(Range(0, total_blocks), [&](const Range& range) {
+#if CV_AVX2
         constexpr int SPAT_BLOCK_SIZE = 8;
         alignas(32) int32_t sumbuf[SPAT_BLOCK_SIZE * K0];
+#endif
 
         int D = D_, H = H_, W = W_;
         int Di = ndims >= 6 ? inpshape[ndims-4] : 1;
@@ -544,7 +546,9 @@ static void convInt8Block(const void* inp_, const void* residual_,
         int Sz = cs.strides[0], Sy = cs.strides[1], Sx = cs.strides[2];
         int padZ = cs.pads[0], padY = cs.pads[1], padX = cs.pads[2];
         int ksize = ksize_;
+#if CV_AVX2
         int8_t zbuf[C0] = {};
+#endif
 
         for (int t = range.start; t < range.end; t++) {
             int n = t / (ngroups * Kblk);
@@ -906,7 +910,6 @@ public:
                  OutputArrayOfArrays output_arrs,
                  OutputArrayOfArrays) CV_OVERRIDE
     {
-        auto* netimpl_ = getNetImpl(this);
         int ninputs = (int)input_arrs.total();
         CV_Assert(ninputs >= 1);
 

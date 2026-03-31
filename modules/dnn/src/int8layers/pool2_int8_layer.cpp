@@ -162,7 +162,6 @@ static void avgPoolInt8(const void* inp_, void* out_, const ConvState& cs,
         int padZ0 = cs.pads[0], padY0 = cs.pads[1], padX0 = cs.pads[2];
         int ksize_total = (int)cs.ofstab.size();
         const int* zyxtab = cs.coordtab.data();
-        const int* ofstab = cs.ofstab.data();
 
         const int8_t* inp = (const int8_t*)inp_ + nc0 * iplanesize;
         int8_t* out = (int8_t*)out_ + nc0 * planesize;
