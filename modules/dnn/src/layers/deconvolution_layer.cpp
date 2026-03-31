@@ -893,12 +893,33 @@ public:
         auto output_wrapper = outputs[0].dynamicCast<CUDABackendWrapper>();
         auto output_shape = output_wrapper->getShape();
 
-        const auto output_feature_maps = numOutput;
-        const auto output_feature_maps_per_group = blobs[0].size[1];
-        const auto groups = output_feature_maps / output_feature_maps_per_group;
+        if (numOutput < 0)
+            numOutput = blobs[0].size[1] * groups;
+
+        if (weightsMat.empty())
+            transpose(blobs[0].reshape(1, blobs[0].size[0]), weightsMat);
+
+        if (biasesMat.empty()) {
+            if (blobs.size() >= 2)
+                biasesMat = blobs[1].reshape(1, numOutput);
+            else
+                biasesMat = Mat::zeros(numOutput, 1, CV_32F);
+        }
 
         TransposeConvolutionConfiguration config;
 
+        if (input_shape.size() == 3)
+        {
+            // CuDNN doesn't support 1D convolution; add an extra spatial dim
+            input_shape.insert(std::end(input_shape) - 1, 1);
+            output_shape.insert(std::end(output_shape) - 1, 1);
+
+            pads_begin.insert(std::begin(pads_begin), 0);
+            pads_end.insert(std::begin(pads_end), 0);
+            strides.insert(std::begin(strides), 1);
+            dilations.insert(std::begin(dilations), 1);
+            kernel_size.insert(std::begin(kernel_size), 1);
+        }
         config.kernel_size.assign(std::begin(kernel_size), std::end(kernel_size));
         config.dilations.assign(std::begin(dilations), std::end(dilations));
         config.strides.assign(std::begin(strides), std::end(strides));

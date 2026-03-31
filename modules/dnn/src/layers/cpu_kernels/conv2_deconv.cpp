@@ -20,7 +20,7 @@ static void deconvBlock32f(const void* inp__, const void* /*residual*/,
     CV_Assert(cs.outshape.layout == DATA_LAYOUT_BLOCK);
     CV_Assert(cs.wshape.dims == 5);
 
-    constexpr int MAX_DIMS = ConvState::MAX_CONV_DIMS;
+    enum { MAX_DIMS = ConvState::MAX_CONV_DIMS };
     const int sdims = cs.nspatialdims;
     const int C0    = cs.inpshape.back();
     const int K0    = C0;
