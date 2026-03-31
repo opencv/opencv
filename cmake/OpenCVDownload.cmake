@@ -282,11 +282,17 @@ ${OPENCV_DOWNLOAD_LOG}
     ocv_download_log("#mkdir \"${DL_DESTINATION_DIR}\"")
     file(MAKE_DIRECTORY "${DL_DESTINATION_DIR}")
     ocv_download_log("#unpack \"${DL_DESTINATION_DIR}\" \"${CACHE_CANDIDATE}\"")
-    execute_process(COMMAND "${CMAKE_COMMAND}" -E tar xzf "${CACHE_CANDIDATE}"
-                    WORKING_DIRECTORY "${DL_DESTINATION_DIR}"
-                    RESULT_VARIABLE res)
-    if(NOT res EQUAL 0)
-      message(FATAL_ERROR "${__msg_prefix}Unpack failed: ${res}")
+    if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.18")
+      file(ARCHIVE_EXTRACT
+        INPUT "${CACHE_CANDIDATE}"
+        DESTINATION "${DL_DESTINATION_DIR}")
+    else()
+      execute_process(COMMAND "${CMAKE_COMMAND}" -E tar xzf "${CACHE_CANDIDATE}"
+                      WORKING_DIRECTORY "${DL_DESTINATION_DIR}"
+                      RESULT_VARIABLE res)
+      if(NOT res EQUAL 0)
+        message(FATAL_ERROR "${__msg_prefix}Unpack failed: ${res}")
+      endif()
     endif()
   else()
     ocv_download_log("#copy \"${COPY_DESTINATION}\" \"${CACHE_CANDIDATE}\"")
