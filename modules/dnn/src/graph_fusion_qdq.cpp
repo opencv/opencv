@@ -549,6 +549,7 @@ struct ModelFusionQDQ
                                     convInt8Params.set("scales", out_sc);
                                     convInt8Params.set("zeropoints", out_zp);
                                     convInt8Params.set("per_channel", per_channel);
+                                    convInt8Params.set("input_is_u8", inputIsU8);
                                     convInt8Params.blobs.resize(3);
                                     convInt8Params.blobs[0] = w_q;
                                     convInt8Params.blobs[1] = biasFused;
