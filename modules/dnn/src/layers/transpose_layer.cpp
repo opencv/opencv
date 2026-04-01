@@ -75,30 +75,39 @@ static void transpose(const Mat& inp, const std::vector<int>& perm, Mat& out)
     size_t p4 = inpStep_[perm_[2]], p3 = inpStep_[perm_[3]];
     size_t p2 = inpStep_[perm_[4]], p1 = inpStep_[perm_[5]], p0 = inpStep_[perm_[6]];
 
+    int64_t outerTotal = (int64_t)sz6 * sz5 * sz4 * sz3 * sz2;
+
 #undef CV_IMPLEMENT_TRANSPOSE
 #define CV_IMPLEMENT_TRANSPOSE(typ) \
-    const typ* inptr0 = (const typ*)inp.data; \
-    typ* outptr = (typ*)out.data; \
-    for (int i6 = 0; i6 < sz6; i6++) { \
-    for (int i5 = 0; i5 < sz5; i5++) { \
-    for (int i4 = 0; i4 < sz4; i4++) { \
-    for (int i3 = 0; i3 < sz3; i3++) { \
-    for (int i2 = 0; i2 < sz2; i2++) { \
-    for (int i1 = 0; i1 < sz1; i1++, outptr += sz0) { \
-        int i0 = 0; \
-        const typ* inptr = inptr0 + i6*p6 + i5*p5 + i4*p4 + i3*p3 + i2*p2 + i1*p1; \
-        for (; i0 <= sz0 - 3; i0 += 3) { \
-            size_t ip0 = i0*p0; \
-            typ t0 = inptr[ip0]; \
-            typ t1 = inptr[ip0+p0]; \
-            typ t2 = inptr[ip0+p0*2]; \
-            outptr[i0] = t0; \
-            outptr[i0+1] = t1; \
-            outptr[i0+2] = t2; \
+    parallel_for_(Range(0, (int)outerTotal), [&](const Range& r) { \
+        const typ* inptr0 = (const typ*)inp.data; \
+        typ* outptr0 = (typ*)out.data; \
+        for (int64_t idx = r.start; idx < r.end; idx++) { \
+            int64_t q = idx; \
+            int i2 = (int)(q % sz2); q /= sz2; \
+            int i3 = (int)(q % sz3); q /= sz3; \
+            int i4 = (int)(q % sz4); q /= sz4; \
+            int i5 = (int)(q % sz5); q /= sz5; \
+            int i6 = (int)q; \
+            const typ* inptrBase = inptr0 + i6*p6 + i5*p5 + i4*p4 + i3*p3 + i2*p2; \
+            typ* outptr = outptr0 + idx * ((int64_t)sz1 * sz0); \
+            for (int i1 = 0; i1 < sz1; i1++, outptr += sz0) { \
+                const typ* inptr = inptrBase + i1*p1; \
+                int i0 = 0; \
+                for (; i0 <= sz0 - 3; i0 += 3) { \
+                    size_t ip0 = i0*p0; \
+                    typ t0 = inptr[ip0]; \
+                    typ t1 = inptr[ip0+p0]; \
+                    typ t2 = inptr[ip0+p0*2]; \
+                    outptr[i0] = t0; \
+                    outptr[i0+1] = t1; \
+                    outptr[i0+2] = t2; \
+                } \
+                for (; i0 < sz0; i0++) \
+                    outptr[i0] = inptr[i0*p0]; \
+            } \
         } \
-        for (; i0 < sz0; i0++) \
-            outptr[i0] = inptr[i0*p0]; \
-    }}}}}}
+    });
 
     if (esz == 4) {
         CV_IMPLEMENT_TRANSPOSE(int)

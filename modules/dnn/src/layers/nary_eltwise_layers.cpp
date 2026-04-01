@@ -621,6 +621,12 @@ public:
         const Mat& a = inputs[0];
         const Mat& b = inputs[1];
         Mat& out = outputs[0];
+
+        if (op == OPERATION::POW && std::is_same<T, RESULT_T>::value && b.total() == 1) {
+            cv::pow(a, (double)(*(const T*)b.data), out);
+            return;
+        }
+
         CV_Assert(helper.shapes.size() == 3 && helper.steps.size() == 3);
         binary_forward_impl<T, RESULT_T, Functor>(f, helper.max_ndims, helper.shapes[0], a.ptr<char>(), helper.steps[1],
                                         b.ptr<char>(), helper.steps[2], out.ptr<char>(), helper.steps[0], block_size);
