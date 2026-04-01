@@ -24,9 +24,6 @@ namespace cv {
 namespace dnn {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
-//
-// [TODO] add special branch for 3x3 depthwise convolution
-//
 static void depthwiseConv32f(const void* inp__, const void* residual__,
                              void* out__, const ConvState& cs,
                              const void* weights__, const float* scale__,
@@ -87,8 +84,14 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
             defaultAlpha = activParams[0];
         } else if (fastActivation == FAST_ACTIV_PRELU) {
             CV_Assert(cs.activParams.size() == size_t(C));
+        } else if (fastActivation == FAST_ACTIV_ELU) {
+            CV_Assert(cs.activParams.size() == 1u);
+            defaultAlpha = 1.f;
+        } else if (fastActivation == FAST_ACTIV_HARDSIGMOID) {
+            CV_Assert(cs.activParams.size() == 2u);
+            defaultAlpha = 1.f;
         } else {
-            CV_Assert(fastActivation == FAST_ACTIV_NONE);
+            CV_Assert(cs.activParams.empty() || fastActivation == FAST_ACTIV_NONE);
             defaultAlpha = 1.f;
         }
 

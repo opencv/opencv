@@ -423,8 +423,14 @@ static void setupActivation(const ConvState& cs, int K,
         defaultAlpha = activParams[0];
     } else if (fastActivation == FAST_ACTIV_PRELU) {
         CV_Assert(cs.activParams.size() == size_t(K));
+    } else if (fastActivation == FAST_ACTIV_ELU) {
+        CV_Assert(cs.activParams.size() == 1u);
+        defaultAlpha = 1.f;
+    } else if (fastActivation == FAST_ACTIV_HARDSIGMOID) {
+        CV_Assert(cs.activParams.size() == 2u);
+        defaultAlpha = 1.f;
     } else {
-        CV_Assert(fastActivation == FAST_ACTIV_NONE);
+        CV_Assert(cs.activParams.empty() || fastActivation == FAST_ACTIV_NONE);
         defaultAlpha = 1.f;
     }
 }
