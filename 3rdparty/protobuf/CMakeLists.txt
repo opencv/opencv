@@ -151,7 +151,7 @@ append_if_exist(Protobuf_SRCS
 include_directories(BEFORE "${PROTOBUF_ROOT}/src")  # ensure using of own headers: https://github.com/opencv/opencv/issues/13328
 
 add_library(libprotobuf STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${Protobuf_SRCS})
-target_include_directories(libprotobuf PUBLIC $<BUILD_INTERFACE:${PROTOBUF_ROOT}/src>)
+target_include_directories(libprotobuf SYSTEM PUBLIC $<BUILD_INTERFACE:${PROTOBUF_ROOT}/src>)
 set_target_properties(libprotobuf
     PROPERTIES
     FOLDER "3rdparty"

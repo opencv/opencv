@@ -477,6 +477,14 @@ if(APPLE AND NOT CMAKE_CROSSCOMPILING AND NOT DEFINED ENV{LDFLAGS} AND EXISTS "/
   link_directories("/usr/local/lib")
 endif()
 
+if(APPLE AND NOT CMAKE_CROSSCOMPILING AND CV_CLANG AND EXISTS "/usr/local/include")
+  # Apple Clang 17+ implicitly injects -I/usr/local/include as a high-priority
+  # user include, causing system-installed headers (e.g. Homebrew protobuf v4+)
+  # to override bundled third-party libraries added via -isystem.
+  # Demote /usr/local/include to -isystem so bundled -isystem paths are searched first.
+  add_compile_options("-isystem/usr/local/include")
+endif()
+
 if(ENABLE_BUILD_HARDENING)
   include("${CMAKE_CURRENT_LIST_DIR}/OpenCVCompilerDefenses.cmake")
 endif()
