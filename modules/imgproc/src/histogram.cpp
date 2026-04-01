@@ -261,7 +261,7 @@ calcHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
             {
                 if( !mask )
                 {
-#if CV_SIMD128
+#if CV_SIMD128 && !defined(__linux__)
                     if( d0 == 1 && sizeof(T) == 2 )
                     {
                         const ushort* p  = (const ushort*)p0;
@@ -606,7 +606,7 @@ calcHist_8u( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
             {
                 if( d0 == 1 )
                 {
-#if CV_SIMD128
+#if CV_SIMD128 && !defined(__linux__)
                     int H0[256]={}, H1[256]={}, H2[256]={}, H3[256]={};
                     x=0;
                     for (; x <= imsize.width - 64; x += 64)
