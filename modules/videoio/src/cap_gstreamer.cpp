@@ -2529,9 +2529,7 @@ bool CvVideoWriter_GStreamer::open( const std::string &filename, int fourcc,
         GSafePtr<GstCaps> prof_caps;
         std::string caps_str = std::string("video/x-raw, format=") + std::string(colorspace);
         prof_caps.attach(gst_caps_from_string(caps_str.c_str()));
-                
         videoprofile.attach(gst_encoding_video_profile_new(prof_caps.get(), NULL, NULL, 1));
-                
         // Transfer ownership to the container profile
         gst_encoding_container_profile_add_profile(
             containerprofile.get(),
