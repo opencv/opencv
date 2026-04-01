@@ -6,6 +6,7 @@
 // Third party copyrights are property of their respective owners.
 
 #include "test_precomp.hpp"
+#include "npy_blob.hpp"
 
 namespace opencv_test { namespace {
 
@@ -102,6 +103,29 @@ TEST(SoftNMS, Accuracy)
     {
         EXPECT_NEAR(updated_scores[i], ref_updated_scores[i], 1e-7);
     }
+}
+
+// Test NMS -> Reshape with zero detections using ONNX model.
+TEST(NMS, ZeroDetections_Reshape)
+{
+    std::string onnxmodel = findDataFile("dnn/onnx/models/nms_reshape_empty.onnx");
+    cv::dnn::Net net = cv::dnn::readNetFromONNX(onnxmodel);
+    ASSERT_FALSE(net.empty());
+
+    Mat boxes = blobFromNPY(findDataFile("dnn/onnx/data/input_nms_reshape_empty_0.npy"));
+    Mat scores = blobFromNPY(findDataFile("dnn/onnx/data/input_nms_reshape_empty_1.npy"));
+    net.setInput(boxes, "boxes");
+    net.setInput(scores, "scores");
+
+    std::vector<Mat> outs;
+    net.forward(outs, std::vector<String>{"output"});
+    ASSERT_EQ(outs.size(), (size_t)1);
+    // Reshape [0,3] -> [1,0,3]: output should be empty with correct shape.
+    EXPECT_EQ(outs[0].total(), (size_t)0);
+    EXPECT_EQ(outs[0].dims, 3);
+    EXPECT_EQ(outs[0].size[0], 1);
+    EXPECT_EQ(outs[0].size[1], 0);
+    EXPECT_EQ(outs[0].size[2], 3);
 }
 
 }} // namespace
