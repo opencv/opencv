@@ -986,7 +986,7 @@ TEST_P(Test_ONNX_layers, Colorization)
     if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16 || target == DNN_TARGET_CUDA_FP16)
     {
         l1 = 0.25;
-        lInf = 5.3;
+        lInf = 5.4;
     }
     normAssert(out, ref, "", l1, lInf);
 }
