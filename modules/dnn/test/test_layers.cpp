@@ -2389,6 +2389,15 @@ public:
             activationParams.set("scale", 0.3f);
             activationParams.set("shift", 0.6f);
         }
+        else if (activationParams.type == "ELU")
+        {
+            activationParams.set("alpha", 1.0f);
+        }
+        else if (activationParams.type == "HardSigmoid")
+        {
+            activationParams.set("alpha", 0.2f);
+            activationParams.set("beta", 0.5f);
+        }
     }
 
     static void makeDefaultTestEltwiseLayer(LayerParams& eltwiseParams, const std::string& op, bool withCoefficients)
@@ -2460,7 +2469,8 @@ public:
     static testing::internal::ParamGenerator<std::string> activationLayersList()
     {
         // TODO: automate list generation
-        return Values("ReLU", "ReLU6", "ChannelsPReLU", "TanH", "Swish", "Mish", "Sigmoid", "ELU", "AbsVal", "BNLL", "Power", "Exp");
+        return Values("ReLU", "ReLU6", "ChannelsPReLU", "TanH", "Swish", "Mish", "Sigmoid", "ELU",
+                       "AbsVal", "BNLL", "Power", "Exp", "HardSwish", "HardSigmoid", "Gelu", "GeluApproximation");
     }
 
     static testing::internal::ParamGenerator<tuple<Backend, Target> > dnnBackendsAndTargetsForFusionTests()

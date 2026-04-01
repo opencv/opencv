@@ -210,8 +210,27 @@ public:
                         slopes.isContinuous());
             int nslopes = int(slopes.total());
             Mat(1, &nslopes, slopesType, (void*)slopes.data).convertTo(activParams, CV_32F);
+        } else if (dynamic_cast<MishLayer*>(activ_ptr)) {
+            fastActivation = FAST_ACTIV_MISH;
+        } else if (dynamic_cast<SwishLayer*>(activ_ptr)) {
+            fastActivation = FAST_ACTIV_SWISH;
+        } else if (dynamic_cast<SigmoidLayer*>(activ_ptr)) {
+            fastActivation = FAST_ACTIV_SIGMOID;
+        } else if (dynamic_cast<TanHLayer*>(activ_ptr)) {
+            fastActivation = FAST_ACTIV_TANH;
+        } else if (ELULayer* activElu = dynamic_cast<ELULayer*>(activ_ptr)) {
+            fastActivation = FAST_ACTIV_ELU;
+            activParams = {activElu->alpha};
+        } else if (dynamic_cast<HardSwishLayer*>(activ_ptr)) {
+            fastActivation = FAST_ACTIV_HARDSWISH;
+        } else if (HardSigmoidLayer* activHSig = dynamic_cast<HardSigmoidLayer*>(activ_ptr)) {
+            fastActivation = FAST_ACTIV_HARDSIGMOID;
+            activParams = {activHSig->alpha, activHSig->beta};
+        } else if (dynamic_cast<GeluLayer*>(activ_ptr)) {
+            fastActivation = FAST_ACTIV_GELU;
+        } else if (dynamic_cast<GeluApproximationLayer*>(activ_ptr)) {
+            fastActivation = FAST_ACTIV_GELU_APPROX;
         } else {
-            //activ = activlayer;
             return false;
         }
         return true;

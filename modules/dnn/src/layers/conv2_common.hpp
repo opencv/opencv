@@ -28,13 +28,24 @@ enum FastActivation {
     FAST_ACTIV_RELU,
     FAST_ACTIV_LEAKY_RELU,
     FAST_ACTIV_PRELU,
-    FAST_ACTIV_CLIP
+    FAST_ACTIV_CLIP,
+    FAST_ACTIV_MISH,
+    FAST_ACTIV_SWISH,
+    FAST_ACTIV_SIGMOID,
+    FAST_ACTIV_TANH,
+    FAST_ACTIV_ELU,
+    FAST_ACTIV_HARDSWISH,
+    FAST_ACTIV_HARDSIGMOID,
+    FAST_ACTIV_GELU,
+    FAST_ACTIV_GELU_APPROX
 };
 
 std::string fastActivationToString(FastActivation fastActivation);
 
 typedef void (*ActivationFunc)(const void* input, void* output,
                                size_t len, const float* params);
+
+ActivationFunc getActivationFunc(FastActivation fastActivation);
 
 struct ConvState
 {
