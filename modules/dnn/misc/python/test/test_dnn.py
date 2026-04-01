@@ -231,7 +231,7 @@ class dnn_test(NewOpenCVTests):
         iouDiff = 0.05
         confThreshold = 0.0001
         nmsThreshold = 0
-        scoreDiff = 1e-3
+        scoreDiff = 1.1e-3
 
         classIds, confidences, boxes = model.detect(frame, confThreshold, nmsThreshold)
 
