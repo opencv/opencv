@@ -12,8 +12,8 @@
 
 namespace cv
 {
-    namespace features
-    {
+namespace features
+{
 
         SuperPoint::Params::Params()
         {
@@ -311,5 +311,5 @@ namespace cv
             return makePtr<SuperPointImpl>(params);
         }
 
-    } // namespace features
+} // namespace features
 } // namespace cv

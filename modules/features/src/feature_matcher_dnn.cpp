@@ -10,8 +10,10 @@
 #include "opencv2/dnn/dnn.hpp"
 #endif
 
-namespace cv {
-namespace features {
+namespace cv
+{
+namespace features
+{
 
 LightGlue::Params::Params()
 {

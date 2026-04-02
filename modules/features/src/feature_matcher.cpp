@@ -8,8 +8,8 @@
 
 namespace cv
 {
-    namespace features
-    {
+namespace features
+{
 
         FeatureMatcher::~FeatureMatcher() {}
 
@@ -66,5 +66,5 @@ namespace cv
             return makePtr<TraditionalFeatureMatcherImpl>(descriptorMatcher);
         }
 
-    } // namespace features
+} // namespace features
 } // namespace cv

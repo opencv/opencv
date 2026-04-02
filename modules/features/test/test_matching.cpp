@@ -13,10 +13,7 @@
 
 #include <cstdlib>
 
-namespace opencv_test
-{
-    namespace
-    {
+namespace opencv_test { namespace {
 
         TEST(Features_FeaturePipeline, TraditionalWrapper)
         {
@@ -101,5 +98,4 @@ namespace opencv_test
 
 #endif
 
-    }
-} // namespace
+}} // namespace

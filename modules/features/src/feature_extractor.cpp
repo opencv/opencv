@@ -8,8 +8,8 @@
 
 namespace cv
 {
-    namespace features
-    {
+namespace features
+{
 
         FeatureExtractor::~FeatureExtractor() {}
 
@@ -54,5 +54,5 @@ namespace cv
             return makePtr<TraditionalFeatureExtractorImpl>(feature2D);
         }
 
-    } // namespace features
+} // namespace features
 } // namespace cv
