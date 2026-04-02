@@ -579,7 +579,9 @@ cv::RotatedRect cv::fitEllipseAMS( InputArray _points )
         M(4,3)=DM(3,4);
         M(4,4)=DM(4,4);
 
-        if (fabs(cv::determinant(M)) > 1.0e-10) {
+        double detAMS = cv::determinant(M);
+        double normMAMS = cv::norm(M, NORM_INF);
+        if (fabs(detAMS) > 1.0e-10 * normMAMS * normMAMS * normMAMS * normMAMS * normMAMS) {
             break;
         }
 
@@ -587,6 +589,12 @@ cv::RotatedRect cv::fitEllipseAMS( InputArray _points )
     }
 
     if (iter < 2) {
+            // Normalize M to prevent precision loss when matrix entries are very small
+            // (which occurs with large point counts due to the 1/n scaling of DM)
+            double mScale = cv::norm(M, NORM_INF);
+            if (mScale > DBL_EPSILON)
+                M *= (1.0 / mScale);
+
             Mat eVal, eVec;
             eigenNonSymmetric(M, eVal, eVec);
 
@@ -774,12 +782,19 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
         M(2,2) = (DM(0,2) + (DM(0,3)*TM(0,2) + DM(0,4)*TM(1,2) + DM(0,5)*TM(2,2))/Ts)/2.;
 
         double det = cv::determinant(M);
-        if (fabs(det) > 1.0e-10)
+        double normM = cv::norm(M, NORM_INF);
+        if (fabs(det) > 1.0e-10 * normM * normM * normM)
             break;
         eps = (float)(s/(n*2)*1e-2);
     }
 
     if( iter < 2 ) {
+        // Normalize M to prevent precision loss when matrix entries are very small
+        // (which occurs with large point counts due to the 1/n scaling of DM)
+        double mScale = cv::norm(M, NORM_INF);
+        if (mScale > DBL_EPSILON)
+            M *= (1.0 / mScale);
+
         Mat eVal, eVec;
         eigenNonSymmetric(M, eVal, eVec);
 
