@@ -21,7 +21,7 @@ if(ANDROID AND ARMEABI_V7A AND NOT NEON)
   endforeach()
 endif()
 
-if(WIN32)
+if(WIN32 AND (X86_64 OR X86))
   foreach(file ${lib_srcs})
     if("${file}" MATCHES "_avx2.c")
       if(MSVC)
