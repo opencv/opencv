@@ -476,6 +476,9 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<PoolingLayer> create(const LayerParams& params);
     };
 
+    // Old-engine int8 pooling. Created directly by the ONNX importer for
+    // QLinearAveragePool / QLinearGlobalAveragePool / int8 MaxPool ops.
+    // Inherits PoolingLayer so it can delegate to TIMVX / NGRAPH backends.
     class CV_EXPORTS PoolingLayerInt8 : public PoolingLayer
     {
     public:
@@ -484,6 +487,10 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<PoolingLayerInt8> create(const LayerParams& params);
     };
 
+    // New-engine int8 pooling with block memory layout (DATA_LAYOUT_BLOCK).
+    // Created by the QDQ graph fusion pass (graph_fusion_qdq.cpp) when it
+    // detects a DequantizeLinear -> Pooling -> QuantizeLinear pattern.
+    // Uses optimised SIMD kernels; OPENCV (CPU) backend only.
     class CV_EXPORTS Pool2Int8Layer : public Layer
     {
     public:
