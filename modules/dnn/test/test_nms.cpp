@@ -106,8 +106,17 @@ TEST(SoftNMS, Accuracy)
 }
 
 // Test NMS -> Reshape with zero detections using ONNX model.
+// NMS with dynamic output shapes is only supported by the new engine.
 TEST(NMS, ZeroDetections_Reshape)
 {
+    auto engine_forced = static_cast<cv::dnn::EngineType>(
+        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
+    if (engine_forced == cv::dnn::ENGINE_CLASSIC)
+    {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+        return;
+    }
+
     std::string onnxmodel = findDataFile("dnn/onnx/models/nms_reshape_empty.onnx");
     cv::dnn::Net net = cv::dnn::readNetFromONNX(onnxmodel);
     ASSERT_FALSE(net.empty());
