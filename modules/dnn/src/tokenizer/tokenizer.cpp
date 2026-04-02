@@ -70,7 +70,7 @@ static void registerDefaultTokenizers() {
     }
 }
 
-Tokenizer::Tokenizer(TokenizeMethod ) : impl_(nullptr) {}
+Tokenizer::Tokenizer() : impl_(nullptr) {}
 
 std::vector<int> Tokenizer::encode(const std::string& text) {
     if (!impl_) CV_Error(cv::Error::StsError, "Tokenizer impl null");

@@ -2099,9 +2099,6 @@ public:
     CV_WRAP int getMaxCandidates() const;
 };
 
-enum class TokenizeMethod {
-    BPE = 0,
-};
 
 /**
  * @brief High-level tokenizer wrapper for DNN usage.
@@ -2122,7 +2119,7 @@ public:
      * @brief Construct a tokenizer with a given method default BPE.
      * For BPE method you normally call Tokenizer::load() to initialize model data.
      */
-    Tokenizer(TokenizeMethod method = TokenizeMethod::BPE);
+    Tokenizer();
 
     /**
      * @brief Load a tokenizer from a model directory.
