@@ -42,23 +42,11 @@ namespace features
                 Mat resized;
                 resize(src, resized, inputSize);
 
-                if (useGray)
-                {
-                    Mat gray;
-                    if (resized.channels() == 1)
-                    {
-                        gray = resized;
-                    }
-                    else
-                    {
-                        cvtColor(resized, gray, COLOR_BGR2GRAY);
-                    }
+                if (useGray && resized.channels() != 1)
+                    cvtColor(resized, resized, COLOR_BGR2GRAY);
 
-                    // SuperPoint models are commonly exported with (1, 1, H, W).
-                    return dnn::blobFromImage(gray, 1.0 / 255.0, inputSize, Scalar(), false, false, CV_32F);
-                }
-
-                return dnn::blobFromImage(resized, 1.0 / 255.0, inputSize, Scalar(), true, false, CV_32F);
+                // SuperPoint models are commonly exported with (1, 1, H, W).
+                return dnn::blobFromImage(resized, 1.0 / 255.0, inputSize, Scalar(), !useGray, false, CV_32F);
             }
 
             static void parseSuperPointOutputs(const std::vector<Mat> &outs,
