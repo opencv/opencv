@@ -4,7 +4,7 @@
 
 #include "precomp.hpp"
 
-#include "opencv2/features/superpoint.hpp"
+#include "opencv2/features/feature_extractor.hpp"
 
 #ifdef HAVE_OPENCV_DNN
 #include "opencv2/dnn/dnn.hpp"
@@ -18,16 +18,11 @@ namespace cv
         SuperPoint::Params::Params()
         {
             modelPath = String();
-            engine = 4; // dnn::ENGINE_ORT
-            backend = -1;
-            target = -1;
+            dnnEngine = 4; // dnn::ENGINE_ORT
+            dnnBackend = -1;
+            dnnTarget = -1;
             inputSize = Size(640, 640);
-            swapRB = true;
-
-            inputName = "image";
-            keypointsName = "keypoints";
-            descriptorsName = "descriptors";
-            scoresName = "scores";
+            preferGrayInput = true;
         }
 
         namespace
@@ -35,10 +30,14 @@ namespace cv
 
 #ifdef HAVE_OPENCV_DNN
 
+            static const char *const kInputName = "image";
+            static const char *const kKeypointsName = "keypoints";
+            static const char *const kDescriptorsName = "descriptors";
+            static const char *const kScoresName = "scores";
+
             static Mat makeSuperPointInputBlob(const Mat &src,
                                                const Size &inputSize,
-                                               bool useGray,
-                                               bool swapRB)
+                                               bool useGray)
             {
                 Mat resized;
                 resize(src, resized, inputSize);
@@ -59,7 +58,7 @@ namespace cv
                     return dnn::blobFromImage(gray, 1.0 / 255.0, inputSize, Scalar(), false, false, CV_32F);
                 }
 
-                return dnn::blobFromImage(resized, 1.0 / 255.0, inputSize, Scalar(), swapRB, false, CV_32F);
+                return dnn::blobFromImage(resized, 1.0 / 255.0, inputSize, Scalar(), true, false, CV_32F);
             }
 
             static void parseSuperPointOutputs(const std::vector<Mat> &outs,
@@ -168,13 +167,13 @@ namespace cv
                 void setModel(const String &modelPath) CV_OVERRIDE
                 {
                     params_.modelPath = modelPath;
-                    net_ = dnn::readNetFromONNX(modelPath, params_.engine);
+                    net_ = dnn::readNetFromONNX(modelPath, params_.dnnEngine);
                     CV_Assert(!net_.empty());
 
-                    if (params_.backend >= 0)
-                        net_.setPreferableBackend(params_.backend);
-                    if (params_.target >= 0)
-                        net_.setPreferableTarget(params_.target);
+                    if (params_.dnnBackend >= 0)
+                        net_.setPreferableBackend(params_.dnnBackend);
+                    if (params_.dnnTarget >= 0)
+                        net_.setPreferableTarget(params_.dnnTarget);
                 }
 
                 String getModel() const CV_OVERRIDE
@@ -197,10 +196,9 @@ namespace cv
                         inputSize = src.size();
 
                     std::vector<String> outNames;
-                    outNames.push_back(params_.keypointsName);
-                    outNames.push_back(params_.descriptorsName);
-                    if (!params_.scoresName.empty())
-                        outNames.push_back(params_.scoresName);
+                    outNames.push_back(kKeypointsName);
+                    outNames.push_back(kDescriptorsName);
+                    outNames.push_back(kScoresName);
 
                     std::vector<Mat> outs;
                     std::string inferenceError;
@@ -208,12 +206,12 @@ namespace cv
 
                     for (int attempt = 0; attempt < 2; ++attempt)
                     {
-                        const bool useGray = (attempt == 0);
-                        Mat blob = makeSuperPointInputBlob(src, inputSize, useGray, params_.swapRB);
+                        const bool useGray = params_.preferGrayInput ? (attempt == 0) : (attempt != 0);
+                        Mat blob = makeSuperPointInputBlob(src, inputSize, useGray);
 
                         try
                         {
-                            net_.setInput(blob, params_.inputName);
+                            net_.setInput(blob, kInputName);
                             net_.forward(outs, outNames);
                             inferenceOk = true;
                             break;
@@ -302,6 +300,11 @@ namespace cv
 #endif
 
         } // namespace
+
+        Ptr<SuperPoint> SuperPoint::create()
+        {
+            return create(SuperPoint::Params());
+        }
 
         Ptr<SuperPoint> SuperPoint::create(const SuperPoint::Params &params)
         {

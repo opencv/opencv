@@ -36,10 +36,32 @@ namespace cv
         class CV_EXPORTS_W TraditionalFeatureMatcher : public FeatureMatcher
         {
         public:
-            CV_WRAP static Ptr<TraditionalFeatureMatcher> create(const Ptr<DescriptorMatcher> &backend);
+            CV_WRAP static Ptr<TraditionalFeatureMatcher> create(const Ptr<DescriptorMatcher> &descriptorMatcher);
 
-            CV_WRAP virtual void setBackend(const Ptr<DescriptorMatcher> &backend) = 0;
+            CV_WRAP virtual void setBackend(const Ptr<DescriptorMatcher> &descriptorMatcher) = 0;
             CV_WRAP virtual Ptr<DescriptorMatcher> getBackend() const = 0;
+        };
+
+        class CV_EXPORTS_W LightGlue : public FeatureMatcher
+        {
+        public:
+            struct Params
+            {
+                Params();
+
+                String modelPath;
+                int dnnEngine;
+                int dnnBackend;
+                int dnnTarget;
+                bool disableWinograd;
+                float scoreThreshold;
+            };
+
+            CV_WRAP static Ptr<LightGlue> create();
+            static Ptr<LightGlue> create(const LightGlue::Params &params);
+
+            CV_WRAP virtual void setModel(const String &modelPath) = 0;
+            CV_WRAP virtual String getModel() const = 0;
         };
 
     } // namespace features

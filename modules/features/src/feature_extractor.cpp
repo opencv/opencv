@@ -19,8 +19,8 @@ namespace cv
             class TraditionalFeatureExtractorImpl CV_FINAL : public TraditionalFeatureExtractor
             {
             public:
-                explicit TraditionalFeatureExtractorImpl(const Ptr<Feature2D> &backend)
-                    : backend_(backend)
+                explicit TraditionalFeatureExtractorImpl(const Ptr<Feature2D> &feature2D)
+                    : feature2D_(feature2D)
                 {
                 }
 
@@ -29,29 +29,29 @@ namespace cv
                              OutputArray descriptors,
                              InputArray mask) const CV_OVERRIDE
                 {
-                    CV_Assert(!backend_.empty());
-                    backend_->detectAndCompute(image, mask, keypoints, descriptors, false);
+                    CV_Assert(!feature2D_.empty());
+                    feature2D_->detectAndCompute(image, mask, keypoints, descriptors, false);
                 }
 
-                void setBackend(const Ptr<Feature2D> &backend) CV_OVERRIDE
+                void setBackend(const Ptr<Feature2D> &feature2D) CV_OVERRIDE
                 {
-                    backend_ = backend;
+                    feature2D_ = feature2D;
                 }
 
                 Ptr<Feature2D> getBackend() const CV_OVERRIDE
                 {
-                    return backend_;
+                    return feature2D_;
                 }
 
             private:
-                Ptr<Feature2D> backend_;
+                Ptr<Feature2D> feature2D_;
             };
 
         } // namespace
 
-        Ptr<TraditionalFeatureExtractor> TraditionalFeatureExtractor::create(const Ptr<Feature2D> &backend)
+        Ptr<TraditionalFeatureExtractor> TraditionalFeatureExtractor::create(const Ptr<Feature2D> &feature2D)
         {
-            return makePtr<TraditionalFeatureExtractorImpl>(backend);
+            return makePtr<TraditionalFeatureExtractorImpl>(feature2D);
         }
 
     } // namespace features

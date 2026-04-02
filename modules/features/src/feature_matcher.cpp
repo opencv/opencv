@@ -31,8 +31,8 @@ namespace cv
             class TraditionalFeatureMatcherImpl CV_FINAL : public TraditionalFeatureMatcher
             {
             public:
-                explicit TraditionalFeatureMatcherImpl(const Ptr<DescriptorMatcher> &backend)
-                    : backend_(backend)
+                explicit TraditionalFeatureMatcherImpl(const Ptr<DescriptorMatcher> &descriptorMatcher)
+                    : descriptorMatcher_(descriptorMatcher)
                 {
                 }
 
@@ -41,29 +41,29 @@ namespace cv
                            std::vector<DMatch> &matches,
                            InputArray mask) const CV_OVERRIDE
                 {
-                    CV_Assert(!backend_.empty());
-                    backend_->match(queryDesc, trainDesc, matches, mask);
+                    CV_Assert(!descriptorMatcher_.empty());
+                    descriptorMatcher_->match(queryDesc, trainDesc, matches, mask);
                 }
 
-                void setBackend(const Ptr<DescriptorMatcher> &backend) CV_OVERRIDE
+                void setBackend(const Ptr<DescriptorMatcher> &descriptorMatcher) CV_OVERRIDE
                 {
-                    backend_ = backend;
+                    descriptorMatcher_ = descriptorMatcher;
                 }
 
                 Ptr<DescriptorMatcher> getBackend() const CV_OVERRIDE
                 {
-                    return backend_;
+                    return descriptorMatcher_;
                 }
 
             private:
-                Ptr<DescriptorMatcher> backend_;
+                Ptr<DescriptorMatcher> descriptorMatcher_;
             };
 
         } // namespace
 
-        Ptr<TraditionalFeatureMatcher> TraditionalFeatureMatcher::create(const Ptr<DescriptorMatcher> &backend)
+        Ptr<TraditionalFeatureMatcher> TraditionalFeatureMatcher::create(const Ptr<DescriptorMatcher> &descriptorMatcher)
         {
-            return makePtr<TraditionalFeatureMatcherImpl>(backend);
+            return makePtr<TraditionalFeatureMatcherImpl>(descriptorMatcher);
         }
 
     } // namespace features

@@ -4,7 +4,7 @@
 
 #include "precomp.hpp"
 
-#include "opencv2/features/lightglue.hpp"
+#include "opencv2/features/feature_matcher.hpp"
 
 #ifdef HAVE_OPENCV_DNN
 #include "opencv2/dnn/dnn.hpp"
@@ -16,23 +16,23 @@ namespace features {
 LightGlue::Params::Params()
 {
     modelPath = String();
-    engine = 4; // dnn::ENGINE_ORT
-    backend = -1;
-    target = -1;
+    dnnEngine = 4; // dnn::ENGINE_ORT
+    dnnBackend = -1;
+    dnnTarget = -1;
     disableWinograd = true;
-
-    kpts0Name = "kpts0";
-    desc0Name = "desc0";
-    kpts1Name = "kpts1";
-    desc1Name = "desc1";
-
-    matches0Name = "matches0";
-    mscores0Name = "mscores0";
+    scoreThreshold = 0.0f;
 }
 
 namespace {
 
 #ifdef HAVE_OPENCV_DNN
+
+static const char* const kKpts0Name = "kpts0";
+static const char* const kDesc0Name = "desc0";
+static const char* const kKpts1Name = "kpts1";
+static const char* const kDesc1Name = "desc1";
+static const char* const kMatches0Name = "matches0";
+static const char* const kMScores0Name = "mscores0";
 
 static Mat toKeypointMat(InputArray kpts)
 {
@@ -111,15 +111,15 @@ public:
     void setModel(const String& modelPath) CV_OVERRIDE
     {
         params_.modelPath = modelPath;
-        net_ = dnn::readNetFromONNX(modelPath, params_.engine);
+        net_ = dnn::readNetFromONNX(modelPath, params_.dnnEngine);
         CV_Assert(!net_.empty());
 
         if (params_.disableWinograd)
             net_.enableWinograd(false);
-        if (params_.backend >= 0)
-            net_.setPreferableBackend(params_.backend);
-        if (params_.target >= 0)
-            net_.setPreferableTarget(params_.target);
+        if (params_.dnnBackend >= 0)
+            net_.setPreferableBackend(params_.dnnBackend);
+        if (params_.dnnTarget >= 0)
+            net_.setPreferableTarget(params_.dnnTarget);
     }
 
     String getModel() const CV_OVERRIDE
@@ -180,14 +180,14 @@ public:
         int tDescShape[] = {1, tDesc32.rows, tDesc32.cols};
         Mat tDescBlob(3, tDescShape, CV_32FC1, tDesc32.data);
 
-        net_.setInput(qKptsBlob, params_.kpts0Name);
-        net_.setInput(qDescBlob, params_.desc0Name);
-        net_.setInput(tKptsBlob, params_.kpts1Name);
-        net_.setInput(tDescBlob, params_.desc1Name);
+        net_.setInput(qKptsBlob, kKpts0Name);
+        net_.setInput(qDescBlob, kDesc0Name);
+        net_.setInput(tKptsBlob, kKpts1Name);
+        net_.setInput(tDescBlob, kDesc1Name);
 
         std::vector<String> outNames;
-        outNames.push_back(params_.matches0Name);
-        outNames.push_back(params_.mscores0Name);
+        outNames.push_back(kMatches0Name);
+        outNames.push_back(kMScores0Name);
 
         std::vector<Mat> outs;
         net_.forward(outs, outNames);
@@ -217,6 +217,8 @@ public:
                 continue;
 
             const float score = i < static_cast<int>(scores0f.total()) ? scores0f.at<float>(i, 0) : 0.0f;
+            if (score < params_.scoreThreshold)
+                continue;
             const float distance = 1.0f - score;
             matches.push_back(DMatch(i, trainIdx, distance));
         }
@@ -274,6 +276,11 @@ private:
 #endif
 
 } // namespace
+
+Ptr<LightGlue> LightGlue::create()
+{
+    return create(LightGlue::Params());
+}
 
 Ptr<LightGlue> LightGlue::create(const LightGlue::Params& params)
 {

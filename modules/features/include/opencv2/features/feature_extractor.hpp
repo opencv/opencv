@@ -27,10 +27,32 @@ namespace cv
         class CV_EXPORTS_W TraditionalFeatureExtractor : public FeatureExtractor
         {
         public:
-            CV_WRAP static Ptr<TraditionalFeatureExtractor> create(const Ptr<Feature2D> &backend);
+            CV_WRAP static Ptr<TraditionalFeatureExtractor> create(const Ptr<Feature2D> &feature2D);
 
-            CV_WRAP virtual void setBackend(const Ptr<Feature2D> &backend) = 0;
+            CV_WRAP virtual void setBackend(const Ptr<Feature2D> &feature2D) = 0;
             CV_WRAP virtual Ptr<Feature2D> getBackend() const = 0;
+        };
+
+        class CV_EXPORTS_W SuperPoint : public FeatureExtractor
+        {
+        public:
+            struct Params
+            {
+                Params();
+
+                String modelPath;
+                int dnnEngine;
+                int dnnBackend;
+                int dnnTarget;
+                Size inputSize;
+                bool preferGrayInput;
+            };
+
+            CV_WRAP static Ptr<SuperPoint> create();
+            static Ptr<SuperPoint> create(const SuperPoint::Params &params);
+
+            CV_WRAP virtual void setModel(const String &modelPath) = 0;
+            CV_WRAP virtual String getModel() const = 0;
         };
 
     } // namespace features

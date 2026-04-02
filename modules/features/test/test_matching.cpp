@@ -6,8 +6,6 @@
 
 #include "opencv2/features/feature_extractor.hpp"
 #include "opencv2/features/feature_matcher.hpp"
-#include "opencv2/features/lightglue.hpp"
-#include "opencv2/features/superpoint.hpp"
 
 #ifdef HAVE_OPENCV_DNN
 #include "opencv2/dnn.hpp"
@@ -63,7 +61,7 @@ namespace opencv_test
 
             cv::features::SuperPoint::Params spParams;
             spParams.modelPath = String(superpointModel);
-            spParams.engine = dnn::ENGINE_ORT;
+            spParams.dnnEngine = dnn::ENGINE_ORT;
             spParams.inputSize = Size(640, 640);
 
             Ptr<cv::features::FeatureExtractor> extractor = cv::features::SuperPoint::create(spParams);
@@ -84,7 +82,7 @@ namespace opencv_test
 
             cv::features::LightGlue::Params lgParams;
             lgParams.modelPath = String(lightglueModel);
-            lgParams.engine = dnn::ENGINE_ORT;
+            lgParams.dnnEngine = dnn::ENGINE_ORT;
 
             Ptr<cv::features::FeatureMatcher> matcher = cv::features::LightGlue::create(lgParams);
             ASSERT_FALSE(matcher.empty());
