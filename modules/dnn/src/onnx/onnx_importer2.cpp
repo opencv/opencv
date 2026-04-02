@@ -2641,6 +2641,10 @@ void ONNXImporter2::parseAttentionOnnxAi(LayerParams& params, const opencv_onnx:
 void ONNXImporter2::parseRoiAlign(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "RoiAlign";
+    if (!layerParams.has("coordinate_transformation_mode")) {
+        int onnx_opset = onnx_opset_map.count(str_domain_ai_onnx) ? onnx_opset_map.at(str_domain_ai_onnx) : 16;
+        layerParams.set("coordinate_transformation_mode", onnx_opset < 16 ? "output_half_pixel" : "half_pixel");
+    }
     addLayer(layerParams, node_proto, 3);
 }
 

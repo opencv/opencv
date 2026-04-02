@@ -867,6 +867,8 @@ void broadcast(InputArray _src, InputArray _shape, OutputArray _dst) {
     // impl
     _dst.create(dims_shape, shape.ptr<int>(), src.type());
     Mat dst = _dst.getMat();
+    if (dst.total() == 0)
+        return;
     std::vector<int> is_same_shape(dims_shape, 0);
     for (int i = 0; i < static_cast<int>(shape_src.size()); ++i) {
         if (shape_src[i] == ptr_shape[i]) {

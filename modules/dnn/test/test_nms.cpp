@@ -6,6 +6,7 @@
 // Third party copyrights are property of their respective owners.
 
 #include "test_precomp.hpp"
+#include "npy_blob.hpp"
 
 namespace opencv_test { namespace {
 
@@ -102,6 +103,34 @@ TEST(SoftNMS, Accuracy)
     {
         EXPECT_NEAR(updated_scores[i], ref_updated_scores[i], 1e-7);
     }
+}
+
+// Test NMS -> Reshape with zero detections using ONNX model.
+// NMS with dynamic output shapes is only supported by the new engine.
+TEST(NMS, ZeroDetections_Reshape)
+{
+    auto engine_forced = static_cast<cv::dnn::EngineType>(
+        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
+    if (engine_forced == cv::dnn::ENGINE_CLASSIC)
+    {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+        return;
+    }
+
+    std::string onnxmodel = findDataFile("dnn/onnx/models/nms_reshape_empty.onnx");
+    cv::dnn::Net net = cv::dnn::readNetFromONNX(onnxmodel);
+    ASSERT_FALSE(net.empty());
+
+    Mat boxes = blobFromNPY(findDataFile("dnn/onnx/data/input_nms_reshape_empty_0.npy"));
+    Mat scores = blobFromNPY(findDataFile("dnn/onnx/data/input_nms_reshape_empty_1.npy"));
+    net.setInput(boxes, "boxes");
+    net.setInput(scores, "scores");
+
+    std::vector<Mat> outs;
+    net.forward(outs, std::vector<String>{"output"});
+    ASSERT_EQ(outs.size(), (size_t)1);
+    Mat ref = blobFromNPY(findDataFile("dnn/onnx/data/output_nms_reshape_empty.npy"));
+    normAssert(ref, outs[0], "NMS_ZeroDetections_Reshape");
 }
 
 }} // namespace
