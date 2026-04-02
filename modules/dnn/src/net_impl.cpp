@@ -2609,6 +2609,86 @@ int64 Net::Impl::getPerfProfile(std::vector<double>& timings) const
 {
     timings = std::vector<double>(layersTimings.begin() + 1, layersTimings.end());
     int64 total = (int64)std::accumulate(timings.begin(), timings.end(), 0.0);
+
+    if (profilingMode == DNN_PROFILE_NONE)
+        return total;
+
+    double tickFreq = getTickFrequency();
+    double totalMs = (double)total * 1000.0 / tickFreq;
+
+    // Collect layer names and types parallel to timings
+    std::vector<String> names;
+    std::vector<String> types;
+    if (mainGraph) {
+        names.reserve(totalLayers);
+        types.reserve(totalLayers);
+        for (const Ptr<Graph>& graph : allgraphs) {
+            const std::vector<Ptr<Layer>>& prog = graph->prog();
+            for (const Ptr<Layer>& layer : prog) {
+                names.push_back(layer ? layer->name : "null");
+                types.push_back(layer ? layer->type : "null");
+            }
+        }
+    } else {
+        for (MapIdToLayerData::const_iterator it = layers.begin(); it != layers.end(); ++it) {
+            if (it->second.id) {  // skip Data layer (id==0)
+                names.push_back(it->second.name);
+                types.push_back(it->second.type);
+            }
+        }
+    }
+
+    size_t n = std::min(timings.size(), names.size());
+
+    if (profilingMode == DNN_PROFILE_DETAILED) {
+        printf("\n=== DNN Layer Profiling (Detailed) ===\n");
+        printf("%-5s %-40s %-20s %10s %8s\n", "ID", "Layer Name", "Type", "Time (ms)", "   (%)");
+        printf("-----------------------------------------------------------------------------------------------\n");
+        for (size_t i = 0; i < n; i++) {
+            double ms = timings[i] * 1000.0 / tickFreq;
+            double pct = (total > 0) ? (timings[i] * 100.0 / (double)total) : 0.0;
+            if (timings[i] > 0) {
+                printf("%-5zu %-40s %-20s %10.3f %7.1f%%\n",
+                       i, names[i].c_str(), types[i].c_str(), ms, pct);
+            }
+        }
+        printf("-----------------------------------------------------------------------------------------------\n");
+        printf("%-5s %-40s %-20s %10.3f %7s\n", "", "TOTAL", "", totalMs, "100.0%");
+        printf("\n");
+    } else if (profilingMode == DNN_PROFILE_SUMMARY) {
+        // Aggregate by layer type
+        std::map<String, double> typeTimings;
+        std::map<String, int> typeCounts;
+        for (size_t i = 0; i < n; i++) {
+            if (timings[i] > 0) {
+                typeTimings[types[i]] += timings[i];
+                typeCounts[types[i]]++;
+            }
+        }
+
+        // Sort by time descending
+        std::vector<std::pair<double, String>> sorted;
+        sorted.reserve(typeTimings.size());
+        for (auto it = typeTimings.begin(); it != typeTimings.end(); ++it) {
+            sorted.push_back(std::make_pair(it->second, it->first));
+        }
+        std::sort(sorted.begin(), sorted.end(), std::greater<std::pair<double, String>>());
+
+        printf("\n=== DNN Layer Profiling (Summary by Type) ===\n");
+        printf("%-25s %6s %10s %8s\n", "Layer Type", "Count", "Time (ms)", "   (%)");
+        printf("-----------------------------------------------------------\n");
+        for (size_t i = 0; i < sorted.size(); i++) {
+            const String& tp = sorted[i].second;
+            double ms = sorted[i].first * 1000.0 / tickFreq;
+            double pct = (total > 0) ? (sorted[i].first * 100.0 / (double)total) : 0.0;
+            printf("%-25s %6d %10.3f %7.1f%%\n",
+                   tp.c_str(), typeCounts[tp], ms, pct);
+        }
+        printf("-----------------------------------------------------------\n");
+        printf("%-25s %6s %10.3f %7s\n", "TOTAL", "", totalMs, "100.0%");
+        printf("\n");
+    }
+
     return total;
 }
 
