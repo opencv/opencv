@@ -120,12 +120,8 @@ TEST(NMS, ZeroDetections_Reshape)
     std::vector<Mat> outs;
     net.forward(outs, std::vector<String>{"output"});
     ASSERT_EQ(outs.size(), (size_t)1);
-    // Reshape [0,3] -> [1,0,3]: output should be empty with correct shape.
-    EXPECT_EQ(outs[0].total(), (size_t)0);
-    EXPECT_EQ(outs[0].dims, 3);
-    EXPECT_EQ(outs[0].size[0], 1);
-    EXPECT_EQ(outs[0].size[1], 0);
-    EXPECT_EQ(outs[0].size[2], 3);
+    Mat ref = blobFromNPY(findDataFile("dnn/onnx/data/output_nms_reshape_empty.npy"));
+    normAssert(ref, outs[0], "NMS_ZeroDetections_Reshape");
 }
 
 }} // namespace
