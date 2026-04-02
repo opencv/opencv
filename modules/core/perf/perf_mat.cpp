@@ -138,6 +138,30 @@ PERF_TEST_P(Size_MatType, Mat_SetToWithMask,
     SANITY_CHECK(src);
 }
 
+/*typedef std::tuple<Size, int, Scalar> Mat_SetToWithoutMaskParams_t;
+typedef TestBaseWithParam<Mat_SetToWithoutMaskParams_t> Mat_SetToWithoutMaskParams;
+
+PERF_TEST_P(Mat_SetToWithoutMaskParams, Mat_SetToWithoutMask,
+            testing::Combine(testing::Values(::perf::sz1080p),
+                             testing::Values(CV_8UC1, CV_8UC3, CV_8UC4),
+                             testing::Values(Scalar::all(1)))
+            )
+{
+    const Mat_SetToWithoutMaskParams_t params = GetParam();
+    const Size size = get<0>(params);
+    const int type = get<1>(params);
+    const Scalar sc = get<2>(params);
+
+    Mat src(size, type);
+
+    TEST_CYCLE()
+    {
+        src.setTo(sc);
+    }
+
+    SANITY_CHECK(src);
+}*/
+
 ///////////// Transform ////////////////////////
 
 PERF_TEST_P(Size_MatType, Mat_Transform,
