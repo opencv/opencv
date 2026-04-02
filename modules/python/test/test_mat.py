@@ -91,7 +91,6 @@ try:
 
         def test_mat_wrap_channels_zero(self):
             # Passing a 0-channel array must raise cv.error, not segfault.
-            # See: https://github.com/opencv/opencv/issues/XXXXX
             data = np.zeros((100, 100, 0), dtype=np.uint8)
 
             with self.assertRaises(cv.error):
