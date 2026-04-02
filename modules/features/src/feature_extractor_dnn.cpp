@@ -73,7 +73,8 @@ namespace features
                     CV_Error(Error::StsError, "SuperPoint keypoints output has invalid shape");
                 }
 
-                kptsFlat.convertTo(kptsFlat, CV_32F);
+                if (kptsFlat.type() != CV_32F)
+                    kptsFlat.convertTo(kptsFlat, CV_32F);
 
                 Mat descFlat;
                 if (desc.dims == 3)
