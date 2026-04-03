@@ -69,6 +69,7 @@ struct Net::Impl : public detail::NetImplBase
     BlobManager blobManager;
     int preferableBackend;
     int preferableTarget;
+    int engineType;  // actual EngineType used (resolved from ENGINE_AUTO)
     bool hasDynamicShapes;
     // Map host data to backend specific wrapper.
     std::map<void*, Ptr<BackendWrapper>> backendWrappers;
