@@ -59,6 +59,7 @@ Net::Impl::Impl()
     isAsync = false;
     preferableBackend = (Backend)getParam_DNN_BACKEND_DEFAULT();
     preferableTarget = DNN_TARGET_CPU;
+    engineType = ENGINE_AUTO;
     hasDynamicShapes = false;
     useWinograd = true;
 
