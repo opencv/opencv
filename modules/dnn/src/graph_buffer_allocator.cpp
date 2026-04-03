@@ -288,8 +288,15 @@ struct BufferAllocator
                         shareBuffer(outarg, elseOutarg);
                 }
 
+                // Isolate subgraph buffers: prevent parent's freed buffers from
+                // being reused here, which causes overwrites on re-execution.
+                std::vector<int> saved_freebufs = freebufs;
+                freebufs.clear();
                 assign(thenBranch);
+                freebufs.clear();
                 assign(elseBranch);
+                freebufs = saved_freebufs;
+
                 for (size_t i = 0; i < noutputs; i++) {
                     Arg thenOutarg = thenOutargs[i];
                     Arg elseOutarg = elseOutargs[i];
@@ -346,9 +353,10 @@ struct BufferAllocator
                     }
                 }
 
+                std::vector<int> saved_freebufs = freebufs;
+                freebufs.clear();
                 assign(body);
-                for (auto body_out: body_outputs)
-                    releaseBuffer(bufidxs.at(body_out.idx));
+                freebufs = saved_freebufs;
             }
 
             for (auto out: outputs) {
