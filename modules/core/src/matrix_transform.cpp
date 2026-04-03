@@ -465,10 +465,16 @@ static bool ocl_transpose( InputArray _src, OutputArray _dst )
             return false;
     }
 
+    String deviceMacro;
+    if (dev.isIntel())
+        deviceMacro = " -D INTEL_GPU";
+    else
+        deviceMacro = "";
+
     ocl::Kernel k(kernelName.c_str(), ocl::core::transpose_oclsrc,
-                  format("-D T=%s -D T1=%s -D cn=%d -D TILE_DIM=%d -D BLOCK_ROWS=%d -D rowsPerWI=%d%s",
+                  format("-D T=%s -D T1=%s -D cn=%d -D TILE_DIM=%d -D BLOCK_ROWS=%d -D rowsPerWI=%d%s%s",
                          ocl::memopTypeToStr(type), ocl::memopTypeToStr(depth),
-                         cn, TILE_DIM, BLOCK_ROWS, rowsPerWI, inplace ? " -D INPLACE" : ""));
+                         cn, TILE_DIM, BLOCK_ROWS, rowsPerWI, inplace ? " -D INPLACE" : "", deviceMacro.c_str()));
     if (k.empty())
         return false;
 
