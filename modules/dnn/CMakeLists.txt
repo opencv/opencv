@@ -186,6 +186,8 @@ if(WITH_ONNXRUNTIME)
 
   if(HAVE_ONNX)
     set(HAVE_ONNXRUNTIME 1 CACHE INTERNAL "ONNX Runtime availability")
+    # Suppress warnings from ONNX Runtime headers
+    ocv_warnings_disable(CMAKE_CXX_FLAGS -Wsuggest-override -Wsign-promo)
 
     if(ONNXRUNTIME_PREFER_STATIC)
       set(_ort_static_lib "")
