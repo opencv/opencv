@@ -206,9 +206,9 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
     if (ismultichannel)
     {
         int channels = ndims >= 1 ? (int)_sizes[ndims - 1] : 1;
-        if (channels > CV_CN_MAX)
+        if (channels < 1 || channels > CV_CN_MAX)
         {
-            failmsg("%s unable to wrap channels, too high (%d > CV_CN_MAX=%d)", info.name, (int)channels, (int)CV_CN_MAX);
+            failmsg("%s unable to wrap channels, invalid count (%d, must be in [1, %d])", info.name, (int)channels, (int)CV_CN_MAX);
             return false;
         }
         ndims--;
