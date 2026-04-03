@@ -121,10 +121,14 @@ namespace features
                 keypoints.clear();
                 keypoints.reserve(static_cast<size_t>(kptsFlat.rows));
 
+                CV_Assert(kptsFlat.isContinuous());
+                const float *kptsPtr = kptsFlat.ptr<float>();
+
                 for (int i = 0; i < kptsFlat.rows; ++i)
                 {
-                    float x = kptsFlat.at<float>(i, 0);
-                    float y = kptsFlat.at<float>(i, 1);
+                    const int idx = i * 2;
+                    float x = kptsPtr[idx];
+                    float y = kptsPtr[idx + 1];
                     if (normalized)
                     {
                         if (shifted)
