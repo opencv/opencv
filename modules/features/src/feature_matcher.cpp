@@ -45,12 +45,12 @@ namespace features
                     descriptorMatcher_->match(queryDesc, trainDesc, matches, mask);
                 }
 
-                void setBackend(const Ptr<DescriptorMatcher> &descriptorMatcher) CV_OVERRIDE
+                void setDescriptorMatcher(const Ptr<DescriptorMatcher> &descriptorMatcher) CV_OVERRIDE
                 {
                     descriptorMatcher_ = descriptorMatcher;
                 }
 
-                Ptr<DescriptorMatcher> getBackend() const CV_OVERRIDE
+                Ptr<DescriptorMatcher> getDescriptorMatcher() const CV_OVERRIDE
                 {
                     return descriptorMatcher_;
                 }

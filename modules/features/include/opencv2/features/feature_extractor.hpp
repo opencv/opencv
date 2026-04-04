@@ -29,8 +29,8 @@ namespace features
     public:
         CV_WRAP static Ptr<TraditionalFeatureExtractor> create(const Ptr<Feature2D> &feature2D);
 
-        CV_WRAP virtual void setBackend(const Ptr<Feature2D> &feature2D) = 0;
-        CV_WRAP virtual Ptr<Feature2D> getBackend() const = 0;
+        CV_WRAP virtual void setFeature2D(const Ptr<Feature2D> &feature2D) = 0;
+        CV_WRAP virtual Ptr<Feature2D> getFeature2D() const = 0;
     };
 
     class CV_EXPORTS_W SuperPoint : public FeatureExtractor

@@ -33,12 +33,12 @@ namespace features
                     feature2D_->detectAndCompute(image, mask, keypoints, descriptors, false);
                 }
 
-                void setBackend(const Ptr<Feature2D> &feature2D) CV_OVERRIDE
+                void setFeature2D(const Ptr<Feature2D> &feature2D) CV_OVERRIDE
                 {
                     feature2D_ = feature2D;
                 }
 
-                Ptr<Feature2D> getBackend() const CV_OVERRIDE
+                Ptr<Feature2D> getFeature2D() const CV_OVERRIDE
                 {
                     return feature2D_;
                 }

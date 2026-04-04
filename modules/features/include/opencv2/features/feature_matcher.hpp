@@ -38,8 +38,8 @@ namespace features
     public:
         CV_WRAP static Ptr<TraditionalFeatureMatcher> create(const Ptr<DescriptorMatcher> &descriptorMatcher);
 
-        CV_WRAP virtual void setBackend(const Ptr<DescriptorMatcher> &descriptorMatcher) = 0;
-        CV_WRAP virtual Ptr<DescriptorMatcher> getBackend() const = 0;
+        CV_WRAP virtual void setDescriptorMatcher(const Ptr<DescriptorMatcher> &descriptorMatcher) = 0;
+        CV_WRAP virtual Ptr<DescriptorMatcher> getDescriptorMatcher() const = 0;
     };
 
     class CV_EXPORTS_W LightGlue : public FeatureMatcher
