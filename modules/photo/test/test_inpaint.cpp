@@ -183,4 +183,56 @@ TEST_P(Photo_InpaintSmallBorders, regression)
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Photo_InpaintSmallBorders,  Values(CV_8UC1, CV_8UC3));
 
+typedef testing::TestWithParam<tuple<perf::MatType>> Photo_Inpaint_TELEA_CornerSaturation;
+
+TEST_P(Photo_Inpaint_TELEA_CornerSaturation, regression)
+{
+    int type = get<0>(GetParam());
+    const int width = 25;
+    const int height = 25;
+    const uchar bg_val = 120;
+
+    Mat image(height, width, type, Scalar::all(bg_val));
+    if (type == CV_8UC3)
+    {
+        image.setTo(Scalar(bg_val, 0, bg_val));
+    }
+    Mat mask = Mat::zeros(image.size(), CV_8U);
+
+    std::vector<Point> holes = {
+        {0, 0}, {24, 0}, {1, 1}, {23, 1},
+        {1, 23}, {23, 23}, {0, 24}, {24, 24}
+    };
+
+    for (const auto& pt : holes)
+    {
+        mask.at<uchar>(pt.y, pt.x) = 255;
+        if (type == CV_8UC3)
+            image.at<Vec3b>(pt.y, pt.x) = Vec3b(0, 0, 0);
+        else
+            image.at<uchar>(pt.y, pt.x) = 0;
+    }
+
+    Mat result;
+    inpaint(image, mask, result, 5, INPAINT_TELEA);
+
+    for (const auto& pt : holes)
+    {
+        if (type == CV_8UC3)
+        {
+            Vec3b val = result.at<Vec3b>(pt.y, pt.x);
+            ASSERT_EQ((int)val[1], 0);
+            ASSERT_NEAR((double)val[0], (double)bg_val, 50.0);
+            ASSERT_NEAR((double)val[2], (double)bg_val, 50.0);
+        }
+        else
+        {
+            uchar val = result.at<uchar>(pt.y, pt.x);
+            ASSERT_NEAR((double)val, (double)bg_val, 50.0);
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Photo_Inpaint_TELEA_CornerSaturation, Values(CV_8UC1, CV_8UC3));
+
 }} // namespace
