@@ -111,12 +111,15 @@ public:
            libprotobuf-c reads it correctly,
            but the current version of libprotobuf does not
         */
-        int startAxis = normalize_axis(_startAxis, numAxes);
-        int endAxis = normalize_axis(_endAxis, numAxes);
+        int startAxis;
+        int endAxis;
 
-        CV_Assert(startAxis >= 0 && startAxis <= numAxes);
+        //CV_Assert(startAxis >= 0 && startAxis <= numAxes);
 
         if (_onnxMode) {
+            startAxis = _startAxis < 0 ? _startAxis + numAxes : _startAxis;
+            startAxis = std::min(std::max(startAxis, 0), numAxes);
+
             size_t outer = 1, inner = 1;
             int i = 0;
             for (; i < startAxis; i++)
@@ -129,6 +132,10 @@ public:
             outputShapeVec.push_back((int)inner);
         }
         else {
+            startAxis = normalize_axis(_startAxis, numAxes);
+            endAxis = normalize_axis(_endAxis, numAxes);
+
+            CV_Assert(startAxis >= 0 && startAxis <= numAxes);
             CV_Assert(endAxis >= startAxis && endAxis <= numAxes);
 
             size_t flattenedDimensionSize = total(inputs[0], startAxis, endAxis + 1);
