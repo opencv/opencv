@@ -11,8 +11,6 @@
 #include "opencv2/dnn.hpp"
 #endif
 
-#include <cstdlib>
-
 namespace opencv_test { namespace {
 
         TEST(Features_FeaturePipeline, TraditionalWrapper)
@@ -45,19 +43,19 @@ namespace opencv_test { namespace {
 
         TEST(Features_FeaturePipeline, SuperPointLightGlue)
         {
-            const char *superpointModel = std::getenv("OPENCV_TEST_SUPERPOINT_ONNX");
-            const char *lightglueModel = std::getenv("OPENCV_TEST_LIGHTGLUE_ONNX");
-            const char *imagePath = std::getenv("OPENCV_TEST_IMAGE");
+            const String superpointModel = cvtest::findDataFile("../dnn/onnx/models/superpoint.onnx", false);
+            const String lightglueModel = cvtest::findDataFile("../dnn/onnx/models/superpoint_lightglue.onnx", false);
+            const String imagePath0 = cv::samples::findFile("box.png");
+            const String imagePath1 = cv::samples::findFile("box_in_scene.png");
 
-            if (!superpointModel || !lightglueModel || !imagePath)
-                return;
+            Mat img0 = imread(imagePath0, IMREAD_COLOR);
+            Mat img1 = imread(imagePath1, IMREAD_COLOR);
 
-            Mat img = imread(imagePath, IMREAD_COLOR);
-            if (img.empty())
-                return;
+            ASSERT_FALSE(img0.empty());
+            ASSERT_FALSE(img1.empty());
 
             cv::features::SuperPoint::Params spParams;
-            spParams.modelPath = String(superpointModel);
+            spParams.modelPath = superpointModel;
             spParams.dnnEngine = dnn::ENGINE_ORT;
             spParams.inputSize = Size(640, 640);
 
@@ -66,8 +64,8 @@ namespace opencv_test { namespace {
 
             std::vector<KeyPoint> kpts0, kpts1;
             Mat desc0, desc1;
-            extractor->extract(img, kpts0, desc0);
-            extractor->extract(img, kpts1, desc1);
+            extractor->extract(img0, kpts0, desc0);
+            extractor->extract(img1, kpts1, desc1);
 
             ASSERT_FALSE(kpts0.empty());
             ASSERT_EQ(static_cast<int>(kpts0.size()), desc0.rows);
@@ -78,14 +76,14 @@ namespace opencv_test { namespace {
             KeyPoint::convert(kpts1, pts1);
 
             cv::features::LightGlue::Params lgParams;
-            lgParams.modelPath = String(lightglueModel);
+            lgParams.modelPath = lightglueModel;
             lgParams.dnnEngine = dnn::ENGINE_ORT;
 
             Ptr<cv::features::FeatureMatcher> matcher = cv::features::LightGlue::create(lgParams);
             ASSERT_FALSE(matcher.empty());
 
             std::vector<DMatch> matches;
-            matcher->match(Mat(pts0), desc0, Mat(pts1), desc1, matches, noArray(), img.size(), img.size());
+            matcher->match(Mat(pts0), desc0, Mat(pts1), desc1, matches, noArray(), img0.size(), img1.size());
 
             for (size_t i = 0; i < matches.size(); ++i)
             {
