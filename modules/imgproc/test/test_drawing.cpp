@@ -1128,4 +1128,28 @@ TEST(Drawing, line_connectivity_regression_26413)
     EXPECT_GT(count4, 15) << "LINE_4 diagonal should have significantly more pixels due to staircase";
 }
 
+
+// Verifies that drawing functions handle negative coordinates correctly without triggering
+// Undefined Behavior (UBSan) during fixed-point scaling.
+TEST(Drawing, negative_coordinates_scaling)
+{
+    Mat img(64, 64, CV_8UC3, Scalar::all(255));
+    Scalar color(0, 0, 255);
+
+    rectangle(img, Rect(-10, -10, 20, 20), color, -1);
+    circle(img, Point(-5, -5), 10, color, -1);
+    ellipse(img, Point(-5, -5), Size(10, 20), 30, 0, 360, color, -1);
+    ellipse(img, RotatedRect(Point2f(-5.f, -5.f), Size2f(10.f, 20.f), 30.f), color, -1);
+
+    std::vector<Point> pts;
+    pts.push_back(Point(-10, -10));
+    pts.push_back(Point(10, -10));
+    pts.push_back(Point(10, 10));
+    pts.push_back(Point(-10, 10));
+    fillConvexPoly(img, pts, color);
+
+    polylines(img, pts, true, color, 1);
+    putText(img, "OpenCV", Point(-10, 10), FONT_HERSHEY_SIMPLEX, 1.0, color, 1);
+}
+
 }} // namespace
