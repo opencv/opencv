@@ -57,7 +57,7 @@ struct CV_EXPORTS_W_SIMPLE DetectorParameters {
         aprilTagDeglitch = 0;
         detectInvertedMarker = false;
         useAruco3Detection = false;
-        minSideLengthCanonicalImg = 32;
+        minSideLengthCanonicalImg = 21;
         minMarkerLengthRatioOriginalImg = 0.0;
         validBitIdThreshold = DEFAULT_VALID_BIT_ID_THRESHOLD;
     }
