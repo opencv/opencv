@@ -77,6 +77,7 @@ class Builder:
             self.hosting_base_path = hosting_base_path
         self.swiftdisabled = swiftdisabled
         self.docs_built = False
+        self.build_docs = False
 
     def checkCMakeVersion(self):
         if get_xcode_version() >= (12, 2):
@@ -101,12 +102,17 @@ class Builder:
         dirs = []
 
         xcode_ver = get_xcode_major()
+        xcode_supports_ios_32bit_arch = xcode_ver <= 13
+        self.build_docs = xcode_ver >= 13
 
         # build each architecture separately
         alltargets = []
 
         for target_group in self.targets:
             for arch in target_group[0]:
+                if arch in ["armv7", "armv7s", "i386"] and not xcode_supports_ios_32bit_arch:
+                    print("Skipping unsupported architecture: " + arch)
+                    continue
                 current = ( arch, target_group[1] )
                 alltargets.append(current)
 
@@ -361,7 +367,7 @@ class Builder:
             framework_build_dir = builddir + "/modules/objc/framework_build"
             execute(cmakecmd, cwd = framework_build_dir)
             execute(buildcmd + ["-target", "ALL_BUILD", "build"], cwd = framework_build_dir)
-            if not self.docs_built:
+            if self.build_docs and not self.docs_built:
                 # build the syntax graphs
                 execute(buildcmd + ["-target", "ALL_BUILD", "docbuild"], cwd = framework_build_dir)
                 # build the document catalog
