@@ -1377,28 +1377,28 @@ void ONNXImporter2::parseConvTranspose(LayerParams& layerParams, const opencv_on
 {
     int n_inputs = node_proto.input_size();
     CV_Assert(2 <= n_inputs && n_inputs <= 3);
-    layerParams.type = "Deconvolution";
-
-    layerParams.set("bias_term", node_proto.input_size() == 3);
-
-    if (net.isConstArg(node_inputs[1]) && (n_inputs == 2 || net.isConstArg(node_inputs[2]))) {
-        Mat weights = net.argTensor(node_inputs[1]);
-        layerParams.blobs.push_back(weights);
-        if (n_inputs > 2) {
-            Mat bias = net.argTensor(node_inputs[2]);
-            layerParams.blobs.push_back(bias);
-        }
-        n_inputs = 1;
-    }
-
-    if (!layerParams.has("kernel_size"))
-        CV_Error(Error::StsNotImplemented,
-                 "Required attribute 'kernel_size' is not present.");
+    layerParams.type = "ConvTranspose2";
 
     if (layerParams.has("output_shape"))
     {
         const DictValue& outShape = layerParams.get("output_shape");
         DictValue strides = layerParams.get("stride");
+
+        // Infer kernel_size from weight shape if not provided
+        if (!layerParams.has("kernel_size"))
+        {
+            const Arg& warg = node_inputs[1];
+            const ArgData& wdata = netimpl->args.at(warg.idx);
+            if (wdata.shape.size() >= 3)
+            {
+                int kdims = (int)wdata.shape.size() - 2;
+                std::vector<int> kshape(kdims);
+                for (int i = 0; i < kdims; ++i)
+                    kshape[i] = wdata.shape[2 + i];
+                layerParams.set("kernel_size", DictValue::arrayInt(kshape.data(), kdims));
+            }
+        }
+
         DictValue kernel = layerParams.get("kernel_size");
 
         String padMode;
@@ -1415,6 +1415,14 @@ void ONNXImporter2::parseConvTranspose(LayerParams& layerParams, const opencv_on
                 int stride = strides.get<int>(i);
                 adjust_pads.push_back(padMode == "SAME"? (sz - 1) % stride :
                                                          (sz - kernel.get<int>(i)) % stride);
+            }
+            layerParams.set("adj", DictValue::arrayInt(&adjust_pads[0], (int)adjust_pads.size()));
+        }
+        else
+        {
+            for (int i = 0; i < strides.size(); i++)
+            {
+                adjust_pads.push_back(1);
             }
             layerParams.set("adj", DictValue::arrayInt(&adjust_pads[0], (int)adjust_pads.size()));
         }

@@ -335,8 +335,7 @@ TEST_P(Test_ONNX_layers, Deconvolution)
         testONNXModels("deconv_adjpad_2d", npy, 0, 0, false, false);
 }
 
-// BUG: https://github.com/opencv/opencv/issues/26307
-TEST_P(Test_ONNX_layers, DISABLED_Deconvolution3D)
+TEST_P(Test_ONNX_layers, Deconvolution3D)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
@@ -356,17 +355,13 @@ TEST_P(Test_ONNX_layers, DISABLED_Deconvolution3D)
     }
 #endif
 
-    if (backend == DNN_BACKEND_OPENCV)
-        throw SkipTestException("OpenCV backend is not supported");  // FIXIT use tags
-
     if (backend == DNN_BACKEND_VKCOM)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
 
     testONNXModels("deconv3d");
 }
 
-// BUG: https://github.com/opencv/opencv/issues/26307
-TEST_P(Test_ONNX_layers, DISABLED_Deconvolution3D_bias)
+TEST_P(Test_ONNX_layers, Deconvolution3D_bias)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
@@ -386,17 +381,13 @@ TEST_P(Test_ONNX_layers, DISABLED_Deconvolution3D_bias)
     }
 #endif
 
-    if (backend == DNN_BACKEND_OPENCV)
-        throw SkipTestException("OpenCV backend is not supported");  // FIXIT use tags
-
     if (backend == DNN_BACKEND_VKCOM)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
 
     testONNXModels("deconv3d_bias");
 }
 
-// BUG: https://github.com/opencv/opencv/issues/26307
-TEST_P(Test_ONNX_layers, DISABLED_Deconvolution3D_pad)
+TEST_P(Test_ONNX_layers, Deconvolution3D_pad)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
@@ -416,17 +407,13 @@ TEST_P(Test_ONNX_layers, DISABLED_Deconvolution3D_pad)
     }
 #endif
 
-    //if (backend == DNN_BACKEND_OPENCV)
-        throw SkipTestException("OpenCV backend is not supported");  // FIXIT use tags
-
     //if (backend == DNN_BACKEND_VKCOM)
     //    applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
 
-    //testONNXModels("deconv3d_pad");
+    testONNXModels("deconv3d_pad");
 }
 
-// BUG: https://github.com/opencv/opencv/issues/26307
-TEST_P(Test_ONNX_layers, DISABLED_Deconvolution3D_adjpad)
+TEST_P(Test_ONNX_layers, Deconvolution3D_adjpad)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
@@ -445,9 +432,6 @@ TEST_P(Test_ONNX_layers, DISABLED_Deconvolution3D_adjpad)
             applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
     }
 #endif
-
-    if (backend == DNN_BACKEND_OPENCV)
-        throw SkipTestException("OpenCV backend is not supported");  // FIXIT use tags
 
     if (backend == DNN_BACKEND_VKCOM)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
@@ -1542,7 +1526,18 @@ TEST_P(Test_ONNX_layers, LSTM_cell_forward)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
-    testONNXModels("lstm_cell_forward", npy, 0, 0, false, false);
+    double l1 = 0, lInf = 0;
+    if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA)
+    {
+        l1 = 5e-5;
+        lInf = 3e-4;
+    }
+    else if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 3e-4;
+        lInf = 1e-3;
+    }
+    testONNXModels("lstm_cell_forward", npy, l1, lInf, false, false);
 }
 TEST_P(Test_ONNX_layers, LSTM_cell_bidirectional)
 {
@@ -1553,7 +1548,18 @@ TEST_P(Test_ONNX_layers, LSTM_cell_bidirectional)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
-    testONNXModels("lstm_cell_bidirectional", npy, 0, 0, false, false);
+    double l1 = 0, lInf = 0;
+    if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA)
+    {
+        l1 = 5e-5;
+        lInf = 3e-4;
+    }
+    else if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 3e-4;
+        lInf = 2e-3;
+    }
+    testONNXModels("lstm_cell_bidirectional", npy, l1, lInf, false, false);
 }
 TEST_P(Test_ONNX_layers, LSTM_cell_with_peepholes)
 {

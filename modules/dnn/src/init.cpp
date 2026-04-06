@@ -134,6 +134,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Convolution,    ConvolutionLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Conv2,          Conv2Layer);
     CV_DNN_REGISTER_LAYER_CLASS(Deconvolution,  DeconvolutionLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(ConvTranspose2, ConvTranspose2Layer);
     CV_DNN_REGISTER_LAYER_CLASS(Pooling,        PoolingLayer);
     CV_DNN_REGISTER_LAYER_CLASS(MaxPool,        MaxPoolLayer);
     CV_DNN_REGISTER_LAYER_CLASS(AveragePool,    AveragePoolLayer);

@@ -1673,6 +1673,13 @@ void Net::Impl::setParam(const std::string& outputTensorName, int numParam, cons
                 return;
             }
 
+            ConvTranspose2Layer* deconv = dynamic_cast<ConvTranspose2Layer*>(layer.get());
+            if (deconv && numParam == 0) {
+                deconv->setWeights(blob, Mat(), defaultC0, accuracy);
+                finalizeLayers = true;
+                return;
+            }
+
             CV_Error_(Error::StsOutOfRange,
                       ("DNN: op producing '%s' has fewer than %d params",
                        outputTensorName.c_str(), numParam + 1));
