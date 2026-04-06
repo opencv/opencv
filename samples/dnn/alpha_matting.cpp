@@ -72,13 +72,13 @@ const string target_keys = format(
     "cuda: CUDA, "
     "cuda_fp16: CUDA fp16 (half-float precision) }");
 
-string keys = param_keys + backend_keys + target_keys;
+string keys = param_keys + backend_keys + target_keys + engine_keys;
 
-static void loadModel(const string modelPath, String backend, String target, Net &net, EngineType engine)
+static void loadModel(const string modelPath, int backendId, int targetId, Net &net, int engineId)
 {
-    net = readNetFromONNX(modelPath, engine);
-    net.setPreferableBackend(getBackendID(backend));
-    net.setPreferableTarget(getTargetID(target));
+    net = readNetFromONNX(modelPath, engineId);
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
 }
 
 static void postprocess(const Mat &image, const Mat &alpha_output, Mat &alpha_mask)
@@ -165,14 +165,12 @@ int main(int argc, char **argv)
 
     parser.about(about);
 
-    EngineType engine = ENGINE_AUTO;
-    if (backend != "default" || target != "cpu")
-    {
-        engine = ENGINE_CLASSIC;
-    }
+    int engineId = getEngineID(parser.get<String>("engine"));
+    int backendId = getBackendID(backend);
+    int targetId = getTargetID(target);
 
     Net net;
-    loadModel(model, backend, target, net, engine);
+    loadModel(model, backendId, targetId, net, engineId);
 
     string input_path = samples::findFile(parser.get<String>("input"));
     Mat image = imread(input_path);

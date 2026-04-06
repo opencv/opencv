@@ -163,6 +163,10 @@ def findFile(filename):
     )
 
 
+backends = ("default", "openvino", "opencv", "vkcom", "cuda")
+targets = ("cpu", "opencl", "opencl_fp16", "ncs2_vpu", "hddl_vpu", "vulkan", "cuda", "cuda_fp16")
+engines = ("auto", "classic", "new", "ort")
+
 def get_backend_id(backend_name):
     backend_ids = {
         "default": cv.dnn.DNN_BACKEND_DEFAULT,
@@ -192,3 +196,47 @@ def get_target_id(target_name):
         raise ValueError(f"Invalid target name: {target_name}")
 
     return target_ids[target_name]
+
+def get_engine_id(engine_name):
+    engine_ids = {
+        "auto": cv.dnn.ENGINE_AUTO,
+        "classic": cv.dnn.ENGINE_CLASSIC,
+        "new": cv.dnn.ENGINE_NEW,
+        "ort": cv.dnn.ENGINE_ORT
+    }
+    if engine_name not in engine_ids:
+        raise ValueError(f"Invalid engine name: {engine_name}")
+
+    return engine_ids[engine_name]
+
+def get_backend_name(backend_id):
+    names = {v: k for k, v in {
+        "default": cv.dnn.DNN_BACKEND_DEFAULT,
+        "openvino": cv.dnn.DNN_BACKEND_INFERENCE_ENGINE,
+        "opencv": cv.dnn.DNN_BACKEND_OPENCV,
+        "vkcom": cv.dnn.DNN_BACKEND_VKCOM,
+        "cuda": cv.dnn.DNN_BACKEND_CUDA
+    }.items()}
+    return names.get(backend_id, "unknown")
+
+def get_target_name(target_id):
+    names = {v: k for k, v in {
+        "cpu": cv.dnn.DNN_TARGET_CPU,
+        "opencl": cv.dnn.DNN_TARGET_OPENCL,
+        "opencl_fp16": cv.dnn.DNN_TARGET_OPENCL_FP16,
+        "ncs2_vpu": cv.dnn.DNN_TARGET_MYRIAD,
+        "hddl_vpu": cv.dnn.DNN_TARGET_HDDL,
+        "vulkan": cv.dnn.DNN_TARGET_VULKAN,
+        "cuda": cv.dnn.DNN_TARGET_CUDA,
+        "cuda_fp16": cv.dnn.DNN_TARGET_CUDA_FP16
+    }.items()}
+    return names.get(target_id, "unknown")
+
+def get_engine_name(engine_id):
+    names = {v: k for k, v in {
+        "auto": cv.dnn.ENGINE_AUTO,
+        "classic": cv.dnn.ENGINE_CLASSIC,
+        "new": cv.dnn.ENGINE_NEW,
+        "ort": cv.dnn.ENGINE_ORT
+    }.items()}
+    return names.get(engine_id, "unknown")

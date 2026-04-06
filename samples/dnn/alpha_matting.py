@@ -78,6 +78,17 @@ def get_args_parser(func_args):
         "cuda: CUDA, "
         "cuda_fp16: CUDA fp16 (half-float precision)",
     )
+    parser.add_argument(
+        "--engine",
+        default="auto",
+        type=str,
+        choices=engines,
+        help="Choose one of DNN engines: "
+        "auto: automatically (by default), "
+        "classic: classic DNN engine, "
+        "new: new graph-based DNN engine, "
+        "ort: ONNX Runtime",
+    )
 
     args, _ = parser.parse_known_args()
     add_preproc_args(args.zoo, parser, "alpha_matting", "modnet")
@@ -107,10 +118,10 @@ def postprocess_output(image, alpha_output):
     return alpha_mask
 
 
-def loadModel(args, engine):
+def loadModel(args, engine, backend, target):
     net = cv.dnn.readNetFromONNX(args.model, engine)
-    net.setPreferableBackend(get_backend_id(args.backend))
-    net.setPreferableTarget(get_target_id(args.target))
+    net.setPreferableBackend(backend)
+    net.setPreferableTarget(target)
     return net
 
 
@@ -138,9 +149,9 @@ def apply_modnet(args, model, image):
 
 def main(func_args=None):
     args = get_args_parser(func_args)
-    engine = cv.dnn.ENGINE_AUTO
-    if args.backend != "default" or args.target != "cpu":
-        engine = cv.dnn.ENGINE_CLASSIC
+    engine = get_engine_id(args.engine)
+    backend = get_backend_id(args.backend)
+    target = get_target_id(args.target)
 
     image = cv.imread(cv.samples.findFile(args.input))
     if image is None:
@@ -154,7 +165,7 @@ def main(func_args=None):
     cv.moveWindow("Composite", 400, 50)
 
     args.model = findModel(args.model, args.sha1)
-    net = loadModel(args, engine)
+    net = loadModel(args, engine, backend, target)
 
     alpha_mask, composite = apply_modnet(args, net, image)
 

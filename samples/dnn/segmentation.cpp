@@ -47,7 +47,7 @@ const string target_keys = format(
                               "cuda: CUDA, "
                               "cuda_fp16: CUDA fp16 (half-float preprocess) }");
 
-string keys = param_keys + backend_keys + target_keys;
+string keys = param_keys + backend_keys + target_keys + engine_keys;
 vector<string> labels;
 vector<Vec3b> colors;
 
@@ -211,13 +211,12 @@ int main(int argc, char **argv)
 
     CV_Assert(!model.empty());
     //! [Read and initialize network]
-    EngineType engine = ENGINE_AUTO;
-    if (backend != "default" || target != "cpu"){
-        engine = ENGINE_CLASSIC;
-    }
-    Net net = readNetFromONNX(model, engine);
-    net.setPreferableBackend(getBackendID(backend));
-    net.setPreferableTarget(getTargetID(target));
+    int engineId = getEngineID(parser.get<String>("engine"));
+    int backendId = getBackendID(backend);
+    int targetId = getTargetID(target);
+    Net net = readNetFromONNX(model, engineId);
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
     //! [Read and initialize network]
     // Create a window
     static const string kWinName = "Deep learning semantic segmentation in OpenCV";

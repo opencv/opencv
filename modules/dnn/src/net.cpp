@@ -250,6 +250,25 @@ bool Net::empty() const
     return impl->empty();
 }
 
+int Net::getEngine() const
+{
+    CV_Assert(impl);
+    return impl->engineType;
+}
+
+String Net::getEngineName() const
+{
+    CV_Assert(impl);
+    switch (impl->engineType)
+    {
+        case ENGINE_CLASSIC: return "ENGINE_CLASSIC";
+        case ENGINE_NEW: return "ENGINE_NEW";
+        case ENGINE_ORT: return "ENGINE_ORT";
+        case ENGINE_AUTO: return "ENGINE_AUTO";
+        default: return "Unknown";
+    }
+}
+
 // FIXIT drop "unconnected" API
 std::vector<int> Net::getUnconnectedOutLayers() const
 {

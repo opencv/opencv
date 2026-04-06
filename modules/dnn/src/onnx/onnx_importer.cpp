@@ -4135,9 +4135,19 @@ Net readNetFromONNX(const String& onnxFile, int engine)
     switch(engine)
     {
         case ENGINE_CLASSIC:
-            return detail::readNetDiagnostic<ONNXImporter>(onnxFile.c_str());
+        {
+            Net net = detail::readNetDiagnostic<ONNXImporter>(onnxFile.c_str());
+            net.getImpl()->engineType = ENGINE_CLASSIC;
+            CV_LOG_INFO(NULL, "DNN/ONNX: Engine used: ENGINE_CLASSIC");
+            return net;
+        }
         case ENGINE_NEW:
-            return readNetFromONNX2(onnxFile);
+        {
+            Net net = readNetFromONNX2(onnxFile);
+            net.getImpl()->engineType = ENGINE_NEW;
+            CV_LOG_INFO(NULL, "DNN/ONNX: Engine used: ENGINE_NEW");
+            return net;
+        }
         case ENGINE_ORT:
         {
 #ifdef HAVE_ONNXRUNTIME
@@ -4146,6 +4156,8 @@ Net readNetFromONNX(const String& onnxFile, int engine)
                 CV_Error(Error::StsError, "DNN/ONNX/ORT: failed to load model");
             if (!net.getImpl() || !net.getImpl()->ort_session)
                 CV_Error(Error::StsError, "DNN/ONNX/ORT: ONNX Runtime session was not initialized");
+            net.getImpl()->engineType = ENGINE_ORT;
+            CV_LOG_INFO(NULL, "DNN/ONNX: Engine used: ENGINE_ORT");
             return net;
 #else
             CV_LOG_WARNING(NULL, "DNN/ONNX/ORT: OpenCV was built without ONNX Runtime (WITH_ONNXRUNTIME=OFF). Falling back to ENGINE_AUTO.");
@@ -4156,9 +4168,18 @@ Net readNetFromONNX(const String& onnxFile, int engine)
         {
             Net net = readNetFromONNX2(onnxFile);
             if (!net.empty())
+            {
+                net.getImpl()->engineType = ENGINE_NEW;
+                CV_LOG_INFO(NULL, "DNN/ONNX: Engine used: ENGINE_NEW (resolved from AUTO)");
                 return net;
+            }
             else
-                return detail::readNetDiagnostic<ONNXImporter>(onnxFile.c_str());
+            {
+                net = detail::readNetDiagnostic<ONNXImporter>(onnxFile.c_str());
+                net.getImpl()->engineType = ENGINE_CLASSIC;
+                CV_LOG_INFO(NULL, "DNN/ONNX: Engine used: ENGINE_CLASSIC (fallback from AUTO)");
+                return net;
+            }
         }
         default:
             CV_Error(Error::StsBadArg, "Invalid DNN engine selected!");
@@ -4174,9 +4195,19 @@ Net readNetFromONNX(const char* buffer, size_t sizeBuffer, int engine)
     switch(engine)
     {
         case ENGINE_CLASSIC:
-            return detail::readNetDiagnostic<ONNXImporter>(buffer, sizeBuffer);
+        {
+            Net net = detail::readNetDiagnostic<ONNXImporter>(buffer, sizeBuffer);
+            net.getImpl()->engineType = ENGINE_CLASSIC;
+            CV_LOG_INFO(NULL, "DNN/ONNX: Engine used: ENGINE_CLASSIC");
+            return net;
+        }
         case ENGINE_NEW:
-            return readNetFromONNX2(buffer, sizeBuffer);
+        {
+            Net net = readNetFromONNX2(buffer, sizeBuffer);
+            net.getImpl()->engineType = ENGINE_NEW;
+            CV_LOG_INFO(NULL, "DNN/ONNX: Engine used: ENGINE_NEW");
+            return net;
+        }
         case ENGINE_ORT:
 #ifdef HAVE_ONNXRUNTIME
             CV_Error(Error::StsNotImplemented, "DNN/ONNX/ORT: loading from memory buffer is not supported");
@@ -4188,9 +4219,18 @@ Net readNetFromONNX(const char* buffer, size_t sizeBuffer, int engine)
         {
             Net net = readNetFromONNX2(buffer, sizeBuffer);
             if (!net.empty())
+            {
+                net.getImpl()->engineType = ENGINE_NEW;
+                CV_LOG_INFO(NULL, "DNN/ONNX: Engine used: ENGINE_NEW (resolved from AUTO)");
                 return net;
+            }
             else
-                return detail::readNetDiagnostic<ONNXImporter>(buffer, sizeBuffer);
+            {
+                net = detail::readNetDiagnostic<ONNXImporter>(buffer, sizeBuffer);
+                net.getImpl()->engineType = ENGINE_CLASSIC;
+                CV_LOG_INFO(NULL, "DNN/ONNX: Engine used: ENGINE_CLASSIC (fallback from AUTO)");
+                return net;
+            }
         }
         default:
             CV_Error(Error::StsBadArg, "Invalid DNN engine selected!");
@@ -4206,9 +4246,19 @@ Net readNetFromONNX(const std::vector<uchar>& buffer, int engine)
     switch(engine)
     {
         case ENGINE_CLASSIC:
-            return readNetFromONNX(reinterpret_cast<const char*>(buffer.data()), buffer.size());
+        {
+            Net net = readNetFromONNX(reinterpret_cast<const char*>(buffer.data()), buffer.size());
+            net.getImpl()->engineType = ENGINE_CLASSIC;
+            CV_LOG_INFO(NULL, "DNN/ONNX: Engine used: ENGINE_CLASSIC");
+            return net;
+        }
         case ENGINE_NEW:
-            return readNetFromONNX2(buffer);
+        {
+            Net net = readNetFromONNX2(buffer);
+            net.getImpl()->engineType = ENGINE_NEW;
+            CV_LOG_INFO(NULL, "DNN/ONNX: Engine used: ENGINE_NEW");
+            return net;
+        }
         case ENGINE_ORT:
 #ifdef HAVE_ONNXRUNTIME
             CV_Error(Error::StsNotImplemented, "DNN/ONNX/ORT: loading from memory buffer is not supported");
@@ -4220,9 +4270,18 @@ Net readNetFromONNX(const std::vector<uchar>& buffer, int engine)
         {
             Net net = readNetFromONNX2(buffer);
             if (!net.empty())
+            {
+                net.getImpl()->engineType = ENGINE_NEW;
+                CV_LOG_INFO(NULL, "DNN/ONNX: Engine used: ENGINE_NEW (resolved from AUTO)");
                 return net;
+            }
             else
-                return readNetFromONNX(reinterpret_cast<const char*>(buffer.data()), buffer.size());
+            {
+                net = readNetFromONNX(reinterpret_cast<const char*>(buffer.data()), buffer.size());
+                net.getImpl()->engineType = ENGINE_CLASSIC;
+                CV_LOG_INFO(NULL, "DNN/ONNX: Engine used: ENGINE_CLASSIC (fallback from AUTO)");
+                return net;
+            }
         }
         default:
             CV_Error(Error::StsBadArg, "Invalid DNN engine selected!");

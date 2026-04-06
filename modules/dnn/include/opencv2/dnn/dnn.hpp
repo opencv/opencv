@@ -1030,6 +1030,18 @@ CV__DNN_INLINE_NS_BEGIN
                               bool comma=true, bool dump_details=false) const;
         std::ostream& dumpDim(std::ostream& strm, int value) const;
 
+        /** @brief Returns the engine type used by this network.
+         *  @returns one of EngineType values (ENGINE_CLASSIC, ENGINE_NEW, ENGINE_ORT).
+         *  @note For networks loaded with ENGINE_AUTO, the returned value reflects
+         *  the actual engine that was selected (ENGINE_NEW or ENGINE_CLASSIC).
+         */
+        CV_WRAP int getEngine() const;
+
+        /** @brief Returns the human-readable name of the engine used by this network.
+         *  @returns string such as "ENGINE_CLASSIC", "ENGINE_NEW", "ENGINE_ORT", or "Unknown".
+         */
+        CV_WRAP String getEngineName() const;
+
         struct Impl;
         inline Impl* getImpl() const { return impl.get(); }
         inline Impl& getImplRef() const { CV_DbgAssert(impl); return *impl.get(); }

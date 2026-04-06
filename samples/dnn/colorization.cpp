@@ -52,7 +52,15 @@ int main(int argc, char** argv) {
         cv::dnn::DNN_TARGET_MYRIAD, cv::dnn::DNN_TARGET_VULKAN, cv::dnn::DNN_TARGET_CUDA,
         cv::dnn::DNN_TARGET_CUDA_FP16);
 
-    const string keys = param_keys + backend_keys + target_keys;
+    const string colorization_engine_keys = format(
+        "{ engine | %d | Choose one of DNN engines: "
+                        "%d: auto (by default), "
+                        "%d: classic DNN engine, "
+                        "%d: new graph-based DNN engine, "
+                        "%d: ONNX Runtime }",
+        cv::dnn::ENGINE_AUTO, cv::dnn::ENGINE_AUTO, cv::dnn::ENGINE_CLASSIC,
+        cv::dnn::ENGINE_NEW, cv::dnn::ENGINE_ORT);
+    const string keys = param_keys + backend_keys + target_keys + colorization_engine_keys;
     CommandLineParser parser(argc, argv, keys);
     parser.about(about);
 
@@ -83,11 +91,8 @@ int main(int argc, char** argv) {
     resize(imgL, imgLResized, Size(256, 256), 0, 0, INTER_CUBIC);
 
     // Prepare the model
-    EngineType engine = ENGINE_AUTO;
-    if (backendId != 0 || targetId != 0){
-        engine = ENGINE_CLASSIC;
-    }
-    dnn::Net net = dnn::readNetFromONNX(onnxModelPath, engine);
+    int engineId = parser.get<int>("engine");
+    dnn::Net net = dnn::readNetFromONNX(onnxModelPath, engineId);
     net.setPreferableBackend(backendId);
     net.setPreferableTarget(targetId);
     //! [Read and initialize network]

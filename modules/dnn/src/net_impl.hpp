@@ -69,6 +69,7 @@ struct Net::Impl : public detail::NetImplBase
     BlobManager blobManager;
     int preferableBackend;
     int preferableTarget;
+    int engineType;  // actual EngineType used (resolved from ENGINE_AUTO)
     bool hasDynamicShapes;
     // Map host data to backend specific wrapper.
     std::map<void*, Ptr<BackendWrapper>> backendWrappers;
@@ -76,6 +77,7 @@ struct Net::Impl : public detail::NetImplBase
     int lastLayerId;
 
     bool netWasAllocated;
+    bool backendInfoPrinted;
     bool netWasQuantized;
     bool fusion;
     bool isAsync;  // FIXIT: drop
@@ -131,6 +133,7 @@ struct Net::Impl : public detail::NetImplBase
 
     void setUpNet(const std::vector<LayerPin>& blobsToKeep_ = std::vector<LayerPin>());
 
+    void printBackendInfo();
 
     virtual Ptr<Layer> createLayerInstance(const LayerData& ld) const
     {
