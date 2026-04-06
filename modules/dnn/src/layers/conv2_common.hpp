@@ -5,7 +5,7 @@
 #ifndef __OPENCV_DNN_LAYERS_CONV2_COMMON_HPP__
 #define __OPENCV_DNN_LAYERS_CONV2_COMMON_HPP__
 
-#include <opencv2/dnn.hpp>
+#include <opencv2/dnn/all_layers.hpp>
 #include <array>
 
 namespace cv
@@ -28,24 +28,10 @@ enum FastActivation {
     FAST_ACTIV_RELU,
     FAST_ACTIV_LEAKY_RELU,
     FAST_ACTIV_PRELU,
-    FAST_ACTIV_CLIP,
-    FAST_ACTIV_MISH,
-    FAST_ACTIV_SWISH,
-    FAST_ACTIV_SIGMOID,
-    FAST_ACTIV_TANH,
-    FAST_ACTIV_ELU,
-    FAST_ACTIV_HARDSWISH,
-    FAST_ACTIV_HARDSIGMOID,
-    FAST_ACTIV_GELU,
-    FAST_ACTIV_GELU_APPROX
+    FAST_ACTIV_CLIP
 };
 
 std::string fastActivationToString(FastActivation fastActivation);
-
-typedef void (*ActivationFunc)(const void* input, void* output,
-                               size_t len, const float* params);
-
-ActivationFunc getActivationFunc(FastActivation fastActivation);
 
 struct ConvState
 {
@@ -78,6 +64,7 @@ struct ConvState
                   const std::vector<int>& pads,
                   AutoPadding autoPad, bool ceilMode,
                   FastActivation fastActivation,
+                  ActivationFunc activationFunc,
                   const std::vector<float>& activParams);
 
     // initializes the structure of parameters for 1D/2D/3D

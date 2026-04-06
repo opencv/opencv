@@ -918,6 +918,36 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<Pad2Layer> create(const LayerParams& params);
     };
 
+    /* Activation function pointer type.
+       Used for fast, platform-optimized activation implementations.
+       @param input  pointer to input data
+       @param output pointer to output data (can be same as input for in-place)
+       @param len    number of elements
+       @param params activation-specific parameters (e.g., alpha, beta)
+    */
+    typedef void (*ActivationFunc)(const void* input, void* output,
+                                   size_t len, const float* params);
+
+    /** Activation type enumeration for dispatched activation function retrieval. */
+    enum ActivationType {
+        ACTIV_NONE = 0,
+        ACTIV_MISH,
+        ACTIV_SWISH,
+        ACTIV_SIGMOID,
+        ACTIV_TANH,
+        ACTIV_ELU,
+        ACTIV_HARDSWISH,
+        ACTIV_HARDSIGMOID,
+        ACTIV_GELU,
+        ACTIV_GELU_APPROX,
+        ACTIV_RELU,
+        ACTIV_CLIP
+    };
+
+    /** Returns a platform-optimized activation function pointer for the given type.
+        The returned function is selected via CPU dispatch for the best available ISA. */
+    CV_EXPORTS ActivationFunc getActivationFunc(int activationType);
+
     /* Activations */
     class CV_EXPORTS ActivationLayer : public Layer
     {
@@ -932,6 +962,15 @@ CV__DNN_INLINE_NS_BEGIN
                                   size_t /*outPlaneSize*/, int /*cn0*/, int /*cn1*/) const {}
         virtual void forwardSlice(const int8_t* /*src*/, const int8_t* /*lut*/, int8_t* /*dst*/, int /*len*/,
                                   size_t /*outPlaneSize*/, int /*cn0*/, int /*cn1*/) const {}
+
+        /** Returns a platform-optimized activation function pointer for this layer.
+            @param depth data type (e.g., CV_32F)
+            @param activParams [out] filled with activation-specific parameters
+            @return function pointer, or nullptr if not available for the given depth
+        */
+        virtual ActivationFunc getActivationFunc(int /*depth*/,
+                                                 std::vector<float>& /*activParams*/) const
+        { return nullptr; }
     };
 
     class CV_EXPORTS ReLULayer : public ActivationLayer

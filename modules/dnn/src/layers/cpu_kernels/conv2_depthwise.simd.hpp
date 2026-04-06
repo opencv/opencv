@@ -84,14 +84,8 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
             defaultAlpha = activParams[0];
         } else if (fastActivation == FAST_ACTIV_PRELU) {
             CV_Assert(cs.activParams.size() == size_t(C));
-        } else if (fastActivation == FAST_ACTIV_ELU) {
-            CV_Assert(cs.activParams.size() == 1u);
-            defaultAlpha = 1.f;
-        } else if (fastActivation == FAST_ACTIV_HARDSIGMOID) {
-            CV_Assert(cs.activParams.size() == 2u);
-            defaultAlpha = 1.f;
         } else {
-            CV_Assert(cs.activParams.empty() || fastActivation == FAST_ACTIV_NONE);
+            // FAST_ACTIV_NONE: activation (if any) is handled via function pointer
             defaultAlpha = 1.f;
         }
 
