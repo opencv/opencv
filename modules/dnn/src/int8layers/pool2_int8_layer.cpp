@@ -112,7 +112,7 @@ static void maxPoolInt8(const void* inp_, void* out_, const ConvState& cs, bool 
 
 static void avgPoolInt8(const void* inp_, void* out_, const ConvState& cs,
                         float inp_sc, int inp_zp, float out_sc, int out_zp,
-                        bool count_include_pad_)
+                        bool count_include_pad_, bool isU8)
 {
     constexpr int MAX_POOL_DIMS = ConvState::MAX_CONV_DIMS;
     int NC1 = cs.inpshape[0] * cs.inpshape[1];
@@ -141,8 +141,8 @@ static void avgPoolInt8(const void* inp_, void* out_, const ConvState& cs,
         int ksize_total = (int)cs.ofstab.size();
         const int* zyxtab = cs.coordtab.data();
 
-        const int8_t* inp = (const int8_t*)inp_ + nc0 * iplanesize;
-        int8_t* out = (int8_t*)out_ + nc0 * planesize;
+        const uint8_t* inp = (const uint8_t*)inp_ + nc0 * iplanesize;
+        uint8_t* out = (uint8_t*)out_ + nc0 * planesize;
 
         float scale_ratio = inp_sc / out_sc;
 
@@ -157,7 +157,6 @@ static void avgPoolInt8(const void* inp_, void* out_, const ConvState& cs,
                     for (int x0 = 0; x0 < W; x0++) {
                         int xi_ = x0 * SX - padX0;
 
-                        // Zero accumulators
                         for (int c = 0; c < C0; c++)
                             accum[c] = 0;
 
@@ -176,9 +175,12 @@ static void avgPoolInt8(const void* inp_, void* out_, const ConvState& cs,
                             }
 
                             count++;
-                            const int8_t* inptr = inp + ((zi * Hi + yi) * Wi + xi) * C0;
-                            for (int c = 0; c < C0; c++)
-                                accum[c] += (int)inptr[c] - inp_zp;
+                            const uint8_t* inptr = inp + ((zi * Hi + yi) * Wi + xi) * C0;
+                            for (int c = 0; c < C0; c++) {
+                                int v = isU8 ? (int)inptr[c]
+                                             : (int)(int8_t)inptr[c];
+                                accum[c] += v - inp_zp;
+                            }
                         }
 
                         if (count == 0) count = 1;
@@ -187,7 +189,10 @@ static void avgPoolInt8(const void* inp_, void* out_, const ConvState& cs,
                         for (int c = 0; c < C0; c++) {
                             float val = (float)accum[c] * inv_count * scale_ratio + (float)out_zp;
                             int ival = cvRound(val);
-                            out[x0 * C0 + c] = (int8_t)std::max(-128, std::min(127, ival));
+                            if (isU8)
+                                out[x0 * C0 + c] = (uint8_t)std::max(0, std::min(255, ival));
+                            else
+                                out[x0 * C0 + c] = (uint8_t)(int8_t)std::max(-128, std::min(127, ival));
                         }
                     }
                 }
@@ -198,23 +203,31 @@ static void avgPoolInt8(const void* inp_, void* out_, const ConvState& cs,
 
 static void globalAvgPoolInt8(const void* inp_, void* out_,
                               int N, int C1, int spatialSize, int C0,
-                              float inp_sc, int inp_zp, float out_sc, int out_zp)
+                              float inp_sc, int inp_zp, float out_sc, int out_zp,
+                              bool isU8)
 {
     int NC1 = N * C1;
     float scale_ratio = inp_sc / out_sc;
 
     parallel_for_(Range(0, NC1), [&](const Range& r) {
         for (int nc = r.start; nc < r.end; nc++) {
-            const int8_t* inptr = (const int8_t*)inp_ + (size_t)nc * spatialSize * C0;
-            int8_t* outptr = (int8_t*)out_ + (size_t)nc * C0;
+            const uint8_t* inptr = (const uint8_t*)inp_ + (size_t)nc * spatialSize * C0;
+            uint8_t* outptr = (uint8_t*)out_ + (size_t)nc * C0;
 
             for (int c = 0; c < C0; c++) {
                 int sum = 0;
-                for (int s = 0; s < spatialSize; s++)
-                    sum += (int)inptr[s * C0 + c] - inp_zp;
+                for (int s = 0; s < spatialSize; s++) {
+                    int v = isU8 ? (int)inptr[s * C0 + c]
+                                 : (int)(int8_t)inptr[s * C0 + c];
+                    sum += v - inp_zp;
+                }
 
                 float val = (float)sum / spatialSize * scale_ratio + (float)out_zp;
-                outptr[c] = (int8_t)std::max(-128, std::min(127, cvRound(val)));
+                int ival = cvRound(val);
+                if (isU8)
+                    outptr[c] = (uint8_t)std::max(0, std::min(255, ival));
+                else
+                    outptr[c] = (uint8_t)(int8_t)std::max(-128, std::min(127, ival));
             }
         }
     });
@@ -336,7 +349,8 @@ public:
                 spatialSize *= inpshape[d];
 
             globalAvgPoolInt8(inp.data, out.data, N, C1, spatialSize, C0,
-                              input_sc, input_zp, output_sc, output_zp);
+                              input_sc, input_zp, output_sc, output_zp,
+                              inptype == CV_8UC1);
         } else {
             ConvState cs_local;
             cs_local.initPooling(inpshape, outshape, kernel_shape, strides,
@@ -347,7 +361,7 @@ public:
             } else {
                 avgPoolInt8(inp.data, out.data, cs_local,
                             input_sc, input_zp, output_sc, output_zp,
-                            count_include_pad);
+                            count_include_pad, inptype == CV_8UC1);
             }
         }
 

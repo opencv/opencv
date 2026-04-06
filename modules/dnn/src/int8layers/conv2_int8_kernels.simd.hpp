@@ -504,7 +504,6 @@ void convInt8Block(const void* inp_, const void* residual_,
 
                 Vec3i pt[SPAT_BLOCK_SIZE];
                 bool inner[SPAT_BLOCK_SIZE];
-                bool all_inner = true;
 
                 if ((p % W_l) + SPAT_BLOCK_SIZE <= W_l) {
                     int zj = p / (H_l * W_l);
@@ -517,7 +516,6 @@ void convInt8Block(const void* inp_, const void* residual_,
                         int xj = xj0 + j;
                         pt[j] = Vec3i(zj * Sz - padZ, yj * Sy - padY, xj * Sx - padX);
                         inner[j] = zy_inner && (xj >= innerX0 && xj < innerX1);
-                        all_inner &= inner[j];
                     }
                 } else {
                     for (int j = 0; j < SPAT_BLOCK_SIZE; j++) {
@@ -530,7 +528,6 @@ void convInt8Block(const void* inp_, const void* residual_,
                         inner[j] = (zj >= innerZ0 && zj < innerZ1) &&
                                    (yj >= innerY0 && yj < innerY1) &&
                                    (xj >= innerX0 && xj < innerX1);
-                        all_inner &= inner[j];
                     }
                 }
 
