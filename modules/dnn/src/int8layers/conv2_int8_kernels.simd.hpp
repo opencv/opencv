@@ -37,8 +37,12 @@ void convInt8Block(const void* inp_, const void* residual_,
 #if defined(__x86_64__) || defined(_M_X64)
 #include <immintrin.h>
 #endif
+#ifdef __clang__
+#pragma clang attribute push(__attribute__((target("avx2,avxvnni"))), apply_to = function)
+#else
 #pragma GCC push_options
 #pragma GCC target("avxvnni")
+#endif
 static void convInt8BlockVNNI(const void* inp_, const void* residual_,
                               void* out_, const ConvState& cs,
                               const void* weightsVNNI_,
@@ -348,7 +352,11 @@ static void convInt8BlockVNNI(const void* inp_, const void* residual_,
         }
     });
 }
+#ifdef __clang__
+#pragma clang attribute pop
+#else
 #pragma GCC pop_options
+#endif
 #endif // CV_AVXVNNI_AVAILABLE
 
 void convInt8Block(const void* inp_, const void* residual_,

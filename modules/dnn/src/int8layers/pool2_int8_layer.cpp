@@ -12,7 +12,8 @@
 namespace cv {
 namespace dnn {
 
-static void maxPoolInt8(const void* inp_, void* out_, const ConvState& cs)
+template <typename T>
+static void maxPoolImpl(const void* inp_, void* out_, const ConvState& cs)
 {
     constexpr int MAX_POOL_DIMS = ConvState::MAX_CONV_DIMS;
     int NC1 = cs.inpshape[0] * cs.inpshape[1];
@@ -44,13 +45,9 @@ static void maxPoolInt8(const void* inp_, void* out_, const ConvState& cs)
         const int* zyxtab = cs.coordtab.data();
         const int* ofstab = cs.ofstab.data();
 
-        const int8_t* inp = (const int8_t*)inp_ + nc0 * iplanesize;
-        int8_t* out = (int8_t*)out_ + nc0 * planesize;
-        const int8_t INITVAL = -128; // INT8_MIN
-
-    #if CV_SIMD128
-        int nlanes = VTraits<v_int8x16>::vlanes(); // 16 bytes
-    #endif
+        const T* inp = (const T*)inp_ + nc0 * iplanesize;
+        T* out = (T*)out_ + nc0 * planesize;
+        const T INITVAL = std::numeric_limits<T>::min();
 
         for (int nc = nc0; nc < nc1; nc++, inp += iplanesize) {
             for (int z0 = 0; z0 < D; z0++) {
@@ -75,20 +72,9 @@ static void maxPoolInt8(const void* inp_, void* out_, const ConvState& cs)
                                     (unsigned)yi >= (unsigned)Hi ||
                                     (unsigned)xi >= (unsigned)Wi)
                                     continue;
-                                const int8_t* inptr = inp + ((zi * Hi + yi) * Wi + xi) * C0;
-                            #if CV_SIMD128
-                                int c = 0;
-                                for (; c <= C0 - nlanes; c += nlanes) {
-                                    v_int8x16 va = v_load(out + x0 * C0 + c);
-                                    v_int8x16 vb = v_load(inptr + c);
-                                    v_store(out + x0 * C0 + c, v_max(va, vb));
-                                }
-                                for (; c < C0; c++)
-                                    out[x0 * C0 + c] = std::max(out[x0 * C0 + c], inptr[c]);
-                            #else
+                                const T* inptr = inp + ((zi * Hi + yi) * Wi + xi) * C0;
                                 for (int c = 0; c < C0; c++)
                                     out[x0 * C0 + c] = std::max(out[x0 * C0 + c], inptr[c]);
-                            #endif
                             }
                         }
 
@@ -98,30 +84,14 @@ static void maxPoolInt8(const void* inp_, void* out_, const ConvState& cs)
 
                         for (; x0 < x1; x0++) {
                             int xi_ = x0 * SX - padX0;
-                            const int8_t* inp_xi = inp + ((Hi * zi_ + yi_) * Wi + xi_) * C0;
+                            const T* inp_xi = inp + ((Hi * zi_ + yi_) * Wi + xi_) * C0;
 
-                        #if CV_SIMD128
-                            int c = 0;
-                            for (; c <= C0 - nlanes; c += nlanes) {
-                                v_int8x16 s0 = v_load(inp_xi + ofstab[0] + c);
-                                for (int k = 1; k < ksize; k++)
-                                    s0 = v_max(s0, v_load(inp_xi + ofstab[k] + c));
-                                v_store(out + x0 * C0 + c, s0);
-                            }
-                            for (; c < C0; c++) {
-                                int8_t s = inp_xi[ofstab[0] + c];
-                                for (int k = 1; k < ksize; k++)
-                                    s = std::max(s, inp_xi[ofstab[k] + c]);
-                                out[x0 * C0 + c] = s;
-                            }
-                        #else
                             for (int c = 0; c < C0; c++) {
-                                int8_t s = inp_xi[ofstab[0] + c];
+                                T s = inp_xi[ofstab[0] + c];
                                 for (int k = 1; k < ksize; k++)
                                     s = std::max(s, inp_xi[ofstab[k] + c]);
                                 out[x0 * C0 + c] = s;
                             }
-                        #endif
                         }
 
                         x1 = W;
@@ -130,6 +100,14 @@ static void maxPoolInt8(const void* inp_, void* out_, const ConvState& cs)
             }
         }
     });
+}
+
+static void maxPoolInt8(const void* inp_, void* out_, const ConvState& cs, bool isU8)
+{
+    if (isU8)
+        maxPoolImpl<uint8_t>(inp_, out_, cs);
+    else
+        maxPoolImpl<int8_t>(inp_, out_, cs);
 }
 
 static void avgPoolInt8(const void* inp_, void* out_, const ConvState& cs,
@@ -365,7 +343,7 @@ public:
                                  dilations, pads, auto_pad, ceil_mode);
 
             if (is_max_pool) {
-                maxPoolInt8(inp.data, out.data, cs_local);
+                maxPoolInt8(inp.data, out.data, cs_local, inptype == CV_8UC1);
             } else {
                 avgPoolInt8(inp.data, out.data, cs_local,
                             input_sc, input_zp, output_sc, output_zp,
