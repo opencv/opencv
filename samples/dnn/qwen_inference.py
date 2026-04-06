@@ -53,7 +53,7 @@ def qwen_inference(net, prompt, max_new_tokens, tokenizer):
     print("Inferencing Qwen2.5 model...")
 
     tokens = tokenizer.encode(prompt)
-    tokens = np.array(tokens, dtype=np.int32).reshape(1, -1)
+    tokens = np.array(tokens, dtype=np.int64).reshape(1, -1)
 
     # Qwen2.5 special token IDs
     im_end_id = 151645   # <|im_end|>
@@ -61,12 +61,18 @@ def qwen_inference(net, prompt, max_new_tokens, tokenizer):
     stop_ids  = (im_end_id, eos_id)
 
     for _ in range(max_new_tokens):
+        seq_len = tokens.shape[1]
+        attention_mask = np.ones((1, seq_len), dtype=np.int64)
+        position_ids = np.arange(seq_len, dtype=np.int64).reshape(1, -1)
+
         net.setInput(tokens, 'input_ids')
+        net.setInput(attention_mask, 'attention_mask')
+        net.setInput(position_ids, 'position_ids')
         logits = net.forward()          # (1, seq_len, vocab_size)
         logits = logits[:, -1, :]       # take last token logits
 
         new_id = int(np.argmax(logits.reshape(-1)))
-        tokens = np.concatenate((tokens, np.array([[new_id]], dtype=np.int32)), axis=1)
+        tokens = np.concatenate((tokens, np.array([[new_id]], dtype=np.int64)), axis=1)
 
         if new_id in stop_ids:
             break
