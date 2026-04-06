@@ -425,13 +425,12 @@ public:
                 ++ptr;
                 CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
                 key_name += *ptr;
-                ++ptr;
-                CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
-            } else {
-                ++ptr;
-                CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
-                if (*ptr != '\\' && *ptr != '"') key_name += *ptr;
+            } else if (*ptr != '"') {
+                // normal byte: append current, do NOT skip ahead first
+                key_name += *ptr;
             }
+            ++ptr;
+            CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
         } while( cv_isprint(*ptr) && *ptr != '"' );
 
         if( *ptr != '"' )
