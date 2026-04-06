@@ -153,8 +153,8 @@ if(WITH_ONNXRUNTIME)
     if(WIN32)
       if(_ort_is_arm64)
         if(DOWNLOAD_ONNXRUNTIME_GPU)
-          message(WARNING "DNN: ONNX Runtime GPU package is not available for Windows ARM64, falling back to CPU package.")
-          set(_ort_package_kind "CPU")
+          message(FATAL_ERROR "DNN: ONNX Runtime GPU package is not available for Windows ARM64. "
+            "Disable DOWNLOAD_ONNXRUNTIME_GPU or use a supported platform (Windows x64 or Linux x64).")
         endif()
         set(_ort_filename "onnxruntime-win-arm64-${ONNXRUNTIME_VERSION}.zip")
       elseif(_ort_is_x64)
@@ -172,8 +172,8 @@ if(WITH_ONNXRUNTIME)
       endif()
     elseif(APPLE)
       if(DOWNLOAD_ONNXRUNTIME_GPU)
-        message(WARNING "DNN: ONNX Runtime GPU package is not available for macOS, falling back to CPU package.")
-        set(_ort_package_kind "CPU")
+        message(FATAL_ERROR "DNN: ONNX Runtime GPU package is not available for macOS. "
+          "Disable DOWNLOAD_ONNXRUNTIME_GPU or use a supported platform (Windows x64 or Linux x64).")
       endif()
       if(_ort_is_arm64)
         set(_ort_filename "onnxruntime-osx-arm64-${ONNXRUNTIME_VERSION}.tgz")
@@ -191,8 +191,8 @@ if(WITH_ONNXRUNTIME)
         endif()
       elseif(_ort_is_arm64)
         if(DOWNLOAD_ONNXRUNTIME_GPU)
-          message(WARNING "DNN: ONNX Runtime GPU package is not available for Linux AArch64 in official prebuilt artifacts, falling back to CPU package.")
-          set(_ort_package_kind "CPU")
+          message(FATAL_ERROR "DNN: ONNX Runtime GPU package is not available for Linux AArch64. "
+            "Disable DOWNLOAD_ONNXRUNTIME_GPU or use a supported platform (Windows x64 or Linux x64).")
         endif()
         set(_ort_filename "onnxruntime-linux-aarch64-${ONNXRUNTIME_VERSION}.tgz")
       endif()
@@ -242,19 +242,24 @@ if(WITH_ONNXRUNTIME)
       # Extract to build dir if not already extracted
       if(EXISTS "${_ort_cache_archive}" AND NOT EXISTS "${_ort_extracted_dir}")
         file(MAKE_DIRECTORY "${_ort_download_dir}")
-        if(_ort_filename MATCHES "\\.zip$")
-          set(_ort_tar_flags xvf)
-        else()
-          set(_ort_tar_flags xzf)
-        endif()
         message(STATUS "DNN: Extracting ONNX Runtime package to ${_ort_download_dir}")
-        execute_process(
-          COMMAND "${CMAKE_COMMAND}" -E tar ${_ort_tar_flags} "${_ort_cache_archive}"
-          WORKING_DIRECTORY "${_ort_download_dir}"
-          RESULT_VARIABLE _ort_extract_status
-        )
-        if(NOT _ort_extract_status EQUAL 0)
-          message(FATAL_ERROR "DNN: ONNX Runtime extraction failed for '${_ort_cache_archive}'.")
+        if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.18")
+          file(ARCHIVE_EXTRACT INPUT "${_ort_cache_archive}"
+               DESTINATION "${_ort_download_dir}")
+        else()
+          if(_ort_filename MATCHES "\\.zip$")
+            set(_ort_tar_flags xvf)
+          else()
+            set(_ort_tar_flags xzf)
+          endif()
+          execute_process(
+            COMMAND "${CMAKE_COMMAND}" -E tar ${_ort_tar_flags} "${_ort_cache_archive}"
+            WORKING_DIRECTORY "${_ort_download_dir}"
+            RESULT_VARIABLE _ort_extract_status
+          )
+          if(NOT _ort_extract_status EQUAL 0)
+            message(FATAL_ERROR "DNN: ONNX Runtime extraction failed for '${_ort_cache_archive}'.")
+          endif()
         endif()
       endif()
 

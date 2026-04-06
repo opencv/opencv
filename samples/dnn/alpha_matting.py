@@ -141,7 +141,6 @@ def apply_modnet(args, model, image):
 def main(func_args=None):
     args = get_args_parser(func_args)
     engine = cv.dnn.ENGINE_AUTO
-    # engine = cv.dnn.ENGINE_AUTO
     if args.backend != "default" or args.target != "cpu":
         engine = cv.dnn.ENGINE_CLASSIC
 
