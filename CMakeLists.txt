@@ -395,6 +395,8 @@ OCV_OPTION(WITH_ONNXRUNTIME "Include Microsoft ONNX Runtime support" OFF
   VERIFY HAVE_ONNX)
 OCV_OPTION(DOWNLOAD_ONNXRUNTIME "Download ONNX Runtime prebuilt binaries" OFF
   VISIBLE_IF WITH_ONNXRUNTIME)
+OCV_OPTION(DOWNLOAD_ONNXRUNTIME_GPU "Download GPU-enabled ONNX Runtime prebuilt binaries when available" OFF
+  VISIBLE_IF WITH_ONNXRUNTIME)
 OCV_OPTION(ONNXRUNTIME_PREFER_STATIC "Prefer static ONNX Runtime library when available" ON
   VISIBLE_IF WITH_ONNXRUNTIME)
 set(ONNXRUNTIME_VERSION "1.24.2" CACHE STRING "ONNX Runtime version to download (prebuilt binaries)")

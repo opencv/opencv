@@ -110,12 +110,19 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS
 set(include_dirs "")
 set(libs "")
 
+# ONNX Runtime
+ocv_option(WITH_ONNXRUNTIME "Build with ONNX Runtime support" OFF)
+ocv_option(DOWNLOAD_ONNXRUNTIME "Download ONNX Runtime prebuilt binaries" OFF IF WITH_ONNXRUNTIME)
+ocv_option(DOWNLOAD_ONNXRUNTIME_GPU "Download GPU-enabled ONNX Runtime prebuilt binaries when available" OFF IF WITH_ONNXRUNTIME)
+
+set(ONNXRUNTIME_VERSION "1.24.2" CACHE STRING "ONNX Runtime version to download (prebuilt binaries)")
+
 if(WITH_ONNXRUNTIME)
   include("${OpenCV_SOURCE_DIR}/cmake/FindONNX.cmake")
 
   set(_ort_download_requested OFF)
   set(_ort_download_forced OFF)
-  if(DOWNLOAD_ONNXRUNTIME)
+  if(DOWNLOAD_ONNXRUNTIME OR DOWNLOAD_ONNXRUNTIME_GPU)
     set(_ort_download_requested ON)
     set(_ort_download_forced ON)
   elseif(NOT HAVE_ONNXRUNTIME)
@@ -125,57 +132,143 @@ if(WITH_ONNXRUNTIME)
 
   if(_ort_download_requested)
     set(_ort_filename "")
-    set(_ort_md5 "")
+    set(_ort_package_kind "CPU")
+    if(DOWNLOAD_ONNXRUNTIME_GPU)
+      set(_ort_package_kind "GPU")
+    endif()
+    string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" _ort_processor)
+    set(_ort_is_x64 FALSE)
+    set(_ort_is_arm64 FALSE)
+    set(_ort_is_x86 FALSE)
+    if(X86_64 OR _ort_processor MATCHES "^(x86_64|amd64)$")
+      set(_ort_is_x64 TRUE)
+    endif()
+    if(ARM64 OR AARCH64 OR _ort_processor MATCHES "^(aarch64|arm64)$")
+      set(_ort_is_arm64 TRUE)
+    endif()
+    if(X86 OR _ort_processor MATCHES "^(x86|i[3-6]86)$")
+      set(_ort_is_x86 TRUE)
+    endif()
 
     if(WIN32)
-      if(X86_64 OR CMAKE_SIZEOF_VOID_P EQUAL 8)
-        set(_ort_filename "onnxruntime-win-x64-${ONNXRUNTIME_VERSION}.zip")
-        set(_ort_md5 "c535ec65cf6f850f2a70b4029acdc5d7")
-      elseif(ARM64 OR AARCH64)
+      if(_ort_is_arm64)
+        if(DOWNLOAD_ONNXRUNTIME_GPU)
+          message(FATAL_ERROR "DNN: ONNX Runtime GPU package is not available for Windows ARM64. "
+            "Disable DOWNLOAD_ONNXRUNTIME_GPU or use a supported platform (Windows x64 or Linux x64).")
+        endif()
         set(_ort_filename "onnxruntime-win-arm64-${ONNXRUNTIME_VERSION}.zip")
-        set(_ort_md5 "01df64c14cf9285a6b23744f1b2ddf63")
+      elseif(_ort_is_x64)
+        if(DOWNLOAD_ONNXRUNTIME_GPU)
+          set(_ort_filename "onnxruntime-win-x64-gpu-${ONNXRUNTIME_VERSION}.zip")
+        else()
+          set(_ort_filename "onnxruntime-win-x64-${ONNXRUNTIME_VERSION}.zip")
+        endif()
+      elseif(_ort_is_x86)
+        message(FATAL_ERROR
+          "DNN: No official ONNX Runtime prebuilt package detected for 32-bit Windows and "
+          "ONNXRUNTIME_VERSION='${ONNXRUNTIME_VERSION}'. "
+          "Disable DOWNLOAD_ONNXRUNTIME and provide ONNXRT_ROOT_DIR manually."
+        )
       endif()
     elseif(APPLE)
-      if(ARM64 OR AARCH64 OR CMAKE_OSX_ARCHITECTURES MATCHES "arm64")
+      if(DOWNLOAD_ONNXRUNTIME_GPU)
+        message(FATAL_ERROR "DNN: ONNX Runtime GPU package is not available for macOS. "
+          "Disable DOWNLOAD_ONNXRUNTIME_GPU or use a supported platform (Windows x64 or Linux x64).")
+      endif()
+      if(_ort_is_arm64)
         set(_ort_filename "onnxruntime-osx-arm64-${ONNXRUNTIME_VERSION}.tgz")
-        set(_ort_md5 "44302ee5651926ba6b0a3e92a3a303db")
+      elseif(_ort_is_x64)
+        set(_ort_filename "onnxruntime-osx-x86_64-${ONNXRUNTIME_VERSION}.tgz")
+      else()
+        set(_ort_filename "onnxruntime-osx-universal2-${ONNXRUNTIME_VERSION}.tgz")
       endif()
     elseif(UNIX)
-      if(X86_64)
-        set(_ort_filename "onnxruntime-linux-x64-${ONNXRUNTIME_VERSION}.tgz")
-        set(_ort_md5 "8e444d3ed1ea286013e339132ed4f08e")
-      elseif(AARCH64 OR ARM64)
+      if(_ort_is_x64)
+        if(DOWNLOAD_ONNXRUNTIME_GPU)
+          set(_ort_filename "onnxruntime-linux-x64-gpu-${ONNXRUNTIME_VERSION}.tgz")
+        else()
+          set(_ort_filename "onnxruntime-linux-x64-${ONNXRUNTIME_VERSION}.tgz")
+        endif()
+      elseif(_ort_is_arm64)
+        if(DOWNLOAD_ONNXRUNTIME_GPU)
+          message(FATAL_ERROR "DNN: ONNX Runtime GPU package is not available for Linux AArch64. "
+            "Disable DOWNLOAD_ONNXRUNTIME_GPU or use a supported platform (Windows x64 or Linux x64).")
+        endif()
         set(_ort_filename "onnxruntime-linux-aarch64-${ONNXRUNTIME_VERSION}.tgz")
-        set(_ort_md5 "857b0fbb35f9d4cc117033242fc2a3da")
       endif()
     endif()
 
     if(NOT _ort_filename)
-      if(_ort_download_forced OR NOT HAVE_ONNXRUNTIME)
+      if(_ort_download_forced)
         message(FATAL_ERROR
-          "DNN: there is no official ONNX Runtime prebuilt package for "
+          "DNN: DOWNLOAD_ONNXRUNTIME=ON, but there is no official ONNX Runtime prebuilt package for "
           "CMAKE_SYSTEM_NAME='${CMAKE_SYSTEM_NAME}', CMAKE_SYSTEM_PROCESSOR='${CMAKE_SYSTEM_PROCESSOR}'. "
-          "Provide an installed ORT via ONNXRT_ROOT_DIR, or use a supported platform."
+          "Disable DOWNLOAD_ONNXRUNTIME and provide an installed ORT via ONNXRT_ROOT_DIR, or use a supported platform."
         )
       endif()
     else()
       set(_ort_url "https://github.com/microsoft/onnxruntime/releases/download/v${ONNXRUNTIME_VERSION}/${_ort_filename}")
       string(REGEX REPLACE "\\.(tgz|zip)$" "" _ort_unpack_dirname "${_ort_filename}")
 
-      ocv_download(
-        FILENAME ${_ort_filename}
-        URL ${_ort_url}
-        DESTINATION_DIR "${OpenCV_BINARY_DIR}/3rdparty/onnxruntime"
-        ID "ORT"
-        HASH ${_ort_md5}
-        UNPACK
-      )
+      set(_ort_download_dir "${OpenCV_BINARY_DIR}/3rdparty/onnxruntime")
+      set(_ort_cache_dir "${OPENCV_DOWNLOAD_PATH}/onnxruntime")
+      set(_ort_cache_archive "${_ort_cache_dir}/${_ort_filename}")
+      set(_ort_extracted_dir "${_ort_download_dir}/${_ort_unpack_dirname}")
 
-      set(ONNXRT_ROOT_DIR "${OpenCV_BINARY_DIR}/3rdparty/onnxruntime/${_ort_unpack_dirname}"
+      message(STATUS "DNN: ONNX Runtime download mode: ${_ort_package_kind}")
+      message(STATUS "DNN: ONNX Runtime package: ${_ort_filename}")
+
+      # Download to persistent cache if not already present
+      if(NOT EXISTS "${_ort_cache_archive}")
+        file(MAKE_DIRECTORY "${_ort_cache_dir}")
+        message(STATUS "DNN: Downloading ONNX Runtime package from ${_ort_url}")
+        file(DOWNLOAD "${_ort_url}" "${_ort_cache_archive}"
+             SHOW_PROGRESS
+             STATUS _ort_download_status
+             LOG _ort_download_log)
+        list(GET _ort_download_status 0 _ort_download_status_code)
+        if(NOT _ort_download_status_code EQUAL 0)
+          file(REMOVE "${_ort_cache_archive}")
+          if(_ort_download_forced)
+            message(FATAL_ERROR "DNN: ONNX Runtime download failed. URL='${_ort_url}'. Log: ${_ort_download_log}")
+          else()
+            message(STATUS "DNN: ONNX Runtime download failed, skipping. Log: ${_ort_download_log}")
+          endif()
+        endif()
+      else()
+        message(STATUS "DNN: ONNX Runtime package found in cache: ${_ort_cache_archive}")
+      endif()
+
+      # Extract to build dir if not already extracted
+      if(EXISTS "${_ort_cache_archive}" AND NOT EXISTS "${_ort_extracted_dir}")
+        file(MAKE_DIRECTORY "${_ort_download_dir}")
+        message(STATUS "DNN: Extracting ONNX Runtime package to ${_ort_download_dir}")
+        if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.18")
+          file(ARCHIVE_EXTRACT INPUT "${_ort_cache_archive}"
+               DESTINATION "${_ort_download_dir}")
+        else()
+          if(_ort_filename MATCHES "\\.zip$")
+            set(_ort_tar_flags xvf)
+          else()
+            set(_ort_tar_flags xzf)
+          endif()
+          execute_process(
+            COMMAND "${CMAKE_COMMAND}" -E tar ${_ort_tar_flags} "${_ort_cache_archive}"
+            WORKING_DIRECTORY "${_ort_download_dir}"
+            RESULT_VARIABLE _ort_extract_status
+          )
+          if(NOT _ort_extract_status EQUAL 0)
+            message(FATAL_ERROR "DNN: ONNX Runtime extraction failed for '${_ort_cache_archive}'.")
+          endif()
+        endif()
+      endif()
+
+      set(ONNXRT_ROOT_DIR "${_ort_extracted_dir}"
           CACHE PATH "ONNX Runtime install directory" FORCE)
 
       if(NOT APPLE AND NOT WIN32)
         set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-rpath,'$ORIGIN/../3rdparty/onnxruntime/${_ort_unpack_dirname}/lib'")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath,'$ORIGIN/../3rdparty/onnxruntime/${_ort_unpack_dirname}/lib'")
       endif()
 
       include("${OpenCV_SOURCE_DIR}/cmake/FindONNX.cmake")
@@ -275,8 +368,7 @@ if(WITH_ONNXRUNTIME)
   else()
     message(SEND_ERROR
       "DNN: ONNX Runtime support was requested (WITH_ONNXRUNTIME=ON), but it was not found. "
-      "Set ONNXRT_ROOT_DIR to an existing installation. "
-      "OpenCV attempts to download supported prebuilt ONNX Runtime packages automatically when needed."
+      "Set ONNXRT_ROOT_DIR to an existing installation or enable DOWNLOAD_ONNXRUNTIME=ON."
     )
   endif()
 

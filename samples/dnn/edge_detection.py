@@ -99,10 +99,11 @@ def loadModel(args, engine):
     return net
 
 def apply_dexined(model, image):
+    t0 = cv.getTickCount()
     out = model.forward()
+    t = (cv.getTickCount() - t0) / cv.getTickFrequency()
     result,_ = post_processing(out, image.shape[:2])
-    t, _ = model.getPerfProfile()
-    label = 'Inference time: %.2f ms' % (t * 1000.0 / cv.getTickFrequency())
+    label = 'Inference time: %.2f ms' % (t * 1000.0)
     cv.putText(image, label, (0, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
     cv.putText(result, label, (0, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255))
     cv.imshow("Output", result)

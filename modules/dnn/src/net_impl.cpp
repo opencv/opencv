@@ -1145,14 +1145,15 @@ void Net::Impl::forward(OutputArrayOfArrays outputBlobs,
         const std::vector<String>& outBlobNames)
 {
     CV_Assert(!empty());
-    if (outBlobNames.empty())
-        CV_Error(Error::StsBadArg, "in Net::forward(), outBlobNames cannot be empty");
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
     if (mainGraph) {
         forwardWithMultipleOutputs(outputBlobs, outBlobNames);
         return;
     }
+
+    if (outBlobNames.empty())
+        CV_Error(Error::StsBadArg, "in Net::forward(), outBlobNames cannot be empty");
 
     std::vector<LayerPin> pins;
     for (int i = 0; i < outBlobNames.size(); i++)

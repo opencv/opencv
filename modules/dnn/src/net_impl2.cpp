@@ -52,6 +52,54 @@ struct OrtNamesCache
 #endif
 
 #ifdef HAVE_ONNXRUNTIME
+void Net::Impl::applyStagedOrtInputs()
+{
+    if (!ort_session || ort_staged_inputs.empty())
+        return;
+
+    if (!ort_names_cache)
+        ort_names_cache = std::make_shared<OrtNamesCache>(*ort_session);
+
+    OrtNamesCache& names = *ort_names_cache;
+    const size_t ninputs = names.input_names.size();
+    if (ninputs == 0)
+        CV_Error(Error::StsError, "DNN/ORT: ORT session has no inputs");
+
+    if (!netInputLayer)
+    {
+        netInputLayer = Ptr<DataLayer>(new DataLayer());
+        netInputLayer->name = "ort_data_layer";
+        netInputLayer->type = "Data";
+    }
+    if (netInputLayer->blobs.size() != ninputs)
+        netInputLayer->blobs.resize(ninputs);
+
+    for (size_t k = 0; k < ort_staged_inputs.size(); ++k)
+    {
+        const std::string& inpname = ort_staged_inputs[k].first;
+        const Mat& inputMat = ort_staged_inputs[k].second;
+        if (inputMat.empty())
+            CV_Error(Error::StsBadArg, "DNN/ORT: Input blob is empty");
+
+        size_t inputIdx = 0;
+        if (inpname.empty())
+        {
+            if (ninputs != 1)
+                CV_Error(Error::StsBadArg, "DNN/ORT: input name must be specified for models with multiple inputs");
+            inputIdx = 0;
+        }
+        else
+        {
+            auto it = names.input_name_to_index.find(inpname);
+            if (it == names.input_name_to_index.end())
+                CV_Error_(Error::StsObjectNotFound, ("DNN/ORT: input '%s' is not found", inpname.c_str()));
+            inputIdx = (size_t)it->second;
+        }
+        inputMat.copyTo(netInputLayer->blobs[inputIdx]);
+    }
+    ort_staged_inputs.clear();
+}
+
 static int cvTypeFromONNXElemType(const ONNXTensorElementDataType t)
 {
     switch (t)
@@ -571,6 +619,8 @@ void Net::Impl::allocateLayerOutputs(
 void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays outputs)
 {
 #ifdef HAVE_ONNXRUNTIME
+    if (mainGraph && modelFormat == DNN_MODEL_ONNX && !modelFileName.empty())
+        finalizeOrt();
     if (this->ort_session)
     {
         if (!netInputLayer || netInputLayer->blobs.empty())
@@ -628,6 +678,8 @@ void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays 
 void Net::Impl::forwardWithSingleOutput(const std::string& outname, OutputArrayOfArrays outputBlobs)
 {
 #ifdef HAVE_ONNXRUNTIME
+    if (mainGraph && modelFormat == DNN_MODEL_ONNX && !modelFileName.empty())
+        finalizeOrt();
     if (this->ort_session)
     {
         if (!netInputLayer || netInputLayer->blobs.empty())
@@ -711,6 +763,8 @@ void Net::Impl::forwardWithSingleOutput(const std::string& outname, OutputArrayO
 void Net::Impl::forwardWithMultipleOutputs(OutputArrayOfArrays outblobs, const std::vector<std::string>& outnames)
 {
 #ifdef HAVE_ONNXRUNTIME
+    if (mainGraph && modelFormat == DNN_MODEL_ONNX && !modelFileName.empty())
+        finalizeOrt();
     if (this->ort_session)
     {
         if (!netInputLayer || netInputLayer->blobs.empty())
@@ -893,6 +947,27 @@ void Net::Impl::traceArg(std::ostream& strm_, const char* prefix, size_t i, Arg 
 void Net::Impl::setMainGraphInput(InputArray m, const std::string& inpname)
 {
 #ifdef HAVE_ONNXRUNTIME
+    if (ortNeedsReinit && mainGraph && modelFormat == DNN_MODEL_ONNX && !modelFileName.empty())
+    {
+        Mat inputMat = m.getMat();
+        if (inputMat.empty())
+            CV_Error(Error::StsBadArg, "DNN/ORT: Input blob is empty");
+
+        bool updated = false;
+        for (size_t i = 0; i < ort_staged_inputs.size(); ++i)
+        {
+            if (ort_staged_inputs[i].first == inpname)
+            {
+                inputMat.copyTo(ort_staged_inputs[i].second);
+                updated = true;
+                break;
+            }
+        }
+        if (!updated)
+            ort_staged_inputs.push_back(std::make_pair(inpname, inputMat.clone()));
+        return;
+    }
+
     if (this->ort_session)
     {
         if (!this->ort_names_cache)

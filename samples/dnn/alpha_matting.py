@@ -129,11 +129,13 @@ def apply_modnet(args, model, image):
         image, args.scale, (args.width, args.height), args.mean, swapRB=args.rgb
     )
     model.setInput(inp)
+    t0 = cv.getTickCount()
     out = model.forward()
+    t = (cv.getTickCount() - t0) / cv.getTickFrequency()
     alpha_mask = postprocess_output(image, out)
     alpha_3ch = cv.merge([alpha_mask / 255.0, alpha_mask / 255.0, alpha_mask / 255.0])
     composite = (image.astype(np.float32) * alpha_3ch).astype(np.uint8)
-    return alpha_mask, composite
+    return alpha_mask, composite, t
 
 
 def main(func_args=None):
@@ -156,10 +158,8 @@ def main(func_args=None):
     args.model = findModel(args.model, args.sha1)
     net = loadModel(args, engine)
 
-    alpha_mask, composite = apply_modnet(args, net, image)
-
-    t, _ = net.getPerfProfile()
-    label = "Inference time: %.2f ms" % (t * 1000.0 / cv.getTickFrequency())
+    alpha_mask, composite, t = apply_modnet(args, net, image)
+    label = "Inference time: %.2f ms" % (t * 1000.0)
 
     draw_label(image, label, (0, 255, 0))
     draw_label(alpha_mask, label, (255, 255, 255))
