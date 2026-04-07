@@ -605,4 +605,84 @@ TEST(Imgproc_FindContours, link_runs)
 #endif
 }
 
+// ============================================================
+// findTRUContours tests
+// ============================================================
+
+// Order-independent contour-set comparison via per-contour hash.
+// Matches the logic from test.cpp (areDifferent), adapted to return bool.
+static bool trucoContoursMatch(const vector<vector<Point>>& a, const vector<vector<Point>>& b)
+{
+    auto hashMix = [](uint64_t x) -> uint64_t {
+        x = (x ^ (x >> 30)) * UINT64_C(0xbf58476d1ce4e5b9);
+        x = (x ^ (x >> 27)) * UINT64_C(0x94d049bb133111eb);
+        return x ^ (x >> 31);
+    };
+    auto hashContour = [&hashMix](const vector<Point>& c) -> uint64_t {
+        uint64_t h = 0;
+        for (const auto& pt : c) {
+            uint64_t seed = (static_cast<uint64_t>(pt.x) * UINT64_C(0x1f1f1f1f1f1f1f1f)) ^
+                             static_cast<uint64_t>(pt.y);
+            h += hashMix(seed);
+        }
+        return hashMix(h ^ hashMix(static_cast<uint64_t>(c.size())));
+    };
+
+    if (a.size() != b.size())
+        return false;
+
+    map<uint64_t, int> counts;
+    for (const auto& c : a) ++counts[hashContour(c)];
+    for (const auto& c : b) --counts[hashContour(c)];
+    for (const auto& kv : counts)
+        if (kv.second != 0) return false;
+    return true;
+}
+
+// Draw N random filled circles on a 4000x4000 black image, apply
+// adaptiveThreshold to extract borders, then verify that findTRUContours
+// returns exactly the same contour set as findContours(RETR_LIST,
+// CHAIN_APPROX_NONE).
+TEST(Imgproc_FindTRUContours, circles_vs_standard)
+{
+    const Size sz(4000, 4000);
+    const int ITER = 3;
+    const int NUM_CIRCLES = 50;
+
+    RNG& rng = TS::ptr()->get_rng();
+
+    for (int iter = 0; iter < ITER; ++iter)
+    {
+        SCOPED_TRACE(cv::format("iter=%d", iter));
+
+        // Build scene: random filled circles on black background
+        Mat img(sz, CV_8UC1, Scalar::all(0));
+        for (int i = 0; i < NUM_CIRCLES; ++i)
+        {
+            Point center(rng.uniform(50, sz.width  - 50),
+                         rng.uniform(50, sz.height - 50));
+            int radius = rng.uniform(10, 200);
+            circle(img, center, radius, Scalar::all(255), FILLED);
+        }
+
+        // Extract borders: pixels brighter than their local neighbourhood mean
+        // become foreground (thin edge lines around each circle).
+        Mat binary;
+        adaptiveThreshold(img, binary, 255,
+                          ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 11, 0);
+
+        // Reference: standard findContours
+        vector<vector<Point>> ref_contours;
+        vector<Vec4i> hierarchy;
+        findContours(binary, ref_contours, hierarchy, RETR_LIST, CHAIN_APPROX_NONE);
+
+        // TRUCO: pads internally, does not modify the caller's image
+        vector<vector<Point>> truco_contours;
+        findTRUContours(binary, truco_contours);
+
+        EXPECT_TRUE(trucoContoursMatch(ref_contours, truco_contours))
+            << "findTRUContours contour set differs from findContours on iter=" << iter;
+    }
+}
+
 }}  // namespace opencv_test

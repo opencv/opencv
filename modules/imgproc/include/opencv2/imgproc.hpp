@@ -4116,6 +4116,9 @@ CV_EXPORTS_W void findContours( InputArray image, OutputArrayOfArrays contours,
 CV_EXPORTS void findContours( InputArray image, OutputArrayOfArrays contours,
                               int mode, int method, Point offset = Point());
 
+
+
+
 //! @brief Find contours using link runs algorithm
 //!
 //! This function implements an algorithm different from cv::findContours:
@@ -4128,6 +4131,26 @@ CV_EXPORTS_W void findContoursLinkRuns(InputArray image, OutputArrayOfArrays con
 
 //! @overload
 CV_EXPORTS_W void findContoursLinkRuns(InputArray image, OutputArrayOfArrays contours);
+
+/** @brief Finds contours in a binary image using TRUCO @cite TRUCO2026 parallel algorithm.
+
+The algorithm achieves faster speed on a single thread by not computing the contour hierarchy and by
+using a more efficient contour retrieval algorithm. The function is parallelized and can achieve
+significant speedup with multiple threads.
+
+This algorithm doesn't support hierarchy extraction nor contour approximation.
+In all other aspects the output contours are the same as cv::findContours.
+
+@param image Source, an 8-bit single-channel image. Non-zero pixels are treated as 1's. Zero
+pixels remain 0's, so the image is treated as binary.
+@param contours Detected contours. Each contour is stored as a vector of points
+(e.g. std::vector<std::vector<cv::Point>>).
+@param minSize Minimum number of points a contour must have to be included in the output. This can
+reduce memory allocation overhead and filter out small noisy contours. Default is 0 (all contours).
+@param nthreads Number of threads to use. If <= 0, cv::getNumThreads() is used.
+*/
+CV_EXPORTS_W void findTRUContours(InputArray image, OutputArrayOfArrays contours,
+                                  int minSize = 0, int nthreads = 0);
 
 /** @brief Approximates a polygonal curve(s) with the specified precision.
 
