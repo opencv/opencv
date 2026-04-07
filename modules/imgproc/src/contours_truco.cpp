@@ -141,22 +141,23 @@ public:
         : padded_(img), ranges_(stripRanges), accumulator_(accumulator), minSize_(minSize)
     {
         step_ = padded_.step;
+        int istep = (int)step_;
         // 0: East (Right)
         offsets_[0] = 1;
         // 1: NE (Up-Right)
-        offsets_[1] = -step_ + 1;
+        offsets_[1] = -istep + 1;
         // 2: North (Up)
-        offsets_[2] = -step_;
+        offsets_[2] = -istep;
         // 3: NW (Up-Left)
-        offsets_[3] = -step_ - 1;
+        offsets_[3] = -istep - 1;
         // 4: West (Left)
         offsets_[4] = -1;
         // 5: SW (Down-Left)
-        offsets_[5] = step_ - 1;
+        offsets_[5] = istep - 1;
         // 6: South (Down)
-        offsets_[6] = step_;
+        offsets_[6] = istep;
         // 7: SE (Down-Right)
-        offsets_[7] = step_ + 1;
+        offsets_[7] = istep + 1;
 
         memcpy(offsets_ + 8, offsets_, 8 * sizeof(int));
 
@@ -299,9 +300,9 @@ public:
         for (; j <= width - cv::VTraits<cv::v_uint8>::vlanes(); j += cv::VTraits<cv::v_uint8>::vlanes())
         {
             cv::v_uint8 vmask = (cv::v_ne(cv::vx_load((uchar*)(src_data + j)), v_zero));
-            if (v_check_any(vmask))
+            if (cv::v_check_any(vmask))
             {
-                j += v_scan_forward(vmask);
+                j += cv::v_scan_forward(vmask);
                 return j;
             }
         }
@@ -324,9 +325,9 @@ public:
             for (; j <=  width - cv::VTraits<cv::v_uint8>::vlanes(); j += cv::VTraits<cv::v_uint8>::vlanes())
             {
                 cv::v_uint8 vmask = (cv::v_eq(cv::vx_load((uchar*)(src_data + j)), v_zero));
-                if (v_check_any(vmask))
+                if (cv::v_check_any(vmask))
                 {
-                    j += v_scan_forward(vmask);
+                    j += cv::v_scan_forward(vmask);
                     return j;
                 }
             }
@@ -443,5 +444,3 @@ void findTRUContours(InputArray _src, OutputArrayOfArrays _contours, int minSize
 
 
 }
-
-
