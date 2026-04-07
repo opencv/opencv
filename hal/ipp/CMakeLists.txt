@@ -45,7 +45,7 @@ target_include_directories(ipphal PRIVATE
   ${IPP_INCLUDE_DIRS}
 )
 
-target_link_libraries(ipphal PUBLIC ${IPP_IW_LIBRARY} ${IPP_LIBRARIES})
+target_link_libraries(ipphal PUBLIC ${IPP_IW_LIBRARIES} ${IPP_LIBRARIES})
 
 set_target_properties(ipphal PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${3P_LIBRARY_OUTPUT_PATH} DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}")
 

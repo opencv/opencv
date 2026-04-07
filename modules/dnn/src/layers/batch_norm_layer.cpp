@@ -83,7 +83,7 @@ public:
         if( hasBias )
         {
             CV_Assert((size_t)biasBlobIndex < blobs.size());
-            const Mat& b = blobs[weightsBlobIndex];
+            const Mat& b = blobs[biasBlobIndex];
             CV_Assert(b.isContinuous() && b.type() == CV_32F && b.total() == (size_t)n);
         }
 

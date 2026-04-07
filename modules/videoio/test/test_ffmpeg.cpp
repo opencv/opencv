@@ -1030,6 +1030,75 @@ inline static std::string videoio_ffmpeg_mismatch_name_printer(const testing::Te
 
 INSTANTIATE_TEST_CASE_P(/**/, videoio_ffmpeg_channel_mismatch, testing::ValuesIn(mismatch_cases), videoio_ffmpeg_mismatch_name_printer);
 
+#ifndef _WIN32
+
+typedef tuple<string, string> AlphaChannelParams;
+typedef testing::TestWithParam< AlphaChannelParams > videoio_ffmpeg_alpha_channel;
+
+// New feature in https://github.com/opencv/opencv/pull/28751 requires FFmpeg wrapper rebuild on Windows
+TEST_P(videoio_ffmpeg_alpha_channel, write_read)
+{
+    if (!videoio_registry::hasBackend(CAP_FFMPEG))
+        throw SkipTestException("FFmpeg backend was not found");
+
+    const int fourcc = fourccFromString(get<0>(GetParam()));
+    const string filename = "video_with_alpha_channel." + get<1>(GetParam());
+    cv::VideoWriter writer(filename, cv::CAP_FFMPEG, fourcc, 1, Size(320, 240),
+                           {VIDEOWRITER_PROP_IS_COLOR, 1,
+                            VIDEOWRITER_PROP_ENABLE_ALPHA, 1});
+
+    ASSERT_TRUE(writer.isOpened());
+
+    for (int i = 0; i < 10; i ++)
+    {
+        cv::Mat frame;
+        cv::Mat gray_frame(240, 320, CV_8UC1, cv::Scalar::all(0));
+        gray_frame(Rect(i*10, i*10, i*10, i*10)).setTo(255);
+        cv::Mat channels[4] = {gray_frame, gray_frame, gray_frame, gray_frame};
+        cv::merge(channels, 4, frame);
+        writer.write(frame);
+    }
+
+    writer.release();
+
+    cv::VideoCapture cap(filename, cv::CAP_FFMPEG, {cv::CAP_PROP_FORMAT, CV_8UC4});
+    ASSERT_TRUE(cap.isOpened());
+    ASSERT_EQ(10, cap.get(cv::CAP_PROP_FRAME_COUNT));
+
+    for (int i = 0; i < 10; i++)
+    {
+        cv::Mat frame;
+        cap >> frame;
+        EXPECT_EQ(4, frame.channels());
+        EXPECT_EQ(320, frame.cols);
+        EXPECT_EQ(240, frame.rows);
+        EXPECT_EQ(0, frame.data[0]);
+        EXPECT_EQ(0, frame.data[1]);
+        EXPECT_EQ(0, frame.data[2]);
+        EXPECT_EQ(0, frame.data[3]);
+
+        cv::Mat channels[4];
+        cv::split(frame, channels);
+        int g_non_zero = cv::countNonZero(channels[1]);
+        int alpha_non_zero = cv::countNonZero(channels[3]);
+
+        EXPECT_EQ(g_non_zero, alpha_non_zero);
+    }
+    remove(filename.c_str());
+}
+
+AlphaChannelParams alpha_params[] =
+{
+    make_tuple("FFV1", "mkv"),
+    make_tuple("FFV1", "avi")
+    // webm and hevc formats are disable as require fresh FFmpeg
+    //make_tuple("VP90", "webm")
+    //make_tuple("hevc", "mp4")
+};
+
+INSTANTIATE_TEST_CASE_P(/**/, videoio_ffmpeg_alpha_channel, testing::ValuesIn(alpha_params));
+#endif
+
 // PR: https://github.com/opencv/opencv/pull/27523
 // TODO: Enable the tests back on Windows after FFmpeg plugin rebuild
 #ifndef _WIN32

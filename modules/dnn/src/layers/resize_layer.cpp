@@ -514,17 +514,30 @@ public:
 
         attrs.nearest_mode = ov::op::v4::Interpolate::NearestMode::ROUND_PREFER_FLOOR;
 
-
-        std::vector<int64_t> shape = {outHeight, outWidth};
-        auto out_shape = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{2}, shape.data());
-
-        auto& input_shape = ieInpNode.get_shape();
-        CV_Assert_N(input_shape[2] != 0, input_shape[3] != 0);
-        std::vector<float> scales = {static_cast<float>(outHeight) / input_shape[2], static_cast<float>(outWidth) / input_shape[3]};
-        auto scales_shape = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{2}, scales.data());
+        std::shared_ptr<ov::Node> out_shape_node;
+        std::shared_ptr<ov::Node> scales_node;
+        if (nodes.size() == 2)
+        {
+            auto& ieRefNode = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
+            auto ref_shape = std::make_shared<ov::op::v3::ShapeOf>(ieRefNode, ov::element::i64);
+            auto hw_indices = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{2}, std::vector<int64_t>{2, 3});
+            auto gather_axis = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{}, 0LL);
+            out_shape_node = std::make_shared<ov::op::v8::Gather>(ref_shape, hw_indices, gather_axis);
+            std::vector<float> dummy_scales = {1.0f, 1.0f};
+            scales_node = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{2}, dummy_scales.data());
+        }
+        else
+        {
+            std::vector<int64_t> shape = {outHeight, outWidth};
+            out_shape_node = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{2}, shape.data());
+            auto& input_shape = ieInpNode.get_shape();
+            CV_Assert_N(input_shape[2] != 0, input_shape[3] != 0);
+            std::vector<float> scales = {static_cast<float>(outHeight) / input_shape[2],static_cast<float>(outWidth) / input_shape[3]};
+            scales_node = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{2}, scales.data());
+        }
 
         auto axes = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{2}, std::vector<int64_t>{2, 3});
-        auto interp = std::make_shared<ov::op::v4::Interpolate>(ieInpNode, out_shape, scales_shape, axes, attrs);
+        auto interp = std::make_shared<ov::op::v4::Interpolate>(ieInpNode, out_shape_node, scales_node, axes, attrs);
         return Ptr<BackendNode>(new InfEngineNgraphNode(interp));
     }
 #endif  // HAVE_DNN_NGRAPH
