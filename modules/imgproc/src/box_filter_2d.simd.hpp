@@ -44,20 +44,22 @@
 // both row and column passes in a single traversal.
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-v_uint32 vx_setall(unsigned value) {
-    return vx_setall_u32(value);
-}
-v_int32 vx_setall(int value) {
-    return vx_setall_s32(value);
-}
-v_uint16 vx_setall(ushort value) {
-    return vx_setall_u16(value);
-}
+template<typename T>
+static inline typename std::enable_if<std::is_same<T, unsigned>::value, v_uint32>::type
+vx_setall(T value) { return vx_setall_u32(value); }
+
+template<typename T>
+static inline typename std::enable_if<std::is_same<T, int>::value, v_int32>::type
+vx_setall(T value) { return vx_setall_s32(value); }
+
+template<typename T>
+static inline typename std::enable_if<std::is_same<T, ushort>::value, v_uint16>::type
+vx_setall(T value) { return vx_setall_u16(value); }
 #endif
 #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-v_float64 vx_setall(double value) {
-    return vx_setall_f64(value);
-}
+template<typename T>
+static inline typename std::enable_if<std::is_same<T, double>::value, v_float64>::type
+vx_setall(T value) { return vx_setall_f64(value); }
 #endif
 
 template<int SCALE_T, typename ET, typename WET, typename VET, typename VFT>
