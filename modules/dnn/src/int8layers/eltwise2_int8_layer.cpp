@@ -11,6 +11,9 @@
 #if CV_AVX2
 #include <immintrin.h>
 #endif
+#if CV_NEON
+#include <arm_neon.h>
+#endif
 
 namespace cv {
 namespace dnn {
@@ -164,7 +167,7 @@ public:
         const int out_min = isU8 ? (withRelu ? output_zp : 0) : (withRelu ? output_zp : -128);
         const int out_max = isU8 ? 255 : 127;
 
-        const int grain = std::max(1, (int)(total_elems / (getNumThreads() * 4)));
+        const double nstripes = (double)std::max(1, getNumThreads() * 4);
 
         if (isU8) {
             std::vector<const uint8_t*> inptrs(ninputs);
@@ -207,6 +210,45 @@ public:
                         _mm_storel_epi64((__m128i*)(outptr + i), packed8);
                     }
                 }
+            #elif CV_NEON
+                if (ninputs == 2) {
+                    float32x4_t vc0 = vdupq_n_f32(c0);
+                    float32x4_t vc1 = vdupq_n_f32(c1);
+                    float32x4_t voff = vdupq_n_f32(off);
+                    int32x4_t vmin = vdupq_n_s32(out_min);
+                    int32x4_t vmax = vdupq_n_s32(out_max);
+
+                    for (; i <= r.end - 8; i += 8) {
+                        uint8x8_t a8 = vld1_u8(p0 + i);
+                        uint8x8_t b8 = vld1_u8(p1 + i);
+                        uint16x8_t a16 = vmovl_u8(a8);
+                        uint16x8_t b16 = vmovl_u8(b8);
+
+                        int32x4_t a32_lo = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(a16)));
+                        int32x4_t b32_lo = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(b16)));
+                        int32x4_t a32_hi = vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(a16)));
+                        int32x4_t b32_hi = vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(b16)));
+
+                        float32x4_t val_lo = vfmaq_f32(vfmaq_f32(voff, vc0, vcvtq_f32_s32(a32_lo)),
+                                                        vc1, vcvtq_f32_s32(b32_lo));
+                        float32x4_t val_hi = vfmaq_f32(vfmaq_f32(voff, vc0, vcvtq_f32_s32(a32_hi)),
+                                                        vc1, vcvtq_f32_s32(b32_hi));
+
+                        int32x4_t ival_lo = vminq_s32(vmaxq_s32(vcvtnq_s32_f32(val_lo), vmin), vmax);
+                        int32x4_t ival_hi = vminq_s32(vmaxq_s32(vcvtnq_s32_f32(val_hi), vmin), vmax);
+
+                        int16x8_t p16 = vcombine_s16(vqmovn_s32(ival_lo), vqmovn_s32(ival_hi));
+                        uint8x8_t p8u = vqmovun_s16(p16);
+                        if (lutptr) {
+                            uint8_t tmp[8];
+                            vst1_u8(tmp, p8u);
+                            for (int k = 0; k < 8; k++)
+                                outptr[i + k] = (uint8_t)lutptr[tmp[k]];
+                        } else {
+                            vst1_u8(outptr + i, p8u);
+                        }
+                    }
+                }
             #endif
                 for (; i < r.end; i++)
                 {
@@ -223,7 +265,7 @@ public:
 
                     outptr[i] = (uint8_t)ival;
                 }
-            }, grain);
+            }, nstripes);
         } else {
             std::vector<const int8_t*> inptrs(ninputs);
             for (int k = 0; k < ninputs; k++)
@@ -265,6 +307,45 @@ public:
                         _mm_storel_epi64((__m128i*)(outptr + i), packed8);
                     }
                 }
+            #elif CV_NEON
+                if (ninputs == 2) {
+                    float32x4_t vc0 = vdupq_n_f32(c0);
+                    float32x4_t vc1 = vdupq_n_f32(c1);
+                    float32x4_t voff = vdupq_n_f32(off);
+                    int32x4_t vmin = vdupq_n_s32(out_min);
+                    int32x4_t vmax = vdupq_n_s32(out_max);
+
+                    for (; i <= r.end - 8; i += 8) {
+                        int8x8_t a8 = vld1_s8(p0 + i);
+                        int8x8_t b8 = vld1_s8(p1 + i);
+                        int16x8_t a16 = vmovl_s8(a8);
+                        int16x8_t b16 = vmovl_s8(b8);
+
+                        int32x4_t a32_lo = vmovl_s16(vget_low_s16(a16));
+                        int32x4_t b32_lo = vmovl_s16(vget_low_s16(b16));
+                        int32x4_t a32_hi = vmovl_s16(vget_high_s16(a16));
+                        int32x4_t b32_hi = vmovl_s16(vget_high_s16(b16));
+
+                        float32x4_t val_lo = vfmaq_f32(vfmaq_f32(voff, vc0, vcvtq_f32_s32(a32_lo)),
+                                                        vc1, vcvtq_f32_s32(b32_lo));
+                        float32x4_t val_hi = vfmaq_f32(vfmaq_f32(voff, vc0, vcvtq_f32_s32(a32_hi)),
+                                                        vc1, vcvtq_f32_s32(b32_hi));
+
+                        int32x4_t ival_lo = vminq_s32(vmaxq_s32(vcvtnq_s32_f32(val_lo), vmin), vmax);
+                        int32x4_t ival_hi = vminq_s32(vmaxq_s32(vcvtnq_s32_f32(val_hi), vmin), vmax);
+
+                        int16x8_t p16 = vcombine_s16(vqmovn_s32(ival_lo), vqmovn_s32(ival_hi));
+                        int8x8_t p8 = vqmovn_s16(p16);
+                        if (lutptr) {
+                            int8_t tmp[8];
+                            vst1_s8(tmp, p8);
+                            for (int k = 0; k < 8; k++)
+                                outptr[i + k] = (int8_t)lutptr[(int)tmp[k] + 128];
+                        } else {
+                            vst1_s8(outptr + i, p8);
+                        }
+                    }
+                }
             #endif
                 for (; i < r.end; i++)
                 {
@@ -281,7 +362,7 @@ public:
 
                     outptr[i] = (int8_t)ival;
                 }
-            }, grain);
+            }, nstripes);
         }
 
         if (uouts) {
