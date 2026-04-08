@@ -961,7 +961,8 @@ void Net::Impl::forwardWithSingleOutput(const std::string& outname, OutputArrayO
 
         std::vector<Mat> emptyBlobs;
         std::vector<Mat> outs = runOgaSession(hasBlobs ? netInputLayer->blobs : emptyBlobs);
-        return outs[0];
+        outputBlobs.assign(outs[0]);
+        return;
     }
 #endif
 #ifdef HAVE_ONNXRUNTIME
