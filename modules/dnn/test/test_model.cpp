@@ -991,55 +991,37 @@ TEST_P(Reproducibility_MobileNetSSD_ONNX, Accuracy)
     printf("num_detections = %d\n", ndet);
     ASSERT_GT(ndet, 0);
 
-    // COCO class ID to label (1-indexed, only classes relevant to this test)
-    std::map<int, std::string> cocoLabels = {
-        {2, "bicycle"}, {3, "car"}, {8, "truck"}, {18, "dog"},
-    };
-
-    struct Detection {
-        int classId;
-        float score;
-        float box[4]; // y1, x1, y2, x2
-    };
-    std::vector<Detection> refDetections = {
-        {2,  0.944377f, {0.219984f, 0.157917f, 0.739280f, 0.742909f}},  // bicycle
-        {18, 0.877805f, {0.360803f, 0.168082f, 0.919625f, 0.426304f}},  // dog
-        {3,  0.787824f, {0.114612f, 0.600506f, 0.298757f, 0.899101f}},  // car
-    };
-
-    const float scoreEps = 0.05f;
-    const float boxEps = 0.05f;
-
-    printf("All detections:\n");
+    // Build test detection vectors from model outputs
+    // Model boxes are normalized (y1, x1, y2, x2) — convert to Rect2d(x, y, w, h)
+    std::vector<int> testClassIds;
+    std::vector<float> testScores;
+    std::vector<Rect2d> testBoxes;
     for (int j = 0; j < ndet; j++) {
-        int cls = (int)classes.at<float>(0, j);
-        float sc = scores.at<float>(0, j);
-        const float* b = boxes.ptr<float>(0, j);
-        std::string label = cocoLabels.count(cls) ? cocoLabels[cls] : "class_" + std::to_string(cls);
-        printf("  [%d] %s (id=%d), score=%.4f, box=[%.3f, %.3f, %.3f, %.3f]\n",
-               j, label.c_str(), cls, sc, b[0], b[1], b[2], b[3]);
+        testClassIds.push_back((int)classes.at<float>(0, j));
+        testScores.push_back(scores.at<float>(0, j));
+        float y1 = boxes.at<float>(0, j, 0);
+        float x1 = boxes.at<float>(0, j, 1);
+        float y2 = boxes.at<float>(0, j, 2);
+        float x2 = boxes.at<float>(0, j, 3);
+        testBoxes.push_back(Rect2d(x1, y1, x2 - x1, y2 - y1));
     }
 
-    for (size_t r = 0; r < refDetections.size(); r++) {
-        bool found = false;
-        std::string refLabel = cocoLabels.count(refDetections[r].classId)
-                               ? cocoLabels[refDetections[r].classId] : "unknown";
-        for (int j = 0; j < ndet; j++) {
-            int cls = (int)classes.at<float>(0, j);
-            float sc = scores.at<float>(0, j);
-            if (cls == refDetections[r].classId && sc > 0.3f) {
-                EXPECT_NEAR(refDetections[r].score, sc, scoreEps);
-                for (int k = 0; k < 4; k++) {
-                    EXPECT_NEAR(refDetections[r].box[k], boxes.at<float>(0, j, k), boxEps);
-                }
-                found = true;
-                printf("  matched: %s (id=%d), score=%.4f\n", refLabel.c_str(), cls, sc);
-                break;
-            }
-        }
-        EXPECT_TRUE(found) << "Expected detection of " << refLabel
-                           << " (class " << refDetections[r].classId << ") not found";
-    }
+    // Reference detections for dog_orig_size.png
+    // COCO 1-indexed: 2=bicycle, 3=car, 18=dog
+    std::vector<int> refClassIds = {2, 18, 3};
+    std::vector<float> refScores = {0.944377f, 0.877805f, 0.787824f};
+    std::vector<Rect2d> refBoxes = {
+        Rect2d(0.157917, 0.219984, 0.742909 - 0.157917, 0.739280 - 0.219984),  // bicycle
+        Rect2d(0.168082, 0.360803, 0.426304 - 0.168082, 0.919625 - 0.360803),  // dog
+        Rect2d(0.600506, 0.114612, 0.899101 - 0.600506, 0.298757 - 0.114612),  // car
+    };
+
+    float confThreshold = 0.5f;
+    double scoreDiff = 0.1;
+    double iouDiff = 0.05;
+    normAssertDetections(refClassIds, refScores, refBoxes,
+                         testClassIds, testScores, testBoxes,
+                         "", confThreshold, scoreDiff, iouDiff);
 }
 INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_MobileNetSSD_ONNX,
                         testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
