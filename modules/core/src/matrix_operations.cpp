@@ -341,6 +341,10 @@ cv::Mat cv::Mat::cross(InputArray _m) const
 namespace cv
 {
 
+typedef void (*ReduceSumFunc)(const Mat& src, Mat& dst);
+ReduceSumFunc getReduceCSumFunc(int sdepth, int ddepth);
+ReduceSumFunc getReduceRSumFunc(int sdepth, int ddepth);
+
 template <typename T, typename WT, typename Op>
 struct ReduceR_SIMD
 {
@@ -350,34 +354,6 @@ struct ReduceR_SIMD
     }
 };
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-
-template <>
-struct ReduceR_SIMD<uchar, int, OpAdd<int> >
-{
-    int operator()(const uchar* src, int start, int end, int* buf, const OpAdd<int>&) const
-    {
-        int i = start;
-        const int vlanes8 = VTraits<v_uint8>::vlanes();
-        const int vlanes32 = VTraits<v_int32>::vlanes();
-        for (; i <= end - vlanes8; i += vlanes8)
-        {
-            v_uint16 v_s0, v_s1;
-            v_expand(vx_load(src + i), v_s0, v_s1);
-            v_uint32 v_s00, v_s01, v_s10, v_s11;
-            v_expand(v_s0, v_s00, v_s01);
-            v_expand(v_s1, v_s10, v_s11);
-            v_store(buf + i,              v_add(vx_load(buf + i),              v_reinterpret_as_s32(v_s00)));
-            v_store(buf + i + vlanes32,   v_add(vx_load(buf + i + vlanes32),   v_reinterpret_as_s32(v_s01)));
-            v_store(buf + i + 2*vlanes32, v_add(vx_load(buf + i + 2*vlanes32), v_reinterpret_as_s32(v_s10)));
-            v_store(buf + i + 3*vlanes32, v_add(vx_load(buf + i + 3*vlanes32), v_reinterpret_as_s32(v_s11)));
-        }
-        v_cleanup();
-        return i;
-    }
-};
-
-#endif // CV_SIMD || CV_SIMD_SCALABLE
 
 template<typename T, typename ST, typename WT, class Op, class OpInit>
 class ReduceR_Invoker : public ParallelLoopBody
@@ -845,7 +821,10 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     {
         if( op == REDUCE_SUM )
         {
-            if(sdepth == CV_8U && ddepth == CV_32S)
+            ReduceSumFunc simd_func = getReduceRSumFunc(sdepth, ddepth);
+            if(simd_func)
+                func = (ReduceFunc)simd_func;
+            else if(sdepth == CV_8U && ddepth == CV_32S)
                 func = reduceSumR8u32s;
             else if(sdepth == CV_8U && ddepth == CV_32F)
                 func = reduceSumR8u32f;
@@ -920,7 +899,10 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     {
         if(op == REDUCE_SUM)
         {
-            if(sdepth == CV_8U && ddepth == CV_32S)
+            ReduceSumFunc simd_func = getReduceCSumFunc(sdepth, ddepth);
+            if(simd_func)
+                func = (ReduceFunc)simd_func;
+            else if(sdepth == CV_8U && ddepth == CV_32S)
                 func = reduceSumC8u32s;
             else if(sdepth == CV_8U && ddepth == CV_32F)
                 func = reduceSumC8u32f;
