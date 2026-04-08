@@ -925,6 +925,14 @@ typedef testing::TestWithParam<Target> Reproducibility_MobileNetSSD_ONNX;
 TEST_P(Reproducibility_MobileNetSSD_ONNX, Accuracy)
 {
     Target targetId = GetParam();
+    auto engine_forced = static_cast<EngineType>(
+        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO));
+    if (engine_forced == ENGINE_CLASSIC)
+    {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+        return;
+    }
+
     applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
     ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
 

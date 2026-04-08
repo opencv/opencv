@@ -1504,9 +1504,6 @@ void ONNXImporter2::parseGather(LayerParams& layerParams, const opencv_onnx::Nod
 {
     layerParams.type = "Gather2";
     CV_CheckEQ(node_proto.input_size(), 2, "");
-    // Diagnostics: log axis used by this Gather node (attribute may be absent -> default 0)
-    int axis = layerParams.get<int>("axis", 0);
-    const std::string node_name = node_proto.has_name() ? node_proto.name() : std::string();
     addLayer(layerParams, node_proto);
 }
 
