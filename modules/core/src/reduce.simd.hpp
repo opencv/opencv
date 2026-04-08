@@ -615,6 +615,7 @@ static void reduceColSum_32f32f(const Mat& srcmat, Mat& dstmat)
     v_cleanup();
 }
 
+#if CV_SIMD_64F
 // --- float → double ---
 static void reduceColSum_32f64f(const Mat& srcmat, Mat& dstmat)
 {
@@ -696,6 +697,7 @@ static void reduceColSum_64f64f(const Mat& srcmat, Mat& dstmat)
     parallel_for_(Range(0, srcmat.rows), body);
     v_cleanup();
 }
+#endif // CV_SIMD_64F
 
 // =====================================================================
 //  Row reduce SUM (dim=0): sum each column across all rows
@@ -925,6 +927,7 @@ static void reduceRowSum_32f32f(const Mat& srcmat, Mat& dstmat)
     v_cleanup();
 }
 
+#if CV_SIMD_64F
 // --- float → double ---
 static void reduceRowSum_32f64f(const Mat& srcmat, Mat& dstmat)
 {
@@ -1002,6 +1005,7 @@ static void reduceRowSum_64f64f(const Mat& srcmat, Mat& dstmat)
     parallel_for_(Range(0, width_cn), body, width_cn * CV_ELEM_SIZE(srcmat.depth()) / 64);
     v_cleanup();
 }
+#endif // CV_SIMD_64F
 
 #endif // CV_SIMD || CV_SIMD_SCALABLE
 
@@ -1017,8 +1021,10 @@ ReduceSumFunc getReduceCSumFunc(int sdepth, int ddepth)
     if (sdepth == CV_16U && ddepth == CV_32F) return reduceColSum_16u32f;
     if (sdepth == CV_16S && ddepth == CV_32F) return reduceColSum_16s32f;
     if (sdepth == CV_32F && ddepth == CV_32F) return reduceColSum_32f32f;
+#if CV_SIMD_64F
     if (sdepth == CV_32F && ddepth == CV_64F) return reduceColSum_32f64f;
     if (sdepth == CV_64F && ddepth == CV_64F) return reduceColSum_64f64f;
+#endif
 #endif
     return nullptr;
 }
@@ -1031,8 +1037,10 @@ ReduceSumFunc getReduceRSumFunc(int sdepth, int ddepth)
     if (sdepth == CV_16U && ddepth == CV_32F) return reduceRowSum_16u32f;
     if (sdepth == CV_16S && ddepth == CV_32F) return reduceRowSum_16s32f;
     if (sdepth == CV_32F && ddepth == CV_32F) return reduceRowSum_32f32f;
+#if CV_SIMD_64F
     if (sdepth == CV_32F && ddepth == CV_64F) return reduceRowSum_32f64f;
     if (sdepth == CV_64F && ddepth == CV_64F) return reduceRowSum_64f64f;
+#endif
 #endif
     return nullptr;
 }

@@ -10,6 +10,8 @@
 namespace cv {
 
 typedef void (*ReduceSumFunc)(const Mat& src, Mat& dst);
+ReduceSumFunc getReduceCSumFunc(int sdepth, int ddepth);
+ReduceSumFunc getReduceRSumFunc(int sdepth, int ddepth);
 
 ReduceSumFunc getReduceCSumFunc(int sdepth, int ddepth)
 {
