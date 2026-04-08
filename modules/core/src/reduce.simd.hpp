@@ -70,7 +70,7 @@ static void reduceColSum_8u32s(const Mat& srcmat, Mat& dstmat)
                 __m128i hi128 = _mm256_extracti128_si256(vsum, 1);
                 __m128i s = _mm_add_epi64(lo128, hi128);
                 s = _mm_add_epi64(s, _mm_unpackhi_epi64(s, s));
-                int total = (int)_mm_cvtsi128_si64(s);
+                int total = _mm_cvtsi128_si32(s);
                 for (; x < width; x++)
                     total += (int)src[x];
                 dst[0] = total;
@@ -83,7 +83,7 @@ static void reduceColSum_8u32s(const Mat& srcmat, Mat& dstmat)
                     vsum = _mm_add_epi64(vsum, _mm_sad_epu8(
                         _mm_loadu_si128((const __m128i*)(src + x)), zero));
                 __m128i s = _mm_add_epi64(vsum, _mm_unpackhi_epi64(vsum, vsum));
-                int total = (int)_mm_cvtsi128_si64(s);
+                int total = _mm_cvtsi128_si32(s);
                 for (; x < width; x++)
                     total += (int)src[x];
                 dst[0] = total;
@@ -201,10 +201,10 @@ static void reduceColSum_8u32s(const Mat& srcmat, Mat& dstmat)
                 __m128i ga_lo = _mm256_castsi256_si128(sum_ga);
                 __m128i ga_hi = _mm256_extracti128_si256(sum_ga, 1);
                 __m128i ga_s = _mm_add_epi64(ga_lo, ga_hi);
-                dst[0] = (int)_mm_cvtsi128_si64(br_s);
-                dst[1] = (int)_mm_cvtsi128_si64(ga_s);
-                dst[2] = (int)_mm_cvtsi128_si64(_mm_srli_si128(br_s, 8));
-                dst[3] = (int)_mm_cvtsi128_si64(_mm_srli_si128(ga_s, 8));
+                dst[0] = _mm_cvtsi128_si32(br_s);
+                dst[1] = _mm_cvtsi128_si32(ga_s);
+                dst[2] = _mm_cvtsi128_si32(_mm_srli_si128(br_s, 8));
+                dst[3] = _mm_cvtsi128_si32(_mm_srli_si128(ga_s, 8));
                 for (; x < cols; x++)
                 {
                     dst[0] += (int)src[x * 4];
@@ -230,10 +230,10 @@ static void reduceColSum_8u32s(const Mat& srcmat, Mat& dstmat)
                     sum_br = _mm_add_epi64(sum_br, _mm_sad_epu8(br, zero));
                     sum_ga = _mm_add_epi64(sum_ga, _mm_sad_epu8(ga, zero));
                 }
-                dst[0] = (int)_mm_cvtsi128_si64(sum_br);
-                dst[1] = (int)_mm_cvtsi128_si64(sum_ga);
-                dst[2] = (int)_mm_cvtsi128_si64(_mm_srli_si128(sum_br, 8));
-                dst[3] = (int)_mm_cvtsi128_si64(_mm_srli_si128(sum_ga, 8));
+                dst[0] = _mm_cvtsi128_si32(sum_br);
+                dst[1] = _mm_cvtsi128_si32(sum_ga);
+                dst[2] = _mm_cvtsi128_si32(_mm_srli_si128(sum_br, 8));
+                dst[3] = _mm_cvtsi128_si32(_mm_srli_si128(sum_ga, 8));
                 for (; x < cols; x++)
                 {
                     dst[0] += (int)src[x * 4];
@@ -360,7 +360,7 @@ static void reduceColSum_8u32f(const Mat& srcmat, Mat& dstmat)
                 __m128i hi128 = _mm256_extracti128_si256(vsum, 1);
                 __m128i s = _mm_add_epi64(lo128, hi128);
                 s = _mm_add_epi64(s, _mm_unpackhi_epi64(s, s));
-                sums[0] = (int)_mm_cvtsi128_si64(s);
+                sums[0] = _mm_cvtsi128_si32(s);
                 for (; x < width; x++)
                     sums[0] += (int)src[x];
 #elif CV_SSE2
@@ -371,7 +371,7 @@ static void reduceColSum_8u32f(const Mat& srcmat, Mat& dstmat)
                     vsum = _mm_add_epi64(vsum, _mm_sad_epu8(
                         _mm_loadu_si128((const __m128i*)(src + x)), zero));
                 __m128i s = _mm_add_epi64(vsum, _mm_unpackhi_epi64(vsum, vsum));
-                sums[0] = (int)_mm_cvtsi128_si64(s);
+                sums[0] = _mm_cvtsi128_si32(s);
                 for (; x < width; x++)
                     sums[0] += (int)src[x];
 #else
@@ -469,10 +469,10 @@ static void reduceColSum_8u32f(const Mat& srcmat, Mat& dstmat)
                 __m128i ga_lo = _mm256_castsi256_si128(sum_ga);
                 __m128i ga_hi = _mm256_extracti128_si256(sum_ga, 1);
                 __m128i ga_s = _mm_add_epi64(ga_lo, ga_hi);
-                sums[0] = (int)_mm_cvtsi128_si64(br_s);
-                sums[1] = (int)_mm_cvtsi128_si64(ga_s);
-                sums[2] = (int)_mm_cvtsi128_si64(_mm_srli_si128(br_s, 8));
-                sums[3] = (int)_mm_cvtsi128_si64(_mm_srli_si128(ga_s, 8));
+                sums[0] = _mm_cvtsi128_si32(br_s);
+                sums[1] = _mm_cvtsi128_si32(ga_s);
+                sums[2] = _mm_cvtsi128_si32(_mm_srli_si128(br_s, 8));
+                sums[3] = _mm_cvtsi128_si32(_mm_srli_si128(ga_s, 8));
                 for (; x < cols; x++)
                 {
                     sums[0] += (int)src[x * 4];
@@ -1025,6 +1025,9 @@ ReduceSumFunc getReduceCSumFunc(int sdepth, int ddepth)
     if (sdepth == CV_32F && ddepth == CV_64F) return reduceColSum_32f64f;
     if (sdepth == CV_64F && ddepth == CV_64F) return reduceColSum_64f64f;
 #endif
+#else
+    CV_UNUSED(sdepth);
+    CV_UNUSED(ddepth);
 #endif
     return nullptr;
 }
@@ -1041,6 +1044,9 @@ ReduceSumFunc getReduceRSumFunc(int sdepth, int ddepth)
     if (sdepth == CV_32F && ddepth == CV_64F) return reduceRowSum_32f64f;
     if (sdepth == CV_64F && ddepth == CV_64F) return reduceRowSum_64f64f;
 #endif
+#else
+    CV_UNUSED(sdepth);
+    CV_UNUSED(ddepth);
 #endif
     return nullptr;
 }
