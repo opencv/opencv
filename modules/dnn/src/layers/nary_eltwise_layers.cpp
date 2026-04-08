@@ -321,12 +321,6 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        for (size_t i = 0; i < inputs.size(); i++)
-        {
-            if (inputs[i].total() == 0)
-                return;
-        }
-
         helper.init(inputs, outputs);
         CV_CheckTrue(helper.prepare_for_broadcast_op(), "NaryEltwiseLayer: Preparation for broadcasting failed");
     }
@@ -903,12 +897,6 @@ public:
         if (inputs.size() == 1) {
             inputs[0].copyTo(outputs[0]);
             return;
-        }
-
-        for (size_t i = 0; i < inputs.size(); i++)
-        {
-            if (inputs[i].total() == 0)
-                return;
         }
 
         std::vector<Mat> used_inputs = inputs;

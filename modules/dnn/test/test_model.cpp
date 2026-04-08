@@ -921,4 +921,127 @@ TEST_P(Reproducibility_ResNet50_ONNX, Accuracy)
 INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_ResNet50_ONNX,
                         testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
 
+typedef testing::TestWithParam<Target> Reproducibility_MobileNetSSD_ONNX;
+TEST_P(Reproducibility_MobileNetSSD_ONNX, Accuracy)
+{
+    Target targetId = GetParam();
+    applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
+
+    std::string modelname = _tf("onnx/models/ssd_mobilenet_v1_12.onnx", true);
+    Net net = readNetFromONNX(modelname);
+
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(targetId);
+
+    if (targetId == DNN_TARGET_CPU_FP16)
+        net.enableWinograd(false);
+
+    std::string imgname = _tf("dog_orig_size.png");
+    Mat image = imread(imgname);
+    ASSERT_TRUE(!image.empty());
+    Mat input;
+    resize(image, input, Size(300, 300));
+    int imsize[] = {1, input.rows, input.cols, 3};
+    Mat input8dim4(4, imsize, CV_8U, input.data);
+
+    std::vector<String> outNames = net.getUnconnectedOutLayersNames();
+    std::vector<Mat> outs;
+    double min_t = 0;
+    const int niters =
+#ifdef _DEBUG
+        1;
+#else
+        30;
+#endif
+
+    for (int i = 0; i < niters; i++) {
+        double t = (double)getTickCount();
+        net.setInput(input8dim4);
+        net.forward(outs, outNames);
+        t = (double)getTickCount() - t;
+        min_t = i == 0 ? t : std::min(min_t, t);
+    }
+    printf("run time = %.2fms\n", min_t*1000./getTickFrequency());
+
+    // Model outputs: detection_boxes [1,N,4], detection_classes [1,N],
+    //                detection_scores [1,N], num_detections [1]
+    ASSERT_EQ(outs.size(), (size_t)4);
+
+    Mat boxes, classes, scores, numDet;
+    for (size_t i = 0; i < outs.size(); i++) {
+        if (outs[i].dims == 3 && outs[i].size[2] == 4)
+            boxes = outs[i];
+        else if (outs[i].total() == 1)
+            numDet = outs[i];
+        else if (outs[i].dims == 2) {
+            float first = outs[i].at<float>(0, 0);
+            if (first == std::round(first) && first > 0)
+                classes = outs[i];
+            else
+                scores = outs[i];
+        }
+    }
+    ASSERT_FALSE(boxes.empty());
+    ASSERT_FALSE(scores.empty());
+    ASSERT_FALSE(classes.empty());
+    ASSERT_FALSE(numDet.empty());
+
+    int ndet = (int)numDet.at<float>(0);
+    printf("num_detections = %d\n", ndet);
+    ASSERT_GT(ndet, 0);
+
+    // COCO class ID to label (1-indexed, only classes relevant to this test)
+    std::map<int, std::string> cocoLabels = {
+        {2, "bicycle"}, {3, "car"}, {8, "truck"}, {18, "dog"},
+    };
+
+    struct Detection {
+        int classId;
+        float score;
+        float box[4]; // y1, x1, y2, x2
+    };
+    std::vector<Detection> refDetections = {
+        {2,  0.944377f, {0.219984f, 0.157917f, 0.739280f, 0.742909f}},  // bicycle
+        {18, 0.877805f, {0.360803f, 0.168082f, 0.919625f, 0.426304f}},  // dog
+        {3,  0.787824f, {0.114612f, 0.600506f, 0.298757f, 0.899101f}},  // car
+    };
+
+    const float scoreEps = 0.05f;
+    const float boxEps = 0.05f;
+
+    printf("All detections:\n");
+    for (int j = 0; j < ndet; j++) {
+        int cls = (int)classes.at<float>(0, j);
+        float sc = scores.at<float>(0, j);
+        const float* b = boxes.ptr<float>(0, j);
+        std::string label = cocoLabels.count(cls) ? cocoLabels[cls] : "class_" + std::to_string(cls);
+        printf("  [%d] %s (id=%d), score=%.4f, box=[%.3f, %.3f, %.3f, %.3f]\n",
+               j, label.c_str(), cls, sc, b[0], b[1], b[2], b[3]);
+    }
+
+    for (size_t r = 0; r < refDetections.size(); r++) {
+        bool found = false;
+        std::string refLabel = cocoLabels.count(refDetections[r].classId)
+                               ? cocoLabels[refDetections[r].classId] : "unknown";
+        for (int j = 0; j < ndet; j++) {
+            int cls = (int)classes.at<float>(0, j);
+            float sc = scores.at<float>(0, j);
+            if (cls == refDetections[r].classId && sc > 0.3f) {
+                EXPECT_NEAR(refDetections[r].score, sc, scoreEps);
+                for (int k = 0; k < 4; k++) {
+                    EXPECT_NEAR(refDetections[r].box[k], boxes.at<float>(0, j, k), boxEps);
+                }
+                found = true;
+                printf("  matched: %s (id=%d), score=%.4f\n", refLabel.c_str(), cls, sc);
+                break;
+            }
+        }
+        EXPECT_TRUE(found) << "Expected detection of " << refLabel
+                           << " (class " << refDetections[r].classId << ") not found";
+    }
+}
+INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_MobileNetSSD_ONNX,
+                        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
+
 }} // namespace
