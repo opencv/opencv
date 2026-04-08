@@ -11,7 +11,7 @@ Exporting Qwen2.5 model to ONNX:
 
 2. Export the model to ONNX:
 
-    optimum-cli export onnx --model Qwen/Qwen2.5-0.5B --task causal-lm qwen2.5_onnx/
+    optimum-cli export onnx --model Qwen/Qwen2.5-0.5B-Instruct --task causal-lm qwen2.5_instruct_onnx/
 
 
 Run the script:

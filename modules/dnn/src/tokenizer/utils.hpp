@@ -29,11 +29,6 @@ static const std::string R50K_UTF8 = "'s|'t|'re|'ve|'m|'ll|'d| ?\\p{L}+| ?\\p{N}
 static const std::string CL100K_BASE = R"CL100K('(?:[sSdDmMtT]|[lL][lL]|[vV][eE]|[rR][eE])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]|\s+(?!\S)|\s)CL100K";
 
 // Qwen2.5 pre-tokenizer split pattern (from tokenizer.json)
-// Original (with possessive quantifiers, not supported in std::regex):
-//   (?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+
-// Adaptations for C++ std::regex:
-//   1. Inline (?i:...) replaced with explicit case variants
-//   2. Unicode properties \p{L} and \p{N} handled via custom unicode_cpt_flags logic
 static const std::string QWEN2_5 = R"QWEN('(?:[sSdDmMtT]|[lL][lL]|[vV][eE]|[rR][eE])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+)QWEN";
 
 }}
