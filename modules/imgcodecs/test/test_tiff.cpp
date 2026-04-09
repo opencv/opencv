@@ -1293,6 +1293,47 @@ TEST(Imgcodecs_Tiff, read_junk) {
     ASSERT_TRUE(img.empty());
 }
 
+
+typedef int Imgcodecs_Tiff_32F_Compressions_32F_Values;
+typedef testing::TestWithParam<Imgcodecs_Tiff_32F_Compressions_32F_Values> Imgcodecs_Tiff_32F_Compressions_32F;
+
+TEST_P(Imgcodecs_Tiff_32F_Compressions_32F, compressions_32F)
+{
+    const int compression = GetParam();
+
+    const Size size(64, 64);
+    Mat src = Mat(size, CV_32FC1);
+    cv::randu(src, cv::Scalar::all(0.), cv::Scalar::all(1.));
+
+    std::vector<int> params;
+    if (compression > 0)
+    {
+      params.push_back(IMWRITE_TIFF_COMPRESSION);
+      params.push_back(compression);
+    }
+
+    std::vector<unsigned char> encoded_data;
+    imencode(".tiff", src, encoded_data, params);
+
+    Mat dst;
+    imdecode(encoded_data, IMREAD_UNCHANGED, &dst);
+
+    EXPECT_LE(cvtest::norm(src, dst, NORM_INF), 1e-6);
+}
+
+const int Imgcodecs_Tiff_32F_Compressions_32F_All_Values[] =
+{
+    -1,//will mean "default"
+    IMWRITE_TIFF_COMPRESSION_NONE,
+    IMWRITE_TIFF_COMPRESSION_LZW,
+    //IMWRITE_TIFF_COMPRESSION_LZMA,//might not be configured
+    //IMWRITE_TIFF_COMPRESSION_ZSTD,//might not be configured
+    //IMWRITE_TIFF_COMPRESSION_DEFLATE,//deprecated
+    IMWRITE_TIFF_COMPRESSION_ADOBE_DEFLATE,
+};
+
+INSTANTIATE_TEST_CASE_P(compressions_32F, Imgcodecs_Tiff_32F_Compressions_32F, testing::ValuesIn(Imgcodecs_Tiff_32F_Compressions_32F_All_Values));
+
 #endif
 
 }} // namespace
