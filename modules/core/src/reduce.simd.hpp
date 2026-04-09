@@ -480,6 +480,34 @@ static void reduceColSum_8u32f(const Mat& srcmat, Mat& dstmat)
                     sums[2] += (int)src[x * 4 + 2];
                     sums[3] += (int)src[x * 4 + 3];
                 }
+#elif CV_SSSE3
+                // Intel SSSE3: _mm_shuffle_epi8 deinterleave + _mm_sad_epu8
+                const __m128i zero = _mm_setzero_si128();
+                const __m128i shuf_mask = _mm_setr_epi8(
+                    0,4,8,12, 1,5,9,13, 2,6,10,14, 3,7,11,15);
+                const __m128i mask_lo32 = _mm_set1_epi64x(0x00000000FFFFFFFFLL);
+                __m128i sum_br = zero, sum_ga = zero;
+                int x = 0;
+                for (; x <= cols - 4; x += 4)
+                {
+                    __m128i v = _mm_loadu_si128((const __m128i*)(src + x * 4));
+                    __m128i grouped = _mm_shuffle_epi8(v, shuf_mask);
+                    __m128i br = _mm_and_si128(grouped, mask_lo32);
+                    __m128i ga = _mm_srli_epi64(grouped, 32);
+                    sum_br = _mm_add_epi64(sum_br, _mm_sad_epu8(br, zero));
+                    sum_ga = _mm_add_epi64(sum_ga, _mm_sad_epu8(ga, zero));
+                }
+                sums[0] = _mm_cvtsi128_si32(sum_br);
+                sums[1] = _mm_cvtsi128_si32(sum_ga);
+                sums[2] = _mm_cvtsi128_si32(_mm_srli_si128(sum_br, 8));
+                sums[3] = _mm_cvtsi128_si32(_mm_srli_si128(sum_ga, 8));
+                for (; x < cols; x++)
+                {
+                    sums[0] += (int)src[x * 4];
+                    sums[1] += (int)src[x * 4 + 1];
+                    sums[2] += (int)src[x * 4 + 2];
+                    sums[3] += (int)src[x * 4 + 3];
+                }
 #else
                 for (int x = 0; x < width; x++)
                     sums[x % cn] += (int)src[x];
