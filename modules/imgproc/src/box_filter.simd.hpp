@@ -1664,7 +1664,7 @@ void blockSum(const Mat& _src, Mat& _dst, Size ksize, Point anchor, const Size &
 
         int widthcn = width*cn;
         i=0;
-        BlockSumBorderInplace<ST,T>(ref, S, R, btab, width, cn, dx1, dx2, borderType);
+        BlockSumBorderInplace<ST,T>(ref, S, R, btab, width + kwidth - 1 - dx1 - dx2, cn, dx1, dx2, borderType);
         BlockSumCore<ST,T>(R, SUM, D, buf_ptr, scale, widthcn, i, cn, kheight, kwidth);
 
 
