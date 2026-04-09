@@ -509,8 +509,57 @@ static void reduceColSum_8u32f(const Mat& srcmat, Mat& dstmat)
                     sums[3] += (int)src[x * 4 + 3];
                 }
 #else
-                for (int x = 0; x < width; x++)
-                    sums[x % cn] += (int)src[x];
+                const int vlanes8 = VTraits<v_uint8>::vlanes();
+                v_uint32 vsum0 = vx_setzero_u32(), vsum1 = vx_setzero_u32();
+                v_uint32 vsum2 = vx_setzero_u32(), vsum3 = vx_setzero_u32();
+                v_uint16 vs16_0 = vx_setzero_u16(), vs16_1 = vx_setzero_u16();
+                v_uint16 vs16_2 = vx_setzero_u16(), vs16_3 = vx_setzero_u16();
+                int x = 0, batch = 0;
+                const int flush_at = 128;
+
+                for (; x <= cols - vlanes8; x += vlanes8)
+                {
+                    v_uint8 ch0, ch1, ch2, ch3;
+                    v_load_deinterleave(src + x * 4, ch0, ch1, ch2, ch3);
+
+                    v_uint16 lo, hi;
+                    v_expand(ch0, lo, hi); vs16_0 = v_add(vs16_0, v_add(lo, hi));
+                    v_expand(ch1, lo, hi); vs16_1 = v_add(vs16_1, v_add(lo, hi));
+                    v_expand(ch2, lo, hi); vs16_2 = v_add(vs16_2, v_add(lo, hi));
+                    v_expand(ch3, lo, hi); vs16_3 = v_add(vs16_3, v_add(lo, hi));
+
+                    if (++batch >= flush_at)
+                    {
+                        v_uint32 a, b;
+                        v_expand(vs16_0, a, b); vsum0 = v_add(vsum0, v_add(a, b));
+                        v_expand(vs16_1, a, b); vsum1 = v_add(vsum1, v_add(a, b));
+                        v_expand(vs16_2, a, b); vsum2 = v_add(vsum2, v_add(a, b));
+                        v_expand(vs16_3, a, b); vsum3 = v_add(vsum3, v_add(a, b));
+                        vs16_0 = vx_setzero_u16(); vs16_1 = vx_setzero_u16();
+                        vs16_2 = vx_setzero_u16(); vs16_3 = vx_setzero_u16();
+                        batch = 0;
+                    }
+                }
+                {
+                    v_uint32 a, b;
+                    v_expand(vs16_0, a, b); vsum0 = v_add(vsum0, v_add(a, b));
+                    v_expand(vs16_1, a, b); vsum1 = v_add(vsum1, v_add(a, b));
+                    v_expand(vs16_2, a, b); vsum2 = v_add(vsum2, v_add(a, b));
+                    v_expand(vs16_3, a, b); vsum3 = v_add(vsum3, v_add(a, b));
+                }
+
+                sums[0] = (int)v_reduce_sum(vsum0);
+                sums[1] = (int)v_reduce_sum(vsum1);
+                sums[2] = (int)v_reduce_sum(vsum2);
+                sums[3] = (int)v_reduce_sum(vsum3);
+
+                for (; x < cols; x++)
+                {
+                    sums[0] += (int)src[x * 4];
+                    sums[1] += (int)src[x * 4 + 1];
+                    sums[2] += (int)src[x * 4 + 2];
+                    sums[3] += (int)src[x * 4 + 3];
+                }
 #endif
             }
             else
