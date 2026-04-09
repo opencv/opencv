@@ -845,6 +845,22 @@ TEST(videoio_ffmpeg, create_with_property_badarg)
     EXPECT_FALSE(cap.isOpened());
 }
 
+TEST(videoio_ffmpeg, open_with_format_cv8uc3)
+{
+    if (!videoio_registry::hasBackend(CAP_FFMPEG))
+        throw SkipTestException("FFmpeg backend was not found");
+
+    string video_file = findDataFile("video/big_buck_bunny.mp4");
+    VideoCapture cap(video_file, CAP_FFMPEG, {
+        CAP_PROP_FORMAT, CV_8UC3
+    });
+    ASSERT_TRUE(cap.isOpened());
+    EXPECT_EQ(cap.get(CAP_PROP_FORMAT), CV_8UC3);
+    Mat frame;
+    ASSERT_TRUE(cap.read(frame));
+    EXPECT_EQ(frame.channels(), 3);
+}
+
 // related issue: https://github.com/opencv/opencv/issues/16821
 TEST(videoio_ffmpeg, DISABLED_open_from_web)
 {
