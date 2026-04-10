@@ -155,7 +155,8 @@ public:
     virtual bool fuseBatchNorm(const Ptr<Layer>& bnlayer) override
     {
         BatchNorm2Layer* bn = dynamic_cast<BatchNorm2Layer*>(bnlayer.get());
-        if (fusedBatchNorm || !bn || bn->inputs.size() > 1)
+        if (fusedBatchNorm || !bn || bn->inputs.size() > 1 ||
+            fastActivation != FAST_ACTIV_NONE || !activ.empty())
             return false;
         fuseBatchNormWeights(bn);
         fusedBatchNorm = true;
