@@ -443,6 +443,43 @@ private:
     void getNeighbors(ResultSet<DistanceType>& result, const ElementType* vec,
                       int maxCheck, float epsError, bool explore_all_trees = false)
     {
+        //Sanitation is necessary from these points due to memory floating point comparison issues
+        //from those points on
+        constexpr ElementType kMaxSanitizedValue = static_cast<ElementType>(1e12);
+        constexpr ElementType kMinSanitizedValue = static_cast<ElementType>(1e-12);
+
+        // First, check if sanitization is necessary
+        bool needsSanitization = false;
+        for (size_t i = 0; i < veclen_; ++i) {
+            const ElementType val = vec[i];
+            if (std::isnan(val) || std::isinf(val) ||
+            std::abs(val) > kMaxSanitizedValue || std::abs(val) < kMinSanitizedValue) {
+                needsSanitization = true;
+                break;
+            }
+        }
+
+        const ElementType* searchVec = vec;
+        std::vector<ElementType> sanitized;
+
+        if (needsSanitization) {
+            sanitized.reserve(veclen_);
+            for (size_t i = 0; i < veclen_; ++i) {
+                ElementType val = vec[i];
+                if (std::isnan(val)) {
+                    val = 0;
+                } else if (std::isinf(val)) {
+                    val = val > 0 ? kMaxSanitizedValue : -kMaxSanitizedValue;
+                } else if (std::abs(val) > kMaxSanitizedValue) {
+                    val = val > 0 ? kMaxSanitizedValue : -kMaxSanitizedValue;
+                } else if (std::abs(val) < kMinSanitizedValue) {
+                    val = 0;
+                }
+                sanitized.push_back(val);
+            }
+            searchVec = sanitized.data();
+        }
+
         int i;
         BranchSt branch;
         int checkCount = 0;
@@ -453,7 +490,7 @@ private:
 
         /* Search once through each tree down to root. */
         for (i = 0; i < trees_; ++i) {
-            searchLevel(result, vec, tree_roots_[i], 0, checkCount, maxCheck,
+            searchLevel(result, searchVec, tree_roots_[i], 0, checkCount, maxCheck,
                         epsError, heap, checked, explore_all_trees);
             if (!explore_all_trees && (checkCount >= maxCheck) && result.full())
                 break;
@@ -461,7 +498,7 @@ private:
 
         /* Keep searching other branches from heap until finished. */
         while ( heap->popMin(branch) && (checkCount < maxCheck || !result.full() )) {
-            searchLevel(result, vec, branch.node, branch.mindist, checkCount, maxCheck,
+            searchLevel(result, searchVec, branch.node, branch.mindist, checkCount, maxCheck,
                         epsError, heap, checked, false);
         }
 
