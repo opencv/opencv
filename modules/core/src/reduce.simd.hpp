@@ -66,6 +66,10 @@ static void reduceColSum_8u32s(const Mat& srcmat, Mat& dstmat)
                 for (; x <= width - 32; x += 32)
                     vsum = _mm256_add_epi64(vsum, _mm256_sad_epu8(
                         _mm256_loadu_si256((const __m256i*)(src + x)), zero));
+                // 8-byte tail: reduce max scalar tail from 31 to 7
+                for (; x <= width - 8; x += 8)
+                    vsum = _mm256_add_epi64(vsum, _mm256_sad_epu8(
+                        _mm256_castsi128_si256(_mm_loadl_epi64((const __m128i*)(src + x))), zero));
                 __m128i lo128 = _mm256_castsi256_si128(vsum);
                 __m128i hi128 = _mm256_extracti128_si256(vsum, 1);
                 __m128i s = _mm_add_epi64(lo128, hi128);
@@ -172,39 +176,61 @@ static void reduceColSum_8u32s(const Mat& srcmat, Mat& dstmat)
                     dst[3] += (int)src[x * 4 + 3];
                 }
 #elif CV_AVX2
-                // Intel AVX2: shuffle to group channels + _mm256_sad_epu8
-                // 32 bytes = 8 pixels × 4 channels per iteration
-                // Shuffle within each 128-bit lane:
-                //   [B0G0R0A0 B1G1R1A1 B2G2R2A2 B3G3R3A3] → [B0B1B2B3 G0G1G2G3 R0R1R2R3 A0A1A2A3]
-                // Then mask/shift to isolate channel pairs, SAD each against zero
+                // Intel AVX2: shuffle + unpack to group channels, full-register SAD
                 const __m256i zero = _mm256_setzero_si256();
                 const __m256i shuf_mask = _mm256_setr_epi8(
                     0,4,8,12, 1,5,9,13, 2,6,10,14, 3,7,11,15,
                     0,4,8,12, 1,5,9,13, 2,6,10,14, 3,7,11,15);
-                const __m256i mask_lo32 = _mm256_set1_epi64x(0x00000000FFFFFFFFLL);
-                __m256i sum_br = zero, sum_ga = zero;
                 int x = 0;
-                for (; x <= cols - 8; x += 8)
+                // 16 pixels/iter with unpack (full-register SAD)
                 {
-                    __m256i v = _mm256_loadu_si256((const __m256i*)(src + x * 4));
-                    __m256i grouped = _mm256_shuffle_epi8(v, shuf_mask);
-                    // 64-bit lane0: [B0B1B2B3 G0G1G2G3], lane1: [R0R1R2R3 A0A1A2A3]
-                    __m256i br = _mm256_and_si256(grouped, mask_lo32);
-                    __m256i ga = _mm256_srli_epi64(grouped, 32);
-                    sum_br = _mm256_add_epi64(sum_br, _mm256_sad_epu8(br, zero));
-                    sum_ga = _mm256_add_epi64(sum_ga, _mm256_sad_epu8(ga, zero));
+                    __m256i sum_bg = zero, sum_ra = zero;
+                    for (; x <= cols - 16; x += 16)
+                    {
+                        __m256i v0 = _mm256_loadu_si256((const __m256i*)(src + x * 4));
+                        __m256i v1 = _mm256_loadu_si256((const __m256i*)(src + x * 4 + 32));
+                        __m256i g0 = _mm256_shuffle_epi8(v0, shuf_mask);
+                        __m256i g1 = _mm256_shuffle_epi8(v1, shuf_mask);
+                        __m256i bg = _mm256_unpacklo_epi32(g0, g1);
+                        __m256i ra = _mm256_unpackhi_epi32(g0, g1);
+                        sum_bg = _mm256_add_epi64(sum_bg, _mm256_sad_epu8(bg, zero));
+                        sum_ra = _mm256_add_epi64(sum_ra, _mm256_sad_epu8(ra, zero));
+                    }
+                    __m128i bg_lo = _mm256_castsi256_si128(sum_bg);
+                    __m128i bg_hi = _mm256_extracti128_si256(sum_bg, 1);
+                    __m128i bg_s = _mm_add_epi64(bg_lo, bg_hi);
+                    __m128i ra_lo = _mm256_castsi256_si128(sum_ra);
+                    __m128i ra_hi = _mm256_extracti128_si256(sum_ra, 1);
+                    __m128i ra_s = _mm_add_epi64(ra_lo, ra_hi);
+                    dst[0] = _mm_cvtsi128_si32(bg_s);                     // B
+                    dst[1] = _mm_cvtsi128_si32(_mm_srli_si128(bg_s, 8));  // G
+                    dst[2] = _mm_cvtsi128_si32(ra_s);                     // R
+                    dst[3] = _mm_cvtsi128_si32(_mm_srli_si128(ra_s, 8));  // A
                 }
-                // sum_br: [B_lo, R_lo, B_hi, R_hi], sum_ga: [G_lo, A_lo, G_hi, A_hi]
-                __m128i br_lo = _mm256_castsi256_si128(sum_br);
-                __m128i br_hi = _mm256_extracti128_si256(sum_br, 1);
-                __m128i br_s = _mm_add_epi64(br_lo, br_hi);
-                __m128i ga_lo = _mm256_castsi256_si128(sum_ga);
-                __m128i ga_hi = _mm256_extracti128_si256(sum_ga, 1);
-                __m128i ga_s = _mm_add_epi64(ga_lo, ga_hi);
-                dst[0] = _mm_cvtsi128_si32(br_s);
-                dst[1] = _mm_cvtsi128_si32(ga_s);
-                dst[2] = _mm_cvtsi128_si32(_mm_srli_si128(br_s, 8));
-                dst[3] = _mm_cvtsi128_si32(_mm_srli_si128(ga_s, 8));
+                // 8-pixel tail with and/srli
+                {
+                    const __m256i mask_lo32 = _mm256_set1_epi64x(0x00000000FFFFFFFFLL);
+                    __m256i sum_br = zero, sum_ga = zero;
+                    for (; x <= cols - 8; x += 8)
+                    {
+                        __m256i v = _mm256_loadu_si256((const __m256i*)(src + x * 4));
+                        __m256i grouped = _mm256_shuffle_epi8(v, shuf_mask);
+                        __m256i br = _mm256_and_si256(grouped, mask_lo32);
+                        __m256i ga = _mm256_srli_epi64(grouped, 32);
+                        sum_br = _mm256_add_epi64(sum_br, _mm256_sad_epu8(br, zero));
+                        sum_ga = _mm256_add_epi64(sum_ga, _mm256_sad_epu8(ga, zero));
+                    }
+                    __m128i br_lo = _mm256_castsi256_si128(sum_br);
+                    __m128i br_hi = _mm256_extracti128_si256(sum_br, 1);
+                    __m128i br_s = _mm_add_epi64(br_lo, br_hi);
+                    __m128i ga_lo = _mm256_castsi256_si128(sum_ga);
+                    __m128i ga_hi = _mm256_extracti128_si256(sum_ga, 1);
+                    __m128i ga_s = _mm_add_epi64(ga_lo, ga_hi);
+                    dst[0] += _mm_cvtsi128_si32(br_s);
+                    dst[1] += _mm_cvtsi128_si32(ga_s);
+                    dst[2] += _mm_cvtsi128_si32(_mm_srli_si128(br_s, 8));
+                    dst[3] += _mm_cvtsi128_si32(_mm_srli_si128(ga_s, 8));
+                }
                 for (; x < cols; x++)
                 {
                     dst[0] += (int)src[x * 4];
@@ -356,6 +382,10 @@ static void reduceColSum_8u32f(const Mat& srcmat, Mat& dstmat)
                 for (; x <= width - 32; x += 32)
                     vsum = _mm256_add_epi64(vsum, _mm256_sad_epu8(
                         _mm256_loadu_si256((const __m256i*)(src + x)), zero));
+                // 8-byte tail: reduce max scalar tail from 31 to 7
+                for (; x <= width - 8; x += 8)
+                    vsum = _mm256_add_epi64(vsum, _mm256_sad_epu8(
+                        _mm256_castsi128_si256(_mm_loadl_epi64((const __m128i*)(src + x))), zero));
                 __m128i lo128 = _mm256_castsi256_si128(vsum);
                 __m128i hi128 = _mm256_extracti128_si256(vsum, 1);
                 __m128i s = _mm_add_epi64(lo128, hi128);
@@ -447,32 +477,61 @@ static void reduceColSum_8u32f(const Mat& srcmat, Mat& dstmat)
                     sums[3] += (int)src[x * 4 + 3];
                 }
 #elif CV_AVX2
+                // Intel AVX2: shuffle + unpack to group channels, full-register SAD
                 const __m256i zero = _mm256_setzero_si256();
                 const __m256i shuf_mask = _mm256_setr_epi8(
                     0,4,8,12, 1,5,9,13, 2,6,10,14, 3,7,11,15,
                     0,4,8,12, 1,5,9,13, 2,6,10,14, 3,7,11,15);
-                const __m256i mask_lo32 = _mm256_set1_epi64x(0x00000000FFFFFFFFLL);
-                __m256i sum_br = zero, sum_ga = zero;
                 int x = 0;
-                for (; x <= cols - 8; x += 8)
+                // 16 pixels/iter with unpack (full-register SAD)
                 {
-                    __m256i v = _mm256_loadu_si256((const __m256i*)(src + x * 4));
-                    __m256i grouped = _mm256_shuffle_epi8(v, shuf_mask);
-                    __m256i br = _mm256_and_si256(grouped, mask_lo32);
-                    __m256i ga = _mm256_srli_epi64(grouped, 32);
-                    sum_br = _mm256_add_epi64(sum_br, _mm256_sad_epu8(br, zero));
-                    sum_ga = _mm256_add_epi64(sum_ga, _mm256_sad_epu8(ga, zero));
+                    __m256i sum_bg = zero, sum_ra = zero;
+                    for (; x <= cols - 16; x += 16)
+                    {
+                        __m256i v0 = _mm256_loadu_si256((const __m256i*)(src + x * 4));
+                        __m256i v1 = _mm256_loadu_si256((const __m256i*)(src + x * 4 + 32));
+                        __m256i g0 = _mm256_shuffle_epi8(v0, shuf_mask);
+                        __m256i g1 = _mm256_shuffle_epi8(v1, shuf_mask);
+                        __m256i bg = _mm256_unpacklo_epi32(g0, g1);
+                        __m256i ra = _mm256_unpackhi_epi32(g0, g1);
+                        sum_bg = _mm256_add_epi64(sum_bg, _mm256_sad_epu8(bg, zero));
+                        sum_ra = _mm256_add_epi64(sum_ra, _mm256_sad_epu8(ra, zero));
+                    }
+                    __m128i bg_lo = _mm256_castsi256_si128(sum_bg);
+                    __m128i bg_hi = _mm256_extracti128_si256(sum_bg, 1);
+                    __m128i bg_s = _mm_add_epi64(bg_lo, bg_hi);
+                    __m128i ra_lo = _mm256_castsi256_si128(sum_ra);
+                    __m128i ra_hi = _mm256_extracti128_si256(sum_ra, 1);
+                    __m128i ra_s = _mm_add_epi64(ra_lo, ra_hi);
+                    sums[0] = _mm_cvtsi128_si32(bg_s);                     // B
+                    sums[1] = _mm_cvtsi128_si32(_mm_srli_si128(bg_s, 8));  // G
+                    sums[2] = _mm_cvtsi128_si32(ra_s);                     // R
+                    sums[3] = _mm_cvtsi128_si32(_mm_srli_si128(ra_s, 8));  // A
                 }
-                __m128i br_lo = _mm256_castsi256_si128(sum_br);
-                __m128i br_hi = _mm256_extracti128_si256(sum_br, 1);
-                __m128i br_s = _mm_add_epi64(br_lo, br_hi);
-                __m128i ga_lo = _mm256_castsi256_si128(sum_ga);
-                __m128i ga_hi = _mm256_extracti128_si256(sum_ga, 1);
-                __m128i ga_s = _mm_add_epi64(ga_lo, ga_hi);
-                sums[0] = _mm_cvtsi128_si32(br_s);
-                sums[1] = _mm_cvtsi128_si32(ga_s);
-                sums[2] = _mm_cvtsi128_si32(_mm_srli_si128(br_s, 8));
-                sums[3] = _mm_cvtsi128_si32(_mm_srli_si128(ga_s, 8));
+                // 8-pixel tail with and/srli
+                {
+                    const __m256i mask_lo32 = _mm256_set1_epi64x(0x00000000FFFFFFFFLL);
+                    __m256i sum_br = zero, sum_ga = zero;
+                    for (; x <= cols - 8; x += 8)
+                    {
+                        __m256i v = _mm256_loadu_si256((const __m256i*)(src + x * 4));
+                        __m256i grouped = _mm256_shuffle_epi8(v, shuf_mask);
+                        __m256i br = _mm256_and_si256(grouped, mask_lo32);
+                        __m256i ga = _mm256_srli_epi64(grouped, 32);
+                        sum_br = _mm256_add_epi64(sum_br, _mm256_sad_epu8(br, zero));
+                        sum_ga = _mm256_add_epi64(sum_ga, _mm256_sad_epu8(ga, zero));
+                    }
+                    __m128i br_lo = _mm256_castsi256_si128(sum_br);
+                    __m128i br_hi = _mm256_extracti128_si256(sum_br, 1);
+                    __m128i br_s = _mm_add_epi64(br_lo, br_hi);
+                    __m128i ga_lo = _mm256_castsi256_si128(sum_ga);
+                    __m128i ga_hi = _mm256_extracti128_si256(sum_ga, 1);
+                    __m128i ga_s = _mm_add_epi64(ga_lo, ga_hi);
+                    sums[0] += _mm_cvtsi128_si32(br_s);
+                    sums[1] += _mm_cvtsi128_si32(ga_s);
+                    sums[2] += _mm_cvtsi128_si32(_mm_srli_si128(br_s, 8));
+                    sums[3] += _mm_cvtsi128_si32(_mm_srli_si128(ga_s, 8));
+                }
                 for (; x < cols; x++)
                 {
                     sums[0] += (int)src[x * 4];
