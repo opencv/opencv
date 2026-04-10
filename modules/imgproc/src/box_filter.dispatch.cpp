@@ -304,6 +304,14 @@ Ptr<BaseColumnFilter> getColumnSumFilter(int sumType, int dstType, int ksize, in
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
+Ptr<BaseRowColumnFilter> getRowColumnSumFilter(int srcType, int dstType, int ksize, double scale)
+{
+    CV_INSTRUMENT_REGION();
+
+    CV_CPU_DISPATCH(getRowColumnSumFilter, (srcType, dstType, ksize, scale),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
+
 
 Ptr<FilterEngine> createBoxFilter(int srcType, int dstType, Size ksize,
                                   Point anchor, bool normalize, int borderType)
@@ -404,7 +412,11 @@ void boxFilter(InputArray _src, OutputArray _dst, int ddepth,
 
     borderType = (borderType&~BORDER_ISOLATED);
 
-    if(sdepth >= CV_32F && src.type() == dst.type() && (ksize.height <= 5 && ksize.width <= 5))
+    if(sdepth >= CV_32F && src.type() == dst.type() && (ksize.height <= 5 && ksize.width <= 5)
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
+       && (src.data == dst.data || !checkHardwareSupport(CV_CPU_LOAD_AGU_GT_2)) //blockSum is effective for x86 arch with AGU<=2.
+#endif
+    )
     {
         CV_CPU_DISPATCH(blockSum, (src, dst, ksize, anchor, wsz, ofs, normalize, borderType),
             CV_CPU_DISPATCH_MODES_ALL);
@@ -478,7 +490,7 @@ void sqrBoxFilter(InputArray _src, OutputArray _dst, int ddepth,
                                                             dstType, ksize.height, anchor.y,
                                                             normalize ? 1./(ksize.width*ksize.height) : 1);
 
-    Ptr<FilterEngine> f = makePtr<FilterEngine>(Ptr<BaseFilter>(), rowFilter, columnFilter,
+    Ptr<FilterEngine> f = makePtr<FilterEngine>(Ptr<BaseFilter>(), rowFilter, columnFilter, Ptr<BaseRowColumnFilter>(),
                                                 srcType, dstType, sumType, borderType );
     Point ofs;
     Size wsz(src.cols, src.rows);

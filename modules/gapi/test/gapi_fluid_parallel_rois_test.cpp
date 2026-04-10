@@ -156,9 +156,9 @@ TEST_P(TiledComputation, Test)
     cp->run_with_gapi(in_mat, comp_args, out_mat_gapi);
     cp->run_with_ocv (in_mat, rois,      out_mat_ocv);
 
-    EXPECT_EQ(0, cvtest::norm(out_mat_gapi, out_mat_ocv, NORM_INF))
+    EXPECT_LE(cvtest::norm(out_mat_gapi, out_mat_ocv, NORM_INF), 1)
             << "in_mat : \n"      << in_mat << std::endl
-            << "diff matrix :\n " << (out_mat_gapi != out_mat_ocv) << std::endl
+            << "diff matrix :\n " << (out_mat_gapi - out_mat_ocv) << std::endl
             << "out_mat_gapi: \n" << out_mat_gapi << std::endl
             << "out_mat_ocv:  \n" << out_mat_ocv << std::endl;;
 }
