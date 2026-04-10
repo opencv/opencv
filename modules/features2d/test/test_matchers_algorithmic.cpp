@@ -629,4 +629,47 @@ TEST(Features2d_DMatch, issue_17771)
     EXPECT_NO_THROW(ubf->knnMatch(usources, utargets, match, 1, mask, true));
 }
 
+// Verify that cross-check BFMatcher gives identical results via Mat (CPU) and UMat (OCL or CPU).
+// When OpenCL is active the UMat path exercises ocl_matchWithCrossCheck; when it is not,
+// both paths fall through to the same CPU code — either way the results must match.
+TEST(Features2d_BFMatcher_CrossCheck, ocl_matches_cpu)
+{
+    RNG rng(42);
+    const int nQuery = 200;
+    const int nTrain = 400;
+    const int dim    = 128;
+
+    // Float descriptors: the OCL dispatch in knnMatchImpl requires CV_32FC1
+    Mat queryMat(nQuery, dim, CV_32FC1);
+    Mat trainMat(nTrain, dim, CV_32FC1);
+    rng.fill(queryMat, RNG::UNIFORM, 0.f, 1.f);
+    rng.fill(trainMat, RNG::UNIFORM, 0.f, 1.f);
+
+    // CPU reference: Mat inputs always take the CPU path
+    Ptr<BFMatcher> cpuMatcher = BFMatcher::create(NORM_L2, true /*crossCheck*/);
+    vector<DMatch> cpuMatches;
+    cpuMatcher->match(queryMat, trainMat, cpuMatches);
+
+    // UMat path: activates OCL dispatch when OpenCL is available
+    UMat queryUMat = queryMat.getUMat(ACCESS_READ);
+    UMat trainUMat = trainMat.getUMat(ACCESS_READ);
+    Ptr<BFMatcher> oclMatcher = BFMatcher::create(NORM_L2, true /*crossCheck*/);
+    vector<DMatch> oclMatches;
+    oclMatcher->match(queryUMat, trainUMat, oclMatches);
+
+    // Both paths must return the same set of matches (order may differ)
+    ASSERT_EQ(cpuMatches.size(), oclMatches.size());
+
+    auto byQuery = [](const DMatch& a, const DMatch& b) { return a.queryIdx < b.queryIdx; };
+    sort(cpuMatches.begin(), cpuMatches.end(), byQuery);
+    sort(oclMatches.begin(), oclMatches.end(), byQuery);
+
+    for (size_t i = 0; i < cpuMatches.size(); ++i)
+    {
+        EXPECT_EQ(cpuMatches[i].queryIdx, oclMatches[i].queryIdx) << "at index " << i;
+        EXPECT_EQ(cpuMatches[i].trainIdx, oclMatches[i].trainIdx) << "at index " << i;
+        EXPECT_NEAR(cpuMatches[i].distance, oclMatches[i].distance, 1e-3f) << "at index " << i;
+    }
+}
+
 }} // namespace
