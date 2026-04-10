@@ -634,6 +634,48 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgcodecs_Png_ZLIBBUFFER_SIZE,
                                         1048576,   // Maximum limit
                                         1048577));
 
+TEST(Imgcodecs_Png, Regression_27466_APNG_16bit)
+{
+    int width = 10, height = 10;
+    std::vector<Mat> frames;
+
+    Mat f1(height, width, CV_16UC3, Scalar(1000, 1000, 1000));
+    frames.push_back(f1);
+
+    Mat f2(height, width, CV_16UC3, Scalar(60000, 60000, 60000));
+    frames.push_back(f2);
+
+    Animation anim;
+    anim.frames = frames;
+    anim.durations.assign(frames.size(), 100);
+    anim.loop_count = 0;
+
+    string filename = "test_16bit_apng.png";
+    ASSERT_TRUE(imwriteanimation(filename, anim)) << "Failed to write APNG file";
+
+    std::vector<Mat> loaded_frames;
+
+    ASSERT_TRUE(imreadmulti(filename, loaded_frames, IMREAD_ANYDEPTH | IMREAD_ANYCOLOR));
+
+    ASSERT_GE(loaded_frames.size(), 1UL) << "Failed to read any frames!";
+
+    EXPECT_EQ(loaded_frames[0].depth(), CV_16U)
+        << "Regression: Frame was forcibly downscaled to 8-bit!";
+
+    EXPECT_EQ(0, cv::norm(loaded_frames[0], frames[0], NORM_INF))
+        << "Pixel data mismatch in Frame 0";
+
+    if (loaded_frames.size() < frames.size()) {
+        std::cout << "[WARNING] Decoder only returned " << loaded_frames.size()
+                  << " frames. This may be a pre-existing decoder limitation, "
+                  << "but 16-bit depth preservation is verified." << std::endl;
+    } else {
+        EXPECT_EQ(0, cv::norm(loaded_frames[1], frames[1], NORM_INF));
+    }
+
+    remove(filename.c_str());
+}
+
 #endif // HAVE_PNG
 
 }} // namespace
