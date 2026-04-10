@@ -348,4 +348,28 @@ TEST(Imgproc_FitEllipseDirect_HorizontalLine, accuracy) {
     EXPECT_NEAR(el.angle, 90, 0.1);
 }
 
+// Regression test for https://github.com/opencv/opencv/issues/28627
+// fitEllipseDirect should handle near-circular ellipses with many points correctly.
+// Previously, the singularity threshold did not account for the 1/n scaling of the
+// design matrix, causing false singular-matrix detection for large n.
+TEST(Imgproc_FitEllipseDirect_NearCircularLargeN, accuracy) {
+    const double cx = 27.0, cy = 27.0, a = 17.0, b = 16.5;
+    const float tol = 2.0f;
+
+    for (int n : {200, 360, 1000}) {
+        std::vector<Point2f> pts;
+        for (int i = 0; i < n; i++) {
+            double theta = 2.0 * CV_PI * i / n;
+            pts.push_back(Point2f(
+                (float)(cx + a * std::cos(theta)),
+                (float)(cy + b * std::sin(theta))));
+        }
+        const RotatedRect el = fitEllipseDirect(pts);
+        EXPECT_FALSE(std::isnan(el.center.x)) << "n=" << n;
+        EXPECT_FALSE(std::isnan(el.center.y)) << "n=" << n;
+        EXPECT_NEAR(el.center.x, cx, tol) << "n=" << n;
+        EXPECT_NEAR(el.center.y, cy, tol) << "n=" << n;
+    }
+}
+
 }} // namespace
