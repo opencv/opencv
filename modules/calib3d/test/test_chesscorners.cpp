@@ -862,5 +862,22 @@ TEST(Calib3d_CornerOrdering, issue_26830) {
     ASSERT_EQ(cornersMinimumSizeMatchesPatternSize, cornersMinimumSizeSmallerThanPatternSize);
 }
 
+TEST(Calib3d_ChessboardDetector, regression_28028)
+{
+   const cv::String dataDir = std::string(TS::ptr()->get_data_path()) + "calib3d/";
+   const cv::Mat image = cv::imread(dataDir + "chessboard_13x9_28028.jpg");
+
+    ASSERT_FALSE(image.empty()) << "Could not load chessboard_13x9_28028.jpg";
+
+    Size patternSize(13, 9);
+    std::vector<Point2f> corners;
+
+    int flags = CALIB_CB_ADAPTIVE_THRESH | CALIB_CB_FAST_CHECK | CALIB_CB_NORMALIZE_IMAGE;
+    bool found = cv::findChessboardCorners(image, patternSize, corners, flags);
+
+    ASSERT_TRUE(found) << "Result: Failed. Chessboard not found (Bug #28028 Reproduced).";
+}
+
 }} // namespace
 /* End of file. */
+
