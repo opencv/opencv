@@ -220,6 +220,9 @@ OCV_OPTION(WITH_1394 "Include IEEE1394 support" OFF
 OCV_OPTION(WITH_AVFOUNDATION "Use AVFoundation for Video I/O (iOS/visionOS/Mac)" ON
   VISIBLE_IF APPLE
   VERIFY HAVE_AVFOUNDATION)
+OCV_OPTION(WITH_ACCELERATE "Use Accelerate framework" ON
+  VISIBLE_IF APPLE
+  VERIFY HAVE_ACCELERATE)
 OCV_OPTION(WITH_AVIF "Enable AVIF support" ON
   VERIFY HAVE_AVIF)
 OCV_OPTION(WITH_CAP_IOS "Enable iOS video capture" ON
@@ -1003,6 +1006,13 @@ if(WITH_HAL_RVV)
   endif()
 endif()
 
+if(HAVE_ACCELERATE)
+  ocv_debug_message(STATUS "Enable Accelerate framework acceleration")
+  if(NOT ";${OpenCV_HAL};" MATCHES ";accelerate;")
+    set(OpenCV_HAL "accelerate;${OpenCV_HAL}")
+  endif()
+endif()
+
 foreach(hal ${OpenCV_HAL})
   if(hal STREQUAL "carotene")
     if(";${CPU_BASELINE_FINAL};" MATCHES ";NEON;")
@@ -1048,6 +1058,10 @@ foreach(hal ${OpenCV_HAL})
     add_subdirectory(hal/openvx)
     ocv_hal_register(OPENVX_HAL_LIBRARIES OPENVX_HAL_HEADERS OPENVX_HAL_INCLUDE_DIRS)
     list(APPEND OpenCV_USED_HAL "openvx (ver ${OPENVX_HAL_VERSION})")
+  elseif(hal STREQUAL "accelerate")
+    add_subdirectory(hal/accelerate)
+    ocv_hal_register(ACCELERATE_HAL_LIBRARIES ACCELERATE_HAL_HEADERS ACCELERATE_HAL_INCLUDE_DIRS)
+    list(APPEND OpenCV_USED_HAL "Accelerate (ver ${ACCELERATE_HAL_VERSION})")
   else()
     ocv_debug_message(STATUS "OpenCV HAL: ${hal} ...")
     ocv_clear_vars(OpenCV_HAL_LIBRARIES OpenCV_HAL_HEADERS OpenCV_HAL_INCLUDE_DIRS)

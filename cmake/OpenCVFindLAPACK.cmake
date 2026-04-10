@@ -235,7 +235,7 @@ if(WITH_LAPACK)
             LAPACKE_H "lapacke.h"
             INCLUDE_DIR "${CBLAS_INCLUDE_DIR}" "${LAPACKE_INCLUDE_DIR}"
             LIBRARIES "${LAPACK_LIBRARIES}")
-        elseif(APPLE)
+        elseif(WITH_ACCELERATE)
           ocv_lapack_check(IMPL "LAPACK/Apple"
             CBLAS_H "Accelerate/Accelerate.h"
             LAPACKE_H "Accelerate/Accelerate.h")
@@ -248,7 +248,7 @@ if(WITH_LAPACK)
     endif()
   endif()
 
-  if(NOT LAPACK_LIBRARIES AND APPLE AND NOT OPENCV_LAPACK_FIND_PACKAGE_ONLY)
+  if(NOT LAPACK_LIBRARIES AND WITH_ACCELERATE AND NOT OPENCV_LAPACK_FIND_PACKAGE_ONLY)
     ocv_lapack_check(IMPL "Apple"
       CBLAS_H "Accelerate/Accelerate.h"
       LAPACKE_H "Accelerate/Accelerate.h"
