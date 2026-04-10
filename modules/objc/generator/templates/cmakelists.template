@@ -22,7 +22,14 @@ else()
 endif()
 file(GLOB_RECURSE objc_headers "*\.h")
 
-add_library($framework STATIC $${objc_sources})
+set_source_files_properties(Documentation.docc PROPERTIES
+   XCODE_LAST_KNOWN_FILE_TYPE folder.documentationcatalog
+)
+
+add_library($framework STATIC
+  $${objc_sources}
+  Documentation.docc
+)
 
 set_target_properties($framework PROPERTIES LINKER_LANGUAGE CXX)
 

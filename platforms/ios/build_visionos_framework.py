@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 The script builds OpenCV.framework for visionOS.
 """
@@ -69,7 +69,7 @@ if __name__ == "__main__":
     parser.add_argument('--framework_name', default='opencv2', dest='framework_name', help='Name of OpenCV framework (default: opencv2, will change to OpenCV in future version)')
     parser.add_argument('--legacy_build', default=False, dest='legacy_build', action='store_true', help='Build legacy framework (default: False, equivalent to "--framework_name=opencv2 --without=objc")')
     parser.add_argument('--run_tests', default=False, dest='run_tests', action='store_true', help='Run tests')
-    parser.add_argument('--build_docs', default=False, dest='build_docs', action='store_true', help='Build docs')
+    parser.add_argument('--doc_hosting_base_path', default=None, dest='hosting_base_path', action='store_true', help='Documentation hosting base path')
     parser.add_argument('--disable-swift', default=False, dest='swiftdisabled', action='store_true', help='Disable building of Swift extensions')
 
     args, unknown_args = parser.parse_known_args()
@@ -112,5 +112,5 @@ if __name__ == "__main__":
     if visionsimulator_archs:
         targets.append((visionsimulator_archs, "XRSimulator")),
 
-    b = visionOSBuilder(args.opencv, args.contrib, args.dynamic, args.without, args.disable, args.enablenonfree, targets, args.debug, args.debug_info, args.framework_name, args.run_tests, args.build_docs, args.swiftdisabled)
+    b = visionOSBuilder(args.opencv, args.contrib, args.dynamic, args.without, args.disable, args.enablenonfree, targets, args.debug, args.debug_info, args.framework_name, args.run_tests, args.hosting_base_path, args.swiftdisabled)
     b.build(args.out)
