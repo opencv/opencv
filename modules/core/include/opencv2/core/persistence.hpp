@@ -273,6 +273,7 @@ public:
         FORMAT_XML  = (1<<3), //!< flag, XML format
         FORMAT_YAML = (2<<3), //!< flag, YAML format
         FORMAT_JSON = (3<<3), //!< flag, JSON format
+        FORMAT_YAML_1_0 = (4<<3), //!< flag, Legacy YAML 1.0 format (strict headers, booleans as ints)
 
         BASE64      = 64,     //!< flag, write rawdata in Base64 by default. (consider using WRITE_BASE64)
         WRITE_BASE64 = BASE64 | WRITE, //!< flag, enable both WRITE and BASE64
@@ -365,6 +366,8 @@ public:
      */
     CV_WRAP void write(const String& name, int val);
     /// @overload
+    CV_WRAP void write(const String& name, bool val);
+
     CV_WRAP void write(const String& name, int64_t val);
     /// @overload
     CV_WRAP void write(const String& name, double val);
@@ -658,6 +661,7 @@ protected:
 /////////////////// XML & YAML I/O implementation //////////////////
 
 CV_EXPORTS void write( FileStorage& fs, const String& name, int value );
+CV_EXPORTS void write( FileStorage& fs, const String& name, bool value );
 CV_EXPORTS void write( FileStorage& fs, const String& name, int64_t value );
 CV_EXPORTS void write( FileStorage& fs, const String& name, float value );
 CV_EXPORTS void write( FileStorage& fs, const String& name, double value );
