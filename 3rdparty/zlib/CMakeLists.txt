@@ -84,10 +84,10 @@ set(ZLIB_SRCS
 add_library(${ZLIB_LIBRARY} STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${ZLIB_SRCS} ${ZLIB_PUBLIC_HDRS} ${ZLIB_PRIVATE_HDRS})
 set_target_properties(${ZLIB_LIBRARY} PROPERTIES DEFINE_SYMBOL ZLIB_DLL)
 if(HAVE_UNISTD_H)
-  target_compile_definitions(${ZLIB_LIBRARY} PRIVATE HAVE_UNISTD_H=1)
+  target_compile_definitions(${ZLIB_LIBRARY} INTERFACE HAVE_UNISTD_H=1)
 endif()
 if(HAVE_STDARG_H)
-  target_compile_definitions(${ZLIB_LIBRARY} PRIVATE HAVE_STDARG_H=1)
+  target_compile_definitions(${ZLIB_LIBRARY} INTERFACE HAVE_STDARG_H=1)
 endif()
 
 ocv_warnings_disable(CMAKE_C_FLAGS -Wshorten-64-to-32 -Wattributes -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wshift-negative-value
