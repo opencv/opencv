@@ -293,7 +293,7 @@ icvTeleaInpaintFMM(Mat &f, Mat &t, Mat &out, int range, CvPriorityQueueFloat *He
                float Jx[3] = {0,0,0};
                float Jy[3] = {0,0,0};
                float Ia[3] = {0,0,0};
-               float s[3] = {1.0e-20f,1.0e-20f,1.0e-20f};
+               float s[3] = {0,0,0};
                float w,dst,lev,dir,sat;
 
                for (k=i-range; k<=i+range; k++) {
@@ -340,18 +340,24 @@ icvTeleaInpaintFMM(Mat &f, Mat &t, Mat &out, int range, CvPriorityQueueFloat *He
                                     gradI.y=0;
                                  }
                               }
-                              Ia[color] += (float)w * (float)(out.at<PixelT>(k-1,l-1)[color]);
-                              Jx[color] -= (float)w * (float)(gradI.x*r.x);
-                              Jy[color] -= (float)w * (float)(gradI.y*r.y);
-                              s[color]  += w;
+                              if (k-1 >= 0 && l-1 >= 0 && k-1 < out.rows && l-1 < out.cols) {
+                                 Ia[color] += (float)w * (float)(out.at<PixelT>(k-1,l-1)[color]);
+                                 Jx[color] -= (float)w * (float)(gradI.x*r.x);
+                                 Jy[color] -= (float)w * (float)(gradI.y*r.y);
+                                 s[color]  += w;
+                              }
                            }
                         }
                      }
                   }
                }
                for (color=0; color<=2; color++) {
-                  sat = (float)(Ia[color]/s[color]+(Jx[color]+Jy[color])/(sqrt(Jx[color]*Jx[color]+Jy[color]*Jy[color])+1.0e-20f));
-                  out.at<PixelT>(i-1,j-1)[color] = round_cast<uchar>(sat);
+                  if (s[color] <= FLT_EPSILON) {
+                     out.at<PixelT>(i-1,j-1)[color] = out.at<PixelT>(ii-1,jj-1)[color];
+                  } else {
+                     sat = (float)(Ia[color]/s[color]+(Jx[color]+Jy[color])/(sqrt(Jx[color]*Jx[color]+Jy[color]*Jy[color])+1.0e-20f));
+                     out.at<PixelT>(i-1,j-1)[color] = round_cast<uchar>(sat);
+                  }
                }
 
                f.at<uchar>(i,j) = BAND;
@@ -381,7 +387,7 @@ icvTeleaInpaintFMM(Mat &f, Mat &t, Mat &out, int range, CvPriorityQueueFloat *He
 
                for (color=0; color<=0; color++) {
                   cv::Point2f gradI,gradT,r;
-                  float Ia=0,Jx=0,Jy=0,s=1.0e-20f,w,dst,lev,dir,sat;
+                  float Ia=0,Jx=0,Jy=0,s=0,w,dst,lev,dir,sat;
 
                   if (f.at<uchar>(i,j+1)!=INSIDE) {
                      if (f.at<uchar>(i,j-1)!=INSIDE) {
@@ -452,17 +458,21 @@ icvTeleaInpaintFMM(Mat &f, Mat &t, Mat &out, int range, CvPriorityQueueFloat *He
                                     gradI.y=0;
                                  }
                               }
-                              Ia += (float)w * (float)(out.at<data_type>(k-1,l-1));
-                              Jx -= (float)w * (float)(gradI.x*r.x);
-                              Jy -= (float)w * (float)(gradI.y*r.y);
-                              s  += w;
+                              if (k-1 >= 0 && l-1 >= 0 && k-1 < out.rows && l-1 < out.cols) {
+                                 Ia += (float)w * (float)(out.at<data_type>(k-1,l-1));
+                                 Jx -= (float)w * (float)(gradI.x*r.x);
+                                 Jy -= (float)w * (float)(gradI.y*r.y);
+                                 s  += w;
+                              }
                            }
                         }
                      }
                   }
-                  sat = (float)(Ia/s+(Jx+Jy)/(sqrt(Jx*Jx+Jy*Jy)+1.0e-20f));
-                  {
-                  out.at<data_type>(i-1,j-1) = round_cast<data_type>(sat);
+                  if (s <= FLT_EPSILON) {
+                     out.at<data_type>(i-1,j-1) = out.at<data_type>(ii-1,jj-1);
+                  } else {
+                     sat = (float)(Ia/s+(Jx+Jy)/(sqrt(Jx*Jx+Jy*Jy)+1.0e-20f));
+                     out.at<data_type>(i-1,j-1) = round_cast<data_type>(sat);
                   }
                }
 
