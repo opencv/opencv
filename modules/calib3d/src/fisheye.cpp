@@ -530,7 +530,7 @@ void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
 /// cv::fisheye::initUndistortRectifyMap
 
 void cv::fisheye::initUndistortRectifyMap( InputArray K, InputArray D, InputArray R, InputArray P,
-    const cv::Size& size, int m1type, OutputArray map1, OutputArray map2 )
+    const cv::Size& size, int m1type, OutputArray map1, OutputArray map2, const cv::Size& inputImageSize )
 {
     CV_INSTRUMENT_REGION();
 
@@ -577,6 +577,10 @@ void cv::fisheye::initUndistortRectifyMap( InputArray K, InputArray D, InputArra
         P.getMat().colRange(0, 3).convertTo(PP, CV_64F);
 
     cv::Matx33d iR = (PP * RR).inv(cv::DECOMP_SVD);
+    const bool useInputSize = inputImageSize.width > 0 && inputImageSize.height > 0;
+    const double inputWidth = static_cast<double>(inputImageSize.width);
+    const double inputHeight = static_cast<double>(inputImageSize.height);
+    constexpr double inf = std::numeric_limits<double>::infinity();
 
     for( int i = 0; i < size.height; ++i)
     {
@@ -592,24 +596,34 @@ void cv::fisheye::initUndistortRectifyMap( InputArray K, InputArray D, InputArra
         for( int j = 0; j < size.width; ++j)
         {
             double u, v;
-            if( _w <= 0)
+            if (!useInputSize && _w <= 0)
             {
-                u = (_x > 0) ? -std::numeric_limits<double>::infinity() : std::numeric_limits<double>::infinity();
-                v = (_y > 0) ? -std::numeric_limits<double>::infinity() : std::numeric_limits<double>::infinity();
+                u = (_x > 0) ? -inf : inf;
+                v = (_y > 0) ? -inf : inf;
             }
             else
             {
-                double x = _x/_w, y = _y/_w;
-
-                double r = sqrt(x*x + y*y);
-                double theta = atan(r);
+                double r = sqrt(_x*_x + _y*_y);
+                double theta = atan2(r, _w);
 
                 double theta2 = theta*theta, theta4 = theta2*theta2, theta6 = theta4*theta2, theta8 = theta4*theta4;
                 double theta_d = theta * (1 + k[0]*theta2 + k[1]*theta4 + k[2]*theta6 + k[3]*theta8);
 
                 double scale = (r == 0) ? 1.0 : theta_d / r;
-                u = f[0]*x*scale + c[0];
-                v = f[1]*y*scale + c[1];
+                u = f[0] * _x * scale + c[0];
+                v = f[1] * _y * scale + c[1];
+
+                if (useInputSize)
+                {
+                    if (u < 0 || v < 0)
+                    {
+                        u = v = -inf;
+                    }
+                    else if (u >= inputWidth || v >= inputHeight)
+                    {
+                        u = v = inf;
+                    }
+                }
             }
 
             if( m1type == CV_16SC2 )
