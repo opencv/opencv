@@ -1537,6 +1537,8 @@ if(WITH_SPNG)
   elseif(HAVE_SPNG)
     status("    PNG:" "${SPNG_LIBRARY} (ver ${SPNG_VERSION})")
   endif()
+
+  status("      Metadata Support:" "EXIF XMP ICC") # SPNG does not support cICP chunk.
 elseif(WITH_PNG OR HAVE_PNG)
   status("    PNG:"  PNG_FOUND  THEN "${PNG_LIBRARY} (ver ${PNG_VERSION_STRING})" ELSE "build (ver ${PNG_VERSION_STRING})")
   if(BUILD_PNG AND PNG_HARDWARE_OPTIMIZATIONS)
@@ -1564,6 +1566,14 @@ elseif(WITH_PNG OR HAVE_PNG)
   endif()
   elseif(BUILD_PNG)
     status("      SIMD Support Request:" "NO")
+  endif()
+
+  if(NOT (PNG_VERSION_STRING VERSION_LESS "1.6.45"))
+    status("      Metadata Support:" "EXIF XMP ICC cICP")
+  elseif(NOT (PNG_VERSION_STRING VERSION_LESS "1.6.31"))
+    status("      Metadata Support:" "EXIF XMP ICC")
+  else()
+    status("      Metadata Support:" "XMP ICC")
   endif()
 endif()
 

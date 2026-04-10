@@ -144,6 +144,17 @@ namespace opencv_test { namespace {
         return iccp_data;
     }
 
+#ifdef OPENCV_IMGCODECS_PNG_WITH_cICP
+    static std::vector<uchar> getSampleCicpData() {
+        return {
+            9,  // BT.2020 / BT.2100
+            16, // SMPTE ST 2084 (PQ)
+            0,  // Identity (RGB)
+            1,  // Full Range
+        };
+    }
+#endif
+
  /**
  * Test to check whether the EXIF orientation tag was processed successfully or not.
  * The test uses a set of 8 images named testExifOrientation_{1 to 8}.(extension).
@@ -468,7 +479,11 @@ TEST(Imgcodecs_Png, Read_Write_With_Exif)
     remove(outputname.c_str());
 }
 
+#ifdef OPENCV_IMGCODECS_PNG_WITH_cICP
+TEST(Imgcodecs_Png, Read_Write_With_Exif_Xmp_Iccp_cICP)
+#else
 TEST(Imgcodecs_Png, Read_Write_With_Exif_Xmp_Iccp)
+#endif
 {
     int png_compression = 3;
     int imgtype = CV_MAKETYPE(CV_8U, 3);
@@ -481,6 +496,11 @@ TEST(Imgcodecs_Png, Read_Write_With_Exif_Xmp_Iccp)
         getSampleXmpData(),
         getSampleIccpData(),
     };
+
+#ifdef OPENCV_IMGCODECS_PNG_WITH_cICP
+    metadata_types.push_back(IMAGE_METADATA_CICP);
+    metadata.push_back(getSampleCicpData());
+#endif
 
     std::vector<int> write_params = {
         IMWRITE_PNG_COMPRESSION, png_compression
