@@ -345,6 +345,173 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
 #undef COP
 }
 
+/**
+ * O(1) implementation for Large Kernels (ksize > 255).
+ * Uses 32-bit integers (int) instead of 16-bit (ushort) to prevent overflow.
+ * SIMD optimizations are removed to ensure stability for these edge cases.
+ */
+static void medianBlur_8u_O1_Large( const Mat& _src, Mat& _dst, int ksize )
+{
+    CV_INSTRUMENT_REGION();
+
+    // USE INT (32-bit) to prevent overflow with ksize > 255
+    typedef int HT;
+
+    typedef struct {
+        HT coarse[16];
+        HT fine[16][16];
+    } Histogram;
+
+    #define HOP(h,x,op) \
+        h.coarse[x>>4] op, \
+        *((HT*)h.fine + x) op
+
+    #define COP(c,j,x,op) \
+        h_coarse[ 16*(n*c+j) + (x>>4) ] op, \
+        h_fine[ 16 * (n*(16*c+(x>>4)) + j) + (x & 0xF) ] op
+
+    int cn = _dst.channels(), m = _dst.rows, r = (ksize-1)/2;
+    CV_Assert(cn > 0 && cn <= 4);
+    size_t sstep = _src.step, dstep = _dst.step;
+    int STRIPE_SIZE = std::min( _dst.cols, 512/cn );
+
+    #define CV_ALIGNMENT 16
+
+    std::vector<HT> _h_coarse(1 * 16 * (STRIPE_SIZE + 2*r) * cn + CV_ALIGNMENT);
+    std::vector<HT> _h_fine(16 * 16 * (STRIPE_SIZE + 2*r) * cn + CV_ALIGNMENT);
+    HT* h_coarse = alignPtr(&_h_coarse[0], CV_ALIGNMENT);
+    HT* h_fine = alignPtr(&_h_fine[0], CV_ALIGNMENT);
+
+    for( int x = 0; x < _dst.cols; x += STRIPE_SIZE )
+    {
+        int i, j, k, c, n = std::min(_dst.cols - x, STRIPE_SIZE) + r*2;
+        const uchar* src = _src.ptr() + x*cn;
+        uchar* dst = _dst.ptr() + (x - r)*cn;
+
+        memset( h_coarse, 0, 16*n*cn*sizeof(h_coarse[0]) );
+        memset( h_fine, 0, 16*16*n*cn*sizeof(h_fine[0]) );
+
+        // First row initialization
+        for( c = 0; c < cn; c++ )
+        {
+            for( j = 0; j < n; j++ )
+                COP( c, j, src[cn*j+c], += (HT)(r+2) );
+
+            for( i = 1; i < r; i++ )
+            {
+                const uchar* p = src + sstep*std::min(i, m-1);
+                for ( j = 0; j < n; j++ )
+                    COP( c, j, p[cn*j+c], ++ );
+            }
+        }
+
+        for( i = 0; i < m; i++ )
+        {
+            const uchar* p0 = src + sstep * std::max( 0, i-r-1 );
+            const uchar* p1 = src + sstep * std::min( m-1, i+r );
+
+            for( c = 0; c < cn; c++ )
+            {
+                Histogram H;
+                HT luc[16];
+
+                memset(&H, 0, sizeof(H));
+                memset(luc, 0, sizeof(luc));
+
+                // Update column histograms for the entire row.
+                for( j = 0; j < n; j++ )
+                {
+                    COP( c, j, p0[j*cn + c], -- );
+                    COP( c, j, p1[j*cn + c], ++ );
+                }
+
+                // First column initialization (Scalar version)
+                for (k = 0; k < 16; ++k) {
+                    for (int ind = 0; ind < 16; ++ind)
+                        H.fine[k][ind] = (HT)(H.fine[k][ind] + (2 * r + 1) * h_fine[16 * n*(16 * c + k) + ind]);
+                }
+
+                HT* px = h_coarse + 16 * n*c;
+                for( j = 0; j < 2*r; ++j, px += 16 ) {
+                    for (int ind = 0; ind < 16; ++ind)
+                        H.coarse[ind] += px[ind];
+                }
+
+                for( j = r; j < n-r; j++ )
+                {
+                    int t = 2*r*r + 2*r, b, sum = 0;
+                    HT* segment;
+
+                    px = h_coarse + 16 * (n*c + std::min(j + r, n - 1));
+
+                    for (int ind = 0; ind < 16; ++ind)
+                        H.coarse[ind] += px[ind];
+
+                    // Find median at coarse level
+                    for ( k = 0; k < 16 ; ++k )
+                    {
+                        sum += H.coarse[k];
+                        if ( sum > t )
+                        {
+                            sum -= H.coarse[k];
+                            break;
+                        }
+                    }
+                    CV_Assert( k < 16 );
+
+                    /* Update corresponding histogram segment */
+                    if ( luc[k] <= j-r )
+                    {
+                        memset(&H.fine[k], 0, 16 * sizeof(HT));
+                        px = h_fine + 16 * (n*(16 * c + k) + j - r);
+                        for (luc[k] = HT(j - r); luc[k] < std::min(j + r + 1, n); ++luc[k], px += 16)
+                        {
+                            for (int ind = 0; ind < 16; ++ind)
+                                H.fine[k][ind] += px[ind];
+                        }
+
+                        if ( luc[k] < j+r+1 )
+                        {
+                            px = h_fine + 16 * (n*(16 * c + k) + (n - 1));
+                            for (int ind = 0; ind < 16; ++ind)
+                                H.fine[k][ind] = (HT)(H.fine[k][ind] + (j + r + 1 - n) * px[ind]);
+                            luc[k] = (HT)(j+r+1);
+                        }
+                    }
+                    else
+                    {
+                        px = h_fine + 16*n*(16 * c + k);
+                        for ( ; luc[k] < j+r+1; ++luc[k] )
+                        {
+                            for (int ind = 0; ind < 16; ++ind)
+                                H.fine[k][ind] += px[16 * std::min((int)luc[k], n - 1) + ind] - px[16 * std::max((int)luc[k] - 2 * r - 1, 0) + ind];
+                        }
+                    }
+
+                    px = h_coarse + 16 * (n*c + std::max(j - r, 0));
+                    for (int ind = 0; ind < 16; ++ind)
+                        H.coarse[ind] -= px[ind];
+
+                    /* Find median in segment */
+                    segment = H.fine[k];
+                    for ( b = 0; b < 16 ; b++ )
+                    {
+                        sum += segment[b];
+                        if ( sum > t )
+                        {
+                            dst[dstep*i+cn*j+c] = (uchar)(16*k + b);
+                            break;
+                        }
+                    }
+                    CV_Assert( b < 16 );
+                }
+            }
+        }
+    }
+    #undef HOP
+    #undef COP
+}
+
 static void
 medianBlur_8u_Om( const Mat& _src, Mat& _dst, int m )
 {
@@ -897,11 +1064,24 @@ void medianBlur(const Mat& src0, /*const*/ Mat& dst, int ksize)
         CV_Assert( src.depth() == CV_8U && (cn == 1 || cn == 3 || cn == 4) );
 
         double img_size_mp = (double)(src0.total())/(1 << 20);
-        if( ksize <= 3 + (img_size_mp < 1 ? 12 : img_size_mp < 4 ? 6 : 2)*
-            ((CV_SIMD || CV_SIMD_SCALABLE) ? 1 : 3))
+        // Determine threshold for small/efficient kernels
+        int small_ksize_thresh = 3 + (img_size_mp < 1 ? 12 : img_size_mp < 4 ? 6 : 2)*
+            ((CV_SIMD || CV_SIMD_SCALABLE) ? 1 : 3);
+
+        if( ksize <= small_ksize_thresh )
+        {
             medianBlur_8u_Om( src, dst, ksize );
-        else
+        }
+        else if (ksize <= 255)
+        {
+            // Use standard O(1) for ksize <= 255 (fits in ushort)
             medianBlur_8u_O1( src, dst, ksize );
+        }
+        else
+        {
+            // Use 32-bit fallback for ksize > 255 to avoid overflow
+            medianBlur_8u_O1_Large( src, dst, ksize );
+        }
     }
 }
 
