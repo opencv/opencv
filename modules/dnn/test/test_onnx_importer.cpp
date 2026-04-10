@@ -3524,5 +3524,22 @@ TEST_P(Test_ONNX_layers, RandomNormalLike_complex)
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
+TEST_P(Test_ONNX_layers, QLinearAdd)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+
+    // Arguments: model_name, extension, l1, lInf, useSoftmax, checkNoFallbacks, numInputs
+    testONNXModels("qlinear_add", npy, 0.15, 2.0, false, true, 2);
+}
+
+TEST_P(Test_ONNX_layers, QLinearMul)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+
+    // Arguments: model_name, extension, l1, lInf, useSoftmax, checkNoFallbacks, numInputs
+    testONNXModels("qlinear_mul", npy, 0.05, 0.5, false, true, 2);
+}
 
 }} // namespace
