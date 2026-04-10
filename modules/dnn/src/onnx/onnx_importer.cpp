@@ -4152,6 +4152,20 @@ Net readNetFromONNX(const String& onnxFile, int engine)
 #endif
         }
         /* fall through */
+        case ENGINE_ORT_GENAI:
+        {
+#ifdef HAVE_ONNXRUNTIME_GENAI
+            Net net = readNetFromONNX2_OGA(onnxFile);
+            if (net.empty())
+                CV_Error(Error::StsError, "DNN/ONNX/OGA: failed to load model");
+            if (!net.getImpl() || !net.getImpl()->oga_model)
+                CV_Error(Error::StsError, "DNN/ONNX/OGA: ONNX Runtime GenAI model was not initialized");
+            return net;
+#else
+            CV_LOG_WARNING(NULL, "DNN/ONNX/OGA: OpenCV was built without ONNX Runtime GenAI or without ONNX Runtime. Falling back to ENGINE_AUTO.");
+#endif
+        }
+        /* fall through */
         case ENGINE_AUTO:
         {
             Net net = readNetFromONNX2(onnxFile);
@@ -4184,6 +4198,13 @@ Net readNetFromONNX(const char* buffer, size_t sizeBuffer, int engine)
             CV_LOG_WARNING(NULL, "DNN/ONNX/ORT: OpenCV was built without ONNX Runtime (WITH_ONNXRUNTIME=OFF). Falling back to ENGINE_AUTO.");
 #endif
             /* fall through */
+        case ENGINE_ORT_GENAI:
+#ifdef HAVE_ONNXRUNTIME_GENAI
+            CV_Error(Error::StsNotImplemented, "DNN/ONNX/OGA: loading from memory buffer is not supported; provide a model directory path");
+#else
+            CV_LOG_WARNING(NULL, "DNN/ONNX/OGA: OpenCV was built without ONNX Runtime GenAI or without ONNX Runtime. Falling back to ENGINE_AUTO.");
+#endif
+            /* fall through */
         case ENGINE_AUTO:
         {
             Net net = readNetFromONNX2(buffer, sizeBuffer);
@@ -4214,6 +4235,13 @@ Net readNetFromONNX(const std::vector<uchar>& buffer, int engine)
             CV_Error(Error::StsNotImplemented, "DNN/ONNX/ORT: loading from memory buffer is not supported");
 #else
             CV_LOG_WARNING(NULL, "DNN/ONNX/ORT: OpenCV was built without ONNX Runtime (WITH_ONNXRUNTIME=OFF). Falling back to ENGINE_AUTO.");
+#endif
+            /* fall through */
+        case ENGINE_ORT_GENAI:
+#ifdef HAVE_ONNXRUNTIME_GENAI
+            CV_Error(Error::StsNotImplemented, "DNN/ONNX/OGA: loading from memory buffer is not supported; provide a model directory path");
+#else
+            CV_LOG_WARNING(NULL, "DNN/ONNX/OGA: OpenCV was built without ONNX Runtime GenAI or without ONNX Runtime. Falling back to ENGINE_AUTO.");
 #endif
             /* fall through */
         case ENGINE_AUTO:

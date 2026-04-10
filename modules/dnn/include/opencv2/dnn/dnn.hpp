@@ -709,6 +709,21 @@ CV__DNN_INLINE_NS_BEGIN
          */
         CV_WRAP Mat forward(const String& outputName = String());
 
+        CV_WRAP Mat tokenize(const String& text) const;
+        CV_WRAP String detokenize(InputArray tokenIds) const;
+        CV_WRAP void setInputImagePath(const String& path);
+        CV_WRAP void setPrompt(const String& prompt);
+        CV_WRAP void setSearchOption(const String& name, double value);
+        CV_WRAP void setSearchOptionBool(const String& name, bool value);
+        CV_WRAP void setGuidance(const String& type, const String& data,
+                                  bool enableFfTokens = false);
+        CV_WRAP String applyChatTemplate(const String& messages,
+                                          const String& templateStr = String(),
+                                          const String& tools = String(),
+                                          bool addGenerationPrompt = true) const;
+        CV_WRAP String getModelType() const;
+        CV_WRAP String getDeviceType() const;
+
         /** @brief Runs forward pass to compute output of layer with name @p outputName.
          *  @param outputName name for layer which output is needed to get
          *  @details By default runs forward pass for the whole network.
@@ -1056,7 +1071,8 @@ CV__DNN_INLINE_NS_BEGIN
         ENGINE_CLASSIC=1, //!< Force use the old dnn engine similar to 4.x branch
         ENGINE_NEW=2,     //!< Force use the new dnn engine. The engine does not support non CPU back-ends for now.
         ENGINE_AUTO=3,    //!< Try to use the new engine and then fall back to the classic version.
-        ENGINE_ORT=4      //!< Try to use ONNX Runtime wrapper (ONNX only, requires build with WITH_ONNXRUNTIME=ON).
+        ENGINE_ORT=4,     //!< Try to use ONNX Runtime wrapper (ONNX only, requires build with WITH_ONNXRUNTIME=ON).
+        ENGINE_ORT_GENAI=5 //!< Use ONNX Runtime GenAI wrapper for generative AI models (requires build with WITH_ONNXRUNTIME=ON and WITH_ONNXRUNTIME_GENAI=ON).
     };
 
     /** @brief Reads a network model stored in <a href="https://pjreddie.com/darknet/">Darknet</a> model files.

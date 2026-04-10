@@ -271,6 +271,38 @@ if(WITH_ONNXRUNTIME)
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath,'$ORIGIN/../3rdparty/onnxruntime/${_ort_unpack_dirname}/lib'")
       endif()
 
+      if(APPLE)
+  set(_ort_dylib "${ONNXRT_ROOT_DIR}/lib/libonnxruntime.${ONNXRUNTIME_VERSION}.dylib")
+
+  if(EXISTS "${_ort_dylib}")
+    execute_process(
+      COMMAND install_name_tool -id "libonnxruntime.dylib" "${_ort_dylib}"
+      RESULT_VARIABLE _ort_patch_result
+      ERROR_QUIET
+    )
+
+    if(_ort_patch_result EQUAL 0)
+      execute_process(
+        COMMAND codesign --force --sign - "${_ort_dylib}"
+        RESULT_VARIABLE _ort_sign_result
+        ERROR_QUIET
+      )
+
+      if(_ort_sign_result EQUAL 0)
+        message(STATUS "DNN/macOS: Patched ORT install name for ORT GenAI dlopen compatibility")
+      else()
+        message(WARNING "DNN/macOS: codesign failed for '${_ort_dylib}'. Workaround: export ORT_LIB_PATH=${_ort_dylib}")
+      endif()
+    else()
+      message(WARNING "DNN/macOS: install_name_tool failed for '${_ort_dylib}'. Workaround: export ORT_LIB_PATH=${_ort_dylib}")
+    endif()
+  endif()
+
+  unset(_ort_dylib)
+endif()
+
+include("${OpenCV_SOURCE_DIR}/cmake/FindONNX.cmake")
+
       include("${OpenCV_SOURCE_DIR}/cmake/FindONNX.cmake")
     endif()
   endif()  # _ort_download_requested
@@ -374,6 +406,148 @@ if(WITH_ONNXRUNTIME)
 
   unset(_ort_download_requested)
   unset(_ort_download_forced)
+endif()
+
+# ONNX Runtime GenAI
+ocv_option(WITH_ONNXRUNTIME_GENAI "Build with ONNX Runtime GenAI support" OFF IF WITH_ONNXRUNTIME)
+ocv_option(DOWNLOAD_ONNXRUNTIME_GENAI "Download ONNX Runtime GenAI prebuilt binaries" OFF IF WITH_ONNXRUNTIME_GENAI)
+
+set(ONNXRUNTIME_GENAI_VERSION "0.12.1" CACHE STRING "ONNX Runtime GenAI version to download (prebuilt binaries)")
+
+if(WITH_ONNXRUNTIME_GENAI AND WITH_ONNXRUNTIME)
+  include("${OpenCV_SOURCE_DIR}/cmake/FindONNX.cmake")
+
+  set(_ortga_download_requested OFF)
+  set(_ortga_download_forced OFF)
+  if(DOWNLOAD_ONNXRUNTIME_GENAI)
+    set(_ortga_download_requested ON)
+    set(_ortga_download_forced ON)
+  elseif(NOT HAVE_ONNXGENAI)
+    set(_ortga_download_requested ON)
+    message(STATUS "DNN: ONNX Runtime GenAI was not found in system paths, attempting to download prebuilt package")
+  endif()
+
+  if(_ortga_download_requested)
+    set(_ortga_filename "")
+    set(_ortga_md5 "")
+
+    if(WIN32)
+      if(X86_64 OR CMAKE_SIZEOF_VOID_P EQUAL 8)
+        set(_ortga_filename "onnxruntime-genai-${ONNXRUNTIME_GENAI_VERSION}-win-x64.zip")
+        set(_ortga_md5 "5fd68ddea370e12a391605bf767c2fce")
+      elseif(ARM64 OR AARCH64)
+        set(_ortga_filename "onnxruntime-genai-${ONNXRUNTIME_GENAI_VERSION}-win-arm64.zip")
+        set(_ortga_md5 "5e6fdfcea9e3668d0f5ef9c6fc071a41")
+      endif()
+    elseif(APPLE)
+      if(ARM64 OR AARCH64 OR CMAKE_OSX_ARCHITECTURES MATCHES "arm64")
+        set(_ortga_filename "onnxruntime-genai-${ONNXRUNTIME_GENAI_VERSION}-osx-arm64.tar.gz")
+        set(_ortga_md5 "d817ca0181bd617e9c1d38e6221b3fdc")
+      endif()
+    elseif(UNIX)
+      if(X86_64)
+        set(_ortga_filename "onnxruntime-genai-${ONNXRUNTIME_GENAI_VERSION}-linux-x64.tar.gz")
+        set(_ortga_md5 "91f59d2f37849729c6c45d15942ec6c6")
+      endif()
+    endif()
+
+    if(NOT _ortga_filename)
+      if(_ortga_download_forced OR NOT HAVE_ONNXGENAI)
+        message(FATAL_ERROR
+          "DNN: there is no official ONNX Runtime GenAI prebuilt package for "
+          "CMAKE_SYSTEM_NAME='${CMAKE_SYSTEM_NAME}', CMAKE_SYSTEM_PROCESSOR='${CMAKE_SYSTEM_PROCESSOR}'. "
+          "Provide an installed ORT GenAI via ONNXGENAI_ROOT_DIR, or use a supported platform."
+        )
+      endif()
+    else()
+      set(_ortga_url "https://github.com/microsoft/onnxruntime-genai/releases/download/v${ONNXRUNTIME_GENAI_VERSION}/${_ortga_filename}")
+      string(REGEX REPLACE "\\.(tgz|tar\\.gz|zip)$" "" _ortga_unpack_dirname "${_ortga_filename}")
+
+      ocv_download(
+        FILENAME        ${_ortga_filename}
+        URL             ${_ortga_url}
+        DESTINATION_DIR "${OpenCV_BINARY_DIR}/3rdparty/onnxruntime-genai"
+        ID              "ORT_GENAI"
+        HASH            ${_ortga_md5}
+        UNPACK
+      )
+
+      set(ONNXGENAI_ROOT_DIR "${OpenCV_BINARY_DIR}/3rdparty/onnxruntime-genai/${_ortga_unpack_dirname}"
+          CACHE PATH "ONNX Runtime GenAI install directory" FORCE)
+
+      if(NOT APPLE AND NOT WIN32)
+        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-rpath,'$ORIGIN/../3rdparty/onnxruntime-genai/${_ortga_unpack_dirname}/lib'")
+      endif()
+
+      include("${OpenCV_SOURCE_DIR}/cmake/FindONNX.cmake")
+    endif()
+  endif()
+
+  if(HAVE_ONNXGENAI)
+    set(HAVE_ONNXRUNTIME_GENAI 1 CACHE INTERNAL "ONNX Runtime GenAI availability")
+
+    if(ONNXGENAI_INCLUDE_DIR)
+      list(APPEND include_dirs "${ONNXGENAI_INCLUDE_DIR}")
+    endif()
+    if(ONNXGENAI_LIBRARIES)
+      list(APPEND libs "${ONNXGENAI_LIBRARIES}")
+    endif()
+
+    add_definitions(-DHAVE_ONNXRUNTIME_GENAI=1)
+    message(STATUS "DNN: ONNX Runtime GenAI enabled")
+
+    set(_ortga_runtime_libs "")
+    if(WIN32)
+      if(ONNXGENAI_ROOT_DIR)
+        file(GLOB _ortga_runtime_libs "${ONNXGENAI_ROOT_DIR}/bin/onnxruntime-genai*.dll")
+      endif()
+      if(_ortga_runtime_libs)
+        install(FILES ${_ortga_runtime_libs} DESTINATION ${OPENCV_BIN_INSTALL_PATH} COMPONENT libs)
+      endif()
+    elseif(APPLE)
+      if(ONNXGENAI_ROOT_DIR)
+        file(GLOB _ortga_runtime_libs "${ONNXGENAI_ROOT_DIR}/lib/libonnxruntime-genai*.dylib")
+      endif()
+      if(NOT _ortga_runtime_libs AND ONNXGENAI_LIBRARIES)
+        foreach(_ortga_lib ${ONNXGENAI_LIBRARIES})
+          get_filename_component(_ortga_lib_dir "${_ortga_lib}" DIRECTORY)
+          file(GLOB _ortga_runtime_libs "${_ortga_lib_dir}/libonnxruntime-genai*.dylib")
+          if(_ortga_runtime_libs)
+            break()
+          endif()
+        endforeach()
+      endif()
+      if(_ortga_runtime_libs)
+        install(FILES ${_ortga_runtime_libs} DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT libs)
+      endif()
+    else()
+      if(ONNXGENAI_ROOT_DIR)
+        file(GLOB _ortga_runtime_libs "${ONNXGENAI_ROOT_DIR}/lib/libonnxruntime-genai.so*")
+      endif()
+      if(NOT _ortga_runtime_libs AND ONNXGENAI_LIBRARIES)
+        foreach(_ortga_lib ${ONNXGENAI_LIBRARIES})
+          get_filename_component(_ortga_lib_dir "${_ortga_lib}" DIRECTORY)
+          file(GLOB _ortga_runtime_libs "${_ortga_lib_dir}/libonnxruntime-genai.so*")
+          if(_ortga_runtime_libs)
+            break()
+          endif()
+        endforeach()
+      endif()
+      if(_ortga_runtime_libs)
+        install(FILES ${_ortga_runtime_libs} DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT libs)
+      endif()
+    endif()
+    unset(_ortga_runtime_libs)
+  else()
+    message(SEND_ERROR
+      "DNN: ONNX Runtime GenAI support was requested (WITH_ONNXRUNTIME_GENAI=ON), but it was not found. "
+      "Set ONNXGENAI_ROOT_DIR to an existing installation. "
+      "OpenCV attempts to download supported prebuilt ONNX Runtime GenAI packages automatically when needed."
+    )
+  endif()
+
+  unset(_ortga_download_requested)
+  unset(_ortga_download_forced)
 endif()
 
 if(HAVE_PROTOBUF)

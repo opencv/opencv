@@ -35,6 +35,12 @@ namespace Ort {
 }
 #endif
 
+#ifdef HAVE_ONNXRUNTIME_GENAI
+struct OgaModel;
+struct OgaTokenizer;
+struct OgaMultiModalProcessor;
+#endif
+
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -46,6 +52,10 @@ typedef std::unordered_map<std::string, int64_t> NamesHash;
 
 #ifdef HAVE_ONNXRUNTIME
 struct OrtNamesCache;
+#endif
+
+#ifdef HAVE_ONNXRUNTIME_GENAI
+struct OgaGenAICache;
 #endif
 
 // NB: Implementation is divided between of multiple .cpp files
@@ -261,6 +271,19 @@ struct Net::Impl : public detail::NetImplBase
     bool ortNeedsReinit = true;  // session needs (re)creation on next finalizeNet
 #endif
 
+#ifdef HAVE_ONNXRUNTIME_GENAI
+    std::shared_ptr<OgaModel> oga_model;
+    std::shared_ptr<OgaTokenizer> oga_tokenizer;
+    std::shared_ptr<OgaMultiModalProcessor> oga_processor;
+    std::string oga_image_path;
+    std::string oga_raw_prompt;
+    std::map<std::string, double> oga_search_options_number;
+    std::map<std::string, bool>   oga_search_options_bool;
+    std::string oga_guidance_type;
+    std::string oga_guidance_data;
+    bool        oga_guidance_ff_tokens = false;
+#endif
+
     void allocateLayer(int lid, const LayersShapesMap& layersShapes);
 
     // TODO add getter
@@ -410,6 +433,27 @@ struct Net::Impl : public detail::NetImplBase
     // If outIdxs is empty, returns all ORT outputs in ORT-defined order.
     std::vector<Mat> runOrtSession(std::vector<Mat> inputBlobs, const std::vector<int>& outIdxs);
 #endif
+
+#ifdef HAVE_ONNXRUNTIME_GENAI
+    // Run a full Generate() call for the OGA engine.
+    // @param inputBlobs  single 1-D CV_32S Mat containing the input token IDs.
+    // @returns           single 1-D CV_32S Mat containing all generated token IDs
+    //                   (including the prompt tokens).
+    void initOgaMultiModalProcessor();
+    std::vector<Mat> runOgaSession(const std::vector<Mat>& inputBlobs);
+    void setInputImagePath(const String& path);
+    void setPrompt(const String& prompt);
+    void setSearchOption(const String& name, double value);
+    void setSearchOptionBool(const String& name, bool value);
+    void setGuidance(const String& type, const String& data, bool enableFfTokens);
+    String applyChatTemplate(const String& messages, const String& templateStr,
+                              const String& tools, bool addGenerationPrompt) const;
+    String getModelType() const;
+    String getDeviceType() const;
+#endif
+    Mat tokenize(const String& text) const;
+    String detokenize(InputArray tokenIds) const;
+
     // run the whole model, convenience wrapper
     void forwardWithSingleOutput(const std::string& outname, OutputArrayOfArrays outputBlobs);
     // run the whole model, convenience wrapper
@@ -476,6 +520,9 @@ Net readNetFromONNX2(const char*, size_t);
 Net readNetFromONNX2(const std::vector<uchar>&);
 #ifdef HAVE_ONNXRUNTIME
 Net readNetFromONNX2_ORT(const String& onnxFile);
+#endif
+#ifdef HAVE_ONNXRUNTIME_GENAI
+Net readNetFromONNX2_OGA(const String& modelDir);
 #endif
 
 CV__DNN_INLINE_NS_END
