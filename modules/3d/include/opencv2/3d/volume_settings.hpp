@@ -16,7 +16,8 @@ enum class VolumeType
 {
     TSDF = 0,
     HashTSDF = 1,
-    ColorTSDF = 2
+    ColorTSDF = 2,
+    ColorHashTSDF = 3
 };
 
 
@@ -94,6 +95,26 @@ public:
     /** @brief Returns TSDF truncation distance. Distances greater than value from surface will be truncated to 1.0.
     */
     CV_WRAP float getTsdfTruncateDistance() const;
+
+    /** @brief Sets gradient delta factor used for normal estimation in TSDF volumes.
+    * @param val input value.
+    */
+    CV_WRAP void setGradientDeltaFactor(float val);
+
+    /** @brief Returns gradient delta factor used for normal estimation in TSDF volumes.
+    */
+    CV_WRAP float getGradientDeltaFactor() const;
+
+    /** @brief Sets threshold for number of frames after which invisible volume units are hidden/removed.
+    * For HashTSDF volumes, units that haven't been visible for this many frames will be removed.
+    * @param val input value.
+    */
+    CV_WRAP void setVolumeUnitHideThreshold(int val);
+
+    /** @brief Returns threshold for number of frames after which invisible volume units are hidden/removed.
+    * For HashTSDF volumes, units that haven't been visible for this many frames will be removed.
+    */
+    CV_WRAP int getVolumeUnitHideThreshold() const;
 
     /** @brief Sets threshold for depth truncation in meters. Truncates the depth greater than threshold to 0.
     * @param val input value.

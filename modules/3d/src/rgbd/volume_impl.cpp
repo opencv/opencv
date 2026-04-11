@@ -8,6 +8,7 @@
 #include "tsdf_functions.hpp"
 #include "hash_tsdf_functions.hpp"
 #include "color_tsdf_functions.hpp"
+#include "color_hash_tsdf_functions.hpp"
 #include "opencv2/imgproc.hpp"
 
 namespace cv
@@ -308,38 +309,32 @@ void HashTsdfVolume::raycast(InputArray _cameraPose, int height, int width, Inpu
 
     const Matx44f cameraPose = _cameraPose.getMat();
 
-#ifndef HAVE_OPENCL
-    raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, intr, volumeUnitDegree, volUnitsData, volumeUnits, _points, _normals);
-#else
+#ifdef HAVE_OPENCL
     if (useGPU)
         ocl_raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, intr, volumeUnitDegree, hashTable, gpu_volUnitsData, _points, _normals);
     else
-        raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, intr, volumeUnitDegree, cpu_volUnitsData, cpu_volumeUnits, _points, _normals);
 #endif
+    raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, intr, volumeUnitDegree, cpu_volUnitsData, cpu_volumeUnits, _points, _normals);
 }
 
 void HashTsdfVolume::fetchNormals(InputArray points, OutputArray normals) const
 {
-#ifndef HAVE_OPENCL
-    fetchNormalsFromHashTsdfVolumeUnit(settings, volUnitsData, volumeUnits, volumeUnitDegree, points, normals);
-#else
+#ifdef HAVE_OPENCL
     if (useGPU)
         ocl_fetchNormalsFromHashTsdfVolumeUnit(settings, volumeUnitDegree, gpu_volUnitsData, volUnitsDataCopy, hashTable, points, normals);
     else
-        fetchNormalsFromHashTsdfVolumeUnit(settings, cpu_volUnitsData, cpu_volumeUnits, volumeUnitDegree, points, normals);
-
 #endif
+    fetchNormalsFromHashTsdfVolumeUnit(settings, cpu_volUnitsData, cpu_volumeUnits, volumeUnitDegree, points, normals);
 }
-void HashTsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals) const
+
+void HashTsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals) const 
 {
-#ifndef HAVE_OPENCL
-    fetchPointsNormalsFromHashTsdfVolumeUnit(settings, volUnitsData, volumeUnits, volumeUnitDegree, points, normals);
-#else
+#ifdef HAVE_OPENCL
     if (useGPU)
         ocl_fetchPointsNormalsFromHashTsdfVolumeUnit(settings, volumeUnitDegree, gpu_volUnitsData, volUnitsDataCopy, hashTable, points, normals);
     else
-        fetchPointsNormalsFromHashTsdfVolumeUnit(settings, cpu_volUnitsData, cpu_volumeUnits, volumeUnitDegree, points, normals);
 #endif
+    fetchPointsNormalsFromHashTsdfVolumeUnit(settings, cpu_volUnitsData, cpu_volumeUnits, volumeUnitDegree, points, normals);
 }
 
 void HashTsdfVolume::fetchPointsNormalsColors(OutputArray, OutputArray, OutputArray) const
@@ -353,14 +348,7 @@ void HashTsdfVolume::reset()
     lastVolIndex = 0;
     lastFrameId = 0;
     enableGrowth = true;
-#ifndef HAVE_OPENCL
-    volUnitsData.forEach<VecTsdfVoxel>([](VecTsdfVoxel& vv, const int* /* position */)
-        {
-            TsdfVoxel& v = reinterpret_cast<TsdfVoxel&>(vv);
-            v.tsdf = floatToTsdf(0.0f); v.weight = 0;
-        });
-    volumeUnits = VolumeUnitIndexes();
-#else
+#ifdef HAVE_OPENCL
     if (useGPU)
     {
         Vec3i resolution;
@@ -379,6 +367,7 @@ void HashTsdfVolume::reset()
         gpu_pixNorms = UMat();
     }
     else
+#endif
     {
         cpu_volUnitsData.forEach<VecTsdfVoxel>([](VecTsdfVoxel& vv, const int* /* position */)
             {
@@ -387,7 +376,6 @@ void HashTsdfVolume::reset()
             });
         cpu_volumeUnits = VolumeUnitIndexes();
     }
-#endif
 }
 
 int HashTsdfVolume::getVisibleBlocks() const { return 1; }
@@ -417,28 +405,24 @@ void HashTsdfVolume::getBoundingBox(OutputArray boundingBox, int precision) cons
         float side = res[0] * voxelSize;
 
         std::vector<Vec3i> vi;
-#ifndef HAVE_OPENCL
-        for (const auto& keyvalue : volumeUnits)
+#ifdef HAVE_OPENCL
+    if (useGPU)
+    {
+        for (int row = 0; row < hashTable.last; row++)
+        {
+            Vec4i idx4 = hashTable.data[row];
+            vi.push_back(Vec3i(idx4[0], idx4[1], idx4[2]));
+        }
+    }
+    else
+#endif
+    {
+        for (const auto& keyvalue : cpu_volumeUnits)
         {
             vi.push_back(keyvalue.first);
         }
-#else
-        if (useGPU)
-        {
-            for (int row = 0; row < hashTable.last; row++)
-            {
-                Vec4i idx4 = hashTable.data[row];
-                vi.push_back(Vec3i(idx4[0], idx4[1], idx4[2]));
-            }
-        }
-        else
-        {
-            for (const auto& keyvalue : cpu_volumeUnits)
-            {
-                vi.push_back(keyvalue.first);
-            }
-        }
-#endif
+    }
+
 
         if (vi.empty())
         {
@@ -591,6 +575,264 @@ void ColorTsdfVolume::setEnableGrowth(bool /*v*/) { }
 bool ColorTsdfVolume::getEnableGrowth() const
 {
     return false;
+}
+
+// COLOR_HASH_TSDF
+
+ColorHashTsdfVolume::ColorHashTsdfVolume(const VolumeSettings& _settings) :
+    ColorTsdfVolume(_settings),
+    lastVolIndex(0),
+    lastFrameId(0),
+    volumeUnitDegree(0),
+    enableGrowth(true)
+{
+    Vec3i resolution;
+    settings.getVolumeResolution(resolution);
+    const Point3i volResolution = Point3i(resolution);
+    volumeUnitDegree = calcVolumeUnitDegree(volResolution);
+
+#ifdef HAVE_OPENCL
+    if (useGPU)
+    {
+        reset();
+    }
+    else
+#endif
+    {
+        cpu_volUnitsData = cv::Mat(VOLUMES_SIZE, resolution[0] * resolution[1] * resolution[2], rawType<ColorHashTsdfVoxel>());
+        reset();
+    }
+}
+
+ColorHashTsdfVolume::~ColorHashTsdfVolume() {}
+
+void ColorHashTsdfVolume::integrate(const OdometryFrame& frame, InputArray _cameraPose)
+{
+    CV_TRACE_FUNCTION();
+#ifndef HAVE_OPENCL
+    Mat depth, image;
+    frame.getDepth(depth);
+    frame.getImage(image);
+#else
+    UMat depth, image;
+    frame.getDepth(depth);
+    frame.getImage(image);
+#endif
+    integrate(depth = depth, image = image, _cameraPose);
+}
+
+void ColorHashTsdfVolume::integrate(InputArray /*_depth*/, InputArray /*_cameraPose*/)
+{
+    CV_Error(cv::Error::StsBadFunc, "Color data should be passed for this volume type");
+}
+
+void ColorHashTsdfVolume::integrate(InputArray _depth, InputArray _image, InputArray _cameraPose)
+{
+    Mat depth = _depth.getMat();
+    Mat image = _image.getMat();
+    const Matx44f cameraPose = _cameraPose.getMat();
+    Matx33f intr;
+    settings.getCameraIntegrateIntrinsics(intr);
+    Intr intrinsics(intr);
+    Vec6f newParams((float)depth.rows, (float)depth.cols,
+        intrinsics.fx, intrinsics.fy,
+        intrinsics.cx, intrinsics.cy);
+    if (!(frameParams == newParams))
+    {
+        frameParams = newParams;
+#ifdef HAVE_OPENCL
+        if (useGPU)
+            ocl_preCalculationPixNorm(depth.size(), intrinsics, gpu_pixNorms);
+        else
+#endif
+        preCalculationPixNorm(depth.size(), intrinsics, cpu_pixNorms);
+    }
+
+#ifdef HAVE_OPENCL
+    if (useGPU)
+    {
+        VolumeUnitIndexes volumeUnits;
+        ocl_integrateColorHashTsdfVolumeUnit(
+            settings, cameraPose, lastVolIndex, lastFrameId,
+            volumeUnitDegree, enableGrowth,
+            depth, image, gpu_pixNorms, gpu_volUnitsData, volumeUnits);
+    }
+    else
+#endif
+    {
+        integrateColorHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, volumeUnitDegree, enableGrowth, depth, image,
+                                    cpu_pixNorms, cpu_volUnitsData, cpu_volumeUnits);
+        lastFrameId++;
+    }
+}
+
+void ColorHashTsdfVolume::raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors)  const
+{
+    Matx33f intr;
+    settings.getCameraRaycastIntrinsics(intr);
+    raycast(cameraPose, settings.getRaycastHeight(), settings.getRaycastWidth(), intr, points, normals, colors);
+}
+
+void ColorHashTsdfVolume::raycast(InputArray _cameraPose, int height, int width, InputArray intr, OutputArray _points, OutputArray _normals, OutputArray _colors) const
+{
+    const Matx44f cameraPose = _cameraPose.getMat();
+
+#ifdef HAVE_OPENCL
+    if (useGPU)
+        ocl_raycastColorHashTsdfVolumeUnit(settings, cameraPose, height, width, intr, volumeUnitDegree, gpu_volUnitsData, hashTable, _points, _normals, _colors);
+    else
+#endif
+    raycastColorHashTsdfVolumeUnit(settings, cameraPose, height, width, intr, volumeUnitDegree, cpu_volUnitsData, hashTable, _points, _normals, _colors);
+}
+
+void ColorHashTsdfVolume::fetchNormals(InputArray points, OutputArray normals) const
+{
+    if(points.empty())
+    {
+        normals.release();
+        return;
+    }
+    
+    fetchPointsNormalsColors(OutputArray(points.getMat()), normals, noArray());
+}
+
+void ColorHashTsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals) const
+{
+    // This is valid, it just fetches points and normals, ignoring colors
+    fetchPointsNormalsColors(points, normals, noArray());
+}
+
+void ColorHashTsdfVolume::fetchPointsNormalsColors(OutputArray points, OutputArray normals, OutputArray colors) const
+{
+#ifdef HAVE_OPENCL
+    if (useGPU)
+        ocl_fetchPointsNormalsColorsFromColorHashTsdfVolumeUnit(settings, gpu_volUnitsData, hashTable, volumeUnitDegree, points, normals, colors);
+    else
+#endif
+    fetchPointsNormalsColorsFromColorHashTsdfVolumeUnit(settings, cpu_volUnitsData, hashTable, volumeUnitDegree, points, normals, colors);
+}
+
+void ColorHashTsdfVolume::reset()
+{
+    CV_TRACE_FUNCTION();
+    lastVolIndex = 0;
+    lastFrameId = 0;
+    enableGrowth = true;
+
+#ifdef HAVE_OPENCL
+    if (useGPU)
+    {
+        Vec3i resolution;
+        settings.getVolumeResolution(resolution);
+
+        bufferSizeDegree = 15;
+        int buff_lvl = (int)(1 << bufferSizeDegree);
+        int volCubed = resolution[0] * resolution[1] * resolution[2];
+
+        volUnitsDataCopy = cv::Mat(buff_lvl, volCubed, rawType<ColorHashTsdfVoxel>());
+        gpu_volUnitsData = cv::UMat(buff_lvl, volCubed, rawType<ColorHashTsdfVoxel>());
+        lastVisibleIndices = cv::UMat(buff_lvl, 1, CV_32S);
+        isActiveFlags = cv::UMat(buff_lvl, 1, CV_8U);
+        hashTable = CustomHashSet();
+        frameParams = Vec6f();
+        gpu_pixNorms = UMat();
+    }
+    else
+#endif
+    {
+        cpu_volUnitsData.forEach<VecRGBTsdfVoxel>([](VecRGBTsdfVoxel& vv, const int* /* position */)
+            {
+                ColorHashTsdfVoxel& v = reinterpret_cast<ColorHashTsdfVoxel&>(vv);
+                v.tsdf = floatToTsdf(0.0f); v.weight = 0;
+                v.r = v.g = v.b = 0;
+            });
+        cpu_volumeUnits = VolumeUnitIndexes();
+    }
+}
+
+int ColorHashTsdfVolume::getVisibleBlocks() const { return 1; }
+size_t ColorHashTsdfVolume::getTotalVolumeUnits() const { return 1; }
+
+void ColorHashTsdfVolume::setEnableGrowth(bool v)
+{
+    enableGrowth = v;
+}
+
+bool ColorHashTsdfVolume::getEnableGrowth() const
+{
+    return enableGrowth;
+}
+
+void ColorHashTsdfVolume::getBoundingBox(OutputArray boundingBox, int precision) const
+{
+    // Reusing HashTsdfVolume's implementation
+    if (precision == Volume::BoundingBoxPrecision::VOXEL)
+    {
+        CV_Error(Error::StsNotImplemented, "Voxel mode is not implemented yet");
+    }
+    else
+    {
+        Vec3i res;
+        this->settings.getVolumeResolution(res);
+        float voxelSize = this->settings.getVoxelSize();
+        float side = res[0] * voxelSize;
+
+        std::vector<Vec3i> vi;
+#ifdef HAVE_OPENCL
+    if (useGPU)
+    {
+        for (int row = 0; row < hashTable.last; row++)
+        {
+            Vec4i idx4 = hashTable.data[row];
+            vi.push_back(Vec3i(idx4[0], idx4[1], idx4[2]));
+        }
+    }
+    else
+#endif
+    {
+        for (const auto& keyvalue : cpu_volumeUnits)
+        {
+            vi.push_back(keyvalue.first);
+        }
+    }
+
+
+        if (vi.empty())
+        {
+            boundingBox.setZero();
+        }
+        else
+        {
+            std::vector<Point3f> pts;
+            for (Vec3i idx : vi)
+            {
+                Point3f base = Point3f((float)idx[0], (float)idx[1], (float)idx[2]) * side;
+                pts.push_back(base);
+                pts.push_back(base + Point3f(side, 0, 0));
+                pts.push_back(base + Point3f(0, side, 0));
+                pts.push_back(base + Point3f(0, 0, side));
+                pts.push_back(base + Point3f(side, side, 0));
+                pts.push_back(base + Point3f(side, 0, side));
+                pts.push_back(base + Point3f(0, side, side));
+                pts.push_back(base + Point3f(side, side, side));
+            }
+
+            const float mval = std::numeric_limits<float>::max();
+            Vec6f bb(mval, mval, mval, -mval, -mval, -mval);
+            for (auto p : pts)
+            {
+                Point3f pg = p;
+                bb[0] = min(bb[0], pg.x);
+                bb[1] = min(bb[1], pg.y);
+                bb[2] = min(bb[2], pg.z);
+                bb[3] = max(bb[3], pg.x);
+                bb[4] = max(bb[4], pg.y);
+                bb[5] = max(bb[5], pg.z);
+            }
+
+            bb.copyTo(boundingBox);
+        }
+    }
 }
 
 }
