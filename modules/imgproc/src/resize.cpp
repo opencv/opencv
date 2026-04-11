@@ -1174,8 +1174,8 @@ resizeNN( const Mat& src, Mat& dst, double fx, double fy )
 class resizeNN_bitexactInvoker : public ParallelLoopBody
 {
 public:
-    resizeNN_bitexactInvoker(const Mat& _src, Mat& _dst, int* _x_ofse, int _ify, int _ify0)
-        : src(_src), dst(_dst), x_ofse(_x_ofse), ify(_ify), ify0(_ify0) {}
+    resizeNN_bitexactInvoker(const Mat& _src, Mat& _dst, int* _x_ofse, int _src_height, int _dst_height)
+        : src(_src), dst(_dst), x_ofse(_x_ofse), src_height(_src_height), dst_height(_dst_height) {}
 
     virtual void operator() (const Range& range) const CV_OVERRIDE
     {
@@ -1184,8 +1184,9 @@ public:
         for( int y = range.start; y < range.end; y++ )
         {
             uchar* D = dst.ptr(y);
-            int _sy = (ify * y + ify0) >> 16;
-            int sy = std::min(_sy, ssize.height-1);
+            // Fixed-point coordinate mapping: floor((y + 0.5) * src_height / dst_height)
+            // Using integer arithmetic: ((y * 2 + 1) * src_height) / (dst_height * 2)
+            int sy = std::min((int)(((int64_t)(y * 2 + 1) * src_height) / (dst_height * 2)), ssize.height-1);
             const uchar* S = src.ptr(sy);
 
             int x = 0;
@@ -1260,30 +1261,27 @@ private:
     const Mat& src;
     Mat& dst;
     int* x_ofse;
-    const int ify;
-    const int ify0;
+    const int src_height;
+    const int dst_height;
 };
 
 static void resizeNN_bitexact( const Mat& src, Mat& dst, double /*fx*/, double /*fy*/ )
 {
     Size ssize = src.size(), dsize = dst.size();
-    int ifx = ((ssize.width << 16) + dsize.width / 2) / dsize.width; // 16bit fixed-point arithmetic
-    int ifx0 = ifx / 2 - ssize.width % 2;                       // This method uses center pixel coordinate as Pillow and scikit-images do.
-    int ify = ((ssize.height << 16) + dsize.height / 2) / dsize.height;
-    int ify0 = ify / 2 - ssize.height % 2;
 
     cv::utils::BufferArea area;
     int* x_ofse = 0;
     area.allocate(x_ofse, dsize.width, CV_SIMD_WIDTH);
     area.commit();
 
+    // Fixed-point coordinate mapping: floor((x + 0.5) * src_width / dst_width)
+    // Using integer arithmetic to guarantee bit-exact results across platforms.
     for( int x = 0; x < dsize.width; x++ )
     {
-        int sx = (ifx * x + ifx0) >> 16;
-        x_ofse[x] = std::min(sx, ssize.width-1);    // offset in element (not byte)
+        x_ofse[x] = std::min((int)(((int64_t)(x * 2 + 1) * ssize.width) / (dsize.width * 2)), ssize.width-1);
     }
     Range range(0, dsize.height);
-    resizeNN_bitexactInvoker invoker(src, dst, x_ofse, ify, ify0);
+    resizeNN_bitexactInvoker invoker(src, dst, x_ofse, ssize.height, dsize.height);
     parallel_for_(range, invoker, dst.total()/(double)(1<<16));
 }
 
