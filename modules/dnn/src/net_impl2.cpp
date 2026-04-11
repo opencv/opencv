@@ -1144,7 +1144,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                 }
                 int64 iter = 0;
                 int64 max_iter = inpMats[0].empty() ? -1 :
-                                 (inpMats[0].convertTo(tmp, CV_64S), tmp.at<int64>(0));
+                                 (inpMats[0].convertTo(tmp, CV_64S), *tmp.ptr<int64>());
                 bool active = loopLayer->cond(mCond);
 
                 std::vector<Mat> state(inpMats.begin() + 2, inpMats.end());
