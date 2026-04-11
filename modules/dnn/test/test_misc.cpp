@@ -247,8 +247,7 @@ TEST(readNet, Regression)
     Net net = readNet(findDataFile("dnn/squeezenet_v1.1.prototxt"),
                       findDataFile("dnn/squeezenet_v1.1.caffemodel", false));
     EXPECT_FALSE(net.empty());
-    net = readNet(findDataFile("dnn/tiny-yolo-voc.cfg"),
-                  findDataFile("dnn/tiny-yolo-voc.weights", false));
+    net = readNet(findDataFile("dnn/tiny-yolo-voc.onnx", false));
     EXPECT_FALSE(net.empty());
     net = readNet(findDataFile("dnn/ssd_mobilenet_v1_coco.pbtxt"),
                   findDataFile("dnn/ssd_mobilenet_v1_coco.pb", false));
