@@ -685,4 +685,183 @@ TEST(Imgproc_FindTRUContours, circles_vs_standard)
     }
 }
 
+// Parallel correctness: results must be identical regardless of thread count.
+// Uses a large noisy image so that the parallel strip-splitting logic is
+// exercised.  The single-threaded run is the reference; every other thread
+// count must produce the exact same (unordered) contour set.
+TEST(Imgproc_FindTRUContours, nthreads_consistency)
+{
+    const Size sz(2000, 2000);
+    RNG& rng = TS::ptr()->get_rng();
+
+    // noise + blur + threshold → many irregularly shaped contours spread
+    // across the whole image, maximising cross-strip interactions
+    Mat noise(sz, CV_8UC1);
+    cvtest::randUni(rng, noise, 0, 255);
+    Mat blurred;
+    boxFilter(noise, blurred, CV_8U, Size(5, 5));
+    Mat img;
+    cv::threshold(blurred, img, 128, 255, THRESH_BINARY);
+
+    const int saved_threads = cv::getNumThreads();
+
+    // Baseline: single-threaded
+    cv::setNumThreads(1);
+    vector<vector<Point>> ref_contours;
+    findTRUContours(img, ref_contours);
+
+    // Every other thread count must produce an identical contour set
+    const int thread_counts[] = {2, 4, 8};
+    for (int t : thread_counts)
+    {
+        SCOPED_TRACE(cv::format("nthreads=%d", t));
+        cv::setNumThreads(t);
+        vector<vector<Point>> contours;
+        findTRUContours(img, contours);
+        EXPECT_TRUE(trucoContoursMatch(ref_contours, contours))
+            << "Result with nthreads=" << t
+            << " differs from single-threaded result";
+    }
+
+    cv::setNumThreads(saved_threads);
+}
+
+// Noise images at various threshold levels – checks that the contour set
+// matches findContours(RETR_LIST, CHAIN_APPROX_NONE) across different
+// foreground densities (sparse, 50/50, dense).
+TEST(Imgproc_FindTRUContours, noise_threshold)
+{
+    const Size sz(500, 500);
+    RNG& rng = TS::ptr()->get_rng();
+
+    // 86  → some black speckles on white background (dense foreground)
+    // 128 → roughly 50 % black / white
+    // 170 → some white speckles on black background (sparse foreground)
+    const int levels[] = {86, 128, 170};
+    for (int level : levels)
+    {
+        SCOPED_TRACE(cv::format("level=%d", level));
+
+        Mat noise(sz, CV_8UC1);
+        cvtest::randUni(rng, noise, 0, 255);
+
+        Mat blurred;
+        boxFilter(noise, blurred, CV_8U, Size(5, 5));
+
+        Mat binary;
+        cv::threshold(blurred, binary, level, 255, THRESH_BINARY);
+
+        // Reference: standard findContours
+        vector<vector<Point>> ref_contours;
+        vector<Vec4i> hierarchy;
+        findContours(binary, ref_contours, hierarchy, RETR_LIST, CHAIN_APPROX_NONE);
+
+        // TRUCO: must return exactly the same (unordered) contour set
+        vector<vector<Point>> truco_contours;
+        findTRUContours(binary, truco_contours);
+
+        auto match=trucoContoursMatch(ref_contours, truco_contours);
+        if( !match){
+            cout<<"Contours differ at level="<<level<<endl;
+            cout<<"Size="<<ref_contours.size()<<" vs "<<truco_contours.size()<<endl;
+            cv::imwrite("errorTRUCO.png",binary);
+        }
+        EXPECT_TRUE(trucoContoursMatch(ref_contours, truco_contours))
+            << "findTRUContours differs from findContours at threshold level=" << level;
+    }
+}
+
+// Nested rectangle outlines – exercises the multi-level nesting case
+// (analogue of Imgproc_FindContours_Modes1.deep for TRUCO).
+TEST(Imgproc_FindTRUContours, nested_rectangles)
+{
+    const int DIM = 600;
+    const Size sz(DIM, DIM);
+    const int NUM = 20;
+    Mat img(sz, CV_8UC1, Scalar::all(0));
+    Rect rect(1, 1, DIM - 2, DIM - 2);
+    for (int i = 0; i < NUM; ++i)
+    {
+        rectangle(img, rect, Scalar::all(255));
+        rect.x      += 10;
+        rect.y      += 10;
+        rect.width  -= 20;
+        rect.height -= 20;
+        if (rect.width <= 0 || rect.height <= 0)
+            break;
+    }
+
+    // Reference
+    vector<vector<Point>> ref_contours;
+    vector<Vec4i> hierarchy;
+    findContours(img, ref_contours, hierarchy, RETR_LIST, CHAIN_APPROX_NONE);
+
+    // TRUCO
+    vector<vector<Point>> truco_contours;
+    findTRUContours(img, truco_contours);
+
+    EXPECT_TRUE(trucoContoursMatch(ref_contours, truco_contours))
+        << "findTRUContours differs from findContours on nested rectangles";
+}
+
+// Mixed scene: filled rectangles, circles and triangles.  Run several
+// random iterations to cover different spatial configurations.
+TEST(Imgproc_FindTRUContours, mixed_figures)
+{
+    const Size sz(800, 600);
+    RNG& rng = TS::ptr()->get_rng();
+    const int ITER = 3;
+
+    for (int iter = 0; iter < ITER; ++iter)
+    {
+        SCOPED_TRACE(cv::format("iter=%d", iter));
+
+        Mat img(sz, CV_8UC1, Scalar::all(0));
+
+        // Filled rectangles
+        for (int i = 0; i < 5; ++i)
+        {
+            Rect r(rng.uniform(10, sz.width / 2),
+                   rng.uniform(10, sz.height / 2),
+                   rng.uniform(20, 100),
+                   rng.uniform(20, 100));
+            r &= Rect(0, 0, sz.width - 1, sz.height - 1);
+            rectangle(img, r, Scalar::all(255), FILLED);
+        }
+
+        // Filled circles
+        for (int i = 0; i < 5; ++i)
+        {
+            Point center(rng.uniform(50, sz.width  - 50),
+                         rng.uniform(50, sz.height - 50));
+            int radius = rng.uniform(10, 50);
+            circle(img, center, radius, Scalar::all(255), FILLED);
+        }
+
+        // Filled triangles (arbitrary polygons)
+        for (int i = 0; i < 3; ++i)
+        {
+            Point pts[3];
+            for (auto& p : pts)
+                p = Point(rng.uniform(10, sz.width - 10),
+                          rng.uniform(10, sz.height - 10));
+            const Point* ppts = pts;
+            int npts = 3;
+            fillPoly(img, &ppts, &npts, 1, Scalar::all(255));
+        }
+
+        // Reference
+        vector<vector<Point>> ref_contours;
+        vector<Vec4i> hierarchy;
+        findContours(img, ref_contours, hierarchy, RETR_LIST, CHAIN_APPROX_NONE);
+
+        // TRUCO
+        vector<vector<Point>> truco_contours;
+        findTRUContours(img, truco_contours);
+
+        EXPECT_TRUE(trucoContoursMatch(ref_contours, truco_contours))
+            << "findTRUContours differs from findContours on mixed figures (iter=" << iter << ")";
+    }
+}
+
 }}  // namespace opencv_test

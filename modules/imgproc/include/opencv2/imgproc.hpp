@@ -4147,10 +4147,10 @@ pixels remain 0's, so the image is treated as binary.
 (e.g. std::vector<std::vector<cv::Point>>).
 @param minSize Minimum number of points a contour must have to be included in the output. This can
 reduce memory allocation overhead and filter out small noisy contours. Default is 0 (all contours).
-@param nthreads Number of threads to use. If <= 0, cv::getNumThreads() is used.
+The number of threads used is controlled globally via cv::setNumThreads().
 */
 CV_EXPORTS_W void findTRUContours(InputArray image, OutputArrayOfArrays contours,
-                                  int minSize = 0, int nthreads = 0);
+                                  int minSize = 0);
 
 /** @brief Approximates a polygonal curve(s) with the specified precision.
 
