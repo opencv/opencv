@@ -4089,6 +4089,10 @@ are a useful tool for shape analysis and object detection and recognition. See s
 OpenCV sample directory.
 @note Since opencv 3.2 source image is not modified by this function.
 
+@note When mode is #RETR_LIST and method is #CHAIN_APPROX_NONE and no hierarchy is requested,
+the function automatically delegates to cv::findTRUContours, which uses a faster lock-free parallel
+algorithm. In that case the number of threads can be controlled via cv::setNumThreads().
+
 @param image Source, an 8-bit single-channel image. Non-zero pixels are treated as 1's. Zero
 pixels remain 0's, so the image is treated as binary . You can use #compare, #inRange, #threshold ,
 #adaptiveThreshold, #Canny, and others to create a binary image out of a grayscale or color one.
@@ -4116,6 +4120,9 @@ CV_EXPORTS_W void findContours( InputArray image, OutputArrayOfArrays contours,
 CV_EXPORTS void findContours( InputArray image, OutputArrayOfArrays contours,
                               int mode, int method, Point offset = Point());
 
+
+
+
 //! @brief Find contours using link runs algorithm
 //!
 //! This function implements an algorithm different from cv::findContours:
@@ -4128,6 +4135,34 @@ CV_EXPORTS_W void findContoursLinkRuns(InputArray image, OutputArrayOfArrays con
 
 //! @overload
 CV_EXPORTS_W void findContoursLinkRuns(InputArray image, OutputArrayOfArrays contours);
+
+/** @brief Finds contours in a binary image using TRUCO @cite TRUCO2026 parallel algorithm.
+
+The algorithm achieves faster speed on a single thread by not computing the contour hierarchy and by
+using a more efficient contour retrieval algorithm. The function is parallelized and can achieve
+significant speedup with multiple threads.
+
+This algorithm doesn't support hierarchy extraction nor contour approximation.
+In all other aspects the output contours are the same as cv::findContours with mode=#RETR_LIST
+and method=#CHAIN_APPROX_NONE.
+
+@note cv::findContours automatically delegates to this function when mode is #RETR_LIST,
+method is #CHAIN_APPROX_NONE, and no hierarchy output is requested.
+
+@param image Source, an 8-bit single-channel image. Non-zero pixels are treated as 1's. Zero
+pixels remain 0's, so the image is treated as binary.
+@param contours Detected contours. Each contour is stored as a vector of points
+(e.g. std::vector<std::vector<cv::Point>>).
+@param minSize Minimum number of points a contour must have to be included in the output. This can
+reduce memory allocation overhead and filter out small noisy contours. Default is 0 (all contours).
+The number of threads used is controlled globally via cv::setNumThreads().
+@param binarize If true, the internal padded copy of the image is thresholded in-place to
+{0, 255} before processing. Use this when the source image may contain non-255 foreground values
+(e.g. when called from cv::findContours which accepts any non-zero value as foreground).
+Default is false.
+*/
+CV_EXPORTS_W void findTRUContours(InputArray image, OutputArrayOfArrays contours,
+                                  int minSize = 0, bool binarize = false);
 
 /** @brief Approximates a polygonal curve(s) with the specified precision.
 

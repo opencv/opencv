@@ -648,6 +648,32 @@ void cv::findContours(InputArray _image,
         return;
     }
 
+    // Fast path: RETR_LIST + CHAIN_APPROX_NONE without hierarchy → findTRUContours (lock-free parallel)
+    if (mode == RETR_LIST && method == CHAIN_APPROX_NONE && !_hierarchy.needed())
+    {
+        // findTRUContours requires FOREGROUND=255; binarize=true thresholds the padded
+        // image in-place, avoiding an extra allocation (findContours accepts any non-zero value)
+        findTRUContours(_image, _contours, 0, true);
+        if (offset != Point())
+        {
+            if (_contours.kind() == _InputArray::STD_VECTOR_VECTOR)
+            {
+                auto& vv = *reinterpret_cast<std::vector<std::vector<Point>>*>(_contours.getObj());
+                for (auto& c : vv)
+                    for (auto& p : c)
+                        p += offset;
+            }
+            else
+            {
+                const Scalar shift(offset.x, offset.y);
+                const int n = (int)_contours.size().height;
+                for (int i = 0; i < n; i++)
+                    _contours.getMat(i) += shift;
+            }
+        }
+        return;
+    }
+
     // TODO: need enum value, need way to return contour starting points with chain codes
     if (method == 0 /*CV_CHAIN_CODE*/)
     {
