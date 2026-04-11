@@ -623,8 +623,8 @@ static void reduceColSum_8u32f(const Mat& srcmat, Mat& dstmat)
             }
             else
             {
-                for (int x = 0; x < width; x++)
-                    sums[x % cn] += (int)src[x];
+                for (int x = 0, c = 0; x < width; x++, c = (c+1)&-(c < cn-1))
+                    sums[c] += (int)src[x];
             }
             for (int c = 0; c < cn; c++)
                 dst[c] = (float)sums[c];
@@ -634,79 +634,94 @@ static void reduceColSum_8u32f(const Mat& srcmat, Mat& dstmat)
     v_cleanup();
 }
 
-// --- ushort → float ---
+// --- 16-bit (ushort/short) → float ---
+template<typename SrcT, typename VecSrc, typename VecDst>
+static void reduceColSum_16_32f(const Mat& srcmat, Mat& dstmat)
+{
+    const int cn = srcmat.channels();
+    const int width = srcmat.cols * cn;
+    const int vlanes = VTraits<VecSrc>::vlanes();
+
+    auto body = [&](const Range& range) {
+        for (int y = range.start; y < range.end; y++)
+        {
+            const SrcT* src = srcmat.ptr<SrcT>(y);
+            float* dst = dstmat.ptr<float>(y);
+
+            if (cn == 1)
+            {
+                VecDst v_sum0 = v_setzero_<VecDst>(), v_sum1 = v_setzero_<VecDst>();
+                int x = 0;
+                for (; x <= width - vlanes; x += vlanes)
+                {
+                    VecDst lo, hi;
+                    v_expand(vx_load(src + x), lo, hi);
+                    v_sum0 = v_add(v_sum0, lo);
+                    v_sum1 = v_add(v_sum1, hi);
+                }
+                dst[0] = (float)(v_reduce_sum(v_sum0) + v_reduce_sum(v_sum1));
+                for (; x < width; x++)
+                    dst[0] += (float)src[x];
+            }
+            else
+            {
+                for (int c = 0; c < cn; c++)
+                    dst[c] = 0;
+                for (int x = 0, c = 0; x < width; x++, c = (c+1)&-(c < cn-1))
+                    dst[c] += (float)src[x];
+            }
+        }
+    };
+    parallel_for_(Range(0, srcmat.rows), body);
+    v_cleanup();
+}
+
 static void reduceColSum_16u32f(const Mat& srcmat, Mat& dstmat)
-{
-    const int cn = srcmat.channels();
-    const int width = srcmat.cols * cn;
-    const int vlanes16 = VTraits<v_uint16>::vlanes();
+{ reduceColSum_16_32f<ushort, v_uint16, v_uint32>(srcmat, dstmat); }
 
-    auto body = [&](const Range& range) {
-        for (int y = range.start; y < range.end; y++)
-        {
-            const ushort* src = srcmat.ptr<ushort>(y);
-            float* dst = dstmat.ptr<float>(y);
-
-            if (cn == 1)
-            {
-                v_uint32 v_sum = vx_setzero_u32();
-                int x = 0;
-                for (; x <= width - vlanes16; x += vlanes16)
-                {
-                    v_uint32 lo, hi;
-                    v_expand(vx_load(src + x), lo, hi);
-                    v_sum = v_add(v_sum, v_add(lo, hi));
-                }
-                dst[0] = (float)v_reduce_sum(v_sum);
-                for (; x < width; x++)
-                    dst[0] += (float)src[x];
-            }
-            else
-            {
-                for (int c = 0; c < cn; c++)
-                    dst[c] = 0;
-                for (int x = 0; x < width; x++)
-                    dst[x % cn] += (float)src[x];
-            }
-        }
-    };
-    parallel_for_(Range(0, srcmat.rows), body);
-    v_cleanup();
-}
-
-// --- short → float ---
 static void reduceColSum_16s32f(const Mat& srcmat, Mat& dstmat)
+{ reduceColSum_16_32f<short, v_int16, v_int32>(srcmat, dstmat); }
+
+// --- float/double → same type ---
+template<typename T, typename VecT>
+static void reduceColSum_FP(const Mat& srcmat, Mat& dstmat)
 {
     const int cn = srcmat.channels();
     const int width = srcmat.cols * cn;
-    const int vlanes16 = VTraits<v_int16>::vlanes();
+    const int vlanes = VTraits<VecT>::vlanes();
 
     auto body = [&](const Range& range) {
         for (int y = range.start; y < range.end; y++)
         {
-            const short* src = srcmat.ptr<short>(y);
-            float* dst = dstmat.ptr<float>(y);
+            const T* src = srcmat.ptr<T>(y);
+            T* dst = dstmat.ptr<T>(y);
 
             if (cn == 1)
             {
-                v_int32 v_sum = vx_setzero_s32();
+                VecT s0 = v_setzero_<VecT>(), s1 = v_setzero_<VecT>();
+                VecT s2 = v_setzero_<VecT>(), s3 = v_setzero_<VecT>();
                 int x = 0;
-                for (; x <= width - vlanes16; x += vlanes16)
+                for (; x <= width - vlanes * 4; x += vlanes * 4)
                 {
-                    v_int32 lo, hi;
-                    v_expand(vx_load(src + x), lo, hi);
-                    v_sum = v_add(v_sum, v_add(lo, hi));
+                    s0 = v_add(s0, vx_load(src + x));
+                    s1 = v_add(s1, vx_load(src + x + vlanes));
+                    s2 = v_add(s2, vx_load(src + x + vlanes * 2));
+                    s3 = v_add(s3, vx_load(src + x + vlanes * 3));
                 }
-                dst[0] = (float)v_reduce_sum(v_sum);
+                s0 = v_add(v_add(s0, s1), v_add(s2, s3));
+                for (; x <= width - vlanes; x += vlanes)
+                    s0 = v_add(s0, vx_load(src + x));
+                T total = (T)v_reduce_sum(s0);
                 for (; x < width; x++)
-                    dst[0] += (float)src[x];
+                    total += src[x];
+                dst[0] = total;
             }
             else
             {
                 for (int c = 0; c < cn; c++)
                     dst[c] = 0;
-                for (int x = 0; x < width; x++)
-                    dst[x % cn] += (float)src[x];
+                for (int x = 0, c = 0; x < width; x++, c = (c+1)&-(c < cn-1))
+                    dst[c] += src[x];
             }
         }
     };
@@ -714,42 +729,8 @@ static void reduceColSum_16s32f(const Mat& srcmat, Mat& dstmat)
     v_cleanup();
 }
 
-// --- float → float ---
 static void reduceColSum_32f32f(const Mat& srcmat, Mat& dstmat)
-{
-    const int cn = srcmat.channels();
-    const int width = srcmat.cols * cn;
-    const int vlanes32 = VTraits<v_float32>::vlanes();
-
-    auto body = [&](const Range& range) {
-        for (int y = range.start; y < range.end; y++)
-        {
-            const float* src = srcmat.ptr<float>(y);
-            float* dst = dstmat.ptr<float>(y);
-
-            if (cn == 1)
-            {
-                v_float32 v_sum = vx_setzero_f32();
-                int x = 0;
-                for (; x <= width - vlanes32; x += vlanes32)
-                    v_sum = v_add(v_sum, vx_load(src + x));
-
-                dst[0] = v_reduce_sum(v_sum);
-                for (; x < width; x++)
-                    dst[0] += src[x];
-            }
-            else
-            {
-                for (int c = 0; c < cn; c++)
-                    dst[c] = 0;
-                for (int x = 0; x < width; x++)
-                    dst[x % cn] += src[x];
-            }
-        }
-    };
-    parallel_for_(Range(0, srcmat.rows), body);
-    v_cleanup();
-}
+{ reduceColSum_FP<float, v_float32>(srcmat, dstmat); }
 
 #if CV_SIMD_64F
 // --- float → double ---
@@ -787,8 +768,8 @@ static void reduceColSum_32f64f(const Mat& srcmat, Mat& dstmat)
             {
                 for (int c = 0; c < cn; c++)
                     dst[c] = 0;
-                for (int x = 0; x < width; x++)
-                    dst[x % cn] += (double)src[x];
+                for (int x = 0, c = 0; x < width; x++, c = (c+1)&-(c < cn-1))
+                    dst[c] += (double)src[x];
             }
         }
     };
@@ -796,43 +777,8 @@ static void reduceColSum_32f64f(const Mat& srcmat, Mat& dstmat)
     v_cleanup();
 }
 
-// --- double → double ---
 static void reduceColSum_64f64f(const Mat& srcmat, Mat& dstmat)
-{
-    const int cn = srcmat.channels();
-    const int width = srcmat.cols * cn;
-    const int vlanes64 = VTraits<v_float64>::vlanes();
-
-    auto body = [&](const Range& range) {
-        for (int y = range.start; y < range.end; y++)
-        {
-            const double* src = srcmat.ptr<double>(y);
-            double* dst = dstmat.ptr<double>(y);
-
-            if (cn == 1)
-            {
-                v_float64 v_sum = vx_setzero_f64();
-                int x = 0;
-                for (; x <= width - vlanes64; x += vlanes64)
-                    v_sum = v_add(v_sum, vx_load(src + x));
-
-                double total = v_reduce_sum(v_sum);
-                for (; x < width; x++)
-                    total += src[x];
-                dst[0] = total;
-            }
-            else
-            {
-                for (int c = 0; c < cn; c++)
-                    dst[c] = 0;
-                for (int x = 0; x < width; x++)
-                    dst[x % cn] += src[x];
-            }
-        }
-    };
-    parallel_for_(Range(0, srcmat.rows), body);
-    v_cleanup();
-}
+{ reduceColSum_FP<double, v_float64>(srcmat, dstmat); }
 #endif // CV_SIMD_64F
 
 // =====================================================================
@@ -939,129 +885,149 @@ static void reduceRowSum_8u32f(const Mat& srcmat, Mat& dstmat)
     temp.convertTo(dstmat, dstmat.type());
 }
 
-// --- ushort → float ---
+// --- 16-bit (ushort/short) → float row reduce ---
+template<typename SrcT, typename VecSrc, typename VecDst>
+static void reduceRowSum_16_32f(const Mat& srcmat, Mat& dstmat)
+{
+    const int width_cn = srcmat.cols * srcmat.channels();
+    const int height = srcmat.rows;
+    const int vlanes16 = VTraits<VecSrc>::vlanes();
+    const int vlanes32 = vlanes16 / 2;
+
+    auto body = [&](const Range& range) {
+        const int start = range.start;
+        const int end = range.end;
+        const int len = end - start;
+        float* dst = dstmat.ptr<float>(0) + start;
+
+        int i = 0;
+        for (; i <= len - vlanes16 * 4; i += vlanes16 * 4)
+        {
+            const SrcT* src0 = srcmat.ptr<SrcT>(0) + start + i;
+            VecDst a0, a1, a2, a3, a4, a5, a6, a7;
+            v_expand(vx_load(src0), a0, a1);
+            v_expand(vx_load(src0 + vlanes16), a2, a3);
+            v_expand(vx_load(src0 + vlanes16*2), a4, a5);
+            v_expand(vx_load(src0 + vlanes16*3), a6, a7);
+            for (int row = 1; row < height; row++)
+            {
+                const SrcT* src = srcmat.ptr<SrcT>(row) + start + i;
+                VecDst lo, hi;
+                v_expand(vx_load(src), lo, hi);
+                a0 = v_add(a0, lo); a1 = v_add(a1, hi);
+                v_expand(vx_load(src + vlanes16), lo, hi);
+                a2 = v_add(a2, lo); a3 = v_add(a3, hi);
+                v_expand(vx_load(src + vlanes16*2), lo, hi);
+                a4 = v_add(a4, lo); a5 = v_add(a5, hi);
+                v_expand(vx_load(src + vlanes16*3), lo, hi);
+                a6 = v_add(a6, lo); a7 = v_add(a7, hi);
+            }
+            v_store(dst + i, v_cvt_f32(v_reinterpret_as_s32(a0)));
+            v_store(dst + i + vlanes32, v_cvt_f32(v_reinterpret_as_s32(a1)));
+            v_store(dst + i + vlanes32*2, v_cvt_f32(v_reinterpret_as_s32(a2)));
+            v_store(dst + i + vlanes32*3, v_cvt_f32(v_reinterpret_as_s32(a3)));
+            v_store(dst + i + vlanes32*4, v_cvt_f32(v_reinterpret_as_s32(a4)));
+            v_store(dst + i + vlanes32*5, v_cvt_f32(v_reinterpret_as_s32(a5)));
+            v_store(dst + i + vlanes32*6, v_cvt_f32(v_reinterpret_as_s32(a6)));
+            v_store(dst + i + vlanes32*7, v_cvt_f32(v_reinterpret_as_s32(a7)));
+        }
+        for (; i <= len - vlanes16; i += vlanes16)
+        {
+            VecDst a0, a1;
+            v_expand(vx_load(srcmat.ptr<SrcT>(0) + start + i), a0, a1);
+            for (int row = 1; row < height; row++)
+            {
+                VecDst lo, hi;
+                v_expand(vx_load(srcmat.ptr<SrcT>(row) + start + i), lo, hi);
+                a0 = v_add(a0, lo); a1 = v_add(a1, hi);
+            }
+            v_store(dst + i, v_cvt_f32(v_reinterpret_as_s32(a0)));
+            v_store(dst + i + vlanes32, v_cvt_f32(v_reinterpret_as_s32(a1)));
+        }
+        for (; i < len; i++)
+        {
+            int val = (int)*(srcmat.ptr<SrcT>(0) + start + i);
+            for (int row = 1; row < height; row++)
+                val += (int)*(srcmat.ptr<SrcT>(row) + start + i);
+            dst[i] = (float)val;
+        }
+    };
+
+    parallel_for_(Range(0, width_cn), body, width_cn * CV_ELEM_SIZE(srcmat.depth()) / 64);
+    v_cleanup();
+}
+
 static void reduceRowSum_16u32f(const Mat& srcmat, Mat& dstmat)
-{
-    const int width_cn = srcmat.cols * srcmat.channels();
-    const int height = srcmat.rows;
-    const int vlanes16 = VTraits<v_uint16>::vlanes();
-    const int vlanes32 = VTraits<v_uint32>::vlanes();
+{ reduceRowSum_16_32f<ushort, v_uint16, v_uint32>(srcmat, dstmat); }
 
-    auto body = [&](const Range& range) {
-        const int start = range.start;
-        const int end = range.end;
-        const int len = end - start;
-
-        AutoBuffer<int> buf32_storage(len);
-        int* buf32 = buf32_storage.data();
-
-        const ushort* src0 = srcmat.ptr<ushort>(0) + start;
-        for (int i = 0; i < len; i++)
-            buf32[i] = (int)src0[i];
-
-        for (int row = 1; row < height; row++)
-        {
-            const ushort* src = srcmat.ptr<ushort>(row) + start;
-            int i = 0;
-            for (; i <= len - vlanes16; i += vlanes16)
-            {
-                v_uint32 lo, hi;
-                v_expand(vx_load(src + i), lo, hi);
-                v_store(buf32 + i, v_add(vx_load(buf32 + i), v_reinterpret_as_s32(lo)));
-                v_store(buf32 + i + vlanes32, v_add(vx_load(buf32 + i + vlanes32), v_reinterpret_as_s32(hi)));
-            }
-            for (; i < len; i++)
-                buf32[i] += (int)src[i];
-        }
-
-        float* dst = dstmat.ptr<float>(0) + start;
-        for (int i = 0; i < len; i++)
-            dst[i] = (float)buf32[i];
-    };
-
-    parallel_for_(Range(0, width_cn), body, width_cn * CV_ELEM_SIZE(srcmat.depth()) / 64);
-    v_cleanup();
-}
-
-// --- short → float ---
 static void reduceRowSum_16s32f(const Mat& srcmat, Mat& dstmat)
+{ reduceRowSum_16_32f<short, v_int16, v_int32>(srcmat, dstmat); }
+
+// --- float/double → same type row reduce ---
+template<typename T, typename VecT>
+static void reduceRowSum_FP(const Mat& srcmat, Mat& dstmat)
 {
     const int width_cn = srcmat.cols * srcmat.channels();
     const int height = srcmat.rows;
-    const int vlanes16 = VTraits<v_int16>::vlanes();
-    const int vlanes32 = VTraits<v_int32>::vlanes();
+    const int vlanes = VTraits<VecT>::vlanes();
 
     auto body = [&](const Range& range) {
         const int start = range.start;
         const int end = range.end;
         const int len = end - start;
+        T* dst = dstmat.ptr<T>(0) + start;
 
-        AutoBuffer<int> buf32_storage(len);
-        int* buf32 = buf32_storage.data();
-
-        const short* src0 = srcmat.ptr<short>(0) + start;
-        for (int i = 0; i < len; i++)
-            buf32[i] = (int)src0[i];
-
-        for (int row = 1; row < height; row++)
+        int i = 0;
+        for (; i <= len - vlanes * 8; i += vlanes * 8)
         {
-            const short* src = srcmat.ptr<short>(row) + start;
-            int i = 0;
-            for (; i <= len - vlanes16; i += vlanes16)
+            const T* src0 = srcmat.ptr<T>(0) + start + i;
+            VecT s0 = vx_load(src0), s1 = vx_load(src0 + vlanes);
+            VecT s2 = vx_load(src0 + vlanes*2), s3 = vx_load(src0 + vlanes*3);
+            VecT s4 = vx_load(src0 + vlanes*4), s5 = vx_load(src0 + vlanes*5);
+            VecT s6 = vx_load(src0 + vlanes*6), s7 = vx_load(src0 + vlanes*7);
+            for (int row = 1; row < height; row++)
             {
-                v_int32 lo, hi;
-                v_expand(vx_load(src + i), lo, hi);
-                v_store(buf32 + i, v_add(vx_load(buf32 + i), lo));
-                v_store(buf32 + i + vlanes32, v_add(vx_load(buf32 + i + vlanes32), hi));
+                const T* src = srcmat.ptr<T>(row) + start + i;
+                s0 = v_add(s0, vx_load(src));
+                s1 = v_add(s1, vx_load(src + vlanes));
+                s2 = v_add(s2, vx_load(src + vlanes*2));
+                s3 = v_add(s3, vx_load(src + vlanes*3));
+                s4 = v_add(s4, vx_load(src + vlanes*4));
+                s5 = v_add(s5, vx_load(src + vlanes*5));
+                s6 = v_add(s6, vx_load(src + vlanes*6));
+                s7 = v_add(s7, vx_load(src + vlanes*7));
             }
-            for (; i < len; i++)
-                buf32[i] += (int)src[i];
+            v_store(dst + i, s0);
+            v_store(dst + i + vlanes, s1);
+            v_store(dst + i + vlanes*2, s2);
+            v_store(dst + i + vlanes*3, s3);
+            v_store(dst + i + vlanes*4, s4);
+            v_store(dst + i + vlanes*5, s5);
+            v_store(dst + i + vlanes*6, s6);
+            v_store(dst + i + vlanes*7, s7);
         }
-
-        float* dst = dstmat.ptr<float>(0) + start;
-        for (int i = 0; i < len; i++)
-            dst[i] = (float)buf32[i];
-    };
-
-    parallel_for_(Range(0, width_cn), body, width_cn * CV_ELEM_SIZE(srcmat.depth()) / 64);
-    v_cleanup();
-}
-
-// --- float → float ---
-static void reduceRowSum_32f32f(const Mat& srcmat, Mat& dstmat)
-{
-    const int width_cn = srcmat.cols * srcmat.channels();
-    const int height = srcmat.rows;
-    const int vlanes = VTraits<v_float32>::vlanes();
-
-    auto body = [&](const Range& range) {
-        const int start = range.start;
-        const int end = range.end;
-        const int len = end - start;
-
-        AutoBuffer<float> buf_storage(len);
-        float* buf = buf_storage.data();
-
-        const float* src0 = srcmat.ptr<float>(0) + start;
-        memcpy(buf, src0, len * sizeof(float));
-
-        for (int row = 1; row < height; row++)
+        for (; i <= len - vlanes; i += vlanes)
         {
-            const float* src = srcmat.ptr<float>(row) + start;
-            int i = 0;
-            for (; i <= len - vlanes; i += vlanes)
-                v_store(buf + i, v_add(vx_load(buf + i), vx_load(src + i)));
-            for (; i < len; i++)
-                buf[i] += src[i];
+            VecT s0 = vx_load(srcmat.ptr<T>(0) + start + i);
+            for (int row = 1; row < height; row++)
+                s0 = v_add(s0, vx_load(srcmat.ptr<T>(row) + start + i));
+            v_store(dst + i, s0);
         }
-
-        float* dst = dstmat.ptr<float>(0) + start;
-        memcpy(dst, buf, len * sizeof(float));
+        for (; i < len; i++)
+        {
+            T val = *(srcmat.ptr<T>(0) + start + i);
+            for (int row = 1; row < height; row++)
+                val += *(srcmat.ptr<T>(row) + start + i);
+            dst[i] = val;
+        }
     };
 
     parallel_for_(Range(0, width_cn), body, width_cn * CV_ELEM_SIZE(srcmat.depth()) / 64);
     v_cleanup();
 }
+
+static void reduceRowSum_32f32f(const Mat& srcmat, Mat& dstmat)
+{ reduceRowSum_FP<float, v_float32>(srcmat, dstmat); }
 
 #if CV_SIMD_64F
 // --- float → double ---
@@ -1106,41 +1072,8 @@ static void reduceRowSum_32f64f(const Mat& srcmat, Mat& dstmat)
     v_cleanup();
 }
 
-// --- double → double ---
 static void reduceRowSum_64f64f(const Mat& srcmat, Mat& dstmat)
-{
-    const int width_cn = srcmat.cols * srcmat.channels();
-    const int height = srcmat.rows;
-    const int vlanes = VTraits<v_float64>::vlanes();
-
-    auto body = [&](const Range& range) {
-        const int start = range.start;
-        const int end = range.end;
-        const int len = end - start;
-
-        AutoBuffer<double> buf_storage(len);
-        double* buf = buf_storage.data();
-
-        const double* src0 = srcmat.ptr<double>(0) + start;
-        memcpy(buf, src0, len * sizeof(double));
-
-        for (int row = 1; row < height; row++)
-        {
-            const double* src = srcmat.ptr<double>(row) + start;
-            int i = 0;
-            for (; i <= len - vlanes; i += vlanes)
-                v_store(buf + i, v_add(vx_load(buf + i), vx_load(src + i)));
-            for (; i < len; i++)
-                buf[i] += src[i];
-        }
-
-        double* dst = dstmat.ptr<double>(0) + start;
-        memcpy(dst, buf, len * sizeof(double));
-    };
-
-    parallel_for_(Range(0, width_cn), body, width_cn * CV_ELEM_SIZE(srcmat.depth()) / 64);
-    v_cleanup();
-}
+{ reduceRowSum_FP<double, v_float64>(srcmat, dstmat); }
 #endif // CV_SIMD_64F
 
 #endif // CV_SIMD || CV_SIMD_SCALABLE
