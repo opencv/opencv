@@ -108,7 +108,7 @@ static int count_exact_wrong(const cv::Mat& data, const cv::Mat& queries,
 
 // Count queries where approximate KNN returned a result worse than the true k-th.
 static int count_approx_wrong(const cv::Mat& data, const cv::Mat& queries,
-                               const cv::Mat& idx_mat, const cv::Mat& dist_mat,
+                               const cv::Mat& /*idx_mat*/, const cv::Mat& dist_mat,
                                int real_k, float radius_sq)
 {
     int wrong = 0;
@@ -124,7 +124,7 @@ static int count_approx_wrong(const cv::Mat& data, const cv::Mat& queries,
 }
 
 // Count queries where radius search result set differs from brute-force.
-static int count_radius_wrong(const cv::flann::Index& flann_idx,
+static int count_radius_wrong(cv::flann::Index& flann_idx,
                                const cv::Mat& data, const cv::Mat& queries,
                                float radius_sq)
 {

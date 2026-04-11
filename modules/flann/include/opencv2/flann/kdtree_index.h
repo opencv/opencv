@@ -232,18 +232,18 @@ public:
         // Dispatch to concrete result-set type so the compiler can inline and
         // eliminate all virtual calls in the hot search loops.
         if (maxChecks==FLANN_CHECKS_UNLIMITED) {
-            if (auto* r = dynamic_cast<KNNUniqueResultSet<DistanceType>*>(&result))
-                getExactNeighbors(*r, vec, epsError);
-            else if (auto* r = dynamic_cast<RadiusUniqueResultSet<DistanceType>*>(&result))
-                getExactNeighbors(*r, vec, epsError);
+            if (auto* rk = dynamic_cast<KNNUniqueResultSet<DistanceType>*>(&result))
+                getExactNeighbors(*rk, vec, epsError);
+            else if (auto* rr = dynamic_cast<RadiusUniqueResultSet<DistanceType>*>(&result))
+                getExactNeighbors(*rr, vec, epsError);
             else
                 getExactNeighbors(result, vec, epsError);
         }
         else {
-            if (auto* r = dynamic_cast<KNNUniqueResultSet<DistanceType>*>(&result))
-                getNeighbors(*r, vec, maxChecks, epsError, explore_all_trees);
-            else if (auto* r = dynamic_cast<RadiusUniqueResultSet<DistanceType>*>(&result))
-                getNeighbors(*r, vec, maxChecks, epsError, explore_all_trees);
+            if (auto* rk = dynamic_cast<KNNUniqueResultSet<DistanceType>*>(&result))
+                getNeighbors(*rk, vec, maxChecks, epsError, explore_all_trees);
+            else if (auto* rr = dynamic_cast<RadiusUniqueResultSet<DistanceType>*>(&result))
+                getNeighbors(*rr, vec, maxChecks, epsError, explore_all_trees);
             else
                 getNeighbors(result, vec, maxChecks, epsError, explore_all_trees);
         }
