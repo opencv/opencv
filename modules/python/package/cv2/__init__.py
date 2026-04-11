@@ -129,6 +129,11 @@ def bootstrap():
             if DEBUG: print('OpenCV loader: exception during checking workaround for sys.path[0]')
             pass  # applySysPathWorkaround is False
 
+    # Keep stdlib typing in sys.modules before cv2/typing can become
+    # visible as a top-level package while loading the native extension.
+    if sys.version_info[0] >= 3:
+        import typing as _opencv_loader_typing  # noqa: F401
+
     for p in reversed(l_vars['PYTHON_EXTENSIONS_PATHS']):
         sys.path.insert(1 if not applySysPathWorkaround else 0, p)
 
