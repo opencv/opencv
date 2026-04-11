@@ -460,7 +460,7 @@ namespace cv{
 // ==========================================================
 //  2. Public API: Handles OutputArray and dispatches to the core implementation
 // ==========================================================
-void findTRUContours(InputArray _src, OutputArrayOfArrays _contours, int minSize)
+void findTRUContours(InputArray _src, OutputArrayOfArrays _contours, int minSize, bool binarize)
 {
     CV_INSTRUMENT_REGION();
     Mat src = _src.getMat();
@@ -469,6 +469,8 @@ void findTRUContours(InputArray _src, OutputArrayOfArrays _contours, int minSize
     // Buffer handling
     cv::Mat padded;
     cv::copyMakeBorder(src, padded, 1, 1, 1, 1, cv::BORDER_CONSTANT, 0);
+    if (binarize)
+        cv::threshold(padded, padded, 0, 255, cv::THRESH_BINARY);
 
 
     // Fast path: caller passed std::vector<std::vector<cv::Point>> directly.
