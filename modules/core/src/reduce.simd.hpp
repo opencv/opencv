@@ -819,6 +819,7 @@ static void reduceRowSum_8u32s(const Mat& srcmat, Mat& dstmat)
         }
 
         memset(buf16, 0, len * sizeof(ushort));
+        const int flush_at = 256; // 256*255 = 65280 < 65535 (u16 safe)
         int flush_count = 0;
 
         for (int row = 1; row < height; row++)
@@ -849,7 +850,7 @@ static void reduceRowSum_8u32s(const Mat& srcmat, Mat& dstmat)
             for (; i < len; i++)
                 buf16[i] += (ushort)src[i];
 
-            if (++flush_count >= 256 || row == height - 1)
+            if (++flush_count >= flush_at || row == height - 1)
             {
                 // flush u16 → u32
                 int j = 0;
