@@ -329,8 +329,7 @@ TEST_P(Test_Model, DetectRegion)
                                     Rect2d(58, 141, 117, 249)};
 
     std::string img_path = _tf("dog416.png");
-    std::string weights_file = _tf("yolo-voc.weights", false);
-    std::string config_file = _tf("yolo-voc.cfg");
+    std::string model_file = _tf("yolo-voc.onnx", false);
 
     double scale = 1.0 / 255.0;
     Size size{416, 416};
@@ -345,7 +344,7 @@ TEST_P(Test_Model, DetectRegion)
         iouDiff = 1.6e-2;
     }
 
-    testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences,
+    testDetectModel(model_file, "", img_path, refClassIds, refConfidences,
                     refBoxes, scoreDiff, iouDiff, confThreshold, nmsThreshold, size,
                     Scalar(), scale, swapRB);
 }
@@ -388,8 +387,7 @@ TEST_P(Test_Model, DetectRegionWithNmsAcrossClasses)
                                     Rect2d(58, 141, 117, 249) };
 
     std::string img_path = _tf("dog416.png");
-    std::string weights_file = _tf("yolo-voc.weights", false);
-    std::string config_file = _tf("yolo-voc.cfg");
+    std::string model_file = _tf("yolo-voc.onnx", false);
 
     double scale = 1.0 / 255.0;
     Size size{ 416, 416 };
@@ -406,7 +404,7 @@ TEST_P(Test_Model, DetectRegionWithNmsAcrossClasses)
         iouDiff = 1.6e-2;
     }
 
-    testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences,
+    testDetectModel(model_file, "", img_path, refClassIds, refConfidences,
         refBoxes, scoreDiff, iouDiff, confThreshold, nmsThreshold, size,
         Scalar(), scale, swapRB, crop,
         nmsAcrossClasses);

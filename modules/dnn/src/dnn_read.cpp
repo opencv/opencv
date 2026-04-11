@@ -37,7 +37,7 @@ Net readNet(const String& _model, const String& _config, const String& _framewor
     {
         if (modelExt == "cfg" || configExt == "weights")
             std::swap(model, config);
-        return readNetFromDarknet(config, model);
+        CV_Error(Error::StsError, "Darknet importer has been removed. Please use readNet(\"darknet\", ...) with ONNX-converted models or use an older OpenCV version.");
     }
     if (framework == "dldt" || framework == "openvino" ||
         modelExt == "bin" || configExt == "bin" ||
@@ -65,7 +65,7 @@ Net readNet(const String& _framework, const std::vector<uchar>& bufferModel,
     else if (framework == "tensorflow")
         return readNetFromTensorflow(bufferModel, bufferConfig, engine);
     else if (framework == "darknet")
-        return readNetFromDarknet(bufferConfig, bufferModel);
+        CV_Error(Error::StsError, "Darknet importer has been removed. Please use ONNX-converted models or use an older OpenCV version.");
     else if (framework == "dldt" || framework == "openvino")
         return readNetFromModelOptimizer(bufferConfig, bufferModel);
     else if (framework == "tflite")
