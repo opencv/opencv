@@ -1209,6 +1209,14 @@ void broadcast(InputArray _src, InputArray _shape, OutputArray _dst) {
     }
     // other cases
     int max_ndims = std::max(dims_src, dims_shape);
+    if (max_ndims < 2 && src.total() == 1) {
+        const char* p_src = src.ptr<const char>();
+        char* p_dst = dst.ptr<char>();
+        size_t esz = src.elemSize();
+        for (size_t j = 0; j < dst.total(); j++)
+            std::memcpy(p_dst + j * esz, p_src, esz);
+        return;
+    }
     const int all_ndims[2] = {src.dims, dst.dims};
     const int* orig_shapes[2] = {src.size.p, dst.size.p};
     cv::AutoBuffer<size_t> buff(max_ndims * 4);

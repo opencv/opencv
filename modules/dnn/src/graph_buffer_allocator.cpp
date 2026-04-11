@@ -288,8 +288,15 @@ struct BufferAllocator
                         shareBuffer(outarg, elseOutarg);
                 }
 
+                // Isolate subgraph buffers: prevent parent's freed buffers from
+                // being reused here, which causes overwrites on re-execution.
+                std::vector<int> saved_freebufs = freebufs;
+                freebufs.clear();
                 assign(thenBranch);
+                freebufs.clear();
                 assign(elseBranch);
+                freebufs = saved_freebufs;
+
                 for (size_t i = 0; i < noutputs; i++) {
                     Arg thenOutarg = thenOutargs[i];
                     Arg elseOutarg = elseOutargs[i];
@@ -320,9 +327,9 @@ struct BufferAllocator
                 CV_Assert(body_noutputs == noutputs+1);
                 CV_Assert(n_state_vars >= 0 && n_accums >= 0);
                 Arg inp0 = inputs[0];
-                if (inp0.idx > 0 && usecounts[inp0.idx] > 0) {
-                    CV_Assert(!netimpl->isConstArg(inp0));
-                    if (!netimpl->isConstArg(trip_count))
+                if (inp0.idx > 0 && usecounts[inp0.idx] > 0 &&
+                    !netimpl->isConstArg(inp0)) {
+                    if (!netimpl->isConstArg(trip_count) && bufidxs[trip_count.idx] >= 0)
                         shareBuffer(trip_count, inputs[0]);
                     else
                         bufidxs.at(inputs[0].idx) = getFreeBuffer();
@@ -335,7 +342,7 @@ struct BufferAllocator
                     Arg v_out = i >= 0 ? outputs[i] : Arg();
                     if (inparg.idx > 0 && usecounts[inparg.idx] > 0) {
                         CV_Assert(!netimpl->isConstArg(inparg));
-                        if (!netimpl->isConstArg(v_inp))
+                        if (!netimpl->isConstArg(v_inp) && v_inp.idx > 0 && bufidxs[v_inp.idx] >= 0)
                             shareBuffer(v_inp, inparg);
                         else
                             bufidxs[inparg.idx] = getFreeBuffer();
@@ -346,9 +353,10 @@ struct BufferAllocator
                     }
                 }
 
+                std::vector<int> saved_freebufs = freebufs;
+                freebufs.clear();
                 assign(body);
-                for (auto body_out: body_outputs)
-                    releaseBuffer(bufidxs.at(body_out.idx));
+                freebufs = saved_freebufs;
             }
 
             for (auto out: outputs) {

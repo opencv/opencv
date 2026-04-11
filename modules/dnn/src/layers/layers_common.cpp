@@ -271,12 +271,18 @@ void tensorToIntVec(const Mat& tensor, std::vector<int>& vec)
     } else {
         int type = tensor.type();
         CV_Assert(type == CV_32S || type == CV_64S);
-        CV_Assert(tensor.dims <= 1);
+        // Accept tensors of any dimensionality; treat them as a flat vector.
+        CV_Assert(tensor.isContinuous());
         int size = (int)tensor.total();
         vec.resize(size);
-        for (int i = 0; i < size; i++) {
-            vec[i] = type == CV_32S ? tensor.at<int>(i) :
-                saturate_cast<int>(tensor.at<int64_t>(i));
+        if (type == CV_32S) {
+            const int* p = tensor.ptr<int>();
+            for (int i = 0; i < size; i++)
+                vec[i] = p[i];
+        } else {
+            const int64_t* p = tensor.ptr<int64_t>();
+            for (int i = 0; i < size; i++)
+                vec[i] = saturate_cast<int>(p[i]);
         }
     }
 }
@@ -289,12 +295,18 @@ void tensorToFloatVec(const Mat& tensor, std::vector<float>& vec)
         int type = tensor.type();
         MatShape shape = tensor.shape();
         CV_Assert(type == CV_32F || type == CV_16F);
-        CV_Assert(shape.dims <= 1);
+        // Accept tensors of any dimensionality; treat them as a flat vector.
+        CV_Assert(tensor.isContinuous());
         int size = (int)shape.total();
         vec.resize(size);
-        for (int i = 0; i < size; i++) {
-            vec[i] = type == CV_32F ? tensor.at<float>(i) :
-                (float)tensor.at<hfloat>(i);
+        if (type == CV_32F) {
+            const float* p = tensor.ptr<float>();
+            for (int i = 0; i < size; i++)
+                vec[i] = p[i];
+        } else {
+            const hfloat* p = tensor.ptr<hfloat>();
+            for (int i = 0; i < size; i++)
+                vec[i] = (float)p[i];
         }
     }
 }
