@@ -55,6 +55,17 @@
 namespace cvflann
 {
 
+/**
+ * Zero-overhead substitute for DynamicBitset used when duplicate checking
+ * is unnecessary (single-tree search).  test() always returns false and
+ * set() is a no-op, so the compiler eliminates all related branches.
+ */
+struct NullDynamicBitset
+{
+    bool test(size_t) const { return false; }
+    void set(size_t) {}
+};
+
 struct KDTreeIndexParams : public IndexParams
 {
     KDTreeIndexParams(int trees = 4)
@@ -92,6 +103,12 @@ public:
     {
         size_ = dataset_.rows;
         veclen_ = dataset_.cols;
+
+        // Multi-point leaves (LEAF_MAX_SIZE) benefit low-dimensional trees by
+        // reducing depth and improving cache efficiency.  For high-dimensional
+        // data the per-point distance cost dominates and the original single-
+        // point leaf behaviour is preferable.
+        leaf_max_size_ = (veclen_ <= 16) ? (int)LEAF_MAX_SIZE : 1;
 
         trees_ = get_param(index_params_,"trees",4);
         tree_roots_ = new NodePtr[trees_];
@@ -212,11 +229,23 @@ public:
         const float epsError = 1+get_param(searchParams,"eps",0.0f);
         const bool explore_all_trees = get_param(searchParams,"explore_all_trees",false);
 
+        // Dispatch to concrete result-set type so the compiler can inline and
+        // eliminate all virtual calls in the hot search loops.
         if (maxChecks==FLANN_CHECKS_UNLIMITED) {
-            getExactNeighbors(result, vec, epsError);
+            if (auto* r = dynamic_cast<KNNUniqueResultSet<DistanceType>*>(&result))
+                getExactNeighbors(*r, vec, epsError);
+            else if (auto* r = dynamic_cast<RadiusUniqueResultSet<DistanceType>*>(&result))
+                getExactNeighbors(*r, vec, epsError);
+            else
+                getExactNeighbors(result, vec, epsError);
         }
         else {
-            getNeighbors(result, vec, maxChecks, epsError, explore_all_trees);
+            if (auto* r = dynamic_cast<KNNUniqueResultSet<DistanceType>*>(&result))
+                getNeighbors(*r, vec, maxChecks, epsError, explore_all_trees);
+            else if (auto* r = dynamic_cast<RadiusUniqueResultSet<DistanceType>*>(&result))
+                getNeighbors(*r, vec, maxChecks, epsError, explore_all_trees);
+            else
+                getNeighbors(result, vec, maxChecks, epsError, explore_all_trees);
         }
     }
 
@@ -243,6 +272,12 @@ private:
          * The child nodes.
          */
         Node* child1, * child2;
+        /**
+         * Leaf node storage: array of point indices and their count.
+         * Non-null only when child1 == child2 == NULL.
+         */
+        int* indices;
+        int count;
     };
     typedef Node* NodePtr;
     typedef BranchStruct<NodePtr, DistanceType> BranchSt;
@@ -259,6 +294,9 @@ private:
         if (tree->child2!=NULL) {
             save_tree(stream, tree->child2);
         }
+        if (tree->child1==NULL && tree->child2==NULL) {
+            save_value(stream, tree->indices[0], tree->count);
+        }
     }
 
 
@@ -271,6 +309,10 @@ private:
         }
         if (tree->child2!=NULL) {
             load_tree(stream, tree->child2);
+        }
+        if (tree->child1==NULL && tree->child2==NULL) {
+            tree->indices = pool_.allocate<int>(tree->count);
+            load_value(stream, tree->indices[0], tree->count);
         }
     }
 
@@ -289,9 +331,12 @@ private:
         NodePtr node = pool_.allocate<Node>(); // allocate memory
 
         /* If too few exemplars remain, then make this a leaf node. */
-        if ( count == 1) {
+        if (count <= leaf_max_size_) {
             node->child1 = node->child2 = NULL;    /* Mark as leaf node. */
-            node->divfeat = *ind;    /* Store index of this vec. */
+            node->count = count;
+            node->indices = pool_.allocate<int>(count);
+            for (int i = 0; i < count; ++i)
+                node->indices[i] = ind[i];
         }
         else {
             int idx;
@@ -301,6 +346,8 @@ private:
 
             node->divfeat = cutfeat;
             node->divval = cutval;
+            node->indices = NULL;
+            node->count = 0;
             node->child1 = divideTree(ind, idx);
             node->child2 = divideTree(ind+idx, count-idx);
         }
@@ -421,16 +468,25 @@ private:
     /**
      * Performs an exact nearest neighbor search. The exact search performs a full
      * traversal of the tree.
+     *
+     * Uses per-dimension lower-bound replacement (not additive accumulation) so the
+     * lower bound remains tight even when the same dimension is split multiple times
+     * along a path.  dists[d] always holds the current squared-distance contribution
+     * of dimension d; it is saved and restored around each "other child" recursion.
      */
-    void getExactNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, float epsError)
+    template<typename ResultSetType>
+    void getExactNeighbors(ResultSetType& result, const ElementType* vec, float epsError)
     {
-        //		checkID -= 1;  /* Set a different unique ID for each search. */
-
         if (trees_ > 1) {
             fprintf(stderr,"It doesn't make any sense to use more than one tree for exact search");
         }
         if (trees_>0) {
-            searchLevelExact(result, vec, tree_roots_[0], 0.0, epsError);
+            // AutoBuffer uses the stack for small veclen_ (e.g. 3D → 12 bytes),
+            // falls back to heap for large dimensions.
+            cv::AutoBuffer<DistanceType> dists_buf(veclen_);
+            DistanceType* dists = dists_buf.data();
+            std::fill(dists, dists + veclen_, DistanceType(0));
+            searchLevelExact(result, vec, tree_roots_[0], 0.0, epsError, dists);
         }
         CV_Assert(result.full());
     }
@@ -439,30 +495,42 @@ private:
      * Performs the approximate nearest-neighbor search. The search is approximate
      * because the tree traversal is abandoned after a given number of descends in
      * the tree.
+     *
+     * When trees_==1, uses NullDynamicBitset to skip duplicate-check overhead
+     * entirely (single-tree traversal cannot visit the same point twice).
      */
-    void getNeighbors(ResultSet<DistanceType>& result, const ElementType* vec,
+    template<typename ResultSetType>
+    void getNeighbors(ResultSetType& result, const ElementType* vec,
                       int maxCheck, float epsError, bool explore_all_trees = false)
     {
-        int i;
         BranchSt branch;
         int checkCount = 0;
-        DynamicBitset checked(size_);
 
         // Priority queue storing intermediate branches in the best-bin-first search
         const cv::Ptr<Heap<BranchSt>>& heap = Heap<BranchSt>::getPooledInstance(cv::utils::getThreadID(), (int)size_);
 
-        /* Search once through each tree down to root. */
-        for (i = 0; i < trees_; ++i) {
-            searchLevel(result, vec, tree_roots_[i], 0, checkCount, maxCheck,
+        if (trees_ == 1) {
+            // Single tree: no duplicate points possible, skip the bitset entirely.
+            NullDynamicBitset checked;
+            searchLevel(result, vec, tree_roots_[0], 0, checkCount, maxCheck,
                         epsError, heap, checked, explore_all_trees);
-            if (!explore_all_trees && (checkCount >= maxCheck) && result.full())
-                break;
+            while (heap->popMin(branch) && (checkCount < maxCheck || !result.full())) {
+                searchLevel(result, vec, branch.node, branch.mindist, checkCount, maxCheck,
+                            epsError, heap, checked, false);
+            }
         }
-
-        /* Keep searching other branches from heap until finished. */
-        while ( heap->popMin(branch) && (checkCount < maxCheck || !result.full() )) {
-            searchLevel(result, vec, branch.node, branch.mindist, checkCount, maxCheck,
-                        epsError, heap, checked, false);
+        else {
+            DynamicBitset checked(size_);
+            for (int i = 0; i < trees_; ++i) {
+                searchLevel(result, vec, tree_roots_[i], 0, checkCount, maxCheck,
+                            epsError, heap, checked, explore_all_trees);
+                if (!explore_all_trees && (checkCount >= maxCheck) && result.full())
+                    break;
+            }
+            while (heap->popMin(branch) && (checkCount < maxCheck || !result.full())) {
+                searchLevel(result, vec, branch.node, branch.mindist, checkCount, maxCheck,
+                            epsError, heap, checked, false);
+            }
         }
 
         CV_Assert(result.full());
@@ -473,32 +541,35 @@ private:
      *  Search starting from a given node of the tree.  Based on any mismatches at
      *  higher levels, all exemplars below this level must have a distance of
      *  at least "mindistsq".
+     *
+     *  Templated on ResultSetType and BitsetType so the compiler can inline all
+     *  result-set operations and (when BitsetType=NullDynamicBitset) eliminate
+     *  the duplicate-check bookkeeping entirely.
      */
-    void searchLevel(ResultSet<DistanceType>& result_set, const ElementType* vec, NodePtr node, DistanceType mindist, int& checkCount, int maxCheck,
-                     float epsError, const cv::Ptr<Heap<BranchSt>>& heap, DynamicBitset& checked, bool explore_all_trees = false)
+    template<typename ResultSetType, typename BitsetType>
+    void searchLevel(ResultSetType& result_set, const ElementType* vec, NodePtr node, DistanceType mindist, int& checkCount, int maxCheck,
+                     float epsError, const cv::Ptr<Heap<BranchSt>>& heap, BitsetType& checked, bool explore_all_trees = false)
     {
         if (result_set.worstDist()<mindist) {
-            //			printf("Ignoring branch, too far\n");
             return;
         }
 
         /* If this is a leaf node, then do check and return. */
         if ((node->child1 == NULL)&&(node->child2 == NULL)) {
-            /*  Do not check same node more than once when searching multiple trees.
-                Once a vector is checked, we set its location in vind to the
-                current checkID.
-             */
-            int index = node->divfeat;
-            if ( checked.test(index) ||
-                 (!explore_all_trees && (checkCount>=maxCheck) && result_set.full()) ) {
+            /* Accumulate checkCount by leaf size so that maxChecks retains its
+             * original meaning (approximately N individual point examinations),
+             * regardless of how many points are stored per leaf. */
+            if (!explore_all_trees && (checkCount >= maxCheck) && result_set.full()) {
                 return;
             }
-            checked.set(index);
             checkCount++;
-
-            DistanceType dist = distance_(dataset_[index], vec, veclen_);
-            result_set.addPoint(dist,index);
-
+            for (int i = 0; i < node->count; ++i) {
+                int index = node->indices[i];
+                if (checked.test(index)) continue;
+                checked.set(index);
+                DistanceType dist = distance_(dataset_[index], vec, veclen_);
+                result_set.addPoint(dist, index);
+            }
             return;
         }
 
@@ -508,16 +579,7 @@ private:
         NodePtr bestChild = (diff < 0) ? node->child1 : node->child2;
         NodePtr otherChild = (diff < 0) ? node->child2 : node->child1;
 
-        /* Create a branch record for the branch not taken.  Add distance
-            of this feature boundary (we don't attempt to correct for any
-            use of this feature in a parent node, which is unlikely to
-            happen and would have only a small effect).  Don't bother
-            adding more branches to heap after halfway point, as cost of
-            adding exceeds their value.
-         */
-
         DistanceType new_distsq = mindist + distance_.accum_dist(val, node->divval, node->divfeat);
-        //		if (2 * checkCount < maxCheck  ||  !result.full()) {
         if ((new_distsq*epsError < result_set.worstDist())||  !result_set.full()) {
             heap->insert( BranchSt(otherChild, new_distsq) );
         }
@@ -528,38 +590,46 @@ private:
 
     /**
      * Performs an exact search in the tree starting from a node.
+     * Templated on ResultSetType to inline all result-set operations.
      */
-    void searchLevelExact(ResultSet<DistanceType>& result_set, const ElementType* vec, const NodePtr node, DistanceType mindist, const float epsError)
+    template<typename ResultSetType>
+    void searchLevelExact(ResultSetType& result_set, const ElementType* vec,
+                          const NodePtr node, DistanceType mindist,
+                          const float epsError, DistanceType* dists)
     {
         /* If this is a leaf node, then do check and return. */
         if ((node->child1 == NULL)&&(node->child2 == NULL)) {
-            int index = node->divfeat;
-            DistanceType dist = distance_(dataset_[index], vec, veclen_);
-            result_set.addPoint(dist,index);
+            for (int i = 0; i < node->count; ++i) {
+                int index = node->indices[i];
+                DistanceType dist = distance_(dataset_[index], vec, veclen_);
+                result_set.addPoint(dist, index);
+            }
             return;
         }
 
         /* Which child branch should be taken first? */
-        ElementType val = vec[node->divfeat];
+        int idx = node->divfeat;
+        ElementType val = vec[idx];
         DistanceType diff = val - node->divval;
         NodePtr bestChild = (diff < 0) ? node->child1 : node->child2;
         NodePtr otherChild = (diff < 0) ? node->child2 : node->child1;
 
-        /* Create a branch record for the branch not taken.  Add distance
-            of this feature boundary (we don't attempt to correct for any
-            use of this feature in a parent node, which is unlikely to
-            happen and would have only a small effect).  Don't bother
-            adding more branches to heap after halfway point, as cost of
-            adding exceeds their value.
-         */
+        /* Per-dimension replacement: subtract the old contribution for this dimension
+         * and add the new one.  This keeps mindist tight even when the same dimension
+         * is split multiple times along a path (avoids the additive over-accumulation
+         * that causes over-pruning and missed neighbours in exact search). */
+        DistanceType cut_dist = distance_.accum_dist(val, node->divval, idx);
+        DistanceType new_mindist = mindist + cut_dist - dists[idx];
 
-        DistanceType new_distsq = mindist + distance_.accum_dist(val, node->divval, node->divfeat);
+        /* Best child: no boundary crossing, mindist and dists unchanged. */
+        searchLevelExact(result_set, vec, bestChild, mindist, epsError, dists);
 
-        /* Call recursively to search next level down. */
-        searchLevelExact(result_set, vec, bestChild, mindist, epsError);
-
-        if (new_distsq*epsError<=result_set.worstDist()) {
-            searchLevelExact(result_set, vec, otherChild, new_distsq, epsError);
+        /* Other child: save, update, recurse, restore. */
+        if (new_mindist * epsError <= result_set.worstDist()) {
+            DistanceType old_dist = dists[idx];
+            dists[idx] = cut_dist;
+            searchLevelExact(result_set, vec, otherChild, new_mindist, epsError, dists);
+            dists[idx] = old_dist;
         }
     }
 
@@ -581,7 +651,12 @@ private:
          * selected at random from among the top RAND_DIM dimensions with the
          * highest variance.  A value of 5 works well.
          */
-        RAND_DIM=5
+        RAND_DIM=5,
+        /**
+         * Maximum number of points stored in a leaf node.
+         * Larger values reduce tree depth and improve cache efficiency.
+         */
+        LEAF_MAX_SIZE=10
     };
 
     void Sum(const ElementType* CV_RESTRICT data, size_t len, DistanceType* CV_RESTRICT mean) {
@@ -616,6 +691,7 @@ private:
 
     size_t size_;
     size_t veclen_;
+    int    leaf_max_size_;
 
 
     DistanceType* mean_;
