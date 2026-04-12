@@ -117,9 +117,14 @@ public:
         CV_Assert(startAxis >= 0 && startAxis <= numAxes);
 
         if (_onnxMode) {
+            // In ONNX, Flatten axis valid range is [0, numAxes] (inclusive).
+            // normalize_axis wraps axis==numAxes to 0, so handle it separately.
+            int onnxAxis = _startAxis;
+            if (onnxAxis < 0) onnxAxis += numAxes;
+            onnxAxis = std::max(0, std::min(onnxAxis, numAxes));
             size_t outer = 1, inner = 1;
             int i = 0;
-            for (; i < startAxis; i++)
+            for (; i < onnxAxis; i++)
                 outer *= inputs[0][i];
             for (; i < numAxes; i++)
                 inner *= inputs[0][i];
@@ -165,8 +170,10 @@ public:
         inputs_arr.getMatVector(inputs);
 
         int numAxes = inputs[0].dims;
-        _startAxis = normalize_axis(_startAxis, numAxes);
-        _endAxis = normalize_axis(_endAxis, numAxes);
+        if (!_onnxMode) {
+            _startAxis = normalize_axis(_startAxis, numAxes);
+            _endAxis = normalize_axis(_endAxis, numAxes);
+        }
     }
 
 #ifdef HAVE_OPENCL

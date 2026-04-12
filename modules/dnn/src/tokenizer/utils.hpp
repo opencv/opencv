@@ -28,5 +28,8 @@ static const std::string R50K_UTF8 = "'s|'t|'re|'ve|'m|'ll|'d| ?\\p{L}+| ?\\p{N}
 // The resulting C++ pattern is compatible with std::regex and the tokenizer's Unicode handling logic.
 static const std::string CL100K_BASE = R"CL100K('(?:[sSdDmMtT]|[lL][lL]|[vV][eE]|[rR][eE])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]|\s+(?!\S)|\s)CL100K";
 
+// Qwen2.5 pre-tokenizer split pattern (from tokenizer.json)
+static const std::string QWEN2_5 = R"QWEN('(?:[sSdDmMtT]|[lL][lL]|[vV][eE]|[rR][eE])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+)QWEN";
+
 }}
 #endif
