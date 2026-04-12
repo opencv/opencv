@@ -1,29 +1,200 @@
-#include "precomp.hpp"
-#include <opencv2/core/hal/hal.hpp>
-#include <opencv2/core/utils/tls.hpp>
-#include <opencv2/core/utils/logger.hpp>
+#include <mat.hpp>
 #include "sift_cuda.cu"
-#include "sift.simd.hpp"
-#include "sift.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
+#include "stdint.h"
+#include "unistd.h"
+#include <vector>
+
+
+// default width of descriptor histogram array
+static const int SIFT_DESCR_WIDTH = 4;
+
+// default number of bins per histogram in descriptor array
+static const int SIFT_DESCR_HIST_BINS = 8;
+
+// assumed gaussian blur for input image
+static const float SIFT_INIT_SIGMA = 0.5f;
+
+// width of border in which to ignore keypoints
+static const int SIFT_IMG_BORDER = 5;
+
+// maximum steps of keypoint interpolation before failure
+static const int SIFT_MAX_INTERP_STEPS = 5;
+
+// default number of bins in histogram for orientation assignment
+static const int SIFT_ORI_HIST_BINS = 36;
+
+// determines gaussian sigma for orientation assignment
+static const float SIFT_ORI_SIG_FCTR = 1.5f;
+
+// determines the radius of the region used in orientation assignment
+static const float SIFT_ORI_RADIUS = 4.5f; // 3 * SIFT_ORI_SIG_FCTR;
+
+// orientation magnitude relative to max that results in new feature
+static const float SIFT_ORI_PEAK_RATIO = 0.8f;
+
+// determines the size of a single descriptor orientation histogram
+static const float SIFT_DESCR_SCL_FCTR = 3.f;
+
+// threshold on magnitude of elements of descriptor vector
+static const float SIFT_DESCR_MAG_THR = 0.2f;
+
+// factor used to convert floating-point descriptor to unsigned char
+static const float SIFT_INT_DESCR_FCTR = 512.f;
+
+#define USE_CUDA 1
+#define DoG_TYPE_SHORT 0
+#if DoG_TYPE_SHORT
+// intermediate type used for DoG pyramids
+typedef short sift_wt;
+static const int SIFT_FIXPT_SCALE = 48;
+#else
+// intermediate type used for DoG pyramids
+typedef float sift_wt;
+static const int SIFT_FIXPT_SCALE = 1;
+#endif
+
 
 // Step 4
-class findScaleSpaceExtremaT
+class SIFT_Range
+{
+public:
+    SIFT_Range();
+    SIFT_Range(int _rstart, int _cstart, int _nrow, int _ncol);
+    int row0, col0;
+    int num_row, num_col;
+};
+
+
+// Interpolates a scale-space extremum's location and scale to subpixel
+// accuracy to form an image feature. Rejects features with low contrast.
+// Based on Section 4 of Lowe's paper.
+static
+bool adjustLocalExtremaCuda(const std::vector<Mat>& dog_pyr, KeyPoint& kpt, int octv,
+                        int& layer, int& r, int& c, int nOctaveLayers,
+                        float contrastThreshold, float edgeThreshold, float sigma)
+{
+
+    // declare unit conversion factors
+    // DoG values are stored as integers (scaled by SIFT_FIXPT_SCALE to avoid floating point during construction
+    const float img_scale = 1.f/(255*SIFT_FIXPT_SCALE);
+    const float deriv_scale = img_scale*0.5f;
+    const float second_deriv_scale = img_scale;
+    const float cross_deriv_scale = img_scale*0.25f;
+
+    float xi=0;     // sub-pixel offset in the scale (layer) direction
+    float xr=0;     // sub-pixel offset in the row direction
+    float xc=0;     //  sub-pixel offset in the column direction
+    float contr=0;  // contrast value at the refined point
+    int i = 0;      //  iteration counter
+
+    // refinement loop: each iteration refetches the three layers becaue layer may have changed from prev iteration
+    for( ; i < SIFT_MAX_INTERP_STEPS; i++ )
+    {
+        int idx = octv*(nOctaveLayers+2) + layer;
+        const Mat& img = dog_pyr[idx];
+        const Mat& prev = dog_pyr[idx-1];
+        const Mat& next = dog_pyr[idx+1];
+
+        Vec3f dD((img.at<sift_wt>(r, c+1) - img.at<sift_wt>(r, c-1))*deriv_scale,
+                 (img.at<sift_wt>(r+1, c) - img.at<sift_wt>(r-1, c))*deriv_scale,
+                 (next.at<sift_wt>(r, c) - prev.at<sift_wt>(r, c))*deriv_scale);
+
+        float v2 = (float)img.at<sift_wt>(r, c)*2;
+        float dxx = (img.at<sift_wt>(r, c+1) + img.at<sift_wt>(r, c-1) - v2)*second_deriv_scale;
+        float dyy = (img.at<sift_wt>(r+1, c) + img.at<sift_wt>(r-1, c) - v2)*second_deriv_scale;
+        float dss = (next.at<sift_wt>(r, c) + prev.at<sift_wt>(r, c) - v2)*second_deriv_scale;
+        float dxy = (img.at<sift_wt>(r+1, c+1) - img.at<sift_wt>(r+1, c-1) -
+                     img.at<sift_wt>(r-1, c+1) + img.at<sift_wt>(r-1, c-1))*cross_deriv_scale;
+        float dxs = (next.at<sift_wt>(r, c+1) - next.at<sift_wt>(r, c-1) -
+                     prev.at<sift_wt>(r, c+1) + prev.at<sift_wt>(r, c-1))*cross_deriv_scale;
+        float dys = (next.at<sift_wt>(r+1, c) - next.at<sift_wt>(r-1, c) -
+                     prev.at<sift_wt>(r+1, c) + prev.at<sift_wt>(r-1, c))*cross_deriv_scale;
+
+        Matx33f H(dxx, dxy, dxs,
+                  dxy, dyy, dys,
+                  dxs, dys, dss);
+
+        Vec3f X = H.solve(dD, DECOMP_LU);
+
+        xi = -X[2];
+        xr = -X[1];
+        xc = -X[0];
+
+        if( std::abs(xi) < 0.5f && std::abs(xr) < 0.5f && std::abs(xc) < 0.5f )
+            break;
+
+        if( std::abs(xi) > (float)(INT_MAX/3) ||
+            std::abs(xr) > (float)(INT_MAX/3) ||
+            std::abs(xc) > (float)(INT_MAX/3) )
+            return false;
+
+        c += cvRound(xc);
+        r += cvRound(xr);
+        layer += cvRound(xi);
+
+        if( layer < 1 || layer > nOctaveLayers ||
+            c < SIFT_IMG_BORDER || c >= img.cols - SIFT_IMG_BORDER  ||
+            r < SIFT_IMG_BORDER || r >= img.rows - SIFT_IMG_BORDER )
+            return false;
+    }
+
+    // ensure convergence of interpolation
+    if( i >= SIFT_MAX_INTERP_STEPS )
+        return false;
+
+    {
+        int idx = octv*(nOctaveLayers+2) + layer;
+        const Mat& img = dog_pyr[idx];
+        const Mat& prev = dog_pyr[idx-1];
+        const Mat& next = dog_pyr[idx+1];
+        Matx31f dD((img.at<sift_wt>(r, c+1) - img.at<sift_wt>(r, c-1))*deriv_scale,
+                   (img.at<sift_wt>(r+1, c) - img.at<sift_wt>(r-1, c))*deriv_scale,
+                   (next.at<sift_wt>(r, c) - prev.at<sift_wt>(r, c))*deriv_scale);
+        float t = dD.dot(Matx31f(xc, xr, xi));
+
+        contr = img.at<sift_wt>(r, c)*img_scale + t * 0.5f;
+        if( std::abs( contr ) * nOctaveLayers < contrastThreshold )
+            return false;
+
+        // principal curvatures are computed using the trace and det of Hessian
+        float v2 = img.at<sift_wt>(r, c)*2.f;
+        float dxx = (img.at<sift_wt>(r, c+1) + img.at<sift_wt>(r, c-1) - v2)*second_deriv_scale;
+        float dyy = (img.at<sift_wt>(r+1, c) + img.at<sift_wt>(r-1, c) - v2)*second_deriv_scale;
+        float dxy = (img.at<sift_wt>(r+1, c+1) - img.at<sift_wt>(r+1, c-1) -
+                     img.at<sift_wt>(r-1, c+1) + img.at<sift_wt>(r-1, c-1)) * cross_deriv_scale;
+        float tr = dxx + dyy;
+        float det = dxx * dyy - dxy * dxy;
+
+        if( det <= 0 || tr*tr*edgeThreshold >= (edgeThreshold + 1)*(edgeThreshold + 1)*det )
+            return false;
+    }
+
+    kpt.pt.x = (c + xc) * (1 << octv);
+    kpt.pt.y = (r + xr) * (1 << octv);
+    kpt.octave = octv + (layer << 8) + (cvRound((xi + 0.5)*255) << 16);
+    kpt.size = sigma*powf(2.f, (layer + xi) / nOctaveLayers)*(1 << octv)*2;
+    kpt.response = std::abs(contr);
+
+    return true;
+}
+
+class findScaleSpaceExtremaCudaT
 {
     public:
-        findScaleSpaceExtremaT(
-            int _o,
-            int _i,
-            int _threshold,
-            int _idx,
-            int _step,
-            int _cols,
+        findScaleSpaceExtremaCudaT(
+            int _o,                                 // octave #
+            int _i,                                 // layer number: [1, nOctaveLayer)
+            int _threshold,                         // min abs value to even consider pixel as candidate
+            int _idx,                               // precomputed index into dog_ptr for current layer
+            int _step,                              // row stride - # elements to skip to get to next row
+            int _cols,                              // width of image in octave
             int _nOctaveLayers,
             double _contrastThreshold,
             double _edgeThreshold,
             double _sigma,
-            const std::vector<Mat>& _gauss_pyr,
-            const std::vector<Mat>& _dog_pyr,
-            std::vector<KeyPoint>& kpts)
+            const std::vector<Mat>& _gauss_pyr,     // gaussian pyramid (for orientation calcs)
+            const std::vector<Mat>& _dog_pyr,       // dog pyramid (for finding extrema / keypoints)
+            std::vector<KeyPoint>& kpts)            // OUTPUT: found keypoints eventually go in here
 
             : o(_o),
             i(_i),
@@ -41,28 +212,31 @@ class findScaleSpaceExtremaT
         {
             // nothing
         }
-        void process(const cv::Range& range)
+        void process(const SIFT_Range &range)
         {
-            CV_TRACE_FUNCTION();
+            const int rbegin = range.row0;
+            const int rend = range.row0 + range.num_row;
 
-            const int begin = range.start;
-            const int end = range.end;
+            const int cbegin = range.col0;
+            const int cend = range.col0 + range.num_col;
 
-            static const int n = SIFT_ORI_HIST_BINS;
-            float CV_DECL_ALIGNED(CV_SIMD_WIDTH) hist[n];
+            static const int n = SIFT_ORI_HIST_BINS; // orientation histogram
+            float hist[n]; // reused buffer for orientation calc
 
-            const Mat& img = dog_pyr[idx];
-            const Mat& prev = dog_pyr[idx-1];
-            const Mat& next = dog_pyr[idx+1];
+            const Mat& img =  this.dog_pyr[idx];     // current layer i
+            const Mat& prev = this.dog_pyr[idx-1];   // current layer i-1
+            const Mat& next = this.dog_pyr[idx+1];   // current layer i+1
 
-            for( int r = begin; r < end; r++)
+            for( int r = rbegin; r < rend; r++)
             {
-                const sift_wt* currptr = img.ptr<sift_wt>(r);
-                const sift_wt* prevptr = prev.ptr<sift_wt>(r);
-                const sift_wt* nextptr = next.ptr<sift_wt>(r);
+                // Accessing currptr[c] then gives you the pixel at (r, c).
+                const sift_wt* currptr = img.ptr<sift_wt>(r); // pointer to row r in curr layer
+                const sift_wt* prevptr = prev.ptr<sift_wt>(r); // pointer to row r previous layer
+                const sift_wt* nextptr = next.ptr<sift_wt>(r);  // pointer to row r in next layer
                 int c = SIFT_IMG_BORDER;
-
-                #if (CV_SIMD || CV_SIMD_SCALABLE) && !(DoG_TYPE_SHORT)
+                
+                // originally CPU vectorization optimization that processes multiple pixels at once using vector registers. 
+                #if (!USE_CUDA) && !(DoG_TYPE_SHORT)
                     const int vecsize = VTraits<v_float32>::vlanes();
                     for( ; c <= cols-SIFT_IMG_BORDER - vecsize; c += vecsize)
                     {
@@ -173,105 +347,150 @@ class findScaleSpaceExtremaT
                             }
                         }
                     }
+                #elif (USE_CUDA) && !(DoG_TYPE_SHORT)
 
-                #endif //CV_SIMD && !(DoG_TYPE_SHORT)
-
-                // vector loop reminder, better predictibility and less branch density
-                for( ; c < cols-SIFT_IMG_BORDER; c++)
-                {
-                    sift_wt val = currptr[c];
-                    if (std::abs(val) <= threshold)
-                        continue;
-
-                    sift_wt _00,_01,_02;
-                    sift_wt _10,    _12;
-                    sift_wt _20,_21,_22;
-                    _00 = currptr[c-step-1]; _01 = currptr[c-step]; _02 = currptr[c-step+1];
-                    _10 = currptr[c     -1];                        _12 = currptr[c     +1];
-                    _20 = currptr[c+step-1]; _21 = currptr[c+step]; _22 = currptr[c+step+1];
-
-                    bool calculate = false;
-                    if (val > 0)
+                    // Loading in the 4x8 chunk, plus neighbors (26-Neighbors per pixel) with overlap
+                    for( ; c < cols-SIFT_IMG_BORDER; c++)
                     {
-                        sift_wt vmax = std::max(std::max(std::max(_00,_01),std::max(_02,_10)),std::max(std::max(_12,_20),std::max(_21,_22)));
-                        if (val >= vmax)
+                        sift_wt val = currptr[c];
+                        if (std::abs(val) <= threshold)
+                            continue;
+
+                        // Loading the 8 Current-Layer Neighbors
+                        sift_wt _00,_01,_02;
+                        sift_wt _10,    _12;
+                        sift_wt _20,_21,_22;
+                        _00 = currptr[c-step-1]; _01 = currptr[c-step]; _02 = currptr[c-step+1];
+                        _10 = currptr[c     -1];                        _12 = currptr[c     +1];
+                        _20 = currptr[c+step-1]; _21 = currptr[c+step]; _22 = currptr[c+step+1];
+                        
+                        // The 26-Neighbor Extremum Check
+                        bool calculate = false;
+                        if (val > 0)
                         {
-                            _00 = prevptr[c-step-1]; _01 = prevptr[c-step]; _02 = prevptr[c-step+1];
-                            _10 = prevptr[c     -1];                        _12 = prevptr[c     +1];
-                            _20 = prevptr[c+step-1]; _21 = prevptr[c+step]; _22 = prevptr[c+step+1];
-                            vmax = std::max(std::max(std::max(_00,_01),std::max(_02,_10)),std::max(std::max(_12,_20),std::max(_21,_22)));
+                            // find max of same-layer nieghbors
+                            sift_wt vmax = std::max(std::max(std::max(_00,_01),std::max(_02,_10)),std::max(std::max(_12,_20),std::max(_21,_22)));
+
+                            // compare max of neighbors to current value
                             if (val >= vmax)
-                            {
-                                _00 = nextptr[c-step-1]; _01 = nextptr[c-step]; _02 = nextptr[c-step+1];
-                                _10 = nextptr[c     -1];                        _12 = nextptr[c     +1];
-                                _20 = nextptr[c+step-1]; _21 = nextptr[c+step]; _22 = nextptr[c+step+1];
+                            {   
+                                // if so, load previous layer neighbors too
+                                _00 = prevptr[c-step-1]; _01 = prevptr[c-step]; _02 = prevptr[c-step+1];
+                                _10 = prevptr[c     -1];                        _12 = prevptr[c     +1];
+                                _20 = prevptr[c+step-1]; _21 = prevptr[c+step]; _22 = prevptr[c+step+1];
+
+                                // find max of prev-layer nieghbors
                                 vmax = std::max(std::max(std::max(_00,_01),std::max(_02,_10)),std::max(std::max(_12,_20),std::max(_21,_22)));
+                                
+                                // compare max of neighbors to current value
                                 if (val >= vmax)
                                 {
-                                    sift_wt _11p = prevptr[c], _11n = nextptr[c];
-                                    calculate = (val >= std::max(_11p,_11n));
+                                    // if so, load next layer neighbors too
+                                    _00 = nextptr[c-step-1]; _01 = nextptr[c-step]; _02 = nextptr[c-step+1];
+                                    _10 = nextptr[c     -1];                        _12 = nextptr[c     +1];
+                                    _20 = nextptr[c+step-1]; _21 = nextptr[c+step]; _22 = nextptr[c+step+1];
+
+                                    // find max of next-layer nieghbors
+                                    vmax = std::max(std::max(std::max(_00,_01),std::max(_02,_10)),std::max(std::max(_12,_20),std::max(_21,_22)));
+                                    
+                                    // compare max of neighbors to current value
+                                    if (val >= vmax)
+                                    {
+                                        // if so, compare current pixel to center pixels of prev and next layer
+                                        sift_wt _11p = prevptr[c], _11n = nextptr[c];
+                                        calculate = (val >= std::max(_11p,_11n));
+                                    }
                                 }
                             }
-                        }
 
-                    } else  { // val can't be zero here (first abs took care of zero), must be negative
-                        sift_wt vmin = std::min(std::min(std::min(_00,_01),std::min(_02,_10)),std::min(std::min(_12,_20),std::min(_21,_22)));
-                        if (val <= vmin)
-                        {
-                            _00 = prevptr[c-step-1]; _01 = prevptr[c-step]; _02 = prevptr[c-step+1];
-                            _10 = prevptr[c     -1];                        _12 = prevptr[c     +1];
-                            _20 = prevptr[c+step-1]; _21 = prevptr[c+step]; _22 = prevptr[c+step+1];
-                            vmin = std::min(std::min(std::min(_00,_01),std::min(_02,_10)),std::min(std::min(_12,_20),std::min(_21,_22)));
+                        } else  { // val can't be zero here (first abs took care of zero), must be negative
+
+                            // find min of current-layer neighbors
+                            sift_wt vmin = std::min(std::min(std::min(_00,_01),std::min(_02,_10)),std::min(std::min(_12,_20),std::min(_21,_22)));
+
+                            // check if pixel is smaller
                             if (val <= vmin)
                             {
-                                _00 = nextptr[c-step-1]; _01 = nextptr[c-step]; _02 = nextptr[c-step+1];
-                                _10 = nextptr[c     -1];                        _12 = nextptr[c     +1];
-                                _20 = nextptr[c+step-1]; _21 = nextptr[c+step]; _22 = nextptr[c+step+1];
+                                // if so, load in previous layer neighbors
+                                _00 = prevptr[c-step-1]; _01 = prevptr[c-step]; _02 = prevptr[c-step+1];
+                                _10 = prevptr[c     -1];                        _12 = prevptr[c     +1];
+                                _20 = prevptr[c+step-1]; _21 = prevptr[c+step]; _22 = prevptr[c+step+1];
+
+                                // find min of prev-layer neighbors
                                 vmin = std::min(std::min(std::min(_00,_01),std::min(_02,_10)),std::min(std::min(_12,_20),std::min(_21,_22)));
+
+                                // chekc if pixel is smaller
                                 if (val <= vmin)
                                 {
-                                    sift_wt _11p = prevptr[c], _11n = nextptr[c];
-                                    calculate = (val <= std::min(_11p,_11n));
+                                    // if so, then lead in next layer neighbors
+                                    _00 = nextptr[c-step-1]; _01 = nextptr[c-step]; _02 = nextptr[c-step+1];
+                                    _10 = nextptr[c     -1];                        _12 = nextptr[c     +1];
+                                    _20 = nextptr[c+step-1]; _21 = nextptr[c+step]; _22 = nextptr[c+step+1];
+
+                                    // find min of neighbors
+                                    vmin = std::min(std::min(std::min(_00,_01),std::min(_02,_10)),std::min(std::min(_12,_20),std::min(_21,_22)));
+
+                                    // check if pixel is smaller
+                                    if (val <= vmin)
+                                    {
+                                        // if so, compare pixel to top and down neighbors
+                                        sift_wt _11p = prevptr[c], _11n = nextptr[c];
+
+                                        // calculate = True means we found local min
+                                        calculate = (val <= std::min(_11p,_11n));
+                                    }
+                                }
+                            }
+                        }
+
+                        // calculate == True -> found a local maxima/minima --> add to keypoints of interest
+                        if (calculate)
+                        {
+                            KeyPoint kpt;
+                            int r1 = r, c1 = c, layer = i;
+
+                            // Sub-pixel refinement ->  adjusts (r1,c1,layer) to the true extremum location
+                            
+                            // Returns false if the refined point is too weak or on an edge → skip it
+                            if( !adjustLocalExtremaCuda(dog_pyr, kpt, o, layer, r1, c1, nOctaveLayers, (float)contrastThreshold, (float)edgeThreshold, (float)sigma) )
+                                continue;
+                            
+                            /****** END OF RACHEL's PORTION ********/
+
+                            /****** START OF NITHILA's PORTION ********/
+                            // refined point is strong, proceed to calculate orientation around keypoint
+                            float scl_octv = kpt.size*0.5f/(1 << o);
+                            float omax = calcOrientationHist(gauss_pyr[o*(nOctaveLayers+3) + layer], // gaussian layer (not DoG)
+                                                            Point(c1, r1),
+                                                            cvRound(SIFT_ORI_RADIUS * scl_octv), // radius of histogram window
+                                                            SIFT_ORI_SIG_FCTR * scl_octv, // gaussian weighting sigma
+                                                            hist, n);
+                            
+                            // For each dominant orientation peak, emit a separate keypoint
+                            float mag_thr = (float)(omax * SIFT_ORI_PEAK_RATIO);  // 80% of peak height
+                            for( int j = 0; j < n; j++ )
+                            {
+                                int l = j > 0 ? j - 1 : n - 1; // left bin (wraps)
+                                int r2 = j < n-1 ? j + 1 : 0; // right bin (wraps)
+                                
+                                // Is bin j a local peak above the threshold?
+                                if( hist[j] > hist[l]  &&  hist[j] > hist[r2]  &&  hist[j] >= mag_thr )
+                                {
+                                    // Parabolic interpolation for sub-bin precision
+                                    float bin = j + 0.5f * (hist[l]-hist[r2]) / (hist[l] - 2*hist[j] + hist[r2]);
+                                    bin = bin < 0 ? n + bin : bin >= n ? bin - n : bin; // wrap to [0,n)
+
+                                    kpt.angle = 360.f - (float)((360.f/n) * bin);  // convert bin to degrees
+                                    if(std::abs(kpt.angle - 360.f) < FLT_EPSILON)
+                                        kpt.angle = 0.f;
+
+                                    kpts_.push_back(kpt); // ← final output, one entry per orientation
                                 }
                             }
                         }
                     }
 
-                    if (calculate)
-                    {
-                        CV_TRACE_REGION("pixel_candidate");
-
-                        KeyPoint kpt;
-                        int r1 = r, c1 = c, layer = i;
-                        if( !adjustLocalExtrema(dog_pyr, kpt, o, layer, r1, c1,
-                                                nOctaveLayers, (float)contrastThreshold,
-                                                (float)edgeThreshold, (float)sigma) )
-                            continue;
-                        float scl_octv = kpt.size*0.5f/(1 << o);
-                        float omax = calcOrientationHist(gauss_pyr[o*(nOctaveLayers+3) + layer],
-                                                        Point(c1, r1),
-                                                        cvRound(SIFT_ORI_RADIUS * scl_octv),
-                                                        SIFT_ORI_SIG_FCTR * scl_octv,
-                                                        hist, n);
-                        float mag_thr = (float)(omax * SIFT_ORI_PEAK_RATIO);
-                        for( int j = 0; j < n; j++ )
-                        {
-                            int l = j > 0 ? j - 1 : n - 1;
-                            int r2 = j < n-1 ? j + 1 : 0;
-
-                            if( hist[j] > hist[l]  &&  hist[j] > hist[r2]  &&  hist[j] >= mag_thr )
-                            {
-                                float bin = j + 0.5f * (hist[l]-hist[r2]) / (hist[l] - 2*hist[j] + hist[r2]);
-                                bin = bin < 0 ? n + bin : bin >= n ? bin - n : bin;
-                                kpt.angle = 360.f - (float)((360.f/n) * bin);
-                                if(std::abs(kpt.angle - 360.f) < FLT_EPSILON)
-                                    kpt.angle = 0.f;
-
-                                kpts_.push_back(kpt);
-                            }
-                        }
-                    }
-                }
+                #endif 
             }
         }
     private:
@@ -285,6 +504,7 @@ class findScaleSpaceExtremaT
         const std::vector<Mat>& gauss_pyr;
         const std::vector<Mat>& dog_pyr;
         std::vector<KeyPoint>& kpts_;
+        
     };
 } 
 
