@@ -48,13 +48,19 @@ static Mat toKeypointMat(InputArray kpts)
     if (m.type() == CV_32FC2 || m.type() == CV_64FC2)
     {
         Mat reshaped = m.reshape(1, static_cast<int>(m.total()));
-        reshaped.convertTo(out, CV_32F);
+        if (reshaped.type() != CV_32F)
+            reshaped.convertTo(out, CV_32F);
+        else
+            out = reshaped.isContinuous() ? reshaped : reshaped.clone();
         return out;
     }
 
     if (m.channels() == 1 && m.cols == 2)
     {
-        m.convertTo(out, CV_32F);
+        if (m.type() != CV_32F)
+            m.convertTo(out, CV_32F);
+        else
+            out = m.isContinuous() ? m : m.clone();
         return out;
     }
 
@@ -64,7 +70,8 @@ static Mat toKeypointMat(InputArray kpts)
         if (reshaped.cols >= 2)
         {
             out = reshaped.colRange(0, 2).clone();
-            out.convertTo(out, CV_32F);
+            if (out.type() != CV_32F)
+                out.convertTo(out, CV_32F);
             return out;
         }
     }
@@ -80,10 +87,17 @@ static Mat normalizeKeypoints(const Mat& kpts, const Size& imageSize)
     CV_Assert(imageSize.width > 1 && imageSize.height > 1);
 
     Mat normalized = kpts.clone();
+    CV_Assert(normalized.isContinuous());
+
+    const float invWidth = 1.0f / static_cast<float>(imageSize.width - 1);
+    const float invHeight = 1.0f / static_cast<float>(imageSize.height - 1);
+    float* normalizedPtr = normalized.ptr<float>();
+
     for (int i = 0; i < normalized.rows; ++i)
     {
-        normalized.at<float>(i, 0) /= static_cast<float>(imageSize.width - 1);
-        normalized.at<float>(i, 1) /= static_cast<float>(imageSize.height - 1);
+        const int idx = i * 2;
+        normalizedPtr[idx] *= invWidth;
+        normalizedPtr[idx + 1] *= invHeight;
     }
     return normalized;
 }
@@ -168,9 +182,17 @@ public:
         Mat qNorm = normalizeKeypoints(qKpts, queryImageSize);
         Mat tNorm = normalizeKeypoints(tKpts, trainImageSize);
 
-        Mat qDesc32, tDesc32;
-        qDesc.convertTo(qDesc32, CV_32F);
-        tDesc.convertTo(tDesc32, CV_32F);
+        Mat qDesc32 = qDesc;
+        if (qDesc32.type() != CV_32F)
+            qDesc32.convertTo(qDesc32, CV_32F);
+        else if (!qDesc32.isContinuous())
+            qDesc32 = qDesc32.clone();
+
+        Mat tDesc32 = tDesc;
+        if (tDesc32.type() != CV_32F)
+            tDesc32.convertTo(tDesc32, CV_32F);
+        else if (!tDesc32.isContinuous())
+            tDesc32 = tDesc32.clone();
 
         int qKptsShape[] = {1, qNorm.rows, 2};
         Mat qKptsBlob(3, qKptsShape, CV_32FC1, qNorm.data);
@@ -198,21 +220,34 @@ public:
 
         CV_Assert(outs.size() >= 2);
 
-        Mat matches0 = outs[0].reshape(1, static_cast<int>(outs[0].total()));
-        Mat scores0 = outs[1].reshape(1, static_cast<int>(outs[1].total()));
+        Mat matches0 = outs[0];
+        if (!matches0.isContinuous())
+            matches0 = matches0.clone();
+        matches0 = matches0.reshape(1, static_cast<int>(matches0.total()));
+        if (matches0.type() != CV_32F)
+            matches0.convertTo(matches0, CV_32F);
 
-        Mat matches0f, scores0f;
-        matches0.convertTo(matches0f, CV_32F);
-        scores0.convertTo(scores0f, CV_32F);
+        Mat scores0 = outs[1];
+        if (!scores0.isContinuous())
+            scores0 = scores0.clone();
+        scores0 = scores0.reshape(1, static_cast<int>(scores0.total()));
+        if (scores0.type() != CV_32F)
+            scores0.convertTo(scores0, CV_32F);
 
         matches.clear();
-        matches.reserve(static_cast<size_t>(matches0f.total()));
+        matches.reserve(static_cast<size_t>(matches0.total()));
+
+        CV_Assert(matches0.isContinuous());
+        const float* matches0Ptr = matches0.ptr<float>();
+
+        const int scoreCount = static_cast<int>(scores0.total());
+        const float* scores0Ptr = scoreCount > 0 ? scores0.ptr<float>() : NULL;
 
         const int trainRows = tDesc32.rows;
-        const int count = static_cast<int>(matches0f.total());
+        const int count = static_cast<int>(matches0.total());
         for (int i = 0; i < count; ++i)
         {
-            const float trainIdxF = matches0f.at<float>(i, 0);
+            const float trainIdxF = matches0Ptr[i];
             if (trainIdxF < -0.5f)
                 continue;
 
@@ -220,7 +255,7 @@ public:
             if (trainIdx < 0 || trainIdx >= trainRows)
                 continue;
 
-            const float score = i < static_cast<int>(scores0f.total()) ? scores0f.at<float>(i, 0) : 0.0f;
+            const float score = (scores0Ptr != NULL && i < scoreCount) ? scores0Ptr[i] : 0.0f;
             if (score < params_.scoreThreshold)
                 continue;
             const float distance = 1.0f - score;
