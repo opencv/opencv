@@ -2,6 +2,30 @@
 This is a sample script to run Qwen2.5 inference in OpenCV using ONNX model.
 The script loads the Qwen2.5 model and runs inference on a given prompt using
 the ChatML format (<|im_start|> / <|im_end|> special tokens).
+
+Model: https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct
+
+Exporting Qwen2.5 model to ONNX:
+
+1. Install the required dependencies:
+
+    pip install optimum[exporters] torch transformers
+
+2. Export the model to ONNX:
+
+    optimum-cli export onnx --model Qwen/Qwen2.5-0.5B-Instruct --task causal-lm qwen2.5_instruct_onnx/
+
+
+Run the script:
+1. Install the required dependencies:
+
+    pip install numpy
+
+2. Run the script:
+
+    python qwen_inference.py --model=<path-to-onnx-model> \
+                             --tokenizer_path=<path-to-qwen2.5-config.json> \
+                             --prompt="What is OpenCV?"
 '''
 
 import numpy as np
