@@ -1129,16 +1129,14 @@ void ONNXImporter2::parseConstant(LayerParams& layerParams, const opencv_onnx::N
         if (layerParams.has("value_float"))
         {
             float v = layerParams.get<float>("value_float");
-            int sizes[] = { 1 };
-            m.create(1, sizes, CV_32F);
-            m.at<float>(0) = v;
+            m.create(0, nullptr, CV_32F);
+            m.at<float>() = v;
         }
         else if (layerParams.has("value_int"))
         {
             int v = layerParams.get<int>("value_int");
-            int sizes[] = { 1 };
-            m.create(1, sizes, CV_32S);
-            m.at<int>(0) = v;
+            m.create(0, nullptr, CV_32S);
+            m.at<int>() = v;
         }
         else if (layerParams.has("value_floats"))
         {

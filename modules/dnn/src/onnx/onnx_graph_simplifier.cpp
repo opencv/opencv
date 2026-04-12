@@ -1988,7 +1988,7 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
         return blob;
     }
     if (tensor_proto.dims_size() == 0) {
-        blob.size.dims = blob.dims = 1;  // To force 1-dimensional cv::Mat for scalars.
+        blob.size.dims = blob.dims = 0;
     }
     return blob;
 }
