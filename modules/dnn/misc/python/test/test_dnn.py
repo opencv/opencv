@@ -427,7 +427,7 @@ class dnn_test(NewOpenCVTests):
           top: "Crop"
         }'''
 
-        net = cv.dnn.readNetFromCaffe(bytearray(proto.encode()))
+        net = cv.dnn.readNet("caffe", b"", bytearray(proto.encode()))
         for backend, target in self.dnnBackendsAndTargets:
             if backend != cv.dnn.DNN_BACKEND_OPENCV:
                 continue
