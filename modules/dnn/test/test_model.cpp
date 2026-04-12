@@ -921,4 +921,61 @@ TEST_P(Reproducibility_ResNet50_ONNX, Accuracy)
 INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_ResNet50_ONNX,
                         testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
 
+typedef testing::TestWithParam<Target> Reproducibility_ResNet50_QDQ_ONNX;
+TEST_P(Reproducibility_ResNet50_QDQ_ONNX, Accuracy)
+{
+    Target targetId = GetParam();
+    applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
+
+    std::string modelname = _tf("onnx/models/resnet50-v1-12-qdq.onnx", false);
+    Net net = readNetFromONNX(modelname);
+
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(targetId);
+
+    if (targetId == DNN_TARGET_CPU_FP16)
+        net.enableWinograd(false);
+
+    std::string imgname = _tf("sqcat.png");
+    Mat image = imread(imgname);
+    Mat input = blobFromImage(image, 0.017, Size(224,224),
+                              Scalar(103.939, 116.779, 123.68),
+                              false, true, CV_32F);
+    ASSERT_TRUE(!input.empty());
+
+    Mat out;
+    double min_t = 0;
+    const int niters =
+#ifdef _DEBUG
+        1;
+#else
+        30;
+#endif
+
+    for (int i = 0; i < niters; i++) {
+        double t = (double)getTickCount();
+        net.setInput(input);
+        out = net.forward();
+        t = (double)getTickCount() - t;
+        min_t = i == 0 ? t : std::min(min_t, t);
+    }
+    printf("run time = %.2fms\n", min_t*1000./getTickFrequency());
+
+    const int K = 5;
+    std::vector<std::pair<int, float> > res;
+    topK(out, res, K);
+    ASSERT_EQ(int(res.size()), K);
+
+    std::vector<std::pair<int, float> > ref = {{285, 10.44}, {287, 10.13}, {283, 8.89}, {278, 8.43}};
+    const float eps = 0.5f;
+
+    for (int i = 0; i < (int)ref.size(); i++) {
+        EXPECT_EQ(ref[i].first, res[i].first);
+        EXPECT_NEAR(ref[i].second, res[i].second, eps);
+    }
+}
+INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_ResNet50_QDQ_ONNX,
+                        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
+
 }} // namespace
