@@ -1033,6 +1033,43 @@ private:
     int hardSigmoidId;
 };
 
+// Swish/SiLU: x * Sigmoid(x)
+class SwishSubgraph : public Subgraph
+{
+public:
+    SwishSubgraph()
+    {
+        int input = addNodeToMatch("");
+        sigmoidId = addNodeToMatch("Sigmoid", input);
+        mulId = addNodeToMatch("Mul", input, sigmoidId);
+        setFusedNode("Swish", input);
+    }
+
+    virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
+                       std::vector<int>& matchedNodesIds) CV_OVERRIDE
+    {
+        if (Subgraph::match(net, nodeId, matchedNodesIds))
+        {
+            // Verify both Mul inputs trace to the same tensor as Sigmoid's input.
+            Ptr<ImportNodeWrapper> mulNode = net->getNode(matchedNodesIds[mulId]);
+            Ptr<ImportNodeWrapper> sigmoidNode = net->getNode(matchedNodesIds[sigmoidId]);
+            std::string sigmoidInput = sigmoidNode->getInputName(0);
+            std::string sigmoidOutput = net->getOutputName(matchedNodesIds[sigmoidId], 0);
+
+            for (int i = 0; i < mulNode->getNumInputs(); i++)
+            {
+                std::string mulInput = mulNode->getInputName(i);
+                if (mulInput != sigmoidOutput)
+                    return mulInput == sigmoidInput;
+            }
+        }
+        return false;
+    }
+
+private:
+    int sigmoidId, mulId;
+};
+
 class CeluSubgraph : public Subgraph
 {
 public:
@@ -1706,6 +1743,7 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net)
     subgraphs.push_back(makePtr<SoftMaxSubgraph>());
     subgraphs.push_back(makePtr<SoftMaxSubgraph2>());
     subgraphs.push_back(makePtr<LogSoftMaxSubgraph>());
+    subgraphs.push_back(makePtr<SwishSubgraph>());
     subgraphs.push_back(makePtr<HardSwishSubgraph>());
     subgraphs.push_back(makePtr<CeluSubgraph>());
     subgraphs.push_back(makePtr<NormalizeSubgraph1>());
