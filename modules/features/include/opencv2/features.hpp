@@ -1294,4 +1294,7 @@ public:
 
 } /* namespace cv */
 
+#include "opencv2/features/feature_extractor.hpp"
+#include "opencv2/features/feature_matcher.hpp"
+
 #endif
