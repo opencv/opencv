@@ -10,15 +10,17 @@
 #include "opencv2/dnn/dnn.hpp"
 #endif
 
-namespace cv
-{
-namespace features
-{
+namespace cv {
+namespace features {
 
 LightGlue::Params::Params()
 {
     modelPath = String();
-    dnnEngine = 4; // dnn::ENGINE_ORT
+#ifdef HAVE_OPENCV_DNN
+    dnnEngine = dnn::ENGINE_AUTO;
+#else
+    dnnEngine = 3; // dnn::ENGINE_AUTO
+#endif
     dnnBackend = -1;
     dnnTarget = -1;
     disableWinograd = true;
