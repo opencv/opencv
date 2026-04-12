@@ -117,9 +117,13 @@ public:
         //CV_Assert(startAxis >= 0 && startAxis <= numAxes);
 
         if (_onnxMode) {
+            CV_Assert(numAxes >= 0);
+            CV_Check(_startAxis, _startAxis >= -numAxes && _startAxis <= numAxes, "");
             startAxis = _startAxis < 0 ? _startAxis + numAxes : _startAxis;
             startAxis = std::min(std::max(startAxis, 0), numAxes);
-
+            if((unsigned)_startAxis == 1 && numAxes ==1) {
+                startAxis = 0;
+            }
             size_t outer = 1, inner = 1;
             int i = 0;
             for (; i < startAxis; i++)
