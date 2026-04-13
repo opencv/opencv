@@ -73,15 +73,6 @@ int armpl_hal_dftFree1D(cvhalDFT *context);
 #undef  cv_hal_dftFree1D
 #define cv_hal_dftFree1D armpl_hal_dftFree1D
 
-int armplDFTFwd_RToPack(const float*  src, float*  dst,
-                        const void* spec, unsigned char* buf);
-int armplDFTFwd_RToPack(const double* src, double* dst,
-                        const void* spec, unsigned char* buf);
-int armplDFTInv_PackToR(const float*  src, float*  dst,
-                        const void* spec, unsigned char* buf);
-int armplDFTInv_PackToR(const double* src, double* dst,
-                        const void* spec, unsigned char* buf);
-
 int armpl_hal_dctInit2D(cvhalDFT **context, int width, int height,
                         int depth, int flags);
 int armpl_hal_dct2D(cvhalDFT *context, const unsigned char *src_data,

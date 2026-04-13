@@ -1,7 +1,19 @@
 if(NOT TARGET armpl)
-  add_library(armpl STATIC IMPORTED)
-  set_target_properties(armpl PROPERTIES
-    IMPORTED_LINK_INTERFACE_LIBRARIES ""
-    IMPORTED_LOCATION "${OpenCV_INSTALL_PATH}/@ARMPL_INSTALL_PATH_RELATIVE_CONFIGCMAKE@"
+  find_library(ARMPL_LIBRARY
+    NAMES armpl_lp64_mp armpl_ilp64_mp armpl_lp64 armpl_ilp64
+    HINTS ENV ARMPL_DIR
+    PATH_SUFFIXES lib
   )
+  find_path(ARMPL_INCLUDE_DIR
+    NAMES armpl.h
+    HINTS ENV ARMPL_DIR
+    PATH_SUFFIXES include
+  )
+  if(ARMPL_LIBRARY AND ARMPL_INCLUDE_DIR)
+    add_library(armpl UNKNOWN IMPORTED)
+    set_target_properties(armpl PROPERTIES
+      IMPORTED_LOCATION "${ARMPL_LIBRARY}"
+      INTERFACE_INCLUDE_DIRECTORIES "${ARMPL_INCLUDE_DIR}"
+    )
+  endif()
 endif()

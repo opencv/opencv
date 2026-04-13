@@ -19,6 +19,7 @@ Introduction to OpenCV {#tutorial_table_of_content_introduction}
 -   @subpage tutorial_windows_visual_studio_opencv
 -   @subpage tutorial_windows_visual_studio_image_watch
 -   @subpage tutorial_windows_msys2_vscode
+-   @subpage tutorial_windows_armpl
 
 ##### Java & Android
 -   @subpage tutorial_java_dev_intro

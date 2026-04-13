@@ -18,12 +18,51 @@ enum ArmPLDFTMode
     ARMPL_DFT_1D_C2C_INV_64,
     ARMPL_DFT_1D_R2C_32,
     ARMPL_DFT_1D_R2C_64,
+    ARMPL_DFT_1D_R2C_FWD,
+    ARMPL_DFT_1D_R2C_FWD_64, 
     ARMPL_DFT_1D_R2C_ROWS_32,
     ARMPL_DFT_1D_R2C_ROWS_64,
+    ARMPL_DFT_1D_C2R_INV,
+    ARMPL_DFT_1D_C2R_INV_64,
     ARMPL_DCT_2D,
     ARMPL_DCT_2D_64,
     ARMPL_DCT_ROW,
     ARMPL_DCT_ROW_64,
+};
+struct ArmPL1DR2CFwdContext {
+    ArmPLDFTMode mode;
+    int          len;
+    fftwf_plan   plan;
+    float        scale;
+    bool         no_scale;
+    bool         complex_output;
+};
+
+struct ArmPL1DR2CFwdContext64 {
+    ArmPLDFTMode mode;
+    int          len;
+    fftw_plan    plan;
+    double       scale;
+    bool         no_scale;
+    bool         complex_output;
+};
+
+struct ArmPL1DC2RInvContext {
+    ArmPLDFTMode mode;
+    int          len;
+    fftwf_plan   plan;
+    float        scale;
+    bool         no_scale;
+    bool         complex_input;
+};
+
+struct ArmPL1DC2RInvContext64 {
+    ArmPLDFTMode mode;
+    int          len;
+    fftw_plan    plan;
+    double       scale;
+    bool         no_scale;
+    bool         complex_input;
 };
 
 struct ArmPLDCT2DContext
@@ -826,6 +865,135 @@ int armpl_hal_dftInit1D(cvhalDFT **context, int len, int count,
     const bool isStageCol   = (flags & CV_HAL_DFT_STAGE_COLS)     != 0;
 
     const bool isRealTransform = isRealOut;
+
+    if (isRealTransform && !isInverse && !isStageCol)
+    {
+        double scale_d = 1.0;
+        if (isScaled && !isTwoStage)
+        {
+            int rowCount = count;
+            if (isRows) rowCount = 1;
+            scale_d = 1.0 / (double)(len * rowCount);
+        }
+        if (depth == CV_32F)
+        {
+            float* tmp_in  = (float*)fftwf_malloc(sizeof(float) * len);
+            fftwf_complex* tmp_out = (fftwf_complex*)fftwf_malloc(
+                                         sizeof(fftwf_complex) * (len / 2 + 1));
+            if (!tmp_in || !tmp_out)
+            {
+                if (tmp_in)  fftwf_free(tmp_in);
+                if (tmp_out) fftwf_free(tmp_out);
+                return CV_HAL_ERROR_NOT_IMPLEMENTED;
+            }
+            fftwf_plan plan = fftwf_plan_dft_r2c_1d(len, tmp_in, tmp_out, FFTW_ESTIMATE);
+            fftwf_free(tmp_in);
+            fftwf_free(tmp_out);
+            if (!plan) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+            ArmPL1DR2CFwdContext *ctx = new ArmPL1DR2CFwdContext();
+            ctx->mode = ARMPL_DFT_1D_R2C_FWD;
+            ctx->len = len;
+            ctx->plan = plan;
+            ctx->scale = (float)scale_d;
+            ctx->no_scale = (scale_d == 1.0);
+            ctx->complex_output = isComplexOut;
+            *context = reinterpret_cast<cvhalDFT*>(ctx);
+        }
+        else // CV_64F
+        {
+            double* tmp_in  = (double*)fftw_malloc(sizeof(double) * len);
+            fftw_complex* tmp_out = (fftw_complex*)fftw_malloc(
+                                        sizeof(fftw_complex) * (len / 2 + 1));
+            if (!tmp_in || !tmp_out)
+            {
+                if (tmp_in)  fftw_free(tmp_in);
+                if (tmp_out) fftw_free(tmp_out);
+                return CV_HAL_ERROR_NOT_IMPLEMENTED;
+            }
+            fftw_plan plan = fftw_plan_dft_r2c_1d(len, tmp_in, tmp_out, FFTW_ESTIMATE);
+            fftw_free(tmp_in);
+            fftw_free(tmp_out);
+            if (!plan) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+            ArmPL1DR2CFwdContext64 *ctx = new ArmPL1DR2CFwdContext64();
+            ctx->mode = ARMPL_DFT_1D_R2C_FWD_64;
+            ctx->len = len;
+            ctx->plan = plan;
+            ctx->scale = scale_d;
+            ctx->no_scale = (scale_d == 1.0);
+            ctx->complex_output = isComplexOut;
+            *context = reinterpret_cast<cvhalDFT*>(ctx);
+        }
+
+        if (needBuffer) *needBuffer = false;
+        return CV_HAL_ERROR_OK;
+    }
+    if (isRealTransform && isInverse && !isStageCol)
+    {
+        double scale_d = 1.0;
+        if (isScaled && !isTwoStage)
+        {
+            int rowCount = count;
+            if (isRows) rowCount = 1;
+            scale_d = 1.0 / (double)(len * rowCount);
+        }
+
+        if (depth == CV_32F)
+        {
+            float* tmp_in  = (float*)fftwf_malloc(sizeof(float) * len);
+            fftwf_complex* tmp_out = (fftwf_complex*)fftwf_malloc(
+                                         sizeof(fftwf_complex) * (len / 2 + 1));
+            if (!tmp_in || !tmp_out)
+            {
+                if (tmp_in)  fftwf_free(tmp_in);
+                if (tmp_out) fftwf_free(tmp_out);
+                return CV_HAL_ERROR_NOT_IMPLEMENTED;
+            }
+            fftwf_plan plan = fftwf_plan_dft_c2r_1d(len, tmp_out, tmp_in, FFTW_ESTIMATE);
+            fftwf_free(tmp_in);
+            fftwf_free(tmp_out);
+            if (!plan) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+            ArmPL1DC2RInvContext *ctx = new ArmPL1DC2RInvContext();
+            ctx->mode          = ARMPL_DFT_1D_C2R_INV;
+            ctx->len           = len;
+            ctx->plan          = plan;
+            ctx->scale         = (float)scale_d;
+            ctx->no_scale      = (scale_d == 1.0);
+            ctx->complex_input = isComplexOut;
+            *context = reinterpret_cast<cvhalDFT*>(ctx);
+        }
+        else // CV_64F
+        {
+            double* tmp_in  = (double*)fftw_malloc(sizeof(double) * len);
+            fftw_complex* tmp_out = (fftw_complex*)fftw_malloc(
+                                        sizeof(fftw_complex) * (len / 2 + 1));
+            if (!tmp_in || !tmp_out)
+            {
+                if (tmp_in)  fftw_free(tmp_in);
+                if (tmp_out) fftw_free(tmp_out);
+                return CV_HAL_ERROR_NOT_IMPLEMENTED;
+            }
+            fftw_plan plan = fftw_plan_dft_c2r_1d(len, tmp_out, tmp_in, FFTW_ESTIMATE);
+            fftw_free(tmp_in);
+            fftw_free(tmp_out);
+            if (!plan) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+            ArmPL1DC2RInvContext64 *ctx = new ArmPL1DC2RInvContext64();
+            ctx->mode = ARMPL_DFT_1D_C2R_INV_64;
+            ctx->len = len;
+            ctx->plan = plan;
+            ctx->scale = scale_d;
+            ctx->no_scale = (scale_d == 1.0);
+            ctx->complex_input = isComplexOut;
+            *context = reinterpret_cast<cvhalDFT*>(ctx);
+        }
+
+        if (needBuffer) *needBuffer = false;
+        return CV_HAL_ERROR_OK;
+    }
+
     if (isRealTransform)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (isScaled && !isRows && isRealTransform)
@@ -893,6 +1061,221 @@ int armpl_hal_dft1D(cvhalDFT *context,
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
     const ArmPLDFTMode mode = *reinterpret_cast<const ArmPLDFTMode*>(context);
+
+    if (mode == ARMPL_DFT_1D_R2C_FWD)
+    {
+        ArmPL1DR2CFwdContext *ctx = reinterpret_cast<ArmPL1DR2CFwdContext*>(context);
+        if (!ctx->plan) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+        const int  n = ctx->len;
+        const bool complex_output = ctx->complex_output;
+        const bool no_scale = ctx->no_scale;
+        const float sc = ctx->scale;
+
+        const float* src_f = reinterpret_cast<const float*>(src);
+        float* dst_f = reinterpret_cast<float*>(dst);
+
+        fftwf_complex* tmp_out = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex) * (n / 2 + 1));
+        if (!tmp_out) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+        fftwf_execute_dft_r2c(ctx->plan, const_cast<float*>(src_f), tmp_out);
+
+        float* dst_pack = dst_f + (complex_output ? 1 : 0);
+        dst_pack[0] = tmp_out[0][0];
+
+        const int num_complex = (n - 1) / 2;
+        int dst_idx = 1;
+        for (int i = 1; i <= num_complex; i++)
+        {
+            dst_pack[dst_idx++] = tmp_out[i][0];
+            dst_pack[dst_idx++] = tmp_out[i][1];
+        }
+        if ((n & 1) == 0)
+            dst_pack[n - 1] = tmp_out[n / 2][0];
+
+        fftwf_free(tmp_out);
+
+        if (!no_scale)
+        {
+            for (int i = 0; i < n; i++)
+                dst_pack[i] *= sc;
+        }
+
+        if (complex_output)
+        {
+            dst_f[0] = dst_pack[0];
+            dst_pack[0] = 0.f;
+            if ((n & 1) == 0)
+                dst_pack[n] = 0.f;
+        }
+        return CV_HAL_ERROR_OK;
+    }
+
+    if (mode == ARMPL_DFT_1D_R2C_FWD_64)
+    {
+        ArmPL1DR2CFwdContext64 *ctx = reinterpret_cast<ArmPL1DR2CFwdContext64*>(context);
+        if (!ctx->plan) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+        const int n = ctx->len;
+        const bool complex_output = ctx->complex_output;
+        const bool no_scale = ctx->no_scale;
+        const double sc = ctx->scale;
+
+        const double* src_d = reinterpret_cast<const double*>(src);
+        double* dst_d = reinterpret_cast<double*>(dst);
+
+        fftw_complex* tmp_out = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * (n / 2 + 1));
+        if (!tmp_out) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        fftw_execute_dft_r2c(ctx->plan, const_cast<double*>(src_d), tmp_out);
+
+        double* dst_pack = dst_d + (complex_output ? 1 : 0);
+        dst_pack[0] = tmp_out[0][0];
+
+        const int num_complex = (n - 1) / 2;
+        int dst_idx = 1;
+        for (int i = 1; i <= num_complex; i++)
+        {
+            dst_pack[dst_idx++] = tmp_out[i][0];
+            dst_pack[dst_idx++] = tmp_out[i][1];
+        }
+        if ((n & 1) == 0)
+            dst_pack[n - 1] = tmp_out[n / 2][0];
+
+        fftw_free(tmp_out);
+
+        if (!no_scale)
+        {
+            for (int i = 0; i < n; i++)
+                dst_pack[i] *= sc;
+        }
+
+        if (complex_output)
+        {
+            dst_d[0] = dst_pack[0];
+            dst_pack[0] = 0.0;
+            if ((n & 1) == 0)
+                dst_pack[n] = 0.0;
+        }
+
+        return CV_HAL_ERROR_OK;
+    }
+    if (mode == ARMPL_DFT_1D_C2R_INV)
+    {
+        ArmPL1DC2RInvContext *ctx = reinterpret_cast<ArmPL1DC2RInvContext*>(context);
+        if (!ctx->plan) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+        const int   n             = ctx->len;
+        const bool  complex_input = ctx->complex_input;
+        const bool  no_scale      = ctx->no_scale;
+        const float sc            = ctx->scale;
+
+        const float* src_f = reinterpret_cast<const float*>(src);
+        float* dst_f = reinterpret_cast<float*>(dst);
+
+        float save_s1 = 0.f;
+        if (complex_input)
+        {
+            save_s1 = src_f[1];
+            const_cast<float*>(src_f)[1] = src_f[0];
+            src_f++;
+        }
+
+        fftwf_complex* tmp = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex) * (n / 2 + 1));
+        if (!tmp)
+        {
+            if (complex_input)
+                const_cast<float*>(src_f - 1)[1] = save_s1;
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        }
+
+        tmp[0][0] = src_f[0];
+        tmp[0][1] = 0.f;
+        const int num_complex = (n - 1) / 2;
+        int src_idx = 1;
+        for (int i = 1; i <= num_complex; i++)
+        {
+            tmp[i][0] = src_f[src_idx++];
+            tmp[i][1] = src_f[src_idx++];
+        }
+        if ((n & 1) == 0)
+        {
+            tmp[n / 2][0] = src_f[n - 1];
+            tmp[n / 2][1] = 0.f;
+        }
+
+        fftwf_execute_dft_c2r(ctx->plan, tmp, dst_f);
+        fftwf_free(tmp);
+
+        if (complex_input)
+            const_cast<float*>(src_f - 1)[1] = save_s1;
+
+        if (!no_scale)
+        {
+            for (int i = 0; i < n; i++)
+                dst_f[i] *= sc;
+        }
+
+        return CV_HAL_ERROR_OK;
+    }
+
+    if (mode == ARMPL_DFT_1D_C2R_INV_64)
+    {
+        ArmPL1DC2RInvContext64 *ctx = reinterpret_cast<ArmPL1DC2RInvContext64*>(context);
+        if (!ctx->plan) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+        const int n = ctx->len;
+        const bool complex_input = ctx->complex_input;
+        const bool no_scale = ctx->no_scale;
+        const double sc = ctx->scale;
+
+        const double* src_d = reinterpret_cast<const double*>(src);
+        double* dst_d = reinterpret_cast<double*>(dst);
+
+        double save_s1 = 0.0;
+        if (complex_input)
+        {
+            save_s1 = src_d[1];
+            const_cast<double*>(src_d)[1] = src_d[0];
+            src_d++;
+        }
+
+        fftw_complex* tmp = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * (n / 2 + 1));
+        if (!tmp)
+        {
+            if (complex_input)
+                const_cast<double*>(src_d - 1)[1] = save_s1;
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        }
+
+        tmp[0][0] = src_d[0];
+        tmp[0][1] = 0.0;
+        const int num_complex = (n - 1) / 2;
+        int src_idx = 1;
+        for (int i = 1; i <= num_complex; i++)
+        {
+            tmp[i][0] = src_d[src_idx++];
+            tmp[i][1] = src_d[src_idx++];
+        }
+        if ((n & 1) == 0)
+        {
+            tmp[n / 2][0] = src_d[n - 1];
+            tmp[n / 2][1] = 0.0;
+        }
+
+        fftw_execute_dft_c2r(ctx->plan, tmp, dst_d);
+        fftw_free(tmp);
+
+        if (complex_input)
+            const_cast<double*>(src_d - 1)[1] = save_s1;
+
+        if (!no_scale)
+        {
+            for (int i = 0; i < n; i++)
+                dst_d[i] *= sc;
+        }
+
+        return CV_HAL_ERROR_OK;
+    }
     if (mode == ARMPL_DFT_1D_C2C_FWD || mode == ARMPL_DFT_1D_C2C_INV)
     {
         ArmPL1DC2CFwdContext *ctx = reinterpret_cast<ArmPL1DC2CFwdContext*>(context);
@@ -962,6 +1345,34 @@ int armpl_hal_dftFree1D(cvhalDFT *context)
 
     const ArmPLDFTMode mode = *reinterpret_cast<const ArmPLDFTMode*>(context);
 
+    if (mode == ARMPL_DFT_1D_R2C_FWD)
+    {
+        ArmPL1DR2CFwdContext *ctx = reinterpret_cast<ArmPL1DR2CFwdContext*>(context);
+        if (ctx->plan) fftwf_destroy_plan(ctx->plan);
+        delete ctx;
+        return CV_HAL_ERROR_OK;
+    }
+    if (mode == ARMPL_DFT_1D_R2C_FWD_64)
+    {
+        ArmPL1DR2CFwdContext64 *ctx = reinterpret_cast<ArmPL1DR2CFwdContext64*>(context);
+        if (ctx->plan) fftw_destroy_plan(ctx->plan);
+        delete ctx;
+        return CV_HAL_ERROR_OK;
+    }
+    if (mode == ARMPL_DFT_1D_C2R_INV)
+    {
+        ArmPL1DC2RInvContext *ctx = reinterpret_cast<ArmPL1DC2RInvContext*>(context);
+        if (ctx->plan) fftwf_destroy_plan(ctx->plan);
+        delete ctx;
+        return CV_HAL_ERROR_OK;
+    }
+    if (mode == ARMPL_DFT_1D_C2R_INV_64)
+    {
+        ArmPL1DC2RInvContext64 *ctx = reinterpret_cast<ArmPL1DC2RInvContext64*>(context);
+        if (ctx->plan) fftw_destroy_plan(ctx->plan);
+        delete ctx;
+        return CV_HAL_ERROR_OK;
+    }
     if (mode == ARMPL_DFT_1D_C2C_FWD || mode == ARMPL_DFT_1D_C2C_INV)
     {
         ArmPL1DC2CFwdContext *ctx = reinterpret_cast<ArmPL1DC2CFwdContext*>(context);
@@ -976,136 +1387,6 @@ int armpl_hal_dftFree1D(cvhalDFT *context)
     }
 
     return CV_HAL_ERROR_OK;
-}
-
-int armplDFTFwd_RToPack(const float* src, float* dst,
-                        const void* spec_, unsigned char* /*buf*/)
-{
-    const ArmplDFTSpec_R_32f* spec = static_cast<const ArmplDFTSpec_R_32f*>(spec_);
-    const int n = spec->n;
-    fftwf_complex* tmp = reinterpret_cast<fftwf_complex*>(
-        fftwf_malloc(sizeof(fftwf_complex) * (n / 2 + 1)));
-    if (!tmp) return -1;
-
-    fftwf_execute_dft_r2c(spec->plan, const_cast<float*>(src), tmp);
-
-    dst[0] = tmp[0][0];
-
-    const int num_complex = (n - 1) / 2;
-    int dst_idx = 1;
-    int i = 1;
-
-#ifdef CV_NEON
-    const int simd_end = 1 + (num_complex / 4) * 4;
-    for (; i < simd_end; i += 4)
-    {
-        float32x4x2_t cd = vld2q_f32(reinterpret_cast<const float*>(&tmp[i]));
-        vst2q_f32(&dst[dst_idx], cd);
-        dst_idx += 8;
-    }
-#endif
-    for (; i <= num_complex; i++)
-    {
-        dst[dst_idx++] = tmp[i][0];
-        dst[dst_idx++] = tmp[i][1];
-    }
-
-    if ((n & 1) == 0)
-        dst[n - 1] = tmp[n / 2][0];
-
-    fftwf_free(tmp);
-    return 0;
-}
-
-int armplDFTFwd_RToPack(const double* src, double* dst,
-                        const void* spec_, unsigned char* /*buf*/)
-{
-    const ArmplDFTSpec_R_64f* spec = static_cast<const ArmplDFTSpec_R_64f*>(spec_);
-    const int n = spec->n;
-    fftw_complex* tmp = reinterpret_cast<fftw_complex*>(
-        fftw_malloc(sizeof(fftw_complex) * (n / 2 + 1)));
-    if (!tmp) return -1;
-
-    fftw_execute_dft_r2c(spec->plan, const_cast<double*>(src), tmp);
-
-    dst[0] = tmp[0][0];  // DC
-
-    const int num_complex = (n - 1) / 2;
-    int dst_idx = 1;
-    for (int i = 1; i <= num_complex; i++)
-    {
-        dst[dst_idx++] = tmp[i][0];
-        dst[dst_idx++] = tmp[i][1];
-    }
-
-    if ((n & 1) == 0)
-        dst[n - 1] = tmp[n / 2][0];
-
-    fftw_free(tmp);
-    return 0;
-}
-
-int armplDFTInv_PackToR(const float* src, float* dst,
-                        const void* spec_, unsigned char* /*buf*/)
-{
-    const ArmplDFTSpec_R_32f* spec = static_cast<const ArmplDFTSpec_R_32f*>(spec_);
-    const int n = spec->n;
-
-    fftwf_complex* tmp = reinterpret_cast<fftwf_complex*>(
-        fftwf_malloc(sizeof(fftwf_complex) * (n / 2 + 1)));
-    if (!tmp) return -1;
-
-    tmp[0][0] = src[0];
-    tmp[0][1] = 0.f;
-
-    const int num_complex = (n - 1) / 2;
-    int src_idx = 1;
-    for (int i = 1; i <= num_complex; i++)
-    {
-        tmp[i][0] = src[src_idx++];
-        tmp[i][1] = src[src_idx++];
-    }
-
-    if ((n & 1) == 0)
-    {
-        tmp[n / 2][0] = src[n - 1];
-        tmp[n / 2][1] = 0.f;
-    }
-
-    fftwf_execute_dft_c2r(spec->plan, tmp, dst);
-    fftwf_free(tmp);
-    return 0;
-}
-
-int armplDFTInv_PackToR(const double* src, double* dst,
-                        const void* spec_, unsigned char* /*buf*/)
-{
-    const ArmplDFTSpec_R_64f* spec = static_cast<const ArmplDFTSpec_R_64f*>(spec_);
-    const int n = spec->n;
-    fftw_complex* tmp = reinterpret_cast<fftw_complex*>(
-        fftw_malloc(sizeof(fftw_complex) * (n / 2 + 1)));
-    if (!tmp) return -1;
-
-    tmp[0][0] = src[0];
-    tmp[0][1] = 0.0;
-
-    const int num_complex = (n - 1) / 2;
-    int src_idx = 1;
-    for (int i = 1; i <= num_complex; i++)
-    {
-        tmp[i][0] = src[src_idx++];
-        tmp[i][1] = src[src_idx++];
-    }
-
-    if ((n & 1) == 0)
-    {
-        tmp[n / 2][0] = src[n - 1];
-        tmp[n / 2][1] = 0.0;
-    }
-
-    fftw_execute_dft_c2r(spec->plan, tmp, dst);
-    fftw_free(tmp);
-    return 0;
 }
 
 class DctHalRowInvoker : public cv::ParallelLoopBody
