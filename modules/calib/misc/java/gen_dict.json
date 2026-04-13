@@ -7,8 +7,6 @@
     },
     "func_arg_fix" : {
         "initCameraMatrix2D" : { "objectPoints" : {"ctype" : "vector_vector_Point3f"},
-                                 "imagePoints"  : {"ctype" : "vector_vector_Point2f"} },
-        "findChessboardCorners" : { "corners" : {"ctype" : "vector_Point2f"} },
-        "drawChessboardCorners" : { "corners" : {"ctype" : "vector_Point2f"} }
+                                 "imagePoints"  : {"ctype" : "vector_vector_Point2f"} }
     }
 }
