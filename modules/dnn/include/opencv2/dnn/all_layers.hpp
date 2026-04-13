@@ -964,12 +964,10 @@ CV__DNN_INLINE_NS_BEGIN
                                   size_t /*outPlaneSize*/, int /*cn0*/, int /*cn1*/) const {}
 
         /** Returns a platform-optimized activation function pointer for this layer.
-            @param depth data type (e.g., CV_32F)
-            @param activParams [out] filled with activation-specific parameters
             @return function pointer, or nullptr if not available for the given depth
         */
-        virtual ActivationFunc getActivationFunc(int depth,
-                                                 std::vector<float>& activParams) const
+        virtual ActivationFunc getActivationFunc(int /*depth*/,
+                                                 std::vector<float>& /*activParams*/) const
         { return nullptr; }
     };
 
