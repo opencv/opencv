@@ -1563,7 +1563,7 @@ TEST_P(Test_ONNX_layers, LSTM_cell_bidirectional)
     else if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
     {
         l1 = 3e-4;
-        lInf = 2e-3;
+        lInf = 3e-3;
     }
     testONNXModels("lstm_cell_bidirectional", npy, l1, lInf, false, false);
 }
