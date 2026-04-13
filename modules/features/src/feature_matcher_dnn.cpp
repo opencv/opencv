@@ -13,14 +13,16 @@
 namespace cv {
 namespace features {
 
+static const int kDnnEngineAuto = 3;
+#ifdef HAVE_OPENCV_DNN
+static_assert(kDnnEngineAuto == static_cast<int>(dnn::ENGINE_AUTO),
+              "kDnnEngineAuto must match dnn::ENGINE_AUTO");
+#endif
+
 LightGlue::Params::Params()
 {
     modelPath = String();
-#ifdef HAVE_OPENCV_DNN
-    dnnEngine = dnn::ENGINE_AUTO;
-#else
-    dnnEngine = 3; // dnn::ENGINE_AUTO
-#endif
+    dnnEngine = kDnnEngineAuto;
     dnnBackend = -1;
     dnnTarget = -1;
     disableWinograd = true;
