@@ -1,12 +1,12 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+// Copyright (C) 2026, BigVision LLC, all rights reserved.
+// Third party copyrights are property of their respective owners.
 
 #include <opencv2/dnn/all_layers.hpp>
 #include "opencv2/core/hal/intrin.hpp"
 #include <math.h>
-
-// === dispatched calls (implemented here)
 
 namespace cv {
 namespace dnn {
@@ -15,9 +15,7 @@ CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 cv::dnn::ActivationFunc getActivationFunc_(int type);
 
 CV_CPU_OPTIMIZATION_NAMESPACE_END
-}} // cv::dnn::
-
-// === implementation
+}}
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
