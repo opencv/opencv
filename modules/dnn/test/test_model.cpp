@@ -993,7 +993,7 @@ TEST_P(Reproducibility_MobileNetSSD_ONNX, Accuracy)
     applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
     ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
 
-    std::string modelname = _tf("onnx/models/ssd_mobilenet_v1_12.onnx", true);
+    std::string modelname = _tf("onnx/models/ssd_mobilenet_v1_12.onnx", false);
     Net net = readNetFromONNX(modelname);
 
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
