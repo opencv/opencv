@@ -28,6 +28,108 @@ using namespace cv::dnn::cuda4dnn;
 
 namespace cv { namespace dnn {
 
+static void fastNormChannelBlock(const Mat& input, const Mat& scale, const Mat& bias, Mat& output, float epsilon)
+{
+    CV_Assert(input.dims == 5 && output.dims == 5);
+    CV_Assert(input.shape().layout == DATA_LAYOUT_BLOCK && output.shape().layout == DATA_LAYOUT_BLOCK);
+    CV_Assert(input.type() == CV_32F && output.type() == CV_32F);
+    CV_Assert(input.isContinuous() && output.isContinuous());
+
+    const int N = input.size[0];
+    const int C1 = input.size[1];
+    const int H = input.size[2];
+    const int W = input.size[3];
+    const int C0 = input.size[4];
+    const int C = input.shape().C;
+
+    CV_CheckEQ((int)scale.total(), C, "DNN/InstanceNorm: scale must be a 1d tensor and match the channel of input");
+    CV_CheckEQ((int)bias.total(), C, "DNN/InstanceNorm: bias must be a 1d tensor and match the channel of input");
+
+    const float* scale_data = scale.ptr<float>();
+    const float* bias_data = bias.ptr<float>();
+
+    const size_t inStep0 = input.step.p[0] / input.elemSize();
+    const size_t inStep1 = input.step.p[1] / input.elemSize();
+    const size_t inStep2 = input.step.p[2] / input.elemSize();
+    const size_t inStep3 = input.step.p[3] / input.elemSize();
+
+    const size_t outStep0 = output.step.p[0] / output.elemSize();
+    const size_t outStep1 = output.step.p[1] / output.elemSize();
+    const size_t outStep2 = output.step.p[2] / output.elemSize();
+    const size_t outStep3 = output.step.p[3] / output.elemSize();
+
+    const size_t norm_size = (size_t)H * (size_t)W;
+    const float inv_norm_size = 1.f / (float)norm_size;
+    const int loops = N * C1;
+
+    parallel_for_(Range(0, loops), [&](const Range& r) {
+        const float* inptr0 = input.ptr<float>();
+        float* outptr0 = output.ptr<float>();
+
+        AutoBuffer<float> buf(C0 * 4);
+        float* sum = buf.data();
+        float* sqsum = sum + C0;
+        float* alpha = sqsum + C0;
+        float* beta = alpha + C0;
+
+        for (int i = r.start; i < r.end; ++i)
+        {
+            int n = i / C1;
+            int c1 = i - n * C1;
+            int cbase = c1 * C0;
+            int validC0 = std::min(C0, std::max(0, C - cbase));
+
+            const float* inbase = inptr0 + n * inStep0 + c1 * inStep1;
+            float* outbase = outptr0 + n * outStep0 + c1 * outStep1;
+
+            for (int c0 = 0; c0 < validC0; ++c0)
+            {
+                sum[c0] = 0.f;
+                sqsum[c0] = 0.f;
+            }
+
+            for (int h = 0; h < H; ++h)
+            {
+                const float* inrow = inbase + h * inStep2;
+                for (int w = 0; w < W; ++w)
+                {
+                    const float* inpix = inrow + w * inStep3;
+                    for (int c0 = 0; c0 < validC0; ++c0)
+                    {
+                        float v = inpix[c0];
+                        sum[c0] += v;
+                        sqsum[c0] += v * v;
+                    }
+                }
+            }
+
+            for (int c0 = 0; c0 < validC0; ++c0)
+            {
+                float mean = sum[c0] * inv_norm_size;
+                float var = std::max(0.f, sqsum[c0] * inv_norm_size - mean * mean);
+                float inv_stdev = 1.f / std::sqrt(var + epsilon);
+                alpha[c0] = scale_data[cbase + c0] * inv_stdev;
+                beta[c0] = bias_data[cbase + c0] - alpha[c0] * mean;
+            }
+
+            for (int h = 0; h < H; ++h)
+            {
+                const float* inrow = inbase + h * inStep2;
+                float* outrow = outbase + h * outStep2;
+                for (int w = 0; w < W; ++w)
+                {
+                    const float* inpix = inrow + w * inStep3;
+                    float* outpix = outrow + w * outStep3;
+                    for (int c0 = 0; c0 < validC0; ++c0)
+                        outpix[c0] = alpha[c0] * inpix[c0] + beta[c0];
+                    for (int c0 = validC0; c0 < C0; ++c0)
+                        outpix[c0] = 0.f;
+                }
+            }
+        }
+    });
+}
+
 // https://github.com/onnx/onnx/blob/main/docs/Operators.md#InstanceNormalization
 class InstanceNormLayerImpl CV_FINAL : public InstanceNormLayer {
 public:
@@ -55,8 +157,10 @@ public:
         const auto &scale = inputs[1];
         const auto &bias = inputs[2];
         CV_CheckGE(input.size(), static_cast<size_t>(3), "DNN/InstanceNorm: input dimension >= 3 is required");
+        if (input.layout == DATA_LAYOUT_BLOCK)
+            CV_CheckEQ(input.dims, 5, "DNN/InstanceNorm: only 5D block layout is supported");
 
-        int C = input[1];
+        int C = input.layout == DATA_LAYOUT_BLOCK ? input.C : input[1];
         int scale_dim = std::accumulate(scale.begin(), scale.end(), 1, std::multiplies<int>());
         CV_CheckEQ(scale_dim, C, "DNN/InstanceNorm: scale must be a 1d tensor and match the channel of input");
         int bias_dim = std::accumulate(bias.begin(), bias.end(), 1, std::multiplies<int>());
@@ -66,11 +170,23 @@ public:
         return false;
     }
 
+    int getLayouts(const std::vector<DataLayout>& actualInputs,
+                   std::vector<DataLayout>& desiredInputs,
+                   const int requiredOutputs,
+                   std::vector<DataLayout>& outputs) const CV_OVERRIDE {
+        CV_Assert(!actualInputs.empty());
+        desiredInputs = actualInputs;
+        outputs.assign(requiredOutputs, actualInputs[0]);
+        return 0;
+    }
+
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
+        MatShape inpShape = inputs_arr.shape(0);
+
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) && inpShape.layout != DATA_LAYOUT_BLOCK,
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         if (inputs_arr.depth() == CV_16F)
@@ -87,7 +203,10 @@ public:
         const auto &scale = inputs[1];
         const auto &bias = inputs[2];
 
-        fastNormChannel(input, scale, bias, outputs[0], epsilon);
+        if (input.shape().layout == DATA_LAYOUT_BLOCK)
+            fastNormChannelBlock(input, scale, bias, outputs[0], epsilon);
+        else
+            fastNormChannel(input, scale, bias, outputs[0], epsilon);
     }
 
 #ifdef HAVE_OPENCL

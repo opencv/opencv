@@ -575,6 +575,395 @@ void resizeCubic(const Mat &inp, Mat &out,
         }
     }, nstripes);
 }
+
+template<typename T>
+void resizeNearestBlock(const Mat &inp, Mat &out,
+                        float scaleH, float scaleW,
+                        int lenY, int lenX,
+                        NearestMode nearestMode,
+                        const String &coordTransMode,
+                        bool halfPixelCenters,
+                        float start_y = 0.0f, float end_y = 1.0f,
+                        float start_x = 0.0f, float end_x = 1.0f,
+                        float extrapolation_value = 0.0f)
+{
+    CV_Assert(inp.dims == 5 && out.dims == 5);
+    CV_Assert(inp.shape().layout == DATA_LAYOUT_BLOCK && out.shape().layout == DATA_LAYOUT_BLOCK);
+    CV_Assert(inp.isContinuous() && out.isContinuous());
+
+    const int N = inp.size[0], C1 = inp.size[1];
+    const int inH = inp.size[2], inW = inp.size[3], C0 = inp.size[4];
+    const int outH = out.size[2], outW = out.size[3];
+
+    CoordTransMode coordMode = parseCoordTransMode(coordTransMode);
+    const bool tf_crop_and_resize_mode = (coordMode == CoordTransMode::TF_CROP_AND_RESIZE);
+
+    std::vector<int> mapY(outH), mapX(outW);
+    buildNearestIndexMap(mapY, outH, inH, scaleH, lenY, start_y, end_y,
+                         coordMode, nearestMode, halfPixelCenters);
+    buildNearestIndexMap(mapX, outW, inW, scaleW, lenX, start_x, end_x,
+                         coordMode, nearestMode, halfPixelCenters);
+
+    const size_t inStep0 = inp.step.p[0] / inp.elemSize();
+    const size_t inStep1 = inp.step.p[1] / inp.elemSize();
+    const size_t inStep2 = inp.step.p[2] / inp.elemSize();
+    const size_t inStep3 = inp.step.p[3] / inp.elemSize();
+
+    const size_t outStep0 = out.step.p[0] / out.elemSize();
+    const size_t outStep1 = out.step.p[1] / out.elemSize();
+    const size_t outStep2 = out.step.p[2] / out.elemSize();
+    const size_t outStep3 = out.step.p[3] / out.elemSize();
+    const size_t C0bytes = (size_t)C0 * sizeof(T);
+
+    const int nplanes = N * C1 * outH;
+    parallel_for_(Range(0, nplanes), [&](const Range& range) {
+        const T* inptr0 = reinterpret_cast<const T*>(inp.data);
+        T* outptr0 = reinterpret_cast<T*>(out.data);
+        T ext = saturate_cast<T>(extrapolation_value);
+        bool ext_is_zero = (ext == (T)0);
+
+        if (!tf_crop_and_resize_mode) {
+            for (int plane = range.start; plane < range.end; ++plane) {
+                int t = plane;
+                int oy = t % outH;
+                t /= outH;
+                int c1 = t % C1;
+                int n = t / C1;
+
+                int iy = mapY[oy];
+                T* outRow = outptr0 + n * outStep0 + c1 * outStep1 + oy * outStep2;
+                const T* inRow = inptr0 + n * inStep0 + c1 * inStep1 + iy * inStep2;
+                for (int ox = 0; ox < outW; ++ox) {
+                    int ix = mapX[ox];
+                    memcpy(outRow + ox * outStep3, inRow + ix * inStep3, C0bytes);
+                }
+            }
+        } else {
+            for (int plane = range.start; plane < range.end; ++plane) {
+                int t = plane;
+                int oy = t % outH;
+                t /= outH;
+                int c1 = t % C1;
+                int n = t / C1;
+
+                int iy = mapY[oy];
+                T* outRow = outptr0 + n * outStep0 + c1 * outStep1 + oy * outStep2;
+                if (iy == -1) {
+                    for (int ox = 0; ox < outW; ++ox) {
+                        T* outPix = outRow + ox * outStep3;
+                        if (ext_is_zero)
+                            memset(outPix, 0, C0bytes);
+                        else {
+                            for (int c0 = 0; c0 < C0; ++c0)
+                                outPix[c0] = ext;
+                        }
+                    }
+                    continue;
+                }
+
+                const T* inRow = inptr0 + n * inStep0 + c1 * inStep1 + iy * inStep2;
+                for (int ox = 0; ox < outW; ++ox) {
+                    int ix = mapX[ox];
+                    T* outPix = outRow + ox * outStep3;
+                    if (ix == -1) {
+                        if (ext_is_zero)
+                            memset(outPix, 0, C0bytes);
+                        else {
+                            for (int c0 = 0; c0 < C0; ++c0)
+                                outPix[c0] = ext;
+                        }
+                    } else {
+                        memcpy(outPix, inRow + ix * inStep3, C0bytes);
+                    }
+                }
+            }
+        }
+    }, kResizeNumStripes);
+}
+
+template<typename T>
+void resizeBilinearBlock(const Mat &inp, Mat &out,
+                         float scaleH, float scaleW,
+                         int lenY, int lenX,
+                         const String &coordTransMode,
+                         bool halfPixelCenters,
+                         float start_y = 0.0f, float end_y = 1.0f,
+                         float start_x = 0.0f, float end_x = 1.0f,
+                         float extrapolation_value = 0.0f)
+{
+    CV_Assert(inp.dims == 5 && out.dims == 5);
+    CV_Assert(inp.shape().layout == DATA_LAYOUT_BLOCK && out.shape().layout == DATA_LAYOUT_BLOCK);
+    CV_Assert(inp.isContinuous() && out.isContinuous());
+
+    const int N = inp.size[0], C1 = inp.size[1];
+    const int inH = inp.size[2], inW = inp.size[3], C0 = inp.size[4];
+    const int outH = out.size[2], outW = out.size[3];
+
+    CoordTransMode coordMode = parseCoordTransMode(coordTransMode);
+    const bool tf_crop_and_resize_mode = (coordMode == CoordTransMode::TF_CROP_AND_RESIZE);
+
+    std::vector<int> x0(outW), x1(outW), y0(outH), y1(outH);
+    std::vector<float> lx(outW), ly(outH);
+    std::vector<uint8_t> outOfBoundsX(outW), outOfBoundsY(outH);
+
+    buildBilinearIndexAndLerp(x0, x1, lx, outOfBoundsX,
+                              outW, inW, scaleW, lenX, start_x, end_x,
+                              coordMode, halfPixelCenters, tf_crop_and_resize_mode);
+    buildBilinearIndexAndLerp(y0, y1, ly, outOfBoundsY,
+                              outH, inH, scaleH, lenY, start_y, end_y,
+                              coordMode, halfPixelCenters, tf_crop_and_resize_mode);
+
+    const size_t inStep0 = inp.step.p[0] / inp.elemSize();
+    const size_t inStep1 = inp.step.p[1] / inp.elemSize();
+    const size_t inStep2 = inp.step.p[2] / inp.elemSize();
+    const size_t inStep3 = inp.step.p[3] / inp.elemSize();
+
+    const size_t outStep0 = out.step.p[0] / out.elemSize();
+    const size_t outStep1 = out.step.p[1] / out.elemSize();
+    const size_t outStep2 = out.step.p[2] / out.elemSize();
+    const size_t outStep3 = out.step.p[3] / out.elemSize();
+
+    const int nplanes = N * C1 * outH;
+    parallel_for_(Range(0, nplanes), [&](const Range& range) {
+        const T* inptr0 = reinterpret_cast<const T*>(inp.data);
+        T* outptr0 = reinterpret_cast<T*>(out.data);
+        T ext = saturate_cast<T>(extrapolation_value);
+
+        for (int plane = range.start; plane < range.end; ++plane) {
+            int t = plane;
+            int oy = t % outH;
+            t /= outH;
+            int c1 = t % C1;
+            int n = t / C1;
+
+            T* outRow = outptr0 + n * outStep0 + c1 * outStep1 + oy * outStep2;
+            if (tf_crop_and_resize_mode && outOfBoundsY[oy]) {
+                for (int ox = 0; ox < outW; ++ox) {
+                    T* outPix = outRow + ox * outStep3;
+                    for (int c0 = 0; c0 < C0; ++c0)
+                        outPix[c0] = ext;
+                }
+                continue;
+            }
+
+            const T* row00 = inptr0 + n * inStep0 + c1 * inStep1 + y0[oy] * inStep2;
+            const T* row01 = inptr0 + n * inStep0 + c1 * inStep1 + y1[oy] * inStep2;
+            float fy = ly[oy];
+
+            if (!tf_crop_and_resize_mode) {
+                for (int ox = 0; ox < outW; ++ox) {
+                    T* outPix = outRow + ox * outStep3;
+                    const T* p00 = row00 + x0[ox] * inStep3;
+                    const T* p01 = row00 + x1[ox] * inStep3;
+                    const T* p10 = row01 + x0[ox] * inStep3;
+                    const T* p11 = row01 + x1[ox] * inStep3;
+                    float fx = lx[ox];
+
+                    for (int c0 = 0; c0 < C0; ++c0) {
+                        float top = static_cast<float>(p00[c0]) + fx * (static_cast<float>(p01[c0]) - static_cast<float>(p00[c0]));
+                        float bot = static_cast<float>(p10[c0]) + fx * (static_cast<float>(p11[c0]) - static_cast<float>(p10[c0]));
+                        outPix[c0] = saturate_cast<T>(top + fy * (bot - top));
+                    }
+                }
+            } else {
+                for (int ox = 0; ox < outW; ++ox) {
+                    T* outPix = outRow + ox * outStep3;
+                    if (outOfBoundsX[ox]) {
+                        for (int c0 = 0; c0 < C0; ++c0)
+                            outPix[c0] = ext;
+                        continue;
+                    }
+
+                    const T* p00 = row00 + x0[ox] * inStep3;
+                    const T* p01 = row00 + x1[ox] * inStep3;
+                    const T* p10 = row01 + x0[ox] * inStep3;
+                    const T* p11 = row01 + x1[ox] * inStep3;
+                    float fx = lx[ox];
+
+                    for (int c0 = 0; c0 < C0; ++c0) {
+                        float top = static_cast<float>(p00[c0]) + fx * (static_cast<float>(p01[c0]) - static_cast<float>(p00[c0]));
+                        float bot = static_cast<float>(p10[c0]) + fx * (static_cast<float>(p11[c0]) - static_cast<float>(p10[c0]));
+                        outPix[c0] = saturate_cast<T>(top + fy * (bot - top));
+                    }
+                }
+            }
+        }
+    }, kResizeNumStripes);
+}
+
+template<typename T>
+void resizeCubicBlock(const Mat &inp, Mat &out,
+                      float scaleH, float scaleW,
+                      int lenY, int lenX,
+                      float cubicA, bool excludeOutside,
+                      const String &coordTransMode,
+                      bool halfPixelCenters,
+                      float start_y = 0.0f, float end_y = 1.0f,
+                      float start_x = 0.0f, float end_x = 1.0f,
+                      float extrapolation_value = 0.0f)
+{
+    CV_Assert(inp.dims == 5 && out.dims == 5);
+    CV_Assert(inp.shape().layout == DATA_LAYOUT_BLOCK && out.shape().layout == DATA_LAYOUT_BLOCK);
+    CV_Assert(inp.isContinuous() && out.isContinuous());
+
+    const int N = inp.size[0], C1 = inp.size[1];
+    const int inH = inp.size[2], inW = inp.size[3], C0 = inp.size[4];
+    const int outH = out.size[2], outW = out.size[3];
+
+    CoordTransMode coordMode = parseCoordTransMode(coordTransMode);
+    const bool tf_crop_and_resize_mode = (coordMode == CoordTransMode::TF_CROP_AND_RESIZE);
+
+    std::vector<std::array<int, 4> > x_id(outW), y_id(outH);
+    std::vector<std::array<float, 4> > x_w(outW), y_w(outH);
+    std::vector<uint8_t> outOfBoundsX(outW), outOfBoundsY(outH);
+
+    buildCubicIndexAndWeights(x_id, x_w, outOfBoundsX,
+                              outW, inW, scaleW, lenX, start_x, end_x,
+                              coordMode, halfPixelCenters, tf_crop_and_resize_mode,
+                              excludeOutside, cubicA);
+    buildCubicIndexAndWeights(y_id, y_w, outOfBoundsY,
+                              outH, inH, scaleH, lenY, start_y, end_y,
+                              coordMode, halfPixelCenters, tf_crop_and_resize_mode,
+                              excludeOutside, cubicA);
+
+    const size_t inStep0 = inp.step.p[0] / inp.elemSize();
+    const size_t inStep1 = inp.step.p[1] / inp.elemSize();
+    const size_t inStep2 = inp.step.p[2] / inp.elemSize();
+    const size_t inStep3 = inp.step.p[3] / inp.elemSize();
+
+    const size_t outStep0 = out.step.p[0] / out.elemSize();
+    const size_t outStep1 = out.step.p[1] / out.elemSize();
+    const size_t outStep2 = out.step.p[2] / out.elemSize();
+    const size_t outStep3 = out.step.p[3] / out.elemSize();
+
+    const int nplanes = N * C1 * outH;
+    parallel_for_(Range(0, nplanes), [&](const Range& range) {
+        const T* inptr0 = reinterpret_cast<const T*>(inp.data);
+        T* outptr0 = reinterpret_cast<T*>(out.data);
+        T ext = saturate_cast<T>(extrapolation_value);
+
+        for (int plane = range.start; plane < range.end; ++plane)
+        {
+            int t = plane;
+            int oy = t % outH;
+            t /= outH;
+            int c1 = t % C1;
+            int n = t / C1;
+
+            T* outRow = outptr0 + n * outStep0 + c1 * outStep1 + oy * outStep2;
+
+            if (tf_crop_and_resize_mode && outOfBoundsY[oy])
+            {
+                for (int ox = 0; ox < outW; ++ox)
+                {
+                    T* outPix = outRow + ox * outStep3;
+                    for (int c0 = 0; c0 < C0; ++c0)
+                        outPix[c0] = ext;
+                }
+                continue;
+            }
+
+            const int yy0 = y_id[oy][0], yy1 = y_id[oy][1], yy2 = y_id[oy][2], yy3 = y_id[oy][3];
+            const float wy0 = y_w[oy][0], wy1 = y_w[oy][1], wy2 = y_w[oy][2], wy3 = y_w[oy][3];
+
+            const T* row0 = yy0 >= 0 ? inptr0 + n * inStep0 + c1 * inStep1 + yy0 * inStep2 : nullptr;
+            const T* row1 = yy1 >= 0 ? inptr0 + n * inStep0 + c1 * inStep1 + yy1 * inStep2 : nullptr;
+            const T* row2 = yy2 >= 0 ? inptr0 + n * inStep0 + c1 * inStep1 + yy2 * inStep2 : nullptr;
+            const T* row3 = yy3 >= 0 ? inptr0 + n * inStep0 + c1 * inStep1 + yy3 * inStep2 : nullptr;
+
+            if (!tf_crop_and_resize_mode) {
+                for (int ox = 0; ox < outW; ++ox)
+                {
+                    T* outPix = outRow + ox * outStep3;
+                    const int xx0 = x_id[ox][0], xx1 = x_id[ox][1], xx2 = x_id[ox][2], xx3 = x_id[ox][3];
+                    const float wx0 = x_w[ox][0], wx1 = x_w[ox][1], wx2 = x_w[ox][2], wx3 = x_w[ox][3];
+
+                    for (int c0 = 0; c0 < C0; ++c0)
+                    {
+                        float val = 0.f;
+                        if (row0)
+                        {
+                            if (xx0 >= 0) val += wy0 * wx0 * static_cast<float>(row0[xx0 * inStep3 + c0]);
+                            if (xx1 >= 0) val += wy0 * wx1 * static_cast<float>(row0[xx1 * inStep3 + c0]);
+                            if (xx2 >= 0) val += wy0 * wx2 * static_cast<float>(row0[xx2 * inStep3 + c0]);
+                            if (xx3 >= 0) val += wy0 * wx3 * static_cast<float>(row0[xx3 * inStep3 + c0]);
+                        }
+                        if (row1)
+                        {
+                            if (xx0 >= 0) val += wy1 * wx0 * static_cast<float>(row1[xx0 * inStep3 + c0]);
+                            if (xx1 >= 0) val += wy1 * wx1 * static_cast<float>(row1[xx1 * inStep3 + c0]);
+                            if (xx2 >= 0) val += wy1 * wx2 * static_cast<float>(row1[xx2 * inStep3 + c0]);
+                            if (xx3 >= 0) val += wy1 * wx3 * static_cast<float>(row1[xx3 * inStep3 + c0]);
+                        }
+                        if (row2)
+                        {
+                            if (xx0 >= 0) val += wy2 * wx0 * static_cast<float>(row2[xx0 * inStep3 + c0]);
+                            if (xx1 >= 0) val += wy2 * wx1 * static_cast<float>(row2[xx1 * inStep3 + c0]);
+                            if (xx2 >= 0) val += wy2 * wx2 * static_cast<float>(row2[xx2 * inStep3 + c0]);
+                            if (xx3 >= 0) val += wy2 * wx3 * static_cast<float>(row2[xx3 * inStep3 + c0]);
+                        }
+                        if (row3)
+                        {
+                            if (xx0 >= 0) val += wy3 * wx0 * static_cast<float>(row3[xx0 * inStep3 + c0]);
+                            if (xx1 >= 0) val += wy3 * wx1 * static_cast<float>(row3[xx1 * inStep3 + c0]);
+                            if (xx2 >= 0) val += wy3 * wx2 * static_cast<float>(row3[xx2 * inStep3 + c0]);
+                            if (xx3 >= 0) val += wy3 * wx3 * static_cast<float>(row3[xx3 * inStep3 + c0]);
+                        }
+                        outPix[c0] = saturate_cast<T>(val);
+                    }
+                }
+            } else {
+                for (int ox = 0; ox < outW; ++ox)
+                {
+                    T* outPix = outRow + ox * outStep3;
+                    if (outOfBoundsX[ox])
+                    {
+                        for (int c0 = 0; c0 < C0; ++c0)
+                            outPix[c0] = ext;
+                        continue;
+                    }
+
+                    const int xx0 = x_id[ox][0], xx1 = x_id[ox][1], xx2 = x_id[ox][2], xx3 = x_id[ox][3];
+                    const float wx0 = x_w[ox][0], wx1 = x_w[ox][1], wx2 = x_w[ox][2], wx3 = x_w[ox][3];
+
+                    for (int c0 = 0; c0 < C0; ++c0)
+                    {
+                        float val = 0.f;
+                        if (row0)
+                        {
+                            if (xx0 >= 0) val += wy0 * wx0 * static_cast<float>(row0[xx0 * inStep3 + c0]);
+                            if (xx1 >= 0) val += wy0 * wx1 * static_cast<float>(row0[xx1 * inStep3 + c0]);
+                            if (xx2 >= 0) val += wy0 * wx2 * static_cast<float>(row0[xx2 * inStep3 + c0]);
+                            if (xx3 >= 0) val += wy0 * wx3 * static_cast<float>(row0[xx3 * inStep3 + c0]);
+                        }
+                        if (row1)
+                        {
+                            if (xx0 >= 0) val += wy1 * wx0 * static_cast<float>(row1[xx0 * inStep3 + c0]);
+                            if (xx1 >= 0) val += wy1 * wx1 * static_cast<float>(row1[xx1 * inStep3 + c0]);
+                            if (xx2 >= 0) val += wy1 * wx2 * static_cast<float>(row1[xx2 * inStep3 + c0]);
+                            if (xx3 >= 0) val += wy1 * wx3 * static_cast<float>(row1[xx3 * inStep3 + c0]);
+                        }
+                        if (row2)
+                        {
+                            if (xx0 >= 0) val += wy2 * wx0 * static_cast<float>(row2[xx0 * inStep3 + c0]);
+                            if (xx1 >= 0) val += wy2 * wx1 * static_cast<float>(row2[xx1 * inStep3 + c0]);
+                            if (xx2 >= 0) val += wy2 * wx2 * static_cast<float>(row2[xx2 * inStep3 + c0]);
+                            if (xx3 >= 0) val += wy2 * wx3 * static_cast<float>(row2[xx3 * inStep3 + c0]);
+                        }
+                        if (row3)
+                        {
+                            if (xx0 >= 0) val += wy3 * wx0 * static_cast<float>(row3[xx0 * inStep3 + c0]);
+                            if (xx1 >= 0) val += wy3 * wx1 * static_cast<float>(row3[xx1 * inStep3 + c0]);
+                            if (xx2 >= 0) val += wy3 * wx2 * static_cast<float>(row3[xx2 * inStep3 + c0]);
+                            if (xx3 >= 0) val += wy3 * wx3 * static_cast<float>(row3[xx3 * inStep3 + c0]);
+                        }
+                        outPix[c0] = saturate_cast<T>(val);
+                    }
+                }
+            }
+        }
+    }, kResizeNumStripes);
+}
 }
 
 class Resize2LayerImpl : public Resize2Layer
@@ -631,6 +1020,30 @@ public:
                 return true;
         }
         return false;
+    }
+
+    int getLayouts(const std::vector<DataLayout>& actualInputs,
+                   std::vector<DataLayout>& desiredInputs,
+                   const int requiredOutputs,
+                   std::vector<DataLayout>& outputs) const CV_OVERRIDE
+    {
+        CV_Assert(!actualInputs.empty());
+        desiredInputs = actualInputs;
+        outputs.assign(requiredOutputs, actualInputs[0]);
+
+        if (actualInputs[0] != DATA_LAYOUT_BLOCK)
+            return 0;
+
+        if (interpolation == "nearest" || interpolation == "bilinear" || interpolation == "opencv_linear" || interpolation == "cubic") {
+            desiredInputs[0] = DATA_LAYOUT_BLOCK;
+            outputs.assign(requiredOutputs, DATA_LAYOUT_BLOCK);
+        } else {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            DataLayout defaultLayout = netimpl_ ? netimpl_->originalLayout : DATA_LAYOUT_NCHW;
+            desiredInputs[0] = defaultLayout;
+            outputs.assign(requiredOutputs, DATA_LAYOUT_UNKNOWN);
+        }
+        return outputs[0] == DATA_LAYOUT_BLOCK ? getNetImpl(this)->defaultC0 : 0;
     }
 
     MatShape getOutShape(const MatShape& inpShape, const std::vector<int>& sizes,
@@ -734,7 +1147,7 @@ public:
 
     void updateOutSizeAndScale(const MatShape& inpShape, const MatShape& outShape)
     {
-        CV_Assert(outShape.dims == 4);
+        CV_Assert(inpShape.dims >= 4 && outShape.dims >= 4);
         outHeight = outShape[2];
         outWidth = outShape[3];
         if (alignCorners && outHeight > 1)
@@ -863,62 +1276,128 @@ public:
         }
 
         if(interpolation=="nearest"){
-            switch(depth){
-            case CV_8S:
-            case CV_8U:
-                resizeNearest<int8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
-                break;
-            case CV_16F:
-                resizeNearest<hfloat>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
-                break;
-            case CV_16BF:
-                resizeNearest<bfloat>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
-                break;
-            case CV_32F:
-                resizeNearest<float>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
-                break;
-            default: CV_Error(Error::StsUnsupportedFormat,"Unsupported depth");
+            if (inp.shape().layout == DATA_LAYOUT_BLOCK) {
+                switch(depth){
+                case CV_8S:
+                    resizeNearestBlock<int8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                    break;
+                case CV_8U:
+                    resizeNearestBlock<uint8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                    break;
+                case CV_16F:
+                    resizeNearestBlock<hfloat>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                    break;
+                case CV_16BF:
+                    resizeNearestBlock<bfloat>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                    break;
+                case CV_32F:
+                    resizeNearestBlock<float>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                    break;
+                default: CV_Error(Error::StsUnsupportedFormat,"Unsupported depth");
+                }
+            } else {
+                switch(depth){
+                case CV_8S:
+                    resizeNearest<int8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                    break;
+                case CV_8U:
+                    resizeNearest<uint8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                    break;
+                case CV_16F:
+                    resizeNearest<hfloat>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                    break;
+                case CV_16BF:
+                    resizeNearest<bfloat>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                    break;
+                case CV_32F:
+                    resizeNearest<float>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                    break;
+                default: CV_Error(Error::StsUnsupportedFormat,"Unsupported depth");
+                }
             }
         }
         else if(interpolation=="bilinear"||interpolation=="opencv_linear"){
-            switch(depth){
-            case CV_8S:
-                resizeBilinear<int8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
-                break;
-            case CV_8U:
-                resizeBilinear<uint8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
-                break;
-            case CV_16F:
-                resizeBilinear<hfloat>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
-                break;
-            case CV_16BF:
-                resizeBilinear<bfloat>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
-                break;
-            case CV_32F:
-                resizeBilinear<float>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
-                break;
-            default: CV_Error(Error::StsUnsupportedFormat,"Unsupported depth");
+            if (inp.shape().layout == DATA_LAYOUT_BLOCK) {
+                switch(depth){
+                case CV_8S:
+                    resizeBilinearBlock<int8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                    break;
+                case CV_8U:
+                    resizeBilinearBlock<uint8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                    break;
+                case CV_16F:
+                    resizeBilinearBlock<hfloat>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                    break;
+                case CV_16BF:
+                    resizeBilinearBlock<bfloat>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                    break;
+                case CV_32F:
+                    resizeBilinearBlock<float>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                    break;
+                default: CV_Error(Error::StsUnsupportedFormat,"Unsupported depth");
+                }
+            } else {
+                switch(depth){
+                case CV_8S:
+                    resizeBilinear<int8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                    break;
+                case CV_8U:
+                    resizeBilinear<uint8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                    break;
+                case CV_16F:
+                    resizeBilinear<hfloat>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                    break;
+                case CV_16BF:
+                    resizeBilinear<bfloat>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                    break;
+                case CV_32F:
+                    resizeBilinear<float>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                    break;
+                default: CV_Error(Error::StsUnsupportedFormat,"Unsupported depth");
+                }
             }
         }
         else if(interpolation=="cubic"){
-            switch (depth) {
-            case CV_8S:
-                resizeCubic<int8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,cubicCoeffA,excludeOutside,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
-                break;
-            case CV_8U:
-                resizeCubic<uint8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,cubicCoeffA,excludeOutside,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
-                break;
-            case CV_16F:
-                resizeCubic<hfloat>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,cubicCoeffA,excludeOutside,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
-                break;
-            case CV_16BF:
-                resizeCubic<bfloat>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,cubicCoeffA,excludeOutside,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
-                break;
-            case CV_32F:
-                resizeCubic<float>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,cubicCoeffA,excludeOutside,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
-                break;
-            default:
-                CV_Error(Error::StsUnsupportedFormat, "Unsupported depth");
+            if (inp.shape().layout == DATA_LAYOUT_BLOCK) {
+                switch (depth) {
+                case CV_8S:
+                    resizeCubicBlock<int8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,cubicCoeffA,excludeOutside,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                    break;
+                case CV_8U:
+                    resizeCubicBlock<uint8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,cubicCoeffA,excludeOutside,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                    break;
+                case CV_16F:
+                    resizeCubicBlock<hfloat>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,cubicCoeffA,excludeOutside,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                    break;
+                case CV_16BF:
+                    resizeCubicBlock<bfloat>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,cubicCoeffA,excludeOutside,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                    break;
+                case CV_32F:
+                    resizeCubicBlock<float>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,cubicCoeffA,excludeOutside,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                    break;
+                default:
+                    CV_Error(Error::StsUnsupportedFormat, "Unsupported depth");
+                }
+            } else {
+                switch (depth) {
+                case CV_8S:
+                    resizeCubic<int8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,cubicCoeffA,excludeOutside,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                    break;
+                case CV_8U:
+                    resizeCubic<uint8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,cubicCoeffA,excludeOutside,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                    break;
+                case CV_16F:
+                    resizeCubic<hfloat>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,cubicCoeffA,excludeOutside,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                    break;
+                case CV_16BF:
+                    resizeCubic<bfloat>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,cubicCoeffA,excludeOutside,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                    break;
+                case CV_32F:
+                    resizeCubic<float>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,cubicCoeffA,excludeOutside,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                    break;
+                default:
+                    CV_Error(Error::StsUnsupportedFormat, "Unsupported depth");
+                }
             }
         }
         else

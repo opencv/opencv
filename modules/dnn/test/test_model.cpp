@@ -1417,4 +1417,89 @@ INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_YOLOXS_ONNX,
                         testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
 
 
+typedef testing::TestWithParam<Target> Reproducibility_BlazeFace_ONNX;
+TEST_P(Reproducibility_BlazeFace_ONNX, Accuracy)
+{
+    Target targetId = GetParam();
+    applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
+
+    std::string modelname = _tf("onnx/models/blazeface.onnx", false);
+    Net net = readNetFromONNX(modelname);
+
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(targetId);
+
+    if (targetId == DNN_TARGET_CPU_FP16)
+        net.enableWinograd(false);
+
+    std::string imgname = findDataFile("cv/cascadeandhog/images/karen-and-rob.png", false);
+    Mat image = imread(imgname);
+    ASSERT_FALSE(image.empty());
+
+    Mat input = blobFromImage(image, 1.0 / 255.0, Size(128, 128), Scalar(), true, false, CV_32F);
+    ASSERT_FALSE(input.empty());
+    Mat refSelected = blobFromNPY(_tf("onnx/data/output_blazeface_selectedBoxes.npy"));
+    ASSERT_FALSE(refSelected.empty());
+
+    const int oneDim[] = {1};
+    Mat conf(1, oneDim, CV_32F); conf.ptr<float>()[0] = 0.20f;
+    Mat iou(1, oneDim, CV_32F); iou.ptr<float>()[0] = 0.30f;
+    Mat maxDet(1, oneDim, CV_64S); maxDet.ptr<int64_t>()[0] = 25;
+
+    std::vector<String> outNames = net.getUnconnectedOutLayersNames();
+    std::vector<Mat> outs;
+    Mat selected;
+    int idxSel = -1;
+
+    double min_t = 0;
+    const int niters =
+#ifdef _DEBUG
+        1;
+#else
+        30;
+#endif
+
+    for (int i = 0; i < niters; i++)
+    {
+        double t = (double)getTickCount();
+
+        net.setInput(input, "image");
+        net.setInput(conf, "conf_threshold");
+        net.setInput(iou, "iou_threshold");
+        net.setInput(maxDet, "max_detections");
+        net.forward(outs, outNames);
+
+        if (idxSel < 0)
+        {
+            for (size_t j = 0; j < outNames.size(); ++j)
+            {
+                if (outNames[j].find("selectedBoxes") != std::string::npos)
+                {
+                    idxSel = static_cast<int>(j);
+                    break;
+                }
+            }
+            if (idxSel < 0 && !outs.empty())
+                idxSel = 0;
+            ASSERT_GE(idxSel, 0);
+        }
+
+        t = (double)getTickCount() - t;
+        min_t = i == 0 ? t : std::min(min_t, t);
+    }
+    printf("run time = %.2fms\n", min_t * 1000. / getTickFrequency());
+
+    outs[idxSel].convertTo(selected, CV_32F);
+
+    Mat outFlat = selected.reshape(1, 1);
+    Mat refFlat = refSelected.reshape(1, 1);
+    ASSERT_EQ(outFlat.total(), refFlat.total())
+        << "OpenCV output size differs from ORT reference";
+    EXPECT_LE(cv::norm(outFlat, refFlat, NORM_INF), 1e-2);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_BlazeFace_ONNX,
+                        testing::Values(DNN_TARGET_CPU));
+
 }} // namespace
