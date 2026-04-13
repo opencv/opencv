@@ -968,8 +968,8 @@ CV__DNN_INLINE_NS_BEGIN
             @param activParams [out] filled with activation-specific parameters
             @return function pointer, or nullptr if not available for the given depth
         */
-        virtual ActivationFunc getActivationFunc(int /*depth*/,
-                                                 std::vector<float>& /*activParams*/) const
+        virtual ActivationFunc getActivationFunc(int depth,
+                                                 std::vector<float>& activParams) const
         { return nullptr; }
     };
 
