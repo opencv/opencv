@@ -269,19 +269,6 @@ int Net::getEngine() const
     return impl->engineType;
 }
 
-String Net::getEngineName() const
-{
-    CV_Assert(impl);
-    switch (impl->engineType)
-    {
-        case ENGINE_CLASSIC: return "ENGINE_CLASSIC";
-        case ENGINE_NEW: return "ENGINE_NEW";
-        case ENGINE_ORT: return "ENGINE_ORT";
-        case ENGINE_AUTO: return "ENGINE_AUTO";
-        default: return "Unknown";
-    }
-}
-
 // FIXIT drop "unconnected" API
 std::vector<int> Net::getUnconnectedOutLayers() const
 {
@@ -551,6 +538,55 @@ ModelFormat Net::getModelFormat() const
 {
     CV_Assert(impl);
     return impl->modelFormat;
+}
+
+std::string getEngineName(int engine)
+{
+    switch (engine)
+    {
+        case ENGINE_CLASSIC: return "ENGINE_CLASSIC";
+        case ENGINE_NEW: return "ENGINE_NEW";
+        case ENGINE_ORT: return "ENGINE_ORT";
+        case ENGINE_AUTO: return "ENGINE_AUTO";
+        default: return "Unknown";
+    }
+}
+
+std::string getBackendName(int backend)
+{
+    const char* backendName = "unknown";
+    switch (backend)
+    {
+        case DNN_BACKEND_OPENCV: backendName = "opencv"; break;
+        case DNN_BACKEND_INFERENCE_ENGINE:
+        case DNN_BACKEND_INFERENCE_ENGINE_NGRAPH: backendName = "openvino"; break;
+        case DNN_BACKEND_CUDA: backendName = "cuda"; break;
+        case DNN_BACKEND_VKCOM: backendName = "vkcom"; break;
+        case DNN_BACKEND_WEBNN: backendName = "webnn"; break;
+        case DNN_BACKEND_TIMVX: backendName = "timvx"; break;
+        case DNN_BACKEND_CANN: backendName = "cann"; break;
+        default: break;
+    }
+
+    return std::string(backendName);
+}
+
+std::string getTargetName(int target)
+{
+    const char* targetName = "unknown";
+    switch (target)
+    {
+        case DNN_TARGET_CPU: targetName = "cpu"; break;
+        case DNN_TARGET_OPENCL: targetName = "opencl"; break;
+        case DNN_TARGET_OPENCL_FP16: targetName = "opencl_fp16"; break;
+        case DNN_TARGET_MYRIAD: targetName = "vpu"; break;
+        case DNN_TARGET_VULKAN: targetName = "vulkan"; break;
+        case DNN_TARGET_CUDA: targetName = "cuda"; break;
+        case DNN_TARGET_CUDA_FP16: targetName = "cuda_fp16"; break;
+        default: break;
+    }
+
+    return std::string(targetName);
 }
 
 CV__DNN_INLINE_NS_END

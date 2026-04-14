@@ -63,41 +63,6 @@ inline int getEngineID(const String& engine) {
     }
 }
 
-inline String getBackendName(int backendId) {
-    switch (backendId) {
-        case cv::dnn::DNN_BACKEND_DEFAULT: return "default";
-        case cv::dnn::DNN_BACKEND_INFERENCE_ENGINE: return "openvino";
-        case cv::dnn::DNN_BACKEND_OPENCV: return "opencv";
-        case cv::dnn::DNN_BACKEND_VKCOM: return "vkcom";
-        case cv::dnn::DNN_BACKEND_CUDA: return "cuda";
-        case cv::dnn::DNN_BACKEND_WEBNN: return "webnn";
-        default: return "unknown";
-    }
-}
-
-inline String getTargetName(int targetId) {
-    switch (targetId) {
-        case cv::dnn::DNN_TARGET_CPU: return "cpu";
-        case cv::dnn::DNN_TARGET_OPENCL: return "opencl";
-        case cv::dnn::DNN_TARGET_OPENCL_FP16: return "opencl_fp16";
-        case cv::dnn::DNN_TARGET_MYRIAD: return "vpu";
-        case cv::dnn::DNN_TARGET_VULKAN: return "vulkan";
-        case cv::dnn::DNN_TARGET_CUDA: return "cuda";
-        case cv::dnn::DNN_TARGET_CUDA_FP16: return "cuda_fp16";
-        default: return "unknown";
-    }
-}
-
-inline String getEngineName(int engineId) {
-    switch (engineId) {
-        case cv::dnn::ENGINE_CLASSIC: return "classic";
-        case cv::dnn::ENGINE_NEW: return "new";
-        case cv::dnn::ENGINE_AUTO: return "auto";
-        case cv::dnn::ENGINE_ORT: return "ort";
-        default: return "unknown";
-    }
-}
-
 const std::string engine_keys = cv::format(
     "{ engine | auto | Choose one of DNN engines: "
                     "auto: automatically (by default), "

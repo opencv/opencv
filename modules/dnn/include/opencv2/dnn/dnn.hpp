@@ -64,6 +64,14 @@ CV__DNN_INLINE_NS_BEGIN
 
     typedef int MatType;
 
+    enum EngineType
+    {
+        ENGINE_CLASSIC=1, //!< Force use the old dnn engine similar to 4.x branch
+        ENGINE_NEW=2,     //!< Force use the new dnn engine. The engine does not support non CPU back-ends for now.
+        ENGINE_AUTO=3,    //!< Try to use the new engine and then fall back to the classic version.
+        ENGINE_ORT=4      //!< Try to use ONNX Runtime wrapper (ONNX only, requires build with WITH_ONNXRUNTIME=ON).
+    };
+
     /**
      * @brief Enum of computation backends supported by layers.
      * @see Net::setPreferableBackend
@@ -128,6 +136,21 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_MODEL_TFLITE = 3, //!< TFLite model
         DNN_MODEL_CAFFE = 4, //!< Caffe model
     };
+
+    /** @brief returns readable DNN engine name from id
+     *  @param engine one of @ref EngineType values
+     */
+    CV_EXPORTS_W std::string getEngineName(int engine);
+
+    /** @brief returns readable DNN backend name from id
+     *  @param backend one of @ref Backend values
+     */
+    CV_EXPORTS_W std::string getBackendName(int backend);
+
+    /** @brief returns readable DNN target name from id
+     *  @param target one of @ref Target values
+     */
+    CV_EXPORTS_W std::string getTargetName(int target);
 
     CV_EXPORTS std::string modelFormatToString(ModelFormat modelFormat);
 
@@ -1050,25 +1073,12 @@ CV__DNN_INLINE_NS_BEGIN
          */
         CV_WRAP int getEngine() const;
 
-        /** @brief Returns the human-readable name of the engine used by this network.
-         *  @returns string such as "ENGINE_CLASSIC", "ENGINE_NEW", "ENGINE_ORT", or "Unknown".
-         */
-        CV_WRAP String getEngineName() const;
-
         struct Impl;
         inline Impl* getImpl() const { return impl.get(); }
         inline Impl& getImplRef() const { CV_DbgAssert(impl); return *impl.get(); }
         friend class accessor::DnnNetAccessor;
     protected:
         Ptr<Impl> impl;
-    };
-
-    enum EngineType
-    {
-        ENGINE_CLASSIC=1, //!< Force use the old dnn engine similar to 4.x branch
-        ENGINE_NEW=2,     //!< Force use the new dnn engine. The engine does not support non CPU back-ends for now.
-        ENGINE_AUTO=3,    //!< Try to use the new engine and then fall back to the classic version.
-        ENGINE_ORT=4      //!< Try to use ONNX Runtime wrapper (ONNX only, requires build with WITH_ONNXRUNTIME=ON).
     };
 
     /** @brief Reads a network model stored in <a href="https://pjreddie.com/darknet/">Darknet</a> model files.

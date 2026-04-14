@@ -988,41 +988,6 @@ void Net::Impl::forwardToLayer(LayerData& ld, bool clearFlags)
 #endif
 }
 
-
-void Net::Impl::printBackendInfo()
-{
-    if (backendInfoPrinted)
-        return;
-    backendInfoPrinted = true;
-
-    const char* backendName = "unknown";
-    switch (preferableBackend)
-    {
-        case DNN_BACKEND_OPENCV: backendName = "opencv"; break;
-        case DNN_BACKEND_INFERENCE_ENGINE:
-        case DNN_BACKEND_INFERENCE_ENGINE_NGRAPH: backendName = "openvino"; break;
-        case DNN_BACKEND_CUDA: backendName = "cuda"; break;
-        case DNN_BACKEND_VKCOM: backendName = "vkcom"; break;
-        case DNN_BACKEND_WEBNN: backendName = "webnn"; break;
-        case DNN_BACKEND_TIMVX: backendName = "timvx"; break;
-        case DNN_BACKEND_CANN: backendName = "cann"; break;
-        default: break;
-    }
-
-    const char* targetName = "unknown";
-    switch (preferableTarget) {
-        case DNN_TARGET_CPU: targetName = "cpu"; break;
-        case DNN_TARGET_OPENCL: targetName = "opencl"; break;
-        case DNN_TARGET_OPENCL_FP16: targetName = "opencl_fp16"; break;
-        case DNN_TARGET_MYRIAD: targetName = "vpu"; break;
-        case DNN_TARGET_VULKAN: targetName = "vulkan"; break;
-        case DNN_TARGET_CUDA: targetName = "cuda"; break;
-        case DNN_TARGET_CUDA_FP16: targetName = "cuda_fp16"; break;
-    }
-    std::cout << "[INFO] DNN: Backend used: " << backendName << std::endl;
-    std::cout << "[INFO] DNN: Target used: " << targetName << std::endl;
-}
-
 Mat Net::Impl::forward(const String& outputName)
 {
     CV_Assert(!empty());
@@ -1031,7 +996,8 @@ Mat Net::Impl::forward(const String& outputName)
     if (mainGraph) {
         if (!outputName.empty())
             CV_Error(Error::StsNotImplemented, "The new dnn engine doesn't support inference until a specified layer. If you want to run the whole model, please don't set the outputName argument in the forward() call. If you want to run the model until a specified layer, please use the old dnn engine");
-        printBackendInfo();
+        CV_LOG_INFO(NULL, "DNN Backend used: " << getBackendName(preferableBackend) << "\n");
+        CV_LOG_INFO(NULL, "DNN Target used: " << getTargetName(preferableTarget) << "\n");
         Mat result;
         forwardWithSingleOutput(outputName, result);
         return result;
@@ -1048,7 +1014,8 @@ Mat Net::Impl::forward(const String& outputName)
 
     std::vector<LayerPin> pins(1, getPinByAlias(layerName));
     setUpNet(pins);
-    printBackendInfo();
+    CV_LOG_INFO(NULL, "DNN Backend used: " << getBackendName(preferableBackend) << "\n");
+    CV_LOG_INFO(NULL, "DNN Target used: " << getTargetName(preferableTarget) << "\n");
     forwardToLayer(getLayerData(layerName));
 
     return getBlob(layerName);
@@ -1814,21 +1781,7 @@ string Net::Impl::dump(bool forceAllocation) const
         }
     }
     std::vector<string> colors = { "#ffffb3", "#fccde5", "#8dd3c7", "#bebada", "#80b1d3", "#fdb462", "#ff4848", "#b35151", "#b266ff", "#b266ff", "#3cb371", "#ffcab3"};
-    string backend;
-    switch (prefBackend)
-    {
-    case DNN_BACKEND_DEFAULT: backend = "DEFAULT/"; break;
-    case DNN_BACKEND_INFERENCE_ENGINE:  // fallthru
-    case DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019:  // fallthru
-    case DNN_BACKEND_INFERENCE_ENGINE_NGRAPH: backend = "OpenVINO/"; break;
-    case DNN_BACKEND_OPENCV: backend = "OCV/"; break;
-    case DNN_BACKEND_VKCOM: backend = "VULKAN/"; break;
-    case DNN_BACKEND_CUDA: backend = "CUDA/"; break;
-    case DNN_BACKEND_WEBNN: backend = "WEBNN/"; break;
-    case DNN_BACKEND_TIMVX: backend = "TIMVX/"; break;
-    case DNN_BACKEND_CANN: backend = "CANN/"; break;
-        // don't use default:
-    }
+    string backend = getBackendName(prefBackend) + "/";
     out << "digraph G {\n";
     // Add nodes
     for (std::map<int, LayerData>::const_iterator it = map.begin(); it != map.end(); ++it)
@@ -1973,50 +1926,40 @@ string Net::Impl::dump(bool forceAllocation) const
         const Target target = ld.layerInstance.empty()
                 ? DNN_TARGET_CPU
                 : (Target)(ld.layerInstance->preferableTarget);  // TODO fix preferableTarget type
+        out << getTargetName(target);
         switch (target)
         {
         case DNN_TARGET_CPU:
-            out << "CPU";
             colorId = layerBackend.empty() ? 0 : 5;
             break;
         case DNN_TARGET_OPENCL:
-            out << "OCL";
             colorId = 1;
             break;
         case DNN_TARGET_OPENCL_FP16:
-            out << "OCL_FP16";
             colorId = 2;
             break;
         case DNN_TARGET_MYRIAD:
-            out << "MYRIAD";
             colorId = 3;
             break;
         case DNN_TARGET_HDDL:
-            out << "HDDL";
             colorId = 8;
             break;
         case DNN_TARGET_VULKAN:
-            out << "VULKAN";
             colorId = 7;
             break;
         case DNN_TARGET_FPGA:
-            out << "FPGA";
             colorId = 4;
             break;
         case DNN_TARGET_CUDA:
-            out << "CUDA";
             colorId = 5;
             break;
         case DNN_TARGET_CUDA_FP16:
-            out << "CUDA_FP16";
             colorId = 6;
             break;
         case DNN_TARGET_NPU:
-            out << "NPU";
             colorId = 9;
             break;
         case DNN_TARGET_CPU_FP16:
-            out << "CPU_FP16";
             colorId = 10;
             break;
             // don't use default:
@@ -2220,43 +2163,6 @@ string Net::Impl::dumpToPbtxt(bool forceAllocation) const {
     Backend prefBackend = (Backend)preferableBackend;
     Target prefTarget = (Target)preferableTarget;
 
-    auto GetBackendName = [] (int backendId) {
-        std::string backend = "Unknown";
-        switch (backendId) {
-            case DNN_BACKEND_DEFAULT:   backend = "DEFAULT"; break;
-            #if CV_VERSION_MAJOR <= 4
-            case DNN_BACKEND_HALIDE:    backend = "HALIDE"; break;
-            #endif
-            case DNN_BACKEND_INFERENCE_ENGINE:  // fallthru
-            case DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019:  // fallthru
-            case DNN_BACKEND_INFERENCE_ENGINE_NGRAPH: backend = "OpenVINO"; break;
-            case DNN_BACKEND_OPENCV:    backend = "OCV"; break;
-            case DNN_BACKEND_VKCOM:     backend = "VULKAN"; break;
-            case DNN_BACKEND_CUDA:      backend = "CUDA"; break;
-            case DNN_BACKEND_WEBNN:     backend = "WEBNN"; break;
-            case DNN_BACKEND_TIMVX:     backend = "TIMVX"; break;
-            case DNN_BACKEND_CANN:      backend = "CANN"; break;
-        }
-        return backend;
-    };
-    auto GetTargetName = [] (int targetId) {
-        std::string target = "Unknown";
-        switch (targetId) {
-            case DNN_TARGET_CPU:         target = "CPU"; break;
-            case DNN_TARGET_OPENCL:      target = "OCL"; break;
-            case DNN_TARGET_OPENCL_FP16: target = "OCL_FP16"; break;
-            case DNN_TARGET_MYRIAD:      target = "MYRIAD"; break;
-            case DNN_TARGET_VULKAN:      target = "VULKAN"; break;
-            case DNN_TARGET_FPGA:        target = "FPGA"; break;
-            case DNN_TARGET_CUDA:        target = "CUDA"; break;
-            case DNN_TARGET_CUDA_FP16:   target = "CUDA_FP16"; break;
-            case DNN_TARGET_HDDL:        target = "HDDL"; break;
-            case DNN_TARGET_NPU:         target = "NPU"; break;
-            case DNN_TARGET_CPU_FP16:    target = "CPU_FP16"; break;
-        }
-        return target;
-    };
-
     const int num_indent_spaces = 2;
     std::string indent_spaces(num_indent_spaces, ' ');
     out << "producer_name: \"opencv dnn\"\n"
@@ -2319,9 +2225,9 @@ string Net::Impl::dumpToPbtxt(bool forceAllocation) const {
             const auto &params = ld.params;
             // Collect backend and target
             const Backend backend = ld.backendNodes.find(prefBackend) == ld.backendNodes.end() ? DNN_BACKEND_OPENCV : prefBackend;
-            const std::string backend_name = GetBackendName(backend);
+            const std::string backend_name = getBackendName(backend);
             const Target target = ld.layerInstance.empty() ? DNN_TARGET_CPU : (Target)(ld.layerInstance->preferableTarget);
-            const std::string target_name = GetTargetName(target);
+            const std::string target_name = getTargetName(target);
             dumpLayerToString(out, inputs, outputs, name, op_type, params, backend_name, target_name, num_indent_spaces + 2);
             out << indent_spaces << "}\n"; // node{}
         }
@@ -2338,11 +2244,11 @@ string Net::Impl::dumpToPbtxt(bool forceAllocation) const {
     // Add preferable backend and target as metadata
     out << "metadata_props {\n";
     out << indent_spaces << format("  key: \"%s\"", "Preferable Backend")
-        << indent_spaces << format("  value: \"%s\"", GetBackendName(prefBackend).c_str());
+        << indent_spaces << format("  value: \"%s\"", getBackendName(prefBackend).c_str());
     out << "}\n"; // metadata_props{}
     out << "metadata_props {\n";
     out << indent_spaces << format("  key: \"%s\"", "Preferable Target")
-        << indent_spaces << format("  value: \"%s\"", GetTargetName(prefTarget).c_str());
+        << indent_spaces << format("  value: \"%s\"", getTargetName(prefTarget).c_str());
     out << "}\n"; // metadata_props{}
 
     return out.str();
@@ -2770,6 +2676,6 @@ int Net::Impl::getLayersCount(const String& layerType) const
     return count;
 }
 
-
 CV__DNN_INLINE_NS_END
+
 }}  // namespace cv::dnn
