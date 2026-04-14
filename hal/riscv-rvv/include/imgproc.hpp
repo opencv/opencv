@@ -179,20 +179,22 @@ int remap16s(int src_type, const uchar *src_data, size_t src_step, int src_width
              short* mapx, size_t mapx_step, ushort* mapy, size_t mapy_step,
              int interpolation, int border_type, const double border_value[4]);
 
-#undef cv_hal_remap32f
-#define cv_hal_remap32f cv::rvv_hal::imgproc::remap32f
-#undef cv_hal_remap32fc2
-#define cv_hal_remap32fc2 cv::rvv_hal::imgproc::remap32fc2
-#undef cv_hal_remap16s
-#define cv_hal_remap16s cv::rvv_hal::imgproc::remap16s
+// BUG: https://github.com/opencv/opencv/issues/27279
+// #undef cv_hal_remap32f
+// #define cv_hal_remap32f cv::cv_hal_rvv::imgproc::remap32f
+// #undef cv_hal_remap32fc2
+// #define cv_hal_remap32fc2 cv::cv_hal_rvv::imgproc::remap32fc2
+// #undef cv_hal_remap16s
+// #define cv_hal_remap16s cv::cv_hal_rvv::imgproc::remap16s
 
 int warpAffine(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar *dst_data, size_t dst_step, int dst_width, int dst_height, const double M[6], int interpolation, int borderType, const double borderValue[4]);
 int warpPerspective(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar *dst_data, size_t dst_step, int dst_width, int dst_height, const double M[9], int interpolation, int borderType, const double borderValue[4]);
 
-#undef cv_hal_warpAffine
-#define cv_hal_warpAffine cv::rvv_hal::imgproc::warpAffine
-#undef cv_hal_warpPerspective
-#define cv_hal_warpPerspective cv::rvv_hal::imgproc::warpPerspective
+// BUG: https://github.com/opencv/opencv/issues/27280
+//#undef cv_hal_warpAffine
+//#define cv_hal_warpAffine cv::cv_hal_rvv::imgproc::warpAffine
+//#undef cv_hal_warpPerspective
+//#define cv_hal_warpPerspective cv::cv_hal_rvv::imgproc::warpPerspective
 
 /* ############ threshold ############ */
 
@@ -240,6 +242,16 @@ int integral(int depth, int sdepth, int sqdepth,
 // Details see https://github.com/opencv/opencv/issues/27407.
 //#undef cv_hal_integral
 //#define cv_hal_integral cv::rvv_hal::imgproc::integral
+
+/* ############ laplacian ############ */
+int laplacian(const uint8_t* src_data, size_t src_step,
+              uint8_t* dst_data, size_t dst_step,
+              int width, int height,
+              int src_depth, int dst_depth, int cn,
+              int ksize, int border_type, uint8_t border_value);
+
+#undef cv_hal_laplacian
+#define cv_hal_laplacian cv::rvv_hal::imgproc::laplacian
 
 /* ############ scharr ############ */
 int scharr(const uint8_t *src_data, size_t src_step, uint8_t *dst_data, size_t dst_step, int width, int height, int src_depth, int dst_depth, int cn, int margin_left, int margin_top, int margin_right, int margin_bottom, int dx, int dy, double scale, double delta, int border_type);
