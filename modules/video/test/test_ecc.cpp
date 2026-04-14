@@ -457,7 +457,7 @@ void CV_ECC_BigPictureTest::run(int)
     ECCParameters params;
     params.criteria = cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, N_ITERS, TERMINATION_EPS);
     params.motionType = MOTION_HOMOGRAPHY;
-    params.numberOfPyramidsLevel = 6;
+    params.nlevels = 6;
     params.itersPerLevel = {5, 10, 300, 300, 1000, 1000};
     findTransformECCMultiScale(largeGray0, largeGray1, found, params, roiMask0, roiMask1);
     ASSERT_EQ(checkMap(found, expectedRes), true);
