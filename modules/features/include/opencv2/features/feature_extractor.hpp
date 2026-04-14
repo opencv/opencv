@@ -41,9 +41,11 @@ namespace features
             Params();
 
             String modelPath;
+#ifdef HAVE_OPENCV_DNN
             int dnnEngine;
             int dnnBackend;
             int dnnTarget;
+#endif
             Size inputSize;
             bool preferGrayInput;
         };
