@@ -10,8 +10,10 @@
 #include "opencv2/dnn/dnn.hpp"
 #endif
 
-namespace cv {
-namespace features {
+namespace cv
+{
+namespace features
+{
 
 #ifdef HAVE_OPENCV_DNN
 static const int kDnnEngineAuto = static_cast<int>(dnn::ENGINE_AUTO);
@@ -29,7 +31,8 @@ LightGlue::Params::Params()
     scoreThreshold = 0.0f;
 }
 
-namespace {
+namespace
+{
 
 #ifdef HAVE_OPENCV_DNN
 
