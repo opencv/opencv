@@ -495,8 +495,8 @@ CV_EXPORTS_W double findTransformECCMultiScale(InputArray reference,
                         InputArray sample,
                         InputOutputArray warpMatrix,
                         const ECCParameters& eccParams = ECCParameters(),
-                        InputArray referenceMask = _InputArray(),
-                        InputArray sampleMask = _InputArray());
+                        InputArray referenceMask = noArray(),
+                        InputArray sampleMask = noArray());
 
 /** @example samples/cpp/kalman.cpp
 An example using the standard Kalman filter

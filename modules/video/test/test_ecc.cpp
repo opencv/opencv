@@ -45,17 +45,32 @@
 namespace opencv_test {
 namespace {
 
-class CV_ECC_BaseTest : public cvtest::BaseTest {
+PARAM_TEST_CASE(Video_ECC, int, bool, double)
+{
+    int motionType;
+    bool usePyramids;
+    double RMSmax;
+    virtual void SetUp()
+    {
+        motionType = GET_PARAM(0);
+        usePyramids = GET_PARAM(1);
+        RMSmax = GET_PARAM(2);
+    }
+};
+
+class CV_ECC_Test : public cvtest::BaseTest {
    public:
-    CV_ECC_BaseTest();
-    virtual ~CV_ECC_BaseTest();
-    void usePyramids();
+    CV_ECC_Test(int motionType, bool usePyramids, double MAX_RMS = 0.1);
+    virtual ~CV_ECC_Test();
 
    protected:
+    int motionType; 
+    double MAX_RMS;  // upper bound for RMS error
+
     double computeRMS(const Mat& mat1, const Mat& mat2);
     bool isMapCorrect(const Mat& mat);
 
-    virtual bool test(const Mat) { return true; };  // single test
+    virtual bool test(const Mat img);
     bool testAllTypes(const Mat img);               // run test for all supported data types (U8, U16, F32, F64)
     bool testAllChNum(const Mat img);               // run test for all supported channels count (gray, RGB)
 
@@ -63,29 +78,28 @@ class CV_ECC_BaseTest : public cvtest::BaseTest {
 
     bool checkMap(const Mat& map, const Mat& ground);
 
-    double MAX_RMS_ECC;  // upper bound for RMS error
     int ntests;          // number of tests per motion type
     int ECC_iterations;  // number of iterations for ECC
     double ECC_epsilon;  // we choose a negative value, so that
     // ECC_iterations are always executed
     TermCriteria criteria;
-    bool grayscale_only;     // test only grayscale images
-    bool use_pyramids;       // use version of findTransformECC with pyramids
+    bool usePyramids;       // use version of findTransformECC with pyramids
 };
 
-CV_ECC_BaseTest::CV_ECC_BaseTest() {
-    MAX_RMS_ECC = 0.1;
-    ntests = 3;
-    ECC_iterations = 50;
-    ECC_epsilon = -1;  //-> negative value means that ECC_Iterations will be executed
-    criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, ECC_iterations, ECC_epsilon);
-    grayscale_only = false;
-    use_pyramids = false;
-}
 
-CV_ECC_BaseTest::~CV_ECC_BaseTest() {}
+CV_ECC_Test::CV_ECC_Test(int a_motionType, bool a_usePyramids, double a_MAX_RMS) : motionType(a_motionType)
+    , MAX_RMS(a_MAX_RMS)
+    , ntests(3)
+    , ECC_iterations(50)
+    , ECC_epsilon(-1)
+    , criteria(TermCriteria::COUNT + TermCriteria::EPS, ECC_iterations, ECC_epsilon)
+    , usePyramids(a_usePyramids)
+    {}
 
-bool CV_ECC_BaseTest::isMapCorrect(const Mat& map) {
+
+CV_ECC_Test::~CV_ECC_Test() {}
+
+bool CV_ECC_Test::isMapCorrect(const Mat& map) {
     bool tr = true;
     float mapVal;
     for (int i = 0; i < map.rows; i++)
@@ -97,7 +111,7 @@ bool CV_ECC_BaseTest::isMapCorrect(const Mat& map) {
     return tr;
 }
 
-double CV_ECC_BaseTest::computeRMS(const Mat& mat1, const Mat& mat2) {
+double CV_ECC_Test::computeRMS(const Mat& mat1, const Mat& mat2) {
     CV_Assert(mat1.rows == mat2.rows);
     CV_Assert(mat1.cols == mat2.cols);
 
@@ -107,13 +121,13 @@ double CV_ECC_BaseTest::computeRMS(const Mat& mat1, const Mat& mat2) {
     return sqrt(errorMat.dot(errorMat) / (mat1.rows * mat1.cols * mat1.channels()));
 }
 
-bool CV_ECC_BaseTest::checkMap(const Mat& map, const Mat& ground) {
+bool CV_ECC_Test::checkMap(const Mat& map, const Mat& ground) {
     if (!isMapCorrect(map)) {
         ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
         return false;
     }
 
-    if (computeRMS(map, ground) > MAX_RMS_ECC) {
+    if (computeRMS(map, ground) > MAX_RMS) {
         ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
         ts->printf(ts->LOG, "RMS = %f", computeRMS(map, ground));
         return false;
@@ -121,7 +135,77 @@ bool CV_ECC_BaseTest::checkMap(const Mat& map, const Mat& ground) {
     return true;
 }
 
-bool CV_ECC_BaseTest::testAllTypes(const Mat img) {
+bool CV_ECC_Test::test(const Mat img)
+{
+    cv::RNG rng = ts->get_rng();
+
+    int progress = 0;
+
+    for (int k = 0; k < ntests; k++) {
+        ts->update_context(this, k, true);
+        progress = update_progress(progress, k, ntests, 0);
+
+        Mat groundMap;
+        switch(motionType)
+        {
+            case MOTION_TRANSLATION: 
+                groundMap = (Mat_<float>(2, 3) << 1, 0, (rng.uniform(10.f, 20.f)), 0, 1, (rng.uniform(10.f, 20.f)));
+                break;
+            case MOTION_EUCLIDEAN: 
+            {
+                double angle = CV_PI / 30 + CV_PI * rng.uniform((double)-2.f, (double)2.f) / 180;
+                groundMap = (Mat_<float>(2, 3) << cos(angle), -sin(angle), (rng.uniform(10.f, 20.f)), sin(angle),
+                            cos(angle), (rng.uniform(10.f, 20.f)));
+                break;
+            }
+            case MOTION_AFFINE:
+                groundMap = (Mat_<float>(2, 3) << (1 - rng.uniform(-0.05f, 0.05f)), (rng.uniform(-0.03f, 0.03f)),
+                            (rng.uniform(10.f, 20.f)), (rng.uniform(-0.03f, 0.03f)), (1 - rng.uniform(-0.05f, 0.05f)),
+                            (rng.uniform(10.f, 20.f)));
+                break;
+            case MOTION_HOMOGRAPHY:
+                groundMap =
+                    (Mat_<float>(3, 3) << (1 - rng.uniform(-0.05f, 0.05f)), (rng.uniform(-0.03f, 0.03f)),
+                    (rng.uniform(10.f, 20.f)), (rng.uniform(-0.03f, 0.03f)), (1 - rng.uniform(-0.05f, 0.05f)),
+                    (rng.uniform(10.f, 20.f)), (rng.uniform(0.0001f, 0.0003f)), (rng.uniform(0.0001f, 0.0003f)), 1.f);
+                break;
+            default:
+                CV_Error(Error::StsBadArg, "Incorrect motion type");
+                break;
+        }
+
+        Mat warpedImage;
+
+        Mat foundMap;
+        if(motionType == MOTION_HOMOGRAPHY)
+        {
+            warpPerspective(img, warpedImage, groundMap, Size(200, 200), INTER_LINEAR + WARP_INVERSE_MAP);
+            foundMap = Mat::eye(3, 3, CV_32F);
+        }
+        else
+        {
+            warpAffine(img, warpedImage, groundMap, Size(200, 200), INTER_LINEAR + WARP_INVERSE_MAP);
+            foundMap = Mat((Mat_<float>(2, 3) << 1, 0, 0, 0, 1, 0));
+        }
+
+
+        if(usePyramids)
+        {
+            ECCParameters params;
+            params.criteria = criteria;
+            params.motionType = motionType;
+            findTransformECCMultiScale(warpedImage, img, foundMap, params);
+        }
+        else
+            findTransformECC(warpedImage, img, foundMap, motionType, criteria);
+
+        if (!checkMap(foundMap, groundMap))
+            return false;
+    }
+    return true;    
+}
+
+bool CV_ECC_Test::testAllTypes(const Mat img) {
     auto types = {CV_8U, CV_16U, CV_32F, CV_64F};
     for (auto type : types) {
         Mat timg;
@@ -132,8 +216,8 @@ bool CV_ECC_BaseTest::testAllTypes(const Mat img) {
     return true;
 }
 
-bool CV_ECC_BaseTest::testAllChNum(const Mat img) {
-    if(!grayscale_only)
+bool CV_ECC_Test::testAllChNum(const Mat img) {
+    if(!usePyramids)
         if (!testAllTypes(img))
             return false;
 
@@ -145,7 +229,7 @@ bool CV_ECC_BaseTest::testAllChNum(const Mat img) {
     return true;
 }
 
-void CV_ECC_BaseTest::run(int) {
+void CV_ECC_Test::run(int) {
     Mat img = imread(string(ts->get_data_path()) + "shared/fruits.png");
     if (img.empty()) {
         ts->printf(ts->LOG, "test image can not be read");
@@ -161,190 +245,33 @@ void CV_ECC_BaseTest::run(int) {
     ts->set_failed_test_info(cvtest::TS::OK);
 }
 
-void CV_ECC_BaseTest::usePyramids()
-{
-    grayscale_only = use_pyramids = true;
+TEST_P(Video_ECC, accuracy) {
+    CV_ECC_Test test(motionType, usePyramids, RMSmax);
+    test.safe_run();    
 }
 
-class CV_ECC_Test_Translation : public CV_ECC_BaseTest {
-   public:
-    CV_ECC_Test_Translation();
-    void setRMS_MAX(double newRMS) { MAX_RMS_ECC = newRMS; }
+// There is such a difference on translation with multiscale:
+// ORIGINAL:1.000000, 0.000000, 17.786327
+// ORIGINAL:0.000000, 1.000000, 19.370564
+// FOUND:1.000000, 0.000000, 18.200426
+// FOUND:0.000000, 1.000000, 19.860243
+// Pyramids version uses nearest neighbour interpolation for
+// speed. It's so much infromation, that error is automatically
+// fixed, but for transition this error is regular, so it's 
+// impossible to compesate it. Therefore, subpixel accuracy cannot 
+// be achieved on transition. That's why we have increased RMS 
+// threshold for MS translation.
+INSTANTIATE_TEST_CASE_P(ECCfixtures, Video_ECC, 
+    testing::Values(testing::make_tuple(MOTION_TRANSLATION, false, 0.1),
+                    testing::make_tuple(MOTION_TRANSLATION, true, 0.3),
+                    testing::make_tuple(MOTION_EUCLIDEAN, false, 0.1),
+                    testing::make_tuple(MOTION_EUCLIDEAN, true, 0.1),
+                    testing::make_tuple(MOTION_AFFINE, false, 0.1),
+                    testing::make_tuple(MOTION_AFFINE, true, 0.1),
+                    testing::make_tuple(MOTION_HOMOGRAPHY, false, 0.1),
+                    testing::make_tuple(MOTION_HOMOGRAPHY, true, 0.1)));
 
-   protected:
-    bool test(const Mat);
-};
-
-CV_ECC_Test_Translation::CV_ECC_Test_Translation() {}
-
-bool CV_ECC_Test_Translation::test(const Mat testImg) {
-    cv::RNG rng = ts->get_rng();
-
-    int progress = 0;
-
-    for (int k = 0; k < ntests; k++) {
-        ts->update_context(this, k, true);
-        progress = update_progress(progress, k, ntests, 0);
-
-        Mat translationGround = (Mat_<float>(2, 3) << 1, 0, (rng.uniform(10.f, 20.f)), 0, 1, (rng.uniform(10.f, 20.f)));
-
-        Mat warpedImage;
-
-        warpAffine(testImg, warpedImage, translationGround, Size(200, 200), INTER_LINEAR + WARP_INVERSE_MAP);
-
-        Mat mapTranslation = (Mat_<float>(2, 3) << 1, 0, 0, 0, 1, 0);
-
-        if(use_pyramids)
-        {
-            ECCParameters params;
-            params.criteria = criteria;
-            params.motionType = MOTION_TRANSLATION;
-            findTransformECCMultiScale(warpedImage, testImg, mapTranslation, params);
-        }
-        else
-            findTransformECC(warpedImage, testImg, mapTranslation, 0, criteria);
-
-        if (!checkMap(mapTranslation, translationGround))
-            return false;
-    }
-    return true;
-}
-
-class CV_ECC_Test_Euclidean : public CV_ECC_BaseTest {
-   public:
-    CV_ECC_Test_Euclidean();
-
-   protected:
-    bool test(const Mat);
-};
-
-CV_ECC_Test_Euclidean::CV_ECC_Test_Euclidean() {}
-
-bool CV_ECC_Test_Euclidean::test(const Mat testImg) {
-    cv::RNG rng = ts->get_rng();
-
-    int progress = 0;
-    for (int k = 0; k < ntests; k++) {
-        ts->update_context(this, k, true);
-        progress = update_progress(progress, k, ntests, 0);
-
-        double angle = CV_PI / 30 + CV_PI * rng.uniform((double)-2.f, (double)2.f) / 180;
-
-        Mat euclideanGround = (Mat_<float>(2, 3) << cos(angle), -sin(angle), (rng.uniform(10.f, 20.f)), sin(angle),
-                               cos(angle), (rng.uniform(10.f, 20.f)));
-
-        Mat warpedImage;
-
-        warpAffine(testImg, warpedImage, euclideanGround, Size(200, 200), INTER_LINEAR + WARP_INVERSE_MAP);
-
-        Mat mapEuclidean = (Mat_<float>(2, 3) << 1, 0, 0, 0, 1, 0);
-
-        if(use_pyramids)
-        {
-            ECCParameters params;
-            params.criteria = criteria;
-            params.motionType = MOTION_EUCLIDEAN;
-            findTransformECCMultiScale(warpedImage, testImg, mapEuclidean, params);
-        }
-        else
-            findTransformECC(warpedImage, testImg, mapEuclidean, 1, criteria);
-
-        if (!checkMap(mapEuclidean, euclideanGround))
-            return false;
-    }
-    return true;
-}
-
-class CV_ECC_Test_Affine : public CV_ECC_BaseTest {
-   public:
-    CV_ECC_Test_Affine();
-
-   protected:
-    bool test(const Mat img);
-};
-
-CV_ECC_Test_Affine::CV_ECC_Test_Affine() {}
-
-bool CV_ECC_Test_Affine::test(const Mat testImg) {
-    cv::RNG rng = ts->get_rng();
-
-    int progress = 0;
-    for (int k = 0; k < ntests; k++) {
-        ts->update_context(this, k, true);
-        progress = update_progress(progress, k, ntests, 0);
-
-        Mat affineGround = (Mat_<float>(2, 3) << (1 - rng.uniform(-0.05f, 0.05f)), (rng.uniform(-0.03f, 0.03f)),
-                            (rng.uniform(10.f, 20.f)), (rng.uniform(-0.03f, 0.03f)), (1 - rng.uniform(-0.05f, 0.05f)),
-                            (rng.uniform(10.f, 20.f)));
-
-        Mat warpedImage;
-
-        warpAffine(testImg, warpedImage, affineGround, Size(200, 200), INTER_LINEAR + WARP_INVERSE_MAP);
-
-        Mat mapAffine = (Mat_<float>(2, 3) << 1, 0, 0, 0, 1, 0);
-
-        if(use_pyramids)
-        {
-            ECCParameters params;
-            params.criteria = criteria;
-            params.motionType = MOTION_AFFINE;
-            findTransformECCMultiScale(warpedImage, testImg, mapAffine, params);
-        }
-        else
-            findTransformECC(warpedImage, testImg, mapAffine, 2, criteria);
-
-        if (!checkMap(mapAffine, affineGround))
-            return false;
-    }
-
-    return true;
-}
-
-class CV_ECC_Test_Homography : public CV_ECC_BaseTest {
-   public:
-    CV_ECC_Test_Homography();
-
-   protected:
-    bool test(const Mat testImg);
-};
-
-CV_ECC_Test_Homography::CV_ECC_Test_Homography() {}
-
-bool CV_ECC_Test_Homography::test(const Mat testImg) {
-    cv::RNG rng = ts->get_rng();
-
-    int progress = 0;
-    for (int k = 0; k < ntests; k++) {
-        ts->update_context(this, k, true);
-        progress = update_progress(progress, k, ntests, 0);
-
-        Mat homoGround =
-            (Mat_<float>(3, 3) << (1 - rng.uniform(-0.05f, 0.05f)), (rng.uniform(-0.03f, 0.03f)),
-             (rng.uniform(10.f, 20.f)), (rng.uniform(-0.03f, 0.03f)), (1 - rng.uniform(-0.05f, 0.05f)),
-             (rng.uniform(10.f, 20.f)), (rng.uniform(0.0001f, 0.0003f)), (rng.uniform(0.0001f, 0.0003f)), 1.f);
-
-        Mat warpedImage;
-
-        warpPerspective(testImg, warpedImage, homoGround, Size(200, 200), INTER_LINEAR + WARP_INVERSE_MAP);
-
-        Mat mapHomography = Mat::eye(3, 3, CV_32F);
-        if(use_pyramids) 
-        {
-            ECCParameters params;
-            params.criteria = criteria;
-            params.motionType = MOTION_HOMOGRAPHY;
-            findTransformECCMultiScale(warpedImage, testImg, mapHomography, params);
-        }
-        else
-            findTransformECC(warpedImage, testImg, mapHomography, 3, criteria);
-
-        if (!checkMap(mapHomography, homoGround))
-            return false;
-    }
-    return true;
-}
-
-class CV_ECC_Test_Mask : public CV_ECC_BaseTest {
+class CV_ECC_Test_Mask : public CV_ECC_Test {
    public:
     CV_ECC_Test_Mask();
 
@@ -352,7 +279,7 @@ class CV_ECC_Test_Mask : public CV_ECC_BaseTest {
     bool test(const Mat);
 };
 
-CV_ECC_Test_Mask::CV_ECC_Test_Mask() {}
+CV_ECC_Test_Mask::CV_ECC_Test_Mask():CV_ECC_Test(MOTION_TRANSLATION, false, 0.1) {}
 
 bool CV_ECC_Test_Mask::test(const Mat testImg) {
     cv::RNG rng = ts->get_rng();
@@ -411,14 +338,13 @@ bool CV_ECC_Test_Mask::test(const Mat testImg) {
     return true;
 }
 
-class CV_ECC_BigPictureTest : public CV_ECC_BaseTest {
+class CV_ECC_BigPictureTest : public CV_ECC_Test {
    public:
-    CV_ECC_BigPictureTest() : masked_version(false) {}
+    CV_ECC_BigPictureTest(bool a_maskedVersion) : CV_ECC_Test(MOTION_HOMOGRAPHY, true, 0.1), maskedVersion(a_maskedVersion) {}
     virtual ~CV_ECC_BigPictureTest() {}
-    void maskedVersion() { masked_version = true; } 
    protected:
     void run(int);
-    bool masked_version;
+    bool maskedVersion;
 };
 
 void CV_ECC_BigPictureTest::run(int)
@@ -429,7 +355,7 @@ void CV_ECC_BigPictureTest::run(int)
     Mat roiMask1;
     Mat expectedRes;
     bool readError = false;
-    if(masked_version)
+    if(maskedVersion)
     {
         largeGray1 = imread(string(ts->get_data_path()) + "shared/halmosh2.jpg", IMREAD_GRAYSCALE);
         roiMask0 = imread(string(ts->get_data_path()) + "shared/halmosh0mask.png", IMREAD_GRAYSCALE);
@@ -546,64 +472,16 @@ TEST(Video_ECC_Test_Compute, bug_14657) {
     EXPECT_NEAR(computeECC(img, img), 1.0f, 1e-5f);
 }
 
-TEST(Video_ECC_Translation, accuracy) {
-    CV_ECC_Test_Translation test;
-    test.safe_run();
-}
-TEST(Video_ECC_Translation_MS, accuracy) {
-    CV_ECC_Test_Translation test;
-    test.usePyramids();
-// There is such a difference.
-// ORIGINAL:1.000000, 0.000000, 17.786327
-// ORIGINAL:0.000000, 1.000000, 19.370564
-// FOUND:1.000000, 0.000000, 18.200426
-// FOUND:0.000000, 1.000000, 19.860243
-// Pyramids version uses nearest neighbour interpolation for
-// speed. It's so much infromation, that error is automatically
-// fixed, but for transition this error is regular, so it's 
-// impossible to compesate it. Therefore, subpixel accuracy cannot 
-// be achieved on transition.
-    test.setRMS_MAX(0.3);
-    test.safe_run();
-}
-TEST(Video_ECC_Euclidean, accuracy) {
-    CV_ECC_Test_Euclidean test;
-    test.safe_run();
-}
-TEST(Video_ECC_Euclidean_MS, accuracy) {
-    CV_ECC_Test_Euclidean test;
-    test.usePyramids();
-    test.safe_run();
-}
-TEST(Video_ECC_Affine, accuracy) {
-    CV_ECC_Test_Affine test;
-    test.safe_run();
-}
-TEST(Video_ECC_Affine_MS, accuracy) {
-    CV_ECC_Test_Affine test;
-    test.usePyramids();
-    test.safe_run();
-}
-TEST(Video_ECC_Homography, accuracy) {
-    CV_ECC_Test_Homography test;
-    test.safe_run();
-}
-TEST(Video_ECC_Homography_MS, accuracy) {
-    CV_ECC_Test_Homography test;
-    test.usePyramids();
-    test.safe_run();
-}
 TEST(Video_ECC_Mask, accuracy) {
     CV_ECC_Test_Mask test;
     test.safe_run();
 }
 TEST(Video_ECC_BigMS, accuracy) {
-    CV_ECC_BigPictureTest test;
+    CV_ECC_BigPictureTest test(false);
     test.safe_run();
 }
 TEST(Video_ECC_BigMS_Mask, accuracy) {
-    CV_ECC_BigPictureTest test;
-    test.maskedVersion();
+    CV_ECC_BigPictureTest test(true);
     test.safe_run();
 }
 }  // namespace
