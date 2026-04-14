@@ -17,17 +17,12 @@ namespace cv { namespace rvv_hal { namespace imgproc {
 
 namespace {
 
-// -------- helpers --------
 static inline int borderMap(int x, int len, int border_type)
 {
     return common::borderInterpolate(x, len, border_type);
 }
 
-static inline uint8_t sample_u8(const uint8_t* src, size_t step,
-                                int width, int height,
-                                int y, int x,
-                                int border_type,
-                                uint8_t border_value)
+static inline uint8_t sample_u8(const uint8_t* src, size_t step, int width, int height, int y, int x, int border_type, uint8_t border_value)
 {
     int yy = borderMap(y, height, border_type);
     int xx = borderMap(x, width , border_type);
@@ -68,10 +63,6 @@ static inline vuint8m1_t clamp_to_u8(vint16m2_t v, size_t vl)
     return __riscv_vnclipu(u16, 0, __RISCV_VXRM_RNU, vl);
 }
 
-// ---------------------------
-// Laplacian3x3 (u8 -> u8)  [FIXED]
-// kernel = sum(3x3) - 9*center
-// ---------------------------
 static int laplacian3x3_u8(int start, int end,
                            const uint8_t* src_data, size_t src_step,
                            uint8_t* dst_data, size_t dst_step,
@@ -91,7 +82,6 @@ static int laplacian3x3_u8(int start, int end,
             s += r2 ? r2[xcol] : border_value;
             return s;
         }
-        // BORDER_CONSTANT
         if (xcol < 0 || xcol >= width)
             return static_cast<uint16_t>(border_value * 3);
         uint16_t s = 0;
@@ -131,7 +121,6 @@ static int laplacian3x3_u8(int start, int end,
             continue;
         }
 
-        // left border
         for (int x = 0; x < left; ++x)
         {
             int sum = 0;
@@ -144,7 +133,6 @@ static int laplacian3x3_u8(int start, int end,
             drow[x] = (uint8_t)val;
         }
 
-        // vector body
         int x = left;
         for (; x < right; )
         {
@@ -174,7 +162,6 @@ static int laplacian3x3_u8(int start, int end,
             vuint16m2_t sum3 = __riscv_vadd_vv_u16m2(vleft, vsum, vl);
             sum3 = __riscv_vadd_vv_u16m2(sum3, vright, vl);
 
-            // 9 * center = (center << 3) + center
             vuint16m2_t v8c = __riscv_vsll_vx_u16m2(v1w, 3, vl);
             vuint16m2_t v9c = __riscv_vadd_vv_u16m2(v8c, v1w, vl);
 
@@ -187,7 +174,6 @@ static int laplacian3x3_u8(int start, int end,
             x += vl;
         }
 
-        // right border
         for (; x < width; ++x)
         {
             int sum = 0;
@@ -204,10 +190,6 @@ static int laplacian3x3_u8(int start, int end,
     return CV_HAL_ERROR_OK;
 }
 
-// ---------------------------
-// Laplacian1 (u8 -> s16)
-// kernel: [0 1 0; 1 -4 1; 0 1 0]
-// ---------------------------
 static int laplacian1(int start, int end,
                       const uint8_t* src_data, size_t src_step,
                       int16_t* dst_data, size_t dst_step,
@@ -232,7 +214,6 @@ static int laplacian1(int start, int end,
         int left = 1;
         int right = width - 1;
 
-        // borders (scalar)
         for (int x = 0; x < left; ++x)
         {
             int v0 = sample_u8(src_data, src_step, width, height, y - 1, x, border_type, border_value);
@@ -243,7 +224,6 @@ static int laplacian1(int start, int end,
             drow[x] = (int16_t)(v0 + v2 + v1l + v1r - 4 * v1);
         }
 
-        // vector body
         int x = left;
         for (; x < right; )
         {
@@ -283,10 +263,6 @@ static int laplacian1(int start, int end,
     return CV_HAL_ERROR_OK;
 }
 
-// ---------------------------
-// Laplacian3 (u8 -> s16)
-// kernel: [2 0 2; 0 -8 0; 2 0 2]
-// ---------------------------
 static int laplacian3(int start, int end,
                       const uint8_t* src_data, size_t src_step,
                       int16_t* dst_data, size_t dst_step,
@@ -367,10 +343,6 @@ static int laplacian3(int start, int end,
     return CV_HAL_ERROR_OK;
 }
 
-// ---------------------------
-// Laplacian5 (u8 -> s16)
-// kernel based on OpenCV Laplacian ksize=5
-// ---------------------------
 static int laplacian5(int start, int end,
                       const uint8_t* src_data, size_t src_step,
                       int16_t* dst_data, size_t dst_step,
@@ -502,9 +474,6 @@ static int laplacian5(int start, int end,
 
 } // anonymous
 
-// ---------------------------
-// public entry for HAL
-// ---------------------------
 int laplacian(const uint8_t* src_data, size_t src_step,
               uint8_t* dst_data, size_t dst_step,
               int width, int height,
