@@ -11,48 +11,48 @@ namespace cv
 namespace features
 {
 
-        FeatureExtractor::~FeatureExtractor() {}
+FeatureExtractor::~FeatureExtractor() {}
 
-        namespace
+namespace
+{
+
+    class TraditionalFeatureExtractorImpl CV_FINAL : public TraditionalFeatureExtractor
+    {
+    public:
+        explicit TraditionalFeatureExtractorImpl(const Ptr<Feature2D> &feature2D)
+            : feature2D_(feature2D)
         {
-
-            class TraditionalFeatureExtractorImpl CV_FINAL : public TraditionalFeatureExtractor
-            {
-            public:
-                explicit TraditionalFeatureExtractorImpl(const Ptr<Feature2D> &feature2D)
-                    : feature2D_(feature2D)
-                {
-                }
-
-                void extract(InputArray image,
-                             std::vector<KeyPoint> &keypoints,
-                             OutputArray descriptors,
-                             InputArray mask) const CV_OVERRIDE
-                {
-                    CV_Assert(!feature2D_.empty());
-                    feature2D_->detectAndCompute(image, mask, keypoints, descriptors, false);
-                }
-
-                void setFeature2D(const Ptr<Feature2D> &feature2D) CV_OVERRIDE
-                {
-                    feature2D_ = feature2D;
-                }
-
-                Ptr<Feature2D> getFeature2D() const CV_OVERRIDE
-                {
-                    return feature2D_;
-                }
-
-            private:
-                Ptr<Feature2D> feature2D_;
-            };
-
-        } // namespace
-
-        Ptr<TraditionalFeatureExtractor> TraditionalFeatureExtractor::create(const Ptr<Feature2D> &feature2D)
-        {
-            return makePtr<TraditionalFeatureExtractorImpl>(feature2D);
         }
+
+        void extract(InputArray image,
+                     std::vector<KeyPoint> &keypoints,
+                     OutputArray descriptors,
+                     InputArray mask) const CV_OVERRIDE
+        {
+            CV_Assert(!feature2D_.empty());
+            feature2D_->detectAndCompute(image, mask, keypoints, descriptors, false);
+        }
+
+        void setFeature2D(const Ptr<Feature2D> &feature2D) CV_OVERRIDE
+        {
+            feature2D_ = feature2D;
+        }
+
+        Ptr<Feature2D> getFeature2D() const CV_OVERRIDE
+        {
+            return feature2D_;
+        }
+
+    private:
+        Ptr<Feature2D> feature2D_;
+    };
+
+} // namespace
+
+Ptr<TraditionalFeatureExtractor> TraditionalFeatureExtractor::create(const Ptr<Feature2D> &feature2D)
+{
+    return makePtr<TraditionalFeatureExtractorImpl>(feature2D);
+}
 
 } // namespace features
 } // namespace cv
