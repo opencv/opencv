@@ -15,8 +15,9 @@ namespace opencv_test { namespace {
 
         TEST(Features_FeaturePipeline, TraditionalWrapper)
         {
-            Mat img(128, 128, CV_8UC1, Scalar::all(0));
-            randu(img, Scalar::all(0), Scalar::all(255));
+            const String imagePath = cv::samples::findFile("box.png");
+            Mat img = imread(imagePath, IMREAD_GRAYSCALE);
+            ASSERT_FALSE(img.empty());
 
             Ptr<cv::features::FeatureExtractor> extractor = cv::features::TraditionalFeatureExtractor::create(ORB::create());
             ASSERT_FALSE(extractor.empty());
