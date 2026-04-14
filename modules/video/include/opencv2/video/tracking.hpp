@@ -438,7 +438,7 @@ Default values are shown in the declaration above.
 @param itersPerLevel Criterion extension: distribution of iterations limit over pyramid levels.
 Can be empty, in this case, this algorithm will use criteria.maxCount on each level.
 @param gaussFiltSize An optional value indicating size of gaussian blur filter; (DEFAULT: 5)
-@param numberOfPyramidsLevel An optional value indicating amount of levels in the pyramid; (DEFAULT: 4) 
+@param nlevels An optional value indicating amount of levels in the pyramid; (DEFAULT: 4) 
  */
 struct CV_EXPORTS_W_SIMPLE ECCParameters
 {
@@ -447,7 +447,7 @@ struct CV_EXPORTS_W_SIMPLE ECCParameters
     CV_PROP_RW cv::TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 50, 1e-6);
     CV_PROP_RW std::vector<int> itersPerLevel = std::vector<int>();
     CV_PROP_RW int gaussFiltSize = 5;
-    CV_PROP_RW int numberOfPyramidsLevel = 4;
+    CV_PROP_RW int nlevels = 4;
 };
 
 /** @brief Finds the geometric transform (warp) between two images in terms of the ECC criterion @cite EP08. Uses pyramids.

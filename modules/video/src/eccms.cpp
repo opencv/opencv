@@ -585,14 +585,14 @@ static void buildPyramidECC(InputArray inputImage,
                   MatPyramid& imgPyramid,
                   InputArray& mask,
                   MatPyramid& maskPyramid,
-                  int numberOfPyramidsLevel) {
-    imgPyramid.resize(numberOfPyramidsLevel);
+                  int nlevels) {
+    imgPyramid.resize(nlevels);
     inputImage.getMat().convertTo(imgPyramid[0], CV_8UC1);
-    maskPyramid.resize(numberOfPyramidsLevel);
+    maskPyramid.resize(nlevels);
     if (!mask.empty()) {
         mask.getMat().convertTo(maskPyramid[0], CV_8UC1);
     }
-    for (int pyrLevel = 0; pyrLevel < numberOfPyramidsLevel - 1; ++pyrLevel) {
+    for (int pyrLevel = 0; pyrLevel < nlevels - 1; ++pyrLevel) {
         Size size = Size((imgPyramid[pyrLevel].cols + 1) / 2, (imgPyramid[pyrLevel].rows + 1) / 2);
         pyrDown(imgPyramid[pyrLevel], imgPyramid[pyrLevel + 1], size);
         if (!mask.empty()) {
@@ -666,11 +666,11 @@ static void checkParams(const MatPyramid& referencePyramid,
                  int motionType,
                  TermCriteria criteria,
                  std::vector<int>& itersPerLevel,
-                 int numberOfPyramidsLevel) {
+                 int nlevels) {
     if (itersPerLevel.empty()) {
-        itersPerLevel.resize(numberOfPyramidsLevel, criteria.maxCount);
+        itersPerLevel.resize(nlevels, criteria.maxCount);
     }
-    CV_Assert(static_cast<int>(itersPerLevel.size()) == numberOfPyramidsLevel);
+    CV_Assert(static_cast<int>(itersPerLevel.size()) == nlevels);
     CV_Assert(!referencePyramid.empty());
     for (const auto& lvl : referencePyramid) {
         CV_Assert(!lvl.empty() && lvl.type() == referencePyramid[0].type());
@@ -709,10 +709,10 @@ static void checkParams(const MatPyramid& referencePyramid,
 static MatPyramid prepareECCPyramid(InputArray image,
                              InputArray imageMask,  // Can be empty
                              int gaussFiltSize,
-                             int numberOfPyramidsLevel) {
+                             int nlevels) {
     MatPyramid imagePyramid, maskPyramid;
-    buildPyramidECC(image, imagePyramid, imageMask, maskPyramid, numberOfPyramidsLevel);
-    for (int lvl = 0; lvl < numberOfPyramidsLevel; lvl++) {
+    buildPyramidECC(image, imagePyramid, imageMask, maskPyramid, nlevels);
+    for (int lvl = 0; lvl < nlevels; lvl++) {
         Mat imgFloat;
         imagePyramid[lvl].convertTo(imgFloat, CV_32F, 1. / 255.);
         if (gaussFiltSize != 0) {
@@ -731,8 +731,8 @@ double findTransformECCMultiScale(InputArray reference,
                         const ECCParameters& eccParams,
                         InputArray referenceMask,
                         InputArray sampleMask) {
-    MatPyramid referencePyramid = prepareECCPyramid(reference, referenceMask, eccParams.gaussFiltSize, eccParams.numberOfPyramidsLevel);
-    MatPyramid samplePyramid = prepareECCPyramid(sample, sampleMask, eccParams.gaussFiltSize, eccParams.numberOfPyramidsLevel);
+    MatPyramid referencePyramid = prepareECCPyramid(reference, referenceMask, eccParams.gaussFiltSize, eccParams.nlevels);
+    MatPyramid samplePyramid = prepareECCPyramid(sample, sampleMask, eccParams.gaussFiltSize, eccParams.nlevels);
     Mat& warpMatrix = warpMatrixA.getMatRef();
     std::vector<int> itersPerLevelCopy = eccParams.itersPerLevel;
     // If the user passed an un-initialized warpMatrix, initialize to identity
@@ -753,9 +753,9 @@ double findTransformECCMultiScale(InputArray reference,
                 eccParams.motionType,
                 eccParams.criteria,
                 itersPerLevelCopy,
-                eccParams.numberOfPyramidsLevel);
+                eccParams.nlevels);
 
-    int nparams = MotionTraits<MOTION_AFFINE>::paramAmount; // default
+    int nparams = 0;
     switch (eccParams.motionType) {
         case MOTION_TRANSLATION: 
             nparams = MotionTraits<MOTION_TRANSLATION>::paramAmount;
@@ -763,22 +763,27 @@ double findTransformECCMultiScale(InputArray reference,
         case MOTION_EUCLIDEAN:
             nparams = MotionTraits<MOTION_EUCLIDEAN>::paramAmount;
             break;
+        case MOTION_AFFINE:
+            nparams = MotionTraits<MOTION_AFFINE>::paramAmount;
+            break;
         case MOTION_HOMOGRAPHY:
             nparams = MotionTraits<MOTION_HOMOGRAPHY>::paramAmount;
             break;
+        default:
+            CV_Error(Error::StsBadArg, "Incorrect motion type");
     }
 
     const std::vector<int> numberOfIterations = ((eccParams.criteria.type & TermCriteria::COUNT) != 0)
                                                     ? itersPerLevelCopy
-                                                    : std::vector<int>(eccParams.numberOfPyramidsLevel, 200);
+                                                    : std::vector<int>(eccParams.nlevels, 200);
     const double terminationEPS = (bool)(eccParams.criteria.type & TermCriteria::EPS) ? eccParams.criteria.epsilon : -1;
 
     // Scale warp matrix multiple times to lower pyramid level
-    for (int pyrLevel = 0; pyrLevel < eccParams.numberOfPyramidsLevel - 1; pyrLevel++) {
+    for (int pyrLevel = 0; pyrLevel < eccParams.nlevels - 1; pyrLevel++) {
         scaleWarpMatrix(warpMatrix, 0.5);
     }
     double rho = -1;
-    for (int pyrLevel = eccParams.numberOfPyramidsLevel - 1; pyrLevel >= 0; --pyrLevel) {
+    for (int pyrLevel = eccParams.nlevels - 1; pyrLevel >= 0; --pyrLevel) {
         const int hr = referencePyramid[pyrLevel].rows;
 
         Mat sampleWithGrad = prepareGradients(samplePyramid[pyrLevel]);
