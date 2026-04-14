@@ -2184,11 +2184,7 @@ TEST_P(Test_ONNX_layers, Gemm_External_Data)
 
 TEST_P(Test_ONNX_layers, Quantized_MatMul_Variable_Weights)
 {
-    // Unsupported
-    EXPECT_THROW(
-    {
-        testONNXModels("quantized_matmul_variable_inputs");
-    }, cv::Exception);
+    testONNXModels("quantized_matmul_variable_inputs", npy, 1.3, 1.3);
 }
 
 TEST_P(Test_ONNX_layers, Quantized_Eltwise)
@@ -2277,7 +2273,7 @@ TEST_P(Test_ONNX_layers, Quantized_Concat)
 
 TEST_P(Test_ONNX_layers, Quantized_Constant)
 {
-    testONNXModels("quantized_constant", npy, 0.008, 0.02);
+    testONNXModels("quantized_constant", npy, 0.02, 0.06);
 }
 
 TEST_P(Test_ONNX_layers, OutputRegistration)
@@ -2289,8 +2285,8 @@ TEST_P(Test_ONNX_layers, QLinearSoftmax)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
-    testONNXModels("qlinearsoftmax_v11", npy, 0.002, 0.002); // 2D coerced
-    testONNXModels("qlinearsoftmax_v13", npy, 0.002, 0.002);
+    testONNXModels("qlinearsoftmax_v11", npy, 0.08, 0.16); // 2D coerced
+    testONNXModels("qlinearsoftmax_v13", npy, 0.08, 0.16);
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());

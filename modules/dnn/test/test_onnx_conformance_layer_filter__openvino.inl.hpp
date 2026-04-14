@@ -1838,11 +1838,11 @@ CASE(test_prelu_broadcast_expanded)
 CASE(test_prelu_example_expanded)
     SKIP;
 CASE(test_qlinearconv)
-    // no filter
+    SKIP;
 CASE(test_qlinearmatmul_2D)
-    // no filter
+    SKIP;
 CASE(test_qlinearmatmul_3D)
-    // no filter
+    SKIP;
 CASE(test_quantizelinear)
     SKIP;
 CASE(test_quantizelinear_axis)

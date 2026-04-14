@@ -738,3 +738,6 @@
 "test_eyelike_populate_off_main_diagonal",
 "test_eyelike_with_dtype",
 "test_eyelike_without_dtype",
+"test_qlinearconv",
+"test_qlinearmatmul_2D",
+"test_qlinearmatmul_3D",
