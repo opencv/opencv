@@ -171,11 +171,19 @@ private:
             Mat bbox = output_blobs[i + strides.size() * 2];
             Mat kps = output_blobs[i + strides.size() * 3];
 
+            // Ensure tensors are in floating-point format (CV_32F) to prevent raw pointer casting errors.
+            // cv::Mat::convertTo safely casts quantized outputs (e.g., CV_8S) and is a no-op for CV_32F.
+            Mat cls_float, obj_float, bbox_float, kps_float;
+            cls.convertTo(cls_float, CV_32F);
+            obj.convertTo(obj_float, CV_32F);
+            bbox.convertTo(bbox_float, CV_32F);
+            kps.convertTo(kps_float, CV_32F);
+
             // Decode from predictions
-            float* cls_v = (float*)(cls.data);
-            float* obj_v = (float*)(obj.data);
-            float* bbox_v = (float*)(bbox.data);
-            float* kps_v = (float*)(kps.data);
+            float* cls_v = (float*)(cls_float.data);
+            float* obj_v = (float*)(obj_float.data);
+            float* bbox_v = (float*)(bbox_float.data);
+            float* kps_v = (float*)(kps_float.data);
 
             // (tl_x, tl_y, w, h, re_x, re_y, le_x, le_y, nt_x, nt_y, rcm_x, rcm_y, lcm_x, lcm_y, score)
             // 'tl': top left point of the bounding box

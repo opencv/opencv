@@ -144,6 +144,89 @@ TEST(Objdetect_face_detection, regression)
     }
 }
 
+TEST(Objdetect_face_detection_int8, regression)
+{
+    // Pre-set params
+    float scoreThreshold = 0.7f;
+    float matchThreshold = 0.7f;
+    float l2disThreshold = 15.0f;
+    int numLM = 5;
+    int numCoords = 4 + 2 * numLM;
+
+    // Load ground truth labels
+    std::map<std::string, Mat> gt = blobFromTXT(findDataFile("dnn_face/detection/cascades_labels.txt"), numCoords);
+
+    // Initialize detector with INT8 model
+    std::string model = findDataFile("dnn/onnx/models/face_detection_yunet_2023mar_int8.onnx", false);
+    Ptr<FaceDetectorYN> faceDetector = FaceDetectorYN::create(model, "", Size(300, 300));
+    faceDetector->setScoreThreshold(0.7f);
+
+    // Detect and match
+    for (auto item: gt)
+    {
+        std::string imagePath = findDataFile("cascadeandhog/images/" + item.first);
+        Mat image = imread(imagePath);
+
+        // Set input size
+        faceDetector->setInputSize(image.size());
+
+        // Run detection
+        Mat faces;
+        faceDetector->detect(image, faces);
+        // std::cout << item.first << " " << item.second.rows << " " << faces.rows << std::endl;
+
+        // Match bboxes and landmarks
+        std::vector<bool> matchedItem(item.second.rows, false);
+        for (int i = 0; i < faces.rows; i++)
+        {
+            if (faces.at<float>(i, numCoords) < scoreThreshold)
+                continue;
+
+            bool boxMatched = false;
+            std::vector<bool> lmMatched(numLM, false);
+            cv::Rect2f resBox(faces.at<float>(i, 0), faces.at<float>(i, 1), faces.at<float>(i, 2), faces.at<float>(i, 3));
+            for (int j = 0; j < item.second.rows && !boxMatched; j++)
+            {
+                if (matchedItem[j])
+                    continue;
+
+                // Retrieve bbox and compare IoU
+                cv::Rect2f gtBox(item.second.at<float>(j, 0), item.second.at<float>(j, 1), item.second.at<float>(j, 2), item.second.at<float>(j, 3));
+                double interArea = (resBox & gtBox).area();
+                double iou = interArea / (resBox.area() + gtBox.area() - interArea);
+                if (iou >= matchThreshold)
+                {
+                    boxMatched = true;
+                    matchedItem[j] = true;
+                }
+
+                // Match landmarks if bbox is matched
+                if (!boxMatched)
+                    continue;
+                for (int lmIdx = 0; lmIdx < numLM; lmIdx++)
+                {
+                    float gtX = item.second.at<float>(j, 4 + 2 * lmIdx);
+                    float gtY = item.second.at<float>(j, 4 + 2 * lmIdx + 1);
+                    float resX = faces.at<float>(i, 4 + 2 * lmIdx);
+                    float resY = faces.at<float>(i, 4 + 2 * lmIdx + 1);
+                    float l2dis = cv::sqrt((gtX - resX) * (gtX - resX) + (gtY - resY) * (gtY - resY));
+
+                    if (l2dis <= l2disThreshold)
+                    {
+                        lmMatched[lmIdx] = true;
+                    }
+                }
+                break;
+            }
+            EXPECT_TRUE(boxMatched) << "In image " << item.first << ", cannot match resBox " << resBox << " with any ground truth.";
+            if (boxMatched)
+            {
+                EXPECT_TRUE(std::all_of(lmMatched.begin(), lmMatched.end(), [](bool v) { return v; })) << "In image " << item.first << ", resBox " << resBox << " matched but its landmarks failed to match.";
+            }
+        }
+    }
+}
+
 TEST(Objdetect_face_recognition, regression)
 {
     // Pre-set params
