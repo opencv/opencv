@@ -451,6 +451,8 @@ void __findTRUContoursImpl(cv::Mat& padded,
                            std::make_move_iterator(tVec.begin()),
                            std::make_move_iterator(tVec.end()));
     }
+    //reverse the order to match original findContours Suzuki&Abe
+    std::reverse(outContours.begin(), outContours.end());
 
 }
 }
