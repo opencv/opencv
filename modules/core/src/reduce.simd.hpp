@@ -67,9 +67,12 @@ static void reduceColSum_8u32s(const Mat& srcmat, Mat& dstmat)
                     vsum = _mm256_add_epi64(vsum, _mm256_sad_epu8(
                         _mm256_loadu_si256((const __m256i*)(src + x)), zero));
                 // 8-byte tail: reduce max scalar tail from 31 to 7
+                // Use _mm256_inserti128_si256 instead of _mm256_castsi128_si256:
+                // the latter leaves upper 128 bits undefined per Intel spec,
+                // causing MSVC to expose stale register data to _mm256_sad_epu8.
                 for (; x <= width - 8; x += 8)
                     vsum = _mm256_add_epi64(vsum, _mm256_sad_epu8(
-                        _mm256_castsi128_si256(_mm_loadl_epi64((const __m128i*)(src + x))), zero));
+                        _mm256_inserti128_si256(_mm256_setzero_si256(), _mm_loadl_epi64((const __m128i*)(src + x)), 0), zero));
                 __m128i lo128 = _mm256_castsi256_si128(vsum);
                 __m128i hi128 = _mm256_extracti128_si256(vsum, 1);
                 __m128i s = _mm_add_epi64(lo128, hi128);
@@ -383,9 +386,12 @@ static void reduceColSum_8u32f(const Mat& srcmat, Mat& dstmat)
                     vsum = _mm256_add_epi64(vsum, _mm256_sad_epu8(
                         _mm256_loadu_si256((const __m256i*)(src + x)), zero));
                 // 8-byte tail: reduce max scalar tail from 31 to 7
+                // Use _mm256_inserti128_si256 instead of _mm256_castsi128_si256:
+                // the latter leaves upper 128 bits undefined per Intel spec,
+                // causing MSVC to expose stale register data to _mm256_sad_epu8.
                 for (; x <= width - 8; x += 8)
                     vsum = _mm256_add_epi64(vsum, _mm256_sad_epu8(
-                        _mm256_castsi128_si256(_mm_loadl_epi64((const __m128i*)(src + x))), zero));
+                        _mm256_inserti128_si256(_mm256_setzero_si256(), _mm_loadl_epi64((const __m128i*)(src + x)), 0), zero));
                 __m128i lo128 = _mm256_castsi256_si128(vsum);
                 __m128i hi128 = _mm256_extracti128_si256(vsum, 1);
                 __m128i s = _mm_add_epi64(lo128, hi128);
