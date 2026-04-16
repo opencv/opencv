@@ -45,22 +45,20 @@
 namespace opencv_test {
 namespace {
 
-PARAM_TEST_CASE(Video_ECC, int, bool, double)
+PARAM_TEST_CASE(Video_ECC, int, bool)
 {
     int motionType;
     bool usePyramids;
-    double RMSmax;
     virtual void SetUp()
     {
         motionType = GET_PARAM(0);
         usePyramids = GET_PARAM(1);
-        RMSmax = GET_PARAM(2);
     }
 };
 
 class CV_ECC_Test : public cvtest::BaseTest {
    public:
-    CV_ECC_Test(int motionType, bool usePyramids, double MAX_RMS = 0.1);
+    CV_ECC_Test(int motionType, bool usePyramids);
     virtual ~CV_ECC_Test();
 
    protected:
@@ -87,8 +85,8 @@ class CV_ECC_Test : public cvtest::BaseTest {
 };
 
 
-CV_ECC_Test::CV_ECC_Test(int a_motionType, bool a_usePyramids, double a_MAX_RMS) : motionType(a_motionType)
-    , MAX_RMS(a_MAX_RMS)
+CV_ECC_Test::CV_ECC_Test(int a_motionType, bool a_usePyramids) : motionType(a_motionType)
+    , MAX_RMS(0.1)
     , ntests(3)
     , ECC_iterations(50)
     , ECC_epsilon(-1)
@@ -246,30 +244,19 @@ void CV_ECC_Test::run(int) {
 }
 
 TEST_P(Video_ECC, accuracy) {
-    CV_ECC_Test test(motionType, usePyramids, RMSmax);
+    CV_ECC_Test test(motionType, usePyramids);
     test.safe_run();    
 }
 
-// There is such a difference on translation with multiscale:
-// ORIGINAL:1.000000, 0.000000, 17.786327
-// ORIGINAL:0.000000, 1.000000, 19.370564
-// FOUND:1.000000, 0.000000, 18.200426
-// FOUND:0.000000, 1.000000, 19.860243
-// Pyramids version uses nearest neighbour interpolation for
-// speed. It's so much infromation, that error is automatically
-// fixed, but for transition this error is regular, so it's 
-// impossible to compesate it. Therefore, subpixel accuracy cannot 
-// be achieved on transition. That's why we have increased RMS 
-// threshold for MS translation.
 INSTANTIATE_TEST_CASE_P(ECCfixtures, Video_ECC, 
-    testing::Values(testing::make_tuple(MOTION_TRANSLATION, false, 0.1),
-                    testing::make_tuple(MOTION_TRANSLATION, true, 0.3),
-                    testing::make_tuple(MOTION_EUCLIDEAN, false, 0.1),
-                    testing::make_tuple(MOTION_EUCLIDEAN, true, 0.1),
-                    testing::make_tuple(MOTION_AFFINE, false, 0.1),
-                    testing::make_tuple(MOTION_AFFINE, true, 0.1),
-                    testing::make_tuple(MOTION_HOMOGRAPHY, false, 0.1),
-                    testing::make_tuple(MOTION_HOMOGRAPHY, true, 0.1)));
+    testing::Values(testing::make_tuple(MOTION_TRANSLATION, false),
+                    testing::make_tuple(MOTION_TRANSLATION, true),
+                    testing::make_tuple(MOTION_EUCLIDEAN, false),
+                    testing::make_tuple(MOTION_EUCLIDEAN, true),
+                    testing::make_tuple(MOTION_AFFINE, false),
+                    testing::make_tuple(MOTION_AFFINE, true),
+                    testing::make_tuple(MOTION_HOMOGRAPHY, false),
+                    testing::make_tuple(MOTION_HOMOGRAPHY, true)));
 
 class CV_ECC_Test_Mask : public CV_ECC_Test {
    public:
@@ -279,7 +266,7 @@ class CV_ECC_Test_Mask : public CV_ECC_Test {
     bool test(const Mat);
 };
 
-CV_ECC_Test_Mask::CV_ECC_Test_Mask():CV_ECC_Test(MOTION_TRANSLATION, false, 0.1) {}
+CV_ECC_Test_Mask::CV_ECC_Test_Mask():CV_ECC_Test(MOTION_TRANSLATION, false) {}
 
 bool CV_ECC_Test_Mask::test(const Mat testImg) {
     cv::RNG rng = ts->get_rng();
@@ -340,7 +327,7 @@ bool CV_ECC_Test_Mask::test(const Mat testImg) {
 
 class CV_ECC_BigPictureTest : public CV_ECC_Test {
    public:
-    CV_ECC_BigPictureTest(bool a_maskedVersion) : CV_ECC_Test(MOTION_HOMOGRAPHY, true, 0.1), maskedVersion(a_maskedVersion) {}
+    CV_ECC_BigPictureTest(bool a_maskedVersion) : CV_ECC_Test(MOTION_HOMOGRAPHY, true), maskedVersion(a_maskedVersion) {}
     virtual ~CV_ECC_BigPictureTest() {}
    protected:
     void run(int);
