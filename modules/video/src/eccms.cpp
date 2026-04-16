@@ -34,8 +34,11 @@ template<> struct MotionTraits<MOTION_TRANSLATION> {
     static constexpr std::array<float, paramAmount> fillJacobian(int /*col*/, int /*row*/, float/*sx*/, float/*sy*/, float fVal, 
                                                      const elemtype* samplePtr, float /*a00*/, float /*a10*/,
                                                      float/*denominator*/) {
-        float gx = fVal * samplePtr[1], gy = fVal * samplePtr[2];
-        return std::array<float, paramAmount>{gx, gy};
+#define GX (fVal * samplePtr[1])
+#define GY (fVal * samplePtr[2])
+        return std::array<float, paramAmount>{GX, GY};
+#undef GX
+#undef GY
     }
 };
 
@@ -61,11 +64,17 @@ template<> struct MotionTraits<MOTION_EUCLIDEAN> {
     static constexpr std::array<float, paramAmount> fillJacobian(int col, int row, float/*sx*/, float/*sy*/, float fVal, 
                                                      const elemtype* samplePtr, float a00, float a10,
                                                      float/*denominator*/) {
-        float gx = fVal * samplePtr[1], gy = fVal * samplePtr[2];
-        float hatX = -col * a10 - row * a00;
-        float hatY = col * a00 - row * a10;
-        float gz = gx * hatX + gy * hatY;
-        return std::array<float, paramAmount>{gz, gx, gy};
+#define GX (fVal * samplePtr[1])
+#define GY (fVal * samplePtr[2])
+#define HATX (-col * a10 - row * a00)
+#define HATY (col * a00 - row * a10)
+#define GZ (GX * HATX + GY * HATY)
+        return std::array<float, paramAmount>{GZ, GX, GY};
+#undef GX
+#undef GY
+#undef HATX
+#undef HATY
+#undef GZ
     }
 };
 
@@ -91,8 +100,11 @@ template<> struct MotionTraits<MOTION_AFFINE> {
     static constexpr std::array<float, paramAmount> fillJacobian(int col, int row, float/*sx*/, float/*sy*/, float fVal, 
                                                      const elemtype* samplePtr, float /*a00*/, float /*a10*/,
                                                      float/*denominator*/) {
-        float gx = fVal * samplePtr[1], gy = fVal * samplePtr[2];
-        return std::array<float, paramAmount>{gx * col, gy * col, gx * row, gy * row, gx, gy};
+#define GX (fVal * samplePtr[1])
+#define GY (fVal * samplePtr[2])
+        return std::array<float, paramAmount>{GX * col, GY * col, GX * row, GY * row, GX, GY};
+#undef GX
+#undef GY
     }
 };
 
@@ -118,10 +130,13 @@ template<> struct MotionTraits<MOTION_HOMOGRAPHY> {
     static constexpr std::array<float, paramAmount> fillJacobian(int col, int row, float sx, float sy, float fVal, 
                                                      const elemtype* samplePtr, float/*a00*/, float/*a10*/,
                                                      float denominator) {
-        float gx = fVal * float(samplePtr[1]) * denominator;
-        float gy = fVal * float(samplePtr[2]) * denominator;
-        float gz = -(gx * sx + gy * sy);
-        return std::array<float, paramAmount>{gx * col, gy * col, gz * col, gx * row, gy * row, gz * row, gx, gy};
+#define GX (fVal * float(samplePtr[1]) * denominator)
+#define GY (fVal * float(samplePtr[2]) * denominator)
+#define GZ (-(GX * sx + GY * sy))
+        return std::array<float, paramAmount>{GX * col, GY * col, GZ * col, GX * row, GY * row, GZ * row, GX, GY};
+#undef GX
+#undef GY
+#undef GZ
     }
 };
 
@@ -147,7 +162,7 @@ public:
 };
 
 template<int N, class F>
-constexpr void constexprFor(F&& fVal) {
+void constexprFor(F&& fVal) {
     constexprForClass<N, F>::execute(std::forward<F>(fVal));
 }
 template<int R, int C, class F>
@@ -185,7 +200,7 @@ public:
 };
 
 template<int M, class F>
-constexpr void constexprForUpperTriangle(F&& fVal) {
+void constexprForUpperTriangle(F&& fVal) {
     constexprForUpperTriangleClass<M,M,F>::execute(std::forward<F>(fVal));
 }
 
@@ -207,7 +222,7 @@ static double imageHessianProjECC(const Mat& map,
                            Mat& sampleProj,
                            Mat& refProj,
                            int deltaY) {
-    static_assert(std::is_same<float, elemtype>::value);
+    static_assert(std::is_same<float, elemtype>::value, "imageHessianProjECC: f16 is not supported yet");
     constexpr int NPARAMS = MotionTraits<motionType>::paramAmount;
 
     CV_Assert(map.type() == CV_64F);
