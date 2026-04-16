@@ -98,6 +98,34 @@ int fastGemmKC(const FastGemmOpt &opt) {
     }
 }
 
+int fastGemmNR(const FastGemmOpt &opt) {
+#if CV_TRY_NEON
+    if (opt.use_neon) {
+        return opt_NEON::fastGemmNR();
+    } else
+#endif
+#if CV_TRY_AVX2
+    if (opt.use_avx2) {
+        return opt_AVX2::fastGemmNR();
+    } else
+#endif
+#if CV_TRY_AVX
+    if (opt.use_avx) {
+        return opt_AVX::fastGemmNR();
+    } else
+#endif
+#if CV_TRY_LASX
+    if (opt.use_lasx) {
+        return opt_LASX::fastGemmNR();
+    } else
+#endif
+    {
+        return cpu_baseline::fastGemmNR();
+    }
+}
+
+
+
 size_t fastGemmPackBSize(size_t N, size_t K, const FastGemmOpt &opt) {
 #if CV_TRY_NEON
     if (opt.use_neon) {

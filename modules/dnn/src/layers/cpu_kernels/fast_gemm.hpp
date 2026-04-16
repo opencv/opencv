@@ -159,6 +159,7 @@ void fastGemmPackB(const Mat &m, std::vector<float> &packed_B, bool trans, FastG
 int fastGemmMC(const FastGemmOpt &opt);
 int fastGemmNC(const FastGemmOpt &opt);
 int fastGemmKC(const FastGemmOpt &opt);
+int fastGemmNR(const FastGemmOpt &opt);
 
 void fastGemmPackB(bool trans, size_t N, size_t K, const float *B, size_t ldb, float *packed_B, const FastGemmOpt &opt);
 

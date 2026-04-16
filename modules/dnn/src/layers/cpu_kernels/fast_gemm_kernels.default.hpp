@@ -130,6 +130,10 @@ int fastGemmKC() {
     return FAST_GEMM_F32_PACKED_STRIDE_K;
 }
 
+int fastGemmNR() {
+    return FAST_GEMM_F32_NR;
+}
+
 void fastGemmPackBKernel(const char *B, char *packed_B, size_t N, size_t K, size_t ldb0, size_t ldb1, size_t esz) {
     size_t GEMM_NC = FAST_GEMM_F32_NC, GEMM_NR = FAST_GEMM_F32_NR;
     size_t NC = (((GEMM_NC < N ? GEMM_NC : N) + GEMM_NR - 1) / GEMM_NR) * GEMM_NR;

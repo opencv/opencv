@@ -120,6 +120,7 @@ size_t fastGemmPackBSize(int N, int K);
 int fastGemmMC();
 int fastGemmNC();
 int fastGemmKC();
+int fastGemmNR();
 
 void fastGemmPackBKernel(const char *B, char *packed_B, size_t N, size_t K, size_t ldb0, size_t ldb1, size_t esz);
 
@@ -557,6 +558,7 @@ size_t fastGemmPackBSize(int N, int K) {
 int fastGemmMC() {return FAST_GEMM_F32_MC;}
 int fastGemmNC() {return FAST_GEMM_F32_NC;}
 int fastGemmKC() {return FAST_GEMM_F32_PACKED_STRIDE_K;}
+int fastGemmNR() {return FAST_GEMM_F32_NR;}
 
 void fastGemmPackBKernel(const char *B, char *packed_B, size_t N, size_t K, size_t ldb0, size_t ldb1, size_t esz) {
     size_t GEMM_NC = FAST_GEMM_F32_NC, GEMM_NR = FAST_GEMM_F32_NR;
