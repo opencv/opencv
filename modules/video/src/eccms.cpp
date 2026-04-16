@@ -209,13 +209,6 @@ constexpr int hessianRowStart(int row) {
     return row == 0 ? 0 : (MotionTraits<MotionType>::paramAmount - row + 1 + hessianRowStart<MotionType>(row - 1));
 }
 
-//DUBUG:
-// [       OK ] ECCfixtures/Video_ECC.accuracy/1 (873 ms)
-// [       OK ] ECCfixtures/Video_ECC.accuracy/3 (713 ms)
-// [       OK ] ECCfixtures/Video_ECC.accuracy/7 (1060 ms)
-// [       OK ] Video_ECC_BigMS.accuracy (2863 ms)
-// [       OK ] Video_ECC_BigMS_Mask.accuracy (2556 ms)
-
 template<int motionType, typename elemtype>
 static double imageHessianProjECC(const Mat& map,
                            const Mat& sampleWithGrad,
