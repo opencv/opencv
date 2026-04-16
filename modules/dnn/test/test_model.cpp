@@ -1420,6 +1420,14 @@ INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_YOLOXS_ONNX,
 typedef testing::TestWithParam<Target> Reproducibility_BlazeFace_ONNX;
 TEST_P(Reproducibility_BlazeFace_ONNX, Accuracy)
 {
+    auto engine_forced = static_cast<cv::dnn::EngineType>(
+            cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
+    if (engine_forced == cv::dnn::ENGINE_CLASSIC)
+    {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+        return;
+    }
+
     Target targetId = GetParam();
     applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
     ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);

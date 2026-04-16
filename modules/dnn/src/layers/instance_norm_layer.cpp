@@ -6,6 +6,8 @@
 #include <opencv2/dnn/shape_utils.hpp>
 #include "./cpu_kernels/fast_norm.hpp"
 
+#include <opencv2/core/hal/intrin.hpp>
+
 // CANN backend
 #include "../op_cann.hpp"
 
@@ -62,6 +64,10 @@ static void fastNormChannelBlock(const Mat& input, const Mat& scale, const Mat& 
     const float inv_norm_size = 1.f / (float)norm_size;
     const int loops = N * C1;
 
+#if CV_SIMD
+    const int VEC_SZ = (int)v_float32::nlanes;
+#endif
+
     parallel_for_(Range(0, loops), [&](const Range& r) {
         const float* inptr0 = input.ptr<float>();
         float* outptr0 = output.ptr<float>();
@@ -82,48 +88,116 @@ static void fastNormChannelBlock(const Mat& input, const Mat& scale, const Mat& 
             const float* inbase = inptr0 + n * inStep0 + c1 * inStep1;
             float* outbase = outptr0 + n * outStep0 + c1 * outStep1;
 
-            for (int c0 = 0; c0 < validC0; ++c0)
+            int c0 = 0;
+#if CV_SIMD
+            for (; c0 <= validC0 - VEC_SZ; c0 += VEC_SZ)
             {
-                sum[c0] = 0.f;
-                sqsum[c0] = 0.f;
+                v_float32 vsum = v_setzero_f32();
+                v_float32 vsqsum = v_setzero_f32();
+
+                for (int h = 0; h < H; ++h)
+                {
+                    const float* inrow = inbase + h * inStep2;
+                    for (int w = 0; w < W; ++w)
+                    {
+                        const float* inpix = inrow + w * inStep3;
+                        v_float32 v = v_load(inpix + c0);
+                        vsum = v_add(vsum, v);
+                        vsqsum = v_fma(v, v, vsqsum);
+                    }
+                }
+                v_store(sum + c0, vsum);
+                v_store(sqsum + c0, vsqsum);
+            }
+#endif
+            for (; c0 < validC0; ++c0)
+            {
+                float s = 0.f, sq = 0.f;
+                for (int h = 0; h < H; ++h)
+                {
+                    const float* inrow = inbase + h * inStep2;
+                    for (int w = 0; w < W; ++w)
+                    {
+                        float v = inrow[w * inStep3 + c0];
+                        s += v;
+                        sq += v * v;
+                    }
+                }
+                sum[c0] = s;
+                sqsum[c0] = sq;
             }
 
-            for (int h = 0; h < H; ++h)
+            for (int c = 0; c < validC0; ++c)
             {
-                const float* inrow = inbase + h * inStep2;
-                for (int w = 0; w < W; ++w)
+                float mean = sum[c] * inv_norm_size;
+                float var = std::max(0.f, sqsum[c] * inv_norm_size - mean * mean);
+                float inv_stdev = 1.f / std::sqrt(var + epsilon);
+                alpha[c] = scale_data[cbase + c] * inv_stdev;
+                beta[c] = bias_data[cbase + c] - alpha[c] * mean;
+            }
+
+            c0 = 0;
+#if CV_SIMD
+            for (; c0 <= validC0 - VEC_SZ; c0 += VEC_SZ)
+            {
+                v_float32 va = v_load(alpha + c0);
+                v_float32 vb = v_load(beta + c0);
+
+                for (int h = 0; h < H; ++h)
                 {
-                    const float* inpix = inrow + w * inStep3;
-                    for (int c0 = 0; c0 < validC0; ++c0)
+                    const float* inrow = inbase + h * inStep2;
+                    float* outrow = outbase + h * outStep2;
+                    for (int w = 0; w < W; ++w)
                     {
-                        float v = inpix[c0];
-                        sum[c0] += v;
-                        sqsum[c0] += v * v;
+                        const float* inpix = inrow + w * inStep3;
+                        float* outpix = outrow + w * outStep3;
+
+                        v_float32 vin = v_load(inpix + c0);
+                        v_float32 vout = v_fma(vin, va, vb);
+                        v_store(outpix + c0, vout);
+                    }
+                }
+            }
+#endif
+            for (; c0 < validC0; ++c0)
+            {
+                float a = alpha[c0];
+                float b = beta[c0];
+                for (int h = 0; h < H; ++h)
+                {
+                    const float* inrow = inbase + h * inStep2;
+                    float* outrow = outbase + h * outStep2;
+                    for (int w = 0; w < W; ++w)
+                    {
+                        outrow[w * outStep3 + c0] = inrow[w * inStep3 + c0] * a + b;
                     }
                 }
             }
 
-            for (int c0 = 0; c0 < validC0; ++c0)
+            int c0_pad = validC0;
+#if CV_SIMD
+            for (; c0_pad <= C0 - VEC_SZ; c0_pad += VEC_SZ)
             {
-                float mean = sum[c0] * inv_norm_size;
-                float var = std::max(0.f, sqsum[c0] * inv_norm_size - mean * mean);
-                float inv_stdev = 1.f / std::sqrt(var + epsilon);
-                alpha[c0] = scale_data[cbase + c0] * inv_stdev;
-                beta[c0] = bias_data[cbase + c0] - alpha[c0] * mean;
-            }
-
-            for (int h = 0; h < H; ++h)
-            {
-                const float* inrow = inbase + h * inStep2;
-                float* outrow = outbase + h * outStep2;
-                for (int w = 0; w < W; ++w)
+                v_float32 vzero = v_setzero_f32();
+                for (int h = 0; h < H; ++h)
                 {
-                    const float* inpix = inrow + w * inStep3;
-                    float* outpix = outrow + w * outStep3;
-                    for (int c0 = 0; c0 < validC0; ++c0)
-                        outpix[c0] = alpha[c0] * inpix[c0] + beta[c0];
-                    for (int c0 = validC0; c0 < C0; ++c0)
-                        outpix[c0] = 0.f;
+                    float* outrow = outbase + h * outStep2;
+                    for (int w = 0; w < W; ++w)
+                    {
+                        v_store(outrow + w * outStep3 + c0_pad, vzero);
+                    }
+                }
+            }
+#endif
+            for (; c0_pad < C0; ++c0_pad)
+            {
+                for (int h = 0; h < H; ++h)
+                {
+                    float* outrow = outbase + h * outStep2;
+                    for (int w = 0; w < W; ++w)
+                    {
+                        outrow[w * outStep3 + c0_pad] = 0.f;
+                    }
                 }
             }
         }
