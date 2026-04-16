@@ -400,6 +400,9 @@ void CharucoDetector::detectDiamonds(InputArray image, OutputArrayOfArrays _diam
     CV_Assert(getBoard().getChessboardSize() == Size(3, 3));
     CV_Assert((inMarkerCorners.empty() && inMarkerIds.empty() && !image.empty()) || (inMarkerCorners.total() == inMarkerIds.total()));
 
+    if (_diamondCorners.needed()) _diamondCorners.release();
+    if (_diamondIds.needed()) _diamondIds.release();
+
     vector<vector<Point2f>> tmpMarkerCorners;
     vector<int> tmpMarkerIds;
     InputOutputArrayOfArrays _markerCorners = inMarkerCorners.needed() ? inMarkerCorners : _InputOutputArray(tmpMarkerCorners);
