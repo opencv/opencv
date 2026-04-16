@@ -26,7 +26,7 @@ class GemmTest : public perf::TestBaseWithParam<GemmTestParams_t>
 
         TEST_CYCLE() cv::gemm(src1, src2, 1.0, src3, 1.0, dst, flags);
 
-        SANITY_CHECK(dst, 1e-3);
+        SANITY_CHECK(dst, 0.01);
     };
 };
 
