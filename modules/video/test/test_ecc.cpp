@@ -62,7 +62,7 @@ class CV_ECC_Test : public cvtest::BaseTest {
     virtual ~CV_ECC_Test();
 
    protected:
-    int motionType; 
+    int motionType;
     double MAX_RMS;  // upper bound for RMS error
 
     double computeRMS(const Mat& mat1, const Mat& mat2);
@@ -146,10 +146,10 @@ bool CV_ECC_Test::test(const Mat img)
         Mat groundMap;
         switch(motionType)
         {
-            case MOTION_TRANSLATION: 
+            case MOTION_TRANSLATION:
                 groundMap = (Mat_<float>(2, 3) << 1, 0, (rng.uniform(10.f, 20.f)), 0, 1, (rng.uniform(10.f, 20.f)));
                 break;
-            case MOTION_EUCLIDEAN: 
+            case MOTION_EUCLIDEAN:
             {
                 double angle = CV_PI / 30 + CV_PI * rng.uniform((double)-2.f, (double)2.f) / 180;
                 groundMap = (Mat_<float>(2, 3) << cos(angle), -sin(angle), (rng.uniform(10.f, 20.f)), sin(angle),
@@ -200,7 +200,7 @@ bool CV_ECC_Test::test(const Mat img)
         if (!checkMap(foundMap, groundMap))
             return false;
     }
-    return true;    
+    return true;
 }
 
 bool CV_ECC_Test::testAllTypes(const Mat img) {
@@ -245,10 +245,10 @@ void CV_ECC_Test::run(int) {
 
 TEST_P(Video_ECC, accuracy) {
     CV_ECC_Test test(motionType, usePyramids);
-    test.safe_run();    
+    test.safe_run();
 }
 
-INSTANTIATE_TEST_CASE_P(ECCfixtures, Video_ECC, 
+INSTANTIATE_TEST_CASE_P(ECCfixtures, Video_ECC,
     testing::Values(testing::make_tuple(MOTION_TRANSLATION, false),
                     testing::make_tuple(MOTION_TRANSLATION, true),
                     testing::make_tuple(MOTION_EUCLIDEAN, false),
@@ -356,13 +356,13 @@ void CV_ECC_BigPictureTest::run(int)
         readError = largeGray0.empty() || largeGray1.empty();
         expectedRes = (Mat_<float>(3, 3) << 0.9751, -0.0323, 52.094, 0.0123, 0.9802, 16.9658, -1.14e-05, -4.55e-06, 1);
     }
-    
+
     if(readError)
     {
         ts->printf(ts->LOG, "test image can not be read");
         ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
         return;
-    }        
+    }
 
     cv::Mat found = cv::Mat::eye(3, 3, CV_32F);
     constexpr int N_ITERS = 20;

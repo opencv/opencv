@@ -8,7 +8,7 @@
 *                    Image Alignment (ECC algorithm, pyramidal version)                  *
 \****************************************************************************************/
 
-namespace cv { 
+namespace cv {
 typedef std::vector<cv::Mat> MatPyramid;
 
 template<int motionType> struct MotionTraits {};
@@ -18,7 +18,7 @@ template<> struct MotionTraits<MOTION_TRANSLATION> {
     static inline void tailHandlerGetCoord(float& sx,
                                               float& sy,
                                               float& denominator,
-                                              int col, 
+                                              int col,
                                               float numeratorX0,
                                               float numeratorY0,
                                               float /*denominator0*/,
@@ -30,8 +30,8 @@ template<> struct MotionTraits<MOTION_TRANSLATION> {
         sx = (numeratorX0 + col);
         sy = numeratorY0;
     }
-    template<typename elemtype> 
-    static constexpr std::array<float, paramAmount> fillJacobian(int /*col*/, int /*row*/, float/*sx*/, float/*sy*/, float fVal, 
+    template<typename elemtype>
+    static constexpr std::array<float, paramAmount> fillJacobian(int /*col*/, int /*row*/, float/*sx*/, float/*sy*/, float fVal,
                                                      elemtype gx, elemtype gy, float /*a00*/, float /*a10*/,
                                                      float/*denominator*/) {
 #define GX (fVal * gx)
@@ -47,7 +47,7 @@ template<> struct MotionTraits<MOTION_EUCLIDEAN> {
     static inline void tailHandlerGetCoord(float& sx,
                                               float& sy,
                                               float& denominator,
-                                              int col, 
+                                              int col,
                                               float numeratorX0,
                                               float numeratorY0,
                                               float /*denominator0*/,
@@ -60,8 +60,8 @@ template<> struct MotionTraits<MOTION_EUCLIDEAN> {
         sy = (numeratorY0 + a10 * col);
     }
 
-    template<typename elemtype> 
-    static constexpr std::array<float, paramAmount> fillJacobian(int col, int row, float/*sx*/, float/*sy*/, float fVal, 
+    template<typename elemtype>
+    static constexpr std::array<float, paramAmount> fillJacobian(int col, int row, float/*sx*/, float/*sy*/, float fVal,
                                                      elemtype gx, elemtype gy, float a00, float a10,
                                                      float/*denominator*/) {
 #define GX (fVal * gx)
@@ -83,7 +83,7 @@ template<> struct MotionTraits<MOTION_AFFINE> {
     static inline void tailHandlerGetCoord(float& sx,
                                               float& sy,
                                               float& denominator,
-                                              int col, 
+                                              int col,
                                               float numeratorX0,
                                               float numeratorY0,
                                               float /*denominator0*/,
@@ -96,8 +96,8 @@ template<> struct MotionTraits<MOTION_AFFINE> {
         sy = (numeratorY0 + a10 * col);
     }
 
-    template<typename elemtype> 
-    static constexpr std::array<float, paramAmount> fillJacobian(int col, int row, float/*sx*/, float/*sy*/, float fVal, 
+    template<typename elemtype>
+    static constexpr std::array<float, paramAmount> fillJacobian(int col, int row, float/*sx*/, float/*sy*/, float fVal,
                                                      elemtype gx, elemtype gy, float /*a00*/, float /*a10*/,
                                                      float/*denominator*/) {
 #define GX (fVal * gx)
@@ -113,7 +113,7 @@ template<> struct MotionTraits<MOTION_HOMOGRAPHY> {
     static inline void tailHandlerGetCoord(float& sx,
                                               float& sy,
                                               float& denominator,
-                                              int col, 
+                                              int col,
                                               float numeratorX0,
                                               float numeratorY0,
                                               float denominator0,
@@ -125,9 +125,9 @@ template<> struct MotionTraits<MOTION_HOMOGRAPHY> {
         sx = (numeratorX0 + a00 * col) * denominator;
         sy = (numeratorY0 + a10 * col) * denominator;
     }
-    
-    template<typename elemtype> 
-    static constexpr std::array<float, paramAmount> fillJacobian(int col, int row, float sx, float sy, float fVal, 
+
+    template<typename elemtype>
+    static constexpr std::array<float, paramAmount> fillJacobian(int col, int row, float sx, float sy, float fVal,
                                                      elemtype gx, elemtype gy, float/*a00*/, float/*a10*/,
                                                      float denominator) {
 #define GX (fVal * float(gx) * denominator)
@@ -140,14 +140,14 @@ template<> struct MotionTraits<MOTION_HOMOGRAPHY> {
     }
 };
 
-inline void reinterpret(Mat& mat, int newdepth) { 
+inline void reinterpret(Mat& mat, int newdepth) {
     mat.flags = (mat.flags & ~CV_MAT_DEPTH_MASK) | newdepth;
 }
 
 template<int N, class F>
 class constexprForClass
 {
-public: 
+public:
     static inline void execute(F&& fVal) {
         constexprForClass<N-1, F>::execute(std::forward<F>(fVal));
         fVal(N-1);
@@ -157,7 +157,7 @@ public:
 template<class F>
 class constexprForClass<0, F>
 {
-public: 
+public:
     static inline void execute(F&&) {}
 };
 
@@ -168,7 +168,7 @@ void constexprFor(F&& fVal) {
 template<int R, int C, class F>
 class constexprForUpperTriangleClassOneRow
 {
-public: 
+public:
     static inline void execute(F&& fVal) {
         constexprForUpperTriangleClassOneRow<R, C-1, F>::execute(std::forward<F>(fVal));
         fVal(R, R + C - 1);
@@ -178,14 +178,14 @@ public:
 template<int R, class F>
 class constexprForUpperTriangleClassOneRow<R, 0, F>
 {
-public: 
+public:
     static inline void execute(F&&) {}
 };
 
 template<int R, int D, class F>
 class constexprForUpperTriangleClass
 {
-public: 
+public:
     static inline void execute(F&& fVal) {
         constexprForUpperTriangleClass<R-1, D, F>::execute(std::forward<F>(fVal));
         constexprForUpperTriangleClassOneRow<R-1, D-R+1, F>::execute(std::forward<F>(fVal));
@@ -195,7 +195,7 @@ public:
 template<int D, class F>
 class constexprForUpperTriangleClass<0, D, F>
 {
-public: 
+public:
     static inline void execute(F&&) {}
 };
 
@@ -310,7 +310,7 @@ static double imageHessianProjECC(const Mat& map,
                                                 denominator0, a00, a10, a20);
                 const unsigned int x0 = (interpolation == INTER_LINEAR) ? static_cast<int>(std::floor(sx)) : saturate_cast<unsigned>(sx);
                 const unsigned int y0 = (interpolation == INTER_LINEAR) ? static_cast<int>(std::floor(sy)) : saturate_cast<unsigned>(sy);
-                if(interpolation == INTER_LINEAR && (static_cast<int>(x0 < xcond) & static_cast<int>(y0 < ycond)) == 0) 
+                if(interpolation == INTER_LINEAR && (static_cast<int>(x0 < xcond) & static_cast<int>(y0 < ycond)) == 0)
                     continue;
                 if (interpolation == INTER_NEAREST && (static_cast<int>(x0 < xcond) & static_cast<int>(y0 < ycond)) == 0)
                     continue;
@@ -375,7 +375,7 @@ static double imageHessianProjECC(const Mat& map,
                 nzs[stripeIdx] += fVal;
                 sampMaskedSums[stripeIdx] += sampleVal;
                 refMaskedSums[stripeIdx] += refVal;
-                std::array<float, NPARAMS> jac = MotionTraits<motionType>::fillJacobian(x, y, sx, sy, 
+                std::array<float, NPARAMS> jac = MotionTraits<motionType>::fillJacobian(x, y, sx, sy,
                                                                                         fVal, gx,
                                                                                         gy, a00,
                                                                                         a10, denominator);
@@ -767,7 +767,7 @@ static void checkParams(const MatPyramid& referencePyramid,
         CV_Error(Error::BadImageSize, "warpMatrix has incorrect size");
     }
 
-    if (eccParams.motionType != MOTION_TRANSLATION && eccParams.motionType != MOTION_EUCLIDEAN && 
+    if (eccParams.motionType != MOTION_TRANSLATION && eccParams.motionType != MOTION_EUCLIDEAN &&
         eccParams.motionType != MOTION_AFFINE && eccParams.motionType != MOTION_HOMOGRAPHY) {
         CV_Error(Error::StsError, "Incorrect motion type");
     }
@@ -830,7 +830,7 @@ double findTransformECCMultiScale(InputArray reference,
 
     int nparams = 0;
     switch (eccParams.motionType) {
-        case MOTION_TRANSLATION: 
+        case MOTION_TRANSLATION:
             nparams = MotionTraits<MOTION_TRANSLATION>::paramAmount;
             break;
         case MOTION_EUCLIDEAN:

@@ -438,7 +438,7 @@ Default values are shown in the declaration above.
 @param itersPerLevel Criterion extension: distribution of iterations limit over pyramid levels.
 Can be empty, in this case, this algorithm will use criteria.maxCount on each level.
 @param gaussFiltSize An optional value indicating size of gaussian blur filter; (DEFAULT: 5)
-@param nlevels An optional value indicating amount of levels in the pyramid; (DEFAULT: 4) 
+@param nlevels An optional value indicating amount of levels in the pyramid; (DEFAULT: 4)
 @param interpolation Type of warp interpolation. Possible values are INTER_NEAREST and INTER_LINEAR.
 Affects accuracy, especially when motionType == MOTION_TRANSLATION. (DEFAULT: INTER_LINEAR)
  */
@@ -486,8 +486,8 @@ displacements/rotations, an initial transformation that roughly aligns the image
 content approximately). Use inverse warping in the second image to take an image close to the first
 one, i.e. use the flag WARP_INVERSE_MAP with warpAffine or warpPerspective. See also the OpenCV
 sample image_alignment.cpp that demonstrates the use of the function. Note that the function throws
-an exception if algorithm does not converges. 
-Unlike findTransformECC, the findTransformECCMultiScale uses pyramids, making function more stable 
+an exception if algorithm does not converges.
+Unlike findTransformECC, the findTransformECCMultiScale uses pyramids, making function more stable
 and able to handle correctly more sophisticated cases.
 
 @sa
