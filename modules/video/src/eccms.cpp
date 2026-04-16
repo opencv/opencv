@@ -224,16 +224,16 @@ static double imageHessianProjECC(const Mat& map,
                            int deltaY,
                            int interpolation) {
     static_assert(std::is_same<float, elemtype>::value, "imageHessianProjECC: f16 is not supported yet");
-    constexpr int NPARAMS = MotionTraits<motionType>::paramAmount;
+#define HESSIAN_PARAMS (MotionTraits<motionType>::paramAmount)
 
     CV_Assert(map.type() == CV_64F);
     CV_Assert(interpolation == INTER_NEAREST || interpolation == INTER_LINEAR);
     CV_Assert(hessian.type() == CV_64F && sampleProj.type() == CV_64F && refProj.type() == CV_64F);
-    if (sampleProj.size() != Size(1, NPARAMS) || refProj.size() != Size(1, NPARAMS)) {
-        CV_Error(Error::BadImageSize, format("imageHessianProjECC: Wrong sample projection/reference projection size. 1x%d expected", NPARAMS));
+    if (sampleProj.size() != Size(1, HESSIAN_PARAMS) || refProj.size() != Size(1, HESSIAN_PARAMS)) {
+        CV_Error(Error::BadImageSize, format("imageHessianProjECC: Wrong sample projection/reference projection size. 1x%d expected", HESSIAN_PARAMS));
     }
-    if (hessian.size() != Size(NPARAMS, NPARAMS)) {
-        CV_Error(Error::BadImageSize, format("imageHessianProjECC: Wrong hessian size. %dx%d expected", NPARAMS, NPARAMS));
+    if (hessian.size() != Size(HESSIAN_PARAMS, HESSIAN_PARAMS)) {
+        CV_Error(Error::BadImageSize, format("imageHessianProjECC: Wrong hessian size. %dx%d expected", HESSIAN_PARAMS, HESSIAN_PARAMS));
     }
     if (!map.isContinuous()) {
         CV_Error(Error::BadStep, "imageHessianProjECC: Map should be continuous");
@@ -255,10 +255,10 @@ static double imageHessianProjECC(const Mat& map,
 
     const int MAX_STRIPES = 128;
     int stripesAmount = std::min(MAX_STRIPES, hr / deltaY);
-    std::vector<Matx<double, NPARAMS, NPARAMS> > hessPs(stripesAmount);
-    std::vector<Vec<double, NPARAMS> > iprojs(stripesAmount);
-    std::vector<Vec<double, NPARAMS> > tprojs(stripesAmount);
-    std::vector<Vec<double, NPARAMS> > projSubs(stripesAmount);
+    std::vector<Matx<double, MotionTraits<motionType>::paramAmount, MotionTraits<motionType>::paramAmount> > hessPs(stripesAmount);
+    std::vector<Vec<double, MotionTraits<motionType>::paramAmount> > iprojs(stripesAmount);
+    std::vector<Vec<double, MotionTraits<motionType>::paramAmount> > tprojs(stripesAmount);
+    std::vector<Vec<double, MotionTraits<motionType>::paramAmount> > projSubs(stripesAmount);
     std::vector<double> correlations(stripesAmount, 0.);
 
     std::vector<double> sampSums(stripesAmount, 0);
@@ -295,19 +295,19 @@ static double imageHessianProjECC(const Mat& map,
         for (int y = ystart; y < yend; y += deltaY) {
             const elemtype* refPtr = ref.ptr<elemtype>(y);
 
-            std::array<float, (NPARAMS * NPARAMS + NPARAMS) / 2> hessPcache{};
-            std::array<float, NPARAMS> iprojCache{};
-            std::array<float, NPARAMS> tprojCache{};
-            std::array<float, NPARAMS> projSubCache{};
+            std::array<float, (HESSIAN_PARAMS * HESSIAN_PARAMS + HESSIAN_PARAMS) / 2> hessPcache{};
+            std::array<float, HESSIAN_PARAMS> iprojCache{};
+            std::array<float, HESSIAN_PARAMS> tprojCache{};
+            std::array<float, HESSIAN_PARAMS> projSubCache{};
 
-            const float numeratorX0 = y * a01 + a02;
-            const float numeratorY0 = y * a11 + a12;
-            const float denominator0 = y * a21 + a22;
+            const float numeratorX0 = y * (float)a01 + (float)a02;
+            const float numeratorY0 = y * (float)a11 + (float)a12;
+            const float denominator0 = y * (float)a21 + (float)a22;
             int x = 0;
             for (; x < wr; x++) { //Tail handler
                 float sx, sy, denominator;
                 MotionTraits<motionType>::tailHandlerGetCoord(sx, sy, denominator, x, numeratorX0, numeratorY0,
-                                                denominator0, a00, a10, a20);
+                                                denominator0, (float)a00, (float)a10, (float)a20);
                 const unsigned int x0 = (interpolation == INTER_LINEAR) ? static_cast<int>(std::floor(sx)) : saturate_cast<unsigned>(sx);
                 const unsigned int y0 = (interpolation == INTER_LINEAR) ? static_cast<int>(std::floor(sy)) : saturate_cast<unsigned>(sy);
                 if(interpolation == INTER_LINEAR && (static_cast<int>(x0 < xcond) & static_cast<int>(y0 < ycond)) == 0)
@@ -372,17 +372,17 @@ static double imageHessianProjECC(const Mat& map,
                 sampSqSums[stripeIdx] += sampleVal * sampleVal;
                 refSums[stripeIdx] += refVal;
                 refSqSums[stripeIdx] += refVal * refVal;
-                nzs[stripeIdx] += fVal;
+                nzs[stripeIdx] += (int)fVal;
                 sampMaskedSums[stripeIdx] += sampleVal;
                 refMaskedSums[stripeIdx] += refVal;
-                std::array<float, NPARAMS> jac = MotionTraits<motionType>::fillJacobian(x, y, sx, sy,
+                std::array<float, HESSIAN_PARAMS> jac = MotionTraits<motionType>::fillJacobian(x, y, sx, sy,
                                                                                         fVal, gx,
-                                                                                        gy, a00,
-                                                                                        a10, denominator);
-                constexprForUpperTriangle<NPARAMS>([&](int row_i, int col_i) {
+                                                                                        gy, (float)a00,
+                                                                                        (float)a10, denominator);
+                constexprForUpperTriangle<HESSIAN_PARAMS>([&](int row_i, int col_i) {
                     hessPcache[hessianRowStart<motionType>(row_i) + (col_i - row_i)] += jac[row_i] * jac[col_i];
                 });
-                constexprFor<NPARAMS>([&](int elem) {
+                constexprFor<HESSIAN_PARAMS>([&](int elem) {
                     iprojCache[elem] += jac[elem] * sampleVal;
                     tprojCache[elem] += jac[elem] * refVal;
                     projSubCache[elem] += jac[elem] * fVal;
@@ -390,10 +390,10 @@ static double imageHessianProjECC(const Mat& map,
                 correlations[stripeIdx] += sampleVal * refVal;
             }
 
-            constexprForUpperTriangle<NPARAMS>([&](int row, int col) {
+            constexprForUpperTriangle<HESSIAN_PARAMS>([&](int row, int col) {
                 hessPs[stripeIdx](row, col) += hessPcache[hessianRowStart<motionType>(row) + (col - row)];
             });
-            constexprFor<NPARAMS>([&](int elem) {
+            constexprFor<HESSIAN_PARAMS>([&](int elem) {
                 iprojs[stripeIdx][elem] += iprojCache[elem];
                 tprojs[stripeIdx][elem] += tprojCache[elem];
                 projSubs[stripeIdx][elem] += projSubCache[elem];
@@ -423,18 +423,19 @@ static double imageHessianProjECC(const Mat& map,
     double* sampleProjPtr = sampleProj.ptr<double>(0);
     double* refProjPtr = refProj.ptr<double>(0);
     for (int stripeIdx = 0; stripeIdx < stripesAmount; stripeIdx++) {
-        for (int hessNum = 0; hessNum < NPARAMS * NPARAMS; hessNum++) {
+        for (int hessNum = 0; hessNum < HESSIAN_PARAMS * HESSIAN_PARAMS; hessNum++) {
             hessPtr[hessNum] += hessPs[stripeIdx].val[hessNum];
         }
-        for (int projNum = 0; projNum < NPARAMS; projNum++) {
+        for (int projNum = 0; projNum < HESSIAN_PARAMS; projNum++) {
             sampleProjPtr[projNum] += iprojs[stripeIdx][projNum] - projSubs[stripeIdx][projNum] * sampMean;
             refProjPtr[projNum] += tprojs[stripeIdx][projNum] - projSubs[stripeIdx][projNum] * refMean;
         }
     }
-    constexprForUpperTriangle<NPARAMS>([&](int row, int col) {
-        hessPtr[col * NPARAMS + row] = hessPtr[row * NPARAMS + col];
+    constexprForUpperTriangle<HESSIAN_PARAMS>([&](int row, int col) {
+        hessPtr[col * HESSIAN_PARAMS + row] = hessPtr[row * HESSIAN_PARAMS + col];
     });
     return correlation;
+#undef HESSIAN_PARAMS
 }
 
 static void updateWarpingMatrixECC(Mat& map_matrix, const Mat& update, const int motionType) {
@@ -639,12 +640,12 @@ static Mat prepareGradients(const Mat& sample) {
                 const float* sampleCurLine = sample.ptr<float>(row);
                 const float* samplePrevLine = sample.ptr<float>(std::max(row - 1, 0));
                 const float* sampleNextLine = sample.ptr<float>(std::min(row + 1, hs - 1));
-                float gradDivY = (row > 0 && row + 1 < hs) ? 0.5 : 0.25;
+                float gradDivY = (row > 0 && row + 1 < hs) ? 0.5f : 0.25f;
                 int col = 0;
                 for (; col < ws; col++) {
                     int prevCol = std::max(col - 1, 0);
                     int nextCol = std::min(col + 1, ws - 1);
-                    float gradDivX = (col > 0 && col + 1 < ws) ? 0.5 : 0.25;
+                    float gradDivX = (col > 0 && col + 1 < ws) ? 0.5f : 0.25f;
                     dstPtr[row * ws * 4 + col * 4] = sampleCurLine[2 * col];
                     dstPtr[row * ws * 4 + col * 4 + 1] =
                         gradDivX * (sampleCurLine[2 * nextCol] - sampleCurLine[2 * prevCol]);
