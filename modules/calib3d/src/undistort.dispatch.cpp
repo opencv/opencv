@@ -40,7 +40,6 @@
 //
 //M*/
 
-#include "opencv2/core/core_c.h"
 #include "opencv2/core/types.hpp"
 #include "precomp.hpp"
 #include "distortion_model.hpp"
@@ -48,8 +47,7 @@
 #include "undistort.simd.hpp"
 #include "undistort.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
 
-namespace cv
-{
+namespace cv {
 
 Mat getDefaultNewCameraMatrix( InputArray _cameraMatrix, Size imgsize,
                                bool centerPrincipalPoint )
@@ -68,8 +66,7 @@ Mat getDefaultNewCameraMatrix( InputArray _cameraMatrix, Size imgsize,
     return newCameraMatrix;
 }
 
-namespace {
-Ptr<ParallelLoopBody> getInitUndistortRectifyMapComputer(Size _size, Mat &_map1, Mat &_map2, int _m1type,
+static Ptr<ParallelLoopBody> getInitUndistortRectifyMapComputer(Size _size, Mat &_map1, Mat &_map2, int _m1type,
                                                          const double* _ir, Matx33d &_matTilt,
                                                          double _u0, double _v0, double _fx, double _fy,
                                                          double _k1, double _k2, double _p1, double _p2,
@@ -80,7 +77,6 @@ Ptr<ParallelLoopBody> getInitUndistortRectifyMapComputer(Size _size, Mat &_map1,
 
     CV_CPU_DISPATCH(getInitUndistortRectifyMapComputer, (_size, _map1, _map2, _m1type, _ir, _matTilt, _u0, _v0, _fx, _fy, _k1, _k2, _p1, _p2, _k3, _k4, _k5, _k6, _s1, _s2, _s3, _s4),
         CV_CPU_DISPATCH_MODES_ALL);
-}
 }
 
 void initUndistortRectifyMap( InputArray _cameraMatrix, InputArray _distCoeffs,
@@ -157,7 +153,7 @@ void initUndistortRectifyMap( InputArray _cameraMatrix, InputArray _distCoeffs,
 
     // Matrix for trapezoidal distortion of tilted image sensor
     Matx33d matTilt = Matx33d::eye();
-    detail::computeTiltProjectionMatrix(tauX, tauY, &matTilt);
+    computeTiltProjectionMatrix(tauX, tauY, &matTilt);
 
     parallel_for_(Range(0, size.height), *getInitUndistortRectifyMapComputer(
         size, map1, map2, m1type, ir, matTilt, u0, v0,
@@ -331,78 +327,74 @@ void undistort( InputArray _src, OutputArray _dst, InputArray _cameraMatrix,
     }
 }
 
-}
-
-static void cvUndistortPointsInternal( const CvMat* _src, CvMat* _dst, const CvMat* _cameraMatrix,
-                   const CvMat* _distCoeffs,
-                   const CvMat* matR, const CvMat* matP, cv::TermCriteria criteria)
+static void undistortPointsInternal( const Mat& _src, Mat& _dst, const Mat& _cameraMatrix,
+                   const Mat& _distCoeffs, const Mat& matR, const Mat& matP, TermCriteria criteria)
 {
     CV_Assert(criteria.isValid());
     double A[3][3], RR[3][3], k[14]={0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    CvMat matA=cvMat(3, 3, CV_64F, A), _Dk;
-    CvMat _RR=cvMat(3, 3, CV_64F, RR);
+    Mat matA(3, 3, CV_64F, A), _Dk;
+    Mat _RR(3, 3, CV_64F, RR);
     cv::Matx33d invMatTilt = cv::Matx33d::eye();
     cv::Matx33d matTilt = cv::Matx33d::eye();
+    bool haveDistCoeffs = !_distCoeffs.empty();
 
-    CV_Assert( CV_IS_MAT(_src) && CV_IS_MAT(_dst) &&
-        (_src->rows == 1 || _src->cols == 1) &&
-        (_dst->rows == 1 || _dst->cols == 1) &&
-        _src->cols + _src->rows - 1 == _dst->rows + _dst->cols - 1 &&
-        (CV_MAT_TYPE(_src->type) == CV_32FC2 || CV_MAT_TYPE(_src->type) == CV_64FC2) &&
-        (CV_MAT_TYPE(_dst->type) == CV_32FC2 || CV_MAT_TYPE(_dst->type) == CV_64FC2));
+    CV_Assert( (_src.rows == 1 || _src.cols == 1) &&
+        (_dst.rows == 1 || _dst.cols == 1) &&
+        _src.cols + _src.rows - 1 == _dst.rows + _dst.cols - 1 &&
+        (_src.type() == CV_32FC2 || _src.type() == CV_64FC2) &&
+        (_dst.type() == CV_32FC2 || _dst.type() == CV_64FC2));
 
-    CV_Assert( CV_IS_MAT(_cameraMatrix) &&
-        _cameraMatrix->rows == 3 && _cameraMatrix->cols == 3 );
+    CV_Assert( _cameraMatrix.rows == 3 && _cameraMatrix.cols == 3 && _cameraMatrix.channels() == 1 );
+    _cameraMatrix.convertTo(matA, CV_64F);
 
-    cvConvert( _cameraMatrix, &matA );
-
-
-    if( _distCoeffs )
+    if( haveDistCoeffs )
     {
-        CV_Assert( CV_IS_MAT(_distCoeffs) &&
-            (_distCoeffs->rows == 1 || _distCoeffs->cols == 1) &&
-            (_distCoeffs->rows*_distCoeffs->cols == 4 ||
-             _distCoeffs->rows*_distCoeffs->cols == 5 ||
-             _distCoeffs->rows*_distCoeffs->cols == 8 ||
-             _distCoeffs->rows*_distCoeffs->cols == 12 ||
-             _distCoeffs->rows*_distCoeffs->cols == 14));
+        CV_Assert(
+            (_distCoeffs.rows == 1 || _distCoeffs.cols == 1) &&
+            (_distCoeffs.rows*_distCoeffs.cols == 4 ||
+             _distCoeffs.rows*_distCoeffs.cols == 5 ||
+             _distCoeffs.rows*_distCoeffs.cols == 8 ||
+             _distCoeffs.rows*_distCoeffs.cols == 12 ||
+             _distCoeffs.rows*_distCoeffs.cols == 14));
 
-        _Dk = cvMat( _distCoeffs->rows, _distCoeffs->cols,
-            CV_MAKETYPE(CV_64F,CV_MAT_CN(_distCoeffs->type)), k);
-
-        cvConvert( _distCoeffs, &_Dk );
+        _Dk = Mat( _distCoeffs.rows, _distCoeffs.cols,
+            CV_MAKETYPE(CV_64F,_distCoeffs.channels()), k);
+        _distCoeffs.convertTo(_Dk, CV_64F);
+        CV_Assert(_Dk.ptr<double>() == k);
         if (k[12] != 0 || k[13] != 0)
         {
-            cv::detail::computeTiltProjectionMatrix<double>(k[12], k[13], NULL, NULL, NULL, &invMatTilt);
-            cv::detail::computeTiltProjectionMatrix<double>(k[12], k[13], &matTilt, NULL, NULL);
+            computeTiltProjectionMatrix<double>(k[12], k[13], NULL, NULL, NULL, &invMatTilt);
+            computeTiltProjectionMatrix<double>(k[12], k[13], &matTilt, NULL, NULL);
         }
     }
 
-    if( matR )
+    if( !matR.empty() )
     {
-        CV_Assert( CV_IS_MAT(matR) && matR->rows == 3 && matR->cols == 3 );
-        cvConvert( matR, &_RR );
+        CV_Assert( matR.rows == 3 && matR.cols == 3 && matR.channels() == 1 );
+        matR.convertTo(_RR, CV_64F);
+        CV_Assert(_RR.ptr<double>() == &RR[0][0]);
     }
     else
-        cvSetIdentity(&_RR);
+        setIdentity(_RR);
 
-    if( matP )
+    if( !matP.empty() )
     {
         double PP[3][3];
-        CvMat _P3x3, _PP=cvMat(3, 3, CV_64F, PP);
-        CV_Assert( CV_IS_MAT(matP) && matP->rows == 3 && (matP->cols == 3 || matP->cols == 4));
-        cvConvert( cvGetCols(matP, &_P3x3, 0, 3), &_PP );
-        cvMatMul( &_PP, &_RR, &_RR );
+        Mat _PP(3, 3, CV_64F, PP);
+        CV_Assert( matP.rows == 3 && (matP.cols == 3 || matP.cols == 4));
+        matP.colRange(0, 3).convertTo(_PP, CV_64F);
+        CV_Assert(_PP.ptr<double>() == &PP[0][0]);
+        _RR = _PP*_RR;
     }
 
-    const CvPoint2D32f* srcf = (const CvPoint2D32f*)_src->data.ptr;
-    const CvPoint2D64f* srcd = (const CvPoint2D64f*)_src->data.ptr;
-    CvPoint2D32f* dstf = (CvPoint2D32f*)_dst->data.ptr;
-    CvPoint2D64f* dstd = (CvPoint2D64f*)_dst->data.ptr;
-    int stype = CV_MAT_TYPE(_src->type);
-    int dtype = CV_MAT_TYPE(_dst->type);
-    int sstep = _src->rows == 1 ? 1 : _src->step/CV_ELEM_SIZE(stype);
-    int dstep = _dst->rows == 1 ? 1 : _dst->step/CV_ELEM_SIZE(dtype);
+    const Point2f* srcf = (const Point2f*)_src.data;
+    const Point2d* srcd = (const Point2d*)_src.data;
+    Point2f* dstf = (Point2f*)_dst.data;
+    Point2d* dstd = (Point2d*)_dst.data;
+    int stype = _src.type();
+    int dtype = _dst.type();
+    int sstep = _src.rows == 1 ? 1 : (int)(_src.step/_src.elemSize());
+    int dstep = _dst.rows == 1 ? 1 : (int)(_dst.step/_dst.elemSize());
 
     double fx = A[0][0];
     double fy = A[1][1];
@@ -411,7 +403,7 @@ static void cvUndistortPointsInternal( const CvMat* _src, CvMat* _dst, const CvM
     double cx = A[0][2];
     double cy = A[1][2];
 
-    int n = _src->rows + _src->cols - 1;
+    int n = _src.rows + _src.cols - 1;
     for( int i = 0; i < n; i++ )
     {
         double x, y, x0 = 0, y0 = 0, u, v;
@@ -431,7 +423,7 @@ static void cvUndistortPointsInternal( const CvMat* _src, CvMat* _dst, const CvM
         x = (x - cx)*ifx;
         y = (y - cy)*ify;
 
-        if( _distCoeffs ) {
+        if( haveDistCoeffs ) {
             // compensate tilt distortion
             // s * [x''', y''', 1]^T = matTilt * [x'', y'', 1]^T =>
             // s * matTilt^{-1} * [x''', y''', 1]^T = [x'', y'', 1]^T =>
@@ -453,9 +445,9 @@ static void cvUndistortPointsInternal( const CvMat* _src, CvMat* _dst, const CvM
 
             for( int j = 0; ; j++ )
             {
-                if ((criteria.type & cv::TermCriteria::COUNT) && j >= criteria.maxCount)
+                if ((criteria.type & TermCriteria::COUNT) && j >= criteria.maxCount)
                     break;
-                if ((criteria.type & cv::TermCriteria::EPS) && error < criteria.epsilon)
+                if ((criteria.type & TermCriteria::EPS) && error < criteria.epsilon)
                     break;
                 // r^2 = x'^2 + y'^2
                 double r2 = x*x + y*y;
@@ -480,11 +472,11 @@ static void cvUndistortPointsInternal( const CvMat* _src, CvMat* _dst, const CvM
                 double new_x = (1. - alpha)*x + alpha*(x0 - deltaX)*icdist;
                 double new_y = (1. - alpha)*y + alpha*(y0 - deltaY)*icdist;
 
-                if(criteria.type & cv::TermCriteria::EPS)
+                if(criteria.type & TermCriteria::EPS)
                 {
                     double r4, r6, a1, a2, a3, cdist, icdist2;
                     double xd, yd, xd0, yd0;
-                    cv::Vec3d vecTilt;
+                    Vec3d vecTilt;
 
                     // r^2 = x'^2 + y'^2
                     r2 = new_x*new_x + new_y*new_y;
@@ -528,7 +520,7 @@ static void cvUndistortPointsInternal( const CvMat* _src, CvMat* _dst, const CvM
             }
         }
 
-        if( matR || matP )
+        if( !matR.empty() || !matP.empty() )
         {
             double xx = RR[0][0]*x + RR[0][1]*y + RR[0][2];
             double yy = RR[1][0]*x + RR[1][1]*y + RR[1][2];
@@ -548,17 +540,6 @@ static void cvUndistortPointsInternal( const CvMat* _src, CvMat* _dst, const CvM
             dstd[i*dstep].y = y;
         }
     }
-}
-
-namespace cv {
-
-void undistortPoints(InputArray _src, OutputArray _dst,
-                     InputArray _cameraMatrix,
-                     InputArray _distCoeffs,
-                     InputArray _Rmat,
-                     InputArray _Pmat)
-{
-    undistortPoints(_src, _dst, _cameraMatrix, _distCoeffs, _Rmat, _Pmat, TermCriteria(TermCriteria::MAX_ITER, 5, 0.01));
 }
 
 void undistortPoints(InputArray _src, OutputArray _dst,
@@ -583,15 +564,7 @@ void undistortPoints(InputArray _src, OutputArray _dst,
     _dst.create(npoints, 1, CV_MAKETYPE(depth, 2), -1, true);
     Mat dst = _dst.getMat();
 
-    CvMat _csrc = cvMat(src), _cdst = cvMat(dst), _ccameraMatrix = cvMat(cameraMatrix);
-    CvMat matR, matP, _cdistCoeffs, *pR=0, *pP=0, *pD=0;
-    if( !R.empty() )
-        pR = &(matR = cvMat(R));
-    if( !P.empty() )
-        pP = &(matP = cvMat(P));
-    if( !distCoeffs.empty() )
-        pD = &(_cdistCoeffs = cvMat(distCoeffs));
-    cvUndistortPointsInternal(&_csrc, &_cdst, &_ccameraMatrix, pD, pR, pP, criteria);
+    undistortPointsInternal(src, dst, cameraMatrix, distCoeffs, R, P, criteria);
 }
 
 void undistortImagePoints(InputArray src, OutputArray dst, InputArray cameraMatrix, InputArray distCoeffs, TermCriteria termCriteria)
@@ -629,7 +602,7 @@ static Point2f mapPointSpherical(const Point2f& p, float alpha, Vec4d* J, enum U
             double fy1 = iR/std::sqrt(1 - y1*y1);
             *J = Vec4d(fx1*(kx*x + k), fx1*ky*x, fy1*kx*y, fy1*(ky*y + k));
         }
-        return Point2f((float)asin(x1), (float)asin(y1));
+        return Point2f((float)std::asin(x1), (float)std::asin(y1));
     }
     CV_Error(Error::StsBadArg, "Unknown projection type");
 }
@@ -710,8 +683,8 @@ float initWideAngleProjMap(InputArray _cameraMatrix0, InputArray _distCoeffs0,
     Mat mapxy(dsize, CV_32FC2);
     double k1 = k[0], k2 = k[1], k3 = k[2], p1 = k[3], p2 = k[4], k4 = k[5], k5 = k[6], k6 = k[7], s1 = k[8], s2 = k[9], s3 = k[10], s4 = k[11];
     double fx = cameraMatrix.at<double>(0,0), fy = cameraMatrix.at<double>(1,1), cx = scenter.x, cy = scenter.y;
-    cv::Matx33d matTilt;
-    cv::detail::computeTiltProjectionMatrix(k[12], k[13], &matTilt);
+    Matx33d matTilt;
+    computeTiltProjectionMatrix(k[12], k[13], &matTilt);
 
     for( int y = 0; y < dsize.height; y++ )
     {
@@ -752,5 +725,5 @@ float initWideAngleProjMap(InputArray _cameraMatrix0, InputArray _distCoeffs0,
     return scale;
 }
 
-} // namespace
+}
 /*  End of file  */
