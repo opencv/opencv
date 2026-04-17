@@ -23,27 +23,28 @@ CV__DNN_INLINE_NS_BEGIN
 class KVCache
 {
     public:
-        KVCache(FastGemmOpt opt, int nHeads) : nHeads(nHeads), offset(0), opt(opt), headDim(-1) {}
-        KVCache(FastGemmOpt opt) : nHeads(-1), isShapeDerived(false), offset(0), opt(opt), headDim(-1) {}
+        virtual ~KVCache() = default;
+        KVCache(FastGemmOpt opt, int nHeads) : nHeads(nHeads),  headDim(-1), offset(0), opt(opt) {}
+        KVCache(FastGemmOpt opt) : nHeads(-1), headDim(-1),offset(0), opt(opt) {}
         void grow(const Mat& newData);
         void clear() {
             pages.clear();
             nTokens = 0;
         }
         const std::vector<Mat>& getPages() const { return pages; }
+        int getPageSize() const { return pageSize; }
     protected:
         void growPrefetch(const Mat& newData, int T);
-        virtual void growGenerate(const Mat& newData);
 
+        virtual void growGenerate(const Mat& newData) = 0;
         std::vector<Mat> pages;
 
         int nTokens = 0;
-        int pageSize = 325;
+        int pageSize = -1;
         int nHeads;
         int headDim;
         int batchSize = -1;
         int offset;
-        bool isShapeDerived = true;
         bool isKCache = false;
         FastGemmOpt opt;
 };
@@ -53,12 +54,14 @@ class VCache : public KVCache
     public:
         VCache(FastGemmOpt opt) : KVCache(opt) {
             isKCache = false;
+            pageSize = fastGemmKC(opt);
         }
         VCache(FastGemmOpt opt, int nHeads) : KVCache(opt, nHeads) {
             isKCache = false;
+            pageSize = fastGemmKC(opt);
         }
     protected:
-        void growGenerate(const Mat& newData) CV_OVERRIDE;
+        void growGenerate(const Mat& newData);
 };
 
 class KCache : public KVCache
@@ -66,12 +69,14 @@ class KCache : public KVCache
     public:
         KCache(FastGemmOpt opt) : KVCache(opt) {
             isKCache = true;
+            pageSize = fastGemmNR(opt);
         }
         KCache(FastGemmOpt opt, int nHeads) : KVCache(opt, nHeads) {
             isKCache = true;
+            pageSize = fastGemmNR(opt);
         }
     protected:
-        void growGenerate(const Mat& newData) CV_OVERRIDE;
+        void growGenerate(const Mat& newData);
 };
 
 

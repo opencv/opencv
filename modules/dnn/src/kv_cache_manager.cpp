@@ -6,6 +6,8 @@
 #include "kv_cache_manager.hpp"
 #include "net_impl.hpp"
 
+#include <memory>
+#include "layers/cpu_kernels/fast_gemm.hpp"
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
@@ -16,36 +18,52 @@ void setKVCacheManager(Net::Impl* netimpl)
 
     const std::vector<Arg>& inputs = netimpl->mainGraph->inputs();
     CV_Assert(!inputs.empty());
-    Arg inputEmbeddingArg = inputs[0];
-    MatShape shape = netimpl->argData(inputEmbeddingArg).shape;
 
-    CV_Assert(shape.size() == 3);
-    KVCacheManager manager;
-    manager.netimpl = netimpl;
-    manager.dim = shape[2];
-    manager.blockSize = 325;
-    manager.initialized = true;
-    netimpl->kvCacheManager = manager;
+    CV_Assert(!netimpl->layers.empty());
+
+    auto manager = std::make_unique<KVCacheManager>();
+    manager->netimpl = netimpl;
+    manager->opt.init();
+
+    for (const auto& layerPair : netimpl->layers)
+    {
+        const LayerData& layer = layerPair.second;
+        if (layer.type != "AttentionONNXAI")
+            continue;
+
+        if (!layer.layerInstance)
+        {
+            CV_Error(cv::Error::StsBadArg,
+                     "setKVCacheManager must be called after the network is initialized");
+        }
+
+        Ptr<AttentionOnnxAiLayer> attnLayer =
+            layer.layerInstance.dynamicCast<AttentionOnnxAiLayer>();
+        CV_Assert(attnLayer);
+
+        int kvNumHeads = attnLayer->kv_num_heads;
+
+        if (kvNumHeads > 0)
+        {
+            manager->kData.emplace(layer.name, KCache(manager->opt, kvNumHeads));
+            manager->vData.emplace(layer.name, VCache(manager->opt, kvNumHeads));
+        }
+        else
+        {
+            manager->kData.emplace(layer.name, KCache(manager->opt));
+            manager->vData.emplace(layer.name, VCache(manager->opt));
+        }
+    }
+
+    manager->isInitialized = true;
+    netimpl->kvCacheManager = std::move(manager);
 }
 
 void KVCacheManager::init()
 {
-    if (isInitialised)
-        return;
-
-    // Allocate cache buffers for each attention layer
-    for (const auto& layerPair : netimpl->layers)
-    {
-        const LayerData& layer = layerPair.second;
-        if (layer.type == "AttentionONNXAI")
-        {
-            std::string layerId = layer.name;
-            Mat kCache(Size(dim, blockSize * batchSize), CV_32F, Scalar(0));
-            Mat vCache(Size(dim, blockSize * batchSize), CV_32F, Scalar(0));
-            kData[layerId] = kCache;
-            vData[layerId] = vCache;
-        }
-    }
+    // Construction of per-layer caches happens in setKVCacheManager.
+    // This method is retained as a callable hook for deferred re-init if needed.
+    CV_Assert(isInitialized);
 }
 
 void KVCache::grow(const Mat& newData) {
@@ -71,11 +89,13 @@ void KVCache::grow(const Mat& newData) {
             else
                 CV_Assert(newData.size[2] == headDim * nHeads);
         }
+        if (batchSize == -1)
+            batchSize = newData.size[0];
     }
 
     int T = newData.dims == 4 ? newData.size[2] : newData.size[1];
 
-    if (T > 1){
+    if (T > 1 || pages.empty()) {
         // prefetch
         if(!pages.empty())
             CV_Error(
@@ -85,12 +105,13 @@ void KVCache::grow(const Mat& newData) {
 
         // add pages
         int totalPages = (T + pageSize - 1) / pageSize;
-        for (int i = 0; i < totalPages - 1; i++) {
+        for (int i = 0; i < totalPages; i++) {
+            int page_size = isKCache ?
+                (int)fastGemmPackBSize(pageSize, headDim, opt):
+                (int)fastGemmPackBSize(headDim, pageSize, opt);
+
             pages.push_back(
-                Mat(
-                    {batchSize, nHeads, fastGemmPackBSize(headDim, pageSize, opt)},
-                    CV_32F, Scalar(0)
-                );
+                Mat({batchSize, nHeads, page_size}, CV_32F, Scalar(0))
             );
         }
         growPrefetch(newData, T);
@@ -102,7 +123,8 @@ void KVCache::grow(const Mat& newData) {
 
 void KVCache::growPrefetch(const Mat& newData, int T){
     int totalPages = (T + pageSize - 1) / pageSize;
-    int ps = isKCache ? fastGemmPackBSize(headDim, pageSize, opt) : fastGemmPackBSize(pageSize, headDim, opt);
+    int ps = isKCache ? (int)fastGemmPackBSize(pageSize, headDim, opt)
+                      : (int)fastGemmPackBSize(headDim, pageSize, opt);
 
     bool is3Dlayout = newData.dims == 3;
 
@@ -113,23 +135,26 @@ void KVCache::growPrefetch(const Mat& newData, int T){
             int h = i % nHeads;
 
             // source
-            size_t step_source = b * nHeads * T * headDim ;
+            size_t step_source = b * nHeads * T * headDim;
             if(is3Dlayout)
-                step_source = page * pageSize * nHeads * headDim +
-                                h * headDim;
+                step_source += page * pageSize * nHeads * headDim +
+                              h * headDim;
             else
-                step_source = h * headDim * T;
-            const auto*source = newData.ptr<float>() + step_source;
+                step_source += h * headDim * T + page * pageSize * headDim;
+            const auto* source = newData.ptr<float>() + step_source;
 
             // dst
             size_t step_dst = b * nHeads * ps +
                               h * ps;
-            auto*dst = pages[page].ptr<float>() + step_dst;
+            auto* dst = pages[page].ptr<float>() + step_dst;
+
+            const int N = (isKCache ? pageSize : headDim);
+            const int K = (isKCache ? headDim : pageSize);
 
             fastGemmPackB(
                 isKCache,
-                fastGemmNR(opt), headDim,
-                source, is3Dlayout ? headDim * nHeads : headDim
+                N, K,
+                source, is3Dlayout ? headDim * nHeads : headDim,
                 dst,
                 opt
             );
@@ -140,12 +165,15 @@ void KVCache::growPrefetch(const Mat& newData, int T){
     nTokens += T;
 }
 
-virtual void KCache::growGenerate(const Mat& newData){
-    bool is3Dlayout = newData.dims == 3;
-    int cur_page = (nTokens + 1) / pageSize;
-    int _kp = (nTokens + 1) % pageSize;
+void KCache::growGenerate(const Mat& newData){
+    int cur_page = nTokens / pageSize;
+    const int Ps = fastGemmPackBSize(pageSize, headDim, opt);
+    int t0 = nTokens % pageSize;
     const int batch_size = newData.size[0];
-    const int ps = fastGemmPackBSize(headDim, pageSize, opt);
+
+    if (cur_page >= (int)pages.size()) {
+        pages.push_back(Mat({batchSize, nHeads, Ps}, CV_32F, Scalar(0)));
+    }
 
     auto* page = pages[cur_page].ptr<float>();
     const auto* data = newData.ptr<float>();
@@ -155,41 +183,63 @@ virtual void KCache::growGenerate(const Mat& newData){
             for(int j = 0; j < headDim; j++) {
                 int step =
                     b * nHeads * headDim +
-                    h * headDim;
+                    h * headDim +
+                    j;
                 page[
-                    ps * (b * nHeads * ps + h) +
-                    _kp + j * pageSize
-                ] = data + step;
+                    b * nHeads * Ps +
+                    h * Ps +
+                    t0 + pageSize * j
+                ] = *(data + step);
             }
         }
     }
+
+    nTokens += 1;
 }
 
-virtual void VCache::growGenerate(const Mat& newData){
-    const size_t Nr = fastGemmNR(opt);
-    size_t width = (headDim + Nr - 1) / Nr * Nr;
-    const size_t t0 = ((nTokens + 1) % pageSize);
-    const size_t step_packed = pageSize * Nr;
+void VCache::growGenerate(const Mat& newData){
+    const int batch_size = newData.size[0];
+    const int Nr = fastGemmNR(opt);
+    const int Ps = fastGemmPackBSize(headDim, pageSize, opt);
+    const int t0 = nTokens  % pageSize;
+    const int step_packed = pageSize * Nr;
+    int cur_page = nTokens  / pageSize;
+
+    if (cur_page >= (int)pages.size()) {
+        pages.push_back(Mat({batchSize, nHeads, Ps}, CV_32F, Scalar(0)));
+    }
+
     auto* page = pages[cur_page].ptr<float>();
     const auto* data = newData.ptr<float>();
 
     for (int b = 0; b < batch_size; b++){
         for (int h = 0; h < nHeads; h++){
-            for (int j=0; j < headDim; j+=fasGemmNR(opt)){
+            for (int j=0; j <= headDim / Nr; j+=1){
                 int step =
                     b * nHeads * headDim +
                     h * headDim +
-                    j;
-                size_t copy_size = std::min(Nr, headDim - j);
+                    j * Nr;
+
+                size_t copy_size = std::min(Nr, headDim - j * Nr);
+
+                auto* cur_page =
+                    page + b * nHeads * Ps +
+                    h * Ps +
+                    t0 * Nr +
+                    j * step_packed;
+
                 std::memcpy(
-                    page + width * t0 + j,
+                    cur_page,
                     data + step,
                     copy_size * sizeof(float)
                 );
             }
         }
     }
+
+    nTokens += 1;
 }
+
 
 CV__DNN_INLINE_NS_END
 }}

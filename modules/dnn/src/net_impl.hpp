@@ -25,6 +25,8 @@
 
 #include "legacy_backend.hpp"  // wrapMat BlobManager OpenCLBackendWrapper
 
+#include "kv_cache_manager.hpp"
+
 #include <unordered_map>
 
 #ifdef HAVE_ONNXRUNTIME
@@ -98,6 +100,7 @@ struct Net::Impl : public detail::NetImplBase
     std::vector<Mat> buffers;
     std::vector<Mat> scratchBufs;
     std::vector<Ptr<Graph> > allgraphs;
+    std::unique_ptr<KVCacheManager> kvCacheManager;
 
     Ptr<Graph> mainGraph;
     int globGraphIdx;
