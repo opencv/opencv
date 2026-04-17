@@ -2184,6 +2184,13 @@ TEST_P(Test_ONNX_layers, Gemm_External_Data)
 
 TEST_P(Test_ONNX_layers, Quantized_MatMul_Variable_Weights)
 {
+    auto engine_forced = static_cast<dnn::Net::EngineType>(
+        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", dnn::Net::ENGINE_AUTO));
+    if (engine_forced == dnn::Net::ENGINE_CLASSIC)
+    {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+        return;
+    }
     testONNXModels("quantized_matmul_variable_inputs", npy, 1.3, 1.3);
 }
 
