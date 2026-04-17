@@ -198,27 +198,25 @@ struct ModelFusionQDQ
                                 ? (int)elt_out_zp_m.at<uint8_t>(0)
                                 : (int)elt_out_zp_m.at<int8_t>(0);
 
-                            LayerParams eltwiseParams = makeLayerParamsFromOriginal(add, "Eltwise2Int8");
-                            eltwiseParams.blobs.clear();
-                            eltwiseParams.set("input_scales", DictValue::arrayReal(in_scales.data(), (int)in_scales.size()));
-                            eltwiseParams.set("input_zeropoints", DictValue::arrayInt(in_zps.data(), (int)in_zps.size()));
-                            eltwiseParams.set("scales", out_scale_val);
-                            eltwiseParams.set("zeropoints", out_zp_val);
-                            Ptr<Layer> eltwiseInt8 = createFusedLayer(eltwiseParams);
-                            if (!eltwiseInt8.empty()) {
-                                CV_Assert(dynamic_cast<Eltwise2Int8Layer*>(eltwiseInt8.get()));
-                                fused_layer_idx = add_layer_idx;
-                                newprog[add_layer_idx] = eltwiseInt8;
-                                fused_inputs.swap(int8_inputs);
-                                removed_args.push_back(q_data_in);     // float add_out
-                                for (const Arg& add_inp : add->inputs)
-                                    removed_args.push_back(add_inp);
+                            Eltwise2Int8Params ep;
+                            ep.name = add->name;
+                            ep.input_scales = in_scales;
+                            ep.input_zeropoints = in_zps;
+                            ep.output_sc = out_scale_val;
+                            ep.output_zp = out_zp_val;
+                            Ptr<Eltwise2Int8Layer> eltwiseInt8 = Eltwise2Int8Layer::create(ep);
+                            eltwiseInt8->netimpl = netimpl;
+                            fused_layer_idx = add_layer_idx;
+                            newprog[add_layer_idx] = eltwiseInt8;
+                            fused_inputs.swap(int8_inputs);
+                            removed_args.push_back(q_data_in);     // float add_out
+                            for (const Arg& add_inp : add->inputs)
+                                removed_args.push_back(add_inp);
 
-                                for (int dq_prog_idx : dq_prog_indices)
-                                    newprog[dq_prog_idx] = Ptr<Layer>();
+                            for (int dq_prog_idx : dq_prog_indices)
+                                newprog[dq_prog_idx] = Ptr<Layer>();
 
-                                break;
-                            }
+                            break;
                         }
                     }
 
@@ -271,25 +269,23 @@ struct ModelFusionQDQ
                                 }
                             }
 
-                            LayerParams reluInt8Params = makeLayerParamsFromOriginal(relu, "ReLUInt8");
-                            reluInt8Params.blobs.clear();
-                            Ptr<Layer> reluInt8 = createFusedLayer(reluInt8Params);
-                            if (!reluInt8.empty()) {
-                                auto* reluInt8Layer = dynamic_cast<ActivationLayerInt8*>(reluInt8.get());
-                                CV_Assert(reluInt8Layer);
-                                reluInt8Layer->input_sc = inp_sc;
-                                reluInt8Layer->input_zp = inp_zp;
-                                reluInt8Layer->output_sc = out_sc;
-                                reluInt8Layer->output_zp = out_zp_i;
-                                reluInt8Layer->activationLUT = lookUpTable;
-                                fused_layer_idx = relu_layer_idx;
-                                newprog[relu_layer_idx] = reluInt8;
-                                fused_inputs.assign(1, dq->inputs[0]);
-                                removed_args.push_back(q_data_in);
-                                removed_args.push_back(relu_in);
-                                newprog[dq_idx] = Ptr<Layer>();
-                                break;
-                            }
+                            ActivationInt8Params ap;
+                            ap.name = relu->name;
+                            ap.activationType = "ReLUInt8";
+                            ap.input_sc = inp_sc;
+                            ap.input_zp = inp_zp;
+                            ap.output_sc = out_sc;
+                            ap.output_zp = out_zp_i;
+                            ap.activationLUT = lookUpTable;
+                            Ptr<ActivationLayerInt8> reluInt8 = ActivationLayerInt8::create(ap);
+                            reluInt8->netimpl = netimpl;
+                            fused_layer_idx = relu_layer_idx;
+                            newprog[relu_layer_idx] = reluInt8;
+                            fused_inputs.assign(1, dq->inputs[0]);
+                            removed_args.push_back(q_data_in);
+                            removed_args.push_back(relu_in);
+                            newprog[dq_idx] = Ptr<Layer>();
+                            break;
                         }
                     }
                 }
@@ -387,41 +383,38 @@ struct ModelFusionQDQ
                                         : (int)out_zp_m2.at<int8_t>(0);
                                     if (out_sc2 > 0.f) {
                                         int relu_out_uc = usecounts.at(q_inp.idx);
-                                        LayerParams eltParams = makeLayerParamsFromOriginal(add2, "Eltwise2Int8");
-                                        eltParams.blobs.clear();
-                                        eltParams.set("input_scales", DictValue::arrayReal(in_scales2.data(), (int)in_scales2.size()));
-                                        eltParams.set("input_zeropoints", DictValue::arrayInt(in_zps2.data(), (int)in_zps2.size()));
-                                        eltParams.set("scales", out_sc2);
-                                        eltParams.set("zeropoints", out_zp_val2);
-                                        eltParams.set("with_relu", true);
-                                        Ptr<Layer> eltInt8 = createFusedLayer(eltParams);
-                                        if (!eltInt8.empty()) {
-                                            CV_Assert(dynamic_cast<Eltwise2Int8Layer*>(eltInt8.get()));
+                                        Eltwise2Int8Params ep2;
+                                        ep2.name = add2->name;
+                                        ep2.input_scales = in_scales2;
+                                        ep2.input_zeropoints = in_zps2;
+                                        ep2.output_sc = out_sc2;
+                                        ep2.output_zp = out_zp_val2;
+                                        ep2.with_relu = true;
+                                        Ptr<Eltwise2Int8Layer> eltInt8 = Eltwise2Int8Layer::create(ep2);
+                                        eltInt8->netimpl = netimpl;
 
-                                            fused_inputs = int8_inputs2;
-                                            if (relu_out_uc <= 1) {
-                                                fused_layer_idx = add_idx2;
-                                                newprog[add_idx2] = eltInt8;
-                                                newprog[relu_layer_idx2] = Ptr<Layer>();
-                                                removed_args.push_back(q_inp);   // relu_out
-                                                removed_args.push_back(relu_in2); // add_out
-                                                for (size_t dk = 0; dk < add2->inputs.size(); dk++) {
-                                                    removed_args.push_back(add2->inputs[dk]);
-                                                }
-                                                for (int dq_prog_idx : dq_prog_indices2) {
-                                                    if (dq_prog_idx >= 0)
-                                                        newprog[dq_prog_idx] = Ptr<Layer>();
-                                                }
-                                            } else {
-                                                int new_idx = (int)newprog.size();
-                                                newprog.push_back(eltInt8);
-                                                fused_layer_idx = new_idx;
-                                                usecounts.at(q_inp.idx) -= 1;
-                                                Eltwise2Int8Layer* elt2ptr = dynamic_cast<Eltwise2Int8Layer*>(eltInt8.get());
-                                                relu_to_eltwise[q_inp.idx] = {outputs[0], elt2ptr};
+                                        fused_inputs = int8_inputs2;
+                                        if (relu_out_uc <= 1) {
+                                            fused_layer_idx = add_idx2;
+                                            newprog[add_idx2] = eltInt8;
+                                            newprog[relu_layer_idx2] = Ptr<Layer>();
+                                            removed_args.push_back(q_inp);   // relu_out
+                                            removed_args.push_back(relu_in2); // add_out
+                                            for (size_t dk = 0; dk < add2->inputs.size(); dk++) {
+                                                removed_args.push_back(add2->inputs[dk]);
                                             }
-                                            break;
+                                            for (int dq_prog_idx : dq_prog_indices2) {
+                                                if (dq_prog_idx >= 0)
+                                                    newprog[dq_prog_idx] = Ptr<Layer>();
+                                            }
+                                        } else {
+                                            int new_idx = (int)newprog.size();
+                                            newprog.push_back(eltInt8);
+                                            fused_layer_idx = new_idx;
+                                            usecounts.at(q_inp.idx) -= 1;
+                                            relu_to_eltwise[q_inp.idx] = {outputs[0], eltInt8.get()};
                                         }
+                                        break;
                                     }
                                 }
                             }
@@ -549,48 +542,41 @@ struct ModelFusionQDQ
                                         outputMultiplier.at<float>(oc) = (inp_sc * wt_sc.at<float>(oc)) / out_sc;
                                     }
 
-                                    LayerParams convInt8Params = makeLayerParamsFromOriginal(conv, "Conv2Int8");
-                                    {
-                                        if (!conv->strides.empty())
-                                            convInt8Params.set("stride", DictValue::arrayInt(conv->strides.data(), (int)conv->strides.size()));
-                                        if (!conv->dilations.empty())
-                                            convInt8Params.set("dilation", DictValue::arrayInt(conv->dilations.data(), (int)conv->dilations.size()));
-                                        if (!conv->pads.empty())
-                                            convInt8Params.set("pad", DictValue::arrayInt(conv->pads.data(), (int)conv->pads.size()));
+                                    Conv2Int8Params cp;
+                                    cp.name = conv->name;
+                                    cp.strides = conv->strides;
+                                    cp.dilations = conv->dilations;
+                                    cp.pads = conv->pads;
+                                    cp.ngroups = conv->ngroups;
+                                    cp.auto_pad = conv->auto_pad;
+                                    cp.ceil_mode = conv->ceil_mode;
+                                    cp.input_sc = inp_sc;
+                                    cp.input_zp = inp_zp;
+                                    cp.output_sc = out_sc;
+                                    cp.output_zp = out_zp;
+                                    cp.per_channel = per_channel;
+                                    cp.input_is_u8 = inputIsU8;
+                                    cp.weights = w_q;
+                                    cp.bias = biasFused;
+                                    cp.outputMultiplier = outputMultiplier;
+                                    Ptr<Conv2Int8Layer> convInt8 = Conv2Int8Layer::create(cp);
+                                    convInt8->netimpl = netimpl;
+                                    fused_layer_idx = conv_layer_idx;
+                                    newprog[conv_layer_idx] = convInt8;
+                                    fused_inputs.assign(1, dq_x->inputs[0]);
+                                    removed_args.push_back(q_data_in);
+                                    removed_args.push_back(conv_w);
+                                    if (conv->inputs.size() == 3) {
+                                        removed_args.push_back(conv->inputs[2]);
+                                        if (dq_bias_idx >= 0)
+                                            newprog[dq_bias_idx] = Ptr<Layer>();
                                     }
-                                    convInt8Params.set("num_output", outCn);
-                                    convInt8Params.set("group", conv->ngroups);
-                                    convInt8Params.set("input_scale", inp_sc);
-                                    convInt8Params.set("input_zeropoint", inp_zp);
-                                    convInt8Params.set("scales", out_sc);
-                                    convInt8Params.set("zeropoints", out_zp);
-                                    convInt8Params.set("per_channel", per_channel);
-                                    convInt8Params.set("input_is_u8", inputIsU8);
-                                    convInt8Params.blobs.resize(3);
-                                    convInt8Params.blobs[0] = w_q;
-                                    convInt8Params.blobs[1] = biasFused;
-                                    convInt8Params.blobs[2] = outputMultiplier;
-                                    Ptr<Layer> convInt8 = createFusedLayer(convInt8Params);
-                                    if (!convInt8.empty()) {
-                                        auto* convInt8Layer = dynamic_cast<Conv2Int8Layer*>(convInt8.get());
-                                        CV_Assert(convInt8Layer);
-                                        fused_layer_idx = conv_layer_idx;
-                                        newprog[conv_layer_idx] = convInt8;
-                                        fused_inputs.assign(1, dq_x->inputs[0]);
-                                        removed_args.push_back(q_data_in);
-                                        removed_args.push_back(conv_w);
-                                        if (conv->inputs.size() == 3) {
-                                            removed_args.push_back(conv->inputs[2]);
-                                            if (dq_bias_idx >= 0)
-                                                newprog[dq_bias_idx] = Ptr<Layer>();
-                                        }
-                                        if (usecounts.at(conv_x.idx) == 1) {
-                                            removed_args.push_back(conv_x);
-                                            newprog[dq_x_idx] = Ptr<Layer>();
-                                        }
-                                        newprog[dq_w_idx] = Ptr<Layer>();
-                                        break;
+                                    if (usecounts.at(conv_x.idx) == 1) {
+                                        removed_args.push_back(conv_x);
+                                        newprog[dq_x_idx] = Ptr<Layer>();
                                     }
+                                    newprog[dq_w_idx] = Ptr<Layer>();
+                                    break;
                                 }
                             }
                         }
@@ -668,33 +654,30 @@ struct ModelFusionQDQ
                                     int firstInpDims = (int)netimpl->argData(mm_x).shape.size();
                                     int axis = std::max(1, firstInpDims - w_q.dims + 1);
 
-                                    LayerParams fcInt8Params = makeLayerParamsFromOriginal(mm, "InnerProductInt8");
-                                    fcInt8Params.set("num_output", outCn);
-                                    fcInt8Params.set("axis", axis);
-                                    fcInt8Params.blobs.resize(3);
-                                    fcInt8Params.blobs[0] = weights;
-                                    fcInt8Params.blobs[1] = bias;
-                                    fcInt8Params.blobs[2] = outputMultiplier;
-                                    Ptr<Layer> fcInt8 = createFusedLayer(fcInt8Params);
-                                    if (!fcInt8.empty()) {
-                                        auto* fcInt8Layer = dynamic_cast<InnerProductLayerInt8*>(fcInt8.get());
-                                        CV_Assert(fcInt8Layer);
-                                        fcInt8Layer->input_zp = inp_zp;
-                                        fcInt8Layer->input_sc = inp_sc;
-                                        fcInt8Layer->output_zp = out_zp_i;
-                                        fcInt8Layer->output_sc = out_sc;
-                                        fcInt8Layer->output_type = fc_out_type;
-                                        fcInt8Layer->per_channel = per_channel;
-                                        fused_layer_idx = mm_layer_idx;
-                                        newprog[mm_layer_idx] = fcInt8;
-                                        fused_inputs.assign(1, dq_x->inputs[0]);
-                                        removed_args.push_back(q_data_in);
-                                        removed_args.push_back(mm_x);
-                                        removed_args.push_back(mm_w);
-                                        newprog[dq_x_idx] = Ptr<Layer>();
-                                        newprog[dq_w_idx] = Ptr<Layer>();
-                                        break;
-                                    }
+                                    InnerProductInt8Params fp;
+                                    fp.name = mm->name;
+                                    fp.num_output = outCn;
+                                    fp.axis = axis;
+                                    fp.input_sc = inp_sc;
+                                    fp.input_zp = inp_zp;
+                                    fp.output_sc = out_sc;
+                                    fp.output_zp = out_zp_i;
+                                    fp.output_type = fc_out_type;
+                                    fp.per_channel = per_channel;
+                                    fp.weights = weights;
+                                    fp.bias = bias;
+                                    fp.outputMultiplier = outputMultiplier;
+                                    Ptr<InnerProductLayerInt8> fcInt8 = InnerProductLayerInt8::create(fp);
+                                    fcInt8->netimpl = netimpl;
+                                    fused_layer_idx = mm_layer_idx;
+                                    newprog[mm_layer_idx] = fcInt8;
+                                    fused_inputs.assign(1, dq_x->inputs[0]);
+                                    removed_args.push_back(q_data_in);
+                                    removed_args.push_back(mm_x);
+                                    removed_args.push_back(mm_w);
+                                    newprog[dq_x_idx] = Ptr<Layer>();
+                                    newprog[dq_w_idx] = Ptr<Layer>();
+                                    break;
                                 }
                             }
                         }
@@ -797,35 +780,32 @@ struct ModelFusionQDQ
                                             int firstInpDims = (int)netimpl->argData(mm_x).shape.size();
                                             int fc_axis = std::max(1, firstInpDims - w_q.dims + 1);
 
-                                            LayerParams fcInt8Params = makeLayerParamsFromOriginal(mm2, "InnerProductInt8");
-                                            fcInt8Params.set("num_output", outCn);
-                                            fcInt8Params.set("axis", fc_axis);
-                                            fcInt8Params.blobs.resize(3);
-                                            fcInt8Params.blobs[0] = weights;
-                                            fcInt8Params.blobs[1] = bias;
-                                            fcInt8Params.blobs[2] = outputMultiplier;
-                                            Ptr<Layer> fcInt8 = createFusedLayer(fcInt8Params);
-                                            if (!fcInt8.empty()) {
-                                                auto* fcInt8Layer = dynamic_cast<InnerProductLayerInt8*>(fcInt8.get());
-                                                CV_Assert(fcInt8Layer);
-                                                fcInt8Layer->input_zp = inp_zp;
-                                                fcInt8Layer->input_sc = inp_sc;
-                                                fcInt8Layer->output_zp = out_zp_i;
-                                                fcInt8Layer->output_sc = out_sc_val;
-                                                fcInt8Layer->output_type = fc_out_type;
-                                                fcInt8Layer->per_channel = per_channel;
-                                                fused_layer_idx = add_bias_idx;
-                                                newprog[add_bias_idx] = fcInt8;
-                                                fused_inputs.assign(1, dq_x->inputs[0]);
-                                                removed_args.push_back(q_data_in);
-                                                removed_args.push_back(add_bias->inputs[mm_inp_k]); // matmul out
-                                                removed_args.push_back(mm_x);
-                                                removed_args.push_back(mm_w);
-                                                newprog[mm2_idx] = Ptr<Layer>();
-                                                newprog[dq_x_idx] = Ptr<Layer>();
-                                                newprog[dq_w_idx] = Ptr<Layer>();
-                                                break;
-                                            }
+                                            InnerProductInt8Params fp2;
+                                            fp2.name = mm2->name;
+                                            fp2.num_output = outCn;
+                                            fp2.axis = fc_axis;
+                                            fp2.input_sc = inp_sc;
+                                            fp2.input_zp = inp_zp;
+                                            fp2.output_sc = out_sc_val;
+                                            fp2.output_zp = out_zp_i;
+                                            fp2.output_type = fc_out_type;
+                                            fp2.per_channel = per_channel;
+                                            fp2.weights = weights;
+                                            fp2.bias = bias;
+                                            fp2.outputMultiplier = outputMultiplier;
+                                            Ptr<InnerProductLayerInt8> fcInt8 = InnerProductLayerInt8::create(fp2);
+                                            fcInt8->netimpl = netimpl;
+                                            fused_layer_idx = add_bias_idx;
+                                            newprog[add_bias_idx] = fcInt8;
+                                            fused_inputs.assign(1, dq_x->inputs[0]);
+                                            removed_args.push_back(q_data_in);
+                                            removed_args.push_back(add_bias->inputs[mm_inp_k]); // matmul out
+                                            removed_args.push_back(mm_x);
+                                            removed_args.push_back(mm_w);
+                                            newprog[mm2_idx] = Ptr<Layer>();
+                                            newprog[dq_x_idx] = Ptr<Layer>();
+                                            newprog[dq_w_idx] = Ptr<Layer>();
+                                            break;
                                         }
                                     }
                                 }
@@ -867,26 +847,35 @@ struct ModelFusionQDQ
                             bool isMax = !isGlobalAve;
                             if ((isGlobalAve && inp_sc > 0.f && out_sc > 0.f) ||
                                 (isMax && std::abs(inp_sc - out_sc) < 1e-6f && inp_zp == out_zp_i)) {
-                                LayerParams poolInt8Params = makeLayerParamsFromOriginal(pool, "Pool2Int8");
-                                poolInt8Params.blobs.clear();
-                                poolInt8Params.set("input_scale", inp_sc);
-                                poolInt8Params.set("input_zeropoint", inp_zp);
-                                poolInt8Params.set("scales", out_sc);
-                                poolInt8Params.set("zeropoints", out_zp_i);
-                                poolInt8Params.set("is_max_pool", isMax);
-                                poolInt8Params.set("global_pooling", isGlobalAve);
-                                Ptr<Layer> poolInt8 = createFusedLayer(poolInt8Params);
-                                if (!poolInt8.empty()) {
-                                    auto* poolInt8Layer = dynamic_cast<Pool2Int8Layer*>(poolInt8.get());
-                                    CV_Assert(poolInt8Layer);
-                                    fused_layer_idx = pool_layer_idx;
-                                    newprog[pool_layer_idx] = poolInt8;
-                                    fused_inputs.assign(1, dq->inputs[0]);
-                                    removed_args.push_back(q_data_in);
-                                    removed_args.push_back(pool_in);
-                                    newprog[dq_idx] = Ptr<Layer>();
-                                    break;
+                                Pool2Int8Params p;
+                                p.name = pool->name;
+                                p.kernel_shape.assign(pool->kernel_size.begin(), pool->kernel_size.end());
+                                p.strides.assign(pool->strides.begin(), pool->strides.end());
+                                if (!pool->pads_begin.empty()) {
+                                    p.pads.reserve(pool->pads_begin.size() + pool->pads_end.size());
+                                    for (size_t v : pool->pads_begin) p.pads.push_back((int)v);
+                                    for (size_t v : pool->pads_end) p.pads.push_back((int)v);
                                 }
+                                if (pool->padMode == "SAME")
+                                    p.auto_pad = AUTO_PAD_SAME_UPPER;
+                                else if (pool->padMode == "VALID")
+                                    p.auto_pad = AUTO_PAD_VALID;
+                                p.ceil_mode = pool->ceilMode;
+                                p.is_global_pooling = isGlobalAve;
+                                p.is_max_pool = isMax;
+                                p.input_sc = inp_sc;
+                                p.input_zp = inp_zp;
+                                p.output_sc = out_sc;
+                                p.output_zp = out_zp_i;
+                                Ptr<Pool2Int8Layer> poolInt8 = Pool2Int8Layer::create(p);
+                                poolInt8->netimpl = netimpl;
+                                fused_layer_idx = pool_layer_idx;
+                                newprog[pool_layer_idx] = poolInt8;
+                                fused_inputs.assign(1, dq->inputs[0]);
+                                removed_args.push_back(q_data_in);
+                                removed_args.push_back(pool_in);
+                                newprog[dq_idx] = Ptr<Layer>();
+                                break;
                             }
                         }
                     }
@@ -980,31 +969,25 @@ struct ModelFusionQDQ
                 inp_zp_m.depth() == CV_8U ? (int)inp_zp_m.at<uint8_t>(0) :
                 (int)inp_zp_m.at<int8_t>(0);
 
-            LayerParams poolInt8Params;
-            poolInt8Params.name = maxpool->name;
-            poolInt8Params.type = "Pool2Int8";
-            if (!maxpool->kernel_shape.empty())
-                poolInt8Params.set("kernel_size", DictValue::arrayInt(maxpool->kernel_shape.data(), (int)maxpool->kernel_shape.size()));
-            if (!maxpool->strides.empty())
-                poolInt8Params.set("stride", DictValue::arrayInt(maxpool->strides.data(), (int)maxpool->strides.size()));
-            if (!maxpool->dilations.empty())
-                poolInt8Params.set("dilation", DictValue::arrayInt(maxpool->dilations.data(), (int)maxpool->dilations.size()));
-            if (!maxpool->pads.empty())
-                poolInt8Params.set("pad", DictValue::arrayInt(maxpool->pads.data(), (int)maxpool->pads.size()));
-            poolInt8Params.set("ceil_mode", maxpool->ceil_mode);
-            poolInt8Params.set("input_scale", inp_sc);
-            poolInt8Params.set("input_zeropoint", inp_zp);
-            poolInt8Params.set("scales", inp_sc);
-            poolInt8Params.set("zeropoints", inp_zp);
-            poolInt8Params.set("is_max_pool", true);
-            poolInt8Params.set("global_pooling", false);
-            Ptr<Layer> poolInt8 = createFusedLayer(poolInt8Params);
-            if (!poolInt8.empty()) {
-                poolInt8->inputs = maxpool->inputs;
-                poolInt8->outputs = maxpool->outputs;
-                newprog[j] = poolInt8;
-                modified = true;
-            }
+            Pool2Int8Params p;
+            p.name = maxpool->name;
+            p.kernel_shape = maxpool->kernel_shape;
+            p.strides = maxpool->strides;
+            p.dilations = maxpool->dilations;
+            p.pads = maxpool->pads;
+            p.auto_pad = maxpool->auto_pad;
+            p.ceil_mode = maxpool->ceil_mode;
+            p.is_max_pool = true;
+            p.input_sc = inp_sc;
+            p.input_zp = inp_zp;
+            p.output_sc = inp_sc;
+            p.output_zp = inp_zp;
+            Ptr<Pool2Int8Layer> poolInt8 = Pool2Int8Layer::create(p);
+            poolInt8->netimpl = netimpl;
+            poolInt8->inputs = maxpool->inputs;
+            poolInt8->outputs = maxpool->outputs;
+            newprog[j] = poolInt8;
+            modified = true;
         }
 
         if (modified) {

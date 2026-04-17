@@ -382,10 +382,28 @@ CV__DNN_INLINE_NS_BEGIN
         bool ceil_mode;
     };
 
+    struct Conv2Int8Params
+    {
+        String name;
+        std::vector<int> strides, dilations, pads;
+        int ngroups = 1;
+        AutoPadding auto_pad = AUTO_PAD_NONE;
+        bool ceil_mode = false;
+        float input_sc = 1.f;
+        int input_zp = 0;
+        float output_sc = 1.f;
+        int output_zp = 0;
+        bool per_channel = true;
+        bool input_is_u8 = false;
+        // blobs[0] = quantized weights, blobs[1] = fused bias, blobs[2] = output multiplier
+        Mat weights, bias, outputMultiplier;
+    };
+
     class CV_EXPORTS Conv2Int8Layer : public Layer
     {
     public:
         static Ptr<Conv2Int8Layer> create(const LayerParams& params);
+        static Ptr<Conv2Int8Layer> create(const Conv2Int8Params& params);
 
         int input_zp, output_zp;
         float input_sc, output_sc;
@@ -487,6 +505,21 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<PoolingLayerInt8> create(const LayerParams& params);
     };
 
+    struct Pool2Int8Params
+    {
+        String name;
+        std::vector<int> kernel_shape, strides, dilations, pads;
+        AutoPadding auto_pad = AUTO_PAD_NONE;
+        bool ceil_mode = false;
+        bool is_global_pooling = false;
+        bool is_max_pool = true;
+        bool count_include_pad = false;
+        float input_sc = 1.f;
+        int input_zp = 0;
+        float output_sc = 1.f;
+        int output_zp = 0;
+    };
+
     // New-engine int8 pooling with block memory layout (DATA_LAYOUT_BLOCK).
     // Created by the QDQ graph fusion pass (graph_fusion_qdq.cpp) when it
     // detects a DequantizeLinear -> Pooling -> QuantizeLinear pattern.
@@ -495,6 +528,7 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         static Ptr<Pool2Int8Layer> create(const LayerParams& params);
+        static Ptr<Pool2Int8Layer> create(const Pool2Int8Params& params);
 
         int input_zp, output_zp;
         float input_sc, output_sc;
@@ -591,6 +625,21 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<InnerProductLayer> create(const LayerParams& params);
     };
 
+    struct InnerProductInt8Params
+    {
+        String name;
+        int axis = 1;
+        int num_output = 0;
+        float input_sc = 1.f;
+        int input_zp = 0;
+        float output_sc = 1.f;
+        int output_zp = 0;
+        int output_type = CV_8S;
+        bool per_channel = true;
+        // blobs[0] = weights, blobs[1] = bias, blobs[2] = output multiplier
+        Mat weights, bias, outputMultiplier;
+    };
+
     class CV_EXPORTS InnerProductLayerInt8 : public InnerProductLayer
     {
     public:
@@ -602,6 +651,7 @@ CV__DNN_INLINE_NS_BEGIN
         // of per-Channel quantization. Otherwise, that means this layer contains per-Tensor quantized parameters.
         bool per_channel;
         static Ptr<InnerProductLayerInt8> create(const LayerParams& params);
+        static Ptr<InnerProductLayerInt8> create(const InnerProductInt8Params& params);
     };
 
     class CV_EXPORTS MVNLayer : public Layer
@@ -1239,6 +1289,17 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<ThresholdedReluLayer> create(const LayerParams &params);
     };
 
+    struct ActivationInt8Params
+    {
+        String name;
+        String activationType; // "ReLUInt8", "SigmoidInt8", etc.
+        float input_sc = 1.f;
+        int input_zp = 0;
+        float output_sc = 1.f;
+        int output_zp = 0;
+        Mat activationLUT;
+    };
+
     class CV_EXPORTS ActivationLayerInt8 : public ActivationLayer
     {
     public:
@@ -1247,6 +1308,7 @@ CV__DNN_INLINE_NS_BEGIN
         Mat activationLUT;
 
         static Ptr<ActivationLayerInt8> create(const LayerParams &params);
+        static Ptr<ActivationLayerInt8> create(const ActivationInt8Params &params);
     };
 
     class CV_EXPORTS SignLayer : public ActivationLayer
@@ -1303,10 +1365,21 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<EltwiseLayerInt8> create(const LayerParams &params);
     };
 
+    struct Eltwise2Int8Params
+    {
+        String name;
+        std::vector<float> input_scales;
+        std::vector<int> input_zeropoints;
+        float output_sc = 1.f;
+        int output_zp = 0;
+        bool with_relu = false;
+    };
+
     class CV_EXPORTS Eltwise2Int8Layer : public Layer
     {
     public:
         static Ptr<Eltwise2Int8Layer> create(const LayerParams& params);
+        static Ptr<Eltwise2Int8Layer> create(const Eltwise2Int8Params& params);
 
         std::vector<float> scales;
         std::vector<int> zeropoints;

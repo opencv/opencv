@@ -2590,6 +2590,8 @@ void ONNXImporter2::buildDispatchMap_COM_MICROSOFT()
     dispatch["QLinearLeakyRelu"] = &ONNXImporter2::parseQLeakyRelu;
     dispatch["QLinearSigmoid"] = &ONNXImporter2::parseQSigmoid;
     dispatch["QLinearConcat"] = &ONNXImporter2::parseQConcat;
+    dispatch["QLinearConv"] = &ONNXImporter2::parseQConv;
+    dispatch["QLinearMatMul"] = &ONNXImporter2::parseQMatMul;
     dispatch["QGemm"] = &ONNXImporter2::parseQGemm;
     dispatch["QLinearSoftmax"] = &ONNXImporter2::parseQSoftmax;
     dispatch["Attention"] = &ONNXImporter2::parseAttention;

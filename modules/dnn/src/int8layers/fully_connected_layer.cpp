@@ -57,6 +57,42 @@ public:
         }
     }
 
+    FullyConnectedLayerInt8Impl(const InnerProductInt8Params& p)
+    {
+        name = p.name;
+        type = "InnerProductInt8";
+        input_sc = p.input_sc;
+        input_zp = p.input_zp;
+        output_sc = p.output_sc;
+        output_zp = p.output_zp;
+        axis = p.axis;
+        per_channel = p.per_channel;
+        output_type = p.output_type;
+
+        if (!p.weights.empty()) {
+            int numOutput = p.num_output;
+            int innerSize = (int)p.weights.total() / numOutput;
+
+            CV_Assert(p.weights.dims >= 2 && (size_t)(innerSize * numOutput) == p.weights.total());
+            CV_Assert((size_t)numOutput == p.bias.total());
+
+            blobs = { p.weights.clone(), p.bias.clone(), p.outputMultiplier.clone() };
+            weightsMat = blobs[0] = blobs[0].reshape(1, numOutput);
+            int vecsize = weightsMat.cols;
+            if (vecsize % VEC_ALIGN != 0)
+            {
+                int vecsize_aligned = (int)alignSize(vecsize, VEC_ALIGN);
+                Mat weightsBuf(weightsMat.rows, vecsize_aligned, weightsMat.type());
+                Mat wpadding = weightsBuf.colRange(vecsize, vecsize_aligned);
+                wpadding.setTo(Scalar::all(0));
+                weightsMat = weightsBuf.colRange(0, vecsize);
+                blobs[0].copyTo(weightsMat);
+            }
+            biasMat = blobs[1] = blobs[1].reshape(1, 1);
+            outputMultiplier = blobs[2];
+        }
+    }
+
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
@@ -504,6 +540,11 @@ public:
 };
 
 Ptr<InnerProductLayerInt8> InnerProductLayerInt8::create(const LayerParams& params)
+{
+    return Ptr<InnerProductLayerInt8>(new FullyConnectedLayerInt8Impl(params));
+}
+
+Ptr<InnerProductLayerInt8> InnerProductLayerInt8::create(const InnerProductInt8Params& params)
 {
     return Ptr<InnerProductLayerInt8>(new FullyConnectedLayerInt8Impl(params));
 }
