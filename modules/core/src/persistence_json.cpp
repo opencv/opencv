@@ -527,7 +527,33 @@ public:
                             case 't' : { buf[i++] = '\t'; break; }
                             case 'b' : { buf[i++] = '\b'; break; }
                             case 'f' : { buf[i++] = '\f'; break; }
-                            case 'u' : { CV_PARSE_ERROR_CPP( "'\\uXXXX' currently not supported" ); break; }
+                            case 'u' : {
+                                if (i + 4 >= CV_FS_MAX_LEN)
+                                    CV_PARSE_ERROR_CPP("string is too long");
+                                ptr++;
+                                uint32_t codepoint = 0;
+                                for (int k = 0; k < 4; k++, ptr++) {
+                                    char hex = *ptr;
+                                    uint32_t digit = 0;
+                                    if      (hex >= '0' && hex <= '9') digit = (uint32_t)(hex - '0');
+                                    else if (hex >= 'a' && hex <= 'f') digit = (uint32_t)(hex - 'a') + 10u;
+                                    else if (hex >= 'A' && hex <= 'F') digit = (uint32_t)(hex - 'A') + 10u;
+                                    else CV_PARSE_ERROR_CPP("invalid \\uXXXX escape sequence");
+                                    codepoint = (codepoint << 4) | digit;
+                                }
+                                if (codepoint < 0x80) {
+                                    buf[i++] = (char)codepoint;
+                                } else if (codepoint < 0x800) {
+                                    buf[i++] = (char)(0xC0 | (codepoint >> 6));
+                                    buf[i++] = (char)(0x80 | (codepoint & 0x3F));
+                                } else {
+                                    buf[i++] = (char)(0xE0 | (codepoint >> 12));
+                                    buf[i++] = (char)(0x80 | ((codepoint >> 6) & 0x3F));
+                                    buf[i++] = (char)(0x80 | (codepoint & 0x3F));
+                                }
+                                beg = ptr;
+                                continue;
+                            }
                             default  : { CV_PARSE_ERROR_CPP( "Invalid escape character" ); }
                             break;
                             }
