@@ -5,7 +5,6 @@
 #include "../precomp.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include "./cpu_kernels/fast_norm.hpp"
-
 #include <opencv2/core/hal/intrin.hpp>
 
 // CANN backend

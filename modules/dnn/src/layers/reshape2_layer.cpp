@@ -86,7 +86,14 @@ public:
         DataLayout origLayout = getOriginalLayout();
         MatShape semanticInp = inpShape.toLayout(origLayout);
         MatShape semanticOut = getOutShape(semanticInp, shapeSpec);
-        return sameDims(semanticOut, semanticInp);
+        if (sameDims(semanticOut, semanticInp))
+            return true;
+        if (semanticOut.dims != 4 || semanticInp.dims != 4)
+            return false;
+        if (origLayout == DATA_LAYOUT_NCHW)
+            return semanticOut[0] == semanticInp[0] && semanticOut[1] == semanticInp[1];
+        else
+            return semanticOut[0] == semanticInp[0] && semanticOut[3] == semanticInp[3];
     }
 
     Reshape2LayerImpl(const LayerParams& params)
@@ -189,7 +196,14 @@ public:
 
         if (inputs[0].layout == DATA_LAYOUT_BLOCK) {
             if (canKeepBlockLayout(inputs[0], shapeSpec)) {
-                outputs.assign(1, inputs[0]);
+                DataLayout origLayout = getOriginalLayout();
+                MatShape semanticInp = inputs[0].toLayout(origLayout);
+                MatShape semanticOut = getOutShape(semanticInp, shapeSpec);
+                if (sameDims(semanticOut, semanticInp)) {
+                    outputs.assign(1, inputs[0]);
+                } else {
+                    outputs.assign(1, semanticOut.toLayout(DATA_LAYOUT_BLOCK, inputs[0][4]));
+                }
             } else {
                 DataLayout origLayout = getOriginalLayout();
                 MatShape semanticInp = inputs[0].toLayout(origLayout);
@@ -214,30 +228,25 @@ public:
         desiredInputs[0] = actualInputs[0];
         outputs.assign(requiredOutputs, actualInputs[0]);
 
-        if (actualInputs[0] != DATA_LAYOUT_BLOCK)
-            return 0;
-
-        bool canUseBlock = false;
-        MatShape shapeSpec;
-        if (getConstShapeSpec(shapeSpec)) {
-            Net::Impl* netimpl_ = getNetImpl(this);
-            MatShape inpShape = netimpl_ ? netimpl_->argData(this->inputs[0]).shape : MatShape();
-            if (inpShape.layout == DATA_LAYOUT_BLOCK && inpShape.dims == 5 && inpShape.C > 0)
-                canUseBlock = canKeepBlockLayout(inpShape, shapeSpec);
-        }
-
-        if (!canUseBlock) {
-            desiredInputs[0] = getOriginalLayout();
-            outputs.assign(requiredOutputs, DATA_LAYOUT_UNKNOWN);
-        } else {
-            desiredInputs[0] = DATA_LAYOUT_BLOCK;
-            outputs.assign(requiredOutputs, DATA_LAYOUT_BLOCK);
+        if (actualInputs[0] == DATA_LAYOUT_BLOCK) {
+            bool canUseBlock = false;
+            MatShape shapeSpec;
+            if (getConstShapeSpec(shapeSpec)) {
+                DataLayout origLayout = getOriginalLayout();
+                int cAxis = (origLayout == DATA_LAYOUT_NCHW) ? 1 : 3;
+                if (shapeSpec.dims == 4 && cAxis < shapeSpec.dims && shapeSpec[cAxis] == 0)
+                    canUseBlock = true;
+            }
+            if (!canUseBlock) {
+                desiredInputs[0] = getOriginalLayout();
+                outputs.assign(requiredOutputs, DATA_LAYOUT_UNKNOWN);
+            }
         }
 
         if (ninputs > 1)
             desiredInputs[1] = DATA_LAYOUT_UNKNOWN;
 
-        return 0;
+        return outputs[0] == DATA_LAYOUT_BLOCK ? getNetImpl(this)->defaultC0 : 0;
     }
 
     void getTypes(const std::vector<MatType>& inputs,
@@ -280,7 +289,14 @@ public:
         MatShape outShape;
         if (inpShape.layout == DATA_LAYOUT_BLOCK) {
             if (canKeepBlockLayout(inpShape, shapeSpec)) {
-                outShape = inpShape;
+                DataLayout origLayout = getOriginalLayout();
+                MatShape semanticInp = inpShape.toLayout(origLayout);
+                MatShape semanticOut = getOutShape(semanticInp, shapeSpec);
+                if (sameDims(semanticOut, semanticInp)) {
+                    outShape = inpShape;
+                } else {
+                    outShape = semanticOut.toLayout(DATA_LAYOUT_BLOCK, inpShape[4]);
+                }
             } else {
                 DataLayout origLayout = getOriginalLayout();
                 MatShape semanticInp = inpShape.toLayout(origLayout);
