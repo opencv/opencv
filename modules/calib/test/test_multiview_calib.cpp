@@ -312,7 +312,7 @@ TEST_F(MultiViewTest, OneLine)
     std::vector<cv::Vec3f> board_pattern = genAsymmetricObjectPoints();
     std::vector<std::vector<cv::Vec3f>> objPoints(num_frames, board_pattern);
 
-    std::vector<int> flagsForIntrinsics(3, CALIB_RATIONAL_MODEL | CALIB_DISABLE_SCHUR_COMPLEMENT);
+    std::vector<int> flagsForIntrinsics(3, CALIB_RATIONAL_MODEL);
 
     std::vector<cv::Mat> Ks, distortions, Rs, Rs_rvec, Ts;
     double rms = calibrateMultiview(objPoints, image_points_all, image_sizes, visibility, models,
@@ -388,7 +388,7 @@ TEST_F(MultiViewTest, OneLineInitialGuess)
     {
         Mat K, dist;
         double mono_rms = calibrateMono(board_pattern, image_points_all[c], image_sizes[c],
-                                        cv::CALIB_MODEL_PINHOLE, cv::CALIB_RATIONAL_MODEL | CALIB_DISABLE_SCHUR_COMPLEMENT,
+                                        cv::CALIB_MODEL_PINHOLE, cv::CALIB_RATIONAL_MODEL,
                                         K, dist);
 
         CV_LOG_INFO(NULL, "K:" << K);

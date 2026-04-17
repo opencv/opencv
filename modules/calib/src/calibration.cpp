@@ -1587,6 +1587,11 @@ static double calibrateCameraInternalSchur( const Mat& objectPoints,
             }
             jacobianAtCurrentParams = false;
         }
+        if (!recomputeFinalErrors)
+        {
+            prev_param.copyTo(param_m);
+            recomputeFinalErrors = true;
+        }
     }
 
     if (flags & CALIB_FIX_ASPECT_RATIO)
