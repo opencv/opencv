@@ -42,7 +42,6 @@ static void split(const Mat& inp, std::vector<Mat>& outs, int axis)
     size_t esz = inp.elemSize();
     size_t sliceSize = esz;
     size_t inpStep = 0;
-    size_t totalSize = inp.total()*esz;
     int outSize_a = 0;
     for (int i = ndims-1; i > axis; i--)
         sliceSize *= inpShape[i];
