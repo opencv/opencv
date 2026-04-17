@@ -153,7 +153,7 @@ void initUndistortRectifyMap( InputArray _cameraMatrix, InputArray _distCoeffs,
 
     // Matrix for trapezoidal distortion of tilted image sensor
     Matx33d matTilt = Matx33d::eye();
-    computeTiltProjectionMatrix(tauX, tauY, &matTilt);
+    detail::computeTiltProjectionMatrix(tauX, tauY, &matTilt);
 
     parallel_for_(Range(0, size.height), *getInitUndistortRectifyMapComputer(
         size, map1, map2, m1type, ir, matTilt, u0, v0,
@@ -363,8 +363,8 @@ static void undistortPointsInternal( const Mat& _src, Mat& _dst, const Mat& _cam
         CV_Assert(_Dk.ptr<double>() == k);
         if (k[12] != 0 || k[13] != 0)
         {
-            computeTiltProjectionMatrix<double>(k[12], k[13], NULL, NULL, NULL, &invMatTilt);
-            computeTiltProjectionMatrix<double>(k[12], k[13], &matTilt, NULL, NULL);
+            detail::computeTiltProjectionMatrix<double>(k[12], k[13], NULL, NULL, NULL, &invMatTilt);
+            detail::computeTiltProjectionMatrix<double>(k[12], k[13], &matTilt, NULL, NULL);
         }
     }
 
@@ -546,6 +546,15 @@ void undistortPoints(InputArray _src, OutputArray _dst,
                      InputArray _cameraMatrix,
                      InputArray _distCoeffs,
                      InputArray _Rmat,
+                     InputArray _Pmat)
+{
+    undistortPoints(_src, _dst, _cameraMatrix, _distCoeffs, _Rmat, _Pmat, TermCriteria(TermCriteria::MAX_ITER, 5, 0.01));
+}
+
+void undistortPoints(InputArray _src, OutputArray _dst,
+                     InputArray _cameraMatrix,
+                     InputArray _distCoeffs,
+                     InputArray _Rmat,
                      InputArray _Pmat,
                      TermCriteria criteria)
 {
@@ -684,7 +693,7 @@ float initWideAngleProjMap(InputArray _cameraMatrix0, InputArray _distCoeffs0,
     double k1 = k[0], k2 = k[1], k3 = k[2], p1 = k[3], p2 = k[4], k4 = k[5], k5 = k[6], k6 = k[7], s1 = k[8], s2 = k[9], s3 = k[10], s4 = k[11];
     double fx = cameraMatrix.at<double>(0,0), fy = cameraMatrix.at<double>(1,1), cx = scenter.x, cy = scenter.y;
     Matx33d matTilt;
-    computeTiltProjectionMatrix(k[12], k[13], &matTilt);
+    detail::computeTiltProjectionMatrix(k[12], k[13], &matTilt);
 
     for( int y = 0; y < dsize.height; y++ )
     {

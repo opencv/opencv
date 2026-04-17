@@ -40,7 +40,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include <iostream>
 #include <opencv2/core/hal/hal.hpp>
 
 namespace cv {
