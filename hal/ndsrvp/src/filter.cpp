@@ -180,9 +180,13 @@ int filter(cvhalFilter2D *context,
 
         // center
         int rborder = MIN(cal_width, full_width - cal_x);
-        ogn_ptr = ogn_data + y * ogn_step + (j + cal_x) * cnes;
-        pad_ptr = pad_data + i * pad_step + j * cnes;
-        memcpy(pad_ptr, ogn_ptr, cnes * (rborder - j));
+        if(rborder > j)
+        {
+            int center_count = MIN(rborder - j, cal_width - j);
+            ogn_ptr = ogn_data + y * ogn_step + (j + cal_x) * cnes;
+            pad_ptr = pad_data + i * pad_step + j * cnes;
+            memcpy(pad_ptr, ogn_ptr, (size_t)center_count * cnes);
+        }
 
         // right border
         j = rborder;
