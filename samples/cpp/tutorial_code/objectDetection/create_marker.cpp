@@ -6,7 +6,7 @@
 using namespace cv;
 
 namespace {
-const char* about = "Create an ArUco marker image";
+const char* about = "Create an ArUco/AprilTag marker image";
 
 //! [aruco_create_markers_keys]
 const char* keys  =
