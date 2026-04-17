@@ -140,35 +140,18 @@ void KVCache::growPrefill(const Mat& newData, int T){
                 step_source += page * pageSize * nHeads * headDim +
                               h * headDim;
             else
-                step_source += h * headDim * T + page * pageSize * headDim;
-            const auto* source = newData.ptr<float>() + step_source;
-
-            int chunk_T = std::min(pageSize, T - page * pageSize);
-            const float* actual_source = source;
-
-            int lds = is3Dlayout ? headDim * nHeads : headDim;
-
-            if (chunk_T < pageSize) {
-                std::vector<float>& temp_buf = *tls_temp_buf.get();
-                temp_buf.assign(pageSize * headDim, 0.0f);
-                for (int i = 0; i < chunk_T; i++) {
-                    std::memcpy(temp_buf.data() + i * headDim, source + i * lds, headDim * sizeof(float));
-                }
-                actual_source = temp_buf.data();
-            }
+                step_source = h * headDim * T;
+            const auto*source = newData.ptr<float>() + step_source;
 
             // dst
             size_t step_dst = b * nHeads * ps +
                               h * ps;
-            auto* dst = pages[page].ptr<float>() + step_dst;
-
-            const int N = headDim;
-            const int K = pageSize;
+            auto*dst = pages[page].ptr<float>() + step_dst;
 
             fastGemmPackB(
                 isKCache,
-                N, K,
-                actual_source, chunk_T < pageSize ? headDim : lds,
+                fastGemmNR(opt), headDim,
+                source, is3Dlayout ? headDim * nHeads : headDim
                 dst,
                 opt
             );
@@ -227,26 +210,21 @@ void VCache::growGenerate(const Mat& newData){
 
     for (int b = 0; b < batch_size; b++){
         for (int h = 0; h < nHeads; h++){
-            for (int j = 0; j <= (headDim - 1) / Nr; j++) {
-                int step = b * nHeads * headDim + h * headDim + j * Nr;
-                int copy_size = std::min(Nr, headDim - j * Nr);
-
-                auto* cur_page_ptr = page + b * nHeads * Ps + h * Ps + t0 * Nr + j * step_packed;
-                const float* src_ptr = data + step;
-                std::memcpy(cur_page_ptr, src_ptr, copy_size * sizeof(float));
-                if (copy_size < Nr) {
-                    float replication_val = src_ptr[0];
-                    for (int k = copy_size; k < Nr; k++) {
-                        cur_page_ptr[k] = replication_val;
-                    }
-                }
+            for (int j=0; j < headDim; j+=fasGemmNR(opt)){
+                int step =
+                    b * nHeads * headDim +
+                    h * headDim +
+                    j;
+                size_t copy_size = std::min(Nr, headDim - j);
+                std::memcpy(
+                    page + width * t0 + j,
+                    data + step,
+                    copy_size * sizeof(float)
+                );
             }
         }
     }
-
-    nTokens += 1;
 }
-
 
 CV__DNN_INLINE_NS_END
 }}
