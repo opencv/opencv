@@ -65,8 +65,9 @@ public:
 class ONNXGraphWrapper : public ImportGraphWrapper
 {
 public:
-    ONNXGraphWrapper(opencv_onnx::GraphProto& _net) : net(_net)
+    ONNXGraphWrapper(opencv_onnx::GraphProto& _net, const std::string& _basePath = "") : net(_net)
     {
+        basePath = _basePath;
         // Add a fake initializer with empty name.
         // Some ONNX models skip their inputs. For example,
         // Resize which has 4 inputs but 2 of them have empty names.
@@ -129,7 +130,7 @@ public:
     Mat getMatFromInitializer(int idx)
     {
         const opencv_onnx::TensorProto& tensor_proto = net.initializer(idx);
-        return getMatFromTensor(tensor_proto);
+        return getMatFromTensor(tensor_proto, false, basePath);
     }
 
     std::string getNameOfInitializer(int idx) const
@@ -176,6 +177,9 @@ public:
 private:
     int numInputs, numInitializers;
     opencv_onnx::GraphProto& net;
+
+public:
+    std::string basePath;
 };
 
 static Mat extractConstant(const Ptr<ImportGraphWrapper>& net, int node_id, int input_id)
@@ -193,7 +197,7 @@ static Mat extractConstant(const Ptr<ImportGraphWrapper>& net, int node_id, int 
         Ptr<ImportNodeWrapper> constant_ptr = net->getNode(constant_id);
         opencv_onnx::NodeProto* constant_node = constant_ptr.dynamicCast<ONNXNodeWrapper>()->node;
         opencv_onnx::TensorProto constant_proto = constant_node->attribute(0).t();
-        return getMatFromTensor(constant_proto);
+        return getMatFromTensor(constant_proto, false, onnx_net->basePath);
     }
 }
 
@@ -1725,7 +1729,7 @@ public:
     }
 };
 
-void simplifySubgraphs(opencv_onnx::GraphProto& net)
+void simplifySubgraphs(opencv_onnx::GraphProto& net, const std::string& basePath)
 {
     std::vector<Ptr<Subgraph> > subgraphs;
     subgraphs.push_back(makePtr<BiasedMatmulSubgraph>());
@@ -1762,7 +1766,7 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net)
         subgraphs.push_back(makePtr<AttentionSingleHeadSubGraph>());
     }
 
-    simplifySubgraphs(Ptr<ImportGraphWrapper>(new ONNXGraphWrapper(net)), subgraphs);
+    simplifySubgraphs(Ptr<ImportGraphWrapper>(new ONNXGraphWrapper(net, basePath)), subgraphs);
 }
 
 

@@ -21,7 +21,7 @@
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
-void simplifySubgraphs(opencv_onnx::GraphProto& net);
+void simplifySubgraphs(opencv_onnx::GraphProto& net, const std::string& basePath = "");
 
 template<typename T1, typename T2>
 void convertInt64ToInt32(const T1& src, T2& dst, int size)

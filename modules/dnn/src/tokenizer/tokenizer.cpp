@@ -137,10 +137,10 @@ static Ptr<GemmaBpeTokenizerImpl> buildGemmaFromJson(
             if (id >= 0 && !content.empty()) {
                 gemma.specialToId[content] = id;
                 gemma.idToSpecial[id]      = content;
-                if (is_special) {
-                    special.insert(content);
-                    if (outSpecial) outSpecial->insert(content);
-                }
+                // All added tokens bypass BPE (matching HuggingFace behavior),
+                // not just those marked special.
+                special.insert(content);
+                if (outSpecial) outSpecial->insert(content);
             }
         }
     }

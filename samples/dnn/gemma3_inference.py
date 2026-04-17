@@ -24,8 +24,11 @@ Run the script:
 2. Run the script:
 
     python gemma3_inference.py --model=<path-to-onnx-model> \
-                               --tokenizer_path=<path-to-gemma3-config.json> \
+                               --tokenizer_path=<path-to-opencv-tokenizer-config.json> \
                                --prompt="What is OpenCV?"
+
+    The tokenizer_path should point to an OpenCV-format config.json (e.g., from
+    opencv_extra/testdata/dnn/llm/gemma3/config.json), NOT the HuggingFace tokenizer_config.json.
 '''
 
 import numpy as np
@@ -51,21 +54,21 @@ def gemma3_inference(net, prompt, max_new_tokens, tokenizer):
     print("Inferencing Gemma3 model...")
 
     tokens = tokenizer.encode(prompt)
+    # Prepend BOS token (id=2) as required by Gemma3
+    tokens = [2] + list(tokens)
     tokens = np.array(tokens, dtype=np.int64).reshape(1, -1)
 
     # Gemma3 special token IDs
     eos_id     = 1    # <eos>
-    eot_id     = 107  # <end_of_turn>
+    eot_id     = 106  # <end_of_turn>
     stop_ids   = (eos_id, eot_id)
 
     for _ in range(max_new_tokens):
         seq_len = tokens.shape[1]
         attention_mask = np.ones((1, seq_len), dtype=np.int64)
-        position_ids = np.arange(seq_len, dtype=np.int64).reshape(1, -1)
 
         net.setInput(tokens, 'input_ids')
         net.setInput(attention_mask, 'attention_mask')
-        net.setInput(position_ids, 'position_ids')
         logits = net.forward()          # (1, seq_len, vocab_size)
         logits = logits[:, -1, :]       # take last token logits
 
@@ -90,6 +93,7 @@ if __name__ == '__main__':
     gemma3_prompt = build_gemma3_prompt(args.prompt)
     print(f"Prompt:\n{gemma3_prompt}")
 
+    prompt_len = len(tokenizer.encode(gemma3_prompt)) + 1  # +1 for BOS token
     tokens = gemma3_inference(net, gemma3_prompt, args.max_new_tokens, tokenizer)
-    response = tokenizer.decode(tokens[0].tolist())
+    response = tokenizer.decode(tokens[0][prompt_len:].tolist())
     print(f"Response:\n{response}")
