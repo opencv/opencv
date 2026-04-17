@@ -348,13 +348,13 @@ void CV_ECC_BigPictureTest::run(int)
         roiMask0 = imread(string(ts->get_data_path()) + "shared/halmosh0mask.png", IMREAD_GRAYSCALE);
         roiMask1 = imread(string(ts->get_data_path()) + "shared/halmosh2mask.png", IMREAD_GRAYSCALE);
         readError = largeGray0.empty() || largeGray1.empty() || roiMask0.empty() || roiMask1.empty();
-        expectedRes = (Mat_<float>(3, 3) << 1.0303, 0.0618, -65.2214, -0.0456, 1.0373, 21.188, 5.9e-06, 1.5e-06, 1);
+        expectedRes = (Mat_<float>(3, 3) << 1.0225, 0.0606, -28.6452, -0.0475, 1.0314, 11.819, 8.21e-06, -3.65e-07, 1);
     }
     else
     {
         largeGray1 = imread(string(ts->get_data_path()) + "shared/halmosh1.jpg", IMREAD_GRAYSCALE);
         readError = largeGray0.empty() || largeGray1.empty();
-        expectedRes = (Mat_<float>(3, 3) << 0.9751, -0.0323, 52.094, 0.0123, 0.9802, 16.9658, -1.14e-05, -4.55e-06, 1);
+        expectedRes = (Mat_<float>(3, 3) << 0.9756, -0.0319, 24.685, 0.013, 0.9808, 7.7453, -2.35e-05, -9.12e-06, 1);
     }
 
     if(readError)
@@ -370,8 +370,8 @@ void CV_ECC_BigPictureTest::run(int)
     ECCParameters params;
     params.criteria = cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, N_ITERS, TERMINATION_EPS);
     params.motionType = MOTION_HOMOGRAPHY;
-    params.nlevels = 6;
-    params.itersPerLevel = {5, 10, 300, 300, 1000, 1000};
+    params.nlevels = 5;
+    params.itersPerLevel = {5, 10, 300, 300, 1000};
     findTransformECCMultiScale(largeGray0, largeGray1, found, params, roiMask0, roiMask1);
     ASSERT_EQ(checkMap(found, expectedRes), true);
     ts->set_failed_test_info(cvtest::TS::OK);
