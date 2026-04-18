@@ -119,7 +119,7 @@ void normAssertDetections(
     std::vector<double> refBoxesIoUDiff(refBoxes.size(), 1.0);
     for (int i = 0; i < testBoxes.size(); ++i)
     {
-        //cout << "Test[i=" << i << "]: score=" << testScores[i] << " id=" << testClassIds[i] << " box " << testBoxes[i] << endl;
+        cout << "Test[i=" << i << "]: score=" << testScores[i] << " id=" << testClassIds[i] << " box " << testBoxes[i] << endl;
         double testScore = testScores[i];
         if (testScore < confThreshold)
             continue;
