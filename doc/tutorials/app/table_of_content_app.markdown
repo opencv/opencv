@@ -11,3 +11,4 @@ Application utils (highgui, imgcodecs, videoio modules) {#tutorial_table_of_cont
 -   @subpage tutorial_intelperc
 -   @subpage tutorial_wayland_ubuntu
 -   @subpage tutorial_animations
+-   @subpage tutorial_libcamera_csi
