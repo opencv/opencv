@@ -11,7 +11,7 @@
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
-void setKVCacheManager(Net::Impl* netimpl)
+void setKVCacheManager(Ptr<Net::Impl> netimpl)
 {
     CV_Assert(netimpl != nullptr);
     CV_Assert(netimpl->mainGraph);

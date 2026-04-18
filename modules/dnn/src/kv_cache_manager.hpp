@@ -91,7 +91,7 @@ struct KVCacheManager
     void init();
 };
 
-void setKVCacheManager(Net::Impl* netimpl);
+void setKVCacheManager(Ptr<Net::Impl> netimpl);
 
 
 CV__DNN_INLINE_NS_END

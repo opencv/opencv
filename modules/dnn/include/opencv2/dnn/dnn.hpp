@@ -1020,6 +1020,15 @@ CV__DNN_INLINE_NS_BEGIN
          */
         CV_WRAP int64 getPerfProfile(CV_OUT std::vector<double>& timings);
 
+        /** @brief Enables KV-Cache for all AttentionOnnxI layers */
+        CV_WRAP void enableKVCache();
+
+        /** @brief Disables KV-Cache for all AttentionOnnxI layers */
+        CV_WRAP void disableKVCache();
+
+        /** @brief Resets KV-Cache for all AttentionOnnxI layers */
+        CV_WRAP void resetKVCache();
+
         // Get the main model graph
         Ptr<Graph> getMainGraph() const;
 
@@ -1042,6 +1051,7 @@ CV__DNN_INLINE_NS_BEGIN
         std::ostream& dumpArg(std::ostream& strm, Arg arg, int indent,
                               bool comma=true, bool dump_details=false) const;
         std::ostream& dumpDim(std::ostream& strm, int value) const;
+
 
         struct Impl;
         inline Impl* getImpl() const { return impl.get(); }
