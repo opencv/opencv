@@ -468,11 +468,16 @@ TEST(Imgcodecs_Png, Read_Write_With_Exif)
     EXPECT_EQ(img2.rows, img.rows);
     EXPECT_EQ(img2.type(), imgtype);
     EXPECT_EQ(read_metadata_types, read_metadata_types2);
+
+#ifdef OPENCV_IMGCODECS_PNG_WITH_EXIF
     ASSERT_GE(read_metadata_types.size(), 1u);
     EXPECT_EQ(read_metadata, read_metadata2);
     EXPECT_EQ(read_metadata_types[0], IMAGE_METADATA_EXIF);
     EXPECT_EQ(read_metadata_types.size(), read_metadata.size());
     EXPECT_EQ(read_metadata[0], metadata[0]);
+#else
+    ASSERT_GE(read_metadata_types.size(), 0u);
+#endif
     EXPECT_EQ(cv::norm(img2, img3, NORM_INF), 0.);
     double mse = cv::norm(img, img2, NORM_L2SQR)/(img.rows*img.cols);
     EXPECT_EQ(mse, 0); // png is lossless
@@ -518,9 +523,23 @@ TEST(Imgcodecs_Png, Read_Write_With_Exif_Xmp_Iccp)
     EXPECT_EQ(img2.rows, img.rows);
     EXPECT_EQ(img2.type(), imgtype);
 
+#ifdef OPENCV_IMGCODECS_PNG_WITH_EXIF
     EXPECT_EQ(metadata_types, read_metadata_types);
     EXPECT_EQ(read_metadata_types, read_metadata_types2);
     EXPECT_EQ(metadata, read_metadata);
+#else
+    ASSERT_GE(read_metadata_types.size(),  2u);
+    EXPECT_EQ(read_metadata_types[0],  IMAGE_METADATA_XMP);
+    EXPECT_EQ(read_metadata_types[1],  IMAGE_METADATA_ICCP);
+
+    ASSERT_GE(read_metadata_types2.size(), 2u);
+    EXPECT_EQ(read_metadata_types2[0], IMAGE_METADATA_XMP);
+    EXPECT_EQ(read_metadata_types2[1], IMAGE_METADATA_ICCP);
+
+    ASSERT_GE(read_metadata.size(), 2u);
+    EXPECT_EQ(metadata[1], read_metadata[0]);
+    EXPECT_EQ(metadata[2], read_metadata[1]);
+#endif
     remove(outputname.c_str());
 }
 
