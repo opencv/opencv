@@ -752,6 +752,49 @@ static bool ocl_knnMatch(InputArray query, InputArray _train, std::vector< std::
         return false;
     return true;
 }
+
+// Run match in both directions on GPU, cross-check filter on CPU.
+// Reuses ocl_matchSingle so no new kernel is needed.
+static bool ocl_matchWithCrossCheck(InputArray query, InputArray train,
+        std::vector< std::vector<DMatch> >& matches, int dstType)
+{
+    // Forward pass: for each query descriptor find nearest in train
+    UMat fwdIdx, fwdDist;
+    if (!ocl_matchSingle(query, train, fwdIdx, fwdDist, dstType))
+        return false;
+
+    // Reverse pass: for each train descriptor find nearest in query
+    UMat revIdx, revDist;
+    if (!ocl_matchSingle(train, query, revIdx, revDist, dstType))
+        return false;
+
+    // Download index arrays (1 x N ints each — cheap)
+    Mat fwdIdxCPU = fwdIdx.getMat(ACCESS_READ);
+    Mat revIdxCPU = revIdx.getMat(ACCESS_READ);
+    Mat fwdDistCPU = fwdDist.getMat(ACCESS_READ);
+
+    if (fwdIdxCPU.empty() || revIdxCPU.empty() || fwdDistCPU.empty())
+        return false;
+
+    const int nQuery = fwdIdxCPU.cols;
+    const int nTrain = revIdxCPU.cols;
+    const int* fwd  = fwdIdxCPU.ptr<int>();
+    const int* rev  = revIdxCPU.ptr<int>();
+    const float* dist = fwdDistCPU.ptr<float>();
+
+    matches.clear();
+    matches.reserve(nQuery);
+
+    for (int q = 0; q < nQuery; ++q)
+    {
+        int t = fwd[q];
+        if (t >= 0 && t < nTrain && rev[t] == q)
+        {
+            matches.push_back(std::vector<DMatch>(1, DMatch(q, t, 0, dist[q])));
+        }
+    }
+    return true;
+}
 #endif
 
 void BFMatcher::knnMatchImpl( InputArray _queryDescriptors, std::vector<std::vector<DMatch> >& matches, int knn,
@@ -794,21 +837,15 @@ void BFMatcher::knnMatchImpl( InputArray _queryDescriptors, std::vector<std::vec
     {
         if(knn == 1)
         {
-            if(trainDescCollection.empty())
+            InputArray train = trainDescCollection.empty() ?
+                (InputArray)utrainDescCollection[0] : (InputArray)trainDescCollection[0];
+            bool oclOk = crossCheck ?
+                ocl_matchWithCrossCheck(_queryDescriptors, train, matches, normType) :
+                ocl_match(_queryDescriptors, train, matches, normType);
+            if (oclOk)
             {
-                if(ocl_match(_queryDescriptors, utrainDescCollection[0], matches, normType))
-                {
-                    CV_IMPL_ADD(CV_IMPL_OCL);
-                    return;
-                }
-            }
-            else
-            {
-                if(ocl_match(_queryDescriptors, trainDescCollection[0], matches, normType))
-                {
-                    CV_IMPL_ADD(CV_IMPL_OCL);
-                    return;
-                }
+                CV_IMPL_ADD(CV_IMPL_OCL);
+                return;
             }
         }
         else

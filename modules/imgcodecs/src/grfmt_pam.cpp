@@ -481,6 +481,23 @@ bool PAMDecoder::readHeader()
             }
         } while (fieldtype != PAM_HEADER_ENDHDR);
 
+        if (selected_fmt != IMWRITE_PAM_FORMAT_NULL && flds_depth) {
+            if (selected_fmt == IMWRITE_PAM_FORMAT_BLACKANDWHITE && m_channels != 1) {
+                CV_Error(Error::StsError, "fmt is IMWRITE_PAM_FORMAT_BLACKANDWHITE but number of channels is not 1");
+            }
+            if (selected_fmt == IMWRITE_PAM_FORMAT_GRAYSCALE && m_channels != 1) {
+                CV_Error(Error::StsError, "fmt is IMWRITE_PAM_FORMAT_GRAYSCALE but number of channels is not 1");
+            }
+            if (selected_fmt == IMWRITE_PAM_FORMAT_GRAYSCALE_ALPHA && m_channels != 2) {
+                CV_Error(Error::StsError, "fmt is IMWRITE_PAM_FORMAT_GRAYSCALE_ALPHA but number of channels is not 2");
+            }
+            if (selected_fmt == IMWRITE_PAM_FORMAT_RGB && m_channels != 3) {
+                CV_Error(Error::StsError, "fmt is IMWRITE_PAM_FORMAT_RGB but number of channels is not 3");
+            }
+            if (selected_fmt == IMWRITE_PAM_FORMAT_RGB_ALPHA && m_channels != 4) {
+                CV_Error(Error::StsError, "fmt is IMWRITE_PAM_FORMAT_RGB_ALPHA but number of channels is not 4");
+            }
+        }
         if (flds_endhdr && flds_height && flds_width && flds_depth && flds_maxval)
         {
             if (selected_fmt == IMWRITE_PAM_FORMAT_NULL)

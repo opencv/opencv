@@ -230,11 +230,18 @@ if(WITH_LAPACK)
           find_path(CBLAS_INCLUDE_DIR "cblas.h")
         endif()
         if(CBLAS_INCLUDE_DIR AND LAPACKE_INCLUDE_DIR)
+          if(NOT DEFINED CBLAS_LIBRARY)
+            find_library(CBLAS_LIBRARY cblas)
+          endif()
+          set(_lapack_generic_libs "${LAPACK_LIBRARIES}")
+          if(CBLAS_LIBRARY)
+            list(APPEND _lapack_generic_libs "${CBLAS_LIBRARY}")
+          endif()
           ocv_lapack_check(IMPL "LAPACK/Generic"
             CBLAS_H "cblas.h"
             LAPACKE_H "lapacke.h"
             INCLUDE_DIR "${CBLAS_INCLUDE_DIR}" "${LAPACKE_INCLUDE_DIR}"
-            LIBRARIES "${LAPACK_LIBRARIES}")
+            LIBRARIES "${_lapack_generic_libs}")
         elseif(APPLE)
           ocv_lapack_check(IMPL "LAPACK/Apple"
             CBLAS_H "Accelerate/Accelerate.h"

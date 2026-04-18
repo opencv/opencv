@@ -3,6 +3,7 @@ __all__ = ("generate_typing_stubs", )
 from io import StringIO
 from pathlib import Path
 import re
+import shutil
 from typing import (Callable, NamedTuple, Union, Set, Dict,
                     Collection, Tuple, List)
 import warnings
@@ -22,6 +23,22 @@ from .nodes import (ASTNode, ASTNodeType, NamespaceNode, ClassNode,
 from .nodes.type_node import (TypeNode, AliasTypeNode, AliasRefTypeNode,
                               AggregatedTypeNode, ASTNodeTypeNode,
                               ConditionalAliasTypeNode, PrimitiveTypeNode)
+
+
+def _clean_stale_stubs_dirs(stubs_root: Path) -> None:
+    """Remove all subdirectories under stubs_root.
+
+    During incremental builds, disabling a previously enabled module leaves
+    behind its typing stub directory (e.g. cv2/gapi/).  Removing all
+    subdirectories before regeneration ensures only stubs for currently
+    enabled modules are present.  Top-level files (py.typed, __init__.pyi)
+    are kept because they are managed separately.
+    """
+    if not stubs_root.is_dir():
+        return
+    for item in stubs_root.iterdir():
+        if item.is_dir():
+            shutil.rmtree(item)
 
 
 def generate_typing_stubs(root: NamespaceNode, output_path: Path):
@@ -88,6 +105,12 @@ def generate_typing_stubs(root: NamespaceNode, output_path: Path):
     # The whole process should fail !only! when all possible scopes are
     # checked and at least 1 node is still unresolved.
     root.resolve_type_nodes()
+    # Remove stale typing stub subdirectories from previous builds.
+    # In incremental builds, disabling a module (e.g. -DBUILD_opencv_gapi=OFF)
+    # no longer generates its stubs, but leftover directories from a previous
+    # build persist and propagate through the copy/install steps, causing
+    # type-checker errors for stubs referencing unavailable modules.
+    _clean_stale_stubs_dirs(Path(output_path) / root.export_name)
     _generate_typing_module(root, output_path)
     _populate_reexported_symbols(root)
     _generate_typing_stubs(root, output_path)
@@ -708,7 +731,7 @@ def _generate_typing_module(root: NamespaceNode, output_path: Path) -> None:
     """
 
     def has_all_required_modules(type_node: TypeNode) -> bool:
-        return all(em in root.namespaces for em in node.required_modules)
+        return all(em in root.namespaces for em in type_node.required_modules)
 
     def register_alias_links_from_aggregated_type(type_node: TypeNode) -> None:
         assert isinstance(type_node, AggregatedTypeNode), \

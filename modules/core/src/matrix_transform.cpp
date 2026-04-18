@@ -13,11 +13,330 @@
 namespace cv {
 
 ////////////////////////////////////// transpose /////////////////////////////////////////
+#if CV_SIMD128
+static void transpose_8bit_simd(const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz)
+{
+    const int m = sz.width, n = sz.height;
+    int i = 0;
+    for (; i <= m - 16; i += 16)
+    {
+        int j = 0;
+        for (; j <= n - 16; j += 16)
+        {
+            v_uint8x16 r0  = v_load(src + i + sstep*(j+ 0));
+            v_uint8x16 r1  = v_load(src + i + sstep*(j+ 1));
+            v_uint8x16 r2  = v_load(src + i + sstep*(j+ 2));
+            v_uint8x16 r3  = v_load(src + i + sstep*(j+ 3));
+            v_uint8x16 r4  = v_load(src + i + sstep*(j+ 4));
+            v_uint8x16 r5  = v_load(src + i + sstep*(j+ 5));
+            v_uint8x16 r6  = v_load(src + i + sstep*(j+ 6));
+            v_uint8x16 r7  = v_load(src + i + sstep*(j+ 7));
+            v_uint8x16 r8  = v_load(src + i + sstep*(j+ 8));
+            v_uint8x16 r9  = v_load(src + i + sstep*(j+ 9));
+            v_uint8x16 r10 = v_load(src + i + sstep*(j+10));
+            v_uint8x16 r11 = v_load(src + i + sstep*(j+11));
+            v_uint8x16 r12 = v_load(src + i + sstep*(j+12));
+            v_uint8x16 r13 = v_load(src + i + sstep*(j+13));
+            v_uint8x16 r14 = v_load(src + i + sstep*(j+14));
+            v_uint8x16 r15 = v_load(src + i + sstep*(j+15));
+
+            v_uint8x16 t0, t1, t2, t3, t4, t5, t6, t7,
+                       t8, t9, t10, t11, t12, t13, t14, t15;
+
+            v_zip(r0,  r1,  t0,  t1);
+            v_zip(r2,  r3,  t2,  t3);
+            v_zip(r4,  r5,  t4,  t5);
+            v_zip(r6,  r7,  t6,  t7);
+            v_zip(r8,  r9,  t8,  t9);
+            v_zip(r10, r11, t10, t11);
+            v_zip(r12, r13, t12, t13);
+            v_zip(r14, r15, t14, t15);
+
+            v_uint16x8 s0, s1, s2, s3, s4, s5, s6, s7,
+                       s8, s9, s10, s11, s12, s13, s14, s15;
+            v_zip(v_reinterpret_as_u16(t0),  v_reinterpret_as_u16(t2),  s0,  s1);
+            v_zip(v_reinterpret_as_u16(t1),  v_reinterpret_as_u16(t3),  s2,  s3);
+            v_zip(v_reinterpret_as_u16(t4),  v_reinterpret_as_u16(t6),  s4,  s5);
+            v_zip(v_reinterpret_as_u16(t5),  v_reinterpret_as_u16(t7),  s6,  s7);
+            v_zip(v_reinterpret_as_u16(t8),  v_reinterpret_as_u16(t10), s8,  s9);
+            v_zip(v_reinterpret_as_u16(t9),  v_reinterpret_as_u16(t11), s10, s11);
+            v_zip(v_reinterpret_as_u16(t12), v_reinterpret_as_u16(t14), s12, s13);
+            v_zip(v_reinterpret_as_u16(t13), v_reinterpret_as_u16(t15), s14, s15);
+
+            v_uint32x4 u0, u1, u2, u3, u4, u5, u6, u7,
+                       u8, u9, u10, u11, u12, u13, u14, u15;
+
+            v_zip(v_reinterpret_as_u32(s0),  v_reinterpret_as_u32(s4),  u0,  u1);
+            v_zip(v_reinterpret_as_u32(s1),  v_reinterpret_as_u32(s5),  u2,  u3);
+            v_zip(v_reinterpret_as_u32(s2),  v_reinterpret_as_u32(s6),  u4,  u5);
+            v_zip(v_reinterpret_as_u32(s3),  v_reinterpret_as_u32(s7),  u6,  u7);
+            v_zip(v_reinterpret_as_u32(s8),  v_reinterpret_as_u32(s12), u8,  u9);
+            v_zip(v_reinterpret_as_u32(s9),  v_reinterpret_as_u32(s13), u10, u11);
+            v_zip(v_reinterpret_as_u32(s10), v_reinterpret_as_u32(s14), u12, u13);
+            v_zip(v_reinterpret_as_u32(s11), v_reinterpret_as_u32(s15), u14, u15);
+
+            v_uint32x4 v0  = v_combine_low (u0,  u8);
+            v_uint32x4 v1  = v_combine_high(u0,  u8);
+            v_uint32x4 v2  = v_combine_low (u1,  u9);
+            v_uint32x4 v3  = v_combine_high(u1,  u9);
+            v_uint32x4 v4  = v_combine_low (u2,  u10);
+            v_uint32x4 v5  = v_combine_high(u2,  u10);
+            v_uint32x4 v6  = v_combine_low (u3,  u11);
+            v_uint32x4 v7  = v_combine_high(u3,  u11);
+            v_uint32x4 v8  = v_combine_low (u4,  u12);
+            v_uint32x4 v9  = v_combine_high(u4,  u12);
+            v_uint32x4 v10 = v_combine_low (u5,  u13);
+            v_uint32x4 v11 = v_combine_high(u5,  u13);
+            v_uint32x4 v12 = v_combine_low (u6,  u14);
+            v_uint32x4 v13 = v_combine_high(u6,  u14);
+            v_uint32x4 v14 = v_combine_low (u7,  u15);
+            v_uint32x4 v15 = v_combine_high(u7,  u15);
+
+            v_store(dst + dstep*(i+ 0) + j, v_reinterpret_as_u8(v0));
+            v_store(dst + dstep*(i+ 1) + j, v_reinterpret_as_u8(v1));
+            v_store(dst + dstep*(i+ 2) + j, v_reinterpret_as_u8(v2));
+            v_store(dst + dstep*(i+ 3) + j, v_reinterpret_as_u8(v3));
+            v_store(dst + dstep*(i+ 4) + j, v_reinterpret_as_u8(v4));
+            v_store(dst + dstep*(i+ 5) + j, v_reinterpret_as_u8(v5));
+            v_store(dst + dstep*(i+ 6) + j, v_reinterpret_as_u8(v6));
+            v_store(dst + dstep*(i+ 7) + j, v_reinterpret_as_u8(v7));
+            v_store(dst + dstep*(i+ 8) + j, v_reinterpret_as_u8(v8));
+            v_store(dst + dstep*(i+ 9) + j, v_reinterpret_as_u8(v9));
+            v_store(dst + dstep*(i+10) + j, v_reinterpret_as_u8(v10));
+            v_store(dst + dstep*(i+11) + j, v_reinterpret_as_u8(v11));
+            v_store(dst + dstep*(i+12) + j, v_reinterpret_as_u8(v12));
+            v_store(dst + dstep*(i+13) + j, v_reinterpret_as_u8(v13));
+            v_store(dst + dstep*(i+14) + j, v_reinterpret_as_u8(v14));
+            v_store(dst + dstep*(i+15) + j, v_reinterpret_as_u8(v15));
+        }
+        for (; j < n; j++)
+            for (int k = 0; k < 16; k++)
+                dst[dstep*(i+k) + j] = src[i + sstep*j + k];
+    }
+    for (; i < m; i++)
+        for (int j = 0; j < n; j++)
+            dst[dstep*i + j] = src[i + sstep*j];
+}
+
+static void transpose_16bit_simd(const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz)
+{
+    const ushort* src16 = reinterpret_cast<const ushort*>(src);
+    ushort* dst16 = reinterpret_cast<ushort*>(dst);
+
+    const size_t sstep_e = sstep / sizeof(ushort);
+    const size_t dstep_e = dstep / sizeof(ushort);
+
+    const int m = sz.width, n = sz.height;
+    int i = 0;
+
+    for (; i <= m - 8; i += 8)
+    {
+        int j = 0;
+        for (; j <= n - 8; j += 8)
+        {
+            v_uint16x8 r0 = v_load(src16 + i + sstep_e*(j+0));
+            v_uint16x8 r1 = v_load(src16 + i + sstep_e*(j+1));
+            v_uint16x8 r2 = v_load(src16 + i + sstep_e*(j+2));
+            v_uint16x8 r3 = v_load(src16 + i + sstep_e*(j+3));
+            v_uint16x8 r4 = v_load(src16 + i + sstep_e*(j+4));
+            v_uint16x8 r5 = v_load(src16 + i + sstep_e*(j+5));
+            v_uint16x8 r6 = v_load(src16 + i + sstep_e*(j+6));
+            v_uint16x8 r7 = v_load(src16 + i + sstep_e*(j+7));
+
+            v_uint16x8 t0, t1, t2, t3, t4, t5, t6, t7;
+            v_zip(r0, r1, t0, t1);
+            v_zip(r2, r3, t2, t3);
+            v_zip(r4, r5, t4, t5);
+            v_zip(r6, r7, t6, t7);
+            v_uint32x4 u0, u1, u2, u3, u4, u5, u6, u7;
+            v_zip(v_reinterpret_as_u32(t0), v_reinterpret_as_u32(t4), u0, u1);
+            v_zip(v_reinterpret_as_u32(t1), v_reinterpret_as_u32(t5), u2, u3);
+            v_zip(v_reinterpret_as_u32(t2), v_reinterpret_as_u32(t6), u4, u5);
+            v_zip(v_reinterpret_as_u32(t3), v_reinterpret_as_u32(t7), u6, u7);
+            v_uint32x4 v0, v1, v2, v3, v4, v5, v6, v7;
+            v_zip(u0, u4, v0, v1);
+            v_zip(u1, u5, v2, v3);
+            v_zip(u2, u6, v4, v5);
+            v_zip(u3, u7, v6, v7);
+
+            v_store(dst16 + dstep_e*(i+0) + j, v_reinterpret_as_u16(v0));
+            v_store(dst16 + dstep_e*(i+1) + j, v_reinterpret_as_u16(v1));
+            v_store(dst16 + dstep_e*(i+2) + j, v_reinterpret_as_u16(v2));
+            v_store(dst16 + dstep_e*(i+3) + j, v_reinterpret_as_u16(v3));
+            v_store(dst16 + dstep_e*(i+4) + j, v_reinterpret_as_u16(v4));
+            v_store(dst16 + dstep_e*(i+5) + j, v_reinterpret_as_u16(v5));
+            v_store(dst16 + dstep_e*(i+6) + j, v_reinterpret_as_u16(v6));
+            v_store(dst16 + dstep_e*(i+7) + j, v_reinterpret_as_u16(v7));
+        }
+        for (; j < n; j++)
+            for (int k = 0; k < 8; k++)
+                dst16[dstep_e*(i+k) + j] = src16[i + sstep_e*j + k];
+    }
+    for (; i < m; i++)
+        for (int j = 0; j < n; j++)
+            dst16[dstep_e*i + j] = src16[i + sstep_e*j];
+}
+
+static void transpose_32bit_simd(const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz)
+{
+    const uint32_t* src32 = reinterpret_cast<const uint32_t*>(src);
+    uint32_t* dst32 = reinterpret_cast<uint32_t*>(dst);
+
+    const size_t sstep_e = sstep / sizeof(uint32_t);
+    const size_t dstep_e = dstep / sizeof(uint32_t);
+
+    const int m = sz.width, n = sz.height;
+    int i = 0;
+    for (; i <= m - 4; i += 4)
+    {
+        int j = 0;
+        for (; j <= n - 4; j += 4)
+        {
+            v_uint32x4 r0 = v_load(src32 + i + sstep_e*(j+0));
+            v_uint32x4 r1 = v_load(src32 + i + sstep_e*(j+1));
+            v_uint32x4 r2 = v_load(src32 + i + sstep_e*(j+2));
+            v_uint32x4 r3 = v_load(src32 + i + sstep_e*(j+3));
+            v_uint32x4 o0, o1, o2, o3;
+            v_transpose4x4(r0, r1, r2, r3, o0, o1, o2, o3);
+
+            v_store(dst32 + dstep_e*(i+0) + j, o0);
+            v_store(dst32 + dstep_e*(i+1) + j, o1);
+            v_store(dst32 + dstep_e*(i+2) + j, o2);
+            v_store(dst32 + dstep_e*(i+3) + j, o3);
+        }
+        for (; j < n; j++)
+            for (int k = 0; k < 4; k++)
+                dst32[dstep_e*(i+k) + j] = src32[i + sstep_e*j + k];
+    }
+    for (; i < m; i++)
+        for (int j = 0; j < n; j++)
+            dst32[dstep_e*i + j] = src32[i + sstep_e*j];
+}
+
+static void transpose_48bit_simd(const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz)
+{
+    const short* src16 = reinterpret_cast<const short*>(src);
+    short* dst16 = reinterpret_cast<short*>(dst);
+
+    const size_t sstep_e = sstep / sizeof(short);
+    const size_t dstep_e = dstep / sizeof(short);
+
+    const int m = sz.width, n = sz.height;
+    int i = 0;
+
+    for (; i <= m - 8; i += 8)
+    {
+        int j = 0;
+        for (; j <= n - 8; j += 8)
+        {
+            v_int16x8 C0_0, C1_0, C2_0;
+            v_int16x8 C0_1, C1_1, C2_1;
+            v_int16x8 C0_2, C1_2, C2_2;
+            v_int16x8 C0_3, C1_3, C2_3;
+            v_int16x8 C0_4, C1_4, C2_4;
+            v_int16x8 C0_5, C1_5, C2_5;
+            v_int16x8 C0_6, C1_6, C2_6;
+            v_int16x8 C0_7, C1_7, C2_7;
+
+            v_load_deinterleave(src16 + sstep_e*(j+0) + i*3, C0_0, C1_0, C2_0);
+            v_load_deinterleave(src16 + sstep_e*(j+1) + i*3, C0_1, C1_1, C2_1);
+            v_load_deinterleave(src16 + sstep_e*(j+2) + i*3, C0_2, C1_2, C2_2);
+            v_load_deinterleave(src16 + sstep_e*(j+3) + i*3, C0_3, C1_3, C2_3);
+            v_load_deinterleave(src16 + sstep_e*(j+4) + i*3, C0_4, C1_4, C2_4);
+            v_load_deinterleave(src16 + sstep_e*(j+5) + i*3, C0_5, C1_5, C2_5);
+            v_load_deinterleave(src16 + sstep_e*(j+6) + i*3, C0_6, C1_6, C2_6);
+            v_load_deinterleave(src16 + sstep_e*(j+7) + i*3, C0_7, C1_7, C2_7);
+
+            v_uint16x8 t0, t1, t2, t3, t4, t5, t6, t7;
+            v_zip(v_reinterpret_as_u16(C0_0), v_reinterpret_as_u16(C0_1), t0, t1);
+            v_zip(v_reinterpret_as_u16(C0_2), v_reinterpret_as_u16(C0_3), t2, t3);
+            v_zip(v_reinterpret_as_u16(C0_4), v_reinterpret_as_u16(C0_5), t4, t5);
+            v_zip(v_reinterpret_as_u16(C0_6), v_reinterpret_as_u16(C0_7), t6, t7);
+            v_uint32x4 u0, u1, u2, u3, u4, u5, u6, u7;
+            v_zip(v_reinterpret_as_u32(t0), v_reinterpret_as_u32(t4), u0, u1);
+            v_zip(v_reinterpret_as_u32(t1), v_reinterpret_as_u32(t5), u2, u3);
+            v_zip(v_reinterpret_as_u32(t2), v_reinterpret_as_u32(t6), u4, u5);
+            v_zip(v_reinterpret_as_u32(t3), v_reinterpret_as_u32(t7), u6, u7);
+            v_uint32x4 s0, s1, s2, s3, s4, s5, s6, s7;
+            v_zip(u0, u4, s0, s1); v_zip(u1, u5, s2, s3);
+            v_zip(u2, u6, s4, s5); v_zip(u3, u7, s6, s7);
+            v_int16x8 r0_0 = v_reinterpret_as_s16(s0), r0_1 = v_reinterpret_as_s16(s1);
+            v_int16x8 r0_2 = v_reinterpret_as_s16(s2), r0_3 = v_reinterpret_as_s16(s3);
+            v_int16x8 r0_4 = v_reinterpret_as_s16(s4), r0_5 = v_reinterpret_as_s16(s5);
+            v_int16x8 r0_6 = v_reinterpret_as_s16(s6), r0_7 = v_reinterpret_as_s16(s7);
+
+            v_zip(v_reinterpret_as_u16(C1_0), v_reinterpret_as_u16(C1_1), t0, t1);
+            v_zip(v_reinterpret_as_u16(C1_2), v_reinterpret_as_u16(C1_3), t2, t3);
+            v_zip(v_reinterpret_as_u16(C1_4), v_reinterpret_as_u16(C1_5), t4, t5);
+            v_zip(v_reinterpret_as_u16(C1_6), v_reinterpret_as_u16(C1_7), t6, t7);
+            v_zip(v_reinterpret_as_u32(t0), v_reinterpret_as_u32(t4), u0, u1);
+            v_zip(v_reinterpret_as_u32(t1), v_reinterpret_as_u32(t5), u2, u3);
+            v_zip(v_reinterpret_as_u32(t2), v_reinterpret_as_u32(t6), u4, u5);
+            v_zip(v_reinterpret_as_u32(t3), v_reinterpret_as_u32(t7), u6, u7);
+            v_zip(u0, u4, s0, s1); v_zip(u1, u5, s2, s3);
+            v_zip(u2, u6, s4, s5); v_zip(u3, u7, s6, s7);
+            v_int16x8 r1_0 = v_reinterpret_as_s16(s0), r1_1 = v_reinterpret_as_s16(s1);
+            v_int16x8 r1_2 = v_reinterpret_as_s16(s2), r1_3 = v_reinterpret_as_s16(s3);
+            v_int16x8 r1_4 = v_reinterpret_as_s16(s4), r1_5 = v_reinterpret_as_s16(s5);
+            v_int16x8 r1_6 = v_reinterpret_as_s16(s6), r1_7 = v_reinterpret_as_s16(s7);
+
+            v_zip(v_reinterpret_as_u16(C2_0), v_reinterpret_as_u16(C2_1), t0, t1);
+            v_zip(v_reinterpret_as_u16(C2_2), v_reinterpret_as_u16(C2_3), t2, t3);
+            v_zip(v_reinterpret_as_u16(C2_4), v_reinterpret_as_u16(C2_5), t4, t5);
+            v_zip(v_reinterpret_as_u16(C2_6), v_reinterpret_as_u16(C2_7), t6, t7);
+            v_zip(v_reinterpret_as_u32(t0), v_reinterpret_as_u32(t4), u0, u1);
+            v_zip(v_reinterpret_as_u32(t1), v_reinterpret_as_u32(t5), u2, u3);
+            v_zip(v_reinterpret_as_u32(t2), v_reinterpret_as_u32(t6), u4, u5);
+            v_zip(v_reinterpret_as_u32(t3), v_reinterpret_as_u32(t7), u6, u7);
+            v_zip(u0, u4, s0, s1); v_zip(u1, u5, s2, s3);
+            v_zip(u2, u6, s4, s5); v_zip(u3, u7, s6, s7);
+            v_int16x8 r2_0 = v_reinterpret_as_s16(s0), r2_1 = v_reinterpret_as_s16(s1);
+            v_int16x8 r2_2 = v_reinterpret_as_s16(s2), r2_3 = v_reinterpret_as_s16(s3);
+            v_int16x8 r2_4 = v_reinterpret_as_s16(s4), r2_5 = v_reinterpret_as_s16(s5);
+            v_int16x8 r2_6 = v_reinterpret_as_s16(s6), r2_7 = v_reinterpret_as_s16(s7);
+
+            v_store_interleave(dst16 + dstep_e*(i+0) + j*3, r0_0, r1_0, r2_0);
+            v_store_interleave(dst16 + dstep_e*(i+1) + j*3, r0_1, r1_1, r2_1);
+            v_store_interleave(dst16 + dstep_e*(i+2) + j*3, r0_2, r1_2, r2_2);
+            v_store_interleave(dst16 + dstep_e*(i+3) + j*3, r0_3, r1_3, r2_3);
+            v_store_interleave(dst16 + dstep_e*(i+4) + j*3, r0_4, r1_4, r2_4);
+            v_store_interleave(dst16 + dstep_e*(i+5) + j*3, r0_5, r1_5, r2_5);
+            v_store_interleave(dst16 + dstep_e*(i+6) + j*3, r0_6, r1_6, r2_6);
+            v_store_interleave(dst16 + dstep_e*(i+7) + j*3, r0_7, r1_7, r2_7);
+        }
+        for (; j < n; j++)
+            for (int k = 0; k < 8; k++)
+            {
+                dst16[dstep_e*(i+k) + j*3 + 0] = src16[sstep_e*j + (i+k)*3 + 0];
+                dst16[dstep_e*(i+k) + j*3 + 1] = src16[sstep_e*j + (i+k)*3 + 1];
+                dst16[dstep_e*(i+k) + j*3 + 2] = src16[sstep_e*j + (i+k)*3 + 2];
+            }
+    }
+    for (; i < m; i++)
+        for (int j = 0; j < n; j++)
+        {
+            dst16[dstep_e*i + j*3 + 0] = src16[sstep_e*j + i*3 + 0];
+            dst16[dstep_e*i + j*3 + 1] = src16[sstep_e*j + i*3 + 1];
+            dst16[dstep_e*i + j*3 + 2] = src16[sstep_e*j + i*3 + 2];
+        }
+}
+#endif
 
 template<typename T> static void
 transpose_( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz )
 {
-    int i=0, j, m = sz.width, n = sz.height;
+#if CV_SIMD128
+    switch (sizeof(T))
+    {
+        case 1: transpose_8bit_simd(src, sstep, dst, dstep, sz);  return;
+        case 2: transpose_16bit_simd(src, sstep, dst, dstep, sz); return;
+        case 4: transpose_32bit_simd(src, sstep, dst, dstep, sz); return;
+        case 6: transpose_48bit_simd(src, sstep, dst, dstep, sz); return;
+        default: break;
+    }
+#endif
+
+    int i = 0, j, m = sz.width, n = sz.height;
 
     #if CV_ENABLE_UNROLLED
     for(; i <= m - 4; i += 4 )
@@ -146,10 +465,16 @@ static bool ocl_transpose( InputArray _src, OutputArray _dst )
             return false;
     }
 
+    String deviceMacro;
+    if (dev.isIntel())
+        deviceMacro = " -D INTEL_GPU";
+    else
+        deviceMacro = "";
+
     ocl::Kernel k(kernelName.c_str(), ocl::core::transpose_oclsrc,
-                  format("-D T=%s -D T1=%s -D cn=%d -D TILE_DIM=%d -D BLOCK_ROWS=%d -D rowsPerWI=%d%s",
+                  format("-D T=%s -D T1=%s -D cn=%d -D TILE_DIM=%d -D BLOCK_ROWS=%d -D rowsPerWI=%d%s%s",
                          ocl::memopTypeToStr(type), ocl::memopTypeToStr(depth),
-                         cn, TILE_DIM, BLOCK_ROWS, rowsPerWI, inplace ? " -D INPLACE" : ""));
+                         cn, TILE_DIM, BLOCK_ROWS, rowsPerWI, inplace ? " -D INPLACE" : "", deviceMacro.c_str()));
     if (k.empty())
         return false;
 

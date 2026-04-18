@@ -13,6 +13,21 @@ else:
     from distutils.dir_util import copy_tree
 
 
+def _remove_stale_pyi_files(directory):
+    """Remove .pyi files and py.typed markers from the directory tree.
+
+    During incremental builds, disabling a previously enabled module leaves
+    stale typing stubs in the loader directory from a previous copy.  Since
+    copy_tree merges rather than replaces, those stale files persist.
+    Removing all stub files before copying ensures only stubs for currently
+    enabled modules are present.  Runtime .py files are not affected.
+    """
+    for dirpath, dirnames, filenames in os.walk(directory):
+        for fname in filenames:
+            if fname.endswith('.pyi') or fname == 'py.typed':
+                os.remove(os.path.join(dirpath, fname))
+
+
 def main():
     args = parse_arguments()
     py_typed_path = os.path.join(args.stubs_dir, 'py.typed')
@@ -24,6 +39,8 @@ def main():
             'generation phase.'.format(py_typed_path)
         )
         return
+    if os.path.isdir(args.output_dir):
+        _remove_stale_pyi_files(args.output_dir)
     copy_tree(args.stubs_dir, args.output_dir)
 
 

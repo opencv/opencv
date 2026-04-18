@@ -1170,6 +1170,7 @@ TEST_P(Test_ONNX_layers, DynamicReshape)
     testONNXModels("dynamic_reshape_opset_11");
     testONNXModels("flatten_by_prod");
     testONNXModels("flatten_const");
+    testONNXModels("flatten_axis_numaxes");
 }
 
 TEST_P(Test_ONNX_layers, Reshape)

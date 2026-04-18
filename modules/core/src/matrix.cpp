@@ -1030,7 +1030,7 @@ void Mat::resize(size_t nelems)
         reserve(nelems);
 
     size.p[0] = (int)nelems;
-    dataend += (size.p[0] - saveRows)*step.p[0];
+    dataend += (size.p[0] - saveRows)*(ptrdiff_t)step.p[0];
 
     //updateContinuityFlag(*this);
 }

@@ -428,11 +428,6 @@ void Cloning::illuminationChange(Mat &I, Mat &mask, Mat &wmask, Mat &cloned, flo
     multiply(multY,multy_temp,patchGradientY);
     patchNaNs(patchGradientY);
 
-    Mat zeroMask = (patchGradientX != 0);
-
-    patchGradientX.copyTo(patchGradientX, zeroMask);
-    patchGradientY.copyTo(patchGradientY, zeroMask);
-
     evaluate(I,wmask,cloned);
 }
 

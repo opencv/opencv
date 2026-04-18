@@ -138,7 +138,7 @@
 #endif
 
 #if defined _WIN32 && (defined(_M_ARM) || defined(_M_ARM64) || defined(_M_ARM64EC)) && (defined(CV_CPU_COMPILE_NEON) || !defined(_MSC_VER))
-# include <Intrin.h>
+# include <intrin.h>
 # include <arm_neon.h>
 # define CV_NEON 1
 #elif defined(__ARM_NEON)
@@ -231,7 +231,7 @@ struct VZeroUpperGuard {
 #  define CV_SSE 1
 #  define CV_SSE2 1
 #elif defined _WIN32 && (defined(_M_ARM) || defined(_M_ARM64) || defined(_M_ARM64EC)) && (defined(CV_CPU_COMPILE_NEON) || !defined(_MSC_VER))
-# include <Intrin.h>
+# include <intrin.h>
 # include <arm_neon.h>
 # define CV_NEON 1
 #elif defined(__ARM_NEON)

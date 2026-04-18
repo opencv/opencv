@@ -134,6 +134,7 @@ public:
 protected:
     bool writeLibTiff( const std::vector<Mat>& img_vec, const std::vector<int>& params );
     bool write_32FC3_SGILOG(const Mat& img, void* tif);
+    bool write_32F_SGILOG(const Mat& img, void* tif, int compression);
 
 private:
     TiffEncoder(const TiffEncoder &); // copy disabled

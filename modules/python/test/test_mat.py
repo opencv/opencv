@@ -89,6 +89,23 @@ try:
                 print(res1)
 
 
+        def test_mat_wrap_channels_zero(self):
+            # Passing a 0-channel array must raise cv.error, not segfault.
+            data = np.zeros((100, 100, 0), dtype=np.uint8)
+
+            with self.assertRaises(cv.error):
+                cv.resize(data, (200, 200))  # channels=0 -> invalid, must not segfault
+
+            with self.assertRaises(cv.error):
+                mat_data = cv.Mat(data, wrap_channels=True)  # unable to wrap channels, invalid count (0)
+                cv.utils.dumpInputArray(mat_data)
+
+            # Verify that channels=1 (lower bound) still works correctly
+            data_1ch = np.zeros((100, 100, 1), dtype=np.uint8)
+            mat_1ch = cv.Mat(data_1ch, wrap_channels=True)
+            res = cv.utils.dumpInputArray(mat_1ch)
+            self.assertIn("CV_8UC1", res)
+
         def test_ufuncs(self):
             data = np.arange(10)
             mat_data = cv.Mat(data)

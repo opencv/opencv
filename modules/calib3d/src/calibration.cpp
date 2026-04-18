@@ -45,16 +45,419 @@
 #include "distortion_model.hpp"
 #include "opencv2/core/core_c.h"
 #include "opencv2/calib3d/calib3d_c.h"
-#include <stdio.h>
 #include <iterator>
 
 /*
-    This is straight-forward port v3 of Matlab calibration engine by Jean-Yves Bouguet
-    that is (in a large extent) based on the paper:
-    Z. Zhang. "A flexible new technique for camera calibration".
-    IEEE Transactions on Pattern Analysis and Machine Intelligence, 22(11):1330-1334, 2000.
-    The 1st initial port was done by Valery Mosyagin.
+    This program implements Levenberg-Marquardt optimization using Schur complement to calibrate cameras.
+    It implements many speedups over the original implemntation.
+    The techniques used here are primarily based upon the following papers:
+    [1] "Bundle Adjustment -- A Modern Synthesis", Triggs et al., 1999
+    [2] "SBA: A Software Package for Generic Sparse Bundle Adjustment", Lourakis and Argyros, 2000
 */
+
+namespace {
+
+class SchurLMSolver
+{
+public:
+    enum State { STARTED, CALC_J, CHECK_ERR, DONE };
+
+    SchurLMSolver()
+        : currentError(0)
+        , state(STARTED)
+        , NINTRINSIC(18)
+        , nimages(0)
+        , n_global(0)
+        , lambdaLg10(-3)
+        , iters(0)
+        , prevErrNorm(DBL_MAX)
+        , solveMethod(cv::DECOMP_CHOLESKY)
+    {
+    }
+
+    void init(int _nimages, int _NINTRINSIC, int nObjPoints,
+              cv::TermCriteria _criteria)
+    {
+        nimages = _nimages;
+        NINTRINSIC = _NINTRINSIC;
+        n_global = NINTRINSIC + nObjPoints * 3;
+        criteria = _criteria;
+
+        U.create(n_global, n_global, CV_64F);
+        ea.create(n_global, 1, CV_64F);
+        deltaGlobal.create(n_global, 1, CV_64F);
+
+        V.resize(nimages);
+        V_inv.resize(nimages);
+        W.resize(nimages);
+        eb.resize(nimages);
+        deltaLocal.resize(nimages);
+
+        for (int i = 0; i < nimages; i++)
+        {
+            V[i].create(6, 6, CV_64F);
+            V_inv[i].create(6, 6, CV_64F);
+            W[i].create(n_global, 6, CV_64F);
+            eb[i].create(6, 1, CV_64F);
+            deltaLocal[i].create(6, 1, CV_64F);
+        }
+
+        state = STARTED;
+        iters = 0;
+        lambdaLg10 = -3;
+        prevErrNorm = DBL_MAX;
+        solveMethod = cv::DECOMP_CHOLESKY;
+    }
+
+    void reset()
+    {
+        U.setTo(0);
+        ea.setTo(0);
+        currentError = 0;
+        for (int i = 0; i < nimages; i++)
+        {
+            V[i].setTo(0);
+            W[i].setTo(0);
+            eb[i].setTo(0);
+        }
+    }
+
+    void step(const cv::Mat& mask)
+    {
+        const double LOG10 = std::log(10.0);
+        double lambda = std::exp(lambdaLg10 * LOG10);
+
+        // Invert V[i] blocks with regularization
+        for (int i = 0; i < nimages; i++)
+        {
+            cv::Mat V_reg = V[i].clone();
+            V_reg.diag() *= (1.0 + lambda);
+            if (solveMethod == cv::DECOMP_QR)
+            {
+                cv::Mat I = cv::Mat::eye(6, 6, CV_64F);
+                cv::solve(V_reg, I, V_inv[i], solveMethod);
+            }
+            else
+            {
+                cv::invert(V_reg, V_inv[i], solveMethod);
+            }
+        }
+
+        // Form Schur complement S and reduced RHS e
+        cv::Mat S = U.clone();
+        S.diag() *= (1.0 + lambda);
+        cv::Mat e = ea.clone();
+
+        for (int i = 0; i < nimages; i++)
+        {
+            cv::Mat WtVinv = W[i] * V_inv[i];
+            S -= WtVinv * W[i].t();
+            e -= WtVinv * eb[i];
+        }
+
+        // Extract active submatrix using mask
+        std::vector<uchar> mask_global(n_global);
+        const uchar* mask_ptr = mask.ptr<uchar>();
+        std::copy(mask_ptr, mask_ptr + NINTRINSIC, mask_global.begin());
+        if (n_global > NINTRINSIC)
+        {
+            // Object points parameters follow intrinsic parameters in the global update vector
+            std::copy(mask_ptr + NINTRINSIC + nimages * 6,
+                      mask_ptr + NINTRINSIC + nimages * 6 + (n_global - NINTRINSIC),
+                      mask_global.begin() + NINTRINSIC);
+        }
+
+        int nactive = 0;
+        for (int i = 0; i < n_global; i++)
+            if (mask_global[i]) nactive++;
+
+        if (nactive == 0)
+        {
+            deltaGlobal.setTo(0);
+            for (int i = 0; i < nimages; i++)
+                deltaLocal[i].setTo(0);
+            return;
+        }
+
+        cv::Mat S_sub(nactive, nactive, CV_64F);
+        cv::Mat e_sub(nactive, 1, CV_64F);
+
+        int ii = 0;
+        for (int i = 0; i < n_global; i++)
+        {
+            if (!mask_global[i]) continue;
+            e_sub.at<double>(ii) = e.at<double>(i);
+            int jj = 0;
+            for (int j = 0; j < n_global; j++)
+            {
+                if (!mask_global[j]) continue;
+                S_sub.at<double>(ii, jj) = S.at<double>(i, j);
+                jj++;
+            }
+            ii++;
+        }
+
+        // Solve the reduced system
+        cv::Mat delta_sub;
+        cv::solve(S_sub, e_sub, delta_sub, solveMethod);
+
+        // Distribute the solution into the full update vector
+        deltaGlobal.setTo(0);
+        int j = 0;
+        for (int i = 0; i < n_global; i++)
+        {
+            if (mask_global[i])
+                deltaGlobal.at<double>(i) = delta_sub.at<double>(j++);
+        }
+
+        // Back-substitute to find the update for extrinsic parameters
+        for (int i = 0; i < nimages; i++)
+        {
+            deltaLocal[i] = V_inv[i] * (eb[i] - W[i].t() * deltaGlobal);
+        }
+    }
+
+    bool iterate(double errNorm, bool& needsJacobian)
+    {
+        needsJacobian = false;
+
+        if (state == DONE)
+        {
+            return false;
+        }
+
+        if (state == STARTED)
+        {
+            state = CALC_J;
+            needsJacobian = true;
+            return true;
+        }
+
+        if (state == CALC_J)
+        {
+            prevErrNorm = errNorm;
+            state = CHECK_ERR;
+            return true;
+        }
+
+        // state == CHECK_ERR
+        if (errNorm > prevErrNorm)
+        {
+            // Reject step
+            if (++lambdaLg10 <= 16)
+            {
+                // Re-solve with higher lambda, DON'T recompute Jacobian
+                return true;
+            }
+            // Lambda exhausted
+        }
+
+        // Accept step
+        lambdaLg10 = std::max(lambdaLg10 - 1, -16);
+        prevErrNorm = errNorm;
+
+        if (++iters >= criteria.maxCount)
+        {
+            state = DONE;
+            return false;
+        }
+
+        state = CALC_J;
+        needsJacobian = true;
+        return true;
+    }
+
+    cv::Mat getGlobalUpdate() const { return deltaGlobal; }
+    cv::Mat getLocalUpdate(int i) const { return deltaLocal[i]; }
+    void setSolveMethod(int method) { solveMethod = method; }
+
+    cv::Mat U;
+    std::vector<cv::Mat> V;
+    std::vector<cv::Mat> W;
+    cv::Mat ea;
+    std::vector<cv::Mat> eb;
+    double currentError;
+
+    State state;
+    int NINTRINSIC;
+    int nimages;
+    int n_global;
+    int lambdaLg10;
+
+private:
+    int iters;
+    double prevErrNorm;
+    cv::TermCriteria criteria;
+    int solveMethod;
+
+    std::vector<cv::Mat> V_inv;
+    cv::Mat deltaGlobal;
+    std::vector<cv::Mat> deltaLocal;
+};
+
+class JAccumulator : public cv::ParallelLoopBody
+{
+public:
+    JAccumulator(SchurLMSolver& _solver,
+                 const cv::Mat& _matM, const cv::Mat& _m, const cv::Mat& _npoints,
+                 const cv::Mat& _param, int _flags, double _aspectRatio,
+                 int _NINTRINSIC, bool _releaseObject, int _maxPoints,
+                 cv::Mutex& _globalMutex)
+        : solver(_solver), matM(_matM), m(_m), npoints(_npoints),
+          param(_param), flags(_flags), aspectRatio(_aspectRatio),
+          NINTRINSIC(_NINTRINSIC), releaseObject(_releaseObject),
+          maxPoints(_maxPoints), globalMutex(_globalMutex) {}
+
+    void operator()(const cv::Range& range) const CV_OVERRIDE
+    {
+        int nimages_total = npoints.checkVector(1, CV_32S);
+        int so = NINTRINSIC + nimages_total * 6;
+
+        double fx = param.at<double>(0), fy = param.at<double>(1);
+        double cx = param.at<double>(2), cy = param.at<double>(3);
+        cv::Matx33d intrin(fx, 0, cx, 0, fy, cy, 0, 0, 1);
+        cv::Mat dist = param.rowRange(4, 4 + 14);
+
+        cv::Mat JiBuf(maxPoints * 2, NINTRINSIC, CV_64F);
+        cv::Mat JeBuf(maxPoints * 2, 6, CV_64F);
+        cv::Mat JoBuf;
+        if (releaseObject)
+            JoBuf.create(maxPoints * 2, maxPoints * 3, CV_64F);
+        cv::Mat errBuf(maxPoints * 2, 1, CV_64F);
+
+        int pos = 0;
+        for (int i = 0; i < range.start; i++)
+            pos += npoints.at<int>(i);
+
+        double localErr = 0;
+
+        for (int i = range.start; i < range.end; i++)
+        {
+            int ni = npoints.at<int>(i);
+            int si = NINTRINSIC + i * 6;
+
+            cv::Mat _ri = param.rowRange(si, si + 3);
+            cv::Mat _ti = param.rowRange(si + 3, si + 6);
+
+            cv::Mat _Mi = matM.colRange(pos, pos + ni);
+            if (releaseObject)
+            {
+                _Mi = param.rowRange(so, so + ni * 3);
+                _Mi = _Mi.reshape(3, 1);
+            }
+            cv::Mat _mi = m.colRange(pos, pos + ni);
+
+            // Buffers for derivatives
+            cv::Mat Ji = JiBuf.rowRange(0, ni * 2);
+            Ji.setTo(0);
+            cv::Mat Je = JeBuf.rowRange(0, ni * 2);
+            Je.setTo(0);
+            cv::Mat Jo;
+            if (releaseObject)
+            {
+                Jo = JoBuf.rowRange(0, ni * 2).colRange(0, ni * 3);
+                Jo.setTo(0);
+            }
+            cv::Mat err = errBuf.rowRange(0, ni * 2);
+            cv::Mat _mp = err.reshape(2, 1);
+
+            cv::Mat _dpdr, _dpdt, _dpdf, _dpdc, _dpdk, _dpdo;
+
+            // Allocate contiguous buffers for Jacobians
+            _dpdr.create(ni * 2, 3, CV_64F);
+            _dpdt.create(ni * 2, 3, CV_64F);
+            _dpdk.create(ni * 2, NINTRINSIC - 4, CV_64F);
+
+            if (!(flags & cv::CALIB_FIX_FOCAL_LENGTH))
+                _dpdf.create(ni * 2, 2, CV_64F);
+            if (!(flags & cv::CALIB_FIX_PRINCIPAL_POINT))
+                _dpdc.create(ni * 2, 2, CV_64F);
+            if (releaseObject)
+                _dpdo.create(ni * 2, ni * 3, CV_64F);
+
+            cv::projectPoints(_Mi, _ri, _ti, intrin, dist, _mp,
+                              _dpdr, _dpdt,
+                              _dpdf.empty() ? cv::noArray() : _dpdf,
+                              _dpdc.empty() ? cv::noArray() : _dpdc,
+                              _dpdk,
+                              _dpdo.empty() ? cv::noArray() : _dpdo,
+                              (flags & cv::CALIB_FIX_ASPECT_RATIO) ? aspectRatio : 0.);
+
+            // Copy Jacobians from projectPoints buffers to solver blocks
+            _dpdr.copyTo(Je.colRange(0, 3));
+            _dpdt.copyTo(Je.colRange(3, 6));
+
+            if (!_dpdf.empty())
+            {
+                if (flags & cv::CALIB_FIX_ASPECT_RATIO)
+                {
+                    cv::Mat dpdf_fx = _dpdf.col(0);
+                    cv::Mat dpdf_fy = _dpdf.col(1);
+                    cv::scaleAdd(dpdf_fx, aspectRatio, dpdf_fy, dpdf_fy);
+                }
+                _dpdf.copyTo(Ji.colRange(0, 2));
+            }
+            if (!_dpdc.empty())
+                _dpdc.copyTo(Ji.colRange(2, 4));
+
+            _dpdk.copyTo(Ji.colRange(4, NINTRINSIC));
+
+            if (!_dpdo.empty())
+                _dpdo.copyTo(Jo);
+
+            cv::subtract(_mp, _mi, _mp);
+            localErr += cv::norm(err, cv::NORM_L2SQR);
+
+            // Accumulate V and eb blocks (per-image)
+            solver.V[i] = Je.t() * Je;
+            solver.eb[i] = Je.t() * err;
+            cv::Mat JitJe = Ji.t() * Je;
+            JitJe.copyTo(solver.W[i].rowRange(0, NINTRINSIC));
+
+            if (releaseObject)
+            {
+                cv::Mat JotJe = Jo.t() * Je;
+                JotJe.copyTo(solver.W[i].rowRange(NINTRINSIC, NINTRINSIC + Jo.cols));
+            }
+
+            // Accumulate U and ea blocks (shared parameters)
+            {
+                cv::AutoLock lock(globalMutex);
+                solver.U(cv::Rect(0, 0, NINTRINSIC, NINTRINSIC)) += Ji.t() * Ji;
+                solver.ea.rowRange(0, NINTRINSIC) += Ji.t() * err;
+
+                if (releaseObject)
+                {
+                    cv::Mat JitJo = Ji.t() * Jo;
+                    solver.U(cv::Rect(NINTRINSIC, 0, Jo.cols, NINTRINSIC)) += JitJo;
+                    solver.U(cv::Rect(0, NINTRINSIC, NINTRINSIC, Jo.cols)) += JitJo.t();
+                    solver.U(cv::Rect(NINTRINSIC, NINTRINSIC, Jo.cols, Jo.cols)) += Jo.t() * Jo;
+                    solver.ea.rowRange(NINTRINSIC, NINTRINSIC + Jo.cols) += Jo.t() * err;
+                }
+
+                solver.currentError += localErr;
+            }
+
+            pos += ni;
+            localErr = 0;
+        }
+    }
+
+private:
+    SchurLMSolver& solver;
+    const cv::Mat& matM;
+    const cv::Mat& m;
+    const cv::Mat& npoints;
+    const cv::Mat& param;
+    int flags;
+    double aspectRatio;
+    int NINTRINSIC;
+    bool releaseObject;
+    int maxPoints;
+    cv::Mutex& globalMutex;
+};
+
+} // anonymous namespace
 
 namespace cv {
 
@@ -146,7 +549,6 @@ static void subMatrix(const Mat& src, Mat& dst,
     CV_Assert(src.type() == CV_64F && dst.type() == CV_64F);
     int m = (int)rows.size(), n = (int)cols.size();
     int i1 = 0, j1 = 0;
-    const uchar* colsdata = cols.empty() ? 0 : &cols[0];
     for(int i = 0; i < m; i++)
     {
         if(rows[i])
@@ -154,20 +556,31 @@ static void subMatrix(const Mat& src, Mat& dst,
             const double* srcptr = src.ptr<double>(i);
             double* dstptr = dst.ptr<double>(i1++);
 
-            for(int j = j1 = 0; j < n; j++)
+            if(n > 0)
             {
-                if(colsdata[j])
-                    dstptr[j1++] = srcptr[j];
+                const uchar* colsdata = cols.data();
+                for(int j = j1 = 0; j < n; j++)
+                {
+                    if(colsdata[j])
+                        dstptr[j1++] = srcptr[j];
+                }
             }
         }
     }
 }
 
-static double calibrateCameraInternal( const Mat& objectPoints,
-                                       const Mat& imagePoints, const Mat& npoints,
-                                       Size imageSize, int iFixedPoint, Mat& cameraMatrix, Mat& distCoeffs,
-                                       Mat rvecs, Mat tvecs, Mat newObjPoints, Mat stdDevs,
-                                       Mat perViewErr, int flags, const TermCriteria& termCrit )
+/*
+    This is straight-forward port v3 of Matlab calibration engine by Jean-Yves Bouguet
+    that is (in a large extent) based on the paper:
+    Z. Zhang. "A flexible new technique for camera calibration".
+    IEEE Transactions on Pattern Analysis and Machine Intelligence, 22(11):1330-1334, 2000.
+    The 1st initial port was done by Valery Mosyagin.
+*/
+static double calibrateCameraInternalBouguet( const Mat& objectPoints,
+                                             const Mat& imagePoints, const Mat& npoints,
+                                             Size imageSize, int iFixedPoint, Mat& cameraMatrix, Mat& distCoeffs,
+                                             Mat rvecs, Mat tvecs, Mat newObjPoints, Mat stdDevs,
+                                             Mat perViewErr, int flags, const TermCriteria& termCrit )
 {
     int NINTRINSIC = CALIB_NINTRINSIC;
     double reprojErr = 0;
@@ -621,6 +1034,677 @@ static double calibrateCameraInternal( const Mat& objectPoints,
     return std::sqrt(reprojErr/total);
 }
 
+static double calibrateCameraInternalSchur( const Mat& objectPoints,
+                                       const Mat& imagePoints, const Mat& npoints,
+                                       Size imageSize, int iFixedPoint, Mat& cameraMatrix, Mat& distCoeffs,
+                                       Mat rvecs, Mat tvecs, Mat newObjPoints, Mat stdDevs,
+                                       Mat perViewErr, int flags, const TermCriteria& termCrit )
+{
+    int NINTRINSIC = CALIB_NINTRINSIC;
+    double reprojErr = 0;
+
+    double aspectRatio = 0.;
+    int nimages = npoints.checkVector(1, CV_32S);
+    CV_Assert(nimages >= 1);
+    int ndistCoeffs = (int)distCoeffs.total();
+    bool releaseObject = iFixedPoint > 0 && iFixedPoint < npoints.at<int>(0) - 1;
+
+    // 0. check the parameters & allocate buffers
+    if (imageSize.width <= 0 || imageSize.height <= 0)
+    {
+        CV_Error(cv::Error::StsOutOfRange, "image width and height must be positive");
+    }
+
+    if (flags & CALIB_TILTED_MODEL)
+    {
+        // when the tilted sensor model is used the distortion coefficients matrix must have 14 parameters
+        if (ndistCoeffs != 14)
+        {
+            CV_Error(cv::Error::StsBadArg, "The tilted sensor model must have 14 parameters");
+        }
+    }else
+    {
+        // when the thin prism model is used the distortion coefficients matrix must have 12 parameters
+        if (flags & CALIB_THIN_PRISM_MODEL)
+        {
+            if (ndistCoeffs != 12)
+            {
+                CV_Error(cv::Error::StsBadArg, "Thin prism model must have 12 parameters");
+            }
+        }
+    }
+
+    if (!rvecs.empty())
+    {
+        int cn = rvecs.channels();
+        CV_Assert(rvecs.depth() == CV_32F || rvecs.depth() == CV_64F);
+        CV_Assert((rvecs.rows == nimages && (rvecs.cols * cn == 3)) ||
+                  (rvecs.rows == 1 && rvecs.cols == nimages && cn == 3));
+    }
+
+    if (!tvecs.empty())
+    {
+        int cn = tvecs.channels();
+        CV_Assert(tvecs.depth() == CV_32F || tvecs.depth() == CV_64F);
+        CV_Assert((tvecs.rows == nimages && tvecs.cols * cn == 3) ||
+                  (tvecs.rows == 1 && tvecs.cols == nimages && cn == 3));
+    }
+
+    CV_Assert(cameraMatrix.type() == CV_32F || cameraMatrix.type() == CV_64F);
+    CV_Assert(cameraMatrix.rows == 3 && cameraMatrix.cols == 3);
+
+    CV_Assert(distCoeffs.type() == CV_32F || distCoeffs.type() == CV_64F);
+    CV_Assert(distCoeffs.rows == 1 || distCoeffs.cols == 1);
+    CV_Assert(ndistCoeffs == 4 || ndistCoeffs == 5 || ndistCoeffs == 8 ||
+              ndistCoeffs == 12 || ndistCoeffs == 14);
+
+    int total = 0, maxPoints = 0;
+    for(int i = 0; i < nimages; i++ )
+    {
+        int ni = npoints.at<int>(i);
+        if( ni < 4 )
+        {
+            CV_Error_( cv::Error::StsOutOfRange, ("The number of points in the view #%d is < 4", i));
+        }
+        maxPoints = MAX( maxPoints, ni );
+        total += ni;
+    }
+
+    if( !newObjPoints.empty() )
+    {
+        int cn = newObjPoints.channels();
+        CV_Assert(newObjPoints.depth() == CV_32F || newObjPoints.depth() == CV_64F);
+        CV_Assert((newObjPoints.rows == maxPoints && newObjPoints.cols*cn == 3) ||
+                  (newObjPoints.rows == 1 && newObjPoints.cols == maxPoints && cn == 3));
+    }
+
+    if( !stdDevs.empty() )
+    {
+        int cn = stdDevs.channels();
+        CV_Assert(stdDevs.depth() == CV_32F || stdDevs.depth() == CV_64F);
+        int nstddev = nimages*6 + NINTRINSIC + (releaseObject ? maxPoints*3 : 0);
+
+        CV_Assert((stdDevs.rows == nstddev && stdDevs.cols*cn == 1) ||
+                  (stdDevs.rows == 1 && stdDevs.cols == nstddev && cn == 1));
+    }
+
+    Mat matM( 1, total, CV_64FC3 );
+    Mat _m( 1, total, CV_64FC2 );
+    Mat allErrors(1, total, CV_64FC2);
+
+    if (objectPoints.channels() == 3)
+    {
+        objectPoints.convertTo(matM, CV_64F);
+    }else
+    {
+        convertPointsToHomogeneous(objectPoints, matM);
+        matM.convertTo(matM, CV_64F);
+    }
+
+    if (imagePoints.channels() == 2)
+    {
+        imagePoints.convertTo(_m, CV_64F);
+    }else
+    {
+        convertPointsFromHomogeneous(imagePoints, _m);
+        _m.convertTo(_m, CV_64F);
+    }
+
+    int nparams = NINTRINSIC + nimages*6;
+    if( releaseObject )
+        nparams += maxPoints * 3;
+
+    std::vector<double> k(14, 0.0);
+    Mat _k( distCoeffs.rows, distCoeffs.cols, CV_64F, k.data());
+    if( distCoeffs.total() < 8 )
+    {
+        if( distCoeffs.total() < 5 )
+            flags |= CALIB_FIX_K3;
+        flags |= CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6;
+    }
+    const double minValidAspectRatio = 0.01;
+    const double maxValidAspectRatio = 100.0;
+
+    Matx33d A;
+    cameraMatrix.convertTo(A, CV_64F);
+
+    // 1. initialize intrinsic parameters & LM solver
+    if( flags & CALIB_USE_INTRINSIC_GUESS )
+    {
+        if( A(0, 0) <= 0 || A(1, 1) <= 0 )
+            CV_Error( cv::Error::StsOutOfRange, "Focal length (fx and fy) must be positive" );
+        if( A(0, 2) < 0 || A(0, 2) >= imageSize.width ||
+            A(1, 2) < 0 || A(1, 2) >= imageSize.height )
+            CV_Error( cv::Error::StsOutOfRange, "Principal point must be within the image" );
+        if( fabs(A(0, 1)) > 1e-5 )
+            CV_Error( cv::Error::StsOutOfRange, "Non-zero skew is not supported by the function" );
+        if( fabs(A(1, 0)) > 1e-5 || fabs(A(2, 0)) > 1e-5 ||
+            fabs(A(2, 1)) > 1e-5 || fabs(A(2,2)-1) > 1e-5 )
+            CV_Error( cv::Error::StsOutOfRange,
+                "The intrinsic matrix must have [fx 0 cx; 0 fy cy; 0 0 1] shape" );
+        A(0, 1) = A(1, 0) = A(2, 0) = A(2, 1) = 0.;
+        A(2, 2) = 1.;
+
+        if (flags & CALIB_FIX_ASPECT_RATIO)
+        {
+            aspectRatio = A(0, 0) / A(1, 1);
+            if (aspectRatio < minValidAspectRatio || aspectRatio > maxValidAspectRatio)
+            {
+                CV_Error(cv::Error::StsOutOfRange,
+                    "The specified aspect ratio (= cameraMatrix[0][0] / cameraMatrix[1][1]) is incorrect");
+            }
+        }
+        distCoeffs.convertTo(_k, CV_64F);
+    }else
+    {
+        Scalar mean, sdv;
+        meanStdDev(matM, mean, sdv);
+        if (fabs(mean[2]) > 1e-5 || fabs(sdv[2]) > 1e-5)
+        {
+            CV_Error(cv::Error::StsBadArg,
+            "For non-planar calibration rigs the initial intrinsic matrix must be specified");
+        }
+        for (int i = 0; i < total; i++)
+        {
+            matM.at<Point3d>(i).z = 0.;
+        }
+
+        if (flags & CALIB_FIX_ASPECT_RATIO)
+        {
+            aspectRatio = A(0, 0);
+            aspectRatio /= A(1, 1);
+            if (aspectRatio < minValidAspectRatio || aspectRatio > maxValidAspectRatio)
+            {
+                CV_Error(cv::Error::StsOutOfRange,
+                    "The specified aspect ratio (= cameraMatrix[0][0] / cameraMatrix[1][1]) is incorrect");
+            }
+        }
+        initIntrinsicParams2D(matM, _m, npoints, imageSize, A, aspectRatio);
+    }
+
+    SchurLMSolver solver;
+    solver.init(nimages, NINTRINSIC, releaseObject ? maxPoints : 0, termCrit);
+    if (flags & CALIB_USE_LU)
+        solver.setSolveMethod(cv::DECOMP_LU);
+    else if (flags & CALIB_USE_QR)
+        solver.setSolveMethod(cv::DECOMP_QR);
+
+    Mat_<double> param_m(nparams, 1);
+    std::vector<uchar> mask_vec(nparams, 1);
+
+    param_m(0) = A(0, 0); param_m(1) = A(1, 1); param_m(2) = A(0, 2); param_m(3) = A(1, 2);
+    for (int i = 0; i < 14; i++)
+        param_m(4 + i) = k[i];
+
+    if (flags & CALIB_FIX_ASPECT_RATIO)
+        mask_vec[0] = 0;
+    if (flags & CALIB_FIX_FOCAL_LENGTH)
+        mask_vec[0] = mask_vec[1] = 0;
+    if (flags & CALIB_FIX_PRINCIPAL_POINT)
+        mask_vec[2] = mask_vec[3] = 0;
+    if (flags & CALIB_ZERO_TANGENT_DIST)
+    {
+        param_m(6) = param_m(7) = 0;
+        mask_vec[6] = mask_vec[7] = 0;
+    }
+    if (!(flags & CALIB_RATIONAL_MODEL))
+        flags |= CALIB_FIX_K4 + CALIB_FIX_K5 + CALIB_FIX_K6;
+    if (!(flags & CALIB_THIN_PRISM_MODEL))
+        flags |= CALIB_FIX_S1_S2_S3_S4;
+    if (!(flags & CALIB_TILTED_MODEL))
+        flags |= CALIB_FIX_TAUX_TAUY;
+
+    mask_vec[4] = !(flags & CALIB_FIX_K1);
+    mask_vec[5] = !(flags & CALIB_FIX_K2);
+    if (flags & CALIB_FIX_TANGENT_DIST)
+        mask_vec[6] = mask_vec[7] = 0;
+    mask_vec[8] = !(flags & CALIB_FIX_K3);
+    mask_vec[9] = !(flags & CALIB_FIX_K4);
+    mask_vec[10] = !(flags & CALIB_FIX_K5);
+    mask_vec[11] = !(flags & CALIB_FIX_K6);
+
+    if (flags & CALIB_FIX_S1_S2_S3_S4)
+    {
+        mask_vec[12] = 0;
+        mask_vec[13] = 0;
+        mask_vec[14] = 0;
+        mask_vec[15] = 0;
+    }
+
+    if (flags & CALIB_USE_INTRINSIC_GUESS)
+    {
+        CV_Assert(nparams == NINTRINSIC + nimages * 6);
+    }
+
+    if (flags & CALIB_FIX_ASPECT_RATIO)
+    {
+        mask_vec[0] = 0;
+        if (aspectRatio <= 0)
+            CV_Error(Error::StsBadArg, "CALIB_FIX_ASPECT_RATIO is set but aspectRatio is not positive");
+    }
+
+    if (flags & CALIB_FIX_TAUX_TAUY)
+    {
+        mask_vec[16] = mask_vec[17] = 0;
+    }
+
+    if (releaseObject)
+    {
+        int s = NINTRINSIC + nimages * 6;
+        std::copy(matM.ptr<double>(), matM.ptr<double>(0, maxPoints - 1) + 3,
+                  param_m.ptr<double>() + s);
+        mask_vec[s + 0] = 0;
+        mask_vec[s + 1] = 0;
+        mask_vec[s + 2] = 0;
+        mask_vec[s + iFixedPoint * 3 + 0] = 0;
+        mask_vec[s + iFixedPoint * 3 + 1] = 0;
+        mask_vec[s + iFixedPoint * 3 + 2] = 0;
+        mask_vec[nparams - 1] = 0;
+    }
+
+    Mat mask(mask_vec);
+    int nparams_nz = countNonZero(mask);
+
+    if (nparams_nz >= 2 * total)
+    {
+        CV_Error_(Error::StsBadArg,
+                  ("There should be less vars to optimize (having %d) than the "
+                   "number of residuals (%d = 2 per point)", nparams_nz, 2 * total));
+    }
+
+    // Initialize extrinsic parameters
+    for (int i = 0, pos = 0; i < nimages; i++)
+    {
+        int ni = npoints.at<int>(i);
+
+        int s = NINTRINSIC + i*6;
+        Mat _ri = param_m.rowRange(s, s + 3);
+        Mat _ti = param_m.rowRange(s + 3, s + 6);
+
+        Mat _Mi = matM.colRange(pos, pos + ni);
+        Mat _mi = _m.colRange(pos, pos + ni);
+
+        findExtrinsicCameraParams2(_Mi, _mi, Mat(A), _k, _ri, _ti, 0);
+
+        pos += ni;
+    }
+
+    // 3. run the optimization
+    Mat_<double> prev_param = param_m.clone();
+    Mutex globalMutex;
+
+    // Compute initial error
+    Mat allErrorsBuf(1, total, CV_64FC2);
+    reprojErr = 0;
+    int so = NINTRINSIC + nimages * 6;
+    int pos = 0;
+    for (int i = 0; i < nimages; i++)
+    {
+        int ni = npoints.at<int>(i);
+        int si = NINTRINSIC + i * 6;
+
+        Mat _ri = param_m.rowRange(si, si + 3);
+        Mat _ti = param_m.rowRange(si + 3, si + 6);
+
+        Mat _Mi = matM.colRange(pos, pos + ni);
+        if (releaseObject)
+        {
+            _Mi = param_m.rowRange(so, so + ni * 3);
+            _Mi = _Mi.reshape(3, 1);
+        }
+        Mat _mi = _m.colRange(pos, pos + ni);
+        Mat _me = allErrorsBuf.colRange(pos, pos + ni);
+
+        double fx = param_m(0), fy = param_m(1), cx = param_m(2), cy = param_m(3);
+        if (flags & CALIB_FIX_ASPECT_RATIO)
+            fx = fy * aspectRatio;
+        Matx33d intrin(fx, 0, cx, 0, fy, cy, 0, 0, 1);
+        Mat dist = param_m.rowRange(4, 4 + 14);
+
+        projectPoints(_Mi, _ri, _ti, intrin, dist, _me);
+        subtract(_me, _mi, _me);
+
+        reprojErr += norm(_me, NORM_L2SQR);
+        pos += ni;
+    }
+
+    bool recomputeFinalErrors = (termCrit.maxCount == 0);
+    bool jacobianAtCurrentParams = false;
+    if (termCrit.maxCount > 0)
+    {
+        solver.reset();
+
+        parallel_for_(Range(0, nimages),
+                      JAccumulator(solver, matM, _m, npoints, param_m,
+                                   flags, aspectRatio, NINTRINSIC,
+                                   releaseObject, maxPoints, globalMutex));
+        jacobianAtCurrentParams = true;
+        // JAccumulator acc(solver, matM, _m, npoints, param_m,
+        //                         flags, aspectRatio, NINTRINSIC,
+        //                         releaseObject, maxPoints, globalMutex);
+        // acc(Range(0, nimages));
+        solver.step(mask);
+
+        double prevErr = reprojErr;
+        // Apply the initial step
+        param_m.copyTo(prev_param);
+        // 1. Global parameters (Intrinsics + Objects)
+        for (int kk = 0; kk < NINTRINSIC; kk++)
+            param_m(kk) -= solver.getGlobalUpdate().at<double>(kk);
+
+        if (releaseObject)
+        {
+             int param_obj_start = NINTRINSIC + nimages * 6;
+             int num_obj_params = solver.n_global - NINTRINSIC;
+             for (int kk = 0; kk < num_obj_params; kk++)
+                 param_m(param_obj_start + kk) -= solver.getGlobalUpdate().at<double>(NINTRINSIC + kk);
+        }
+        for (int i = 0; i < nimages; i++)
+        {
+            int si = NINTRINSIC + i * 6;
+            for (int kk = 0; kk < 6; kk++)
+                param_m(si + kk) -= solver.getLocalUpdate(i).at<double>(kk);
+        }
+        jacobianAtCurrentParams = false;
+        for (int iter = 0; iter < termCrit.maxCount; iter++)
+        {
+            if (flags & CALIB_FIX_ASPECT_RATIO)
+            {
+                param_m(0) = param_m(1) * aspectRatio;
+            }
+
+            reprojErr = 0;
+            int pos_iter = 0;
+            for (int i = 0; i < nimages; i++)
+            {
+                int ni = npoints.at<int>(i);
+                int si = NINTRINSIC + i * 6;
+
+                Mat _ri = param_m.rowRange(si, si + 3);
+                Mat _ti = param_m.rowRange(si + 3, si + 6);
+
+                Mat _Mi = matM.colRange(pos_iter, pos_iter + ni);
+                if (releaseObject)
+                {
+                    _Mi = param_m.rowRange(so, so + ni * 3).reshape(3, 1);
+                }
+                Mat _mi = _m.colRange(pos_iter, pos_iter + ni);
+                Mat _me = allErrorsBuf.colRange(pos_iter, pos_iter + ni);
+
+                double fx = param_m(0), fy = param_m(1), cx = param_m(2), cy = param_m(3);
+                Matx33d intrin(fx, 0, cx, 0, fy, cy, 0, 0, 1);
+                Mat dist = param_m.rowRange(4, 4 + 14);
+
+                projectPoints(_Mi, _ri, _ti, intrin, dist, _me);
+                subtract(_me, _mi, _me);
+
+                double viewErr = norm(_me, NORM_L2SQR);
+                if (!perViewErr.empty())
+                {
+                    perViewErr.at<double>(i) = std::sqrt(viewErr / ni);
+                }
+                reprojErr += viewErr;
+                pos_iter += ni;
+            }
+
+            // Accept or reject the step
+            if (reprojErr < prevErr)
+            {
+                // Step accepted
+                solver.lambdaLg10 = std::max(solver.lambdaLg10 - 1, -16);
+                prevErr = reprojErr;
+
+                // Check convergence BEFORE saving new prev_param
+                double paramChange = norm(param_m, prev_param, NORM_L2) /
+                                     (norm(prev_param, NORM_L2) + DBL_EPSILON);
+                param_m.copyTo(prev_param);
+                if (paramChange < termCrit.epsilon)
+                {
+                    break;
+                }
+
+                // Compute new Jacobian at new position
+                solver.reset();
+                parallel_for_(Range(0, nimages),
+                              JAccumulator(solver, matM, _m, npoints, param_m,
+                                           flags, aspectRatio, NINTRINSIC,
+                                           releaseObject, maxPoints, globalMutex));
+                jacobianAtCurrentParams = true;
+            }else
+            {
+                // Step rejected, increase lambda and recompute step
+                if (++solver.lambdaLg10 > 16)
+                {
+                    // Lambda exhausted, restore best params
+                    prev_param.copyTo(param_m);
+                    recomputeFinalErrors = true;
+                    break;
+                }
+
+                // Revert params
+                prev_param.copyTo(param_m);
+            }
+
+            // Compute step (possibly with new lambda)
+            solver.step(mask);
+
+            // Apply step. Update layouts:
+            // deltaGlobal: [Intrinsics (0..NINTRINSIC-1) | Object points (NINTRINSIC..n_global-1)]
+            // param_m: [Intrinsics | Extrinsic parameters | Object points]
+
+            // Apply Intrinsics update
+            for (int kk = 0; kk < NINTRINSIC; kk++)
+            {
+                param_m(kk) -= solver.getGlobalUpdate().at<double>(kk);
+            }
+
+            // Apply Objects update (if any)
+            if (releaseObject)
+            {
+                 int param_obj_start = NINTRINSIC + nimages * 6;
+                 int num_obj_params = solver.n_global - NINTRINSIC;
+                 for (int kk = 0; kk < num_obj_params; kk++)
+                 {
+                     param_m(param_obj_start + kk) -= solver.getGlobalUpdate().at<double>(NINTRINSIC + kk);
+                 }
+            }
+
+            // Apply Local parameters (Extrinsics)
+            for (int i = 0; i < nimages; i++)
+            {
+                int si = NINTRINSIC + i * 6;
+                for (int kk = 0; kk < 6; kk++)
+                    param_m(si + kk) -= solver.getLocalUpdate(i).at<double>(kk);
+            }
+            jacobianAtCurrentParams = false;
+        }
+    }
+
+    if (flags & CALIB_FIX_ASPECT_RATIO)
+    {
+        param_m(0) = param_m(1) * aspectRatio;
+    }
+
+    if (recomputeFinalErrors)
+    {
+        Mat finalErrorsBuf;
+        Mat* errorsPtr = &allErrorsBuf;
+        if (!stdDevs.empty())
+        {
+            finalErrorsBuf.create(1, total, CV_64FC2);
+            errorsPtr = &finalErrorsBuf;
+        }
+
+        Mat& errors = *errorsPtr;
+        reprojErr = 0;
+        pos = 0;
+        for (int i = 0; i < nimages; i++)
+        {
+            int ni = npoints.at<int>(i);
+            int si = NINTRINSIC + i * 6;
+
+            Mat _ri = param_m.rowRange(si, si + 3);
+            Mat _ti = param_m.rowRange(si + 3, si + 6);
+
+            Mat _Mi = matM.colRange(pos, pos + ni);
+            if (releaseObject)
+            {
+                _Mi = param_m.rowRange(so, so + ni * 3).reshape(3, 1);
+            }
+            Mat _mi = _m.colRange(pos, pos + ni);
+            Mat _me = errors.colRange(pos, pos + ni);
+
+            double fx = param_m(0), fy = param_m(1), cx = param_m(2), cy = param_m(3);
+            Matx33d intrin(fx, 0, cx, 0, fy, cy, 0, 0, 1);
+            Mat dist = param_m.rowRange(4, 4 + 14);
+
+            projectPoints(_Mi, _ri, _ti, intrin, dist, _me);
+            subtract(_me, _mi, _me);
+
+            double viewErr = norm(_me, NORM_L2SQR);
+            if (!perViewErr.empty())
+            {
+                perViewErr.at<double>(i) = std::sqrt(viewErr / ni);
+            }
+            reprojErr += viewErr;
+            pos += ni;
+        }
+    }
+
+    if (!stdDevs.empty())
+    {
+        if (!jacobianAtCurrentParams)
+        {
+            solver.reset();
+            parallel_for_(Range(0, nimages),
+                          JAccumulator(solver, matM, _m, npoints, param_m,
+                                       flags, aspectRatio, NINTRINSIC,
+                                       releaseObject, maxPoints, globalMutex));
+            jacobianAtCurrentParams = true;
+        }
+        Mat JtJ = Mat::zeros(nparams, nparams, CV_64F);
+
+        // Manual copy for U to avoid assertion
+        Mat srcU = solver.U(Rect(0, 0, NINTRINSIC, NINTRINSIC));
+        Mat dstU = JtJ(Rect(0, 0, NINTRINSIC, NINTRINSIC));
+        for(int r=0; r<srcU.rows; r++) {
+            const double* sptr = srcU.ptr<double>(r);
+            double* dptr = dstU.ptr<double>(r);
+            for(int c=0; c<srcU.cols; c++) dptr[c] = sptr[c];
+        }
+
+        for (int i = 0; i < nimages; i++)
+        {
+            int si = NINTRINSIC + i * 6;
+            // Manual copy for V[i]
+            Mat srcV = solver.V[i];
+            Mat dstV = JtJ(Rect(si, si, 6, 6));
+            for(int r=0; r<srcV.rows; r++) {
+                const double* sptr = srcV.ptr<double>(r);
+                double* dptr = dstV.ptr<double>(r);
+                for(int c=0; c<srcV.cols; c++) dptr[c] = sptr[c];
+            }
+
+            Mat srcW = solver.W[i].rowRange(0, NINTRINSIC);
+            Mat dstJ = JtJ(Rect(si, 0, 6, NINTRINSIC));
+
+            // Manual copy for W part
+            srcW.copyTo(dstJ);
+        }
+
+        if (releaseObject)
+        {
+            int obj_start = NINTRINSIC + nimages * 6;
+
+            // Manual copy for U (extended) parts
+            // Top-right block
+            Mat srcU_tr = solver.U(Rect(NINTRINSIC, 0, maxPoints * 3, NINTRINSIC));
+            Mat dstU_tr = JtJ(Rect(obj_start, 0, maxPoints * 3, NINTRINSIC));
+            srcU_tr.copyTo(dstU_tr);
+
+            // Bottom-right block
+            Mat srcU_br = solver.U(Rect(NINTRINSIC, NINTRINSIC, maxPoints * 3, maxPoints * 3));
+            Mat dstU_br = JtJ(Rect(obj_start, obj_start, maxPoints * 3, maxPoints * 3));
+            srcU_br.copyTo(dstU_br);
+
+            for (int i = 0; i < nimages; i++)
+            {
+                int si = NINTRINSIC + i * 6;
+                // Manual copy for W extended part
+                Mat srcW_ext = solver.W[i].rowRange(NINTRINSIC, solver.W[i].rows);
+                Mat dstJ_ext = JtJ(Rect(obj_start, si, maxPoints * 3, 6));
+                cv::transpose(srcW_ext, dstJ_ext);
+            }
+        }
+
+        completeSymm(JtJ, false);
+
+        Mat JtJinv, JtJN;
+        JtJN.create(nparams_nz, nparams_nz, CV_64F);
+        std::vector<uchar> mask_copy(mask.ptr<uchar>(), mask.ptr<uchar>() + nparams);
+        subMatrix(JtJ, JtJN, mask_copy, mask_copy);
+        completeSymm(JtJN, false);
+        cv::invert(JtJN, JtJinv, DECOMP_SVD);
+
+        int nErrors = 2 * total - nparams_nz;
+        double sigma2 = norm(allErrorsBuf, NORM_L2SQR) / nErrors;
+
+        int j = 0;
+        for (int s = 0; s < nparams; s++)
+        {
+            stdDevs.at<double>(s) = mask.at<uchar>(s) ?
+                std::sqrt(JtJinv.at<double>(j, j) * sigma2) : 0.0;
+            if (mask.at<uchar>(s))
+            {
+                j++;
+            }
+        }
+    }
+
+    // Store optimization results
+    A = Matx33d(param_m(0), 0, param_m(2), 0, param_m(1), param_m(3), 0, 0, 1);
+    Mat(A).convertTo(cameraMatrix, cameraMatrix.type());
+
+    _k = Mat(distCoeffs.size(), CV_64F, param_m.ptr<double>() + 4);
+    _k.convertTo(distCoeffs, distCoeffs.type());
+
+
+    if (!newObjPoints.empty() && releaseObject)
+    {
+        int s = NINTRINSIC + nimages * 6;
+        Mat _Mi = param_m.rowRange(s, s + maxPoints * 3);
+        _Mi.reshape(3, 1).convertTo(newObjPoints, newObjPoints.type());
+
+    }
+    for (int i = 0; i < nimages; i++)
+    {
+        if (!rvecs.empty())
+        {
+            Mat src = param_m.rowRange(NINTRINSIC + i * 6, NINTRINSIC + i * 6 + 3);
+            if (rvecs.rows == nimages && rvecs.cols * rvecs.channels() == 9)
+            {
+                Mat dst(3, 3, rvecs.depth(), rvecs.ptr(i));
+                Rodrigues(src, A);
+                Mat(A).convertTo(dst, dst.type());
+            }
+            else
+            {
+                Mat dst(3, 1, rvecs.depth(), rvecs.rows == 1 ?
+                    rvecs.data + i * rvecs.elemSize() : rvecs.ptr(i));
+                src.convertTo(dst, dst.type());
+            }
+        }
+        if (!tvecs.empty())
+        {
+            Mat src = param_m.rowRange(NINTRINSIC + i * 6 + 3, NINTRINSIC + i * 6 + 6);
+            Mat dst(3, 1, tvecs.depth(), tvecs.rows == 1 ?
+                    tvecs.data + i * tvecs.elemSize() : tvecs.ptr(i));
+            src.convertTo(dst, dst.type());
+        }
+    }
+    return std::sqrt(reprojErr/total);
+}
+
 //////////////////////////////// Stereo Calibration ///////////////////////////////////
 
 static double stereoCalibrateImpl(
@@ -713,14 +1797,19 @@ static double stereoCalibrateImpl(
             distCoeffs.convertTo(tdist, CV_64F);
         }
 
-        if( !(flags & (CALIB_FIX_INTRINSIC | CALIB_USE_INTRINSIC_GUESS)))
-        {
-            Mat mIntr(A[k], /* copyData = */ false);
-            Mat mDist(distInitial[k], /* copyData = */ false);
-            calibrateCameraInternal(objectPoints, imagePoints[k],
-                                    _npoints, imageSize, 0, mIntr, mDist,
-                                    Mat(), Mat(), Mat(), Mat(), Mat(), flags, termCrit);
-        }
+          if( !(flags & (CALIB_FIX_INTRINSIC | CALIB_USE_INTRINSIC_GUESS)))
+          {
+              Mat mIntr(A[k], /* copyData = */ false);
+              Mat mDist(distInitial[k], /* copyData = */ false);
+              if( flags & CALIB_DISABLE_SCHUR_COMPLEMENT )
+                  calibrateCameraInternalBouguet(objectPoints, imagePoints[k],
+                                      _npoints, imageSize, 0, mIntr, mDist,
+                                      Mat(), Mat(), Mat(), Mat(), Mat(), flags, termCrit);
+              else
+                  calibrateCameraInternalSchur(objectPoints, imagePoints[k],
+                                      _npoints, imageSize, 0, mIntr, mDist,
+                                      Mat(), Mat(), Mat(), Mat(), Mat(), flags, termCrit);
+          }
     }
 
     if( flags & CALIB_SAME_FOCAL_LENGTH )
@@ -1437,51 +2526,60 @@ double calibrateCameraRO(InputArrayOfArrays _objectPoints,
         errorsM = _perViewErrors.getMat();
     }
 
-    double reprojErr = calibrateCameraInternal(
-            objPt, imgPt, npoints, imageSize, iFixedPoint,
-            cameraMatrix, distCoeffs,
-            rvecM, tvecM,
-            newObjPt,
-            stdDeviationsM,
-            errorsM, flags, criteria);
+    double reprojErr = 0;
+    if( flags & CALIB_DISABLE_SCHUR_COMPLEMENT )
+    {
+        reprojErr = calibrateCameraInternalBouguet(
+                objPt, imgPt, npoints, imageSize, iFixedPoint,
+                cameraMatrix, distCoeffs,
+                rvecM, tvecM,
+                newObjPt,
+                stdDeviationsM,
+                errorsM, flags, criteria);
+    }
+    else
+    {
+        reprojErr = calibrateCameraInternalSchur(
+                objPt, imgPt, npoints, imageSize, iFixedPoint,
+                cameraMatrix, distCoeffs,
+                rvecM, tvecM,
+                newObjPt,
+                stdDeviationsM,
+                errorsM, flags, criteria);
+    }
 
     if( stddev_needed )
     {
         stdDeviationsM.rowRange(0, CALIB_NINTRINSIC).copyTo(stdDeviationsIntrinsics);
     }
-
-    if ( stddev_ext_needed )
+    if( stddev_ext_needed )
     {
-        int s = CALIB_NINTRINSIC;
-        stdDeviationsM.rowRange(s, s + nimages*6).copyTo(stdDeviationsExtrinsics);
+        stdDeviationsM.rowRange(CALIB_NINTRINSIC, CALIB_NINTRINSIC + nimages*6).copyTo(stdDeviationsExtrinsics);
     }
-
     if( stddev_obj_needed )
     {
-        int s = CALIB_NINTRINSIC + nimages*6;
-        stdDeviationsM.rowRange(s, s + np*3).copyTo(stdDeviationsObjPoints);
-    }
-
-    // overly complicated and inefficient rvec/ tvec handling to support vector<Mat>
-    for(int i = 0; i < nimages; i++ )
-    {
-        if( rvecs_needed && rvecs_mat_vec)
-        {
-            _rvecs.create(3, 1, CV_64F, i, true);
-            Mat rv = _rvecs.getMat(i);
-            memcpy(rv.ptr(), rvecM.ptr(i), 3*sizeof(double));
-        }
-        if( tvecs_needed && tvecs_mat_vec)
-        {
-            _tvecs.create(3, 1, CV_64F, i, true);
-            Mat tv = _tvecs.getMat(i);
-            memcpy(tv.ptr(), tvecM.ptr(i), 3*sizeof(double));
-        }
+         int si = CALIB_NINTRINSIC + nimages*6;
+         stdDeviationsM.rowRange(si, stdDeviationsM.rows).copyTo(stdDeviationsObjPoints);
     }
 
     cameraMatrix.copyTo(_cameraMatrix);
     distCoeffs.copyTo(_distCoeffs);
 
+    for(int i = 0; i < nimages; i++ )
+    {
+        if( rvecs_needed && rvecs_mat_vec )
+        {
+            _rvecs.create(3, 1, CV_64F, i, true);
+            Mat rv = _rvecs.getMat(i);
+            Mat(rvecM.row(i).t()).copyTo(rv);
+        }
+        if( tvecs_needed && tvecs_mat_vec )
+        {
+            _tvecs.create(3, 1, CV_64F, i, true);
+            Mat tv = _tvecs.getMat(i);
+            Mat(tvecM.row(i).t()).copyTo(tv);
+        }
+    }
     return reprojErr;
 }
 

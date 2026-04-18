@@ -2225,7 +2225,9 @@ void ONNXImporter::parseFlatten(LayerParams& layerParams, const opencv_onnx::Nod
         {
             constBlobsExtraInfo.insert(std::make_pair(node_proto.output(0), getBlobExtraInfo(node_proto, 0)));
         }
-        int axis = normalize_axis(axis_, input.dims);
+        int axis = axis_;
+        if (axis < 0) axis += input.dims;
+        axis = std::max(0, std::min(axis, input.dims));
 
         int out_size[2] = {1, 1};
         for (int i = 0; i < axis; ++i)
@@ -2244,18 +2246,46 @@ void ONNXImporter::parseFlatten(LayerParams& layerParams, const opencv_onnx::Nod
     IterShape_t shapeIt = outShapes.find(node_proto.input(0));
     CV_Assert(shapeIt != outShapes.end());
     MatShape inpShape = shapeIt->second;
-    int axis = normalize_axis(axis_, inpShape.size());
+    int axis = axis_;
+    if (axis < 0) axis += (int)inpShape.size();
+    axis = std::max(0, std::min(axis, (int)inpShape.size()));
 
-    if (axis == 0 || axis == inpShape.size())
+    if (axis == (int)inpShape.size())
     {
         LayerParams reshapeLp;
         reshapeLp.name = layerParams.name + "/reshape";
         reshapeLp.type = "Reshape";
         CV_Assert(layer_id.find(reshapeLp.name) == layer_id.end());
-
-        inpShape.insert(axis == 0 ? inpShape.begin() : inpShape.end(), 1);
+        inpShape.push_back(1);
         reshapeLp.set("dim", DictValue::arrayInt(&inpShape[0], inpShape.size()));
+        opencv_onnx::NodeProto proto;
+        proto.add_input(node_proto.input(0));
+        proto.add_output(reshapeLp.name);
+        addLayer(reshapeLp, proto);
+        LayerParams flatLp;
+        flatLp.name = layerParams.name + "/flatten";
+        flatLp.type = "Flatten";
+        CV_Assert(layer_id.find(flatLp.name) == layer_id.end());
+        flatLp.set("axis", 0);
+        flatLp.set("end_axis", (int)inpShape.size() - 2);
+        opencv_onnx::NodeProto proto2;
+        proto2.add_input(reshapeLp.name);
+        proto2.add_output(flatLp.name);
+        addLayer(flatLp, proto2);
+        layerParams.type = "Identity";
+        node_proto.set_input(0, flatLp.name);
+        addLayer(layerParams, node_proto);
+        return;
+    }
 
+    if (axis == 0)
+    {
+        LayerParams reshapeLp;
+        reshapeLp.name = layerParams.name + "/reshape";
+        reshapeLp.type = "Reshape";
+        CV_Assert(layer_id.find(reshapeLp.name) == layer_id.end());
+        inpShape.insert(inpShape.begin(), 1);
+        reshapeLp.set("dim", DictValue::arrayInt(&inpShape[0], inpShape.size()));
         opencv_onnx::NodeProto proto;
         proto.add_input(node_proto.input(0));
         proto.add_output(reshapeLp.name);
