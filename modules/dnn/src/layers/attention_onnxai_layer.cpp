@@ -218,15 +218,7 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
             kData.grow(inputs[1]);
 
             const std::vector<Mat>& kCachePages = kData.getPages();
-            // print
-            std::cout << "<<<<------>>>>" << std::endl;
-            for (size_t i = 0; i < kCachePages.size(); i++) {
-                std::cout <<
-                    "K cache page " << i << ": " <<
-                    kCachePages[i] <<
-                    std::endl;
-            }
-            std::cout << "<<<<------>>>>" << std::endl;
+
             pagedAttnQKGemm(
                 inputs[0], kCachePages, attention_prob,
                 seq_len_q, q_num_heads, kv_num_heads, kData.getPageSize(), qk_head_size,

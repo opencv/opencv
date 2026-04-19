@@ -554,7 +554,7 @@ void pagedAttnQKGemm(
     CV_CheckTypeEQ(Q.type(), A.type(), "pagedAttnQKGemmKernel: Q and A should have the same type");
 
     CV_CheckTrue(
-        T_s % fastGemmNC(opt) == 0,
+        T_s % fastGemmNR(opt) == 0,
         "pagedAttnQKGemmKernel: T_s should be divisible by the macro tile size"
     );
 

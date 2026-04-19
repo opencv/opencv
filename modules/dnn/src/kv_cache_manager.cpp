@@ -21,23 +21,21 @@ void setKVCacheManager(Ptr<Net::Impl> netimpl)
     manager.netimpl = netimpl;
     manager.opt.init();
 
-    for (const auto& layerPair : netimpl->layers)
-    {
-        const LayerData& layer = layerPair.second;
-        if (layer.type != "AttentionOnnxAi")
+    for (const auto& layer : netimpl->mainGraph->prog()) {
+        if (layer->type != "AttentionOnnxAi")
             continue;
 
-        int kvNumHeads = layer.params.get<int>("kv_num_heads", -1);
+        int kvNumHeads = layer.dynamicCast<AttentionOnnxAiLayer>()->kv_num_heads;
 
         if (kvNumHeads > 0)
         {
-            manager.kData.emplace(layer.name, KCache(manager.opt, kvNumHeads));
-            manager.vData.emplace(layer.name, VCache(manager.opt, kvNumHeads));
+            manager.kData.emplace(layer->name, KCache(manager.opt, kvNumHeads));
+            manager.vData.emplace(layer->name, VCache(manager.opt, kvNumHeads));
         }
         else
         {
-            manager.kData.emplace(layer.name, KCache(manager.opt));
-            manager.vData.emplace(layer.name, VCache(manager.opt));
+            manager.kData.emplace(layer->name, KCache(manager.opt));
+            manager.vData.emplace(layer->name, VCache(manager.opt));
         }
     }
 
