@@ -1238,17 +1238,14 @@ OPENCV_HAL_IMPL_WASM_INIT_CMP_OP(v_uint16x8, u16x8, i16x8)
 OPENCV_HAL_IMPL_WASM_INIT_CMP_OP(v_int16x8, i16x8, i16x8)
 OPENCV_HAL_IMPL_WASM_INIT_CMP_OP(v_uint32x4, u32x4, i32x4)
 OPENCV_HAL_IMPL_WASM_INIT_CMP_OP(v_int32x4, i32x4, i32x4)
+OPENCV_HAL_IMPL_WASM_INIT_CMP_OP(v_int64x2, i64x2, i64x2)
 OPENCV_HAL_IMPL_WASM_INIT_CMP_OP(v_float32x4, f32x4, f32x4)
 OPENCV_HAL_IMPL_WASM_INIT_CMP_OP(v_float64x2, f64x2, f64x2)
 
-#define OPENCV_HAL_IMPL_WASM_64BIT_CMP_OP(_Tpvec, cast) \
-inline _Tpvec v_eq(const _Tpvec& a, const _Tpvec& b) \
-{ return cast(v_eq(v_reinterpret_as_f64(a), v_reinterpret_as_f64(b))); } \
-inline _Tpvec v_ne(const _Tpvec& a, const _Tpvec& b) \
-{ return cast(v_ne(v_reinterpret_as_f64(a), v_reinterpret_as_f64(b))); }
-
-OPENCV_HAL_IMPL_WASM_64BIT_CMP_OP(v_uint64x2, v_reinterpret_as_u64)
-OPENCV_HAL_IMPL_WASM_64BIT_CMP_OP(v_int64x2, v_reinterpret_as_s64)
+inline v_uint64x2 v_eq(const v_uint64x2& a, const v_uint64x2& b)
+{ return v_reinterpret_as_u64(v_eq(v_reinterpret_as_f64(a), v_reinterpret_as_f64(b))); }
+inline v_uint64x2 v_ne(const v_uint64x2& a, const v_uint64x2& b)
+{ return v_reinterpret_as_u64(v_ne(v_reinterpret_as_f64(a), v_reinterpret_as_f64(b))); }
 
 inline v_float32x4 v_not_nan(const v_float32x4& a)
 {

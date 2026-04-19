@@ -273,7 +273,7 @@ void Net::Impl::setPreferableBackend(Net& net, int backendId)
         return;
 
 #ifdef HAVE_ONNXRUNTIME
-    if (mainGraph && modelFormat == DNN_MODEL_ONNX && !modelFileName.empty())
+    if (useOrtEngine && mainGraph && modelFormat == DNN_MODEL_ONNX && !modelFileName.empty())
     {
         preferableBackend = backendId;
         ortNeedsReinit = true;  // will be applied on finalizeNet()
@@ -317,7 +317,7 @@ void Net::Impl::setPreferableBackend(Net& net, int backendId)
 void Net::Impl::setPreferableTarget(int targetId)
 {
 #ifdef HAVE_ONNXRUNTIME
-    if (mainGraph && modelFormat == DNN_MODEL_ONNX && !modelFileName.empty())
+    if (useOrtEngine && mainGraph && modelFormat == DNN_MODEL_ONNX && !modelFileName.empty())
     {
         int resolved = IS_DNN_CUDA_TARGET(targetId) ? targetId : DNN_TARGET_CPU;
         if (preferableTarget != resolved)

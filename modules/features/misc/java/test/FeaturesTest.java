@@ -10,6 +10,7 @@ import org.opencv.core.Mat;
 import org.opencv.core.MatOfInt;
 import org.opencv.core.MatOfDMatch;
 import org.opencv.core.MatOfKeyPoint;
+import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
 import org.opencv.core.Range;
@@ -19,6 +20,7 @@ import org.opencv.features.DescriptorMatcher;
 import org.opencv.features.Features;
 import org.opencv.core.KeyPoint;
 import org.opencv.imgcodecs.Imgcodecs;
+import org.opencv.imgproc.Imgproc;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 import org.opencv.features.Feature2D;
@@ -169,4 +171,25 @@ public class FeaturesTest extends OpenCVTestCase {
 
         assertMatEqual(ref, outImg);
     }
+
+    public void testGoodFeaturesToTrackMatListOfPointIntDoubleDouble() {
+        Mat src = gray0;
+        Imgproc.rectangle(src, new Point(2, 2), new Point(8, 8), new Scalar(100), -1);
+        MatOfPoint lp = new MatOfPoint();
+
+        Features.goodFeaturesToTrack(src, lp, 100, 0.01, 3);
+
+        assertEquals(4, lp.total());
+    }
+
+    public void testGoodFeaturesToTrackMatListOfPointIntDoubleDoubleMatIntBooleanDouble() {
+        Mat src = gray0;
+        Imgproc.rectangle(src, new Point(2, 2), new Point(8, 8), new Scalar(100), -1);
+        MatOfPoint lp = new MatOfPoint();
+
+        Features.goodFeaturesToTrack(src, lp, 100, 0.01, 3, gray1, 4, 3, true, 0);
+
+        assertEquals(4, lp.total());
+    }
+
 }

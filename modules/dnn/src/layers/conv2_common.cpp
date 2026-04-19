@@ -13,11 +13,14 @@ CV__DNN_INLINE_NS_BEGIN
 
 std::string fastActivationToString(FastActivation fastActivation)
 {
-    return fastActivation == FAST_ACTIV_RELU ? "ReLU" :
-           fastActivation == FAST_ACTIV_LEAKY_RELU ? "LeakyReLU" :
-           fastActivation == FAST_ACTIV_PRELU ? "PReLU" :
-           fastActivation == FAST_ACTIV_CLIP ? "Clip" :
-           fastActivation == FAST_ACTIV_NONE ? "None" : format("unknown(%d)", int(fastActivation));
+    switch (fastActivation) {
+    case FAST_ACTIV_NONE: return "None";
+    case FAST_ACTIV_RELU: return "ReLU";
+    case FAST_ACTIV_LEAKY_RELU: return "LeakyReLU";
+    case FAST_ACTIV_PRELU: return "PReLU";
+    case FAST_ACTIV_CLIP: return "Clip";
+    default: return format("unknown(%d)", int(fastActivation));
+    }
 }
 
 AutoPadding getAutoPadding(const LayerParams& params)
@@ -175,6 +178,7 @@ void ConvState::initConv(const MatShape& inpshape_,
                          const std::vector<int>& pads_,
                          AutoPadding autoPad, bool ceilMode,
                          FastActivation fastActivation_,
+                         ActivationFunc activationFunc_,
                          const std::vector<float>& activParams_)
 {
     nspatialdims = wshape_.dims - 2;
@@ -201,7 +205,7 @@ void ConvState::initConv(const MatShape& inpshape_,
     }
 
     fastActivation = fastActivation_;
-    activation = nullptr;
+    activation = activationFunc_;
     activParams = activParams_;
 
     CV_Assert(wshape_[0] > 0 && wshape_[1] > 0);

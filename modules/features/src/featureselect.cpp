@@ -40,7 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels_imgproc.hpp"
+#include "opencl_kernels_features.hpp"
 
 #include <cstdio>
 #include <vector>
@@ -100,7 +100,7 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
             wgs2_aligned <<= 1;
         wgs2_aligned >>= 1;
 
-        ocl::Kernel k("maxEigenVal", ocl::imgproc::gftt_oclsrc,
+        ocl::Kernel k("maxEigenVal", ocl::features::gftt_oclsrc,
                       format("-D OP_MAX_EIGEN_VAL -D WGS=%d -D groupnum=%d -D WGS2_ALIGNED=%d%s",
                              (int)wgs, dbsize, wgs2_aligned, haveMask ? " -D HAVE_MASK" : ""));
         if (k.empty())
@@ -123,7 +123,7 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
         if (!k.run(1, &globalsize, &wgs, false))
             return false;
 
-        ocl::Kernel k2("maxEigenValTask", ocl::imgproc::gftt_oclsrc,
+        ocl::Kernel k2("maxEigenValTask", ocl::features::gftt_oclsrc,
                        format("-D OP_MAX_EIGEN_VAL -D WGS=%zu -D WGS2_ALIGNED=%d -D groupnum=%d",
                               wgs, wgs2_aligned, dbsize));
         if (k2.empty())
@@ -137,7 +137,7 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
 
     // collect list of pointers to features - put them into temporary image
     {
-        ocl::Kernel k("findCorners", ocl::imgproc::gftt_oclsrc,
+        ocl::Kernel k("findCorners", ocl::features::gftt_oclsrc,
                       format("-D OP_FIND_CORNERS%s", haveMask ? " -D HAVE_MASK" : ""));
         if (k.empty())
             return false;

@@ -23,6 +23,7 @@ import org.opencv.core.TermCriteria;
 import org.opencv.highgui.HighGui;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
+import org.opencv.features.Features;
 
 class CornerSubPix {
     private Mat src = new Mat();
@@ -102,7 +103,7 @@ class CornerSubPix {
         Mat copy = src.clone();
 
         /// Apply corner detection
-        Imgproc.goodFeaturesToTrack(srcGray, corners, maxCorners, qualityLevel, minDistance, new Mat(),
+        Features.goodFeaturesToTrack(srcGray, corners, maxCorners, qualityLevel, minDistance, new Mat(),
                 blockSize, gradientSize, useHarrisDetector, k);
 
         /// Draw corners detected

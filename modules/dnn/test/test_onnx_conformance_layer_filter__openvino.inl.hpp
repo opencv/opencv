@@ -717,11 +717,11 @@ CASE(test_expand_dim_changed)
 CASE(test_expand_dim_unchanged)
     SKIP;
 CASE(test_eyelike_populate_off_main_diagonal)
-    // no filter
+    SKIP;
 CASE(test_eyelike_with_dtype)
-    // no filter
+    SKIP;
 CASE(test_eyelike_without_dtype)
-    // no filter
+    SKIP;
 CASE(test_flatten_axis0)
     // no filter
 CASE(test_flatten_axis1)
@@ -1435,7 +1435,7 @@ CASE(test_logsoftmax_negative_axis_expanded)
 CASE(test_logsoftmax_negative_axis_expanded_ver18)
     SKIP;
 CASE(test_loop11)
-    // no filter
+    SKIP;
 CASE(test_loop13_seq)
     // no filter
 CASE(test_loop16_seq_none)

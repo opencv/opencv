@@ -44,6 +44,7 @@
 
 #include "../test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp"
+#include "opencv2/features.hpp"
 
 
 #ifdef HAVE_OPENCL

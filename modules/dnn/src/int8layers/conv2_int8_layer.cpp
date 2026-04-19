@@ -340,7 +340,7 @@ public:
         if (inpshape != prevInpshape) {
             cs.initConv(inpshape, wshape0, outshape, ngroups,
                         strides, dilations, pads, auto_pad, ceil_mode,
-                        FAST_ACTIV_NONE, {});
+                        FAST_ACTIV_NONE, nullptr, {});
             prevInpshape = inpshape;
         }
 

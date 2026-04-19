@@ -180,6 +180,7 @@ protected:
     void parseCastLike             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseClip                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConcat               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseLoop                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseIf                   (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConstant             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConstantOfShape      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -220,6 +221,7 @@ protected:
     void parseOneHot               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDFT                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDet                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseEyeLike              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseBlackmanWindow       (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseHannWindow           (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseHammingWindow        (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -1499,10 +1501,6 @@ void ONNXImporter2::parseGather(LayerParams& layerParams, const opencv_onnx::Nod
 {
     layerParams.type = "Gather2";
     CV_CheckEQ(node_proto.input_size(), 2, "");
-    // Diagnostics: log axis used by this Gather node (attribute may be absent -> default 0)
-    int axis = layerParams.get<int>("axis", 0);
-    const std::string node_name = node_proto.has_name() ? node_proto.name() : std::string();
-    CV_LOG_WARNING(NULL, "DNN/ONNX: Gather node '" << node_name << "' axis=" << axis << ", outputs=" << (node_proto.output_size() > 0 ? node_proto.output(0) : std::string("")));
     addLayer(layerParams, node_proto);
 }
 
@@ -1517,6 +1515,34 @@ void ONNXImporter2::parseConcat(LayerParams& layerParams, const opencv_onnx::Nod
     CV_CheckEQ(node_proto.output_size(), 1, "");
     layerParams.type = "Concat2";
     addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseLoop(LayerParams& layerParams,
+                              const opencv_onnx::NodeProto& node_proto)
+{
+    // ONNX Loop: inputs = [M, cond, v0, v1, ...]; attribute "body" is a GraphProto.
+    CV_Assert(node_proto.input_size() >= 2);
+    layerParams.type = "Loop";
+
+    // Create Loop layer node in the current graph.
+    addLayer(layerParams, node_proto);
+
+    std::vector<Ptr<Graph> > subgraphs(1);
+    for (int i = 0; i < node_proto.attribute_size(); ++i)
+    {
+        const auto& attr = node_proto.attribute(i);
+        if (attr.name() == "body")
+        {
+            opencv_onnx::GraphProto body = attr.g();
+            Ptr<Graph> graph = parseGraph(&body, false);
+            subgraphs[0] = graph;
+        }
+    }
+
+    CV_Assert(!subgraphs[0].empty());
+
+    Ptr<Layer>& loopLayer = curr_prog.back();
+    *loopLayer->subgraphs() = subgraphs;
 }
 
 void ONNXImporter2::parseIf(LayerParams& layerParams,
@@ -1736,6 +1762,17 @@ void ONNXImporter2::parseOneHot(LayerParams& layerParams, const opencv_onnx::Nod
 void ONNXImporter2::parseDet(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "Det";
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseEyeLike(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "EyeLike";
+    if (layerParams.has("dtype"))
+    {
+        int onnxDtype = layerParams.get<int>("dtype");
+        layerParams.set("dtype", dataType2cv((opencv_onnx::TensorProto_DataType)onnxDtype));
+    }
     addLayer(layerParams, node_proto);
 }
 
@@ -2694,6 +2731,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["Gather"] = &ONNXImporter2::parseGather;
     dispatch["GatherElements"] = &ONNXImporter2::parseGatherElements;
     dispatch["Concat"] = &ONNXImporter2::parseConcat;
+    dispatch["Loop"] = &ONNXImporter2::parseLoop;
     dispatch["If"] = &ONNXImporter2::parseIf;
     dispatch["Resize"] = &ONNXImporter2::parseResize2;
     dispatch["Size"] = &ONNXImporter2::parseSize;
@@ -2705,6 +2743,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["OneHot"] = &ONNXImporter2::parseOneHot;
     dispatch["DFT"] = &ONNXImporter2::parseDFT;
     dispatch["Det"] = &ONNXImporter2::parseDet;
+    dispatch["EyeLike"] = &ONNXImporter2::parseEyeLike;
     dispatch["BlackmanWindow"] = &ONNXImporter2::parseBlackmanWindow;
     dispatch["HannWindow"] = &ONNXImporter2::parseHannWindow;
     dispatch["HammingWindow"] = &ONNXImporter2::parseHammingWindow;
@@ -2808,6 +2847,7 @@ Net readNetFromONNX2_ORT(const String& onnxFile)
     auto impl = net.getImpl();
     impl->modelFileName = onnxFile;
     impl->modelFormat = DNN_MODEL_ONNX;
+    impl->useOrtEngine = true;
     impl->ortNeedsReinit = true;
 
     // Create an empty main graph placeholder so that callers can detect

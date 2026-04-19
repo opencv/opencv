@@ -63,6 +63,7 @@ struct ConstFolding
                     if (processGraph(g))
                         modified = true;
                 }
+                newprog.push_back(layer);
                 continue;
             }
             const std::vector<Arg>& inputs = layer->inputs;

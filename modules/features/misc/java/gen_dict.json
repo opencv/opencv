@@ -14,5 +14,8 @@
             "jni_type": "jbyte",
             "suffix": "B"
         }
+    },
+    "func_arg_fix" : {
+        "goodFeaturesToTrack" : { "corners" : {"ctype" : "vector_Point"} }
     }
 }

@@ -2412,6 +2412,32 @@ float initWideAngleProjMap(InputArray cameraMatrix, InputArray distCoeffs,
                                 m1type, map1, map2, (UndistortTypes)projType, alpha);
 }
 
+/** @brief Computes useful camera characteristics from the camera intrinsic matrix.
+ *
+ * @param cameraMatrix Input camera intrinsic matrix that can be estimated by #calibrateCamera or
+ * #stereoCalibrate .
+ * @param imageSize Input image size in pixels.
+ * @param apertureWidth Physical width in mm of the sensor.
+ * @param apertureHeight Physical height in mm of the sensor.
+ * @param fovx Output field of view in degrees along the horizontal sensor axis.
+ * @param fovy Output field of view in degrees along the vertical sensor axis.
+ * @param focalLength Focal length of the lens in mm.
+ * @param principalPoint Principal point in mm.
+ * @param aspectRatio \f$f_y/f_x\f$
+ *
+ * The function computes various useful camera characteristics from the previously estimated camera
+ * matrix.
+ *
+ * @note
+ *   Do keep in mind that the unity measure 'mm' stands for whatever unit of measure one chooses for
+ *    the chessboard pitch (it can thus be any value).
+ */
+CV_EXPORTS_W void calibrationMatrixValues( InputArray cameraMatrix, Size imageSize,
+                                           double apertureWidth, double apertureHeight,
+                                           CV_OUT double& fovx, CV_OUT double& fovy,
+                                           CV_OUT double& focalLength, CV_OUT Point2d& principalPoint,
+                                           CV_OUT double& aspectRatio );
+
 /** @brief Returns the default new camera matrix.
 
 The function returns the camera matrix that is either an exact copy of the input cameraMatrix (when

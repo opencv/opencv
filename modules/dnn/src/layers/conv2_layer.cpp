@@ -34,6 +34,7 @@ public:
         ngroups = params.get<int>("group", 1);
         fusedBatchNorm = false;
         fastActivation = FAST_ACTIV_NONE;
+        activationFunc = nullptr;
         addResidual = false;
     }
 
@@ -73,10 +74,11 @@ public:
             strm << "batch_norm: true,\n";
         }
 
-        if (fastActivation != FAST_ACTIV_NONE || !activ.empty()) {
+        if (fastActivation != FAST_ACTIV_NONE || activationFunc != nullptr || !activ.empty()) {
             prindent(strm, indent);
             strm << "fused_activation: " <<
                 (fastActivation != FAST_ACTIV_NONE ? fastActivationToString(fastActivation) :
+                 activationFunc != nullptr ? "ActivationFunc" :
                  activ->type) << ",\n";
         }
 
@@ -186,8 +188,10 @@ public:
     virtual bool fuseActivation(const Ptr<Layer>& activlayer) override
     {
         ActivationLayer* activ_ptr = dynamic_cast<ActivationLayer*>(activlayer.get());
-        if (!activ_ptr || fastActivation != FAST_ACTIV_NONE || !activ.empty())
+        if (!activ_ptr || fastActivation != FAST_ACTIV_NONE ||
+            activationFunc != nullptr || !activ.empty())
             return false;
+
         ReLULayer* activRelu = dynamic_cast<ReLULayer*>(activ_ptr);
         ReLU6Layer* activClip = dynamic_cast<ReLU6Layer*>(activ_ptr);
         ChannelsPReLULayer* activPRelu = dynamic_cast<ChannelsPReLULayer*>(activ_ptr);
@@ -211,15 +215,17 @@ public:
             int nslopes = int(slopes.total());
             Mat(1, &nslopes, slopesType, (void*)slopes.data).convertTo(activParams, CV_32F);
         } else {
-            //activ = activlayer;
-            return false;
+            activationFunc = activ_ptr->getActivationFunc(CV_32F, activParams);
+            if (!activationFunc)
+                return false;
         }
         return true;
     }
 
     virtual bool fuseAddResidual(Arg residual) CV_OVERRIDE
     {
-        if (activ.empty() && fastActivation == FAST_ACTIV_NONE && !addResidual && residual.idx >= 0) {
+        if (activ.empty() && fastActivation == FAST_ACTIV_NONE &&
+            activationFunc == nullptr && !addResidual && residual.idx >= 0) {
             addResidual = true;
             inputs.push_back(residual);
             return true;
@@ -345,7 +351,7 @@ public:
         if (inpshape != prevInpshape) {
             cs.initConv(inpshape, wshape0, outshape, ngroups,
                         strides, dilations, pads, auto_pad, ceil_mode,
-                        fastActivation, activParams);
+                        fastActivation, activationFunc, activParams);
             prevInpshape = inpshape;
         }
 
@@ -400,6 +406,7 @@ public:
     ConvState cs;
     bool fusedBatchNorm;
     FastActivation fastActivation;
+    ActivationFunc activationFunc;
     std::vector<float> activParams;
     bool addResidual;
 };

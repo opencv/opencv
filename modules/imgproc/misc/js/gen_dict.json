@@ -59,7 +59,6 @@
             "getRectSubPix",
             "getRotationMatrix2D",
             "getStructuringElement",
-            "goodFeaturesToTrack",
             "grabCut",
             "HoughCircles",
             "HoughLines",

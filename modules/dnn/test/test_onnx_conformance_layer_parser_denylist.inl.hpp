@@ -305,9 +305,6 @@
 "test_einsum_scalar",
 "test_equal_string",
 "test_equal_string_broadcast",
-"test_eyelike_populate_off_main_diagonal",  // Issues::Layer::Can't create layer::Can't create layer "onnx_node_output_0!y" of type "EyeLike" in function 'getLayerInstance'
-"test_eyelike_with_dtype",  // ---- same as above ---
-"test_eyelike_without_dtype",  // ---- same as above ---
 "test_gridsample_bicubic",  // ---- same as above ---
 "test_gridsample_bicubic_align_corners_0_additional_1",
 "test_gridsample_bicubic_align_corners_1_additional_1",
@@ -331,9 +328,8 @@
 "test_l1normalization_axis_last",
 "test_l2normalization_axis_0",
 "test_l2normalization_axis_1",
-"test_loop11",  // Issue::'Graph' is not supported in function 'getLayerParams'
-"test_loop13_seq",  // Issue::typeProto.has_tensor_type() in function 'populateNet'
-"test_loop16_seq_none",  // Issue::Failed to allocate 179812654996800 bytes in function 'OutOfMemoryError'
+"test_loop13_seq",  // Loop with tensor sequences output, not yet supported in OpenCV
+"test_loop16_seq_none",  // Loop with optional tensor sequences, not yet supported in OpenCV
 "test_lpnormalization_default",
 "test_lppool_1d_default",
 "test_lppool_2d_default",

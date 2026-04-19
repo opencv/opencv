@@ -9,6 +9,7 @@
         "FastFeatureDetector" : { "DetectorType": "FastDetectorType" }
     },
     "func_arg_fix" : {
+        "goodFeaturesToTrack" : { "corners" : {"ctype" : "vector_Point"} },
         "Feature2D": {
             "(void)compute:(NSArray<Mat*>*)images keypoints:(NSMutableArray<NSMutableArray<KeyPoint*>*>*)keypoints descriptors:(NSMutableArray<Mat*>*)descriptors" : { "compute" : {"name" : "compute2"} },
             "(void)detect:(NSArray<Mat*>*)images keypoints:(NSMutableArray<NSMutableArray<KeyPoint*>*>*)keypoints masks:(NSArray<Mat*>*)masks" : { "detect" : {"name" : "detect2"} }

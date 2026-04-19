@@ -85,6 +85,7 @@ void initializeLayerFactory()
 #endif
 
     CV_DNN_REGISTER_LAYER_CLASS(If,             IfLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Loop,           LoopLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Concat,         ConcatLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Concat2,        Concat2Layer);
     CV_DNN_REGISTER_LAYER_CLASS(ConstantOfShape, ConstantOfShapeLayer);
@@ -119,6 +120,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(IsInf,          IsInfLayer);
     CV_DNN_REGISTER_LAYER_CLASS(OneHot,         OneHotLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Det,            DetLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(EyeLike,        EyeLikeLayer);
     CV_DNN_REGISTER_LAYER_CLASS(BlackmanWindow, BlackmanWindowLayer);
     CV_DNN_REGISTER_LAYER_CLASS(HannWindow,     HannWindowLayer);
     CV_DNN_REGISTER_LAYER_CLASS(HammingWindow,  HammingWindowLayer);

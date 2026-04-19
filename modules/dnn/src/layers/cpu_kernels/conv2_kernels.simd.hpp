@@ -424,7 +424,7 @@ static void setupActivation(const ConvState& cs, int K,
     } else if (fastActivation == FAST_ACTIV_PRELU) {
         CV_Assert(cs.activParams.size() == size_t(K));
     } else {
-        CV_Assert(fastActivation == FAST_ACTIV_NONE);
+        // FAST_ACTIV_NONE: activation (if any) is handled via function pointer
         defaultAlpha = 1.f;
     }
 }

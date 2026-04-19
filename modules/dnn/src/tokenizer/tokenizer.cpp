@@ -20,7 +20,8 @@ static std::unordered_map<std::string, ImplRegestry>& tokenizerRegistry() {
     return reg;
 }
 
-CoreBPE buildTokenizerGPT(const std::string& model_type, const std::string& json_path);
+CoreBPE buildTokenizerFromJson(const std::string& model_type, const std::string& json_path,
+                          std::unordered_set<std::string>* outSpecial = nullptr);
 
 struct Tokenizer::Impl {
     virtual ~Impl() {}
@@ -30,13 +31,16 @@ struct Tokenizer::Impl {
 
 struct BpeTokenizerImpl : public Tokenizer::Impl {
     Ptr<CoreBPE> coreBPE;
+    std::unordered_set<std::string> allowedSpecial;
 
-    explicit BpeTokenizerImpl(CoreBPE core)
-        : coreBPE(makePtr<CoreBPE>(std::move(core))) {}
+    explicit BpeTokenizerImpl(CoreBPE core,
+                              std::unordered_set<std::string> special = {})
+        : coreBPE(makePtr<CoreBPE>(std::move(core)))
+        , allowedSpecial(std::move(special)) {}
 
     std::vector<int> encode(const std::string& text) override {
         CV_Assert(coreBPE);
-        std::vector<uint32_t> tok = coreBPE->encode(text, {}).first;
+        std::vector<uint32_t> tok = coreBPE->encode(text, allowedSpecial).first;
         return std::vector<int>(tok.begin(), tok.end());
     }
 
@@ -60,12 +64,15 @@ static void registerDefaultTokenizers() {
             std::string tok_json = dir + "tokenizer.json";
 
             CoreBPE core;
+            std::unordered_set<std::string> special;
             if (model_type == "gpt2" || model_type == "gpt4") {
-                core = buildTokenizerGPT(model_type, tok_json);
+                core = buildTokenizerFromJson(model_type, tok_json);
+            } else if (model_type == "qwen2" || model_type == "qwen2.5") {
+                core = buildTokenizerFromJson(model_type, tok_json, &special);
             } else {
                 CV_Error(cv::Error::StsError, "Unsupported model_type for BPE: " + model_type);
             }
-            return makePtr<BpeTokenizerImpl>(std::move(core));
+            return makePtr<BpeTokenizerImpl>(std::move(core), std::move(special));
         };
     }
 }
@@ -82,7 +89,8 @@ std::string Tokenizer::decode(const std::vector<int>& tokens) {
     return impl_->decode(tokens);
 };
 
-CoreBPE buildTokenizerGPT(const std::string& model_type, const std::string& json_path) {
+CoreBPE buildTokenizerFromJson(const std::string& model_type, const std::string& json_path,
+                          std::unordered_set<std::string>* outSpecial) {
     cv::FileStorage fs(json_path, cv::FileStorage::READ | cv::FileStorage::FORMAT_JSON);
     if (!fs.isOpened())
         CV_Error(cv::Error::StsError, "Failed to open tokenizer.json: " + json_path);
@@ -99,9 +107,11 @@ CoreBPE buildTokenizerGPT(const std::string& model_type, const std::string& json
         skip_tokens.insert("<|endoftext|>");
     } else if (model_type == "gpt4" || model_type == "cl100k_base") {
         pattern = CL100K_BASE;
+    } else if (model_type == "qwen2" || model_type == "qwen2.5") {
+        pattern = QWEN2_5;
     } else {
         CV_Error(cv::Error::StsError,
-            "Unsupported model_type: " + model_type + " (expected gpt2/r50k_base or gpt4/cl100k_base)");
+            "Unsupported model_type: " + model_type + " (expected gpt2/r50k_base, gpt4/cl100k_base, or qwen2/qwen2.5)");
     }
 
     auto token_to_bytes = [&](const std::string& token_utf8) -> std::vector<uint8_t> {
@@ -139,6 +149,7 @@ CoreBPE buildTokenizerGPT(const std::string& model_type, const std::string& json
             if (special && id >= 0 && !content.empty()) {
                 specialTokens.emplace(content, (uint32_t)id);
                 if (id > max_id) max_id = id;
+                if (outSpecial) outSpecial->insert(content);
             }
         }
     }

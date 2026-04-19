@@ -11,6 +11,16 @@ namespace cv
 namespace dnn
 {
 
+#if __cplusplus < 201703L
+template<typename T>
+static T clamp(T d, T min, T max)
+{
+    return std::min(std::max(d, min), max);
+}
+#else
+#define clamp std::clamp
+#endif
+
 static MatShape inferTransformLayoutShape(const MatShape& inpshape_,
                                           DataLayout outlayout,
                                           DataLayout defaultLayout,
@@ -29,7 +39,7 @@ static inline void transpose8x8(const _Tp* inp_, size_t istep,
                                 _Tp* out_, size_t ostep)
 {
 #if CV_SIMD128
-    if constexpr (sizeof(_Tp) == 4u) {
+    if (sizeof(_Tp) == 4u) {
         const uint32_t* inp = (const uint32_t*)inp_;
         uint32_t* out = (uint32_t*)out_;
         v_uint32x4 a0, a1, a2, a3, b0, b1, b2, b3;
@@ -249,7 +259,7 @@ void transformLayout(const Mat& inp, Mat& out,
     size_t total = N*C1*planesize*C0;
     constexpr size_t min_elems_per_chunk = 1 << 17;
     int nblocks = int((total + min_elems_per_chunk/2) / min_elems_per_chunk);
-    nblocks = std::clamp(nblocks, 1, 128);
+    nblocks = clamp(nblocks, 1, 128);
     nblocks = (nblocks + N*C1 - 1)/(N*C1);
 
     parallel_for_(Range(0, N*C1*nblocks), [&](const Range& range)

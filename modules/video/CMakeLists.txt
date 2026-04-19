@@ -4,6 +4,7 @@ ocv_define_module(video
     opencv_imgproc
     OPTIONAL
       opencv_3d
+      opencv_features
       opencv_dnn
     WRAP
       java

@@ -1051,32 +1051,6 @@ CV_EXPORTS_W double calibrateCameraRO( InputArrayOfArrays objectPoints,
                                      int flags = 0, TermCriteria criteria = TermCriteria(
                                         TermCriteria::COUNT + TermCriteria::EPS, 100, DBL_EPSILON) );
 
-/** @brief Computes useful camera characteristics from the camera intrinsic matrix.
-
-@param cameraMatrix Input camera intrinsic matrix that can be estimated by #calibrateCamera or
-#stereoCalibrate .
-@param imageSize Input image size in pixels.
-@param apertureWidth Physical width in mm of the sensor.
-@param apertureHeight Physical height in mm of the sensor.
-@param fovx Output field of view in degrees along the horizontal sensor axis.
-@param fovy Output field of view in degrees along the vertical sensor axis.
-@param focalLength Focal length of the lens in mm.
-@param principalPoint Principal point in mm.
-@param aspectRatio \f$f_y/f_x\f$
-
-The function computes various useful camera characteristics from the previously estimated camera
-matrix.
-
-@note
-   Do keep in mind that the unity measure 'mm' stands for whatever unit of measure one chooses for
-    the chessboard pitch (it can thus be any value).
- */
-CV_EXPORTS_W void calibrationMatrixValues( InputArray cameraMatrix, Size imageSize,
-                                           double apertureWidth, double apertureHeight,
-                                           CV_OUT double& fovx, CV_OUT double& fovy,
-                                           CV_OUT double& focalLength, CV_OUT Point2d& principalPoint,
-                                           CV_OUT double& aspectRatio );
-
 /** @brief Calibrates a stereo camera set up. This function finds the intrinsic parameters
 for each of the two cameras and the extrinsic parameters between the two cameras.
 

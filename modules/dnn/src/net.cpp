@@ -136,7 +136,7 @@ void Net::finalizeNet()
     CV_TRACE_FUNCTION();
     CV_Assert(impl);
 #ifdef HAVE_ONNXRUNTIME
-    if (impl->mainGraph && impl->modelFormat == DNN_MODEL_ONNX && !impl->modelFileName.empty())
+    if (impl->useOrtEngine && impl->mainGraph && impl->modelFormat == DNN_MODEL_ONNX && !impl->modelFileName.empty())
     {
         impl->finalizeOrt();
         return;

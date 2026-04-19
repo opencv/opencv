@@ -46,6 +46,7 @@
 
 #include "../perf_precomp.hpp"
 #include "opencv2/ts/ocl_perf.hpp"
+#include "opencv2/features.hpp"
 
 #ifdef HAVE_OPENCL
 

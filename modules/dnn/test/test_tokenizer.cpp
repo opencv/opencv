@@ -96,4 +96,59 @@ TEST(Tokenizer_BPE, CatastrophicallyRepetitive_GPT2) {
         EXPECT_EQ(with_newline, gpt2_tok.decode(gpt2_tok.encode(with_newline)));
     }
 }
+
+// ---- Qwen2.5 tests ----
+// Ground truth generated with:
+//   from transformers import AutoTokenizer
+//   tok = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-0.5B")
+//   tok.encode(text)
+
+TEST(Tokenizer_BPE, Tokenizer_Qwen2_5_English) {
+    std::string model = _tf("qwen2.5/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+    EXPECT_EQ(tok.encode("Hello world"), (std::vector<int>{9707, 1879}));
+}
+
+TEST(Tokenizer_BPE, Tokenizer_Qwen2_5_Chinese) {
+    std::string model = _tf("qwen2.5/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+    // 你好世界
+    EXPECT_EQ(tok.encode("\xe4\xbd\xa0\xe5\xa5\xbd\xe4\xb8\x96\xe7\x95\x8c"),
+              (std::vector<int>{108386, 99489}));
+}
+
+TEST(Tokenizer_BPE, Tokenizer_Qwen2_5_Code) {
+    std::string model = _tf("qwen2.5/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+    EXPECT_EQ(tok.encode("def hello(): print('hello')"),
+              (std::vector<int>{750, 23811, 4555, 1173, 492, 14990, 863}));
+}
+
+TEST(Tokenizer_BPE, Tokenizer_Qwen2_5_Numbers) {
+    std::string model = _tf("qwen2.5/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+    EXPECT_EQ(tok.encode("2024"), (std::vector<int>{17, 15, 17, 19}));
+}
+
+TEST(Tokenizer_BPE, Tokenizer_Qwen2_5_SpecialTokens) {
+    std::string model = _tf("qwen2.5/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+    // <|im_start|>user\nHello<|im_end|>
+    EXPECT_EQ(tok.encode("<|im_start|>user\nHello<|im_end|>"),
+              (std::vector<int>{151644, 872, 198, 9707, 151645}));
+}
+
+TEST(Tokenizer_BPE, Tokenizer_Qwen2_5_Roundtrip) {
+    std::string model = _tf("qwen2.5/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+    std::vector<std::string> cases = {
+        "Hello world",
+        "def hello(): print('hello')",
+        "2024",
+    };
+    for (const auto& text : cases) {
+        EXPECT_EQ(tok.decode(tok.encode(text)), text);
+    }
+}
+
 }}

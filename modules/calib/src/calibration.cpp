@@ -3014,47 +3014,6 @@ double calibrateCameraRO(InputArrayOfArrays _objectPoints,
     return reprojErr;
 }
 
-
-void calibrationMatrixValues( InputArray _cameraMatrix, Size imageSize,
-                              double apertureWidth, double apertureHeight,
-                              double& fovx, double& fovy, double& focalLength,
-                              Point2d& principalPoint, double& aspectRatio )
-{
-    CV_INSTRUMENT_REGION();
-
-    if(_cameraMatrix.size() != Size(3, 3))
-        CV_Error(cv::Error::StsUnmatchedSizes, "Size of cameraMatrix must be 3x3!");
-
-    Matx33d A;
-    _cameraMatrix.getMat().convertTo(A, CV_64F);
-    CV_DbgAssert(imageSize.width != 0 && imageSize.height != 0 && A(0, 0) != 0.0 && A(1, 1) != 0.0);
-
-    /* Calculate pixel aspect ratio. */
-    aspectRatio = A(1, 1) / A(0, 0);
-
-    /* Calculate number of pixel per realworld unit. */
-    double mx, my;
-    if(apertureWidth != 0.0 && apertureHeight != 0.0) {
-        mx = imageSize.width / apertureWidth;
-        my = imageSize.height / apertureHeight;
-    } else {
-        mx = 1.0;
-        my = aspectRatio;
-    }
-
-    /* Calculate fovx and fovy. */
-    fovx = atan2(A(0, 2), A(0, 0)) + atan2(imageSize.width  - A(0, 2), A(0, 0));
-    fovy = atan2(A(1, 2), A(1, 1)) + atan2(imageSize.height - A(1, 2), A(1, 1));
-    fovx *= 180.0 / CV_PI;
-    fovy *= 180.0 / CV_PI;
-
-    /* Calculate focal length. */
-    focalLength = A(0, 0) / mx;
-
-    /* Calculate principle point. */
-    principalPoint = Point2d(A(0, 2) / mx, A(1, 2) / my);
-}
-
 double stereoCalibrate( InputArrayOfArrays _objectPoints,
                         InputArrayOfArrays _imagePoints1,
                         InputArrayOfArrays _imagePoints2,
