@@ -81,15 +81,29 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
 
         const int batch_size = inputs[0][0];
         const int seq_len_q = inputs[0][input_dims - 2];
-        const int seq_len_kv = inputs[1][input_dims - 2];
+        int seq_len_kv = inputs[1][input_dims - 2];
+        int input_seq_len_kv = seq_len_kv;
+
+        Net::Impl* netimpl = getNetImpl(const_cast<AttentionOnnxAiLayerImpl*>(this));
+        if (netimpl && netimpl->useKVCache) {
+            KVCacheManager& kvCacheManager = netimpl->kvCacheManager;
+            if (kvCacheManager.isInitialized) {
+                auto it_k = kvCacheManager.kData.find(name);
+                if (it_k != kvCacheManager.kData.end()) {
+                    seq_len_kv += it_k->second.getNumTokens();
+                    int pageSize = it_k->second.getPageSize();
+                    seq_len_kv = (seq_len_kv + pageSize - 1) / pageSize * pageSize;
+                }
+            }
+        }
 
         const int q_hn = input_dims == 4 ?
             inputs[0][1] : q_num_heads;
         const int kv_hn =input_dims == 4 ?
             inputs[1][1] : kv_num_heads;
 
-        CV_CheckTrue(inputs[2][input_dims - 2] == seq_len_kv,
-                     "Key and query sequence lengths must be equal");
+        CV_CheckTrue(inputs[2][input_dims - 2] == input_seq_len_kv,
+                     "Key and value sequence lengths must be equal");
         const int nhq = input_dims == 4 ? inputs[0][1] : q_num_heads;
 
         CV_CheckTrue(q_hn % kv_hn == 0,
@@ -144,8 +158,12 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
         opt.init();
 
         Net::Impl* netimpl = getNetImpl(this);
-        std::unique_ptr<KVCacheManager>& kvCacheManager =  netimpl->kvCacheManager;
-        bool with_kv_cache = kvCacheManager && kvCacheManager->isInitialized;
+        bool with_kv_cache = false;
+
+        if (netimpl && netimpl->useKVCache) {
+            KVCacheManager& kvCacheManager = netimpl->kvCacheManager;
+            with_kv_cache = kvCacheManager.isInitialized;
+        }
 
         if (inputs_arr.depth() == CV_16F)
         {
@@ -191,14 +209,24 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
                             _a_offsets, _o_offsets;
 
         if (with_kv_cache){
-            auto it_k = kvCacheManager->kData.find(name);
-            CV_Assert(it_k != kvCacheManager->kData.end());
+            KVCacheManager& kvCacheManager = netimpl->kvCacheManager;
+
+            auto it_k = kvCacheManager.kData.find(name);
+            CV_Assert(it_k != kvCacheManager.kData.end());
             KCache&kData = it_k->second;
 
             kData.grow(inputs[1]);
 
             const std::vector<Mat>& kCachePages = kData.getPages();
-
+            // print
+            std::cout << "<<<<------>>>>" << std::endl;
+            for (size_t i = 0; i < kCachePages.size(); i++) {
+                std::cout <<
+                    "K cache page " << i << ": " <<
+                    kCachePages[i] <<
+                    std::endl;
+            }
+            std::cout << "<<<<------>>>>" << std::endl;
             pagedAttnQKGemm(
                 inputs[0], kCachePages, attention_prob,
                 seq_len_q, q_num_heads, kv_num_heads, kData.getPageSize(), qk_head_size,
@@ -266,8 +294,9 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
         );
 
         if (with_kv_cache){
-            auto it_v = kvCacheManager->vData.find(name);
-            CV_Assert(it_v != kvCacheManager->vData.end());
+            KVCacheManager& kvCacheManager = netimpl->kvCacheManager;
+            auto it_v = kvCacheManager.vData.find(name);
+            CV_Assert(it_v != kvCacheManager.vData.end());
             VCache& vData = it_v->second;
 
             vData.grow(inputs[2]);

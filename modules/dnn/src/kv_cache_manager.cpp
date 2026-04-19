@@ -14,48 +14,35 @@ CV__DNN_INLINE_NS_BEGIN
 void setKVCacheManager(Ptr<Net::Impl> netimpl)
 {
     CV_Assert(netimpl != nullptr);
-    CV_Assert(netimpl->mainGraph);
-
-    const std::vector<Arg>& inputs = netimpl->mainGraph->inputs();
-    CV_Assert(!inputs.empty());
 
     CV_Assert(!netimpl->layers.empty());
 
-    auto manager = std::make_unique<KVCacheManager>();
-    manager->netimpl = netimpl;
-    manager->opt.init();
+    auto manager = KVCacheManager();
+    manager.netimpl = netimpl;
+    manager.opt.init();
 
     for (const auto& layerPair : netimpl->layers)
     {
         const LayerData& layer = layerPair.second;
-        if (layer.type != "AttentionONNXAI")
+        if (layer.type != "AttentionOnnxAi")
             continue;
 
-        if (!layer.layerInstance)
-        {
-            CV_Error(cv::Error::StsBadArg,
-                     "setKVCacheManager must be called after the network is initialized");
-        }
-
-        Ptr<AttentionOnnxAiLayer> attnLayer =
-            layer.layerInstance.dynamicCast<AttentionOnnxAiLayer>();
-        CV_Assert(attnLayer);
-
-        int kvNumHeads = attnLayer->kv_num_heads;
+        int kvNumHeads = layer.params.get<int>("kv_num_heads", -1);
 
         if (kvNumHeads > 0)
         {
-            manager->kData.emplace(layer.name, KCache(manager->opt, kvNumHeads));
-            manager->vData.emplace(layer.name, VCache(manager->opt, kvNumHeads));
+            manager.kData.emplace(layer.name, KCache(manager.opt, kvNumHeads));
+            manager.vData.emplace(layer.name, VCache(manager.opt, kvNumHeads));
         }
         else
         {
-            manager->kData.emplace(layer.name, KCache(manager->opt));
-            manager->vData.emplace(layer.name, VCache(manager->opt));
+            manager.kData.emplace(layer.name, KCache(manager.opt));
+            manager.vData.emplace(layer.name, VCache(manager.opt));
         }
     }
 
-    manager->isInitialized = true;
+    manager.isInitialized = true;
+    netimpl->useKVCache = true;
     netimpl->kvCacheManager = std::move(manager);
 }
 

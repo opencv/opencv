@@ -2949,4 +2949,159 @@ TEST(ConvolutionWinograd, Accuracy)
     normAssert(outLarge, refLarge, "Large input after small", 0.0, 0.0);
 }
 
+
+TEST(KV_Cache, prefetch_3D)
+{
+    int headSize = 337, numHeads = 4;
+    int B = 1, T = 256;
+    std::string onnx_file_path = "/Users/o/dev/cv/dev/attention_model_3d.onnx";
+    Net netWithKVCache = readNetFromONNX(onnx_file_path, cv::dnn::ENGINE_NEW);
+    Net netWithoutKVCache = readNetFromONNX(onnx_file_path, cv::dnn::ENGINE_NEW);
+
+    Mat Q({B, T, headSize * numHeads}, CV_32F);
+    Mat K({B, T, headSize * numHeads}, CV_32F);
+    Mat V({B, T, headSize * numHeads}, CV_32F);
+
+    randn(Q, 0, 1);
+    randn(K, 0, 1);
+    randn(V, 0, 1);
+
+    netWithKVCache.setInput(Q, "Q");
+    netWithKVCache.setInput(K, "K");
+    netWithKVCache.setInput(V, "V");
+    // warmup
+    netWithKVCache.forward();
+
+    netWithKVCache.enableKVCache();
+    Mat outWithKVCache = netWithKVCache.forward();
+
+    netWithoutKVCache.setInput(Q, "Q");
+    netWithoutKVCache.setInput(K, "K");
+    netWithoutKVCache.setInput(V, "V");
+    Mat outWithoutKVCache = netWithoutKVCache.forward();
+
+    normAssert(outWithKVCache, outWithoutKVCache, "Attention output with and without KV cache", 0.0, 0.0);
+}
+
+TEST(KV_Cache, prefetch_4D)
+{
+    auto getNet = [&](int numHeads = 8) {
+        Net net;
+        LayerParams lp;
+        lp.name = "attention";
+        lp.type = "AttentionOnnxAi";
+        int id = net.addLayerToPrev(lp.name, lp.type, lp);
+        net.setInputsNames({"Q", "K", "V"});
+
+        net.connect(0, 1, id, 1);
+        net.connect(0, 2, id, 2);
+        return net;
+    };
+
+    int headSize = 23, numHeads = 8;
+    int B = 1, T = 29;
+
+    Net netWithKVCache = getNet(numHeads);
+    Net netWithoutKVCache = getNet(numHeads);
+
+    Mat Q({B, numHeads, T, headSize }, CV_32F);
+    Mat K({B, numHeads, T, headSize }, CV_32F);
+    Mat V({B, numHeads, T, headSize }, CV_32F);
+
+    randn(Q, 0, 1);
+    randn(K, 0, 1);
+    randn(V, 0, 1);
+
+    netWithKVCache.setInput(Q, "Q");
+    netWithKVCache.setInput(K, "K");
+    netWithKVCache.setInput(V, "V");
+    // warmup
+    netWithKVCache.forward();
+
+    netWithKVCache.enableKVCache();
+    Mat outWithKVCache = netWithKVCache.forward();
+
+    netWithKVCache.enableKVCache();
+    netWithKVCache.forward();
+
+    netWithoutKVCache.setInput(Q, "Q");
+    netWithoutKVCache.setInput(K, "K");
+    netWithoutKVCache.setInput(V, "V");
+    Mat outWithoutKVCache = netWithoutKVCache.forward();
+
+    normAssert(outWithKVCache, outWithoutKVCache, "Attention output with and without KV cache", 0.0, 0.0);
+}
+
+TEST(KV_Cache, generate_3D){
+    auto getNet = [&](int numHeads = 8) {
+        Net net;
+        LayerParams lp;
+        lp.name = "attention";
+        lp.type = "AttentionOnnxAi";
+        lp.set("q_num_heads", numHeads);
+        lp.set("kv_num_heads", numHeads);
+        int id = net.addLayerToPrev(lp.name, lp.type, lp);
+        net.setInputsNames({"Q", "K", "V"});
+
+        net.connect(0, 1, id, 1);
+        net.connect(0, 2, id, 2);
+        return net;
+    };
+
+    int headSize = 24, numHeads = 8;
+    int B = 1, T = 20;
+
+    Net netWithKVCache = getNet(numHeads);
+    Net netWithoutKVCache = getNet(numHeads);
+
+    Mat Q({B, T, headSize * numHeads}, CV_32F);
+    Mat K({B, T, headSize * numHeads}, CV_32F);
+    Mat V({B, T, headSize * numHeads}, CV_32F);
+
+    randn(Q, 0, 1);
+    randn(K, 0, 1);
+    randn(V, 0, 1);
+
+    netWithKVCache.setInput(Q, "Q");
+    netWithKVCache.setInput(K, "K");
+    netWithKVCache.setInput(V, "V");
+    // warmup
+    netWithKVCache.forward();
+    // enable KV cache
+    netWithKVCache.enableKVCache();
+    // pass to KV Cache
+    netWithKVCache.forward();
+
+    // Qnew , Knew and Vnew have the same values as Q, K and V in the first T tokens
+    // plus a new token
+    Mat Qnew({B, T+1, headSize * numHeads}, CV_32F);
+    Mat Knew({B, T+1, headSize * numHeads}, CV_32F);
+    Mat Vnew({B, T+1, headSize * numHeads}, CV_32F);
+
+    randn(Qnew, 0, 1);
+    randn(Knew, 0, 1);
+    randn(Vnew, 0, 1);
+
+    std::vector<Range> srcRanges = { Range::all(), Range(0, T), Range::all() };
+
+    Q.copyTo(Qnew(srcRanges));
+    K.copyTo(Knew(srcRanges));
+    V.copyTo(Vnew(srcRanges));
+
+    netWithKVCache.setInput(Qnew({Range::all(), Range(T, T+1), Range::all()}), "Q");
+    netWithKVCache.setInput(Knew({Range::all(), Range(T, T+1), Range::all()}), "K");
+    netWithKVCache.setInput(Vnew({Range::all(), Range(T, T+1), Range::all()}), "V");
+
+    Mat outWithKVCache = netWithKVCache.forward(); // B x 1 x (headSize * numHeads)
+
+    netWithoutKVCache.setInput(Qnew, "Q");
+    netWithoutKVCache.setInput(Knew, "K");
+    netWithoutKVCache.setInput(Vnew, "V");
+    Mat outWithoutKVCache = netWithoutKVCache.forward(); // B x T+1 x (headSize * numHeads)
+
+    normAssert(outWithKVCache, outWithoutKVCache({Range::all(), Range(T, T+1), Range::all()}), "Attention output with and without KV cache", 0.0, 0.0);
+
+}
+
+
 }} // namespace

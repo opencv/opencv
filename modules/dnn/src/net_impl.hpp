@@ -82,6 +82,8 @@ struct Net::Impl : public detail::NetImplBase
     bool fusion;
     bool isAsync;  // FIXIT: drop
     bool useWinograd;
+    bool useKVCache = false;
+
     std::vector<int64> layersTimings;
 
     std::string modelFileName;
@@ -100,7 +102,7 @@ struct Net::Impl : public detail::NetImplBase
     std::vector<Mat> buffers;
     std::vector<Mat> scratchBufs;
     std::vector<Ptr<Graph> > allgraphs;
-    std::unique_ptr<KVCacheManager> kvCacheManager;
+    KVCacheManager kvCacheManager;
 
     Ptr<Graph> mainGraph;
     int globGraphIdx;
