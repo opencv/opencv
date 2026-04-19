@@ -13,7 +13,6 @@
 #include <map>
 
 #include "contours_common.hpp"
-
 using namespace std;
 using namespace cv;
 
@@ -648,12 +647,12 @@ void cv::findContours(InputArray _image,
         return;
     }
 
-    // Fast path: RETR_LIST + CHAIN_APPROX_NONE without hierarchy → findTRUContours (lock-free parallel)
-    if (mode == RETR_LIST && method == CHAIN_APPROX_NONE && !_hierarchy.needed())
+    // Fast path: RETR_LIST without hierarchy → findTRUContours (parallel contour extraction)
+    if (mode == RETR_LIST && !_hierarchy.needed())
     {
         // findTRUContours requires FOREGROUND=255; binarize=true thresholds the padded
         // image in-place, avoiding an extra allocation (findContours accepts any non-zero value)
-        findTRUContours(_image, _contours, 0, true);
+        findTRUContours(_image, _contours, 0, true,method);
         if (offset != Point())
         {
             if (_contours.kind() == _InputArray::STD_VECTOR_VECTOR)

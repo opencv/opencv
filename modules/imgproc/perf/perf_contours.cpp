@@ -173,8 +173,10 @@ PERF_TEST_P(TestFindTRUContours, findTRUContours,
     adaptiveThreshold(img, binary, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 11, 0);
 
     vector<vector<Point>> contours;
-
-    TEST_CYCLE() findTRUContours(binary, contours, 0, nthreads);
+    int prev_nthreads=cv::getNumThreads();
+    cv::setNumThreads(nthreads);
+    TEST_CYCLE() findContours(binary, contours, RETR_LIST, CHAIN_APPROX_NONE);
+    cv::setNumThreads(prev_nthreads);
 
     SANITY_CHECK_NOTHING();
 }

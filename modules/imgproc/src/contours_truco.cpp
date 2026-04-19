@@ -3,6 +3,7 @@
 #include "contours_common.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 #include <map>
+
 namespace{
 // Tunable block size. 1024 points = 8KB (Fits easily in L1 Cache)
 template <size_t BLOCK_SIZE = 2048>
@@ -237,6 +238,8 @@ public:
 
         // Pre-allocate buffer to avoid re-allocation during moves
         TRUCOPagedContour<4096> buffer;
+        std::vector<flInfo> firstLinebuffer;
+        firstLinebuffer.reserve(128);
 
         int cols = padded_.cols;
 
@@ -282,7 +285,27 @@ public:
                     if(c>=cols)break;//end of row
                     //internal contour
                     if(row_ptr[c-1]>VISITED_OUTER_RIGHT){
-                        if( traceContour(&buffer,r,c-1,row_ptr,rowRange,false)){
+
+                        bool mustSave=false;
+
+                        if(r==rowRange.start){
+                            if( (mustSave=traceInnerContourFirstLine( firstLinebuffer,r,c-1,row_ptr,rowRange) ) ){
+                                buffer.clear();
+                                for(auto fli:firstLinebuffer){
+                                    buffer.push_back({fli.x-1,fli.y-1});
+                                    if(fli.val!=FOREGROUND)
+                                        *(padded_.data + fli.y * step_ + fli.x )=fli.val;
+                                }
+                                mustSave=true;
+                            }
+                        }
+
+                        else {
+                            mustSave=traceContour(&buffer,r,c-1,row_ptr,rowRange,false);
+                        }
+
+                        if(mustSave){
+
                             // Post-processing
                             if (buffer.size() > 1 && buffer.back() == buffer.front()) {
                                 buffer.pop_back();
@@ -373,6 +396,77 @@ public:
 
         return final_hash ^ (final_hash >> 31);
     }
+    struct flInfo{
+        int x,y;uchar val;
+    };
+
+    bool traceInnerContourFirstLine(std::vector<flInfo> &res,   int r,int c,uchar *row_ptr, const cv::Range& rowRange  )const{
+
+        res.clear();
+        int curr_x = c , curr_y = r;
+        int start_dir = -1;
+        int search_idx = 1;
+        uchar* curr_ptr = row_ptr + c , * start_ptr = curr_ptr;
+        int dir=-1;
+        bool is_first_move = true;
+        // 3. TRACING LOOP
+        while(true)
+        {
+            res.push_back({curr_x , curr_y ,FOREGROUND});
+            // Check neighbors
+            for (int n = 0; n < 8; ++n)
+            {
+                int idx = search_idx + n;
+                // Use offset cache
+                uchar* neighbor = curr_ptr + offsets_[idx];
+                if (*neighbor == BACKGROUND) continue;
+
+
+                dir = idx & 7;
+                if(  curr_y>=rowRange.start){//do not write on the upper
+                    if ((search_idx <= 1) || (dir <= search_idx - 2))
+                    {
+                        res.back().val=  VISITED_OUTER_RIGHT;
+                    }
+                    else if (*curr_ptr == FOREGROUND)
+                    {
+                        res.back().val=VISITED_;
+                    }
+                }
+                // --- EXECUTE MOVE ---
+                curr_y += dy_[dir];
+                curr_x += dx_[dir];
+                // Check bounds
+                if( curr_y < rowRange.start-1 || (curr_y == rowRange.start-1  &&   curr_x<=c)){
+                    return false;
+                }
+                // Short-circuit Jacob's Check
+                if (curr_ptr == start_ptr && !is_first_move && dir == start_dir) {
+                    return true;//done
+                }
+
+                curr_ptr = neighbor;//move ptr
+
+                // Reset search index for Moore neighbor
+                search_idx = (dir +6) & 7;
+                break;
+
+            }
+            if (is_first_move) {
+                if( curr_x!=c+1 || curr_y!=r-1 )return false;
+                if(dir==-1){//single pixel
+                    res.back().val =VISITED_OUTER_RIGHT;
+                    break;//not moved
+                }
+                start_dir = dir;
+                is_first_move = false;
+            }
+
+        }
+        return true;
+    }
+
+
 private:
     cv::Mat padded_;
     const std::vector<cv::Range>& ranges_;
@@ -391,14 +485,95 @@ private:
     const uchar VISITED_    = 200;
 };
 
+static bool isForwardCyclicShift(const std::vector<cv::Point>& A, const std::vector<cv::Point>& B) {
+    if (A.size() != B.size()) return false;
+    if (A.empty()) return true;
+
+    int n = static_cast<int>(A.size());
+
+    // Find all occurrences of A[0] in B (there can be multiple in 1-pixel shapes)
+    for (int b_start = 0; b_start < n; ++b_start) {
+        if (B[b_start] == A[0]) {
+            bool match = true;
+            for (int i = 0; i < n; ++i) {
+                // Traverse B FORWARD
+                int b_idx = (b_start + i) % n;
+
+                if (A[i] != B[b_idx]) {
+                    match = false;
+                    break;
+                }
+            }
+            // If we make it through the loop, we proved B is a forward shift of A!
+            if (match) return true;
+        }
+    }
+    return false;
+}
 
 
+void approxContour(std::vector<cv::Point> &inout,cv::ContourApproximationModes contApprox_)   {
+    size_t n = inout.size();
+    if (n <= 1) return;
+
+    if (contApprox_ == cv::CHAIN_APPROX_SIMPLE) {
+        std::vector<cv::Point> result;
+        result.reserve(n);
+
+        for (size_t i = 0; i < n; ++i) {
+            size_t prev_i = (i == 0) ? n - 1 : i - 1;
+            size_t next_i = (i == n - 1) ? 0 : i + 1;
+
+            cv::Point v1 = inout[i] - inout[prev_i];
+            cv::Point v2 = inout[next_i] - inout[i];
+
+            if (v1 != v2) {
+                result.push_back(inout[i]);
+            }
+        }
+        if (result.empty() && n > 0) result.push_back(inout[0]);
+        inout = std::move(result);
+    } else if (contApprox_ == cv::CHAIN_APPROX_TC89_L1 || contApprox_ == cv::CHAIN_APPROX_TC89_KCOS) {
+        auto getCode = [](cv::Point d) -> schar {
+            if (d.x == 1) {
+                if (d.y == 0) return 0;
+                if (d.y == -1) return 1;
+                if (d.y == 1) return 7;
+            } else if (d.x == 0) {
+                if (d.y == -1) return 2;
+                if (d.y == 1) return 6;
+            } else if (d.x == -1) {
+                if (d.y == -1) return 3;
+                if (d.y == 0) return 4;
+                if (d.y == 1) return 5;
+            }
+            return 0;
+        };
+
+        cv::ContourCodesStorage::storage_t codesStorage;
+        cv::ContourCodesStorage codes(&codesStorage);
+        for (size_t i = 0; i < n; ++i) {
+            cv::Point delta = inout[(i + 1) % n] - inout[i];
+            codes.push_back(getCode(delta));
+        }
+
+        cv::ContourPointsStorage::storage_t pointsStorage;
+        cv::ContourPointsStorage points(&pointsStorage);
+        cv::approximateChainTC89(codes, inout[0], contApprox_, points);
+
+        inout.clear();
+        inout.reserve(points.size());
+        for (size_t i = 0; i < points.size(); ++i) {
+            inout.push_back(points.at(i));
+        }
+    }
+}
 // ==========================================================
 // 1. The Core Implementation (Operates on std::vector directly)
 // ==========================================================
-void __findTRUContoursImpl(cv::Mat& padded,
+void findTRUContoursImpl(cv::Mat& padded,
                            std::vector<std::vector<cv::Point>>& outContours,
-                           int minSize)
+                           int minSize,int contApprox)
 {
     // 1. Load Balancing Logic
     const int nstripes = cv::getNumThreads();
@@ -422,37 +597,49 @@ void __findTRUContoursImpl(cv::Mat& padded,
     TRUCOntourTracer worker(padded, balancedRanges, threadAccumulators, minSize);
     cv::parallel_for_(cv::Range(0, (int)balancedRanges.size()), worker);
 
-    //remove possible duplicated that happens in very rare occasions
+    //3. remove possible duplicates that happen in very rare occasions
     for(int i=0;i<int(threadAccumulators.size())-1;i++){
-        for(auto [k,v]:threadAccumulators[i].Last_HashIndex_O){
-            if(auto it=threadAccumulators[i+1].First_HashIndex_I.find(k);it!=threadAccumulators[i+1].First_HashIndex_I.end()){
+        for(auto const& kv:threadAccumulators[i].Last_HashIndex_O){
+            auto it=threadAccumulators[i+1].First_HashIndex_I.find(kv.first);
+            if(it!=threadAccumulators[i+1].First_HashIndex_I.end()){
                 size_t idx=it->second;
-                // Swap the target with the last element
-                std::swap( threadAccumulators[i+1][idx], threadAccumulators[i+1].back());
-                // Remove the last element
-                threadAccumulators[i+1].pop_back();
+                if (!isForwardCyclicShift(threadAccumulators[i+1][idx],threadAccumulators[i][kv.second] )) continue;
+                threadAccumulators[i+1][idx].clear();
             }
         }
     }
 
-    // 3. ZERO-COPY MERGE
+    // 4. ZERO-COPY MERGE
     // Calculate total size
-
     size_t totalContours = 0;
-    for (const auto& vec : threadAccumulators)
-        totalContours += vec.size();
+    for (auto& tVec : threadAccumulators) {
+        if (!tVec.empty()) {
+            tVec.erase(std::remove_if(tVec.begin(), tVec.end(),
+                                      [](const std::vector<cv::Point>& c){ return c.empty(); }), tVec.end());
+        }
+        totalContours += tVec.size();
+    }
 
     outContours.clear();
     outContours.reserve(totalContours);
-
+    //5. move the contours from thread accumulators to output without copying pixel data
     for (auto& tVec : threadAccumulators) {
         // move_iterator moves the vector internals (pointers) without copying pixel data
         outContours.insert(outContours.end(),
                            std::make_move_iterator(tVec.begin()),
                            std::make_move_iterator(tVec.end()));
     }
-    //reverse the order to match original findContours Suzuki&Abe
+    //6. reverse the order to match original findContours Suzuki&Abe
     std::reverse(outContours.begin(), outContours.end());
+
+    //7. now, lets do the contour approximation if needed in parallel
+    if(contApprox!=cv::CHAIN_APPROX_NONE){
+        cv::parallel_for_(cv::Range(0, (int)outContours.size()), [&](const cv::Range& range){
+            for(int i=range.start;i<range.end;i++){
+                approxContour(outContours[i],(cv::ContourApproximationModes)contApprox);
+            }
+        });
+    }
 
 }
 }
@@ -460,9 +647,13 @@ void __findTRUContoursImpl(cv::Mat& padded,
 namespace cv{
 
 // ==========================================================
-//  2. Public API: Handles OutputArray and dispatches to the core implementation
+//
+//  Public API: Handles OutputArray and dispatches to the core implementation
+//  This is a modified version of the original TRUCO parallel algorithm to produce the exact same output
+//  as original findContours with RETR_LIST mode (no hierarchy, all contours are external). It also supports contour approximation.
+//
 // ==========================================================
-void findTRUContours(InputArray _src, OutputArrayOfArrays _contours, int minSize, bool binarize)
+void findTRUContours(InputArray _src, OutputArrayOfArrays _contours, int minSize, bool binarize,int method)
 {
     CV_INSTRUMENT_REGION();
     Mat src = _src.getMat();
@@ -479,11 +670,11 @@ void findTRUContours(InputArray _src, OutputArrayOfArrays _contours, int minSize
     // Write into it without any intermediate copy.
     if (_contours.kind() == _InputArray::STD_VECTOR_VECTOR) {
         auto* vec = reinterpret_cast<std::vector<std::vector<cv::Point>>*>(_contours.getObj());
-        __findTRUContoursImpl(padded, *vec, minSize);
+        findTRUContoursImpl(padded, *vec, minSize,method);
     }
     else{ // Slow path: generic OutputArray — build in a temp vector then copy.
         std::vector<std::vector<cv::Point>> tempContours;
-        __findTRUContoursImpl(padded, tempContours, minSize);
+        findTRUContoursImpl(padded, tempContours, minSize,method);
 
         _contours.create((int)tempContours.size(), 1, 0, -1, true);
         for (size_t i = 0; i < tempContours.size(); i++) {
