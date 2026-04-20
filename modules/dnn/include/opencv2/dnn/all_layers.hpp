@@ -1795,6 +1795,30 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<MatMulLayer> create(const LayerParams &params);
     };
 
+    struct MatMulInt8Params
+    {
+        String name;
+        int num_output = 0;
+        int inp_dims = 2;
+        float input_sc = 1.f;
+        int input_zp = 0;
+        float output_sc = 1.f;
+        int output_zp = 0;
+        int output_type = CV_8S;
+        bool per_channel = true;
+        Mat weights, bias, outputMultiplier;
+    };
+
+    class CV_EXPORTS MatMulInt8Layer : public MatMulLayer
+    {
+    public:
+        int input_zp, output_zp;
+        float input_sc, output_sc;
+        int output_type;
+        bool per_channel;
+        static Ptr<MatMulInt8Layer> create(const MatMulInt8Params& params);
+    };
+
     class CV_EXPORTS ExpandLayer : public Layer
     {
     public:
