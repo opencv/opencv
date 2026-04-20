@@ -1238,17 +1238,19 @@ inline static std::string stream_capture_ffmpeg_name_printer(const testing::Test
 
 INSTANTIATE_TEST_CASE_P(videoio, stream_capture_ffmpeg, testing::Values("h264", "h265", "mjpg.avi"), stream_capture_ffmpeg_name_printer);
 
-#ifdef HAVE_AVFOUNDATION
 // Seek by frame index must be accurate on non-integer frame rates.
-TEST(videoio_avfoundation, seek_nonInteger_fps_frame_accurate)
+typedef testing::TestWithParam<VideoCaptureAPIs> PreciseSeekingTest;
+
+TEST_P(PreciseSeekingTest, seek_nonInteger_fps_frame_accurate)
 {
-    if (!videoio_registry::hasBackend(CAP_AVFOUNDATION))
-        throw SkipTestException("AVFoundation backend is not available");
+    VideoCaptureAPIs apiPref = GetParam();
+    if (!videoio_registry::hasBackend(apiPref))
+        throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
 
     const std::string file = findDataFile("video/sample_23976fps.mp4");
 
     VideoCapture cap;
-    ASSERT_TRUE(cap.open(file, CAP_AVFOUNDATION))
+    ASSERT_TRUE(cap.open(file, apiPref))
         << "AVFoundation could not open " << file;
 
     const double fps_num = 24000.0;
@@ -1270,6 +1272,9 @@ TEST(videoio_avfoundation, seek_nonInteger_fps_frame_accurate)
             << "non-integer fps seek drifted at frame N=" << N;
     }
 }
-#endif  // HAVE_AVFOUNDATION
+
+VideoCaptureAPIs seekable_backeinds[] = {CAP_FFMPEG, CAP_MSMF, CAP_AVFOUNDATION};
+
+INSTANTIATE_TEST_CASE_P(videoio, PreciseSeekingTest, testing::ValuesIn(seekable_backeinds), safe_capture_name_printer);
 
 } // namespace
