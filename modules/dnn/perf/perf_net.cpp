@@ -406,6 +406,22 @@ PERF_TEST_P_(DNNTestNetwork, VIT_B_32)
     processNet("dnn/onnx/models/vit_b_32.onnx", "", cv::Size(224, 224));
 }
 
+PERF_TEST_P_(DNNTestNetwork, BERT)
+{
+    const int seq_len = 9;
+    int64_t input_ids_data[seq_len] = {101, 1996, 103, 2938, 2006, 1996, 13523, 1012, 102};
+    int64_t attention_mask_data[seq_len] = {1, 1, 1, 1, 1, 1, 1, 1, 1};
+    int64_t token_type_ids_data[seq_len] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+    int shp[2] = {1, seq_len};
+    Mat input_ids(2, shp, CV_64S, input_ids_data);
+    Mat attention_mask(2, shp, CV_64S, attention_mask_data);
+    Mat token_type_ids(2, shp, CV_64S, token_type_ids_data);
+    processNet("dnn/onnx/models/bert.onnx", "",
+               {std::make_tuple(input_ids, "input_ids"),
+                std::make_tuple(attention_mask, "attention_mask"),
+                std::make_tuple(token_type_ids, "token_type_ids")});
+}
+
 PERF_TEST_P_(DNNTestNetwork, VIT_Base_Patch16_224)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);

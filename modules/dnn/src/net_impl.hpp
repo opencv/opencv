@@ -454,6 +454,8 @@ struct Net::Impl : public detail::NetImplBase
     void assignBuffers();
     // fuse batch norm, add bias and activation to convolution
     void fuseBasic();
+    // fuse ViT-style multi-head attention subgraphs
+    void fuseAttention();
     // replace constant sub-expressions with their results
 
     void fuseQDQ();

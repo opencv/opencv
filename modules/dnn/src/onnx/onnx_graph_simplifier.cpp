@@ -841,12 +841,28 @@ public:
             std::vector<int64_t> axes = extractAxis(net, matchedNodesIds[mean]);
             // check whether it is -1 or last_axis or [axis, ..., last_axis]
             int64_t input_ndims = static_cast<int64_t>(net.dynamicCast<ONNXGraphWrapper>()->getTensorShapeSize(matchedNodesIds[mean], 0));
-            if (input_ndims == -1) {
-                return false; // input shape unknown
+
+            // When axes are all negative (e.g. [-1] or [-2, -1]), we can validate
+            // the pattern without knowing input_ndims.
+            bool all_axes_negative = !axes.empty();
+            for (size_t i = 0; i < axes.size(); i++) {
+                if (axes[i] >= 0) { all_axes_negative = false; break; }
             }
-            // assume that axes are sorted in ascending order, e.g. [0, 1, 2, 3] or [-3, -2, -1]
-            if (axes.back() != -1 && axes.back() != (input_ndims - 1)) {
-                return false;
+
+            if (input_ndims == -1 && !all_axes_negative) {
+                return false; // input shape unknown and axes are positive
+            }
+
+            if (input_ndims != -1) {
+                // assume that axes are sorted in ascending order, e.g. [0, 1, 2, 3] or [-3, -2, -1]
+                if (axes.back() != -1 && axes.back() != (input_ndims - 1)) {
+                    return false;
+                }
+            } else {
+                // axes are all negative; check that the last axis is -1
+                if (axes.back() != -1) {
+                    return false;
+                }
             }
             for (size_t i = 0; i < axes.size() - 1; i++) {
                 if (axes[i] - axes[i + 1] != -1) {
@@ -857,9 +873,18 @@ public:
             std::vector<int64_t> axes1 = extractAxis(net, matchedNodesIds[mean1]);
             if (axes.size() != axes1.size())
                 return false;
-            for (size_t i = 0; i < axes.size(); i++) {
-                if (((axes[i] + input_ndims) % input_ndims) != ((axes1[i] + input_ndims) % input_ndims)) {
-                    return false;
+            if (input_ndims != -1) {
+                for (size_t i = 0; i < axes.size(); i++) {
+                    if (((axes[i] + input_ndims) % input_ndims) != ((axes1[i] + input_ndims) % input_ndims)) {
+                        return false;
+                    }
+                }
+            } else {
+                // both axes sets are negative; just compare directly
+                for (size_t i = 0; i < axes.size(); i++) {
+                    if (axes[i] != axes1[i]) {
+                        return false;
+                    }
                 }
             }
             axis = axes[0];

@@ -186,6 +186,14 @@ void fastGemmBatch(size_t batch,
                    int M, int N, int K, float alpha, const Mat&A, int lda0, int lda1,
                    const Mat&B, int ldb0, int ldb1, float beta, Mat&C, int ldc, FastGemmOpt &opt);
 
+bool fastGemmThinEligible(int M, int N, int K);
+size_t fastGemmThinPackBSize(int N, int K);
+void fastGemmThinPackB(int N, int K, const float* B, size_t ldb_K, size_t ldb_N, float* packed_B);
+void fastGemmThin(int M, int N, int K, float alpha,
+                  const float* A, int lda0, int lda1,
+                  const float* packed_B, float beta,
+                  float* C, int ldc, bool multi_thread);
+
 void pagedAttnQKGemm(
     const Mat& Q, const std::vector<Mat> &K, Mat& A,
     int T_q, int Nq, int N_k, int T_s, int D,

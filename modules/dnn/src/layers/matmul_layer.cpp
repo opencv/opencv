@@ -156,6 +156,17 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         if (!blobs.empty()) {
             fastGemmPackB(blobs[0], packed_input_B, trans_b, opt);
             helper.updatePackedBOffsets(packed_input_B.size());
+
+            if (helper.batch == 1 && blobs[0].type() == CV_32F &&
+                fastGemmThinEligible(helper.M, helper.N, helper.K)) {
+                thin_packed_B.resize(fastGemmThinPackBSize(helper.N, helper.K));
+                fastGemmThinPackB(helper.N, helper.K,
+                                  blobs[0].ptr<const float>(),
+                                  (size_t)helper.ldb0, (size_t)helper.ldb1,
+                                  thin_packed_B.data());
+            } else {
+                thin_packed_B.clear();
+            }
         }
 
         // broadcast bias if needed
@@ -259,6 +270,11 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             fastGemmBatch(helper.batch, helper.A_offsets.data(), helper.B_offsets.data(), helper.C_offsets.data(),
                           helper.M, helper.N, helper.K, alpha, a, helper.lda0, helper.lda1,
                           b, helper.ldb0, helper.ldb1, beta, y, helper.ldc, opt);
+        } else if (!thin_packed_B.empty()) {
+            fastGemmThin(helper.M, helper.N, helper.K, alpha,
+                         a, helper.lda0, helper.lda1,
+                         thin_packed_B.data(), beta,
+                         y, helper.ldc, opt.multi_thread);
         } else {
             fastGemmBatch(helper.batch, helper.A_offsets.data(), helper.packed_B_offsets.data(), helper.C_offsets.data(),
                           helper.M, helper.N, helper.K, alpha, a, helper.lda0, helper.lda1,
@@ -495,6 +511,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
     int real_ndims_C;
 
     std::vector<float> packed_input_B;
+    std::vector<float> thin_packed_B;
     Mat broadcast_bias;
 
     FastGemmOpt opt;
