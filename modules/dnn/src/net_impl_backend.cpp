@@ -181,9 +181,9 @@ void Net::Impl::setPreferableBackend(Net& net, int backendId)
         backendId = DNN_BACKEND_OPENCV;
     }
 #ifdef HAVE_DNN_NGRAPH
-    if (netWasQuantized && backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2023_0))
+    if (netWasQuantized && backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
     {
-        CV_LOG_WARNING(NULL, "DNN: OpenVINO 2023.0 and higher is required to supports quantized networks");
+        CV_LOG_WARNING(NULL, "DNN: quantized networks on OpenVINO backend currently fail to evaluate; falling back to OpenCV");
         backendId = DNN_BACKEND_OPENCV;
     }
 #endif
