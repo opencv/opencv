@@ -314,6 +314,11 @@ bool Layer::dynamicOutputShapes() const
     return false;
 }
 
+bool Layer::isDataShuffling() const
+{
+    return false;
+}
+
 std::ostream& Layer::dumpAttrs(std::ostream& strm, int) const
 {
     return strm;

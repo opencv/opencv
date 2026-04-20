@@ -139,6 +139,8 @@ public:
         return outShape;
     }
 
+    bool isDataShuffling() const CV_OVERRIDE { return true; }
+
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int,
                          std::vector<MatShape> &outputs,

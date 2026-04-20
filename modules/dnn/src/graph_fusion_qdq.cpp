@@ -880,6 +880,60 @@ struct ModelFusionQDQ
                         }
                     }
 
+                // fuse DequantizeLinear -> DataShuffling/MaxPool -> QuantizeLinear
+                // when DQ and Q have same scale/zp, the op can work directly on int8 data.
+                // Uses Layer::isDataShuffling() to identify eligible layers.
+                {
+                    QuantizeLinearLayer* ql_shuffle = dynamic_cast<QuantizeLinearLayer*>(layer_ptr);
+                    if (ql_shuffle && ninputs == 3 && usecounts.at(inputs[0].idx) == 1) {
+                        Arg ql_data = inputs[0];
+                        Arg ql_scale = inputs[1];
+                        Arg ql_zp = inputs[2];
+                        int shuffle_idx = producer_of.at(ql_data.idx);
+                        Layer* shuffle_layer = (shuffle_idx >= 0 && !newprog[shuffle_idx].empty())
+                            ? newprog[shuffle_idx].get() : nullptr;
+
+                        bool is_shuffle = shuffle_layer && shuffle_layer->isDataShuffling();
+
+                        if (is_shuffle && shuffle_layer->inputs.size() >= 1 &&
+                            usecounts.at(ql_data.idx) == 1) {
+                            Arg shuffle_inp = shuffle_layer->inputs[0];
+                            int dq_idx = producer_of.at(shuffle_inp.idx);
+                            DequantizeLinearLayer* dq = getLayer<DequantizeLinearLayer>(newprog, dq_idx);
+
+                            if (dq && dq->inputs.size() >= 3 &&
+                                usecounts.at(shuffle_inp.idx) == 1) {
+                                float dq_sc = netimpl->argTensor(dq->inputs[1]).at<float>(0);
+                                float q_sc = netimpl->argTensor(ql_scale).at<float>(0);
+                                const Mat& dq_zp_m = netimpl->argTensor(dq->inputs[2]);
+                                const Mat& q_zp_m = netimpl->argTensor(ql_zp);
+
+                                int dq_zp = dq_zp_m.depth() == CV_8U
+                                    ? (int)dq_zp_m.at<uint8_t>(0) : (int)dq_zp_m.at<int8_t>(0);
+                                int q_zp = q_zp_m.depth() == CV_8U
+                                    ? (int)q_zp_m.at<uint8_t>(0) : (int)q_zp_m.at<int8_t>(0);
+
+                                int in_type = netimpl->argData(dq->inputs[0]).type;
+                                int out_type = !outputs.empty() ? netimpl->argData(outputs[0]).type : -1;
+                                bool in_int8 = (in_type == CV_8S || in_type == CV_8U);
+                                bool out_int8 = (out_type == CV_8S || out_type == CV_8U);
+
+                                if (in_int8 && out_int8 &&
+                                    std::abs(dq_sc - q_sc) < 1e-6f && dq_zp == q_zp) {
+                                    fused_layer_idx = shuffle_idx;
+                                    fused_inputs.assign(1, dq->inputs[0]);
+                                    for (size_t si = 1; si < shuffle_layer->inputs.size(); si++)
+                                        fused_inputs.push_back(shuffle_layer->inputs[si]);
+                                    removed_args.push_back(ql_data);
+                                    removed_args.push_back(shuffle_inp);
+                                    newprog[dq_idx] = Ptr<Layer>();
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
                 ActivationLayerInt8* activ_int8 = dynamic_cast<ActivationLayerInt8*>(layer_ptr);
                 if (activ_int8 && ninputs == 1 &&
                     usecounts.at(inputs[0].idx) == 1) {
