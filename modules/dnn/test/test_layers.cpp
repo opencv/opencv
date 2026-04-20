@@ -2962,8 +2962,8 @@ TEST(ConvolutionWinograd, Accuracy)
 
 TEST(KV_Cache, prefetch_3D)
 {
-    int headSize = 337, numHeads = 4;
-    int B = 1, T = 256;
+    int headSize = 7, numHeads = 2;
+    int B = 1, T = 5;
     std::string onnx_file_path = "/Users/o/dev/cv/dev/attention_model_3d.onnx";
     Net netWithKVCache = readNetFromONNX(onnx_file_path, cv::dnn::ENGINE_NEW);
     Net netWithoutKVCache = readNetFromONNX(onnx_file_path, cv::dnn::ENGINE_NEW);

@@ -104,6 +104,7 @@ void KVCache::grow(const Mat& newData) {
         // generate
         growGenerate(newData);
     }
+
 }
 
 void KVCache::growPrefetch(const Mat& newData, int T){
@@ -112,6 +113,9 @@ void KVCache::growPrefetch(const Mat& newData, int T){
                       : (int)fastGemmPackBSize(headDim, pageSize, opt);
 
     bool is3Dlayout = newData.dims == 3;
+
+    int total = totalPages * batchSize * nHeads;
+
 
     auto fn = [&](const Range& range) {
         for (int i = range.start; i < range.end; i++) {
@@ -128,24 +132,37 @@ void KVCache::growPrefetch(const Mat& newData, int T){
                 step_source += h * headDim * T + page * pageSize * headDim;
             const auto* source = newData.ptr<float>() + step_source;
 
+            int chunk_T = std::min(pageSize, T - page * pageSize);
+            const float* actual_source = source;
+            std::vector<float> temp_buf;
+
+            int lds = is3Dlayout ? headDim * nHeads : headDim;
+
+            if (chunk_T < pageSize) {
+                temp_buf.assign(pageSize * headDim, 0.0f);
+                for (int i = 0; i < chunk_T; i++) {
+                    std::memcpy(temp_buf.data() + i * headDim, source + i * lds, headDim * sizeof(float));
+                }
+                actual_source = temp_buf.data();
+            }
+
             // dst
             size_t step_dst = b * nHeads * ps +
                               h * ps;
             auto* dst = pages[page].ptr<float>() + step_dst;
 
-            const int N = (isKCache ? pageSize : headDim);
-            const int K = (isKCache ? headDim : pageSize);
+            const int N = headDim;
+            const int K = pageSize;
 
             fastGemmPackB(
                 isKCache,
                 N, K,
-                source, is3Dlayout ? headDim * nHeads : headDim,
+                actual_source, chunk_T < pageSize ? headDim : lds,
                 dst,
                 opt
             );
         }
     };
-    int total = totalPages * batchSize * nHeads;
     parallel_for_(Range(0, total), fn);
     nTokens += T;
 }

@@ -81,19 +81,22 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
 
         const int batch_size = inputs[0][0];
         const int seq_len_q = inputs[0][input_dims - 2];
-        int seq_len_kv = inputs[1][input_dims - 2];
-        int input_seq_len_kv = seq_len_kv;
+        int seq_len_k = inputs[1][input_dims - 2];
+        int seq_len_v = inputs[2][input_dims - 2];
 
         Net::Impl* netimpl = getNetImpl(const_cast<AttentionOnnxAiLayerImpl*>(this));
         if (netimpl && netimpl->useKVCache) {
             KVCacheManager& kvCacheManager = netimpl->kvCacheManager;
             if (kvCacheManager.isInitialized) {
                 auto it_k = kvCacheManager.kData.find(name);
-                if (it_k != kvCacheManager.kData.end()) {
-                    seq_len_kv += it_k->second.getNumTokens();
-                    int pageSize = it_k->second.getPageSize();
-                    seq_len_kv = (seq_len_kv + pageSize - 1) / pageSize * pageSize;
-                }
+                CV_Assert(it_k != kvCacheManager.kData.end());
+                if (it_k != kvCacheManager.kData.end())
+                    seq_len_k += it_k->second.getNumTokens();
+
+                auto it_v = kvCacheManager.vData.find(name);
+                CV_Assert(it_v != kvCacheManager.vData.end());
+                if (it_v != kvCacheManager.vData.end())
+                    seq_len_v += it_v->second.getNumTokens();
             }
         }
 
@@ -102,7 +105,7 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
         const int kv_hn =input_dims == 4 ?
             inputs[1][1] : kv_num_heads;
 
-        CV_CheckTrue(inputs[2][input_dims - 2] == input_seq_len_kv,
+        CV_CheckTrue(seq_len_v == seq_len_k,
                      "Key and value sequence lengths must be equal");
         const int nhq = input_dims == 4 ? inputs[0][1] : q_num_heads;
 
@@ -127,7 +130,7 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
             outputs.push_back(output_shape);
         }
 
-        MatShape attention_prob_shape{batch_size , nhq, seq_len_q, seq_len_kv};
+        MatShape attention_prob_shape{batch_size , nhq, seq_len_q, seq_len_k};
         internals.push_back(attention_prob_shape);
 
         return false;
@@ -161,8 +164,7 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
         bool with_kv_cache = false;
 
         if (netimpl && netimpl->useKVCache) {
-            KVCacheManager& kvCacheManager = netimpl->kvCacheManager;
-            with_kv_cache = kvCacheManager.isInitialized;
+            with_kv_cache = netimpl->kvCacheManager.isInitialized;
         }
 
         if (inputs_arr.depth() == CV_16F)
@@ -185,7 +187,7 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
                             inputs[0].size[1]:
                             inputs[0].size[2];
 
-        const int seq_len_kv = input_dims == 3 ?
+        int seq_len_kv = input_dims == 3 ?
                             inputs[1].size[1]:
                             inputs[1].size[2];
 
@@ -218,11 +220,15 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
             kData.grow(inputs[1]);
 
             const std::vector<Mat>& kCachePages = kData.getPages();
+            seq_len_kv = kData.getNumTokens();
+
+            scale = is_scale_set ? scale : 1.0f / std::sqrt(static_cast<float>(qk_head_size));
 
             pagedAttnQKGemm(
                 inputs[0], kCachePages, attention_prob,
-                seq_len_q, q_num_heads, kv_num_heads, kData.getPageSize(), qk_head_size,
-                opt
+                seq_len_q, q_num_heads, kv_num_heads, kData.getPageSize(),
+                qk_head_size, seq_len_kv,
+                scale, opt
             );
         } else {
             const auto* Q =  inputs[0].ptr<const float>();
@@ -292,10 +298,11 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
             VCache& vData = it_v->second;
 
             vData.grow(inputs[2]);
+            seq_len_kv = vData.getNumTokens();
 
             pagedAttnAVGemm(
                 attention_prob, vData.getPages(), outputs[0],
-                seq_len_q, nhq, nhkv, vData.getPageSize() , v_head_size,
+                seq_len_q, nhq, nhkv, vData.getPageSize() , v_head_size, seq_len_kv,
                 opt
             );
         } else {
