@@ -226,7 +226,7 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
 
             pagedAttnQKGemm(
                 inputs[0], kCachePages, attention_prob,
-                seq_len_q, q_num_heads, kv_num_heads, kData.getPageSize(),
+                seq_len_q, nhq, nhkv, kData.getPageSize(),
                 qk_head_size, seq_len_kv,
                 scale, opt
             );

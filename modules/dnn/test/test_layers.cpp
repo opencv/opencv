@@ -2962,19 +2962,14 @@ TEST(ConvolutionWinograd, Accuracy)
 
 TEST(KV_Cache, prefetch_3D)
 {
-    int headSize = 7, numHeads = 2;
-    int B = 1, T = 5;
-    std::string onnx_file_path = "/Users/o/dev/cv/dev/attention_model_3d.onnx";
-    Net netWithKVCache = readNetFromONNX(onnx_file_path, cv::dnn::ENGINE_NEW);
-    Net netWithoutKVCache = readNetFromONNX(onnx_file_path, cv::dnn::ENGINE_NEW);
+    std::string model_path = "/Users/o/dev/cv/dev/data/kv-cache/attention_3d.onnx";
+    Net netWithKVCache = readNetFromONNX(model_path, cv::dnn::ENGINE_NEW);
+    Net netWithoutKVCache = readNetFromONNX(model_path, cv::dnn::ENGINE_NEW);
 
-    Mat Q({B, T, headSize * numHeads}, CV_32F);
-    Mat K({B, T, headSize * numHeads}, CV_32F);
-    Mat V({B, T, headSize * numHeads}, CV_32F);
-
-    randn(Q, 0, 1);
-    randn(K, 0, 1);
-    randn(V, 0, 1);
+    Mat Q = readTensorFromONNX("/Users/o/dev/cv/dev/data/kv-cache/input_3d_0.pb");
+    Mat K = readTensorFromONNX("/Users/o/dev/cv/dev/data/kv-cache/input_3d_1.pb");
+    Mat V = readTensorFromONNX("/Users/o/dev/cv/dev/data/kv-cache/input_3d_2.pb");
+    Mat ref = readTensorFromONNX("/Users/o/dev/cv/dev/data/kv-cache/output_3d.pb");
 
     netWithKVCache.setInput(Q, "Q");
     netWithKVCache.setInput(K, "K");
@@ -2990,37 +2985,21 @@ TEST(KV_Cache, prefetch_3D)
     netWithoutKVCache.setInput(V, "V");
     Mat outWithoutKVCache = netWithoutKVCache.forward();
 
+    normAssert(outWithKVCache, ref, "Attention output with KV cache vs reference", 1e-5, 1e-5);
+    normAssert(outWithoutKVCache, ref, "Attention output without KV cache vs reference", 1e-5, 1e-5);
     normAssert(outWithKVCache, outWithoutKVCache, "Attention output with and without KV cache", 0.0, 0.0);
 }
 
 TEST(KV_Cache, prefetch_4D)
 {
-    auto getNet = [&](int numHeads = 8) {
-        Net net;
-        LayerParams lp;
-        lp.name = "attention";
-        lp.type = "AttentionOnnxAi";
-        int id = net.addLayerToPrev(lp.name, lp.type, lp);
-        net.setInputsNames({"Q", "K", "V"});
+    std::string model_path = "/Users/o/dev/cv/dev/data/kv-cache/attention_4d.onnx";
+    Net netWithKVCache = readNetFromONNX(model_path, cv::dnn::ENGINE_NEW);
+    Net netWithoutKVCache = readNetFromONNX(model_path, cv::dnn::ENGINE_NEW);
 
-        net.connect(0, 1, id, 1);
-        net.connect(0, 2, id, 2);
-        return net;
-    };
-
-    int headSize = 23, numHeads = 8;
-    int B = 1, T = 29;
-
-    Net netWithKVCache = getNet(numHeads);
-    Net netWithoutKVCache = getNet(numHeads);
-
-    Mat Q({B, numHeads, T, headSize }, CV_32F);
-    Mat K({B, numHeads, T, headSize }, CV_32F);
-    Mat V({B, numHeads, T, headSize }, CV_32F);
-
-    randn(Q, 0, 1);
-    randn(K, 0, 1);
-    randn(V, 0, 1);
+    Mat Q = readTensorFromONNX("/Users/o/dev/cv/dev/data/kv-cache/input_4d_0.pb");
+    Mat K = readTensorFromONNX("/Users/o/dev/cv/dev/data/kv-cache/input_4d_1.pb");
+    Mat V = readTensorFromONNX("/Users/o/dev/cv/dev/data/kv-cache/input_4d_2.pb");
+    Mat ref = readTensorFromONNX("/Users/o/dev/cv/dev/data/kv-cache/output_4d.pb");
 
     netWithKVCache.setInput(Q, "Q");
     netWithKVCache.setInput(K, "K");
@@ -3031,14 +3010,13 @@ TEST(KV_Cache, prefetch_4D)
     netWithKVCache.enableKVCache();
     Mat outWithKVCache = netWithKVCache.forward();
 
-    netWithKVCache.enableKVCache();
-    netWithKVCache.forward();
-
     netWithoutKVCache.setInput(Q, "Q");
     netWithoutKVCache.setInput(K, "K");
     netWithoutKVCache.setInput(V, "V");
     Mat outWithoutKVCache = netWithoutKVCache.forward();
 
+    normAssert(outWithKVCache, ref, "Attention output with KV cache vs reference", 1e-5, 1e-5);
+    normAssert(outWithoutKVCache, ref, "Attention output without KV cache vs reference", 1e-5, 1e-5);
     normAssert(outWithKVCache, outWithoutKVCache, "Attention output with and without KV cache", 0.0, 0.0);
 }
 
