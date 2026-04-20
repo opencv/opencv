@@ -2959,9 +2959,6 @@ TEST(ConvolutionWinograd, Accuracy)
     normAssert(outLarge, refLarge, "Large input after small", 0.0, 0.0);
 }
 
-// Test that GELU approximation does not produce NaN for large inputs.
-// Regression test for SIMD tanh overflow: exp(2*inner) overflows to inf
-// when inner > 44, causing inf/inf = NaN.
 TEST(Layer_Test_GeluApprox, NoNaN_LargeInput)
 {
     LayerParams lp;
@@ -2970,7 +2967,6 @@ TEST(Layer_Test_GeluApprox, NoNaN_LargeInput)
     Ptr<Layer> layer = LayerFactory::createLayerInstance("GeluApproximation", lp);
     ASSERT_TRUE(layer != nullptr);
 
-    // Values that trigger the bug: x=10.6 -> inner≈51 -> exp(102) overflows float32
     float data[] = {-15.f, -10.f, -7.4f, -1.f, 0.f, 1.f, 5.f, 10.6f, 15.f, 20.f};
     int dims[] = {1, 1, 10};
     Mat inp(3, dims, CV_32F, data);
@@ -2981,21 +2977,17 @@ TEST(Layer_Test_GeluApprox, NoNaN_LargeInput)
     ASSERT_EQ(outVec.size(), (size_t)1);
 
     Mat& out = outVec[0];
-    // Check no NaN or Inf
     for (int i = 0; i < 10; i++) {
         float val = out.ptr<float>()[i];
         EXPECT_FALSE(std::isnan(val)) << "NaN at index " << i << " (input=" << data[i] << ")";
         EXPECT_FALSE(std::isinf(val)) << "Inf at index " << i << " (input=" << data[i] << ")";
     }
 
-    // GELU(x) ≈ x for large positive x, ≈ 0 for large negative x
-    EXPECT_NEAR(out.ptr<float>()[9], 20.f, 0.01f);  // GELU(20) ≈ 20
-    EXPECT_NEAR(out.ptr<float>()[0], 0.f, 1e-6f);   // GELU(-15) ≈ 0
-    EXPECT_NEAR(out.ptr<float>()[4], 0.f, 1e-6f);   // GELU(0) = 0
+    EXPECT_NEAR(out.ptr<float>()[9], 20.f, 0.01f);
+    EXPECT_NEAR(out.ptr<float>()[0], 0.f, 1e-6f);
+    EXPECT_NEAR(out.ptr<float>()[4], 0.f, 1e-6f);
 }
 
-// Test that Softmax does not produce NaN when all inputs are -inf (fully masked row).
-// Regression test: sum of exp(-inf) = 0, then 1/0 = inf, 0*inf = NaN.
 TEST(Layer_Test_Softmax, NoNaN_AllNegInf)
 {
     LayerParams lp;
@@ -3005,7 +2997,6 @@ TEST(Layer_Test_Softmax, NoNaN_AllNegInf)
     Ptr<Layer> layer = LayerFactory::createLayerInstance("Softmax", lp);
     ASSERT_TRUE(layer != nullptr);
 
-    // All -inf inputs (simulates fully masked attention row)
     int dims[] = {1, 8};
     Mat inp(2, dims, CV_32F, Scalar(-std::numeric_limits<float>::infinity()));
     std::vector<Mat> inpVec = {inp};
@@ -3019,7 +3010,7 @@ TEST(Layer_Test_Softmax, NoNaN_AllNegInf)
         float val = out.ptr<float>()[i];
         EXPECT_FALSE(std::isnan(val)) << "NaN at index " << i;
         EXPECT_FALSE(std::isinf(val)) << "Inf at index " << i;
-        EXPECT_EQ(val, 0.f) << "Expected 0 for fully masked softmax at index " << i;
+        EXPECT_EQ(val, 0.f) << "Expected 0 at index " << i;
     }
 }
 

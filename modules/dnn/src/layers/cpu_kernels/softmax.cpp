@@ -104,21 +104,20 @@ void softmax(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep){
             // copy back the result to src
             _cnDim = 0;
             if (s == 0.f || std::isinf(1.f / s)) {
-                // All inputs were -inf (fully masked row): output zeros
                 for (; _cnDim < axisStep; _cnDim++)
                     dstPtr[srcOffset + (_cnDim + axisBias) * cnStep] = 0.f;
             } else {
                 s = 1.f / s;
 #if CV_ENABLE_UNROLLED && defined(_M_ARM64)
-                for (; _cnDim + 3 < axisStep; _cnDim += 4) {
-                    dstPtr[srcOffset + (_cnDim + 0 + axisBias) * cnStep] = axisBuf[_cnDim + 0] * s;
-                    dstPtr[srcOffset + (_cnDim + 1 + axisBias) * cnStep] = axisBuf[_cnDim + 1] * s;
-                    dstPtr[srcOffset + (_cnDim + 2 + axisBias) * cnStep] = axisBuf[_cnDim + 2] * s;
-                    dstPtr[srcOffset + (_cnDim + 3 + axisBias) * cnStep] = axisBuf[_cnDim + 3] * s;
-                }
+            for (; _cnDim + 3 < axisStep; _cnDim += 4) {
+                dstPtr[srcOffset + (_cnDim + 0 + axisBias) * cnStep] = axisBuf[_cnDim + 0] * s;
+                dstPtr[srcOffset + (_cnDim + 1 + axisBias) * cnStep] = axisBuf[_cnDim + 1] * s;
+                dstPtr[srcOffset + (_cnDim + 2 + axisBias) * cnStep] = axisBuf[_cnDim + 2] * s;
+                dstPtr[srcOffset + (_cnDim + 3 + axisBias) * cnStep] = axisBuf[_cnDim + 3] * s;
+            }
 #endif
-                for (; _cnDim < axisStep; _cnDim++)
-                    dstPtr[srcOffset + (_cnDim + axisBias) * cnStep] = axisBuf[_cnDim] * s;
+            for (; _cnDim < axisStep; _cnDim++)
+                dstPtr[srcOffset + (_cnDim + axisBias) * cnStep] = axisBuf[_cnDim] * s;
             }
         }
     }, nstripes);
