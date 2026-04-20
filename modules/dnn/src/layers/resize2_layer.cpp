@@ -312,7 +312,6 @@ void resizeNearest(const Mat &inp, Mat &out,
             const T* inptr0 = reinterpret_cast<const T*>(inp.data);
             T* outptr0 = reinterpret_cast<T*>(out.data);
             T ext = saturate_cast<T>(extrapolation_value);
-            bool ext_is_zero = (ext == (T)0);
 
             for (int plane = range.start; plane < range.end; ++plane) {
                 int t = plane;
@@ -326,8 +325,7 @@ void resizeNearest(const Mat &inp, Mat &out,
                 if (tf_crop_and_resize_mode && iy == -1) {
                     for (int ox = 0; ox < outW; ++ox) {
                         T* outPix = outRow + ox * outStep3;
-                        if (ext_is_zero) memset(outPix, 0, C0bytes);
-                        else for (int c0 = 0; c0 < C0; ++c0) outPix[c0] = ext;
+                        for (int c0 = 0; c0 < C0; ++c0) outPix[c0] = ext;
                     }
                     continue;
                 }
@@ -337,8 +335,7 @@ void resizeNearest(const Mat &inp, Mat &out,
                     int ix = mapX[ox];
                     if (tf_crop_and_resize_mode && ix == -1) {
                         T* outPix = outRow + ox * outStep3;
-                        if (ext_is_zero) memset(outPix, 0, C0bytes);
-                        else for (int c0 = 0; c0 < C0; ++c0) outPix[c0] = ext;
+                        for (int c0 = 0; c0 < C0; ++c0) outPix[c0] = ext;
                     } else {
                         memcpy(outRow + ox * outStep3, inRow + ix * inStep3, C0bytes);
                     }

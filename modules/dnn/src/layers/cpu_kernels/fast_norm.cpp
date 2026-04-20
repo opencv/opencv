@@ -196,7 +196,7 @@ void fastNormChannel(const Mat &input, const Mat &scale, const Mat &bias, Mat &o
         const float inv_norm_size = 1.f / (float)norm_size;
 
 #if CV_SIMD
-        const int VEC_SZ = (int)v_float32::nlanes;
+        const int VEC_SZ = VTraits<v_float32>::vlanes();
 #endif
 
         parallel_for_(Range(0, N * C1), [&](const Range& r) {
@@ -354,7 +354,6 @@ void fastNormGroup(const Mat &input, const Mat &scale, const Mat &bias, Mat &out
         CV_Assert(input.isContinuous() && output.isContinuous());
 
         const int N  = input.size[0];
-        const int C1 = input.size[1];
         const int H  = input.size[2];
         const int W  = input.size[3];
         const int C0 = input.size[4];
@@ -378,7 +377,7 @@ void fastNormGroup(const Mat &input, const Mat &scale, const Mat &bias, Mat &out
         const double inv_norm_size = 1.0 / (double)norm_size;
 
 #if CV_SIMD
-        const int VEC_SZ = (int)v_float32::nlanes;
+        const int VEC_SZ = VTraits<v_float32>::vlanes();
 #endif
 
         parallel_for_(Range(0, N * (int)num_groups), [&](const Range& r) {
