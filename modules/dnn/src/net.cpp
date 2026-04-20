@@ -446,6 +446,18 @@ int64 Net::getPerfProfile(std::vector<double>& timings)
     return impl->getPerfProfile(timings);
 }
 
+std::vector<std::pair<String, double>> Net::profile() const
+{
+    CV_Assert(impl);
+    return impl->profile();
+}
+
+void Net::printProfile() const
+{
+    CV_Assert(impl);
+    impl->printProfile();
+}
+
 bool Net::isConstArg(Arg arg) const
 {
     return argKind(arg) == DNN_ARG_CONST;

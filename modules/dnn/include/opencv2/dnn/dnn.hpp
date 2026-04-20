@@ -1020,6 +1020,23 @@ CV__DNN_INLINE_NS_BEGIN
          */
         CV_WRAP int64 getPerfProfile(CV_OUT std::vector<double>& timings);
 
+        /** @brief Returns profiling data as a vector of (label, time_ms) pairs.
+         *
+         * In DNN_PROFILE_DETAILED mode, each entry is "layer_name (type)" with its time in ms.
+         * In DNN_PROFILE_SUMMARY mode, entries are aggregated by layer type with total time in ms.
+         * Results are sorted by time in descending order.
+         * Returns empty vector if profiling mode is DNN_PROFILE_NONE.
+         */
+        std::vector<std::pair<String, double>> profile() const;
+
+        /** @brief Prints profiling data in a formatted table using CV_LOG_INFO.
+         *
+         * In DNN_PROFILE_DETAILED mode, prints per-layer ID, name, type, time, and percentage.
+         * In DNN_PROFILE_SUMMARY mode, prints per-type count, time, and percentage.
+         * Does nothing if profiling mode is DNN_PROFILE_NONE.
+         */
+        CV_WRAP void printProfile() const;
+
         // Get the main model graph
         Ptr<Graph> getMainGraph() const;
 
