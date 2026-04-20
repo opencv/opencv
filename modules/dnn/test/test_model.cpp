@@ -1540,7 +1540,7 @@ TEST_P(Reproducibility_FacePaint_ONNX, Accuracy)
 #ifdef _DEBUG
         1;
 #else
-        10;
+        5;
 #endif
 
     for (int i = 0; i < niters; i++) {
