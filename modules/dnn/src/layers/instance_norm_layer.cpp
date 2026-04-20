@@ -29,180 +29,6 @@ using namespace cv::dnn::cuda4dnn;
 
 namespace cv { namespace dnn {
 
-static void fastNormChannelBlock(const Mat& input, const Mat& scale, const Mat& bias, Mat& output, float epsilon)
-{
-    CV_Assert(input.dims == 5 && output.dims == 5);
-    CV_Assert(input.shape().layout == DATA_LAYOUT_BLOCK && output.shape().layout == DATA_LAYOUT_BLOCK);
-    CV_Assert(input.type() == CV_32F && output.type() == CV_32F);
-    CV_Assert(input.isContinuous() && output.isContinuous());
-
-    const int N = input.size[0];
-    const int C1 = input.size[1];
-    const int H = input.size[2];
-    const int W = input.size[3];
-    const int C0 = input.size[4];
-    const int C = input.shape().C;
-
-    CV_CheckEQ((int)scale.total(), C, "DNN/InstanceNorm: scale must be a 1d tensor and match the channel of input");
-    CV_CheckEQ((int)bias.total(), C, "DNN/InstanceNorm: bias must be a 1d tensor and match the channel of input");
-
-    const float* scale_data = scale.ptr<float>();
-    const float* bias_data = bias.ptr<float>();
-
-    const size_t inStep0 = input.step.p[0] / input.elemSize();
-    const size_t inStep1 = input.step.p[1] / input.elemSize();
-    const size_t inStep2 = input.step.p[2] / input.elemSize();
-    const size_t inStep3 = input.step.p[3] / input.elemSize();
-
-    const size_t outStep0 = output.step.p[0] / output.elemSize();
-    const size_t outStep1 = output.step.p[1] / output.elemSize();
-    const size_t outStep2 = output.step.p[2] / output.elemSize();
-    const size_t outStep3 = output.step.p[3] / output.elemSize();
-
-    const size_t norm_size = (size_t)H * (size_t)W;
-    const float inv_norm_size = 1.f / (float)norm_size;
-    const int loops = N * C1;
-
-#if CV_SIMD
-    const int VEC_SZ = (int)v_float32::nlanes;
-#endif
-
-    parallel_for_(Range(0, loops), [&](const Range& r) {
-        const float* inptr0 = input.ptr<float>();
-        float* outptr0 = output.ptr<float>();
-
-        AutoBuffer<float> buf(C0 * 4);
-        float* sum = buf.data();
-        float* sqsum = sum + C0;
-        float* alpha = sqsum + C0;
-        float* beta = alpha + C0;
-
-        for (int i = r.start; i < r.end; ++i)
-        {
-            int n = i / C1;
-            int c1 = i - n * C1;
-            int cbase = c1 * C0;
-            int validC0 = std::min(C0, std::max(0, C - cbase));
-
-            const float* inbase = inptr0 + n * inStep0 + c1 * inStep1;
-            float* outbase = outptr0 + n * outStep0 + c1 * outStep1;
-
-            int c0 = 0;
-#if CV_SIMD
-            for (; c0 <= validC0 - VEC_SZ; c0 += VEC_SZ)
-            {
-                v_float32 vsum = v_setzero_f32();
-                v_float32 vsqsum = v_setzero_f32();
-
-                for (int h = 0; h < H; ++h)
-                {
-                    const float* inrow = inbase + h * inStep2;
-                    for (int w = 0; w < W; ++w)
-                    {
-                        const float* inpix = inrow + w * inStep3;
-                        v_float32 v = v_load(inpix + c0);
-                        vsum = v_add(vsum, v);
-                        vsqsum = v_fma(v, v, vsqsum);
-                    }
-                }
-                v_store(sum + c0, vsum);
-                v_store(sqsum + c0, vsqsum);
-            }
-#endif
-            for (; c0 < validC0; ++c0)
-            {
-                float s = 0.f, sq = 0.f;
-                for (int h = 0; h < H; ++h)
-                {
-                    const float* inrow = inbase + h * inStep2;
-                    for (int w = 0; w < W; ++w)
-                    {
-                        float v = inrow[w * inStep3 + c0];
-                        s += v;
-                        sq += v * v;
-                    }
-                }
-                sum[c0] = s;
-                sqsum[c0] = sq;
-            }
-
-            for (int c = 0; c < validC0; ++c)
-            {
-                float mean = sum[c] * inv_norm_size;
-                float var = std::max(0.f, sqsum[c] * inv_norm_size - mean * mean);
-                float inv_stdev = 1.f / std::sqrt(var + epsilon);
-                alpha[c] = scale_data[cbase + c] * inv_stdev;
-                beta[c] = bias_data[cbase + c] - alpha[c] * mean;
-            }
-
-            c0 = 0;
-#if CV_SIMD
-            for (; c0 <= validC0 - VEC_SZ; c0 += VEC_SZ)
-            {
-                v_float32 va = v_load(alpha + c0);
-                v_float32 vb = v_load(beta + c0);
-
-                for (int h = 0; h < H; ++h)
-                {
-                    const float* inrow = inbase + h * inStep2;
-                    float* outrow = outbase + h * outStep2;
-                    for (int w = 0; w < W; ++w)
-                    {
-                        const float* inpix = inrow + w * inStep3;
-                        float* outpix = outrow + w * outStep3;
-
-                        v_float32 vin = v_load(inpix + c0);
-                        v_float32 vout = v_fma(vin, va, vb);
-                        v_store(outpix + c0, vout);
-                    }
-                }
-            }
-#endif
-            for (; c0 < validC0; ++c0)
-            {
-                float a = alpha[c0];
-                float b = beta[c0];
-                for (int h = 0; h < H; ++h)
-                {
-                    const float* inrow = inbase + h * inStep2;
-                    float* outrow = outbase + h * outStep2;
-                    for (int w = 0; w < W; ++w)
-                    {
-                        outrow[w * outStep3 + c0] = inrow[w * inStep3 + c0] * a + b;
-                    }
-                }
-            }
-
-            int c0_pad = validC0;
-#if CV_SIMD
-            for (; c0_pad <= C0 - VEC_SZ; c0_pad += VEC_SZ)
-            {
-                v_float32 vzero = v_setzero_f32();
-                for (int h = 0; h < H; ++h)
-                {
-                    float* outrow = outbase + h * outStep2;
-                    for (int w = 0; w < W; ++w)
-                    {
-                        v_store(outrow + w * outStep3 + c0_pad, vzero);
-                    }
-                }
-            }
-#endif
-            for (; c0_pad < C0; ++c0_pad)
-            {
-                for (int h = 0; h < H; ++h)
-                {
-                    float* outrow = outbase + h * outStep2;
-                    for (int w = 0; w < W; ++w)
-                    {
-                        outrow[w * outStep3 + c0_pad] = 0.f;
-                    }
-                }
-            }
-        }
-    });
-}
-
 // https://github.com/onnx/onnx/blob/main/docs/Operators.md#InstanceNormalization
 class InstanceNormLayerImpl CV_FINAL : public InstanceNormLayer {
 public:
@@ -262,7 +88,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) && inpShape.layout != DATA_LAYOUT_BLOCK,
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16F)
+        if (inputs_arr.depth() == CV_16F && inpShape.layout != DATA_LAYOUT_BLOCK)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -276,10 +102,7 @@ public:
         const auto &scale = inputs[1];
         const auto &bias = inputs[2];
 
-        if (input.shape().layout == DATA_LAYOUT_BLOCK)
-            fastNormChannelBlock(input, scale, bias, outputs[0], epsilon);
-        else
-            fastNormChannel(input, scale, bias, outputs[0], epsilon);
+        fastNormChannel(input, scale, bias, outputs[0], epsilon);
     }
 
 #ifdef HAVE_OPENCL
