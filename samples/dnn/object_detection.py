@@ -12,12 +12,6 @@ from tf_text_graph_common import readTextMessage
 from tf_text_graph_ssd import createSSDGraph
 from tf_text_graph_faster_rcnn import createFasterRCNNGraph
 
-def set_info_log_level():
-    if hasattr(cv, 'setLogLevel') and hasattr(cv, 'LOG_LEVEL_INFO'):
-        cv.setLogLevel(cv.LOG_LEVEL_INFO)
-    elif hasattr(cv, 'utils') and hasattr(cv.utils, 'logging'):
-        cv.utils.logging.setLogLevel(cv.utils.logging.LOG_LEVEL_INFO)
-
 def help():
     print(
         '''
@@ -77,7 +71,7 @@ if args.alias is None or hasattr(args, 'help'):
     help()
     exit(1)
 
-set_info_log_level()
+cv.utils.logging.setLogLevel(cv.utils.logging.LOG_LEVEL_INFO)
 args.model = findModel(args.model, args.sha1)
 if args.config is not None:
     args.config = findModel(args.config, args.config_sha1)

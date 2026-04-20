@@ -6,12 +6,6 @@ import numpy as np
 import sys
 from common import *
 
-def set_info_log_level():
-    if hasattr(cv, 'setLogLevel') and hasattr(cv, 'LOG_LEVEL_INFO'):
-        cv.setLogLevel(cv.LOG_LEVEL_INFO)
-    elif hasattr(cv, 'utils') and hasattr(cv.utils, 'logging'):
-        cv.utils.logging.setLogLevel(cv.utils.logging.LOG_LEVEL_INFO)
-
 def help():
     print(
         '''
@@ -78,7 +72,7 @@ def main(func_args=None):
         help()
         exit(1)
 
-    set_info_log_level()
+    cv.utils.logging.setLogLevel(cv.utils.logging.LOG_LEVEL_INFO)
     args.model = findModel(args.model, args.sha1)
     args.labels = findFile(args.labels)
 
