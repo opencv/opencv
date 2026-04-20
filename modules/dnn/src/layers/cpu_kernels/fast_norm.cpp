@@ -180,16 +180,16 @@ void fastNormChannel(const Mat &input, const Mat &scale, const Mat &bias, Mat &o
             const auto *x = input_data + norm_size * i;
             auto *y = output_data + norm_size * i;
 
-            float mean = 0.f, mean_square = 0.f;
-            for (int j = 0; j < norm_size; j++) {
-                float v = x[j];
-                mean += v;
-                mean_square += v * v;
+            double dmean = 0., dmean_sq = 0.;
+            for (size_t j = 0; j < norm_size; j++) {
+                double v = (double)x[j];
+                dmean += v;
+                dmean_sq += v * v;
             }
 
-            mean *= inv_norm_size;
-            mean_square = std::sqrt(std::max(0.f, mean_square * inv_norm_size - mean * mean) + epsilon);
-            float inv_stdev = 1.f / mean_square;
+            float mean = (float)(dmean / norm_size);
+            float var = (float)std::max(0., dmean_sq / norm_size - (double)mean * (double)mean);
+            float inv_stdev = 1.f / std::sqrt(var + epsilon);
 
             size_t c = i % C;
             float s = scale_data[c] * inv_stdev, b = bias_data[c];
@@ -225,16 +225,16 @@ void fastNormGroup(const Mat &input, const Mat &scale, const Mat &bias, Mat &out
             const auto *x = input_data + norm_size * i;
             auto *y = output_data + norm_size * i;
 
-            float mean = 0.f, mean_square = 0.f;
-            for (int j = 0; j < norm_size; j++) {
-                float v = x[j];
-                mean += v;
-                mean_square += v * v;
+            double dmean = 0., dmean_sq = 0.;
+            for (size_t j = 0; j < norm_size; j++) {
+                double v = (double)x[j];
+                dmean += v;
+                dmean_sq += v * v;
             }
 
-            mean *= inv_norm_size;
-            mean_square = std::sqrt(std::max(0.f, mean_square * inv_norm_size - mean * mean) + epsilon);
-            float inv_stdev = 1.f / mean_square;
+            float mean = (float)(dmean / norm_size);
+            float var = (float)std::max(0., dmean_sq / norm_size - (double)mean * (double)mean);
+            float inv_stdev = 1.f / std::sqrt(var + epsilon);
 
             size_t group_idx = i % num_groups * channels_per_group;
             for (size_t j = 0; j < norm_size; j++) {

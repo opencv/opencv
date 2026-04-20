@@ -1510,4 +1510,57 @@ TEST_P(Reproducibility_BlazeFace_ONNX, Accuracy)
 INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_BlazeFace_ONNX,
                         testing::Values(DNN_TARGET_CPU));
 
+typedef testing::TestWithParam<Target> Reproducibility_FacePaint_ONNX;
+TEST_P(Reproducibility_FacePaint_ONNX, Accuracy)
+{
+    Target targetId = GetParam();
+    applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
+
+    std::string modelname = _tf("onnx/models/face_paint_512_v2_0.onnx", false);
+    Net net = readNetFromONNX(modelname);
+
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(targetId);
+
+    if (targetId == DNN_TARGET_CPU_FP16)
+        net.enableWinograd(false);
+
+    std::string imgname = _tf("sqcat.png");
+    Mat image = imread(imgname);
+    ASSERT_FALSE(image.empty());
+
+    Mat input = blobFromImage(image, 1.0/127.5, Size(512, 512),
+                              Scalar(127.5, 127.5, 127.5), true, false, CV_32F);
+    ASSERT_TRUE(!input.empty());
+
+    Mat out;
+    double min_t = 0;
+    const int niters =
+#ifdef _DEBUG
+        1;
+#else
+        10;
+#endif
+
+    for (int i = 0; i < niters; i++) {
+        double t = (double)getTickCount();
+        net.setInput(input);
+        out = net.forward();
+        t = (double)getTickCount() - t;
+        min_t = i == 0 ? t : std::min(min_t, t);
+    }
+    printf("run time = %.2fms\n", min_t * 1000. / getTickFrequency());
+
+    Mat ref = blobFromNPY(_tf("onnx/data/face_paint_512_v2_0_ort_output.npy"));
+    ASSERT_FALSE(ref.empty());
+
+    Mat outFlat = out.reshape(1, 1);
+    Mat refFlat = ref.reshape(1, 1);
+    ASSERT_EQ(outFlat.total(), refFlat.total()) << "OpenCV output size differs from ORT reference";
+    EXPECT_LE(cv::norm(outFlat, refFlat, NORM_INF), 1e-2);
+}
+INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_FacePaint_ONNX,
+                        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
+
 }} // namespace

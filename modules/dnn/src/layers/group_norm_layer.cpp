@@ -74,7 +74,7 @@ static void fastNormGroupBlock(const Mat& input, const Mat& scale, const Mat& bi
             int c_start = g * channels_per_group;
             int c_end   = c_start + channels_per_group;
 
-            float group_sum = 0.f, group_sqsum = 0.f;
+            double group_sum = 0., group_sqsum = 0.;
 
             for (int c = c_start; c < c_end; c++) {
                 int c1 = c / C0;
@@ -83,15 +83,15 @@ static void fastNormGroupBlock(const Mat& input, const Mat& scale, const Mat& bi
                 for (int h = 0; h < H; ++h) {
                     const float* inrow = inbase + h * inStep2;
                     for (int w = 0; w < W; ++w) {
-                        float v = inrow[w * inStep3 + c0];
+                        double v = (double)inrow[w * inStep3 + c0];
                         group_sum += v;
                         group_sqsum += v * v;
                     }
                 }
             }
 
-            float mean = group_sum * inv_norm_size;
-            float var  = std::max(0.f, group_sqsum * inv_norm_size - mean * mean);
+            float mean = (float)(group_sum * (double)inv_norm_size);
+            float var  = std::max(0.f, (float)(group_sqsum * (double)inv_norm_size - (double)mean * (double)mean));
             float inv_stdev = 1.f / std::sqrt(var + epsilon);
 
             for (int c1_start = c_start / C0, c1_end_idx = (c_end - 1) / C0 + 1,
