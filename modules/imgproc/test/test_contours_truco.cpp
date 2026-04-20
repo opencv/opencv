@@ -93,7 +93,7 @@ TEST_P(Imgproc_FindTRUContours, circles_vs_standard)
         }
         Mat binary;
         adaptiveThreshold(img, binary, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 11, 0);
-        
+
         vector<vector<Point>> ref_contours;
         vector<Vec4i> hierarchy;
         findContours(binary, ref_contours, hierarchy, RETR_LIST, method);//will call suzuki abe because using hierarchy
@@ -160,7 +160,7 @@ TEST_P(Imgproc_FindTRUContours, nested_rectangles)
         if (rect.width <= 0 || rect.height <= 0)
             break;
     }
-    
+
     vector<vector<Point>> ref_contours;
     vector<Vec4i> hierarchy;
     findContours(img, ref_contours, hierarchy, RETR_LIST, method);//will call suzuki abe because using hierarchy
@@ -168,7 +168,7 @@ TEST_P(Imgproc_FindTRUContours, nested_rectangles)
 
     vector<vector<Point>> truco_contours;
     findContours(img, truco_contours, RETR_LIST, method);//will use TRUCO because NOT using hierarchy AND RETR_LIST
-    
+
     EXPECT_TRUE(trucoContoursMatch(ref_contours, truco_contours));
 }
 
@@ -216,7 +216,7 @@ TEST_P(Imgproc_FindTRUContours, mixed_figures)
         EXPECT_TRUE(!hierarchy.empty());
         vector<vector<Point>> truco_contours;
         findContours(img, truco_contours, RETR_LIST, method);//will use TRUCO because NOT using hierarchy AND RETR_LIST
-        
+
         EXPECT_TRUE(trucoContoursMatch(ref_contours, truco_contours));
     }
 }
