@@ -1,4 +1,4 @@
-samples/dnn/segmentation.cppimport cv2 as cv
+import cv2 as cv
 import argparse
 import numpy as np
 
