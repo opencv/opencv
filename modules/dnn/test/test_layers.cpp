@@ -2962,14 +2962,14 @@ TEST(ConvolutionWinograd, Accuracy)
 
 TEST(KV_Cache, prefetch_3D)
 {
-    std::string model_path = "dnn/onnx/models/attention_3d.onnx";
+    std::string model_path = "dnn/onnx/models/test_attention_kv_cache_3d.onnx";
     Net netWithKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_NEW);
     Net netWithoutKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_NEW);
 
-    Mat Q = blobFromNPY(findDataFile("dnn/onnx/data/input_3d_0.npy", true));
-    Mat K = blobFromNPY(findDataFile("dnn/onnx/data/input_3d_1.npy", true));
-    Mat V = blobFromNPY(findDataFile("dnn/onnx/data/input_3d_2.npy", true));
-    Mat ref = blobFromNPY(findDataFile("dnn/onnx/data/output_3d.npy", true));
+    Mat Q = blobFromNPY(findDataFile("dnn/onnx/data/input_test_attention_kv_cache_3d_0.npy", true));
+    Mat K = blobFromNPY(findDataFile("dnn/onnx/data/input_test_attention_kv_cache_3d_1.npy", true));
+    Mat V = blobFromNPY(findDataFile("dnn/onnx/data/input_test_attention_kv_cache_3d_2.npy", true));
+    Mat ref = blobFromNPY(findDataFile("dnn/onnx/data/output_test_attention_kv_cache_3d.npy", true));
 
     netWithKVCache.setInput(Q, "Q");
     netWithKVCache.setInput(K, "K");
@@ -2992,14 +2992,14 @@ TEST(KV_Cache, prefetch_3D)
 
 TEST(KV_Cache, prefetch_4D)
 {
-    std::string model_path = "dnn/onnx/models/attention_4d.onnx";
+    std::string model_path = "dnn/onnx/models/test_attention_kv_cache_4d.onnx";
     Net netWithKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_NEW);
     Net netWithoutKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_NEW);
 
-    Mat Q = blobFromNPY(findDataFile("dnn/onnx/data/input_4d_0.npy", true));
-    Mat K = blobFromNPY(findDataFile("dnn/onnx/data/input_4d_1.npy", true));
-    Mat V = blobFromNPY(findDataFile("dnn/onnx/data/input_4d_2.npy", true));
-    Mat ref = blobFromNPY(findDataFile("dnn/onnx/data/output_4d.npy", true));
+    Mat Q = blobFromNPY(findDataFile("dnn/onnx/data/input_test_attention_kv_cache_4d_0.npy", true));
+    Mat K = blobFromNPY(findDataFile("dnn/onnx/data/input_test_attention_kv_cache_4d_1.npy", true));
+    Mat V = blobFromNPY(findDataFile("dnn/onnx/data/input_test_attention_kv_cache_4d_2.npy", true));
+    Mat ref = blobFromNPY(findDataFile("dnn/onnx/data/output_test_attention_kv_cache_4d.npy", true));
 
     netWithKVCache.setInput(Q, "Q");
     netWithKVCache.setInput(K, "K");
@@ -3022,14 +3022,14 @@ TEST(KV_Cache, prefetch_4D)
 
 TEST(KV_Cache, generate_3D)
 {
-    std::string model_path = "dnn/onnx/models/attention_3d.onnx";
+    std::string model_path = "dnn/onnx/models/test_attention_kv_cache_3d.onnx";
     Net netWithKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_NEW);
     Net netWithoutKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_NEW);
 
-    Mat Q_all = blobFromNPY(findDataFile("dnn/onnx/data/input_3d_0.npy", true));
-    Mat K_all = blobFromNPY(findDataFile("dnn/onnx/data/input_3d_1.npy", true));
-    Mat V_all = blobFromNPY(findDataFile("dnn/onnx/data/input_3d_2.npy", true));
-    Mat Y_all = blobFromNPY(findDataFile("dnn/onnx/data/output_3d.npy", true));
+    Mat Q_all = blobFromNPY(findDataFile("dnn/onnx/data/input_test_attention_kv_cache_3d_0.npy", true));
+    Mat K_all = blobFromNPY(findDataFile("dnn/onnx/data/input_test_attention_kv_cache_3d_1.npy", true));
+    Mat V_all = blobFromNPY(findDataFile("dnn/onnx/data/input_test_attention_kv_cache_3d_2.npy", true));
+    Mat Y_all = blobFromNPY(findDataFile("dnn/onnx/data/output_test_attention_kv_cache_3d.npy", true));
 
     int T = Q_all.size[1];
 
@@ -3071,14 +3071,14 @@ TEST(KV_Cache, generate_3D)
 
 TEST(KV_Cache, generate_4D)
 {
-    std::string model_path = "dnn/onnx/models/attention_4d.onnx";
+    std::string model_path = "dnn/onnx/models/test_attention_kv_cache_4d.onnx";
     Net netWithKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_NEW);
     Net netWithoutKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_NEW);
 
-    Mat Q_all = blobFromNPY(findDataFile("dnn/onnx/data/input_4d_0.npy", true));
-    Mat K_all = blobFromNPY(findDataFile("dnn/onnx/data/input_4d_1.npy", true));
-    Mat V_all = blobFromNPY(findDataFile("dnn/onnx/data/input_4d_2.npy", true));
-    Mat Y_all = blobFromNPY(findDataFile("dnn/onnx/data/output_4d.npy", true));
+    Mat Q_all = blobFromNPY(findDataFile("dnn/onnx/data/input_test_attention_kv_cache_4d_0.npy", true));
+    Mat K_all = blobFromNPY(findDataFile("dnn/onnx/data/input_test_attention_kv_cache_4d_1.npy", true));
+    Mat V_all = blobFromNPY(findDataFile("dnn/onnx/data/input_test_attention_kv_cache_4d_2.npy", true));
+    Mat Y_all = blobFromNPY(findDataFile("dnn/onnx/data/output_test_attention_kv_cache_4d.npy", true));
 
     int T = Q_all.size[2];
 
