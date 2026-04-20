@@ -151,11 +151,6 @@ TEST(Tokenizer_BPE, Tokenizer_Qwen2_5_Roundtrip) {
     }
 }
 
-// ---- Gemma3 tests ----
-// Ground truth generated with:
-//   from tokenizers import Tokenizer
-//   tok = Tokenizer.from_file("tokenizer.json")
-//   tok.encode(text, add_special_tokens=False).ids
 
 TEST(Tokenizer_Gemma, Tokenizer_Gemma3_English) {
     std::string model = _tf("gemma3/config.json");
