@@ -143,6 +143,20 @@ void KVCache::growPrefill(const Mat& newData, int T){
                 step_source = h * headDim * T;
             const auto*source = newData.ptr<float>() + step_source;
 
+            int chunk_T = std::min(pageSize, T - page * pageSize);
+            const float* actual_source = source;
+            std::vector<float> temp_buf;
+
+            int lds = is3Dlayout ? headDim * nHeads : headDim;
+
+            if (chunk_T < pageSize) {
+                temp_buf.assign(pageSize * headDim, 0.0f);
+                for (int i = 0; i < chunk_T; i++) {
+                    std::memcpy(temp_buf.data() + i * headDim, source + i * lds, headDim * sizeof(float));
+                }
+                actual_source = temp_buf.data();
+            }
+
             // dst
             size_t step_dst = b * nHeads * ps +
                               h * ps;
