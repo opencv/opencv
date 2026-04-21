@@ -77,11 +77,6 @@ public:
     {
         init();
     }
-    CvCapture_Images(const String& _filename)
-    {
-        init();
-        open(_filename);
-    }
 
     virtual ~CvCapture_Images() CV_OVERRIDE
     {
@@ -94,7 +89,7 @@ public:
     virtual bool isOpened() const CV_OVERRIDE;
     virtual int getCaptureDomain() /*const*/ CV_OVERRIDE { return cv::CAP_IMAGES; }
 
-    bool open(const String&);
+    bool open(const String&, int image_seq_start = -1);
     void close();
 protected:
     std::string filename_pattern; // actually a printf-pattern
@@ -285,13 +280,16 @@ std::string icvExtractPattern(const std::string& filename, unsigned *offset)
 }
 
 
-bool CvCapture_Images::open(const std::string& _filename)
+bool CvCapture_Images::open(const std::string& _filename, int image_seq_start)
 {
     unsigned offset = 0;
     close();
 
     CV_Assert(!_filename.empty());
     filename_pattern = icvExtractPattern(_filename, &offset);
+    const bool explicit_start = (image_seq_start >= 0);
+    if (explicit_start)
+        offset = static_cast<unsigned>(image_seq_start);
     if (filename_pattern.empty())
     {
         filename_pattern = _filename;
@@ -317,7 +315,7 @@ bool CvCapture_Images::open(const std::string& _filename)
             cv::String filename = cv::format(filename_pattern.c_str(), (int)(offset + length));
             if (!utils::fs::exists(filename))
             {
-                if (length == 0 && offset == 0) // allow starting with 0 or 1
+                if (length == 0 && offset == 0 && !explicit_start) // allow starting with 0 or 1
                 {
                     offset++;
                     continue;
@@ -355,9 +353,22 @@ bool CvCapture_Images::isOpened() const
     return !filename_pattern.empty();
 }
 
-Ptr<IVideoCapture> create_Images_capture(const std::string &filename)
+Ptr<IVideoCapture> create_Images_capture(const std::string& filename, const VideoCaptureParameters& params)
 {
-    return makePtr<CvCapture_Images>(filename);
+    int image_seq_start = -1;
+    if (params.has(CAP_PROP_IMAGE_SEQ_START))
+    {
+        image_seq_start = params.get<int>(CAP_PROP_IMAGE_SEQ_START);
+    }
+    if (params.warnUnusedParameters())
+    {
+        CV_LOG_ERROR(NULL, "VIDEOIO/IMAGES: unsupported parameters in .open(), see logger INFO channel for details. Bailout");
+        return Ptr<IVideoCapture>();
+    }
+    Ptr<CvCapture_Images> cap = makePtr<CvCapture_Images>();
+    if (!cap->open(filename, image_seq_start))
+        return Ptr<IVideoCapture>();
+    return cap;
 }
 
 //

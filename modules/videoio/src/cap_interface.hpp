@@ -367,7 +367,7 @@ Ptr<IVideoCapture> create_V4L_capture_file(const std::string &filename);
 Ptr<IVideoCapture> create_OpenNI2_capture_cam( int index );
 Ptr<IVideoCapture> create_OpenNI2_capture_file( const std::string &filename );
 
-Ptr<IVideoCapture> create_Images_capture(const std::string &filename);
+Ptr<IVideoCapture> create_Images_capture(const std::string& filename, const VideoCaptureParameters& params);
 Ptr<IVideoWriter> create_Images_writer(const std::string& filename, int fourcc,
                                        double fps, const Size& frameSize,
                                        const VideoWriterParameters& params);

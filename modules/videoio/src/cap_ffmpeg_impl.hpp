@@ -624,6 +624,7 @@ struct CvCapture_FFMPEG
     int use_opencl;
     int extraDataIdx;
     int requestedThreads;
+    int image_seq_start;  // image2 demuxer start_number; -1 means unset
 };
 
 void CvCapture_FFMPEG::init()
@@ -679,6 +680,7 @@ void CvCapture_FFMPEG::init()
     use_opencl = 0;
     extraDataIdx = 1;
     requestedThreads = cv::getNumberOfCPUs();
+    image_seq_start = -1;
 }
 
 
@@ -1160,6 +1162,10 @@ bool CvCapture_FFMPEG::open(const char* _filename, int index, const Ptr<IStreamR
         {
             nThreads = requestedThreads = params.get<int>(CAP_PROP_N_THREADS);
         }
+        if (params.has(CAP_PROP_IMAGE_SEQ_START))
+        {
+            image_seq_start = params.get<int>(CAP_PROP_IMAGE_SEQ_START);
+        }
         if (params.warnUnusedParameters())
         {
             CV_LOG_ERROR(NULL, "VIDEOIO/FFMPEG: unsupported parameters in .open(), see logger INFO channel for details. Bailout");
@@ -1193,6 +1199,10 @@ bool CvCapture_FFMPEG::open(const char* _filename, int index, const Ptr<IStreamR
 #else
         av_dict_set(&dict, "rtsp_transport", "tcp", 0);
 #endif
+    }
+    if (image_seq_start >= 0)
+    {
+        av_dict_set_int(&dict, "start_number", image_seq_start, 0);
     }
     CV_FFMPEG_FMT_CONST AVInputFormat* input_format = NULL;
     AVDictionaryEntry* entry = av_dict_get(dict, "input_format", NULL, 0);

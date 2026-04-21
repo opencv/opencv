@@ -300,10 +300,39 @@ TEST(videoio_images, bug_26457)
     EXPECT_MAT_N_DIFF(img, col.getFirstFrame(), 0);
 }
 
+TEST(videoio_images, open_with_seq_start)
+{
+    // Sequence starts at an index outside the auto-probe range
+    // Opening with only the pattern must fail without the property, and succeed when it is set
+    const size_t start = 100;
+    const size_t count = 5;
+    ImageCollection col;
+    col.generate(count, start);
+    const std::string pattern = col.getPatternFilename();
+
+    {
+        VideoCapture cap(pattern, CAP_IMAGES);
+        EXPECT_FALSE(cap.isOpened());
+    }
+
+    {
+        VideoCapture cap;
+        ASSERT_TRUE(cap.open(pattern, CAP_IMAGES,
+                             { CAP_PROP_IMAGE_SEQ_START, static_cast<int>(start) }));
+        ASSERT_TRUE(cap.isOpened());
+        EXPECT_EQ(count, (size_t)cap.get(CAP_PROP_FRAME_COUNT));
+        for (size_t idx = 0; idx < count; ++idx)
+        {
+            Mat img;
+            ASSERT_TRUE(cap.read(img));
+            EXPECT_MAT_N_DIFF(img, col.getFrame(start + idx), 0);
+        }
+    }
+}
+
 // TODO: should writer overwrite files?
 // TODO: is clamping good for seeking?
 // TODO: missing files? E.g. 3, 4, 6, 7, 8 (should it finish OR jump over OR return empty frame?)
 // TODO: non-numbered files (https://github.com/opencv/opencv/pull/23815)
-// TODO: when opening with pattern (e.g. test%01d.png), first frame can be only 0 (test0.png)
 
 }} // opencv_test::<anonymous>::
