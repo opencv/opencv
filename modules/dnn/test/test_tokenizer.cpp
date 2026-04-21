@@ -151,4 +151,50 @@ TEST(Tokenizer_BPE, Tokenizer_Qwen2_5_Roundtrip) {
     }
 }
 
+
+TEST(Tokenizer_Gemma, Tokenizer_Gemma3_English) {
+    std::string model = _tf("gemma3/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+    EXPECT_EQ(tok.encode("Hello world"), (std::vector<int>{9259, 1902}));
+}
+
+TEST(Tokenizer_Gemma, Tokenizer_Gemma3_Phrase) {
+    std::string model = _tf("gemma3/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+    EXPECT_EQ(tok.encode("the quick brown fox"),
+              (std::vector<int>{1437, 3823, 8864, 37423}));
+}
+
+TEST(Tokenizer_Gemma, Tokenizer_Gemma3_Mixed) {
+    std::string model = _tf("gemma3/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+    EXPECT_EQ(tok.encode("OpenCV"), (std::vector<int>{7084, 20741}));
+}
+
+TEST(Tokenizer_Gemma, Tokenizer_Gemma3_Numbers) {
+    std::string model = _tf("gemma3/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+    EXPECT_EQ(tok.encode("2024"), (std::vector<int>{236778, 236771, 236778, 236812}));
+}
+
+TEST(Tokenizer_Gemma, Tokenizer_Gemma3_SpecialTokens) {
+    std::string model = _tf("gemma3/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+    EXPECT_EQ(tok.encode("<bos>Hello<eos>"), (std::vector<int>{2, 9259, 1}));
+}
+
+TEST(Tokenizer_Gemma, Tokenizer_Gemma3_Roundtrip) {
+    std::string model = _tf("gemma3/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+    std::vector<std::string> cases = {
+        "Hello world",
+        "the quick brown fox",
+        "OpenCV",
+        "hello world",
+    };
+    for (const auto& text : cases) {
+        EXPECT_EQ(tok.decode(tok.encode(text)), text);
+    }
+}
+
 }}
