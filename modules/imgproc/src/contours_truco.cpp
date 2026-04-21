@@ -289,14 +289,14 @@ public:
                         bool mustSave=false;
 
                         if(r==rowRange.start){
-                            if( (mustSave=traceInnerContourFirstLine( firstLinebuffer,r,c-1,row_ptr,rowRange) ) ){
+                            mustSave=traceInnerContourFirstLine( firstLinebuffer,r,c-1,row_ptr,rowRange);
+                            if( mustSave ){
                                 buffer.clear();
                                 for(auto fli:firstLinebuffer){
                                     buffer.push_back({fli.x-1,fli.y-1});
                                     if(fli.val!=FOREGROUND)
                                         *(padded_.data + fli.y * step_ + fli.x )=fli.val;
                                 }
-                                mustSave=true;
                             }
                         }
 
