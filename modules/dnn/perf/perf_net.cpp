@@ -124,6 +124,11 @@ PERF_TEST_P_(DNNTestNetwork, MobileNetv2_ONNX)
     processNet("dnn/onnx/models/mobilenetv2.onnx", "", cv::Size(224, 224));
 }
 
+PERF_TEST_P_(DNNTestNetwork, ResNet50_QDQ_ONNX)
+{
+    processNet("dnn/onnx/models/resnet50-v1-12-qdq.onnx", "", cv::Size(224, 224));
+}
+
 PERF_TEST_P_(DNNTestNetwork, SqueezeNet_v1_1)
 {
     processNet("dnn/squeezenet_v1.1.caffemodel", "dnn/squeezenet_v1.1.prototxt", cv::Size(227, 227));
@@ -155,6 +160,15 @@ PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow)
 PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_v2_TensorFlow)
 {
     processNet("dnn/ssd_mobilenet_v2_coco_2018_03_29.pb", "ssd_mobilenet_v2_coco_2018_03_29.pbtxt", cv::Size(300, 300));
+}
+
+PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_v1_ONNX)
+{
+    Mat image(cv::Size(300, 300), CV_8UC3);
+    randu(image, 0, 255);
+    int imsize[] = {1, image.rows, image.cols, 3};
+    Mat input(4, imsize, CV_8U, image.data);
+    processNet("dnn/onnx/models/ssd_mobilenet_v1_12.onnx", "", input);
 }
 
 PERF_TEST_P_(DNNTestNetwork, DenseNet_121)

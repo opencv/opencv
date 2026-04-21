@@ -880,23 +880,8 @@ TEST_P(Reproducibility_ResNet50_ONNX, Accuracy)
                               false, true, CV_32F);
     ASSERT_TRUE(!input.empty());
 
-    Mat out;
-    double min_t = 0;
-    const int niters =
-#ifdef _DEBUG
-        1;
-#else
-        30;
-#endif
-
-    for (int i = 0; i < niters; i++) {
-        double t = (double)getTickCount();
-        net.setInput(input);
-        out = net.forward();
-        t = (double)getTickCount() - t;
-        min_t = i == 0 ? t : std::min(min_t, t);
-    }
-    printf("run time = %.2fms\n", min_t*1000./getTickFrequency());
+    net.setInput(input);
+    Mat out = net.forward();
 
     std::vector<std::pair<int, float> > ref = {{285, 10.13}, {287, 9.68}, {283, 8.83}, {278, 8.56}, {279, 8.34}};
     std::vector<std::pair<int, float> > res;
@@ -944,23 +929,8 @@ TEST_P(Reproducibility_ResNet50_QDQ_ONNX, Accuracy)
                               false, true, CV_32F);
     ASSERT_TRUE(!input.empty());
 
-    Mat out;
-    double min_t = 0;
-    const int niters =
-#ifdef _DEBUG
-        1;
-#else
-        30;
-#endif
-
-    for (int i = 0; i < niters; i++) {
-        double t = (double)getTickCount();
-        net.setInput(input);
-        out = net.forward();
-        t = (double)getTickCount() - t;
-        min_t = i == 0 ? t : std::min(min_t, t);
-    }
-    printf("run time = %.2fms\n", min_t*1000./getTickFrequency());
+    net.setInput(input);
+    Mat out = net.forward();
 
     const int K = 5;
     std::vector<std::pair<int, float> > res;
@@ -1012,22 +982,8 @@ TEST_P(Reproducibility_MobileNetSSD_ONNX, Accuracy)
 
     std::vector<String> outNames = net.getUnconnectedOutLayersNames();
     std::vector<Mat> outs;
-    double min_t = 0;
-    const int niters =
-#ifdef _DEBUG
-        1;
-#else
-        30;
-#endif
-
-    for (int i = 0; i < niters; i++) {
-        double t = (double)getTickCount();
-        net.setInput(input8dim4);
-        net.forward(outs, outNames);
-        t = (double)getTickCount() - t;
-        min_t = i == 0 ? t : std::min(min_t, t);
-    }
-    printf("run time = %.2fms\n", min_t*1000./getTickFrequency());
+    net.setInput(input8dim4);
+    net.forward(outs, outNames);
 
     // Model outputs: detection_boxes [1,N,4], detection_classes [1,N],
     //                detection_scores [1,N], num_detections [1]
@@ -1209,22 +1165,8 @@ TEST_P(Reproducibility_YOLOv5n_ONNX, Accuracy)
     ASSERT_TRUE(!image.empty());
     Mat input = blobFromImage(image, 1.0/255.0, Size(640, 640), Scalar(), true, false, CV_32F);
 
-    Mat out;
-    double min_t = 0;
-    const int niters =
-#ifdef _DEBUG
-        1;
-#else
-        10;
-#endif
-    for (int i = 0; i < niters; i++) {
-        double t = (double)getTickCount();
-        net.setInput(input);
-        out = net.forward();
-        t = (double)getTickCount() - t;
-        min_t = i == 0 ? t : std::min(min_t, t);
-    }
-    printf("run time = %.2fms\n", min_t*1000./getTickFrequency());
+    net.setInput(input);
+    Mat out = net.forward();
 
     if (out.type() != CV_32F) out.convertTo(out, CV_32F);
 
@@ -1269,22 +1211,8 @@ TEST_P(Reproducibility_YOLOv8n_ONNX, Accuracy)
     ASSERT_TRUE(!image.empty());
     Mat input = blobFromImage(image, 1.0/255.0, Size(640, 640), Scalar(), true, false, CV_32F);
 
-    Mat out;
-    double min_t = 0;
-    const int niters =
-#ifdef _DEBUG
-        1;
-#else
-        10;
-#endif
-    for (int i = 0; i < niters; i++) {
-        double t = (double)getTickCount();
-        net.setInput(input);
-        out = net.forward();
-        t = (double)getTickCount() - t;
-        min_t = i == 0 ? t : std::min(min_t, t);
-    }
-    printf("run time = %.2fms\n", min_t*1000./getTickFrequency());
+    net.setInput(input);
+    Mat out = net.forward();
 
     if (out.type() != CV_32F) out.convertTo(out, CV_32F);
 
@@ -1328,22 +1256,8 @@ TEST_P(Reproducibility_YOLOXS_ONNX, Accuracy)
     ASSERT_TRUE(!image.empty());
     Mat input = blobFromImage(image, 1.0, Size(640, 640), Scalar(), false, false, CV_32F);
 
-    Mat out;
-    double min_t = 0;
-    const int niters =
-#ifdef _DEBUG
-        1;
-#else
-        10;
-#endif
-    for (int i = 0; i < niters; i++) {
-        double t = (double)getTickCount();
-        net.setInput(input);
-        out = net.forward();
-        t = (double)getTickCount() - t;
-        min_t = i == 0 ? t : std::min(min_t, t);
-    }
-    printf("run time = %.2fms\n", min_t*1000./getTickFrequency());
+    net.setInput(input);
+    Mat out = net.forward();
 
     if (out.type() != CV_32F) out.convertTo(out, CV_32F);
 
