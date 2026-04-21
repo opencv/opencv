@@ -11,6 +11,7 @@
 
 #include "../../precomp.hpp"
 #include "softmax.hpp"
+#include "opencv2/core/fast_math.hpp"
 
 namespace cv { namespace dnn {
 
@@ -103,7 +104,7 @@ void softmax(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep){
 
             // copy back the result to src
             _cnDim = 0;
-            if (s == 0.f || std::isinf(1.f / s)) {
+            if (s == 0.f || cvIsInf(1.f / s)) {
                 for (; _cnDim < axisStep; _cnDim++)
                     dstPtr[srcOffset + (_cnDim + axisBias) * cnStep] = 0.f;
             } else {

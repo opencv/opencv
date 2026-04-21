@@ -41,6 +41,7 @@
 
 #include "test_precomp.hpp"
 #include <opencv2/core/ocl.hpp>
+#include <opencv2/core/fast_math.hpp>
 #include "npy_blob.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/dnn/all_layers.hpp>
@@ -2979,8 +2980,8 @@ TEST(Layer_Test_GeluApprox, NoNaN_LargeInput)
     Mat& out = outVec[0];
     for (int i = 0; i < 10; i++) {
         float val = out.ptr<float>()[i];
-        EXPECT_FALSE(std::isnan(val)) << "NaN at index " << i << " (input=" << data[i] << ")";
-        EXPECT_FALSE(std::isinf(val)) << "Inf at index " << i << " (input=" << data[i] << ")";
+        EXPECT_FALSE(cvIsNaN(val)) << "NaN at index " << i << " (input=" << data[i] << ")";
+        EXPECT_FALSE(cvIsInf(val)) << "Inf at index " << i << " (input=" << data[i] << ")";
     }
 
     EXPECT_NEAR(out.ptr<float>()[9], 20.f, 0.01f);
@@ -3008,8 +3009,8 @@ TEST(Layer_Test_Softmax, NoNaN_AllNegInf)
     Mat& out = outVec[0];
     for (int i = 0; i < 8; i++) {
         float val = out.ptr<float>()[i];
-        EXPECT_FALSE(std::isnan(val)) << "NaN at index " << i;
-        EXPECT_FALSE(std::isinf(val)) << "Inf at index " << i;
+        EXPECT_FALSE(cvIsNaN(val)) << "NaN at index " << i;
+        EXPECT_FALSE(cvIsInf(val)) << "Inf at index " << i;
         EXPECT_EQ(val, 0.f) << "Expected 0 at index " << i;
     }
 }
