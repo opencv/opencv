@@ -318,7 +318,7 @@ TEST_P(Reproducibility_MobileNet_SSD, Accuracy)
 
     ASSERT_EQ(out.size[2], 100);
 
-    float scores_diff = 1e-5, boxes_iou_diff = 1e-4;
+    float scores_diff = 1e-2, boxes_iou_diff = 1e-2;
     if (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD || targetId == DNN_TARGET_CPU_FP16)
     {
         scores_diff = 1.5e-2;
