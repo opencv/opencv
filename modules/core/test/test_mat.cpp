@@ -2966,4 +2966,59 @@ TEST(Mat, issue_27080)
     EXPECT_EQ(cv::norm(src3, src4, NORM_L1), UINT_MAX);
 }
 
+
+template<typename _Tp, int cn> static void make_vector(std::vector<cv::Vec<_Tp, cn> >& v, int n)
+{
+    v.clear();
+    v.resize(n);
+    _Tp* data = &v[0][0];
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < cn; j++) {
+            int k = j % 4;
+            int val = (k == 0 ? 1 : k == 1 ? -1 : k == 2 ? (i+1) : -(i+1))*(i+1);
+            data[i*cn + j] = (_Tp)val;
+        }
+    }
+}
+
+TEST(Core_InputOutputArray, std_vector_vector)
+{
+    std::vector<std::vector<short> > cn_s(3);
+    cn_s[0].resize(100, 1);
+    cn_s[1].resize(100, 2);
+    cn_s[2].resize(100, 3);
+
+    _InputArray iarr_s(cn_s);
+    _OutputArray oarr_s(cn_s);
+    EXPECT_EQ((size_t)3, iarr_s.total(-1));
+
+    Mat m0 = iarr_s.getMat(0);
+    EXPECT_EQ(100, m0.cols);
+    EXPECT_EQ(CV_16S, m0.type());
+    EXPECT_EQ(m0.ptr<short>(), &cn_s[0][0]);
+
+    oarr_s.create(Size(200, 1), CV_16S, 2);
+    EXPECT_EQ((size_t)200, cn_s[2].size());
+    cn_s[1].clear();
+    EXPECT_EQ(true, oarr_s.empty(1));
+
+    std::vector<std::vector<double> > cn_d(4);
+    for (int i = 0; i < 4; i++)
+        cn_d[i].resize(1000, (double)(i+1));
+
+    _InputArray iarr_d(cn_d);
+    _OutputArray oarr_d(cn_d);
+    EXPECT_EQ((size_t)4, iarr_d.total(-1));
+
+    Mat m2 = oarr_d.getMat(2);
+    EXPECT_EQ(m2.ptr<double>(), &cn_d[2][0]);
+    EXPECT_EQ(1000, m2.cols);
+    EXPECT_EQ(CV_64F, m2.type());
+
+    oarr_d.create(Size(3000, 1), CV_64F, 3);
+    EXPECT_EQ((size_t)3000, cn_d[3].size());
+    cn_d[1].clear();
+    EXPECT_EQ(true, oarr_d.empty(1));
+}
+
 }} // namespace

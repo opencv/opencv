@@ -254,6 +254,7 @@ void _InputArray::getMatVector(std::vector<Mat>& mv) const
         #define GET_VEC_VEC_MAT_VEC(T)         {             const std::vector<std::vector<T > >* vv = (const std::vector<std::vector<T > >*)obj;             size_t n = vv->size();             mv.resize(n);             for (size_t i = 0; i < n; i++) {                 const std::vector<T >& vi = vv->at(i);                 CV_Assert(vi.size() <= (size_t)INT_MAX);                 int ni = (int)vi.size();                 mv[i] = ni > 0 ? Mat(1, ni, typ, (void*)&vi[0]) : Mat();             }         }         break
 
         STD_VECTOR_SWITCH(esz, GET_VEC_VEC_MAT_VEC)
+        return;
     }
 
     if( k == STD_VECTOR_MAT )
@@ -1666,104 +1667,22 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
 
     if( k == STD_VECTOR || k == STD_VECTOR_VECTOR )
     {
-        CV_Assert( d <= 2 && (size0 == 1 || size1 == 1 || size0*size1 == 0) );
+        CV_Assert(!fixedSize());
+        CV_Assert(k == STD_VECTOR_VECTOR || i < 0);
+        CV_Assert(d == 2 && (size0 == 1 || size1 == 1 || size0*size1 == 0));
         size_t len = size0*size1 > 0 ? size0 + size1 - 1 : 0;
-        std::vector<uchar>* v = (std::vector<uchar>*)obj;
+        int esz = CV_ELEM_SIZE(flags);
 
-        if( k == STD_VECTOR_VECTOR )
+        if( k == STD_VECTOR || (k == STD_VECTOR_VECTOR && i >= 0) )
         {
-            std::vector<std::vector<uchar> >& vv = *(std::vector<std::vector<uchar> >*)obj;
-            if( i < 0 )
-            {
-                CV_Assert(!fixedSize() || len == vv.size());
-                vv.resize(len);
-                return;
-            }
-            CV_Assert( i < (int)vv.size() );
-            v = &vv[i];
+            int type0 = CV_MAT_TYPE(flags);
+            CV_Assert( mtype == type0 || (CV_MAT_CN(mtype) == CV_MAT_CN(type0) && ((1 << type0) & fixedDepthMask) != 0) );
         }
-        else
-            CV_Assert( i < 0 );
 
-        int type0 = CV_MAT_TYPE(flags);
-        CV_Assert( mtype == type0 || (CV_MAT_CN(mtype) == CV_MAT_CN(type0) && ((1 << type0) & fixedDepthMask) != 0) );
+    #undef RESIZE_VEC
+    #define RESIZE_VEC(T) { std::vector<T>* v; if (k == STD_VECTOR_VECTOR) { std::vector<std::vector<T> >* vv = reinterpret_cast<std::vector<std::vector<T> >*>(obj); if (i < 0) { CV_Assert(!fixedSize() || len == vv->size()); vv->resize(len); return; } CV_Assert(size_t(i) < vv->size()); v = &vv->at(i); } else { v = reinterpret_cast<std::vector<T>*>(obj); } CV_Assert(!fixedSize() || len == v->size()); v->resize(len); } break
 
-        int esz = CV_ELEM_SIZE(type0);
-        CV_Assert(!fixedSize() || len == ((std::vector<uchar>*)v)->size() / esz);
-        switch( esz )
-        {
-        case 1:
-            ((std::vector<uchar>*)v)->resize(len);
-            break;
-        case 2:
-            ((std::vector<Vec2b>*)v)->resize(len);
-            break;
-        case 3:
-            ((std::vector<Vec3b>*)v)->resize(len);
-            break;
-        case 4:
-            ((std::vector<int>*)v)->resize(len);
-            break;
-        case 6:
-            ((std::vector<Vec3s>*)v)->resize(len);
-            break;
-        case 8:
-            ((std::vector<Vec2i>*)v)->resize(len);
-            break;
-        case 12:
-            ((std::vector<Vec3i>*)v)->resize(len);
-            break;
-        case 16:
-            ((std::vector<Vec4i>*)v)->resize(len);
-            break;
-        case 20:
-            ((std::vector<Vec<int, 5> >*)v)->resize(len);
-            break;
-        case 24:
-            ((std::vector<Vec6i>*)v)->resize(len);
-            break;
-        case 28:
-            ((std::vector<Vec<int, 7> >*)v)->resize(len);
-            break;
-        case 32:
-            ((std::vector<Vec8i>*)v)->resize(len);
-            break;
-        case 36:
-            ((std::vector<Vec<int, 9> >*)v)->resize(len);
-            break;
-        case 40:
-            ((std::vector<Vec<int, 10> >*)v)->resize(len);
-            break;
-        case 44:
-            ((std::vector<Vec<int, 11> >*)v)->resize(len);
-            break;
-        case 48:
-            ((std::vector<Vec<int, 12> >*)v)->resize(len);
-            break;
-        case 52:
-            ((std::vector<Vec<int, 13> >*)v)->resize(len);
-            break;
-        case 56:
-            ((std::vector<Vec<int, 14> >*)v)->resize(len);
-            break;
-        case 60:
-            ((std::vector<Vec<int, 15> >*)v)->resize(len);
-            break;
-        case 64:
-            ((std::vector<Vec<int, 16> >*)v)->resize(len);
-            break;
-        case 128:
-            ((std::vector<Vec<int, 32> >*)v)->resize(len);
-            break;
-        case 256:
-            ((std::vector<Vec<int, 64> >*)v)->resize(len);
-            break;
-        case 512:
-            ((std::vector<Vec<int, 128> >*)v)->resize(len);
-            break;
-        default:
-            CV_Error_(cv::Error::StsBadArg, ("Vectors with element size %d are not supported. Please, modify OutputArray::create()\n", esz));
-        }
+        STD_VECTOR_SWITCH(esz, RESIZE_VEC)
         return;
     }
 
