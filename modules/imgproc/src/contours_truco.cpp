@@ -127,9 +127,9 @@ private:
 ////IMPLEMENTATION
 
 struct AccumulatorT:public std::vector<std::vector<cv::Point>>{
-    std::map<uint64_t,size_t> Last_HashIndex_O;
-    std::map<uint64_t,size_t> First_HashIndex_I;
+    std::vector<int> idx_internal_lastLine,idx_external_firstLine;
 };
+
 
 class TRUCOntourTracer : public cv::ParallelLoopBody
 {
@@ -168,7 +168,57 @@ public:
 
     }
 
+    //trace external contour marking EAST pixels (VISITED_OUTER_RIGHT) only so that later the analysis of the internal contour is exactly as expected
+    void traceExternalContourMock(  int r,int c,uchar *row_ptr, const cv::Range& rowRange)const{
+        int curr_x = c , curr_y = r;
+        int start_dir = -1 ;
+        int search_idx = 5;
+        uchar* curr_ptr = row_ptr + c , * start_ptr = curr_ptr;
+        int dir=-1;
+        bool is_first_move = true;
+        // 3. TRACING LOOP
+        while(true)
+        {
+            // Check neighbors
+            for (int n = 0; n < 8; ++n)
+            {
+                int idx = search_idx + n;
+                // Use offset cache
+                uchar* neighbor = curr_ptr + offsets_[idx];
+                if (*neighbor == BACKGROUND) continue;
+                dir = idx & 7;
+                if (((search_idx <= 1)  || (dir <= search_idx - 2)) && (curr_x!=c && curr_y!=r))//do nt apply to first pixel in the way back
+                    *curr_ptr = VISITED_OUTER_RIGHT;
+                // --- EXECUTE MOVE ---
+                curr_y += dy_[dir];
+                curr_x += dx_[dir];
+                // Check bounds //we need to move out of the range  //if first line, and internal contour, we let it go, but no further from this line
+                if( curr_y < rowRange.start )
+                    return  ;
+                // Short-circuit Jacob's Check
+                if (curr_ptr == start_ptr) {
+                    if (!is_first_move && dir == start_dir) {
+                        return  ;//done
+                    }
+                }
+                curr_ptr = neighbor;//move ptr
+                // Reset search index for Moore neighbor
+                search_idx = (dir +6) & 7;
+                break;
+
+            }
+            if (is_first_move) {
+                if(dir==-1){//single pixel
+                    break;//not moved
+                }
+                start_dir = dir;
+                is_first_move = false;
+            }
+
+        }
+    }
     bool traceContour( TRUCOPagedContour<4096>* buffer,  int r,int c,uchar *row_ptr, const cv::Range& rowRange,bool isExternal)const{
+
         buffer->clear();
 
         int curr_x = c , curr_y = r;
@@ -176,11 +226,27 @@ public:
         int search_idx = isExternal ? 5 :1;
         uchar* curr_ptr = row_ptr + c , * start_ptr = curr_ptr;
         int dir=-1;
+        // int sign=isExternal?1:-1;
+
         bool is_first_move = true;
+
+
+        // QUick test to find the first element of an internal contour. We know it should be NE
+        if(!isExternal){
+            int n=0;
+            for ( n = 0; n < 8; ++n)
+            {
+                int idx = search_idx + n;
+                if ( *(curr_ptr + offsets_[idx]) == BACKGROUND) continue;
+                if(curr_x+ dx_[ idx & 7]!=c+1 || curr_y+ dy_[ idx & 7]!=r-1) return false;
+                break;
+            }
+            if(n==8) return false;//isolated pixels must not be considered as internal
+        }
         // 3. TRACING LOOP
         while(true)
         {
-            buffer->push_back({curr_x - 1, curr_y - 1});
+            buffer->push_back({ (curr_x - 1),  (curr_y - 1)});
             // Check neighbors
             for (int n = 0; n < 8; ++n)
             {
@@ -193,8 +259,10 @@ public:
                 // --- EXECUTE MOVE ---
                 curr_y += dy_[dir];
                 curr_x += dx_[dir];
+
+
                 // Check bounds //we need to move out of the range  //if first line, and internal contour, we let it go, but no further from this line
-                if( curr_y < rowRange.start  &&  !(!isExternal && r==rowRange.start && curr_y== rowRange.start -1)){
+                if( curr_y < rowRange.start ){
                     return false;
                 }
                 if ((search_idx <= 1)  || (dir <= search_idx - 2))
@@ -232,14 +300,13 @@ public:
         }
         return true;
     }
+
     void operator()(const cv::Range& range) const CV_OVERRIDE
     {
 
 
         // Pre-allocate buffer to avoid re-allocation during moves
         TRUCOPagedContour<4096> buffer;
-        std::vector<flInfo> firstLinebuffer;
-        firstLinebuffer.reserve(128);
 
         int cols = padded_.cols;
 
@@ -251,7 +318,7 @@ public:
             // Hint for result vector size
             local_contours.reserve(2048);
 
-            for (int r = rowRange.start; r < rowRange.end; ++r)
+            for (int r = rowRange.start; r <= rowRange.end; ++r)
             {
                 uchar* row_ptr = padded_.data + r * step_;
 
@@ -262,7 +329,7 @@ public:
                     if ((c = findStartContourPoint(row_ptr, cols, c)) == cols) break;
 
                     // 2. CHECK: Only process if actually FOREGROUND (redundancy check)
-                    if (row_ptr[c] == FOREGROUND)
+                    if (row_ptr[c] == FOREGROUND && r<rowRange.end )
                     {
                         if( traceContour(&buffer,r,c,row_ptr,rowRange,true)){
                             // Post-processing
@@ -273,50 +340,33 @@ public:
                                 // Instead of copying the vector, we move it.
                                 local_contours.emplace_back();
                                 buffer.copyTo(local_contours.back());
-                                if(r==rowRange.end-1){
-                                    local_contours.Last_HashIndex_O[hashContour(local_contours.back())]=local_contours.size()-1;
+                                if( r==rowRange.start){//register this so we can zip them as Suzuki&Abe method
+                                    local_contours.idx_external_firstLine.push_back(local_contours.size()-1 );
                                 }
                             }
                         }
+                    }
+                    else if( row_ptr[c] == FOREGROUND && r==rowRange.end ){//extra step to mark east pixels only so that internal contours can be correctly extracted in this line
+                        traceExternalContourMock(r,c,row_ptr,rowRange);
                     }
 
                     // 3. FAST SCAN: Find end of current component to skip processing it again
                     c = findEndContourPoint(row_ptr, cols, c + 1);
                     if(c>=cols)break;//end of row
                     //internal contour
-                    if(row_ptr[c-1]>VISITED_OUTER_RIGHT){
+                    if(row_ptr[c-1]>VISITED_OUTER_RIGHT && r>rowRange.start){//inner contours of first line are handled by the thread above
 
-                        bool mustSave=false;
-
-                        if(r==rowRange.start){
-                            mustSave=traceInnerContourFirstLine( firstLinebuffer,r,c-1,row_ptr,rowRange);
-                            if( mustSave ){
-                                buffer.clear();
-                                for(auto fli:firstLinebuffer){
-                                    buffer.push_back({fli.x-1,fli.y-1});
-                                    if(fli.val!=FOREGROUND)
-                                        *(padded_.data + fli.y * step_ + fli.x )=fli.val;
-                                }
-                            }
-                        }
-
-                        else {
-                            mustSave=traceContour(&buffer,r,c-1,row_ptr,rowRange,false);
-                        }
-
-                        if(mustSave){
-
+                        if(traceContour(&buffer,r,c-1,row_ptr,rowRange,false)){
                             // Post-processing
                             if (buffer.size() > 1 && buffer.back() == buffer.front()) {
                                 buffer.pop_back();
-
                             }
                             if (buffer.size() >= minSize_) {
                                 local_contours.emplace_back();
                                 buffer.copyTo(local_contours.back());
-                            }
-                            if(r==rowRange.start){
-                                local_contours.First_HashIndex_I[hashContour(local_contours.back())]=local_contours.size()-1;
+                                if( r==rowRange.end){//register this so we can zip them as Suzuki&Abe method
+                                    local_contours.idx_internal_lastLine.push_back(local_contours.size() -1);
+                                }
                             }
                         }
                     }
@@ -371,101 +421,6 @@ public:
         return j;
     }
 
-    static inline uint64_t hashContour(const std::vector<cv::Point>& c) {
-        uint64_t h = 0;
-
-        for (const auto& pt : c) {
-            uint64_t seed = (static_cast<uint64_t>(pt.x) * UINT64_C(0x1f1f1f1f1f1f1f1f)) ^ static_cast<uint64_t>(pt.y);
-
-            //   hashMix for 'seed'
-            seed = (seed ^ (seed >> 30)) * UINT64_C(0xbf58476d1ce4e5b9);
-            seed = (seed ^ (seed >> 27)) * UINT64_C(0x94d049bb133111eb);
-            h += seed ^ (seed >> 31);
-        }
-
-        //   hashMix for 'c.size()'
-        uint64_t size_hash = static_cast<uint64_t>(c.size());
-        size_hash = (size_hash ^ (size_hash >> 30)) * UINT64_C(0xbf58476d1ce4e5b9);
-        size_hash = (size_hash ^ (size_hash >> 27)) * UINT64_C(0x94d049bb133111eb);
-        size_hash = size_hash ^ (size_hash >> 31);
-
-        //   hashMix for the final combined hash
-        uint64_t final_hash = h ^ size_hash;
-        final_hash = (final_hash ^ (final_hash >> 30)) * UINT64_C(0xbf58476d1ce4e5b9);
-        final_hash = (final_hash ^ (final_hash >> 27)) * UINT64_C(0x94d049bb133111eb);
-
-        return final_hash ^ (final_hash >> 31);
-    }
-    struct flInfo{
-        int x,y;uchar val;
-    };
-
-    bool traceInnerContourFirstLine(std::vector<flInfo> &res,   int r,int c,uchar *row_ptr, const cv::Range& rowRange  )const{
-
-        res.clear();
-        int curr_x = c , curr_y = r;
-        int start_dir = -1;
-        int search_idx = 1;
-        uchar* curr_ptr = row_ptr + c , * start_ptr = curr_ptr;
-        int dir=-1;
-        bool is_first_move = true;
-        // 3. TRACING LOOP
-        while(true)
-        {
-            res.push_back({curr_x , curr_y ,FOREGROUND});
-            // Check neighbors
-            for (int n = 0; n < 8; ++n)
-            {
-                int idx = search_idx + n;
-                // Use offset cache
-                uchar* neighbor = curr_ptr + offsets_[idx];
-                if (*neighbor == BACKGROUND) continue;
-
-
-                dir = idx & 7;
-                if(  curr_y>=rowRange.start){//do not write on the upper
-                    if ((search_idx <= 1) || (dir <= search_idx - 2))
-                    {
-                        res.back().val=  VISITED_OUTER_RIGHT;
-                    }
-                    else if (*curr_ptr == FOREGROUND)
-                    {
-                        res.back().val=VISITED_;
-                    }
-                }
-                // --- EXECUTE MOVE ---
-                curr_y += dy_[dir];
-                curr_x += dx_[dir];
-                // Check bounds
-                if( curr_y < rowRange.start-1 || (curr_y == rowRange.start-1  &&   curr_x<=c)){
-                    return false;
-                }
-                // Short-circuit Jacob's Check
-                if (curr_ptr == start_ptr && !is_first_move && dir == start_dir) {
-                    return true;//done
-                }
-
-                curr_ptr = neighbor;//move ptr
-
-                // Reset search index for Moore neighbor
-                search_idx = (dir +6) & 7;
-                break;
-
-            }
-            if (is_first_move) {
-                if( curr_x!=c+1 || curr_y!=r-1 )return false;
-                if(dir==-1){//single pixel
-                    res.back().val =VISITED_OUTER_RIGHT;
-                    break;//not moved
-                }
-                start_dir = dir;
-                is_first_move = false;
-            }
-
-        }
-        return true;
-    }
-
 
 private:
     cv::Mat padded_;
@@ -484,32 +439,6 @@ private:
     const uchar VISITED_OUTER_RIGHT    = 100;
     const uchar VISITED_    = 200;
 };
-
-static bool isForwardCyclicShift(const std::vector<cv::Point>& A, const std::vector<cv::Point>& B) {
-    if (A.size() != B.size()) return false;
-    if (A.empty()) return true;
-
-    int n = static_cast<int>(A.size());
-
-    // Find all occurrences of A[0] in B (there can be multiple in 1-pixel shapes)
-    for (int b_start = 0; b_start < n; ++b_start) {
-        if (B[b_start] == A[0]) {
-            bool match = true;
-            for (int i = 0; i < n; ++i) {
-                // Traverse B FORWARD
-                int b_idx = (b_start + i) % n;
-
-                if (A[i] != B[b_idx]) {
-                    match = false;
-                    break;
-                }
-            }
-            // If we make it through the loop, we proved B is a forward shift of A!
-            if (match) return true;
-        }
-    }
-    return false;
-}
 
 
 void approxContour(std::vector<cv::Point> &inout,cv::ContourApproximationModes contApprox_)   {
@@ -575,7 +504,7 @@ void findTRUContoursImpl(cv::Mat& padded,
                            std::vector<std::vector<cv::Point>>& outContours,
                            int minSize,int contApprox)
 {
-    // 1. Load Balancing Logic
+    //   Load Balancing Logic
     const int nstripes = cv::getNumThreads();
     std::vector<cv::Range> balancedRanges;
     if (nstripes > 1) {
@@ -592,45 +521,77 @@ void findTRUContoursImpl(cv::Mat& padded,
     else {
         balancedRanges.emplace_back(1, padded.rows - 1);
     }
-    // 2. Parallel Execution
+    //  Parallel Execution
     std::vector<AccumulatorT> threadAccumulators(balancedRanges.size());
     TRUCOntourTracer worker(padded, balancedRanges, threadAccumulators, minSize);
     cv::parallel_for_(cv::Range(0, (int)balancedRanges.size()), worker);
 
-    //3. remove possible duplicates that happen in very rare occasions
-    for(int i=0;i<int(threadAccumulators.size())-1;i++){
-        for(auto const& kv:threadAccumulators[i].Last_HashIndex_O){
-            auto it=threadAccumulators[i+1].First_HashIndex_I.find(kv.first);
-            if(it!=threadAccumulators[i+1].First_HashIndex_I.end()){
-                size_t idx=it->second;
-                if (!isForwardCyclicShift(threadAccumulators[i+1][idx],threadAccumulators[i][kv.second] )) continue;
-                threadAccumulators[i+1][idx].clear();
-            }
+
+    // REORG To Match Suzuki & Abe's Contour Ordering.
+    // Every adjacent strip pair (t, t+1) shares a boundary row. On that row:
+    //   * thread t   recorded INTERNAL fragments -> idx_internal_lastLine (tail of accT)
+    //   * thread t+1 recorded EXTERNAL fragments -> idx_external_firstLine (head of accT1)
+    // Both runs are already in X-ascending order (left-to-right raster scan),
+    // so a two-pointer merge restores the sequential Suzuki & Abe ordering.
+    for (size_t t = 0; t + 1 < threadAccumulators.size(); ++t) {
+        auto& accT  = threadAccumulators[t];
+        auto& accT1 = threadAccumulators[t + 1];
+
+        const size_t kI = accT.idx_internal_lastLine.size();
+        const size_t kE = accT1.idx_external_firstLine.size();
+        if (kI == 0 && kE == 0) continue;
+
+        const size_t tailStart = accT.size() - kI;
+
+        // Merge by ascending X of each contour's first point. Contours are moved,
+        // not copied — only std::vector handles (three pointers) change hands.
+        std::vector<std::vector<cv::Point>> merged;
+        merged.reserve(kI + kE);
+        size_t i = tailStart, iEnd = accT.size();
+        size_t j = 0,         jEnd = kE;
+        while (i < iEnd && j < jEnd) {
+            if (accT[i].front().x <= accT1[j].front().x)
+                merged.emplace_back(std::move(accT[i++]));
+            else
+                merged.emplace_back(std::move(accT1[j++]));
         }
+        while (i < iEnd) merged.emplace_back(std::move(accT[i++]));
+        while (j < jEnd) merged.emplace_back(std::move(accT1[j++]));
+
+        // Replace accT's tail with the merged run.
+        accT.resize(tailStart);
+        for (auto& c : merged) accT.emplace_back(std::move(c));
+
+        // Drop the consumed externals from the head of accT1.
+        accT1.erase(accT1.begin(), accT1.begin() + kE);
+
+        // Any remaining bookkeeping in accT1 indexed absolute positions — fix them.
+        for (auto& idx : accT1.idx_internal_lastLine)
+            idx -= static_cast<int>(kE);
+
+        // This boundary's bookkeeping is now consumed.
+        accT.idx_internal_lastLine.clear();
+        accT1.idx_external_firstLine.clear();
     }
 
-    // 4. ZERO-COPY MERGE
-    // Calculate total size
+    //   ZERO-COPY MERGE
     size_t totalContours = 0;
-    for (auto& tVec : threadAccumulators) {
-        if (!tVec.empty()) {
-            tVec.erase(std::remove_if(tVec.begin(), tVec.end(),
-                                      [](const std::vector<cv::Point>& c){ return c.empty(); }), tVec.end());
-        }
+    for (auto& tVec : threadAccumulators)
         totalContours += tVec.size();
-    }
+
 
     outContours.clear();
     outContours.reserve(totalContours);
-    //5. move the contours from thread accumulators to output without copying pixel data
+    // move the contours from thread accumulators to output without copying pixel data
     for (auto& tVec : threadAccumulators) {
         // move_iterator moves the vector internals (pointers) without copying pixel data
         outContours.insert(outContours.end(),
                            std::make_move_iterator(tVec.begin()),
                            std::make_move_iterator(tVec.end()));
     }
-    //6. reverse the order to match original findContours Suzuki&Abe
+    //  reverse the order to match original findContours Suzuki&Abe
     std::reverse(outContours.begin(), outContours.end());
+
 
     //7. now, lets do the contour approximation if needed in parallel
     if(contApprox!=cv::CHAIN_APPROX_NONE){
