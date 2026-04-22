@@ -400,9 +400,6 @@ void CharucoDetector::detectDiamonds(InputArray image, OutputArrayOfArrays _diam
     CV_Assert(getBoard().getChessboardSize() == Size(3, 3));
     CV_Assert((inMarkerCorners.empty() && inMarkerIds.empty() && !image.empty()) || (inMarkerCorners.total() == inMarkerIds.total()));
 
-    if (_diamondCorners.needed()) _diamondCorners.release();
-    if (_diamondIds.needed()) _diamondIds.release();
-
     vector<vector<Point2f>> tmpMarkerCorners;
     vector<int> tmpMarkerIds;
     InputOutputArrayOfArrays _markerCorners = inMarkerCorners.needed() ? inMarkerCorners : _InputOutputArray(tmpMarkerCorners);
@@ -417,7 +414,12 @@ void CharucoDetector::detectDiamonds(InputArray image, OutputArrayOfArrays _diam
 
     // stores if the detected markers have been assigned or not to a diamond
     vector<bool> assigned(_markerIds.total(), false);
-    if(_markerIds.total() < 4ull) return; // a diamond need at least 4 markers
+    if(_markerIds.total() < 4ull)
+    {
+        if (_diamondCorners.needed()) _diamondCorners.release();
+        if (_diamondIds.needed()) _diamondIds.release();
+        return; // a diamond need at least 4 markers
+    }
 
     // convert input image to grey
     Mat grey;
@@ -521,15 +523,26 @@ void CharucoDetector::detectDiamonds(InputArray image, OutputArrayOfArrays _diam
 
     if(diamondIds.size() > 0ull) {
         // parse output
-        Mat(diamondIds).copyTo(_diamondIds);
+        if (_diamondIds.needed())
+        {
+            Mat(diamondIds).copyTo(_diamondIds);
+        }
 
-        _diamondCorners.create((int)diamondCorners.size(), 1, CV_32FC2);
-        for(unsigned int i = 0; i < diamondCorners.size(); i++) {
-            _diamondCorners.create(4, 1, CV_32FC2, i, true);
-            for(int j = 0; j < 4; j++) {
-                _diamondCorners.getMat(i).at<Point2f>(j) = diamondCorners[i][j];
+        if (_diamondCorners.needed())
+        {
+            _diamondCorners.create((int)diamondCorners.size(), 1, CV_32FC2);
+            for(unsigned int i = 0; i < diamondCorners.size(); i++) {
+                _diamondCorners.create(4, 1, CV_32FC2, i, true);
+                for(int j = 0; j < 4; j++) {
+                    _diamondCorners.getMat(i).at<Point2f>(j) = diamondCorners[i][j];
+                }
             }
         }
+    }
+    else
+    {
+        if (_diamondCorners.needed()) _diamondCorners.release();
+        if (_diamondIds.needed()) _diamondIds.release();
     }
 }
 
