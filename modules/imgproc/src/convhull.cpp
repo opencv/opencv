@@ -41,6 +41,7 @@
 
 #include "precomp.hpp"
 #include <iostream>
+#include "convex_hull_bucket_sort.hpp"
 
 namespace cv
 {
@@ -171,14 +172,17 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     // sort the point set by x-coordinate, find min and max y
     if( !is_float )
     {
-        std::sort(pointer, pointer + total, CHullCmpPoints<int>());
-        for( i = 1; i < total; i++ )
+        if (!convex_hull_bucket_sort(data0, pointer, total,  miny_ind, maxy_ind))
         {
-            int y = pointer[i]->y;
-            if( pointer[miny_ind]->y > y )
-                miny_ind = i;
-            if( pointer[maxy_ind]->y < y )
-                maxy_ind = i;
+            std::sort(pointer, pointer + total, CHullCmpPoints<int>());
+            for( i = 1; i < total; i++ )
+            {
+                int y = pointer[i]->y;
+                if( pointer[miny_ind]->y > y )
+                    miny_ind = i;
+                if( pointer[maxy_ind]->y < y )
+                    maxy_ind = i;
+                }
         }
     }
     else
