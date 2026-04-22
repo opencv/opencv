@@ -7,6 +7,51 @@
 
 namespace cv {
 
+typedef Vec<int, 5> Vec5i;
+typedef Vec<int, 7> Vec7i;
+typedef Vec<int, 9> Vec9i;
+typedef Vec<int, 10> Vec10i;
+typedef Vec<int, 11> Vec11i;
+typedef Vec<int, 12> Vec12i;
+typedef Vec<int, 13> Vec13i;
+typedef Vec<int, 14> Vec14i;
+typedef Vec<int, 15> Vec15i;
+typedef Vec<int, 16> Vec16i;
+typedef Vec<int, 32> Vec32i;
+typedef Vec<int, 64> Vec64i;
+typedef Vec<int, 128> Vec128i;
+
+#undef STD_VECTOR_SWITCH
+#define STD_VECTOR_SWITCH(esz, func) \
+    switch( esz ) \
+    { \
+    case 1: func(uchar); \
+    case 2: func(Vec2b); \
+    case 3: func(Vec3b); \
+    case 4: func(int); \
+    case 6: func(Vec3s); \
+    case 8: func(Vec2i); \
+    case 12: func(Vec3i); \
+    case 16: func(Vec4i); \
+    case 20: func(Vec5i); \
+    case 24: func(Vec6i); \
+    case 28: func(Vec7i); \
+    case 32: func(Vec8i); \
+    case 36: func(Vec9i); \
+    case 40: func(Vec10i); \
+    case 44: func(Vec11i); \
+    case 48: func(Vec12i); \
+    case 52: func(Vec13i); \
+    case 56: func(Vec14i); \
+    case 60: func(Vec15i); \
+    case 64: func(Vec16i); \
+    case 128: func(Vec32i); \
+    case 256: func(Vec64i); \
+    case 512: func(Vec128i); \
+    default: \
+        CV_Error_(cv::Error::StsBadArg, ("Vectors of vectors with element size %d are not supported. Please, modify STD_VECTOR_SWITCH() macro\n", esz)); \
+    }
+
 /*************************************************************************************************\
                                         Input/Output Array
 \*************************************************************************************************/
@@ -38,16 +83,6 @@ Mat _InputArray::getMat_(int i) const
         return Mat(sz, flags, obj);
     }
 
-    if( k == STD_VECTOR )
-    {
-        CV_Assert( i < 0 );
-        int t = CV_MAT_TYPE(flags);
-        const std::vector<uchar>& v = *(const std::vector<uchar>*)obj;
-        int v_size = size().width;
-
-        return !v.empty() ? Mat(1, &v_size, t, (void*)&v[0]) : Mat();
-    }
-
     if( k == STD_BOOL_VECTOR )
     {
         CV_Assert( i < 0 );
@@ -56,7 +91,7 @@ Mat _InputArray::getMat_(int i) const
         int j, n = (int)v.size();
         if( n == 0 )
             return Mat();
-        Mat m(1, &n, t);
+        Mat m(1, n, t);
         uchar* dst = m.data;
         for( j = 0; j < n; j++ )
             dst[j] = (uchar)v[j];
@@ -66,15 +101,15 @@ Mat _InputArray::getMat_(int i) const
     if( k == NONE )
         return Mat();
 
-    if( k == STD_VECTOR_VECTOR )
+    if( k == STD_VECTOR || k == STD_VECTOR_VECTOR )
     {
-        int t = type(i);
-        const std::vector<std::vector<uchar> >& vv = *(const std::vector<std::vector<uchar> >*)obj;
-        CV_Assert( 0 <= i && i < (int)vv.size() );
-        const std::vector<uchar>& v = vv[i];
-        int v_size = size(i).width;
+        int t = CV_MAT_TYPE(flags);
+        int esz = CV_ELEM_SIZE(t);
 
-        return !v.empty() ? Mat(1, &v_size, t, (void*)&v[0]) : Mat();
+    #undef GET_MAT
+    #define GET_MAT(T)         {             std::vector<T>* v;             if (k == STD_VECTOR_VECTOR) {                 std::vector<std::vector<T> >* vv =                     reinterpret_cast<std::vector<std::vector<T> >*>(obj);                 CV_Assert(size_t(i) < vv->size());                 v = &vv->at(i);             } else {                 v = reinterpret_cast<std::vector<T>*>(obj);             }             return v->empty() ? Mat() : Mat(1, int(v->size()), t, v->data());         }
+
+        STD_VECTOR_SWITCH(esz, GET_MAT)
     }
 
     if( k == STD_VECTOR_MAT )
@@ -212,17 +247,13 @@ void _InputArray::getMatVector(std::vector<Mat>& mv) const
 
     if( k == STD_VECTOR_VECTOR )
     {
-        const std::vector<std::vector<uchar> >& vv = *(const std::vector<std::vector<uchar> >*)obj;
-        int n = (int)vv.size();
-        int t = CV_MAT_TYPE(flags);
-        mv.resize(n);
+        int typ = CV_MAT_TYPE(flags);
+        int esz = CV_ELEM_SIZE(typ);
 
-        for( int i = 0; i < n; i++ )
-        {
-            const std::vector<uchar>& v = vv[i];
-            mv[i] = Mat(size(i), t, (void*)&v[0]);
-        }
-        return;
+        #undef GET_VEC_VEC_MAT_VEC
+        #define GET_VEC_VEC_MAT_VEC(T)         {             const std::vector<std::vector<T > >* vv = (const std::vector<std::vector<T > >*)obj;             size_t n = vv->size();             mv.resize(n);             for (size_t i = 0; i < n; i++) {                 const std::vector<T >& vi = vv->at(i);                 CV_Assert(vi.size() <= (size_t)INT_MAX);                 int ni = (int)vi.size();                 mv[i] = ni > 0 ? Mat(1, ni, typ, (void*)&vi[0]) : Mat();             }         }         break
+
+        STD_VECTOR_SWITCH(esz, GET_VEC_VEC_MAT_VEC)
     }
 
     if( k == STD_VECTOR_MAT )
