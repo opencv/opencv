@@ -624,7 +624,7 @@ struct ModelFusionQDQ
                             out_sc = netimpl->argTensor(out_scale).at<float>(0);
                             const Mat& fc_out_zp_m = netimpl->argTensor(out_zp);
                             out_zp_i = fc_out_zp_m.depth() == CV_8U
-                                ? (int)fc_out_zp_m.at<uint8_t>(0)
+                                ? (int)fc_out_zp_m.at<uint8_t>(0) - 128
                                 : (int)fc_out_zp_m.at<int8_t>(0);
                             if (!(inp_sc > 0.f && out_sc > 0.f))
                                 break;
@@ -738,7 +738,7 @@ struct ModelFusionQDQ
                             float out_sc_val = netimpl->argTensor(out_scale).at<float>(0);
                             const Mat& fc_out_zp_m = netimpl->argTensor(out_zp);
                             int out_zp_i = fc_out_zp_m.depth() == CV_8U
-                                ? (int)fc_out_zp_m.at<uint8_t>(0)
+                                ? (int)fc_out_zp_m.at<uint8_t>(0) - 128
                                 : (int)fc_out_zp_m.at<int8_t>(0);
                             if (inp_sc > 0.f && out_sc_val > 0.f) {
                                 Mat w_q = netimpl->argTensor(dq_w->inputs[0]);
@@ -857,7 +857,7 @@ struct ModelFusionQDQ
                             float out_sc_val = netimpl->argTensor(out_scale).at<float>(0);
                             const Mat& g_out_zp_m = netimpl->argTensor(out_zp);
                             int out_zp_i = g_out_zp_m.depth() == CV_8U
-                                ? (int)g_out_zp_m.at<uint8_t>(0)
+                                ? (int)g_out_zp_m.at<uint8_t>(0) - 128
                                 : (int)g_out_zp_m.at<int8_t>(0);
                             if (inp_sc > 0.f && out_sc_val > 0.f) {
                                 Mat w_q = netimpl->argTensor(dq_b->inputs[0]);

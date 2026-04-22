@@ -119,7 +119,11 @@ public:
 
         const int nstripes = outerSize <= 4 ? 1 : getNumThreads();
         runInt8Gemm(srcMat, weightsMat, biasMat, outputMultiplier, dstMatInt32, nstripes, output_zp);
-        dstMatInt32.convertTo(dstMat, output_type);
+        if (output_type == CV_8U) {
+            dstMatInt32.convertTo(dstMat, output_type, 1, 128);
+        } else {
+            dstMatInt32.convertTo(dstMat, output_type);
+        }
     }
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
