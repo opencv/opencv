@@ -83,12 +83,10 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        MatShape inpShape = inputs_arr.shape(0);
-
-        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) && inpShape.layout != DATA_LAYOUT_BLOCK,
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16F && inpShape.layout != DATA_LAYOUT_BLOCK)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;

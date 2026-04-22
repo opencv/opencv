@@ -71,6 +71,11 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
+        if (inputs_arr.depth() == CV_16F) {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
+
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
@@ -78,11 +83,6 @@ public:
         const auto& input = inputs[0];
         const auto& scale = inputs[1];
         const auto& bias = inputs[2];
-
-        if (inputs_arr.depth() == CV_16F && input.shape().layout != DATA_LAYOUT_BLOCK) {
-            forward_fallback(inputs_arr, outputs_arr, internals_arr);
-            return;
-        }
 
         fastNormGroup(input, scale, bias, outputs[0], epsilon, num_groups);
     }

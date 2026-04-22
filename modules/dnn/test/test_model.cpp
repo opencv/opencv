@@ -1441,7 +1441,7 @@ TEST_P(Reproducibility_BlazeFace_ONNX, Accuracy)
     if (targetId == DNN_TARGET_CPU_FP16)
         net.enableWinograd(false);
 
-    std::string imgname = findDataFile("cv/cascadeandhog/images/karen-and-rob.png", false);
+    std::string imgname = findDataFile("cv/cascadeandhog/images/karen-and-rob.png");
     Mat image = imread(imgname);
     ASSERT_FALSE(image.empty());
 
@@ -1460,43 +1460,23 @@ TEST_P(Reproducibility_BlazeFace_ONNX, Accuracy)
     Mat selected;
     int idxSel = -1;
 
-    double min_t = 0;
-    const int niters =
-#ifdef _DEBUG
-        1;
-#else
-        30;
-#endif
+    net.setInput(input, "image");
+    net.setInput(conf, "conf_threshold");
+    net.setInput(iou, "iou_threshold");
+    net.setInput(maxDet, "max_detections");
+    net.forward(outs, outNames);
 
-    for (int i = 0; i < niters; i++)
+    for (size_t j = 0; j < outNames.size(); ++j)
     {
-        double t = (double)getTickCount();
-
-        net.setInput(input, "image");
-        net.setInput(conf, "conf_threshold");
-        net.setInput(iou, "iou_threshold");
-        net.setInput(maxDet, "max_detections");
-        net.forward(outs, outNames);
-
-        if (idxSel < 0)
+        if (outNames[j].find("selectedBoxes") != std::string::npos)
         {
-            for (size_t j = 0; j < outNames.size(); ++j)
-            {
-                if (outNames[j].find("selectedBoxes") != std::string::npos)
-                {
-                    idxSel = static_cast<int>(j);
-                    break;
-                }
-            }
-            if (idxSel < 0 && !outs.empty())
-                idxSel = 0;
-            ASSERT_GE(idxSel, 0);
+            idxSel = static_cast<int>(j);
+            break;
         }
-
-        t = (double)getTickCount() - t;
-        min_t = i == 0 ? t : std::min(min_t, t);
     }
-    printf("run time = %.2fms\n", min_t * 1000. / getTickFrequency());
+    if (idxSel < 0 && !outs.empty())
+        idxSel = 0;
+    ASSERT_GE(idxSel, 0);
 
     outs[idxSel].convertTo(selected, CV_32F);
 
@@ -1508,7 +1488,7 @@ TEST_P(Reproducibility_BlazeFace_ONNX, Accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_BlazeFace_ONNX,
-                        testing::Values(DNN_TARGET_CPU));
+                        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
 
 typedef testing::TestWithParam<Target> Reproducibility_FacePaint_ONNX;
 TEST_P(Reproducibility_FacePaint_ONNX, Accuracy)
@@ -1534,23 +1514,8 @@ TEST_P(Reproducibility_FacePaint_ONNX, Accuracy)
                               Scalar(127.5, 127.5, 127.5), true, false, CV_32F);
     ASSERT_TRUE(!input.empty());
 
-    Mat out;
-    double min_t = 0;
-    const int niters =
-#ifdef _DEBUG
-        1;
-#else
-        5;
-#endif
-
-    for (int i = 0; i < niters; i++) {
-        double t = (double)getTickCount();
-        net.setInput(input);
-        out = net.forward();
-        t = (double)getTickCount() - t;
-        min_t = i == 0 ? t : std::min(min_t, t);
-    }
-    printf("run time = %.2fms\n", min_t * 1000. / getTickFrequency());
+    net.setInput(input);
+    Mat out = net.forward();
 
     Mat ref = blobFromNPY(_tf("onnx/data/face_paint_512_v2_0_ort_output.npy"));
     ASSERT_FALSE(ref.empty());

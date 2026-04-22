@@ -221,18 +221,18 @@ void fastNormChannel(const Mat &input, const Mat &scale, const Mat &bias, Mat &o
                 int c0 = 0;
 #if CV_SIMD
                 for (; c0 <= validC0 - VEC_SZ; c0 += VEC_SZ) {
-                    v_float32 vsum = v_setzero_f32();
-                    v_float32 vsqsum = v_setzero_f32();
+                    v_float32 vsum = vx_setzero_f32();
+                    v_float32 vsqsum = vx_setzero_f32();
                     for (int h = 0; h < H; ++h) {
                         const float* inrow = inbase + h * inStep2;
                         for (int w = 0; w < W; ++w) {
-                            v_float32 v = v_load(inrow + w * inStep3 + c0);
+                            v_float32 v = vx_load(inrow + w * inStep3 + c0);
                             vsum = v_add(vsum, v);
                             vsqsum = v_fma(v, v, vsqsum);
                         }
                     }
-                    v_store(sum + c0, vsum);
-                    v_store(sqsum + c0, vsqsum);
+                    vx_store(sum + c0, vsum);
+                    vx_store(sqsum + c0, vsqsum);
                 }
 #endif
                 for (; c0 < validC0; ++c0) {
@@ -260,14 +260,14 @@ void fastNormChannel(const Mat &input, const Mat &scale, const Mat &bias, Mat &o
                 c0 = 0;
 #if CV_SIMD
                 for (; c0 <= validC0 - VEC_SZ; c0 += VEC_SZ) {
-                    v_float32 va = v_load(alpha + c0);
-                    v_float32 vb = v_load(beta + c0);
+                    v_float32 va = vx_load(alpha + c0);
+                    v_float32 vb = vx_load(beta + c0);
                     for (int h = 0; h < H; ++h) {
                         const float* inrow  = inbase + h * inStep2;
                         float*       outrow = outbase + h * outStep2;
                         for (int w = 0; w < W; ++w) {
-                            v_float32 vin = v_load(inrow + w * inStep3 + c0);
-                            v_store(outrow + w * outStep3 + c0, v_fma(vin, va, vb));
+                            v_float32 vin = vx_load(inrow + w * inStep3 + c0);
+                            vx_store(outrow + w * outStep3 + c0, v_fma(vin, va, vb));
                         }
                     }
                 }
@@ -285,11 +285,11 @@ void fastNormChannel(const Mat &input, const Mat &scale, const Mat &bias, Mat &o
                 int c0_pad = validC0;
 #if CV_SIMD
                 for (; c0_pad <= C0 - VEC_SZ; c0_pad += VEC_SZ) {
-                    v_float32 vzero = v_setzero_f32();
+                    v_float32 vzero = vx_setzero_f32();
                     for (int h = 0; h < H; ++h) {
                         float* outrow = outbase + h * outStep2;
                         for (int w = 0; w < W; ++w)
-                            v_store(outrow + w * outStep3 + c0_pad, vzero);
+                            vx_store(outrow + w * outStep3 + c0_pad, vzero);
                     }
                 }
 #endif
@@ -431,14 +431,14 @@ void fastNormGroup(const Mat &input, const Mat &scale, const Mat &bias, Mat &out
                     int c0 = c0_lo;
 #if CV_SIMD
                     for (; c0 <= c0_hi - VEC_SZ; c0 += VEC_SZ) {
-                        v_float32 va = v_load(alpha + c0);
-                        v_float32 vb = v_load(beta + c0);
+                        v_float32 va = vx_load(alpha + c0);
+                        v_float32 vb = vx_load(beta + c0);
                         for (int h = 0; h < H; ++h) {
                             const float* inrow  = inbase + h * inStep2;
                             float*       outrow = outbase + h * outStep2;
                             for (int w = 0; w < W; ++w) {
-                                v_float32 vin = v_load(inrow + w * inStep3 + c0);
-                                v_store(outrow + w * outStep3 + c0, v_fma(vin, va, vb));
+                                v_float32 vin = vx_load(inrow + w * inStep3 + c0);
+                                vx_store(outrow + w * outStep3 + c0, v_fma(vin, va, vb));
                             }
                         }
                     }
