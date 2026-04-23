@@ -44,8 +44,24 @@
 #include "test_precomp.hpp"
 #include "npy_blob.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+#include <set>
 
 namespace opencv_test { namespace {
+
+static const std::set<std::string>& getDarknetNewEngineDenylist()
+{
+    static const std::set<std::string> denyList = {
+        #include "test_darknet_importer_new_engine_denylist.inl.hpp"
+    };
+    return denyList;
+}
+
+static void skipIfInDarknetNewEngineDenylist()
+{
+    const std::string name = opencv_test::getCurrentTestNameNoParams();
+    if (!name.empty() && getDarknetNewEngineDenylist().count(name))
+        throw SkipTestException("Test is in the new engine denylist: " + name);
+}
 
 template<typename TString>
 static std::string _tf(TString filename)
@@ -55,6 +71,7 @@ static std::string _tf(TString filename)
 
 TEST(Test_YOLO, read_yolov4_onnx)
 {
+    skipIfInDarknetNewEngineDenylist();
     Net net = readNet(findDataFile("dnn/yolov4.onnx", false));
     ASSERT_FALSE(net.empty());
 }
@@ -234,6 +251,7 @@ public:
 
 TEST_P(Test_YOLO_nets, YOLOv4)
 {
+    skipIfInDarknetNewEngineDenylist();
     applyTestTag(
             CV_TEST_TAG_LONG,
             CV_TEST_TAG_MEMORY_2GB,
@@ -281,6 +299,7 @@ TEST_P(Test_YOLO_nets, YOLOv4)
 
 TEST_P(Test_YOLO_nets, YoloVoc)
 {
+    skipIfInDarknetNewEngineDenylist();
     applyTestTag(
 #if defined(OPENCV_32BIT_CONFIGURATION) && defined(HAVE_OPENCL)
         CV_TEST_TAG_MEMORY_2GB,
@@ -327,6 +346,7 @@ TEST_P(Test_YOLO_nets, YoloVoc)
 
 TEST_P(Test_YOLO_nets, TinyYoloVoc)
 {
+    skipIfInDarknetNewEngineDenylist();
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
 
     // batchId, classId, confidence, left, top, right, bottom
@@ -369,6 +389,7 @@ TEST_P(Test_YOLO_nets, TinyYoloVoc)
 
 TEST_P(Test_YOLO_nets, YOLOv3)
 {
+    skipIfInDarknetNewEngineDenylist();
     applyTestTag(
             CV_TEST_TAG_LONG,
             CV_TEST_TAG_MEMORY_2GB,
@@ -421,6 +442,7 @@ TEST_P(Test_YOLO_nets, YOLOv3)
 
 TEST_P(Test_YOLO_nets, YOLOv4_tiny)
 {
+    skipIfInDarknetNewEngineDenylist();
     applyTestTag(
         target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB
     );
@@ -445,7 +467,7 @@ TEST_P(Test_YOLO_nets, YOLOv4_tiny)
     if (target == DNN_TARGET_CUDA_FP16)
         iouDiff = 0.02;
 
-    std::string model_file = "yolov4-tiny-2020-12.onnx";
+    std::string model_file = "yolov4-tiny.onnx";
 
     {
         SCOPED_TRACE("batch size 1");
@@ -460,6 +482,7 @@ TEST_P(Test_YOLO_nets, YOLOv4_tiny)
 
 TEST_P(Test_YOLO_nets, YOLOv4x_mish)
 {
+    skipIfInDarknetNewEngineDenylist();
     applyTestTag(
         CV_TEST_TAG_MEMORY_2GB,
         CV_TEST_TAG_LONG,

@@ -1417,7 +1417,7 @@ TEST_P(Test_Int8_nets, YOLOv4_tiny)
     };
     Mat ref(N0 + N1, 7, CV_32FC1, (void*)ref_);
 
-    std::string model_file = "yolov4-tiny-2020-12.onnx";
+    std::string model_file = "yolov4-tiny.onnx";
     double scoreDiff = 0.12;
     double iouDiff = target == DNN_TARGET_OPENCL_FP16 ? 0.2 : 0.118;
 
