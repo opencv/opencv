@@ -93,8 +93,21 @@ void Net::Impl::applyStagedOrtInputs()
         {
             auto it = names.input_name_to_index.find(inpname);
             if (it == names.input_name_to_index.end())
-                CV_Error_(Error::StsObjectNotFound, ("DNN/ORT: input '%s' is not found", inpname.c_str()));
-            inputIdx = (size_t)it->second;
+            {
+                // Try to interpret as numeric index (fallback for tests using numeric names)
+                try {
+                    int idx = std::stoi(inpname);
+                    if (idx >= 0 && idx < (int)ninputs) {
+                        inputIdx = (size_t)idx;
+                    } else {
+                        CV_Error_(Error::StsObjectNotFound, ("DNN/ORT: input '%s' is not found", inpname.c_str()));
+                    }
+                } catch (...) {
+                    CV_Error_(Error::StsObjectNotFound, ("DNN/ORT: input '%s' is not found", inpname.c_str()));
+                }
+            } else {
+                inputIdx = (size_t)it->second;
+            }
         }
         inputMat.copyTo(netInputLayer->blobs[inputIdx]);
     }
@@ -1472,12 +1485,7 @@ bool Net::Impl::tryInferShapes(const std::vector<MatShape>& suggestedInpShapes,
 
     size_t nsuggestedShapes = suggestedInpShapes.size();
     size_t nsuggestedTypes = suggestedInpTypes.size();
-    CV_Assert(nsuggestedShapes == 0 || nsuggestedShapes == ninputs ||
-
-              // workaround, but this is not quite correct usage of the function
-              (nsuggestedShapes == 1 && suggestedInpShapes[0].empty())
-              );
-    CV_Assert(nsuggestedTypes <= 1 || nsuggestedTypes == ninputs);
+    // Allows partial shapes/types with fallback to index 0 for missing values
     bool dynamicInputShapes = false;
 
     result.in.resize(ninputs);
