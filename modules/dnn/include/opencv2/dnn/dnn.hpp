@@ -716,21 +716,6 @@ CV__DNN_INLINE_NS_BEGIN
          */
         CV_WRAP Mat forward(const String& outputName = String());
 
-        CV_WRAP Mat tokenize(const String& text) const;
-        CV_WRAP String detokenize(InputArray tokenIds) const;
-        CV_WRAP void setInputImagePath(const String& path);
-        CV_WRAP void setPrompt(const String& prompt);
-        CV_WRAP void setSearchOption(const String& name, double value);
-        CV_WRAP void setSearchOptionBool(const String& name, bool value);
-        CV_WRAP void setGuidance(const String& type, const String& data,
-                                  bool enableFfTokens = false);
-        CV_WRAP String applyChatTemplate(const String& messages,
-                                          const String& templateStr = String(),
-                                          const String& tools = String(),
-                                          bool addGenerationPrompt = true) const;
-        CV_WRAP String getModelType() const;
-        CV_WRAP String getDeviceType() const;
-
         /** @brief Runs forward pass to compute output of layer with name @p outputName.
          *  @param outputName name for layer which output is needed to get
          *  @details By default runs forward pass for the whole network.
@@ -2184,10 +2169,100 @@ public:
     CV_WRAP std::vector<int> encode(const std::string& text);
 
     CV_WRAP std::string decode(const std::vector<int>& tokens);
+
+    /** @brief Tokenize text into token IDs (Mat).
+     *  @param text  UTF-8 input string.
+     *  @return Mat of shape [1, N] with type CV_32S.
+     */
+    CV_WRAP Mat tokenize(const String& text);
+
+    /** @brief Detokenize token IDs back to text.
+     *  @param tokenIds  Mat of token IDs (CV_32S).
+     *  @return Decoded UTF-8 string.
+     */
+    CV_WRAP String detokenize(InputArray tokenIds);
+
     struct Impl;
 private:
     Ptr<Impl> impl_;
 };
+
+    /** @brief Enum of tokenizer backends supported by the LLM class.
+     *  @see LLM::create
+     */
+    enum TokenizerType
+    {
+        TOKENIZER_OPENCV_BPE = 0, //!< OpenCV built-in BPE tokenizer (GPT-2, GPT-4, Qwen 2.5 — auto-detected from config.json).
+        TOKENIZER_ORT_GENAI  = 1  //!< ORT GenAI tokenizer (requires build with WITH_ONNXRUNTIME=ON and WITH_ONNXRUNTIME_GENAI=ON).
+    };
+
+    /** @brief High-level class for Large Language Model inference and tokenization.
+     *
+     * Provides a unified API that supports multiple tokenizer backends
+     * (OpenCV BPE, ORT GenAI) and exposes ORT GenAI configuration methods
+     * when available.
+     */
+    class CV_EXPORTS_W_SIMPLE LLM {
+    public:
+        CV_WRAP LLM();
+        CV_WRAP ~LLM();
+
+        /** @brief Create an LLM instance.
+         *  @param modelPath  Path to model directory (for ORT GenAI) or config.json (for OpenCV tokenizers when tokenizerConfigPath is empty).
+         *  @param tokenizerType  Which tokenizer backend to use. @see TokenizerType
+         *  @param tokenizerConfigPath  Optional separate path to tokenizer config.json. When provided with TOKENIZER_OPENCV_BPE,
+         *  modelPath is used for the model and tokenizerConfigPath for the tokenizer.
+         *  @param engine  Engine type for inference. Only needed for ORT GenAI. @see EngineType
+         */
+        CV_WRAP static LLM create(CV_WRAP_FILE_PATH const String& modelPath,
+                                   int tokenizerType = TOKENIZER_ORT_GENAI,
+                                   CV_WRAP_FILE_PATH const String& tokenizerConfigPath = String(),
+                                   int engine = ENGINE_AUTO);
+
+        /** @brief Tokenize text into token IDs.
+         *  @param text  UTF-8 input string.
+         *  @return Mat of shape [1, N] with type CV_32S containing token IDs.
+         */
+        CV_WRAP Mat tokenize(const String& text) const;
+
+        /** @brief Detokenize token IDs back to text.
+         *  @param tokenIds  Mat of token IDs (CV_32S).
+         *  @return Decoded UTF-8 string.
+         */
+        CV_WRAP String detokenize(InputArray tokenIds) const;
+
+        /** @brief Encode UTF-8 text to token ids.
+         *  @param text  UTF-8 input string.
+         *  @return Vector of token ids.
+         */
+        CV_WRAP std::vector<int> encode(const std::string& text);
+
+        /** @brief Decode token ids back to UTF-8 text.
+         *  @param tokens  Vector of token ids.
+         *  @return Decoded UTF-8 string.
+         */
+        CV_WRAP std::string decode(const std::vector<int>& tokens);
+
+        CV_WRAP void setInputImagePath(const String& path);
+        CV_WRAP void setPrompt(const String& prompt);
+        CV_WRAP void setSearchOption(const String& name, double value);
+        CV_WRAP void setSearchOptionBool(const String& name, bool value);
+        CV_WRAP void setGuidance(const String& type, const String& data,
+                                  bool enableFfTokens = false);
+        CV_WRAP String applyChatTemplate(const String& messages,
+                                          const String& templateStr = String(),
+                                          const String& tools = String(),
+                                          bool addGenerationPrompt = true) const;
+        CV_WRAP String getModelType() const;
+        CV_WRAP String getDeviceType() const;
+
+        /** @brief Access the underlying Net object for inference (setInput/forward). */
+        CV_WRAP Net getNet() const;
+
+        struct Impl;
+    private:
+        Ptr<Impl> impl_;
+    };
 
 //! @}
 CV__DNN_INLINE_NS_END

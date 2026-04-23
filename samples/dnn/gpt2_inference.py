@@ -50,11 +50,12 @@ def stable_softmax(logits):
 
 
 
-def gpt2_inference(net, prompt, max_length, tokenizer):
+def gpt2_inference(llm, prompt, max_length):
 
     print("Inferencing GPT-2 model...")
 
-    tokens = tokenizer.encode(prompt).reshape(1,-1)
+    tokens = llm.tokenize(prompt)
+    net = llm.getNet()
 
     stop_tokens = (50256, ) ## could be extended to include more stop tokens
     while 0 < max_length and tokens[:, -1] not in stop_tokens:
@@ -82,8 +83,7 @@ if __name__ == '__main__':
     prompt = args.prompt
     tokenizer_path = args.tokenizer_path
 
-    net = cv.dnn.readNetFromONNX(args.model, cv.dnn.ENGINE_NEW)
-    tokenizer = cv.dnn.Tokenizer.load(tokenizer_path)
+    llm = cv.dnn.LLM.create(args.model, cv.dnn.TOKENIZER_OPENCV_BPE, tokenizer_path)
 
-    tokens = gpt2_inference(net, prompt, max_length, tokenizer)
-    print(tokenizer.decode(tokens[0]))
+    tokens = gpt2_inference(llm, prompt, max_length)
+    print(llm.detokenize(tokens[0]))

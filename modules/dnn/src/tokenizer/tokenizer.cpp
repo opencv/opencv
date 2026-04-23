@@ -189,6 +189,22 @@ std::string Tokenizer::decode(const std::vector<int>& tokens) {
     return impl_->decode(tokens);
 };
 
+Mat Tokenizer::tokenize(const String& text) {
+    std::vector<int> ids = encode(text);
+    Mat tokens(1, (int)ids.size(), CV_32S);
+    std::memcpy(tokens.data, ids.data(), ids.size() * sizeof(int));
+    return tokens;
+}
+
+String Tokenizer::detokenize(InputArray tokenIds) {
+    Mat m = tokenIds.getMat();
+    CV_Assert(m.type() == CV_32S);
+    const int* ptr = m.ptr<int>();
+    int count = (int)m.total();
+    std::vector<int> ids(ptr, ptr + count);
+    return decode(ids);
+}
+
 CoreBPE buildTokenizerFromJson(const std::string& model_type, const std::string& json_path,
                           std::unordered_set<std::string>* outSpecial) {
     cv::FileStorage fs(json_path, cv::FileStorage::READ | cv::FileStorage::FORMAT_JSON);

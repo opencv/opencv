@@ -50,12 +50,14 @@ def build_chatml_prompt(user_prompt):
     '''Wrap user prompt in Qwen2.5 ChatML format.'''
     return '<|im_start|>user\n' + user_prompt + '<|im_end|>\n<|im_start|>assistant\n'
 
-def qwen_inference(net, prompt, max_new_tokens, tokenizer):
+def qwen_inference(llm, prompt, max_new_tokens):
 
     print("Inferencing Qwen2.5 model...")
 
-    tokens = tokenizer.encode(prompt)
+    tokens = llm.encode(prompt)
     tokens = np.array(tokens, dtype=np.int64).reshape(1, -1)
+
+    net = llm.getNet()
 
     # Qwen2.5 special token IDs
     im_end_id = 151645   # <|im_end|>
@@ -87,13 +89,11 @@ if __name__ == '__main__':
     np.random.seed(args.seed)
 
     print("Preparing Qwen2.5 model...")
-    tokenizer = cv.dnn.Tokenizer.load(args.tokenizer_path)
-
-    net = cv.dnn.readNetFromONNX(args.model, cv.dnn.ENGINE_NEW)
+    llm = cv.dnn.LLM.create(args.model, cv.dnn.TOKENIZER_OPENCV_BPE, args.tokenizer_path)
 
     chatml_prompt = build_chatml_prompt(args.prompt)
     print(f"Prompt:\n{chatml_prompt}")
 
-    tokens = qwen_inference(net, chatml_prompt, args.max_new_tokens, tokenizer)
-    response = tokenizer.decode(tokens[0].tolist())
+    tokens = qwen_inference(llm, chatml_prompt, args.max_new_tokens)
+    response = llm.decode(tokens[0].tolist())
     print(f"Response:\n{response}")

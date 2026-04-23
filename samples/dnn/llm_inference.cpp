@@ -53,26 +53,23 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    Net net = readNetFromONNX(modelDir, ENGINE_ORT_GENAI);
-    if (net.empty())
-    {
-        cerr << "Error: Failed to load model from: " << modelDir << endl;
-        return 1;
-    }
+    LLM llm = LLM::create(modelDir, TOKENIZER_ORT_GENAI);
 
-    cout << "Model type  : " << net.getModelType()  << endl;
-    cout << "Device type : " << net.getDeviceType() << endl;
+    cout << "Model type  : " << llm.getModelType()  << endl;
+    cout << "Device type : " << llm.getDeviceType() << endl;
 
     const string messages = "[{\"role\": \"user\", \"content\": \"" + userMsg + "\"}]";
-    const string prompt   = net.applyChatTemplate(messages);
+    const string prompt   = llm.applyChatTemplate(messages);
 
-    Mat tokens = net.tokenize(prompt);
-    net.setSearchOption("max_length", static_cast<double>(tokens.cols + maxNewTokens));
-    net.setSearchOptionBool("do_sample", false);  // greedy — deterministic output
+    Mat tokens = llm.tokenize(prompt);
+    llm.setSearchOption("max_length", static_cast<double>(tokens.cols + maxNewTokens));
+    llm.setSearchOptionBool("do_sample", false);  // greedy — deterministic output
+
+    Net net = llm.getNet();
     net.setInput(tokens);
     Mat out = net.forward();
 
-    cout << net.detokenize(out) << endl;
+    cout << llm.detokenize(out) << endl;
 
     return 0;
 }

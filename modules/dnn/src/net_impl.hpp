@@ -442,18 +442,7 @@ struct Net::Impl : public detail::NetImplBase
     //                   (including the prompt tokens).
     void initOgaMultiModalProcessor();
     std::vector<Mat> runOgaSession(const std::vector<Mat>& inputBlobs);
-    void setInputImagePath(const String& path);
-    void setPrompt(const String& prompt);
-    void setSearchOption(const String& name, double value);
-    void setSearchOptionBool(const String& name, bool value);
-    void setGuidance(const String& type, const String& data, bool enableFfTokens);
-    String applyChatTemplate(const String& messages, const String& templateStr,
-                              const String& tools, bool addGenerationPrompt) const;
-    String getModelType() const;
-    String getDeviceType() const;
 #endif
-    Mat tokenize(const String& text) const;
-    String detokenize(InputArray tokenIds) const;
 
     // run the whole model, convenience wrapper
     void forwardWithSingleOutput(const std::string& outname, OutputArrayOfArrays outputBlobs);
