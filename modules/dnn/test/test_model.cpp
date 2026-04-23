@@ -962,7 +962,7 @@ TEST_P(Reproducibility_ViT_ONNX, Accuracy)
         return;
     }
 
-    std::string modelname = _tf("onnx/models/vit_base_patch16_224_Opset16.onnx", false);
+    std::string modelname = _tf("dnn/vit_base_patch16_224_Opset16.onnx", false);
     Net net = readNetFromONNX(modelname);
 
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
@@ -988,9 +988,9 @@ TEST_P(Reproducibility_ViT_ONNX, Accuracy)
     topK(out, res, K);
     ASSERT_EQ(int(res.size()), K);
 
-    // Reference top-5 computed via onnxruntime with the same preprocessing.
+    // Reference top-5 captured from the ONNX Runtime engine (OPENCV_FORCE_DNN_ENGINE=4).
     std::vector<std::pair<int, float> > ref = {
-        {285, 9.223f}, {281, 8.174f}, {282, 7.791f}, {287, 6.343f}, {283, 5.072f}
+        {285, 7.683f}, {282, 7.182f}, {281, 6.894f}, {287, 3.623f}, {283, 3.287f}
     };
     const float eps = 0.5f;
 
