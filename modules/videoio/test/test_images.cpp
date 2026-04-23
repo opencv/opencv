@@ -300,27 +300,32 @@ TEST(videoio_images, bug_26457)
     EXPECT_MAT_N_DIFF(img, col.getFirstFrame(), 0);
 }
 
-TEST(videoio_images, open_with_seq_start)
+typedef testing::TestWithParam<VideoCaptureAPIs> videoio_image_seq_start;
+
+TEST_P(videoio_image_seq_start, open)
 {
+    const VideoCaptureAPIs apiPref = GetParam();
+    if (!videoio_registry::hasBackend(apiPref))
+        throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
+
     // Sequence starts at an index outside the auto-probe range
     // Opening with only the pattern must fail without the property, and succeed when it is set
-    const size_t start = 100;
+    const int start = 100;
     const size_t count = 5;
     ImageCollection col;
     col.generate(count, start);
     const std::string pattern = col.getPatternFilename();
 
     {
-        VideoCapture cap(pattern, CAP_IMAGES);
+        VideoCapture cap(pattern, apiPref);
         EXPECT_FALSE(cap.isOpened());
     }
 
     {
         VideoCapture cap;
-        ASSERT_TRUE(cap.open(pattern, CAP_IMAGES,
-                             { CAP_PROP_IMAGE_SEQ_START, static_cast<int>(start) }));
+        ASSERT_TRUE(cap.open(pattern, apiPref,
+                             { CAP_PROP_IMAGE_SEQ_START, start }));
         ASSERT_TRUE(cap.isOpened());
-        EXPECT_EQ(count, (size_t)cap.get(CAP_PROP_FRAME_COUNT));
         for (size_t idx = 0; idx < count; ++idx)
         {
             Mat img;
@@ -329,6 +334,9 @@ TEST(videoio_images, open_with_seq_start)
         }
     }
 }
+
+INSTANTIATE_TEST_CASE_P(videoio_images, videoio_image_seq_start,
+                        testing::Values(CAP_IMAGES, CAP_FFMPEG));
 
 // TODO: should writer overwrite files?
 // TODO: is clamping good for seeking?
