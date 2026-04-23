@@ -191,7 +191,7 @@ public:
             }
         }
     }
-    
+
     static LayerParams normalizeONNXParams(const LayerParams& params)
     {
         LayerParams p = params;
