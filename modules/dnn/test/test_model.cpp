@@ -17,7 +17,7 @@ static std::string _tf(TString filename, bool required = true)
     return findDataFile(rootFolder + filename, required);
 }
 
-// Skip Test_Model tests when using ENGINE_ORT - these are pre-existing failures
+// Skip pre-existing Test_Model failures when using ENGINE_ORT
 static inline bool shouldSkipTestModel() {
     return ((EngineType)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO)) == ENGINE_ORT;
 }

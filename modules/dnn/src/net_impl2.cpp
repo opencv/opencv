@@ -94,7 +94,6 @@ void Net::Impl::applyStagedOrtInputs()
             auto it = names.input_name_to_index.find(inpname);
             if (it == names.input_name_to_index.end())
             {
-                // Try to interpret as numeric index (fallback for tests using numeric names)
                 try {
                     int idx = std::stoi(inpname);
                     if (idx >= 0 && idx < (int)ninputs) {

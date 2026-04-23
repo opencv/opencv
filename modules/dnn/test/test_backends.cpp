@@ -10,7 +10,7 @@
 
 namespace opencv_test { namespace {
 
-// Skip DNNTestNetwork tests when using ENGINE_ORT - these are pre-existing failures
+// Skip pre-existing DNNTestNetwork failures when using ENGINE_ORT
 static inline bool shouldSkipDNNTestNetwork() {
     return ((EngineType)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO)) == ENGINE_ORT;
 }

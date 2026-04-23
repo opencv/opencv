@@ -6,7 +6,7 @@
 
 namespace opencv_test { namespace {
 
-// Skip Graph Simplifier tests when using ENGINE_ORT - these are pre-existing failures
+// Skip pre-existing Graph Simplifier failures when using ENGINE_ORT
 static inline bool shouldSkipGraphSimplifierTest() {
     return ((EngineType)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO)) == ENGINE_ORT;
 }
