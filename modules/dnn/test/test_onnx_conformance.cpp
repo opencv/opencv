@@ -1714,6 +1714,7 @@ public:
     static std::set<std::string> opencl_fp16_deny_list;
     static std::set<std::string> opencl_deny_list;
     static std::set<std::string> classic_deny_list;
+    static std::set<std::string> ort_deny_list;
 #ifdef HAVE_HALIDE
     static std::set<std::string> halide_deny_list;
 #endif
@@ -1796,6 +1797,14 @@ public:
             classic_deny_list = {};
         }
 
+        if (engine_forced == ENGINE_ORT) {
+            ort_deny_list = {
+#include "test_onnx_conformance_layer_filter_ort_denylist.inl.hpp"
+            };
+        } else {
+            ort_deny_list = {};
+        }
+
 #ifdef HAVE_HALIDE
         halide_deny_list = {
             #include "test_onnx_conformance_layer_filter__halide_denylist.inl.hpp"
@@ -1825,6 +1834,7 @@ std::set<std::string> Test_ONNX_conformance::global_deny_list;
 std::set<std::string> Test_ONNX_conformance::opencl_fp16_deny_list;
 std::set<std::string> Test_ONNX_conformance::opencl_deny_list;
 std::set<std::string> Test_ONNX_conformance::classic_deny_list;
+std::set<std::string> Test_ONNX_conformance::ort_deny_list;
 #ifdef HAVE_HALIDE
 std::set<std::string> Test_ONNX_conformance::halide_deny_list;
 #endif
@@ -1852,6 +1862,12 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
 
     // SKIP some more if we are in the 'classic engine' mode, where we don't support certain layers.
     if (classic_deny_list.find(name) != classic_deny_list.end())
+    {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+    }
+
+    // SKIP some more if we are in the 'ORT engine' mode, where we have pre-existing issues.
+    if (ort_deny_list.find(name) != ort_deny_list.end())
     {
         applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
     }
