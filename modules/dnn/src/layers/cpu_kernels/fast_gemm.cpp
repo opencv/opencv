@@ -247,7 +247,7 @@ static inline void fast_gemm_thin_strip(int M, int K, float alpha,
                                         const float* A, int lda0, int lda1,
                                         const float* b_strip,
                                         float beta, float* c_strip, int ldc) {
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if CV_SIMD
     const int NR = VTraits<v_float32>::vlanes();
     v_float32 acc[FAST_GEMM_THIN_MAX_M];
     for (int m = 0; m < M; m++) acc[m] = vx_setzero_f32();
@@ -275,6 +275,39 @@ static inline void fast_gemm_thin_strip(int M, int K, float alpha,
             v_float32 cv = vx_load(c_strip + m * ldc);
             cv = v_mul(cv, v_beta);
             vx_store(c_strip + m * ldc, v_fma(acc[m], v_alpha, cv));
+        }
+    }
+#elif CV_SIMD_SCALABLE
+    // Scalable vector types (e.g. RVV) are sizeless and cannot form arrays;
+    // back the per-row accumulators with a scalar scratch buffer.
+    const int NR = VTraits<v_float32>::vlanes();
+    float acc_buf[FAST_GEMM_THIN_MAX_M * VTraits<v_float32>::max_nlanes];
+    for (int m = 0; m < M; m++) vx_store(acc_buf + m * NR, vx_setzero_f32());
+
+    for (int k = 0; k < K; k++) {
+        v_float32 bv = vx_load(b_strip + k * NR);
+        for (int m = 0; m < M; m++) {
+            v_float32 am = vx_setall_f32(A[m * lda0 + k * lda1]);
+            v_float32 acc_m = vx_load(acc_buf + m * NR);
+            vx_store(acc_buf + m * NR, v_fma(bv, am, acc_m));
+        }
+    }
+
+    const v_float32 v_alpha = vx_setall_f32(alpha);
+    if (beta == 0.f) {
+        for (int m = 0; m < M; m++)
+            vx_store(c_strip + m * ldc, v_mul(vx_load(acc_buf + m * NR), v_alpha));
+    } else if (beta == 1.f) {
+        for (int m = 0; m < M; m++) {
+            v_float32 cv = vx_load(c_strip + m * ldc);
+            vx_store(c_strip + m * ldc, v_fma(vx_load(acc_buf + m * NR), v_alpha, cv));
+        }
+    } else {
+        const v_float32 v_beta = vx_setall_f32(beta);
+        for (int m = 0; m < M; m++) {
+            v_float32 cv = vx_load(c_strip + m * ldc);
+            cv = v_mul(cv, v_beta);
+            vx_store(c_strip + m * ldc, v_fma(vx_load(acc_buf + m * NR), v_alpha, cv));
         }
     }
 #else
