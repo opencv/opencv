@@ -46,7 +46,7 @@ class calibration_test(NewOpenCVTests):
             if not found:
                 continue
 
-            img_points.append(corners.reshape(-1, 2))
+            img_points.append(corners)
             obj_points.append(pattern_points)
 
         # calculate camera distortion

@@ -851,7 +851,9 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
                          cv::TermCriteria(TermCriteria::EPS + TermCriteria::MAX_ITER, 15, 0.1));
     }
 
-    Mat(out_corners).copyTo(corners_);
+    // Fix for issue #7200: Reshape from (N, 1, 2 channels) to (N, 2) for consistent Python API
+    Mat corners_mat = Mat(out_corners).reshape(1); // Reshape to (N, 2) with 1 channel
+    corners_mat.copyTo(corners_);
     return found;
 }
 

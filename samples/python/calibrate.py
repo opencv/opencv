@@ -125,7 +125,7 @@ def main():
             if found:
                 term = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_COUNT, 30, 0.1)
                 cv.cornerSubPix(img, corners, (5, 5), (-1, -1), term)
-                frame_img_points = corners.reshape(-1, 2)
+                frame_img_points = corners
                 frame_obj_points = pattern_points
         elif pattern_type == 'charucoboard':
             corners, charucoIds, _, _ = charuco_detector.detectBoard(img)
