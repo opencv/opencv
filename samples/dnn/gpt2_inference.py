@@ -55,14 +55,11 @@ def gpt2_inference(llm, prompt, max_length):
     print("Inferencing GPT-2 model...")
 
     tokens = llm.tokenize(prompt)
-    net = llm.getNet()
 
     stop_tokens = (50256, ) ## could be extended to include more stop tokens
     while 0 < max_length and tokens[:, -1] not in stop_tokens:
 
-        net.setInputsNames(['idx'])
-        net.setInput(tokens, 'idx')
-        logits = net.forward()
+        logits = llm.run(tokens, 'idx')
         logits = logits[:, -1, :]  # (B, vocab_size)
 
         # use hard sampling

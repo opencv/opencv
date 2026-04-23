@@ -2217,7 +2217,7 @@ private:
         CV_WRAP static LLM create(CV_WRAP_FILE_PATH const String& modelPath,
                                    int tokenizerType = TOKENIZER_ORT_GENAI,
                                    CV_WRAP_FILE_PATH const String& tokenizerConfigPath = String(),
-                                   int engine = ENGINE_AUTO);
+                                   int engine = ENGINE_NEW);
 
         /** @brief Tokenize text into token IDs.
          *  @param text  UTF-8 input string.
@@ -2256,7 +2256,26 @@ private:
         CV_WRAP String getModelType() const;
         CV_WRAP String getDeviceType() const;
 
-        /** @brief Access the underlying Net object for inference (setInput/forward). */
+        /** @brief Run inference using inputs already set via setInputImagePath() and setPrompt() (VLM models).
+         *  @return Output Mat from the model.
+         */
+        CV_WRAP Mat run();
+
+        /** @brief Run inference with a single input.
+         *  @param tokens  Input Mat.
+         *  @param inputName  Optional input layer name.
+         *  @return Output Mat from the model.
+         */
+        CV_WRAP Mat run(InputArray tokens, const String& inputName = "");
+
+        /** @brief Run inference with multiple named inputs.
+         *  @param inputs  Vector of input Mats.
+         *  @param inputNames  Vector of corresponding input names.
+         *  @return Output Mat from the model.
+         */
+        CV_WRAP Mat run(const std::vector<Mat>& inputs, const std::vector<String>& inputNames);
+
+        /** @brief Access the underlying Net object. */
         CV_WRAP Net getNet() const;
 
         struct Impl;

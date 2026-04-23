@@ -57,8 +57,6 @@ def qwen_inference(llm, prompt, max_new_tokens):
     tokens = llm.encode(prompt)
     tokens = np.array(tokens, dtype=np.int64).reshape(1, -1)
 
-    net = llm.getNet()
-
     # Qwen2.5 special token IDs
     im_end_id = 151645   # <|im_end|>
     eos_id    = 151643   # <|endoftext|>
@@ -69,10 +67,8 @@ def qwen_inference(llm, prompt, max_new_tokens):
         attention_mask = np.ones((1, seq_len), dtype=np.int64)
         position_ids = np.arange(seq_len, dtype=np.int64).reshape(1, -1)
 
-        net.setInput(tokens, 'input_ids')
-        net.setInput(attention_mask, 'attention_mask')
-        net.setInput(position_ids, 'position_ids')
-        logits = net.forward()          # (1, seq_len, vocab_size)
+        logits = llm.run([tokens, attention_mask, position_ids],
+                         ['input_ids', 'attention_mask', 'position_ids'])
         logits = logits[:, -1, :]       # take last token logits
 
         new_id = int(np.argmax(logits.reshape(-1)))

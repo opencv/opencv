@@ -1,7 +1,7 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
-// Copyright (C) 2025, BigVision LLC, all rights reserved.
+// Copyright (C) 2026,BigVision LLC, all rights reserved.
 // Third party copyrights are property of their respective owners.
 #include <iostream>
 #include <opencv2/dnn.hpp>
@@ -65,9 +65,7 @@ int main(int argc, char** argv)
     llm.setSearchOption("max_length", static_cast<double>(tokens.cols + maxNewTokens));
     llm.setSearchOptionBool("do_sample", false);  // greedy — deterministic output
 
-    Net net = llm.getNet();
-    net.setInput(tokens);
-    Mat out = net.forward();
+    Mat out = llm.run(tokens);
 
     cout << llm.detokenize(out) << endl;
 

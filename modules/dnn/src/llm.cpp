@@ -1,6 +1,8 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+// Copyright (C) 2026, BigVision LLC, all rights reserved.
+// Third party copyrights are property of their respective owners.
 
 #include "precomp.hpp"
 #include "net_impl.hpp"
@@ -277,7 +279,30 @@ String LLM::getDeviceType() const
 }
 #endif  // HAVE_ONNXRUNTIME_GENAI
 
-// ---- Inference ----
+Mat LLM::run()
+{
+    CV_Assert(impl_);
+    return impl_->net_.forward();
+}
+
+Mat LLM::run(InputArray tokens, const String& inputName)
+{
+    CV_Assert(impl_);
+    if (inputName.empty())
+        impl_->net_.setInput(tokens);
+    else
+        impl_->net_.setInput(tokens, inputName);
+    return impl_->net_.forward();
+}
+
+Mat LLM::run(const std::vector<Mat>& inputs, const std::vector<String>& inputNames)
+{
+    CV_Assert(impl_);
+    CV_Assert(inputs.size() == inputNames.size());
+    for (size_t i = 0; i < inputs.size(); i++)
+        impl_->net_.setInput(inputs[i], inputNames[i]);
+    return impl_->net_.forward();
+}
 
 Net LLM::getNet() const
 {
