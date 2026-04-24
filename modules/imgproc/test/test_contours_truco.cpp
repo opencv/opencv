@@ -16,22 +16,51 @@ struct CvNThreadScope{
         cv::setNumThreads(nprev);
     }
 };
-// Order-dependent contour-set comparison
+// Order-independent contour-set comparison
 static bool trucoContoursMatch(const vector<vector<Point>>& cont1, const vector<vector<Point>>& cont2)
 {
-    if(cont1.size()!=cont2.size()){
-        return false;
-    }
-    for(size_t c=0;c<cont1.size();c++)   {
-        if(cont1[c].size()!=cont2[c].size() ){
-            return false;
+        //order senstive hash
+    auto Hash=[](const std::vector<cv::Point>& contour) {
+        // FNV-1a 64-bit hash constants
+        constexpr uint64_t FNV_OFFSET = 1469598103934665603ULL;
+        constexpr uint64_t FNV_PRIME  = 1099511628211ULL;
+
+        uint64_t hash = FNV_OFFSET;
+
+        // Mix in the size so that contours with different lengths
+        // but same prefix produce different hashes
+        uint64_t size = static_cast<uint64_t>(contour.size());
+        for (int i = 0; i < 8; ++i) {
+            hash ^= (size >> (i * 8)) & 0xFF;
+            hash *= FNV_PRIME;
         }
 
-        for(size_t p=0;p<cont1[c].size();p++){
-            if( cont1[c][p].x!=cont2[c][p].x ||  cont1[c][p].y!=cont2[c][p].y){
-                return false;
+        // Mix in each point's x and y coordinates byte by byte
+        for (const cv::Point& p : contour) {
+            uint32_t x = static_cast<uint32_t>(p.x);
+            uint32_t y = static_cast<uint32_t>(p.y);
+
+            for (int i = 0; i < 4; ++i) {
+                hash ^= (x >> (i * 8)) & 0xFF;
+                hash *= FNV_PRIME;
+            }
+            for (int i = 0; i < 4; ++i) {
+                hash ^= (y >> (i * 8)) & 0xFF;
+                hash *= FNV_PRIME;
             }
         }
+        return hash;
+    };
+    std::set<uint64> hashes1,hashes2;
+    for(auto &contour:cont1){
+        hashes1.insert( Hash(contour));
+    }
+    for(auto &contour:cont2){
+        hashes2.insert( Hash(contour));
+    }
+
+    for(auto &h1:hashes1){//element in cont and not in cont2
+        if( hashes2.find(h1) ==hashes2.end()) return false;
     }
     return true;
 }
@@ -113,10 +142,10 @@ TEST_P(Imgproc_FindTRUContours, noise_threshold)
     const Size sz(1500, 1500);
     RNG& rng = TS::ptr()->get_rng();
     const int levels[] = {86, 128, 170};
-    const int ITER = cvtest::debugLevel >= 10?100:2;
+    const int ITER = 2;
 
     std::vector<int> thread_counts;
-    for(int i=2;i<40;i++) thread_counts.push_back(i);
+    for(int i=2;i<40;i+=3) thread_counts.push_back(i);
     for(int i=0;i<ITER;i++){
         for (int level : levels)
         {

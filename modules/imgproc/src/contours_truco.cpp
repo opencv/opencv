@@ -341,7 +341,7 @@ public:
                                 local_contours.emplace_back();
                                 buffer.copyTo(local_contours.back());
                                 if( r==rowRange.start){//register this so we can zip them as Suzuki&Abe method
-                                    local_contours.idx_external_firstLine.push_back(local_contours.size()-1 );
+                                    local_contours.idx_external_firstLine.push_back((int)(local_contours.size()-1) );
                                 }
                             }
                         }
@@ -365,7 +365,7 @@ public:
                                 local_contours.emplace_back();
                                 buffer.copyTo(local_contours.back());
                                 if( r==rowRange.end){//register this so we can zip them as Suzuki&Abe method
-                                    local_contours.idx_internal_lastLine.push_back(local_contours.size() -1);
+                                    local_contours.idx_internal_lastLine.push_back((int)(local_contours.size() -1));
                                 }
                             }
                         }
