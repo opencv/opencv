@@ -294,7 +294,7 @@ else()
     set(ARMPL_DEFAULT OFF)
 endif()
 
-OCV_OPTION(WITH_ARMPL "Include ARM Performance Libraries support (auto-download)" 
+OCV_OPTION(WITH_ARMPL "Include ARM Performance Libraries support (auto-download)"
   ${ARMPL_DEFAULT}
   VISIBLE_IF (AARCH64 OR ARM64) AND NOT WINRT AND NOT IOS AND NOT XROS
   VERIFY HAVE_ARMPL)
