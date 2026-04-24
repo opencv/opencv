@@ -85,7 +85,7 @@ static Mat sdpaReference(const Mat& Q, const Mat& KT, const Mat& V, float scale)
     return Y;
 }
 
-// Skip ONNX layer tests when using ENGINE_ORT - these are pre-existing failures
+// Skip ONNX layer tests when using ENGINE_ORT
 static inline bool shouldSkipONNXLayerTest() {
     return ((EngineType)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO)) == ENGINE_ORT;
 }
@@ -2660,8 +2660,6 @@ TEST_P(Test_ONNX_nets, ResNet18v1)
 
 TEST_P(Test_ONNX_nets, ResNet50v1)
 {
-    // ORT denies: Missing test data file - input_resnet50v1.pb not found 
-    if (shouldSkipONNXLayerTest()) throw SkipTestException("ORT engine failure");
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
 
     // output range: [-67; 75], after Softmax [0, 0.98]
