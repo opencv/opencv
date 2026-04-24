@@ -3,6 +3,13 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "../precomp.hpp"
+
+#include "cpu_kernels/nary_eltwise_kernels.simd.hpp"
+#include "layers/cpu_kernels/nary_eltwise_kernels.simd_declarations.hpp"
+#define CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN namespace cpu_baseline {
+#define CV_CPU_OPTIMIZATION_NAMESPACE_END }
+#undef CV_CPU_DISPATCH_MODES_ALL
+
 #include "../net_impl.hpp"
 #include "layers_common.hpp"
 #include "../op_cuda.hpp"
@@ -34,6 +41,13 @@ static int _mod(int x, int y) {
         res += y;
     }
     return res;
+}
+
+// Wrapper that turns the CV_CPU_DISPATCH return-chain into a normal call.
+static inline int simd_binop_f32_dispatch(const float* a, const float* b,
+                                          float* out, int n, int op) {
+    CV_CPU_DISPATCH(simd_binop_f32_, (a, b, out, n, op),
+                    NEON, AVX2, AVX, BASELINE);
 }
 
 }
@@ -450,10 +464,32 @@ public:
     }
 
     template <typename T, typename RESULT_T, typename Functor>
-    void binary_forward_impl(const Functor& op, int ndims, const std::vector<int>& shape,
-                             const char* data1, const std::vector<size_t>& step1,
-                             const char* data2, const std::vector<size_t>& step2,
-                             char* data, const std::vector<size_t>& step, size_t block_size) {
+    void binary_forward_impl(const Functor& op, int ndims, const std::vector<int>& shape_in,
+                             const char* data1, const std::vector<size_t>& step1_in,
+                             const char* data2, const std::vector<size_t>& step2_in,
+                             char* data, const std::vector<size_t>& step_in, size_t block_size) {
+        // Collapse consecutive dims that are contiguous in all three tensors.
+        std::vector<int> shape(shape_in.begin(), shape_in.begin() + ndims);
+        std::vector<size_t> step1(step1_in.begin(), step1_in.begin() + ndims);
+        std::vector<size_t> step2(step2_in.begin(), step2_in.begin() + ndims);
+        std::vector<size_t> step (step_in .begin(), step_in .begin() + ndims);
+        for (int k = (int)shape.size() - 2; k >= 0; k--) {
+            size_t e1 = (size_t)shape[k + 1] * step1[k + 1];
+            size_t e2 = (size_t)shape[k + 1] * step2[k + 1];
+            size_t e  = (size_t)shape[k + 1] * step [k + 1];
+            if (step1[k] == e1 && step2[k] == e2 && step[k] == e) {
+                shape[k] *= shape[k + 1];
+                step1[k] = step1[k + 1];
+                step2[k] = step2[k + 1];
+                step [k] = step [k + 1];
+                shape.erase(shape.begin() + k + 1);
+                step1.erase(step1.begin() + k + 1);
+                step2.erase(step2.begin() + k + 1);
+                step .erase(step .begin() + k + 1);
+            }
+        }
+        ndims = (int)shape.size();
+
         size_t dp1 = 0, dp2 = 0, dp = 0;
         int plane_size = 1;
         size_t nplanes = 1;
@@ -470,43 +506,38 @@ public:
         }
 
     #if CV_SIMD
-        // Fast path: fully contiguous float Add → flatten + SIMD + parallel_for_
-        bool is_add = (this->op == OPERATION::SUM || this->op == OPERATION::ADD);
-        if (is_add && std::is_same<T, float>::value && std::is_same<RESULT_T, float>::value &&
-            dp1 == 1 && dp2 == 1 && dp == 1 && ndims >= 1) {
-            bool contiguous = true;
-            for (int k = ndims - 2; k >= 0; k--) {
-                if (shape[k] <= 1) continue; // size-1 dims have stride 0, skip
-                size_t expected = (size_t)shape[k + 1] * step1[k + 1];
-                if (step1[k] != expected || step2[k] != expected || step[k] != expected) {
-                    contiguous = false;
-                    break;
+        const bool is_add = (this->op == OPERATION::SUM || this->op == OPERATION::ADD);
+        const bool is_sub = (this->op == OPERATION::SUB);
+        const bool is_mul = (this->op == OPERATION::PROD);
+        const bool is_div = (this->op == OPERATION::DIV);
+        const bool simd_f32 = std::is_same<T, float>::value && std::is_same<RESULT_T, float>::value &&
+                              (is_add || is_sub || is_mul || is_div);
+        const int simd_bin_op = is_add ? cpu_baseline::SIMD_BIN_ADD :
+                                is_sub ? cpu_baseline::SIMD_BIN_SUB :
+                                is_mul ? cpu_baseline::SIMD_BIN_MUL :
+                                is_div ? cpu_baseline::SIMD_BIN_DIV : -1;
+
+        // Fast path: fully-flat contiguous float binop -> one big parallel SIMD loop.
+        if (simd_f32 && ndims == 1 && dp1 == 1 && dp2 == 1 && dp == 1) {
+            int64_t total = (int64_t)nplanes * plane_size;
+            const float* p1 = (const float*)data1;
+            const float* p2 = (const float*)data2;
+            float* po = (float*)data;
+            const int64_t chunk = 4096;
+            int64_t nchunks = (total + chunk - 1) / chunk;
+            parallel_for_(Range(0, (int)nchunks), [&](const Range& r) {
+                for (int c = r.start; c < r.end; c++) {
+                    int64_t start = c * chunk;
+                    int64_t end = std::min(start + chunk, total);
+                    int n = (int)(end - start);
+                    int i = simd_binop_f32_dispatch(p1 + start, p2 + start, po + start, n, simd_bin_op);
+                    if (is_add)      for (; i < n; i++) po[start + i] = p1[start + i] + p2[start + i];
+                    else if (is_mul) for (; i < n; i++) po[start + i] = p1[start + i] * p2[start + i];
+                    else if (is_sub) for (; i < n; i++) po[start + i] = p1[start + i] - p2[start + i];
+                    else if (is_div) for (; i < n; i++) po[start + i] = p1[start + i] / p2[start + i];
                 }
-            }
-            if (contiguous) {
-                int64_t total = (int64_t)nplanes * plane_size;
-                const float* p1 = (const float*)data1;
-                const float* p2 = (const float*)data2;
-                float* po = (float*)data;
-                const int64_t chunk = 1024;
-                int64_t nchunks = (total + chunk - 1) / chunk;
-                parallel_for_(Range(0, (int)nchunks), [&](const Range& r) {
-                    for (int c = r.start; c < r.end; c++) {
-                        int64_t start = c * chunk;
-                        int64_t end = std::min(start + chunk, total);
-                        int64_t i = start;
-                        for (; i <= end - (int64_t)VTraits<v_float32>::nlanes * 4; i += VTraits<v_float32>::nlanes * 4) {
-                            v_store(po + i, v_add(vx_load(p1 + i), vx_load(p2 + i)));
-                            v_store(po + i + VTraits<v_float32>::nlanes, v_add(vx_load(p1 + i + VTraits<v_float32>::nlanes), vx_load(p2 + i + VTraits<v_float32>::nlanes)));
-                            v_store(po + i + VTraits<v_float32>::nlanes*2, v_add(vx_load(p1 + i + VTraits<v_float32>::nlanes*2), vx_load(p2 + i + VTraits<v_float32>::nlanes*2)));
-                            v_store(po + i + VTraits<v_float32>::nlanes*3, v_add(vx_load(p1 + i + VTraits<v_float32>::nlanes*3), vx_load(p2 + i + VTraits<v_float32>::nlanes*3)));
-                        }
-                        for (; i < end; i++)
-                            po[i] = p1[i] + p2[i];
-                    }
-                });
-                return;
-            }
+            });
+            return;
         }
     #endif
 
@@ -518,17 +549,12 @@ public:
                 if (dp1 == 1 && dp2 == 1 && dp == 1) {
                     int i = r.start;
                 #if CV_SIMD
-                    if (is_add && std::is_same<T, float>::value && std::is_same<RESULT_T, float>::value) {
+                    if (simd_f32) {
                         const float* p1 = (const float*)(const void*)&ptr1[r.start];
                         const float* p2 = (const float*)(const void*)&ptr2[r.start];
                         float* po = (float*)(void*)&ptr[r.start];
-                        int len = r.end - r.start, j = 0;
-                        for (; j <= len - VTraits<v_float32>::nlanes * 4; j += VTraits<v_float32>::nlanes * 4) {
-                            v_store(po + j, v_add(vx_load(p1 + j), vx_load(p2 + j)));
-                            v_store(po + j + VTraits<v_float32>::nlanes, v_add(vx_load(p1 + j + VTraits<v_float32>::nlanes), vx_load(p2 + j + VTraits<v_float32>::nlanes)));
-                            v_store(po + j + VTraits<v_float32>::nlanes*2, v_add(vx_load(p1 + j + VTraits<v_float32>::nlanes*2), vx_load(p2 + j + VTraits<v_float32>::nlanes*2)));
-                            v_store(po + j + VTraits<v_float32>::nlanes*3, v_add(vx_load(p1 + j + VTraits<v_float32>::nlanes*3), vx_load(p2 + j + VTraits<v_float32>::nlanes*3)));
-                        }
+                        int len = r.end - r.start;
+                        int j = simd_binop_f32_dispatch(p1, p2, po, len, simd_bin_op);
                         i = r.start + j;
                     }
                 #endif
@@ -576,16 +602,11 @@ public:
                     if (dp1 == 1 && dp2 == 1 && dp == 1) {
                         int i = 0;
                     #if CV_SIMD
-                        if (is_add && std::is_same<T, float>::value && std::is_same<RESULT_T, float>::value) {
-                            const float* p1 = (const float*)(const void*)ptr1;
-                            const float* p2 = (const float*)(const void*)ptr2;
-                            float* po = (float*)(void*)ptr;
-                            for (; i <= plane_size - VTraits<v_float32>::nlanes * 4; i += VTraits<v_float32>::nlanes * 4) {
-                                v_store(po + i, v_add(vx_load(p1 + i), vx_load(p2 + i)));
-                                v_store(po + i + VTraits<v_float32>::nlanes, v_add(vx_load(p1 + i + VTraits<v_float32>::nlanes), vx_load(p2 + i + VTraits<v_float32>::nlanes)));
-                                v_store(po + i + VTraits<v_float32>::nlanes*2, v_add(vx_load(p1 + i + VTraits<v_float32>::nlanes*2), vx_load(p2 + i + VTraits<v_float32>::nlanes*2)));
-                                v_store(po + i + VTraits<v_float32>::nlanes*3, v_add(vx_load(p1 + i + VTraits<v_float32>::nlanes*3), vx_load(p2 + i + VTraits<v_float32>::nlanes*3)));
-                            }
+                        if (simd_f32) {
+                            i = simd_binop_f32_dispatch((const float*)(const void*)ptr1,
+                                                        (const float*)(const void*)ptr2,
+                                                        (float*)(void*)ptr,
+                                                        plane_size, simd_bin_op);
                         }
                     #endif
                         for(; i < plane_size; i++) {
@@ -608,7 +629,14 @@ public:
                     }
                 }
             };
-            double nstripes = nplanes * (1.0 / double(block_size));
+            // Use total work (planes * plane_size) so large broadcasts parallelize
+            // even when nplanes alone is below the old nstripes threshold. Target
+            // ~16KB of output work per stripe so even tiny plane_size ops (e.g.
+            // 2-element broadcast rows) spread across threads instead of running
+            // serially.
+            double nstripes = (double)nplanes * plane_size * sizeof(T) / 16384.0;
+            if (nstripes < 1.0) nstripes = 1.0;
+            (void)block_size;
             parallel_for_(Range(0, nplanes), worker, nstripes);
         }
     }
@@ -741,7 +769,9 @@ public:
                     }
                 }
             };
-            double nstripes = nplanes * (1.0 / double(block_size));
+            double nstripes = (double)nplanes * plane_size * sizeof(T) / 16384.0;
+            if (nstripes < 1.0) nstripes = 1.0;
+            (void)block_size;
             parallel_for_(Range(0, nplanes), worker, nstripes);
         }
     }
@@ -880,7 +910,9 @@ public:
                     }
                 }
             };
-            double nstripes = nplanes * (1.0 / double(block_size));
+            double nstripes = (double)nplanes * plane_size * (sizeof(T_INP1) + sizeof(T_OUT)) / 16384.0;
+            if (nstripes < 1.0) nstripes = 1.0;
+            (void)block_size;
             parallel_for_(Range(0, nplanes), worker, nstripes);
         }
     }

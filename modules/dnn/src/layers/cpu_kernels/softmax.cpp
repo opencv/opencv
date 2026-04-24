@@ -11,7 +11,11 @@
 
 #include "../../precomp.hpp"
 #include "softmax.hpp"
-#include "opencv2/core/fast_math.hpp"
+
+#define CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
+#include "activation_kernels.simd.hpp"
+#include "layers/cpu_kernels/activation_kernels.simd_declarations.hpp"
+#undef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
 namespace cv { namespace dnn {
 

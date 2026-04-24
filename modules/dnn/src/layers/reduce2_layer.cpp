@@ -5,6 +5,13 @@
 // Third party copyrights are property of their respective owners.
 
 #include "../precomp.hpp"
+
+#include "cpu_kernels/reduce2_kernels.simd.hpp"
+#include "layers/cpu_kernels/reduce2_kernels.simd_declarations.hpp"
+#define CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN namespace cpu_baseline {
+#define CV_CPU_OPTIMIZATION_NAMESPACE_END }
+#undef CV_CPU_DISPATCH_MODES_ALL
+
 #include <opencv2/dnn/shape_utils.hpp>
 #include "../net_impl.hpp"
 #include "../op_cann.hpp"
@@ -521,8 +528,41 @@ public:
         outputs_arr.getMatVector(outputs);
         Mat& dst = outputs[0];
 
+        if (src.depth() == CV_32F && src.isContinuous() && dst.isContinuous() &&
+            reduce_type != ReduceType::LOG_SUM_EXP) {
+            if (dst.total() == 1) {
+                CV_CPU_DISPATCH(reduceAllFloatParallel_, (src, dst, (int)reduce_type),
+                                NEON, AVX2, AVX, BASELINE);
+                return;
+            }
+            size_t innerLen = 1;
+            if (reduceTrailingAxesLen(src, axes, innerLen) && innerLen > 1) {
+                CV_CPU_DISPATCH(reduceLastAxesFloatParallel_, (src, dst, innerLen, (int)reduce_type),
+                                NEON, AVX2, AVX, BASELINE);
+                return;
+            }
+        }
+
         typeDispatch(dst.type(), src, dst, axes, noop_with_empty_axes);
     }
+
+    static bool reduceTrailingAxesLen(const Mat& src, const std::vector<int>& axes,
+                                      size_t& innerLen)
+    {
+        MatShape s = shape(src);
+        int nd = s.dims;
+        if (axes.empty() || (int)axes.size() > nd) return false;
+        std::vector<int> sorted_axes(axes.begin(), axes.end());
+        std::sort(sorted_axes.begin(), sorted_axes.end());
+        // Must be the trailing [nd - k .. nd - 1] block.
+        int k = (int)sorted_axes.size();
+        for (int i = 0; i < k; i++)
+            if (sorted_axes[i] != nd - k + i) return false;
+        innerLen = 1;
+        for (int i = nd - k; i < nd; i++) innerLen *= (size_t)s[i];
+        return true;
+    }
+
 
     virtual std::ostream& dumpAttrs(std::ostream& strm, int indent) const CV_OVERRIDE
     {

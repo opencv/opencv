@@ -5,14 +5,24 @@
 // Third party copyrights are property of their respective owners.
 
 #include <opencv2/dnn/all_layers.hpp>
+#include <opencv2/dnn/shape_utils.hpp>
 #include "opencv2/core/hal/intrin.hpp"
+#include "opencv2/core/fast_math.hpp"
 #include <math.h>
+#include <cfloat>
+#include <algorithm>
 
 namespace cv {
 namespace dnn {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
 cv::dnn::ActivationFunc getActivationFunc_(int type);
+
+// Per-row softmax over a contiguous Mat axis.
+void softmax_(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep);
+
+// Fused clamp on a single contiguous chunk, 4x unrolled. Used by clip_layer.
+void clampFloatChunk_(const float* src, float* dst, size_t n, float lo, float hi);
 
 CV_CPU_OPTIMIZATION_NAMESPACE_END
 }}
@@ -298,6 +308,129 @@ static void activationClip(const void* input, void* output,
     for (; i < len; i++) {
         out[i] = std::min(std::max(inp[i], minval), maxval);
     }
+}
+
+void clampFloatChunk_(const float* src, float* dst, size_t n, float lo, float hi) {
+    size_t i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int lanes = VTraits<v_float32>::nlanes;
+    v_float32 vlo = vx_setall_f32(lo);
+    v_float32 vhi = vx_setall_f32(hi);
+    for (; i + lanes * 4 <= n; i += lanes * 4) {
+        v_store(dst + i,             v_min(v_max(vx_load(src + i),             vlo), vhi));
+        v_store(dst + i + lanes,     v_min(v_max(vx_load(src + i + lanes),     vlo), vhi));
+        v_store(dst + i + lanes * 2, v_min(v_max(vx_load(src + i + lanes * 2), vlo), vhi));
+        v_store(dst + i + lanes * 3, v_min(v_max(vx_load(src + i + lanes * 3), vlo), vhi));
+    }
+    for (; i + lanes <= n; i += lanes)
+        v_store(dst + i, v_min(v_max(vx_load(src + i), vlo), vhi));
+#endif
+    for (; i < n; i++)
+        dst[i] = std::min(std::max(src[i], lo), hi);
+}
+
+void softmax_(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep) {
+    CV_Assert(src.type() == CV_32F);
+    CV_Assert(src.isContinuous() && dst.isContinuous());
+    CV_Assert(src.size == dst.size);
+    axis = normalize_axis(axis, src.dims);
+
+    size_t outerSize = src.total(0, axis),
+           innerSize = src.total(axis + 1);
+
+    const float *srcPtr = src.ptr<float>();
+    float *dstPtr = dst.ptr<float>();
+
+    size_t outerStep = src.total(axis);
+    size_t cnStep = src.total(axis + 1);
+
+    // multi-threads: weight by axisStep so axis=-1 with small outerSize*innerSize
+    // (e.g. [4,256,13294] -> 1024 tasks of 13294 elems) still parallelizes.
+    size_t totalTasks = outerSize * innerSize;
+    double nstripes = (double) totalTasks * (double) axisStep / 8192.0;
+    if (nstripes < 1.0) nstripes = 1.0;
+    size_t channelAxis = (axisStep + 7) & -8;
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int nlanes = VTraits<v_float32>::vlanes();
+#endif
+
+    parallel_for_(Range(0, (int) totalTasks), [&](const Range &range) {
+        AutoBuffer<float> axisBuf_(channelAxis);
+        float *axisBuf = axisBuf_.data();
+
+        for (size_t i = range.start; i < range.end; i++) {
+            size_t outerDim = i / innerSize;
+            size_t innerDim = i % innerSize;
+            size_t srcOffset = outerDim * outerStep + innerDim;
+            size_t _cnDim = 0;
+#if CV_ENABLE_UNROLLED && defined(_M_ARM64)
+            for (; _cnDim + 3 < axisStep; _cnDim += 4) {
+                axisBuf[_cnDim + 0] = srcPtr[srcOffset + (_cnDim + 0 + axisBias) * cnStep];
+                axisBuf[_cnDim + 1] = srcPtr[srcOffset + (_cnDim + 1 + axisBias) * cnStep];
+                axisBuf[_cnDim + 2] = srcPtr[srcOffset + (_cnDim + 2 + axisBias) * cnStep];
+                axisBuf[_cnDim + 3] = srcPtr[srcOffset + (_cnDim + 3 + axisBias) * cnStep];
+            }
+#endif
+            for (; _cnDim < axisStep; _cnDim++)
+                axisBuf[_cnDim] = srcPtr[srcOffset + (_cnDim + axisBias) * cnStep];
+
+            float maxVal = -FLT_MAX;
+            int cnDim = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            v_float32 vmax = vx_setall_f32(-FLT_MAX);
+            for (; cnDim < axisStep; cnDim += nlanes) {
+                if (cnDim > axisStep - nlanes) {
+                    if (cnDim == 0) { break; }
+                    cnDim = axisStep - nlanes;
+                }
+                v_float32 val = vx_load(axisBuf + cnDim);
+                vmax = v_max(vmax, val);
+            }
+            maxVal = v_reduce_max(vmax);
+#endif
+            for (; cnDim < axisStep; cnDim++) {
+                maxVal = std::max(maxVal, axisBuf[cnDim]);
+            }
+
+            float s = 0.f;
+            cnDim = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            v_float32 vs = vx_setzero_f32();
+            vmax = vx_setall_f32(maxVal);
+            for (; cnDim <= axisStep - nlanes; cnDim += nlanes) {
+                v_float32 val = vx_load(axisBuf + cnDim);
+                val = v_sub(val, vmax);
+                val = v_exp(val);
+                vs = v_add(vs, val);
+                v_store(axisBuf + cnDim, val);
+            }
+            s = v_reduce_sum(vs);
+#endif
+            for (; cnDim < axisStep; cnDim++) {
+                axisBuf[cnDim] = expf(axisBuf[cnDim] - maxVal);
+                s += axisBuf[cnDim];
+            }
+
+            _cnDim = 0;
+            if (s == 0.f || cvIsInf(1.f / s)) {
+                for (; _cnDim < axisStep; _cnDim++)
+                    dstPtr[srcOffset + (_cnDim + axisBias) * cnStep] = 0.f;
+            } else {
+                s = 1.f / s;
+#if CV_ENABLE_UNROLLED && defined(_M_ARM64)
+                for (; _cnDim + 3 < axisStep; _cnDim += 4) {
+                    dstPtr[srcOffset + (_cnDim + 0 + axisBias) * cnStep] = axisBuf[_cnDim + 0] * s;
+                    dstPtr[srcOffset + (_cnDim + 1 + axisBias) * cnStep] = axisBuf[_cnDim + 1] * s;
+                    dstPtr[srcOffset + (_cnDim + 2 + axisBias) * cnStep] = axisBuf[_cnDim + 2] * s;
+                    dstPtr[srcOffset + (_cnDim + 3 + axisBias) * cnStep] = axisBuf[_cnDim + 3] * s;
+                }
+#endif
+                for (; _cnDim < axisStep; _cnDim++)
+                    dstPtr[srcOffset + (_cnDim + axisBias) * cnStep] = axisBuf[_cnDim] * s;
+            }
+        }
+    }, nstripes);
 }
 
 ActivationFunc getActivationFunc_(int type)
