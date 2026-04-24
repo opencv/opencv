@@ -962,7 +962,7 @@ TEST_P(Reproducibility_ViT_ONNX, Accuracy)
         return;
     }
 
-    std::string modelname = _tf("dnn/vit_base_patch16_224_Opset16.onnx", false);
+    std::string modelname = _tf("vit_base_patch16_224_Opset16.onnx", false);
     Net net = readNetFromONNX(modelname);
 
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
