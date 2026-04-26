@@ -109,7 +109,7 @@ enum ImwriteFlags {
        IMWRITE_TIFF_RESUNIT        = 256,//!< For TIFF, use to specify which DPI resolution unit to set. See ImwriteTiffResolutionUnitFlags. Default is IMWRITE_TIFF_RESOLUTION_UNIT_INCH.
        IMWRITE_TIFF_XDPI           = 257,//!< For TIFF, use to specify the X direction DPI
        IMWRITE_TIFF_YDPI           = 258,//!< For TIFF, use to specify the Y direction DPI
-       IMWRITE_TIFF_COMPRESSION    = 259,//!< For TIFF, use to specify the image compression scheme. See cv::ImwriteTiffCompressionFlags. Note, for images whose depth is CV_32F, only libtiff's SGILOG compression scheme is used. For other supported depths, the compression scheme can be specified by this flag; LZW compression is the default.
+       IMWRITE_TIFF_COMPRESSION    = 259,//!< For TIFF, use to specify the image compression scheme. See cv::ImwriteTiffCompressionFlags. The compression scheme can be specified by this flag; the default is LZW compression, except for 32F depth where it is NONE
        IMWRITE_TIFF_ROWSPERSTRIP   = 278,//!< For TIFF, use to specify the number of rows per strip.
        IMWRITE_TIFF_PREDICTOR      = 317,//!< For TIFF, use to specify predictor. See cv::ImwriteTiffPredictorFlags. Default is IMWRITE_TIFF_PREDICTOR_HORIZONTAL .
        IMWRITE_JPEG2000_COMPRESSION_X1000 = 272,//!< For JPEG2000, use to specify the target compression rate (multiplied by 1000). The value can be from 0 to 1000. Default is 1000.
@@ -541,8 +541,11 @@ can be saved using this function, with these exceptions:
                      64-bit unsigned (CV_64U), 64-bit signed (CV_64S),
                      32-bit float (CV_32F) and 64-bit float (CV_64F) images can be saved.
   - Multiple images (vector of Mat) can be saved in TIFF format (see the code sample below).
-  - 32-bit float 3-channel (CV_32FC3) TIFF images will be saved
-    using the LogLuv high dynamic range encoding (4 bytes per pixel)
+  - 32-bit float 3-channel (CV_32FC3) TIFF images can be saved
+    using the LogLuv high dynamic range encoding (4 bytes per pixel) through TIFF_COMPRESSION_SGILOG or
+    (3 bytes per pixel) through TIFF_COMPRESSION_SGILOG24.
+  - Other compression schemes (LZW...) are supported as well for 32F depth, but the efficiency might not
+    be very good for the floating-point representation bit patterns.
 - With GIF encoder, 8-bit unsigned (CV_8U) images can be saved.
   - GIF images with an alpha channel can be saved using this function.
     To achieve this, create an 8-bit 4-channel (CV_8UC4) BGRA image, ensuring the alpha channel is the last component.

@@ -70,7 +70,7 @@ public:
         , lambdaLg10(-3)
         , iters(0)
         , prevErrNorm(DBL_MAX)
-        , solveMethod(cv::DECOMP_CHOLESKY)
+        , solveMethod(cv::DECOMP_EIG)
     {
     }
 
@@ -105,7 +105,7 @@ public:
         iters = 0;
         lambdaLg10 = -3;
         prevErrNorm = DBL_MAX;
-        solveMethod = cv::DECOMP_CHOLESKY;
+        solveMethod = cv::DECOMP_EIG;
     }
 
     void reset()
@@ -121,7 +121,7 @@ public:
         }
     }
 
-    void step(const cv::Mat& mask)
+    bool step(const cv::Mat& mask)
     {
         const double LOG10 = std::log(10.0);
         double lambda = std::exp(lambdaLg10 * LOG10);
@@ -134,11 +134,21 @@ public:
             if (solveMethod == cv::DECOMP_QR)
             {
                 cv::Mat I = cv::Mat::eye(6, 6, CV_64F);
-                cv::solve(V_reg, I, V_inv[i], solveMethod);
+                if (!cv::solve(V_reg, I, V_inv[i], solveMethod) ||
+                    !cv::checkRange(V_inv[i]))
+                {
+                    clearUpdates();
+                    return false;
+                }
             }
             else
             {
-                cv::invert(V_reg, V_inv[i], solveMethod);
+                if (cv::invert(V_reg, V_inv[i], solveMethod) == 0.0 ||
+                    !cv::checkRange(V_inv[i]))
+                {
+                    clearUpdates();
+                    return false;
+                }
             }
         }
 
@@ -172,10 +182,8 @@ public:
 
         if (nactive == 0)
         {
-            deltaGlobal.setTo(0);
-            for (int i = 0; i < nimages; i++)
-                deltaLocal[i].setTo(0);
-            return;
+            clearUpdates();
+            return true;
         }
 
         cv::Mat S_sub(nactive, nactive, CV_64F);
@@ -198,7 +206,12 @@ public:
 
         // Solve the reduced system
         cv::Mat delta_sub;
-        cv::solve(S_sub, e_sub, delta_sub, solveMethod);
+        if (!cv::solve(S_sub, e_sub, delta_sub, solveMethod) ||
+            !cv::checkRange(delta_sub))
+        {
+            clearUpdates();
+            return false;
+        }
 
         // Distribute the solution into the full update vector
         deltaGlobal.setTo(0);
@@ -214,6 +227,7 @@ public:
         {
             deltaLocal[i] = V_inv[i] * (eb[i] - W[i].t() * deltaGlobal);
         }
+        return true;
     }
 
     bool iterate(double errNorm, bool& needsJacobian)
@@ -284,6 +298,13 @@ public:
     int lambdaLg10;
 
 private:
+    void clearUpdates()
+    {
+        deltaGlobal.setTo(0);
+        for (int i = 0; i < nimages; i++)
+            deltaLocal[i].setTo(0);
+    }
+
     int iters;
     double prevErrNorm;
     cv::TermCriteria criteria;
@@ -1398,6 +1419,17 @@ static double calibrateCameraInternalSchur( const Mat& objectPoints,
     bool jacobianAtCurrentParams = false;
     if (termCrit.maxCount > 0)
     {
+        const auto computeStep = [&solver, &mask]()
+        {
+            for (;;)
+            {
+                if (solver.step(mask))
+                    return true;
+                if (++solver.lambdaLg10 > 16)
+                    return false;
+            }
+        };
+
         solver.reset();
 
         parallel_for_(Range(0, nimages),
@@ -1409,30 +1441,35 @@ static double calibrateCameraInternalSchur( const Mat& objectPoints,
         //                         flags, aspectRatio, NINTRINSIC,
         //                         releaseObject, maxPoints, globalMutex);
         // acc(Range(0, nimages));
-        solver.step(mask);
-
         double prevErr = reprojErr;
-        // Apply the initial step
-        param_m.copyTo(prev_param);
-        // 1. Global parameters (Intrinsics + Objects)
-        for (int kk = 0; kk < NINTRINSIC; kk++)
-            param_m(kk) -= solver.getGlobalUpdate().at<double>(kk);
-
-        if (releaseObject)
+        if (!computeStep())
         {
-             int param_obj_start = NINTRINSIC + nimages * 6;
-             int num_obj_params = solver.n_global - NINTRINSIC;
-             for (int kk = 0; kk < num_obj_params; kk++)
-                 param_m(param_obj_start + kk) -= solver.getGlobalUpdate().at<double>(NINTRINSIC + kk);
+            recomputeFinalErrors = true;
         }
-        for (int i = 0; i < nimages; i++)
+        else
         {
-            int si = NINTRINSIC + i * 6;
-            for (int kk = 0; kk < 6; kk++)
-                param_m(si + kk) -= solver.getLocalUpdate(i).at<double>(kk);
+            // Apply the initial step
+            param_m.copyTo(prev_param);
+            // 1. Global parameters (Intrinsics + Objects)
+            for (int kk = 0; kk < NINTRINSIC; kk++)
+                param_m(kk) -= solver.getGlobalUpdate().at<double>(kk);
+
+            if (releaseObject)
+            {
+                 int param_obj_start = NINTRINSIC + nimages * 6;
+                 int num_obj_params = solver.n_global - NINTRINSIC;
+                 for (int kk = 0; kk < num_obj_params; kk++)
+                     param_m(param_obj_start + kk) -= solver.getGlobalUpdate().at<double>(NINTRINSIC + kk);
+            }
+            for (int i = 0; i < nimages; i++)
+            {
+                int si = NINTRINSIC + i * 6;
+                for (int kk = 0; kk < 6; kk++)
+                    param_m(si + kk) -= solver.getLocalUpdate(i).at<double>(kk);
+            }
         }
         jacobianAtCurrentParams = false;
-        for (int iter = 0; iter < termCrit.maxCount; iter++)
+        for (int iter = 0; !recomputeFinalErrors && iter < termCrit.maxCount; iter++)
         {
             if (flags & CALIB_FIX_ASPECT_RATIO)
             {
@@ -1496,7 +1533,8 @@ static double calibrateCameraInternalSchur( const Mat& objectPoints,
                                            flags, aspectRatio, NINTRINSIC,
                                            releaseObject, maxPoints, globalMutex));
                 jacobianAtCurrentParams = true;
-            }else
+            }
+            else
             {
                 // Step rejected, increase lambda and recompute step
                 if (++solver.lambdaLg10 > 16)
@@ -1512,7 +1550,12 @@ static double calibrateCameraInternalSchur( const Mat& objectPoints,
             }
 
             // Compute step (possibly with new lambda)
-            solver.step(mask);
+            if (!computeStep())
+            {
+                prev_param.copyTo(param_m);
+                recomputeFinalErrors = true;
+                break;
+            }
 
             // Apply step. Update layouts:
             // deltaGlobal: [Intrinsics (0..NINTRINSIC-1) | Object points (NINTRINSIC..n_global-1)]
@@ -1544,6 +1587,11 @@ static double calibrateCameraInternalSchur( const Mat& objectPoints,
             }
             jacobianAtCurrentParams = false;
         }
+        if (!recomputeFinalErrors)
+        {
+            prev_param.copyTo(param_m);
+            recomputeFinalErrors = true;
+        }
     }
 
     if (flags & CALIB_FIX_ASPECT_RATIO)
@@ -1551,9 +1599,9 @@ static double calibrateCameraInternalSchur( const Mat& objectPoints,
         param_m(0) = param_m(1) * aspectRatio;
     }
 
+    Mat finalErrorsBuf;
     if (recomputeFinalErrors)
     {
-        Mat finalErrorsBuf;
         Mat* errorsPtr = &allErrorsBuf;
         if (!stdDevs.empty())
         {
@@ -1673,7 +1721,8 @@ static double calibrateCameraInternalSchur( const Mat& objectPoints,
         cv::invert(JtJN, JtJinv, DECOMP_SVD);
 
         int nErrors = 2 * total - nparams_nz;
-        double sigma2 = norm(allErrorsBuf, NORM_L2SQR) / nErrors;
+        const Mat& errorsForStats = finalErrorsBuf.empty() ? allErrorsBuf : finalErrorsBuf;
+        double sigma2 = norm(errorsForStats, NORM_L2SQR) / nErrors;
 
         int j = 0;
         for (int s = 0; s < nparams; s++)

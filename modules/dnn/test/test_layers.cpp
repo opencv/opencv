@@ -41,6 +41,7 @@
 
 #include "test_precomp.hpp"
 #include <opencv2/core/ocl.hpp>
+#include <opencv2/core/fast_math.hpp>
 #include "npy_blob.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/dnn/all_layers.hpp>
@@ -3118,5 +3119,60 @@ TEST(KV_Cache, generate_4D)
     normAssert(outWithKVCache, Y_gen_std, "Attention generate 4D: KV vs standard", 0.0, 0.0);
 }
 
+
+TEST(Layer_Test_GeluApprox, NoNaN_LargeInput)
+{
+    LayerParams lp;
+    lp.type = "GeluApproximation";
+    lp.name = "test_gelu_approx";
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("GeluApproximation", lp);
+    ASSERT_TRUE(layer != nullptr);
+
+    float data[] = {-15.f, -10.f, -7.4f, -1.f, 0.f, 1.f, 5.f, 10.6f, 15.f, 20.f};
+    int dims[] = {1, 1, 10};
+    Mat inp(3, dims, CV_32F, data);
+    std::vector<Mat> inpVec = {inp};
+    std::vector<Mat> outVec;
+
+    runLayer(layer, inpVec, outVec);
+    ASSERT_EQ(outVec.size(), (size_t)1);
+
+    Mat& out = outVec[0];
+    for (int i = 0; i < 10; i++) {
+        float val = out.ptr<float>()[i];
+        EXPECT_FALSE(cvIsNaN(val)) << "NaN at index " << i << " (input=" << data[i] << ")";
+        EXPECT_FALSE(cvIsInf(val)) << "Inf at index " << i << " (input=" << data[i] << ")";
+    }
+
+    EXPECT_NEAR(out.ptr<float>()[9], 20.f, 0.01f);
+    EXPECT_NEAR(out.ptr<float>()[0], 0.f, 1e-6f);
+    EXPECT_NEAR(out.ptr<float>()[4], 0.f, 1e-6f);
+}
+
+TEST(Layer_Test_Softmax, NoNaN_AllNegInf)
+{
+    LayerParams lp;
+    lp.type = "Softmax";
+    lp.name = "test_softmax";
+    lp.set("axis", 1);
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("Softmax", lp);
+    ASSERT_TRUE(layer != nullptr);
+
+    int dims[] = {1, 8};
+    Mat inp(2, dims, CV_32F, Scalar(-std::numeric_limits<float>::infinity()));
+    std::vector<Mat> inpVec = {inp};
+    std::vector<Mat> outVec;
+
+    runLayer(layer, inpVec, outVec);
+    ASSERT_EQ(outVec.size(), (size_t)1);
+
+    Mat& out = outVec[0];
+    for (int i = 0; i < 8; i++) {
+        float val = out.ptr<float>()[i];
+        EXPECT_FALSE(cvIsNaN(val)) << "NaN at index " << i;
+        EXPECT_FALSE(cvIsInf(val)) << "Inf at index " << i;
+        EXPECT_EQ(val, 0.f) << "Expected 0 at index " << i;
+    }
+}
 
 }} // namespace

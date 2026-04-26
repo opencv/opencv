@@ -1105,7 +1105,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, int index, const Ptr<IStreamR
                 {
                     enableAlpha = false;
                 }
-                if (value == CV_8UC4)
+                else if (value == CV_8UC4)
                 {
                     enableAlpha = true;
                 }

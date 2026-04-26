@@ -42,7 +42,6 @@ static void split(const Mat& inp, std::vector<Mat>& outs, int axis)
     size_t esz = inp.elemSize();
     size_t sliceSize = esz;
     size_t inpStep = 0;
-    size_t totalSize = inp.total()*esz;
     int outSize_a = 0;
     for (int i = ndims-1; i > axis; i--)
         sliceSize *= inpShape[i];
@@ -68,22 +67,30 @@ static void split(const Mat& inp, std::vector<Mat>& outs, int axis)
 
     CV_Assert(outSize_a == inpShape[axis]);
 
-    parallel_for_(Range(0, (int)noutputs), [&](const Range& r) {
-        for (int k = r.start; k < r.end; k++) {
-            const uchar* inptr = inp.data;
-            Mat& out_k = outs[k];
-            uchar* outptr_k = out_k.data;
-            int sz_a;
-            for (int i = 0; i < k; i++) {
-                sz_a = outs[i].size[axis];
-                inptr += sliceSize*sz_a;
-            }
-            sz_a = out_k.size[axis];
-            size_t sliceSize_k = sliceSize*sz_a;
-            for (int i = 0; i < nslices; i++)
-                memcpy(outptr_k + i*sliceSize_k, inptr + i*inpStep, sliceSize_k);
+    // Precompute per-output source offset and per-slice size.
+    std::vector<size_t> srcOffset(noutputs);
+    std::vector<size_t> sliceSize_k_vec(noutputs);
+    {
+        size_t acc = 0;
+        for (size_t k = 0; k < noutputs; k++) {
+            int sz_a = outs[k].size[axis];
+            srcOffset[k] = acc;
+            sliceSize_k_vec[k] = sliceSize * sz_a;
+            acc += sliceSize_k_vec[k];
         }
-    }, (totalSize > 1000000 ? noutputs : 1));
+    }
+
+    int64_t nTasks = (int64_t)nslices * (int64_t)noutputs;
+    parallel_for_(Range(0, (int)nTasks), [&](const Range& r) {
+        for (int64_t idx = r.start; idx < r.end; idx++) {
+            int k = (int)(idx % (int64_t)noutputs);
+            int s = (int)(idx / (int64_t)noutputs);
+            uchar* outptr_k = outs[k].data;
+            const uchar* inptr = inp.data + srcOffset[k];
+            size_t sliceSize_k = sliceSize_k_vec[k];
+            memcpy(outptr_k + (size_t)s*sliceSize_k, inptr + (size_t)s*inpStep, sliceSize_k);
+        }
+    });
 }
 
 class Split2LayerImpl CV_FINAL : public Split2Layer

@@ -327,6 +327,20 @@ cv::Mat cv::Mat::cross(InputArray _m) const
 namespace cv
 {
 
+typedef void (*ReduceSumFunc)(const Mat& src, Mat& dst);
+ReduceSumFunc getReduceCSumFunc(int sdepth, int ddepth);
+ReduceSumFunc getReduceRSumFunc(int sdepth, int ddepth);
+
+template <typename T, typename WT, typename Op>
+struct ReduceR_SIMD
+{
+    int operator()(const T*, int start, int, WT*, const Op&) const
+    {
+        return start;
+    }
+};
+
+
 template<typename T, typename ST, typename WT, class Op, class OpInit>
 class ReduceR_Invoker : public ParallelLoopBody
 {
@@ -350,7 +364,8 @@ public:
     for( ; --height; )
     {
         src += srcstep;
-        i = range.start;
+        ReduceR_SIMD<T, WT, Op> simd_op;
+        i = simd_op(src, range.start, range.end, buf, op);
         #if CV_ENABLE_UNROLLED
         for(; i <= range.end - 4; i += 4 )
         {
@@ -801,7 +816,10 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     {
         if( op == REDUCE_SUM )
         {
-            if(sdepth == CV_8U && ddepth == CV_32S)
+            ReduceSumFunc simd_func = getReduceRSumFunc(sdepth, ddepth);
+            if(simd_func)
+                func = (ReduceFunc)simd_func;
+            else if(sdepth == CV_8U && ddepth == CV_32S)
                 func = reduceSumR8u32s;
             else if(sdepth == CV_8U && ddepth == CV_32F)
                 func = reduceSumR8u32f;
@@ -876,7 +894,10 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     {
         if(op == REDUCE_SUM)
         {
-            if(sdepth == CV_8U && ddepth == CV_32S)
+            ReduceSumFunc simd_func = getReduceCSumFunc(sdepth, ddepth);
+            if(simd_func)
+                func = (ReduceFunc)simd_func;
+            else if(sdepth == CV_8U && ddepth == CV_32S)
                 func = reduceSumC8u32s;
             else if(sdepth == CV_8U && ddepth == CV_32F)
                 func = reduceSumC8u32f;

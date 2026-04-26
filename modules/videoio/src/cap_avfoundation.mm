@@ -1104,9 +1104,19 @@ bool CvCaptureFile::setProperty(int property_id, double value) {
             t.value = value * t.timescale / 1000;
             retval = setupReadingAt(t);
             break;
-        case cv::CAP_PROP_POS_FRAMES:
-            retval = mAssetTrack.nominalFrameRate > 0 ? setupReadingAt(CMTimeMake(value, mAssetTrack.nominalFrameRate)) : false;
+        case cv::CAP_PROP_POS_FRAMES: {
+            // Build the seek CMTime from the track's native rational frame
+            // duration so non-integer rates (e.g. 23.976 = 24000/1001) are exact.
+            CMTime frameDuration = mAssetTrack.minFrameDuration;
+            if (frameDuration.timescale > 0 && frameDuration.value > 0) {
+                retval = setupReadingAt(CMTimeMultiply(frameDuration, (int32_t)value));
+            } else if (mAssetTrack.nominalFrameRate > 0) {
+                retval = setupReadingAt(CMTimeMake(value, mAssetTrack.nominalFrameRate));
+            } else {
+                retval = false;
+            }
             break;
+        }
         case cv::CAP_PROP_POS_AVI_RATIO:
             t = mAsset.duration;
             t.value = round(t.value * value);

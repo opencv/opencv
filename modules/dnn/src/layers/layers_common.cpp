@@ -333,8 +333,28 @@ void reshapeAndCopyFirst(InputArrayOfArrays inputs,
         if (inpTotal == 0 && outTotal == 0)
             return;
         Mat inp_ = inp.reshape(0, shape);
-        if (inp_.data != outref[0].data)
-            inp_.copyTo(outref[0]);
+        if (inp_.data != outref[0].data) {
+            // Parallel memcpy for large buffers to avoid single-thread bottleneck
+            // on reshape-style layers that don't get in-place-allocated.
+            CV_Assert(inp_.isContinuous());
+            CV_Assert(outref[0].isContinuous());
+            size_t bytes = inpTotal * inp_.elemSize();
+            const size_t CHUNK_BYTES = 64 * 1024;
+            if (bytes > 2 * CHUNK_BYTES) {
+                const uchar* src = inp_.data;
+                uchar* dst = outref[0].data;
+                int nChunks = (int)((bytes + CHUNK_BYTES - 1) / CHUNK_BYTES);
+                parallel_for_(Range(0, nChunks), [&](const Range& r) {
+                    for (int i = r.start; i < r.end; i++) {
+                        size_t off = (size_t)i * CHUNK_BYTES;
+                        size_t len = std::min(CHUNK_BYTES, bytes - off);
+                        memcpy(dst + off, src + off, len);
+                    }
+                });
+            } else {
+                inp_.copyTo(outref[0]);
+            }
+        }
     }
     else {
         UMat inp = inputs.getUMat(0);

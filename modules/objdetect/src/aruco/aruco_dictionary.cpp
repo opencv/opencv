@@ -235,34 +235,30 @@ Mat Dictionary::getBitsFromByteList(const Mat &byteList, int markerSize, int rot
     CV_Assert(byteList.channels() >= 4);
     CV_Assert(rotationId >= 0 && rotationId < 4);
 
-    Mat bits(markerSize, markerSize, CV_8UC1, Scalar::all(0));
-
-    unsigned char base2List[] = { 128, 64, 32, 16, 8, 4, 2, 1 };
+    Mat bits = Mat::zeros(markerSize, markerSize, CV_8UC1);
+    unsigned char *bitsPtr = bits.ptr();
 
     // Use a base offset for the selected rotation
     int nbytes = (bits.cols * bits.rows + 8 - 1) / 8; // integer ceil
     int base = rotationId * nbytes;
-    int currentByteIdx = 0;
-    unsigned char currentByte = byteList.ptr()[base + currentByteIdx];
-    int currentBit = 0;
+    const unsigned char *currentBytePtr = byteList.ptr() + base;
+    const unsigned char *currentBytePtrEnd = currentBytePtr + bits.total() / 8;
 
-    for(int row = 0; row < bits.rows; row++) {
-        for(int col = 0; col < bits.cols; col++) {
-            if(currentByte >= base2List[currentBit]) {
-                bits.at<unsigned char>(row, col) = 1;
-                currentByte -= base2List[currentBit];
-            }
-            currentBit++;
-            if(currentBit == 8) {
-                currentByteIdx++;
-                currentByte = byteList.ptr()[base + currentByteIdx];
-                // if not enough bits for one more byte, we are in the end
-                // update bit position accordingly
-                if(8 * (currentByteIdx + 1) > (int)bits.total())
-                    currentBit = 8 * (currentByteIdx + 1) - (int)bits.total();
-                else
-                    currentBit = 0; // ok, bits enough for next byte
-            }
+    for(;currentBytePtr < currentBytePtrEnd; ++currentBytePtr) {
+        unsigned char currentByte = *currentBytePtr;
+        for(int mask = 1 << 7; mask != 0; mask >>= 1) {
+            if (currentByte & mask) *bitsPtr = 1;
+            ++bitsPtr;
+        }
+    }
+    // if not enough bits for one more byte, we are in the end
+    // update bit position accordingly
+    if (bits.total() % 8 != 0) {
+        unsigned char currentByte = *currentBytePtrEnd;
+        int mask = 1 << ((bits.total() % 8) - 1);
+        for(; mask != 0; mask >>= 1) {
+            if (currentByte & mask) *bitsPtr = 1;
+            ++bitsPtr;
         }
     }
     return bits;

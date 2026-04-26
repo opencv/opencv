@@ -3296,4 +3296,17 @@ TEST(ImgProc_cvtColor_InvalidNumOfChannels, regression_25971)
     }
 }
 
+TEST(ImgProc_applyColorMap, dimensions)
+{
+    cv::Mat1b src({0, 128, 255});
+    cv::Mat3b gt = (cv::Mat3b(1, 3) << cv::Vec3b(128, 0, 0), cv::Vec3b(126, 255, 130), cv::Vec3b(0, 0, 128));
+    cv::Mat3b dst;
+    cv::applyColorMap(src, dst, cv::COLORMAP_JET);
+    ASSERT_EQ(cv::norm(dst, gt, NORM_L1), 0);
+    src = src.t();
+    gt = gt.t();
+    cv::applyColorMap(src, dst, cv::COLORMAP_JET);
+    ASSERT_EQ(cv::norm(dst, gt, NORM_L1), 0);
+}
+
 }} // namespace

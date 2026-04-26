@@ -937,7 +937,7 @@ Imgcodes_Tiff_TypeAndComp all_types[] = {
     { CV_32SC1, true  }, { CV_32SC3, true  }, { CV_32SC4, true  },
     { CV_64UC1, true  }, { CV_64UC3, true  }, { CV_64UC4, true  },
     { CV_64SC1, true  }, { CV_64SC3, true  }, { CV_64SC4, true  },
-    { CV_32FC1, false }, { CV_32FC3, false }, { CV_32FC4, false }, // No compression
+    { CV_32FC1, true  }, { CV_32FC3, true  }, { CV_32FC4, true  },
     { CV_64FC1, false }, { CV_64FC3, false }, { CV_64FC4, false }  // No compression
 };
 
@@ -1295,6 +1295,47 @@ TEST(Imgcodecs_Tiff, read_junk) {
     ASSERT_NO_THROW(img = cv::imdecode(junkInputArray, IMREAD_UNCHANGED));
     ASSERT_TRUE(img.empty());
 }
+
+
+typedef int Imgcodecs_Tiff_32F_Compressions_32F_Values;
+typedef testing::TestWithParam<Imgcodecs_Tiff_32F_Compressions_32F_Values> Imgcodecs_Tiff_32F_Compressions_32F;
+
+TEST_P(Imgcodecs_Tiff_32F_Compressions_32F, compressions_32F)
+{
+    const int compression = GetParam();
+
+    const Size size(64, 64);
+    Mat src = Mat(size, CV_32FC1);
+    cv::randu(src, cv::Scalar::all(0.), cv::Scalar::all(1.));
+
+    std::vector<int> params;
+    if (compression > 0)
+    {
+      params.push_back(IMWRITE_TIFF_COMPRESSION);
+      params.push_back(compression);
+    }
+
+    std::vector<unsigned char> encoded_data;
+    imencode(".tiff", src, encoded_data, params);
+
+    Mat dst;
+    imdecode(encoded_data, IMREAD_UNCHANGED, &dst);
+
+    EXPECT_LE(cvtest::norm(src, dst, NORM_INF), 1e-6);
+}
+
+const int Imgcodecs_Tiff_32F_Compressions_32F_All_Values[] =
+{
+    -1,//will mean "default"
+    IMWRITE_TIFF_COMPRESSION_NONE,
+    IMWRITE_TIFF_COMPRESSION_LZW,
+    //IMWRITE_TIFF_COMPRESSION_LZMA,//might not be configured
+    //IMWRITE_TIFF_COMPRESSION_ZSTD,//might not be configured
+    //IMWRITE_TIFF_COMPRESSION_DEFLATE,//deprecated
+    IMWRITE_TIFF_COMPRESSION_ADOBE_DEFLATE,
+};
+
+INSTANTIATE_TEST_CASE_P(compressions_32F, Imgcodecs_Tiff_32F_Compressions_32F, testing::ValuesIn(Imgcodecs_Tiff_32F_Compressions_32F_All_Values));
 
 #endif
 

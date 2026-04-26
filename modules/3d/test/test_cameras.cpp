@@ -1071,21 +1071,45 @@ TEST(Calib3d_Triangulate, accuracy)
         float x1data[] = { 200.f, 0.f };
         float x2data[] = { 170.f, 1.f };
         float Xdata[] = { 0.f, -5.f, 25/3.f };
-        Mat x1(2, 1, CV_32F, x1data);
-        Mat x2(2, 1, CV_32F, x2data);
-        Mat res0(1, 3, CV_32F, Xdata);
+        constexpr int num_points = 5;
+        Mat1f res0(num_points, 3);
+        for(int i = 0; i < num_points; ++i) {
+          for(int j = 0; j < 3; ++j) {
+            res0(i, j) = Xdata[j];
+          }
+        }
+
         Mat res_, res;
 
-        triangulatePoints(P1, P2, x1, x2, res_);
-        cv::transpose(res_, res_); // TODO cvtest (transpose doesn't support inplace)
-        convertPointsFromHomogeneous(res_, res);
-        res = res.reshape(1, 1);
+        for(int test : {0, 1}) {
+          if (test == 0) {
+            // 2xN and 1xN 2-channel.
+            Mat1f x1(2, num_points);
+            Mat2f x2(1, num_points);
+            for(int i = 0; i < 2; ++i) {
+              for(int j = 0; j < num_points; ++j) {
+                x1(i, j) = x1data[i];
+                x2(0, j)[i] = x2data[i];
+              }
+            }
+            triangulatePoints(P1, P2, x1, x2, res_);
+          } else {
+            // Array and vector.
+            std::array<cv::Point2f, num_points> x1;
+            x1.fill({x1data[0], x1data[1]});
+            std::vector<cv::Point2f> x2(num_points, {x2data[0], x2data[1]});
+            triangulatePoints(P1, P2, x1, x2, res_);
+          }
+          cv::transpose(res_, res_); // TODO cvtest (transpose doesn't support inplace)
+          convertPointsFromHomogeneous(res_, res);
+          res = res.reshape(1, num_points);
 
-        cout << "[1]:" << endl;
-        cout << "\tres0: " << res0 << endl;
-        cout << "\tres: " << res << endl;
+          cout << "[1]:" << endl;
+          cout << "\tres0: " << res0 << endl;
+          cout << "\tres: " << res << endl;
 
-        ASSERT_LE(cvtest::norm(res, res0, NORM_INF), 1e-1);
+          ASSERT_LE(cvtest::norm(res, res0, NORM_INF), 1e-1);
+        }
     }
 
     // another testcase http://code.opencv.org/issues/3461

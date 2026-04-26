@@ -973,7 +973,12 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
     if (cn > 4)
         return false;
 
-    const char * kernelName;
+    Size size = _src.size();
+    _dst.create(size, type);
+    UMat src = _src.getUMat(), dst = _dst.getUMat();
+    bool inplace = (dst.u == src.u);
+
+    String kernelName;
     if (flipCode == 0)
         kernelName = "arithm_flip_rows", flipType = FLIP_ROWS;
     else if (flipCode > 0)
@@ -981,33 +986,65 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
     else
         kernelName = "arithm_flip_rows_cols", flipType = FLIP_BOTH;
 
+    if(inplace)
+        kernelName += "_inplace";
+
     int pxPerWIy = (dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU)) ? 4 : 1;
     kercn = (cn!=3 || flipType == FLIP_ROWS) ? std::max(kercn, cn) : cn;
+    const int TILE_SIZE = 32, BLOCK_ROWS = 8;
 
-    ocl::Kernel k(kernelName, ocl::core::flip_oclsrc,
-        format( "-D T=%s -D T1=%s -D DEPTH=%d -D cn=%d -D PIX_PER_WI_Y=%d -D kercn=%d",
+    ocl::Kernel k(kernelName.c_str(), ocl::core::flip_oclsrc,
+                format( "-D T=%s -D T1=%s -D DEPTH=%d -D cn=%d -D PIX_PER_WI_Y=%d -D kercn=%d -D TILE_SIZE=%d -D BLOCK_ROWS=%d%s",
                 kercn != cn ? ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)) : ocl::vecopTypeToStr(CV_MAKE_TYPE(depth, kercn)),
-                kercn != cn ? ocl::typeToStr(depth) : ocl::vecopTypeToStr(depth), depth, cn, pxPerWIy, kercn));
+                kercn != cn ? ocl::typeToStr(depth) : ocl::vecopTypeToStr(depth), depth, cn, pxPerWIy, kercn, TILE_SIZE, BLOCK_ROWS,
+                inplace ? " -D INPLACE" : ""));
     if (k.empty())
         return false;
 
-    Size size = _src.size();
-    _dst.create(size, type);
-    UMat src = _src.getUMat(), dst = _dst.getUMat();
-
     int cols = size.width * cn / kercn, rows = size.height;
-    cols = flipType == FLIP_COLS ? (cols + 1) >> 1 : cols;
-    rows = flipType & FLIP_ROWS ? (rows + 1) >> 1 : rows;
+    int work_cols = flipType == FLIP_COLS ? (cols + 1) >> 1 : cols;
+    int work_rows = flipType & FLIP_ROWS ? (rows + 1) >> 1 : rows;
 
-    k.args(ocl::KernelArg::ReadOnlyNoSize(src),
-           ocl::KernelArg::WriteOnly(dst, cn, kercn), rows, cols);
+    if (inplace)
+    {
+        k.args(ocl::KernelArg::ReadWriteNoSize(dst), rows, cols);
 
-    size_t maxWorkGroupSize = dev.maxWorkGroupSize();
-    CV_Assert(maxWorkGroupSize % 4 == 0);
+        int gs_cols, gs_rows;
+        if (flipType == FLIP_COLS)
+        {
+            gs_cols = work_cols;
+            gs_rows = rows;
+        }
+        else if (flipType == FLIP_ROWS)
+        {
+            gs_cols = cols;
+            gs_rows = work_rows;
+        }
+        else // FLIP_BOTH
+        {
+            gs_cols = cols;
+            gs_rows = rows;
+        }
 
-    size_t globalsize[2] = { (size_t)cols, ((size_t)rows + pxPerWIy - 1) / pxPerWIy },
-            localsize[2] = { maxWorkGroupSize / 4, 4 };
-    return k.run(2, globalsize, (flipType == FLIP_COLS) && !dev.isIntel() ? localsize : NULL, false);
+        size_t globalsize[2] = {
+            (size_t)divUp(gs_cols, TILE_SIZE) * TILE_SIZE,
+            (size_t)divUp(gs_rows, TILE_SIZE) * BLOCK_ROWS
+        };
+        size_t localsize[2] = { TILE_SIZE, BLOCK_ROWS };
+        return k.run(2, globalsize, localsize, false);
+    }
+    else
+    {
+        k.args(ocl::KernelArg::ReadOnlyNoSize(src),
+           ocl::KernelArg::WriteOnly(dst, cn, kercn), work_rows, work_cols);
+
+        size_t maxWorkGroupSize = dev.maxWorkGroupSize();
+        CV_Assert(maxWorkGroupSize % 4 == 0);
+
+        size_t globalsize[2] = { (size_t)work_cols, ((size_t)work_rows + pxPerWIy - 1) / pxPerWIy };
+        size_t localsize[2]  = { maxWorkGroupSize / 4, 4 };
+        return k.run(2, globalsize, (flipType == FLIP_COLS) && !dev.isIntel() ? localsize : NULL, false);
+    }
 }
 
 #endif

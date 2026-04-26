@@ -1323,8 +1323,12 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
     cv::Ptr<void> tif_cleanup(tif, cv_tiffCloseHandle);
 
     //Settings that matter to all images
-    int compression = IMWRITE_TIFF_COMPRESSION_LZW;
-    int predictor = IMWRITE_TIFF_PREDICTOR_HORIZONTAL;
+    const int compression_default_32F = IMWRITE_TIFF_COMPRESSION_NONE;
+    const int compression_default = IMWRITE_TIFF_COMPRESSION_LZW;
+    const int predictor_default_32F = IMWRITE_TIFF_PREDICTOR_FLOATINGPOINT;
+    const int predictor_default = IMWRITE_TIFF_PREDICTOR_HORIZONTAL;
+    int compression = -1;
+    int predictor = -1;
     int resUnit = -1, dpiX = -1, dpiY = -1;
 
     if(readParam(params, IMWRITE_TIFF_COMPRESSION, compression))
@@ -1431,14 +1435,37 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
             CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_PAGENUMBER, page, img_vec.size()));
         }
 
-        if (type == CV_32FC3 && compression == COMPRESSION_SGILOG)
-        {
-            if (!write_32FC3_SGILOG(img, tif))
-                return false;
-            continue;
-        }
+        const bool is32F = (depth == CV_32F);
+        int page_compression =
+          (compression < 0) ?
+            (is32F ? compression_default_32F : compression_default) :
+          compression;
+        int page_predictor =
+            (predictor < 0) ?
+            (is32F ? predictor_default_32F : predictor_default) :
+            predictor;
 
-        int page_compression = compression;
+        if ((page_compression == COMPRESSION_SGILOG) || (page_compression == COMPRESSION_SGILOG24))
+        {
+            if (depth != CV_32F)
+                CV_Error(cv::Error::StsError, "SGILOG requires 32F");
+            else if ((page_compression == COMPRESSION_SGILOG24) && (type != CV_32FC3))
+                CV_Error(cv::Error::StsError, "SGILOG24 requires 32FC3");
+            else if ((page_compression == COMPRESSION_SGILOG) && (type != CV_32FC1) && (type != CV_32FC3))
+                CV_Error(cv::Error::StsError, "SGILOG requires 32FC1 or 32FC3");
+            else if ((page_compression == COMPRESSION_SGILOG) && (type == CV_32FC3))
+            {
+                if (!write_32FC3_SGILOG(img, tif))
+                    return false;
+                continue;
+            }
+            else
+            {
+                if (!write_32F_SGILOG(img, tif, page_compression))
+                    return false;
+                continue;
+            }
+        }
 
         int bitsPerChannel = -1;
         uint16_t sample_format = SAMPLEFORMAT_INT;
@@ -1493,7 +1520,6 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
             case CV_32F:
             {
                 bitsPerChannel = 32;
-                page_compression = COMPRESSION_NONE;
                 sample_format = SAMPLEFORMAT_IEEEFP;
                 break;
             }
@@ -1513,10 +1539,10 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
 // Predictor 2 for 64-bit is supported at v4.4.0 or later.
 // See https://libtiff.gitlab.io/libtiff/releases/v4.4.0.html
 #if TIFFLIB_VERSION < 20220520 /* Magic number of libtiff v4.4.0 */
-        if ( (bitsPerChannel == 64) && (predictor == PREDICTOR_HORIZONTAL /* 2 */) )
+        if ( (bitsPerChannel == 64) && (page_predictor == PREDICTOR_HORIZONTAL /* 2 */) )
         {
             CV_LOG_ONCE_WARNING(NULL, "Predictor 2(HORIZONTAL) for 64-bit is supported at v4.4.0 or later, so it is fallbacked to 0(NONE)");
-            predictor = PREDICTOR_NONE;
+            page_predictor = PREDICTOR_NONE;
         }
 #endif
 
@@ -1541,7 +1567,7 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
 
         if (page_compression == COMPRESSION_LZW || page_compression == COMPRESSION_ADOBE_DEFLATE || page_compression == COMPRESSION_DEFLATE)
         {
-            CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_PREDICTOR, predictor));
+            CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_PREDICTOR, page_predictor));
         }
 
         if (resUnit >= RESUNIT_NONE && resUnit <= RESUNIT_CENTIMETER)
@@ -1618,6 +1644,41 @@ bool TiffEncoder::write_32FC3_SGILOG(const Mat& _img, void* tif_)
     CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_SGILOGDATAFMT, SGILOGDATAFMT_FLOAT));
     CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_ROWSPERSTRIP, 1));
     const int strip_size = 3 * img.cols;
+    for (int i = 0; i < img.rows; i++)
+    {
+        CV_TIFF_CHECK_CALL(TIFFWriteEncodedStrip(tif, i, (tdata_t)img.ptr<float>(i), strip_size * sizeof(float)) != (tsize_t)-1);
+    }
+    CV_TIFF_CHECK_CALL(TIFFWriteDirectory(tif));
+    return true;
+}
+
+bool TiffEncoder::write_32F_SGILOG(const Mat& _img, void* tif_, int compression)
+{
+    TIFF* tif = (TIFF*)tif_;
+    CV_Assert(tif);
+    const int nChannels = _img.channels();
+    CV_Assert(
+      ((compression == COMPRESSION_SGILOG) && ((nChannels == 1) || (nChannels == 3))) ||
+      ((compression == COMPRESSION_SGILOG24) && (nChannels == 3))
+    );
+
+    Mat img;
+    if (nChannels == 1)
+      img = _img;
+    else
+      cvtColor(_img, img, COLOR_BGR2XYZ);
+
+    //done by caller: CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_IMAGEWIDTH, img.cols));
+    //done by caller: CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_IMAGELENGTH, img.rows));
+    CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_SAMPLESPERPIXEL, nChannels));
+    CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_BITSPERSAMPLE, 32));
+    CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_COMPRESSION, compression));
+    CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_PHOTOMETRIC,
+      (nChannels == 1) ? PHOTOMETRIC_LOGL : PHOTOMETRIC_LOGLUV));
+    CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG));
+    CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_SGILOGDATAFMT, SGILOGDATAFMT_FLOAT));
+    CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_ROWSPERSTRIP, 1));
+    const int strip_size = nChannels * img.cols;
     for (int i = 0; i < img.rows; i++)
     {
         CV_TIFF_CHECK_CALL(TIFFWriteEncodedStrip(tif, i, (tdata_t)img.ptr<float>(i), strip_size * sizeof(float)) != (tsize_t)-1);

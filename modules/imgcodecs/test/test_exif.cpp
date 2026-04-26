@@ -144,6 +144,17 @@ namespace opencv_test { namespace {
         return iccp_data;
     }
 
+#ifdef OPENCV_IMGCODECS_PNG_WITH_cICP
+    static std::vector<uchar> getSampleCicpData() {
+        return {
+            9,  // BT.2020 / BT.2100
+            16, // SMPTE ST 2084 (PQ)
+            0,  // Identity (RGB)
+            1,  // Full Range
+        };
+    }
+#endif
+
  /**
  * Test to check whether the EXIF orientation tag was processed successfully or not.
  * The test uses a set of 8 images named testExifOrientation_{1 to 8}.(extension).
@@ -457,18 +468,27 @@ TEST(Imgcodecs_Png, Read_Write_With_Exif)
     EXPECT_EQ(img2.rows, img.rows);
     EXPECT_EQ(img2.type(), imgtype);
     EXPECT_EQ(read_metadata_types, read_metadata_types2);
+
+#ifdef OPENCV_IMGCODECS_PNG_WITH_EXIF
     ASSERT_GE(read_metadata_types.size(), 1u);
     EXPECT_EQ(read_metadata, read_metadata2);
     EXPECT_EQ(read_metadata_types[0], IMAGE_METADATA_EXIF);
     EXPECT_EQ(read_metadata_types.size(), read_metadata.size());
     EXPECT_EQ(read_metadata[0], metadata[0]);
+#else
+    ASSERT_GE(read_metadata_types.size(), 0u);
+#endif
     EXPECT_EQ(cv::norm(img2, img3, NORM_INF), 0.);
     double mse = cv::norm(img, img2, NORM_L2SQR)/(img.rows*img.cols);
     EXPECT_EQ(mse, 0); // png is lossless
     remove(outputname.c_str());
 }
 
+#ifdef OPENCV_IMGCODECS_PNG_WITH_cICP
+TEST(Imgcodecs_Png, Read_Write_With_Exif_Xmp_Iccp_cICP)
+#else
 TEST(Imgcodecs_Png, Read_Write_With_Exif_Xmp_Iccp)
+#endif
 {
     int png_compression = 3;
     int imgtype = CV_MAKETYPE(CV_8U, 3);
@@ -481,6 +501,11 @@ TEST(Imgcodecs_Png, Read_Write_With_Exif_Xmp_Iccp)
         getSampleXmpData(),
         getSampleIccpData(),
     };
+
+#ifdef OPENCV_IMGCODECS_PNG_WITH_cICP
+    metadata_types.push_back(IMAGE_METADATA_CICP);
+    metadata.push_back(getSampleCicpData());
+#endif
 
     std::vector<int> write_params = {
         IMWRITE_PNG_COMPRESSION, png_compression
@@ -498,9 +523,23 @@ TEST(Imgcodecs_Png, Read_Write_With_Exif_Xmp_Iccp)
     EXPECT_EQ(img2.rows, img.rows);
     EXPECT_EQ(img2.type(), imgtype);
 
+#ifdef OPENCV_IMGCODECS_PNG_WITH_EXIF
     EXPECT_EQ(metadata_types, read_metadata_types);
     EXPECT_EQ(read_metadata_types, read_metadata_types2);
     EXPECT_EQ(metadata, read_metadata);
+#else
+    ASSERT_GE(read_metadata_types.size(),  2u);
+    EXPECT_EQ(read_metadata_types[0],  IMAGE_METADATA_XMP);
+    EXPECT_EQ(read_metadata_types[1],  IMAGE_METADATA_ICCP);
+
+    ASSERT_GE(read_metadata_types2.size(), 2u);
+    EXPECT_EQ(read_metadata_types2[0], IMAGE_METADATA_XMP);
+    EXPECT_EQ(read_metadata_types2[1], IMAGE_METADATA_ICCP);
+
+    ASSERT_GE(read_metadata.size(), 2u);
+    EXPECT_EQ(metadata[1], read_metadata[0]);
+    EXPECT_EQ(metadata[2], read_metadata[1]);
+#endif
     remove(outputname.c_str());
 }
 

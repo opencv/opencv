@@ -40,22 +40,54 @@ static void concat(const std::vector<Mat>& inps, Mat& out, int axis)
         totalSize += inps[i].total()*esz;
     }
 
-    parallel_for_(Range(0, ninputs), [&](const Range& r) {
-        for (int k = r.start; k < r.end; k++) {
-            const Mat& inp_k = inps[k];
-            uchar* outptr = out.data;
-            const uchar* inptr_k = inp_k.data;
-            int sz_a;
-            for (int i = 0; i < k; i++) {
-                sz_a = inps[i].size[axis];
-                outptr += sliceSize*sz_a;
-            }
-            sz_a = inp_k.size[axis];
-            size_t sliceSize_k = sliceSize*sz_a;
-            for (int i = 0; i < nslices; i++)
-                memcpy(outptr + i*outStep, inptr_k + i*sliceSize_k, sliceSize_k);
+    // Precompute per-input destination offset and per-slice size.
+    std::vector<size_t> dstOffset(ninputs);
+    std::vector<size_t> sliceSize_k_vec(ninputs);
+    {
+        size_t acc = 0;
+        for (int k = 0; k < ninputs; k++) {
+            int sz_a = inps[k].size[axis];
+            dstOffset[k] = acc;
+            sliceSize_k_vec[k] = sliceSize * sz_a;
+            acc += sliceSize_k_vec[k];
         }
-    }, (totalSize > 1000000 ? ninputs : 1));
+    }
+    const size_t CHUNK = 64 * 1024;
+
+    // Precompute per-input chunk counts and a prefix sum for fast index decode.
+    std::vector<int> chunkOff(ninputs + 1, 0);
+    for (int k = 0; k < ninputs; k++)
+        chunkOff[k + 1] = chunkOff[k] + (int)((sliceSize_k_vec[k] + CHUNK - 1) / CHUNK);
+    int chunksPerSlice = chunkOff[ninputs];
+    int totalChunks = chunksPerSlice * nslices;
+
+    if (totalSize > CHUNK && totalChunks > 0) {
+        parallel_for_(Range(0, totalChunks), [&](const Range& r) {
+            for (int c = r.start; c < r.end; c++) {
+                int s = c / chunksPerSlice;
+                int local = c % chunksPerSlice;
+                int k = 0;
+                while (local >= chunkOff[k + 1]) k++;
+                int chunkInK = local - chunkOff[k];
+                size_t byteStart = (size_t)chunkInK * CHUNK;
+                size_t byteEnd = std::min(byteStart + CHUNK, sliceSize_k_vec[k]);
+
+                const uchar* inptr_k = inps[k].data;
+                uchar* outptr = out.data + dstOffset[k];
+                memcpy(outptr + (size_t)s * outStep + byteStart,
+                       inptr_k + (size_t)s * sliceSize_k_vec[k] + byteStart,
+                       byteEnd - byteStart);
+            }
+        });
+    } else {
+        for (int k = 0; k < ninputs; k++) {
+            const uchar* inptr_k = inps[k].data;
+            uchar* outptr = out.data + dstOffset[k];
+            size_t sliceSize_k = sliceSize_k_vec[k];
+            for (int s = 0; s < nslices; s++)
+                memcpy(outptr + (size_t)s * outStep, inptr_k + (size_t)s * sliceSize_k, sliceSize_k);
+        }
+    }
 }
 
 class Concat2LayerImpl CV_FINAL : public Concat2Layer

@@ -141,7 +141,7 @@ CoreBPE::CoreBPE(ByteVecRankMap encoder,
     std::sort(sortedTokenBytes_.begin(), sortedTokenBytes_.end());
 }
 
-std::optional<std::vector<std::uint8_t>>
+std::vector<std::uint8_t>
 CoreBPE::decodeBytes(const std::vector<std::uint32_t>& tokens) const {
     std::vector<std::uint8_t> out;
     out.reserve(tokens.size() * 2);
@@ -157,7 +157,7 @@ CoreBPE::decodeBytes(const std::vector<std::uint32_t>& tokens) const {
             if (sit != specialDecoder_.end()) {
                 tokenBytes = &sit->second;
             } else {
-                return std::nullopt;
+                return std::vector<std::uint8_t>();
             }
         }
         out.insert(out.end(), tokenBytes->begin(), tokenBytes->end());

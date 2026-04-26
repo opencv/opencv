@@ -14,6 +14,7 @@ ocv_add_dispatched_file(minmax SSE2 SSE4_1 AVX2 VSX3 LASX)
 ocv_add_dispatched_file(nan_mask SSE2 AVX2 LASX)
 ocv_add_dispatched_file(split SSE2 AVX2 LASX)
 ocv_add_dispatched_file(sum SSE2 AVX2 LASX)
+ocv_add_dispatched_file(reduce SSE2 SSSE3 AVX2 NEON_DOTPROD)
 ocv_add_dispatched_file(norm SSE2 SSE4_1 AVX AVX2 NEON_DOTPROD LASX)
 
 # dispatching for accuracy tests

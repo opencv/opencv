@@ -37,6 +37,13 @@ if(HAVE_CANN)
   ocv_target_compile_definitions(${the_module} PRIVATE "HAVE_CANN=1")
 endif()
 
+if(MSVC)
+  ocv_target_compile_options(${the_module} PRIVATE "/fp:fast")
+elseif(CV_GCC OR CV_CLANG)
+  ocv_target_compile_options(${the_module} PRIVATE -ffast-math)
+  ocv_target_compile_options(${the_module} PRIVATE -fno-finite-math-only)
+endif()
+
 ocv_option(OPENCV_DNN_CUDA "Build with CUDA support"
     HAVE_CUDA
     AND HAVE_CUBLAS

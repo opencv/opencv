@@ -71,7 +71,7 @@ void triangulatePoints( InputArray _P1, InputArray _P2,
     {
         npoints1 = points1.rows + points1.cols - 1;
         ystep1 = 1;
-        pstep1 = points1.rows == 1 ? 2 : (int)(points1.step/points1.elemSize());
+        pstep1 = 2;
     }
     else
     {
@@ -84,7 +84,7 @@ void triangulatePoints( InputArray _P1, InputArray _P2,
     {
         npoints2 = points2.rows + points2.cols - 1;
         ystep2 =  1;
-        pstep2 = points2.rows == 1 ? 2 : (int)(points2.step/points2.elemSize());
+        pstep2 = 2;
     }
     else
     {

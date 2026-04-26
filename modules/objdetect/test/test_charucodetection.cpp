@@ -705,6 +705,27 @@ TEST(Charuco, testmatchImagePoints)
     }
 }
 
+TEST(Charuco, detectDiamondsClearsOutputsWithLessThanFourMarkers)
+{
+    aruco::CharucoBoard board(Size(3, 3), 1.f, 0.5f, aruco::getPredefinedDictionary(aruco::DICT_4X4_50));
+    aruco::CharucoDetector detector(board);
+
+    vector<vector<Point2f>> markerCorners = {
+        {Point2f(10.f, 10.f), Point2f(20.f, 10.f), Point2f(20.f, 20.f), Point2f(10.f, 20.f)},
+        {Point2f(30.f, 10.f), Point2f(40.f, 10.f), Point2f(40.f, 20.f), Point2f(30.f, 20.f)},
+        {Point2f(10.f, 30.f), Point2f(20.f, 30.f), Point2f(20.f, 40.f), Point2f(10.f, 40.f)}
+    };
+    vector<int> markerIds = {0, 1, 2};
+
+    vector<vector<Point2f>> diamondCorners = {{Point2f(1.f, 1.f), Point2f(2.f, 1.f), Point2f(2.f, 2.f), Point2f(1.f, 2.f)}};
+    vector<Vec4i> diamondIds = {Vec4i(0, 1, 2, 3)};
+
+    detector.detectDiamonds(Mat(), diamondCorners, diamondIds, markerCorners, markerIds);
+
+    EXPECT_TRUE(diamondCorners.empty());
+    EXPECT_TRUE(diamondIds.empty());
+}
+
 typedef testing::TestWithParam<int> CharucoDraw;
 INSTANTIATE_TEST_CASE_P(/**/, CharucoDraw, testing::Values(CV_8UC2, CV_8SC2, CV_16UC2, CV_16SC2, CV_32SC2, CV_32FC2, CV_64FC2));
 TEST_P(CharucoDraw, testDrawDetected) {

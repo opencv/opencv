@@ -579,7 +579,9 @@ cv::RotatedRect cv::fitEllipseAMS( InputArray _points )
         M(4,3)=DM(3,4);
         M(4,4)=DM(4,4);
 
-        if (fabs(cv::determinant(M)) > 1.0e-10) {
+        double npow = (double)n * (double)n;
+        npow = npow * npow * (double)n;  // n^5
+        if (fabs(cv::determinant(M)) > 1.0e-10 / npow) {
             break;
         }
 
@@ -703,6 +705,8 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
     Matx<double, 3, 1> pVec;
 
     double x0, y0, a, b, theta, Ts;
+    Mat eVal, eVec;
+    double cond[3];
     double s = 0;
 
     for( i = 0; i < n; i++ )
@@ -763,6 +767,11 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
         Ts=(-(DM(3,5)*DM(4,4)*DM(5,3)) + DM(3,4)*DM(4,5)*DM(5,3) + DM(3,5)*DM(4,3)*DM(5,4) - \
               DM(3,3)*DM(4,5)*DM(5,4)  - DM(3,4)*DM(4,3)*DM(5,5) + DM(3,3)*DM(4,4)*DM(5,5));
 
+        if (fabs(Ts) < DBL_EPSILON) {
+            eps = (float)(s/(n*2)*1e-2);
+            continue;
+        }
+
         M(0,0) = (DM(2,0) + (DM(2,3)*TM(0,0) + DM(2,4)*TM(1,0) + DM(2,5)*TM(2,0))/Ts)/2.;
         M(0,1) = (DM(2,1) + (DM(2,3)*TM(0,1) + DM(2,4)*TM(1,1) + DM(2,5)*TM(2,1))/Ts)/2.;
         M(0,2) = (DM(2,2) + (DM(2,3)*TM(0,2) + DM(2,4)*TM(1,2) + DM(2,5)*TM(2,2))/Ts)/2.;
@@ -773,18 +782,9 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
         M(2,1) = (DM(0,1) + (DM(0,3)*TM(0,1) + DM(0,4)*TM(1,1) + DM(0,5)*TM(2,1))/Ts)/2.;
         M(2,2) = (DM(0,2) + (DM(0,3)*TM(0,2) + DM(0,4)*TM(1,2) + DM(0,5)*TM(2,2))/Ts)/2.;
 
-        double det = cv::determinant(M);
-        if (fabs(det) > 1.0e-10)
-            break;
-        eps = (float)(s/(n*2)*1e-2);
-    }
-
-    if( iter < 2 ) {
-        Mat eVal, eVec;
         eigenNonSymmetric(M, eVal, eVec);
 
         // Select the eigen vector {a,b,c} which satisfies 4ac-b^2 > 0
-        double cond[3];
         cond[0]=(4.0 * eVec.at<double>(0,0) * eVec.at<double>(0,2) - eVec.at<double>(0,1) * eVec.at<double>(0,1));
         cond[1]=(4.0 * eVec.at<double>(1,0) * eVec.at<double>(1,2) - eVec.at<double>(1,1) * eVec.at<double>(1,1));
         cond[2]=(4.0 * eVec.at<double>(2,0) * eVec.at<double>(2,2) - eVec.at<double>(2,1) * eVec.at<double>(2,1));
@@ -793,6 +793,18 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
         } else {
             i = (cond[0]<cond[2]) ? 2 : 0;
         }
+        // Check that the ellipse condition 4ac-b^2 is meaningfully positive
+        // (not just positive due to floating-point noise from complex eigenvalues)
+        {
+            double v0 = eVec.at<double>(i,0), v1 = eVec.at<double>(i,1), v2 = eVec.at<double>(i,2);
+            double vnorm2 = v0*v0 + v1*v1 + v2*v2;
+            if (cond[i] > 1e-6 * vnorm2)
+                break;
+        }
+        eps = (float)(s/(n*2)*1e-2);
+    }
+
+    if( iter < 2 ) {
         double norm = std::sqrt(eVec.at<double>(i,0)*eVec.at<double>(i,0) + eVec.at<double>(i,1)*eVec.at<double>(i,1) + eVec.at<double>(i,2)*eVec.at<double>(i,2));
         if (((eVec.at<double>(i,0)<0.0  ? -1 : 1) * (eVec.at<double>(i,1)<0.0  ? -1 : 1) * (eVec.at<double>(i,2)<0.0  ? -1 : 1)) <= 0.0) {
                 norm=-1.0*norm;

@@ -112,6 +112,7 @@ public:
                     case CV_16F: forward_impl<int64_t, int16_t>(data, indices, out); break;
                     case CV_32F: forward_impl<int64_t, float>(data, indices, out); break;
                     case CV_64F: forward_impl<int64_t, double>(data, indices, out); break;
+                    case CV_64S: forward_impl<int64_t, int64_t>(data, indices, out); break;
                     default: CV_Error(Error::StsNotImplemented, "Unsupported data type");
                 }
             } break;

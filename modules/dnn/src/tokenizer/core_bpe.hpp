@@ -45,7 +45,6 @@
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
-#include <optional>
 #include <string>
 #include <cstdint>
 
@@ -148,7 +147,7 @@ public:
      * @param tokens  Token ids.
      * @return Decoded bytes on success, or @c std::nullopt if any id is unknown.
      */
-    std::optional<std::vector<std::uint8_t>> decodeBytes(const std::vector<std::uint32_t>& tokens) const;
+    std::vector<std::uint8_t> decodeBytes(const std::vector<std::uint32_t>& tokens) const;
 
 private:
     ByteVecRankMap encoder_;

@@ -337,6 +337,28 @@ TEST(Imgproc_FitEllipseDirect_Issue_7, accuracy) {
     EXPECT_TRUE(checkEllipse(ellipseDirectTest, ellipseDirectTrue, tol));
 }
 
+TEST(Imgproc_FitEllipseDirect_NearCircular, accuracy)
+{
+    // 360 points on a near-circular ellipse (a=17, b=16.5)
+    // This data previously triggered unnecessary fallback to fitEllipseNoDirect
+    std::vector<cv::Point2f> points;
+    double cx = 27.0, cy = 27.0, a = 17.0, b = 16.5;
+    for (int i = 0; i < 360; i++) {
+        double theta = 2.0 * CV_PI * i / 360.0;
+        points.push_back(cv::Point2f(
+            (float)(cx + a * cos(theta)),
+            (float)(cy + b * sin(theta))));
+    }
+
+    cv::RotatedRect direct = cv::fitEllipseDirect(points);
+
+    // Direct should produce a valid result close to ground truth
+    EXPECT_NEAR(direct.center.x, 27.0, 0.1);
+    EXPECT_NEAR(direct.center.y, 27.0, 0.1);
+    EXPECT_NEAR(std::max(direct.size.width, direct.size.height), 34.0, 0.5);
+    EXPECT_NEAR(std::min(direct.size.width, direct.size.height), 33.0, 0.5);
+}
+
 TEST(Imgproc_FitEllipseDirect_HorizontalLine, accuracy) {
     vector<Point2f> pts({{-300, 100}, {-200, 100}, {-100, 100}, {0, 100}, {100, 100}, {200, 100}, {300, 100}});
     const RotatedRect el = fitEllipseDirect(pts);

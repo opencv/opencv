@@ -8,6 +8,13 @@ namespace opencv_test { namespace {
 
 #if defined(HAVE_PNG) || defined(HAVE_SPNG)
 
+// See https://github.com/opencv/opencv/pull/28615
+// Precision differences in 16-bit grayscale conversion between old and modern libpng versions
+#define OPENCV_IMGCODECS_PNG_EPS_DEFAULT (4)
+#ifndef OPENCV_IMGCODECS_PNG_EPS_16BIT_GRAY
+#define  OPENCV_IMGCODECS_PNG_EPS_16BIT_GRAY (OPENCV_IMGCODECS_PNG_EPS_DEFAULT)
+#endif
+
 TEST(Imgcodecs_Png, write_big)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
@@ -276,10 +283,12 @@ TEST_P(Imgcodecs_Png_PngSuite, decode)
         cvtColor(gt_3, gt_258, COLOR_BGR2RGB);
     }
 
+    const double epsGrayAnydepth = ((gt.depth() == CV_16U) && (gt.channels() > 1)) ? OPENCV_IMGCODECS_PNG_EPS_16BIT_GRAY: OPENCV_IMGCODECS_PNG_EPS_DEFAULT;
+
     // Perform comparisons with different imread flags
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(1, 0), imread(filename, IMREAD_GRAYSCALE), gt_0);
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(1, 0), imread(filename, IMREAD_COLOR), gt_1);
-    EXPECT_PRED_FORMAT2(cvtest::MatComparator(4, 0), imread(filename, IMREAD_ANYDEPTH), gt_2);
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(epsGrayAnydepth, 0), imread(filename, IMREAD_ANYDEPTH), gt_2); // IMREAD_GRAYSCALE is used.
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), imread(filename, IMREAD_COLOR | IMREAD_ANYDEPTH), gt_3);
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(1, 0), imread(filename, IMREAD_COLOR_RGB), gt_256);
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), imread(filename, IMREAD_COLOR_RGB | IMREAD_ANYDEPTH), gt_258);

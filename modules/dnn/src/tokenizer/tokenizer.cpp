@@ -49,11 +49,10 @@ struct BpeTokenizerImpl : public Tokenizer::Impl {
     std::string decode(const std::vector<int>& tokens) override {
         CV_Assert(coreBPE);
         std::vector<uint32_t> t32(tokens.begin(), tokens.end());
-        auto opt_bytes = coreBPE->decodeBytes(t32);
-        if (!opt_bytes)
+        const std::vector<std::uint8_t> opt_bytes = coreBPE->decodeBytes(t32);
+        if (opt_bytes.empty())
             CV_Error(cv::Error::StsError, "Invalid decode.");
-        const auto& bytes = *opt_bytes;
-        return std::string(reinterpret_cast<const char*>(bytes.data()), bytes.size());
+        return std::string(reinterpret_cast<const char*>(opt_bytes.data()), opt_bytes.size());
     }
 };
 

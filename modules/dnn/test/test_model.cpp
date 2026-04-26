@@ -880,23 +880,8 @@ TEST_P(Reproducibility_ResNet50_ONNX, Accuracy)
                               false, true, CV_32F);
     ASSERT_TRUE(!input.empty());
 
-    Mat out;
-    double min_t = 0;
-    const int niters =
-#ifdef _DEBUG
-        1;
-#else
-        30;
-#endif
-
-    for (int i = 0; i < niters; i++) {
-        double t = (double)getTickCount();
-        net.setInput(input);
-        out = net.forward();
-        t = (double)getTickCount() - t;
-        min_t = i == 0 ? t : std::min(min_t, t);
-    }
-    printf("run time = %.2fms\n", min_t*1000./getTickFrequency());
+    net.setInput(input);
+    Mat out = net.forward();
 
     std::vector<std::pair<int, float> > ref = {{285, 10.13}, {287, 9.68}, {283, 8.83}, {278, 8.56}, {279, 8.34}};
     std::vector<std::pair<int, float> > res;
@@ -944,23 +929,8 @@ TEST_P(Reproducibility_ResNet50_QDQ_ONNX, Accuracy)
                               false, true, CV_32F);
     ASSERT_TRUE(!input.empty());
 
-    Mat out;
-    double min_t = 0;
-    const int niters =
-#ifdef _DEBUG
-        1;
-#else
-        30;
-#endif
-
-    for (int i = 0; i < niters; i++) {
-        double t = (double)getTickCount();
-        net.setInput(input);
-        out = net.forward();
-        t = (double)getTickCount() - t;
-        min_t = i == 0 ? t : std::min(min_t, t);
-    }
-    printf("run time = %.2fms\n", min_t*1000./getTickFrequency());
+    net.setInput(input);
+    Mat out = net.forward();
 
     const int K = 5;
     std::vector<std::pair<int, float> > res;
@@ -1012,22 +982,8 @@ TEST_P(Reproducibility_MobileNetSSD_ONNX, Accuracy)
 
     std::vector<String> outNames = net.getUnconnectedOutLayersNames();
     std::vector<Mat> outs;
-    double min_t = 0;
-    const int niters =
-#ifdef _DEBUG
-        1;
-#else
-        30;
-#endif
-
-    for (int i = 0; i < niters; i++) {
-        double t = (double)getTickCount();
-        net.setInput(input8dim4);
-        net.forward(outs, outNames);
-        t = (double)getTickCount() - t;
-        min_t = i == 0 ? t : std::min(min_t, t);
-    }
-    printf("run time = %.2fms\n", min_t*1000./getTickFrequency());
+    net.setInput(input8dim4);
+    net.forward(outs, outNames);
 
     // Model outputs: detection_boxes [1,N,4], detection_classes [1,N],
     //                detection_scores [1,N], num_detections [1]
@@ -1090,5 +1046,241 @@ TEST_P(Reproducibility_MobileNetSSD_ONNX, Accuracy)
 }
 INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_MobileNetSSD_ONNX,
                         testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
+
+
+namespace {
+
+enum YoloFormat { YOLO_V5, YOLO_V8, YOLO_X };
+static void YoloPostprocess(const Mat& out, YoloFormat fmt, int inputSize,
+                       float confTh, float nmsTh,
+                       std::vector<int>& classIds,
+                       std::vector<float>& confidences,
+                       std::vector<Rect2d>& boxes)
+{
+    CV_Assert(out.dims == 3);
+    bool hasObj  = (fmt != YOLO_V8);
+    int nclasses = 80;
+    int stride   = 4 + (hasObj ? 1 : 0) + nclasses;
+
+    const float* data = nullptr;
+    std::vector<float> buf;
+    int N;
+    if (fmt == YOLO_V8) {
+        int C = out.size[1];
+        N = out.size[2];
+        CV_Assert(C == stride);
+        const float* src = out.ptr<float>();
+        buf.resize((size_t)N * C);
+        for (int i = 0; i < C; i++)
+            for (int j = 0; j < N; j++)
+                buf[j * C + i] = src[i * N + j];
+        data = buf.data();
+    } else {
+        N = out.size[1];
+        CV_Assert(out.size[2] == stride);
+        data = out.ptr<float>();
+    }
+
+    // YOLOX grid decode tables
+    std::vector<float> gridX, gridY, strideVec;
+    if (fmt == YOLO_X) {
+        const int strides[] = {8, 16, 32};
+        gridX.resize(N); gridY.resize(N); strideVec.resize(N);
+        int idx = 0;
+        for (int si = 0; si < 3; si++) {
+            int gs = inputSize / strides[si];
+            for (int y = 0; y < gs; y++)
+                for (int x = 0; x < gs; x++) {
+                    gridX[idx] = (float)x;
+                    gridY[idx] = (float)y;
+                    strideVec[idx] = (float)strides[si];
+                    idx++;
+                }
+        }
+        CV_Assert(idx == N);
+    }
+
+    int classOff = hasObj ? 5 : 4;
+    double scale = 1.0 / inputSize;
+    std::vector<Rect> intBoxes;
+    std::vector<int> allCls;
+    std::vector<float> allConf;
+    std::vector<Rect2d> allBoxes;
+
+    for (int i = 0; i < N; i++) {
+        const float* r = data + (size_t)i * stride;
+        float obj = hasObj ? r[4] : 1.0f;
+        if (obj < confTh) continue;
+
+        int bestCls = 0; float bestScore = 0;
+        for (int c = 0; c < nclasses; c++) {
+            float s = r[classOff + c] * obj;
+            if (s > bestScore) { bestScore = s; bestCls = c; }
+        }
+        if (bestScore < confTh) continue;
+
+        float cx, cy, w, h;
+        if (fmt == YOLO_X) {
+            cx = (r[0] + gridX[i]) * strideVec[i];
+            cy = (r[1] + gridY[i]) * strideVec[i];
+            w  = std::exp(r[2]) * strideVec[i];
+            h  = std::exp(r[3]) * strideVec[i];
+        } else {
+            cx = r[0]; cy = r[1]; w = r[2]; h = r[3];
+        }
+
+        intBoxes.push_back(Rect((int)(cx-w/2), (int)(cy-h/2), (int)w, (int)h));
+        allConf.push_back(bestScore);
+        allCls.push_back(bestCls);
+        allBoxes.push_back(Rect2d((cx-w/2)*scale, (cy-h/2)*scale, w*scale, h*scale));
+    }
+
+    std::vector<int> indices;
+    cv::dnn::NMSBoxes(intBoxes, allConf, confTh, nmsTh, indices);
+    for (int idx : indices) {
+        classIds.push_back(allCls[idx]);
+        confidences.push_back(allConf[idx]);
+        boxes.push_back(allBoxes[idx]);
+    }
+}
+
+} // local namespace
+
+typedef testing::TestWithParam<Target> Reproducibility_YOLOv5n_ONNX;
+TEST_P(Reproducibility_YOLOv5n_ONNX, Accuracy)
+{
+    Target targetId = GetParam();
+    applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
+
+    std::string modelname = _tf("yolov5n.onnx", false);
+    Net net = readNetFromONNX(modelname);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(targetId);
+    if (targetId == DNN_TARGET_CPU_FP16)
+        net.enableWinograd(false);
+
+    std::string imgname = _tf("dog416.png");
+    Mat image = imread(imgname);
+    ASSERT_TRUE(!image.empty());
+    Mat input = blobFromImage(image, 1.0/255.0, Size(640, 640), Scalar(), true, false, CV_32F);
+
+    net.setInput(input);
+    Mat out = net.forward();
+
+    if (out.type() != CV_32F) out.convertTo(out, CV_32F);
+
+    std::vector<int> classIds;
+    std::vector<float> confidences;
+    std::vector<Rect2d> testBoxes;
+    YoloPostprocess(out, YOLO_V5, 640, 0.25f, 0.45f, classIds, confidences, testBoxes);
+
+    std::vector<int>    refClassIds  = {16, 2, 1, 1};
+    std::vector<float>  refScores    = {0.711f, 0.581f, 0.344f, 0.275f};
+    std::vector<Rect2d> refBoxes     = {
+        Rect2d(0.168262, 0.374023, 0.247852, 0.577734),  // dog
+        Rect2d(0.605469, 0.134375, 0.286719, 0.156250),  // car
+        Rect2d(0.186279, 0.248828, 0.148926, 0.129688),  // bicycle (small)
+        Rect2d(0.231836, 0.277930, 0.519141, 0.483203),  // bicycle (large)
+    };
+
+    normAssertDetections(refClassIds, refScores, refBoxes,
+                         classIds, confidences, testBoxes,
+                         "", 0.25f, /*scoreDiff=*/0.2, /*iouDiff=*/0.2);
+}
+INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_YOLOv5n_ONNX,
+                        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
+
+
+typedef testing::TestWithParam<Target> Reproducibility_YOLOv8n_ONNX;
+TEST_P(Reproducibility_YOLOv8n_ONNX, Accuracy)
+{
+    Target targetId = GetParam();
+    applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
+
+    std::string modelname = _tf("yolov8n.onnx", false);
+    Net net = readNetFromONNX(modelname);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(targetId);
+    if (targetId == DNN_TARGET_CPU_FP16)
+        net.enableWinograd(false);
+
+    std::string imgname = _tf("dog416.png");
+    Mat image = imread(imgname);
+    ASSERT_TRUE(!image.empty());
+    Mat input = blobFromImage(image, 1.0/255.0, Size(640, 640), Scalar(), true, false, CV_32F);
+
+    net.setInput(input);
+    Mat out = net.forward();
+
+    if (out.type() != CV_32F) out.convertTo(out, CV_32F);
+
+    std::vector<int> classIds;
+    std::vector<float> confidences;
+    std::vector<Rect2d> testBoxes;
+    YoloPostprocess(out, YOLO_V8, 640, 0.25f, 0.45f, classIds, confidences, testBoxes);
+
+    std::vector<int>    refClassIds  = {16, 1, 7};
+    std::vector<float>  refScores    = {0.827f, 0.809f, 0.544f};
+    std::vector<Rect2d> refBoxes     = {
+        Rect2d(0.171157, 0.386951, 0.231909, 0.551873),  // dog
+        Rect2d(0.160967, 0.234788, 0.577899, 0.495077),  // bicycle
+        Rect2d(0.608337, 0.130141, 0.291832, 0.167390),  // truck
+    };
+
+    normAssertDetections(refClassIds, refScores, refBoxes,
+                         classIds, confidences, testBoxes,
+                         "", 0.25f, /*scoreDiff=*/0.1, /*iouDiff=*/0.1);
+}
+INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_YOLOv8n_ONNX,
+                        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
+
+
+typedef testing::TestWithParam<Target> Reproducibility_YOLOXS_ONNX;
+TEST_P(Reproducibility_YOLOXS_ONNX, Accuracy)
+{
+    Target targetId = GetParam();
+    applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
+
+    std::string modelname = _tf("yolox_s.onnx", false);
+    Net net = readNetFromONNX(modelname);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(targetId);
+    if (targetId == DNN_TARGET_CPU_FP16)
+        net.enableWinograd(false);
+
+    std::string imgname = _tf("dog416.png");
+    Mat image = imread(imgname);
+    ASSERT_TRUE(!image.empty());
+    Mat input = blobFromImage(image, 1.0, Size(640, 640), Scalar(), false, false, CV_32F);
+
+    net.setInput(input);
+    Mat out = net.forward();
+
+    if (out.type() != CV_32F) out.convertTo(out, CV_32F);
+
+    std::vector<int> classIds;
+    std::vector<float> confidences;
+    std::vector<Rect2d> testBoxes;
+    YoloPostprocess(out, YOLO_X, 640, 0.25f, 0.45f, classIds, confidences, testBoxes);
+
+    std::vector<int>    refClassIds  = {1, 16, 7, 1};
+    std::vector<float>  refScores    = {0.962f, 0.920f, 0.833f, 0.266f};
+    std::vector<Rect2d> refBoxes     = {
+        Rect2d(0.160787, 0.225276, 0.577830, 0.503752),  // bicycle (large)
+        Rect2d(0.172622, 0.386773, 0.230225, 0.554768),  // dog
+        Rect2d(0.601869, 0.128871, 0.302539, 0.168476),  // truck
+        Rect2d(0.166281, 0.251719, 0.339791, 0.385267),  // bicycle (small)
+    };
+
+    normAssertDetections(refClassIds, refScores, refBoxes,
+                         classIds, confidences, testBoxes,
+                         "", 0.25f, /*scoreDiff=*/0.2, /*iouDiff=*/0.2);
+}
+INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_YOLOXS_ONNX,
+                        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
+
 
 }} // namespace

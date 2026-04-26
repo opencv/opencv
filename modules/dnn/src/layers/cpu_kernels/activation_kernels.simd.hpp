@@ -232,10 +232,13 @@ static void activationGELUApprox(const void* input, void* output,
     v_float32 half = vx_setall_f32(0.5f), one = vx_setall_f32(1.f);
     v_float32 v_s2pi = vx_setall_f32(sqrt2_pi), v_coeff = vx_setall_f32(coeff);
     v_float32 two = vx_setall_f32(2.f);
+    // Clamp to [-9, 9] to prevent overflow in exp(2*inner); tanh saturates here anyway
+    v_float32 clamp_hi = vx_setall_f32(9.f), clamp_lo = vx_setall_f32(-9.f);
     for (; i + vlanes <= len; i += vlanes) {
         v_float32 x = vx_load(inp + i);
         // inner = sqrt(2/pi) * x + coeff * x^3 = x * (sqrt(2/pi) + coeff * x^2)
         v_float32 inner = v_mul(x, v_add(v_s2pi, v_mul(v_coeff, v_mul(x, x))));
+        inner = v_min(v_max(inner, clamp_lo), clamp_hi);
         // tanh via exp: (exp(2*inner)-1)/(exp(2*inner)+1)
         v_float32 e2 = v_exp(v_mul(two, inner));
         v_float32 t = v_div(v_sub(e2, one), v_add(e2, one));
