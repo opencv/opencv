@@ -2756,8 +2756,6 @@ TEST_P(Test_ONNX_nets, MobileNet_v2)
 
 TEST_P(Test_ONNX_nets, MobileNet_v2_FP16)
 {
-    // ORT denies: FP16 data type not supported - Softmax layer rejects CV_16FC1 (half-precision float)
-    if (shouldSkipONNXLayerTest()) throw SkipTestException("ORT engine failure");
     testONNXModels("mobilenetv2_fp16", npy, default_l1, default_lInf, true);
 }
 

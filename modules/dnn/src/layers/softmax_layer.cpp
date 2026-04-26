@@ -100,6 +100,22 @@ public:
         return inplace;
     }
 
+    void getTypes(const std::vector<MatType> &inputs,
+                  const int requiredOutputs,
+                  const int requiredInternals,
+                  std::vector<MatType> &outputs,
+                  std::vector<MatType> &internals) const CV_OVERRIDE
+    {
+        CV_Assert(inputs.size());
+        for (auto input : inputs)
+        {
+            CV_CheckType(input, input == CV_32F || input == CV_64F || input == CV_8S ||
+                                input == CV_64S || input == CV_16F, "");
+        }
+        outputs.assign(requiredOutputs, inputs[0]);
+        internals.assign(requiredInternals, inputs[0]);
+    }
+
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE

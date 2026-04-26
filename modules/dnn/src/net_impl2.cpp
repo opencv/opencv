@@ -94,16 +94,9 @@ void Net::Impl::applyStagedOrtInputs()
             auto it = names.input_name_to_index.find(inpname);
             if (it == names.input_name_to_index.end())
             {
-                try {
-                    int idx = std::stoi(inpname);
-                    if (idx >= 0 && idx < (int)ninputs) {
-                        inputIdx = (size_t)idx;
-                    } else {
-                        CV_Error_(Error::StsObjectNotFound, ("DNN/ORT: input '%s' is not found", inpname.c_str()));
-                    }
-                } catch (...) {
-                    CV_Error_(Error::StsObjectNotFound, ("DNN/ORT: input '%s' is not found", inpname.c_str()));
-                }
+                int idx = std::stoi(inpname);
+                CV_Assert(idx >= 0 && idx < (int)ninputs);
+                inputIdx = (size_t)idx;
             } else {
                 inputIdx = (size_t)it->second;
             }
