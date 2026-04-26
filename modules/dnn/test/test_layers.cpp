@@ -2993,6 +2993,14 @@ TEST(KV_Cache, prefetch_3D)
 
 TEST(KV_Cache, prefetch_4D)
 {
+    auto engine_forced = static_cast<cv::dnn::EngineType>(
+            cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
+    if (engine_forced == cv::dnn::ENGINE_CLASSIC)
+    {
+        // Mark the test as skipped and exit early.
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+        return;
+    }
     std::string model_path = "dnn/onnx/models/test_attention_kv_cache_4d.onnx";
     Net netWithKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_NEW);
     Net netWithoutKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_NEW);
@@ -3023,6 +3031,14 @@ TEST(KV_Cache, prefetch_4D)
 
 TEST(KV_Cache, generate_3D)
 {
+    auto engine_forced = static_cast<cv::dnn::EngineType>(
+            cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
+    if (engine_forced == cv::dnn::ENGINE_CLASSIC)
+    {
+        // Mark the test as skipped and exit early.
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+        return;
+    }
     std::string model_path = "dnn/onnx/models/test_attention_kv_cache_3d.onnx";
     Net netWithKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_NEW);
     Net netWithoutKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_NEW);
@@ -3072,6 +3088,15 @@ TEST(KV_Cache, generate_3D)
 
 TEST(KV_Cache, generate_4D)
 {
+    auto engine_forced = static_cast<cv::dnn::EngineType>(
+            cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
+    if (engine_forced == cv::dnn::ENGINE_CLASSIC)
+    {
+        // Mark the test as skipped and exit early.
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+        return;
+    }
+
     std::string model_path = "dnn/onnx/models/test_attention_kv_cache_4d.onnx";
     Net netWithKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_NEW);
     Net netWithoutKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_NEW);
