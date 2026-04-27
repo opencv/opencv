@@ -335,15 +335,17 @@ TEST_P(videoio_image_seq_start, open)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(videoio_images, videoio_image_seq_start,
-                        testing::Values(
-                            CAP_IMAGES
 // PR: https://github.com/opencv/opencv/pull/28844/
 // Requires FFmpeg wrapper re-build on Windows
+static const VideoCaptureAPIs BackendsWithSeqStart[] =
+{
+    CAP_IMAGES
 #ifndef _WIN32
-                            ,CAP_FFMPEG
+    ,CAP_FFMPEG
 #endif
-                        ));
+};
+
+INSTANTIATE_TEST_CASE_P(videoio_images, videoio_image_seq_start, testing::ValuesIn(BackendsWithSeqStart));
 
 // TODO: should writer overwrite files?
 // TODO: is clamping good for seeking?
