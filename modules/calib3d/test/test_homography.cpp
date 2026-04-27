@@ -763,4 +763,15 @@ TEST(Calib3d_Homography, Refine)
     }
 }
 
+// Test for Issue #22746: findHomography should return an empty matrix instead of crashing when given less than 4 points
+TEST(Calib3d_Homography, issue_22746_not_enough_points)
+{
+    std::vector<cv::Point2f> src = {cv::Point2f(0, 0), cv::Point2f(1, 0), cv::Point2f(0, 1)};
+    std::vector<cv::Point2f> dst = {cv::Point2f(1, 1), cv::Point2f(2, 1), cv::Point2f(1, 2)};
+    
+    cv::Mat H;
+    EXPECT_NO_THROW(H = cv::findHomography(src, dst));
+    EXPECT_TRUE(H.empty());
+}
+
 }} // namespace
