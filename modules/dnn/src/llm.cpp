@@ -6,6 +6,7 @@
 
 #include "precomp.hpp"
 #include "net_impl.hpp"
+#include "tokenizer/tokenizer_impl.hpp"
 
 #include <opencv2/core/utils/logger.hpp>
 
@@ -29,12 +30,56 @@ namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
+#ifdef HAVE_ONNXRUNTIME_GENAI
+struct OgaTokenizerImpl : public Tokenizer::Impl {
+    Net::Impl* ni;
+
+    explicit OgaTokenizerImpl(Net::Impl* ni_) : ni(ni_) {}
+
+    std::vector<int> encode(const std::string& text) override
+    {
+        CV_Assert(ni->oga_tokenizer);
+        auto sequences = OgaSequences::Create();
+        ni->oga_tokenizer->Encode(text.c_str(), *sequences);
+        const int32_t* ptr = sequences->SequenceData(0);
+        size_t len = sequences->SequenceCount(0);
+        return std::vector<int>(ptr, ptr + len);
+    }
+
+    std::string decode(const std::vector<int>& tokens) override
+    {
+        if (ni->oga_processor)
+        {
+            const char* outStr = nullptr;
+            OGA_CHECK(OgaProcessorDecode(ni->oga_processor.get(),
+                      (const int32_t*)tokens.data(), tokens.size(), &outStr));
+            std::string result(outStr ? outStr : "");
+            OgaDestroyString(outStr);
+            return result;
+        }
+
+        CV_Assert(ni->oga_tokenizer);
+        OgaTokenizerStream* streamPtr = nullptr;
+        OGA_CHECK(OgaCreateTokenizerStream(ni->oga_tokenizer.get(), &streamPtr));
+        std::string result;
+        for (size_t i = 0; i < tokens.size(); ++i)
+        {
+            const char* chunk = nullptr;
+            OGA_CHECK(OgaTokenizerStreamDecode(streamPtr, (int32_t)tokens[i], &chunk));
+            if (chunk)
+                result += chunk;
+        }
+        OgaDestroyTokenizerStream(streamPtr);
+        return result;
+    }
+};
+#endif
+
 struct LLM::Impl {
-    Tokenizer opencv_tokenizer_;
-    bool useOpencvTokenizer_;
+    Tokenizer tokenizer_;
     Net net_;
 
-    Impl() : useOpencvTokenizer_(false) {}
+    Impl() {}
 };
 
 LLM::LLM() : impl_(makePtr<LLM::Impl>()) {}
@@ -50,19 +95,20 @@ LLM LLM::create(const String& modelPath, int tokenizerType,
     {
         if (tokenizerConfigPath.empty())
         {
-            llm.impl_->opencv_tokenizer_ = Tokenizer::load(modelPath);
+            llm.impl_->tokenizer_ = Tokenizer::load(modelPath);
         }
         else
         {
-            llm.impl_->opencv_tokenizer_ = Tokenizer::load(tokenizerConfigPath);
+            llm.impl_->tokenizer_ = Tokenizer::load(tokenizerConfigPath);
             llm.impl_->net_ = readNetFromONNX(modelPath, engine);
         }
-        llm.impl_->useOpencvTokenizer_ = true;
     }
     else if (tokenizerType == TOKENIZER_ORT_GENAI)
     {
         llm.impl_->net_ = readNetFromONNX(modelPath, ENGINE_ORT_GENAI);
-        llm.impl_->useOpencvTokenizer_ = false;
+#ifdef HAVE_ONNXRUNTIME_GENAI
+        llm.impl_->tokenizer_ = Tokenizer(Ptr<Tokenizer::Impl>(new OgaTokenizerImpl(llm.impl_->net_.getImpl())));
+#endif
         CV_LOG_INFO(NULL, "DNN/LLM: Successfully initialized OGA model for " << modelPath);
     }
     else
@@ -73,105 +119,10 @@ LLM LLM::create(const String& modelPath, int tokenizerType,
     return llm;
 }
 
-Mat LLM::tokenize(const String& text) const
+Tokenizer LLM::getTokenizer() const
 {
     CV_Assert(impl_);
-    if (impl_->useOpencvTokenizer_)
-        return impl_->opencv_tokenizer_.tokenize(text);
-#ifdef HAVE_ONNXRUNTIME_GENAI
-    auto* ni = impl_->net_.getImpl();
-    CV_Assert(ni->oga_tokenizer);
-    auto sequences = OgaSequences::Create();
-    ni->oga_tokenizer->Encode(text.c_str(), *sequences);
-    const int32_t* ptr = sequences->SequenceData(0);
-    size_t len = sequences->SequenceCount(0);
-    Mat tokens(1, (int)len, CV_32S);
-    memcpy(tokens.data, ptr, len * sizeof(int32_t));
-    return tokens;
-#else
-    CV_Error(Error::StsNotImplemented, "tokenize with ORT GenAI requires build with WITH_ONNXRUNTIME_GENAI=ON");
-#endif
-}
-
-String LLM::detokenize(InputArray tokenIds) const
-{
-    CV_Assert(impl_);
-    if (impl_->useOpencvTokenizer_)
-        return impl_->opencv_tokenizer_.detokenize(tokenIds);
-#ifdef HAVE_ONNXRUNTIME_GENAI
-    auto* ni = impl_->net_.getImpl();
-    Mat m = tokenIds.getMat();
-    const int32_t* ptr = m.ptr<int32_t>();
-    size_t count = (size_t)m.total();
-
-    if (ni->oga_processor)
-    {
-        const char* outStr = nullptr;
-        OGA_CHECK(OgaProcessorDecode(ni->oga_processor.get(), ptr, count, &outStr));
-        String result(outStr ? outStr : "");
-        OgaDestroyString(outStr);
-        return result;
-    }
-
-    CV_Assert(ni->oga_tokenizer);
-    OgaTokenizerStream* streamPtr = nullptr;
-    OGA_CHECK(OgaCreateTokenizerStream(ni->oga_tokenizer.get(), &streamPtr));
-    std::string result;
-    for (size_t i = 0; i < count; ++i)
-    {
-        const char* chunk = nullptr;
-        OGA_CHECK(OgaTokenizerStreamDecode(streamPtr, ptr[i], &chunk));
-        if (chunk)
-            result += chunk;
-    }
-    OgaDestroyTokenizerStream(streamPtr);
-    return String(result);
-#else
-    CV_Error(Error::StsNotImplemented, "detokenize with ORT GenAI requires build with WITH_ONNXRUNTIME_GENAI=ON");
-#endif
-}
-
-std::vector<int> LLM::encode(const std::string& text)
-{
-    CV_Assert(impl_);
-    if (impl_->useOpencvTokenizer_)
-        return impl_->opencv_tokenizer_.encode(text);
-#ifdef HAVE_ONNXRUNTIME_GENAI
-    auto* ni = impl_->net_.getImpl();
-    CV_Assert(ni->oga_tokenizer);
-    auto sequences = OgaSequences::Create();
-    ni->oga_tokenizer->Encode(text.c_str(), *sequences);
-    const int32_t* ptr = sequences->SequenceData(0);
-    size_t len = sequences->SequenceCount(0);
-    return std::vector<int>(ptr, ptr + len);
-#else
-    CV_Error(Error::StsNotImplemented, "encode with ORT GenAI requires build with WITH_ONNXRUNTIME_GENAI=ON");
-#endif
-}
-
-std::string LLM::decode(const std::vector<int>& tokens)
-{
-    CV_Assert(impl_);
-    if (impl_->useOpencvTokenizer_)
-        return impl_->opencv_tokenizer_.decode(tokens);
-#ifdef HAVE_ONNXRUNTIME_GENAI
-    auto* ni = impl_->net_.getImpl();
-    CV_Assert(ni->oga_tokenizer);
-    OgaTokenizerStream* streamPtr = nullptr;
-    OGA_CHECK(OgaCreateTokenizerStream(ni->oga_tokenizer.get(), &streamPtr));
-    std::string result;
-    for (size_t i = 0; i < tokens.size(); ++i)
-    {
-        const char* chunk = nullptr;
-        OGA_CHECK(OgaTokenizerStreamDecode(streamPtr, (int32_t)tokens[i], &chunk));
-        if (chunk)
-            result += chunk;
-    }
-    OgaDestroyTokenizerStream(streamPtr);
-    return result;
-#else
-    CV_Error(Error::StsNotImplemented, "decode with ORT GenAI requires build with WITH_ONNXRUNTIME_GENAI=ON");
-#endif
+    return impl_->tokenizer_;
 }
 
 #ifdef HAVE_ONNXRUNTIME_GENAI
@@ -285,13 +236,15 @@ Mat LLM::run()
     return impl_->net_.forward();
 }
 
-Mat LLM::run(InputArray tokens, const String& inputName)
+Mat LLM::run(const std::vector<int>& tokens, const String& inputName)
 {
     CV_Assert(impl_);
+    Mat tokensMat(1, (int)tokens.size(), CV_32S);
+    std::memcpy(tokensMat.data, tokens.data(), tokens.size() * sizeof(int));
     if (inputName.empty())
-        impl_->net_.setInput(tokens);
+        impl_->net_.setInput(tokensMat);
     else
-        impl_->net_.setInput(tokens, inputName);
+        impl_->net_.setInput(tokensMat, inputName);
     return impl_->net_.forward();
 }
 

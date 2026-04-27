@@ -76,6 +76,134 @@ using namespace cv;
 using namespace cv::dnn;
 using namespace std;
 
+//
+// ORT-GenAI path: uses OGA tokenizer + single run() call for full generation.
+//
+void runOrtGenAI(const string& modelPath, const string& userPrompt, int maxNewTokens)
+{
+    // 1. Create LLM with ORT-GenAI tokenizer
+    LLM llm = LLM::create(modelPath, TOKENIZER_ORT_GENAI);
+    Tokenizer tokenizer = llm.getTokenizer();
+
+    cout << "Model type  : " << llm.getModelType()  << endl;
+    cout << "Device type : " << llm.getDeviceType() << endl;
+
+    // 2. Apply chat template and encode prompt
+    const string messages = "[{\"role\": \"user\", \"content\": \"" + userPrompt + "\"}]";
+    const string prompt   = llm.applyChatTemplate(messages);
+    vector<int> tokens    = tokenizer.encode(prompt);
+
+    // 3. Configure generation parameters
+    llm.setSearchOption("max_length", static_cast<double>(tokens.size() + maxNewTokens));
+    llm.setSearchOptionBool("do_sample", false);
+
+    // 4. Run inference and decode output
+    Mat out = llm.run(tokens);
+    vector<int> outIds(out.ptr<int>(), out.ptr<int>() + out.total());
+    cout << tokenizer.decode(outIds) << endl;
+}
+
+//
+// GPT-2 path: uses OpenCV BPE tokenizer + autoregressive greedy decoding loop.
+//
+void runGpt2(const string& modelPath, const string& tokenizerCfg,
+             const string& userPrompt, int maxSeqLen)
+{
+    // 1. Create LLM with OpenCV BPE tokenizer
+    LLM llm = LLM::create(modelPath, TOKENIZER_OPENCV_BPE, tokenizerCfg);
+    Tokenizer tokenizer = llm.getTokenizer();
+
+    // 2. Encode prompt
+    vector<int> tokens = tokenizer.encode(userPrompt);
+
+    // 3. Autoregressive greedy decoding loop
+    const int stopToken = 50256;  // <|endoftext|>
+    int remaining = maxSeqLen;
+
+    while (remaining > 0 && tokens.back() != stopToken)
+    {
+        Mat logits = llm.run(tokens, "idx");  // (1, seq_len, vocab_size)
+
+        int seqLen    = logits.size[1];
+        int vocabSize = logits.size[2];
+        Mat lastLogits(1, vocabSize, CV_32F, logits.ptr<float>() + (seqLen - 1) * vocabSize);
+
+        Point maxLoc;
+        minMaxLoc(lastLogits, nullptr, nullptr, nullptr, &maxLoc);
+        tokens.push_back(maxLoc.x);
+        remaining--;
+    }
+
+    // 4. Decode and print
+    cout << tokenizer.decode(tokens) << endl;
+}
+
+//
+// Qwen2.5 path: uses OpenCV BPE tokenizer + autoregressive greedy decoding loop
+// with multiple named inputs (input_ids, attention_mask, position_ids).
+//
+void runQwen(const string& modelPath, const string& tokenizerCfg,
+             const string& userPrompt, int maxNewTokens)
+{
+    // 1. Create LLM with OpenCV BPE tokenizer and ENGINE_NEW
+    LLM llm = LLM::create(modelPath, TOKENIZER_OPENCV_BPE, tokenizerCfg, ENGINE_NEW);
+    Tokenizer tokenizer = llm.getTokenizer();
+
+    // 2. Encode prompt with ChatML format
+    const string chatmlPrompt = "<|im_start|>user\n" + userPrompt + "<|im_end|>\n<|im_start|>assistant\n";
+    vector<int> ids = tokenizer.encode(chatmlPrompt);
+    Mat tokens(1, (int)ids.size(), CV_64F);
+    for (int i = 0; i < (int)ids.size(); i++)
+        tokens.at<double>(0, i) = static_cast<double>(ids[i]);
+    tokens.convertTo(tokens, CV_64S);
+
+    // 3. Autoregressive greedy decoding loop
+    const vector<int> stopIds = {151645, 151643};  // <|im_end|>, <|endoftext|>
+
+    for (int i = 0; i < maxNewTokens; i++)
+    {
+        int seqLen = tokens.cols;
+        Mat attentionMask(1, seqLen, CV_64S, Scalar(1));
+        Mat positionIds(1, seqLen, CV_64S);
+        for (int j = 0; j < seqLen; j++)
+            positionIds.at<int64_t>(0, j) = j;
+
+        Mat logits = llm.run({tokens, attentionMask, positionIds},
+                             {"input_ids", "attention_mask", "position_ids"});
+
+        Mat lastLogits;
+        if (logits.dims == 3)
+        {
+            int vocabSize = logits.size[2];
+            lastLogits = Mat(1, vocabSize, CV_32F, logits.ptr<float>() + (seqLen - 1) * vocabSize);
+        }
+        else
+        {
+            lastLogits = logits.row(logits.rows - 1);
+        }
+
+        Point maxLoc;
+        minMaxLoc(lastLogits, nullptr, nullptr, nullptr, &maxLoc);
+        int newId = maxLoc.x;
+
+        bool stop = false;
+        for (int sid : stopIds)
+        {
+            if (newId == sid) { stop = true; break; }
+        }
+        if (stop) break;
+
+        Mat newToken(1, 1, CV_64S, Scalar(static_cast<int64_t>(newId)));
+        hconcat(tokens, newToken, tokens);
+    }
+
+    // 4. Decode and print
+    Mat tokens32s;
+    tokens.convertTo(tokens32s, CV_32S);
+    vector<int> allIds(tokens32s.ptr<int>(), tokens32s.ptr<int>() + tokens32s.total());
+    cout << tokenizer.decode(allIds) << endl;
+}
+
 const string param_keys =
     "{ help           h  |                  | Print help message. }"
     "{ tokenizer_type    | ort_genai        | Tokenizer type: ort_genai, gpt2, or qwen. }"
@@ -110,119 +238,25 @@ int main(int argc, char** argv)
 
     if (tokenizerType == "ort_genai")
     {
-        // ---- ORT-GenAI path ----
-        LLM llm = LLM::create(modelPath, TOKENIZER_ORT_GENAI);
-
-        cout << "Model type  : " << llm.getModelType()  << endl;
-        cout << "Device type : " << llm.getDeviceType() << endl;
-
-        const string messages = "[{\"role\": \"user\", \"content\": \"" + userPrompt + "\"}]";
-        const string prompt   = llm.applyChatTemplate(messages);
-
-        Mat tokens = llm.tokenize(prompt);
-        llm.setSearchOption("max_length", static_cast<double>(tokens.cols + maxNewTokens));
-        llm.setSearchOptionBool("do_sample", false);
-
-        Mat out = llm.run(tokens);
-        cout << llm.detokenize(out) << endl;
+        runOrtGenAI(modelPath, userPrompt, maxNewTokens);
     }
     else if (tokenizerType == "gpt2")
     {
-        // ---- GPT-2 path ----
-        // The prompt length must match the length used when exporting the model to ONNX.
         if (tokenizerCfg.empty())
         {
             cerr << "Error: --tokenizer is required for gpt2 tokenizer_type." << endl;
             return 1;
         }
-
-        LLM llm = LLM::create(modelPath, TOKENIZER_OPENCV_BPE, tokenizerCfg);
-
-        Mat tokens = llm.tokenize(userPrompt);
-
-        int stopToken = 50256;  // <|endoftext|>
-        int remaining = maxSeqLen;
-
-        while (remaining > 0 && tokens.at<int>(0, tokens.cols - 1) != stopToken)
-        {
-            Mat logits = llm.run(tokens, "idx");  // (1, seq_len, vocab_size)
-
-            // Take last token logits — greedy decode
-            int seqLen = logits.size[1];
-            int vocabSize = logits.size[2];
-            Mat lastLogits(1, vocabSize, CV_32F, logits.ptr<float>() + (seqLen - 1) * vocabSize);
-            Point maxLoc;
-            minMaxLoc(lastLogits, nullptr, nullptr, nullptr, &maxLoc);
-
-            Mat newToken(1, 1, CV_32S, Scalar(maxLoc.x));
-            hconcat(tokens, newToken, tokens);
-            remaining--;
-        }
-
-        cout << llm.detokenize(tokens) << endl;
+        runGpt2(modelPath, tokenizerCfg, userPrompt, maxSeqLen);
     }
     else if (tokenizerType == "qwen")
     {
-        // ---- Qwen2.5 path ----
         if (tokenizerCfg.empty())
         {
             cerr << "Error: --tokenizer is required for qwen tokenizer_type." << endl;
             return 1;
         }
-
-        LLM llm = LLM::create(modelPath, TOKENIZER_OPENCV_BPE, tokenizerCfg, ENGINE_NEW);
-
-        // ChatML format
-        const string chatmlPrompt = "<|im_start|>user\n" + userPrompt + "<|im_end|>\n<|im_start|>assistant\n";
-        vector<int> ids = llm.encode(chatmlPrompt);
-        Mat tokens(1, (int)ids.size(), CV_64F);
-        for (int i = 0; i < (int)ids.size(); i++)
-            tokens.at<double>(0, i) = static_cast<double>(ids[i]);
-        tokens.convertTo(tokens, CV_64S);
-
-        vector<int> stopTokens = {151645, 151643};  // <|im_end|>, <|endoftext|>
-
-        for (int i = 0; i < maxNewTokens; i++)
-        {
-            int seqLen = tokens.cols;
-            Mat attentionMask(1, seqLen, CV_64S, Scalar(1));
-            Mat positionIds(1, seqLen, CV_64S);
-            for (int j = 0; j < seqLen; j++)
-                positionIds.at<int64_t>(0, j) = j;
-
-            Mat logits = llm.run({tokens, attentionMask, positionIds},
-                                 {"input_ids", "attention_mask", "position_ids"});
-
-            // Take last token logits
-            Mat lastLogits;
-            if (logits.dims == 3)
-            {
-                int vocabSize = logits.size[2];
-                lastLogits = Mat(1, vocabSize, CV_32F, logits.ptr<float>() + (seqLen - 1) * vocabSize);
-            }
-            else
-            {
-                lastLogits = logits.row(logits.rows - 1);
-            }
-
-            Point maxLoc;
-            minMaxLoc(lastLogits, nullptr, nullptr, nullptr, &maxLoc);
-            int newId = maxLoc.x;
-
-            bool stop = false;
-            for (int sid : stopTokens)
-            {
-                if (newId == sid) { stop = true; break; }
-            }
-            if (stop) break;
-
-            Mat newToken(1, 1, CV_64S, Scalar(static_cast<int64_t>(newId)));
-            hconcat(tokens, newToken, tokens);
-        }
-
-        Mat tokens32s;
-        tokens.convertTo(tokens32s, CV_32S);
-        cout << llm.detokenize(tokens32s) << endl;
+        runQwen(modelPath, tokenizerCfg, userPrompt, maxNewTokens);
     }
     else
     {

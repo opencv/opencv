@@ -73,6 +73,92 @@ import numpy as np
 import argparse
 import cv2 as cv
 
+
+def run_ort_genai(model_path, user_prompt, max_new_tokens):
+    '''ORT-GenAI path: uses OGA tokenizer + single run() call for full generation.'''
+
+    # 1. Create LLM with ORT-GenAI tokenizer
+    llm = cv.dnn.LLM.create(model_path, cv.dnn.TOKENIZER_ORT_GENAI)
+    tokenizer = llm.getTokenizer()
+
+    print(f"Model type  : {llm.getModelType()}")
+    print(f"Device type : {llm.getDeviceType()}")
+
+    # 2. Apply chat template and encode prompt
+    messages = '[{"role": "user", "content": "' + user_prompt + '"}]'
+    prompt = llm.applyChatTemplate(messages)
+    tokens = tokenizer.encode(prompt)
+
+    # 3. Configure generation parameters
+    llm.setSearchOption("max_length", float(len(tokens) + max_new_tokens))
+    llm.setSearchOptionBool("do_sample", False)
+
+    # 4. Run inference and decode output
+    out = llm.run(tokens)
+    print(tokenizer.decode(out.flatten().tolist()))
+
+
+def run_gpt2(model_path, tokenizer_cfg, user_prompt, max_seq_len):
+    '''GPT-2 path: uses OpenCV BPE tokenizer + autoregressive greedy decoding loop.'''
+
+    # 1. Create LLM with OpenCV BPE tokenizer
+    llm = cv.dnn.LLM.create(model_path, cv.dnn.TOKENIZER_OPENCV_BPE, tokenizer_cfg)
+    tokenizer = llm.getTokenizer()
+
+    # 2. Encode prompt
+    tokens = list(tokenizer.encode(user_prompt))
+
+    # 3. Autoregressive greedy decoding loop
+    stop_token = 50256  # <|endoftext|>
+    remaining = max_seq_len
+
+    while remaining > 0 and tokens[-1] != stop_token:
+        logits = llm.run(tokens, 'idx')  # (1, seq_len, vocab_size)
+        logits = logits[:, -1, :]
+
+        new_idx = int(np.argmax(logits.reshape(-1)))
+        tokens.append(new_idx)
+        remaining -= 1
+
+    # 4. Decode and print
+    print(tokenizer.decode(tokens))
+
+
+def run_qwen(model_path, tokenizer_cfg, user_prompt, max_new_tokens):
+    '''Qwen2.5 path: uses OpenCV BPE tokenizer + autoregressive greedy decoding loop
+    with multiple named inputs (input_ids, attention_mask, position_ids).'''
+
+    # 1. Create LLM with OpenCV BPE tokenizer and ENGINE_NEW
+    llm = cv.dnn.LLM.create(model_path, cv.dnn.TOKENIZER_OPENCV_BPE, tokenizer_cfg, cv.dnn.ENGINE_NEW)
+    tokenizer = llm.getTokenizer()
+
+    # 2. Encode prompt with ChatML format
+    chatml_prompt = '<|im_start|>user\n' + user_prompt + '<|im_end|>\n<|im_start|>assistant\n'
+    tokens = tokenizer.encode(chatml_prompt)
+    tokens = np.array(tokens, dtype=np.int64).reshape(1, -1)
+
+    # 3. Autoregressive greedy decoding loop
+    stop_ids = (151645, 151643)  # <|im_end|>, <|endoftext|>
+
+    for _ in range(max_new_tokens):
+        seq_len = tokens.shape[1]
+        attention_mask = np.ones((1, seq_len), dtype=np.int64)
+        position_ids = np.arange(seq_len, dtype=np.int64).reshape(1, -1)
+
+        logits = llm.run([tokens, attention_mask, position_ids],
+                         ['input_ids', 'attention_mask', 'position_ids'])
+        logits = logits[:, -1, :]
+
+        new_id = int(np.argmax(logits.reshape(-1)))
+        tokens = np.concatenate((tokens, np.array([[new_id]], dtype=np.int64)), axis=1)
+
+        if new_id in stop_ids:
+            break
+
+    # 4. Decode and print
+    print(tokenizer.decode(tokens[0].tolist()))
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description='LLM inference using the LLM class with multiple tokenizer backends.',
                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -86,83 +172,24 @@ def parse_args():
     parser.add_argument('--max_seq_len', type=int, default=32, help='Number of tokens to continue (gpt2 only).')
     return parser.parse_args()
 
+
 if __name__ == '__main__':
     args = parse_args()
 
     if args.tokenizer_type == 'ort_genai':
-        # ---- ORT-GenAI path ----
-        llm = cv.dnn.LLM.create(args.model, cv.dnn.TOKENIZER_ORT_GENAI)
-
-        print(f"Model type  : {llm.getModelType()}")
-        print(f"Device type : {llm.getDeviceType()}")
-
-        messages = '[{"role": "user", "content": "' + args.prompt + '"}]'
-        prompt = llm.applyChatTemplate(messages)
-
-        tokens = llm.tokenize(prompt)
-        llm.setSearchOption("max_length", float(tokens.shape[1] + args.max_new_tokens))
-        llm.setSearchOptionBool("do_sample", False)
-
-        out = llm.run(tokens)
-        print(llm.detokenize(out))
+        run_ort_genai(args.model, args.prompt, args.max_new_tokens)
 
     elif args.tokenizer_type == 'gpt2':
-        # ---- GPT-2 path ----
-        # The prompt length must match the length used when exporting the model to ONNX.
         if not args.tokenizer:
             print("Error: --tokenizer is required for gpt2 tokenizer_type.")
             exit(1)
-
-        llm = cv.dnn.LLM.create(args.model, cv.dnn.TOKENIZER_OPENCV_BPE, args.tokenizer)
-
-        tokens = llm.tokenize(args.prompt)
-
-        stop_token = 50256  # <|endoftext|>
-        remaining = args.max_seq_len
-
-        while remaining > 0 and tokens[:, -1] != stop_token:
-            logits = llm.run(tokens, 'idx')  # (1, seq_len, vocab_size)
-            logits = logits[:, -1, :]  # take last token logits
-
-            new_idx = np.argmax(logits.reshape(-1)).reshape(1, 1)
-            tokens = np.concatenate((tokens, new_idx), axis=1)
-            remaining -= 1
-
-        print(llm.detokenize(tokens[0]))
+        run_gpt2(args.model, args.tokenizer, args.prompt, args.max_seq_len)
 
     elif args.tokenizer_type == 'qwen':
-        # ---- Qwen2.5 path ----
         if not args.tokenizer:
             print("Error: --tokenizer is required for qwen tokenizer_type.")
             exit(1)
-
-        llm = cv.dnn.LLM.create(args.model, cv.dnn.TOKENIZER_OPENCV_BPE, args.tokenizer, cv.dnn.ENGINE_NEW)
-
-        # ChatML format
-        chatml_prompt = '<|im_start|>user\n' + args.prompt + '<|im_end|>\n<|im_start|>assistant\n'
-
-        tokens = llm.encode(chatml_prompt)
-        tokens = np.array(tokens, dtype=np.int64).reshape(1, -1)
-
-        stop_ids = (151645, 151643)  # <|im_end|>, <|endoftext|>
-
-        for _ in range(args.max_new_tokens):
-            seq_len = tokens.shape[1]
-            attention_mask = np.ones((1, seq_len), dtype=np.int64)
-            position_ids = np.arange(seq_len, dtype=np.int64).reshape(1, -1)
-
-            logits = llm.run([tokens, attention_mask, position_ids],
-                             ['input_ids', 'attention_mask', 'position_ids'])  # (1, seq_len, vocab_size)
-            logits = logits[:, -1, :]       # take last token logits
-
-            new_id = int(np.argmax(logits.reshape(-1)))
-            tokens = np.concatenate((tokens, np.array([[new_id]], dtype=np.int64)), axis=1)
-
-            if new_id in stop_ids:
-                break
-
-        response = llm.decode(tokens[0].tolist())
-        print(response)
+        run_qwen(args.model, args.tokenizer, args.prompt, args.max_new_tokens)
 
     else:
         print(f"Error: Unknown tokenizer_type '{args.tokenizer_type}'. Use ort_genai, gpt2, or qwen.")

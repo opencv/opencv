@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include <opencv2/dnn/dnn.hpp>
+#include "tokenizer_impl.hpp"
 #include "utils.hpp"
 #include "unicode.hpp"
 #include "core_bpe.hpp"
@@ -24,12 +25,6 @@ static std::unordered_map<std::string, ImplRegestry>& tokenizerRegistry() {
 
 CoreBPE buildTokenizerFromJson(const std::string& model_type, const std::string& json_path,
                           std::unordered_set<std::string>* outSpecial = nullptr);
-
-struct Tokenizer::Impl {
-    virtual ~Impl() {}
-    virtual std::vector<int> encode(const std::string& text) = 0;
-    virtual std::string decode(const std::vector<int>& tokens) = 0;
-};
 
 struct BpeTokenizerImpl : public Tokenizer::Impl {
     Ptr<CoreBPE> coreBPE;
@@ -188,22 +183,6 @@ std::string Tokenizer::decode(const std::vector<int>& tokens) {
     if (!impl_) CV_Error(cv::Error::StsError, "Tokenizer impl null");
     return impl_->decode(tokens);
 };
-
-Mat Tokenizer::tokenize(const String& text) {
-    std::vector<int> ids = encode(text);
-    Mat tokens(1, (int)ids.size(), CV_32S);
-    std::memcpy(tokens.data, ids.data(), ids.size() * sizeof(int));
-    return tokens;
-}
-
-String Tokenizer::detokenize(InputArray tokenIds) {
-    Mat m = tokenIds.getMat();
-    CV_Assert(m.type() == CV_32S);
-    const int* ptr = m.ptr<int>();
-    int count = (int)m.total();
-    std::vector<int> ids(ptr, ptr + count);
-    return decode(ids);
-}
 
 CoreBPE buildTokenizerFromJson(const std::string& model_type, const std::string& json_path,
                           std::unordered_set<std::string>* outSpecial) {

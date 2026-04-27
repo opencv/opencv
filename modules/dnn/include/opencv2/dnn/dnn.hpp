@@ -2169,20 +2169,8 @@ public:
     CV_WRAP std::vector<int> encode(const std::string& text);
 
     CV_WRAP std::string decode(const std::vector<int>& tokens);
-
-    /** @brief Tokenize text into token IDs (Mat).
-     *  @param text  UTF-8 input string.
-     *  @return Mat of shape [1, N] with type CV_32S.
-     */
-    CV_WRAP Mat tokenize(const String& text);
-
-    /** @brief Detokenize token IDs back to text.
-     *  @param tokenIds  Mat of token IDs (CV_32S).
-     *  @return Decoded UTF-8 string.
-     */
-    CV_WRAP String detokenize(InputArray tokenIds);
-
     struct Impl;
+    explicit Tokenizer(const Ptr<Impl>& impl) : impl_(impl) {}
 private:
     Ptr<Impl> impl_;
 };
@@ -2219,29 +2207,10 @@ private:
                                    CV_WRAP_FILE_PATH const String& tokenizerConfigPath = String(),
                                    int engine = ENGINE_NEW);
 
-        /** @brief Tokenize text into token IDs.
-         *  @param text  UTF-8 input string.
-         *  @return Mat of shape [1, N] with type CV_32S containing token IDs.
+        /** @brief Get the tokenizer associated with this LLM instance.
+         *  @return Tokenizer object that can encode/decode text.
          */
-        CV_WRAP Mat tokenize(const String& text) const;
-
-        /** @brief Detokenize token IDs back to text.
-         *  @param tokenIds  Mat of token IDs (CV_32S).
-         *  @return Decoded UTF-8 string.
-         */
-        CV_WRAP String detokenize(InputArray tokenIds) const;
-
-        /** @brief Encode UTF-8 text to token ids.
-         *  @param text  UTF-8 input string.
-         *  @return Vector of token ids.
-         */
-        CV_WRAP std::vector<int> encode(const std::string& text);
-
-        /** @brief Decode token ids back to UTF-8 text.
-         *  @param tokens  Vector of token ids.
-         *  @return Decoded UTF-8 string.
-         */
-        CV_WRAP std::string decode(const std::vector<int>& tokens);
+        CV_WRAP Tokenizer getTokenizer() const;
 
         CV_WRAP void setInputImagePath(const String& path);
         CV_WRAP void setPrompt(const String& prompt);
@@ -2262,11 +2231,11 @@ private:
         CV_WRAP Mat run();
 
         /** @brief Run inference with a single input.
-         *  @param tokens  Input Mat.
+         *  @param tokens  Vector of token ids.
          *  @param inputName  Optional input layer name.
          *  @return Output Mat from the model.
          */
-        CV_WRAP Mat run(InputArray tokens, const String& inputName = "");
+        CV_WRAP Mat run(const std::vector<int>& tokens, const String& inputName = "");
 
         /** @brief Run inference with multiple named inputs.
          *  @param inputs  Vector of input Mats.
