@@ -74,7 +74,7 @@ std::vector<std::pair<std::size_t, std::uint32_t>> bytePairMerge(const ByteVecRa
 std::vector<std::uint32_t> bytePairEncode(const std::vector<std::uint8_t>& piece,
                                  const ByteVecRankMap& ranks) {
 
-    if (static_cast<int>(piece.size()) == 1) {
+    if (piece.size() == 1u) {
         auto it = ranks.find(piece);
         return it == ranks.end() ? std::vector<std::uint32_t>{} : std::vector<std::uint32_t>{it->second};
     }
