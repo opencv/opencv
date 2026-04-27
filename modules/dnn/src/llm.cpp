@@ -304,11 +304,5 @@ Mat LLM::run(const std::vector<Mat>& inputs, const std::vector<String>& inputNam
     return impl_->net_.forward();
 }
 
-Net LLM::getNet() const
-{
-    CV_Assert(impl_);
-    return impl_->net_;
-}
-
 CV__DNN_INLINE_NS_END
 }}  // namespace cv::dnn

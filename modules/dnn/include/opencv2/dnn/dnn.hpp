@@ -2275,9 +2275,6 @@ private:
          */
         CV_WRAP Mat run(const std::vector<Mat>& inputs, const std::vector<String>& inputNames);
 
-        /** @brief Access the underlying Net object. */
-        CV_WRAP Net getNet() const;
-
         struct Impl;
     private:
         Ptr<Impl> impl_;
