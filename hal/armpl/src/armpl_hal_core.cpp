@@ -30,7 +30,61 @@ enum ArmPLDFTMode
     ARMPL_DCT_2D_64,
     ARMPL_DCT_ROW,
     ARMPL_DCT_ROW_64,
+    ARMPL_DFT_C2C_D,
+    ARMPL_DFT_R2C_D,
+    ARMPL_DFT_C2R_D,
+    ARMPL_DFT_C2C_ROW_D,
+    ARMPL_DFT_R_ROW_D
 };
+
+struct ArmPLD_C2CDFTContext
+{
+    ArmPLDFTMode mode     = ARMPL_DFT_C2C_D;
+    int          width, height;
+    bool         inv, no_scale;
+    double       scale;
+    fftw_plan    plan_fwd, plan_inv;
+};
+
+struct ArmPLD_R2CDFTContext
+{
+    ArmPLDFTMode mode     = ARMPL_DFT_R2C_D;
+    int          width, height;
+    bool         col_wise, no_scale;
+    double       scale;
+    fftw_plan    plan;
+};
+
+struct ArmPLD_C2RDFTContext
+{
+    ArmPLDFTMode mode     = ARMPL_DFT_C2R_D;
+    int          width, height;
+    bool         col_wise, no_scale;
+    double       scale;
+    fftw_plan    plan;
+};
+
+struct ArmPLD_C2CRowDFTContext
+{
+    ArmPLDFTMode  mode     = ARMPL_DFT_C2C_ROW_D;
+    int           width, height;
+    bool          inv, no_scale;
+    double        scale;
+    fftw_plan     plan_fwd, plan_inv;
+    fftw_complex *fftw_buf;
+};
+
+struct ArmPLD_RRowDFTContext
+{
+    ArmPLDFTMode  mode     = ARMPL_DFT_R_ROW_D;
+    int           width, height;
+    bool          inv, no_scale;
+    double        scale;
+    fftw_plan     plan_fwd, plan_inv;
+    double       *fftw_in_r, *fftw_out_r;
+    fftw_complex *fftw_in_c, *fftw_out_c;
+};
+
 struct ArmPL1DR2CFwdContext {
     ArmPLDFTMode mode;
     int          len;
@@ -280,188 +334,374 @@ int armpl_hal_dftInit2D(cvhalDFT **context,
                         int src_channels, int dst_channels,
                         int flags, int nonzero_rows)
 {
-    if (depth        != CV_32F)       return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (nonzero_rows != 0)            return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
     const bool isInverse = (flags & CV_HAL_DFT_INVERSE) != 0;
     const bool isScaled  = (flags & CV_HAL_DFT_SCALE)   != 0;
     const bool isRowWise = (flags & CV_HAL_DFT_ROWS)    != 0;
 
-    if (!isRowWise && src_channels == 2 && dst_channels == 2)
+    if (depth == CV_32F)
     {
-        const int   norm_flag = !isScaled ? 8 : (isInverse ? 2 : 1);
-        float       scale     = 1.0f;
-        const float inv_total = 1.0f / (float)(width * height);
-        if (isInverse) { if (norm_flag == 1 || norm_flag == 2) scale = inv_total; }
-        else           { if (norm_flag == 1)                   scale = inv_total; }
-
-        const size_t total = (size_t)width * height;
-        fftwf_complex *tmp_in  = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex) * total);
-        fftwf_complex *tmp_out = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex) * total);
-        if (!tmp_in || !tmp_out)
+        if (!isRowWise && src_channels == 2 && dst_channels == 2)
         {
-            if (tmp_in)  fftwf_free(tmp_in);
-            if (tmp_out) fftwf_free(tmp_out);
-            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+            const int   norm_flag = !isScaled ? 8 : (isInverse ? 2 : 1);
+            float       scale     = 1.0f;
+            const float inv_total = 1.0f / (float)(width * height);
+            if (isInverse) { if (norm_flag == 1 || norm_flag == 2) scale = inv_total; }
+            else           { if (norm_flag == 1)                   scale = inv_total; }
+
+            const size_t total = (size_t)width * height;
+            fftwf_complex *tmp_in  = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex) * total);
+            fftwf_complex *tmp_out = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex) * total);
+            if (!tmp_in || !tmp_out)
+            {
+                if (tmp_in)  fftwf_free(tmp_in);
+                if (tmp_out) fftwf_free(tmp_out);
+                return CV_HAL_ERROR_NOT_IMPLEMENTED;
+            }
+
+            fftwf_plan pf = fftwf_plan_dft_2d(height, width, tmp_in, tmp_out, FFTW_FORWARD,  FFTW_ESTIMATE);
+            fftwf_plan pi = fftwf_plan_dft_2d(height, width, tmp_in, tmp_out, FFTW_BACKWARD, FFTW_ESTIMATE);
+            fftwf_free(tmp_in);
+            fftwf_free(tmp_out);
+            if (!pf || !pi)
+            {
+                if (pf) fftwf_destroy_plan(pf);
+                if (pi) fftwf_destroy_plan(pi);
+                return CV_HAL_ERROR_NOT_IMPLEMENTED;
+            }
+
+            ArmPLC2CDFTContext *ctx = new ArmPLC2CDFTContext();
+            ctx->width = width; ctx->height = height;
+            ctx->inv = isInverse; ctx->no_scale = (scale == 1.0f);
+            ctx->plan_fwd = pf; ctx->plan_inv = pi; ctx->scale = scale;
+            *context = reinterpret_cast<cvhalDFT*>(ctx);
+            return CV_HAL_ERROR_OK;
         }
-
-        fftwf_plan pf = fftwf_plan_dft_2d(height, width, tmp_in, tmp_out, FFTW_FORWARD,  FFTW_ESTIMATE);
-        fftwf_plan pi = fftwf_plan_dft_2d(height, width, tmp_in, tmp_out, FFTW_BACKWARD, FFTW_ESTIMATE);
-        fftwf_free(tmp_in);
-        fftwf_free(tmp_out);
-        if (!pf || !pi)
+        if (!isRowWise && src_channels == 1 && dst_channels == 1)
         {
-            if (pf) fftwf_destroy_plan(pf);
-            if (pi) fftwf_destroy_plan(pi);
-            return CV_HAL_ERROR_NOT_IMPLEMENTED;
-        }
+            if (isInverse)
+            {
+                const bool col_wise = (width == 1);
+                float scale = 1.0f;
+                if (isScaled)
+                    scale = col_wise ? (1.0f / height) : (1.0f / (float)(width * height));
 
-        ArmPLC2CDFTContext *ctx = new ArmPLC2CDFTContext();
-        ctx->width = width; ctx->height = height;
-        ctx->inv = isInverse; ctx->no_scale = (scale == 1.0f);
-        ctx->plan_fwd = pf; ctx->plan_inv = pi; ctx->scale = scale;
-        *context = reinterpret_cast<cvhalDFT*>(ctx);
-        return CV_HAL_ERROR_OK;
-    }
-    if (!isRowWise && src_channels == 1 && dst_channels == 1)
-    {
-        if (isInverse)
-        {
+                fftwf_plan plan = 0;
+                if (col_wise)
+                {
+                    fftwf_complex *dc = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex) * (height/2 + 1));
+                    float         *dr = (float*)        fftwf_malloc(sizeof(float)         * height);
+                    if (!dc || !dr) { if (dc) fftwf_free(dc); if (dr) fftwf_free(dr); return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+                    plan = fftwf_plan_dft_c2r_1d(height, dc, dr, FFTW_ESTIMATE);
+                    fftwf_free(dc);
+                    fftwf_free(dr);
+                }
+                else
+                {
+                    fftwf_complex *dc = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex) * (size_t)height * (width/2 + 1));
+                    float         *dr = (float*)        fftwf_malloc(sizeof(float)         * (size_t)width * height);
+                    if (!dc || !dr) { if (dc) fftwf_free(dc); if (dr) fftwf_free(dr); return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+                    plan = fftwf_plan_dft_c2r_2d(height, width, dc, dr, FFTW_ESTIMATE);
+                    fftwf_free(dc);
+                    fftwf_free(dr);
+                }
+                if (!plan) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+                ArmPLC2RDFTContext *ctx = new ArmPLC2RDFTContext();
+                ctx->width    = width;
+                ctx->height   = height;
+                ctx->col_wise = col_wise;
+                ctx->plan     = plan;
+                ctx->scale    = scale;
+                ctx->no_scale = (scale == 1.0f);
+                *context = reinterpret_cast<cvhalDFT*>(ctx);
+                return CV_HAL_ERROR_OK;
+            }
+
             const bool col_wise = (width == 1);
-            float scale = 1.0f;
+            float      scale    = 1.0f;
             if (isScaled)
                 scale = col_wise ? (1.0f / height) : (1.0f / (float)(width * height));
 
             fftwf_plan plan = 0;
             if (col_wise)
             {
+                float         *dr = (float*)        fftwf_malloc(sizeof(float)         * height);
                 fftwf_complex *dc = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex) * (height/2 + 1));
-                float *dr = (float*) fftwf_malloc(sizeof(float) * height);
-                if (!dc || !dr) { if (dc) fftwf_free(dc); if (dr) fftwf_free(dr); return CV_HAL_ERROR_NOT_IMPLEMENTED; }
-                plan = fftwf_plan_dft_c2r_1d(height, dc, dr, FFTW_ESTIMATE);
-                fftwf_free(dc);
-                fftwf_free(dr);
+                if (!dr || !dc) { if (dr) fftwf_free(dr); if (dc) fftwf_free(dc); return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+                plan = fftwf_plan_dft_r2c_1d(height, dr, dc, FFTW_ESTIMATE);
+                fftwf_free(dr); fftwf_free(dc);
             }
             else
             {
+                float         *dr = (float*)        fftwf_malloc(sizeof(float)         * (size_t)width * height);
                 fftwf_complex *dc = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex) * (size_t)height * (width/2 + 1));
-                float *dr = (float*) fftwf_malloc(sizeof(float) * (size_t)width * height);
-                if (!dc || !dr) { if (dc) fftwf_free(dc); if (dr) fftwf_free(dr); return CV_HAL_ERROR_NOT_IMPLEMENTED; }
-                plan = fftwf_plan_dft_c2r_2d(height, width, dc, dr, FFTW_ESTIMATE);
-                fftwf_free(dc);
+                if (!dr || !dc) { if (dr) fftwf_free(dr); if (dc) fftwf_free(dc); return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+                plan = fftwf_plan_dft_r2c_2d(height, width, dr, dc, FFTW_ESTIMATE);
                 fftwf_free(dr);
+                fftwf_free(dc);
             }
             if (!plan) return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
-            ArmPLC2RDFTContext *ctx = new ArmPLC2RDFTContext();
-            ctx->width    = width;
-            ctx->height   = height;
-            ctx->col_wise = col_wise;
-            ctx->plan     = plan;
-            ctx->scale    = scale;
-            ctx->no_scale = (scale == 1.0f);
+            ArmPLR2CDFTContext *ctx = new ArmPLR2CDFTContext();
+            ctx->width = width; ctx->height = height;
+            ctx->col_wise = col_wise; ctx->no_scale = (scale == 1.0f);
+            ctx->plan = plan; ctx->scale = scale;
+            *context = reinterpret_cast<cvhalDFT*>(ctx);
+            return CV_HAL_ERROR_OK;
+        }
+        if (isRowWise && src_channels == 2 && dst_channels == 2)
+        {
+            const int   norm_flag = !isScaled ? 8 : (isInverse ? 2 : 1);
+            float       scale     = 1.0f;
+            const float inv_w     = 1.0f / (float)width;
+            if (isInverse) { if (norm_flag == 1 || norm_flag == 2) scale = inv_w; }
+            else           { if (norm_flag == 1)                   scale = inv_w; }
+
+            fftwf_complex *fftw_buf = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex) * width);
+            if (!fftw_buf) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+            fftwf_plan pf = fftwf_plan_dft_1d(width, fftw_buf, fftw_buf, FFTW_FORWARD,  FFTW_ESTIMATE);
+            fftwf_plan pi = fftwf_plan_dft_1d(width, fftw_buf, fftw_buf, FFTW_BACKWARD, FFTW_ESTIMATE);
+            if (!pf || !pi)
+            {
+                if (pf) fftwf_destroy_plan(pf);
+                if (pi) fftwf_destroy_plan(pi);
+                fftwf_free(fftw_buf);
+                return CV_HAL_ERROR_NOT_IMPLEMENTED;
+            }
+
+            ArmPLC2CRowDFTContext *ctx = new ArmPLC2CRowDFTContext();
+            ctx->width = width; ctx->height = height; ctx->inv = isInverse;
+            ctx->plan_fwd = pf; ctx->plan_inv = pi;
+            ctx->scale = scale; ctx->no_scale = (scale == 1.0f);
+            ctx->fftw_buf = fftw_buf;
+            *context = reinterpret_cast<cvhalDFT*>(ctx);
+            return CV_HAL_ERROR_OK;
+        }
+        if (isRowWise && src_channels == 1 && dst_channels == 1)
+        {
+            float scale = 1.0f;
+            if (isScaled) scale = 1.0f / (float)width;
+
+            float         *fftw_in_r  = (float*)        fftwf_malloc(sizeof(float)         * width);
+            fftwf_complex *fftw_out_c = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex) * (width/2 + 1));
+            fftwf_complex *fftw_in_c  = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex) * (width/2 + 1));
+            float         *fftw_out_r = (float*)        fftwf_malloc(sizeof(float)         * width);
+            if (!fftw_in_r || !fftw_out_c || !fftw_in_c || !fftw_out_r)
+            {
+                if (fftw_in_r)  fftwf_free(fftw_in_r);
+                if (fftw_out_c) fftwf_free(fftw_out_c);
+                if (fftw_in_c)  fftwf_free(fftw_in_c);
+                if (fftw_out_r) fftwf_free(fftw_out_r);
+                return CV_HAL_ERROR_NOT_IMPLEMENTED;
+            }
+
+            fftwf_plan pf = fftwf_plan_dft_r2c_1d(width, fftw_in_r, fftw_out_c, FFTW_ESTIMATE);
+            fftwf_plan pi = fftwf_plan_dft_c2r_1d(width, fftw_in_c, fftw_out_r, FFTW_ESTIMATE);
+            if (!pf || !pi)
+            {
+                if (pf) fftwf_destroy_plan(pf);
+                if (pi) fftwf_destroy_plan(pi);
+                fftwf_free(fftw_in_r); fftwf_free(fftw_out_c);
+                fftwf_free(fftw_in_c); fftwf_free(fftw_out_r);
+                return CV_HAL_ERROR_NOT_IMPLEMENTED;
+            }
+
+            ArmPLRRowDFTContext *ctx = new ArmPLRRowDFTContext();
+            ctx->width = width; ctx->height = height; ctx->inv = isInverse;
+            ctx->plan_fwd = pf; ctx->plan_inv = pi;
+            ctx->scale = scale; ctx->no_scale = (scale == 1.0f);
+            ctx->fftw_in_r = fftw_in_r; ctx->fftw_out_c = fftw_out_c;
+            ctx->fftw_in_c = fftw_in_c; ctx->fftw_out_r = fftw_out_r;
             *context = reinterpret_cast<cvhalDFT*>(ctx);
             return CV_HAL_ERROR_OK;
         }
 
-        const bool col_wise = (width == 1);
-        float      scale    = 1.0f;
-        if (isScaled)
-            scale = col_wise ? (1.0f / height) : (1.0f / (float)(width * height));
-
-        fftwf_plan plan = 0;
-        if (col_wise)
-        {
-            float         *dr = (float*)        fftwf_malloc(sizeof(float)         * height);
-            fftwf_complex *dc = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex) * (height/2 + 1));
-            if (!dr || !dc) { if (dr) fftwf_free(dr); if (dc) fftwf_free(dc); return CV_HAL_ERROR_NOT_IMPLEMENTED; }
-            plan = fftwf_plan_dft_r2c_1d(height, dr, dc, FFTW_ESTIMATE);
-            fftwf_free(dr); fftwf_free(dc);
-        }
-        else
-        {
-            float         *dr = (float*)        fftwf_malloc(sizeof(float)         * (size_t)width * height);
-            fftwf_complex *dc = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex) * (size_t)height * (width/2 + 1));
-            if (!dr || !dc) { if (dr) fftwf_free(dr); if (dc) fftwf_free(dc); return CV_HAL_ERROR_NOT_IMPLEMENTED; }
-            plan = fftwf_plan_dft_r2c_2d(height, width, dr, dc, FFTW_ESTIMATE);
-            fftwf_free(dr); fftwf_free(dc);
-        }
-        if (!plan) return CV_HAL_ERROR_NOT_IMPLEMENTED;
-
-        ArmPLR2CDFTContext *ctx = new ArmPLR2CDFTContext();
-        ctx->width = width; ctx->height = height;
-        ctx->col_wise = col_wise; ctx->no_scale = (scale == 1.0f);
-        ctx->plan = plan; ctx->scale = scale;
-        *context = reinterpret_cast<cvhalDFT*>(ctx);
-        return CV_HAL_ERROR_OK;
-    }
-    if (isRowWise && src_channels == 2 && dst_channels == 2)
-    {
-        const int   norm_flag = !isScaled ? 8 : (isInverse ? 2 : 1);
-        float       scale     = 1.0f;
-        const float inv_w     = 1.0f / (float)width;
-        if (isInverse) { if (norm_flag == 1 || norm_flag == 2) scale = inv_w; }
-        else           { if (norm_flag == 1)                   scale = inv_w; }
-
-        fftwf_complex *fftw_buf = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex) * width);
-        if (!fftw_buf) return CV_HAL_ERROR_NOT_IMPLEMENTED;
-
-        fftwf_plan pf = fftwf_plan_dft_1d(width, fftw_buf, fftw_buf, FFTW_FORWARD,  FFTW_ESTIMATE);
-        fftwf_plan pi = fftwf_plan_dft_1d(width, fftw_buf, fftw_buf, FFTW_BACKWARD, FFTW_ESTIMATE);
-        if (!pf || !pi)
-        {
-            if (pf) fftwf_destroy_plan(pf);
-            if (pi) fftwf_destroy_plan(pi);
-            fftwf_free(fftw_buf);
-            return CV_HAL_ERROR_NOT_IMPLEMENTED;
-        }
-
-        ArmPLC2CRowDFTContext *ctx = new ArmPLC2CRowDFTContext();
-        ctx->width = width; ctx->height = height; ctx->inv = isInverse;
-        ctx->plan_fwd = pf; ctx->plan_inv = pi;
-        ctx->scale = scale; ctx->no_scale = (scale == 1.0f);
-        ctx->fftw_buf = fftw_buf;
-        *context = reinterpret_cast<cvhalDFT*>(ctx);
-        return CV_HAL_ERROR_OK;
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
     }
 
-    if (isRowWise && src_channels == 1 && dst_channels == 1)
+    if (depth == CV_64F)
     {
-        float scale = 1.0f;
-        if (isScaled) scale = 1.0f / (float)width;
-
-        float         *fftw_in_r  = (float*)        fftwf_malloc(sizeof(float)         * width);
-        fftwf_complex *fftw_out_c = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex) * (width/2 + 1));
-        fftwf_complex *fftw_in_c  = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex) * (width/2 + 1));
-        float         *fftw_out_r = (float*)        fftwf_malloc(sizeof(float)         * width);
-        if (!fftw_in_r || !fftw_out_c || !fftw_in_c || !fftw_out_r)
+        if (!isRowWise && src_channels == 2 && dst_channels == 2)
         {
-            if (fftw_in_r)  fftwf_free(fftw_in_r);
-            if (fftw_out_c) fftwf_free(fftw_out_c);
-            if (fftw_in_c)  fftwf_free(fftw_in_c);
-            if (fftw_out_r) fftwf_free(fftw_out_r);
-            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+            const int    norm_flag = !isScaled ? 8 : (isInverse ? 2 : 1);
+            double       scale     = 1.0;
+            const double inv_total = 1.0 / (double)(width * height);
+            if (isInverse) { if (norm_flag == 1 || norm_flag == 2) scale = inv_total; }
+            else           { if (norm_flag == 1)                   scale = inv_total; }
+
+            const size_t total = (size_t)width * height;
+            fftw_complex *tmp_in  = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * total);
+            fftw_complex *tmp_out = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * total);
+            if (!tmp_in || !tmp_out)
+            {
+                if (tmp_in)  fftw_free(tmp_in);
+                if (tmp_out) fftw_free(tmp_out);
+                return CV_HAL_ERROR_NOT_IMPLEMENTED;
+            }
+
+            fftw_plan pf = fftw_plan_dft_2d(height, width, tmp_in, tmp_out, FFTW_FORWARD,  FFTW_ESTIMATE);
+            fftw_plan pi = fftw_plan_dft_2d(height, width, tmp_in, tmp_out, FFTW_BACKWARD, FFTW_ESTIMATE);
+            fftw_free(tmp_in);
+            fftw_free(tmp_out);
+            if (!pf || !pi)
+            {
+                if (pf) fftw_destroy_plan(pf);
+                if (pi) fftw_destroy_plan(pi);
+                return CV_HAL_ERROR_NOT_IMPLEMENTED;
+            }
+
+            ArmPLD_C2CDFTContext *ctx = new ArmPLD_C2CDFTContext();
+            ctx->width = width; ctx->height = height;
+            ctx->inv = isInverse; ctx->no_scale = (scale == 1.0);
+            ctx->plan_fwd = pf; ctx->plan_inv = pi; ctx->scale = scale;
+            *context = reinterpret_cast<cvhalDFT*>(ctx);
+            return CV_HAL_ERROR_OK;
+        }
+        if (!isRowWise && src_channels == 1 && dst_channels == 1)
+        {
+            if (isInverse)
+            {
+                const bool col_wise = (width == 1);
+                double scale = 1.0;
+                if (isScaled)
+                    scale = col_wise ? (1.0 / height) : (1.0 / (double)(width * height));
+
+                fftw_plan plan = 0;
+                if (col_wise)
+                {
+                    fftw_complex *dc = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * (height/2 + 1));
+                    double       *dr = (double*)      fftw_malloc(sizeof(double)        * height);
+                    if (!dc || !dr) { if (dc) fftw_free(dc); if (dr) fftw_free(dr); return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+                    plan = fftw_plan_dft_c2r_1d(height, dc, dr, FFTW_ESTIMATE);
+                    fftw_free(dc);
+                    fftw_free(dr);
+                }
+                else
+                {
+                    fftw_complex *dc = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * (size_t)height * (width/2 + 1));
+                    double       *dr = (double*)      fftw_malloc(sizeof(double)        * (size_t)width * height);
+                    if (!dc || !dr) { if (dc) fftw_free(dc); if (dr) fftw_free(dr); return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+                    plan = fftw_plan_dft_c2r_2d(height, width, dc, dr, FFTW_ESTIMATE);
+                    fftw_free(dc);
+                    fftw_free(dr);
+                }
+                if (!plan) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+                ArmPLD_C2RDFTContext *ctx = new ArmPLD_C2RDFTContext();
+                ctx->width    = width;
+                ctx->height   = height;
+                ctx->col_wise = col_wise;
+                ctx->plan     = plan;
+                ctx->scale    = scale;
+                ctx->no_scale = (scale == 1.0);
+                *context = reinterpret_cast<cvhalDFT*>(ctx);
+                return CV_HAL_ERROR_OK;
+            }
+
+            const bool col_wise = (width == 1);
+            double     scale    = 1.0;
+            if (isScaled)
+                scale = col_wise ? (1.0 / height) : (1.0 / (double)(width * height));
+
+            fftw_plan plan = 0;
+            if (col_wise)
+            {
+                double       *dr = (double*)      fftw_malloc(sizeof(double)        * height);
+                fftw_complex *dc = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * (height/2 + 1));
+                if (!dr || !dc) { if (dr) fftw_free(dr); if (dc) fftw_free(dc); return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+                plan = fftw_plan_dft_r2c_1d(height, dr, dc, FFTW_ESTIMATE);
+                fftw_free(dr); fftw_free(dc);
+            }
+            else
+            {
+                double       *dr = (double*)      fftw_malloc(sizeof(double)        * (size_t)width * height);
+                fftw_complex *dc = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * (size_t)height * (width/2 + 1));
+                if (!dr || !dc) { if (dr) fftw_free(dr); if (dc) fftw_free(dc); return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+                plan = fftw_plan_dft_r2c_2d(height, width, dr, dc, FFTW_ESTIMATE);
+                fftw_free(dr);
+                fftw_free(dc);
+            }
+            if (!plan) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+            ArmPLD_R2CDFTContext *ctx = new ArmPLD_R2CDFTContext();
+            ctx->width = width; ctx->height = height;
+            ctx->col_wise = col_wise; ctx->no_scale = (scale == 1.0);
+            ctx->plan = plan; ctx->scale = scale;
+            *context = reinterpret_cast<cvhalDFT*>(ctx);
+            return CV_HAL_ERROR_OK;
+        }
+        if (isRowWise && src_channels == 2 && dst_channels == 2)
+        {
+            const int    norm_flag = !isScaled ? 8 : (isInverse ? 2 : 1);
+            double       scale     = 1.0;
+            const double inv_w     = 1.0 / (double)width;
+            if (isInverse) { if (norm_flag == 1 || norm_flag == 2) scale = inv_w; }
+            else           { if (norm_flag == 1)                   scale = inv_w; }
+
+            fftw_complex *fftw_buf = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * width);
+            if (!fftw_buf) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+            fftw_plan pf = fftw_plan_dft_1d(width, fftw_buf, fftw_buf, FFTW_FORWARD,  FFTW_ESTIMATE);
+            fftw_plan pi = fftw_plan_dft_1d(width, fftw_buf, fftw_buf, FFTW_BACKWARD, FFTW_ESTIMATE);
+            if (!pf || !pi)
+            {
+                if (pf) fftw_destroy_plan(pf);
+                if (pi) fftw_destroy_plan(pi);
+                fftw_free(fftw_buf);
+                return CV_HAL_ERROR_NOT_IMPLEMENTED;
+            }
+
+            ArmPLD_C2CRowDFTContext *ctx = new ArmPLD_C2CRowDFTContext();
+            ctx->width = width; ctx->height = height; ctx->inv = isInverse;
+            ctx->plan_fwd = pf; ctx->plan_inv = pi;
+            ctx->scale = scale; ctx->no_scale = (scale == 1.0);
+            ctx->fftw_buf = fftw_buf;
+            *context = reinterpret_cast<cvhalDFT*>(ctx);
+            return CV_HAL_ERROR_OK;
+        }
+        if (isRowWise && src_channels == 1 && dst_channels == 1)
+        {
+            double scale = 1.0;
+            if (isScaled) scale = 1.0 / (double)width;
+
+            double       *fftw_in_r  = (double*)      fftw_malloc(sizeof(double)        * width);
+            fftw_complex *fftw_out_c = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * (width/2 + 1));
+            fftw_complex *fftw_in_c  = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * (width/2 + 1));
+            double       *fftw_out_r = (double*)      fftw_malloc(sizeof(double)        * width);
+            if (!fftw_in_r || !fftw_out_c || !fftw_in_c || !fftw_out_r)
+            {
+                if (fftw_in_r)  fftw_free(fftw_in_r);
+                if (fftw_out_c) fftw_free(fftw_out_c);
+                if (fftw_in_c)  fftw_free(fftw_in_c);
+                if (fftw_out_r) fftw_free(fftw_out_r);
+                return CV_HAL_ERROR_NOT_IMPLEMENTED;
+            }
+
+            fftw_plan pf = fftw_plan_dft_r2c_1d(width, fftw_in_r, fftw_out_c, FFTW_ESTIMATE);
+            fftw_plan pi = fftw_plan_dft_c2r_1d(width, fftw_in_c, fftw_out_r, FFTW_ESTIMATE);
+            if (!pf || !pi)
+            {
+                if (pf) fftw_destroy_plan(pf);
+                if (pi) fftw_destroy_plan(pi);
+                fftw_free(fftw_in_r); fftw_free(fftw_out_c);
+                fftw_free(fftw_in_c); fftw_free(fftw_out_r);
+                return CV_HAL_ERROR_NOT_IMPLEMENTED;
+            }
+
+            ArmPLD_RRowDFTContext *ctx = new ArmPLD_RRowDFTContext();
+            ctx->width = width; ctx->height = height; ctx->inv = isInverse;
+            ctx->plan_fwd = pf; ctx->plan_inv = pi;
+            ctx->scale = scale; ctx->no_scale = (scale == 1.0);
+            ctx->fftw_in_r = fftw_in_r; ctx->fftw_out_c = fftw_out_c;
+            ctx->fftw_in_c = fftw_in_c; ctx->fftw_out_r = fftw_out_r;
+            *context = reinterpret_cast<cvhalDFT*>(ctx);
+            return CV_HAL_ERROR_OK;
         }
 
-        fftwf_plan pf = fftwf_plan_dft_r2c_1d(width, fftw_in_r, fftw_out_c, FFTW_ESTIMATE);
-        fftwf_plan pi = fftwf_plan_dft_c2r_1d(width, fftw_in_c, fftw_out_r, FFTW_ESTIMATE);
-        if (!pf || !pi)
-        {
-            if (pf) fftwf_destroy_plan(pf);
-            if (pi) fftwf_destroy_plan(pi);
-            fftwf_free(fftw_in_r); fftwf_free(fftw_out_c);
-            fftwf_free(fftw_in_c); fftwf_free(fftw_out_r);
-            return CV_HAL_ERROR_NOT_IMPLEMENTED;
-        }
-
-        ArmPLRRowDFTContext *ctx = new ArmPLRRowDFTContext();
-        ctx->width = width; ctx->height = height; ctx->inv = isInverse;
-        ctx->plan_fwd = pf; ctx->plan_inv = pi;
-        ctx->scale = scale; ctx->no_scale = (scale == 1.0f);
-        ctx->fftw_in_r = fftw_in_r; ctx->fftw_out_c = fftw_out_c;
-        ctx->fftw_in_c = fftw_in_c; ctx->fftw_out_r = fftw_out_r;
-        *context = reinterpret_cast<cvhalDFT*>(ctx);
-        return CV_HAL_ERROR_OK;
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
     }
 
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -606,14 +846,13 @@ int armpl_hal_dft2D(cvhalDFT *context,
                 memcpy(in + (size_t)y * W,
                        reinterpret_cast<const float*>(src_data + (size_t)y * src_step),
                        (size_t)W * sizeof(float));
-
         fftwf_execute_dft_r2c(ctx->plan, in, out);
 
         const int half1  = W/2 + 1;
         const int pairs  = (W - 1) / 2;
         const int even_W = (W & 1) == 0;
 
-#define PACK_BINS(dr_, fi_)                                                      \
+#define PACK_BINS_F(dr_, fi_)                                                    \
         do {                                                                     \
             float *_d = (dr_); int _fi = (fi_);                                  \
             if (no_scale) {                                                       \
@@ -633,9 +872,7 @@ int armpl_hal_dft2D(cvhalDFT *context,
             const int  fi = y * half1;
 
             if (y == 0 || y == 1)
-            {
                 dr[0] = no_scale ? out[fi][0] : out[fi][0] * sc;
-            }
             else if ((y & 1) == 0)
             {
                 const int fi_c0 = (y / 2) * half1;
@@ -647,14 +884,12 @@ int armpl_hal_dft2D(cvhalDFT *context,
                 dr[0] = no_scale ? out[fi_c0][0] : out[fi_c0][0] * sc;
             }
 
-            PACK_BINS(dr, fi);
+            PACK_BINS_F(dr, fi);
 
             if (even_W)
             {
                 if (y == 0 || y == 1)
-                {
                     dr[W - 1] = no_scale ? out[fi + W/2][0] : out[fi + W/2][0] * sc;
-                }
                 else if ((y & 1) == 0)
                 {
                     const int fi_c0 = (y / 2) * half1;
@@ -668,12 +903,13 @@ int armpl_hal_dft2D(cvhalDFT *context,
             }
         }
 
-#undef PACK_BINS
+#undef PACK_BINS_F
 
         fftwf_free(in);
         fftwf_free(out);
         return CV_HAL_ERROR_OK;
     }
+
     if (mode == ARMPL_DFT_C2R)
     {
         ArmPLC2RDFTContext *ctx = reinterpret_cast<ArmPLC2RDFTContext*>(context);
@@ -735,10 +971,8 @@ int armpl_hal_dft2D(cvhalDFT *context,
             {
                 float re = reinterpret_cast<const float*>(src_data + (size_t)(2*y - 1)*src_step)[0];
                 float im = reinterpret_cast<const float*>(src_data + (size_t)(2*y    )*src_step)[0];
-                in[y * half1][0] =  re;
-                in[y * half1][1] =  im;
-                in[(H - y) * half1][0] =  re;
-                in[(H - y) * half1][1] = -im;
+                in[y * half1][0] =  re; in[y * half1][1] =  im;
+                in[(H - y) * half1][0] =  re; in[(H - y) * half1][1] = -im;
             }
 
             if ((H & 1) == 0)
@@ -751,7 +985,6 @@ int armpl_hal_dft2D(cvhalDFT *context,
         if (even_W)
         {
             const int kny = W / 2;
-
             in[kny][0] = reinterpret_cast<const float*>(src_data)[W-1];
             in[kny][1] = 0.f;
 
@@ -759,10 +992,8 @@ int armpl_hal_dft2D(cvhalDFT *context,
             {
                 float re = reinterpret_cast<const float*>(src_data + (size_t)(2*y - 1)*src_step)[W-1];
                 float im = reinterpret_cast<const float*>(src_data + (size_t)(2*y    )*src_step)[W-1];
-                in[y * half1 + kny][0] =  re;
-                in[y * half1 + kny][1] =  im;
-                in[(H - y) * half1 + kny][0] =  re;
-                in[(H - y) * half1 + kny][1] = -im;
+                in[y * half1 + kny][0] =  re; in[y * half1 + kny][1] =  im;
+                in[(H - y) * half1 + kny][0] =  re; in[(H - y) * half1 + kny][1] = -im;
             }
 
             if ((H & 1) == 0)
@@ -788,12 +1019,10 @@ int armpl_hal_dft2D(cvhalDFT *context,
 
         for (int y = 0; y < H; y++)
         {
-            float *dr  = reinterpret_cast<float*>(dst_data + (size_t)y * dst_step);
+            float       *dr  = reinterpret_cast<float*>(dst_data + (size_t)y * dst_step);
             const float *row = out + (size_t)y * W;
             if (no_scale)
-            {
                 memcpy(dr, row, (size_t)W * sizeof(float));
-            }
             else
             {
                 int x = 0;
@@ -802,8 +1031,7 @@ int armpl_hal_dft2D(cvhalDFT *context,
                 for (; x + 3 < W; x += 4)
                     vst1q_f32(dr + x, vmulq_f32(vld1q_f32(row + x), sv));
 #endif
-                for (; x < W; x++)
-                    dr[x] = row[x] * sc;
+                for (; x < W; x++) dr[x] = row[x] * sc;
             }
         }
 
@@ -992,6 +1220,457 @@ int armpl_hal_dft2D(cvhalDFT *context,
         return CV_HAL_ERROR_OK;
     }
 
+    if (mode == ARMPL_DFT_C2C_D)
+    {
+        ArmPLD_C2CDFTContext *ctx = reinterpret_cast<ArmPLD_C2CDFTContext*>(context);
+        if (!ctx->plan_fwd || !ctx->plan_inv) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+        const int    W        = ctx->width;
+        const int    H        = ctx->height;
+        const double sc       = ctx->scale;
+        const bool   no_scale = ctx->no_scale;
+        const size_t row_cb   = (size_t)W * sizeof(fftw_complex);
+
+        fftw_complex *in  = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * (size_t)W * H);
+        fftw_complex *out = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * (size_t)W * H);
+        if (!in || !out) { if (in) fftw_free(in); if (out) fftw_free(out); return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+        if (src_step == row_cb)
+            memcpy(in, src_data, (size_t)W * H * sizeof(fftw_complex));
+        else
+        {
+            for (int y = 0; y < H; y++)
+            {
+                const double *sr = reinterpret_cast<const double*>(src_data + (size_t)y * src_step);
+                fftw_complex *ir = in + (size_t)y * W;
+                for (int x = 0; x < W; x++) { ir[x][0] = sr[x*2]; ir[x][1] = sr[x*2+1]; }
+            }
+        }
+
+        fftw_execute_dft(ctx->inv ? ctx->plan_inv : ctx->plan_fwd, in, out);
+
+        if (no_scale)
+        {
+            if (dst_step == row_cb)
+                memcpy(dst_data, out, (size_t)W * H * sizeof(fftw_complex));
+            else
+                for (int y = 0; y < H; y++)
+                    memcpy(dst_data + (size_t)y * dst_step, out + (size_t)y * W, row_cb);
+        }
+        else
+        {
+            for (int y = 0; y < H; y++)
+            {
+                double             *dr  = reinterpret_cast<double*>(dst_data + (size_t)y * dst_step);
+                const fftw_complex *or_ = out + (size_t)y * W;
+                for (int x = 0; x < W; x++) { dr[x*2] = or_[x][0]*sc; dr[x*2+1] = or_[x][1]*sc; }
+            }
+        }
+
+        fftw_free(in);
+        fftw_free(out);
+        return CV_HAL_ERROR_OK;
+    }
+
+    if (mode == ARMPL_DFT_R2C_D)
+    {
+        ArmPLD_R2CDFTContext *ctx = reinterpret_cast<ArmPLD_R2CDFTContext*>(context);
+        if (!ctx->plan) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+        const int    W        = ctx->width;
+        const int    H        = ctx->height;
+        const double sc       = ctx->scale;
+        const bool   no_scale = ctx->no_scale;
+
+        if (ctx->col_wise)
+        {
+            double       *in  = (double*)      fftw_malloc(sizeof(double)        * H);
+            fftw_complex *out = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * (H/2 + 1));
+            if (!in || !out) { if (in) fftw_free(in); if (out) fftw_free(out); return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+            for (int y = 0; y < H; y++)
+                in[y] = reinterpret_cast<const double*>(src_data + (size_t)y * src_step)[0];
+            fftw_execute_dft_r2c(ctx->plan, in, out);
+
+            const int pairs = (H - 1) / 2;
+            if (no_scale)
+            {
+                reinterpret_cast<double*>(dst_data)[0] = out[0][0];
+                for (int k = 1; k <= pairs; k++)
+                {
+                    reinterpret_cast<double*>(dst_data + (size_t)(2*k-1)*dst_step)[0] = out[k][0];
+                    reinterpret_cast<double*>(dst_data + (size_t)(2*k)  *dst_step)[0] = out[k][1];
+                }
+                if ((H & 1) == 0)
+                    reinterpret_cast<double*>(dst_data + (size_t)(H-1)*dst_step)[0] = out[H/2][0];
+            }
+            else
+            {
+                reinterpret_cast<double*>(dst_data)[0] = out[0][0] * sc;
+                for (int k = 1; k <= pairs; k++)
+                {
+                    reinterpret_cast<double*>(dst_data + (size_t)(2*k-1)*dst_step)[0] = out[k][0] * sc;
+                    reinterpret_cast<double*>(dst_data + (size_t)(2*k)  *dst_step)[0] = out[k][1] * sc;
+                }
+                if ((H & 1) == 0)
+                    reinterpret_cast<double*>(dst_data + (size_t)(H-1)*dst_step)[0] = out[H/2][0] * sc;
+            }
+            fftw_free(in);
+            fftw_free(out);
+            return CV_HAL_ERROR_OK;
+        }
+
+        double       *in  = (double*)      fftw_malloc(sizeof(double)        * (size_t)W * H);
+        fftw_complex *out = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * (size_t)H * (W/2 + 1));
+        if (!in || !out) { if (in) fftw_free(in); if (out) fftw_free(out); return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+        if (src_step == (size_t)W * sizeof(double))
+            memcpy(in, src_data, (size_t)W * H * sizeof(double));
+        else
+            for (int y = 0; y < H; y++)
+                memcpy(in + (size_t)y * W,
+                       reinterpret_cast<const double*>(src_data + (size_t)y * src_step),
+                       (size_t)W * sizeof(double));
+        fftw_execute_dft_r2c(ctx->plan, in, out);
+
+        const int half1  = W/2 + 1;
+        const int pairs  = (W - 1) / 2;
+        const int even_W = (W & 1) == 0;
+
+#define PACK_BINS_D(dr_, fi_)                                                      \
+        do {                                                                       \
+            double *_d = (dr_); int _fi = (fi_);                                   \
+            if (no_scale) {                                                         \
+                for (int k = 1; k <= pairs; k++) {                                 \
+                    _d[2*k-1] = out[_fi+k][0]; _d[2*k] = out[_fi+k][1];          \
+                }                                                                   \
+            } else {                                                                \
+                for (int k = 1; k <= pairs; k++) {                                 \
+                    _d[2*k-1] = out[_fi+k][0]*sc; _d[2*k] = out[_fi+k][1]*sc;    \
+                }                                                                   \
+            }                                                                       \
+        } while(0)
+
+        for (int y = 0; y < H; y++)
+        {
+            double    *dr = reinterpret_cast<double*>(dst_data + (size_t)y * dst_step);
+            const int  fi = y * half1;
+
+            if (y == 0 || y == 1)
+                dr[0] = no_scale ? out[fi][0] : out[fi][0] * sc;
+            else if ((y & 1) == 0)
+            {
+                const int fi_c0 = (y / 2) * half1;
+                dr[0] = no_scale ? out[fi_c0][1] : out[fi_c0][1] * sc;
+            }
+            else
+            {
+                const int fi_c0 = ((y + 1) / 2) * half1;
+                dr[0] = no_scale ? out[fi_c0][0] : out[fi_c0][0] * sc;
+            }
+
+            PACK_BINS_D(dr, fi);
+
+            if (even_W)
+            {
+                if (y == 0 || y == 1)
+                    dr[W - 1] = no_scale ? out[fi + W/2][0] : out[fi + W/2][0] * sc;
+                else if ((y & 1) == 0)
+                {
+                    const int fi_c0 = (y / 2) * half1;
+                    dr[W - 1] = no_scale ? out[fi_c0 + W/2][1] : out[fi_c0 + W/2][1] * sc;
+                }
+                else
+                {
+                    const int fi_c0 = ((y + 1) / 2) * half1;
+                    dr[W - 1] = no_scale ? out[fi_c0 + W/2][0] : out[fi_c0 + W/2][0] * sc;
+                }
+            }
+        }
+
+#undef PACK_BINS_D
+
+        fftw_free(in);
+        fftw_free(out);
+        return CV_HAL_ERROR_OK;
+    }
+
+    if (mode == ARMPL_DFT_C2R_D)
+    {
+        ArmPLD_C2RDFTContext *ctx = reinterpret_cast<ArmPLD_C2RDFTContext*>(context);
+        if (!ctx->plan) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+        const int    W        = ctx->width;
+        const int    H        = ctx->height;
+        const double sc       = ctx->scale;
+        const bool   no_scale = ctx->no_scale;
+
+        if (ctx->col_wise)
+        {
+            fftw_complex *in  = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * (H/2 + 1));
+            double       *out = (double*)      fftw_malloc(sizeof(double)        * H);
+            if (!in || !out) { if (in) fftw_free(in); if (out) fftw_free(out); return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+            in[0][0] = reinterpret_cast<const double*>(src_data)[0];
+            in[0][1] = 0.0;
+
+            const int pairs = (H - 1) / 2;
+            for (int k = 1; k <= pairs; k++)
+            {
+                in[k][0] = reinterpret_cast<const double*>(src_data + (size_t)(2*k-1)*src_step)[0];
+                in[k][1] = reinterpret_cast<const double*>(src_data + (size_t)(2*k)  *src_step)[0];
+            }
+            if ((H & 1) == 0)
+            {
+                in[H/2][0] = reinterpret_cast<const double*>(src_data + (size_t)(H-1)*src_step)[0];
+                in[H/2][1] = 0.0;
+            }
+            fftw_execute_dft_c2r(ctx->plan, in, out);
+            if (no_scale)
+                for (int y = 0; y < H; y++)
+                    reinterpret_cast<double*>(dst_data + (size_t)y * dst_step)[0] = out[y];
+            else
+                for (int y = 0; y < H; y++)
+                    reinterpret_cast<double*>(dst_data + (size_t)y * dst_step)[0] = out[y] * sc;
+
+            fftw_free(in);
+            fftw_free(out);
+            return CV_HAL_ERROR_OK;
+        }
+
+        const int half1  = W/2 + 1;
+        const int pairs  = (W - 1) / 2;
+        const int even_W = (W & 1) == 0;
+
+        fftw_complex *in  = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * (size_t)H * half1);
+        double       *out = (double*)      fftw_malloc(sizeof(double)        * (size_t)W * H);
+        if (!in || !out) { if (in) fftw_free(in); if (out) fftw_free(out); return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+        memset(in, 0, sizeof(fftw_complex) * (size_t)H * half1);
+
+        {
+            in[0][0] = reinterpret_cast<const double*>(src_data)[0];
+            in[0][1] = 0.0;
+
+            for (int y = 1; y <= (H-1)/2; y++)
+            {
+                double re = reinterpret_cast<const double*>(src_data + (size_t)(2*y - 1)*src_step)[0];
+                double im = reinterpret_cast<const double*>(src_data + (size_t)(2*y    )*src_step)[0];
+                in[y * half1][0] =  re; in[y * half1][1] =  im;
+                in[(H - y) * half1][0] =  re; in[(H - y) * half1][1] = -im;
+            }
+
+            if ((H & 1) == 0)
+            {
+                in[(H/2) * half1][0] = reinterpret_cast<const double*>(src_data + (size_t)(H-1)*src_step)[0];
+                in[(H/2) * half1][1] = 0.0;
+            }
+        }
+
+        if (even_W)
+        {
+            const int kny = W / 2;
+            in[kny][0] = reinterpret_cast<const double*>(src_data)[W-1];
+            in[kny][1] = 0.0;
+
+            for (int y = 1; y <= (H-1)/2; y++)
+            {
+                double re = reinterpret_cast<const double*>(src_data + (size_t)(2*y - 1)*src_step)[W-1];
+                double im = reinterpret_cast<const double*>(src_data + (size_t)(2*y    )*src_step)[W-1];
+                in[y * half1 + kny][0] =  re; in[y * half1 + kny][1] =  im;
+                in[(H - y) * half1 + kny][0] =  re; in[(H - y) * half1 + kny][1] = -im;
+            }
+
+            if ((H & 1) == 0)
+            {
+                in[(H/2) * half1 + kny][0] = reinterpret_cast<const double*>(src_data + (size_t)(H-1)*src_step)[W-1];
+                in[(H/2) * half1 + kny][1] = 0.0;
+            }
+        }
+
+        for (int y = 0; y < H; y++)
+        {
+            const double *sr = reinterpret_cast<const double*>(src_data + (size_t)y * src_step);
+            const int     fi = y * half1;
+            for (int k = 1; k <= pairs; k++)
+            {
+                in[fi + k][0] = sr[2*k - 1];
+                in[fi + k][1] = sr[2*k];
+            }
+        }
+
+        fftw_execute_dft_c2r(ctx->plan, in, out);
+        fftw_free(in);
+
+        for (int y = 0; y < H; y++)
+        {
+            double       *dr  = reinterpret_cast<double*>(dst_data + (size_t)y * dst_step);
+            const double *row = out + (size_t)y * W;
+            if (no_scale)
+                memcpy(dr, row, (size_t)W * sizeof(double));
+            else
+                for (int x = 0; x < W; x++) dr[x] = row[x] * sc;
+        }
+
+        fftw_free(out);
+        return CV_HAL_ERROR_OK;
+    }
+
+    if (mode == ARMPL_DFT_C2C_ROW_D)
+    {
+        ArmPLD_C2CRowDFTContext *ctx = reinterpret_cast<ArmPLD_C2CRowDFTContext*>(context);
+        if (!ctx->plan_fwd || !ctx->plan_inv) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+        const int     W        = ctx->width;
+        const int     H        = ctx->height;
+        const double  sc       = ctx->scale;
+        const bool    no_scale = ctx->no_scale;
+        const size_t  rb       = (size_t)W * sizeof(fftw_complex);
+        fftw_complex *buf      = ctx->fftw_buf;
+
+        if (!ctx->inv)
+        {
+            for (int i = 0; i < H; i++)
+            {
+                const unsigned char *sb = src_data + (size_t)i * src_step;
+                unsigned char       *db = dst_data + (size_t)i * dst_step;
+                if (sb != db) memcpy(db, sb, rb);
+                fftw_execute_dft(ctx->plan_fwd,
+                                 reinterpret_cast<fftw_complex*>(db),
+                                 reinterpret_cast<fftw_complex*>(db));
+                if (!no_scale)
+                {
+                    double *f = reinterpret_cast<double*>(db);
+                    for (int j = 0; j < W*2; j++) f[j] *= sc;
+                }
+            }
+        }
+        else
+        {
+            for (int i = 0; i < H; i++)
+            {
+                const unsigned char *sb = src_data + (size_t)i * src_step;
+                unsigned char       *db = dst_data + (size_t)i * dst_step;
+                memcpy(buf, sb, rb);
+                fftw_execute(ctx->plan_inv);
+                if (no_scale)
+                    memcpy(db, buf, rb);
+                else
+                {
+                    double       *df = reinterpret_cast<double*>(db);
+                    const double *bf = reinterpret_cast<const double*>(buf);
+                    for (int j = 0; j < W*2; j++) df[j] = bf[j] * sc;
+                }
+            }
+        }
+        return CV_HAL_ERROR_OK;
+    }
+
+    if (mode == ARMPL_DFT_R_ROW_D)
+    {
+        ArmPLD_RRowDFTContext *ctx = reinterpret_cast<ArmPLD_RRowDFTContext*>(context);
+        if (!ctx->plan_fwd || !ctx->plan_inv) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+        const int    W        = ctx->width;
+        const int    H        = ctx->height;
+        const double sc       = ctx->scale;
+        const bool   no_scale = ctx->no_scale;
+
+        if (!ctx->inv)
+        {
+            double       *fin  = ctx->fftw_in_r;
+            fftw_complex *fout = ctx->fftw_out_c;
+            const int     ncf  = (W - 1) / 2;
+            const bool    hnyq = (W & 1) == 0;
+
+            for (int i = 0; i < H; i++)
+            {
+                const double *sr = reinterpret_cast<const double*>(src_data + (size_t)i * src_step);
+                double       *dr = reinterpret_cast<double*>(dst_data + (size_t)i * dst_step);
+
+                memcpy(fin, sr, (size_t)W * sizeof(double));
+                fftw_execute(ctx->plan_fwd);
+
+                if (no_scale)
+                {
+                    dr[0] = fout[0][0];
+                    int j = 1;
+                    for (; j + 3 <= ncf; j += 4)
+                    {
+                        dr[j*2-1]     = fout[j][0];   dr[j*2]     = fout[j][1];
+                        dr[(j+1)*2-1] = fout[j+1][0]; dr[(j+1)*2] = fout[j+1][1];
+                        dr[(j+2)*2-1] = fout[j+2][0]; dr[(j+2)*2] = fout[j+2][1];
+                        dr[(j+3)*2-1] = fout[j+3][0]; dr[(j+3)*2] = fout[j+3][1];
+                    }
+                    for (; j <= ncf; j++) { dr[j*2-1] = fout[j][0]; dr[j*2] = fout[j][1]; }
+                    if (hnyq) dr[W-1] = fout[W/2][0];
+                }
+                else
+                {
+                    dr[0] = fout[0][0] * sc;
+                    int j = 1;
+                    for (; j + 3 <= ncf; j += 4)
+                    {
+                        dr[j*2-1]     = fout[j][0]*sc;   dr[j*2]     = fout[j][1]*sc;
+                        dr[(j+1)*2-1] = fout[j+1][0]*sc; dr[(j+1)*2] = fout[j+1][1]*sc;
+                        dr[(j+2)*2-1] = fout[j+2][0]*sc; dr[(j+2)*2] = fout[j+2][1]*sc;
+                        dr[(j+3)*2-1] = fout[j+3][0]*sc; dr[(j+3)*2] = fout[j+3][1]*sc;
+                    }
+                    for (; j <= ncf; j++) { dr[j*2-1] = fout[j][0]*sc; dr[j*2] = fout[j][1]*sc; }
+                    if (hnyq) dr[W-1] = fout[W/2][0] * sc;
+                }
+            }
+        }
+        else
+        {
+            fftw_complex *fin  = ctx->fftw_in_c;
+            double       *fout = ctx->fftw_out_r;
+            const bool    hnyq = (W & 1) == 0;
+
+            for (int i = 0; i < H; i++)
+            {
+                const double *sr = reinterpret_cast<const double*>(src_data + (size_t)i * src_step);
+                double       *dr = reinterpret_cast<double*>(dst_data + (size_t)i * dst_step);
+
+                fin[0][0] = sr[0]; fin[0][1] = 0.0;
+
+                if (hnyq)
+                {
+                    int j = 1, end = W/2;
+                    for (; j + 3 < end; j += 4)
+                    {
+                        fin[j][0]   = sr[j*2-1];     fin[j][1]   = sr[j*2];
+                        fin[j+1][0] = sr[(j+1)*2-1]; fin[j+1][1] = sr[(j+1)*2];
+                        fin[j+2][0] = sr[(j+2)*2-1]; fin[j+2][1] = sr[(j+2)*2];
+                        fin[j+3][0] = sr[(j+3)*2-1]; fin[j+3][1] = sr[(j+3)*2];
+                    }
+                    for (; j < end; j++) { fin[j][0] = sr[j*2-1]; fin[j][1] = sr[j*2]; }
+                    fin[W/2][0] = sr[W-1]; fin[W/2][1] = 0.0;
+                }
+                else
+                {
+                    int j = 1, end = W/2 + 1;
+                    for (; j + 3 < end; j += 4)
+                    {
+                        fin[j][0]   = sr[j*2-1];     fin[j][1]   = sr[j*2];
+                        fin[j+1][0] = sr[(j+1)*2-1]; fin[j+1][1] = sr[(j+1)*2];
+                        fin[j+2][0] = sr[(j+2)*2-1]; fin[j+2][1] = sr[(j+2)*2];
+                        fin[j+3][0] = sr[(j+3)*2-1]; fin[j+3][1] = sr[(j+3)*2];
+                    }
+                    for (; j < end; j++) { fin[j][0] = sr[j*2-1]; fin[j][1] = sr[j*2]; }
+                }
+
+                fftw_execute(ctx->plan_inv);
+
+                if (no_scale)
+                    memcpy(dr, fout, (size_t)W * sizeof(double));
+                else
+                    for (int j = 0; j < W; j++) dr[j] = fout[j] * sc;
+            }
+        }
+        return CV_HAL_ERROR_OK;
+    }
+
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -1000,7 +1679,6 @@ int armpl_hal_dftFree2D(cvhalDFT *context)
     if (!context) return CV_HAL_ERROR_OK;
 
     const ArmPLDFTMode mode = *reinterpret_cast<const ArmPLDFTMode*>(context);
-
     if (mode == ARMPL_DFT_C2C)
     {
         ArmPLC2CDFTContext *ctx = reinterpret_cast<ArmPLC2CDFTContext*>(context);
@@ -1037,6 +1715,44 @@ int armpl_hal_dftFree2D(cvhalDFT *context)
         if (ctx->fftw_out_c) fftwf_free(ctx->fftw_out_c);
         if (ctx->fftw_in_c)  fftwf_free(ctx->fftw_in_c);
         if (ctx->fftw_out_r) fftwf_free(ctx->fftw_out_r);
+        delete ctx;
+    }
+    else if (mode == ARMPL_DFT_C2C_D)
+    {
+        ArmPLD_C2CDFTContext *ctx = reinterpret_cast<ArmPLD_C2CDFTContext*>(context);
+        if (ctx->plan_fwd) fftw_destroy_plan(ctx->plan_fwd);
+        if (ctx->plan_inv) fftw_destroy_plan(ctx->plan_inv);
+        delete ctx;
+    }
+    else if (mode == ARMPL_DFT_R2C_D)
+    {
+        ArmPLD_R2CDFTContext *ctx = reinterpret_cast<ArmPLD_R2CDFTContext*>(context);
+        if (ctx->plan) fftw_destroy_plan(ctx->plan);
+        delete ctx;
+    }
+    else if (mode == ARMPL_DFT_C2R_D)
+    {
+        ArmPLD_C2RDFTContext *ctx = reinterpret_cast<ArmPLD_C2RDFTContext*>(context);
+        if (ctx->plan) fftw_destroy_plan(ctx->plan);
+        delete ctx;
+    }
+    else if (mode == ARMPL_DFT_C2C_ROW_D)
+    {
+        ArmPLD_C2CRowDFTContext *ctx = reinterpret_cast<ArmPLD_C2CRowDFTContext*>(context);
+        if (ctx->plan_fwd) fftw_destroy_plan(ctx->plan_fwd);
+        if (ctx->plan_inv) fftw_destroy_plan(ctx->plan_inv);
+        if (ctx->fftw_buf) fftw_free(ctx->fftw_buf);
+        delete ctx;
+    }
+    else if (mode == ARMPL_DFT_R_ROW_D)
+    {
+        ArmPLD_RRowDFTContext *ctx = reinterpret_cast<ArmPLD_RRowDFTContext*>(context);
+        if (ctx->plan_fwd)   fftw_destroy_plan(ctx->plan_fwd);
+        if (ctx->plan_inv)   fftw_destroy_plan(ctx->plan_inv);
+        if (ctx->fftw_in_r)  fftw_free(ctx->fftw_in_r);
+        if (ctx->fftw_out_c) fftw_free(ctx->fftw_out_c);
+        if (ctx->fftw_in_c)  fftw_free(ctx->fftw_in_c);
+        if (ctx->fftw_out_r) fftw_free(ctx->fftw_out_r);
         delete ctx;
     }
 
