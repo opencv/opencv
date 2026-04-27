@@ -10,10 +10,12 @@ jobs:
         submodules: recursive
 
     - name: Build Release
+      env:
+        IPHONEOS_DEPLOYMENT_TARGET: "15.0"
       run: |-
         mkdir -p out/iphoneos out/iphonesimulator out/xcframework
-        python3 platforms/ios/build_framework.py --contrib opencv_contrib --iphoneos_archs arm64 out/iphoneos
-        python3 platforms/ios/build_framework.py --contrib opencv_contrib --iphonesimulator_archs "arm64,x86_64" out/iphonesimulator
+        python3 platforms/ios/build_framework.py --iphoneos_deployment_target $IPHONEOS_DEPLOYMENT_TARGET --contrib opencv_contrib --iphoneos_archs arm64 out/iphoneos
+        python3 platforms/ios/build_framework.py --iphoneos_deployment_target $IPHONEOS_DEPLOYMENT_TARGET --contrib opencv_contrib --iphonesimulator_archs "arm64,x86_64" out/iphonesimulator
         xcodebuild -create-xcframework -framework out/iphoneos/opencv2.framework -framework out/iphonesimulator/opencv2.framework -output out/xcframework/opencv2.xcframework
         zip --symlinks -r opencv_ios_xcframework.zip out/xcframework/opencv2.xcframework
         zip --symlinks -r opencv_ios_build_data.zip out/iphoneos/build out/iphonesimulator/build
