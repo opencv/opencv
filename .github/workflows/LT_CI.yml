@@ -1,0 +1,27 @@
+name: Build OpenCV iOS xcframework
+on: [push, pull_request]
+
+jobs:
+  build-ios:
+    runs-on: macos-15
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Build Release
+      run: |-
+        mkdir -p out/iphoneos out/iphonesimulator out/xcframework
+        python3 platforms/ios/build_framework.py --contrib opencv_contrib --iphoneos_archs arm64 out/iphoneos
+        python3 platforms/ios/build_framework.py --contrib opencv_contrib --iphonesimulator_archs "arm64,x86_64" out/iphonesimulator
+        xcodebuild -create-xcframework -framework out/iphoneos/opencv2.framework -framework out/iphonesimulator/opencv2.framework -output out/xcframework/opencv2.xcframework
+        zip --symlinks -r opencv_ios_xcframework.zip out/xcframework/opencv2.xcframework
+        zip --symlinks -r opencv_ios_build_data.zip out/iphoneos/build out/iphonesimulator/build
+    - uses: actions/upload-artifact@v4
+      with:
+        name: ios_lib
+        path: opencv_ios_xcframework.zip
+    - uses: actions/upload-artifact@v4
+      with:
+        name: ios_build_data
+        path: opencv_ios_build_data.zip
