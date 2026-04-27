@@ -113,7 +113,7 @@ static Ptr<GemmaBpeTokenizerImpl> buildGemmaFromJson(
         uint32_t rank = 0;
         for (auto it = merges_node.begin(); it != merges_node.end(); ++it) {
             cv::FileNode entry = *it;
-            if ((int)entry.size() != 2) {
+            if (entry.size() != 2) {
                 ++rank;
                 continue;
             }
