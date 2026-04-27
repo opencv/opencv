@@ -27,7 +27,7 @@ CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 int simd_binop_f32_(const float* a, const float* b, float* out, int n, int op) {
     int i = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-    const int lanes = VTraits<v_float32>::nlanes;
+    const int lanes = VTraits<v_float32>::vlanes();
     if (op == SIMD_BIN_ADD) {
         for (; i <= n - lanes * 4; i += lanes * 4) {
             v_store(out + i,             v_add(vx_load(a + i),             vx_load(b + i)));

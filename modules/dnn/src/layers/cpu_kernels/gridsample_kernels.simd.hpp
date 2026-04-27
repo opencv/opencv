@@ -41,7 +41,7 @@ void gridSampleBilinearF32InteriorRow_(
     size_t yCStride)
 {
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-    const int L = VTraits<v_float32>::nlanes;
+    const int L = VTraits<v_float32>::vlanes();
 #endif
     for (int w = 0; w < Wout; w++) {
         if (!interior[w]) continue;

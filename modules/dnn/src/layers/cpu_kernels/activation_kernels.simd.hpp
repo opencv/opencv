@@ -313,7 +313,7 @@ static void activationClip(const void* input, void* output,
 void clampFloatChunk_(const float* src, float* dst, size_t n, float lo, float hi) {
     size_t i = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-    const int lanes = VTraits<v_float32>::nlanes;
+    const int lanes = VTraits<v_float32>::vlanes();
     v_float32 vlo = vx_setall_f32(lo);
     v_float32 vhi = vx_setall_f32(hi);
     for (; i + lanes * 4 <= n; i += lanes * 4) {

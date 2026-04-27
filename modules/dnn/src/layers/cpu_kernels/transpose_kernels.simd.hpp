@@ -89,7 +89,7 @@ void transpose2D_f32_(const float* inp, float* out,
             float* outB = out + b * batchStride;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-            if (VTraits<v_float32>::nlanes == 8) {
+            if (VTraits<v_float32>::vlanes() == 8) {
                 int64_t r = r0;
                 for (; r + 8 <= r1; r += 8) {
                     int64_t c = c0;

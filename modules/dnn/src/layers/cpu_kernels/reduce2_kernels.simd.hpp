@@ -53,7 +53,7 @@ void reduceAllFloatParallel_(const Mat& src, Mat& dst, int reduce_type_int) {
             const float* q = p + start;
             size_t n = end - start, i = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-            const int L = VTraits<v_float32>::nlanes;
+            const int L = VTraits<v_float32>::vlanes();
 #endif
             switch (rt) {
             case Reduce2Layer::ReduceType::MAX: {
@@ -197,7 +197,7 @@ void reduceLastAxesFloatParallel_(const Mat& src, Mat& dst, size_t innerLen, int
             const float* s0 = p + (size_t)row * innerLen;
             size_t i = 0, n = innerLen;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-            const int L = VTraits<v_float32>::nlanes;
+            const int L = VTraits<v_float32>::vlanes();
 #endif
             switch (rt) {
             case Reduce2Layer::ReduceType::MAX: {

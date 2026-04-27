@@ -147,7 +147,7 @@ public:
     {
         CV_Assert(in_arr.size().area() == 1);
         const Mat X = in_arr.getMat(0);
-        CV_Assert(X.data != nullptr);
+        CV_Assert(X.total() == 0 || X.data != nullptr);
 
         const int rank = X.dims;
         std::vector<int> dims(rank), strides(rank);
