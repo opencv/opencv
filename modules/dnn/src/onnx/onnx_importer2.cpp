@@ -189,6 +189,7 @@ protected:
     void parseCumSum               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDepthSpaceOps        (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDetectionOutput      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parsePriorBox             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseEinsum               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseElementWise          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseElu                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -1913,6 +1914,17 @@ void ONNXImporter2::parseSoftMax(LayerParams& layerParams, const opencv_onnx::No
 void ONNXImporter2::parseDetectionOutput(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     CV_CheckEQ(node_proto.input_size(), 3, "");
+    if (layerParams.has("code_type"))
+    {
+        int ct = layerParams.get<int>("code_type");
+        layerParams.set("code_type", ct == 2 ? "CENTER_SIZE" : "CORNER");
+    }
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parsePriorBox(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "PriorBox";
     addLayer(layerParams, node_proto);
 }
 
@@ -2759,6 +2771,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["NonMaxSuprression"] = &ONNXImporter2::parseNonMaxSuprression;
     dispatch["SoftMax"] = dispatch["Softmax"] = dispatch["LogSoftmax"] = &ONNXImporter2::parseSoftMax;
     dispatch["DetectionOutput"] = &ONNXImporter2::parseDetectionOutput;
+    dispatch["PriorBox"] = &ONNXImporter2::parsePriorBox;
     dispatch["CumSum"] = &ONNXImporter2::parseCumSum;
     dispatch["SpaceToDepth"] = dispatch["DepthToSpace"] = &ONNXImporter2::parseDepthSpaceOps;
     dispatch["ScatterElements"] = dispatch["Scatter"] = dispatch["ScatterND"] = &ONNXImporter2::parseScatter;
