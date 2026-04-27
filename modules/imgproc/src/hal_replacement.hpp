@@ -1560,7 +1560,6 @@ inline int hal_ni_calcHist(const uchar* src_data, size_t src_step, int src_type,
 
 #include "custom_hal.hpp"
 
-
 //! @cond IGNORED
 #define CALL_HAL_RET(name, fun, retval, ...) \
     int res = __CV_EXPAND(fun(__VA_ARGS__, &retval)); \
