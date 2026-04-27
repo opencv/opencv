@@ -62,9 +62,19 @@ public:
         pnorm = params.get<float>("p", 2);
         epsilon = params.get<float>("eps", 1e-10f);
         acrossSpatial = params.get<bool>("across_spatial", true);
-        startAxis = params.get<int>("start_axis", 1);
-        CV_Assert(!params.has("across_spatial") || !params.has("end_axis"));
-        endAxis = params.get<int>("end_axis", acrossSpatial ? -1 : startAxis);
+
+        if (!params.has("start_axis") && !params.has("across_spatial"))
+        {
+            int axis = params.get<int>("axis", -1);
+            startAxis = axis;
+            endAxis = axis;
+        }
+        else
+        {
+            startAxis = params.get<int>("start_axis", 1);
+            CV_Assert(!params.has("across_spatial") || !params.has("end_axis"));
+            endAxis = params.get<int>("end_axis", acrossSpatial ? -1 : startAxis);
+        }
         CV_Assert(pnorm > 0);
     }
 

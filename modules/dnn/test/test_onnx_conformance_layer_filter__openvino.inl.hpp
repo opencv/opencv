@@ -1314,6 +1314,8 @@ CASE(test_layer_normalization_default_axis_expanded)
     SKIP;
 CASE(test_layer_normalization_default_axis_expanded_ver18)
     SKIP;
+CASE(test_lpnormalization_default)
+    SKIP;
 CASE(test_leakyrelu)
     // no filter
 CASE(test_leakyrelu_default)

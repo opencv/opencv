@@ -330,7 +330,6 @@
 "test_l2normalization_axis_1",
 "test_loop13_seq",  // Loop with tensor sequences output, not yet supported in OpenCV
 "test_loop16_seq_none",  // Loop with optional tensor sequences, not yet supported in OpenCV
-"test_lpnormalization_default",
 "test_lppool_1d_default",
 "test_lppool_2d_default",
 "test_lppool_2d_dilations",
