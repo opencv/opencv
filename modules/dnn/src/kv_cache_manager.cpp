@@ -11,6 +11,32 @@
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
+
+
+void initKVDataRecursively(const Ptr<Graph>& graph, std::map<std::string, KCache>& kData, std::map<std::string, VCache>& vData, FastGemmOpt& opt) {
+    for (const auto& layer : graph->prog()) {
+
+        for (const auto& subgraph : layer->subgraphs() ? *layer->subgraphs() : std::vector<Ptr<Graph>>()) {
+            initKVDataRecursively(subgraph, kData, vData, opt);
+        }
+
+        if (layer->type == "AttentionOnnxAi") {
+            int kvNumHeads = layer.dynamicCast<AttentionOnnxAiLayer>()->kv_num_heads;
+
+            if (kvNumHeads > 0)
+            {
+                kData.emplace(layer->name, KCache(opt, kvNumHeads));
+                vData.emplace(layer->name, VCache(opt, kvNumHeads));
+            }
+            else
+            {
+                kData.emplace(layer->name, KCache(opt));
+                vData.emplace(layer->name, VCache(opt));
+            }
+        }
+    }
+}
+
 void setKVCacheManager(Ptr<Net::Impl> netimpl)
 {
     CV_Assert(netimpl != nullptr);
@@ -21,23 +47,7 @@ void setKVCacheManager(Ptr<Net::Impl> netimpl)
     manager.netimpl = netimpl;
     manager.opt.init();
 
-    for (const auto& layer : netimpl->mainGraph->prog()) {
-        if (layer->type != "AttentionOnnxAi")
-            continue;
-
-        int kvNumHeads = layer.dynamicCast<AttentionOnnxAiLayer>()->kv_num_heads;
-
-        if (kvNumHeads > 0)
-        {
-            manager.kData.emplace(layer->name, KCache(manager.opt, kvNumHeads));
-            manager.vData.emplace(layer->name, VCache(manager.opt, kvNumHeads));
-        }
-        else
-        {
-            manager.kData.emplace(layer->name, KCache(manager.opt));
-            manager.vData.emplace(layer->name, VCache(manager.opt));
-        }
-    }
+    initKVDataRecursively(netimpl->mainGraph, manager.kData, manager.vData, manager.opt);
 
     manager.isInitialized = true;
     netimpl->useKVCache = true;
