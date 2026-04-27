@@ -1506,7 +1506,7 @@ TEST_P(Reproducibility_FacePaint_ONNX, Accuracy)
     if (targetId == DNN_TARGET_CPU_FP16)
         net.enableWinograd(false);
 
-    std::string imgname = _tf("sqcat.png");
+    std::string imgname = findDataFile("cv/shared/baboon.png");
     Mat image = imread(imgname);
     ASSERT_FALSE(image.empty());
 
@@ -1517,13 +1517,15 @@ TEST_P(Reproducibility_FacePaint_ONNX, Accuracy)
     net.setInput(input);
     Mat out = net.forward();
 
-    Mat ref = blobFromNPY(_tf("onnx/data/face_paint_512_v2_0_ort_output.npy"));
-    ASSERT_FALSE(ref.empty());
+    Mat ref_img = imread(_tf("onnx/data/face_paint_512_v2_0_ort_output.png"));
+    ASSERT_FALSE(ref_img.empty()) << "Failed to load reference PNG";
+    Mat ref = blobFromImage(ref_img, 1.0 / 127.5, Size(),
+                            Scalar(127.5, 127.5, 127.5), true, false, CV_32F);
 
     Mat outFlat = out.reshape(1, 1);
     Mat refFlat = ref.reshape(1, 1);
     ASSERT_EQ(outFlat.total(), refFlat.total()) << "OpenCV output size differs from ORT reference";
-    EXPECT_LE(cv::norm(outFlat, refFlat, NORM_INF), 1e-2);
+    EXPECT_LE(cv::norm(outFlat, refFlat, NORM_INF), 0.01);
 }
 INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_FacePaint_ONNX,
                         testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
