@@ -72,25 +72,6 @@ static int laplacian3x3_u8(int start, int end,
     if (!isLaplacian3x3Supported(width, height, border_type))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
-    auto vert_sum_scalar = [&](const uint8_t* r0, const uint8_t* r1, const uint8_t* r2, int xcol) -> uint16_t {
-        if (border_type == BORDER_REPLICATE)
-        {
-            xcol = std::max(0, std::min(width - 1, xcol));
-            uint16_t s = 0;
-            s += r0 ? r0[xcol] : border_value;
-            s += r1 ? r1[xcol] : border_value;
-            s += r2 ? r2[xcol] : border_value;
-            return s;
-        }
-        if (xcol < 0 || xcol >= width)
-            return static_cast<uint16_t>(border_value * 3);
-        uint16_t s = 0;
-        s += r0 ? r0[xcol] : border_value;
-        s += r1 ? r1[xcol] : border_value;
-        s += r2 ? r2[xcol] : border_value;
-        return s;
-    };
-
     for (int y = start; y < end; ++y)
     {
         int y0 = borderMap(y - 1, height, border_type);
@@ -109,12 +90,12 @@ static int laplacian3x3_u8(int start, int end,
         {
             for (int x = 0; x < width; ++x)
             {
-                int sum = 0;
-                for (int dy = -1; dy <= 1; ++dy)
-                    for (int dx = -1; dx <= 1; ++dx)
-                        sum += sample_u8(src_data, src_step, width, height, y + dy, x + dx, border_type, border_value);
+                int v0l = sample_u8(src_data, src_step, width, height, y - 1, x - 1, border_type, border_value);
+                int v0r = sample_u8(src_data, src_step, width, height, y - 1, x + 1, border_type, border_value);
+                int v2l = sample_u8(src_data, src_step, width, height, y + 1, x - 1, border_type, border_value);
+                int v2r = sample_u8(src_data, src_step, width, height, y + 1, x + 1, border_type, border_value);
                 int v1 = sample_u8(src_data, src_step, width, height, y, x, border_type, border_value);
-                int val = sum - 9 * v1;
+                int val = (v0l + v0r + v2l + v2r - 4 * v1) * 2;
                 val = std::max(0, std::min(255, val));
                 drow[x] = (uint8_t)val;
             }
@@ -123,12 +104,12 @@ static int laplacian3x3_u8(int start, int end,
 
         for (int x = 0; x < left; ++x)
         {
-            int sum = 0;
-            for (int dy = -1; dy <= 1; ++dy)
-                for (int dx = -1; dx <= 1; ++dx)
-                    sum += sample_u8(src_data, src_step, width, height, y + dy, x + dx, border_type, border_value);
+            int v0l = sample_u8(src_data, src_step, width, height, y - 1, x - 1, border_type, border_value);
+            int v0r = sample_u8(src_data, src_step, width, height, y - 1, x + 1, border_type, border_value);
+            int v2l = sample_u8(src_data, src_step, width, height, y + 1, x - 1, border_type, border_value);
+            int v2r = sample_u8(src_data, src_step, width, height, y + 1, x + 1, border_type, border_value);
             int v1 = sample_u8(src_data, src_step, width, height, y, x, border_type, border_value);
-            int val = sum - 9 * v1;
+            int val = (v0l + v0r + v2l + v2r - 4 * v1) * 2;
             val = std::max(0, std::min(255, val));
             drow[x] = (uint8_t)val;
         }
@@ -136,52 +117,43 @@ static int laplacian3x3_u8(int start, int end,
         int x = left;
         for (; x < right; )
         {
-            size_t vl = __riscv_vsetvl_e8m1((width - 1) - x);
+            size_t vl = __riscv_vsetvl_e8m1(right - x);
 
-            __builtin_prefetch(r0 ? (r0 + x) : nullptr, 0, 3);
+            __builtin_prefetch(r0 ? (r0 + x - 1) : nullptr, 0, 3);
             __builtin_prefetch(r1 + x, 0, 3);
-            __builtin_prefetch(r2 ? (r2 + x) : nullptr, 0, 3);
+            __builtin_prefetch(r2 ? (r2 + x - 1) : nullptr, 0, 3);
 
-            vuint8m1_t v0 = r0 ? __riscv_vle8_v_u8m1(r0 + x, vl) : __riscv_vmv_v_x_u8m1(border_value, vl);
-            vuint8m1_t v1 = r1 ? __riscv_vle8_v_u8m1(r1 + x, vl) : __riscv_vmv_v_x_u8m1(border_value, vl);
-            vuint8m1_t v2 = r2 ? __riscv_vle8_v_u8m1(r2 + x, vl) : __riscv_vmv_v_x_u8m1(border_value, vl);
+            vuint8m1_t v0l = r0 ? __riscv_vle8_v_u8m1(r0 + x - 1, vl) : __riscv_vmv_v_x_u8m1(border_value, vl);
+            vuint8m1_t v0r = r0 ? __riscv_vle8_v_u8m1(r0 + x + 1, vl) : __riscv_vmv_v_x_u8m1(border_value, vl);
+            vuint8m1_t v2l = r2 ? __riscv_vle8_v_u8m1(r2 + x - 1, vl) : __riscv_vmv_v_x_u8m1(border_value, vl);
+            vuint8m1_t v2r = r2 ? __riscv_vle8_v_u8m1(r2 + x + 1, vl) : __riscv_vmv_v_x_u8m1(border_value, vl);
+            vuint8m1_t v1  = r1 ? __riscv_vle8_v_u8m1(r1 + x, vl) : __riscv_vmv_v_x_u8m1(border_value, vl);
 
-            vuint16m2_t v0w = __riscv_vwaddu_vx_u16m2(v0, 0, vl);
-            vuint16m2_t v1w = __riscv_vwaddu_vx_u16m2(v1, 0, vl);
-            vuint16m2_t v2w = __riscv_vwaddu_vx_u16m2(v2, 0, vl);
+            vint16m2_t s0l = vw_u8_to_i16(v0l, vl);
+            vint16m2_t s0r = vw_u8_to_i16(v0r, vl);
+            vint16m2_t s2l = vw_u8_to_i16(v2l, vl);
+            vint16m2_t s2r = vw_u8_to_i16(v2r, vl);
+            vint16m2_t s1  = vw_u8_to_i16(v1, vl);
 
-            vuint16m2_t vsum = __riscv_vadd_vv_u16m2(v0w, v1w, vl);
-            vsum = __riscv_vadd_vv_u16m2(vsum, v2w, vl);
+            vint16m2_t sum = __riscv_vadd_vv_i16m2(s0l, s0r, vl);
+            sum = __riscv_vadd_vv_i16m2(sum, s2l, vl);
+            sum = __riscv_vadd_vv_i16m2(sum, s2r, vl);
+            sum = __riscv_vsub_vv_i16m2(sum, __riscv_vsll_vx_i16m2(s1, 2, vl), vl);
+            sum = __riscv_vsll_vx_i16m2(sum, 1, vl);
 
-            uint16_t left_scalar  = vert_sum_scalar(r0, r1, r2, x - 1);
-            uint16_t right_scalar = vert_sum_scalar(r0, r1, r2, x + (int)vl);
-
-            vuint16m2_t vleft  = __riscv_vslide1down_vx_u16m2(vsum, left_scalar, vl);
-            vuint16m2_t vright = __riscv_vslide1up_vx_u16m2(vsum, right_scalar, vl);
-
-            vuint16m2_t sum3 = __riscv_vadd_vv_u16m2(vleft, vsum, vl);
-            sum3 = __riscv_vadd_vv_u16m2(sum3, vright, vl);
-
-            vuint16m2_t v8c = __riscv_vsll_vx_u16m2(v1w, 3, vl);
-            vuint16m2_t v9c = __riscv_vadd_vv_u16m2(v8c, v1w, vl);
-
-            vint16m2_t res = __riscv_vsub_vv_i16m2(
-                __riscv_vreinterpret_v_u16m2_i16m2(sum3),
-                __riscv_vreinterpret_v_u16m2_i16m2(v9c), vl);
-
-            vuint8m1_t out = clamp_to_u8(res, vl);
+            vuint8m1_t out = clamp_to_u8(sum, vl);
             __riscv_vse8_v_u8m1(drow + x, out, vl);
             x += vl;
         }
 
         for (; x < width; ++x)
         {
-            int sum = 0;
-            for (int dy = -1; dy <= 1; ++dy)
-                for (int dx = -1; dx <= 1; ++dx)
-                    sum += sample_u8(src_data, src_step, width, height, y + dy, x + dx, border_type, border_value);
+            int v0l = sample_u8(src_data, src_step, width, height, y - 1, x - 1, border_type, border_value);
+            int v0r = sample_u8(src_data, src_step, width, height, y - 1, x + 1, border_type, border_value);
+            int v2l = sample_u8(src_data, src_step, width, height, y + 1, x - 1, border_type, border_value);
+            int v2r = sample_u8(src_data, src_step, width, height, y + 1, x + 1, border_type, border_value);
             int v1 = sample_u8(src_data, src_step, width, height, y, x, border_type, border_value);
-            int val = sum - 9 * v1;
+            int val = (v0l + v0r + v2l + v2r - 4 * v1) * 2;
             val = std::max(0, std::min(255, val));
             drow[x] = (uint8_t)val;
         }
