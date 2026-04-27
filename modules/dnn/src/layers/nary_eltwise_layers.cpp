@@ -933,8 +933,6 @@ public:
 
         std::vector<Mat> used_inputs = inputs;
 
-        // Crop oversized inputs to output shape to tolerate off-by-1 spatial mismatches from Caffe→ONNX export.
-        // needsCrop: scan all inputs first to avoid the repack cost when no cropping is needed.
         const Mat& out0 = outputs[0];
         bool needsCrop = false;
         for (const auto& inp : used_inputs) {

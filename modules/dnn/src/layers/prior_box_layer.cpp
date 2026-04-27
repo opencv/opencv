@@ -203,6 +203,14 @@ public:
         remap("min_sizes",     "min_size");
         remap("max_sizes",     "max_size");
         remap("aspect_ratios", "aspect_ratio");
+
+        if (p.has("steps") && !p.has("step_h") && !p.has("step_w")) {
+            DictValue steps = p.get("steps");
+            if (steps.size() == 2) {
+                p.set("step_h", steps.get<float>(0));
+                p.set("step_w", steps.get<float>(1));
+            }
+        }
         return p;
     }
 
