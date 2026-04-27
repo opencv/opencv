@@ -252,6 +252,7 @@
 "test_less_uint32",
 "test_less_uint64",
 "test_less_uint8",
+"test_lpnormalization_default",
 "test_resize_upsample_scales_nearest_axes_2_3",
 "test_resize_upsample_sizes_nearest_axes_2_3",
 "test_split_equal_parts_2d_opset13",

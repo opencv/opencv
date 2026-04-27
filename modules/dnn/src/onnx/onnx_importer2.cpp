@@ -204,6 +204,7 @@ protected:
     void parseInstanceNormalization(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseLayerNorm            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseLeakyRelu            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseLpNormalization      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseLRN                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseLSTM                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseMatMul               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -1309,6 +1310,12 @@ void ONNXImporter2::parsePRelu(LayerParams& layerParams, const opencv_onnx::Node
     CV_Assert(net.isConstArg(node_inputs[1]));
     layerParams.blobs.push_back(net.argTensor(node_inputs[1]));
     addLayer(layerParams, node_proto, 1);
+}
+
+void ONNXImporter2::parseLpNormalization(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "NormalizeBBox";
+    addLayer(layerParams, node_proto);
 }
 
 void ONNXImporter2::parseLRN(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
@@ -2722,6 +2729,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["Abs"] = &ONNXImporter2::parseAbs;
     dispatch["PRelu"] = &ONNXImporter2::parsePRelu;
     dispatch["NonZero"] = &ONNXImporter2::parseNonZero;
+    dispatch["LpNormalization"] = &ONNXImporter2::parseLpNormalization;
     dispatch["LRN"] = &ONNXImporter2::parseLRN;
     dispatch["InstanceNormalization"] = &ONNXImporter2::parseInstanceNormalization;
     dispatch["BatchNormalization"] = &ONNXImporter2::parseBatchNormalization;
