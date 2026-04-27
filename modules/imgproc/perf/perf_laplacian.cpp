@@ -19,7 +19,7 @@ PERF_TEST_P(Perf_Laplacian, Laplacian,
                 BorderMode::all()
             ))
 {
-Size sz        = get<0>(GetParam());
+    Size sz        = get<0>(GetParam());
     int ksize      = get<1>(GetParam());
     int ddepth     = get<2>(GetParam());
     int borderMode = get<3>(GetParam());
