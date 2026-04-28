@@ -1704,14 +1704,14 @@ TEST(Core_InputOutput, FileStorage_json_unicode_escape)
     // Test 2-byte UTF-8 character (\u00A9=©)
     ASSERT_TRUE(fs["copyright"].isString());
     std::string copyright_str = (std::string)fs["copyright"];
-    ASSERT_EQ(copyright_str.size(), 2);  // © is 2 bytes in UTF-8
+    ASSERT_EQ(copyright_str.size(), 2u);  // © is 2 bytes in UTF-8
     ASSERT_EQ((unsigned char)copyright_str[0], 0xC2);
     ASSERT_EQ((unsigned char)copyright_str[1], 0xA9);
 
     // Test 3-byte UTF-8 character (\u4E2D=中)
     ASSERT_TRUE(fs["chinese"].isString());
     std::string chinese_str = (std::string)fs["chinese"];
-    ASSERT_EQ(chinese_str.size(), 3);  // 中 is 3 bytes in UTF-8
+    ASSERT_EQ(chinese_str.size(), 3u);  // 中 is 3 bytes in UTF-8
     ASSERT_EQ((unsigned char)chinese_str[0], 0xE4);
     ASSERT_EQ((unsigned char)chinese_str[1], 0xB8);
     ASSERT_EQ((unsigned char)chinese_str[2], 0xAD);
@@ -1719,7 +1719,7 @@ TEST(Core_InputOutput, FileStorage_json_unicode_escape)
     // Test another 3-byte character (\u263A=☺)
     ASSERT_TRUE(fs["emoji_base"].isString());
     std::string emoji_str = (std::string)fs["emoji_base"];
-    ASSERT_EQ(emoji_str.size(), 3);
+    ASSERT_EQ(emoji_str.size(), 3u);
     ASSERT_EQ((unsigned char)emoji_str[0], 0xE2);
     ASSERT_EQ((unsigned char)emoji_str[1], 0x98);
     ASSERT_EQ((unsigned char)emoji_str[2], 0xBA);
