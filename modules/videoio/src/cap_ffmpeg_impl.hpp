@@ -526,14 +526,17 @@ inline static std::string _opencv_ffmpeg_get_error_string(int error_code)
 
 static inline int64_t to_avtb(int64_t ts, AVRational tb)
 {
-    return av_rescale_q(ts, tb, AV_TIME_BASE_Q);
+    // Replace AV_TIME_BASE_Q with av_make_q(1, AV_TIME_BASE) to fix 
+    // MSVC C4576 error caused by C99 compound literal in strict C++17 mode
+    return av_rescale_q(ts, tb, av_make_q(1, AV_TIME_BASE));
 }
 
 static inline int64_t from_avtb(int64_t ts_avtb, AVRational tb)
 {
-    return av_rescale_q(ts_avtb, AV_TIME_BASE_Q, tb);
+    // Replace AV_TIME_BASE_Q with av_make_q(1, AV_TIME_BASE) to fix 
+    // MSVC C4576 error caused by C99 compound literal in strict C++17 mode
+    return av_rescale_q(ts_avtb, av_make_q(1, AV_TIME_BASE), tb);
 }
-
 
 struct CvCapture_FFMPEG
 {
