@@ -1117,11 +1117,12 @@ FillConvexPoly( Mat& img, const Point2l* v, int npts, const void* color, int lin
     else
         delta1 = XY_ONE - 1, delta2 = 0;
 
-    p0 = v[npts - 1];
-    p0.x <<= XY_SHIFT - shift;
-    p0.y <<= XY_SHIFT - shift;
-
     CV_Assert( 0 <= shift && shift <= XY_SHIFT );
+    const int64 xy_scale = 1LL << (XY_SHIFT - shift);
+
+    p0 = v[npts - 1];
+    p0.x *= xy_scale;
+    p0.y *= xy_scale;
     xmin = xmax = v[0].x;
     ymin = ymax = v[0].y;
 
@@ -1138,8 +1139,8 @@ FillConvexPoly( Mat& img, const Point2l* v, int npts, const void* color, int lin
         xmax = std::max( xmax, p.x );
         xmin = MIN( xmin, p.x );
 
-        p.x <<= XY_SHIFT - shift;
-        p.y <<= XY_SHIFT - shift;
+        p.x *= xy_scale;
+        p.y *= xy_scale;
 
         if( line_type <= 8 )
         {
@@ -1202,8 +1203,8 @@ FillConvexPoly( Mat& img, const Point2l* v, int npts, const void* color, int lin
                             int64 xe = v[idx].x;
                             if (shift != XY_SHIFT)
                             {
-                                xs <<= XY_SHIFT - shift;
-                                xe <<= XY_SHIFT - shift;
+                                xs *= xy_scale;
+                                xe *= xy_scale;
                             }
 
                             edge[i].ye = ty;
