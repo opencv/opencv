@@ -96,17 +96,17 @@ public:
 
 PERF_TEST_P_(DNNTestNetwork, AlexNet)
 {
-    processNet("dnn/bvlc_alexnet.caffemodel", "dnn/bvlc_alexnet.prototxt", cv::Size(227, 227));
+    processNet("dnn/onnx/models/alexnet.onnx", "", cv::Size(227, 227));
 }
 
 PERF_TEST_P_(DNNTestNetwork, GoogLeNet)
 {
-    processNet("dnn/bvlc_googlenet.caffemodel", "dnn/bvlc_googlenet.prototxt", cv::Size(224, 224));
+    processNet("dnn/onnx/models/googlenet.onnx", "", cv::Size(224, 224));
 }
 
 PERF_TEST_P_(DNNTestNetwork, ResNet_50)
 {
-    processNet("dnn/ResNet-50-model.caffemodel", "dnn/ResNet-50-deploy.prototxt", cv::Size(224, 224));
+    processNet("dnn/onnx/models/resnet50v1.onnx", "", cv::Size(224, 224));
 }
 
 PERF_TEST_P_(DNNTestNetwork, ResNet_18_v1_ONNX)
@@ -131,7 +131,7 @@ PERF_TEST_P_(DNNTestNetwork, ResNet50_QDQ_ONNX)
 
 PERF_TEST_P_(DNNTestNetwork, SqueezeNet_v1_1)
 {
-    processNet("dnn/squeezenet_v1.1.caffemodel", "dnn/squeezenet_v1.1.prototxt", cv::Size(227, 227));
+    processNet("dnn/onnx/models/squeezenet.onnx", "", cv::Size(227, 227));
 }
 
 PERF_TEST_P_(DNNTestNetwork, Inception_5h)
@@ -144,12 +144,12 @@ PERF_TEST_P_(DNNTestNetwork, SSD)
 {
     applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
 
-    processNet("dnn/VGG_ILSVRC2016_SSD_300x300_iter_440000.caffemodel", "dnn/ssd_vgg16.prototxt", cv::Size(300, 300));
+    processNet("dnn/ssd_vgg16.onnx", "", cv::Size(300, 300));
 }
 
 PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_Caffe)
 {
-    processNet("dnn/MobileNetSSD_deploy_19e3ec3.caffemodel", "dnn/MobileNetSSD_deploy_19e3ec3.prototxt", cv::Size(300, 300));
+    processNet("dnn/ssd_mobilenet_v1_12.onnx", "", cv::Size(300, 300));
 }
 
 PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow)
@@ -162,18 +162,9 @@ PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_v2_TensorFlow)
     processNet("dnn/ssd_mobilenet_v2_coco_2018_03_29.pb", "ssd_mobilenet_v2_coco_2018_03_29.pbtxt", cv::Size(300, 300));
 }
 
-PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_v1_ONNX)
-{
-    Mat image(cv::Size(300, 300), CV_8UC3);
-    randu(image, 0, 255);
-    int imsize[] = {1, image.rows, image.cols, 3};
-    Mat input(4, imsize, CV_8U, image.data);
-    processNet("dnn/onnx/models/ssd_mobilenet_v1_12.onnx", "", input);
-}
-
 PERF_TEST_P_(DNNTestNetwork, DenseNet_121)
 {
-    processNet("dnn/DenseNet_121.caffemodel", "dnn/DenseNet_121.prototxt", cv::Size(224, 224));
+    processNet("dnn/onnx/models/densenet121.onnx", "", cv::Size(224, 224));
 }
 
 PERF_TEST_P_(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
@@ -184,7 +175,8 @@ PERF_TEST_P_(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
         throw SkipTestException("");
     // The same .caffemodel but modified .prototxt
     // See https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/src/openpose/pose/poseParameters.cpp
-    processNet("dnn/openpose_pose_mpi.caffemodel", "dnn/openpose_pose_mpi_faster_4_stages.prototxt", cv::Size(368, 368));
+    // processNet("dnn/openpose_pose_mpi.caffemodel", "dnn/openpose_pose_mpi_faster_4_stages.prototxt", cv::Size(368, 368));
+    processNet("dnn/openpose_pose_mpi.onnx", "", cv::Size(368, 368));
 }
 
 PERF_TEST_P_(DNNTestNetwork, Inception_v2_SSD_TensorFlow)

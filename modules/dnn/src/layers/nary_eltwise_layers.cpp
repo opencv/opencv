@@ -933,7 +933,6 @@ public:
         }
 
         std::vector<Mat> used_inputs = inputs;
-
         const Mat& out0 = outputs[0];
         bool needsCrop = false;
         for (const auto& inp : used_inputs) {

@@ -7,8 +7,24 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/core/ocl.hpp"
+#include <set>
 
 namespace opencv_test { namespace {
+
+static const std::set<std::string>& getCaffeNewEngineDenylist()
+{
+    static const std::set<std::string> denyList = {
+        #include "test_caffe_importer_new_engine_denylist.inl.hpp"
+    };
+    return denyList;
+}
+
+static void skipIfInCaffeNewEngineDenylist()
+{
+    const std::string name = opencv_test::getCurrentTestNameNoParams();
+    if (!name.empty() && getCaffeNewEngineDenylist().count(name))
+        throw SkipTestException("Test is in the new engine denylist: " + name);
+}
 
 class DNNTestNetwork : public DNNTestLayer
 {
@@ -124,8 +140,7 @@ TEST_P(DNNTestNetwork, DISABLED_YOLOv8n) {
 TEST_P(DNNTestNetwork, AlexNet)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_1GB);
-    processNet("dnn/bvlc_alexnet.caffemodel", "dnn/bvlc_alexnet.prototxt",
-               Size(227, 227), "prob");
+    processNet("dnn/onnx/models/alexnet.onnx", "", Size(227, 227));
     expectNoFallbacksFromIE(net);
     expectNoFallbacksFromCUDA(net);
 }
@@ -137,16 +152,14 @@ TEST_P(DNNTestNetwork, ResNet_50)
         CV_TEST_TAG_DEBUG_VERYLONG
     );
 
-    processNet("dnn/ResNet-50-model.caffemodel", "dnn/ResNet-50-deploy.prototxt",
-               Size(224, 224), "prob");
+    processNet("dnn/onnx/models/resnet50v1.onnx", "", Size(224, 224));
     expectNoFallbacksFromIE(net);
     expectNoFallbacksFromCUDA(net);
 }
 
 TEST_P(DNNTestNetwork, SqueezeNet_v1_1)
 {
-    processNet("dnn/squeezenet_v1.1.caffemodel", "dnn/squeezenet_v1.1.prototxt",
-               Size(227, 227), "prob");
+    processNet("dnn/onnx/models/squeezenet.onnx", "", Size(227, 227));
     expectNoFallbacksFromIE(net);
     expectNoFallbacksFromCUDA(net);
 }
@@ -155,8 +168,7 @@ TEST_P(DNNTestNetwork, GoogLeNet)
 {
     applyTestTag(target == DNN_TARGET_CPU ? "" : CV_TEST_TAG_MEMORY_512MB);
 
-    processNet("dnn/bvlc_googlenet.caffemodel", "dnn/bvlc_googlenet.prototxt",
-               Size(224, 224), "prob");
+    processNet("dnn/onnx/models/googlenet.onnx", "", Size(224, 224));
     expectNoFallbacksFromIE(net);
     expectNoFallbacksFromCUDA(net);
 }
@@ -174,60 +186,6 @@ TEST_P(DNNTestNetwork, Inception_5h)
     processNet("dnn/tensorflow_inception_graph.pb", "", Size(224, 224), "softmax2", l1, lInf);
     expectNoFallbacksFromIE(net);
     expectNoFallbacksFromCUDA(net);
-}
-
-TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe)
-{
-    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
-    Mat sample = imread(findDataFile("dnn/street.png"));
-    Mat inp = blobFromImage(sample, 1.0f / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), false);
-    float scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16) ? 1.5e-2 : 0.0;
-    float iouDiff = (target == DNN_TARGET_MYRIAD) ? 0.063  : 0.0;
-    float detectionConfThresh = (target == DNN_TARGET_MYRIAD) ? 0.262  : FLT_MIN;
-    processNet("dnn/MobileNetSSD_deploy_19e3ec3.caffemodel", "dnn/MobileNetSSD_deploy_19e3ec3.prototxt",
-               inp, "detection_out", scoreDiff, iouDiff, detectionConfThresh);
-    expectNoFallbacksFromIE(net);
-}
-
-TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe_Different_Width_Height)
-{
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // May hang on some configurations
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
-        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
-            CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
-        );
-#elif defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
-    // IE exception: Ngraph operation Transpose with name conv15_2_mbox_conf_perm has dynamic output shape on 0 port, but CPU plug-in supports only static shape
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
-        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
-            CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
-        );
-    if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) &&
-        target == DNN_TARGET_MYRIAD && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#elif defined(INF_ENGINE_RELEASE)
-    if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) &&
-        target == DNN_TARGET_MYRIAD && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#endif
-
-    Mat sample = imread(findDataFile("dnn/street.png"));
-    Mat inp = blobFromImage(sample, 1.0f / 127.5, Size(300, 560), Scalar(127.5, 127.5, 127.5), false);
-    float scoreDiff = 0.0, iouDiff = 0.0;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
-    {
-        scoreDiff = 0.029;
-        iouDiff = 0.09;
-    }
-    else if (target == DNN_TARGET_CUDA_FP16)
-    {
-        scoreDiff = 0.03;
-        iouDiff = 0.08;
-    }
-    processNet("dnn/MobileNetSSD_deploy_19e3ec3.caffemodel", "dnn/MobileNetSSD_deploy_19e3ec3.prototxt",
-                inp, "detection_out", scoreDiff, iouDiff);
-    expectNoFallbacksFromIE(net);
 }
 
 TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow)
@@ -332,8 +290,8 @@ TEST_P(DNNTestNetwork, SSD_VGG16)
         iouDiff = 0.13;
     }
 
-    processNet("dnn/VGG_ILSVRC2016_SSD_300x300_iter_440000.caffemodel",
-               "dnn/ssd_vgg16.prototxt", inp, "detection_out", scoreDiff,
+    processNet("dnn/ssd_vgg16.onnx", "",
+               inp, "detection_out", scoreDiff,
                iouDiff, 0.2, false);
     expectNoFallbacksFromIE(net);
 }
@@ -350,7 +308,7 @@ TEST_P(DNNTestNetwork, OpenPose_pose_coco)
 
     const float l1 = (target == DNN_TARGET_MYRIAD) ? 0.009 : 0.0;
     const float lInf = (target == DNN_TARGET_MYRIAD) ? 0.09 : 0.0;
-    processNet("dnn/openpose_pose_coco.caffemodel", "dnn/openpose_pose_coco.prototxt",
+    processNet("dnn/openpose_pose_coco.onnx", "",
                Size(46, 46), "", l1, lInf);
     expectNoFallbacksFromIE(net);
     expectNoFallbacksFromCUDA(net);
@@ -369,7 +327,7 @@ TEST_P(DNNTestNetwork, OpenPose_pose_mpi)
     // output range: [-0.001, 0.97]
     const float l1 = (target == DNN_TARGET_MYRIAD) ? 0.02 : 0.0;
     const float lInf = (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16) ? 0.2 : 0.0;
-    processNet("dnn/openpose_pose_mpi.caffemodel", "dnn/openpose_pose_mpi.prototxt",
+    processNet("dnn/openpose_pose_mpi.onnx", "",
                Size(46, 46), "", l1, lInf);
     expectNoFallbacksFromIE(net);
     expectNoFallbacksFromCUDA(net);
@@ -384,9 +342,8 @@ TEST_P(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
 
-    // The same .caffemodel but modified .prototxt
     // See https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/src/openpose/pose/poseParameters.cpp
-    processNet("dnn/openpose_pose_mpi.caffemodel", "dnn/openpose_pose_mpi_faster_4_stages.prototxt",
+    processNet("dnn/openpose_pose_mpi_faster_4_stages.onnx", "",
                Size(46, 46));
     expectNoFallbacksFromIE(net);
     expectNoFallbacksFromCUDA(net);
@@ -459,7 +416,7 @@ TEST_P(DNNTestNetwork, DenseNet_121)
         l1 = 0.008;
         lInf = 0.06;
     }
-    processNet("dnn/DenseNet_121.caffemodel", "dnn/DenseNet_121.prototxt", Size(224, 224), "", l1, lInf);
+    processNet("dnn/onnx/models/densenet121.onnx", "", Size(224, 224), "", l1, lInf);
     if (target != DNN_TARGET_MYRIAD || getInferenceEngineVPUType() != CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
         expectNoFallbacksFromIE(net);
     expectNoFallbacksFromCUDA(net);

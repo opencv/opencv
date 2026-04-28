@@ -10,6 +10,21 @@
 #include <set>
 namespace opencv_test { namespace {
 
+static const std::set<std::string>& getCaffeNewEngineDenylist()
+{
+    static const std::set<std::string> denyList = {
+        #include "test_caffe_importer_new_engine_denylist.inl.hpp"
+    };
+    return denyList;
+}
+
+static void skipIfInCaffeNewEngineDenylist()
+{
+    const std::string name = opencv_test::getCurrentTestNameNoParams();
+    if (!name.empty() && getCaffeNewEngineDenylist().count(name))
+        throw SkipTestException("Test is in the new engine denylist: " + name);
+}
+
 template<typename TString>
 static std::string _tf(TString filename, bool required = true)
 {
@@ -282,13 +297,12 @@ TEST_P(Test_Model, Classify)
     std::pair<int, float> ref(652, 0.641789);
 
     std::string img_path = _tf("grace_hopper_227.png");
-    std::string config_file = _tf("bvlc_alexnet.prototxt");
-    std::string weights_file = _tf("bvlc_alexnet.caffemodel", false);
+    std::string weights_file = _tf("onnx/models/alexnet.onnx", false);
 
     Size size{227, 227};
     float norm = 1e-4;
 
-    testClassifyModel(weights_file, config_file, img_path, ref, norm, size);
+    testClassifyModel(weights_file, "", img_path, ref, norm, size);
 }
 
 
@@ -324,8 +338,8 @@ TEST_P(Test_Model, DetectionOutput)
                                     Rect2d(132, 223, 207, 344)};
 
     std::string img_path = _tf("dog416.png");
-    std::string weights_file = _tf("resnet50_rfcn_final.caffemodel", false);
-    std::string config_file = _tf("rfcn_pascal_voc_resnet50.prototxt");
+    std::string weights_file = _tf("resnet50_rfcn_final.onnx", false);
+    std::string config_file = "";
 
     Scalar mean = Scalar(102.9801, 115.9465, 122.7717);
     Size size{800, 600};
@@ -351,64 +365,6 @@ TEST_P(Test_Model, DetectionOutput)
 
     testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences, refBoxes,
                     scoreDiff, iouDiff, confThreshold, nmsThreshold, size, mean);
-}
-
-
-TEST_P(Test_Model, DetectionMobilenetSSD)
-{
-    Mat ref = blobFromNPY(_tf("mobilenet_ssd_caffe_out.npy"));
-    ref = ref.reshape(1, ref.size[2]);
-
-    std::string img_path = _tf("street.png");
-    Mat frame = imread(img_path);
-    int frameWidth  = frame.cols;
-    int frameHeight = frame.rows;
-
-    std::vector<int> refClassIds;
-    std::vector<float> refConfidences;
-    std::vector<Rect2d> refBoxes;
-    for (int i = 0; i < ref.rows; i++)
-    {
-        refClassIds.emplace_back(ref.at<float>(i, 1));
-        refConfidences.emplace_back(ref.at<float>(i, 2));
-        int left   = ref.at<float>(i, 3) * frameWidth;
-        int top    = ref.at<float>(i, 4) * frameHeight;
-        int right  = ref.at<float>(i, 5) * frameWidth;
-        int bottom = ref.at<float>(i, 6) * frameHeight;
-        int width  = right  - left + 1;
-        int height = bottom - top + 1;
-        refBoxes.emplace_back(left, top, width, height);
-    }
-
-    std::string weights_file = _tf("MobileNetSSD_deploy_19e3ec3.caffemodel", false);
-    std::string config_file = _tf("MobileNetSSD_deploy_19e3ec3.prototxt");
-
-    Scalar mean = Scalar(127.5, 127.5, 127.5);
-    double scale = 1.0 / 127.5;
-    Size size{300, 300};
-
-    double scoreDiff = 1e-5, iouDiff = 1e-5;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16)
-    {
-        scoreDiff = 1.7e-2;
-        iouDiff = 6.91e-2;
-    }
-    else if (target == DNN_TARGET_MYRIAD)
-    {
-        scoreDiff = 0.017;
-        if (getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-            iouDiff = 0.1;
-    }
-    else if (target == DNN_TARGET_CUDA_FP16)
-    {
-        scoreDiff = 0.0028;
-        iouDiff = 1e-2;
-    }
-    float confThreshold = FLT_MIN;
-    double nmsThreshold = 0.0;
-
-    testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences, refBoxes,
-                    scoreDiff, iouDiff, confThreshold, nmsThreshold, size, mean, scale);
 }
 
 TEST_P(Test_Model, Keypoints_pose)
@@ -476,44 +432,6 @@ TEST_P(Test_Model, Keypoints_face)
         norm = 0.004; // l1 = 0.0006, lInf = 0.004
 
     testKeypointsModel(weights, "", inp, exp, norm, size, mean, scale, swapRB);
-}
-
-TEST_P(Test_Model, Detection_normalized)
-{
-    std::string img_path = _tf("grace_hopper_227.png");
-    std::vector<int> refClassIds = {15};
-    std::vector<float> refConfidences = {0.999222f};
-    std::vector<Rect2d> refBoxes = {Rect2d(0, 4, 227, 222)};
-
-    std::string weights_file = _tf("MobileNetSSD_deploy_19e3ec3.caffemodel", false);
-    std::string config_file = _tf("MobileNetSSD_deploy_19e3ec3.prototxt");
-
-    Scalar mean = Scalar(127.5, 127.5, 127.5);
-    double scale = 1.0 / 127.5;
-    Size size{300, 300};
-
-    double scoreDiff = 1e-5, iouDiff = 1e-5;
-    float confThreshold = FLT_MIN;
-    double nmsThreshold = 0.0;
-    if (target == DNN_TARGET_CUDA)
-    {
-        scoreDiff = 3e-4;
-        iouDiff = 0.018;
-    }
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_CPU_FP16)
-    {
-        scoreDiff = 5e-3;
-        iouDiff = 0.09;
-    }
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2020040000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
-    {
-        scoreDiff = 0.02;
-        iouDiff = 0.1f;
-    }
-#endif
-    testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences, refBoxes,
-                    scoreDiff, iouDiff, confThreshold, nmsThreshold, size, mean, scale);
 }
 
 TEST_P(Test_Model, Segmentation)

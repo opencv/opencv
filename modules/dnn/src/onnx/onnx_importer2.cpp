@@ -2087,6 +2087,49 @@ void ONNXImporter2::parseDetectionOutput(LayerParams& layerParams, const opencv_
 void ONNXImporter2::parsePriorBox(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "PriorBox";
+
+    if (node_proto.input_size() < 2)
+    {
+        bool needImgSize = true;
+        if (layerParams.has("img_sizes"))
+        {
+            DictValue v = layerParams.get("img_sizes");
+            if (v.size() >= 2 && (v.getIntValue(0) != 0 || v.getIntValue(1) != 0))
+                needImgSize = false;
+        }
+        if (needImgSize && curr_graph_proto)
+        {
+            for (int i = 0; i < curr_graph_proto->input_size(); i++)
+            {
+                const auto& inp = curr_graph_proto->input(i);
+                if (inp.has_type() && inp.type().has_tensor_type() &&
+                    inp.type().tensor_type().has_shape() &&
+                    inp.type().tensor_type().shape().dim_size() == 4)
+                {
+                    int h = (int)inp.type().tensor_type().shape().dim(2).dim_value();
+                    int w = (int)inp.type().tensor_type().shape().dim(3).dim_value();
+                    if (h > 0 && w > 0)
+                    {
+                        // DEBUG: confirm this is firing
+                        std::cerr << "[parsePriorBox] " << node_proto.name()
+                                  << " setting img_h=" << h << " img_w=" << w
+                                  << " from graph input '" << inp.name() << "'\n";
+                        layerParams.set("img_h", h);
+                        layerParams.set("img_w", w);
+                        break;
+                    }
+                }
+            }
+        }
+        else
+        {
+            std::cerr << "[parsePriorBox] " << node_proto.name()
+                      << " fallback skipped: needImgSize=" << needImgSize
+                      << " curr_graph_proto=" << (curr_graph_proto ? "set" : "null")
+                      << "\n";
+        }
+    }
+
     addLayer(layerParams, node_proto);
 }
 

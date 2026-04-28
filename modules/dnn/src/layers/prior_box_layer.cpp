@@ -306,6 +306,14 @@ public:
             _offsetsX.assign(1, offset);
             _offsetsY.assign(1, offset);
         }
+        if (params.has("img_h") && params.has("img_w")) {
+            _imageHeight = getParameter<int>(params, "img_h");
+            _imageWidth = getParameter<int>(params, "img_w");
+        } else if (params.has("img_size")) {
+            int imgSize = getParameter<int>(params, "img_size");
+            _imageHeight = imgSize;
+            _imageWidth = imgSize;
+        }
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
@@ -346,16 +354,19 @@ public:
         std::vector<Mat> inputs;
         inputs_arr.getMatVector(inputs);
 
-        CV_CheckGT(inputs.size(), (size_t)1, "");
-        CV_CheckEQ(inputs[0].dims, 4, ""); CV_CheckEQ(inputs[1].dims, 4, "");
+        CV_CheckEQ(inputs[0].dims, 4, "");
         int layerWidth = inputs[0].size[3];
         int layerHeight = inputs[0].size[2];
 
-        int imageWidth = inputs[1].size[3];
-        int imageHeight = inputs[1].size[2];
+        if (inputs.size() > 1)
+        {
+            CV_CheckEQ(inputs[1].dims, 4, "");
+            _imageWidth = inputs[1].size[3];
+            _imageHeight = inputs[1].size[2];
+        }
 
-        _stepY = _stepY == 0 ? (static_cast<float>(imageHeight) / layerHeight) : _stepY;
-        _stepX = _stepX == 0 ? (static_cast<float>(imageWidth) / layerWidth) : _stepX;
+        _stepY = _stepY == 0 ? (static_cast<float>(_imageHeight) / layerHeight) : _stepY;
+        _stepX = _stepX == 0 ? (static_cast<float>(_imageWidth) / layerWidth) : _stepX;
     }
 
 #ifdef HAVE_OPENCL
@@ -371,8 +382,13 @@ public:
         int _layerWidth = inputs[0].size[3];
         int _layerHeight = inputs[0].size[2];
 
-        int _imageWidth = inputs[1].size[3];
-        int _imageHeight = inputs[1].size[2];
+        int imgW = _imageWidth;
+        int imgH = _imageHeight;
+        if (inputs.size() >= 2)
+        {
+            imgW = inputs[1].size[3];
+            imgH = inputs[1].size[2];
+        }
 
         if (umat_offsetsX.empty())
         {
@@ -410,8 +426,8 @@ public:
         kernel.set(9, ocl::KernelArg::PtrWriteOnly(outputs[0]));
         kernel.set(10, (int)_layerHeight);
         kernel.set(11, (int)_layerWidth);
-        kernel.set(12, (int)_imageHeight);
-        kernel.set(13, (int)_imageWidth);
+        kernel.set(12, (int)imgH);
+        kernel.set(13, (int)imgW);
         kernel.run(1, &nthreads, NULL, false);
 
         // clip the prior's coordinate such that it is within [0, 1]
@@ -459,13 +475,19 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        CV_Assert(inputs.size() == 2);
+        CV_Assert(!inputs.empty());
 
         int _layerWidth = inputs[0].size[3];
         int _layerHeight = inputs[0].size[2];
 
-        int _imageWidth = inputs[1].size[3];
-        int _imageHeight = inputs[1].size[2];
+        int imgW = _imageWidth;
+        int imgH = _imageHeight;
+        if (inputs.size() >= 2)
+        {
+            imgW = inputs[1].size[3];
+            imgH = inputs[1].size[2];
+        }
+        CV_Assert(imgW > 0 && imgH > 0);
 
         float* outputPtr = outputs[0].ptr<float>();
         float _boxWidth, _boxHeight;
@@ -481,8 +503,8 @@ public:
                     {
                         float center_x = (w + _offsetsX[j]) * _stepX;
                         float center_y = (h + _offsetsY[j]) * _stepY;
-                        outputPtr = addPrior(center_x, center_y, _boxWidth, _boxHeight, _imageWidth,
-                                             _imageHeight, _bboxesNormalized, outputPtr);
+                        outputPtr = addPrior(center_x, center_y, _boxWidth, _boxHeight, imgW,
+                                             imgH, _bboxesNormalized, outputPtr);
                     }
                 }
             }
@@ -669,6 +691,9 @@ private:
     bool _bboxesNormalized;
 
     size_t _numPriors;
+
+    int _imageWidth = 0;
+    int _imageHeight = 0;
 
     static const size_t _numAxes = 4;
     static const std::string _layerName;
