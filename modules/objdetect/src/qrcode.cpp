@@ -10,17 +10,96 @@
 #include "opencv2/3d.hpp"
 #include <opencv2/core/utils/logger.hpp>
 #include "graphical_code_detector_impl.hpp"
+#include "qrcode_yunet.hpp"
+
 
 #include <array>
 #include <limits>
 #include <cmath>
 #include <queue>
 #include <map>
+#include <iomanip>
+#include <mutex>
 
 namespace cv
 {
 using std::vector;
 using std::pair;
+
+namespace {
+struct YunetTimingSummary {
+    std::mutex mutex;
+    int total_calls = 0;
+    int yunet_attempts = 0;
+    int yunet_hits = 0;
+    double total_coarse_ms = 0.0;
+    double total_detect_ms = 0.0;
+    double total_decode_ms = 0.0;
+    double total_call_ms = 0.0;
+
+    void add(bool attempted, bool hit, double coarse_ms, double detect_ms, double decode_ms, double call_ms)
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        total_calls++;
+        yunet_attempts += attempted ? 1 : 0;
+        yunet_hits += hit ? 1 : 0;
+        total_coarse_ms += coarse_ms;
+        total_detect_ms += detect_ms;
+        total_decode_ms += decode_ms;
+        total_call_ms += call_ms;
+    }
+
+    ~YunetTimingSummary()
+    {
+        if (total_calls == 0)
+            return;
+
+        const double inv = 1.0 / static_cast<double>(total_calls);
+        std::cout << "\n[YUNET_TIMING] calls=" << total_calls
+                  << " attempts=" << yunet_attempts
+                  << " hits=" << yunet_hits << std::endl;
+        std::cout << std::fixed << std::setprecision(3)
+                  << "[YUNET_TIMING] avg_coarse_ms=" << (total_coarse_ms * inv)
+                  << " avg_detect_ms=" << (total_detect_ms * inv)
+                  << " avg_decode_ms=" << (total_decode_ms * inv)
+                  << " avg_total_ms=" << (total_call_ms * inv)
+                  << std::endl;
+    }
+};
+
+static YunetTimingSummary& getYunetTimingSummary()
+{
+    static YunetTimingSummary summary;
+    return summary;
+}
+
+static YunetWrapper& getYunetWrapper()
+{
+    static YunetWrapper yunet = []() {
+        if (const char* env = std::getenv("OPENCV_YUNET_MODEL"))
+            return YunetWrapper(std::string(env));
+        return YunetWrapper();
+    }();
+    return yunet;
+}
+} // namespace
+
+static cv::Rect expandBox(
+    const cv::Rect& box,
+    const cv::Size& imgSize,
+    float ratio = 0.15f)
+{
+    int dw = static_cast<int>(box.width  * ratio);
+    int dh = static_cast<int>(box.height * ratio);
+
+    int x1 = std::max(0, box.x - dw);
+    int y1 = std::max(0, box.y - dh);
+    int x2 = std::min(imgSize.width,  box.x + box.width  + dw);
+    int y2 = std::min(imgSize.height, box.y + box.height + dh);
+
+    return cv::Rect(x1, y1, x2 - x1, y2 - y1);
+}
+
 
 static bool checkQRInputImage(InputArray img, Mat& gray)
 {
@@ -123,7 +202,7 @@ void QRDetect::init(const Mat& src, double eps_vertical_, double eps_horizontal_
 {
     CV_TRACE_FUNCTION();
     CV_Assert(!src.empty());
-    barcode = src.clone();
+        barcode = src.clone(); // Clone the source image for processing
     const double min_side = std::min(src.size().width, src.size().height);
     if (min_side < 512.0)
     {
@@ -2995,25 +3074,133 @@ String ImplContour::decodeCurved(InputArray in, InputArray points, OutputArray s
     return ok ? decoded_info : std::string();
 }
 
-std::string ImplContour::detectAndDecode(InputArray in, OutputArray points_, OutputArray straight_qrcode) const {
-    Mat inarr;
+// ===============================================================
+// Modified detectAndDecode() with optional YUNET preprocessing
+// ===============================================================
+
+std::string ImplContour::detectAndDecode(InputArray in,
+                                         OutputArray points_,
+                                         OutputArray straight_qrcode) const
+{
+    const auto call_t0 = std::chrono::steady_clock::now();
+    double coarse_ms = 0.0;
+    double detect_ms = 0.0;
+    double decode_ms = 0.0;
+    bool yunet_attempted = false;
+    bool yunet_hit = false;
+
+    cv::Mat inarr;
+    // Validate the input image with checkQRInputImage.
     if (!checkQRInputImage(in, inarr))
     {
+        const auto call_t1 = std::chrono::steady_clock::now();
+        const double call_ms = std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(call_t1 - call_t0).count();
+        getYunetTimingSummary().add(yunet_attempted, yunet_hit, coarse_ms, detect_ms, decode_ms, call_ms);
         points_.release();
         return std::string();
     }
 
-    vector<Point2f> points;
-    bool ok = detect(inarr, points);
-    if (!ok)
-    {
-        points_.release();
-        return std::string();
+    // Get the cv::Mat view and check whether the image is grayscale.
+    inarr = in.getMat();
+
+    // Convert grayscale images to 3-channel BGR.
+    if (inarr.channels() == 1) {
+        cv::cvtColor(inarr, inarr, cv::COLOR_GRAY2BGR);  // Convert to 3-channel BGR.
     }
-    updatePointsResult(points_, points);
-    std::string decoded_info = decode(inarr, points, straight_qrcode);
-    return decoded_info;
+
+    // -----------------------------------------------------------
+    // 1. Optional YuNet coarse detection (embedded model by default).
+    // -----------------------------------------------------------
+    yunet_attempted = true;
+    {
+        YunetWrapper& yunet = getYunetWrapper();
+
+        const auto coarse_t0 = std::chrono::steady_clock::now();
+        std::vector<cv::Rect> yunet_boxes;
+        const bool coarse_ok = yunet.detectMulti(inarr, yunet_boxes);
+        const auto coarse_t1 = std::chrono::steady_clock::now();
+        coarse_ms += std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(coarse_t1 - coarse_t0).count();
+
+        if (coarse_ok)
+        {
+            yunet_hit = true;
+
+            // Try all YuNet candidates (sorted by score in detectMulti).
+            for (const cv::Rect& box : yunet_boxes)
+            {
+                // Expand the bounding box by 20% (aligned with the Python benchmark).
+                const float scale = 1.20f;
+                int w = box.width;
+                int h = box.height;
+                int cx = box.x + w / 2;
+                int cy = box.y + h / 2;
+
+                int new_w = int(w * scale);
+                int new_h = int(h * scale);
+
+                int x1 = std::max(0, cx - new_w / 2);
+                int y1 = std::max(0, cy - new_h / 2);
+                int x2 = std::min(inarr.cols, cx + new_w / 2);
+                int y2 = std::min(inarr.rows, cy + new_h / 2);
+
+                cv::Rect roi_rect(x1, y1, x2 - x1, y2 - y1);
+                if (roi_rect.width <= 0 || roi_rect.height <= 0)
+                {
+                    continue;
+                }
+
+                cv::Mat roi = inarr(roi_rect).clone();
+
+                // ---------------------------------------------------
+                // 2. Run OpenCV's original fine QR detector on the ROI.
+                // ---------------------------------------------------
+                std::vector<cv::Point2f> roi_points;
+                const auto detect_t0 = std::chrono::steady_clock::now();
+                bool ok = detect(roi, roi_points);
+                const auto detect_t1 = std::chrono::steady_clock::now();
+                detect_ms += std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(detect_t1 - detect_t0).count();
+
+                if (!ok)
+                {
+                    continue;
+                }
+
+                // Decode the QR code from the ROI.
+                const auto decode_t0 = std::chrono::steady_clock::now();
+                std::string decoded = decode(roi, roi_points, straight_qrcode);
+                const auto decode_t1 = std::chrono::steady_clock::now();
+                decode_ms += std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(decode_t1 - decode_t0).count();
+
+                if (decoded.empty())
+                {
+                    continue;
+                }
+
+                // Convert ROI-local points to the original image coordinates for output only.
+                std::vector<cv::Point2f> out_points = roi_points;
+                for (auto& pt : out_points)
+                {
+                    pt.x += roi_rect.x;
+                    pt.y += roi_rect.y;
+                }
+
+                updatePointsResult(points_, out_points);
+
+                const auto call_t1 = std::chrono::steady_clock::now();
+                const double call_ms = std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(call_t1 - call_t0).count();
+                getYunetTimingSummary().add(yunet_attempted, yunet_hit, coarse_ms, detect_ms, decode_ms, call_ms);
+                return decoded;
+            }
+        }
+    }
+
+    const auto call_t1 = std::chrono::steady_clock::now();
+    const double call_ms = std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(call_t1 - call_t0).count();
+    getYunetTimingSummary().add(yunet_attempted, yunet_hit, coarse_ms, detect_ms, decode_ms, call_ms);
+    points_.release();
+    return std::string();
 }
+
 
 std::string QRCodeDetector::detectAndDecodeCurved(InputArray in, OutputArray points,
                                                   OutputArray straight_qrcode) {
@@ -3021,27 +3208,85 @@ std::string QRCodeDetector::detectAndDecodeCurved(InputArray in, OutputArray poi
     return std::dynamic_pointer_cast<ImplContour>(p)->detectAndDecodeCurved(in, points, straight_qrcode);
 }
 
-std::string ImplContour::detectAndDecodeCurved(InputArray in, OutputArray points_,
+// ===============================================================
+// Modified detectAndDecodeCurved() with optional YUNET preprocessing
+// ===============================================================
+
+std::string ImplContour::detectAndDecodeCurved(InputArray in,
+                                               OutputArray points_,
                                                OutputArray straight_qrcode)
 {
-    Mat inarr;
+    cv::Mat inarr;
     if (!checkQRInputImage(in, inarr))
     {
         points_.release();
         return std::string();
     }
+    // Get the cv::Mat view and check whether the image is grayscale.
+    inarr = in.getMat();
 
-    vector<Point2f> points;
-    bool ok = detect(inarr, points);
-    if (!ok)
-    {
-        points_.release();
-        return std::string();
+    // Convert grayscale images to 3-channel BGR.
+    if (inarr.channels() == 1) {
+        cv::cvtColor(inarr, inarr, cv::COLOR_GRAY2BGR);  // Convert to 3-channel BGR.
     }
-    updatePointsResult(points_, points);
-    std::string decoded_info = decodeCurved(inarr, points, straight_qrcode);
-    return decoded_info;
+
+    // -----------------------------------------------------------
+    // 1. Optional YuNet coarse detection (embedded model by default).
+    // -----------------------------------------------------------
+    cv::Rect yunet_box;
+
+    {
+        YunetWrapper& yunet = getYunetWrapper();
+
+        if (yunet.detect(inarr, yunet_box))
+        {
+            // Expand the bounding box by 10%.
+            const float scale = 1.10f;
+            int w = yunet_box.width;
+            int h = yunet_box.height;
+            int cx = yunet_box.x + w / 2;
+            int cy = yunet_box.y + h / 2;
+
+            int new_w = int(w * scale);
+            int new_h = int(h * scale);
+
+            int x1 = std::max(0, cx - new_w / 2);
+            int y1 = std::max(0, cy - new_h / 2);
+            int x2 = std::min(inarr.cols, cx + new_w / 2);
+            int y2 = std::min(inarr.rows, cy + new_h / 2);
+
+            yunet_box = cv::Rect(x1, y1, x2 - x1, y2 - y1);
+
+            // Crop the ROI for fine detection.
+            cv::Mat roi = inarr(yunet_box).clone();
+
+            // ---------------------------------------------------
+            // 2. Run the original OpenCV fine detector on the ROI.
+            // ---------------------------------------------------
+            std::vector<cv::Point2f> points;
+            bool ok = detect(roi, points);
+
+            if (ok)
+            {
+                // Convert ROI-local keypoints to the original image coordinates.
+                for (auto& pt : points)
+                {
+                    pt.x += yunet_box.x;
+                    pt.y += yunet_box.y;
+                }
+
+                updatePointsResult(points_, points);
+
+                // Curved QR decoding on ROI
+                return decodeCurved(roi, points, straight_qrcode);
+            }
+        }
+    }
+
+    points_.release();
+    return std::string();
 }
+
 
 class QRDetectMulti : public QRDetect
 {
@@ -3972,29 +4217,93 @@ bool QRDetectMulti::computeTransformationPoints(const size_t cur_ind)
     return true;
 }
 
-bool ImplContour::detectMulti(InputArray in, OutputArray points) const {
+bool ImplContour::detectMulti(InputArray in, OutputArray points) const
+{
     Mat gray;
     if (!checkQRInputImage(in, gray)) {
         points.release();
         return false;
     }
-    vector<Point2f> result;
-    QRDetectMulti qrdet;
-    qrdet.init(gray, epsX, epsY);
-    if (!qrdet.localization()) {
+
+    // =====================================================
+    // [NEW] 1. YuNet multi coarse detection + single-code refinement.
+    // =====================================================
+    {
+            std::cout << "[DEBUG] Enter YuNet branch\n";
+
+        // --- Prepare a color image for YuNet ---
+        Mat color;
+        if (in.kind() == _InputArray::MAT)
+        {
+            Mat src = in.getMat();
+            if (src.channels() == 3)
+                color = src;
+            else if (src.channels() == 1)
+                cvtColor(src, color, COLOR_GRAY2BGR);
+        }
+
+        if (color.empty())
+        {
+            points.release();
+            return false;
+        }
+
+        YunetWrapper& yunet = getYunetWrapper();
+        std::vector<cv::Rect> boxes;
+
+        if (!yunet.detectMulti(color, boxes))
+        {
+            points.release();
+            return false;
+        }
+
+        std::cout << "[DEBUG] YuNet detectMulti boxes = "
+                  << boxes.size() << std::endl;
+
+        std::vector<Point2f> flat_result;
+
+        for (const Rect& box : boxes)
+        {
+            std::cout << "[DEBUG] Box = " << box << std::endl;
+            Rect roi = expandBox(box, gray.size());
+            Mat roi_img = gray(roi);
+
+            QRDetect qrdet;
+            qrdet.init(roi_img, epsX, epsY);
+
+            if (!qrdet.localization())
+                continue;
+            if (!qrdet.computeTransformationPoints())
+                continue;
+
+            vector<Point2f> pts = qrdet.getTransformationPoints();
+            if (pts.size() != 4)
+                continue;
+
+            for (auto& p : pts)
+            {
+                p.x += roi.x;
+                p.y += roi.y;
+                flat_result.push_back(p);
+            }
+        }
+
+        if (flat_result.size() >= 4)
+        {
+            std::cout << "[DEBUG] YuNet refine SUCCESS\n";
+
+            updatePointsResult(points, flat_result);
+            return true;
+        }
+
         points.release();
         return false;
     }
-    vector<vector<Point2f> > pnts2f = qrdet.getTransformationPoints();
-    for(size_t i = 0; i < pnts2f.size(); i++)
-        for(size_t j = 0; j < pnts2f[i].size(); j++)
-            result.push_back(pnts2f[i][j]);
-    if (result.size() >= 4) {
-        updatePointsResult(points, result);
-        return true;
-    }
+
+    points.release();
     return false;
 }
+
 
 class ParallelDecodeProcess : public ParallelLoopBody
 {
