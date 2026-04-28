@@ -1244,8 +1244,9 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                     mCond = outputs[0];
                     active = loopLayer->cond(mCond);
 
+                    // Deep-copy: body buffers (and their UMats via Mat::fit reuse) are recycled across iterations.
                     for (int i = 0; i < n_state; i++)
-                        state[i] = outputs[1 + i];
+                        state[i] = outputs[1 + i].clone();
                     for (int i = 0; i < n_accum; i++)
                         history[i].push_back(outputs[1 + n_state + i].clone());
                 }
