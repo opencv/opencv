@@ -23,6 +23,8 @@ void initKVDataRecursively(const Ptr<Graph>& graph, std::map<std::string, KCache
 
         if (layer->type == "AttentionOnnxAi") {
             int kvNumHeads = layer.dynamicCast<AttentionOnnxAiLayer>()->kv_num_heads;
+            CV_LOG_DEBUG(NULL, "Initializing KV cache for layer " << layer->name << " with " << kvNumHeads << " heads");
+            std::cout << "Initializing KV cache for layer " << layer->name << " with " << kvNumHeads << " heads" << std::endl;
 
             if (kvNumHeads > 0)
             {
@@ -115,6 +117,19 @@ void KVCache::grow(const Mat& newData) {
         growGenerate(newData);
     }
 
+    if (isKCache){
+        std::cout << "KCache:" << std::endl;
+    } else {
+        std::cout << "VCache:" << std::endl;
+    }
+
+    std::cout << "Cache grew. nTokens: " << nTokens << ", nPages: " << pages.size() << std::endl;
+    for(int i = 0; i < pages.size(); i++){
+       for(int j = 0; j < pages[i].total(); j++){
+               std::cout << pages[i].ptr<float>()[j] << " ";
+       }
+         std::cout << std::endl;
+    }
 }
 
 void KVCache::growPrefill(const Mat& newData, int T){
