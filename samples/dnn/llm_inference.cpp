@@ -79,7 +79,7 @@ using namespace std;
 //
 // ORT-GenAI path: uses OGA tokenizer + single run() call for full generation.
 //
-void runOrtGenAI(const string& modelPath, const string& userPrompt, int maxNewTokens)
+static void runOrtGenAI(const string& modelPath, const string& userPrompt, int maxNewTokens)
 {
     // 1. Create LLM with ORT-GenAI tokenizer
     LLM llm = LLM::create(modelPath, TOKENIZER_ORT_GENAI);
@@ -106,7 +106,7 @@ void runOrtGenAI(const string& modelPath, const string& userPrompt, int maxNewTo
 //
 // GPT-2 path: uses OpenCV BPE tokenizer + autoregressive greedy decoding loop.
 //
-void runGpt2(const string& modelPath, const string& tokenizerCfg,
+static void runGpt2(const string& modelPath, const string& tokenizerCfg,
              const string& userPrompt, int maxSeqLen)
 {
     // 1. Create LLM with OpenCV BPE tokenizer
@@ -142,7 +142,7 @@ void runGpt2(const string& modelPath, const string& tokenizerCfg,
 // Qwen2.5 path: uses OpenCV BPE tokenizer + autoregressive greedy decoding loop
 // with multiple named inputs (input_ids, attention_mask, position_ids).
 //
-void runQwen(const string& modelPath, const string& tokenizerCfg,
+static void runQwen(const string& modelPath, const string& tokenizerCfg,
              const string& userPrompt, int maxNewTokens)
 {
     // 1. Create LLM with OpenCV BPE tokenizer and ENGINE_NEW

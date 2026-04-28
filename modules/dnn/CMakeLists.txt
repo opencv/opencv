@@ -502,7 +502,7 @@ if(WITH_ONNXRUNTIME_GENAI AND WITH_ONNXRUNTIME)
       list(APPEND libs "${ONNXGENAI_LIBRARIES}")
     endif()
 
-    add_definitions(-DHAVE_ONNXRUNTIME_GENAI=1)
+    add_definitions(-DHAVE_ONNXRUNTIME_GENAI=1 -DOGA_USE_SPAN=0)
     message(STATUS "DNN: ONNX Runtime GenAI enabled")
 
     set(_ortga_runtime_libs "")
