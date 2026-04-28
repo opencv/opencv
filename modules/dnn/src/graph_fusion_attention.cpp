@@ -189,17 +189,12 @@ struct ModelFusionAttention
                         vector<int>* out_perm,
                         std::set<int>* extra_ops_to_remove) const
     {
-        const char* dbg = std::getenv("OPENCV_DBG_ATTN_FUSION");
         if (proj_matmul_idx < 0) return -1;
         Arg proj_out = prog[proj_matmul_idx]->outputs[0];
         int reshape_idx = findMatchingConsumer(prog, proj_out,
             [](Layer* L){ return dynamic_cast<Reshape2Layer*>(L) != nullptr; },
             extra_ops_to_remove);
-        if (!isReshape(prog, reshape_idx)) {
-            if (dbg) fprintf(stderr, "    proj %d: no unique Reshape consumer (ridx=%d)\n",
-                             proj_matmul_idx, reshape_idx);
-            return -1;
-        }
+        if (!isReshape(prog, reshape_idx)) return -1;
 
         const auto& reshape_inputs = prog[reshape_idx]->inputs;
         if (reshape_inputs.size() < 2) return -1;
@@ -217,11 +212,8 @@ struct ModelFusionAttention
             int concat_idx = it->second;
             if (concat_idx < 0 || concat_idx >= (int)prog.size() || !prog[concat_idx])
                 return -1;
-            if (!dynamic_cast<Concat2Layer*>(prog[concat_idx].get())) {
-                if (dbg) fprintf(stderr, "    reshape shape producer is %s, not Concat2\n",
-                                 prog[concat_idx]->type.c_str());
+            if (!dynamic_cast<Concat2Layer*>(prog[concat_idx].get()))
                 return -1;
-            }
             const auto& cinputs = prog[concat_idx]->inputs;
             if (cinputs.size() != 4) return -1;
             num_heads = extractConstInt(prog, cinputs[2]);
@@ -234,10 +226,7 @@ struct ModelFusionAttention
 
         Arg reshape_out = prog[reshape_idx]->outputs[0];
         int transpose_idx = singleConsumer(reshape_out);
-        if (!isTranspose(prog, transpose_idx)) {
-            if (dbg) fprintf(stderr, "    reshape %d consumer not Transpose\n", reshape_idx);
-            return -1;
-        }
+        if (!isTranspose(prog, transpose_idx)) return -1;
         TransposeLayer* tr = dynamic_cast<TransposeLayer*>(prog[transpose_idx].get());
         if (!tr) return -1;
         *out_perm = tr->perm;
@@ -273,11 +262,8 @@ struct ModelFusionAttention
         bool modified = false;
         std::set<int> removed_ops;
 
-        const char* dbg = std::getenv("OPENCV_DBG_ATTN_FUSION");
         for (auto& [inp_idx, matmul_indices] : qkv_candidates) {
             if (matmul_indices.size() < 3) continue;
-            if (dbg) fprintf(stderr, "[ATTN] candidate group at arg=%d with %zu matmuls\n",
-                             inp_idx, matmul_indices.size());
 
             for (size_t qi = 0; qi + 2 < matmul_indices.size(); qi++)
             for (size_t ki = qi + 1; ki + 1 < matmul_indices.size(); ki++)
@@ -295,35 +281,22 @@ struct ModelFusionAttention
                     const Mat& w = prog[indices[k]]->blobs[0];
                     if (w.dims != 2) { shapes_ok = false; break; }
                 }
-                if (!shapes_ok) { if (dbg) fprintf(stderr, "[ATTN]   fail: weight not 2D\n"); continue; }
+                if (!shapes_ok) continue;
 
                 int reshape_idx[3], num_heads[3], transpose_idx[3];
                 vector<int> perms[3];
                 std::set<int> extra_ops;
                 bool pattern_ok = true;
-                int fail_branch = -1;
                 for (int k = 0; k < 3; k++) {
                     transpose_idx[k] = followProjChain(prog, indices[k],
                                                        &reshape_idx[k],
                                                        &num_heads[k], &perms[k],
                                                        &extra_ops);
-                    if (transpose_idx[k] < 0) { pattern_ok = false; fail_branch = k; break; }
+                    if (transpose_idx[k] < 0) { pattern_ok = false; break; }
                 }
-                if (!pattern_ok) {
-                    if (dbg) fprintf(stderr, "[ATTN]   fail: followProjChain branch %d (matmul %s)\n",
-                                     fail_branch, prog[indices[fail_branch]]->name.c_str());
+                if (!pattern_ok) continue;
+                if (num_heads[0] != num_heads[1] || num_heads[1] != num_heads[2])
                     continue;
-                }
-                if (num_heads[0] != num_heads[1] || num_heads[1] != num_heads[2]) {
-                    if (dbg) fprintf(stderr, "[ATTN]   fail: num_heads mismatch %d/%d/%d\n",
-                                     num_heads[0], num_heads[1], num_heads[2]);
-                    continue;
-                }
-                if (dbg) fprintf(stderr, "[ATTN]   all 3 projections matched, num_heads=%d, perms=[%d,%d,%d,%d],[%d,%d,%d,%d],[%d,%d,%d,%d]\n",
-                                 num_heads[0],
-                                 perms[0][0],perms[0][1],perms[0][2],perms[0][3],
-                                 perms[1][0],perms[1][1],perms[1][2],perms[1][3],
-                                 perms[2][0],perms[2][1],perms[2][2],perms[2][3]);
 
                 // K is identified by perm [0,2,3,1] (transposes head_dim to second-last);
                 // Q and V use perm [0,2,1,3].
@@ -350,11 +323,9 @@ struct ModelFusionAttention
                     vit_style = false;
                     qk_matmul_idx = k_next;
                 } else {
-                    if (dbg) fprintf(stderr, "[ATTN]   fail: K_tr consumer is neither Mul nor MatMul (k_next=%d, type=%s)\n",
-                                     k_next, k_next>=0 && prog[k_next] ? prog[k_next]->type.c_str() : "<null>");
                     continue;
                 }
-                if (!isMatMul(prog, qk_matmul_idx)) { if (dbg) fprintf(stderr, "[ATTN]   fail: qk_matmul not MatMul\n"); continue; }
+                if (!isMatMul(prog, qk_matmul_idx)) continue;
 
                 int q_slot = -1, v_slot = -1;
                 for (int attempt = 0; attempt < 2; attempt++) {
@@ -420,104 +391,101 @@ struct ModelFusionAttention
 
                     Arg attnv_out = prog[attnv_matmul_idx]->outputs[0];
                     int out_transpose_idx = singleConsumer(attnv_out);
-                    if (!isTranspose(prog, out_transpose_idx)) goto next_attempt;
-                    {
-                        Arg out_tr_out = prog[out_transpose_idx]->outputs[0];
-                        int out_reshape_idx = findMatchingConsumer(prog, out_tr_out,
-                            [](Layer* L){ return dynamic_cast<Reshape2Layer*>(L) != nullptr; },
-                            &extra_ops);
-                        if (!isReshape(prog, out_reshape_idx)) goto next_attempt;
+                    if (!isTranspose(prog, out_transpose_idx)) continue;
 
-                        const auto& or_inputs = prog[out_reshape_idx]->inputs;
-                        if (or_inputs.size() >= 2 && !netimpl->isConstArg(or_inputs[1])) {
-                            auto it = producer_.find(or_inputs[1].idx);
-                            if (it != producer_.end())
-                                collectShapeChain(prog, it->second, extra_ops);
-                        }
+                    Arg out_tr_out = prog[out_transpose_idx]->outputs[0];
+                    int out_reshape_idx = findMatchingConsumer(prog, out_tr_out,
+                        [](Layer* L){ return dynamic_cast<Reshape2Layer*>(L) != nullptr; },
+                        &extra_ops);
+                    if (!isReshape(prog, out_reshape_idx)) continue;
 
-                        const Mat& Wq = prog[indices[q_slot]]->blobs[0];
-                        const Mat& Wk = prog[indices[k_slot]]->blobs[0];
-                        const Mat& Wv = prog[indices[v_slot]]->blobs[0];
-                        int input_hidden = Wq.size[0];
-                        int q_hidden = Wq.size[1];
-                        int k_hidden = Wk.size[1];
-                        int v_hidden = Wv.size[1];
-                        int total_hidden = q_hidden + k_hidden + v_hidden;
-
-                        int wshape[] = {input_hidden, total_hidden};
-                        Mat W_qkv(2, wshape, CV_32F);
-                        for (int r = 0; r < input_hidden; r++) {
-                            float* dst = W_qkv.ptr<float>(r);
-                            memcpy(dst, Wq.ptr<float>(r), q_hidden * sizeof(float));
-                            memcpy(dst + q_hidden, Wk.ptr<float>(r), k_hidden * sizeof(float));
-                            memcpy(dst + q_hidden + k_hidden, Wv.ptr<float>(r), v_hidden * sizeof(float));
-                        }
-
-                        Mat bias_qkv;
-                        bool has_bias = prog[indices[q_slot]]->blobs.size() >= 2;
-                        if (has_bias) {
-                            const Mat& bq = prog[indices[q_slot]]->blobs[1];
-                            const Mat& bk = prog[indices[k_slot]]->blobs[1];
-                            const Mat& bv = prog[indices[v_slot]]->blobs[1];
-                            int bias_total = (int)(bq.total() + bk.total() + bv.total());
-                            bias_qkv.create(1, &bias_total, CV_32F);
-                            float* dst = bias_qkv.ptr<float>();
-                            memcpy(dst, bq.ptr<float>(), bq.total() * sizeof(float));
-                            memcpy(dst + bq.total(), bk.ptr<float>(), bk.total() * sizeof(float));
-                            memcpy(dst + bq.total() + bk.total(), bv.ptr<float>(), bv.total() * sizeof(float));
-                        }
-
-                        float param_scale = vit_style ? (1.f / (q_scale_val * k_scale_val))
-                                                      : post_scale_val;
-
-                        LayerParams attn_params;
-                        attn_params.name = prog[indices[q_slot]]->name + "_fused_attention";
-                        attn_params.type = "Attention";
-                        attn_params.set("num_heads", num_heads[0]);
-                        DictValue qkv_sizes_param = DictValue::arrayInt(
-                            std::vector<int>{q_hidden, k_hidden, v_hidden}.data(), 3);
-                        attn_params.set("qkv_hidden_sizes", qkv_sizes_param);
-                        attn_params.set("scale", param_scale);
-                        attn_params.set("output_ndims", 3);
-
-                        attn_params.blobs.push_back(W_qkv);
-                        if (has_bias)
-                            attn_params.blobs.push_back(bias_qkv);
-
-                        Ptr<Layer> attn_layer = LayerFactory::createLayerInstance(
-                            attn_params.type, attn_params);
-                        CV_Assert(attn_layer);
-
-                        Arg shared_input = prog[indices[0]]->inputs[0];
-                        if (has_mask)
-                            attn_layer->inputs = { shared_input, mask_arg };
-                        else
-                            attn_layer->inputs = { shared_input };
-                        attn_layer->outputs = prog[out_reshape_idx]->outputs;
-                        attn_layer->netimpl = netimpl;
-
-                        std::set<int> to_remove = {
-                            indices[0], indices[1], indices[2],
-                            reshape_idx[0], reshape_idx[1], reshape_idx[2],
-                            transpose_idx[0], transpose_idx[1], transpose_idx[2],
-                            qk_matmul_idx, softmax_idx, attnv_matmul_idx,
-                            out_transpose_idx, out_reshape_idx
-                        };
-                        if (k_mul_idx >= 0) to_remove.insert(k_mul_idx);
-                        if (q_mul_idx >= 0) to_remove.insert(q_mul_idx);
-                        if (qk_div_idx >= 0) to_remove.insert(qk_div_idx);
-                        if (qk_add_idx >= 0) to_remove.insert(qk_add_idx);
-                        for (int op : extra_ops) to_remove.insert(op);
-                        for (int op : to_remove)
-                            removed_ops.insert(op);
-
-                        int insert_pos = *std::min_element(to_remove.begin(), to_remove.end());
-                        attention_replacements_.push_back({insert_pos, attn_layer});
-                        modified = true;
+                    const auto& or_inputs = prog[out_reshape_idx]->inputs;
+                    if (or_inputs.size() >= 2 && !netimpl->isConstArg(or_inputs[1])) {
+                        auto it = producer_.find(or_inputs[1].idx);
+                        if (it != producer_.end())
+                            collectShapeChain(prog, it->second, extra_ops);
                     }
-                    break;
 
-                    next_attempt:;
+                    const Mat& Wq = prog[indices[q_slot]]->blobs[0];
+                    const Mat& Wk = prog[indices[k_slot]]->blobs[0];
+                    const Mat& Wv = prog[indices[v_slot]]->blobs[0];
+                    int input_hidden = Wq.size[0];
+                    int q_hidden = Wq.size[1];
+                    int k_hidden = Wk.size[1];
+                    int v_hidden = Wv.size[1];
+                    int total_hidden = q_hidden + k_hidden + v_hidden;
+
+                    int wshape[] = {input_hidden, total_hidden};
+                    Mat W_qkv(2, wshape, CV_32F);
+                    for (int r = 0; r < input_hidden; r++) {
+                        float* dst = W_qkv.ptr<float>(r);
+                        memcpy(dst, Wq.ptr<float>(r), q_hidden * sizeof(float));
+                        memcpy(dst + q_hidden, Wk.ptr<float>(r), k_hidden * sizeof(float));
+                        memcpy(dst + q_hidden + k_hidden, Wv.ptr<float>(r), v_hidden * sizeof(float));
+                    }
+
+                    Mat bias_qkv;
+                    bool has_bias = prog[indices[q_slot]]->blobs.size() >= 2;
+                    if (has_bias) {
+                        const Mat& bq = prog[indices[q_slot]]->blobs[1];
+                        const Mat& bk = prog[indices[k_slot]]->blobs[1];
+                        const Mat& bv = prog[indices[v_slot]]->blobs[1];
+                        int bias_total = (int)(bq.total() + bk.total() + bv.total());
+                        bias_qkv.create(1, &bias_total, CV_32F);
+                        float* dst = bias_qkv.ptr<float>();
+                        memcpy(dst, bq.ptr<float>(), bq.total() * sizeof(float));
+                        memcpy(dst + bq.total(), bk.ptr<float>(), bk.total() * sizeof(float));
+                        memcpy(dst + bq.total() + bk.total(), bv.ptr<float>(), bv.total() * sizeof(float));
+                    }
+
+                    float param_scale = vit_style ? (1.f / (q_scale_val * k_scale_val))
+                                                  : post_scale_val;
+
+                    LayerParams attn_params;
+                    attn_params.name = prog[indices[q_slot]]->name + "_fused_attention";
+                    attn_params.type = "Attention";
+                    attn_params.set("num_heads", num_heads[0]);
+                    DictValue qkv_sizes_param = DictValue::arrayInt(
+                        std::vector<int>{q_hidden, k_hidden, v_hidden}.data(), 3);
+                    attn_params.set("qkv_hidden_sizes", qkv_sizes_param);
+                    attn_params.set("scale", param_scale);
+                    attn_params.set("output_ndims", 3);
+
+                    attn_params.blobs.push_back(W_qkv);
+                    if (has_bias)
+                        attn_params.blobs.push_back(bias_qkv);
+
+                    Ptr<Layer> attn_layer = LayerFactory::createLayerInstance(
+                        attn_params.type, attn_params);
+                    CV_Assert(attn_layer);
+
+                    Arg shared_input = prog[indices[0]]->inputs[0];
+                    if (has_mask)
+                        attn_layer->inputs = { shared_input, mask_arg };
+                    else
+                        attn_layer->inputs = { shared_input };
+                    attn_layer->outputs = prog[out_reshape_idx]->outputs;
+                    attn_layer->netimpl = netimpl;
+
+                    std::set<int> to_remove = {
+                        indices[0], indices[1], indices[2],
+                        reshape_idx[0], reshape_idx[1], reshape_idx[2],
+                        transpose_idx[0], transpose_idx[1], transpose_idx[2],
+                        qk_matmul_idx, softmax_idx, attnv_matmul_idx,
+                        out_transpose_idx, out_reshape_idx
+                    };
+                    if (k_mul_idx >= 0) to_remove.insert(k_mul_idx);
+                    if (q_mul_idx >= 0) to_remove.insert(q_mul_idx);
+                    if (qk_div_idx >= 0) to_remove.insert(qk_div_idx);
+                    if (qk_add_idx >= 0) to_remove.insert(qk_add_idx);
+                    for (int op : extra_ops) to_remove.insert(op);
+                    for (int op : to_remove)
+                        removed_ops.insert(op);
+
+                    int insert_pos = *std::min_element(to_remove.begin(), to_remove.end());
+                    attention_replacements_.push_back({insert_pos, attn_layer});
+                    modified = true;
+                    break;
                 }
             }
         }
