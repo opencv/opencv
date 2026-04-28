@@ -22,6 +22,8 @@ void initKVDataRecursively(const Ptr<Graph>& graph, std::map<std::string, KCache
 
         if (layer->type == "AttentionOnnxAi") {
             int kvNumHeads = layer.dynamicCast<AttentionOnnxAiLayer>()->kv_num_heads;
+            CV_LOG_DEBUG(NULL, "Initializing KV cache for layer " << layer->name << " with " << kvNumHeads << " heads");
+            std::cout << "Initializing KV cache for layer " << layer->name << " with " << kvNumHeads << " heads" << std::endl;
 
             if (kvNumHeads > 0)
             {
@@ -46,7 +48,7 @@ void setKVCacheManager(Ptr<Net::Impl> netimpl)
     auto manager = KVCacheManager();
     manager.netimpl = netimpl;
     manager.opt.init();
-
+    std::cout << "Initializing KV cache manager" << std::endl;
     initKVDataRecursively(netimpl->mainGraph, manager.kData, manager.vData, manager.opt);
 
     manager.isInitialized = true;
@@ -109,15 +111,28 @@ void KVCache::grow(const Mat& newData) {
                 Mat({batchSize, nHeads, page_size}, CV_32F, Scalar(0))
             );
         }
-        growPrefetch(newData, T);
+        growPrefill(newData, T);
     } else{
         // generate
         growGenerate(newData);
     }
 
+    if (isKCache){
+        std::cout << "KCache:" << std::endl;
+    } else {
+        std::cout << "VCache:" << std::endl;
+    }
+
+    std::cout << "Cache grew. nTokens: " << nTokens << ", nPages: " << pages.size() << std::endl;
+    for(int i = 0; i < pages.size(); i++){
+       for(int j = 0; j < pages[i].total(); j++){
+               std::cout << pages[i].ptr<float>()[j] << " ";
+       }
+         std::cout << std::endl;
+    }
 }
 
-void KVCache::growPrefetch(const Mat& newData, int T){
+void KVCache::growPrefill(const Mat& newData, int T){
     int totalPages = (T + pageSize - 1) / pageSize;
     int ps = isKCache ? (int)fastGemmPackBSize(pageSize, headDim, opt)
                       : (int)fastGemmPackBSize(headDim, pageSize, opt);

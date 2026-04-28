@@ -35,7 +35,7 @@ class KVCache
         int getPageSize() const { return pageSize; }
         int getNumTokens() const { return nTokens; }
     protected:
-        void growPrefetch(const Mat& newData, int T);
+        void growPrefill(const Mat& newData, int T);
 
         virtual void growGenerate(const Mat& newData) = 0;
         std::vector<Mat> pages;
