@@ -37,11 +37,21 @@ public:
         {
             slope = params.get<float>("slope");
         }
+    }
+
+    ActivationLayerInt8Impl(const ActivationInt8Params &p)
+    {
+        name = p.name;
+        type = p.activationType;
+        input_sc = p.input_sc;
+        input_zp = p.input_zp;
+        output_sc = p.output_sc;
+        output_zp = p.output_zp;
+        activationLUT = p.activationLUT;
 
 #ifdef HAVE_TIMVX
         tvActType = getTimVXActType(type);
 #endif
-
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
@@ -356,6 +366,11 @@ public:
 };
 
 Ptr<ActivationLayerInt8> ActivationLayerInt8::create(const LayerParams& params)
+{
+    return Ptr<ActivationLayerInt8>(new ActivationLayerInt8Impl(params));
+}
+
+Ptr<ActivationLayerInt8> ActivationLayerInt8::create(const ActivationInt8Params& params)
 {
     return Ptr<ActivationLayerInt8>(new ActivationLayerInt8Impl(params));
 }

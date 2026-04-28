@@ -57,6 +57,18 @@ public:
         offset = 0.f;
     }
 
+    Eltwise2Int8LayerImpl(const Eltwise2Int8Params& p)
+    {
+        name = p.name;
+        type = "Eltwise2Int8";
+        scales = p.input_scales;
+        zeropoints = p.input_zeropoints;
+        output_sc = p.output_sc;
+        output_zp = p.output_zp;
+        withRelu = p.with_relu;
+        offset = 0.f;
+    }
+
     void ensureCoeffs()
     {
         if (!coeffs.empty() || scales.empty())
@@ -405,6 +417,11 @@ public:
 };
 
 Ptr<Eltwise2Int8Layer> Eltwise2Int8Layer::create(const LayerParams& params)
+{
+    return Ptr<Eltwise2Int8Layer>(new Eltwise2Int8LayerImpl(params));
+}
+
+Ptr<Eltwise2Int8Layer> Eltwise2Int8Layer::create(const Eltwise2Int8Params& params)
 {
     return Ptr<Eltwise2Int8Layer>(new Eltwise2Int8LayerImpl(params));
 }
