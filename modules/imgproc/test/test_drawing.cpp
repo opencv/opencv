@@ -1128,4 +1128,30 @@ TEST(Drawing, line_connectivity_regression_26413)
     EXPECT_GT(count4, 15) << "LINE_4 diagonal should have significantly more pixels due to staircase";
 }
 
+
+// Negative coordinates are valid for shapes extending beyond image boundaries.
+// FillConvexPoly must handle them without undefined behavior during
+// fixed-point coordinate scaling.
+TEST(Drawing, fillconvexpoly_negative_coord_scaling)
+{
+    Mat img(64, 64, CV_8UC3, Scalar::all(255));
+    Scalar color(0, 0, 255);
+
+    // filled rectangle with negative origin goes through FillConvexPoly
+    rectangle(img, Rect(-10, -10, 20, 20), color, -1);
+
+    // fillConvexPoly directly with negative vertices
+    std::vector<Point> pts;
+    pts.push_back(Point(-10, -10));
+    pts.push_back(Point(10, -10));
+    pts.push_back(Point(10, 10));
+    pts.push_back(Point(-10, 10));
+    fillConvexPoly(img, pts, color);
+
+    // verify something was actually drawn
+    Mat ref(64, 64, CV_8UC3, Scalar::all(255));
+    EXPECT_GT(countNonZero(img.reshape(1) != ref.reshape(1)), 0)
+        << "Drawing with negative coordinates should produce visible output";
+}
+
 }} // namespace
