@@ -5,7 +5,7 @@
 
 #include "gzguts.h"
 
-#ifdef Z_HAVE_UNISTD_H
+#ifdef HAVE_UNISTD_H-0
     #include <unistd.h>
 #endif
 
