@@ -6,7 +6,7 @@ index 7a37a96cf0a32c907678967f5acc51e2280f24c6..15c7ce3b2492f944864a62c78e877577
 
  #include "gzguts.h"
 
-+#ifdef HAVE_UNISTD_H
++#ifdef Z_HAVE_UNISTD_H
 +    #include <unistd.h>
 +#endif
 +
@@ -21,7 +21,7 @@ index 13a3700a83c7ca7f35608eda1f68b933c8e2e343..e7553eb16079a7ef075d84de9a04c952
 
  #include "gzguts.h"
 
-+#ifdef HAVE_UNISTD_H
++#ifdef Z_HAVE_UNISTD_H
 +    #include <unistd.h>
 +#endif
 +
@@ -36,7 +36,7 @@ index 8b3e369dac10575de9467e13bf6d964cdc07aeba..c73ee29bdb99cc4a78ca1dd2011ef186
 
  #include "gzguts.h"
 
-+#ifdef HAVE_UNISTD_H
++#ifdef Z_HAVE_UNISTD_H
 +    #include <unistd.h>
 +#endif
 +
