@@ -234,12 +234,14 @@ void fastGemmPackB(bool trans, size_t N, size_t K, const float *B, size_t ldb, f
 }
 
 static constexpr int FAST_GEMM_THIN_MAX_M = 12;
+// Scalar-fallback strip width (unroll factor, not SIMD lanes); 4 matches the narrowest universal-intrinsic float width so layout stays consistent with SIMD builds.
+static constexpr int FAST_GEMM_THIN_SCALAR_NR = 4;
 
 static inline int fast_gemm_thin_lanes() {
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     return VTraits<v_float32>::vlanes();
 #else
-    return 4;
+    return FAST_GEMM_THIN_SCALAR_NR;
 #endif
 }
 
@@ -311,8 +313,8 @@ static inline void fast_gemm_thin_strip(int M, int K, float alpha,
         }
     }
 #else
-    const int NR = 4;
-    float acc[FAST_GEMM_THIN_MAX_M * 4] = {0};
+    const int NR = FAST_GEMM_THIN_SCALAR_NR;
+    float acc[FAST_GEMM_THIN_MAX_M * FAST_GEMM_THIN_SCALAR_NR] = {0};
     for (int k = 0; k < K; k++) {
         for (int m = 0; m < M; m++) {
             float a_mk = A[m * lda0 + k * lda1];
@@ -566,6 +568,7 @@ void fastGemmBatch(size_t batch, const size_t *A_offsets, const size_t *B_offset
     const char *b = (const char *)B;
     char *c = (char *)C;
 
+    // Below ~10K MACs (M*N*K) the blocked SIMD kernel's pack/tile overhead outweighs its speedup, so route tiny problems through the unblocked thin path.
     if (ldb1 == 1 && (fastGemmThinEligible(M, N, K) || (uint64_t)M * N * K <= 10000)) {
         const size_t esz = sizeof(float);
         for (size_t i = 0; i < batch; i++) {
