@@ -60,6 +60,35 @@ struct ModelFusionAttention
         return dynamic_cast<MatMulLayer*>(prog[idx].get()) != nullptr;
     }
 
+    // QKV projections may be exported as either MatMul (no bias) or Gemm
+    // (typically nn.Linear with bias). Both store a const weight in blobs[0];
+    // Gemm-with-trans_b stores it as [N, K] instead of [K, N].
+    static bool isProjCandidate(const Ptr<Layer>& l)
+    {
+        if (l->blobs.empty() || l->inputs.size() != 1) return false;
+        if (dynamic_cast<MatMulLayer*>(l.get()))
+            return true;
+        GemmLayer* g = dynamic_cast<GemmLayer*>(l.get());
+        if (!g) return false;
+        if (g->trans_a || g->alpha != 1.f) return false;
+        if (l->blobs.size() == 2 && g->beta != 1.f) return false;
+        return true;
+    }
+
+    // Returns the projection weight in [K, N] (input_hidden, output_hidden)
+    // layout, transposing if the source is a Gemm with trans_b.
+    static Mat getProjWeight(const Ptr<Layer>& l)
+    {
+        const Mat& W = l->blobs[0];
+        GemmLayer* g = dynamic_cast<GemmLayer*>(l.get());
+        if (g && g->trans_b) {
+            Mat Wt;
+            cv::transpose(W, Wt);
+            return Wt;
+        }
+        return W;
+    }
+
     bool isScalarBinOp(const vector<Ptr<Layer>>& prog, int idx,
                        NaryEltwiseLayer::OPERATION op, float* val) const
     {
@@ -251,10 +280,7 @@ struct ModelFusionAttention
         std::map<int, vector<int>> qkv_candidates;
         for (size_t i = 0; i < nops; i++) {
             if (!prog[i]) continue;
-            MatMulLayer* mm = dynamic_cast<MatMulLayer*>(prog[i].get());
-            if (!mm) continue;
-            if (prog[i]->blobs.empty() || prog[i]->inputs.size() != 1)
-                continue;
+            if (!isProjCandidate(prog[i])) continue;
             Arg inp = prog[i]->inputs[0];
             qkv_candidates[inp.idx].push_back((int)i);
         }
@@ -406,9 +432,11 @@ struct ModelFusionAttention
                             collectShapeChain(prog, it->second, extra_ops);
                     }
 
-                    const Mat& Wq = prog[indices[q_slot]]->blobs[0];
-                    const Mat& Wk = prog[indices[k_slot]]->blobs[0];
-                    const Mat& Wv = prog[indices[v_slot]]->blobs[0];
+                    // Normalize each projection weight to [K, N] regardless of
+                    // whether the source op is MatMul or Gemm-with-trans_b.
+                    Mat Wq = getProjWeight(prog[indices[q_slot]]);
+                    Mat Wk = getProjWeight(prog[indices[k_slot]]);
+                    Mat Wv = getProjWeight(prog[indices[v_slot]]);
                     int input_hidden = Wq.size[0];
                     int q_hidden = Wq.size[1];
                     int k_hidden = Wk.size[1];

@@ -549,6 +549,7 @@ void Net::Impl::prepareForInference()
         constFold();
         constArgs();
         fuseAttention();
+        fuseSharedInputGemm();
         fuseBasic();
         useBlockLayout();
         assignBuffers();

@@ -456,6 +456,8 @@ struct Net::Impl : public detail::NetImplBase
     void fuseBasic();
     // fuse ViT-style multi-head attention subgraphs
     void fuseAttention();
+    // fuse Gemm layers that share the same input into one wider Gemm
+    void fuseSharedInputGemm();
     // replace constant sub-expressions with their results
 
     void fuseQDQ();
