@@ -105,7 +105,7 @@ The tutorial consists of two main programs:
     Using the found matches along with @ref cv::solvePnPRansac function the `R` and `t` of
     the camera are computed. Finally, a KalmanFilter is applied in order to reject bad poses.
 
-    In the case that you compiled OpenCV with the samples, you can find it in opencv/build/bin/cpp-tutorial-pnp_detection`.
+    In the case that you compiled OpenCV with the samples, you can find it in `opencv/build/bin/cpp-tutorial-pnp_detection`.
     Then you can run the application and change some parameters:
     @code{.cpp}
     This program shows how to detect an object given its 3D textured model. You can choose to use a recorded video or the webcam.
@@ -252,8 +252,8 @@ Here is explained in detail the code for the real time application:
     The next step is to detect the scene features and extract it descriptors. For this task I
     implemented a *class* **RobustMatcher** which has a function for keypoints detection and features
     extraction. You can find it in
-    `samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/src/RobusMatcher.cpp`. In your
-    *RobusMatch* object you can use any of the 2D features detectors of OpenCV. In this case I used
+    `samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/src/RobustMatcher.cpp`. In your
+    *RobustMatch* object you can use any of the 2D features detectors of OpenCV. In this case I used
     @ref cv::ORB features because is based on @ref cv::FAST to detect the keypoints and cv::xfeatures2d::BriefDescriptorExtractor
     to extract the descriptors which means that is fast and robust to rotations. You can find more
     detailed information about *ORB* in the documentation.
