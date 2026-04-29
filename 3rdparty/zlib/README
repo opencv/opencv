@@ -1,10 +1,10 @@
 ZLIB DATA COMPRESSION LIBRARY
 
-zlib 1.3.1 is a general purpose data compression library.  All the code is
-thread safe.  The data format used by the zlib library is described by RFCs
-(Request for Comments) 1950 to 1952 in the files
-http://tools.ietf.org/html/rfc1950 (zlib format), rfc1951 (deflate format) and
-rfc1952 (gzip format).
+zlib 1.3.2 is a general purpose data compression library.  All the code is
+thread safe (though see the FAQ for caveats).  The data format used by the zlib
+library is described by RFCs (Request for Comments) 1950 to 1952 at
+https://datatracker.ietf.org/doc/html/rfc1950 (zlib format), rfc1951 (deflate
+format) and rfc1952 (gzip format).
 
 All functions of the compression library are documented in the file zlib.h
 (volunteer to write man pages welcome, contact zlib@gzip.org).  A usage example
@@ -21,17 +21,17 @@ make_vms.com.
 
 Questions about zlib should be sent to <zlib@gzip.org>, or to Gilles Vollant
 <info@winimage.com> for the Windows DLL version.  The zlib home page is
-http://zlib.net/ .  Before reporting a problem, please check this site to
+https://zlib.net/ .  Before reporting a problem, please check this site to
 verify that you have the latest version of zlib; otherwise get the latest
 version and check whether the problem still exists or not.
 
-PLEASE read the zlib FAQ http://zlib.net/zlib_faq.html before asking for help.
+PLEASE read the zlib FAQ https://zlib.net/zlib_faq.html before asking for help.
 
 Mark Nelson <markn@ieee.org> wrote an article about zlib for the Jan.  1997
 issue of Dr.  Dobb's Journal; a copy of the article is available at
-https://marknelson.us/posts/1997/01/01/zlib-engine.html .
+https://zlib.net/nelson/ .
 
-The changes made in version 1.3.1 are documented in the file ChangeLog.
+The changes made in version 1.3.2 are documented in the file ChangeLog.
 
 Unsupported third party contributions are provided in directory contrib/ .
 
@@ -43,9 +43,9 @@ can be found at https://github.com/pmqs/IO-Compress .
 
 A Python interface to zlib written by A.M. Kuchling <amk@amk.ca> is
 available in Python 1.5 and later versions, see
-http://docs.python.org/library/zlib.html .
+https://docs.python.org/3/library/zlib.html .
 
-zlib is built into tcl: http://wiki.tcl.tk/4610 .
+zlib is built into tcl: https://wiki.tcl-lang.org/page/zlib .
 
 An experimental package to read and write files in .zip format, written on top
 of zlib by Gilles Vollant <info@winimage.com>, is available in the
@@ -69,9 +69,7 @@ Notes for some targets:
 - zlib doesn't work on HP-UX 9.05 with some versions of /bin/cc. It works with
   other compilers. Use "make test" to check your compiler.
 
-- gzdopen is not supported on RISCOS or BEOS.
-
-- For PalmOs, see http://palmzlib.sourceforge.net/
+- For PalmOs, see https://palmzlib.sourceforge.net/
 
 
 Acknowledgments:
@@ -83,7 +81,7 @@ Acknowledgments:
 
 Copyright notice:
 
- (C) 1995-2024 Jean-loup Gailly and Mark Adler
+ (C) 1995-2026 Jean-loup Gailly and Mark Adler
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
