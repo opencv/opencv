@@ -1134,7 +1134,7 @@ private:
 
         const unsigned int histos_veclen = static_cast<unsigned int>(
                     veclen_*sizeof(CentersType)*(HISTOS_PER_BASE*BASE_PER_CHAR));
-        cv::AutoBuffer<unsigned int> histos_buf(branching*histos_veclen);
+        AutoBuffer<unsigned int> histos_buf(branching*histos_veclen);
         Matrix<unsigned int> histos(histos_buf.data(), branching, histos_veclen);
 
         bool converged = false;

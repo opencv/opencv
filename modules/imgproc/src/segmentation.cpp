@@ -350,8 +350,8 @@ void cv::pyrMeanShiftFiltering( InputArray _src, OutputArray _dst,
     if( (unsigned)max_level > (unsigned)MAX_LEVELS )
         CV_Error( cv::Error::StsOutOfRange, "The number of pyramid levels is too large or negative" );
 
-    std::vector<cv::Mat> src_pyramid(max_level+1);
-    std::vector<cv::Mat> dst_pyramid(max_level+1);
+    AutoBuffer<cv::Mat> src_pyramid(max_level+1);
+    AutoBuffer<cv::Mat> dst_pyramid(max_level+1);
     cv::Mat mask0;
     int i, j, level;
     //uchar* submask = 0;

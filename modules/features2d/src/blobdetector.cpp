@@ -332,13 +332,15 @@ void SimpleBlobDetectorImpl::findBlobs(InputArray _image, InputArray _binaryImag
 
         //compute blob radius
         {
-            std::vector<double> dists;
-            for (size_t pointIdx = 0; pointIdx < contours[contourIdx].size(); pointIdx++)
+            const std::vector<cv::Point>& contour = contours[contourIdx];
+            const size_t contourSize = contour.size();
+            AutoBuffer<double> dists(contourSize);
+            for (size_t pointIdx = 0; pointIdx < contourSize; pointIdx++)
             {
-                Point2d pt = contours[contourIdx][pointIdx];
-                dists.push_back(norm(center.location - pt));
+                const Point2d& pt = contour[pointIdx];
+                dists[pointIdx] = norm(center.location - pt);
             }
-            std::sort(dists.begin(), dists.end());
+            std::sort(dists.data(), dists.data()+dists.size());
             center.radius = (dists[(dists.size() - 1) / 2] + dists[dists.size() / 2]) / 2.;
         }
 

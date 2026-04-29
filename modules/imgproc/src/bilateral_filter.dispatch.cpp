@@ -98,8 +98,8 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
         return false;
 
     copyMakeBorder(src, temp, radius, radius, radius, radius, borderType);
-    std::vector<float> _space_weight(d * d);
-    std::vector<int> _space_ofs(d * d);
+    AutoBuffer<float> _space_weight(d * d);
+    AutoBuffer<int> _space_ofs(d * d);
     float * const space_weight = &_space_weight[0];
     int * const space_ofs = &_space_ofs[0];
 
@@ -188,9 +188,9 @@ bilateralFilter_8u( const Mat& src, Mat& dst, int d,
     Mat temp;
     copyMakeBorder( src, temp, radius, radius, radius, radius, borderType );
 
-    std::vector<float> _color_weight(cn*256);
-    std::vector<float> _space_weight(d*d);
-    std::vector<int> _space_ofs(d*d);
+    AutoBuffer<float> _color_weight(cn*256);
+    AutoBuffer<float> _space_weight(d*d);
+    AutoBuffer<int> _space_ofs(d*d);
     float* color_weight = &_color_weight[0];
     float* space_weight = &_space_weight[0];
     int* space_ofs = &_space_ofs[0];
@@ -283,15 +283,15 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
     copyMakeBorder( src, temp, radius, radius, radius, radius, borderType );
 
     // allocate lookup tables
-    std::vector<float> _space_weight(d*d);
-    std::vector<int> _space_ofs(d*d);
+    AutoBuffer<float> _space_weight(d*d);
+    AutoBuffer<int> _space_ofs(d*d);
     float* space_weight = &_space_weight[0];
     int* space_ofs = &_space_ofs[0];
 
     // assign a length which is slightly more than needed
     len = (float)(maxValSrc - minValSrc) * cn;
     kExpNumBins = kExpNumBinsPerChannel * cn;
-    std::vector<float> _expLUT(kExpNumBins+2);
+    AutoBuffer<float> _expLUT(kExpNumBins+2);
     float* expLUT = &_expLUT[0];
 
     scale_index = kExpNumBins/len;

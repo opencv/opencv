@@ -558,7 +558,7 @@ void transposeND(InputArray src_, const std::vector<int>& order, OutputArray dst
         CV_CheckEQ(static_cast<size_t>(order_[i]), i, "New order should be a valid permutation of the old one");
     }
 
-    std::vector<int> newShape(order.size());
+    AutoBuffer<int> newShape(order.size());
     for (size_t i = 0; i < order.size(); ++i)
     {
         newShape[i] = inp.size[order[i]];
@@ -582,7 +582,7 @@ void transposeND(InputArray src_, const std::vector<int>& order, OutputArray dst
     size_t continuous_size = continuous_idx == 0 ? out.total() : out.step1(continuous_idx - 1);
     size_t outer_size = out.total() / continuous_size;
 
-    std::vector<size_t> steps(order.size());
+    AutoBuffer<size_t> steps(order.size());
     for (int i = 0; i < static_cast<int>(steps.size()); ++i)
     {
         steps[i] = inp.step1(order[i]);
@@ -1229,14 +1229,15 @@ void broadcast(InputArray _src, InputArray _shape, OutputArray _dst) {
     // impl
     _dst.create(dims_shape, shape.ptr<int>(), src.type());
     Mat dst = _dst.getMat();
-    std::vector<int> is_same_shape(dims_shape, 0);
+    AutoBuffer<int> is_same_shape(dims_shape);
+    std::fill(is_same_shape.data(), is_same_shape.data()+is_same_shape.size(), 0);
     for (int i = 0; i < static_cast<int>(shape_src.size()); ++i) {
         if (shape_src[i] == ptr_shape[i]) {
             is_same_shape[i] = 1;
         }
     }
     // copy if same shape
-    if (std::accumulate(is_same_shape.begin(), is_same_shape.end(), 1, std::multiplies<int>()) != 0) {
+    if (std::accumulate(is_same_shape.data(), is_same_shape.data()+is_same_shape.size(), 1, std::multiplies<int>()) != 0) {
         const auto *p_src = src.ptr<const char>();
         auto *p_dst = dst.ptr<char>();
         std::memcpy(p_dst, p_src, dst.total() * dst.elemSize());
@@ -1246,7 +1247,7 @@ void broadcast(InputArray _src, InputArray _shape, OutputArray _dst) {
     int max_ndims = std::max(dims_src, dims_shape);
     const int all_ndims[2] = {src.dims, dst.dims};
     const int* orig_shapes[2] = {src.size.p, dst.size.p};
-    cv::AutoBuffer<size_t> buff(max_ndims * 4);
+    AutoBuffer<size_t> buff(max_ndims * 4);
     int* flatten_shapes[2] = {(int*)buff.data(), (int*)(buff.data() + max_ndims)};
     size_t* flatten_steps[2] = {(size_t*)(buff.data() + 2 * max_ndims), (size_t*)(buff.data() + 3 * max_ndims)};
     if (_flatten_for_broadcast(2, max_ndims, all_ndims, orig_shapes, flatten_shapes, flatten_steps)) {
@@ -1328,7 +1329,8 @@ void broadcast(InputArray _src, InputArray _shape, OutputArray _dst) {
             std::memcpy(p_dst + dst_offset, p_src + src_offset, dst.elemSize());
         }
         // broadcast copy (dst inplace)
-        std::vector<int> cumulative_shape(dims_shape, 1);
+        AutoBuffer<int> cumulative_shape(dims_shape);
+        std::fill(cumulative_shape.data(), cumulative_shape.data()+cumulative_shape.size(), 1);
         int total = static_cast<int>(dst.total());
         for (int i = dims_shape - 1; i >= 0; --i) {
             cumulative_shape[i] = static_cast<int>(total / ptr_shape[i]);

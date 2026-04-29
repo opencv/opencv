@@ -887,7 +887,7 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
     if (actual_op < 0)
         actual_op = op;
 
-    std::vector<ocl::Kernel> kernels(iterations);
+    AutoBuffer<ocl::Kernel> kernels(iterations);
     for (int i = 0; i < iterations; i++)
     {
         int current_op = iterations == i + 1 ? actual_op : op;

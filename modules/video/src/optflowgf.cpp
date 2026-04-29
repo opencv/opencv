@@ -822,7 +822,7 @@ private:
     float  m_ig[4];
     void setPolynomialExpansionConsts(int n, double sigma)
     {
-        std::vector<float> buf(n*6 + 3);
+        AutoBuffer<float> buf(n*6 + 3);
         float* g = &buf[0] + n;
         float* xg = g + n*2 + 1;
         float* xxg = xg + n*2 + 1;

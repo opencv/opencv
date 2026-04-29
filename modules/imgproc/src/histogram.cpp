@@ -3004,7 +3004,7 @@ cvCalcArrHist( CvArr** img, CvHistogram* hist, int accumulate, const CvArr* mask
     int i, dims = cvGetDims( hist->bins, size);
     bool uniform = CV_IS_UNIFORM_HIST(hist);
 
-    std::vector<cv::Mat> images(dims);
+    cv::AutoBuffer<cv::Mat> images(dims);
     for( i = 0; i < dims; i++ )
         images[i] = cv::cvarrToMat(img[i]);
 
@@ -3084,7 +3084,7 @@ cvCalcArrBackProject( CvArr** img, CvArr* dst, const CvHistogram* hist )
         }
     }
 
-    std::vector<cv::Mat> images(dims);
+    cv::AutoBuffer<cv::Mat> images(dims);
     for( i = 0; i < dims; i++ )
         images[i] = cv::cvarrToMat(img[i]);
 

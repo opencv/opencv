@@ -225,7 +225,7 @@ void SIFT_Impl::buildGaussianPyramid( const Mat& base, std::vector<Mat>& pyr, in
 {
     CV_TRACE_FUNCTION();
 
-    std::vector<double> sig(nOctaveLayers + 3);
+    AutoBuffer<double> sig(nOctaveLayers + 3);
     pyr.resize(nOctaves*(nOctaveLayers + 3));
 
     // precompute Gaussian sigmas using the following formula:

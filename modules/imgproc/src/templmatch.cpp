@@ -568,7 +568,7 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
 {
     const double blockScale = 4.5;
     const int minBlockSize = 256;
-    std::vector<uchar> buf;
+    AutoBuffer<uchar> buf(0);
 
     Mat templ = _templ;
     int depth = img.depth(), cn = img.channels();
@@ -792,7 +792,8 @@ static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _
     if (templ.type() != mask.type())
     {
         // Assertions above ensured, that depth is the same and only number of channel differ
-        std::vector<Mat> maskChannels(templ.channels(), mask);
+        AutoBuffer<Mat> maskChannels(templ.channels());
+        std::fill(maskChannels.data(), maskChannels.data()+maskChannels.size(), mask);
         merge(maskChannels.data(), templ.channels(), mask);
     }
 
