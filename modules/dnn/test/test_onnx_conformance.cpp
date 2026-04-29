@@ -1799,7 +1799,7 @@ public:
 
         if (engine_forced == ENGINE_ORT) {
             ort_deny_list = {
-#include "test_onnx_conformance_layer_filter_ort_denylist.inl.hpp"
+#include "test_onnx_ort_denylist.inl.hpp"
             };
         } else {
             ort_deny_list = {};
