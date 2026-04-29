@@ -234,8 +234,10 @@ void fastGemmPackB(bool trans, size_t N, size_t K, const float *B, size_t ldb, f
 }
 
 static constexpr int FAST_GEMM_THIN_MAX_M = 12;
+#if !CV_SIMD
 // Scalar-fallback strip width (unroll factor, not SIMD lanes); 4 matches the narrowest universal-intrinsic float width so layout stays consistent with SIMD builds.
 static constexpr int FAST_GEMM_THIN_SCALAR_NR = 4;
+#endif
 
 static inline int fast_gemm_thin_lanes() {
 #if (CV_SIMD || CV_SIMD_SCALABLE)
