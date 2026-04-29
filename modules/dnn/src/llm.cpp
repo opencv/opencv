@@ -91,7 +91,7 @@ LLM LLM::create(const String& modelPath, int tokenizerType,
 {
     LLM llm;
 
-    if (tokenizerType == TOKENIZER_OPENCV_BPE)
+    if (tokenizerType == TOKENIZER_OPENCV)
     {
         if (tokenizerConfigPath.empty())
         {

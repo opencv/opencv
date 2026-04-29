@@ -67,6 +67,24 @@ Exporting Qwen2.5 model to ONNX:
 To run:
     python llm_inference.py --tokenizer_type=qwen --model=/path/to/qwen2.5.onnx \
         --tokenizer=/path/to/qwen2.5/config.json --prompt="What is OpenCV?" --max_new_tokens=100
+
+=== Gemma3 with OpenCV Gemma tokenizer ===
+
+Model: https://huggingface.co/google/gemma-3-1b-it
+
+Exporting Gemma3 model to ONNX:
+
+1. Install the required dependencies:
+
+    pip install optimum[exporters] torch transformers
+
+2. Export the model to ONNX:
+
+    optimum-cli export onnx --model google/gemma-3-1b-it --task causal-lm gemma3_instruct_onnx/
+
+To run:
+    python llm_inference.py --tokenizer_type=gemma3 --model=/path/to/gemma3.onnx \
+        --tokenizer=/path/to/gemma3/config.json --prompt="What is OpenCV?" --max_new_tokens=100
 '''
 
 import numpy as np
@@ -102,7 +120,7 @@ def run_gpt2(model_path, tokenizer_cfg, user_prompt, max_seq_len):
     '''GPT-2 path: uses OpenCV BPE tokenizer + autoregressive greedy decoding loop.'''
 
     # 1. Create LLM with OpenCV BPE tokenizer
-    llm = cv.dnn.LLM.create(model_path, cv.dnn.TOKENIZER_OPENCV_BPE, tokenizer_cfg)
+    llm = cv.dnn.LLM.create(model_path, cv.dnn.TOKENIZER_OPENCV, tokenizer_cfg)
     tokenizer = llm.getTokenizer()
 
     # 2. Encode prompt
@@ -129,7 +147,7 @@ def run_qwen(model_path, tokenizer_cfg, user_prompt, max_new_tokens):
     with multiple named inputs (input_ids, attention_mask, position_ids).'''
 
     # 1. Create LLM with OpenCV BPE tokenizer and ENGINE_NEW
-    llm = cv.dnn.LLM.create(model_path, cv.dnn.TOKENIZER_OPENCV_BPE, tokenizer_cfg, cv.dnn.ENGINE_NEW)
+    llm = cv.dnn.LLM.create(model_path, cv.dnn.TOKENIZER_OPENCV, tokenizer_cfg, cv.dnn.ENGINE_NEW)
     tokenizer = llm.getTokenizer()
 
     # 2. Encode prompt with ChatML format
@@ -159,16 +177,50 @@ def run_qwen(model_path, tokenizer_cfg, user_prompt, max_new_tokens):
     print(tokenizer.decode(tokens[0].tolist()))
 
 
+def run_gemma3(model_path, tokenizer_cfg, user_prompt, max_new_tokens):
+    '''Gemma3 path: uses OpenCV Gemma tokenizer + autoregressive greedy decoding loop
+    with input_ids and attention_mask.'''
+
+    # 1. Create LLM with OpenCV Gemma tokenizer and ENGINE_NEW
+    llm = cv.dnn.LLM.create(model_path, cv.dnn.TOKENIZER_OPENCV, tokenizer_cfg, cv.dnn.ENGINE_NEW)
+    tokenizer = llm.getTokenizer()
+
+    # 2. Encode prompt with Gemma3 chat format (BOS token id=2 prepended)
+    gemma_prompt = '<start_of_turn>user\n' + user_prompt + '<end_of_turn>\n<start_of_turn>model\n'
+    tokens = [2] + list(tokenizer.encode(gemma_prompt))
+    tokens = np.array(tokens, dtype=np.int64).reshape(1, -1)
+
+    # 3. Autoregressive greedy decoding loop
+    stop_ids = (1, 106)  # <eos>, <end_of_turn>
+
+    for _ in range(max_new_tokens):
+        seq_len = tokens.shape[1]
+        attention_mask = np.ones((1, seq_len), dtype=np.int64)
+
+        logits = llm.run([tokens, attention_mask],
+                         ['input_ids', 'attention_mask'])
+        logits = logits[:, -1, :]
+
+        new_id = int(np.argmax(logits.reshape(-1)))
+        tokens = np.concatenate((tokens, np.array([[new_id]], dtype=np.int64)), axis=1)
+
+        if new_id in stop_ids:
+            break
+
+    # 4. Decode and print
+    print(tokenizer.decode(tokens[0].tolist()))
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description='LLM inference using the LLM class with multiple tokenizer backends.',
                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--tokenizer_type', type=str, default='ort_genai',
-                        choices=['ort_genai', 'gpt2', 'qwen'],
-                        help='Tokenizer type: ort_genai, gpt2, or qwen.')
+                        choices=['ort_genai', 'gpt2', 'qwen', 'gemma3'],
+                        help='Tokenizer type: ort_genai, gpt2, qwen, or gemma3.')
     parser.add_argument('--model', type=str, required=True, help='Path to ONNX model file or ORT-GenAI model directory.')
-    parser.add_argument('--tokenizer', type=str, default='', help='Path to tokenizer config.json (required for gpt2/qwen).')
+    parser.add_argument('--tokenizer', type=str, default='', help='Path to tokenizer config.json (required for gpt2/qwen/gemma3).')
     parser.add_argument('--prompt', type=str, default='What is OpenCV?', help='User prompt text.')
-    parser.add_argument('--max_new_tokens', type=int, default=100, help='Maximum number of new tokens to generate (ort_genai/qwen).')
+    parser.add_argument('--max_new_tokens', type=int, default=100, help='Maximum number of new tokens to generate (ort_genai/qwen/gemma3).')
     parser.add_argument('--max_seq_len', type=int, default=32, help='Number of tokens to continue (gpt2 only).')
     return parser.parse_args()
 
@@ -191,6 +243,12 @@ if __name__ == '__main__':
             exit(1)
         run_qwen(args.model, args.tokenizer, args.prompt, args.max_new_tokens)
 
+    elif args.tokenizer_type == 'gemma3':
+        if not args.tokenizer:
+            print("Error: --tokenizer is required for gemma3 tokenizer_type.")
+            exit(1)
+        run_gemma3(args.model, args.tokenizer, args.prompt, args.max_new_tokens)
+
     else:
-        print(f"Error: Unknown tokenizer_type '{args.tokenizer_type}'. Use ort_genai, gpt2, or qwen.")
+        print(f"Error: Unknown tokenizer_type '{args.tokenizer_type}'. Use ort_genai, gpt2, qwen, or gemma3.")
         exit(1)

@@ -67,6 +67,24 @@ Exporting Qwen2.5 model to ONNX:
 To run:
     ./example_dnn_llm_inference --tokenizer_type=qwen --model=/path/to/qwen2.5.onnx \
         --tokenizer=/path/to/qwen2.5/config.json --prompt="What is OpenCV?" --max_new_tokens=100
+
+=== Gemma3 with OpenCV Gemma tokenizer ===
+
+Model: https://huggingface.co/google/gemma-3-1b-it
+
+Exporting Gemma3 model to ONNX:
+
+1. Install the required dependencies:
+
+    pip install optimum[exporters] torch transformers
+
+2. Export the model to ONNX:
+
+    optimum-cli export onnx --model google/gemma-3-1b-it --task causal-lm gemma3_instruct_onnx/
+
+To run:
+    ./example_dnn_llm_inference --tokenizer_type=gemma3 --model=/path/to/gemma3.onnx \
+        --tokenizer=/path/to/gemma3/config.json --prompt="What is OpenCV?" --max_new_tokens=100
 */
 
 #include <iostream>
@@ -110,7 +128,7 @@ static void runGpt2(const string& modelPath, const string& tokenizerCfg,
              const string& userPrompt, int maxSeqLen)
 {
     // 1. Create LLM with OpenCV BPE tokenizer
-    LLM llm = LLM::create(modelPath, TOKENIZER_OPENCV_BPE, tokenizerCfg);
+    LLM llm = LLM::create(modelPath, TOKENIZER_OPENCV, tokenizerCfg);
     Tokenizer tokenizer = llm.getTokenizer();
 
     // 2. Encode prompt
@@ -126,7 +144,7 @@ static void runGpt2(const string& modelPath, const string& tokenizerCfg,
 
         int seqLen    = logits.size[1];
         int vocabSize = logits.size[2];
-        Mat lastLogits(1, vocabSize, CV_32F, logits.ptr<float>() + (seqLen - 1) * vocabSize);
+        Mat lastLogits(1, vocabSize, CV_32F, logits.ptr<float>(0, seqLen - 1));
 
         Point maxLoc;
         minMaxLoc(lastLogits, nullptr, nullptr, nullptr, &maxLoc);
@@ -146,7 +164,7 @@ static void runQwen(const string& modelPath, const string& tokenizerCfg,
              const string& userPrompt, int maxNewTokens)
 {
     // 1. Create LLM with OpenCV BPE tokenizer and ENGINE_NEW
-    LLM llm = LLM::create(modelPath, TOKENIZER_OPENCV_BPE, tokenizerCfg, ENGINE_NEW);
+    LLM llm = LLM::create(modelPath, TOKENIZER_OPENCV, tokenizerCfg, ENGINE_NEW);
     Tokenizer tokenizer = llm.getTokenizer();
 
     // 2. Encode prompt with ChatML format
@@ -175,7 +193,69 @@ static void runQwen(const string& modelPath, const string& tokenizerCfg,
         if (logits.dims == 3)
         {
             int vocabSize = logits.size[2];
-            lastLogits = Mat(1, vocabSize, CV_32F, logits.ptr<float>() + (seqLen - 1) * vocabSize);
+            lastLogits = Mat(1, vocabSize, CV_32F, logits.ptr<float>(0, seqLen - 1));
+        }
+        else
+        {
+            lastLogits = logits.row(logits.rows - 1);
+        }
+
+        Point maxLoc;
+        minMaxLoc(lastLogits, nullptr, nullptr, nullptr, &maxLoc);
+        int newId = maxLoc.x;
+
+        bool stop = false;
+        for (int sid : stopIds)
+        {
+            if (newId == sid) { stop = true; break; }
+        }
+        if (stop) break;
+
+        Mat newToken(1, 1, CV_64S, Scalar(static_cast<int64_t>(newId)));
+        hconcat(tokens, newToken, tokens);
+    }
+
+    // 4. Decode and print
+    Mat tokens32s;
+    tokens.convertTo(tokens32s, CV_32S);
+    vector<int> allIds(tokens32s.ptr<int>(), tokens32s.ptr<int>() + tokens32s.total());
+    cout << tokenizer.decode(allIds) << endl;
+}
+
+// Gemma3 path: uses OpenCV Gemma tokenizer + autoregressive greedy decoding loop
+// with input_ids and attention_mask.
+static void runGemma3(const string& modelPath, const string& tokenizerCfg,
+                      const string& userPrompt, int maxNewTokens)
+{
+    // 1. Create LLM with OpenCV Gemma tokenizer and ENGINE_NEW
+    LLM llm = LLM::create(modelPath, TOKENIZER_OPENCV, tokenizerCfg, ENGINE_NEW);
+    Tokenizer tokenizer = llm.getTokenizer();
+
+    // 2. Encode prompt with Gemma3 chat format (BOS token id=2 prepended)
+    const string gemmaPrompt = "<start_of_turn>user\n" + userPrompt + "<end_of_turn>\n<start_of_turn>model\n";
+    vector<int> ids = tokenizer.encode(gemmaPrompt);
+    ids.insert(ids.begin(), 2);  // BOS token
+
+    Mat tokens(1, (int)ids.size(), CV_64S);
+    for (int i = 0; i < (int)ids.size(); i++)
+        tokens.at<int64_t>(0, i) = static_cast<int64_t>(ids[i]);
+
+    // 3. Autoregressive greedy decoding loop
+    const vector<int> stopIds = {1, 106};  // <eos>, <end_of_turn>
+
+    for (int i = 0; i < maxNewTokens; i++)
+    {
+        int seqLen = tokens.cols;
+        Mat attentionMask(1, seqLen, CV_64S, Scalar(1));
+
+        Mat logits = llm.run({tokens, attentionMask},
+                             {"input_ids", "attention_mask"});
+
+        Mat lastLogits;
+        if (logits.dims == 3)
+        {
+            int vocabSize = logits.size[2];
+            lastLogits = Mat(1, vocabSize, CV_32F, logits.ptr<float>(0, seqLen - 1));
         }
         else
         {
@@ -206,11 +286,11 @@ static void runQwen(const string& modelPath, const string& tokenizerCfg,
 
 const string param_keys =
     "{ help           h  |                  | Print help message. }"
-    "{ tokenizer_type    | ort_genai        | Tokenizer type: ort_genai, gpt2, or qwen. }"
+    "{ tokenizer_type    | ort_genai        | Tokenizer type: ort_genai, gpt2, qwen, or gemma3. }"
     "{ model          m  |                  | Path to ONNX model file or ORT-GenAI model directory (required). }"
-    "{ tokenizer      t  |                  | Path to tokenizer config.json (required for gpt2/qwen). }"
+    "{ tokenizer      t  |                  | Path to tokenizer config.json (required for gpt2/qwen/gemma3). }"
     "{ prompt         p  | What is OpenCV?  | User prompt text. }"
-    "{ max_new_tokens    | 100              | Maximum number of new tokens to generate (ort_genai/qwen). }"
+    "{ max_new_tokens    | 100              | Maximum number of new tokens to generate (ort_genai/qwen/gemma3). }"
     "{ max_seq_len       | 32               | Number of tokens to continue (gpt2 only). }";
 
 int main(int argc, char** argv)
@@ -258,9 +338,18 @@ int main(int argc, char** argv)
         }
         runQwen(modelPath, tokenizerCfg, userPrompt, maxNewTokens);
     }
+    else if (tokenizerType == "gemma3")
+    {
+        if (tokenizerCfg.empty())
+        {
+            cerr << "Error: --tokenizer is required for gemma3 tokenizer_type." << endl;
+            return 1;
+        }
+        runGemma3(modelPath, tokenizerCfg, userPrompt, maxNewTokens);
+    }
     else
     {
-        cerr << "Error: Unknown tokenizer_type '" << tokenizerType << "'. Use ort_genai, gpt2, or qwen." << endl;
+        cerr << "Error: Unknown tokenizer_type '" << tokenizerType << "'. Use ort_genai, gpt2, qwen, or gemma3." << endl;
         return 1;
     }
 

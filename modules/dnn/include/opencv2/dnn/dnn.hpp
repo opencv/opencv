@@ -2180,7 +2180,7 @@ private:
      */
     enum TokenizerType
     {
-        TOKENIZER_OPENCV_BPE = 0, //!< OpenCV built-in BPE tokenizer (GPT-2, GPT-4, Qwen 2.5 — auto-detected from config.json).
+        TOKENIZER_OPENCV     = 0, //!< OpenCV built-in tokenizer; backend selected from config.json (BPE: GPT-2/GPT-4/Qwen2.5, Gemma: Gemma3).
         TOKENIZER_ORT_GENAI  = 1  //!< ORT GenAI tokenizer (requires build with WITH_ONNXRUNTIME=ON and WITH_ONNXRUNTIME_GENAI=ON).
     };
 
@@ -2198,7 +2198,7 @@ private:
         /** @brief Create an LLM instance.
          *  @param modelPath  Path to model directory (for ORT GenAI) or config.json (for OpenCV tokenizers when tokenizerConfigPath is empty).
          *  @param tokenizerType  Which tokenizer backend to use. @see TokenizerType
-         *  @param tokenizerConfigPath  Optional separate path to tokenizer config.json. When provided with TOKENIZER_OPENCV_BPE,
+         *  @param tokenizerConfigPath  Optional separate path to tokenizer config.json. When provided with TOKENIZER_OPENCV,
          *  modelPath is used for the model and tokenizerConfigPath for the tokenizer.
          *  @param engine  Engine type for inference. Only needed for ORT GenAI. @see EngineType
          */
