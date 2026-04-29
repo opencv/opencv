@@ -12,6 +12,7 @@
 #include "nldiffusion_functions.h"
 #include "utils.h"
 #include "opencl_kernels_features2d.hpp"
+#include "akaze_diffusion.hpp"
 
 #include <iostream>
 
@@ -111,185 +112,6 @@ static inline int getGaussianKernelSize(float sigma) {
   return ksize;
 }
 
-/* ************************************************************************* */
-/**
-* @brief This function computes a scalar non-linear diffusion step
-* @param Lt Base image in the evolution
-* @param Lf Conductivity image
-* @param Lstep Output image that gives the difference between the current
-* Ld and the next Ld being evolved
-* @param row_begin row where to start
-* @param row_end last row to fill exclusive. the range is [row_begin, row_end).
-* @note Forward Euler Scheme 3x3 stencil
-* The function c is a scalar value that depends on the gradient norm
-* dL_by_ds = d(c dL_by_dx)_by_dx + d(c dL_by_dy)_by_dy
-*/
-static inline void
-nld_step_scalar_one_lane(const Mat& Lt, const Mat& Lf, Mat& Lstep, float step_size, int row_begin, int row_end)
-{
-  CV_INSTRUMENT_REGION();
-  /* The labeling scheme for this five star stencil:
-   [    a    ]
-   [ -1 c +1 ]
-   [    b    ]
-   */
-
-  Lstep.create(Lt.size(), Lt.type());
-  const int cols = Lt.cols - 2;
-  int row = row_begin;
-
-  const float *lt_a, *lt_c, *lt_b;
-  const float *lf_a, *lf_c, *lf_b;
-  float *dst;
-  float step_r = 0.f;
-
-  // Process the top row
-  if (row == 0) {
-    lt_c = Lt.ptr<float>(0) + 1;  /* Skip the left-most column by +1 */
-    lf_c = Lf.ptr<float>(0) + 1;
-    lt_b = Lt.ptr<float>(1) + 1;
-    lf_b = Lf.ptr<float>(1) + 1;
-
-    // fill the corner to prevent uninitialized values
-    dst = Lstep.ptr<float>(0);
-    dst[0] = 0.0f;
-    ++dst;
-
-    for (int j = 0; j < cols; j++) {
-      step_r = (lf_c[j] + lf_c[j + 1])*(lt_c[j + 1] - lt_c[j]) +
-               (lf_c[j] + lf_c[j - 1])*(lt_c[j - 1] - lt_c[j]) +
-               (lf_c[j] + lf_b[j    ])*(lt_b[j    ] - lt_c[j]);
-      dst[j] = step_r * step_size;
-    }
-
-    // fill the corner to prevent uninitialized values
-    dst[cols] = 0.0f;
-    ++row;
-  }
-
-  // Process the middle rows
-  int middle_end = std::min(Lt.rows - 1, row_end);
-  for (; row < middle_end; ++row)
-  {
-    lt_a = Lt.ptr<float>(row - 1);
-    lf_a = Lf.ptr<float>(row - 1);
-    lt_c = Lt.ptr<float>(row    );
-    lf_c = Lf.ptr<float>(row    );
-    lt_b = Lt.ptr<float>(row + 1);
-    lf_b = Lf.ptr<float>(row + 1);
-    dst = Lstep.ptr<float>(row);
-
-    // The left-most column
-    step_r = (lf_c[0] + lf_c[1])*(lt_c[1] - lt_c[0]) +
-             (lf_c[0] + lf_b[0])*(lt_b[0] - lt_c[0]) +
-             (lf_c[0] + lf_a[0])*(lt_a[0] - lt_c[0]);
-    dst[0] = step_r * step_size;
-
-    lt_a++; lt_c++; lt_b++;
-    lf_a++; lf_c++; lf_b++;
-    dst++;
-
-    // The middle columns
-    for (int j = 0; j < cols; j++)
-    {
-      step_r = (lf_c[j] + lf_c[j + 1])*(lt_c[j + 1] - lt_c[j]) +
-               (lf_c[j] + lf_c[j - 1])*(lt_c[j - 1] - lt_c[j]) +
-               (lf_c[j] + lf_b[j    ])*(lt_b[j    ] - lt_c[j]) +
-               (lf_c[j] + lf_a[j    ])*(lt_a[j    ] - lt_c[j]);
-      dst[j] = step_r * step_size;
-    }
-
-    // The right-most column
-    step_r = (lf_c[cols] + lf_c[cols - 1])*(lt_c[cols - 1] - lt_c[cols]) +
-             (lf_c[cols] + lf_b[cols    ])*(lt_b[cols    ] - lt_c[cols]) +
-             (lf_c[cols] + lf_a[cols    ])*(lt_a[cols    ] - lt_c[cols]);
-    dst[cols] = step_r * step_size;
-  }
-
-  // Process the bottom row (row == Lt.rows - 1)
-  if (row_end == Lt.rows) {
-    lt_a = Lt.ptr<float>(row - 1) + 1;  /* Skip the left-most column by +1 */
-    lf_a = Lf.ptr<float>(row - 1) + 1;
-    lt_c = Lt.ptr<float>(row    ) + 1;
-    lf_c = Lf.ptr<float>(row    ) + 1;
-
-    // fill the corner to prevent uninitialized values
-    dst = Lstep.ptr<float>(row);
-    dst[0] = 0.0f;
-    ++dst;
-
-    for (int j = 0; j < cols; j++) {
-      step_r = (lf_c[j] + lf_c[j + 1])*(lt_c[j + 1] - lt_c[j]) +
-               (lf_c[j] + lf_c[j - 1])*(lt_c[j - 1] - lt_c[j]) +
-               (lf_c[j] + lf_a[j    ])*(lt_a[j    ] - lt_c[j]);
-      dst[j] = step_r * step_size;
-    }
-
-    // fill the corner to prevent uninitialized values
-    dst[cols] = 0.0f;
-  }
-}
-
-class NonLinearScalarDiffusionStep : public ParallelLoopBody
-{
-public:
-  NonLinearScalarDiffusionStep(const Mat& Lt, const Mat& Lf, Mat& Lstep, float step_size)
-    : Lt_(&Lt), Lf_(&Lf), Lstep_(&Lstep), step_size_(step_size)
-  {}
-
-  void operator()(const Range& range) const CV_OVERRIDE
-  {
-    nld_step_scalar_one_lane(*Lt_, *Lf_, *Lstep_, step_size_, range.start, range.end);
-  }
-
-private:
-  const Mat* Lt_;
-  const Mat* Lf_;
-  Mat* Lstep_;
-  float step_size_;
-};
-
-#ifdef HAVE_OPENCL
-static inline bool
-ocl_non_linear_diffusion_step(InputArray Lt_, InputArray Lf_, OutputArray Lstep_, float step_size)
-{
-  if(!Lt_.isContinuous())
-    return false;
-
-  UMat Lt = Lt_.getUMat();
-  UMat Lf = Lf_.getUMat();
-  UMat Lstep = Lstep_.getUMat();
-
-  size_t globalSize[] = {(size_t)Lt.cols, (size_t)Lt.rows};
-
-  ocl::Kernel ker("AKAZE_nld_step_scalar", ocl::features2d::akaze_oclsrc);
-  if( ker.empty() )
-    return false;
-
-  return ker.args(
-    ocl::KernelArg::ReadOnly(Lt),
-    ocl::KernelArg::PtrReadOnly(Lf),
-    ocl::KernelArg::PtrWriteOnly(Lstep),
-    step_size).run(2, globalSize, 0, true);
-}
-#endif // HAVE_OPENCL
-
-static inline void
-non_linear_diffusion_step(InputArray Lt_, InputArray Lf_, OutputArray Lstep_, float step_size)
-{
-  CV_INSTRUMENT_REGION();
-
-  Lstep_.create(Lt_.size(), Lt_.type());
-
-  CV_OCL_RUN(Lt_.isUMat() && Lf_.isUMat() && Lstep_.isUMat(),
-    ocl_non_linear_diffusion_step(Lt_, Lf_, Lstep_, step_size));
-
-  Mat Lt = Lt_.getMat();
-  Mat Lf = Lf_.getMat();
-  Mat Lstep = Lstep_.getMat();
-  parallel_for_(Range(0, Lt.rows), NonLinearScalarDiffusionStep(Lt, Lf, Lstep, step_size));
-}
-
 /**
  * @brief This function computes a good empirical value for the k contrast factor
  * given two gradient images, the percentile (0-1), the temporal storage to hold
@@ -310,38 +132,42 @@ compute_kcontrast(InputArray Lx_, InputArray Ly_, float perc, int nbins)
   Mat Lx = Lx_.getMat();
   Mat Ly = Ly_.getMat();
 
-  // temporary square roots of dot product
-  Mat modgs (Lx.rows - 2, Lx.cols - 2, CV_32F);
-  const int total = modgs.cols * modgs.rows;
-  float *modg = modgs.ptr<float>();
+  int rows = Lx.rows - 2;
+  int cols = Lx.cols - 2;
+  const int total = rows * cols;
+
+  if (total <= 0)
+    return 0.03f;
+
+  Mat Lx_inner = Lx(Rect(1, 1, cols, rows));
+  Mat Ly_inner = Ly(Rect(1, 1, cols, rows));
+  Mat modgs;
+  magnitude(Lx_inner, Ly_inner, modgs);
+
   float hmax = 0.0f;
-
-  for (int i = 1; i < Lx.rows - 1; i++) {
-    const float *lx = Lx.ptr<float>(i) + 1;
-    const float *ly = Ly.ptr<float>(i) + 1;
-    const int cols = Lx.cols - 2;
-
-    for (int j = 0; j < cols; j++) {
-      float dist = sqrtf(lx[j] * lx[j] + ly[j] * ly[j]);
-      *modg++ = dist;
-      hmax = std::max(hmax, dist);
-    }
+  const float* modg_ptr = modgs.ptr<float>();
+  for (int i = 0; i < total; i++) {
+    if (modg_ptr[i] > hmax) hmax = modg_ptr[i];
   }
-  modg = modgs.ptr<float>();
 
   if (hmax == 0.0f)
-    return 0.03f;  // e.g. a blank image
+    return 0.03f;
 
-  // Compute the bin numbers: the value range [0, hmax] -> [0, nbins-1]
-  modgs *= (nbins - 1) / hmax;
+  Mat modgs_mutable = modgs.clone();
+  float* modg_ptr_w = modgs_mutable.ptr<float>();
+  float scale = (nbins - 1) / hmax;
+  for (int i = 0; i < total; i++) {
+    modg_ptr_w[i] = modg_ptr[i] * scale;
+  }
 
-  // Count up histogram
   std::vector<int> hist(nbins, 0);
-  for (int i = 0; i < total; i++)
-    hist[(int)modg[i]]++;
+  for (int i = 0; i < total; i++) {
+    int bin = (int)modg_ptr_w[i];
+    if (bin >= 0 && bin < nbins)
+      hist[bin]++;
+  }
 
-  // Now find the perc of the histogram percentile
-  const int nthreshold = (int)((total - hist[0]) * perc);  // Exclude hist[0] as background
+  const int nthreshold = (int)((total - hist[0]) * perc);
   int nelements = 0;
   for (int k = 1; k < nbins; k++) {
     if (nelements >= nthreshold)
@@ -355,72 +181,102 @@ compute_kcontrast(InputArray Lx_, InputArray Ly_, float perc, int nbins)
 
 #ifdef HAVE_OPENCL
 static inline bool
-ocl_pm_g2(InputArray Lx_, InputArray Ly_, OutputArray Lflow_, float kcontrast)
+ocl_compute_kcontrast(InputArray Lx_, InputArray Ly_, float perc, int nbins, float& kcontrast_out)
 {
   UMat Lx = Lx_.getUMat();
   UMat Ly = Ly_.getUMat();
-  UMat Lflow = Lflow_.getUMat();
 
-  int total = Lx.rows * Lx.cols;
-  size_t globalSize[] = {(size_t)total};
+  int rows = Lx.rows - 2;
+  int cols = Lx.cols - 2;
+  int total = rows * cols;
 
-  ocl::Kernel ker("AKAZE_pm_g2", ocl::features2d::akaze_oclsrc);
-  if( ker.empty() )
+  if (total <= 0)
     return false;
 
-  return ker.args(
-    ocl::KernelArg::PtrReadOnly(Lx),
-    ocl::KernelArg::PtrReadOnly(Ly),
-    ocl::KernelArg::PtrWriteOnly(Lflow),
-    kcontrast, total).run(1, globalSize, 0, true);
+  UMat modgs(rows, cols, CV_32F);
+  UMat Lx_inner = Lx(Rect(1, 1, cols, rows));
+  UMat Ly_inner = Ly(Rect(1, 1, cols, rows));
+
+  magnitude(Lx_inner, Ly_inner, modgs);
+
+  // Download once and compute histogram on CPU
+  Mat modgs_mat;
+  modgs.copyTo(modgs_mat);
+
+  const float* ptr = modgs_mat.ptr<float>();
+  float hmax = 0.0f;
+  for (int i = 0; i < total; i++) {
+    if (ptr[i] > hmax) hmax = ptr[i];
+  }
+
+  if (hmax == 0.0f) {
+    kcontrast_out = 0.03f;
+    return true;
+  }
+
+  float scale = (nbins - 1) / hmax;
+  float* ptr_w = (float*)ptr;  // We already have a writable copy via copyTo
+  for (int i = 0; i < total; i++) {
+    ptr_w[i] = ptr[i] * scale;
+  }
+
+  Mat hist_mat(1, nbins, CV_32SC1, Scalar(0));
+  for (int i = 0; i < total; i++) {
+    int bin = (int)ptr_w[i];
+    if (bin >= 0 && bin < nbins) {
+      hist_mat.at<int>(0, bin)++;
+    }
+  }
+
+  const int nthreshold = (int)((total - hist_mat.at<int>(0, 0)) * perc);
+  int nelements = 0;
+  for (int k = 1; k < nbins; k++) {
+    if (nelements >= nthreshold) {
+      kcontrast_out = (float)hmax * k / nbins;
+      return true;
+    }
+    nelements += hist_mat.at<int>(0, k);
+  }
+
+  kcontrast_out = 0.03f;
+  return true;
 }
 #endif // HAVE_OPENCL
-
-static inline void
-compute_diffusivity(InputArray Lx, InputArray Ly, OutputArray Lflow, float kcontrast, KAZE::DiffusivityType diffusivity)
-{
-  CV_INSTRUMENT_REGION();
-
-  Lflow.create(Lx.size(), Lx.type());
-
-  switch (diffusivity) {
-    case KAZE::DIFF_PM_G1:
-      pm_g1(Lx, Ly, Lflow, kcontrast);
-    break;
-    case KAZE::DIFF_PM_G2:
-      CV_OCL_RUN(Lx.isUMat() && Ly.isUMat() && Lflow.isUMat(), ocl_pm_g2(Lx, Ly, Lflow, kcontrast));
-      pm_g2(Lx, Ly, Lflow, kcontrast);
-    break;
-    case KAZE::DIFF_WEICKERT:
-      weickert_diffusivity(Lx, Ly, Lflow, kcontrast);
-    break;
-    case KAZE::DIFF_CHARBONNIER:
-      charbonnier_diffusivity(Lx, Ly, Lflow, kcontrast);
-    break;
-    default:
-      CV_Error_(Error::StsError, ("Diffusivity is not supported: %d", static_cast<int>(diffusivity)));
-    break;
-  }
-}
 
 /**
  * @brief Converts input image to grayscale float image
  *
- * @param image any image
- * @param dst grayscale float image
+ * @param image any image (Mat or UMat)
+ * @param dst grayscale float image (Mat or UMat)
  */
 static inline void prepareInputImage(InputArray image, OutputArray dst)
 {
-  Mat img = image.getMat();
-  if (img.channels() > 1)
-    cvtColor(image, img, COLOR_BGR2GRAY);
+  if (image.isUMat()) {
+    UMat img = image.getUMat();
+    if (img.channels() > 1) {
+      UMat tmp;
+      cvtColor(image, tmp, COLOR_BGR2GRAY);
+      img = tmp;
+    }
 
-  if ( img.depth() == CV_32F )
-    dst.assign(img);
-  else if ( img.depth() == CV_8U )
-    img.convertTo(dst, CV_32F, 1.0 / 255.0, 0);
-  else if ( img.depth() == CV_16U )
-    img.convertTo(dst, CV_32F, 1.0 / 65535.0, 0);
+    if (img.depth() == CV_32F)
+      dst.assign(img);
+    else if (img.depth() == CV_8U)
+      img.convertTo(dst, CV_32F, 1.0 / 255.0, 0);
+    else if (img.depth() == CV_16U)
+      img.convertTo(dst, CV_32F, 1.0 / 65535.0, 0);
+  } else {
+    Mat img = image.getMat();
+    if (img.channels() > 1)
+      cvtColor(image, img, COLOR_BGR2GRAY);
+
+    if (img.depth() == CV_32F)
+      dst.assign(img);
+    else if (img.depth() == CV_8U)
+      img.convertTo(dst, CV_32F, 1.0 / 255.0, 0);
+    else if (img.depth() == CV_16U)
+      img.convertTo(dst, CV_32F, 1.0 / 65535.0, 0);
+  }
 }
 
 /**
@@ -458,8 +314,17 @@ create_nonlinear_scale_space(InputArray image, const AKAZEOptions &options,
   Scharr(Lsmooth, Lx, CV_32F, 1, 0, 1, 0, BORDER_DEFAULT);
   Scharr(Lsmooth, Ly, CV_32F, 0, 1, 1, 0, BORDER_DEFAULT);
   Lsmooth.release();
-  // compute the kcontrast factor
-  float kcontrast = compute_kcontrast(Lx, Ly, options.kcontrast_percentile, options.kcontrast_nbins);
+
+  // compute the kcontrast factor - try OCL path first if working with UMat
+  float kcontrast = 0.0f;
+#ifdef HAVE_OPENCL
+  bool kcontrast_ocl_success = false;
+  if (std::is_same<MatType, UMat>::value) {
+    kcontrast_ocl_success = ocl_compute_kcontrast(Lx, Ly, options.kcontrast_percentile, options.kcontrast_nbins, kcontrast);
+  }
+  if (!kcontrast_ocl_success)
+#endif
+    kcontrast = compute_kcontrast(Lx, Ly, options.kcontrast_percentile, options.kcontrast_nbins);
 
   // Now generate the rest of evolution levels
   for (size_t i = 1; i < evolution.size(); i++) {
@@ -520,7 +385,7 @@ convertScalePyramid(const std::vector<Evolution<MatTypeSrc> >& src, std::vector<
  */
 void AKAZEFeatures::Create_Nonlinear_Scale_Space(InputArray image)
 {
-  if (ocl::isOpenCLActivated() && image.isUMat()) {
+  if (ocl::isOpenCLActivated() && image.isUMat() && !ocl::Device::getDefault().hostUnifiedMemory()) {
     // will run OCL version of scale space pyramid
     UMatPyramid uPyr;
     // init UMat pyramid with sizes
@@ -533,6 +398,27 @@ void AKAZEFeatures::Create_Nonlinear_Scale_Space(InputArray image)
     create_nonlinear_scale_space(image, options_, tsteps_, evolution_);
   }
 }
+
+#ifdef HAVE_OPENCL
+/**
+ * @brief Get initialized evolution pyramid for UMatPyramid
+ * @param uPyr Output UMatPyramid initialized with sizes from evolution_
+ */
+void AKAZEFeatures::GetEvolutionPyramid(UMatPyramid& uPyr)
+{
+  convertScalePyramid(evolution_, uPyr);
+}
+
+/**
+ * @brief This method creates the nonlinear scale space for a given image (UMatPyramid version)
+ * @param image Input image for which the nonlinear scale space needs to be created
+ * @param uPyr UMatPyramid to store the evolution
+ */
+void AKAZEFeatures::Create_Nonlinear_Scale_Space_UMat(InputArray image, UMatPyramid& uPyr)
+{
+  create_nonlinear_scale_space(image, options_, tsteps_, uPyr);
+}
+#endif // HAVE_OPENCL
 
 /* ************************************************************************* */
 
@@ -558,7 +444,7 @@ ocl_compute_determinant(InputArray Lxx_, InputArray Lxy_, InputArray Lyy_,
     ocl::KernelArg::PtrReadOnly(Lxy),
     ocl::KernelArg::PtrReadOnly(Lyy),
     ocl::KernelArg::PtrWriteOnly(Ldet),
-    sigma, total).run(1, globalSize, 0, true);
+    sigma, total).run(1, globalSize, 0, false);
 }
 #endif // HAVE_OPENCL
 
@@ -714,6 +600,202 @@ find_neighbor_point(const int x, const int y, const Mat &mask, const int search_
   return false;
 }
 
+#ifdef HAVE_OPENCL
+static inline bool
+ocl_find_extrema_same_scale(InputArray Ldet_, OutputArray keypoint_mask_, float threshold, int border)
+{
+  UMat Ldet = Ldet_.getUMat();
+  UMat keypoint_mask = keypoint_mask_.getUMat();
+
+  int rows = Ldet.rows;
+  int cols = Ldet.cols;
+
+  size_t globalSize[] = {(size_t)cols, (size_t)rows};
+
+  ocl::Kernel ker("AKAZE_find_extrema_same_scale", ocl::features2d::akaze_oclsrc);
+  if( ker.empty() )
+    return false;
+
+  bool success = ker.set(0, ocl::KernelArg::ReadOnly(Ldet));
+  success = success && ker.set(1, rows);
+  success = success && ker.set(2, cols);
+  success = success && ker.set(3, threshold);
+  success = success && ker.set(4, border);
+  success = success && ker.set(5, ocl::KernelArg::PtrWriteOnly(keypoint_mask));
+
+  if (!success)
+    return false;
+
+  return ker.run(2, globalSize, 0, false);
+}
+
+static inline bool
+ocl_cross_scale_filter_lower(InputArray keypoints_current_, InputOutputArray keypoints_lower_,
+  InputArray ldet_current_, InputArray ldet_lower_, int diff_ratio, int search_radius)
+{
+  UMat keypoints_current = keypoints_current_.getUMat();
+  UMat keypoints_lower = keypoints_lower_.getUMat();
+  UMat ldet_current = ldet_current_.getUMat();
+  UMat ldet_lower = ldet_lower_.getUMat();
+
+  int rows = keypoints_current.rows;
+  int cols = keypoints_current.cols;
+  int lower_rows = keypoints_lower.rows;
+  int lower_cols = keypoints_lower.cols;
+
+  size_t globalSize[] = {(size_t)cols, (size_t)rows};
+
+  ocl::Kernel ker("AKAZE_cross_scale_filter_lower", ocl::features2d::akaze_oclsrc);
+  if( ker.empty() )
+    return false;
+
+  bool success = ker.set(0, ocl::KernelArg::ReadOnly(keypoints_current));
+  success = success && ker.set(1, ocl::KernelArg::ReadWrite(keypoints_lower));
+  success = success && ker.set(2, ocl::KernelArg::ReadOnly(ldet_current));
+  success = success && ker.set(3, ocl::KernelArg::ReadOnly(ldet_lower));
+  success = success && ker.set(4, rows);
+  success = success && ker.set(5, cols);
+  success = success && ker.set(6, lower_rows);
+  success = success && ker.set(7, lower_cols);
+  success = success && ker.set(8, diff_ratio);
+  success = success && ker.set(9, search_radius);
+  return success && ker.run(2, globalSize, 0, false);
+}
+
+static inline bool
+ocl_cross_scale_filter_upper(InputArray keypoints_current_, InputOutputArray keypoints_upper_,
+  InputArray ldet_current_, InputArray ldet_upper_, int diff_ratio, int search_radius)
+{
+  UMat keypoints_current = keypoints_current_.getUMat();
+  UMat keypoints_upper = keypoints_upper_.getUMat();
+  UMat ldet_current = ldet_current_.getUMat();
+  UMat ldet_upper = ldet_upper_.getUMat();
+
+  int rows = keypoints_current.rows;
+  int cols = keypoints_current.cols;
+  int upper_rows = keypoints_upper.rows;
+  int upper_cols = keypoints_upper.cols;
+
+  size_t globalSize[] = {(size_t)cols, (size_t)rows};
+
+  ocl::Kernel ker("AKAZE_cross_scale_filter_upper", ocl::features2d::akaze_oclsrc);
+  if( ker.empty() )
+    return false;
+
+  bool success = ker.set(0, ocl::KernelArg::ReadOnly(keypoints_current));
+  success = success && ker.set(1, ocl::KernelArg::ReadWrite(keypoints_upper));
+  success = success && ker.set(2, ocl::KernelArg::ReadOnly(ldet_current));
+  success = success && ker.set(3, ocl::KernelArg::ReadOnly(ldet_upper));
+  success = success && ker.set(4, rows);
+  success = success && ker.set(5, cols);
+  success = success && ker.set(6, upper_rows);
+  success = success && ker.set(7, upper_cols);
+  success = success && ker.set(8, diff_ratio);
+  success = success && ker.set(9, search_radius);
+  return success && ker.run(2, globalSize, 0, false);
+}
+
+static inline bool
+ocl_subpixel_refinement_orientation(InputArray keypoints_, InputArray ldet_,
+  InputArray Lx_, InputArray Ly_,
+  int rows, int cols,
+  float octave_ratio, float esigma, int octave, int level,
+  OutputArray output_count_, OutputArray output_x_, OutputArray output_y_,
+  OutputArray output_size_, OutputArray output_response_,
+  OutputArray output_octave_, OutputArray output_class_id_,
+  OutputArray output_angle_,
+  int max_output)
+{
+  UMat keypoints = keypoints_.getUMat();
+  UMat ldet = ldet_.getUMat();
+  UMat Lx = Lx_.getUMat();
+  UMat Ly = Ly_.getUMat();
+  UMat output_count = output_count_.getUMat();
+  UMat output_x = output_x_.getUMat();
+  UMat output_y = output_y_.getUMat();
+  UMat output_size = output_size_.getUMat();
+  UMat output_response = output_response_.getUMat();
+  UMat output_octave = output_octave_.getUMat();
+  UMat output_class_id = output_class_id_.getUMat();
+  UMat output_angle = output_angle_.getUMat();
+
+  size_t globalSize[] = {(size_t)cols, (size_t)rows};
+
+  ocl::Kernel ker("AKAZE_subpixel_refinement_orientation", ocl::features2d::akaze_oclsrc);
+  if( ker.empty() )
+    return false;
+
+  bool success = ker.set(0, ocl::KernelArg::ReadOnly(keypoints));
+  success = success && ker.set(1, ocl::KernelArg::ReadOnly(ldet));
+  success = success && ker.set(2, ocl::KernelArg::ReadOnly(Lx));
+  success = success && ker.set(3, ocl::KernelArg::ReadOnly(Ly));
+  success = success && ker.set(4, rows);
+  success = success && ker.set(5, cols);
+  success = success && ker.set(6, octave_ratio);
+  success = success && ker.set(7, esigma);
+  success = success && ker.set(8, octave);
+  success = success && ker.set(9, level);
+  success = success && ker.set(10, ocl::KernelArg::PtrWriteOnly(output_count));
+  success = success && ker.set(11, ocl::KernelArg::PtrWriteOnly(output_x));
+  success = success && ker.set(12, ocl::KernelArg::PtrWriteOnly(output_y));
+  success = success && ker.set(13, ocl::KernelArg::PtrWriteOnly(output_size));
+  success = success && ker.set(14, ocl::KernelArg::PtrWriteOnly(output_response));
+  success = success && ker.set(15, ocl::KernelArg::PtrWriteOnly(output_octave));
+  success = success && ker.set(16, ocl::KernelArg::PtrWriteOnly(output_class_id));
+  success = success && ker.set(17, ocl::KernelArg::PtrWriteOnly(output_angle));
+  success = success && ker.set(18, max_output);
+
+  if (!success)
+    return false;
+
+  return ker.run(2, globalSize, 0, false);
+}
+
+static inline bool
+ocl_compute_mldb_descriptor_level(InputArray keypoints_x_, InputArray keypoints_y_,
+  InputArray keypoints_size_, InputArray keypoints_angle_,
+  InputArray Lx_, InputArray Ly_, InputArray Lt_,
+  int rows, int cols, float octave_ratio,
+  int descriptor_size, OutputArray output_descriptors_)
+{
+  UMat keypoints_x = keypoints_x_.getUMat();
+  UMat keypoints_y = keypoints_y_.getUMat();
+  UMat keypoints_size = keypoints_size_.getUMat();
+  UMat keypoints_angle = keypoints_angle_.getUMat();
+  UMat Lx = Lx_.getUMat();
+  UMat Ly = Ly_.getUMat();
+  UMat Lt = Lt_.getUMat();
+  UMat output_descriptors = output_descriptors_.getUMat();
+
+  int num_keypoints = (int)keypoints_x.total();
+
+  size_t globalSize[] = {(size_t)num_keypoints};
+
+  ocl::Kernel ker("AKAZE_compute_mldb_descriptor_level", ocl::features2d::akaze_oclsrc);
+  if( ker.empty() )
+    return false;
+
+  bool success = ker.set(0, ocl::KernelArg::ReadOnly(keypoints_x));
+  success = success && ker.set(1, ocl::KernelArg::ReadOnly(keypoints_y));
+  success = success && ker.set(2, ocl::KernelArg::ReadOnly(keypoints_size));
+  success = success && ker.set(3, ocl::KernelArg::ReadOnly(keypoints_angle));
+  success = success && ker.set(4, num_keypoints);
+  success = success && ker.set(5, ocl::KernelArg::ReadOnly(Lx));
+  success = success && ker.set(6, ocl::KernelArg::ReadOnly(Ly));
+  success = success && ker.set(7, ocl::KernelArg::ReadOnly(Lt));
+  success = success && ker.set(8, rows);
+  success = success && ker.set(9, cols);
+  success = success && ker.set(10, octave_ratio);
+  success = success && ker.set(11, descriptor_size);
+  success = success && ker.set(12, ocl::KernelArg::PtrWriteOnly(output_descriptors));
+
+  if (!success)
+    return false;
+
+  return ker.run(1, globalSize, 0, false);
+}
+#endif // HAVE_OPENCL
+
 /**
  * @brief Find keypoints in parallel for each pyramid layer
  */
@@ -784,6 +866,264 @@ private:
   std::vector<Mat>* keypoints_by_layers_;
   float dthreshold_; ///< Detector response threshold to accept point
 };
+
+#ifdef HAVE_OPENCL
+/**
+ * @brief Find keypoints in parallel for each pyramid layer (OpenCL version)
+ */
+class FindKeypointsSameScaleOCL : public ParallelLoopBody
+{
+public:
+    explicit FindKeypointsSameScaleOCL(const UMatPyramid& ev,
+      std::vector<UMat>& kpts, float dthreshold)
+    : evolution_(&ev), keypoints_by_layers_(&kpts), dthreshold_(dthreshold)
+  {}
+
+  void operator()(const Range& range) const CV_OVERRIDE
+  {
+    for (int i = range.start; i < range.end; i++)
+    {
+      const Evolution<UMat> &e = (*evolution_)[i];
+      UMat &kpts = (*keypoints_by_layers_)[i];
+      // this mask will hold positions of keypoints in this level
+      kpts = UMat::zeros(e.Ldet.size(), CV_8UC1);
+
+      // if border is too big we shouldn't search any keypoints
+      if (e.border + 1 >= e.Ldet.rows)
+        continue;
+
+      // Use OpenCL kernel for same-scale extrema detection only
+      ocl_find_extrema_same_scale(e.Ldet, kpts, dthreshold_, e.border);
+    }
+  }
+
+private:
+  const UMatPyramid*  evolution_;
+  std::vector<UMat>* keypoints_by_layers_;
+  float dthreshold_;
+};
+#endif // HAVE_OPENCL
+
+#ifdef HAVE_OPENCL
+/**
+ * @brief This method finds extrema in the nonlinear scale space (UMatPyramid version)
+ * @param keypoints_by_layers Output vectors of detected keypoints; one vector for each evolution level
+ */
+static inline void
+Find_Scale_Space_Extrema_UMat(UMatPyramid& evolution, std::vector<UMat>& keypoints_by_layers, float dthreshold)
+{
+  CV_INSTRUMENT_REGION();
+
+  keypoints_by_layers.resize(evolution.size());
+
+  // find points in the same level using OpenCL
+  FindKeypointsSameScaleOCL(evolution, keypoints_by_layers, dthreshold)
+    (Range(0, (int)evolution.size()));
+}
+
+/**
+ * @brief This method selects interesting keypoints through the nonlinear scale space (OpenCL version)
+ * @param uPyr UMatPyramid evolution
+ * @param kpts Vector of detected keypoints
+ */
+void AKAZEFeatures::Feature_Detection_UMat(UMatPyramid& uPyr, std::vector<KeyPoint>& kpts)
+{
+  CV_INSTRUMENT_REGION();
+
+  kpts.clear();
+  std::vector<UMat> keypoints_by_layers;
+  Find_Scale_Space_Extrema_UMat(uPyr, keypoints_by_layers, options_.dthreshold);
+
+  // Cross-scale filtering using OpenCL (GPU-only)
+  for (size_t i = 1; i < keypoints_by_layers.size(); i++) {
+    const int diff_ratio = (int)uPyr[i].octave_ratio / (int)uPyr[i-1].octave_ratio;
+    const int search_radius = uPyr[i].sigma_size * diff_ratio;
+    ocl_cross_scale_filter_lower(keypoints_by_layers[i], keypoints_by_layers[i-1],
+      uPyr[i].Ldet, uPyr[i-1].Ldet, diff_ratio, search_radius);
+  }
+
+  for (int i = (int)keypoints_by_layers.size() - 2; i >= 0; i--) {
+    const int diff_ratio = (int)uPyr[i+1].octave_ratio / (int)uPyr[i].octave_ratio;
+    const int search_radius = uPyr[i+1].sigma_size;
+    ocl_cross_scale_filter_upper(keypoints_by_layers[i], keypoints_by_layers[i+1],
+      uPyr[i].Ldet, uPyr[i+1].Ldet, diff_ratio, search_radius);
+  }
+
+  // Submit ALL subpixel+orientation kernels async before any download.
+  // OpenCL's in-order queue guarantees correct ordering relative to the
+  // cross-scale filter kernels already queued above.
+  int num_levels = (int)keypoints_by_layers.size();
+  std::vector<int>  max_kpts_per_level(num_levels, 0);
+  std::vector<bool> level_active(num_levels, false);
+  std::vector<UMat> out_count(num_levels), out_x(num_levels), out_y(num_levels);
+  std::vector<UMat> out_size(num_levels), out_response(num_levels);
+  std::vector<UMat> out_octave(num_levels), out_class_id(num_levels), out_angle(num_levels);
+
+  for (int i = 0; i < num_levels; i++) {
+    const Evolution<UMat>& e = uPyr[i];
+    if (e.border + 1 >= e.Ldet.rows)
+      continue;
+    level_active[i] = true;
+    int max_kpts = (int)(e.Ldet.total() * 0.1f);
+    max_kpts_per_level[i] = max_kpts;
+    out_count[i]    = UMat(1, 1, CV_32S, Scalar::all(0));
+    out_x[i]        = UMat(max_kpts, 1, CV_32F);
+    out_y[i]        = UMat(max_kpts, 1, CV_32F);
+    out_size[i]     = UMat(max_kpts, 1, CV_32F);
+    out_response[i] = UMat(max_kpts, 1, CV_32F);
+    out_octave[i]   = UMat(max_kpts, 1, CV_32S);
+    out_class_id[i] = UMat(max_kpts, 1, CV_32S);
+    out_angle[i]    = UMat(max_kpts, 1, CV_32F);
+    ocl_subpixel_refinement_orientation(keypoints_by_layers[i], e.Ldet, e.Lx, e.Ly,
+      e.Ldet.rows, e.Ldet.cols,
+      e.octave_ratio, e.esigma, e.octave, i,
+      out_count[i], out_x[i], out_y[i], out_size[i], out_response[i],
+      out_octave[i], out_class_id[i], out_angle[i], max_kpts);
+  }
+
+  // Single sync point: the first getMat() flushes the entire queue.
+  // All subsequent getMat() calls on already-done buffers return immediately.
+  std::vector<KeyPoint> all_kpts;
+  for (int i = 0; i < num_levels; i++) {
+    if (!level_active[i]) continue;
+    int max_kpts = max_kpts_per_level[i];
+
+    Mat count_mat = out_count[i].getMat(ACCESS_READ);
+    int num_kpts_level = std::min(count_mat.at<int>(0, 0), max_kpts);
+    if (num_kpts_level == 0) continue;
+
+    Mat x_mat    = out_x[i].getMat(ACCESS_READ);
+    Mat y_mat    = out_y[i].getMat(ACCESS_READ);
+    Mat size_mat = out_size[i].getMat(ACCESS_READ);
+    Mat resp_mat = out_response[i].getMat(ACCESS_READ);
+    Mat oct_mat  = out_octave[i].getMat(ACCESS_READ);
+    Mat cid_mat  = out_class_id[i].getMat(ACCESS_READ);
+    Mat ang_mat  = out_angle[i].getMat(ACCESS_READ);
+
+    int start = (int)all_kpts.size();
+    all_kpts.resize(start + num_kpts_level);
+    for (int j = 0; j < num_kpts_level; j++) {
+      KeyPoint& kp    = all_kpts[start + j];
+      kp.pt.x         = x_mat.at<float>(j, 0);
+      kp.pt.y         = y_mat.at<float>(j, 0);
+      kp.size         = size_mat.at<float>(j, 0);
+      kp.response     = resp_mat.at<float>(j, 0);
+      kp.octave       = oct_mat.at<int>(j, 0);
+      kp.class_id     = cid_mat.at<int>(j, 0);
+      kp.angle        = ang_mat.at<float>(j, 0);
+    }
+  }
+
+  kpts = all_kpts;
+}
+#endif // HAVE_OPENCL
+
+#ifdef HAVE_OPENCL
+/**
+ * @brief Compute descriptors using OpenCL (GPU-only)
+ * @param kpts Input keypoints
+ * @param desc Output descriptors
+ * @param uPyr UMatPyramid evolution
+ */
+void AKAZEFeatures::Compute_Descriptors_UMat(std::vector<KeyPoint>& kpts, OutputArray desc, UMatPyramid& uPyr)
+{
+  CV_INSTRUMENT_REGION();
+
+  if (kpts.empty()) {
+    desc.create(0, 0, CV_8UC1);
+    return;
+  }
+
+  // Determine descriptor size based on options
+  int descriptor_size = 64;
+  int descriptor_type = CV_32FC1;
+  if (options_.descriptor >= AKAZE::DESCRIPTOR_MLDB_UPRIGHT)
+  {
+    int descriptor_bits = (options_.descriptor_size == 0)
+          ? (6 + 36 + 120)*options_.descriptor_channels
+          : options_.descriptor_size;
+    descriptor_size = divUp(descriptor_bits, 8);
+    descriptor_type = CV_8UC1;
+  }
+
+  desc.create((int)kpts.size(), descriptor_size, descriptor_type);
+  UMat descriptors = desc.getUMat();
+
+  // For MLDB_UPRIGHT descriptor, use GPU computation (MLDB with rotation falls back to CPU)
+  if (options_.descriptor == AKAZE::DESCRIPTOR_MLDB_UPRIGHT) {
+    int num_keypoints = (int)kpts.size();
+
+    // Group keypoints by their level to process each level independently
+    std::vector<std::vector<int>> kpts_by_level(uPyr.size());
+    for (int i = 0; i < num_keypoints; i++) {
+      int level = kpts[i].class_id;
+      if (level >= 0 && level < (int)uPyr.size()) {
+        kpts_by_level[level].push_back(i);
+      }
+    }
+
+    // Process each level independently on GPU
+    for (size_t level = 0; level < uPyr.size(); level++) {
+      if (kpts_by_level[level].empty())
+        continue;
+
+      const Evolution<UMat>& e = uPyr[level];
+      int num_kpts_level = (int)kpts_by_level[level].size();
+
+      // Create GPU buffers for keypoints in this level
+      std::vector<float> kpts_x, kpts_y, kpts_size, kpts_angle;
+
+      for (int idx : kpts_by_level[level]) {
+        kpts_x.push_back(kpts[idx].pt.x);
+        kpts_y.push_back(kpts[idx].pt.y);
+        kpts_size.push_back(kpts[idx].size);
+        kpts_angle.push_back(kpts[idx].angle);
+      }
+
+      Mat keypoints_x_mat(num_kpts_level, 1, CV_32F, kpts_x.data());
+      Mat keypoints_y_mat(num_kpts_level, 1, CV_32F, kpts_y.data());
+      Mat keypoints_size_mat(num_kpts_level, 1, CV_32F, kpts_size.data());
+      Mat keypoints_angle_mat(num_kpts_level, 1, CV_32F, kpts_angle.data());
+
+      UMat keypoints_x, keypoints_y, keypoints_size, keypoints_angle;
+      keypoints_x_mat.copyTo(keypoints_x);
+      keypoints_y_mat.copyTo(keypoints_y);
+      keypoints_size_mat.copyTo(keypoints_size);
+      keypoints_angle_mat.copyTo(keypoints_angle);
+
+      // Get level data directly without concatenation
+      UMat Lx_level = e.Lx;
+      UMat Ly_level = e.Ly;
+      UMat Lt_level = e.Lt;
+
+      // Allocate descriptor buffer for this level
+      UMat descriptors_level(num_kpts_level, descriptor_size, CV_8UC1);
+
+      // Compute descriptors for this level on GPU
+      ocl_compute_mldb_descriptor_level(keypoints_x, keypoints_y, keypoints_size, keypoints_angle,
+        Lx_level, Ly_level, Lt_level,
+        e.Lx.rows, e.Lx.cols, e.octave_ratio,
+        descriptor_size, descriptors_level);
+
+      // Copy descriptors to final output
+      Mat descriptors_level_mat;
+      descriptors_level.copyTo(descriptors_level_mat);
+
+      Mat descriptors_mat = desc.getMat();
+      for (int i = 0; i < num_kpts_level; i++) {
+        int global_idx = kpts_by_level[level][i];
+        for (int j = 0; j < descriptor_size; j++) {
+          descriptors_mat.at<uchar>(global_idx, j) = descriptors_level_mat.at<uchar>(i, j);
+        }
+      }
+    }
+  } else {
+    // For non-MLDB descriptors, fall back to CPU implementation
+    Mat desc_mat = desc.getMat();
+    Compute_Descriptors(kpts, desc_mat);
+  }
+}
+#endif // HAVE_OPENCL
 
 /**
  * @brief This method finds extrema in the nonlinear scale space

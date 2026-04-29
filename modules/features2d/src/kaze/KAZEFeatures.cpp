@@ -23,6 +23,8 @@
 #include "../precomp.hpp"
 #include "KAZEFeatures.h"
 #include "utils.h"
+#include "opencl_kernels_features2d.hpp"
+#include "akaze_diffusion.hpp"
 
 namespace cv
 {
@@ -196,13 +198,13 @@ void KAZEFeatures::Feature_Detection(std::vector<KeyPoint>& kpts)
 class MultiscaleDerivativesKAZEInvoker : public ParallelLoopBody
 {
 public:
-    explicit MultiscaleDerivativesKAZEInvoker(std::vector<TEvolution>& ev) : evolution_(&ev)
+    explicit MultiscaleDerivativesKAZEInvoker(TPyramid& ev) : evolution_(&ev)
     {
     }
 
     void operator()(const Range& range) const CV_OVERRIDE
     {
-        std::vector<TEvolution>& evolution = *evolution_;
+        TPyramid& evolution = *evolution_;
         for (int i = range.start; i < range.end; i++)
         {
             compute_scharr_derivatives(evolution[i].Lsmooth, evolution[i].Lx, 1, 0, evolution[i].sigma_size);
@@ -238,14 +240,14 @@ void KAZEFeatures::Compute_Multiscale_Derivatives(void)
 class FindExtremumKAZEInvoker : public ParallelLoopBody
 {
 public:
-    explicit FindExtremumKAZEInvoker(std::vector<TEvolution>& ev, std::vector<std::vector<KeyPoint> >& kpts_par,
+    explicit FindExtremumKAZEInvoker(TPyramid& ev, std::vector<std::vector<KeyPoint> >& kpts_par,
                                                                      const KAZEOptions& options) : evolution_(&ev), kpts_par_(&kpts_par), options_(options)
     {
     }
 
     void operator()(const Range& range) const CV_OVERRIDE
     {
-        std::vector<TEvolution>& evolution = *evolution_;
+        TPyramid& evolution = *evolution_;
         std::vector<std::vector<KeyPoint> >& kpts_par = *kpts_par_;
         for (int i = range.start; i < range.end; i++)
         {
@@ -300,7 +302,7 @@ public:
     }
 
 private:
-    std::vector<TEvolution>*  evolution_;
+    TPyramid*  evolution_;
     std::vector<std::vector<KeyPoint> >* kpts_par_;
     KAZEOptions options_;
 };
@@ -499,7 +501,7 @@ void KAZEFeatures::Do_Subpixel_Refinement(std::vector<KeyPoint> &kpts) {
 class KAZE_Descriptor_Invoker : public ParallelLoopBody
 {
 public:
-        KAZE_Descriptor_Invoker(std::vector<KeyPoint> &kpts, Mat &desc, std::vector<TEvolution>& evolution, const KAZEOptions& options)
+        KAZE_Descriptor_Invoker(std::vector<KeyPoint> &kpts, Mat &desc, TPyramid& evolution, const KAZEOptions& options)
                 : kpts_(&kpts)
                 , desc_(&desc)
                 , evolution_(&evolution)
@@ -515,7 +517,7 @@ public:
     {
         std::vector<KeyPoint> &kpts      = *kpts_;
         Mat                   &desc      = *desc_;
-        std::vector<TEvolution>   &evolution = *evolution_;
+        TPyramid   &evolution = *evolution_;
 
         for (int i = range.start; i < range.end; i++)
         {
@@ -547,7 +549,7 @@ private:
 
         std::vector<KeyPoint> * kpts_;
         Mat                   * desc_;
-        std::vector<TEvolution>   * evolution_;
+        TPyramid   * evolution_;
         KAZEOptions                 options_;
 };
 
@@ -582,7 +584,7 @@ void KAZEFeatures::Feature_Description(std::vector<KeyPoint> &kpts, Mat &desc)
  * @note The orientation is computed using a similar approach as described in the
  * original SURF method. See Bay et al., Speeded Up Robust Features, ECCV 2006
  */
-void KAZEFeatures::Compute_Main_Orientation(KeyPoint &kpt, const std::vector<TEvolution>& evolution_, const KAZEOptions& options)
+void KAZEFeatures::Compute_Main_Orientation(KeyPoint &kpt, const TPyramid& evolution_, const KAZEOptions& options)
 {
     int ix = 0, iy = 0, idx = 0, s = 0, level = 0;
     float xf = 0.0, yf = 0.0, gweight = 0.0;
@@ -671,7 +673,7 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Upright_Descriptor_64(const KeyPoint &kpt
     float fx = 0.0, fy = 0.0, res1 = 0.0, res2 = 0.0, res3 = 0.0, res4 = 0.0;
     int dsize = 0, scale = 0, level = 0;
 
-        std::vector<TEvolution>& evolution = *evolution_;
+        TPyramid& evolution = *evolution_;
 
     // Subregion centers for the 4x4 gaussian weighting
     float cx = -0.5f, cy = 0.5f;
@@ -799,7 +801,7 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Descriptor_64(const KeyPoint &kpt, float 
     int kx = 0, ky = 0, i = 0, j = 0, dcount = 0;
     int dsize = 0, scale = 0, level = 0;
 
-        std::vector<TEvolution>& evolution = *evolution_;
+        TPyramid& evolution = *evolution_;
 
     // Subregion centers for the 4x4 gaussian weighting
     float cx = -0.5f, cy = 0.5f;
@@ -933,7 +935,7 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Upright_Descriptor_128(const KeyPoint &kp
     // Subregion centers for the 4x4 gaussian weighting
     float cx = -0.5f, cy = 0.5f;
 
-        std::vector<TEvolution>& evolution = *evolution_;
+        TPyramid& evolution = *evolution_;
 
     // Set the descriptor size and the sample and pattern sizes
     dsize = 128;
@@ -1082,7 +1084,7 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Descriptor_128(const KeyPoint &kpt, float
     int kx = 0, ky = 0, i = 0, j = 0, dcount = 0;
     int dsize = 0, scale = 0, level = 0;
 
-        std::vector<TEvolution>& evolution = *evolution_;
+        TPyramid& evolution = *evolution_;
 
     // Subregion centers for the 4x4 gaussian weighting
     float cx = -0.5f, cy = 0.5f;
@@ -1216,5 +1218,255 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Descriptor_128(const KeyPoint &kpt, float
         desc[i] /= len;
     }
 }
+
+#ifdef HAVE_OPENCL
+
+// Compute GaussianBlur kernel size matching KAZE's gaussian_2D_convolution formula
+static inline int kaze_ksize_for_sigma(float sigma)
+{
+    return cvCeil(2.0f * (1.0f + (sigma - 0.8f) / 0.3f)) | 1;
+}
+
+// Dispatch the KAZE upright descriptor kernel for one pyramid level.
+// lx_step: row stride of Lx/Ly in float elements (= Lx.cols for continuous mat).
+static inline bool
+ocl_compute_kaze_upright_descriptor_level(InputArray Lx_, InputArray Ly_,
+                                           InputArray keypoints_x_, InputArray keypoints_y_,
+                                           InputArray keypoints_size_,
+                                           OutputArray descriptors_, bool extended)
+{
+    UMat Lx = Lx_.getUMat();
+    UMat Ly = Ly_.getUMat();
+    UMat keypoints_x = keypoints_x_.getUMat();
+    UMat keypoints_y = keypoints_y_.getUMat();
+    UMat keypoints_size = keypoints_size_.getUMat();
+    UMat descriptors = descriptors_.getUMat();
+
+    int nkeypoints = (int)keypoints_x.total();
+    // For continuous UMat, step_in_float_elements == cols
+    int lx_step = Lx.cols;
+    int lx_rows = Lx.rows;
+    int lx_cols = Lx.cols;
+
+    size_t globalSize[] = {(size_t)nkeypoints};
+
+    const char* kernel_name = extended ? "KAZE_compute_upright_descriptor_128"
+                                       : "KAZE_compute_upright_descriptor_64";
+    ocl::Kernel ker(kernel_name, ocl::features2d::kaze_oclsrc);
+    if (ker.empty())
+        return false;
+
+    return ker.args(
+        ocl::KernelArg::PtrReadOnly(Lx),
+        ocl::KernelArg::PtrReadOnly(Ly),
+        lx_step, lx_rows, lx_cols,
+        ocl::KernelArg::PtrReadOnly(keypoints_x),
+        ocl::KernelArg::PtrReadOnly(keypoints_y),
+        ocl::KernelArg::PtrReadOnly(keypoints_size),
+        ocl::KernelArg::PtrWriteOnly(descriptors),
+        nkeypoints).run(1, globalSize, 0, false);
+}
+
+void KAZEFeatures::Create_Nonlinear_Scale_Space_UMat(InputArray image, UTPyramid& uPyr)
+{
+    CV_Assert(evolution_.size() > 0);
+
+    // Initialize UTPyramid metadata from the pre-built CPU evolution
+    uPyr.resize(evolution_.size());
+    for (size_t i = 0; i < evolution_.size(); i++)
+    {
+        uPyr[i].etime      = evolution_[i].etime;
+        uPyr[i].esigma     = evolution_[i].esigma;
+        uPyr[i].octave     = evolution_[i].octave;
+        uPyr[i].sublevel   = evolution_[i].sublevel;
+        uPyr[i].sigma_size = evolution_[i].sigma_size;
+    }
+
+    // Level 0: soffset blur (-> Lt), then sderivatives blur (-> Lsmooth)
+    {
+        int k0 = kaze_ksize_for_sigma(options_.soffset);
+        int k1 = kaze_ksize_for_sigma(options_.sderivatives);
+        GaussianBlur(image, uPyr[0].Lt,     Size(k0, k0), options_.soffset,      options_.soffset,      BORDER_REPLICATE);
+        GaussianBlur(uPyr[0].Lt, uPyr[0].Lsmooth, Size(k1, k1), options_.sderivatives, options_.sderivatives, BORDER_REPLICATE);
+    }
+
+    // Compute kcontrast on CPU using first-level Lt (one GPU→CPU sync)
+    {
+        Mat lt_cpu;
+        uPyr[0].Lt.copyTo(lt_cpu);
+        options_.kcontrast = compute_k_percentile(lt_cpu, options_.kcontrast_percentille,
+                                                   options_.sderivatives, options_.kcontrast_bins, 0, 0);
+    }
+
+    // Build scale space (levels 1 .. n-1)
+    {
+        int k1 = kaze_ksize_for_sigma(options_.sderivatives);
+        UMat Lx_diff, Ly_diff, Lflow, Lstep;
+
+        for (size_t i = 1; i < uPyr.size(); i++)
+        {
+            // Copy diffused previous level and compute Lsmooth from it
+            uPyr[i - 1].Lt.copyTo(uPyr[i].Lt);
+            GaussianBlur(uPyr[i - 1].Lt, uPyr[i].Lsmooth,
+                         Size(k1, k1), options_.sderivatives, options_.sderivatives, BORDER_REPLICATE);
+
+            // Scale=1 Scharr for diffusivity (not stored; used only to drive diffusion)
+            Scharr(uPyr[i].Lsmooth, Lx_diff, CV_32F, 1, 0, 1.0, 0.0, BORDER_DEFAULT);
+            Scharr(uPyr[i].Lsmooth, Ly_diff, CV_32F, 0, 1, 1.0, 0.0, BORDER_DEFAULT);
+
+            compute_diffusivity(Lx_diff, Ly_diff, Lflow, options_.kcontrast, options_.diffusivity);
+
+            // Fast Explicit Diffusion steps
+            const std::vector<float>& tsteps = tsteps_[i - 1];
+            for (size_t j = 0; j < tsteps.size(); j++)
+            {
+                non_linear_diffusion_step(uPyr[i].Lt, Lflow, Lstep, tsteps[j] * 0.5f);
+                add(uPyr[i].Lt, Lstep, uPyr[i].Lt);
+            }
+        }
+    }
+
+    // Compute sigma_size-scaled multiscale derivatives and Ldet for all levels.
+    // Matches CPU Compute_Multiscale_Derivatives + Compute_Detector_Response exactly:
+    //   Lx  = s * scharr_s(Lsmooth)
+    //   Ly  = s * scharr_s(Lsmooth)
+    //   Lxx = s^2 * scharr_s(Lx_unscaled)   [applied before scaling Lx]
+    //   Lyy = s^2 * scharr_s(Ly_unscaled)
+    //   Lxy = s^2 * scharr_s_y(Lx_unscaled)
+    //   Ldet = Lxx*Lyy - Lxy^2
+    for (size_t i = 0; i < uPyr.size(); i++)
+    {
+        int s = uPyr[i].sigma_size;
+
+        Mat kx_x, ky_x, kx_y, ky_y;
+        compute_derivative_kernels(kx_x, ky_x, 1, 0, s);
+        compute_derivative_kernels(kx_y, ky_y, 0, 1, s);
+
+        // First-order (unscaled) from Lsmooth
+        UMat Lx_unscaled, Ly_unscaled;
+        sepFilter2D(uPyr[i].Lsmooth, Lx_unscaled, CV_32F, kx_x, ky_x);
+        sepFilter2D(uPyr[i].Lsmooth, Ly_unscaled, CV_32F, kx_y, ky_y);
+
+        // Second-order from unscaled first-order (must happen before scaling Lx/Ly)
+        UMat Lxx_unscaled, Lxy_unscaled, Lyy_unscaled;
+        sepFilter2D(Lx_unscaled, Lxx_unscaled, CV_32F, kx_x, ky_x);
+        sepFilter2D(Ly_unscaled, Lyy_unscaled, CV_32F, kx_y, ky_y);
+        sepFilter2D(Lx_unscaled, Lxy_unscaled, CV_32F, kx_y, ky_y);
+
+        // Scale first-order and store in pyramid (used by descriptor kernel)
+        Lx_unscaled.convertTo(uPyr[i].Lx, CV_32F, (double)s);
+        Ly_unscaled.convertTo(uPyr[i].Ly, CV_32F, (double)s);
+
+        // Scale second-order and compute Ldet
+        double s2 = (double)s * s;
+        UMat Lxx, Lxy, Lyy;
+        Lxx_unscaled.convertTo(Lxx, CV_32F, s2);
+        Lxy_unscaled.convertTo(Lxy, CV_32F, s2);
+        Lyy_unscaled.convertTo(Lyy, CV_32F, s2);
+
+        UMat tmp1, tmp2;
+        multiply(Lxx, Lyy, tmp1);
+        multiply(Lxy, Lxy, tmp2);
+        subtract(tmp1, tmp2, uPyr[i].Ldet);
+    }
+}
+
+void KAZEFeatures::Feature_Detection_UMat(UTPyramid& uPyr, std::vector<KeyPoint>& kpts)
+{
+    // GPU built the scale space; download Ldet for all levels, then run CPU detection.
+    // The CPU Determinant_Hessian + Do_Subpixel_Refinement only need Ldet.
+    for (size_t i = 0; i < uPyr.size(); i++)
+        uPyr[i].Ldet.copyTo(evolution_[i].Ldet);   // single batch sync on first copyTo
+
+    Determinant_Hessian(kpts);
+    Do_Subpixel_Refinement(kpts);
+}
+
+void KAZEFeatures::Compute_Descriptors_UMat(std::vector<KeyPoint>& kpts, OutputArray desc,
+                                             UTPyramid& uPyr)
+{
+    if (kpts.empty())
+    {
+        desc.release();
+        return;
+    }
+
+    int descriptor_size = options_.extended ? 128 : 64;
+
+    // Group keypoint indices by pyramid level
+    std::vector<std::vector<int>> kpts_by_level(uPyr.size());
+    for (size_t i = 0; i < kpts.size(); i++)
+    {
+        int lv = kpts[i].class_id;
+        if (lv >= 0 && lv < (int)uPyr.size())
+            kpts_by_level[lv].push_back((int)i);
+    }
+
+    // Pre-allocate output matrix; we'll write into row-ranges per level
+    desc.create((int)kpts.size(), descriptor_size, CV_32F);
+    Mat out_mat = desc.getMat();
+
+    // Track the keypoint ordering as we iterate levels
+    // (kpts_by_level iterates in ascending level order, matching kpts order after sorting)
+    // We use a small vector to map global keypoint index -> descriptor row
+    std::vector<int> kpt_to_row(kpts.size(), -1);
+    {
+        // Determine final output row for each keypoint based on iteration order
+        int row = 0;
+        for (size_t lv = 0; lv < uPyr.size(); lv++)
+            for (int ki : kpts_by_level[lv])
+                kpt_to_row[ki] = row++;
+    }
+
+    for (size_t lv = 0; lv < uPyr.size(); lv++)
+    {
+        const std::vector<int>& indices = kpts_by_level[lv];
+        int n = (int)indices.size();
+        if (n == 0)
+            continue;
+
+        // Pack keypoint data into UMats for this level
+        UMat kpts_x(n, 1, CV_32F);
+        UMat kpts_y(n, 1, CV_32F);
+        UMat kpts_sz(n, 1, CV_32F);
+        {
+            Mat mx = kpts_x.getMat(ACCESS_WRITE);
+            Mat my = kpts_y.getMat(ACCESS_WRITE);
+            Mat ms = kpts_sz.getMat(ACCESS_WRITE);
+            for (int i = 0; i < n; i++)
+            {
+                const KeyPoint& kp = kpts[indices[i]];
+                mx.at<float>(i) = kp.pt.x;
+                my.at<float>(i) = kp.pt.y;
+                ms.at<float>(i) = kp.size;
+            }
+        }
+
+        // Compute descriptors for this level on GPU
+        UMat desc_level(n, descriptor_size, CV_32F);
+        bool ok = ocl_compute_kaze_upright_descriptor_level(
+            uPyr[lv].Lx, uPyr[lv].Ly,
+            kpts_x, kpts_y, kpts_sz,
+            desc_level, options_.extended);
+
+        if (!ok)
+        {
+            // GPU failed — fall back to full CPU path
+            Mat cpu_desc;
+            Feature_Description(kpts, cpu_desc);
+            cpu_desc.copyTo(desc);
+            return;
+        }
+
+        // Download and copy into correct rows of the output matrix
+        Mat level_mat = desc_level.getMat(ACCESS_READ);
+        for (int i = 0; i < n; i++)
+        {
+            int row = kpt_to_row[indices[i]];
+            level_mat.row(i).copyTo(out_mat.row(row));
+        }
+    }
+}
+#endif // HAVE_OPENCL
 
 }

@@ -187,11 +187,35 @@ namespace cv
             options.diffusivity = diffusivity;
 
             AKAZEFeatures impl(options);
-            impl.Create_Nonlinear_Scale_Space(image);
 
-            if (!useProvidedKeypoints)
+            UMatPyramid uPyr;
+#ifdef HAVE_OPENCL
+            // Use OpenCL version if available, image is UMat, and descriptor type is supported
+            // Disable on 32-bit systems due to private memory limitations in AKAZE OpenCL kernels
+#if defined(_M_IX86) || defined(__i386__)
+            bool use_opencl = false;
+#else
+            bool use_opencl = cv::ocl::useOpenCL() && image.isUMat() && descriptor == DESCRIPTOR_MLDB_UPRIGHT
+                              && !ocl::Device::getDefault().hostUnifiedMemory();
+#endif
+            if (use_opencl)
             {
-                impl.Feature_Detection(keypoints);
+                impl.GetEvolutionPyramid(uPyr); // Get initialized pyramid
+                impl.Create_Nonlinear_Scale_Space_UMat(image, uPyr);
+                if (!useProvidedKeypoints)
+                {
+                    impl.Feature_Detection_UMat(uPyr, keypoints);
+                }
+            }
+            else
+#endif
+            {
+                impl.Create_Nonlinear_Scale_Space(image);
+
+                if (!useProvidedKeypoints)
+                {
+                    impl.Feature_Detection(keypoints);
+                }
             }
 
             if (!mask.empty())
@@ -207,7 +231,16 @@ namespace cv
 
             if(descriptors.needed())
             {
-                impl.Compute_Descriptors(keypoints, descriptors);
+#ifdef HAVE_OPENCL
+                if (use_opencl)
+                {
+                    impl.Compute_Descriptors_UMat(keypoints, descriptors, uPyr);
+                }
+                else
+#endif
+                {
+                    impl.Compute_Descriptors(keypoints, descriptors);
+                }
 
                 CV_Assert((descriptors.empty() || descriptors.cols() == descriptorSize()));
                 CV_Assert((descriptors.empty() || (descriptors.type() == descriptorType())));

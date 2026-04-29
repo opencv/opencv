@@ -94,6 +94,12 @@ private:
   void Do_Subpixel_Refinement(std::vector<Mat>& keypoints_by_layers,
     std::vector<KeyPoint>& kpts);
 
+public:
+  void GetEvolutionPyramid(UMatPyramid& uPyr);
+  void Create_Nonlinear_Scale_Space_UMat(InputArray img, UMatPyramid& uPyr);
+  void Feature_Detection_UMat(UMatPyramid& uPyr, std::vector<cv::KeyPoint>& kpts);
+  void Compute_Descriptors_UMat(std::vector<cv::KeyPoint>& kpts, OutputArray desc, UMatPyramid& uPyr);
+
   /// Feature description methods
   void Compute_Keypoints_Orientation(std::vector<cv::KeyPoint>& kpts) const;
 
