@@ -520,7 +520,7 @@ LayerParams ONNXImporter2::getLayerParams(const opencv_onnx::NodeProto& node_pro
             else if (attribute_proto.has_t())
             {
                 opencv_onnx::TensorProto tensor = attribute_proto.t();
-                Mat blob = getMatFromTensor2(tensor);
+                Mat blob = parseTensor(tensor);
                 lp.blobs.push_back(blob);
                 lp.set("original_dims_of_mat", tensor.dims_size());
             }
@@ -774,7 +774,7 @@ Mat ONNXImporter2::parseTensor(const opencv_onnx::TensorProto& tensor_proto)
 Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool mainGraph_)
 {
     CV_LOG_DEBUG(NULL, "DNN/ONNX: parsing graph '" << graph_proto->name() << "' of " << graph_proto->node_size() << " nodes");
-    simplifySubgraphs(*graph_proto);
+    simplifySubgraphs(*graph_proto, onnxBasePath);
     int n_nodes = graph_proto->node_size();
     CV_LOG_DEBUG(NULL, "DNN/ONNX: simplified the graph to " << n_nodes << " nodes");
 
