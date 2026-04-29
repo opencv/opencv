@@ -2767,7 +2767,7 @@ TEST_P(Test_ONNX_nets, MobileNet_v4)
 
 TEST_P(Test_ONNX_nets, LResNet100E_IR)
 {
-    // ORT denies: BatchNormalization dimension mismatch - scale input expects 3 dimensions in stage1_unit1_bn1
+    //ORT denies : Legacy ONNX spatial=0 attribute on BatchNorm causes ORT dimension mismatch; reconvert with modern exporter to fix 1D vs 3D scale error with spatial=1.
     if (shouldSkipONNXLayerTest()) throw SkipTestException("ORT engine failure");
     applyTestTag(
 #if defined(OPENCV_32BIT_CONFIGURATION) && defined(HAVE_OPENCL)
