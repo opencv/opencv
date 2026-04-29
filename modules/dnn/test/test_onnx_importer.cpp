@@ -2493,7 +2493,7 @@ public:
 
 TEST_P(Test_ONNX_nets, Alexnet)
 {
-    // ORT denies: Input dimension mismatch - test provides 227x227 but alexnet.onnx model expects 224x224
+    // ORT denies: alexnet.onnx declares 224x224 input but reference was generated with 227x227
     if (shouldSkipONNXLayerTest()) throw SkipTestException("ORT engine failure");
 #if defined(OPENCV_32BIT_CONFIGURATION) && (defined(HAVE_OPENCL) || defined(_WIN32))
     applyTestTag(CV_TEST_TAG_MEMORY_2GB);
