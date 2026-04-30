@@ -322,7 +322,6 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
                 opt
             );
         }
-
     }
 
  private:

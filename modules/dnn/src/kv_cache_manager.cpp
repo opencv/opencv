@@ -22,8 +22,6 @@ void initKVDataRecursively(const Ptr<Graph>& graph, std::map<std::string, KCache
 
         if (layer->type == "AttentionOnnxAi") {
             int kvNumHeads = layer.dynamicCast<AttentionOnnxAiLayer>()->kv_num_heads;
-            CV_LOG_DEBUG(NULL, "Initializing KV cache for layer " << layer->name << " with " << kvNumHeads << " heads");
-            std::cout << "Initializing KV cache for layer " << layer->name << " with " << kvNumHeads << " heads" << std::endl;
 
             if (kvNumHeads > 0)
             {
@@ -48,7 +46,6 @@ void setKVCacheManager(Ptr<Net::Impl> netimpl)
     auto manager = KVCacheManager();
     manager.netimpl = netimpl;
     manager.opt.init();
-    std::cout << "Initializing KV cache manager" << std::endl;
     initKVDataRecursively(netimpl->mainGraph, manager.kData, manager.vData, manager.opt);
 
     manager.isInitialized = true;
@@ -117,19 +114,6 @@ void KVCache::grow(const Mat& newData) {
         growGenerate(newData);
     }
 
-    if (isKCache){
-        std::cout << "KCache:" << std::endl;
-    } else {
-        std::cout << "VCache:" << std::endl;
-    }
-
-    std::cout << "Cache grew. nTokens: " << nTokens << ", nPages: " << pages.size() << std::endl;
-    for(int i = 0; i < pages.size(); i++){
-       for(int j = 0; j < pages[i].total(); j++){
-               std::cout << pages[i].ptr<float>()[j] << " ";
-       }
-         std::cout << std::endl;
-    }
 }
 
 void KVCache::growPrefill(const Mat& newData, int T){
@@ -241,25 +225,19 @@ void VCache::growGenerate(const Mat& newData){
 
     for (int b = 0; b < batch_size; b++){
         for (int h = 0; h < nHeads; h++){
-            for (int j=0; j <= headDim / Nr; j+=1){
-                int step =
-                    b * nHeads * headDim +
-                    h * headDim +
-                    j * Nr;
+            for (int j = 0; j <= (headDim - 1) / Nr; j++) {
+                int step = b * nHeads * headDim + h * headDim + j * Nr;
+                int copy_size = std::min(Nr, headDim - j * Nr);
 
-                size_t copy_size = std::min(Nr, headDim - j * Nr);
-
-                auto* cur_page =
-                    page + b * nHeads * Ps +
-                    h * Ps +
-                    t0 * Nr +
-                    j * step_packed;
-
-                std::memcpy(
-                    cur_page,
-                    data + step,
-                    copy_size * sizeof(float)
-                );
+                auto* cur_page_ptr = page + b * nHeads * Ps + h * Ps + t0 * Nr + j * step_packed;
+                const float* src_ptr = data + step;
+                std::memcpy(cur_page_ptr, src_ptr, copy_size * sizeof(float));
+                if (copy_size < Nr) {
+                    float replication_val = src_ptr[0];
+                    for (int k = copy_size; k < Nr; k++) {
+                        cur_page_ptr[k] = replication_val;
+                    }
+                }
             }
         }
     }

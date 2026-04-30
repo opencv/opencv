@@ -530,6 +530,7 @@ static inline void fast_gemm_macro_kernel(int m, int n, int k,
                 for(int p = 0; p < mr; p++)
                     memcpy(cptr + p * (ldc * esz), cptr0 + p * ldc0_esz, nr_esz);
             }
+
 #if CV_NEON && CV_NEON_AARCH64
             fast_gemm8x12_f32(k, packed_A + i * k * esz, packed_B + j * k * esz, cptr, ldc, alpha);
 #elif CV_AVX
@@ -1081,10 +1082,14 @@ void pagedAttnAVGemmKernel(
     size_t batch = Nq * B;
     int total = batch * tiles_per_mat;
 
-    auto fn = [&](const Range &r) {
+auto fn = [&](const Range &r) {
         cv::AutoBuffer<char, FAST_GEMM_MAX_STACKBUF> packed_a_buff;
         packed_a_buff.allocate(buff_size);
         char* packed_a = packed_a_buff.data();
+
+        cv::AutoBuffer<char, FAST_GEMM_MAX_STACKBUF> repacked_v_buff;
+        repacked_v_buff.allocate(NC * T_s * esz);
+        char* repacked_v = repacked_v_buff.data();
 
         size_t start = r.start;
         size_t end = r.end;
@@ -1121,13 +1126,14 @@ void pagedAttnAVGemmKernel(
                 o_offset += i0 * Nq * D + nq * D + j0;
             else
                 o_offset += nq * T_a * D + i0 * D + j0;
+                // nq * T_a * D + i0 * D + j0;
             char* out_block = Out + o_offset * esz;
 
             for(size_t i = 0; i < mc; i++) {
                 memset(out_block + i * ldc0 * esz, 0, nc * esz);
             }
 
-            int _nc = static_cast<int>((nc + GEMM_NR - 1) / GEMM_NR) * GEMM_NR * esz;
+            // int _nc = static_cast<int>((nc + GEMM_NR - 1) / GEMM_NR) * GEMM_NR * esz;
 
             for(int k0 = 0; k0 < (int)T_v; )
             {
@@ -1136,7 +1142,7 @@ void pagedAttnAVGemmKernel(
                 int kc = std::min((int)KC, (int)T_v - k0);
                 kc = std::min(kc, (int)T_s - (int)k);
 
-                size_t v_offset = v_offset_base * esz + k * _nc;
+                size_t v_offset = v_offset_base * esz + k * GEMM_NR * esz;
                 const char *v_block = V[sk] + v_offset;
 
                 // pack
@@ -1149,8 +1155,19 @@ void pagedAttnAVGemmKernel(
 #elif CV_SIMD128
                 fast_gemm_pack8_f32(mc, kc, a_block + k0 * esz, T_v, 1, packed_a);
 #endif
+
+                const char* v_block_to_use = v_block;
+                if (kc < (int)T_s) {
+                    for (size_t j = 0; j < nc; j += GEMM_NR) {
+                        const char *src_panel = v_block + j * T_s * esz;
+                        char *dst_panel = repacked_v + j * kc * esz;
+                        memcpy(dst_panel, src_panel, kc * GEMM_NR * esz);
+                    }
+                    v_block_to_use = repacked_v;
+                }
+
                 // run kernel
-                fast_gemm_macro_kernel(mc, nc, kc, packed_a, v_block, 1.f, out_block, ldc0, esz);
+                fast_gemm_macro_kernel(mc, nc, kc, packed_a, v_block_to_use, 1.f, out_block, ldc0, esz);
                 k0 += kc;
             }
         }

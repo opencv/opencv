@@ -2960,76 +2960,7 @@ TEST(ConvolutionWinograd, Accuracy)
     normAssert(outLarge, refLarge, "Large input after small", 0.0, 0.0);
 }
 
-
-TEST(KV_Cache, prefetch_3D)
-{
-    std::string model_path = "dnn/onnx/models/test_attention_kv_cache_3d.onnx";
-    Net netWithKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_NEW);
-    Net netWithoutKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_NEW);
-
-    Mat Q = blobFromNPY(findDataFile("dnn/onnx/data/input_test_attention_kv_cache_3d_0.npy", true));
-    Mat K = blobFromNPY(findDataFile("dnn/onnx/data/input_test_attention_kv_cache_3d_1.npy", true));
-    Mat V = blobFromNPY(findDataFile("dnn/onnx/data/input_test_attention_kv_cache_3d_2.npy", true));
-    Mat ref = blobFromNPY(findDataFile("dnn/onnx/data/output_test_attention_kv_cache_3d.npy", true));
-
-    netWithKVCache.setInput(Q, "Q");
-    netWithKVCache.setInput(K, "K");
-    netWithKVCache.setInput(V, "V");
-    // warmup
-    netWithKVCache.forward();
-
-    netWithKVCache.enableKVCache();
-    Mat outWithKVCache = netWithKVCache.forward();
-
-    netWithoutKVCache.setInput(Q, "Q");
-    netWithoutKVCache.setInput(K, "K");
-    netWithoutKVCache.setInput(V, "V");
-    Mat outWithoutKVCache = netWithoutKVCache.forward();
-
-    normAssert(outWithKVCache, ref, "Attention output with KV cache vs reference", 1e-4, 1e-3);
-    normAssert(outWithoutKVCache, ref, "Attention output without KV cache vs reference", 1e-4, 1e-3);
-    normAssert(outWithKVCache, outWithoutKVCache, "Attention output with and without KV cache", 0.0, 0.0);
-}
-
-TEST(KV_Cache, prefetch_4D)
-{
-    auto engine_forced = static_cast<cv::dnn::EngineType>(
-            cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
-    if (engine_forced == cv::dnn::ENGINE_CLASSIC)
-    {
-        // Mark the test as skipped and exit early.
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
-        return;
-    }
-    std::string model_path = "dnn/onnx/models/test_attention_kv_cache_4d.onnx";
-    Net netWithKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_NEW);
-    Net netWithoutKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_NEW);
-
-    Mat Q = blobFromNPY(findDataFile("dnn/onnx/data/input_test_attention_kv_cache_4d_0.npy", true));
-    Mat K = blobFromNPY(findDataFile("dnn/onnx/data/input_test_attention_kv_cache_4d_1.npy", true));
-    Mat V = blobFromNPY(findDataFile("dnn/onnx/data/input_test_attention_kv_cache_4d_2.npy", true));
-    Mat ref = blobFromNPY(findDataFile("dnn/onnx/data/output_test_attention_kv_cache_4d.npy", true));
-
-    netWithKVCache.setInput(Q, "Q");
-    netWithKVCache.setInput(K, "K");
-    netWithKVCache.setInput(V, "V");
-    // warmup
-    netWithKVCache.forward();
-
-    netWithKVCache.enableKVCache();
-    Mat outWithKVCache = netWithKVCache.forward();
-
-    netWithoutKVCache.setInput(Q, "Q");
-    netWithoutKVCache.setInput(K, "K");
-    netWithoutKVCache.setInput(V, "V");
-    Mat outWithoutKVCache = netWithoutKVCache.forward();
-
-    normAssert(outWithKVCache, ref, "Attention output with KV cache vs reference", 1e-4, 1e-3);
-    normAssert(outWithoutKVCache, ref, "Attention output without KV cache vs reference", 1e-4, 1e-3);
-    normAssert(outWithKVCache, outWithoutKVCache, "Attention output with and without KV cache", 0.0, 0.0);
-}
-
-TEST(KV_Cache, generate_3D)
+TEST(KV_Cache, layout3D)
 {
     auto engine_forced = static_cast<cv::dnn::EngineType>(
             cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
@@ -3040,53 +2971,63 @@ TEST(KV_Cache, generate_3D)
         return;
     }
     std::string model_path = "dnn/onnx/models/test_attention_kv_cache_3d.onnx";
+    std::string model_path_with_mask = "dnn/onnx/models/test_attention_kv_cache_3d_with_mask.onnx";
+
     Net netWithKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_NEW);
-    Net netWithoutKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_NEW);
+    Net netWithoutKVCache = readNetFromONNX(findDataFile(model_path_with_mask, true), cv::dnn::ENGINE_NEW);
 
     Mat Q_all = blobFromNPY(findDataFile("dnn/onnx/data/input_test_attention_kv_cache_3d_0.npy", true));
     Mat K_all = blobFromNPY(findDataFile("dnn/onnx/data/input_test_attention_kv_cache_3d_1.npy", true));
     Mat V_all = blobFromNPY(findDataFile("dnn/onnx/data/input_test_attention_kv_cache_3d_2.npy", true));
-    Mat Y_all = blobFromNPY(findDataFile("dnn/onnx/data/output_test_attention_kv_cache_3d.npy", true));
+    Mat mask  = blobFromNPY(findDataFile("dnn/onnx/data/input_test_attention_kv_cache_3d_3.npy", true));
 
+    int B = Q_all.size[0];
     int T = Q_all.size[1];
+    int T_pref = T / 2;
 
-    Mat Q_pref = Q_all({Range::all(), Range(0, T - 1), Range::all()});
-    Mat K_pref = K_all({Range::all(), Range(0, T - 1), Range::all()});
-    Mat V_pref = V_all({Range::all(), Range(0, T - 1), Range::all()});
+    Mat Y({B, T, V_all.size[2]}, CV_32F);
+    Y.setTo(0);
 
-    Mat Q_gen = Q_all({Range::all(), Range(T - 1, T), Range::all()});
-    Mat K_gen = K_all({Range::all(), Range(T - 1, T), Range::all()});
-    Mat V_gen = V_all({Range::all(), Range(T - 1, T), Range::all()});
+    Mat Q_pref = Q_all({Range::all(), Range(0, T_pref), Range::all()});
+    Mat K_pref = K_all({Range::all(), Range(0, T_pref), Range::all()});
+    Mat V_pref = V_all({Range::all(), Range(0, T_pref), Range::all()});
 
-    Mat Y_gen_ref = Y_all({Range::all(), Range(T - 1, T), Range::all()});
-
-    // 1. Warmup and Prefill
+    // 1.  Prefill
     netWithKVCache.setInput(Q_pref, "Q");
     netWithKVCache.setInput(K_pref, "K");
     netWithKVCache.setInput(V_pref, "V");
     netWithKVCache.forward(); // warmup
-
     netWithKVCache.enableKVCache();
-    netWithKVCache.forward(); // prefill
+    Mat prefillResult = netWithKVCache.forward(); // prefill
+    prefillResult.copyTo(Y({Range::all(), Range(0, T_pref), Range::all()}));
 
     // 2. Generate
-    netWithKVCache.setInput(Q_gen, "Q");
-    netWithKVCache.setInput(K_gen, "K");
-    netWithKVCache.setInput(V_gen, "V");
-    Mat outWithKVCache = netWithKVCache.forward();
+    for(int t = T_pref; t < T; t++)
+    {
+        Mat Q_gen = Q_all({Range::all(), Range(t, t + 1), Range::all()});
+        Mat K_gen = K_all({Range::all(), Range(t, t + 1), Range::all()});
+        Mat V_gen = V_all({Range::all(), Range(t, t + 1), Range::all()});
+
+        netWithKVCache.setInput(Q_gen, "Q");
+        netWithKVCache.setInput(K_gen, "K");
+        netWithKVCache.setInput(V_gen, "V");
+
+        Mat nextToken = netWithKVCache.forward();
+        nextToken.copyTo(Y({Range::all(), Range(t, t + 1), Range::all()}));
+    }
 
     // 3. Standard path
     netWithoutKVCache.setInput(Q_all, "Q");
     netWithoutKVCache.setInput(K_all, "K");
     netWithoutKVCache.setInput(V_all, "V");
-    Mat outWithoutKVCache = netWithoutKVCache.forward();
-    Mat Y_gen_std = outWithoutKVCache({Range::all(), Range(T - 1, T), Range::all()});
+    netWithoutKVCache.setInput(mask, "Mask");
 
-    normAssert(outWithKVCache, Y_gen_ref, "Attention generate 3D: KV vs ref", 1e-5, 1e-5);
-    normAssert(outWithKVCache, Y_gen_std, "Attention generate 3D: KV vs standard", 0.0, 0.0);
+    Mat Yref = netWithoutKVCache.forward();
+
+    normAssert(Y, Yref, "Attention generate 3D: KV vs standard", 1e-5, 1e-5);
 }
 
-TEST(KV_Cache, generate_4D)
+TEST(KV_Cache, layout4D)
 {
     auto engine_forced = static_cast<cv::dnn::EngineType>(
             cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
@@ -3098,50 +3039,69 @@ TEST(KV_Cache, generate_4D)
     }
 
     std::string model_path = "dnn/onnx/models/test_attention_kv_cache_4d.onnx";
+    std::string model_path_with_mask = "dnn/onnx/models/test_attention_kv_cache_4d_with_mask.onnx";
+
     Net netWithKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_NEW);
-    Net netWithoutKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_NEW);
+    Net netWithoutKVCache = readNetFromONNX(findDataFile(model_path_with_mask, true), cv::dnn::ENGINE_NEW);
 
     Mat Q_all = blobFromNPY(findDataFile("dnn/onnx/data/input_test_attention_kv_cache_4d_0.npy", true));
     Mat K_all = blobFromNPY(findDataFile("dnn/onnx/data/input_test_attention_kv_cache_4d_1.npy", true));
     Mat V_all = blobFromNPY(findDataFile("dnn/onnx/data/input_test_attention_kv_cache_4d_2.npy", true));
-    Mat Y_all = blobFromNPY(findDataFile("dnn/onnx/data/output_test_attention_kv_cache_4d.npy", true));
+    Mat mask  = blobFromNPY(findDataFile("dnn/onnx/data/input_test_attention_kv_cache_4d_3.npy", true));
 
+    int B = Q_all.size[0];
+    int N = Q_all.size[1];
     int T = Q_all.size[2];
+    int D = Q_all.size[3];
 
-    Mat Q_pref = Q_all({Range::all(), Range::all(), Range(0, T - 1), Range::all()});
-    Mat K_pref = K_all({Range::all(), Range::all(), Range(0, T - 1), Range::all()});
-    Mat V_pref = V_all({Range::all(), Range::all(), Range(0, T - 1), Range::all()});
+    int T_pref = T / 2;
 
-    Mat Q_gen = Q_all({Range::all(), Range::all(), Range(T - 1, T), Range::all()});
-    Mat K_gen = K_all({Range::all(), Range::all(), Range(T - 1, T), Range::all()});
-    Mat V_gen = V_all({Range::all(), Range::all(), Range(T - 1, T), Range::all()});
+    Mat Y({B, N, T, D}, CV_32F);
 
-    Mat Y_gen_ref = Y_all({Range::all(), Range::all(), Range(T - 1, T), Range::all()});
-
-    // 1. Warmup and Prefill
+    Mat Q_pref = Q_all({Range::all(), Range::all(), Range(0,T_pref), Range::all()});
+    Mat K_pref = K_all({Range::all(), Range::all(), Range(0, T_pref), Range::all()});
+    Mat V_pref = V_all({Range::all(), Range::all(), Range(0, T_pref), Range::all()});
+    // 1.  Prefill
     netWithKVCache.setInput(Q_pref, "Q");
     netWithKVCache.setInput(K_pref, "K");
     netWithKVCache.setInput(V_pref, "V");
     netWithKVCache.forward(); // warmup
-
     netWithKVCache.enableKVCache();
-    netWithKVCache.forward(); // prefill
+
+    Mat prefillResult = netWithKVCache.forward(); // prefill
+    prefillResult.copyTo(Y({Range::all(), Range::all(), Range(0, T_pref), Range::all()}));
 
     // 2. Generate
-    netWithKVCache.setInput(Q_gen, "Q");
-    netWithKVCache.setInput(K_gen, "K");
-    netWithKVCache.setInput(V_gen, "V");
-    Mat outWithKVCache = netWithKVCache.forward();
+    for(int t = T_pref; t < T; t++)
+    {
+        netWithKVCache.setInput(
+            Q_all({Range::all(), Range::all(), Range(t, t + 1), Range::all()}),
+            "Q"
+        );
+        netWithKVCache.setInput(
+            K_all({Range::all(), Range::all(), Range(t, t + 1), Range::all()}),
+            "K"
+        );
+        netWithKVCache.setInput(
+            V_all({Range::all(), Range::all(), Range(t, t + 1), Range::all()}),
+            "V"
+        );
+
+        Mat nextToken = netWithKVCache.forward();
+        nextToken.copyTo(Y({Range::all(), Range::all(), Range(t, t + 1), Range::all()}));
+    }
+
+    std::cout << std::endl;
 
     // 3. Standard path
     netWithoutKVCache.setInput(Q_all, "Q");
     netWithoutKVCache.setInput(K_all, "K");
     netWithoutKVCache.setInput(V_all, "V");
-    Mat outWithoutKVCache = netWithoutKVCache.forward();
-    Mat Y_gen_std = outWithoutKVCache({Range::all(), Range::all(), Range(T - 1, T), Range::all()});
+    netWithoutKVCache.setInput(mask, "Mask");
 
-    normAssert(outWithKVCache, Y_gen_ref, "Attention generate 4D: KV vs ref", 1e-5, 1e-5);
-    normAssert(outWithKVCache, Y_gen_std, "Attention generate 4D: KV vs standard", 0.0, 0.0);
+    Mat Yref = netWithoutKVCache.forward();
+
+    normAssert(Y, Yref, "Attention generate 3D: KV vs standard", 1e-5, 1e-5);
 }
 
 
