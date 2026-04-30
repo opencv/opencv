@@ -107,6 +107,7 @@ public:
     AutoBuffer();
     //! constructor taking the real buffer size
     explicit AutoBuffer(size_t _size);
+    AutoBuffer(size_t _size, const _Tp& value);
 
     //! the copy constructor
     AutoBuffer(const AutoBuffer<_Tp, fixed_size>& buf);
@@ -140,7 +141,13 @@ public:
     //! returns a reference to the element at specified location. No bounds checking is performed in Release builds.
     inline const _Tp& operator[] (size_t i) const { CV_DbgCheckLT(i, sz, "out of range"); return ptr[i]; }
 #endif
-
+public:
+    inline _Tp* begin() { return data(); }
+    inline const _Tp* begin() const { return data(); }
+    inline const _Tp* cbegin() const { return begin(); }
+    inline _Tp* end() { return data()+size(); }
+    inline const _Tp* end() const { return data()+size(); }
+    inline const _Tp* cend() const { return end(); }
 protected:
     //! pointer to the real buffer, can point to buf if the buffer is small enough
     _Tp* ptr;
@@ -1052,6 +1059,13 @@ AutoBuffer<_Tp, fixed_size>::AutoBuffer(size_t _size)
     ptr = buf;
     sz = fixed_size;
     allocate(_size);
+}
+
+template<typename _Tp, size_t fixed_size> inline
+AutoBuffer<_Tp, fixed_size>::AutoBuffer(size_t _size, const _Tp& value)
+                            :AutoBuffer(size)
+{
+    std::fill(begin(), end(), value);
 }
 
 template<typename _Tp, size_t fixed_size> inline
