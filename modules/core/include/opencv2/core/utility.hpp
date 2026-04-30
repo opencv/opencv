@@ -102,6 +102,12 @@ template<typename _Tp, size_t fixed_size = 1024/sizeof(_Tp)+8> class AutoBuffer
 {
 public:
     typedef _Tp value_type;
+    typedef  std::size_t size_type;
+    typedef  std::ptrdiff_t difference_type;
+    typedef const _Tp* const_iterator;
+    typedef _Tp* iterator;
+    typedef const _Tp& const_reference;
+    typedef _Tp& reference;
 
     //! the default constructor
     AutoBuffer();
@@ -142,12 +148,24 @@ public:
     inline const _Tp& operator[] (size_t i) const { CV_DbgCheckLT(i, sz, "out of range"); return ptr[i]; }
 #endif
 public:
-    inline _Tp* begin() { return data(); }
-    inline const _Tp* begin() const { return data(); }
-    inline const _Tp* cbegin() const { return begin(); }
-    inline _Tp* end() { return data()+size(); }
-    inline const _Tp* end() const { return data()+size(); }
-    inline const _Tp* cend() const { return end(); }
+    inline iterator begin() { return data(); }
+    inline const_iterator begin() const { return data(); }
+    inline const_iterator cbegin() const { return begin(); }
+    inline iterator end() { return data()+size(); }
+    inline const_iterator end() const { return data()+size(); }
+    inline const_iterator cend() const { return end(); }
+public:
+    inline bool empty() const { return !size(); }
+    inline void clear() {resize(0);}
+    inline const_reference front() const { return (*this)[0] ;}
+    inline reference front() { return (*this)[0] ;}
+    inline const_reference back() const { CV_DbgCheckGT(sz, 0, "out of range"); return (*this)[size()-1] ;}
+    inline reference back() { CV_DbgCheckGT(sz, 0, "out of range"); return (*this)[size()-1] ;}
+public:
+    inline void push_back( const _Tp& value ) {resize(size()+1); back() = value;}
+    inline void push_back( _Tp&& value ) {resize(size()+1); back() = std::move(value);}
+    inline void emplace_back( _Tp&& value ) {push_back(value);}
+    inline void pop_back() {CV_DbgCheckGT(sz, 0, "out of range"); resize(size()-1);}
 protected:
     //! pointer to the real buffer, can point to buf if the buffer is small enough
     _Tp* ptr;
