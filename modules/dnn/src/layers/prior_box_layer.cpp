@@ -66,6 +66,8 @@
 using namespace cv::dnn::cuda4dnn;
 #endif
 
+#include "../net_impl.hpp"
+
 namespace cv
 {
 namespace dnn
@@ -363,6 +365,30 @@ public:
             CV_CheckEQ(inputs[1].dims, 4, "");
             _imageWidth = inputs[1].size[3];
             _imageHeight = inputs[1].size[2];
+        }
+        else if (_imageWidth == 0 && _imageHeight == 0)
+        {
+            // Single-input PriorBox (ONNX): derive image dims from the network's
+            // first 4D graph input when img_h/img_w/img_size weren't provided.
+            Net::Impl* netimpl_ = getNetImpl(this);
+            if (netimpl_ && netimpl_->mainGraph)
+            {
+                for (const Arg& arg : netimpl_->mainGraph->inputs())
+                {
+                    const ArgData& ad = netimpl_->argData(arg);
+                    if (ad.shape.dims == 4)
+                    {
+                        int h = ad.shape[2];
+                        int w = ad.shape[3];
+                        if (h > 0 && w > 0)
+                        {
+                            _imageHeight = h;
+                            _imageWidth = w;
+                            break;
+                        }
+                    }
+                }
+            }
         }
 
         _stepY = _stepY == 0 ? (static_cast<float>(_imageHeight) / layerHeight) : _stepY;

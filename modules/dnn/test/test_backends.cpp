@@ -7,24 +7,8 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/core/ocl.hpp"
-#include <set>
 
 namespace opencv_test { namespace {
-
-static const std::set<std::string>& getCaffeNewEngineDenylist()
-{
-    static const std::set<std::string> denyList = {
-        #include "test_caffe_importer_new_engine_denylist.inl.hpp"
-    };
-    return denyList;
-}
-
-static void skipIfInCaffeNewEngineDenylist()
-{
-    const std::string name = opencv_test::getCurrentTestNameNoParams();
-    if (!name.empty() && getCaffeNewEngineDenylist().count(name))
-        throw SkipTestException("Test is in the new engine denylist: " + name);
-}
 
 class DNNTestNetwork : public DNNTestLayer
 {

@@ -34,7 +34,7 @@ public class DnnForwardAndRetrieve extends OpenCVTestCase {
         MatOfByte bufferProto = new MatOfByte();
         bufferProto.fromArray(prototxt.getBytes());
         MatOfByte bufferModel = new MatOfByte();
-        Net net = Dnn.readNetFromCaffe(bufferProto, bufferModel, Dnn.ENGINE_CLASSIC);
+        Net net = Dnn.readNet("caffe", bufferModel, bufferProto, Dnn.ENGINE_CLASSIC);
         net.setPreferableBackend(Dnn.DNN_BACKEND_OPENCV);
 
         // Create input data

@@ -63,8 +63,6 @@ static String _tf(TString filename)
     return (basetestdir + "dnn/layers/") + filename;
 }
 
-class Test_Caffe_layers : public DNNTestLayer {};
-
 void testReshape(const MatShape& inputShape, const MatShape& targetShape,
                  int axis = 0, int num_axes = -1,
                  MatShape mask = MatShape())
@@ -597,6 +595,7 @@ INSTANTIATE_TEST_CASE_P(Layer_Test, Crop, Combine(
 /*offset value*/        Values(3, 4)
 ));
 
+class Test_Caffe_layers : public DNNTestLayer {};
 
 // Check that by default average pooling layer should not count zero padded values
 // into the normalization area.

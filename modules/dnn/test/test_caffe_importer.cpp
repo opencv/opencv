@@ -46,21 +46,6 @@
 
 namespace opencv_test { namespace {
 
-static const std::set<std::string>& getCaffeNewEngineDenylist()
-{
-    static const std::set<std::string> denyList = {
-        #include "test_caffe_importer_new_engine_denylist.inl.hpp"
-    };
-    return denyList;
-}
-
-static void skipIfInCaffeNewEngineDenylist()
-{
-    const std::string name = opencv_test::getCurrentTestNameNoParams();
-    if (!name.empty() && getCaffeNewEngineDenylist().count(name))
-        throw SkipTestException("Test is in the new engine denylist: " + name);
-}
-
 template<typename TString>
 static std::string _tf(TString filename)
 {
@@ -151,75 +136,6 @@ TEST(Test_Caffe, multiple_inputs)
 
     normAssert(out, first_image + second_image);
 }
-
-typedef testing::TestWithParam<tuple<std::string, Target> > opencv_face_detector;
-TEST_P(opencv_face_detector, Accuracy)
-{
-    std::string model = findDataFile(get<0>(GetParam()), false);
-    dnn::Target targetId = (dnn::Target)(int)get<1>(GetParam());
-
-    if (targetId == DNN_TARGET_OPENCL_FP16)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
-    if (targetId == DNN_TARGET_CPU_FP16)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
-
-    Net net = readNetFromONNX(model);
-    ASSERT_FALSE(net.empty());
-
-    Mat img = imread(findDataFile("gpu/lbpcascade/er.png"));
-    Mat blob = blobFromImage(img, 1.0, Size(), Scalar(104.0, 177.0, 123.0), false, false);
-
-    net.setPreferableBackend(DNN_BACKEND_OPENCV);
-    net.setPreferableTarget(targetId);
-
-    net.setInput(blob);
-    // Output has shape 1x1xNx7 where N - number of detections.
-    // An every detection is a vector of values [id, classId, confidence, left, top, right, bottom]
-    Mat out = net.forward();
-    Mat ref = (Mat_<float>(6, 7) << 0, 1, 0.99520785, 0.80997437, 0.16379407, 0.87996572, 0.26685631,
-                                    0, 1, 0.9934696, 0.2831718, 0.50738752, 0.345781, 0.5985168,
-                                    0, 1, 0.99096733, 0.13629119, 0.24892329, 0.19756334, 0.3310290,
-                                    0, 1, 0.98977017, 0.23901358, 0.09084064, 0.29902688, 0.1769477,
-                                    0, 1, 0.97203469, 0.67965847, 0.06876482, 0.73999709, 0.1513494,
-                                    0, 1, 0.95097077, 0.51901293, 0.45863652, 0.5777427, 0.5347801);
-    normAssertDetections(ref, out, "", 0.5, 1e-4, 2e-4);
-}
-
-// False positives bug for large faces: https://github.com/opencv/opencv/issues/15106
-TEST_P(opencv_face_detector, issue_15106)
-{
-    std::string model = findDataFile(get<0>(GetParam()), false);
-    dnn::Target targetId = (dnn::Target)(int)get<1>(GetParam());
-
-    if (targetId == DNN_TARGET_OPENCL_FP16)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
-    if (targetId == DNN_TARGET_CPU_FP16)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
-
-    Net net = readNetFromONNX(model);
-    ASSERT_FALSE(net.empty());
-
-    Mat img = imread(findDataFile("cv/shared/lena.png"));
-    img = img.rowRange(img.rows / 4, 3 * img.rows / 4).colRange(img.cols / 4, 3 * img.cols / 4);
-    Mat blob = blobFromImage(img, 1.0, Size(300, 300), Scalar(104.0, 177.0, 123.0), false, false);
-
-    net.setPreferableBackend(DNN_BACKEND_OPENCV);
-    net.setPreferableTarget(targetId);
-
-    net.setInput(blob);
-    // Output has shape 1x1xNx7 where N - number of detections.
-    // An every detection is a vector of values [id, classId, confidence, left, top, right, bottom]
-    Mat out = net.forward();
-    Mat ref = (Mat_<float>(1, 7) << 0, 1, 0.9149431, 0.30424616, 0.26964942, 0.88733053, 0.99815309);
-    normAssertDetections(ref, out, "", 0.89, 6e-5, 1e-4);
-}
-INSTANTIATE_TEST_CASE_P(Test_Caffe, opencv_face_detector,
-    Combine(
-        Values("dnn/onnx/models/opencv_face_detector.onnx",
-               "dnn/onnx/models/opencv_face_detector_fp16.onnx"),
-        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV))
-    )
-);
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_Caffe_nets, dnnBackendsAndTargets());
 

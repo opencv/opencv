@@ -25,7 +25,7 @@ import cv2 as cv
 class OpticalFlow(object):
     def __init__(self, model, height, width, proto=""):
         if proto:
-            self.net = cv.dnn.readNetFromCaffe(proto, model)
+            self.net = cv.dnn.readNet(proto, model)
         else:
             self.net = cv.dnn.readNet(model)
         self.net.setPreferableBackend(cv.dnn.DNN_BACKEND_OPENCV)

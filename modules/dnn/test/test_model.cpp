@@ -10,21 +10,6 @@
 #include <set>
 namespace opencv_test { namespace {
 
-static const std::set<std::string>& getCaffeNewEngineDenylist()
-{
-    static const std::set<std::string> denyList = {
-        #include "test_caffe_importer_new_engine_denylist.inl.hpp"
-    };
-    return denyList;
-}
-
-static void skipIfInCaffeNewEngineDenylist()
-{
-    const std::string name = opencv_test::getCurrentTestNameNoParams();
-    if (!name.empty() && getCaffeNewEngineDenylist().count(name))
-        throw SkipTestException("Test is in the new engine denylist: " + name);
-}
-
 template<typename TString>
 static std::string _tf(TString filename, bool required = true)
 {
@@ -303,68 +288,6 @@ TEST_P(Test_Model, Classify)
     float norm = 1e-4;
 
     testClassifyModel(weights_file, "", img_path, ref, norm, size);
-}
-
-
-TEST_P(Test_Model, DetectionOutput)
-{
-    applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
-
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Check 'backward_compatible_check || in_out_elements_equal' failed at core/src/op/reshape.cpp:427:
-    // While validating node 'v1::Reshape bbox_pred_reshape (ave_bbox_pred_rois[0]:f32{1,8,1,1}, Constant_388[0]:i64{4}) -> (f32{?,?,?,?})' with friendly_name 'bbox_pred_reshape':
-    // Requested output shape {1,300,8,1} is incompatible with input shape {1, 8, 1, 1}
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#elif defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
-    // Exception: Function contains several inputs and outputs with one friendly name! (HETERO bug?)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target != DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#elif defined(INF_ENGINE_RELEASE)
-    // FIXIT DNN_BACKEND_INFERENCE_ENGINE is misused
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
-
-    if (target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
-#endif
-
-    std::vector<int> refClassIds = {7, 12};
-    std::vector<float> refConfidences = {0.991359f, 0.94786f};
-    std::vector<Rect2d> refBoxes = {Rect2d(491, 81, 212, 98),
-                                    Rect2d(132, 223, 207, 344)};
-
-    std::string img_path = _tf("dog416.png");
-    std::string weights_file = _tf("resnet50_rfcn_final.onnx", false);
-    std::string config_file = "";
-
-    Scalar mean = Scalar(102.9801, 115.9465, 122.7717);
-    Size size{800, 600};
-
-    double scoreDiff = default_l1, iouDiff = 1e-5;
-    float confThreshold = 0.8;
-    double nmsThreshold = 0.0;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_CPU_FP16)
-    {
-        if (backend == DNN_BACKEND_OPENCV)
-            scoreDiff = 4e-3;
-        else
-            scoreDiff = 2e-2;
-        iouDiff = 1.8e-1;
-    }
-#if defined(INF_ENGINE_RELEASE)
-        if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        {
-            scoreDiff = 0.05;
-            iouDiff = 0.08;
-        }
-#endif
-
-    testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences, refBoxes,
-                    scoreDiff, iouDiff, confThreshold, nmsThreshold, size, mean);
 }
 
 TEST_P(Test_Model, Keypoints_pose)

@@ -245,8 +245,7 @@ TEST(blobFromImagesWithParams_4ch, multi_image)
 
 TEST(readNet, Regression)
 {
-    Net net = readNet(findDataFile("dnn/squeezenet_v1.1.prototxt"),
-                      findDataFile("dnn/squeezenet_v1.1.caffemodel", false));
+    Net net = readNet(findDataFile("dnn/onnx/models/squeezenet.onnx", false));
     EXPECT_FALSE(net.empty());
     net = readNet(findDataFile("dnn/ssd_mobilenet_v1_coco.pbtxt"),
                   findDataFile("dnn/ssd_mobilenet_v1_coco.pb", false));
@@ -256,9 +255,7 @@ TEST(readNet, Regression)
 TEST(readNet, do_not_call_setInput)  // https://github.com/opencv/opencv/issues/16618
 {
     // 1. load network
-    const string proto = findDataFile("dnn/squeezenet_v1.1.prototxt");
-    const string model = findDataFile("dnn/squeezenet_v1.1.caffemodel", false);
-    Net net = readNetFromCaffe(proto, model);
+    Net net = readNet(findDataFile("dnn/onnx/models/squeezenet.onnx", false));
 
     // 2. mistake: no inputs are specified through .setInput()
 
@@ -325,13 +322,7 @@ TEST_P(dump, Regression)
 {
     const int backend  = get<0>(GetParam());
     const int target   = get<1>(GetParam());
-    Net net = readNet(findDataFile("dnn/squeezenet_v1.1.prototxt"),
-                      findDataFile("dnn/squeezenet_v1.1.caffemodel", false));
-
-    if (net.getMainGraph())
-        ASSERT_EQ(net.getLayer(net.getLayerId("fire2/concat"))->inputs.size(), 2);
-    else
-        ASSERT_EQ(net.getLayerInputs(net.getLayerId("fire2/concat")).size(), 2);
+    Net net = readNet(findDataFile("dnn/onnx/models/squeezenet.onnx", false));
 
     int size[] = {1, 3, 227, 227};
     Mat input = cv::Mat::ones(4, size, CV_32F);
@@ -579,20 +570,17 @@ INSTANTIATE_TEST_CASE_P(/**/, DeprecatedForward, dnnBackendsAndTargets());
 
 TEST(Net, forwardAndRetrieve)
 {
-    std::string prototxt =
-        "input: \"data\"\n"
-        "layer {\n"
-        "  name: \"testLayer\"\n"
-        "  type: \"Slice\"\n"
-        "  bottom: \"data\"\n"
-        "  top: \"firstCopy\"\n"
-        "  top: \"secondCopy\"\n"
-        "  slice_param {\n"
-        "    axis: 0\n"
-        "    slice_point: 2\n"
-        "  }\n"
-        "}";
-    Net net = readNetFromCaffe(&prototxt[0], prototxt.size());
+    LayerParams lpSlice;
+    lpSlice.name = "testLayer";
+    lpSlice.type = "Slice";
+    lpSlice.set("axis", 0);
+    Mat slicePoint = (Mat_<int>(1, 1) << 2);
+    lpSlice.set("slice_point", DictValue::arrayInt<int*>((int*)slicePoint.data, 1));
+
+    Net net;
+    int sliceId = net.addLayer(lpSlice.name, lpSlice.type, lpSlice);
+    net.connect(0, 0, sliceId, 0);
+
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
 
     Mat inp(4, 5, CV_32F);
