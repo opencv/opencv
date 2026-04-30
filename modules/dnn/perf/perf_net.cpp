@@ -212,8 +212,9 @@ PERF_TEST_P_(DNNTestNetwork, YOLOv3)
 #endif
 
     Mat sample = imread(findDataFile("dnn/dog416.png"));
+    cv::resize(sample, sample, Size(640, 640));
     Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(), Scalar(), true);
-    processNet("dnn/yolov3.weights", "dnn/yolov3.cfg", inp);
+    processNet("dnn/yolov3.onnx", "", inp);
 }
 
 PERF_TEST_P_(DNNTestNetwork, YOLOv4)
@@ -231,8 +232,9 @@ PERF_TEST_P_(DNNTestNetwork, YOLOv4)
         throw SkipTestException("Test is disabled in OpenVINO 2020.4");
 #endif
     Mat sample = imread(findDataFile("dnn/dog416.png"));
+    cv::resize(sample, sample, Size(608, 608));
     Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(), Scalar(), true);
-    processNet("dnn/yolov4.weights", "dnn/yolov4.cfg", inp);
+    processNet("dnn/yolov4.onnx", "", inp);
 }
 
 PERF_TEST_P_(DNNTestNetwork, YOLOv4_tiny)
@@ -243,7 +245,7 @@ PERF_TEST_P_(DNNTestNetwork, YOLOv4_tiny)
 #endif
     Mat sample = imread(findDataFile("dnn/dog416.png"));
     Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(), Scalar(), true);
-    processNet("dnn/yolov4-tiny-2020-12.weights", "dnn/yolov4-tiny-2020-12.cfg", inp);
+    processNet("dnn/yolov4-tiny.onnx", "", inp);
 }
 
 PERF_TEST_P_(DNNTestNetwork, YOLOv5) {
