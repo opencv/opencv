@@ -765,7 +765,7 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
                 sdepth, ddepth, cn,
                 ksize, borderType & ~BORDER_ISOLATED,
                 (uint8_t)0);
-                
+
         filter2D( _src, _dst, ddepth, kernel, Point(-1, -1), delta, borderType );
     }
     else

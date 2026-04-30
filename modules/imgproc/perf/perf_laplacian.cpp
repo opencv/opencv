@@ -13,7 +13,7 @@ typedef perf::TestBaseWithParam<LaplacianParams> Perf_Laplacian;
 
 PERF_TEST_P(Perf_Laplacian, Laplacian,
             testing::Combine(
-                testing::Values(szVGA, sz720p, sz1080p), 
+                testing::Values(szVGA, sz720p, sz1080p),
                 testing::Values(1, 3, 5),                // ksize: 1, 3, 5
                 TargetDepth::all(),                      // CV_8U and CV_16S
                 BorderMode::all()
