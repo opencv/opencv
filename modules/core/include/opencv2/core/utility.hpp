@@ -159,13 +159,13 @@ public:
     inline void clear() {resize(0);}
     inline const_reference front() const { return (*this)[0] ;}
     inline reference front() { return (*this)[0] ;}
-    inline const_reference back() const { CV_DbgCheckGT(sz, 0, "out of range"); return (*this)[size()-1] ;}
-    inline reference back() { CV_DbgCheckGT(sz, 0, "out of range"); return (*this)[size()-1] ;}
+    inline const_reference back() const { CV_DbgCheckGT(sz, (size_t)0, "out of range"); return (*this)[size()-1] ;}
+    inline reference back() { CV_DbgCheckGT(sz, (size_t)0, "out of range"); return (*this)[size()-1] ;}
 public:
     inline void push_back( const _Tp& value ) {resize(size()+1); back() = value;}
     inline void push_back( _Tp&& value ) {resize(size()+1); back() = std::move(value);}
     inline void emplace_back( _Tp&& value ) {push_back(value);}
-    inline void pop_back() {CV_DbgCheckGT(sz, 0, "out of range"); resize(size()-1);}
+    inline void pop_back() {CV_DbgCheckGT(sz, (size_t)0, "out of range"); resize(size()-1);}
 protected:
     //! pointer to the real buffer, can point to buf if the buffer is small enough
     _Tp* ptr;
