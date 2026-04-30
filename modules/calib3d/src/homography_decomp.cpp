@@ -519,8 +519,8 @@ void filterHomographyDecompByVisibleRefpoints(InputArrayOfArrays _rotations,
 
     AutoBuffer<uchar> solutionMask(nsolutions);
     std::fill(solutionMask.data(), solutionMask.data()+solutionMask.size(), (uchar)1);
-    AutoBuffer<Mat> normals(nsolutions);
-    AutoBuffer<Mat> rotnorm(nsolutions);
+    std::vector<Mat> normals(nsolutions);
+    std::vector<Mat> rotnorm(nsolutions);
     Mat R;
 
     for( int i = 0; i < nsolutions; i++ )

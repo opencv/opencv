@@ -792,8 +792,7 @@ static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _
     if (templ.type() != mask.type())
     {
         // Assertions above ensured, that depth is the same and only number of channel differ
-        AutoBuffer<Mat> maskChannels(templ.channels());
-        std::fill(maskChannels.data(), maskChannels.data()+maskChannels.size(), mask);
+        std::vector<Mat> maskChannels(templ.channels(), mask);
         merge(maskChannels.data(), templ.channels(), mask);
     }
 

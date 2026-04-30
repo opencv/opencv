@@ -1304,7 +1304,7 @@ void cv::calcHist( InputArrayOfArrays images, const std::vector<int>& channels,
             _ranges[i] = (float*)&ranges[i*2];
     }
 
-    AutoBuffer<Mat> buf(nimages);
+    std::vector<Mat> buf(nimages);
     for( i = 0; i < nimages; i++ )
         buf[i] = images.getMat(i);
 
@@ -2011,7 +2011,7 @@ void cv::calcBackProject( InputArrayOfArrays images, const std::vector<int>& cha
             _ranges[i] = (float*)&ranges[i*2];
     }
 
-    AutoBuffer<Mat> buf(nimages);
+    std::vector<Mat> buf(nimages);
     for( i = 0; i < nimages; i++ )
         buf[i] = images.getMat(i);
 
@@ -3004,7 +3004,7 @@ cvCalcArrHist( CvArr** img, CvHistogram* hist, int accumulate, const CvArr* mask
     int i, dims = cvGetDims( hist->bins, size);
     bool uniform = CV_IS_UNIFORM_HIST(hist);
 
-    cv::AutoBuffer<cv::Mat> images(dims);
+    std::vector<cv::Mat> images(dims);
     for( i = 0; i < dims; i++ )
         images[i] = cv::cvarrToMat(img[i]);
 
@@ -3084,7 +3084,7 @@ cvCalcArrBackProject( CvArr** img, CvArr* dst, const CvHistogram* hist )
         }
     }
 
-    cv::AutoBuffer<cv::Mat> images(dims);
+    std::vector<cv::Mat> images(dims);
     for( i = 0; i < dims; i++ )
         images[i] = cv::cvarrToMat(img[i]);
 

@@ -70,10 +70,10 @@ public:
     template<typename _to_binary_convertor_t> inline
     Base64ContextEmitter & write(_to_binary_convertor_t & convertor)
     {
-        static const size_t BUFFER_MAX_LEN = 1024U;
+        constexpr size_t BUFFER_MAX_LEN = 1024U;
 
-        AutoBuffer<uchar> buffer(BUFFER_MAX_LEN);
-        uchar * beg = buffer.data();
+        uchar buffer[BUFFER_MAX_LEN];
+        uchar * beg = buffer;
         uchar * end = beg;
 
         while (convertor) {
