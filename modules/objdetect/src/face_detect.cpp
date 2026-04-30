@@ -43,6 +43,9 @@ public:
         padW = (int((inputW - 1) / divisor) + 1) * divisor;
         padH = (int((inputH - 1) / divisor) + 1) * divisor;
 
+        if (!net.getMainGraph())
+            net.setInputShape("input", MatShape({1, 3, padH, padW}));
+
         scoreThreshold = score_threshold;
         nmsThreshold = nms_threshold;
         topK = top_k;
@@ -72,6 +75,9 @@ public:
         padW = (int((inputW - 1) / divisor) + 1) * divisor;
         padH = (int((inputH - 1) / divisor) + 1) * divisor;
 
+        if (!net.getMainGraph())
+            net.setInputShape("input", MatShape({1, 3, padH, padW}));
+
         scoreThreshold = score_threshold;
         nmsThreshold = nms_threshold;
         topK = top_k;
@@ -83,6 +89,8 @@ public:
         inputH = input_size.height;
         padW = ((inputW - 1) / divisor + 1) * divisor;
         padH = ((inputH - 1) / divisor + 1) * divisor;
+        if (!net.getMainGraph())
+            net.setInputShape("input", MatShape({1, 3, padH, padW}));
     }
 
     Size getInputSize() override

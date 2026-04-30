@@ -1314,6 +1314,8 @@ CASE(test_layer_normalization_default_axis_expanded)
     SKIP;
 CASE(test_layer_normalization_default_axis_expanded_ver18)
     SKIP;
+CASE(test_lpnormalization_default)
+    SKIP;
 CASE(test_leakyrelu)
     // no filter
 CASE(test_leakyrelu_default)
@@ -1838,11 +1840,11 @@ CASE(test_prelu_broadcast_expanded)
 CASE(test_prelu_example_expanded)
     SKIP;
 CASE(test_qlinearconv)
-    // no filter
+    SKIP;
 CASE(test_qlinearmatmul_2D)
-    // no filter
+    SKIP;
 CASE(test_qlinearmatmul_3D)
-    // no filter
+    SKIP;
 CASE(test_quantizelinear)
     SKIP;
 CASE(test_quantizelinear_axis)

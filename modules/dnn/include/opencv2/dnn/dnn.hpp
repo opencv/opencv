@@ -495,6 +495,13 @@ CV__DNN_INLINE_NS_BEGIN
         // so that forward() can assume that the outputs are already allocated.
         virtual bool dynamicOutputShapes() const;
 
+        // returns true if the layer only rearranges data without changing values.
+        // Examples: Flatten, Reshape, Transpose, Permute, Squeeze, Unsqueeze,
+        // Concat, Split, Slice, Tile, MaxPool.
+        // Used by QDQ fusion to elide redundant dequantize-quantize pairs
+        // when the scale and zero point are the same.
+        virtual bool isDataShuffling() const;
+
         // dumps attributes of the layer (e.g. strides, dilations in Convolution, MaxPool)
         virtual std::ostream& dumpAttrs(std::ostream& strm, int indent) const;
 

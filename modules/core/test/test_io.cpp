@@ -1685,6 +1685,53 @@ TEST(Core_InputOutput, FileStorage_json_bool)
     fs.release();
 }
 
+TEST(Core_InputOutput, FileStorage_json_unicode_escape)
+{
+    // Test \uXXXX Unicode escape sequences in JSON strings
+    std::string test = R"({
+        "ascii": "\u0041\u0042\u0043",
+        "copyright": "\u00A9",
+        "chinese": "\u4E2D",
+        "emoji_base": "\u263A",
+        "mixed": "Hello \u4E16\u754C"
+    })";
+    FileStorage fs(test, FileStorage::READ | FileStorage::MEMORY);
+
+    // Test ASCII characters (\u0041=A, \u0042=B, \u0043=C)
+    ASSERT_TRUE(fs["ascii"].isString());
+    ASSERT_EQ((std::string)fs["ascii"], "ABC");
+
+    // Test 2-byte UTF-8 character (\u00A9=©)
+    ASSERT_TRUE(fs["copyright"].isString());
+    std::string copyright_str = (std::string)fs["copyright"];
+    ASSERT_EQ(copyright_str.size(), 2u);  // © is 2 bytes in UTF-8
+    ASSERT_EQ((unsigned char)copyright_str[0], 0xC2);
+    ASSERT_EQ((unsigned char)copyright_str[1], 0xA9);
+
+    // Test 3-byte UTF-8 character (\u4E2D=中)
+    ASSERT_TRUE(fs["chinese"].isString());
+    std::string chinese_str = (std::string)fs["chinese"];
+    ASSERT_EQ(chinese_str.size(), 3u);  // 中 is 3 bytes in UTF-8
+    ASSERT_EQ((unsigned char)chinese_str[0], 0xE4);
+    ASSERT_EQ((unsigned char)chinese_str[1], 0xB8);
+    ASSERT_EQ((unsigned char)chinese_str[2], 0xAD);
+
+    // Test another 3-byte character (\u263A=☺)
+    ASSERT_TRUE(fs["emoji_base"].isString());
+    std::string emoji_str = (std::string)fs["emoji_base"];
+    ASSERT_EQ(emoji_str.size(), 3u);
+    ASSERT_EQ((unsigned char)emoji_str[0], 0xE2);
+    ASSERT_EQ((unsigned char)emoji_str[1], 0x98);
+    ASSERT_EQ((unsigned char)emoji_str[2], 0xBA);
+
+    // Test mixed ASCII and Unicode
+    ASSERT_TRUE(fs["mixed"].isString());
+    std::string mixed = (std::string)fs["mixed"];
+    ASSERT_EQ(mixed.substr(0, 6), "Hello ");  // First 6 chars are "Hello "
+
+    fs.release();
+}
+
 TEST(Core_InputOutput, FileStorage_free_file_after_exception)
 {
     const std::string fileName = cv::tempfile("FileStorage_free_file_after_exception_test.yml");

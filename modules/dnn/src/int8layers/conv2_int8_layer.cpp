@@ -212,6 +212,32 @@ public:
         }
     }
 
+    Conv2Int8LayerImpl(const Conv2Int8Params& p)
+    {
+        name = p.name;
+        type = "Conv2Int8";
+        strides = p.strides;
+        dilations = p.dilations;
+        pads = p.pads;
+        ngroups = p.ngroups;
+        auto_pad = p.auto_pad;
+        ceil_mode = p.ceil_mode;
+        input_sc = p.input_sc;
+        input_zp = p.input_zp;
+        output_sc = p.output_sc;
+        output_zp = p.output_zp;
+        per_channel = p.per_channel;
+        inputIsU8 = p.input_is_u8;
+        addResidual = false;
+
+        if (!p.weights.empty()) {
+            wshape0 = p.weights.shape();
+            biasInt32 = p.bias;
+            outMultiplier = p.outputMultiplier;
+            blobs = { p.weights, p.bias, p.outputMultiplier };
+        }
+    }
+
     void getTypes(const std::vector<MatType>& inputs,
                   const int requiredOutputs, const int,
                   std::vector<MatType>& outputs,
@@ -341,6 +367,10 @@ public:
             cs.initConv(inpshape, wshape0, outshape, ngroups,
                         strides, dilations, pads, auto_pad, ceil_mode,
                         FAST_ACTIV_NONE, nullptr, {});
+
+            if (cs.depthwise) {
+                cs.wshape = getWpackShapeInt8(wshape0, ngroups, C0);
+            }
             prevInpshape = inpshape;
         }
 
@@ -363,6 +393,11 @@ public:
 };
 
 Ptr<Conv2Int8Layer> Conv2Int8Layer::create(const LayerParams& params)
+{
+    return Ptr<Conv2Int8Layer>(new Conv2Int8LayerImpl(params));
+}
+
+Ptr<Conv2Int8Layer> Conv2Int8Layer::create(const Conv2Int8Params& params)
 {
     return Ptr<Conv2Int8Layer>(new Conv2Int8LayerImpl(params));
 }

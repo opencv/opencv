@@ -2667,7 +2667,7 @@ applying a rectification transformation (R) and projecting to a new image plane 
     which are dimensionless coordinates in the camera's focal plane, independent of intrinsic parameters.
 
 @note **Fisheye vs. Standard Model:**
-Use this function (#fisheye::undistortPoints) for fisheye cameras (wide-angle lenses).
+Use this function (#cv::fisheye::undistortPoints) for fisheye cameras (wide-angle lenses).
 For standard pinhole cameras, use #undistortPoints instead. The fisheye model uses a different distortion
 parameterization (4 coefficients) compared to the standard model (4-14 coefficients).
 
@@ -2732,14 +2732,14 @@ may additionally scale and shift the result by using a different matrix.
 
 The function transforms an image to compensate radial and tangential lens distortion.
 
-The function is simply a combination of fisheye::initUndistortRectifyMap (with unity R ) and remap
+The function is simply a combination of #cv::fisheye::initUndistortRectifyMap (with unity R ) and remap
 (with bilinear interpolation). See the former function for details of the transformation being
 performed.
 
 See below the results of undistortImage.
    -   a\) result of undistort of perspective camera model (all possible coefficients (k_1, k_2, k_3,
         k_4, k_5, k_6) of distortion were optimized under calibration)
-    -   b\) result of fisheye::undistortImage of fisheye camera model (all possible coefficients (k_1, k_2,
+    -   b\) result of #cv::fisheye::undistortImage of fisheye camera model (all possible coefficients (k_1, k_2,
         k_3, k_4) of fisheye distortion were optimized under calibration)
     -   c\) original image was captured with fisheye lens
 

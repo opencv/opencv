@@ -1795,6 +1795,10 @@ if(WITH_EIGEN OR HAVE_EIGEN)
   status("    Eigen:"      HAVE_EIGEN       THEN "YES (ver ${EIGEN_WORLD_VERSION}.${EIGEN_MAJOR_VERSION}.${EIGEN_MINOR_VERSION})" ELSE NO)
 endif()
 
+if(WITH_CLP OR HAVE_CLP)
+  status("    CLP:"        HAVE_CLP         THEN "YES" ELSE NO)
+endif()
+
 if(WITH_FASTCV OR HAVE_FASTCV)
   status("    FastCV:"     HAVE_FASTCV      THEN "YES (${FASTCV_LIBRARY})" ELSE "NO")
 endif()

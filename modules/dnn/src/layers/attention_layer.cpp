@@ -165,7 +165,8 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
                                  std::vector<MatShape> &outputs,
                                  std::vector<MatShape> &internals) const CV_OVERRIDE {
         int num_inputs = inputs.size() + blobs.size();
-        CV_CheckEQ(num_inputs, 3, "DNN/Attention: three inputs are required");
+        CV_CheckGE(num_inputs, 3, "DNN/Attention: at least three inputs are required (data, weight, bias)");
+        CV_CheckLE(num_inputs, 4, "DNN/Attention: at most four inputs are supported (data, weight, bias, mask)");
         const auto &input_shape = inputs[0];
         const auto &weight_shape = blobs.empty() ? inputs[1] : shape(blobs.front());
         const auto &bias_shape = blobs.empty() ? inputs[2] : shape(blobs.back());
@@ -391,6 +392,41 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
                              output + output_offset, seq_len, opt);
                 }
             }, loops * seq_len * qk_head_size * seq_len * (1 / 1024.0));
+
+            // Additive attention mask applied before softmax. Supports BERT-style mask
+            // shapes [B, 1, 1, S] (per-batch) and [1, 1, 1, S] (global broadcast).
+            // Only reached when the fusion pass attached an external mask input.
+            int num_non_blob_inputs = (int)inputs.size();
+            bool has_mask = (!blobs.empty() && num_non_blob_inputs >= 2) ||
+                            (blobs.empty() && num_non_blob_inputs >= 4);
+            if (has_mask) {
+                const Mat &mask_mat = blobs.empty() ? inputs[3] : inputs[1];
+                CV_CheckTypeEQ(mask_mat.type(), CV_32F,
+                               "DNN/Attention: mask must be float32");
+                const int mask_last_dim = shape(mask_mat).back();
+                CV_CheckEQ(mask_last_dim, (int)seq_len,
+                           "DNN/Attention: mask last dim must equal seq_len");
+                const size_t mask_total = mask_mat.total();
+                int mask_batch_stride;
+                if (mask_total == batch_size * seq_len)      mask_batch_stride = (int)seq_len;
+                else if (mask_total == seq_len)              mask_batch_stride = 0;
+                else CV_Error(Error::StsNotImplemented,
+                              "DNN/Attention: unsupported mask shape");
+
+                const float *mask_data = mask_mat.ptr<const float>();
+                parallel_for_(Range(0, (int)loops), [&](const Range &r) {
+                    for (int i = r.start; i < r.end; i++) {
+                        const int b = i / (int)num_heads;
+                        const float *m = mask_data + b * mask_batch_stride;
+                        float *prob = output + i * seq_len_square;
+                        for (size_t row = 0; row < seq_len; row++) {
+                            float *p = prob + row * seq_len;
+                            for (size_t j = 0; j < seq_len; j++)
+                                p[j] += m[j];
+                        }
+                    }
+                }, loops * seq_len * (1 / 1024.0));
+            }
 
             // Compute softmax on the last dimension
             softmax(attention_prob, attention_prob, shape(attention_prob).size() - 1);

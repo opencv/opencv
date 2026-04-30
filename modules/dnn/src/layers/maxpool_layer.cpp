@@ -456,6 +456,8 @@ public:
         temptypes.clear();
     }
 
+    bool isDataShuffling() const CV_OVERRIDE { return true; }
+
     virtual bool getMemoryShapes(const std::vector<MatShape>& inpshapes,
                                  const int,
                                  std::vector<MatShape> &outshapes,

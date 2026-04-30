@@ -22,8 +22,13 @@ endif()
 # Check for unistd.h
 #
 if(NOT MSVC)
-  check_include_file(unistd.h Z_HAVE_UNISTD_H)
+  check_include_file(unistd.h HAVE_UNISTD_H)
 endif()
+
+#
+# Check for stdarg.h
+#
+check_include_file(stdarg.h HAVE_STDARG_H)
 
 if(MSVC)
   add_definitions(-D_CRT_SECURE_NO_DEPRECATE)
@@ -38,7 +43,7 @@ if(HAVE_OFF64_T)
   add_definitions(-D_LARGEFILE64_SOURCE=1)
 endif()
 
-configure_file(	${CMAKE_CURRENT_SOURCE_DIR}/zconf.h.cmakein
+configure_file(	${CMAKE_CURRENT_SOURCE_DIR}/zconf.h.in
                 ${CMAKE_CURRENT_BINARY_DIR}/zconf.h @ONLY)
 
 ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}")
@@ -78,6 +83,12 @@ set(ZLIB_SRCS
 
 add_library(${ZLIB_LIBRARY} STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${ZLIB_SRCS} ${ZLIB_PUBLIC_HDRS} ${ZLIB_PRIVATE_HDRS})
 set_target_properties(${ZLIB_LIBRARY} PROPERTIES DEFINE_SYMBOL ZLIB_DLL)
+if(HAVE_UNISTD_H)
+  target_compile_definitions(${ZLIB_LIBRARY} PUBLIC HAVE_UNISTD_H=1)
+endif()
+if(HAVE_STDARG_H)
+  target_compile_definitions(${ZLIB_LIBRARY} PUBLIC HAVE_STDARG_H=1)
+endif()
 
 ocv_warnings_disable(CMAKE_C_FLAGS -Wshorten-64-to-32 -Wattributes -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wshift-negative-value
     -Wundef  # _LFS64_LARGEFILE is not defined

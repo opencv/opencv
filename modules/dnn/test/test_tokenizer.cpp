@@ -197,4 +197,44 @@ TEST(Tokenizer_Gemma, Tokenizer_Gemma3_Roundtrip) {
     }
 }
 
+// Gemma2 tests (SentencePiece tokenizer)
+TEST(Tokenizer_SentencePiece, Tokenizer_Gemma2_English) {
+    std::string model = _tf("gemma2/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+    EXPECT_EQ(tok.encode("Hello world"), (std::vector<int>{2, 4521, 2134}));
+}
+
+TEST(Tokenizer_SentencePiece, Tokenizer_Gemma2_Phrase) {
+    std::string model = _tf("gemma2/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+    EXPECT_EQ(tok.encode("the quick brown fox"),
+              (std::vector<int>{2, 1175, 4320, 8426, 25341}));
+}
+
+TEST(Tokenizer_SentencePiece, Tokenizer_Gemma2_Mixed) {
+    std::string model = _tf("gemma2/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+    EXPECT_EQ(tok.encode("OpenCV"), (std::vector<int>{2, 6047, 17813}));
+}
+
+TEST(Tokenizer_SentencePiece, Tokenizer_Gemma2_Numbers) {
+    std::string model = _tf("gemma2/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+    EXPECT_EQ(tok.encode("2024"), (std::vector<int>{2, 235284, 235276, 235284, 235310}));
+}
+
+TEST(Tokenizer_SentencePiece, Tokenizer_Gemma2_Roundtrip) {
+    std::string model = _tf("gemma2/config.json");
+    Tokenizer tok = Tokenizer::load(model);
+    std::vector<std::string> cases = {
+        "Hello world",
+        "the quick brown fox",
+        "OpenCV",
+        "hello world",
+    };
+    for (const auto& text : cases) {
+        EXPECT_EQ(tok.decode(tok.encode(text)), text);
+    }
+}
+
 }}

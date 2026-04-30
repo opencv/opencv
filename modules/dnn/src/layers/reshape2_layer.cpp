@@ -57,6 +57,8 @@ public:
         }
     }
 
+    bool isDataShuffling() const CV_OVERRIDE { return true; }
+
     virtual bool dynamicOutputShapes() const CV_OVERRIDE
     {
         if (!dynamicShapeSpec)

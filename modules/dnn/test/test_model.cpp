@@ -948,6 +948,140 @@ TEST_P(Reproducibility_ResNet50_QDQ_ONNX, Accuracy)
 INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_ResNet50_QDQ_ONNX,
                         testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
 
+typedef testing::TestWithParam<Target> Reproducibility_ViT_ONNX;
+TEST_P(Reproducibility_ViT_ONNX, Accuracy)
+{
+    Target targetId = GetParam();
+    applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB);
+    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
+    auto engine_forced = static_cast<EngineType>(
+        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO));
+    if (engine_forced == ENGINE_CLASSIC)
+    {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+        return;
+    }
+
+    std::string modelname = _tf("vit_base_patch16_224_Opset16.onnx", false);
+    Net net = readNetFromONNX(modelname);
+
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(targetId);
+
+    if (targetId == DNN_TARGET_CPU_FP16)
+        net.enableWinograd(false);
+
+    std::string imgname = _tf("sqcat.png");
+    Mat image = imread(imgname);
+    // ViT preprocessing: (pixel/255 - 0.5)/0.5 == pixel/127.5 - 1
+    // blobFromImage form: (pixel - 127.5) * (1/127.5)
+    Mat input = blobFromImage(image, 1.0 / 127.5, Size(224, 224),
+                              Scalar(127.5, 127.5, 127.5),
+                              true, true, CV_32F);
+    ASSERT_TRUE(!input.empty());
+
+    net.setInput(input);
+    Mat out = net.forward();
+
+    const int K = 5;
+    std::vector<std::pair<int, float> > res;
+    topK(out, res, K);
+    ASSERT_EQ(int(res.size()), K);
+
+    // Reference top-5 captured from the ONNX Runtime engine (OPENCV_FORCE_DNN_ENGINE=4).
+    std::vector<std::pair<int, float> > ref = {
+        {285, 7.683f}, {282, 7.182f}, {281, 6.894f}, {287, 3.623f}, {283, 3.287f}
+    };
+    const float eps = 0.5f;
+
+    std::vector<int> reflabels(K), reslabels(K);
+    for (int i = 0; i < K; i++) {
+        reflabels[i] = ref[i].first;
+        reslabels[i] = res[i].first;
+    }
+    ASSERT_EQ(reflabels, reslabels);
+
+    for (int i = 0; i < K; i++) {
+        EXPECT_NEAR(ref[i].second, res[i].second, eps);
+    }
+}
+INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_ViT_ONNX,
+                        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
+
+typedef testing::TestWithParam<Target> Reproducibility_BERT_ONNX;
+TEST_P(Reproducibility_BERT_ONNX, Accuracy)
+{
+    Target targetId = GetParam();
+    applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB);
+    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
+    auto engine_forced = static_cast<EngineType>(
+    cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO));
+    if (engine_forced == ENGINE_CLASSIC)
+    {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+        return;
+    }
+
+    std::string modelname = _tf("onnx/models/bert.onnx", false);
+    Net net = readNetFromONNX(modelname);
+
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(targetId);
+
+    // Tokenized with bert-base-uncased: "The [MASK] sat on the mat."
+    // [CLS]=101  the=1996  [MASK]=103  sat=2938  on=2006  the=1996  mat=13523  .=1012  [SEP]=102
+    const int seq_len = 9;
+    int64_t input_ids_data[seq_len] = {101, 1996, 103, 2938, 2006, 1996, 13523, 1012, 102};
+    int64_t attention_mask_data[seq_len] = {1, 1, 1, 1, 1, 1, 1, 1, 1};
+    int64_t token_type_ids_data[seq_len] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+    int shape[2] = {1, seq_len};
+    Mat input_ids(2, shape, CV_64S, input_ids_data);
+    Mat attention_mask(2, shape, CV_64S, attention_mask_data);
+    Mat token_type_ids(2, shape, CV_64S, token_type_ids_data);
+
+    net.setInput(input_ids, "input_ids");
+    net.setInput(attention_mask, "attention_mask");
+    net.setInput(token_type_ids, "token_type_ids");
+    Mat out = net.forward();
+
+    // Output shape: [1, 9, 30522] (batch, seq_len, vocab_size)
+    ASSERT_EQ(out.dims, 3);
+    ASSERT_EQ(out.size[0], 1);
+    ASSERT_EQ(out.size[1], seq_len);
+    ASSERT_EQ(out.size[2], 30522);
+
+    const int vocab = 30522;
+    const float* mask_logits = out.ptr<float>() + 2 * vocab;
+
+    const int K = 5;
+    std::vector<std::pair<int, float> > res;
+    std::vector<int> idx(vocab);
+    for (int i = 0; i < vocab; i++) idx[i] = i;
+    std::partial_sort(idx.begin(), idx.begin() + K, idx.end(),
+                      [&](int a, int b) { return mask_logits[a] > mask_logits[b]; });
+    for (int k = 0; k < K; k++)
+        res.emplace_back(idx[k], mask_logits[idx[k]]);
+
+    std::vector<std::pair<int, float> > ref = {
+        {2611, 8.222f}, {2158, 8.196f}, {3899, 8.021f}, {2879, 7.972f}, {2450, 7.393f}
+    };
+    const float eps = 0.5f;
+
+    std::vector<int> reflabels(K), reslabels(K);
+    for (int i = 0; i < K; i++) {
+        reflabels[i] = ref[i].first;
+        reslabels[i] = res[i].first;
+    }
+    ASSERT_EQ(reflabels, reslabels);
+
+    for (int i = 0; i < K; i++) {
+        EXPECT_NEAR(ref[i].second, res[i].second, eps);
+    }
+}
+INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_BERT_ONNX,
+                        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
+
 typedef testing::TestWithParam<Target> Reproducibility_MobileNetSSD_ONNX;
 TEST_P(Reproducibility_MobileNetSSD_ONNX, Accuracy)
 {
