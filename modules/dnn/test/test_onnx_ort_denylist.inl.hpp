@@ -7,46 +7,33 @@
 // OpenCV ORT (ONNX Runtime) Engine Deny List
 // Tests are skipped when running with OPENCV_FORCE_DNN_ENGINE=ENGINE_ORT (4)
 
+// --- Test_Graph_Simplifier tests (test_graph_simplifier.cpp) ---
+// These tests verify OpenCV's internal subgraph fusion (graph simplifier). Under ORT engine,
+// ORT owns the entire graph and OpenCV's fusion never runs, so getLayerTypes() returns {}.
+"GeluSubGraph",
+"GeluApproximationSubGraph",
+"LayerNormSubGraph",
+"LayerNormNoFusionSubGraph",
+"SoftmaxSubgraph",
+"HardSwishSubgraph",
+"CeluSubgraph",
+"NormalizeSubgraph",
+"BatchNormalizationSubgraph",
+"ExpandSubgraph",
+"MishSubgraph",
+"AttentionSubgraph",
+"BiasedMatMulSubgraph",
+
 // --- ONNX conformance suite tests (Test_ONNX_conformance) ---
-"test_gelu_subgraph",
-"test_gelu_approximation_subgraph",
-"test_layer_norm_subgraph",
-"test_layer_norm_no_fusion_subgraph",
-"test_softmax_subgraph",
-"test_hardswish_subgraph",
-"test_celu_subgraph",
-"test_normalize_subgraph",
-"test_batch_normalization_subgraph",
-"test_expand_subgraph",
-"test_mish_subgraph",
-"test_attention_subgraph",
-"test_biased_matmul_subgraph",
+// These fail under ORT due to OpenCV input-staging bug: setInput() stores data in the
+// mainGraph tensor storage, but forwardWithMultipleOutputs() reads from netInputLayer->blobs
+// which is never populated when ORT session is initialized after setInput().
 "test_dropout_default",
 "test_dropout_default_mask",
 "test_dropout_default_mask_ratio",
 "test_dropout_default_old",
 "test_dropout_default_ratio",
 "test_dropout_random_old",
-"test_linear",
-"test_average_pool",
-"test_batch_normalization",
-"test_gemm_default_matrix_bias",
-"test_gemm_default_no_bias",
-"test_quantized_matmul",
-"test_reduce_mean_axis1",
-"test_reduce_sum",
-"test_equal_same_dims",
-"test_resize_nearest",
-"test_if_layer_resize",
-"test_yunet_input_size_mismatch",
-"test_keypoints_pose_input_size_mismatch",
-"test_resize_unfused",
-"test_multi_inputs",
-"test_dynamic_resize",
-"test_trilu_tril_one_row1d",
-"test_random_normal_like",
-"test_random_normal_like_basic",
-"test_random_normal_like_complex",
 
 // --- Test_ONNX_layers / Test_ONNX_nets tests (test_onnx_importer.cpp) ---
 "Dropout",
@@ -57,11 +44,8 @@
 "AveragePooling",
 "BatchNormalization",
 "Multiplication",
-"Constant",
-"Resize",
-"ResizeUnfused",
-"MultyInputs",
-"DynamicResize",
+"Quantized_MatMul",
+// Trilu with 1D input is an OpenCV extension; ONNX spec requires rank>=2, ORT enforces strictly.
 "trilu_tril_one_row1D",
 // alexnet.onnx declares 224x224 input but reference was generated with 227x227 (Caffe-era); ORT enforces shape strictly while CLASSIC/NEW silently accept any size.
 "Alexnet",
