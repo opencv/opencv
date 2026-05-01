@@ -449,6 +449,7 @@ PERF_TEST_P_(DNNTestNetwork, BEiT_Base_Patch16_224)
     processNet("dnn/beit_base_patch16_224_Opset16.onnx", "", cv::Size(224, 224));
 }
 
+<<<<<<< HEAD
 PERF_TEST_P_(DNNTestNetwork, BlazeFace)
 {
     Mat input(cv::Size(128, 128), CV_32FC3);
@@ -470,6 +471,56 @@ PERF_TEST_P_(DNNTestNetwork, BlazeFace)
 PERF_TEST_P_(DNNTestNetwork, FacePaint)
 {
     processNet("dnn/onnx/models/face_paint_512_v2_0.onnx", "", cv::Size(512, 512));
+=======
+PERF_TEST_P_(DNNTestNetwork, DISABLED_Grounding_DINO)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_2GB, CV_TEST_TAG_DEBUG_VERYLONG);
+
+    // Image input
+    Mat sample = imread(findDataFile("dnn/dog416.png"));
+    Mat img = blobFromImage(sample, 1.0 / 255.0, Size(800, 800), Scalar(), true);
+
+    // Text token inputs (dummy tokens for "dog ." as query text, seq_len=7)
+    const int seq_len = 7;
+    int64_t input_ids_data[seq_len]      = {101, 3899, 1012, 102, 0, 0, 0};
+    int64_t attention_mask_data[seq_len] = {1, 1, 1, 1, 0, 0, 0};
+    int64_t token_type_ids_data[seq_len] = {0, 0, 0, 0, 0, 0, 0};
+    int64_t position_ids_data[seq_len]   = {0, 1, 2, 3, 0, 0, 0};
+    uint8_t text_token_mask_data[seq_len]= {1, 1, 1, 1, 0, 0, 0};
+
+    int shp[2] = {1, seq_len};
+    Mat input_ids(2, shp, CV_64S, input_ids_data);
+    Mat attention_mask(2, shp, CV_64S, attention_mask_data);
+    Mat token_type_ids(2, shp, CV_64S, token_type_ids_data);
+    Mat position_ids(2, shp, CV_64S, position_ids_data);
+    Mat text_token_mask(2, shp, CV_8U, text_token_mask_data);
+
+    processNet("dnn/onnx/models/groundingdino_swint_ogc.onnx", "",
+               {std::make_tuple(img,             "img"),
+                std::make_tuple(input_ids,       "input_ids"),
+                std::make_tuple(attention_mask,  "attention_mask"),
+                std::make_tuple(token_type_ids,  "token_type_ids"),
+                std::make_tuple(position_ids,    "position_ids"),
+                std::make_tuple(text_token_mask, "text_token_mask")});
+}
+
+PERF_TEST_P_(DNNTestNetwork, DISABLED_RF_DETR)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_1GB, CV_TEST_TAG_DEBUG_LONG);
+
+    Mat sample = imread(findDataFile("dnn/dog416.png"));
+    Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(560, 560), Scalar(), true);
+    processNet("dnn/onnx/models/rfdetr.onnx", "", inp);
+}
+
+PERF_TEST_P_(DNNTestNetwork, DISABLED_RT_DETR_L)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_1GB, CV_TEST_TAG_DEBUG_LONG);
+
+    Mat sample = imread(findDataFile("dnn/dog416.png"));
+    Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(640, 640), Scalar(), true);
+    processNet("dnn/onnx/models/rtdetr-l.onnx", "", inp);
+>>>>>>> dcef01dafe (add perf test for RT-DETR, RF-DETR, GroundingDino)
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, DNNTestNetwork, dnnBackendsAndTargets());
