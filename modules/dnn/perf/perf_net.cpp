@@ -476,11 +476,11 @@ PERF_TEST_P_(DNNTestNetwork, DISABLED_Grounding_DINO)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_2GB, CV_TEST_TAG_DEBUG_VERYLONG);
 
-    // Image input
+
     Mat sample = imread(findDataFile("dnn/dog416.png"));
     Mat img = blobFromImage(sample, 1.0 / 255.0, Size(800, 800), Scalar(), true);
 
-    // Text token inputs (dummy tokens for "dog ." as query text, seq_len=7)
+
     const int seq_len = 7;
     int64_t input_ids_data[seq_len]      = {101, 3899, 1012, 102, 0, 0, 0};
     int64_t attention_mask_data[seq_len] = {1, 1, 1, 1, 0, 0, 0};
