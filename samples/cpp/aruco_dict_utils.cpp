@@ -329,13 +329,14 @@ int main(int argc, char *argv[])
         cerr << "Dictionary not specified" << endl;
         return 0;
     }
+
     if (!outputFile.empty() && nMarkers > 0 && markerSize > 0)
     {
         FileStorage fs(outputFile, FileStorage::WRITE);
         if (checkFlippedMarkers)
-            dictionary = generateCustomAsymmetricDictionary(nMarkers, markerSize, aruco::Dictionary(), 0);
+            dictionary = generateCustomAsymmetricDictionary(nMarkers, markerSize, dictionary, 0);
         else
-            dictionary = aruco::extendDictionary(nMarkers, markerSize, aruco::Dictionary(), 0);
+            dictionary = aruco::extendDictionary(nMarkers, markerSize, dictionary, 0);
         dictionary.writeDictionary(fs);
     }
 
