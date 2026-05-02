@@ -7,6 +7,7 @@
 #include "net_impl.hpp"
 
 #include <memory>
+#include <opencv2/core/utils/tls.hpp>
 #include "layers/cpu_kernels/fast_gemm.hpp"
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -125,6 +126,7 @@ void KVCache::growPrefill(const Mat& newData, int T){
 
     int total = totalPages * batchSize * nHeads;
 
+    cv::TLSData<std::vector<float>> tls_temp_buf;
 
     auto fn = [&](const Range& range) {
         for (int i = range.start; i < range.end; i++) {
@@ -143,11 +145,11 @@ void KVCache::growPrefill(const Mat& newData, int T){
 
             int chunk_T = std::min(pageSize, T - page * pageSize);
             const float* actual_source = source;
-            std::vector<float> temp_buf;
 
             int lds = is3Dlayout ? headDim * nHeads : headDim;
 
             if (chunk_T < pageSize) {
+                std::vector<float>& temp_buf = *tls_temp_buf.get();
                 temp_buf.assign(pageSize * headDim, 0.0f);
                 for (int i = 0; i < chunk_T; i++) {
                     std::memcpy(temp_buf.data() + i * headDim, source + i * lds, headDim * sizeof(float));
