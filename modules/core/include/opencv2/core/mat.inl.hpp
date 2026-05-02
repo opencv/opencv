@@ -488,6 +488,7 @@ Mat::Mat(const std::vector<_Tp>& vec, bool copyData)
         step[0] = step[1] = sizeof(_Tp);
         datastart = data = (uchar*)&vec[0];
         datalimit = dataend = datastart + rows * step[0];
+        TraceEvent(nullptr, this, MatTracerEventKind::MAT_TRACER_EVENT_MEMORY_REFERENCE);
     }
     else
         Mat((int)vec.size(), 1, traits::Type<_Tp>::value, (uchar*)&vec[0]).copyTo(*this);
@@ -525,6 +526,7 @@ Mat::Mat(const std::array<_Tp, _Nm>& arr, bool copyData)
         step[0] = step[1] = sizeof(_Tp);
         datastart = data = (uchar*)arr.data();
         datalimit = dataend = datastart + rows * step[0];
+        TraceEvent(nullptr, this, MatTracerEventKind::MAT_TRACER_EVENT_MEMORY_REFERENCE);
     }
     else
         Mat((int)arr.size(), 1, traits::Type<_Tp>::value, (uchar*)arr.data()).copyTo(*this);
@@ -540,6 +542,7 @@ Mat::Mat(const Vec<_Tp, n>& vec, bool copyData)
         step[0] = step[1] = sizeof(_Tp);
         datastart = data = (uchar*)vec.val;
         datalimit = dataend = datastart + rows * step[0];
+        TraceEvent(nullptr, this, MatTracerEventKind::MAT_TRACER_EVENT_MEMORY_REFERENCE);
     }
     else
         Mat(n, 1, traits::Type<_Tp>::value, (void*)vec.val).copyTo(*this);
@@ -557,6 +560,7 @@ Mat::Mat(const Matx<_Tp,m,n>& M, bool copyData)
         step[1] = sizeof(_Tp);
         datastart = data = (uchar*)M.val;
         datalimit = dataend = datastart + rows * step[0];
+        TraceEvent(nullptr, this, MatTracerEventKind::MAT_TRACER_EVENT_MEMORY_REFERENCE);
     }
     else
         Mat(m, n, traits::Type<_Tp>::value, (uchar*)M.val).copyTo(*this);
@@ -572,6 +576,7 @@ Mat::Mat(const Point_<_Tp>& pt, bool copyData)
         step[0] = step[1] = sizeof(_Tp);
         datastart = data = (uchar*)&pt.x;
         datalimit = dataend = datastart + rows * step[0];
+        TraceEvent(nullptr, this, MatTracerEventKind::MAT_TRACER_EVENT_MEMORY_REFERENCE);
     }
     else
     {
@@ -591,6 +596,7 @@ Mat::Mat(const Point3_<_Tp>& pt, bool copyData)
         step[0] = step[1] = sizeof(_Tp);
         datastart = data = (uchar*)&pt.x;
         datalimit = dataend = datastart + rows * step[0];
+        TraceEvent(nullptr, this, MatTracerEventKind::MAT_TRACER_EVENT_MEMORY_REFERENCE);
     }
     else
     {
