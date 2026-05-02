@@ -502,6 +502,22 @@ enum UMatUsageFlags
 
 struct CV_EXPORTS UMatData;
 
+/** @brief  Custom trace delegate
+*/
+
+enum MatTracerEventKind
+{
+    MAT_TRACER_EVENT_UNDEFINED,
+    MAT_TRACER_EVENT_MEMORY_ALLOCATE, MAT_TRACER_EVENT_MEMORY_DEALLOCATE, MAT_TRACER_EVENT_MEMORY_REFERENCE,
+    MAT_TRACER_EVENT_RELEASE, MAT_TRACER_EVENT_ADDREF
+};
+
+class CV_EXPORTS IMatTracerDelegate
+{
+  public:
+    virtual void trace(const Mat* src, Mat* dst, MatTracerEventKind kind) = 0;
+};
+
 /** @brief  Custom array allocator
 */
 class CV_EXPORTS MatAllocator
@@ -2216,6 +2232,10 @@ public:
     static MatAllocator* getStdAllocator();
     static MatAllocator* getDefaultAllocator();
     static void setDefaultAllocator(MatAllocator* allocator);
+
+    static IMatTracerDelegate* getDefaultTracer();
+    static IMatTracerDelegate* setDefaultTracer(IMatTracerDelegate* tracer);
+    static void TraceEvent(const Mat* src, Mat* dst, MatTracerEventKind kind);
 
     //! internal use method: updates the continuity flag
     void updateContinuityFlag();

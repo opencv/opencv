@@ -198,6 +198,32 @@ MatAllocator* Mat::getStdAllocator()
     CV_SINGLETON_LAZY_INIT(MatAllocator, new StdMatAllocator())
 }
 
+static inline
+IMatTracerDelegate*& getDefaultMatTracerRef()
+{
+    static IMatTracerDelegate* g_matTracer = nullptr;
+    return g_matTracer;
+}
+
+IMatTracerDelegate* Mat::getDefaultTracer()
+{
+    return getDefaultMatTracerRef();
+}
+
+IMatTracerDelegate* Mat::setDefaultTracer(IMatTracerDelegate* tracer)
+{
+    IMatTracerDelegate* result = getDefaultMatTracerRef();
+    getDefaultMatTracerRef() = tracer;
+    return result;
+}
+
+void Mat::TraceEvent(const Mat* src, Mat* dst, MatTracerEventKind kind)
+{
+    IMatTracerDelegate* tracer = getDefaultMatTracerRef();
+    if ( tracer )
+      tracer->trace(src, dst, kind);
+}
+
 //==================================================================================================
 
 bool MatSize::operator==(const MatSize& sz) const CV_NOEXCEPT
@@ -404,7 +430,9 @@ Mat::Mat(const Mat& m)
       u(m.u), size(&rows), step(0)
 {
     if( u )
+    {
         CV_XADD(&u->refcount, 1);
+    }
     if( m.dims <= 2 )
     {
         step[0] = m.step[0]; step[1] = m.step[1];
@@ -414,6 +442,7 @@ Mat::Mat(const Mat& m)
         dims = 0;
         copySize(m);
     }
+    TraceEvent(&m, this, MatTracerEventKind::MAT_TRACER_EVENT_ADDREF);
 }
 
 Mat::Mat(int _rows, int _cols, int _type, void* _data, size_t _step)
@@ -442,6 +471,7 @@ Mat::Mat(int _rows, int _cols, int _type, void* _data, size_t _step)
     datalimit = datastart + _step * rows;
     dataend = datalimit - _step + minstep;
     updateContinuityFlag();
+    TraceEvent(nullptr, this, MatTracerEventKind::MAT_TRACER_EVENT_MEMORY_REFERENCE);
 }
 
 Mat::Mat(Size _sz, int _type, void* _data, size_t _step)
@@ -471,6 +501,7 @@ Mat::Mat(Size _sz, int _type, void* _data, size_t _step)
     datalimit = datastart + _step*rows;
     dataend = datalimit - _step + minstep;
     updateContinuityFlag();
+    TraceEvent(nullptr, this, MatTracerEventKind::MAT_TRACER_EVENT_MEMORY_REFERENCE);
 }
 
 
@@ -505,6 +536,8 @@ Mat& Mat::operator=(const Mat& m)
         datalimit = m.datalimit;
         allocator = m.allocator;
         u = m.u;
+
+        TraceEvent(&m, this, MatTracerEventKind::MAT_TRACER_EVENT_ADDREF);
     }
     return *this;
 }
@@ -541,13 +574,22 @@ void Mat::create(Size _sz, int _type)
 void Mat::addref()
 {
     if( u )
+    {
         CV_XADD(&u->refcount, 1);
+    }
+    TraceEvent(nullptr, this, MatTracerEventKind::MAT_TRACER_EVENT_ADDREF);
 }
 
 void Mat::release()
 {
-    if( u && CV_XADD(&u->refcount, -1) == 1 )
-        deallocate();
+    TraceEvent(nullptr, this, MatTracerEventKind::MAT_TRACER_EVENT_RELEASE);
+    if( u )
+    {
+        if ( CV_XADD(&u->refcount, -1) == 1 )
+        {
+            deallocate();
+        }
+    }
     u = NULL;
     datastart = dataend = datalimit = data = 0;
     for(int i = 0; i < dims; i++)
@@ -652,6 +694,8 @@ Mat& Mat::operator=(Mat&& m)
     m.data = NULL; m.datastart = NULL; m.dataend = NULL; m.datalimit = NULL;
     m.allocator = NULL;
     m.u = NULL;
+
+    TraceEvent(nullptr, this, MatTracerEventKind::MAT_TRACER_EVENT_ADDREF);
     return *this;
 }
 
@@ -709,6 +753,7 @@ void Mat::create(int d, const int* _sizes, int _type)
             allocator = a0;
         }
         CV_Assert( step[dims-1] == (size_t)CV_ELEM_SIZE(flags) );
+        TraceEvent(nullptr, this, MatTracerEventKind::MAT_TRACER_EVENT_MEMORY_ALLOCATE);
     }
 
     addref();
@@ -732,6 +777,7 @@ void Mat::copySize(const Mat& m)
 
 void Mat::deallocate()
 {
+    TraceEvent(nullptr, this, MatTracerEventKind::MAT_TRACER_EVENT_MEMORY_DEALLOCATE);
     if(u)
     {
         UMatData* u_ = u;
@@ -828,6 +874,7 @@ Mat::Mat(int _dims, const int* _sizes, int _type, void* _data, const size_t* _st
     datastart = data = (uchar*)_data;
     setSize(*this, _dims, _sizes, _steps, true);
     finalizeHdr(*this);
+    TraceEvent(nullptr, this, MatTracerEventKind::MAT_TRACER_EVENT_MEMORY_REFERENCE);
 }
 
 
@@ -839,6 +886,7 @@ Mat::Mat(const std::vector<int>& _sizes, int _type, void* _data, const size_t* _
     datastart = data = (uchar*)_data;
     setSize(*this, (int)_sizes.size(), _sizes.data(), _steps, true);
     finalizeHdr(*this);
+    TraceEvent(nullptr, this, MatTracerEventKind::MAT_TRACER_EVENT_MEMORY_REFERENCE);
 }
 
 
