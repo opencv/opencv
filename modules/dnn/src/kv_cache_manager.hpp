@@ -62,7 +62,7 @@ class VCache : public KVCache
             pageSize = fastGemmKC(opt);
         }
     protected:
-        void growGenerate(const Mat& newData);
+        void growGenerate(const Mat& newData) CV_OVERRIDE;
 };
 
 class KCache : public KVCache
@@ -77,7 +77,7 @@ class KCache : public KVCache
             pageSize = fastGemmNR(opt);
         }
     protected:
-        void growGenerate(const Mat& newData);
+        void growGenerate(const Mat& newData) CV_OVERRIDE;
 };
 
 
