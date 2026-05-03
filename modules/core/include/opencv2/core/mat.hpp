@@ -515,6 +515,8 @@ enum MatTracerEventKind
 class CV_EXPORTS IMatTracerDelegate
 {
   public:
+    virtual ~IMatTracerDelegate() = default;
+  public:
     virtual void trace(const Mat* src, Mat* dst, MatTracerEventKind kind) = 0;
 };
 
