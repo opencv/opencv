@@ -1078,7 +1078,7 @@ void pagedAttnAVGemmKernel(
     size_t batch = Nq * B;
     int total = batch * tiles_per_mat;
 
-auto fn = [&](const Range &r) {
+    auto fn = [&](const Range &r) {
         cv::AutoBuffer<char, FAST_GEMM_MAX_STACKBUF> packed_a_buff;
         packed_a_buff.allocate(buff_size);
         char* packed_a = packed_a_buff.data();
