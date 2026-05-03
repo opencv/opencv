@@ -730,7 +730,7 @@ cv::Mat cv::internal::NormalizePixels(const Mat& imagePoints, const IntrinsicPar
     return undistorted;
 }
 
-void cv::internal::InitExtrinsics(const Mat& _imagePoints, const Mat& _objectPoints, const IntrinsicParams& param, Mat& omckk, Mat& Tckk)
+bool cv::internal::InitExtrinsics(const Mat& _imagePoints, const Mat& _objectPoints, const IntrinsicParams& param, Mat& omckk, Mat& Tckk)
 {
     CV_Assert(!_objectPoints.empty() && _objectPoints.type() == CV_64FC3);
     CV_Assert(!_imagePoints.empty() && _imagePoints.type() == CV_64FC2);
@@ -751,14 +751,18 @@ void cv::internal::InitExtrinsics(const Mat& _imagePoints, const Mat& _objectPoi
     Mat X_new = R * objectPoints + T * Mat::ones(1, Np, CV_64FC1);
     Mat H = ComputeHomography(imagePointsNormalized, X_new(Rect(0,0,X_new.cols,2)));
     double sc = .5 * (norm(H.col(0)) + norm(H.col(1)));
+    if (!(sc > 0))
+        return false;
     H = H / sc;
     Mat u1 = H.col(0).clone();
     double norm_u1 = norm(u1);
-    CV_Assert(fabs(norm_u1) > 0);
+    if (!(norm_u1 > 0))
+        return false;
     u1  = u1 / norm_u1;
     Mat u2 = H.col(1).clone() - u1.dot(H.col(1).clone()) * u1;
     double norm_u2 = norm(u2);
-    CV_Assert(fabs(norm_u2) > 0);
+    if (!(norm_u2 > 0))
+        return false;
     u2 = u2 / norm_u2;
     Mat u3 = u1.cross(u2);
     Mat RRR;
@@ -770,6 +774,7 @@ void cv::internal::InitExtrinsics(const Mat& _imagePoints, const Mat& _objectPoi
     Tckk = Tckk + Rckk * T;
     Rckk = Rckk * R;
     Rodrigues(Rckk, omckk);
+    return true;
 }
 
 void cv::internal::CalibrateExtrinsics(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints,
@@ -796,7 +801,18 @@ void cv::internal::CalibrateExtrinsics(InputArrayOfArrays objectPoints, InputArr
         bool imT = image.rows < image.cols;
         bool obT = object.rows < object.cols;
 
-        InitExtrinsics(imT ? image.t() : image, obT ? object.t() : object, param, omckk, Tckk);
+        if (!InitExtrinsics(imT ? image.t() : image, obT ? object.t() : object, param, omckk, Tckk))
+        {
+            CV_LOG_WARNING(NULL, "fisheye::calibrate: degenerate homography for image " << image_idx
+                           << "; falling back to last known extrinsics");
+            omc.getMat().col(image_idx).reshape(1, 3).copyTo(omckk);
+            Tc.getMat().col(image_idx).reshape(1, 3).copyTo(Tckk);
+            if (norm(omckk) == 0 && norm(Tckk) == 0)
+            {
+                omckk = Mat::zeros(3, 1, CV_64FC1);
+                Tckk = (Mat_<double>(3, 1) << 0, 0, 1);
+            }
+        }
 
         ComputeExtrinsicRefine(!imT ? image.t() : image, !obT ? object.t() : object, omckk, Tckk, JJ_kk, maxIter, param, thresh_cond);
         if (check_cond)
