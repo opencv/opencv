@@ -3189,3 +3189,4 @@ TEST(Layer_Test_Softmax, NoNaN_AllNegInf)
 }
 
 }} // namespace
+>>>>>>> 2214fb6ae0 (parametrize tests)
