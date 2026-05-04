@@ -549,8 +549,8 @@ void Net::Impl::prepareForInference()
         constFold();
         constArgs();
         fuseAttention();
-        useBlockLayout();
         fuseBasic();
+        useBlockLayout();
         assignBuffers();
         totalLayers = updateGraphOfs(mainGraph, 0, true);
         prepared = true;
