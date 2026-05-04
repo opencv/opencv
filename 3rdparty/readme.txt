@@ -65,6 +65,23 @@ jasper                JasPer is a collection of software
                       https://github.com/jasper-software/jasper.git
                       for details and links to source code
 ------------------------------------------------------------------------------------
+mlas                  Microsoft Linear Algebra Subprograms — processor-optimized
+                      GEMM kernels and platform-specific threading code.
+                      Vendored from ONNX Runtime (onnxruntime/core/mlas/), MIT licensed.
+
+                      Copyright (c) Microsoft Corporation
+                      Additional MIT-licensed contributions in the source tree:
+                          Copyright 2025 Arm Limited (lib/kleidiai/)
+                          Copyright 2025 FUJITSU LIMITED (erf/gelu neon fp16)
+
+                      License: see mlas/LICENSE
+                      Provenance and local patches: see mlas/README.md
+                      Upstream: https://github.com/microsoft/onnxruntime
+
+                      Used by the dnn module's SGEMM dispatch path. Built as
+                      an OBJECT library and linked into opencv_dnn when the
+                      host arch/OS is wired up (HAVE_MLAS).
+------------------------------------------------------------------------------------
 ffmpeg                FFmpeg is a complete, cross-platform solution to record,
                       convert and stream audio and video. It includes libavcodec -
                       the leading audio/video codec library, and also libavformat, libavutils and
