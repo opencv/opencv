@@ -1,6 +1,8 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+// Copyright (C) 2026, BigVision LLC, all rights reserved.
+// Third party copyrights are property of their respective owners.
 
 // Fuses multiple Gemm layers that share the same input into one wider Gemm.
 //
@@ -21,11 +23,6 @@
 //   - At least 2 Gemm layers share the same input arg.
 //   - Each Gemm has a const weight blob and (optionally) const bias.
 //   - All Gemms have identical (alpha, beta, trans_a, trans_b) and matching K.
-//
-// Win comes from running one wider matmul (better thread utilization, single
-// packA / fewer parallel-for setups) instead of several narrow ones. The added
-// slices copy data, but each panel is independent and the panels are written
-// contiguously so the slices stream from L2.
 
 #include "precomp.hpp"
 #include "net_impl.hpp"
@@ -38,16 +35,12 @@ using std::string;
 
 namespace {
 
-// Read [rows, cols] float weight from blobs[0], honoring trans_b. The returned
-// matrix is in [K, N] (K = input_hidden, N = output_hidden) layout regardless
-// of how the underlying blob was stored.
 static bool readGemmWeight(const Ptr<Layer>& l, bool trans_b, Mat& W_out)
 {
     if (l->blobs.empty()) return false;
     const Mat& W = l->blobs[0];
     if (W.dims != 2 || W.type() != CV_32F) return false;
     if (trans_b) {
-        // Stored as [N, K]; transpose to [K, N].
         cv::transpose(W, W_out);
     } else {
         W.copyTo(W_out);
@@ -63,16 +56,12 @@ static bool readGemmBias(const Ptr<Layer>& l, Mat& b_out)
     b.copyTo(b_out);
     return true;
 }
-
-} // anonymous namespace
+}
 
 struct ModelFusionSharedGemm
 {
     explicit ModelFusionSharedGemm(Net::Impl* netimpl_) : netimpl(netimpl_) {}
 
-    // Returns true if `l` is a Gemm with a const weight blob, no extra runtime
-    // inputs (only the shared activation), and parameters compatible with the
-    // wider-fusion path. Records the trans_b/M/N/K/alpha/beta into out fields.
     struct GemmInfo
     {
         int    layer_idx = -1;
@@ -93,8 +82,6 @@ struct ModelFusionSharedGemm
         GemmLayer* g = dynamic_cast<GemmLayer*>(l.get());
         if (!g) return false;
 
-        // Only handle the simple "linear with const weights" case: one runtime
-        // input, weights (and optional bias) in blobs.
         if (l->inputs.size() != 1) return false;
         if (l->blobs.empty() || l->blobs.size() > 2) return false;
 
@@ -106,14 +93,10 @@ struct ModelFusionSharedGemm
         float alpha  = g->alpha;
         float beta   = g->beta;
 
-        // We only fuse "vanilla" matmuls: A@B (no transpose on A), and we want
-        // the bias term to act in the natural way (beta=1).
         if (trans_a) return false;
         if (alpha != 1.f) return false;
         if (l->blobs.size() == 2 && beta != 1.f) return false;
 
-        // K is the inner dimension. For trans_b: W is [N, K] -> K = W.size[1].
-        // Otherwise W is [K, N] -> K = W.size[0].
         int K = trans_b ? W.size[1] : W.size[0];
         int N = trans_b ? W.size[0] : W.size[1];
         if (K <= 0 || N <= 0) return false;
@@ -121,7 +104,6 @@ struct ModelFusionSharedGemm
         if (l->blobs.size() == 2) {
             const Mat& b = l->blobs[1];
             if (b.type() != CV_32F) return false;
-            // Bias must be 1D length N (or trivially broadcastable to N).
             if ((int)b.total() != N) return false;
         }
 
@@ -144,9 +126,6 @@ struct ModelFusionSharedGemm
         const vector<Ptr<Layer>>& prog = graph->prog();
         size_t nops = prog.size();
 
-        // Group eligible Gemm layers by their (input, trans_b, K, alpha, beta)
-        // signature. We require trans_b/K/alpha/beta to match across the group
-        // so the fused Gemm has consistent shape and semantics.
         struct Key { int input_idx; int trans_b; int K; };
         auto keyLess = [](const Key& a, const Key& b) {
             if (a.input_idx != b.input_idx) return a.input_idx < b.input_idx;
@@ -169,9 +148,6 @@ struct ModelFusionSharedGemm
         for (auto& [key, infos] : groups) {
             if (infos.size() < 2) continue;
 
-            // Make sure all members have the same has_bias flag. Mixing biased
-            // and bias-free gemms would force us to synthesize zero bias slices
-            // — keep it simple and only fuse uniform groups.
             bool all_have_bias = infos[0].has_bias;
             bool uniform = true;
             for (auto& info : infos)
@@ -182,10 +158,6 @@ struct ModelFusionSharedGemm
             int total_N = 0;
             for (auto& info : infos) total_N += info.N;
 
-            // Concatenate weights into a [K, total_N] matrix in MatMul-style
-            // (i.e. trans_b == false in the fused Gemm), regardless of how the
-            // originals were stored. We then drive the fused Gemm with
-            // trans_b=false, so fast_gemm sees a contiguous [K, total_N] B.
             int wshape[] = { K, total_N };
             Mat W_concat(2, wshape, CV_32F);
             int col_offset = 0;
@@ -221,13 +193,9 @@ struct ModelFusionSharedGemm
                 if (!uniform) continue;
             }
 
-            // Find an insertion position: just before the earliest member, so
-            // its output (the fused result) is materialized before any slice
-            // consumes it.
             int insert_pos = (int)nops;
             for (auto& info : infos) insert_pos = std::min(insert_pos, info.layer_idx);
 
-            // Construct the fused Gemm.
             LayerParams fp;
             fp.name = prog[infos[0].layer_idx]->name + "_shared_input_fused";
             fp.type = "Gemm";
@@ -241,15 +209,12 @@ struct ModelFusionSharedGemm
             Ptr<Layer> fused = LayerFactory::createLayerInstance("Gemm", fp);
             if (!fused) continue;
 
-            // The fused output needs a fresh arg in the graph.
             string fused_out_name = fp.name + "_out";
             Arg fused_out_arg = netimpl->getArg(fused_out_name);
             fused->inputs  = { infos[0].input };
             fused->outputs = { fused_out_arg };
             fused->netimpl = netimpl;
 
-            // Build one Slice2 per member taking [..., col_lo : col_hi] of the
-            // fused output. Slice2 expects starts/ends/axes/steps as input args.
             vector<Ptr<Layer>> slices;
             int col_cursor = 0;
             for (size_t s = 0; s < infos.size(); s++) {

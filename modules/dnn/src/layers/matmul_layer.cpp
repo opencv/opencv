@@ -503,8 +503,6 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
 #endif // HAVE_CANN
 
  private:
-    bool trans_a;
-    bool trans_b;
     float alpha;
     float beta;
 

@@ -602,6 +602,7 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         bool logSoftMax;
+        float scale;
 
         static Ptr<SoftmaxLayer> create(const LayerParams& params);
     };
@@ -1792,6 +1793,9 @@ CV__DNN_INLINE_NS_BEGIN
 
     class CV_EXPORTS MatMulLayer : public Layer {
      public:
+        bool trans_a;
+        bool trans_b;
+
         static Ptr<MatMulLayer> create(const LayerParams &params);
     };
 

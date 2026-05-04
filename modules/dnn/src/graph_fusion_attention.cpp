@@ -60,9 +60,6 @@ struct ModelFusionAttention
         return dynamic_cast<MatMulLayer*>(prog[idx].get()) != nullptr;
     }
 
-    // QKV projections may be exported as either MatMul (no bias) or Gemm
-    // (typically nn.Linear with bias). Both store a const weight in blobs[0];
-    // Gemm-with-trans_b stores it as [N, K] instead of [K, N].
     static bool isProjCandidate(const Ptr<Layer>& l)
     {
         if (l->blobs.empty() || l->inputs.size() != 1) return false;

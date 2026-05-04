@@ -550,6 +550,9 @@ void Net::Impl::prepareForInference()
         constArgs();
         fuseAttention();
         fuseSharedInputGemm();
+        fuseReshapeTranspose();
+        fuseTransposeMatMul();
+        fuseScaleSoftmax();
         fuseBasic();
         useBlockLayout();
         assignBuffers();
