@@ -163,8 +163,16 @@ public:
                 }
 
                 if (batch_dims > 0)
-                    offset += data_strides[batch_dims - 1] * i;
-
+                {
+                    size_t rem = i;
+                    for (int d = q - 2; d >= 0; --d)
+                    {
+                        const size_t coord_d = rem % indices.size[d];
+                        rem /= indices.size[d];
+                        if (d < batch_dims)
+                            offset += coord_d * data_strides[d];
+                    }
+                }
                 // copy data from data to out
                 for (size_t j = 0; j < inner_size; ++j)
                 {
