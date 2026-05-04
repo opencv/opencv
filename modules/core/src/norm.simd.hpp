@@ -1438,6 +1438,7 @@ struct MaskedNormL2_SIMD<float, double> {
     }
 };
 
+#if defined _M_ARM64
 template <>
 struct MaskedNormInf_SIMD<uchar, int> {
     inline int operator()(const uchar* src, const uchar* mask, int len, int cn) const {
@@ -1539,6 +1540,7 @@ struct MaskedNormL1_SIMD<uchar, int> {
         return result;
     }
 };
+#endif
 
 template <>
 struct MaskedNormInf_SIMD<ushort, int> {
