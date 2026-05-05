@@ -85,7 +85,7 @@ cvMixChannels( const CvArr** src, int src_count,
 {
     CV_Assert(src_count >= 0 && dst_count >= 0);
     size_t buf_size = static_cast<size_t>(src_count) + static_cast<size_t>(dst_count);
-    std::vector<cv::Mat> buf(buf_size);
+    cv::AutoBuffer<cv::Mat> buf(buf_size);
 
     int i;
     for( i = 0; i < src_count; i++ )
