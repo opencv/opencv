@@ -3144,7 +3144,10 @@ inline v_int32x4 v_lut(const int* tab, const int* idx)
 }
 inline v_int32x4 v_lut_pairs(const int* tab, const int* idx)
 {
-    return v_int32x4(_mm_set_epi64x(*(const int64_t*)(tab + idx[1]), *(const int64_t*)(tab + idx[0])));
+    int64_t lo, hi;
+    memcpy(&lo, tab + idx[0], sizeof(int64_t));
+    memcpy(&hi, tab + idx[1], sizeof(int64_t));
+    return v_int32x4(_mm_set_epi64x(hi, lo));
 }
 inline v_int32x4 v_lut_quads(const int* tab, const int* idx)
 {
