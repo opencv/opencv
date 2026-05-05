@@ -204,12 +204,13 @@ void CV_DetectorTest::run( int )
 
         // write image filenames
         validationFS << IMAGE_FILENAMES << "[";
-        vector<string>::const_iterator it = imageFilenames.begin();
-        for( int ii = 0; it != imageFilenames.end(); ++it, ii++ )
+        // int ii = 0;
+        for( const auto& filename : imageFilenames )
         {
             //String buf = cv::format("img_%d", ii);
             //cvWriteComment( validationFS.fs, buf, 0 );
-            validationFS << *it;
+            validationFS << filename;
+            //ii++;
         }
         validationFS << "]"; // IMAGE_FILENAMES
 

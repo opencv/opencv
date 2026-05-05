@@ -2108,9 +2108,19 @@ T fsWriteRead(const T& expectedValue, const char* ext)
     fs_w.release();
 
     FileStorage fs_r(fname, FileStorage::READ);
-
     T value;
     fs_r["value"] >> value;
+    fs_r.release();
+
+    // If ext is `.gz[0-9]`, fname on storage will end with `.gz`.
+    // FileStorage::Impl::open() truncates the last digit internally.
+    if (isdigit(fname.back()))
+    {
+        fname.pop_back();
+    }
+
+    remove(fname.c_str());
+
     return value;
 }
 
@@ -2143,7 +2153,7 @@ TEST_P(FileStorage_exact_type, long_int)
 }
 
 INSTANTIATE_TEST_CASE_P(Core_InputOutput,
-    FileStorage_exact_type, Values(".yml", ".xml", ".json")
+    FileStorage_exact_type, Values(".yml", ".xml", ".json", ".xml.gz", ".xml.gz0", ".xml.gz9")
 );
 
 }} // namespace

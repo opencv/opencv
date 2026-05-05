@@ -306,8 +306,12 @@ public:
      before opening the file.
      @param filename Name of the file to open or the text string to read the data from.
      Extension of the file (.xml, .yml/.yaml or .json) determines its format (XML, YAML or JSON
-     respectively). Also you can append .gz to work with compressed files, for example myHugeMatrix.xml.gz. If both
-     FileStorage::WRITE and FileStorage::MEMORY flags are specified, source is used just to specify
+     respectively). Also you can append .gz to work with compressed files, for example myHugeMatrix.xml.gz.
+     You can also specify a compression level from 0 to 9 by appending it to the extension
+     (e.g. ".gz0" for no compression, ".gz9" for high compression).
+     The last digit will be truncated internally to write/read.
+     (e.g. If "a.xml.gz9" is specified, "a.xml.gz" is used for the actual file name.)
+     If both FileStorage::WRITE and FileStorage::MEMORY flags are specified, source is used just to specify
      the output file format (e.g. mydata.xml, .yml etc.). A file name can also contain parameters.
      You can use this format, "*?base64" (e.g. "file.json?base64" (case sensitive)), as an alternative to
      FileStorage::BASE64 flag.
