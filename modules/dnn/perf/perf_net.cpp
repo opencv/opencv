@@ -449,38 +449,15 @@ PERF_TEST_P_(DNNTestNetwork, BEiT_Base_Patch16_224)
     processNet("dnn/beit_base_patch16_224_Opset16.onnx", "", cv::Size(224, 224));
 }
 
-<<<<<<< HEAD
-PERF_TEST_P_(DNNTestNetwork, BlazeFace)
-{
-    Mat input(cv::Size(128, 128), CV_32FC3);
-    randu(input, 0.0f, 1.0f);
-    input = blobFromImage(input, 1.0 / 255.0, Size(128, 128));
-
-    const int oneDim[] = {1};
-    Mat conf(1, oneDim, CV_32F); conf.ptr<float>()[0] = 0.20f;
-    Mat iou(1, oneDim, CV_32F); iou.ptr<float>()[0] = 0.30f;
-    Mat maxDet(1, oneDim, CV_64S); maxDet.ptr<int64_t>()[0] = 25;
-
-    processNet("dnn/onnx/models/blazeface.onnx", "",
-               {std::make_tuple(input, "image"),
-                std::make_tuple(conf, "conf_threshold"),
-                std::make_tuple(iou, "iou_threshold"),
-                std::make_tuple(maxDet, "max_detections")});
-}
-
-PERF_TEST_P_(DNNTestNetwork, FacePaint)
-{
-    processNet("dnn/onnx/models/face_paint_512_v2_0.onnx", "", cv::Size(512, 512));
-=======
 PERF_TEST_P_(DNNTestNetwork, DISABLED_Grounding_DINO)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_2GB, CV_TEST_TAG_DEBUG_VERYLONG);
 
-
+    // Image input
     Mat sample = imread(findDataFile("dnn/dog416.png"));
     Mat img = blobFromImage(sample, 1.0 / 255.0, Size(800, 800), Scalar(), true);
 
-
+    // Text token inputs (dummy tokens for "dog ." as query text, seq_len=7)
     const int seq_len = 7;
     int64_t input_ids_data[seq_len]      = {101, 3899, 1012, 102, 0, 0, 0};
     int64_t attention_mask_data[seq_len] = {1, 1, 1, 1, 0, 0, 0};
@@ -520,7 +497,6 @@ PERF_TEST_P_(DNNTestNetwork, DISABLED_RT_DETR_L)
     Mat sample = imread(findDataFile("dnn/dog416.png"));
     Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(640, 640), Scalar(), true);
     processNet("dnn/onnx/models/rtdetr-l.onnx", "", inp);
->>>>>>> dcef01dafe (add perf test for RT-DETR, RF-DETR, GroundingDino)
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, DNNTestNetwork, dnnBackendsAndTargets());
