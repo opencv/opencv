@@ -1218,8 +1218,7 @@ namespace cv{
             // ............
             const size_t Plength = size_t(((h + 1) / 2) * size_t((w + 1) / 2)) + 1;
 
-            AutoBuffer<LabelT> P_(Plength);
-            std::fill(P_.data(), P_.data()+P_.size(), static_cast<LabelT>(0));
+            AutoBuffer<LabelT> P_(Plength, 0);
             LabelT *P = P_.data();
             //P[0] = 0;
             LabelT lunique = 1;
