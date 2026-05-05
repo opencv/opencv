@@ -1081,7 +1081,7 @@ AutoBuffer<_Tp, fixed_size>::AutoBuffer(size_t _size)
 
 template<typename _Tp, size_t fixed_size> inline
 AutoBuffer<_Tp, fixed_size>::AutoBuffer(size_t _size, const _Tp& value)
-                            :AutoBuffer(size)
+                            :AutoBuffer<_Tp, fixed_size>(_size)
 {
     std::fill(begin(), end(), value);
 }
