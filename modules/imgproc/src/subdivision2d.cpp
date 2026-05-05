@@ -793,8 +793,7 @@ void Subdiv2D::getLeadingEdgeList(std::vector<int>& leadingEdgeList) const
 {
     leadingEdgeList.clear();
     int i, total = (int)(qedges.size()*4);
-    AutoBuffer<bool> edgemask(total);
-    std::fill(edgemask.data(), edgemask.data()+edgemask.size(), false);
+    AutoBuffer<bool> edgemask(total, false);
 
     for( i = 4; i < total; i += 2 )
     {
@@ -814,8 +813,7 @@ void Subdiv2D::getTriangleList(std::vector<Vec6f>& triangleList) const
 {
     triangleList.clear();
     int i, total = (int)(qedges.size()*4);
-    AutoBuffer<bool> edgemask(total);
-    std::fill(edgemask.data(), edgemask.data()+edgemask.size(), false);
+    AutoBuffer<bool> edgemask(total, false);
     Rect2f rect(topLeft.x, topLeft.y, bottomRight.x - topLeft.x, bottomRight.y - topLeft.y);
 
     for( i = 4; i < total; i += 2 )

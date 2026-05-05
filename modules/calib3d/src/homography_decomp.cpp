@@ -517,8 +517,7 @@ void filterHomographyDecompByVisibleRefpoints(InputArrayOfArrays _rotations,
     CV_Assert(pointsMask.empty() || pointsMask.checkVector(1, CV_8U) == npoints);
     const uchar* pointsMaskPtr = pointsMask.data;
 
-    AutoBuffer<uchar> solutionMask(nsolutions);
-    std::fill(solutionMask.data(), solutionMask.data()+solutionMask.size(), (uchar)1);
+    AutoBuffer<uchar> solutionMask(nsolutions, (uchar)1);
     std::vector<Mat> normals(nsolutions);
     std::vector<Mat> rotnorm(nsolutions);
     Mat R;
@@ -558,11 +557,7 @@ void filterHomographyDecompByVisibleRefpoints(InputArrayOfArrays _rotations,
     AutoBuffer<int> possibleSolutions(0);
     for( int i = 0; i < nsolutions; i++ )
         if( solutionMask[i] )
-        {
-            const size_t oldSize = possibleSolutions.size();
-            possibleSolutions.resize(oldSize+1);
-            possibleSolutions[oldSize] = i;
-        }
+            possibleSolutions.push_back(i);
 
     constexpr int cvType = traits::Type<decltype(possibleSolutions)::value_type>::value;
     Mat(static_cast<int>(possibleSolutions.size()), 1, cvType, possibleSolutions.data()).copyTo(_possibleSolutions);

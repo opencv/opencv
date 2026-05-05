@@ -189,7 +189,7 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
         const int grid_width = (w + cell_size - 1) / cell_size;
         const int grid_height = (h + cell_size - 1) / cell_size;
 
-        AutoBuffer<std::vector<Point2f> > grid(grid_width*grid_height);
+        std::vector<std::vector<Point2f> > grid(grid_width*grid_height);
         minDistance *= minDistance;
 
         for( i = 0; i < total; i++ )

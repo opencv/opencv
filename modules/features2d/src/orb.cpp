@@ -1177,7 +1177,7 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
 
         if( !sortedByLevel )
         {
-            AutoBuffer<std::vector<KeyPoint> > allKeypoints(nLevels);
+            std::vector<std::vector<KeyPoint> > allKeypoints(nLevels);
             nkeypoints = (int)keypoints.size();
             for( i = 0; i < nkeypoints; i++ )
             {

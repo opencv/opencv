@@ -314,8 +314,7 @@ HoughLinesSDiv( InputArray image, OutputArray lines, int type,
     for( index = 0; index < 5 * tn * stn; index++ )
         sinTable[index] = (float)cos( stheta * index * 0.2f );
 
-    AutoBuffer<uchar> _caccum(rn * tn);
-    std::fill(_caccum.data(), _caccum.data()+_caccum.size(), (uchar)0);
+    AutoBuffer<uchar> _caccum(rn * tn, (uchar)0);
     uchar* caccum = &_caccum[0];
 
     // Counting all feature pixels

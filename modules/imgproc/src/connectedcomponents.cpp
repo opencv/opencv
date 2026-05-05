@@ -1156,8 +1156,7 @@ namespace cv{
             AutoBuffer<int> chunksSizeAndLabels(chunksSizeAndLabelsSize);
 
             //Tree of labels
-            AutoBuffer<LabelT> P(Plength);
-            std::fill(P.data(), P.data()+P.size(), static_cast<LabelT>(0));
+            AutoBuffer<LabelT> P(Plength, 0);
             //First label is for background
             //P[0] = 0;
 
@@ -1787,8 +1786,7 @@ namespace cv{
             AutoBuffer<int> chunksSizeAndLabels(roundUp(h, 2));
 
             //Tree of labels
-            AutoBuffer<LabelT> P_(Plength);
-            std::fill(P_.data(), P_.data()+P_.size(), static_cast<LabelT>(0));
+            AutoBuffer<LabelT> P_(Plength, 0);
             LabelT* P = P_.data();
             //First label is for background
             //P[0] = 0;
@@ -1845,8 +1843,7 @@ namespace cv{
             // ............
             const size_t Plength = size_t((size_t(h) * size_t(w) + 1) / 2) + 1;
 
-            AutoBuffer<LabelT> P_(Plength);
-            std::fill(P_.data(), P_.data()+P_.size(), static_cast<LabelT>(0));
+            AutoBuffer<LabelT> P_(Plength, 0);
             LabelT* P = P_.data();
             P[0] = 0;
             LabelT lunique = 1;
@@ -2322,8 +2319,7 @@ namespace cv{
             AutoBuffer<int> chunksSizeAndLabels(roundUp(h, 2));
 
             //Tree of labels
-            AutoBuffer<LabelT> P_(Plength);
-            std::fill(P_.data(), P_.data()+P_.size(), static_cast<LabelT>(0));
+            AutoBuffer<LabelT> P_(Plength, 0);
             LabelT *P = P_.data();
             //First label is for background
             //P[0] = 0;
@@ -2392,8 +2388,7 @@ namespace cv{
             //Obviously, 4-way connectivity upper bound is also good for 8-way connectivity labeling
             const size_t Plength = (size_t(h) * size_t(w) + 1) / 2 + 1;
             //array P for equivalences resolution
-            AutoBuffer<LabelT> P_(Plength);
-            std::fill(P_.data(), P_.data()+P_.size(), static_cast<LabelT>(0));
+            AutoBuffer<LabelT> P_(Plength, 0);
             LabelT *P = P_.data();
             //first label is for background pixels
             //P[0] = 0;
@@ -4274,8 +4269,7 @@ namespace cv{
             AutoBuffer<int> chunksSizeAndLabels(chunksSizeAndLabelsSize);
 
             //Tree of labels
-            AutoBuffer<LabelT> P(Plength);
-            std::fill(P.data(), P.data()+P.size(), static_cast<LabelT>(0));
+            AutoBuffer<LabelT> P(Plength, 0);
             //First label is for background
             //P[0] = 0;
 
@@ -4330,8 +4324,7 @@ namespace cv{
             //............
             const size_t Plength = size_t(((h + 1) / 2) * size_t((w + 1) / 2)) + 1;
 
-            AutoBuffer<LabelT> P_(Plength);
-            std::fill(P_.data(), P_.data()+P_.size(), static_cast<LabelT>(0));
+            AutoBuffer<LabelT> P_(Plength, 0);
             LabelT *P = P_.data();
             //P[0] = 0;
             LabelT lunique = 1;

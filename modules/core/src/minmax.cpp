@@ -1310,7 +1310,7 @@ static void reduceMinMax(cv::InputArray src, cv::OutputArray dst, ReduceMode mod
     CV_Assert(srcMat.channels() == 1 && axis >= 0 && axis < srcMat.dims);
 
     cv::AutoBuffer<int> sizes(srcMat.dims);
-    std::copy(srcMat.size.p, srcMat.size.p + srcMat.dims, sizes.data());
+    std::copy(srcMat.size.p, srcMat.size.p + srcMat.dims, sizes.begin());
     sizes[axis] = 1;
 
     dst.create(srcMat.dims, sizes.data(), CV_32SC1); // indices

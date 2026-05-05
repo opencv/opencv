@@ -340,7 +340,7 @@ void SimpleBlobDetectorImpl::findBlobs(InputArray _image, InputArray _binaryImag
                 const Point2d& pt = contour[pointIdx];
                 dists[pointIdx] = norm(center.location - pt);
             }
-            std::sort(dists.data(), dists.data()+dists.size());
+            std::sort(dists.begin(), dists.end());
             center.radius = (dists[(dists.size() - 1) / 2] + dists[dists.size() / 2]) / 2.;
         }
 
