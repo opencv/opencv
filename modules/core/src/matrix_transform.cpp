@@ -1246,7 +1246,7 @@ void broadcast(InputArray _src, InputArray _shape, OutputArray _dst) {
     int max_ndims = std::max(dims_src, dims_shape);
     const int all_ndims[2] = {src.dims, dst.dims};
     const int* orig_shapes[2] = {src.size.p, dst.size.p};
-    AutoBuffer<size_t> buff(max_ndims * 4);
+    cv::AutoBuffer<size_t> buff(max_ndims * 4);
     int* flatten_shapes[2] = {(int*)buff.data(), (int*)(buff.data() + max_ndims)};
     size_t* flatten_steps[2] = {(size_t*)(buff.data() + 2 * max_ndims), (size_t*)(buff.data() + 3 * max_ndims)};
     if (_flatten_for_broadcast(2, max_ndims, all_ndims, orig_shapes, flatten_shapes, flatten_steps)) {
