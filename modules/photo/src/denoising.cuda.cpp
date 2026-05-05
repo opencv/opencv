@@ -67,6 +67,7 @@ using namespace cv::cuda;
 
 void cv::cuda::nonLocalMeans(InputArray, OutputArray, float, int, int, int, Stream&) { throw_no_cuda(); }
 void cv::cuda::fastNlMeansDenoising(InputArray, OutputArray, float, int, int, Stream&) { throw_no_cuda(); }
+void cv::cuda::fastNlMeansDenoising_16(InputArray, OutputArray, float, int, int, Stream&) { throw_no_cuda(); }
 void cv::cuda::fastNlMeansDenoisingColored(InputArray, OutputArray, float, float, int, int, Stream&) { throw_no_cuda(); }
 
 #else
@@ -116,6 +117,9 @@ namespace cv { namespace cuda { namespace device
         void nlm_fast_gpu(const PtrStepSzb& src, PtrStepSzb dst, PtrStepi buffer,
                           int search_window, int block_window, float h, cudaStream_t stream);
 
+        void nlm_fast_gpu_16u(const PtrStepSzb& src, PtrStepSzb dst, PtrStepSzf buffer,
+            int search_window, int block_window, float h, cudaStream_t stream);
+
         void fnlm_split_channels(const PtrStepSz<uchar3>& lab, PtrStepb l, PtrStep<uchar2> ab, cudaStream_t stream);
         void fnlm_merge_channels(const PtrStepb& l, const PtrStep<uchar2>& ab, PtrStepSz<uchar3> lab, cudaStream_t stream);
      }
@@ -148,6 +152,37 @@ void cv::cuda::fastNlMeansDenoising(InputArray _src, OutputArray _dst, float h, 
     GpuMat dst = _dst.getGpuMat();
 
     funcs[src.channels()-1](src_hdr, dst, buffer, search_window, block_window, h, StreamAccessor::getStream(stream));
+}
+
+void cv::cuda::fastNlMeansDenoising_16(InputArray _src, OutputArray _dst, float h, int search_window, int block_window, Stream& stream)
+{
+    const GpuMat src = _src.getGpuMat();
+    //
+    CV_Assert(src.depth() == CV_16UC1);
+    //Sadece tek kanal 16-bit
+    int border_size = search_window/2 + block_window/2;
+    Size esize = src.size() + Size(border_size, border_size) * 2;
+
+    BufferPool pool(stream);
+
+    GpuMat extended_src = pool.getBuffer(esize, src.type());
+    cv::cuda::copyMakeBorder(src, extended_src, border_size, border_size, border_size, border_size, cv::BORDER_DEFAULT, Scalar(), stream);
+    GpuMat src_hdr = extended_src(Rect(Point2i(border_size, border_size), src.size()));
+
+    int bcols, brows;
+    device::imgproc::nln_fast_get_buffer_size(src_hdr, search_window, block_window, bcols, brows);
+    GpuMat buffer = pool.getBuffer(brows, bcols, CV_32S);
+
+    using namespace cv::cuda::device::imgproc;
+    typedef void (*nlm_fast_t)(const PtrStepSzb&, PtrStepSzb, PtrStepi, int, int, float, cudaStream_t);
+    static const nlm_fast_t func = nlm_fast_gpu<ushort>;
+
+    _dst.create(src.size(), src.type());
+    GpuMat dst = _dst.getGpuMat();
+
+    device::imgproc::nlm_fast_gpu_16u(src_hdr, dst, buffer,
+                                      search_window, block_window,
+                                      h, StreamAccessor::getStream(stream));
 }
 
 void cv::cuda::fastNlMeansDenoisingColored(InputArray _src, OutputArray _dst, float h_luminance, float h_color, int search_window, int block_window, Stream& stream)
