@@ -522,7 +522,6 @@ bool FileStorage::Impl::open(const char *filename_or_buf, int _flags, const char
     bool write_base64 = (write_mode || append) && (_flags & FileStorage::BASE64) != 0;
 
     bool isGZ = false;
-    size_t fnamelen = 0;
 
     std::vector<std::string> params;
     //if ( !mem_mode )
@@ -556,7 +555,7 @@ bool FileStorage::Impl::open(const char *filename_or_buf, int _flags, const char
             isGZ = true;
             compression = dot_pos[3];
             if (compression)
-                dot_pos[3] = '\0', fnamelen--;
+                dot_pos[3] = '\0';
         }
 
         if (!isGZ) {

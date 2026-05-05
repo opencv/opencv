@@ -1511,9 +1511,15 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
 
                             char *wptr = weights + (k0_block * DkHkWkCg + c0 * CONV_MR) * esz;
                             float *cptr = cbuf_task + stripe * CONV_NR;
+#ifdef CONV_ARM_FP16
                             hfloat* cptr_f16 = (hfloat*)cbuf_task + stripe*CONV_NR;
+#endif // CONV_ARM_FP16
                             for (int k = k0_block; k < k1_block; k += CONV_MR,
-                                    wptr += DkHkWkCg * CONV_MR * esz, cptr += CONV_MR * ldc, cptr_f16 += CONV_MR * ldc)
+                                    wptr += DkHkWkCg * CONV_MR * esz,
+#ifdef CONV_ARM_FP16
+                                    cptr_f16 += CONV_MR * ldc,
+#endif // CONV_ARM_FP16
+                                    cptr += CONV_MR * ldc)
                             {
 #if CV_TRY_AVX2
                                 if (conv->useAVX2)
@@ -1547,12 +1553,18 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
 
                     size_t outofs = ((n * ngroups + g) * Kg + k0_block) * out_planesize + zyx0;
                     const float *cptr = cbuf_task;
+#ifdef CONV_ARM_FP16
                     const hfloat *cptr_fp16 = (const hfloat *)cbuf_task;
+#endif // CONV_ARM_FP16
                     float *outptr = out + outofs;
                     const float *pbptr = fusedAddPtr0 ? fusedAddPtr0 + outofs : 0;
 
                     for (int k = k0_block; k < k1_block; k++,
-                            cptr += ldc, cptr_fp16 += ldc, outptr += out_planesize,
+                            cptr += ldc,
+#ifdef CONV_ARM_FP16
+                            cptr_fp16 += ldc,
+#endif // CONV_ARM_FP16
+                            outptr += out_planesize,
                             pbptr += (pbptr ? out_planesize : 0))
                     {
                         float biasval = biasptr[k];

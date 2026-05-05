@@ -155,13 +155,12 @@ int main( int argc, const char** argv )
     vector< vector<int> > stage_features;
     FileNode stages = cascade["stages"];
     FileNodeIterator it_stages = stages.begin(), it_stages_end = stages.end();
-    int idx = 0;
-    for( ; it_stages != it_stages_end; it_stages++, idx++ ){
+    for( ; it_stages != it_stages_end; it_stages++ ){
         vector<int> current_feature_indexes;
         FileNode weak_classifiers = (*it_stages)["weakClassifiers"];
         FileNodeIterator it_weak = weak_classifiers.begin(), it_weak_end = weak_classifiers.end();
         vector<int> values;
-        for(int idy = 0; it_weak != it_weak_end; it_weak++, idy++ ){
+        for( ; it_weak != it_weak_end; it_weak++ ){
             (*it_weak)["internalNodes"] >> values;
             current_feature_indexes.push_back( (int)values[2] );
         }
@@ -192,7 +191,7 @@ int main( int argc, const char** argv )
         FileNode features = cascade["features"];
         vector< vector< rect_data > > feature_data;
         FileNodeIterator it_features = features.begin(), it_features_end = features.end();
-        for(int idf = 0; it_features != it_features_end; it_features++, idf++ ){
+        for( ; it_features != it_features_end; it_features++ ){
             vector< rect_data > current_feature_rectangles;
             FileNode rectangles = (*it_features)["rects"];
             int nrects = (int)rectangles.size();
@@ -278,7 +277,7 @@ int main( int argc, const char** argv )
         FileNode features = cascade["features"];
         vector<Rect> feature_data;
         FileNodeIterator it_features = features.begin(), it_features_end = features.end();
-        for(int idf = 0; it_features != it_features_end; it_features++, idf++ ){
+        for( ; it_features != it_features_end; it_features++ ){
             FileNode rectangle = (*it_features)["rect"];
             Rect current_feature ((int)rectangle[0], (int)rectangle[1], (int)rectangle[2], (int)rectangle[3]);
             feature_data.push_back(current_feature);

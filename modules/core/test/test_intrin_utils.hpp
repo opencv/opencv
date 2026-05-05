@@ -285,17 +285,17 @@ template<typename R> struct TheTest
         }
 
         // reinterpret_as
-        v_uint8 vu8 = v_reinterpret_as_u8(r1); out.a.clear(); v_store((uchar*)out.a.d, vu8); EXPECT_EQ(data.a, out.a);
-        v_int8 vs8 = v_reinterpret_as_s8(r1); out.a.clear(); v_store((schar*)out.a.d, vs8); EXPECT_EQ(data.a, out.a);
-        v_uint16 vu16 = v_reinterpret_as_u16(r1); out.a.clear(); v_store((ushort*)out.a.d, vu16); EXPECT_EQ(data.a, out.a);
-        v_int16 vs16 = v_reinterpret_as_s16(r1); out.a.clear(); v_store((short*)out.a.d, vs16); EXPECT_EQ(data.a, out.a);
-        v_uint32 vu32 = v_reinterpret_as_u32(r1); out.a.clear(); v_store((unsigned*)out.a.d, vu32); EXPECT_EQ(data.a, out.a);
-        v_int32 vs32 = v_reinterpret_as_s32(r1); out.a.clear(); v_store((int*)out.a.d, vs32); EXPECT_EQ(data.a, out.a);
-        v_uint64 vu64 = v_reinterpret_as_u64(r1); out.a.clear(); v_store((uint64*)out.a.d, vu64); EXPECT_EQ(data.a, out.a);
-        v_int64 vs64 = v_reinterpret_as_s64(r1); out.a.clear(); v_store((int64*)out.a.d, vs64); EXPECT_EQ(data.a, out.a);
-        v_float32 vf32 = v_reinterpret_as_f32(r1); out.a.clear(); v_store((float*)out.a.d, vf32); EXPECT_EQ(data.a, out.a);
+        AlignedData<R> out_u8;  v_uint8   vu8  = v_reinterpret_as_u8(r1);  v_store((uchar*)out_u8.a.d, vu8);      EXPECT_EQ(data.a, out_u8.a);
+        AlignedData<R> out_s8;  v_int8    vs8  = v_reinterpret_as_s8(r1);  v_store((schar*)out_s8.a.d, vs8);      EXPECT_EQ(data.a, out_s8.a);
+        AlignedData<R> out_u16; v_uint16  vu16 = v_reinterpret_as_u16(r1); v_store((ushort*)out_u16.a.d, vu16);   EXPECT_EQ(data.a, out_u16.a);
+        AlignedData<R> out_s16; v_int16   vs16 = v_reinterpret_as_s16(r1); v_store((short*)out_s16.a.d, vs16);    EXPECT_EQ(data.a, out_s16.a);
+        AlignedData<R> out_u32; v_uint32  vu32 = v_reinterpret_as_u32(r1); v_store((unsigned*)out_u32.a.d, vu32); EXPECT_EQ(data.a, out_u32.a);
+        AlignedData<R> out_s32; v_int32   vs32 = v_reinterpret_as_s32(r1); v_store((int*)out_s32.a.d, vs32);      EXPECT_EQ(data.a, out_s32.a);
+        AlignedData<R> out_u64; v_uint64  vu64 = v_reinterpret_as_u64(r1); v_store((uint64*)out_u64.a.d, vu64);   EXPECT_EQ(data.a, out_u64.a);
+        AlignedData<R> out_s64; v_int64   vs64 = v_reinterpret_as_s64(r1); v_store((int64*)out_s64.a.d, vs64);    EXPECT_EQ(data.a, out_s64.a);
+        AlignedData<R> out_f32; v_float32 vf32 = v_reinterpret_as_f32(r1); v_store((float*)out_f32.a.d, vf32);    EXPECT_EQ(data.a, out_f32.a);
 #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-        v_float64 vf64 = v_reinterpret_as_f64(r1); out.a.clear(); v_store((double*)out.a.d, vf64); EXPECT_EQ(data.a, out.a);
+        AlignedData<R> out_f64; v_float64 vf64 = v_reinterpret_as_f64(r1); v_store((double*)out_f64.a.d, vf64);   EXPECT_EQ(data.a, out_f64.a);
 #endif
 
 #if CV_SIMD_WIDTH == 16
