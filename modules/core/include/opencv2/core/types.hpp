@@ -1242,7 +1242,7 @@ Point_<_Tp>::operator Vec<_Tp, 2>() const
 template<typename _Tp> inline
 _Tp Point_<_Tp>::dot(const Point_& pt) const
 {
-    return saturate_cast<_Tp>(x*pt.x + y*pt.y);
+    return saturate_cast<_Tp>((int64_t)x*pt.x + (int64_t)y*pt.y);
 }
 
 template<typename _Tp> inline
