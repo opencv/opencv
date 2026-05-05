@@ -311,12 +311,13 @@ MLAS_INTERNAL_DATA MLAS_DECLSPEC_ALIGN(const uint32_t MlasMaskMoveTableLasx[16],
 #ifdef MLAS_GEMM_ONLY
 MLAS_PLATFORM::MLAS_PLATFORM(void)
 {
-    // Required by every MLAS path (and probed by mlasAvailable()): the
-    // original ctor always sets this; the SGEMM-only patch was missing it,
-    // which made MlasGetPreferredBufferAlignment() return 0 and the OpenCV
-    // wrapper's mlasAvailable() sanity check fail, silently routing every
-    // SGEMM call back to fast_gemm.
+    // The PreferredBufferAlignment field only exists on AMD64 (see
+    // MLAS_PLATFORM in mlasi.h). On other targets MlasGetPreferredBufferAlignment()
+    // returns MLAS_DEFAULT_PREFERRED_BUFFER_ALIGNMENT directly without
+    // consulting the struct.
+#if defined(MLAS_TARGET_AMD64)
     this->PreferredBufferAlignment = MLAS_DEFAULT_PREFERRED_BUFFER_ALIGNMENT;
+#endif
 
 #if defined(MLAS_TARGET_AMD64_IX86)
     // SSE2 baseline (every x86 since 2003).

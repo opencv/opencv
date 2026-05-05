@@ -26,7 +26,7 @@ Abstract:
 // Define the calling convention for Windows targets.
 //
 
-#if (_MSC_VER >= 800) || defined(_STDCALL_SUPPORTED)
+#if (defined(_MSC_VER) && (_MSC_VER >= 800)) || defined(_STDCALL_SUPPORTED)
 #define MLASCALL __stdcall
 #else
 #define MLASCALL
