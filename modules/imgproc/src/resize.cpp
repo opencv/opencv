@@ -1167,7 +1167,7 @@ resizeNN( const Mat& src, Mat& dst, double fx, double fy )
 #endif
     {
         resizeNNInvoker invoker(src, dst, x_ofs, ify);
-        parallel_for_(range, invoker, dst.total()/(double)(1<<16));
+parallel_for_(range, invoker, dst.total()/(double)(1<<16));
     }
 }
 
@@ -1267,9 +1267,9 @@ private:
 static void resizeNN_bitexact( const Mat& src, Mat& dst, double /*fx*/, double /*fy*/ )
 {
     Size ssize = src.size(), dsize = dst.size();
-    int ifx = ((ssize.width << 16) + dsize.width / 2) / dsize.width; // 16bit fixed-point arithmetic
-    int ifx0 = ifx / 2 - ssize.width % 2;                       // This method uses center pixel coordinate as Pillow and scikit-images do.
-    int ify = ((ssize.height << 16) + dsize.height / 2) / dsize.height;
+    const int ifx = ((ssize.width << 20) + dsize.width / 2) / dsize.width; // 20bit fixed-point arithmetic (upgraded from 16bit for precision)
+    int ifx0 = ifx / 2 - ssize.width % 2;
+    const int ify = ((ssize.height << 20) + dsize.height / 2) / dsize.height;
     int ify0 = ify / 2 - ssize.height % 2;
 
     cv::utils::BufferArea area;
@@ -1279,7 +1279,7 @@ static void resizeNN_bitexact( const Mat& src, Mat& dst, double /*fx*/, double /
 
     for( int x = 0; x < dsize.width; x++ )
     {
-        int sx = (ifx * x + ifx0) >> 16;
+        int sx = (ifx * x + ifx0) >> 20;
         x_ofse[x] = std::min(sx, ssize.width-1);    // offset in element (not byte)
     }
     Range range(0, dsize.height);
