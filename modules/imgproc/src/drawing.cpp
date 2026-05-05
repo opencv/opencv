@@ -1118,8 +1118,8 @@ FillConvexPoly( Mat& img, const Point2l* v, int npts, const void* color, int lin
         delta1 = XY_ONE - 1, delta2 = 0;
 
     p0 = v[npts - 1];
-    p0.x <<= XY_SHIFT - shift;
-    p0.y <<= XY_SHIFT - shift;
+    p0.x = (typename Point2l::L)((uint64_t)(uint32_t)p0.x << (XY_SHIFT - shift));
+    p0.y = (typename Point2l::L)((uint64_t)(uint32_t)p0.y << (XY_SHIFT - shift));
 
     CV_Assert( 0 <= shift && shift <= XY_SHIFT );
     xmin = xmax = v[0].x;
@@ -1138,8 +1138,8 @@ FillConvexPoly( Mat& img, const Point2l* v, int npts, const void* color, int lin
         xmax = std::max( xmax, p.x );
         xmin = MIN( xmin, p.x );
 
-        p.x <<= XY_SHIFT - shift;
-        p.y <<= XY_SHIFT - shift;
+        p.x = (typename Point2l::L)((uint64_t)(uint32_t)p.x << (XY_SHIFT - shift));
+        p.y = (typename Point2l::L)((uint64_t)(uint32_t)p.y << (XY_SHIFT - shift));
 
         if( line_type <= 8 )
         {
@@ -1658,10 +1658,10 @@ ThickLine( Mat& img, Point2l p0, Point2l p1, const void* color,
         p1 -= offset;
     }
 
-    p0.x <<= XY_SHIFT - shift;
-    p0.y <<= XY_SHIFT - shift;
-    p1.x <<= XY_SHIFT - shift;
-    p1.y <<= XY_SHIFT - shift;
+    p0.x = (typename Point2l::L)((uint64_t)(uint32_t)p0.x << (XY_SHIFT - shift));
+    p0.y = (typename Point2l::L)((uint64_t)(uint32_t)p0.y << (XY_SHIFT - shift));
+    p1.x = (typename Point2l::L)((uint64_t)(uint32_t)p1.x << (XY_SHIFT - shift));
+    p1.y = (typename Point2l::L)((uint64_t)(uint32_t)p1.y << (XY_SHIFT - shift));
 
     if( thickness <= 1 )
     {
@@ -1931,8 +1931,8 @@ void circle( InputOutputArray _img, Point center, int radius,
     {
         Point2l _center(center);
         int64 _radius(radius);
-        _center.x <<= XY_SHIFT - shift;
-        _center.y <<= XY_SHIFT - shift;
+        _center.x = (int64)((uint64)_center.x << (XY_SHIFT - shift));
+        _center.y = (int64)((uint64)_center.y << (XY_SHIFT - shift));
         _radius <<= XY_SHIFT - shift;
         EllipseEx( img, _center, Size2l(_radius, _radius),
                    0, 0, 360, buf, thickness, line_type );
@@ -1964,10 +1964,10 @@ void ellipse( InputOutputArray _img, Point center, Size axes,
     int _end_angle = cvRound(end_angle);
     Point2l _center(center);
     Size2l _axes(axes);
-    _center.x <<= XY_SHIFT - shift;
-    _center.y <<= XY_SHIFT - shift;
-    _axes.width <<= XY_SHIFT - shift;
-    _axes.height <<= XY_SHIFT - shift;
+_center.x = (int64)((uint64)_center.x << (XY_SHIFT - shift));
+        _center.y = (int64)((uint64)_center.y << (XY_SHIFT - shift));
+        _axes.width = (int64)((uint64)_axes.width << (XY_SHIFT - shift));
+        _axes.height = (int64)((uint64)_axes.height << (XY_SHIFT - shift));
 
     EllipseEx( img, _center, _axes, _angle, _start_angle,
                _end_angle, buf, thickness, line_type );
