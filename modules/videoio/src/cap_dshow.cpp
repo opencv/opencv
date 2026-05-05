@@ -2760,6 +2760,7 @@ int videoInput::start(int deviceID, videoDevice *VD){
     // but leave pbFormat as NULL. We check for NULL here to avoid a crash.
     // https://github.com/opencv/opencv/issues/28904
     if (pVih == NULL) {
+        DebugPrintOut("ERROR: pbFormat field is not set!\n");
         return false;
     }
     int currentWidth    =  HEADER(pVih)->biWidth;
