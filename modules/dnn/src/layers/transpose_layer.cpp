@@ -3,6 +3,12 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "../precomp.hpp"
+#include "cpu_kernels/transpose_kernels.simd.hpp"
+#include "layers/cpu_kernels/transpose_kernels.simd_declarations.hpp"
+#define CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN namespace cpu_baseline {
+#define CV_CPU_OPTIMIZATION_NAMESPACE_END }
+#undef CV_CPU_DISPATCH_MODES_ALL
+
 #include "layers_common.hpp"
 #include "../net_impl.hpp"
 //#include "../op_cuda.hpp"
@@ -26,6 +32,25 @@ namespace dnn
     Opset's 1 to 23 are covered.
 */
 
+// Detect a "swap innermost two dims" permutation, collapsing leading dims.
+static bool isSwapLastTwo(const MatShape& inpShape,
+                                 const std::vector<int>& perm,
+                                 int esz,
+                                 int64_t& outer, int64_t& rows, int64_t& cols)
+{
+    if (esz != 4) return false;
+    int nd = inpShape.dims;
+    if (nd < 2 || (int)perm.size() != nd) return false;
+    for (int i = 0; i < nd - 2; i++)
+        if (perm[i] != i) return false;
+    if (perm[nd - 2] != nd - 1 || perm[nd - 1] != nd - 2) return false;
+    outer = 1;
+    for (int i = 0; i < nd - 2; i++) outer *= inpShape[i];
+    rows = inpShape[nd - 1]; // output rows = input inner dim
+    cols = inpShape[nd - 2]; // output cols = input outer-of-pair dim
+    return true;
+}
+
 static void transpose(const Mat& inp, const std::vector<int>& perm, Mat& out)
 {
     enum {TRANSPOSE_MAX_DIMS=7};
@@ -34,6 +59,60 @@ static void transpose(const Mat& inp, const std::vector<int>& perm, Mat& out)
     int ndims = inpShape.dims;
     size_t esz = inp.elemSize();
     CV_Assert(esz == 1 || esz == 2 || esz == 4 || esz == 8);
+
+    int64_t outer = 1, rows = 0, cols = 0;
+    if (isSwapLastTwo(inpShape, perm, (int)esz, outer, rows, cols)
+        && inp.isContinuous() && out.isContinuous()) {
+        CV_CPU_DISPATCH(transpose2D_f32_,
+                        (inp.ptr<float>(), out.ptr<float>(), outer, rows, cols),
+                        NEON, AVX2, AVX, BASELINE);
+        return;
+    }
+
+    if (inp.isContinuous() && out.isContinuous() &&
+        ndims >= 2 && (int)perm.size() == ndims &&
+        perm[ndims - 1] == ndims - 1)
+    {
+        std::vector<int64_t> inStride(ndims, 0);
+        inStride[ndims - 1] = 1;
+        for (int i = ndims - 2; i >= 0; i--)
+            inStride[i] = inStride[i + 1] * (int64_t)inpShape[i + 1];
+        const int64_t inner = inpShape[ndims - 1];
+
+        std::vector<int> outOuterShape(ndims - 1);
+        for (int i = 0; i < ndims - 1; i++) outOuterShape[i] = outShape[i];
+        int64_t outerTotal = 1;
+        for (int i = 0; i < ndims - 1; i++) outerTotal *= outOuterShape[i];
+
+        if (outerTotal > 0 && inner > 0) {
+            const size_t innerBytes = (size_t)inner * esz;
+            const char* in_base = (const char*)inp.data;
+            char* out_base = (char*)out.data;
+
+            parallel_for_(Range(0, (int)outerTotal), [&](const Range& r) {
+                std::vector<int> outIdx(ndims - 1, 0);
+                int64_t rem = r.start;
+                for (int k = ndims - 2; k >= 0; k--) {
+                    outIdx[k] = (int)(rem % outOuterShape[k]);
+                    rem /= outOuterShape[k];
+                }
+                for (int64_t idx = r.start; idx < r.end; idx++) {
+                    int64_t inOff = 0;
+                    for (int i = 0; i < ndims - 1; i++) {
+                        inOff += (int64_t)outIdx[i] * inStride[perm[i]];
+                    }
+                    std::memcpy(out_base + (size_t)idx * innerBytes,
+                                in_base + (size_t)inOff * esz,
+                                innerBytes);
+                    for (int k = ndims - 2; k >= 0; k--) {
+                        if (++outIdx[k] < outOuterShape[k]) break;
+                        outIdx[k] = 0;
+                    }
+                }
+            }, std::max(1.0, (double)outerTotal * (double)innerBytes / 16384.0));
+            return;
+        }
+    }
 
     int perm_[TRANSPOSE_MAX_DIMS];
     int inpShape_[TRANSPOSE_MAX_DIMS];
