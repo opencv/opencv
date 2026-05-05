@@ -138,7 +138,7 @@ float  cubeRoot( float value )
     /* fr *= 2^ex * sign */
     m.f = value;
     v.f = fr;
-    v.i = (v.i + (ex << 23) + s) & (m.i*2 != 0 ? -1 : 0);
+    v.i = (v.i + (ex << 23) + s) & ((unsigned)m.i*2 != 0 ? -1 : 0);
     return v.f;
 }
 
