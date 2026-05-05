@@ -17,7 +17,7 @@ cvSplit( const void* srcarr, void* dstarr0, void* dstarr1, void* dstarr2, void* 
         nz += dptrs[i] != 0;
     CV_Assert( nz > 0 );
     std::vector<cv::Mat> dvec(nz);
-    cv::AutoBuffer<int> pairs(nz*2);
+    std::vector<int> pairs(nz*2);
 
     for( i = j = 0; i < 4; i++ )
     {
@@ -53,7 +53,7 @@ cvMerge( const void* srcarr0, const void* srcarr1, const void* srcarr2,
         nz += sptrs[i] != 0;
     CV_Assert( nz > 0 );
     std::vector<cv::Mat> svec(nz);
-    cv::AutoBuffer<int> pairs(nz*2);
+    std::vector<int> pairs(nz*2);
 
     for( i = j = 0; i < 4; i++ )
     {
