@@ -2756,8 +2756,7 @@ int videoInput::start(int deviceID, videoDevice *VD){
     }
 
     VIDEOINFOHEADER *pVih =  reinterpret_cast<VIDEOINFOHEADER*>(VD->pAmMediaType->pbFormat);
-    
-    // Some legacy or virtual cameras (e.g., Microsoft Ball filter) return S_OK 
+    // Some legacy or virtual cameras (e.g., Microsoft Ball filter) return S_OK
     // but leave pbFormat as NULL. We check for NULL here to avoid a crash.
     // https://github.com/opencv/opencv/issues/28904
     if (pVih == NULL) {
