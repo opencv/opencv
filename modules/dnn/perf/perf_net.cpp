@@ -449,6 +449,29 @@ PERF_TEST_P_(DNNTestNetwork, BEiT_Base_Patch16_224)
     processNet("dnn/beit_base_patch16_224_Opset16.onnx", "", cv::Size(224, 224));
 }
 
+PERF_TEST_P_(DNNTestNetwork, BlazeFace)
+{
+    Mat input(cv::Size(128, 128), CV_32FC3);
+    randu(input, 0.0f, 1.0f);
+    input = blobFromImage(input, 1.0 / 255.0, Size(128, 128));
+
+    const int oneDim[] = {1};
+    Mat conf(1, oneDim, CV_32F); conf.ptr<float>()[0] = 0.20f;
+    Mat iou(1, oneDim, CV_32F); iou.ptr<float>()[0] = 0.30f;
+    Mat maxDet(1, oneDim, CV_64S); maxDet.ptr<int64_t>()[0] = 25;
+
+    processNet("dnn/onnx/models/blazeface.onnx", "",
+               {std::make_tuple(input, "image"),
+                std::make_tuple(conf, "conf_threshold"),
+                std::make_tuple(iou, "iou_threshold"),
+                std::make_tuple(maxDet, "max_detections")});
+}
+
+PERF_TEST_P_(DNNTestNetwork, FacePaint)
+{
+    processNet("dnn/onnx/models/face_paint_512_v2_0.onnx", "", cv::Size(512, 512));
+}
+
 INSTANTIATE_TEST_CASE_P(/*nothing*/, DNNTestNetwork, dnnBackendsAndTargets());
 
 } // namespace

@@ -41,7 +41,7 @@ public:
 
     Range getShapeRange(const MatShape& inpShape) const
     {
-        int outDims = inpShape.dims;
+        int outDims = inpShape.layout == DATA_LAYOUT_BLOCK ? inpShape.dims - 1 : inpShape.dims;
         int start_ = start < 0 ? start + outDims : start;
         int end_ = end >= outDims ? outDims : end < 0 ? end + outDims : end;
 
@@ -64,6 +64,17 @@ public:
 
         outShape[0] = r.end - r.start;
         return outShape;
+    }
+
+    int getLayouts(const std::vector<DataLayout>& actualInputs,
+                   std::vector<DataLayout>& desiredInputs,
+                   const int requiredOutputs,
+                   std::vector<DataLayout>& outputs) const CV_OVERRIDE
+    {
+        CV_Assert(actualInputs.size() == 1);
+        desiredInputs.assign(1, actualInputs[0]);
+        outputs.assign(requiredOutputs, DATA_LAYOUT_UNKNOWN);
+        return 0;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -110,8 +121,41 @@ public:
         Range r = getShapeRange(inpShape);
 
         shape_type_t shapeData[CV_MAX_DIM];
-        for (int i = r.start; i < r.end; i++)
-            shapeData[i - r.start] = (shape_type_t)inpShape[i];
+        if (inpShape.layout != DATA_LAYOUT_BLOCK)
+        {
+            for (int i = r.start; i < r.end; i++)
+                shapeData[i - r.start] = (shape_type_t)inpShape[i];
+        }
+        else
+        {
+            CV_Assert(inpShape.dims >= 3);
+            CV_Assert(inpShape.C > 0);
+            Net::Impl* netimpl_ = getNetImpl(this);
+            DataLayout origLayout = netimpl_ ? netimpl_->originalLayout : DATA_LAYOUT_NCHW;
+            CV_Assert(origLayout == DATA_LAYOUT_NCHW || origLayout == DATA_LAYOUT_NHWC);
+
+            const int semanticNdims = inpShape.dims - 1;
+            std::vector<shape_type_t> semanticShape(semanticNdims);
+            semanticShape[0] = (shape_type_t)inpShape[0];
+
+            if (origLayout == DATA_LAYOUT_NCHW)
+            {
+                CV_Assert(semanticNdims >= 2);
+                semanticShape[1] = (shape_type_t)inpShape.C;
+                for (int i = 2; i < semanticNdims; i++)
+                    semanticShape[i] = (shape_type_t)inpShape[i];
+            }
+            else
+            {
+                CV_Assert(semanticNdims >= 2);
+                semanticShape[semanticNdims - 1] = (shape_type_t)inpShape.C;
+                for (int i = 1; i < semanticNdims - 1; i++)
+                    semanticShape[i] = (shape_type_t)inpShape[i + 1];
+            }
+
+            for (int i = r.start; i < r.end; i++)
+                shapeData[i - r.start] = semanticShape[i];
+        }
 
         Mat shape({r.end - r.start}, shapeType, shapeData);
 

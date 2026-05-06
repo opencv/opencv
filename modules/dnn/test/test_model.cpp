@@ -1417,4 +1417,117 @@ INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_YOLOXS_ONNX,
                         testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
 
 
+typedef testing::TestWithParam<Target> Reproducibility_BlazeFace_ONNX;
+TEST_P(Reproducibility_BlazeFace_ONNX, Accuracy)
+{
+    auto engine_forced = static_cast<cv::dnn::EngineType>(
+            cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
+    if (engine_forced == cv::dnn::ENGINE_CLASSIC)
+    {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+        return;
+    }
+
+    Target targetId = GetParam();
+    applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
+
+    std::string modelname = _tf("onnx/models/blazeface.onnx", false);
+    Net net = readNetFromONNX(modelname);
+
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(targetId);
+
+    if (targetId == DNN_TARGET_CPU_FP16)
+        net.enableWinograd(false);
+
+    std::string imgname = findDataFile("cv/cascadeandhog/images/karen-and-rob.png");
+    Mat image = imread(imgname);
+    ASSERT_FALSE(image.empty());
+
+    Mat input = blobFromImage(image, 1.0 / 255.0, Size(128, 128), Scalar(), true, false, CV_32F);
+    ASSERT_FALSE(input.empty());
+    Mat refSelected = blobFromNPY(_tf("onnx/data/output_blazeface_selectedBoxes.npy"));
+    ASSERT_FALSE(refSelected.empty());
+
+    const int oneDim[] = {1};
+    Mat conf(1, oneDim, CV_32F); conf.ptr<float>()[0] = 0.20f;
+    Mat iou(1, oneDim, CV_32F); iou.ptr<float>()[0] = 0.30f;
+    Mat maxDet(1, oneDim, CV_64S); maxDet.ptr<int64_t>()[0] = 25;
+
+    std::vector<String> outNames = net.getUnconnectedOutLayersNames();
+    std::vector<Mat> outs;
+    Mat selected;
+    int idxSel = -1;
+
+    net.setInput(input, "image");
+    net.setInput(conf, "conf_threshold");
+    net.setInput(iou, "iou_threshold");
+    net.setInput(maxDet, "max_detections");
+    net.forward(outs, outNames);
+
+    for (size_t j = 0; j < outNames.size(); ++j)
+    {
+        if (outNames[j].find("selectedBoxes") != std::string::npos)
+        {
+            idxSel = static_cast<int>(j);
+            break;
+        }
+    }
+    if (idxSel < 0 && !outs.empty())
+        idxSel = 0;
+    ASSERT_GE(idxSel, 0);
+
+    outs[idxSel].convertTo(selected, CV_32F);
+
+    Mat outFlat = selected.reshape(1, 1);
+    Mat refFlat = refSelected.reshape(1, 1);
+    ASSERT_EQ(outFlat.total(), refFlat.total())
+        << "OpenCV output size differs from ORT reference";
+    EXPECT_LE(cv::norm(outFlat, refFlat, NORM_INF), 1e-2);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_BlazeFace_ONNX,
+                        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
+
+typedef testing::TestWithParam<Target> Reproducibility_FacePaint_ONNX;
+TEST_P(Reproducibility_FacePaint_ONNX, Accuracy)
+{
+    Target targetId = GetParam();
+    applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
+
+    std::string modelname = _tf("onnx/models/face_paint_512_v2_0.onnx", false);
+    Net net = readNetFromONNX(modelname);
+
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(targetId);
+
+    if (targetId == DNN_TARGET_CPU_FP16)
+        net.enableWinograd(false);
+
+    std::string imgname = findDataFile("cv/shared/baboon.png");
+    Mat image = imread(imgname);
+    ASSERT_FALSE(image.empty());
+
+    Mat input = blobFromImage(image, 1.0/127.5, Size(512, 512),
+                              Scalar(127.5, 127.5, 127.5), true, false, CV_32F);
+    ASSERT_TRUE(!input.empty());
+
+    net.setInput(input);
+    Mat out = net.forward();
+
+    Mat ref_img = imread(_tf("onnx/data/face_paint_512_v2_0_ort_output.png"));
+    ASSERT_FALSE(ref_img.empty()) << "Failed to load reference PNG";
+    Mat ref = blobFromImage(ref_img, 1.0 / 127.5, Size(),
+                            Scalar(127.5, 127.5, 127.5), true, false, CV_32F);
+
+    Mat outFlat = out.reshape(1, 1);
+    Mat refFlat = ref.reshape(1, 1);
+    ASSERT_EQ(outFlat.total(), refFlat.total()) << "OpenCV output size differs from ORT reference";
+    EXPECT_LE(cv::norm(outFlat, refFlat, NORM_INF), 0.01);
+}
+INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_FacePaint_ONNX,
+                        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
+
 }} // namespace
