@@ -1092,7 +1092,8 @@ public:
 
     /** If CVFolds \> 1 then algorithms prunes the built decision tree using K-fold
     cross-validation procedure where K is equal to CVFolds.
-    Default value is 10.*/
+    Default value is 0. Note: cross-validation pruning (CVFolds > 1) is currently not implemented;
+    use CVFolds = 0 (no pruning) or CVFolds = 1 (pruning without cross-validation).*/
     /** @see setCVFolds */
     CV_WRAP virtual int getCVFolds() const = 0;
     /** @copybrief getCVFolds @see getCVFolds */

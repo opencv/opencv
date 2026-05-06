@@ -57,7 +57,7 @@ TreeParams::TreeParams()
     regressionAccuracy = 0.01f;
     useSurrogates = false;
     maxCategories = 10;
-    CVFolds = 10;
+    CVFolds = 0;
     use1SERule = true;
     truncatePrunedTree = true;
     priors = Mat();
