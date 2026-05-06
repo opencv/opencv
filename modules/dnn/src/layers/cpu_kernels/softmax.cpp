@@ -15,11 +15,12 @@
 
 namespace cv { namespace dnn {
 
-void softmax(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep){
+void softmax(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep, float scale){
     CV_Assert(src.type() == CV_32F);
     CV_Assert(src.isContinuous() && dst.isContinuous());
     CV_Assert(src.size == dst.size);
     axis = normalize_axis(axis, src.dims);
+    const bool scaled = scale != 1.f;
 
     size_t outerSize = src.total(0, axis),
            innerSize = src.total(axis + 1);
@@ -60,6 +61,22 @@ void softmax(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep){
 #endif
             for (; _cnDim < axisStep; _cnDim++)
                 axisBuf[_cnDim] = srcPtr[srcOffset + (_cnDim + axisBias) * cnStep];
+
+            // Bake the fused pre-Softmax scale into the buffer once. axisBuf
+            // already lives in L1 from the load above, so this pass is short.
+            if (scaled) {
+                int sk = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                v_float32 vscale = vx_setall_f32(scale);
+                for (; sk <= axisStep - nlanes; sk += nlanes) {
+                    v_float32 val = vx_load(axisBuf + sk);
+                    val = v_mul(val, vscale);
+                    v_store(axisBuf + sk, val);
+                }
+#endif
+                for (; sk < axisStep; sk++)
+                    axisBuf[sk] *= scale;
+            }
 
             float maxVal = -FLT_MAX;
             int cnDim = 0;
@@ -126,6 +143,10 @@ void softmax(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep){
 
 void softmax(Mat &dst, const Mat &src, int axis) {
     softmax(dst, src, axis, 0, src.size[axis]);
+}
+
+void softmax(Mat &dst, const Mat &src, int axis, float scale) {
+    softmax(dst, src, axis, 0, src.size[axis], scale);
 }
 
 void logSoftmax(Mat &dst, const Mat &src, int axis) {

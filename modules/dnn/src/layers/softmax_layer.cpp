@@ -77,6 +77,7 @@ public:
     {
         axisRaw = params.get<int>("axis", -1);
         logSoftMax = params.get<bool>("log_softmax", false);
+        scale = params.get<float>("scale", 1.f);
         setParamsFrom(params);
     }
 
@@ -231,10 +232,14 @@ public:
         Mat &dst = outputs[0];
         int axis = normalize_axis(axisRaw, src.dims);
 
-        if(logSoftMax)
+        if (logSoftMax) {
+            CV_Assert(scale == 1.f);
             logSoftmax(dst, src, axis);
-        else
+        } else if (scale != 1.f) {
+            softmax(dst, src, axis, scale);
+        } else {
             softmax(dst, src, axis);
+        }
     }
 
 #ifdef HAVE_CUDA
