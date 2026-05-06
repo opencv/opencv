@@ -451,6 +451,58 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
                 default_cache_path = std::string(utf8_buf.data());
             }
         }
+#elif defined __ANDROID__
+        // no defaults
+#elif defined __APPLE__
+        const std::string tmpdir_env = utils::getConfigurationParameterString("TMPDIR");
+        if (!tmpdir_env.empty() && utils::fs::isDirectory(tmpdir_env))
+        {
+            default_cache_path = tmpdir_env;
+        }
+        else
+        {
+            default_cache_path = "/tmp/";
+            CV_LOG_WARNING(NULL, "Using world accessible cache directory. This may be not secure: " << default_cache_path);
+        }
+#elif defined __linux__ || defined __HAIKU__ || defined __FreeBSD__ || defined __GNU__
+        // https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
+        if (default_cache_path.empty())
+        {
+            const std::string xdg_cache_env = utils::getConfigurationParameterString("XDG_CACHE_HOME");
+            if (!xdg_cache_env.empty() && utils::fs::isDirectory(xdg_cache_env))
+            {
+                default_cache_path = xdg_cache_env;
+            }
+        }
+        if (default_cache_path.empty())
+        {
+            const std::string home_env = utils::getConfigurationParameterString("HOME");
+            if (!home_env.empty() && utils::fs::isDirectory(home_env))
+            {
+                cv::String home_path = home_env;
+                cv::String home_cache_path = utils::fs::join(home_path, ".cache/");
+                if (utils::fs::isDirectory(home_cache_path))
+                {
+                    default_cache_path = home_cache_path;
+                }
+            }
+        }
+        if (default_cache_path.empty())
+        {
+            const char* temp_path = "/var/tmp/";
+            if (utils::fs::isDirectory(temp_path))
+            {
+                default_cache_path = temp_path;
+                CV_LOG_WARNING(NULL, "Using world accessible cache directory. This may be not secure: " << default_cache_path);
+            }
+        }
+        if (default_cache_path.empty())
+        {
+            default_cache_path = "/tmp/";
+            CV_LOG_WARNING(NULL, "Using world accessible cache directory. This may be not secure: " << default_cache_path);
+        }
+#else
+        // no defaults
 #endif
         CV_LOG_VERBOSE(NULL, 0, "default_cache_path = " << default_cache_path);
         if (!default_cache_path.empty())
