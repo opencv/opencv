@@ -44,7 +44,6 @@ void reduceAllFloatParallel_(const Mat& src, Mat& dst, int reduce_type_int) {
     else if (rt == Reduce2Layer::ReduceType::PROD) init_f = 1.0f;
 
     std::vector<float>  partial_f(stripes, init_f);
-    std::vector<double> partial_d(stripes, (rt == Reduce2Layer::ReduceType::PROD) ? 1.0 : 0.0);
 
     parallel_for_(Range(0, stripes), [&](const Range& r) {
         for (int s = r.start; s < r.end; s++) {
@@ -81,53 +80,53 @@ void reduceAllFloatParallel_(const Mat& src, Mat& dst, int reduce_type_int) {
             case Reduce2Layer::ReduceType::SUM:
             case Reduce2Layer::ReduceType::MEAN:
             case Reduce2Layer::ReduceType::LOG_SUM: {
-                double acc = 0.0;
+                float acc = 0.0f;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
                 v_float32 va = vx_setzero_f32();
                 for (; i + L <= n; i += L) va = v_add(va, vx_load(q + i));
-                acc += (double)v_reduce_sum(va);
+                acc += v_reduce_sum(va);
 #endif
                 for (; i < n; i++) acc += q[i];
-                partial_d[s] = acc;
+                partial_f[s] = acc;
                 break;
             }
             case Reduce2Layer::ReduceType::L1: {
-                double acc = 0.0;
+                float acc = 0.0f;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
                 v_float32 va = vx_setzero_f32();
                 for (; i + L <= n; i += L) va = v_add(va, v_abs(vx_load(q + i)));
-                acc += (double)v_reduce_sum(va);
+                acc += v_reduce_sum(va);
 #endif
                 for (; i < n; i++) acc += std::fabs(q[i]);
-                partial_d[s] = acc;
+                partial_f[s] = acc;
                 break;
             }
             case Reduce2Layer::ReduceType::L2:
             case Reduce2Layer::ReduceType::SUM_SQUARE: {
-                double acc = 0.0;
+                float acc = 0.0f;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
                 v_float32 va = vx_setzero_f32();
                 for (; i + L <= n; i += L) {
                     v_float32 x = vx_load(q + i);
                     va = v_add(va, v_mul(x, x));
                 }
-                acc += (double)v_reduce_sum(va);
+                acc += v_reduce_sum(va);
 #endif
-                for (; i < n; i++) { double x = q[i]; acc += x * x; }
-                partial_d[s] = acc;
+                for (; i < n; i++) { float x = q[i]; acc += x * x; }
+                partial_f[s] = acc;
                 break;
             }
             case Reduce2Layer::ReduceType::PROD: {
-                double acc = 1.0;
+                float acc = 1.0f;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
                 v_float32 va = vx_setall_f32(1.0f);
                 for (; i + L <= n; i += L) va = v_mul(va, vx_load(q + i));
                 float buf[VTraits<v_float32>::max_nlanes];
                 v_store(buf, va);
-                for (int k = 0; k < L; k++) acc *= (double)buf[k];
+                for (int k = 0; k < L; k++) acc *= buf[k];
 #endif
-                for (; i < n; i++) acc *= (double)q[i];
-                partial_d[s] = acc;
+                for (; i < n; i++) acc *= q[i];
+                partial_f[s] = acc;
                 break;
             }
             default: CV_Error(Error::StsInternal, "reduceAllFloatParallel_: unhandled type");
@@ -150,34 +149,34 @@ void reduceAllFloatParallel_(const Mat& src, Mat& dst, int reduce_type_int) {
         break;
     }
     case Reduce2Layer::ReduceType::SUM: {
-        double acc = 0.0; for (int s = 0; s < stripes; s++) acc += partial_d[s];
-        *out = (float)acc;
+        float acc = 0.0f; for (int s = 0; s < stripes; s++) acc += partial_f[s];
+        *out = acc;
         break;
     }
     case Reduce2Layer::ReduceType::MEAN: {
-        double acc = 0.0; for (int s = 0; s < stripes; s++) acc += partial_d[s];
-        *out = total > 0 ? (float)(acc / (double)total) : 0.0f;
+        float acc = 0.0f; for (int s = 0; s < stripes; s++) acc += partial_f[s];
+        *out = total > 0 ? (float)((double)acc / (double)total) : 0.0f;
         break;
     }
     case Reduce2Layer::ReduceType::L1:
     case Reduce2Layer::ReduceType::SUM_SQUARE: {
-        double acc = 0.0; for (int s = 0; s < stripes; s++) acc += partial_d[s];
-        *out = (float)acc;
+        float acc = 0.0f; for (int s = 0; s < stripes; s++) acc += partial_f[s];
+        *out = acc;
         break;
     }
     case Reduce2Layer::ReduceType::L2: {
-        double acc = 0.0; for (int s = 0; s < stripes; s++) acc += partial_d[s];
-        *out = (float)std::sqrt(acc);
+        float acc = 0.0f; for (int s = 0; s < stripes; s++) acc += partial_f[s];
+        *out = std::sqrt(acc);
         break;
     }
     case Reduce2Layer::ReduceType::LOG_SUM: {
-        double acc = 0.0; for (int s = 0; s < stripes; s++) acc += partial_d[s];
-        *out = total > 0 ? (float)std::log(acc) : -std::numeric_limits<float>::infinity();
+        float acc = 0.0f; for (int s = 0; s < stripes; s++) acc += partial_f[s];
+        *out = total > 0 ? std::log(acc) : -std::numeric_limits<float>::infinity();
         break;
     }
     case Reduce2Layer::ReduceType::PROD: {
-        double acc = 1.0; for (int s = 0; s < stripes; s++) acc *= partial_d[s];
-        *out = (float)acc;
+        float acc = 1.0f; for (int s = 0; s < stripes; s++) acc *= partial_f[s];
+        *out = acc;
         break;
     }
     default: CV_Error(Error::StsInternal, "reduceAllFloatParallel_: unhandled type");
@@ -190,7 +189,7 @@ void reduceLastAxesFloatParallel_(const Mat& src, Mat& dst, size_t innerLen, int
     float* q = dst.ptr<float>();
     const size_t nOut = src.total() / innerLen;
 
-    const double inv_inner = innerLen > 0 ? 1.0 / (double)innerLen : 0.0;
+    const float inv_inner = innerLen > 0 ? 1.0f / (float)innerLen : 0.0f;
 
     parallel_for_(Range(0, (int)nOut), [&](const Range& r) {
         for (int row = r.start; row < r.end; row++) {
@@ -229,36 +228,36 @@ void reduceLastAxesFloatParallel_(const Mat& src, Mat& dst, size_t innerLen, int
             case Reduce2Layer::ReduceType::SUM:
             case Reduce2Layer::ReduceType::MEAN:
             case Reduce2Layer::ReduceType::LOG_SUM: {
-                double acc = 0.0;
+                float acc = 0.0f;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
                 if (n >= (size_t)L) {
                     v_float32 va = vx_setzero_f32();
                     for (; i + L <= n; i += L) va = v_add(va, vx_load(s0 + i));
-                    acc += (double)v_reduce_sum(va);
+                    acc += v_reduce_sum(va);
                 }
 #endif
                 for (; i < n; i++) acc += s0[i];
-                if (rt == Reduce2Layer::ReduceType::MEAN)        q[row] = (float)(acc * inv_inner);
-                else if (rt == Reduce2Layer::ReduceType::LOG_SUM) q[row] = (float)std::log(acc);
-                else                                              q[row] = (float)acc;
+                if (rt == Reduce2Layer::ReduceType::MEAN)        q[row] = acc * inv_inner;
+                else if (rt == Reduce2Layer::ReduceType::LOG_SUM) q[row] = std::log(acc);
+                else                                              q[row] = acc;
                 break;
             }
             case Reduce2Layer::ReduceType::L1: {
-                double acc = 0.0;
+                float acc = 0.0f;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
                 if (n >= (size_t)L) {
                     v_float32 va = vx_setzero_f32();
                     for (; i + L <= n; i += L) va = v_add(va, v_abs(vx_load(s0 + i)));
-                    acc += (double)v_reduce_sum(va);
+                    acc += v_reduce_sum(va);
                 }
 #endif
                 for (; i < n; i++) acc += std::fabs(s0[i]);
-                q[row] = (float)acc;
+                q[row] = acc;
                 break;
             }
             case Reduce2Layer::ReduceType::L2:
             case Reduce2Layer::ReduceType::SUM_SQUARE: {
-                double acc = 0.0;
+                float acc = 0.0f;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
                 if (n >= (size_t)L) {
                     v_float32 va = vx_setzero_f32();
@@ -266,26 +265,26 @@ void reduceLastAxesFloatParallel_(const Mat& src, Mat& dst, size_t innerLen, int
                         v_float32 x = vx_load(s0 + i);
                         va = v_add(va, v_mul(x, x));
                     }
-                    acc += (double)v_reduce_sum(va);
+                    acc += v_reduce_sum(va);
                 }
 #endif
-                for (; i < n; i++) { double x = s0[i]; acc += x * x; }
-                q[row] = (rt == Reduce2Layer::ReduceType::L2) ? (float)std::sqrt(acc) : (float)acc;
+                for (; i < n; i++) { float x = s0[i]; acc += x * x; }
+                q[row] = (rt == Reduce2Layer::ReduceType::L2) ? std::sqrt(acc) : acc;
                 break;
             }
             case Reduce2Layer::ReduceType::PROD: {
-                double acc = 1.0;
+                float acc = 1.0f;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
                 if (n >= (size_t)L) {
                     v_float32 va = vx_setall_f32(1.0f);
                     for (; i + L <= n; i += L) va = v_mul(va, vx_load(s0 + i));
                     float buf[VTraits<v_float32>::max_nlanes];
                     v_store(buf, va);
-                    for (int k = 0; k < L; k++) acc *= (double)buf[k];
+                    for (int k = 0; k < L; k++) acc *= buf[k];
                 }
 #endif
-                for (; i < n; i++) acc *= (double)s0[i];
-                q[row] = (float)acc;
+                for (; i < n; i++) acc *= s0[i];
+                q[row] = acc;
                 break;
             }
             default: CV_Error(Error::StsInternal, "reduceLastAxesFloatParallel_: unhandled type");
