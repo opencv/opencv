@@ -452,6 +452,9 @@ int laplacian(const uint8_t* src_data, size_t src_step,
               int src_depth, int dst_depth, int cn,
               int ksize, int border_type, uint8_t border_value)
 {
+    if (src_data == dst_data)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
     if (src_depth != CV_8U || cn != 1)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
