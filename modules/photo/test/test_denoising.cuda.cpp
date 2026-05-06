@@ -116,5 +116,43 @@ TEST(CUDA_FastNonLocalMeans, Regression)
     EXPECT_MAT_NEAR(gray_gold, dgray, 1);
 }
 
+TEST(CUDA_Photo_FastNlMeans, regression_16u)
+{
+    // 1. Generate random 16-bit data on the CPU (512x512 is sufficient for testing)
+    cv::Mat src_host(512, 512, CV_16U);
+    cv::randu(src_host, Scalar::all(0), Scalar::all(16));
+
+    // 2. Upload data to the GPU
+    cv::cuda::GpuMat src_device;
+    src_device.upload(src_host);
+    cv::cuda::GpuMat dst_device;
+
+    float h = 3.0f;
+    int search_window = 21;
+    int block_size = 7;
+
+    // 3. Execute the function and ensure it does not throw any exceptions
+    EXPECT_NO_THROW({
+        cv::cuda::fastNlMeansDenoising_16(src_device, dst_device, h, search_window, block_size);
+    });
+
+    ASSERT_FALSE(dst_device.empty()) << "Error: GPU output matrix should not be empty!";
+
+    // 4. Download data back to the CPU for analysis
+    cv::Mat dst_host;
+    dst_device.download(dst_host);
+
+    // CHECK 1: Did the output become completely zero? (Black image check)
+    double minVal, maxVal;
+    cv::minMaxLoc(dst_host, &minVal, &maxVal);
+    EXPECT_GT(maxVal, 0) << "Error: Maximum value in the output image is 0 (Completely black)!";
+
+    // CHECK 2: Did the algorithm actually modify the image?
+    cv::Mat diff;
+    cv::absdiff(src_host, dst_host, diff); // Get the absolute difference between input and output
+    int changed_pixels = cv::countNonZero(diff);
+    EXPECT_GT(changed_pixels, 0) << "Error: The algorithm did not change the image at all!";
+}
+
 }} // namespace
 #endif // HAVE_CUDA
