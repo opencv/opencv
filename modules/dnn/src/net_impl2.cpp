@@ -549,6 +549,7 @@ void Net::Impl::prepareForInference()
         constFold();
         constArgs();
         fuseAttention();
+        fuseMatMulConstBToGemm();
         fuseSharedInputGemm();
         fuseReshapeTranspose();
         fuseTransposeMatMul();

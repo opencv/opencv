@@ -153,7 +153,7 @@ TEST_F(Test_Graph_Simplifier, BiasedMatMulSubgraph) {
     /* Test for 1 subgraphs
         - BiasedMatMulSubgraph
     */
-    test("biased_matmul", "MatMul");
+    test("biased_matmul", "Gemm");
 }
 
 }}

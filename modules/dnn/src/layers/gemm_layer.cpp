@@ -58,6 +58,7 @@ public:
         trans_b = params.get<bool>("transB", false);
         alpha = params.get<float>("alpha", 1.0f);
         beta = params.get<float>("beta", 1.0f);
+        flatten_a = params.get<bool>("flatten_a", true);
 
         // The params are not part of ONNX, but set by old ONNX parser
         const_B = params.get<bool>("constB", false);
@@ -164,9 +165,19 @@ public:
             }
         }
 
-        int batches = std::accumulate(shape_A.begin(), shape_A.end() - 2, 1, std::multiplies<int>());
-        MatShape shape_y{M * batches, N};
-        outputs.assign(1, shape_y);
+        if (flatten_a) {
+            int batches = std::accumulate(shape_A.begin(), shape_A.end() - 2, 1, std::multiplies<int>());
+            MatShape shape_y{M * batches, N};
+            outputs.assign(1, shape_y);
+        } else {
+            // Preserve A's leading dims; only the trailing axis changes from K to N.
+            // (trans_a is rejected upstream for this mode, so M corresponds to
+            //  shape_A[-2] and we just rewrite the last axis.)
+            CV_CheckFalse(trans_a, "DNN/Gemm: flatten_a=false requires trans_a=false");
+            MatShape shape_y = shape_A;
+            shape_y[shape_y.size() - 1] = N;
+            outputs.assign(1, shape_y);
+        }
         return false;
     }
 
@@ -247,8 +258,7 @@ public:
             fastGemmPackB(blobs[0], packed_B, trans_b, opt);
         }
 
-        // also pre-broadcast bias
-        if (constC(mode)) {
+        if (constC(mode) && flatten_a) {
             const auto &C = blobs.back();
 
             std::vector<Mat> outputs;
@@ -290,15 +300,37 @@ public:
         int M = shape_Y[dims_Y - 2], N = shape_Y[dims_Y - 1];
         int K = trans_a ? ma : na;
 
+        // In flatten_a=false mode the output keeps A's leading dims, so the
+        // GEMM row count spans those dims as well: rows = total(Y)/N.
+        const int rows = flatten_a ? M : (int)(Y.total() / (size_t)N);
+
         // broadcast C and copy C to output
         if (constC(mode) || inputs.size() >= 3) {
-            if (!constC(mode) || broadcast_C.empty()) {
-                broadcastCWtihBeta(M, N, (inputs.size() >= 3 ? inputs.back() : blobs.back()));
-            }
-            int step = M * N;
-            CV_CheckEQ(broadcast_C.size(), static_cast<size_t>(step), "DNN/Gemm: C is not broadcast properly");
             float *ptr_y = Y.ptr<float>();
-            std::memcpy(ptr_y, broadcast_C.data(), step * sizeof(float));
+            if (flatten_a) {
+                if (!constC(mode) || broadcast_C.empty()) {
+                    broadcastCWtihBeta(M, N, (inputs.size() >= 3 ? inputs.back() : blobs.back()));
+                }
+                int step = M * N;
+                CV_CheckEQ(broadcast_C.size(), static_cast<size_t>(step), "DNN/Gemm: C is not broadcast properly");
+                std::memcpy(ptr_y, broadcast_C.data(), step * sizeof(float));
+            } else {
+                // ND output: tile the (1D / scalar) bias across all `rows`
+                // rows, scaled by beta. The rewriter restricts bias to scalar
+                // or 1D length-N; assert here.
+                const Mat& C = (inputs.size() >= 3) ? inputs.back() : blobs.back();
+                const float* c = C.ptr<const float>();
+                if (C.total() == 1) {
+                    float val = beta * (*c);
+                    std::fill_n(ptr_y, (size_t)rows * (size_t)N, val);
+                } else {
+                    CV_CheckEQ((int)C.total(), N, "DNN/Gemm: bias must be scalar or length-N in flatten_a=false mode");
+                    for (int j = 0; j < N; j++) ptr_y[j] = beta * c[j];
+                    for (int i = 1; i < rows; i++) {
+                        std::memcpy(ptr_y + (size_t)i * N, ptr_y, (size_t)N * sizeof(float));
+                    }
+                }
+            }
         } else { // initialization
             float *ptr_y = Y.ptr<float>();
             size_t total = Y.total();
@@ -307,7 +339,7 @@ public:
 
         if (constB(mode)) {
             CV_CheckGT(packed_B.size(), static_cast<size_t>(0), "DNN/Gemm: constant B is not pre-packed");
-            fastGemm(trans_a, M, N, K, alpha, A.ptr<const float>(), na, packed_B.data(), 1.f, Y.ptr<float>(), N, opt);
+            fastGemm(trans_a, rows, N, K, alpha, A.ptr<const float>(), na, packed_B.data(), 1.f, Y.ptr<float>(), N, opt);
         } else {
             fastGemmBatch(trans_a, trans_b, alpha, A, inputs[1], 1.f, Y, opt);
         }

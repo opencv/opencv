@@ -286,7 +286,7 @@ public:
         desiredInputs[0] = DATA_LAYOUT_BLOCK;
         for (size_t i = 1; i < ninputs; i++)
             desiredInputs[i] = DATA_LAYOUT_UNKNOWN;
-        if (addResidual && ninputs >= 2)
+        if (addResidual && ninputs > 1)
             desiredInputs[ninputs - 1] = DATA_LAYOUT_BLOCK;
         outputs.assign(requiredOutputs, DATA_LAYOUT_BLOCK);
         return getNetImpl(this)->defaultC0;

@@ -1800,6 +1800,7 @@ CV__DNN_INLINE_NS_BEGIN
         bool trans_b;
         float alpha;
         float beta;
+        bool flatten_a;
 
         static Ptr<GemmLayer> create(const LayerParams& params);
     };
@@ -1808,6 +1809,8 @@ CV__DNN_INLINE_NS_BEGIN
      public:
         bool trans_a;
         bool trans_b;
+        float alpha;
+        float beta;
 
         static Ptr<MatMulLayer> create(const LayerParams &params);
     };

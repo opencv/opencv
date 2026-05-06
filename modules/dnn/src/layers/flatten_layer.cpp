@@ -89,6 +89,8 @@ public:
 
     bool isDataShuffling() const CV_OVERRIDE { return true; }
 
+    virtual bool alwaysSupportInplace() const CV_OVERRIDE { return true; }
+
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
@@ -209,18 +211,11 @@ public:
                    outputs_arr.isUMatVector(),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        std::vector<Mat> inputs, outputs;
-        inputs_arr.getMatVector(inputs);
-        outputs_arr.getMatVector(outputs);
-
-        for (size_t i = 0; i < inputs.size(); i++)
-        {
-            MatShape outShape = shape(outputs[i]);
-            if (inputs[i].data != outputs[i].data)
-            {
-                inputs[i].reshape(1, (int)outShape.size(), &outShape[0]).copyTo(outputs[i]);
-            }
-        }
+        std::vector<Mat> outs;
+        outputs_arr.getMatVector(outs);
+        CV_Assert(!outs.empty());
+        const MatShape outShape = outs[0].shape();
+        reshapeAndCopyFirst(inputs_arr, outputs_arr, outShape);
     }
 
 #ifdef HAVE_CANN

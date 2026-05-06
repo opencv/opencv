@@ -456,6 +456,9 @@ struct Net::Impl : public detail::NetImplBase
     void fuseBasic();
     // fuse ViT-style multi-head attention subgraphs
     void fuseAttention();
+    // rewrite MatMul(A, const_B [, const_bias]) into Gemm so projection-style
+    // matmuls reach the MLAS pre-packed sgemm path
+    void fuseMatMulConstBToGemm();
     // fuse Gemm layers that share the same input into one wider Gemm
     void fuseSharedInputGemm();
     // collapse redundant Reshape/Transpose chains
