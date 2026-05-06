@@ -125,33 +125,70 @@ public:
     CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to "protected" (need to fix bindings first)
     GridBoard();
 };
+/** @brief Type of ChArUco board layout.
+ *
+ * - **CHARUCO_1** (classic): markers are placed inside the white squares of a chessboard.
+ *   markerLength < squareLength. A size=(W,H) board has W*H squares, (W-1)*(H-1) interior
+ *   chessboard corner intersections, and the board origin is at the outer top-left corner of
+ *   the top-left square (i.e. the first interior corner is at (squareLength, squareLength)).
+ *
+ * - **CHARUCO_2** (full-cell): each square is entirely covered by a marker (markerLength ==
+ *   squareLength). A size=(W,H) board has W*H markers and (W+1)*(H+1) corner intersections
+ *   including border corners. The board origin is at the physical top-left corner of the
+ *   top-left marker. Provides better corner detection than CHARUCO_1.
+ *
+ * The two types are not interchangeable: they differ in corner count, corner positions, and
+ * the coordinate origin, so object points from matchImagePoints() are not directly comparable.
+ */
+enum CharucoBoardType{
+    CHARUCO_1=0,
+    CHARUCO_2=1
+};
 
 /**
- * @brief ChArUco board is a planar chessboard where the markers are placed inside the white squares of a chessboard.
+ * @brief ChArUco board: a chessboard with ArUco markers embedded in its squares.
+ *
+ * Two layout types are supported, selected via CharucoBoardType:
+ * - CHARUCO_1 (default): classic layout, markers inside the white squares.
+ * - CHARUCO_2: full-cell layout, each square is entirely a marker.
  *
  * The benefits of ChArUco boards is that they provide both, ArUco markers versatility and chessboard corner precision,
  * which is important for calibration and pose estimation. The board image can be drawn using generateImage() method.
  */
 class CV_EXPORTS_W_SIMPLE CharucoBoard : public Board {
+    CharucoBoardType type_=CHARUCO_1;//type of board. By default, the original
 public:
     /** @brief CharucoBoard constructor
      *
      * @param size number of chessboard squares in x and y directions
-     * @param squareLength squareLength chessboard square side length (normally in meters)
-     * @param markerLength marker side length (same unit than squareLength)
+     * @param squareLength chessboard square side length (normally in meters)
+     * @param markerLength marker side length (same unit as squareLength). For CHARUCO_1 must be
+     *        less than squareLength. For CHARUCO_2 this parameter is ignored (markerLength == squareLength).
      * @param dictionary dictionary of markers indicating the type of markers
-     * @param ids array of id used markers
-     * The first markers in the dictionary are used to fill the white chessboard squares.
+     * @param ids array of marker ids to use; if empty, the first size.width*size.height ids are used
+     * @param type board layout: CHARUCO_1 (classic, default) or CHARUCO_2 (full-cell).
+     *        See CharucoBoardType for a description of both layouts.
      */
     CV_WRAP CharucoBoard(const Size& size, float squareLength, float markerLength,
-                         const Dictionary &dictionary, InputArray ids = noArray());
+                         const Dictionary &dictionary, InputArray ids = noArray(), CharucoBoardType type=CHARUCO_1);
 
-    /** @brief set legacy chessboard pattern.
+    /** @brief CharucoBoard constructor for CHARUCO_2 layout.
+     *
+     * Convenience constructor that creates a CHARUCO_2 board (full-cell markers, markerLength == squareLength).
+     *
+     * @param size number of chessboard squares in x and y directions
+     * @param squareLength chessboard square side length (normally in meters); equals the marker side length
+     * @param dictionary dictionary of markers indicating the type of markers
+     */
+    CV_WRAP CharucoBoard(const Size& size, float squareLength, const Dictionary &dictionary);
+
+    /** @brief set legacy chessboard pattern (CHARUCO_1 only).
      *
      * Legacy setting creates chessboard patterns starting with a white box in the upper left corner
      * if there is an even row count of chessboard boxes, otherwise it starts with a black box.
      * This setting ensures compatibility to patterns created with OpenCV versions prior OpenCV 4.6.0.
      * See https://github.com/opencv/opencv/issues/23152.
+     * Not supported for CHARUCO_2 boards; calling on a CHARUCO_2 board throws cv::Error::StsNotImplemented.
      *
      * Default value: false.
      */
@@ -162,15 +199,24 @@ public:
     CV_WRAP float getSquareLength() const;
     CV_WRAP float getMarkerLength() const;
 
-    /** @brief get CharucoBoard::chessboardCorners
+    /** @brief get the 3D positions of the chessboard corner intersections.
+     *
+     * For CHARUCO_1: returns the (squaresX-1)*(squaresY-1) interior corners, origin at the
+     * outer top-left corner of the board, Y increasing downward.
+     *
+     * For CHARUCO_2: returns the (squaresX+1)*(squaresY+1) corner intersections including
+     * border corners, origin at the physical top-left corner of the top-left marker, Y
+     * increasing downward.
      */
     CV_WRAP std::vector<Point3f> getChessboardCorners() const;
 
-    /** @brief get CharucoBoard::nearestMarkerIdx, for each charuco corner, nearest marker index in ids array
+    /** @brief get CharucoBoard::nearestMarkerIdx, for each charuco corner, nearest marker index in ids array.
+     * Only meaningful for CHARUCO_1 boards; returns an empty vector for CHARUCO_2.
      */
     CV_PROP std::vector<std::vector<int> > getNearestMarkerIdx() const;
 
-    /** @brief get CharucoBoard::nearestMarkerCorners, for each charuco corner, nearest marker corner id of each marker
+    /** @brief get CharucoBoard::nearestMarkerCorners, for each charuco corner, nearest marker corner id of each marker.
+     * Only meaningful for CHARUCO_1 boards; returns an empty vector for CHARUCO_2.
      */
     CV_PROP std::vector<std::vector<int> > getNearestMarkerCorners() const;
 
@@ -186,6 +232,12 @@ public:
      * for number of charucoIDs <= 2,the function returns true.
      */
     CV_WRAP bool checkCharucoCornersCollinear(InputArray charucoIds) const;
+
+
+    /**
+     * @brief getType indicates the type of board
+     */
+    CV_WRAP CharucoBoardType getType()const;
 
     CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to "protected" (need to fix bindings first)
     CharucoBoard();
