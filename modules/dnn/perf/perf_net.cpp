@@ -450,9 +450,13 @@ PERF_TEST_P_(DNNTestNetwork, BEiT_Base_Patch16_224)
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 PERF_TEST_P_(DNNTestNetwork, DISABLED_Grounding_DINO)
 =======
 // Model: https://drive.google.com/file/d/1gKEV7QdzymK9QVgBt-tLaBvKQ9uxu0rp/view?usp=drive_link
+=======
+// Model: https://huggingface.co/vietanhdev/segment-anything-2-onnx-models/blob/main/sam2_hiera_large.encoder.onnx
+>>>>>>> 1077b2bc41 (updated source model links)
 PERF_TEST_P_(DNNTestNetwork, SAM2_Encoder)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_2GB, CV_TEST_TAG_DEBUG_VERYLONG);
@@ -462,7 +466,7 @@ PERF_TEST_P_(DNNTestNetwork, SAM2_Encoder)
     processNet("dnn/onnx/models/sam2_hiera_large.encoder.onnx", "", inp);
 }
 
-// Model: https://drive.google.com/file/d/1ZqInQ6f2mK7wM3NiJR5L6kY2qUI5kfL1/view?usp=drive_link
+// Model: https://huggingface.co/vietanhdev/segment-anything-2-onnx-models/blob/main/sam2_hiera_large.decoder.onnx
 PERF_TEST_P_(DNNTestNetwork, SAM2_Decoder)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_1GB, CV_TEST_TAG_DEBUG_LONG);
@@ -502,7 +506,7 @@ PERF_TEST_P_(DNNTestNetwork, SAM2_Decoder)
                 std::make_tuple(has_mask_input,   "has_mask_input")});
 }
 
-// Model: https://drive.google.com/file/d/1LPWCWbZtobOQCeQq77uB1ji0dslgLt7f/view?usp=drive_link
+// Model: https://s3.ap-northeast-2.wasabisys.com/pinto-model-zoo/252_RAFT/iter10/resources.tar.gz
 PERF_TEST_P_(DNNTestNetwork, RAFT)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_2GB, CV_TEST_TAG_DEBUG_LONG);
@@ -518,7 +522,7 @@ PERF_TEST_P_(DNNTestNetwork, RAFT)
                 std::make_tuple(blob1, "1")});
 }
 
-// Model: https://drive.google.com/file/d/18_SwvW4bL0zlHmcz-4HF59gWuJCGG7ru/view?usp=drive_link
+// Model: https://huggingface.co/onnx-community/owlv2-base-patch16-finetuned-ONNX
 PERF_TEST_P_(DNNTestNetwork, OWLv2)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_1GB, CV_TEST_TAG_DEBUG_LONG);
@@ -562,7 +566,7 @@ PERF_TEST_P_(DNNTestNetwork, YOLO26n)
     processNet("dnn/onnx/models/yolo26n.onnx", "", inp);
 }
 
-// Model: https://drive.google.com/file/d/1Hfk65X2o1svE0kfkEQ_5-pNp-c39zIpN/view?usp=drive_link
+// Model: https://huggingface.co/Xenova/segformer_b2_clothes/blob/main/onnx/model.onnx
 PERF_TEST_P_(DNNTestNetwork, SegFormer_B2_Clothes)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_512MB, CV_TEST_TAG_DEBUG_LONG);
@@ -572,7 +576,7 @@ PERF_TEST_P_(DNNTestNetwork, SegFormer_B2_Clothes)
     processNet("dnn/onnx/models/segformer_b2_clothes.onnx", "", inp);
 }
 
-// Model: https://drive.google.com/file/d/1dYL9NfOcxWoQjkAH4kxizArYOlqCNYsV/view?usp=drive_link
+// Model: https://huggingface.co/Xenova/siglip-base-patch16-224/blob/main/onnx/model.onnx
 PERF_TEST_P_(DNNTestNetwork, SigLIP)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_512MB, CV_TEST_TAG_DEBUG_LONG);
@@ -595,7 +599,7 @@ PERF_TEST_P_(DNNTestNetwork, SigLIP)
                 std::make_tuple(pixel_values, "pixel_values")});
 }
 
-// Model: https://drive.google.com/file/d/1ccWGQ62OBSvPr1WxqJVgHw0Nm5H0h8id/view?usp=sharing
+// Model: https://huggingface.co/onnx-community/depth-anything-v2-small/blob/main/onnx/model.onnx
 PERF_TEST_P_(DNNTestNetwork, Depth_Anything_V2)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_512MB, CV_TEST_TAG_DEBUG_LONG);
@@ -635,7 +639,7 @@ PERF_TEST_P_(DNNTestNetwork, BlazeFace)
                 std::make_tuple(iou_threshold,  "iou_threshold")});
 }
 
-// Model: https://drive.google.com/file/d/1VWIsouNwAc-YHlHlOuC2QZ4KsPLE74G2/view?usp=drive_link
+// Model: https://huggingface.co/onnx-community/grounding-dino-tiny-ONNX
 PERF_TEST_P_(DNNTestNetwork, Grounding_DINO)
 >>>>>>> 97d419edf6 (removed DISABLED from CV_TEST_TAG_DEBUG_LONG tagged test)
 {
