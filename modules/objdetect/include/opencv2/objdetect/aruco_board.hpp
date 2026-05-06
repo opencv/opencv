@@ -136,6 +136,7 @@ public:
  *   squareLength). A size=(W,H) board has W*H markers and (W+1)*(H+1) corner intersections
  *   including border corners. The board origin is at the physical top-left corner of the
  *   top-left marker. Provides better corner detection than CHARUCO_1.
+ *   See @cite charuco2_2026 for the full description of the CHARUCO_2 algorithm.
  *
  * The two types are not interchangeable: they differ in corner count, corner positions, and
  * the coordinate origin, so object points from matchImagePoints() are not directly comparable.
@@ -150,7 +151,7 @@ enum CharucoBoardType{
  *
  * Two layout types are supported, selected via CharucoBoardType:
  * - CHARUCO_1 (default): classic layout, markers inside the white squares.
- * - CHARUCO_2: full-cell layout, each square is entirely a marker.
+ * - CHARUCO_2: full-cell layout, each square is entirely a marker. See @cite charuco2_2026.
  *
  * The benefits of ChArUco boards is that they provide both, ArUco markers versatility and chessboard corner precision,
  * which is important for calibration and pose estimation. The board image can be drawn using generateImage() method.

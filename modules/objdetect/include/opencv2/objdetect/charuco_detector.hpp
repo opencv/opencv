@@ -34,6 +34,11 @@ struct CV_EXPORTS_W_SIMPLE CharucoParameters {
     CV_PROP_RW bool checkMarkers;
 };
 
+/** @brief Detects ChArUco board corners and diamond markers.
+ *
+ * Supports both CHARUCO_1 (classic) and CHARUCO_2 (full-cell) board layouts.
+ * For the CHARUCO_2 detection algorithm see @cite charuco2_2026.
+ */
 class CV_EXPORTS_W CharucoDetector : public Algorithm {
 public:
     /** @brief Basic CharucoDetector constructor
