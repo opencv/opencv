@@ -449,14 +449,7 @@ PERF_TEST_P_(DNNTestNetwork, BEiT_Base_Patch16_224)
     processNet("dnn/beit_base_patch16_224_Opset16.onnx", "", cv::Size(224, 224));
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-PERF_TEST_P_(DNNTestNetwork, DISABLED_Grounding_DINO)
-=======
-// Model: https://drive.google.com/file/d/1gKEV7QdzymK9QVgBt-tLaBvKQ9uxu0rp/view?usp=drive_link
-=======
 // Model: https://huggingface.co/vietanhdev/segment-anything-2-onnx-models/blob/main/sam2_hiera_large.encoder.onnx
->>>>>>> 1077b2bc41 (updated source model links)
 PERF_TEST_P_(DNNTestNetwork, SAM2_Encoder)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_2GB, CV_TEST_TAG_DEBUG_VERYLONG);
@@ -506,7 +499,7 @@ PERF_TEST_P_(DNNTestNetwork, SAM2_Decoder)
                 std::make_tuple(has_mask_input,   "has_mask_input")});
 }
 
-// Model: https://s3.ap-northeast-2.wasabisys.com/pinto-model-zoo/252_RAFT/iter10/resources.tar.gz
+// Model: https://github.com/opencv/opencv_zoo/tree/main/models/optical_flow_estimation_raft
 PERF_TEST_P_(DNNTestNetwork, RAFT)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_2GB, CV_TEST_TAG_DEBUG_LONG);
@@ -514,10 +507,10 @@ PERF_TEST_P_(DNNTestNetwork, RAFT)
     // RAFT takes two consecutive frames to estimate optical flow between them
     Mat frame0 = imread(findDataFile("gpu/opticalflow/frame0.png"));
     Mat frame1 = imread(findDataFile("gpu/opticalflow/frame1.png"));
-    Mat blob0 = blobFromImage(frame0, 1.0, Size(640, 480), Scalar(), true);
-    Mat blob1 = blobFromImage(frame1, 1.0, Size(640, 480), Scalar(), true);
+    Mat blob0 = blobFromImage(frame0, 1.0, Size(480, 360), Scalar(), true);
+    Mat blob1 = blobFromImage(frame1, 1.0, Size(480, 360), Scalar(), true);
 
-    processNet("dnn/onnx/models/raft_things_iter10_480x640.onnx", "",
+    processNet("dnn/onnx/models/optical_flow_estimation_raft_2023aug.onnx", "",
                {std::make_tuple(blob0, "0"),
                 std::make_tuple(blob1, "1")});
 }
@@ -641,7 +634,6 @@ PERF_TEST_P_(DNNTestNetwork, BlazeFace)
 
 // Model: https://huggingface.co/onnx-community/grounding-dino-tiny-ONNX
 PERF_TEST_P_(DNNTestNetwork, Grounding_DINO)
->>>>>>> 97d419edf6 (removed DISABLED from CV_TEST_TAG_DEBUG_LONG tagged test)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_2GB, CV_TEST_TAG_DEBUG_VERYLONG);
 
@@ -673,12 +665,8 @@ PERF_TEST_P_(DNNTestNetwork, Grounding_DINO)
                 std::make_tuple(text_token_mask, "text_token_mask")});
 }
 
-<<<<<<< HEAD
-PERF_TEST_P_(DNNTestNetwork, DISABLED_RF_DETR)
-=======
 // Model: https://drive.google.com/file/d/1P6a7oS_dV5y09FsCA4XDZK1-WcdZbWFh/view?usp=drive_link
 PERF_TEST_P_(DNNTestNetwork, RF_DETR)
->>>>>>> 97d419edf6 (removed DISABLED from CV_TEST_TAG_DEBUG_LONG tagged test)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_1GB, CV_TEST_TAG_DEBUG_LONG);
 
@@ -687,12 +675,8 @@ PERF_TEST_P_(DNNTestNetwork, RF_DETR)
     processNet("dnn/onnx/models/rfdetr.onnx", "", inp);
 }
 
-<<<<<<< HEAD
-PERF_TEST_P_(DNNTestNetwork, DISABLED_RT_DETR_L)
-=======
 // Model: https://drive.google.com/file/d/1OrSmlXURayVQgW8nrrxjggzPMN7xPRGJ/view?usp=sharing
 PERF_TEST_P_(DNNTestNetwork, RT_DETR_L)
->>>>>>> 97d419edf6 (removed DISABLED from CV_TEST_TAG_DEBUG_LONG tagged test)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_1GB, CV_TEST_TAG_DEBUG_LONG);
 
