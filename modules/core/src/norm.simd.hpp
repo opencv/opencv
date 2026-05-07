@@ -1280,8 +1280,6 @@ struct MaskedNormL2_SIMD {
     }
 };
 
-#if CV_SIMD_64F
-
 template <>
 struct MaskedNormInf_SIMD<float, float> {
     inline float operator()(const float* src, const uchar* mask, int len, int cn) const {
@@ -1330,6 +1328,7 @@ struct MaskedNormInf_SIMD<float, float> {
     }
 };
 
+#if CV_SIMD_64F
 template <>
 struct MaskedNormL1_SIMD<float, double> {
     inline double operator()(const float* src, const uchar* mask, int len, int cn) const {
@@ -1438,7 +1437,8 @@ struct MaskedNormL2_SIMD<float, double> {
     }
 };
 
-#if defined _M_ARM64
+#endif
+
 template <>
 struct MaskedNormInf_SIMD<uchar, int> {
     inline int operator()(const uchar* src, const uchar* mask, int len, int cn) const {
@@ -1540,7 +1540,6 @@ struct MaskedNormL1_SIMD<uchar, int> {
         return result;
     }
 };
-#endif
 
 template <>
 struct MaskedNormInf_SIMD<ushort, int> {
@@ -1706,8 +1705,6 @@ struct MaskedNormL2_SIMD<ushort, double> {
         return result;
     }
 };
-
-#endif
 
 template<typename T, typename ST> int
 normInf_(const T* src, const uchar* mask, ST* _result, int len, int cn) {
