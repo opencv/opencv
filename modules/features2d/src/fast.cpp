@@ -180,7 +180,7 @@ static void FAST16_RVV(InputArray _img,
                 vint16m1_t min_max = __riscv_vmax_vv_i16m1(__riscv_vmin_vv_i16m1(va00, d0, vl), __riscv_vmin_vv_i16m1(va00, d9, vl), vl);
                 vint16m1_t max_min = __riscv_vmin_vv_i16m1(__riscv_vmax_vv_i16m1(vb00, d0, vl), __riscv_vmax_vv_i16m1(vb00, d9, vl), vl);
                 min_max = __riscv_vmax_vv_i16m1(min_max, __riscv_vmax_vv_i16m1(__riscv_vmin_vv_i16m1(va01, d2, vl),  __riscv_vmin_vv_i16m1(va01, d11, vl), vl), vl);
-                max_min = __riscv_vmin_vv_i16m1(max_min, __riscv_vmin_vv_i16m1(__riscv_vmax_vv_i16m1(vb01, d2, vl),  __riscv_vmax_vvv_i16m1(vb01, d11, vl), vl), vl);
+                max_min = __riscv_vmin_vv_i16m1(max_min, __riscv_vmin_vv_i16m1(__riscv_vmax_vv_i16m1(vb01, d2, vl),  __riscv_vmax_vv_i16m1(vb01, d11, vl), vl), vl);
                 min_max = __riscv_vmax_vv_i16m1(min_max, __riscv_vmax_vv_i16m1(__riscv_vmin_vv_i16m1(va10, d4, vl),  __riscv_vmin_vv_i16m1(va10, d13, vl), vl), vl);
                 max_min = __riscv_vmin_vv_i16m1(max_min, __riscv_vmin_vv_i16m1(__riscv_vmax_vv_i16m1(vb10, d4, vl),  __riscv_vmax_vv_i16m1(vb10, d13, vl), vl), vl);
                 min_max = __riscv_vmax_vv_i16m1(min_max, __riscv_vmax_vv_i16m1(__riscv_vmin_vv_i16m1(va11, d6, vl),  __riscv_vmin_vv_i16m1(va01, d15, vl), vl), vl);
