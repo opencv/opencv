@@ -7,44 +7,7 @@
 // OpenCV ORT (ONNX Runtime) Engine Deny List
 // Tests are skipped when running with OPENCV_FORCE_DNN_ENGINE=ENGINE_ORT (4)
 
-// --- Test_Graph_Simplifier tests (test_graph_simplifier.cpp) ---
-// These tests verify OpenCV's internal subgraph fusion (graph simplifier). Under ORT engine,
-// ORT owns the entire graph and OpenCV's fusion never runs, so getLayerTypes() returns {}.
-"GeluSubGraph",
-"GeluApproximationSubGraph",
-"LayerNormSubGraph",
-"LayerNormNoFusionSubGraph",
-"SoftmaxSubgraph",
-"HardSwishSubgraph",
-"CeluSubgraph",
-"NormalizeSubgraph",
-"BatchNormalizationSubgraph",
-"ExpandSubgraph",
-"MishSubgraph",
-"AttentionSubgraph",
-"BiasedMatMulSubgraph",
-
-// --- ONNX conformance suite tests (Test_ONNX_conformance) ---
-// These fail under ORT due to OpenCV input-staging bug: setInput() stores data in the
-// mainGraph tensor storage, but forwardWithMultipleOutputs() reads from netInputLayer->blobs
-// which is never populated when ORT session is initialized after setInput().
-"test_dropout_default",
-"test_dropout_default_mask",
-"test_dropout_default_mask_ratio",
-"test_dropout_default_old",
-"test_dropout_default_ratio",
-"test_dropout_random_old",
-
 // --- Test_ONNX_layers / Test_ONNX_nets tests (test_onnx_importer.cpp) ---
-"Dropout",
-"Linear",
-"ReduceMean",
-"ReduceSum",
-"CompareSameDims_EQ",
-"AveragePooling",
-"BatchNormalization",
-"Multiplication",
-"Quantized_MatMul",
 // Trilu with 1D input is an OpenCV extension; ONNX spec requires rank>=2, ORT enforces strictly.
 "trilu_tril_one_row1D",
 // alexnet.onnx declares 224x224 input but reference was generated with 227x227 (Caffe-era); ORT enforces shape strictly while CLASSIC/NEW silently accept any size.

@@ -2102,7 +2102,6 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
     std::vector<Mat> outputs;
     try
     {
-        //net.setTracingMode(DNN_TRACE_ALL);
         net.forward(outputs, layerNames);
     }
     catch (...)
@@ -2124,15 +2123,6 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
         {
             if (ref_outputs.size() == 1)
             {
-                /*std::cout << "\n-------------------------------------------\nreference tensor:\n";
-                pprint(std::cout, ref_outputs[0], 0, 3, 100, '[');
-                std::cout << "\n";
-                std::cout << "\n-------------------------------------------\nabsdiff:\n";
-                Mat temp;
-                absdiff(ref_outputs[0], outputs[0], temp);
-                pprint(std::cout, temp, 0, 3, 100, '[');
-                std::cout << "\n";*/
-                // probably we found random unconnected layers.
                 normAssert(ref_outputs[0], outputs[0], "", default_l1, default_lInf);
             }
             else

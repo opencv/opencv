@@ -12,21 +12,6 @@ class Test_Graph_Simplifier : public ::testing::Test {
 
     Test_Graph_Simplifier() : required(true) {}
 
-    void SetUp() override {
-        if ((EngineType)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO) != ENGINE_ORT)
-            return;
-        const auto* test_info = ::testing::UnitTest::GetInstance()->current_test_info();
-        if (!test_info) return;
-        // Graph simplifier tests verify OpenCV's internal subgraph fusion, which does not
-        // run under ORT engine (ORT owns the whole graph). Skip all of them via the denylist.
-        static const std::set<std::string> denylist = {
-            #include "test_onnx_ort_denylist.inl.hpp"
-        };
-        std::string name = test_info->name();
-        if (denylist.find(name) != denylist.end())
-            throw SkipTestException("ORT engine: graph simplifier tests not applicable");
-    }
-
     void test_conformance(const std::string &basename, const std::string &expected_layer) {
         test(basename + std::string("/model"), std::vector<std::string>{expected_layer}, std::string("dnn/onnx/conformance/node/"));
     }
@@ -38,6 +23,15 @@ class Test_Graph_Simplifier : public ::testing::Test {
     void test(const std::string &basename, const std::vector<std::string> &expected_layers, const std::string &model_path_prefix = std::string("dnn/onnx/models/")) {
         std::string model_path = findDataFile(model_path_prefix + basename + std::string(".onnx"), required);
         auto net = readNet(model_path);
+
+        bool isOrt = (EngineType)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO) == ENGINE_ORT;
+        if (isOrt) {
+            // Under ORT engine, OpenCV's graph simplifier never runs (ORT owns the whole graph).
+            // Just verify the model loads successfully.
+            EXPECT_FALSE(net.empty());
+            return;
+        }
+
         std::vector<std::string> layers;
         net.getLayerTypes(layers);
 
