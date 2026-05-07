@@ -1491,18 +1491,13 @@ struct MaskedNormL1_SIMD<uchar, int> {
         int result = 0;
         if (cn == 1) {
             int i = 0;
-            const int vstep = VTraits<v_uint8>::vlanes();
+            const int vstep = VTraits<v_uint8>::vlanes() / 4;
             v_uint32 acc = vx_setzero_u32();
             for (; i <= len - vstep; i += vstep) {
-                v_uint8 m   = vx_load(mask + i);
-                v_uint8 s   = vx_load(src + i);
-                v_uint8 sel = v_and(s, v_gt(m, vx_setzero_u8()));
-                v_uint16 lo16, hi16;
-                v_expand(sel, lo16, hi16);
-                v_uint32 lo32a, lo32b, hi32a, hi32b;
-                v_expand(lo16, lo32a, lo32b);
-                v_expand(hi16, hi32a, hi32b);
-                acc = v_add(acc, v_add(v_add(lo32a, lo32b), v_add(hi32a, hi32b)));
+                v_uint32 m   = v_load_expand_q(mask + i);
+                v_uint32 s = v_load_expand_q(src + i);
+                v_uint32 sel = v_and(s, v_gt(m, vx_setzero_u32()));
+                acc = v_add(acc, sel);
             }
 
             result = (int)v_reduce_sum(acc);
@@ -1517,17 +1512,12 @@ struct MaskedNormL1_SIMD<uchar, int> {
                 if (mask[i]) {
                     const uchar* elem = src + i * cn;
                     int k = 0;
-                    const int vstep = VTraits<v_uint8>::vlanes();
+                    const int vstep = VTraits<v_uint8>::vlanes() / 4;
                     v_uint32 acc = vx_setzero_u32();
 
                     for (; k <= cn - vstep; k += vstep) {
-                        v_uint8 s = vx_load(elem + k);
-                        v_uint16 lo16, hi16;
-                        v_expand(s, lo16, hi16);
-                        v_uint32 lo32a, lo32b, hi32a, hi32b;
-                        v_expand(lo16, lo32a, lo32b);
-                        v_expand(hi16, hi32a, hi32b);
-                        acc = v_add(acc, v_add(v_add(lo32a, lo32b), v_add(hi32a, hi32b)));
+                        v_uint32 s = v_load_expand_q(elem + k);
+                        acc = v_add(acc, s);
                     }
 
                     result += (int)v_reduce_sum(acc);
