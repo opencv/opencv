@@ -19,7 +19,7 @@ Abstract:
 #ifdef MLAS_USE_SVE
 #include "sve/mlasi_sve.h"
 #endif
-#if defined(MLAS_NEON_INTRINSICS) && defined(MLAS_F16VEC_INTRINSICS_SUPPORTED)
+#if defined(MLAS_NEON_INTRINSICS) && defined(MLAS_F16VEC_INTRINSICS_SUPPORTED) && !defined(MLAS_GEMM_ONLY)
 #include "erf_neon_fp16.h"
 #include "gelu_neon_fp16.h"
 #endif

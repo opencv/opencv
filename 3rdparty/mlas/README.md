@@ -57,7 +57,10 @@ re-vendor:
    the `MLAS_OPENCV_THREADING` block.
 3. `lib/platform.cpp` — non-SGEMM dispatch is wrapped in `#if 0` blocks
    (search for `MLAS_GEMM_ONLY`). Allows building the SGEMM-only subset
-   without pulling in the rest of the MLAS sources.
+   without pulling in the rest of the MLAS sources. The top-of-file
+   `erf_neon_fp16.h` / `gelu_neon_fp16.h` includes are also gated with
+   `!defined(MLAS_GEMM_ONLY)` because those headers transitively pull in
+   non-vendored FP16 sources (`fp16_common.h`, `softmax_kernel_neon.h`).
 4. `lib/core/common/{narrow,common}.h` — minimal shims for ORT internals
    that MLAS calls; not present upstream as MLAS sources, only as ORT
    includes.

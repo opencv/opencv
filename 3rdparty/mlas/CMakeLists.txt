@@ -197,7 +197,7 @@ target_compile_definitions(opencv_dnn_mlas PRIVATE
   MLAS_GEMM_ONLY=1
 )
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   target_compile_options(opencv_dnn_mlas PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:-w>"
     "$<$<COMPILE_LANGUAGE:CXX>:-include>"
