@@ -1,9 +1,16 @@
 #!/usr/bin/env python
 
 """aruco_detect_board_charuco.py
-Usage example:
-python aruco_detect_board_charuco.py -w=5 -h=7 -sl=0.04 -ml=0.02 -d=10 -c=../data/aruco/tutorial_camera_charuco.yml
-                                     -i=../data/aruco/choriginal.jpg
+Detect markers and corners of a ChArUco board (CHARUCO_1 or CHARUCO_2 layout),
+optionally estimating the board pose when camera parameters are provided.
+
+Usage examples:
+  CHARUCO_1 (classic layout):
+    python aruco_detect_board_charuco.py -w=5 -h=7 -sl=0.04 -ml=0.02 -d=10 \
+        -c=../data/aruco/tutorial_camera_charuco.yml -i=../data/aruco/choriginal.jpg
+
+  CHARUCO_2 (full-cell layout):
+    python aruco_detect_board_charuco.py -w=5 -h=7 -sl=0.04 -d=10 --bt=1
 """
 
 import argparse
@@ -42,6 +49,8 @@ def main():
                         dest="ci", type=int)
     parser.add_argument("-c", help="Input file with calibrated camera parameters", default="", action="store",
                         dest="cam_param")
+    parser.add_argument("--bt", help="Board type: 0=CHARUCO_1 (classic), 1=CHARUCO_2 (full-cell markers)",
+                        default=0, type=int, dest="bt")
 
     args = parser.parse_args()
 
@@ -66,7 +75,10 @@ def main():
 
     aruco_dict = cv.aruco.getPredefinedDictionary(dict)
     board_size = (width, height)
-    board = cv.aruco.CharucoBoard(board_size, square_len, marker_len, aruco_dict)
+    board_type = cv.aruco.CHARUCO_2 if args.bt == cv.aruco.CHARUCO_2 else cv.aruco.CHARUCO_1
+    if board_type == cv.aruco.CHARUCO_2:
+        marker_len = square_len
+    board = cv.aruco.CharucoBoard(board_size, square_len, marker_len, aruco_dict, None, board_type)
     charuco_detector = cv.aruco.CharucoDetector(board)
 
     image = None

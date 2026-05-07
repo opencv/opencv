@@ -1,7 +1,8 @@
 #pragma once
 #include "opencv2/objdetect/aruco_detector.hpp"
 #include "opencv2/objdetect/aruco_board.hpp"
-namespace  cv::aruco{
+namespace  cv{
+namespace aruco{
 
 class CharucoBoard2{
 public:
@@ -65,4 +66,5 @@ class     CharucoDetector2{
 
 };
 
+}
 }
