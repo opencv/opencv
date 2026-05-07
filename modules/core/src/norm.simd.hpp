@@ -1494,8 +1494,8 @@ struct MaskedNormL1_SIMD<uchar, int> {
             const int vstep = VTraits<v_uint8>::vlanes() / 4;
             v_uint32 acc = vx_setzero_u32();
             for (; i <= len - vstep; i += vstep) {
-                v_uint32 m   = v_load_expand_q(mask + i);
-                v_uint32 s = v_load_expand_q(src + i);
+                v_uint32 m   = vx_load_expand_q(mask + i);
+                v_uint32 s = vx_load_expand_q(src + i);
                 v_uint32 sel = v_and(s, v_gt(m, vx_setzero_u32()));
                 acc = v_add(acc, sel);
             }
@@ -1516,7 +1516,7 @@ struct MaskedNormL1_SIMD<uchar, int> {
                     v_uint32 acc = vx_setzero_u32();
 
                     for (; k <= cn - vstep; k += vstep) {
-                        v_uint32 s = v_load_expand_q(elem + k);
+                        v_uint32 s = vx_load_expand_q(elem + k);
                         acc = v_add(acc, s);
                     }
 
