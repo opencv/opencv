@@ -34,7 +34,7 @@ namespace dnn
 
 // Detect a "swap innermost two dims" permutation, collapsing leading dims.
 // Returns true and fills outer/rows/cols when applicable.
-static bool is_swap_last_two_f32(const MatShape& inpShape,
+static bool isSwapLastTwo(const MatShape& inpShape,
                                  const std::vector<int>& perm,
                                  int esz,
                                  int64_t& outer, int64_t& rows, int64_t& cols)
@@ -62,7 +62,7 @@ static void transpose(const Mat& inp, const std::vector<int>& perm, Mat& out)
     CV_Assert(esz == 1 || esz == 2 || esz == 4 || esz == 8);
 
     int64_t outer = 1, rows = 0, cols = 0;
-    if (is_swap_last_two_f32(inpShape, perm, (int)esz, outer, rows, cols)
+    if (isSwapLastTwo(inpShape, perm, (int)esz, outer, rows, cols)
         && inp.isContinuous() && out.isContinuous()) {
         CV_CPU_DISPATCH(transpose2D_f32_,
                         (inp.ptr<float>(), out.ptr<float>(), outer, rows, cols),

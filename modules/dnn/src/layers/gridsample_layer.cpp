@@ -6,7 +6,7 @@
 
 #include "../precomp.hpp"
 
-// activation_kernels-style dispatch for the SIMD-over-channels bilinear kernel.
+// Dispatch infrastructure for the SIMD GridSample kernels.
 #include "cpu_kernels/gridsample_kernels.simd.hpp"
 #include "layers/cpu_kernels/gridsample_kernels.simd_declarations.hpp"
 #define CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN namespace cpu_baseline {
@@ -128,103 +128,6 @@ static inline void gridSampleComputeRows(
         return (float)(*p);
     };
 
-    if ((MODE == M_BILINEAR || MODE == M_NEAREST) && C >= 8 && Wout <= 64) {
-        const int parallel_rows = N * Hout;
-        float xscale, yscale, xdelta, ydelta;
-        computeNormToPixParams(W, H, align_corners, xscale, yscale, xdelta, ydelta);
-
-        parallel_for_(Range(0, parallel_rows), [&](const Range& range) {
-            int px[64], py[64];       // NEAREST: px/py; BILINEAR: x0/y0
-            float dx[64], dy[64];     // BILINEAR: fractional offsets
-            bool interior[64];        // BILINEAR: fast path (all 4 corners in-bounds)
-            for (int row = range.start; row < range.end; row++) {
-                int n = row / Hout;
-                int h = row - n * Hout;
-                const T* baseN = Xptr + n * xNStride;
-                size_t gRowBase = n * gNStride + h * gHStride;
-
-                unsigned char interior_u8[64] = {};
-                for (int w = 0; w < Wout; w++) {
-                    float nx = Gptr[gRowBase + w * gWStride + 0];
-                    float ny = Gptr[gRowBase + w * gWStride + 1];
-                    float xf, yf; normToPix(nx, ny, xscale, yscale, xdelta, ydelta, xf, yf);
-                    if (MODE == M_NEAREST) {
-                        px[w] = cvRound(xf);
-                        py[w] = cvRound(yf);
-                    } else {
-                        int x0 = saturate_cast<int>(floorf(xf));
-                        int y0 = saturate_cast<int>(floorf(yf));
-                        px[w] = x0; py[w] = y0;
-                        dx[w] = xf - x0; dy[w] = yf - y0;
-                        interior[w] = (x0 >= 0 && y0 >= 0 && x0 + 1 < W && y0 + 1 < H);
-                        interior_u8[w] = interior[w] ? 1 : 0;
-                    }
-                }
-
-                if (MODE == M_BILINEAR && std::is_same<T, float>::value) {
-                    CV_CPU_DISPATCH(gridSampleBilinearF32InteriorRow_,
-                                    ((const float*)baseN,
-                                     (float*)(Yptr + n * yNStride + h * yHStride),
-                                     px, py, dx, dy, interior_u8,
-                                     C, Wout, xCStride, xHStride, yCStride),
-                                    NEON, AVX2, AVX, BASELINE);
-                    for (int w = 0; w < Wout; w++) {
-                        if (interior[w]) continue;
-                        const int x0 = px[w], y0 = py[w];
-                        const float fx = dx[w], fy = dy[w];
-                        for (int c = 0; c < C; c++) {
-                            const T* baseNC = baseN + c * xCStride;
-                            float v00 = fetch(baseNC, y0,     x0);
-                            float v01 = fetch(baseNC, y0,     x0 + 1);
-                            float v10 = fetch(baseNC, y0 + 1, x0);
-                            float v11 = fetch(baseNC, y0 + 1, x0 + 1);
-                            float vx0 = v00 + (v01 - v00) * fx;
-                            float vx1 = v10 + (v11 - v10) * fx;
-                            float outv = vx0 + (vx1 - vx0) * fy;
-                            Yptr[n * yNStride + c * yCStride + h * yHStride + w] = saturate_cast<T>(outv);
-                        }
-                    }
-                    continue;
-                }
-
-                for (int c = 0; c < C; c++) {
-                    const T* baseNC = baseN + c * xCStride;
-                    T* outRow = Yptr + n * yNStride + c * yCStride + h * yHStride;
-                    for (int w = 0; w < Wout; w++) {
-                        float outv = 0.f;
-                        if (MODE == M_NEAREST) {
-                            outv = fetch(baseNC, py[w], px[w]);
-                        } else if (interior[w]) {
-                            const int x0 = px[w], y0 = py[w];
-                            const float fx = dx[w], fy = dy[w];
-                            const T* p_y0 = baseNC + (size_t)y0 * xHStride;
-                            const T* p_y1 = p_y0 + xHStride;
-                            float v00 = (float)p_y0[x0];
-                            float v01 = (float)p_y0[x0 + 1];
-                            float v10 = (float)p_y1[x0];
-                            float v11 = (float)p_y1[x0 + 1];
-                            float vx0 = v00 + (v01 - v00) * fx;
-                            float vx1 = v10 + (v11 - v10) * fx;
-                            outv = vx0 + (vx1 - vx0) * fy;
-                        } else {
-                            const int x0 = px[w], y0 = py[w];
-                            const float fx = dx[w], fy = dy[w];
-                            float v00 = fetch(baseNC, y0,     x0);
-                            float v01 = fetch(baseNC, y0,     x0 + 1);
-                            float v10 = fetch(baseNC, y0 + 1, x0);
-                            float v11 = fetch(baseNC, y0 + 1, x0 + 1);
-                            float vx0 = v00 + (v01 - v00) * fx;
-                            float vx1 = v10 + (v11 - v10) * fx;
-                            outv = vx0 + (vx1 - vx0) * fy;
-                        }
-                        outRow[w] = saturate_cast<T>(outv);
-                    }
-                }
-            }
-        });
-        return;
-    }
-
     int nstripes = Hout * C * N;
     parallel_for_(Range(0, nstripes), [&](const Range& range) {
         for (int row = range.start; row < range.end; row++) {
@@ -339,6 +242,7 @@ static inline void gridSampleComputeRows(
     });
 }
 
+
 template<typename T>
 static inline void gridSampleDispatch(
         const T* Xptr,
@@ -350,6 +254,24 @@ static inline void gridSampleDispatch(
         int mode, int padding,
         float cubic_alpha)
 {
+    if (std::is_same<T, float>::value) {
+        const float* X = reinterpret_cast<const float*>(Xptr);
+        float* Y = reinterpret_cast<float*>(Yptr);
+        if (mode == M_NEAREST) {
+            CV_CPU_DISPATCH(gridSampleNearest2D_f32_,
+                            (X, Gptr, Y, N, C, H, W, Hout, Wout, align_corners, padding),
+                            NEON, AVX2, AVX, BASELINE);
+        } else if (mode == M_BILINEAR) {
+            CV_CPU_DISPATCH(gridSampleBilinear2D_f32_,
+                            (X, Gptr, Y, N, C, H, W, Hout, Wout, align_corners, padding),
+                            NEON, AVX2, AVX, BASELINE);
+        } else {
+            CV_CPU_DISPATCH(gridSampleBicubic2D_f32_,
+                            (X, Gptr, Y, N, C, H, W, Hout, Wout, align_corners, padding, cubic_alpha),
+                            NEON, AVX2, AVX, BASELINE);
+        }
+        return;
+    }
     if (mode == M_NEAREST) {
         if (padding == P_ZEROS) gridSampleComputeRows<T, M_NEAREST, P_ZEROS>(Xptr, Gptr, Yptr, N, C, H, W, Hout, Wout, align_corners, cubic_alpha);
         else if (padding == P_BORDER) gridSampleComputeRows<T, M_NEAREST, P_BORDER>(Xptr, Gptr, Yptr, N, C, H, W, Hout, Wout, align_corners, cubic_alpha);
@@ -492,6 +414,7 @@ static inline void gridSampleCompute3D(
     });
 }
 
+
 template<typename T>
 static inline void gridSampleDispatch3D(
         const T* Xptr,
@@ -502,6 +425,22 @@ static inline void gridSampleDispatch3D(
         bool align_corners,
         int mode, int padding)
 {
+    if (std::is_same<T, float>::value) {
+        const float* X = reinterpret_cast<const float*>(Xptr);
+        float* Y = reinterpret_cast<float*>(Yptr);
+        if (mode == M_NEAREST) {
+            CV_CPU_DISPATCH(gridSampleNearest3D_f32_,
+                            (X, Gptr, Y, N, C, D, H, W, Dout, Hout, Wout, align_corners, padding),
+                            NEON, AVX2, AVX, BASELINE);
+        } else if (mode == M_BILINEAR) {
+            CV_CPU_DISPATCH(gridSampleBilinear3D_f32_,
+                            (X, Gptr, Y, N, C, D, H, W, Dout, Hout, Wout, align_corners, padding),
+                            NEON, AVX2, AVX, BASELINE);
+        } else {
+            CV_Error(Error::StsNotImplemented, "GridSample bicubic mode is not supported for 5D inputs");
+        }
+        return;
+    }
     if (mode == M_NEAREST) {
         if (padding == P_ZEROS) gridSampleCompute3D<T, M_NEAREST, P_ZEROS>(Xptr, Gptr, Yptr, N, C, D, H, W, Dout, Hout, Wout, align_corners);
         else if (padding == P_BORDER) gridSampleCompute3D<T, M_NEAREST, P_BORDER>(Xptr, Gptr, Yptr, N, C, D, H, W, Dout, Hout, Wout, align_corners);

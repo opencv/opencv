@@ -7,6 +7,9 @@
 #include "hal_replacement.hpp"
 #include "opencv2/core/detail/dispatch_helper.impl.hpp"
 
+#include "transpose.simd.hpp"
+#include "transpose.simd_declarations.hpp"
+
 #include <algorithm> // std::swap_ranges
 #include <numeric> // std::accumulate
 
@@ -179,38 +182,10 @@ static void transpose_16bit_simd(const uchar* src, size_t sstep, uchar* dst, siz
 
 static void transpose_32bit_simd(const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz)
 {
-    const uint32_t* src32 = reinterpret_cast<const uint32_t*>(src);
-    uint32_t* dst32 = reinterpret_cast<uint32_t*>(dst);
-
-    const size_t sstep_e = sstep / sizeof(uint32_t);
-    const size_t dstep_e = dstep / sizeof(uint32_t);
-
-    const int m = sz.width, n = sz.height;
-    int i = 0;
-    for (; i <= m - 4; i += 4)
-    {
-        int j = 0;
-        for (; j <= n - 4; j += 4)
-        {
-            v_uint32x4 r0 = v_load(src32 + i + sstep_e*(j+0));
-            v_uint32x4 r1 = v_load(src32 + i + sstep_e*(j+1));
-            v_uint32x4 r2 = v_load(src32 + i + sstep_e*(j+2));
-            v_uint32x4 r3 = v_load(src32 + i + sstep_e*(j+3));
-            v_uint32x4 o0, o1, o2, o3;
-            v_transpose4x4(r0, r1, r2, r3, o0, o1, o2, o3);
-
-            v_store(dst32 + dstep_e*(i+0) + j, o0);
-            v_store(dst32 + dstep_e*(i+1) + j, o1);
-            v_store(dst32 + dstep_e*(i+2) + j, o2);
-            v_store(dst32 + dstep_e*(i+3) + j, o3);
-        }
-        for (; j < n; j++)
-            for (int k = 0; k < 4; k++)
-                dst32[dstep_e*(i+k) + j] = src32[i + sstep_e*j + k];
-    }
-    for (; i < m; i++)
-        for (int j = 0; j < n; j++)
-            dst32[dstep_e*i + j] = src32[i + sstep_e*j];
+    // Cache-blocked + AVX2-aware path lives in transpose.simd.hpp; pick the
+    // best variant available at runtime.
+    CV_CPU_DISPATCH(transpose_32bit_blocks_simd, (src, sstep, dst, dstep, sz),
+                    CV_CPU_DISPATCH_MODES_ALL);
 }
 
 static void transpose_48bit_simd(const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz)

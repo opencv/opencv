@@ -393,14 +393,17 @@ void softmax_(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep, fl
                 maxVal = std::max(maxVal, axisBuf[cnDim]);
             }
 
+            // Fuse the input scale into the centered exp: softmax(x*scale) where
+            // exp((x - maxVal) * scale) is numerically equivalent to pre-multiplying.
             float s = 0.f;
             cnDim = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
             v_float32 vs = vx_setzero_f32();
             vmax = vx_setall_f32(maxVal);
+            v_float32 vscale = vx_setall_f32(scale);
             for (; cnDim <= axisStep - nlanes; cnDim += nlanes) {
                 v_float32 val = vx_load(axisBuf + cnDim);
-                val = v_sub(val, vmax);
+                val = v_mul(v_sub(val, vmax), vscale);
                 val = v_exp(val);
                 vs = v_add(vs, val);
                 v_store(axisBuf + cnDim, val);
@@ -408,7 +411,7 @@ void softmax_(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep, fl
             s = v_reduce_sum(vs);
 #endif
             for (; cnDim < axisStep; cnDim++) {
-                axisBuf[cnDim] = expf(axisBuf[cnDim] - maxVal);
+                axisBuf[cnDim] = expf((axisBuf[cnDim] - maxVal) * scale);
                 s += axisBuf[cnDim];
             }
 
@@ -417,7 +420,7 @@ void softmax_(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep, fl
                 for (; _cnDim < axisStep; _cnDim++)
                     dstPtr[srcOffset + (_cnDim + axisBias) * cnStep] = 0.f;
             } else {
-                s = scale / s;
+                s = 1.f / s;
 #if CV_ENABLE_UNROLLED && defined(_M_ARM64)
                 for (; _cnDim + 3 < axisStep; _cnDim += 4) {
                     dstPtr[srcOffset + (_cnDim + 0 + axisBias) * cnStep] = axisBuf[_cnDim + 0] * s;
