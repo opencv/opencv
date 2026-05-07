@@ -300,6 +300,15 @@ macro(ocv_set_cuda_arch_bin_and_ptx nvcc_executable)
           ${_arch_hopper}
           ${_arch_blackwell}
       )
+      if(NOT __cuda_arch_bin)
+        message(FATAL_ERROR "CUDA: No supported GPU architectures were detected by NVCC. "
+            "All probe compilations failed - this usually means the host compiler is incompatible "
+            "with this CUDA toolkit (e.g. CUDA 13.x rejects gcc >= 15). "
+            "Re-run cmake with -DOPENCV_CMAKE_CUDA_DEBUG=1 to see NVCC errors, then either: "
+            "(1) set -DCUDA_HOST_COMPILER=/path/to/supported/g++, or "
+            "(2) specify -DCUDA_ARCH_BIN=<list> explicitly (see https://docs.opencv.org/4.x/d2/dbc/cuda_intro.html), or "
+            "(3) pass -ccbin via -DOPENCV_CUDA_DETECTION_NVCC_FLAGS.")
+      endif()
       list(GET __cuda_arch_bin -1 __cuda_arch_ptx)
     endif()
   endif()
