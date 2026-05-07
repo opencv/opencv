@@ -4,6 +4,7 @@
 
 #include "parametersController.hpp"
 #include <opencv2/objdetect/aruco_dictionary.hpp>
+#include <opencv2/objdetect/aruco_board.hpp>
 #include <opencv2/videoio/registry.hpp>
 #include <iostream>
 
@@ -150,6 +151,7 @@ bool calib::parametersController::loadFromParser(cv::CommandLineParser &parser)
     }
     else if(templateType.find("charuco", 0) == 0) {
         mCapParams.board = ChArUco;
+        mCapParams.charucoBoardType = (templateType == "charuco2") ? cv::aruco::CHARUCO_2 : cv::aruco::CHARUCO_1;
         mCapParams.boardSizeUnits = cv::Size(5, 7);
         mCapParams.charucoDictFile = parser.get<std::string>("fad");
         std::string arucoDictName = parser.get<std::string>("ad");
@@ -180,7 +182,7 @@ bool calib::parametersController::loadFromParser(cv::CommandLineParser &parser)
             return false;
         }
         mCapParams.charucoSquareLength = 200;
-        mCapParams.charucoMarkerSize = 100;
+        mCapParams.charucoMarkerSize = (templateType == "charuco2") ? 200 : 100;
     }
     else {
         std::cerr << "Wrong template name\n";

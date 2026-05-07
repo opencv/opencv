@@ -43,7 +43,7 @@ const char* keys  =
         "{ci       | 0       | Camera id }"
         "{vb       |         | Video I/O back-end. One of: %s }"
         "{flip     | false   | Vertical flip of input frames }"
-        "{t        | circles | Template for calibration (circles, chessboard, dualCircles, charuco, symcircles) }"
+        "{t        | circles | Template for calibration (circles, chessboard, dualCircles, charuco, charuco2, symcircles) }"
         "{sz       | 16.3    | Distance between two nearest centers of circles or squares on calibration board}"
         "{dst      | 295     | Distance between white and black parts of daulCircles template}"
         "{w        |         | Width of template (in corners or circles)}"
