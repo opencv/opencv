@@ -65,8 +65,9 @@ public:
 class ONNXGraphWrapper : public ImportGraphWrapper
 {
 public:
-    ONNXGraphWrapper(opencv_onnx::GraphProto& _net) : net(_net)
+    ONNXGraphWrapper(opencv_onnx::GraphProto& _net, const std::string& _basePath = "") : net(_net)
     {
+        basePath = _basePath;
         // Add a fake initializer with empty name.
         // Some ONNX models skip their inputs. For example,
         // Resize which has 4 inputs but 2 of them have empty names.
@@ -129,7 +130,7 @@ public:
     Mat getMatFromInitializer(int idx)
     {
         const opencv_onnx::TensorProto& tensor_proto = net.initializer(idx);
-        return getMatFromTensor(tensor_proto);
+        return getMatFromTensor(tensor_proto, false, basePath);
     }
 
     std::string getNameOfInitializer(int idx) const
@@ -176,6 +177,9 @@ public:
 private:
     int numInputs, numInitializers;
     opencv_onnx::GraphProto& net;
+
+public:
+    std::string basePath;
 };
 
 static Mat extractConstant(const Ptr<ImportGraphWrapper>& net, int node_id, int input_id)
@@ -193,7 +197,7 @@ static Mat extractConstant(const Ptr<ImportGraphWrapper>& net, int node_id, int 
         Ptr<ImportNodeWrapper> constant_ptr = net->getNode(constant_id);
         opencv_onnx::NodeProto* constant_node = constant_ptr.dynamicCast<ONNXNodeWrapper>()->node;
         opencv_onnx::TensorProto constant_proto = constant_node->attribute(0).t();
-        return getMatFromTensor(constant_proto);
+        return getMatFromTensor(constant_proto, false, onnx_net->basePath);
     }
 }
 
@@ -841,12 +845,28 @@ public:
             std::vector<int64_t> axes = extractAxis(net, matchedNodesIds[mean]);
             // check whether it is -1 or last_axis or [axis, ..., last_axis]
             int64_t input_ndims = static_cast<int64_t>(net.dynamicCast<ONNXGraphWrapper>()->getTensorShapeSize(matchedNodesIds[mean], 0));
-            if (input_ndims == -1) {
-                return false; // input shape unknown
+
+            // When axes are all negative (e.g. [-1] or [-2, -1]), we can validate
+            // the pattern without knowing input_ndims.
+            bool all_axes_negative = !axes.empty();
+            for (size_t i = 0; i < axes.size(); i++) {
+                if (axes[i] >= 0) { all_axes_negative = false; break; }
             }
-            // assume that axes are sorted in ascending order, e.g. [0, 1, 2, 3] or [-3, -2, -1]
-            if (axes.back() != -1 && axes.back() != (input_ndims - 1)) {
-                return false;
+
+            if (input_ndims == -1 && !all_axes_negative) {
+                return false; // input shape unknown and axes are positive
+            }
+
+            if (input_ndims != -1) {
+                // assume that axes are sorted in ascending order, e.g. [0, 1, 2, 3] or [-3, -2, -1]
+                if (axes.back() != -1 && axes.back() != (input_ndims - 1)) {
+                    return false;
+                }
+            } else {
+                // axes are all negative; check that the last axis is -1
+                if (axes.back() != -1) {
+                    return false;
+                }
             }
             for (size_t i = 0; i < axes.size() - 1; i++) {
                 if (axes[i] - axes[i + 1] != -1) {
@@ -857,9 +877,18 @@ public:
             std::vector<int64_t> axes1 = extractAxis(net, matchedNodesIds[mean1]);
             if (axes.size() != axes1.size())
                 return false;
-            for (size_t i = 0; i < axes.size(); i++) {
-                if (((axes[i] + input_ndims) % input_ndims) != ((axes1[i] + input_ndims) % input_ndims)) {
-                    return false;
+            if (input_ndims != -1) {
+                for (size_t i = 0; i < axes.size(); i++) {
+                    if (((axes[i] + input_ndims) % input_ndims) != ((axes1[i] + input_ndims) % input_ndims)) {
+                        return false;
+                    }
+                }
+            } else {
+                // both axes sets are negative; just compare directly
+                for (size_t i = 0; i < axes.size(); i++) {
+                    if (axes[i] != axes1[i]) {
+                        return false;
+                    }
                 }
             }
             axis = axes[0];
@@ -1725,7 +1754,7 @@ public:
     }
 };
 
-void simplifySubgraphs(opencv_onnx::GraphProto& net)
+void simplifySubgraphs(opencv_onnx::GraphProto& net, const std::string& basePath)
 {
     std::vector<Ptr<Subgraph> > subgraphs;
     subgraphs.push_back(makePtr<BiasedMatmulSubgraph>());
@@ -1762,7 +1791,7 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net)
         subgraphs.push_back(makePtr<AttentionSingleHeadSubGraph>());
     }
 
-    simplifySubgraphs(Ptr<ImportGraphWrapper>(new ONNXGraphWrapper(net)), subgraphs);
+    simplifySubgraphs(Ptr<ImportGraphWrapper>(new ONNXGraphWrapper(net, basePath)), subgraphs);
 }
 
 

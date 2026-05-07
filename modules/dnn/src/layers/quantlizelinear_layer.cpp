@@ -180,12 +180,15 @@ static void quantizeLinear(const Mat& inp, const Mat& scale_, const Mat& zp,
         CV_Assert(zpshape == scshape);
     }
 
-    axis = normalize_axis(axis, ndims);
+    if (ndims > 0)
+        axis = normalize_axis(axis, ndims);
+    else
+        axis = 0;
     for (i = 0; i < axis; i++)
         nslices *= inpshape[i];
     for (i = axis+1; i < ndims; i++)
         slice_size *= inpshape[i];
-    int sz_a = inpshape[axis];
+    int sz_a = ndims > 0 ? inpshape[axis] : 1;
 
     if (block_size == 0) {
         size_t sc_total = scshape.total();

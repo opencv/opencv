@@ -548,8 +548,13 @@ void Net::Impl::prepareForInference()
         fuseQDQ();
         constFold();
         constArgs();
-        useBlockLayout();
+        fuseAttention();
+        fuseSharedInputGemm();
+        fuseReshapeTranspose();
+        fuseTransposeMatMul();
+        fuseScaleSoftmax();
         fuseBasic();
+        useBlockLayout();
         assignBuffers();
         totalLayers = updateGraphOfs(mainGraph, 0, true);
         prepared = true;

@@ -78,6 +78,8 @@ public:
         scale = params.get<float>("scales", 1.0f);
     }
 
+    bool isDataShuffling() const CV_OVERRIDE { return true; }
+
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
                                  const int requiredOutputs,
                                  std::vector<MatShape> &outputs,

@@ -233,33 +233,208 @@ void fastGemmPackB(bool trans, size_t N, size_t K, const float *B, size_t ldb, f
     }
 }
 
+static constexpr int FAST_GEMM_THIN_MAX_M = 12;
+#if !CV_SIMD
+// Scalar-fallback strip width (unroll factor, not SIMD lanes); 4 matches the narrowest universal-intrinsic float width so layout stays consistent with SIMD builds.
+static constexpr int FAST_GEMM_THIN_SCALAR_NR = 4;
+#endif
+
+static inline int fast_gemm_thin_lanes() {
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    return VTraits<v_float32>::vlanes();
+#else
+    return FAST_GEMM_THIN_SCALAR_NR;
+#endif
+}
+
+static inline void fast_gemm_thin_strip(int M, int K, float alpha,
+                                        const float* A, int lda0, int lda1,
+                                        const float* b_strip,
+                                        float beta, float* c_strip, int ldc) {
+#if CV_SIMD
+    const int NR = VTraits<v_float32>::vlanes();
+    v_float32 acc[FAST_GEMM_THIN_MAX_M];
+    for (int m = 0; m < M; m++) acc[m] = vx_setzero_f32();
+
+    for (int k = 0; k < K; k++) {
+        v_float32 bv = vx_load(b_strip + k * NR);
+        for (int m = 0; m < M; m++) {
+            v_float32 am = vx_setall_f32(A[m * lda0 + k * lda1]);
+            acc[m] = v_fma(bv, am, acc[m]);
+        }
+    }
+
+    const v_float32 v_alpha = vx_setall_f32(alpha);
+    if (beta == 0.f) {
+        for (int m = 0; m < M; m++)
+            vx_store(c_strip + m * ldc, v_mul(acc[m], v_alpha));
+    } else if (beta == 1.f) {
+        for (int m = 0; m < M; m++) {
+            v_float32 cv = vx_load(c_strip + m * ldc);
+            vx_store(c_strip + m * ldc, v_fma(acc[m], v_alpha, cv));
+        }
+    } else {
+        const v_float32 v_beta = vx_setall_f32(beta);
+        for (int m = 0; m < M; m++) {
+            v_float32 cv = vx_load(c_strip + m * ldc);
+            cv = v_mul(cv, v_beta);
+            vx_store(c_strip + m * ldc, v_fma(acc[m], v_alpha, cv));
+        }
+    }
+#elif CV_SIMD_SCALABLE
+    // Scalable vector types (e.g. RVV) are sizeless and cannot form arrays;
+    // back the per-row accumulators with a scalar scratch buffer.
+    const int NR = VTraits<v_float32>::vlanes();
+    float acc_buf[FAST_GEMM_THIN_MAX_M * VTraits<v_float32>::max_nlanes];
+    for (int m = 0; m < M; m++) vx_store(acc_buf + m * NR, vx_setzero_f32());
+
+    for (int k = 0; k < K; k++) {
+        v_float32 bv = vx_load(b_strip + k * NR);
+        for (int m = 0; m < M; m++) {
+            v_float32 am = vx_setall_f32(A[m * lda0 + k * lda1]);
+            v_float32 acc_m = vx_load(acc_buf + m * NR);
+            vx_store(acc_buf + m * NR, v_fma(bv, am, acc_m));
+        }
+    }
+
+    const v_float32 v_alpha = vx_setall_f32(alpha);
+    if (beta == 0.f) {
+        for (int m = 0; m < M; m++)
+            vx_store(c_strip + m * ldc, v_mul(vx_load(acc_buf + m * NR), v_alpha));
+    } else if (beta == 1.f) {
+        for (int m = 0; m < M; m++) {
+            v_float32 cv = vx_load(c_strip + m * ldc);
+            vx_store(c_strip + m * ldc, v_fma(vx_load(acc_buf + m * NR), v_alpha, cv));
+        }
+    } else {
+        const v_float32 v_beta = vx_setall_f32(beta);
+        for (int m = 0; m < M; m++) {
+            v_float32 cv = vx_load(c_strip + m * ldc);
+            cv = v_mul(cv, v_beta);
+            vx_store(c_strip + m * ldc, v_fma(vx_load(acc_buf + m * NR), v_alpha, cv));
+        }
+    }
+#else
+    const int NR = FAST_GEMM_THIN_SCALAR_NR;
+    float acc[FAST_GEMM_THIN_MAX_M * FAST_GEMM_THIN_SCALAR_NR] = {0};
+    for (int k = 0; k < K; k++) {
+        for (int m = 0; m < M; m++) {
+            float a_mk = A[m * lda0 + k * lda1];
+            for (int c = 0; c < NR; c++)
+                acc[m * NR + c] += a_mk * b_strip[k * NR + c];
+        }
+    }
+    if (beta == 0.f) {
+        for (int m = 0; m < M; m++)
+            for (int c = 0; c < NR; c++)
+                c_strip[m * ldc + c] = alpha * acc[m * NR + c];
+    } else {
+        for (int m = 0; m < M; m++)
+            for (int c = 0; c < NR; c++)
+                c_strip[m * ldc + c] = beta * c_strip[m * ldc + c] + alpha * acc[m * NR + c];
+    }
+#endif
+}
+
+bool fastGemmThinEligible(int M, int N, int K) {
+    if (M <= 0 || N <= 0 || K <= 0) return false;
+    if (M > FAST_GEMM_THIN_MAX_M) return false;
+    const int NR = fast_gemm_thin_lanes();
+    if (N < 2 * NR) return false;
+    return true;
+}
+
+size_t fastGemmThinPackBSize(int N, int K) {
+    const int NR = fast_gemm_thin_lanes();
+    const int n_strips = (N + NR - 1) / NR;
+    return (size_t)n_strips * (size_t)NR * (size_t)K;
+}
+
+void fastGemmThinPackB(int N, int K, const float* B, size_t ldb_K, size_t ldb_N, float* packed_B) {
+    const int NR = fast_gemm_thin_lanes();
+    const int n_strips = (N + NR - 1) / NR;
+    for (int s = 0; s < n_strips; s++) {
+        const int j0 = s * NR;
+        const int nr = std::min(NR, N - j0);
+        float* strip = packed_B + (size_t)s * NR * K;
+        for (int k = 0; k < K; k++) {
+            float* out = strip + k * NR;
+            int c = 0;
+            for (; c < nr; c++) out[c] = B[k * ldb_K + (j0 + c) * ldb_N];
+            for (; c < NR; c++) out[c] = 0.f;
+        }
+    }
+}
+
+void fastGemmThin(int M, int N, int K, float alpha,
+                  const float* A, int lda0, int lda1,
+                  const float* packed_B, float beta,
+                  float* C, int ldc, bool multi_thread) {
+    const int NR = fast_gemm_thin_lanes();
+    const int n_full_strips = N / NR;
+    const int n_tail = N - n_full_strips * NR;
+
+    auto fn = [&](const Range& r) {
+        for (int s = r.start; s < r.end; s++) {
+            const float* b_strip = packed_B + (size_t)s * NR * K;
+            float* c_strip = C + s * NR;
+            fast_gemm_thin_strip(M, K, alpha, A, lda0, lda1, b_strip, beta, c_strip, ldc);
+        }
+    };
+    if (multi_thread && n_full_strips > 1) {
+        parallel_for_(Range(0, n_full_strips), fn, (double)n_full_strips * M * K * NR * (1.0 / 1024.0));
+    } else {
+        fn(Range(0, n_full_strips));
+    }
+
+    if (n_tail > 0) {
+        const int j0 = n_full_strips * NR;
+        const float* b_strip = packed_B + (size_t)n_full_strips * NR * K;
+        for (int m = 0; m < M; m++) {
+            for (int c = 0; c < n_tail; c++) {
+                float acc_s = 0.f;
+                for (int k = 0; k < K; k++)
+                    acc_s += A[m * lda0 + k * lda1] * b_strip[k * NR + c];
+                const float mul = alpha * acc_s;
+                float* p = C + m * ldc + j0 + c;
+                *p = (beta == 0.f) ? mul : beta * (*p) + mul;
+            }
+        }
+    }
+}
+
 static void fast_gemm_thin(float alpha, float beta, int M, int N, int K,
                            const char *a_, int lda0, int lda1,
                            const char *b_, int ldb,
                            char *c_, int ldc, bool multi_thread) {
-    const float* a = (const float*)a_;
+    const float* A = (const float*)a_;
+    const float* B = (const float*)b_;
+    float* C = (float*)c_;
+
+    if (fastGemmThinEligible(M, N, K)) {
+        AutoBuffer<float> packed(fastGemmThinPackBSize(N, K));
+        fastGemmThinPackB(N, K, B, (size_t)ldb, 1, packed.data());
+        fastGemmThin(M, N, K, alpha, A, lda0, lda1, packed.data(), beta, C, ldc, multi_thread);
+        return;
+    }
 
     auto fn = [&](const Range &r) {
-        for(int start = r.start ; start < r.end; start++ ) {
-            float* c_i = (float*)c_ + start * ldc;
+        for (int i = r.start; i < r.end; i++) {
+            float* c_i = C + i * ldc;
             if (beta == 0.f)
-                for(int j = 0; j < N; j++ ) c_i[j] = 0.f;
+                for (int j = 0; j < N; j++) c_i[j] = 0.f;
             else if (beta != 1.f)
-                for(int j = 0; j < N; j++ ) c_i[j] *= beta;
-            for(int k = 0; k < K; k++ ) {
-                const float* b_k = (const float*)b_ + k * ldb;
-                float aval = alpha * a[start * lda0 + k * lda1];
-                for(int j = 0; j < N; j++ )
+                for (int j = 0; j < N; j++) c_i[j] *= beta;
+            for (int k = 0; k < K; k++) {
+                const float* b_k = B + k * ldb;
+                float aval = alpha * A[i * lda0 + k * lda1];
+                for (int j = 0; j < N; j++)
                     c_i[j] += aval * b_k[j];
             }
         }
     };
-
     if (multi_thread) {
-        int total = M; // outer loops
-        int cost_per_thread = static_cast<int>(K * N); // inner loops
-        double nstripes = (size_t)total * cost_per_thread * (1 / 1024.0);
-        parallel_for_(Range(0, total), fn, nstripes);
+        parallel_for_(Range(0, M), fn, (double)M * K * N * (1.0 / 1024.0));
     } else {
         fn(Range(0, M));
     }
@@ -321,7 +496,7 @@ void fastGemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
         std::swap(ldb0, ldb1);
     }
 
-    if (!trans_b && ldb1 == 1 && (M <= 4 || (uint64_t)M * N * K <= 10000)) {
+    if (!trans_b && ldb1 == 1 && (fastGemmThinEligible(M, N, K) || (uint64_t)M * N * K <= 10000)) {
         return fast_gemm_thin(alpha, beta, M, N, K, a, lda0, lda1, b, ldb0, c, ldc, opt.multi_thread);
     }
 
@@ -394,6 +569,18 @@ void fastGemmBatch(size_t batch, const size_t *A_offsets, const size_t *B_offset
     const char *a = (const char *)A;
     const char *b = (const char *)B;
     char *c = (char *)C;
+
+    // Below ~10K MACs (M*N*K) the blocked SIMD kernel's pack/tile overhead outweighs its speedup, so route tiny problems through the unblocked thin path.
+    if (ldb1 == 1 && (fastGemmThinEligible(M, N, K) || (uint64_t)M * N * K <= 10000)) {
+        const size_t esz = sizeof(float);
+        for (size_t i = 0; i < batch; i++) {
+            fast_gemm_thin(alpha, beta, M, N, K,
+                           a + A_offsets[i] * esz, lda0, lda1,
+                           b + B_offsets[i] * esz, ldb0,
+                           c + C_offsets[i] * esz, ldc, opt.multi_thread);
+        }
+        return;
+    }
 
 #if CV_TRY_NEON
     if (opt.use_neon) {
@@ -485,6 +672,17 @@ void fastGemmBatch(size_t batch,
     const char *a = (const char *)A.ptr<const float>();
     const char *b = (const char *)B.ptr<const float>();
     char *c = (char *)C.ptr<float>();
+
+    if (ldb1 == 1 && (fastGemmThinEligible(M, N, K) || (uint64_t)M * N * K <= 10000)) {
+        const size_t esz = sizeof(float);
+        for (size_t i = 0; i < batch; i++) {
+            fast_gemm_thin(alpha, beta, M, N, K,
+                           a + A_offsets[i] * esz, lda0, lda1,
+                           b + B_offsets[i] * esz, ldb0,
+                           c + C_offsets[i] * esz, ldc, opt.multi_thread);
+        }
+        return;
+    }
 
 #if CV_TRY_NEON
     if (opt.use_neon) {

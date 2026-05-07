@@ -259,6 +259,25 @@ public:
         output_zp = params.get<int>("zeropoints", 0);
     }
 
+    Pool2Int8LayerImpl(const Pool2Int8Params& p)
+    {
+        name = p.name;
+        type = "Pool2Int8";
+        kernel_shape = p.kernel_shape;
+        strides = p.strides;
+        dilations = p.dilations;
+        pads = p.pads;
+        auto_pad = p.auto_pad;
+        ceil_mode = p.ceil_mode;
+        is_global_pooling = p.is_global_pooling;
+        is_max_pool = p.is_max_pool;
+        count_include_pad = p.count_include_pad;
+        input_sc = p.input_sc;
+        input_zp = p.input_zp;
+        output_sc = p.output_sc;
+        output_zp = p.output_zp;
+    }
+
     void getTypes(const std::vector<MatType>& inputs,
                   const int requiredOutputs, const int,
                   std::vector<MatType>& outputs,
@@ -373,6 +392,11 @@ public:
 };
 
 Ptr<Pool2Int8Layer> Pool2Int8Layer::create(const LayerParams& params)
+{
+    return Ptr<Pool2Int8Layer>(new Pool2Int8LayerImpl(params));
+}
+
+Ptr<Pool2Int8Layer> Pool2Int8Layer::create(const Pool2Int8Params& params)
 {
     return Ptr<Pool2Int8Layer>(new Pool2Int8LayerImpl(params));
 }

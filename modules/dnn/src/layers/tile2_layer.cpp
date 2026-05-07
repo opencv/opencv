@@ -139,6 +139,8 @@ public:
         return backendId == DNN_BACKEND_OPENCV;
     }
 
+    bool isDataShuffling() const CV_OVERRIDE { return true; }
+
     virtual bool dynamicOutputShapes() const CV_OVERRIDE
     {
         Net::Impl* netimpl_ = getNetImpl(this);

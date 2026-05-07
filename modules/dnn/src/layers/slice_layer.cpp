@@ -237,6 +237,8 @@ public:
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CANN;
     }
 
+    bool isDataShuffling() const CV_OVERRIDE { return true; }
+
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                             const int requiredOutputs,
                             std::vector<MatShape> &outputs,

@@ -38,6 +38,8 @@ public:
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
+    bool isDataShuffling() const CV_OVERRIDE { return true; }
+
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
                                  const int requiredOutputs,
                                  std::vector<MatShape> &outputs,

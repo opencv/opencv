@@ -300,10 +300,56 @@ TEST(videoio_images, bug_26457)
     EXPECT_MAT_N_DIFF(img, col.getFirstFrame(), 0);
 }
 
+typedef testing::TestWithParam<VideoCaptureAPIs> videoio_image_seq_start;
+
+TEST_P(videoio_image_seq_start, open)
+{
+    const VideoCaptureAPIs apiPref = GetParam();
+    if (!videoio_registry::hasBackend(apiPref))
+        throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
+
+    // Sequence starts at an index outside the auto-probe range
+    // Opening with only the pattern must fail without the property, and succeed when it is set
+    const int start = 100;
+    const size_t count = 5;
+    ImageCollection col;
+    col.generate(count, start);
+    const std::string pattern = col.getPatternFilename();
+
+    {
+        VideoCapture cap(pattern, apiPref);
+        EXPECT_FALSE(cap.isOpened());
+    }
+
+    {
+        VideoCapture cap;
+        ASSERT_TRUE(cap.open(pattern, apiPref,
+                             { CAP_PROP_IMAGE_SEQ_START, start }));
+        ASSERT_TRUE(cap.isOpened());
+        for (size_t idx = 0; idx < count; ++idx)
+        {
+            Mat img;
+            ASSERT_TRUE(cap.read(img));
+            EXPECT_MAT_N_DIFF(img, col.getFrame(start + idx), 0);
+        }
+    }
+}
+
+// PR: https://github.com/opencv/opencv/pull/28844/
+// Requires FFmpeg wrapper re-build on Windows
+static const VideoCaptureAPIs BackendsWithSeqStart[] =
+{
+    CAP_IMAGES
+#ifndef _WIN32
+    ,CAP_FFMPEG
+#endif
+};
+
+INSTANTIATE_TEST_CASE_P(videoio_images, videoio_image_seq_start, testing::ValuesIn(BackendsWithSeqStart));
+
 // TODO: should writer overwrite files?
 // TODO: is clamping good for seeking?
 // TODO: missing files? E.g. 3, 4, 6, 7, 8 (should it finish OR jump over OR return empty frame?)
 // TODO: non-numbered files (https://github.com/opencv/opencv/pull/23815)
-// TODO: when opening with pattern (e.g. test%01d.png), first frame can be only 0 (test0.png)
 
 }} // opencv_test::<anonymous>::
