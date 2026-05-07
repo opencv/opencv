@@ -181,9 +181,16 @@ if(MLAS_RISCV64)
       set_source_files_properties(${f} PROPERTIES COMPILE_FLAGS "-march=rv64gcv -mabi=lp64d")
     endforeach()
   endif()
+  # Scalar MlasSgemmKernelZero/Add fallback for non-RVV runtime/build.
+  list(APPEND mlas_platform_srcs ${MLAS_SRC_DIR}/scalar/SgemmKernelScalar.cpp)
 endif()
 
-# WASM and unknown archs fall back to scalar sgemm in sgemm.cpp's generic path.
+# WASM / unknown archs use the scalar sgemm path; link its kernel.
+if(MLAS_WASM OR NOT (MLAS_X86 OR MLAS_X86_64 OR MLAS_ARM OR MLAS_ARM64
+                     OR MLAS_POWER OR MLAS_LOONGARCH64 OR MLAS_S390X
+                     OR MLAS_RISCV64))
+  list(APPEND mlas_platform_srcs ${MLAS_SRC_DIR}/scalar/SgemmKernelScalar.cpp)
+endif()
 
 add_library(opencv_dnn_mlas OBJECT ${mlas_common_srcs} ${mlas_platform_srcs})
 set_target_properties(opencv_dnn_mlas PROPERTIES POSITION_INDEPENDENT_CODE ON)
@@ -202,6 +209,10 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang"
     "$<$<COMPILE_LANGUAGE:CXX>:-w>"
     "$<$<COMPILE_LANGUAGE:CXX>:-include>"
     "$<$<COMPILE_LANGUAGE:CXX>:cstring>"
+  )
+  # MLAS .S files lack .note.GNU-stack; tell the assembler the stack is non-exec.
+  target_compile_options(opencv_dnn_mlas PRIVATE
+    "$<$<COMPILE_LANGUAGE:ASM>:-Wa,--noexecstack>"
   )
 endif()
 if(MLAS_X86_64)
