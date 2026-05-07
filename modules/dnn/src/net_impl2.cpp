@@ -977,7 +977,7 @@ void Net::Impl::traceArg(std::ostream& strm_, const char* prefix, size_t i, Arg 
 void Net::Impl::setMainGraphInput(InputArray m, const std::string& inpname)
 {
 #ifdef HAVE_ONNXRUNTIME
-    if (useOrtEngine && ortNeedsReinit && mainGraph && modelFormat == DNN_MODEL_ONNX && !modelFileName.empty())
+    if (useOrtEngine && !ort_session)
     {
         Mat inputMat = m.getMat();
         if (inputMat.empty())

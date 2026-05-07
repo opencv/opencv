@@ -58,6 +58,7 @@ Net::Impl::Impl()
     layerNameToId.insert(std::make_pair(inpl.name, inpl.id));
 
     lastLayerId = 0;
+    totalLayers = 0;
     netWasAllocated = false;
     netWasQuantized = false;
     fusion = true;
@@ -2651,7 +2652,9 @@ void Net::Impl::getMemoryConsumption(
 
 int64 Net::Impl::getPerfProfile(std::vector<double>& timings) const
 {
-    timings = std::vector<double>(layersTimings.begin() + 1, layersTimings.end());
+    timings.clear();
+    if (layersTimings.size() > 1)
+        timings.assign(layersTimings.begin() + 1, layersTimings.end());
     int64 total = (int64)std::accumulate(timings.begin(), timings.end(), 0.0);
     return total;
 }
