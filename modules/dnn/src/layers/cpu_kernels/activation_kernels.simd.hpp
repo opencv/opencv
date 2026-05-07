@@ -420,7 +420,7 @@ void softmax_(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep, fl
                 for (; _cnDim < axisStep; _cnDim++)
                     dstPtr[srcOffset + (_cnDim + axisBias) * cnStep] = 0.f;
             } else {
-                s = 1.f / s;
+                s = scale / s;
 #if CV_ENABLE_UNROLLED && defined(_M_ARM64)
                 for (; _cnDim + 3 < axisStep; _cnDim += 4) {
                     dstPtr[srcOffset + (_cnDim + 0 + axisBias) * cnStep] = axisBuf[_cnDim + 0] * s;
