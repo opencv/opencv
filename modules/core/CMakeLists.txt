@@ -16,7 +16,7 @@ ocv_add_dispatched_file(split SSE2 AVX2 LASX)
 ocv_add_dispatched_file(sum SSE2 AVX2 LASX)
 ocv_add_dispatched_file(reduce SSE2 SSSE3 AVX2 NEON_DOTPROD)
 ocv_add_dispatched_file(norm SSE2 SSE4_1 AVX AVX2 NEON_DOTPROD LASX)
-ocv_add_dispatched_file(transpose AVX AVX2 NEON LASX)
+ocv_add_dispatched_file(transpose AVX AVX2 NEON RVV LASX)
 
 # dispatching for accuracy tests
 ocv_add_dispatched_file_force_all(test_intrin128 TEST SSE2 SSE3 SSSE3 SSE4_1 SSE4_2 AVX FP16 AVX2 AVX512_SKX)
