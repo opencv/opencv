@@ -2626,6 +2626,28 @@ TEST(BroadcastTo, basic) {
     }
 }
 
+TEST(BroadcastTo, in_place_coverage) {
+    // 1. Create a 1x3 source matrix
+    std::vector<int> src_shape = { 1, 3 };
+    cv::Mat src(src_shape, CV_32FC1, cv::Scalar(5.0f));
+
+    // 2. Define the target shape (3x3)
+    std::vector<int> target_shape = { 3, 3 };
+
+    // 3. Clone to test in-place behavior (input = output)
+    cv::Mat in_place_mat = src.clone();
+
+    // 4. Execute broadcast in-place
+    cv::broadcast(in_place_mat, target_shape, in_place_mat);
+
+    // 5. Verification
+    EXPECT_EQ(in_place_mat.dims, (int)target_shape.size());
+    for (size_t i = 0; i < target_shape.size(); i++) {
+        EXPECT_EQ(in_place_mat.size[i], target_shape[i]);
+    }
+    EXPECT_FLOAT_EQ(in_place_mat.at<float>(2, 2), 5.0f);
+}
+
 TEST(Core_minMaxIdx, regression_9207_2)
 {
     const int rows = 13;
