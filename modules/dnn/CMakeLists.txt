@@ -124,7 +124,7 @@ ocv_option(WITH_ONNXRUNTIME "Build with ONNX Runtime support" OFF)
 ocv_option(DOWNLOAD_ONNXRUNTIME "Download ONNX Runtime prebuilt binaries" OFF IF WITH_ONNXRUNTIME)
 ocv_option(DOWNLOAD_ONNXRUNTIME_GPU "Download GPU-enabled ONNX Runtime prebuilt binaries when available" OFF IF WITH_ONNXRUNTIME)
 
-set(ONNXRUNTIME_VERSION "1.24.2" CACHE STRING "ONNX Runtime version to download (prebuilt binaries)")
+set(ONNXRUNTIME_VERSION "1.25.1" CACHE STRING "ONNX Runtime version to download (prebuilt binaries)")
 
 if(WITH_ONNXRUNTIME)
   include("${OpenCV_SOURCE_DIR}/cmake/FindONNX.cmake")
