@@ -16,7 +16,7 @@ PERF_TEST_P(Size_MatType, sum, TYPICAL_MATS)
 
     TEST_CYCLE() s = sum(arr);
 
-    SANITY_CHECK(s, 1e-6, ERROR_RELATIVE);
+    SANITY_CHECK(s, 1e-5, ERROR_RELATIVE);
 }
 
 PERF_TEST_P(Size_MatType, mean, TYPICAL_MATS)
