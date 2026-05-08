@@ -1909,9 +1909,13 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
             default_l1 = 0.002;   // Expected: (normL1) <= (l1), actual: 0.00195312 vs 1e-05
             default_lInf = 0.002; // Expected: (normInf) <= (lInf), actual: 0.00195312 vs 0.0001
         }
-        if (name == "test_reduce_sum_square_default_axes_keepdims_random" ||
-            name == "test_reduce_sum_square_default_axes_keepdims_random_expanded") {
-            default_l1 = 2e-5; // Expected: (normL1) <= (l1), actual: 1.52588e-05 vs 1e-05
+        if ((EngineType)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO) == ENGINE_ORT)
+        {
+            if (name == "test_reduce_sum_square_default_axes_keepdims_random" ||
+                name == "test_reduce_sum_square_default_axes_keepdims_random_expanded")
+            {
+                default_l1 = 2e-5; // ORT sequential accumulation vs numpy pairwise; actual: 1.52588e-05
+            }
         }
     }
 #ifdef HAVE_HALIDE
@@ -2121,16 +2125,56 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
     {
         try
         {
+            // Normalize output/reference types for comparison (bool→uint8, float16/bf16→float32, bf16-as-uint16→float32).
+            auto normalizeBoolMat = [](Mat& m) {
+                if (m.type() == CV_Bool)
+                    m = Mat(m.dims, m.size.p, CV_8U, m.data, m.step.p).clone();
+            };
+            for (Mat& out : outputs)
+                normalizeBoolMat(out);
+            for (Mat& ref : ref_outputs)
+                normalizeBoolMat(ref);
+
+            auto normalizeHalfMat = [](Mat& m) {
+                if (m.depth() == CV_16F || m.depth() == CV_16BF)
+                    m.convertTo(m, CV_32F);
+            };
+            for (Mat& out : outputs)
+                normalizeHalfMat(out);
+            for (Mat& ref : ref_outputs)
+                normalizeHalfMat(ref);
+
+            CV_Assert(outputs.size() == ref_outputs.size());
+            std::vector<bool> is_bf16_pair(outputs.size(), false);
+            for (size_t i = 0; i < outputs.size(); ++i) {
+                if (ref_outputs[i].depth() == CV_16U && outputs[i].depth() == CV_32F) {
+                    const int n = (int)ref_outputs[i].total();
+                    Mat tmp(1, n, CV_32F);
+                    const uint16_t* src = ref_outputs[i].ptr<uint16_t>();
+                    float* dst = tmp.ptr<float>();
+                    for (int j = 0; j < n; ++j) {
+                        uint32_t bits = (uint32_t)src[j] << 16;
+                        memcpy(dst + j, &bits, sizeof(float));
+                    }
+                    ref_outputs[i] = tmp.reshape(1, ref_outputs[i].dims, ref_outputs[i].size.p);
+                    is_bf16_pair[i] = true;
+                }
+            }
+
             if (ref_outputs.size() == 1)
             {
-                normAssert(ref_outputs[0], outputs[0], "", default_l1, default_lInf);
+                double l1   = is_bf16_pair[0] ? 0.002 : default_l1;
+                double lInf = is_bf16_pair[0] ? 0.01  : default_lInf;
+                normAssert(ref_outputs[0], outputs[0], "", l1, lInf);
             }
             else
             {
                 ASSERT_EQ(outputs.size(), ref_outputs.size());
                 for (size_t i = 0; i < ref_outputs.size(); ++i)
                 {
-                    normAssert(ref_outputs[i], outputs[i], "", default_l1, default_lInf);
+                    double l1   = is_bf16_pair[i] ? 0.002 : default_l1;
+                    double lInf = is_bf16_pair[i] ? 0.01  : default_lInf;
+                    normAssert(ref_outputs[i], outputs[i], "", l1, lInf);
                 }
             }
         }
