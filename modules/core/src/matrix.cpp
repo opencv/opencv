@@ -293,7 +293,7 @@ int updateContinuityFlag(int flags, int dims, const int* size, const size_t* ste
     for( j = dims-1; j > i; j-- )
     {
         t *= size[j];
-        if( step[j]*size[j] < step[j-1] )
+        if( (uint64)step[j]*size[j] < step[j-1] )
             break;
     }
 
@@ -577,21 +577,21 @@ bool Mat::empty() const
 size_t Mat::total() const
 {
     if( dims <= 2 )
-        return (size_t)rows * cols;
-    size_t p = 1;
+        return (size_t)((uint64_t)rows * (uint64_t)cols);
+    uint64_t p = 1;
     for( int i = 0; i < dims; i++ )
         p *= size[i];
-    return p;
+    return (size_t)p;
 }
 
 size_t Mat::total(int startDim, int endDim) const
 {
     CV_Assert( 0 <= startDim && startDim <= endDim);
-    size_t p = 1;
+    uint64_t p = 1;
     int endDim_ = endDim <= dims ? endDim : dims;
     for( int i = startDim; i < endDim_; i++ )
         p *= size[i];
-    return p;
+    return (size_t)p;
 }
 
 
