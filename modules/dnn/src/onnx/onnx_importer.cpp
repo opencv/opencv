@@ -64,6 +64,21 @@ static T getScalarFromMat(Mat m)
     return m.at<T>(0);
 }
 
+// Read scalar zero-point from a Mat of any supported integer depth.
+// `unshiftFromInt8` undoes the -128 offset that populateNet() applies when
+// rewriting UINT8 initializers as INT8.
+static int readZpScalar(const Mat& m, int i, bool unshiftFromInt8 = false)
+{
+    switch (m.depth()) {
+        case CV_8U:  return (int)m.at<uint8_t>(i);
+        case CV_8S:  return (int)m.at<int8_t>(i) + (unshiftFromInt8 ? 128 : 0);
+        case CV_16U: return (int)m.at<uint16_t>(i);
+        case CV_16S: return (int)m.at<int16_t>(i);
+        case CV_32S: return m.at<int>(i);
+        default:     CV_Error(Error::StsNotImplemented, "Unsupported zero_point depth");
+    }
+}
+
 static int onnxDataTypeToCvDepth(int onnxType)
 {
     switch (onnxType)
@@ -98,7 +113,9 @@ class ONNXImporter
 
     struct TensorInfo {
         int real_ndims;
-        TensorInfo(int _real_ndims = 0) : real_ndims(_real_ndims) {}
+        int onnx_dtype;
+        TensorInfo(int _real_ndims = 0, int _onnx_dtype = 0)
+            : real_ndims(_real_ndims), onnx_dtype(_onnx_dtype) {}
     };
 
     std::map<std::string, Mat> getGraphTensors(
@@ -446,7 +463,7 @@ std::map<std::string, Mat> ONNXImporter::getGraphTensors(
             continue;
 
         layers_weights.insert(std::make_pair(tensor_proto.name(), mat));
-        constBlobsExtraInfo.insert(std::make_pair(tensor_proto.name(), TensorInfo(tensor_proto.dims_size())));
+        constBlobsExtraInfo.insert(std::make_pair(tensor_proto.name(), TensorInfo(tensor_proto.dims_size(), tensor_proto.data_type())));
     }
     return layers_weights;
 }
@@ -867,6 +884,8 @@ void ONNXImporter::populateNet()
         const opencv_onnx::TypeProto::Tensor& tensor = typeProto.tensor_type();
         CV_Assert(tensor.has_shape());
         const opencv_onnx::TensorShapeProto& tensorShape = tensor.shape();
+        if (constBlobsExtraInfo.find(name) == constBlobsExtraInfo.end())
+            constBlobsExtraInfo.insert(std::make_pair(name, TensorInfo(tensor.shape().dim_size(), tensor.elem_type())));
 
         int dim_size = tensorShape.dim_size();
         CV_CheckGE(dim_size, 0, "");  // some inputs are scalars (dims=0), e.g. in Test_ONNX_nets.Resnet34_kinetics test
@@ -3411,13 +3430,22 @@ void ONNXImporter::parseQuantDequant(LayerParams& layerParams, const opencv_onnx
     // or 1-D tensor (per-channel quantized).
     bool is1D = false;
 
-    if (layerParams.type == "Quantize")
-        layerParams.set("depth", CV_8S);
-    else // Dequantize
-        layerParams.set("depth", CV_32F);
+    int outDepth = (layerParams.type == "Quantize") ? CV_8U : CV_32F;
+    int zpOnnxDtype = 0;
+    if (node_proto.input_size() == 3)
+    {
+        auto it = constBlobsExtraInfo.find(node_proto.input(2));
+        if (it != constBlobsExtraInfo.end())
+            zpOnnxDtype = it->second.onnx_dtype;
+    }
 
-    // If scale is not defined as a constant blob, it is considered an external input.
     if(constBlobs.find(node_proto.input(1)) == constBlobs.end()){
+        if (layerParams.type == "Quantize")
+        {
+            layerParams.set("depth", zpOnnxDtype == 0 ? CV_8U : onnxDataTypeToCvDepth(zpOnnxDtype));
+        }
+        else
+            layerParams.set("depth", outDepth);
         addLayer(layerParams, node_proto);
         return;
     }
@@ -3431,6 +3459,9 @@ void ONNXImporter::parseQuantDequant(LayerParams& layerParams, const opencv_onnx
         zpMat = getBlob(node_proto, 2);
         CV_Assert(zpMat.total() ==  scaleMat.total()); // zero point should has the same shape as scale.
     }
+    if (layerParams.type == "Quantize")
+        outDepth = CV_8S;
+    layerParams.set("depth", outDepth);
 
     if (is1D)
     {
@@ -3443,8 +3474,7 @@ void ONNXImporter::parseQuantDequant(LayerParams& layerParams, const opencv_onnx
         {
             scales[i] = scaleMat.at<float>(i);
             if (!zpMat.empty())
-                zeropoints[i] = zpMat.depth() == CV_32S ?
-                                zpMat.at<int>(i) : (int)zpMat.at<int8_t>(i);
+                zeropoints[i] = readZpScalar(zpMat, i);
         }
 
         layerParams.set("is1D", true);
@@ -3454,8 +3484,7 @@ void ONNXImporter::parseQuantDequant(LayerParams& layerParams, const opencv_onnx
     }
     else
     {
-        int zeropoint = zpMat.empty() ? 0 : zpMat.depth() == CV_32S ?
-                                            getScalarFromMat<int>(zpMat) : (int)getScalarFromMat<int8_t>(zpMat);
+        int zeropoint = zpMat.empty() ? 0 : readZpScalar(zpMat, 0);
         float scale = getScalarFromMat<float>(scaleMat);
 
         layerParams.set("is1D", false);
