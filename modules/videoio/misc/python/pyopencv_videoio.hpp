@@ -144,13 +144,13 @@ bool pyopencv_to(PyObject* obj, Ptr<cv::IStreamReader>& p, const ArgInfo&)
 // =============================================================================
 // Context Manager support for VideoCapture and VideoWriter
 // =============================================================================
-static PyObject* pycvVideoEnter(PyObject* self, PyObject* py_args, PyObject* kw) {
+static PyObject* pycvVideoEnter(PyObject* self, PyObject* /*args*/, PyObject* /*kw*/) {
     Py_INCREF(self);
     return self;
 }
 
-static PyObject* pycvVideoExit(PyObject* self, PyObject* py_args, PyObject* kw) {
-    PyObject* res = PyObject_CallMethod(self, (char*)"release", NULL);
+static PyObject* pycvVideoExit(PyObject* self, PyObject* /*args*/, PyObject* /*kw*/) {
+    PyObject* res = PyObject_CallMethod(self, (char*)"release", (char*)"");
     if (!res) {
         return NULL;
     }
@@ -159,12 +159,12 @@ static PyObject* pycvVideoExit(PyObject* self, PyObject* py_args, PyObject* kw) 
 }
 
 #define PYOPENCV_EXTRA_METHODS_VideoCapture \
-    {"__enter__", CV_PY_FN_WITH_KW(pycvVideoEnter), ""}, \
-    {"__exit__",  CV_PY_FN_WITH_KW(pycvVideoExit), ""},
+    {"__enter__", CV_PY_FN_WITH_KW(pycvVideoEnter), "Context manager enter"}, \
+    {"__exit__",  CV_PY_FN_WITH_KW(pycvVideoExit), "Context manager exit"},
 
 #define PYOPENCV_EXTRA_METHODS_VideoWriter \
-    {"__enter__", CV_PY_FN_WITH_KW(pycvVideoEnter), ""}, \
-    {"__exit__",  CV_PY_FN_WITH_KW(pycvVideoExit), ""},
+    {"__enter__", CV_PY_FN_WITH_KW(pycvVideoEnter), "Context manager enter"}, \
+    {"__exit__",  CV_PY_FN_WITH_KW(pycvVideoExit), "Context manager exit"},
 
 
 #endif // HAVE_OPENCV_VIDEOIO
