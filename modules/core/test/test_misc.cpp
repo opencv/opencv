@@ -923,7 +923,22 @@ TYPED_TEST_P(Rect_Test, OnTheEdge) {
   ASSERT_FALSE( rect.contains( Point_<TypeParam>(250, cv_nexttoward(h, h    ))));
   ASSERT_FALSE( rect.contains( Point_<TypeParam>(250, cv_nexttoward(h, h + 1))));
 }
-REGISTER_TYPED_TEST_CASE_P(Rect_Test, Overflows, OnTheEdge);
+
+TYPED_TEST_P(Rect_Test, BottomRight_Overflow) {
+  TypeParam num_max = std::numeric_limits<TypeParam>::max();
+  TypeParam zero = TypeParam();
+  Rect_<TypeParam> r(zero, zero, num_max, num_max);
+  Point_<TypeParam> br = r.br();
+  if (std::numeric_limits<TypeParam>::is_integer) {
+    ASSERT_EQ(num_max, br.x);
+    ASSERT_EQ(num_max, br.y);
+  } else {
+    ASSERT_EQ(num_max, br.x);
+    ASSERT_EQ(num_max, br.y);
+  }
+}
+
+REGISTER_TYPED_TEST_CASE_P(Rect_Test, Overflows, OnTheEdge, BottomRight_Overflow);
 
 typedef ::testing::Types<int, float, double> RectTypes;
 INSTANTIATE_TYPED_TEST_CASE_P(Negative_Test, Rect_Test, RectTypes);

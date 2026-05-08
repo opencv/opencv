@@ -1902,7 +1902,7 @@ Point_<_Tp> Rect_<_Tp>::tl() const
 template<typename _Tp> inline
 Point_<_Tp> Rect_<_Tp>::br() const
 {
-    return Point_<_Tp>(x + width, y + height);
+    return Point_<_Tp>(saturate_cast<_Tp>((int64_t)x + width), saturate_cast<_Tp>((int64_t)y + height));
 }
 
 template<typename _Tp> inline
