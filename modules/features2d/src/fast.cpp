@@ -52,7 +52,7 @@ The references are:
 namespace cv
 {
 
-#ifdef CV_RVV
+#if CV_RVV
 #include <riscv_vector.h>
 
 static void FAST16_RVV(InputArray _img,
@@ -687,7 +687,7 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
         FAST_t<12>(_img, keypoints, threshold, nonmax_suppression);
         break;
     case FastFeatureDetector::TYPE_9_16:
-#ifdef CV_RVV
+#if CV_RVV
         FAST16_RVV(_img, keypoints, threshold, nonmax_suppression);
 #else
         FAST_t<16>(_img, keypoints, threshold, nonmax_suppression);
