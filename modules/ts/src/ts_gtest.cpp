@@ -10471,6 +10471,7 @@ class CapturedStream {
                                             temp_file_path_w);
     // Convert filename back to UTF-8
     std::string temp_file_path;
+    int captured_fd = -1;
     if (success != 0)
     {
         len = WideCharToMultiByte(CP_UTF8, 0, temp_file_path_w, -1, NULL, 0, NULL, NULL);
@@ -10480,6 +10481,9 @@ class CapturedStream {
             WideCharToMultiByte(CP_UTF8, 0, temp_file_path_w, -1, utf8_buf.data(), len, NULL, NULL);
             temp_file_path = std::string(utf8_buf.data());
         }
+        // Create file and get fd for redirect
+        captured_fd = _open(temp_file_path.c_str(), _O_CREAT | _O_WRONLY | _O_TRUNC, _S_IREAD | _S_IWRITE);
+        filename_ = temp_file_path;
     }
 # else
     // There's no guarantee that a test has write access to the current
