@@ -141,4 +141,30 @@ bool pyopencv_to(PyObject* obj, Ptr<cv::IStreamReader>& p, const ArgInfo&)
     return false;
 }
 
+// =============================================================================
+// Context Manager support for VideoCapture and VideoWriter
+// =============================================================================
+static PyObject* pycvVideoEnter(PyObject* self, PyObject* py_args, PyObject* kw) {
+    Py_INCREF(self);
+    return self;
+}
+
+static PyObject* pycvVideoExit(PyObject* self, PyObject* py_args, PyObject* kw) {
+    PyObject* res = PyObject_CallMethod(self, (char*)"release", NULL);
+    if (!res) {
+        return NULL;
+    }
+    Py_DECREF(res);
+    Py_RETURN_NONE;
+}
+
+#define PYOPENCV_EXTRA_METHODS_VideoCapture \
+    {"__enter__", CV_PY_FN_WITH_KW(pycvVideoEnter), ""}, \
+    {"__exit__",  CV_PY_FN_WITH_KW(pycvVideoExit), ""},
+
+#define PYOPENCV_EXTRA_METHODS_VideoWriter \
+    {"__enter__", CV_PY_FN_WITH_KW(pycvVideoEnter), ""}, \
+    {"__exit__",  CV_PY_FN_WITH_KW(pycvVideoExit), ""},
+
+
 #endif // HAVE_OPENCV_VIDEOIO
