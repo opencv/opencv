@@ -15,8 +15,9 @@ UMatData* NumpyAllocator::allocate(PyObject* o, int dims, const int* sizes, int 
     npy_intp* _strides = PyArray_STRIDES((PyArrayObject*) o);
     for( int i = 0; i < dims - 1; i++ )
         step[i] = (size_t)_strides[i];
-    step[dims-1] = CV_ELEM_SIZE(type);
-    u->size = sizes[0]*step[0];
+    if( dims > 0 )
+        step[dims-1] = CV_ELEM_SIZE(type);
+    u->size = dims > 0 ? sizes[0]*step[0] : CV_ELEM_SIZE(type);
     u->userdata = o;
     return u;
 }
