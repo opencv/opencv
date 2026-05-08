@@ -1205,9 +1205,19 @@ MatSize::MatSize(int* _p) CV_NOEXCEPT
     : p(_p) {}
 
 inline
+
 int MatSize::dims() const CV_NOEXCEPT
 {
-    return (p - 1)[0];
+    // Ensure no padding exists between Mat::dims and Mat::rows at compile time.
+    // We rely on this contiguous memory layout for pointer arithmetic.
+    static_assert(offsetof(Mat, rows) == offsetof(Mat, dims) + sizeof(int),
+        "Padding between Mat::dims and Mat::rows is not allowed for MatSize logic");
+
+    // Avoid strict intra-object array bounds UB caught by HWASan.
+    // By laundering the pointer through const char*, we perform byte-level 
+    // arithmetic which is safer against strict pointer provenance tracking.
+    const char* byte_p = reinterpret_cast<const char*>(p);
+    return *reinterpret_cast<const int*>(byte_p - sizeof(int));
 }
 
 inline
