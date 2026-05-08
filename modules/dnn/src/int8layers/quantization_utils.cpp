@@ -138,6 +138,7 @@ class QuantizeLayerImpl CV_FINAL : public QuantizeLayer
 public:
     int axis;
     int block_size;
+    int outDepth;  // CV_8S (legacy default) or CV_8U; driven by ONNX y_zero_point dtype
     bool is1D;
     Mat scalesMat, zeropointsMat; // Saving the broadcasted scales data.
     bool quantParamExternal = true;  // Indicates if the quantization parameters (scale and zero point) are provided as inputs to the node.
@@ -147,6 +148,7 @@ public:
         is1D = params.get<bool>("is1D", false);
         axis = params.get<int>("axis", 1);
         block_size = params.get<int>("block_size", 0);
+        outDepth = params.get<int>("depth", CV_8S);
 
         if (!is1D)
         {
@@ -196,7 +198,7 @@ public:
         std::vector<MatType>& outputs,
         std::vector<MatType>& internals) const CV_OVERRIDE
     {
-        outputs.assign(requiredOutputs, CV_8S);
+        outputs.assign(requiredOutputs, outDepth);
     }
 
 
@@ -229,7 +231,7 @@ public:
             inputs[0] = inputFp32;  // replace
         }
 
-        inputs[0].convertTo(outputs[0], CV_8S, 1.f/scales[0], zeropoints[0]);
+        inputs[0].convertTo(outputs[0], outDepth, 1.f/scales[0], zeropoints[0]);
         return true;
     }
 #endif
@@ -263,8 +265,8 @@ public:
             }
         }
 
-        if (outputs[0].depth() != CV_8S)
-            outputs[0].convertTo(outputs[0], CV_8S);
+        if (outputs[0].depth() != outDepth)
+            outputs[0].convertTo(outputs[0], outDepth);
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
@@ -287,10 +289,10 @@ public:
             divide(inputs[0], scalesMat, inputTmp);
             add(inputTmp, zeropointsMat, inputTmp);
 
-            inputTmp.convertTo(outputs[0], CV_8S);
+            inputTmp.convertTo(outputs[0], outDepth);
         }
         else
-            inputs[0].convertTo(outputs[0], CV_8S, 1.f/scales[0], zeropoints[0]);
+            inputs[0].convertTo(outputs[0], outDepth, 1.f/scales[0], zeropoints[0]);
     }
 
 #ifdef HAVE_DNN_NGRAPH
