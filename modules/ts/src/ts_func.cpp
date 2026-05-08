@@ -1223,6 +1223,10 @@ void minMaxLoc(const Mat& src, double* _minval, double* _maxval,
             minMaxLoc_((const unsigned*)sptr, total, startidx,
                        &minval, &maxval, &minidx, &maxidx, mptr);
             break;
+        case CV_Bool:
+            minMaxLoc_((const uchar*)sptr, total, startidx,
+                       &minval, &maxval, &minidx, &maxidx, mptr);
+            break;
         default:
             CV_Assert(0);
         }

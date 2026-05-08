@@ -198,7 +198,7 @@ void findNonZero(InputArray _src, OutputArray _idx)
         {
             const ushort* ptr16 = (const ushort*)ptr8;
             for( j = 0; j < cols; j++ )
-                if( (ptr16[j]<<1) != 0 ) buf[k++] = j;
+                if( (ptr16[j] & 0x7fff) != 0 ) buf[k++] = j;
         }
         else
         {
