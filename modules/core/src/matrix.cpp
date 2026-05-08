@@ -293,7 +293,7 @@ int updateContinuityFlag(int flags, int dims, const int* size, const size_t* ste
     for( j = dims-1; j > i; j-- )
     {
         t *= size[j];
-        if( step[j]*size[j] < step[j-1] )
+        if( j > 0 && step[j]*size[j] < step[j-1] )
             break;
     }
 
