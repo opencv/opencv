@@ -30,6 +30,7 @@ void cv::swap( Mat& a, Mat& b )
     std::swap(a.u, b.u);
 
     std::swap(a.size.p, b.size.p);
+    std::swap(a.size.dims_, b.size.dims_);
     std::swap(a.step.p, b.step.p);
     std::swap(a.step.buf[0], b.step.buf[0]);
     std::swap(a.step.buf[1], b.step.buf[1]);

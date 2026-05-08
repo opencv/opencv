@@ -1202,12 +1202,12 @@ void Mat::push_back(const std::vector<_Tp>& v)
 
 inline
 MatSize::MatSize(int* _p) CV_NOEXCEPT
-    : p(_p) {}
+    : p(_p), dims_(0) {}
 
 inline
 int MatSize::dims() const CV_NOEXCEPT
 {
-    return (p - 1)[0];
+    return dims_;
 }
 
 inline

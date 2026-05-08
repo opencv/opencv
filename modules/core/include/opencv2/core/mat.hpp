@@ -615,6 +615,7 @@ CV_ENUM_FLAGS(UMatData::MemoryFlag)
 struct CV_EXPORTS MatSize
 {
     explicit MatSize(int* _p) CV_NOEXCEPT;
+    void setDims(int _dims) CV_NOEXCEPT { dims_ = _dims; }
     int dims() const CV_NOEXCEPT;
     Size operator()() const;
     const int& operator[](int i) const;
@@ -624,6 +625,7 @@ struct CV_EXPORTS MatSize
     bool operator != (const MatSize& sz) const CV_NOEXCEPT;
 
     int* p;
+    int dims_;
 };
 
 struct CV_EXPORTS MatStep

@@ -404,6 +404,7 @@ UMat::UMat(UMat&& m)
 : flags(m.flags), dims(m.dims), rows(m.rows), cols(m.cols), allocator(m.allocator),
   usageFlags(m.usageFlags), u(m.u), offset(m.offset), size(&rows)
 {
+    size.dims_ = m.dims;
     if (m.dims <= 2)  // move new step/size info
     {
         step[0] = m.step[0];
@@ -414,8 +415,10 @@ UMat::UMat(UMat&& m)
         CV_DbgAssert(m.step.p != m.step.buf);
         step.p = m.step.p;
         size.p = m.size.p;
+        size.dims_ = m.dims;
         m.step.p = m.step.buf;
         m.size.p = &m.rows;
+        m.size.dims_ = 0;
     }
     m.flags = MAGIC_VAL; m.dims = m.rows = m.cols = 0;
     m.allocator = NULL;
@@ -437,6 +440,7 @@ UMat& UMat::operator=(UMat&& m)
         fastFree(step.p);
         step.p = step.buf;
         size.p = &rows;
+        size.dims_ = 0;
     }
     if (m.dims <= 2) // move new step/size info
     {
@@ -448,8 +452,10 @@ UMat& UMat::operator=(UMat&& m)
         CV_DbgAssert(m.step.p != m.step.buf);
         step.p = m.step.p;
         size.p = m.size.p;
+        size.dims_ = m.dims;
         m.step.p = m.step.buf;
         m.size.p = &m.rows;
+        m.size.dims_ = 0;
     }
     m.flags = MAGIC_VAL;
     m.usageFlags = USAGE_DEFAULT;
@@ -481,6 +487,7 @@ void swap( UMat& a, UMat& b )
     std::swap(a.offset, b.offset);
 
     std::swap(a.size.p, b.size.p);
+    std::swap(a.size.dims_, b.size.dims_);
     std::swap(a.step.p, b.step.p);
     std::swap(a.step.buf[0], b.step.buf[0]);
     std::swap(a.step.buf[1], b.step.buf[1]);
@@ -510,12 +517,13 @@ void setSize( UMat& m, int _dims, const int* _sz,
             fastFree(m.step.p);
             m.step.p = m.step.buf;
             m.size.p = &m.rows;
+            m.size.dims_ = m.dims;
         }
         if( _dims > 2 )
         {
             m.step.p = (size_t*)fastMalloc(_dims*sizeof(m.step.p[0]) + (_dims+1)*sizeof(m.size.p[0]));
             m.size.p = (int*)(m.step.p + _dims) + 1;
-            m.size.p[-1] = _dims;
+            m.size.setDims(_dims);
             m.rows = m.cols = -1;
         }
     }
