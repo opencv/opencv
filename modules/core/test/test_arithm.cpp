@@ -3594,13 +3594,12 @@ TEST_P(NonZeroAccuracyNewTypes, accuracy)
     cv::Mat src = cv::Mat::zeros(sz, CV_MAKETYPE(depth, 1));
 
     std::vector<Point> expected_pts;
-    cv::RNG rng(0xCafeBabeULL);
     const int total = sz.area();
     const int approx_nz = std::max(1, total / 17);
     std::vector<uchar> is_nz(total, 0);
     for (int n = 0; n < approx_nz; )
     {
-        int idx = rng.uniform(0, total);
+        int idx = theRNG().uniform(0, total);
         if (is_nz[idx])
             continue;
         is_nz[idx] = 1;

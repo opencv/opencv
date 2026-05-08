@@ -198,6 +198,8 @@ void findNonZero(InputArray _src, OutputArray _idx)
         {
             const ushort* ptr16 = (const ushort*)ptr8;
             for( j = 0; j < cols; j++ )
+                // mask sign bit so -0 (0x8000) is treated as zero; cannot use <<1 here
+                // because ushort is promoted to int and the sign bit would not be discarded
                 if( (ptr16[j] & 0x7fff) != 0 ) buf[k++] = j;
         }
         else
