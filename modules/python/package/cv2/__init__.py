@@ -179,3 +179,27 @@ def bootstrap():
 
 
 bootstrap()
+
+
+# ==============================================================================
+# Context manager support for VideoCapture and VideoWriter (Issue #28956)
+# ==============================================================================
+def _video_enter(self):
+    return self
+
+def _video_exit(self, exc_type, exc_val, exc_tb):
+    self.release()
+
+try:
+    # Check if the classes were successfully loaded by bootstrap()
+    g = globals()
+    
+    if 'VideoCapture' in g:
+        g['VideoCapture'].__enter__ = _video_enter
+        g['VideoCapture'].__exit__ = _video_exit
+        
+    if 'VideoWriter' in g:
+        g['VideoWriter'].__enter__ = _video_enter
+        g['VideoWriter'].__exit__ = _video_exit
+except Exception:
+    pass
