@@ -528,7 +528,7 @@ OpenCV have own DNN inference module which have own build-in engine, but can als
 | `DOWNLOAD_ONNXRUNTIME` | _OFF_ | Download official ONNX Runtime prebuilt binaries when enabled (or when ONNX Runtime is not available in system paths). |
 | `DOWNLOAD_ONNXRUNTIME_GPU` | _OFF_ | Download GPU-enabled ONNX Runtime prebuilt binaries when available (Windows x64 and Linux x64 only). Requires `WITH_ONNXRUNTIME=ON`. |
 | `ONNXRUNTIME_PREFER_STATIC` | _ON_ | Prefer static `libonnxruntime.a` when both static and shared ONNX Runtime libraries are available. |
-| `ONNXRUNTIME_VERSION` | _1.24.2_ | ONNX Runtime version to download for prebuilt packages. |
+| `ONNXRUNTIME_VERSION` | _1.25.1_ | ONNX Runtime version to download for prebuilt packages. |
 | `OPENCV_DNN_CUDA` | _OFF_ | Enable CUDA backend. [CUDA](https://en.wikipedia.org/wiki/CUDA), CUBLAS and [CUDNN](https://developer.nvidia.com/cudnn) must be installed. |
 | `WITH_VULKAN` | _OFF_ | Enable experimental [Vulkan](https://en.wikipedia.org/wiki/Vulkan_(API)) backend. Does not require additional dependencies, but can use external Vulkan headers (`VULKAN_INCLUDE_DIRS`). |
 

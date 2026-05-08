@@ -399,7 +399,7 @@ OCV_OPTION(DOWNLOAD_ONNXRUNTIME_GPU "Download GPU-enabled ONNX Runtime prebuilt 
   VISIBLE_IF WITH_ONNXRUNTIME)
 OCV_OPTION(ONNXRUNTIME_PREFER_STATIC "Prefer static ONNX Runtime library when available" ON
   VISIBLE_IF WITH_ONNXRUNTIME)
-set(ONNXRUNTIME_VERSION "1.24.2" CACHE STRING "ONNX Runtime version to download (prebuilt binaries)")
+set(ONNXRUNTIME_VERSION "1.25.1" CACHE STRING "ONNX Runtime version to download (prebuilt binaries)")
 
 # Backward compatibility for previous option name.
 if(DEFINED WITH_ONNX AND WITH_ONNX AND NOT WITH_ONNXRUNTIME)
