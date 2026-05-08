@@ -59,7 +59,7 @@ struct BaseElemWiseOp
         {
             beta = exp(rng.uniform(-0.5, 0.1)*m*2*CV_LOG2);
             beta *= rng.uniform(0, 2) ? 1 : -1;
-        }
+        } 
 
         if( !(flags & FIX_GAMMA) )
         {
