@@ -581,9 +581,9 @@ void CharucoBoard2Impl::createCharucoBoard() {
     rightBottomBorder = Point3f(size.width * squareLength, size.height * squareLength, 0.f);
 }
 
-void CharucoBoard2Impl::matchImagePoints(InputArrayOfArrays detectedCharuco, InputArray detectedIds,
-                                         OutputArray objPoints, OutputArray imgPoints) const {
-    board2.matchImagePoints(detectedCharuco, detectedIds, objPoints, imgPoints);
+void CharucoBoard2Impl::matchImagePoints(InputArrayOfArrays detectedCharuco_, InputArray detectedIds_,
+                                         OutputArray objPoints_, OutputArray imgPoints_) const {
+    board2.matchImagePoints(detectedCharuco_, detectedIds_, objPoints_, imgPoints_);
 }
 
 void CharucoBoard2Impl::generateImage(Size outSize, OutputArray img, int marginSize, int borderBits) const {
