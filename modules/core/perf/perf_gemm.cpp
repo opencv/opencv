@@ -29,7 +29,7 @@ class GemmTest : public perf::TestBaseWithParam<GemmTestParams_t>
         if (dst.total() * dst.channels() < 26)
             SANITY_CHECK_NOTHING();
         else
-            SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
+            SANITY_CHECK(dst, (CV_MAT_DEPTH(type) == CV_32F) ? 1e-4 : 1e-6, ERROR_RELATIVE);
     };
 };
 
