@@ -1227,6 +1227,49 @@ static inline int kaze_ksize_for_sigma(float sigma)
     return cvCeil(2.0f * (1.0f + (sigma - 0.8f) / 0.3f)) | 1;
 }
 
+static void sync_evolution_from_uPyr(const UTPyramid& uPyr, TPyramid& evolution_)
+{
+    for (size_t lv = 0; lv < uPyr.size(); lv++)
+    {
+        uPyr[lv].Lx.copyTo(evolution_[lv].Lx);
+        uPyr[lv].Ly.copyTo(evolution_[lv].Ly);
+    }
+}
+
+static inline bool
+ocl_compute_kaze_orientation_level(InputArray Lx_, InputArray Ly_,
+                                   InputArray keypoints_x_, InputArray keypoints_y_,
+                                   InputArray keypoints_size_, InputArray keypoints_angle_,
+                                   int nkeypoints)
+{
+    UMat Lx = Lx_.getUMat();
+    UMat Ly = Ly_.getUMat();
+    UMat keypoints_x = keypoints_x_.getUMat();
+    UMat keypoints_y = keypoints_y_.getUMat();
+    UMat keypoints_size = keypoints_size_.getUMat();
+    UMat keypoints_angle = keypoints_angle_.getUMat();
+
+    int lx_step = (int)(Lx.step / Lx.elemSize1());
+    int lx_rows = Lx.rows;
+    int lx_cols = Lx.cols;
+
+    size_t globalSize[] = {(size_t)nkeypoints};
+
+    ocl::Kernel ker("KAZE_compute_orientation_level", ocl::features2d::kaze_oclsrc);
+    if (ker.empty())
+        return false;
+
+    return ker.args(
+        ocl::KernelArg::PtrReadOnly(Lx),
+        ocl::KernelArg::PtrReadOnly(Ly),
+        lx_step, lx_rows, lx_cols,
+        ocl::KernelArg::PtrReadOnly(keypoints_x),
+        ocl::KernelArg::PtrReadOnly(keypoints_y),
+        ocl::KernelArg::PtrReadOnly(keypoints_size),
+        ocl::KernelArg::PtrWriteOnly(keypoints_angle),
+        nkeypoints).run(1, globalSize, 0, false);
+}
+
 // Dispatch the KAZE upright descriptor kernel for one pyramid level.
 // lx_step: row stride of Lx/Ly in float elements (= Lx.cols for continuous mat).
 static inline bool
@@ -1243,8 +1286,7 @@ ocl_compute_kaze_upright_descriptor_level(InputArray Lx_, InputArray Ly_,
     UMat descriptors = descriptors_.getUMat();
 
     int nkeypoints = (int)keypoints_x.total();
-    // For continuous UMat, step_in_float_elements == cols
-    int lx_step = Lx.cols;
+    int lx_step = (int)(Lx.step / Lx.elemSize1());
     int lx_rows = Lx.rows;
     int lx_cols = Lx.cols;
 
@@ -1263,6 +1305,47 @@ ocl_compute_kaze_upright_descriptor_level(InputArray Lx_, InputArray Ly_,
         ocl::KernelArg::PtrReadOnly(keypoints_x),
         ocl::KernelArg::PtrReadOnly(keypoints_y),
         ocl::KernelArg::PtrReadOnly(keypoints_size),
+        ocl::KernelArg::PtrWriteOnly(descriptors),
+        nkeypoints).run(1, globalSize, 0, false);
+}
+
+// Dispatch the KAZE rotation-invariant descriptor kernel for one pyramid level.
+// lx_step: row stride of Lx/Ly in float elements (= Lx.cols for continuous mat).
+static inline bool
+ocl_compute_kaze_descriptor_level(InputArray Lx_, InputArray Ly_,
+                                   InputArray keypoints_x_, InputArray keypoints_y_,
+                                   InputArray keypoints_size_, InputArray keypoints_angle_,
+                                   OutputArray descriptors_, bool extended)
+{
+    UMat Lx = Lx_.getUMat();
+    UMat Ly = Ly_.getUMat();
+    UMat keypoints_x = keypoints_x_.getUMat();
+    UMat keypoints_y = keypoints_y_.getUMat();
+    UMat keypoints_size = keypoints_size_.getUMat();
+    UMat keypoints_angle = keypoints_angle_.getUMat();
+    UMat descriptors = descriptors_.getUMat();
+
+    int nkeypoints = (int)keypoints_x.total();
+    int lx_step = (int)(Lx.step / Lx.elemSize1());
+    int lx_rows = Lx.rows;
+    int lx_cols = Lx.cols;
+
+    size_t globalSize[] = {(size_t)nkeypoints};
+
+    const char* kernel_name = extended ? "KAZE_compute_descriptor_128"
+                                       : "KAZE_compute_descriptor_64";
+    ocl::Kernel ker(kernel_name, ocl::features2d::kaze_oclsrc);
+    if (ker.empty())
+        return false;
+
+    return ker.args(
+        ocl::KernelArg::PtrReadOnly(Lx),
+        ocl::KernelArg::PtrReadOnly(Ly),
+        lx_step, lx_rows, lx_cols,
+        ocl::KernelArg::PtrReadOnly(keypoints_x),
+        ocl::KernelArg::PtrReadOnly(keypoints_y),
+        ocl::KernelArg::PtrReadOnly(keypoints_size),
+        ocl::KernelArg::PtrReadOnly(keypoints_angle),
         ocl::KernelArg::PtrWriteOnly(descriptors),
         nkeypoints).run(1, globalSize, 0, false);
 }
@@ -1290,18 +1373,89 @@ void KAZEFeatures::Create_Nonlinear_Scale_Space_UMat(InputArray image, UTPyramid
         GaussianBlur(uPyr[0].Lt, uPyr[0].Lsmooth, Size(k1, k1), options_.sderivatives, options_.sderivatives, BORDER_REPLICATE);
     }
 
-    // Compute kcontrast on CPU using first-level Lt (one GPU→CPU sync)
+    // Compute kcontrast from L0 gradients. Uses OpenCV Scharr (correct UMat handling)
+    // + fused mag2 kernel (replaces multiply(Lx^2) + multiply(Ly^2) + add(mag2)).
     {
-        Mat lt_cpu;
-        uPyr[0].Lt.copyTo(lt_cpu);
-        options_.kcontrast = compute_k_percentile(lt_cpu, options_.kcontrast_percentille,
-                                                   options_.sderivatives, options_.kcontrast_bins, 0, 0);
+        int nbins = options_.kcontrast_bins;
+        int rows = uPyr[0].Lsmooth.rows;
+        int cols = uPyr[0].Lsmooth.cols;
+
+        UMat Lx_k, Ly_k;
+        Scharr(uPyr[0].Lsmooth, Lx_k, CV_32F, 1, 0, 1.0, 0.0, BORDER_DEFAULT);
+        Scharr(uPyr[0].Lsmooth, Ly_k, CV_32F, 0, 1, 1.0, 0.0, BORDER_DEFAULT);
+
+        UMat mag2(rows, cols, CV_32F);
+
+        bool ocl_ok = false;
+        size_t localSize[] = {16, 16};
+        size_t globalSize[] = {
+            (size_t)alignSize(cols, (int)localSize[0]),
+            (size_t)alignSize(rows, (int)localSize[1])
+        };
+
+        int kstep = (int)(Lx_k.step / sizeof(float));
+        int mag2_step = (int)(mag2.step / mag2.elemSize1());
+
+        ocl::Kernel ker("KAZE_compute_mag2", ocl::features2d::kaze_oclsrc);
+        if (!ker.empty() && ker.args(
+            ocl::KernelArg::PtrReadOnly(Lx_k),
+            ocl::KernelArg::PtrReadOnly(Ly_k),
+            kstep, cols, rows,
+            ocl::KernelArg::PtrWriteOnly(mag2),
+            mag2_step
+        ).run(2, globalSize, localSize, false))
+        {
+            double maxVal = 0.0;
+            minMaxLoc(mag2, NULL, &maxVal, NULL, NULL);
+            float hmax = sqrt((float)maxVal);
+
+            if (hmax > 1e-10f)
+            {
+                UMat histogram(1, nbins, CV_32S, Scalar::all(0));
+
+                ocl::Kernel hist_ker("KAZE_compute_kcontrast_histogram", ocl::features2d::kaze_oclsrc);
+                if (!hist_ker.empty() && hist_ker.args(
+                    ocl::KernelArg::PtrReadOnly(Lx_k),
+                    ocl::KernelArg::PtrReadOnly(Ly_k),
+                    kstep, cols, rows, hmax, nbins,
+                    ocl::KernelArg::PtrWriteOnly(histogram),
+                    ocl::KernelArg::Local(nbins * (int)sizeof(int))
+                ).run(2, globalSize, localSize, false))
+                {
+                    Mat hist_cpu = histogram.getMat(ACCESS_READ);
+                    const int* hist_data = hist_cpu.ptr<int>();
+
+                    float npoints = 0.0f;
+                    for (int b = 0; b < nbins; b++)
+                        npoints += (float)hist_data[b];
+
+                    int nthreshold = (int)(npoints * options_.kcontrast_percentille);
+                    int nelements = 0, k = 0;
+                    for (k = 0; nelements < nthreshold && k < nbins; k++)
+                        nelements += hist_data[k];
+
+                    if (nelements < nthreshold)
+                        options_.kcontrast = 0.03f;
+                    else
+                        options_.kcontrast = hmax * ((float)k / (float)nbins);
+                    ocl_ok = true;
+                }
+            }
+        }
+
+        if (!ocl_ok)
+        {
+            Mat lt_cpu;
+            uPyr[0].Lt.copyTo(lt_cpu);
+            options_.kcontrast = compute_k_percentile(lt_cpu, options_.kcontrast_percentille,
+                                                       options_.sderivatives, options_.kcontrast_bins, 0, 0);
+        }
     }
 
     // Build scale space (levels 1 .. n-1)
     {
         int k1 = kaze_ksize_for_sigma(options_.sderivatives);
-        UMat Lx_diff, Ly_diff, Lflow, Lstep;
+        UMat Lx_diff, Ly_diff, Lflow;
 
         for (size_t i = 1; i < uPyr.size(); i++)
         {
@@ -1316,12 +1470,40 @@ void KAZEFeatures::Create_Nonlinear_Scale_Space_UMat(InputArray image, UTPyramid
 
             compute_diffusivity(Lx_diff, Ly_diff, Lflow, options_.kcontrast, options_.diffusivity);
 
-            // Fast Explicit Diffusion steps
+            // Fast Explicit Diffusion steps with fused kernel (no Lstep buffer)
             const std::vector<float>& tsteps = tsteps_[i - 1];
-            for (size_t j = 0; j < tsteps.size(); j++)
+
+#ifdef HAVE_OPENCL
+            if (cv::ocl::isOpenCLActivated())
             {
-                non_linear_diffusion_step(uPyr[i].Lt, Lflow, Lstep, tsteps[j] * 0.5f);
-                add(uPyr[i].Lt, Lstep, uPyr[i].Lt);
+                UMat lt_buf1;
+                lt_buf1.create(uPyr[i].Lt.size(), uPyr[i].Lt.type());
+                if (ocl_pingpong_nld_step(uPyr[i].Lt, lt_buf1, Lflow, tsteps[0] * 0.5f))
+                {
+                    bool src_is_lt0 = false;
+                    for (size_t j = 1; j < tsteps.size(); j++)
+                    {
+                        if (src_is_lt0)
+                            ocl_pingpong_nld_step(uPyr[i].Lt, lt_buf1, Lflow, tsteps[j] * 0.5f);
+                        else
+                            ocl_pingpong_nld_step(lt_buf1, uPyr[i].Lt, Lflow, tsteps[j] * 0.5f);
+                        src_is_lt0 = !src_is_lt0;
+                    }
+                    if (!src_is_lt0)
+                        lt_buf1.copyTo(uPyr[i].Lt);
+                    continue;
+                }
+            }
+#endif
+            // Fallback to original 2-step approach (non-OCL or fused unavailable)
+            {
+                UMat Lstep_bak;
+                Lstep_bak.create(uPyr[i].Lt.size(), uPyr[i].Lt.type());
+                for (size_t j = 0; j < tsteps.size(); j++)
+                {
+                    non_linear_diffusion_step(uPyr[i].Lt, Lflow, Lstep_bak, tsteps[j] * 0.5f);
+                    add(uPyr[i].Lt, Lstep_bak, uPyr[i].Lt);
+                }
             }
         }
     }
@@ -1392,6 +1574,7 @@ void KAZEFeatures::Compute_Descriptors_UMat(std::vector<KeyPoint>& kpts, OutputA
     }
 
     int descriptor_size = options_.extended ? 128 : 64;
+    bool upright = options_.upright;
 
     // Group keypoint indices by pyramid level
     std::vector<std::vector<int>> kpts_by_level(uPyr.size());
@@ -1418,6 +1601,55 @@ void KAZEFeatures::Compute_Descriptors_UMat(std::vector<KeyPoint>& kpts, OutputA
                 kpt_to_row[ki] = row++;
     }
 
+
+    if (!upright)
+    {
+        for (size_t lv = 0; lv < uPyr.size(); lv++)
+        {
+            const std::vector<int>& indices = kpts_by_level[lv];
+            int n = (int)indices.size();
+            if (n == 0)
+                continue;
+
+            // Pack keypoint data into UMats for orientation
+            UMat kpts_x(n, 1, CV_32F);
+            UMat kpts_y(n, 1, CV_32F);
+            UMat kpts_sz(n, 1, CV_32F);
+            UMat kpts_angle(n, 1, CV_32F);
+            {
+                Mat mx = kpts_x.getMat(ACCESS_WRITE);
+                Mat my = kpts_y.getMat(ACCESS_WRITE);
+                Mat ms = kpts_sz.getMat(ACCESS_WRITE);
+                Mat ma = kpts_angle.getMat(ACCESS_WRITE);
+                for (int i = 0; i < n; i++)
+                {
+                    const KeyPoint& kp = kpts[indices[i]];
+                    mx.at<float>(i) = kp.pt.x;
+                    my.at<float>(i) = kp.pt.y;
+                    ms.at<float>(i) = kp.size;
+                }
+            }
+
+            bool ok = ocl_compute_kaze_orientation_level(
+                uPyr[lv].Lx, uPyr[lv].Ly,
+                kpts_x, kpts_y, kpts_sz, kpts_angle, n);
+
+            if (ok)
+            {
+                Mat ma = kpts_angle.getMat(ACCESS_READ);
+                for (int i = 0; i < n; i++)
+                    kpts[indices[i]].angle = ma.at<float>(i);
+            }
+            else
+            {
+                // Fallback to CPU orientation
+                sync_evolution_from_uPyr(uPyr, evolution_);
+                for (int ki : indices)
+                    Compute_Main_Orientation(kpts[ki], evolution_, options_);
+            }
+        }
+    }
+
     for (size_t lv = 0; lv < uPyr.size(); lv++)
     {
         const std::vector<int>& indices = kpts_by_level[lv];
@@ -1429,34 +1661,50 @@ void KAZEFeatures::Compute_Descriptors_UMat(std::vector<KeyPoint>& kpts, OutputA
         UMat kpts_x(n, 1, CV_32F);
         UMat kpts_y(n, 1, CV_32F);
         UMat kpts_sz(n, 1, CV_32F);
+        UMat kpts_angle(n, 1, CV_32F);
         {
             Mat mx = kpts_x.getMat(ACCESS_WRITE);
             Mat my = kpts_y.getMat(ACCESS_WRITE);
             Mat ms = kpts_sz.getMat(ACCESS_WRITE);
+            Mat ma = kpts_angle.getMat(ACCESS_WRITE);
             for (int i = 0; i < n; i++)
             {
                 const KeyPoint& kp = kpts[indices[i]];
                 mx.at<float>(i) = kp.pt.x;
                 my.at<float>(i) = kp.pt.y;
                 ms.at<float>(i) = kp.size;
+                ma.at<float>(i) = kp.angle;
             }
         }
 
         // Compute descriptors for this level on GPU
         UMat desc_level(n, descriptor_size, CV_32F);
-        bool ok = ocl_compute_kaze_upright_descriptor_level(
-            uPyr[lv].Lx, uPyr[lv].Ly,
-            kpts_x, kpts_y, kpts_sz,
-            desc_level, options_.extended);
-
-        if (!ok)
+        bool ok;
+        if (upright)
         {
-            // GPU failed — fall back to full CPU path
-            Mat cpu_desc;
-            Feature_Description(kpts, cpu_desc);
-            cpu_desc.copyTo(desc);
-            return;
+            ok = ocl_compute_kaze_upright_descriptor_level(
+                uPyr[lv].Lx, uPyr[lv].Ly,
+                kpts_x, kpts_y, kpts_sz,
+                desc_level, options_.extended);
         }
+        else
+        {
+            ok = ocl_compute_kaze_descriptor_level(
+                uPyr[lv].Lx, uPyr[lv].Ly,
+                kpts_x, kpts_y, kpts_sz, kpts_angle,
+                desc_level, options_.extended);
+        }
+
+            if (!ok)
+            {
+                // GPU failed — fall back to full CPU path
+                sync_evolution_from_uPyr(uPyr, evolution_);
+                Mat cpu_desc;
+                Feature_Description(kpts, cpu_desc);
+                cpu_desc.copyTo(desc);
+                return;
+            }
+
 
         // Download and copy into correct rows of the output matrix
         Mat level_mat = desc_level.getMat(ACCESS_READ);

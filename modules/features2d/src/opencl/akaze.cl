@@ -4,6 +4,26 @@
 
 
 /**
+ * @brief This function computes the Perona and Malik conductivity coefficient g1
+ * g1 = exp(-dL^2 / k^2)
+ * @param lx First order image derivative in X-direction (horizontal)
+ * @param ly First order image derivative in Y-direction (vertical)
+ * @param dst Output image
+ * @param k Contrast factor parameter
+ */
+__kernel void
+AKAZE_pm_g1(__global const float* lx, __global const float* ly, __global float* dst,
+    float k, int size)
+{
+    int i = get_global_id(0);
+    if (!(i < size))
+        return;
+
+    const float k2inv = 1.0f / (k * k);
+    dst[i] = exp(-(lx[i] * lx[i] + ly[i] * ly[i]) * k2inv);
+}
+
+/**
  * @brief This function computes the Perona and Malik conductivity coefficient g2
  * g2 = 1 / (1 + dL^2 / k^2)
  * @param lx First order image derivative in X-direction (horizontal)
@@ -24,6 +44,50 @@ AKAZE_pm_g2(__global const float* lx, __global const float* ly, __global float* 
 
     const float k2inv = 1.0f / (k * k);
     dst[i] = 1.0f / (1.0f + ((lx[i] * lx[i] + ly[i] * ly[i]) * k2inv));
+}
+
+/**
+ * @brief This function computes Weickert conductivity coefficient
+ * g3 = 1 - exp(-3.315 / (dL^2 / k^2)^4)
+ * @param lx First order image derivative in X-direction (horizontal)
+ * @param ly First order image derivative in Y-direction (vertical)
+ * @param dst Output image
+ * @param k Contrast factor parameter
+ */
+__kernel void
+AKAZE_weickert(__global const float* lx, __global const float* ly, __global float* dst,
+    float k, int size)
+{
+    int i = get_global_id(0);
+    if (i >= size)
+        return;
+
+    const float inv_k = 1.0f / (k * k);
+    float dL = inv_k * (lx[i] * lx[i] + ly[i] * ly[i]);
+    float dL4 = dL * dL;
+    dL4 = dL4 * dL4;
+    dst[i] = 1.0f - exp(-3.315f / dL4);
+}
+
+/**
+ * @brief This function computes Charbonnier conductivity coefficient
+ * gc = 1 / sqrt(1 + dL^2 / k^2)
+ * @param lx First order image derivative in X-direction (horizontal)
+ * @param ly First order image derivative in Y-direction (vertical)
+ * @param dst Output image
+ * @param k Contrast factor parameter
+ */
+__kernel void
+AKAZE_charbonnier(__global const float* lx, __global const float* ly, __global float* dst,
+    float k, int size)
+{
+    int i = get_global_id(0);
+    if (i >= size)
+        return;
+
+    const float inv_k = 1.0f / (k * k);
+    float den = sqrt(1.0f + inv_k * (lx[i] * lx[i] + ly[i] * ly[i]));
+    dst[i] = 1.0f / den;
 }
 
 __kernel void
@@ -95,6 +159,94 @@ AKAZE_nld_step_scalar(__global const float* lt, int lt_step, int lt_offset, int 
     }
 
     dst[c + j] = res * step_size;
+}
+
+/**
+ * @brief Fused nonlinear diffusion step with ping-pong buffering
+ * @details Combines non_linear_diffusion_step and add(Lt, Lstep, Lt) into a single
+ * kernel. Reads from src (read-only), writes result to dst (write-only).
+ * This avoids read-write races: all neighbor reads go to src, all writes go to dst.
+ * No Lstep intermediate buffer is needed; the two buffers ping-pong between steps.
+ *
+ * The 5-point stencil labeling scheme:
+ *        [    a    ]
+ *        [ -1 c +1 ]
+ *        [    b    ]
+ *
+ * @param src Current evolution image (read-only)
+ * @param dst Output evolution image (write-only)
+ * @param rows Image height
+ * @param cols Image width
+ * @param lf Conductivity (flow) image
+ * @param step_size FED step size (tau * 0.5)
+ */
+__kernel void
+AKAZE_pingpong_nld_step(__global const float* src, int rows, int cols,
+    __global float* dst, __global const float* lf, float step_size)
+{
+    int i = get_global_id(1);
+    int j = get_global_id(0);
+
+    if (!(i < rows && j < cols))
+        return;
+
+    int a = (i - 1) * cols;
+    int c = i * cols;
+    int b = (i + 1) * cols;
+
+    float cur = src[c + j];
+    float res = 0.0f;
+
+    if (i == 0)
+    {
+        if (j == 0 || j == (cols - 1))
+        {
+            res = 0.0f;
+        }
+        else
+        {
+            res = (lf[c + j] + lf[c + j + 1]) * (src[c + j + 1] - cur) +
+                  (lf[c + j] + lf[c + j - 1]) * (src[c + j - 1] - cur) +
+                  (lf[c + j] + lf[b + j    ]) * (src[b + j    ] - cur);
+        }
+    }
+    else if (i == (rows - 1))
+    {
+        if (j == 0 || j == (cols - 1))
+        {
+            res = 0.0f;
+        }
+        else
+        {
+            res = (lf[c + j] + lf[c + j + 1]) * (src[c + j + 1] - cur) +
+                  (lf[c + j] + lf[c + j - 1]) * (src[c + j - 1] - cur) +
+                  (lf[c + j] + lf[a + j    ]) * (src[a + j    ] - cur);
+        }
+    }
+    else
+    {
+        if (j == 0)
+        {
+            res = (lf[c + 0] + lf[c + 1]) * (src[c + 1] - cur) +
+                  (lf[c + 0] + lf[b + 0]) * (src[b + 0] - cur) +
+                  (lf[c + 0] + lf[a + 0]) * (src[a + 0] - cur);
+        }
+        else if (j == (cols - 1))
+        {
+            res = (lf[c + j] + lf[c + j - 1]) * (src[c + j - 1] - cur) +
+                  (lf[c + j] + lf[b + j    ]) * (src[b + j    ] - cur) +
+                  (lf[c + j] + lf[a + j    ]) * (src[a + j    ] - cur);
+        }
+        else
+        {
+            res = (lf[c + j] + lf[c + j + 1]) * (src[c + j + 1] - cur) +
+                  (lf[c + j] + lf[c + j - 1]) * (src[c + j - 1] - cur) +
+                  (lf[c + j] + lf[b + j    ]) * (src[b + j    ] - cur) +
+                  (lf[c + j] + lf[a + j    ]) * (src[a + j    ] - cur);
+        }
+    }
+
+    dst[c + j] = cur + res * step_size;
 }
 
 /**

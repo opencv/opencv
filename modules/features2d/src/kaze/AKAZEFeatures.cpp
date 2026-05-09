@@ -307,7 +307,7 @@ create_nonlinear_scale_space(InputArray image, const AKAZEOptions &options,
   }
 
   // derivatives, flow and diffusion step
-  MatType Lx, Ly, Lsmooth, Lflow, Lstep;
+  MatType Lx, Ly, Lsmooth, Lflow;
 
   // compute derivatives for computing k contrast
   GaussianBlur(img, Lsmooth, Size(5, 5), 1.0f, 1.0f, BORDER_REPLICATE);
@@ -348,12 +348,40 @@ create_nonlinear_scale_space(InputArray image, const AKAZEOptions &options,
     // Compute the conductivity equation
     compute_diffusivity(Lx, Ly, Lflow, kcontrast, options.diffusivity);
 
-    // Perform Fast Explicit Diffusion on Lt
+    // Perform Fast Explicit Diffusion on Lt (fused in-place kernel preferred)
     const std::vector<float> &tsteps = tsteps_evolution[i - 1];
-    for (size_t j = 0; j < tsteps.size(); j++) {
-      const float step_size = tsteps[j] * 0.5f;
-      non_linear_diffusion_step(e.Lt, Lflow, Lstep, step_size);
-      add(e.Lt, Lstep, e.Lt);
+
+#ifdef HAVE_OPENCL
+    if (cv::ocl::isOpenCLActivated() && std::is_same<MatType, UMat>::value)
+    {
+      UMat lt_buf1;
+      lt_buf1.create(e.Lt.size(), e.Lt.type());
+      if (ocl_pingpong_nld_step(e.Lt, lt_buf1, Lflow, tsteps[0] * 0.5f))
+      {
+        bool src_is_lt0 = false;
+        for (size_t j = 1; j < tsteps.size(); j++)
+        {
+          if (src_is_lt0)
+            ocl_pingpong_nld_step(e.Lt, lt_buf1, Lflow, tsteps[j] * 0.5f);
+          else
+            ocl_pingpong_nld_step(lt_buf1, e.Lt, Lflow, tsteps[j] * 0.5f);
+          src_is_lt0 = !src_is_lt0;
+        }
+        if (!src_is_lt0)
+          lt_buf1.copyTo(e.Lt);
+        continue;
+      }
+    }
+#endif
+    // Fallback to original 2-step approach
+    {
+      MatType Lstep;
+      Lstep.create(e.Lt.size(), e.Lt.type());
+      for (size_t j = 0; j < tsteps.size(); j++) {
+        const float step_size = tsteps[j] * 0.5f;
+        non_linear_diffusion_step(e.Lt, Lflow, Lstep, step_size);
+        add(e.Lt, Lstep, e.Lt);
+      }
     }
   }
 
@@ -385,7 +413,14 @@ convertScalePyramid(const std::vector<Evolution<MatTypeSrc> >& src, std::vector<
  */
 void AKAZEFeatures::Create_Nonlinear_Scale_Space(InputArray image)
 {
-  if (ocl::isOpenCLActivated() && image.isUMat() && !ocl::Device::getDefault().hostUnifiedMemory()) {
+#if defined(_M_IX86) || defined(__i386__)
+  // The AKAZE compute_diffusivity kernels use significant private memory (float arrays
+  // inside each work-item). On 32-bit platforms, this may exceed driver limits.
+  bool use_opencl = false;
+#else
+  bool use_opencl = ocl::isOpenCLActivated() && image.isUMat() && !ocl::Device::getDefault().hostUnifiedMemory();
+#endif
+  if (use_opencl) {
     // will run OCL version of scale space pyramid
     UMatPyramid uPyr;
     // init UMat pyramid with sizes

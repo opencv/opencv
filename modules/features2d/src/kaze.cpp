@@ -113,8 +113,16 @@ namespace cv
             CV_INSTRUMENT_REGION();
 
 #ifdef HAVE_OPENCL
-            bool use_opencl = ocl::useOpenCL() && upright
+            // Only use OpenCL if input is already UMat
+#if defined(_M_IX86) || defined(__i386__)
+            // KAZE kernels use significant private memory (e.g. float[109] arrays).
+            // On 32-bit platforms, this may exceed driver limits and cause crashes.
+            bool use_opencl = false;
+#else
+            bool use_opencl = ocl::useOpenCL()
+                              && image.isUMat()
                               && !ocl::Device::getDefault().hostUnifiedMemory();
+#endif
             if (use_opencl)
             {
                 UMat img_gray = image.getUMat();
@@ -147,6 +155,7 @@ namespace cv
                 options.diffusivity = diffusivity;
 
                 KAZEFeatures impl(options);
+
                 UTPyramid uPyr;
                 impl.Create_Nonlinear_Scale_Space_UMat(img1_32, uPyr);
 

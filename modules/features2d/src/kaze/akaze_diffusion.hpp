@@ -19,7 +19,6 @@ nld_step_scalar_one_lane(const Mat& Lt, const Mat& Lf, Mat& Lstep, float step_si
 {
   CV_INSTRUMENT_REGION();
 
-  Lstep.create(Lt.size(), Lt.type());
   const int cols = Lt.cols - 2;
   int row = row_begin;
 
@@ -149,6 +148,53 @@ ocl_non_linear_diffusion_step(InputArray Lt_, InputArray Lf_, OutputArray Lstep_
 }
 
 static inline bool
+ocl_pingpong_nld_step(InputArray Lt_src_, InputArray Lt_dst_, InputArray Lf_, float step_size)
+{
+  if(!Lt_src_.isUMat() || !Lt_dst_.isUMat() || !Lf_.isUMat() || !Lt_src_.isContinuous())
+    return false;
+
+  UMat Lt_src = Lt_src_.getUMat();
+  UMat Lt_dst = Lt_dst_.getUMat();
+  UMat Lf = Lf_.getUMat();
+
+  int rows = Lt_src.rows;
+  int cols = Lt_src.cols;
+  size_t globalSize[] = {(size_t)cols, (size_t)rows};
+
+  ocl::Kernel ker("AKAZE_pingpong_nld_step", ocl::features2d::akaze_oclsrc);
+  if( ker.empty() )
+    return false;
+
+  return ker.args(
+    ocl::KernelArg::PtrReadOnly(Lt_src),
+    rows, cols,
+    ocl::KernelArg::PtrWriteOnly(Lt_dst),
+    ocl::KernelArg::PtrReadOnly(Lf),
+    step_size).run(2, globalSize, 0, false);
+}
+
+static inline bool
+ocl_pm_g1(InputArray Lx_, InputArray Ly_, OutputArray Lflow_, float kcontrast)
+{
+  UMat Lx = Lx_.getUMat();
+  UMat Ly = Ly_.getUMat();
+  UMat Lflow = Lflow_.getUMat();
+
+  int total = Lx.rows * Lx.cols;
+  size_t globalSize[] = {(size_t)total};
+
+  ocl::Kernel ker("AKAZE_pm_g1", ocl::features2d::akaze_oclsrc);
+  if( ker.empty() )
+    return false;
+
+  return ker.args(
+    ocl::KernelArg::PtrReadOnly(Lx),
+    ocl::KernelArg::PtrReadOnly(Ly),
+    ocl::KernelArg::PtrWriteOnly(Lflow),
+    kcontrast, total).run(1, globalSize, 0, false);
+}
+
+static inline bool
 ocl_pm_g2(InputArray Lx_, InputArray Ly_, OutputArray Lflow_, float kcontrast)
 {
   UMat Lx = Lx_.getUMat();
@@ -168,14 +214,54 @@ ocl_pm_g2(InputArray Lx_, InputArray Ly_, OutputArray Lflow_, float kcontrast)
     ocl::KernelArg::PtrWriteOnly(Lflow),
     kcontrast, total).run(1, globalSize, 0, false);
 }
+
+static inline bool
+ocl_weickert(InputArray Lx_, InputArray Ly_, OutputArray Lflow_, float kcontrast)
+{
+  UMat Lx = Lx_.getUMat();
+  UMat Ly = Ly_.getUMat();
+  UMat Lflow = Lflow_.getUMat();
+
+  int total = Lx.rows * Lx.cols;
+  size_t globalSize[] = {(size_t)total};
+
+  ocl::Kernel ker("AKAZE_weickert", ocl::features2d::akaze_oclsrc);
+  if( ker.empty() )
+    return false;
+
+  return ker.args(
+    ocl::KernelArg::PtrReadOnly(Lx),
+    ocl::KernelArg::PtrReadOnly(Ly),
+    ocl::KernelArg::PtrWriteOnly(Lflow),
+    kcontrast, total).run(1, globalSize, 0, false);
+}
+
+static inline bool
+ocl_charbonnier(InputArray Lx_, InputArray Ly_, OutputArray Lflow_, float kcontrast)
+{
+  UMat Lx = Lx_.getUMat();
+  UMat Ly = Ly_.getUMat();
+  UMat Lflow = Lflow_.getUMat();
+
+  int total = Lx.rows * Lx.cols;
+  size_t globalSize[] = {(size_t)total};
+
+  ocl::Kernel ker("AKAZE_charbonnier", ocl::features2d::akaze_oclsrc);
+  if( ker.empty() )
+    return false;
+
+  return ker.args(
+    ocl::KernelArg::PtrReadOnly(Lx),
+    ocl::KernelArg::PtrReadOnly(Ly),
+    ocl::KernelArg::PtrWriteOnly(Lflow),
+    kcontrast, total).run(1, globalSize, 0, false);
+}
 #endif // HAVE_OPENCL
 
 static inline void
 non_linear_diffusion_step(InputArray Lt_, InputArray Lf_, OutputArray Lstep_, float step_size)
 {
   CV_INSTRUMENT_REGION();
-
-  Lstep_.create(Lt_.size(), Lt_.type());
 
   CV_OCL_RUN(Lt_.isUMat() && Lf_.isUMat() && Lstep_.isUMat(),
     ocl_non_linear_diffusion_step(Lt_, Lf_, Lstep_, step_size));
@@ -195,16 +281,23 @@ compute_diffusivity(InputArray Lx, InputArray Ly, OutputArray Lflow, float kcont
 
   switch (diffusivity) {
     case KAZE::DIFF_PM_G1:
+      CV_OCL_RUN(Lx.isUMat() && Ly.isUMat() && Lflow.isUMat(),
+        ocl_pm_g1(Lx, Ly, Lflow, kcontrast))
       pm_g1(Lx, Ly, Lflow, kcontrast);
     break;
     case KAZE::DIFF_PM_G2:
-      CV_OCL_RUN(Lx.isUMat() && Ly.isUMat() && Lflow.isUMat(), ocl_pm_g2(Lx, Ly, Lflow, kcontrast));
+      CV_OCL_RUN(Lx.isUMat() && Ly.isUMat() && Lflow.isUMat(),
+        ocl_pm_g2(Lx, Ly, Lflow, kcontrast))
       pm_g2(Lx, Ly, Lflow, kcontrast);
     break;
     case KAZE::DIFF_WEICKERT:
+      CV_OCL_RUN(Lx.isUMat() && Ly.isUMat() && Lflow.isUMat(),
+        ocl_weickert(Lx, Ly, Lflow, kcontrast))
       weickert_diffusivity(Lx, Ly, Lflow, kcontrast);
     break;
     case KAZE::DIFF_CHARBONNIER:
+      CV_OCL_RUN(Lx.isUMat() && Ly.isUMat() && Lflow.isUMat(),
+        ocl_charbonnier(Lx, Ly, Lflow, kcontrast))
       charbonnier_diffusivity(Lx, Ly, Lflow, kcontrast);
     break;
     default:
