@@ -3029,6 +3029,12 @@ Mat& Mat::operator = (const MatExpr& e)
     return *this;
 }
 
+inline
+Mat::Mat(const MatExpr& e)
+{
+    e.op->assign(e, *this);
+}
+
 template<typename _Tp> inline
 Mat_<_Tp>::Mat_(const MatExpr& e)
 {

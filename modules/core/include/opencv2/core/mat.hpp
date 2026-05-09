@@ -932,6 +932,13 @@ public:
     Mat(const Mat& m);
 
     /** @overload
+    @param expr Matrix expression to be converted to a matrix.
+    This constructor ensures proper evaluation of matrix expressions into a matrix,
+    avoiding use-after-scope issues when the expression temporary outlives the constructed matrix.
+    */
+    explicit Mat(const MatExpr& expr);
+
+    /** @overload
     @param rows Number of rows in a 2D array.
     @param cols Number of columns in a 2D array.
     @param type Array type. Use CV_8UC1, ..., CV_64FC4 to create 1-4 channel matrices, or
