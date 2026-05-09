@@ -2963,10 +2963,14 @@ cvInitImageHeader( IplImage * image, CvSize size, int depth,
     image->nChannels = MAX( channels, 1 );
     image->depth = depth;
     image->align = align;
-    image->widthStep = (((image->width * image->nChannels *
-         (image->depth & ~IPL_DEPTH_SIGN) + 7)/8)+ align - 1) & (~(align - 1));
+    const int64 widthStep_tmp = (int64)image->width * image->nChannels *
+         ((image->depth & ~IPL_DEPTH_SIGN) / 8);
+    const int64 widthStep_aligned = ((widthStep_tmp + align - 1) & (~(align - 1)));
+    if (widthStep_aligned != (int64)(int)widthStep_aligned)
+        CV_Error( cv::Error::StsNoMem, "Overflow for widthStep" );
+    image->widthStep = (int)widthStep_aligned;
     image->origin = origin;
-    const int64 imageSize_tmp = (int64)image->widthStep*(int64)image->height;
+    const int64 imageSize_tmp = (int64)image->widthStep * (int64)image->height;
     image->imageSize = (int)imageSize_tmp;
     if( (int64)image->imageSize != imageSize_tmp )
         CV_Error( cv::Error::StsNoMem, "Overflow for imageSize" );
