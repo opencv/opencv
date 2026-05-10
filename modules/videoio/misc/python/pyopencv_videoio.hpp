@@ -150,7 +150,11 @@ static PyObject* pycvVideoEnter(PyObject* self, PyObject* /*args*/, PyObject* /*
 }
 
 static PyObject* pycvVideoExit(PyObject* self, PyObject* /*args*/, PyObject* /*kw*/) {
-    PyObject* res = PyObject_CallMethod(self, (char*)"release", (char*)"");
+    // Using OpenCV's standard way to call Python methods safely without format string warnings
+    PyObject* method_name = PyString_FromString("release");
+    PyObject* res = PyObject_CallMethodObjArgs(self, method_name, NULL);
+    Py_DECREF(method_name);
+    
     if (!res) {
         return NULL;
     }
@@ -165,6 +169,5 @@ static PyObject* pycvVideoExit(PyObject* self, PyObject* /*args*/, PyObject* /*k
 #define PYOPENCV_EXTRA_METHODS_VideoWriter \
     {"__enter__", CV_PY_FN_WITH_KW(pycvVideoEnter), "Context manager enter"}, \
     {"__exit__",  CV_PY_FN_WITH_KW(pycvVideoExit), "Context manager exit"},
-
 
 #endif // HAVE_OPENCV_VIDEOIO
