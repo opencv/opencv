@@ -2016,8 +2016,14 @@ Rect_<_Tp>& operator &= ( Rect_<_Tp>& a, const Rect_<_Tp>& b )
     // Rx_min.x < 0 && Rx_min.x + Rx_min.width >= Rx_max.x and therefore
     // Rx_min.width >= (Rx_max.x - Rx_min.x) which means (Rx_max.x - Rx_min.x)
     // is inferior to a valid int and therefore does not overflow.
-    a.width = std::min(Rx_min.width - (Rx_max.x - Rx_min.x), Rx_max.width);
-    a.height = std::min(Ry_min.height - (Ry_max.y - Ry_min.y), Ry_max.height);
+    const _Tp x_diff = Rx_max.x - Rx_min.x;
+    const _Tp y_diff = Ry_max.y - Ry_min.y;
+    if (Rx_min.width <= x_diff || Ry_min.height <= y_diff) {
+        a = Rect_<_Tp>();
+        return a;
+    }
+    a.width = std::min(Rx_min.width - x_diff, Rx_max.width);
+    a.height = std::min(Ry_min.height - y_diff, Ry_max.height);
     a.x = Rx_max.x;
     a.y = Ry_max.y;
     if (a.empty())

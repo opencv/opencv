@@ -928,6 +928,16 @@ REGISTER_TYPED_TEST_CASE_P(Rect_Test, Overflows, OnTheEdge);
 typedef ::testing::Types<int, float, double> RectTypes;
 INSTANTIATE_TYPED_TEST_CASE_P(Negative_Test, Rect_Test, RectTypes);
 
+// https://github.com/opencv/opencv/issues/11988
+TEST(Core_Rect, unsigned_intersection)
+{
+    typedef Rect_<unsigned> R;
+
+    EXPECT_EQ(R(5, 5, 5, 5), R(0, 0, 10, 10) & R(5, 5, 10, 10));
+    EXPECT_EQ(R(), R(0, 0, 10, 10) & R(20, 0, 5, 5));
+    EXPECT_EQ(R(), R(0, 0, 10, 10) & R(0, 20, 5, 5));
+}
+
 // Expected that SkipTestException thrown in the constructor should skip test but not fail
 struct TestFixtureSkip: public ::testing::Test {
     TestFixtureSkip(bool throwEx = true) {
