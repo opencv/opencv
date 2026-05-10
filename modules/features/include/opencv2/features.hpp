@@ -50,6 +50,10 @@
 #include "opencv2/flann/miniflann.hpp"
 #endif
 
+#ifdef HAVE_OPENCV_DNN
+#include "opencv2/dnn.hpp"
+#endif
+
 /**
   @defgroup features Features Framework
   @{
@@ -835,6 +839,54 @@ public:
   CV_WRAP virtual const std::vector<std::vector<cv::Point> >& getBlobContours() const = 0;
 };
 
+/** @brief ALIKED feature detector and descriptor extractor.
+
+ALIKED (A Lightweight Image KEYpoint Detector) is a CNN-based feature detector and descriptor
+extractor. It produces 128-dimensional float descriptors and keypoints with sub-pixel accuracy.
+
+The model expects RGB input [1,3,H,W] and internally converts BGR images to RGB.
+*/
+class CV_EXPORTS_W ALIKED : public Feature2D
+{
+protected:
+    ALIKED();
+public:
+    virtual ~ALIKED();
+
+    struct CV_EXPORTS_W_SIMPLE Params
+    {
+        CV_WRAP Params();
+        CV_PROP_RW Size inputSize;              //!< Input image size for the network, default 640x640
+        CV_PROP_RW bool normalizeDescriptors;   //!< Whether to L2-normalize descriptors, default true
+    };
+
+    /** @brief Creates ALIKED from a model file path.
+    @param modelPath Path to the ONNX model file.
+    @param params ALIKED parameters.
+    */
+    CV_WRAP static Ptr<ALIKED> create(const String& modelPath, const ALIKED::Params& params = ALIKED::Params());
+
+    /** @brief Creates ALIKED from in-memory model data.
+    @param modelData Buffer containing the model data.
+    @param params ALIKED parameters.
+    */
+    static Ptr<ALIKED> create(const std::vector<uchar>& modelData, const ALIKED::Params& params = ALIKED::Params());
+
+#ifdef HAVE_OPENCV_DNN
+    /** @brief Creates ALIKED from a pre-loaded DNN network.
+    @param net Pre-loaded DNN network.
+    @param params ALIKED parameters.
+    */
+    CV_WRAP static Ptr<ALIKED> create(const dnn::Net& net, const ALIKED::Params& params);
+#endif
+
+    /** @brief Returns the model path or name.
+    */
+    CV_WRAP virtual String getModel() const = 0;
+
+    CV_WRAP virtual String getDefaultName() const CV_OVERRIDE = 0;
+};
+
 
 /****************************************************************************************\
 *                                      Distance                                          *
@@ -1251,6 +1303,70 @@ protected:
 };
 
 #endif
+
+/** @brief LightGlue feature matcher.
+
+LightGlue is a CNN-based feature matcher that takes keypoint locations and descriptors from
+two images and directly predicts match pairs. Unlike traditional matchers that compute
+descriptor distances, LightGlue uses attention mechanisms to produce confidence scores for
+each potential match pair.
+
+The matcher extends DescriptorMatcher and supports the standard match(), knnMatch(), and
+radiusMatch() interfaces. Context (keypoints and image sizes) must be provided via
+setPairInfo() before matching.
+*/
+class CV_EXPORTS_W LightGlueMatcher : public DescriptorMatcher
+{
+protected:
+    LightGlueMatcher();
+public:
+    virtual ~LightGlueMatcher();
+
+    struct CV_EXPORTS_W_SIMPLE Params
+    {
+        CV_WRAP Params();
+        CV_PROP_RW float scoreThreshold;   //!< Match confidence threshold, default 0.0
+        CV_PROP_RW bool disableWinograd;   //!< Disable Winograd convolution, default false
+    };
+
+    /** @brief Creates LightGlueMatcher from a model file path.
+    @param modelPath Path to the ONNX model file.
+    @param params LightGlue parameters.
+    */
+    CV_WRAP static Ptr<LightGlueMatcher> create(const String& modelPath, const LightGlueMatcher::Params& params = LightGlueMatcher::Params());
+
+    /** @brief Creates LightGlueMatcher from in-memory model data.
+    @param modelData Buffer containing the model data.
+    @param params LightGlue parameters.
+    */
+    static Ptr<LightGlueMatcher> create(const std::vector<uchar>& modelData, const LightGlueMatcher::Params& params = LightGlueMatcher::Params());
+
+#ifdef HAVE_OPENCV_DNN
+    /** @brief Creates LightGlueMatcher from a pre-loaded DNN network.
+    @param net Pre-loaded DNN network.
+    @param params LightGlue parameters.
+    */
+    CV_WRAP static Ptr<LightGlueMatcher> create(const dnn::Net& net, const LightGlueMatcher::Params& params);
+#endif
+
+    /** @brief Sets the keypoint and image size context for the next match() call.
+
+    This provides the spatial context that LightGlue needs in addition to descriptors.
+    Must be called before match()/knnMatch()/radiusMatch() unless using automatic context
+    from in-process ALIKED instances.
+
+    @param queryKpts Query image keypoints (Nx2 float matrix with x,y coordinates).
+    @param trainKpts Train image keypoints (Nx2 float matrix with x,y coordinates).
+    @param queryImageSize Size of the query image (width, height).
+    @param trainImageSize Size of the train image (width, height).
+    */
+    CV_WRAP virtual void setPairInfo(InputArray queryKpts, InputArray trainKpts,
+                                     Size queryImageSize = Size(), Size trainImageSize = Size()) = 0;
+
+    /** @brief Clears stored pair context information.
+    */
+    CV_WRAP virtual void clearPairInfo() = 0;
+};
 
 //! @} features_match
 
