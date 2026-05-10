@@ -191,6 +191,71 @@ TEST(Photo_DenoisingGrayscaleMulti16bitL1, regression)
     cv::Mat expected;
     result_8u.convertTo(expected, CV_16U);
 
+}
+
+TEST(Photo_DenoisingGrayscale16bitL2, accuracy)
+{
+    // Generate a programmatic image with some structure
+    Mat original_8u(100, 100, CV_8UC1);
+    for (int r = 0; r < 100; ++r)
+    {
+        for (int c = 0; c < 100; ++c)
+        {
+            original_8u.at<uchar>(r, c) = (uchar)((r * 2 + c) % 256);
+        }
+    }
+
+    // Add noise
+    Mat noised_8u = original_8u.clone();
+    for (int r = 10; r < 90; ++r)
+    {
+        for (int c = 10; c < 90; ++c)
+        {
+            noised_8u.at<uchar>(r, c) = (uchar)std::min(255, std::max(0, (int)noised_8u.at<uchar>(r, c) + ((r + c) % 15 - 7)));
+        }
+    }
+
+    Mat noised_16u;
+    noised_8u.convertTo(noised_16u, CV_16U);
+
+    Mat result_8u, result_16u;
+    std::vector<float> h = {10};
+    fastNlMeansDenoising(noised_8u, result_8u, h, 7, 21, NORM_L2);
+    fastNlMeansDenoising(noised_16u, result_16u, h, 7, 21, NORM_L2);
+
+    Mat expected;
+    result_8u.convertTo(expected, CV_16U);
+
+    EXPECT_MAT_NEAR(result_16u, expected, 1);
+}
+
+TEST(Photo_DenoisingGrayscaleMulti16bitL2, accuracy)
+{
+    const int imgs_count = 3;
+    vector<Mat> original_8u(imgs_count);
+    vector<Mat> original_16u(imgs_count);
+
+    for (int i = 0; i < imgs_count; ++i)
+    {
+        original_8u[i] = Mat(100, 100, CV_8UC1);
+        for (int r = 0; r < 100; ++r)
+        {
+            for (int c = 0; c < 100; ++c)
+            {
+                original_8u[i].at<uchar>(r, c) = (uchar)((r * 2 + c + i * 5) % 256);
+            }
+        }
+        original_8u[i].convertTo(original_16u[i], CV_16U);
+    }
+
+    Mat result_8u, result_16u;
+    std::vector<float> h = {15};
+    fastNlMeansDenoisingMulti(original_8u, result_8u, /*imgToDenoiseIndex*/ imgs_count / 2, /*temporalWindowSize*/ imgs_count, h, 7, 21, NORM_L2);
+    fastNlMeansDenoisingMulti(original_16u, result_16u, /*imgToDenoiseIndex*/ imgs_count / 2, /*temporalWindowSize*/ imgs_count, h, 7, 21, NORM_L2);
+
+    cv::Mat expected;
+    result_8u.convertTo(expected, CV_16U);
+
     EXPECT_MAT_NEAR(result_16u, expected, 1);
 }
 
