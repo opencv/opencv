@@ -492,11 +492,11 @@ namespace cv { namespace cuda { namespace device
             buffer_rows = src.cols + block_window * grid.x;
         }
 
-        template<typename T, typename DT>
-        void nlm_fast_gpu(const PtrStepSzb& src, PtrStepSzb dst, PtrStepSz<DT> buffer,
+        template<typename T>
+        void nlm_fast_gpu(const PtrStepSzb& src, PtrStepSzb dst, PtrStepi buffer,
                           int search_window, int block_window, float h, cudaStream_t stream)
         {
-            typedef FastNonLocalMeans<T, DT> FNLM;
+            typedef FastNonLocalMeans<T, int> FNLM;
             FNLM fnlm(search_window, block_window, h);
 
             fnlm.src = (PtrStepSz<T>)src;
@@ -504,21 +504,42 @@ namespace cv { namespace cuda { namespace device
 
             dim3 block(FNLM::CTA_SIZE, 1);
             dim3 grid(divUp(src.cols, FNLM::TILE_COLS), divUp(src.rows, FNLM::TILE_ROWS));
-            int smem = search_window * search_window * sizeof(DT);
+            int smem = search_window * search_window * sizeof(int);
 
 
-            fast_nlm_kernel<T, DT><<<grid, block, smem>>>(fnlm, (PtrStepSz<T>)dst);
+            fast_nlm_kernel<T, int><<<grid, block, smem>>>(fnlm, (PtrStepSz<T>)dst);
             cudaSafeCall ( cudaGetLastError () );
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        template void nlm_fast_gpu<uchar, int>(const PtrStepSzb&, PtrStepSzb, PtrStepSz<int>, int, int, float,  cudaStream_t);
-        template void nlm_fast_gpu<uchar2, int>(const PtrStepSzb&, PtrStepSzb, PtrStepSz<int>, int, int, float, cudaStream_t);
-        template void nlm_fast_gpu<uchar3, int>(const PtrStepSzb&, PtrStepSzb, PtrStepSz<int>, int, int, float, cudaStream_t);
-        template void nlm_fast_gpu<ushort, float>(const PtrStepSzb&, PtrStepSzb, PtrStepSz<float>, int, int, float,  cudaStream_t);
-        template void nlm_fast_gpu<ushort2, float>(const PtrStepSzb&, PtrStepSzb, PtrStepSz<float>, int, int, float, cudaStream_t);
-        template void nlm_fast_gpu<ushort3, float>(const PtrStepSzb&, PtrStepSzb, PtrStepSz<float>, int, int, float, cudaStream_t);
+        template<typename T>
+        void nlm_fast_gpu(const PtrStepSzb& src, PtrStepSzb dst, PtrStepSz<float> buffer,
+                          int search_window, int block_window, float h, cudaStream_t stream)
+        {
+            typedef FastNonLocalMeans<T, float> FNLM;
+            FNLM fnlm(search_window, block_window, h);
+
+            fnlm.src = (PtrStepSz<T>)src;
+            fnlm.buffer = buffer;
+
+            dim3 block(FNLM::CTA_SIZE, 1);
+            dim3 grid(divUp(src.cols, FNLM::TILE_COLS), divUp(src.rows, FNLM::TILE_ROWS));
+            int smem = search_window * search_window * sizeof(float);
+
+
+            fast_nlm_kernel<T, float><<<grid, block, smem>>>(fnlm, (PtrStepSz<T>)dst);
+            cudaSafeCall ( cudaGetLastError () );
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
+        }
+
+        template void nlm_fast_gpu<uchar>(const PtrStepSzb&, PtrStepSzb, PtrStepi, int, int, float,  cudaStream_t);
+        template void nlm_fast_gpu<uchar2>(const PtrStepSzb&, PtrStepSzb, PtrStepi, int, int, float, cudaStream_t);
+        template void nlm_fast_gpu<uchar3>(const PtrStepSzb&, PtrStepSzb, PtrStepi, int, int, float, cudaStream_t);
+        template void nlm_fast_gpu<ushort>(const PtrStepSzb&, PtrStepSzb, PtrStepSz<float>, int, int, float,  cudaStream_t);
+        template void nlm_fast_gpu<ushort2>(const PtrStepSzb&, PtrStepSzb, PtrStepSz<float>, int, int, float, cudaStream_t);
+        template void nlm_fast_gpu<ushort3>(const PtrStepSzb&, PtrStepSzb, PtrStepSz<float>, int, int, float, cudaStream_t);
 
 
 
