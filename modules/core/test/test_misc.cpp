@@ -928,7 +928,6 @@ REGISTER_TYPED_TEST_CASE_P(Rect_Test, Overflows, OnTheEdge);
 typedef ::testing::Types<int, float, double> RectTypes;
 INSTANTIATE_TYPED_TEST_CASE_P(Negative_Test, Rect_Test, RectTypes);
 
-// https://github.com/opencv/opencv/issues/11988
 TEST(Core_Rect, unsigned_intersection)
 {
     typedef Rect_<unsigned> R;
