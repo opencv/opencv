@@ -2864,6 +2864,51 @@ TEST(Layer_If, resize)
     }
 }
 
+TEST(Layer_If, subgraph_name_scoping)
+{
+    auto engine_forced = static_cast<cv::dnn::EngineType>(
+            cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
+    if (engine_forced == cv::dnn::ENGINE_CLASSIC)
+    {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+        return;
+    }
+
+    const std::string modelname = findDataFile("dnn/onnx/models/subgraph_name_scoping.onnx", true);
+    dnn::Net net = dnn::readNetFromONNX(modelname, ENGINE_NEW);
+
+    int xshape[1] = {2};
+    Mat x(1, xshape, CV_32F);
+    x.at<float>(0) = 1.f;
+    x.at<float>(1) = 2.f;
+
+    for (int f = 0; f <= 1; f++) {
+        Mat cond(1, 1, CV_BoolC1, cv::Scalar(f));
+
+        net.setInput(cond, "cond");
+        net.setInput(x.clone(), "x");
+
+        std::vector<Mat> outs;
+        net.forward(outs, std::vector<String>{"sum_outer", "branch_val"});
+        ASSERT_EQ(outs.size(), 2u);
+
+        // sum_outer = x + outer "shared" ([10, 20]).
+        const float* sumP = outs[0].ptr<float>();
+        EXPECT_FLOAT_EQ(sumP[0], 11.f);
+        EXPECT_FLOAT_EQ(sumP[1], 22.f);
+
+        // branch_val is the body's locally-scoped "shared": [1, 2] or [100, 200].
+        const float* brP = outs[1].ptr<float>();
+        if (f) {
+            EXPECT_FLOAT_EQ(brP[0], 1.f);
+            EXPECT_FLOAT_EQ(brP[1], 2.f);
+        } else {
+            EXPECT_FLOAT_EQ(brP[0], 100.f);
+            EXPECT_FLOAT_EQ(brP[1], 200.f);
+        }
+    }
+}
+
 TEST(Layer_Size, onnx_1d)
 {
     auto engine_forced = static_cast<cv::dnn::EngineType>(
