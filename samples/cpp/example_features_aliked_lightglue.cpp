@@ -14,17 +14,6 @@
 using namespace cv;
 using namespace std;
 
-static void drawMatchesCustom(InputArray img1, const vector<KeyPoint>& kpts1,
-                              InputArray img2, const vector<KeyPoint>& kpts2,
-                              const vector<DMatch>& matches, const String& winName)
-{
-    Mat out;
-    cv::drawMatches(img1.getMat(), kpts1, img2.getMat(), kpts2, matches, out,
-                    Scalar::all(-1), Scalar::all(-1), vector<char>(),
-                    DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
-    imshow(winName, out);
-}
-
 int main(int argc, char** argv)
 {
     // ---- Parse arguments ----
