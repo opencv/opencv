@@ -2624,6 +2624,24 @@ TEST(BroadcastTo, basic) {
         broadcast(_src, shape, dst);
         fn_verify(ref, dst);
     }
+    // Issue #28910: Test in-place behaviour and missing branch coverage
+    {
+        std::vector<int> _shape_src{ 1, 3 };
+        std::vector<int> _data_src{ 1, 2, 3 };
+        Mat _src(static_cast<int>(_shape_src.size()), _shape_src.data(), CV_32SC1, _data_src.data());
+
+        std::vector<int> shape{ 2, 3 };
+
+        // In-place broadcast (dst is exactly the same as src)
+        broadcast(_src, shape, _src);
+
+        std::vector<int> data_ref{
+            1, 2, 3, // [0, :]
+            1, 2, 3  // [1, :]
+        };
+        Mat ref(static_cast<int>(shape.size()), shape.data(), _src.type(), data_ref.data());
+        fn_verify(ref, _src);
+    }
 }
 
 TEST(Core_minMaxIdx, regression_9207_2)
