@@ -202,6 +202,36 @@ Next we register a layer and try to import the model.
 
 @snippet dnn/custom_layers.hpp Register ResizeBilinearLayer
 
+## Example: custom layer from ONNX
+ONNX groups operators into **domains**. The standard operators live in the
+default domain `ai.onnx`; vendors and exporters often place their own ops in a
+named domain such as `my.namespace`. When OpenCV imports an ONNX node, it looks
+the op up in cv::dnn::LayerFactory by:
+
+- the op_type alone, for nodes in the default `ai.onnx` domain (or no domain), and
+- `"<domain>.<op_type>"`, for nodes in any non-default domain.
+
+Node attributes are passed through to the layer constructor as
+cv::dnn::LayerParams entries with the same names. Consider an op `MyCustomOp`
+with attributes `scale` and `bias` that computes `y = scale * x + bias`. The
+implementation can look like:
+
+@snippet dnn/custom_layer_onnx.cpp CustomScaleBiasLayer
+
+To import a model that uses this op, register the layer **before** calling
+cv::dnn::readNetFromONNX. Use cv::dnn::LayerFactory::registerLayer for runtime
+registration (and cv::dnn::LayerFactory::unregisterLayer when done) — pick the
+right key for the domain of the op as described above:
+
+@snippet dnn/custom_layer_onnx.cpp Register CustomScaleBiasLayer
+
+A complete runnable example is available at
+[samples/dnn/custom_layer_onnx.cpp](https://github.com/opencv/opencv/tree/5.x/samples/dnn/custom_layer_onnx.cpp).
+Tiny ONNX models exercising both the default-domain and custom-domain registration
+paths can be generated with
+[generate_custom_layer_models.py](https://github.com/opencv/opencv_extra/tree/5.x/testdata/dnn/onnx/generate_custom_layer_models.py)
+in the opencv_extra repository.
+
 ## Define a custom layer in Python
 The following example shows how to customize OpenCV's layers in Python.
 
