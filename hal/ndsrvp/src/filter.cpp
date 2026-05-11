@@ -98,6 +98,8 @@ int filterInit(cvhalFilter2D **context,
     if(anchor_x < 0 || anchor_x >= kernel_width || anchor_y < 0 || anchor_y >= kernel_height)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
+    borderType &= ~CV_HAL_BORDER_ISOLATED;
+
     FilterData *ctx = new FilterData(kernel_data, kernel_step, kernel_type, src_type, dst_type, borderType,
         kernel_width, kernel_height, max_width, max_height, delta, anchor_x, anchor_y);
 
