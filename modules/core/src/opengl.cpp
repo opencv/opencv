@@ -1682,27 +1682,21 @@ Context& initializeContextFromGL()
 
                 if(extensionSize > 0)
                 {
-                    char* extensions = nullptr;
+                    std::string devString;
 
                     try {
-                        extensions = new char[extensionSize];
+                        std::vector<char> extensions(extensionSize);
 
-                        status = clGetDeviceInfo(devices[j], CL_DEVICE_EXTENSIONS, extensionSize, extensions, &extensionSize);
-                        if (status != CL_SUCCESS)
-                            continue;
+                        status = clGetDeviceInfo(devices[j], CL_DEVICE_EXTENSIONS, extensionSize, &extensions[0], &extensionSize);
+                        if (status == CL_SUCCESS) {
+                            devString = &extensions[0];
+                        }
                     } catch(...) {
                         CV_Error(cv::Error::OpenCLInitError, "OpenCL: Exception thrown during device extensions gathering");
                     }
 
-                    std::string devString;
-
-                    if(extensions != nullptr) {
-                        devString = extensions;
-                        delete[] extensions;
-                    }
-                    else {
-                        CV_Error(cv::Error::OpenCLInitError, "OpenCL: Unexpected error during device extensions gathering");
-                    }
+                    if (status != CL_SUCCESS)
+                        continue;
 
                     size_t oldPos = 0;
                     size_t spacePos = devString.find(' ', oldPos); // extensions string is space delimited
