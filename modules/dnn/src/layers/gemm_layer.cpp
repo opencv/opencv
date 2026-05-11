@@ -256,6 +256,29 @@ public:
         // pack B if it is const
         if (constB(mode)) {
             fastGemmPackB(blobs[0], packed_B, trans_b, opt);
+
+            // Pre-pack B in the "thin" layout when the gemm shape has a
+            // small leading dim (M <= FAST_GEMM_THIN_MAX_M).
+            thin_packed_B.clear();
+            if (!trans_a && blobs[0].type() == CV_32F) {
+                std::vector<Mat> outputs;
+                outputs_arr.getMatVector(outputs);
+                if (!outputs.empty()) {
+                    const auto &Y = outputs[0];
+                    const auto shape_Y = shape(Y);
+                    const int N = shape_Y.back();
+                    const int K = trans_b ? blobs[0].size[1] : blobs[0].size[0];
+                    const int rows_thin = flatten_a ? shape_Y[shape_Y.size() - 2]
+                                                    : (int)(Y.total() / (size_t)N);
+                    if (fastGemmThinEligible(rows_thin, N, K)) {
+                        thin_packed_B.resize(fastGemmThinPackBSize(N, K));
+                        const size_t ldb_K = trans_b ? 1 : N;
+                        const size_t ldb_N = trans_b ? K : 1;
+                        fastGemmThinPackB(N, K, blobs[0].ptr<const float>(),
+                                          ldb_K, ldb_N, thin_packed_B.data());
+                    }
+                }
+            }
         }
 
         if (constC(mode) && flatten_a) {
@@ -339,7 +362,12 @@ public:
 
         if (constB(mode)) {
             CV_CheckGT(packed_B.size(), static_cast<size_t>(0), "DNN/Gemm: constant B is not pre-packed");
-            fastGemm(trans_a, rows, N, K, alpha, A.ptr<const float>(), na, packed_B.data(), 1.f, Y.ptr<float>(), N, opt);
+            if (!thin_packed_B.empty()) {
+                fastGemmThin(rows, N, K, alpha, A.ptr<const float>(), na, 1,
+                             thin_packed_B.data(), 1.f, Y.ptr<float>(), N, opt.multi_thread);
+            } else {
+                fastGemm(trans_a, rows, N, K, alpha, A.ptr<const float>(), na, packed_B.data(), 1.f, Y.ptr<float>(), N, opt);
+            }
         } else {
             fastGemmBatch(trans_a, trans_b, alpha, A, inputs[1], 1.f, Y, opt);
         }
@@ -502,6 +530,7 @@ private:
     bool const_C;
     bool have_bias;
     std::vector<float> packed_B;
+    std::vector<float> thin_packed_B;
     std::vector<float> broadcast_C;
     int real_ndims_C;
     FastGemmOpt opt;
