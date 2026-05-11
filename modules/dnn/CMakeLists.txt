@@ -485,9 +485,13 @@ endif()
 
 # Vendored MLAS (Microsoft Linear Algebra Subprograms) from ONNX Runtime.
 # Sources live in 3rdparty/mlas/. Builds to an OBJECT library whose objects
-# link directly into opencv_dnn.
+# link directly into opencv_dnn. Skipped under Emscripten: MLAS is a native
+# CPU SGEMM accelerator (asm/intrinsic kernels) and the wasm scalar fallback
+# offers no benefit for the JS bindings build that produces opencv.js.
 set(HAVE_MLAS 0)
-add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/mlas" "${CMAKE_BINARY_DIR}/3rdparty/mlas")
+if(NOT EMSCRIPTEN)
+  add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/mlas" "${CMAKE_BINARY_DIR}/3rdparty/mlas")
+endif()
 if(HAVE_MLAS)
   add_definitions(-DHAVE_MLAS=1)
   list(APPEND include_dirs ${MLAS_INCLUDE_DIRS})
