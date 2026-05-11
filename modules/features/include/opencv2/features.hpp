@@ -842,7 +842,8 @@ public:
 /** @brief ALIKED feature detector and descriptor extractor.
 
 ALIKED (A Lightweight Image KEYpoint Detector) is a CNN-based feature detector and descriptor
-extractor. It produces 128-dimensional float descriptors and keypoints with sub-pixel accuracy.
+extractor, as described in @cite Zhao23 . It produces 128-dimensional float descriptors and
+keypoints with sub-pixel accuracy.
 
 The model expects RGB input [1,3,H,W] and internally converts BGR images to RGB.
 */
@@ -1306,10 +1307,10 @@ protected:
 
 /** @brief LightGlue feature matcher.
 
-LightGlue is a CNN-based feature matcher that takes keypoint locations and descriptors from
-two images and directly predicts match pairs. Unlike traditional matchers that compute
-descriptor distances, LightGlue uses attention mechanisms to produce confidence scores for
-each potential match pair.
+LightGlue is a CNN-based feature matcher, as described in @cite Lindenberger23 . It takes
+keypoint locations and descriptors from two images and directly predicts match pairs. Unlike
+traditional matchers that compute descriptor distances, LightGlue uses attention mechanisms
+to produce confidence scores for each potential match pair.
 
 The matcher extends DescriptorMatcher and supports the standard match(), knnMatch(), and
 radiusMatch() interfaces. Context (keypoints and image sizes) must be provided via
