@@ -449,6 +449,29 @@ PERF_TEST_P_(DNNTestNetwork, BEiT_Base_Patch16_224)
     processNet("dnn/beit_base_patch16_224_Opset16.onnx", "", cv::Size(224, 224));
 }
 
+PERF_TEST_P_(DNNTestNetwork, BlazeFace)
+{
+    Mat input(cv::Size(128, 128), CV_32FC3);
+    randu(input, 0.0f, 1.0f);
+    input = blobFromImage(input, 1.0 / 255.0, Size(128, 128));
+
+    const int oneDim[] = {1};
+    Mat conf(1, oneDim, CV_32F); conf.ptr<float>()[0] = 0.20f;
+    Mat iou(1, oneDim, CV_32F); iou.ptr<float>()[0] = 0.30f;
+    Mat maxDet(1, oneDim, CV_64S); maxDet.ptr<int64_t>()[0] = 25;
+
+    processNet("dnn/onnx/models/blazeface.onnx", "",
+               {std::make_tuple(input, "image"),
+                std::make_tuple(conf, "conf_threshold"),
+                std::make_tuple(iou, "iou_threshold"),
+                std::make_tuple(maxDet, "max_detections")});
+}
+
+PERF_TEST_P_(DNNTestNetwork, FacePaint)
+{
+    processNet("dnn/onnx/models/face_paint_512_v2_0.onnx", "", cv::Size(512, 512));
+}
+
 // Model: https://huggingface.co/vietanhdev/segment-anything-2-onnx-models/blob/main/sam2_hiera_large.encoder.onnx
 PERF_TEST_P_(DNNTestNetwork, SAM2_Encoder)
 {
@@ -608,28 +631,6 @@ PERF_TEST_P_(DNNTestNetwork, RetinaFace)
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
 
     processNet("dnn/onnx/models/retinaface_10g.onnx", "", cv::Size(640, 640));
-}
-
-// Model: https://drive.google.com/file/d/14zpHuXCofZ8F9k-iPg2-21UW85HuefuE/view?usp=sharing
-PERF_TEST_P_(DNNTestNetwork, BlazeFace)
-{
-    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
-
-    Mat sample = imread(findDataFile("dnn/dog416.png"));
-    Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(128, 128), Scalar(), true);
-
-    float conf_threshold_val = 0.5f;
-    float iou_threshold_val = 0.3f;
-    int64_t max_detections_val = 100;
-    Mat conf_threshold(1, 1, CV_32F, &conf_threshold_val);
-    Mat iou_threshold(1, 1, CV_32F, &iou_threshold_val);
-    Mat max_detections(1, 1, CV_64S, &max_detections_val);
-
-    processNet("dnn/onnx/models/blaze.onnx", "",
-               {std::make_tuple(inp,            "image"),
-                std::make_tuple(conf_threshold, "conf_threshold"),
-                std::make_tuple(max_detections, "max_detections"),
-                std::make_tuple(iou_threshold,  "iou_threshold")});
 }
 
 // Model: https://huggingface.co/onnx-community/grounding-dino-tiny-ONNX
