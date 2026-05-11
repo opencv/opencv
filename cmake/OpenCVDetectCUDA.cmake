@@ -37,6 +37,53 @@ if(NOT CUDA_FOUND)
   return()
 endif()
 
+# ----------------------------------------------------------------------------
+# Warn when multiple CUDA installations are detected on the system.
+# CMake's FindCUDA resolves nvcc via PATH order, which can silently pick the
+# wrong toolchain when both a distro install (/usr/bin/nvcc) and a manual
+# install (/usr/local/cuda/bin/nvcc) coexist, leading to ABI mismatch link
+# errors (e.g. "undefined reference to rsqrtf") that are hard to diagnose.
+# See: https://github.com/opencv/opencv/issues/29002
+# ----------------------------------------------------------------------------
+set(_OPENCV_CUDA_CANDIDATE_PATHS
+  "/usr/bin/nvcc"
+  "/usr/local/cuda/bin/nvcc"
+  "/usr/local/bin/nvcc"
+)
+# Also honour any user-supplied root so it appears in the candidate list.
+if(CUDA_TOOLKIT_ROOT_DIR)
+  list(APPEND _OPENCV_CUDA_CANDIDATE_PATHS "${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc")
+endif()
+
+set(_OPENCV_CUDA_FOUND_NVCC_PATHS "")
+foreach(_candidate IN LISTS _OPENCV_CUDA_CANDIDATE_PATHS)
+  if(EXISTS "${_candidate}")
+    list(APPEND _OPENCV_CUDA_FOUND_NVCC_PATHS "${_candidate}")
+  endif()
+endforeach()
+list(REMOVE_DUPLICATES _OPENCV_CUDA_FOUND_NVCC_PATHS)
+
+list(LENGTH _OPENCV_CUDA_FOUND_NVCC_PATHS _OPENCV_CUDA_NVCC_COUNT)
+if(_OPENCV_CUDA_NVCC_COUNT GREATER 1)
+  message(WARNING
+    "CUDA: Multiple CUDA installations detected on this system:\n"
+    "  ${_OPENCV_CUDA_FOUND_NVCC_PATHS}\n"
+    "  CMake selected: ${CUDA_NVCC_EXECUTABLE} (version ${CUDA_VERSION})\n"
+    "  Selection is based on PATH order and may not be what you intended.\n"
+    "  To force a specific installation, re-run CMake with:\n"
+    "    -DCUDA_TOOLKIT_ROOT_DIR=<path>            (e.g. /usr/local/cuda)\n"
+    "    -DCMAKE_CUDA_COMPILER=<path>/bin/nvcc\n"
+    "    -DCUDA_NVCC_EXECUTABLE=<path>/bin/nvcc\n"
+    "  Mismatched toolchains cause silent ABI errors at link time.")
+else()
+  message(STATUS "CUDA: Using nvcc at ${CUDA_NVCC_EXECUTABLE} (version ${CUDA_VERSION})")
+endif()
+
+unset(_OPENCV_CUDA_CANDIDATE_PATHS)
+unset(_OPENCV_CUDA_FOUND_NVCC_PATHS)
+unset(_OPENCV_CUDA_NVCC_COUNT)
+# ----------------------------------------------------------------------------
+
 unset(CUDA_nvcuvenc_LIBRARY CACHE)
 set(HAVE_CUDA 1)
 if(NOT CUDA_VERSION VERSION_LESS 11.0)
