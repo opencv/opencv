@@ -538,6 +538,33 @@ CV__DNN_INLINE_NS_BEGIN
         virtual void setProg(const std::vector<Ptr<Layer> >& newprog) = 0;
     };
 
+    /** @brief Single entry in a @ref PerfProfile.
+     *
+     * In DNN_PROFILE_DETAILED mode, @p label is "layer_name (type)" and @p count is 1.
+     * In DNN_PROFILE_SUMMARY mode, @p label is the layer type and @p count is the
+     * number of layers of that type that contributed to @p timeMs.
+     */
+    struct CV_EXPORTS_W_SIMPLE PerfProfileEntry
+    {
+        CV_WRAP PerfProfileEntry() : timeMs(0.0), count(0) {}
+        CV_PROP_RW String label;
+        CV_PROP_RW double timeMs;
+        CV_PROP_RW int count;
+    };
+
+    /** @brief Self-describing snapshot of profiling data from one inference.
+     *
+     * Carries the @ref ProfilingMode it was captured in so it can be saved, kept across
+     * runs (e.g. best-of-N by total time), and printed later via @ref Net::printPerfProfile
+     * without needing access to the originating @ref Net.
+     */
+    struct CV_EXPORTS_W_SIMPLE PerfProfile
+    {
+        CV_WRAP PerfProfile() : mode(DNN_PROFILE_NONE) {}
+        CV_PROP_RW ProfilingMode mode;
+        CV_PROP_RW std::vector<PerfProfileEntry> entries;
+    };
+
     /** @brief This class allows to create and manipulate comprehensive artificial neural networks.
      *
      * Neural network is presented as directed acyclic graph (DAG), where vertices are Layer instances,
@@ -1020,22 +1047,21 @@ CV__DNN_INLINE_NS_BEGIN
          */
         CV_WRAP int64 getPerfProfile(CV_OUT std::vector<double>& timings);
 
-        /** @brief Returns profiling data as a vector of (label, time_ms) pairs.
+        /** @brief Returns profiling data captured during the last forward pass.
          *
-         * In DNN_PROFILE_DETAILED mode, each entry is "layer_name (type)" with its time in ms.
-         * In DNN_PROFILE_SUMMARY mode, entries are aggregated by layer type with total time in ms.
-         * Results are sorted by time in descending order.
-         * Returns empty vector if profiling mode is DNN_PROFILE_NONE.
+         * Entries are sorted by time in descending order. The returned @ref PerfProfile
+         * carries the profiling mode it was captured in. Returns an empty profile with
+         * mode == DNN_PROFILE_NONE if profiling is disabled.
          */
-        std::vector<std::pair<String, double>> profile() const;
+        CV_WRAP PerfProfile getPerfProfile() const;
 
-        /** @brief Prints profiling data in a formatted table using CV_LOG_INFO.
+        /** @brief Prints a @ref PerfProfile in a formatted table using CV_LOG_INFO.
          *
-         * In DNN_PROFILE_DETAILED mode, prints per-layer ID, name, type, time, and percentage.
+         * In DNN_PROFILE_DETAILED mode, prints per-layer label, time, and percentage.
          * In DNN_PROFILE_SUMMARY mode, prints per-type count, time, and percentage.
-         * Does nothing if profiling mode is DNN_PROFILE_NONE.
+         * Does nothing if @p profile.mode is DNN_PROFILE_NONE or all timings are zero.
          */
-        CV_WRAP void printProfile() const;
+        CV_WRAP static void printPerfProfile(const PerfProfile& profile);
 
         // Get the main model graph
         Ptr<Graph> getMainGraph() const;

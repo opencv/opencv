@@ -446,16 +446,15 @@ int64 Net::getPerfProfile(std::vector<double>& timings)
     return impl->getPerfProfile(timings);
 }
 
-std::vector<std::pair<String, double>> Net::profile() const
+PerfProfile Net::getPerfProfile() const
 {
     CV_Assert(impl);
-    return impl->profile();
+    return impl->getPerfProfile();
 }
 
-void Net::printProfile() const
+void Net::printPerfProfile(const PerfProfile& profile)
 {
-    CV_Assert(impl);
-    impl->printProfile();
+    Net::Impl::printPerfProfile(profile);
 }
 
 bool Net::isConstArg(Arg arg) const

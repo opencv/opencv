@@ -331,8 +331,8 @@ struct Net::Impl : public detail::NetImplBase
             std::vector<size_t>& blobs) /*const*/;
     int64 getPerfProfile(std::vector<double>& timings) const;
     void collectLayerInfo(std::vector<String>& names, std::vector<String>& types) const;
-    std::vector<std::pair<String, double>> profile() const;
-    void printProfile() const;
+    PerfProfile getPerfProfile() const;
+    static void printPerfProfile(const PerfProfile& profile);
 
     // TODO drop
     LayerPin getLatestLayerPin(const std::vector<LayerPin>& pins) const;

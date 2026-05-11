@@ -141,7 +141,7 @@ def main(func_args=None):
         t0 = cv.getTickCount()
         if args.alias == 'u2netp':
             output = net.forward(net.getUnconnectedOutLayersNames())
-            net.printProfile()
+            cv.dnn.Net.printPerfProfile(net.getPerfProfile())
             pred = output[0][0, 0, :, :]
             mask = (pred * 255).astype(np.uint8)
             mask = cv.resize(mask, (frame.shape[1], frame.shape[0]), interpolation=cv.INTER_AREA)
@@ -153,7 +153,7 @@ def main(func_args=None):
             frame = cv.addWeighted(frame, 0.25, foreground_overlay, 0.75, 0)
         else:
             score = net.forward()
-            net.printProfile()
+            cv.dnn.Net.printPerfProfile(net.getPerfProfile())
 
             numClasses = score.shape[1]
             height = score.shape[2]
