@@ -1,20 +1,19 @@
 #pragma once
 
-
 #include <string>
 #include <vector>
+
 #include <opencv2/core.hpp>
 #include <opencv2/dnn.hpp>
-#include <opencv2/imgproc.hpp> 
+#include <opencv2/imgproc.hpp>
 
 class YunetWrapper {
 public:
-    YunetWrapper();
     YunetWrapper(const std::string& model_path);
     ~YunetWrapper() = default;
 
     bool detect(const cv::Mat& img, cv::Rect& out_box);
-    // Multi-box detection: return all QR candidate boxes after NMS.
+    // Multi-box detection: return ALL QR candidate boxes after NMS
     bool detectMulti(const cv::Mat& img, std::vector<cv::Rect>& out_boxes);
 
 
