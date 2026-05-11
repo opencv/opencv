@@ -1085,7 +1085,7 @@ void cv::aruco::CharucoDetector2::detectBoard(cv::InputArray image, cv::OutputAr
              for(int c=0;c<4;c++){
                 cv::Mat query = (cv::Mat_<float>(1, 2) << marker[c].x, marker[c].y); // Single 2D query point
                 int nn=findex->radiusSearch(query, indices, dists, threshold*threshold, marker.size());
-                for(int ix=0;ix<nn;ix++){
+                for(int ix=0;ix<std::min(nn,int(indices.size()));ix++){
                     int idx=indices[ix];
                      if(comp[idx/4].id==marker.id) continue;//same marker
                     //check if the connection is consistent, i.e., if the global corner ids are the same
@@ -1253,6 +1253,7 @@ void cv::aruco::CharucoDetector2::detectDiamonds(cv::InputArray image, cv::Outpu
                  query.ptr<float>(0)[0]=marker[c].x;
                  query.ptr<float>(0)[1]=marker[c].y;
                  int nn=flannIndex->radiusSearch(query, indices, dists, threshold, 4);
+                 nn=std::min(int(indices.size()),nn);
                //  std::cout<<"nn="<<nn<<" for marker "<<marker.id<<" corner "<<c<<std::endl;
                  totalSharedCorners+=nn-1;
                  if( nn>cornerWithMostSharedCorners)
