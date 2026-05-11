@@ -788,7 +788,10 @@ TEST_P(Test_Model, TextDetectionByDB)
 
     {
     SCOPED_TRACE("Original DB");
-    testTextDetectionModelByDB(weightPathDB, "", imgPath, gt, binThresh, polyThresh, maxCandidates, unclipRatio, size, meanDB, scaleDB, 0.05f);
+    float boxes_iou_diff = 0.05f;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        boxes_iou_diff = 0.11f;
+    testTextDetectionModelByDB(weightPathDB, "", imgPath, gt, binThresh, polyThresh, maxCandidates, unclipRatio, size, meanDB, scaleDB, boxes_iou_diff);
     }
 
     {

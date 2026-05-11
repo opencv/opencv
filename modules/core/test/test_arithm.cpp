@@ -3585,6 +3585,83 @@ INSTANTIATE_TEST_CASE_P(
     testing::Values(CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U)
 );
 
+typedef testing::TestWithParam<perf::MatDepth> NonZeroAccuracyNewTypes;
+
+TEST_P(NonZeroAccuracyNewTypes, accuracy)
+{
+    const int depth = GetParam();
+    const Size sz(123, 71);
+    cv::Mat src = cv::Mat::zeros(sz, CV_MAKETYPE(depth, 1));
+
+    std::vector<Point> expected_pts;
+    const int total = sz.area();
+    const int approx_nz = std::max(1, total / 17);
+    std::vector<uchar> is_nz(total, 0);
+    for (int n = 0; n < approx_nz; )
+    {
+        int idx = theRNG().uniform(0, total);
+        if (is_nz[idx])
+            continue;
+        is_nz[idx] = 1;
+        ++n;
+    }
+
+    auto setNonZero = [&](int y, int x)
+    {
+        switch(depth)
+        {
+            case CV_Bool: src.at<uchar>(y, x) = 1; break;
+            case CV_16BF: src.at<uint16_t>(y, x) = 0x3F80; /* bf16(1.0f) */ break;
+            case CV_32U:  src.at<uint32_t>(y, x) = 7u; break;
+            case CV_64U:  src.at<uint64_t>(y, x) = 7ULL; break;
+            case CV_64S:  src.at<int64_t>(y, x)  = -7LL; break;
+            default: FAIL() << "Unexpected depth " << depth;
+        }
+    };
+
+    int nz_ref = 0;
+    for (int y = 0; y < sz.height; ++y)
+        for (int x = 0; x < sz.width; ++x)
+            if (is_nz[y*sz.width + x])
+            {
+                setNonZero(y, x);
+                expected_pts.emplace_back(x, y);
+                ++nz_ref;
+            }
+
+    EXPECT_EQ(nz_ref, cv::countNonZero(src));
+    EXPECT_EQ(nz_ref > 0, cv::hasNonZero(src));
+    cv::Mat zeros = cv::Mat::zeros(sz, src.type());
+    EXPECT_FALSE(cv::hasNonZero(zeros));
+
+    std::vector<Point> pts;
+    cv::findNonZero(src, pts);
+    ASSERT_EQ(expected_pts.size(), pts.size());
+    for (size_t i = 0; i < pts.size(); ++i)
+    {
+        EXPECT_EQ(expected_pts[i].x, pts[i].x) << "i=" << i;
+        EXPECT_EQ(expected_pts[i].y, pts[i].y) << "i=" << i;
+    }
+}
+
+TEST(NonZeroAccuracyNewTypes_BF16, negative_zero_is_zero)
+{
+    const Size sz(64, 32);
+    cv::Mat src(sz, CV_16BFC1);
+    src.setTo(cv::Scalar::all(-0.0));
+    EXPECT_EQ(0, cv::countNonZero(src));
+    EXPECT_FALSE(cv::hasNonZero(src));
+    std::vector<Point> pts;
+    cv::findNonZero(src, pts);
+    EXPECT_TRUE(pts.empty());
+}
+
+INSTANTIATE_TEST_CASE_P(
+    NonZeroAcc,
+    NonZeroAccuracyNewTypes,
+    testing::Values(CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U)
+);
+
 ///////////////////////////////////////////////////////////////////////////////////
 typedef testing::TestWithParam<perf::MatDepth> MinMaxSupportedMatDepth;
 
@@ -3609,6 +3686,212 @@ INSTANTIATE_TEST_CASE_P(
     MinMaxLoc,
     MinMaxSupportedMatDepth,
     testing::Values(perf::MatDepth(CV_16F), CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U)
+);
+
+typedef testing::TestWithParam<perf::MatDepth> MinMaxAccuracyNewTypes;
+
+TEST_P(MinMaxAccuracyNewTypes, accuracy)
+{
+    const int depth = GetParam();
+    const Size sz(173, 91);
+
+    double fill_val = 0, min_val = 0, max_val = 0;
+    Point min_pos(11, 7), max_pos(150, 80);
+    ASSERT_TRUE(min_pos != max_pos);
+
+    switch (depth)
+    {
+        case CV_Bool: fill_val = 0; min_val = 0; max_val = 1; break;
+        case CV_16BF: fill_val = 1.5; min_val = -123.5; max_val = 4096.0; break;
+        case CV_32U:  fill_val = 1000.0; min_val = 7.0;
+                      max_val = (double)std::numeric_limits<uint32_t>::max() - 1.0; break;
+        case CV_64U:  fill_val = 1e15; min_val = 0.0; max_val = 1e18; break;
+        case CV_64S:  fill_val = 0.0; min_val = -1e17; max_val = 1e17; break;
+        default: FAIL() << "Unexpected depth " << depth;
+    }
+
+    cv::Mat src(sz, CV_MAKETYPE(depth, 1));
+    if (depth == CV_Bool) src.setTo(cv::Scalar::all(0));
+    else src.setTo(cv::Scalar::all(fill_val));
+
+    auto put = [&](Point p, double v)
+    {
+        switch(depth)
+        {
+            case CV_Bool: src.at<uchar>(p.y, p.x)    = (uchar)v; break;
+            case CV_16BF: src.at<cv::bfloat>(p.y, p.x) = cv::bfloat((float)v); break;
+            case CV_32U:  src.at<uint32_t>(p.y, p.x) = (uint32_t)v; break;
+            case CV_64U:  src.at<uint64_t>(p.y, p.x) = (uint64_t)v; break;
+            case CV_64S:  src.at<int64_t>(p.y, p.x)  = (int64_t)v; break;
+            default: FAIL() << "Unexpected depth " << depth;
+        }
+    };
+    put(min_pos, min_val);
+    put(max_pos, max_val);
+
+    // minMaxLoc: 2D-only, returns Points.
+    {
+        double minV = 0, maxV = 0;
+        Point minLoc(-1, -1), maxLoc(-1, -1);
+        cv::minMaxLoc(src, &minV, &maxV, &minLoc, &maxLoc);
+        EXPECT_NEAR(min_val, minV, 1e-5 * std::max(1.0, std::fabs(min_val)));
+        EXPECT_NEAR(max_val, maxV, 1e-5 * std::max(1.0, std::fabs(max_val)));
+        if (depth != CV_Bool)
+        {
+            EXPECT_EQ(min_pos, minLoc);
+        }
+        EXPECT_EQ(max_pos, maxLoc);
+    }
+
+    // minMaxIdx: same data, idx[] form (row, col).
+    {
+        double minV = 0, maxV = 0;
+        int minIdx[2] = {-1, -1}, maxIdx[2] = {-1, -1};
+        cv::minMaxIdx(src, &minV, &maxV, minIdx, maxIdx);
+        EXPECT_NEAR(min_val, minV, 1e-5 * std::max(1.0, std::fabs(min_val)));
+        EXPECT_NEAR(max_val, maxV, 1e-5 * std::max(1.0, std::fabs(max_val)));
+        if (depth != CV_Bool)
+        {
+            EXPECT_EQ(min_pos.y, minIdx[0]);
+            EXPECT_EQ(min_pos.x, minIdx[1]);
+        }
+        EXPECT_EQ(max_pos.y, maxIdx[0]);
+        EXPECT_EQ(max_pos.x, maxIdx[1]);
+    }
+}
+
+// Mask-aware accuracy: extreme values outside the mask must be ignored.
+TEST_P(MinMaxAccuracyNewTypes, accuracy_with_mask)
+{
+    const int depth = GetParam();
+    const Size sz(64, 48);
+    cv::Mat src(sz, CV_MAKETYPE(depth, 1));
+    cv::Mat mask = cv::Mat::zeros(sz, CV_8UC1);
+
+    double fill_val = 0, masked_min = 0, masked_max = 0, outlier_min = 0, outlier_max = 0;
+    Point min_pos(5, 5), max_pos(40, 30), outlier_min_pos(1, 1), outlier_max_pos(60, 45);
+
+    switch (depth)
+    {
+        case CV_Bool:
+            fill_val = 0; masked_min = 0; masked_max = 1;
+            outlier_min = 0; outlier_max = 1; break;
+        case CV_16BF:
+            fill_val = 1.0; masked_min = -10.0; masked_max = 10.0;
+            outlier_min = -1000.0; outlier_max = 1000.0; break;
+        case CV_32U:
+            fill_val = 100; masked_min = 1; masked_max = 1000;
+            outlier_min = 0; outlier_max = (double)std::numeric_limits<uint32_t>::max(); break;
+        case CV_64U:
+            fill_val = 1e10; masked_min = 1.0; masked_max = 1e12;
+            outlier_min = 0.0; outlier_max = 1e18; break;
+        case CV_64S:
+            fill_val = 0.0; masked_min = -1e10; masked_max = 1e10;
+            outlier_min = -1e17; outlier_max = 1e17; break;
+        default: FAIL() << "Unexpected depth " << depth;
+    }
+
+    src.setTo(cv::Scalar::all(fill_val));
+
+    auto put = [&](Point p, double v)
+    {
+        switch(depth)
+        {
+            case CV_Bool: src.at<uchar>(p.y, p.x)    = (uchar)v; break;
+            case CV_16BF: src.at<cv::bfloat>(p.y, p.x) = cv::bfloat((float)v); break;
+            case CV_32U:  src.at<uint32_t>(p.y, p.x) = (uint32_t)v; break;
+            case CV_64U:  src.at<uint64_t>(p.y, p.x) = (uint64_t)v; break;
+            case CV_64S:  src.at<int64_t>(p.y, p.x)  = (int64_t)v; break;
+            default: FAIL() << "Unexpected depth " << depth;
+        }
+    };
+    put(min_pos, masked_min);
+    put(max_pos, masked_max);
+    put(outlier_min_pos, outlier_min);
+    put(outlier_max_pos, outlier_max);
+
+    mask.setTo(255);
+    mask.at<uchar>(outlier_min_pos.y, outlier_min_pos.x) = 0;
+    mask.at<uchar>(outlier_max_pos.y, outlier_max_pos.x) = 0;
+
+    double minV = 0, maxV = 0;
+    int minIdx[2] = {-1, -1}, maxIdx[2] = {-1, -1};
+    cv::minMaxIdx(src, &minV, &maxV, minIdx, maxIdx, mask);
+
+    EXPECT_NEAR(masked_min, minV, 1e-5 * std::max(1.0, std::fabs(masked_min)));
+    EXPECT_NEAR(masked_max, maxV, 1e-5 * std::max(1.0, std::fabs(masked_max)));
+
+    if (depth != CV_Bool)
+    {
+        EXPECT_EQ(min_pos.y, minIdx[0]);
+        EXPECT_EQ(min_pos.x, minIdx[1]);
+        EXPECT_EQ(max_pos.y, maxIdx[0]);
+        EXPECT_EQ(max_pos.x, maxIdx[1]);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(
+    MinMaxAcc,
+    MinMaxAccuracyNewTypes,
+    testing::Values(CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U)
+);
+
+typedef testing::TestWithParam<perf::MatDepth> LUTAccuracyNewDstTypes;
+
+TEST_P(LUTAccuracyNewDstTypes, accuracy)
+{
+    const int dst_depth = GetParam();
+    cv::Mat lut(1, 256, CV_MAKETYPE(dst_depth, 1));
+    for (int i = 0; i < 256; ++i)
+    {
+        switch (dst_depth)
+        {
+            case CV_Bool: lut.at<uchar>(0, i)    = (uchar)(i & 1); break;
+            case CV_16BF: lut.at<cv::bfloat>(0, i) = cv::bfloat((float)(i - 128) * 0.5f); break;
+            case CV_32U:  lut.at<uint32_t>(0, i) = (uint32_t)i * 16777619u; break;
+            case CV_64U:  lut.at<uint64_t>(0, i) = ((uint64_t)i << 56) | (uint64_t)i; break;
+            case CV_64S:  lut.at<int64_t>(0, i)  = ((int64_t)i - 128) * 1000000000LL; break;
+            default: FAIL() << "Unexpected depth " << dst_depth;
+        }
+    }
+
+    cv::Mat src(16, 16, CV_8UC1);
+    for (int y = 0; y < 16; ++y)
+        for (int x = 0; x < 16; ++x)
+            src.at<uchar>(y, x) = (uchar)(y * 16 + x);
+
+    cv::Mat dst;
+    cv::LUT(src, lut, dst);
+    ASSERT_EQ(dst.size(), src.size());
+    ASSERT_EQ(dst.type(), CV_MAKETYPE(dst_depth, 1));
+
+    for (int y = 0; y < 16; ++y)
+    {
+        for (int x = 0; x < 16; ++x)
+        {
+            int idx = src.at<uchar>(y, x);
+            switch (dst_depth)
+            {
+                case CV_Bool:
+                    EXPECT_EQ(lut.at<uchar>(0, idx), dst.at<uchar>(y, x)); break;
+                case CV_16BF:
+                    EXPECT_EQ(lut.at<uint16_t>(0, idx), dst.at<uint16_t>(y, x)); break;
+                case CV_32U:
+                    EXPECT_EQ(lut.at<uint32_t>(0, idx), dst.at<uint32_t>(y, x)); break;
+                case CV_64U:
+                    EXPECT_EQ(lut.at<uint64_t>(0, idx), dst.at<uint64_t>(y, x)); break;
+                case CV_64S:
+                    EXPECT_EQ(lut.at<int64_t>(0, idx),  dst.at<int64_t>(y, x)); break;
+                default: FAIL() << "Unexpected depth " << dst_depth;
+            }
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(
+    LUTAcc,
+    LUTAccuracyNewDstTypes,
+    testing::Values(CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U)
 );
 
 CV_ENUM(LutIdxType, CV_8U, CV_8S, CV_16U, CV_16S)
