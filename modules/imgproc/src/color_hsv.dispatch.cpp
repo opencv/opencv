@@ -1,6 +1,7 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
+// Copyright (C) 2026, Advanced Micro Devices, all rights reserved.
 
 #include "precomp.hpp"
 
@@ -10,6 +11,8 @@
 
 #include "color_hsv.simd.hpp"
 #include "color_hsv.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
+
+#define CV_CVT_AVX512_MIN_WIDTH 240
 
 namespace cv {
 
@@ -123,6 +126,12 @@ void cvtBGRtoHSV(const uchar * src_data, size_t src_step,
     }
 #endif
 
+    if (width < CV_CVT_AVX512_MIN_WIDTH) {
+        CV_CPU_CALL_AVX2(cvtBGRtoHSV, (src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue, isFullRange, isHSV));
+        CV_CPU_CALL_SSE4_1(cvtBGRtoHSV, (src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue, isFullRange, isHSV));
+        CV_CPU_CALL_SSE2(cvtBGRtoHSV, (src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue, isFullRange, isHSV));
+        CV_CPU_CALL_BASELINE(cvtBGRtoHSV, (src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue, isFullRange, isHSV));
+    }
     CV_CPU_DISPATCH(cvtBGRtoHSV, (src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue, isFullRange, isHSV),
         CV_CPU_DISPATCH_MODES_ALL);
 }
@@ -200,6 +209,12 @@ void cvtHSVtoBGR(const uchar * src_data, size_t src_step,
     }
 #endif
 
+    if (width < CV_CVT_AVX512_MIN_WIDTH) {
+        CV_CPU_CALL_AVX2(cvtHSVtoBGR, (src_data, src_step, dst_data, dst_step, width, height, depth, dcn, swapBlue, isFullRange, isHSV));
+        CV_CPU_CALL_SSE4_1(cvtHSVtoBGR, (src_data, src_step, dst_data, dst_step, width, height, depth, dcn, swapBlue, isFullRange, isHSV));
+        CV_CPU_CALL_SSE2(cvtHSVtoBGR, (src_data, src_step, dst_data, dst_step, width, height, depth, dcn, swapBlue, isFullRange, isHSV));
+        CV_CPU_CALL_BASELINE(cvtHSVtoBGR, (src_data, src_step, dst_data, dst_step, width, height, depth, dcn, swapBlue, isFullRange, isHSV));
+    }
     CV_CPU_DISPATCH(cvtHSVtoBGR, (src_data, src_step, dst_data, dst_step, width, height, depth, dcn, swapBlue, isFullRange, isHSV),
         CV_CPU_DISPATCH_MODES_ALL);
 }
