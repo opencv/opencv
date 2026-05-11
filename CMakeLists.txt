@@ -281,7 +281,7 @@ OCV_OPTION(WITH_FRAMEBUFFER_XVFB "Include virtual framebuffer support" OFF
 OCV_OPTION(WITH_WAYLAND "Include Wayland support" OFF
         VISIBLE_IF UNIX AND NOT APPLE AND NOT ANDROID
         VERIFY HAVE_WAYLAND)
-OCV_OPTION(WITH_IPP "Include Intel IPP support" OFF
+OCV_OPTION(WITH_IPP "Include Intel IPP support" (X86_64 OR X86) AND NOT IOS AND NOT XROS
   VISIBLE_IF (X86_64 OR X86) AND NOT WINRT AND NOT IOS AND NOT XROS
   VERIFY HAVE_IPP)
 OCV_OPTION(WITH_HALIDE "Include Halide support" OFF
@@ -559,8 +559,6 @@ endif()
 
 # OpenCV modules to skip
 # ===================================================
-OCV_OPTION(BUILD_opencv_stitching  "Disable stitching module because of compilation errors" OFF)
-
 if(OPENCV_DISABLE_FILESYSTEM_SUPPORT)
   add_definitions(-DOPENCV_HAVE_FILESYSTEM_SUPPORT=0)
 endif()

@@ -2,8 +2,20 @@ name: Build OpenCV iOS xcframework
 on: [push, pull_request]
 
 jobs:
-  build-ios:
-    runs-on: macos-15
+  build-ios-framework:
+    runs-on: macos-latest-xlarge
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: iphoneos
+            archs: arm64
+            output: iphoneos
+            arch_flag: --iphoneos_archs
+          - platform: iphonesimulator
+            archs: arm64
+            output: iphonesimulator
+            arch_flag: --iphonesimulator_archs
     steps:
     - uses: actions/checkout@v4
       with:
@@ -11,19 +23,39 @@ jobs:
 
     - name: Build Release
       env:
-        IPHONEOS_DEPLOYMENT_TARGET: "15.0"
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
       run: |-
-        mkdir -p out/iphoneos out/iphonesimulator out/xcframework
-        python3 platforms/ios/build_framework.py --iphoneos_deployment_target $IPHONEOS_DEPLOYMENT_TARGET --contrib opencv_contrib --build_only_specified_archs --iphoneos_archs arm64 out/iphoneos
-        python3 platforms/ios/build_framework.py --iphoneos_deployment_target $IPHONEOS_DEPLOYMENT_TARGET --contrib opencv_contrib --build_only_specified_archs --iphonesimulator_archs "arm64,x86_64" out/iphonesimulator
+        mkdir -p out/${{ matrix.output }}
+        python3 platforms/ios/build_framework.py --iphoneos_deployment_target $IPHONEOS_DEPLOYMENT_TARGET --contrib opencv_contrib --build_only_specified_archs ${{ matrix.arch_flag }} ${{ matrix.archs }} --without stitching out/${{ matrix.output }}
+        zip --symlinks -r opencv_ios_${{ matrix.output }}.zip out/${{ matrix.output }}/opencv2.framework
+        zip --symlinks -r opencv_ios_${{ matrix.output }}_build_data.zip out/${{ matrix.output }}/build
+    - uses: actions/upload-artifact@v4
+      with:
+        name: ios_${{ matrix.output }}_framework
+        path: opencv_ios_${{ matrix.output }}.zip
+    - uses: actions/upload-artifact@v4
+      with:
+        name: ios_${{ matrix.output }}_build_data
+        path: opencv_ios_${{ matrix.output }}_build_data.zip
+
+  package-ios:
+    runs-on: macos-latest-xlarge
+    needs: build-ios-framework
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: ios_iphoneos_framework
+    - uses: actions/download-artifact@v4
+      with:
+        name: ios_iphonesimulator_framework
+    - name: Create xcframework
+      run: |-
+        unzip opencv_ios_iphoneos.zip
+        unzip opencv_ios_iphonesimulator.zip
+        mkdir -p out/xcframework
         xcodebuild -create-xcframework -framework out/iphoneos/opencv2.framework -framework out/iphonesimulator/opencv2.framework -output out/xcframework/opencv2.xcframework
         zip --symlinks -r opencv_ios_xcframework.zip out/xcframework/opencv2.xcframework
-        zip --symlinks -r opencv_ios_build_data.zip out/iphoneos/build out/iphonesimulator/build
     - uses: actions/upload-artifact@v4
       with:
         name: ios_lib
         path: opencv_ios_xcframework.zip
-    - uses: actions/upload-artifact@v4
-      with:
-        name: ios_build_data
-        path: opencv_ios_build_data.zip
