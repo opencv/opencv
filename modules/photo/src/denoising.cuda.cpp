@@ -112,8 +112,12 @@ namespace cv { namespace cuda { namespace device
     {
         void nln_fast_get_buffer_size(const PtrStepSzb& src, int search_window, int block_window, int& buffer_cols, int& buffer_rows);
 
-        template<typename T, typename DT>
-        void nlm_fast_gpu(const PtrStepSzb& src, PtrStepSzb dst, PtrStepSz<DT> buffer,
+        template<typename T>
+        void nlm_fast_gpu(const PtrStepSzb& src, PtrStepSzb dst, PtrStepi buffer,
+                          int search_window, int block_window, float h, cudaStream_t stream);
+
+        template<typename T>
+        void nlm_fast_gpu(const PtrStepSzb& src, PtrStepSzb dst, PtrStepSz<float> buffer,
                           int search_window, int block_window, float h, cudaStream_t stream);
 
         void fnlm_split_channels(const PtrStepSz<uchar3>& lab, PtrStepb l, PtrStep<uchar2> ab, cudaStream_t stream);
@@ -147,15 +151,15 @@ void cv::cuda::fastNlMeansDenoising(InputArray _src, OutputArray _dst, float h, 
     if (src.depth() == CV_8U)
     {
         GpuMat buffer = pool.getBuffer(brows, bcols, CV_32S);
-        typedef void (*nlm_fast_t)(const PtrStepSzb&, PtrStepSzb, PtrStepSz<int>, int, int, float, cudaStream_t);
-        static const nlm_fast_t funcs[] = { nlm_fast_gpu<uchar, int>, nlm_fast_gpu<uchar2, int>, nlm_fast_gpu<uchar3, int>, 0};
+        typedef void (*nlm_fast_t)(const PtrStepSzb&, PtrStepSzb, PtrStepi, int, int, float, cudaStream_t);
+        static const nlm_fast_t funcs[] = { nlm_fast_gpu<uchar>, nlm_fast_gpu<uchar2>, nlm_fast_gpu<uchar3>, 0};
         funcs[src.channels()-1](src_hdr, dst, buffer, search_window, block_window, h, StreamAccessor::getStream(stream));
     }
     else
     {
         GpuMat buffer = pool.getBuffer(brows, bcols, CV_32F);
         typedef void (*nlm_fast_t)(const PtrStepSzb&, PtrStepSzb, PtrStepSz<float>, int, int, float, cudaStream_t);
-        static const nlm_fast_t funcs[] = { nlm_fast_gpu<ushort, float>, nlm_fast_gpu<ushort2, float>, nlm_fast_gpu<ushort3, float>, 0};
+        static const nlm_fast_t funcs[] = { nlm_fast_gpu<ushort>, nlm_fast_gpu<ushort2>, nlm_fast_gpu<ushort3>, 0};
         funcs[src.channels()-1](src_hdr, dst, buffer, search_window, block_window, h, StreamAccessor::getStream(stream));
     }
 }
