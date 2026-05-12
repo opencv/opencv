@@ -7,6 +7,7 @@
 
 #include "opencv2/core/cvdef.h"
 #include <memory>
+#include <string>
 
 namespace cv { namespace parallel {
 #ifndef CV_API_CALL
@@ -49,6 +50,29 @@ namespace cv { namespace parallel {
  *
  */
 
+/** @brief Classification of parallel operations for granularity optimization.
+ * Used to determine the R coefficient in the formula: n_opt = R * sqrt(W).
+ */
+enum class ParallelOpClass {
+    GENERIC = 0,
+    PIXEL_ARITH,
+    PIXEL_STAT,
+    FILTER,
+    GEOMETRIC,
+    FEATURE_DETECTION,
+    ML_PREDICT,
+    COLOR_CONVERT,
+    OPTICAL_FLOW,
+    STEREO_MATCH
+};
+
+/** @brief Parameters to guide the calculation of nstripes.
+ */
+struct ParallelTuningHints {
+    ParallelOpClass opClass = ParallelOpClass::GENERIC;
+    double workAmount = -1; // Total number of iterations or pixels (W)
+};
+
 /** Interface for parallel_for backends implementations
  *
  * @sa setParallelForBackend
@@ -69,6 +93,20 @@ public:
     virtual int setNumThreads(int nThreads) = 0;
 
     virtual const char* getName() const = 0;
+
+    /** @brief Calculate the optimal number of stripes for a specific workload.
+     * 
+     * Centralizes the logic to prevent overhead in small tasks and imbalance in large ones.
+     * Default implementation returns getNumThreads() for backward compatibility.
+     * 
+     * @param tasks The total task count (iterations).
+     * @param hints Metadata about the operation type and total work (W).
+     */
+    virtual int computeOptimalNstripes(int tasks, const ParallelTuningHints& hints = ParallelTuningHints()) const
+    {
+        CV_UNUSED(tasks); CV_UNUSED(hints);
+        return getNumThreads();
+    }
 };
 
 /** @brief Replace OpenCV parallel_for backend
