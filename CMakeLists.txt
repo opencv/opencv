@@ -1540,7 +1540,11 @@ if(WITH_SPNG)
 
   status("      Metadata Support:" "EXIF XMP ICC") # SPNG does not support cICP chunk.
 elseif(WITH_PNG OR HAVE_PNG)
-  status("    PNG:"  PNG_FOUND  THEN "${PNG_LIBRARY} (ver ${PNG_VERSION_STRING})" ELSE "build (ver ${PNG_VERSION_STRING})")
+  if(BUILD_PNG)
+    status("    PNG:" FALSE THEN "" ELSE "build (ver ${PNG_VERSION_STRING})")
+  else()
+    status("    PNG:"  PNG_FOUND  THEN "${PNG_LIBRARY} (ver ${PNG_VERSION_STRING})" ELSE "build (ver ${PNG_VERSION_STRING})")
+  endif()
   if(BUILD_PNG AND PNG_HARDWARE_OPTIMIZATIONS)
     status("      SIMD Support Request:" "YES")
     if(PNG_INTEL_SSE)
