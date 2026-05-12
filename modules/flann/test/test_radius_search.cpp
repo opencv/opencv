@@ -66,20 +66,16 @@ TEST(Flann_Index, radiusSearch_output_size_matches_returned_count)
     cv::flann::Index index(data, indexParams);
 
     const int maxResults = 4;
-    int nTimesError1 = 0; // nn != (int)indices.size()
-    int nTimesError2 = 0; // nn > maxResults
 
     for (int i = 0; i < (int)corners.size(); i++)
     {
+        SCOPED_TRACE(cv::format("Data row: %d", i));
         std::vector<int> indices(maxResults);
         std::vector<float> dists(maxResults);
         int nn = index.radiusSearch(data.row(i), indices, dists, 100, maxResults);
-        if (nn != (int)indices.size()) nTimesError1++;
-        if (nn > maxResults)          nTimesError2++;
+        EXPECT_EQ(nn, (int)indices.size());
+        EXPECT_LE(nn, maxResults);
     }
-
-    EXPECT_EQ(nTimesError1, 0) << "nn must equal indices.size() for every query";
-    EXPECT_EQ(nTimesError2, 0) << "nn must not exceed maxResults";
 }
 
 }} // namespace
