@@ -202,6 +202,7 @@ private:
     // Domain: com.microsoft
     // URL: https://github.com/microsoft/onnxruntime/blob/master/docs/ContribOperators.md
     void parseQuantDequant         (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseDynamicQuantizeLinear (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseQConv                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseQMatMul              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseQEltwise             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -727,6 +728,7 @@ static bool ifInt8Output(const String& layerType)
     // ai.onnx opset 15
     static std::vector<String> input8output8List = {
             "QuantizeLinear",
+            "DynamicQuantizeLinear",
             "QLinearAdd",
             "QLinearMul",
             "QLinearAveragePool",
@@ -3344,6 +3346,8 @@ void ONNXImporter::parseQuantDequant(LayerParams& layerParams, const opencv_onnx
 
     // If scale is not defined as a constant blob, it is considered an external input.
     if(constBlobs.find(node_proto.input(1)) == constBlobs.end()){
+        // Scale is not a constant — this is effectively dynamic quantization
+        layerParams.type = (node_proto.op_type() == "QuantizeLinear") ? "QuantizeDynamic" : "DequantizeDynamic";
         addLayer(layerParams, node_proto);
         return;
     }
@@ -3399,6 +3403,15 @@ void ONNXImporter::parseQuantDequant(LayerParams& layerParams, const opencv_onnx
     }
     else
         addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter::parseDynamicQuantizeLinear(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    // DynamicQuantizeLinear (opset 11): 1 input (FP32 data), 3 outputs (UINT8/INT8 data, scale, zeropoint)
+    CV_Assert(node_proto.input_size() == 1);
+    layerParams.type = "QuantizeDynamic";
+    layerParams.set("depth", CV_8S);
+    addLayer(layerParams, node_proto);
 }
 
 void ONNXImporter::parseQConv(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
@@ -4053,6 +4066,7 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
 
     // ai.onnx: opset 10+
     dispatch["QuantizeLinear"] = dispatch["DequantizeLinear"] = &ONNXImporter::parseQuantDequant;
+    dispatch["DynamicQuantizeLinear"] = &ONNXImporter::parseDynamicQuantizeLinear;
     dispatch["QLinearConv"] = &ONNXImporter::parseQConv;
     dispatch["QLinearMatMul"] = &ONNXImporter::parseQMatMul;
 
