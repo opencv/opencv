@@ -931,10 +931,13 @@ INSTANTIATE_TYPED_TEST_CASE_P(Negative_Test, Rect_Test, RectTypes);
 TEST(Core_Rect, unsigned_intersection)
 {
     typedef Rect_<unsigned> R;
+    const unsigned num_max = std::numeric_limits<unsigned>::max();
 
     EXPECT_EQ(R(5, 5, 5, 5), R(0, 0, 10, 10) & R(5, 5, 10, 10));
     EXPECT_EQ(R(), R(0, 0, 10, 10) & R(20, 0, 5, 5));
     EXPECT_EQ(R(), R(0, 0, 10, 10) & R(0, 20, 5, 5));
+    EXPECT_EQ(R(num_max - 5, 0, 5, 10), R(0, 0, num_max, 10) & R(num_max - 5, 0, 10, 10));
+    EXPECT_EQ(R(), R(0, 0, num_max / 2, 10) & R(num_max / 2 + 1, 0, 10, 10));
 }
 
 // Expected that SkipTestException thrown in the constructor should skip test but not fail
