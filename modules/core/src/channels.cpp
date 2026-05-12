@@ -294,7 +294,7 @@ void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
     int ndst = dst_is_mat ? 1 : (int)dst.total();
 
     CV_Assert(nsrc > 0 && ndst > 0);
-    std::vector<Mat> _buf(nsrc + ndst);
+    cv::AutoBuffer<Mat> _buf(nsrc + ndst);
     Mat* buf = _buf.data();
     for( i = 0; i < nsrc; i++ )
         buf[i] = src.getMat(src_is_mat ? -1 : i);
@@ -327,7 +327,7 @@ void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
     int ndst = dst_is_mat ? 1 : (int)dst.total();
 
     CV_Assert(fromTo.size()%2 == 0 && nsrc > 0 && ndst > 0);
-    std::vector<Mat> _buf(nsrc + ndst);
+    cv::AutoBuffer<Mat> _buf(nsrc + ndst);
     Mat* buf = _buf.data();
     for( i = 0; i < nsrc; i++ )
         buf[i] = src.getMat(src_is_mat ? -1 : i);

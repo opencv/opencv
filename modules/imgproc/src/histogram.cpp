@@ -1304,7 +1304,7 @@ void cv::calcHist( InputArrayOfArrays images, const std::vector<int>& channels,
             _ranges[i] = (float*)&ranges[i*2];
     }
 
-    std::vector<Mat> buf(nimages);
+    AutoBuffer<Mat> buf(nimages);
     for( i = 0; i < nimages; i++ )
         buf[i] = images.getMat(i);
 
@@ -2011,7 +2011,7 @@ void cv::calcBackProject( InputArrayOfArrays images, const std::vector<int>& cha
             _ranges[i] = (float*)&ranges[i*2];
     }
 
-    std::vector<Mat> buf(nimages);
+    AutoBuffer<Mat> buf(nimages);
     for( i = 0; i < nimages; i++ )
         buf[i] = images.getMat(i);
 

@@ -237,7 +237,7 @@ namespace
         const int gridWidth = (imageSize_.width + cellSize - 1) / cellSize;
         const int gridHeight = (imageSize_.height + cellSize - 1) / cellSize;
 
-        AutoBuffer< std::vector<Point2f> > grid(gridWidth * gridHeight);
+        std::vector< std::vector<Point2f> > grid(gridWidth * gridHeight);
 
         const double minDist2 = minDist_ * minDist_;
 

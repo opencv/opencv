@@ -1229,15 +1229,14 @@ void broadcast(InputArray _src, InputArray _shape, OutputArray _dst) {
     // impl
     _dst.create(dims_shape, shape.ptr<int>(), src.type());
     Mat dst = _dst.getMat();
-    AutoBuffer<int> is_same_shape(dims_shape);
-    std::fill(is_same_shape.data(), is_same_shape.data()+is_same_shape.size(), 0);
+    AutoBuffer<int> is_same_shape(dims_shape, 0);
     for (int i = 0; i < static_cast<int>(shape_src.size()); ++i) {
         if (shape_src[i] == ptr_shape[i]) {
             is_same_shape[i] = 1;
         }
     }
     // copy if same shape
-    if (std::accumulate(is_same_shape.data(), is_same_shape.data()+is_same_shape.size(), 1, std::multiplies<int>()) != 0) {
+    if (std::accumulate(is_same_shape.begin(), is_same_shape.end(), 1, std::multiplies<int>()) != 0) {
         const auto *p_src = src.ptr<const char>();
         auto *p_dst = dst.ptr<char>();
         std::memcpy(p_dst, p_src, dst.total() * dst.elemSize());
@@ -1247,7 +1246,7 @@ void broadcast(InputArray _src, InputArray _shape, OutputArray _dst) {
     int max_ndims = std::max(dims_src, dims_shape);
     const int all_ndims[2] = {src.dims, dst.dims};
     const int* orig_shapes[2] = {src.size.p, dst.size.p};
-    AutoBuffer<size_t> buff(max_ndims * 4);
+    cv::AutoBuffer<size_t> buff(max_ndims * 4);
     int* flatten_shapes[2] = {(int*)buff.data(), (int*)(buff.data() + max_ndims)};
     size_t* flatten_steps[2] = {(size_t*)(buff.data() + 2 * max_ndims), (size_t*)(buff.data() + 3 * max_ndims)};
     if (_flatten_for_broadcast(2, max_ndims, all_ndims, orig_shapes, flatten_shapes, flatten_steps)) {
@@ -1329,8 +1328,7 @@ void broadcast(InputArray _src, InputArray _shape, OutputArray _dst) {
             std::memcpy(p_dst + dst_offset, p_src + src_offset, dst.elemSize());
         }
         // broadcast copy (dst inplace)
-        AutoBuffer<int> cumulative_shape(dims_shape);
-        std::fill(cumulative_shape.data(), cumulative_shape.data()+cumulative_shape.size(), 1);
+        AutoBuffer<int> cumulative_shape(dims_shape, 1);
         int total = static_cast<int>(dst.total());
         for (int i = dims_shape - 1; i >= 0; --i) {
             cumulative_shape[i] = static_cast<int>(total / ptr_shape[i]);

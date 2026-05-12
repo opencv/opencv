@@ -111,8 +111,7 @@ public:
 void LinkRunner::convertLinks(int& first, int& prev, bool isHole)
 {
     const vector<int>& contours = isHole ? int_rns : ext_rns;
-    int count = 0;
-    for (int j = 0; j < (int)contours.size(); j++, count++)
+    for (int j = 0; j < (int)contours.size(); j++)
     {
         int start = contours[j];
         int cur = start;

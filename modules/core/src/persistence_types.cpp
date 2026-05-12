@@ -84,7 +84,7 @@ void write( FileStorage& fs, const String& name, const SparseMat& m )
         elems[i++] = it.node();
     }
 
-    std::sort(elems.data(), elems.data()+elems.size(), SparseNodeCmp(dims));
+    std::sort(elems.begin(), elems.end(), SparseNodeCmp(dims));
     const SparseMat::Node* prev_node = 0;
     size_t esz = m.elemSize();
 
