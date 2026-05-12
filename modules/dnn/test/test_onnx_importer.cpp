@@ -3566,4 +3566,28 @@ TEST_P(Test_ONNX_layers, RandomNormalLike_complex)
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
+TEST_P(Test_ONNX_layers, getUnconnectedOutLayers)
+{
+    auto engine_forced = static_cast<cv::dnn::EngineType>(
+        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
+    if (engine_forced == cv::dnn::ENGINE_ORT)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+
+    Net net = readNetFromONNX(_tf("models/yolov8x.onnx", false));
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    std::vector<int>    outIds   = net.getUnconnectedOutLayers();
+    std::vector<String> outNames = net.getUnconnectedOutLayersNames();
+
+    EXPECT_EQ(outIds.size(), outNames.size());
+    EXPECT_EQ(1, outIds.size());
+
+    EXPECT_EQ("output0", outNames[0]);
+    EXPECT_GT(outIds[0], 0);
+    Ptr<Layer> layer = net.getLayer(outIds[0]);
+    ASSERT_TRUE(layer);
+}
+
 }} // namespace

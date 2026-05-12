@@ -2378,10 +2378,32 @@ std::vector<String> Net::Impl::getLayerNames() const
 }
 
 
-// FIXIT drop "unconnected" API
 std::vector<int> Net::Impl::getUnconnectedOutLayers() const
 {
     std::vector<int> layersIds;
+
+    if (mainGraph) {
+        const std::vector<Arg>& outargs = mainGraph->outputs();
+        std::set<int> outArgIdxs;
+        for (const auto& out : outargs)
+            outArgIdxs.insert(out.idx);
+
+        int graph_ofs = 0;
+        for (const auto& graph : allgraphs) {
+            const std::vector<Ptr<Layer>>& prog = graph->prog();
+            for (int i = 0; i < (int)prog.size(); i++) {
+                for (const auto& layerOut : prog[i]->outputs) {
+                    if (outArgIdxs.count(layerOut.idx)) {
+                        layersIds.push_back(graph_ofs + i);
+                        break;
+                    }
+                }
+            }
+            graph_ofs += (int)prog.size();
+        }
+        if (!layersIds.empty())
+            return layersIds;
+    }
 
     // registerOutput() flow
     if (!outputNameToId.empty())
