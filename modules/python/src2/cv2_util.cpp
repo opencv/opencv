@@ -6,6 +6,25 @@
 PyObject* opencv_error = NULL;
 cv::TLSData<std::vector<std::string> > conversionErrorsTLS;
 
+int cvDepthToNumpyType(int depth)
+{
+    const int f = (int)(sizeof(size_t)/8);
+    return depth == CV_8U ? NPY_UBYTE : depth == CV_8S ? NPY_BYTE :
+           depth == CV_16U ? NPY_USHORT : depth == CV_16S ? NPY_SHORT :
+           depth == CV_32U ? NPY_UINT32 : depth == CV_32S ? NPY_INT32 : depth == CV_64S ? NPY_INT64 :
+           depth == CV_32F ? NPY_FLOAT : depth == CV_64F ? NPY_DOUBLE : depth == CV_16F ? NPY_HALF :
+           depth == CV_Bool ? NPY_BOOL : f*NPY_ULONGLONG + (f^1)*NPY_UINT;
+}
+
+int numpyTypeToCvDepth(int typenum)
+{
+    return typenum == NPY_UBYTE ? CV_8U : typenum == NPY_BYTE ? CV_8S :
+           typenum == NPY_USHORT ? CV_16U : typenum == NPY_SHORT ? CV_16S :
+           typenum == NPY_INT ? CV_32S : typenum == NPY_UINT32 ? CV_32U : typenum == NPY_INT32 ? CV_32S :
+           typenum == NPY_HALF ? CV_16F : typenum == NPY_FLOAT ? CV_32F : typenum == NPY_DOUBLE ? CV_64F :
+           typenum == NPY_BOOL ? CV_Bool : -1;
+}
+
 using namespace cv;
 
 //======================================================================================================================
