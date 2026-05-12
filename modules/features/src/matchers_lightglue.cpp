@@ -12,15 +12,8 @@
 namespace cv
 {
 
-LightGlueMatcher::LightGlueMatcher()
-{
-    // nothing
-}
-
-LightGlueMatcher::~LightGlueMatcher()
-{
-    // nothing
-}
+LightGlueMatcher::LightGlueMatcher() {}
+LightGlueMatcher::~LightGlueMatcher() {}
 
 LightGlueMatcher::Params::Params()
 {

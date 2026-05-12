@@ -12,15 +12,8 @@
 namespace cv
 {
 
-ALIKED::ALIKED()
-{
-    // nothing
-}
-
-ALIKED::~ALIKED()
-{
-    // nothing
-}
+ALIKED::ALIKED() {}
+ALIKED::~ALIKED() {}
 
 ALIKED::Params::Params()
 {
