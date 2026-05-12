@@ -754,44 +754,15 @@ bool FileStorage::Impl::open(const char *filename_or_buf, int _flags, const char
         char *bufPtr = cv_skip_BOM(buf);
         size_t bufOffset = bufPtr - buf;
 
+        // NOTE: Yaml 1.2 allows to skip header. Data without type signature is read as YAML
         if (strncmp(bufPtr, yaml_signature, strlen(yaml_signature)) == 0)
-        {
             fmt = FileStorage::FORMAT_YAML;
-        }
-        else if ((flags & FileStorage::FORMAT_MASK) == FileStorage::FORMAT_JSON)
+        else if (strncmp(bufPtr, json_signature, strlen(json_signature)) == 0)
             fmt = FileStorage::FORMAT_JSON;
-        else if ((flags & FileStorage::FORMAT_MASK) == FileStorage::FORMAT_XML)
+        else if (strncmp(bufPtr, xml_signature, strlen(xml_signature)) == 0)
             fmt = FileStorage::FORMAT_XML;
-
-        // [FIX] Fallback to filename extension if header signature is missing
-        if (fmt == FileStorage::FORMAT_AUTO && !filename.empty())
-        {
-            const char *dot_pos = NULL;
-            const char *dot_pos2 = NULL;
-            for (const char *pos = &filename[0]; pos[0] != 0; pos++) {
-                if (pos[0] == '.') {
-                    dot_pos2 = dot_pos;
-                    dot_pos = pos;
-                }
-            }
-            if (fs::strcasecmp(dot_pos, ".gz") == 0 && dot_pos2 != NULL) {
-                dot_pos = dot_pos2;
-            }
-            if (fs::strcasecmp(dot_pos, ".xml") == 0 || fs::strcasecmp(dot_pos, ".xml.gz") == 0)
-                fmt = FileStorage::FORMAT_XML;
-            else if (fs::strcasecmp(dot_pos, ".json") == 0 || fs::strcasecmp(dot_pos, ".json.gz") == 0)
-                fmt = FileStorage::FORMAT_JSON;
-            else if (fs::strcasecmp(dot_pos, ".yml") == 0 || fs::strcasecmp(dot_pos, ".yaml") == 0 ||
-                     fs::strcasecmp(dot_pos, ".yml.gz") == 0 || fs::strcasecmp(dot_pos, ".yaml.gz") == 0)
-                fmt = FileStorage::FORMAT_YAML;
-        }
-
-        if (fmt == FileStorage::FORMAT_AUTO) {
-            if (strbufsize == bufOffset && mem_mode)
-                CV_Error(cv::Error::StsBadArg, "Input file is invalid");
-            else
-                CV_Error(cv::Error::StsBadArg, "Unsupported file storage format");
-        }
+        else
+            fmt = FileStorage::FORMAT_YAML;
 
         rewind();
         strbufpos = bufOffset;

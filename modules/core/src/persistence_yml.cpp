@@ -732,20 +732,20 @@ public:
                     str_end++;
                     if ((fs->getFormat() & FileStorage::FORMAT_MASK) != FileStorage::FORMAT_YAML_1_0)
                     {
-                        size_t len = str_end - ptr;
-                        if (len == 4 && memcmp(ptr, "true", 4) == 0) {
+                        size_t llen = str_end - ptr;
+                        if (llen == 4 && memcmp(ptr, "true", 4) == 0) {
                             int64_t ival = 1;
                             node.setValue(FileNode::INT, &ival);
                             ptr = endptr;
                             return ptr;
                         }
-                        else if (len == 5 && memcmp(ptr, "false", 5) == 0) {
+                        else if (llen == 5 && memcmp(ptr, "false", 5) == 0) {
                             int64_t ival = 0;
                             node.setValue(FileNode::INT, &ival);
                             ptr = endptr;
                             return ptr;
                         }
-                        else if (len == 4 && memcmp(ptr, "null", 4) == 0) {
+                        else if (llen == 4 && memcmp(ptr, "null", 4) == 0) {
                             ptr = endptr;
                             return ptr;
                         }
