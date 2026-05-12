@@ -1,7 +1,6 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
-// Copyright (C) 2026, Advanced Micro Devices, all rights reserved.
 
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
@@ -12,8 +11,6 @@
 #include "color_rgb.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
 
 #define IPP_DISABLE_CVTCOLOR_GRAY2BGR_8UC3 1
-
-#define CV_CVT_AVX512_MIN_WIDTH 240
 
 namespace cv {
 
@@ -236,12 +233,6 @@ void cvtBGRtoBGR(const uchar * src_data, size_t src_step,
 #endif
 #endif
 
-    if (width < CV_CVT_AVX512_MIN_WIDTH) {
-        CV_CPU_CALL_AVX2(cvtBGRtoBGR, (src_data, src_step, dst_data, dst_step, width, height, depth, scn, dcn, swapBlue));
-        CV_CPU_CALL_SSE4_1(cvtBGRtoBGR, (src_data, src_step, dst_data, dst_step, width, height, depth, scn, dcn, swapBlue));
-        CV_CPU_CALL_SSE2(cvtBGRtoBGR, (src_data, src_step, dst_data, dst_step, width, height, depth, scn, dcn, swapBlue));
-        CV_CPU_CALL_BASELINE(cvtBGRtoBGR, (src_data, src_step, dst_data, dst_step, width, height, depth, scn, dcn, swapBlue));
-    }
     CV_CPU_DISPATCH(cvtBGRtoBGR, (src_data, src_step, dst_data, dst_step, width, height, depth, scn, dcn, swapBlue),
         CV_CPU_DISPATCH_MODES_ALL);
 }
@@ -256,12 +247,6 @@ void cvtBGRtoBGR5x5(const uchar * src_data, size_t src_step,
 
     CALL_HAL(cvtBGRtoBGR5x5, cv_hal_cvtBGRtoBGR5x5, src_data, src_step, dst_data, dst_step, width, height, scn, swapBlue, greenBits);
 
-    if (width < CV_CVT_AVX512_MIN_WIDTH) {
-        CV_CPU_CALL_AVX2(cvtBGRtoBGR5x5, (src_data, src_step, dst_data, dst_step, width, height, scn, swapBlue, greenBits));
-        CV_CPU_CALL_SSE4_1(cvtBGRtoBGR5x5, (src_data, src_step, dst_data, dst_step, width, height, scn, swapBlue, greenBits));
-        CV_CPU_CALL_SSE2(cvtBGRtoBGR5x5, (src_data, src_step, dst_data, dst_step, width, height, scn, swapBlue, greenBits));
-        CV_CPU_CALL_BASELINE(cvtBGRtoBGR5x5, (src_data, src_step, dst_data, dst_step, width, height, scn, swapBlue, greenBits));
-    }
     CV_CPU_DISPATCH(cvtBGRtoBGR5x5, (src_data, src_step, dst_data, dst_step, width, height, scn, swapBlue, greenBits),
         CV_CPU_DISPATCH_MODES_ALL);
 }
@@ -276,12 +261,6 @@ void cvtBGR5x5toBGR(const uchar * src_data, size_t src_step,
 
     CALL_HAL(cvtBGR5x5toBGR, cv_hal_cvtBGR5x5toBGR, src_data, src_step, dst_data, dst_step, width, height, dcn, swapBlue, greenBits);
 
-    if (width < CV_CVT_AVX512_MIN_WIDTH) {
-        CV_CPU_CALL_AVX2(cvtBGR5x5toBGR, (src_data, src_step, dst_data, dst_step, width, height, dcn, swapBlue, greenBits));
-        CV_CPU_CALL_SSE4_1(cvtBGR5x5toBGR, (src_data, src_step, dst_data, dst_step, width, height, dcn, swapBlue, greenBits));
-        CV_CPU_CALL_SSE2(cvtBGR5x5toBGR, (src_data, src_step, dst_data, dst_step, width, height, dcn, swapBlue, greenBits));
-        CV_CPU_CALL_BASELINE(cvtBGR5x5toBGR, (src_data, src_step, dst_data, dst_step, width, height, dcn, swapBlue, greenBits));
-    }
     CV_CPU_DISPATCH(cvtBGR5x5toBGR, (src_data, src_step, dst_data, dst_step, width, height, dcn, swapBlue, greenBits),
         CV_CPU_DISPATCH_MODES_ALL);
 }
@@ -326,12 +305,6 @@ void cvtBGRtoGray(const uchar * src_data, size_t src_step,
     }
 #endif
 
-    if (width < CV_CVT_AVX512_MIN_WIDTH) {
-        CV_CPU_CALL_AVX2(cvtBGRtoGray, (src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue));
-        CV_CPU_CALL_SSE4_1(cvtBGRtoGray, (src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue));
-        CV_CPU_CALL_SSE2(cvtBGRtoGray, (src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue));
-        CV_CPU_CALL_BASELINE(cvtBGRtoGray, (src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue));
-    }
     CV_CPU_DISPATCH(cvtBGRtoGray, (src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue),
         CV_CPU_DISPATCH_MODES_ALL);
 }
@@ -377,12 +350,6 @@ void cvtGraytoBGR(const uchar * src_data, size_t src_step,
     }
 #endif
 
-    if (width < CV_CVT_AVX512_MIN_WIDTH) {
-        CV_CPU_CALL_AVX2(cvtGraytoBGR, (src_data, src_step, dst_data, dst_step, width, height, depth, dcn));
-        CV_CPU_CALL_SSE4_1(cvtGraytoBGR, (src_data, src_step, dst_data, dst_step, width, height, depth, dcn));
-        CV_CPU_CALL_SSE2(cvtGraytoBGR, (src_data, src_step, dst_data, dst_step, width, height, depth, dcn));
-        CV_CPU_CALL_BASELINE(cvtGraytoBGR, (src_data, src_step, dst_data, dst_step, width, height, depth, dcn));
-    }
     CV_CPU_DISPATCH(cvtGraytoBGR, (src_data, src_step, dst_data, dst_step, width, height, depth, dcn),
         CV_CPU_DISPATCH_MODES_ALL);
 }
@@ -397,12 +364,6 @@ void cvtBGR5x5toGray(const uchar * src_data, size_t src_step,
 
     CALL_HAL(cvtBGR5x5toGray, cv_hal_cvtBGR5x5toGray, src_data, src_step, dst_data, dst_step, width, height, greenBits);
 
-    if (width < CV_CVT_AVX512_MIN_WIDTH) {
-        CV_CPU_CALL_AVX2(cvtBGR5x5toGray, (src_data, src_step, dst_data, dst_step, width, height, greenBits));
-        CV_CPU_CALL_SSE4_1(cvtBGR5x5toGray, (src_data, src_step, dst_data, dst_step, width, height, greenBits));
-        CV_CPU_CALL_SSE2(cvtBGR5x5toGray, (src_data, src_step, dst_data, dst_step, width, height, greenBits));
-        CV_CPU_CALL_BASELINE(cvtBGR5x5toGray, (src_data, src_step, dst_data, dst_step, width, height, greenBits));
-    }
     CV_CPU_DISPATCH(cvtBGR5x5toGray, (src_data, src_step, dst_data, dst_step, width, height, greenBits),
         CV_CPU_DISPATCH_MODES_ALL);
 }
@@ -417,12 +378,6 @@ void cvtGraytoBGR5x5(const uchar * src_data, size_t src_step,
 
     CALL_HAL(cvtGraytoBGR5x5, cv_hal_cvtGraytoBGR5x5, src_data, src_step, dst_data, dst_step, width, height, greenBits);
 
-    if (width < CV_CVT_AVX512_MIN_WIDTH) {
-        CV_CPU_CALL_AVX2(cvtGraytoBGR5x5, (src_data, src_step, dst_data, dst_step, width, height, greenBits));
-        CV_CPU_CALL_SSE4_1(cvtGraytoBGR5x5, (src_data, src_step, dst_data, dst_step, width, height, greenBits));
-        CV_CPU_CALL_SSE2(cvtGraytoBGR5x5, (src_data, src_step, dst_data, dst_step, width, height, greenBits));
-        CV_CPU_CALL_BASELINE(cvtGraytoBGR5x5, (src_data, src_step, dst_data, dst_step, width, height, greenBits));
-    }
     CV_CPU_DISPATCH(cvtGraytoBGR5x5, (src_data, src_step, dst_data, dst_step, width, height, greenBits),
         CV_CPU_DISPATCH_MODES_ALL);
 }
@@ -444,12 +399,6 @@ void cvtRGBAtoMultipliedRGBA(const uchar * src_data, size_t src_step,
     }
 #endif
 
-    if (width < CV_CVT_AVX512_MIN_WIDTH) {
-        CV_CPU_CALL_AVX2(cvtRGBAtoMultipliedRGBA, (src_data, src_step, dst_data, dst_step, width, height));
-        CV_CPU_CALL_SSE4_1(cvtRGBAtoMultipliedRGBA, (src_data, src_step, dst_data, dst_step, width, height));
-        CV_CPU_CALL_SSE2(cvtRGBAtoMultipliedRGBA, (src_data, src_step, dst_data, dst_step, width, height));
-        CV_CPU_CALL_BASELINE(cvtRGBAtoMultipliedRGBA, (src_data, src_step, dst_data, dst_step, width, height));
-    }
     CV_CPU_DISPATCH(cvtRGBAtoMultipliedRGBA, (src_data, src_step, dst_data, dst_step, width, height),
         CV_CPU_DISPATCH_MODES_ALL);
 }
@@ -462,12 +411,6 @@ void cvtMultipliedRGBAtoRGBA(const uchar * src_data, size_t src_step,
 
     CALL_HAL(cvtMultipliedRGBAtoRGBA, cv_hal_cvtMultipliedRGBAtoRGBA, src_data, src_step, dst_data, dst_step, width, height);
 
-    if (width < CV_CVT_AVX512_MIN_WIDTH) {
-        CV_CPU_CALL_AVX2(cvtMultipliedRGBAtoRGBA, (src_data, src_step, dst_data, dst_step, width, height));
-        CV_CPU_CALL_SSE4_1(cvtMultipliedRGBAtoRGBA, (src_data, src_step, dst_data, dst_step, width, height));
-        CV_CPU_CALL_SSE2(cvtMultipliedRGBAtoRGBA, (src_data, src_step, dst_data, dst_step, width, height));
-        CV_CPU_CALL_BASELINE(cvtMultipliedRGBAtoRGBA, (src_data, src_step, dst_data, dst_step, width, height));
-    }
     CV_CPU_DISPATCH(cvtMultipliedRGBAtoRGBA, (src_data, src_step, dst_data, dst_step, width, height),
         CV_CPU_DISPATCH_MODES_ALL);
 }
