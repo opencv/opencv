@@ -2624,23 +2624,34 @@ TEST(BroadcastTo, basic) {
         broadcast(_src, shape, dst);
         fn_verify(ref, dst);
     }
-    // Issue #28910: Test in-place behaviour and missing branch coverage
+    // Issue #28910: Test true in-place behaviour without reallocation
     {
-        std::vector<int> _shape_src{ 1, 3 };
-        std::vector<int> _data_src{ 1, 2, 3 };
-        Mat _src(static_cast<int>(_shape_src.size()), _shape_src.data(), CV_32SC1, _data_src.data());
-
         std::vector<int> shape{ 2, 3 };
 
-        // In-place broadcast (dst is exactly the same as src)
-        broadcast(_src, shape, _src);
+        // 1. Pre-allocate dst with the TARGET shape (2x3).
+        // This strictly prevents _dst.create() inside cv::broadcast from allocating new memory!
+        Mat dst = Mat::zeros(static_cast<int>(shape.size()), shape.data(), CV_32SC1);
 
+        // 2. Create src as a view (ROI) of the first row of dst.
+        // src is now 1x3, but shares the EXACT SAME memory buffer as dst (True In-place).
+        Mat src = dst.row(0);
+
+        // Fill the source data
+        src.at<int>(0, 0) = 1;
+        src.at<int>(0, 1) = 2;
+        src.at<int>(0, 2) = 3;
+
+        // 3. True in-place broadcast! 
+        // src(1x3) will be broadcasted to dst(2x3) within the same memory block.
+        broadcast(src, shape, dst);
+
+        // 4. Verify the broadcasted result
         std::vector<int> data_ref{
             1, 2, 3, // [0, :]
             1, 2, 3  // [1, :]
         };
-        Mat ref(static_cast<int>(shape.size()), shape.data(), _src.type(), data_ref.data());
-        fn_verify(ref, _src);
+        Mat ref(static_cast<int>(shape.size()), shape.data(), CV_32SC1, data_ref.data());
+        fn_verify(ref, dst);
     }
 }
 
