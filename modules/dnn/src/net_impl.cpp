@@ -2378,7 +2378,6 @@ std::vector<String> Net::Impl::getLayerNames() const
 }
 
 
-// FIXIT drop "unconnected" API
 std::vector<int> Net::Impl::getUnconnectedOutLayers() const
 {
     std::vector<int> layersIds;

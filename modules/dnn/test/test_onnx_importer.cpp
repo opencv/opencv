@@ -3581,15 +3581,13 @@ TEST_P(Test_ONNX_layers, getUnconnectedOutLayers)
     std::vector<int>    outIds   = net.getUnconnectedOutLayers();
     std::vector<String> outNames = net.getUnconnectedOutLayersNames();
 
-    EXPECT_FALSE(outIds.empty());
     EXPECT_EQ(outIds.size(), outNames.size());
+    EXPECT_EQ(1, outIds.size());
 
-    for (int id : outIds)
-    {
-        EXPECT_GT(id, 0);
-        Ptr<Layer> layer = net.getLayer(id);
-        ASSERT_TRUE(layer);
-    }
+    EXPECT_EQ("output0", outNames[0]);
+    EXPECT_GT(outIds[0], 0);
+    Ptr<Layer> layer = net.getLayer(outIds[0]);
+    ASSERT_TRUE(layer);
 }
 
 }} // namespace
