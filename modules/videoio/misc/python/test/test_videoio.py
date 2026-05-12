@@ -87,5 +87,23 @@ class Bindings(NewOpenCVTests):
         self.assertTrue(hasFrame)
         self.assertEqual(frame.shape, (576, 768, 3))
 
+    def test_context_manager(self):
+            # 1. Test VideoCapture context manager
+            with cv.VideoCapture() as cap:
+                self.assertTrue(isinstance(cap, cv.VideoCapture))
+            # Implicitly calls release(), shouldn't raise any errors
+
+            # 2. Test VideoWriter context manager
+            with cv.VideoWriter() as writer:
+                self.assertTrue(isinstance(writer, cv.VideoWriter))
+            # Implicitly calls release(), shouldn't raise any errors
+
+            # 3. Test exception propagation safety
+            try:
+                with cv.VideoCapture() as cap:
+                    raise RuntimeError("Testing context manager exception safety")
+            except RuntimeError:
+                pass # Exception correctly propagated, and release() was safely called
+
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

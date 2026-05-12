@@ -144,30 +144,37 @@ bool pyopencv_to(PyObject* obj, Ptr<cv::IStreamReader>& p, const ArgInfo&)
 // =============================================================================
 // Context Manager support for VideoCapture and VideoWriter
 // =============================================================================
+
 static PyObject* pycvVideoEnter(PyObject* self, PyObject* /*args*/, PyObject* /*kw*/) {
     Py_INCREF(self);
     return self;
 }
 
-static PyObject* pycvVideoExit(PyObject* self, PyObject* /*args*/, PyObject* /*kw*/) {
-    // Using OpenCV's standard way to call Python methods safely without format string warnings
-    PyObject* method_name = PyString_FromString("release");
-    PyObject* res = PyObject_CallMethodObjArgs(self, method_name, NULL);
-    Py_DECREF(method_name);
-    
-    if (!res) {
-        return NULL;
+static PyObject* pycvVideoCaptureExit(PyObject* self, PyObject* /*args*/, PyObject* /*kw*/) {
+    Ptr<cv::VideoCapture>* obj_getp = nullptr;
+    // Cast the Python object directly to C++ pointer
+    if (pyopencv_VideoCapture_getp(self, obj_getp) && obj_getp && *obj_getp) {
+        (*obj_getp)->release(); // Native C++ call (Zero Python overhead)
     }
-    Py_DECREF(res);
+    Py_RETURN_NONE;
+}
+
+static PyObject* pycvVideoWriterExit(PyObject* self, PyObject* /*args*/, PyObject* /*kw*/) {
+    Ptr<cv::VideoWriter>* obj_getp = nullptr;
+    // Cast the Python object directly to C++ pointer
+    if (pyopencv_VideoWriter_getp(self, obj_getp) && obj_getp && *obj_getp) {
+        (*obj_getp)->release(); // Native C++ call (Zero Python overhead)
+    }
     Py_RETURN_NONE;
 }
 
 #define PYOPENCV_EXTRA_METHODS_VideoCapture \
     {"__enter__", CV_PY_FN_WITH_KW(pycvVideoEnter), "Context manager enter"}, \
-    {"__exit__",  CV_PY_FN_WITH_KW(pycvVideoExit), "Context manager exit"},
+    {"__exit__",  CV_PY_FN_WITH_KW(pycvVideoCaptureExit), "Context manager exit"},
 
 #define PYOPENCV_EXTRA_METHODS_VideoWriter \
     {"__enter__", CV_PY_FN_WITH_KW(pycvVideoEnter), "Context manager enter"}, \
-    {"__exit__",  CV_PY_FN_WITH_KW(pycvVideoExit), "Context manager exit"},
+    {"__exit__",  CV_PY_FN_WITH_KW(pycvVideoWriterExit), "Context manager exit"},
 
+    
 #endif // HAVE_OPENCV_VIDEOIO
