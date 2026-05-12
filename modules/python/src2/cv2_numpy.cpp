@@ -15,8 +15,9 @@ UMatData* NumpyAllocator::allocate(PyObject* o, int dims, const int* sizes, int 
     npy_intp* _strides = PyArray_STRIDES((PyArrayObject*) o);
     for( int i = 0; i < dims - 1; i++ )
         step[i] = (size_t)_strides[i];
-    step[dims-1] = CV_ELEM_SIZE(type);
-    u->size = sizes[0]*step[0];
+    if( dims > 0 )
+        step[dims-1] = CV_ELEM_SIZE(type);
+    u->size = dims > 0 ? sizes[0]*step[0] : CV_ELEM_SIZE(type);
     u->userdata = o;
     return u;
 }
@@ -33,12 +34,7 @@ UMatData* NumpyAllocator::allocate(int dims0, const int* sizes, int type, void* 
 
     int depth = CV_MAT_DEPTH(type);
     int cn = CV_MAT_CN(type);
-    const int f = (int)(sizeof(size_t)/8);
-    int typenum = depth == CV_8U ? NPY_UBYTE : depth == CV_8S ? NPY_BYTE :
-    depth == CV_16U ? NPY_USHORT : depth == CV_16S ? NPY_SHORT :
-    depth == CV_32U ? NPY_UINT32 : depth == CV_32S ? NPY_INT32 : depth == CV_64S ? NPY_INT64 :
-    depth == CV_32F ? NPY_FLOAT : depth == CV_64F ? NPY_DOUBLE : depth == CV_16F ? NPY_HALF :
-    depth == CV_Bool ? NPY_BOOL : f*NPY_ULONGLONG + (f^1)*NPY_UINT;
+    int typenum = cvDepthToNumpyType(depth);
     int i, dims = dims0;
     cv::AutoBuffer<npy_intp> _sizes(dims + 1);
     for( i = 0; i < dims; i++ )

@@ -129,18 +129,7 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 
     bool needcopy = false, needcast = false;
     int typenum = PyArray_TYPE(oarr), new_typenum = typenum;
-    int type = typenum == NPY_UBYTE ? CV_8U :
-               typenum == NPY_BYTE ? CV_8S :
-               typenum == NPY_USHORT ? CV_16U :
-               typenum == NPY_SHORT ? CV_16S :
-               typenum == NPY_INT ? CV_32S :
-               typenum == NPY_UINT32 ? CV_32U :
-               typenum == NPY_INT32 ? CV_32S :
-               typenum == NPY_HALF ? CV_16F :
-               typenum == NPY_FLOAT ? CV_32F :
-               typenum == NPY_DOUBLE ? CV_64F :
-               typenum == NPY_BOOL ? CV_Bool :
-               -1;
+    int type = numpyTypeToCvDepth(typenum);
 
     if( type < 0 )
     {
@@ -296,12 +285,14 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
         return filled;
     }
 
-    // handle degenerate case
-    // FIXIT: Don't force 1D for Scalars
-    if( ndims == 0) {
-        size[ndims] = 1;
-        step[ndims] = elemsize;
-        ndims++;
+    // 0D (scalar) tensor: allocate a proper scalar Mat and copy the value.
+    if (ndims == 0)
+    {
+        m.fit(0, nullptr, type);
+        memcpy(m.data, PyArray_DATA(oarr), CV_ELEM_SIZE(type));
+        if (needcopy)
+            Py_DECREF(o);
+        return true;
     }
 
 #if 1
@@ -326,6 +317,15 @@ PyObject* pyopencv_from(const cv::Mat& m)
 {
     if( !m.data )
         Py_RETURN_NONE;
+    // 0D (scalar) Mat: return a true 0D numpy array.
+    if( m.dims == 0 )
+    {
+        int typenum = cvDepthToNumpyType(CV_MAT_DEPTH(m.type()));
+        PyObject* o = PyArray_SimpleNew(0, nullptr, typenum);
+        if( o )
+            memcpy(PyArray_DATA((PyArrayObject*)o), m.data, CV_ELEM_SIZE(m.type()));
+        return o;
+    }
     cv::Mat temp, *p = (cv::Mat*)&m;
     if(!p->u || p->allocator != &GetNumpyAllocator())
     {

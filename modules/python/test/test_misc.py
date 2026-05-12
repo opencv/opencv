@@ -281,6 +281,9 @@ class Arguments(NewOpenCVTests):
         a = np.array([0, 1, 0, 1], dtype=bool)
         res8 = cv.utils.dumpInputArray(a)
         self.assertEqual(res8, "InputArray: empty()=false kind=0x00010000 flags=0x01010000 total(-1)=4 dims(-1)=1 size(-1)=4x1 type(-1)=CV_BoolC1")
+        a = np.array(3.14, dtype=np.float32)
+        res9 = cv.utils.dumpInputArray(a)
+        self.assertEqual(res9, "InputArray: empty()=false kind=0x00010000 flags=0x01010000 total(-1)=1 dims(-1)=0 size(-1)=1x1 type(-1)=CV_32FC1")
 
     def test_InputArrayOfArrays(self):
         res1 = cv.utils.dumpInputArrayOfArrays(None)
