@@ -1287,6 +1287,16 @@ struct SigmoidFunctor : public BaseDefaultFunctor<SigmoidFunctor>
 {
     typedef SigmoidLayer Layer;
 
+    int vlanes;
+
+    explicit SigmoidFunctor() {
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        vlanes = VTraits<v_float32>::vlanes();
+#else
+        vlanes = 1;
+#endif
+    }
+
     bool supportBackend(int backendId, int)
     {
 #ifdef HAVE_INF_ENGINE
@@ -1309,6 +1319,45 @@ struct SigmoidFunctor : public BaseDefaultFunctor<SigmoidFunctor>
             y = y / (1 + y);
         }
         return y;
+    }
+
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize) {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            // Using identity: 1 / (1 + exp(-x)) === 1 - (1 / (1 + exp(x)))
+            // Clamping x to [-80.f, 88.f] prevents both v_exp overflow (inf) and subnormal underflow.
+            v_float32 one = vx_setall_f32(1.0f);
+            v_float32 min_val = vx_setall_f32(-80.0f), max_val = vx_setall_f32(88.0f);
+            int step2 = vlanes * 2;
+
+            // 2-way unrolled loop optimized for minimal register dependency
+            for (; i <= len - step2; i += step2) {
+                v_float32 x0 = vx_load(srcptr + i);
+                v_float32 x1 = vx_load(srcptr + i + vlanes);
+
+                x0 = v_min(v_max(x0, min_val), max_val);
+                x1 = v_min(v_max(x1, min_val), max_val);
+
+                // y = 1.0f - (1.0f / (1.0f + exp(x)))
+                v_float32 dst0 = v_sub(one, v_div(one, v_add(one, v_exp(x0))));
+                v_float32 dst1 = v_sub(one, v_div(one, v_add(one, v_exp(x1))));
+
+                vx_store(dstptr + i, dst0);
+                vx_store(dstptr + i + vlanes, dst1);
+            }
+
+            for (; i <= len - vlanes; i += vlanes) {
+                v_float32 x = vx_load(srcptr + i);
+                x = v_min(v_max(x, min_val), max_val);
+                vx_store(dstptr + i, v_sub(one, v_div(one, v_add(one, v_exp(x)))));
+            }
+#endif
+            for (; i < len; i++) {
+                dstptr[i] = calculate(srcptr[i]);
+            }
+        }
     }
 
 #ifdef HAVE_CUDA
