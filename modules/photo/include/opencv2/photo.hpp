@@ -962,4 +962,6 @@ CV_EXPORTS_W void loadChromaticAberrationParams(
 
 } // cv
 
+#include "./photo/segmentation.hpp"
+
 #endif

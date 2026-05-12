@@ -2,16 +2,16 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#ifndef OPENCV_IMGPROC_SEGMENTATION_HPP
-#define OPENCV_IMGPROC_SEGMENTATION_HPP
+#ifndef OPENCV_PHOTO_SEGMENTATION_HPP
+#define OPENCV_PHOTO_SEGMENTATION_HPP
 
-#include "opencv2/imgproc.hpp"
+#include "opencv2/photo.hpp"
 
 namespace cv {
 
 namespace segmentation {
 
-//! @addtogroup imgproc_segmentation
+//! @addtogroup photo_segmentation
 //! @{
 
 
@@ -21,7 +21,7 @@ namespace segmentation {
  * which can be used for image segmentation.
  *
  * Usage example:
- * @snippet snippets/imgproc_segmentation.cpp usage_example_intelligent_scissors
+ * @snippet snippets/photo_segmentation.cpp usage_example_intelligent_scissors
  *
  * Reference: <a href="http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.138.3811&rep=rep1&type=pdf">"Intelligent Scissors for Image Composition"</a>
  * algorithm designed by Eric N. Mortensen and William A. Barrett, Brigham Young University
@@ -138,4 +138,4 @@ protected:
 }  // namespace segmentation
 }  // namespace cv
 
-#endif // OPENCV_IMGPROC_SEGMENTATION_HPP
+#endif // OPENCV_PHOTO_SEGMENTATION_HPP

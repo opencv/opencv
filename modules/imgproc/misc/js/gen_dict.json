@@ -102,17 +102,6 @@
             "watershed"
         ],
         "CLAHE": ["apply", "collectGarbage", "getClipLimit", "getTilesGridSize", "setClipLimit", "setTilesGridSize"],
-        "FontFace": ["set", "getName", "setInstance", "getInstance", "getBuiltinFontData"],
-        "segmentation_IntelligentScissorsMB": [
-            "IntelligentScissorsMB",
-            "setWeights",
-            "setGradientMagnitudeMaxLimit",
-            "setEdgeFeatureZeroCrossingParameters",
-            "setEdgeFeatureCannyParameters",
-            "applyImage",
-            "applyImageFeatures",
-            "buildMap",
-            "getContour"
-        ]
+        "FontFace": ["set", "getName", "setInstance", "getInstance", "getBuiltinFontData"]
     }
 }

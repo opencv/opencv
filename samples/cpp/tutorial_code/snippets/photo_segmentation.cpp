@@ -1,5 +1,5 @@
-#include "opencv2/imgproc.hpp"
-#include "opencv2/imgproc/segmentation.hpp"
+#include "opencv2/photo.hpp"
+#include "opencv2/photo/segmentation.hpp"
 
 using namespace cv;
 
