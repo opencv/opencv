@@ -5,6 +5,7 @@ import numpy as np
 import cv2 as cv
 import io
 import sys
+import tempfile
 
 from tests_common import NewOpenCVTests
 
@@ -97,8 +98,9 @@ class Bindings(NewOpenCVTests):
             # Implicitly calls release(), shouldn't raise any errors
 
             # 2. Test VideoWriter context manager
-            with cv.VideoWriter("test_output.avi", cv.VideoWriter_fourcc(*'MJPG'), 25, (640, 480)) as writer:
-                self.assertTrue(isinstance(writer, cv.VideoWriter))
+            with tempfile.NamedTemporaryFile(suffix='.avi') as tmp:
+                with cv.VideoWriter(tmp.name, cv.VideoWriter_fourcc(*'MJPG'), 25, (640, 480)) as writer:
+                    self.assertTrue(isinstance(writer, cv.VideoWriter))
             # Implicitly calls release(), shouldn't raise any errors
 
             # 3. Test exception propagation safety
