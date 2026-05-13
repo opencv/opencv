@@ -133,7 +133,22 @@ protected:
     Mat parseTensor(const opencv_onnx::TensorProto& tensorProto);
     void rememberMissingOp(const std::string& opname);
 
+    // Subgraph body-local names are renamed to "<scope_prefix><name>" so
+    // they cannot shadow the enclosing scope.
+    struct RenameUndo {
+        std::string key;
+        bool had_prev;
+        std::string prev_value;
+    };
     std::string remap(const std::string& name) const;
+    void pushSubgraphRenames(const opencv_onnx::GraphProto& graph_proto,
+                             std::vector<RenameUndo>& undos);
+    void sanitizeMainGraphNames(const opencv_onnx::GraphProto& graph_proto);
+    void recordSubgraphRename(const std::string& raw_name,
+                              const std::string& prefix,
+                              std::vector<RenameUndo>& undos);
+    void sanitizeName(const std::string& raw_name);
+    void popRenames(const std::vector<RenameUndo>& undos);
 
     LayerParams getLayerParams(const opencv_onnx::NodeProto& node_proto);
 
@@ -162,7 +177,6 @@ protected:
     // In this case each node is assigned a name 'onnx_node!<current global_node_idx value>'
     int global_node_idx;
     std::unordered_map<std::string, std::string> rename_map;
-    // Counter used to generate unique scope prefixes per subgraph invocation.
     int subgraph_scope_counter;
     bool have_errors;
 
@@ -788,6 +802,84 @@ std::string ONNXImporter2::remap(const std::string& name) const
     return it == rename_map.end() ? name : it->second;
 }
 
+void ONNXImporter2::recordSubgraphRename(const std::string& raw_name,
+                                        const std::string& prefix,
+                                        std::vector<RenameUndo>& undos)
+{
+    if (raw_name.empty())
+        return;
+    RenameUndo u;
+    u.key = raw_name;
+    auto it = rename_map.find(raw_name);
+    u.had_prev = (it != rename_map.end());
+    if (u.had_prev)
+        u.prev_value = it->second;
+    undos.push_back(std::move(u));
+    rename_map[raw_name] = prefix + raw_name;
+}
+
+void ONNXImporter2::sanitizeName(const std::string& raw_name)
+{
+    if (raw_name.empty() || raw_name.find('#') == std::string::npos)
+        return;
+    if (rename_map.find(raw_name) != rename_map.end())
+        return;
+    std::string sanitized = raw_name;
+    std::replace(sanitized.begin(), sanitized.end(), '#', '_');
+    rename_map[raw_name] = std::move(sanitized);
+}
+
+void ONNXImporter2::pushSubgraphRenames(const opencv_onnx::GraphProto& g,
+                                       std::vector<RenameUndo>& undos)
+{
+    const std::string& gname = g.name();
+    const std::string prefix = (gname.empty() ? std::string("body") : gname)
+                               + std::to_string(subgraph_scope_counter++) + "#";
+
+    const int n_init = g.initializer_size();
+    const int n_in = g.input_size();
+    const int n_out = g.output_size();
+    const int n_nodes = g.node_size();
+    undos.reserve(undos.size() + n_init + n_in + n_out + n_nodes);
+
+    for (int i = 0; i < n_init; ++i)
+        recordSubgraphRename(g.initializer(i).name(), prefix, undos);
+    for (int i = 0; i < n_in; ++i)
+        recordSubgraphRename(g.input(i).name(), prefix, undos);
+    for (int i = 0; i < n_out; ++i)
+        recordSubgraphRename(g.output(i).name(), prefix, undos);
+    for (int i = 0; i < n_nodes; ++i) {
+        const opencv_onnx::NodeProto& n = g.node(i);
+        for (int j = 0; j < n.output_size(); ++j)
+            recordSubgraphRename(n.output(j), prefix, undos);
+    }
+}
+
+void ONNXImporter2::sanitizeMainGraphNames(const opencv_onnx::GraphProto& g)
+{
+    for (int i = 0; i < g.initializer_size(); ++i)
+        sanitizeName(g.initializer(i).name());
+    for (int i = 0; i < g.input_size(); ++i)
+        sanitizeName(g.input(i).name());
+    for (int i = 0; i < g.output_size(); ++i)
+        sanitizeName(g.output(i).name());
+    for (int i = 0; i < g.node_size(); ++i) {
+        const opencv_onnx::NodeProto& n = g.node(i);
+        for (int j = 0; j < n.output_size(); ++j)
+            sanitizeName(n.output(j));
+    }
+}
+
+void ONNXImporter2::popRenames(const std::vector<RenameUndo>& undos)
+{
+    for (auto it = undos.rbegin(); it != undos.rend(); ++it) {
+        if (it->had_prev)
+            rename_map[it->key] = it->prev_value;
+        else
+            rename_map.erase(it->key);
+    }
+}
+
 Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool mainGraph_)
 {
     CV_LOG_DEBUG(NULL, "DNN/ONNX: parsing graph '" << graph_proto->name() << "' of " << graph_proto->node_size() << " nodes");
@@ -795,63 +887,11 @@ Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool 
     int n_nodes = graph_proto->node_size();
     CV_LOG_DEBUG(NULL, "DNN/ONNX: simplified the graph to " << n_nodes << " nodes");
 
-    // Build scope-local renames.
-    struct RenameUndo {
-        std::string key;
-        bool had_prev;
-        std::string prev_value;
-    };
     std::vector<RenameUndo> local_renames;
-    {
-        std::string prefix;
-        if (!mainGraph_) {
-            const std::string& gname = graph_proto->name();
-            prefix = (gname.empty() ? std::string("body") : gname)
-                     + std::to_string(subgraph_scope_counter++) + "#";
-        }
-
-        auto registerLocal = [&](const std::string& raw_name) {
-            if (raw_name.empty())
-                return;
-            if (!mainGraph_) {
-                std::string alias = prefix + raw_name;
-                RenameUndo u;
-                u.key = raw_name;
-                auto it = rename_map.find(raw_name);
-                u.had_prev = (it != rename_map.end());
-                if (u.had_prev)
-                    u.prev_value = it->second;
-                local_renames.push_back(std::move(u));
-                rename_map[raw_name] = std::move(alias);
-            } else if (raw_name.find('#') != std::string::npos
-                       && rename_map.find(raw_name) == rename_map.end()) {
-                std::string sanitized = raw_name;
-                std::replace(sanitized.begin(), sanitized.end(), '#', '_');
-                rename_map[raw_name] = std::move(sanitized);
-            }
-        };
-
-        for (int i = 0; i < graph_proto->initializer_size(); ++i)
-            registerLocal(graph_proto->initializer(i).name());
-        for (int i = 0; i < graph_proto->input_size(); ++i)
-            registerLocal(graph_proto->input(i).name());
-        for (int i = 0; i < graph_proto->output_size(); ++i)
-            registerLocal(graph_proto->output(i).name());
-        for (int i = 0; i < n_nodes; ++i) {
-            const opencv_onnx::NodeProto& n = graph_proto->node(i);
-            for (int j = 0; j < n.output_size(); ++j)
-                registerLocal(n.output(j));
-        }
-    }
-
-    auto undoRenames = [&]() {
-        for (auto it = local_renames.rbegin(); it != local_renames.rend(); ++it) {
-            if (it->had_prev)
-                rename_map[it->key] = it->prev_value;
-            else
-                rename_map.erase(it->key);
-        }
-    };
+    if (mainGraph_)
+        sanitizeMainGraphNames(*graph_proto);
+    else
+        pushSubgraphRenames(*graph_proto, local_renames);
 
     opencv_onnx::GraphProto* saved_graph_proto = curr_graph_proto;
     Ptr<Graph> saved_graph = curr_graph;
@@ -880,7 +920,7 @@ Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool 
         Arg arg = netimpl->newArg(input_name, mainGraph_ ? DNN_ARG_INPUT : DNN_ARG_TEMP);
         if (!parseValueInfo(input_i, netimpl->args.at(arg.idx))) {
             raiseError();
-            undoRenames();
+            popRenames(local_renames);
             return Ptr<Graph>();
         }
         inputs.push_back(arg);
@@ -904,7 +944,7 @@ Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool 
         }
         if (!parseValueInfo(output_i, netimpl->args.at(arg.idx))) {
            raiseError();
-           undoRenames();
+           popRenames(local_renames);
            return Ptr<Graph>();
         }
         outputs.push_back(arg);
@@ -926,7 +966,7 @@ Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool 
     curr_graph_proto = saved_graph_proto;
     curr_graph = saved_graph;
 
-    undoRenames();
+    popRenames(local_renames);
     return just_constructed;
 }
 

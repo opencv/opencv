@@ -5,6 +5,8 @@
 #include "precomp.hpp"
 #include "net_impl.hpp"
 
+#include <unordered_set>
+
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
@@ -353,10 +355,48 @@ struct BufferAllocator
                     }
                 }
 
+                // The body reads names produced in the enclosing scope
+                // (closure references) without listing them in the Loop/If
+                // layer's inputs. Bump the outer-scope usecount of each
+                // such arg so its buffer survives until the subgraph runs.
+                std::unordered_set<int> bodyDefined;
+                for (Arg ba : body->inputs())
+                    bodyDefined.insert(ba.idx);
+                for (const Ptr<Layer>& blayer : body->prog()) {
+                    if (!blayer) continue;
+                    for (Arg bo : blayer->outputs)
+                        bodyDefined.insert(bo.idx);
+                }
+                std::unordered_set<int> closureBumped;
+                for (const Ptr<Layer>& blayer : body->prog()) {
+                    if (!blayer) continue;
+                    for (Arg bi : blayer->inputs) {
+                        if (bi.idx <= 0) continue;
+                        if (bodyDefined.count(bi.idx)) continue;
+                        if (netimpl->isConstArg(bi)) continue;
+                        if (bufidxs[bi.idx] < 0) continue;
+                        if (closureBumped.insert(bi.idx).second) {
+                            usecounts[bi.idx]++;
+                            buf_usecounts[bufidxs[bi.idx]]++;
+                        }
+                    }
+                }
+
                 std::vector<int> saved_freebufs = freebufs;
                 freebufs.clear();
                 assign(body);
                 freebufs = saved_freebufs;
+
+                for (int idx : closureBumped) {
+                    int bidx = bufidxs[idx];
+                    if (--usecounts[idx] == 0) {
+                        if (bidx >= 0)
+                            releaseBuffer(bidx);
+                    } else if (bidx >= 0) {
+                        CV_Assert(buf_usecounts[bidx] > 0);
+                        --buf_usecounts[bidx];
+                    }
+                }
             }
 
             for (auto out: outputs) {
