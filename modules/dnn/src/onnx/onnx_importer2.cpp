@@ -894,11 +894,12 @@ void ONNXImporter2::parseNode(const opencv_onnx::NodeProto& node_proto)
                 << node_proto.output_size() << " outputs from domain '"
                 << layer_type_domain << "'");*/
 
+    // Unknown domain: still try parseCustomLayer; addLayer() handles the miss.
     if (dispatch.empty())
     {
-        CV_LOG_ERROR(NULL, "DNN/ONNX: missing dispatch map for domain='" << layer_type_domain << "'");
-        rememberMissingOp(layer_type);
-        return;
+        CV_LOG_DEBUG(NULL, "DNN/ONNX: no built-in dispatch map for domain='"
+                     << layer_type_domain << "', trying custom layer for '"
+                     << layer_type << "'");
     }
 
     node_inputs.clear();
@@ -990,8 +991,21 @@ void ONNXImporter2::parseNeg(LayerParams& layerParams, const opencv_onnx::NodePr
     addLayer(layerParams, node_proto);
 }
 
+// Lookup unknown ONNX ops in the user-side LayerFactory; non-default
+// domains are prefixed (e.g. "my.namespace.MyOp"), matching the old engine.
 void ONNXImporter2::parseCustomLayer(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
+    const std::string& name = layerParams.name;
+    std::string& layer_type = layerParams.type;
+    const std::string& layer_type_domain = node_proto.has_domain() ? node_proto.domain() : std::string();
+
+    if (!LayerFactory::isLayerRegistered(layer_type))
+    {
+        CV_LOG_INFO(NULL, "DNN/ONNX: unknown node type '" << layer_type
+                << "' (domain '" << layer_type_domain << "', node '" << name
+                << "'). Register a handler via CV_DNN_REGISTER_LAYER_CLASS() or LayerFactory::registerLayer().");
+    }
+
     parseSimpleLayers(layerParams, node_proto);
 }
 
