@@ -1711,7 +1711,9 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
 
 /* finds complex roots of a polynomial using Durand-Kerner method:
    http://en.wikipedia.org/wiki/Durand%E2%80%93Kerner_method */
-double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
+double cv::solvePoly(InputArray _coeffs0, OutputArray _roots0, int maxIters,
+    double init_p_re, double init_p_im,
+    double init_r_re, double init_r_im)
 {
     CV_INSTRUMENT_REGION();
 
@@ -1748,7 +1750,8 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
             break;
     }
 
-    C p(1, 0), r(1, 1);
+   /* C p(1, 0), r(1, 1);*/
+    C p(init_p_re, init_p_im), r(init_r_re, init_r_im);
 
     for( i = 0; i < n; i++ )
     {

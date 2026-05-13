@@ -2025,7 +2025,10 @@ The function cv::solvePoly finds real and complex roots of a polynomial equation
 @param roots output (complex) array of roots.
 @param maxIters maximum number of iterations the algorithm does.
 */
-CV_EXPORTS_W double solvePoly(InputArray coeffs, OutputArray roots, int maxIters = 300);
+/*CV_EXPORTS_W double solvePoly(InputArray coeffs, OutputArray roots, int maxIters = 300);*/
+CV_EXPORTS_W double solvePoly(InputArray coeffs, OutputArray roots, int maxIters = 300,
+    double init_p_re = 1.0, double init_p_im = 0.0,
+    double init_r_re = 1.0, double init_r_im = 1.0);
 
 /** @brief Calculates eigenvalues and eigenvectors of a symmetric matrix.
 
