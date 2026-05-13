@@ -4122,8 +4122,6 @@ CV_EXPORTS void findContours( InputArray image, OutputArrayOfArrays contours,
                               int mode, int method, Point offset = Point());
 
 
-
-
 //! @brief Find contours using link runs algorithm
 //!
 //! This function implements an algorithm different from cv::findContours:

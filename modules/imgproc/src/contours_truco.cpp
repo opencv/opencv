@@ -5,6 +5,7 @@
 #include <map>
 
 namespace{
+
 // Tunable block size. 1024 points = 8KB (Fits easily in L1 Cache)
 template <size_t BLOCK_SIZE = 2048>
 class TRUCOPagedContour {
@@ -303,8 +304,6 @@ public:
 
     void operator()(const cv::Range& range) const CV_OVERRIDE
     {
-
-
         // Pre-allocate buffer to avoid re-allocation during moves
         TRUCOPagedContour<4096> buffer;
 
@@ -497,6 +496,7 @@ void approxContour(std::vector<cv::Point> &inout,cv::ContourApproximationModes c
         }
     }
 }
+
 // ==========================================================
 // 1. The Core Implementation (Operates on std::vector directly)
 // ==========================================================
@@ -645,6 +645,5 @@ void findTRUContours(InputArray _src, OutputArrayOfArrays _contours, int minSize
         }
     }
 }
-
 
 }

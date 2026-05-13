@@ -5,6 +5,7 @@
 #include "test_precomp.hpp"
 
 namespace opencv_test { namespace {
+
 //helps to temporarily change the number of threads and restore it back after the scope
 struct CvNThreadScope{
     int nprev;
@@ -16,6 +17,7 @@ struct CvNThreadScope{
         cv::setNumThreads(nprev);
     }
 };
+
 // Order-independent contour-set comparison
 static bool trucoContoursMatch(const vector<vector<Point>>& cont1, const vector<vector<Point>>& cont2)
 {
@@ -67,8 +69,6 @@ static bool trucoContoursMatch(const vector<vector<Point>>& cont1, const vector<
 
 typedef testing::TestWithParam<ContourApproximationModes> Imgproc_FindTRUContours;
 
-
-
 TEST_P(Imgproc_FindTRUContours, nthreads_consistency)
 {
     ContourApproximationModes method = GetParam();
@@ -95,7 +95,7 @@ TEST_P(Imgproc_FindTRUContours, nthreads_consistency)
         SCOPED_TRACE(cv::format("nthreads=%d method=%d", t, (int)method));
         CvNThreadScope nt(t);
         vector<vector<Point>> contours;
-        findContours(img, contours, RETR_LIST, method);//will use TRUCO because NOT using hierarchy AND RETR_LIST
+        findContours(img, contours, RETR_LIST, method); //will use TRUCO because NOT using hierarchy AND RETR_LIST
         auto match=trucoContoursMatch(ref_contours, contours);
         EXPECT_TRUE(match);
     }
@@ -125,19 +125,16 @@ TEST_P(Imgproc_FindTRUContours, circles_vs_standard)
 
         vector<vector<Point>> ref_contours;
         vector<Vec4i> hierarchy;
-        findContours(binary, ref_contours, hierarchy, RETR_LIST, method);//will call suzuki abe because using hierarchy
+        findContours(binary, ref_contours, hierarchy, RETR_LIST, method); //will call suzuki abe because using hierarchy
         EXPECT_TRUE(!hierarchy.empty());
         vector<vector<Point>> truco_contours;
         findContours(binary, truco_contours, RETR_LIST, method);
-        EXPECT_TRUE(trucoContoursMatch(ref_contours, truco_contours));//will use TRUCO because NOT using hierarchy AND RETR_LIST
-
-
+        EXPECT_TRUE(trucoContoursMatch(ref_contours, truco_contours)); //will use TRUCO because NOT using hierarchy AND RETR_LIST
     }
 }
 
 TEST_P(Imgproc_FindTRUContours, noise_threshold)
 {
-
     ContourApproximationModes method = GetParam();
     const Size sz(1500, 1500);
     RNG& rng = TS::ptr()->get_rng();
@@ -145,8 +142,9 @@ TEST_P(Imgproc_FindTRUContours, noise_threshold)
     const int ITER = 2;
 
     std::vector<int> thread_counts;
-    for(int i=2;i<40;i+=3) thread_counts.push_back(i);
-    for(int i=0;i<ITER;i++){
+    for(int i=2; i<40; i+=3) thread_counts.push_back(i);
+    for(int i=0; i<ITER; i++)
+    {
         for (int level : levels)
         {
             SCOPED_TRACE(cv::format("level=%d method=%d", level, (int)method));

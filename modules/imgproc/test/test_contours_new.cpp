@@ -605,5 +605,4 @@ TEST(Imgproc_FindContours, link_runs)
 #endif
 }
 
-
 }}  // namespace opencv_test

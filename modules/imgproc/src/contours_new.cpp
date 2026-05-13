@@ -13,6 +13,7 @@
 #include <map>
 
 #include "contours_common.hpp"
+
 using namespace std;
 using namespace cv;
 
