@@ -54,31 +54,29 @@ namespace cv { namespace parallel {
  * Used to determine the R coefficient in the formula: n_opt = R * sqrt(W).
  */
 enum class ParallelOpClass {
-    GENERIC = 0,
-    PIXEL_ARITH,
-    PIXEL_STAT,
-    FILTER,
-    GEOMETRIC,
-    FEATURE_DETECTION,
-    ML_PREDICT,
-    COLOR_CONVERT,
-    OPTICAL_FLOW,
-    STEREO_MATCH
+    GENERIC = 0,        //!< Default or unknown operation
+    PIXEL_ARITH,        //!< Simple pixel-wise arithmetic
+    PIXEL_STAT,         //!< Pixel statistics and reductions
+    FILTER,             //!< Linear and non-linear filtering
+    GEOMETRIC,          //!< Geometric transformations
+    FEATURE_DETECTION,  //!< Feature detection algorithms
+    ML_PREDICT,         //!< Machine learning inference
+    COLOR_CONVERT,      //!< Color space conversions
+    OPTICAL_FLOW,       //!< Optical flow estimation
+    STEREO_MATCH        //!< Stereo matching algorithms
 };
 
 /** @brief Parameters to guide the calculation of nstripes.
  */
 struct ParallelTuningHints {
     ParallelOpClass opClass = ParallelOpClass::GENERIC;
-    double workAmount = -1; // Total number of iterations or pixels (W)
+    double workAmount = -1; //!< Total number of iterations or pixels (W)
 };
 
 /** Interface for parallel_for backends implementations
  *
  * @sa setParallelForBackend
  */
-// ... (keep all your existing enums and structs)
-
 class CV_EXPORTS ParallelForAPI
 {
 public:
@@ -96,20 +94,23 @@ public:
 
     virtual const char* getName() const = 0;
 
-    /** @brief Calculate the optimal number of stripes.
-     *  NOTE: This is non-virtual to preserve ABI compatibility in 4.x.
+    /** @brief Calculate the optimal number of stripes for a specific workload.
+     *
+     * This function is non-virtual to maintain ABI compatibility with existing 4.x binaries.
+     *
+     * @param tasks The total number of tasks/iterations.
+     * @param hints Metadata about the operation type and workload size.
      */
     int computeOptimalNstripes(int tasks, const ParallelTuningHints& hints = ParallelTuningHints()) const
     {
-        // For 4.x, ensure we strictly default to the existing behavior 
-        // unless specific workAmount is provided.
+        CV_UNUSED(tasks);
+        // Safety: If no workAmount is provided, return default thread count to prevent videoio regressions.
         if (hints.workAmount < 0) {
             return getNumThreads();
         }
-        
-        // Add your R * sqrt(W) logic here or in a separate utility 
-        // function to keep this header clean.
-        return getNumThreads(); 
+
+        // Future implementation of the R * sqrt(W) model goes here.
+        return getNumThreads();
     }
 };
 
@@ -117,13 +118,13 @@ public:
  *
  * Application can replace OpenCV `parallel_for()` backend with own implementation.
  *
- * @note This call is not thread-safe. Consider calling this function from the `main()` before any other OpenCV processing functions (and without any other created threads).
+ * @note This call is not thread-safe. Consider calling this function from the `main()` before any other OpenCV processing functions.
  */
 CV_EXPORTS void setParallelForBackend(const std::shared_ptr<ParallelForAPI>& api, bool propagateNumThreads = true);
 
 /** @brief Change OpenCV parallel_for backend
  *
- * @note This call is not thread-safe. Consider calling this function from the `main()` before any other OpenCV processing functions (and without any other created threads).
+ * @note This call is not thread-safe. Consider calling this function from the `main()` before any other OpenCV processing functions.
  */
 CV_EXPORTS_W bool setParallelForBackend(const std::string& backendName, bool propagateNumThreads = true);
 
