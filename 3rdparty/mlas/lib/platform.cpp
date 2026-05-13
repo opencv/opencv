@@ -319,10 +319,19 @@ MLAS_INTERNAL_DATA MLAS_DECLSPEC_ALIGN(const uint32_t MlasMaskMoveTableLasx[16],
 MLAS_PLATFORM::MLAS_PLATFORM(void)
 {
     // Portable softmax kernels (compute.cpp). flashattn.cpp dereferences these
-    // function pointers on the AMD64 / LARCH64 path; everything else falls
-    // back to the same symbols directly.
+    // function pointers on the AMD64 / LARCH64 path; compute.cpp's
+    // MlasComputeSoftmax does the same on AMD64 / LARCH64 / SVE / RISCV64.
+    // Other paths call the symbols directly. Gates mirror the MLAS_PLATFORM
+    // member visibility in mlasi.h so we initialize the field wherever it
+    // exists — leaving it null would crash any future code that reads it via
+    // the struct on those targets.
+#if defined(MLAS_TARGET_LARCH64) || defined(MLAS_USE_SVE) || \
+    defined(MLAS_TARGET_AMD64)   || defined(MLAS_TARGET_RISCV64)
     this->ReduceMaximumF32Kernel  = MlasReduceMaximumF32Kernel;
+#endif
+#if defined(MLAS_USE_SVE) || defined(MLAS_TARGET_AMD64) || defined(MLAS_TARGET_RISCV64)
     this->ComputeSumExpF32Kernel  = MlasComputeSumExpF32Kernel;
+#endif
 
     // The PreferredBufferAlignment field only exists on AMD64 (see
     // MLAS_PLATFORM in mlasi.h). On other targets MlasGetPreferredBufferAlignment()
