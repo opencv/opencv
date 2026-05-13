@@ -998,15 +998,6 @@ void ONNXImporter2::parseCustomLayer(LayerParams& layerParams, const opencv_onnx
     const std::string& name = layerParams.name;
     std::string& layer_type = layerParams.type;
     const std::string& layer_type_domain = node_proto.has_domain() ? node_proto.domain() : std::string();
-    if (!layer_type_domain.empty() && layer_type_domain != str_domain_ai_onnx)
-    {
-        static bool DNN_CUSTOM_ONNX_TYPE_INCLUDE_DOMAIN_NAME =
-            utils::getConfigurationParameterBool("OPENCV_DNN_CUSTOM_ONNX_TYPE_INCLUDE_DOMAIN_NAME", true);
-        if (DNN_CUSTOM_ONNX_TYPE_INCLUDE_DOMAIN_NAME)
-        {
-            layer_type = layer_type_domain + "." + layer_type;
-        }
-    }
 
     if (!LayerFactory::isLayerRegistered(layer_type))
     {
