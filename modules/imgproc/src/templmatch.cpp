@@ -870,6 +870,11 @@ static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _
             // norm(T')
             double norm_templx = norm(mask.mul(templ - sum(mask.mul(templ)).div(mask_sum)),
                                       NORM_L2);
+            if (norm_templx < DBL_EPSILON || cvIsNaN(norm_templx))
+            {
+                result = Scalar::all(1);
+                return;
+            }
             // norm(I') = sqrt{ CCorr(I^2, M^2) - 2*CCorr(I, M^2)/sum(M)*CCorr(I, M)
             //                  + sum(M^2)*CCorr(I, M)^2/sum(M)^2 }
             //          = sqrt{ CCorr(I^2, M^2)
