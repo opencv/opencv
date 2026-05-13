@@ -39,12 +39,12 @@ public:
         return makePtr<CustomScaleBiasLayer>(params);
     }
 
-    bool getMemoryShapes(const vector<MatShape>& inputs,
+    bool getMemoryShapes(const vector<MatShape>& inpts,
                          const int /*requiredOutputs*/,
                          vector<MatShape>& outShapes,
                          vector<MatShape>& /*internals*/) const CV_OVERRIDE
     {
-        outShapes.assign(1, inputs[0]);
+        outShapes.assign(1, inpts[0]);
         return false;
     }
 
