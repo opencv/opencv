@@ -154,6 +154,62 @@ bool mlasSgemmPacked(bool trans_a, bool trans_b,
     return true;
 }
 
+size_t mlasFlashAttentionBufferBytesPerThread(int q_block_size,
+                                              int kv_block_size,
+                                              int v_head_size)
+{
+    if (q_block_size <= 0 || kv_block_size <= 0 || v_head_size <= 0) return 0;
+    // flashattn.cpp lays out the per-thread scratch as:
+    //   l[q_block_size] + m[q_block_size]
+    //   + intermediate[q_block_size * kv_block_size]
+    //   + temp_output[q_block_size * v_head_size]
+    const size_t q  = static_cast<size_t>(q_block_size);
+    const size_t kv = static_cast<size_t>(kv_block_size);
+    const size_t vd = static_cast<size_t>(v_head_size);
+    return (q * (2 + kv + vd)) * sizeof(float);
+}
+
+bool mlasFlashAttention(const float* query, const float* key, const float* value,
+                        float* output,
+                        int batch_size, int num_heads,
+                        int q_seq_len, int kv_seq_len,
+                        int qk_head_size, int v_head_size,
+                        float scale,
+                        int q_block_size, int kv_block_size,
+                        void* scratch, int thread_count)
+{
+    if (!mlasAvailable()) return false;
+    if (batch_size <= 0 || num_heads <= 0) return false;
+    if (q_seq_len <= 0 || kv_seq_len <= 0) return false;
+    if (qk_head_size <= 0 || v_head_size <= 0) return false;
+    if (q_block_size <= 0 || kv_block_size <= 0) return false;
+    if (thread_count <= 0 || scratch == nullptr) return false;
+    if (query == nullptr || key == nullptr || value == nullptr || output == nullptr)
+        return false;
+
+    MlasFlashAttentionThreadedArgs args;
+    args.batch_size            = batch_size;
+    args.num_heads             = num_heads;
+    args.q_sequence_length     = q_seq_len;
+    args.kv_sequence_length    = kv_seq_len;
+    args.qk_head_size          = qk_head_size;
+    args.v_head_size           = v_head_size;
+    args.q_block_size          = q_block_size;
+    args.kv_block_size         = kv_block_size;
+    args.scale                 = scale;
+    args.thread_count          = thread_count;
+    args.buffer                = static_cast<float*>(scratch);
+    args.buffer_size_per_thread = mlasFlashAttentionBufferBytesPerThread(
+                                      q_block_size, kv_block_size, v_head_size);
+    args.query                 = query;
+    args.key                   = key;
+    args.value                 = value;
+    args.output                = output;
+
+    MlasFlashAttention(&args, /*ThreadPool=*/nullptr);
+    return true;
+}
+
 }}  // cv::dnn
 
 #endif  // HAVE_MLAS

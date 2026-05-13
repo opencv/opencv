@@ -6,6 +6,7 @@
 
 #include <opencv2/dnn/shape_utils.hpp>
 #include "cpu_kernels/fast_gemm.hpp"
+#include "cpu_kernels/mlas_gemm.hpp"
 
 // OpenVINO backend
 #include "../op_inf_engine.hpp"
@@ -267,9 +268,22 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         if (blobs.empty()) {
             const auto &B = inputs[1];
             const auto *b = B.ptr<const float>();
-            fastGemmBatch(helper.batch, helper.A_offsets.data(), helper.B_offsets.data(), helper.C_offsets.data(),
-                          helper.M, helper.N, helper.K, alpha, a, helper.lda0, helper.lda1,
-                          b, helper.ldb0, helper.ldb1, beta, y, helper.ldc, opt);
+            bool done = false;
+            if (mlasAvailable() && helper.M > 0 && helper.N > 0 && helper.K > 0) {
+                const auto A_shape = shape(A);
+                const auto B_shape = shape(B);
+                const int lda_mem = A_shape.back();
+                const int ldb_mem = B_shape.back();
+                done = mlasSgemmBatch(helper.batch,
+                                      helper.A_offsets.data(), helper.B_offsets.data(), helper.C_offsets.data(),
+                                      trans_a, trans_b, helper.M, helper.N, helper.K,
+                                      alpha, a, lda_mem, b, ldb_mem, beta, y, helper.ldc);
+            }
+            if (!done) {
+                fastGemmBatch(helper.batch, helper.A_offsets.data(), helper.B_offsets.data(), helper.C_offsets.data(),
+                              helper.M, helper.N, helper.K, alpha, a, helper.lda0, helper.lda1,
+                              b, helper.ldb0, helper.ldb1, beta, y, helper.ldc, opt);
+            }
         } else if (!thin_packed_B.empty()) {
             fastGemmThin(helper.M, helper.N, helper.K, alpha,
                          a, helper.lda0, helper.lda1,

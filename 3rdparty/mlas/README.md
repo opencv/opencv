@@ -14,9 +14,25 @@ internally by ONNX Runtime.
 
 ## What is vendored
 
-Only the SGEMM (single-precision GEMM) subset of MLAS. The rest of MLAS
-(quantized GEMM, conv, FP16, etc.) is excluded so the OpenCV DNN module gets
-the fast SGEMM path without dragging in the full library.
+The SGEMM (single-precision GEMM) subset of MLAS plus `MlasFlashAttention`
+(fused multi-head attention). The rest of MLAS (quantized GEMM, conv,
+FP16-dispatch SoftMax, etc.) is excluded so the OpenCV DNN module gets the
+fast SGEMM and FlashAttention paths without dragging in the full library.
+
+Source files imported verbatim from upstream:
+
+- `lib/sgemm.cpp` — SGEMM dispatch and host-side glue.
+- `lib/compute.cpp` — softmax / exp / row-max / sum-exp kernels. Only the
+  portable C++ fallbacks for `MlasReduceMaximumF32Kernel` and
+  `MlasComputeSumExpF32Kernel` are exercised; no per-arch `.S` softmax
+  kernels are vendored. The file is imported whole (FP16 / GQA template
+  specializations compile but never run — `SoftmaxDispatch` stays nullptr).
+- `lib/flashattn.cpp` — the `MlasFlashAttention` / `MlasFlashAttentionThreaded`
+  entry points. Depends on `MlasSgemmOperation` (in `sgemm.cpp`) and the two
+  portable kernels above.
+- `lib/softmax.h` — header included by `compute.cpp`; pure FP16-dispatch
+  typedefs, harmless under FP32-only builds.
+- Per-arch SGEMM kernels under `lib/<arch>/`.
 
 Top-level layout:
 
@@ -61,6 +77,9 @@ re-vendor:
    `erf_neon_fp16.h` / `gelu_neon_fp16.h` includes are also gated with
    `!defined(MLAS_GEMM_ONLY)` because those headers transitively pull in
    non-vendored FP16 sources (`fp16_common.h`, `softmax_kernel_neon.h`).
+   The `MLAS_GEMM_ONLY` ctor also assigns `ReduceMaximumF32Kernel` and
+   `ComputeSumExpF32Kernel` to the portable `compute.cpp` fallbacks so
+   `MlasFlashAttention` works without per-arch softmax kernels.
 4. `lib/core/common/{narrow,common}.h` — minimal shims for ORT internals
    that MLAS calls; not present upstream as MLAS sources, only as ORT
    includes.

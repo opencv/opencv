@@ -302,8 +302,15 @@ MLAS_INTERNAL_DATA MLAS_DECLSPEC_ALIGN(const uint32_t MlasMaskMoveTableLasx[16],
 // Plus, on the SBGemm aarch64+linux path, the SBGemm batch overrides — but
 // those are nullptr-default and we don't enable SBGemm here.
 //
+// Also initializes the two softmax kernel pointers consumed by
+// flashattn.cpp (ReduceMaximumF32Kernel, ComputeSumExpF32Kernel) to the
+// portable fallbacks provided by compute.cpp. No SIMD-asm softmax kernels
+// are vendored — the flash-attention path uses the portable C++ rowmax /
+// sum-exp implementations.
+//
 // Every other dispatch field stays at its in-class default (most are
-// `= nullptr`). Calling any non-SGEMM MLAS API in this build is undefined.
+// `= nullptr`). Calling any non-SGEMM / non-FlashAttention MLAS API in this
+// build is undefined.
 //
 // The original full ORT ctor is preserved unchanged below the #else for
 // future re-vendoring — drop MLAS_GEMM_ONLY to use it.
@@ -311,6 +318,12 @@ MLAS_INTERNAL_DATA MLAS_DECLSPEC_ALIGN(const uint32_t MlasMaskMoveTableLasx[16],
 #ifdef MLAS_GEMM_ONLY
 MLAS_PLATFORM::MLAS_PLATFORM(void)
 {
+    // Portable softmax kernels (compute.cpp). flashattn.cpp dereferences these
+    // function pointers on the AMD64 / LARCH64 path; everything else falls
+    // back to the same symbols directly.
+    this->ReduceMaximumF32Kernel  = MlasReduceMaximumF32Kernel;
+    this->ComputeSumExpF32Kernel  = MlasComputeSumExpF32Kernel;
+
     // The PreferredBufferAlignment field only exists on AMD64 (see
     // MLAS_PLATFORM in mlasi.h). On other targets MlasGetPreferredBufferAlignment()
     // returns MLAS_DEFAULT_PREFERRED_BUFFER_ALIGNMENT directly without

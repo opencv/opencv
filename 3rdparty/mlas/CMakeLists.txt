@@ -1,9 +1,9 @@
 # Vendored from microsoft/onnxruntime onnxruntime/core/mlas/. License: MIT.
 # See LICENSE and README.md in this directory for provenance.
 #
-# Stripped to MlasGemm SGEMM only. ONLY the source files needed for
-# MlasGemm (single-precision GEMM) and its per-arch optimizations are
-# compiled here. Non-SGEMM dispatch lines in lib/platform.cpp are
+# Vendored subset: SGEMM (sgemm.cpp + arch kernels) plus MlasFlashAttention
+# (flashattn.cpp) and the portable softmax kernels it needs from compute.cpp.
+# Non-SGEMM / non-FlashAttention dispatch lines in lib/platform.cpp are
 # `#if 0`'d out (search for "MLAS_GEMM_ONLY"). Re-vendoring upstream
 # requires re-applying that patch.
 #
@@ -11,16 +11,20 @@
 #   - lib/threading.cpp -> threading_opencv.cpp (cv::parallel_for_).
 #   - mlasi.h: MlasGetMaximumThreadCount() returns cv::getNumThreads().
 #   - lib/core/common/{narrow,common}.h shims for ORT internals MLAS uses.
-#   - lib/platform.cpp: non-SGEMM dispatch removed (`#if 0` blocks).
+#   - lib/platform.cpp: non-SGEMM dispatch removed (`#if 0` blocks), and
+#     ReduceMaximumF32Kernel / ComputeSumExpF32Kernel initialized to the
+#     portable compute.cpp fallbacks.
 
 set(MLAS_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 set(MLAS_INC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/inc)
 
-# Hardware-agnostic core: just the bare minimum for SGEMM dispatch + math.
+# Hardware-agnostic core: SGEMM dispatch + softmax/exp kernels + flash-attention.
 set(mlas_common_srcs
   ${MLAS_SRC_DIR}/platform.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/threading_opencv.cpp
   ${MLAS_SRC_DIR}/sgemm.cpp
+  ${MLAS_SRC_DIR}/compute.cpp
+  ${MLAS_SRC_DIR}/flashattn.cpp
 )
 
 # Architecture detection — same as ORT's onnxruntime_mlas.cmake.
@@ -58,10 +62,32 @@ endif()
 
 set(mlas_platform_srcs)
 
+# Probe ASM language once. Some Android NDK toolchain + CMake combinations
+# fail to initialize ASM for certain ABIs (e.g. x86_64) even though the
+# target compiler can assemble .S files — that surfaces as
+# "CMAKE_ASM_COMPILE_OBJECT not set" at generate time. For archs whose
+# mlas platform.cpp dispatches to arch-specific kernels defined in .S
+# (X86_64, X86, ARM64, LOONGARCH64), disable MLAS entirely if ASM is
+# unavailable so the DNN module falls back to its built-in SGEMM.
+include(CheckLanguage)
+set(_MLAS_REQUIRES_ASM FALSE)
+if(MLAS_X86_64 OR MLAS_X86 OR MLAS_ARM64 OR MLAS_LOONGARCH64)
+  set(_MLAS_REQUIRES_ASM TRUE)
+endif()
+set(_MLAS_HAS_ASM FALSE)
+check_language(ASM)
+if(CMAKE_ASM_COMPILER)
+  enable_language(ASM)
+  set(_MLAS_HAS_ASM TRUE)
+elseif(_MLAS_REQUIRES_ASM)
+  message(WARNING "MLAS: ASM language unavailable on ${CMAKE_SYSTEM_PROCESSOR}; "
+                  "MLAS disabled (DNN will use its built-in SGEMM)")
+  return()
+endif()
+
 # x86_64 SGEMM kernels: MlasGemmFloatKernelSse / Avx / Fma3 / Avx512F
 # plus the M=1 fast paths and B-packing helpers.
 if(MLAS_X86_64)
-  enable_language(ASM)
   list(APPEND mlas_platform_srcs
     ${MLAS_SRC_DIR}/x86_64/SgemmKernelSse2.S
     ${MLAS_SRC_DIR}/x86_64/SgemmTransposePackB16x4Sse2.S
@@ -88,7 +114,6 @@ endif()
 
 # i386 / 32-bit x86 SGEMM kernels.
 if(MLAS_X86)
-  enable_language(ASM)
   list(APPEND mlas_platform_srcs
     ${MLAS_SRC_DIR}/x86/SgemmKernelSse2.S
     ${MLAS_SRC_DIR}/x86/SgemmKernelAvx.S
@@ -108,7 +133,6 @@ endif()
 
 # ARM64 / AArch64.
 if(MLAS_ARM64)
-  enable_language(ASM)
   list(APPEND mlas_platform_srcs
     ${MLAS_SRC_DIR}/aarch64/SgemmKernelNeon.S
     ${MLAS_SRC_DIR}/aarch64/SgemvKernelNeon.S
@@ -123,8 +147,7 @@ if(MLAS_POWER)
     PROPERTIES COMPILE_FLAGS "-DSINGLE")
   include(CheckCXXCompilerFlag)
   check_cxx_compiler_flag("-mcpu=power10" MLAS_HAS_POWER10)
-  if(MLAS_HAS_POWER10)
-    enable_language(ASM)
+  if(MLAS_HAS_POWER10 AND _MLAS_HAS_ASM)
     list(APPEND mlas_platform_srcs ${MLAS_SRC_DIR}/power/SgemmKernelPOWER10.cpp)
     if(NOT AIX)
       list(APPEND mlas_platform_srcs ${MLAS_SRC_DIR}/power/SgemmKernelPackA.S)
@@ -138,7 +161,6 @@ endif()
 
 # LoongArch 64 (LSX + LASX).
 if(MLAS_LOONGARCH64)
-  enable_language(ASM)
   list(APPEND mlas_platform_srcs
     ${MLAS_SRC_DIR}/loongarch64/SgemmKernelLsx.S
     ${MLAS_SRC_DIR}/loongarch64/SgemmTransposePackB16x4LSX.S

@@ -56,6 +56,42 @@ bool mlasSgemmPacked(bool trans_a, bool trans_b,
                      float beta,
                      float* C, int ldc);
 
+// Scratch-buffer size (in bytes) per worker thread for mlasFlashAttention.
+// The caller must allocate `thread_count * this` bytes for the scratch
+// pointer. Returns 0 if any argument is non-positive.
+size_t mlasFlashAttentionBufferBytesPerThread(int q_block_size,
+                                              int kv_block_size,
+                                              int v_head_size);
+
+// Multi-head attention via MLAS flash-attention. Computes
+//   output[b, i, h, :] = softmax(scale * Q[b,h,i,:] @ K[b,h,:,:]^T) @ V[b,h,:,:]
+// fused into one tiled kernel without materializing the q_seq x kv_seq
+// attention matrix.
+//
+// Layouts (row-major contiguous, FP32):
+//   query : [batch, num_heads, q_seq_len,  qk_head_size]
+//   key   : [batch, num_heads, kv_seq_len, qk_head_size]
+//   value : [batch, num_heads, kv_seq_len, v_head_size]
+//   output: [batch, q_seq_len, num_heads,  v_head_size]   (heads *after* seq)
+//
+// scale         - usually 1 / sqrt(qk_head_size).
+// q_block_size  - tile size along the q sequence (e.g. 256).
+// kv_block_size - tile size along the kv sequence (e.g. 256).
+// scratch       - caller-owned buffer of at least
+//                 thread_count * mlasFlashAttentionBufferBytesPerThread(...).
+// thread_count  - number of MLAS workers to fan out across (typically
+//                 cv::getNumThreads()).
+//
+// Returns false if MLAS is unavailable or arguments are invalid.
+bool mlasFlashAttention(const float* query, const float* key, const float* value,
+                        float* output,
+                        int batch_size, int num_heads,
+                        int q_seq_len, int kv_seq_len,
+                        int qk_head_size, int v_head_size,
+                        float scale,
+                        int q_block_size, int kv_block_size,
+                        void* scratch, int thread_count);
+
 #else  // HAVE_MLAS
 
 inline bool mlasAvailable() { return false; }
@@ -73,6 +109,11 @@ inline size_t mlasSgemmPackBSize(bool, bool, int, int) { return 0; }
 inline bool mlasSgemmPackB(bool, bool, int, int, const float*, int, void*) { return false; }
 inline bool mlasSgemmPacked(bool, bool, int, int, int, float,
                             const float*, int, const void*, float, float*, int) { return false; }
+
+inline size_t mlasFlashAttentionBufferBytesPerThread(int, int, int) { return 0; }
+inline bool mlasFlashAttention(const float*, const float*, const float*, float*,
+                               int, int, int, int, int, int, float,
+                               int, int, void*, int) { return false; }
 
 #endif  // HAVE_MLAS
 
