@@ -573,11 +573,23 @@ void fastGemmBatch(size_t batch, const size_t *A_offsets, const size_t *B_offset
     // Below ~10K MACs (M*N*K) the blocked SIMD kernel's pack/tile overhead outweighs its speedup, so route tiny problems through the unblocked thin path.
     if (ldb1 == 1 && (fastGemmThinEligible(M, N, K) || (uint64_t)M * N * K <= 10000)) {
         const size_t esz = sizeof(float);
-        for (size_t i = 0; i < batch; i++) {
-            fast_gemm_thin(alpha, beta, M, N, K,
-                           a + A_offsets[i] * esz, lda0, lda1,
-                           b + B_offsets[i] * esz, ldb0,
-                           c + C_offsets[i] * esz, ldc, opt.multi_thread);
+        // Parallelise over batch with single-thread inner thin gemm
+        if (opt.multi_thread && batch > 1) {
+            parallel_for_(Range(0, (int)batch), [&](const Range& r) {
+                for (int i = r.start; i < r.end; i++) {
+                    fast_gemm_thin(alpha, beta, M, N, K,
+                                   a + A_offsets[i] * esz, lda0, lda1,
+                                   b + B_offsets[i] * esz, ldb0,
+                                   c + C_offsets[i] * esz, ldc, false);
+                }
+            }, (double)batch * M * N * K * (1.0 / 1024.0));
+        } else {
+            for (size_t i = 0; i < batch; i++) {
+                fast_gemm_thin(alpha, beta, M, N, K,
+                               a + A_offsets[i] * esz, lda0, lda1,
+                               b + B_offsets[i] * esz, ldb0,
+                               c + C_offsets[i] * esz, ldc, opt.multi_thread);
+            }
         }
         return;
     }
@@ -675,11 +687,22 @@ void fastGemmBatch(size_t batch,
 
     if (ldb1 == 1 && (fastGemmThinEligible(M, N, K) || (uint64_t)M * N * K <= 10000)) {
         const size_t esz = sizeof(float);
-        for (size_t i = 0; i < batch; i++) {
-            fast_gemm_thin(alpha, beta, M, N, K,
-                           a + A_offsets[i] * esz, lda0, lda1,
-                           b + B_offsets[i] * esz, ldb0,
-                           c + C_offsets[i] * esz, ldc, opt.multi_thread);
+        if (opt.multi_thread && batch > 1) {
+            parallel_for_(Range(0, (int)batch), [&](const Range& r) {
+                for (int i = r.start; i < r.end; i++) {
+                    fast_gemm_thin(alpha, beta, M, N, K,
+                                   a + A_offsets[i] * esz, lda0, lda1,
+                                   b + B_offsets[i] * esz, ldb0,
+                                   c + C_offsets[i] * esz, ldc, false);
+                }
+            }, (double)batch * M * N * K * (1.0 / 1024.0));
+        } else {
+            for (size_t i = 0; i < batch; i++) {
+                fast_gemm_thin(alpha, beta, M, N, K,
+                               a + A_offsets[i] * esz, lda0, lda1,
+                               b + B_offsets[i] * esz, ldb0,
+                               c + C_offsets[i] * esz, ldc, opt.multi_thread);
+            }
         }
         return;
     }

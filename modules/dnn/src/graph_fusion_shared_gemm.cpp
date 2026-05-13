@@ -73,6 +73,7 @@ struct ModelFusionSharedGemm
         float  alpha = 1.f;
         float  beta  = 1.f;
         bool   has_bias = false;
+        bool   flatten_a = true;
     };
 
     bool inspectGemm(const vector<Ptr<Layer>>& prog, int idx, GemmInfo& info) const
@@ -116,6 +117,7 @@ struct ModelFusionSharedGemm
         info.alpha     = alpha;
         info.beta      = beta;
         info.has_bias  = (l->blobs.size() == 2);
+        info.flatten_a = g->flatten_a;
         return true;
     }
 
@@ -152,6 +154,14 @@ struct ModelFusionSharedGemm
             bool uniform = true;
             for (auto& info : infos)
                 if (info.has_bias != all_have_bias) { uniform = false; break; }
+            if (!uniform) continue;
+
+            // Require uniform flatten_a too — the fused Gemm has a single
+            // value, and mixing 2D-output and ND-output downstream consumers
+            // would need different post-fusion shape handling.
+            bool all_flatten_a = infos[0].flatten_a;
+            for (auto& info : infos)
+                if (info.flatten_a != all_flatten_a) { uniform = false; break; }
             if (!uniform) continue;
 
             int K = infos[0].K;
@@ -203,6 +213,15 @@ struct ModelFusionSharedGemm
             fp.set("transB", false);
             fp.set("alpha", 1.f);
             fp.set("beta",  1.f);
+            fp.set("flatten_a", all_flatten_a);
+            // Mirror the constB / const_C / have_bias signalling that the
+            // GemmLayerImpl's getOpMode() reads from LayerParams. We always
+            // ship the weights as a constant blob, and (when biased) the bias
+            // too — so this fused Gemm has only one runtime input.
+            fp.set("constB", true);
+            fp.set("have_bias", all_have_bias);
+            fp.set("const_C", all_have_bias);
+            if (all_have_bias) fp.set("real_ndims_C", 1);
             fp.blobs.push_back(W_concat);
             if (all_have_bias) fp.blobs.push_back(b_concat);
 

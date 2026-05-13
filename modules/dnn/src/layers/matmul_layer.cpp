@@ -503,9 +503,6 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
 #endif // HAVE_CANN
 
  private:
-    float alpha;
-    float beta;
-
     int real_ndims_C;
 
     std::vector<float> packed_input_B;

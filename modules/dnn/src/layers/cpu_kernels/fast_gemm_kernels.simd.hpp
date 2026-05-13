@@ -666,8 +666,7 @@ void fastGemmKernel(size_t M, size_t N, size_t K,
     };
 
     if (multi_thread) {
-        int cost_per_thread = static_cast<int>((K / KC) * (MC / GEMM_MR) * (NC / GEMM_NR));
-        double nstripes = (size_t)total_tiles * cost_per_thread * (1 / 1024.0);
+        double nstripes = (double)M * N * K * (1.0 / 1024.0);
         parallel_for_(Range(0, total_tiles), fn, nstripes);
     } else {
         fn(Range(0, total_tiles));
@@ -750,8 +749,7 @@ void fastGemmKernel(size_t M, size_t N, size_t K,
     };
 
     if (multi_thread) {
-        int cost_per_thread = static_cast<int>((K / KC) * (MC / GEMM_MR) * (NC / GEMM_NR));
-        double nstripes = (size_t)total_tiles * cost_per_thread * (1 / 1024.0);
+        double nstripes = (double)M * N * K * (1.0 / 1024.0);
         parallel_for_(Range(0, total_tiles), fn, nstripes);
     } else {
         fn(Range(0, total_tiles));
@@ -846,8 +844,7 @@ void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_
     };
 
     int total = batch * total_tiles;
-    int cost_per_thread = static_cast<int>((K / KC) * (MC / GEMM_MR) * (NC / GEMM_NR));
-    double nstripes = (size_t)total * cost_per_thread * (1 / 1024.0);
+    double nstripes = (double)batch * M * N * K * (1.0 / 1024.0);
     parallel_for_(Range(0, total), fn, nstripes);
 }
 
@@ -932,8 +929,7 @@ void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_
     };
 
     int total = batch * total_tiles;
-    int cost_per_thread = static_cast<int>((K / KC) * (MC / GEMM_MR) * (NC / GEMM_NR));
-    double nstripes = (size_t)total * cost_per_thread * (1 / 1024.0);
+    double nstripes = (double)batch * M * N * K * (1.0 / 1024.0);
     parallel_for_(Range(0, total), fn, nstripes);
 }
 
