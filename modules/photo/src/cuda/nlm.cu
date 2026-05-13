@@ -506,13 +506,13 @@ namespace cv { namespace cuda { namespace device
                 search_window(search_window_),
                 block_window(block_window_),
                 minus_h2_inv(-1.f / (h * h)) {
-            }   // tek kanal: VecTraits cn=1
+            }   // One Channel: VecTraits cn=1
 
             PtrStep<ushort> src;
             mutable PtrStepf buffer;                  // float buffer (int yerine)
 
-            // calcDist — float döndürür, int overflow olmaz
-            // 65535² = 4.29×10⁹ > INT_MAX olduğu için float zorunlu
+            // calcDist — returns float
+            // 65535² = 4.29×10⁹ > INT_MAX, must return float
             __device__ __forceinline__ float calcDist_16(ushort a, ushort b) const
             {
                 float diff = float(a) - float(b);
@@ -521,8 +521,8 @@ namespace cv { namespace cuda { namespace device
 
             __device__ __forceinline__ void initSums_BruteForce(
                 int i, int j,
-                float* dist_sums,          // float[] — orijinalde int[]
-                PtrStepf& col_sums,        // PtrStepf — orijinalde PtrStepi
+                float* dist_sums,
+                PtrStepf& col_sums,
                 PtrStepf& up_col_sums) const
             {
                 for (int index = threadIdx.x; index < search_window * search_window; index += STRIDE)
@@ -664,7 +664,7 @@ namespace cv { namespace cuda { namespace device
                     + blockIdx.y * search_window * search_window;
                 up_col_sums.step = buffer.step;
 
-                extern __shared__ float dist_sums_16[];   // float — orijinalde int
+                extern __shared__ float dist_sums_16[];
 
                 int first = 0;
 

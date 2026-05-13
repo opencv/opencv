@@ -133,7 +133,7 @@ TEST(CUDA_Photo_FastNlMeans, regression_16u)
 
     // 3. Execute the function and ensure it does not throw any exceptions
     EXPECT_NO_THROW({
-        cv::cuda::fastNlMeansDenoising_16(src_device, dst_device, h, search_window, block_size);
+        cv::cuda::fastNlMeansDenoising(src_device, dst_device, h, search_window, block_size);
     });
 
     ASSERT_FALSE(dst_device.empty()) << "Error: GPU output matrix should not be empty!";
@@ -164,27 +164,27 @@ TEST(CUDA_Photo_FastNlMeans, accuracy_16u)
 
     // 2. Convert the 8-bit image to 16-bit and scale it to the full range (0-255 becomes 0-65280)
     Mat src_host;
-    img_8u.convertTo(src_host, CV_16U, 256.0); 
+    img_8u.convertTo(src_host, CV_16U, 256.0);
 
     // 3. Add synthetic Gaussian noise safely
     Mat noise(src_host.size(), CV_16S);
     randn(noise, 0, 1500); // Standard deviation suitable for 16-bit scale
-    
+
     Mat noisy_host;
     // cv::add automatically handles clamping between 0-65535 for CV_16U
-    cv::add(src_host, noise, noisy_host, noArray(), CV_16U); 
+    cv::add(src_host, noise, noisy_host, noArray(), CV_16U);
 
     // 4. Upload data to the GPU
     cuda::GpuMat d_noisy, d_dst;
     d_noisy.upload(noisy_host);
 
     // 5. Execute the 16-bit NLM algorithm
-    float h = 3000.0f; 
+    float h = 3000.0f;
     int search_window = 21;
     int block_size = 7;
 
     EXPECT_NO_THROW({
-        cuda::fastNlMeansDenoising_16(d_noisy, d_dst, h, search_window, block_size);
+        cuda::fastNlMeansDenoising(d_noisy, d_dst, h, search_window, block_size);
     });
 
     Mat dst_host;
@@ -196,11 +196,11 @@ TEST(CUDA_Photo_FastNlMeans, accuracy_16u)
     double psnr_denoised = cv::PSNR(src_host, dst_host, max_val_16u);
 
     // The PSNR of the denoised image must be HIGHER than the noisy image (Higher = Better quality)
-    EXPECT_GT(psnr_denoised, psnr_noisy) 
+    EXPECT_GT(psnr_denoised, psnr_noisy)
         << "Accuracy Failed: Denoised image quality is worse than the noisy input!";
-    
+
     // Logical minimum threshold for PSNR
-    EXPECT_GT(psnr_denoised, 30.0) 
+    EXPECT_GT(psnr_denoised, 30.0)
         << "Accuracy Failed: PSNR is too low, check accumulator types or scaling!";
 }
 
