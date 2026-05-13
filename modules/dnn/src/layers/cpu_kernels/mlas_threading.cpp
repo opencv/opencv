@@ -15,9 +15,16 @@
 //      when MLAS_OPENCV_THREADING is defined (see the small patch in
 //      mlasi.h flagged with that define).
 //   2. The three threaded entry points below dispatch to cv::parallel_for_.
+//
+// Compiled into the opencv_dnn_mlas object library only — the
+// MLAS_OPENCV_THREADING guard makes the file a no-op when picked up by
+// opencv_dnn's recursive src glob, since MLAS internal headers and the
+// MLAS_GEMM_ONLY / BUILD_MLAS_NO_ONNXRUNTIME defines are not in scope there.
 
-#include "lib/mlasi.h"
-#include "lib/qgemm.h"   // for MLAS_GEMM_QUANT_DISPATCH definition (stub below)
+#if defined(MLAS_OPENCV_THREADING)
+
+#include "mlasi.h"
+#include "qgemm.h"   // for MLAS_GEMM_QUANT_DISPATCH definition (stub below)
 
 #include <opencv2/core/utility.hpp>
 
@@ -87,3 +94,5 @@ MlasTryBatchParallel(
         }
     });
 }
+
+#endif // MLAS_OPENCV_THREADING

@@ -8,7 +8,8 @@
 # requires re-applying that patch.
 #
 # Local patches against upstream:
-#   - lib/threading.cpp -> threading_opencv.cpp (cv::parallel_for_).
+#   - lib/threading.cpp -> modules/dnn/src/layers/cpu_kernels/mlas_threading.cpp
+#     (cv::parallel_for_).
 #   - mlasi.h: MlasGetMaximumThreadCount() returns cv::getNumThreads().
 #   - lib/core/common/{narrow,common}.h shims for ORT internals MLAS uses.
 #   - lib/platform.cpp: non-SGEMM dispatch removed (`#if 0` blocks), and
@@ -21,7 +22,7 @@ set(MLAS_INC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/inc)
 # Hardware-agnostic core: SGEMM dispatch + softmax/exp kernels + flash-attention.
 set(mlas_common_srcs
   ${MLAS_SRC_DIR}/platform.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/threading_opencv.cpp
+  ${CMAKE_SOURCE_DIR}/modules/dnn/src/layers/cpu_kernels/mlas_threading.cpp
   ${MLAS_SRC_DIR}/sgemm.cpp
   ${MLAS_SRC_DIR}/compute.cpp
   ${MLAS_SRC_DIR}/flashattn.cpp
@@ -237,7 +238,12 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang"
     "$<$<COMPILE_LANGUAGE:ASM>:-Wa,--noexecstack>"
   )
 endif()
-if(MLAS_X86_64)
+# platform.cpp's __linux__ branch calls syscall() but upstream only includes
+# <sys/syscall.h>, not <unistd.h> (where syscall() is declared on glibc).
+# Force-include unistd.h on non-Windows x86_64 builds. MSVC doesn't ship
+# unistd.h and doesn't recognize the -include flag; its _WIN32 branch in
+# platform.cpp doesn't need syscall() anyway.
+if(MLAS_X86_64 AND NOT WIN32)
   set_source_files_properties(${MLAS_SRC_DIR}/platform.cpp
     PROPERTIES COMPILE_FLAGS "-include unistd.h")
 endif()

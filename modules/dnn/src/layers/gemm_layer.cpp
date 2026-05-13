@@ -349,7 +349,6 @@ public:
         size_t dims_Y = shape_Y.size();
         int M = shape_Y[dims_Y - 2], N = shape_Y[dims_Y - 1];
         int K = trans_a ? ma : na;
-        const int rows = (int)(Y.total() / (size_t)N);
 
         // In flatten_a=false mode the output keeps A's leading dims, so the
         // GEMM row count spans those dims as well: rows = total(Y)/N.
