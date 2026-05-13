@@ -77,6 +77,8 @@ struct ParallelTuningHints {
  *
  * @sa setParallelForBackend
  */
+// ... (keep all your existing enums and structs)
+
 class CV_EXPORTS ParallelForAPI
 {
 public:
@@ -94,18 +96,20 @@ public:
 
     virtual const char* getName() const = 0;
 
-    /** @brief Calculate the optimal number of stripes for a specific workload.
-     * 
-     * Centralizes the logic to prevent overhead in small tasks and imbalance in large ones.
-     * Default implementation returns getNumThreads() for backward compatibility.
-     * 
-     * @param tasks The total task count (iterations).
-     * @param hints Metadata about the operation type and total work (W).
+    /** @brief Calculate the optimal number of stripes.
+     *  NOTE: This is non-virtual to preserve ABI compatibility in 4.x.
      */
-    virtual int computeOptimalNstripes(int tasks, const ParallelTuningHints& hints = ParallelTuningHints()) const
+    int computeOptimalNstripes(int tasks, const ParallelTuningHints& hints = ParallelTuningHints()) const
     {
-        CV_UNUSED(tasks); CV_UNUSED(hints);
-        return getNumThreads();
+        // For 4.x, ensure we strictly default to the existing behavior 
+        // unless specific workAmount is provided.
+        if (hints.workAmount < 0) {
+            return getNumThreads();
+        }
+        
+        // Add your R * sqrt(W) logic here or in a separate utility 
+        // function to keep this header clean.
+        return getNumThreads(); 
     }
 };
 
