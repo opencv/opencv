@@ -5222,8 +5222,4 @@ Point LineIterator::pos() const
 
 } // cv
 
-
-#include "./imgproc/segmentation.hpp"
-
-
 #endif
