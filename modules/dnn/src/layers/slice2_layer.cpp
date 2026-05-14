@@ -115,13 +115,16 @@ public:
                             std::min(end, inpsz);
             if (allStarts)
                 allStarts[axis] = start;
-            if (allEnds)
-                allEnds[axis] = end;
             if (allSteps)
                 allSteps[axis] = step;
             int outsz = step > 0 ? (end - start + step-1)/step :
                                    (start - end - step-1)/(-step);
-            CV_Assert(outsz >= 0);
+            if (outsz < 0) {
+                outsz = 0;
+                end = start;
+            }
+            if (allEnds)
+                allEnds[axis] = end;
             outShape[axis] = outsz;
         }
 

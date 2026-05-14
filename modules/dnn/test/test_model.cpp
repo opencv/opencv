@@ -1533,4 +1533,40 @@ TEST_P(Reproducibility_FacePaint_ONNX, Accuracy)
 INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_FacePaint_ONNX,
                         testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
 
+typedef testing::TestWithParam<Target> Reproducibility_SwinIR_ONNX;
+TEST_P(Reproducibility_SwinIR_ONNX, Accuracy)
+{
+    Target targetId = GetParam();
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB, CV_TEST_TAG_LONG);
+
+    std::string modelname = _tf("onnx/models/swinir_x4_gan.onnx", false);
+    Net net = readNetFromONNX(modelname, ENGINE_NEW);
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(targetId);
+
+    std::string imgname = findDataFile("cv/dnn_superres/butterfly.png");
+    Mat image = imread(imgname);
+    ASSERT_FALSE(image.empty());
+
+    Mat input = blobFromImage(image, 1.0 / 255.0, Size(64, 64),
+                              Scalar(0, 0, 0), true, false, CV_32F);
+    net.setInput(input);
+    Mat out = net.forward();
+
+    ASSERT_EQ(out.dims, 4);
+    EXPECT_EQ(out.size[0], 1);
+    EXPECT_EQ(out.size[1], 3);
+    EXPECT_EQ(out.size[2], 256);
+    EXPECT_EQ(out.size[3], 256);
+
+    double minVal, maxVal;
+    cv::minMaxLoc(out.reshape(1, 1), &minVal, &maxVal);
+    EXPECT_GE(minVal, -0.2);
+    EXPECT_LE(maxVal,  1.2);
+}
+INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_SwinIR_ONNX,
+                        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
+
 }} // namespace
