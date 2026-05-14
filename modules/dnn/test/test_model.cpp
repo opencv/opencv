@@ -1539,6 +1539,14 @@ TEST_P(Reproducibility_SwinIR_ONNX, Accuracy)
     Target targetId = GetParam();
     applyTestTag(CV_TEST_TAG_MEMORY_512MB, CV_TEST_TAG_LONG);
 
+    auto engine_forced = static_cast<EngineType>(
+        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO));
+    if (engine_forced == ENGINE_CLASSIC)
+    {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+        return;
+    }
+
     std::string modelname = _tf("onnx/models/swinir_x4_gan.onnx", false);
     Net net = readNetFromONNX(modelname, ENGINE_NEW);
     ASSERT_FALSE(net.empty());
