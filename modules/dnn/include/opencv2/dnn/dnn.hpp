@@ -1063,7 +1063,8 @@ CV__DNN_INLINE_NS_BEGIN
         ENGINE_CLASSIC=1, //!< Force use the old dnn engine similar to 4.x branch
         ENGINE_NEW=2,     //!< Force use the new dnn engine. The engine does not support non CPU back-ends for now.
         ENGINE_AUTO=3,    //!< Try to use the new engine and then fall back to the classic version.
-        ENGINE_ORT=4      //!< Try to use ONNX Runtime wrapper (ONNX only, requires build with WITH_ONNXRUNTIME=ON).
+        ENGINE_ORT=4,     //!< Try to use ONNX Runtime wrapper (ONNX only, requires build with WITH_ONNXRUNTIME=ON).
+        ENGINE_ORT_GENAI=5 //!< Use ONNX Runtime GenAI wrapper for generative AI models (requires build with WITH_ONNXRUNTIME=ON and WITH_ONNXRUNTIME_GENAI=ON).
     };
 
     /** @brief Reads a network model stored in <a href="https://pjreddie.com/darknet/">Darknet</a> model files.
@@ -2169,9 +2170,84 @@ public:
 
     CV_WRAP std::string decode(const std::vector<int>& tokens);
     struct Impl;
+    explicit Tokenizer(const Ptr<Impl>& impl) : impl_(impl) {}
 private:
     Ptr<Impl> impl_;
 };
+
+    /** @brief Enum of tokenizer backends supported by the LLM class.
+     *  @see LLM::create
+     */
+    enum TokenizerType
+    {
+        TOKENIZER_OPENCV     = 0, //!< OpenCV built-in tokenizer; backend selected from config.json (BPE: GPT-2/GPT-4/Qwen2.5, Gemma: Gemma3).
+        TOKENIZER_ORT_GENAI  = 1  //!< ORT GenAI tokenizer (requires build with WITH_ONNXRUNTIME=ON and WITH_ONNXRUNTIME_GENAI=ON).
+    };
+
+    /** @brief High-level class for Large Language Model inference and tokenization.
+     *
+     * Provides a unified API that supports multiple tokenizer backends
+     * (OpenCV BPE, ORT GenAI) and exposes ORT GenAI configuration methods
+     * when available.
+     */
+    class CV_EXPORTS_W_SIMPLE LLM {
+    public:
+        CV_WRAP LLM();
+        CV_WRAP ~LLM();
+
+        /** @brief Create an LLM instance.
+         *  @param modelPath  Path to model directory (for ORT GenAI) or config.json (for OpenCV tokenizers when tokenizerConfigPath is empty).
+         *  @param tokenizerType  Which tokenizer backend to use. @see TokenizerType
+         *  @param tokenizerConfigPath  Optional separate path to tokenizer config.json. When provided with TOKENIZER_OPENCV,
+         *  modelPath is used for the model and tokenizerConfigPath for the tokenizer.
+         *  @param engine  Engine type for inference. Only needed for ORT GenAI. @see EngineType
+         */
+        CV_WRAP static LLM create(CV_WRAP_FILE_PATH const String& modelPath,
+                                   int tokenizerType = TOKENIZER_ORT_GENAI,
+                                   CV_WRAP_FILE_PATH const String& tokenizerConfigPath = String(),
+                                   int engine = ENGINE_NEW);
+
+        /** @brief Get the tokenizer associated with this LLM instance.
+         *  @return Tokenizer object that can encode/decode text.
+         */
+        CV_WRAP Tokenizer getTokenizer() const;
+
+        CV_WRAP void setInputImagePath(const String& path);
+        CV_WRAP void setPrompt(const String& prompt);
+        CV_WRAP void setSearchOption(const String& name, double value);
+        CV_WRAP void setSearchOptionBool(const String& name, bool value);
+        CV_WRAP void setGuidance(const String& type, const String& data,
+                                  bool enableFfTokens = false);
+        CV_WRAP String applyChatTemplate(const String& messages,
+                                          const String& templateStr = String(),
+                                          const String& tools = String(),
+                                          bool addGenerationPrompt = true) const;
+        CV_WRAP String getModelType() const;
+        CV_WRAP String getDeviceType() const;
+
+        /** @brief Run inference using inputs already set via setInputImagePath() and setPrompt() (VLM models).
+         *  @return Output Mat from the model.
+         */
+        CV_WRAP Mat run();
+
+        /** @brief Run inference with a single input.
+         *  @param tokens  Vector of token ids.
+         *  @param inputName  Optional input layer name.
+         *  @return Output Mat from the model.
+         */
+        CV_WRAP Mat run(const std::vector<int>& tokens, const String& inputName = "");
+
+        /** @brief Run inference with multiple named inputs.
+         *  @param inputs  Vector of input Mats.
+         *  @param inputNames  Vector of corresponding input names.
+         *  @return Output Mat from the model.
+         */
+        CV_WRAP Mat run(const std::vector<Mat>& inputs, const std::vector<String>& inputNames);
+
+        struct Impl;
+    private:
+        Ptr<Impl> impl_;
+    };
 
 //! @}
 CV__DNN_INLINE_NS_END

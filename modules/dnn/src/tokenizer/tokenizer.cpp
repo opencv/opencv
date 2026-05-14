@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include <opencv2/dnn/dnn.hpp>
+#include "tokenizer_impl.hpp"
 #include "utils.hpp"
 #include "unicode.hpp"
 #include "core_bpe.hpp"
@@ -24,12 +25,6 @@ static std::unordered_map<std::string, ImplRegestry>& tokenizerRegistry() {
 
 CoreBPE buildTokenizerFromJson(const std::string& model_type, const std::string& json_path,
                           std::unordered_set<std::string>* outSpecial = nullptr);
-
-struct Tokenizer::Impl {
-    virtual ~Impl() {}
-    virtual std::vector<int> encode(const std::string& text) = 0;
-    virtual std::string decode(const std::vector<int>& tokens) = 0;
-};
 
 struct BpeTokenizerImpl : public Tokenizer::Impl {
     Ptr<CoreBPE> coreBPE;
