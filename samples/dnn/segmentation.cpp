@@ -267,7 +267,7 @@ int main(int argc, char **argv)
         {
             vector<Mat> output;
             net.forward(output, net.getUnconnectedOutLayersNames());
-            cv::dnn::Net::printPerfProfile(net.getPerfProfile());
+            net.printPerfProfile();
 
             Mat pred = output[0].reshape(1, output[0].size[2]);
             pred.convertTo(pred, CV_8U, 255.0);
@@ -289,7 +289,7 @@ int main(int argc, char **argv)
         {
             //! [Make forward pass]
             Mat score = net.forward();
-            cv::dnn::Net::printPerfProfile(net.getPerfProfile());
+            net.printPerfProfile();
             //! [Make forward pass]
             Mat segm;
             colorizeSegmentation(score, segm);

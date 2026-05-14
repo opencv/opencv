@@ -233,7 +233,7 @@ int main(int argc, char** argv)
         timeRecorder.start();
         prob = net.forward();
         timeRecorder.stop();
-        cv::dnn::Net::printPerfProfile(net.getPerfProfile());
+        net.printPerfProfile();
         //! [Make forward pass]
 
         //! [Get a class with a highest score]

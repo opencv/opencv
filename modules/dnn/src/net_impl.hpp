@@ -254,12 +254,17 @@ struct Net::Impl : public detail::NetImplBase
     void finalizeOrt();
     void refreshOrtMainGraphOutputs();
     void applyStagedOrtInputs();
+    void collectOrtProfileData() const;
     std::vector<std::pair<std::string, Mat>> ort_staged_inputs;
     std::shared_ptr<Ort::Env> ort_env;
     std::shared_ptr<Ort::Session> ort_session;
     std::shared_ptr<OrtNamesCache> ort_names_cache;
     bool useOrtEngine = false;   // true only when user explicitly selected ENGINE_ORT
     bool ortNeedsReinit = false;  // session needs (re)creation on next finalizeNet
+    std::string ort_profile_path_prefix;          // prefix passed to EnableProfiling
+    mutable bool ort_profile_collected = false;   // EndProfiling was already called once
+    mutable int  ort_profile_runs = 0;            // number of session.Run calls since profiling started
+    mutable std::vector<std::tuple<String, String, double>> ort_profile_data;  // (name, type, ms_per_run)
 #endif
 
     void allocateLayer(int lid, const LayersShapesMap& layersShapes);
@@ -332,7 +337,8 @@ struct Net::Impl : public detail::NetImplBase
     int64 getPerfProfile(std::vector<double>& timings) const;
     void collectLayerInfo(std::vector<String>& names, std::vector<String>& types) const;
     PerfProfile getPerfProfile() const;
-    static void printPerfProfile(const PerfProfile& profile);
+    void getPerfProfile(std::vector<std::string>& names, std::vector<std::string>& timems, std::vector<std::string>& counts) const;
+    void printPerfProfile() const;
 
     // TODO drop
     LayerPin getLatestLayerPin(const std::vector<LayerPin>& pins) const;

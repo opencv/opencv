@@ -221,6 +221,7 @@ std::vector<Mat> Net::Impl::runOrtSession(std::vector<Mat> inputBlobs, const std
         Ort::RunOptions{nullptr},
         in_names.data(), input_tensors.data(), input_tensors.size(),
         out_names.data(), out_names.size());
+    if (profilingMode != DNN_PROFILE_NONE) ort_profile_runs++;
 
     CV_CheckEQ(output_tensors.size(), out_names.size(), "DNN/ORT: ORT returned unexpected number of outputs");
 

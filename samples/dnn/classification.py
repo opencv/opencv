@@ -141,6 +141,7 @@ def main(func_args=None):
         t0 = cv.getTickCount()
         out = net.forward()
         t = (cv.getTickCount() - t0) / cv.getTickFrequency()
+        net.printPerfProfile()
 
         (h, w, _) = frame.shape
         roi_rows = min(300, h)

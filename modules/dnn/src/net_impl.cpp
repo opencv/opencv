@@ -6,6 +6,12 @@
 
 #include "net_impl.hpp"
 
+#ifdef HAVE_ONNXRUNTIME
+#include <onnxruntime_cxx_api.h>
+#include <fstream>
+#include <sstream>
+#endif
+
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -2635,6 +2641,109 @@ void Net::Impl::collectLayerInfo(std::vector<String>& names, std::vector<String>
     }
 }
 
+#ifdef HAVE_ONNXRUNTIME
+// Scan ORT's JSON for "cat":"Node" entries, extract op_name, name, and dur for kernel_time
+// events. Track brace depth so inner objects (args.thread_scheduling_stats) don't terminate.
+static void parseOrtProfileJson(const std::string& text,
+                                std::map<std::string, std::pair<std::string, double>>& out_ms)
+{
+    auto extract_quoted = [&](const std::string& entry, const std::string& key) -> std::string {
+        const std::string needle = "\"" + key + "\"";
+        size_t p = entry.find(needle);
+        if (p == std::string::npos) return std::string();
+        size_t colon = entry.find(':', p + needle.size());
+        if (colon == std::string::npos) return std::string();
+        size_t q1 = entry.find('"', colon + 1);
+        if (q1 == std::string::npos) return std::string();
+        size_t q2 = entry.find('"', q1 + 1);
+        if (q2 == std::string::npos) return std::string();
+        return entry.substr(q1 + 1, q2 - q1 - 1);
+    };
+    auto extract_dur = [&](const std::string& entry) -> double {
+        const std::string needle = "\"dur\"";
+        size_t p = entry.find(needle);
+        if (p == std::string::npos) return 0;
+        size_t colon = entry.find(':', p + needle.size());
+        if (colon == std::string::npos) return 0;
+        size_t e = entry.find_first_of(",}", colon + 1);
+        if (e == std::string::npos) return 0;
+        const std::string token = entry.substr(colon + 1, e - colon - 1);
+        try { return std::stod(token); }
+        catch (const std::exception& ex) {
+            CV_LOG_WARNING(NULL, "DNN/ORT: failed to parse \"dur\" value \"" << token << "\": " << ex.what());
+            return 0;
+        }
+    };
+
+    int depth = 0;
+    size_t entry_start = std::string::npos;
+    for (size_t i = 0; i < text.size(); ++i) {
+        char c = text[i];
+        if (c == '{') {
+            if (depth == 0) entry_start = i;
+            depth++;
+        } else if (c == '}') {
+            depth--;
+            if (depth == 0 && entry_start != std::string::npos) {
+                const std::string entry = text.substr(entry_start, i - entry_start + 1);
+                entry_start = std::string::npos;
+
+                if (entry.find("\"cat\"") == std::string::npos) continue;
+                if (extract_quoted(entry, "cat") != "Node") continue;
+                const std::string name = extract_quoted(entry, "name");
+                static const std::string KT = "_kernel_time";
+                if (name.size() < KT.size() || name.compare(name.size() - KT.size(), KT.size(), KT) != 0)
+                    continue;
+                const std::string op  = extract_quoted(entry, "op_name");
+                const double dur_us   = extract_dur(entry);
+                if (op.empty() || dur_us <= 0) continue;
+                std::string canonical = name.substr(0, name.size() - KT.size());
+                auto& slot = out_ms[canonical];
+                slot.first = op;
+                slot.second += dur_us / 1000.0;
+            }
+        }
+    }
+}
+
+void Net::Impl::collectOrtProfileData() const
+{
+    if (ort_profile_collected) return;
+    ort_profile_collected = true;
+    if (!ort_session || ort_profile_path_prefix.empty()) return;
+
+    // EndProfiling closes the file ORT has been writing to and returns its path.
+    Ort::AllocatorWithDefaultOptions allocator;
+    Ort::AllocatedStringPtr profile_path = ort_session->EndProfilingAllocated(allocator);
+    if (!profile_path) {
+        CV_LOG_WARNING(NULL, "DNN/ORT: EndProfiling did not return a path (prefix=" << ort_profile_path_prefix << ")");
+        return;
+    }
+
+    // Read the JSON entirely into memory, then parse it from the string.
+    std::ifstream in(profile_path.get());
+    if (!in.is_open()) {
+        CV_LOG_WARNING(NULL, "DNN/ORT: failed to open profile JSON " << profile_path.get());
+        return;
+    }
+    std::stringstream ss; ss << in.rdbuf();
+    const std::string text = ss.str();
+
+    std::map<std::string, std::pair<std::string, double>> by_name;
+    parseOrtProfileJson(text, by_name);
+
+    const int runs = ort_profile_runs > 0 ? ort_profile_runs : 1;
+    ort_profile_data.clear();
+    ort_profile_data.reserve(by_name.size());
+    for (auto& kv : by_name) {
+        const String name = kv.first;
+        const String type = kv.second.first;
+        const double ms_per_run = kv.second.second / runs;
+        ort_profile_data.emplace_back(name, type, ms_per_run);
+    }
+}
+#endif
+
 PerfProfile Net::Impl::getPerfProfile() const
 {
     PerfProfile result;
@@ -2642,6 +2751,43 @@ PerfProfile Net::Impl::getPerfProfile() const
 
     if (profilingMode == DNN_PROFILE_NONE)
         return result;
+
+#ifdef HAVE_ONNXRUNTIME
+    if (useOrtEngine && ort_session) {
+        collectOrtProfileData();
+        if (profilingMode == DNN_PROFILE_DETAILED) {
+            for (const auto& t : ort_profile_data) {
+                if (std::get<2>(t) <= 0) continue;
+                PerfProfileEntry e;
+                e.label = std::get<0>(t) + " (" + std::get<1>(t) + ")";
+                e.timeMs = std::get<2>(t);
+                e.count = 1;
+                result.entries.push_back(e);
+            }
+        } else if (profilingMode == DNN_PROFILE_SUMMARY) {
+            std::map<String, double> typeTimings;
+            std::map<String, int> typeCounts;
+            for (const auto& t : ort_profile_data) {
+                if (std::get<2>(t) <= 0) continue;
+                typeTimings[std::get<1>(t)] += std::get<2>(t);
+                typeCounts[std::get<1>(t)]++;
+            }
+            result.entries.reserve(typeTimings.size());
+            for (auto it = typeTimings.begin(); it != typeTimings.end(); ++it) {
+                PerfProfileEntry e;
+                e.label = it->first;
+                e.timeMs = it->second;
+                e.count = typeCounts[it->first];
+                result.entries.push_back(e);
+            }
+        }
+        std::sort(result.entries.begin(), result.entries.end(),
+                  [](const PerfProfileEntry& a, const PerfProfileEntry& b) {
+                      return a.timeMs > b.timeMs;
+                  });
+        return result;
+    }
+#endif
 
     std::vector<double> timings(layersTimings.begin() + 1, layersTimings.end());
     double tickFreq = getTickFrequency();
@@ -2689,8 +2835,27 @@ PerfProfile Net::Impl::getPerfProfile() const
     return result;
 }
 
-void Net::Impl::printPerfProfile(const PerfProfile& profile)
+void Net::Impl::getPerfProfile(std::vector<std::string>& names,
+                               std::vector<std::string>& timems,
+                               std::vector<std::string>& counts) const
 {
+    PerfProfile profile = getPerfProfile();
+    names.clear();
+    timems.clear();
+    counts.clear();
+    names.reserve(profile.entries.size());
+    timems.reserve(profile.entries.size());
+    counts.reserve(profile.entries.size());
+    for (const PerfProfileEntry& e : profile.entries) {
+        names.push_back(e.label);
+        timems.push_back(cv::format("%.3f", e.timeMs));
+        counts.push_back(cv::format("%d", e.count));
+    }
+}
+
+void Net::Impl::printPerfProfile() const
+{
+    PerfProfile profile = getPerfProfile();
     if (profile.mode == DNN_PROFILE_NONE)
         return;
 

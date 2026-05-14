@@ -1049,19 +1049,18 @@ CV__DNN_INLINE_NS_BEGIN
 
         /** @brief Returns profiling data captured during the last forward pass.
          *
-         * Entries are sorted by time in descending order. The returned @ref PerfProfile
-         * carries the profiling mode it was captured in. Returns an empty profile with
-         * mode == DNN_PROFILE_NONE if profiling is disabled.
+         * Entries are sorted by time in descending order. Empty vectors are returned
+         * if profiling is disabled (DNN_PROFILE_NONE).
          */
-        CV_WRAP PerfProfile getPerfProfile() const;
+        CV_WRAP void getPerfProfile(CV_OUT std::vector<std::string>& names, CV_OUT std::vector<std::string>& timems, CV_OUT std::vector<std::string>& counts) const;
 
-        /** @brief Prints a @ref PerfProfile in a formatted table using CV_LOG_INFO.
+        /** @brief Prints the profile captured during the last forward pass in a formatted table using CV_LOG_INFO.
          *
          * In DNN_PROFILE_DETAILED mode, prints per-layer label, time, and percentage.
          * In DNN_PROFILE_SUMMARY mode, prints per-type count, time, and percentage.
-         * Does nothing if @p profile.mode is DNN_PROFILE_NONE or all timings are zero.
+         * Does nothing if profiling is disabled (DNN_PROFILE_NONE) or all timings are zero.
          */
-        CV_WRAP static void printPerfProfile(const PerfProfile& profile);
+        CV_WRAP void printPerfProfile() const;
 
         // Get the main model graph
         Ptr<Graph> getMainGraph() const;

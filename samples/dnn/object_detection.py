@@ -343,7 +343,7 @@ def processingThreadBody():
                 futureOutputs.append(net.forwardAsync())
             else:
                 outs = net.forward(outNames)
-                cv.dnn.Net.printPerfProfile(net.getPerfProfile())
+                net.printPerfProfile()
                 predictionsQueue.put(copy.deepcopy(outs))
 
         while futureOutputs and futureOutputs[0].wait_for(0):
@@ -412,7 +412,7 @@ else:
 
         net.setInput(blob)
         outs = net.forward(outNames)
-        cv.dnn.Net.printPerfProfile(net.getPerfProfile())
+        net.printPerfProfile()
 
         boxes, classIds, confidences, indices = postprocess(frame, outs)
         drawPred(classIds, confidences, boxes, indices, (stdSize*max(frame.shape[:2]))/stdImgSize, (stdWeight*max(frame.shape[:2]))//stdImgSize)
