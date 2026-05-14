@@ -176,5 +176,5 @@ static PyObject* pycvVideoWriterExit(PyObject* self, PyObject* /*args*/, PyObjec
     {"__enter__", CV_PY_FN_WITH_KW(pycvVideoEnter), "Context manager enter"}, \
     {"__exit__",  CV_PY_FN_WITH_KW(pycvVideoWriterExit), "Context manager exit"},
 
-    
+
 #endif // HAVE_OPENCV_VIDEOIO

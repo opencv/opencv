@@ -89,7 +89,7 @@ class Bindings(NewOpenCVTests):
         self.assertEqual(frame.shape, (576, 768, 3))
 
     def test_context_manager(self):
-            
+
             video_file = self.find_file("cv/video/768x576.avi")
 
             # 1. Test VideoCapture context manager
