@@ -307,9 +307,23 @@ public:
                 const int nstripes = getNumThreads();
                 Mat &dst = outputs[i];
                 CV_Assert(src.size == dst.size && src.type() == dst.type() &&
-                          src.isContinuous() && dst.isContinuous() && src.type() == CV_8S);
+                          src.isContinuous() && dst.isContinuous() &&
+                          (src.type() == CV_8S || src.type() == CV_8U));
 
-                Activation::run(src, activationLUT, dst, nstripes);
+                if (src.type() == CV_8S) {
+                    Activation::run(src, activationLUT, dst, nstripes);
+                } else {
+                    const uint8_t* table = activationLUT.ptr<uint8_t>();
+                    const uint8_t* srcptr = src.ptr<uint8_t>();
+                    uint8_t* dstptr = dst.ptr<uint8_t>();
+                    int total = (int)src.total();
+                    parallel_for_(Range(0, nstripes), [&](const Range& r) {
+                        int start = (int)((size_t)r.start * total / nstripes);
+                        int end   = (int)((size_t)r.end   * total / nstripes);
+                        for (int j = start; j < end; j++)
+                            dstptr[j] = table[srcptr[j]];
+                    }, nstripes);
+                }
             }
             else
             {

@@ -395,6 +395,7 @@ CV__DNN_INLINE_NS_BEGIN
         int output_zp = 0;
         bool per_channel = true;
         bool input_is_u8 = false;
+        bool float_input = false; // accept FP32 NCHW and quantize+interleave internally
         // blobs[0] = quantized weights, blobs[1] = fused bias, blobs[2] = output multiplier
         Mat weights, bias, outputMultiplier;
     };
@@ -408,6 +409,7 @@ CV__DNN_INLINE_NS_BEGIN
         int input_zp, output_zp;
         float input_sc, output_sc;
         bool per_channel;
+        bool float_input = false;
 
         std::vector<int> strides, dilations, pads;
         int ngroups;
