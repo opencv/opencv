@@ -284,20 +284,9 @@ OCV_OPTION(WITH_WAYLAND "Include Wayland support" OFF
 OCV_OPTION(WITH_IPP "Include Intel IPP support" (NOT MINGW AND NOT CV_DISABLE_OPTIMIZATION)
   VISIBLE_IF (X86_64 OR X86) AND NOT WINRT AND NOT IOS AND NOT XROS
   VERIFY HAVE_IPP)
-if((AARCH64 OR ARM64) AND NOT WINRT AND NOT IOS AND NOT XROS)
-    if(NOT DEFINED WITH_ARMPL)
-        set(ARMPL_DEFAULT ON)
-    else()
-        set(ARMPL_DEFAULT ${WITH_ARMPL})
-    endif()
-else()
-    set(ARMPL_DEFAULT OFF)
-endif()
-
-OCV_OPTION(WITH_ARMPL "Include ARM Performance Libraries support (auto-download)"
-  ${ARMPL_DEFAULT}
-  VISIBLE_IF (AARCH64 OR ARM64) AND NOT WINRT AND NOT IOS AND NOT XROS
-  VERIFY HAVE_ARMPL)
+OCV_OPTION(WITH_ARMPL "Include ARM Performance Libraries support (auto-download)" OFF
+   VISIBLE_IF (AARCH64 OR ARM64) AND NOT WINRT AND NOT IOS AND NOT XROS
+   VERIFY HAVE_ARMPL)
 OCV_OPTION(WITH_HALIDE "Include Halide support" OFF
   VISIBLE_IF TRUE
   VERIFY HAVE_HALIDE)
@@ -992,7 +981,7 @@ endif()
 if(HAVE_ARMPL)
   ocv_debug_message(STATUS "Enable ARMPL acceleration")
   if(NOT ";${OpenCV_HAL};" MATCHES ";armpl;")
-    set(OpenCV_HAL "armpl;${OpenCV_HAL}")
+    set(OpenCV_HAL "armpl_hal;${OpenCV_HAL}")
   endif()
 endif()
 
@@ -1041,11 +1030,11 @@ foreach(hal ${OpenCV_HAL})
     else()
       message(STATUS "FastCV: fastcv is not available, disabling fastcv...")
     endif()
-  elseif(hal STREQUAL "armpl")
-    if((ARM OR AARCH64 OR ARM64) AND WIN32 AND NOT WINRT AND NOT IOS AND NOT XROS)
+  elseif(hal STREQUAL "armpl_hal")
+    if((ARM OR AARCH64 OR ARM64) AND NOT WINRT AND NOT IOS AND NOT XROS)
       add_subdirectory(hal/armpl)
       ocv_hal_register(ARMPL_HAL_LIBRARIES ARMPL_HAL_HEADERS ARMPL_HAL_INCLUDE_DIRS)
-      list(APPEND OpenCV_USED_HAL "armpl (ver ${ARMPL_HAL_VERSION})")
+      list(APPEND OpenCV_USED_HAL "ARMPL (ver ${ARMPL_HAL_VERSION})")
     else()
       message(STATUS "ARMPL: ARM Performance Libraries not available on this platform, disabling armpl...")
     endif()
