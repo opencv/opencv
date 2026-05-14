@@ -2642,67 +2642,38 @@ void Net::Impl::collectLayerInfo(std::vector<String>& names, std::vector<String>
 }
 
 #ifdef HAVE_ONNXRUNTIME
-// Scan ORT's JSON for "cat":"Node" entries, extract op_name, name, and dur for kernel_time
-// events. Track brace depth so inner objects (args.thread_scheduling_stats) don't terminate.
 static void parseOrtProfileJson(const std::string& text,
                                 std::map<std::string, std::pair<std::string, double>>& out_ms)
 {
-    auto extract_quoted = [&](const std::string& entry, const std::string& key) -> std::string {
-        const std::string needle = "\"" + key + "\"";
-        size_t p = entry.find(needle);
-        if (p == std::string::npos) return std::string();
-        size_t colon = entry.find(':', p + needle.size());
-        if (colon == std::string::npos) return std::string();
-        size_t q1 = entry.find('"', colon + 1);
-        if (q1 == std::string::npos) return std::string();
-        size_t q2 = entry.find('"', q1 + 1);
-        if (q2 == std::string::npos) return std::string();
-        return entry.substr(q1 + 1, q2 - q1 - 1);
-    };
-    auto extract_dur = [&](const std::string& entry) -> double {
-        const std::string needle = "\"dur\"";
-        size_t p = entry.find(needle);
-        if (p == std::string::npos) return 0;
-        size_t colon = entry.find(':', p + needle.size());
-        if (colon == std::string::npos) return 0;
-        size_t e = entry.find_first_of(",}", colon + 1);
-        if (e == std::string::npos) return 0;
-        const std::string token = entry.substr(colon + 1, e - colon - 1);
-        try { return std::stod(token); }
-        catch (const std::exception& ex) {
-            CV_LOG_WARNING(NULL, "DNN/ORT: failed to parse \"dur\" value \"" << token << "\": " << ex.what());
-            return 0;
-        }
-    };
+    const std::string wrapped = "{\"events\":" + text + "}";
+    FileStorage fs(wrapped, FileStorage::READ | FileStorage::MEMORY | FileStorage::FORMAT_JSON);
+    if (!fs.isOpened()) {
+        CV_LOG_WARNING(NULL, "DNN/ORT: failed to parse profile JSON");
+        return;
+    }
 
-    int depth = 0;
-    size_t entry_start = std::string::npos;
-    for (size_t i = 0; i < text.size(); ++i) {
-        char c = text[i];
-        if (c == '{') {
-            if (depth == 0) entry_start = i;
-            depth++;
-        } else if (c == '}') {
-            depth--;
-            if (depth == 0 && entry_start != std::string::npos) {
-                const std::string entry = text.substr(entry_start, i - entry_start + 1);
-                entry_start = std::string::npos;
+    static const std::string KT = "_kernel_time";
+    FileNode events = fs["events"];
+    for (FileNodeIterator it = events.begin(); it != events.end(); ++it) {
+        FileNode entry = *it;
+        if (!entry.isMap()) continue;
+        if ((std::string)entry["cat"] != "Node") continue;
 
-                if (entry.find("\"cat\"") == std::string::npos) continue;
-                if (extract_quoted(entry, "cat") != "Node") continue;
-                const std::string name = extract_quoted(entry, "name");
-                static const std::string KT = "_kernel_time";
-                if (name.size() < KT.size() || name.compare(name.size() - KT.size(), KT.size(), KT) != 0)
-                    continue;
-                const std::string op  = extract_quoted(entry, "op_name");
-                const double dur_us   = extract_dur(entry);
-                if (op.empty() || dur_us <= 0) continue;
-                std::string canonical = name.substr(0, name.size() - KT.size());
-                auto& slot = out_ms[canonical];
-                slot.first = op;
-                slot.second += dur_us / 1000.0;
-            }
-        }
+        const std::string name = (std::string)entry["name"];
+        if (name.size() < KT.size() ||
+            name.compare(name.size() - KT.size(), KT.size(), KT) != 0)
+            continue;
+
+        FileNode args = entry["args"];
+        if (args.empty()) continue;
+        const std::string op = (std::string)args["op_name"];
+        const double dur_us  = (double)entry["dur"];
+        if (op.empty() || dur_us <= 0) continue;
+
+        const std::string canonical = name.substr(0, name.size() - KT.size());
+        auto& slot = out_ms[canonical];
+        slot.first = op;
+        slot.second += dur_us / 1000.0;
     }
 }
 
