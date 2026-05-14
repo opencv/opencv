@@ -51,7 +51,7 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
             + "    <type>8</type>\n"  // FLANN_INDEX_TYPE_BOOL
             + "    <value>1</value></_></searchParams>\n"
             + "</opencv_storage>\n";
-    static final String ymlParamsDefault = "%YAML:1.0\n---\n"
+    static final String ymlParamsDefault = "%YAML 1.2\n---\n"
             + "format: 3\n"
             + "indexParams:\n"
             + "   -\n"
@@ -79,7 +79,7 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
             + "      name: sorted\n"
             + "      type: 8\n"  // FLANN_INDEX_TYPE_BOOL
             + "      value: 1\n";
-    static final String ymlParamsModified = "%YAML:1.0\n---\n"
+    static final String ymlParamsModified = "%YAML 1.2\n---\n"
             + "format: 3\n"
             + "indexParams:\n"
             + "   -\n"
