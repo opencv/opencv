@@ -505,7 +505,6 @@ public:
             }
         }
 
-    #if CV_SIMD
         const bool is_add = (this->op == OPERATION::SUM || this->op == OPERATION::ADD);
         const bool is_sub = (this->op == OPERATION::SUB);
         const bool is_mul = (this->op == OPERATION::PROD);
@@ -535,7 +534,6 @@ public:
             });
             return;
         }
-    #endif
 
         if (nplanes == 1) { // parallelize within the plane
             const T* ptr1 = (const T*)data1;
