@@ -530,11 +530,7 @@ public:
                     int64_t start = c * chunk;
                     int64_t end = std::min(start + chunk, total);
                     int n = (int)(end - start);
-                    int i = simd_binop_f32_dispatch(p1 + start, p2 + start, po + start, n, simd_bin_op);
-                    if (is_add)      for (; i < n; i++) po[start + i] = p1[start + i] + p2[start + i];
-                    else if (is_mul) for (; i < n; i++) po[start + i] = p1[start + i] * p2[start + i];
-                    else if (is_sub) for (; i < n; i++) po[start + i] = p1[start + i] - p2[start + i];
-                    else if (is_div) for (; i < n; i++) po[start + i] = p1[start + i] / p2[start + i];
+                    simd_binop_f32_dispatch(p1 + start, p2 + start, po + start, n, simd_bin_op);
                 }
             });
             return;
@@ -547,19 +543,14 @@ public:
             RESULT_T* ptr = (RESULT_T*)data;
             auto worker = [&](const Range &r) {
                 if (dp1 == 1 && dp2 == 1 && dp == 1) {
-                    int i = r.start;
-                #if CV_SIMD
                     if (simd_f32) {
                         const float* p1 = (const float*)(const void*)&ptr1[r.start];
                         const float* p2 = (const float*)(const void*)&ptr2[r.start];
                         float* po = (float*)(void*)&ptr[r.start];
-                        int len = r.end - r.start;
-                        int j = simd_binop_f32_dispatch(p1, p2, po, len, simd_bin_op);
-                        i = r.start + j;
-                    }
-                #endif
-                    for(; i < r.end; i++) {
-                        ptr[i] = op(ptr1[i], ptr2[i]);
+                        simd_binop_f32_dispatch(p1, p2, po, r.end - r.start, simd_bin_op);
+                    } else {
+                        for (int i = r.start; i < r.end; i++)
+                            ptr[i] = op(ptr1[i], ptr2[i]);
                     }
                 } else if (dp1 == 1 && dp2 == 0 && dp == 1){
                     T x2 = *ptr2;
@@ -600,17 +591,14 @@ public:
                     const T* ptr2 = (const T*)ptr2_;
                     RESULT_T* ptr = (RESULT_T*)ptr_;
                     if (dp1 == 1 && dp2 == 1 && dp == 1) {
-                        int i = 0;
-                    #if CV_SIMD
                         if (simd_f32) {
-                            i = simd_binop_f32_dispatch((const float*)(const void*)ptr1,
-                                                        (const float*)(const void*)ptr2,
-                                                        (float*)(void*)ptr,
-                                                        plane_size, simd_bin_op);
-                        }
-                    #endif
-                        for(; i < plane_size; i++) {
-                            ptr[i] = op(ptr1[i], ptr2[i]);
+                            simd_binop_f32_dispatch((const float*)(const void*)ptr1,
+                                                    (const float*)(const void*)ptr2,
+                                                    (float*)(void*)ptr,
+                                                    plane_size, simd_bin_op);
+                        } else {
+                            for (int i = 0; i < plane_size; i++)
+                                ptr[i] = op(ptr1[i], ptr2[i]);
                         }
                     } else if (dp1 == 1 && dp2 == 0 && dp == 1){
                         T x2 = *ptr2;

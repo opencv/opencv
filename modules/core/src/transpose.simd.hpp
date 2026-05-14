@@ -61,27 +61,30 @@ static inline void transpose_32bit_blocks_tile(const uint32_t* src32, size_t sst
                     dst32[dstep_e*(i+k) + j] = src32[i + sstep_e*j + k];
         }
     }
-#endif
-    for (; i + 4 <= i_hi; i += 4)
+    else if (VTraits<v_uint32>::vlanes() == 4)
     {
-        int j = j_lo;
-        for (; j + 4 <= j_hi; j += 4)
+        for (; i + 4 <= i_hi; i += 4)
         {
-            v_uint32x4 r0 = v_load(src32 + i + sstep_e*(j+0));
-            v_uint32x4 r1 = v_load(src32 + i + sstep_e*(j+1));
-            v_uint32x4 r2 = v_load(src32 + i + sstep_e*(j+2));
-            v_uint32x4 r3 = v_load(src32 + i + sstep_e*(j+3));
-            v_uint32x4 o0, o1, o2, o3;
-            v_transpose4x4(r0, r1, r2, r3, o0, o1, o2, o3);
-            v_store(dst32 + dstep_e*(i+0) + j, o0);
-            v_store(dst32 + dstep_e*(i+1) + j, o1);
-            v_store(dst32 + dstep_e*(i+2) + j, o2);
-            v_store(dst32 + dstep_e*(i+3) + j, o3);
+            int j = j_lo;
+            for (; j + 4 <= j_hi; j += 4)
+            {
+                v_uint32 r0 = vx_load(src32 + i + sstep_e*(j+0));
+                v_uint32 r1 = vx_load(src32 + i + sstep_e*(j+1));
+                v_uint32 r2 = vx_load(src32 + i + sstep_e*(j+2));
+                v_uint32 r3 = vx_load(src32 + i + sstep_e*(j+3));
+                v_uint32 o0, o1, o2, o3;
+                v_transpose4x4(r0, r1, r2, r3, o0, o1, o2, o3);
+                vx_store(dst32 + dstep_e*(i+0) + j, o0);
+                vx_store(dst32 + dstep_e*(i+1) + j, o1);
+                vx_store(dst32 + dstep_e*(i+2) + j, o2);
+                vx_store(dst32 + dstep_e*(i+3) + j, o3);
+            }
+            for (; j < j_hi; j++)
+                for (int k = 0; k < 4; k++)
+                    dst32[dstep_e*(i+k) + j] = src32[i + sstep_e*j + k];
         }
-        for (; j < j_hi; j++)
-            for (int k = 0; k < 4; k++)
-                dst32[dstep_e*(i+k) + j] = src32[i + sstep_e*j + k];
     }
+#endif
     for (; i < i_hi; i++)
         for (int j = j_lo; j < j_hi; j++)
             dst32[dstep_e*i + j] = src32[i + sstep_e*j];
