@@ -2084,31 +2084,25 @@ GAPI_FLUID_KERNEL(GFluidThreshold, cv::gapi::core::GThreshold, false)
 //
 //------------------------
 
-static void run_inrange3(uchar out[], const uchar in[], int width,
-                         const uchar lower[], const uchar upper[])
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+template<typename SRC>
+static CV_ALWAYS_INLINE
+typename std::enable_if<std::is_integral<SRC>::value, int>::type
+call_inrange_simd(const SRC in[], const SRC lower[], const SRC upper[],
+                  uchar out[], int width, int chan)
 {
-    int w = 0; // cycle index
-
-#if CV_SIMD128
-    for (; w <= width-16; w+=16)
-    {
-        v_uint8x16 i0, i1, i2;
-        v_load_deinterleave(&in[3*w], i0, i1, i2);
-
-        v_uint8x16 o;
-        o = v_and(v_and(v_and(v_and(v_and(v_ge(i0, v_setall_u8(lower[0])), v_le(i0, v_setall_u8(upper[0]))), v_ge(i1, v_setall_u8(lower[1]))), v_le(i1, v_setall_u8(upper[1]))), v_ge(i2, v_setall_u8(lower[2]))), v_le(i2, v_setall_u8(upper[2])));
-
-        v_store(&out[w], o);
-    }
-#endif
-
-    for (; w < width; w++)
-    {
-        out[w] = in[3*w  ] >= lower[0] && in[3*w  ] <= upper[0] &&
-                 in[3*w+1] >= lower[1] && in[3*w+1] <= upper[1] &&
-                 in[3*w+2] >= lower[2] && in[3*w+2] <= upper[2] ? 255: 0;
-    }
+    return inrange_simd(in, lower, upper, out, width, chan);
 }
+
+template<typename SRC>
+static CV_ALWAYS_INLINE
+typename std::enable_if<!std::is_integral<SRC>::value, int>::type
+call_inrange_simd(const SRC[], const SRC[], const SRC[],
+                  uchar[], int, int)
+{
+    return 0;  // float: no SIMD, scalar fallback handles everything
+}
+#endif
 
 template<typename DST, typename SRC>
 static void run_inrange(Buffer &dst, const View &src, const cv::Scalar &upperb,
@@ -2123,7 +2117,7 @@ static void run_inrange(Buffer &dst, const View &src, const cv::Scalar &upperb,
     int chan  = src.meta().chan;
     GAPI_Assert(dst.meta().chan == 1);
 
-    SRC lower[4], upper[4];
+    SRC lower[4] = {}, upper[4] = {};
     for (int c=0; c < chan; c++)
     {
         if (std::is_integral<SRC>::value)
@@ -2145,40 +2139,34 @@ static void run_inrange(Buffer &dst, const View &src, const cv::Scalar &upperb,
         }
     }
 
-    // manually SIMD for important case if RGB/BGR
-    if (std::is_same<SRC,uchar>::value && chan==3)
-    {
-        run_inrange3((uchar*)out, (const uchar*)in, width,
-                     (const uchar*)lower, (const uchar*)upper);
-        return;
-    }
-
-    // TODO: please manually SIMD if multiple channels:
-    // modern compilers would perfectly vectorize this code if one channel,
-    // but may need help with de-interleaving channels if RGB/BGR image etc
+    // SIMD path for integral types (uchar, ushort, short); float falls through
+int w = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    w = call_inrange_simd(in, lower, upper, out, width, chan);
+#endif
     switch (chan)
     {
     case 1:
-        for (int w=0; w < width; w++)
-            out[w] = in[w] >= lower[0] && in[w] <= upper[0]? 255: 0;
+        for (; w < width; w++)
+            out[w] = in[w] >= lower[0] && in[w] <= upper[0] ? 255 : 0;
         break;
     case 2:
-        for (int w=0; w < width; w++)
+        for (; w < width; w++)
             out[w] = in[2*w  ] >= lower[0] && in[2*w  ] <= upper[0] &&
-                     in[2*w+1] >= lower[1] && in[2*w+1] <= upper[1] ? 255: 0;
+                     in[2*w+1] >= lower[1] && in[2*w+1] <= upper[1] ? 255 : 0;
         break;
     case 3:
-        for (int w=0; w < width; w++)
+        for (; w < width; w++)
             out[w] = in[3*w  ] >= lower[0] && in[3*w  ] <= upper[0] &&
                      in[3*w+1] >= lower[1] && in[3*w+1] <= upper[1] &&
-                     in[3*w+2] >= lower[2] && in[3*w+2] <= upper[2] ? 255: 0;
+                     in[3*w+2] >= lower[2] && in[3*w+2] <= upper[2] ? 255 : 0;
         break;
     case 4:
-        for (int w=0; w < width; w++)
+        for (; w < width; w++)
             out[w] = in[4*w  ] >= lower[0] && in[4*w  ] <= upper[0] &&
                      in[4*w+1] >= lower[1] && in[4*w+1] <= upper[1] &&
                      in[4*w+2] >= lower[2] && in[4*w+2] <= upper[2] &&
-                     in[4*w+3] >= lower[3] && in[4*w+3] <= upper[3] ? 255: 0;
+                     in[4*w+3] >= lower[3] && in[4*w+3] <= upper[3] ? 255 : 0;
         break;
     default: CV_Error(cv::Error::StsBadArg, "unsupported number of channels");
     }
