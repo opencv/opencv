@@ -141,10 +141,6 @@ bool pyopencv_to(PyObject* obj, Ptr<cv::IStreamReader>& p, const ArgInfo&)
     return false;
 }
 
-// =============================================================================
-// Context Manager support for VideoCapture and VideoWriter
-// =============================================================================
-
 static PyObject* pycvVideoEnter(PyObject* self, PyObject* /*args*/, PyObject* /*kw*/) {
     Py_INCREF(self);
     return self;
@@ -152,18 +148,16 @@ static PyObject* pycvVideoEnter(PyObject* self, PyObject* /*args*/, PyObject* /*
 
 static PyObject* pycvVideoCaptureExit(PyObject* self, PyObject* /*args*/, PyObject* /*kw*/) {
     Ptr<cv::VideoCapture>* obj_getp = nullptr;
-    // Cast the Python object directly to C++ pointer
     if (pyopencv_VideoCapture_getp(self, obj_getp) && obj_getp && *obj_getp) {
-        (*obj_getp)->release(); // Native C++ call (Zero Python overhead)
+        (*obj_getp)->release();
     }
     Py_RETURN_NONE;
 }
 
 static PyObject* pycvVideoWriterExit(PyObject* self, PyObject* /*args*/, PyObject* /*kw*/) {
     Ptr<cv::VideoWriter>* obj_getp = nullptr;
-    // Cast the Python object directly to C++ pointer
     if (pyopencv_VideoWriter_getp(self, obj_getp) && obj_getp && *obj_getp) {
-        (*obj_getp)->release(); // Native C++ call (Zero Python overhead)
+        (*obj_getp)->release();
     }
     Py_RETURN_NONE;
 }
