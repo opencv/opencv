@@ -50,7 +50,7 @@ const string target_keys = format(
                     "cuda: CUDA, "
                     "cuda_fp16: CUDA fp16 (half-float preprocess) }");
 
-string keys = param_keys + backend_keys + target_keys;
+string keys = param_keys + backend_keys + target_keys + engine_keys;
 
 static void loadParser(const string &modelName, const string &zooFile)
 {

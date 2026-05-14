@@ -163,6 +163,10 @@ def findFile(filename):
     )
 
 
+backends = ("default", "openvino", "opencv", "vkcom", "cuda")
+targets = ("cpu", "opencl", "opencl_fp16", "ncs2_vpu", "hddl_vpu", "vulkan", "cuda", "cuda_fp16")
+engines = ("auto", "classic", "new", "ort")
+
 def get_backend_id(backend_name):
     backend_ids = {
         "default": cv.dnn.DNN_BACKEND_DEFAULT,
@@ -192,3 +196,15 @@ def get_target_id(target_name):
         raise ValueError(f"Invalid target name: {target_name}")
 
     return target_ids[target_name]
+
+def get_engine_id(engine_name):
+    engine_ids = {
+        "auto": cv.dnn.ENGINE_AUTO,
+        "classic": cv.dnn.ENGINE_CLASSIC,
+        "new": cv.dnn.ENGINE_NEW,
+        "ort": cv.dnn.ENGINE_ORT
+    }
+    if engine_name not in engine_ids:
+        raise ValueError(f"Invalid engine name: {engine_name}")
+
+    return engine_ids[engine_name]

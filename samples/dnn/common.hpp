@@ -1,6 +1,8 @@
 #include <opencv2/core/utils/filesystem.hpp>
+#include <opencv2/dnn.hpp>
 #include<iostream>
 using namespace cv;
+using namespace cv::dnn;
 
 std::string genArgument(const std::string& argName, const std::string& help,
                         const std::string& modelName, const std::string& zooFile,
@@ -46,6 +48,27 @@ inline int getTargetID(const String& target) {
         throw std::invalid_argument("Invalid target name: " + target);
     }
 }
+
+inline int getEngineID(const String& engine) {
+    std::map<String, int> engineIDs = {
+        {"auto", cv::dnn::ENGINE_AUTO},
+        {"classic", cv::dnn::ENGINE_CLASSIC},
+        {"new", cv::dnn::ENGINE_NEW},
+        {"ort", cv::dnn::ENGINE_ORT}
+    };
+    if(engineIDs.find(engine) != engineIDs.end()){
+        return engineIDs[engine];
+    }else {
+        throw std::invalid_argument("Invalid engine name: " + engine);
+    }
+}
+
+const std::string engine_keys = cv::format(
+    "{ engine | auto | Choose one of DNN engines: "
+                    "auto: automatically (by default), "
+                    "classic: classic DNN engine, "
+                    "new: new graph-based DNN engine, "
+                    "ort: ONNX Runtime }");
 
 std::string genArgument(const std::string& argName, const std::string& help,
                         const std::string& modelName, const std::string& zooFile,

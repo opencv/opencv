@@ -63,7 +63,7 @@ const string target_keys = format(
                     "cuda: CUDA, "
                     "cuda_fp16: CUDA fp16 (half-float preprocess) }");
 
-string keys = param_keys + backend_keys + target_keys;
+string keys = param_keys + backend_keys + target_keys + engine_keys;
 
 float confThreshold, nmsThreshold, scale, paddingValue;
 vector<string> labels;
@@ -217,14 +217,12 @@ int main(int argc, char** argv)
         }
     }
     //![read_net]
-    EngineType engine = ENGINE_AUTO;
-    if ((parser.get<String>("backend") != "default") || (parser.get<String>("target") != "cpu")){
-        engine = ENGINE_CLASSIC;
-    }
-    Net net = readNet(modelPath, configPath, "", engine);
+    int engine = getEngineID(parser.get<String>("engine"));
     int backend = getBackendID(parser.get<String>("backend"));
+    int target = getTargetID(parser.get<String>("target"));
+    Net net = readNet(modelPath, configPath, "", engine);
     net.setPreferableBackend(backend);
-    net.setPreferableTarget(getTargetID(parser.get<String>("target")));
+    net.setPreferableTarget(target);
     //![read_net]
 
     // Create a window

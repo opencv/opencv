@@ -5,6 +5,8 @@
 
 #include <iostream>
 
+#include "common.hpp"
+
 using namespace cv;
 using namespace std;
 
@@ -50,6 +52,26 @@ int main(int argc, char** argv)
         "{nms_threshold     | 0.3        | Suppress bounding boxes of iou >= nms_threshold}"
         "{top_k             | 5000       | Keep top_k bounding boxes before NMS}"
         "{save s            | false      | Set true to save results. This flag is invalid when using camera}"
+        "{ backend          | default    | Choose one of computation backends: "
+                            "default: automatically (by default), "
+                            "openvino: Intel's Deep Learning Inference Engine, "
+                            "opencv: OpenCV implementation, "
+                            "vkcom: VKCOM, "
+                            "cuda: CUDA, "
+                            "webnn: WebNN }"
+        "{ target           | cpu        | Choose one of target computation devices: "
+                            "cpu: CPU target (by default), "
+                            "opencl: OpenCL, "
+                            "opencl_fp16: OpenCL fp16 (half-float precision), "
+                            "vpu: VPU, "
+                            "vulkan: Vulkan, "
+                            "cuda: CUDA, "
+                            "cuda_fp16: CUDA fp16 (half-float preprocess) }"
+        "{ engine           | auto       | Choose one of DNN engines: "
+                            "auto: automatically (by default), "
+                            "classic: classic DNN engine, "
+                            "new: new graph-based DNN engine, "
+                            "ort: ONNX Runtime }"
     );
     if (parser.has("help"))
     {
@@ -70,9 +92,12 @@ int main(int argc, char** argv)
     double cosine_similar_thresh = 0.363;
     double l2norm_similar_thresh = 1.128;
 
+    int backendId = getBackendID(parser.get<String>("backend"));
+    int targetId = getTargetID(parser.get<String>("target"));
+
     //! [initialize_FaceDetectorYN]
     // Initialize FaceDetectorYN
-    Ptr<FaceDetectorYN> detector = FaceDetectorYN::create(fd_modelPath, "", Size(320, 320), scoreThreshold, nmsThreshold, topK);
+    Ptr<FaceDetectorYN> detector = FaceDetectorYN::create(fd_modelPath, "", Size(320, 320), scoreThreshold, nmsThreshold, topK, backendId, targetId);
     //! [initialize_FaceDetectorYN]
 
     TickMeter tm;
@@ -154,7 +179,7 @@ int main(int argc, char** argv)
 
             //! [initialize_FaceRecognizerSF]
             // Initialize FaceRecognizerSF
-            Ptr<FaceRecognizerSF> faceRecognizer = FaceRecognizerSF::create(fr_modelPath, "");
+            Ptr<FaceRecognizerSF> faceRecognizer = FaceRecognizerSF::create(fr_modelPath, "", backendId, targetId);
             //! [initialize_FaceRecognizerSF]
 
 

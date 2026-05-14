@@ -44,6 +44,12 @@ def get_args_parser(func_args):
                          "vulkan: Vulkan, "
                          "cuda: CUDA, "
                          "cuda_fp16: CUDA fp16 (half-float preprocess)")
+    parser.add_argument('--engine', default="auto", type=str, choices=engines,
+                    help="Choose one of DNN engines: "
+                         "auto: automatically (by default), "
+                         "classic: classic DNN engine, "
+                         "new: new graph-based DNN engine, "
+                         "ort: ONNX Runtime")
 
     args, _ = parser.parse_known_args()
     add_preproc_args(args.zoo, parser, 'segmentation')
@@ -99,12 +105,12 @@ def main(func_args=None):
             colors = [np.array(color.split(' '), np.uint8) for color in f.read().rstrip('\n').split('\n')]
 
     # Load a network
-    engine = cv.dnn.ENGINE_AUTO
-    if args.backend != "default" or args.target != "cpu":
-        engine = cv.dnn.ENGINE_CLASSIC
+    engine = get_engine_id(args.engine)
+    backend = get_backend_id(args.backend)
+    target = get_target_id(args.target)
     net = cv.dnn.readNetFromONNX(args.model, engine)
-    net.setPreferableBackend(get_backend_id(args.backend))
-    net.setPreferableTarget(get_target_id(args.target))
+    net.setPreferableBackend(backend)
+    net.setPreferableTarget(target)
 
     winName = 'Deep learning semantic segmentation in OpenCV'
     cv.namedWindow(winName, cv.WINDOW_AUTOSIZE)

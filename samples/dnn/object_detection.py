@@ -57,6 +57,12 @@ parser.add_argument('--target', default="cpu", type=str, choices=targets,
                     "vulkan: Vulkan, "
                     "cuda: CUDA, "
                     "cuda_fp16: CUDA fp16 (half-float preprocess)")
+parser.add_argument('--engine', default="auto", type=str, choices=engines,
+                    help="Choose one of DNN engines: "
+                    "auto: automatically (by default), "
+                    "classic: classic DNN engine, "
+                    "new: new graph-based DNN engine, "
+                    "ort: ONNX Runtime")
 parser.add_argument('--async', type=int, default=0,
                     dest='use_threads',
                     help='Choose 0 for synchronous mode and 1 for asynchronous mode')
@@ -98,12 +104,12 @@ if args.labels:
         labels = f.read().rstrip('\n').split('\n')
 
 # Load a network
-engine = cv.dnn.ENGINE_AUTO
-if args.backend != "default" or args.target != "cpu":
-    engine = cv.dnn.ENGINE_CLASSIC
+engine = get_engine_id(args.engine)
+backend = get_backend_id(args.backend)
+target = get_target_id(args.target)
 net = cv.dnn.readNet(args.model, args.config, "", engine)
-net.setPreferableBackend(get_backend_id(args.backend))
-net.setPreferableTarget(get_target_id(args.target))
+net.setPreferableBackend(backend)
+net.setPreferableTarget(target)
 outNames = net.getUnconnectedOutLayersNames()
 
 confThreshold = args.thr

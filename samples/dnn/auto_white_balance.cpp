@@ -191,7 +191,7 @@ int main(int argc, char **argv) {
                          "Predicts scene illuminant and corrects the white "
                          "balance of the image.\n";
 
-    string keys = param_keys + backend_keys + target_keys;
+    string keys = param_keys + backend_keys + target_keys + engine_keys;
 
     CommandLineParser parser(argc, argv, keys);
     if (parser.has("help")) {
@@ -221,9 +221,12 @@ int main(int argc, char **argv) {
 
     Net net;
     try {
-        net = readNetFromONNX(model);
-        net.setPreferableBackend(getBackendID(backend));
-        net.setPreferableTarget(getTargetID(target));
+        int engineId = getEngineID(parser.get<String>("engine"));
+        int backendId = getBackendID(backend);
+        int targetId = getTargetID(target);
+        net = readNetFromONNX(model, engineId);
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
     } catch (const Exception &e) {
         cerr << "Error loading model: " << e.what() << endl;
         return -1;
