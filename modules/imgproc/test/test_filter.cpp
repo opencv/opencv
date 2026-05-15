@@ -1972,6 +1972,16 @@ TEST(Imgproc_Blur, borderTypes)
     EXPECT_DOUBLE_EQ(0.0, cvtest::norm(expected_dst, dst, NORM_INF));
 }
 
+TEST(Imgproc_Blur, invalidKernelSize)
+{
+    Mat src(3, 3, CV_8UC1, Scalar::all(1)), dst;
+
+    EXPECT_THROW(cv::blur(src, dst, Size(0, 3)), cv::Exception);
+    EXPECT_THROW(cv::blur(src, dst, Size(3, 0)), cv::Exception);
+    EXPECT_THROW(cv::blur(src, dst, Size(-1, 3)), cv::Exception);
+    EXPECT_THROW(cv::blur(src, dst, Size(3, -1)), cv::Exception);
+}
+
 TEST(Imgproc_GaussianBlur, borderTypes)
 {
     Size kernelSize(3, 3);
