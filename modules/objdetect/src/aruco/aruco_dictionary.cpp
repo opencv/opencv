@@ -266,6 +266,12 @@ Mat Dictionary::getBitsFromByteList(const Mat &byteList, int markerSize, int rot
 
 
 Dictionary getPredefinedDictionary(PredefinedDictionaryType name) {
+    // The maximum number of bits that can be corrected is theoretically (d-1)/2,
+    // where d is the minimum Hamming distance between any two codes in the dictionary.
+    // However, we use a more conservative limit (d/2)-1 to reduce the probability
+    // of false positives during detection. This formula is equivalent to the 
+    // theoretical limit for even distances and stricter for odd distances.
+    
     // DictionaryData constructors calls
     //    moved out of globals so construted on first use, which allows lazy-loading of opencv dll
     static const Dictionary DICT_ARUCO_DATA = Dictionary(Mat(1024, (5 * 5 + 7) / 8, CV_8UC4, (uchar*)DICT_ARUCO_BYTES), 5, (3/2)-1);
