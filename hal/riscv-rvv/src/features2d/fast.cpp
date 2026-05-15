@@ -114,90 +114,121 @@ inline int fast_16(const uchar* src_data, size_t src_step,
                 vint16m1_t d14 = __riscv_vsub_vv_i16m1(vcen, vk14, vl);
                 vint16m1_t d15 = __riscv_vsub_vv_i16m1(vcen, vk15, vl);
 
-                /* Score computation: 16-arc min/max */
-                vint16m1_t va  = __riscv_vmin_vv_i16m1(d7, d8, vl);
-                vint16m1_t vb  = __riscv_vmax_vv_i16m1(d7, d8, vl);
-                vint16m1_t va0 = __riscv_vmin_vv_i16m1(va, d6, vl);
-                vint16m1_t vb0 = __riscv_vmax_vv_i16m1(vb, d6, vl);
-                vint16m1_t va1 = __riscv_vmin_vv_i16m1(va, d9, vl);
-                vint16m1_t vb1 = __riscv_vmax_vv_i16m1(vb, d9, vl);
-                va0 = __riscv_vmin_vv_i16m1(va, d5, vl);
-                vb0 = __riscv_vmax_vv_i16m1(vb, d5, vl);
-                va1 = __riscv_vmin_vv_i16m1(va, d10, vl);
-                vb1 = __riscv_vmax_vv_i16m1(vb, d10, vl);
-                va0 = __riscv_vmin_vv_i16m1(va, d4, vl);
-                vb0 = __riscv_vmax_vv_i16m1(vb, d4, vl);
-                va1 = __riscv_vmin_vv_i16m1(va, d11, vl);
-                vb1 = __riscv_vmax_vv_i16m1(vb, d11, vl);
-                va0 = __riscv_vmin_vv_i16m1(va, d3, vl);
-                vb0 = __riscv_vmax_vv_i16m1(vb, d3, vl);
-                va1 = __riscv_vmin_vv_i16m1(va, d12, vl);
-                vb1 = __riscv_vmax_vv_i16m1(vb, d12, vl);
+                /* __E: multi-level share (binary tree with named nodes) */
+                /* Bright score (min tree) */
+                vint16m1_t va0 = __riscv_vmin_vv_i16m1(d7,  d8, vl);
+                vint16m1_t va00 = __riscv_vmin_vv_i16m1(va0, d6, vl);
+                va00 = __riscv_vmin_vv_i16m1(va00, d5, vl);
+                va00 = __riscv_vmin_vv_i16m1(va00, d4, vl);
+                va00 = __riscv_vmin_vv_i16m1(va00, d3, vl);  /* d3~d8 */
 
-                vint16m1_t va00 = __riscv_vmin_vv_i16m1(__riscv_vmin_vv_i16m1(va0, d2, vl), d1, vl);
-                vint16m1_t vb00 = __riscv_vmax_vv_i16m1(__riscv_vmax_vv_i16m1(vb0, d2, vl), d1, vl);
-                vint16m1_t va10 = __riscv_vmin_vv_i16m1(__riscv_vmin_vv_i16m1(va1, d6, vl), d5, vl);
-                vint16m1_t vb10 = __riscv_vmax_vv_i16m1(__riscv_vmax_vv_i16m1(vb1, d6, vl), d5, vl);
+                vint16m1_t va000 = __riscv_vmin_vv_i16m1(va00, d2, vl);
+                va000 = __riscv_vmin_vv_i16m1(va000, d1, vl); /* d1~d8 */
+                vint16m1_t va001 = __riscv_vmin_vv_i16m1(va00, d9, vl);
+                va001 = __riscv_vmin_vv_i16m1(va001, d10, vl); /* d3~d10 */
 
-                vint16m1_t va01 = __riscv_vmin_vv_i16m1(__riscv_vmin_vv_i16m1(va0, d9, vl),  d10, vl);
-                vint16m1_t vb01 = __riscv_vmax_vv_i16m1(__riscv_vmax_vv_i16m1(vb0, d9, vl),  d10, vl);
-                vint16m1_t va11 = __riscv_vmin_vv_i16m1(__riscv_vmin_vv_i16m1(va0, d13, vl), d14, vl);
-                vint16m1_t vb11 = __riscv_vmax_vv_i16m1(__riscv_vmax_vv_i16m1(vb0, d13, vl), d14, vl);
+                vint16m1_t va01 = __riscv_vmin_vv_i16m1(va0, d9, vl);
+                va01 = __riscv_vmin_vv_i16m1(va01, d10, vl);
+                va01 = __riscv_vmin_vv_i16m1(va01, d11, vl);
+                va01 = __riscv_vmin_vv_i16m1(va01, d12, vl);  /* d7~d12 */
 
-                vint16m1_t min_max = __riscv_vmax_vv_i16m1(__riscv_vmin_vv_i16m1(va00, d0, vl), __riscv_vmin_vv_i16m1(va00, d9, vl), vl);
-                vint16m1_t max_min = __riscv_vmin_vv_i16m1(__riscv_vmax_vv_i16m1(vb00, d0, vl), __riscv_vmax_vv_i16m1(vb00, d9, vl), vl);
-                min_max = __riscv_vmax_vv_i16m1(min_max, __riscv_vmax_vv_i16m1(__riscv_vmin_vv_i16m1(va01, d2, vl),  __riscv_vmin_vv_i16m1(va01, d11, vl), vl), vl);
-                max_min = __riscv_vmin_vv_i16m1(max_min, __riscv_vmin_vv_i16m1(__riscv_vmax_vv_i16m1(vb01, d2, vl),  __riscv_vmax_vv_i16m1(vb01, d11, vl), vl), vl);
-                min_max = __riscv_vmax_vv_i16m1(min_max, __riscv_vmax_vv_i16m1(__riscv_vmin_vv_i16m1(va10, d4, vl),  __riscv_vmin_vv_i16m1(va10, d13, vl), vl), vl);
-                max_min = __riscv_vmin_vv_i16m1(max_min, __riscv_vmin_vv_i16m1(__riscv_vmax_vv_i16m1(vb10, d4, vl),  __riscv_vmax_vv_i16m1(vb10, d13, vl), vl), vl);
-                min_max = __riscv_vmax_vv_i16m1(min_max, __riscv_vmax_vv_i16m1(__riscv_vmin_vv_i16m1(va11, d6, vl),  __riscv_vmin_vv_i16m1(va01, d15, vl), vl), vl);
-                max_min = __riscv_vmin_vv_i16m1(max_min, __riscv_vmin_vv_i16m1(__riscv_vmax_vv_i16m1(vb11, d6, vl),  __riscv_vmax_vv_i16m1(vb01, d15, vl), vl), vl);
+                vint16m1_t va010 = __riscv_vmin_vv_i16m1(va01, d6, vl);
+                va010 = __riscv_vmin_vv_i16m1(va010, d5, vl); /* d5~d12 */
+                vint16m1_t va011 = __riscv_vmin_vv_i16m1(va01, d13, vl);
+                va011 = __riscv_vmin_vv_i16m1(va011, d14, vl); /* d7~d14 */
 
-                va  = __riscv_vmin_vv_i16m1(d15, d0, vl);
-                vb  = __riscv_vmax_vv_i16m1(d15, d0, vl);
-                va0 = __riscv_vmin_vv_i16m1(va, d14, vl);
-                vb0 = __riscv_vmax_vv_i16m1(vb, d14, vl);
-                va1 = __riscv_vmin_vv_i16m1(va, d1, vl);
-                vb1 = __riscv_vmax_vv_i16m1(vb, d1, vl);
-                va0 = __riscv_vmin_vv_i16m1(va, d13, vl);
-                vb0 = __riscv_vmax_vv_i16m1(vb, d13, vl);
-                va1 = __riscv_vmin_vv_i16m1(va, d2, vl);
-                vb1 = __riscv_vmax_vv_i16m1(vb, d2, vl);
-                va0 = __riscv_vmin_vv_i16m1(va, d12, vl);
-                vb0 = __riscv_vmax_vv_i16m1(vb, d12, vl);
-                va1 = __riscv_vmin_vv_i16m1(va, d3, vl);
-                vb1 = __riscv_vmax_vv_i16m1(vb, d3, vl);
-                va0 = __riscv_vmin_vv_i16m1(va, d11, vl);
-                vb0 = __riscv_vmax_vv_i16m1(vb, d11, vl);
-                va1 = __riscv_vmin_vv_i16m1(va, d4, vl);
-                vb1 = __riscv_vmax_vv_i16m1(vb, d4, vl);
+                vint16m1_t min_max = __riscv_vmax_vv_i16m1(__riscv_vmin_vv_i16m1(va000, d0, vl), __riscv_vmin_vv_i16m1(va000, d9, vl), vl);
+                min_max = __riscv_vmax_vv_i16m1(min_max, __riscv_vmax_vv_i16m1(__riscv_vmin_vv_i16m1(va001, d2,  vl), __riscv_vmin_vv_i16m1(va001, d11, vl), vl), vl);
+                min_max = __riscv_vmax_vv_i16m1(min_max, __riscv_vmax_vv_i16m1(__riscv_vmin_vv_i16m1(va010, d4,  vl), __riscv_vmin_vv_i16m1(va010, d13, vl), vl), vl);
+                min_max = __riscv_vmax_vv_i16m1(min_max, __riscv_vmax_vv_i16m1(__riscv_vmin_vv_i16m1(va011, d6,  vl), __riscv_vmin_vv_i16m1(va011, d15, vl), vl), vl);
 
-                va00 = __riscv_vmin_vv_i16m1(__riscv_vmin_vv_i16m1(va0, d10, vl), d9, vl);
-                vb00 = __riscv_vmax_vv_i16m1(__riscv_vmax_vv_i16m1(vb0, d10, vl), d9, vl);
-                va10 = __riscv_vmin_vv_i16m1(__riscv_vmin_vv_i16m1(va1, d14, vl), d13, vl);
-                vb10 = __riscv_vmax_vv_i16m1(__riscv_vmax_vv_i16m1(vb1, d14, vl), d13, vl);
+                vint16m1_t va1 = __riscv_vmin_vv_i16m1(d15, d0, vl);
+                vint16m1_t va10 = __riscv_vmin_vv_i16m1(va1, d14, vl);
+                va10 = __riscv_vmin_vv_i16m1(va10, d13, vl);
+                va10 = __riscv_vmin_vv_i16m1(va10, d12, vl);
+                va10 = __riscv_vmin_vv_i16m1(va10, d11, vl);  /* d0,d11~d15 */
 
-                va01 = __riscv_vmin_vv_i16m1(__riscv_vmin_vv_i16m1(va0, d1, vl),  d10, vl);
-                vb01 = __riscv_vmax_vv_i16m1(__riscv_vmax_vv_i16m1(vb0, d1, vl),  d10, vl);
-                va11 = __riscv_vmin_vv_i16m1(__riscv_vmin_vv_i16m1(va0, d5, vl),  d6, vl);
-                vb11 = __riscv_vmax_vv_i16m1(__riscv_vmax_vv_i16m1(vb0, d5, vl),  d6, vl);
+                vint16m1_t va100 = __riscv_vmin_vv_i16m1(va10, d10, vl);
+                va100 = __riscv_vmin_vv_i16m1(va100, d9, vl); /* d0,d9~d15 */
+                vint16m1_t va101 = __riscv_vmin_vv_i16m1(va10, d1, vl);
+                va101 = __riscv_vmin_vv_i16m1(va101, d2, vl); /* d0~d2,d11~d15 */
 
-                min_max = __riscv_vmax_vv_i16m1(min_max, __riscv_vmax_vv_i16m1(__riscv_vmin_vv_i16m1(va00, d8, vl),  __riscv_vmin_vv_i16m1(va00, d1, vl),  vl), vl);
-                max_min = __riscv_vmin_vv_i16m1(max_min, __riscv_vmin_vv_i16m1(__riscv_vmax_vv_i16m1(vb00, d8, vl),  __riscv_vmax_vv_i16m1(vb00, d1, vl),  vl), vl);
-                min_max = __riscv_vmax_vv_i16m1(min_max, __riscv_vmax_vv_i16m1(__riscv_vmin_vv_i16m1(va01, d10, vl), __riscv_vmin_vv_i16m1(va01, d3, vl),  vl), vl);
-                max_min = __riscv_vmin_vv_i16m1(max_min, __riscv_vmin_vv_i16m1(__riscv_vmax_vv_i16m1(vb01, d10, vl), __riscv_vmax_vv_i16m1(vb01, d3, vl),  vl), vl);
-                min_max = __riscv_vmax_vv_i16m1(min_max, __riscv_vmax_vv_i16m1(__riscv_vmin_vv_i16m1(va10, d12, vl), __riscv_vmin_vv_i16m1(va10, d5, vl),  vl), vl);
-                max_min = __riscv_vmin_vv_i16m1(max_min, __riscv_vmin_vv_i16m1(__riscv_vmax_vv_i16m1(vb10, d12, vl), __riscv_vmax_vv_i16m1(vb10, d5, vl),  vl), vl);
-                min_max = __riscv_vmax_vv_i16m1(min_max, __riscv_vmax_vv_i16m1(__riscv_vmin_vv_i16m1(va11, d14, vl), __riscv_vmin_vv_i16m1(va01, d7, vl),  vl), vl);
-                max_min = __riscv_vmin_vv_i16m1(max_min, __riscv_vmin_vv_i16m1(__riscv_vmax_vv_i16m1(vb11, d14, vl), __riscv_vmax_vv_i16m1(vb01, d7, vl),  vl), vl);
+                vint16m1_t va11 = __riscv_vmin_vv_i16m1(va1, d1, vl);
+                va11 = __riscv_vmin_vv_i16m1(va11, d2, vl);
+                va11 = __riscv_vmin_vv_i16m1(va11, d3, vl);
+                va11 = __riscv_vmin_vv_i16m1(va11, d4, vl);   /* d0~d4,d15 */
 
-                vint16m1_t score_v = __riscv_vmax_vv_i16m1(min_max,
-                        __riscv_vneg_v_i16m1(max_min, vl), vl);
+                vint16m1_t va110 = __riscv_vmin_vv_i16m1(va11, d14, vl);
+                va110 = __riscv_vmin_vv_i16m1(va110, d13, vl); /* d0~d4,d13~d15 */
+                vint16m1_t va111 = __riscv_vmin_vv_i16m1(va11, d5, vl);
+                va111 = __riscv_vmin_vv_i16m1(va111, d6, vl);  /* d0~d6,d15 */
+
+                min_max = __riscv_vmax_vv_i16m1(min_max, __riscv_vmax_vv_i16m1(__riscv_vmin_vv_i16m1(va100, d8,  vl), __riscv_vmin_vv_i16m1(va100, d1,  vl), vl), vl);
+                min_max = __riscv_vmax_vv_i16m1(min_max, __riscv_vmax_vv_i16m1(__riscv_vmin_vv_i16m1(va101, d10, vl), __riscv_vmin_vv_i16m1(va101, d3,  vl), vl), vl);
+                min_max = __riscv_vmax_vv_i16m1(min_max, __riscv_vmax_vv_i16m1(__riscv_vmin_vv_i16m1(va110, d12, vl), __riscv_vmin_vv_i16m1(va110, d5,  vl), vl), vl);
+                min_max = __riscv_vmax_vv_i16m1(min_max, __riscv_vmax_vv_i16m1(__riscv_vmin_vv_i16m1(va111, d14, vl), __riscv_vmin_vv_i16m1(va111, d7,  vl), vl), vl);
+
+                /* Dark score (max tree) */
+                vint16m1_t vb0 = __riscv_vmax_vv_i16m1(d7,  d8, vl);
+                vint16m1_t vb00 = __riscv_vmax_vv_i16m1(vb0, d6, vl);
+                vb00 = __riscv_vmax_vv_i16m1(vb00, d5, vl);
+                vb00 = __riscv_vmax_vv_i16m1(vb00, d4, vl);
+                vb00 = __riscv_vmax_vv_i16m1(vb00, d3, vl);
+
+                vint16m1_t vb000 = __riscv_vmax_vv_i16m1(vb00, d2, vl);
+                vb000 = __riscv_vmax_vv_i16m1(vb000, d1, vl);
+                vint16m1_t vb001 = __riscv_vmax_vv_i16m1(vb00, d9, vl);
+                vb001 = __riscv_vmax_vv_i16m1(vb001, d10, vl);
+
+                vint16m1_t vb01 = __riscv_vmax_vv_i16m1(vb0, d9, vl);
+                vb01 = __riscv_vmax_vv_i16m1(vb01, d10, vl);
+                vb01 = __riscv_vmax_vv_i16m1(vb01, d11, vl);
+                vb01 = __riscv_vmax_vv_i16m1(vb01, d12, vl);
+
+                vint16m1_t vb010 = __riscv_vmax_vv_i16m1(vb01, d6, vl);
+                vb010 = __riscv_vmax_vv_i16m1(vb010, d5, vl);
+                vint16m1_t vb011 = __riscv_vmax_vv_i16m1(vb01, d13, vl);
+                vb011 = __riscv_vmax_vv_i16m1(vb011, d14, vl);
+
+                vint16m1_t max_min = __riscv_vmin_vv_i16m1(__riscv_vmax_vv_i16m1(vb000, d0, vl), __riscv_vmax_vv_i16m1(vb000, d9, vl), vl);
+                max_min = __riscv_vmin_vv_i16m1(max_min, __riscv_vmin_vv_i16m1(__riscv_vmax_vv_i16m1(vb001, d2,  vl), __riscv_vmax_vv_i16m1(vb001, d11, vl), vl), vl);
+                max_min = __riscv_vmin_vv_i16m1(max_min, __riscv_vmin_vv_i16m1(__riscv_vmax_vv_i16m1(vb010, d4,  vl), __riscv_vmax_vv_i16m1(vb010, d13, vl), vl), vl);
+                max_min = __riscv_vmin_vv_i16m1(max_min, __riscv_vmin_vv_i16m1(__riscv_vmax_vv_i16m1(vb011, d6,  vl), __riscv_vmax_vv_i16m1(vb011, d15, vl), vl), vl);
+
+                vint16m1_t vb1 = __riscv_vmax_vv_i16m1(d15, d0, vl);
+                vint16m1_t vb10 = __riscv_vmax_vv_i16m1(vb1, d14, vl);
+                vb10 = __riscv_vmax_vv_i16m1(vb10, d13, vl);
+                vb10 = __riscv_vmax_vv_i16m1(vb10, d12, vl);
+                vb10 = __riscv_vmax_vv_i16m1(vb10, d11, vl);
+
+                vint16m1_t vb100 = __riscv_vmax_vv_i16m1(vb10, d10, vl);
+                vb100 = __riscv_vmax_vv_i16m1(vb100, d9, vl);
+                vint16m1_t vb101 = __riscv_vmax_vv_i16m1(vb10, d1, vl);
+                vb101 = __riscv_vmax_vv_i16m1(vb101, d2, vl);
+
+                vint16m1_t vb11 = __riscv_vmax_vv_i16m1(vb1, d1, vl);
+                vb11 = __riscv_vmax_vv_i16m1(vb11, d2, vl);
+                vb11 = __riscv_vmax_vv_i16m1(vb11, d3, vl);
+                vb11 = __riscv_vmax_vv_i16m1(vb11, d4, vl);
+
+                vint16m1_t vb110 = __riscv_vmax_vv_i16m1(vb11, d14, vl);
+                vb110 = __riscv_vmax_vv_i16m1(vb110, d13, vl);
+                vint16m1_t vb111 = __riscv_vmax_vv_i16m1(vb11, d5, vl);
+                vb111 = __riscv_vmax_vv_i16m1(vb111, d6, vl);
+
+                max_min = __riscv_vmin_vv_i16m1(max_min, __riscv_vmin_vv_i16m1(__riscv_vmax_vv_i16m1(vb100, d8,  vl), __riscv_vmax_vv_i16m1(vb100, d1,  vl), vl), vl);
+                max_min = __riscv_vmin_vv_i16m1(max_min, __riscv_vmin_vv_i16m1(__riscv_vmax_vv_i16m1(vb101, d10, vl), __riscv_vmax_vv_i16m1(vb101, d3,  vl), vl), vl);
+                max_min = __riscv_vmin_vv_i16m1(max_min, __riscv_vmin_vv_i16m1(__riscv_vmax_vv_i16m1(vb110, d12, vl), __riscv_vmax_vv_i16m1(vb110, d5,  vl), vl), vl);
+                max_min = __riscv_vmin_vv_i16m1(max_min, __riscv_vmin_vv_i16m1(__riscv_vmax_vv_i16m1(vb111, d14, vl), __riscv_vmax_vv_i16m1(vb111, d7,  vl), vl), vl);
+
+                /* Final score: max(bright, -dark) - 1 */
+                vint16m1_t score_v = __riscv_vsub_vx_i16m1(
+                    __riscv_vmax_vv_i16m1(min_max, __riscv_vneg_v_i16m1(max_min, vl), vl), 1, vl);
 
                 if (nonmax_suppression)
                     __riscv_vse16_v_i16m1(curr + j, score_v, vl);
 
-                vbool16_t mask = __riscv_vmsgt_vx_i16m1_b16(score_v, threshold, vl);
+                vbool16_t mask = __riscv_vmsge_vx_i16m1_b16(score_v, threshold, vl);
                 vuint16m1_t vresult = __riscv_vcompress_vm_u16m1(__riscv_vid_v_u16m1(vl), mask, vl);
                 size_t count = __riscv_vcpop_m_b16(mask, vl);
                 __riscv_vse32_v_i32m2(&cornerpos[ncorners],
