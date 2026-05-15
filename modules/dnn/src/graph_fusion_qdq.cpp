@@ -293,7 +293,6 @@ struct ModelFusionQDQ
                     }
                 }
 
-                // Fuse DQ → Sigmoid → QL into SigmoidInt8 with a precomputed 256-entry LUT.
                 {
                 int sig_layer_idx = -1;
                 SigmoidLayer* sigmoid_layer = 0;
@@ -1042,7 +1041,6 @@ struct ModelFusionQDQ
                 }
 
                 // Fuse DQ -> MaxPool -> QL into Pool2Int8 when scales/zps match.
-                // MaxPoolLayer (not PoolingLayer) is the type used by ENGINE_NEW.
                 {
                 int pool_layer_idx = -1;
                 MaxPoolLayer* maxpool = 0;
@@ -1289,7 +1287,6 @@ struct ModelFusionQDQ
             if (ql_idx >= newprog.size()) continue;
             QuantizeLinearLayer* ql = dynamic_cast<QuantizeLinearLayer*>(newprog[ql_idx].get());
 
-            // The QL's data input must be a FP32 graph-level input.
             if (ql->inputs.size() < 2) continue;
             const Arg& ql_data = ql->inputs[0];
             if (netimpl->argKind(ql_data) != DNN_ARG_INPUT) continue;

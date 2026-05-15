@@ -152,13 +152,10 @@ static void convInt8BlockVNNI(const void* inp_, const void* residual_,
             alignas(32) float multbuf[K0];
             memcpy(multbuf, multiplier + k_base, K0 * sizeof(float));
 
-            // For depthwise (Kg==1): group g produces exactly one output channel at slot
-            // k0_off = g%K0 within its K0-block.  biasVNNI[g] is the correct bias, but
-            // the memcpy above put biasVNNI[g + k0_off] at biasbuf[k0_off].  Fix both.
             const int k0_off_dw = k_base & (K0-1);
             if (cs.depthwise) {
-                biasbuf[k0_off_dw] = biasbuf[0]; // biasbuf[0] == biasVNNI[k_base] == bias[g]
-                multbuf[k0_off_dw] = multbuf[0]; // multbuf[0] == multiplier[k_base] == mult[g]
+                biasbuf[k0_off_dw] = biasbuf[0];
+                multbuf[k0_off_dw] = multbuf[0];
             }
 
             int D_l = D, H_l = H, W_l = W;
@@ -1101,9 +1098,7 @@ static void convInt8BlockNEON(const void* inp_, const void* residual_,
 #undef CONV_NEON_STORE
 #endif // CV_NEON && CV_NEON_DOT
 
-// Depthwise INT8 kernel: ngroups==K==C, Kg==Cg==1.
-// For group g the only non-zero weight is at c0=g%C0, k0_in_weight=0.
-// Reads ONE input lane and writes ONE output slot — no wasted MACs, no write collisions.
+// INT8 depthwise convolution kernel (ngroups==K==C, Kg==Cg==1).
 static void convInt8BlockDepthwise(const void* inp_, const void* residual_,
                                    void* out_, const ConvState& cs,
                                    const void* weights_,
@@ -1193,10 +1188,7 @@ static void convInt8BlockDepthwise(const void* inp_, const void* residual_,
                 int n_g = g_end - g_start;
                 constexpr int SB = 8;
 
-                // Pre-gather wbuf[i*K0+j] = weight for group g_start+j at kernel pos i.
-                // Packed layout: [ngroups, Kblk=1, ksize, C1Max, C0*K0].
-                // For depthwise (Kg=1): kin=0, kblk=0, k0_pack=0, c0=g%C0.
-                // Byte offset for group g, kernel pos i: g*ksize*C1Max*C0*K0 + i*C1Max*C0*K0 + c0*K0.
+                // Pre-gather weights for this group block into wbuf[ksize * K0].
                 alignas(32) int8_t wbuf[128 * K0];
                 for (int i = 0; i < ksize; i++) {
                     for (int j = 0; j < n_g; j++) {
@@ -1216,13 +1208,11 @@ static void convInt8BlockDepthwise(const void* inp_, const void* residual_,
                 __m128i v_xor = inputIsU8 ? _mm_setzero_si128()
                                           : _mm_set1_epi8((char)0x80);
 
-                // SB-pixel spatial blocks: weight loaded once per kernel pos per block,
-                // coordinate computation amortised over SB pixels (same as VNNI kernel).
                 int p = p_task_start;
                 for (; p < p_task_end; p += SB) {
                     if (p + SB > p_task_end) {
-                        if (p == p_task_start) break;   // tile < SB, handle in scalar tail
-                        p = p_task_end - SB;            // overlap trick
+                        if (p == p_task_start) break;
+                        p = p_task_end - SB;
                     }
 
                     Vec3i pt[SB];
@@ -1231,7 +1221,6 @@ static void convInt8BlockDepthwise(const void* inp_, const void* residual_,
                     bool  same_row  = false;
 
                     if ((p % W) + SB <= W) {
-                        // Fast path: all SB pixels in the same row — only 2 divisions.
                         same_row = true;
                         int zj  = p / (H * W);
                         int yxj = p - zj * H * W;
@@ -1246,7 +1235,6 @@ static void convInt8BlockDepthwise(const void* inp_, const void* residual_,
                             all_inner   &= inner_pix[j];
                         }
                     } else {
-                        // Slow path: pixels span a row boundary.
                         for (int j = 0; j < SB; j++) {
                             int pj  = p + j;
                             int zj  = pj / (H * W);
@@ -1265,8 +1253,6 @@ static void convInt8BlockDepthwise(const void* inp_, const void* residual_,
                     __m256i s4 = vbias, s5 = vbias, s6 = vbias, s7 = vbias;
 
                     if (all_inner && same_row) {
-                        // Hot path: dominant case for large spatial maps.
-                        // One address computation per kernel position; j offset via stride.
                         const int step = Sx * C0;
                         for (int i = 0; i < ksize; i++) {
                             __m128i w8  = _mm_loadl_epi64((const __m128i*)(wbuf + i * K0));
@@ -1287,7 +1273,6 @@ static void convInt8BlockDepthwise(const void* inp_, const void* residual_,
                             #undef DW_HOT
                         }
                     } else if (all_inner) {
-                        // Row-boundary or non-unit-stride: still no bounds check.
                         for (int i = 0; i < ksize; i++) {
                             __m128i w8  = _mm_loadl_epi64((const __m128i*)(wbuf + i * K0));
                             __m256i w32 = _mm256_cvtepi8_epi32(w8);
@@ -1307,7 +1292,6 @@ static void convInt8BlockDepthwise(const void* inp_, const void* residual_,
                             #undef DW_INNER
                         }
                     } else {
-                        // Border pixels: need bounds checking per pixel per kernel pos.
                         for (int i = 0; i < ksize; i++) {
                             __m128i w8  = _mm_loadl_epi64((const __m128i*)(wbuf + i * K0));
                             __m256i w32 = _mm256_cvtepi8_epi32(w8);
@@ -1377,7 +1361,6 @@ static void convInt8BlockDepthwise(const void* inp_, const void* residual_,
                     DW_STORE(4); DW_STORE(5); DW_STORE(6); DW_STORE(7);
                     #undef DW_STORE
                 }
-                // Scalar tail: fires only when tile size < SB.
                 for (; p < p_task_end; p++) {
                     int zj  = p / (H * W);
                     int yxj = p - zj * H * W;
@@ -1432,7 +1415,6 @@ static void convInt8BlockDepthwise(const void* inp_, const void* residual_,
             }
 #endif // CV_AVX2
 
-            // Scalar fallback (for ksize > 128 or non-AVX2 targets)
             for (int p = p_task_start; p < p_task_end; p++) {
                 int zj  = p / (H * W);
                 int yxj = p - zj * H * W;
@@ -1515,9 +1497,7 @@ void convInt8Block(const void* inp_, const void* residual_,
                    const int8_t* activLUT,
                    bool inputIsU8)
 {
-    // Depthwise: dedicated kernel processes K0 groups simultaneously (N*K1 tasks, not N*K tasks).
-    // Dispatch before VNNI so AVX2 depthwise runs instead of the wasted-MAC VNNI path.
-    // biasVNNI_ has been pre-adjusted by the caller for both int8 and uint8 paths.
+    // Dispatch to dedicated depthwise kernel before the general VNNI path.
     if (cs.depthwise) {
         const int* dw_bias = biasVNNI_ ? biasVNNI_ : bias;
         convInt8BlockDepthwise(inp_, residual_, out_, cs, weights_,
@@ -1660,9 +1640,6 @@ void convInt8Block(const void* inp_, const void* residual_,
             alignas(32) int32_t biasbuf[K0];
             alignas(32) float multbuf[K0];
             {
-                // Only k_valid channels starting at k_base are real output channels;
-                // the rest are padding slots whose output is discarded (pre-zeroed above).
-                // Reading past the end of bias/multiplier (size K) is UB, so clamp the copy.
                 int k_valid = std::min(K0, K - k_base);
                 memcpy(biasbuf, bias + k_base, k_valid * sizeof(int32_t));
                 memset(biasbuf + k_valid, 0, (K0 - k_valid) * sizeof(int32_t));
