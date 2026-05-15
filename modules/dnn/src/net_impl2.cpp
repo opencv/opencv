@@ -684,6 +684,10 @@ void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays 
     // [TODO] if a target or backend change or there are some other important
     // global changes in configuration, finalizeLayers should be set to 'true' again
     finalizeLayers = false;
+
+    // Feed present.* outputs back as past_key_values.* inputs for the next step (causal-lm-with-past).
+    if (useKVCache && kvCacheManager.hasRoutes)
+        kvCacheManager.applyRoutes();
 }
 
 void Net::Impl::forwardWithSingleOutput(const std::string& outname, OutputArrayOfArrays outputBlobs)

@@ -1,7 +1,7 @@
 # This file is part of OpenCV project.
 # It is subject to the license terms in the LICENSE file found in the top-level directory
 # of this distribution and at http://opencv.org/license.html.
-# Copyright (C) 2025, BigVision LLC, all rights reserved.
+# Copyright (C) 2026, BigVision LLC, all rights reserved.
 # Third party copyrights are property of their respective owners.
 
 '''
@@ -17,9 +17,9 @@ Exporting Gemma3 model to ONNX:
 
     pip install optimum[exporters] torch transformers
 
-2. Export the model to ONNX:
+2. Export the model to ONNX with KV-cache support:
 
-    optimum-cli export onnx --model google/gemma-3-1b-it --task causal-lm gemma3_instruct_onnx/
+    optimum-cli export onnx --model google/gemma-3-1b-it --task causal-lm-with-past gemma3_instruct_onnx_with_past/
 
 
 Run the script:
@@ -62,29 +62,34 @@ def gemma3_inference(net, prompt, max_new_tokens, tokenizer):
     tokens = tokenizer.encode(prompt)
     # Prepend BOS token (id=2) as required by Gemma3
     tokens = [2] + list(tokens)
-    tokens = np.array(tokens, dtype=np.int64).reshape(1, -1)
+    input_ids = np.array(tokens, dtype=np.int64).reshape(1, -1)
 
     # Gemma3 special token IDs
     eos_id     = 1    # <eos>
     eot_id     = 106  # <end_of_turn>
     stop_ids   = (eos_id, eot_id)
 
-    for _ in range(max_new_tokens):
-        seq_len = tokens.shape[1]
-        attention_mask = np.ones((1, seq_len), dtype=np.int64)
+    net.enableKVCache()
+    prompt_len = input_ids.shape[1]
 
-        net.setInput(tokens, 'input_ids')
-        net.setInput(attention_mask, 'attention_mask')
-        logits = net.forward()          # (1, seq_len, vocab_size)
-        logits = logits[:, -1, :]       # take last token logits
+    # Prefill: process full prompt once to populate KV-cache
+    net.setInput(input_ids, 'input_ids')
+    net.setInput(np.ones((1, prompt_len), dtype=np.int64), 'attention_mask')
+    logits = net.forward()
+    new_id = int(np.argmax(logits[:, -1, :].reshape(-1)))
+    generated = [new_id]
 
-        new_id = int(np.argmax(logits.reshape(-1)))
-        tokens = np.concatenate((tokens, np.array([[new_id]], dtype=np.int64)), axis=1)
-
+    # Generate: feed one new token per step; OpenCV routes present.* -> past_key_values.*
+    for _ in range(max_new_tokens - 1):
         if new_id in stop_ids:
             break
+        net.setInput(np.array([[new_id]], dtype=np.int64), 'input_ids')
+        net.setInput(np.ones((1, prompt_len + len(generated)), dtype=np.int64), 'attention_mask')
+        logits = net.forward()
+        new_id = int(np.argmax(logits[:, -1, :].reshape(-1)))
+        generated.append(new_id)
 
-    return tokens
+    return np.array([tokens + generated], dtype=np.int64)
 
 if __name__ == '__main__':
 

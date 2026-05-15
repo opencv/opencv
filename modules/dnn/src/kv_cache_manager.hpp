@@ -89,7 +89,14 @@ struct KVCacheManager
     FastGemmOpt opt;
     bool isInitialized = false;
 
+    // present.* output arg idx -> past_key_values.* input arg idx
+    std::vector<std::pair<int, int>> presentToPastRoutes;
+    bool hasRoutes = false;
+
     void init();
+    void buildRoutes();
+    void applyRoutes();
+    void initPastTensors();
 };
 
 void setKVCacheManager(Ptr<Net::Impl> netimpl);
