@@ -858,14 +858,25 @@ static inline int remap32f(int src_type, const uchar *src_data, size_t src_step,
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
 }
 
-inline int remap32fc2(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height,
+int remap32f(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height,
+             uchar *dst_data, size_t dst_step, int dst_width, int dst_height,
+             float* mapx, size_t mapx_step, float* mapy, size_t mapy_step,
+             int interpolation, int border_type, const double border_value[4])
+{
+    return remap32f<false>(src_type, src_data, src_step, src_width, src_height,
+                           dst_data, dst_step, dst_width, dst_height,
+                           mapx, mapx_step, mapy, mapy_step,
+                           interpolation, border_type, border_value);
+}
+
+int remap32fc2(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height,
                       uchar *dst_data, size_t dst_step, int dst_width, int dst_height,
                       float* map, size_t map_step, int interpolation, int border_type, const double border_value[4])
 {
     return remap32f(src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, map, map_step, nullptr, 0, interpolation, border_type, border_value);
 }
 
-inline int remap16s(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height,
+int remap16s(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height,
                     uchar *dst_data, size_t dst_step, int dst_width, int dst_height,
                     short* mapx, size_t mapx_step, ushort* mapy, size_t mapy_step,
                     int interpolation, int border_type, const double border_value[4])
