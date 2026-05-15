@@ -68,6 +68,11 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
     if(CV_CPU_HAS_SUPPORT_AVX2)
         fast_t_impl_avx2 = opt_AVX2::FAST_t_patternSize16_AVX2::getImpl(img.cols, threshold, nonmax_suppression, pixel);
 #endif
+#if CV_TRY_NEON
+    Ptr<opt_NEON::FAST_t_patternSize16_NEON> fast_t_impl_neon;
+    if(CV_CPU_HAS_SUPPORT_NEON)
+        fast_t_impl_neon = opt_NEON::FAST_t_patternSize16_NEON::getImpl(img.cols, threshold, nonmax_suppression, pixel);
+#endif
 
 #endif
 
@@ -112,6 +117,10 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
 #if CV_TRY_AVX2
                     if (fast_t_impl_avx2)
                         fast_t_impl_avx2->process(j, ptr, curr, cornerpos, ncorners);
+#endif
+#if CV_TRY_NEON
+                    if (fast_t_impl_neon)
+                        fast_t_impl_neon->process(j, ptr, curr, cornerpos, ncorners);
 #endif
                     //vz if (j <= (img.cols - 27)) //it doesn't make sense using vectors for less than 8 elements
                     {

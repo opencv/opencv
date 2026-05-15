@@ -58,5 +58,18 @@ public:
 };
 #endif
 }
+
+namespace opt_NEON
+{
+#if CV_TRY_NEON
+class FAST_t_patternSize16_NEON
+{
+public:
+    static Ptr<FAST_t_patternSize16_NEON> getImpl(int _cols, int _threshold, bool _nonmax_suppression, const int* _pixel);
+    virtual void process(int &j, const uchar* &ptr, uchar* curr, int* cornerpos, int &ncorners) = 0;
+    virtual ~FAST_t_patternSize16_NEON() {}
+};
+#endif
+}
 }
 #endif
