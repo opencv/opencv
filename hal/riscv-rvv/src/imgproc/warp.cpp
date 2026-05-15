@@ -791,7 +791,7 @@ static inline int remap32fC4(int start, int end, const uchar *src_data, size_t s
 // the algorithm is copied from 3rdparty/carotene/src/remap.cpp,
 // in the function void CAROTENE_NS::remapNearestNeighbor and void CAROTENE_NS::remapLinear
 template<bool s16 = false>
-inline int remap32f(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height,
+static inline int remap32f(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height,
                     uchar *dst_data, size_t dst_step, int dst_width, int dst_height,
                     float* mapx, size_t mapx_step, float* mapy, size_t mapy_step,
                     int interpolation, int border_type, const double border_value[4])
