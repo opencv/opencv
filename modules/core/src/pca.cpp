@@ -41,6 +41,7 @@
 //
 //M*/
 
+#include "opencv2/core/mat.hpp"
 #include "precomp.hpp"
 
 /****************************************************************************************\
@@ -307,9 +308,9 @@ void PCA::project(InputArray _data, OutputArray result) const
         tmp_data = tmp_mean;
     }
     if( mean.rows == 1 )
-        gemm( tmp_data, eigenvectors, 1, Mat(), 0, result, GEMM_2_T );
+        gemm( tmp_data, eigenvectors, 1, noArray(), 0, result, GEMM_2_T );
     else
-        gemm( eigenvectors, tmp_data, 1, Mat(), 0, result, 0 );
+        gemm( eigenvectors, tmp_data, 1, noArray(), 0, result, 0 );
 }
 
 Mat PCA::project(InputArray data) const

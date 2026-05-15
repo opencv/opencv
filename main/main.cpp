@@ -11,7 +11,7 @@ static int errorCallback(int status, const char* func_name, const char* err_msg,
     std::cout << "\n[OpenCV error captured]" << std::endl;
     std::cout << "status: " << status << std::endl;
     std::cout << "function: " << func_name << std::endl;
-    std::cout << "message: " << err_msg << std::endl;
+    std::cout << "message: 1" << err_msg << std::endl;
     std::cout << "location: " << file_name << ":" << line << std::endl;
     return 0;
 }
