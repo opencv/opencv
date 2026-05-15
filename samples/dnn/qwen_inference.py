@@ -11,9 +11,9 @@ Exporting Qwen2.5 model to ONNX:
 
     pip install optimum[exporters] torch transformers
 
-2. Export the model to ONNX:
+2. Export the model to ONNX with KV-cache support:
 
-    optimum-cli export onnx --model Qwen/Qwen2.5-0.5B-Instruct --task causal-lm qwen2.5_instruct_onnx/
+    optimum-cli export onnx --model Qwen/Qwen2.5-0.5B-Instruct --task causal-lm-with-past qwen2.5_instruct_onnx_with_past/
 
 
 Run the script:
@@ -42,10 +42,6 @@ def parse_args():
     parser.add_argument('--seed', type=int, default=0, help='Random seed.')
     return parser.parse_args()
 
-def stable_softmax(logits):
-    exp_logits = np.exp(logits - np.max(logits, axis=-1, keepdims=True))
-    return exp_logits / np.sum(exp_logits, axis=-1, keepdims=True)
-
 def build_chatml_prompt(user_prompt):
     '''Wrap user prompt in Qwen2.5 ChatML format.'''
     return '<|im_start|>user\n' + user_prompt + '<|im_end|>\n<|im_start|>assistant\n'
@@ -54,32 +50,38 @@ def qwen_inference(net, prompt, max_new_tokens, tokenizer):
 
     print("Inferencing Qwen2.5 model...")
 
-    tokens = tokenizer.encode(prompt)
-    tokens = np.array(tokens, dtype=np.int64).reshape(1, -1)
+    tokens = list(tokenizer.encode(prompt))
+    input_ids = np.array(tokens, dtype=np.int64).reshape(1, -1)
 
     # Qwen2.5 special token IDs
     im_end_id = 151645   # <|im_end|>
     eos_id    = 151643   # <|endoftext|>
     stop_ids  = (im_end_id, eos_id)
 
-    for _ in range(max_new_tokens):
-        seq_len = tokens.shape[1]
-        attention_mask = np.ones((1, seq_len), dtype=np.int64)
-        position_ids = np.arange(seq_len, dtype=np.int64).reshape(1, -1)
+    net.enableKVCache()
+    prompt_len = input_ids.shape[1]
 
-        net.setInput(tokens, 'input_ids')
-        net.setInput(attention_mask, 'attention_mask')
-        net.setInput(position_ids, 'position_ids')
-        logits = net.forward()          # (1, seq_len, vocab_size)
-        logits = logits[:, -1, :]       # take last token logits
+    # Prefill: process full prompt once to populate KV-cache
+    net.setInput(input_ids, 'input_ids')
+    net.setInput(np.ones((1, prompt_len), dtype=np.int64), 'attention_mask')
+    net.setInput(np.arange(prompt_len, dtype=np.int64).reshape(1, -1), 'position_ids')
+    logits = net.forward()
+    new_id = int(np.argmax(logits[:, -1, :].reshape(-1)))
+    generated = [new_id]
 
-        new_id = int(np.argmax(logits.reshape(-1)))
-        tokens = np.concatenate((tokens, np.array([[new_id]], dtype=np.int64)), axis=1)
-
+    # Generate: feed one new token per step; OpenCV routes present.* -> past_key_values.*
+    for _ in range(max_new_tokens - 1):
         if new_id in stop_ids:
             break
+        cur_len = prompt_len + len(generated)
+        net.setInput(np.array([[new_id]], dtype=np.int64), 'input_ids')
+        net.setInput(np.ones((1, cur_len), dtype=np.int64), 'attention_mask')
+        net.setInput(np.array([[cur_len - 1]], dtype=np.int64), 'position_ids')
+        logits = net.forward()
+        new_id = int(np.argmax(logits[:, -1, :].reshape(-1)))
+        generated.append(new_id)
 
-    return tokens
+    return np.array([tokens + generated], dtype=np.int64)
 
 if __name__ == '__main__':
 
@@ -94,6 +96,7 @@ if __name__ == '__main__':
     chatml_prompt = build_chatml_prompt(args.prompt)
     print(f"Prompt:\n{chatml_prompt}")
 
+    prompt_len = len(tokenizer.encode(chatml_prompt))
     tokens = qwen_inference(net, chatml_prompt, args.max_new_tokens, tokenizer)
-    response = tokenizer.decode(tokens[0].tolist())
+    response = tokenizer.decode(tokens[0][prompt_len:].tolist())
     print(f"Response:\n{response}")
