@@ -313,8 +313,10 @@ public:
         Ptr<ActivationLayerInt8> activ_int8 = layer.dynamicCast<ActivationLayerInt8>();
         if (!activ_int8.empty()) {
             activ = activ_int8;
-            if (!activ_int8->blobs.empty())
-                activ_int8->blobs[0].convertTo(activationLUT, CV_8S);
+            if (!activ_int8->activationLUT.empty())
+                activationLUT = activ_int8->activationLUT;
+            else if (!activ_int8->blobs.empty())
+                activ_int8->blobs[0].copyTo(activationLUT);
             return true;
         }
         return false;

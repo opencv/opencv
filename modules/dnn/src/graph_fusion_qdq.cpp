@@ -621,8 +621,9 @@ struct ModelFusionQDQ
                                                 Mat bq = netimpl->argTensor(dq_b->inputs[0]);
                                                 if (bq.empty() || bq.total() != (size_t)outCn || bq.depth() != CV_32S)
                                                     biasOk = false;
-                                                else
+                                                else {
                                                     bias = bq.reshape(1, 1);
+                                                }
                                             }
                                         }
                                     }
@@ -632,7 +633,7 @@ struct ModelFusionQDQ
                                     const bool inputIsU8 =
                                         (netimpl->argData(dq_x->inputs[0]).type == CV_8U) ||
                                         (x_zp_m.depth() == CV_8U);
-                                    const int inp_zp_kernel = inputIsU8 ? (inp_zp - 128) : inp_zp;
+                                    const int inp_zp_kernel = inputIsU8 ? 0 : inp_zp;
                                     Mat weights_2d = w_q.reshape(1, outCn);
                                     Mat biasFused(1, outCn, CV_32S);
                                     Mat outputMultiplier(1, outCn, CV_32F);

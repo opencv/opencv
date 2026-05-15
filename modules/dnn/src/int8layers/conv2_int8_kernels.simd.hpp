@@ -1315,16 +1315,20 @@ static void convInt8BlockDepthwise(const void* inp_, const void* residual_,
                                 int zi = pt[j][0] + ofsZYX[i*3]; \
                                 int yi = pt[j][1] + ofsZYX[i*3+1]; \
                                 int xi = pt[j][2] + ofsZYX[i*3+2]; \
+                                __m256i inp32; \
                                 if (!((unsigned)zi >= (unsigned)Di || \
                                       (unsigned)yi >= (unsigned)Hi || \
                                       (unsigned)xi >= (unsigned)Wi)) { \
                                     const int8_t* ip = inpbaseptr + \
                                         (((zi * Hi) + yi) * Wi + xi) * C0; \
-                                    __m256i inp32 = _mm256_cvtepu8_epi32(_mm_xor_si128( \
+                                    inp32 = _mm256_cvtepu8_epi32(_mm_xor_si128( \
                                         _mm_loadl_epi64((const __m128i*)ip), v_xor)); \
-                                    s##j = _mm256_add_epi32(s##j, \
-                                        _mm256_mullo_epi32(inp32, w32)); \
+                                } else { \
+                                    inp32 = inputIsU8 \
+                                        ? _mm256_set1_epi32(inp_zp) \
+                                        : _mm256_set1_epi32((int)(uint8_t)((uint8_t)inp_zp ^ 0x80u)); \
                                 } \
+                                s##j = _mm256_add_epi32(s##j, _mm256_mullo_epi32(inp32, w32)); \
                             }
                             DW_BORDER(0); DW_BORDER(1); DW_BORDER(2); DW_BORDER(3);
                             DW_BORDER(4); DW_BORDER(5); DW_BORDER(6); DW_BORDER(7);
@@ -1468,13 +1472,17 @@ static void convInt8BlockDepthwise(const void* inp_, const void* residual_,
                             int zi = zi_base + ofsZYX[i * 3];
                             int yi = yi_base + ofsZYX[i * 3 + 1];
                             int xi = xi_base + ofsZYX[i * 3 + 2];
+                            int ival;
                             if ((unsigned)zi >= (unsigned)Di ||
                                 (unsigned)yi >= (unsigned)Hi ||
-                                (unsigned)xi >= (unsigned)Wi)
-                                continue;
-                            const int8_t* ip = inpbaseptr + (((zi * Hi) + yi) * Wi + xi) * C0;
-                            int ival = inputIsU8 ? (int)(uint8_t)ip[c0]
+                                (unsigned)xi >= (unsigned)Wi) {
+                                ival = inputIsU8 ? inp_zp
+                                                 : (int)(uint8_t)((uint8_t)inp_zp ^ 0x80u);
+                            } else {
+                                const int8_t* ip = inpbaseptr + (((zi * Hi) + yi) * Wi + xi) * C0;
+                                ival = inputIsU8 ? (int)(uint8_t)ip[c0]
                                                  : (int)(uint8_t)((uint8_t)ip[c0] ^ 0x80u);
+                            }
                             acc += ival * (int)wbase_g[(size_t)i * C1Max * C0 * K0 + c0 * K0];
                         }
                     }
