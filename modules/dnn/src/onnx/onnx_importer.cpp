@@ -3344,6 +3344,11 @@ void ONNXImporter::parseQuantDequant(LayerParams& layerParams, const opencv_onnx
     else // Dequantize
         layerParams.set("depth", CV_32F);
 
+    // If scale is not defined as a constant blob, it is considered an external input.
+    if(constBlobs.find(node_proto.input(1)) == constBlobs.end()){
+        addLayer(layerParams, node_proto);
+        return;
+    }
 
     Mat scaleMat = getBlob(node_proto, 1);
     if(scaleMat.total() > 1) is1D = true;
