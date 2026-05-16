@@ -35,7 +35,10 @@ enum DictionaryType {
     DICT_APRILTAG_25h9,     ///< 5x5 bits, minimum hamming distance between any two codes = 9, 35 codes
     DICT_APRILTAG_36h10,    ///< 6x6 bits, minimum hamming distance between any two codes = 10, 2320 codes
     DICT_APRILTAG_36h11,     ///< 6x6 bits, minimum hamming distance between any two codes = 11, 587 codes
-    DICT_ARUCO_MIP_36h12     ///< 6x6 bits, minimum hamming distance between any two codes = 12, 250 codes
+    /** @brief 6x6 bits, minimum hamming distance between any two codes = 12, 250 codes.
+     * See @cite garrido2016generation for details.
+     */
+    DICT_ARUCO_MIP_36h12
 };
 
 //! @addtogroup objdetect_aruco
@@ -45,6 +48,8 @@ enum DictionaryType {
  *
  * All parameters have defaults that work well for standard printed markers under normal lighting.
  * Tune only when detection fails or produces false positives in your specific setup.
+ *
+ * The implementation is based on the ArUco Library @cite Aruco2014 @cite romero2018speeded @cite GARRIDOJURADO2026102690.
  */
 struct CV_EXPORTS_W_SIMPLE DetectorParameters {
 
@@ -253,7 +258,7 @@ CV_EXPORTS_W void getSolvePnpPoints(const Marker &marker, OutputArray objPoints,
 
 /** @brief Result of detecting a ChArUco2-style grid board.
  *
- * Follows the ChArUco2 design: every square carries an ArUco marker (standard markers on black
+ * Follows the ChArUco2 design @cite MuñozSalinas2026ChArUco2: every square carries an ArUco marker (standard markers on black
  * squares, inverted markers on white squares), yielding N×M markers on an N×M board and
  * (N+1)×(M+1) observable intersection corners including the board border.
  *
@@ -342,6 +347,7 @@ CV_EXPORTS_W void getSolvePnpPoints(const Board &board, OutputArray objPoints, O
 /** @brief A detected ChArUco2-style diamond marker.
  *
  * A diamond is a 2×2 block of ArUco markers (standard on black squares, inverted on white).
+ * Follows the ChArUco2 design @cite MuñozSalinas2026ChArUco2.
  * Its identity is the combination of the four constituent marker ids, accessible via `id`
  * (as a `Vec4i` convenience field) or individually through each `markers[i].id`.
  *
@@ -448,7 +454,7 @@ enum FractalType {
 
 /** @brief A detected fractal marker.
  *
- * Fractal markers are nested ArUco-like markers: an outer 6×6 marker contains one or more
+ * Fractal markers @cite romero2019fractal are nested ArUco-like markers: an outer 6×6 marker contains one or more
  * smaller markers at increasing scales.  The nesting provides many more image-to-3D
  * correspondences than a plain marker, improving pose accuracy and partial-occlusion
  * robustness.
