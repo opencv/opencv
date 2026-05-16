@@ -197,6 +197,8 @@ CV_EXPORTS_W std::vector<Marker> detectMarkers(InputArray image, DictionaryType 
  * Each marker candidate is tested against all dictionaries in `dicts`.  Once identified in one
  * dictionary it is removed from the candidate pool, so the same region is never matched twice.
  *
+ * The implementation is based on the ArUco Library @cite Aruco2014 @cite romero2018speeded @cite GARRIDOJURADO2026102690.
+ *
  * @sa Marker::dict
  */
 CV_EXPORTS_W std::vector<Marker> detectMarkers(InputArray image, const std::vector<DictionaryType> &dicts,
@@ -346,8 +348,8 @@ CV_EXPORTS_W void getSolvePnpPoints(const Board &board, OutputArray objPoints, O
 
 /** @brief A detected ChArUco2-style diamond marker.
  *
- * A diamond is a 2×2 block of ArUco markers (standard on black squares, inverted on white).
- * Follows the ChArUco2 design @cite MuñozSalinas2026ChArUco2.
+ * A diamond is a 2×2 block of ArUco markers (standard on black squares, inverted on white) follwing the ChArUco2 design @cite MuñozSalinas2026ChArUco2.
+ *
  * Its identity is the combination of the four constituent marker ids, accessible via `id`
  * (as a `Vec4i` convenience field) or individually through each `markers[i].id`.
  *
@@ -367,7 +369,7 @@ private:
 /** @brief Generate a ChArUco2-style diamond image ready for printing.
  *
  * A diamond is a 2×2 block of ArUco markers following the ChArUco2 design: standard markers
- * on black squares and inverted markers on white squares.  The four marker ids are arranged
+ * on black squares and inverted markers on white squares @cite MuñozSalinas2026ChArUco2.  The four marker ids are arranged
  * in clockwise order from the top-left, matching the `Diamond::id` field returned by
  * detectDiamonds().
  *
