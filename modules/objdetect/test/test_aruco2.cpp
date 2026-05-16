@@ -212,4 +212,126 @@ TEST(Objdetect_Aruco2, MultiDictionary) {
     EXPECT_TRUE(found2);
 }
 
+TEST(Objdetect_Aruco2, BoardGeneration) {
+    Size gridSize(4, 3);
+    DictionaryType dict = DICT_ARUCO_MIP_36h12;
+    Mat img;
+    generateBoardImage(img, gridSize, dict, 20);
+    
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(img.type(), CV_8UC1);
+    
+    // Each marker is 6x6 bits. 
+    // markerSizePix = 6 * 20 = 120
+    // border = 120 / 4 = 30
+    // imgWidth = 4 * 120 + 2 * 30 = 480 + 60 = 540
+    // imgHeight = 3 * 120 + 2 * 30 = 360 + 60 = 420
+    EXPECT_EQ(img.cols, 540);
+    EXPECT_EQ(img.rows, 420);
+}
+
+TEST(Objdetect_Aruco2, BoardDetection) {
+    Size gridSize(3, 2);
+    DictionaryType dict = DICT_ARUCO_MIP_36h12;
+    Mat boardImg;
+    generateBoardImage(boardImg, gridSize, dict, 20);
+    
+    Mat canvas(boardImg.rows + 100, boardImg.cols + 100, CV_8UC1, Scalar(255));
+    Rect roi(50, 50, boardImg.cols, boardImg.rows);
+    boardImg.copyTo(canvas(roi));
+    
+    Board board;
+    bool found = detectBoard(canvas, gridSize, dict, board);
+    
+    ASSERT_TRUE(found);
+    EXPECT_EQ(board.gridSize, gridSize);
+    EXPECT_EQ(board.dict, dict);
+    EXPECT_EQ(board.markers.size(), 6u);
+}
+
+TEST(Objdetect_Aruco2, BoardRotation) {
+    Size gridSize(3, 2);
+    DictionaryType dict = DICT_ARUCO_MIP_36h12;
+    Mat boardImg;
+    generateBoardImage(boardImg, gridSize, dict, 20);
+    
+    Mat canvas(800, 800, CV_8UC1, Scalar(255));
+    Rect roi((canvas.cols - boardImg.cols) / 2, (canvas.rows - boardImg.rows) / 2, boardImg.cols, boardImg.rows);
+    boardImg.copyTo(canvas(roi));
+    
+    Point2f center(canvas.cols / 2.0f, canvas.rows / 2.0f);
+    
+    for (double angle : {90.0, 180.0, 270.0}) {
+        Mat rot = getRotationMatrix2D(center, angle, 1.0);
+        Mat rotated;
+        warpAffine(canvas, rotated, rot, canvas.size(), INTER_LINEAR, BORDER_CONSTANT, Scalar(255));
+        
+        Board board;
+        bool found = detectBoard(rotated, gridSize, dict, board);
+        
+        ASSERT_TRUE(found) << "Failed for angle " << angle;
+        EXPECT_EQ(board.markers.size(), 6u) << "Failed for angle " << angle;
+    }
+}
+
+TEST(Objdetect_Aruco2, DiamondGeneration) {
+    DictionaryType dict = DICT_ARUCO_MIP_36h12;
+    Vec4i ids(1, 2, 3, 4);
+    Mat img;
+    generateDiamondImage(img, dict, ids, 20);
+    
+    ASSERT_FALSE(img.empty());
+    // Diamond is a 2x2 board.
+    // markerSizePix = 6 * 20 = 120
+    // border = 120 / 4 = 30
+    // imgSize = 2 * 120 + 2 * 30 = 240 + 60 = 300
+    EXPECT_EQ(img.cols, 300);
+    EXPECT_EQ(img.rows, 300);
+}
+
+TEST(Objdetect_Aruco2, DiamondDetection) {
+    DictionaryType dict = DICT_ARUCO_MIP_36h12;
+    Vec4i ids(5, 10, 15, 20);
+    Mat diamondImg;
+    generateDiamondImage(diamondImg, dict, ids, 20);
+    
+    Mat canvas(diamondImg.rows + 100, diamondImg.cols + 100, CV_8UC1, Scalar(255));
+    Rect roi(50, 50, diamondImg.cols, diamondImg.rows);
+    diamondImg.copyTo(canvas(roi));
+    
+    std::vector<Diamond> diamonds = detectDiamonds(canvas, dict);
+    
+    ASSERT_EQ(diamonds.size(), 1u);
+    EXPECT_EQ(diamonds[0].id, ids);
+    EXPECT_EQ(diamonds[0].dict, dict);
+    EXPECT_EQ(diamonds[0].markers.size(), 4u);
+}
+
+TEST(Objdetect_Aruco2, FractalGeneration) {
+    FractalType ftype = FRACTAL_2L_6;
+    Mat img;
+    generateFractalImage(img, ftype, 20);
+    
+    ASSERT_FALSE(img.empty());
+    // Fractal size depends on nesting, let's just check it's non-empty and square.
+    EXPECT_EQ(img.cols, img.rows);
+    EXPECT_GT(img.cols, 0);
+}
+
+TEST(Objdetect_Aruco2, FractalDetection) {
+    FractalType ftype = FRACTAL_2L_6;
+    Mat fractalImg;
+    generateFractalImage(fractalImg, ftype, 40); // Larger for better detection
+    
+    Mat canvas(fractalImg.rows + 100, fractalImg.cols + 100, CV_8UC1, Scalar(255));
+    Rect roi(50, 50, fractalImg.cols, fractalImg.rows);
+    fractalImg.copyTo(canvas(roi));
+    
+    std::vector<FractalMarker> fractals = detectFractals(canvas, ftype);
+    
+    ASSERT_EQ(fractals.size(), 1u);
+    EXPECT_EQ(fractals[0].type, ftype);
+}
+
+
 }} // namespace
