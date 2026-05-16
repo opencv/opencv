@@ -25,3 +25,5 @@ build
 node_modules
 CMakeSettings.json
 xcuserdata/
+build_base
+build_rvv

@@ -10,6 +10,10 @@
 #include <algorithm> // std::swap_ranges
 #include <numeric> // std::accumulate
 
+#if defined(__riscv_vector)
+#include <riscv_vector.h>
+#endif // __riscv_vector
+
 namespace cv {
 
 ////////////////////////////////////// transpose /////////////////////////////////////////
@@ -593,9 +597,57 @@ void transposeND(InputArray src_, const std::vector<int>& order, OutputArray dst
 
     size_t src_offset = 0;
     size_t es = out.elemSize();
+
+#if defined(__riscv_vector)
+    #define TRANSPOSEND_RVV_MEMCPY(EBIT, MTYPE, VLOAD, VSTORE, VSETVL)  \
+    {                                                                   \
+        size_t total_elems = continuous_size;                           \
+        const MTYPE* s_ = (const MTYPE*)(src + es * src_offset);        \
+        MTYPE* d_ = (MTYPE*)dst;                                        \
+        size_t rem_ = total_elems;                                      \
+        while (rem_ > 0) {                                              \
+            size_t vl_ = VSETVL(rem_);                                  \
+            auto vd_ = VLOAD(s_, vl_);                                  \
+            VSTORE(d_, vd_, vl_);                                       \
+            s_ += vl_;                                                  \
+            d_ += vl_;                                                  \
+            rem_ -= vl_;                                                \
+        }                                                               \
+    }
+#endif
+
     for (size_t i = 0; i < outer_size; ++i)
     {
+#if defined(__riscv_vector)
+        switch (es)
+        {
+            case 1:
+                TRANSPOSEND_RVV_MEMCPY(8,  uint8_t,
+                    __riscv_vle8_v_u8m8, __riscv_vse8_v_u8m8,
+                    __riscv_vsetvl_e8m8)
+                break;
+            case 2:
+                TRANSPOSEND_RVV_MEMCPY(16, uint16_t,
+                    __riscv_vle16_v_u16m8, __riscv_vse16_v_u16m8,
+                    __riscv_vsetvl_e16m8)
+                break;
+            case 4:
+                TRANSPOSEND_RVV_MEMCPY(32, uint32_t,
+                    __riscv_vle32_v_u32m8, __riscv_vse32_v_u32m8,
+                    __riscv_vsetvl_e32m8)
+                break;
+            case 8:
+                TRANSPOSEND_RVV_MEMCPY(64, uint64_t,
+                    __riscv_vle64_v_u64m8, __riscv_vse64_v_u64m8,
+                    __riscv_vsetvl_e64m8)
+                break;
+            default:
+                std::memcpy(dst, src + es * src_offset, es * continuous_size);
+                break;
+        }
+#else
         std::memcpy(dst, src + es * src_offset, es * continuous_size);
+#endif
         dst += es * continuous_size;
         for (int j = continuous_idx - 1; j >= 0; --j)
         {
@@ -607,6 +659,11 @@ void transposeND(InputArray src_, const std::vector<int>& order, OutputArray dst
             src_offset -= steps[j] * out.size[j];
         }
     }
+
+#if defined(__riscv_vector)
+    #undef TRANSPOSEND_RVV_MEMCPY
+#endif
+
 }
 
 
