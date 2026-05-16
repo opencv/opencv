@@ -22,6 +22,71 @@ CV__DNN_INLINE_NS_BEGIN
 
 extern bool DNN_DIAGNOSTICS_RUN;
 
+static bool isValidPerm(const std::vector<int>& perm, int rank)
+{
+    if (rank <= 0 || perm.size() != static_cast<size_t>(rank))
+        return false;
+
+    std::vector<bool> used(rank, false);
+    for (size_t i = 0; i < perm.size(); ++i)
+    {
+        if (perm[i] < 0 || perm[i] >= rank || used[perm[i]])
+            return false;
+        used[perm[i]] = true;
+    }
+    return true;
+}
+
+static bool getPermAttr(opencv_onnx::NodeProto* node, std::vector<int>& perm, bool& hasPerm)
+{
+    CV_Assert(node);
+
+    hasPerm = false;
+    for (int i = 0; i < node->attribute_size(); ++i)
+    {
+        opencv_onnx::AttributeProto attr = node->attribute(i);
+        // ONNX Transpose uses "perm"; OpenCV internal Permute layer uses "order" after import.
+        if (attr.name() != "perm")
+            continue;
+
+        hasPerm = true;
+        perm.clear();
+        for (int j = 0; j < attr.ints_size(); ++j)
+        {
+            int64_t axis = attr.ints(j);
+            if (axis < std::numeric_limits<int>::min() || axis > std::numeric_limits<int>::max())
+                return false;
+            perm.push_back(static_cast<int>(axis));
+        }
+        return true;
+    }
+
+    perm.clear();
+    return true;
+}
+
+static void getDefaultPerm(int rank, std::vector<int>& perm)
+{
+    perm.resize(rank);
+    // ONNX Transpose without "perm" reverses all dimensions.
+    for (int i = 0; i < rank; ++i)
+        perm[i] = rank - 1 - i;
+}
+
+static bool isIdentityPerm(const std::vector<int>& p2, const std::vector<int>& p1)
+{
+    if (p1.size() != p2.size())
+        return false;
+
+    for (size_t i = 0; i < p2.size(); ++i)
+    {
+        // For ONNX Transpose, p1 followed by p2 composes as p1[p2[i]].
+        if (p2[i] < 0 || p2[i] >= static_cast<int>(p1.size()) || p1[p2[i]] != static_cast<int>(i))
+            return false;
+    }
+    return true;
+}
+
 // This wrapper can behave differently for fake input nodes and real graph nodes.
 class ONNXNodeWrapper : public ImportNodeWrapper
 {
@@ -161,6 +226,34 @@ public:
             return net.initializer(nodeId - numInputs).name();
         else
             return net.node(nodeId - numInputs - numInitializers).output(outId);
+    }
+
+    bool hasSingleConsumer(const std::string& name) const
+    {
+        int count = 0;
+        for (int i = 0; i < net.node_size(); ++i)
+        {
+            const opencv_onnx::NodeProto& node = net.node(i);
+            for (int j = 0; j < node.input_size(); ++j)
+            {
+                if (node.input(j) == name)
+                {
+                    if (++count > 1)
+                        return false;
+                }
+            }
+        }
+        return count == 1;
+    }
+
+    bool isGraphOutput(const std::string& name) const
+    {
+        for (int i = 0; i < net.output_size(); ++i)
+        {
+            if (net.output(i).name() == name)
+                return true;
+        }
+        return false;
     }
 
     virtual void removeNode(int idx) CV_OVERRIDE
@@ -1754,6 +1847,72 @@ public:
     }
 };
 
+class ConsecutiveTransposePairsSubgraph : public Subgraph
+{
+public:
+    ConsecutiveTransposePairsSubgraph()
+    {
+        input = addNodeToMatch("");
+        transpose1 = addNodeToMatch("Transpose", input);
+        transpose2 = addNodeToMatch("Transpose", transpose1);
+        setFusedNode("Identity", input);
+    }
+
+    virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
+                       std::vector<int>& matchedNodesIds) CV_OVERRIDE
+    {
+        if (!Subgraph::match(net, nodeId, matchedNodesIds))
+            return false;
+
+        Ptr<ONNXGraphWrapper> onnxNet = net.dynamicCast<ONNXGraphWrapper>();
+        if (!onnxNet)
+            return false;
+
+        Ptr<ONNXNodeWrapper> nodeWrapper1 = net->getNode(matchedNodesIds[transpose1]).dynamicCast<ONNXNodeWrapper>();
+        Ptr<ONNXNodeWrapper> nodeWrapper2 = net->getNode(matchedNodesIds[transpose2]).dynamicCast<ONNXNodeWrapper>();
+        if (!nodeWrapper1 || !nodeWrapper1->node || !nodeWrapper2 || !nodeWrapper2->node)
+            return false;
+
+        if (nodeWrapper1->node->output_size() != 1 || nodeWrapper2->node->output_size() != 1)
+            return false;
+        const std::string& intermediate = nodeWrapper1->node->output(0);
+        if (!onnxNet->hasSingleConsumer(intermediate) || onnxNet->isGraphOutput(intermediate))
+            return false;
+
+        std::vector<int> perm1, perm2;
+        bool hasPerm1, hasPerm2;
+        if (!getPermAttr(nodeWrapper1->node, perm1, hasPerm1) ||
+            !getPermAttr(nodeWrapper2->node, perm2, hasPerm2))
+            return false;
+
+        int inputRank = -1;
+        if (hasPerm1 && hasPerm2)
+        {
+            if (perm1.size() != perm2.size())
+                return false;
+            inputRank = static_cast<int>(perm1.size());
+        }
+        else
+        {
+            inputRank = onnxNet->getTensorShapeSize(matchedNodesIds[transpose1], 0);
+            if (inputRank <= 0)
+                return false;
+            if (!hasPerm1)
+                getDefaultPerm(inputRank, perm1);
+            if (!hasPerm2)
+                getDefaultPerm(inputRank, perm2);
+        }
+
+        if (!isValidPerm(perm1, inputRank) || !isValidPerm(perm2, inputRank))
+            return false;
+
+        return isIdentityPerm(perm2, perm1);
+    }
+
+protected:
+    int input, transpose1, transpose2;
+};
+
 void simplifySubgraphs(opencv_onnx::GraphProto& net, const std::string& basePath)
 {
     std::vector<Ptr<Subgraph> > subgraphs;
@@ -1790,6 +1949,8 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net, const std::string& basePath
         subgraphs.push_back(makePtr<AttentionSubGraph>());
         subgraphs.push_back(makePtr<AttentionSingleHeadSubGraph>());
     }
+    // Cleanup pass: remove identity-equivalent consecutive Transpose nodes after larger fusions.
+    subgraphs.push_back(makePtr<ConsecutiveTransposePairsSubgraph>());
 
     simplifySubgraphs(Ptr<ImportGraphWrapper>(new ONNXGraphWrapper(net, basePath)), subgraphs);
 }

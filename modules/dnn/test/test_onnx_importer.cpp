@@ -3517,6 +3517,70 @@ TEST_P(Test_ONNX_layers, ClipDivSharedConstant) {
     testONNXModels("clip_div_shared_constant");
 }
 
+static Mat makeConsecutiveTransposeInput()
+{
+    int inputShape[] = {1, 3, 4, 4};
+    Mat input(4, inputShape, CV_32F);
+    float* data = input.ptr<float>();
+    for (size_t i = 0; i < input.total(); ++i)
+        data[i] = static_cast<float>(i);
+    return input;
+}
+
+static void testConsecutiveTransposeModel(const String& basename,
+                                          int backendId, int targetId,
+                                          int expectedTransposeLayers,
+                                          const Mat& input, const Mat& ref)
+{
+    Net net = readNetFromONNX(_tf("models/" + basename + ".onnx"));
+    ASSERT_FALSE(net.empty());
+    int numTransposeLayers = net.getLayersCount("Permute") + net.getLayersCount("Transpose");
+    if (expectedTransposeLayers >= 0)
+        EXPECT_EQ(numTransposeLayers, expectedTransposeLayers);
+    else
+        // Non-identity transpose pairs must not be eliminated completely.
+        // They may still be fused into a single equivalent Transpose later.
+        EXPECT_GT(numTransposeLayers, 0);
+
+    if (net.getMainGraph())
+        net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    else
+    {
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
+    }
+
+    net.setInput(input);
+    Mat output = net.forward();
+
+    EXPECT_EQ(shape(output), shape(ref));
+    EXPECT_LT(cv::norm(output, ref, NORM_INF), 1e-5);
+}
+
+TEST_P(Test_ONNX_layers, ConsecutiveTransposeIdentity)
+{
+    Mat input = makeConsecutiveTransposeInput();
+
+    testConsecutiveTransposeModel("transpose_identity", backend, target, 0, input, input);
+}
+
+TEST_P(Test_ONNX_layers, ConsecutiveTransposeDefaultPerm)
+{
+    Mat input = makeConsecutiveTransposeInput();
+
+    testConsecutiveTransposeModel("transpose_default_perm", backend, target, 0, input, input);
+}
+
+TEST_P(Test_ONNX_layers, ConsecutiveTransposeNonIdentity)
+{
+    Mat input = makeConsecutiveTransposeInput();
+    Mat ref1, ref;
+    cv::transposeND(input, std::vector<int>{0, 2, 3, 1}, ref1);
+    cv::transposeND(ref1, std::vector<int>{0, 1, 3, 2}, ref);
+
+    testConsecutiveTransposeModel("transpose_non_identity", backend, target, -1, input, ref);
+}
+
 TEST_P(Test_ONNX_layers, TopK) {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
         backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ||

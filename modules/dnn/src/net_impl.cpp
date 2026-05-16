@@ -2999,6 +2999,20 @@ void Net::Impl::getLayerTypes(std::vector<String>& layersTypes) const
 // TODO drop?
 int Net::Impl::getLayersCount(const String& layerType) const
 {
+    if (mainGraph) {
+        int count = 0;
+        for (const Ptr<Graph>& g: allgraphs) {
+            const std::vector<Ptr<Layer> >& prog = g->prog();
+            for (const Ptr<Layer>& layer: prog) {
+                if (!layer)
+                    continue;
+                if (layer->type == layerType)
+                    count++;
+            }
+        }
+        return count;
+    }
+
     int count = 0;
     for (Impl::MapIdToLayerData::const_iterator it = layers.begin();
             it != layers.end(); it++)
