@@ -141,4 +141,34 @@ bool pyopencv_to(PyObject* obj, Ptr<cv::IStreamReader>& p, const ArgInfo&)
     return false;
 }
 
+static PyObject* pycvVideoEnter(PyObject* self, PyObject* /*args*/, PyObject* /*kw*/) {
+    Py_INCREF(self);
+    return self;
+}
+
+static PyObject* pycvVideoCaptureExit(PyObject* self, PyObject* /*args*/, PyObject* /*kw*/) {
+    Ptr<cv::VideoCapture>* obj_getp = nullptr;
+    if (pyopencv_VideoCapture_getp(self, obj_getp) && obj_getp && *obj_getp) {
+        (*obj_getp)->release();
+    }
+    Py_RETURN_NONE;
+}
+
+static PyObject* pycvVideoWriterExit(PyObject* self, PyObject* /*args*/, PyObject* /*kw*/) {
+    Ptr<cv::VideoWriter>* obj_getp = nullptr;
+    if (pyopencv_VideoWriter_getp(self, obj_getp) && obj_getp && *obj_getp) {
+        (*obj_getp)->release();
+    }
+    Py_RETURN_NONE;
+}
+
+#define PYOPENCV_EXTRA_METHODS_VideoCapture \
+    {"__enter__", CV_PY_FN_WITH_KW(pycvVideoEnter), "Context manager enter"}, \
+    {"__exit__",  CV_PY_FN_WITH_KW(pycvVideoCaptureExit), "Context manager exit"},
+
+#define PYOPENCV_EXTRA_METHODS_VideoWriter \
+    {"__enter__", CV_PY_FN_WITH_KW(pycvVideoEnter), "Context manager enter"}, \
+    {"__exit__",  CV_PY_FN_WITH_KW(pycvVideoWriterExit), "Context manager exit"},
+
+
 #endif // HAVE_OPENCV_VIDEOIO
