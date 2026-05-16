@@ -162,7 +162,7 @@ struct CV_EXPORTS_W_SIMPLE Marker {
  * cv::imwrite("marker_42.png", markerImg);
  * @endcode
  */
-CV_WRAP void generateMarkerImage(OutputArray img,const DictionaryType &dictionary, int id, unsigned int bitSize=20,bool externalBorder=true);
+CV_EXPORTS_W void generateMarkerImage(OutputArray img,const DictionaryType &dictionary, int id, unsigned int bitSize=20,bool externalBorder=true);
 
 
 /** @brief Detect ArUco markers in an image using a single dictionary.
@@ -179,7 +179,7 @@ CV_WRAP void generateMarkerImage(OutputArray img,const DictionaryType &dictionar
  * undistort the image first with the known camera model.
  * @sa undistort, detectMarkers(InputArray, const std::vector<DictionaryType>&, const DetectorParameters&)
  */
-CV_WRAP std::vector<Marker> detectMarkers(InputArray image, DictionaryType dict = DICT_ARUCO_MIP_36h12,
+CV_EXPORTS_W std::vector<Marker> detectMarkers(InputArray image, DictionaryType dict = DICT_ARUCO_MIP_36h12,
                                           const DetectorParameters &detectorParams = {});
 
 /** @brief Detect ArUco markers in an image searching across multiple dictionaries in one pass.
@@ -194,7 +194,7 @@ CV_WRAP std::vector<Marker> detectMarkers(InputArray image, DictionaryType dict 
  *
  * @sa Marker::dict
  */
-CV_WRAP std::vector<Marker> detectMarkers(InputArray image, const std::vector<DictionaryType> &dicts,
+CV_EXPORTS_W std::vector<Marker> detectMarkers(InputArray image, const std::vector<DictionaryType> &dicts,
                                           const DetectorParameters &detectorParams = {});
 
 
@@ -211,7 +211,7 @@ CV_WRAP std::vector<Marker> detectMarkers(InputArray image, const std::vector<Di
  *
  * Useful for visualisation and debugging.
  */
-CV_WRAP void drawDetected(InputOutputArray image, const std::vector<Marker> &markers,
+CV_EXPORTS_W void drawDetected(InputOutputArray image, const std::vector<Marker> &markers,
                                  Scalar borderColor = Scalar(0, 255, 0));
 
 
@@ -227,7 +227,7 @@ CV_WRAP void drawDetected(InputOutputArray image, const std::vector<Marker> &mar
  * @param tvec          translation vector (from solvePnP)
  * @param length        axis length in the same unit as @p tvec (e.g. metres)
  */
-CV_WRAP void drawAxis(InputOutputArray image, InputArray cameraMatrix, InputArray distCoeffs,
+CV_EXPORTS_W void drawAxis(InputOutputArray image, InputArray cameraMatrix, InputArray distCoeffs,
                       InputArray rvec, InputArray tvec, float length);
 
 
@@ -248,7 +248,7 @@ CV_WRAP void drawAxis(InputOutputArray image, InputArray cameraMatrix, InputArra
  * cv::solvePnP(objPts, imgPts, cameraMatrix, distCoeffs, rvec, tvec);
  * @endcode
  */
-CV_WRAP void getSolvePnpPoints(const Marker &marker, OutputArray objPoints, OutputArray imgPoints, float markerSize = 1.f);
+CV_EXPORTS_W void getSolvePnpPoints(const Marker &marker, OutputArray objPoints, OutputArray imgPoints, float markerSize = 1.f);
 
 
 /** @brief Result of detecting a ChArUco2-style grid board.
@@ -286,7 +286,7 @@ private:
  * Markers are laid out in row-major order with no gap between them.
  * Pass the same `boardSize`, `dict`, and `ids` to detectBoard() for detection.
  */
-CV_WRAP void generateBoardImage(OutputArray img, Size boardSize, DictionaryType dict,
+CV_EXPORTS_W void generateBoardImage(OutputArray img, Size boardSize, DictionaryType dict,
                                 int bitSize = 25, std::vector<int> ids = {});
 
 
@@ -305,7 +305,7 @@ CV_WRAP void generateBoardImage(OutputArray img, Size boardSize, DictionaryType 
  * found, board = cv.aruco2.detectBoard(image, (4, 3), cv.aruco2.DICT_6X6_250)
  * @endcode
  */
-CV_WRAP bool detectBoard(InputArray image, cv::Size gridSize, DictionaryType dict,
+CV_EXPORTS_W bool detectBoard(InputArray image, cv::Size gridSize, DictionaryType dict,
                          CV_OUT Board &board,  std::vector<int> ids = {});
 
 /** @brief Draw detected board corners and optionally marker ids onto an image.
@@ -318,7 +318,7 @@ CV_WRAP bool detectBoard(InputArray image, cv::Size gridSize, DictionaryType dic
  * For each detected board corner a filled circle is drawn together with its global corner id.
  * Useful for verifying that the board detection and corner assignment are correct.
  */
-CV_WRAP void drawDetected(InputOutputArray image, const Board &board,
+CV_EXPORTS_W void drawDetected(InputOutputArray image, const Board &board,
                                Scalar color = Scalar(0, 255, 0),bool drawMarkerIds=false);
 
 
@@ -337,7 +337,7 @@ CV_WRAP void drawDetected(InputOutputArray image, const Board &board,
  *
  * @sa getSolvePnpPoints(const Marker, OutputArray, OutputArray)
  */
-CV_WRAP void getSolvePnpPoints(const Board &board, OutputArray objPoints, OutputArray imgPoints, float markerSize = 1.f);
+CV_EXPORTS_W void getSolvePnpPoints(const Board &board, OutputArray objPoints, OutputArray imgPoints, float markerSize = 1.f);
 
 /** @brief A detected ChArUco2-style diamond marker.
  *
@@ -378,7 +378,7 @@ private:
  *
  * Pass the same `dictionary` and `ids` to detectDiamonds() for detection.
  */
-CV_WRAP void generateDiamondImage(OutputArray img,const DictionaryType &dictionary, const cv::Vec4i &ids,
+CV_EXPORTS_W void generateDiamondImage(OutputArray img,const DictionaryType &dictionary, const cv::Vec4i &ids,
                                   int bitSize=20);
 
 /** @brief Detect ChArUco2-style diamond markers in an image.
@@ -391,7 +391,7 @@ CV_WRAP void generateDiamondImage(OutputArray img,const DictionaryType &dictiona
  * @param dict         dictionary used to print the diamond markers
  * @return             vector of detected Diamond objects; empty if none found
  */
-CV_WRAP std::vector<Diamond> detectDiamonds(InputArray image, DictionaryType dict);
+CV_EXPORTS_W std::vector<Diamond> detectDiamonds(InputArray image, DictionaryType dict);
 
 /** @brief Draw detected diamond outlines and optionally constituent marker ids onto an image.
  *
@@ -405,7 +405,7 @@ CV_WRAP std::vector<Diamond> detectDiamonds(InputArray image, DictionaryType dic
  * - a small filled square at each of the 9 grid corners
  * - the Vec4i diamond id as text at the diamond centroid
  */
-CV_WRAP void drawDetected(InputOutputArray image, const std::vector<Diamond> &diamonds,
+CV_EXPORTS_W void drawDetected(InputOutputArray image, const std::vector<Diamond> &diamonds,
                                Scalar color = Scalar(0, 255, 0),bool drawMarkerIds=false);
 
 
@@ -425,7 +425,7 @@ CV_WRAP void drawDetected(InputOutputArray image, const std::vector<Diamond> &di
  * @sa getSolvePnpPoints(const Marker, OutputArray, OutputArray),
  *     getSolvePnpPoints(const Board, OutputArray, OutputArray)
  */
-CV_WRAP void getSolvePnpPoints(const Diamond &diamond, OutputArray objPoints, OutputArray imgPoints, float markerSize = 1.f);
+CV_EXPORTS_W void getSolvePnpPoints(const Diamond &diamond, OutputArray objPoints, OutputArray imgPoints, float markerSize = 1.f);
 
 
 /** @brief Fractal marker type — selects the nested-marker configuration.
@@ -479,7 +479,7 @@ private:
  * @param ftype    fractal configuration (FRACTAL_2L_6 … FRACTAL_5L_6)
  * @param bitSize  side length of one bit cell in pixels (default 20)
  */
-CV_WRAP void generateFractalImage(OutputArray img, const FractalType &ftype, int bitSize=20);
+CV_EXPORTS_W void generateFractalImage(OutputArray img, const FractalType &ftype, int bitSize=20);
 
 /** @brief Detect fractal markers in an image.
  *
@@ -491,7 +491,7 @@ CV_WRAP void generateFractalImage(OutputArray img, const FractalType &ftype, int
  * @param ftype  fractal configuration to search for
  * @return vector of detected fractal markers; empty if none found
  */
-CV_WRAP std::vector<FractalMarker> detectFractals(InputArray image, FractalType ftype);
+CV_EXPORTS_W std::vector<FractalMarker> detectFractals(InputArray image, FractalType ftype);
 
 /** @brief Draw detected fractal markers on an image.
  *
@@ -504,7 +504,7 @@ CV_WRAP std::vector<FractalMarker> detectFractals(InputArray image, FractalType 
  * @param drawAllImagePoints  if true, draw a small circle at every matched image point
  *                         stored inside each FractalMarker (default true)
  */
-CV_WRAP void drawDetected(InputOutputArray image, const std::vector<FractalMarker> &fractals,
+CV_EXPORTS_W void drawDetected(InputOutputArray image, const std::vector<FractalMarker> &fractals,
                                   Scalar color = Scalar(0, 255, 0), bool drawAllImagePoints = true);
 
 /** @brief Extract solvePnP inputs for a detected fractal marker.
@@ -527,7 +527,7 @@ CV_WRAP void drawDetected(InputOutputArray image, const std::vector<FractalMarke
  *     getSolvePnpPoints(const Board &, OutputArray, OutputArray, float),
  *     getSolvePnpPoints(const Diamond &, OutputArray, OutputArray, float)
  */
-CV_WRAP void getSolvePnpPoints(const FractalMarker &fractal, OutputArray objPoints,
+CV_EXPORTS_W void getSolvePnpPoints(const FractalMarker &fractal, OutputArray objPoints,
                                OutputArray imgPoints, float markerSize = 1.f);
 
 //! @}
