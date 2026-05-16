@@ -307,6 +307,64 @@ TEST(Objdetect_Aruco2, DiamondDetection) {
     EXPECT_EQ(diamonds[0].markers.size(), 4u);
 }
 
+TEST(Objdetect_Aruco2, DiamondRotation) {
+    DictionaryType dict = DICT_ARUCO_MIP_36h12;
+    Vec4i ids(1, 2, 3, 4);
+    Mat diamondImg;
+    generateDiamondImage(diamondImg, dict, ids, 20);
+    
+    Mat canvas(800, 800, CV_8UC1, Scalar(255));
+    Rect roi((canvas.cols - diamondImg.cols) / 2, (canvas.rows - diamondImg.rows) / 2, diamondImg.cols, diamondImg.rows);
+    diamondImg.copyTo(canvas(roi));
+    
+    Point2f center(canvas.cols / 2.0f, canvas.rows / 2.0f);
+    
+    for (double angle : {90.0, 180.0, 270.0}) {
+        Mat rot = getRotationMatrix2D(center, angle, 1.0);
+        Mat rotated;
+        warpAffine(canvas, rotated, rot, canvas.size(), INTER_LINEAR, BORDER_CONSTANT, Scalar(255));
+        
+        std::vector<Diamond> diamonds = detectDiamonds(rotated, dict);
+        
+        ASSERT_EQ(diamonds.size(), 1u) << "Failed for angle " << angle;
+        // Diamond ID is Vec4i of the 4 constituent markers.
+        // The detector should return them in consistent order regardless of rotation.
+        EXPECT_EQ(diamonds[0].id, ids) << "Failed for angle " << angle;
+    }
+}
+
+TEST(Objdetect_Aruco2, DiamondPerspective) {
+    DictionaryType dict = DICT_ARUCO_MIP_36h12;
+    Vec4i ids(10, 20, 30, 40);
+    Mat diamondImg;
+    generateDiamondImage(diamondImg, dict, ids, 20);
+    
+    Size imgSize(800, 800);
+    Mat canvas(imgSize, CV_8UC1, Scalar(255));
+    
+    std::vector<Point2f> srcPoints = {
+        Point2f(0, 0),
+        Point2f((float)diamondImg.cols, 0),
+        Point2f((float)diamondImg.cols, (float)diamondImg.rows),
+        Point2f(0, (float)diamondImg.rows)
+    };
+    
+    std::vector<Point2f> dstPoints = {
+        Point2f(200, 200),
+        Point2f(600, 250),
+        Point2f(550, 650),
+        Point2f(150, 600)
+    };
+    
+    Mat M = getPerspectiveTransform(srcPoints, dstPoints);
+    warpPerspective(diamondImg, canvas, M, imgSize, INTER_LINEAR, BORDER_TRANSPARENT);
+    
+    std::vector<Diamond> diamonds = detectDiamonds(canvas, dict);
+    
+    ASSERT_EQ(diamonds.size(), 1u);
+    EXPECT_EQ(diamonds[0].id, ids);
+}
+
 TEST(Objdetect_Aruco2, FractalGeneration) {
     FractalType ftype = FRACTAL_2L_6;
     Mat img;
@@ -331,6 +389,63 @@ TEST(Objdetect_Aruco2, FractalDetection) {
     
     ASSERT_EQ(fractals.size(), 1u);
     EXPECT_EQ(fractals[0].type, ftype);
+}
+
+TEST(Objdetect_Aruco2, FractalRotation) {
+    FractalType ftype = FRACTAL_2L_6;
+    Mat fractalImg;
+    generateFractalImage(fractalImg, ftype, 20); // Smaller bitSize (20 instead of 40)
+    
+    Mat canvas(1200, 1200, CV_8UC1, Scalar(255)); // Larger canvas
+    int posX = (canvas.cols - fractalImg.cols) / 2;
+    int posY = (canvas.rows - fractalImg.rows) / 2;
+    // Ensure the marker fits in the canvas
+    ASSERT_GT(posX, 0);
+    ASSERT_GT(posY, 0);
+    Rect roi(posX, posY, fractalImg.cols, fractalImg.rows);
+    fractalImg.copyTo(canvas(roi));
+    
+    Point2f center(canvas.cols / 2.0f, canvas.rows / 2.0f);
+    
+    for (double angle : {90.0, 180.0, 270.0}) {
+        Mat rot = getRotationMatrix2D(center, angle, 1.0);
+        Mat rotated;
+        warpAffine(canvas, rotated, rot, canvas.size(), INTER_LINEAR, BORDER_CONSTANT, Scalar(255));
+        
+        std::vector<FractalMarker> fractals = detectFractals(rotated, ftype);
+        
+        ASSERT_EQ(fractals.size(), 1u) << "Failed for angle " << angle;
+    }
+}
+
+TEST(Objdetect_Aruco2, FractalPerspective) {
+    FractalType ftype = FRACTAL_3L_6; // Use more levels for perspective robustness check
+    Mat fractalImg;
+    generateFractalImage(fractalImg, ftype, 40);
+    
+    Size imgSize(800, 800);
+    Mat canvas(imgSize, CV_8UC1, Scalar(255));
+    
+    std::vector<Point2f> srcPoints = {
+        Point2f(0, 0),
+        Point2f((float)fractalImg.cols, 0),
+        Point2f((float)fractalImg.cols, (float)fractalImg.rows),
+        Point2f(0, (float)fractalImg.rows)
+    };
+    
+    std::vector<Point2f> dstPoints = {
+        Point2f(200, 200),
+        Point2f(600, 250),
+        Point2f(550, 650),
+        Point2f(150, 600)
+    };
+    
+    Mat M = getPerspectiveTransform(srcPoints, dstPoints);
+    warpPerspective(fractalImg, canvas, M, imgSize, INTER_LINEAR, BORDER_TRANSPARENT);
+    
+    std::vector<FractalMarker> fractals = detectFractals(canvas, ftype);
+    
+    ASSERT_EQ(fractals.size(), 1u);
 }
 
 
