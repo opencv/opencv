@@ -48,6 +48,20 @@ TEST(Objdetect_Aruco2, SimpleDetection) {
     ASSERT_EQ(markers.size(), 1u);
     EXPECT_EQ(markers[0].id, id);
     EXPECT_EQ(markers[0].dict, dict);
+
+    // Test getSolvePnpPoints
+    Mat objPoints, imgPoints;
+    getSolvePnpPoints(markers[0], objPoints, imgPoints, 0.1f);
+    ASSERT_EQ(objPoints.total(), 4u);
+    ASSERT_EQ(imgPoints.total(), 4u);
+    ASSERT_EQ(objPoints.type(), CV_32FC3);
+    ASSERT_EQ(imgPoints.type(), CV_32FC2);
+    
+    // Check that imgPoints match corners
+    for(int i=0; i<4; i++) {
+        EXPECT_NEAR(imgPoints.at<Vec2f>(i)[0], markers[0].corners[i].x, 1e-5);
+        EXPECT_NEAR(imgPoints.at<Vec2f>(i)[1], markers[0].corners[i].y, 1e-5);
+    }
     
     // Check corners
     // Top-left should be (roi.x, roi.y)
@@ -247,6 +261,15 @@ TEST(Objdetect_Aruco2, BoardDetection) {
     EXPECT_EQ(board.gridSize, gridSize);
     EXPECT_EQ(board.dict, dict);
     EXPECT_EQ(board.markers.size(), 6u);
+
+    // Test getSolvePnpPoints
+    Mat objPoints, imgPoints;
+    getSolvePnpPoints(board, objPoints, imgPoints, 0.05f);
+    // 3x2 board has (3+1)x(2+1) = 12 intersection corners
+    ASSERT_EQ(objPoints.total(), 12u);
+    ASSERT_EQ(imgPoints.total(), 12u);
+    ASSERT_EQ(objPoints.type(), CV_32FC3);
+    ASSERT_EQ(imgPoints.type(), CV_32FC2);
 }
 
 TEST(Objdetect_Aruco2, BoardRotation) {
@@ -305,6 +328,15 @@ TEST(Objdetect_Aruco2, DiamondDetection) {
     EXPECT_EQ(diamonds[0].id, ids);
     EXPECT_EQ(diamonds[0].dict, dict);
     EXPECT_EQ(diamonds[0].markers.size(), 4u);
+
+    // Test getSolvePnpPoints
+    Mat objPoints, imgPoints;
+    getSolvePnpPoints(diamonds[0], objPoints, imgPoints, 0.1f);
+    // Diamond returns a 3x3 grid of 9 points
+    ASSERT_EQ(objPoints.total(), 9u);
+    ASSERT_EQ(imgPoints.total(), 9u);
+    ASSERT_EQ(objPoints.type(), CV_32FC3);
+    ASSERT_EQ(imgPoints.type(), CV_32FC2);
 }
 
 TEST(Objdetect_Aruco2, DiamondRotation) {
@@ -389,6 +421,15 @@ TEST(Objdetect_Aruco2, FractalDetection) {
     
     ASSERT_EQ(fractals.size(), 1u);
     EXPECT_EQ(fractals[0].type, ftype);
+
+    // Test getSolvePnpPoints
+    Mat objPoints, imgPoints;
+    getSolvePnpPoints(fractals[0], objPoints, imgPoints, 0.2f);
+    // Fractal marker should have at least the 4 outer corners, and likely more inner ones.
+    ASSERT_GE(objPoints.total(), 4u);
+    ASSERT_EQ(objPoints.total(), imgPoints.total());
+    ASSERT_EQ(objPoints.type(), CV_32FC3);
+    ASSERT_EQ(imgPoints.type(), CV_32FC2);
 }
 
 TEST(Objdetect_Aruco2, FractalRotation) {
