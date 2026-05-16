@@ -27,3 +27,4 @@ CMakeSettings.json
 xcuserdata/
 build_base
 build_rvv
+opencv_extra
