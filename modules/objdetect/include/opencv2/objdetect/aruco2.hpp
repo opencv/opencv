@@ -7,6 +7,9 @@
 namespace cv {
 namespace aruco2 {
 
+//! @addtogroup objdetect_aruco2
+//! @{
+
 /** @brief Predefined markers dictionaries/sets
  *
  * Each dictionary indicates the number of bits and the number of markers contained
@@ -31,6 +34,7 @@ enum DictionaryType {
     DICT_7X7_250,           ///< 7x7 bits, minimum hamming distance between any two codes = 17, 250 codes
     DICT_7X7_1000,          ///< 7x7 bits, minimum hamming distance between any two codes = 14, 1000 codes
     DICT_ARUCO_ORIGINAL,    ///< 6x6 bits, minimum hamming distance between any two codes = 3, 1024 codes
+    /** @brief AprilTag dictionaries. See @cite wang2016iros for details. */
     DICT_APRILTAG_16h5,     ///< 4x4 bits, minimum hamming distance between any two codes = 5, 30 codes
     DICT_APRILTAG_25h9,     ///< 5x5 bits, minimum hamming distance between any two codes = 9, 35 codes
     DICT_APRILTAG_36h10,    ///< 6x6 bits, minimum hamming distance between any two codes = 10, 2320 codes
@@ -40,9 +44,6 @@ enum DictionaryType {
      */
     DICT_ARUCO_MIP_36h12
 };
-
-//! @addtogroup objdetect_aruco
-//! @{
 
 /** @brief Detection parameters for detectMarkers() and detectBoard().
  *
@@ -163,7 +164,7 @@ struct CV_EXPORTS_W_SIMPLE Marker {
  * @param externalBorder indicates whether to add a white border around the marker
  * @code
  * cv::Mat markerImg;
- * cv::aruco2::generateMarkerImage(markerImg,DICT_6X6_250, 42);
+ * cv::aruco2::generateMarkerImage(markerImg,DICT_ARUCO_MIP_36h12, 42);
  * cv::imwrite("marker_42.png", markerImg);
  * @endcode
  */
@@ -260,7 +261,7 @@ CV_EXPORTS_W void getSolvePnpPoints(const Marker &marker, OutputArray objPoints,
 
 /** @brief Result of detecting a ChArUco2-style grid board.
  *
- * Follows the ChArUco2 design @cite MuñozSalinas2026ChArUco2: every square carries an ArUco marker (standard markers on black
+ * Follows the ChArUco2 design @cite MunozSalinas2026ChArUco2 : every square carries an ArUco marker (standard markers on black
  * squares, inverted markers on white squares), yielding N×M markers on an N×M board and
  * (N+1)×(M+1) observable intersection corners including the board border.
  *
@@ -276,9 +277,9 @@ struct CV_EXPORTS_W_SIMPLE Board {
     CV_PROP_RW std::vector<Marker> markers;    ///< detected markers (subset of the full board)
 private:
     std::vector<std::pair<int,cv::Point2f>> detectedBoardCorners;
-    friend bool detectBoard(InputArray, cv::Size, DictionaryType, Board &,  std::vector<int>);
-    friend void getSolvePnpPoints(const Board&, OutputArray, OutputArray, float);
-    friend void drawDetected(InputOutputArray, const Board &, Scalar, bool);
+    friend bool detectBoard(InputArray image, cv::Size gridSize, DictionaryType dict, Board &board,  std::vector<int> ids);
+    friend void getSolvePnpPoints(const Board& board, OutputArray objPoints, OutputArray imgPoints, float markerSize);
+    friend void drawDetected(InputOutputArray image, const Board &board, Scalar color, bool drawMarkerIds);
 };
 
 /** @brief Generate a grid board image ready for printing.
@@ -309,7 +310,7 @@ CV_EXPORTS_W void generateBoardImage(OutputArray img, Size boardSize, Dictionary
  *
  * In Python the return value and output parameter are combined:
  * @code{.py}
- * found, board = cv.aruco2.detectBoard(image, (4, 3), cv.aruco2.DICT_6X6_250)
+ * found, board = cv.aruco2.detectBoard(image, (4, 3), cv.aruco2.DICT_ARUCO_MIP_36h12)
  * @endcode
  */
 CV_EXPORTS_W bool detectBoard(InputArray image, cv::Size gridSize, DictionaryType dict,
@@ -348,7 +349,7 @@ CV_EXPORTS_W void getSolvePnpPoints(const Board &board, OutputArray objPoints, O
 
 /** @brief A detected ChArUco2-style diamond marker.
  *
- * A diamond is a 2×2 block of ArUco markers (standard on black squares, inverted on white) follwing the ChArUco2 design @cite MuñozSalinas2026ChArUco2.
+ * A diamond is a 2×2 block of ArUco markers (standard on black squares, inverted on white) follwing the ChArUco2 design @cite MunozSalinas2026ChArUco2.
  *
  * Its identity is the combination of the four constituent marker ids, accessible via `id`
  * (as a `Vec4i` convenience field) or individually through each `markers[i].id`.
@@ -361,15 +362,15 @@ struct CV_EXPORTS_W_SIMPLE Diamond {
     CV_PROP_RW std::vector<Marker> markers;    ///< the 4 detected markers forming the diamond
 private:
     std::vector<cv::Point2f> corners;
-    friend std::vector<Diamond> detectDiamonds(InputArray, DictionaryType);
-    friend void getSolvePnpPoints(const Diamond&, OutputArray, OutputArray, float);
-    friend void drawDetected(InputOutputArray, const std::vector<Diamond> &, Scalar, bool);
+    friend std::vector<Diamond> detectDiamonds(InputArray image, DictionaryType dict);
+    friend void getSolvePnpPoints(const Diamond& diamond, OutputArray objPoints, OutputArray imgPoints, float markerSize);
+    friend void drawDetected(InputOutputArray image, const std::vector<Diamond> &diamonds, Scalar color, bool drawMarkerIds);
 };
 
 /** @brief Generate a ChArUco2-style diamond image ready for printing.
  *
  * A diamond is a 2×2 block of ArUco markers following the ChArUco2 design: standard markers
- * on black squares and inverted markers on white squares @cite MuñozSalinas2026ChArUco2.  The four marker ids are arranged
+ * on black squares and inverted markers on white squares @cite MunozSalinas2026ChArUco2.  The four marker ids are arranged
  * in clockwise order from the top-left, matching the `Diamond::id` field returned by
  * detectDiamonds().
  *
@@ -380,7 +381,7 @@ private:
  *
  * @code
  * cv::Mat diamondImg;
- * cv::aruco2::generateDiamondImage(diamondImg,DICT_6X6_250, {10, 11, 12, 13} );
+ * cv::aruco2::generateDiamondImage(diamondImg,DICT_ARUCO_MIP_36h12, {10, 11, 12, 13} );
  * cv::imwrite("diamond.png", diamondImg);
  * @endcode
  *
@@ -472,9 +473,9 @@ struct CV_EXPORTS_W_SIMPLE FractalMarker {
 private:
     std::vector<cv::Point2f> imgPoints; ///< all 2-D correspondences (set by detectFractals)
     std::vector<cv::Point3f> objPoints; ///< matching 3-D model points in normalised space
-    friend std::vector<FractalMarker> detectFractals(InputArray, FractalType);
-    friend void getSolvePnpPoints(const FractalMarker &, OutputArray, OutputArray, float);
-    friend void drawDetected(InputOutputArray, const std::vector<FractalMarker> &, Scalar, bool);
+    friend std::vector<FractalMarker> detectFractals(InputArray image, FractalType ftype);
+    friend void getSolvePnpPoints(const FractalMarker &fractal, OutputArray objPoints, OutputArray imgPoints, float markerSize);
+    friend void drawDetected(InputOutputArray image, const std::vector<FractalMarker> &fractals, Scalar color, bool drawAllImagePoints);
 };
 
 /** @brief Render a fractal marker to a grayscale image.

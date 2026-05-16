@@ -1,0 +1,78 @@
+Detection of ArUco2 Fractal Markers {#tutorial_aruco2_fractals}
+===================================
+
+@prev_tutorial{tutorial_aruco2_diamonds}
+@next_tutorial{tutorial_aruco2_pose}
+
+|    |    |
+| -: | :- |
+| Original author | Rafael Muñoz-Salinas |
+| Compatibility    | OpenCV >= 5.0.0 |
+
+Fractal markers @cite romero2019fractal : are nested ArUco-like markers designed for extreme robustness and high-precision pose estimation. An outer marker contains one or more smaller markers at increasing scales.
+
+Benefits of Fractal Markers
+---------------------------
+
+- **Occlusion Robustness:** Even if the outer marker is heavily occluded, detection can continue using the inner markers.
+- **Dynamic Range:** They can be detected at both long range (outer marker) and very close range (inner markers).
+- **Precision:** The nested design provides many more image-to-3D correspondences than a standard marker, significantly improving pose accuracy.
+
+<img src="aruco2_fractal.png" alt="Example of ArUco2 Fractal Marker" width="50%"/>
+
+Fractal Types
+-------------
+
+`aruco2` supports several fractal configurations via the `cv::aruco2::FractalType` enum:
+- `FRACTAL_2L_6`: 2 levels (outer + 1 inner marker).
+- `FRACTAL_3L_6`: 3 levels.
+- `FRACTAL_4L_6`: 4 levels.
+- `FRACTAL_5L_6`: 5 levels (highest density of corners).
+
+Fractal Creation
+----------------
+
+Generate a fractal marker image using `cv::aruco2::generateFractalImage()`.
+
+@code{.cpp}
+cv::Mat fractalImage;
+cv::aruco2::generateFractalImage(fractalImage, cv::aruco2::FRACTAL_3L_6);
+cv::imwrite("fractal.png", fractalImage);
+@endcode
+
+The parameters are:
+- The output image (`cv::Mat`).
+- The fractal type.
+- Optional: `bitSize` (default 20), the size of each bit in pixels.
+
+Fractal Detection
+-----------------
+
+Detection is handled by the `cv::aruco2::detectFractals()`.
+
+@code{.cpp}
+cv::Mat image = cv::imread("fractal_scene.jpg");
+auto fractals = cv::aruco2::detectFractals(image, cv::aruco2::FRACTAL_3L_6);
+
+for (const auto &f : fractals) {
+    std::cout << "Detected fractal marker ID: " << f.id << std::endl;
+}
+@endcode
+
+Each `cv::aruco2::FractalMarker` object contains:
+- `corners`: The 4 corners of the outer marker.
+- `type`: The fractal configuration used.
+- `id`: The ID of the outer marker.
+
+Drawing Detected Fractals
+-------------------------
+
+Visualize the detection with `cv::aruco2::drawDetected()`.
+
+@code{.cpp}
+cv::aruco2::drawDetected(image, fractals);
+cv::imshow("Detected Fractals", image);
+cv::waitKey(0);
+@endcode
+
+By default, this draws the outer border, the ID, and all matched image points (inner corners) as small circles. You can disable the inner points by passing `false` as the fourth parameter.

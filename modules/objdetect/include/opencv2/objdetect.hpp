@@ -81,6 +81,20 @@
         for Google Summer of Code 2015 (GSoC 15).
     @}
 
+    @defgroup objdetect_aruco2 ArUco2: faster and simpler markers, boards and fractals detection
+    @{
+        The `aruco2` module is a proposed replacement for the legacy `aruco` module in OpenCV 5,
+        designed to be faster, simpler, and more robust.
+
+        - **Performance:** 6.5× faster detection engine and 2.7× faster dictionary identification.
+        - **Simpler API:** Unified function calls returning a single `vector<Marker>`.
+        - **Robustness:** Native support for multi-dictionary detection, enhanced board designs and fractal markers.
+
+        Check @ref tutorial_aruco2_detection "the corresponding tutorials" for more details.
+
+        The implementation is based on the ArUco Library @cite Aruco2014 @cite romero2018speeded @cite GARRIDOJURADO2026102690.
+    @}
+
 @}
  */
 
