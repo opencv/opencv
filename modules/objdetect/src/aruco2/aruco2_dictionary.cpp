@@ -4,11 +4,9 @@
 #include "../precomp.hpp"
 #include "opencv2/core/hal/hal.hpp"
 #include "opencv2/imgproc.hpp"
-#include "aruco_dictionary.hpp"
-#include "predefined_dictionaries.hpp"
-#include "predefined_dictionaries_apriltag.hpp"
-#include <iostream>
-#include <bitset>
+#include "aruco2_dictionary.hpp"
+#include "aruco2_predefined_dictionaries.hpp"
+#include "aruco2_predefined_dictionaries_apriltag.hpp"
 namespace cv {
 namespace aruco2 {
 

@@ -1,15 +1,16 @@
-#include "../precomp.hpp"
-#include "opencv2/objdetect/aruco2.hpp"
-#include "aruco_dictionary.hpp"
-#include <opencv2/imgproc.hpp>
-#include <opencv2/3d.hpp>
-#include <opencv2/flann.hpp>
-#include <opencv2/core/hal/intrin.hpp>
-#include <opencv2/core/utils/logger.hpp>
-
 #include <vector>
 #include <queue>
 #include <map>
+
+#include "../precomp.hpp"
+#include "opencv2/objdetect/aruco2.hpp"
+#include "aruco2_dictionary.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/3d.hpp"
+#include "opencv2/flann.hpp"
+#include "opencv2/core/hal/intrin.hpp"
+#include "opencv2/core/utils/logger.hpp"
+
 
 namespace {
 using namespace cv;
