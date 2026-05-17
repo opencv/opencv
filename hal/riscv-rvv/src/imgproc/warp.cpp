@@ -924,22 +924,27 @@ static inline int warpC1(int start, int end, const uchar *src_data, size_t src_s
             }
             else
             {
-                auto ix = __riscv_vfcvt_x(__riscv_vfmadd(mx, 1 << 10, __riscv_vfmv_v_f_f32m4(1 << 4, vl), vl), vl);
-                auto iy = __riscv_vfcvt_x(__riscv_vfmadd(my, 1 << 10, __riscv_vfmv_v_f_f32m4(1 << 4, vl), vl), vl);
-                auto ix0 = __riscv_vsra(ix, 10, vl), iy0 = __riscv_vsra(iy, 10, vl);
+                auto floor_to_int = [&](auto v)
+                {
+                    auto iv = __riscv_vfcvt_x(v, vl);
+                    auto fv = __riscv_vfcvt_f(iv, vl);
+                    return __riscv_vsub_mu(__riscv_vmfgt(fv, v, vl), iv, iv, 1, vl);
+                };
+
+                auto ix0 = floor_to_int(mx), iy0 = floor_to_int(my);
                 auto ix1 = __riscv_vadd(ix0, 1, vl), iy1 = __riscv_vadd(iy0, 1, vl);
+                auto rx = __riscv_vfsub(mx, __riscv_vfcvt_f(ix0, vl), vl);
+                auto ry = __riscv_vfsub(my, __riscv_vfcvt_f(iy0, vl), vl);
 
-                auto v0 = __riscv_vzext_vf4(access(ix0, iy0), vl);
-                auto v1 = __riscv_vzext_vf4(access(ix1, iy0), vl);
-                auto v2 = __riscv_vzext_vf4(access(ix0, iy1), vl);
-                auto v3 = __riscv_vzext_vf4(access(ix1, iy1), vl);
+                auto v0 = __riscv_vfcvt_f(__riscv_vzext_vf4(access(ix0, iy0), vl), vl);
+                auto v1 = __riscv_vfcvt_f(__riscv_vzext_vf4(access(ix1, iy0), vl), vl);
+                auto v2 = __riscv_vfcvt_f(__riscv_vzext_vf4(access(ix0, iy1), vl), vl);
+                auto v3 = __riscv_vfcvt_f(__riscv_vzext_vf4(access(ix1, iy1), vl), vl);
 
-                auto rx = __riscv_vreinterpret_v_i32m4_u32m4(__riscv_vand(__riscv_vsra(ix, 5, vl), (1 << 5) - 1, vl));
-                auto ry = __riscv_vreinterpret_v_i32m4_u32m4(__riscv_vand(__riscv_vsra(iy, 5, vl), (1 << 5) - 1, vl));
-                v0 = __riscv_vmacc(__riscv_vmul(v0, 1 << 5, vl), rx, __riscv_vsub(v1, v0, vl), vl);
-                v2 = __riscv_vmacc(__riscv_vmul(v2, 1 << 5, vl), rx, __riscv_vsub(v3, v2, vl), vl);
-                v0 = __riscv_vmacc(__riscv_vmul(v0, 1 << 5, vl), ry, __riscv_vsub(v2, v0, vl), vl);
-                __riscv_vse8(dst_data + i * dst_step + j, __riscv_vnclipu(__riscv_vnclipu(v0, 10, __RISCV_VXRM_RNU, vl), 0, __RISCV_VXRM_RNU, vl), vl);
+                v0 = __riscv_vfmacc(v0, rx, __riscv_vfsub(v1, v0, vl), vl);
+                v2 = __riscv_vfmacc(v2, rx, __riscv_vfsub(v3, v2, vl), vl);
+                v0 = __riscv_vfmacc(v0, ry, __riscv_vfsub(v2, v0, vl), vl);
+                __riscv_vse8(dst_data + i * dst_step + j, __riscv_vnclipu(__riscv_vfncvt_xu(v0, vl), 0, __RISCV_VXRM_RNU, vl), vl);
             }
         }
     }
@@ -995,48 +1000,53 @@ static inline int warpC3(int start, int end, const uchar *src_data, size_t src_s
             }
             else
             {
-                auto ix = __riscv_vfcvt_x(__riscv_vfmadd(mx, 1 << 10, __riscv_vfmv_v_f_f32m2(1 << 4, vl), vl), vl);
-                auto iy = __riscv_vfcvt_x(__riscv_vfmadd(my, 1 << 10, __riscv_vfmv_v_f_f32m2(1 << 4, vl), vl), vl);
-                auto ix0 = __riscv_vsra(ix, 10, vl), iy0 = __riscv_vsra(iy, 10, vl);
-                auto ix1 = __riscv_vadd(ix0, 1, vl), iy1 = __riscv_vadd(iy0, 1, vl);
+                auto floor_to_int = [&](auto v)
+                {
+                    auto iv = __riscv_vfcvt_x(v, vl);
+                    auto fv = __riscv_vfcvt_f(iv, vl);
+                    return __riscv_vsub_mu(__riscv_vmfgt(fv, v, vl), iv, iv, 1, vl);
+                };
 
-                vuint32m2_t v00, v10, v20;
-                vuint32m2_t v01, v11, v21;
-                vuint32m2_t v02, v12, v22;
-                vuint32m2_t v03, v13, v23;
+                auto ix0 = floor_to_int(mx), iy0 = floor_to_int(my);
+                auto ix1 = __riscv_vadd(ix0, 1, vl), iy1 = __riscv_vadd(iy0, 1, vl);
+                auto rx = __riscv_vfsub(mx, __riscv_vfcvt_f(ix0, vl), vl);
+                auto ry = __riscv_vfsub(my, __riscv_vfcvt_f(iy0, vl), vl);
+
+                vfloat32m2_t v00, v10, v20;
+                vfloat32m2_t v01, v11, v21;
+                vfloat32m2_t v02, v12, v22;
+                vfloat32m2_t v03, v13, v23;
                 vuint8mf2_t src0, src1, src2;
                 access(ix0, iy0, src0, src1, src2);
-                v00 = __riscv_vzext_vf4(src0, vl);
-                v10 = __riscv_vzext_vf4(src1, vl);
-                v20 = __riscv_vzext_vf4(src2, vl);
+                v00 = __riscv_vfcvt_f(__riscv_vzext_vf4(src0, vl), vl);
+                v10 = __riscv_vfcvt_f(__riscv_vzext_vf4(src1, vl), vl);
+                v20 = __riscv_vfcvt_f(__riscv_vzext_vf4(src2, vl), vl);
                 access(ix1, iy0, src0, src1, src2);
-                v01 = __riscv_vzext_vf4(src0, vl);
-                v11 = __riscv_vzext_vf4(src1, vl);
-                v21 = __riscv_vzext_vf4(src2, vl);
+                v01 = __riscv_vfcvt_f(__riscv_vzext_vf4(src0, vl), vl);
+                v11 = __riscv_vfcvt_f(__riscv_vzext_vf4(src1, vl), vl);
+                v21 = __riscv_vfcvt_f(__riscv_vzext_vf4(src2, vl), vl);
                 access(ix0, iy1, src0, src1, src2);
-                v02 = __riscv_vzext_vf4(src0, vl);
-                v12 = __riscv_vzext_vf4(src1, vl);
-                v22 = __riscv_vzext_vf4(src2, vl);
+                v02 = __riscv_vfcvt_f(__riscv_vzext_vf4(src0, vl), vl);
+                v12 = __riscv_vfcvt_f(__riscv_vzext_vf4(src1, vl), vl);
+                v22 = __riscv_vfcvt_f(__riscv_vzext_vf4(src2, vl), vl);
                 access(ix1, iy1, src0, src1, src2);
-                v03 = __riscv_vzext_vf4(src0, vl);
-                v13 = __riscv_vzext_vf4(src1, vl);
-                v23 = __riscv_vzext_vf4(src2, vl);
+                v03 = __riscv_vfcvt_f(__riscv_vzext_vf4(src0, vl), vl);
+                v13 = __riscv_vfcvt_f(__riscv_vzext_vf4(src1, vl), vl);
+                v23 = __riscv_vfcvt_f(__riscv_vzext_vf4(src2, vl), vl);
 
-                auto rx = __riscv_vreinterpret_v_i32m2_u32m2(__riscv_vand(__riscv_vsra(ix, 5, vl), (1 << 5) - 1, vl));
-                auto ry = __riscv_vreinterpret_v_i32m2_u32m2(__riscv_vand(__riscv_vsra(iy, 5, vl), (1 << 5) - 1, vl));
-                v00 = __riscv_vmacc(__riscv_vmul(v00, 1 << 5, vl), rx, __riscv_vsub(v01, v00, vl), vl);
-                v02 = __riscv_vmacc(__riscv_vmul(v02, 1 << 5, vl), rx, __riscv_vsub(v03, v02, vl), vl);
-                v00 = __riscv_vmacc(__riscv_vmul(v00, 1 << 5, vl), ry, __riscv_vsub(v02, v00, vl), vl);
-                v10 = __riscv_vmacc(__riscv_vmul(v10, 1 << 5, vl), rx, __riscv_vsub(v11, v10, vl), vl);
-                v12 = __riscv_vmacc(__riscv_vmul(v12, 1 << 5, vl), rx, __riscv_vsub(v13, v12, vl), vl);
-                v10 = __riscv_vmacc(__riscv_vmul(v10, 1 << 5, vl), ry, __riscv_vsub(v12, v10, vl), vl);
-                v20 = __riscv_vmacc(__riscv_vmul(v20, 1 << 5, vl), rx, __riscv_vsub(v21, v20, vl), vl);
-                v22 = __riscv_vmacc(__riscv_vmul(v22, 1 << 5, vl), rx, __riscv_vsub(v23, v22, vl), vl);
-                v20 = __riscv_vmacc(__riscv_vmul(v20, 1 << 5, vl), ry, __riscv_vsub(v22, v20, vl), vl);
+                v00 = __riscv_vfmacc(v00, rx, __riscv_vfsub(v01, v00, vl), vl);
+                v02 = __riscv_vfmacc(v02, rx, __riscv_vfsub(v03, v02, vl), vl);
+                v00 = __riscv_vfmacc(v00, ry, __riscv_vfsub(v02, v00, vl), vl);
+                v10 = __riscv_vfmacc(v10, rx, __riscv_vfsub(v11, v10, vl), vl);
+                v12 = __riscv_vfmacc(v12, rx, __riscv_vfsub(v13, v12, vl), vl);
+                v10 = __riscv_vfmacc(v10, ry, __riscv_vfsub(v12, v10, vl), vl);
+                v20 = __riscv_vfmacc(v20, rx, __riscv_vfsub(v21, v20, vl), vl);
+                v22 = __riscv_vfmacc(v22, rx, __riscv_vfsub(v23, v22, vl), vl);
+                v20 = __riscv_vfmacc(v20, ry, __riscv_vfsub(v22, v20, vl), vl);
                 vuint8mf2x3_t dst{};
-                dst = __riscv_vset_v_u8mf2_u8mf2x3(dst, 0, __riscv_vnclipu(__riscv_vnclipu(v00, 10, __RISCV_VXRM_RNU, vl), 0, __RISCV_VXRM_RNU, vl));
-                dst = __riscv_vset_v_u8mf2_u8mf2x3(dst, 1, __riscv_vnclipu(__riscv_vnclipu(v10, 10, __RISCV_VXRM_RNU, vl), 0, __RISCV_VXRM_RNU, vl));
-                dst = __riscv_vset_v_u8mf2_u8mf2x3(dst, 2, __riscv_vnclipu(__riscv_vnclipu(v20, 10, __RISCV_VXRM_RNU, vl), 0, __RISCV_VXRM_RNU, vl));
+                dst = __riscv_vset_v_u8mf2_u8mf2x3(dst, 0, __riscv_vnclipu(__riscv_vfncvt_xu(v00, vl), 0, __RISCV_VXRM_RNU, vl));
+                dst = __riscv_vset_v_u8mf2_u8mf2x3(dst, 1, __riscv_vnclipu(__riscv_vfncvt_xu(v10, vl), 0, __RISCV_VXRM_RNU, vl));
+                dst = __riscv_vset_v_u8mf2_u8mf2x3(dst, 2, __riscv_vnclipu(__riscv_vfncvt_xu(v20, vl), 0, __RISCV_VXRM_RNU, vl));
                 __riscv_vsseg3e8(dst_data + i * dst_step + j * 3, dst, vl);
             }
         }
@@ -1096,56 +1106,61 @@ static inline int warpC4(int start, int end, const uchar *src_data, size_t src_s
             }
             else
             {
-                auto ix = __riscv_vfcvt_x(__riscv_vfmadd(mx, 1 << 10, __riscv_vfmv_v_f_f32m2(1 << 4, vl), vl), vl);
-                auto iy = __riscv_vfcvt_x(__riscv_vfmadd(my, 1 << 10, __riscv_vfmv_v_f_f32m2(1 << 4, vl), vl), vl);
-                auto ix0 = __riscv_vsra(ix, 10, vl), iy0 = __riscv_vsra(iy, 10, vl);
-                auto ix1 = __riscv_vadd(ix0, 1, vl), iy1 = __riscv_vadd(iy0, 1, vl);
+                auto floor_to_int = [&](auto v)
+                {
+                    auto iv = __riscv_vfcvt_x(v, vl);
+                    auto fv = __riscv_vfcvt_f(iv, vl);
+                    return __riscv_vsub_mu(__riscv_vmfgt(fv, v, vl), iv, iv, 1, vl);
+                };
 
-                vuint32m2_t v00, v10, v20, v30;
-                vuint32m2_t v01, v11, v21, v31;
-                vuint32m2_t v02, v12, v22, v32;
-                vuint32m2_t v03, v13, v23, v33;
+                auto ix0 = floor_to_int(mx), iy0 = floor_to_int(my);
+                auto ix1 = __riscv_vadd(ix0, 1, vl), iy1 = __riscv_vadd(iy0, 1, vl);
+                auto rx = __riscv_vfsub(mx, __riscv_vfcvt_f(ix0, vl), vl);
+                auto ry = __riscv_vfsub(my, __riscv_vfcvt_f(iy0, vl), vl);
+
+                vfloat32m2_t v00, v10, v20, v30;
+                vfloat32m2_t v01, v11, v21, v31;
+                vfloat32m2_t v02, v12, v22, v32;
+                vfloat32m2_t v03, v13, v23, v33;
                 vuint8mf2_t src0, src1, src2, src3;
                 access(ix0, iy0, src0, src1, src2, src3);
-                v00 = __riscv_vzext_vf4(src0, vl);
-                v10 = __riscv_vzext_vf4(src1, vl);
-                v20 = __riscv_vzext_vf4(src2, vl);
-                v30 = __riscv_vzext_vf4(src3, vl);
+                v00 = __riscv_vfcvt_f(__riscv_vzext_vf4(src0, vl), vl);
+                v10 = __riscv_vfcvt_f(__riscv_vzext_vf4(src1, vl), vl);
+                v20 = __riscv_vfcvt_f(__riscv_vzext_vf4(src2, vl), vl);
+                v30 = __riscv_vfcvt_f(__riscv_vzext_vf4(src3, vl), vl);
                 access(ix1, iy0, src0, src1, src2, src3);
-                v01 = __riscv_vzext_vf4(src0, vl);
-                v11 = __riscv_vzext_vf4(src1, vl);
-                v21 = __riscv_vzext_vf4(src2, vl);
-                v31 = __riscv_vzext_vf4(src3, vl);
+                v01 = __riscv_vfcvt_f(__riscv_vzext_vf4(src0, vl), vl);
+                v11 = __riscv_vfcvt_f(__riscv_vzext_vf4(src1, vl), vl);
+                v21 = __riscv_vfcvt_f(__riscv_vzext_vf4(src2, vl), vl);
+                v31 = __riscv_vfcvt_f(__riscv_vzext_vf4(src3, vl), vl);
                 access(ix0, iy1, src0, src1, src2, src3);
-                v02 = __riscv_vzext_vf4(src0, vl);
-                v12 = __riscv_vzext_vf4(src1, vl);
-                v22 = __riscv_vzext_vf4(src2, vl);
-                v32 = __riscv_vzext_vf4(src3, vl);
+                v02 = __riscv_vfcvt_f(__riscv_vzext_vf4(src0, vl), vl);
+                v12 = __riscv_vfcvt_f(__riscv_vzext_vf4(src1, vl), vl);
+                v22 = __riscv_vfcvt_f(__riscv_vzext_vf4(src2, vl), vl);
+                v32 = __riscv_vfcvt_f(__riscv_vzext_vf4(src3, vl), vl);
                 access(ix1, iy1, src0, src1, src2, src3);
-                v03 = __riscv_vzext_vf4(src0, vl);
-                v13 = __riscv_vzext_vf4(src1, vl);
-                v23 = __riscv_vzext_vf4(src2, vl);
-                v33 = __riscv_vzext_vf4(src3, vl);
+                v03 = __riscv_vfcvt_f(__riscv_vzext_vf4(src0, vl), vl);
+                v13 = __riscv_vfcvt_f(__riscv_vzext_vf4(src1, vl), vl);
+                v23 = __riscv_vfcvt_f(__riscv_vzext_vf4(src2, vl), vl);
+                v33 = __riscv_vfcvt_f(__riscv_vzext_vf4(src3, vl), vl);
 
-                auto rx = __riscv_vreinterpret_v_i32m2_u32m2(__riscv_vand(__riscv_vsra(ix, 5, vl), (1 << 5) - 1, vl));
-                auto ry = __riscv_vreinterpret_v_i32m2_u32m2(__riscv_vand(__riscv_vsra(iy, 5, vl), (1 << 5) - 1, vl));
-                v00 = __riscv_vmacc(__riscv_vmul(v00, 1 << 5, vl), rx, __riscv_vsub(v01, v00, vl), vl);
-                v02 = __riscv_vmacc(__riscv_vmul(v02, 1 << 5, vl), rx, __riscv_vsub(v03, v02, vl), vl);
-                v00 = __riscv_vmacc(__riscv_vmul(v00, 1 << 5, vl), ry, __riscv_vsub(v02, v00, vl), vl);
-                v10 = __riscv_vmacc(__riscv_vmul(v10, 1 << 5, vl), rx, __riscv_vsub(v11, v10, vl), vl);
-                v12 = __riscv_vmacc(__riscv_vmul(v12, 1 << 5, vl), rx, __riscv_vsub(v13, v12, vl), vl);
-                v10 = __riscv_vmacc(__riscv_vmul(v10, 1 << 5, vl), ry, __riscv_vsub(v12, v10, vl), vl);
-                v20 = __riscv_vmacc(__riscv_vmul(v20, 1 << 5, vl), rx, __riscv_vsub(v21, v20, vl), vl);
-                v22 = __riscv_vmacc(__riscv_vmul(v22, 1 << 5, vl), rx, __riscv_vsub(v23, v22, vl), vl);
-                v20 = __riscv_vmacc(__riscv_vmul(v20, 1 << 5, vl), ry, __riscv_vsub(v22, v20, vl), vl);
-                v30 = __riscv_vmacc(__riscv_vmul(v30, 1 << 5, vl), rx, __riscv_vsub(v31, v30, vl), vl);
-                v32 = __riscv_vmacc(__riscv_vmul(v32, 1 << 5, vl), rx, __riscv_vsub(v33, v32, vl), vl);
-                v30 = __riscv_vmacc(__riscv_vmul(v30, 1 << 5, vl), ry, __riscv_vsub(v32, v30, vl), vl);
+                v00 = __riscv_vfmacc(v00, rx, __riscv_vfsub(v01, v00, vl), vl);
+                v02 = __riscv_vfmacc(v02, rx, __riscv_vfsub(v03, v02, vl), vl);
+                v00 = __riscv_vfmacc(v00, ry, __riscv_vfsub(v02, v00, vl), vl);
+                v10 = __riscv_vfmacc(v10, rx, __riscv_vfsub(v11, v10, vl), vl);
+                v12 = __riscv_vfmacc(v12, rx, __riscv_vfsub(v13, v12, vl), vl);
+                v10 = __riscv_vfmacc(v10, ry, __riscv_vfsub(v12, v10, vl), vl);
+                v20 = __riscv_vfmacc(v20, rx, __riscv_vfsub(v21, v20, vl), vl);
+                v22 = __riscv_vfmacc(v22, rx, __riscv_vfsub(v23, v22, vl), vl);
+                v20 = __riscv_vfmacc(v20, ry, __riscv_vfsub(v22, v20, vl), vl);
+                v30 = __riscv_vfmacc(v30, rx, __riscv_vfsub(v31, v30, vl), vl);
+                v32 = __riscv_vfmacc(v32, rx, __riscv_vfsub(v33, v32, vl), vl);
+                v30 = __riscv_vfmacc(v30, ry, __riscv_vfsub(v32, v30, vl), vl);
                 vuint8mf2x4_t dst{};
-                dst = __riscv_vset_v_u8mf2_u8mf2x4(dst, 0, __riscv_vnclipu(__riscv_vnclipu(v00, 10, __RISCV_VXRM_RNU, vl), 0, __RISCV_VXRM_RNU, vl));
-                dst = __riscv_vset_v_u8mf2_u8mf2x4(dst, 1, __riscv_vnclipu(__riscv_vnclipu(v10, 10, __RISCV_VXRM_RNU, vl), 0, __RISCV_VXRM_RNU, vl));
-                dst = __riscv_vset_v_u8mf2_u8mf2x4(dst, 2, __riscv_vnclipu(__riscv_vnclipu(v20, 10, __RISCV_VXRM_RNU, vl), 0, __RISCV_VXRM_RNU, vl));
-                dst = __riscv_vset_v_u8mf2_u8mf2x4(dst, 3, __riscv_vnclipu(__riscv_vnclipu(v30, 10, __RISCV_VXRM_RNU, vl), 0, __RISCV_VXRM_RNU, vl));
+                dst = __riscv_vset_v_u8mf2_u8mf2x4(dst, 0, __riscv_vnclipu(__riscv_vfncvt_xu(v00, vl), 0, __RISCV_VXRM_RNU, vl));
+                dst = __riscv_vset_v_u8mf2_u8mf2x4(dst, 1, __riscv_vnclipu(__riscv_vfncvt_xu(v10, vl), 0, __RISCV_VXRM_RNU, vl));
+                dst = __riscv_vset_v_u8mf2_u8mf2x4(dst, 2, __riscv_vnclipu(__riscv_vfncvt_xu(v20, vl), 0, __RISCV_VXRM_RNU, vl));
+                dst = __riscv_vset_v_u8mf2_u8mf2x4(dst, 3, __riscv_vnclipu(__riscv_vfncvt_xu(v30, vl), 0, __RISCV_VXRM_RNU, vl));
                 __riscv_vsseg4e8(dst_data + i * dst_step + j * 4, dst, vl);
             }
         }
