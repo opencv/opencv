@@ -8,7 +8,20 @@
 #include <jni.h>
 #include "opencv_java.hpp"
 #include "opencv2/core.hpp"
+#include "opencv2/objdetect.hpp"
 
 void Copy_vector_NativeByteArray_to_List(JNIEnv* env, std::vector<std::string>& vs, jobject list);
+
+jobject vector_Marker_to_List(JNIEnv* env, std::vector<cv::aruco2::Marker>& vs);
+std::vector<cv::aruco2::Marker> List_to_vector_Marker(JNIEnv* env, jobject list);
+
+jobject vector_Diamond_to_List(JNIEnv* env, std::vector<cv::aruco2::Diamond>& vs);
+std::vector<cv::aruco2::Diamond> List_to_vector_Diamond(JNIEnv* env, jobject list);
+
+jobject vector_FractalMarker_to_List(JNIEnv* env, std::vector<cv::aruco2::FractalMarker>& vs);
+std::vector<cv::aruco2::FractalMarker> List_to_vector_FractalMarker(JNIEnv* env, jobject list);
+
+void Mat_to_vector_DictionaryType(cv::Mat& mat, std::vector<cv::aruco2::DictionaryType>& v);
+void vector_DictionaryType_to_Mat(std::vector<cv::aruco2::DictionaryType>& v, cv::Mat& mat);
 
 #endif	/* OBJDETECT_CONVERTERS_HPP */

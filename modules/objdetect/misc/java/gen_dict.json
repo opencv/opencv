@@ -1,4 +1,7 @@
 {
+    "namespaces_dict": {
+        "cv.aruco2": "Aruco2"
+    },
     "ManualFuncs" : {
         "QRCodeEncoder" : {
             "QRCodeEncoder" : {
@@ -64,6 +67,42 @@
             "jni_var": "std::vector< std::string > %(n)s",
             "suffix": "Ljava_util_List",
             "v_type": "vector_NativeByteArray"
+        },
+        "vector_DictionaryType": {
+            "j_type": "MatOfInt",
+            "jn_type": "long",
+            "jni_type": "jlong",
+            "jni_var": "std::vector<cv::aruco2::DictionaryType> %(n)s",
+            "suffix": "J",
+            "v_type": "Mat",
+            "j_import": "org.opencv.core.MatOfInt"
+        },
+        "vector_Marker": {
+            "j_type": "List<Aruco2_Marker>",
+            "jn_type": "List<Aruco2_Marker>",
+            "jni_type": "jobject",
+            "jni_var": "std::vector<cv::aruco2::Marker> %(n)s",
+            "suffix": "Ljava_util_List",
+            "v_type": "Aruco2_Marker",
+            "j_import": "org.opencv.objdetect.Aruco2_Marker"
+        },
+        "vector_Diamond": {
+            "j_type": "List<Aruco2_Diamond>",
+            "jn_type": "List<Aruco2_Diamond>",
+            "jni_type": "jobject",
+            "jni_var": "std::vector<cv::aruco2::Diamond> %(n)s",
+            "suffix": "Ljava_util_List",
+            "v_type": "Aruco2_Diamond",
+            "j_import": "org.opencv.objdetect.Aruco2_Diamond"
+        },
+        "vector_FractalMarker": {
+            "j_type": "List<Aruco2_FractalMarker>",
+            "jn_type": "List<Aruco2_FractalMarker>",
+            "jni_type": "jobject",
+            "jni_var": "std::vector<cv::aruco2::FractalMarker> %(n)s",
+            "suffix": "Ljava_util_List",
+            "v_type": "Aruco2_FractalMarker",
+            "j_import": "org.opencv.objdetect.Aruco2_FractalMarker"
         }
     }
 }
