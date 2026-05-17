@@ -329,7 +329,7 @@ Following formats can be read by OpenCV without help of any third-party library:
 | [WebP](https://en.wikipedia.org/wiki/WebP) || `WITH_WEBP` | _ON_ | `BUILD_WEBP` |
 | [JPEG 2000](https://en.wikipedia.org/wiki/JPEG_2000) | [OpenJPEG](https://en.wikipedia.org/wiki/OpenJPEG) | `WITH_OPENJPEG` | _ON_ | `BUILD_OPENJPEG` |
 |^| [JasPer](https://en.wikipedia.org/wiki/JasPer) | `WITH_JASPER` | _ON_ (see note) | `BUILD_JASPER` |
-| [OpenEXR](https://en.wikipedia.org/wiki/OpenEXR) || `WITH_OPENEXR` | _ON_ | `BUILD_OPENEXR` |
+| [OpenEXR](https://en.wikipedia.org/wiki/OpenEXR) || `WITH_OPENEXR` | _ON_ | Not Supported (see note) |
 | [JPEG XL](https://en.wikipedia.org/wiki/JPEG_XL) || `WITH_JPEGXL` | _ON_ | Not supported. (see note) |
 | [AVIF](https://en.wikipedia.org/wiki/AVIF) || `WITH_AVIF` | _ON_ | Not supported. (see note) |
 
@@ -341,6 +341,7 @@ Corresponding BUILD_* options will force building and using the bundled librarie
 @note (JPEG 2000) OpenJPEG have higher priority than JasPer which is deprecated.
 @note (JPEG XL) OpenCV doesn't contain libjxl source code, so `BUILD_JPEGXL` is not supported. Users must provide a system-wide installation of libjxl.
 @note (AVIF) OpenCV doesn't contain libavif source code, so `BUILD_AVIF` is not supported. Users must provide a system-wide installation of libavif.
+@note (EXR) OpenCV 4.14 and later don't contain OpenEXR source code, so `BUILD_OPENEXR` is not supported.
 
 @warning OpenEXR ver 2.2 or earlier cannot be used in combination with C++17 or later. In this case, updating OpenEXR ver 2.3.0 or later is required.
 

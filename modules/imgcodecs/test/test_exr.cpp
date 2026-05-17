@@ -1,10 +1,13 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
+#include "test_precomp.hpp"
 
 //#define GENERATE_DATA
 
 namespace opencv_test { namespace {
+
+#ifdef HAVE_OPENEXR
 
 size_t getFileSize(const string& filename)
 {
@@ -371,5 +374,6 @@ TEST(Imgcodecs_EXR, imwrite_regression_26207_extra)
     remove(filename.c_str());
 }
 
+#endif
 
 }} // namespace
