@@ -742,7 +742,7 @@ std::vector<Marker> detectMarkers(InputArray image,DictionaryType dict,const Det
 
 
 
-void generateMarkerImage(OutputArray _img,const DictionaryType &dictionary, int id, unsigned int bitSize,bool externalBorder){
+void generateMarkerImage(OutputArray _img, DictionaryType dictionary, int id, int bitSize, bool externalBorder){
 
     //assert marker size >sidePixels
     auto dict=getPredefinedDictionary(dictionary);

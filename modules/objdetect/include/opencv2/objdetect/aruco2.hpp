@@ -150,6 +150,7 @@ struct CV_EXPORTS_W_SIMPLE Marker {
     CV_PROP_RW std::vector<cv::Point2f> corners; ///< four corner points in clockwise order
     CV_PROP_RW int id = -1;                      ///< marker id; -1 if unidentified
     CV_PROP_RW DictionaryType dict = DictionaryType(-1); ///< dictionary this marker belongs to
+    CV_WRAP Point2f getCorner(int i) const { return corners[i]; }
     cv::Point2f operator[](size_t i) const { return corners[i]; }
     size_t size() const { return corners.size(); }
 };
@@ -168,7 +169,7 @@ struct CV_EXPORTS_W_SIMPLE Marker {
  * cv::imwrite("marker_42.png", markerImg);
  * @endcode
  */
-CV_EXPORTS_W void generateMarkerImage(OutputArray img,const DictionaryType &dictionary, int id, unsigned int bitSize=20,bool externalBorder=true);
+CV_EXPORTS_W void generateMarkerImage(OutputArray img, DictionaryType dictionary, int id, int bitSize=20,bool externalBorder=true);
 
 
 /** @brief Detect ArUco markers in an image using a single dictionary.
@@ -470,6 +471,7 @@ struct CV_EXPORTS_W_SIMPLE FractalMarker {
     CV_PROP_RW std::vector<cv::Point2f> corners; ///< 4 outer corners, clockwise from top-left
     CV_PROP_RW FractalType type;                 ///< fractal configuration used for detection
     CV_PROP_RW int id = -1;                      ///< id of the outer (external) marker
+    CV_WRAP Point2f getCorner(int i) const { return corners[i]; }
 private:
     std::vector<cv::Point2f> imgPoints; ///< all 2-D correspondences (set by detectFractals)
     std::vector<cv::Point3f> objPoints; ///< matching 3-D model points in normalised space
@@ -488,7 +490,7 @@ private:
  * @param ftype    fractal configuration (FRACTAL_2L_6 … FRACTAL_5L_6)
  * @param bitSize  side length of one bit cell in pixels (default 20)
  */
-CV_EXPORTS_W void generateFractalImage(OutputArray img, const FractalType &ftype, int bitSize=20);
+CV_EXPORTS_W void generateFractalImage(OutputArray img, FractalType ftype, int bitSize=20);
 
 /** @brief Detect fractal markers in an image.
  *

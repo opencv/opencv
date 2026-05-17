@@ -1055,7 +1055,7 @@ static std::string fractalTypeName(FractalType ft) {
     return "FRACTAL_3L_6";
 }
 
-void generateFractalImage(OutputArray _img, const FractalType &ftype, int bitSize) {
+void generateFractalImage(OutputArray _img, FractalType ftype, int bitSize) {
     nanofractal::FractalMarkerSet fmset(fractalTypeName(ftype));
 
     // The innermost marker (highest id) controls the per-bit pixel size.
