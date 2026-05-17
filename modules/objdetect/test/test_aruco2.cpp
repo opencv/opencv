@@ -157,7 +157,7 @@ TEST(Objdetect_Aruco2, Inverted) {
     Rect roi(inverted.cols / 2, inverted.rows / 2, inverted.cols, inverted.rows);
     inverted.copyTo(canvas(roi));
     
-    DetectorParameters params;
+    DetectionParameters params;
     params.detectInvertedMarker = true;
     
     std::vector<Marker> markers = detectMarkers(canvas, dict, params);
@@ -254,7 +254,7 @@ TEST(Objdetect_Aruco2, BoardDetection) {
     Rect roi(50, 50, boardImg.cols, boardImg.rows);
     boardImg.copyTo(canvas(roi));
     
-    Board board;
+    GridBoard board;
     bool found = detectBoard(canvas, gridSize, dict, board);
     
     ASSERT_TRUE(found);
@@ -289,7 +289,7 @@ TEST(Objdetect_Aruco2, BoardRotation) {
         Mat rotated;
         warpAffine(canvas, rotated, rot, canvas.size(), INTER_LINEAR, BORDER_CONSTANT, Scalar(255));
         
-        Board board;
+        GridBoard board;
         bool found = detectBoard(rotated, gridSize, dict, board);
         
         ASSERT_TRUE(found) << "Failed for angle " << angle;

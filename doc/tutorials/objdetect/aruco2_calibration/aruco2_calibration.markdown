@@ -66,7 +66,7 @@ int main() {
         if (image.empty()) continue;
         if (imageSize.width == 0) imageSize = image.size();
 
-        cv::aruco2::Board board;
+        cv::aruco2::GridBoard board;
         if (cv::aruco2::detectBoard(image, cv::Size(9, 5), cv::aruco2::DICT_ARUCO_MIP_36h12, board)) {
             cv::Mat imgPtsMat, objPtsMat;
             // Get 3D-2D correspondences

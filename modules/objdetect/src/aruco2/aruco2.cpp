@@ -20,11 +20,11 @@ using namespace cv::aruco2;
 class MarkerDetector{
 public:
     // The only function you need to call
-    static inline std::vector<Marker> detect(const cv::Mat &img, const std::vector<DictionaryType> dicts,  const DetectorParameters &params=DetectorParameters(),std::vector<Marker> *candidatesOut=nullptr,cv::Mat ThresImageIn={});
+    static inline std::vector<Marker> detect(const cv::Mat &img, const std::vector<DictionaryType> dicts,  const DetectionParameters &params=DetectionParameters(),std::vector<Marker> *candidatesOut=nullptr,cv::Mat ThresImageIn={});
 private:
     static inline Marker sort( const  Marker &marker);
     static inline float  getSubpixelValue(const cv::Mat &im_grey,const cv::Point2f &p);
-    static inline int   getMarkerId(  cv::Mat  candidateBits,int &idx, int &nrotations, const DetectorParameters &params,Dictionary &dict);
+    static inline int   getMarkerId(  cv::Mat  candidateBits,int &idx, int &nrotations, const DetectionParameters &params,Dictionary &dict);
     static inline int isInto(const std::vector<cv::Point2f> &a, const std::vector<cv::Point2f> &b) ;
     static std::vector<std::vector<cv::Point>> visitedAwareTracingContour(cv::Mat &padded_io, size_t minSize = 1,float maxRevisited=0.1) ;
     static int getBorderErrors(const cv::Mat &bits, int markerSize, int borderSize) ;
@@ -76,7 +76,7 @@ int MarkerDetector::isInto(const std::vector<cv::Point2f> &a, const std::vector<
     return 0;
 }
 
-std::vector<Marker>  MarkerDetector::detect(const cv::Mat &img,   const std::vector<DictionaryType> dicts,const DetectorParameters &params,std::vector<Marker> *candidatesOut,cv::Mat ThresImIn){
+std::vector<Marker>  MarkerDetector::detect(const cv::Mat &img,   const std::vector<DictionaryType> dicts,const DetectionParameters &params,std::vector<Marker> *candidatesOut,cv::Mat ThresImIn){
     cv::Mat bwimage,thresImage;
     std::vector<Marker> DetectedMarkers;
     //first, convert to bw
@@ -221,7 +221,7 @@ std::vector<Marker>  MarkerDetector::detect(const cv::Mat &img,   const std::vec
  *                           1 if the candidate is a black candidate (default candidate)
  *                           2 if the candidate is a white candidate
  */
-int MarkerDetector:: getMarkerId(cv::Mat candidateBits, int &idx, int &nrotations, const DetectorParameters &params,Dictionary &dict){
+int MarkerDetector:: getMarkerId(cv::Mat candidateBits, int &idx, int &nrotations, const DetectionParameters &params,Dictionary &dict){
     uint8_t typ=1;
 
     if(params.detectInvertedMarker ) candidateBits=~candidateBits;
@@ -433,7 +433,7 @@ std::vector<Marker> detect(DictionaryType dict, cv::Mat & src_gray,cv::Mat & thr
 
     cv::Mat kernel = cv::getStructuringElement(cv::MORPH_CROSS, cv::Size(3, 3));
     cv::erode(thresImage, thresImage, kernel,{-1,-1},erosionIt);
-    DetectorParameters params;
+    DetectionParameters params;
     return MarkerDetector::detect(src_gray,{dict},params,nullptr,thresImage);
 }
 
@@ -659,7 +659,7 @@ std::vector<std::vector<Marker>> connectedMarkerComponents(const std::vector<Mar
 
 //given a marker id and one of its corners, return the global corner id of that corner, which is a unique id for that corner in the whole board,
 
-int getGlobalCornerID(int marker_id, int corner_id,const  cv::Size &bSize,const std::vector<int> ids)
+int getGlobalCornerID(int marker_id, int corner_id,const  cv::Size &bSize,const std::vector<int> &ids)
 {
 
 
@@ -733,10 +733,10 @@ std::vector<std::pair<int,int>> getMarkerCornersFromGlobalCornerID( int gid,cv::
 namespace cv {
 namespace aruco2 {
 
-std::vector<Marker> detectMarkers(InputArray image,const std::vector<DictionaryType> &dicts,const DetectorParameters &detectorParams){
+std::vector<Marker> detectMarkers(InputArray image,const std::vector<DictionaryType> &dicts,const DetectionParameters &detectorParams){
     return MarkerDetector::detect(image.getMat(),dicts,detectorParams);
 }
-std::vector<Marker> detectMarkers(InputArray image,DictionaryType dict,const DetectorParameters &detectorParams){
+std::vector<Marker> detectMarkers(InputArray image,DictionaryType dict,const DetectionParameters &detectorParams){
     return MarkerDetector::detect(image.getMat(),{dict},detectorParams);
 }
 
@@ -814,8 +814,10 @@ void getSolvePnpPoints(const Marker &marker, OutputArray objPoints, OutputArray 
 
 
 bool detectBoard(InputArray image, cv::Size gridSize, DictionaryType dict,
-            CV_OUT Board &board_, std::vector<int> ids){
+            CV_OUT GridBoard &board_, InputArray _ids){
 
+    std::vector<int> ids;
+    _ids.copyTo(ids);
 
     CV_Assert(gridSize.width > 0 && gridSize.height > 0  );
     CV_Assert(image.channels() == 1 || image.channels() == 3);
@@ -984,7 +986,9 @@ bool detectBoard(InputArray image, cv::Size gridSize, DictionaryType dict,
 
 
 void generateBoardImage(OutputArray img, Size bSize, DictionaryType dict,
-                        int bitSize , std::vector<int> ids  ){
+                        int bitSize , InputArray _ids  ){
+    std::vector<int> ids;
+    _ids.copyTo(ids);
     auto dictionary=getPredefinedDictionary(dict);
     int nmarkers=bSize.area();
     if(nmarkers > dictionary.bytesList.rows)
@@ -1038,7 +1042,7 @@ void generateBoardImage(OutputArray img, Size bSize, DictionaryType dict,
     outImage.copyTo(img);
 
 }
-  void drawDetected(InputOutputArray image, const Board &board,
+  void drawDetected(InputOutputArray image, const GridBoard &board,
                        Scalar color,bool drawMarkerIds ){
       for(size_t i=0;i<board.detectedBoardCorners.size();i++){
           //draw a circle for each detected corner
@@ -1065,7 +1069,7 @@ void generateBoardImage(OutputArray img, Size bSize, DictionaryType dict,
 
   }
 
-  void getSolvePnpPoints(const Board &board, OutputArray objPoints, OutputArray imgPoints, float markerSize  ){
+  void getSolvePnpPoints(const GridBoard &board, OutputArray objPoints, OutputArray imgPoints, float markerSize  ){
 
     std::vector<cv::Point3f> objectPoints;
     std::vector<cv::Point2f> imagePoints;
@@ -1085,7 +1089,7 @@ void generateBoardImage(OutputArray img, Size bSize, DictionaryType dict,
   }
 
   void generateDiamondImage(OutputArray img,const DictionaryType &dictionary, const cv::Vec4i &ids,int bitSize){
-        generateBoardImage(img,cv::Size(2,2),dictionary,bitSize,{ids[0],ids[1],ids[2],ids[3]});
+        generateBoardImage(img,cv::Size(2,2),dictionary,bitSize,ids);
   }
 
    std::vector<Diamond> detectDiamonds(InputArray image, DictionaryType dict  ){

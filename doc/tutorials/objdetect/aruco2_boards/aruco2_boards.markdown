@@ -49,7 +49,7 @@ Detecting an ArUco2 board is handled by the `cv::aruco2::detectBoard()` function
 
 @code{.cpp}
 cv::Mat image = cv::imread("board_scene.jpg");
-cv::aruco2::Board board;
+cv::aruco2::GridBoard board;
 bool found = cv::aruco2::detectBoard(image, cv::Size(4, 3), cv::aruco2::DICT_ARUCO_MIP_36h12, board);
 
 if (found) {
@@ -57,7 +57,7 @@ if (found) {
 }
 @endcode
 
-The `cv::aruco2::Board` structure populated by the function contains:
+The `cv::aruco2::GridBoard` structure populated by the function contains:
 - `gridSize`: The dimensions of the board.
 - `dict`: The dictionary used.
 - `markers`: A `std::vector<Marker>` containing only the markers that were successfully detected in the current frame.

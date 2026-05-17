@@ -45,11 +45,11 @@ The following image shows a single marker with its estimated pose visualized as 
 
 ![Pose Estimation for a Single Marker](marker_axis.jpg)
 
-### Pose Estimation for Boards, Diamonds, and Fractals
+### Pose Estimation for GridBoards, Diamonds, and Fractals
 
 The same pattern applies to more complex targets. The only difference is the target object passed to `getSolvePnpPoints()`.
 
-**For a Board:**
+**For a GridBoard:**
 @code{.cpp}
 cv::aruco2::getSolvePnpPoints(board, objPoints, imgPoints, markerSize);
 @endcode

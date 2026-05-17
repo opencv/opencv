@@ -52,7 +52,7 @@ enum DictionaryType {
  *
  * The implementation is based on the ArUco Library @cite Aruco2014 @cite romero2018speeded @cite GARRIDOJURADO2026102690.
  */
-struct CV_EXPORTS_W_SIMPLE DetectorParameters {
+struct CV_EXPORTS_W_SIMPLE DetectionParameters {
 
     /** @brief Size of the box filter kernel used for adaptive thresholding (pixels, must be odd).
      *
@@ -184,10 +184,10 @@ CV_EXPORTS_W void generateMarkerImage(OutputArray img, DictionaryType dictionary
  *
  * @note Lens distortion is not corrected internally.  For accurate pose estimation,
  * undistort the image first with the known camera model.
- * @sa undistort, detectMarkers(InputArray, const std::vector<DictionaryType>&, const DetectorParameters&)
+ * @sa undistort, detectMarkers(InputArray, const std::vector<DictionaryType>&, const DetectionParameters&)
  */
 CV_EXPORTS_W std::vector<Marker> detectMarkers(InputArray image, DictionaryType dict = DICT_ARUCO_MIP_36h12,
-                                          const DetectorParameters &detectorParams = {});
+                                          const DetectionParameters &detectorParams = {});
 
 /** @brief Detect ArUco markers in an image searching across multiple dictionaries in one pass.
  *
@@ -204,7 +204,7 @@ CV_EXPORTS_W std::vector<Marker> detectMarkers(InputArray image, DictionaryType 
  * @sa Marker::dict
  */
 CV_EXPORTS_W std::vector<Marker> detectMarkers(InputArray image, const std::vector<DictionaryType> &dicts,
-                                          const DetectorParameters &detectorParams = {});
+                                          const DetectionParameters &detectorParams = {});
 
 
 /** @brief Draw detected markers onto an image.
@@ -270,18 +270,19 @@ CV_EXPORTS_W void getSolvePnpPoints(const Marker &marker, OutputArray objPoints,
  * partially occluded).  Use getSolvePnpPoints() to obtain the corresponding object and image
  * point arrays for solvePnP().
  *
- * @sa detectBoard, getSolvePnpPoints(const Board, OutputArray, OutputArray)
+ * @sa detectBoard, getSolvePnpPoints(const GridBoard, OutputArray, OutputArray)
  */
-struct CV_EXPORTS_W_SIMPLE Board {
+struct CV_EXPORTS_W_SIMPLE GridBoard {
     CV_PROP_RW cv::Size gridSize;              ///< board dimensions: width × height in markers
     CV_PROP_RW DictionaryType dict;            ///< dictionary used for all markers on the board
     CV_PROP_RW std::vector<Marker> markers;    ///< detected markers (subset of the full board)
 private:
     std::vector<std::pair<int,cv::Point2f>> detectedBoardCorners;
-    friend bool detectBoard(InputArray image, cv::Size gridSize, DictionaryType dict, Board &board,  std::vector<int> ids);
-    friend void getSolvePnpPoints(const Board& board, OutputArray objPoints, OutputArray imgPoints, float markerSize);
-    friend void drawDetected(InputOutputArray image, const Board &board, Scalar color, bool drawMarkerIds);
+    friend bool detectBoard(InputArray image, cv::Size gridSize, DictionaryType dict, GridBoard &board, InputArray ids);
+    friend void getSolvePnpPoints(const GridBoard& board, OutputArray objPoints, OutputArray imgPoints, float markerSize);
+    friend void drawDetected(InputOutputArray image, const GridBoard &board, Scalar color, bool drawMarkerIds);
 };
+
 
 /** @brief Generate a grid board image ready for printing.
  *
@@ -296,7 +297,7 @@ private:
  * Pass the same `boardSize`, `dict`, and `ids` to detectBoard() for detection.
  */
 CV_EXPORTS_W void generateBoardImage(OutputArray img, Size boardSize, DictionaryType dict,
-                                int bitSize = 25, std::vector<int> ids = {});
+                                int bitSize = 25, InputArray ids = noArray());
 
 
 /** @brief Detect a rectangular grid board of ArUco markers.
@@ -304,7 +305,7 @@ CV_EXPORTS_W void generateBoardImage(OutputArray img, Size boardSize, Dictionary
  * @param image        input image (grayscale or BGR)
  * @param gridSize     board layout as columns × rows (e.g. `cv::Size(4, 3)` for a 4×3 grid)
  * @param dict         dictionary used to print the board
- * @param board        output Board populated with the detected markers
+ * @param board        output GridBoard populated with the detected markers
  * @param ids          optional custom marker id list in row-major order;
  *                     if empty, ids 0…(cols*rows−1) are assumed
  * @return             true if at least one board marker was detected
@@ -315,7 +316,7 @@ CV_EXPORTS_W void generateBoardImage(OutputArray img, Size boardSize, Dictionary
  * @endcode
  */
 CV_EXPORTS_W bool detectBoard(InputArray image, cv::Size gridSize, DictionaryType dict,
-                         CV_OUT Board &board,  std::vector<int> ids = {});
+                         CV_OUT GridBoard &board, InputArray ids = noArray());
 
 /** @brief Draw detected board corners and optionally marker ids onto an image.
  *
@@ -327,7 +328,7 @@ CV_EXPORTS_W bool detectBoard(InputArray image, cv::Size gridSize, DictionaryTyp
  * For each detected board corner a filled circle is drawn together with its global corner id.
  * Useful for verifying that the board detection and corner assignment are correct.
  */
-CV_EXPORTS_W void drawDetected(InputOutputArray image, const Board &board,
+CV_EXPORTS_W void drawDetected(InputOutputArray image, const GridBoard &board,
                                Scalar color = Scalar(0, 255, 0),bool drawMarkerIds=false);
 
 
@@ -346,7 +347,7 @@ CV_EXPORTS_W void drawDetected(InputOutputArray image, const Board &board,
  *
  * @sa getSolvePnpPoints(const Marker, OutputArray, OutputArray)
  */
-CV_EXPORTS_W void getSolvePnpPoints(const Board &board, OutputArray objPoints, OutputArray imgPoints, float markerSize = 1.f);
+CV_EXPORTS_W void getSolvePnpPoints(const GridBoard &board, OutputArray objPoints, OutputArray imgPoints, float markerSize = 1.f);
 
 /** @brief A detected ChArUco2-style diamond marker.
  *
@@ -355,9 +356,9 @@ CV_EXPORTS_W void getSolvePnpPoints(const Board &board, OutputArray objPoints, O
  * Its identity is the combination of the four constituent marker ids, accessible via `id`
  * (as a `Vec4i` convenience field) or individually through each `markers[i].id`.
  *
- * @sa detectDiamonds, getSolvePnpPoints(const Diamond, OutputArray, OutputArray)
+ * @sa detectDiamonds, getSolvePnpPoints(const GridBoard, OutputArray, OutputArray)
  */
-struct CV_EXPORTS_W_SIMPLE Diamond {
+ struct CV_EXPORTS_W_SIMPLE Diamond {
     CV_PROP_RW cv::Vec4i id;                   ///< ids of the 4 constituent markers (clockwise from top-left)
     CV_PROP_RW DictionaryType dict;            ///< dictionary used for the 4 markers
     CV_PROP_RW std::vector<Marker> markers;    ///< the 4 detected markers forming the diamond
@@ -433,7 +434,7 @@ CV_EXPORTS_W void drawDetected(InputOutputArray image, const std::vector<Diamond
  *                    by this value.  Default 1.f returns unit-size points.
  *
  * @sa getSolvePnpPoints(const Marker, OutputArray, OutputArray),
- *     getSolvePnpPoints(const Board, OutputArray, OutputArray)
+ *     getSolvePnpPoints(const GridBoard, OutputArray, OutputArray)
  */
 CV_EXPORTS_W void getSolvePnpPoints(const Diamond &diamond, OutputArray objPoints, OutputArray imgPoints, float markerSize = 1.f);
 
@@ -535,7 +536,7 @@ CV_EXPORTS_W void drawDetected(InputOutputArray image, const std::vector<Fractal
  *                    @p markerSize / 2.  Default 1.f returns normalised-space points.
  *
  * @sa getSolvePnpPoints(const Marker &, OutputArray, OutputArray, float),
- *     getSolvePnpPoints(const Board &, OutputArray, OutputArray, float),
+ *     getSolvePnpPoints(const GridBoard &, OutputArray, OutputArray, float),
  *     getSolvePnpPoints(const Diamond &, OutputArray, OutputArray, float)
  */
 CV_EXPORTS_W void getSolvePnpPoints(const FractalMarker &fractal, OutputArray objPoints,
