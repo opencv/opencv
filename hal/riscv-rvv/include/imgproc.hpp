@@ -180,12 +180,12 @@ int remap16s(int src_type, const uchar *src_data, size_t src_step, int src_width
              int interpolation, int border_type, const double border_value[4]);
 
 // BUG: https://github.com/opencv/opencv/issues/27279
-#undef cv_hal_remap32f
-#define cv_hal_remap32f cv::rvv_hal::imgproc::remap32f
-#undef cv_hal_remap32fc2
-#define cv_hal_remap32fc2 cv::rvv_hal::imgproc::remap32fc2
-#undef cv_hal_remap16s
-#define cv_hal_remap16s cv::rvv_hal::imgproc::remap16s
+// #undef cv_hal_remap32f
+// #define cv_hal_remap32f cv::rvv_hal::imgproc::remap32f
+// #undef cv_hal_remap32fc2
+// #define cv_hal_remap32fc2 cv::rvv_hal::imgproc::remap32fc2
+// #undef cv_hal_remap16s
+// #define cv_hal_remap16s cv::rvv_hal::imgproc::remap16s
 
 int warpAffine(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar *dst_data, size_t dst_step, int dst_width, int dst_height, const double M[6], int interpolation, int borderType, const double borderValue[4]);
 int warpPerspective(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar *dst_data, size_t dst_step, int dst_width, int dst_height, const double M[9], int interpolation, int borderType, const double borderValue[4]);
