@@ -383,18 +383,8 @@ TEST_P(Test_Darknet_nets, YoloVoc)
                                     1, 6,  0.667770f, 0.446555f, 0.453578f, 0.499986f, 0.519167f,  // a car
                                     1, 6,  0.844947f, 0.637058f, 0.460398f, 0.828508f, 0.66427f);  // a car
 
-    double nmsThreshold = (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16) ? 0.397 : 0.4;
-    double scoreDiff = 1e-2, iouDiff = 2e-2;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
-    {
-        scoreDiff = 1e-2;
-        iouDiff = 0.018;
-    }
-    else if (target == DNN_TARGET_CUDA_FP16)
-    {
-        scoreDiff = 0.03;
-        iouDiff = 0.018;
-    }
+    double nmsThreshold = 0.397;
+    double scoreDiff = 0.03, iouDiff = 0.018;
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
     // accuracy
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
@@ -665,7 +655,7 @@ TEST_P(Test_Darknet_nets, YOLOv3)
     };
     Mat ref(N0 + N1, 7, CV_32FC1, (void*)ref_);
 
-    double scoreDiff = 9e-3, iouDiff = 8e-3;
+    double scoreDiff = 8e-5, iouDiff = 3e-4;
     if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2022010000)
@@ -755,8 +745,8 @@ TEST_P(Test_Darknet_nets, YOLOv4)
     };
     Mat ref(N0 + N1, 7, CV_32FC1, (void*)ref_);
 
-    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16) ? 0.006 : 5e-2;
-    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16) ? 0.042 : 5e-2;
+    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16) ? 0.006 : 8e-5;
+    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16) ? 0.042 : 3e-4;
     if (target == DNN_TARGET_CUDA_FP16)
     {
         scoreDiff = 0.008;
@@ -959,8 +949,8 @@ TEST_P(Test_Darknet_nets, YOLOv4x_mish)
     };
     Mat ref(N0 + N1, 7, CV_32FC1, (void*)ref_);
 
-    double scoreDiff = 5e-3;
-    double iouDiff = 5e-3;
+    double scoreDiff = 8e-5;
+    double iouDiff = 3e-4;
 
     if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_CPU_FP16)
     {

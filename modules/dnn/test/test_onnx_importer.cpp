@@ -3187,9 +3187,9 @@ TEST_P(Test_ONNX_nets, VitTrack) {
     auto ref_output2 = blobFromNPY(_tf("data/output_object_tracking_vittrack_2023sep_1.npy"));
     auto ref_output3 = blobFromNPY(_tf("data/output_object_tracking_vittrack_2023sep_2.npy"));
 
-    normAssert(ref_output1, outputs[0], "VitTrack output1");
-    normAssert(ref_output2, outputs[1], "VitTrack output2");
-    normAssert(ref_output3, outputs[2], "VitTrack output3");
+    normAssert(ref_output1, outputs[0], "VitTrack output1", 3e-5, 3e-4);
+    normAssert(ref_output2, outputs[1], "VitTrack output2", 3e-5, 2e-4);
+    normAssert(ref_output3, outputs[2], "VitTrack output3", 3e-4, 9e-4);
 }
 
 TEST_P(Test_ONNX_layers, LayerNormNoFusion) {

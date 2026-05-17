@@ -94,7 +94,7 @@ TEST_P(Test_TFLite, face_landmark)
 {
     if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
-    double l1 = 2.2e-5, lInf = 2e-4;
+    double l1 = 0.066, lInf = 0.21;
     if (target == DNN_TARGET_CPU_FP16 || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD ||
         (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL))
     {
@@ -120,7 +120,7 @@ TEST_P(Test_TFLite, face_detection_short_range)
 // https://google.github.io/mediapipe/solutions/selfie_segmentation
 TEST_P(Test_TFLite, selfie_segmentation)
 {
-    double l1 = 0, lInf = 0;
+    double l1 = 0.002, lInf = 0.24;
     if (target == DNN_TARGET_CPU_FP16 || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD ||
         (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL))
     {

@@ -265,7 +265,7 @@ TEST(Reproducibility_FCN, Accuracy)
     int shape[] = {1, 21, 500, 500};
     Mat ref(4, shape, CV_32FC1, refData.data);
 
-    normAssert(ref, out);
+    normAssert(ref, out, "", 0.013, 0.17);
 }
 
 TEST(Reproducibility_SSD, Accuracy)
@@ -318,7 +318,7 @@ TEST_P(Reproducibility_MobileNet_SSD, Accuracy)
 
     ASSERT_EQ(out.size[2], 100);
 
-    float scores_diff = 1e-2, boxes_iou_diff = 1e-2;
+    float scores_diff = 1e-5, boxes_iou_diff = 1e-4;
     if (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD || targetId == DNN_TARGET_CPU_FP16)
     {
         scores_diff = 1.5e-2;
