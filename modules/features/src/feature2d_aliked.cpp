@@ -26,8 +26,8 @@ ALIKED::Params::Params()
 class ALIKEDImpl : public ALIKED
 {
 public:
-    ALIKEDImpl(const ALIKED::Params& _params, const String& _modelPath)
-        : params(_params), modelPath(_modelPath)
+    ALIKEDImpl(const ALIKED::Params& _params, const String& modelPath)
+        : params(_params)
     {
         net = dnn::readNet(modelPath, "", "", dnn::ENGINE_ORT);
         CV_Assert(!net.empty());
@@ -42,13 +42,6 @@ public:
         CV_Assert(!net.empty());
     }
 
-    ALIKEDImpl(const dnn::Net& _net, const ALIKED::Params& _params)
-        : params(_params)
-    {
-        CV_Assert(!_net.empty());
-        net = _net;
-    }
-
     void detectAndCompute(InputArray image, InputArray mask,
                           std::vector<KeyPoint>& keypoints,
                           OutputArray descriptors,
@@ -58,15 +51,12 @@ public:
     int descriptorType() const CV_OVERRIDE;
     int defaultNorm() const CV_OVERRIDE;
     bool empty() const CV_OVERRIDE;
-    String getModel() const CV_OVERRIDE;
-    String getDefaultName() const CV_OVERRIDE;
 
     const ALIKEDContext& getLastContext() const { return lastContext; }
 
 protected:
     dnn::Net net;
     ALIKED::Params params;
-    String modelPath;
     ALIKEDContext lastContext;
 
     void runNetwork(InputArray image, std::vector<KeyPoint>& keypoints,
@@ -159,8 +149,6 @@ int ALIKEDImpl::descriptorSize() const { return 128; }
 int ALIKEDImpl::descriptorType() const { return CV_32F; }
 int ALIKEDImpl::defaultNorm() const { return NORM_L2; }
 bool ALIKEDImpl::empty() const { return net.empty(); }
-String ALIKEDImpl::getModel() const { return modelPath; }
-String ALIKEDImpl::getDefaultName() const { return "ALIKED"; }
 
 Ptr<ALIKED> ALIKED::create(const String& modelPath, const ALIKED::Params& params)
 {
@@ -172,24 +160,11 @@ Ptr<ALIKED> ALIKED::create(const std::vector<uchar>& modelData, const ALIKED::Pa
     return makePtr<ALIKEDImpl>(modelData, params);
 }
 
-Ptr<ALIKED> ALIKED::create(const dnn::Net& net, const ALIKED::Params& params)
-{
-    return makePtr<ALIKEDImpl>(net, params);
-}
-
 #else  // !HAVE_OPENCV_DNN
 
 Ptr<ALIKED> ALIKED::create(const String& modelPath, const ALIKED::Params& params)
 {
     CV_UNUSED(modelPath);
-    CV_UNUSED(params);
-    CV_Error(cv::Error::StsNotImplemented,
-             "ALIKED requires OpenCV built with opencv_dnn module!");
-}
-
-Ptr<ALIKED> ALIKED::create(const std::vector<uchar>& modelData, const ALIKED::Params& params)
-{
-    CV_UNUSED(modelData);
     CV_UNUSED(params);
     CV_Error(cv::Error::StsNotImplemented,
              "ALIKED requires OpenCV built with opencv_dnn module!");

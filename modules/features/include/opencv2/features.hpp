@@ -867,25 +867,13 @@ public:
     */
     CV_WRAP static Ptr<ALIKED> create(const String& modelPath, const ALIKED::Params& params = ALIKED::Params());
 
+#ifdef HAVE_OPENCV_DNN
     /** @brief Creates ALIKED from in-memory model data.
     @param modelData Buffer containing the model data.
     @param params ALIKED parameters.
     */
     static Ptr<ALIKED> create(const std::vector<uchar>& modelData, const ALIKED::Params& params = ALIKED::Params());
-
-#ifdef HAVE_OPENCV_DNN
-    /** @brief Creates ALIKED from a pre-loaded DNN network.
-    @param net Pre-loaded DNN network.
-    @param params ALIKED parameters.
-    */
-    CV_WRAP static Ptr<ALIKED> create(const dnn::Net& net, const ALIKED::Params& params);
 #endif
-
-    /** @brief Returns the model path or name.
-    */
-    CV_WRAP virtual String getModel() const = 0;
-
-    CV_WRAP virtual String getDefaultName() const CV_OVERRIDE = 0;
 };
 
 
@@ -1336,18 +1324,12 @@ public:
     */
     CV_WRAP static Ptr<LightGlueMatcher> create(const String& modelPath, const LightGlueMatcher::Params& params = LightGlueMatcher::Params());
 
+#ifdef HAVE_OPENCV_DNN
     /** @brief Creates LightGlueMatcher from in-memory model data.
     @param modelData Buffer containing the model data.
     @param params LightGlue parameters.
     */
     static Ptr<LightGlueMatcher> create(const std::vector<uchar>& modelData, const LightGlueMatcher::Params& params = LightGlueMatcher::Params());
-
-#ifdef HAVE_OPENCV_DNN
-    /** @brief Creates LightGlueMatcher from a pre-loaded DNN network.
-    @param net Pre-loaded DNN network.
-    @param params LightGlue parameters.
-    */
-    CV_WRAP static Ptr<LightGlueMatcher> create(const dnn::Net& net, const LightGlueMatcher::Params& params);
 #endif
 
     /** @brief Sets the keypoint and image size context for the next match() call.

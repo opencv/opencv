@@ -46,8 +46,8 @@ struct LightGluePairContext
 class LightGlueMatcherImpl : public LightGlueMatcher
 {
 public:
-    LightGlueMatcherImpl(const LightGlueMatcher::Params& _params, const String& _modelPath)
-        : params(_params), modelPath(_modelPath)
+    LightGlueMatcherImpl(const LightGlueMatcher::Params& _params, const String& modelPath)
+        : params(_params)
     {
         net = dnn::readNet(modelPath, "", "", dnn::ENGINE_ORT);
         CV_Assert(!net.empty());
@@ -62,12 +62,9 @@ public:
         CV_Assert(!net.empty());
     }
 
+    // Private constructor for clone() — shares the already-loaded network
     LightGlueMatcherImpl(const dnn::Net& _net, const LightGlueMatcher::Params& _params)
-        : params(_params)
-    {
-        CV_Assert(!_net.empty());
-        net = _net;
-    }
+        : params(_params), net(_net) {}
 
     // DescriptorMatcher interface
     bool isMaskSupported() const CV_OVERRIDE { return false; }
@@ -98,14 +95,12 @@ protected:
 
     dnn::Net net;
     LightGlueMatcher::Params params;
-    String modelPath;
     LightGluePairContext pairContext;
 };
 
 Ptr<DescriptorMatcher> LightGlueMatcherImpl::clone(bool emptyTrainData) const
 {
     Ptr<LightGlueMatcherImpl> m = makePtr<LightGlueMatcherImpl>(net, params);
-    m->modelPath = modelPath;
     // Always copy pairContext - it's matcher state, not train data
     m->pairContext = pairContext;
     if (!emptyTrainData)
@@ -274,27 +269,12 @@ Ptr<LightGlueMatcher> LightGlueMatcher::create(const std::vector<uchar>& modelDa
     return makePtr<LightGlueMatcherImpl>(modelData, params);
 }
 
-Ptr<LightGlueMatcher> LightGlueMatcher::create(const dnn::Net& net,
-                                                 const LightGlueMatcher::Params& params)
-{
-    return makePtr<LightGlueMatcherImpl>(net, params);
-}
-
 #else  // !HAVE_OPENCV_DNN
 
 Ptr<LightGlueMatcher> LightGlueMatcher::create(const String& modelPath,
                                                  const LightGlueMatcher::Params& params)
 {
     CV_UNUSED(modelPath);
-    CV_UNUSED(params);
-    CV_Error(cv::Error::StsNotImplemented,
-             "LightGlueMatcher requires OpenCV built with opencv_dnn module!");
-}
-
-Ptr<LightGlueMatcher> LightGlueMatcher::create(const std::vector<uchar>& modelData,
-                                                 const LightGlueMatcher::Params& params)
-{
-    CV_UNUSED(modelData);
     CV_UNUSED(params);
     CV_Error(cv::Error::StsNotImplemented,
              "LightGlueMatcher requires OpenCV built with opencv_dnn module!");

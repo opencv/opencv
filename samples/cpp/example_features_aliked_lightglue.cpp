@@ -60,11 +60,6 @@ else
     // vector<uchar> modelData = readFile(alikedModel);
     // Ptr<ALIKED> aliked = ALIKED::create(modelData);
 
-    // Method D: From pre-loaded dnn::Net
-    // dnn::Net net = dnn::readNet(alikedModel);
-    // Ptr<ALIKED> aliked = ALIKED::create(net);
-
-    cout << "ALIKED model: " << aliked->getModel() << endl;
     cout << "Descriptor size: " << aliked->descriptorSize() << endl;  // 128
     cout << "Descriptor type: " << aliked->descriptorType() << endl;  // CV_32F
     cout << "Default norm: " << aliked->defaultNorm() << endl;        // NORM_L2
@@ -105,10 +100,6 @@ else
     // Method C: From in-memory model data
     // vector<uchar> lgData = readFile(lightglueModel);
     // Ptr<LightGlueMatcher> lg = LightGlueMatcher::create(lgData);
-
-    // Method D: From pre-loaded dnn::Net
-    // dnn::Net lgNet = dnn::readNet(lightglueModel);
-    // Ptr<LightGlueMatcher> lg = LightGlueMatcher::create(lgNet);
 
     // ================================================================
     //  4. Set keypoint context for LightGlue
