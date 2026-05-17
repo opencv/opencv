@@ -969,9 +969,20 @@ void TFLiteImporter::parseDeconvolution(const Operator& op, const std::string& o
     layerParams.set("num_output", oc);
 
     // Add adjust padding similar to TensorFlow (see tf_importer)
-    const auto* outShape = modelTensors->Get(op.outputs()->Get(0))->shape();
-    const int outH = outShape->Get(1);
-    const int outW = outShape->Get(2);
+    int outH = 0, outW = 0;
+    int shapeTensorIdx = op.inputs()->Get(0);
+    if (allTensors.count(shapeTensorIdx) && !allTensors[shapeTensorIdx].empty() &&
+        allTensors[shapeTensorIdx].total() >= 3) {
+        Mat outShapeTensor = allTensors[shapeTensorIdx];
+        outH = outShapeTensor.at<int32_t>(1);
+        outW = outShapeTensor.at<int32_t>(2);
+    }
+    if (outH == 0 || outW == 0) {
+        const auto* outShape = modelTensors->Get(op.outputs()->Get(0))->shape();
+        outH = outShape->Get(1);
+        outW = outShape->Get(2);
+    }
+
     if (params->padding == kTfLitePaddingSame)
     {
         layerParams.set("adj_w", (outW - 1) % params->stride_width);
