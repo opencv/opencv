@@ -2,7 +2,7 @@ Detection of ArUco2 Boards {#tutorial_aruco2_boards}
 ==========================
 
 @prev_tutorial{tutorial_aruco2_detection}
-@next_tutorial{tutorial_aruco2_diamonds}
+@next_tutorial{tutorial_aruco2_calibration}
 
 |    |    |
 | -: | :- |
@@ -22,16 +22,16 @@ Benefits of ArUco2 Boards
 
 <img src="aruco2_board.png" alt="Example of ArUco2 Board" width="50%"/>
 
+
 Board Creation
 --------------
 
 You can generate a board image ready for printing using `cv::aruco2::generateBoardImage()`.
 
 @code{.cpp}
+//Generate a 9x5 board using DICT_ARUCO_MIP_36h12 markers
 cv::Mat boardImage;
-cv::Size gridSize(4, 3); // 4 columns, 3 rows
-cv::aruco2::DictionaryType dict = cv::aruco2::DICT_ARUCO_MIP_36h12;
-cv::aruco2::generateBoardImage(boardImage, gridSize, dict);
+cv::aruco2::generateBoardImage(boardImage, cv::Size(9, 5), cv::aruco2::DICT_ARUCO_MIP_36h12);
 cv::imwrite("board.png", boardImage);
 @endcode
 
@@ -74,3 +74,14 @@ cv::waitKey(0);
 @endcode
 
 You can also pass `true` as an optional fourth parameter to draw the IDs of the individual markers on the board.
+
+
+Camera Calibration with Boards
+------------------------------
+
+ArUco2 boards are particularly useful for camera calibration. Unlike traditional chessboards, they do not require the entire board to be visible to be useful.
+
+Key advantages for calibration:
+- **Partial Visibility:** You can calibrate your camera even if only a part of the board is in the frame. This is extremely valuable for capturing data at the edges and corners of the image sensor, where lens distortion is typically most significant.
+- **Ambiguity Removal:** Traditional chessboards can suffer from "phase" ambiguity (the calibration algorithm might misidentify which corner is which if the board is symmetric). Since each square in an ArUco2 board contains a unique marker ID, the identity and position of every corner are always known unequivocally.
+- **Robustness:** Calibration can proceed even in the presence of significant occlusions or shadows that would cause traditional chessboard detection to fail.

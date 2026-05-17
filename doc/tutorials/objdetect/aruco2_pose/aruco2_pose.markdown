@@ -37,9 +37,13 @@ for (const auto &m : cv::aruco2::detectMarkers(image)) {
     cv::solvePnP(objPoints, imgPoints, cameraMatrix, distCoeffs, rvec, tvec);
     
     // 3. Draw XYZ axes (Red=X, Green=Y, Blue=Z)
-    cv::aruco2::drawAxis(image, cameraMatrix, distCoeffs, rvec, tvec, markerSize * 0.5f);
+    cv::aruco2::drawAxis(image, cameraMatrix, distCoeffs, rvec, tvec, markerSize);
 }
 @endcode
+
+The following image shows a single marker with its estimated pose visualized as a 3D coordinate system:
+
+![Pose Estimation for a Single Marker](marker_axis.jpg)
 
 ### Pose Estimation for Boards, Diamonds, and Fractals
 
@@ -63,7 +67,7 @@ cv::aruco2::getSolvePnpPoints(fractal, objPoints, imgPoints, markerSize);
 Note on Calibration
 -------------------
 
-Accurate pose estimation requires the camera's intrinsic parameters (`cameraMatrix` and `distCoeffs`). These are obtained through the camera calibration process. If the image is already undistorted, `distCoeffs` can be passed as an empty `cv::Mat()`.
+Accurate pose estimation requires the camera's intrinsic parameters (`cameraMatrix` and `distCoeffs`). These are obtained through the @ref tutorial_aruco2_calibration process. If the image is already undistorted, `distCoeffs` can be passed as an empty `cv::Mat()`.
 
 Visualizing the Pose
 --------------------

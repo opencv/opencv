@@ -1,0 +1,22 @@
+%YAML:1.0
+---
+image_size: [ 2000, 1126 ]
+camera_matrix: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [ 1364.091033615068, 0., 928.5825908232099, 0.,
+       1365.4076527737539, 581.61821669795665, 0., 0., 1. ]
+distortion_coeffs: !!opencv-matrix
+   rows: 1
+   cols: 5
+   dt: d
+   data: [ -0.024302814608455656, 0.18725844879343315,
+       -0.0039233595172727996, -0.0018114277205209899,
+       -0.23918130693577355 ]
+reprojection_error: 3.4850724582502401
+num_images: 11
+board_cols: 9
+board_rows: 5
+marker_size_m: 0.05000000074505806
+dictionary_id: 21

@@ -19,7 +19,7 @@ Benefits of ArUco2
 
 Compared to the legacy `aruco` module, `aruco2` offers several significant improvements:
 
-- **Performance:** The detection engine is up to **6.5× faster** (based on ArUco Nano), and dictionary identification is up to **2.7× faster** thanks to O(1) hash-map lookups.
+- **Performance:** The detection engine is up to **6.5× more efficient** (based on ArUco Nano), and dictionary identification is up to **2.7× faster** thanks to O(1) hash-map lookups.
 - **Simpler API:** Detection is now a single function call returning a `std::vector<Marker>`, where each marker contains its ID, corners, and dictionary info. No more managing parallel vectors!
 - **Ease of Use:** A single public header `#include <opencv2/objdetect/aruco2.hpp>` provides everything you need.
 - **Robustness:** Safer default parameters (e.g., `errorCorrectionRate=0`) help prevent false positives in cluttered scenes.
@@ -44,17 +44,26 @@ It must be noted that a marker can be found rotated in the environment, however,
 process needs to be able to determine its original rotation, so that each corner is identified
 unequivocally. This is also done based on the binary codification.
 
-A dictionary is a set of markers used in an application. It defines the marker size (number of bits) and the number of markers it contains. `aruco2` includes many predefined dictionaries, such as `DICT_4X4_50`, `DICT_ARUCO_MIP_36h12`, and `DICT_APRILTAG_36h11`.
+A dictionary is a set of markers used in an application. It defines the marker size (number of bits) and the number of markers it contains. `aruco2` includes many predefined dictionaries, such as `DICT_6X6_250`, `DICT_ARUCO_MIP_36h12`, and `DICT_APRILTAG_36h11`.
 
 ### Selecting a Dictionary
 
-For most applications, it is **highly recommended** to use `DICT_ARUCO_MIP_36h12`. This dictionary contains 250 markers and offers the highest intermarker distance @cite garrido2016generation, which significantly reduces the probability of false positives and improves detection robustness.
+The choice of dictionary depends on the number of markers needed and the required detection robustness. Two main factors influence this:
+- **Marker Size**: The number of bits in the matrix (e.g., 6x6, 7x7). **It is strongly recommended to use at least 6x6 bits** for reliable detection. Larger bit matrices (like 7x7) provide higher inter-marker distance and better error correction.
+- **Dictionary Size**: The total number of unique markers in the set.
 
-If your application requires more than 250 markers, consider using the AprilTag dictionaries @cite wang2016iros :
-- `DICT_APRILTAG_36h11`: 587 markers.
-- `DICT_APRILTAG_36h10`: 2320 markers.
+#### Inter-marker Distance
 
-More information on selecting a dictionary can be found in the "Selecting a dictionary" section of the legacy documentation.
+The most critical parameter of a dictionary is the **inter-marker distance** (minimum Hamming distance). It represents the minimum number of bit differences between any two markers in the dictionary.
+- A higher inter-marker distance allows for better **error correction** and reduces **false positives** (misidentifying a marker or detecting one where there is none).
+- For a fixed marker size, increasing the dictionary size decreases the inter-marker distance.
+- For a fixed dictionary size, increasing the marker size (more bits) increases the inter-marker distance.
+
+#### Recommendations
+
+- **Use the smallest dictionary possible**: Always choose the smallest dictionary that fits your application's needs. For example, if you only need 250 markers, `DICT_6X6_250` is much more robust than `DICT_6X6_1000`.
+- **Prefer `DICT_ARUCO_MIP_36h12`**: For most general applications requiring up to 250 markers, `DICT_ARUCO_MIP_36h12` is highly recommended. It uses a 6x6 grid and is specifically optimized for maximum inter-marker distance (distance = 12) @cite garrido2016generation .
+- **AprilTag Dictionaries**: If you need more than 250 markers, the AprilTag dictionaries (`DICT_APRILTAG_36h11` or `DICT_APRILTAG_36h10`) are excellent alternatives @cite wang2016iros .
 
 
 Marker Creation

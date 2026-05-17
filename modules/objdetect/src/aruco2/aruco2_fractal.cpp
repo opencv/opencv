@@ -1171,7 +1171,7 @@ void drawDetected(InputOutputArray _image, const std::vector<FractalMarker> &fra
 
     float lineWidthF = std::max(1.f, std::min(5.f, float(image.cols) / 500.f));
     int lineWidth = int(std::round(lineWidthF));
-    int dotRadius = std::max(2, int(std::round(lineWidthF * 2.f)));
+    int dotRadius = std::max(2, int(std::round(lineWidthF * 1.2f)));
 
     for (const auto &m : fractals) {
         if (m.corners.size() < 4) continue;

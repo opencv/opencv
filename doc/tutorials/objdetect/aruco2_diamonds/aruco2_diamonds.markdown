@@ -1,7 +1,7 @@
 Detection of ArUco2 Diamonds {#tutorial_aruco2_diamonds}
 ============================
 
-@prev_tutorial{tutorial_aruco2_boards}
+@prev_tutorial{tutorial_aruco2_calibration}
 @next_tutorial{tutorial_aruco2_fractals}
 
 |    |    |
@@ -68,3 +68,18 @@ cv::waitKey(0);
 @endcode
 
 This function draws the diamond's outer boundary, small squares at each of the 9 grid corners, and the `Vec4i` ID at the centroid. You can also pass `true` as an optional fourth parameter to draw the individual IDs of the four constituent markers.
+
+Pose Estimation with Diamonds
+-----------------------------
+
+Diamonds are excellent for high-precision pose estimation. To estimate the pose, use `cv::aruco2::getSolvePnpPoints()` to obtain the image-to-3D correspondences and then call `cv::solvePnP()`.
+
+@code{.cpp}
+float markerSize = 0.05f; // Physical side length of a single marker in meters
+for (const auto &d : diamonds) {
+    cv::Mat objPoints, imgPoints, rvec, tvec;
+    cv::aruco2::getSolvePnpPoints(d, objPoints, imgPoints, markerSize);
+    cv::solvePnP(objPoints, imgPoints, cameraMatrix, distCoeffs, rvec, tvec);
+    cv::aruco2::drawAxis(image, cameraMatrix, distCoeffs, rvec, tvec, markerSize);
+}
+@endcode

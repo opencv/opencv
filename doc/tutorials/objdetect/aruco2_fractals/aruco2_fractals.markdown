@@ -11,14 +11,25 @@ Detection of ArUco2 Fractal Markers {#tutorial_aruco2_fractals}
 
 Fractal markers @cite romero2019fractal : are nested ArUco-like markers designed for extreme robustness and high-precision pose estimation. An outer marker contains one or more smaller markers at increasing scales.
 
+![Fractal Marker](aruco2_fractal.jpg)
+
 Benefits of Fractal Markers
 ---------------------------
 
-- **Occlusion Robustness:** Even if the outer marker is heavily occluded, detection can continue using the inner markers.
+- **Occlusion Robustness:** Fractal markers are designed to be detectable even when significant portions of the marker are covered or outside the camera's field of view.
 - **Dynamic Range:** They can be detected at both long range (outer marker) and very close range (inner markers).
-- **Precision:** The nested design provides many more image-to-3D correspondences than a standard marker, significantly improving pose accuracy.
+- **Precision:** The nested design provides many more image-to-3D correspondences than a standard marker by utilizing **inner corners**, significantly improving pose accuracy.
 
-<img src="aruco2_fractal.png" alt="Example of ArUco2 Fractal Marker" width="50%"/>
+Occlusion and Inner Corners
+---------------------------
+
+One of the most powerful features of ArUco2 fractal markers is their ability to provide a pose even when partially occluded. While a standard ArUco marker requires all four corners to be visible for pose estimation, a fractal marker can use any combination of its nested markers.
+
+Furthermore, `aruco2` detects all the **inner corners** of the fractal grid. Instead of having just 4 points for the `solvePnP` algorithm, a fractal marker can provide dozens or even hundreds of points, depending on the fractal level.
+
+The following image illustrates a fractal marker that is partially outside the image frame. Despite the missing outer corners, the system detects the visible inner markers and their inner corners, allowing for a stable pose estimation (indicated by the coordinate axes):
+
+![Occluded Fractal Marker with Inner Corners and Axis](aruco2_fractal_detected.jpg)
 
 Fractal Types
 -------------
