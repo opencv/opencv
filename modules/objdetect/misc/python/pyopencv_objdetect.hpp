@@ -8,10 +8,10 @@ typedef std::vector<cv::Ptr<mcc::CChecker>> vector_Ptr_CChecker;
 typedef dnn::Net dnn_Net;
 #endif
 
-typedef std::vector<cv::aruco2::Marker> vector_Marker;
-typedef std::vector<cv::aruco2::DictionaryType> vector_DictionaryType;
-typedef std::vector<cv::aruco2::Diamond> vector_Diamond;
-typedef std::vector<cv::aruco2::FractalMarker> vector_FractalMarker;
+typedef std::vector<cv::aruco2::Marker> vector_aruco2_Marker;
+typedef std::vector<cv::aruco2::DictionaryType> vector_aruco2_DictionaryType;
+typedef std::vector<cv::aruco2::Diamond> vector_aruco2_Diamond;
+typedef std::vector<cv::aruco2::FractalMarker> vector_aruco2_FractalMarker;
 
 class NativeByteArray
 {

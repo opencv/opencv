@@ -50,119 +50,119 @@ public class Aruco2 {
 
     @SuppressWarnings("unchecked")
     public static List<Marker> detectMarkers(Mat image, int dict, DetectionParameters detectorParams) {
-        return (List<Marker>)(List<?>)Objdetect.detectMarkers(image, dict, detectorParams);
+        return (List<Marker>)(List<?>)Objdetect.Aruco2_detectMarkers_Params(image, dict, detectorParams.nativeObj);
     }
 
     @SuppressWarnings("unchecked")
     public static List<Marker> detectMarkers(Mat image, int dict) {
-        return (List<Marker>)(List<?>)Objdetect.detectMarkers(image, dict);
+        return (List<Marker>)(List<?>)Objdetect.Aruco2_detectMarkers_Params(image, dict, 0L);
     }
 
     @SuppressWarnings("unchecked")
     public static List<Marker> detectMarkers(Mat image) {
-        return (List<Marker>)(List<?>)Objdetect.detectMarkers(image);
+        return (List<Marker>)(List<?>)Objdetect.Aruco2_detectMarkers_Params(image, DICT_ARUCO_MIP_36h12, 0L);
     }
 
     @SuppressWarnings("unchecked")
     public static List<Marker> detectMarkers(Mat image, MatOfInt dicts, DetectionParameters detectorParams) {
-        return (List<Marker>)(List<?>)Objdetect.detectMarkers(image, dicts, detectorParams);
+        return (List<Marker>)(List<?>)Objdetect.Aruco2_detectMarkers_Dicts(image, dicts, detectorParams.nativeObj);
     }
 
     public static void generateMarkerImage(Mat img, int dictionary, int id, int bitSize, boolean externalBorder) {
-        Objdetect.generateMarkerImage(img, dictionary, id, bitSize, externalBorder);
+        Objdetect.Aruco2_generateMarkerImage(img, dictionary, id, bitSize, externalBorder);
     }
 
     public static void generateMarkerImage(Mat img, int dictionary, int id) {
-        Objdetect.generateMarkerImage(img, dictionary, id);
+        Objdetect.Aruco2_generateMarkerImage(img, dictionary, id);
     }
 
     @SuppressWarnings("unchecked")
     public static void drawDetectedMarkers(Mat image, List<Marker> markers, Scalar borderColor) {
-        Objdetect.aruco2_drawDetectedMarkers(image, (List<Aruco2_Marker>)(List<?>)markers, borderColor);
+        Objdetect.Aruco2_aruco2_drawDetectedMarkers(image, (List<Aruco2_Marker>)(List<?>)markers, borderColor);
     }
 
     @SuppressWarnings("unchecked")
     public static void drawDetectedMarkers(Mat image, List<Marker> markers) {
-        Objdetect.aruco2_drawDetectedMarkers(image, (List<Aruco2_Marker>)(List<?>)markers);
+        Objdetect.Aruco2_aruco2_drawDetectedMarkers(image, (List<Aruco2_Marker>)(List<?>)markers);
     }
 
     public static void drawAxis(Mat image, Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec, float length) {
-        Objdetect.drawAxis(image, cameraMatrix, distCoeffs, rvec, tvec, length);
+        Objdetect.Aruco2_drawAxis(image, cameraMatrix, distCoeffs, rvec, tvec, length);
     }
 
     public static void getSolvePnpPoints(Marker marker, Mat objPoints, Mat imgPoints, float markerSize) {
-        Objdetect.getSolvePnpPoints(marker, objPoints, imgPoints, markerSize);
+        Objdetect.Aruco2_getSolvePnpPoints_Marker(marker.nativeObj, objPoints, imgPoints, markerSize);
     }
 
     public static void getSolvePnpPoints(Marker marker, Mat objPoints, Mat imgPoints) {
-        Objdetect.getSolvePnpPoints(marker, objPoints, imgPoints);
+        Objdetect.Aruco2_getSolvePnpPoints_Marker(marker.nativeObj, objPoints, imgPoints, 1.0f);
     }
 
     public static void generateBoardImage(Mat img, Size boardSize, int dict, int bitSize, Mat ids) {
-        Objdetect.generateBoardImage(img, boardSize, dict, bitSize, ids);
+        Objdetect.Aruco2_generateBoardImage(img, boardSize, dict, bitSize, ids);
     }
 
     public static void generateBoardImage(Mat img, Size boardSize, int dict) {
-        Objdetect.generateBoardImage(img, boardSize, dict);
+        Objdetect.Aruco2_generateBoardImage(img, boardSize, dict);
     }
 
     public static boolean detectBoard(Mat image, Size gridSize, int dict, GridBoard board, Mat ids) {
-        return Objdetect.detectBoard(image, gridSize, dict, board, ids);
+        return Objdetect.Aruco2_detectBoard_Ids(image, gridSize, dict, board.nativeObj, ids);
     }
 
     public static boolean detectBoard(Mat image, Size gridSize, int dict, GridBoard board) {
-        return Objdetect.detectBoard(image, gridSize, dict, board);
+        return Objdetect.Aruco2_detectBoard_NoIds(image, gridSize, dict, board.nativeObj);
     }
 
     public static void drawDetectedBoard(Mat image, GridBoard board, Scalar color, boolean drawMarkerIds) {
-        Objdetect.aruco2_drawDetectedBoard(image, board, color, drawMarkerIds);
+        Objdetect.Aruco2_aruco2_drawDetectedBoard_Params(image, board.nativeObj, color, drawMarkerIds);
     }
 
     public static void drawDetectedBoard(Mat image, GridBoard board) {
-        Objdetect.aruco2_drawDetectedBoard(image, board);
+        Objdetect.Aruco2_aruco2_drawDetectedBoard_NoParams(image, board.nativeObj);
     }
 
     public static void getSolvePnpPoints(GridBoard board, Mat objPoints, Mat imgPoints, float markerSize) {
-        Objdetect.getSolvePnpPoints(board, objPoints, imgPoints, markerSize);
+        Objdetect.Aruco2_getSolvePnpPoints_GridBoard(board.nativeObj, objPoints, imgPoints, markerSize);
     }
 
     public static void getSolvePnpPoints(GridBoard board, Mat objPoints, Mat imgPoints) {
-        Objdetect.getSolvePnpPoints(board, objPoints, imgPoints);
+        Objdetect.Aruco2_getSolvePnpPoints_GridBoard(board.nativeObj, objPoints, imgPoints, 1.0f);
     }
 
     @SuppressWarnings("unchecked")
     public static List<Diamond> detectDiamonds(Mat image, int dict) {
-        return (List<Diamond>)(List<?>)Objdetect.detectDiamonds(image, dict);
+        return (List<Diamond>)(List<?>)Objdetect.Aruco2_detectDiamonds(image, dict);
     }
 
     public static void generateDiamondImage(Mat img, int dictionary, int[] ids, int bitSize) {
-        Objdetect.generateDiamondImage(img, dictionary, ids, bitSize);
+        Objdetect.Aruco2_generateDiamondImage(img, dictionary, ids, bitSize);
     }
 
     @SuppressWarnings("unchecked")
     public static void drawDetectedDiamonds(Mat image, List<Diamond> diamonds, Scalar color, boolean drawMarkerIds) {
-        Objdetect.aruco2_drawDetectedDiamonds(image, (List<Aruco2_Diamond>)(List<?>)diamonds, color, drawMarkerIds);
+        Objdetect.Aruco2_aruco2_drawDetectedDiamonds(image, (List<Aruco2_Diamond>)(List<?>)diamonds, color, drawMarkerIds);
     }
 
     public static void getSolvePnpPoints(Diamond diamond, Mat objPoints, Mat imgPoints, float markerSize) {
-        Objdetect.getSolvePnpPoints(diamond, objPoints, imgPoints, markerSize);
+        Objdetect.Aruco2_getSolvePnpPoints_Diamond(diamond.nativeObj, objPoints, imgPoints, markerSize);
     }
 
     public static void generateFractalImage(Mat img, int ftype, int bitSize) {
-        Objdetect.generateFractalImage(img, ftype, bitSize);
+        Objdetect.Aruco2_generateFractalImage(img, ftype, bitSize);
     }
 
     @SuppressWarnings("unchecked")
     public static List<FractalMarker> detectFractals(Mat image, int ftype) {
-        return (List<FractalMarker>)(List<?>)Objdetect.detectFractals(image, ftype);
+        return (List<FractalMarker>)(List<?>)Objdetect.Aruco2_detectFractals(image, ftype);
     }
 
     @SuppressWarnings("unchecked")
     public static void drawDetectedFractals(Mat image, List<FractalMarker> fractals, Scalar color, boolean drawAllImagePoints) {
-        Objdetect.aruco2_drawDetectedFractals(image, (List<Aruco2_FractalMarker>)(List<?>)fractals, color, drawAllImagePoints);
+        Objdetect.Aruco2_aruco2_drawDetectedFractals(image, (List<Aruco2_FractalMarker>)(List<?>)fractals, color, drawAllImagePoints);
     }
 
     public static void getSolvePnpPoints(FractalMarker fractal, Mat objPoints, Mat imgPoints, float markerSize) {
-        Objdetect.getSolvePnpPoints(fractal, objPoints, imgPoints, markerSize);
+        Objdetect.Aruco2_getSolvePnpPoints_Fractal(fractal.nativeObj, objPoints, imgPoints, markerSize);
     }
 }
