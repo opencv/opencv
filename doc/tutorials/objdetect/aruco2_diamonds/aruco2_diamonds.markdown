@@ -23,13 +23,7 @@ Diamond Creation
 
 You can generate a diamond image for printing using `cv::aruco2::getDiamondImage()`.
 
-@code{.cpp}
-cv::Mat diamondImage;
-cv::aruco2::DictionaryType dict = cv::aruco2::DICT_ARUCO_MIP_36h12;
-cv::Vec4i ids(10, 11, 12, 13); // IDs clockwise from top-left
-cv::aruco2::getDiamondImage(diamondImage, dict, ids);
-cv::imwrite("diamond.png", diamondImage);
-@endcode
+@snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_diamonds.cpp create_diamond
 
 The parameters are:
 - The output image (`cv::Mat`).
@@ -42,14 +36,7 @@ Diamond Detection
 
 Detection is handled by the `cv::aruco2::detectDiamonds()` function.
 
-@code{.cpp}
-cv::Mat image = cv::imread("diamond_scene.jpg");
-auto diamonds = cv::aruco2::detectDiamonds(image, cv::aruco2::DICT_ARUCO_MIP_36h12);
-
-for (const auto &d : diamonds) {
-    std::cout << "Detected diamond with IDs: " << d.id << std::endl;
-}
-@endcode
+@snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_diamonds.cpp detect_diamonds
 
 Each `cv::aruco2::Diamond` object in the returned vector contains:
 - `id`: A `cv::Vec4i` with the IDs of the four markers.
@@ -61,11 +48,7 @@ Drawing Detected Diamonds
 
 Visualize the results using the `cv::aruco2::drawDiamonds()` function.
 
-@code{.cpp}
-cv::aruco2::drawDiamonds(image, diamonds);
-cv::imshow("Detected Diamonds", image);
-cv::waitKey(0);
-@endcode
+@snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_diamonds.cpp draw_diamonds
 
 This function draws the diamond's outer boundary, small squares at each of the 9 grid corners, and the `Vec4i` ID at the centroid. You can also pass `true` as an optional fourth parameter to draw the individual IDs of the four constituent markers.
 
@@ -74,12 +57,4 @@ Pose Estimation with Diamonds
 
 Diamonds are excellent for high-precision pose estimation. To estimate the pose, use `cv::aruco2::getSolvePnpPoints()` to obtain the image-to-3D correspondences and then call `cv::solvePnP()`.
 
-@code{.cpp}
-float markerSize = 0.05f; // Physical side length of a single marker in meters
-for (const auto &d : diamonds) {
-    cv::Mat objPoints, imgPoints, rvec, tvec;
-    cv::aruco2::getSolvePnpPoints(d, objPoints, imgPoints, markerSize);
-    cv::solvePnP(objPoints, imgPoints, cameraMatrix, distCoeffs, rvec, tvec);
-    cv::aruco2::drawAxis(image, cameraMatrix, distCoeffs, rvec, tvec, markerSize);
-}
-@endcode
+@snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_diamonds.cpp pose_diamond

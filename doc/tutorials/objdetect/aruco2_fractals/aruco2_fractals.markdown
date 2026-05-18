@@ -45,11 +45,7 @@ Fractal Creation
 
 Generate a fractal marker image using `cv::aruco2::getFractalImage()`.
 
-@code{.cpp}
-cv::Mat fractalImage;
-cv::aruco2::getFractalImage(fractalImage, cv::aruco2::FRACTAL_3L_6);
-cv::imwrite("fractal.png", fractalImage);
-@endcode
+@snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_fractals.cpp create_fractal
 
 The parameters are:
 - The output image (`cv::Mat`).
@@ -61,14 +57,7 @@ Fractal Detection
 
 Detection is handled by the `cv::aruco2::detectFractals()`.
 
-@code{.cpp}
-cv::Mat image = cv::imread("fractal_scene.jpg");
-auto fractals = cv::aruco2::detectFractals(image, cv::aruco2::FRACTAL_3L_6);
-
-for (const auto &f : fractals) {
-    std::cout << "Detected fractal marker ID: " << f.id << std::endl;
-}
-@endcode
+@snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_fractals.cpp detect_fractals
 
 Each `cv::aruco2::FractalMarker` object contains:
 - `corners`: The 4 corners of the outer marker.
@@ -80,10 +69,6 @@ Drawing Detected Fractals
 
 Visualize the detection with `cv::aruco2::drawFractals()`.
 
-@code{.cpp}
-cv::aruco2::drawFractals(image, fractals);
-cv::imshow("Detected Fractals", image);
-cv::waitKey(0);
-@endcode
+@snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_fractals.cpp draw_fractals
 
 By default, this draws the outer border, the ID, and all matched image points (inner corners) as small circles. You can disable the inner points by passing `false` as the fourth parameter.

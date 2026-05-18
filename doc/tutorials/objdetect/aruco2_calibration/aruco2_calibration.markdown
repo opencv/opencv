@@ -43,61 +43,7 @@ Calibration Code
 
 The following example demonstrates a complete calibration script. It iterates through a folder of images, detects the board in each, and performs the final calibration.
 
-@code{.cpp}
-#include <opencv2/objdetect/aruco2.hpp>
-#include <opencv2/calib3d.hpp>
-#include <opencv2/highgui.hpp>
-#include <opencv2/imgproc.hpp>
-#include <filesystem>
-#include <iostream>
-
-namespace fs = std::filesystem;
-
-int main() {
-    float markerSize = 0.05f; // 5 cm
-    std::string folder = "path/to/calibration_images";
-
-    std::vector<std::vector<cv::Point3f>> allObjPts;
-    std::vector<std::vector<cv::Point2f>> allImgPts;
-    cv::Size imageSize;
-
-    for (auto& entry : fs::directory_iterator(folder)) {
-        cv::Mat image = cv::imread(entry.path().string(), cv::IMREAD_GRAYSCALE);
-        if (image.empty()) continue;
-        if (imageSize.width == 0) imageSize = image.size();
-
-        cv::aruco2::GridBoard board;
-        if (cv::aruco2::detectGridBoard(image, cv::Size(9, 5), cv::aruco2::DICT_ARUCO_MIP_36h12, board)) {
-            cv::Mat imgPtsMat, objPtsMat;
-            // Get 3D-2D correspondences
-            cv::aruco2::getSolvePnpPoints(board, objPtsMat, imgPtsMat, markerSize);
-
-            // Convert to vector for calibrateCamera
-            std::vector<cv::Point2f> imgPts(imgPtsMat.begin<cv::Point2f>(), imgPtsMat.end<cv::Point2f>());
-            std::vector<cv::Point3f> objPts(objPtsMat.begin<cv::Point3f>(), objPtsMat.end<cv::Point3f>());
-
-            allImgPts.push_back(imgPts);
-            allObjPts.push_back(objPts);
-        }
-    }
-
-    // Perform calibration
-    cv::Mat cameraMatrix, distCoeffs;
-    std::vector<cv::Mat> rvecs, tvecs;
-    double rpe = cv::calibrateCamera(allObjPts, allImgPts, imageSize, cameraMatrix, distCoeffs, rvecs, tvecs);
-
-    std::cout << "Reprojection error: " << rpe << " px" << std::endl;
-    std::cout << "Camera Matrix:\n" << cameraMatrix << std::endl;
-
-    // Save results
-    cv::FileStorage fs_out("calibration.yaml", cv::FileStorage::WRITE);
-    fs_out << "camera_matrix" << cameraMatrix;
-    fs_out << "distortion_coeffs" << distCoeffs;
-    fs_out.release();
-
-    return 0;
-}
-@endcode
+@snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_calibration.cpp calibration
 
 ### Understanding the Output
 

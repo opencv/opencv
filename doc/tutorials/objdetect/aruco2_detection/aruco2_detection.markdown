@@ -26,9 +26,7 @@ Compared to the legacy `aruco` module, `aruco2` offers several significant impro
 - **Advanced Features:** Native support for multi-dictionary detection in a single pass, and enhanced designs for boards, diamonds, and fractal markers.
 
 The `aruco2` functionalities are included in:
-@code{.cpp}
-#include <opencv2/objdetect/aruco2.hpp>
-@endcode
+@snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_detection.cpp aruco2hdr
 
 
 Markers and Dictionaries
@@ -72,11 +70,7 @@ Marker Creation
 Markers must be printed before they can be detected. You can generate marker images using the `cv::aruco2::getFiducialMarker()` function.
 
 Example:
-@code{.cpp}
-cv::Mat markerImage;
-cv::aruco2::getFiducialMarker(markerImage, cv::aruco2::DICT_ARUCO_MIP_36h12, 42);
-cv::imwrite("marker42.png", markerImage);
-@endcode
+@snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_detection.cpp generate_marker
 
 The parameters are:
 - The output image (`cv::Mat`).
@@ -92,28 +86,13 @@ Detecting markers in `aruco2` is straightforward. The `cv::aruco2::detectFiducia
 
 ### Basic Detection (Single Dictionary)
 
-@code{.cpp}
-cv::Mat image = cv::imread("scene.jpg");
-auto markers = cv::aruco2::detectFiducialMarkers(image, cv::aruco2::DICT_ARUCO_MIP_36h12);
-
-for (const auto &m : markers) {
-    std::cout << "Detected marker ID: " << m.id << " at " << m.corners[0] << std::endl;
-}
-@endcode
+@snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_detection.cpp detect_single
 
 ### Multi-Dictionary Detection
 
 One of the new features of `aruco2` is the ability to search for markers from multiple dictionaries in a single pass:
 
-@code{.cpp}
-using namespace cv::aruco2;
-auto markers = detectFiducialMarkers(image, {DICT_ARUCO_MIP_36h12, DICT_APRILTAG_36h11});
-
-for (const auto &m : markers) {
-    std::string dictName = (m.dict == DICT_ARUCO_MIP_36h12) ? "ArUco" : "AprilTag";
-    std::cout << "Found " << dictName << " marker ID: " << m.id << std::endl;
-}
-@endcode
+@snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_detection.cpp multi_dict
 
 
 Drawing Detected Markers
@@ -121,10 +100,6 @@ Drawing Detected Markers
 
 To visualize the detection results, use `cv::aruco2::drawFiducialMarkers()`. It draws a colored outline around each marker, a dot at the first corner to show orientation, and the marker ID.
 
-@code{.cpp}
-cv::aruco2::drawFiducialMarkers(image, markers);
-cv::imshow("Detected Markers", image);
-cv::waitKey(0);
-@endcode
+@snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_detection.cpp draw_markers
 
 The default color is green (`cv::Scalar(0, 255, 0)`), but you can specify a custom color as the third parameter.

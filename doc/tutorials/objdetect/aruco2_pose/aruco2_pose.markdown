@@ -23,23 +23,7 @@ The general workflow is:
 
 ### Pose Estimation for a Single Marker
 
-@code{.cpp}
-cv::Mat cameraMatrix, distCoeffs; // Load from calibration file
-float markerSize = 0.05f;        // Physical side length in meters (e.g., 5 cm)
-
-for (const auto &m : cv::aruco2::detectFiducialMarkers(image)) {
-    cv::Mat objPoints, imgPoints, rvec, tvec;
-    
-    // 1. Extract points
-    cv::aruco2::getSolvePnpPoints(m, objPoints, imgPoints, markerSize);
-    
-    // 2. Estimate pose
-    cv::solvePnP(objPoints, imgPoints, cameraMatrix, distCoeffs, rvec, tvec);
-    
-    // 3. Draw XYZ axes (Red=X, Green=Y, Blue=Z)
-    cv::aruco2::drawAxis(image, cameraMatrix, distCoeffs, rvec, tvec, markerSize);
-}
-@endcode
+@snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_pose.cpp pose_single_marker
 
 The following image shows a single marker with its estimated pose visualized as a 3D coordinate system:
 
@@ -50,19 +34,10 @@ The following image shows a single marker with its estimated pose visualized as 
 The same pattern applies to more complex targets. The only difference is the target object passed to `getSolvePnpPoints()`.
 
 **For a GridBoard:**
-@code{.cpp}
-cv::aruco2::getSolvePnpPoints(board, objPoints, imgPoints, markerSize);
-@endcode
-
-**For a Diamond:**
-@code{.cpp}
-cv::aruco2::getSolvePnpPoints(diamond, objPoints, imgPoints, markerSize);
-@endcode
+@snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_pose.cpp pose_board
 
 **For a Fractal Marker:**
-@code{.cpp}
-cv::aruco2::getSolvePnpPoints(fractal, objPoints, imgPoints, markerSize);
-@endcode
+@snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_pose.cpp pose_fractal
 
 Note on Calibration
 -------------------
@@ -77,7 +52,5 @@ The `cv::aruco2::drawAxis()` function projects the origin and the three axis tip
 - **Y-axis** is Green.
 - **Z-axis** is Blue.
 
-@code{.cpp}
-cv::aruco2::drawAxis(image, cameraMatrix, distCoeffs, rvec, tvec, axisLength);
-@endcode
+`cv::aruco2::drawAxis(image, cameraMatrix, distCoeffs, rvec, tvec, axisLength);`
 The `axisLength` parameter should be in the same units as your `markerSize` (e.g., meters).
