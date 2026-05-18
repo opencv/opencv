@@ -363,8 +363,9 @@
    out0 += inp4;                                                              \
 }
 
-void png_read_filter_row_up_msa(png_row_infop row_info, png_bytep row,
-                                png_const_bytep prev_row)
+void
+png_read_filter_row_up_msa(png_row_infop row_info, png_bytep row,
+    png_const_bytep prev_row)
 {
    size_t i, cnt, cnt16, cnt32;
    size_t istop = row_info->rowbytes;
@@ -454,8 +455,9 @@ void png_read_filter_row_up_msa(png_row_infop row_info, png_bytep row,
    }
 }
 
-void png_read_filter_row_sub4_msa(png_row_infop row_info, png_bytep row,
-                                  png_const_bytep prev_row)
+void
+png_read_filter_row_sub4_msa(png_row_infop row_info, png_bytep row,
+    png_const_bytep prev_row)
 {
    size_t count;
    size_t istop = row_info->rowbytes;
@@ -493,8 +495,9 @@ void png_read_filter_row_sub4_msa(png_row_infop row_info, png_bytep row,
    }
 }
 
-void png_read_filter_row_sub3_msa(png_row_infop row_info, png_bytep row,
-                                  png_const_bytep prev_row)
+void
+png_read_filter_row_sub3_msa(png_row_infop row_info, png_bytep row,
+    png_const_bytep prev_row)
 {
    size_t count;
    size_t istop = row_info->rowbytes;
@@ -538,8 +541,9 @@ void png_read_filter_row_sub3_msa(png_row_infop row_info, png_bytep row,
    }
 }
 
-void png_read_filter_row_avg4_msa(png_row_infop row_info, png_bytep row,
-                                  png_const_bytep prev_row)
+void
+png_read_filter_row_avg4_msa(png_row_infop row_info, png_bytep row,
+    png_const_bytep prev_row)
 {
    size_t i;
    png_bytep src = row;
@@ -589,8 +593,9 @@ void png_read_filter_row_avg4_msa(png_row_infop row_info, png_bytep row,
    }
 }
 
-void png_read_filter_row_avg3_msa(png_row_infop row_info, png_bytep row,
-                                  png_const_bytep prev_row)
+void
+png_read_filter_row_avg3_msa(png_row_infop row_info, png_bytep row,
+    png_const_bytep prev_row)
 {
    size_t i;
    png_bytep src = row;
@@ -650,9 +655,9 @@ void png_read_filter_row_avg3_msa(png_row_infop row_info, png_bytep row,
    }
 }
 
-void png_read_filter_row_paeth4_msa(png_row_infop row_info,
-                                    png_bytep row,
-                                    png_const_bytep prev_row)
+void
+png_read_filter_row_paeth4_msa(png_row_infop row_info, png_bytep row,
+    png_const_bytep prev_row)
 {
    int32_t count, rp_end;
    png_bytep nxt;
@@ -721,9 +726,9 @@ void png_read_filter_row_paeth4_msa(png_row_infop row_info,
    }
 }
 
-void png_read_filter_row_paeth3_msa(png_row_infop row_info,
-                                    png_bytep row,
-                                    png_const_bytep prev_row)
+void
+png_read_filter_row_paeth3_msa(png_row_infop row_info, png_bytep row,
+    png_const_bytep prev_row)
 {
    int32_t count, rp_end;
    png_bytep nxt;

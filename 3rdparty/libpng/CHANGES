@@ -5988,7 +5988,7 @@ Version 1.6.32rc01 [August 18, 2017]
 
 Version 1.6.32rc02 [August 22, 2017]
   Added contrib/oss-fuzz directory which contains files used by the oss-fuzz
-    project (https://github.com/google/oss-fuzz/tree/master/projects/libpng).
+    project <https://github.com/google/oss-fuzz/tree/master/projects/libpng>.
 
 Version 1.6.32 [August 24, 2017]
   No changes.
@@ -6321,7 +6321,65 @@ Version 1.6.53 [December 5, 2025]
   Fixed a build failure with CMake 4.1 or newer, on Windows, when using
     Visual C++ without MASM installed.
 
+Version 1.6.54 [January 12, 2026]
+  Fixed CVE-2026-22695 (medium severity):
+    Heap buffer over-read in `png_image_read_direct_scaled`.
+    (Reported and fixed by Petr Simecek.)
+  Fixed CVE-2026-22801 (medium severity):
+    Integer truncation causing heap buffer over-read in `png_image_write_*`.
+  Implemented various improvements in oss-fuzz.
+    (Contributed by Philippe Antoine.)
+
+Version 1.6.55 [February 9, 2026]
+  Fixed CVE-2026-25646 (high severity):
+    Heap buffer overflow in `png_set_quantize`.
+    (Reported and fixed by Joshua Inscoe.)
+  Resolved an oss-fuzz build issue involving nalloc.
+    (Contributed by Philippe Antoine.)
+
+Version 1.6.56 [March 25, 2026]
+  Fixed CVE-2026-33416 (high severity):
+    Use-after-free via pointer aliasing in `png_set_tRNS` and `png_set_PLTE`.
+    (Reported by Halil Oktay and Ryo Shimada;
+    fixed by Halil Oktay and Cosmin Truta.)
+  Fixed CVE-2026-33636 (high severity):
+    Out-of-bounds read/write in the palette expansion on ARM Neon.
+    (Reported by Taegu Ha; fixed by Taegu Ha and Cosmin Truta.)
+  Fixed uninitialized reads beyond `num_trans` in `trans_alpha` buffers.
+    (Contributed by Halil Oktay.)
+  Fixed stale `info_ptr->palette` after in-place gamma and background
+    transforms.
+  Fixed wrong channel indices in `png_image_read_and_map` RGB_ALPHA path.
+    (Contributed by Yuelin Wang.)
+  Fixed wrong background color in colormap read.
+    (Contributed by Yuelin Wang.)
+  Fixed dead loop in sPLT write.
+    (Contributed by Yuelin Wang.)
+  Added missing null pointer checks in four public API functions.
+    (Contributed by Yuelin Wang.)
+  Validated shift bit depths in `png_set_shift` to prevent infinite loop.
+    (Contributed by Yuelin Wang.)
+  Avoided undefined behavior in library and tests.
+  Deprecated the hardly-ever-tested POINTER_INDEXING config option.
+  Added negative-stride test coverage for the simplified API.
+  Fixed memory leaks and API misuse in oss-fuzz.
+    (Contributed by Owen Sanzas.)
+  Implemented various fixes and improvements in oss-fuzz.
+    (Contributed by Bob Friesenhahn and Philippe Antoine.)
+  Performed various refactorings and cleanups.
+
+Version 1.6.57 [April 8, 2026]
+  Fixed CVE-2026-34757 (medium severity):
+    Use-after-free in `png_set_PLTE`, `png_set_tRNS` and `png_set_hIST`
+    leading to corrupted chunk data and potential heap information disclosure.
+    Also hardened the append-style setters (`png_set_text`, `png_set_sPLT`,
+    `png_set_unknown_chunks`) against a theoretical variant of the same
+    aliasing pattern.
+    (Reported by Iv4n <Iv4n550@users.noreply.github.com>.)
+  Fixed integer overflow in rowbytes computation in read transforms.
+    (Contributed by Mohammad Seet.)
+
 Send comments/corrections/commendations to png-mng-implement at lists.sf.net.
 Subscription is required; visit
-https://lists.sourceforge.net/lists/listinfo/png-mng-implement
+<https://lists.sourceforge.net/lists/listinfo/png-mng-implement>
 to subscribe.
