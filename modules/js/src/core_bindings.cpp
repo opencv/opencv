@@ -93,6 +93,15 @@ using namespace cv::segmentation;  // FIXIT
 using namespace cv::aruco;
 typedef aruco::DetectorParameters aruco_DetectorParameters;
 typedef QRCodeDetectorAruco::Params QRCodeDetectorAruco_Params;
+
+using namespace cv::aruco2;
+typedef aruco2::DetectionParameters aruco2_DetectionParameters;
+typedef aruco2::FiducialMarker aruco2_FiducialMarker;
+typedef aruco2::GridBoard aruco2_GridBoard;
+typedef aruco2::Diamond aruco2_Diamond;
+typedef aruco2::FractalMarker aruco2_FractalMarker;
+typedef aruco2::DictionaryType aruco2_DictionaryType;
+typedef aruco2::FractalType aruco2_FractalType;
 #endif
 
 #ifdef HAVE_OPENCV_DNN
@@ -480,6 +489,8 @@ EMSCRIPTEN_BINDINGS(binding_utils)
     register_vector<std::vector<cv::DMatch>>("DMatchVectorVector");
     register_vector<std::vector<cv::KeyPoint>>("KeyPointVectorVector");
     register_vector<std::vector<cv::Point>>("PointVectorVector");
+    register_vector<cv::aruco2::FiducialMarker>("FiducialMarkerVector");
+    register_vector<std::vector<cv::Point2f>>("Point2fVectorVector");
 
 
     emscripten::class_<cv::Mat>("Mat")

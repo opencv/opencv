@@ -26,12 +26,12 @@ Benefits of ArUco2 Boards
 Board Creation
 --------------
 
-You can generate a board image ready for printing using `cv::aruco2::generateGridBoardImage()`.
+You can generate a board image ready for printing using `cv::aruco2::getGridBoard()`.
 
 @code{.cpp}
 //Generate a 9x5 board using DICT_ARUCO_MIP_36h12 markers
 cv::Mat boardImage;
-cv::aruco2::generateGridBoardImage(boardImage, cv::Size(9, 5), cv::aruco2::DICT_ARUCO_MIP_36h12);
+cv::aruco2::getGridBoard(boardImage, cv::Size(9, 5), cv::aruco2::DICT_ARUCO_MIP_36h12);
 cv::imwrite("board.png", boardImage);
 @endcode
 
@@ -60,15 +60,15 @@ if (found) {
 The `cv::aruco2::GridBoard` structure populated by the function contains:
 - `gridSize`: The dimensions of the board.
 - `dict`: The dictionary used.
-- `markers`: A `std::vector<Marker>` containing only the markers that were successfully detected in the current frame.
+- `markers`: A `std::vector<FiducialMarker>` containing only the markers that were successfully detected in the current frame.
 
 Drawing Detected Boards
 -----------------------
 
-To visualize the board detection, use the overloaded `cv::aruco2::drawDetected()` function for boards. It draws a circle and the ID for each detected board corner.
+To visualize the board detection, use the `cv::aruco2::drawGridBoard()` function. It draws a circle and the ID for each detected board corner.
 
 @code{.cpp}
-cv::aruco2::drawDetected(image, board);
+cv::aruco2::drawGridBoard(image, board);
 cv::imshow("Detected Board", image);
 cv::waitKey(0);
 @endcode

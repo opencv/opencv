@@ -60,12 +60,12 @@ std::vector<T> List_to_vector(JNIEnv* env, jobject list, const char* classPath) 
     return vs;
 }
 
-jobject vector_aruco2_Marker_to_List(JNIEnv* env, std::vector<cv::aruco2::Marker>& vs) {
-    return vector_to_List(env, vs, "org/opencv/objdetect/Marker");
+jobject vector_aruco2_FiducialMarker_to_List(JNIEnv* env, std::vector<cv::aruco2::FiducialMarker>& vs) {
+    return vector_to_List(env, vs, "org/opencv/objdetect/FiducialMarker");
 }
 
-std::vector<cv::aruco2::Marker> List_to_vector_aruco2_Marker(JNIEnv* env, jobject list) {
-    return List_to_vector<cv::aruco2::Marker>(env, list, "org/opencv/objdetect/Marker");
+std::vector<cv::aruco2::FiducialMarker> List_to_vector_aruco2_FiducialMarker(JNIEnv* env, jobject list) {
+    return List_to_vector<cv::aruco2::FiducialMarker>(env, list, "org/opencv/objdetect/FiducialMarker");
 }
 
 jobject vector_aruco2_Diamond_to_List(JNIEnv* env, std::vector<cv::aruco2::Diamond>& vs) {

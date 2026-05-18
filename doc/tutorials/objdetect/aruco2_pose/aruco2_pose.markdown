@@ -27,7 +27,7 @@ The general workflow is:
 cv::Mat cameraMatrix, distCoeffs; // Load from calibration file
 float markerSize = 0.05f;        // Physical side length in meters (e.g., 5 cm)
 
-for (const auto &m : cv::aruco2::detectMarkers(image)) {
+for (const auto &m : cv::aruco2::detectFiducialMarkers(image)) {
     cv::Mat objPoints, imgPoints, rvec, tvec;
     
     // 1. Extract points

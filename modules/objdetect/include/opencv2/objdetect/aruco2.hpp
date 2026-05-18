@@ -45,7 +45,7 @@ enum DictionaryType {
     DICT_ARUCO_MIP_36h12
 };
 
-/** @brief Detection parameters for detectMarkers() and detectGridBoard().
+/** @brief Detection parameters for detectFiducialMarkers() and detectGridBoard().
  *
  * All parameters have defaults that work well for standard printed markers under normal lighting.
  * Tune only when detection fails or produces false positives in your specific setup.
@@ -53,6 +53,7 @@ enum DictionaryType {
  * The implementation is based on the ArUco Library @cite Aruco2014 @cite romero2018speeded @cite GARRIDOJURADO2026102690.
  */
 struct CV_EXPORTS_W_SIMPLE DetectionParameters {
+    CV_WRAP DetectionParameters() {}
 
     /** @brief Size of the box filter kernel used for adaptive thresholding (pixels, must be odd).
      *
@@ -132,7 +133,7 @@ struct CV_EXPORTS_W_SIMPLE DetectionParameters {
 };
 
 
-/** @brief A single detected ArUco marker.
+/** @brief A single detected ArUco fiducial marker.
  *
  * `corners` holds the four image-plane corner points in clockwise order starting from the
  * top-left corner.  `id` is the marker identifier within its `dict` dictionary.
@@ -144,9 +145,10 @@ struct CV_EXPORTS_W_SIMPLE DetectionParameters {
  *   corners[3] ---- corners[2]
  * @endcode
  *
- * @sa detectMarkers, drawDetected, getSolvePnpPoints
+ * @sa detectFiducialMarkers, drawFiducialMarkers, getSolvePnpPoints
  */
-struct CV_EXPORTS_W_SIMPLE Marker {
+struct CV_EXPORTS_W_SIMPLE FiducialMarker {
+    CV_WRAP FiducialMarker() {}
     CV_PROP_RW std::vector<cv::Point2f> corners; ///< four corner points in clockwise order
     CV_PROP_RW int id = -1;                      ///< marker id; -1 if unidentified
     CV_PROP_RW cv::aruco2::DictionaryType dict = cv::aruco2::DictionaryType(-1); ///< dictionary this marker belongs to
@@ -165,52 +167,52 @@ struct CV_EXPORTS_W_SIMPLE Marker {
  * @param externalBorder indicates whether to add a white border around the marker
  * @code
  * cv::Mat markerImg;
- * cv::aruco2::generateMarkerImage(markerImg,DICT_ARUCO_MIP_36h12, 42);
+ * cv::aruco2::getFiducialMarker(markerImg,DICT_ARUCO_MIP_36h12, 42);
  * cv::imwrite("marker_42.png", markerImg);
  * @endcode
  */
-CV_EXPORTS_W void generateMarkerImage(OutputArray img, cv::aruco2::DictionaryType dictionary, int id, int bitSize=20,bool externalBorder=true);
+CV_EXPORTS_W void getFiducialMarker(OutputArray img, cv::aruco2::DictionaryType dictionary, int id, int bitSize=20,bool externalBorder=true);
 
 
-/** @brief Detect ArUco markers in an image using a single dictionary.
+/** @brief Detect ArUco fiducial markers in an image using a single dictionary.
  *
  * @param image        input image (grayscale or BGR)
  * @param dict         dictionary to search; default is DICT_ARUCO_MIP_36h12
  * @param detectorParams  detection tuning parameters
- * @return             vector of detected Marker objects; empty if none found
+ * @return             vector of detected FiducialMarker objects; empty if none found
  *
  * Performs the full detection pipeline: adaptive thresholding → contour tracing →
  * quadrilateral fitting → bit extraction → dictionary lookup → subpixel corner refinement.
  *
  * @note Lens distortion is not corrected internally.  For accurate pose estimation,
  * undistort the image first with the known camera model.
- * @sa undistort, detectMarkers(InputArray, const std::vector<DictionaryType>&, const DetectionParameters&)
+ * @sa undistort, detectFiducialMarkers(InputArray, const std::vector<DictionaryType>&, const DetectionParameters&)
  */
-CV_EXPORTS_W std::vector<cv::aruco2::Marker> detectMarkers(InputArray image, cv::aruco2::DictionaryType dict = cv::aruco2::DICT_ARUCO_MIP_36h12,
+CV_EXPORTS_W std::vector<cv::aruco2::FiducialMarker> detectFiducialMarkers(InputArray image, cv::aruco2::DictionaryType dict = cv::aruco2::DICT_ARUCO_MIP_36h12,
                                           const cv::aruco2::DetectionParameters &detectorParams = {});
 
-/** @brief Detect ArUco markers in an image searching across multiple dictionaries in one pass.
+/** @brief Detect ArUco fiducial markers in an image searching across multiple dictionaries in one pass.
  *
  * @param image        input image (grayscale or BGR)
  * @param dicts        list of dictionaries to search simultaneously
  * @param detectorParams  detection tuning parameters
- * @return             vector of detected Marker objects; each carries the dictionary it was found in
+ * @return             vector of detected FiducialMarker objects; each carries the dictionary it was found in
  *
  * Each marker candidate is tested against all dictionaries in `dicts`.  Once identified in one
  * dictionary it is removed from the candidate pool, so the same region is never matched twice.
  *
  * The implementation is based on the ArUco Library @cite Aruco2014 @cite romero2018speeded @cite GARRIDOJURADO2026102690.
  *
- * @sa Marker::dict
+ * @sa FiducialMarker::dict
  */
-CV_EXPORTS_W std::vector<cv::aruco2::Marker> detectMarkers(InputArray image, const std::vector<cv::aruco2::DictionaryType> &dicts,
+CV_EXPORTS_W std::vector<cv::aruco2::FiducialMarker> detectFiducialMarkers(InputArray image, const std::vector<cv::aruco2::DictionaryType> &dicts,
                                           const cv::aruco2::DetectionParameters &detectorParams = {});
 
 
-/** @brief Draw detected markers onto an image.
+/** @brief Draw detected fiducial markers onto an image.
  *
  * @param image        input/output image (1 or 3 channels); modified in place
- * @param markers      markers returned by detectMarkers()
+ * @param markers      markers returned by detectFiducialMarkers()
  * @param borderColor  color used to draw the marker outline (default: green)
  *
  * For each marker the function draws:
@@ -220,7 +222,7 @@ CV_EXPORTS_W std::vector<cv::aruco2::Marker> detectMarkers(InputArray image, con
  *
  * Useful for visualisation and debugging.
  */
-CV_EXPORTS_W void drawDetected(InputOutputArray image, const std::vector<cv::aruco2::Marker> &markers,
+CV_EXPORTS_W void drawFiducialMarkers(InputOutputArray image, const std::vector<cv::aruco2::FiducialMarker> &markers,
                                  Scalar borderColor = Scalar(0, 255, 0));
 
 
@@ -240,9 +242,9 @@ CV_EXPORTS_W void drawAxis(InputOutputArray image, InputArray cameraMatrix, Inpu
                       InputArray rvec, InputArray tvec, float length);
 
 
-/** @brief Compute object and image points for a single marker to pass to solvePnP().
+/** @brief Compute object and image points for a single fiducial marker to pass to solvePnP().
  *
- * @param marker     a detected marker
+ * @param marker     a detected fiducial marker
  * @param objPoints  output 4×1 array of the corresponding 3-D object points in marker
  *                   coordinates (CV_32FC3), with the marker centre at the origin and
  *                   half-unit side length (i.e. corners at ±0.5 in X and Y, Z=0)
@@ -257,7 +259,7 @@ CV_EXPORTS_W void drawAxis(InputOutputArray image, InputArray cameraMatrix, Inpu
  * cv::solvePnP(objPts, imgPts, cameraMatrix, distCoeffs, rvec, tvec);
  * @endcode
  */
-CV_EXPORTS_W void getSolvePnpPoints(const cv::aruco2::Marker &marker, OutputArray objPoints, OutputArray imgPoints, float markerSize = 1.f);
+CV_EXPORTS_W void getSolvePnpPoints(const cv::aruco2::FiducialMarker &marker, OutputArray objPoints, OutputArray imgPoints, float markerSize = 1.f);
 
 
 /** @brief Result of detecting a ChArUco2-style grid board.
@@ -273,14 +275,15 @@ CV_EXPORTS_W void getSolvePnpPoints(const cv::aruco2::Marker &marker, OutputArra
  * @sa detectGridBoard, getSolvePnpPoints(const GridBoard, OutputArray, OutputArray)
  */
 struct CV_EXPORTS_W_SIMPLE GridBoard {
+    CV_WRAP GridBoard() {}
     CV_PROP_RW cv::Size gridSize;              ///< board dimensions: width × height in markers
     CV_PROP_RW cv::aruco2::DictionaryType dict;            ///< dictionary used for all markers on the board
-    CV_PROP_RW std::vector<cv::aruco2::Marker> markers;    ///< detected markers (subset of the full board)
+    CV_PROP_RW std::vector<cv::aruco2::FiducialMarker> markers;    ///< detected markers (subset of the full board)
 private:
     std::vector<std::pair<int,cv::Point2f>> detectedBoardCorners;
     friend bool detectGridBoard(InputArray image, cv::Size gridSize, cv::aruco2::DictionaryType dict, GridBoard &board, InputArray ids);
     friend void getSolvePnpPoints(const GridBoard& board, OutputArray objPoints, OutputArray imgPoints, float markerSize);
-    friend void drawDetected(InputOutputArray image, const GridBoard &board, Scalar color, bool drawMarkerIds);
+    friend void drawGridBoard(InputOutputArray image, const GridBoard &board, Scalar color, bool drawMarkerIds);
 };
 
 
@@ -296,7 +299,7 @@ private:
  * Markers are laid out in row-major order with no gap between them.
  * Pass the same `boardSize`, `dict`, and `ids` to detectGridBoard() for detection.
  */
-CV_EXPORTS_W void generateGridBoardImage(OutputArray img, Size boardSize, cv::aruco2::DictionaryType dict,
+CV_EXPORTS_W void getGridBoard(OutputArray img, Size boardSize, cv::aruco2::DictionaryType dict,
                                 int bitSize = 25, InputArray ids = noArray());
 
 
@@ -328,7 +331,7 @@ CV_EXPORTS_W bool detectGridBoard(InputArray image, cv::Size gridSize, cv::aruco
  * For each detected board corner a filled circle is drawn together with its global corner id.
  * Useful for verifying that the board detection and corner assignment are correct.
  */
-CV_EXPORTS_W void drawDetected(InputOutputArray image, const cv::aruco2::GridBoard &board,
+CV_EXPORTS_W void drawGridBoard(InputOutputArray image, const cv::aruco2::GridBoard &board,
                                Scalar color = Scalar(0, 255, 0),bool drawMarkerIds=false);
 
 
@@ -345,7 +348,7 @@ CV_EXPORTS_W void drawDetected(InputOutputArray image, const cv::aruco2::GridBoa
  * Only detected markers are included, so `imgPoints` and `objPoints` are always the same length
  * even when the board is partially occluded.
  *
- * @sa getSolvePnpPoints(const Marker, OutputArray, OutputArray)
+ * @sa getSolvePnpPoints(const FiducialMarker &, OutputArray, OutputArray)
  */
 CV_EXPORTS_W void getSolvePnpPoints(const cv::aruco2::GridBoard &board, OutputArray objPoints, OutputArray imgPoints, float markerSize = 1.f);
 
@@ -356,17 +359,18 @@ CV_EXPORTS_W void getSolvePnpPoints(const cv::aruco2::GridBoard &board, OutputAr
  * Its identity is the combination of the four constituent marker ids, accessible via `id`
  * (as a `Vec4i` convenience field) or individually through each `markers[i].id`.
  *
- * @sa detectDiamonds, getSolvePnpPoints(const GridBoard, OutputArray, OutputArray)
+ * @sa detectDiamonds, getSolvePnpPoints(const Diamond&, OutputArray, OutputArray)
  */
  struct CV_EXPORTS_W_SIMPLE Diamond {
+    CV_WRAP Diamond() {}
     CV_PROP_RW cv::Vec4i id;                   ///< ids of the 4 constituent markers (clockwise from top-left)
     CV_PROP_RW cv::aruco2::DictionaryType dict;            ///< dictionary used for the 4 markers
-    CV_PROP_RW std::vector<cv::aruco2::Marker> markers;    ///< the 4 detected markers forming the diamond
+    CV_PROP_RW std::vector<cv::aruco2::FiducialMarker> markers;    ///< the 4 detected markers forming the diamond
 private:
     std::vector<cv::Point2f> corners;
     friend std::vector<Diamond> detectDiamonds(InputArray image, cv::aruco2::DictionaryType dict);
     friend void getSolvePnpPoints(const Diamond& diamond, OutputArray objPoints, OutputArray imgPoints, float markerSize);
-    friend void drawDetected(InputOutputArray image, const std::vector<Diamond> &diamonds, Scalar color, bool drawMarkerIds);
+    friend void drawDiamonds(InputOutputArray image, const std::vector<Diamond> &diamonds, Scalar color, bool drawMarkerIds);
 };
 
 /** @brief Generate a ChArUco2-style diamond image ready for printing.
@@ -383,19 +387,19 @@ private:
  *
  * @code
  * cv::Mat diamondImg;
- * cv::aruco2::generateDiamondImage(diamondImg,DICT_ARUCO_MIP_36h12, {10, 11, 12, 13} );
+ * cv::aruco2::getDiamondImage(diamondImg,DICT_ARUCO_MIP_36h12, {10, 11, 12, 13} );
  * cv::imwrite("diamond.png", diamondImg);
  * @endcode
  *
  * Pass the same `dictionary` and `ids` to detectDiamonds() for detection.
  */
-CV_EXPORTS_W void generateDiamondImage(OutputArray img,const cv::aruco2::DictionaryType &dictionary, const cv::Vec4i &ids,
+CV_EXPORTS_W void getDiamondImage(OutputArray img,const cv::aruco2::DictionaryType &dictionary, const cv::Vec4i &ids,
                                   int bitSize=20);
 
 /** @brief Detect ChArUco2-style diamond markers in an image.
  *
  * A diamond is a 2×2 block of ArUco markers (standard on black squares, inverted on white).
- * Each detected Diamond carries the 4 constituent Marker objects and their combined id as a
+ * Each detected Diamond carries the 4 constituent FiducialMarker objects and their combined id as a
  * `Vec4i` for convenient access.
  *
  * @param image        input image (grayscale or BGR)
@@ -416,7 +420,7 @@ CV_EXPORTS_W std::vector<cv::aruco2::Diamond> detectDiamonds(InputArray image, c
  * - a small filled square at each of the 9 grid corners
  * - the Vec4i diamond id as text at the diamond centroid
  */
-CV_EXPORTS_W void drawDetected(InputOutputArray image, const std::vector<cv::aruco2::Diamond> &diamonds,
+CV_EXPORTS_W void drawDiamonds(InputOutputArray image, const std::vector<cv::aruco2::Diamond> &diamonds,
                                Scalar color = Scalar(0, 255, 0),bool drawMarkerIds=false);
 
 
@@ -433,8 +437,8 @@ CV_EXPORTS_W void drawDetected(InputOutputArray image, const std::vector<cv::aru
  * @param markerSize  physical side length of one marker (e.g. metres); objPoints are scaled
  *                    by this value.  Default 1.f returns unit-size points.
  *
- * @sa getSolvePnpPoints(const Marker, OutputArray, OutputArray),
- *     getSolvePnpPoints(const GridBoard, OutputArray, OutputArray)
+ * @sa getSolvePnpPoints(const FiducialMarker &, OutputArray, OutputArray),
+ *     getSolvePnpPoints(const GridBoard&, OutputArray, OutputArray)
  */
 CV_EXPORTS_W void getSolvePnpPoints(const cv::aruco2::Diamond &diamond, OutputArray objPoints, OutputArray imgPoints, float markerSize = 1.f);
 
@@ -469,6 +473,7 @@ enum FractalType {
  * physical units.
  */
 struct CV_EXPORTS_W_SIMPLE FractalMarker {
+    CV_WRAP FractalMarker() {}
     CV_PROP_RW std::vector<cv::Point2f> corners; ///< 4 outer corners, clockwise from top-left
     CV_PROP_RW cv::aruco2::FractalType type;                 ///< fractal configuration used for detection
     CV_PROP_RW int id = -1;                      ///< id of the outer (external) marker
@@ -478,7 +483,7 @@ private:
     std::vector<cv::Point3f> objPoints; ///< matching 3-D model points in normalised space
     friend std::vector<cv::aruco2::FractalMarker> detectFractals(InputArray image, cv::aruco2::FractalType ftype);
     friend void getSolvePnpPoints(const cv::aruco2::FractalMarker &fractal, OutputArray objPoints, OutputArray imgPoints, float markerSize);
-    friend void drawDetected(InputOutputArray image, const std::vector<cv::aruco2::FractalMarker> &fractals, Scalar color, bool drawAllImagePoints);
+    friend void drawFractals(InputOutputArray image, const std::vector<cv::aruco2::FractalMarker> &fractals, Scalar color, bool drawAllImagePoints);
 };
 
 /** @brief Render a fractal marker to a grayscale image.
@@ -491,7 +496,7 @@ private:
  * @param ftype    fractal configuration (FRACTAL_2L_6 … FRACTAL_5L_6)
  * @param bitSize  side length of one bit cell in pixels (default 20)
  */
-CV_EXPORTS_W void generateFractalImage(OutputArray img, cv::aruco2::FractalType ftype, int bitSize=20);
+CV_EXPORTS_W void getFractalImage(OutputArray img, cv::aruco2::FractalType ftype, int bitSize=20);
 
 /** @brief Detect fractal markers in an image.
  *
@@ -516,7 +521,7 @@ CV_EXPORTS_W std::vector<cv::aruco2::FractalMarker> detectFractals(InputArray im
  * @param drawAllImagePoints  if true, draw a small circle at every matched image point
  *                         stored inside each FractalMarker (default true)
  */
-CV_EXPORTS_W void drawDetected(InputOutputArray image, const std::vector<cv::aruco2::FractalMarker> &fractals,
+CV_EXPORTS_W void drawFractals(InputOutputArray image, const std::vector<cv::aruco2::FractalMarker> &fractals,
                                   Scalar color = Scalar(0, 255, 0), bool drawAllImagePoints = true);
 
 /** @brief Extract solvePnP inputs for a detected fractal marker.
@@ -535,7 +540,7 @@ CV_EXPORTS_W void drawDetected(InputOutputArray image, const std::vector<cv::aru
  * @param markerSize  physical side length of the outer marker; objPoints are scaled by
  *                    @p markerSize / 2.  Default 1.f returns normalised-space points.
  *
- * @sa getSolvePnpPoints(const Marker &, OutputArray, OutputArray, float),
+ * @sa getSolvePnpPoints(const FiducialMarker &, OutputArray, OutputArray, float),
  *     getSolvePnpPoints(const GridBoard &, OutputArray, OutputArray, float),
  *     getSolvePnpPoints(const Diamond &, OutputArray, OutputArray, float)
  */
@@ -546,5 +551,6 @@ CV_EXPORTS_W void getSolvePnpPoints(const cv::aruco2::FractalMarker &fractal, Ou
 
 } // namespace aruco2
 } // namespace cv
+
 
 

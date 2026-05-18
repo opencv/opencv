@@ -216,3 +216,70 @@ QUnit.test('Charuco detector', function (assert) {
         chess_corners.delete();
     }
 });
+
+QUnit.test('ArUco2 detection', function (assert) {
+    let params = new cv.aruco2_DetectionParameters();
+    params.boxFilterSize = 5;
+    let DICT = cv.aruco2_DictionaryType.DICT_4X4_50;
+
+    let img = new cv.Mat();
+    cv.aruco2_getFiducialMarker(img, DICT, 0, 100, true);
+    assert.ok(!img.empty());
+
+    let markers = cv.aruco2_detectFiducialMarkers(img, DICT, params);
+    assert.equal(markers.size(), 1);
+    assert.equal(markers.get(0).id, 0);
+    assert.equal(markers.get(0).corners.size(), 4);
+
+    params.delete();
+    img.delete();
+    markers.delete();
+});
+
+QUnit.test('ArUco2 MIP dictionary detection', function (assert) {
+    let DICT = cv.aruco2_DictionaryType.DICT_ARUCO_MIP_36h12;
+    let img = new cv.Mat();
+    cv.aruco2_getFiducialMarker(img, DICT, 42, 200, true);
+    assert.ok(!img.empty());
+
+    let markers = cv.aruco2_detectFiducialMarkers(img, DICT);
+    assert.equal(markers.size(), 1);
+    assert.equal(markers.get(0).id, 42);
+    assert.equal(markers.get(0).corners.size(), 4);
+
+    img.delete();
+    markers.delete();
+});
+
+QUnit.test('ArUco2 drawFiducialMarkers', function (assert) {
+    let DICT = cv.aruco2_DictionaryType.DICT_4X4_50;
+    let img = new cv.Mat();
+    cv.aruco2_getFiducialMarker(img, DICT, 5, 100, true);
+    assert.ok(!img.empty());
+
+    let markers = cv.aruco2_detectFiducialMarkers(img, DICT);
+    assert.equal(markers.size(), 1);
+
+    let colorImg = new cv.Mat();
+    cv.cvtColor(img, colorImg, cv.COLOR_GRAY2BGR);
+    cv.aruco2_drawFiducialMarkers(colorImg, markers);
+    assert.ok(!colorImg.empty());
+
+    img.delete();
+    colorImg.delete();
+    markers.delete();
+});
+
+QUnit.test('ArUco2 GridBoard', function (assert) {
+    let DICT = cv.aruco2_DictionaryType.DICT_4X4_50;
+    let img = new cv.Mat();
+    let gridSize = new cv.Size(3, 3);
+    cv.aruco2_getGridBoard(img, gridSize, DICT, 20);
+    assert.ok(!img.empty());
+
+    let board = new cv.aruco2_GridBoard();
+    assert.ok(board);
+
+    img.delete();
+    board.delete();
+});

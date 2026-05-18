@@ -61,13 +61,13 @@
                     "}"
                 ]
             },
-            "Aruco2_Marker_0" : {
+            "Aruco2_FiducialMarker_0" : {
                 "j_code" : [],
-                "jn_code" : [ "public static native long Aruco2_Marker_0();" ],
+                "jn_code" : [ "public static native long Aruco2_FiducialMarker_0();" ],
                 "cpp_code" : [ 
-                    "JNIEXPORT jlong JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1Marker_10(JNIEnv*, jclass);",
-                    "JNIEXPORT jlong JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1Marker_10(JNIEnv*, jclass) {",
-                    "    return (jlong) new cv::aruco2::Marker();",
+                    "JNIEXPORT jlong JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1FiducialMarker_10(JNIEnv*, jclass);",
+                    "JNIEXPORT jlong JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1FiducialMarker_10(JNIEnv*, jclass) {",
+                    "    return (jlong) new cv::aruco2::FiducialMarker();",
                     "}"
                 ]
             },
@@ -101,31 +101,31 @@
                     "}"
                 ]
             },
-            "Aruco2_detectMarkers" : {
+            "Aruco2_detectFiducialMarkers" : {
                 "j_code" : [
-                    "public static List<Aruco2_Marker> Aruco2_detectMarkers_Params(Mat image, int dict, long detectorParams) {",
-                    "    return Aruco2_detectMarkers_Params_0(image.nativeObj, dict, detectorParams);",
+                    "public static List<Aruco2_FiducialMarker> Aruco2_detectFiducialMarkers_Params(Mat image, int dict, long detectorParams) {",
+                    "    return Aruco2_detectFiducialMarkers_Params_0(image.nativeObj, dict, detectorParams);",
                     "}",
-                    "public static List<Aruco2_Marker> Aruco2_detectMarkers_Dicts(Mat image, org.opencv.core.MatOfInt dicts, long detectorParams) {",
-                    "    return Aruco2_detectMarkers_Dicts_0(image.nativeObj, dicts.nativeObj, detectorParams);",
+                    "public static List<Aruco2_FiducialMarker> Aruco2_detectFiducialMarkers_Dicts(Mat image, org.opencv.core.MatOfInt dicts, long detectorParams) {",
+                    "    return Aruco2_detectFiducialMarkers_Dicts_0(image.nativeObj, dicts.nativeObj, detectorParams);",
                     "}"
                 ],
                 "jn_code" : [
-                    "private static native List<Aruco2_Marker> Aruco2_detectMarkers_Params_0(long image_nativeObj, int dict, long detectorParams);",
-                    "private static native List<Aruco2_Marker> Aruco2_detectMarkers_Dicts_0(long image_nativeObj, long dicts_nativeObj, long detectorParams);"
+                    "private static native List<Aruco2_FiducialMarker> Aruco2_detectFiducialMarkers_Params_0(long image_nativeObj, int dict, long detectorParams);",
+                    "private static native List<Aruco2_FiducialMarker> Aruco2_detectFiducialMarkers_Dicts_0(long image_nativeObj, long dicts_nativeObj, long detectorParams);"
                 ],
                 "cpp_code" : [
-                    "JNIEXPORT jobject JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1detectMarkers_1Params_10(JNIEnv* env, jclass, jlong image, jint dict, jlong params);",
-                    "JNIEXPORT jobject JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1detectMarkers_1Params_10(JNIEnv* env, jclass, jlong image, jint dict, jlong params) {",
-                    "    std::vector<cv::aruco2::Marker> res = cv::aruco2::detectMarkers(*((cv::Mat*)image), (cv::aruco2::DictionaryType)dict, *((cv::aruco2::DetectionParameters*)params));",
-                    "    return vector_aruco2_Marker_to_List(env, res);",
+                    "JNIEXPORT jobject JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1detectFiducialMarkers_1Params_10(JNIEnv* env, jclass, jlong image, jint dict, jlong params);",
+                    "JNIEXPORT jobject JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1detectFiducialMarkers_1Params_10(JNIEnv* env, jclass, jlong image, jint dict, jlong params) {",
+                    "    std::vector<cv::aruco2::FiducialMarker> res = cv::aruco2::detectFiducialMarkers(*((cv::Mat*)image), (cv::aruco2::DictionaryType)dict, *((cv::aruco2::DetectionParameters*)params));",
+                    "    return vector_aruco2_FiducialMarker_to_List(env, res);",
                     "}",
-                    "JNIEXPORT jobject JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1detectMarkers_1Dicts_10(JNIEnv* env, jclass, jlong image, jlong dicts, jlong params);",
-                    "JNIEXPORT jobject JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1detectMarkers_1Dicts_10(JNIEnv* env, jclass, jlong image, jlong dicts, jlong params) {",
+                    "JNIEXPORT jobject JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1detectFiducialMarkers_1Dicts_10(JNIEnv* env, jclass, jlong image, jlong dicts, jlong params);",
+                    "JNIEXPORT jobject JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1detectFiducialMarkers_1Dicts_10(JNIEnv* env, jclass, jlong image, jlong dicts, jlong params) {",
                     "    std::vector<cv::aruco2::DictionaryType> dicts_vec;",
                     "    Mat_to_vector_aruco2_DictionaryType(*((cv::Mat*)dicts), dicts_vec);",
-                    "    std::vector<cv::aruco2::Marker> res = cv::aruco2::detectMarkers(*((cv::Mat*)image), dicts_vec, *((cv::aruco2::DetectionParameters*)params));",
-                    "    return vector_aruco2_Marker_to_List(env, res);",
+                    "    std::vector<cv::aruco2::FiducialMarker> res = cv::aruco2::detectFiducialMarkers(*((cv::Mat*)image), dicts_vec, *((cv::aruco2::DetectionParameters*)params));",
+                    "    return vector_aruco2_FiducialMarker_to_List(env, res);",
                     "}"
                 ]
             },
@@ -153,70 +153,94 @@
                     "}"
                 ]
             },
-            "Aruco2_drawDetected" : {
+            "Aruco2_drawFiducialMarkers" : {
                 "j_code" : [
-                    "public static void Aruco2_drawDetected(Mat image, List<Aruco2_Marker> markers, Scalar borderColor) {",
-                    "    Aruco2_drawDetected_Markers_0(image.nativeObj, markers, borderColor.val[0], borderColor.val[1], borderColor.val[2], borderColor.val[3]);",
+                    "public static void Aruco2_drawFiducialMarkers(Mat image, List<Aruco2_FiducialMarker> markers, Scalar borderColor) {",
+                    "    Aruco2_drawFiducialMarkers_0(image.nativeObj, markers, borderColor.val[0], borderColor.val[1], borderColor.val[2], borderColor.val[3]);",
                     "}",
-                    "public static void Aruco2_drawDetected(Mat image, List<Aruco2_Marker> markers) {",
-                    "    Aruco2_drawDetected_Markers_1(image.nativeObj, markers);",
-                    "}",
-                    "public static void Aruco2_drawDetected(Mat image, long board, Scalar color, boolean drawMarkerIds) {",
-                    "    Aruco2_drawDetected_GridBoard_0(image.nativeObj, board, color.val[0], color.val[1], color.val[2], color.val[3], drawMarkerIds);",
-                    "}",
-                    "public static void Aruco2_drawDetected(Mat image, long board) {",
-                    "    Aruco2_drawDetected_GridBoard_1(image.nativeObj, board);",
-                    "}",
-                    "public static void Aruco2_drawDetected(Mat image, List<Aruco2_Diamond> diamonds, Scalar color, boolean drawMarkerIds) {",
-                    "    Aruco2_drawDetected_Diamonds_0(image.nativeObj, diamonds, color.val[0], color.val[1], color.val[2], color.val[3], drawMarkerIds);",
-                    "}",
-                    "public static void Aruco2_drawDetected(Mat image, List<Aruco2_FractalMarker> fractals, Scalar color, boolean drawAllImagePoints) {",
-                    "    Aruco2_drawDetected_Fractals_0(image.nativeObj, fractals, color.val[0], color.val[1], color.val[2], color.val[3], drawAllImagePoints);",
+                    "public static void Aruco2_drawFiducialMarkers(Mat image, List<Aruco2_FiducialMarker> markers) {",
+                    "    Aruco2_drawFiducialMarkers_1(image.nativeObj, markers);",
                     "}"
                 ],
                 "jn_code" : [
-                    "private static native void Aruco2_drawDetected_Markers_0(long image, List<Aruco2_Marker> markers, double c0, double c1, double c2, double c3);",
-                    "private static native void Aruco2_drawDetected_Markers_1(long image, List<Aruco2_Marker> markers);",
-                    "private static native void Aruco2_drawDetected_GridBoard_0(long image, long board, double c0, double c1, double c2, double c3, boolean drawMarkerIds);",
-                    "private static native void Aruco2_drawDetected_GridBoard_1(long image, long board);",
-                    "private static native void Aruco2_drawDetected_Diamonds_0(long image, List<Aruco2_Diamond> diamonds, double c0, double c1, double c2, double c3, boolean drawMarkerIds);",
-                    "private static native void Aruco2_drawDetected_Fractals_0(long image, List<Aruco2_FractalMarker> fractals, double c0, double c1, double c2, double c3, boolean drawAllImagePoints);"
+                    "private static native void Aruco2_drawFiducialMarkers_0(long image, List<Aruco2_FiducialMarker> markers, double c0, double c1, double c2, double c3);",
+                    "private static native void Aruco2_drawFiducialMarkers_1(long image, List<Aruco2_FiducialMarker> markers);"
                 ],
                 "cpp_code" : [
-                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1drawDetected_1Markers_10(JNIEnv* env, jclass, jlong image, jobject markers, jdouble c0, jdouble c1, jdouble c2, jdouble c3);",
-                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1drawDetected_1Markers_10(JNIEnv* env, jclass, jlong image, jobject markers, jdouble c0, jdouble c1, jdouble c2, jdouble c3) {",
-                    "    std::vector<cv::aruco2::Marker> markers_vec = List_to_vector_aruco2_Marker(env, markers);",
-                    "    cv::aruco2::drawDetected(*((cv::Mat*)image), markers_vec, cv::Scalar(c0, c1, c2, c3));",
+                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1drawFiducialMarkers_10(JNIEnv* env, jclass, jlong image, jobject markers, jdouble c0, jdouble c1, jdouble c2, jdouble c3);",
+                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1drawFiducialMarkers_10(JNIEnv* env, jclass, jlong image, jobject markers, jdouble c0, jdouble c1, jdouble c2, jdouble c3) {",
+                    "    std::vector<cv::aruco2::FiducialMarker> markers_vec = List_to_vector_aruco2_FiducialMarker(env, markers);",
+                    "    cv::aruco2::drawFiducialMarkers(*((cv::Mat*)image), markers_vec, cv::Scalar(c0, c1, c2, c3));",
                     "}",
-                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1drawDetected_1Markers_11(JNIEnv* env, jclass, jlong image, jobject markers);",
-                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1drawDetected_1Markers_11(JNIEnv* env, jclass, jlong image, jobject markers) {",
-                    "    std::vector<cv::aruco2::Marker> markers_vec = List_to_vector_aruco2_Marker(env, markers);",
-                    "    cv::aruco2::drawDetected(*((cv::Mat*)image), markers_vec);",
+                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1drawFiducialMarkers_11(JNIEnv* env, jclass, jlong image, jobject markers);",
+                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1drawFiducialMarkers_11(JNIEnv* env, jclass, jlong image, jobject markers) {",
+                    "    std::vector<cv::aruco2::FiducialMarker> markers_vec = List_to_vector_aruco2_FiducialMarker(env, markers);",
+                    "    cv::aruco2::drawFiducialMarkers(*((cv::Mat*)image), markers_vec);",
+                    "}"
+                ]
+            },
+            "Aruco2_drawGridBoard" : {
+                "j_code" : [
+                    "public static void Aruco2_drawGridBoard(Mat image, long board, Scalar color, boolean drawMarkerIds) {",
+                    "    Aruco2_drawGridBoard_0(image.nativeObj, board, color.val[0], color.val[1], color.val[2], color.val[3], drawMarkerIds);",
                     "}",
-                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1drawDetected_1GridBoard_10(JNIEnv*, jclass, jlong image, jlong board, jdouble c0, jdouble c1, jdouble c2, jdouble c3, jboolean drawMarkerIds);",
-                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1drawDetected_1GridBoard_10(JNIEnv*, jclass, jlong image, jlong board, jdouble c0, jdouble c1, jdouble c2, jdouble c3, jboolean drawMarkerIds) {",
-                    "    cv::aruco2::drawDetected(*((cv::Mat*)image), *((cv::aruco2::GridBoard*)board), cv::Scalar(c0, c1, c2, c3), (bool)drawMarkerIds);",
+                    "public static void Aruco2_drawGridBoard(Mat image, long board) {",
+                    "    Aruco2_drawGridBoard_1(image.nativeObj, board);",
+                    "}"
+                ],
+                "jn_code" : [
+                    "private static native void Aruco2_drawGridBoard_0(long image, long board, double c0, double c1, double c2, double c3, boolean drawMarkerIds);",
+                    "private static native void Aruco2_drawGridBoard_1(long image, long board);"
+                ],
+                "cpp_code" : [
+                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1drawGridBoard_10(JNIEnv*, jclass, jlong image, jlong board, jdouble c0, jdouble c1, jdouble c2, jdouble c3, jboolean drawMarkerIds);",
+                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1drawGridBoard_10(JNIEnv*, jclass, jlong image, jlong board, jdouble c0, jdouble c1, jdouble c2, jdouble c3, jboolean drawMarkerIds) {",
+                    "    cv::aruco2::drawGridBoard(*((cv::Mat*)image), *((cv::aruco2::GridBoard*)board), cv::Scalar(c0, c1, c2, c3), (bool)drawMarkerIds);",
                     "}",
-                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1drawDetected_1GridBoard_11(JNIEnv*, jclass, jlong image, jlong board);",
-                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1drawDetected_1GridBoard_11(JNIEnv*, jclass, jlong image, jlong board) {",
-                    "    cv::aruco2::drawDetected(*((cv::Mat*)image), *((cv::aruco2::GridBoard*)board));",
-                    "}",
-                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1drawDetected_1Diamonds_10(JNIEnv* env, jclass, jlong image, jobject diamonds, jdouble c0, jdouble c1, jdouble c2, jdouble c3, jboolean drawMarkerIds);",
-                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1drawDetected_1Diamonds_10(JNIEnv* env, jclass, jlong image, jobject diamonds, jdouble c0, jdouble c1, jdouble c2, jdouble c3, jboolean drawMarkerIds) {",
+                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1drawGridBoard_11(JNIEnv*, jclass, jlong image, jlong board);",
+                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1drawGridBoard_11(JNIEnv*, jclass, jlong image, jlong board) {",
+                    "    cv::aruco2::drawGridBoard(*((cv::Mat*)image), *((cv::aruco2::GridBoard*)board));",
+                    "}"
+                ]
+            },
+            "Aruco2_drawDiamonds" : {
+                "j_code" : [
+                    "public static void Aruco2_drawDiamonds(Mat image, List<Aruco2_Diamond> diamonds, Scalar color, boolean drawMarkerIds) {",
+                    "    Aruco2_drawDiamonds_0(image.nativeObj, diamonds, color.val[0], color.val[1], color.val[2], color.val[3], drawMarkerIds);",
+                    "}"
+                ],
+                "jn_code" : [
+                    "private static native void Aruco2_drawDiamonds_0(long image, List<Aruco2_Diamond> diamonds, double c0, double c1, double c2, double c3, boolean drawMarkerIds);"
+                ],
+                "cpp_code" : [
+                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1drawDiamonds_10(JNIEnv* env, jclass, jlong image, jobject diamonds, jdouble c0, jdouble c1, jdouble c2, jdouble c3, jboolean drawMarkerIds);",
+                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1drawDiamonds_10(JNIEnv* env, jclass, jlong image, jobject diamonds, jdouble c0, jdouble c1, jdouble c2, jdouble c3, jboolean drawMarkerIds) {",
                     "    std::vector<cv::aruco2::Diamond> diamonds_vec = List_to_vector_aruco2_Diamond(env, diamonds);",
-                    "    cv::aruco2::drawDetected(*((cv::Mat*)image), diamonds_vec, cv::Scalar(c0, c1, c2, c3), (bool)drawMarkerIds);",
-                    "}",
-                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1drawDetected_1Fractals_10(JNIEnv* env, jclass, jlong image, jobject fractals, jdouble c0, jdouble c1, jdouble c2, jdouble c3, jboolean drawAllImagePoints);",
-                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1drawDetected_1Fractals_10(JNIEnv* env, jclass, jlong image, jobject fractals, jdouble c0, jdouble c1, jdouble c2, jdouble c3, jboolean drawAllImagePoints) {",
+                    "    cv::aruco2::drawDiamonds(*((cv::Mat*)image), diamonds_vec, cv::Scalar(c0, c1, c2, c3), (bool)drawMarkerIds);",
+                    "}"
+                ]
+            },
+            "Aruco2_drawFractals" : {
+                "j_code" : [
+                    "public static void Aruco2_drawFractals(Mat image, List<Aruco2_FractalMarker> fractals, Scalar color, boolean drawAllImagePoints) {",
+                    "    Aruco2_drawFractals_0(image.nativeObj, fractals, color.val[0], color.val[1], color.val[2], color.val[3], drawAllImagePoints);",
+                    "}"
+                ],
+                "jn_code" : [
+                    "private static native void Aruco2_drawFractals_0(long image, List<Aruco2_FractalMarker> fractals, double c0, double c1, double c2, double c3, boolean drawAllImagePoints);"
+                ],
+                "cpp_code" : [
+                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1drawFractals_10(JNIEnv* env, jclass, jlong image, jobject fractals, jdouble c0, jdouble c1, jdouble c2, jdouble c3, jboolean drawAllImagePoints);",
+                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1drawFractals_10(JNIEnv* env, jclass, jlong image, jobject fractals, jdouble c0, jdouble c1, jdouble c2, jdouble c3, jboolean drawAllImagePoints) {",
                     "    std::vector<cv::aruco2::FractalMarker> fractals_vec = List_to_vector_aruco2_FractalMarker(env, fractals);",
-                    "    cv::aruco2::drawDetected(*((cv::Mat*)image), fractals_vec, cv::Scalar(c0, c1, c2, c3), (bool)drawAllImagePoints);",
+                    "    cv::aruco2::drawFractals(*((cv::Mat*)image), fractals_vec, cv::Scalar(c0, c1, c2, c3), (bool)drawAllImagePoints);",
                     "}"
                 ]
             },
             "Aruco2_getSolvePnpPoints" : {
                 "j_code" : [
-                    "public static void Aruco2_getSolvePnpPoints_Marker(long marker, Mat objPoints, Mat imgPoints, float markerSize) {",
-                    "    Aruco2_getSolvePnpPoints_Marker_0(marker, objPoints.nativeObj, imgPoints.nativeObj, markerSize);",
+                    "public static void Aruco2_getSolvePnpPoints_FiducialMarker(long marker, Mat objPoints, Mat imgPoints, float markerSize) {",
+                    "    Aruco2_getSolvePnpPoints_FiducialMarker_0(marker, objPoints.nativeObj, imgPoints.nativeObj, markerSize);",
                     "}",
                     "public static void Aruco2_getSolvePnpPoints_GridBoard(long board, Mat objPoints, Mat imgPoints, float markerSize) {",
                     "    Aruco2_getSolvePnpPoints_GridBoard_0(board, objPoints.nativeObj, imgPoints.nativeObj, markerSize);",
@@ -229,15 +253,15 @@
                     "}"
                 ],
                 "jn_code" : [
-                    "private static native void Aruco2_getSolvePnpPoints_Marker_0(long marker, long objPoints_nativeObj, long imgPoints_nativeObj, float markerSize);",
+                    "private static native void Aruco2_getSolvePnpPoints_FiducialMarker_0(long marker, long objPoints_nativeObj, long imgPoints_nativeObj, float markerSize);",
                     "private static native void Aruco2_getSolvePnpPoints_GridBoard_0(long board, long objPoints_nativeObj, long imgPoints_nativeObj, float markerSize);",
                     "private static native void Aruco2_getSolvePnpPoints_Diamond_0(long diamond, long objPoints_nativeObj, long imgPoints_nativeObj, float markerSize);",
                     "private static native void Aruco2_getSolvePnpPoints_Fractal_0(long fractal, long objPoints_nativeObj, long imgPoints_nativeObj, float markerSize);"
                 ],
                 "cpp_code" : [
-                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1getSolvePnpPoints_1Marker_10(JNIEnv*, jclass, jlong marker, jlong objPoints, jlong imgPoints, jfloat markerSize);",
-                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1getSolvePnpPoints_1Marker_10(JNIEnv*, jclass, jlong marker, jlong objPoints, jlong imgPoints, jfloat markerSize) {",
-                    "    cv::aruco2::getSolvePnpPoints(*((cv::aruco2::Marker*)marker), *((cv::Mat*)objPoints), *((cv::Mat*)imgPoints), markerSize);",
+                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1getSolvePnpPoints_1FiducialMarker_10(JNIEnv*, jclass, jlong marker, jlong objPoints, jlong imgPoints, jfloat markerSize);",
+                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1getSolvePnpPoints_1FiducialMarker_10(JNIEnv*, jclass, jlong marker, jlong objPoints, jlong imgPoints, jfloat markerSize) {",
+                    "    cv::aruco2::getSolvePnpPoints(*((cv::aruco2::FiducialMarker*)marker), *((cv::Mat*)objPoints), *((cv::Mat*)imgPoints), markerSize);",
                     "}",
                     "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1getSolvePnpPoints_1GridBoard_10(JNIEnv*, jclass, jlong board, jlong objPoints, jlong imgPoints, jfloat markerSize);",
                     "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1getSolvePnpPoints_1GridBoard_10(JNIEnv*, jclass, jlong board, jlong objPoints, jlong imgPoints, jfloat markerSize) {",
@@ -281,14 +305,14 @@
             "v_type": "Mat",
             "j_import": "org.opencv.core.MatOfInt"
         },
-        "vector_aruco2_Marker": {
-            "j_type": "List<Aruco2_Marker>",
-            "jn_type": "List<Aruco2_Marker>",
+        "vector_aruco2_FiducialMarker": {
+            "j_type": "List<Aruco2_FiducialMarker>",
+            "jn_type": "List<Aruco2_FiducialMarker>",
             "jni_type": "jobject",
-            "jni_var": "std::vector<cv::aruco2::Marker> %(n)s",
+            "jni_var": "std::vector<cv::aruco2::FiducialMarker> %(n)s",
             "suffix": "Ljava_util_List",
-            "v_type": "Aruco2_Marker",
-            "j_import": "org.opencv.objdetect.Aruco2_Marker"
+            "v_type": "Aruco2_FiducialMarker",
+            "j_import": "org.opencv.objdetect.Aruco2_FiducialMarker"
         },
         "vector_aruco2_Diamond": {
             "j_type": "List<Aruco2_Diamond>",
@@ -314,7 +338,7 @@
             "jni_type": "jlong",
             "suffix": "J"
         },
-        "aruco2_Marker": {
+        "aruco2_FiducialMarker": {
             "j_type": "long",
             "jn_type": "long",
             "jni_type": "jlong",
@@ -343,4 +367,3 @@
         "Aruco2_detectGridBoard" : { "board" : {"attrib" : []} }
     }
 }
- 

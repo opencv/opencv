@@ -12,8 +12,8 @@
 
 void Copy_vector_NativeByteArray_to_List(JNIEnv* env, std::vector<std::string>& vs, jobject list);
 
-jobject vector_aruco2_Marker_to_List(JNIEnv* env, std::vector<cv::aruco2::Marker>& vs);
-std::vector<cv::aruco2::Marker> List_to_vector_aruco2_Marker(JNIEnv* env, jobject list);
+jobject vector_aruco2_FiducialMarker_to_List(JNIEnv* env, std::vector<cv::aruco2::FiducialMarker>& vs);
+std::vector<cv::aruco2::FiducialMarker> List_to_vector_aruco2_FiducialMarker(JNIEnv* env, jobject list);
 
 jobject vector_aruco2_Diamond_to_List(JNIEnv* env, std::vector<cv::aruco2::Diamond>& vs);
 std::vector<cv::aruco2::Diamond> List_to_vector_aruco2_Diamond(JNIEnv* env, jobject list);

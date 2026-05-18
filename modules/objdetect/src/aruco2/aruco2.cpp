@@ -20,9 +20,9 @@ using namespace cv::aruco2;
 class MarkerDetector{
 public:
     // The only function you need to call
-    static inline std::vector<Marker> detect(const cv::Mat &img, const std::vector<DictionaryType> dicts,  const DetectionParameters &params=DetectionParameters(),std::vector<Marker> *candidatesOut=nullptr,cv::Mat ThresImageIn={});
+    static inline std::vector<FiducialMarker> detect(const cv::Mat &img, const std::vector<DictionaryType> dicts,  const DetectionParameters &params=DetectionParameters(),std::vector<FiducialMarker> *candidatesOut=nullptr,cv::Mat ThresImageIn={});
 private:
-    static inline Marker sort( const  Marker &marker);
+    static inline FiducialMarker sort( const  FiducialMarker &marker);
     static inline float  getSubpixelValue(const cv::Mat &im_grey,const cv::Point2f &p);
     static inline int   getMarkerId(  cv::Mat  candidateBits,int &idx, int &nrotations, const DetectionParameters &params,Dictionary &dict);
     static inline int isInto(const std::vector<cv::Point2f> &a, const std::vector<cv::Point2f> &b) ;
@@ -76,9 +76,9 @@ int MarkerDetector::isInto(const std::vector<cv::Point2f> &a, const std::vector<
     return 0;
 }
 
-std::vector<Marker>  MarkerDetector::detect(const cv::Mat &img,   const std::vector<DictionaryType> dicts,const DetectionParameters &params,std::vector<Marker> *candidatesOut,cv::Mat ThresImIn){
+std::vector<FiducialMarker>  MarkerDetector::detect(const cv::Mat &img,   const std::vector<DictionaryType> dicts,const DetectionParameters &params,std::vector<FiducialMarker> *candidatesOut,cv::Mat ThresImIn){
     cv::Mat bwimage,thresImage;
-    std::vector<Marker> DetectedMarkers;
+    std::vector<FiducialMarker> DetectedMarkers;
     //first, convert to bw
     if(img.channels()==3)
         cv::cvtColor(img,bwimage,cv::COLOR_BGR2GRAY);
@@ -103,7 +103,7 @@ std::vector<Marker>  MarkerDetector::detect(const cv::Mat &img,   const std::vec
     contours=visitedAwareTracingContour(thresImage,minSize4,params.maxTimesRevisited);
 
     //decide where to store the candidates. If candidatesOut is not null, store there, otherwise use a local variable
-    std::vector<Marker> candidateslocal;
+    std::vector<FiducialMarker> candidateslocal;
     if(candidatesOut!=nullptr) {
         candidatesOut->clear();
     }
@@ -122,7 +122,7 @@ std::vector<Marker>  MarkerDetector::detect(const cv::Mat &img,   const std::vec
         if(  ((approxCurve[2].x-approxCurve[3].x)*(approxCurve[2].x-approxCurve[3].x) + (approxCurve[2].y-approxCurve[3].y)*(approxCurve[2].y-approxCurve[3].y))<minSizeSq) continue;
         if(  ((approxCurve[3].x-approxCurve[0].x)*(approxCurve[3].x-approxCurve[0].x) + (approxCurve[3].y-approxCurve[0].y)*(approxCurve[3].y-approxCurve[0].y))<minSizeSq) continue;
         // // add the points
-        Marker marker;marker.corners.reserve(4);
+        FiducialMarker marker;marker.corners.reserve(4);
         for (int j = 0; j < 4; j++)
             marker.corners.emplace_back( cv::Point2f( approxCurve[j].x,approxCurve[j].y));
         //sort corner in clockwise direction
@@ -134,7 +134,7 @@ std::vector<Marker>  MarkerDetector::detect(const cv::Mat &img,   const std::vec
     //now, for each candidate check bits inside
     for(size_t di=0;di<dicts.size();di++){
         Dictionary dict=getPredefinedDictionary(dicts[di]);
-        std::vector<Marker> currDirMarkerDetected;
+        std::vector<FiducialMarker> currDirMarkerDetected;
         cv::Mat bits(dict.markerSize+2,dict.markerSize+2,CV_8UC1),bitadaptive(dict.markerSize+2,dict.markerSize+2,CV_8UC1);
 
         for(auto it=candidatesOut->begin();it!=candidatesOut->end();){
@@ -173,7 +173,7 @@ std::vector<Marker>  MarkerDetector::detect(const cv::Mat &img,   const std::vec
         }
 
         /// REMOVAL OF INNER DUPLICATED DETECTIONS OF THE SAME MARKER(INNER AND OUTER BORDER)
-        std::sort(currDirMarkerDetected.begin(), currDirMarkerDetected.end(),[](const Marker &a,const Marker &b){return a.id<b.id;});
+        std::sort(currDirMarkerDetected.begin(), currDirMarkerDetected.end(),[](const FiducialMarker &a,const FiducialMarker &b){return a.id<b.id;});
         {
             std::vector<bool> toRemove(currDirMarkerDetected.size(), false);
             for (int i = 0; i < int(currDirMarkerDetected.size()) - 1; i++)
@@ -288,8 +288,8 @@ float MarkerDetector::getSubpixelValue(const cv::Mat &im_grey, const cv::Point2f
     // Interpolate Vertically between Top and Bottom results
     return top + dy * (bot - top);
 }
-Marker  MarkerDetector::sort( const  Marker &marker){
-    Marker res_marker=marker;
+FiducialMarker  MarkerDetector::sort( const  FiducialMarker &marker){
+    FiducialMarker res_marker=marker;
     /// sort the points in clockwise order
     double dx1 = res_marker.corners[1].x - res_marker.corners[0].x;
     double dy1 = res_marker.corners[1].y - res_marker.corners[0].y;
@@ -429,7 +429,7 @@ void MarkerDetector::thres255Adaptive(cv::Mat &in,cv::Mat &out,int off,int thres
 
 //////////////////////////////////// BOARD
 
-std::vector<Marker> detect(DictionaryType dict, cv::Mat & src_gray,cv::Mat & thresImage,   int erosionIt){
+std::vector<FiducialMarker> detect(DictionaryType dict, cv::Mat & src_gray,cv::Mat & thresImage,   int erosionIt){
 
     cv::Mat kernel = cv::getStructuringElement(cv::MORPH_CROSS, cv::Size(3, 3));
     cv::erode(thresImage, thresImage, kernel,{-1,-1},erosionIt);
@@ -437,7 +437,7 @@ std::vector<Marker> detect(DictionaryType dict, cv::Mat & src_gray,cv::Mat & thr
     return MarkerDetector::detect(src_gray,{dict},params,nullptr,thresImage);
 }
 
-int cornerMaxDistance(const Marker &m1,const Marker &m2)
+int cornerMaxDistance(const FiducialMarker &m1,const FiducialMarker &m2)
 {
     int md=0;
     for(int i=0;i<4;i++){
@@ -446,10 +446,10 @@ int cornerMaxDistance(const Marker &m1,const Marker &m2)
     }
     return md;
 }
-std::vector<Marker> detectBWMarkers(cv::Mat &src_gray,DictionaryType dict){
+std::vector<FiducialMarker> detectBWMarkers(cv::Mat &src_gray,DictionaryType dict){
 
 
-    std::vector<Marker>  markers_black,markers_white;
+    std::vector<FiducialMarker>  markers_black,markers_white;
     cv::Mat thresImage;
 
     //BLACK MARKERS
@@ -458,7 +458,7 @@ std::vector<Marker> detectBWMarkers(cv::Mat &src_gray,DictionaryType dict){
     cv::threshold(thresImage, thresImage, 3, 255, cv::THRESH_BINARY);
     //determine how many erosion iterations we will do, depending on the size of the image
     int maxErodeIterations= std::max(2, int( (2.*src_gray.cols/2000.)+0.5));
-    std::vector<std::vector<Marker>  > markers_blackv(maxErodeIterations);
+    std::vector<std::vector<FiducialMarker>  > markers_blackv(maxErodeIterations);
     cv::Range range(1, maxErodeIterations);
 
     cv::parallel_for_(range, [&](const cv::Range& r) {
@@ -493,9 +493,9 @@ std::vector<Marker> detectBWMarkers(cv::Mat &src_gray,DictionaryType dict){
     //now, we need to merge the different markers
     if(markers_blackv.size()>1){
 
-        std::vector<Marker> unduplicated;
+        std::vector<FiducialMarker> unduplicated;
         /// REMOVAL OF INNER DUPLICATED DETECTIONS OF THE SAME MARKER(INNER AND OUTER BORDER)
-        std::sort(markers_black.begin(), markers_black.end(),[](const Marker &a,const Marker &b){return a.id<b.id;});
+        std::sort(markers_black.begin(), markers_black.end(),[](const FiducialMarker &a,const FiducialMarker &b){return a.id<b.id;});
         std::vector<bool> toRemove(markers_black.size(), false);
         for (int i = 0; i < int(markers_black.size()) - 1; i++)
         {
@@ -554,7 +554,7 @@ std::vector<Marker> detectBWMarkers(cv::Mat &src_gray,DictionaryType dict){
 
 
     // Combine results from both
-    std::vector<Marker> allMarkers;
+    std::vector<FiducialMarker> allMarkers;
     allMarkers.reserve(markers_black.size() + markers_white.size());
     allMarkers.insert(allMarkers.end(), markers_black.begin(), markers_black.end());
     allMarkers.insert(allMarkers.end(), markers_white.begin(), markers_white.end());
@@ -602,7 +602,7 @@ std::vector<std::vector<int>> getConnectedComponents(cv::Mat graph_8uc1) {
     return components;
 }
 
-std::shared_ptr<cv::flann::Index> buildFlannIndex(const std::vector<Marker> &markers) {
+std::shared_ptr<cv::flann::Index> buildFlannIndex(const std::vector<FiducialMarker> &markers) {
     //create a vector with all corners
     std::vector<cv::Point2f> corners;
     corners.reserve(markers.size()*4);
@@ -617,7 +617,7 @@ std::shared_ptr<cv::flann::Index> buildFlannIndex(const std::vector<Marker> &mar
     return std::make_shared<cv::flann::Index>(data, indexParams);
 }
 //returns a set of markers that are connected, i.e. that have at least one corner closer than a threshold.
-std::vector<std::vector<Marker>> connectedMarkerComponents(const std::vector<Marker> &markers){
+std::vector<std::vector<FiducialMarker>> connectedMarkerComponents(const std::vector<FiducialMarker> &markers){
     //create a vector with all corners
     //now, create a flann index with these corners
     auto flannIndex=buildFlannIndex(markers);
@@ -646,7 +646,7 @@ std::vector<std::vector<Marker>> connectedMarkerComponents(const std::vector<Mar
 
 
     //now, for each component, obtain the corresponding markers
-    std::vector<std::vector<Marker>> res;
+    std::vector<std::vector<FiducialMarker>> res;
     for(const auto &comp:ccomps){
         res.push_back({});
         for(auto idx:comp){
@@ -733,16 +733,16 @@ std::vector<std::pair<int,int>> getMarkerCornersFromGlobalCornerID( int gid,cv::
 namespace cv {
 namespace aruco2 {
 
-std::vector<Marker> detectMarkers(InputArray image,const std::vector<DictionaryType> &dicts,const DetectionParameters &detectorParams){
+std::vector<FiducialMarker> detectFiducialMarkers(InputArray image,const std::vector<DictionaryType> &dicts,const DetectionParameters &detectorParams){
     return MarkerDetector::detect(image.getMat(),dicts,detectorParams);
 }
-std::vector<Marker> detectMarkers(InputArray image,DictionaryType dict,const DetectionParameters &detectorParams){
+std::vector<FiducialMarker> detectFiducialMarkers(InputArray image,DictionaryType dict,const DetectionParameters &detectorParams){
     return MarkerDetector::detect(image.getMat(),{dict},detectorParams);
 }
 
 
 
-void generateMarkerImage(OutputArray _img, DictionaryType dictionary, int id, int bitSize, bool externalBorder){
+void getFiducialMarker(OutputArray _img, DictionaryType dictionary, int id, int bitSize, bool externalBorder){
 
     //assert marker size >sidePixels
     auto dict=getPredefinedDictionary(dictionary);
@@ -769,7 +769,7 @@ void generateMarkerImage(OutputArray _img, DictionaryType dictionary, int id, in
      cv::resize(markerWithBorders, _img, cv::Size(sidePixels, sidePixels), 0, 0, cv::INTER_NEAREST);
  }
 
-void drawDetected(InputOutputArray _image, const std::vector<Marker> &markers, Scalar borderColor) {
+void drawFiducialMarkers(InputOutputArray _image, const std::vector<FiducialMarker> &markers, Scalar borderColor) {
     cv::Mat image = _image.getMat();
     Scalar cornerColor(255 - borderColor[0], borderColor[1], borderColor[2]);
     Scalar textColor  (255 - borderColor[0], 255 - borderColor[1], 255 - borderColor[2]);
@@ -804,7 +804,7 @@ void drawAxis(InputOutputArray image, InputArray cameraMatrix, InputArray distCo
     cv::line(img, projected[0], projected[3], Scalar(255, 0,   0), 2); // Z blue
 }
 
-void getSolvePnpPoints(const Marker &marker, OutputArray objPoints, OutputArray imgPoints, float markerSize  ){
+void getSolvePnpPoints(const FiducialMarker &marker, OutputArray objPoints, OutputArray imgPoints, float markerSize  ){
     std::vector<cv::Point3f> markerCorners={ {-markerSize/2.f,markerSize/2.f,0.f},{markerSize/2.f,markerSize/2.f,0.f},{markerSize/2.f,-markerSize/2.f,0.f},{-markerSize/2.f,-markerSize/2.f,0.f}};
 
     cv::Mat(markerCorners).copyTo(objPoints);
@@ -839,7 +839,7 @@ bool detectGridBoard(InputArray image, cv::Size gridSize, DictionaryType dict,
     auto allMarkers=detectBWMarkers( src_gray,dict);
     //remove markers not belonging to the list of ids of the board
     allMarkers.erase(std::remove_if(allMarkers.begin(), allMarkers.end(),
-                                    [ids](const Marker &m) {
+                                    [ids](const FiducialMarker &m) {
                                         return std::find(ids.begin(), ids.end(), m.id) == ids.end();
                                     }), allMarkers.end());
 
@@ -849,10 +849,10 @@ bool detectGridBoard(InputArray image, cv::Size gridSize, DictionaryType dict,
 
 
     //obtain the connected components
-    std::vector<std::vector<Marker> > connected_markers=connectedMarkerComponents(allMarkers);
+    std::vector<std::vector<FiducialMarker> > connected_markers=connectedMarkerComponents(allMarkers);
 
     //lets detect possible inconsistencies, i.e., markers in the wrong order, possibly belonging to another board configuration
-    std::vector<std::vector<Marker> > consistent_connected_markers;
+    std::vector<std::vector<FiducialMarker> > consistent_connected_markers;
     for(auto &comp:connected_markers){
         int threshold=10;
         auto findex=buildFlannIndex(comp);
@@ -887,7 +887,7 @@ bool detectGridBoard(InputArray image, cv::Size gridSize, DictionaryType dict,
     if(consistent_connected_markers.empty())return false;
 
     //select the one with more markers belonging to the board (at least 2)
-    std::vector<Marker> connected_markers_filtered;
+    std::vector<FiducialMarker> connected_markers_filtered;
     for(const auto &comp:consistent_connected_markers){
         size_t validMarkers=0;
         for(const auto &m:comp){
@@ -958,7 +958,7 @@ bool detectGridBoard(InputArray image, cv::Size gridSize, DictionaryType dict,
             int cornerid = it_mc->second;
             //see if the makrer id is detected
             auto markerid_copy=markerid;//capturing markerid only in C++20, lets use a copy for prev compilers
-            auto it=std::find_if(allMarkers.begin(),allMarkers.end(),[markerid_copy](const Marker &m){return m.id==markerid_copy;});
+            auto it=std::find_if(allMarkers.begin(),allMarkers.end(),[markerid_copy](const FiducialMarker &m){return m.id==markerid_copy;});
             if(it!=allMarkers.end()){
                 (*it).corners[cornerid]=corner_c;
             }
@@ -985,7 +985,7 @@ bool detectGridBoard(InputArray image, cv::Size gridSize, DictionaryType dict,
 }
 
 
-void generateGridBoardImage(OutputArray img, Size bSize, DictionaryType dict,
+void getGridBoard(OutputArray img, Size bSize, DictionaryType dict,
                         int bitSize , InputArray _ids  ){
     std::vector<int> ids;
     _ids.copyTo(ids);
@@ -1042,7 +1042,7 @@ void generateGridBoardImage(OutputArray img, Size bSize, DictionaryType dict,
     outImage.copyTo(img);
 
 }
-  void drawDetected(InputOutputArray image, const GridBoard &board,
+  void drawGridBoard(InputOutputArray image, const GridBoard &board,
                        Scalar color,bool drawMarkerIds ){
       for(size_t i=0;i<board.detectedBoardCorners.size();i++){
           //draw a circle for each detected corner
@@ -1088,8 +1088,8 @@ void generateGridBoardImage(OutputArray img, Size bSize, DictionaryType dict,
     cv::Mat(imagePoints).copyTo(imgPoints);
   }
 
-  void generateDiamondImage(OutputArray img,const DictionaryType &dictionary, const cv::Vec4i &ids,int bitSize){
-        generateGridBoardImage(img,cv::Size(2,2),dictionary,bitSize,ids);
+  void getDiamondImage(OutputArray img,const DictionaryType &dictionary, const cv::Vec4i &ids,int bitSize){
+        getGridBoard(img,cv::Size(2,2),dictionary,bitSize,ids);
   }
 
    std::vector<Diamond> detectDiamonds(InputArray image, DictionaryType dict  ){
@@ -1105,7 +1105,7 @@ void generateGridBoardImage(OutputArray img, Size bSize, DictionaryType dict,
 
        if(allMarkers.empty())return {};
        //obtain the connected components
-       std::vector<std::vector<Marker> > connected_markers=connectedMarkerComponents(allMarkers);
+       std::vector<std::vector<FiducialMarker> > connected_markers=connectedMarkerComponents(allMarkers);
 
        //discard these that have more or less than 4 elements
 
@@ -1197,7 +1197,7 @@ void generateGridBoardImage(OutputArray img, Size bSize, DictionaryType dict,
    }
 
 
-   void drawDetected(InputOutputArray image, const std::vector<Diamond> &diamonds, Scalar color ,bool drawMarkerIds){
+   void drawDiamonds(InputOutputArray image, const std::vector<Diamond> &diamonds, Scalar color ,bool drawMarkerIds){
        for(const auto &d:diamonds){
 
            //draw lines between corners

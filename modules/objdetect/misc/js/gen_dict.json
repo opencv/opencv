@@ -1,7 +1,10 @@
 {
     "whitelist":
     {
-        "": ["groupRectangles", "getPredefinedDictionary", "extendDictionary", "drawDetectedMarkers", "generateImageMarker", "drawDetectedCornersCharuco", "drawDetectedDiamonds"],
+        "": ["groupRectangles", "getPredefinedDictionary", "extendDictionary", "drawMarkers", "drawDetectedGridBoard", "drawDetectedDiamonds", "drawDetectedFractals", "drawDetected", "generateImageMarker", "drawDetectedCornersCharuco",
+             "detectMarkers", "detectGridBoard", "generateMarkerImage", "generateGridBoardImage", "generateDiamondImage", "generateFractalImage", "getSolvePnpPoints", "estimatePoseBoard", "refineDetected",
+             "aruco2_detectFiducialMarkers", "aruco2_detectGridBoard", "aruco2_drawFiducialMarkers", "aruco2_getFiducialMarker",
+             "aruco2_getGridBoard", "aruco2_getDiamondImage", "aruco2_getFractalImage", "aruco2_getSolvePnpPoints"],
         "HOGDescriptor": ["load", "HOGDescriptor", "getDefaultPeopleDetector", "getDaimlerPeopleDetector", "setSVMDetector", "detectMultiScale"],
         "CascadeClassifier": ["load", "detectMultiScale2", "CascadeClassifier", "detectMultiScale3", "empty", "detectMultiScale"],
         "GraphicalCodeDetector": ["decode", "detect", "detectAndDecode", "detectMulti", "decodeMulti", "detectAndDecodeMulti"],
@@ -19,6 +22,13 @@
         "QRCodeDetectorAruco_Params": ["Params"],
         "QRCodeDetectorAruco": ["QRCodeDetectorAruco", "decode", "detect", "detectAndDecode", "detectMulti", "decodeMulti", "detectAndDecodeMulti", "setDetectorParameters", "setArucoParameters"],
         "barcode_BarcodeDetector": ["BarcodeDetector", "decode", "detect", "detectAndDecode", "detectMulti", "decodeMulti", "detectAndDecodeMulti", "decodeWithType", "detectAndDecodeWithType"],
+        "aruco2_DictionaryType": [],
+        "aruco2_FractalType": [],
+        "aruco2_FiducialMarker": ["FiducialMarker"],
+        "aruco2_GridBoard": ["GridBoard", "getGridBoard", "getGridSize"],
+        "aruco2_Diamond": ["Diamond"],
+        "aruco2_FractalMarker": ["FractalMarker"],
+        "aruco2_DetectionParameters": ["DetectionParameters"],
         "mcc_CheckerDetector": ["process", "getBestColorChecker", "getListColorChecker", "create", "draw", "getRefColors", "setDetectionParams", "getDetectionParams", "setColorChartType", "getColorChartType", "setUseDnnModel", "getUseDnnModel"],
         "mcc_DetectorParameters": ["DetectorParametersMCC"],
         "mcc_Checker": ["setTarget", "setBox", "setChartsRGB", "setChartsYCbCr", "setCost", "setCenter", "getTarget", "getBox", "getColorCharts", "getChartsRGB", "getChartsYCbCr", "getCost", "getCenter"],
@@ -26,6 +36,7 @@
     },
     "namespace_prefix_override":
     {
-        "aruco": ""
+        "aruco": "",
+        "aruco2": "aruco2"
     }
 }

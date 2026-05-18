@@ -43,11 +43,11 @@ Fractal Types
 Fractal Creation
 ----------------
 
-Generate a fractal marker image using `cv::aruco2::generateFractalImage()`.
+Generate a fractal marker image using `cv::aruco2::getFractalImage()`.
 
 @code{.cpp}
 cv::Mat fractalImage;
-cv::aruco2::generateFractalImage(fractalImage, cv::aruco2::FRACTAL_3L_6);
+cv::aruco2::getFractalImage(fractalImage, cv::aruco2::FRACTAL_3L_6);
 cv::imwrite("fractal.png", fractalImage);
 @endcode
 
@@ -78,10 +78,10 @@ Each `cv::aruco2::FractalMarker` object contains:
 Drawing Detected Fractals
 -------------------------
 
-Visualize the detection with `cv::aruco2::drawDetected()`.
+Visualize the detection with `cv::aruco2::drawFractals()`.
 
 @code{.cpp}
-cv::aruco2::drawDetected(image, fractals);
+cv::aruco2::drawFractals(image, fractals);
 cv::imshow("Detected Fractals", image);
 cv::waitKey(0);
 @endcode

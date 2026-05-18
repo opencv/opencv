@@ -1055,7 +1055,7 @@ static std::string fractalTypeName(FractalType ft) {
     return "FRACTAL_3L_6";
 }
 
-void generateFractalImage(OutputArray _img, FractalType ftype, int bitSize) {
+void getFractalImage(OutputArray _img, FractalType ftype, int bitSize) {
     nanofractal::FractalMarkerSet fmset(fractalTypeName(ftype));
 
     // The innermost marker (highest id) controls the per-bit pixel size.
@@ -1165,9 +1165,10 @@ std::vector<FractalMarker> detectFractals(InputArray _img, FractalType ftype) {
     return {m};
 }
 
-void drawDetected(InputOutputArray _image, const std::vector<FractalMarker> &fractals,
+void drawFractals(InputOutputArray _image, const std::vector<FractalMarker> &fractals,
                           Scalar color, bool drawAllImagePoints) {
     cv::Mat image = _image.getMat();
+
 
     float lineWidthF = std::max(1.f, std::min(5.f, float(image.cols) / 500.f));
     int lineWidth = int(std::round(lineWidthF));

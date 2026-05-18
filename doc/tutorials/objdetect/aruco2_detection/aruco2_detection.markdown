@@ -20,7 +20,7 @@ Benefits of ArUco2
 Compared to the legacy `aruco` module, `aruco2` offers several significant improvements:
 
 - **Performance:** The detection engine is up to **6.5× more efficient** (based on ArUco Nano), and dictionary identification is up to **2.7× faster** thanks to O(1) hash-map lookups.
-- **Simpler API:** Detection is now a single function call returning a `std::vector<Marker>`, where each marker contains its ID, corners, and dictionary info. No more managing parallel vectors!
+- **Simpler API:** Detection is now a single function call returning a `std::vector<FiducialMarker>`, where each marker contains its ID, corners, and dictionary info. No more managing parallel vectors!
 - **Ease of Use:** A single public header `#include <opencv2/objdetect/aruco2.hpp>` provides everything you need.
 - **Robustness:** Safer default parameters (e.g., `errorCorrectionRate=0`) help prevent false positives in cluttered scenes.
 - **Advanced Features:** Native support for multi-dictionary detection in a single pass, and enhanced designs for boards, diamonds, and fractal markers.
@@ -69,12 +69,12 @@ The most critical parameter of a dictionary is the **inter-marker distance** (mi
 Marker Creation
 ---------------
 
-Markers must be printed before they can be detected. You can generate marker images using the `cv::aruco2::generateMarkerImage()` function.
+Markers must be printed before they can be detected. You can generate marker images using the `cv::aruco2::getFiducialMarker()` function.
 
 Example:
 @code{.cpp}
 cv::Mat markerImage;
-cv::aruco2::generateMarkerImage(markerImage, cv::aruco2::DICT_ARUCO_MIP_36h12, 42);
+cv::aruco2::getFiducialMarker(markerImage, cv::aruco2::DICT_ARUCO_MIP_36h12, 42);
 cv::imwrite("marker42.png", markerImage);
 @endcode
 
@@ -83,19 +83,18 @@ The parameters are:
 - The dictionary type (e.g., `cv::aruco2::DICT_ARUCO_MIP_36h12`).
 - The marker ID (must be valid for the chosen dictionary).
 - Optional: `bitSize` (default 20), which is the size of each bit in pixels.
-- Optional: `externalBorder` (default true), which adds a white border around the marker.
-
-
+- Optional: `externalBorder` (default true), whether to add a white border.
+...
 Marker Detection
 ----------------
 
-Detecting markers in `aruco2` is straightforward. The `cv::aruco2::detectMarkers()` function performs the entire pipeline: thresholding, contour tracing, quadrilateral fitting, bit extraction, and dictionary lookup.
+Detecting markers in `aruco2` is straightforward. The `cv::aruco2::detectFiducialMarkers()` function performs the entire pipeline: thresholding, contour tracing, quadrilateral fitting, bit extraction, and dictionary lookup.
 
 ### Basic Detection (Single Dictionary)
 
 @code{.cpp}
 cv::Mat image = cv::imread("scene.jpg");
-auto markers = cv::aruco2::detectMarkers(image, cv::aruco2::DICT_ARUCO_MIP_36h12);
+auto markers = cv::aruco2::detectFiducialMarkers(image, cv::aruco2::DICT_ARUCO_MIP_36h12);
 
 for (const auto &m : markers) {
     std::cout << "Detected marker ID: " << m.id << " at " << m.corners[0] << std::endl;
@@ -108,7 +107,7 @@ One of the new features of `aruco2` is the ability to search for markers from mu
 
 @code{.cpp}
 using namespace cv::aruco2;
-auto markers = detectMarkers(image, {DICT_ARUCO_MIP_36h12, DICT_APRILTAG_36h11});
+auto markers = detectFiducialMarkers(image, {DICT_ARUCO_MIP_36h12, DICT_APRILTAG_36h11});
 
 for (const auto &m : markers) {
     std::string dictName = (m.dict == DICT_ARUCO_MIP_36h12) ? "ArUco" : "AprilTag";
@@ -120,10 +119,10 @@ for (const auto &m : markers) {
 Drawing Detected Markers
 ------------------------
 
-To visualize the detection results, use `cv::aruco2::drawDetected()`. It draws a colored outline around each marker, a dot at the first corner to show orientation, and the marker ID.
+To visualize the detection results, use `cv::aruco2::drawFiducialMarkers()`. It draws a colored outline around each marker, a dot at the first corner to show orientation, and the marker ID.
 
 @code{.cpp}
-cv::aruco2::drawDetected(image, markers);
+cv::aruco2::drawFiducialMarkers(image, markers);
 cv::imshow("Detected Markers", image);
 cv::waitKey(0);
 @endcode

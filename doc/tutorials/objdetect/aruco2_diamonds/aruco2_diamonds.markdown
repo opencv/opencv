@@ -21,13 +21,13 @@ Diamonds are conceptually different from boards. While a board's identity is fix
 Diamond Creation
 ----------------
 
-You can generate a diamond image for printing using `cv::aruco2::generateDiamondImage()`.
+You can generate a diamond image for printing using `cv::aruco2::getDiamondImage()`.
 
 @code{.cpp}
 cv::Mat diamondImage;
 cv::aruco2::DictionaryType dict = cv::aruco2::DICT_ARUCO_MIP_36h12;
 cv::Vec4i ids(10, 11, 12, 13); // IDs clockwise from top-left
-cv::aruco2::generateDiamondImage(diamondImage, dict, ids);
+cv::aruco2::getDiamondImage(diamondImage, dict, ids);
 cv::imwrite("diamond.png", diamondImage);
 @endcode
 
@@ -54,15 +54,15 @@ for (const auto &d : diamonds) {
 Each `cv::aruco2::Diamond` object in the returned vector contains:
 - `id`: A `cv::Vec4i` with the IDs of the four markers.
 - `dict`: The dictionary used.
-- `markers`: A `std::vector<Marker>` containing the four individual markers forming the diamond.
+- `markers`: A `std::vector<FiducialMarker>` containing the four individual markers forming the diamond.
 
 Drawing Detected Diamonds
 -------------------------
 
-Visualize the results using the overloaded `cv::aruco2::drawDetected()` function for diamonds.
+Visualize the results using the `cv::aruco2::drawDiamonds()` function.
 
 @code{.cpp}
-cv::aruco2::drawDetected(image, diamonds);
+cv::aruco2::drawDiamonds(image, diamonds);
 cv::imshow("Detected Diamonds", image);
 cv::waitKey(0);
 @endcode
