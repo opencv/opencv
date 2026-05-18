@@ -190,7 +190,6 @@ int remap16s(int src_type, const uchar *src_data, size_t src_step, int src_width
 int warpAffine(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar *dst_data, size_t dst_step, int dst_width, int dst_height, const double M[6], int interpolation, int borderType, const double borderValue[4]);
 int warpPerspective(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar *dst_data, size_t dst_step, int dst_width, int dst_height, const double M[9], int interpolation, int borderType, const double borderValue[4]);
 
-// BUG: https://github.com/opencv/opencv/issues/27280
 #undef cv_hal_warpAffine
 #define cv_hal_warpAffine cv::rvv_hal::imgproc::warpAffine
 #undef cv_hal_warpPerspective
