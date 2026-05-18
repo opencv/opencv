@@ -41,13 +41,19 @@ int main()
 
     // Pose estimation (requires camera calibration data)
     //! [pose_diamond]
-    Mat cameraMatrix, distCoeffs; // Load from calibration file in a real application
+    Mat cameraMatrix, distCoeffs;
+    // Load from calibration file in a real application, e.g.:
+    //   FileStorage fs("calibration.yaml", FileStorage::READ);
+    //   fs["camera_matrix"] >> cameraMatrix;
+    //   fs["distortion_coeffs"] >> distCoeffs;
     float markerSize = 0.05f;
-    for (const auto &d : diamonds) {
-        Mat objPoints, imgPoints, rvec, tvec;
-        aruco2::getSolvePnpPoints(d, objPoints, imgPoints, markerSize);
-        solvePnP(objPoints, imgPoints, cameraMatrix, distCoeffs, rvec, tvec);
-        aruco2::drawAxis(colorImage, cameraMatrix, distCoeffs, rvec, tvec, markerSize);
+    if (!cameraMatrix.empty()) {
+        for (const auto &d : diamonds) {
+            Mat objPoints, imgPoints, rvec, tvec;
+            aruco2::getSolvePnpPoints(d, objPoints, imgPoints, markerSize);
+            solvePnP(objPoints, imgPoints, cameraMatrix, distCoeffs, rvec, tvec);
+            aruco2::drawAxis(colorImage, cameraMatrix, distCoeffs, rvec, tvec, markerSize);
+        }
     }
     //! [pose_diamond]
 
