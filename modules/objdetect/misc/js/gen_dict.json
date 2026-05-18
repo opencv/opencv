@@ -27,7 +27,7 @@
         "aruco2_DictionaryType": [],
         "aruco2_FractalType": [],
         "aruco2_FiducialMarker": ["FiducialMarker"],
-        "aruco2_GridBoard": ["GridBoard", "getGridBoard", "getGridSize"],
+        "aruco2_GridBoard": ["GridBoard"],
         "aruco2_Diamond": ["Diamond"],
         "aruco2_FractalMarker": ["FractalMarker"],
         "aruco2_DetectionParameters": ["DetectionParameters"],

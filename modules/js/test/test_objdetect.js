@@ -288,6 +288,8 @@ QUnit.test('ArUco2 GridBoard generate and detect', function (assert) {
     let found = cv.aruco2_detectGridBoard(canvas, gridSize, DICT, board);
     assert.ok(found);
     assert.equal(board.markers.size(), 6);
+    assert.equal(board.gridSize.width, 3);
+    assert.equal(board.gridSize.height, 2);
 
     let colorCanvas = new cv.Mat();
     cv.cvtColor(canvas, colorCanvas, cv.COLOR_GRAY2BGR);
@@ -297,9 +299,9 @@ QUnit.test('ArUco2 GridBoard generate and detect', function (assert) {
     let objPts = new cv.Mat();
     let imgPts = new cv.Mat();
     cv.aruco2_getSolvePnpPoints1(board, objPts, imgPts);
-    // 3x2 board → (3+1)×(2+1) = 12 corners
-    assert.equal(objPts.rows, 12);
-    assert.equal(imgPts.rows, 12);
+    // JS bindings return 1×N Mats for these outputs
+    assert.equal(objPts.cols, 12);
+    assert.equal(imgPts.cols, 12);
 
     img.delete(); canvas.delete(); board.delete(); colorCanvas.delete();
     objPts.delete(); imgPts.delete();
@@ -323,8 +325,8 @@ QUnit.test('ArUco2 getSolvePnpPoints FiducialMarker', function (assert) {
     let objPts = new cv.Mat();
     let imgPts = new cv.Mat();
     cv.aruco2_getSolvePnpPoints(markers.get(0), objPts, imgPts);
-    assert.equal(objPts.rows, 4);
-    assert.equal(imgPts.rows, 4);
+    assert.equal(objPts.cols, 4);
+    assert.equal(imgPts.cols, 4);
 
     img.delete(); canvas.delete(); markers.delete(); objPts.delete(); imgPts.delete();
 });
@@ -390,6 +392,11 @@ QUnit.test('ArUco2 Diamond workflow', function (assert) {
 
     let diamonds = cv.aruco2_detectDiamonds(canvas, DICT);
     assert.equal(diamonds.size(), 1);
+    assert.equal(diamonds.get(0).id[0], 5);
+    assert.equal(diamonds.get(0).id[1], 10);
+    assert.equal(diamonds.get(0).id[2], 15);
+    assert.equal(diamonds.get(0).id[3], 20);
+    assert.equal(diamonds.get(0).markers.size(), 4);
 
     let colorCanvas = new cv.Mat();
     cv.cvtColor(canvas, colorCanvas, cv.COLOR_GRAY2BGR);
@@ -399,9 +406,9 @@ QUnit.test('ArUco2 Diamond workflow', function (assert) {
     let objPts = new cv.Mat();
     let imgPts = new cv.Mat();
     cv.aruco2_getSolvePnpPoints2(diamonds.get(0), objPts, imgPts);
-    // Diamond → 3x3 grid = 9 points
-    assert.equal(objPts.rows, 9);
-    assert.equal(imgPts.rows, 9);
+    // JS bindings return 1×N Mats for these outputs
+    assert.equal(objPts.cols, 9);
+    assert.equal(imgPts.cols, 9);
 
     diamondImg.delete(); canvas.delete(); diamonds.delete();
     colorCanvas.delete(); objPts.delete(); imgPts.delete();
@@ -421,6 +428,9 @@ QUnit.test('ArUco2 Fractal workflow', function (assert) {
 
     let fractals = cv.aruco2_detectFractals(canvas, cv.aruco2_FractalType.FRACTAL_2L_6);
     assert.equal(fractals.size(), 1);
+    assert.equal(fractals.get(0).id, 0);
+    assert.equal(fractals.get(0).type, 0); // FRACTAL_2L_6
+    assert.equal(fractals.get(0).corners.size(), 4);
 
     let colorCanvas = new cv.Mat();
     cv.cvtColor(canvas, colorCanvas, cv.COLOR_GRAY2BGR);
