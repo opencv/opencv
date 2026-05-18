@@ -45,7 +45,7 @@ enum DictionaryType {
     DICT_ARUCO_MIP_36h12
 };
 
-/** @brief Detection parameters for detectMarkers() and detectBoard().
+/** @brief Detection parameters for detectMarkers() and detectGridBoard().
  *
  * All parameters have defaults that work well for standard printed markers under normal lighting.
  * Tune only when detection fails or produces false positives in your specific setup.
@@ -220,7 +220,7 @@ CV_EXPORTS_W std::vector<cv::aruco2::Marker> detectMarkers(InputArray image, con
  *
  * Useful for visualisation and debugging.
  */
-CV_EXPORTS_AS(aruco2_drawDetectedMarkers) CV_EXPORTS_W void drawDetected(InputOutputArray image, const std::vector<cv::aruco2::Marker> &markers,
+CV_EXPORTS_AS(drawDetectedMarkers) CV_EXPORTS_W void drawDetected(InputOutputArray image, const std::vector<cv::aruco2::Marker> &markers,
                                  Scalar borderColor = Scalar(0, 255, 0));
 
 
@@ -270,7 +270,7 @@ CV_EXPORTS_W void getSolvePnpPoints(const cv::aruco2::Marker &marker, OutputArra
  * partially occluded).  Use getSolvePnpPoints() to obtain the corresponding object and image
  * point arrays for solvePnP().
  *
- * @sa detectBoard, getSolvePnpPoints(const GridBoard, OutputArray, OutputArray)
+ * @sa detectGridBoard, getSolvePnpPoints(const GridBoard, OutputArray, OutputArray)
  */
 struct CV_EXPORTS_W_SIMPLE GridBoard {
     CV_PROP_RW cv::Size gridSize;              ///< board dimensions: width × height in markers
@@ -278,7 +278,7 @@ struct CV_EXPORTS_W_SIMPLE GridBoard {
     CV_PROP_RW std::vector<cv::aruco2::Marker> markers;    ///< detected markers (subset of the full board)
 private:
     std::vector<std::pair<int,cv::Point2f>> detectedBoardCorners;
-    friend bool detectBoard(InputArray image, cv::Size gridSize, cv::aruco2::DictionaryType dict, GridBoard &board, InputArray ids);
+    friend bool detectGridBoard(InputArray image, cv::Size gridSize, cv::aruco2::DictionaryType dict, GridBoard &board, InputArray ids);
     friend void getSolvePnpPoints(const GridBoard& board, OutputArray objPoints, OutputArray imgPoints, float markerSize);
     friend void drawDetected(InputOutputArray image, const GridBoard &board, Scalar color, bool drawMarkerIds);
 };
@@ -294,9 +294,9 @@ private:
  *                     if empty, ids 0…(cols*rows−1) are used
  *
  * Markers are laid out in row-major order with no gap between them.
- * Pass the same `boardSize`, `dict`, and `ids` to detectBoard() for detection.
+ * Pass the same `boardSize`, `dict`, and `ids` to detectGridBoard() for detection.
  */
-CV_EXPORTS_W void generateBoardImage(OutputArray img, Size boardSize, cv::aruco2::DictionaryType dict,
+CV_EXPORTS_W void generateGridBoardImage(OutputArray img, Size boardSize, cv::aruco2::DictionaryType dict,
                                 int bitSize = 25, InputArray ids = noArray());
 
 
@@ -312,29 +312,29 @@ CV_EXPORTS_W void generateBoardImage(OutputArray img, Size boardSize, cv::aruco2
  *
  * In Python the return value and output parameter are combined:
  * @code{.py}
- * found, board = cv.aruco2.detectBoard(image, (4, 3), cv.aruco2.DICT_ARUCO_MIP_36h12)
+ * found, board = cv.aruco2.detectGridBoard(image, (4, 3), cv.aruco2.DICT_ARUCO_MIP_36h12)
  * @endcode
  */
-CV_EXPORTS_W bool detectBoard(InputArray image, cv::Size gridSize, cv::aruco2::DictionaryType dict,
+CV_EXPORTS_W bool detectGridBoard(InputArray image, cv::Size gridSize, cv::aruco2::DictionaryType dict,
                          CV_OUT cv::aruco2::GridBoard &board, InputArray ids = noArray());
 
 /** @brief Draw detected board corners and optionally marker ids onto an image.
  *
  * @param image          input/output image (1 or 3 channels); modified in place
- * @param board          board returned by detectBoard()
+ * @param board          board returned by detectGridBoard()
  * @param color          color used to draw corner markers and text (default: green)
  * @param drawMarkerIds  if true, draws the id of each detected marker at its centroid
  *
  * For each detected board corner a filled circle is drawn together with its global corner id.
  * Useful for verifying that the board detection and corner assignment are correct.
  */
-CV_EXPORTS_AS(aruco2_drawDetectedBoard) CV_EXPORTS_W void drawDetected(InputOutputArray image, const cv::aruco2::GridBoard &board,
+CV_EXPORTS_AS(drawDetectedGridBoard) CV_EXPORTS_W void drawDetected(InputOutputArray image, const cv::aruco2::GridBoard &board,
                                Scalar color = Scalar(0, 255, 0),bool drawMarkerIds=false);
 
 
 /** @brief Compute object and image points for a detected board to pass to solvePnP().
  *
- * @param board      a detected board returned by detectBoard()
+ * @param board      a detected board returned by detectGridBoard()
  * @param objPoints  output array of corresponding 3-D object points in board coordinates (CV_32FC3).
  *                   The board origin is at the top-left marker corner; X points right, Y points
  *                   down, Z=0.
@@ -416,7 +416,7 @@ CV_EXPORTS_W std::vector<cv::aruco2::Diamond> detectDiamonds(InputArray image, c
  * - a small filled square at each of the 9 grid corners
  * - the Vec4i diamond id as text at the diamond centroid
  */
-CV_EXPORTS_AS(aruco2_drawDetectedDiamonds) CV_EXPORTS_W void drawDetected(InputOutputArray image, const std::vector<cv::aruco2::Diamond> &diamonds,
+CV_EXPORTS_AS(drawDetectedDiamonds) CV_EXPORTS_W void drawDetected(InputOutputArray image, const std::vector<cv::aruco2::Diamond> &diamonds,
                                Scalar color = Scalar(0, 255, 0),bool drawMarkerIds=false);
 
 
@@ -516,7 +516,7 @@ CV_EXPORTS_W std::vector<cv::aruco2::FractalMarker> detectFractals(InputArray im
  * @param drawAllImagePoints  if true, draw a small circle at every matched image point
  *                         stored inside each FractalMarker (default true)
  */
-CV_EXPORTS_AS(aruco2_drawDetectedFractals) CV_EXPORTS_W void drawDetected(InputOutputArray image, const std::vector<cv::aruco2::FractalMarker> &fractals,
+CV_EXPORTS_AS(drawDetectedFractals) CV_EXPORTS_W void drawDetected(InputOutputArray image, const std::vector<cv::aruco2::FractalMarker> &fractals,
                                   Scalar color = Scalar(0, 255, 0), bool drawAllImagePoints = true);
 
 /** @brief Extract solvePnP inputs for a detected fractal marker.

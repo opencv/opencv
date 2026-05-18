@@ -230,7 +230,7 @@ TEST(Objdetect_Aruco2, BoardGeneration) {
     Size gridSize(4, 3);
     DictionaryType dict = DICT_ARUCO_MIP_36h12;
     Mat img;
-    generateBoardImage(img, gridSize, dict, 20);
+    generateGridBoardImage(img, gridSize, dict, 20);
     
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(img.type(), CV_8UC1);
@@ -248,14 +248,14 @@ TEST(Objdetect_Aruco2, BoardDetection) {
     Size gridSize(3, 2);
     DictionaryType dict = DICT_ARUCO_MIP_36h12;
     Mat boardImg;
-    generateBoardImage(boardImg, gridSize, dict, 20);
+    generateGridBoardImage(boardImg, gridSize, dict, 20);
     
     Mat canvas(boardImg.rows + 100, boardImg.cols + 100, CV_8UC1, Scalar(255));
     Rect roi(50, 50, boardImg.cols, boardImg.rows);
     boardImg.copyTo(canvas(roi));
     
     GridBoard board;
-    bool found = detectBoard(canvas, gridSize, dict, board);
+    bool found = detectGridBoard(canvas, gridSize, dict, board);
     
     ASSERT_TRUE(found);
     EXPECT_EQ(board.gridSize, gridSize);
@@ -276,7 +276,7 @@ TEST(Objdetect_Aruco2, BoardRotation) {
     Size gridSize(3, 2);
     DictionaryType dict = DICT_ARUCO_MIP_36h12;
     Mat boardImg;
-    generateBoardImage(boardImg, gridSize, dict, 20);
+    generateGridBoardImage(boardImg, gridSize, dict, 20);
     
     Mat canvas(800, 800, CV_8UC1, Scalar(255));
     Rect roi((canvas.cols - boardImg.cols) / 2, (canvas.rows - boardImg.rows) / 2, boardImg.cols, boardImg.rows);
@@ -290,7 +290,7 @@ TEST(Objdetect_Aruco2, BoardRotation) {
         warpAffine(canvas, rotated, rot, canvas.size(), INTER_LINEAR, BORDER_CONSTANT, Scalar(255));
         
         GridBoard board;
-        bool found = detectBoard(rotated, gridSize, dict, board);
+        bool found = detectGridBoard(rotated, gridSize, dict, board);
         
         ASSERT_TRUE(found) << "Failed for angle " << angle;
         EXPECT_EQ(board.markers.size(), 6u) << "Failed for angle " << angle;

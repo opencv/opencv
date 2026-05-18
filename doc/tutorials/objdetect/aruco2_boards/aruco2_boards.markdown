@@ -26,12 +26,12 @@ Benefits of ArUco2 Boards
 Board Creation
 --------------
 
-You can generate a board image ready for printing using `cv::aruco2::generateBoardImage()`.
+You can generate a board image ready for printing using `cv::aruco2::generateGridBoardImage()`.
 
 @code{.cpp}
 //Generate a 9x5 board using DICT_ARUCO_MIP_36h12 markers
 cv::Mat boardImage;
-cv::aruco2::generateBoardImage(boardImage, cv::Size(9, 5), cv::aruco2::DICT_ARUCO_MIP_36h12);
+cv::aruco2::generateGridBoardImage(boardImage, cv::Size(9, 5), cv::aruco2::DICT_ARUCO_MIP_36h12);
 cv::imwrite("board.png", boardImage);
 @endcode
 
@@ -45,12 +45,12 @@ The parameters are:
 Board Detection
 ---------------
 
-Detecting an ArUco2 board is handled by the `cv::aruco2::detectBoard()` function.
+Detecting an ArUco2 board is handled by the `cv::aruco2::detectGridBoard()` function.
 
 @code{.cpp}
 cv::Mat image = cv::imread("board_scene.jpg");
 cv::aruco2::GridBoard board;
-bool found = cv::aruco2::detectBoard(image, cv::Size(4, 3), cv::aruco2::DICT_ARUCO_MIP_36h12, board);
+bool found = cv::aruco2::detectGridBoard(image, cv::Size(4, 3), cv::aruco2::DICT_ARUCO_MIP_36h12, board);
 
 if (found) {
     std::cout << "Detected " << board.markers.size() << " markers on the board." << std::endl;

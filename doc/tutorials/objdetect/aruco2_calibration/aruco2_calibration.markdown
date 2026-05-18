@@ -32,7 +32,7 @@ The calibration process involves three main steps:
 
 ### Detection Example
 
-When an ArUco2 board is detected, the `detectBoard()` function identifies all visible markers and their corners. The following image shows a board detected in a cluttered scene:
+When an ArUco2 board is detected, the `detectGridBoard()` function identifies all visible markers and their corners. The following image shows a board detected in a cluttered scene:
 
 ![Detected ArUco2 Board](calib_detection.jpg)
 
@@ -67,7 +67,7 @@ int main() {
         if (imageSize.width == 0) imageSize = image.size();
 
         cv::aruco2::GridBoard board;
-        if (cv::aruco2::detectBoard(image, cv::Size(9, 5), cv::aruco2::DICT_ARUCO_MIP_36h12, board)) {
+        if (cv::aruco2::detectGridBoard(image, cv::Size(9, 5), cv::aruco2::DICT_ARUCO_MIP_36h12, board)) {
             cv::Mat imgPtsMat, objPtsMat;
             // Get 3D-2D correspondences
             cv::aruco2::getSolvePnpPoints(board, objPtsMat, imgPtsMat, markerSize);

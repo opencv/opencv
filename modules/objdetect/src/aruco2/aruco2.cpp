@@ -813,7 +813,7 @@ void getSolvePnpPoints(const Marker &marker, OutputArray objPoints, OutputArray 
 
 
 
-bool detectBoard(InputArray image, cv::Size gridSize, DictionaryType dict,
+bool detectGridBoard(InputArray image, cv::Size gridSize, DictionaryType dict,
             CV_OUT GridBoard &board_, InputArray _ids){
 
     std::vector<int> ids;
@@ -985,7 +985,7 @@ bool detectBoard(InputArray image, cv::Size gridSize, DictionaryType dict,
 }
 
 
-void generateBoardImage(OutputArray img, Size bSize, DictionaryType dict,
+void generateGridBoardImage(OutputArray img, Size bSize, DictionaryType dict,
                         int bitSize , InputArray _ids  ){
     std::vector<int> ids;
     _ids.copyTo(ids);
@@ -1089,7 +1089,7 @@ void generateBoardImage(OutputArray img, Size bSize, DictionaryType dict,
   }
 
   void generateDiamondImage(OutputArray img,const DictionaryType &dictionary, const cv::Vec4i &ids,int bitSize){
-        generateBoardImage(img,cv::Size(2,2),dictionary,bitSize,ids);
+        generateGridBoardImage(img,cv::Size(2,2),dictionary,bitSize,ids);
   }
 
    std::vector<Diamond> detectDiamonds(InputArray image, DictionaryType dict  ){

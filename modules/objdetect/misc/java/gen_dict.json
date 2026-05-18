@@ -55,6 +55,7 @@
                 "j_code" : [],
                 "jn_code" : [ "public static native long Aruco2_DetectionParameters_0();" ],
                 "cpp_code" : [ 
+                    "JNIEXPORT jlong JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1DetectionParameters_10(JNIEnv*, jclass);",
                     "JNIEXPORT jlong JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1DetectionParameters_10(JNIEnv*, jclass) {",
                     "    return (jlong) new cv::aruco2::DetectionParameters();",
                     "}"
@@ -64,6 +65,7 @@
                 "j_code" : [],
                 "jn_code" : [ "public static native long Aruco2_Marker_0();" ],
                 "cpp_code" : [ 
+                    "JNIEXPORT jlong JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1Marker_10(JNIEnv*, jclass);",
                     "JNIEXPORT jlong JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1Marker_10(JNIEnv*, jclass) {",
                     "    return (jlong) new cv::aruco2::Marker();",
                     "}"
@@ -73,6 +75,7 @@
                 "j_code" : [],
                 "jn_code" : [ "public static native long Aruco2_GridBoard_0();" ],
                 "cpp_code" : [ 
+                    "JNIEXPORT jlong JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1GridBoard_10(JNIEnv*, jclass);",
                     "JNIEXPORT jlong JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1GridBoard_10(JNIEnv*, jclass) {",
                     "    return (jlong) new cv::aruco2::GridBoard();",
                     "}"
@@ -82,6 +85,7 @@
                 "j_code" : [],
                 "jn_code" : [ "public static native long Aruco2_Diamond_0();" ],
                 "cpp_code" : [ 
+                    "JNIEXPORT jlong JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1Diamond_10(JNIEnv*, jclass);",
                     "JNIEXPORT jlong JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1Diamond_10(JNIEnv*, jclass) {",
                     "    return (jlong) new cv::aruco2::Diamond();",
                     "}"
@@ -91,6 +95,7 @@
                 "j_code" : [],
                 "jn_code" : [ "public static native long Aruco2_FractalMarker_0();" ],
                 "cpp_code" : [ 
+                    "JNIEXPORT jlong JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1FractalMarker_10(JNIEnv*, jclass);",
                     "JNIEXPORT jlong JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1FractalMarker_10(JNIEnv*, jclass) {",
                     "    return (jlong) new cv::aruco2::FractalMarker();",
                     "}"
@@ -110,10 +115,12 @@
                     "private static native List<Aruco2_Marker> Aruco2_detectMarkers_Dicts_0(long image_nativeObj, long dicts_nativeObj, long detectorParams);"
                 ],
                 "cpp_code" : [
+                    "JNIEXPORT jobject JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1detectMarkers_1Params_10(JNIEnv* env, jclass, jlong image, jint dict, jlong params);",
                     "JNIEXPORT jobject JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1detectMarkers_1Params_10(JNIEnv* env, jclass, jlong image, jint dict, jlong params) {",
                     "    std::vector<cv::aruco2::Marker> res = cv::aruco2::detectMarkers(*((cv::Mat*)image), (cv::aruco2::DictionaryType)dict, *((cv::aruco2::DetectionParameters*)params));",
                     "    return vector_aruco2_Marker_to_List(env, res);",
                     "}",
+                    "JNIEXPORT jobject JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1detectMarkers_1Dicts_10(JNIEnv* env, jclass, jlong image, jlong dicts, jlong params);",
                     "JNIEXPORT jobject JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1detectMarkers_1Dicts_10(JNIEnv* env, jclass, jlong image, jlong dicts, jlong params) {",
                     "    std::vector<cv::aruco2::DictionaryType> dicts_vec;",
                     "    Mat_to_vector_aruco2_DictionaryType(*((cv::Mat*)dicts), dicts_vec);",
@@ -122,46 +129,50 @@
                     "}"
                 ]
             },
-            "Aruco2_detectBoard" : {
+            "Aruco2_detectGridBoard" : {
                 "j_code" : [
-                    "public static boolean Aruco2_detectBoard_Ids(Mat image, Size gridSize, int dict, long board, Mat ids) {",
-                    "    return Aruco2_detectBoard_Ids_0(image.nativeObj, gridSize.width, gridSize.height, dict, board, ids.nativeObj);",
+                    "public static boolean Aruco2_detectGridBoard_Ids(Mat image, Size gridSize, int dict, long board, Mat ids) {",
+                    "    return Aruco2_detectGridBoard_Ids_0(image.nativeObj, gridSize.width, gridSize.height, dict, board, ids.nativeObj);",
                     "}",
-                    "public static boolean Aruco2_detectBoard_NoIds(Mat image, Size gridSize, int dict, long board) {",
-                    "    return Aruco2_detectBoard_NoIds_0(image.nativeObj, gridSize.width, gridSize.height, dict, board);",
+                    "public static boolean Aruco2_detectGridBoard_NoIds(Mat image, Size gridSize, int dict, long board) {",
+                    "    return Aruco2_detectGridBoard_NoIds_0(image.nativeObj, gridSize.width, gridSize.height, dict, board);",
                     "}"
                 ],
                 "jn_code" : [
-                    "private static native boolean Aruco2_detectBoard_Ids_0(long image, double w, double h, int dict, long board, long ids);",
-                    "private static native boolean Aruco2_detectBoard_NoIds_0(long image, double w, double h, int dict, long board);"
+                    "private static native boolean Aruco2_detectGridBoard_Ids_0(long image, double w, double h, int dict, long board, long ids);",
+                    "private static native boolean Aruco2_detectGridBoard_NoIds_0(long image, double w, double h, int dict, long board);"
                 ],
                 "cpp_code" : [
-                    "JNIEXPORT jboolean JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1detectBoard_1Ids_10(JNIEnv*, jclass, jlong image, jdouble w, jdouble h, jint dict, jlong board, jlong ids) {",
-                    "    return (jboolean) cv::aruco2::detectBoard(*((cv::Mat*)image), cv::Size((int)w, (int)h), (cv::aruco2::DictionaryType)dict, *((cv::aruco2::GridBoard*)board), *((cv::Mat*)ids));",
+                    "JNIEXPORT jboolean JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1detectGridBoard_1Ids_10(JNIEnv*, jclass, jlong image, jdouble w, jdouble h, jint dict, jlong board, jlong ids);",
+                    "JNIEXPORT jboolean JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1detectGridBoard_1Ids_10(JNIEnv*, jclass, jlong image, jdouble w, jdouble h, jint dict, jlong board, jlong ids) {",
+                    "    return (jboolean) cv::aruco2::detectGridBoard(*((cv::Mat*)image), cv::Size((int)w, (int)h), (cv::aruco2::DictionaryType)dict, *((cv::aruco2::GridBoard*)board), *((cv::Mat*)ids));",
                     "}",
-                    "JNIEXPORT jboolean JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1detectBoard_1NoIds_10(JNIEnv*, jclass, jlong image, jdouble w, jdouble h, jint dict, jlong board) {",
-                    "    return (jboolean) cv::aruco2::detectBoard(*((cv::Mat*)image), cv::Size((int)w, (int)h), (cv::aruco2::DictionaryType)dict, *((cv::aruco2::GridBoard*)board));",
+                    "JNIEXPORT jboolean JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1detectGridBoard_1NoIds_10(JNIEnv*, jclass, jlong image, jdouble w, jdouble h, jint dict, jlong board);",
+                    "JNIEXPORT jboolean JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1detectGridBoard_1NoIds_10(JNIEnv*, jclass, jlong image, jdouble w, jdouble h, jint dict, jlong board) {",
+                    "    return (jboolean) cv::aruco2::detectGridBoard(*((cv::Mat*)image), cv::Size((int)w, (int)h), (cv::aruco2::DictionaryType)dict, *((cv::aruco2::GridBoard*)board));",
                     "}"
                 ]
             },
-            "Aruco2_aruco2_drawDetectedBoard" : {
+            "Aruco2_drawDetectedGridBoard" : {
                 "j_code" : [
-                    "public static void Aruco2_aruco2_drawDetectedBoard_Params(Mat image, long board, Scalar color, boolean drawMarkerIds) {",
-                    "    Aruco2_aruco2_drawDetectedBoard_Params_0(image.nativeObj, board, color.val[0], color.val[1], color.val[2], color.val[3], drawMarkerIds);",
+                    "public static void Aruco2_drawDetectedGridBoard_Params(Mat image, long board, Scalar color, boolean drawMarkerIds) {",
+                    "    Aruco2_drawDetectedGridBoard_Params_0(image.nativeObj, board, color.val[0], color.val[1], color.val[2], color.val[3], drawMarkerIds);",
                     "}",
-                    "public static void Aruco2_aruco2_drawDetectedBoard_NoParams(Mat image, long board) {",
-                    "    Aruco2_aruco2_drawDetectedBoard_NoParams_0(image.nativeObj, board);",
+                    "public static void Aruco2_drawDetectedGridBoard_NoParams(Mat image, long board) {",
+                    "    Aruco2_drawDetectedGridBoard_NoParams_0(image.nativeObj, board);",
                     "}"
                 ],
                 "jn_code" : [
-                    "private static native void Aruco2_aruco2_drawDetectedBoard_Params_0(long image, long board, double c0, double c1, double c2, double c3, boolean drawMarkerIds);",
-                    "private static native void Aruco2_aruco2_drawDetectedBoard_NoParams_0(long image, long board);"
+                    "private static native void Aruco2_drawDetectedGridBoard_Params_0(long image, long board, double c0, double c1, double c2, double c3, boolean drawMarkerIds);",
+                    "private static native void Aruco2_drawDetectedGridBoard_NoParams_0(long image, long board);"
                 ],
                 "cpp_code" : [
-                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1aruco2_1drawDetectedBoard_1Params_10(JNIEnv*, jclass, jlong image, jlong board, jdouble c0, jdouble c1, jdouble c2, jdouble c3, jboolean drawMarkerIds) {",
+                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1drawDetectedGridBoard_1Params_10(JNIEnv*, jclass, jlong image, jlong board, jdouble c0, jdouble c1, jdouble c2, jdouble c3, jboolean drawMarkerIds);",
+                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1drawDetectedGridBoard_1Params_10(JNIEnv*, jclass, jlong image, jlong board, jdouble c0, jdouble c1, jdouble c2, jdouble c3, jboolean drawMarkerIds) {",
                     "    cv::aruco2::drawDetected(*((cv::Mat*)image), *((cv::aruco2::GridBoard*)board), cv::Scalar(c0, c1, c2, c3), (bool)drawMarkerIds);",
                     "}",
-                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1aruco2_1drawDetectedBoard_1NoParams_10(JNIEnv*, jclass, jlong image, jlong board) {",
+                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1drawDetectedGridBoard_1NoParams_10(JNIEnv*, jclass, jlong image, jlong board);",
+                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1drawDetectedGridBoard_1NoParams_10(JNIEnv*, jclass, jlong image, jlong board) {",
                     "    cv::aruco2::drawDetected(*((cv::Mat*)image), *((cv::aruco2::GridBoard*)board));",
                     "}"
                 ]
@@ -188,15 +199,19 @@
                     "private static native void Aruco2_getSolvePnpPoints_Fractal_0(long fractal, long objPoints_nativeObj, long imgPoints_nativeObj, float markerSize);"
                 ],
                 "cpp_code" : [
+                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1getSolvePnpPoints_1Marker_10(JNIEnv*, jclass, jlong marker, jlong objPoints, jlong imgPoints, jfloat markerSize);",
                     "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1getSolvePnpPoints_1Marker_10(JNIEnv*, jclass, jlong marker, jlong objPoints, jlong imgPoints, jfloat markerSize) {",
                     "    cv::aruco2::getSolvePnpPoints(*((cv::aruco2::Marker*)marker), *((cv::Mat*)objPoints), *((cv::Mat*)imgPoints), markerSize);",
                     "}",
+                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1getSolvePnpPoints_1GridBoard_10(JNIEnv*, jclass, jlong board, jlong objPoints, jlong imgPoints, jfloat markerSize);",
                     "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1getSolvePnpPoints_1GridBoard_10(JNIEnv*, jclass, jlong board, jlong objPoints, jlong imgPoints, jfloat markerSize) {",
                     "    cv::aruco2::getSolvePnpPoints(*((cv::aruco2::GridBoard*)board), *((cv::Mat*)objPoints), *((cv::Mat*)imgPoints), markerSize);",
                     "}",
+                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1getSolvePnpPoints_1Diamond_10(JNIEnv*, jclass, jlong diamond, jlong objPoints, jlong imgPoints, jfloat markerSize);",
                     "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1getSolvePnpPoints_1Diamond_10(JNIEnv*, jclass, jlong diamond, jlong objPoints, jlong imgPoints, jfloat markerSize) {",
                     "    cv::aruco2::getSolvePnpPoints(*((cv::aruco2::Diamond*)diamond), *((cv::Mat*)objPoints), *((cv::Mat*)imgPoints), markerSize);",
                     "}",
+                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1getSolvePnpPoints_1Fractal_10(JNIEnv*, jclass, jlong fractal, jlong objPoints, jlong imgPoints, jfloat markerSize);",
                     "JNIEXPORT void JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1getSolvePnpPoints_1Fractal_10(JNIEnv*, jclass, jlong fractal, jlong objPoints, jlong imgPoints, jfloat markerSize) {",
                     "    cv::aruco2::getSolvePnpPoints(*((cv::aruco2::FractalMarker*)fractal), *((cv::Mat*)objPoints), *((cv::Mat*)imgPoints), markerSize);",
                     "}"
@@ -289,6 +304,6 @@
         }
     },
     "func_arg_fix" : {
-        "Aruco2_detectBoard" : { "board" : {"attrib" : []} }
+        "Aruco2_detectGridBoard" : { "board" : {"attrib" : []} }
     }
 }
