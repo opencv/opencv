@@ -490,6 +490,9 @@ EMSCRIPTEN_BINDINGS(binding_utils)
     register_vector<std::vector<cv::KeyPoint>>("KeyPointVectorVector");
     register_vector<std::vector<cv::Point>>("PointVectorVector");
     register_vector<cv::aruco2::FiducialMarker>("FiducialMarkerVector");
+    register_vector<cv::aruco2::Diamond>("DiamondVector");
+    register_vector<cv::aruco2::FractalMarker>("FractalMarkerVector");
+    register_vector<cv::aruco2::DictionaryType>("DictionaryTypeVector");
     register_vector<std::vector<cv::Point2f>>("Point2fVectorVector");
 
 
@@ -650,6 +653,12 @@ EMSCRIPTEN_BINDINGS(binding_utils)
         .field("distance", &cv::DMatch::distance);
 
     emscripten::value_array<cv::Scalar_<double>> ("Scalar")
+        .element(emscripten::index<0>())
+        .element(emscripten::index<1>())
+        .element(emscripten::index<2>())
+        .element(emscripten::index<3>());
+
+    emscripten::value_array<cv::Vec4i>("Vec4i")
         .element(emscripten::index<0>())
         .element(emscripten::index<1>())
         .element(emscripten::index<2>())

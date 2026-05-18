@@ -63,12 +63,14 @@ public class Aruco2 {
 
     @SuppressWarnings("unchecked")
     public static List<FiducialMarker> detectFiducialMarkers(Mat image, int dict) {
-        return (List<FiducialMarker>)(List<?>)Objdetect.Aruco2_detectFiducialMarkers_Params(image, dict, 0L);
+        DetectionParameters params = new DetectionParameters();
+        return (List<FiducialMarker>)(List<?>)Objdetect.Aruco2_detectFiducialMarkers_Params(image, dict, params.nativeObj);
     }
 
     @SuppressWarnings("unchecked")
     public static List<FiducialMarker> detectFiducialMarkers(Mat image) {
-        return (List<FiducialMarker>)(List<?>)Objdetect.Aruco2_detectFiducialMarkers_Params(image, DICT_ARUCO_MIP_36h12, 0L);
+        DetectionParameters params = new DetectionParameters();
+        return (List<FiducialMarker>)(List<?>)Objdetect.Aruco2_detectFiducialMarkers_Params(image, DICT_ARUCO_MIP_36h12, params.nativeObj);
     }
 
     @SuppressWarnings("unchecked")
@@ -102,31 +104,35 @@ public class Aruco2 {
         Objdetect.Aruco2_getGridBoard(img, boardSize, dict, bitSize, ids);
     }
 
+    public static void getGridBoard(Mat img, Size boardSize, int dict, int bitSize) {
+        Objdetect.Aruco2_getGridBoard(img, boardSize, dict, bitSize);
+    }
+
     public static void getGridBoard(Mat img, Size boardSize, int dict) {
         Objdetect.Aruco2_getGridBoard(img, boardSize, dict);
     }
 
-    public static boolean detectGridBoard(Mat image, Size gridSize, int dict, GridBoard board, Mat ids) {
+    public static boolean detectGridBoard(Mat image, Size gridSize, int dict, Aruco2_GridBoard board, Mat ids) {
         return Objdetect.Aruco2_detectGridBoard_Ids(image, gridSize, dict, board.nativeObj, ids);
     }
 
-    public static boolean detectGridBoard(Mat image, Size gridSize, int dict, GridBoard board) {
+    public static boolean detectGridBoard(Mat image, Size gridSize, int dict, Aruco2_GridBoard board) {
         return Objdetect.Aruco2_detectGridBoard_NoIds(image, gridSize, dict, board.nativeObj);
     }
 
-    public static void drawGridBoard(Mat image, GridBoard board, Scalar color, boolean drawMarkerIds) {
+    public static void drawGridBoard(Mat image, Aruco2_GridBoard board, Scalar color, boolean drawMarkerIds) {
         Objdetect.Aruco2_drawGridBoard(image, board.nativeObj, color, drawMarkerIds);
     }
 
-    public static void drawGridBoard(Mat image, GridBoard board) {
+    public static void drawGridBoard(Mat image, Aruco2_GridBoard board) {
         Objdetect.Aruco2_drawGridBoard(image, board.nativeObj);
     }
 
-    public static void getSolvePnpPoints(GridBoard board, Mat objPoints, Mat imgPoints, float markerSize) {
+    public static void getSolvePnpPoints(Aruco2_GridBoard board, Mat objPoints, Mat imgPoints, float markerSize) {
         Objdetect.Aruco2_getSolvePnpPoints_GridBoard(board.nativeObj, objPoints, imgPoints, markerSize);
     }
 
-    public static void getSolvePnpPoints(GridBoard board, Mat objPoints, Mat imgPoints) {
+    public static void getSolvePnpPoints(Aruco2_GridBoard board, Mat objPoints, Mat imgPoints) {
         Objdetect.Aruco2_getSolvePnpPoints_GridBoard(board.nativeObj, objPoints, imgPoints, 1.0f);
     }
 
