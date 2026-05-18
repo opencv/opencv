@@ -2155,6 +2155,7 @@ TEST(Core_InputOutput, FileStorage_int64_26829)
         "IntMax: 2147483647\n"
         "String4: string4\n"
         "Int64Max: 9223372036854775807\n"
+        "Int64Reg: 2147484671\n"
         "String5: string5\n";
 
     FileStorage fs(content, FileStorage::READ | FileStorage::MEMORY);
@@ -2197,6 +2198,14 @@ TEST(Core_InputOutput, FileStorage_int64_26829)
 
         fs["Int64Max"] >> value;
         EXPECT_EQ(value, INT64_MAX);
+
+        fs["Int64Reg"] >> value;
+        EXPECT_EQ(value, 2147484671); // C++ INT_MAX +1024
+    }
+
+    {
+        double value = fs["Int64Reg"].real();
+        EXPECT_EQ(value, 2147484671); // C++ INT_MAX +1024
     }
 }
 
