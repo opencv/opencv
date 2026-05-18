@@ -1,4 +1,5 @@
 {
+    "namespace_ignore_list": ["cv.aruco2"],
     "ManualFuncs" : {
         "QRCodeDetectorAruco": {
             "getDetectorParameters": { "declaration" : [""], "implementation" : [""] }
