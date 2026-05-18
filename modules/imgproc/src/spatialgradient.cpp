@@ -113,6 +113,13 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
     // TODO: Allow for other kernel sizes
     CV_Assert(ksize == 3);
 
+    CALL_HAL(spatialGradient, cv_hal_spatialGradient,
+         src.data, src.step,
+         dx.ptr<short>(), dx.step,
+         dy.ptr<short>(), dy.step,
+         src.cols, src.rows,
+         ksize, borderType);
+
     // Get dimensions
     const int H = src.rows,
               W = src.cols;
