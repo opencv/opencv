@@ -1751,28 +1751,50 @@ double cv::solvePoly(InputArray _coeffs0, OutputArray _roots0, int maxIters)
     }
 
     maxIters = maxIters <= 0 ? 1000 : maxIters;
-    const int MAX_ATTEMPTS = 15;
+    const int MAX_ATTEMPTS = 3;
 
     for (int attempt = 0; attempt < MAX_ATTEMPTS; attempt++)
     {
-        printf("Internal Solver - Attempt %d started...\n", attempt);
-        C p, r(1, 1);
-
         if (attempt == 0)
         {
-            p = C(1, 0);
+            C p(1, 0), r(1, 1);
+            for (i = 0; i < n; i++)
+            {
+                roots[i] = p;
+                p = p * r;
+            }
         }
         else
         {
-            double radius = 1.0 + attempt * 0.5;
-            double angle = attempt * 0.8;
-            p = C(radius * std::cos(angle), radius * std::sin(angle));
-        }
+            double max_val = 0, max_val_lower = 0;
+            double c0_mag = std::sqrt(coeffs[0].re * coeffs[0].re + coeffs[0].im * coeffs[0].im);
+            double cn_mag = std::sqrt(coeffs[n].re * coeffs[n].re + coeffs[n].im * coeffs[n].im);
 
-        for (i = 0; i < n; i++)
-        {
-            roots[i] = p;
-            p = p * r;
+            for (int k = 0; k < n; k++)
+            {
+                double val = std::sqrt(coeffs[k].re * coeffs[k].re + coeffs[k].im * coeffs[k].im);
+                if (val > max_val) max_val = val;
+            }
+            for (int k = 1; k <= n; k++)
+            {
+                double val = std::sqrt(coeffs[k].re * coeffs[k].re + coeffs[k].im * coeffs[k].im);
+                if (val > max_val_lower) max_val_lower = val;
+            }
+
+            double R = (cn_mag == 0) ? 1.0 : (1.0 + max_val / cn_mag);
+            double rho = (max_val_lower == 0) ? R : (c0_mag / (c0_mag + max_val_lower));
+            if (rho < 1e-8) rho = 1e-8;
+
+            double log_rho = std::log(rho);
+            double log_R = std::log(R);
+            double step = (n > 1) ? (log_R - log_rho) / (n - 1) : 0;
+
+            for (i = 0; i < n; i++)
+            {
+                double mag = std::exp(log_rho + i * step);
+                double angle = i * 2.399963229728653 + attempt * 1.5;
+                roots[i] = C(mag * std::cos(angle), mag * std::sin(angle));
+            }
         }
 
         for (iter = 0; iter < maxIters; iter++)
@@ -1780,10 +1802,9 @@ double cv::solvePoly(InputArray _coeffs0, OutputArray _roots0, int maxIters)
             maxDiff = 0;
             for (i = 0; i < n; i++)
             {
-                p = roots[i];
+                C p = roots[i];
                 C num = coeffs[n], denom = coeffs[n];
                 int num_same_root = 1;
-
                 for (j = 0; j < n; j++)
                 {
                     num = num * p + coeffs[n - j - 1];
@@ -1795,9 +1816,7 @@ double cv::solvePoly(InputArray _coeffs0, OutputArray _roots0, int maxIters)
                             num_same_root++;
                     }
                 }
-
                 num /= denom;
-
                 if (num_same_root > 1)
                 {
                     double old_num_re = num.re;
@@ -1813,12 +1832,10 @@ double cv::solvePoly(InputArray _coeffs0, OutputArray _roots0, int maxIters)
                         num.im = num.re - old_num_re;
                         num.re /= 2;
                         num.re = sqrt(num.re);
-
                         num.im /= 2;
                         num.im = sqrt(num.im);
                         if (old_num_re < 0) num.im = -num.im;
                     }
-
                     if (num_same_root % 2 != 0) {
                         Mat cube_coefs(4, 1, CV_64FC1);
                         Mat cube_roots(3, 1, CV_64FC2);
@@ -1827,7 +1844,6 @@ double cv::solvePoly(InputArray _coeffs0, OutputArray _roots0, int maxIters)
                         cube_coefs.at<double>(1) = -48 * old_num_re;
                         cube_coefs.at<double>(0) = 64;
                         solveCubic(cube_coefs, cube_roots);
-
                         num.re = std::cbrt(cube_roots.at<double>(0));
                         num.im = sqrt(std::pow(num.re, 2) / 3 - old_num_re / (3 * num.re));
                     }
@@ -1835,11 +1851,10 @@ double cv::solvePoly(InputArray _coeffs0, OutputArray _roots0, int maxIters)
                 roots[i] = p - num;
                 maxDiff = std::max(maxDiff, cv::abs(num));
             }
-            if (maxDiff <= 0)
+            if (maxDiff <= 1e-14)
                 break;
         }
-
-        if (maxDiff <= 0)
+        if (maxDiff <= 1e-14)
             break;
     }
 
