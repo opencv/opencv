@@ -86,7 +86,9 @@ public:
     CV_ALWAYS_INLINE operator float() const { return (float)val / (1LL << fixedShift); }
     CV_ALWAYS_INLINE operator uint8_t() const { return saturate_cast<uint8_t>(); }
     CV_ALWAYS_INLINE operator int8_t() const { return saturate_cast<int8_t>(); }
+#if defined(__sun)
     CV_ALWAYS_INLINE operator signed char() const { return saturate_cast<int8_t>(); }
+#endif
     CV_ALWAYS_INLINE operator uint16_t() const { return saturate_cast<uint16_t>(); }
     CV_ALWAYS_INLINE operator int16_t() const { return saturate_cast<int16_t>(); }
     CV_ALWAYS_INLINE operator int32_t() const { return saturate_cast<int32_t>(); }
