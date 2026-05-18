@@ -1711,7 +1711,7 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
 
 /* finds complex roots of a polynomial using Durand-Kerner method:
    http://en.wikipedia.org/wiki/Durand%E2%80%93Kerner_method */
-double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
+double cv::solvePoly(InputArray _coeffs0, OutputArray _roots0, int maxIters)
 {
     CV_INSTRUMENT_REGION();
 
@@ -1723,115 +1723,140 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
     int ctype = _coeffs0.type();
     int cdepth = CV_MAT_DEPTH(ctype);
 
-    CV_Assert( CV_MAT_DEPTH(ctype) >= CV_32F && CV_MAT_CN(ctype) <= 2 );
-    CV_Assert( coeffs0.rows == 1 || coeffs0.cols == 1 );
+    CV_Assert(CV_MAT_DEPTH(ctype) >= CV_32F && CV_MAT_CN(ctype) <= 2);
+    CV_Assert(coeffs0.rows == 1 || coeffs0.cols == 1);
 
     int n0 = coeffs0.cols + coeffs0.rows - 2, n = n0;
 
     _roots0.create(n, 1, CV_MAKETYPE(cdepth, 2), -1, true, _OutputArray::DEPTH_MASK_FLT);
     Mat roots0 = _roots0.getMat();
 
-    AutoBuffer<C> buf(n*2+2);
-    C *coeffs = buf.data(), *roots = coeffs + n + 1;
+    AutoBuffer<C> buf(n * 2 + 2);
+    C* coeffs = buf.data(), * roots = coeffs + n + 1;
+
     Mat coeffs1(coeffs0.size(), CV_MAKETYPE(CV_64F, coeffs0.channels()), coeffs0.channels() == 2 ? coeffs : roots);
     coeffs0.convertTo(coeffs1, coeffs1.type());
-    if( coeffs0.channels() == 1 )
+
+    if (coeffs0.channels() == 1)
     {
         const double* rcoeffs = (const double*)roots;
-        for( i = 0; i <= n; i++ )
+        for (i = 0; i <= n; i++)
             coeffs[i] = C(rcoeffs[i], 0);
     }
 
-    for( ; n > 1; n-- )
+    for (; n > 1; n--)
     {
-        if( std::abs(coeffs[n].re) + std::abs(coeffs[n].im) > DBL_EPSILON )
+        if (std::abs(coeffs[n].re) + std::abs(coeffs[n].im) > DBL_EPSILON)
             break;
-    }
-
-    C p(1, 0), r(1, 1);
-
-    for( i = 0; i < n; i++ )
-    {
-        roots[i] = p;
-        p = p * r;
     }
 
     maxIters = maxIters <= 0 ? 1000 : maxIters;
-    for( iter = 0; iter < maxIters; iter++ )
+    const int MAX_ATTEMPTS = 15;
+
+    for (int attempt = 0; attempt < MAX_ATTEMPTS; attempt++)
     {
-        maxDiff = 0;
-        for( i = 0; i < n; i++ )
+        printf("Internal Solver - Attempt %d started...\n", attempt);
+        C p, r(1, 1);
+
+        if (attempt == 0)
         {
-            p = roots[i];
-            C num = coeffs[n], denom = coeffs[n];
-            int num_same_root = 1;
-            for( j = 0; j < n; j++ )
-            {
-                num = num*p + coeffs[n-j-1];
-                if( j != i )
-                {
-                    if ( (p - roots[j]).re != 0 || (p - roots[j]).im != 0 )
-                        denom = denom * (p - roots[j]);
-                    else
-                        num_same_root++;
-                }
-            }
-            num /= denom;
-            if( num_same_root > 1)
-            {
-                double old_num_re = num.re;
-                double old_num_im = num.im;
-                int square_root_times = num_same_root % 2 == 0 ? num_same_root / 2 : num_same_root / 2 - 1;
-
-                for( j = 0; j < square_root_times; j++)
-                {
-                    num.re = old_num_re*old_num_re + old_num_im*old_num_im;
-                    num.re = sqrt(num.re);
-                    num.re += old_num_re;
-                    num.im = num.re - old_num_re;
-                    num.re /= 2;
-                    num.re = sqrt(num.re);
-
-                    num.im /= 2;
-                    num.im = sqrt(num.im);
-                    if( old_num_re < 0 ) num.im = -num.im;
-                }
-
-                if( num_same_root % 2 != 0){
-                    Mat cube_coefs(4, 1, CV_64FC1);
-                    Mat cube_roots(3, 1, CV_64FC2);
-                    cube_coefs.at<double>(3) = -(std::pow(old_num_re, 3));
-                    cube_coefs.at<double>(2) = -(15*std::pow(old_num_re, 2) + 27*std::pow(old_num_im, 2));
-                    cube_coefs.at<double>(1) = -48*old_num_re;
-                    cube_coefs.at<double>(0) = 64;
-                    solveCubic(cube_coefs, cube_roots);
-
-                    num.re = std::cbrt(cube_roots.at<double>(0));
-                    num.im = sqrt(std::pow(num.re, 2) / 3 - old_num_re / (3*num.re));
-                }
-            }
-            roots[i] = p - num;
-            maxDiff = std::max(maxDiff, cv::abs(num));
+            p = C(1, 0);
         }
-        if( maxDiff <= 0 )
+        else
+        {
+            double radius = 1.0 + attempt * 0.5;
+            double angle = attempt * 0.8;
+            p = C(radius * std::cos(angle), radius * std::sin(angle));
+        }
+
+        for (i = 0; i < n; i++)
+        {
+            roots[i] = p;
+            p = p * r;
+        }
+
+        for (iter = 0; iter < maxIters; iter++)
+        {
+            maxDiff = 0;
+            for (i = 0; i < n; i++)
+            {
+                p = roots[i];
+                C num = coeffs[n], denom = coeffs[n];
+                int num_same_root = 1;
+
+                for (j = 0; j < n; j++)
+                {
+                    num = num * p + coeffs[n - j - 1];
+                    if (j != i)
+                    {
+                        if ((p - roots[j]).re != 0 || (p - roots[j]).im != 0)
+                            denom = denom * (p - roots[j]);
+                        else
+                            num_same_root++;
+                    }
+                }
+
+                num /= denom;
+
+                if (num_same_root > 1)
+                {
+                    double old_num_re = num.re;
+                    double old_num_im = num.im;
+                    int square_root_times = num_same_root % 2 == 0 ?
+                        num_same_root / 2 : num_same_root / 2 - 1;
+
+                    for (j = 0; j < square_root_times; j++)
+                    {
+                        num.re = old_num_re * old_num_re + old_num_im * old_num_im;
+                        num.re = sqrt(num.re);
+                        num.re += old_num_re;
+                        num.im = num.re - old_num_re;
+                        num.re /= 2;
+                        num.re = sqrt(num.re);
+
+                        num.im /= 2;
+                        num.im = sqrt(num.im);
+                        if (old_num_re < 0) num.im = -num.im;
+                    }
+
+                    if (num_same_root % 2 != 0) {
+                        Mat cube_coefs(4, 1, CV_64FC1);
+                        Mat cube_roots(3, 1, CV_64FC2);
+                        cube_coefs.at<double>(3) = -(std::pow(old_num_re, 3));
+                        cube_coefs.at<double>(2) = -(15 * std::pow(old_num_re, 2) + 27 * std::pow(old_num_im, 2));
+                        cube_coefs.at<double>(1) = -48 * old_num_re;
+                        cube_coefs.at<double>(0) = 64;
+                        solveCubic(cube_coefs, cube_roots);
+
+                        num.re = std::cbrt(cube_roots.at<double>(0));
+                        num.im = sqrt(std::pow(num.re, 2) / 3 - old_num_re / (3 * num.re));
+                    }
+                }
+                roots[i] = p - num;
+                maxDiff = std::max(maxDiff, cv::abs(num));
+            }
+            if (maxDiff <= 0)
+                break;
+        }
+
+        if (maxDiff <= 0)
             break;
     }
 
-    if( coeffs0.channels() == 1 )
+    if (coeffs0.channels() == 1)
     {
         const double verySmallEps = 1e-100;
-        for( i = 0; i < n; i++ )
-            if( fabs(roots[i].im) < verySmallEps )
+        for (i = 0; i < n; i++)
+            if (fabs(roots[i].im) < verySmallEps)
                 roots[i].im = 0;
     }
 
-    for( ; n < n0; n++ )
-        roots[n+1] = roots[n];
+    for (; n < n0; n++)
+        roots[n + 1] = roots[n];
 
     Mat(roots0.size(), CV_64FC2, roots).convertTo(roots0, roots0.type());
     return maxDiff;
 }
-
 
 #ifndef OPENCV_EXCLUDE_C_API
 
