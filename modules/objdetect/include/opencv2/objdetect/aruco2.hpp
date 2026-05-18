@@ -220,7 +220,7 @@ CV_EXPORTS_W std::vector<cv::aruco2::Marker> detectMarkers(InputArray image, con
  *
  * Useful for visualisation and debugging.
  */
-CV_EXPORTS_AS(drawDetectedMarkers) CV_EXPORTS_W void drawDetected(InputOutputArray image, const std::vector<cv::aruco2::Marker> &markers,
+CV_EXPORTS_W void drawDetected(InputOutputArray image, const std::vector<cv::aruco2::Marker> &markers,
                                  Scalar borderColor = Scalar(0, 255, 0));
 
 
@@ -328,7 +328,7 @@ CV_EXPORTS_W bool detectGridBoard(InputArray image, cv::Size gridSize, cv::aruco
  * For each detected board corner a filled circle is drawn together with its global corner id.
  * Useful for verifying that the board detection and corner assignment are correct.
  */
-CV_EXPORTS_AS(drawDetectedGridBoard) CV_EXPORTS_W void drawDetected(InputOutputArray image, const cv::aruco2::GridBoard &board,
+CV_EXPORTS_W void drawDetected(InputOutputArray image, const cv::aruco2::GridBoard &board,
                                Scalar color = Scalar(0, 255, 0),bool drawMarkerIds=false);
 
 
@@ -416,7 +416,7 @@ CV_EXPORTS_W std::vector<cv::aruco2::Diamond> detectDiamonds(InputArray image, c
  * - a small filled square at each of the 9 grid corners
  * - the Vec4i diamond id as text at the diamond centroid
  */
-CV_EXPORTS_AS(drawDetectedDiamonds) CV_EXPORTS_W void drawDetected(InputOutputArray image, const std::vector<cv::aruco2::Diamond> &diamonds,
+CV_EXPORTS_W void drawDetected(InputOutputArray image, const std::vector<cv::aruco2::Diamond> &diamonds,
                                Scalar color = Scalar(0, 255, 0),bool drawMarkerIds=false);
 
 
@@ -516,7 +516,7 @@ CV_EXPORTS_W std::vector<cv::aruco2::FractalMarker> detectFractals(InputArray im
  * @param drawAllImagePoints  if true, draw a small circle at every matched image point
  *                         stored inside each FractalMarker (default true)
  */
-CV_EXPORTS_AS(drawDetectedFractals) CV_EXPORTS_W void drawDetected(InputOutputArray image, const std::vector<cv::aruco2::FractalMarker> &fractals,
+CV_EXPORTS_W void drawDetected(InputOutputArray image, const std::vector<cv::aruco2::FractalMarker> &fractals,
                                   Scalar color = Scalar(0, 255, 0), bool drawAllImagePoints = true);
 
 /** @brief Extract solvePnP inputs for a detected fractal marker.
@@ -546,3 +546,5 @@ CV_EXPORTS_W void getSolvePnpPoints(const cv::aruco2::FractalMarker &fractal, Ou
 
 } // namespace aruco2
 } // namespace cv
+
+
