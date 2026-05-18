@@ -25,3 +25,7 @@ OpenCV.js Tutorials {#tutorial_js_root}
 -   @subpage tutorial_js_table_of_contents_dnn
 
     These tutorials show how to use dnn module in JavaScript
+
+-   @subpage tutorial_js_table_of_contents_objdetect
+
+    These tutorials show how to use objdetect module in JavaScript

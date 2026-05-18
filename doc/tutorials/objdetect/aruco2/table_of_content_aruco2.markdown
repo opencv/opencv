@@ -8,3 +8,4 @@ ArUco2 Tutorials {#tutorial_table_of_content_aruco2}
 -   @subpage tutorial_aruco2_fractals
 -   @subpage tutorial_aruco2_pose
 -   @subpage tutorial_aruco2_java_detection
+-   @subpage tutorial_js_aruco2_detection
