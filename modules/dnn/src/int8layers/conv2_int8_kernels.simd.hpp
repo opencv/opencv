@@ -357,9 +357,15 @@ static void convInt8BlockVNNI(const void* inp_, const void* residual_,
                         for (int c0 = 0; c0 < C0; c0++) {
                             int ival = inputIsU8 ? (int)(uint8_t)inptr[c0]
                                                  : (int)(uint8_t)((uint8_t)inptr[c0] ^ 0x80u);
-                            const int8_t* wp = wptr + c0 * K0;
-                            for (int k0 = 0; k0 < K0; k0++)
-                                acc[k0] += ival * (int)wp[k0];
+                            // VNNI-repacked weights: weight(c0,k0) = wptr[k0*4 + c0] (c0<4)
+                            // else wptr[32 + k0*4 + (c0-4)]
+                            if (c0 < 4) {
+                                for (int k0 = 0; k0 < K0; k0++)
+                                    acc[k0] += ival * (int)wptr[k0 * 4 + c0];
+                            } else {
+                                for (int k0 = 0; k0 < K0; k0++)
+                                    acc[k0] += ival * (int)wptr[32 + k0 * 4 + (c0 - 4)];
+                            }
                         }
                     }
                 }

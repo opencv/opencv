@@ -207,6 +207,8 @@ struct ModelFusionQDQ
                             ep.input_zeropoints = in_zps;
                             ep.output_sc = out_scale_val;
                             ep.output_zp = out_zp_val;
+                            ep.operation = (add->op == NaryEltwiseLayer::OPERATION::PROD)
+                                ? "mul" : "add";
                             Ptr<Eltwise2Int8Layer> eltwiseInt8 = Eltwise2Int8Layer::create(ep);
                             eltwiseInt8->netimpl = netimpl;
                             fused_layer_idx = add_layer_idx;
@@ -468,6 +470,8 @@ struct ModelFusionQDQ
                                         ep2.output_sc = out_sc2;
                                         ep2.output_zp = out_zp_val2;
                                         ep2.with_relu = true;
+                                        ep2.operation = (add2->op == NaryEltwiseLayer::OPERATION::PROD)
+                                            ? "mul" : "add";
                                         Ptr<Eltwise2Int8Layer> eltInt8 = Eltwise2Int8Layer::create(ep2);
                                         eltInt8->netimpl = netimpl;
 

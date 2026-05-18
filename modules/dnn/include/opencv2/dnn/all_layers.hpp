@@ -1389,6 +1389,7 @@ CV__DNN_INLINE_NS_BEGIN
         float output_sc = 1.f;
         int output_zp = 0;
         bool with_relu = false;
+        String operation = "add";
     };
 
     class CV_EXPORTS Eltwise2Int8Layer : public Layer
