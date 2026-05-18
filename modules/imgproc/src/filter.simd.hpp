@@ -610,14 +610,14 @@ public:
 
                 uchar* hbuf = tls.hbuf.ptr();
                 for (int r = 0; r < tile_mat.rows; r++)
-                    (*fe.rowFilter)(tile_mat.ptr(r), hbuf + r * hstep, w, cn);
+                    (*fe.rowFilter)(tile_mat.ptr(r), hbuf + r * hstep, w, cn, true);
 
                 AutoBuffer<const uchar*> _brows(h + kheight - 1);
                 const uchar** brows = _brows.data();
                 for (int m = 0; m < h + kheight - 1; m++)
                     brows[m] = hbuf + m * hstep;
 
-                (*fe.columnFilter)(brows, dst_ptr, (int)dst.step, h, w * cn);
+                (*fe.columnFilter)(brows, dst_ptr, (int)dst.step, h, w * cn, cn, true);
             }
             else
             {
