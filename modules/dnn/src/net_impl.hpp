@@ -48,6 +48,33 @@ typedef std::unordered_map<std::string, int64_t> NamesHash;
 struct OrtNamesCache;
 #endif
 
+/** @brief Single entry in a @ref PerfProfile.
+ *
+ * In DNN_PROFILE_DETAILED mode, @p label is "layer_name (type)" and @p count is 1.
+ * In DNN_PROFILE_SUMMARY mode, @p label is the layer type and @p count is the
+ * number of layers of that type that contributed to @p timeMs.
+ */
+struct PerfProfileEntry
+{
+    PerfProfileEntry() : timeMs(0.0), count(0) {}
+    String label;
+    double timeMs;
+    int count;
+};
+
+/** @brief Self-describing snapshot of profiling data from one inference.
+ *
+ * Carries the @ref ProfilingMode it was captured in so it can be saved, kept across
+ * runs (e.g. best-of-N by total time), and printed later via @ref Net::printPerfProfile
+ * without needing access to the originating @ref Net.
+ */
+struct PerfProfile
+{
+    PerfProfile() : mode(DNN_PROFILE_NONE) {}
+    ProfilingMode mode;
+    std::vector<PerfProfileEntry> entries;
+};
+
 // NB: Implementation is divided between of multiple .cpp files
 struct Net::Impl : public detail::NetImplBase
 {
