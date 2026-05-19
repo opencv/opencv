@@ -369,8 +369,7 @@ void boxFilter(InputArray _src, OutputArray _dst, int ddepth,
     CV_INSTRUMENT_REGION();
 
     CV_Assert(!_src.empty());
-    if( ksize.width <= 0 || ksize.height <= 0 )
-        CV_Error( cv::Error::StsBadSize, "Kernel size must be strictly positive" );
+    CV_Assert(ksize.width > 0 && ksize.height > 0);
 
     CV_OCL_RUN(_dst.isUMat() &&
                (borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT ||
