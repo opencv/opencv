@@ -279,9 +279,9 @@ struct CV_EXPORTS_W_SIMPLE GridBoard {
     CV_PROP_RW std::vector<cv::aruco2::FiducialMarker> markers;    ///< detected markers (subset of the full board)
 private:
     std::vector<std::pair<int,cv::Point2f>> detectedBoardCorners;
-    friend bool detectGridBoard(InputArray image, cv::Size gridSize, cv::aruco2::DictionaryType dictionary, GridBoard &board, InputArray ids);
-    friend void getSolvePnpPoints(const GridBoard& board, OutputArray objPoints, OutputArray imgPoints, float markerSize);
-    friend void drawGridBoard(InputOutputArray image, const GridBoard &board, Scalar color, bool drawMarkerIds);
+    friend bool detectGridBoard(InputArray image, cv::Size gridSize, cv::aruco2::DictionaryType dictionary, cv::aruco2::GridBoard &board, InputArray ids);
+    friend void getSolvePnpPoints(const cv::aruco2::GridBoard& board, OutputArray objPoints, OutputArray imgPoints, float markerSize);
+    friend void drawGridBoard(InputOutputArray image, const cv::aruco2::GridBoard &board, Scalar color, bool drawMarkerIds);
 };
 
 
@@ -371,9 +371,9 @@ CV_EXPORTS_W void getSolvePnpPoints(const cv::aruco2::GridBoard &board, OutputAr
     CV_PROP_RW std::vector<cv::aruco2::FiducialMarker> markers;    ///< the 4 detected markers forming the diamond
 private:
     std::vector<cv::Point2f> corners;
-    friend std::vector<Diamond> detectDiamonds(InputArray image, cv::aruco2::DictionaryType dictionary);
-    friend void getSolvePnpPoints(const Diamond& diamond, OutputArray objPoints, OutputArray imgPoints, float markerSize);
-    friend void drawDiamonds(InputOutputArray image, const std::vector<Diamond> &diamonds, Scalar color, bool drawMarkerIds);
+    friend std::vector<cv::aruco2::Diamond> detectDiamonds(InputArray image, cv::aruco2::DictionaryType dictionary);
+    friend void getSolvePnpPoints(const cv::aruco2::Diamond& diamond, OutputArray objPoints, OutputArray imgPoints, float markerSize);
+    friend void drawDiamonds(InputOutputArray image, const std::vector<cv::aruco2::Diamond> &diamonds, Scalar color, bool drawMarkerIds);
 };
 
 /** @brief Generate a ChArUco2-style diamond image ready for printing.
@@ -421,7 +421,7 @@ CV_EXPORTS_W std::vector<cv::aruco2::Diamond> detectDiamonds(InputArray image, c
  * - the Vec4i diamond id as text at the diamond centroid
  * @snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_diamonds.cpp draw_diamonds
  */
-CV_EXPORTS_W void drawDiamonds(InputOutputArray image, const std::vector<Diamond> &diamonds,
+CV_EXPORTS_W void drawDiamonds(InputOutputArray image, const std::vector<cv::aruco2::Diamond> &diamonds,
                                Scalar color = Scalar(0, 255, 0),bool drawMarkerIds=false);
 
 
