@@ -61,7 +61,7 @@ public class MSERFeatureDetectorTest extends OpenCVTestCase {
 
         detector.write(filename);
 
-        String truth = "%YAML:1.0\n---\nname: \"Feature2D.MSER\"\ndelta: 5\nminArea: 60\nmaxArea: 14400\nmaxVariation: 0.25\nminDiversity: 0.20000000000000001\nmaxEvolution: 200\nareaThreshold: 1.01\nminMargin: 0.0030000000000000001\nedgeBlurSize: 5\npass2Only: 0\n";
+        String truth = "%YAML 1.2\n---\nname: \"Feature2D.MSER\"\ndelta: 5\nminArea: 60\nmaxArea: 14400\nmaxVariation: 0.25\nminDiversity: 0.20000000000000001\nmaxEvolution: 200\nareaThreshold: 1.01\nminMargin: 0.0030000000000000001\nedgeBlurSize: 5\npass2Only: false\n";
         String actual = readFile(filename);
         actual = actual.replaceAll("e([+-])0(\\d\\d)", "e$1$2"); // NOTE: workaround for different platforms double representation
         assertEquals(truth, actual);

@@ -273,7 +273,7 @@ public class BruteForceSL2DescriptorMatcherTest extends OpenCVTestCase {
 
         matcher.write(filename);
 
-        String truth = "%YAML:1.0\n---\n";
+        String truth = "%YAML 1.2\n---\n";
         assertEquals(truth, readFile(filename));
     }
 

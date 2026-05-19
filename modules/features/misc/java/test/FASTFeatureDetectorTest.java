@@ -133,7 +133,7 @@ public class FASTFeatureDetectorTest extends OpenCVTestCase {
 
         detector.write(filename);
 
-        String truth = "%YAML:1.0\n---\nname: \"Feature2D.FastFeatureDetector\"\nthreshold: 10\nnonmaxSuppression: 1\ntype: 2\n";
+        String truth = "%YAML 1.2\n---\nname: \"Feature2D.FastFeatureDetector\"\nthreshold: 10\nnonmaxSuppression: true\ntype: 2\n";
         String data = readFile(filename);
 
         assertEquals(truth, data);

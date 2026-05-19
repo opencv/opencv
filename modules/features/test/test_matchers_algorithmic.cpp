@@ -558,7 +558,7 @@ TEST( Features2d_DMatch, read_write )
 #ifdef HAVE_OPENCV_FLANN
 TEST( Features2d_FlannBasedMatcher, read_write )
 {
-    static const char* ymlfile = "%YAML:1.0\n---\n"
+    static const char* ymlfile = "%YAML 1.2\n---\n"
     "format: 3\n"
     "indexParams:\n"
     "   -\n"
