@@ -29,39 +29,47 @@ set(mlas_common_srcs
 )
 
 # Architecture detection — same as ORT's onnxruntime_mlas.cmake.
-set(MLAS_ARM       FALSE)
-set(MLAS_ARM64     FALSE)
-set(MLAS_POWER     FALSE)
-set(MLAS_X86       FALSE)
-set(MLAS_X86_64    FALSE)
-set(MLAS_RISCV64   FALSE)
-set(MLAS_LOONGARCH64 FALSE)
-set(MLAS_S390X     FALSE)
-set(MLAS_WASM      FALSE)
+set(MLAS_ARM         FALSE CACHE INTERNAL "" FORCE)
+set(MLAS_ARM64       FALSE CACHE INTERNAL "" FORCE)
+set(MLAS_POWER       FALSE CACHE INTERNAL "" FORCE)
+set(MLAS_X86         FALSE CACHE INTERNAL "" FORCE)
+set(MLAS_X86_64      FALSE CACHE INTERNAL "" FORCE)
+set(MLAS_RISCV64     FALSE CACHE INTERNAL "" FORCE)
+set(MLAS_LOONGARCH64 FALSE CACHE INTERNAL "" FORCE)
+set(MLAS_S390X       FALSE CACHE INTERNAL "" FORCE)
+set(MLAS_WASM        FALSE CACHE INTERNAL "" FORCE)
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
-  set(MLAS_WASM TRUE)
+  set(MLAS_WASM TRUE CACHE INTERNAL "" FORCE)
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^arm64.*")
-  set(MLAS_ARM64 TRUE)
+  set(MLAS_ARM64 TRUE CACHE INTERNAL "" FORCE)
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^aarch64.*")
-  set(MLAS_ARM64 TRUE)
+  set(MLAS_ARM64 TRUE CACHE INTERNAL "" FORCE)
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^arm.*")
-  set(MLAS_ARM TRUE)
+  set(MLAS_ARM TRUE CACHE INTERNAL "" FORCE)
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(powerpc.*|ppc.*)")
-  set(MLAS_POWER TRUE)
+  set(MLAS_POWER TRUE CACHE INTERNAL "" FORCE)
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(i.86|x86?)$")
-  set(MLAS_X86 TRUE)
+  set(MLAS_X86 TRUE CACHE INTERNAL "" FORCE)
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|AMD64)$")
-  set(MLAS_X86_64 TRUE)
+  set(MLAS_X86_64 TRUE CACHE INTERNAL "" FORCE)
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^riscv64.*")
-  set(MLAS_RISCV64 TRUE)
+  set(MLAS_RISCV64 TRUE CACHE INTERNAL "" FORCE)
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^loongarch64.*")
-  set(MLAS_LOONGARCH64 TRUE)
+  set(MLAS_LOONGARCH64 TRUE CACHE INTERNAL "" FORCE)
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^s390x$")
-  set(MLAS_S390X TRUE)
+  set(MLAS_S390X TRUE CACHE INTERNAL "" FORCE)
 endif()
 
 set(mlas_platform_srcs)
+
+# State flags consumed by the top-level config summary's PNG-style chain:
+#   OPENCV_DNN_MLAS_ENABLED      — 1 if MLAS compiled in, 0 if skipped/unavailable
+#   OPENCV_DNN_MLAS_SKIP_REASON  — human-readable reason for the NO case
+# Cleared in modules/dnn/CMakeLists.txt before add_subdirectory() so stale
+# values don't survive a config where MLAS is no longer reached.
+set(OPENCV_DNN_MLAS_ENABLED     0  CACHE INTERNAL "" FORCE)
+set(OPENCV_DNN_MLAS_SKIP_REASON "" CACHE INTERNAL "" FORCE)
 
 # Probe ASM language once. check_language(ASM) is a no-op when
 # CMAKE_ASM_COMPILER is already set in cache — and the Android NDK toolchain
@@ -76,18 +84,24 @@ if(MLAS_X86_64 OR MLAS_X86 OR MLAS_ARM64 OR MLAS_LOONGARCH64)
   set(_MLAS_REQUIRES_ASM TRUE)
 endif()
 if(ANDROID AND _MLAS_REQUIRES_ASM)
+  set(OPENCV_DNN_MLAS_SKIP_REASON
+    "skipped on Android ${CMAKE_ANDROID_ARCH_ABI}; enable_language(ASM) from subdir is unreliable"
+    CACHE INTERNAL "" FORCE)
   message(STATUS "MLAS: skipping on Android ${CMAKE_ANDROID_ARCH_ABI} "
                  "(enable_language(ASM) from subdir is unreliable here); "
                  "DNN will use its built-in SGEMM")
   return()
 endif()
 include(CheckLanguage)
-set(_MLAS_HAS_ASM FALSE)
+set(MLAS_HAS_ASM FALSE CACHE INTERNAL "" FORCE)
 check_language(ASM)
 if(CMAKE_ASM_COMPILER)
   enable_language(ASM)
-  set(_MLAS_HAS_ASM TRUE)
+  set(MLAS_HAS_ASM TRUE CACHE INTERNAL "" FORCE)
 elseif(_MLAS_REQUIRES_ASM)
+  set(OPENCV_DNN_MLAS_SKIP_REASON
+    "no ASM compiler available for ${CMAKE_SYSTEM_PROCESSOR}"
+    CACHE INTERNAL "" FORCE)
   message(WARNING "MLAS: ASM language unavailable on ${CMAKE_SYSTEM_PROCESSOR}; "
                   "MLAS disabled (DNN will use its built-in SGEMM)")
   return()
@@ -133,7 +147,7 @@ if(MLAS_X86)
   endif()
 endif()
 
-# ARM 32-bit: pure C++ sgemmc.
+# ARM 32-bit: pure C++ sgemmc (no .S kernels).
 if(MLAS_ARM)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mfpu=neon")
   list(APPEND mlas_platform_srcs ${MLAS_SRC_DIR}/arm/sgemmc.cpp)
@@ -155,7 +169,8 @@ if(MLAS_POWER)
     PROPERTIES COMPILE_FLAGS "-DSINGLE")
   include(CheckCXXCompilerFlag)
   check_cxx_compiler_flag("-mcpu=power10" MLAS_HAS_POWER10)
-  if(MLAS_HAS_POWER10 AND _MLAS_HAS_ASM)
+  set(MLAS_HAS_POWER10 ${MLAS_HAS_POWER10} CACHE INTERNAL "" FORCE)
+  if(MLAS_HAS_POWER10 AND MLAS_HAS_ASM)
     list(APPEND mlas_platform_srcs ${MLAS_SRC_DIR}/power/SgemmKernelPOWER10.cpp)
     if(NOT AIX)
       list(APPEND mlas_platform_srcs ${MLAS_SRC_DIR}/power/SgemmKernelPackA.S)
@@ -200,6 +215,7 @@ if(MLAS_RISCV64)
     int main() { size_t vl = __riscv_vsetvl_e32m1(4); return static_cast<int>(vl == 0); }"
     MLAS_HAS_RISCV64_RVV)
   set(CMAKE_REQUIRED_FLAGS "${_old}")
+  set(MLAS_HAS_RISCV64_RVV ${MLAS_HAS_RISCV64_RVV} CACHE INTERNAL "" FORCE)
   if(MLAS_HAS_RISCV64_RVV)
     list(APPEND mlas_platform_srcs
       ${MLAS_SRC_DIR}/riscv64/sgemm_pack_b_rvv.cpp
@@ -258,8 +274,4 @@ endif()
 set(HAVE_MLAS 1 PARENT_SCOPE)
 set(MLAS_OBJECTS $<TARGET_OBJECTS:opencv_dnn_mlas> PARENT_SCOPE)
 set(MLAS_INCLUDE_DIRS ${MLAS_INC_DIR} PARENT_SCOPE)
-
-message(STATUS "MLAS [SGEMM-only]: arch — "
-  "ARM=${MLAS_ARM} ARM64=${MLAS_ARM64} POWER=${MLAS_POWER} "
-  "X86=${MLAS_X86} X86_64=${MLAS_X86_64} RISCV64=${MLAS_RISCV64} "
-  "LOONGARCH64=${MLAS_LOONGARCH64} S390X=${MLAS_S390X} WASM=${MLAS_WASM}")
+set(OPENCV_DNN_MLAS_ENABLED 1 CACHE INTERNAL "" FORCE)

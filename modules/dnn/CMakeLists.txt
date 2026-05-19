@@ -489,6 +489,13 @@ endif()
 # CPU SGEMM accelerator (asm/intrinsic kernels) and the wasm scalar fallback
 # offers no benefit for the JS bindings build that produces opencv.js.
 set(HAVE_MLAS 0)
+# Reset status flags + arch booleans
+foreach(_v OPENCV_DNN_MLAS_ENABLED OPENCV_DNN_MLAS_SKIP_REASON
+           MLAS_X86_64 MLAS_X86 MLAS_ARM MLAS_ARM64 MLAS_POWER
+           MLAS_LOONGARCH64 MLAS_S390X MLAS_RISCV64 MLAS_WASM
+           MLAS_HAS_ASM MLAS_HAS_POWER10 MLAS_HAS_RISCV64_RVV)
+  unset(${_v} CACHE)
+endforeach()
 if(NOT EMSCRIPTEN)
   add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/mlas" "${CMAKE_BINARY_DIR}/3rdparty/mlas")
 endif()
