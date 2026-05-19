@@ -17,6 +17,9 @@ In this tutorial you will learn:
 - How to detect ArUco2 markers in an image using Java.
 - How to handle multiple dictionaries in a single pass.
 - How to configure detection parameters.
+- How to detect ArUco2 Grid Boards.
+- How to detect ArUco2 Diamonds.
+- How to detect ArUco2 Fractal Markers.
 
 Introduction
 ------------
@@ -111,3 +114,21 @@ Grid Board Detection
 `detectGridBoard()` returns a `boolean` indicating whether any board marker was found. The `Aruco2_GridBoard` object is populated with the detected markers and can be accessed via `get_markers()`.
 
 For pose estimation, use `Aruco2.getSolvePnpPoints(board, objPoints, imgPoints, markerSize)` to obtain 3D-2D correspondences suitable for `Calib3d.solvePnP()`.
+
+Diamond Detection
+-----------------
+
+An ArUco2 diamond marker is a 2x2 block of ArUco markers following the ChArUco2 design. Detection is handled by the `Aruco2.detectDiamonds()` function.
+
+@snippet java/tutorial_code/objdetect/aruco2/Aruco2Detection.java diamonds
+
+Each `Diamond` object contains the constituent markers and their IDs.
+
+Fractal Marker Detection
+------------------------
+
+Fractal markers are nested ArUco-like markers designed for extreme robustness and high-precision pose estimation.
+
+@snippet java/tutorial_code/objdetect/aruco2/Aruco2Detection.java fractals
+
+`Aruco2.detectFractals()` returns a list of `FractalMarker` objects. You can visualize them with `Aruco2.drawFractals()`.

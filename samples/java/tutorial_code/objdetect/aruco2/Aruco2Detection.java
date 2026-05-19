@@ -4,6 +4,8 @@ import org.opencv.objdetect.Aruco2;
 import org.opencv.objdetect.Aruco2_GridBoard;
 import org.opencv.objdetect.DetectionParameters;
 import org.opencv.objdetect.FiducialMarker;
+import org.opencv.objdetect.Diamond;
+import org.opencv.objdetect.FractalMarker;
 
 import java.util.List;
 
@@ -73,6 +75,29 @@ class Aruco2DetectionRun {
         if (found) {
             System.out.println("Board detected with " + board.get_markers().size() + " markers");
         }
+
+        // Diamond detection
+        //! [diamonds]
+        Mat diamondImg = new Mat();
+        int[] diamondIds = {0, 1, 2, 3};
+        Aruco2.getDiamondImage(diamondImg, Aruco2.DICT_ARUCO_MIP_36h12, diamondIds, 20);
+
+        List<Diamond> diamonds = Aruco2.detectDiamonds(diamondImg, Aruco2.DICT_ARUCO_MIP_36h12);
+        Aruco2.drawDiamonds(diamondImg, diamonds, new Scalar(255, 0, 0), true);
+        //! [diamonds]
+
+        System.out.println("Detected " + diamonds.size() + " diamond(s)");
+
+        // Fractal detection
+        //! [fractals]
+        Mat fractalImg = new Mat();
+        Aruco2.getFractalMarkerImage(fractalImg, Aruco2.FRACTAL_2L_6, 20);
+
+        List<FractalMarker> fractals = Aruco2.detectFractals(fractalImg, Aruco2.FRACTAL_2L_6);
+        Aruco2.drawFractals(fractalImg, fractals, new Scalar(255, 0, 0), true);
+        //! [fractals]
+
+        System.out.println("Detected " + fractals.size() + " fractal(s)");
     }
 }
 
