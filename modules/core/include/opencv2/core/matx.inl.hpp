@@ -115,7 +115,7 @@ public:
     int idx;
 };
 
-template<typename _Tp, typename _T2, int m, int n> static inline
+template<typename _Tp, typename _T2, int m, int n> CV_DEPRECATED_EXTERNAL static inline
 MatxCommaInitializer<_Tp, m, n> operator << (const Matx<_Tp, m, n>& mtx, _T2 val)
 {
     MatxCommaInitializer<_Tp, m, n> commaInitializer((Matx<_Tp, m, n>*)&mtx);
@@ -738,7 +738,7 @@ public:
     Vec<_Tp, m> operator *() const;
 };
 
-template<typename _Tp, typename _T2, int cn> static inline
+template<typename _Tp, typename _T2, int cn> CV_DEPRECATED_EXTERNAL static inline
 VecCommaInitializer<_Tp, cn> operator << (const Vec<_Tp, cn>& vec, _T2 val)
 {
     VecCommaInitializer<_Tp, cn> commaInitializer((Vec<_Tp, cn>*)&vec);

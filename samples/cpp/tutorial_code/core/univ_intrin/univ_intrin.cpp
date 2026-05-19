@@ -201,9 +201,11 @@ int main(int argc, char *argv[])
     namedWindow("Output", 1);
     imshow("Input", src);
 
-    kernel = (Mat_<float>(3, 3) << 1, 0, -1,
-                                   2, 0, -2,
-                                   1, 0, -1);
+    kernel = Mat_<float>({3, 3}, {
+        1., 0., -1.,
+        2., 0., -2.,
+        1., 0., -1.
+    });
 
     t = (double)getTickCount();
 
