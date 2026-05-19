@@ -22,7 +22,7 @@ public class Aruco2Test extends OpenCVTestCase {
         params.set_boxFilterSize(5);
 
         Mat img = new Mat();
-        Aruco2.getFiducialMarker(img, Aruco2.DICT_4X4_50, 0, 20, true);
+        Aruco2.getFiducialMarkerImage(img, Aruco2.DICT_4X4_50, 0, 20, true);
         assertFalse(img.empty());
 
         List<FiducialMarker> markers = Aruco2.detectFiducialMarkers(img, Aruco2.DICT_4X4_50, params);
@@ -33,7 +33,7 @@ public class Aruco2Test extends OpenCVTestCase {
 
     public void testGenerateMarker() {
         Mat img = new Mat();
-        Aruco2.getFiducialMarker(img, Aruco2.DICT_4X4_50, 1, 20, false);
+        Aruco2.getFiducialMarkerImage(img, Aruco2.DICT_4X4_50, 1, 20, false);
         assertFalse(img.empty());
         assertEquals(120, img.rows());
         assertEquals(120, img.cols());
@@ -42,13 +42,13 @@ public class Aruco2Test extends OpenCVTestCase {
     public void testGridBoard() {
         Mat img = new Mat();
         Size gridSize = new Size(3, 3);
-        Aruco2.getGridBoard(img, gridSize, Aruco2.DICT_4X4_50);
+        Aruco2.getGridBoardImage(img, gridSize, Aruco2.DICT_4X4_50);
         assertFalse(img.empty());
     }
 
     public void testDrawFiducialMarkers() {
         Mat img = new Mat();
-        Aruco2.getFiducialMarker(img, Aruco2.DICT_ARUCO_MIP_36h12, 42, 20, true);
+        Aruco2.getFiducialMarkerImage(img, Aruco2.DICT_ARUCO_MIP_36h12, 42, 20, true);
         assertFalse(img.empty());
 
         List<FiducialMarker> markers = Aruco2.detectFiducialMarkers(img, Aruco2.DICT_ARUCO_MIP_36h12);
@@ -62,7 +62,7 @@ public class Aruco2Test extends OpenCVTestCase {
 
     public void testDetectFiducialMarkersMultiDict() {
         Mat img = new Mat();
-        Aruco2.getFiducialMarker(img, Aruco2.DICT_4X4_50, 0, 20, true);
+        Aruco2.getFiducialMarkerImage(img, Aruco2.DICT_4X4_50, 0, 20, true);
         assertFalse(img.empty());
 
         MatOfInt dicts = new MatOfInt(Aruco2.DICT_4X4_50, Aruco2.DICT_4X4_100);
@@ -73,7 +73,7 @@ public class Aruco2Test extends OpenCVTestCase {
 
     public void testDrawAxis() {
         Mat img = new Mat();
-        Aruco2.getFiducialMarker(img, Aruco2.DICT_ARUCO_MIP_36h12, 42, 20, true);
+        Aruco2.getFiducialMarkerImage(img, Aruco2.DICT_ARUCO_MIP_36h12, 42, 20, true);
         Mat colorImg = new Mat();
         Imgproc.cvtColor(img, colorImg, Imgproc.COLOR_GRAY2BGR);
 
@@ -90,7 +90,7 @@ public class Aruco2Test extends OpenCVTestCase {
 
     public void testGetSolvePnpPointsFiducialMarker() {
         Mat img = new Mat();
-        Aruco2.getFiducialMarker(img, Aruco2.DICT_ARUCO_MIP_36h12, 100, 20, false);
+        Aruco2.getFiducialMarkerImage(img, Aruco2.DICT_ARUCO_MIP_36h12, 100, 20, false);
         Mat canvas = new Mat(img.rows() * 2, img.cols() * 2, CvType.CV_8UC1, new Scalar(255));
         img.copyTo(canvas.submat(img.rows() / 2, img.rows() / 2 + img.rows(),
                                  img.cols() / 2, img.cols() / 2 + img.cols()));
@@ -108,7 +108,7 @@ public class Aruco2Test extends OpenCVTestCase {
     public void testDetectAndDrawGridBoard() {
         Mat boardImg = new Mat();
         Size gridSize = new Size(3, 2);
-        Aruco2.getGridBoard(boardImg, gridSize, Aruco2.DICT_ARUCO_MIP_36h12, 20);
+        Aruco2.getGridBoardImage(boardImg, gridSize, Aruco2.DICT_ARUCO_MIP_36h12, 20);
         Mat canvas = new Mat(boardImg.rows() + 100, boardImg.cols() + 100, CvType.CV_8UC1, new Scalar(255));
         boardImg.copyTo(canvas.submat(50, 50 + boardImg.rows(), 50, 50 + boardImg.cols()));
 
@@ -127,7 +127,7 @@ public class Aruco2Test extends OpenCVTestCase {
     public void testGetSolvePnpPointsGridBoard() {
         Mat boardImg = new Mat();
         Size gridSize = new Size(3, 2);
-        Aruco2.getGridBoard(boardImg, gridSize, Aruco2.DICT_ARUCO_MIP_36h12, 20);
+        Aruco2.getGridBoardImage(boardImg, gridSize, Aruco2.DICT_ARUCO_MIP_36h12, 20);
         Mat canvas = new Mat(boardImg.rows() + 100, boardImg.cols() + 100, CvType.CV_8UC1, new Scalar(255));
         boardImg.copyTo(canvas.submat(50, 50 + boardImg.rows(), 50, 50 + boardImg.cols()));
 
@@ -171,7 +171,7 @@ public class Aruco2Test extends OpenCVTestCase {
 
     public void testFractalWorkflow() {
         Mat fractalImg = new Mat();
-        Aruco2.getFractalImage(fractalImg, Aruco2.FRACTAL_2L_6, 40);
+        Aruco2.getFractalMarkerImage(fractalImg, Aruco2.FRACTAL_2L_6, 40);
         assertFalse(fractalImg.empty());
         assertEquals(fractalImg.rows(), fractalImg.cols());
 

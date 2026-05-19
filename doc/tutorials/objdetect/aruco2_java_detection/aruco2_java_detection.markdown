@@ -51,7 +51,7 @@ Download the source code from
 Marker Creation
 ---------------
 
-Before detection, you need to generate and print markers. In Java, use `Aruco2.getFiducialMarker()` for this. The output image is passed as an empty `Mat` object.
+Before detection, you need to generate and print markers. In Java, use `Aruco2.getFiducialMarkerImage()` for this. The output image is passed as an empty `Mat` object.
 
 @snippet java/tutorial_code/objdetect/aruco2/Aruco2Detection.java generate_marker
 
@@ -104,7 +104,7 @@ Key parameters include:
 Grid Board Detection
 --------------------
 
-`aruco2` also supports grid boards for more robust pose estimation. Generate a board image with `getGridBoard()`, then detect it with `detectGridBoard()`.
+`aruco2` also supports grid boards for more robust pose estimation. Generate a board image with `getGridBoardImage()`, then detect it with `detectGridBoard()`.
 
 @snippet java/tutorial_code/objdetect/aruco2/Aruco2Detection.java grid_board
 

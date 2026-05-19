@@ -11,7 +11,7 @@ class Aruco2DetectionRun {
     public void run() {
         //! [generate_marker]
         Mat markerImg = new Mat();
-        Aruco2.getFiducialMarker(markerImg, Aruco2.DICT_ARUCO_MIP_36h12, 42, 20, true);
+        Aruco2.getFiducialMarkerImage(markerImg, Aruco2.DICT_ARUCO_MIP_36h12, 42, 20, true);
         //! [generate_marker]
 
         System.out.println("Generated marker size: " + markerImg.cols() + "x" + markerImg.rows());
@@ -61,7 +61,7 @@ class Aruco2DetectionRun {
         //! [grid_board]
         Mat boardImg = new Mat();
         Size gridSize = new Size(3, 2);
-        Aruco2.getGridBoard(boardImg, gridSize, Aruco2.DICT_ARUCO_MIP_36h12, 20);
+        Aruco2.getGridBoardImage(boardImg, gridSize, Aruco2.DICT_ARUCO_MIP_36h12, 20);
 
         Mat boardScene = new Mat(boardImg.rows() + 100, boardImg.cols() + 100, CvType.CV_8UC1, new Scalar(255));
         boardImg.copyTo(boardScene.submat(50, 50 + boardImg.rows(), 50, 50 + boardImg.cols()));

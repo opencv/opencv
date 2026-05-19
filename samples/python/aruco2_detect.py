@@ -49,7 +49,7 @@ def main():
         if ch == ord('q'):
             break
         elif ch == ord('g'):
-            marker_img = cv.aruco2.getFiducialMarker(dictionary, 42, bitSize=20)
+            marker_img = cv.aruco2.getFiducialMarkerImage(dictionary, 42, bitSize=20)
             cv.imshow('Generated Marker 42', marker_img)
 
     cap.release()

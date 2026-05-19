@@ -68,7 +68,7 @@ The most critical parameter of a dictionary is the **inter-marker distance** (mi
 Marker Creation
 ---------------
 
-Markers must be printed before they can be detected. You can generate marker images using the `cv::aruco2::getFiducialMarker()` function.
+Markers must be printed before they can be detected. You can generate marker images using the `cv::aruco2::getFiducialMarkerImage()` function.
 
 Example:
 @snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_detection.cpp generate_marker

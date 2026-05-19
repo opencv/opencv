@@ -3,8 +3,8 @@
     {
         "": ["groupRectangles", "getPredefinedDictionary", "extendDictionary", "drawMarkers", "drawDetectedGridBoard", "drawDetectedDiamonds", "drawDetectedFractals", "drawDetected", "generateImageMarker", "drawDetectedCornersCharuco",
              "detectMarkers", "detectGridBoard", "generateMarkerImage", "generateGridBoardImage", "generateDiamondImage", "generateFractalImage", "getSolvePnpPoints", "estimatePoseBoard", "refineDetected",
-             "aruco2_detectFiducialMarkers", "aruco2_detectGridBoard", "aruco2_drawFiducialMarkers", "aruco2_getFiducialMarker",
-             "aruco2_getGridBoard", "aruco2_getDiamondImage", "aruco2_getFractalImage", "aruco2_getSolvePnpPoints",
+             "aruco2_detectFiducialMarkers", "aruco2_detectGridBoard", "aruco2_drawFiducialMarkers", "aruco2_getFiducialMarkerImage",
+             "aruco2_getGridBoardImage", "aruco2_getDiamondImage", "aruco2_getFractalMarkerImage", "aruco2_getSolvePnpPoints",
              "aruco2_detectDiamonds", "aruco2_detectFractals", "aruco2_drawGridBoard", "aruco2_drawDiamonds",
              "aruco2_drawFractals", "aruco2_drawAxis"],
         "HOGDescriptor": ["load", "HOGDescriptor", "getDefaultPeopleDetector", "getDaimlerPeopleDetector", "setSVMDetector", "detectMultiScale"],

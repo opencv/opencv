@@ -26,7 +26,7 @@ Benefits of ArUco2 Boards
 Board Creation
 --------------
 
-You can generate a board image ready for printing using `cv::aruco2::getGridBoard()`.
+You can generate a board image ready for printing using `cv::aruco2::getGridBoardImage()`.
 
 @snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_boards.cpp create_board
 

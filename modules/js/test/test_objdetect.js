@@ -223,7 +223,7 @@ QUnit.test('ArUco2 detection', function (assert) {
     let DICT = cv.aruco2_DictionaryType.DICT_4X4_50;
 
     let img = new cv.Mat();
-    cv.aruco2_getFiducialMarker(img, DICT, 0, 100, true);
+    cv.aruco2_getFiducialMarkerImage(img, DICT, 0, 100, true);
     assert.ok(!img.empty());
 
     let markers = cv.aruco2_detectFiducialMarkers(img, DICT, params);
@@ -239,7 +239,7 @@ QUnit.test('ArUco2 detection', function (assert) {
 QUnit.test('ArUco2 MIP dictionary detection', function (assert) {
     let DICT = cv.aruco2_DictionaryType.DICT_ARUCO_MIP_36h12;
     let img = new cv.Mat();
-    cv.aruco2_getFiducialMarker(img, DICT, 42, 200, true);
+    cv.aruco2_getFiducialMarkerImage(img, DICT, 42, 200, true);
     assert.ok(!img.empty());
 
     let markers = cv.aruco2_detectFiducialMarkers(img, DICT);
@@ -254,7 +254,7 @@ QUnit.test('ArUco2 MIP dictionary detection', function (assert) {
 QUnit.test('ArUco2 drawFiducialMarkers', function (assert) {
     let DICT = cv.aruco2_DictionaryType.DICT_4X4_50;
     let img = new cv.Mat();
-    cv.aruco2_getFiducialMarker(img, DICT, 5, 100, true);
+    cv.aruco2_getFiducialMarkerImage(img, DICT, 5, 100, true);
     assert.ok(!img.empty());
 
     let markers = cv.aruco2_detectFiducialMarkers(img, DICT);
@@ -274,7 +274,7 @@ QUnit.test('ArUco2 GridBoard generate and detect', function (assert) {
     let DICT = cv.aruco2_DictionaryType.DICT_ARUCO_MIP_36h12;
     let img = new cv.Mat();
     let gridSize = new cv.Size(3, 2);
-    cv.aruco2_getGridBoard(img, gridSize, DICT, 20);
+    cv.aruco2_getGridBoardImage(img, gridSize, DICT, 20);
     assert.ok(!img.empty());
 
     let canvas = new cv.Mat(img.rows + 100, img.cols + 100, cv.CV_8UC1);
@@ -310,7 +310,7 @@ QUnit.test('ArUco2 GridBoard generate and detect', function (assert) {
 QUnit.test('ArUco2 getSolvePnpPoints FiducialMarker', function (assert) {
     let DICT = cv.aruco2_DictionaryType.DICT_ARUCO_MIP_36h12;
     let img = new cv.Mat();
-    cv.aruco2_getFiducialMarker(img, DICT, 100, 20, false);
+    cv.aruco2_getFiducialMarkerImage(img, DICT, 100, 20, false);
 
     let canvas = new cv.Mat(img.rows * 2, img.cols * 2, cv.CV_8UC1);
     canvas.setTo([255]);
@@ -337,8 +337,8 @@ QUnit.test('ArUco2 multi-dict detection', function (assert) {
 
     let img1 = new cv.Mat();
     let img2 = new cv.Mat();
-    cv.aruco2_getFiducialMarker(img1, DICT1, 5, 20, false);
-    cv.aruco2_getFiducialMarker(img2, DICT2, 10, 20, false);
+    cv.aruco2_getFiducialMarkerImage(img1, DICT1, 5, 20, false);
+    cv.aruco2_getFiducialMarkerImage(img2, DICT2, 10, 20, false);
 
     let canvas = new cv.Mat(600, 600, cv.CV_8UC1);
     canvas.setTo([255]);
@@ -361,7 +361,7 @@ QUnit.test('ArUco2 multi-dict detection', function (assert) {
 QUnit.test('ArUco2 drawAxis', function (assert) {
     let DICT = cv.aruco2_DictionaryType.DICT_ARUCO_MIP_36h12;
     let img = new cv.Mat();
-    cv.aruco2_getFiducialMarker(img, DICT, 42, 20, true);
+    cv.aruco2_getFiducialMarkerImage(img, DICT, 42, 20, true);
 
     let colorImg = new cv.Mat();
     cv.cvtColor(img, colorImg, cv.COLOR_GRAY2BGR);
@@ -416,7 +416,7 @@ QUnit.test('ArUco2 Diamond workflow', function (assert) {
 
 QUnit.test('ArUco2 Fractal workflow', function (assert) {
     let fractalImg = new cv.Mat();
-    cv.aruco2_getFractalImage(fractalImg, cv.aruco2_FractalType.FRACTAL_2L_6, 40);
+    cv.aruco2_getFractalMarkerImage(fractalImg, cv.aruco2_FractalType.FRACTAL_2L_6, 40);
     assert.ok(!fractalImg.empty());
     assert.equal(fractalImg.rows, fractalImg.cols);
 

@@ -21,7 +21,7 @@ TEST(Objdetect_Aruco2, Generation) {
     // If externalBorder is true, it adds another bit? Let's check the code or just see the result.
     // Standard aruco FiducialMarkers have 1 bit border.
     // Let's see what generateFiducialMarkerImage does.
-    getFiducialMarker(img, dictionary, id, bitSize, true);
+    getFiducialMarkerImage(img, dictionary, id, bitSize, true);
 
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(img.type(), CV_8UC1);
@@ -36,7 +36,7 @@ TEST(Objdetect_Aruco2, SimpleDetection) {
     DictionaryType dictionary = DICT_ARUCO_MIP_36h12;
     int id = 100;
     Mat markerImg;
-    getFiducialMarker(markerImg, dictionary, id, 20, false);
+    getFiducialMarkerImage(markerImg, dictionary, id, 20, false);
 
     // Create a larger canvas
     Mat canvas(markerImg.rows * 2, markerImg.cols * 2, CV_8UC1, Scalar(255));
@@ -73,7 +73,7 @@ TEST(Objdetect_Aruco2, Rotation) {
     DictionaryType dictionary = DICT_ARUCO_MIP_36h12;
     int id = 50;
     Mat markerImg;
-    getFiducialMarker(markerImg, dictionary, id, 20, false);
+    getFiducialMarkerImage(markerImg, dictionary, id, 20, false);
 
     Mat canvas(markerImg.rows * 2, markerImg.cols * 2, CV_8UC1, Scalar(255));
     Rect roi(markerImg.cols / 2, markerImg.rows / 2, markerImg.cols, markerImg.rows);
@@ -112,7 +112,7 @@ TEST(Objdetect_Aruco2, Perspective) {
     DictionaryType dictionary = DICT_ARUCO_MIP_36h12;
     int id = 25;
     Mat markerImg;
-    getFiducialMarker(markerImg, dictionary, id, 20, false);
+    getFiducialMarkerImage(markerImg, dictionary, id, 20, false);
 
     Size imgSize(500, 500);
     Mat canvas(imgSize, CV_8UC1, Scalar(255));
@@ -149,7 +149,7 @@ TEST(Objdetect_Aruco2, Inverted) {
     DictionaryType dictionary = DICT_ARUCO_MIP_36h12;
     int id = 10;
     Mat markerImg;
-    getFiducialMarker(markerImg, dictionary, id, 20, false);
+    getFiducialMarkerImage(markerImg, dictionary, id, 20, false);
 
     Mat inverted = 255 - markerImg;
 
@@ -176,7 +176,7 @@ TEST(Objdetect_Aruco2, MultiFiducialMarker) {
 
     for (int i = 0; i < (int)ids.size(); ++i) {
         Mat markerImg;
-        getFiducialMarker(markerImg, dictionary, ids[i], 20, false);
+        getFiducialMarkerImage(markerImg, dictionary, ids[i], 20, false);
         // Space them out: 200 pixels apart horizontally
         Rect roi(50 + i * 250, 50, markerImg.cols, markerImg.rows);
         markerImg.copyTo(canvas(roi));
@@ -204,8 +204,8 @@ TEST(Objdetect_Aruco2, MultiDictionary) {
     int id2 = 10;
 
     Mat markerImg1, markerImg2;
-    getFiducialMarker(markerImg1, dictionary1, id1, 20, false);
-    getFiducialMarker(markerImg2, dictionary2, id2, 20, false);
+    getFiducialMarkerImage(markerImg1, dictionary1, id1, 20, false);
+    getFiducialMarkerImage(markerImg2, dictionary2, id2, 20, false);
 
     Mat canvas(600, 600, CV_8UC1, Scalar(255));
     markerImg1.copyTo(canvas(Rect(100, 100, markerImg1.cols, markerImg1.rows)));
@@ -229,7 +229,7 @@ TEST(Objdetect_Aruco2, BoardGeneration) {
     Size gridSize(4, 3);
     DictionaryType dictionary = DICT_ARUCO_MIP_36h12;
     Mat img;
-    getGridBoard(img, gridSize, dictionary, 20);
+    getGridBoardImage(img, gridSize, dictionary, 20);
 
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(img.type(), CV_8UC1);
@@ -247,7 +247,7 @@ TEST(Objdetect_Aruco2, BoardDetection) {
     Size gridSize(3, 2);
     DictionaryType dictionary = DICT_ARUCO_MIP_36h12;
     Mat boardImg;
-    getGridBoard(boardImg, gridSize, dictionary, 20);
+    getGridBoardImage(boardImg, gridSize, dictionary, 20);
 
     Mat canvas(boardImg.rows + 100, boardImg.cols + 100, CV_8UC1, Scalar(255));
     Rect roi(50, 50, boardImg.cols, boardImg.rows);
@@ -275,7 +275,7 @@ TEST(Objdetect_Aruco2, BoardRotation) {
     Size gridSize(3, 2);
     DictionaryType dictionary = DICT_ARUCO_MIP_36h12;
     Mat boardImg;
-    getGridBoard(boardImg, gridSize, dictionary, 20);
+    getGridBoardImage(boardImg, gridSize, dictionary, 20);
 
     Mat canvas(800, 800, CV_8UC1, Scalar(255));
     Rect roi((canvas.cols - boardImg.cols) / 2, (canvas.rows - boardImg.rows) / 2, boardImg.cols, boardImg.rows);
@@ -399,7 +399,7 @@ TEST(Objdetect_Aruco2, DiamondPerspective) {
 TEST(Objdetect_Aruco2, FractalGeneration) {
     FractalType ftype = FRACTAL_2L_6;
     Mat img;
-    getFractalImage(img, ftype, 20);
+    getFractalMarkerImage(img, ftype, 20);
 
     ASSERT_FALSE(img.empty());
     // Fractal size depends on nesting, let's just check it's non-empty and square.
@@ -410,7 +410,7 @@ TEST(Objdetect_Aruco2, FractalGeneration) {
 TEST(Objdetect_Aruco2, FractalDetection) {
     FractalType ftype = FRACTAL_2L_6;
     Mat fractalImg;
-    getFractalImage(fractalImg, ftype, 40); // Larger for better detection
+    getFractalMarkerImage(fractalImg, ftype, 40); // Larger for better detection
 
     Mat canvas(fractalImg.rows + 100, fractalImg.cols + 100, CV_8UC1, Scalar(255));
     Rect roi(50, 50, fractalImg.cols, fractalImg.rows);
@@ -434,7 +434,7 @@ TEST(Objdetect_Aruco2, FractalDetection) {
 TEST(Objdetect_Aruco2, FractalRotation) {
     FractalType ftype = FRACTAL_2L_6;
     Mat fractalImg;
-    getFractalImage(fractalImg, ftype, 20); // Smaller bitSize (20 instead of 40)
+    getFractalMarkerImage(fractalImg, ftype, 20); // Smaller bitSize (20 instead of 40)
 
     Mat canvas(1200, 1200, CV_8UC1, Scalar(255)); // Larger canvas
     int posX = (canvas.cols - fractalImg.cols) / 2;
@@ -461,7 +461,7 @@ TEST(Objdetect_Aruco2, FractalRotation) {
 TEST(Objdetect_Aruco2, FractalPerspective) {
     FractalType ftype = FRACTAL_3L_6; // Use more levels for perspective robustness check
     Mat fractalImg;
-    getFractalImage(fractalImg, ftype, 40);
+    getFractalMarkerImage(fractalImg, ftype, 40);
 
     Size imgSize(800, 800);
     Mat canvas(imgSize, CV_8UC1, Scalar(255));

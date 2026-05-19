@@ -43,7 +43,7 @@ Fractal Types
 Fractal Creation
 ----------------
 
-Generate a fractal marker image using `cv::aruco2::getFractalImage()`.
+Generate a fractal marker image using `cv::aruco2::getFractalMarkerImage()`.
 
 @snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_fractals.cpp create_fractal
 

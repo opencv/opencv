@@ -29,7 +29,7 @@ Key benefits of `aruco2`:
 Marker Creation
 ---------------
 
-Before detection, you need to generate and print markers. Use `cv.aruco2.getFiducialMarker()` for this.
+Before detection, you need to generate and print markers. Use `cv.aruco2.getFiducialMarkerImage()` for this.
 
 @snippet samples/python/tutorial_code/objdetect/aruco2/py_aruco2_detection.py marker_creation
 

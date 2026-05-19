@@ -45,14 +45,14 @@ const cv = await require('./opencv.js');
 Marker Creation
 ---------------
 
-Before detection, you need to generate and print markers. Use `cv.aruco2_getFiducialMarker()` for this.
+Before detection, you need to generate and print markers. Use `cv.aruco2_getFiducialMarkerImage()` for this.
 
 @code{.js}
 let markerImg = new cv.Mat();
 let DICT = cv.aruco2_DictionaryType.DICT_ARUCO_MIP_36h12;
 
 // Generate marker ID 42 with 20x20 pixels per bit and a white border
-cv.aruco2_getFiducialMarker(markerImg, DICT, 42, 20, true);
+cv.aruco2_getFiducialMarkerImage(markerImg, DICT, 42, 20, true);
 
 // markerImg now contains the generated marker
 console.log("Marker size:", markerImg.cols, "x", markerImg.rows);
@@ -74,7 +74,7 @@ Detection is done with a single call to `cv.aruco2_detectFiducialMarkers()`. It 
 
 @code{.js}
 let img = new cv.Mat();
-cv.aruco2_getFiducialMarker(img, DICT, 42, 20, true);
+cv.aruco2_getFiducialMarkerImage(img, DICT, 42, 20, true);
 
 let markers = cv.aruco2_detectFiducialMarkers(img, DICT);
 
@@ -161,12 +161,12 @@ Key parameters include:
 Grid Board Detection
 --------------------
 
-`aruco2` also supports grid boards for more robust pose estimation. Generate a board image with `cv.aruco2_getGridBoard()`, then detect it with `cv.aruco2_detectGridBoard()`.
+`aruco2` also supports grid boards for more robust pose estimation. Generate a board image with `cv.aruco2_getGridBoardImage()`, then detect it with `cv.aruco2_detectGridBoard()`.
 
 @code{.js}
 let boardImg = new cv.Mat();
 let gridSize = new cv.Size(3, 2);
-cv.aruco2_getGridBoard(boardImg, gridSize, DICT, 20);
+cv.aruco2_getGridBoardImage(boardImg, gridSize, DICT, 20);
 
 let boardScene = new cv.Mat(boardImg.rows + 100, boardImg.cols + 100, cv.CV_8UC1);
 boardScene.setTo(new cv.Scalar(255));

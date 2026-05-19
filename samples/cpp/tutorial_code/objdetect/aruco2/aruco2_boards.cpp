@@ -9,7 +9,7 @@ int main()
 {
     //! [create_board]
     Mat boardImage;
-    aruco2::getGridBoard(boardImage, Size(9, 5), aruco2::DICT_ARUCO_MIP_36h12);
+    aruco2::getGridBoardImage(boardImage, Size(9, 5), aruco2::DICT_ARUCO_MIP_36h12);
     imwrite("board.png", boardImage);
     //! [create_board]
 

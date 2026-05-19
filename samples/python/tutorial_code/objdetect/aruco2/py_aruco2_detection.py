@@ -11,7 +11,7 @@ def marker_creation():
     dictionary = cv.aruco2.DICT_ARUCO_MIP_36h12
 
     # Generate a marker (ID 42, 20x20 pixels per bit)
-    marker_img = cv.aruco2.getFiducialMarker(dictionary, 42, bitSize=20)
+    marker_img = cv.aruco2.getFiducialMarkerImage(dictionary, 42, bitSize=20)
 
     cv.imwrite("marker42.png", marker_img)
     # [marker_creation]
@@ -82,7 +82,7 @@ def grid_board_tutorial():
     # Create a 4x3 grid board
     grid_size = (4, 3)
     dictionary = cv.aruco2.DICT_ARUCO_MIP_36h12
-    board_img = cv.aruco2.getGridBoard(grid_size, dictionary, bitSize=25)
+    board_img = cv.aruco2.getGridBoardImage(grid_size, dictionary, bitSize=25)
     cv.imwrite("board.png", board_img)
 
     # Detect board in an image
@@ -126,7 +126,7 @@ def fractal_tutorial():
     # [fractals]
     # Create a fractal marker (multi-scale nested markers)
     fractal_type = cv.aruco2.FRACTAL_5L_6
-    fractal_img = cv.aruco2.getFractalImage(fractal_type, bitSize=20)
+    fractal_img = cv.aruco2.getFractalMarkerImage(fractal_type, bitSize=20)
     cv.imwrite("fractal.png", fractal_img)
 
     # Detect fractals

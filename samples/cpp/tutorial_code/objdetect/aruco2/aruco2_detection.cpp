@@ -11,7 +11,7 @@ int main()
 {
     //! [generate_marker]
     Mat image;
-    aruco2::getFiducialMarker(image, aruco2::DICT_ARUCO_MIP_36h12, 42);
+    aruco2::getFiducialMarkerImage(image, aruco2::DICT_ARUCO_MIP_36h12, 42);
     imwrite("marker42.png", image);
     //! [generate_marker]
 

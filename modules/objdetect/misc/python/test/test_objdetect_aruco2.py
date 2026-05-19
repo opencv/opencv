@@ -12,7 +12,7 @@ class objdetect_aruco2_test(NewOpenCVTests):
         self.assertTrue(hasattr(cv.aruco2, 'DICT_APRILTAG_36h11'))
 
     def test_generate_marker(self):
-        img = cv.aruco2.getFiducialMarker(cv.aruco2.DICT_ARUCO_MIP_36h12, 42, bitSize=10)
+        img = cv.aruco2.getFiducialMarkerImage(cv.aruco2.DICT_ARUCO_MIP_36h12, 42, bitSize=10)
         self.assertIsNotNone(img)
         self.assertEqual(img.dtype, np.uint8)
         # 6x6 bits + 4 border bits (2 black, 2 white) = 10 bits. 10 * 10 = 100 pixels.
@@ -21,7 +21,7 @@ class objdetect_aruco2_test(NewOpenCVTests):
     def test_detect_markers(self):
         dict_type = cv.aruco2.DICT_ARUCO_MIP_36h12
         marker_id = 42
-        img = cv.aruco2.getFiducialMarker(dict_type, marker_id, bitSize=20)
+        img = cv.aruco2.getFiducialMarkerImage(dict_type, marker_id, bitSize=20)
 
         # Add some padding to simulate a scene
         # img is 200x200 (10 bits * 20)
@@ -38,8 +38,8 @@ class objdetect_aruco2_test(NewOpenCVTests):
         dict1 = cv.aruco2.DICT_ARUCO_MIP_36h12
         dict2 = cv.aruco2.DICT_APRILTAG_36h11
 
-        img1 = cv.aruco2.getFiducialMarker(dict1, 10, bitSize=10)
-        img2 = cv.aruco2.getFiducialMarker(dict2, 20, bitSize=10)
+        img1 = cv.aruco2.getFiducialMarkerImage(dict1, 10, bitSize=10)
+        img2 = cv.aruco2.getFiducialMarkerImage(dict2, 20, bitSize=10)
 
         # img1 is 100x100, img2 is 100x100
         scene = np.ones((150, 250), dtype=np.uint8) * 255
@@ -55,7 +55,7 @@ class objdetect_aruco2_test(NewOpenCVTests):
 
     def test_draw_detected(self):
         dict_type = cv.aruco2.DICT_ARUCO_MIP_36h12
-        img = cv.aruco2.getFiducialMarker(dict_type, 42, bitSize=20)
+        img = cv.aruco2.getFiducialMarkerImage(dict_type, 42, bitSize=20)
         scene = cv.merge([img, img, img]) # Convert to BGR
 
         markers = cv.aruco2.detectFiducialMarkers(img, dict_type)
@@ -68,7 +68,7 @@ class objdetect_aruco2_test(NewOpenCVTests):
     def test_grid_board_detection(self):
         dict_type = cv.aruco2.DICT_ARUCO_MIP_36h12
         grid_size = (3, 2)
-        board_img = cv.aruco2.getGridBoard(grid_size, dict_type, bitSize=20)
+        board_img = cv.aruco2.getGridBoardImage(grid_size, dict_type, bitSize=20)
         self.assertIsNotNone(board_img)
         canvas = np.ones((board_img.shape[0]+100, board_img.shape[1]+100), dtype=np.uint8) * 255
         canvas[50:50+board_img.shape[0], 50:50+board_img.shape[1]] = board_img
@@ -80,7 +80,7 @@ class objdetect_aruco2_test(NewOpenCVTests):
 
     def test_draw_axis(self):
         dict_type = cv.aruco2.DICT_ARUCO_MIP_36h12
-        img = cv.aruco2.getFiducialMarker(dict_type, 42, bitSize=20)
+        img = cv.aruco2.getFiducialMarkerImage(dict_type, 42, bitSize=20)
         canvas = np.ones((img.shape[0]*2, img.shape[1]*2), dtype=np.uint8) * 255
         canvas[img.shape[0]//2:img.shape[0]//2+img.shape[0],
                img.shape[1]//2:img.shape[1]//2+img.shape[1]] = img
@@ -94,7 +94,7 @@ class objdetect_aruco2_test(NewOpenCVTests):
 
     def test_get_solve_pnp_points_fiducial_marker(self):
         dict_type = cv.aruco2.DICT_ARUCO_MIP_36h12
-        img = cv.aruco2.getFiducialMarker(dict_type, 100, bitSize=20)
+        img = cv.aruco2.getFiducialMarkerImage(dict_type, 100, bitSize=20)
         canvas = np.ones((img.shape[0]*2, img.shape[1]*2), dtype=np.uint8) * 255
         canvas[img.shape[0]//2:img.shape[0]//2+img.shape[0],
                img.shape[1]//2:img.shape[1]//2+img.shape[1]] = img
@@ -107,7 +107,7 @@ class objdetect_aruco2_test(NewOpenCVTests):
     def test_draw_grid_board(self):
         dict_type = cv.aruco2.DICT_ARUCO_MIP_36h12
         grid_size = (3, 2)
-        board_img = cv.aruco2.getGridBoard(grid_size, dict_type, bitSize=20)
+        board_img = cv.aruco2.getGridBoardImage(grid_size, dict_type, bitSize=20)
         canvas = np.ones((board_img.shape[0]+100, board_img.shape[1]+100), dtype=np.uint8) * 255
         canvas[50:50+board_img.shape[0], 50:50+board_img.shape[1]] = board_img
         found, board = cv.aruco2.detectGridBoard(canvas, grid_size, dict_type)
@@ -119,7 +119,7 @@ class objdetect_aruco2_test(NewOpenCVTests):
     def test_get_solve_pnp_points_grid_board(self):
         dict_type = cv.aruco2.DICT_ARUCO_MIP_36h12
         grid_size = (3, 2)
-        board_img = cv.aruco2.getGridBoard(grid_size, dict_type, bitSize=20)
+        board_img = cv.aruco2.getGridBoardImage(grid_size, dict_type, bitSize=20)
         canvas = np.ones((board_img.shape[0]+100, board_img.shape[1]+100), dtype=np.uint8) * 255
         canvas[50:50+board_img.shape[0], 50:50+board_img.shape[1]] = board_img
         found, board = cv.aruco2.detectGridBoard(canvas, grid_size, dict_type)
@@ -148,7 +148,7 @@ class objdetect_aruco2_test(NewOpenCVTests):
 
     def test_fractal_workflow(self):
         ftype = cv.aruco2.FRACTAL_2L_6
-        fractal_img = cv.aruco2.getFractalImage(ftype, bitSize=40)
+        fractal_img = cv.aruco2.getFractalMarkerImage(ftype, bitSize=40)
         self.assertIsNotNone(fractal_img)
         canvas = np.ones((fractal_img.shape[0]+100, fractal_img.shape[1]+100), dtype=np.uint8) * 255
         canvas[50:50+fractal_img.shape[0], 50:50+fractal_img.shape[1]] = fractal_img

@@ -48,12 +48,12 @@ public class Aruco2 {
 
     // Functions
 
-    public static void getFiducialMarker(Mat img, int dictionary, int id, int bitSize, boolean externalBorder) {
-        Objdetect.Aruco2_getFiducialMarker(img, dictionary, id, bitSize, externalBorder);
+    public static void getFiducialMarkerImage(Mat img, int dictionary, int id, int bitSize, boolean externalBorder) {
+        Objdetect.Aruco2_getFiducialMarkerImage(img, dictionary, id, bitSize, externalBorder);
     }
 
-    public static void getFiducialMarker(Mat img, int dictionary, int id) {
-        Objdetect.Aruco2_getFiducialMarker(img, dictionary, id);
+    public static void getFiducialMarkerImage(Mat img, int dictionary, int id) {
+        Objdetect.Aruco2_getFiducialMarkerImage(img, dictionary, id);
     }
 
     @SuppressWarnings("unchecked")
@@ -100,16 +100,16 @@ public class Aruco2 {
         Objdetect.Aruco2_getSolvePnpPoints_FiducialMarker(marker.nativeObj, objPoints, imgPoints, 1.0f);
     }
 
-    public static void getGridBoard(Mat img, Size boardSize, int dictionary, int bitSize, Mat ids) {
-        Objdetect.Aruco2_getGridBoard(img, boardSize, dictionary, bitSize, ids);
+    public static void getGridBoardImage(Mat img, Size boardSize, int dictionary, int bitSize, Mat ids) {
+        Objdetect.Aruco2_getGridBoardImage(img, boardSize, dictionary, bitSize, ids);
     }
 
-    public static void getGridBoard(Mat img, Size boardSize, int dictionary, int bitSize) {
-        Objdetect.Aruco2_getGridBoard(img, boardSize, dictionary, bitSize);
+    public static void getGridBoardImage(Mat img, Size boardSize, int dictionary, int bitSize) {
+        Objdetect.Aruco2_getGridBoardImage(img, boardSize, dictionary, bitSize);
     }
 
-    public static void getGridBoard(Mat img, Size boardSize, int dictionary) {
-        Objdetect.Aruco2_getGridBoard(img, boardSize, dictionary);
+    public static void getGridBoardImage(Mat img, Size boardSize, int dictionary) {
+        Objdetect.Aruco2_getGridBoardImage(img, boardSize, dictionary);
     }
 
     public static boolean detectGridBoard(Mat image, Size gridSize, int dictionary, Aruco2_GridBoard board, Mat ids) {
@@ -154,8 +154,8 @@ public class Aruco2 {
         Objdetect.Aruco2_getSolvePnpPoints_Diamond(diamond.nativeObj, objPoints, imgPoints, markerSize);
     }
 
-    public static void getFractalImage(Mat img, int ftype, int bitSize) {
-        Objdetect.Aruco2_getFractalImage(img, ftype, bitSize);
+    public static void getFractalMarkerImage(Mat img, int ftype, int bitSize) {
+        Objdetect.Aruco2_getFractalMarkerImage(img, ftype, bitSize);
     }
 
     @SuppressWarnings("unchecked")

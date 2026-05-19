@@ -1,0 +1,223 @@
+PORTED FUNCs LIST (149 of 170):
+
+ Dictionary cv::aruco::getPredefinedDictionary(int dict)
+ Dictionary cv::aruco::extendDictionary(int nMarkers, int markerSize, Dictionary baseDictionary = Dictionary(), int randomSeed = 0)
+ void cv::aruco::drawDetectedCornersCharuco(Mat& image, Mat charucoCorners, Mat charucoIds = Mat(), Scalar cornerColor = Scalar(255, 0, 0))
+ void cv::aruco::drawDetectedDiamonds(Mat& image, vector_Mat diamondCorners, Mat diamondIds = Mat(), Scalar borderColor = Scalar(0, 0, 255))
+ void cv::aruco::drawDetectedMarkers(Mat& image, vector_Mat corners, Mat ids = Mat(), Scalar borderColor = Scalar(0, 255, 0))
+ void cv::aruco::generateImageMarker(Dictionary dictionary, int id, int sidePixels, Mat& img, int borderBits = 1)
+ void cv::aruco2::getFiducialMarkerImage(Mat& img, aruco2_DictionaryType dictionary, int id, int bitSize = 20, bool externalBorder = true)
+ vector_aruco2_FiducialMarker cv::aruco2::detectFiducialMarkers(Mat image, aruco2_DictionaryType dict = cv::aruco2::DICT_ARUCO_MIP_36h12, aruco2_DetectionParameters detectorParams = {})
+ void cv::aruco2::drawFiducialMarkers(Mat& image, vector_aruco2_FiducialMarker markers, Scalar borderColor = Scalar(0, 255, 0))
+ void cv::aruco2::drawAxis(Mat& image, Mat cameraMatrix, Mat distCoeffs, Mat rvec, Mat tvec, float length)
+ void cv::aruco2::getSolvePnpPoints(aruco2_FiducialMarker marker, Mat& objPoints, Mat& imgPoints, float markerSize = 1.f)
+ void cv::aruco2::getGridBoardImage(Mat& img, Size boardSize, aruco2_DictionaryType dict, int bitSize = 25, Mat ids = Mat())
+ bool cv::aruco2::detectGridBoard(Mat image, Size gridSize, aruco2_DictionaryType dict, aruco2_GridBoard& board, Mat ids = Mat())
+ void cv::aruco2::drawGridBoard(Mat& image, aruco2_GridBoard board, Scalar color = Scalar(0, 255, 0), bool drawMarkerIds = false)
+ void cv::aruco2::getSolvePnpPoints(aruco2_GridBoard board, Mat& objPoints, Mat& imgPoints, float markerSize = 1.f)
+ void cv::aruco2::getDiamondImage(Mat& img, aruco2_DictionaryType dictionary, Vec4i ids, int bitSize = 20)
+ vector_aruco2_Diamond cv::aruco2::detectDiamonds(Mat image, aruco2_DictionaryType dict)
+ void cv::aruco2::drawDiamonds(Mat& image, vector_aruco2_Diamond diamonds, Scalar color = Scalar(0, 255, 0), bool drawMarkerIds = false)
+ void cv::aruco2::getSolvePnpPoints(aruco2_Diamond diamond, Mat& objPoints, Mat& imgPoints, float markerSize = 1.f)
+ void cv::aruco2::getFractalMarkerImage(Mat& img, aruco2_FractalType ftype, int bitSize = 20)
+ vector_aruco2_FractalMarker cv::aruco2::detectFractals(Mat image, aruco2_FractalType ftype)
+ void cv::aruco2::drawFractals(Mat& image, vector_aruco2_FractalMarker fractals, Scalar color = Scalar(0, 255, 0), bool drawAllImagePoints = true)
+ void cv::aruco2::getSolvePnpPoints(aruco2_FractalMarker fractal, Mat& objPoints, Mat& imgPoints, float markerSize = 1.f)
+ void cv::FaceDetectorYN::setInputSize(Size input_size)
+ Size cv::FaceDetectorYN::getInputSize()
+ void cv::FaceDetectorYN::setScoreThreshold(float score_threshold)
+ float cv::FaceDetectorYN::getScoreThreshold()
+ void cv::FaceDetectorYN::setNMSThreshold(float nms_threshold)
+ float cv::FaceDetectorYN::getNMSThreshold()
+ void cv::FaceDetectorYN::setTopK(int top_k)
+ int cv::FaceDetectorYN::getTopK()
+ int cv::FaceDetectorYN::detect(Mat image, Mat& faces)
+static Ptr_FaceDetectorYN cv::FaceDetectorYN::create(String model, String config, Size input_size, float score_threshold = 0.9f, float nms_threshold = 0.3f, int top_k = 5000, int backend_id = 0, int target_id = 0)
+static Ptr_FaceDetectorYN cv::FaceDetectorYN::create(String framework, vector_uchar bufferModel, vector_uchar bufferConfig, Size input_size, float score_threshold = 0.9f, float nms_threshold = 0.3f, int top_k = 5000, int backend_id = 0, int target_id = 0)
+ void cv::FaceRecognizerSF::alignCrop(Mat src_img, Mat face_box, Mat& aligned_img)
+ void cv::FaceRecognizerSF::feature(Mat aligned_img, Mat& face_feature)
+ double cv::FaceRecognizerSF::match(Mat face_feature1, Mat face_feature2, int dis_type = FaceRecognizerSF::FR_COSINE)
+static Ptr_FaceRecognizerSF cv::FaceRecognizerSF::create(String model, String config, int backend_id = 0, int target_id = 0)
+static Ptr_FaceRecognizerSF cv::FaceRecognizerSF::create(String framework, vector_uchar bufferModel, vector_uchar bufferConfig, int backend_id = 0, int target_id = 0)
+ bool cv::GraphicalCodeDetector::detect(Mat img, Mat& points)
+ string cv::GraphicalCodeDetector::decode(Mat img, Mat points, Mat& straight_code = Mat())
+ string cv::GraphicalCodeDetector::detectAndDecode(Mat img, Mat& points = Mat(), Mat& straight_code = Mat())
+ bool cv::GraphicalCodeDetector::detectMulti(Mat img, Mat& points)
+ bool cv::GraphicalCodeDetector::decodeMulti(Mat img, Mat points, vector_string& decoded_info, vector_Mat& straight_code = vector_Mat())
+ bool cv::GraphicalCodeDetector::detectAndDecodeMulti(Mat img, vector_string& decoded_info, Mat& points = Mat(), vector_Mat& straight_code = vector_Mat())
+  cv::QRCodeDetector::QRCodeDetector()
+ QRCodeDetector cv::QRCodeDetector::setEpsX(double epsX)
+ QRCodeDetector cv::QRCodeDetector::setEpsY(double epsY)
+ QRCodeDetector cv::QRCodeDetector::setUseAlignmentMarkers(bool useAlignmentMarkers)
+ String cv::QRCodeDetector::decodeCurved(Mat img, Mat points, Mat& straight_qrcode = Mat())
+ string cv::QRCodeDetector::detectAndDecodeCurved(Mat img, Mat& points = Mat(), Mat& straight_qrcode = Mat())
+ QRCodeEncoder_ECIEncodings cv::QRCodeDetector::getEncoding(int codeIdx = 0)
+  cv::QRCodeDetectorAruco::QRCodeDetectorAruco()
+  cv::QRCodeDetectorAruco::QRCodeDetectorAruco(QRCodeDetectorAruco_Params params)
+ QRCodeDetectorAruco cv::QRCodeDetectorAruco::setDetectorParameters(QRCodeDetectorAruco_Params params)
+  cv::QRCodeDetectorAruco::Params::Params()
+static Ptr_QRCodeEncoder cv::QRCodeEncoder::create(QRCodeEncoder_Params parameters = QRCodeEncoder::Params())
+ void cv::QRCodeEncoder::encode(String encoded_info, Mat& qrcode)
+ void cv::QRCodeEncoder::encodeStructuredAppend(String encoded_info, vector_Mat& qrcodes)
+  cv::QRCodeEncoder::Params::Params()
+  cv::aruco::ArucoDetector::ArucoDetector(Dictionary dictionary = getPredefinedDictionary(cv::aruco::DICT_4X4_50), DetectorParameters detectorParams = DetectorParameters(), RefineParameters refineParams = RefineParameters())
+ void cv::aruco::ArucoDetector::detectMarkers(Mat image, vector_Mat& corners, Mat& ids, vector_Mat& rejectedImgPoints = vector_Mat())
+ void cv::aruco::ArucoDetector::detectMarkersWithConfidence(Mat image, vector_Mat& corners, Mat& ids, Mat& markersConfidence, vector_Mat& rejectedImgPoints = vector_Mat())
+ void cv::aruco::ArucoDetector::refineDetectedMarkers(Mat image, Board board, vector_Mat& detectedCorners, Mat& detectedIds, vector_Mat& rejectedCorners, Mat cameraMatrix = Mat(), Mat distCoeffs = Mat(), Mat& recoveredIdxs = Mat())
+ void cv::aruco::ArucoDetector::detectMarkersMultiDict(Mat image, vector_Mat& corners, Mat& ids, vector_Mat& rejectedImgPoints = vector_Mat(), Mat& dictIndices = Mat())
+ Dictionary cv::aruco::ArucoDetector::getDictionary()
+ void cv::aruco::ArucoDetector::setDictionary(Dictionary dictionary)
+ DetectorParameters cv::aruco::ArucoDetector::getDetectorParameters()
+ void cv::aruco::ArucoDetector::setDetectorParameters(DetectorParameters detectorParameters)
+ RefineParameters cv::aruco::ArucoDetector::getRefineParameters()
+ void cv::aruco::ArucoDetector::setRefineParameters(RefineParameters refineParameters)
+  cv::aruco::Board::Board(vector_Mat objPoints, Dictionary dictionary, Mat ids)
+ Dictionary cv::aruco::Board::getDictionary()
+ vector_vector_Point3f cv::aruco::Board::getObjPoints()
+ vector_int cv::aruco::Board::getIds()
+ Point3f cv::aruco::Board::getRightBottomCorner()
+ void cv::aruco::Board::matchImagePoints(vector_Mat detectedCorners, Mat detectedIds, Mat& objPoints, Mat& imgPoints)
+ void cv::aruco::Board::generateImage(Size outSize, Mat& img, int marginSize = 0, int borderBits = 1)
+  cv::aruco::CharucoBoard::CharucoBoard(Size size, float squareLength, float markerLength, Dictionary dictionary, Mat ids = Mat())
+ void cv::aruco::CharucoBoard::setLegacyPattern(bool legacyPattern)
+ bool cv::aruco::CharucoBoard::getLegacyPattern()
+ Size cv::aruco::CharucoBoard::getChessboardSize()
+ float cv::aruco::CharucoBoard::getSquareLength()
+ float cv::aruco::CharucoBoard::getMarkerLength()
+ vector_Point3f cv::aruco::CharucoBoard::getChessboardCorners()
+ bool cv::aruco::CharucoBoard::checkCharucoCornersCollinear(Mat charucoIds)
+  cv::aruco::CharucoDetector::CharucoDetector(CharucoBoard board, CharucoParameters charucoParams = CharucoParameters(),  _hidden_  detectorParams = DetectorParameters(),  _hidden_  refineParams = RefineParameters())
+ CharucoBoard cv::aruco::CharucoDetector::getBoard()
+ void cv::aruco::CharucoDetector::setBoard(CharucoBoard board)
+ CharucoParameters cv::aruco::CharucoDetector::getCharucoParameters()
+ void cv::aruco::CharucoDetector::setCharucoParameters(CharucoParameters charucoParameters)
+ DetectorParameters cv::aruco::CharucoDetector::getDetectorParameters()
+ void cv::aruco::CharucoDetector::setDetectorParameters(DetectorParameters detectorParameters)
+ RefineParameters cv::aruco::CharucoDetector::getRefineParameters()
+ void cv::aruco::CharucoDetector::setRefineParameters(RefineParameters refineParameters)
+ void cv::aruco::CharucoDetector::detectBoard(Mat image, Mat& charucoCorners, Mat& charucoIds, vector_Mat& markerCorners = vector_Mat(), Mat& markerIds = Mat())
+ void cv::aruco::CharucoDetector::detectDiamonds(Mat image, vector_Mat& diamondCorners, Mat& diamondIds, vector_Mat& markerCorners = vector_Mat(), Mat& markerIds = Mat())
+  cv::aruco::CharucoParameters::CharucoParameters()
+  cv::aruco::DetectorParameters::DetectorParameters()
+  cv::aruco::Dictionary::Dictionary()
+  cv::aruco::Dictionary::Dictionary(Mat bytesList, int _markerSize, int maxcorr = 0)
+ bool cv::aruco::Dictionary::identify(Mat onlyBits, int& idx, int& rotation, double maxCorrectionRate)
+ bool cv::aruco::Dictionary::identify(Mat onlyCellPixelRatio, int& idx, int& rotation, double maxCorrectionRate, float validBitIdThreshold)
+ int cv::aruco::Dictionary::getDistanceToId(Mat bits, int id, bool allRotations = true)
+ void cv::aruco::Dictionary::generateImageMarker(int id, int sidePixels, Mat& _img, int borderBits = 1)
+static Mat cv::aruco::Dictionary::getByteListFromBits(Mat bits)
+static Mat cv::aruco::Dictionary::getBitsFromByteList(Mat byteList, int markerSize, int rotationId = 0)
+ Mat cv::aruco::Dictionary::getMarkerBits(int markerId, int rotationId = 0)
+  cv::aruco::RefineParameters::RefineParameters(float minRepDistance = 10.f, float errorCorrectionRate = 3.f, bool checkAllOrders = true)
+  cv::aruco2::DetectionParameters::DetectionParameters()
+  cv::aruco2::Diamond::Diamond()
+  cv::aruco2::FiducialMarker::FiducialMarker()
+ Point2f cv::aruco2::FiducialMarker::getCorner(int i)
+  cv::aruco2::FractalMarker::FractalMarker()
+ Point2f cv::aruco2::FractalMarker::getCorner(int i)
+  cv::aruco2::GridBoard::GridBoard()
+  cv::barcode::BarcodeDetector::BarcodeDetector()
+  cv::barcode::BarcodeDetector::BarcodeDetector(string prototxt_path, string model_path)
+ bool cv::barcode::BarcodeDetector::decodeWithType(Mat img, Mat points, vector_string& decoded_info, vector_string& decoded_type)
+ bool cv::barcode::BarcodeDetector::detectAndDecodeWithType(Mat img, vector_string& decoded_info, vector_string& decoded_type, Mat& points = Mat())
+ double cv::barcode::BarcodeDetector::getDownsamplingThreshold()
+ BarcodeDetector cv::barcode::BarcodeDetector::setDownsamplingThreshold(double thresh)
+ void cv::barcode::BarcodeDetector::getDetectorScales(vector_float& sizes)
+ BarcodeDetector cv::barcode::BarcodeDetector::setDetectorScales(vector_float sizes)
+ double cv::barcode::BarcodeDetector::getGradientThreshold()
+ BarcodeDetector cv::barcode::BarcodeDetector::setGradientThreshold(double thresh)
+static Ptr_CChecker cv::mcc::CChecker::create()
+ void cv::mcc::CChecker::setTarget(ColorChart _target)
+ void cv::mcc::CChecker::setBox(vector_Point2f _box)
+ void cv::mcc::CChecker::setChartsRGB(Mat _chartsRGB)
+ void cv::mcc::CChecker::setChartsYCbCr(Mat _chartsYCbCr)
+ void cv::mcc::CChecker::setCost(float _cost)
+ void cv::mcc::CChecker::setCenter(Point2f _center)
+ ColorChart cv::mcc::CChecker::getTarget()
+ vector_Point2f cv::mcc::CChecker::getBox()
+ vector_Point2f cv::mcc::CChecker::getColorCharts()
+ Mat cv::mcc::CChecker::getChartsRGB(bool getStats = true)
+ Mat cv::mcc::CChecker::getChartsYCbCr()
+ float cv::mcc::CChecker::getCost()
+ Point2f cv::mcc::CChecker::getCenter()
+ bool cv::mcc::CCheckerDetector::process(Mat image, vector_Rect regionsOfInterest, int nc = 1)
+ bool cv::mcc::CCheckerDetector::process(Mat image, int nc = 1)
+static Ptr_CCheckerDetector cv::mcc::CCheckerDetector::create()
+ Mat cv::mcc::CCheckerDetector::getRefColors()
+ void cv::mcc::CCheckerDetector::setDetectionParams(DetectorParametersMCC params)
+ void cv::mcc::CCheckerDetector::setColorChartType(ColorChart chartType)
+ DetectorParametersMCC cv::mcc::CCheckerDetector::getDetectionParams()
+ ColorChart cv::mcc::CCheckerDetector::getColorChartType()
+  cv::mcc::DetectorParametersMCC::DetectorParametersMCC()
+
+SKIPPED FUNCs LIST (21 of 170):
+
+ vector_aruco2_FiducialMarker cv::aruco2::detectFiducialMarkers(Mat image, vector_aruco2_DictionaryType dicts, aruco2_DetectionParameters detectorParams = {})
+// Unknown type 'vector_aruco2_DictionaryType' (I), skipping the function
+
+ NativeByteArray cv::GraphicalCodeDetector::detectAndDecode(Mat img, Mat& points = Mat(), Mat& straight_code = Mat())
+// Return type 'NativeByteArray' is not supported, skipping the function
+
+ NativeByteArray cv::GraphicalCodeDetector::decode(Mat img, Mat points, Mat& straight_code = Mat())
+// Return type 'NativeByteArray' is not supported, skipping the function
+
+ bool cv::GraphicalCodeDetector::decodeMulti(Mat img, Mat points, vector_NativeByteArray& decoded_info, vector_Mat& straight_code = vector_Mat())
+// Unknown type 'vector_NativeByteArray' (O), skipping the function
+
+ bool cv::GraphicalCodeDetector::detectAndDecodeMulti(Mat img, vector_NativeByteArray& decoded_info, Mat& points = Mat(), vector_Mat& straight_code = vector_Mat())
+// Unknown type 'vector_NativeByteArray' (O), skipping the function
+
+ aruco_DetectorParameters cv::QRCodeDetectorAruco::getArucoParameters()
+// Return type 'aruco_DetectorParameters' is not supported, skipping the function
+
+ void cv::QRCodeDetectorAruco::setArucoParameters(aruco_DetectorParameters params)
+// Unknown type 'aruco_DetectorParameters' (I), skipping the function
+
+  cv::aruco::ArucoDetector::ArucoDetector(vector_Dictionary dictionaries, DetectorParameters detectorParams = DetectorParameters(), RefineParameters refineParams = RefineParameters())
+// Unknown type 'vector_Dictionary' (I), skipping the function
+
+ vector_Dictionary cv::aruco::ArucoDetector::getDictionaries()
+// Return type 'vector_Dictionary' is not supported, skipping the function
+
+ void cv::aruco::ArucoDetector::setDictionaries(vector_Dictionary dictionaries)
+// Unknown type 'vector_Dictionary' (I), skipping the function
+
+ void cv::aruco::ArucoDetector::write(FileStorage fs, String name)
+// Unknown type 'FileStorage' (I), skipping the function
+
+ void cv::aruco::ArucoDetector::read(FileNode fn)
+// Unknown type 'FileNode' (I), skipping the function
+
+ bool cv::aruco::DetectorParameters::readDetectorParameters(FileNode fn)
+// Unknown type 'FileNode' (I), skipping the function
+
+ bool cv::aruco::DetectorParameters::writeDetectorParameters(FileStorage fs, String name = String())
+// Unknown type 'FileStorage' (I), skipping the function
+
+ bool cv::aruco::Dictionary::readDictionary(FileNode fn)
+// Unknown type 'FileNode' (I), skipping the function
+
+ void cv::aruco::Dictionary::writeDictionary(FileStorage fs, String name = String())
+// Unknown type 'FileStorage' (I), skipping the function
+
+ bool cv::aruco::RefineParameters::readRefineParameters(FileNode fn)
+// Unknown type 'FileNode' (I), skipping the function
+
+ bool cv::aruco::RefineParameters::writeRefineParameters(FileStorage fs, String name = String())
+// Unknown type 'FileStorage' (I), skipping the function
+
+ Ptr_mcc_CChecker cv::mcc::CCheckerDetector::getBestColorChecker()
+// Return type 'Ptr_mcc_CChecker' is not supported, skipping the function
+
+ vector_Ptr_CChecker cv::mcc::CCheckerDetector::getListColorChecker()
+// Return type 'vector_Ptr_CChecker' is not supported, skipping the function
+
+ void cv::mcc::CCheckerDetector::draw(vector_Ptr_CChecker checkers, Mat& img, Scalar color = CV_RGB(0,250,0), int thickness = 2)
+// Unknown type 'vector_Ptr_CChecker' (I), skipping the function
+
+
+0 def args - 108 funcs
+1 def args - 33 funcs
+2 def args - 23 funcs
+3 def args - 4 funcs
+5 def args - 2 funcs

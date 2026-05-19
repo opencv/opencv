@@ -742,7 +742,7 @@ std::vector<FiducialMarker> detectFiducialMarkers(InputArray image,DictionaryTyp
 
 
 
-void getFiducialMarker(OutputArray _img, DictionaryType dictionary, int id, int bitSize, bool externalBorder){
+void getFiducialMarkerImage(OutputArray _img, DictionaryType dictionary, int id, int bitSize, bool externalBorder){
 
     //assert marker size >sidePixels
     auto dict=getPredefinedDictionary(dictionary);
@@ -985,7 +985,7 @@ bool detectGridBoard(InputArray image, cv::Size gridSize, DictionaryType diction
 }
 
 
-void getGridBoard(OutputArray img, Size bSize, DictionaryType dictionary,
+void getGridBoardImage(OutputArray img, Size bSize, DictionaryType dictionary,
                         int bitSize , InputArray _ids  ){
     std::vector<int> ids;
     _ids.copyTo(ids);
@@ -1089,7 +1089,7 @@ void getGridBoard(OutputArray img, Size bSize, DictionaryType dictionary,
   }
 
   void getDiamondImage(OutputArray img,const DictionaryType &dictionary, const cv::Vec4i &ids,int bitSize){
-        getGridBoard(img,cv::Size(2,2),dictionary,bitSize,ids);
+        getGridBoardImage(img,cv::Size(2,2),dictionary,bitSize,ids);
   }
 
    std::vector<Diamond> detectDiamonds(InputArray image, DictionaryType dictionary  ){

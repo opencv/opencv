@@ -73,16 +73,16 @@ static std::vector<cv::aruco2::FractalMarker> fractalArrayToVec(NSArray<Aruco2Fr
 
 @implementation Aruco2
 
-// ---- getFiducialMarker -------------------------------------------------------
+// ---- getFiducialMarkerImage --------------------------------------------------
 
-+ (void)getFiducialMarker:(Mat*)img dictionary:(int)dictionary id:(int)markerId
-                  bitSize:(int)bitSize externalBorder:(BOOL)externalBorder {
-    cv::aruco2::getFiducialMarker(img.nativeRef, (cv::aruco2::DictionaryType)dictionary,
-                                  markerId, bitSize, (bool)externalBorder);
++ (void)getFiducialMarkerImage:(Mat*)img dictionary:(int)dictionary id:(int)markerId
+                       bitSize:(int)bitSize externalBorder:(BOOL)externalBorder {
+    cv::aruco2::getFiducialMarkerImage(img.nativeRef, (cv::aruco2::DictionaryType)dictionary,
+                                       markerId, bitSize, (bool)externalBorder);
 }
 
-+ (void)getFiducialMarker:(Mat*)img dictionary:(int)dictionary id:(int)markerId {
-    cv::aruco2::getFiducialMarker(img.nativeRef, (cv::aruco2::DictionaryType)dictionary, markerId);
++ (void)getFiducialMarkerImage:(Mat*)img dictionary:(int)dictionary id:(int)markerId {
+    cv::aruco2::getFiducialMarkerImage(img.nativeRef, (cv::aruco2::DictionaryType)dictionary, markerId);
 }
 
 // ---- detectFiducialMarkers (single dict) ------------------------------------
@@ -149,21 +149,21 @@ static std::vector<cv::aruco2::FractalMarker> fractalArrayToVec(NSArray<Aruco2Fr
     cv::aruco2::getSolvePnpPoints(marker.nativeRef, objPoints.nativeRef, imgPoints.nativeRef);
 }
 
-// ---- getGridBoard -----------------------------------------------------------
+// ---- getGridBoardImage ------------------------------------------------------
 
-+ (void)getGridBoard:(Mat*)img boardSize:(Size2i*)boardSize dictionary:(int)dictionary
-             bitSize:(int)bitSize ids:(nullable Mat*)ids {
++ (void)getGridBoardImage:(Mat*)img boardSize:(Size2i*)boardSize dictionary:(int)dictionary
+                  bitSize:(int)bitSize ids:(nullable Mat*)ids {
     if (ids != nil) {
-        cv::aruco2::getGridBoard(img.nativeRef, boardSize.nativeRef,
-                                 (cv::aruco2::DictionaryType)dictionary, bitSize, ids.nativeRef);
+        cv::aruco2::getGridBoardImage(img.nativeRef, boardSize.nativeRef,
+                                      (cv::aruco2::DictionaryType)dictionary, bitSize, ids.nativeRef);
     } else {
-        cv::aruco2::getGridBoard(img.nativeRef, boardSize.nativeRef,
-                                 (cv::aruco2::DictionaryType)dictionary, bitSize);
+        cv::aruco2::getGridBoardImage(img.nativeRef, boardSize.nativeRef,
+                                      (cv::aruco2::DictionaryType)dictionary, bitSize);
     }
 }
 
-+ (void)getGridBoard:(Mat*)img boardSize:(Size2i*)boardSize dictionary:(int)dictionary {
-    cv::aruco2::getGridBoard(img.nativeRef, boardSize.nativeRef, (cv::aruco2::DictionaryType)dictionary);
++ (void)getGridBoardImage:(Mat*)img boardSize:(Size2i*)boardSize dictionary:(int)dictionary {
+    cv::aruco2::getGridBoardImage(img.nativeRef, boardSize.nativeRef, (cv::aruco2::DictionaryType)dictionary);
 }
 
 // ---- detectGridBoard --------------------------------------------------------
@@ -258,14 +258,14 @@ static std::vector<cv::aruco2::FractalMarker> fractalArrayToVec(NSArray<Aruco2Fr
     cv::aruco2::getSolvePnpPoints(diamond.nativeRef, objPoints.nativeRef, imgPoints.nativeRef);
 }
 
-// ---- getFractalImage --------------------------------------------------------
+// ---- getFractalMarkerImage --------------------------------------------------
 
-+ (void)getFractalImage:(Mat*)img ftype:(int)ftype bitSize:(int)bitSize {
-    cv::aruco2::getFractalImage(img.nativeRef, (cv::aruco2::FractalType)ftype, bitSize);
++ (void)getFractalMarkerImage:(Mat*)img ftype:(int)ftype bitSize:(int)bitSize {
+    cv::aruco2::getFractalMarkerImage(img.nativeRef, (cv::aruco2::FractalType)ftype, bitSize);
 }
 
-+ (void)getFractalImage:(Mat*)img ftype:(int)ftype {
-    cv::aruco2::getFractalImage(img.nativeRef, (cv::aruco2::FractalType)ftype);
++ (void)getFractalMarkerImage:(Mat*)img ftype:(int)ftype {
+    cv::aruco2::getFractalMarkerImage(img.nativeRef, (cv::aruco2::FractalType)ftype);
 }
 
 // ---- detectFractals ---------------------------------------------------------

@@ -168,7 +168,7 @@ struct CV_EXPORTS_W_SIMPLE FiducialMarker {
  *
  * @snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_detection.cpp generate_marker
  */
-CV_EXPORTS_W void getFiducialMarker(OutputArray img, cv::aruco2::DictionaryType dictionary, int id, int bitSize=20,bool externalBorder=true);
+CV_EXPORTS_W void getFiducialMarkerImage(OutputArray img, cv::aruco2::DictionaryType dictionary, int id, int bitSize=20,bool externalBorder=true);
 
 
 /** @brief Detect ArUco fiducial markers in an image using a single dictionary.
@@ -298,7 +298,7 @@ private:
  * Pass the same `boardSize`, `dictionary`, and `ids` to detectGridBoard() for detection.
  * @snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_boards.cpp create_board
  */
-CV_EXPORTS_W void getGridBoard(OutputArray img, Size boardSize, cv::aruco2::DictionaryType dictionary,
+CV_EXPORTS_W void getGridBoardImage(OutputArray img, Size boardSize, cv::aruco2::DictionaryType dictionary,
                                 int bitSize = 25, InputArray ids = noArray());
 
 
@@ -499,7 +499,7 @@ private:
  * @param bitSize  side length of one bit cell in pixels (default 20)
  * @snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_fractals.cpp create_fractal
  */
-CV_EXPORTS_W void getFractalImage(OutputArray img, cv::aruco2::FractalType ftype, int bitSize=20);
+CV_EXPORTS_W void getFractalMarkerImage(OutputArray img, cv::aruco2::FractalType ftype, int bitSize=20);
 
 /** @brief Detect fractal markers in an image.
  *

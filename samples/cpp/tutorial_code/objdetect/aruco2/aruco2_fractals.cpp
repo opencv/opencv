@@ -9,7 +9,7 @@ int main()
 {
     //! [create_fractal]
     Mat image;
-    aruco2::getFractalImage(image, aruco2::FRACTAL_3L_6);
+    aruco2::getFractalMarkerImage(image, aruco2::FRACTAL_3L_6);
     imwrite("fractal.png", image);
     //! [create_fractal]
     //!

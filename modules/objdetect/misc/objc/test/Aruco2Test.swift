@@ -19,12 +19,12 @@ class Aruco2Test: OpenCVTestCase {
         XCTAssertEqual(Aruco2_FRACTAL_5L_6.rawValue, 3)
     }
 
-    // MARK: - getFiducialMarker
+    // MARK: - getFiducialMarkerImage
 
-    func testGetFiducialMarkerSize() {
+    func testGetFiducialMarkerImageSize() {
         // DICT_ARUCO_MIP_36h12: 6x6 bits + 2 black + 2 white border = 10 bits per side
         let img = Mat()
-        Aruco2.getFiducialMarker(img: img,
+        Aruco2.getFiducialMarkerImage(img: img,
                                  dictionary: Aruco2_DICT_ARUCO_MIP_36h12.rawValue,
                                  id: 42,
                                  bitSize: 10,
@@ -36,7 +36,7 @@ class Aruco2Test: OpenCVTestCase {
 
     func testGetFiducialMarkerDefaultParams() {
         let img = Mat()
-        Aruco2.getFiducialMarker(img: img,
+        Aruco2.getFiducialMarkerImage(img: img,
                                  dictionary: Aruco2_DICT_4X4_50.rawValue,
                                  id: 0)
         XCTAssertFalse(img.empty())
@@ -44,7 +44,7 @@ class Aruco2Test: OpenCVTestCase {
 
     func testGetFiducialMarkerNoExternalBorder() {
         let img = Mat()
-        Aruco2.getFiducialMarker(img: img,
+        Aruco2.getFiducialMarkerImage(img: img,
                                  dictionary: Aruco2_DICT_4X4_50.rawValue,
                                  id: 1,
                                  bitSize: 20,
@@ -57,7 +57,7 @@ class Aruco2Test: OpenCVTestCase {
     func testDetectFiducialMarkersBasic() {
         let dictType = Aruco2_DICT_ARUCO_MIP_36h12.rawValue
         let markerImg = Mat()
-        Aruco2.getFiducialMarker(img: markerImg, dictionary: dictType, id: 42, bitSize: 20, externalBorder: true)
+        Aruco2.getFiducialMarkerImage(img: markerImg, dictionary: dictType, id: 42, bitSize: 20, externalBorder: true)
 
         let scene = Mat(rows: markerImg.rows() + 100,
                         cols: markerImg.cols() + 100,
@@ -75,7 +75,7 @@ class Aruco2Test: OpenCVTestCase {
     func testDetectFiducialMarkersWithParams() {
         let dictType = Aruco2_DICT_4X4_50.rawValue
         let markerImg = Mat()
-        Aruco2.getFiducialMarker(img: markerImg, dictionary: dictType, id: 0, bitSize: 20, externalBorder: true)
+        Aruco2.getFiducialMarkerImage(img: markerImg, dictionary: dictType, id: 0, bitSize: 20, externalBorder: true)
 
         let scene = Mat(rows: markerImg.rows() + 100,
                         cols: markerImg.cols() + 100,
@@ -98,9 +98,9 @@ class Aruco2Test: OpenCVTestCase {
         let dict2 = Aruco2_DICT_APRILTAG_36h11.rawValue
 
         let img1 = Mat()
-        Aruco2.getFiducialMarker(img: img1, dictionary: dict1, id: 10, bitSize: 10, externalBorder: true)
+        Aruco2.getFiducialMarkerImage(img: img1, dictionary: dict1, id: 10, bitSize: 10, externalBorder: true)
         let img2 = Mat()
-        Aruco2.getFiducialMarker(img: img2, dictionary: dict2, id: 20, bitSize: 10, externalBorder: true)
+        Aruco2.getFiducialMarkerImage(img: img2, dictionary: dict2, id: 20, bitSize: 10, externalBorder: true)
 
         let h = img1.rows()
         let w = img1.cols()
@@ -122,7 +122,7 @@ class Aruco2Test: OpenCVTestCase {
     func testDrawFiducialMarkers() {
         let dictType = Aruco2_DICT_ARUCO_MIP_36h12.rawValue
         let markerImg = Mat()
-        Aruco2.getFiducialMarker(img: markerImg, dictionary: dictType, id: 42, bitSize: 20, externalBorder: true)
+        Aruco2.getFiducialMarkerImage(img: markerImg, dictionary: dictType, id: 42, bitSize: 20, externalBorder: true)
 
         let scene = Mat(rows: markerImg.rows() + 100,
                         cols: markerImg.cols() + 100,
@@ -169,7 +169,7 @@ class Aruco2Test: OpenCVTestCase {
     func testGetSolvePnpPointsFiducialMarker() {
         let dictType = Aruco2_DICT_ARUCO_MIP_36h12.rawValue
         let markerImg = Mat()
-        Aruco2.getFiducialMarker(img: markerImg, dictionary: dictType, id: 100, bitSize: 20, externalBorder: false)
+        Aruco2.getFiducialMarkerImage(img: markerImg, dictionary: dictType, id: 100, bitSize: 20, externalBorder: false)
 
         let rowOff = markerImg.rows() / 2
         let colOff = markerImg.cols() / 2
@@ -193,7 +193,7 @@ class Aruco2Test: OpenCVTestCase {
     func testDrawAxis() {
         let dictType = Aruco2_DICT_ARUCO_MIP_36h12.rawValue
         let markerImg = Mat()
-        Aruco2.getFiducialMarker(img: markerImg, dictionary: dictType, id: 42, bitSize: 20, externalBorder: true)
+        Aruco2.getFiducialMarkerImage(img: markerImg, dictionary: dictType, id: 42, bitSize: 20, externalBorder: true)
 
         let colorImg = Mat(rows: markerImg.rows(), cols: markerImg.cols(),
                            type: CvType.CV_8UC3, scalar: Scalar(255, 255, 255))
@@ -214,11 +214,11 @@ class Aruco2Test: OpenCVTestCase {
 
     // MARK: - GridBoard
 
-    func testGetGridBoard() {
+    func testGetGridBoardImage() {
         let dictType = Aruco2_DICT_ARUCO_MIP_36h12.rawValue
         let boardSize = Size2i(width: 3, height: 2)
         let boardImg = Mat()
-        Aruco2.getGridBoard(img: boardImg, boardSize: boardSize, dictionary: dictType)
+        Aruco2.getGridBoardImage(img: boardImg, boardSize: boardSize, dictionary: dictType)
         XCTAssertFalse(boardImg.empty())
     }
 
@@ -226,7 +226,7 @@ class Aruco2Test: OpenCVTestCase {
         let dictType = Aruco2_DICT_ARUCO_MIP_36h12.rawValue
         let gridSize = Size2i(width: 3, height: 2)
         let boardImg = Mat()
-        Aruco2.getGridBoard(img: boardImg, boardSize: gridSize, dictionary: dictType, bitSize: 20, ids: nil)
+        Aruco2.getGridBoardImage(img: boardImg, boardSize: gridSize, dictionary: dictType, bitSize: 20, ids: nil)
 
         let scene = Mat(rows: boardImg.rows() + 100, cols: boardImg.cols() + 100,
                         type: CvType.CV_8UC1, scalar: Scalar(255))
@@ -243,7 +243,7 @@ class Aruco2Test: OpenCVTestCase {
         let dictType = Aruco2_DICT_ARUCO_MIP_36h12.rawValue
         let gridSize = Size2i(width: 3, height: 2)
         let boardImg = Mat()
-        Aruco2.getGridBoard(img: boardImg, boardSize: gridSize, dictionary: dictType, bitSize: 20, ids: nil)
+        Aruco2.getGridBoardImage(img: boardImg, boardSize: gridSize, dictionary: dictType, bitSize: 20, ids: nil)
 
         let scene = Mat(rows: boardImg.rows() + 100, cols: boardImg.cols() + 100,
                         type: CvType.CV_8UC1, scalar: Scalar(255))
@@ -265,7 +265,7 @@ class Aruco2Test: OpenCVTestCase {
         let dictType = Aruco2_DICT_ARUCO_MIP_36h12.rawValue
         let gridSize = Size2i(width: 3, height: 2)
         let boardImg = Mat()
-        Aruco2.getGridBoard(img: boardImg, boardSize: gridSize, dictionary: dictType, bitSize: 20, ids: nil)
+        Aruco2.getGridBoardImage(img: boardImg, boardSize: gridSize, dictionary: dictType, bitSize: 20, ids: nil)
 
         let scene = Mat(rows: boardImg.rows() + 100, cols: boardImg.cols() + 100,
                         type: CvType.CV_8UC1, scalar: Scalar(255))
@@ -348,9 +348,9 @@ class Aruco2Test: OpenCVTestCase {
 
     // MARK: - FractalMarker
 
-    func testGetFractalImage() {
+    func testGetFractalMarkerImage() {
         let img = Mat()
-        Aruco2.getFractalImage(img: img, ftype: Aruco2_FRACTAL_2L_6.rawValue, bitSize: 40)
+        Aruco2.getFractalMarkerImage(img: img, ftype: Aruco2_FRACTAL_2L_6.rawValue, bitSize: 40)
         XCTAssertFalse(img.empty())
         XCTAssertEqual(img.rows(), img.cols())
     }
@@ -358,7 +358,7 @@ class Aruco2Test: OpenCVTestCase {
     func testDetectFractals() {
         let ftype = Aruco2_FRACTAL_2L_6.rawValue
         let fractalImg = Mat()
-        Aruco2.getFractalImage(img: fractalImg, ftype: ftype, bitSize: 40)
+        Aruco2.getFractalMarkerImage(img: fractalImg, ftype: ftype, bitSize: 40)
 
         let scene = Mat(rows: fractalImg.rows() + 100, cols: fractalImg.cols() + 100,
                         type: CvType.CV_8UC1, scalar: Scalar(255))
@@ -373,7 +373,7 @@ class Aruco2Test: OpenCVTestCase {
     func testGetSolvePnpPointsFractalMarker() {
         let ftype = Aruco2_FRACTAL_2L_6.rawValue
         let fractalImg = Mat()
-        Aruco2.getFractalImage(img: fractalImg, ftype: ftype, bitSize: 40)
+        Aruco2.getFractalMarkerImage(img: fractalImg, ftype: ftype, bitSize: 40)
 
         let scene = Mat(rows: fractalImg.rows() + 100, cols: fractalImg.cols() + 100,
                         type: CvType.CV_8UC1, scalar: Scalar(255))
@@ -393,7 +393,7 @@ class Aruco2Test: OpenCVTestCase {
     func testDrawFractals() {
         let ftype = Aruco2_FRACTAL_2L_6.rawValue
         let fractalImg = Mat()
-        Aruco2.getFractalImage(img: fractalImg, ftype: ftype, bitSize: 40)
+        Aruco2.getFractalMarkerImage(img: fractalImg, ftype: ftype, bitSize: 40)
 
         let scene = Mat(rows: fractalImg.rows() + 100, cols: fractalImg.cols() + 100,
                         type: CvType.CV_8UC1, scalar: Scalar(255))

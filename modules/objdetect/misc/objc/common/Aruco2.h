@@ -76,7 +76,7 @@ NS_ASSUME_NONNULL_BEGIN
  */
 CV_EXPORTS @interface Aruco2 : NSObject
 
-// ---- getFiducialMarker -------------------------------------------------------
+// ---- getFiducialMarkerImage --------------------------------------------------
 
 /**
  * Generate a canonical marker image ready for printing.
@@ -86,17 +86,17 @@ CV_EXPORTS @interface Aruco2 : NSObject
  * @param bitSize    Output size in pixels of each marker bit. Default 20.
  * @param externalBorder Whether to add a white external border. Default YES.
  */
-+ (void)getFiducialMarker:(Mat*)img
-               dictionary:(int)dictionary
-                       id:(int)markerId
-                  bitSize:(int)bitSize
-           externalBorder:(BOOL)externalBorder
-NS_SWIFT_NAME(getFiducialMarker(img:dictionary:id:bitSize:externalBorder:));
++ (void)getFiducialMarkerImage:(Mat*)img
+                    dictionary:(int)dictionary
+                            id:(int)markerId
+                       bitSize:(int)bitSize
+                externalBorder:(BOOL)externalBorder
+NS_SWIFT_NAME(getFiducialMarkerImage(img:dictionary:id:bitSize:externalBorder:));
 
-+ (void)getFiducialMarker:(Mat*)img
-               dictionary:(int)dictionary
-                       id:(int)markerId
-NS_SWIFT_NAME(getFiducialMarker(img:dictionary:id:));
++ (void)getFiducialMarkerImage:(Mat*)img
+                    dictionary:(int)dictionary
+                            id:(int)markerId
+NS_SWIFT_NAME(getFiducialMarkerImage(img:dictionary:id:));
 
 // ---- detectFiducialMarkers (single dict) ------------------------------------
 
@@ -186,7 +186,7 @@ NS_SWIFT_NAME(getSolvePnpPoints(marker:objPoints:imgPoints:markerSize:));
                                  imgPoints:(Mat*)imgPoints
 NS_SWIFT_NAME(getSolvePnpPoints(marker:objPoints:imgPoints:));
 
-// ---- getGridBoard -----------------------------------------------------------
+// ---- getGridBoardImage ------------------------------------------------------
 
 /**
  * Generate a grid board image ready for printing.
@@ -196,17 +196,17 @@ NS_SWIFT_NAME(getSolvePnpPoints(marker:objPoints:imgPoints:));
  * @param bitSize   Size of each marker bit in pixels. Default 25.
  * @param ids       Optional custom marker id list (Mat of ints); pass nil for 0…N-1.
  */
-+ (void)getGridBoard:(Mat*)img
-           boardSize:(Size2i*)boardSize
-          dictionary:(int)dictionary
-             bitSize:(int)bitSize
-                 ids:(nullable Mat*)ids
-NS_SWIFT_NAME(getGridBoard(img:boardSize:dictionary:bitSize:ids:));
++ (void)getGridBoardImage:(Mat*)img
+                boardSize:(Size2i*)boardSize
+               dictionary:(int)dictionary
+                  bitSize:(int)bitSize
+                      ids:(nullable Mat*)ids
+NS_SWIFT_NAME(getGridBoardImage(img:boardSize:dictionary:bitSize:ids:));
 
-+ (void)getGridBoard:(Mat*)img
-           boardSize:(Size2i*)boardSize
-          dictionary:(int)dictionary
-NS_SWIFT_NAME(getGridBoard(img:boardSize:dictionary:));
++ (void)getGridBoardImage:(Mat*)img
+                boardSize:(Size2i*)boardSize
+               dictionary:(int)dictionary
+NS_SWIFT_NAME(getGridBoardImage(img:boardSize:dictionary:));
 
 // ---- detectGridBoard --------------------------------------------------------
 
@@ -342,7 +342,7 @@ NS_SWIFT_NAME(getSolvePnpPoints(diamond:objPoints:imgPoints:markerSize:));
                            imgPoints:(Mat*)imgPoints
 NS_SWIFT_NAME(getSolvePnpPoints(diamond:objPoints:imgPoints:));
 
-// ---- getFractalImage --------------------------------------------------------
+// ---- getFractalMarkerImage --------------------------------------------------
 
 /**
  * Render a fractal marker to a grayscale image.
@@ -350,14 +350,14 @@ NS_SWIFT_NAME(getSolvePnpPoints(diamond:objPoints:imgPoints:));
  * @param ftype   Fractal configuration (Aruco2FractalType).
  * @param bitSize Side length of one bit cell in pixels. Default 20.
  */
-+ (void)getFractalImage:(Mat*)img
-                  ftype:(int)ftype
-                bitSize:(int)bitSize
-NS_SWIFT_NAME(getFractalImage(img:ftype:bitSize:));
++ (void)getFractalMarkerImage:(Mat*)img
+                        ftype:(int)ftype
+                      bitSize:(int)bitSize
+NS_SWIFT_NAME(getFractalMarkerImage(img:ftype:bitSize:));
 
-+ (void)getFractalImage:(Mat*)img
-                  ftype:(int)ftype
-NS_SWIFT_NAME(getFractalImage(img:ftype:));
++ (void)getFractalMarkerImage:(Mat*)img
+                        ftype:(int)ftype
+NS_SWIFT_NAME(getFractalMarkerImage(img:ftype:));
 
 // ---- detectFractals ---------------------------------------------------------
 
