@@ -6,6 +6,7 @@
 
 #include "rvv_hal.hpp"
 #include "common.hpp"
+
 #include <type_traits>
 
 namespace cv { namespace rvv_hal { namespace imgproc {
@@ -217,9 +218,9 @@ static inline int remap32fC1(int start, int end, bool s16, const uchar *src_data
                 auto v2 = rvv<helper>::vcvt0(access(ix0, iy1), vl);
                 auto v3 = rvv<helper>::vcvt0(access(ix1, iy1), vl);
 
-                v0 = __riscv_vfmacc(v0, fx, __riscv_vfsub(v1, v0, vl), vl);
-                v2 = __riscv_vfmacc(v2, fx, __riscv_vfsub(v3, v2, vl), vl);
-                v0 = __riscv_vfmacc(v0, fy, __riscv_vfsub(v2, v0, vl), vl);
+                v0 = __riscv_vfadd(v0, __riscv_vfmul(fx, __riscv_vfsub(v1, v0, vl), vl), vl);
+                v2 = __riscv_vfadd(v2, __riscv_vfmul(fx, __riscv_vfsub(v3, v2, vl), vl), vl);
+                v0 = __riscv_vfadd(v0, __riscv_vfmul(fy, __riscv_vfsub(v2, v0, vl), vl), vl);
                 helper::vstore(reinterpret_cast<T*>(dst_data + i * dst_step) + j, rvv<helper>::vcvt1(v0, vl), vl);
             }
             else
@@ -241,6 +242,8 @@ private:
         // in the function static void interpolateLanczos4
         constexpr double s45 = 0.70710678118654752440084436210485;
         constexpr double cs[][2] = {{1, 0}, {-s45, -s45}, {0, 1}, {s45, -s45}, {-1, 0}, {s45, s45}, {0, -1}, {-s45, s45}};
+        constexpr int INTER_REMAP_COEF_BITS = 15;
+        constexpr int INTER_REMAP_COEF_SCALE = 1 << INTER_REMAP_COEF_BITS;
 
         for (int t = 0; t < 32; t++)
         {
@@ -266,10 +269,49 @@ private:
             for (int i = 0; i < 8; i++)
                 coeffs[t*8+i] *= sum;
         }
+
+        for (int fy = 0; fy < 32; fy++)
+        {
+            for (int fx = 0; fx < 32; fx++)
+            {
+                short* itab = coeffs_i + (fy * 32 + fx) * 64;
+                int isum = 0;
+                for (int ky = 0; ky < 8; ky++)
+                {
+                    float vy = coeffs[fy * 8 + ky];
+                    for (int kx = 0; kx < 8; kx++)
+                    {
+                        float v = vy * coeffs[fx * 8 + kx];
+                        int q = saturate_cast<short>(v * INTER_REMAP_COEF_SCALE);
+                        itab[ky * 8 + kx] = (short)q;
+                        isum += q;
+                    }
+                }
+
+                if (isum != INTER_REMAP_COEF_SCALE)
+                {
+                    int diff = isum - INTER_REMAP_COEF_SCALE;
+                    int ksize2 = 4, Mk1 = ksize2, Mk2 = ksize2, mk1 = ksize2, mk2 = ksize2;
+                    for (int ky = ksize2; ky < ksize2 + 2; ky++)
+                        for (int kx = ksize2; kx < ksize2 + 2; kx++)
+                        {
+                            if (itab[ky * 8 + kx] < itab[mk1 * 8 + mk2])
+                                mk1 = ky, mk2 = kx;
+                            else if (itab[ky * 8 + kx] > itab[Mk1 * 8 + Mk2])
+                                Mk1 = ky, Mk2 = kx;
+                        }
+                    if (diff < 0)
+                        itab[Mk1 * 8 + Mk2] = (short)(itab[Mk1 * 8 + Mk2] - diff);
+                    else
+                        itab[mk1 * 8 + mk2] = (short)(itab[mk1 * 8 + mk2] - diff);
+                }
+            }
+        }
     }
 
 public:
     float coeffs[32 * 8];
+    short coeffs_i[32 * 32 * 8 * 8];
 
     static RemapTable& instance()
     {
@@ -277,6 +319,249 @@ public:
         return tab;
     }
 };
+
+template<typename helper, bool s16>
+static inline int remap32fLanczos4C1(int start, int end, const uchar *src_data, size_t src_step, int src_width, int src_height,
+                                     uchar *dst_data, size_t dst_step, int dst_width,
+                                     const float* mapx, size_t mapx_step, const float* mapy, size_t mapy_step,
+                                     int interpolation, int border_type, const double* border_value)
+{
+    using T = typename helper::ElemType;
+    constexpr int INTER_REMAP_COEF_BITS = 15;
+
+    for (int i = start; i < end; i++)
+    {
+        int vl;
+        for (int j = 0; j < dst_width; j += vl)
+        {
+            vl = helper::setvl(dst_width - j);
+            typename RVV_SameLen<float, helper>::VecType mx, my;
+            if (s16)
+            {
+                auto map = __riscv_vlseg2e16_v_i16m1x2(reinterpret_cast<const short*>(mapx) + i * mapx_step + j * 2, vl);
+                mx = __riscv_vfwcvt_f(__riscv_vget_v_i16m1x2_i16m1(map, 0), vl);
+                my = __riscv_vfwcvt_f(__riscv_vget_v_i16m1x2_i16m1(map, 1), vl);
+            }
+            else
+            {
+                if (mapy == nullptr)
+                {
+                    auto map = __riscv_vlseg2e32_v_f32m2x2(mapx + i * mapx_step + j * 2, vl);
+                    mx = __riscv_vget_v_f32m2x2_f32m2(map, 0);
+                    my = __riscv_vget_v_f32m2x2_f32m2(map, 1);
+                }
+                else
+                {
+                    mx = RVV_SameLen<float, helper>::vload(mapx + i * mapx_step + j, vl);
+                    my = RVV_SameLen<float, helper>::vload(mapy + i * mapy_step + j, vl);
+                }
+            }
+            if (interpolation & CV_HAL_WARP_RELATIVE_MAP)
+            {
+                mx = __riscv_vfadd(mx, __riscv_vfcvt_f(__riscv_vadd(RVV_SameLen<uint, helper>::vid(vl), j, vl), vl), vl);
+                my = __riscv_vfadd(my, i, vl);
+            }
+
+            auto access = [&](typename RVV_SameLen<int, helper>::VecType ix, typename RVV_SameLen<int, helper>::VecType iy) {
+                auto ux = RVV_SameLen<uint, helper>::reinterpret(__riscv_vmin(__riscv_vmax(ix, 0, vl), src_width  - 1, vl));
+                auto uy = RVV_SameLen<uint, helper>::reinterpret(__riscv_vmin(__riscv_vmax(iy, 0, vl), src_height - 1, vl));
+                auto src = rvv<helper>::vloxei(reinterpret_cast<const T*>(src_data), __riscv_vmadd(uy, src_step, __riscv_vmul(ux, sizeof(T), vl), vl), vl);
+                if (border_type == CV_HAL_BORDER_CONSTANT)
+                {
+                    auto mask = __riscv_vmor(__riscv_vmsne(ix, RVV_SameLen<int, helper>::reinterpret(ux), vl), __riscv_vmsne(iy, RVV_SameLen<int, helper>::reinterpret(uy), vl), vl);
+                    src = __riscv_vmerge(src, helper::vmv(border_value[0], vl), mask, vl);
+                }
+                return src;
+            };
+
+            typename RVV_SameLen<int, helper>::VecType ix3, iy3;
+            typename RVV_SameLen<ushort, helper>::VecType imx, imy;
+            if (s16)
+            {
+                ix3 = __riscv_vfcvt_x(mx, vl);
+                iy3 = __riscv_vfcvt_x(my, vl);
+                auto md = __riscv_vle16_v_u16m1(reinterpret_cast<const ushort*>(mapy) + i * mapy_step + j, vl);
+                imx = __riscv_vand(md, 31, vl);
+                imy = __riscv_vand(__riscv_vsrl(md, 5, vl), 31, vl);
+            }
+            else
+            {
+                auto dmx = __riscv_vfcvt_x(__riscv_vfmul(mx, 32, vl), vl);
+                auto dmy = __riscv_vfcvt_x(__riscv_vfmul(my, 32, vl), vl);
+                ix3 = __riscv_vsra(dmx, 5, vl);
+                iy3 = __riscv_vsra(dmy, 5, vl);
+                imx = __riscv_vncvt_x(__riscv_vreinterpret_v_i32m2_u32m2(__riscv_vand(dmx, 31, vl)), vl);
+                imy = __riscv_vncvt_x(__riscv_vreinterpret_v_i32m2_u32m2(__riscv_vand(dmy, 31, vl)), vl);
+            }
+
+            auto ix0 = __riscv_vsub(ix3, 3, vl), iy0 = __riscv_vsub(iy3, 3, vl);
+            auto ix1 = __riscv_vsub(ix3, 2, vl), iy1 = __riscv_vsub(iy3, 2, vl);
+            auto ix2 = __riscv_vsub(ix3, 1, vl), iy2 = __riscv_vsub(iy3, 1, vl);
+            auto ix4 = __riscv_vadd(ix3, 1, vl), iy4 = __riscv_vadd(iy3, 1, vl);
+            auto ix5 = __riscv_vadd(ix3, 2, vl), iy5 = __riscv_vadd(iy3, 2, vl);
+            auto ix6 = __riscv_vadd(ix3, 3, vl), iy6 = __riscv_vadd(iy3, 3, vl);
+            auto ix7 = __riscv_vadd(ix3, 4, vl), iy7 = __riscv_vadd(iy3, 4, vl);
+
+            typename RVV_SameLen<float, helper>::VecType c0, c1, c2, c3, c4, c5, c6, c7;
+            auto intertab = [&](typename RVV_SameLen<ushort, helper>::VecType x) {
+                x = __riscv_vmul(x, sizeof(float) * 8, vl);
+                auto val = __riscv_vloxseg4ei16_v_f32m2x4(RemapTable::instance().coeffs, x, vl);
+                c0 = __riscv_vget_v_f32m2x4_f32m2(val, 0);
+                c1 = __riscv_vget_v_f32m2x4_f32m2(val, 1);
+                c2 = __riscv_vget_v_f32m2x4_f32m2(val, 2);
+                c3 = __riscv_vget_v_f32m2x4_f32m2(val, 3);
+                val = __riscv_vloxseg4ei16_v_f32m2x4(RemapTable::instance().coeffs, __riscv_vadd(x, sizeof(float) * 4, vl), vl);
+                c4 = __riscv_vget_v_f32m2x4_f32m2(val, 0);
+                c5 = __riscv_vget_v_f32m2x4_f32m2(val, 1);
+                c6 = __riscv_vget_v_f32m2x4_f32m2(val, 2);
+                c7 = __riscv_vget_v_f32m2x4_f32m2(val, 3);
+            };
+
+            if constexpr (std::is_same_v<T, uchar>)
+            {
+                int ix_buf[256] = {0};
+                int iy_buf[256] = {0};
+                ushort fx_buf[256] = {0};
+                ushort fy_buf[256] = {0};
+                RVV_SameLen<int, helper>::vstore(ix_buf, ix3, vl);
+                RVV_SameLen<int, helper>::vstore(iy_buf, iy3, vl);
+                RVV_SameLen<ushort, helper>::vstore(fx_buf, imx, vl);
+                RVV_SameLen<ushort, helper>::vstore(fy_buf, imy, vl);
+
+                const int border_value_u8 = saturate_cast<int>(border_value[0]);
+                T* dst_ptr = reinterpret_cast<T*>(dst_data + i * dst_step) + j;
+                const short* table = RemapTable::instance().coeffs_i;
+
+                for (int lane = 0; lane < vl; lane++)
+                {
+                    const short* tab = table + (fy_buf[lane] * 32 + fx_buf[lane]) * 64;
+                    const int xbase = ix_buf[lane] - 3;
+                    const int ybase = iy_buf[lane] - 3;
+                    int sum = 0;
+
+                    for (int ky = 0; ky < 8; ky++)
+                    {
+                        int sy = ybase + ky;
+                        const uchar* src_row = nullptr;
+
+                        if ((unsigned)sy < (unsigned)src_height)
+                        {
+                            src_row = src_data + sy * src_step;
+                        }
+                        else if (border_type == CV_HAL_BORDER_CONSTANT)
+                        {
+                            for (int kx = 0; kx < 8; kx++)
+                                sum += border_value_u8 * tab[ky * 8 + kx];
+                            continue;
+                        }
+                        else
+                        {
+                            sy = sy < 0 ? 0 : src_height - 1;
+                            src_row = src_data + sy * src_step;
+                        }
+
+                        for (int kx = 0; kx < 8; kx++)
+                        {
+                            int sx = xbase + kx;
+                            int pixel;
+                            if ((unsigned)sx < (unsigned)src_width)
+                                pixel = src_row[sx];
+                            else if (border_type == CV_HAL_BORDER_CONSTANT)
+                                pixel = border_value_u8;
+                            else
+                                pixel = src_row[sx < 0 ? 0 : src_width - 1];
+                            sum += pixel * tab[ky * 8 + kx];
+                        }
+                    }
+
+                    dst_ptr[lane] = saturate_cast<T>((sum + (1 << (INTER_REMAP_COEF_BITS - 1))) >> INTER_REMAP_COEF_BITS);
+                }
+            }
+            else
+            {
+                intertab(imx);
+                auto v0 = rvv<helper>::vcvt0(access(ix0, iy0), vl);
+                auto v1 = rvv<helper>::vcvt0(access(ix1, iy0), vl);
+                auto v2 = rvv<helper>::vcvt0(access(ix2, iy0), vl);
+                auto v3 = rvv<helper>::vcvt0(access(ix3, iy0), vl);
+                auto v4 = rvv<helper>::vcvt0(access(ix4, iy0), vl);
+                auto v5 = rvv<helper>::vcvt0(access(ix5, iy0), vl);
+                auto v6 = rvv<helper>::vcvt0(access(ix6, iy0), vl);
+                auto v7 = rvv<helper>::vcvt0(access(ix7, iy0), vl);
+                auto k0 = __riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmul(v0, c0, vl), v1, c1, vl), v2, c2, vl), v3, c3, vl), v4, c4, vl), v5, c5, vl), v6, c6, vl), v7, c7, vl);
+                v0 = rvv<helper>::vcvt0(access(ix0, iy1), vl);
+                v1 = rvv<helper>::vcvt0(access(ix1, iy1), vl);
+                v2 = rvv<helper>::vcvt0(access(ix2, iy1), vl);
+                v3 = rvv<helper>::vcvt0(access(ix3, iy1), vl);
+                v4 = rvv<helper>::vcvt0(access(ix4, iy1), vl);
+                v5 = rvv<helper>::vcvt0(access(ix5, iy1), vl);
+                v6 = rvv<helper>::vcvt0(access(ix6, iy1), vl);
+                v7 = rvv<helper>::vcvt0(access(ix7, iy1), vl);
+                auto k1 = __riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmul(v0, c0, vl), v1, c1, vl), v2, c2, vl), v3, c3, vl), v4, c4, vl), v5, c5, vl), v6, c6, vl), v7, c7, vl);
+                v0 = rvv<helper>::vcvt0(access(ix0, iy2), vl);
+                v1 = rvv<helper>::vcvt0(access(ix1, iy2), vl);
+                v2 = rvv<helper>::vcvt0(access(ix2, iy2), vl);
+                v3 = rvv<helper>::vcvt0(access(ix3, iy2), vl);
+                v4 = rvv<helper>::vcvt0(access(ix4, iy2), vl);
+                v5 = rvv<helper>::vcvt0(access(ix5, iy2), vl);
+                v6 = rvv<helper>::vcvt0(access(ix6, iy2), vl);
+                v7 = rvv<helper>::vcvt0(access(ix7, iy2), vl);
+                auto k2 = __riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmul(v0, c0, vl), v1, c1, vl), v2, c2, vl), v3, c3, vl), v4, c4, vl), v5, c5, vl), v6, c6, vl), v7, c7, vl);
+                v0 = rvv<helper>::vcvt0(access(ix0, iy3), vl);
+                v1 = rvv<helper>::vcvt0(access(ix1, iy3), vl);
+                v2 = rvv<helper>::vcvt0(access(ix2, iy3), vl);
+                v3 = rvv<helper>::vcvt0(access(ix3, iy3), vl);
+                v4 = rvv<helper>::vcvt0(access(ix4, iy3), vl);
+                v5 = rvv<helper>::vcvt0(access(ix5, iy3), vl);
+                v6 = rvv<helper>::vcvt0(access(ix6, iy3), vl);
+                v7 = rvv<helper>::vcvt0(access(ix7, iy3), vl);
+                auto k3 = __riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmul(v0, c0, vl), v1, c1, vl), v2, c2, vl), v3, c3, vl), v4, c4, vl), v5, c5, vl), v6, c6, vl), v7, c7, vl);
+                v0 = rvv<helper>::vcvt0(access(ix0, iy4), vl);
+                v1 = rvv<helper>::vcvt0(access(ix1, iy4), vl);
+                v2 = rvv<helper>::vcvt0(access(ix2, iy4), vl);
+                v3 = rvv<helper>::vcvt0(access(ix3, iy4), vl);
+                v4 = rvv<helper>::vcvt0(access(ix4, iy4), vl);
+                v5 = rvv<helper>::vcvt0(access(ix5, iy4), vl);
+                v6 = rvv<helper>::vcvt0(access(ix6, iy4), vl);
+                v7 = rvv<helper>::vcvt0(access(ix7, iy4), vl);
+                auto k4 = __riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmul(v0, c0, vl), v1, c1, vl), v2, c2, vl), v3, c3, vl), v4, c4, vl), v5, c5, vl), v6, c6, vl), v7, c7, vl);
+                v0 = rvv<helper>::vcvt0(access(ix0, iy5), vl);
+                v1 = rvv<helper>::vcvt0(access(ix1, iy5), vl);
+                v2 = rvv<helper>::vcvt0(access(ix2, iy5), vl);
+                v3 = rvv<helper>::vcvt0(access(ix3, iy5), vl);
+                v4 = rvv<helper>::vcvt0(access(ix4, iy5), vl);
+                v5 = rvv<helper>::vcvt0(access(ix5, iy5), vl);
+                v6 = rvv<helper>::vcvt0(access(ix6, iy5), vl);
+                v7 = rvv<helper>::vcvt0(access(ix7, iy5), vl);
+                auto k5 = __riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmul(v0, c0, vl), v1, c1, vl), v2, c2, vl), v3, c3, vl), v4, c4, vl), v5, c5, vl), v6, c6, vl), v7, c7, vl);
+                v0 = rvv<helper>::vcvt0(access(ix0, iy6), vl);
+                v1 = rvv<helper>::vcvt0(access(ix1, iy6), vl);
+                v2 = rvv<helper>::vcvt0(access(ix2, iy6), vl);
+                v3 = rvv<helper>::vcvt0(access(ix3, iy6), vl);
+                v4 = rvv<helper>::vcvt0(access(ix4, iy6), vl);
+                v5 = rvv<helper>::vcvt0(access(ix5, iy6), vl);
+                v6 = rvv<helper>::vcvt0(access(ix6, iy6), vl);
+                v7 = rvv<helper>::vcvt0(access(ix7, iy6), vl);
+                auto k6 = __riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmul(v0, c0, vl), v1, c1, vl), v2, c2, vl), v3, c3, vl), v4, c4, vl), v5, c5, vl), v6, c6, vl), v7, c7, vl);
+                v0 = rvv<helper>::vcvt0(access(ix0, iy7), vl);
+                v1 = rvv<helper>::vcvt0(access(ix1, iy7), vl);
+                v2 = rvv<helper>::vcvt0(access(ix2, iy7), vl);
+                v3 = rvv<helper>::vcvt0(access(ix3, iy7), vl);
+                v4 = rvv<helper>::vcvt0(access(ix4, iy7), vl);
+                v5 = rvv<helper>::vcvt0(access(ix5, iy7), vl);
+                v6 = rvv<helper>::vcvt0(access(ix6, iy7), vl);
+                v7 = rvv<helper>::vcvt0(access(ix7, iy7), vl);
+                auto k7 = __riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmul(v0, c0, vl), v1, c1, vl), v2, c2, vl), v3, c3, vl), v4, c4, vl), v5, c5, vl), v6, c6, vl), v7, c7, vl);
+                intertab(imy);
+                k0 = __riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmul(k0, c0, vl), k1, c1, vl), k2, c2, vl), k3, c3, vl), k4, c4, vl), k5, c5, vl), k6, c6, vl), k7, c7, vl);
+
+                helper::vstore(reinterpret_cast<T*>(dst_data + i * dst_step) + j, rvv<helper>::vcvt1(k0, vl), vl);
+            }
+        }
+    }
+
+    return CV_HAL_ERROR_OK;
+}
 
 template<typename helper>
 static inline int remap32fCubic(int start, int end, bool s16, const uchar *src_data, size_t src_step, int src_width, int src_height,
@@ -391,7 +676,6 @@ static inline int remap32fCubic(int start, int end, bool s16, const uchar *src_d
 
             intertab(my);
             k0 = __riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmul(k0, c0, vl), k1, c1, vl), k2, c2, vl), k3, c3, vl);
-
             helper::vstore(reinterpret_cast<T*>(dst_data + i * dst_step) + j, rvv<helper>::vcvt1(k0, vl), vl);
         }
     }
@@ -863,7 +1147,7 @@ static inline int remap32f(int src_type, const uchar *src_data, size_t src_step,
     // remove this #ifndef in the future if possible
 #ifndef __clang__
     case CV_HAL_INTER_LANCZOS4*100 + CV_8UC1:
-        return invoke(dst_width, dst_height, {remap32fLanczos4<RVV_U8MF2, s16>}, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, mapx, mapx_step, mapy, mapy_step, interpolation, border_type, border_value);
+        return invoke(dst_width, dst_height, {remap32fLanczos4C1<RVV_U8MF2, s16>}, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, mapx, mapx_step, mapy, mapy_step, interpolation, border_type, border_value);
     // disabled since UI is fast enough
     // case CV_HAL_INTER_LANCZOS4*100 + CV_16UC1:
     //     return invoke(dst_width, dst_height, {remap32fLanczos4<RVV_U16M1, s16>}, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, mapx, mapx_step, mapy, mapy_step, interpolation, border_type, border_value);
