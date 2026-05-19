@@ -2645,4 +2645,99 @@ TEST(ImgProc_ParallelFilter, morphology_compound)
     }
 }
 
+// Regression test for ndsrvp HAL filter padding robustness:
+// Exercises extreme-but-valid anchor positions with small images and large kernels
+// to ensure HAL implementations handle boundary-dominated padding correctly.
+TEST(Imgproc_Filter2D, padding_bounds_extreme_anchor)
+{
+    // Case 1: 1x1 image, large kernel, anchor at far right
+    {
+        Mat src = (Mat_<uchar>(1, 1) << 128);
+        Mat kernel = Mat::ones(1, 7, CV_32F) / 7.0f;
+        Mat dst;
+        Point anchor(6, 0);
+        EXPECT_NO_THROW(cv::filter2D(src, dst, -1, kernel, anchor, 0, BORDER_REPLICATE));
+        EXPECT_EQ(dst.size(), src.size());
+        EXPECT_NEAR(dst.at<uchar>(0, 0), 128, 1);
+    }
+
+    // Case 2: 1x1 image, large kernel, anchor at far left
+    {
+        Mat src = (Mat_<uchar>(1, 1) << 200);
+        Mat kernel = Mat::ones(1, 9, CV_32F) / 9.0f;
+        Mat dst;
+        Point anchor(0, 0);
+        EXPECT_NO_THROW(cv::filter2D(src, dst, -1, kernel, anchor, 0, BORDER_REPLICATE));
+        EXPECT_EQ(dst.size(), src.size());
+        EXPECT_NEAR(dst.at<uchar>(0, 0), 200, 1);
+    }
+
+    // Case 3: 2x2 image, 11x11 kernel, various anchors
+    {
+        Mat src = (Mat_<uchar>(2, 2) << 100, 150, 200, 250);
+        Mat kernel = Mat::ones(11, 11, CV_32F) / 121.0f;
+        Mat dst;
+        for (int ax : {0, 5, 10}) {
+            for (int ay : {0, 5, 10}) {
+                Point anchor(ax, ay);
+                EXPECT_NO_THROW(cv::filter2D(src, dst, -1, kernel, anchor, 0, BORDER_REPLICATE));
+                EXPECT_EQ(dst.size(), src.size());
+            }
+        }
+    }
+
+    // Case 4: ROI near edge of larger image (non-zero offset)
+    {
+        Mat full(10, 10, CV_8UC1, Scalar(100));
+        Mat roi = full(Rect(8, 8, 2, 2));
+        Mat kernel = Mat::ones(5, 5, CV_32F) / 25.0f;
+        Mat dst;
+        EXPECT_NO_THROW(cv::filter2D(roi, dst, -1, kernel, Point(4, 4), 0, BORDER_REPLICATE));
+        EXPECT_EQ(dst.size(), roi.size());
+        EXPECT_NO_THROW(cv::filter2D(roi, dst, -1, kernel, Point(0, 0), 0, BORDER_REPLICATE));
+        EXPECT_EQ(dst.size(), roi.size());
+    }
+
+    // Case 5: all border types with all valid anchors for wide kernel on narrow image
+    {
+        Mat src = (Mat_<uchar>(1, 3) << 10, 20, 30);
+        Mat kernel = Mat::ones(1, 15, CV_32F) / 15.0f;
+        Mat dst;
+        int borderTypes[] = {BORDER_REPLICATE, BORDER_REFLECT, BORDER_REFLECT_101, BORDER_CONSTANT};
+        for (int bt : borderTypes) {
+            for (int ax = 0; ax < 15; ax++) {
+                EXPECT_NO_THROW(cv::filter2D(src, dst, -1, kernel, Point(ax, 0), 0, bt))
+                    << "borderType=" << bt << " anchor_x=" << ax;
+                EXPECT_EQ(dst.size(), src.size());
+            }
+        }
+    }
+}
+
+// Regression test: small ROI with BORDER_ISOLATED and kernel larger than ROI width.
+// The HAL must handle the case where border regions dominate the center span.
+TEST(Imgproc_Filter2D, padding_bounds_roi_isolated)
+{
+    Mat full(20, 20, CV_8UC1, Scalar(100));
+    Mat roi = full(Rect(5, 5, 3, 3));
+    roi.setTo(Scalar(200));
+
+    Mat kernel = Mat::ones(7, 7, CV_32F) / 49.0f;
+    Mat dst;
+
+    for (int ax = 0; ax < 7; ax++) {
+        for (int ay = 0; ay < 7; ay++) {
+            EXPECT_NO_THROW(
+                cv::filter2D(roi, dst, -1, kernel, Point(ax, ay), 0,
+                             BORDER_REPLICATE | BORDER_ISOLATED))
+                << "anchor=(" << ax << "," << ay << ")";
+            EXPECT_EQ(dst.size(), roi.size());
+            double minv, maxv;
+            minMaxLoc(dst, &minv, &maxv);
+            EXPECT_NEAR(minv, 200, 1) << "anchor=(" << ax << "," << ay << ")";
+            EXPECT_NEAR(maxv, 200, 1) << "anchor=(" << ax << "," << ay << ")";
+        }
+    }
+}
+
 }} // namespace

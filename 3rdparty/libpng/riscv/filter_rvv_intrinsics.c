@@ -41,7 +41,7 @@ png_read_filter_row_up_rvv(png_row_infop row_info, png_bytep row,
 }
 
 static inline void
-png_read_filter_row_sub_rvv(size_t len, size_t bpp, unsigned char* row)
+png_read_filter_row_sub_rvv(size_t len, size_t bpp, unsigned char *row)
 {
    png_bytep rp_end = row + len;
 
@@ -97,8 +97,8 @@ png_read_filter_row_sub4_rvv(png_row_infop row_info, png_bytep row,
 }
 
 static inline void
-png_read_filter_row_avg_rvv(size_t len, size_t bpp, unsigned char* row,
-    const unsigned char* prev_row)
+png_read_filter_row_avg_rvv(size_t len, size_t bpp, unsigned char *row,
+    const unsigned char *prev_row)
 {
    png_bytep rp_end = row + len;
 
@@ -178,8 +178,8 @@ png_read_filter_row_avg4_rvv(png_row_infop row_info, png_bytep row,
 }
 
 static inline void
-png_read_filter_row_paeth_rvv(size_t len, size_t bpp, unsigned char* row,
-    const unsigned char* prev)
+png_read_filter_row_paeth_rvv(size_t len, size_t bpp, unsigned char *row,
+    const unsigned char *prev)
 {
    png_bytep rp_end = row + len;
 

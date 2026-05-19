@@ -237,7 +237,9 @@ INSTANTIATE_TEST_CASE_P(ThresholdPerfTestFluid, ThresholdOTPerfTest,
 INSTANTIATE_TEST_CASE_P(InRangePerfTestFluid, InRangePerfTest,
     Combine(Values(AbsExact().to_compare_f()),
             Values(szSmall128, szVGA, sz720p, sz1080p),
-            Values(CV_8UC1),
+            Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4,
+                   CV_16UC1, CV_16UC3,
+                   CV_16SC1, CV_16SC3),
             Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(Split3PerfTestFluid, Split3PerfTest,

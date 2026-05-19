@@ -4084,9 +4084,14 @@ CV_EXPORTS_W int connectedComponentsWithStats(InputArray image, OutputArray labe
 
 /** @brief Finds contours in a binary image.
 
-The function retrieves contours from the binary image using the algorithm @cite Suzuki85 . The contours
+The function retrieves contours from the binary image. The contours
 are a useful tool for shape analysis and object detection and recognition. See squares.cpp in the
 OpenCV sample directory.
+
+@note Since OpenCV 4.14, when mode is #RETR_LIST and no hierarchy is requested, this function
+automatically uses the TRUCO parallel algorithm @cite TRUCO2026, a scalable lock-free method for
+contour extraction. In all other cases, the sequential @cite Suzuki85 algorithm is used.
+
 @note Since opencv 3.2 source image is not modified by this function.
 
 @param image Source, an 8-bit single-channel image. Non-zero pixels are treated as 1's. Zero
@@ -4116,6 +4121,7 @@ CV_EXPORTS_W void findContours( InputArray image, OutputArrayOfArrays contours,
 CV_EXPORTS void findContours( InputArray image, OutputArrayOfArrays contours,
                               int mode, int method, Point offset = Point());
 
+
 //! @brief Find contours using link runs algorithm
 //!
 //! This function implements an algorithm different from cv::findContours:
@@ -4128,6 +4134,7 @@ CV_EXPORTS_W void findContoursLinkRuns(InputArray image, OutputArrayOfArrays con
 
 //! @overload
 CV_EXPORTS_W void findContoursLinkRuns(InputArray image, OutputArrayOfArrays contours);
+
 
 /** @brief Approximates a polygonal curve(s) with the specified precision.
 

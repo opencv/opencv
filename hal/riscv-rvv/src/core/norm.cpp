@@ -313,7 +313,7 @@ struct NormL2_RVV<short, double> {
             auto v_mul = __riscv_vwmul(v, v, vl);
             s = __riscv_vfadd_tu(s, s, __riscv_vfwcvt_f(v_mul, vl), vl);
         }
-        return __riscv_vfmv_f(__riscv_vfredosum(s, __riscv_vfmv_s_f_f64m1(0, __riscv_vsetvlmax_e32m1()), vlmax));
+        return __riscv_vfmv_f(__riscv_vfredosum(s, __riscv_vfmv_s_f_f64m1(0, __riscv_vsetvlmax_e64m1()), vlmax));
     }
 };
 
@@ -695,7 +695,7 @@ struct MaskedNormL2_RVV<short, double> {
                 s = __riscv_vfadd_tumu(b, s, s, __riscv_vfwcvt_f(b, v_mul, vl), vl);
             }
         }
-        return __riscv_vfmv_f(__riscv_vfredosum(s, __riscv_vfmv_s_f_f64m1(0, __riscv_vsetvlmax_e32m1()), vlmax));
+        return __riscv_vfmv_f(__riscv_vfredosum(s, __riscv_vfmv_s_f_f64m1(0, __riscv_vsetvlmax_e64m1()), vlmax));
     }
 };
 

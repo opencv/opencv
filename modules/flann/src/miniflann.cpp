@@ -663,33 +663,51 @@ int Index::radiusSearch(InputArray _query, OutputArray _indices,
     if( algo == FLANN_INDEX_LSH )
         CV_Error( Error::StsNotImplemented, "LSH index does not support radiusSearch operation" );
 
+    int rsearch_ret;
     switch( distType )
     {
     case FLANN_DIST_HAMMING:
-        return runRadiusSearch< HammingDistance >(index, query, indices, dists, radius, params);
-
+        rsearch_ret = runRadiusSearch< HammingDistance >(index, query, indices, dists, radius, params);
+        break;
     case FLANN_DIST_L2:
-        return runRadiusSearch< ::cvflann::L2<float> >(index, query, indices, dists, radius, params);
+        rsearch_ret = runRadiusSearch< ::cvflann::L2<float> >(index, query, indices, dists, radius, params);
+        break;
     case FLANN_DIST_L1:
-        return runRadiusSearch< ::cvflann::L1<float> >(index, query, indices, dists, radius, params);
+        rsearch_ret = runRadiusSearch< ::cvflann::L1<float> >(index, query, indices, dists, radius, params);
+        break;
 #if MINIFLANN_SUPPORT_EXOTIC_DISTANCE_TYPES
     case FLANN_DIST_DNAMMING:
-        return runRadiusSearch< DNAmmingDistance >(index, query, indices, dists, radius, params);
+        rsearch_ret = runRadiusSearch< DNAmmingDistance >(index, query, indices, dists, radius, params);
+        break;
     case FLANN_DIST_MAX:
-        return runRadiusSearch< ::cvflann::MaxDistance<float> >(index, query, indices, dists, radius, params);
+        rsearch_ret = runRadiusSearch< ::cvflann::MaxDistance<float> >(index, query, indices, dists, radius, params);
+        break;
     case FLANN_DIST_HIST_INTERSECT:
-        return runRadiusSearch< ::cvflann::HistIntersectionDistance<float> >(index, query, indices, dists, radius, params);
+        rsearch_ret = runRadiusSearch< ::cvflann::HistIntersectionDistance<float> >(index, query, indices, dists, radius, params);
+        break;
     case FLANN_DIST_HELLINGER:
-        return runRadiusSearch< ::cvflann::HellingerDistance<float> >(index, query, indices, dists, radius, params);
+        rsearch_ret = runRadiusSearch< ::cvflann::HellingerDistance<float> >(index, query, indices, dists, radius, params);
+        break;
     case FLANN_DIST_CHI_SQUARE:
-        return runRadiusSearch< ::cvflann::ChiSquareDistance<float> >(index, query, indices, dists, radius, params);
+        rsearch_ret = runRadiusSearch< ::cvflann::ChiSquareDistance<float> >(index, query, indices, dists, radius, params);
+        break;
     case FLANN_DIST_KL:
-        return runRadiusSearch< ::cvflann::KL_Divergence<float> >(index, query, indices, dists, radius, params);
+        rsearch_ret = runRadiusSearch< ::cvflann::KL_Divergence<float> >(index, query, indices, dists, radius, params);
+        break;
 #endif
     default:
         CV_Error(Error::StsBadArg, "Unknown/unsupported distance type");
+        return -1;
     }
-    return -1;
+    if (rsearch_ret > maxResults)
+        rsearch_ret = maxResults;
+    if (rsearch_ret < maxResults) {
+        if (_indices.needed())
+            indices.colRange(0, rsearch_ret).copyTo(_indices);
+        if (_dists.needed())
+            dists.colRange(0, rsearch_ret).copyTo(_dists);
+    }
+    return rsearch_ret;
 }
 
 flann_distance_t Index::getDistance() const

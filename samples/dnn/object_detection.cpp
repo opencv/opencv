@@ -324,7 +324,7 @@ inline void preprocess(const Mat& frame, Net& net, Size inpSize, float scale,
     if (net.getLayer(0)->outputNameToIndex("im_info") != -1)  // Faster-RCNN or R-FCN
     {
         resize(frame, frame, inpSize);
-        Mat imInfo = (Mat_<float>(1, 3) << inpSize.height, inpSize.width, 1.6f);
+        Mat imInfo = Mat_<float>({1, 3}, {(float)inpSize.height, (float)inpSize.width, 1.6f});
         net.setInput(imInfo, "im_info");
     }
 }
