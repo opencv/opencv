@@ -4,7 +4,7 @@ import tempfile
 import os
 import cv2 as cv
 import numpy as np
-from tests_common import NewOpenCVTests
+from tests_common import NewOpenCVTests, unittest
 
 
 class persistence_test(NewOpenCVTests):
