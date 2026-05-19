@@ -8,19 +8,18 @@ using namespace cv;
 int main()
 {
     //! [create_fractal]
-    Mat fractalImage;
-    aruco2::getFractalImage(fractalImage, aruco2::FRACTAL_3L_6);
-    imwrite("fractal.png", fractalImage);
+    Mat image;
+    aruco2::getFractalImage(image, aruco2::FRACTAL_3L_6);
+    imwrite("fractal.png", image);
     //! [create_fractal]
+    //!
+    //add some blur to make it more realistic. Otherwise inner corners will not be
+    //properly detected due to the perfect black and white borders
+    GaussianBlur(image, image, Size(3, 3), 0); //not needed in real scenarios, but helps in this synthetic example
 
-    std::cout << "Fractal image size: " << fractalImage.cols << "x" << fractalImage.rows << std::endl;
-
-    // Place fractal on a white scene for detection
-    Mat scene(fractalImage.rows + 100, fractalImage.cols + 100, CV_8UC1, Scalar(255));
-    fractalImage.copyTo(scene(Rect(50, 50, fractalImage.cols, fractalImage.rows)));
+    std::cout << "Fractal image size: " << image.cols << "x" << image.rows << std::endl;
 
     //! [detect_fractals]
-    Mat image = scene.clone();
     auto fractals = aruco2::detectFractals(image, aruco2::FRACTAL_3L_6);
 
     for (const auto &f : fractals) {
@@ -34,7 +33,6 @@ int main()
     aruco2::drawFractals(colorImage, fractals);
     imshow("Detected Fractals", colorImage);
     waitKey(0);
-    //! [draw_fractals]
 
     return 0;
 }

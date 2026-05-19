@@ -31,12 +31,8 @@ int main(int argc, char *argv[])
 
         aruco2::GridBoard board;
         if (aruco2::detectGridBoard(image, Size(9, 5), aruco2::DICT_ARUCO_MIP_36h12, board)) {
-            Mat imgPtsMat, objPtsMat;
-            aruco2::getSolvePnpPoints(board, objPtsMat, imgPtsMat, markerSize);
-
-            std::vector<Point2f> imgPts(imgPtsMat.begin<Point2f>(), imgPtsMat.end<Point2f>());
-            std::vector<Point3f> objPts(objPtsMat.begin<Point3f>(), objPtsMat.end<Point3f>());
-
+            std::vector<Point2f> imgPts; std::vector<Point3f> objPts;
+            aruco2::getSolvePnpPoints(board, objPts, imgPts, markerSize);
             allImgPts.push_back(imgPts);
             allObjPts.push_back(objPts);
         }

@@ -9,21 +9,13 @@ using namespace cv;
 int main()
 {
     //! [create_diamond]
-    Mat diamondImage;
-    aruco2::DictionaryType dict = aruco2::DICT_ARUCO_MIP_36h12;
-    Vec4i ids(10, 11, 12, 13);
-    aruco2::getDiamondImage(diamondImage, dict, ids);
-    imwrite("diamond.png", diamondImage);
+    Mat image;
+    aruco2::getDiamondImage(image, aruco2::DICT_ARUCO_MIP_36h12, Vec4i  (10, 11, 12, 13));
+    imwrite("diamond.png", image);
     //! [create_diamond]
-
-    std::cout << "Diamond image size: " << diamondImage.cols << "x" << diamondImage.rows << std::endl;
-
-    // Place diamond on a white scene for detection
-    Mat scene(diamondImage.rows + 100, diamondImage.cols + 100, CV_8UC1, Scalar(255));
-    diamondImage.copyTo(scene(Rect(50, 50, diamondImage.cols, diamondImage.rows)));
+    std::cout << "Diamond image size: " << image.cols << "x" << image.rows << std::endl;
 
     //! [detect_diamonds]
-    Mat image = scene.clone();
     auto diamonds = aruco2::detectDiamonds(image, aruco2::DICT_ARUCO_MIP_36h12);
 
     for (const auto &d : diamonds) {

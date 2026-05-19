@@ -10,20 +10,17 @@ using namespace cv;
 int main()
 {
     //! [generate_marker]
-    Mat markerImage;
-    aruco2::getFiducialMarker(markerImage, aruco2::DICT_ARUCO_MIP_36h12, 42);
-    imwrite("marker42.png", markerImage);
+    Mat image;
+    aruco2::getFiducialMarker(image, aruco2::DICT_ARUCO_MIP_36h12, 42);
+    imwrite("marker42.png", image);
     //! [generate_marker]
 
-    std::cout << "Generated marker size: " << markerImage.cols << "x" << markerImage.rows << std::endl;
+    std::cout << "Generated marker size: " << image.cols << "x" << image.rows << std::endl;
 
     // Place marker on a white scene for detection
-    Mat scene(300, 300, CV_8UC1, Scalar(255));
-    markerImage.copyTo(scene(Rect(50, 50, markerImage.cols, markerImage.rows)));
 
     //! [detect_single]
-    Mat image = scene.clone();
-    auto markers = aruco2::detectFiducialMarkers(image, aruco2::DICT_ARUCO_MIP_36h12);
+     auto markers = aruco2::detectFiducialMarkers(image, aruco2::DICT_ARUCO_MIP_36h12);
 
     for (const auto &m : markers) {
         std::cout << "Detected marker ID: " << m.id << " at " << m.corners[0] << std::endl;
@@ -46,10 +43,10 @@ int main()
     params.thres = 3;
     params.errorCorrectionRate = 0.0;
 
-    auto paramsMarkers = aruco2::detectFiducialMarkers(image, aruco2::DICT_ARUCO_MIP_36h12, params);
+    markers = aruco2::detectFiducialMarkers(image, aruco2::DICT_ARUCO_MIP_36h12, params);
     //! [params]
 
-    std::cout << "Custom parameters detection found " << paramsMarkers.size() << " marker(s)" << std::endl;
+    std::cout << "Custom parameters detection found " << markers.size() << " marker(s)" << std::endl;
 
     //! [draw_markers]
     Mat colorImage;
