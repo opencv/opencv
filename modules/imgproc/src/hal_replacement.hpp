@@ -1548,7 +1548,33 @@ inline int hal_ni_calcHist(const uchar* src_data, size_t src_step, int src_type,
 #define cv_hal_calcHist hal_ni_calcHist
 //! @endcond
 
-//! @}
+/**
+   @brief Demosaicing of a Bayer pattern image
+   @param src_data Source Bayer image data (single channel, 8-bit)
+   @param src_step Source image step in bytes
+   @param src_type Source image type (CV_8UC1)
+   @param src_width Source image width
+   @param src_height Source image height
+   @param dst_data Destination image data
+   @param dst_step Destination image step in bytes
+   @param dst_type Destination image type
+   @param dcn Destination channel number (1 for GRAY, 3 for BGR, 4 for BGRA)
+   @param blue Blue channel position: -1 for BG/GB patterns, 1 for RG/GR patterns
+   @param start_with_green 1 if first row starts with green pixel, 0 otherwise
+   @param bcoeff Blue luminance coefficient for GRAY path
+   @param rcoeff Red luminance coefficient for GRAY path
+*/
+inline int hal_ni_demosaicing(const uchar* src_data, size_t src_step, int src_type,
+                               int src_width, int src_height,
+                               uchar* dst_data, size_t dst_step, int dst_type,
+                               int dcn, int blue, int start_with_green, int bcoeff, int rcoeff)
+{
+    return CV_HAL_ERROR_NOT_IMPLEMENTED;
+}
+
+//! @cond IGNORED
+#define cv_hal_demosaicing hal_ni_demosaicing
+//! @endcond
 
 #if defined(__clang__)
 #pragma clang diagnostic pop
