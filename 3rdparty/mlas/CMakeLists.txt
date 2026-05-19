@@ -63,18 +63,25 @@ endif()
 
 set(mlas_platform_srcs)
 
-# Probe ASM language once. Some Android NDK toolchain + CMake combinations
-# fail to initialize ASM for certain ABIs (e.g. x86_64) even though the
-# target compiler can assemble .S files — that surfaces as
-# "CMAKE_ASM_COMPILE_OBJECT not set" at generate time. For archs whose
-# mlas platform.cpp dispatches to arch-specific kernels defined in .S
-# (X86_64, X86, ARM64, LOONGARCH64), disable MLAS entirely if ASM is
-# unavailable so the DNN module falls back to its built-in SGEMM.
-include(CheckLanguage)
+# Probe ASM language once. check_language(ASM) is a no-op when
+# CMAKE_ASM_COMPILER is already set in cache — and the Android NDK toolchain
+# pre-sets it for every ABI. So on Android the guard falls through to
+# enable_language(ASM), which then fails at generate time with
+# "CMAKE_ASM_COMPILE_OBJECT not set" on the NDK + CMake 3.22.1 combo CI uses.
+# Skip MLAS on Android for the ASM-using arches; the DNN module falls back to
+# its built-in SGEMM. Android armv7a stays enabled via the C++-only
+# sgemmc.cpp path under MLAS_ARM below.
 set(_MLAS_REQUIRES_ASM FALSE)
 if(MLAS_X86_64 OR MLAS_X86 OR MLAS_ARM64 OR MLAS_LOONGARCH64)
   set(_MLAS_REQUIRES_ASM TRUE)
 endif()
+if(ANDROID AND _MLAS_REQUIRES_ASM)
+  message(STATUS "MLAS: skipping on Android ${CMAKE_ANDROID_ARCH_ABI} "
+                 "(enable_language(ASM) from subdir is unreliable here); "
+                 "DNN will use its built-in SGEMM")
+  return()
+endif()
+include(CheckLanguage)
 set(_MLAS_HAS_ASM FALSE)
 check_language(ASM)
 if(CMAKE_ASM_COMPILER)
