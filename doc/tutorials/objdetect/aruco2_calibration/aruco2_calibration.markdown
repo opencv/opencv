@@ -2,7 +2,7 @@ Calibration with ArUco2 Boards {#tutorial_aruco2_calibration}
 ==============================
 
 @prev_tutorial{tutorial_aruco2_boards}
-@next_tutorial{tutorial_aruco2_pose}
+@next_tutorial{tutorial_aruco2_diamonds}
 
 |    |    |
 | -: | :- |

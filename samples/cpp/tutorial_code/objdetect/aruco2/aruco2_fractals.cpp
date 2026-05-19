@@ -33,6 +33,7 @@ int main()
     aruco2::drawFractals(colorImage, fractals);
     imshow("Detected Fractals", colorImage);
     waitKey(0);
+    //! [draw_fractals]
 
     return 0;
 }

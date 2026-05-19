@@ -165,11 +165,8 @@ struct CV_EXPORTS_W_SIMPLE FiducialMarker {
  * @param id          marker identifier; must be a valid index in the chosen dictionary
  * @param bitSize  output size in pixels of each marker bit
  * @param externalBorder indicates whether to add a white border around the marker
- * @code
- * cv::Mat markerImg;
- * cv::aruco2::getFiducialMarker(markerImg,DICT_ARUCO_MIP_36h12, 42);
- * cv::imwrite("marker_42.png", markerImg);
- * @endcode
+ *
+ * @snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_detection.cpp generate_marker
  */
 CV_EXPORTS_W void getFiducialMarker(OutputArray img, cv::aruco2::DictionaryType dictionary, int id, int bitSize=20,bool externalBorder=true);
 
@@ -184,9 +181,9 @@ CV_EXPORTS_W void getFiducialMarker(OutputArray img, cv::aruco2::DictionaryType 
  * Performs the full detection pipeline: adaptive thresholding → contour tracing →
  * quadrilateral fitting → bit extraction → dictionary lookup → subpixel corner refinement.
  *
- * @note Lens distortion is not corrected internally.  For accurate pose estimation,
- * undistort the image first with the known camera model.
- * @sa undistort, detectFiducialMarkers(InputArray, const std::vector<DictionaryType>&, const DetectionParameters&)
+ * The implementation is based on the ArUco Library @cite Aruco2014 @cite romero2018speeded @cite GARRIDOJURADO2026102690.
+ *
+ * @snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_detection.cpp detect_single
  */
 CV_EXPORTS_W std::vector<cv::aruco2::FiducialMarker> detectFiducialMarkers(InputArray image, cv::aruco2::DictionaryType dictionary = cv::aruco2::DICT_ARUCO_MIP_36h12,
                                           const cv::aruco2::DetectionParameters &detectorParams = {});
@@ -204,6 +201,7 @@ CV_EXPORTS_W std::vector<cv::aruco2::FiducialMarker> detectFiducialMarkers(Input
  * The implementation is based on the ArUco Library @cite Aruco2014 @cite romero2018speeded @cite GARRIDOJURADO2026102690.
  *
  * @sa FiducialMarker::dictionary
+ * @snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_detection.cpp multi_dict
  */
 CV_EXPORTS_W std::vector<cv::aruco2::FiducialMarker> detectFiducialMarkers(InputArray image, const std::vector<cv::aruco2::DictionaryType> &dictionaries,
                                           const cv::aruco2::DetectionParameters &detectorParams = {});
@@ -221,6 +219,7 @@ CV_EXPORTS_W std::vector<cv::aruco2::FiducialMarker> detectFiducialMarkers(Input
  * - the marker id as text at the marker centroid
  *
  * Useful for visualisation and debugging.
+ * @snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_detection.cpp draw_markers
  */
 CV_EXPORTS_W void drawFiducialMarkers(InputOutputArray image, const std::vector<cv::aruco2::FiducialMarker> &markers,
                                  Scalar borderColor = Scalar(0, 255, 0));
@@ -237,6 +236,8 @@ CV_EXPORTS_W void drawFiducialMarkers(InputOutputArray image, const std::vector<
  * @param rvec          rotation vector (from solvePnP)
  * @param tvec          translation vector (from solvePnP)
  * @param length        axis length in the same unit as @p tvec (e.g. metres)
+ *
+ * @snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_pose.cpp pose_single_marker
  */
 CV_EXPORTS_W void drawAxis(InputOutputArray image, InputArray cameraMatrix, InputArray distCoeffs,
                       InputArray rvec, InputArray tvec, float length);
@@ -253,16 +254,12 @@ CV_EXPORTS_W void drawAxis(InputOutputArray image, InputArray cameraMatrix, Inpu
  * @param markerSize  physical side length of the marker (e.g. metres); objPoints are scaled
  *                    by this value.  Default 1.f returns unit-size points.
  *
- * @code
- * cv::Mat rvec, tvec, imgPts, objPts;
- * cv::aruco2::getSolvePnpPoints(marker, objPts, imgPts, 0.05f); // 5 cm marker
- * cv::solvePnP(objPts, imgPts, cameraMatrix, distCoeffs, rvec, tvec);
- * @endcode
+ * @snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_pose.cpp pose_single_marker
  */
 CV_EXPORTS_W void getSolvePnpPoints(const cv::aruco2::FiducialMarker &marker, OutputArray objPoints, OutputArray imgPoints, float markerSize = 1.f);
 
 
-/** @brief Result of detecting a ChArUco2-style grid board.
+/** @brief Result of detecting a grid board.
  *
  * Follows the ChArUco2 design @cite MunozSalinas2026ChArUco2 : every square carries an ArUco marker (standard markers on black
  * squares, inverted markers on white squares), yielding N×M markers on an N×M board and
@@ -273,6 +270,7 @@ CV_EXPORTS_W void getSolvePnpPoints(const cv::aruco2::FiducialMarker &marker, Ou
  * point arrays for solvePnP().
  *
  * @sa detectGridBoard, getSolvePnpPoints(const GridBoard, OutputArray, OutputArray)
+ * @snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_boards.cpp detect_board
  */
 struct CV_EXPORTS_W_SIMPLE GridBoard {
     CV_WRAP GridBoard() {}
@@ -298,12 +296,13 @@ private:
  *
  * Markers are laid out in row-major order with no gap between them.
  * Pass the same `boardSize`, `dictionary`, and `ids` to detectGridBoard() for detection.
+ * @snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_boards.cpp create_board
  */
 CV_EXPORTS_W void getGridBoard(OutputArray img, Size boardSize, cv::aruco2::DictionaryType dictionary,
                                 int bitSize = 25, InputArray ids = noArray());
 
 
-/** @brief Detect a rectangular grid board of ArUco markers.
+/** @brief Detect a rectangular grid board of ArUco markers (ChArUco2 design @cite MunozSalinas2026ChArUco2).
  *
  * @param image        input image (grayscale or BGR)
  * @param gridSize     board layout as columns × rows (e.g. `cv::Size(4, 3)` for a 4×3 grid)
@@ -313,10 +312,12 @@ CV_EXPORTS_W void getGridBoard(OutputArray img, Size boardSize, cv::aruco2::Dict
  *                     if empty, ids 0…(cols*rows−1) are assumed
  * @return             true if at least one board marker was detected
  *
+ *
  * In Python the return value and output parameter are combined:
  * @code{.py}
  * found, board = cv.aruco2.detectGridBoard(image, (4, 3), cv.aruco2.DICT_ARUCO_MIP_36h12)
  * @endcode
+ * @snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_boards.cpp detect_board
  */
 CV_EXPORTS_W bool detectGridBoard(InputArray image, cv::Size gridSize, cv::aruco2::DictionaryType dictionary,
                          CV_OUT cv::aruco2::GridBoard &board, InputArray ids = noArray());
@@ -330,12 +331,13 @@ CV_EXPORTS_W bool detectGridBoard(InputArray image, cv::Size gridSize, cv::aruco
  *
  * For each detected board corner a filled circle is drawn together with its global corner id.
  * Useful for verifying that the board detection and corner assignment are correct.
+ * @snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_boards.cpp draw_board
  */
 CV_EXPORTS_W void drawGridBoard(InputOutputArray image, const cv::aruco2::GridBoard &board,
                                Scalar color = Scalar(0, 255, 0),bool drawMarkerIds=false);
 
 
-/** @brief Compute object and image points for a detected board to pass to solvePnP().
+/** @brief Compute object and image points for a detected board to pass to pose estimation.
  *
  * @param board      a detected board returned by detectGridBoard()
  * @param objPoints  output array of corresponding 3-D object points in board coordinates (CV_32FC3).
@@ -349,6 +351,7 @@ CV_EXPORTS_W void drawGridBoard(InputOutputArray image, const cv::aruco2::GridBo
  * even when the board is partially occluded.
  *
  * @sa getSolvePnpPoints(const FiducialMarker &, OutputArray, OutputArray)
+ * @snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_pose.cpp pose_board
  */
 CV_EXPORTS_W void getSolvePnpPoints(const cv::aruco2::GridBoard &board, OutputArray objPoints, OutputArray imgPoints, float markerSize = 1.f);
 
@@ -385,11 +388,7 @@ private:
  * @param ids           ids of the 4 constituent markers in clockwise order from top-left
  * @param bitSize      size of each marker bit in pixels (default 20)
  *
- * @code
- * cv::Mat diamondImg;
- * cv::aruco2::getDiamondImage(diamondImg,DICT_ARUCO_MIP_36h12, {10, 11, 12, 13} );
- * cv::imwrite("diamond.png", diamondImg);
- * @endcode
+ * @snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_diamonds.cpp create_diamond
  *
  * Pass the same `dictionary` and `ids` to detectDiamonds() for detection.
  */
@@ -398,13 +397,14 @@ CV_EXPORTS_W void getDiamondImage(OutputArray img,const cv::aruco2::DictionaryTy
 
 /** @brief Detect ChArUco2-style diamond markers in an image.
  *
- * A diamond is a 2×2 block of ArUco markers (standard on black squares, inverted on white).
+ * A diamond is a 2×2 block of ArUco markers (standard on black squares, inverted on white) @cite MunozSalinas2026ChArUco2.
  * Each detected Diamond carries the 4 constituent FiducialMarker objects and their combined id as a
  * `Vec4i` for convenient access.
  *
  * @param image        input image (grayscale or BGR)
  * @param dictionary   dictionary used to print the diamond markers
  * @return             vector of detected Diamond objects; empty if none found
+ * @snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_diamonds.cpp detect_diamonds
  */
 CV_EXPORTS_W std::vector<cv::aruco2::Diamond> detectDiamonds(InputArray image, cv::aruco2::DictionaryType dictionary);
 
@@ -419,8 +419,9 @@ CV_EXPORTS_W std::vector<cv::aruco2::Diamond> detectDiamonds(InputArray image, c
  * - a quadrilateral outline connecting the 4 outer corners
  * - a small filled square at each of the 9 grid corners
  * - the Vec4i diamond id as text at the diamond centroid
+ * @snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_diamonds.cpp draw_diamonds
  */
-CV_EXPORTS_W void drawDiamonds(InputOutputArray image, const std::vector<cv::aruco2::Diamond> &diamonds,
+CV_EXPORTS_W void drawDiamonds(InputOutputArray image, const std::vector<Diamond> &diamonds,
                                Scalar color = Scalar(0, 255, 0),bool drawMarkerIds=false);
 
 
@@ -439,6 +440,7 @@ CV_EXPORTS_W void drawDiamonds(InputOutputArray image, const std::vector<cv::aru
  *
  * @sa getSolvePnpPoints(const FiducialMarker &, OutputArray, OutputArray),
  *     getSolvePnpPoints(const GridBoard&, OutputArray, OutputArray)
+ * @snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_diamonds.cpp pose_diamond
  */
 CV_EXPORTS_W void getSolvePnpPoints(const cv::aruco2::Diamond &diamond, OutputArray objPoints, OutputArray imgPoints, float markerSize = 1.f);
 
@@ -495,6 +497,7 @@ private:
  * @param img      output CV_8UC1 image
  * @param ftype    fractal configuration (FRACTAL_2L_6 … FRACTAL_5L_6)
  * @param bitSize  side length of one bit cell in pixels (default 20)
+ * @snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_fractals.cpp create_fractal
  */
 CV_EXPORTS_W void getFractalImage(OutputArray img, cv::aruco2::FractalType ftype, int bitSize=20);
 
@@ -507,10 +510,11 @@ CV_EXPORTS_W void getFractalImage(OutputArray img, cv::aruco2::FractalType ftype
  * @param image  input image (BGR or grayscale)
  * @param ftype  fractal configuration to search for
  * @return vector of detected fractal markers; empty if none found
+ * @snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_fractals.cpp detect_fractals
  */
 CV_EXPORTS_W std::vector<cv::aruco2::FractalMarker> detectFractals(InputArray image, cv::aruco2::FractalType ftype);
 
-/** @brief Draw detected fractal markers on an image.
+/** @brief Draw detected fractal markers on an image @cite romero2019fractal.
  *
  * Draws a coloured quadrilateral around each marker, a red dot on @p corners[0] to
  * indicate orientation, and the marker id at the centroid.
@@ -520,6 +524,7 @@ CV_EXPORTS_W std::vector<cv::aruco2::FractalMarker> detectFractals(InputArray im
  * @param color            border and label colour (default green)
  * @param drawAllImagePoints  if true, draw a small circle at every matched image point
  *                         stored inside each FractalMarker (default true)
+ * @snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_fractals.cpp draw_fractals
  */
 CV_EXPORTS_W void drawFractals(InputOutputArray image, const std::vector<cv::aruco2::FractalMarker> &fractals,
                                   Scalar color = Scalar(0, 255, 0), bool drawAllImagePoints = true);
@@ -543,6 +548,7 @@ CV_EXPORTS_W void drawFractals(InputOutputArray image, const std::vector<cv::aru
  * @sa getSolvePnpPoints(const FiducialMarker &, OutputArray, OutputArray, float),
  *     getSolvePnpPoints(const GridBoard &, OutputArray, OutputArray, float),
  *     getSolvePnpPoints(const Diamond &, OutputArray, OutputArray, float)
+ * @snippet samples/cpp/tutorial_code/objdetect/aruco2/aruco2_pose.cpp pose_fractal
  */
 CV_EXPORTS_W void getSolvePnpPoints(const cv::aruco2::FractalMarker &fractal, OutputArray objPoints,
                                OutputArray imgPoints, float markerSize = 1.f);

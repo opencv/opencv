@@ -2,6 +2,7 @@ Detection of ArUco2 Markers in Java {#tutorial_aruco2_java_detection}
 ===================================
 
 @prev_tutorial{tutorial_aruco2_pose}
+@next_tutorial{tutorial_py_aruco2_detection}
 
 |    |    |
 | -: | :- |

@@ -2,6 +2,7 @@ Pose Estimation with ArUco2 {#tutorial_aruco2_pose}
 ============================
 
 @prev_tutorial{tutorial_aruco2_fractals}
+@next_tutorial{tutorial_aruco2_java_detection}
 
 |    |    |
 | -: | :- |

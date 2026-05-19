@@ -1,6 +1,7 @@
 Detection of ArUco2 Markers {#tutorial_aruco2_detection}
 ===========================
 
+@prev_tutorial{tutorial_table_of_content_aruco2}
 @next_tutorial{tutorial_aruco2_boards}
 
 |    |    |

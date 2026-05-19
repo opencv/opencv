@@ -62,9 +62,4 @@ You can also pass `true` as an optional fourth parameter to draw the IDs of the 
 Camera Calibration with Boards
 ------------------------------
 
-ArUco2 boards are particularly useful for camera calibration. Unlike traditional chessboards, they do not require the entire board to be visible to be useful.
-
-Key advantages for calibration:
-- **Partial Visibility:** You can calibrate your camera even if only a part of the board is in the frame. This is extremely valuable for capturing data at the edges and corners of the image sensor, where lens distortion is typically most significant.
-- **Ambiguity Removal:** Traditional chessboards can suffer from "phase" ambiguity (the calibration algorithm might misidentify which corner is which if the board is symmetric). Since each square in an ArUco2 board contains a unique marker ID, the identity and position of every corner are always known unequivocally.
-- **Robustness:** Calibration can proceed even in the presence of significant occlusions or shadows that would cause traditional chessboard detection to fail.
+ArUco2 boards are particularly useful for camera calibration. For a detailed guide and a complete code example, please refer to the @ref tutorial_aruco2_calibration tutorial.

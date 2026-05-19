@@ -1,6 +1,9 @@
 Detection of ArUco2 Markers in JavaScript {#tutorial_js_aruco2_detection}
 =========================================
 
+@prev_tutorial{tutorial_py_aruco2_detection}
+@next_tutorial{tutorial_barcode_detect_and_decode}
+
 Goals
 -----
 
@@ -8,7 +11,7 @@ In this tutorial you will learn:
 - What ArUco2 markers are and why they are useful.
 - How to generate ArUco2 markers with OpenCV.js.
 - How to detect ArUco2 markers in an image using OpenCV.js.
-- How to handle multiple dictionaryionaries in a single pass.
+- How to handle multiple dictionaries in a single pass.
 - How to configure detection parameters.
 
 Introduction
@@ -109,7 +112,7 @@ colorImg.delete();
 Multi-Dictionary Detection
 --------------------------
 
-One of the most powerful features of `aruco2` is detecting markers from multiple dictionaryionaries at once. In JavaScript, pass a `cv.DictionaryTypeVector` containing the dictionary constants.
+One of the most powerful features of `aruco2` is detecting markers from multiple dictionaries at once. In JavaScript, pass a `cv.DictionaryTypeVector` containing the dictionary constants.
 
 @code{.js}
 let DICT1 = cv.aruco2_DictionaryType.DICT_ARUCO_MIP_36h12;

@@ -1,6 +1,9 @@
 Detection of ArUco2 Markers in Python {#tutorial_py_aruco2_detection}
 ===========================
 
+@prev_tutorial{tutorial_aruco2_java_detection}
+@next_tutorial{tutorial_js_aruco2_detection}
+
 Goals
 -----
 

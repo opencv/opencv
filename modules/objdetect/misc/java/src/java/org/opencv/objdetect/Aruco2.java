@@ -57,14 +57,14 @@ public class Aruco2 {
     }
 
     @SuppressWarnings("unchecked")
-    public static List<FiducialMarker> detectFiducialMarkers(Mat image, int dict, DetectionParameters detectorParams) {
-        return (List<FiducialMarker>)(List<?>)Objdetect.Aruco2_detectFiducialMarkers_Params(image, dict, detectorParams.nativeObj);
+    public static List<FiducialMarker> detectFiducialMarkers(Mat image, int dictionary, DetectionParameters detectorParams) {
+        return (List<FiducialMarker>)(List<?>)Objdetect.Aruco2_detectFiducialMarkers_Params(image, dictionary, detectorParams.nativeObj);
     }
 
     @SuppressWarnings("unchecked")
-    public static List<FiducialMarker> detectFiducialMarkers(Mat image, int dict) {
+    public static List<FiducialMarker> detectFiducialMarkers(Mat image, int dictionary) {
         DetectionParameters params = new DetectionParameters();
-        return (List<FiducialMarker>)(List<?>)Objdetect.Aruco2_detectFiducialMarkers_Params(image, dict, params.nativeObj);
+        return (List<FiducialMarker>)(List<?>)Objdetect.Aruco2_detectFiducialMarkers_Params(image, dictionary, params.nativeObj);
     }
 
     @SuppressWarnings("unchecked")
@@ -74,8 +74,8 @@ public class Aruco2 {
     }
 
     @SuppressWarnings("unchecked")
-    public static List<FiducialMarker> detectFiducialMarkers(Mat image, MatOfInt dicts, DetectionParameters detectorParams) {
-        return (List<FiducialMarker>)(List<?>)Objdetect.Aruco2_detectFiducialMarkers_Dicts(image, dicts, detectorParams.nativeObj);
+    public static List<FiducialMarker> detectFiducialMarkers(Mat image, MatOfInt dictionaries, DetectionParameters detectorParams) {
+        return (List<FiducialMarker>)(List<?>)Objdetect.Aruco2_detectFiducialMarkers_Dicts(image, dictionaries, detectorParams.nativeObj);
     }
 
     @SuppressWarnings("unchecked")
@@ -100,24 +100,24 @@ public class Aruco2 {
         Objdetect.Aruco2_getSolvePnpPoints_FiducialMarker(marker.nativeObj, objPoints, imgPoints, 1.0f);
     }
 
-    public static void getGridBoard(Mat img, Size boardSize, int dict, int bitSize, Mat ids) {
-        Objdetect.Aruco2_getGridBoard(img, boardSize, dict, bitSize, ids);
+    public static void getGridBoard(Mat img, Size boardSize, int dictionary, int bitSize, Mat ids) {
+        Objdetect.Aruco2_getGridBoard(img, boardSize, dictionary, bitSize, ids);
     }
 
-    public static void getGridBoard(Mat img, Size boardSize, int dict, int bitSize) {
-        Objdetect.Aruco2_getGridBoard(img, boardSize, dict, bitSize);
+    public static void getGridBoard(Mat img, Size boardSize, int dictionary, int bitSize) {
+        Objdetect.Aruco2_getGridBoard(img, boardSize, dictionary, bitSize);
     }
 
-    public static void getGridBoard(Mat img, Size boardSize, int dict) {
-        Objdetect.Aruco2_getGridBoard(img, boardSize, dict);
+    public static void getGridBoard(Mat img, Size boardSize, int dictionary) {
+        Objdetect.Aruco2_getGridBoard(img, boardSize, dictionary);
     }
 
-    public static boolean detectGridBoard(Mat image, Size gridSize, int dict, Aruco2_GridBoard board, Mat ids) {
-        return Objdetect.Aruco2_detectGridBoard_Ids(image, gridSize, dict, board.nativeObj, ids);
+    public static boolean detectGridBoard(Mat image, Size gridSize, int dictionary, Aruco2_GridBoard board, Mat ids) {
+        return Objdetect.Aruco2_detectGridBoard_Ids(image, gridSize, dictionary, board.nativeObj, ids);
     }
 
-    public static boolean detectGridBoard(Mat image, Size gridSize, int dict, Aruco2_GridBoard board) {
-        return Objdetect.Aruco2_detectGridBoard_NoIds(image, gridSize, dict, board.nativeObj);
+    public static boolean detectGridBoard(Mat image, Size gridSize, int dictionary, Aruco2_GridBoard board) {
+        return Objdetect.Aruco2_detectGridBoard_NoIds(image, gridSize, dictionary, board.nativeObj);
     }
 
     public static void drawGridBoard(Mat image, Aruco2_GridBoard board, Scalar color, boolean drawMarkerIds) {
@@ -137,8 +137,8 @@ public class Aruco2 {
     }
 
     @SuppressWarnings("unchecked")
-    public static List<Diamond> detectDiamonds(Mat image, int dict) {
-        return (List<Diamond>)(List<?>)Objdetect.Aruco2_detectDiamonds(image, dict);
+    public static List<Diamond> detectDiamonds(Mat image, int dictionary) {
+        return (List<Diamond>)(List<?>)Objdetect.Aruco2_detectDiamonds(image, dictionary);
     }
 
     public static void getDiamondImage(Mat img, int dictionary, int[] ids, int bitSize) {
