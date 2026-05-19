@@ -54,7 +54,7 @@
             "Aruco2_DetectionParameters_0" : {
                 "j_code" : [],
                 "jn_code" : [ "public static native long Aruco2_DetectionParameters_0();" ],
-                "cpp_code" : [ 
+                "cpp_code" : [
                     "JNIEXPORT jlong JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1DetectionParameters_10(JNIEnv*, jclass);",
                     "JNIEXPORT jlong JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1DetectionParameters_10(JNIEnv*, jclass) {",
                     "    return (jlong) new cv::aruco2::DetectionParameters();",
@@ -64,7 +64,7 @@
             "Aruco2_FiducialMarker_0" : {
                 "j_code" : [],
                 "jn_code" : [ "public static native long Aruco2_FiducialMarker_0();" ],
-                "cpp_code" : [ 
+                "cpp_code" : [
                     "JNIEXPORT jlong JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1FiducialMarker_10(JNIEnv*, jclass);",
                     "JNIEXPORT jlong JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1FiducialMarker_10(JNIEnv*, jclass) {",
                     "    return (jlong) new cv::aruco2::FiducialMarker();",
@@ -74,7 +74,7 @@
             "Aruco2_GridBoard_0" : {
                 "j_code" : [],
                 "jn_code" : [ "public static native long Aruco2_GridBoard_0();" ],
-                "cpp_code" : [ 
+                "cpp_code" : [
                     "JNIEXPORT jlong JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1GridBoard_10(JNIEnv*, jclass);",
                     "JNIEXPORT jlong JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1GridBoard_10(JNIEnv*, jclass) {",
                     "    return (jlong) new cv::aruco2::GridBoard();",
@@ -84,7 +84,7 @@
             "Aruco2_Diamond_0" : {
                 "j_code" : [],
                 "jn_code" : [ "public static native long Aruco2_Diamond_0();" ],
-                "cpp_code" : [ 
+                "cpp_code" : [
                     "JNIEXPORT jlong JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1Diamond_10(JNIEnv*, jclass);",
                     "JNIEXPORT jlong JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1Diamond_10(JNIEnv*, jclass) {",
                     "    return (jlong) new cv::aruco2::Diamond();",
@@ -94,7 +94,7 @@
             "Aruco2_FractalMarker_0" : {
                 "j_code" : [],
                 "jn_code" : [ "public static native long Aruco2_FractalMarker_0();" ],
-                "cpp_code" : [ 
+                "cpp_code" : [
                     "JNIEXPORT jlong JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1FractalMarker_10(JNIEnv*, jclass);",
                     "JNIEXPORT jlong JNICALL Java_org_opencv_objdetect_Objdetect_Aruco2_1FractalMarker_10(JNIEnv*, jclass) {",
                     "    return (jlong) new cv::aruco2::FractalMarker();",

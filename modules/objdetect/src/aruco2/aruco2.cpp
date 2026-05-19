@@ -111,7 +111,7 @@ std::vector<FiducialMarker>  MarkerDetector::detect(const cv::Mat &img,   const 
         candidatesOut=&candidateslocal;
     }
     ///////////////// for each contour, approx to a rectangle
-    for (unsigned int i = 0; i < contours.size(); i++)
+    for (size_t i = 0; i < contours.size(); i++)
     {
         // can approximate to a convex rect?
         cv::approxPolyDP(contours[i], approxCurve, double(contours[i].size()) * 0.03, true);
@@ -124,7 +124,7 @@ std::vector<FiducialMarker>  MarkerDetector::detect(const cv::Mat &img,   const 
         // // add the points
         FiducialMarker marker;marker.corners.reserve(4);
         for (int j = 0; j < 4; j++)
-            marker.corners.emplace_back( cv::Point2f( approxCurve[j].x,approxCurve[j].y));
+            marker.corners.emplace_back( cv::Point2f( float(approxCurve[j].x),float(approxCurve[j].y)));
         //sort corner in clockwise direction
         marker=sort(marker);
         candidatesOut->push_back(marker);
@@ -190,7 +190,7 @@ std::vector<FiducialMarker>  MarkerDetector::detect(const cv::Mat &img,   const 
                 }
             }
             //now move to DetectedMarkers these not marked for removal
-            for (unsigned int i = 0; i < currDirMarkerDetected.size(); i++)
+            for (size_t i = 0; i < currDirMarkerDetected.size(); i++)
                 if (!toRemove[i]) DetectedMarkers.push_back(currDirMarkerDetected[i]);
 
         }
@@ -210,7 +210,7 @@ std::vector<FiducialMarker>  MarkerDetector::detect(const cv::Mat &img,   const 
             Corners.insert(Corners.end(), m.corners.begin(),m.corners.end());
         cv::cornerSubPix(bwimage, Corners, cv::Size(halfwsize,halfwsize), cv::Size(-1, -1),cv::TermCriteria( cv::TermCriteria::MAX_ITER | cv::TermCriteria::EPS, 12, 0.005));
         // copy back to the markers
-        for (unsigned int i = 0; i < DetectedMarkers.size(); i++)
+        for (size_t i = 0; i < DetectedMarkers.size(); i++)
             for (int c = 0; c < 4; c++) DetectedMarkers[i].corners[c] = Corners[i * 4 + c];
     }
     return DetectedMarkers;//DONE
@@ -873,7 +873,7 @@ bool detectGridBoard(InputArray image, cv::Size gridSize, DictionaryType diction
                     int gid1=getGlobalCornerID(marker.id,c,gridSize,ids);
                     int gid2=getGlobalCornerID(comp[idx/4].id,idx%4,gridSize,ids);
                     if(gid1!=gid2){
-                        CV_LOG_WARNING(NULL, "Marker " << marker.id << " corner " << c << " connected to marker " << comp[idx/4].id << " corner " << (idx%4) << " but global corner ids differ: " << gid1 << " vs " << gid2);
+                        CV_LOG_WARNING(nullptr, "Marker " << marker.id << " corner " << c << " connected to marker " << comp[idx/4].id << " corner " << (idx%4) << " but global corner ids differ: " << gid1 << " vs " << gid2);
                         is_consistent=false;
                     }
                 }

@@ -16,18 +16,18 @@ TEST(Objdetect_Aruco2, Generation) {
     int id = 42;
     unsigned int bitSize = 10;
     DictionaryType dictionary = DICT_ARUCO_MIP_36h12;
-    
+
     // 6x6 bits + 2 border bits = 8 bits per side
     // If externalBorder is true, it adds another bit? Let's check the code or just see the result.
     // Standard aruco FiducialMarkers have 1 bit border.
     // Let's see what generateFiducialMarkerImage does.
     getFiducialMarker(img, dictionary, id, bitSize, true);
-    
+
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(img.type(), CV_8UC1);
-    
+
     // 6x6 bits + 2 internal border bits + 2 external border bits = 10 bits per side
-    int expectedSize = (6 + 4) * bitSize; 
+    int expectedSize = (6 + 4) * bitSize;
     ASSERT_EQ(img.rows, expectedSize);
     ASSERT_EQ(img.cols, expectedSize);
 }
@@ -37,14 +37,14 @@ TEST(Objdetect_Aruco2, SimpleDetection) {
     int id = 100;
     Mat markerImg;
     getFiducialMarker(markerImg, dictionary, id, 20, false);
-    
+
     // Create a larger canvas
     Mat canvas(markerImg.rows * 2, markerImg.cols * 2, CV_8UC1, Scalar(255));
     Rect roi(markerImg.cols / 2, markerImg.rows / 2, markerImg.cols, markerImg.rows);
     markerImg.copyTo(canvas(roi));
-    
+
     auto markers = detectFiducialMarkers(canvas, dictionary);
-    
+
     ASSERT_EQ(markers.size(), 1u);
     EXPECT_EQ(markers[0].id, id);
     EXPECT_EQ(markers[0].dictionary, dictionary);
@@ -56,13 +56,13 @@ TEST(Objdetect_Aruco2, SimpleDetection) {
     ASSERT_EQ(imgPoints.total(), 4u);
     ASSERT_EQ(objPoints.type(), CV_32FC3);
     ASSERT_EQ(imgPoints.type(), CV_32FC2);
-    
+
     // Check that imgPoints match corners
     for(int i=0; i<4; i++) {
         EXPECT_NEAR(imgPoints.at<Vec2f>(i)[0], markers[0].corners[i].x, 1e-5);
         EXPECT_NEAR(imgPoints.at<Vec2f>(i)[1], markers[0].corners[i].y, 1e-5);
     }
-    
+
     // Check corners
     // Top-left should be (roi.x, roi.y)
     EXPECT_NEAR(markers[0].corners[0].x, (float)roi.x, 1.0f);
@@ -74,11 +74,11 @@ TEST(Objdetect_Aruco2, Rotation) {
     int id = 50;
     Mat markerImg;
     getFiducialMarker(markerImg, dictionary, id, 20, false);
-    
+
     Mat canvas(markerImg.rows * 2, markerImg.cols * 2, CV_8UC1, Scalar(255));
     Rect roi(markerImg.cols / 2, markerImg.rows / 2, markerImg.cols, markerImg.rows);
     markerImg.copyTo(canvas(roi));
-    
+
     Point2f center(canvas.cols / 2.0f, canvas.rows / 2.0f);
     std::vector<Point2f> originalCorners = {
         Point2f((float)roi.x, (float)roi.y),
@@ -86,20 +86,20 @@ TEST(Objdetect_Aruco2, Rotation) {
         Point2f((float)roi.x + roi.width, (float)roi.y + roi.height),
         Point2f((float)roi.x, (float)roi.y + roi.height)
     };
-    
+
     for (double angle : {90.0, 180.0, 270.0}) {
         Mat rot = getRotationMatrix2D(center, angle, 1.0);
         Mat rotated;
         warpAffine(canvas, rotated, rot, canvas.size(), INTER_LINEAR, BORDER_CONSTANT, Scalar(255));
-        
+
         auto markers = detectFiducialMarkers(rotated, dictionary);
-        
+
         ASSERT_EQ(markers.size(), 1u) << "Failed for angle " << angle;
         EXPECT_EQ(markers[0].id, id);
-        
+
         std::vector<Point2f> expectedCorners;
         transform(originalCorners, expectedCorners, rot);
-        
+
         for (int i = 0; i < 4; i++) {
             // Note: rotation might shift pixels slightly, 1.5px tolerance is safe for non-subpixel
             EXPECT_NEAR(markers[0].corners[i].x, expectedCorners[i].x, 1.5f) << "Angle: " << angle << " Corner: " << i;
@@ -113,32 +113,32 @@ TEST(Objdetect_Aruco2, Perspective) {
     int id = 25;
     Mat markerImg;
     getFiducialMarker(markerImg, dictionary, id, 20, false);
-    
+
     Size imgSize(500, 500);
     Mat canvas(imgSize, CV_8UC1, Scalar(255));
-    
+
     std::vector<Point2f> srcPoints = {
         Point2f(0, 0),
         Point2f((float)markerImg.cols, 0),
         Point2f((float)markerImg.cols, (float)markerImg.rows),
         Point2f(0, (float)markerImg.rows)
     };
-    
+
     std::vector<Point2f> dstPoints = {
         Point2f(150, 150),
         Point2f(350, 180),
         Point2f(320, 380),
         Point2f(120, 350)
     };
-    
+
     Mat M = getPerspectiveTransform(srcPoints, dstPoints);
     warpPerspective(markerImg, canvas, M, imgSize, INTER_LINEAR, BORDER_TRANSPARENT);
-    
+
     std::vector<FiducialMarker> markers = detectFiducialMarkers(canvas, dictionary);
-    
+
     ASSERT_EQ(markers.size(), 1u);
     EXPECT_EQ(markers[0].id, id);
-    
+
     for (int i = 0; i < 4; ++i) {
         EXPECT_NEAR(markers[0].corners[i].x, dstPoints[i].x, 2.0f);
         EXPECT_NEAR(markers[0].corners[i].y, dstPoints[i].y, 2.0f);
@@ -150,18 +150,18 @@ TEST(Objdetect_Aruco2, Inverted) {
     int id = 10;
     Mat markerImg;
     getFiducialMarker(markerImg, dictionary, id, 20, false);
-    
+
     Mat inverted = 255 - markerImg;
-    
+
     Mat canvas(inverted.rows * 2, inverted.cols * 2, CV_8UC1, Scalar(0));
     Rect roi(inverted.cols / 2, inverted.rows / 2, inverted.cols, inverted.rows);
     inverted.copyTo(canvas(roi));
-    
+
     DetectionParameters params;
     params.detectInvertedMarker = true;
-    
+
     std::vector<FiducialMarker> markers = detectFiducialMarkers(canvas, dictionary, params);
-    
+
     ASSERT_EQ(markers.size(), 1u);
     EXPECT_EQ(markers[0].id, id);
     EXPECT_NEAR(markers[0].corners[0].x, (float)roi.x, 1.0f);
@@ -230,10 +230,10 @@ TEST(Objdetect_Aruco2, BoardGeneration) {
     DictionaryType dictionary = DICT_ARUCO_MIP_36h12;
     Mat img;
     getGridBoard(img, gridSize, dictionary, 20);
-    
+
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(img.type(), CV_8UC1);
-    
+
     // Each FiducialMarker is 6x6 bits.
     // FiducialMarkerSizePix = 6 * 20 = 120
     // border = 120 / 4 = 30
@@ -248,14 +248,14 @@ TEST(Objdetect_Aruco2, BoardDetection) {
     DictionaryType dictionary = DICT_ARUCO_MIP_36h12;
     Mat boardImg;
     getGridBoard(boardImg, gridSize, dictionary, 20);
-    
+
     Mat canvas(boardImg.rows + 100, boardImg.cols + 100, CV_8UC1, Scalar(255));
     Rect roi(50, 50, boardImg.cols, boardImg.rows);
     boardImg.copyTo(canvas(roi));
-    
+
     GridBoard board;
     bool found = detectGridBoard(canvas, gridSize, dictionary, board);
-    
+
     ASSERT_TRUE(found);
     EXPECT_EQ(board.gridSize, gridSize);
     EXPECT_EQ(board.dictionary, dictionary);
@@ -276,21 +276,21 @@ TEST(Objdetect_Aruco2, BoardRotation) {
     DictionaryType dictionary = DICT_ARUCO_MIP_36h12;
     Mat boardImg;
     getGridBoard(boardImg, gridSize, dictionary, 20);
-    
+
     Mat canvas(800, 800, CV_8UC1, Scalar(255));
     Rect roi((canvas.cols - boardImg.cols) / 2, (canvas.rows - boardImg.rows) / 2, boardImg.cols, boardImg.rows);
     boardImg.copyTo(canvas(roi));
-    
+
     Point2f center(canvas.cols / 2.0f, canvas.rows / 2.0f);
-    
+
     for (double angle : {90.0, 180.0, 270.0}) {
         Mat rot = getRotationMatrix2D(center, angle, 1.0);
         Mat rotated;
         warpAffine(canvas, rotated, rot, canvas.size(), INTER_LINEAR, BORDER_CONSTANT, Scalar(255));
-        
+
         GridBoard board;
         bool found = detectGridBoard(rotated, gridSize, dictionary, board);
-        
+
         ASSERT_TRUE(found) << "Failed for angle " << angle;
         EXPECT_EQ(board.markers.size(), 6u) << "Failed for angle " << angle;
     }
@@ -301,7 +301,7 @@ TEST(Objdetect_Aruco2, DiamondGeneration) {
     Vec4i ids(1, 2, 3, 4);
     Mat img;
     getDiamondImage(img, dictionary, ids, 20);
-    
+
     ASSERT_FALSE(img.empty());
     // Diamond is a 2x2 board.
     // FiducialMarkerSizePix = 6 * 20 = 120
@@ -316,13 +316,13 @@ TEST(Objdetect_Aruco2, DiamondDetection) {
     Vec4i ids(5, 10, 15, 20);
     Mat diamondImg;
     getDiamondImage(diamondImg, dictionary, ids, 20);
-    
+
     Mat canvas(diamondImg.rows + 100, diamondImg.cols + 100, CV_8UC1, Scalar(255));
     Rect roi(50, 50, diamondImg.cols, diamondImg.rows);
     diamondImg.copyTo(canvas(roi));
-    
+
     std::vector<Diamond> diamonds = detectDiamonds(canvas, dictionary);
-    
+
     ASSERT_EQ(diamonds.size(), 1u);
     EXPECT_EQ(diamonds[0].id, ids);
     EXPECT_EQ(diamonds[0].dictionary, dictionary);
@@ -343,20 +343,20 @@ TEST(Objdetect_Aruco2, DiamondRotation) {
     Vec4i ids(1, 2, 3, 4);
     Mat diamondImg;
     getDiamondImage(diamondImg, dictionary, ids, 20);
-    
+
     Mat canvas(800, 800, CV_8UC1, Scalar(255));
     Rect roi((canvas.cols - diamondImg.cols) / 2, (canvas.rows - diamondImg.rows) / 2, diamondImg.cols, diamondImg.rows);
     diamondImg.copyTo(canvas(roi));
-    
+
     Point2f center(canvas.cols / 2.0f, canvas.rows / 2.0f);
-    
+
     for (double angle : {90.0, 180.0, 270.0}) {
         Mat rot = getRotationMatrix2D(center, angle, 1.0);
         Mat rotated;
         warpAffine(canvas, rotated, rot, canvas.size(), INTER_LINEAR, BORDER_CONSTANT, Scalar(255));
-        
+
         std::vector<Diamond> diamonds = detectDiamonds(rotated, dictionary);
-        
+
         ASSERT_EQ(diamonds.size(), 1u) << "Failed for angle " << angle;
         // Diamond ID is Vec4i of the 4 constituent FiducialMarkers.
         // The detector should return them in consistent order regardless of rotation.
@@ -369,29 +369,29 @@ TEST(Objdetect_Aruco2, DiamondPerspective) {
     Vec4i ids(10, 20, 30, 40);
     Mat diamondImg;
     getDiamondImage(diamondImg, dictionary, ids, 20);
-    
+
     Size imgSize(800, 800);
     Mat canvas(imgSize, CV_8UC1, Scalar(255));
-    
+
     std::vector<Point2f> srcPoints = {
         Point2f(0, 0),
         Point2f((float)diamondImg.cols, 0),
         Point2f((float)diamondImg.cols, (float)diamondImg.rows),
         Point2f(0, (float)diamondImg.rows)
     };
-    
+
     std::vector<Point2f> dstPoints = {
         Point2f(200, 200),
         Point2f(600, 250),
         Point2f(550, 650),
         Point2f(150, 600)
     };
-    
+
     Mat M = getPerspectiveTransform(srcPoints, dstPoints);
     warpPerspective(diamondImg, canvas, M, imgSize, INTER_LINEAR, BORDER_TRANSPARENT);
-    
+
     std::vector<Diamond> diamonds = detectDiamonds(canvas, dictionary);
-    
+
     ASSERT_EQ(diamonds.size(), 1u);
     EXPECT_EQ(diamonds[0].id, ids);
 }
@@ -400,7 +400,7 @@ TEST(Objdetect_Aruco2, FractalGeneration) {
     FractalType ftype = FRACTAL_2L_6;
     Mat img;
     getFractalImage(img, ftype, 20);
-    
+
     ASSERT_FALSE(img.empty());
     // Fractal size depends on nesting, let's just check it's non-empty and square.
     EXPECT_EQ(img.cols, img.rows);
@@ -411,13 +411,13 @@ TEST(Objdetect_Aruco2, FractalDetection) {
     FractalType ftype = FRACTAL_2L_6;
     Mat fractalImg;
     getFractalImage(fractalImg, ftype, 40); // Larger for better detection
-    
+
     Mat canvas(fractalImg.rows + 100, fractalImg.cols + 100, CV_8UC1, Scalar(255));
     Rect roi(50, 50, fractalImg.cols, fractalImg.rows);
     fractalImg.copyTo(canvas(roi));
-    
+
     std::vector<FractalMarker> fractals = detectFractals(canvas, ftype);
-    
+
     ASSERT_EQ(fractals.size(), 1u);
     EXPECT_EQ(fractals[0].type, ftype);
 
@@ -435,7 +435,7 @@ TEST(Objdetect_Aruco2, FractalRotation) {
     FractalType ftype = FRACTAL_2L_6;
     Mat fractalImg;
     getFractalImage(fractalImg, ftype, 20); // Smaller bitSize (20 instead of 40)
-    
+
     Mat canvas(1200, 1200, CV_8UC1, Scalar(255)); // Larger canvas
     int posX = (canvas.cols - fractalImg.cols) / 2;
     int posY = (canvas.rows - fractalImg.rows) / 2;
@@ -444,16 +444,16 @@ TEST(Objdetect_Aruco2, FractalRotation) {
     ASSERT_GT(posY, 0);
     Rect roi(posX, posY, fractalImg.cols, fractalImg.rows);
     fractalImg.copyTo(canvas(roi));
-    
+
     Point2f center(canvas.cols / 2.0f, canvas.rows / 2.0f);
-    
+
     for (double angle : {90.0, 180.0, 270.0}) {
         Mat rot = getRotationMatrix2D(center, angle, 1.0);
         Mat rotated;
         warpAffine(canvas, rotated, rot, canvas.size(), INTER_LINEAR, BORDER_CONSTANT, Scalar(255));
-        
+
         std::vector<FractalMarker> fractals = detectFractals(rotated, ftype);
-        
+
         ASSERT_EQ(fractals.size(), 1u) << "Failed for angle " << angle;
     }
 }
@@ -462,29 +462,29 @@ TEST(Objdetect_Aruco2, FractalPerspective) {
     FractalType ftype = FRACTAL_3L_6; // Use more levels for perspective robustness check
     Mat fractalImg;
     getFractalImage(fractalImg, ftype, 40);
-    
+
     Size imgSize(800, 800);
     Mat canvas(imgSize, CV_8UC1, Scalar(255));
-    
+
     std::vector<Point2f> srcPoints = {
         Point2f(0, 0),
         Point2f((float)fractalImg.cols, 0),
         Point2f((float)fractalImg.cols, (float)fractalImg.rows),
         Point2f(0, (float)fractalImg.rows)
     };
-    
+
     std::vector<Point2f> dstPoints = {
         Point2f(200, 200),
         Point2f(600, 250),
         Point2f(550, 650),
         Point2f(150, 600)
     };
-    
+
     Mat M = getPerspectiveTransform(srcPoints, dstPoints);
     warpPerspective(fractalImg, canvas, M, imgSize, INTER_LINEAR, BORDER_TRANSPARENT);
-    
+
     std::vector<FractalMarker> fractals = detectFractals(canvas, ftype);
-    
+
     ASSERT_EQ(fractals.size(), 1u);
 }
 

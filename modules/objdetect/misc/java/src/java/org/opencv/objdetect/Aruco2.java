@@ -15,7 +15,7 @@ import org.opencv.objdetect.Objdetect;
 public class Aruco2 {
 
     // Enums (delegated to Objdetect)
-    
+
     public static final int
         DICT_4X4_50 = Objdetect.Aruco2_DICT_4X4_50,
         DICT_4X4_100 = Objdetect.Aruco2_DICT_4X4_100,

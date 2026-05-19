@@ -22,12 +22,12 @@ class objdetect_aruco2_test(NewOpenCVTests):
         dict_type = cv.aruco2.DICT_ARUCO_MIP_36h12
         marker_id = 42
         img = cv.aruco2.getFiducialMarker(dict_type, marker_id, bitSize=20)
-        
+
         # Add some padding to simulate a scene
         # img is 200x200 (10 bits * 20)
         scene = np.ones((300, 300), dtype=np.uint8) * 255
         scene[50:50+img.shape[0], 50:50+img.shape[1]] = img
-        
+
         markers = cv.aruco2.detectFiducialMarkers(scene, dict_type)
         self.assertEqual(len(markers), 1)
         self.assertEqual(markers[0].id, marker_id)
@@ -37,18 +37,18 @@ class objdetect_aruco2_test(NewOpenCVTests):
     def test_detect_multi_dictionary(self):
         dict1 = cv.aruco2.DICT_ARUCO_MIP_36h12
         dict2 = cv.aruco2.DICT_APRILTAG_36h11
-        
+
         img1 = cv.aruco2.getFiducialMarker(dict1, 10, bitSize=10)
         img2 = cv.aruco2.getFiducialMarker(dict2, 20, bitSize=10)
-        
+
         # img1 is 100x100, img2 is 100x100
         scene = np.ones((150, 250), dtype=np.uint8) * 255
         scene[10:10+img1.shape[0], 10:10+img1.shape[1]] = img1
         scene[10:10+img2.shape[0], 110:110+img2.shape[1]] = img2
-        
+
         markers = cv.aruco2.detectFiducialMarkers(scene, [dict1, dict2])
         self.assertEqual(len(markers), 2)
-        
+
         ids = {m.id for m in markers}
         self.assertIn(10, ids)
         self.assertIn(20, ids)
@@ -57,10 +57,10 @@ class objdetect_aruco2_test(NewOpenCVTests):
         dict_type = cv.aruco2.DICT_ARUCO_MIP_36h12
         img = cv.aruco2.getFiducialMarker(dict_type, 42, bitSize=20)
         scene = cv.merge([img, img, img]) # Convert to BGR
-        
+
         markers = cv.aruco2.detectFiducialMarkers(img, dict_type)
         cv.aruco2.drawFiducialMarkers(scene, markers)
-        
+
         # Check if some pixels are now green (0, 255, 0) or at least different from original
         # This is a bit weak but confirms the function runs
         self.assertTrue(np.any(scene[:,:,1] == 255))
