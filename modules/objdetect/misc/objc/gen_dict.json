@@ -1,5 +1,20 @@
 {
-    "namespace_ignore_list": ["cv.aruco2"],
+    "namespace_ignore_list": [],
+    "namespaces_dict": {
+        "cv.aruco2": "Aruco2"
+    },
+    "type_dict": {
+        "vector_aruco2_FiducialMarker": {"objc_type": "NSArray<Aruco2_FiducialMarker*>*", "from_cpp": "/* TODO */", "to_cpp": "/* TODO */"},
+        "vector_aruco2_Diamond": {"objc_type": "NSArray<Aruco2_Diamond*>*", "from_cpp": "/* TODO */", "to_cpp": "/* TODO */"},
+        "vector_aruco2_FractalMarker": {"objc_type": "NSArray<Aruco2_FractalMarker*>*", "from_cpp": "/* TODO */", "to_cpp": "/* TODO */"},
+        "aruco2_DictionaryType": {"objc_type": "Aruco2_DictionaryType", "is_primitive": true},
+        "aruco2_FractalType": {"objc_type": "Aruco2_FractalType", "is_primitive": true},
+        "aruco2_DetectionParameters": {"objc_type": "Aruco2_DetectionParameters*", "from_cpp": "/* TODO */"},
+        "aruco2_FiducialMarker": {"objc_type": "Aruco2_FiducialMarker*", "from_cpp": "/* TODO */"},
+        "aruco2_GridBoard": {"objc_type": "Aruco2_GridBoard*", "from_cpp": "/* TODO */"},
+        "aruco2_Diamond": {"objc_type": "Aruco2_Diamond*", "from_cpp": "/* TODO */"},
+        "aruco2_FractalMarker": {"objc_type": "Aruco2_FractalMarker*", "from_cpp": "/* TODO */"}
+    },
     "ManualFuncs" : {
         "QRCodeDetectorAruco": {
             "getDetectorParameters": { "declaration" : [""], "implementation" : [""] }
