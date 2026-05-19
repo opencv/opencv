@@ -41,10 +41,9 @@ def multi_dict_detection(img):
     dictionaries = [cv.aruco2.DICT_ARUCO_MIP_36h12, cv.aruco2.DICT_APRILTAG_36h11]
     markers = cv.aruco2.detectFiducialMarkers(img, dictionaries)
 
-    # In Python, the .dict attribute is not accessible due to keyword collision.
-    # We can still iterate over detected markers.
     for m in markers:
-        print(f"Found marker ID: {m.id} with {len(m.corners)} corners")
+        dict_name = "ArUco" if m.dictionary == cv.aruco2.DICT_ARUCO_MIP_36h12 else "AprilTag"
+        print(f"Found {dict_name} marker ID: {m.id}")
     # [multi_dict]
 
 def detection_parameters(img):

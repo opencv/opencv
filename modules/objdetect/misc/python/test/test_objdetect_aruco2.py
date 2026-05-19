@@ -31,7 +31,7 @@ class objdetect_aruco2_test(NewOpenCVTests):
         markers = cv.aruco2.detectFiducialMarkers(scene, dict_type)
         self.assertEqual(len(markers), 1)
         self.assertEqual(markers[0].id, marker_id)
-        # self.assertEqual(markers[0].dict, dict_type) # dict attribute seems missing in Python Marker
+        self.assertEqual(markers[0].dictionary, dict_type)
         self.assertEqual(len(markers[0].corners), 4)
 
     def test_detect_multi_dictionary(self):
@@ -75,6 +75,7 @@ class objdetect_aruco2_test(NewOpenCVTests):
         found, board = cv.aruco2.detectGridBoard(canvas, grid_size, dict_type)
         self.assertTrue(found)
         self.assertEqual(board.gridSize, grid_size)
+        self.assertEqual(board.dictionary, dict_type)
         self.assertEqual(len(board.markers), 6)
 
     def test_draw_axis(self):
@@ -137,6 +138,7 @@ class objdetect_aruco2_test(NewOpenCVTests):
         canvas[50:50+diamond_img.shape[0], 50:50+diamond_img.shape[1]] = diamond_img
         diamonds = cv.aruco2.detectDiamonds(canvas, dict_type)
         self.assertEqual(len(diamonds), 1)
+        self.assertEqual(diamonds[0].dictionary, dict_type)
         color_canvas = cv.cvtColor(canvas, cv.COLOR_GRAY2BGR)
         cv.aruco2.drawDiamonds(color_canvas, diamonds)
         obj_pts, img_pts = cv.aruco2.getSolvePnpPoints(diamonds[0], markerSize=0.1)

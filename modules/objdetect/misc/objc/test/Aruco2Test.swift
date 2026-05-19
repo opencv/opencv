@@ -66,7 +66,7 @@ class Aruco2Test: OpenCVTestCase {
         markerImg.copy(to: scene.submat(rowStart: 50, rowEnd: 50 + markerImg.rows(),
                                         colStart: 50, colEnd: 50 + markerImg.cols()))
 
-        let markers = Aruco2.detectFiducialMarkers(image: scene, dict: dictType)
+        let markers = Aruco2.detectFiducialMarkers(image: scene, dictionary: dictType)
         XCTAssertEqual(markers.count, 1)
         XCTAssertEqual(markers[0].id, 42)
         XCTAssertEqual(markers[0].corners.count, 4)
@@ -86,7 +86,7 @@ class Aruco2Test: OpenCVTestCase {
 
         let params = Aruco2DetectionParameters()
         params.boxFilterSize = 15
-        let markers = Aruco2.detectFiducialMarkers(image: scene, dict: dictType, params: params)
+        let markers = Aruco2.detectFiducialMarkers(image: scene, dictionary: dictType, params: params)
         XCTAssertEqual(markers.count, 1)
         XCTAssertEqual(markers[0].id, 0)
     }
@@ -131,7 +131,7 @@ class Aruco2Test: OpenCVTestCase {
         markerImg.copy(to: scene.submat(rowStart: 50, rowEnd: 50 + markerImg.rows(),
                                         colStart: 50, colEnd: 50 + markerImg.cols()))
 
-        let markers = Aruco2.detectFiducialMarkers(image: scene, dict: dictType)
+        let markers = Aruco2.detectFiducialMarkers(image: scene, dictionary: dictType)
         XCTAssertFalse(markers.isEmpty)
 
         // Draw on a 3-channel copy
@@ -178,7 +178,7 @@ class Aruco2Test: OpenCVTestCase {
         markerImg.copy(to: scene.submat(rowStart: rowOff, rowEnd: rowOff + markerImg.rows(),
                                         colStart: colOff, colEnd: colOff + markerImg.cols()))
 
-        let markers = Aruco2.detectFiducialMarkers(image: scene, dict: dictType)
+        let markers = Aruco2.detectFiducialMarkers(image: scene, dictionary: dictType)
         XCTAssertEqual(markers.count, 1)
 
         let objPoints = Mat()
@@ -218,7 +218,7 @@ class Aruco2Test: OpenCVTestCase {
         let dictType = Aruco2_DICT_ARUCO_MIP_36h12.rawValue
         let boardSize = Size2i(width: 3, height: 2)
         let boardImg = Mat()
-        Aruco2.getGridBoard(img: boardImg, boardSize: boardSize, dict: dictType)
+        Aruco2.getGridBoard(img: boardImg, boardSize: boardSize, dictionary: dictType)
         XCTAssertFalse(boardImg.empty())
     }
 
@@ -226,7 +226,7 @@ class Aruco2Test: OpenCVTestCase {
         let dictType = Aruco2_DICT_ARUCO_MIP_36h12.rawValue
         let gridSize = Size2i(width: 3, height: 2)
         let boardImg = Mat()
-        Aruco2.getGridBoard(img: boardImg, boardSize: gridSize, dict: dictType, bitSize: 20, ids: nil)
+        Aruco2.getGridBoard(img: boardImg, boardSize: gridSize, dictionary: dictType, bitSize: 20, ids: nil)
 
         let scene = Mat(rows: boardImg.rows() + 100, cols: boardImg.cols() + 100,
                         type: CvType.CV_8UC1, scalar: Scalar(255))
@@ -234,7 +234,7 @@ class Aruco2Test: OpenCVTestCase {
                                        colStart: 50, colEnd: 50 + boardImg.cols()))
 
         let board = Aruco2GridBoard()
-        let found = Aruco2.detectGridBoard(image: scene, gridSize: gridSize, dict: dictType, board: board)
+        let found = Aruco2.detectGridBoard(image: scene, gridSize: gridSize, dictionary: dictType, board: board)
         XCTAssertTrue(found)
         XCTAssertGreaterThan(board.markers.count, 0)
     }
@@ -243,7 +243,7 @@ class Aruco2Test: OpenCVTestCase {
         let dictType = Aruco2_DICT_ARUCO_MIP_36h12.rawValue
         let gridSize = Size2i(width: 3, height: 2)
         let boardImg = Mat()
-        Aruco2.getGridBoard(img: boardImg, boardSize: gridSize, dict: dictType, bitSize: 20, ids: nil)
+        Aruco2.getGridBoard(img: boardImg, boardSize: gridSize, dictionary: dictType, bitSize: 20, ids: nil)
 
         let scene = Mat(rows: boardImg.rows() + 100, cols: boardImg.cols() + 100,
                         type: CvType.CV_8UC1, scalar: Scalar(255))
@@ -251,7 +251,7 @@ class Aruco2Test: OpenCVTestCase {
                                        colStart: 50, colEnd: 50 + boardImg.cols()))
 
         let board = Aruco2GridBoard()
-        let found = Aruco2.detectGridBoard(image: scene, gridSize: gridSize, dict: dictType, board: board)
+        let found = Aruco2.detectGridBoard(image: scene, gridSize: gridSize, dictionary: dictType, board: board)
         XCTAssertTrue(found)
 
         let objPoints = Mat()
@@ -265,7 +265,7 @@ class Aruco2Test: OpenCVTestCase {
         let dictType = Aruco2_DICT_ARUCO_MIP_36h12.rawValue
         let gridSize = Size2i(width: 3, height: 2)
         let boardImg = Mat()
-        Aruco2.getGridBoard(img: boardImg, boardSize: gridSize, dict: dictType, bitSize: 20, ids: nil)
+        Aruco2.getGridBoard(img: boardImg, boardSize: gridSize, dictionary: dictType, bitSize: 20, ids: nil)
 
         let scene = Mat(rows: boardImg.rows() + 100, cols: boardImg.cols() + 100,
                         type: CvType.CV_8UC1, scalar: Scalar(255))
@@ -273,7 +273,7 @@ class Aruco2Test: OpenCVTestCase {
                                        colStart: 50, colEnd: 50 + boardImg.cols()))
 
         let board = Aruco2GridBoard()
-        let found = Aruco2.detectGridBoard(image: scene, gridSize: gridSize, dict: dictType, board: board)
+        let found = Aruco2.detectGridBoard(image: scene, gridSize: gridSize, dictionary: dictType, board: board)
         XCTAssertTrue(found)
 
         let colorScene = Mat(rows: scene.rows(), cols: scene.cols(),
@@ -303,7 +303,7 @@ class Aruco2Test: OpenCVTestCase {
         diamondImg.copy(to: scene.submat(rowStart: 50, rowEnd: 50 + diamondImg.rows(),
                                          colStart: 50, colEnd: 50 + diamondImg.cols()))
 
-        let diamonds = Aruco2.detectDiamonds(image: scene, dict: dictType)
+        let diamonds = Aruco2.detectDiamonds(image: scene, dictionary: dictType)
         XCTAssertEqual(diamonds.count, 1)
     }
 
@@ -318,7 +318,7 @@ class Aruco2Test: OpenCVTestCase {
         diamondImg.copy(to: scene.submat(rowStart: 50, rowEnd: 50 + diamondImg.rows(),
                                          colStart: 50, colEnd: 50 + diamondImg.cols()))
 
-        let diamonds = Aruco2.detectDiamonds(image: scene, dict: dictType)
+        let diamonds = Aruco2.detectDiamonds(image: scene, dictionary: dictType)
         XCTAssertEqual(diamonds.count, 1)
 
         let objPoints = Mat()
@@ -339,7 +339,7 @@ class Aruco2Test: OpenCVTestCase {
         diamondImg.copy(to: scene.submat(rowStart: 50, rowEnd: 50 + diamondImg.rows(),
                                          colStart: 50, colEnd: 50 + diamondImg.cols()))
 
-        let diamonds = Aruco2.detectDiamonds(image: scene, dict: dictType)
+        let diamonds = Aruco2.detectDiamonds(image: scene, dictionary: dictType)
         let colorScene = Mat(rows: scene.rows(), cols: scene.cols(),
                              type: CvType.CV_8UC3, scalar: Scalar(255, 255, 255))
         Aruco2.drawDiamonds(image: colorScene, diamonds: diamonds, color: Scalar(0, 255, 0, 255), drawMarkerIds: false)
@@ -415,6 +415,8 @@ class Aruco2Test: OpenCVTestCase {
         m.id = 42
         XCTAssertEqual(m.id, 42)
         XCTAssertEqual(m.corners.count, 0)
+        m.dictionary = Aruco2_DICT_4X4_50.rawValue
+        XCTAssertEqual(m.dictionary, Aruco2_DICT_4X4_50.rawValue)
     }
 
     // MARK: - GridBoard struct
@@ -424,6 +426,8 @@ class Aruco2Test: OpenCVTestCase {
         board.gridSize = Size2i(width: 4, height: 3)
         XCTAssertEqual(board.gridSize.width, 4)
         XCTAssertEqual(board.gridSize.height, 3)
+        board.dictionary = Aruco2_DICT_5X5_100.rawValue
+        XCTAssertEqual(board.dictionary, Aruco2_DICT_5X5_100.rawValue)
     }
 
     // MARK: - Diamond struct
@@ -433,6 +437,8 @@ class Aruco2Test: OpenCVTestCase {
         d.id = Int4(v0: 1, v1: 2, v2: 3, v3: 4)
         XCTAssertEqual(d.id.v0, 1)
         XCTAssertEqual(d.id.v3, 4)
+        d.dictionary = Aruco2_DICT_6X6_250.rawValue
+        XCTAssertEqual(d.dictionary, Aruco2_DICT_6X6_250.rawValue)
     }
 
     // MARK: - FractalMarker struct

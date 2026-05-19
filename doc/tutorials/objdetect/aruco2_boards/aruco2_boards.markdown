@@ -46,7 +46,7 @@ Detecting an ArUco2 board is handled by the `cv::aruco2::detectGridBoard()` func
 
 The `cv::aruco2::GridBoard` structure populated by the function contains:
 - `gridSize`: The dimensions of the board.
-- `dict`: The dictionary used.
+- `dictionary`: The dictionary used.
 - `markers`: A `std::vector<FiducialMarker>` containing only the markers that were successfully detected in the current frame.
 
 Drawing Detected Boards

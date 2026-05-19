@@ -31,7 +31,7 @@ CV_EXPORTS @interface Aruco2GridBoard : NSObject
 @property Size2i* gridSize;
 
 /** Dictionary used for all markers on the board (Aruco2DictionaryType as int). */
-@property int dict;
+@property int dictionary;
 
 /** Detected markers (subset of the full board when partially occluded). */
 @property NSArray<Aruco2FiducialMarker*>* markers;

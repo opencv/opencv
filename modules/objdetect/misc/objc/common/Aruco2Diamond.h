@@ -31,7 +31,7 @@ CV_EXPORTS @interface Aruco2Diamond : NSObject
 @property Int4* id;
 
 /** Dictionary used for the 4 markers (Aruco2DictionaryType as int). */
-@property int dict;
+@property int dictionary;
 
 /** The 4 detected markers forming the diamond. */
 @property NSArray<Aruco2FiducialMarker*>* markers;

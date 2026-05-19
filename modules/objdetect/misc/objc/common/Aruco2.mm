@@ -87,18 +87,18 @@ static std::vector<cv::aruco2::FractalMarker> fractalArrayToVec(NSArray<Aruco2Fr
 
 // ---- detectFiducialMarkers (single dict) ------------------------------------
 
-+ (NSArray<Aruco2FiducialMarker*>*)detectFiducialMarkers:(Mat*)image dict:(int)dict
++ (NSArray<Aruco2FiducialMarker*>*)detectFiducialMarkers:(Mat*)image dictionary:(int)dictionary
                                                     params:(nullable Aruco2DetectionParameters*)params {
     cv::aruco2::DetectionParameters cppParams = (params != nil)
         ? params.nativeRef
         : cv::aruco2::DetectionParameters{};
     std::vector<cv::aruco2::FiducialMarker> result =
-        cv::aruco2::detectFiducialMarkers(image.nativeRef, (cv::aruco2::DictionaryType)dict, cppParams);
+        cv::aruco2::detectFiducialMarkers(image.nativeRef, (cv::aruco2::DictionaryType)dictionary, cppParams);
     return fiducialVecToArray(result);
 }
 
-+ (NSArray<Aruco2FiducialMarker*>*)detectFiducialMarkers:(Mat*)image dict:(int)dict {
-    return [Aruco2 detectFiducialMarkers:image dict:dict params:nil];
++ (NSArray<Aruco2FiducialMarker*>*)detectFiducialMarkers:(Mat*)image dictionary:(int)dictionary {
+    return [Aruco2 detectFiducialMarkers:image dictionary:dictionary params:nil];
 }
 
 // ---- detectFiducialMarkers (multiple dicts) ---------------------------------
@@ -151,41 +151,41 @@ static std::vector<cv::aruco2::FractalMarker> fractalArrayToVec(NSArray<Aruco2Fr
 
 // ---- getGridBoard -----------------------------------------------------------
 
-+ (void)getGridBoard:(Mat*)img boardSize:(Size2i*)boardSize dict:(int)dict
++ (void)getGridBoard:(Mat*)img boardSize:(Size2i*)boardSize dictionary:(int)dictionary
              bitSize:(int)bitSize ids:(nullable Mat*)ids {
     if (ids != nil) {
         cv::aruco2::getGridBoard(img.nativeRef, boardSize.nativeRef,
-                                 (cv::aruco2::DictionaryType)dict, bitSize, ids.nativeRef);
+                                 (cv::aruco2::DictionaryType)dictionary, bitSize, ids.nativeRef);
     } else {
         cv::aruco2::getGridBoard(img.nativeRef, boardSize.nativeRef,
-                                 (cv::aruco2::DictionaryType)dict, bitSize);
+                                 (cv::aruco2::DictionaryType)dictionary, bitSize);
     }
 }
 
-+ (void)getGridBoard:(Mat*)img boardSize:(Size2i*)boardSize dict:(int)dict {
-    cv::aruco2::getGridBoard(img.nativeRef, boardSize.nativeRef, (cv::aruco2::DictionaryType)dict);
++ (void)getGridBoard:(Mat*)img boardSize:(Size2i*)boardSize dictionary:(int)dictionary {
+    cv::aruco2::getGridBoard(img.nativeRef, boardSize.nativeRef, (cv::aruco2::DictionaryType)dictionary);
 }
 
 // ---- detectGridBoard --------------------------------------------------------
 
-+ (BOOL)detectGridBoard:(Mat*)image gridSize:(Size2i*)gridSize dict:(int)dict
++ (BOOL)detectGridBoard:(Mat*)image gridSize:(Size2i*)gridSize dictionary:(int)dictionary
                   board:(Aruco2GridBoard*)board ids:(nullable Mat*)ids {
     bool found;
     if (ids != nil) {
         found = cv::aruco2::detectGridBoard(image.nativeRef, gridSize.nativeRef,
-                                            (cv::aruco2::DictionaryType)dict,
+                                            (cv::aruco2::DictionaryType)dictionary,
                                             board.nativeRef, ids.nativeRef);
     } else {
         found = cv::aruco2::detectGridBoard(image.nativeRef, gridSize.nativeRef,
-                                            (cv::aruco2::DictionaryType)dict,
+                                            (cv::aruco2::DictionaryType)dictionary,
                                             board.nativeRef);
     }
     return found ? YES : NO;
 }
 
-+ (BOOL)detectGridBoard:(Mat*)image gridSize:(Size2i*)gridSize dict:(int)dict
++ (BOOL)detectGridBoard:(Mat*)image gridSize:(Size2i*)gridSize dictionary:(int)dictionary
                   board:(Aruco2GridBoard*)board {
-    return [Aruco2 detectGridBoard:image gridSize:gridSize dict:dict board:board ids:nil];
+    return [Aruco2 detectGridBoard:image gridSize:gridSize dictionary:dictionary board:board ids:nil];
 }
 
 // ---- drawGridBoard ----------------------------------------------------------
@@ -226,9 +226,9 @@ static std::vector<cv::aruco2::FractalMarker> fractalArrayToVec(NSArray<Aruco2Fr
 
 // ---- detectDiamonds ---------------------------------------------------------
 
-+ (NSArray<Aruco2Diamond*>*)detectDiamonds:(Mat*)image dict:(int)dict {
++ (NSArray<Aruco2Diamond*>*)detectDiamonds:(Mat*)image dictionary:(int)dictionary {
     std::vector<cv::aruco2::Diamond> result =
-        cv::aruco2::detectDiamonds(image.nativeRef, (cv::aruco2::DictionaryType)dict);
+        cv::aruco2::detectDiamonds(image.nativeRef, (cv::aruco2::DictionaryType)dictionary);
     return diamondVecToArray(result);
 }
 

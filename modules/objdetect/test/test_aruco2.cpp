@@ -15,13 +15,13 @@ TEST(Objdetect_Aruco2, Generation) {
     Mat img;
     int id = 42;
     unsigned int bitSize = 10;
-    DictionaryType dict = DICT_ARUCO_MIP_36h12;
+    DictionaryType dictionary = DICT_ARUCO_MIP_36h12;
     
     // 6x6 bits + 2 border bits = 8 bits per side
     // If externalBorder is true, it adds another bit? Let's check the code or just see the result.
     // Standard aruco FiducialMarkers have 1 bit border.
     // Let's see what generateFiducialMarkerImage does.
-    getFiducialMarker(img, dict, id, bitSize, true);
+    getFiducialMarker(img, dictionary, id, bitSize, true);
     
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(img.type(), CV_8UC1);
@@ -33,21 +33,21 @@ TEST(Objdetect_Aruco2, Generation) {
 }
 
 TEST(Objdetect_Aruco2, SimpleDetection) {
-    DictionaryType dict = DICT_ARUCO_MIP_36h12;
+    DictionaryType dictionary = DICT_ARUCO_MIP_36h12;
     int id = 100;
     Mat markerImg;
-    getFiducialMarker(markerImg, dict, id, 20, false);
+    getFiducialMarker(markerImg, dictionary, id, 20, false);
     
     // Create a larger canvas
     Mat canvas(markerImg.rows * 2, markerImg.cols * 2, CV_8UC1, Scalar(255));
     Rect roi(markerImg.cols / 2, markerImg.rows / 2, markerImg.cols, markerImg.rows);
     markerImg.copyTo(canvas(roi));
     
-    auto markers = detectFiducialMarkers(canvas, dict);
+    auto markers = detectFiducialMarkers(canvas, dictionary);
     
     ASSERT_EQ(markers.size(), 1u);
     EXPECT_EQ(markers[0].id, id);
-    EXPECT_EQ(markers[0].dict, dict);
+    EXPECT_EQ(markers[0].dictionary, dictionary);
 
     // Test getSolvePnpPoints
     Mat objPoints, imgPoints;
@@ -70,10 +70,10 @@ TEST(Objdetect_Aruco2, SimpleDetection) {
 }
 
 TEST(Objdetect_Aruco2, Rotation) {
-    DictionaryType dict = DICT_ARUCO_MIP_36h12;
+    DictionaryType dictionary = DICT_ARUCO_MIP_36h12;
     int id = 50;
     Mat markerImg;
-    getFiducialMarker(markerImg, dict, id, 20, false);
+    getFiducialMarker(markerImg, dictionary, id, 20, false);
     
     Mat canvas(markerImg.rows * 2, markerImg.cols * 2, CV_8UC1, Scalar(255));
     Rect roi(markerImg.cols / 2, markerImg.rows / 2, markerImg.cols, markerImg.rows);
@@ -92,7 +92,7 @@ TEST(Objdetect_Aruco2, Rotation) {
         Mat rotated;
         warpAffine(canvas, rotated, rot, canvas.size(), INTER_LINEAR, BORDER_CONSTANT, Scalar(255));
         
-        auto markers = detectFiducialMarkers(rotated, dict);
+        auto markers = detectFiducialMarkers(rotated, dictionary);
         
         ASSERT_EQ(markers.size(), 1u) << "Failed for angle " << angle;
         EXPECT_EQ(markers[0].id, id);
@@ -109,10 +109,10 @@ TEST(Objdetect_Aruco2, Rotation) {
 }
 
 TEST(Objdetect_Aruco2, Perspective) {
-    DictionaryType dict = DICT_ARUCO_MIP_36h12;
+    DictionaryType dictionary = DICT_ARUCO_MIP_36h12;
     int id = 25;
     Mat markerImg;
-    getFiducialMarker(markerImg, dict, id, 20, false);
+    getFiducialMarker(markerImg, dictionary, id, 20, false);
     
     Size imgSize(500, 500);
     Mat canvas(imgSize, CV_8UC1, Scalar(255));
@@ -134,7 +134,7 @@ TEST(Objdetect_Aruco2, Perspective) {
     Mat M = getPerspectiveTransform(srcPoints, dstPoints);
     warpPerspective(markerImg, canvas, M, imgSize, INTER_LINEAR, BORDER_TRANSPARENT);
     
-    std::vector<FiducialMarker> markers = detectFiducialMarkers(canvas, dict);
+    std::vector<FiducialMarker> markers = detectFiducialMarkers(canvas, dictionary);
     
     ASSERT_EQ(markers.size(), 1u);
     EXPECT_EQ(markers[0].id, id);
@@ -146,10 +146,10 @@ TEST(Objdetect_Aruco2, Perspective) {
 }
 
 TEST(Objdetect_Aruco2, Inverted) {
-    DictionaryType dict = DICT_ARUCO_MIP_36h12;
+    DictionaryType dictionary = DICT_ARUCO_MIP_36h12;
     int id = 10;
     Mat markerImg;
-    getFiducialMarker(markerImg, dict, id, 20, false);
+    getFiducialMarker(markerImg, dictionary, id, 20, false);
     
     Mat inverted = 255 - markerImg;
     
@@ -160,7 +160,7 @@ TEST(Objdetect_Aruco2, Inverted) {
     DetectionParameters params;
     params.detectInvertedMarker = true;
     
-    std::vector<FiducialMarker> markers = detectFiducialMarkers(canvas, dict, params);
+    std::vector<FiducialMarker> markers = detectFiducialMarkers(canvas, dictionary, params);
     
     ASSERT_EQ(markers.size(), 1u);
     EXPECT_EQ(markers[0].id, id);
@@ -169,21 +169,21 @@ TEST(Objdetect_Aruco2, Inverted) {
 }
 
 TEST(Objdetect_Aruco2, MultiFiducialMarker) {
-    DictionaryType dict = DICT_ARUCO_MIP_36h12;
+    DictionaryType dictionary = DICT_ARUCO_MIP_36h12;
     std::vector<int> ids = {10, 20, 30};
     Mat canvas(800, 800, CV_8UC1, Scalar(255));
     std::vector<Rect> rois;
 
     for (int i = 0; i < (int)ids.size(); ++i) {
         Mat markerImg;
-        getFiducialMarker(markerImg, dict, ids[i], 20, false);
+        getFiducialMarker(markerImg, dictionary, ids[i], 20, false);
         // Space them out: 200 pixels apart horizontally
         Rect roi(50 + i * 250, 50, markerImg.cols, markerImg.rows);
         markerImg.copyTo(canvas(roi));
         rois.push_back(roi);
     }
 
-    std::vector<FiducialMarker> markers = detectFiducialMarkers(canvas, dict);
+    std::vector<FiducialMarker> markers = detectFiducialMarkers(canvas, dictionary);
 
     ASSERT_EQ(markers.size(), ids.size());
 
@@ -198,28 +198,28 @@ TEST(Objdetect_Aruco2, MultiFiducialMarker) {
 }
 
 TEST(Objdetect_Aruco2, MultiDictionary) {
-    DictionaryType dict1 = DICT_4X4_50;
-    DictionaryType dict2 = DICT_ARUCO_MIP_36h12;
+    DictionaryType dictionary1 = DICT_4X4_50;
+    DictionaryType dictionary2 = DICT_ARUCO_MIP_36h12;
     int id1 = 5;
     int id2 = 10;
 
     Mat markerImg1, markerImg2;
-    getFiducialMarker(markerImg1, dict1, id1, 20, false);
-    getFiducialMarker(markerImg2, dict2, id2, 20, false);
+    getFiducialMarker(markerImg1, dictionary1, id1, 20, false);
+    getFiducialMarker(markerImg2, dictionary2, id2, 20, false);
 
     Mat canvas(600, 600, CV_8UC1, Scalar(255));
     markerImg1.copyTo(canvas(Rect(100, 100, markerImg1.cols, markerImg1.rows)));
     markerImg2.copyTo(canvas(Rect(300, 300, markerImg2.cols, markerImg2.rows)));
 
-    std::vector<DictionaryType> dicts = {dict1, dict2};
-    std::vector<FiducialMarker> markers = detectFiducialMarkers(canvas, dicts);
+    std::vector<DictionaryType> dictionaries = {dictionary1, dictionary2};
+    std::vector<FiducialMarker> markers = detectFiducialMarkers(canvas, dictionaries);
 
     ASSERT_EQ(markers.size(), 2u);
 
     bool found1 = false, found2 = false;
     for (const auto& m : markers) {
-        if (m.id == id1 && m.dict == dict1) found1 = true;
-        if (m.id == id2 && m.dict == dict2) found2 = true;
+        if (m.id == id1 && m.dictionary == dictionary1) found1 = true;
+        if (m.id == id2 && m.dictionary == dictionary2) found2 = true;
     }
     EXPECT_TRUE(found1);
     EXPECT_TRUE(found2);
@@ -227,9 +227,9 @@ TEST(Objdetect_Aruco2, MultiDictionary) {
 
 TEST(Objdetect_Aruco2, BoardGeneration) {
     Size gridSize(4, 3);
-    DictionaryType dict = DICT_ARUCO_MIP_36h12;
+    DictionaryType dictionary = DICT_ARUCO_MIP_36h12;
     Mat img;
-    getGridBoard(img, gridSize, dict, 20);
+    getGridBoard(img, gridSize, dictionary, 20);
     
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(img.type(), CV_8UC1);
@@ -245,20 +245,20 @@ TEST(Objdetect_Aruco2, BoardGeneration) {
 
 TEST(Objdetect_Aruco2, BoardDetection) {
     Size gridSize(3, 2);
-    DictionaryType dict = DICT_ARUCO_MIP_36h12;
+    DictionaryType dictionary = DICT_ARUCO_MIP_36h12;
     Mat boardImg;
-    getGridBoard(boardImg, gridSize, dict, 20);
+    getGridBoard(boardImg, gridSize, dictionary, 20);
     
     Mat canvas(boardImg.rows + 100, boardImg.cols + 100, CV_8UC1, Scalar(255));
     Rect roi(50, 50, boardImg.cols, boardImg.rows);
     boardImg.copyTo(canvas(roi));
     
     GridBoard board;
-    bool found = detectGridBoard(canvas, gridSize, dict, board);
+    bool found = detectGridBoard(canvas, gridSize, dictionary, board);
     
     ASSERT_TRUE(found);
     EXPECT_EQ(board.gridSize, gridSize);
-    EXPECT_EQ(board.dict, dict);
+    EXPECT_EQ(board.dictionary, dictionary);
     EXPECT_EQ(board.markers.size(), 6u);
 
     // Test getSolvePnpPoints
@@ -273,9 +273,9 @@ TEST(Objdetect_Aruco2, BoardDetection) {
 
 TEST(Objdetect_Aruco2, BoardRotation) {
     Size gridSize(3, 2);
-    DictionaryType dict = DICT_ARUCO_MIP_36h12;
+    DictionaryType dictionary = DICT_ARUCO_MIP_36h12;
     Mat boardImg;
-    getGridBoard(boardImg, gridSize, dict, 20);
+    getGridBoard(boardImg, gridSize, dictionary, 20);
     
     Mat canvas(800, 800, CV_8UC1, Scalar(255));
     Rect roi((canvas.cols - boardImg.cols) / 2, (canvas.rows - boardImg.rows) / 2, boardImg.cols, boardImg.rows);
@@ -289,7 +289,7 @@ TEST(Objdetect_Aruco2, BoardRotation) {
         warpAffine(canvas, rotated, rot, canvas.size(), INTER_LINEAR, BORDER_CONSTANT, Scalar(255));
         
         GridBoard board;
-        bool found = detectGridBoard(rotated, gridSize, dict, board);
+        bool found = detectGridBoard(rotated, gridSize, dictionary, board);
         
         ASSERT_TRUE(found) << "Failed for angle " << angle;
         EXPECT_EQ(board.markers.size(), 6u) << "Failed for angle " << angle;
@@ -297,10 +297,10 @@ TEST(Objdetect_Aruco2, BoardRotation) {
 }
 
 TEST(Objdetect_Aruco2, DiamondGeneration) {
-    DictionaryType dict = DICT_ARUCO_MIP_36h12;
+    DictionaryType dictionary = DICT_ARUCO_MIP_36h12;
     Vec4i ids(1, 2, 3, 4);
     Mat img;
-    getDiamondImage(img, dict, ids, 20);
+    getDiamondImage(img, dictionary, ids, 20);
     
     ASSERT_FALSE(img.empty());
     // Diamond is a 2x2 board.
@@ -312,20 +312,20 @@ TEST(Objdetect_Aruco2, DiamondGeneration) {
 }
 
 TEST(Objdetect_Aruco2, DiamondDetection) {
-    DictionaryType dict = DICT_ARUCO_MIP_36h12;
+    DictionaryType dictionary = DICT_ARUCO_MIP_36h12;
     Vec4i ids(5, 10, 15, 20);
     Mat diamondImg;
-    getDiamondImage(diamondImg, dict, ids, 20);
+    getDiamondImage(diamondImg, dictionary, ids, 20);
     
     Mat canvas(diamondImg.rows + 100, diamondImg.cols + 100, CV_8UC1, Scalar(255));
     Rect roi(50, 50, diamondImg.cols, diamondImg.rows);
     diamondImg.copyTo(canvas(roi));
     
-    std::vector<Diamond> diamonds = detectDiamonds(canvas, dict);
+    std::vector<Diamond> diamonds = detectDiamonds(canvas, dictionary);
     
     ASSERT_EQ(diamonds.size(), 1u);
     EXPECT_EQ(diamonds[0].id, ids);
-    EXPECT_EQ(diamonds[0].dict, dict);
+    EXPECT_EQ(diamonds[0].dictionary, dictionary);
     EXPECT_EQ(diamonds[0].markers.size(), 4u);
 
     // Test getSolvePnpPoints
@@ -339,10 +339,10 @@ TEST(Objdetect_Aruco2, DiamondDetection) {
 }
 
 TEST(Objdetect_Aruco2, DiamondRotation) {
-    DictionaryType dict = DICT_ARUCO_MIP_36h12;
+    DictionaryType dictionary = DICT_ARUCO_MIP_36h12;
     Vec4i ids(1, 2, 3, 4);
     Mat diamondImg;
-    getDiamondImage(diamondImg, dict, ids, 20);
+    getDiamondImage(diamondImg, dictionary, ids, 20);
     
     Mat canvas(800, 800, CV_8UC1, Scalar(255));
     Rect roi((canvas.cols - diamondImg.cols) / 2, (canvas.rows - diamondImg.rows) / 2, diamondImg.cols, diamondImg.rows);
@@ -355,7 +355,7 @@ TEST(Objdetect_Aruco2, DiamondRotation) {
         Mat rotated;
         warpAffine(canvas, rotated, rot, canvas.size(), INTER_LINEAR, BORDER_CONSTANT, Scalar(255));
         
-        std::vector<Diamond> diamonds = detectDiamonds(rotated, dict);
+        std::vector<Diamond> diamonds = detectDiamonds(rotated, dictionary);
         
         ASSERT_EQ(diamonds.size(), 1u) << "Failed for angle " << angle;
         // Diamond ID is Vec4i of the 4 constituent FiducialMarkers.
@@ -365,10 +365,10 @@ TEST(Objdetect_Aruco2, DiamondRotation) {
 }
 
 TEST(Objdetect_Aruco2, DiamondPerspective) {
-    DictionaryType dict = DICT_ARUCO_MIP_36h12;
+    DictionaryType dictionary = DICT_ARUCO_MIP_36h12;
     Vec4i ids(10, 20, 30, 40);
     Mat diamondImg;
-    getDiamondImage(diamondImg, dict, ids, 20);
+    getDiamondImage(diamondImg, dictionary, ids, 20);
     
     Size imgSize(800, 800);
     Mat canvas(imgSize, CV_8UC1, Scalar(255));
@@ -390,7 +390,7 @@ TEST(Objdetect_Aruco2, DiamondPerspective) {
     Mat M = getPerspectiveTransform(srcPoints, dstPoints);
     warpPerspective(diamondImg, canvas, M, imgSize, INTER_LINEAR, BORDER_TRANSPARENT);
     
-    std::vector<Diamond> diamonds = detectDiamonds(canvas, dict);
+    std::vector<Diamond> diamonds = detectDiamonds(canvas, dictionary);
     
     ASSERT_EQ(diamonds.size(), 1u);
     EXPECT_EQ(diamonds[0].id, ids);

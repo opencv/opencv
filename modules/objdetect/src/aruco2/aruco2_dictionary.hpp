@@ -109,7 +109,7 @@ CV_EXPORTS Dictionary getPredefinedDictionary(DictionaryType name);
 
 /** @brief Returns one of the predefined dictionaries referenced by DICT_*.
   */
-CV_EXPORTS_W Dictionary getPredefinedDictionary(int dict);
+CV_EXPORTS_W Dictionary getPredefinedDictionary(int dictionary);
 
 /** @brief Extend base dictionary by new nMarkers
   *

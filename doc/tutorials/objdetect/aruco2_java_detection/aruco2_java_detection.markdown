@@ -71,7 +71,7 @@ Detection is done with a single call to `Aruco2.detectFiducialMarkers()`. It ret
 Each `FiducialMarker` in the list provides:
 - `get_id()`: the marker identifier.
 - `get_corners()`: the four corner points in the image.
-- `get_dict()`: the dictionary the marker was found in.
+- `get_dictionary()`: the dictionary the marker was found in.
 
 Drawing Detected Markers
 ------------------------
@@ -85,7 +85,7 @@ Multi-Dictionary Detection
 
 One of the most powerful features of `aruco2` is detecting markers from multiple dictionaries at once. In Java, pass a `MatOfInt` containing the dictionary constants.
 
-@snippet java/tutorial_code/objdetect/aruco2/Aruco2Detection.java multi_dict
+@snippet java/tutorial_code/objdetect/aruco2/Aruco2Detection.java multi_dictionary
 
 Advanced: Detection Parameters
 ------------------------------

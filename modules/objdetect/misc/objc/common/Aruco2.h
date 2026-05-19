@@ -103,18 +103,18 @@ NS_SWIFT_NAME(getFiducialMarker(img:dictionary:id:));
 /**
  * Detect ArUco fiducial markers in an image using a single dictionary.
  * @param image    Input image (grayscale or BGR).
- * @param dict     Dictionary to search (Aruco2DictionaryType).
+ * @param dictionary Dictionary to search (Aruco2DictionaryType).
  * @param params   Detection parameters. Pass nil for defaults.
  * @return Array of detected FiducialMarker objects; empty if none found.
  */
 + (NSArray<Aruco2FiducialMarker*>*)detectFiducialMarkers:(Mat*)image
-                                                     dict:(int)dict
+                                               dictionary:(int)dictionary
                                                    params:(nullable Aruco2DetectionParameters*)params
-NS_SWIFT_NAME(detectFiducialMarkers(image:dict:params:));
+NS_SWIFT_NAME(detectFiducialMarkers(image:dictionary:params:));
 
 + (NSArray<Aruco2FiducialMarker*>*)detectFiducialMarkers:(Mat*)image
-                                                     dict:(int)dict
-NS_SWIFT_NAME(detectFiducialMarkers(image:dict:));
+                                               dictionary:(int)dictionary
+NS_SWIFT_NAME(detectFiducialMarkers(image:dictionary:));
 
 // ---- detectFiducialMarkers (multiple dicts) ---------------------------------
 
@@ -192,21 +192,21 @@ NS_SWIFT_NAME(getSolvePnpPoints(marker:objPoints:imgPoints:));
  * Generate a grid board image ready for printing.
  * @param img       Output grayscale image (CV_8UC1).
  * @param boardSize Board layout as columns × rows.
- * @param dict      Dictionary (Aruco2DictionaryType).
+ * @param dictionary Dictionary (Aruco2DictionaryType).
  * @param bitSize   Size of each marker bit in pixels. Default 25.
  * @param ids       Optional custom marker id list (Mat of ints); pass nil for 0…N-1.
  */
 + (void)getGridBoard:(Mat*)img
            boardSize:(Size2i*)boardSize
-                dict:(int)dict
+          dictionary:(int)dictionary
              bitSize:(int)bitSize
                  ids:(nullable Mat*)ids
-NS_SWIFT_NAME(getGridBoard(img:boardSize:dict:bitSize:ids:));
+NS_SWIFT_NAME(getGridBoard(img:boardSize:dictionary:bitSize:ids:));
 
 + (void)getGridBoard:(Mat*)img
            boardSize:(Size2i*)boardSize
-                dict:(int)dict
-NS_SWIFT_NAME(getGridBoard(img:boardSize:dict:));
+          dictionary:(int)dictionary
+NS_SWIFT_NAME(getGridBoard(img:boardSize:dictionary:));
 
 // ---- detectGridBoard --------------------------------------------------------
 
@@ -214,23 +214,23 @@ NS_SWIFT_NAME(getGridBoard(img:boardSize:dict:));
  * Detect a rectangular grid board of ArUco markers.
  * @param image    Input image (grayscale or BGR).
  * @param gridSize Board layout as columns × rows.
- * @param dict     Dictionary (Aruco2DictionaryType).
+ * @param dictionary Dictionary (Aruco2DictionaryType).
  * @param board    Output GridBoard populated with the detected markers.
  * @param ids      Optional custom marker id list (Mat of ints); pass nil for 0…N-1.
  * @return YES if at least one board marker was detected.
  */
 + (BOOL)detectGridBoard:(Mat*)image
                gridSize:(Size2i*)gridSize
-                   dict:(int)dict
+             dictionary:(int)dictionary
                   board:(Aruco2GridBoard*)board
                     ids:(nullable Mat*)ids
-NS_SWIFT_NAME(detectGridBoard(image:gridSize:dict:board:ids:));
+NS_SWIFT_NAME(detectGridBoard(image:gridSize:dictionary:board:ids:));
 
 + (BOOL)detectGridBoard:(Mat*)image
                gridSize:(Size2i*)gridSize
-                   dict:(int)dict
+             dictionary:(int)dictionary
                   board:(Aruco2GridBoard*)board
-NS_SWIFT_NAME(detectGridBoard(image:gridSize:dict:board:));
+NS_SWIFT_NAME(detectGridBoard(image:gridSize:dictionary:board:));
 
 // ---- drawGridBoard ----------------------------------------------------------
 
@@ -296,12 +296,12 @@ NS_SWIFT_NAME(getDiamondImage(img:dictionary:ids:));
 /**
  * Detect ChArUco2-style diamond markers in an image.
  * @param image Input image (grayscale or BGR).
- * @param dict  Dictionary (Aruco2DictionaryType).
+ * @param dictionary Dictionary (Aruco2DictionaryType).
  * @return Array of detected Diamond objects; empty if none found.
  */
 + (NSArray<Aruco2Diamond*>*)detectDiamonds:(Mat*)image
-                                       dict:(int)dict
-NS_SWIFT_NAME(detectDiamonds(image:dict:));
+                                 dictionary:(int)dictionary
+NS_SWIFT_NAME(detectDiamonds(image:dictionary:));
 
 // ---- drawDiamonds -----------------------------------------------------------
 

@@ -26,7 +26,7 @@ class Aruco2DetectionRun {
 
         System.out.println("Detected " + markers.size() + " marker(s)");
         for (FiducialMarker m : markers) {
-            System.out.println("  Marker ID: " + m.get_id());
+            System.out.println("  Marker ID: " + m.get_id() + " (Dict: " + m.get_dictionary() + ")");
         }
 
         // Draw detected markers for visualization
@@ -38,10 +38,10 @@ class Aruco2DetectionRun {
         //! [draw_markers]
 
         // Multi-dictionary detection
-        //! [multi_dict]
-        MatOfInt dicts = new MatOfInt(Aruco2.DICT_ARUCO_MIP_36h12, Aruco2.DICT_APRILTAG_36h11);
-        List<FiducialMarker> multiMarkers = Aruco2.detectFiducialMarkers(scene, dicts, new DetectionParameters());
-        //! [multi_dict]
+        //! [multi_dictionary]
+        MatOfInt dictionaries = new MatOfInt(Aruco2.DICT_ARUCO_MIP_36h12, Aruco2.DICT_APRILTAG_36h11);
+        List<FiducialMarker> multiMarkers = Aruco2.detectFiducialMarkers(scene, dictionaries, new DetectionParameters());
+        //! [multi_dictionary]
 
         System.out.println("Multi-dictionary detection found " + multiMarkers.size() + " marker(s)");
 

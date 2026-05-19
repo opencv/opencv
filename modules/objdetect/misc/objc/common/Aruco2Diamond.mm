@@ -16,8 +16,8 @@
     native.id = v.nativeRef;
 }
 
-- (int)dict { return (int)native.dict; }
-- (void)setDict:(int)v { native.dict = (cv::aruco2::DictionaryType)v; }
+- (int)dictionary { return (int)native.dictionary; }
+- (void)setDictionary:(int)v { native.dictionary = (cv::aruco2::DictionaryType)v; }
 
 - (NSArray<Aruco2FiducialMarker*>*)markers {
     NSMutableArray<Aruco2FiducialMarker*>* result = [NSMutableArray arrayWithCapacity:native.markers.size()];

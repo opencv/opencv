@@ -136,7 +136,7 @@ struct CV_EXPORTS_W_SIMPLE DetectionParameters {
 /** @brief A single detected ArUco fiducial marker.
  *
  * `corners` holds the four image-plane corner points in clockwise order starting from the
- * top-left corner.  `id` is the marker identifier within its `dict` dictionary.
+ * top-left corner.  `id` is the marker identifier within its `dictionary` dictionary.
  *
  * Corner order (viewed from front, standard orientation):
  * @code
@@ -151,7 +151,7 @@ struct CV_EXPORTS_W_SIMPLE FiducialMarker {
     CV_WRAP FiducialMarker() {}
     CV_PROP_RW std::vector<cv::Point2f> corners; ///< four corner points in clockwise order
     CV_PROP_RW int id = -1;                      ///< marker id; -1 if unidentified
-    CV_PROP_RW cv::aruco2::DictionaryType dict = cv::aruco2::DictionaryType(-1); ///< dictionary this marker belongs to
+    CV_PROP_RW cv::aruco2::DictionaryType dictionary; ///< dictionary this marker belongs to
     CV_WRAP Point2f getCorner(int i) const { return corners[i]; }
     cv::Point2f operator[](size_t i) const { return corners[i]; }
     size_t size() const { return corners.size(); }
@@ -177,7 +177,7 @@ CV_EXPORTS_W void getFiducialMarker(OutputArray img, cv::aruco2::DictionaryType 
 /** @brief Detect ArUco fiducial markers in an image using a single dictionary.
  *
  * @param image        input image (grayscale or BGR)
- * @param dict         dictionary to search; default is DICT_ARUCO_MIP_36h12
+ * @param dictionary   dictionary to search; default is DICT_ARUCO_MIP_36h12
  * @param detectorParams  detection tuning parameters
  * @return             vector of detected FiducialMarker objects; empty if none found
  *
@@ -188,24 +188,24 @@ CV_EXPORTS_W void getFiducialMarker(OutputArray img, cv::aruco2::DictionaryType 
  * undistort the image first with the known camera model.
  * @sa undistort, detectFiducialMarkers(InputArray, const std::vector<DictionaryType>&, const DetectionParameters&)
  */
-CV_EXPORTS_W std::vector<cv::aruco2::FiducialMarker> detectFiducialMarkers(InputArray image, cv::aruco2::DictionaryType dict = cv::aruco2::DICT_ARUCO_MIP_36h12,
+CV_EXPORTS_W std::vector<cv::aruco2::FiducialMarker> detectFiducialMarkers(InputArray image, cv::aruco2::DictionaryType dictionary = cv::aruco2::DICT_ARUCO_MIP_36h12,
                                           const cv::aruco2::DetectionParameters &detectorParams = {});
 
 /** @brief Detect ArUco fiducial markers in an image searching across multiple dictionaries in one pass.
  *
  * @param image        input image (grayscale or BGR)
- * @param dicts        list of dictionaries to search simultaneously
+ * @param dictionaries list of dictionaries to search simultaneously
  * @param detectorParams  detection tuning parameters
  * @return             vector of detected FiducialMarker objects; each carries the dictionary it was found in
  *
- * Each marker candidate is tested against all dictionaries in `dicts`.  Once identified in one
+ * Each marker candidate is tested against all dictionaries in `dictionaries`.  Once identified in one
  * dictionary it is removed from the candidate pool, so the same region is never matched twice.
  *
  * The implementation is based on the ArUco Library @cite Aruco2014 @cite romero2018speeded @cite GARRIDOJURADO2026102690.
  *
- * @sa FiducialMarker::dict
+ * @sa FiducialMarker::dictionary
  */
-CV_EXPORTS_W std::vector<cv::aruco2::FiducialMarker> detectFiducialMarkers(InputArray image, const std::vector<cv::aruco2::DictionaryType> &dicts,
+CV_EXPORTS_W std::vector<cv::aruco2::FiducialMarker> detectFiducialMarkers(InputArray image, const std::vector<cv::aruco2::DictionaryType> &dictionaries,
                                           const cv::aruco2::DetectionParameters &detectorParams = {});
 
 
@@ -277,11 +277,11 @@ CV_EXPORTS_W void getSolvePnpPoints(const cv::aruco2::FiducialMarker &marker, Ou
 struct CV_EXPORTS_W_SIMPLE GridBoard {
     CV_WRAP GridBoard() {}
     CV_PROP_RW cv::Size gridSize;              ///< board dimensions: width × height in markers
-    CV_PROP_RW cv::aruco2::DictionaryType dict;            ///< dictionary used for all markers on the board
+    CV_PROP_RW cv::aruco2::DictionaryType dictionary;            ///< dictionary used for all markers on the board
     CV_PROP_RW std::vector<cv::aruco2::FiducialMarker> markers;    ///< detected markers (subset of the full board)
 private:
     std::vector<std::pair<int,cv::Point2f>> detectedBoardCorners;
-    friend bool detectGridBoard(InputArray image, cv::Size gridSize, cv::aruco2::DictionaryType dict, GridBoard &board, InputArray ids);
+    friend bool detectGridBoard(InputArray image, cv::Size gridSize, cv::aruco2::DictionaryType dictionary, GridBoard &board, InputArray ids);
     friend void getSolvePnpPoints(const GridBoard& board, OutputArray objPoints, OutputArray imgPoints, float markerSize);
     friend void drawGridBoard(InputOutputArray image, const GridBoard &board, Scalar color, bool drawMarkerIds);
 };
@@ -291,15 +291,15 @@ private:
  *
  * @param img          output grayscale image (CV_8UC1) containing the full board
  * @param boardSize    board layout as columns × rows (e.g. `cv::Size(4, 3)`)
- * @param dict         dictionary used for the markers
+ * @param dictionary   dictionary used for the markers
  * @param bitSize     size of each marker bit in pixels (default 25)
  * @param ids          optional custom marker id list in row-major order;
  *                     if empty, ids 0…(cols*rows−1) are used
  *
  * Markers are laid out in row-major order with no gap between them.
- * Pass the same `boardSize`, `dict`, and `ids` to detectGridBoard() for detection.
+ * Pass the same `boardSize`, `dictionary`, and `ids` to detectGridBoard() for detection.
  */
-CV_EXPORTS_W void getGridBoard(OutputArray img, Size boardSize, cv::aruco2::DictionaryType dict,
+CV_EXPORTS_W void getGridBoard(OutputArray img, Size boardSize, cv::aruco2::DictionaryType dictionary,
                                 int bitSize = 25, InputArray ids = noArray());
 
 
@@ -307,7 +307,7 @@ CV_EXPORTS_W void getGridBoard(OutputArray img, Size boardSize, cv::aruco2::Dict
  *
  * @param image        input image (grayscale or BGR)
  * @param gridSize     board layout as columns × rows (e.g. `cv::Size(4, 3)` for a 4×3 grid)
- * @param dict         dictionary used to print the board
+ * @param dictionary   dictionary used to print the board
  * @param board        output GridBoard populated with the detected markers
  * @param ids          optional custom marker id list in row-major order;
  *                     if empty, ids 0…(cols*rows−1) are assumed
@@ -318,7 +318,7 @@ CV_EXPORTS_W void getGridBoard(OutputArray img, Size boardSize, cv::aruco2::Dict
  * found, board = cv.aruco2.detectGridBoard(image, (4, 3), cv.aruco2.DICT_ARUCO_MIP_36h12)
  * @endcode
  */
-CV_EXPORTS_W bool detectGridBoard(InputArray image, cv::Size gridSize, cv::aruco2::DictionaryType dict,
+CV_EXPORTS_W bool detectGridBoard(InputArray image, cv::Size gridSize, cv::aruco2::DictionaryType dictionary,
                          CV_OUT cv::aruco2::GridBoard &board, InputArray ids = noArray());
 
 /** @brief Draw detected board corners and optionally marker ids onto an image.
@@ -364,11 +364,11 @@ CV_EXPORTS_W void getSolvePnpPoints(const cv::aruco2::GridBoard &board, OutputAr
  struct CV_EXPORTS_W_SIMPLE Diamond {
     CV_WRAP Diamond() {}
     CV_PROP_RW cv::Vec4i id;                   ///< ids of the 4 constituent markers (clockwise from top-left)
-    CV_PROP_RW cv::aruco2::DictionaryType dict;            ///< dictionary used for the 4 markers
+    CV_PROP_RW cv::aruco2::DictionaryType dictionary;            ///< dictionary used for the 4 markers
     CV_PROP_RW std::vector<cv::aruco2::FiducialMarker> markers;    ///< the 4 detected markers forming the diamond
 private:
     std::vector<cv::Point2f> corners;
-    friend std::vector<Diamond> detectDiamonds(InputArray image, cv::aruco2::DictionaryType dict);
+    friend std::vector<Diamond> detectDiamonds(InputArray image, cv::aruco2::DictionaryType dictionary);
     friend void getSolvePnpPoints(const Diamond& diamond, OutputArray objPoints, OutputArray imgPoints, float markerSize);
     friend void drawDiamonds(InputOutputArray image, const std::vector<Diamond> &diamonds, Scalar color, bool drawMarkerIds);
 };
@@ -403,10 +403,10 @@ CV_EXPORTS_W void getDiamondImage(OutputArray img,const cv::aruco2::DictionaryTy
  * `Vec4i` for convenient access.
  *
  * @param image        input image (grayscale or BGR)
- * @param dict         dictionary used to print the diamond markers
+ * @param dictionary   dictionary used to print the diamond markers
  * @return             vector of detected Diamond objects; empty if none found
  */
-CV_EXPORTS_W std::vector<cv::aruco2::Diamond> detectDiamonds(InputArray image, cv::aruco2::DictionaryType dict);
+CV_EXPORTS_W std::vector<cv::aruco2::Diamond> detectDiamonds(InputArray image, cv::aruco2::DictionaryType dictionary);
 
 /** @brief Draw detected diamond outlines and optionally constituent marker ids onto an image.
  *
@@ -551,6 +551,3 @@ CV_EXPORTS_W void getSolvePnpPoints(const cv::aruco2::FractalMarker &fractal, Ou
 
 } // namespace aruco2
 } // namespace cv
-
-
-

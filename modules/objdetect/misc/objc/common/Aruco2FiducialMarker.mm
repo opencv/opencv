@@ -26,8 +26,8 @@
 - (int)id { return native.id; }
 - (void)setId:(int)v { native.id = v; }
 
-- (int)dict { return (int)native.dict; }
-- (void)setDict:(int)v { native.dict = (cv::aruco2::DictionaryType)v; }
+- (int)dictionary { return (int)native.dictionary; }
+- (void)setDictionary:(int)v { native.dictionary = (cv::aruco2::DictionaryType)v; }
 
 - (cv::aruco2::FiducialMarker&)nativeRef { return native; }
 

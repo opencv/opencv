@@ -33,7 +33,7 @@ CV_EXPORTS @interface Aruco2FiducialMarker : NSObject
 @property int id;
 
 /** Dictionary this marker belongs to (Aruco2DictionaryType as int). */
-@property int dict;
+@property int dictionary;
 
 #ifdef __cplusplus
 @property(readonly) cv::aruco2::FiducialMarker& nativeRef;

@@ -8,7 +8,7 @@ In this tutorial you will learn:
 - What ArUco2 markers are and why they are useful.
 - How to generate ArUco2 markers with OpenCV.js.
 - How to detect ArUco2 markers in an image using OpenCV.js.
-- How to handle multiple dictionaries in a single pass.
+- How to handle multiple dictionaryionaries in a single pass.
 - How to configure detection parameters.
 
 Introduction
@@ -89,7 +89,7 @@ markers.delete();
 Each marker object provides:
 - `id`: the marker identifier.
 - `corners`: the four corner points in the image (a `cv.Mat` with `size()` = 4).
-- `dict`: the dictionary the marker was found in.
+- `dictionary`: the dictionary the marker was found in.
 
 Drawing Detected Markers
 ------------------------
@@ -109,26 +109,26 @@ colorImg.delete();
 Multi-Dictionary Detection
 --------------------------
 
-One of the most powerful features of `aruco2` is detecting markers from multiple dictionaries at once. In JavaScript, pass a `cv.DictionaryTypeVector` containing the dictionary constants.
+One of the most powerful features of `aruco2` is detecting markers from multiple dictionaryionaries at once. In JavaScript, pass a `cv.DictionaryTypeVector` containing the dictionary constants.
 
 @code{.js}
 let DICT1 = cv.aruco2_DictionaryType.DICT_ARUCO_MIP_36h12;
 let DICT2 = cv.aruco2_DictionaryType.DICT_APRILTAG_36h11;
 
-let dicts = new cv.DictionaryTypeVector();
-dicts.push_back(DICT1);
-dicts.push_back(DICT2);
+let dictionaries = new cv.DictionaryTypeVector();
+dictionaries.push_back(DICT1);
+dictionaries.push_back(DICT2);
 
-let multiMarkers = cv.aruco2_detectFiducialMarkers1(img, dicts);
+let multiMarkers = cv.aruco2_detectFiducialMarkers1(img, dictionaries);
 
 console.log("Found", multiMarkers.size(), "marker(s)");
 for (let i = 0; i < multiMarkers.size(); i++) {
     let m = multiMarkers.get(i);
-    let name = (m.dict === DICT1) ? "ArUco" : "AprilTag";
+    let name = (m.dictionary === DICT1) ? "ArUco" : "AprilTag";
     console.log(name, "marker ID:", m.id);
 }
 
-dicts.delete();
+dictionaries.delete();
 multiMarkers.delete();
 @endcode
 

@@ -32,7 +32,7 @@ int main()
     auto multiMarkers = detectFiducialMarkers(image, {DICT_ARUCO_MIP_36h12, DICT_APRILTAG_36h11});
 
     for (const auto &m : multiMarkers) {
-        std::string dictName = (m.dict == DICT_ARUCO_MIP_36h12) ? "ArUco" : "AprilTag";
+        std::string dictName = (m.dictionary == DICT_ARUCO_MIP_36h12) ? "ArUco" : "AprilTag";
         std::cout << "Found " << dictName << " marker ID: " << m.id << std::endl;
     }
     //! [multi_dict]

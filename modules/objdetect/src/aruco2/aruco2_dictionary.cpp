@@ -418,8 +418,8 @@ Dictionary getPredefinedDictionary(DictionaryType name) {
 }
 
 
-Dictionary getPredefinedDictionary(int dict) {
-    return getPredefinedDictionary(DictionaryType(dict));
+Dictionary getPredefinedDictionary(int dictionary) {
+    return getPredefinedDictionary(DictionaryType(dictionary));
 }
 
 

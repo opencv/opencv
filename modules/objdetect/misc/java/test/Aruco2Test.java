@@ -28,6 +28,7 @@ public class Aruco2Test extends OpenCVTestCase {
         List<FiducialMarker> markers = Aruco2.detectFiducialMarkers(img, Aruco2.DICT_4X4_50, params);
         assertEquals(1, markers.size());
         assertEquals(0, markers.get(0).get_id());
+        assertEquals(Aruco2.DICT_4X4_50, markers.get(0).get_dictionary());
     }
 
     public void testGenerateMarker() {
@@ -114,6 +115,7 @@ public class Aruco2Test extends OpenCVTestCase {
         Aruco2_GridBoard board = new Aruco2_GridBoard();
         boolean found = Aruco2.detectGridBoard(canvas, gridSize, Aruco2.DICT_ARUCO_MIP_36h12, board);
         assertTrue(found);
+        assertEquals(Aruco2.DICT_ARUCO_MIP_36h12, board.get_dictionary());
         assertEquals(6, board.get_markers().size()); // 3x2 = 6 markers
 
         Mat colorCanvas = new Mat();
@@ -152,6 +154,7 @@ public class Aruco2Test extends OpenCVTestCase {
 
         List<Diamond> diamonds = Aruco2.detectDiamonds(canvas, Aruco2.DICT_ARUCO_MIP_36h12);
         assertEquals(1, diamonds.size());
+        assertEquals(Aruco2.DICT_ARUCO_MIP_36h12, diamonds.get(0).get_dictionary());
 
         Mat colorCanvas = new Mat();
         Imgproc.cvtColor(canvas, colorCanvas, Imgproc.COLOR_GRAY2BGR);

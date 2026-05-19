@@ -40,7 +40,7 @@ Detection is handled by the `cv::aruco2::detectDiamonds()` function.
 
 Each `cv::aruco2::Diamond` object in the returned vector contains:
 - `id`: A `cv::Vec4i` with the IDs of the four markers.
-- `dict`: The dictionary used.
+- `dictionary`: The dictionary used.
 - `markers`: A `std::vector<FiducialMarker>` containing the four individual markers forming the diamond.
 
 Drawing Detected Diamonds
