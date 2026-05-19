@@ -22,9 +22,11 @@
 #include <array>
 #include <iostream>
 #include <fstream>
+#include <algorithm>
 #include <limits>
 #include <set>
 #include <string>
+#include <unordered_map>
 
 #if defined _MSC_VER && _MSC_VER < 1910/*MSVS 2017*/
 #pragma warning(push)
@@ -131,6 +133,23 @@ protected:
     Mat parseTensor(const opencv_onnx::TensorProto& tensorProto);
     void rememberMissingOp(const std::string& opname);
 
+    // Subgraph body-local names are renamed to "<scope_prefix><name>" so
+    // they cannot shadow the enclosing scope.
+    struct RenameUndo {
+        std::string key;
+        bool had_prev;
+        std::string prev_value;
+    };
+    std::string remap(const std::string& name) const;
+    void pushSubgraphRenames(const opencv_onnx::GraphProto& graph_proto,
+                             std::vector<RenameUndo>& undos);
+    void sanitizeMainGraphNames(const opencv_onnx::GraphProto& graph_proto);
+    void recordSubgraphRename(const std::string& raw_name,
+                              const std::string& prefix,
+                              std::vector<RenameUndo>& undos);
+    void sanitizeName(const std::string& raw_name);
+    void popRenames(const std::vector<RenameUndo>& undos);
+
     LayerParams getLayerParams(const opencv_onnx::NodeProto& node_proto);
 
     void addLayer(LayerParams& layerParams,
@@ -157,6 +176,8 @@ protected:
     // Used when Onnx does not contain node names.
     // In this case each node is assigned a name 'onnx_node!<current global_node_idx value>'
     int global_node_idx;
+    std::unordered_map<std::string, std::string> rename_map;
+    int subgraph_scope_counter;
     bool have_errors;
 
     typedef void (ONNXImporter2::*ONNXImporterNodeParser)(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -661,6 +682,8 @@ void ONNXImporter2::parseOperatorSet()
 Net ONNXImporter2::parseModel()
 {
     global_node_idx = 0;
+    subgraph_scope_counter = 0;
+    rename_map.clear();
     have_errors = false;
     CV_Assert(model_proto.has_graph());
     opencv_onnx::GraphProto* graph_proto = model_proto.mutable_graph();
@@ -771,12 +794,104 @@ Mat ONNXImporter2::parseTensor(const opencv_onnx::TensorProto& tensor_proto)
     return getMatFromTensor2(tensor_proto, onnxBasePath);
 }
 
+std::string ONNXImporter2::remap(const std::string& name) const
+{
+    if (name.empty())
+        return name;
+    auto it = rename_map.find(name);
+    return it == rename_map.end() ? name : it->second;
+}
+
+void ONNXImporter2::recordSubgraphRename(const std::string& raw_name,
+                                        const std::string& prefix,
+                                        std::vector<RenameUndo>& undos)
+{
+    if (raw_name.empty())
+        return;
+    RenameUndo u;
+    u.key = raw_name;
+    auto it = rename_map.find(raw_name);
+    u.had_prev = (it != rename_map.end());
+    if (u.had_prev)
+        u.prev_value = it->second;
+    undos.push_back(std::move(u));
+    rename_map[raw_name] = prefix + raw_name;
+}
+
+void ONNXImporter2::sanitizeName(const std::string& raw_name)
+{
+    if (raw_name.empty() || raw_name.find('#') == std::string::npos)
+        return;
+    if (rename_map.find(raw_name) != rename_map.end())
+        return;
+    std::string sanitized = raw_name;
+    std::replace(sanitized.begin(), sanitized.end(), '#', '_');
+    rename_map[raw_name] = std::move(sanitized);
+}
+
+void ONNXImporter2::pushSubgraphRenames(const opencv_onnx::GraphProto& g,
+                                       std::vector<RenameUndo>& undos)
+{
+    const std::string& gname = g.name();
+    const std::string prefix = (gname.empty() ? std::string("body") : gname)
+                               + std::to_string(subgraph_scope_counter++) + "#";
+
+    const int n_init = g.initializer_size();
+    const int n_in = g.input_size();
+    const int n_out = g.output_size();
+    const int n_nodes = g.node_size();
+    undos.reserve(undos.size() + n_init + n_in + n_out + n_nodes);
+
+    for (int i = 0; i < n_init; ++i)
+        recordSubgraphRename(g.initializer(i).name(), prefix, undos);
+    for (int i = 0; i < n_in; ++i)
+        recordSubgraphRename(g.input(i).name(), prefix, undos);
+    for (int i = 0; i < n_out; ++i)
+        recordSubgraphRename(g.output(i).name(), prefix, undos);
+    for (int i = 0; i < n_nodes; ++i) {
+        const opencv_onnx::NodeProto& n = g.node(i);
+        for (int j = 0; j < n.output_size(); ++j)
+            recordSubgraphRename(n.output(j), prefix, undos);
+    }
+}
+
+void ONNXImporter2::sanitizeMainGraphNames(const opencv_onnx::GraphProto& g)
+{
+    for (int i = 0; i < g.initializer_size(); ++i)
+        sanitizeName(g.initializer(i).name());
+    for (int i = 0; i < g.input_size(); ++i)
+        sanitizeName(g.input(i).name());
+    for (int i = 0; i < g.output_size(); ++i)
+        sanitizeName(g.output(i).name());
+    for (int i = 0; i < g.node_size(); ++i) {
+        const opencv_onnx::NodeProto& n = g.node(i);
+        for (int j = 0; j < n.output_size(); ++j)
+            sanitizeName(n.output(j));
+    }
+}
+
+void ONNXImporter2::popRenames(const std::vector<RenameUndo>& undos)
+{
+    for (auto it = undos.rbegin(); it != undos.rend(); ++it) {
+        if (it->had_prev)
+            rename_map[it->key] = it->prev_value;
+        else
+            rename_map.erase(it->key);
+    }
+}
+
 Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool mainGraph_)
 {
     CV_LOG_DEBUG(NULL, "DNN/ONNX: parsing graph '" << graph_proto->name() << "' of " << graph_proto->node_size() << " nodes");
     simplifySubgraphs(*graph_proto, onnxBasePath);
     int n_nodes = graph_proto->node_size();
     CV_LOG_DEBUG(NULL, "DNN/ONNX: simplified the graph to " << n_nodes << " nodes");
+
+    std::vector<RenameUndo> local_renames;
+    if (mainGraph_)
+        sanitizeMainGraphNames(*graph_proto);
+    else
+        pushSubgraphRenames(*graph_proto, local_renames);
 
     opencv_onnx::GraphProto* saved_graph_proto = curr_graph_proto;
     Ptr<Graph> saved_graph = curr_graph;
@@ -788,21 +903,24 @@ Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool 
     // parse constant tensors
     int n_consts = graph_proto->initializer_size();
     for (int i = 0; i < n_consts; i++) {
-        //const opencv_onnx::
         const opencv_onnx::TensorProto& const_i = graph_proto->initializer(i);
         Mat t = parseTensor(const_i);
-        netimpl->newConstArg(const_i.name(), t);
+        netimpl->newConstArg(remap(const_i.name()), t);
     }
 
     // parse graph inputs
     int n_inputs = graph_proto->input_size();
     for (int i = 0; i < n_inputs; i++) {
         const opencv_onnx::ValueInfoProto& input_i = graph_proto->input(i);
-        if (net.haveArg(input_i.name()))
+        std::string input_name = remap(input_i.name());
+        // ONNX permits an initializer with the same name to shadow an input,
+        // promoting it to a constant. In that case the input entry is ignored.
+        if (net.haveArg(input_name))
             continue;
-        Arg arg = netimpl->newArg(input_i.name(), mainGraph_ ? DNN_ARG_INPUT : DNN_ARG_TEMP);
+        Arg arg = netimpl->newArg(input_name, mainGraph_ ? DNN_ARG_INPUT : DNN_ARG_TEMP);
         if (!parseValueInfo(input_i, netimpl->args.at(arg.idx))) {
             raiseError();
+            popRenames(local_renames);
             return Ptr<Graph>();
         }
         inputs.push_back(arg);
@@ -812,9 +930,21 @@ Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool 
     int n_outputs = graph_proto->output_size();
     for (int i = 0; i < n_outputs; i++) {
         const opencv_onnx::ValueInfoProto& output_i = graph_proto->output(i);
-        Arg arg = netimpl->newArg(output_i.name(), mainGraph_ ? DNN_ARG_OUTPUT : DNN_ARG_TEMP);
+        std::string output_name = remap(output_i.name());
+        Arg arg;
+        if (!output_name.empty() && net.haveArg(output_name)) {
+            arg = net.getArg(output_name);
+            if (mainGraph_) {
+                ArgData& adata = netimpl->args.at(arg.idx);
+                if (adata.kind == DNN_ARG_TEMP)
+                    adata.kind = DNN_ARG_OUTPUT;
+            }
+        } else {
+            arg = netimpl->newArg(output_name, mainGraph_ ? DNN_ARG_OUTPUT : DNN_ARG_TEMP);
+        }
         if (!parseValueInfo(output_i, netimpl->args.at(arg.idx))) {
            raiseError();
+           popRenames(local_renames);
            return Ptr<Graph>();
         }
         outputs.push_back(arg);
@@ -825,7 +955,6 @@ Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool 
 
     std::swap(saved_prog, curr_prog);
 
-    std::vector<Ptr<Layer> > prog;
     for (int i = 0; i < n_nodes && !have_errors; i++) {
         parseNode(graph_proto->node(i));
     }
@@ -837,6 +966,7 @@ Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool 
     curr_graph_proto = saved_graph_proto;
     curr_graph = saved_graph;
 
+    popRenames(local_renames);
     return just_constructed;
 }
 
@@ -907,22 +1037,18 @@ void ONNXImporter2::parseNode(const opencv_onnx::NodeProto& node_proto)
 
     int n_inputs = node_proto.input_size();
     for (int i = 0; i < n_inputs; i++) {
-        const std::string& arg_name = node_proto.input(i);
+        std::string arg_name = remap(node_proto.input(i));
         if (!net.haveArg(arg_name)) {
             CV_LOG_ERROR(NULL, "DNN/ONNX: unknown input '" << arg_name << "' of node '" << node_name << "'");
             raiseError();
         }
         Arg arg = net.getArg(arg_name);
-        /*ArgData adata = net.argData(arg);
-        printf("%s (%s), arg '%s'/'%s': adata.kind = %s, type=%s\n", node_name.c_str(), layer_type.c_str(),
-               arg_name.c_str(), adata.name.c_str(),
-               argKindToString(adata.kind).c_str(), typeToString(adata.type).c_str());*/
         node_inputs.push_back(arg);
     }
 
     int n_outputs = node_proto.output_size();
     for (int i = 0; i < n_outputs; i++) {
-        const std::string& arg_name = node_proto.output(i);
+        std::string arg_name = remap(node_proto.output(i));
         Arg arg = net.getArg(arg_name);
         node_outputs.push_back(arg);
     }
