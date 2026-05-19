@@ -298,6 +298,9 @@ macro(ocv_set_cuda_arch_bin_and_ptx nvcc_executable)
           ${_arch_hopper}
           ${_arch_blackwell}
       )
+      if(NOT __cuda_arch_bin)
+        message(FATAL_ERROR "CUDA: No compatible CUDA architecture found. Please enable OPENCV_CMAKE_CUDA_DEBUG=1 for investigation.")
+      endif()
       list(GET __cuda_arch_bin -1 __cuda_arch_ptx)
     endif()
   endif()

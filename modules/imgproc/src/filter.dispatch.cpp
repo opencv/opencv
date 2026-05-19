@@ -63,14 +63,14 @@
 
 namespace cv {
 
-BaseRowFilter::BaseRowFilter() { ksize = anchor = -1; }
+BaseRowFilter::BaseRowFilter() : ksize(-1), anchor(-1) {}
 BaseRowFilter::~BaseRowFilter() {}
 
-BaseColumnFilter::BaseColumnFilter() { ksize = anchor = -1; }
+BaseColumnFilter::BaseColumnFilter() : ksize(-1), anchor(-1) {}
 BaseColumnFilter::~BaseColumnFilter() {}
 void BaseColumnFilter::reset() {}
 
-BaseFilter::BaseFilter() { ksize = Size(-1,-1); anchor = Point(-1,-1); }
+BaseFilter::BaseFilter() : ksize(-1, -1), anchor(-1, -1) {}
 BaseFilter::~BaseFilter() {}
 void BaseFilter::reset() {}
 
@@ -205,6 +205,14 @@ int FilterEngine::proceed(const uchar* src, int srcstep, int count,
 
     CV_CPU_DISPATCH(FilterEngine__proceed, (*this, src, srcstep, count, dst, dststep),
         CV_CPU_DISPATCH_MODES_ALL);
+}
+
+bool FilterEngine::isStateless() const
+{
+    bool s2d = !filter2D    || filter2D->isStateless();
+    bool sr  = !rowFilter   || rowFilter->isStateless();
+    bool sc  = !columnFilter || columnFilter->isStateless();
+    return s2d && sr && sc;
 }
 
 void FilterEngine::apply(const Mat& src, Mat& dst, const Size& wsz, const Point& ofs)
@@ -455,16 +463,18 @@ template<typename ST, class CastOp, class VecOp> struct Filter2D : public BaseFi
         vecOp = _vecOp;
         CV_Assert( _kernel.type() == DataType<KT>::type );
         preprocess2DKernel( _kernel, coords, coeffs );
-        ptrs.resize( coords.size() );
     }
+
+    bool isStateless() const CV_OVERRIDE { return true; }
 
     void operator()(const uchar** src, uchar* dst, int dststep, int count, int width, int cn) CV_OVERRIDE
     {
         KT _delta = delta;
         const Point* pt = &coords[0];
         const KT* kf = (const KT*)&coeffs[0];
-        const ST** kp = (const ST**)&ptrs[0];
         int i, k, nz = (int)coords.size();
+        AutoBuffer<const ST*> _kp(nz);
+        const ST** kp = _kp.data();
         CastOp castOp = castOp0;
 
         width *= cn;
@@ -507,7 +517,6 @@ template<typename ST, class CastOp, class VecOp> struct Filter2D : public BaseFi
 
     std::vector<Point> coords;
     std::vector<uchar> coeffs;
-    std::vector<uchar*> ptrs;
     KT delta;
     CastOp castOp0;
     VecOp vecOp;

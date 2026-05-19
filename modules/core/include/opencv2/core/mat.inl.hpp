@@ -3207,7 +3207,7 @@ MatCommaInitializer_<_Tp>::operator Mat_<_Tp>() const
 }
 
 
-template<typename _Tp, typename T2> static inline
+template<typename _Tp, typename T2> CV_DEPRECATED_EXTERNAL static inline
 MatCommaInitializer_<_Tp> operator << (const Mat_<_Tp>& m, T2 val)
 {
     MatCommaInitializer_<_Tp> commaInitializer((Mat_<_Tp>*)&m);

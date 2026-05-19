@@ -48,6 +48,8 @@
 
 namespace cv
 {
+
+
 #ifdef HAVE_OPENCL
 bool ocl_sepFilter2D(
         InputArray _src, OutputArray _dst, int ddepth,

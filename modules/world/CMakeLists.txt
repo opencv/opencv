@@ -84,7 +84,7 @@ endif()
 ocv_target_compile_definitions(${the_module} PRIVATE OPENCV_MODULE_IS_PART_OF_WORLD=1)
 
 # NOTE: https://github.com/opencv/opencv/issues/25543
-if (WITH_QT)
+if (WITH_QT AND QT_VERSION_MAJOR GREATER 5)
   qt_disable_unicode_defines(${the_module})
 endif()
 

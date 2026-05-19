@@ -212,7 +212,10 @@ TEST_P(Test_Int8_layers, AvePooling)
     if (backend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         testLayer("layer_pooling_ave", "Caffe", 0.0021, 0.0075);
     testLayer("ave_pool_same", "TensorFlow", 0.00153, 0.0041);
-    testLayer("average_pooling_1d", "ONNX", 0.002, 0.0048);
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2025030000)
+    if (backend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+#endif
+        testLayer("average_pooling_1d", "ONNX", 0.002, 0.0048);
     if (backend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         testLayer("average_pooling", "ONNX", 0.0014, 0.0032);
     testLayer("average_pooling_dynamic_axes", "ONNX", 0.0014, 0.006);

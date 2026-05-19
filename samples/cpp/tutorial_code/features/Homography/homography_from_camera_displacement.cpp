@@ -113,7 +113,7 @@ void homographyFromCameraDisplacement(const string &img1Path, const string &img2
     //! [compute-camera-displacement]
 
     //! [compute-plane-normal-at-camera-pose-1]
-    Mat normal = (Mat_<double>(3,1) << 0, 0, 1);
+    Mat normal = Mat_<double>({3,1}, {0, 0, 1});
     Mat normal1 = R1*normal;
     //! [compute-plane-normal-at-camera-pose-1]
 

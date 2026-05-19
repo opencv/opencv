@@ -103,7 +103,7 @@ static bool ocl_math_op(InputArray _src1, InputArray _src2, OutputArray _dst, in
    Fast cube root by Ken Turkowski
    (http://www.worldserver.com/turk/computergraphics/papers.html)
 \* ************************************************************************** */
-float  cubeRoot( float value )
+CV_DISABLE_UBSAN float cubeRoot( float value )
 {
     CV_INSTRUMENT_REGION();
 

@@ -54,14 +54,9 @@ int main(int,char**)
     //! [matlab]
 
     // create a 3x3 double-precision identity matrix
-    //! [comma]
-    Mat C = (Mat_<double>(3,3) << 0, -1, 0, -1, 5, -1, 0, -1, 0);
-    cout << "C = " << endl << " " << C << endl << endl;
-    //! [comma]
-    // do the same with initializer_list
 
     //! [list]
-    C = (Mat_<double>({0, -1, 0, -1, 5, -1, 0, -1, 0})).reshape(3);
+    Mat C = Mat_<double>({3, 3}, {0, -1, 0, -1, 5, -1, 0, -1, 0});
     cout << "C = " << endl << " " << C << endl << endl;
     //! [list]
 

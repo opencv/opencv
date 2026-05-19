@@ -326,7 +326,7 @@ if(NOT HAVE_SPNG AND WITH_PNG)
   if(BUILD_PNG)
     ocv_clear_vars(PNG_FOUND)
   else()
-    ocv_clear_internal_cache_vars(PNG_LIBRARY PNG_INCLUDE_DIR)
+    ocv_clear_internal_cache_vars(PNG_LIBRARY PNG_INCLUDE_DIR PNG_PNG_INCLUDE_DIR)
     find_package(PNG QUIET)
   endif()
 
@@ -339,6 +339,18 @@ if(NOT HAVE_SPNG AND WITH_PNG)
     set(PNG_INCLUDE_DIR "${${PNG_LIBRARY}_SOURCE_DIR}" CACHE INTERNAL "")
     set(PNG_DEFINITIONS "")
     ocv_parse_header_version(PNG "${PNG_INCLUDE_DIR}/png.h" PNG_LIBPNG_VER_STRING)
+  endif()
+
+  if(BUILD_PNG)
+    # Downstream find_package(PNG) calls from transitive dependencies
+    # (included via include() in the same scope) may overwrite PNG_FOUND
+    # and related variables. PNG_LIBRARY is naturally protected by
+    # FindPNG's "if(NOT PNG_LIBRARY)" guard, but PNG_PNG_INCLUDE_DIR
+    # (searched via find_path without a guard) and its derived variables
+    # (PNG_INCLUDE_DIR, PNG_LIBRARIES, PNG_VERSION_STRING) are not.
+    # Lock PNG_PNG_INCLUDE_DIR so that find_path() respects the cached
+    # bundled path and skips the system search.
+    set(PNG_PNG_INCLUDE_DIR "${PNG_INCLUDE_DIR}" CACHE INTERNAL "PNG include dir (bundled)")
   endif()
 
   set(HAVE_PNG YES)

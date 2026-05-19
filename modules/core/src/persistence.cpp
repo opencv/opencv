@@ -529,7 +529,6 @@ bool FileStorage::Impl::open(const char *filename_or_buf, int _flags, const char
     bool write_base64 = (write_mode || append) && (_flags & FileStorage::BASE64) != 0;
 
     bool isGZ = false;
-    size_t fnamelen = 0;
 
     std::vector<std::string> params;
     //if ( !mem_mode )
@@ -552,18 +551,30 @@ bool FileStorage::Impl::open(const char *filename_or_buf, int _flags, const char
     flags = _flags;
 
     if (!mem_mode) {
-        char *dot_pos = strrchr((char *) filename.c_str(), '.');
+        size_t dot_idx = filename.find_last_of('.');
         char compression = '\0';
 
-        if (dot_pos && dot_pos[1] == 'g' && dot_pos[2] == 'z' &&
-            (dot_pos[3] == '\0' || (cv_isdigit(dot_pos[3]) && dot_pos[4] == '\0'))) {
-            if (append) {
-                CV_Error(cv::Error::StsNotImplemented, "Appending data to compressed file is not implemented");
+        if (dot_idx != std::string::npos)
+        {
+            std::string ext = filename.substr(dot_idx);
+
+            // Instead of `ext.starts_with(".gz")
+            if (ext.size() >= 3 && (ext[1] == 'g') && (ext[2] == 'z') )
+            {
+                if (ext.size() == 3)
+                {
+                    // ".gz"
+                    isGZ = true;
+                }
+
+                else if(ext.size() == 4 && cv_isdigit(ext[3]))
+                {
+                    // ".gz[0-9]"
+                    isGZ = true;
+                    compression = ext[3];
+                    filename.pop_back(); // Replace `gz[0-9]' to 'gz'.
+                }
             }
-            isGZ = true;
-            compression = dot_pos[3];
-            if (compression)
-                dot_pos[3] = '\0', fnamelen--;
         }
 
         if (!isGZ) {
@@ -575,6 +586,9 @@ bool FileStorage::Impl::open(const char *filename_or_buf, int _flags, const char
             }
         } else {
 #if USE_ZLIB
+            if (append) {
+                CV_Error(cv::Error::StsNotImplemented, "Appending data to compressed file is not implemented");
+            }
             char mode[] = {write_mode ? 'w' : 'r', 'b', compression ? compression : '3', '\0'};
             gzfile = gzopen(filename.c_str(), mode);
             if (!gzfile)

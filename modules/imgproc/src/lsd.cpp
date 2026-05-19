@@ -977,7 +977,6 @@ double LineSegmentDetectorImpl::rect_nfa(const rect& rec) const
     double top_y = ordered_y[0].y, bottom_y = ordered_y[2].y;
 
     // Loop around all points in the region and count those that are aligned.
-    std::vector<cv::Point> points;
     double left_limit, right_limit;
     for(int y = (int) ceil(top_y); y <= (int) ceil(bottom_y); ++y)
     {

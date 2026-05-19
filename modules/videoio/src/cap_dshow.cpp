@@ -2756,7 +2756,13 @@ int videoInput::start(int deviceID, videoDevice *VD){
     }
 
     VIDEOINFOHEADER *pVih =  reinterpret_cast<VIDEOINFOHEADER*>(VD->pAmMediaType->pbFormat);
-    CV_Assert(pVih);
+    // Some legacy or virtual cameras (e.g., Microsoft Ball filter) return S_OK
+    // but leave pbFormat as NULL. We check for NULL here to avoid a crash.
+    // https://github.com/opencv/opencv/issues/28904
+    if (pVih == NULL) {
+        DebugPrintOut("ERROR: pbFormat field is not set!\n");
+        return false;
+    }
     int currentWidth    =  HEADER(pVih)->biWidth;
     int currentHeight    =  HEADER(pVih)->biHeight;
 

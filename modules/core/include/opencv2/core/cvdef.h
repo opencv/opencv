@@ -697,7 +697,7 @@ __CV_ENUM_FLAGS_BITWISE_XOR_EQ   (EnumType, EnumType)                           
 #endif
 
 /****************************************************************************************\
-*                                    Thread sanitizer                                    *
+*                                    Sanitizers                                         *
 \****************************************************************************************/
 #ifndef CV_THREAD_SANITIZER
 # if defined(__has_feature)
@@ -705,6 +705,12 @@ __CV_ENUM_FLAGS_BITWISE_XOR_EQ   (EnumType, EnumType)                           
 #     define CV_THREAD_SANITIZER
 #   endif
 # endif
+#endif
+
+#if defined(__clang__) || defined(__GNUC__)
+  #define CV_DISABLE_UBSAN __attribute__((no_sanitize("undefined")))
+#else
+  #define CV_DISABLE_UBSAN
 #endif
 
 /****************************************************************************************\

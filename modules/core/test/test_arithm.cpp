@@ -2995,6 +2995,14 @@ TEST(Core_Norm, NORM_L2_8UC4)
     EXPECT_EQ(kNorm, cv::norm(a, b, NORM_L2));
 }
 
+TEST(Core_Norm, NORM_L2SQR_16SC4_large)
+{
+    const int sizes[] = {1, 116, 40};
+    Mat src(3, sizes, CV_16SC4, Scalar::all(16384));
+    const double expected = static_cast<double>(src.total()) * src.channels() * 16384.0 * 16384.0;
+    EXPECT_EQ(expected, cv::norm(src, NORM_L2SQR));
+}
+
 TEST(Core_ConvertTo, regression_12121)
 {
     {
