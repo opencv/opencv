@@ -20,7 +20,7 @@ int main()
 {
     {
         //! [example]
-        Mat m = (Mat_<uchar>(3,2) << 1,2,3,4,5,6);
+        Mat m = Mat_<uchar>({3,2}, {1,2,3,4,5,6});
         Mat col_sum, row_sum;
 
         reduce(m, col_sum, 0, REDUCE_SUM, CV_32F);
