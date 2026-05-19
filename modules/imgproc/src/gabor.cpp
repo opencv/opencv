@@ -78,18 +78,33 @@ cv::Mat cv::getGaborKernel( Size ksize, double sigma, double theta,
     double ey = -0.5/(sigma_y*sigma_y);
     double cscale = CV_PI*2/lambd;
 
-    for( int y = ymin; y <= ymax; y++ )
-        for( int x = xmin; x <= xmax; x++ )
-        {
-            double xr = x*c + y*s;
-            double yr = -x*s + y*c;
+    int rows = kernel.rows;
+    int cols = kernel.cols;
 
-            double v = scale*std::exp(ex*xr*xr + ey*yr*yr)*cos(cscale*xr + psi);
-            if( ktype == CV_32F )
-                kernel.at<float>(ymax - y, xmax - x) = (float)v;
-            else
-                kernel.at<double>(ymax - y, xmax - x) = v;
+    auto compute_gabor_row = [&](const cv::Range& range) {
+        for( int row = range.start; row < range.end; row++ )
+        {
+            int y = ymax - row;
+            
+            float* ptr_f = (ktype == CV_32F) ? kernel.ptr<float>(row) : nullptr;
+            double* ptr_d = (ktype == CV_64F) ? kernel.ptr<double>(row) : nullptr;
+
+            for( int col = 0; col < cols; col++ )
+            {
+                int x = xmax - col;
+                
+                double xr = x*c + y*s;
+                double yr = -x*s + y*c;
+
+                double v = scale*std::exp(ex*xr*xr + ey*yr*yr)*cos(cscale*xr + psi);
+                
+                if( ktype == CV_32F ) ptr_f[col] = (float)v;
+                else ptr_d[col] = v;
+            }
         }
+    };
+
+    cv::parallel_for_(cv::Range(0, rows), compute_gabor_row);
 
     return kernel;
 }
