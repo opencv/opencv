@@ -62,27 +62,29 @@ static int bayer2Gray_8u_rows(int start, int end,
             size_t vl = __riscv_vsetvl_e16m1((remaining - 2) / 2);
             if (vl < 4) break;
 
-            vuint16m1_t r0 = __riscv_vle16_v_u16m1((const uint16_t*)bayer, vl);
-            vuint16m1_t r1 = __riscv_vle16_v_u16m1((const uint16_t*)(bayer + b_step), vl);
-            vuint16m1_t r2 = __riscv_vle16_v_u16m1((const uint16_t*)(bayer + b_step * 2), vl);
+            vuint8mf2_t r0_B_u8 = __riscv_vlse8_v_u8mf2(bayer, 2, vl);
+            vuint8mf2_t r0_G_u8 = __riscv_vlse8_v_u8mf2(bayer + 1, 2, vl);
+            vuint8mf2_t r1_G_u8 = __riscv_vlse8_v_u8mf2(bayer + b_step, 2, vl);
+            vuint8mf2_t r1_R_u8 = __riscv_vlse8_v_u8mf2(bayer + b_step + 1, 2, vl);
+            vuint8mf2_t r2_B_u8 = __riscv_vlse8_v_u8mf2(bayer + b_step * 2, 2, vl);
+            vuint8mf2_t r2_G_u8 = __riscv_vlse8_v_u8mf2(bayer + b_step * 2 + 1, 2, vl);
 
-            vuint16m1_t masklo = __riscv_vmv_v_x_u16m1(0x00FF, vl);
+            vuint16m1_t r0_B = __riscv_vwaddu_vx_u16m1(r0_B_u8, 0, vl);
+            vuint16m1_t r0_G = __riscv_vwaddu_vx_u16m1(r0_G_u8, 0, vl);
+            vuint16m1_t r1_G = __riscv_vwaddu_vx_u16m1(r1_G_u8, 0, vl);
+            vuint16m1_t r1_R = __riscv_vwaddu_vx_u16m1(r1_R_u8, 0, vl);
+            vuint16m1_t r2_B = __riscv_vwaddu_vx_u16m1(r2_B_u8, 0, vl);
+            vuint16m1_t r2_G = __riscv_vwaddu_vx_u16m1(r2_G_u8, 0, vl);
 
-            vuint16m1_t r0_B = __riscv_vand_vv_u16m1(r0, masklo, vl);
-            vuint16m1_t r2_B = __riscv_vand_vv_u16m1(r2, masklo, vl);
             vuint16m1_t b1_ = __riscv_vadd_vv_u16m1(r0_B, r2_B, vl);
             vuint16m1_t b1  = __riscv_vslidedown_vx_u16m1(b1_, 1, vl);
             vuint16m1_t b0  = __riscv_vadd_vv_u16m1(b1_, b1, vl);
 
-            vuint16m1_t r0_G = __riscv_vsrl_vx_u16m1(r0, 8, vl);
-            vuint16m1_t r2_G = __riscv_vsrl_vx_u16m1(r2, 8, vl);
-            vuint16m1_t r1_G = __riscv_vand_vv_u16m1(r1, masklo, vl);
             vuint16m1_t r1_G_next = __riscv_vslidedown_vx_u16m1(r1_G, 1, vl);
             vuint16m1_t g0 = __riscv_vadd_vv_u16m1(r0_G, r2_G, vl);
             g0 = __riscv_vadd_vv_u16m1(g0, __riscv_vadd_vv_u16m1(r1_G, r1_G_next, vl), vl);
             vuint16m1_t g1 = __riscv_vsll_vx_u16m1(r1_G_next, 2, vl);
 
-            vuint16m1_t r1_R = __riscv_vsrl_vx_u16m1(r1, 8, vl);
             vuint16m1_t r1_R_next = __riscv_vslidedown_vx_u16m1(r1_R, 1, vl);
             vuint16m1_t r0_ = r1_R;
             vuint16m1_t r1_ = __riscv_vadd_vv_u16m1(r1_R, r1_R_next, vl);
@@ -122,12 +124,8 @@ static int bayer2Gray_8u_rows(int start, int end,
             vuint8mf2_t gray_even_u8 = __riscv_vnclipu_wx_u8mf2(gray_even_u16, 0, __RISCV_VXRM_RNU, vl);
             vuint8mf2_t gray_odd_u8  = __riscv_vnclipu_wx_u8mf2(gray_odd_u16,  0, __RISCV_VXRM_RNU, vl);
 
-            vuint16m1_t even_wide = __riscv_vwaddu_vx_u16m1(gray_even_u8, 0, vl);
-            vuint16m1_t odd_wide  = __riscv_vwaddu_vx_u16m1(gray_odd_u8,  0, vl);
-            vuint16m1_t odd_shifted = __riscv_vsll_vx_u16m1(odd_wide, 8, vl);
-            vuint16m1_t interleaved = __riscv_vor_vv_u16m1(even_wide, odd_shifted, vl);
-
-            __riscv_vse16_v_u16m1((uint16_t*)drow, interleaved, vl);
+            __riscv_vsse8_v_u8mf2(drow, 2, gray_even_u8, vl);
+            __riscv_vsse8_v_u8mf2(drow + 1, 2, gray_odd_u8, vl);
 
             bayer += vl * 2;
             drow += vl * 2;
