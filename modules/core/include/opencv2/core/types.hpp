@@ -1998,30 +1998,34 @@ Rect_<_Tp>& operator &= ( Rect_<_Tp>& a, const Rect_<_Tp>& b )
         a = Rect_<_Tp>();
         return a;
     }
-    const Rect_<_Tp>& Rx_min = (a.x < b.x) ? a : b;
-    const Rect_<_Tp>& Rx_max = (a.x < b.x) ? b : a;
-    const Rect_<_Tp>& Ry_min = (a.y < b.y) ? a : b;
-    const Rect_<_Tp>& Ry_max = (a.y < b.y) ? b : a;
-    // Looking at the formula below, we will compute Rx_min.width - (Rx_max.x - Rx_min.x)
-    // but we want to avoid overflows. Rx_min.width >= 0 and (Rx_max.x - Rx_min.x) >= 0
-    // by definition so the difference does not overflow. The only thing that can overflow
-    // is (Rx_max.x - Rx_min.x). And it can only overflow if Rx_min.x < 0.
-    // Let us first deal with the following case.
-    if ((Rx_min.x < 0 && Rx_min.x + Rx_min.width < Rx_max.x) ||
-        (Ry_min.y < 0 && Ry_min.y + Ry_min.height < Ry_max.y)) {
+
+    // Compute axis-aligned intersection of rectangles a and b.
+    // Each Rect_ is (x, y, width, height): (x,y) is the top-left corner;
+    // the right/bottom edges (exclusive) are (x + width) and (y + height).
+    //
+    // Intersection bounds:
+    //   left/top:    max of the two top-left coordinates
+    //   right/bottom: min of the two right/bottom edges
+    // If the rectangles do not overlap, right <= left or bottom <= top.
+    
+    _Tp x_min = std::max(a.x, b.x);
+    _Tp y_min = std::max(a.y, b.y);
+    _Tp x_max = std::min(a.x + a.width, b.x + b.width);
+    _Tp y_max = std::min(a.y + a.height, b.y + b.height);
+
+    // to prevent underflow, we cannot directly construct the rectangle
+    // we need to check if the width and height are positive
+
+    if (x_max <= x_min || y_max <= y_min) { // no overlap
         a = Rect_<_Tp>();
         return a;
     }
-    // We now know that either Rx_min.x >= 0, or
-    // Rx_min.x < 0 && Rx_min.x + Rx_min.width >= Rx_max.x and therefore
-    // Rx_min.width >= (Rx_max.x - Rx_min.x) which means (Rx_max.x - Rx_min.x)
-    // is inferior to a valid int and therefore does not overflow.
-    a.width = std::min(Rx_min.width - (Rx_max.x - Rx_min.x), Rx_max.width);
-    a.height = std::min(Ry_min.height - (Ry_max.y - Ry_min.y), Ry_max.height);
-    a.x = Rx_max.x;
-    a.y = Ry_max.y;
-    if (a.empty())
-        a = Rect_<_Tp>();
+    else {
+        a.x = x_min;
+        a.y = y_min;
+        a.width = x_max - x_min;
+        a.height = y_max - y_min;
+    }
     return a;
 }
 
