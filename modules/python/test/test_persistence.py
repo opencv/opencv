@@ -4,7 +4,6 @@ import tempfile
 import os
 import cv2 as cv
 import numpy as np
-import yaml
 from tests_common import NewOpenCVTests
 
 
@@ -45,6 +44,11 @@ class persistence_test(NewOpenCVTests):
         os.remove(fname)
 
     def test_yml_python_interop(self):
+        try:
+            import yaml
+        except:
+            raise unittest.SkipTest('Pyyml is not available for interop test')
+
         ref_data = {
             'int_value': 42,
             "bool_value": True,
