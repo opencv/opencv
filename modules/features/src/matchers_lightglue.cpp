@@ -64,7 +64,7 @@ public:
 
     // Private constructor for clone() — shares the already-loaded network
     LightGlueMatcherImpl(const dnn::Net& _net, const LightGlueMatcher::Params& _params)
-        : params(_params), net(_net) {}
+        : net(_net), params(_params) {}
 
     // DescriptorMatcher interface
     bool isMaskSupported() const CV_OVERRIDE { return false; }
