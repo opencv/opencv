@@ -1560,80 +1560,56 @@ OPENCV_HAL_IMPL_RVV_UNPACKS(v_float64, 64)
 #define OPENCV_HAL_IMPL_RVV_INTERLEAVED(_Tpvec, _Tp, suffix, width, hwidth, vl) \
 inline void v_load_deinterleave(const _Tp* ptr, v_##_Tpvec& a, v_##_Tpvec& b) \
 { \
-    vuint##width##m2x2_t seg = __riscv_vlseg2e##width##_v_u##width##m2x2( \
-        (const uint##width##_t*)ptr, VTraits<v_##_Tpvec>::vlanes()); \
-    a = v_reinterpret_as_##suffix( \
-        v_uint##width(__riscv_vget_v_u##width##m2x2_u##width##m2(seg, 0))); \
-    b = v_reinterpret_as_##suffix( \
-        v_uint##width(__riscv_vget_v_u##width##m2x2_u##width##m2(seg, 1))); \
+    a = __riscv_vlse##width##_v_##suffix##m2(ptr  , sizeof(_Tp)*2, VTraits<v_##_Tpvec>::vlanes()); \
+    b = __riscv_vlse##width##_v_##suffix##m2(ptr+1, sizeof(_Tp)*2, VTraits<v_##_Tpvec>::vlanes()); \
 }\
 inline void v_load_deinterleave(const _Tp* ptr, v_##_Tpvec& a, v_##_Tpvec& b, v_##_Tpvec& c) \
 { \
-    vuint##width##m2x3_t seg = __riscv_vlseg3e##width##_v_u##width##m2x3( \
-        (const uint##width##_t*)ptr, VTraits<v_##_Tpvec>::vlanes()); \
-    a = v_reinterpret_as_##suffix( \
-        v_uint##width(__riscv_vget_v_u##width##m2x3_u##width##m2(seg, 0))); \
-    b = v_reinterpret_as_##suffix( \
-        v_uint##width(__riscv_vget_v_u##width##m2x3_u##width##m2(seg, 1))); \
-    c = v_reinterpret_as_##suffix( \
-        v_uint##width(__riscv_vget_v_u##width##m2x3_u##width##m2(seg, 2))); \
+    a = __riscv_vlse##width##_v_##suffix##m2(ptr  , sizeof(_Tp)*3, VTraits<v_##_Tpvec>::vlanes()); \
+    b = __riscv_vlse##width##_v_##suffix##m2(ptr+1, sizeof(_Tp)*3, VTraits<v_##_Tpvec>::vlanes()); \
+    c = __riscv_vlse##width##_v_##suffix##m2(ptr+2, sizeof(_Tp)*3, VTraits<v_##_Tpvec>::vlanes()); \
 } \
 inline void v_load_deinterleave(const _Tp* ptr, v_##_Tpvec& a, v_##_Tpvec& b, \
                                 v_##_Tpvec& c, v_##_Tpvec& d) \
 { \
     \
-    vuint##width##m2x4_t seg = __riscv_vlseg4e##width##_v_u##width##m2x4( \
-        (const uint##width##_t*)ptr, VTraits<v_##_Tpvec>::vlanes()); \
-    a = v_reinterpret_as_##suffix( \
-        v_uint##width(__riscv_vget_v_u##width##m2x4_u##width##m2(seg, 0))); \
-    b = v_reinterpret_as_##suffix( \
-        v_uint##width(__riscv_vget_v_u##width##m2x4_u##width##m2(seg, 1))); \
-    c = v_reinterpret_as_##suffix( \
-        v_uint##width(__riscv_vget_v_u##width##m2x4_u##width##m2(seg, 2))); \
-    d = v_reinterpret_as_##suffix( \
-        v_uint##width(__riscv_vget_v_u##width##m2x4_u##width##m2(seg, 3))); \
+    a = __riscv_vlse##width##_v_##suffix##m2(ptr  , sizeof(_Tp)*4, VTraits<v_##_Tpvec>::vlanes()); \
+    b = __riscv_vlse##width##_v_##suffix##m2(ptr+1, sizeof(_Tp)*4, VTraits<v_##_Tpvec>::vlanes()); \
+    c = __riscv_vlse##width##_v_##suffix##m2(ptr+2, sizeof(_Tp)*4, VTraits<v_##_Tpvec>::vlanes()); \
+    d = __riscv_vlse##width##_v_##suffix##m2(ptr+3, sizeof(_Tp)*4, VTraits<v_##_Tpvec>::vlanes()); \
 } \
 inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec& a, const v_##_Tpvec& b, \
                                 hal::StoreMode /*mode*/=hal::STORE_UNALIGNED) \
 { \
-    vuint##width##m2x2_t seg; \
-    seg = __riscv_vset_v_u##width##m2_u##width##m2x2(seg, 0, v_reinterpret_as_u##width(a)); \
-    seg = __riscv_vset_v_u##width##m2_u##width##m2x2(seg, 1, v_reinterpret_as_u##width(b)); \
-    __riscv_vsseg2e##width##_v_u##width##m2x2( \
-        (uint##width##_t*)ptr, seg, VTraits<v_##_Tpvec>::vlanes()); \
+    __riscv_vsse##width(ptr, sizeof(_Tp)*2, a, VTraits<v_##_Tpvec>::vlanes()); \
+    __riscv_vsse##width(ptr+1, sizeof(_Tp)*2, b, VTraits<v_##_Tpvec>::vlanes()); \
 } \
 inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec& a, const v_##_Tpvec& b, \
                                 const v_##_Tpvec& c, hal::StoreMode /*mode*/=hal::STORE_UNALIGNED) \
 { \
-    vuint##width##m2x3_t seg; \
-    seg = __riscv_vset_v_u##width##m2_u##width##m2x3(seg, 0, v_reinterpret_as_u##width(a)); \
-    seg = __riscv_vset_v_u##width##m2_u##width##m2x3(seg, 1, v_reinterpret_as_u##width(b)); \
-    seg = __riscv_vset_v_u##width##m2_u##width##m2x3(seg, 2, v_reinterpret_as_u##width(c)); \
-    __riscv_vsseg3e##width##_v_u##width##m2x3( \
-        (uint##width##_t*)ptr, seg, VTraits<v_##_Tpvec>::vlanes()); \
+    __riscv_vsse##width(ptr, sizeof(_Tp)*3, a, VTraits<v_##_Tpvec>::vlanes()); \
+    __riscv_vsse##width(ptr+1, sizeof(_Tp)*3, b, VTraits<v_##_Tpvec>::vlanes()); \
+    __riscv_vsse##width(ptr+2, sizeof(_Tp)*3, c, VTraits<v_##_Tpvec>::vlanes()); \
 } \
 inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec& a, const v_##_Tpvec& b, \
                                 const v_##_Tpvec& c, const v_##_Tpvec& d, \
                                 hal::StoreMode /*mode*/=hal::STORE_UNALIGNED ) \
 { \
-    vuint##width##m2x4_t seg; \
-    seg = __riscv_vset_v_u##width##m2_u##width##m2x4(seg, 0, v_reinterpret_as_u##width(a)); \
-    seg = __riscv_vset_v_u##width##m2_u##width##m2x4(seg, 1, v_reinterpret_as_u##width(b)); \
-    seg = __riscv_vset_v_u##width##m2_u##width##m2x4(seg, 2, v_reinterpret_as_u##width(c)); \
-    seg = __riscv_vset_v_u##width##m2_u##width##m2x4(seg, 3, v_reinterpret_as_u##width(d)); \
-    __riscv_vsseg4e##width##_v_u##width##m2x4( \
-        (uint##width##_t*)ptr, seg, VTraits<v_##_Tpvec>::vlanes()); \
+    __riscv_vsse##width(ptr, sizeof(_Tp)*4, a, VTraits<v_##_Tpvec>::vlanes()); \
+    __riscv_vsse##width(ptr+1, sizeof(_Tp)*4, b, VTraits<v_##_Tpvec>::vlanes()); \
+    __riscv_vsse##width(ptr+2, sizeof(_Tp)*4, c, VTraits<v_##_Tpvec>::vlanes()); \
+    __riscv_vsse##width(ptr+3, sizeof(_Tp)*4, d, VTraits<v_##_Tpvec>::vlanes()); \
 }
 
 OPENCV_HAL_IMPL_RVV_INTERLEAVED(uint8, uchar, u8, 8, 4, VTraits<v_uint8>::vlanes())
-OPENCV_HAL_IMPL_RVV_INTERLEAVED(int8, schar, s8, 8, 4, VTraits<v_int8>::vlanes())
+OPENCV_HAL_IMPL_RVV_INTERLEAVED(int8, schar, i8, 8, 4, VTraits<v_int8>::vlanes())
 OPENCV_HAL_IMPL_RVV_INTERLEAVED(uint16, ushort, u16, 16, 8, VTraits<v_uint16>::vlanes())
-OPENCV_HAL_IMPL_RVV_INTERLEAVED(int16, short, s16, 16, 8, VTraits<v_int16>::vlanes())
+OPENCV_HAL_IMPL_RVV_INTERLEAVED(int16, short, i16, 16, 8, VTraits<v_int16>::vlanes())
 OPENCV_HAL_IMPL_RVV_INTERLEAVED(uint32, unsigned, u32, 32, 16, VTraits<v_uint32>::vlanes())
-OPENCV_HAL_IMPL_RVV_INTERLEAVED(int32, int, s32, 32, 16, VTraits<v_int32>::vlanes())
+OPENCV_HAL_IMPL_RVV_INTERLEAVED(int32, int, i32, 32, 16, VTraits<v_int32>::vlanes())
 OPENCV_HAL_IMPL_RVV_INTERLEAVED(float32, float, f32, 32, 16, VTraits<v_float32>::vlanes())
 OPENCV_HAL_IMPL_RVV_INTERLEAVED(uint64, uint64, u64, 64, 32, VTraits<v_uint64>::vlanes())
-OPENCV_HAL_IMPL_RVV_INTERLEAVED(int64, int64, s64, 64, 32, VTraits<v_int64>::vlanes())
+OPENCV_HAL_IMPL_RVV_INTERLEAVED(int64, int64, i64, 64, 32, VTraits<v_int64>::vlanes())
 #if CV_SIMD_SCALABLE_64F
 OPENCV_HAL_IMPL_RVV_INTERLEAVED(float64, double, f64, 64, 32, VTraits<v_float64>::vlanes())
 #endif
