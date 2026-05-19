@@ -184,55 +184,84 @@ HoughLinesStandard( InputArray src, OutputArray lines, int type,
                      irho, tabSin, tabCos);
 
     // stage 1. fill accumulator
-    int accum_size = (numangle + 2) * (numrho + 2);
-    memset(accum, 0, accum_size * sizeof(int));
+    // Original Single Tread
+    if (numangle < 100) {
+        if (use_edgeval) {
+            for( i = 0; i < height; i++ )
+                for( j = 0; j < width; j++ )
+                {
+                    if( image[i * step + j] != 0 )
+                        for(int n = 0; n < numangle; n++ )
+                        {
+                            int r = cvRound( j * tabCos[n] + i * tabSin[n] );
+                            r += (numrho - 1) / 2;
+                            accum[(n + 1) * (numrho + 2) + r + 1] += image[i * step + j];
+                        }
+                }
+        } else {
+            for( i = 0; i < height; i++ )
+                for( j = 0; j < width; j++ )
+                {
+                    if( image[i * step + j] != 0 )
+                        for(int n = 0; n < numangle; n++ )
+                        {
+                            int r = cvRound( j * tabCos[n] + i * tabSin[n] );
+                            r += (numrho - 1) / 2;
+                            accum[(n + 1) * (numrho + 2) + r + 1]++;
+                        }
+                }
+        }
+    } else {
+        int accum_size = (numangle + 2) * (numrho + 2);
+        memset(accum, 0, accum_size * sizeof(int));
 
-    // Extract the coordinates of all edge points
-    std::vector<int> x_coords, y_coords, edge_vals;
-    size_t estimated_edges = (size_t)(width * height * 0.1);
-    x_coords.reserve(estimated_edges);
-    y_coords.reserve(estimated_edges);
-    if (use_edgeval) {
-        edge_vals.reserve(estimated_edges);
-    }
+        // Extract the coordinates of all edge points
+        std::vector<int> x_coords, y_coords, edge_vals;
+        size_t estimated_edges = (size_t)(width * height * 0.1);
+        x_coords.reserve(estimated_edges);
+        y_coords.reserve(estimated_edges);
+        if (use_edgeval) {
+            edge_vals.reserve(estimated_edges);
+        }
 
-    for (int y = 0; y < height; y++) {
-        const uchar* row_ptr = image + y * step;
-        for (int x = 0; x < width; x++) {
-            int val = row_ptr[x];
-            if (val != 0) {
-                x_coords.push_back(x);
-                y_coords.push_back(y);
-                if (use_edgeval) edge_vals.push_back(val);
+        for (int y = 0; y < height; y++) {
+            const uchar* row_ptr = image + y * step;
+            for (int x = 0; x < width; x++) {
+                int val = row_ptr[x];
+                if (val != 0) {
+                    x_coords.push_back(x);
+                    y_coords.push_back(y);
+                    if (use_edgeval) edge_vals.push_back(val);
+                }
             }
         }
-    }
-    int num_edges = (int)x_coords.size();
+        int num_edges = (int)x_coords.size();
 
-    // Perform multi-threaded segmentation according to the numangle
-    // Since accum is divided into blocks according to angles, the accum areas written by different threads will not overlap
-    auto process_hough_by_angle = [&](const cv::Range& range) {
-        for (int n = range.start; n < range.end; n++) {
-            float cos_n = tabCos[n];
-            float sin_n = tabSin[n];
-            
-            int* accum_n = accum + (n + 1) * (numrho + 2) + 1 + (numrho - 1) / 2;
+        // Perform multi-threaded segmentation according to the numangle
+        // Since accum is divided into blocks according to angles, the accum areas written by different threads will not overlap
+        auto process_hough_by_angle = [&](const cv::Range& range) {
+            for (int n = range.start; n < range.end; n++) {
+                float cos_n = tabCos[n];
+                float sin_n = tabSin[n];
+                
+                int* accum_n = accum + (n + 1) * (numrho + 2) + 1 + (numrho - 1) / 2;
 
-            if (use_edgeval) {
-                for (int k = 0; k < num_edges; k++) {
-                    int r = cvRound(x_coords[k] * cos_n + y_coords[k] * sin_n);
-                    accum_n[r] += edge_vals[k]; 
-                }
-            } else {
-                for (int k = 0; k < num_edges; k++) {
-                    int r = cvRound(x_coords[k] * cos_n + y_coords[k] * sin_n);
-                    accum_n[r]++;
+                if (use_edgeval) {
+                    for (int k = 0; k < num_edges; k++) {
+                        int r = cvRound(x_coords[k] * cos_n + y_coords[k] * sin_n);
+                        accum_n[r] += edge_vals[k]; 
+                    }
+                } else {
+                    for (int k = 0; k < num_edges; k++) {
+                        int r = cvRound(x_coords[k] * cos_n + y_coords[k] * sin_n);
+                        accum_n[r]++;
+                    }
                 }
             }
-        }
-    };
+        };
 
-    cv::parallel_for_(cv::Range(0, numangle), process_hough_by_angle);
+        cv::parallel_for_(cv::Range(0, numangle), process_hough_by_angle);
+    }
 
     // stage 2. find local maximums
     findLocalMaximums( numrho, numangle, threshold, accum, _sort_buf );
