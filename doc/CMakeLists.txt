@@ -309,3 +309,5 @@ if(DOXYGEN_FOUND)
     ${compatible_MESSAGE_NEVER}
   )
 endif()
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.modern.txt)
