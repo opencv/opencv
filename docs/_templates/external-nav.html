@@ -1,0 +1,9 @@
+{% if theme_external_links %}
+<ul class="bd-navbar-elements navbar-nav">
+  {% for link in theme_external_links %}
+    <li class="nav-item">
+      <a class="nav-link nav-external" href="{{ link.url }}" target="_blank" rel="noopener">{{ link.name }}</a>
+    </li>
+  {% endfor %}
+</ul>
+{% endif %}
