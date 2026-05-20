@@ -50,6 +50,16 @@ static float rngIn(float from, float to) { return from + (to-from) * (float)theR
 
 TEST_P(EstimateAffine2D, test3Points)
 {
+    int method = GetParam();
+    if (method < USAC_DEFAULT || method > USAC_MAGSAC)
+    {
+        for (size_t i = 0; i < 2; ++i)
+        {
+            std::vector<cv::Vec2f> fpts(i), tpts(i);
+            vector<uchar> inliers;
+            EXPECT_THROW(estimateAffine2D(fpts, tpts, inliers, method), cv::Exception);
+        }
+    }
     // try more transformations
     for (size_t i = 0; i < 500; ++i)
     {
@@ -67,7 +77,7 @@ TEST_P(EstimateAffine2D, test3Points)
         transform(fpts, tpts, aff);
 
         vector<uchar> inliers;
-        Mat aff_est = estimateAffine2D(fpts, tpts, inliers, GetParam() /* method */);
+        Mat aff_est = estimateAffine2D(fpts, tpts, inliers, method );
 
         EXPECT_NEAR(0., cvtest::norm(aff_est, aff, NORM_INF), 1e-3);
 

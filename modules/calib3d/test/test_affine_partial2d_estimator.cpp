@@ -62,6 +62,13 @@ static Mat rngPartialAffMat() {
 
 TEST_P(EstimateAffinePartial2D, test2Points)
 {
+    for (size_t i = 0; i < 2; ++i)
+    {
+        std::vector<cv::Vec2f> fpts(i), tpts(i);
+        vector<uchar> inliers;
+        EXPECT_THROW(estimateAffinePartial2D(fpts, tpts, inliers, GetParam() /* method */), cv::Exception);
+    }
+
     // try more transformations
     for (size_t i = 0; i < 500; ++i)
     {

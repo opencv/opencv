@@ -1363,14 +1363,16 @@ No image processing is done to improve to find the checkerboard. This has the ef
 execution of the function but could lead to not recognizing the checkerboard if the image
 is not previously binarized in the appropriate manner.
 
+@return True if all of the corners are found and placed in a certain order (row by row,
+left to right in every row). Otherwise, if the function fails to find all the corners or reorder them,
+it returns false.
+
 The function attempts to determine whether the input image is a view of the chessboard pattern and
-locate the internal chessboard corners. The function returns a non-zero value if all of the corners
-are found and they are placed in a certain order (row by row, left to right in every row).
-Otherwise, if the function fails to find all the corners or reorder them, it returns 0. For example,
-a regular chessboard has 8 x 8 squares and 7 x 7 internal corners, that is, points where the black
-squares touch each other. The detected coordinates are approximate, and to determine their positions
-more accurately, the function calls #cornerSubPix. You also may use the function #cornerSubPix with
-different parameters if returned coordinates are not accurate enough.
+locate the internal chessboard corners. For example, a regular chessboard has 8 x 8 squares and
+7 x 7 internal corners, that is, points where the black squares touch each other. The detected
+coordinates are approximate, and to determine their positions more accurately, the function
+calls #cornerSubPix. You also may use the function #cornerSubPix with different parameters if
+returned coordinates are not accurate enough.
 
 Sample usage of detecting and drawing chessboard corners: :
 @code
@@ -1401,9 +1403,12 @@ to create the desired checkerboard pattern.
 CV_EXPORTS_W bool findChessboardCorners( InputArray image, Size patternSize, OutputArray corners,
                                          int flags = CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE );
 
-/*
-   Checks whether the image contains chessboard of the specific size or not.
-   If yes, nonzero value is returned.
+/** @brief Checks whether the image contains chessboard of the specific size or not.
+
+@param img Source chessboard view.
+@param size Size of the chessboard.
+
+@return Whether a chessboard was found.
 */
 CV_EXPORTS_W bool checkChessboard(InputArray img, Size size);
 
@@ -1584,10 +1589,12 @@ perspective distortions but much more sensitive to background clutter.
                     If `blobDetector` is NULL then `image` represents Point2f array of candidates.
 @param parameters struct for finding circles in a grid pattern.
 
+@return True if all of the centers have been found and they have been placed in a certain order
+(row by row, left to right in every row). Otherwise, if the function fails to find all the corners
+or reorder them, it returns false.
+
 The function attempts to determine whether the input image contains a grid of circles. If it is, the
-function locates centers of the circles. The function returns a non-zero value if all of the centers
-have been found and they have been placed in a certain order (row by row, left to right in every
-row). Otherwise, if the function fails to find all the corners or reorder them, it returns 0.
+function locates centers of the circles.
 
 Sample usage of detecting and drawing the centers of circles: :
 @code
@@ -3179,12 +3186,14 @@ an inlier.
 between 0.95 and 0.99 is usually good enough. Values too close to 1 can slow down the estimation
 significantly. Values lower than 0.8-0.9 can result in an incorrectly estimated transformation.
 
+@return Whether a solution was found.
+
 The function estimates an optimal 3D affine transformation between two 3D point sets using the
 RANSAC algorithm.
  */
-CV_EXPORTS_W  int estimateAffine3D(InputArray src, InputArray dst,
-                                   OutputArray out, OutputArray inliers,
-                                   double ransacThreshold = 3, double confidence = 0.99);
+CV_EXPORTS_W  bool estimateAffine3D(InputArray src, InputArray dst,
+                                    OutputArray out, OutputArray inliers,
+                                    double ransacThreshold = 3, double confidence = 0.99);
 
 /** @brief Computes an optimal affine transformation between two 3D point sets.
 
@@ -3253,12 +3262,14 @@ CV_EXPORTS_W   cv::Mat estimateAffine3D(InputArray src, InputArray dst,
  * between 0.95 and 0.99 is usually good enough. Values too close to 1 can slow down the estimation
  * significantly. Values lower than 0.8-0.9 can result in an incorrectly estimated transformation.
  *
+ * @return Whether a translation was found.
+ *
  * The function estimates an optimal 3D translation between two 3D point sets using the
  * RANSAC algorithm.
  *  */
-CV_EXPORTS_W  int estimateTranslation3D(InputArray src, InputArray dst,
-                                        OutputArray out, OutputArray inliers,
-                                        double ransacThreshold = 3, double confidence = 0.99);
+CV_EXPORTS_W  bool estimateTranslation3D(InputArray src, InputArray dst,
+                                         OutputArray out, OutputArray inliers,
+                                         double ransacThreshold = 3, double confidence = 0.99);
 
 /** @brief Computes an optimal affine transformation between two 2D point sets.
 
