@@ -683,6 +683,11 @@ def transform(text: str, tags: TagIndex, *,
     text = _convert_module_bullets_to_table(text)
     text = _convert_rowspan_tables(text)
     text = _deindent_toplevel_numbered_lists(text)
+    if out_doc:
+        _od_parts = out_doc.split("/")
+        if len(_od_parts) >= 2:
+            _mod = _od_parts[-2]
+            text = re.sub(rf"\b{re.escape(_mod)}/images/", "images/", text)
     text = _convert_images_to_figures(text)
     text = _wrap_metadata_table(text)
 
