@@ -91,7 +91,7 @@ markers.delete();
 
 Each marker object provides:
 - `id`: the marker identifier.
-- `corners`: the four corner points in the image (a `cv.Mat` with `size()` = 4).
+- `corners`: the four corner points in the image (a `cv.Point2fVector` with `size()` = 4).
 - `dictionary`: the dictionary the marker was found in.
 
 Drawing Detected Markers
