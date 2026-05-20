@@ -193,20 +193,23 @@ void fastNormChannel(const Mat &input, const Mat &scale, const Mat &bias, Mat &o
         const size_t outStep3 = output.step.p[3] / sizeof(float);
 
         const size_t norm_size = (size_t)H * (size_t)W;
-        const float inv_norm_size = 1.f / (float)norm_size;
 
 #if CV_SIMD
         const int VEC_SZ = VTraits<v_float32>::vlanes();
 #endif
 
+        // Accumulators are double-precision
+        const double inv_norm_size_d = 1.0 / (double)norm_size;
+
         parallel_for_(Range(0, N * C1), [&](const Range& r) {
             const float* inptr0 = (const float*)input.data;
             float* outptr0 = (float*)output.data;
 
-            AutoBuffer<float> buf(C0 * 4);
-            float* sum   = buf.data();
-            float* sqsum = sum + C0;
-            float* alpha = sqsum + C0;
+            AutoBuffer<double> sumBuf(C0 * 2);
+            double* sum   = sumBuf.data();
+            double* sqsum = sum + C0;
+            AutoBuffer<float> abBuf(C0 * 2);
+            float* alpha = abBuf.data();
             float* beta  = alpha + C0;
 
             for (int i = r.start; i < r.end; ++i) {
@@ -219,28 +222,36 @@ void fastNormChannel(const Mat &input, const Mat &scale, const Mat &bias, Mat &o
                 float*       outbase = outptr0 + n * outStep0 + c1 * outStep1;
 
                 int c0 = 0;
-#if CV_SIMD
+#if CV_SIMD && CV_SIMD_64F
+                const int VEC_SZ_D = VTraits<v_float64>::vlanes();
+                CV_DbgAssert(VEC_SZ == 2 * VEC_SZ_D);
                 for (; c0 <= validC0 - VEC_SZ; c0 += VEC_SZ) {
-                    v_float32 vsum = vx_setzero_f32();
-                    v_float32 vsqsum = vx_setzero_f32();
+                    v_float64 vsum_lo = vx_setzero_f64(), vsum_hi = vx_setzero_f64();
+                    v_float64 vsqsum_lo = vx_setzero_f64(), vsqsum_hi = vx_setzero_f64();
                     for (int h = 0; h < H; ++h) {
                         const float* inrow = inbase + h * inStep2;
                         for (int w = 0; w < W; ++w) {
                             v_float32 v = vx_load(inrow + w * inStep3 + c0);
-                            vsum = v_add(vsum, v);
-                            vsqsum = v_fma(v, v, vsqsum);
+                            v_float64 vlo = v_cvt_f64(v);
+                            v_float64 vhi = v_cvt_f64_high(v);
+                            vsum_lo = v_add(vsum_lo, vlo);
+                            vsum_hi = v_add(vsum_hi, vhi);
+                            vsqsum_lo = v_fma(vlo, vlo, vsqsum_lo);
+                            vsqsum_hi = v_fma(vhi, vhi, vsqsum_hi);
                         }
                     }
-                    vx_store(sum + c0, vsum);
-                    vx_store(sqsum + c0, vsqsum);
+                    vx_store(sum   + c0,             vsum_lo);
+                    vx_store(sum   + c0 + VEC_SZ_D, vsum_hi);
+                    vx_store(sqsum + c0,             vsqsum_lo);
+                    vx_store(sqsum + c0 + VEC_SZ_D, vsqsum_hi);
                 }
 #endif
                 for (; c0 < validC0; ++c0) {
-                    float s = 0.f, sq = 0.f;
+                    double s = 0., sq = 0.;
                     for (int h = 0; h < H; ++h) {
                         const float* inrow = inbase + h * inStep2;
                         for (int w = 0; w < W; ++w) {
-                            float v = inrow[w * inStep3 + c0];
+                            double v = (double)inrow[w * inStep3 + c0];
                             s += v;
                             sq += v * v;
                         }
@@ -250,11 +261,11 @@ void fastNormChannel(const Mat &input, const Mat &scale, const Mat &bias, Mat &o
                 }
 
                 for (int c = 0; c < validC0; ++c) {
-                    float mean = sum[c] * inv_norm_size;
-                    float var = std::max(0.f, sqsum[c] * inv_norm_size - mean * mean);
-                    float inv_stdev = 1.f / std::sqrt(var + epsilon);
+                    double mean = sum[c] * inv_norm_size_d;
+                    double var = std::max(0., sqsum[c] * inv_norm_size_d - mean * mean);
+                    float inv_stdev = 1.f / std::sqrt((float)var + epsilon);
                     alpha[c] = scale_data[cbase + c] * inv_stdev;
-                    beta[c]  = bias_data[cbase + c] - alpha[c] * mean;
+                    beta[c]  = bias_data[cbase + c] - alpha[c] * (float)mean;
                 }
 
                 c0 = 0;

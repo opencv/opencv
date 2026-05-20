@@ -7,4 +7,9 @@
     #include <hpx/hpx_main.hpp>
 #endif
 
-CV_TEST_MAIN("cv")
+static void initFeaturesTests()
+{
+    cvtest::addDataSearchEnv("OPENCV_DNN_TEST_DATA_PATH");
+}
+
+CV_TEST_MAIN("cv", initFeaturesTests())
