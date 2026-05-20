@@ -301,8 +301,16 @@ static void testConstantTemplateWithMask(const string& testName, int type, int m
     Mat result;
     matchTemplate(image, templ, result, TM_CCOEFF_NORMED, mask);
 
-    EXPECT_TRUE(checkRange(result));
-    EXPECT_EQ(0, countNonZero(result != 1.0f));
+    for (int y = 0; y < result.rows; ++y)
+    {
+        for (int x = 0; x < result.cols; ++x)
+        {
+            const float value = result.at<float>(y, x);
+            EXPECT_FALSE(cvIsNaN(value));
+            EXPECT_FALSE(cvIsInf(value));
+            EXPECT_EQ(1.0f, value);
+        }
+    }
 }
 
 TEST(Imgproc_MatchTemplateWithMask, regression_23257_constant_template)
