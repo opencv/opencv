@@ -81,11 +81,9 @@
 
         <br>
 
-        @warning In OpenCV 4, the order of the returned corners locations for the AprilTag family were not aligned with the ArUco one.\n
-        Since OpenCV 5, the corners order for the AprilTag family matches with the ArUco family ones.\n
-        Note that this order is different from the convention adopted by the official [AprilTag library](https://github.com/AprilRobotics/apriltag/).
-
-        ![](pics/AprilTag_corners_comparison_opencv4_opencv5_april.png) { width=80% }
+        @warning In OpenCV, the order of the returned corners locations for the AprilTag family is not aligned with the ArUco one.\n
+        Note that this order is also different from the convention adopted by the official [AprilTag library](https://github.com/AprilRobotics/apriltag/).
+        ![](pics/AprilTag_corners_comparison_opencv_april.png) { width=80% }
 
         <br>
 
@@ -97,11 +95,19 @@
         An overview of the supported AprilTag markers family is visible in the following image:
         ![](pics/AprilTag_family.png) { width=80% }
 
+        @note The generated images (in the above picture) using @ref aruco::generateImageMarker for the AprilTag markers have been
+        rotated by 180 degree in order to match the official AprilTag images.
+        When using the @ref aruco::generateImageMarker function, it will output by default a different image from the official AprilTag convention,
+        see the [AprilRobotics/apriltag-imgs](https://github.com/AprilRobotics/apriltag-imgs) repository.
+        This is the reason why you see a different corners order between ArUco and AprilTag in the above image.
+
         <br>
 
         For the ArUco marker family, the recommended family is the DICT_ARUCO_MIP_36h12 one, [see](https://stackoverflow.com/a/51511558).
         In general, a smaller marker family (e.g. `4x4` vs `6x6`) should give you a better detection rate with respect to the camera distance,
         at the expense of having more probability to have issues with false detection or marker id decoding error.
+        The number of marker ids in a family is also something to take into account with respect to the application use case and the ability
+        to correct wrong bits during the marker id decoding process.
 
         You can download some pregenerated MIP_36h12 ArUco marker images from:
           - https://sourceforge.net/projects/aruco/files/
@@ -116,7 +122,7 @@
 
         <br>
 
-        There are multiple paramteters which can be tweaked to improve the marker detection rate or to be adapted to your use case (e.g. image resolution).
+        There are multiple parameters which can be tweaked to improve the marker detection rate or to be adapted to your use case (e.g. image resolution).
         Please refer to the:
           - @ref aruco::DetectorParameters
           - "Detector Parameters" section in the @ref tutorial_aruco_detection tutorial or in the @ref tutorial_aruco_faq page
