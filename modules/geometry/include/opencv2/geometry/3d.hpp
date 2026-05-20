@@ -1885,12 +1885,14 @@ an inlier.
 between 0.95 and 0.99 is usually good enough. Values too close to 1 can slow down the estimation
 significantly. Values lower than 0.8-0.9 can result in an incorrectly estimated transformation.
 
+@return Whether a solution was found.
+
 The function estimates an optimal 3D affine transformation between two 3D point sets using the
 RANSAC algorithm.
  */
-CV_EXPORTS_W  int estimateAffine3D(InputArray src, InputArray dst,
-                                   OutputArray out, OutputArray inliers,
-                                   double ransacThreshold = 3, double confidence = 0.99);
+CV_EXPORTS_W  bool estimateAffine3D(InputArray src, InputArray dst,
+                                    OutputArray out, OutputArray inliers,
+                                    double ransacThreshold = 3, double confidence = 0.99);
 
 /** @brief Computes an optimal affine transformation between two 3D point sets.
 
@@ -1959,12 +1961,14 @@ CV_EXPORTS_W   cv::Mat estimateAffine3D(InputArray src, InputArray dst,
  * between 0.95 and 0.99 is usually good enough. Values too close to 1 can slow down the estimation
  * significantly. Values lower than 0.8-0.9 can result in an incorrectly estimated transformation.
  *
+ * @return Whether a translation was found.
+ *
  * The function estimates an optimal 3D translation between two 3D point sets using the
  * RANSAC algorithm.
  *  */
-CV_EXPORTS_W  int estimateTranslation3D(InputArray src, InputArray dst,
-                                        OutputArray out, OutputArray inliers,
-                                        double ransacThreshold = 3, double confidence = 0.99);
+CV_EXPORTS_W  bool estimateTranslation3D(InputArray src, InputArray dst,
+                                         OutputArray out, OutputArray inliers,
+                                         double ransacThreshold = 3, double confidence = 0.99);
 
 /** @brief Computes an optimal affine transformation between two 2D point sets.
 

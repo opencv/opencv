@@ -829,16 +829,18 @@ public:
     }
 };
 
-int estimateAffine3D(InputArray _from, InputArray _to,
-                     OutputArray _out, OutputArray _inliers,
-                     double ransacThreshold, double confidence)
+bool estimateAffine3D(InputArray _from, InputArray _to,
+                      OutputArray _out, OutputArray _inliers,
+                      double ransacThreshold, double confidence)
 {
     CV_INSTRUMENT_REGION();
 
     Mat from = _from.getMat(), to = _to.getMat();
     int count = from.checkVector(3);
 
-    CV_Assert( count >= 0 && to.checkVector(3) == count );
+    CV_CheckGE( count, 0, "Points need to be 3d");
+    CV_CheckGE( count, 3, "At least 3 points are needed for affine transformation estimation.");
+    CV_CheckEQ(to.checkVector(3), count, "Point matches need to have the same size");
 
     Mat dFrom, dTo;
     from.convertTo(dFrom, CV_32F);
@@ -857,11 +859,14 @@ Mat    estimateAffine3D(InputArray _from, InputArray _to,
                         CV_OUT double* _scale, bool force_rotation)
 {
     CV_INSTRUMENT_REGION();
+
     Mat from = _from.getMat(), to = _to.getMat();
     int count = from.checkVector(3);
 
-    CV_CheckGE(count, 3, "Umeyama algorithm needs at least 3 points for affine transformation estimation.");
-    CV_CheckEQ(to.checkVector(3), count, "Point sets need to have the same size");
+    CV_CheckGE(count, 0, "Points need to be 3d");
+    CV_CheckGE(count, 3, "At least 3 points are needed for affine transformation estimation.");
+    CV_CheckEQ(to.checkVector(3), count, "Point matches need to have the same size");
+
     from = from.reshape(1, count);
     to = to.reshape(1, count);
     if(from.type() != CV_64F)
@@ -933,16 +938,17 @@ Mat    estimateAffine3D(InputArray _from, InputArray _to,
     return transform;
 }
 
-int estimateTranslation3D(InputArray _from, InputArray _to,
-                          OutputArray _out, OutputArray _inliers,
-                          double ransacThreshold, double confidence)
+bool estimateTranslation3D(InputArray _from, InputArray _to,
+                           OutputArray _out, OutputArray _inliers,
+                           double ransacThreshold, double confidence)
 {
     CV_INSTRUMENT_REGION();
 
     Mat from = _from.getMat(), to = _to.getMat();
     int count = from.checkVector(3);
 
-    CV_Assert( count >= 0 && to.checkVector(3) == count );
+    CV_CheckGE(count, 0, "Points need to be 3d");
+    CV_CheckEQ(to.checkVector(3), count, "Point matches need to have the same size");
 
     Mat dFrom, dTo;
     from.convertTo(dFrom, CV_32F);
@@ -972,7 +978,9 @@ Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray _inliers,
     bool result = false;
     Mat H;
 
-    CV_Assert( count >= 0 && to.checkVector(2) == count );
+    CV_CheckGE(count, 0, "Points need to be 2d");
+    CV_CheckGE(count, 2, "At least 2 points for partial affine transformation estimation.");
+    CV_CheckEQ(to.checkVector(2), count, "Point matches need to have the same size");
 
     if (from.type() != CV_32FC2 || to.type() != CV_32FC2)
     {
@@ -1108,7 +1116,9 @@ Mat estimateAffinePartial2D(InputArray _from, InputArray _to, OutputArray _inlie
     bool result = false;
     Mat H;
 
-    CV_Assert( count >= 0 && to.checkVector(2) == count );
+    CV_CheckGE(count, 0, "Points need to be 2d");
+    CV_CheckGE(count, 2, "At least 2 points for partial affine transformation estimation.");
+    CV_CheckEQ(to.checkVector(2), count, "Point matches need to have the same size");
 
     if (from.type() != CV_32FC2 || to.type() != CV_32FC2)
     {
@@ -1253,7 +1263,9 @@ Vec2d estimateTranslation2D(InputArray _from, InputArray _to,
     Mat from = _from.getMat(), to = _to.getMat();
     int count = from.checkVector(2);
     bool result = false;
-    CV_Assert(count >= 0 && to.checkVector(2) == count);
+
+    CV_CheckGE(count, 0, "Points need to be 2d");
+    CV_CheckEQ(to.checkVector(2), count, "Point matches need to have the same size");
 
     if (from.type() != CV_32FC2 || to.type() != CV_32FC2) {
         Mat tmp1, tmp2;
