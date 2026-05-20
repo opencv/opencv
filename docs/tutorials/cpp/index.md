@@ -22,7 +22,7 @@
   - INSERT OBJDETECT MODULE INFO
 * - [Features framework (features module)](https://docs.opencv.org/5.x/d9/d97/tutorial_table_of_content_features.html)
   - feature detectors, descriptors and matching framework
-* - [Deep Neural Networks (dnn module)](https://docs.opencv.org/5.x/d2/d58/tutorial_table_of_content_dnn.html)
+* - [Deep Neural Networks (dnn module)](dnn/index.md)
   - infer neural networks using built-in *dnn* module
 * - [Other tutorials (stitching, video)](https://docs.opencv.org/5.x/da/d54/tutorial_table_of_content_other.html)
   - other modules (stitching, video)
@@ -47,7 +47,7 @@ Application utils (highgui, imgcodecs, videoio modules) <https://docs.opencv.org
 Camera calibration and 3D reconstruction (calib3d module) <calib3d/index>
 Object Detection (objdetect module) <https://docs.opencv.org/5.x/d2/d64/tutorial_table_of_content_objdetect.html>
 Features framework (features module) <https://docs.opencv.org/5.x/d9/d97/tutorial_table_of_content_features.html>
-Deep Neural Networks (dnn module) <https://docs.opencv.org/5.x/d2/d58/tutorial_table_of_content_dnn.html>
+Deep Neural Networks (dnn module) <dnn/index>
 Other tutorials (stitching, video) <https://docs.opencv.org/5.x/da/d54/tutorial_table_of_content_other.html>
 OpenCV iOS <https://docs.opencv.org/5.x/d3/dc9/tutorial_table_of_content_ios.html>
 3d processing and visualisation (3d module) <https://docs.opencv.org/5.x/de/d4f/tutorial_table_of_content_3d.html>
