@@ -1204,6 +1204,12 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<TopKLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS RandomNormalLikeLayer : public Layer
+    {
+    public:
+        static Ptr<RandomNormalLikeLayer> create(const LayerParams& params);
+    };
+
 //! @}
 //! @}
 CV__DNN_INLINE_NS_END
