@@ -131,10 +131,9 @@
 
         <br>
 
-        @warning In OpenCV 4, the order of the returned corners locations for the AprilTag family is not aligned with the ArUco one.\n
+        @warning In OpenCV, the order of the returned corners locations for the AprilTag family is not aligned with the ArUco one.\n
         Note that this order is also different from the convention adopted by the official [AprilTag library](https://github.com/AprilRobotics/apriltag/).
-
-        ![](pics/AprilTag_corners_comparison_opencv4_april.png) { width=80% }
+        ![](pics/AprilTag_corners_comparison_opencv_april.png) { width=80% }
 
         <br>
 
@@ -157,6 +156,8 @@
         For the ArUco marker family, the recommended family is the DICT_ARUCO_MIP_36h12 one, [see](https://stackoverflow.com/a/51511558).
         In general, a smaller marker family (e.g. `4x4` vs `6x6`) should give you a better detection rate with respect to the camera distance,
         at the expense of having more probability to have issues with false detection or marker id decoding error.
+        The number of marker ids in a family is also something to take into account with respect to the application use case and the ability
+        to correct wrong bits during the marker id decoding process.
 
         You can download some pregenerated MIP_36h12 ArUco marker images from:
           - https://sourceforge.net/projects/aruco/files/
@@ -171,7 +172,7 @@
 
         <br>
 
-        There are multiple paramteters which can be tweaked to improve the marker detection rate or to be adapted to your use case (e.g. image resolution).
+        There are multiple parameters which can be tweaked to improve the marker detection rate or to be adapted to your use case (e.g. image resolution).
         Please refer to the:
           - @ref aruco::DetectorParameters
           - "Detector Parameters" section in the @ref tutorial_aruco_detection tutorial or in the @ref tutorial_aruco_faq page
