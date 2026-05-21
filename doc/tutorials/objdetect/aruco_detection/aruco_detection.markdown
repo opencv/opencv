@@ -144,7 +144,7 @@ Error correction techniques are employed when necessary.
 
 Consider the following image:
 
-![Image with an assortment of markers](images/singlemarkerssource.jpg)
+![Image with an assortment of markers](images/singlemarkerssource.jpg) { width=70% }
 
 And a printout of this image in a photo:
 

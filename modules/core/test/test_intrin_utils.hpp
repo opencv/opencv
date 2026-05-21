@@ -1519,9 +1519,8 @@ template<typename R> struct TheTest
         R v = dataV, a = dataA, b = dataB, c = dataC, d = dataD;
 
         Data<R> res = v_matmul(v, a, b, c, d);
-        // for (int i = 0; i < VTraits<R>::vlanes(); i += 4)
-        // {
-            int i = 0;
+        for (int i = 0; i < VTraits<R>::vlanes(); i += 4)
+        {
             for (int j = i; j < i + 4; ++j)
             {
                 SCOPED_TRACE(cv::format("i=%d j=%d", i, j));
@@ -1531,12 +1530,11 @@ template<typename R> struct TheTest
                              + dataV[i + 3] * dataD[j];
                 EXPECT_COMPARE_EQ(val, res[j]);
             }
-        // }
+        }
 
         Data<R> resAdd = v_matmuladd(v, a, b, c, d);
-        // for (int i = 0; i < VTraits<R>::vlanes(); i += 4)
-        // {
-            i = 0;
+        for (int i = 0; i < VTraits<R>::vlanes(); i += 4)
+        {
             for (int j = i; j < i + 4; ++j)
             {
                 SCOPED_TRACE(cv::format("i=%d j=%d", i, j));
@@ -1546,7 +1544,7 @@ template<typename R> struct TheTest
                              + dataD[j];
                 EXPECT_COMPARE_EQ(val, resAdd[j]);
             }
-        // }
+        }
         return *this;
     }
 

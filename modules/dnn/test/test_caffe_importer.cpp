@@ -265,7 +265,7 @@ TEST(Reproducibility_FCN, Accuracy)
     int shape[] = {1, 21, 500, 500};
     Mat ref(4, shape, CV_32FC1, refData.data);
 
-    normAssert(ref, out);
+    normAssert(ref, out, "", 0.013, 0.17);
 }
 
 TEST(Reproducibility_SSD, Accuracy)

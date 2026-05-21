@@ -1465,6 +1465,8 @@ TEST(Core_Matx, from_initializer_list)
     Mat_<double> a = (Mat_<double>(2,2) << 10, 11, 12, 13);
     Matx22d b = {10, 11, 12, 13};
     ASSERT_EQ( cvtest::norm(a, b, NORM_INF), 0.);
+    Mat_<double> c({2, 2}, {10, 11, 12, 13});
+    ASSERT_EQ( cvtest::norm(c, b, NORM_INF), 0.);
 }
 
 TEST(Core_Mat, regression_9507)
@@ -1918,6 +1920,11 @@ TEST(Mat, from_initializer_list)
     auto D = Mat_<double>({2, 3}, {1, 2, 3, 4, 5, 6});
     EXPECT_EQ(2, D.rows);
     EXPECT_EQ(3, D.cols);
+
+    double angle = 30, a = cos(angle*CV_PI/180), b = sin(angle*CV_PI/180);
+    Mat R({2, 2}, {a, -b, b, a});
+    ASSERT_EQ(CV_64FC1, R.type());
+    ASSERT_EQ(cv::Size(2, 2), R.size());
 }
 
 TEST(Mat_, from_initializer_list)
@@ -1929,6 +1936,11 @@ TEST(Mat_, from_initializer_list)
     ASSERT_DOUBLE_EQ(cvtest::norm(A, B, NORM_INF), 0.);
     ASSERT_DOUBLE_EQ(cvtest::norm(A, C, NORM_INF), 0.);
     ASSERT_DOUBLE_EQ(cvtest::norm(B, C, NORM_INF), 0.);
+
+    double angle = 30, a = cos(angle*CV_PI/180), b = sin(angle*CV_PI/180);
+    Mat_<double> R({2, 2}, {a, -b, b, a});
+    ASSERT_EQ(CV_64FC1, R.type());
+    ASSERT_EQ(cv::Size(2, 2), R.size());
 }
 
 
