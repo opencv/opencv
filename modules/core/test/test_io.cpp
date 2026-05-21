@@ -110,6 +110,8 @@ protected:
             int test_int = (int)cvtest::randInt(rng);
             double test_real = (cvtest::randInt(rng)%2?1:-1)*exp(cvtest::randReal(rng)*18-9);
             string test_string = "vw wv23424rt\"&amp;&lt;&gt;&amp;&apos;@#$@$%$%&%IJUKYILFD@#$@%$&*&() ";
+            bool bool_true = true;
+            bool bool_false = false;
 
             int depth = cvtest::randInt(rng) % (CV_64F+1);
             int cn = cvtest::randInt(rng) % 4 + 1;
@@ -153,6 +155,7 @@ protected:
                                        cvtest::randInt(rng) % 10000, 0, 100, rng);
 
             fs << "test_int" << test_int << "test_real" << test_real << "test_string" << test_string;
+            fs << "test_true" << bool_true << "test_false" << bool_false;
             fs << "test_mat" << test_mat;
             fs << "test_mat_nd" << test_mat_nd;
             fs << "test_sparse_mat" << test_sparse_mat;
@@ -185,6 +188,17 @@ protected:
                real_string != test_string )
             {
                 ts->printf( cvtest::TS::LOG, "the read scalars are not correct\n" );
+                ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
+                return;
+            }
+
+            bool real_true;
+            bool real_false;
+            fs["test_true"] >> real_true;
+            fs["test_false"] >> real_false;
+            if (!real_true || real_false)
+            {
+                ts->printf( cvtest::TS::LOG, "the read boolean value is not correct\n" );
                 ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
                 return;
             }

@@ -2921,8 +2921,7 @@ void read(const FileNode& node, std::string& val, const std::string& default_val
 void FileStorage::Impl::write(const String &key, bool value)
 {
     CV_Assert(write_mode);
-    // [SWAP LOGIC]
-    if (fmt == FileStorage::FORMAT_YAML_1_0)
+    if (fmt != FileStorage::FORMAT_YAML)
     {
         // Legacy behavior: Write as integer 1 or 0
         getEmitter().write(key.c_str(), (int)value);
