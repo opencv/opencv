@@ -240,7 +240,7 @@ TEST(Imgproc_ConnectedComponents, missing_background_pixels)
 
 TEST(Imgproc_ConnectedComponents, spaghetti_bbdt_sauf_stats)
 {
-    cv::Mat1b img({16, 16}, {
+    cv::Mat1b img({16, 16}, { (unsigned char)
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0,
         0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0,
@@ -361,8 +361,8 @@ TEST(Imgproc_ConnectedComponents, spaghetti_bbdt_sauf_stats)
 
 TEST(Imgproc_ConnectedComponents, chessboard_even)
 {
-    const auto size = {16, 16};
-    cv::Mat1b input(size, {
+    auto size = {16, 16};
+    cv::Mat1b input(size, { (unsigned char)
         1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
         0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
         1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
@@ -445,8 +445,8 @@ TEST(Imgproc_ConnectedComponents, chessboard_even)
 
 TEST(Imgproc_ConnectedComponents, chessboard_odd)
 {
-    const auto size = {15, 15};
-    cv::Mat1b input(size, {
+    auto size = {15, 15};
+    cv::Mat1b input(size, { (unsigned char)
         1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
         0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
         1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
@@ -526,8 +526,8 @@ TEST(Imgproc_ConnectedComponents, chessboard_odd)
 
 TEST(Imgproc_ConnectedComponents, maxlabels_8conn_even)
 {
-    const auto size = {16, 16};
-    cv::Mat1b input(size, {
+    auto size = {16, 16};
+    cv::Mat1b input(size, { (unsigned char)
         1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
@@ -607,8 +607,8 @@ TEST(Imgproc_ConnectedComponents, maxlabels_8conn_even)
 
 TEST(Imgproc_ConnectedComponents, maxlabels_8conn_odd)
 {
-   const auto size = {15, 15};
-    cv::Mat1b input(size, {
+    auto size = {15, 15};
+    cv::Mat1b input(size, { (unsigned char)
         1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
@@ -685,7 +685,7 @@ TEST(Imgproc_ConnectedComponents, maxlabels_8conn_odd)
 
 TEST(Imgproc_ConnectedComponents, single_row)
 {
-    const auto size = {1, 15};
+    auto size = {1, 15};
     cv::Mat1b input(size, {1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1});
     cv::Mat1i output_8c(size, {1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7, 0, 8});
     cv::Mat1i output_4c(size, {1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7, 0, 8});
@@ -715,8 +715,8 @@ TEST(Imgproc_ConnectedComponents, single_row)
 
 TEST(Imgproc_ConnectedComponents, single_column)
 {
-    const auto size = {15, 1};
-    cv::Mat1b input(size, {1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1});
+    auto size = {15, 1};
+    cv::Mat1b input(size, {(unsigned char)1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1});
     cv::Mat1i output_8c(size, {1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7, 0, 8});
     cv::Mat1i output_4c(size, {1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7, 0, 8});
 
