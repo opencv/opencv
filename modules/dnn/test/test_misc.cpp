@@ -10,6 +10,7 @@
 #include <opencv2/core/ocl.hpp>
 #include <opencv2/core/opencl/ocl_defs.hpp>
 #include <opencv2/dnn/layer.details.hpp>  // CV_DNN_REGISTER_LAYER_CLASS
+#include <opencv2/dnn/shape_utils.hpp>
 
 namespace opencv_test { namespace {
 
@@ -1070,5 +1071,16 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_two_inputs, Combine(
     Values(CV_32F),
     dnnBackendsAndTargets()
 ));
+
+TEST(Net, ShapeUtils_total_no_int32_overflow)
+{
+    cv::MatShape shape = cv::dnn::shape(1920, 1478656);
+
+    size_t t = cv::dnn::total(shape);
+    EXPECT_EQ(t, (size_t)1920 * 1478656);
+
+    int t_int = (int)t;
+    EXPECT_LT(t_int, 0);
+}
 
 }} // namespace
