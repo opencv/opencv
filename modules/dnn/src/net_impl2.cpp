@@ -598,6 +598,9 @@ void Net::Impl::allocateLayerOutputs(
     CV_Assert(tempShapes.size() == tempTypes.size());
     CV_Assert(outShapes.size() == outTypes.size());
     CV_Assert(outShapes.size() == noutputs);
+
+    for (int i = 0; i < (int)tempShapes.size(); i++)
+        CV_CheckGT(total(tempShapes[i]), (size_t)0, "");
     outputs.assign(noutputs, Mat());
     outOrigData.resize(noutputs);
     for (size_t i = 0; i < noutputs; i++) {
@@ -1627,6 +1630,9 @@ bool Net::Impl::tryInferGraphShapes(const Ptr<Graph>& graph,
         CV_Assert((int)outShapes.size() == noutputs);
         layer->getTypes(inpTypes, noutputs, (int)tempShapes.size(), outTypes, tempTypes);
         CV_Assert((int)outTypes.size() == noutputs);
+
+        for (int i = 0; i < (int)tempShapes.size(); i++)
+            CV_CheckGT(total(tempShapes[i]), (size_t)0, "");
 
         for (int i = 0; i < noutputs; i++) {
             Arg out = outputs[i];
