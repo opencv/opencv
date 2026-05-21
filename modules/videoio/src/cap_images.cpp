@@ -386,7 +386,7 @@ public:
     double getProperty(int) const CV_OVERRIDE { return 0; }
     bool setProperty( int, double ) CV_OVERRIDE; // FIXIT doesn't work: IVideoWriter interface only!
     bool isOpened() const CV_OVERRIDE { return !filename_pattern.empty(); }
-    void write( InputArray ) CV_OVERRIDE;
+    bool write( InputArray ) CV_OVERRIDE;
     int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_IMAGES; }
 protected:
     std::string filename_pattern;
@@ -394,15 +394,16 @@ protected:
     std::vector<int> params;
 };
 
-void CvVideoWriter_Images::write(InputArray image)
+bool CvVideoWriter_Images::write(InputArray image)
 {
     CV_Assert(!filename_pattern.empty());
     cv::String filename = cv::format(filename_pattern.c_str(), (int)currentframe);
     CV_Assert(!filename.empty());
 
     cv::Mat img = image.getMat();
-    cv::imwrite(filename, img);
+    const bool ok = cv::imwrite(filename, img);
     currentframe++;
+    return ok;
 }
 
 void CvVideoWriter_Images::close()

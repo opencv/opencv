@@ -543,11 +543,11 @@ public:
 
     virtual int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_ANDROID; }
 
-    virtual void write(cv::InputArray image_ ) CV_OVERRIDE
+    virtual bool write(cv::InputArray image_ ) CV_OVERRIDE
     {
         if (!image_.isMat()) {
             LOGE("Support only Mat input");
-            return;
+            return false;
         }
 
         Mat image = image_.getMat();
@@ -559,16 +559,17 @@ public:
                 width, height, CV_8UC1, CV_8UC3, CV_8UC4,
                 image.cols, image.rows, image.type()
             );
-            return;
+            return false;
         }
 
         #if __ANDROID_API__ >= 26
         ANativeWindow_Buffer buffer;
         if (0 != ANativeWindow_lock(surface, &buffer, NULL)) {
             LOGE("Failed to lock the surface");
-            return;
+            return false;
         }
 
+        bool format_supported = true;
         if (AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM == buffer.format) {
             Mat bufferMat(image.rows, image.cols, CV_8UC4, buffer.bits, buffer.stride * 4);
             switch (image.type()) {
@@ -578,9 +579,13 @@ public:
             }
         } else {
             LOGE("Unknown surface buffer format: 0x%x", buffer.format);
+            format_supported = false;
         }
 
         ANativeWindow_unlockAndPost(surface);
+        if (!format_supported) {
+            return false;
+        }
         #else
         //OpenCV doesn't support RGB to NV12 so we need to convert to YV12 and then manually changed it to NV12
         Mat imageYV12;
@@ -612,6 +617,7 @@ public:
         drainEncoder(false);
 
         frameIndex++;
+        return true;
     }
 
     virtual bool open( const cv::String& filename, int fourcc, double fps, cv::Size frameSize, const VideoWriterParameters& params )
