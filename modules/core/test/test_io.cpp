@@ -1991,7 +1991,6 @@ static void test_20279(FileStorage& fs)
         m32fc1.at<float>((int)i) = v * 0.5f;
     }
     Mat m16fc1;
-    // produces CV_16S output: convertFp16(m32fc1, m16fc1);
     m32fc1.convertTo(m16fc1, CV_16FC1);
     EXPECT_EQ(CV_16FC1, m16fc1.type()) << typeToString(m16fc1.type());
     //std::cout << m16fc1 << std::endl;
