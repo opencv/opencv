@@ -196,3 +196,10 @@ tutorials/python/index
 tutorials/javascript/index
 faq
 ```
+
+```{toctree}
+:hidden:
+:maxdepth: 1
+
+tutorials/cpp/calib3d/index
+

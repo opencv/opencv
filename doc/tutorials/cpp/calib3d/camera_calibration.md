@@ -22,12 +22,16 @@ For distortion, OpenCV takes into account both radial and tangential factors. Fo
 factor one uses the following formulas:
 
 $$
+
 r^2 = x^2 + y^2
+
 $$
 
 $$
+
 x_{distorted} = x( 1 + k_1 r^2 + k_2 r^4 + k_3 r^6) \\
 y_{distorted} = y( 1 + k_1 r^2 + k_2 r^4 + k_3 r^6)
+
 $$
 
 So for an undistorted pixel point at $(x,y)$ coordinates, its position on the distorted image
@@ -38,21 +42,27 @@ Tangential distortion occurs because the image taking lenses are not perfectly p
 imaging plane. It can be represented via the formulas:
 
 $$
+
 x_{distorted} = x + [ 2p_1xy + p_2(r^2+2x^2)] \\
 y_{distorted} = y + [ p_1(r^2+ 2y^2)+ 2p_2xy]
+
 $$
 
 So we have five distortion parameters which in OpenCV are presented as one row matrix with 5
 columns:
 
 $$
+
 distortion\_coefficients=(k_1 \hspace{10pt} k_2 \hspace{10pt} p_1 \hspace{10pt} p_2 \hspace{10pt} k_3)
+
 $$
 
 Now for the unit conversion we use the following formula:
 
 $$
+
 \left [  \begin{matrix}   x \\   y \\  w \end{matrix} \right ] = \left [ \begin{matrix}   f_x & 0 & c_x \\  0 & f_y & c_y \\   0 & 0 & 1 \end{matrix} \right ] \left [ \begin{matrix}  X \\  Y \\   Z \end{matrix} \right ]
+
 $$
 
 Here the presence of $w$ is explained by the use of homography coordinate system (and $w=Z$). The
@@ -116,108 +126,108 @@ on how to do this you can find in the [File Input and Output using XML / YAML / 
 
 1. **Read the settings**
 
-```{doxysnippet} samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp
-:tag: file_read
-:language: cpp
-```
+   ```{doxysnippet} samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp
+   :tag: file_read
+   :language: cpp
+   ```
 
-For this I've used simple OpenCV class input operation. After reading the file I've an
-additional post-processing function that checks validity of the input. Only if all inputs are
-good then *goodInput* variable will be true.
+   For this I've used simple OpenCV class input operation. After reading the file I've an
+   additional post-processing function that checks validity of the input. Only if all inputs are
+   good then *goodInput* variable will be true.
 
 1. **Get next input, if it fails or we have enough of them - calibrate**
 
-After this we have a big
-loop where we do the following operations: get the next image from the image list, camera or
-video file. If this fails or we have enough images then we run the calibration process. In case
-of image we step out of the loop and otherwise the remaining frames will be undistorted (if the
-option is set) via changing from *DETECTION* mode to the *CALIBRATED* one.
+   After this we have a big
+   loop where we do the following operations: get the next image from the image list, camera or
+   video file. If this fails or we have enough images then we run the calibration process. In case
+   of image we step out of the loop and otherwise the remaining frames will be undistorted (if the
+   option is set) via changing from *DETECTION* mode to the *CALIBRATED* one.
 
-```{doxysnippet} samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp
-:tag: get_input
-:language: cpp
-```
+   ```{doxysnippet} samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp
+   :tag: get_input
+   :language: cpp
+   ```
 
-For some cameras we may need to flip the input image. Here we do this too.
+   For some cameras we may need to flip the input image. Here we do this too.
 
 1. **Find the pattern in the current input**
 
-The formation of the equations I mentioned above aims
-to finding major patterns in the input: in case of the chessboard these are corners of the
-squares and for the circles, well, the circles themselves. ChArUco board is equivalent to
-chessboard, but corners are matched by ArUco markers. The position of these will form the
-result which will be written into the *pointBuf* vector.
+   The formation of the equations I mentioned above aims
+   to finding major patterns in the input: in case of the chessboard these are corners of the
+   squares and for the circles, well, the circles themselves. ChArUco board is equivalent to
+   chessboard, but corners are matched by ArUco markers. The position of these will form the
+   result which will be written into the *pointBuf* vector.
 
-```{doxysnippet} samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp
-:tag: find_pattern
-:language: cpp
-```
+   ```{doxysnippet} samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp
+   :tag: find_pattern
+   :language: cpp
+   ```
 
-Depending on the type of the input pattern you use either the [cv::findChessboardCorners](https://docs.opencv.org/5.x/d4/d93/group__calib.html#ga93efa9b0aa890de240ca32b11253dd4a) or
-the [cv::findCirclesGrid](https://docs.opencv.org/5.x/d4/d93/group__calib.html#ga7f02cd21c8352142890190227628fa80) function or [cv::aruco::CharucoDetector::detectBoard](https://docs.opencv.org/5.x/d9/df5/classcv_1_1aruco_1_1CharucoDetector.html#aacbea601612a3a0feaa45ebb7fb255fd) method.
-For all of them you pass the current image and the size of the board and you'll get the positions
-of the patterns. [cv::findChessboardCorners](https://docs.opencv.org/5.x/d4/d93/group__calib.html#ga93efa9b0aa890de240ca32b11253dd4a) and [cv::findCirclesGrid](https://docs.opencv.org/5.x/d4/d93/group__calib.html#ga7f02cd21c8352142890190227628fa80) return a boolean variable
-which states if the pattern was found in the input (we only need to take into account
-those images where this is true!). `CharucoDetector::detectBoard` may detect partially visible
-pattern and returns coordinates and ids of visible inner corners.
+   Depending on the type of the input pattern you use either the [cv::findChessboardCorners](https://docs.opencv.org/5.x/d4/d93/group__calib.html#ga93efa9b0aa890de240ca32b11253dd4a) or
+   the [cv::findCirclesGrid](https://docs.opencv.org/5.x/d4/d93/group__calib.html#ga7f02cd21c8352142890190227628fa80) function or [cv::aruco::CharucoDetector::detectBoard](https://docs.opencv.org/5.x/d9/df5/classcv_1_1aruco_1_1CharucoDetector.html#aacbea601612a3a0feaa45ebb7fb255fd) method.
+   For all of them you pass the current image and the size of the board and you'll get the positions
+   of the patterns. [cv::findChessboardCorners](https://docs.opencv.org/5.x/d4/d93/group__calib.html#ga93efa9b0aa890de240ca32b11253dd4a) and [cv::findCirclesGrid](https://docs.opencv.org/5.x/d4/d93/group__calib.html#ga7f02cd21c8352142890190227628fa80) return a boolean variable
+   which states if the pattern was found in the input (we only need to take into account
+   those images where this is true!). `CharucoDetector::detectBoard` may detect partially visible
+   pattern and returns coordinates and ids of visible inner corners.
 
-:::{note}
-Board size and amount of matched points is different for chessboard, circles grid and ChArUco.
-All chessboard related algorithm expects amount of inner corners as board width and height.
-Board size of circles grid is just amount of circles by both grid dimensions. ChArUco board size
-is defined in squares, but detection result is list of inner corners and that's why is smaller
-by 1 in both dimensions.
-:::
-In the case of live cameras, we only capture images when an input delay time is passed.
-This is done to allow the user to move the chessboard around and getting different images.
-Similar images result in similar equations, and similar equations at the calibration step will
-form an ill-posed problem, so the calibration will fail. For square images the positions of the
-corners are only approximate. We may improve this by calling the [cv::cornerSubPix](https://docs.opencv.org/5.x/dd/d1a/group__imgproc__feature.html#ga354e0d7c86d0d9da75de9b9701a9a87e) function.
-(`winSize` is used to control the side length of the search window. Its default value is 11.
-`winSize` may be changed by command line parameter `--winSize=<number>`.)
-It will produce better calibration result. After this we add a valid inputs result to the
-*imagePoints* vector to collect all of the equations into a single container. Finally, for
-visualization feedback purposes we will draw the found points on the input image using [cv::findChessboardCorners](https://docs.opencv.org/5.x/d4/d93/group__calib.html#ga93efa9b0aa890de240ca32b11253dd4a) function.
+   :::{note}
+   Board size and amount of matched points is different for chessboard, circles grid and ChArUco.
+   All chessboard related algorithm expects amount of inner corners as board width and height.
+   Board size of circles grid is just amount of circles by both grid dimensions. ChArUco board size
+   is defined in squares, but detection result is list of inner corners and that's why is smaller
+   by 1 in both dimensions.
+   :::
+   In the case of live cameras, we only capture images when an input delay time is passed.
+   This is done to allow the user to move the chessboard around and getting different images.
+   Similar images result in similar equations, and similar equations at the calibration step will
+   form an ill-posed problem, so the calibration will fail. For square images the positions of the
+   corners are only approximate. We may improve this by calling the [cv::cornerSubPix](https://docs.opencv.org/5.x/dd/d1a/group__imgproc__feature.html#ga354e0d7c86d0d9da75de9b9701a9a87e) function.
+   (`winSize` is used to control the side length of the search window. Its default value is 11.
+   `winSize` may be changed by command line parameter `--winSize=<number>`.)
+   It will produce better calibration result. After this we add a valid inputs result to the
+   *imagePoints* vector to collect all of the equations into a single container. Finally, for
+   visualization feedback purposes we will draw the found points on the input image using [cv::findChessboardCorners](https://docs.opencv.org/5.x/d4/d93/group__calib.html#ga93efa9b0aa890de240ca32b11253dd4a) function.
 
-```{doxysnippet} samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp
-:tag: pattern_found
-:language: cpp
-```
+   ```{doxysnippet} samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp
+   :tag: pattern_found
+   :language: cpp
+   ```
 
 1. **Show state and result to the user, plus command line control of the application**
 
-This part shows text output on the image.
+   This part shows text output on the image.
 
-```{doxysnippet} samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp
-:tag: output_text
-:language: cpp
-```
+   ```{doxysnippet} samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp
+   :tag: output_text
+   :language: cpp
+   ```
 
-If we ran calibration and got camera's matrix with the distortion coefficients we may want to
-correct the image using [cv::undistort](https://docs.opencv.org/5.x/da/d35/group____3d.html#ga69f2545a8b62a6b0fc2ee060dc30559d) function:
+   If we ran calibration and got camera's matrix with the distortion coefficients we may want to
+   correct the image using [cv::undistort](https://docs.opencv.org/5.x/da/d35/group____3d.html#ga69f2545a8b62a6b0fc2ee060dc30559d) function:
 
-```{doxysnippet} samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp
-:tag: output_undistorted
-:language: cpp
-```
+   ```{doxysnippet} samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp
+   :tag: output_undistorted
+   :language: cpp
+   ```
 
-Then we show the image and wait for an input key and if this is *u* we toggle the distortion removal,
-if it is *g* we start again the detection process, and finally for the *ESC* key we quit the application:
+   Then we show the image and wait for an input key and if this is *u* we toggle the distortion removal,
+   if it is *g* we start again the detection process, and finally for the *ESC* key we quit the application:
 
-```{doxysnippet} samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp
-:tag: await_input
-:language: cpp
-```
+   ```{doxysnippet} samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp
+   :tag: await_input
+   :language: cpp
+   ```
 
 1. **Show the distortion removal for the images too**
 
-When you work with an image list it is not
-possible to remove the distortion inside the loop. Therefore, you must do this after the loop.
-Taking advantage of this now I'll expand the [cv::undistort](https://docs.opencv.org/5.x/da/d35/group____3d.html#ga69f2545a8b62a6b0fc2ee060dc30559d) function, which is in fact first
-calls [cv::initUndistortRectifyMap](https://docs.opencv.org/5.x/da/d35/group____3d.html#ga7dfb72c9cf9780a347fbe3d1c47e5d5a) to find transformation matrices and then performs
-transformation using [cv::remap](https://docs.opencv.org/5.x/da/d54/group__imgproc__transform.html#ga399c57f6b292b8883ad8ecbf2581b0dd) function. Because, after successful calibration map
-calculation needs to be done only once, by using this expanded form you may speed up your
-application:
+   When you work with an image list it is not
+   possible to remove the distortion inside the loop. Therefore, you must do this after the loop.
+   Taking advantage of this now I'll expand the [cv::undistort](https://docs.opencv.org/5.x/da/d35/group____3d.html#ga69f2545a8b62a6b0fc2ee060dc30559d) function, which is in fact first
+   calls [cv::initUndistortRectifyMap](https://docs.opencv.org/5.x/da/d35/group____3d.html#ga7dfb72c9cf9780a347fbe3d1c47e5d5a) to find transformation matrices and then performs
+   transformation using [cv::remap](https://docs.opencv.org/5.x/da/d54/group__imgproc__transform.html#ga399c57f6b292b8883ad8ecbf2581b0dd) function. Because, after successful calibration map
+   calculation needs to be done only once, by using this expanded form you may speed up your
+   application:
 
 ```{doxysnippet} samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp
 :tag: show_results
