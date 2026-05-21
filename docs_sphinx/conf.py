@@ -32,7 +32,7 @@ OPENCV_ROOT = HERE.parent.resolve()
 import os as _os
 DOC_MODULES = [
     m.strip()
-    for m in (_os.environ.get("OPENCV_DOC_MODULES") or "photo").split(",")
+    for m in (_os.environ.get("OPENCV_DOC_MODULES") or "photo,objdetect").split(",")
     if m.strip()
 ]
 
@@ -201,13 +201,33 @@ for _toc in (DOC_ROOT / "tutorials").glob("*/table_of_content_*.markdown"):
     if _toc.parent.name not in DOC_MODULES:
         _scan_external(_toc)
 
+# Doxygen flattens IMAGE_PATH across every `images/` folder under the tutorial
+# tree, so a tutorial can reference `images/foo.png` even when `foo.png` lives
+# in a sibling module's `images/` directory. Mirror that behavior by building
+# a basename -> doc-root-relative-path index once at import time.
+_IMAGE_INDEX: dict[str, str] = {}
+for _img in (DOC_ROOT / "tutorials").rglob("images/*"):
+    if _img.is_file():
+        _IMAGE_INDEX.setdefault(_img.name, _img.relative_to(DOC_ROOT).as_posix())
+
 _TOGGLE_LABELS = {"cpp": "C++", "java": "Java", "python": "Python"}
+
+
+# Mirror of Doxygen's EXAMPLE_PATH (see opencv/doc/Doxyfile.in) — the bases a
+# bare `@snippet some/path.cpp` is resolved against. OPENCV_ROOT comes first so
+# fully-qualified paths like `samples/cpp/...` keep working.
+_SNIPPET_BASES = [
+    OPENCV_ROOT,
+    OPENCV_ROOT / "samples",
+    OPENCV_ROOT / "apps",
+]
 
 
 def _read_snippet(rel_path: str, label: str | None) -> tuple[str, str]:
     """Return (code_text, language) for an @include / @snippet directive."""
-    p = (OPENCV_ROOT / rel_path).resolve()
-    if not p.is_file():
+    p = next((b / rel_path for b in _SNIPPET_BASES
+              if (b / rel_path).is_file()), None)
+    if p is None:
         return f"// not found: {rel_path}\n", "text"
     text = p.read_text(encoding="utf-8", errors="replace")
     ext = p.suffix.lower()
@@ -215,8 +235,11 @@ def _read_snippet(rel_path: str, label: str | None) -> tuple[str, str]:
             ".py": "python", ".java": "java"}.get(ext, "text")
     if label is None:
         return text, lang
-    pat = re.compile(r"^\s*(?://!|//|##|#)\s*\[" + re.escape(label) + r"\]\s*$",
-                     re.MULTILINE)
+    # Doxygen matches `[label]` after any comment-style marker (//, //!, #, ##)
+    # anywhere on a line — including labels wrapped in block-comments like
+    # `/* //! [label]` or `//! [label] */`.
+    pat = re.compile(r"^[^\[\n]*(?://!|//|##|#)[^\[\n]*\[" + re.escape(label)
+                     + r"\][^\n]*$", re.MULTILINE)
     matches = list(pat.finditer(text))
     if len(matches) < 2:
         return f"// snippet not found: {rel_path} [{label}]\n", lang
@@ -245,7 +268,7 @@ def _emit_toggles(tabs: list[tuple[str, str]]) -> str:
     return "\n".join(out)
 
 
-def _translate(text: str) -> str:
+def _translate(text: str, docname: str | None = None) -> str:
     # 1. Heading anchors: "Title {#name}\n===" (setext) and "## Title {#name}" (ATX).
     #    Strip the anchor from the rendered heading and emit a MyST label
     #    "(name)=" immediately above. Setext converted to ATX for simplicity.
@@ -278,11 +301,13 @@ def _translate(text: str) -> str:
         r"@code(?:\{(?P<lang>[^}]*)\})?\s*\n(?P<body>.*?)\n\s*@endcode",
         _code_repl, text, flags=re.DOTALL)
 
-    # 4. @include path
+    # 4. @include path  /  @includelineno path
+    #    (line numbering hint is dropped — MyST fenced blocks don't take :linenos:
+    #    and PyData's code-block styling is already legible without it.)
     def _include_repl(m: re.Match) -> str:
         code, lang = _read_snippet(m.group("path"), None)
         return f"\n```{lang}\n{code.rstrip()}\n```\n"
-    text = re.sub(r"@include\s+(?P<path>\S+)", _include_repl, text)
+    text = re.sub(r"@include(?:lineno)?\s+(?P<path>\S+)", _include_repl, text)
 
     # 5. @snippet path [Label]
     def _snippet_repl(m: re.Match) -> str:
@@ -333,6 +358,30 @@ def _translate(text: str) -> str:
     # 8. @cite KEY -> [KEY]
     text = re.sub(r"@cite\s+([\w-]+)", r"[\1]", text)
 
+    # 8b. @youtube{ID}  -> responsive embed (raw HTML, passed through by MyST).
+    text = re.sub(
+        r"^@youtube\{(?P<id>[\w-]+)\}\s*$",
+        lambda m: (
+            '\n<div class="opencv-youtube">'
+            f'<iframe src="https://www.youtube-nocookie.com/embed/{m.group("id")}" '
+            'title="YouTube video player" frameborder="0" '
+            'allow="accelerometer; autoplay; clipboard-write; encrypted-media; '
+            'gyroscope; picture-in-picture" allowfullscreen></iframe></div>\n'
+        ),
+        text, flags=re.MULTILINE)
+
+    # 8c. @note ... / @see ...  -> MyST admonitions.  Each directive body runs
+    #     until the next blank line, the next @directive at start-of-line, or
+    #     end of file (matches Doxygen's paragraph-level semantics).
+    _ADMON_KIND = {"note": "note", "see": "seealso"}
+    def _admon_repl(m: re.Match) -> str:
+        kind = _ADMON_KIND[m.group("dir")]
+        body = m.group("body").strip()
+        return f"\n:::{{{kind}}}\n{body}\n:::\n"
+    text = re.sub(
+        r"^@(?P<dir>note|see)\s+(?P<body>.+?)(?=\n[ \t]*\n|\n@[A-Za-z]|\Z)",
+        _admon_repl, text, flags=re.DOTALL | re.MULTILINE)
+
     # 9. @subpage NAME  (collected blocks -> real toctree).
     #    Enabled modules' anchors become internal toctree entries.
     #    Disabled modules' anchors become external links into the Doxygen
@@ -369,10 +418,24 @@ def _translate(text: str) -> str:
     text = re.sub(r"^@cond\s+\S+\s*$", "", text, flags=re.MULTILINE)
     text = re.sub(r"^@endcond\s*$", "", text, flags=re.MULTILINE)
 
-    # 12. Image paths "images/foo.png" -> "/tutorials/others/images/foo.png"
-    #     (project-root absolute via MyST; source_dir is opencv/doc/).
-    text = re.sub(r"(!\[[^\]]*\]\()images/([^)]+\))",
-                  r"\1/tutorials/others/images/\2", text)
+    # 12. Image paths "images/foo.png" — resolve like Doxygen's flat IMAGE_PATH:
+    #     prefer the doc's own "images/" sibling, then fall back to a global
+    #     basename lookup across every tutorial `images/` folder. As a final
+    #     fallback, point at the consolidated `tutorials/others/images/` dir
+    #     (where modules like `photo` store their assets).
+    def _img_repl(m: re.Match) -> str:
+        rel = m.group("rel")
+        if docname:
+            local = DOC_ROOT / pathlib.Path(docname).parent / "images" / rel
+            if local.is_file():
+                return m.group(0)
+        hit = _IMAGE_INDEX.get(pathlib.Path(rel).name)
+        if hit:
+            return f'{m.group("pre")}/{hit})'
+        return f'{m.group("pre")}/tutorials/others/images/{rel})'
+    text = re.sub(
+        r'(?P<pre>!\[[^\]]*\]\()images/(?P<rel>[^)]+)\)',
+        _img_repl, text)
 
     # 13. Front-matter table: OpenCV tutorials use the "| -: | :- |"
     #     alignment pattern for the Original-author/Compatibility block.
@@ -398,7 +461,7 @@ def _source_read(app, docname, source):
     # module we enabled in DOC_MODULES.
     if not docname.startswith("tutorials/"):
         return
-    source[0] = _translate(source[0])
+    source[0] = _translate(source[0], docname)
 
 
 def setup(app):
