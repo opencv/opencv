@@ -18,7 +18,7 @@ Abstract:
 #include "mlasi.h"
 
 void
-MLASCALL
+MLASCALL 
 MlasGemvFloatKernel(
     const float* A,
     const float* B,

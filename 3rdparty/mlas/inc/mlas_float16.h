@@ -41,7 +41,7 @@ union fp32_bits {
 #pragma warning(disable : 26451)
 #endif
 
-inline
+inline 
 _mlas_fp16_
 MLAS_Float2Half(float ff)
 {

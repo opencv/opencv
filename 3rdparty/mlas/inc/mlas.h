@@ -2301,7 +2301,7 @@ MlasComputeFP16Erf(
  * @param algo    GELU algorithm variant (exact erf or tanh approximation).
  */
 void
-MLASCALL
+MLASCALL 
 MlasComputeFP16Gelu(
     const MLAS_FP16* input,
     MLAS_FP16* output,

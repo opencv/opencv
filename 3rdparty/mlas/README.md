@@ -9,7 +9,9 @@ internally by ONNX Runtime.
 - **Upstream**: https://github.com/microsoft/onnxruntime
 - **Source path**: `onnxruntime/core/mlas/`
 - **Imported**: 2026-05-04
-- **Upstream commit**: TODO — fill in the exact ORT commit SHA on next re-vendor
+- **Upstream commit**: [`62f742f1aa0c3102745ed35e3d869eaee845b9ac`](https://github.com/microsoft/onnxruntime/tree/62f742f1aa0c3102745ed35e3d869eaee845b9ac/onnxruntime/core/mlas)
+  (2026-04-30, last MLAS-touching commit on `main` at import time;
+  released as part of ORT [v1.26.0](https://github.com/microsoft/onnxruntime/releases/tag/v1.26.0))
 - **License**: MIT (see [LICENSE](LICENSE))
 
 ## What is vendored
@@ -63,26 +65,34 @@ top-level license (Apache 2.0).
 ## Local patches against upstream
 
 These deviate from a clean upstream import and must be re-applied on every
-re-vendor:
+re-vendor. The unified-diff form of each in-tree edit lives under
+[`patches/`](patches/) (same convention as
+[`3rdparty/zlib/patches/`](../zlib/patches)); re-apply with
+`git apply --directory=3rdparty/mlas patches/*.diff` after re-importing.
 
-1. `lib/threading.cpp` is dropped. Its three threading entry points
-   (`MlasExecuteThreaded`, `MlasTrySimpleParallel`, `MlasTryBatchParallel`)
-   are reimplemented in `threading_opencv.cpp` on top of `cv::parallel_for_`.
-2. `lib/mlasi.h` — `MlasGetMaximumThreadCount()` returns
-   `cv::getNumThreads()` when `MLAS_OPENCV_THREADING` is defined. Look for
-   the `MLAS_OPENCV_THREADING` block.
-3. `lib/platform.cpp` — non-SGEMM dispatch is wrapped in `#if 0` blocks
-   (search for `MLAS_GEMM_ONLY`). Allows building the SGEMM-only subset
-   without pulling in the rest of the MLAS sources. The top-of-file
-   `erf_neon_fp16.h` / `gelu_neon_fp16.h` includes are also gated with
-   `!defined(MLAS_GEMM_ONLY)` because those headers transitively pull in
+1. `lib/threading.cpp` is dropped (not vendored). Its three threading entry
+   points (`MlasExecuteThreaded`, `MlasTrySimpleParallel`,
+   `MlasTryBatchParallel`) are reimplemented in
+   `modules/dnn/src/layers/cpu_kernels/mlas_threading.cpp` on top of
+   `cv::parallel_for_`. No `.diff` — the file is simply absent.
+2. `lib/mlasi.h` — `MlasGetMaximumThreadCount()` returns `cv::getNumThreads()`
+   when `MLAS_OPENCV_THREADING` is defined; `#include "core/mlas/inc/mlas.h"`
+   is rewritten to `#include "../inc/mlas.h"` because the ORT in-tree path
+   does not exist here. See `patches/0001-mlasi-opencv-threading.diff`.
+3. `lib/platform.cpp` — non-SGEMM dispatch is wrapped under `MLAS_GEMM_ONLY`
+   so the SGEMM-only subset builds without the rest of the MLAS sources. The
+   top-of-file `erf_neon_fp16.h` / `gelu_neon_fp16.h` includes are also gated
+   on `!defined(MLAS_GEMM_ONLY)` because those headers transitively pull in
    non-vendored FP16 sources (`fp16_common.h`, `softmax_kernel_neon.h`).
    The `MLAS_GEMM_ONLY` ctor also assigns `ReduceMaximumF32Kernel` and
    `ComputeSumExpF32Kernel` to the portable `compute.cpp` fallbacks so
-   `MlasFlashAttention` works without per-arch softmax kernels.
-4. `lib/core/common/{narrow,common}.h` — minimal shims for ORT internals
-   that MLAS calls; not present upstream as MLAS sources, only as ORT
-   includes.
+   `MlasFlashAttention` works without per-arch softmax kernels. See
+   `patches/0002-platform-gemm-only.diff`.
+4. `inc/mlas.h` — guard `_MSC_VER` with `defined()` so `-Wundef` builds
+   under GCC/Clang don't warn. See `patches/0003-mlas-h-msc-ver-guard.diff`.
+5. `lib/core/common/{narrow,common}.h` — minimal shims for ORT internals
+   that MLAS calls (not present upstream as MLAS sources, only as ORT
+   includes). These are new files, not edits — no `.diff` needed.
 
 ## Build flags
 

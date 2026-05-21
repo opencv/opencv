@@ -1,0 +1,46 @@
+Patch against upstream onnxruntime/core/mlas/lib/mlasi.h
+Base commit: 62f742f1aa0c3102745ed35e3d869eaee845b9ac (ORT v1.26.0)
+
+Reroute the public-header include to the relative vendored path,
+and make MlasGetMaximumThreadCount() return cv::getNumThreads()
+when MLAS_OPENCV_THREADING is defined (so MLAS partitions according
+to OpenCV's thread budget, not ORT's).
+
+--- a/3rdparty/mlas/lib/mlasi.h
++++ b/3rdparty/mlas/lib/mlasi.h
+@@ -35,7 +35,9 @@
+ #endif
+ #endif  // MLAS_NO_EXCEPTION
+ 
+-#include "core/mlas/inc/mlas.h"
++// Vendored under 3rdparty/mlas/. The ORT path "core/mlas/inc/mlas.h" only
++// works when MLAS is part of the ORT source tree.
++#include "../inc/mlas.h"
+ 
+ #if defined(_WIN32)
+ #ifndef WIN32_LEAN_AND_MEAN
+@@ -1675,13 +1677,23 @@
+     );
+ 
+ 
++#if defined(MLAS_OPENCV_THREADING)
++// Defined in 3rdparty/mlas/threading_opencv.cpp. Returns
++// cv::getNumThreads(). Hidden behind a free function so this header doesn't
++// need to pull <opencv2/core/utility.hpp> into every MLAS translation unit.
++extern "C" int opencv_dnn_mlas_max_threads();
++#endif
++
+ inline
+ ptrdiff_t
+ MlasGetMaximumThreadCount(
+     MLAS_THREADPOOL* ThreadPool
+     )
+ {
+-#if defined(BUILD_MLAS_NO_ONNXRUNTIME)
++#if defined(MLAS_OPENCV_THREADING)
++    MLAS_UNREFERENCED_PARAMETER(ThreadPool);
++    return static_cast<ptrdiff_t>(opencv_dnn_mlas_max_threads());
++#elif defined(BUILD_MLAS_NO_ONNXRUNTIME)
+     MLAS_UNREFERENCED_PARAMETER(ThreadPool);
+     return 1;
+ #else

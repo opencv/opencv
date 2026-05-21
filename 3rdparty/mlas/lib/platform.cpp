@@ -880,7 +880,7 @@ Return Value:
         }
         else{
             this->ErfFP16KernelRoutine = MlasNeonErfFP16Kernel;
-            this->GeluFP16KernelRoutine = MlasNeonGeluFP16Kernel;
+            this->GeluFP16KernelRoutine = MlasNeonGeluFP16Kernel; 
         }
     #else
         this->ErfFP16KernelRoutine = MlasNeonErfFP16Kernel;

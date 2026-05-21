@@ -1671,10 +1671,10 @@ MlasTrySimpleParallel(
  */
 void
 MlasTryBatchParallel(
-MLAS_THREADPOOL * ThreadPool,
-const std::ptrdiff_t Iterations,
-const std::function<void(std::ptrdiff_t tid)>& Work
-);
+	MLAS_THREADPOOL * ThreadPool,
+	const std::ptrdiff_t Iterations,
+	const std::function<void(std::ptrdiff_t tid)>& Work
+    );
 
 
 #if defined(MLAS_OPENCV_THREADING)
@@ -2997,7 +2997,7 @@ MlasReadTimeStampCounter(void)
     (
         "rdtime.d %0, %1\n\t"
         : "=r" (time_cnt), "=r" (id)
-::
+	::
     );
 
     return time_cnt;
@@ -3041,7 +3041,7 @@ MlasThreadedBufAlloc(size_t size)
         ThreadedBufHolder.reset(
             reinterpret_cast<uint8_t*>(aligned_alloc(ThreadedBufAlignment, size)));
 #else
-// aligned_alloc unavailable macos 10.14 or earlier
+	// aligned_alloc unavailable macos 10.14 or earlier
         void* ptr;
         int err = posix_memalign(&ptr, ThreadedBufAlignment, size);
         if (err != 0) {

@@ -43,16 +43,16 @@ MlasSveErfFP16Kernel(
     size_t N
 );
 
-void
-MLASCALL
+void 
+MLASCALL 
 MlasSveTanhFP16Kernel(
     const MLAS_FP16* Input,
     MLAS_FP16* Output,
     size_t N
 );
 
-void
-MLASCALL
+void 
+MLASCALL 
 MlasSveGeluFP16Kernel(
     const MLAS_FP16* Input,
     MLAS_FP16* Output,
@@ -133,7 +133,7 @@ MlasSveErfKernel(
     size_t N
 );
 
-void
+void 
 MLASCALL
 MlasSveLogisticKernel(
     const float* Input,
@@ -212,8 +212,8 @@ MLAS_SVE_TARGET
 MLAS_FORCEINLINE
 MLAS_SVINT32
 MlasSveAddInt32(MLAS_SVBOOL Pred, MLAS_SVINT32 Vector1, MLAS_SVINT32 Vector2)
-{
-    return svadd_s32_m(Pred, Vector1, Vector2);
+{   
+    return svadd_s32_m(Pred, Vector1, Vector2);  
 }
 
 MLAS_SVE_TARGET
@@ -270,8 +270,8 @@ MLAS_SVINT32
 MlasSveBlendInt32(MLAS_SVBOOL Pred, MLAS_SVINT32 Vector1, MLAS_SVINT32 Vector2, MLAS_SVINT32 Selection)
 {
     return MlasSveOrInt32(
-        Pred,
-        MlasSveAndInt32(Pred, Vector2, Selection),
+        Pred, 
+        MlasSveAndInt32(Pred, Vector2, Selection), 
         MlasSveAndNotInt32(Pred, Selection, Vector1)
     );
 }
@@ -442,7 +442,7 @@ MLAS_FORCEINLINE
 MLAS_SVFLOAT32
 MlasSveMultiplyFloat32(MLAS_SVBOOL Pred, MLAS_SVFLOAT32 Vector1, MLAS_SVFLOAT32 Vector2)
 {
-    return svmul_f32_m(Pred, Vector1, Vector2);
+    return svmul_f32_m(Pred, Vector1, Vector2);  
 }
 
 MLAS_SVE_TARGET
@@ -523,7 +523,7 @@ MlasSveAndFloat32(MLAS_SVBOOL Pred, MLAS_SVFLOAT32 Vector1, MLAS_SVFLOAT32 Vecto
 {
     return MlasSveReinterpretAsFloat32(
         MlasSveAndInt32(
-            Pred,
+            Pred, 
             MlasSveReinterpretAsInt32(Vector1),
             MlasSveReinterpretAsInt32(Vector2)
         )
@@ -578,7 +578,7 @@ MLAS_SVFLOAT32
 MlasSveBlendFloat32(MLAS_SVBOOL Pred, MLAS_SVFLOAT32 Vector1, MLAS_SVFLOAT32 Vector2, MLAS_SVFLOAT32 Selection)
 {
     return MlasSveOrFloat32(
-        Pred,
+        Pred, 
         MlasSveAndFloat32(Pred, Vector2, Selection),
         MlasSveAndFloat32(Pred, Vector1, Selection)
     );
@@ -640,8 +640,8 @@ MLAS_SVFLOAT32
 MlasSvePowerOf2Float32(MLAS_SVBOOL Pred, MLAS_SVFLOAT32 Vector)
 {
     MLAS_SVINT32 emm0 = MlasSveAddInt32(
-        Pred,
-        MlasSveCastToInt32(Pred, Vector),
+        Pred, 
+        MlasSveCastToInt32(Pred, Vector), 
         MlasSveBroadcastInt32(127)
     );
     return MlasSveReinterpretAsFloat32(MlasSveShiftLeftInt32<23>(Pred, emm0));
@@ -677,3 +677,4 @@ MlasSveCompareGreaterThan(svbool_t Pred, MLAS_SVFLOAT32 A, MLAS_SVFLOAT32 B)
 #endif
 
 #endif
+
