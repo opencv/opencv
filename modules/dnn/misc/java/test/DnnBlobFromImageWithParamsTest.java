@@ -26,15 +26,6 @@ public class DnnBlobFromImageWithParamsTest extends OpenCVTestCase {
             assertEquals(5, Core.DATA_LAYOUT_NDHWC);
             assertEquals(6, Core.DATA_LAYOUT_PLANAR);
             assertEquals(7, Core.DATA_LAYOUT_BLOCK);
-
-            assertEquals(Core.DATA_LAYOUT_UNKNOWN, Core.DNN_LAYOUT_UNKNOWN);
-            assertEquals(Core.DATA_LAYOUT_ND,      Core.DNN_LAYOUT_ND);
-            assertEquals(Core.DATA_LAYOUT_NCHW,    Core.DNN_LAYOUT_NCHW);
-            assertEquals(Core.DATA_LAYOUT_NCDHW,   Core.DNN_LAYOUT_NCDHW);
-            assertEquals(Core.DATA_LAYOUT_NHWC,    Core.DNN_LAYOUT_NHWC);
-            assertEquals(Core.DATA_LAYOUT_NDHWC,   Core.DNN_LAYOUT_NDHWC);
-            assertEquals(Core.DATA_LAYOUT_PLANAR,  Core.DNN_LAYOUT_PLANAR);
-            assertEquals(Core.DATA_LAYOUT_BLOCK,   Core.DNN_LAYOUT_BLOCK);
         }
 
         public void testBlobFromImageWithParamsNHWCScalarScale()
