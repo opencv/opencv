@@ -288,7 +288,6 @@ public:
             const int na = shape_A[shape_A.size() - 1];
             const int ma = shape_A[shape_A.size() - 2];
             const int N  = shape_Y[shape_Y.size() - 1];
-            const int M  = shape_Y[shape_Y.size() - 2];
             const int K  = trans_a ? ma : na;
             const Mat& Bmat = blobs[0];
             const int ldb = Bmat.size[Bmat.dims - 1];
@@ -298,7 +297,6 @@ public:
                 if (mlasSgemmPackB(trans_a, trans_b, N, K,
                                    Bmat.ptr<const float>(), ldb,
                                    packed_B_mlas.data)) {
-                    packed_B_mlas_M = M;
                     packed_B_mlas_N = N;
                     packed_B_mlas_K = K;
                 } else {
@@ -572,10 +570,11 @@ private:
     bool have_bias;
     std::vector<float> packed_B;
     std::vector<float> thin_packed_B;
+#ifdef HAVE_MLAS
     cv::Mat packed_B_mlas;
-    int packed_B_mlas_M;
-    int packed_B_mlas_N;
-    int packed_B_mlas_K;
+    int packed_B_mlas_N = 0;
+    int packed_B_mlas_K = 0;
+#endif
     std::vector<float> broadcast_C;
     int real_ndims_C;
     FastGemmOpt opt;
