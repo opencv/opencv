@@ -1022,6 +1022,7 @@ ocv_register_modules()
 
 # Generate targets for documentation
 add_subdirectory(doc)
+add_subdirectory(docs_sphinx)
 
 # various data that is used by cv libraries and/or demo applications.
 # add_subdirectory(data)
