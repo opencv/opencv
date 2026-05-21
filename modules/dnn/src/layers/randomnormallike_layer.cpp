@@ -6,12 +6,11 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
-#include <opencv2/dnn/layer.details.hpp>
 #include <cmath>
 
 namespace cv { namespace dnn {
 
-class RandomNormalLikeLayerImpl CV_FINAL : public Layer
+class RandomNormalLikeLayerImpl CV_FINAL : public RandomNormalLikeLayer
 {
 public:
     RandomNormalLikeLayerImpl(const LayerParams& params)
@@ -117,6 +116,9 @@ private:
     int depth;
 };
 
-CV_DNN_REGISTER_LAYER_CLASS_STATIC(RandomNormalLike, RandomNormalLikeLayerImpl);
+Ptr<RandomNormalLikeLayer> RandomNormalLikeLayer::create(const LayerParams& params)
+{
+    return makePtr<RandomNormalLikeLayerImpl>(params);
+}
 
 }} // namespace cv::dnn
