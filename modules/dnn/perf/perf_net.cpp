@@ -475,7 +475,7 @@ PERF_TEST_P_(DNNTestNetwork, FacePaint)
 // Model: https://huggingface.co/vietanhdev/segment-anything-2-onnx-models/blob/main/sam2_hiera_large.encoder.onnx
 PERF_TEST_P_(DNNTestNetwork, SAM2_Encoder)
 {
-    applyTestTag(CV_TEST_TAG_MEMORY_2GB, CV_TEST_TAG_DEBUG_VERYLONG);
+    applyTestTag(CV_TEST_TAG_MEMORY_2GB, CV_TEST_TAG_VERYLONG);
 
     Mat sample = imread(findDataFile("dnn/dog416.png"));
     Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(1024, 1024), Scalar(), true);
@@ -485,7 +485,7 @@ PERF_TEST_P_(DNNTestNetwork, SAM2_Encoder)
 // Model: https://huggingface.co/vietanhdev/segment-anything-2-onnx-models/blob/main/sam2_hiera_large.decoder.onnx
 PERF_TEST_P_(DNNTestNetwork, SAM2_Decoder)
 {
-    applyTestTag(CV_TEST_TAG_MEMORY_1GB, CV_TEST_TAG_DEBUG_LONG);
+    applyTestTag(CV_TEST_TAG_MEMORY_1GB, CV_TEST_TAG_VERYLONG);
 
     // Synthetic encoder outputs used as decoder inputs
     int shp_embed[4]  = {1, 256, 64, 64};
@@ -525,7 +525,7 @@ PERF_TEST_P_(DNNTestNetwork, SAM2_Decoder)
 // Model: https://github.com/opencv/opencv_zoo/tree/main/models/optical_flow_estimation_raft
 PERF_TEST_P_(DNNTestNetwork, RAFT)
 {
-    applyTestTag(CV_TEST_TAG_MEMORY_2GB, CV_TEST_TAG_DEBUG_LONG);
+    applyTestTag(CV_TEST_TAG_MEMORY_2GB, CV_TEST_TAG_VERYLONG);
 
     // RAFT takes two consecutive frames to estimate optical flow between them
     Mat frame0 = imread(findDataFile("gpu/opticalflow/frame0.png"));
@@ -541,7 +541,7 @@ PERF_TEST_P_(DNNTestNetwork, RAFT)
 // Model: https://huggingface.co/onnx-community/owlv2-base-patch16-finetuned-ONNX
 PERF_TEST_P_(DNNTestNetwork, OWLv2)
 {
-    applyTestTag(CV_TEST_TAG_MEMORY_1GB, CV_TEST_TAG_DEBUG_LONG);
+    applyTestTag(CV_TEST_TAG_MEMORY_1GB, CV_TEST_TAG_VERYLONG);
 
     // Image input: [1, 3, 960, 960] (60x60 patches x 16 = 960)
     Mat sample = imread(findDataFile("dnn/dog416.png"));
@@ -565,7 +565,7 @@ PERF_TEST_P_(DNNTestNetwork, OWLv2)
 // Model: https://drive.google.com/file/d/1IU7iktOUbvNPFnDJb_ivl3LxYIdpEp3f/view?usp=drive_link
 PERF_TEST_P_(DNNTestNetwork, YOLO26m_Seg)
 {
-    applyTestTag(CV_TEST_TAG_MEMORY_512MB, CV_TEST_TAG_DEBUG_LONG);
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB, CV_TEST_TAG_VERYLONG);
 
     Mat sample = imread(findDataFile("dnn/dog416.png"));
     Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(640, 640), Scalar(), true);
@@ -585,7 +585,7 @@ PERF_TEST_P_(DNNTestNetwork, YOLO26n)
 // Model: https://huggingface.co/Xenova/segformer_b2_clothes/blob/main/onnx/model.onnx
 PERF_TEST_P_(DNNTestNetwork, SegFormer_B2_Clothes)
 {
-    applyTestTag(CV_TEST_TAG_MEMORY_512MB, CV_TEST_TAG_DEBUG_LONG);
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB, CV_TEST_TAG_VERYLONG);
 
     Mat sample = imread(findDataFile("dnn/dog416.png"));
     Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(512, 512), Scalar(), true);
@@ -595,7 +595,7 @@ PERF_TEST_P_(DNNTestNetwork, SegFormer_B2_Clothes)
 // Model: https://huggingface.co/Xenova/siglip-base-patch16-224/blob/main/onnx/model.onnx
 PERF_TEST_P_(DNNTestNetwork, SigLIP)
 {
-    applyTestTag(CV_TEST_TAG_MEMORY_512MB, CV_TEST_TAG_DEBUG_LONG);
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB, CV_TEST_TAG_VERYLONG);
 
     // Image input: [1, 3, 224, 224] normalized to [-1, 1]
     Mat sample = imread(findDataFile("dnn/dog416.png"));
@@ -618,7 +618,7 @@ PERF_TEST_P_(DNNTestNetwork, SigLIP)
 // Model: https://huggingface.co/onnx-community/depth-anything-v2-small/blob/main/onnx/model.onnx
 PERF_TEST_P_(DNNTestNetwork, Depth_Anything_V2)
 {
-    applyTestTag(CV_TEST_TAG_MEMORY_512MB, CV_TEST_TAG_DEBUG_LONG);
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB, CV_TEST_TAG_VERYLONG);
 
     Mat sample = imread(findDataFile("dnn/street.png"));
     Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(518, 518), Scalar(), true);
@@ -636,7 +636,7 @@ PERF_TEST_P_(DNNTestNetwork, RetinaFace)
 // Model: https://huggingface.co/onnx-community/grounding-dino-tiny-ONNX
 PERF_TEST_P_(DNNTestNetwork, Grounding_DINO)
 {
-    applyTestTag(CV_TEST_TAG_MEMORY_2GB, CV_TEST_TAG_DEBUG_VERYLONG);
+    applyTestTag(CV_TEST_TAG_MEMORY_2GB, CV_TEST_TAG_VERYLONG);
 
     // Image input
     Mat sample = imread(findDataFile("dnn/dog416.png"));
@@ -669,7 +669,7 @@ PERF_TEST_P_(DNNTestNetwork, Grounding_DINO)
 // Model: https://drive.google.com/file/d/1P6a7oS_dV5y09FsCA4XDZK1-WcdZbWFh/view?usp=drive_link
 PERF_TEST_P_(DNNTestNetwork, RF_DETR)
 {
-    applyTestTag(CV_TEST_TAG_MEMORY_1GB, CV_TEST_TAG_DEBUG_LONG);
+    applyTestTag(CV_TEST_TAG_MEMORY_1GB, CV_TEST_TAG_VERYLONG);
 
     Mat sample = imread(findDataFile("dnn/dog416.png"));
     Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(560, 560), Scalar(), true);
@@ -679,7 +679,7 @@ PERF_TEST_P_(DNNTestNetwork, RF_DETR)
 // Model: https://drive.google.com/file/d/1OrSmlXURayVQgW8nrrxjggzPMN7xPRGJ/view?usp=sharing
 PERF_TEST_P_(DNNTestNetwork, RT_DETR_L)
 {
-    applyTestTag(CV_TEST_TAG_MEMORY_1GB, CV_TEST_TAG_DEBUG_LONG);
+    applyTestTag(CV_TEST_TAG_MEMORY_1GB, CV_TEST_TAG_VERYLONG);
 
     Mat sample = imread(findDataFile("dnn/dog416.png"));
     Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(640, 640), Scalar(), true);
