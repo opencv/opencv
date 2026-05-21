@@ -184,7 +184,7 @@ class CvVideoWriter_AVFoundation : public cv::IVideoWriter {
     public:
         CvVideoWriter_AVFoundation(const std::string &filename, int fourcc, double fps, const cv::Size& frame_size, int is_color);
         ~CvVideoWriter_AVFoundation();
-        void write(cv::InputArray image) CV_OVERRIDE;
+        bool write(cv::InputArray image) CV_OVERRIDE;
         int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_AVFOUNDATION; }
         bool isOpened() const CV_OVERRIDE
         {
@@ -1233,14 +1233,14 @@ static void releaseCallback( void *releaseRefCon, const void * ) {
     CFRelease((CFDataRef)releaseRefCon);
 }
 
-void CvVideoWriter_AVFoundation::write(cv::InputArray image) {
+bool CvVideoWriter_AVFoundation::write(cv::InputArray image) {
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
 
     // writer status check
     if (mMovieWriter.status !=  AVAssetWriterStatusWriting ) {
         NSLog(@"mMovieWriter.status: %d. Error: %@", (int)mMovieWriter.status, [mMovieWriter.error localizedDescription]);
         [localpool drain];
-        return;
+        return false;
     }
 
     // Make writeFrame() a blocking call.
@@ -1255,7 +1255,7 @@ void CvVideoWriter_AVFoundation::write(cv::InputArray image) {
     if (image.size().height!=movieSize.height || image.size().width!=movieSize.width){
         fprintf(stderr, "OpenCV: Frame size does not match video size.\n");
         [localpool drain];
-        return;
+        return false;
     }
 
     if (movieColor) {
@@ -1305,6 +1305,7 @@ void CvVideoWriter_AVFoundation::write(cv::InputArray image) {
         NSLog(@"Frame appendPixelBuffer failed.");
     }
 
+    return success;
 }
 
 #pragma clang diagnostic pop
