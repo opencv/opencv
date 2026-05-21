@@ -1,0 +1,20 @@
+{# Override of pydata_sphinx_theme's components/navbar-nav.html.
+   PyData's default renders both top-level toctree items AND the
+   configured external_links in one bar. For OpenCV we want ONLY the
+   Doxygen-style external nav (Main Page, Related Pages, Namespaces,
+   …) in the header — the tutorial module tree belongs in the left
+   sidebar, not the header. So we render external_links only. #}
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    {%- for link in (theme_external_links or []) %}
+    <li class="nav-item">
+      {# PyData's CSS adds the ↗ icon via .nav-external::after — don't
+         render a second one inline or it doubles up. #}
+      <a class="nav-link nav-external"
+         href="{{ link.url }}"
+         target="_blank"
+         rel="noopener noreferrer">{{ link.name }}</a>
+    </li>
+    {%- endfor %}
+  </ul>
+</nav>
