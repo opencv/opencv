@@ -13,7 +13,141 @@ namespace cv
 namespace dnn
 {
 
-static void maxPool32f(const void* inp_, void* out_, const ConvState& cs)
+// ONNX MaxPool indices: flat index into logical NCHW input (padding excluded).
+static inline int64_t maxPoolFlatIndex(int n, int cGlobal, int C,
+                                      int zi, int yi, int xi,
+                                      int Di, int Hi, int Wi)
+{
+    return (((int64_t)n * C + cGlobal) * Di + zi) * (int64_t)Hi * Wi
+           + (int64_t)yi * Wi + xi;
+}
+
+static void maxPool32fWithIndices(const void* inp_, void* out_, void* idx_, const ConvState& cs);
+static void maxPool32fValuesOnly(const void* inp_, void* out_, const ConvState& cs);
+
+static void maxPool32f(const void* inp_, void* out_, void* idx_, const ConvState& cs)
+{
+    if (idx_)
+        maxPool32fWithIndices(inp_, out_, idx_, cs);
+    else
+        maxPool32fValuesOnly(inp_, out_, cs);
+}
+
+static void maxPool32fWithIndices(const void* inp_, void* out_, void* idx_, const ConvState& cs)
+{
+    int NC1 = cs.inpshape[0]*cs.inpshape[1];
+
+    CV_Assert(cs.inpshape.layout == DATA_LAYOUT_BLOCK);
+    CV_Assert(cs.outshape.layout == DATA_LAYOUT_BLOCK);
+    CV_Assert(cs.inpshape.dims == cs.outshape.dims);
+    CV_Assert(idx_ != nullptr);
+
+    parallel_for_(Range(0, NC1), [&](const Range& r) {
+        constexpr int MAX_POOL_DIMS = ConvState::MAX_CONV_DIMS;
+
+        CV_Assert(cs.nspatialdims <= MAX_POOL_DIMS && MAX_POOL_DIMS == 3);
+
+        int sdims = cs.nspatialdims;
+        int nc0 = r.start, nc1 = r.end;
+        int C1 = cs.inpshape[1];
+        int C = cs.inpshape.C;
+        int C0 = cs.inpshape.back();
+        int Di = sdims > 2 ? cs.inpshape[sdims - 1] : 1;
+        int Hi = sdims > 1 ? cs.inpshape[sdims] : 1;
+        int Wi = cs.inpshape[sdims + 1];
+        int D = sdims > 2 ? cs.outshape[sdims - 1] : 1;
+        int H = sdims > 1 ? cs.outshape[sdims] : 1;
+        int W = cs.outshape[sdims + 1];
+        int iplanesize = Di*Hi*Wi*C0;
+        int planesize = D*H*W*C0;
+        int SZ = cs.strides[0], SY = cs.strides[1], SX = cs.strides[2];
+        int padZ0 = cs.pads[0], padY0 = cs.pads[1], padX0 = cs.pads[2];
+        int inner_z0 = cs.inner[0], inner_z1 = cs.inner[MAX_POOL_DIMS];
+        int inner_y0 = cs.inner[1], inner_y1 = cs.inner[MAX_POOL_DIMS + 1];
+        int inner_x0 = cs.inner[2], inner_x1 = cs.inner[MAX_POOL_DIMS + 2];
+        int ksize = (int)cs.ofstab.size();
+        const int* zyxtab = cs.coordtab.data();
+        const int* ofstab = cs.ofstab.data();
+
+        const float* inp = (const float*)inp_ + nc0*iplanesize;
+        float* out = (float*)out_ + nc0*planesize;
+        int64_t* idx = (int64_t*)idx_ + nc0*planesize;
+        const float INITVAL = -FLT_MAX;
+
+        for (int nc = nc0; nc < nc1; nc++, inp += iplanesize) {
+            int n = nc / C1;
+            int c1 = nc % C1;
+            int cBase = c1 * C0;
+
+            for (int z0 = 0; z0 < D; z0++) {
+                int zi_ = z0*SZ - padZ0;
+                for (int y0 = 0; y0 < H; y0++, out += W*C0, idx += W*C0) {
+                    int x0 = 0;
+                    int x1 = z0 >= inner_z0 && z0 < inner_z1 &&
+                        y0 >= inner_y0 && y0 < inner_y1 ? inner_x0 : W;
+                    int yi_ = y0*SY - padY0;
+
+                    for(;;) {
+                        for (; x0 < x1; x0++) {
+                            int xi_ = x0*SX - padX0;
+                            for (int c = 0; c < C0; c++) {
+                                int cGlobal = cBase + c;
+                                float maxv = INITVAL;
+                                int64_t maxi = -1;
+                                for (int k = 0; k < ksize; k++) {
+                                    int zi = zi_ + zyxtab[k*MAX_POOL_DIMS];
+                                    int yi = yi_ + zyxtab[k*MAX_POOL_DIMS+1];
+                                    int xi = xi_ + zyxtab[k*MAX_POOL_DIMS+2];
+                                    if ((unsigned)zi >= (unsigned)Di ||
+                                        (unsigned)yi >= (unsigned)Hi ||
+                                        (unsigned)xi >= (unsigned)Wi)
+                                        continue;
+                                    const float* inptr = inp + ((zi*Hi + yi)*Wi + xi)*C0;
+                                    float v = inptr[c];
+                                    if (v > maxv) {
+                                        maxv = v;
+                                        maxi = maxPoolFlatIndex(n, cGlobal, C, zi, yi, xi, Di, Hi, Wi);
+                                    }
+                                }
+                                out[x0*C0 + c] = maxv;
+                                idx[x0*C0 + c] = maxi;
+                            }
+                        }
+                        if (x0 == W)
+                            break;
+                        x1 = inner_x1;
+
+                        for (; x0 < x1; x0++) {
+                            int xi_ = x0*SX - padX0;
+                            const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
+                            for (int c = 0; c < C0; c++) {
+                                int cGlobal = cBase + c;
+                                float maxv = INITVAL;
+                                int64_t maxi = -1;
+                                for (int k = 0; k < ksize; k++) {
+                                    const float* inptr = inp_xi + ofstab[k];
+                                    float v = inptr[c];
+                                    if (v > maxv) {
+                                        maxv = v;
+                                        int zi = zi_ + zyxtab[k*MAX_POOL_DIMS];
+                                        int yi = yi_ + zyxtab[k*MAX_POOL_DIMS+1];
+                                        int xi = xi_ + zyxtab[k*MAX_POOL_DIMS+2];
+                                        maxi = maxPoolFlatIndex(n, cGlobal, C, zi, yi, xi, Di, Hi, Wi);
+                                    }
+                                }
+                                out[x0*C0 + c] = maxv;
+                                idx[x0*C0 + c] = maxi;
+                            }
+                        }
+                        x1 = W;
+                    }
+                }
+            }
+        }
+    });
+}
+
+static void maxPool32fValuesOnly(const void* inp_, void* out_, const ConvState& cs)
 {
     int NC1 = cs.inpshape[0]*cs.inpshape[1];
 
@@ -374,10 +508,12 @@ static void maxPool16bf(const void* inp_, void* out_, const ConvState& cs)
 }
 #endif
 
-typedef void (*MaxPoolFunc)(const void* inp, void* out, const ConvState& cs);
+typedef void (*MaxPoolFunc)(const void* inp, void* out,void* idx, const ConvState& cs);
 
 class MaxPoolLayerImpl : public MaxPoolLayer
 {
+    int output_number = 1;
+
 public:
     MaxPoolLayerImpl(const LayerParams& params)
     {
@@ -389,6 +525,7 @@ public:
         pads = params.getVector<int>("pad");
         ceil_mode = params.get<bool>("ceil_mode", false);
         storage_order = params.get<int>("storage_order", 0);
+        output_number = params.get<int>("output_number", 1);
     }
 
     virtual std::ostream& dumpAttrs(std::ostream& strm, int indent) const CV_OVERRIDE
@@ -421,6 +558,8 @@ public:
             prindent(strm, indent);
             strm << "storage_order: " << storage_order << ",\n";
         }
+        prindent(strm, indent);
+        strm << "output_number: " << output_number << ",\n";
         return strm;
     }
 
@@ -433,7 +572,7 @@ public:
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() == 1);
-        CV_Assert(outputs.size() == 1);
+        CV_Assert(outputs.size() == 1||outputs.size() == 2);
         int ksize = 1;
         for (auto sz: kernel_shape) ksize *= sz;
         return (int64_t)(inputs[0].total()*ksize);
@@ -451,8 +590,11 @@ public:
     {
         int ninputs = (int)inptypes.size();
         CV_Assert(ninputs == 1);
-
-        outtypes.assign(1, inferType(inptypes[0]));
+        if (outputs.size() == 2u) {
+            outtypes ={inferType(inptypes[0]), CV_64S};
+        } else {
+            outtypes.assign(1, inferType(inptypes[0]));
+        }
         temptypes.clear();
     }
 
@@ -463,13 +605,23 @@ public:
                                  std::vector<MatShape> &outshapes,
                                  std::vector<MatShape> &tempshapes) const CV_OVERRIDE
     {
-        CV_Assert(outputs.size() == 1u);
+        CV_Assert(outputs.size() == 1u||outputs.size() == 2u);
         size_t ninputs = inpshapes.size();
         CV_Assert(ninputs == 1);
 
-        outshapes.assign(1, convInferShape(inpshapes[0], MatShape(),
-                                           kernel_shape, 0, strides, dilations,
-                                           pads, auto_pad, ceil_mode));
+        MatShape baseShape = convInferShape(inpshapes[0], MatShape(),
+                                            kernel_shape, 0, strides, dilations,
+                                            pads, auto_pad, ceil_mode);
+    
+        outshapes.clear();
+        if (outputs.size() == 1u) {
+            outshapes.push_back(baseShape);
+        }
+        else {
+            outshapes.push_back(baseShape);
+            //optional output:indices tensor from max pooling across the input tensor
+            outshapes.push_back(baseShape);
+        }
         tempshapes.clear();
         return true;
     }
@@ -512,22 +664,30 @@ public:
         if (outKind == _InputArray::STD_VECTOR_MAT) {
             Mat inp = inputs_arr.getMat(0);
             std::vector<Mat>& outs = outputs_arr.getMatVecRef();
-            outs.resize(1);
+            size_t nout = outputs.size(); 
+            outs.resize(nout);
             outs[0].fit(outshape, inptype);
-            runOp(inp, outs[0], cs);
+            if (nout == 2u) outs[1].fit(outshape, CV_64S);
+            runOp(inp, outs[0], nout == 2 ? &outs[1] : nullptr, cs);
         } else {
             // [TODO] more efficient OpenCL implementation
             Mat inp = inputs_arr.getMat(0);
             std::vector<UMat>& outs = outputs_arr.getUMatVecRef();
-            outs.resize(1);
+            size_t nout = outputs.size();
+            outs.resize(nout);
             outs[0].fit(outshape, inptype);
             Mat temp(outshape, inptype);
-            runOp(inp, temp, cs);
+            Mat tempIdx;
+            if (nout == 2u)
+                tempIdx.create(outshape, CV_64S);
+            runOp(inp, temp, nout == 2 ? &tempIdx : nullptr, cs);
             temp.copyTo(outs[0]);
+            if (nout == 2u)
+                tempIdx.copyTo(outs[1]);
         }
     }
 
-    void runOp(const Mat& inp, Mat& out, const ConvState& cs)
+    void runOp(const Mat& inp, Mat& out, Mat* idx, const ConvState& cs)
     {
         int inptype = inp.type();
         MaxPoolFunc func =
@@ -537,7 +697,8 @@ public:
             nullptr;
 
         CV_Assert(func != nullptr && "MaxPool: unsupported data type");
-        func(inp.data, out.data, cs);
+        CV_Assert(idx == nullptr || idx->type() == CV_64S);
+        func(inp.data, out.data, idx ? idx->data : nullptr, cs);
     }
 };
 
