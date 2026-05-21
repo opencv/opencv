@@ -1,0 +1,419 @@
+/*
+ * docs_sphinx/_static/custom.css
+ * Ported visual layer from the Prasadayus/opencv#27 Sphinx port,
+ * trimmed to the rules that apply to our minimal wrapper (PyData
+ * pydata-sphinx-theme + MyST, no doxysnippet/opencv_code_links/tabs
+ * extensions). Rules that target HTML markup we don't emit are
+ * dropped; rules that are pure pydata overrides are kept verbatim.
+ */
+
+:root,
+html[data-theme="light"],
+html[data-theme="dark"] {
+    --pst-font-family-base: "Inter", "Source Sans Pro", -apple-system,
+        BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+        sans-serif;
+    --pst-font-family-heading: var(--pst-font-family-base);
+    --pst-font-family-monospace: "JetBrains Mono", "SFMono-Regular", Menlo,
+        Consolas, "Liberation Mono", monospace;
+    --pst-font-size-base: 16px;
+}
+
+html { font-size: 16px; }
+body, .bd-main { font-family: var(--pst-font-family-base); }
+
+h1 { font-size: 2.25rem; font-weight: 700; line-height: 1.2; letter-spacing: -0.02em; }
+h2 { font-size: 1.5rem; font-weight: 600; line-height: 1.3; letter-spacing: -0.01em; margin-top: 2rem; }
+h3 { font-size: 1.125rem; font-weight: 600; line-height: 1.4; }
+
+.bd-content p, .bd-content li { line-height: 1.6; }
+.bd-content ol > li { margin-bottom: 1.1rem; padding-left: 0.25rem; }
+.bd-content ol ol { list-style-type: lower-alpha; }
+.bd-content ol ol ol { list-style-type: lower-roman; }
+.bd-content ol > li > p:first-child > strong:first-child::after { content: ":"; }
+
+html[data-theme="light"] {
+    --pst-color-link: #0969da;
+    --pst-color-link-hover: #0550ae;
+    --opencv-accent: #003a6b;
+}
+html[data-theme="dark"] {
+    --opencv-accent: #a4c9ff;
+}
+
+.bd-content a { text-decoration: none; color: #0969da; }
+html[data-theme="dark"] .bd-article-container a { color: #539bf5 !important; }
+.bd-content a:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.22em;
+    text-decoration-thickness: 1px;
+    color: #0550ae;
+}
+html[data-theme="dark"] .bd-article-container a:hover { color: #6cb6ff !important; }
+.bd-content a > code, .bd-content code > a { color: inherit; }
+
+/* --- Front-matter table (.opencv-meta-table — applied in source-read) -- */
+.opencv-meta-table,
+.opencv-meta-table .pst-scrollable-table-container { margin: 0 !important; padding: 0 !important; }
+.opencv-meta-table table { margin-bottom: 0 !important; }
+.opencv-meta-table + p,
+div.opencv-meta-table + p { margin-top: 1.5rem !important; }
+.opencv-meta-table .pst-scrollable-table-container,
+.opencv-meta-table table,
+table.opencv-meta-table {
+    width: auto !important;
+    max-width: fit-content;
+    margin-right: auto;
+    margin-left: 0;
+    border: 1px solid var(--pst-color-border);
+    border-radius: 0.5rem;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    overflow: hidden;
+}
+.opencv-meta-table table th,
+.opencv-meta-table table td,
+table.opencv-meta-table th,
+table.opencv-meta-table td {
+    padding: 0.45rem 1rem;
+    font-size: 0.92rem;
+    border-bottom: 1px solid var(--pst-color-border);
+    border-right: 1px solid var(--pst-color-border);
+    vertical-align: middle;
+    text-align: left !important;
+}
+.opencv-meta-table table td:first-child,
+table.opencv-meta-table td:first-child {
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--pst-color-on-surface);
+    font-weight: 600;
+    white-space: nowrap;
+}
+.opencv-meta-table table tr:last-child td,
+table.opencv-meta-table tr:last-child td { border-bottom: none; }
+.opencv-meta-table table td:last-child,
+table.opencv-meta-table td:last-child { border-right: none; }
+.opencv-meta-table table thead,
+table.opencv-meta-table thead { display: none; }
+
+html[data-theme="dark"] .opencv-meta-table table,
+html[data-theme="dark"] table.opencv-meta-table {
+    border: 1px solid #444c56 !important;
+    border-radius: 0.5rem !important;
+    overflow: hidden !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+}
+html[data-theme="dark"] .opencv-meta-table table th,
+html[data-theme="dark"] .opencv-meta-table table td,
+html[data-theme="dark"] table.opencv-meta-table th,
+html[data-theme="dark"] table.opencv-meta-table td {
+    border-bottom: 1px solid #444c56 !important;
+    border-right: 1px solid #444c56 !important;
+    color: #cdd9e5 !important;
+    background-color: #22272e !important;
+}
+html[data-theme="dark"] .opencv-meta-table table td:first-child,
+html[data-theme="dark"] table.opencv-meta-table td:first-child {
+    background: #2d333b !important;
+    font-weight: 600 !important;
+    color: #cdd9e5 !important;
+}
+html[data-theme="dark"] .opencv-meta-table table tr:last-child td,
+html[data-theme="dark"] table.opencv-meta-table tr:last-child td { border-bottom: none !important; }
+html[data-theme="dark"] .opencv-meta-table table td:last-child,
+html[data-theme="dark"] table.opencv-meta-table td:last-child { border-right: none !important; }
+
+/* --- Images & figures -------------------------------------------------- */
+.bd-content figure figcaption,
+.bd-content figure figcaption p,
+.bd-content figure figcaption .caption-text {
+    font-weight: 700 !important;
+    font-style: normal !important;
+}
+.bd-content figure,
+.bd-content p img,
+.bd-content li img { margin-top: 1rem; margin-bottom: 1rem; }
+.bd-content figure { margin-left: auto; margin-right: auto; text-align: center; }
+.bd-content p:has(> img:only-child) { text-align: center; }
+.bd-content p > img { display: inline-block; }
+
+/* --- YouTube embeds (.opencv-youtube — emitted by @youtube{ID} rule) --- */
+.opencv-youtube {
+    position: relative;
+    width: 100%;
+    max-width: 720px;
+    margin: 1.5rem auto;
+    aspect-ratio: 16 / 9;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+}
+.opencv-youtube iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+/* --- Generic tables ---------------------------------------------------- */
+.bd-content table {
+    border-collapse: collapse !important;
+    width: 100%;
+    margin-bottom: 1rem;
+    border: 1px solid var(--pst-color-border) !important;
+}
+.bd-content table th {
+    border: 1px solid var(--pst-color-border) !important;
+    padding: 0.65rem 1rem !important;
+    background: var(--pst-color-surface) !important;
+    font-size: 0.8rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.07em !important;
+    color: var(--pst-color-muted) !important;
+    font-weight: 600 !important;
+}
+.bd-content table td {
+    border: 1px solid var(--pst-color-border) !important;
+    padding: 0.65rem 1rem !important;
+    vertical-align: middle !important;
+}
+.bd-content table tbody tr:hover td { background: var(--pst-color-surface) !important; }
+
+/* --- Header & navbar --------------------------------------------------- */
+.bd-header {
+    border-bottom: 1px solid var(--pst-color-border);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+.bd-header .navbar { min-height: 3.25rem; padding-top: 0.25rem; padding-bottom: 0.25rem; }
+.bd-header .navbar-header-items__start { gap: 1rem; align-items: center; }
+.bd-header img.logo__image { max-height: 36px; }
+
+.version-badge {
+    display: inline-block;
+    padding: 0.1rem 0.5rem;
+    margin-left: 0.25rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--pst-color-text-muted);
+    background: var(--pst-color-surface);
+    border: 1px solid var(--pst-color-border);
+    border-radius: 0.35rem;
+    line-height: 1.4;
+    white-space: nowrap;
+    letter-spacing: 0.04em;
+}
+
+.bd-header .navbar-nav { gap: 0.25rem; }
+.bd-header .navbar-nav > li > a {
+    font-size: 0.78rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--pst-color-text-muted);
+    padding: 0.4rem 0.75rem !important;
+    border-radius: 0.35rem;
+    transition: color 120ms ease, background 120ms ease;
+}
+.bd-header .navbar-nav > li > a:hover {
+    color: var(--opencv-accent);
+    background: var(--pst-color-surface);
+    text-decoration: none;
+}
+.bd-header .navbar-nav > li > a.active,
+.bd-header .navbar-nav > li > a.current {
+    color: var(--opencv-accent);
+    font-weight: 600;
+}
+.bd-header .navbar-persistent--mobile,
+.bd-header .navbar-persistent--container,
+.bd-header button.theme-switch-button,
+.bd-header .navbar-icon-links a.nav-link { color: var(--pst-color-text-muted); }
+.bd-header button.theme-switch-button:hover,
+.bd-header .navbar-icon-links a.nav-link:hover { color: var(--opencv-accent); }
+
+/* --- Wider reading column ---------------------------------------------- */
+@media (min-width: 960px) {
+    .bd-page-width,
+    .bd-container__inner.bd-page-width { max-width: none !important; }
+    .bd-container { max-width: none !important; }
+    .bd-sidebar-primary { padding-left: 1rem !important; padding-right: 1rem !important; }
+    .bd-main .bd-content,
+    .bd-main .bd-article-container { padding-left: 2rem; padding-right: 2rem; }
+    .bd-main .bd-article { padding-left: 0; padding-right: 0; }
+}
+
+/* --- Left sidebar nav -------------------------------------------------- */
+.bd-sidebar-primary nav.bd-links { margin-right: 0 !important; }
+.bd-sidebar-primary nav.bd-docs-nav p.bd-links__title {
+    font-size: 0.9rem !important;
+    font-weight: 700 !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+    color: var(--pst-color-text-base) !important;
+    margin-bottom: 0.5rem !important;
+}
+.bd-sidebar-primary nav.bd-links li > a {
+    font-size: 0.9rem !important;
+    line-height: 1.45 !important;
+    padding-top: 0.28rem !important;
+    padding-bottom: 0.28rem !important;
+}
+.bd-sidebar-primary nav.bd-links .toctree-l1 > a {
+    font-weight: 500 !important;
+    padding-left: 0.65rem !important;
+}
+.bd-sidebar-primary nav.bd-links .toctree-l2 > a {
+    font-size: 0.875rem !important;
+    padding-left: 1.25rem !important;
+    color: var(--pst-color-text-muted) !important;
+}
+.bd-sidebar-primary nav.bd-links .toctree-l3 > a {
+    font-size: 0.86rem !important;
+    padding-left: 2rem !important;
+    color: var(--pst-color-text-muted) !important;
+}
+.bd-sidebar-primary nav.bd-links .current > a {
+    color: var(--pst-color-primary) !important;
+    font-weight: 600 !important;
+}
+html[data-theme="dark"] .bd-sidebar-primary nav.bd-links .current > a { color: #539bf5 !important; }
+
+/* --- Code blocks ------------------------------------------------------- */
+div.highlight {
+    position: relative;
+    display: block !important;
+    width: 100% !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+div.highlight pre {
+    font-size: 0.875rem !important;
+    line-height: 1.55 !important;
+    overflow-x: auto !important;
+    white-space: pre !important;
+    background: #f6f8fa !important;
+    color: #24292e !important;
+    border: none !important;
+    border-left: 3px solid #0550ae !important;
+    border-radius: 0.4rem !important;
+    padding: 0.6rem 0.85rem !important;
+    margin: 0 !important;
+    font-style: normal !important;
+}
+.highlight .c, .highlight .ch, .highlight .cm,
+.highlight .cpf, .highlight .c1, .highlight .cs { font-style: normal !important; }
+
+html[data-theme="dark"] { color-scheme: dark; }
+html[data-theme="dark"] div.highlight span,
+html[data-theme="dark"] div.highlight * { color: unset !important; }
+
+/* Dark-mode Pygments tokens (matches the PR's mapping) */
+html[data-theme="dark"] .highlight .c, html[data-theme="dark"] .highlight .c1,
+html[data-theme="dark"] .highlight .c2, html[data-theme="dark"] .highlight .cm,
+html[data-theme="dark"] .highlight .cp, html[data-theme="dark"] .highlight .cs,
+html[data-theme="dark"] .highlight .ch,
+html[data-theme="dark"] .highlight .cpf { color: #e3b341 !important; font-style: normal !important; }
+html[data-theme="dark"] .highlight .k, html[data-theme="dark"] .highlight .kd,
+html[data-theme="dark"] .highlight .kn, html[data-theme="dark"] .highlight .kp,
+html[data-theme="dark"] .highlight .kr,
+html[data-theme="dark"] .highlight .kt { color: #f47067 !important; font-weight: 600; }
+html[data-theme="dark"] .highlight .s, html[data-theme="dark"] .highlight .s1,
+html[data-theme="dark"] .highlight .s2, html[data-theme="dark"] .highlight .sa,
+html[data-theme="dark"] .highlight .sb, html[data-theme="dark"] .highlight .sc,
+html[data-theme="dark"] .highlight .sd, html[data-theme="dark"] .highlight .se,
+html[data-theme="dark"] .highlight .si,
+html[data-theme="dark"] .highlight .ss { color: #96d0ff !important; }
+html[data-theme="dark"] .highlight .n, html[data-theme="dark"] .highlight .na,
+html[data-theme="dark"] .highlight .nb, html[data-theme="dark"] .highlight .nc,
+html[data-theme="dark"] .highlight .nf,
+html[data-theme="dark"] .highlight .nn { color: #cdd9e5 !important; }
+html[data-theme="dark"] .highlight .o,
+html[data-theme="dark"] .highlight .ow { color: #f47067 !important; }
+html[data-theme="dark"] .highlight .mi, html[data-theme="dark"] .highlight .mf,
+html[data-theme="dark"] .highlight .mh,
+html[data-theme="dark"] .highlight .mo { color: #6cb6ff !important; }
+
+html[data-theme="dark"] div.highlight pre {
+    background: #2d333b !important;
+    color: #cdd9e5 !important;
+    border-left: 3px solid #539bf5 !important;
+}
+html[data-theme="dark"] code,
+html[data-theme="dark"] .sig {
+    background-color: #2d333b !important;
+    color: #cdd9e5 !important;
+}
+
+/* --- Heading anchors fade-in ------------------------------------------ */
+a.headerlink { opacity: 0; transition: opacity 120ms; }
+h1:hover a.headerlink, h2:hover a.headerlink, h3:hover a.headerlink,
+h4:hover a.headerlink, h5:hover a.headerlink, h6:hover a.headerlink,
+dt:hover a.headerlink { opacity: 1; }
+
+/* --- Prev/next strip --------------------------------------------------- */
+.prev-next-area { overflow: hidden; clear: both; }
+.prev-next-area .prev-next-title {
+    color: var(--pst-color-link) !important;
+    font-weight: 600 !important;
+    font-size: 1rem !important;
+}
+.prev-next-area a:hover .prev-next-title {
+    color: var(--pst-color-link-hover) !important;
+    text-decoration: underline !important;
+}
+.prev-next-area .prev-next-subtitle {
+    font-size: 0.78rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    color: var(--pst-color-muted) !important;
+}
+
+/* --- Back-to-top pill (PyData's built-in #pst-back-to-top) ------------ */
+#pst-back-to-top {
+    font-family: var(--pst-font-family-base) !important;
+    font-size: 0.82rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.05em !important;
+    text-transform: uppercase !important;
+    padding: 0.65rem 1.6rem !important;
+    border-radius: 2rem !important;
+    border: none !important;
+    background: linear-gradient(135deg, #0066cc, #003a6b) !important;
+    color: #fff !important;
+    box-shadow: 0 4px 14px rgba(0, 60, 120, 0.35) !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    transition: box-shadow 150ms ease, opacity 150ms ease !important;
+}
+#pst-back-to-top:hover {
+    box-shadow: 0 6px 20px rgba(0, 60, 120, 0.5) !important;
+    color: #fff !important;
+    text-decoration: none !important;
+    opacity: 0.92 !important;
+}
+
+/* --- C++ symbol signatures (Breathe-rendered API pages, when enabled) - */
+dl.cpp.function > dt.sig,
+dl.cpp.class > dt.sig,
+dl.cpp.struct > dt.sig,
+dl.cpp.type > dt.sig {
+    background: var(--pst-color-surface);
+    border: 1px solid var(--pst-color-border);
+    border-left: 3px solid var(--opencv-accent);
+    border-radius: 0.4rem;
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    line-height: 1.8;
+    overflow-x: auto;
+    margin-bottom: 0.5rem;
+}
+dl.cpp.function .sig-name.descname { color: var(--opencv-accent); font-weight: 700; }
+dl.cpp.function .sig-prename.descclassname { color: var(--pst-color-text-muted); }
+
+/* --- MathJax inline alignment tweak ----------------------------------- */
+mjx-container.MathJax:not([display="true"]) { vertical-align: -0.15em !important; }
