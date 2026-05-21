@@ -244,9 +244,9 @@ public:
             return false;
 
         int bottom_concat_axis;
-        int concat_size = total(shape(inputs[0]), cAxis + 1);
+        int concat_size = (int)total(shape(inputs[0]), cAxis + 1);
         int top_concat_axis = outputs[0].size[cAxis];
-        int num_concats = total(shape(inputs[0]), 0, cAxis);
+        int num_concats = (int)total(shape(inputs[0]), 0, cAxis);
         int offset_concat_axis = 0;
         UMat& outMat = outputs[0];
         String matType = matTypeToOclType(inputs[0].type());
