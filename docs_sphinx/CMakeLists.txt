@@ -32,10 +32,14 @@ add_custom_target(sphinx
   COMMENT "Building Sphinx HTML site -> ${_SPHINX_OUTDIR}"
   VERBATIM)
 
-# Clean rebuild: `cmake --build <build> --target sphinx-clean`
+# Clean rebuild: `cmake --build <build> --target sphinx-clean`.
+# Also wipes the doctrees env cache — without that, changes to DOC_MODULES
+# in conf.py (newly enabled modules) silently fail to appear in the next
+# `sphinx` build because Sphinx reuses the cached file enumeration.
 add_custom_target(sphinx-clean
   COMMAND ${CMAKE_COMMAND} -E rm -rf ${_SPHINX_OUTDIR}
-  COMMENT "Removing ${_SPHINX_OUTDIR}"
+  COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_CURRENT_BINARY_DIR}/.doctrees
+  COMMENT "Removing ${_SPHINX_OUTDIR} and .doctrees env cache"
   VERBATIM)
 
 message(STATUS "docs_sphinx: sphinx target enabled (sphinx-build: ${SPHINX_BUILD})")

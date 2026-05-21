@@ -32,7 +32,7 @@ OPENCV_ROOT = HERE.parent.resolve()
 import os as _os
 DOC_MODULES = [
     m.strip()
-    for m in (_os.environ.get("OPENCV_DOC_MODULES") or "photo,objdetect").split(",")
+    for m in (_os.environ.get("OPENCV_DOC_MODULES") or "photo,objdetect,dnn,gpu,others").split(",")
     if m.strip()
 ]
 
@@ -61,7 +61,7 @@ master_doc = "tutorials/tutorials"
 include_patterns = ["tutorials/tutorials.markdown"] + [
     f"tutorials/{m}/**" for m in DOC_MODULES
 ]
-exclude_patterns = ["**/Thumbs.db", "**/.DS_Store"]
+exclude_patterns = ["**/Thumbs.db", "**/.DS_Store", "**/_old/**"]
 
 myst_enable_extensions = [
     "colon_fence", "deflist", "dollarmath", "amsmath",
@@ -162,9 +162,16 @@ _HEAD_RE = re.compile(
     re.MULTILINE)
 
 def _scan_internal(path: pathlib.Path) -> None:
-    """Add every {#anchor} in `path` (file or dir) to _ANCHOR_TO_DOC."""
-    files = [path] if (path.is_file() and path.suffix == ".markdown") \
-        else (list(path.rglob("*.markdown")) if path.is_dir() else [])
+    """Add every {#anchor} in `path` (file or dir) to _ANCHOR_TO_DOC.
+    Picks up both `.markdown` (the bulk of the tree) and `.md` (the form
+    used by ports like dnn/dnn_pytorch_tf_*)."""
+    _SUFFIXES = (".markdown", ".md")
+    if path.is_file():
+        files = [path] if path.suffix in _SUFFIXES else []
+    elif path.is_dir():
+        files = [p for s in _SUFFIXES for p in path.rglob(f"*{s}")]
+    else:
+        files = []
     for md in files:
         try:
             head = md.read_text(encoding="utf-8", errors="replace")[:4000]
@@ -202,13 +209,16 @@ for _toc in (DOC_ROOT / "tutorials").glob("*/table_of_content_*.markdown"):
         _scan_external(_toc)
 
 # Doxygen flattens IMAGE_PATH across every `images/` folder under the tutorial
-# tree, so a tutorial can reference `images/foo.png` even when `foo.png` lives
-# in a sibling module's `images/` directory. Mirror that behavior by building
-# a basename -> doc-root-relative-path index once at import time.
+# tree plus the top-level `doc/images/` (per Doxyfile.in), so a tutorial can
+# reference `images/foo.png` even when `foo.png` lives in a sibling module's
+# `images/` directory or in `doc/images/`. Mirror that behavior by building a
+# basename -> doc-root-relative-path index once at import time.
 _IMAGE_INDEX: dict[str, str] = {}
-for _img in (DOC_ROOT / "tutorials").rglob("images/*"):
-    if _img.is_file():
-        _IMAGE_INDEX.setdefault(_img.name, _img.relative_to(DOC_ROOT).as_posix())
+for _root in ((DOC_ROOT / "tutorials").rglob("images/*"),
+              (DOC_ROOT / "images").glob("*")):
+    for _img in _root:
+        if _img.is_file():
+            _IMAGE_INDEX.setdefault(_img.name, _img.relative_to(DOC_ROOT).as_posix())
 
 _TOGGLE_LABELS = {"cpp": "C++", "java": "Java", "python": "Python"}
 
@@ -301,6 +311,30 @@ def _translate(text: str, docname: str | None = None) -> str:
         r"@code(?:\{(?P<lang>[^}]*)\})?\s*\n(?P<body>.*?)\n\s*@endcode",
         _code_repl, text, flags=re.DOTALL)
 
+    # 3b. Tilde-fenced code blocks: `~~~~{.lang} ... ~~~~` (Doxygen-style).
+    #     MyST treats `{.lang}` as a directive name, so `.py` raises an
+    #     "Unknown directive" warning. Normalise to backtick-fenced output.
+    def _tilde_repl(m: re.Match) -> str:
+        lang = (m.group("lang") or "").strip().lstrip(".") or "text"
+        if lang == "none":
+            lang = "text"
+        return f"\n```{lang}\n{m.group('body').strip()}\n```\n"
+    text = re.sub(
+        r"^~~~+(?:[ \t]*\{(?P<lang>[^}\n]+)\})?[ \t]*\n"
+        r"(?P<body>.*?)\n^~~~+[ \t]*$",
+        _tilde_repl, text, flags=re.DOTALL | re.MULTILINE)
+
+    # 3c. Normalize `yml` fence lexer -> `yaml`.
+    #     Pygments emits "Lexer succeeded for unknown lexer 'yml'" otherwise.
+    #     Runs after 3 and 3b so @code{.yml} / ~~~~{.yml} fences caught here too.
+    #     Matches the lang token on its own — won't touch `yamllint`, `yml-foo`,
+    #     or strings like ` ```yml-config` (none currently exist, but the \b
+    #     guard keeps this safe under future edits).
+    text = re.sub(
+        r"^(?P<fence>`{3,}|~{3,})yml\b(?P<rest>[ \t]*)$",
+        lambda m: f"{m.group('fence')}yaml{m.group('rest')}",
+        text, flags=re.MULTILINE)
+
     # 4. @include path  /  @includelineno path
     #    (line numbering hint is dropped — MyST fenced blocks don't take :linenos:
     #    and PyData's code-block styling is already legible without it.)
@@ -308,6 +342,36 @@ def _translate(text: str, docname: str | None = None) -> str:
         code, lang = _read_snippet(m.group("path"), None)
         return f"\n```{lang}\n{code.rstrip()}\n```\n"
     text = re.sub(r"@include(?:lineno)?\s+(?P<path>\S+)", _include_repl, text)
+
+    # 4b. @htmlinclude path  -> raw HTML embed.
+    #     Doxygen's EXAMPLE_PATH search is recursive, so a bare basename
+    #     like `js_face_recognition.html` still resolves to its sample
+    #     directory. If the file is a complete HTML document, lift just
+    #     the <body>...</body> content to avoid nesting <html> inside
+    #     the rendered page.
+    def _htmlinclude_repl(m: re.Match) -> str:
+        rel = m.group("path")
+        p = next((b / rel for b in _SNIPPET_BASES
+                  if (b / rel).is_file()), None)
+        if p is None:
+            name = pathlib.Path(rel).name
+            for base in _SNIPPET_BASES:
+                hit = next(iter(base.rglob(name)), None)
+                if hit is not None:
+                    p = hit
+                    break
+        if p is None:
+            return f"<!-- htmlinclude not found: {rel} -->"
+        raw = p.read_text(encoding="utf-8", errors="replace")
+        # `<body ...>` opener: allow quoted attribute values so a `=>`
+        # arrow function inside `onload="..."` doesn't terminate the tag.
+        body = re.search(
+            r"<body\b(?:[^>\"']|\"[^\"]*\"|'[^']*')*>(.*?)</body>",
+            raw, re.DOTALL | re.IGNORECASE)
+        inner = body.group(1).strip() if body else raw
+        return f"\n```{{raw}} html\n{inner}\n```\n"
+    text = re.sub(r"^@htmlinclude\s+(?P<path>\S+)\s*$",
+                  _htmlinclude_repl, text, flags=re.MULTILINE)
 
     # 5. @snippet path [Label]
     def _snippet_repl(m: re.Match) -> str:
@@ -344,6 +408,20 @@ def _translate(text: str, docname: str | None = None) -> str:
             i = j
         return "".join(out)
     text = _toggle_collapse(text)
+
+    # 6b. @link target [display text] @endlink  ->  @ref target ["display"]
+    #     Doxygen's @link/@endlink pair is the verbose form of @ref. MyST has
+    #     no equivalent, so normalise to @ref and let step 7 resolve the anchor
+    #     against _ANCHOR_TO_DOC (covers e.g. dnn_googlenet automatically).
+    #     Display text is non-greedy and may span lines; embedded `"` chars are
+    #     stripped because step 7's disp parser is `"[^"]+"`.
+    def _link_repl(m: re.Match) -> str:
+        target = m.group("target")
+        disp = (m.group("disp") or "").strip().replace('"', '')
+        return f'@ref {target} "{disp}"' if disp else f"@ref {target}"
+    text = re.sub(
+        r"@link\s+(?P<target>[\w-]+)(?P<disp>.*?)@endlink",
+        _link_repl, text, flags=re.DOTALL)
 
     # 7. @ref name [optional "Display Text"]
     def _ref_repl(m: re.Match) -> str:
@@ -387,8 +465,11 @@ def _translate(text: str, docname: str | None = None) -> str:
     #    Disabled modules' anchors become external links into the Doxygen
     #    build, so the left sidebar still shows the full module list.
     def _subpage_list_to_toctree(src: str) -> str:
+        # Bullet items may carry a descriptive prefix before @subpage, e.g.
+        # `-   stitching. @subpage tutorial_stitcher` (tutorials/others/...).
         pat = re.compile(
-            r"((?:^[ \t]*-\s+@subpage\s+[\w-]+(?:[^\n]*)\n)+)", re.MULTILINE)
+            r"((?:^[ \t]*-\s+[^\n@]*?@subpage\s+[\w-]+(?:[^\n]*)\n)+)",
+            re.MULTILINE)
         def repl(m: re.Match) -> str:
             entries = re.findall(r"@subpage\s+([\w-]+)", m.group(1))
             lines = []
@@ -434,7 +515,7 @@ def _translate(text: str, docname: str | None = None) -> str:
             return f'{m.group("pre")}/{hit})'
         return f'{m.group("pre")}/tutorials/others/images/{rel})'
     text = re.sub(
-        r'(?P<pre>!\[[^\]]*\]\()images/(?P<rel>[^)]+)\)',
+        r'(?P<pre>!\[[^\]]*\]\()(?:[\w-]+/)?images/(?P<rel>[^)]+)\)',
         _img_repl, text)
 
     # 13. Front-matter table: OpenCV tutorials use the "| -: | :- |"
