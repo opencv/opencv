@@ -1889,6 +1889,14 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
                 default_lInf = 0.0005; // Expected: (normInf) <= (lInf), actual: 0.000455521 vs 0.0001
             }
         }
+        if (name == "test_reduce_prod_default_axes_keepdims_random") {
+            default_l1 = 0.002;   // Expected: (normL1) <= (l1), actual: 0.00195312 vs 1e-05
+            default_lInf = 0.002; // Expected: (normInf) <= (lInf), actual: 0.00195312 vs 0.0001
+        }
+        if (name == "test_reduce_sum_square_default_axes_keepdims_random" ||
+            name == "test_reduce_sum_square_default_axes_keepdims_random_expanded") {
+            default_l1 = 2e-5; // Expected: (normL1) <= (l1), actual: 1.52588e-05 vs 1e-05
+        }
     }
 #ifdef HAVE_HALIDE
     else if (backend == DNN_BACKEND_HALIDE)

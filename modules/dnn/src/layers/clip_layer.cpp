@@ -5,6 +5,23 @@
 // Copyright (C) 2025, BigVision LLC, all rights reserved.
 // Third party copyrights are property of their respective owners.
 #include "../precomp.hpp"
+#define CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
+#include "cpu_kernels/activation_kernels.simd.hpp"
+#include "layers/cpu_kernels/activation_kernels.simd_declarations.hpp"
+#undef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
+
+namespace cv { namespace dnn { namespace {
+static inline void clampFloatChunkDispatch(const float* src, float* dst,
+                                           size_t n, float lo, float hi) {
+    CV_CPU_DISPATCH(clampFloatChunk_, (src, dst, n, lo, hi),
+                    CV_CPU_DISPATCH_MODES_ALL);
+}
+}}}
+
+#define CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN namespace cpu_baseline {
+#define CV_CPU_OPTIMIZATION_NAMESPACE_END }
+#undef CV_CPU_DISPATCH_MODES_ALL
+
 #include "layers_common.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/core/hal/interface.h>
@@ -67,6 +84,9 @@ public:
         return backendId == DNN_BACKEND_OPENCV;
     }
 
+    // Clip rewrites values in place of the input layout.
+    virtual bool alwaysSupportInplace() const CV_OVERRIDE { return true; }
+
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
@@ -121,6 +141,28 @@ public:
         double actualMin = dynMin ? getScalar(inputs[1]) : (hasMin ? minValue : typeMin(data.depth()));
         double actualMax = dynMax ? getScalar(inputs[2]) : (hasMax ? maxValue : typeMax(data.depth()));
         CV_Assert(actualMin <= actualMax);
+
+        // Fused single-pass clamp for contiguous CV_32F. Halves memory traffic
+        // vs the cv::max + cv::min pair, and lets the allocator run it in-place.
+        if (data.depth() == CV_32F && data.isContinuous() && dst.isContinuous() &&
+            data.total() == dst.total()) {
+            const float lo = (float)actualMin;
+            const float hi = (float)actualMax;
+            const size_t total = data.total();
+            const float* src = data.ptr<float>();
+            float* out = dst.ptr<float>();
+            const size_t CHUNK = 16384;
+            int nChunks = (int)((total + CHUNK - 1) / CHUNK);
+            parallel_for_(Range(0, nChunks), [&](const Range& r) {
+                for (int c = r.start; c < r.end; c++) {
+                    size_t start = (size_t)c * CHUNK;
+                    size_t end = std::min(start + CHUNK, total);
+                    clampFloatChunkDispatch(src + start, out + start,
+                                            end - start, lo, hi);
+                }
+            });
+            return;
+        }
 
         Scalar lowS  = Scalar::all(actualMin);
         Scalar highS = Scalar::all(actualMax);
