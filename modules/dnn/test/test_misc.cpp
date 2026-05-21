@@ -1077,10 +1077,7 @@ TEST(Net, ShapeUtils_total_no_int32_overflow)
     cv::MatShape shape = cv::dnn::shape(1920, 1478656);
 
     size_t t = cv::dnn::total(shape);
-    EXPECT_EQ(t, (size_t)1920 * 1478656);
-
-    int t_int = (int)t;
-    EXPECT_LT(t_int, 0);
+    EXPECT_EQ(t, 2839019520llu);
 }
 
 }} // namespace
