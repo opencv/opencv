@@ -32,7 +32,7 @@ OPENCV_ROOT = HERE.parent.resolve()
 import os as _os
 DOC_MODULES = [
     m.strip()
-    for m in (_os.environ.get("OPENCV_DOC_MODULES") or "photo,objdetect,core,calib3d,features,introduction,imgproc").split(",")
+    for m in (_os.environ.get("OPENCV_DOC_MODULES") or "photo,objdetect,core,calib3d,features,3d,app,introduction,imgproc").split(",")
     if m.strip()
 ]
 
@@ -97,6 +97,7 @@ exclude_patterns = [
     "**/Thumbs.db", "**/.DS_Store",
     "tutorials/core/how_to_use_OpenCV_parallel_for_/**",
     "tutorials/introduction/load_save_image/**",
+    "tutorials/app/_old/**",
 ]
 
 myst_enable_extensions = [
@@ -582,6 +583,12 @@ def _translate(text: str, docname: str | None = None) -> str:
         lambda m: m.group(1) + re.sub(r"^    ", "", m.group(2), flags=re.MULTILINE),
         text, flags=re.MULTILINE)
 
+    # 1a-iii. 4-space list items under a plain paragraph line → strip to fix lazy continuation.
+    text = re.sub(
+        r"(^(?![ \t#@`]|-#|[-*+]\s|\d+[.)]\s)[^\n]+\n)((?:    [-*+][ \t][^\n]*\n(?:[ \t]{5,}[^\n]*\n)*)+)",
+        lambda m: m.group(1) + re.sub(r"^    ", "", m.group(2), flags=re.MULTILINE),
+        text, flags=re.MULTILINE)
+
     # 1b. @note ... / @see ...  -> MyST admonitions.
     #     Runs BEFORE math conversion so that \f[...\f] inside a note body is
     #     still on one logical line and does not create a blank-line terminator
@@ -591,15 +598,16 @@ def _translate(text: str, docname: str | None = None) -> str:
     #     the directive.
     _ADMON_KIND = {"note": "note", "see": "seealso"}
     def _admon_repl(m: re.Match) -> str:
+        indent = m.group("indent")
         kind = _ADMON_KIND[m.group("dir")]
         raw = m.group("body")
         lines = raw.split("\n")
         min_ind = min(
             (len(l) - len(l.lstrip()) for l in lines if l.strip()), default=0)
         body = "\n".join(l[min_ind:] for l in lines).strip()
-        return f"\n:::{{{kind}}}\n{body}\n:::\n"
+        return f"\n{indent}:::{{{kind}}}\n{indent}{body}\n{indent}:::\n"
     text = re.sub(
-        r"^[ \t]*@(?P<dir>note|see)[ \t]*\n?(?P<body>.+?)(?=\n[ \t]*\n|\n[ \t]*@[A-Za-z]|\Z)",
+        r"^(?P<indent>[ \t]*)@(?P<dir>note|see)[ \t]*\n?(?P<body>.+?)(?=\n[ \t]*\n|\n[ \t]*@[A-Za-z]|\Z)",
         _admon_repl, text, flags=re.DOTALL | re.MULTILINE)
 
     # 2. Doxygen LaTeX math markers.
@@ -632,7 +640,7 @@ def _translate(text: str, docname: str | None = None) -> str:
     text = re.sub(r"\\f\$(.+?)\\f\$", lambda m: f"${m.group(1)}$",
                   text, flags=re.DOTALL)
 
-    # 2b. \bordermatrix{...} is a Plain-TeX macro (not LaTeX), so MathJax
+     # 2b. \bordermatrix{...} is a Plain-TeX macro (not LaTeX), so MathJax
     #     leaves it raw. Convert to a standard `matrix` environment and
     #     translate `\cr` row separators to `\\`. Loses the bracket lines
     #     of bordermatrix but the contents render correctly.
@@ -641,6 +649,10 @@ def _translate(text: str, docname: str | None = None) -> str:
         lambda m: r"\begin{matrix}" + m.group(1).replace(r"\cr", r"\\")
                   + r"\end{matrix}",
         text)
+
+    # 2c. Normalise unknown Pygments lexer names: plaintext/bash/sh → text.
+    text = re.sub(r"^([ \t]*)```plaintext\b", r"\1```text", text, flags=re.MULTILINE)
+    text = re.sub(r"^([ \t]*)```(?:bash|sh)\b", r"\1```text", text, flags=re.MULTILINE)
 
     # 3. @code{.lang} ... @endcode → fenced block. Preserve the indent
     #    so blocks nested under a bullet item stay inside the list; for
@@ -719,6 +731,15 @@ def _translate(text: str, docname: str | None = None) -> str:
         r"^(?P<indent>[ \t]*)@snippet\s+(?P<path>\S+)\s+(?P<label>[^\n]+?)\s*$",
         _snippet_repl, text, flags=re.MULTILINE)
 
+    # 5b. @snippetlineno — same as @snippet with :linenos:.
+    def _snippetlineno_repl(m: re.Match) -> str:
+        indent = m.group("indent")
+        code, lang = _read_snippet(m.group("path"), m.group("label"))
+        body = "\n".join(indent + l for l in code.rstrip().split("\n"))
+        return f"\n{indent}```{{code-block}} {lang}\n{indent}:linenos:\n{body}\n{indent}```\n"
+    text = re.sub(r"^(?P<indent>[ \t]*)@snippetlineno\s+(?P<path>\S+)\s+(?P<label>[^\n]+?)\s*$",
+                  _snippetlineno_repl, text, flags=re.MULTILINE)
+
     # 6. @add_toggle_LANG ... @end_toggle  (coalesce runs into one tab-set)
     #    Capture the leading indent of each toggle block and emit the tab-set
     #    fence lines at the same indent, so toggles inside list items stay as
@@ -736,7 +757,7 @@ def _translate(text: str, docname: str | None = None) -> str:
             block_ind, tabs, j = m.group(1), [], m.start()
             while True:
                 m2 = re.match(
-                    r"[ \t]*@add_toggle_(\w+)[ \t]*\n(.*?)\n\s*@end_toggle\s*\n?",
+                    r"[ \t]*@add_toggle_(\w+)[ \t]*\n(.*?)\n[ \t]*@end_toggle[ \t]*\n?",
                     src[j:], flags=re.DOTALL)
                 if not m2:
                     break
@@ -753,6 +774,32 @@ def _translate(text: str, docname: str | None = None) -> str:
         return "".join(out)
     text = _toggle_collapse(text)
 
+    # 6b. Strip list-item continuation indent stranded after a col-0 tab-set close.
+    def _strip_tabset_continuations(src: str) -> str:
+        lines = src.split("\n")
+        out: list[str] = []
+        i = 0
+        while i < len(lines):
+            line = lines[i]
+            if line == "``````":
+                out.append(line)
+                i += 1
+                while i < len(lines):
+                    ln = lines[i]
+                    if ln.startswith("    "):
+                        out.append(ln[4:])
+                        i += 1
+                    elif not ln.strip():
+                        out.append(ln)
+                        i += 1
+                    else:
+                        break
+            else:
+                out.append(line)
+                i += 1
+        return "\n".join(out)
+    text = _strip_tabset_continuations(text)
+
     # 7. @ref name [optional "Display Text"]
     def _ref_repl(m: re.Match) -> str:
         name = m.group("name"); disp = m.group("disp")
@@ -765,8 +812,11 @@ def _translate(text: str, docname: str | None = None) -> str:
     text = re.sub(r'@ref\s+(?P<name>[\w:-]+)(?:\s+"(?P<disp>[^"]+)")?',
                   _ref_repl, text)
 
-    # 8. @cite KEY -> [KEY]
-    text = re.sub(r"@cite\s+([\w-]+)", r"[\1]", text)
+    # 8. @cite KEY → [[KEY]](link to docs.opencv.org citelist)
+    text = re.sub(
+        r"@cite\s+([\w-]+)",
+        lambda m: f"[[{m.group(1)}]](https://docs.opencv.org/5.x/d0/de3/citelist.html#CITEREF_{m.group(1)})",
+        text)
 
     # 8b. @youtube{ID}  -> responsive embed (raw HTML, passed through by MyST).
     text = re.sub(
@@ -846,7 +896,7 @@ def _translate(text: str, docname: str | None = None) -> str:
                   text, flags=re.MULTILINE)
 
     # 11. @tableofcontents -> drop (PyData right sidebar replaces it)
-    text = re.sub(r"^(?:@tableofcontents|\[TOC\])\s*$", "",, text, flags=re.MULTILINE)
+    text = re.sub(r"^(?:@tableofcontents|\[TOC\])\s*$", "", text, flags=re.MULTILINE)
 
     # 11b. @cond NAME ... @endcond  -> strip just the markers; if the
     #      enclosed @subpage points to a disabled module it gets dropped
@@ -915,6 +965,18 @@ def _translate(text: str, docname: str | None = None) -> str:
         lambda m: m.group(1) + re.sub(r"^    ", "", m.group(2), flags=re.MULTILINE),
         text, flags=re.MULTILINE)
 
+    # 11g. Wrap bare http(s) URLs in <> for CommonMark autolink.
+    def _autolink_repl(m: re.Match) -> str:
+        url = m.group(0)
+        trail = ""
+        while url and url[-1] in ".,;:!?)":
+            trail = url[-1] + trail
+            url = url[:-1]
+        return f"<{url}>{trail}" if url else m.group(0)
+    text = re.sub(
+        r'(?<!\]\()(?<![<"])https?://\S+',
+        _autolink_repl, text)
+
     # Depth-relative prefix from the current doc back to the site root,
     # used to point `<img src>` at `<output>/contrib_modules/...` files
     # that html_extra_path publishes (Sphinx can't pathto-rewrite URLs
@@ -923,9 +985,6 @@ def _translate(text: str, docname: str | None = None) -> str:
     _contrib_url_prefix = ("../" * _depth) + "contrib_modules/"
 
     def _emit_contrib_img(rel_url: str, alt: str) -> str:
-        """Raw-HTML <img> (or <figure> if alt is 'Figure ...') for a
-        contrib_modules/<rel> path — bypasses Sphinx's image processing
-        so the depth-relative URL survives to the rendered HTML."""
         src = _contrib_url_prefix + rel_url
         img = f'<img src="{src}" alt="{alt}"/>'
         if alt.startswith("Figure "):
@@ -1022,6 +1081,47 @@ def _translate(text: str, docname: str | None = None) -> str:
     text = re.sub(
         r'(?P<pre>!\[[^\]]*\]\()(?P<rel>[A-Za-z0-9_.-]+\.[A-Za-z]{2,4})\)',
         _bare_img_repl, text)
+
+    # 12c. Standalone ![Caption](path) → {figure} so alt text is a visible caption.
+    text = re.sub(
+        r"^([ \t]*)!\[(?P<alt>[^\]]+)\]\((?P<path>[^)\n]+)\)[ \t]*$",
+        lambda m: (
+            f"\n{m.group(1)}```{{figure}} {m.group('path')}\n"
+            f"{m.group(1)}{m.group('alt').strip()}\n"
+            f"{m.group(1)}```\n"
+        ),
+        text, flags=re.MULTILINE)
+
+    # 12d. Doxygen ^ rowspan cell → merge into row above via <hr class="cv-rowdiv">.
+    def _merge_caret_rows(src: str) -> str:
+        lines = src.split("\n")
+        out: list[str] = []
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith("|") and "|" in stripped[1:]:
+                cells = [c.strip() for c in stripped.strip("|").split("|")]
+                if "^" in cells:
+                    prev_idx = next(
+                        (k for k in range(len(out) - 1, -1, -1)
+                         if out[k].strip().startswith("|") and
+                            not re.match(r"^\|[\s|:-]+\|$", out[k].strip())),
+                        None)
+                    if prev_idx is not None:
+                        prev_cells = [c.strip() for c in
+                                      out[prev_idx].strip().strip("|").split("|")]
+                        merged = []
+                        for j, cell in enumerate(cells):
+                            pv = prev_cells[j] if j < len(prev_cells) else ""
+                            if cell == "^":
+                                merged.append(pv)
+                            else:
+                                sep = '<hr class="cv-rowdiv">'
+                                merged.append(f"{pv}{sep}{cell}" if pv else cell)
+                        out[prev_idx] = "| " + " | ".join(merged) + " |"
+                        continue
+            out.append(line)
+        return "\n".join(out)
+    text = _merge_caret_rows(text)
 
     # 13. Front-matter table: OpenCV tutorials use the "| -: | :- |"
     #     alignment pattern for the Original-author/Compatibility block.

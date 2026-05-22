@@ -57,7 +57,11 @@ html[data-theme="dark"] .bd-article-container a:hover { color: #6cb6ff !importan
 .opencv-meta-table .pst-scrollable-table-container { margin: 0 !important; padding: 0 !important; }
 .opencv-meta-table table { margin-bottom: 0 !important; }
 .opencv-meta-table + p,
-div.opencv-meta-table + p { margin-top: 1.5rem !important; }
+.opencv-meta-table + ul,
+.opencv-meta-table + ol,
+div.opencv-meta-table + p,
+div.opencv-meta-table + ul,
+div.opencv-meta-table + ol { margin-top: 1.5rem !important; }
 .opencv-meta-table .pst-scrollable-table-container,
 .opencv-meta-table table,
 table.opencv-meta-table {
@@ -95,6 +99,12 @@ table.opencv-meta-table tr:last-child td { border-bottom: none; }
 table.opencv-meta-table td:last-child { border-right: none; }
 .opencv-meta-table table thead,
 table.opencv-meta-table thead { display: none; }
+.opencv-meta-table td hr.cv-rowdiv {
+    margin: 4px -1rem;
+    border: none;
+    border-top: 1px solid var(--pst-color-border);
+    opacity: 1;
+}
 
 html[data-theme="dark"] .opencv-meta-table table,
 html[data-theme="dark"] table.opencv-meta-table {
