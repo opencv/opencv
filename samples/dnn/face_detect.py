@@ -16,7 +16,7 @@ parser.add_argument('--image1', '-i1', type=str, help='Path to the input image1.
 parser.add_argument('--image2', '-i2', type=str, help='Path to the input image2. When image1 and image2 parameters given then the program try to find a face on both images and runs face recognition algorithm.')
 parser.add_argument('--video', '-v', type=str, help='Path to the input video.')
 parser.add_argument('--scale', '-sc', type=float, default=1.0, help='Scale factor used to resize input video frames.')
-parser.add_argument('--face_detection_model', '-fd', type=str, default='face_detection_yunet_2023mar.onnx', help='Path to the face detection model. Download the model at https://github.com/opencv/opencv_zoo/tree/master/models/face_detection_yunet')
+parser.add_argument('--face_detection_model', '-fd', type=str, default='face_detection_yunet_2026may.onnx', help='Path to the face detection model. Download the model at https://github.com/opencv/opencv_zoo/tree/master/models/face_detection_yunet')
 parser.add_argument('--face_recognition_model', '-fr', type=str, default='face_recognition_sface_2021dec.onnx', help='Path to the face recognition model. Download the model at https://github.com/opencv/opencv_zoo/tree/master/models/face_recognition_sface')
 parser.add_argument('--score_threshold', type=float, default=0.85, help='Filtering out faces of score < score_threshold.')
 parser.add_argument('--nms_threshold', type=float, default=0.3, help='Suppress bounding boxes of iou >= nms_threshold.')
