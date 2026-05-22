@@ -317,79 +317,167 @@ void acc_simd_(const uchar* src, float* dst, const uchar* mask, int len, int cn)
     }
     else
     {
-        v_uint8 v_0 = vx_setall_u8(0);
-        if (cn == 1)
+        if (x <= len - cVectorWidth)
         {
-            for ( ; x <= len - cVectorWidth; x += cVectorWidth)
+            v_uint8 v_0 = vx_setall_u8(0);
+            if (cn == 1)
             {
-                v_uint8 v_mask = vx_load(mask + x);
-                v_mask = v_not(v_eq(v_0, v_mask));
-                v_uint8 v_src = vx_load(src + x);
-                v_src = v_and(v_src, v_mask);
-                v_uint16 v_src0, v_src1;
-                v_expand(v_src, v_src0, v_src1);
+                for ( ; x <= len - cVectorWidth; x += cVectorWidth)
+                {
+                    v_uint8 v_mask = vx_load(mask + x);
+                    v_mask = v_not(v_eq(v_0, v_mask));
+                    v_uint8 v_src = vx_load(src + x);
+                    v_src = v_and(v_src, v_mask);
+                    v_uint16 v_src0, v_src1;
+                    v_expand(v_src, v_src0, v_src1);
 
-                v_uint32 v_src00, v_src01, v_src10, v_src11;
-                v_expand(v_src0, v_src00, v_src01);
-                v_expand(v_src1, v_src10, v_src11);
+                    v_uint32 v_src00, v_src01, v_src10, v_src11;
+                    v_expand(v_src0, v_src00, v_src01);
+                    v_expand(v_src1, v_src10, v_src11);
 
-                v_store(dst + x, v_add(vx_load(dst + x), v_cvt_f32(v_reinterpret_as_s32(v_src00))));
-                v_store(dst + x + step, v_add(vx_load(dst + x + step), v_cvt_f32(v_reinterpret_as_s32(v_src01))));
-                v_store(dst + x + step * 2, v_add(vx_load(dst + x + step * 2), v_cvt_f32(v_reinterpret_as_s32(v_src10))));
-                v_store(dst + x + step * 3, v_add(vx_load(dst + x + step * 3), v_cvt_f32(v_reinterpret_as_s32(v_src11))));
+                    v_store(dst + x, v_add(vx_load(dst + x), v_cvt_f32(v_reinterpret_as_s32(v_src00))));
+                    v_store(dst + x + step, v_add(vx_load(dst + x + step), v_cvt_f32(v_reinterpret_as_s32(v_src01))));
+                    v_store(dst + x + step * 2, v_add(vx_load(dst + x + step * 2), v_cvt_f32(v_reinterpret_as_s32(v_src10))));
+                    v_store(dst + x + step * 3, v_add(vx_load(dst + x + step * 3), v_cvt_f32(v_reinterpret_as_s32(v_src11))));
+                }
             }
-        }
-        else if (cn == 3)
-        {
-            for ( ; x <= len - cVectorWidth; x += cVectorWidth)
+            else if (cn == 3)
             {
-                v_uint8 v_mask = vx_load(mask + x);
-                v_mask = v_not(v_eq(v_0, v_mask));
-                v_uint8 v_src0, v_src1, v_src2;
-                v_load_deinterleave(src + (x * cn), v_src0, v_src1, v_src2);
-                v_src0 = v_and(v_src0, v_mask);
-                v_src1 = v_and(v_src1, v_mask);
-                v_src2 = v_and(v_src2, v_mask);
-                v_uint16 v_src00, v_src01, v_src10, v_src11, v_src20, v_src21;
-                v_expand(v_src0, v_src00, v_src01);
-                v_expand(v_src1, v_src10, v_src11);
-                v_expand(v_src2, v_src20, v_src21);
+                for ( ; x <= len - cVectorWidth; x += cVectorWidth)
+                {
+                    v_uint8 v_mask = vx_load(mask + x);
+                    v_mask = v_not(v_eq(v_0, v_mask));
+                    v_uint8 v_src0, v_src1, v_src2;
+                    v_load_deinterleave(src + (x * cn), v_src0, v_src1, v_src2);
+                    v_src0 = v_and(v_src0, v_mask);
+                    v_src1 = v_and(v_src1, v_mask);
+                    v_src2 = v_and(v_src2, v_mask);
+                    v_uint16 v_src00, v_src01, v_src10, v_src11, v_src20, v_src21;
+                    v_expand(v_src0, v_src00, v_src01);
+                    v_expand(v_src1, v_src10, v_src11);
+                    v_expand(v_src2, v_src20, v_src21);
 
-                v_uint32 v_src000, v_src001, v_src010, v_src011;
-                v_uint32 v_src100, v_src101, v_src110, v_src111;
-                v_uint32 v_src200, v_src201, v_src210, v_src211;
-                v_expand(v_src00, v_src000, v_src001);
-                v_expand(v_src01, v_src010, v_src011);
-                v_expand(v_src10, v_src100, v_src101);
-                v_expand(v_src11, v_src110, v_src111);
-                v_expand(v_src20, v_src200, v_src201);
-                v_expand(v_src21, v_src210, v_src211);
+                    v_uint32 v_src000, v_src001, v_src010, v_src011;
+                    v_uint32 v_src100, v_src101, v_src110, v_src111;
+                    v_uint32 v_src200, v_src201, v_src210, v_src211;
+                    v_expand(v_src00, v_src000, v_src001);
+                    v_expand(v_src01, v_src010, v_src011);
+                    v_expand(v_src10, v_src100, v_src101);
+                    v_expand(v_src11, v_src110, v_src111);
+                    v_expand(v_src20, v_src200, v_src201);
+                    v_expand(v_src21, v_src210, v_src211);
 
-                v_float32 v_dst000, v_dst001, v_dst010, v_dst011;
-                v_float32 v_dst100, v_dst101, v_dst110, v_dst111;
-                v_float32 v_dst200, v_dst201, v_dst210, v_dst211;
-                v_load_deinterleave(dst + (x * cn), v_dst000, v_dst100, v_dst200);
-                v_load_deinterleave(dst + ((x + step) * cn), v_dst001, v_dst101, v_dst201);
-                v_load_deinterleave(dst + ((x + step * 2) * cn), v_dst010, v_dst110, v_dst210);
-                v_load_deinterleave(dst + ((x + step * 3) * cn), v_dst011, v_dst111, v_dst211);
+                    v_float32 v_dst000, v_dst001, v_dst010, v_dst011;
+                    v_float32 v_dst100, v_dst101, v_dst110, v_dst111;
+                    v_float32 v_dst200, v_dst201, v_dst210, v_dst211;
+                    v_load_deinterleave(dst + (x * cn), v_dst000, v_dst100, v_dst200);
+                    v_load_deinterleave(dst + ((x + step) * cn), v_dst001, v_dst101, v_dst201);
+                    v_load_deinterleave(dst + ((x + step * 2) * cn), v_dst010, v_dst110, v_dst210);
+                    v_load_deinterleave(dst + ((x + step * 3) * cn), v_dst011, v_dst111, v_dst211);
 
-                v_dst000 = v_add(v_dst000, v_cvt_f32(v_reinterpret_as_s32(v_src000)));
-                v_dst100 = v_add(v_dst100, v_cvt_f32(v_reinterpret_as_s32(v_src100)));
-                v_dst200 = v_add(v_dst200, v_cvt_f32(v_reinterpret_as_s32(v_src200)));
-                v_dst001 = v_add(v_dst001, v_cvt_f32(v_reinterpret_as_s32(v_src001)));
-                v_dst101 = v_add(v_dst101, v_cvt_f32(v_reinterpret_as_s32(v_src101)));
-                v_dst201 = v_add(v_dst201, v_cvt_f32(v_reinterpret_as_s32(v_src201)));
-                v_dst010 = v_add(v_dst010, v_cvt_f32(v_reinterpret_as_s32(v_src010)));
-                v_dst110 = v_add(v_dst110, v_cvt_f32(v_reinterpret_as_s32(v_src110)));
-                v_dst210 = v_add(v_dst210, v_cvt_f32(v_reinterpret_as_s32(v_src210)));
-                v_dst011 = v_add(v_dst011, v_cvt_f32(v_reinterpret_as_s32(v_src011)));
-                v_dst111 = v_add(v_dst111, v_cvt_f32(v_reinterpret_as_s32(v_src111)));
-                v_dst211 = v_add(v_dst211, v_cvt_f32(v_reinterpret_as_s32(v_src211)));
+                    v_dst000 = v_add(v_dst000, v_cvt_f32(v_reinterpret_as_s32(v_src000)));
+                    v_dst100 = v_add(v_dst100, v_cvt_f32(v_reinterpret_as_s32(v_src100)));
+                    v_dst200 = v_add(v_dst200, v_cvt_f32(v_reinterpret_as_s32(v_src200)));
+                    v_dst001 = v_add(v_dst001, v_cvt_f32(v_reinterpret_as_s32(v_src001)));
+                    v_dst101 = v_add(v_dst101, v_cvt_f32(v_reinterpret_as_s32(v_src101)));
+                    v_dst201 = v_add(v_dst201, v_cvt_f32(v_reinterpret_as_s32(v_src201)));
+                    v_dst010 = v_add(v_dst010, v_cvt_f32(v_reinterpret_as_s32(v_src010)));
+                    v_dst110 = v_add(v_dst110, v_cvt_f32(v_reinterpret_as_s32(v_src110)));
+                    v_dst210 = v_add(v_dst210, v_cvt_f32(v_reinterpret_as_s32(v_src210)));
+                    v_dst011 = v_add(v_dst011, v_cvt_f32(v_reinterpret_as_s32(v_src011)));
+                    v_dst111 = v_add(v_dst111, v_cvt_f32(v_reinterpret_as_s32(v_src111)));
+                    v_dst211 = v_add(v_dst211, v_cvt_f32(v_reinterpret_as_s32(v_src211)));
 
-                v_store_interleave(dst + (x * cn), v_dst000, v_dst100, v_dst200);
-                v_store_interleave(dst + ((x + step) * cn), v_dst001, v_dst101, v_dst201);
-                v_store_interleave(dst + ((x + step * 2) * cn), v_dst010, v_dst110, v_dst210);
-                v_store_interleave(dst + ((x + step * 3) * cn), v_dst011, v_dst111, v_dst211);
+                    v_store_interleave(dst + (x * cn), v_dst000, v_dst100, v_dst200);
+                    v_store_interleave(dst + ((x + step) * cn), v_dst001, v_dst101, v_dst201);
+                    v_store_interleave(dst + ((x + step * 2) * cn), v_dst010, v_dst110, v_dst210);
+                    v_store_interleave(dst + ((x + step * 3) * cn), v_dst011, v_dst111, v_dst211);
+                }
+            }
+            else if (cn == 4)
+            {
+                v_uint8 v_zero = vx_setzero_u8();
+
+                for (; x <= len - cVectorWidth; x += cVectorWidth)
+                {
+                    v_uint8 v_mask = vx_load(mask + x);
+                    v_mask = v_not(v_eq(v_mask, v_zero));
+
+                    v_uint8 v_src0, v_src1, v_src2, v_src3;
+
+                    v_load_deinterleave(src + x * cn,
+                                        v_src0, v_src1, v_src2, v_src3);
+
+                    v_src0 = v_and(v_src0, v_mask);
+                    v_src1 = v_and(v_src1, v_mask);
+                    v_src2 = v_and(v_src2, v_mask);
+                    v_src3 = v_and(v_src3, v_mask);
+
+                    v_uint16 v_src0_u16_0, v_src0_u16_1;
+                    v_uint16 v_src1_u16_0, v_src1_u16_1;
+                    v_uint16 v_src2_u16_0, v_src2_u16_1;
+                    v_uint16 v_src3_u16_0, v_src3_u16_1;
+
+                    v_expand(v_src0, v_src0_u16_0, v_src0_u16_1);
+                    v_expand(v_src1, v_src1_u16_0, v_src1_u16_1);
+                    v_expand(v_src2, v_src2_u16_0, v_src2_u16_1);
+                    v_expand(v_src3, v_src3_u16_0, v_src3_u16_1);
+
+                    v_uint32 v_src0_u32_0, v_src0_u32_1, v_src0_u32_2, v_src0_u32_3;
+                    v_uint32 v_src1_u32_0, v_src1_u32_1, v_src1_u32_2, v_src1_u32_3;
+                    v_uint32 v_src2_u32_0, v_src2_u32_1, v_src2_u32_2, v_src2_u32_3;
+                    v_uint32 v_src3_u32_0, v_src3_u32_1, v_src3_u32_2, v_src3_u32_3;
+
+                    v_expand(v_src0_u16_0, v_src0_u32_0, v_src0_u32_1);
+                    v_expand(v_src0_u16_1, v_src0_u32_2, v_src0_u32_3);
+
+                    v_expand(v_src1_u16_0, v_src1_u32_0, v_src1_u32_1);
+                    v_expand(v_src1_u16_1, v_src1_u32_2, v_src1_u32_3);
+
+                    v_expand(v_src2_u16_0, v_src2_u32_0, v_src2_u32_1);
+                    v_expand(v_src2_u16_1, v_src2_u32_2, v_src2_u32_3);
+
+                    v_expand(v_src3_u16_0, v_src3_u32_0, v_src3_u32_1);
+                    v_expand(v_src3_u16_1, v_src3_u32_2, v_src3_u32_3);
+
+                    v_float32 v_src0_f0 = v_cvt_f32(v_reinterpret_as_s32(v_src0_u32_0));
+                    v_float32 v_src0_f1 = v_cvt_f32(v_reinterpret_as_s32(v_src0_u32_1));
+                    v_float32 v_src0_f2 = v_cvt_f32(v_reinterpret_as_s32(v_src0_u32_2));
+                    v_float32 v_src0_f3 = v_cvt_f32(v_reinterpret_as_s32(v_src0_u32_3));
+
+                    v_float32 v_src1_f0 = v_cvt_f32(v_reinterpret_as_s32(v_src1_u32_0));
+                    v_float32 v_src1_f1 = v_cvt_f32(v_reinterpret_as_s32(v_src1_u32_1));
+                    v_float32 v_src1_f2 = v_cvt_f32(v_reinterpret_as_s32(v_src1_u32_2));
+                    v_float32 v_src1_f3 = v_cvt_f32(v_reinterpret_as_s32(v_src1_u32_3));
+
+                    v_float32 v_src2_f0 = v_cvt_f32(v_reinterpret_as_s32(v_src2_u32_0));
+                    v_float32 v_src2_f1 = v_cvt_f32(v_reinterpret_as_s32(v_src2_u32_1));
+                    v_float32 v_src2_f2 = v_cvt_f32(v_reinterpret_as_s32(v_src2_u32_2));
+                    v_float32 v_src2_f3 = v_cvt_f32(v_reinterpret_as_s32(v_src2_u32_3));
+
+                    v_float32 v_src3_f0 = v_cvt_f32(v_reinterpret_as_s32(v_src3_u32_0));
+                    v_float32 v_src3_f1 = v_cvt_f32(v_reinterpret_as_s32(v_src3_u32_1));
+                    v_float32 v_src3_f2 = v_cvt_f32(v_reinterpret_as_s32(v_src3_u32_2));
+                    v_float32 v_src3_f3 = v_cvt_f32(v_reinterpret_as_s32(v_src3_u32_3));
+
+                    v_float32 v_dst0, v_dst1, v_dst2, v_dst3;
+
+                    v_load_deinterleave(dst + x * cn, v_dst0, v_dst1, v_dst2, v_dst3);
+
+                    v_store_interleave(dst + x * cn, v_add(v_dst0, v_src0_f0), v_add(v_dst1, v_src1_f0), v_add(v_dst2, v_src2_f0), v_add(v_dst3, v_src3_f0));
+
+                    v_load_deinterleave(dst + (x + step) * cn, v_dst0, v_dst1, v_dst2, v_dst3);
+
+                    v_store_interleave(dst + (x + step) * cn, v_add(v_dst0, v_src0_f1), v_add(v_dst1, v_src1_f1), v_add(v_dst2, v_src2_f1), v_add(v_dst3, v_src3_f1));
+
+                    v_load_deinterleave(dst + (x + 2 * step) * cn, v_dst0, v_dst1, v_dst2, v_dst3);
+
+                    v_store_interleave(dst + (x + 2 * step) * cn, v_add(v_dst0, v_src0_f2), v_add(v_dst1, v_src1_f2), v_add(v_dst2, v_src2_f2), v_add(v_dst3, v_src3_f2));
+
+                    v_load_deinterleave(dst + (x + 3 * step) * cn, v_dst0, v_dst1, v_dst2, v_dst3);
+
+                    v_store_interleave(dst + (x + 3 * step) * cn, v_add(v_dst0, v_src0_f3), v_add(v_dst1, v_src1_f3), v_add(v_dst2, v_src2_f3), v_add(v_dst3, v_src3_f3));
+                }
             }
         }
     }
@@ -500,49 +588,101 @@ void acc_simd_(const float* src, float* dst, const uchar* mask, int len, int cn)
     }
     else
     {
-        v_float32 v_0 = vx_setzero_f32();
-        if (cn == 1)
+        if (x <= len - cVectorWidth)
         {
-            for ( ; x <= len - cVectorWidth ; x += cVectorWidth)
+            v_float32 v_0 = vx_setzero_f32();
+            if (cn == 1)
             {
-                v_uint16 v_masku16 = vx_load_expand(mask + x);
-                v_uint32 v_masku320, v_masku321;
-                v_expand(v_masku16, v_masku320, v_masku321);
-                v_float32 v_mask0 = v_reinterpret_as_f32(v_not(v_eq(v_masku320, v_reinterpret_as_u32(v_0))));
-                v_float32 v_mask1 = v_reinterpret_as_f32(v_not(v_eq(v_masku321, v_reinterpret_as_u32(v_0))));
+                for ( ; x <= len - cVectorWidth ; x += cVectorWidth)
+                {
+                    v_uint16 v_masku16 = vx_load_expand(mask + x);
+                    v_uint32 v_masku320, v_masku321;
+                    v_expand(v_masku16, v_masku320, v_masku321);
+                    v_float32 v_mask0 = v_reinterpret_as_f32(v_not(v_eq(v_masku320, v_reinterpret_as_u32(v_0))));
+                    v_float32 v_mask1 = v_reinterpret_as_f32(v_not(v_eq(v_masku321, v_reinterpret_as_u32(v_0))));
 
-                v_store(dst + x, v_add(vx_load(dst + x), v_and(vx_load(src + x), v_mask0)));
-                v_store(dst + x + step, v_add(vx_load(dst + x + step), v_and(vx_load(src + x + step), v_mask1)));
+                    v_store(dst + x, v_add(vx_load(dst + x), v_and(vx_load(src + x), v_mask0)));
+                    v_store(dst + x + step, v_add(vx_load(dst + x + step), v_and(vx_load(src + x + step), v_mask1)));
+                }
+            }
+            else if (cn == 3)
+            {
+                for ( ; x <= len - cVectorWidth ; x += cVectorWidth)
+                {
+                    v_uint16 v_masku16 = vx_load_expand(mask + x);
+                    v_uint32 v_masku320, v_masku321;
+                    v_expand(v_masku16, v_masku320, v_masku321);
+                    v_float32 v_mask0 = v_reinterpret_as_f32(v_not(v_eq(v_masku320, v_reinterpret_as_u32(v_0))));
+                    v_float32 v_mask1 = v_reinterpret_as_f32(v_not(v_eq(v_masku321, v_reinterpret_as_u32(v_0))));
+
+                    v_float32 v_src00, v_src01, v_src10, v_src11, v_src20, v_src21;
+                    v_load_deinterleave(src + x * cn, v_src00, v_src10, v_src20);
+                    v_load_deinterleave(src + (x + step) * cn, v_src01, v_src11, v_src21);
+                    v_src00 = v_and(v_src00, v_mask0);
+                    v_src01 = v_and(v_src01, v_mask1);
+                    v_src10 = v_and(v_src10, v_mask0);
+                    v_src11 = v_and(v_src11, v_mask1);
+                    v_src20 = v_and(v_src20, v_mask0);
+                    v_src21 = v_and(v_src21, v_mask1);
+
+                    v_float32 v_dst00, v_dst01, v_dst10, v_dst11, v_dst20, v_dst21;
+                    v_load_deinterleave(dst + x * cn, v_dst00, v_dst10, v_dst20);
+                    v_load_deinterleave(dst + (x + step) * cn, v_dst01, v_dst11, v_dst21);
+
+                    v_store_interleave(dst + x * cn, v_add(v_dst00, v_src00), v_add(v_dst10, v_src10), v_add(v_dst20, v_src20));
+                    v_store_interleave(dst + (x + step) * cn, v_add(v_dst01, v_src01), v_add(v_dst11, v_src11), v_add(v_dst21, v_src21));
+                }
+            }
+            else if (cn == 4)
+            {
+                    for (; x <=  len - 2 * cVectorWidth; x += cVectorWidth)
+                    {
+                        v_uint16 v_masku16 = vx_load_expand(mask + x);
+
+                        v_uint32 v_masku320, v_masku321;
+                        v_expand(v_masku16, v_masku320, v_masku321);
+
+                        v_float32 v_mask0 = v_reinterpret_as_f32(v_not(v_eq(v_masku320, v_reinterpret_as_u32(v_0))));
+
+                        v_float32 v_mask1 = v_reinterpret_as_f32(v_not(v_eq(v_masku321, v_reinterpret_as_u32(v_0))));
+
+                        v_float32 v_src00, v_src01;
+                        v_float32 v_src10, v_src11;
+                        v_float32 v_src20, v_src21;
+                        v_float32 v_src30, v_src31;
+
+                        v_load_deinterleave(src + x * cn,
+                                            v_src00, v_src10, v_src20, v_src30);
+
+                        v_load_deinterleave(src + (x + step) * cn,
+                                            v_src01, v_src11, v_src21, v_src31);
+
+                        v_src00 = v_and(v_src00, v_mask0);
+                        v_src10 = v_and(v_src10, v_mask0);
+                        v_src20 = v_and(v_src20, v_mask0);
+                        v_src30 = v_and(v_src30, v_mask0);
+
+                        v_src01 = v_and(v_src01, v_mask1);
+                        v_src11 = v_and(v_src11, v_mask1);
+                        v_src21 = v_and(v_src21, v_mask1);
+                        v_src31 = v_and(v_src31, v_mask1);
+
+                        v_float32 v_dst00, v_dst01;
+                        v_float32 v_dst10, v_dst11;
+                        v_float32 v_dst20, v_dst21;
+                        v_float32 v_dst30, v_dst31;
+
+                        v_load_deinterleave(dst + x * cn, v_dst00, v_dst10, v_dst20, v_dst30);
+
+                        v_load_deinterleave(dst + (x + step) * cn, v_dst01, v_dst11, v_dst21, v_dst31);
+
+                        v_store_interleave(dst + x * cn,v_add(v_dst00, v_src00),v_add(v_dst10, v_src10),v_add(v_dst20, v_src20),v_add(v_dst30, v_src30));
+
+                        v_store_interleave(dst + (x + step) * cn,v_add(v_dst01, v_src01),v_add(v_dst11, v_src11),v_add(v_dst21, v_src21),v_add(v_dst31, v_src31));
+                    }
             }
         }
-        else if (cn == 3)
-        {
-            for ( ; x <= len - cVectorWidth ; x += cVectorWidth)
-            {
-                v_uint16 v_masku16 = vx_load_expand(mask + x);
-                v_uint32 v_masku320, v_masku321;
-                v_expand(v_masku16, v_masku320, v_masku321);
-                v_float32 v_mask0 = v_reinterpret_as_f32(v_not(v_eq(v_masku320, v_reinterpret_as_u32(v_0))));
-                v_float32 v_mask1 = v_reinterpret_as_f32(v_not(v_eq(v_masku321, v_reinterpret_as_u32(v_0))));
 
-                v_float32 v_src00, v_src01, v_src10, v_src11, v_src20, v_src21;
-                v_load_deinterleave(src + x * cn, v_src00, v_src10, v_src20);
-                v_load_deinterleave(src + (x + step) * cn, v_src01, v_src11, v_src21);
-                v_src00 = v_and(v_src00, v_mask0);
-                v_src01 = v_and(v_src01, v_mask1);
-                v_src10 = v_and(v_src10, v_mask0);
-                v_src11 = v_and(v_src11, v_mask1);
-                v_src20 = v_and(v_src20, v_mask0);
-                v_src21 = v_and(v_src21, v_mask1);
-
-                v_float32 v_dst00, v_dst01, v_dst10, v_dst11, v_dst20, v_dst21;
-                v_load_deinterleave(dst + x * cn, v_dst00, v_dst10, v_dst20);
-                v_load_deinterleave(dst + (x + step) * cn, v_dst01, v_dst11, v_dst21);
-
-                v_store_interleave(dst + x * cn, v_add(v_dst00, v_src00), v_add(v_dst10, v_src10), v_add(v_dst20, v_src20));
-                v_store_interleave(dst + (x + step) * cn, v_add(v_dst01, v_src01), v_add(v_dst11, v_src11), v_add(v_dst21, v_src21));
-            }
-        }
     }
 #endif // CV_SIMD
     acc_general_(src, dst, mask, len, cn, x);
