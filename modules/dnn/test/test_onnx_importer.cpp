@@ -178,6 +178,49 @@ TEST_P(Test_ONNX_layers, MaxPooling_2)
     testONNXModels("two_maxpooling", npy, 0, 0, false, false);
 }
 
+TEST_P(Test_ONNX_layers, MaxPooling_Indices)
+{
+    const String basename = "maxpooling_indices";
+    const String onnxmodel = _tf("models/" + basename + ".onnx", required);
+
+    int inpShape[] = {1, 1, 5, 5};
+    Mat inp(4, inpShape, CV_32F);
+    float* inpData = inp.ptr<float>();
+    for (int i = 0; i < 25; ++i)
+        inpData[i] = (float)(i + 1);
+
+    int outShape[] = {1, 1, 2, 2};
+    Mat refValues(4, outShape, CV_32F);
+    Mat refIndices(4, outShape, CV_64S);
+    float* refValuesData = refValues.ptr<float>();
+    int64_t* refIndicesData = refIndices.ptr<int64_t>();
+    refValuesData[0] = 7.f;  refValuesData[1] = 9.f;
+    refValuesData[2] = 17.f; refValuesData[3] = 19.f;
+    refIndicesData[0] = 6;   refIndicesData[1] = 8;
+    refIndicesData[2] = 16;  refIndicesData[3] = 18;
+
+    checkBackend(&inp, &refValues);
+    Net net = readNetFromONNX(onnxmodel);
+    ASSERT_FALSE(net.empty());
+    testInputShapes(net, std::vector<Mat>(1, inp));
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+    net.setInput(inp, "0");
+
+    std::vector<Mat> outs;
+    std::vector<String> outNames;
+    outNames.push_back("Y");
+    outNames.push_back("Indices");
+    net.forward(outs, outNames);
+
+    ASSERT_EQ(2u, outs.size());
+    EXPECT_EQ(refValues.shape(), outs[0].shape());
+    EXPECT_EQ(refIndices.shape(), outs[1].shape());
+    normAssert(refValues, outs[0], (basename + "_values").c_str(), default_l1, default_lInf);
+    normAssert(refIndices, outs[1], (basename + "_indices").c_str(), default_l1, default_lInf);
+}
+
 TEST_P(Test_ONNX_layers, Convolution)
 {
     testONNXModels("convolution");
