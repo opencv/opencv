@@ -91,6 +91,46 @@ OCL_TEST_P(HoughLines, RealImage)
     Near(1e-5);
 }
 
+OCL_TEST(HoughLines, MinMaxTheta)
+{
+    Mat src(400, 400, CV_8UC1, Scalar(0));
+    line(src, Point(0, 200), Point(399, 200), Scalar::all(255), 1);
+    UMat usrc;
+    src.copyTo(usrc);
+
+    const double rho = 1.0;
+    const double theta = CV_PI / 360.0;
+    const int thresh = 100;
+    const double min_theta = CV_PI / 2 - 0.2;
+    const double max_theta = CV_PI / 2 + 0.2;
+
+    Mat dst;
+    UMat udst;
+    OCL_OFF(cv::HoughLines(src, dst, rho, theta, thresh, 0, 0, min_theta, max_theta));
+    OCL_ON(cv::HoughLines(usrc, udst, rho, theta, thresh, 0, 0, min_theta, max_theta));
+
+    ASSERT_EQ(dst.size(), udst.size());
+
+    if (dst.total() > 0)
+    {
+        Mat lines_cpu, lines_gpu;
+        dst.copyTo(lines_cpu);
+        udst.copyTo(lines_gpu);
+
+        std::sort(lines_cpu.begin<Vec2f>(), lines_cpu.end<Vec2f>(), Vec2fComparator());
+        std::sort(lines_gpu.begin<Vec2f>(), lines_gpu.end<Vec2f>(), Vec2fComparator());
+
+        EXPECT_LE(TestUtils::checkNorm2(lines_cpu, lines_gpu), 1e-5);
+
+        for (int i = 0; i < lines_cpu.rows; ++i)
+        {
+            float angle = lines_cpu.at<Vec2f>(i)[1];
+            EXPECT_GE(angle, (float)min_theta);
+            EXPECT_LE(angle, (float)max_theta);
+        }
+    }
+}
+
 OCL_TEST_P(HoughLines, GeneratedImage)
 {
     for (int j = 0; j < test_loop_times; j++)
