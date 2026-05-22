@@ -32,7 +32,7 @@ OPENCV_ROOT = HERE.parent.resolve()
 import os as _os
 DOC_MODULES = [
     m.strip()
-    for m in (_os.environ.get("OPENCV_DOC_MODULES") or "photo,objdetect,core,calib3d,features,3d,app,introduction,imgproc").split(",")
+    for m in (_os.environ.get("OPENCV_DOC_MODULES") or "photo,objdetect,core,calib3d,features,3d,app,introduction,imgproc,ios").split(",")
     if m.strip()
 ]
 
@@ -596,7 +596,7 @@ def _translate(text: str, docname: str | None = None) -> str:
     #     Allow optional leading indent and bare @note (body on next line).
     #     Dedent the body so indented lines don't become code blocks inside
     #     the directive.
-    _ADMON_KIND = {"note": "note", "see": "seealso"}
+    _ADMON_KIND = {"note": "note", "see": "seealso", "warning": "warning"}
     def _admon_repl(m: re.Match) -> str:
         indent = m.group("indent")
         kind = _ADMON_KIND[m.group("dir")]
@@ -607,7 +607,7 @@ def _translate(text: str, docname: str | None = None) -> str:
         body = "\n".join(l[min_ind:] for l in lines).strip()
         return f"\n{indent}:::{{{kind}}}\n{indent}{body}\n{indent}:::\n"
     text = re.sub(
-        r"^(?P<indent>[ \t]*)@(?P<dir>note|see)[ \t]*\n?(?P<body>.+?)(?=\n[ \t]*\n|\n[ \t]*@[A-Za-z]|\Z)",
+        r"^(?P<indent>[ \t]*)@(?P<dir>note|see|warning)[ \t]*\n?(?P<body>.+?)(?=\n[ \t]*\n|\n[ \t]*@[A-Za-z]|\Z)",
         _admon_repl, text, flags=re.DOTALL | re.MULTILINE)
 
     # 2. Doxygen LaTeX math markers.
@@ -660,6 +660,8 @@ def _translate(text: str, docname: str | None = None) -> str:
     def _code_repl(m: re.Match) -> str:
         indent = m.group("indent") or ""
         lang = _normalize_lang(m.group("lang") or "")
+        if lang == "m":
+            lang = "objc"
         body = m.group("body")
         if indent:
             body = _textwrap.dedent(body).strip("\n")
@@ -667,6 +669,7 @@ def _translate(text: str, docname: str | None = None) -> str:
                              for line in body.split("\n"))
             return f"\n{indent}```{lang}\n{body}\n{indent}```\n"
         return f"\n```{lang}\n{body.strip()}\n```\n"
+
     text = re.sub(
         r"^(?P<indent>[ \t]*)@code(?:\{(?P<lang>[^}]*)\})?\s*\n(?P<body>.*?)\n[ \t]*@endcode",
         _code_repl, text, flags=re.DOTALL | re.MULTILINE)
