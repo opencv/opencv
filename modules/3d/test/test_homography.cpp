@@ -42,7 +42,12 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include <opencv2/features.hpp>
+
+// #define SAVE_FEATURES 1
+
+#ifdef SAVE_FEATURES
+# include "opencv2/features.hpp"
+#endif
 
 namespace opencv_test { namespace {
 
@@ -604,13 +609,39 @@ TEST(Calib3d_Homography, EKcase)
     ASSERT_LE(err, 0.01);
 }
 
+#ifdef SAVE_FEATURES
+static void saveKeypoints(const std::string& fname, const std::vector<cv::Point2f> points)
+{
+    FileStorage fs(fname, cv::FileStorage::WRITE);
+    ASSERT_TRUE(fs.isOpened());
+    fs << "keypoints" << points;
+    fs.release();
+}
+#else
+static void loadKeypoints(const std::string& fname, std::vector<cv::Point2f>& points)
+{
+    FileStorage fs(fname, cv::FileStorage::READ);
+    ASSERT_TRUE(fs.isOpened());
+    fs["keypoints"] >> points;
+    fs.release();
+}
+#endif
+
 TEST(Calib3d_Homography, fromImages)
 {
+    const std::string points_file1 = cvtest::TS::ptr()->get_data_path() + "cv/optflow/image1.ORB.yaml.gz";
+    const std::string points_file2 = cvtest::TS::ptr()->get_data_path() + "cv/optflow/image2.ORB.yaml.gz";
+
+    std::vector<Point2f> pointframe1;
+    std::vector<Point2f> pointframe2;
+
+#ifdef SAVE_FEATURES
+    vector<KeyPoint> keypoints_1, keypoints_2;
+    Mat descriptors_1, descriptors_2;
+
     Mat img_1 = imread(cvtest::TS::ptr()->get_data_path() + "cv/optflow/image1.png", 0);
     Mat img_2 = imread(cvtest::TS::ptr()->get_data_path() + "cv/optflow/image2.png", 0);
     Ptr<ORB> orb = ORB::create();
-    vector<KeyPoint> keypoints_1, keypoints_2;
-    Mat descriptors_1, descriptors_2;
     orb->detectAndCompute( img_1, Mat(), keypoints_1, descriptors_1, false );
     orb->detectAndCompute( img_2, Mat(), keypoints_2, descriptors_2, false );
 
@@ -637,14 +668,21 @@ TEST(Calib3d_Homography, fromImages)
     }
 
     //-- Localize the model
-    std::vector<Point2f> pointframe1;
-    std::vector<Point2f> pointframe2;
     for( int i = 0; i < (int)good_matches.size(); i++ )
     {
         //-- Get the keypoints from the good matches
         pointframe1.push_back( keypoints_1[ good_matches[i].queryIdx ].pt );
         pointframe2.push_back( keypoints_2[ good_matches[i].trainIdx ].pt );
     }
+
+    saveKeypoints(points_file1, pointframe1);
+    saveKeypoints(points_file2, pointframe2);
+#else
+    loadKeypoints(points_file1, pointframe1);
+    loadKeypoints(points_file2, pointframe2);
+#endif
+    ASSERT_FALSE(pointframe1.empty());
+    ASSERT_FALSE(pointframe1.empty());
 
     Mat H0, H1, inliers0, inliers1;
     double min_t0 = DBL_MAX, min_t1 = DBL_MAX;
@@ -664,11 +702,6 @@ TEST(Calib3d_Homography, fromImages)
         min_t1 = std::min(min_t1, t);
     }
     int ninliers1 = countNonZero(inliers1);
-    double freq = getTickFrequency();
-    printf("nfeatures1 = %d, nfeatures2=%d, matches=%d, ninliers(RANSAC)=%d, "
-           "time(RANSAC)=%.2fmsec, ninliers(RHO)=%d, time(RHO)=%.2fmsec\n",
-           (int)keypoints_1.size(), (int)keypoints_2.size(),
-           (int)good_matches.size(), ninliers0, min_t0*1000./freq, ninliers1, min_t1*1000./freq);
 
     ASSERT_TRUE(!H0.empty());
     ASSERT_GE(ninliers0, 80);
