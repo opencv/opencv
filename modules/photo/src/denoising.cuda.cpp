@@ -116,6 +116,10 @@ namespace cv { namespace cuda { namespace device
         void nlm_fast_gpu(const PtrStepSzb& src, PtrStepSzb dst, PtrStepi buffer,
                           int search_window, int block_window, float h, cudaStream_t stream);
 
+        template<typename T>
+        void nlm_fast_gpu(const PtrStepSzb& src, PtrStepSzb dst, PtrStepSz<float> buffer,
+                          int search_window, int block_window, float h, cudaStream_t stream);
+
         void fnlm_split_channels(const PtrStepSz<uchar3>& lab, PtrStepb l, PtrStep<uchar2> ab, cudaStream_t stream);
         void fnlm_merge_channels(const PtrStepb& l, const PtrStep<uchar2>& ab, PtrStepSz<uchar3> lab, cudaStream_t stream);
      }
@@ -125,7 +129,7 @@ void cv::cuda::fastNlMeansDenoising(InputArray _src, OutputArray _dst, float h, 
 {
     const GpuMat src = _src.getGpuMat();
 
-    CV_Assert(src.depth() == CV_8U && src.channels() < 4);
+    CV_Assert((src.depth() == CV_8U || src.depth() == CV_16U) && src.channels() < 4);
 
     int border_size = search_window/2 + block_window/2;
     Size esize = src.size() + Size(border_size, border_size) * 2;
@@ -138,16 +142,26 @@ void cv::cuda::fastNlMeansDenoising(InputArray _src, OutputArray _dst, float h, 
 
     int bcols, brows;
     device::imgproc::nln_fast_get_buffer_size(src_hdr, search_window, block_window, bcols, brows);
-    GpuMat buffer = pool.getBuffer(brows, bcols, CV_32S);
 
     using namespace cv::cuda::device::imgproc;
-    typedef void (*nlm_fast_t)(const PtrStepSzb&, PtrStepSzb, PtrStepi, int, int, float, cudaStream_t);
-    static const nlm_fast_t funcs[] = { nlm_fast_gpu<uchar>, nlm_fast_gpu<uchar2>, nlm_fast_gpu<uchar3>, 0};
 
     _dst.create(src.size(), src.type());
     GpuMat dst = _dst.getGpuMat();
 
-    funcs[src.channels()-1](src_hdr, dst, buffer, search_window, block_window, h, StreamAccessor::getStream(stream));
+    if (src.depth() == CV_8U)
+    {
+        GpuMat buffer = pool.getBuffer(brows, bcols, CV_32S);
+        typedef void (*nlm_fast_t)(const PtrStepSzb&, PtrStepSzb, PtrStepi, int, int, float, cudaStream_t);
+        static const nlm_fast_t funcs[] = { nlm_fast_gpu<uchar>, nlm_fast_gpu<uchar2>, nlm_fast_gpu<uchar3>, 0};
+        funcs[src.channels()-1](src_hdr, dst, buffer, search_window, block_window, h, StreamAccessor::getStream(stream));
+    }
+    else
+    {
+        GpuMat buffer = pool.getBuffer(brows, bcols, CV_32F);
+        typedef void (*nlm_fast_t)(const PtrStepSzb&, PtrStepSzb, PtrStepSz<float>, int, int, float, cudaStream_t);
+        static const nlm_fast_t funcs[] = { nlm_fast_gpu<ushort>, nlm_fast_gpu<ushort2>, nlm_fast_gpu<ushort3>, 0};
+        funcs[src.channels()-1](src_hdr, dst, buffer, search_window, block_window, h, StreamAccessor::getStream(stream));
+    }
 }
 
 void cv::cuda::fastNlMeansDenoisingColored(InputArray _src, OutputArray _dst, float h_luminance, float h_color, int search_window, int block_window, Stream& stream)

@@ -190,53 +190,62 @@ public:
     }
 };
 
+template <typename T> struct DistType { typedef int type; };
+template <> struct DistType<ushort> { typedef int64 type; };
+template <int cn> struct DistType<Vec<ushort, cn> > { typedef int64 type; };
+
 class DistSquared
 {
     template <typename T> struct calcDist_
     {
-        static inline int f(const T a, const T b)
+        static inline typename DistType<T>::type f(const T a, const T b)
         {
-            return (int)(a-b) * (int)(a-b);
+            typedef typename DistType<T>::type result_type;
+            return (result_type)(a-b) * (result_type)(a-b);
         }
     };
 
     template <typename ET> struct calcDist_<Vec<ET, 2> >
     {
-        static inline int f(const Vec<ET, 2> a, const Vec<ET, 2> b)
+        static inline typename DistType<Vec<ET, 2> >::type f(const Vec<ET, 2> a, const Vec<ET, 2> b)
         {
-            return (int)(a[0]-b[0])*(int)(a[0]-b[0]) + (int)(a[1]-b[1])*(int)(a[1]-b[1]);
+            typedef typename DistType<Vec<ET, 2> >::type result_type;
+            return (result_type)(a[0]-b[0])*(result_type)(a[0]-b[0]) + (result_type)(a[1]-b[1])*(result_type)(a[1]-b[1]);
         }
     };
 
     template <typename ET> struct calcDist_<Vec<ET, 3> >
     {
-        static inline int f(const Vec<ET, 3> a, const Vec<ET, 3> b)
+        static inline typename DistType<Vec<ET, 3> >::type f(const Vec<ET, 3> a, const Vec<ET, 3> b)
         {
+            typedef typename DistType<Vec<ET, 3> >::type result_type;
             return
-                (int)(a[0]-b[0])*(int)(a[0]-b[0]) +
-                (int)(a[1]-b[1])*(int)(a[1]-b[1]) +
-                (int)(a[2]-b[2])*(int)(a[2]-b[2]);
+                (result_type)(a[0]-b[0])*(result_type)(a[0]-b[0]) +
+                (result_type)(a[1]-b[1])*(result_type)(a[1]-b[1]) +
+                (result_type)(a[2]-b[2])*(result_type)(a[2]-b[2]);
         }
     };
 
     template <typename ET> struct calcDist_<Vec<ET, 4> >
     {
-        static inline int f(const Vec<ET, 4> a, const Vec<ET, 4> b)
+        static inline typename DistType<Vec<ET, 4> >::type f(const Vec<ET, 4> a, const Vec<ET, 4> b)
         {
+            typedef typename DistType<Vec<ET, 4> >::type result_type;
             return
-                (int)(a[0]-b[0])*(int)(a[0]-b[0]) +
-                (int)(a[1]-b[1])*(int)(a[1]-b[1]) +
-                (int)(a[2]-b[2])*(int)(a[2]-b[2]) +
-                (int)(a[3]-b[3])*(int)(a[3]-b[3]);
+                (result_type)(a[0]-b[0])*(result_type)(a[0]-b[0]) +
+                (result_type)(a[1]-b[1])*(result_type)(a[1]-b[1]) +
+                (result_type)(a[2]-b[2])*(result_type)(a[2]-b[2]) +
+                (result_type)(a[3]-b[3])*(result_type)(a[3]-b[3]);
         }
     };
 
     template <typename T> struct calcUpDownDist_
     {
-        static inline int f(T a_up, T a_down, T b_up, T b_down)
+        static inline typename DistType<T>::type f(T a_up, T a_down, T b_up, T b_down)
         {
-            int A = a_down - b_down;
-            int B = a_up - b_up;
+            typedef typename DistType<T>::type result_type;
+            result_type A = (result_type)a_down - (result_type)b_down;
+            result_type B = (result_type)a_up - (result_type)b_up;
             return (A-B)*(A+B);
         }
     };
@@ -246,7 +255,7 @@ class DistSquared
     private:
         typedef Vec<ET, n> T;
     public:
-        static inline int f(T a_up, T a_down, T b_up, T b_down)
+        static inline typename DistType<T>::type f(T a_up, T a_down, T b_up, T b_down)
         {
             return calcDist<T>(a_down, b_down) - calcDist<T>(a_up, b_up);
         }
@@ -279,13 +288,13 @@ class DistSquared
     };
 
 public:
-    template <typename T> static inline int calcDist(const T a, const T b)
+    template <typename T> static inline typename DistType<T>::type calcDist(const T a, const T b)
     {
         return calcDist_<T>::f(a, b);
     }
 
     template <typename T>
-    static inline int calcDist(const Mat& m, int i1, int j1, int i2, int j2)
+    static inline typename DistType<T>::type calcDist(const Mat& m, int i1, int j1, int i2, int j2)
     {
         const T a = m.at<T>(i1, j1);
         const T b = m.at<T>(i2, j2);
@@ -293,7 +302,7 @@ public:
     }
 
     template <typename T>
-    static inline int calcUpDownDist(T a_up, T a_down, T b_up, T b_down)
+    static inline typename DistType<T>::type calcUpDownDist(T a_up, T a_down, T b_up, T b_down)
     {
         return calcUpDownDist_<T>::f(a_up, a_down, b_up, b_down);
     }
@@ -306,9 +315,10 @@ public:
     }
 
     template <typename T>
-    static inline int maxDist()
+    static inline typename DistType<T>::type maxDist()
     {
-        return (int)pixelInfo<T>::sampleMax() * (int)pixelInfo<T>::sampleMax() *
+        typedef typename DistType<T>::type result_type;
+        return (result_type)pixelInfo<T>::sampleMax() * (result_type)pixelInfo<T>::sampleMax() *
             pixelInfo<T>::channels;
     }
 };
