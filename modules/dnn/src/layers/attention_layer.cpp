@@ -5,6 +5,7 @@
 #include "../precomp.hpp"
 #include "cpu_kernels/fast_gemm.hpp"
 #include "cpu_kernels/softmax.hpp"
+#include "cpu_kernels/mlas_gemm.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -366,7 +367,39 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
             parallel_for_(Range(0, loops), fn, nstripes);
         }
 
-        // attention_prob = softmax(scale * Q @ K^T + mask)
+        const int num_non_blob_inputs = (int)inputs.size();
+        const bool has_mask = (!blobs.empty() && num_non_blob_inputs >= 2) ||
+                                ( blobs.empty() && num_non_blob_inputs >= 4);
+
+        if (mlasAvailable() && !has_mask &&
+            batch_size > 0 && num_heads > 0 && seq_len > 0 &&
+            qkv_head_sizes[0] > 0 && qkv_head_sizes[2] > 0)
+        {
+            const int B   = (int)batch_size;
+            const int H   = (int)num_heads;
+            const int S   = (int)seq_len;
+            const int Dqk = (int)qkv_head_sizes[0];
+            const int Dv  = (int)qkv_head_sizes[2];
+            // ORT-style default tiling, clamped to the actual sequence length.
+            const int q_block  = std::min(256, S);
+            const int kv_block = std::min(256, S);
+            const int threads  = std::max(1, cv::getNumThreads());
+
+            const size_t per_thread =
+                mlasFlashAttentionBufferBytesPerThread(q_block, kv_block, Dv);
+            flash_scratch.resize((size_t)threads * per_thread);
+
+            if (mlasFlashAttention(Q, K, V,
+                                    outputs[0].ptr<float>(),
+                                    B, H, S, S, Dqk, Dv, scale,
+                                    q_block, kv_block,
+                                    flash_scratch.data(), threads))
+            {
+                return;  // fast path done; outputs[0] is fully written
+            }
+        }
+
+        // Compute Softmax(scale * MatMul(Q, K))
         auto &attention_prob = internals[1];
         {
             auto *output = attention_prob.ptr<float>();
@@ -526,6 +559,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
     std::vector<float> packed_weight_q;
     std::vector<float> packed_weight_k;
     std::vector<float> packed_weight_v;
+    std::vector<unsigned char> flash_scratch;
 
     FastGemmOpt opt;
 };

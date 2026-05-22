@@ -1819,6 +1819,38 @@ if(BUILD_opencv_dnn AND OPENCV_DNN_BACKEND_DEFAULT)
     status("    Default DNN backend:" ${OPENCV_DNN_BACKEND_DEFAULT})
 endif()
 
+if(BUILD_opencv_dnn AND (OPENCV_DNN_MLAS_ENABLED OR OPENCV_DNN_MLAS_SKIP_REASON))
+  status("    DNN MLAS:" OPENCV_DNN_MLAS_ENABLED THEN "YES (SGEMM-only, vendored)"
+                                                 ELSE "NO (${OPENCV_DNN_MLAS_SKIP_REASON})")
+  if(OPENCV_DNN_MLAS_ENABLED)
+    if(MLAS_X86_64)
+      status("      ASM kernels:" "YES (X86_64: SSE2, AVX, FMA3, AVX512F)")
+    elseif(MLAS_X86)
+      status("      ASM kernels:" "YES (X86: SSE2, AVX)")
+    elseif(MLAS_ARM64)
+      status("      ASM kernels:" "YES (ARM64: NEON SGEMM, NEON SGEMV)")
+    elseif(MLAS_ARM)
+      status("      ASM kernels:" "NO (ARM 32-bit, scalar C++ sgemmc.cpp)")
+    elseif(MLAS_LOONGARCH64)
+      status("      ASM kernels:" "YES (LoongArch: LSX, LASX)")
+    elseif(MLAS_POWER)
+      status("      ASM kernels:" MLAS_HAS_POWER10 AND MLAS_HAS_ASM
+                                  THEN "YES (POWER10 PackA)"
+                                  ELSE "NO (POWER base, no .S kernels)")
+    elseif(MLAS_S390X)
+      status("      ASM kernels:" "NO (S390X ZVECTOR via intrinsics)")
+    elseif(MLAS_RISCV64)
+      status("      ASM kernels:" MLAS_HAS_RISCV64_RVV
+                                  THEN "NO (RISCV64 with RVV intrinsics)"
+                                  ELSE "NO (RISCV64 scalar fallback)")
+    elseif(MLAS_WASM)
+      status("      ASM kernels:" "NO (WASM scalar fallback)")
+    else()
+      status("      ASM kernels:" "NO (scalar fallback)")
+    endif()
+  endif()
+endif()
+
 if(WITH_EIGEN OR HAVE_EIGEN)
   status("    Eigen:"      HAVE_EIGEN       THEN "YES (ver ${EIGEN_WORLD_VERSION}.${EIGEN_MAJOR_VERSION}.${EIGEN_MINOR_VERSION})" ELSE NO)
 endif()

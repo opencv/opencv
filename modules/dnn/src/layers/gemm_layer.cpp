@@ -17,6 +17,7 @@ using namespace cv::dnn::cuda4dnn;
 
 #include <opencv2/dnn/shape_utils.hpp>
 #include "cpu_kernels/fast_gemm.hpp"
+#include "cpu_kernels/mlas_gemm.hpp"
 
 namespace cv { namespace dnn {
 
@@ -279,6 +280,30 @@ public:
                     }
                 }
             }
+#ifdef HAVE_MLAS
+            std::vector<Mat> outputs;
+            outputs_arr.getMatVector(outputs);
+            const auto shape_A = shape(inputs[0]);
+            const auto shape_Y = shape(outputs[0]);
+            const int na = shape_A[shape_A.size() - 1];
+            const int ma = shape_A[shape_A.size() - 2];
+            const int N  = shape_Y[shape_Y.size() - 1];
+            const int K  = trans_a ? ma : na;
+            const Mat& Bmat = blobs[0];
+            const int ldb = Bmat.size[Bmat.dims - 1];
+            const size_t packed_bytes = mlasSgemmPackBSize(trans_a, trans_b, N, K);
+            if (packed_bytes > 0) {
+                packed_B_mlas.create(1, static_cast<int>(packed_bytes), CV_8U);
+                if (mlasSgemmPackB(trans_a, trans_b, N, K,
+                                   Bmat.ptr<const float>(), ldb,
+                                   packed_B_mlas.data)) {
+                    packed_B_mlas_N = N;
+                    packed_B_mlas_K = K;
+                } else {
+                    packed_B_mlas.release();
+                }
+            }
+#endif
         }
 
         if (constC(mode) && flatten_a) {
@@ -361,6 +386,20 @@ public:
         }
 
         if (constB(mode)) {
+#ifdef HAVE_MLAS
+            if (!packed_B_mlas.empty() &&
+                packed_B_mlas_N == N && packed_B_mlas_K == K)
+            {
+                if (mlasSgemmPacked(trans_a, trans_b, rows, N, K,
+                                    alpha,
+                                    A.ptr<const float>(), na,
+                                    packed_B_mlas.data,
+                                    1.f,
+                                    Y.ptr<float>(), N)) {
+                    return;
+                }
+            }
+#endif
             CV_CheckGT(packed_B.size(), static_cast<size_t>(0), "DNN/Gemm: constant B is not pre-packed");
             if (!thin_packed_B.empty()) {
                 fastGemmThin(rows, N, K, alpha, A.ptr<const float>(), na, 1,
@@ -531,6 +570,11 @@ private:
     bool have_bias;
     std::vector<float> packed_B;
     std::vector<float> thin_packed_B;
+#ifdef HAVE_MLAS
+    cv::Mat packed_B_mlas;
+    int packed_B_mlas_N = 0;
+    int packed_B_mlas_K = 0;
+#endif
     std::vector<float> broadcast_C;
     int real_ndims_C;
     FastGemmOpt opt;

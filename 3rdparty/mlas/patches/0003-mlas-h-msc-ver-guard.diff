@@ -1,0 +1,19 @@
+Patch against upstream onnxruntime/core/mlas/inc/mlas.h
+Base commit: 62f742f1aa0c3102745ed35e3d869eaee845b9ac (ORT v1.26.0)
+
+Guard _MSC_VER with defined() so -Wundef builds on GCC/Clang
+(where _MSC_VER is not predefined) do not warn when this header is
+consumed outside the ORT build that always defines _MSC_VER through
+its toolchain wrappers.
+
+--- a/3rdparty/mlas/inc/mlas.h
++++ b/3rdparty/mlas/inc/mlas.h
+@@ -26,7 +26,7 @@
+ // Define the calling convention for Windows targets.
+ //
+ 
+-#if (_MSC_VER >= 800) || defined(_STDCALL_SUPPORTED)
++#if (defined(_MSC_VER) && (_MSC_VER >= 800)) || defined(_STDCALL_SUPPORTED)
+ #define MLASCALL __stdcall
+ #else
+ #define MLASCALL
