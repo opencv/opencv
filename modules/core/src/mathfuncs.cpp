@@ -1746,116 +1746,135 @@ double cv::solvePoly(InputArray _coeffs0, OutputArray _roots0, int maxIters)
 
     for (; n > 1; n--)
     {
-        if (std::abs(coeffs[n].re) + std::abs(coeffs[n].im) > DBL_EPSILON)
+        if (abs(coeffs[n].re) + abs(coeffs[n].im) > DBL_EPSILON)
             break;
     }
 
     maxIters = maxIters <= 0 ? 1000 : maxIters;
     const int MAX_ATTEMPTS = 3;
+    Mat cube_coefs(4, 1, CV_64FC1);
+    Mat cube_roots(3, 1, CV_64FC2);
 
-    for (int attempt = 0; attempt < MAX_ATTEMPTS; attempt++)
-    {
-        if (attempt == 0)
-        {
+    double R_max = 0.0, rho_min = 0.0;
+    double cn_mag = hypot(coeffs[n].re, coeffs[n].im);
+    double c0_mag = hypot(coeffs[0].re, coeffs[0].im);
+
+    for (int k = 1; k <= n; k++) {
+        double mag = hypot(coeffs[n - k].re, coeffs[n - k].im);
+        if (cn_mag > 0) {
+            double val = pow(mag / cn_mag, 1.0 / k);
+            if (val > R_max) R_max = val;
+        }
+    }
+    R_max = (R_max == 0.0) ? 1.0 : R_max * 2.0;
+
+    if (c0_mag > 0) {
+        for (int k = 1; k <= n; k++) {
+            double mag = hypot(coeffs[k].re, coeffs[k].im);
+            double val = pow(mag / c0_mag, 1.0 / k);
+            if (val > rho_min) rho_min = val;
+        }
+        rho_min = (rho_min == 0.0) ? R_max : 0.5 / rho_min;
+    }
+    else {
+        rho_min = 1e-8;
+    }
+    if (rho_min < 1e-8) rho_min = 1e-8;
+
+    for (int attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+        if (attempt == 0) {
             C p(1, 0), r(1, 1);
-            for (i = 0; i < n; i++)
-            {
+            for (i = 0; i < n; i++) {
                 roots[i] = p;
                 p = p * r;
             }
         }
-        else
-        {
-            double max_val = 0, max_val_lower = 0;
-            double c0_mag = std::sqrt(coeffs[0].re * coeffs[0].re + coeffs[0].im * coeffs[0].im);
-            double cn_mag = std::sqrt(coeffs[n].re * coeffs[n].re + coeffs[n].im * coeffs[n].im);
+        else {
+            double log_rho = log(rho_min);
+            double log_R = log(R_max);
+            double step_angle = (n > 1) ? (log_R - log_rho) / (n - 1) : 0.0;
 
-            for (int k = 0; k < n; k++)
-            {
-                double val = std::sqrt(coeffs[k].re * coeffs[k].re + coeffs[k].im * coeffs[k].im);
-                if (val > max_val) max_val = val;
-            }
-            for (int k = 1; k <= n; k++)
-            {
-                double val = std::sqrt(coeffs[k].re * coeffs[k].re + coeffs[k].im * coeffs[k].im);
-                if (val > max_val_lower) max_val_lower = val;
-            }
-
-            double R = (cn_mag == 0) ? 1.0 : (1.0 + max_val / cn_mag);
-            double rho = (max_val_lower == 0) ? R : (c0_mag / (c0_mag + max_val_lower));
-            if (rho < 1e-8) rho = 1e-8;
-
-            double log_rho = std::log(rho);
-            double log_R = std::log(R);
-            double step = (n > 1) ? (log_R - log_rho) / (n - 1) : 0;
-
-            for (i = 0; i < n; i++)
-            {
-                double mag = std::exp(log_rho + i * step);
+            for (i = 0; i < n; i++) {
+                double mag = exp(log_rho + i * step_angle);
                 double angle = i * 2.399963229728653 + attempt * 1.5;
-                roots[i] = C(mag * std::cos(angle), mag * std::sin(angle));
+                roots[i] = C(mag * cos(angle), mag * sin(angle));
             }
         }
 
-        for (iter = 0; iter < maxIters; iter++)
-        {
+        bool nan_detected = false;
+        for (iter = 0; iter < maxIters; iter++) {
             maxDiff = 0;
-            for (i = 0; i < n; i++)
-            {
+            for (i = 0; i < n; i++) {
                 C p = roots[i];
-                C num = coeffs[n], denom = coeffs[n];
+                C num = coeffs[n];
                 int num_same_root = 1;
-                for (j = 0; j < n; j++)
-                {
+
+                for (j = 0; j < n; j++) {
                     num = num * p + coeffs[n - j - 1];
-                    if (j != i)
-                    {
-                        if ((p - roots[j]).re != 0 || (p - roots[j]).im != 0)
-                            denom = denom * (p - roots[j]);
-                        else
+                }
+
+                if (coeffs[n].re != 0 || coeffs[n].im != 0) {
+                    num /= coeffs[n];
+                }
+
+                for (j = 0; j < n; j++) {
+                    if (j != i) {
+                        C diff = p - roots[j];
+                        if (diff.re != 0 || diff.im != 0) {
+                            num /= diff;
+                        }
+                        else {
                             num_same_root++;
+                        }
                     }
                 }
-                num /= denom;
-                if (num_same_root > 1)
-                {
+
+                if (num_same_root > 1) {
                     double old_num_re = num.re;
                     double old_num_im = num.im;
-                    int square_root_times = num_same_root % 2 == 0 ?
-                        num_same_root / 2 : num_same_root / 2 - 1;
+                    int sq_times = num_same_root % 2 == 0 ? num_same_root / 2 : num_same_root / 2 - 1;
 
-                    for (j = 0; j < square_root_times; j++)
-                    {
-                        num.re = old_num_re * old_num_re + old_num_im * old_num_im;
-                        num.re = sqrt(num.re);
-                        num.re += old_num_re;
-                        num.im = num.re - old_num_re;
-                        num.re /= 2;
-                        num.re = sqrt(num.re);
-                        num.im /= 2;
-                        num.im = sqrt(num.im);
-                        if (old_num_re < 0) num.im = -num.im;
+                    for (j = 0; j < sq_times; j++) {
+                        double mag = hypot(old_num_re, old_num_im);
+                        num.re = sqrt((mag + old_num_re) / 2.0);
+                        num.im = sqrt((mag - old_num_re) / 2.0);
+                        if (old_num_im < 0) num.im = -num.im;
+                        old_num_re = num.re;
+                        old_num_im = num.im;
                     }
                     if (num_same_root % 2 != 0) {
-                        Mat cube_coefs(4, 1, CV_64FC1);
-                        Mat cube_roots(3, 1, CV_64FC2);
-                        cube_coefs.at<double>(3) = -(std::pow(old_num_re, 3));
-                        cube_coefs.at<double>(2) = -(15 * std::pow(old_num_re, 2) + 27 * std::pow(old_num_im, 2));
-                        cube_coefs.at<double>(1) = -48 * old_num_re;
-                        cube_coefs.at<double>(0) = 64;
+                        double re2 = old_num_re * old_num_re;
+                        double im2 = old_num_im * old_num_im;
+                        cube_coefs.at<double>(3) = -(re2 * old_num_re);
+                        cube_coefs.at<double>(2) = -(15.0 * re2 + 27.0 * im2);
+                        cube_coefs.at<double>(1) = -48.0 * old_num_re;
+                        cube_coefs.at<double>(0) = 64.0;
                         solveCubic(cube_coefs, cube_roots);
-                        num.re = std::cbrt(cube_roots.at<double>(0));
-                        num.im = sqrt(std::pow(num.re, 2) / 3 - old_num_re / (3 * num.re));
+                        num.re = cbrt(cube_roots.at<double>(0));
+                        num.im = sqrt(abs((num.re * num.re) / 3.0 - old_num_re / (3.0 * num.re + 1e-14)));
                     }
                 }
+
+                double step_mag = hypot(num.re, num.im);
+                if (step_mag > 10.0 * R_max) {
+                    num.re = num.re * (10.0 * R_max / step_mag);
+                    num.im = num.im * (10.0 * R_max / step_mag);
+                }
+
                 roots[i] = p - num;
-                maxDiff = std::max(maxDiff, cv::abs(num));
+
+                if (isnan(roots[i].re) || isnan(roots[i].im) || isinf(roots[i].re) || isinf(roots[i].im)) {
+                    nan_detected = true;
+                    break;
+                }
+                maxDiff = max(maxDiff, cv::abs(num));
             }
-            if (maxDiff <= 1e-14)
-                break;
+
+            if (nan_detected) break;
+            if (maxDiff <= 1e-14) break;
         }
-        if (maxDiff <= 1e-14)
-            break;
+
+        if (!nan_detected && maxDiff <= 1e-14) break;
     }
 
     if (coeffs0.channels() == 1)
