@@ -177,40 +177,22 @@ static inline int remap32fC1(int start, int end, bool s16, const uchar *src_data
             else if (mode == CV_HAL_INTER_LINEAR)
             {
                 typename RVV_SameLen<int, helper>::VecType ix0, iy0;
-                typename RVV_SameLen<float, helper>::VecType fx, fy;
                 if (s16)
                 {
                     ix0 = __riscv_vfcvt_x(mx, vl);
                     iy0 = __riscv_vfcvt_x(my, vl);
                     auto md = __riscv_vle16_v_u16m4(reinterpret_cast<const ushort*>(mapy) + i * mapy_step + j, vl);
-                    fx = __riscv_vfdiv(__riscv_vfwcvt_f(__riscv_vand(md, 31, vl), vl), 32, vl);
-                    fy = __riscv_vfdiv(__riscv_vfwcvt_f(__riscv_vand(__riscv_vsrl(md, 5, vl), 31, vl), vl), 32, vl);
+                    mx = __riscv_vfdiv(__riscv_vfwcvt_f(__riscv_vand(md, 31, vl), vl), 32, vl);
+                    my = __riscv_vfdiv(__riscv_vfwcvt_f(__riscv_vand(__riscv_vsrl(md, 5, vl), 31, vl), vl), 32, vl);
                 }
                 else
                 {
-                    if constexpr (std::is_same<T, float>::value)
-                    {
-                        auto floor_to_int = [&](auto v)
-                        {
-                            auto iv = __riscv_vfcvt_x(v, vl);
-                            auto fv = __riscv_vfcvt_f(iv, vl);
-                            return __riscv_vsub_mu(__riscv_vmfgt(fv, v, vl), iv, iv, 1, vl);
-                        };
-
-                        ix0 = floor_to_int(mx);
-                        iy0 = floor_to_int(my);
-                        fx = __riscv_vfsub(mx, __riscv_vfcvt_f(ix0, vl), vl);
-                        fy = __riscv_vfsub(my, __riscv_vfcvt_f(iy0, vl), vl);
-                    }
-                    else
-                    {
-                        auto imx = __riscv_vfcvt_x(__riscv_vfmul(mx, 32, vl), vl);
-                        auto imy = __riscv_vfcvt_x(__riscv_vfmul(my, 32, vl), vl);
-                        ix0 = __riscv_vsra(imx, 5, vl);
-                        iy0 = __riscv_vsra(imy, 5, vl);
-                        fx = __riscv_vfdiv(__riscv_vfcvt_f(__riscv_vand(imx, 31, vl), vl), 32, vl);
-                        fy = __riscv_vfdiv(__riscv_vfcvt_f(__riscv_vand(imy, 31, vl), vl), 32, vl);
-                    }
+                    auto imx = __riscv_vfcvt_x(__riscv_vfmul(mx, 32, vl), vl);
+                    auto imy = __riscv_vfcvt_x(__riscv_vfmul(my, 32, vl), vl);
+                    ix0 = __riscv_vsra(imx, 5, vl);
+                    iy0 = __riscv_vsra(imy, 5, vl);
+                    mx = __riscv_vfdiv(__riscv_vfcvt_f(__riscv_vand(imx, 31, vl), vl), 32, vl);
+                    my = __riscv_vfdiv(__riscv_vfcvt_f(__riscv_vand(imy, 31, vl), vl), 32, vl);
                 }
                 auto ix1 = __riscv_vadd(ix0, 1, vl), iy1 = __riscv_vadd(iy0, 1, vl);
                 auto v0 = rvv<helper>::vcvt0(access(ix0, iy0), vl);
@@ -218,9 +200,9 @@ static inline int remap32fC1(int start, int end, bool s16, const uchar *src_data
                 auto v2 = rvv<helper>::vcvt0(access(ix0, iy1), vl);
                 auto v3 = rvv<helper>::vcvt0(access(ix1, iy1), vl);
 
-                v0 = __riscv_vfadd(v0, __riscv_vfmul(fx, __riscv_vfsub(v1, v0, vl), vl), vl);
-                v2 = __riscv_vfadd(v2, __riscv_vfmul(fx, __riscv_vfsub(v3, v2, vl), vl), vl);
-                v0 = __riscv_vfadd(v0, __riscv_vfmul(fy, __riscv_vfsub(v2, v0, vl), vl), vl);
+                v0 = __riscv_vfmacc(v0, mx, __riscv_vfsub(v1, v0, vl), vl);
+                v2 = __riscv_vfmacc(v2, mx, __riscv_vfsub(v3, v2, vl), vl);
+                v0 = __riscv_vfmacc(v0, my, __riscv_vfsub(v2, v0, vl), vl);
                 helper::vstore(reinterpret_cast<T*>(dst_data + i * dst_step) + j, rvv<helper>::vcvt1(v0, vl), vl);
             }
             else
