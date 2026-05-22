@@ -1748,7 +1748,15 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
             break;
     }
 
-    C p(1, 0), r(1, 1);
+    // This is a simplified initialization scheme based on
+    // "Initial approximations in Durand-Kerner's root finding method" by Guggenheimer
+    double scale = 0;
+    double scaleDenom = abs(coeffs[n]);
+    for ( i = 0; i < n; i++ )
+        scale += pow(abs(coeffs[i]) / scaleDenom, 1.0 / (n - i));
+    scale *= 2.0 / n;
+
+    C p(scale, 0), r(cos(CV_2PI / n), sin(CV_2PI / n));
 
     for( i = 0; i < n; i++ )
     {
