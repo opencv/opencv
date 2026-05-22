@@ -409,14 +409,14 @@ public:
     GpuMatND();
 
     /** @overload
-    @param size Array of integers specifying an n-dimensional array shape.
+    @param shape Array of integers specifying an n-dimensional array shape.
     @param type Array type. Use CV_8UC1, ..., CV_16FC4 to create 1-4 channel matrices, or
     CV_8UC(n), ..., CV_64FC(n) to create multi-channel (up to CV_CN_MAX channels) matrices.
     */
     GpuMatND(const MatShape& shape, int type);
 
     /** @overload
-    @param size Array of integers specifying an n-dimensional array shape.
+    @param shape Array of integers specifying an n-dimensional array shape.
     @param type Array type. Use CV_8UC1, ..., CV_16FC4 to create 1-4 channel matrices, or
     CV_8UC(n), ..., CV_64FC(n) to create multi-channel (up to CV_CN_MAX channels) matrices.
     @param data Pointer to the user data. Matrix constructors that take data and step parameters do not
@@ -424,7 +424,7 @@ public:
     data, which means that no data is copied. This operation is very efficient and can be used to
     process external data using OpenCV functions. The external data is not automatically deallocated, so
     you should take care of it.
-    @param step Array of _size.size() or _size.size()-1 steps in case of a multi-dimensional array
+    @param step Array of shape.size() or shape.size()-1 steps in case of a multi-dimensional array
     (if specified, the last step must be equal to the element size, otherwise it will be added as such).
     If not specified, the matrix is assumed to be continuous.
     */
