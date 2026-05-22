@@ -47,6 +47,7 @@
 
 #include "precomp.hpp"
 #include <iostream>
+
 namespace cv {
 
 class AffineFeature_Impl CV_FINAL : public AffineFeature

@@ -1,17 +1,23 @@
 package org.opencv.test.cv3d;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import org.opencv.cv3d.Cv3d;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfDouble;
+import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.MatOfPoint3f;
+import org.opencv.core.MatOfInt;
+import org.opencv.core.MatOfInt4;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
+import org.opencv.core.RotatedRect;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.imgproc.Imgproc;
 
@@ -582,5 +588,157 @@ public class Cv3dTest extends OpenCVTestCase {
                     new Mat().eye(3, 3, CvType.CV_64F), K_new, 0.0, new Size(1920,1080));
 
         assertMatEqual(K_new, K_new_truth, EPS);
+    }
+
+    public void testApproxPolyDP() {
+        MatOfPoint2f curve = new MatOfPoint2f(new Point(1, 3), new Point(2, 4), new Point(3, 5), new Point(4, 4), new Point(5, 3));
+
+        MatOfPoint2f approxCurve = new MatOfPoint2f();
+
+        Cv3d.approxPolyDP(curve, approxCurve, EPS, true);
+
+        List<Point> approxCurveGold =  new ArrayList<Point>(3);
+        approxCurveGold.add(new Point(1, 3));
+        approxCurveGold.add(new Point(3, 5));
+        approxCurveGold.add(new Point(5, 3));
+
+        assertListPointEquals(approxCurve.toList(), approxCurveGold, EPS);
+    }
+
+        public void testConvexHullMatMat() {
+        MatOfPoint points = new MatOfPoint(
+                new Point(20, 0),
+                new Point(40, 0),
+                new Point(30, 20),
+                new Point(0,  20),
+                new Point(20, 10),
+                new Point(30, 10)
+        );
+
+        MatOfInt hull = new MatOfInt();
+
+        Cv3d.convexHull(points, hull);
+
+        MatOfInt expHull = new MatOfInt(
+                0, 1, 2, 3
+        );
+        assertMatEqual(expHull, hull.reshape(1, (int)hull.total()), EPS);
+    }
+
+    public void testConvexHullMatMatBooleanBoolean() {
+        MatOfPoint points = new MatOfPoint(
+                new Point(2, 0),
+                new Point(4, 0),
+                new Point(3, 2),
+                new Point(0, 2),
+                new Point(2, 1),
+                new Point(3, 1)
+        );
+
+        MatOfInt hull = new MatOfInt();
+
+        Cv3d.convexHull(points, hull, true);
+
+        MatOfInt expHull = new MatOfInt(
+                3, 2, 1, 0
+        );
+        assertMatEqual(expHull, hull.reshape(1, hull.cols()), EPS);
+    }
+
+    public void testConvexityDefects() {
+        MatOfPoint points = new MatOfPoint(
+                new Point(20, 0),
+                new Point(40, 0),
+                new Point(30, 20),
+                new Point(0,  20),
+                new Point(20, 10),
+                new Point(30, 10)
+        );
+
+        MatOfInt hull = new MatOfInt();
+        Cv3d.convexHull(points, hull);
+
+        MatOfInt4 convexityDefects = new MatOfInt4();
+        Cv3d.convexityDefects(points, hull, convexityDefects);
+
+        assertMatEqual(new MatOfInt4(3, 0, 5, 3620), convexityDefects.reshape(4, convexityDefects.cols()));
+    }
+
+        public void testFitEllipse() {
+        MatOfPoint2f points = new MatOfPoint2f(new Point(0, 0), new Point(-1, 1), new Point(1, 1), new Point(1, -1), new Point(-1, -1));
+        RotatedRect rrect = new RotatedRect();
+
+        rrect = Cv3d.fitEllipse(points);
+
+        double FIT_ELLIPSE_CENTER_EPS = 0.01;
+        double FIT_ELLIPSE_SIZE_EPS = 0.4;
+
+        assertEquals(0.0, rrect.center.x, FIT_ELLIPSE_CENTER_EPS);
+        assertEquals(0.0, rrect.center.y, FIT_ELLIPSE_CENTER_EPS);
+        assertEquals(2.828, rrect.size.width, FIT_ELLIPSE_SIZE_EPS);
+        assertEquals(2.828, rrect.size.height, FIT_ELLIPSE_SIZE_EPS);
+    }
+
+    public void testFitLine() {
+        Mat points = new Mat(1, 4, CvType.CV_32FC2);
+        points.put(0, 0, 0, 0, 2, 3, 3, 4, 5, 8);
+
+        Mat linePoints = new Mat(4, 1, CvType.CV_32FC1);
+        linePoints.put(0, 0, 0.53198653, 0.84675282, 2.5, 3.75);
+
+        Cv3d.fitLine(points, dst, Imgproc.DIST_L12, 0, 0.01, 0.01);
+
+        assertMatEqual(linePoints, dst, EPS);
+    }
+
+    public void testIsContourConvex() {
+        MatOfPoint contour1 = new MatOfPoint(new Point(0, 0), new Point(10, 0), new Point(10, 10), new Point(5, 4));
+
+        assertFalse(Cv3d.isContourConvex(contour1));
+
+        MatOfPoint contour2 = new MatOfPoint(new Point(0, 0), new Point(10, 0), new Point(10, 10), new Point(5, 6));
+
+        assertTrue(Cv3d.isContourConvex(contour2));
+    }
+
+    public void testMatchShapes() {
+        Mat contour1 = new Mat(1, 4, CvType.CV_32FC2);
+        Mat contour2 = new Mat(1, 4, CvType.CV_32FC2);
+        contour1.put(0, 0, 1, 1, 5, 1, 4, 3, 6, 2);
+        contour2.put(0, 0, 1, 1, 6, 1, 4, 1, 2, 5);
+
+        double distance = Cv3d.matchShapes(contour1, contour2, Imgproc.CONTOURS_MATCH_I1, 1);
+
+        assertEquals(2.81109697365334, distance, EPS);
+    }
+
+    public void testMinAreaRect() {
+        MatOfPoint2f points = new MatOfPoint2f(new Point(1, 1), new Point(5, 1), new Point(4, 3), new Point(6, 2));
+
+        RotatedRect rrect = Cv3d.minAreaRect(points);
+
+        assertEquals(new Size(2, 5), rrect.size);
+        assertEquals(-90., rrect.angle);
+        assertEquals(new Point(3.5, 2), rrect.center);
+    }
+
+    public void testMinEnclosingCircle() {
+        MatOfPoint2f points = new MatOfPoint2f(new Point(0, 0), new Point(-100, 0), new Point(0, -100), new Point(100, 0), new Point(0, 100));
+        Point actualCenter = new Point();
+        float[] radius = new float[1];
+
+        Cv3d.minEnclosingCircle(points, actualCenter, radius);
+
+        assertEquals(new Point(0, 0), actualCenter);
+        assertEquals(100.0f, radius[0], 1.0);
+    }
+
+        public void testPointPolygonTest() {
+        MatOfPoint2f contour = new MatOfPoint2f(new Point(0, 0), new Point(1, 3), new Point(3, 4), new Point(4, 3), new Point(2, 1));
+        double sign1 = Cv3d.pointPolygonTest(contour, new Point(2, 2), false);
+        assertEquals(1.0, sign1);
+
+        double sign2 = Cv3d.pointPolygonTest(contour, new Point(4, 4), true);
+        assertEquals(-Math.sqrt(0.5), sign2);
     }
 }

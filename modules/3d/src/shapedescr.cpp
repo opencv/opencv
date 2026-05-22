@@ -237,75 +237,6 @@ void cv::minEnclosingCircle( InputArray _points, Point2f& _center, float& _radiu
     }
 }
 
-
-// calculates length of a curve (e.g. contour perimeter)
-double cv::arcLength( InputArray _curve, bool is_closed )
-{
-    CV_INSTRUMENT_REGION();
-
-    Mat curve = _curve.getMat();
-    int count = curve.checkVector(2);
-    int depth = curve.depth();
-    CV_Assert( count >= 0 && (depth == CV_32F || depth == CV_32S));
-    double perimeter = 0;
-
-    int i;
-
-    if( count <= 1 )
-        return 0.;
-
-    bool is_float = depth == CV_32F;
-    int last = is_closed ? count-1 : 0;
-    const Point* pti = curve.ptr<Point>();
-    const Point2f* ptf = curve.ptr<Point2f>();
-
-    Point2f prev = is_float ? ptf[last] : Point2f((float)pti[last].x,(float)pti[last].y);
-
-    for( i = 0; i < count; i++ )
-    {
-        Point2f p = is_float ? ptf[i] : Point2f((float)pti[i].x,(float)pti[i].y);
-        float dx = p.x - prev.x, dy = p.y - prev.y;
-        perimeter += std::sqrt(dx*dx + dy*dy);
-
-        prev = p;
-    }
-
-    return perimeter;
-}
-
-// area of a whole sequence
-double cv::contourArea( InputArray _contour, bool oriented )
-{
-    CV_INSTRUMENT_REGION();
-
-    Mat contour = _contour.getMat();
-    int npoints = contour.checkVector(2);
-    int depth = contour.depth();
-    CV_Assert(npoints >= 0 && (depth == CV_32F || depth == CV_32S));
-
-    if( npoints == 0 )
-        return 0.;
-
-    double a00 = 0;
-    bool is_float = depth == CV_32F;
-    const Point* ptsi = contour.ptr<Point>();
-    const Point2f* ptsf = contour.ptr<Point2f>();
-    Point2f prev = is_float ? ptsf[npoints-1] : Point2f((float)ptsi[npoints-1].x, (float)ptsi[npoints-1].y);
-
-    for( int i = 0; i < npoints; i++ )
-    {
-        Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
-        a00 += (double)prev.x * p.y - (double)prev.y * p.x;
-        prev = p;
-    }
-
-    a00 *= 0.5;
-    if( !oriented )
-        a00 = fabs(a00);
-
-    return a00;
-}
-
 namespace cv
 {
 
@@ -442,7 +373,7 @@ static RotatedRect fitEllipseNoDirect( InputArray _points )
     // store angle and radii
     rp[4] = -0.5 * atan2(gfp[2], gfp[1] - gfp[0]); // convert from APP angle usage
     if( fabs(gfp[2]) > min_eps )
-        t = gfp[2]/sin(-2.0 * rp[4]);
+        t = gfp[2]/std::sin(-2.0 * rp[4]);
     else // ellipse is rotated by an integer multiple of pi/2
         t = gfp[1] - gfp[0];
     rp[2] = fabs(gfp[0] + gfp[1] - t);

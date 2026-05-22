@@ -90,8 +90,8 @@ static void fitLine2D_wods( const Point2f* points, int count, float *weights, fl
     dxy = xy - x * y;
 
     t = (float) atan2( 2 * dxy, dx2 - dy2 ) / 2;
-    line[0] = (float) cos( t );
-    line[1] = (float) sin( t );
+    line[0] = (float) std::cos( t );
+    line[1] = (float) std::sin( t );
 
     line[2] = (float) x;
     line[3] = (float) y;
@@ -394,7 +394,7 @@ static void fitLine2D( const Point2f * points, int count, int dist,
                 double t = _line[0] * _lineprev[0] + _line[1] * _lineprev[1];
                 t = MAX(t,-1.);
                 t = MIN(t,1.);
-                if( fabs(acos(t)) < adelta )
+                if( fabs(std::acos(t)) < adelta )
                 {
                     float x, y, d;
 
@@ -535,7 +535,7 @@ static void fitLine3D( Point3f * points, int count, int dist,
                 double t = _line[0] * _lineprev[0] + _line[1] * _lineprev[1] + _line[2] * _lineprev[2];
                 t = MAX(t,-1.);
                 t = MIN(t,1.);
-                if( fabs(acos(t)) < adelta )
+                if( fabs(std::acos(t)) < adelta )
                 {
                     float x, y, z, ax, ay, az, dx, dy, dz, d;
 

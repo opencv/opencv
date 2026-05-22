@@ -1,9 +1,9 @@
-package org.opencv.test.imgproc;
+package org.opencv.test.cv3d;
 
 import org.opencv.core.MatOfFloat6;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
-import org.opencv.imgproc.Subdiv2D;
+import org.opencv.cv3d.Subdiv2D;
 import org.opencv.test.OpenCVTestCase;
 
 public class Subdiv2DTest extends OpenCVTestCase {

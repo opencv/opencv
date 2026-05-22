@@ -41,6 +41,7 @@
 
 #include "precomp.hpp"
 #include <vector>
+#include <cmath>
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // Default LSD parameters
@@ -450,7 +451,7 @@ void LineSegmentDetectorImpl::flsd(std::vector<Vec4f>& lines,
     // Angle tolerance
     const double prec = CV_PI * ANG_TH / 180;
     const double p = ANG_TH / 180;
-    const double rho = QUANT / sin(prec);    // gradient magnitude threshold
+    const double rho = QUANT / std::sin(prec);    // gradient magnitude threshold
 
     if(SCALE != 1)
     {
@@ -642,8 +643,8 @@ void LineSegmentDetectorImpl::region_grow(const Point2i& s, std::vector<RegionPo
                     reg.push_back(region_point);
 
                     // Update region's angle
-                    sumdx += cos(float(angle));
-                    sumdy += sin(float(angle));
+                    sumdx += std::cos(float(angle));
+                    sumdy += std::sin(float(angle));
                     // reg_angle is used in the isAligned, so it needs to be updates?
                     reg_angle = fastAtan2(sumdy, sumdx) * DEG_TO_RADS;
                 }
@@ -674,8 +675,8 @@ void LineSegmentDetectorImpl::region2rect(const std::vector<RegionPoint>& reg,
     double theta = get_theta(reg, x, y, reg_angle, prec);
 
     // Find length and width
-    double dx = cos(theta);
-    double dy = sin(theta);
+    double dx = std::cos(theta);
+    double dy = std::sin(theta);
     double l_min = 0, l_max = 0, w_min = 0, w_max = 0;
 
     for(size_t i = 0; i < reg.size(); ++i)

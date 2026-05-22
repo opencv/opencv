@@ -14,6 +14,7 @@
 
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/logger.hpp>
+#include <opencv2/3d.hpp>
 
 #ifdef _WIN32
 #ifndef NOMINMAX
