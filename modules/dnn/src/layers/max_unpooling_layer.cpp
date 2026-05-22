@@ -225,7 +225,7 @@ public:
         }
         getMemoryShapes(inpShapes, 1, outShapes, internals);
 
-        Mat zeros = Mat::zeros(1, total(outShapes[0]), CV_32F);
+        Mat zeros = Mat::zeros(1, (int)total(outShapes[0]), CV_32F);
         auto zeroInp = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{zeros.total()}, zeros.data);
 
         int newShape = -1;

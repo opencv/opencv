@@ -1330,11 +1330,11 @@ void Net::Impl::getLayerShapesRecursively(int id, LayersShapesMap& inOutShapes)
 
     try
     {
-        for (int i = 0; i < ints.size(); i++)
-            CV_CheckGT(total(ints[i]), 0, "");
+        for (int i = 0; i < (int)ints.size(); i++)
+            CV_CheckGT(total(ints[i]), (size_t)0, "");
 
-        for (int i = 0; i < os.size(); i++)
-            CV_CheckGT(total(os[i]), 0, "");
+        for (int i = 0; i < (int)os.size(); i++)
+            CV_CheckGT(total(os[i]), (size_t)0, "");
     }
     catch (const cv::Exception& e)
     {
