@@ -36,6 +36,15 @@ DOC_MODULES = [
     if m.strip()
 ]
 
+# Sibling list for opencv/doc/js_tutorials/ modules. Same env-var override
+# pattern (OPENCV_JS_DOC_MODULES). The js_tutorials root is pulled in as a
+# top-level toctree entry of the master doc when this list is non-empty.
+JS_DOC_MODULES = [
+    m.strip()
+    for m in (_os.environ.get("OPENCV_JS_DOC_MODULES") or "js_setup").split(",")
+    if m.strip()
+]
+
 # -- Project ----------------------------------------------------------------
 project = "OpenCV"
 author = "OpenCV Team"
@@ -60,6 +69,8 @@ master_doc = "tutorials/tutorials"
 # Source dir is opencv/doc/ — scope to the master + enabled modules only.
 include_patterns = ["tutorials/tutorials.markdown"] + [
     f"tutorials/{m}/**" for m in DOC_MODULES
+] + (["js_tutorials/js_tutorials.markdown"] if JS_DOC_MODULES else []) + [
+    f"js_tutorials/{m}/**" for m in JS_DOC_MODULES
 ]
 exclude_patterns = ["**/Thumbs.db", "**/.DS_Store", "**/_old/**"]
 
@@ -76,9 +87,17 @@ suppress_warnings = ["myst.header", "myst.xref_missing", "toc.not_included"]
 DOXYGEN_BASE_URL = (
     _os.environ.get("OPENCV_DOXYGEN_BASE_URL", "https://docs.opencv.org/5.x/")
     .rstrip("/") + "/")
+# Try both common layouts: build/ inside opencv/ (in-tree, the usual CMake
+# invocation `cmake -B build` from the repo root) and build/ sibling to
+# opencv/ (out-of-tree, used by some CI setups). Whichever exists wins; env
+# var still overrides everything.
+_TAG_CANDIDATES = (
+    HERE.parent / "build" / "doc" / "doxygen" / "html" / "opencv.tag",
+    HERE.parent.parent / "build" / "doc" / "doxygen" / "html" / "opencv.tag",
+)
 _TAG_FILE = pathlib.Path(_os.environ.get(
     "OPENCV_DOXYGEN_TAGFILE",
-    str(HERE.parent.parent / "build" / "doc" / "doxygen" / "html" / "opencv.tag"),
+    str(next((p for p in _TAG_CANDIDATES if p.is_file()), _TAG_CANDIDATES[0])),
 ))
 
 # anchor -> doxygen URL filename (from opencv.tag if available).
@@ -147,13 +166,16 @@ html_theme_options = {
 #  Nothing on disk under opencv/doc/ is modified.
 # ===========================================================================
 
-# Build anchor maps. Two kinds:
+# Build anchor maps. Three kinds:
 #   _ANCHOR_TO_DOC      anchor -> docname  (internal — for enabled modules)
 #   _ANCHOR_TO_EXTERNAL anchor -> (title, url)  (external — for the rest)
+#   _ANCHOR_TO_TITLE    anchor -> first-heading title (used when rendering a
+#                       subpage list as a visible bulleted list with link text)
 # Disabled modules still appear in the master toctree as external links to
 # the Doxygen build, so the left sidebar shows the full module list.
 _ANCHOR_TO_DOC: dict[str, str] = {}
 _ANCHOR_TO_EXTERNAL: dict[str, tuple[str, str]] = {}
+_ANCHOR_TO_TITLE: dict[str, str] = {}
 
 _HEAD_RE = re.compile(
     r"^(?P<title1>[^\n]+?)\s*\{#(?P<anchor1>[\w-]+)\}\s*\n[=\-]{3,}\s*$"
@@ -180,6 +202,14 @@ def _scan_internal(path: pathlib.Path) -> None:
         rel = md.relative_to(DOC_ROOT).with_suffix("").as_posix()
         for m in re.finditer(r"\{#([\w-]+)\}", head):
             _ANCHOR_TO_DOC[m.group(1)] = rel
+        # Capture the first heading's title alongside its anchor so subpage
+        # lists with descriptions can render with real link text.
+        tm = _HEAD_RE.search(head)
+        if tm:
+            anchor = tm.group("anchor1") or tm.group("anchor2")
+            title = (tm.group("title1") or tm.group("title2") or "").strip()
+            if anchor and title:
+                _ANCHOR_TO_TITLE[anchor] = title
 
 def _scan_external(toc_file: pathlib.Path) -> None:
     """Pull the top heading's (title, anchor) from a module's table_of_content
@@ -202,10 +232,18 @@ def _scan_external(toc_file: pathlib.Path) -> None:
 _scan_internal(DOC_ROOT / "tutorials" / "tutorials.markdown")
 for _m in DOC_MODULES:
     _scan_internal(DOC_ROOT / "tutorials" / _m)
+if JS_DOC_MODULES:
+    _scan_internal(DOC_ROOT / "js_tutorials" / "js_tutorials.markdown")
+for _m in JS_DOC_MODULES:
+    _scan_internal(DOC_ROOT / "js_tutorials" / _m)
 
 # External scan: every OTHER module's top-level table_of_content_*.markdown.
 for _toc in (DOC_ROOT / "tutorials").glob("*/table_of_content_*.markdown"):
     if _toc.parent.name not in DOC_MODULES:
+        _scan_external(_toc)
+# Same for js_tutorials (files are named js_table_of_contents_*.markdown there).
+for _toc in (DOC_ROOT / "js_tutorials").glob("*/js_table_of_contents_*.markdown"):
+    if _toc.parent.name not in JS_DOC_MODULES:
         _scan_external(_toc)
 
 # Doxygen flattens IMAGE_PATH across every `images/` folder under the tutorial
@@ -214,7 +252,12 @@ for _toc in (DOC_ROOT / "tutorials").glob("*/table_of_content_*.markdown"):
 # `images/` directory or in `doc/images/`. Mirror that behavior by building a
 # basename -> doc-root-relative-path index once at import time.
 _IMAGE_INDEX: dict[str, str] = {}
+# js_tutorials/ uses `js_assets/` (flat directory at the js_tutorials root)
+# instead of per-tutorial `images/` folders. Include both lookup roots so
+# `![alt](js_assets/foo.jpg)` references resolve the same way.
 for _root in ((DOC_ROOT / "tutorials").rglob("images/*"),
+              (DOC_ROOT / "js_tutorials").rglob("images/*"),
+              (DOC_ROOT / "js_tutorials" / "js_assets").glob("*"),
               (DOC_ROOT / "images").glob("*")):
     for _img in _root:
         if _img.is_file():
@@ -279,6 +322,19 @@ def _emit_toggles(tabs: list[tuple[str, str]]) -> str:
 
 
 def _translate(text: str, docname: str | None = None) -> str:
+    # 0. Master doc: synthesize a @subpage entry for the js_tutorials root so
+    #    step 9 picks it up as a toctree entry. tutorials.markdown has no
+    #    direct reference to js_tutorials, and editing it is forbidden, so the
+    #    only way to surface js content in the master sidebar is to inject.
+    if docname == "tutorials/tutorials" and JS_DOC_MODULES:
+        text += "\n- @subpage tutorial_js_root\n"
+
+    # 0b. Doxygen automatic-numbered list items: "-# foo" -> "1. foo". MyST /
+    #     CommonMark sequentially numbers identical-marker ordered lists, so
+    #     successive "1." items render as 1, 2, 3, ...
+    text = re.sub(r"^(?P<indent>[ \t]*)-#[ \t]+",
+                  lambda m: f"{m.group('indent')}1. ", text, flags=re.MULTILINE)
+
     # 1. Heading anchors: "Title {#name}\n===" (setext) and "## Title {#name}" (ATX).
     #    Strip the anchor from the rendered heading and emit a MyST label
     #    "(name)=" immediately above. Setext converted to ATX for simplicity.
@@ -334,6 +390,14 @@ def _translate(text: str, docname: str | None = None) -> str:
         r"^(?P<fence>`{3,}|~{3,})yml\b(?P<rest>[ \t]*)$",
         lambda m: f"{m.group('fence')}yaml{m.group('rest')}",
         text, flags=re.MULTILINE)
+
+    # 3d. \htmlonly ... \endhtmlonly  ->  raw HTML embed (used by js_tutorials
+    #     for the interactive `<iframe>` "Try it" panels). MyST's `{raw} html`
+    #     directive passes the body through to the HTML writer unchanged.
+    text = re.sub(
+        r"\\htmlonly\s*\n(?P<body>.*?)\n\s*\\endhtmlonly",
+        lambda m: f"\n```{{raw}} html\n{m.group('body').strip()}\n```\n",
+        text, flags=re.DOTALL)
 
     # 4. @include path  /  @includelineno path
     #    (line numbering hint is dropped — MyST fenced blocks don't take :linenos:
@@ -424,11 +488,18 @@ def _translate(text: str, docname: str | None = None) -> str:
         _link_repl, text, flags=re.DOTALL)
 
     # 7. @ref name [optional "Display Text"]
+    #    Resolution order: enabled-module anchor (internal docname) ->
+    #    Doxygen tag (external URL) -> fragment-only fallback. The Doxygen
+    #    fallback keeps cross-module refs (e.g. js_setup -> js_imgproc) from
+    #    rendering as broken in-page anchors when the target module isn't
+    #    onboarded into the Sphinx wrapper yet.
     def _ref_repl(m: re.Match) -> str:
         name = m.group("name"); disp = m.group("disp")
         target = _ANCHOR_TO_DOC.get(name)
         if target:
             return f"[{disp or name}]({'/' + target})"
+        if name in _TAG_FILENAMES:
+            return f"[{disp or name}]({_doxygen_url(name)})"
         return f"[{disp or name}](#{name})"
     text = re.sub(r'@ref\s+(?P<name>[\w-]+)(?:\s+"(?P<disp>[^"]+)")?',
                   _ref_repl, text)
@@ -448,41 +519,80 @@ def _translate(text: str, docname: str | None = None) -> str:
         ),
         text, flags=re.MULTILINE)
 
-    # 8c. @note ... / @see ...  -> MyST admonitions.  Each directive body runs
-    #     until the next blank line, the next @directive at start-of-line, or
-    #     end of file (matches Doxygen's paragraph-level semantics).
-    _ADMON_KIND = {"note": "note", "see": "seealso"}
+    # 8c. @note ... / @see ... / @warning ... -> MyST admonitions. Each body
+    #     runs until the next blank line, the next @directive, or end of file
+    #     (Doxygen's paragraph-level semantics). Leading whitespace before
+    #     `@note` is preserved so admonitions inside `-#` list items render as
+    #     nested admonitions instead of indented code blocks.
+    _ADMON_KIND = {"note": "note", "see": "seealso", "warning": "warning"}
     def _admon_repl(m: re.Match) -> str:
         kind = _ADMON_KIND[m.group("dir")]
-        body = m.group("body").strip()
-        return f"\n:::{{{kind}}}\n{body}\n:::\n"
+        indent = m.group("indent") or ""
+        body = m.group("body").rstrip()
+        return f"\n{indent}:::{{{kind}}}\n{body}\n{indent}:::\n"
     text = re.sub(
-        r"^@(?P<dir>note|see)\s+(?P<body>.+?)(?=\n[ \t]*\n|\n@[A-Za-z]|\Z)",
+        r"^(?P<indent>[ \t]*)@(?P<dir>note|see|warning)[ \t]*\n?"
+        r"(?P<body>.+?)(?=\n[ \t]*\n|\n[ \t]*@[A-Za-z]|\Z)",
         _admon_repl, text, flags=re.DOTALL | re.MULTILINE)
 
     # 9. @subpage NAME  (collected blocks -> real toctree).
     #    Enabled modules' anchors become internal toctree entries.
     #    Disabled modules' anchors become external links into the Doxygen
     #    build, so the left sidebar still shows the full module list.
+    #    When the source pairs each `- @subpage X` line with an indented
+    #    description paragraph (the `js_tutorials` / table_of_contents form),
+    #    emit a hidden toctree (for nav) plus a visible bulleted list whose
+    #    items show link + description. Without that handling those indented
+    #    paragraphs would render as CommonMark code blocks.
     def _subpage_list_to_toctree(src: str) -> str:
         # Bullet items may carry a descriptive prefix before @subpage, e.g.
         # `-   stitching. @subpage tutorial_stitcher` (tutorials/others/...).
-        pat = re.compile(
-            r"((?:^[ \t]*-\s+[^\n@]*?@subpage\s+[\w-]+(?:[^\n]*)\n)+)",
+        bullet  = r"^[ \t]*-\s+[^\n@]*?@subpage\s+[\w-]+(?:[^\n]*)\n"
+        desc_re = r"(?:[ \t]*\n[ \t]+[^\n]+(?:\n[ \t]+[^\n]+)*\n?)*"
+        pat = re.compile(rf"((?:{bullet}{desc_re}(?:[ \t]*\n)*)+)", re.MULTILINE)
+        item_pat = re.compile(
+            rf"^[ \t]*-\s+[^\n@]*?@subpage\s+(?P<anchor>[\w-]+)[^\n]*\n"
+            rf"(?P<desc>{desc_re})",
             re.MULTILINE)
+
         def repl(m: re.Match) -> str:
-            entries = re.findall(r"@subpage\s+([\w-]+)", m.group(1))
-            lines = []
-            for e in entries:
-                if e in _ANCHOR_TO_DOC:
-                    lines.append("/" + _ANCHOR_TO_DOC[e])
-                elif e in _ANCHOR_TO_EXTERNAL:
-                    title, url = _ANCHOR_TO_EXTERNAL[e]
-                    lines.append(f"{title} <{url}>")
-            if not lines:
+            resolved: list[tuple[str, str, str, str]] = []
+            for im in item_pat.finditer(m.group(1)):
+                anchor = im.group("anchor")
+                desc_lines = [l.strip() for l in (im.group("desc") or "").splitlines() if l.strip()]
+                description = " ".join(desc_lines)
+                if anchor in _ANCHOR_TO_DOC:
+                    target = _ANCHOR_TO_DOC[anchor]
+                    title  = _ANCHOR_TO_TITLE.get(anchor, anchor)
+                    resolved.append(("internal", target, title, description))
+                elif anchor in _ANCHOR_TO_EXTERNAL:
+                    title, url = _ANCHOR_TO_EXTERNAL[anchor]
+                    resolved.append(("external", url, title, description))
+            if not resolved:
                 return ""
-            body = "\n".join(lines)
-            return f"\n```{{toctree}}\n:maxdepth: 1\n\n{body}\n```\n"
+
+            tt_lines = ["/" + t if k == "internal" else f"{n} <{t}>"
+                        for k, t, n, _ in resolved]
+            tt_body = "\n".join(tt_lines)
+
+            if not any(d for _, _, _, d in resolved):
+                return f"\n```{{toctree}}\n:maxdepth: 1\n\n{tt_body}\n```\n"
+
+            # Blank line between link and description forces a "loose" list,
+            # so each description renders as its own <p> instead of being
+            # merged onto the link's paragraph.
+            list_lines = []
+            for kind, target, title, desc in resolved:
+                href = f"/{target}" if kind == "internal" else target
+                list_lines.append(f"- [{title}]({href})")
+                if desc:
+                    list_lines.append("")
+                    list_lines.append(f"  {desc}")
+                list_lines.append("")
+            return (
+                f"\n```{{toctree}}\n:hidden:\n:maxdepth: 1\n\n{tt_body}\n```\n"
+                f"\n{chr(10).join(list_lines).rstrip()}\n"
+            )
         return pat.sub(repl, src)
     text = _subpage_list_to_toctree(text)
 
@@ -499,15 +609,17 @@ def _translate(text: str, docname: str | None = None) -> str:
     text = re.sub(r"^@cond\s+\S+\s*$", "", text, flags=re.MULTILINE)
     text = re.sub(r"^@endcond\s*$", "", text, flags=re.MULTILINE)
 
-    # 12. Image paths "images/foo.png" — resolve like Doxygen's flat IMAGE_PATH:
-    #     prefer the doc's own "images/" sibling, then fall back to a global
-    #     basename lookup across every tutorial `images/` folder. As a final
-    #     fallback, point at the consolidated `tutorials/others/images/` dir
-    #     (where modules like `photo` store their assets).
+    # 12. Image paths "images/foo.png" or "js_assets/foo.jpg" — resolve like
+    #     Doxygen's flat IMAGE_PATH: prefer the doc's own asset sibling, then
+    #     fall back to a global basename lookup across every tutorial `images/`
+    #     folder plus `js_tutorials/js_assets/`. As a final fallback, point at
+    #     the consolidated `tutorials/others/images/` dir (where modules like
+    #     `photo` store their assets).
     def _img_repl(m: re.Match) -> str:
         rel = m.group("rel")
+        asset_dir = m.group("dir")
         if docname:
-            local = DOC_ROOT / pathlib.Path(docname).parent / "images" / rel
+            local = DOC_ROOT / pathlib.Path(docname).parent / asset_dir / rel
             if local.is_file():
                 return m.group(0)
         hit = _IMAGE_INDEX.get(pathlib.Path(rel).name)
@@ -515,7 +627,7 @@ def _translate(text: str, docname: str | None = None) -> str:
             return f'{m.group("pre")}/{hit})'
         return f'{m.group("pre")}/tutorials/others/images/{rel})'
     text = re.sub(
-        r'(?P<pre>!\[[^\]]*\]\()(?:[\w-]+/)?images/(?P<rel>[^)]+)\)',
+        r'(?P<pre>!\[[^\]]*\]\()(?:[\w-]+/)?(?P<dir>images|js_assets)/(?P<rel>[^)]+)\)',
         _img_repl, text)
 
     # 13. Front-matter table: OpenCV tutorials use the "| -: | :- |"
@@ -539,8 +651,8 @@ def _translate(text: str, docname: str | None = None) -> str:
 
 def _source_read(app, docname, source):
     # Translate any tutorial doc — the root index plus everything under a
-    # module we enabled in DOC_MODULES.
-    if not docname.startswith("tutorials/"):
+    # module we enabled in DOC_MODULES / JS_DOC_MODULES.
+    if not (docname.startswith("tutorials/") or docname.startswith("js_tutorials/")):
         return
     source[0] = _translate(source[0], docname)
 
