@@ -3332,6 +3332,117 @@ Ptr<ExpLayer> ExpLayer::create(const LayerParams& params)
     return l;
 }
 
+// Block-layout (NxC1xHxWxC0) aware override of per-channel PReLU.
+class ChannelsPReLUImpl CV_FINAL : public ElementWiseLayer<ChannelsPReLUFunctor>
+{
+public:
+    using ElementWiseLayer<ChannelsPReLUFunctor>::ElementWiseLayer;
+
+    void forward(InputArrayOfArrays inputs_arr,
+                 OutputArrayOfArrays outputs_arr,
+                 OutputArrayOfArrays internals_arr) CV_OVERRIDE
+    {
+        CV_TRACE_FUNCTION();
+
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+        if (!inputs.empty() && inputs[0].shape().layout == DATA_LAYOUT_BLOCK)
+        {
+            CV_Assert(inputs.size() == outputs.size());
+            for (size_t i = 0; i < inputs.size(); ++i)
+                forwardBlock(inputs[i], outputs[i]);
+            return;
+        }
+        ElementWiseLayer<ChannelsPReLUFunctor>::forward(inputs_arr, outputs_arr, internals_arr);
+    }
+
+private:
+    void forwardBlock(const Mat& src, Mat& dst) const
+    {
+        CV_Assert(src.type() == CV_32F && dst.type() == CV_32F);
+        CV_Assert(src.dims == 5 && dst.dims == 5);
+        CV_Assert(src.isContinuous() && dst.isContinuous());
+
+        const int N  = src.size[0];
+        const int C1 = src.size[1];
+        const int H  = src.size[2];
+        const int W  = src.size[3];
+        const int C0 = src.size[4];
+        const int Ci = (int)src.shape().C;
+
+        const float* scaleptr = func.scale.ptr<float>();
+
+        const size_t inStep0 = src.step.p[0] / sizeof(float);
+        const size_t inStep1 = src.step.p[1] / sizeof(float);
+        const size_t inStep2 = src.step.p[2] / sizeof(float);
+        const size_t inStep3 = src.step.p[3] / sizeof(float);
+
+        const size_t outStep0 = dst.step.p[0] / sizeof(float);
+        const size_t outStep1 = dst.step.p[1] / sizeof(float);
+        const size_t outStep2 = dst.step.p[2] / sizeof(float);
+        const size_t outStep3 = dst.step.p[3] / sizeof(float);
+
+#if CV_SIMD
+        const int VEC_SZ = VTraits<v_float32>::vlanes();
+#endif
+
+        parallel_for_(Range(0, N * C1), [&](const Range& r) {
+            const float* inptr0 = src.ptr<float>();
+            float* outptr0 = dst.ptr<float>();
+            AutoBuffer<float> slopeBuf(C0);
+            float* slopes = slopeBuf.data();
+
+            for (int i = r.start; i < r.end; ++i) {
+                const int n  = i / C1;
+                const int c1 = i - n * C1;
+                const int cbase = c1 * C0;
+                const int validC0 = std::min(C0, std::max(0, Ci - cbase));
+
+                for (int c = 0; c < validC0; ++c)
+                    slopes[c] = scaleptr[cbase + c];
+                for (int c = validC0; c < C0; ++c)
+                    slopes[c] = 0.f;
+
+                const float* inbase  = inptr0  + n * inStep0 + c1 * inStep1;
+                float*       outbase = outptr0 + n * outStep0 + c1 * outStep1;
+
+#if CV_SIMD
+                if (C0 == VEC_SZ) {
+                    v_float32 vslope = vx_load(slopes);
+                    v_float32 vzero  = vx_setzero_f32();
+                    for (int h = 0; h < H; ++h) {
+                        const float* inrow  = inbase  + h * inStep2;
+                        float*       outrow = outbase + h * outStep2;
+                        for (int w = 0; w < W; ++w) {
+                            v_float32 v = vx_load(inrow + w * inStep3);
+                            v_float32 scaled = v_mul(v, vslope);
+                            v_float32 out = v_select(v_ge(v, vzero), v, scaled);
+                            vx_store(outrow + w * outStep3, out);
+                        }
+                    }
+                    continue;
+                }
+#endif
+                for (int h = 0; h < H; ++h) {
+                    const float* inrow  = inbase  + h * inStep2;
+                    float*       outrow = outbase + h * outStep2;
+                    for (int w = 0; w < W; ++w) {
+                        const float* in_pos  = inrow  + w * inStep3;
+                        float*       out_pos = outrow + w * outStep3;
+                        for (int c0 = 0; c0 < validC0; ++c0) {
+                            float v = in_pos[c0];
+                            out_pos[c0] = v >= 0.f ? v : slopes[c0] * v;
+                        }
+                        for (int c0 = validC0; c0 < C0; ++c0)
+                            out_pos[c0] = 0.f;
+                    }
+                }
+            }
+        });
+    }
+};
+
 Ptr<Layer> ChannelsPReLULayer::create(const LayerParams& params)
 {
     CV_Assert(params.blobs.size() == 1);
@@ -3353,7 +3464,7 @@ Ptr<Layer> ChannelsPReLULayer::create(const LayerParams& params)
     }
     else
     {
-        l = new ElementWiseLayer<ChannelsPReLUFunctor>(ChannelsPReLUFunctor(scale));
+        l = new ChannelsPReLUImpl(ChannelsPReLUFunctor(scale));
     }
     l->setParamsFrom(params);
 
