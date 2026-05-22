@@ -172,9 +172,10 @@ class Conv2Int8LayerImpl CV_FINAL : public Conv2Int8Layer
 public:
     Mat weights;       // repacked int8 weights in block format
     Mat weightsVNNI;   // VNNI-transposed weights (pre-computed)
-    Mat biasInt32;     // int32 fused bias
-    Mat biasVNNI;      // biasInt32 - 128*wsum  (int8: both kernels XOR input with 0x80)
-    Mat biasU8;        // biasInt32 - inp_zp*wsum  (uint8: both kernels skip XOR)
+    Mat biasInt32;
+    Mat biasVNNI;
+    Mat biasU8;
+    Mat biasBaselineU8;
     Mat outMultiplier; // float32 per-channel output multiplier
     MatShape wshape0;  // original weight shape (K x Cg x kH x kW)
     MatShape prevInpshape;
@@ -401,12 +402,15 @@ public:
 
             if (inputIsU8) {
                 biasU8.create({K}, CV_32SC1);
+                biasBaselineU8.create({K}, CV_32SC1);
                 const int32_t* bI = biasInt32.ptr<int32_t>();
                 const int32_t* bV = biasVNNI.ptr<int32_t>();
                 int32_t* bU = biasU8.ptr<int32_t>();
+                int32_t* bB = biasBaselineU8.ptr<int32_t>();
                 for (int k = 0; k < K; k++) {
                     int32_t wsum = (bI[k] - bV[k]) / 128;
                     bU[k] = bI[k] - input_zp * wsum;
+                    bB[k] = bI[k] + (128 - input_zp) * wsum;
                 }
             }
         }
@@ -457,10 +461,14 @@ public:
             ? (biasU8.empty()   ? nullptr : biasU8.ptr<int>())
             : (biasVNNI.empty() ? nullptr : biasVNNI.ptr<int>());
 
+        const int* baselineBias = (inputIsU8 && !biasBaselineU8.empty())
+            ? biasBaselineU8.ptr<int>()
+            : biasInt32.ptr<int>();
+
         convInt8Block(inp.data, resptr, out.data, cs,
                       weights.data,
                       weightsVNNI.empty() ? nullptr : weightsVNNI.data,
-                      biasInt32.ptr<int>(),
+                      baselineBias,
                       effectiveBiasVNNI,
                       outMultiplier.ptr<float>(),
                       input_zp, output_zp,

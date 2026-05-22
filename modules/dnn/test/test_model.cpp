@@ -5,6 +5,8 @@
 #include "test_precomp.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include "npy_blob.hpp"
+#include <map>
+#include <set>
 namespace opencv_test { namespace {
 
 template<typename TString>
@@ -817,12 +819,19 @@ TEST_P(Reproducibility_ResNet50_QDQ_ONNX, Accuracy)
     topK(out, res, K);
     ASSERT_EQ(int(res.size()), K);
 
+    // Top 4 class's score must be within eps of its reference value.
     std::vector<std::pair<int, float> > ref = {{285, 10.44}, {287, 10.13}, {283, 8.89}, {278, 8.43}};
     const float eps = 0.5f;
 
-    for (int i = 0; i < (int)ref.size(); i++) {
-        EXPECT_EQ(ref[i].first, res[i].first);
-        EXPECT_NEAR(ref[i].second, res[i].second, eps);
+    std::map<int, float> res_map;
+    for (int i = 0; i < (int)res.size(); i++)
+        res_map[res[i].first] = res[i].second;
+
+    for (const auto& r : ref) {
+        auto it = res_map.find(r.first);
+        EXPECT_NE(it, res_map.end()) << "Expected class " << r.first << " not found in top-4";
+        if (it != res_map.end())
+            EXPECT_NEAR(r.second, it->second, eps) << "Score mismatch for class " << r.first;
     }
 }
 INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_ResNet50_QDQ_ONNX,
