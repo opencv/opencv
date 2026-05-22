@@ -35,6 +35,11 @@ DOC_MODULES = [
     for m in (_os.environ.get("OPENCV_DOC_MODULES") or "photo,objdetect,core,calib3d,features,3d,app,introduction,imgproc,ios").split(",")
     if m.strip()
 ]
+DOC_JS_MODULES = [
+    m.strip()
+    for m in (_os.environ.get("OPENCV_DOC_JS_MODULES") or "js_gui").split(",")
+    if m.strip()
+]
 
 # ---------------------------------------------------------------------------
 # SCOPE — contrib tree.  Folder names under opencv_contrib/modules/.
@@ -90,6 +95,9 @@ master_doc = "tutorials/tutorials"
 include_patterns = ["tutorials/tutorials.markdown"] + [
     f"tutorials/{m}/**" for m in DOC_MODULES
 ]
+] + (["js_tutorials/js_tutorials.markdown"] + [
+    f"js_tutorials/{m}/**" for m in DOC_JS_MODULES
+] if DOC_JS_MODULES else [])
 if CONTRIB_MODULES and (SPHINX_INPUT_ROOT / "tutorials_contrib").is_dir():
     include_patterns.append("tutorials_contrib/contrib_root.markdown")
     include_patterns += [f"tutorials_contrib/{m}/**" for m in CONTRIB_MODULES]
@@ -269,9 +277,17 @@ for _toc in (DOC_ROOT / "tutorials").glob("*/table_of_content_*.markdown"):
     if _toc.parent.name not in DOC_MODULES:
         _scan_external(_toc)
 
+_scan_internal(DOC_ROOT / "js_tutorials" / "js_tutorials.markdown")
+for _m in DOC_JS_MODULES:
+    _scan_internal(DOC_ROOT / "js_tutorials" / _m)
+for _toc in (DOC_ROOT / "js_tutorials").glob("*/js_table_of_contents_*.markdown"):
+    if _toc.parent.name not in DOC_JS_MODULES:
+        _scan_external(_toc)
+
 # Basename -> srcdir-relative URL index for image lookup, mirroring
 # Doxygen's flat IMAGE_PATH. Walks source trees directly (not the staged
 # tree) because pathlib.rglob in Python <3.13 doesn't follow symlinks.
+
 _IMAGE_INDEX: dict[str, str] = {}
 _IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".bmp", ".webp"}
 for _img in (DOC_ROOT / "tutorials").rglob("images/*"):
@@ -466,7 +482,7 @@ def _translate(text: str, docname: str | None = None) -> str:
     #    inserted text is safe from re-processing.
     _verbatim_stash: dict[str, str] = {}
     def _verbatim_save(body: str, inline: bool) -> str:
-        key = f"VERBATIM_{len(_verbatim_stash)}"
+        key = f"VERBATIM_{len(_verbatim_stash)}"
         if inline:
             _verbatim_stash[key] = f"`{body.strip()}`"
         else:
@@ -482,6 +498,18 @@ def _translate(text: str, docname: str | None = None) -> str:
         r"@verbatim[ \t]+(?P<body>[^\n]+?)[ \t]+@endverbatim",
         lambda m: _verbatim_save(m.group("body"), inline=True),
         text)
+
+    # 0b. \htmlonly ... \endhtmlonly → raw HTML block; rewrite relative iframe
+    #     src (../../foo.html) to absolute docs.opencv.org URL so demos load.
+    def _htmlonly_repl(m: re.Match) -> str:
+        body = re.sub(r'src="\.\.\/\.\.\/([\w/.-]+)"',
+                      lambda mm: f'src="{DOXYGEN_BASE_URL}{mm.group(1)}"',
+                      m.group(1))
+        body = re.sub(r'\s*onload="[^"]*"', ' height="700px"', body)
+        return f"\n```{{raw}} html\n{body}\n```\n"
+    text = re.sub(r"^\\htmlonly\s*\n(.*?)\\endhtmlonly\s*$",
+                  _htmlonly_repl, text, flags=re.DOTALL | re.MULTILINE)
+
 
     # 1. Heading anchors: "Title {#name}\n===" (setext) and "## Title {#name}" (ATX).
     #    Strip the anchor from the rendered heading and emit a MyST label
@@ -596,7 +624,7 @@ def _translate(text: str, docname: str | None = None) -> str:
     #     Allow optional leading indent and bare @note (body on next line).
     #     Dedent the body so indented lines don't become code blocks inside
     #     the directive.
-    _ADMON_KIND = {"note": "note", "see": "seealso", "warning": "warning"}
+    _ADMON_KIND = {"note": "note", "see": "seealso", "warning": "warning", "sa": "seealso"}
     def _admon_repl(m: re.Match) -> str:
         indent = m.group("indent")
         kind = _ADMON_KIND[m.group("dir")]
@@ -607,8 +635,23 @@ def _translate(text: str, docname: str | None = None) -> str:
         body = "\n".join(l[min_ind:] for l in lines).strip()
         return f"\n{indent}:::{{{kind}}}\n{indent}{body}\n{indent}:::\n"
     text = re.sub(
-        r"^(?P<indent>[ \t]*)@(?P<dir>note|see|warning)[ \t]*\n?(?P<body>.+?)(?=\n[ \t]*\n|\n[ \t]*@[A-Za-z]|\Z)",
+        r"^(?P<indent>[ \t]*)@(?P<dir>note|see|warning|sa)[ \t]*\n?(?P<body>.+?)(?=\n[ \t]*\n|\n[ \t]*@[A-Za-z]|\Z)",
         _admon_repl, text, flags=re.DOTALL | re.MULTILINE)
+
+    # 1c. @param name desc / @return desc → MyST definition list.
+    def _param_block_repl(m: re.Match) -> str:
+        items = []
+        for line in m.group(0).strip().split("\n"):
+            pm = re.match(r"@param\s+(\S+)\s+(.*)", line.strip())
+            if pm:
+                items.append(f"`{pm.group(1)}`\n: {pm.group(2).strip()}")
+            rm = re.match(r"@return\s+(.*)", line.strip())
+            if rm:
+                items.append(f"*(return value)*\n: {rm.group(1).strip()}")
+        return "\n\n".join(items) + "\n"
+    text = re.sub(
+        r"(^@(?:param\s+\S+|return)\s+[^\n]+\n)+",
+        _param_block_repl, text, flags=re.MULTILINE)
 
     # 2. Doxygen LaTeX math markers.
     #    Block \f[...\f]: consume leading indent and re-emit it on the $$
@@ -662,6 +705,11 @@ def _translate(text: str, docname: str | None = None) -> str:
         lang = _normalize_lang(m.group("lang") or "")
         if lang == "m":
             lang = "objc"
+                lang = _normalize_lang(m.group("lang") or "")
+        if lang == "m":
+            lang = "objc"
+        if lang == "js":
+            lang = "javascript"
         body = m.group("body")
         if indent:
             body = _textwrap.dedent(body).strip("\n")
@@ -670,6 +718,7 @@ def _translate(text: str, docname: str | None = None) -> str:
             return f"\n{indent}```{lang}\n{body}\n{indent}```\n"
         return f"\n```{lang}\n{body.strip()}\n```\n"
 
+        
     text = re.sub(
         r"^(?P<indent>[ \t]*)@code(?:\{(?P<lang>[^}]*)\})?\s*\n(?P<body>.*?)\n[ \t]*@endcode",
         _code_repl, text, flags=re.DOTALL | re.MULTILINE)
@@ -871,10 +920,14 @@ def _translate(text: str, docname: str | None = None) -> str:
     #    `- <module>. @subpage <id>` form used by contrib_root.markdown.
     def _subpage_list_to_toctree(src: str) -> str:
         pat = re.compile(
-            r"((?:^[ \t]*-\s+[^\n]*?@subpage\s+[\w-]+(?:[^\n]*)\n)+)",
+            r"((?:^[ \t]*-\s+@subpage\s+[\w-]+[^\n]*\n(?:[ \t]*\n[ \t]+[^\n]+\n)*)+)",
             re.MULTILINE)
         def repl(m: re.Match) -> str:
-            entries = re.findall(r"@subpage\s+([\w-]+)", m.group(1))
+            block = m.group(1)
+            entries = re.findall(r"@subpage\s+([\w-]+)", block)
+            dm = re.search(
+                r"@subpage\s+[\w-]+[^\n]*\n(?:[ \t]*\n([ \t]+[^\n]+)\n)?", block)
+            desc = dm.group(1).strip() if dm and dm.group(1) else None
             lines = []
             for e in entries:
                 if e in _ANCHOR_TO_DOC:
@@ -885,7 +938,10 @@ def _translate(text: str, docname: str | None = None) -> str:
             if not lines:
                 return ""
             body = "\n".join(lines)
-            return f"\n```{{toctree}}\n:maxdepth: 1\n\n{body}\n```\n"
+            result = f"\n```{{toctree}}\n:maxdepth: 1\n\n{body}\n```\n"
+            if desc:
+                result += f"\n{desc}\n"
+            return result
         return pat.sub(repl, src)
     text = _subpage_list_to_toctree(text)
 
@@ -1189,20 +1245,21 @@ def _translate(text: str, docname: str | None = None) -> str:
 
 
 def _source_read(app, docname, source):
-    # Translate any tutorial doc — the root index, everything under an enabled
-    # main module, and (when staged) everything under an enabled contrib module.
     if not (docname.startswith("tutorials/")
-            or docname.startswith("tutorials_contrib/")):
+            or docname.startswith("tutorials_contrib/")
+            or docname.startswith("js_tutorials/")):
         return
     text = source[0]
-    # On the master doc, append `- @subpage tutorial_contrib_root` so the
-    # contrib site appears in the unified left sidebar without modifying
-    # opencv/doc/tutorials/tutorials.markdown on disk.
     if (docname == "tutorials/tutorials"
             and CONTRIB_MODULES
             and "tutorial_contrib_root" in _ANCHOR_TO_DOC):
         text = text.rstrip() + "\n\n- @subpage tutorial_contrib_root\n"
     source[0] = _translate(text, docname)
+    if docname == "tutorials/tutorials" and DOC_JS_MODULES:
+        source[0] += (
+            "\n\n```{toctree}\n:maxdepth: 1\n:caption: JavaScript Tutorials\n\n"
+            "/js_tutorials/js_tutorials\n```\n"
+        )
 
 
 def setup(app):
