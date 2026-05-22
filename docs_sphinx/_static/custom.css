@@ -417,3 +417,92 @@ dl.cpp.function .sig-prename.descclassname { color: var(--pst-color-text-muted);
 
 /* --- MathJax inline alignment tweak ----------------------------------- */
 mjx-container.MathJax:not([display="true"]) { vertical-align: -0.15em !important; }
+
+/* --- Copy-to-clipboard button -----------------------------------------
+ * Provided by the `sphinx-copybutton` extension, which injects
+ * `<button class="copybtn">` into every `div.highlight > pre` at runtime
+ * and ships its own `copybutton.css`. We override its defaults here so
+ * the button uses the same design tokens (PST surface + opencv-accent)
+ * as the rest of the wrapper. custom.css is loaded after copybutton.css
+ * so these rules win on equal-specificity matches.
+ */
+button.copybtn {
+    width: 1.85rem !important;
+    height: 1.85rem !important;
+    top: 0.5rem !important;
+    right: 0.5rem !important;
+    color: var(--pst-color-text-muted) !important;
+    background: var(--pst-color-surface) !important;
+    border: 1px solid var(--pst-color-border) !important;
+    border-radius: 0.4rem !important;       /* matches code-block radius */
+    transition: opacity 0.15s ease, color 0.15s ease,
+                border-color 0.15s ease, background 0.15s ease,
+                transform 0.05s ease !important;
+}
+button.copybtn svg {
+    width: 0.95rem !important;
+    height: 0.95rem !important;
+    padding: 0 !important;
+    stroke: currentColor;
+}
+.highlight:hover button.copybtn:hover,
+button.copybtn:focus-visible {
+    color: var(--opencv-accent) !important;
+    border-color: var(--opencv-accent) !important;
+    background: var(--pst-color-surface) !important;
+}
+button.copybtn:focus-visible {
+    outline: 2px solid var(--opencv-accent) !important;
+    outline-offset: 2px;
+}
+button.copybtn:active { transform: translateY(1px); }
+
+/* Confirmation: use the OpenCV accent rather than the default green so the
+   success state reads as on-brand. */
+button.copybtn.success {
+    color: var(--opencv-accent) !important;
+    border-color: var(--opencv-accent) !important;
+    background: var(--pst-color-surface) !important;
+    opacity: 1 !important;
+}
+
+/* Light-mode fine-tune to match the code block's #f6f8fa surface. */
+html[data-theme="light"] button.copybtn {
+    background: #ffffff !important;
+    color: #57606a !important;
+    border-color: #d0d7de !important;
+}
+html[data-theme="light"] button.copybtn:hover,
+html[data-theme="light"] button.copybtn.success {
+    color: var(--opencv-accent) !important;
+    border-color: var(--opencv-accent) !important;
+}
+
+/* Dark-mode tune to match the slate code-block surface (#2d333b). */
+html[data-theme="dark"] button.copybtn {
+    background: #373e47 !important;
+    color: #adbac7 !important;
+    border-color: #444c56 !important;
+}
+html[data-theme="dark"] button.copybtn:hover,
+html[data-theme="dark"] button.copybtn.success {
+    color: var(--opencv-accent) !important;
+    border-color: var(--opencv-accent) !important;
+}
+
+/* Tooltip from the extension's `o-tooltip--left` helper — soften the
+   default grey/white pill into something that matches our type stack. */
+.o-tooltip--left:after {
+    font-family: var(--pst-font-family-base);
+    background: var(--pst-color-surface);
+    color: var(--pst-color-text-base);
+    border: 1px solid var(--pst-color-border);
+    border-radius: 0.35rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.78rem;
+}
+
+/* On touch devices the hover-reveal is invisible — keep it shown. */
+@media (max-width: 768px) {
+    button.copybtn { opacity: 1 !important; }
+}
