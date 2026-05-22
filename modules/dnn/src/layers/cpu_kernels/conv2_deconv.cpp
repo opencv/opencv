@@ -63,6 +63,15 @@ static void deconvBlock32f(const void* inp__, const void* /*residual*/,
     const float* wdata = (const float*)weights__;
     const float* bias  = bias__;
 
+    // SIMD path is safe when ngroups==1 or Kg%C0==0; repackDeconvWeights()
+    // zero-fills padded lanes.
+    const bool simd_ok =
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        ((ngroups == 1) || (Kg % C0 == 0)) && (C0 % VTraits<v_float32>::vlanes() == 0);
+#else
+        false;
+#endif
+
     const int NK1 = N * K1;
     parallel_for_(Range(0, NK1), [&](const Range& range) {
         for (int nk1 = range.start; nk1 < range.end; nk1++) {
@@ -74,21 +83,27 @@ static void deconvBlock32f(const void* inp__, const void* /*residual*/,
             if (currK0 <= 0) continue;
 
             float* out_k1 = (float*)out__ + ((int64_t)n * K1 + k1) * ospatial * C0;
-
-            for (int opos = 0; opos < ospatial; opos++) {
-                float* p = out_k1 + opos * C0;
-                if (bias) {
-                    for (int k0 = 0; k0 < currK0; k0++) p[k0] = bias[k_base + k0];
-                } else {
-                    for (int k0 = 0; k0 < currK0; k0++) p[k0] = 0.f;
-                }
-                for (int k0 = currK0; k0 < C0; k0++) p[k0] = 0.f;
-            }
-
             const float* inp_n = (const float*)inp__ + (int64_t)n * C1 * ispatial * C0;
+
+            // Precompute the shared (g, kblk, c1_abs_base) for the SIMD path.
+            int simd_g = 0, simd_kblk = 0, simd_c1_abs_base = 0;
+            if (simd_ok) {
+                simd_g          = k_base / Kg;
+                simd_kblk       = (k_base - simd_g * Kg) / K0;
+                const int c_start = simd_g * Cg;
+                simd_c1_abs_base  = c_start / C0;
+            }
 
             for (int opos_flat = 0; opos_flat < ospatial; opos_flat++) {
                 float* out_ptr = out_k1 + opos_flat * C0;
+
+                // Bias init: write currK0 valid lanes + zero-pad the rest.
+                if (bias) {
+                    for (int k0 = 0; k0 < currK0; k0++) out_ptr[k0] = bias[k_base + k0];
+                } else {
+                    for (int k0 = 0; k0 < currK0; k0++) out_ptr[k0] = 0.f;
+                }
+                for (int k0 = currK0; k0 < C0; k0++) out_ptr[k0] = 0.f;
 
                 int ocoords[MAX_DIMS];
                 {
@@ -100,6 +115,61 @@ static void deconvBlock32f(const void* inp__, const void* /*residual*/,
                     }
                 }
 
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                if (simd_ok) {
+                    const int VLANES = VTraits<v_float32>::vlanes();
+                    const int v_per_block = C0 / VLANES;
+                    // Hold the C0-wide accumulator in registers across all
+                    // (ks, c1p) iterations so we only touch out_ptr once.
+                    v_float32 acc[8];  // C0 <= 8*VLANES covers everything realistic
+                    for (int v = 0; v < v_per_block; v++)
+                        acc[v] = v_load(out_ptr + v * VLANES);
+
+                    for (int ks = 0; ks < ksize; ks++) {
+                        bool valid = true;
+                        int ipos_flat = 0;
+                        for (int i = 0; i < sdims; i++) {
+                            int di = MAX_DIMS - sdims + i;
+                            int raw = ocoords[di] + cs.pads[di]
+                                      - kcoords_tab[ks][di] * cs.dilations[di];
+                            if (raw < 0 || raw % cs.strides[di] != 0) {
+                                valid = false; break;
+                            }
+                            int ic = raw / cs.strides[di];
+                            if (ic >= iDims[di]) { valid = false; break; }
+                            ipos_flat = ipos_flat * iDims[di] + ic;
+                        }
+                        if (!valid) continue;
+
+                        const float* w_base = wdata +
+                            ((int64_t)(simd_g * Kblk + simd_kblk) * ksize + ks)
+                            * C1Max * C0 * K0;
+
+                        for (int c1p = 0; c1p < C1Max; c1p++) {
+                            const int c1_abs = simd_c1_abs_base + c1p;
+                            if (c1_abs >= C1) break;
+
+                            const float* inp_ptr = inp_n +
+                                (int64_t)(c1_abs * ispatial + ipos_flat) * C0;
+                            const float* w_c1p = w_base + (int64_t)c1p * C0 * K0;
+
+                            for (int c0 = 0; c0 < C0; c0++) {
+                                v_float32 inp_v = vx_setall_f32(inp_ptr[c0]);
+                                for (int v = 0; v < v_per_block; v++) {
+                                    v_float32 w_row = v_load(w_c1p + c0 * K0 + v * VLANES);
+                                    acc[v] = v_fma(inp_v, w_row, acc[v]);
+                                }
+                            }
+                        }
+                    }
+
+                    for (int v = 0; v < v_per_block; v++)
+                        v_store(out_ptr + v * VLANES, acc[v]);
+                    continue;
+                }
+#endif
+
+                // Scalar fallback.
                 for (int ks = 0; ks < ksize; ks++) {
                     bool valid = true;
                     int ipos_flat = 0;
