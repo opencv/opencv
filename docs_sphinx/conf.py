@@ -37,7 +37,7 @@ DOC_MODULES = [
 ]
 DOC_JS_MODULES = [
     m.strip()
-    for m in (_os.environ.get("OPENCV_DOC_JS_MODULES") or "js_gui").split(",")
+    for m in (_os.environ.get("OPENCV_DOC_JS_MODULES") or "js_gui,js_core").split(",")
     if m.strip()
 ]
 
