@@ -32,7 +32,7 @@ OPENCV_ROOT = HERE.parent.resolve()
 import os as _os
 DOC_MODULES = [
     m.strip()
-    for m in (_os.environ.get("OPENCV_DOC_MODULES") or "photo,objdetect,core,calib3d,features,introduction").split(",")
+    for m in (_os.environ.get("OPENCV_DOC_MODULES") or "photo,objdetect,core,calib3d,features,introduction,imgproc").split(",")
     if m.strip()
 ]
 
@@ -180,6 +180,16 @@ html_theme_options = {
     "icon_links": [{"name": "GitHub",
                     "url": "https://github.com/opencv/opencv",
                     "icon": "fa-brands fa-github"}],
+}
+
+# Doxygen defines \fork{a}{b}{c}{d} as a piecewise-function shorthand.
+# Define it as a MathJax macro so threshold.markdown renders correctly.
+mathjax3_config = {
+    "tex": {
+        "macros": {
+            "fork": [r"\left\{ \begin{array}{ll} #1 & \mbox{#2}\\ #3 & \mbox{#4}\end{array} \right.", 4],
+        }
+    }
 }
 
 # ===========================================================================
@@ -413,19 +423,35 @@ def _read_snippet(rel_path: str, label: str | None) -> tuple[str, str]:
     return "\n".join(lines), lang
 
 
-def _emit_toggles(tabs: list[tuple[str, str]]) -> str:
+def _emit_toggles(tabs: list[tuple[str, str]], indent: str = "") -> str:
+    def _dedent(body: str) -> str:
+        # Fully dedent the tab-item body to column 0. The {tab-item} directive
+        # resets the parser context, so directives (```{code-block}```) must be
+        # at column 0 to be recognised — not at 4-space where CommonMark treats
+        # them as indented code blocks. Using the actual minimum indent of all
+        # non-empty lines (instead of exactly len(indent)) handles the case
+        # where @snippet/@include is indented deeper than @add_toggle (e.g.
+        # 8-space snippet inside a 4-space toggle block).
+        lines = body.split("\n")
+        non_empty = [l for l in lines if l.strip()]
+        if not non_empty:
+            return body
+        min_ind = min(len(l) - len(l.lstrip()) for l in non_empty)
+        if min_ind == 0:
+            return body
+        return "\n".join(l[min_ind:] if l.strip() else l for l in lines)
     if HAVE_SPHINX_DESIGN:
         out = ["", "``````{tab-set}"]
         for lang, body in tabs:
             label = _TOGGLE_LABELS.get(lang, lang.title())
-            out += [f"`````{{tab-item}} {label}", body, "`````"]
+            out += [f"`````{{tab-item}} {label}", _dedent(body), "`````"]
         out += ["``````", ""]
         return "\n".join(out)
     # Fallback: render each toggle as a labeled section.
     out = [""]
     for lang, body in tabs:
         label = _TOGGLE_LABELS.get(lang, lang.title())
-        out += [f"**{label}**", "", body, ""]
+        out += [f"**{label}**", "", _dedent(body), ""]
     return "\n".join(out)
 
 
@@ -511,9 +537,98 @@ def _translate(text: str, docname: str | None = None) -> str:
     text = _demote_extra_h1s(text)
 
     # 2. Doxygen LaTeX math markers
+    # 1a-i. Over-indented list markers.
+    #   A bullet marker (-/*/+) followed by 5+ spaces causes CommonMark to use
+    #   marker_col+2 as the continuation indent (the extra spaces beyond 4 are
+    #   treated as content), making the actual text 6+ spaces into the content —
+    #   above the 4-space threshold for indented code blocks.  Normalise to
+    #   exactly 3 spaces after the marker and reduce all continuation lines by
+    #   the same delta so nested structure is preserved.
+    def _normalize_over_indented_markers(src: str) -> str:
+        lines_in = src.split("\n")
+        out: list[str] = []
+        i = 0
+        while i < len(lines_in):
+            m = re.match(r"^([ \t]*)([-*+])( {5,})(.*)", lines_in[i])
+            if m:
+                outer, marker, spaces, content = (
+                    m.group(1), m.group(2), m.group(3), m.group(4))
+                old_col = len(outer) + 1 + len(spaces)
+                new_col = len(outer) + 1 + 3
+                delta = old_col - new_col
+                out.append(f"{outer}{marker}   {content}")
+                i += 1
+                while i < len(lines_in):
+                    line = lines_in[i]
+                    stripped = line.lstrip(" \t")
+                    actual = len(line) - len(stripped)
+                    if not stripped:
+                        out.append(line); i += 1; continue
+                    if actual >= old_col:
+                        out.append(" " * (actual - delta) + stripped); i += 1
+                    else:
+                        break
+            else:
+                out.append(lines_in[i]); i += 1
+        return "\n".join(out)
+    text = _normalize_over_indented_markers(text)
+
+    # 1a-ii. 4-space indented list items directly under a heading.
+    #   Doxygen ignores visual indentation; CommonMark treats 4-space-indented
+    #   lines as indented code blocks.  Strip the 4-space prefix when list items
+    #   immediately follow a heading (with optional blank lines between).
+    text = re.sub(
+        r"(^#{1,6}[ \t][^\n]+\n(?:[ \t]*\n)*)((?:    [ \t]*[-*+][^\n]*\n)+)",
+        lambda m: m.group(1) + re.sub(r"^    ", "", m.group(2), flags=re.MULTILINE),
+        text, flags=re.MULTILINE)
+
+    # 1b. @note ... / @see ...  -> MyST admonitions.
+    #     Runs BEFORE math conversion so that \f[...\f] inside a note body is
+    #     still on one logical line and does not create a blank-line terminator
+    #     that would cut the body short.
+    #     Allow optional leading indent and bare @note (body on next line).
+    #     Dedent the body so indented lines don't become code blocks inside
+    #     the directive.
+    _ADMON_KIND = {"note": "note", "see": "seealso"}
+    def _admon_repl(m: re.Match) -> str:
+        kind = _ADMON_KIND[m.group("dir")]
+        raw = m.group("body")
+        lines = raw.split("\n")
+        min_ind = min(
+            (len(l) - len(l.lstrip()) for l in lines if l.strip()), default=0)
+        body = "\n".join(l[min_ind:] for l in lines).strip()
+        return f"\n:::{{{kind}}}\n{body}\n:::\n"
+    text = re.sub(
+        r"^[ \t]*@(?P<dir>note|see)[ \t]*\n?(?P<body>.+?)(?=\n[ \t]*\n|\n[ \t]*@[A-Za-z]|\Z)",
+        _admon_repl, text, flags=re.DOTALL | re.MULTILINE)
+
+    # 2. Doxygen LaTeX math markers.
+    #    Block \f[...\f]: consume leading indent and re-emit it on the $$
+    #    fence lines so the block stays inside any enclosing list item and
+    #    the text that follows (at the same indent) is not misread as a code block.
+    #
+    #    Preprocess: when two \f[...\f] blocks are adjacent on the same source
+    #    line (e.g. \end{bmatrix}\f]\f[G_{y}), split them onto separate lines
+    #    and prefix the second \f[ with the line's own leading indent.  Without
+    #    this the primary regex below would convert the first block correctly but
+    #    leave the second \f[ at column 0 in the output; the fallback then emits
+    #    that block at column 0, breaking any enclosing list structure.
+    def _split_adj_math(m: re.Match) -> str:
+        indent = m.group("indent")
+        return m.group(0).replace("\\f]\\f[", f"\\f]\n{indent}\\f[")
+    text = re.sub(r"^(?P<indent>[ \t]*)[^\n]*\\f\]\\f\[",
+                  _split_adj_math, text, flags=re.MULTILINE)
+
+    def _block_math_repl(m: re.Match) -> str:
+        ind = m.group("indent")
+        return f"\n{ind}$$\n{m.group('body').strip()}\n{ind}$$\n"
+    text = re.sub(r"^(?P<indent>[ \t]*)\\f\[(?P<body>.+?)\\f\]",
+                  _block_math_repl, text, flags=re.DOTALL | re.MULTILINE)
+    # Fallback for any \f[...\f] not at line-start (e.g. two adjacent blocks).
     text = re.sub(r"\\f\[(.+?)\\f\]",
                   lambda m: f"\n$$\n{m.group(1).strip()}\n$$\n",
                   text, flags=re.DOTALL)
+    # Inline math.
     text = re.sub(r"\\f\$(.+?)\\f\$", lambda m: f"${m.group(1)}$",
                   text, flags=re.DOTALL)
 
@@ -576,9 +691,9 @@ def _translate(text: str, docname: str | None = None) -> str:
         return f"\n{indent}```{lang}\n{body_indented}\n{indent}```\n"
 
     # 4. @include path  /  @includelineno path
-    #    (line numbering hint is dropped — MyST fenced blocks don't take :linenos:
-    #    and PyData's code-block styling is already legible without it.)
+    #    Indent preserved so code blocks inside list items don't break the list.
     def _include_repl(m: re.Match) -> str:
+        indent = m.group("indent")
         code, lang = _read_snippet(m.group("path"), None)
         return _emit_codeblock(m.group("indent") or "", lang, code)
     text = re.sub(r"^(?P<indent>[ \t]*)@include(?:lineno)?\s+(?P<path>\S+)",
@@ -595,7 +710,9 @@ def _translate(text: str, docname: str | None = None) -> str:
         text, flags=re.MULTILINE)
 
     # 5. @snippet path [Label]
+    # Indent preserved so code blocks inside list items don't break the list.
     def _snippet_repl(m: re.Match) -> str:
+        indent = m.group("indent")
         code, lang = _read_snippet(m.group("path"), m.group("label"))
         return _emit_codeblock(m.group("indent") or "", lang, code)
     text = re.sub(
@@ -603,18 +720,23 @@ def _translate(text: str, docname: str | None = None) -> str:
         _snippet_repl, text, flags=re.MULTILINE)
 
     # 6. @add_toggle_LANG ... @end_toggle  (coalesce runs into one tab-set)
+    #    Capture the leading indent of each toggle block and emit the tab-set
+    #    fence lines at the same indent, so toggles inside list items stay as
+    #    list-item continuation content (where 4-space fences are valid).
+    #    Body content is dedented so code blocks at column 0 inside the
+    #    directive body are parsed correctly by myst-parser.
     def _toggle_collapse(src: str) -> str:
         out, i = [], 0
-        opener = re.compile(r"^\s*@add_toggle_(\w+)\s*$", re.MULTILINE)
+        opener = re.compile(r"^([ \t]*)@add_toggle_(\w+)[ \t]*$", re.MULTILINE)
         while True:
             m = opener.search(src, i)
             if not m:
                 out.append(src[i:]); break
             out.append(src[i:m.start()])
-            tabs, j = [], m.start()
+            block_ind, tabs, j = m.group(1), [], m.start()
             while True:
                 m2 = re.match(
-                    r"\s*@add_toggle_(\w+)\s*\n(.*?)\n\s*@end_toggle\s*\n?",
+                    r"[ \t]*@add_toggle_(\w+)[ \t]*\n(.*?)\n\s*@end_toggle\s*\n?",
                     src[j:], flags=re.DOTALL)
                 if not m2:
                     break
@@ -626,7 +748,7 @@ def _translate(text: str, docname: str | None = None) -> str:
                 j += k.end()
             if not tabs:
                 out.append(src[m.start():m.start() + 1]); i = m.start() + 1; continue
-            out.append(_emit_toggles(tabs))
+            out.append(_emit_toggles(tabs, block_ind))
             i = j
         return "".join(out)
     text = _toggle_collapse(text)
@@ -718,10 +840,13 @@ def _translate(text: str, docname: str | None = None) -> str:
     text = re.sub(r"^@(?:next|prev)_tutorial\{[^}]*\}\s*$", "",
                   text, flags=re.MULTILINE)
 
-    # 11. @tableofcontents / [TOC] -> drop. PyData's right sidebar
-    #     already shows the per-page outline.
-    text = re.sub(r"^(?:@tableofcontents|\[TOC\])\s*$", "",
+    # 10b. Doxygen ordered-list marker: "-#" -> "1."
+    #      Doxygen uses -# for numbered lists; MyST uses standard 1. notation.
+    text = re.sub(r"^([ \t]*)-#([ \t]+)", r"\g<1>1.\g<2>",
                   text, flags=re.MULTILINE)
+
+    # 11. @tableofcontents -> drop (PyData right sidebar replaces it)
+    text = re.sub(r"^(?:@tableofcontents|\[TOC\])\s*$", "",, text, flags=re.MULTILINE)
 
     # 11b. @cond NAME ... @endcond  -> strip just the markers; if the
     #      enclosed @subpage points to a disabled module it gets dropped
@@ -880,6 +1005,29 @@ def _translate(text: str, docname: str | None = None) -> str:
 
     # 13. Wrap the Original-author/Compatibility front-matter table
     #     in a `.opencv-meta-table` div so custom.css can style it.
+    # 12b. Bare image filenames with no directory prefix (e.g. "psf.png") that
+    #      Doxygen resolves via IMAGE_PATH but Sphinx cannot find as-is.
+    #      Redirect to images/<name> when the file lives in the doc's own
+    #      images/ sibling, otherwise fall back to the global index.
+    def _bare_img_repl(m: re.Match) -> str:
+        rel = m.group("rel")
+        if docname:
+            local = DOC_ROOT / pathlib.Path(docname).parent / "images" / rel
+            if local.is_file():
+                return f'{m.group("pre")}images/{rel})'
+        hit = _IMAGE_INDEX.get(rel)
+        if hit:
+            return f'{m.group("pre")}/{hit})'
+        return m.group(0)
+    text = re.sub(
+        r'(?P<pre>!\[[^\]]*\]\()(?P<rel>[A-Za-z0-9_.-]+\.[A-Za-z]{2,4})\)',
+        _bare_img_repl, text)
+
+    # 13. Front-matter table: OpenCV tutorials use the "| -: | :- |"
+    #     alignment pattern for the Original-author/Compatibility block.
+    #     Wrap it in a {div} carrying .opencv-meta-table so custom.css
+    #     can pin the rounded card + label-column styling without us
+    #     modifying the .markdown source.
     def _wrap_front_matter(src: str) -> str:
         pat = re.compile(
             r"(^\|[^\n]*\|[ \t]*\n"     # header row (often empty)
