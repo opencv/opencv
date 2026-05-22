@@ -2679,6 +2679,20 @@ TEST(Core_SolvePoly, regression_5599)
     }
 }
 
+TEST(Core_SolvePoly, regression_23644)
+{
+    // x^2 - 2x - 3 = 0,  roots: 3, -1
+    cv::Mat coefs = (cv::Mat_<float>(1,3) << -3, -2, 1 );
+    cv::Mat r;
+    double prec;
+    prec = cv::solvePoly(coefs, r);
+    EXPECT_LE(prec, 1e-6);
+    EXPECT_EQ(2u, r.total());
+    ASSERT_EQ(CV_32FC2, r.type());
+    checkRoot<float>(r, 3, 0);
+    checkRoot<float>(r, -1, 0);
+}
+
 class Core_PhaseTest : public cvtest::BaseTest
 {
     int t;
