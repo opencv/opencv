@@ -59,13 +59,26 @@ namespace cv
 *                                         GEMM                                           *
 \****************************************************************************************/
 
+#if defined(HAVE_CLAMDBLAS) || defined(HAVE_OPENCL)
+static inline bool gemm_has_addend(InputArray matC, double beta)
+{
+    if (matC.kind() == cv::_InputArray::NONE)
+        return false;
+
+    if (beta == 0.0 && matC.empty())
+        return false;
+
+    return true;
+}
+#endif
+
 #ifdef HAVE_CLAMDBLAS
 
 static bool ocl_gemm_amdblas( InputArray matA, InputArray matB, double alpha,
                       InputArray matC, double beta, OutputArray matD, int flags )
 {
     int type = matA.type(), esz = CV_ELEM_SIZE(type);
-    bool haveC = matC.kind() != cv::_InputArray::NONE;
+    bool haveC = gemm_has_addend(matC, beta);
     Size sizeA = matA.size(), sizeB = matB.size(), sizeC = haveC ? matC.size() : Size(0, 0);
     bool atrans = (flags & GEMM_1_T) != 0, btrans = (flags & GEMM_2_T) != 0, ctrans = (flags & GEMM_3_T) != 0;
 
@@ -170,7 +183,7 @@ static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
     if (!doubleSupport && depth == CV_64F)
         return false;
 
-    bool haveC = matC.kind() != cv::_InputArray::NONE;
+    bool haveC = gemm_has_addend(matC, beta);
     Size sizeA = matA.size(), sizeB = matB.size(), sizeC = haveC ? matC.size() : Size(0, 0);
     bool atrans = (flags & GEMM_1_T) != 0, btrans = (flags & GEMM_2_T) != 0, ctrans = (flags & GEMM_3_T) != 0;
 

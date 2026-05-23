@@ -53,6 +53,40 @@ namespace ocl {
 ////////////////////////////////////////////////////////////////////////////
 // GEMM
 
+namespace {
+
+static int gemmErrorCallback(int, const char*, const char*, const char*, int, void* data)
+{
+    ++*static_cast<int*>(data);
+    return 0;
+}
+
+struct GemmErrorRedirector
+{
+    explicit GemmErrorRedirector(int& errorCount)
+        : oldUserData(0),
+          oldCallback(cv::redirectError((cv::ErrorCallback)gemmErrorCallback, &errorCount, &oldUserData))
+    {
+    }
+
+    ~GemmErrorRedirector()
+    {
+        cv::redirectError(oldCallback, oldUserData);
+    }
+
+    void* oldUserData;
+    cv::ErrorCallback oldCallback;
+};
+
+static void requireOpenCL()
+{
+    cv::ocl::setUseOpenCL(true);
+    if (!cv::ocl::useOpenCL())
+        throw cvtest::SkipTestException("OpenCL is not available");
+}
+
+}
+
 PARAM_TEST_CASE(Gemm,
                 MatType,
                 bool, // GEMM_1_T
@@ -158,6 +192,83 @@ OCL_TEST(Gemm, small)
     OCL_ON(cv::gemm(A, B, 1, noArray(), 0, uC, GEMM_2_T));
 
     EXPECT_LE(cvtest::norm(C, uC, cv::NORM_INF), 1e-5);
+}
+
+OCL_TEST(Gemm, emptyMatCZeroBeta)
+{
+    Mat A(16, 12, CV_32FC1), B(12, 16, CV_32FC1);
+    randu(A, -1, 1);
+    randu(B, -1, 1);
+
+    UMat uA, uB, uD;
+    A.copyTo(uA);
+    B.copyTo(uB);
+
+    Mat ref;
+    OCL_OFF(cv::gemm(A, B, 1.0, noArray(), 0.0, ref, 0));
+
+    Mat emptyC;
+    int errorCount = 0;
+    {
+        GemmErrorRedirector redirector(errorCount);
+        requireOpenCL();
+        cv::gemm(uA, uB, 1.0, emptyC, 0.0, uD, 0);
+    }
+
+    EXPECT_EQ(0, errorCount);
+    EXPECT_LE(cvtest::norm(ref, uD, cv::NORM_INF), 1e-5);
+}
+
+OCL_TEST(Gemm, emptyMatCNonZeroBeta)
+{
+    Mat A(16, 12, CV_32FC1), B(12, 16, CV_32FC1);
+    randu(A, -1, 1);
+    randu(B, -1, 1);
+
+    UMat uA, uB, uD;
+    A.copyTo(uA);
+    B.copyTo(uB);
+
+    Mat emptyC;
+    int errorCount = 0;
+    {
+        GemmErrorRedirector redirector(errorCount);
+        requireOpenCL();
+        try
+        {
+            cv::gemm(uA, uB, 1.0, emptyC, 1.0, uD, 0);
+        }
+        catch (const cv::Exception&)
+        {
+        }
+    }
+
+    EXPECT_GT(errorCount, 0);
+}
+
+OCL_TEST(Gemm, emptyMatCZeroBetaTranspose)
+{
+    Mat A(16, 12, CV_32FC1), B(16, 12, CV_32FC1);
+    randu(A, -1, 1);
+    randu(B, -1, 1);
+
+    UMat uA, uB, uD;
+    A.copyTo(uA);
+    B.copyTo(uB);
+
+    Mat ref;
+    OCL_OFF(cv::gemm(A, B, 1.0, noArray(), 0.0, ref, GEMM_2_T));
+
+    Mat emptyC;
+    int errorCount = 0;
+    {
+        GemmErrorRedirector redirector(errorCount);
+        requireOpenCL();
+        cv::gemm(uA, uB, 1.0, emptyC, 0.0, uD, GEMM_2_T);
+    }
+
+    EXPECT_EQ(0, errorCount);
+    EXPECT_LE(cvtest::norm(ref, uD, cv::NORM_INF), 1e-5);
 }
 
 } } // namespace opencv_test::ocl
