@@ -1286,8 +1286,7 @@ INSTANTIATE_TEST_CASE_P(videoio, PreciseSeekingTest, testing::ValuesIn(seekable_
 TEST(Videoio_MJPEG, put_bits_no_heap_overflow)
 {
     const std::string filename = cv::tempfile(".avi");
-    uint8_t pixel = 0xff;
-    cv::Mat frame(1, 1, CV_8UC1, &pixel);
+    cv::Mat frame(1, 1, CV_8UC1, cv::Scalar::all(255));
     int fourcc = cv::VideoWriter::fourcc('M', 'J', 'P', 'G');
     {
         cv::VideoWriter writer;
