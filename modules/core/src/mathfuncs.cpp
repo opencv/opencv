@@ -1789,14 +1789,33 @@ double cv::solvePoly(InputArray _coeffs0, OutputArray _roots0, int maxIters)
                 p = p * r;
             }
         }
+        else if (attempt == 1) {
+            double scale_ratio = R_max / rho_min;
+
+            if (scale_ratio < 1e6) {
+                for (i = 0; i < n; i++) {
+                    double angle = i * (2.0 * CV_PI / n) + (CV_PI / n);
+                    roots[i] = C(R_max * cos(angle), R_max * sin(angle));
+                }
+            }
+            else {
+                double log_rho = log(rho_min);
+                double log_R = log(R_max);
+                double step_angle = (n > 1) ? (log_R - log_rho) / (n - 1) : 0.0;
+                for (i = 0; i < n; i++) {
+                    double mag = exp(log_rho + i * step_angle);
+                    double angle = i * 2.399963229728653 + 1.5;
+                    roots[i] = C(mag * cos(angle), mag * sin(angle));
+                }
+            }
+        }
         else {
             double log_rho = log(rho_min);
             double log_R = log(R_max);
             double step_angle = (n > 1) ? (log_R - log_rho) / (n - 1) : 0.0;
-
             for (i = 0; i < n; i++) {
                 double mag = exp(log_rho + i * step_angle);
-                double angle = i * 2.399963229728653 + attempt * 1.5;
+                double angle = i * 2.399963229728653 + 3.0;
                 roots[i] = C(mag * cos(angle), mag * sin(angle));
             }
         }
@@ -1806,27 +1825,28 @@ double cv::solvePoly(InputArray _coeffs0, OutputArray _roots0, int maxIters)
             maxDiff = 0;
             for (i = 0; i < n; i++) {
                 C p = roots[i];
-                C num = coeffs[n];
+                C num = coeffs[n], denom = coeffs[n];
                 int num_same_root = 1;
 
                 for (j = 0; j < n; j++) {
                     num = num * p + coeffs[n - j - 1];
-                }
-
-                if (coeffs[n].re != 0 || coeffs[n].im != 0) {
-                    num /= coeffs[n];
-                }
-
-                for (j = 0; j < n; j++) {
                     if (j != i) {
-                        C diff = p - roots[j];
-                        if (diff.re != 0 || diff.im != 0) {
-                            num /= diff;
+                        double diff_re = p.re - roots[j].re;
+                        double diff_im = p.im - roots[j].im;
+                        if (diff_re != 0.0 || diff_im != 0.0) {
+                            denom = denom * C(diff_re, diff_im);
                         }
                         else {
                             num_same_root++;
                         }
                     }
+                }
+
+                num /= denom;
+
+                if (isnan(num.re) || isnan(num.im) || isinf(num.re) || isinf(num.im)) {
+                    nan_detected = true;
+                    break;
                 }
 
                 if (num_same_root > 1) {
@@ -1863,11 +1883,11 @@ double cv::solvePoly(InputArray _coeffs0, OutputArray _roots0, int maxIters)
 
                 roots[i] = p - num;
 
-                if (isnan(roots[i].re) || isnan(roots[i].im) || isinf(roots[i].re) || isinf(roots[i].im)) {
+                if (isnan(roots[i].re) || isnan(roots[i].im)) {
                     nan_detected = true;
                     break;
                 }
-                maxDiff = max(maxDiff, cv::abs(num));
+                maxDiff = max(maxDiff, step_mag);
             }
 
             if (nan_detected) break;
