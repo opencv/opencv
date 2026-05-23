@@ -2693,6 +2693,79 @@ TEST(Core_SolvePoly, regression_23644)
     checkRoot<float>(r, -1, 0);
 }
 
+TEST(Core_SolvePoly, degree_2_polynomials)
+{
+    cv::Mat_<float> coefs(1,3);
+    cv::Mat r;
+    double prec;
+    for (int c0 = -20; c0 <= 20; c0++)
+    {
+        coefs.at<float>(0) = c0;
+        for (int c1 = -20; c1 <= 20; c1++)
+        {
+            coefs.at<float>(1) = c1;
+            for (int c2 = -20; c2 <= 20; c2++)
+            {
+                coefs.at<float>(2) = c2;
+                prec = cv::solvePoly(coefs, r);
+                EXPECT_LE(prec, 1e-6);
+            }
+        }
+    }
+}
+
+TEST(Core_SolvePoly, degree_4_polynomials)
+{
+    applyTestTag(CV_TEST_TAG_VERYLONG);
+
+    cv::Mat_<float> coefs(1,5);
+    cv::Mat r;
+    double prec;
+    for (int c0 = -10; c0 <= 10; c0++)
+    {
+        coefs.at<float>(0) = c0;
+        for (int c1 = -10; c1 <= 10; c1++)
+        {
+            coefs.at<float>(1) = c1;
+            for (int c2 = -10; c2 <= 10; c2++)
+            {
+                coefs.at<float>(2) = c2;
+                for (int c3 = -10; c3 <= 10; c3++)
+                {
+                    coefs.at<float>(3) = c3;
+                    for (int c4 = -10; c4 <= 10; c4++)
+                    {
+                        coefs.at<float>(4) = c4;
+                        prec = cv::solvePoly(coefs, r);
+                        EXPECT_LE(prec, 1e-3);
+                    }
+                }
+            }
+        }
+    }
+}
+
+TEST(Core_SolvePoly, different_magnitudes_polynomials)
+{
+    cv::Mat_<float> coefs(1,3);
+    cv::Mat r;
+    double prec;
+    for (int i = -10; i < 10; i++)
+    {
+        coefs.at<float>(0) = pow(2, i);
+        for (int j = -10; j < 10; j++)
+        {
+            coefs.at<float>(1) = pow(2, j);
+            for (int k = -10; k < 10; k++)
+            {
+                coefs.at<float>(2) = pow(2, k);
+                prec = cv::solvePoly(coefs, r);
+                EXPECT_LE(prec, 1e-6);
+            }
+        }
+    }
+}
+
 class Core_PhaseTest : public cvtest::BaseTest
 {
     int t;
