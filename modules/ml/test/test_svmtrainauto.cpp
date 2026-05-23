@@ -161,4 +161,37 @@ TEST(ML_SVM, getSupportVectors)
     EXPECT_EQ(0, sv.rows);    // inapplicable for non-linear SVMs
 }
 
+// Regression test for https://github.com/opencv/opencv/pull/29111
+// NU_SVC + LINEAR kernel trained on near-FLT_MAX data triggered a UB pointer
+// arithmetic overflow in solve_generic: select_working_set_nu_svm returned
+// stale index -1 (all gradients were Inf), and get_row(-1) was called without
+// a bounds check, causing samples.ptr<float>(-1) to overflow.
+TEST(ML_SVM, nu_svc_extreme_float_no_crash)
+{
+    float fdata[] = {
+        -3.40282347e+38f,  0.0f,
+         3.08375703e+38f,  0.0f,
+         3.38958311e+38f,  0.0f,
+        -3.40053886e+38f,  0.0f,
+        -5.19229686e+33f,  0.0f,
+        -5.17201445e+33f,  0.0f,
+    };
+    int labels[] = {1, 0, 0, 0, 0, 0};
+
+    cv::Mat features(6, 2, CV_32F, fdata);
+    cv::Mat responses(6, 1, CV_32S, labels);
+
+    cv::Ptr<SVM> svm = SVM::create();
+    ASSERT_TRUE(svm);
+    svm->setType(SVM::NU_SVC);
+    svm->setKernel(SVM::LINEAR);
+    svm->setNu(0.010317);
+    svm->setTermCriteria(cv::TermCriteria(
+        cv::TermCriteria::MAX_ITER | cv::TermCriteria::EPS, 11, 0.099998f));
+
+    // Must not crash or trigger undefined behaviour; the solver may not converge
+    // on pathological data but must exit cleanly.
+    EXPECT_NO_THROW(svm->train(features, cv::ml::ROW_SAMPLE, responses));
+}
+
 }} // namespace
