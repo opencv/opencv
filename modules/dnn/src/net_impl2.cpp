@@ -221,6 +221,7 @@ std::vector<Mat> Net::Impl::runOrtSession(std::vector<Mat> inputBlobs, const std
         Ort::RunOptions{nullptr},
         in_names.data(), input_tensors.data(), input_tensors.size(),
         out_names.data(), out_names.size());
+    if (profilingMode != DNN_PROFILE_NONE) ort_profile_runs++;
 
     CV_CheckEQ(output_tensors.size(), out_names.size(), "DNN/ORT: ORT returned unexpected number of outputs");
 
@@ -547,10 +548,16 @@ void Net::Impl::prepareForInference()
     if (!prepared) {
         fuseQDQ();
         constFold();
+        fuseBN();
         constArgs();
         fuseAttention();
-        useBlockLayout();
+        fuseMatMulConstBToGemm();
+        fuseSharedInputGemm();
+        fuseReshapeTranspose();
+        fuseTransposeMatMul();
+        fuseScaleSoftmax();
         fuseBasic();
+        useBlockLayout();
         assignBuffers();
         totalLayers = updateGraphOfs(mainGraph, 0, true);
         prepared = true;
@@ -591,6 +598,9 @@ void Net::Impl::allocateLayerOutputs(
     CV_Assert(tempShapes.size() == tempTypes.size());
     CV_Assert(outShapes.size() == outTypes.size());
     CV_Assert(outShapes.size() == noutputs);
+
+    for (int i = 0; i < (int)tempShapes.size(); i++)
+        CV_CheckGT(total(tempShapes[i]), (size_t)0, "");
     outputs.assign(noutputs, Mat());
     outOrigData.resize(noutputs);
     for (size_t i = 0; i < noutputs; i++) {
@@ -1238,8 +1248,9 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                     mCond = outputs[0];
                     active = loopLayer->cond(mCond);
 
+                    // Deep-copy: body buffers (and their UMats via Mat::fit reuse) are recycled across iterations.
                     for (int i = 0; i < n_state; i++)
-                        state[i] = outputs[1 + i];
+                        state[i] = outputs[1 + i].clone();
                     for (int i = 0; i < n_accum; i++)
                         history[i].push_back(outputs[1 + n_state + i].clone());
                 }
@@ -1619,6 +1630,9 @@ bool Net::Impl::tryInferGraphShapes(const Ptr<Graph>& graph,
         CV_Assert((int)outShapes.size() == noutputs);
         layer->getTypes(inpTypes, noutputs, (int)tempShapes.size(), outTypes, tempTypes);
         CV_Assert((int)outTypes.size() == noutputs);
+
+        for (int i = 0; i < (int)tempShapes.size(); i++)
+            CV_CheckGT(total(tempShapes[i]), (size_t)0, "");
 
         for (int i = 0; i < noutputs; i++) {
             Arg out = outputs[i];

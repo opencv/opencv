@@ -419,7 +419,7 @@ public:
         // set the variance.
         {
             ocl::Kernel kernel("set_variance", ocl::dnn::prior_box_oclsrc, opts);
-            int offset = total(shape(outputs[0]), 2);
+            int offset = (int)total(shape(outputs[0]), 2);
             size_t nthreads = _layerHeight * _layerWidth * _numPriors;
             kernel.set(0, (int)nthreads);
             kernel.set(1, (int)offset);

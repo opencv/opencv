@@ -14,6 +14,9 @@ void emit_failmsg(PyObject * exc, const char *msg);
 int failmsg(const char *fmt, ...);
 PyObject* failmsgp(const char *fmt, ...);
 
+int cvDepthToNumpyType(int depth);
+int numpyTypeToCvDepth(int typenum);
+
 //======================================================================================================================
 
 class PyAllowThreads

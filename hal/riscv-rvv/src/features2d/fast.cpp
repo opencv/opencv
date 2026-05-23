@@ -1,219 +1,268 @@
 #include "rvv_hal.hpp"
 #include "common.hpp"
-#include <cfloat>
+#include <cstring>
+#include <vector>
+#include <algorithm>
 
 namespace cv { namespace rvv_hal { namespace features2d {
-
-static inline uint8_t cornerScore(const uint8_t* ptr, const int* pixel)
-{
-    constexpr int K = 8, N = 16 + K + 1;
-    int v = ptr[0];
-    int16_t d[32] = {0};
-    for (int k = 0; k < N; k++)
-        d[k] = (int16_t)(v - ptr[pixel[k]]);
-    auto vlenb = __riscv_vlenb();
-    switch (vlenb) {
-        #define CV_RVV_HAL_FAST_CORNERSOCRE16_CASE(lmul) \
-            size_t vl = __riscv_vsetvl_e16m##lmul(N); \
-            vint16m##lmul##_t vd = __riscv_vle16_v_i16m##lmul(d, vl); \
-            vint16m##lmul##_t q0 = __riscv_vmv_v_x_i16m##lmul((int16_t)(-1000), vl); \
-            vint16m##lmul##_t q1 = __riscv_vmv_v_x_i16m##lmul((int16_t)(1000), vl); \
-            vint16m##lmul##_t vds = vd, ak0 = vd, bk0 = vd; \
-            for (int i = 0; i < 8; i++) { \
-                vds = __riscv_vslide1down(vds, 0, vl); \
-                ak0 = __riscv_vmin(ak0, vds, vl); \
-                bk0 = __riscv_vmax(bk0, vds, vl); \
-            } \
-            q0 = __riscv_vmax(q0, __riscv_vmin(ak0, vd, vl), vl); \
-            q1 = __riscv_vmin(q1, __riscv_vmax(bk0, vd, vl), vl); \
-            vds = __riscv_vslide1down(vds, 0, vl); \
-            q0 = __riscv_vmax(q0, __riscv_vmin(ak0, vds, vl), vl); \
-            q1 = __riscv_vmin(q1, __riscv_vmax(bk0, vds, vl), vl); \
-            q0 = __riscv_vmax(q0, __riscv_vrsub(q1, 0, vl), vl); \
-            return (uint8_t)(__riscv_vmv_x(__riscv_vredmax(q0, __riscv_vmv_s_x_i16m1(0, vl), vl)) - 1);
-        case 16: { // 128-bit
-            CV_RVV_HAL_FAST_CORNERSOCRE16_CASE(4)
-        } break;
-        case 32: { // 256-bit
-            CV_RVV_HAL_FAST_CORNERSOCRE16_CASE(2)
-        } break;
-        default: { // >=512-bit
-            CV_RVV_HAL_FAST_CORNERSOCRE16_CASE(1)
-        }
-    }
-}
-
 
 inline int fast_16(const uchar* src_data, size_t src_step,
                    int width, int height,
                    std::vector<cvhalKeyPoint> &keypoints,
                    int threshold, bool nonmax_suppression)
 {
-
     constexpr int patternSize = 16;
-    constexpr int K = patternSize/2, N = patternSize + K + 1;
-    constexpr int quarterPatternSize = patternSize/4;
+    constexpr int K = patternSize / 2, N = patternSize + K + 1;
 
-    int i, j, k;
     int pixel[N] = {0};
-    pixel[0] = 0 + (int)src_step * 3;
-    pixel[1] = 1 + (int)src_step * 3;
-    pixel[2] = 2 + (int)src_step * 2;
-    pixel[3] = 3 + (int)src_step * 1;
-    pixel[4] = 3 + (int)src_step * 0;
-    pixel[5] = 3 + (int)src_step * -1;
-    pixel[6] = 2 + (int)src_step * -2;
-    pixel[7] = 1 + (int)src_step * -3;
-    pixel[8] = 0 + (int)src_step * -3;
-    pixel[9] = -1 + (int)src_step * -3;
+    pixel[0]  =  0 + (int)src_step * 3;
+    pixel[1]  =  1 + (int)src_step * 3;
+    pixel[2]  =  2 + (int)src_step * 2;
+    pixel[3]  =  3 + (int)src_step * 1;
+    pixel[4]  =  3 + (int)src_step * 0;
+    pixel[5]  =  3 + (int)src_step * -1;
+    pixel[6]  =  2 + (int)src_step * -2;
+    pixel[7]  =  1 + (int)src_step * -3;
+    pixel[8]  =  0 + (int)src_step * -3;
+    pixel[9]  = -1 + (int)src_step * -3;
     pixel[10] = -2 + (int)src_step * -2;
     pixel[11] = -3 + (int)src_step * -1;
     pixel[12] = -3 + (int)src_step * 0;
     pixel[13] = -3 + (int)src_step * 1;
     pixel[14] = -2 + (int)src_step * 2;
     pixel[15] = -1 + (int)src_step * 3;
-    for (k = 16; k < N; k++)
-    {
+    for (int k = 16; k < N; k++)
         pixel[k] = pixel[k - 16];
-    }
 
-    std::vector<uchar> _buf((width+16)*3*(sizeof(ptrdiff_t) + sizeof(uchar)) + 128);
-    uchar* buf[3];
-    buf[0] = &_buf[0]; buf[1] = buf[0] + width; buf[2] = buf[1] + width;
-    ptrdiff_t* cpbuf[3];
-    cpbuf[0] = (ptrdiff_t*)alignPtr(buf[2] + width, sizeof(ptrdiff_t)) + 1;
-    cpbuf[1] = cpbuf[0] + width + 1;
-    cpbuf[2] = cpbuf[1] + width + 1;
-    memset(buf[0], 0, width*3);
+    /* Three-row score buffer (int16) + corner position buffer */
+    std::vector<int16_t> _sbuf((width + 16) * 3, 0);
+    int16_t *sbuf[3] = { _sbuf.data(), _sbuf.data() + width, _sbuf.data() + 2 * width };
 
-    int vlmax = __riscv_vsetvlmax_e8m4();
-    vuint8m4_t v_c_delta = __riscv_vmv_v_x_u8m4(0x80, vlmax);
-    vuint8m4_t v_c_threshold = __riscv_vmv_v_x_u8m4((char) threshold, vlmax);
-    vuint8m4_t v_c_k = __riscv_vmv_v_x_u8m4((uint8_t)K, vlmax);
-    vuint8m4_t v_c_zero = __riscv_vmv_v_x_u8m4(0, vlmax);
+    std::vector<int> _cpbuf((width + 2) * 3, 0);
+    int *cpbuf[3] = { _cpbuf.data() + 1, _cpbuf.data() + (width + 2) + 1,
+                      _cpbuf.data() + 2 * (width + 2) + 1 };
 
-    for( i = 3; i < height - 2; i++)
+    for (int i = 3; i < height - 2; i++)
     {
+        const uchar *ptr = src_data + i * src_step + 3;
+        int16_t *curr = sbuf[(i - 3) % 3];
+        int *cornerpos = cpbuf[(i - 3) % 3];
+        int ncorners = 0;
+        std::fill(curr, curr + width, (int16_t)0);
 
-        const uchar* ptr = src_data + i * src_step + 3;
-        uchar* curr = buf[(i - 3)%3];
-        ptrdiff_t* cornerpos = cpbuf[(i - 3)%3];
-        memset(curr, 0, width);
-        ptrdiff_t ncorners = 0;
-
-        if( i < height - 3 )
+        if (i < height - 3)
         {
-            j = 3;
+            int j = 3;
+            size_t vl;
+            for (; j < width - 3; j += vl, ptr += vl)
             {
-                int margin = width - 3;
-                int vl = __riscv_vsetvl_e8m4(margin - j);
-                for (; j < margin; j += vl, ptr += vl)
-                {
-                    vl = __riscv_vsetvl_e8m4(margin - j);
-                    vuint8m4_t v_pixels = __riscv_vle8_v_u8m4(ptr, vl);
-                    // pixels add threshold
-                    vuint8m4_t v_pat = __riscv_vsaddu(v_pixels, v_c_threshold, vl);
-                    // pixels sub threshold
-                    vuint8m4_t v_pst = __riscv_vssubu(v_pixels, v_c_threshold, vl);
-                    vint8m4_t v0 = __riscv_vreinterpret_i8m4(__riscv_vxor(v_pat, v_c_delta, vl));
-                    vint8m4_t v1 = __riscv_vreinterpret_i8m4(__riscv_vxor(v_pst, v_c_delta, vl));
+                vl = __riscv_vsetvl_e16m1(width - 3 - j);
 
-                    v_pixels = __riscv_vle8_v_u8m4(ptr + pixel[0], vl);
-                    vint8m4_t x0 = __riscv_vreinterpret_i8m4(__riscv_vsub(v_pixels, v_c_delta, vl));
-                    v_pixels = __riscv_vle8_v_u8m4(ptr + pixel[quarterPatternSize], vl);
-                    vint8m4_t x1 = __riscv_vreinterpret_i8m4(__riscv_vsub(v_pixels, v_c_delta, vl));
-                    v_pixels = __riscv_vle8_v_u8m4(ptr + pixel[2*quarterPatternSize], vl);
-                    vint8m4_t x2 = __riscv_vreinterpret_i8m4(__riscv_vsub(v_pixels, v_c_delta, vl));
-                    v_pixels = __riscv_vle8_v_u8m4(ptr + pixel[3*quarterPatternSize], vl);
-                    vint8m4_t x3 = __riscv_vreinterpret_i8m4(__riscv_vsub(v_pixels, v_c_delta, vl));
+                /* Load center pixel and widen to int16 */
+                vint16m1_t vcen = __riscv_vreinterpret_v_u16m1_i16m1(
+                    __riscv_vzext_vf2(__riscv_vle8_v_u8mf2(ptr, vl), vl));
+                vint16m1_t vlo = __riscv_vsub_vx_i16m1(vcen, threshold, vl);
+                vint16m1_t vhi = __riscv_vadd_vx_i16m1(vcen, threshold, vl);
 
-                    vbool2_t m0, m1;
-                    m0 = __riscv_vmand(__riscv_vmslt(v0, x0, vl), __riscv_vmslt(v0, x1, vl), vl);
-                    m1 = __riscv_vmand(__riscv_vmslt(x0, v1, vl), __riscv_vmslt(x1, v1, vl), vl);
-                    m0 = __riscv_vmor(m0, __riscv_vmand(__riscv_vmslt(v0, x1, vl), __riscv_vmslt(v0, x2, vl), vl), vl);
-                    m1 = __riscv_vmor(m1, __riscv_vmand(__riscv_vmslt(x1, v1, vl), __riscv_vmslt(x2, v1, vl), vl), vl);
-                    m0 = __riscv_vmor(m0, __riscv_vmand(__riscv_vmslt(v0, x2, vl), __riscv_vmslt(v0, x3, vl), vl), vl);
-                    m1 = __riscv_vmor(m1, __riscv_vmand(__riscv_vmslt(x2, v1, vl), __riscv_vmslt(x3, v1, vl), vl), vl);
-                    m0 = __riscv_vmor(m0, __riscv_vmand(__riscv_vmslt(v0, x3, vl), __riscv_vmslt(v0, x0, vl), vl), vl);
-                    m1 = __riscv_vmor(m1, __riscv_vmand(__riscv_vmslt(x3, v1, vl), __riscv_vmslt(x0, v1, vl), vl), vl);
-                    m0 = __riscv_vmor(m0, m1, vl);
+                /* 4-direction quick reject */
+                vint16m1_t vk0  = __riscv_vreinterpret_v_u16m1_i16m1(__riscv_vzext_vf2(__riscv_vle8_v_u8mf2(ptr + pixel[0],  vl), vl));
+                vint16m1_t vk4  = __riscv_vreinterpret_v_u16m1_i16m1(__riscv_vzext_vf2(__riscv_vle8_v_u8mf2(ptr + pixel[4],  vl), vl));
+                vint16m1_t vk8  = __riscv_vreinterpret_v_u16m1_i16m1(__riscv_vzext_vf2(__riscv_vle8_v_u8mf2(ptr + pixel[8],  vl), vl));
+                vint16m1_t vk12 = __riscv_vreinterpret_v_u16m1_i16m1(__riscv_vzext_vf2(__riscv_vle8_v_u8mf2(ptr + pixel[12], vl), vl));
 
-                    unsigned long mask_cnt = __riscv_vcpop(m0, vl);
-                    if(!mask_cnt)
-                        continue;
+                vbool16_t bright = __riscv_vmand_mm_b16(__riscv_vmsgt_vv_i16m1_b16(vk0, vhi, vl), __riscv_vmsgt_vv_i16m1_b16(vk4, vhi, vl), vl);
+                vbool16_t dark   = __riscv_vmand_mm_b16(__riscv_vmsgt_vv_i16m1_b16(vlo, vk0, vl),  __riscv_vmsgt_vv_i16m1_b16(vlo, vk4, vl),  vl);
+                bright = __riscv_vmor_mm_b16(bright, __riscv_vmand_mm_b16(__riscv_vmsgt_vv_i16m1_b16(vk4,  vhi, vl), __riscv_vmsgt_vv_i16m1_b16(vk8,  vhi, vl), vl), vl);
+                dark   = __riscv_vmor_mm_b16(dark,   __riscv_vmand_mm_b16(__riscv_vmsgt_vv_i16m1_b16(vlo, vk4, vl),  __riscv_vmsgt_vv_i16m1_b16(vlo, vk8, vl),  vl), vl);
+                bright = __riscv_vmor_mm_b16(bright, __riscv_vmand_mm_b16(__riscv_vmsgt_vv_i16m1_b16(vk8,  vhi, vl), __riscv_vmsgt_vv_i16m1_b16(vk12, vhi, vl), vl), vl);
+                dark   = __riscv_vmor_mm_b16(dark,   __riscv_vmand_mm_b16(__riscv_vmsgt_vv_i16m1_b16(vlo, vk8, vl),  __riscv_vmsgt_vv_i16m1_b16(vlo, vk12, vl), vl), vl);
+                bright = __riscv_vmor_mm_b16(bright, __riscv_vmand_mm_b16(__riscv_vmsgt_vv_i16m1_b16(vk12, vhi, vl), __riscv_vmsgt_vv_i16m1_b16(vk0,  vhi, vl), vl), vl);
+                dark   = __riscv_vmor_mm_b16(dark,   __riscv_vmand_mm_b16(__riscv_vmsgt_vv_i16m1_b16(vlo, vk12, vl), __riscv_vmsgt_vv_i16m1_b16(vlo, vk0,  vl), vl), vl);
 
-                    // TODO: Test if skipping to the first possible key point pixel if faster
-                    // Memory access maybe expensive since the data is not aligned
-                    // long first_set = __riscv_vfirst(m0, vl);
-                    // if( first_set == -1 ) {
-                    //     j -= first_set;
-                    //     ptr -= first_set;
-                    // }
+                if (__riscv_vfirst_m_b16(__riscv_vmor_mm_b16(bright, dark, vl), vl) < 0)
+                    continue;
 
-                    vuint8m4_t c0 = __riscv_vmv_v_x_u8m4(0, vl);
-                    vuint8m4_t c1 = __riscv_vmv_v_x_u8m4(0, vl);
-                    vuint8m4_t max0 = __riscv_vmv_v_x_u8m4(0, vl);
-                    vuint8m4_t max1 = __riscv_vmv_v_x_u8m4(0, vl);
+                /* Load remaining 12 neighbors */
+                vint16m1_t vk1  = __riscv_vreinterpret_v_u16m1_i16m1(__riscv_vzext_vf2(__riscv_vle8_v_u8mf2(ptr + pixel[1],  vl), vl));
+                vint16m1_t vk2  = __riscv_vreinterpret_v_u16m1_i16m1(__riscv_vzext_vf2(__riscv_vle8_v_u8mf2(ptr + pixel[2],  vl), vl));
+                vint16m1_t vk3  = __riscv_vreinterpret_v_u16m1_i16m1(__riscv_vzext_vf2(__riscv_vle8_v_u8mf2(ptr + pixel[3],  vl), vl));
+                vint16m1_t vk5  = __riscv_vreinterpret_v_u16m1_i16m1(__riscv_vzext_vf2(__riscv_vle8_v_u8mf2(ptr + pixel[5],  vl), vl));
+                vint16m1_t vk6  = __riscv_vreinterpret_v_u16m1_i16m1(__riscv_vzext_vf2(__riscv_vle8_v_u8mf2(ptr + pixel[6],  vl), vl));
+                vint16m1_t vk7  = __riscv_vreinterpret_v_u16m1_i16m1(__riscv_vzext_vf2(__riscv_vle8_v_u8mf2(ptr + pixel[7],  vl), vl));
+                vint16m1_t vk9  = __riscv_vreinterpret_v_u16m1_i16m1(__riscv_vzext_vf2(__riscv_vle8_v_u8mf2(ptr + pixel[9],  vl), vl));
+                vint16m1_t vk10 = __riscv_vreinterpret_v_u16m1_i16m1(__riscv_vzext_vf2(__riscv_vle8_v_u8mf2(ptr + pixel[10], vl), vl));
+                vint16m1_t vk11 = __riscv_vreinterpret_v_u16m1_i16m1(__riscv_vzext_vf2(__riscv_vle8_v_u8mf2(ptr + pixel[11], vl), vl));
+                vint16m1_t vk13 = __riscv_vreinterpret_v_u16m1_i16m1(__riscv_vzext_vf2(__riscv_vle8_v_u8mf2(ptr + pixel[13], vl), vl));
+                vint16m1_t vk14 = __riscv_vreinterpret_v_u16m1_i16m1(__riscv_vzext_vf2(__riscv_vle8_v_u8mf2(ptr + pixel[14], vl), vl));
+                vint16m1_t vk15 = __riscv_vreinterpret_v_u16m1_i16m1(__riscv_vzext_vf2(__riscv_vle8_v_u8mf2(ptr + pixel[15], vl), vl));
 
-                    for( k = 0; k < N; k++ )
-                    {
-                        vint8m4_t x = __riscv_vreinterpret_i8m4(__riscv_vxor(__riscv_vle8_v_u8m4(ptr + pixel[k], vl), v_c_delta, vl));
+                /* Compute differences: d[i] = center - neighbor[i] */
+                vint16m1_t d0  = __riscv_vsub_vv_i16m1(vcen, vk0,  vl);
+                vint16m1_t d1  = __riscv_vsub_vv_i16m1(vcen, vk1,  vl);
+                vint16m1_t d2  = __riscv_vsub_vv_i16m1(vcen, vk2,  vl);
+                vint16m1_t d3  = __riscv_vsub_vv_i16m1(vcen, vk3,  vl);
+                vint16m1_t d4  = __riscv_vsub_vv_i16m1(vcen, vk4,  vl);
+                vint16m1_t d5  = __riscv_vsub_vv_i16m1(vcen, vk5,  vl);
+                vint16m1_t d6  = __riscv_vsub_vv_i16m1(vcen, vk6,  vl);
+                vint16m1_t d7  = __riscv_vsub_vv_i16m1(vcen, vk7,  vl);
+                vint16m1_t d8  = __riscv_vsub_vv_i16m1(vcen, vk8,  vl);
+                vint16m1_t d9  = __riscv_vsub_vv_i16m1(vcen, vk9,  vl);
+                vint16m1_t d10 = __riscv_vsub_vv_i16m1(vcen, vk10, vl);
+                vint16m1_t d11 = __riscv_vsub_vv_i16m1(vcen, vk11, vl);
+                vint16m1_t d12 = __riscv_vsub_vv_i16m1(vcen, vk12, vl);
+                vint16m1_t d13 = __riscv_vsub_vv_i16m1(vcen, vk13, vl);
+                vint16m1_t d14 = __riscv_vsub_vv_i16m1(vcen, vk14, vl);
+                vint16m1_t d15 = __riscv_vsub_vv_i16m1(vcen, vk15, vl);
 
-                        m0 = __riscv_vmslt(v0, x, vl);
-                        m1 = __riscv_vmslt(x, v1, vl);
+                /* __E: multi-level share (binary tree with named nodes) */
+                /* Bright score (min tree) */
+                vint16m1_t va0 = __riscv_vmin_vv_i16m1(d7,  d8, vl);
+                vint16m1_t va00 = __riscv_vmin_vv_i16m1(va0, d6, vl);
+                va00 = __riscv_vmin_vv_i16m1(va00, d5, vl);
+                va00 = __riscv_vmin_vv_i16m1(va00, d4, vl);
+                va00 = __riscv_vmin_vv_i16m1(va00, d3, vl);  /* d3~d8 */
 
-                        c0 = __riscv_vadd_mu(m0, c0, c0, (uint8_t)1, vl);
-                        c1 = __riscv_vadd_mu(m1, c1, c1, (uint8_t)1, vl);
-                        c0 = __riscv_vmerge(v_c_zero, c0, m0, vl);
-                        c1 = __riscv_vmerge(v_c_zero, c1, m1, vl);
+                vint16m1_t va000 = __riscv_vmin_vv_i16m1(va00, d2, vl);
+                va000 = __riscv_vmin_vv_i16m1(va000, d1, vl); /* d1~d8 */
+                vint16m1_t va001 = __riscv_vmin_vv_i16m1(va00, d9, vl);
+                va001 = __riscv_vmin_vv_i16m1(va001, d10, vl); /* d3~d10 */
 
-                        max0 = __riscv_vmaxu(max0, c0, vl);
-                        max1 = __riscv_vmaxu(max1, c1, vl);
-                    }
+                vint16m1_t va01 = __riscv_vmin_vv_i16m1(va0, d9, vl);
+                va01 = __riscv_vmin_vv_i16m1(va01, d10, vl);
+                va01 = __riscv_vmin_vv_i16m1(va01, d11, vl);
+                va01 = __riscv_vmin_vv_i16m1(va01, d12, vl);  /* d7~d12 */
 
-                    vbool2_t v_comparek = __riscv_vmsltu(v_c_k, __riscv_vmaxu(max0, max1, vl), vl);
-                    uint8_t m[64];
-                    __riscv_vse8(m, __riscv_vreinterpret_u8m1(v_comparek), vl);
+                vint16m1_t va010 = __riscv_vmin_vv_i16m1(va01, d6, vl);
+                va010 = __riscv_vmin_vv_i16m1(va010, d5, vl); /* d5~d12 */
+                vint16m1_t va011 = __riscv_vmin_vv_i16m1(va01, d13, vl);
+                va011 = __riscv_vmin_vv_i16m1(va011, d14, vl); /* d7~d14 */
 
-                    for( k = 0; k < vl; k++ )
-                    {
-                        if( (m[k / 8] >> (k % 8)) & 1 )
-                        {
-                            cornerpos[ncorners++] = j + k;
-                            if(nonmax_suppression) {
-                                curr[j + k] = (uchar)cornerScore(ptr + k, pixel);
-                            }
-                        }
-                    }
-                }
+                vint16m1_t min_max = __riscv_vmax_vv_i16m1(__riscv_vmin_vv_i16m1(va000, d0, vl), __riscv_vmin_vv_i16m1(va000, d9, vl), vl);
+                min_max = __riscv_vmax_vv_i16m1(min_max, __riscv_vmax_vv_i16m1(__riscv_vmin_vv_i16m1(va001, d2,  vl), __riscv_vmin_vv_i16m1(va001, d11, vl), vl), vl);
+                min_max = __riscv_vmax_vv_i16m1(min_max, __riscv_vmax_vv_i16m1(__riscv_vmin_vv_i16m1(va010, d4,  vl), __riscv_vmin_vv_i16m1(va010, d13, vl), vl), vl);
+                min_max = __riscv_vmax_vv_i16m1(min_max, __riscv_vmax_vv_i16m1(__riscv_vmin_vv_i16m1(va011, d6,  vl), __riscv_vmin_vv_i16m1(va011, d15, vl), vl), vl);
+
+                vint16m1_t va1 = __riscv_vmin_vv_i16m1(d15, d0, vl);
+                vint16m1_t va10 = __riscv_vmin_vv_i16m1(va1, d14, vl);
+                va10 = __riscv_vmin_vv_i16m1(va10, d13, vl);
+                va10 = __riscv_vmin_vv_i16m1(va10, d12, vl);
+                va10 = __riscv_vmin_vv_i16m1(va10, d11, vl);  /* d0,d11~d15 */
+
+                vint16m1_t va100 = __riscv_vmin_vv_i16m1(va10, d10, vl);
+                va100 = __riscv_vmin_vv_i16m1(va100, d9, vl); /* d0,d9~d15 */
+                vint16m1_t va101 = __riscv_vmin_vv_i16m1(va10, d1, vl);
+                va101 = __riscv_vmin_vv_i16m1(va101, d2, vl); /* d0~d2,d11~d15 */
+
+                vint16m1_t va11 = __riscv_vmin_vv_i16m1(va1, d1, vl);
+                va11 = __riscv_vmin_vv_i16m1(va11, d2, vl);
+                va11 = __riscv_vmin_vv_i16m1(va11, d3, vl);
+                va11 = __riscv_vmin_vv_i16m1(va11, d4, vl);   /* d0~d4,d15 */
+
+                vint16m1_t va110 = __riscv_vmin_vv_i16m1(va11, d14, vl);
+                va110 = __riscv_vmin_vv_i16m1(va110, d13, vl); /* d0~d4,d13~d15 */
+                vint16m1_t va111 = __riscv_vmin_vv_i16m1(va11, d5, vl);
+                va111 = __riscv_vmin_vv_i16m1(va111, d6, vl);  /* d0~d6,d15 */
+
+                min_max = __riscv_vmax_vv_i16m1(min_max, __riscv_vmax_vv_i16m1(__riscv_vmin_vv_i16m1(va100, d8,  vl), __riscv_vmin_vv_i16m1(va100, d1,  vl), vl), vl);
+                min_max = __riscv_vmax_vv_i16m1(min_max, __riscv_vmax_vv_i16m1(__riscv_vmin_vv_i16m1(va101, d10, vl), __riscv_vmin_vv_i16m1(va101, d3,  vl), vl), vl);
+                min_max = __riscv_vmax_vv_i16m1(min_max, __riscv_vmax_vv_i16m1(__riscv_vmin_vv_i16m1(va110, d12, vl), __riscv_vmin_vv_i16m1(va110, d5,  vl), vl), vl);
+                min_max = __riscv_vmax_vv_i16m1(min_max, __riscv_vmax_vv_i16m1(__riscv_vmin_vv_i16m1(va111, d14, vl), __riscv_vmin_vv_i16m1(va111, d7,  vl), vl), vl);
+
+                /* Dark score (max tree) */
+                vint16m1_t vb0 = __riscv_vmax_vv_i16m1(d7,  d8, vl);
+                vint16m1_t vb00 = __riscv_vmax_vv_i16m1(vb0, d6, vl);
+                vb00 = __riscv_vmax_vv_i16m1(vb00, d5, vl);
+                vb00 = __riscv_vmax_vv_i16m1(vb00, d4, vl);
+                vb00 = __riscv_vmax_vv_i16m1(vb00, d3, vl);
+
+                vint16m1_t vb000 = __riscv_vmax_vv_i16m1(vb00, d2, vl);
+                vb000 = __riscv_vmax_vv_i16m1(vb000, d1, vl);
+                vint16m1_t vb001 = __riscv_vmax_vv_i16m1(vb00, d9, vl);
+                vb001 = __riscv_vmax_vv_i16m1(vb001, d10, vl);
+
+                vint16m1_t vb01 = __riscv_vmax_vv_i16m1(vb0, d9, vl);
+                vb01 = __riscv_vmax_vv_i16m1(vb01, d10, vl);
+                vb01 = __riscv_vmax_vv_i16m1(vb01, d11, vl);
+                vb01 = __riscv_vmax_vv_i16m1(vb01, d12, vl);
+
+                vint16m1_t vb010 = __riscv_vmax_vv_i16m1(vb01, d6, vl);
+                vb010 = __riscv_vmax_vv_i16m1(vb010, d5, vl);
+                vint16m1_t vb011 = __riscv_vmax_vv_i16m1(vb01, d13, vl);
+                vb011 = __riscv_vmax_vv_i16m1(vb011, d14, vl);
+
+                vint16m1_t max_min = __riscv_vmin_vv_i16m1(__riscv_vmax_vv_i16m1(vb000, d0, vl), __riscv_vmax_vv_i16m1(vb000, d9, vl), vl);
+                max_min = __riscv_vmin_vv_i16m1(max_min, __riscv_vmin_vv_i16m1(__riscv_vmax_vv_i16m1(vb001, d2,  vl), __riscv_vmax_vv_i16m1(vb001, d11, vl), vl), vl);
+                max_min = __riscv_vmin_vv_i16m1(max_min, __riscv_vmin_vv_i16m1(__riscv_vmax_vv_i16m1(vb010, d4,  vl), __riscv_vmax_vv_i16m1(vb010, d13, vl), vl), vl);
+                max_min = __riscv_vmin_vv_i16m1(max_min, __riscv_vmin_vv_i16m1(__riscv_vmax_vv_i16m1(vb011, d6,  vl), __riscv_vmax_vv_i16m1(vb011, d15, vl), vl), vl);
+
+                vint16m1_t vb1 = __riscv_vmax_vv_i16m1(d15, d0, vl);
+                vint16m1_t vb10 = __riscv_vmax_vv_i16m1(vb1, d14, vl);
+                vb10 = __riscv_vmax_vv_i16m1(vb10, d13, vl);
+                vb10 = __riscv_vmax_vv_i16m1(vb10, d12, vl);
+                vb10 = __riscv_vmax_vv_i16m1(vb10, d11, vl);
+
+                vint16m1_t vb100 = __riscv_vmax_vv_i16m1(vb10, d10, vl);
+                vb100 = __riscv_vmax_vv_i16m1(vb100, d9, vl);
+                vint16m1_t vb101 = __riscv_vmax_vv_i16m1(vb10, d1, vl);
+                vb101 = __riscv_vmax_vv_i16m1(vb101, d2, vl);
+
+                vint16m1_t vb11 = __riscv_vmax_vv_i16m1(vb1, d1, vl);
+                vb11 = __riscv_vmax_vv_i16m1(vb11, d2, vl);
+                vb11 = __riscv_vmax_vv_i16m1(vb11, d3, vl);
+                vb11 = __riscv_vmax_vv_i16m1(vb11, d4, vl);
+
+                vint16m1_t vb110 = __riscv_vmax_vv_i16m1(vb11, d14, vl);
+                vb110 = __riscv_vmax_vv_i16m1(vb110, d13, vl);
+                vint16m1_t vb111 = __riscv_vmax_vv_i16m1(vb11, d5, vl);
+                vb111 = __riscv_vmax_vv_i16m1(vb111, d6, vl);
+
+                max_min = __riscv_vmin_vv_i16m1(max_min, __riscv_vmin_vv_i16m1(__riscv_vmax_vv_i16m1(vb100, d8,  vl), __riscv_vmax_vv_i16m1(vb100, d1,  vl), vl), vl);
+                max_min = __riscv_vmin_vv_i16m1(max_min, __riscv_vmin_vv_i16m1(__riscv_vmax_vv_i16m1(vb101, d10, vl), __riscv_vmax_vv_i16m1(vb101, d3,  vl), vl), vl);
+                max_min = __riscv_vmin_vv_i16m1(max_min, __riscv_vmin_vv_i16m1(__riscv_vmax_vv_i16m1(vb110, d12, vl), __riscv_vmax_vv_i16m1(vb110, d5,  vl), vl), vl);
+                max_min = __riscv_vmin_vv_i16m1(max_min, __riscv_vmin_vv_i16m1(__riscv_vmax_vv_i16m1(vb111, d14, vl), __riscv_vmax_vv_i16m1(vb111, d7,  vl), vl), vl);
+
+                /* Final score: max(bright, -dark) - 1 */
+                vint16m1_t score_v = __riscv_vsub_vx_i16m1(
+                    __riscv_vmax_vv_i16m1(min_max, __riscv_vneg_v_i16m1(max_min, vl), vl), 1, vl);
+
+                if (nonmax_suppression)
+                    __riscv_vse16_v_i16m1(curr + j, score_v, vl);
+
+                vbool16_t mask = __riscv_vmsge_vx_i16m1_b16(score_v, threshold, vl);
+                vuint16m1_t vresult = __riscv_vcompress_vm_u16m1(__riscv_vid_v_u16m1(vl), mask, vl);
+                size_t count = __riscv_vcpop_m_b16(mask, vl);
+                __riscv_vse32_v_i32m2(&cornerpos[ncorners],
+                    __riscv_vreinterpret_v_u32m2_i32m2(__riscv_vwaddu_vx_u32m2(vresult, (uint16_t)j, vl)), count);
+                ncorners += count;
             }
         }
 
         cornerpos[-1] = ncorners;
 
-        if( i == 3 )            continue;
+        if (i == 3) continue;
 
-        const uchar* prev = buf[(i - 4 + 3)%3];
-        const uchar* pprev = buf[(i - 5 + 3)%3];
-        cornerpos = cpbuf[(i - 4 + 3)%3]; // cornerpos[-1] is used to store a value
-        ncorners = cornerpos[-1];
-        for( k = 0; k < ncorners; k++ )
+        const int16_t *prev  = sbuf[(i - 4 + 3) % 3];
+        const int16_t *pprev = sbuf[(i - 5 + 3) % 3];
+        cornerpos = cpbuf[(i - 4 + 3) % 3];
+        ncorners  = cornerpos[-1];
+
+        for (int k = 0; k < ncorners; k++)
         {
-            j = cornerpos[k];
+            int j = cornerpos[k];
             int score = prev[j];
-            if(!nonmax_suppression ||
-               (score > prev[j+1] && score > prev[j-1] &&
-                score > pprev[j-1] && score > pprev[j] && score > pprev[j+1] &&
-                score > curr[j-1] && score > curr[j] && score > curr[j+1]) )
+            if (!nonmax_suppression ||
+                (score > prev[j+1] && score > prev[j-1] &&
+                 score > pprev[j-1] && score > pprev[j] && score > pprev[j+1] &&
+                 score > curr[j-1] && score > curr[j] && score > curr[j+1]))
             {
                 cvhalKeyPoint kp;
                 kp.x = (float)j;
-                kp.y = (float)(i-1);
+                kp.y = (float)(i - 1);
                 kp.size = 7.f;
                 kp.angle = -1.f;
                 kp.response = (float)score;
-                kp.octave = 0; // Not used in FAST
-                kp.class_id = -1; // Not used in FAST
+                kp.octave = 0;
+                kp.class_id = -1;
                 keypoints.push_back(kp);
             }
         }

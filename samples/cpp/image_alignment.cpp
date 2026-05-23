@@ -242,33 +242,38 @@ int main (const int argc, const char * argv[])
         double angle;
         switch (mode_temp) {
         case MOTION_TRANSLATION:
-            warpGround = (Mat_<float>(2,3) << 1, 0, (rng.uniform(10.f, 20.f)),
-                0, 1, (rng.uniform(10.f, 20.f)));
+            warpGround = Mat_<float>({2,3}, {
+                1, 0, (rng.uniform(10.f, 20.f)),
+                0, 1, (rng.uniform(10.f, 20.f))
+            });
             warpAffine(target_image, template_image, warpGround,
                 Size(200,200), INTER_LINEAR + WARP_INVERSE_MAP);
             break;
         case MOTION_EUCLIDEAN:
             angle = CV_PI/30 + CV_PI*rng.uniform((double)-2.f, (double)2.f)/180;
 
-            warpGround = (Mat_<float>(2,3) << cos(angle), -sin(angle), (rng.uniform(10.f, 20.f)),
-                sin(angle), cos(angle), (rng.uniform(10.f, 20.f)));
+            warpGround = Mat_<float>({2,3}, {
+                (float)cos(angle), (float)-sin(angle), (rng.uniform(10.f, 20.f)),
+                (float)sin(angle), (float)cos(angle), (rng.uniform(10.f, 20.f))
+            });
             warpAffine(target_image, template_image, warpGround,
                 Size(200,200), INTER_LINEAR + WARP_INVERSE_MAP);
             break;
         case MOTION_AFFINE:
 
-            warpGround = (Mat_<float>(2,3) << (1-rng.uniform(-0.05f, 0.05f)),
-                (rng.uniform(-0.03f, 0.03f)), (rng.uniform(10.f, 20.f)),
-                (rng.uniform(-0.03f, 0.03f)), (1-rng.uniform(-0.05f, 0.05f)),
-                (rng.uniform(10.f, 20.f)));
+            warpGround = Mat_<float>({2,3}, {
+                (1-rng.uniform(-0.05f, 0.05f)), (rng.uniform(-0.03f, 0.03f)), (rng.uniform(10.f, 20.f)),
+                (rng.uniform(-0.03f, 0.03f)), (1-rng.uniform(-0.05f, 0.05f)), (rng.uniform(10.f, 20.f))
+            });
             warpAffine(target_image, template_image, warpGround,
                 Size(200,200), INTER_LINEAR + WARP_INVERSE_MAP);
             break;
         case MOTION_HOMOGRAPHY:
-            warpGround = (Mat_<float>(3,3) << (1-rng.uniform(-0.05f, 0.05f)),
-                (rng.uniform(-0.03f, 0.03f)), (rng.uniform(10.f, 20.f)),
+            warpGround = Mat_<float>({3,3}, {
+                (1-rng.uniform(-0.05f, 0.05f)), (rng.uniform(-0.03f, 0.03f)), (rng.uniform(10.f, 20.f)),
                 (rng.uniform(-0.03f, 0.03f)), (1-rng.uniform(-0.05f, 0.05f)),(rng.uniform(10.f, 20.f)),
-                (rng.uniform(0.0001f, 0.0003f)), (rng.uniform(0.0001f, 0.0003f)), 1.f);
+                (rng.uniform(0.0001f, 0.0003f)), (rng.uniform(0.0001f, 0.0003f)), 1.f
+            });
             warpPerspective(target_image, template_image, warpGround,
                 Size(200,200), INTER_LINEAR + WARP_INVERSE_MAP);
             break;

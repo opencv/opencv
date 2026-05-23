@@ -4,7 +4,7 @@ import tempfile
 import os
 import cv2 as cv
 import numpy as np
-from tests_common import NewOpenCVTests
+from tests_common import NewOpenCVTests, unittest
 
 
 class persistence_test(NewOpenCVTests):
@@ -42,3 +42,46 @@ class persistence_test(NewOpenCVTests):
         fs.release()
 
         os.remove(fname)
+
+    def test_yml_python_interop(self):
+        try:
+            import yaml
+        except:
+            raise unittest.SkipTest('Pyyml is not available for interop test')
+
+        ref_data = {
+            'int_value': 42,
+            "bool_value": True,
+            "float_value": 3.1415926,
+            "int64_value": 2147483647 + 1024, # C++ INT_MAX + 1024
+            "string_value": "opencv"
+        }
+
+        fd, test_file_name = tempfile.mkstemp(prefix="opencv_python_persistence_", suffix=".yml")
+        os.close(fd)
+
+        with open(test_file_name, 'w') as ff:
+            yaml.dump(ref_data, ff)
+
+        # Notice: no cv.FileStorage_FORMAT_YAML flag needed now thanks to the C++ fix!
+        fs = cv.FileStorage(test_file_name, cv.FILE_STORAGE_READ)
+        self.assertTrue(fs.isOpened())
+
+        node = fs.getNode('int_value')
+        self.assertTrue(node.isInt())
+        self.assertEqual(42, int(node.real()))
+
+        node = fs.getNode('int64_value')
+        self.assertTrue(node.isInt())
+        self.assertEqual(2147483647 + 1024, int(node.real()))
+
+        node = fs.getNode('float_value')
+        self.assertTrue(node.isReal())
+        self.assertEqual(3.1415926, node.real())
+
+        node = fs.getNode('string_value')
+        self.assertTrue(node.isString())
+        self.assertEqual("opencv", node.string())
+
+        fs.release()
+        os.remove(test_file_name)

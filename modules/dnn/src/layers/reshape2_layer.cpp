@@ -40,6 +40,62 @@ class Reshape2LayerImpl CV_FINAL : public Reshape2Layer
 public:
     bool dynamicShapeSpec;
 
+    static bool sameDims(const MatShape& a, const MatShape& b)
+    {
+        if (a.dims != b.dims)
+            return false;
+        for (int i = 0; i < a.dims; i++) {
+            if (a[i] != b[i])
+                return false;
+        }
+        return true;
+    }
+
+    DataLayout getOriginalLayout() const
+    {
+        Net::Impl* netimpl_ = getNetImpl(this);
+        DataLayout layout = netimpl_ ? netimpl_->originalLayout : DATA_LAYOUT_NCHW;
+        CV_Assert(layout == DATA_LAYOUT_NCHW || layout == DATA_LAYOUT_NHWC);
+        return layout;
+    }
+
+    bool getConstShapeSpec(MatShape& shapeSpec) const
+    {
+        if (!dynamicShapeSpec) {
+            shapeSpec = newShapeDesc;
+            return true;
+        }
+
+        if (this->inputs.size() != 2)
+            return false;
+
+        Net::Impl* netimpl_ = getNetImpl(this);
+        if (!netimpl_ || !netimpl_->isConstArg(this->inputs[1]))
+            return false;
+
+        Mat shapeTensor = netimpl_->argTensor(this->inputs[1]);
+        shapeSpec = tensorToShape(shapeTensor);
+        return true;
+    }
+
+    bool canKeepBlockLayout(const MatShape& inpShape, const MatShape& shapeSpec) const
+    {
+        if (inpShape.layout != DATA_LAYOUT_BLOCK || inpShape.dims != 5)
+            return false;
+
+        DataLayout origLayout = getOriginalLayout();
+        MatShape semanticInp = inpShape.toLayout(origLayout);
+        MatShape semanticOut = getOutShape(semanticInp, shapeSpec);
+        if (sameDims(semanticOut, semanticInp))
+            return true;
+        if (semanticOut.dims != 4 || semanticInp.dims != 4)
+            return false;
+        if (origLayout == DATA_LAYOUT_NCHW)
+            return semanticOut[0] == semanticInp[0] && semanticOut[1] == semanticInp[1];
+        else
+            return semanticOut[0] == semanticInp[0] && semanticOut[3] == semanticInp[3];
+    }
+
     Reshape2LayerImpl(const LayerParams& params)
     {
         dynamicShapeSpec = true;
@@ -76,12 +132,16 @@ public:
         return backendId == DNN_BACKEND_OPENCV;
     }
 
+    // Reshape just re-interprets the same contiguous buffer. Let the graph
+    // buffer allocator alias input and output so the memcpy in forward() is a no-op.
+    virtual bool alwaysSupportInplace() const CV_OVERRIDE { return true; }
+
     bool haveShapeSpec() const
     {
         return newShapeDesc.dims >= 0;
     }
 
-    MatShape getOutShape(const MatShape& inpShape, MatShape& shapeSpec) const
+    MatShape getOutShape(const MatShape& inpShape, const MatShape& shapeSpec) const
     {
         MatShape outShape = shapeSpec;
         int m1idx = -1;
@@ -137,9 +197,60 @@ public:
         } else {
             CV_Assert(shapeSpec.dims >= 0);
         }
-        outputs.assign(1, getOutShape(inputs[0], shapeSpec));
+
+        if (inputs[0].layout == DATA_LAYOUT_BLOCK) {
+            if (canKeepBlockLayout(inputs[0], shapeSpec)) {
+                DataLayout origLayout = getOriginalLayout();
+                MatShape semanticInp = inputs[0].toLayout(origLayout);
+                MatShape semanticOut = getOutShape(semanticInp, shapeSpec);
+                if (sameDims(semanticOut, semanticInp)) {
+                    outputs.assign(1, inputs[0]);
+                } else {
+                    outputs.assign(1, semanticOut.toLayout(DATA_LAYOUT_BLOCK, inputs[0][4]));
+                }
+            } else {
+                DataLayout origLayout = getOriginalLayout();
+                MatShape semanticInp = inputs[0].toLayout(origLayout);
+                outputs.assign(1, getOutShape(semanticInp, shapeSpec));
+            }
+        } else {
+            outputs.assign(1, getOutShape(inputs[0], shapeSpec));
+        }
         internals.clear();
         return true;
+    }
+
+    int getLayouts(const std::vector<DataLayout>& actualInputs,
+                   std::vector<DataLayout>& desiredInputs,
+                   const int requiredOutputs,
+                   std::vector<DataLayout>& outputs) const CV_OVERRIDE
+    {
+        size_t ninputs = actualInputs.size();
+        CV_Assert(ninputs == 1u || ninputs == 2u);
+
+        desiredInputs.assign(ninputs, DATA_LAYOUT_UNKNOWN);
+        desiredInputs[0] = actualInputs[0];
+        outputs.assign(requiredOutputs, actualInputs[0]);
+
+        if (actualInputs[0] == DATA_LAYOUT_BLOCK) {
+            bool canUseBlock = false;
+            MatShape shapeSpec;
+            if (getConstShapeSpec(shapeSpec)) {
+                DataLayout origLayout = getOriginalLayout();
+                int cAxis = (origLayout == DATA_LAYOUT_NCHW) ? 1 : 3;
+                if (shapeSpec.dims == 4 && cAxis < shapeSpec.dims && shapeSpec[cAxis] == 0)
+                    canUseBlock = true;
+            }
+            if (!canUseBlock) {
+                desiredInputs[0] = getOriginalLayout();
+                outputs.assign(requiredOutputs, DATA_LAYOUT_UNKNOWN);
+            }
+        }
+
+        if (ninputs > 1)
+            desiredInputs[1] = DATA_LAYOUT_UNKNOWN;
+
+        return outputs[0] == DATA_LAYOUT_BLOCK ? getNetImpl(this)->defaultC0 : 0;
     }
 
     void getTypes(const std::vector<MatType>& inputs,
@@ -173,12 +284,32 @@ public:
                   (ninputs == 2 && !haveShapeSpec_));
 
         MatShape inpShape = inputs_arr.shape(0);
+        CV_Assert(inpShape.layout != DATA_LAYOUT_BLOCK || inpShape.C > 0);
         MatShape shapeSpec = newShapeDesc;
         if (!haveShapeSpec_) {
             Mat shapeTensor = inputs_arr.getMat(1);
             shapeSpec = tensorToShape(shapeTensor);
         }
-        MatShape outShape = getOutShape(inpShape, shapeSpec);
+        MatShape outShape;
+        if (inpShape.layout == DATA_LAYOUT_BLOCK) {
+            if (canKeepBlockLayout(inpShape, shapeSpec)) {
+                DataLayout origLayout = getOriginalLayout();
+                MatShape semanticInp = inpShape.toLayout(origLayout);
+                MatShape semanticOut = getOutShape(semanticInp, shapeSpec);
+                if (sameDims(semanticOut, semanticInp)) {
+                    outShape = inpShape;
+                } else {
+                    outShape = semanticOut.toLayout(DATA_LAYOUT_BLOCK, inpShape[4]);
+                }
+            } else {
+                DataLayout origLayout = getOriginalLayout();
+                MatShape semanticInp = inpShape.toLayout(origLayout);
+                outShape = getOutShape(semanticInp, shapeSpec);
+            }
+        } else {
+            outShape = getOutShape(inpShape, shapeSpec);
+        }
+
         reshapeAndCopyFirst(inputs_arr, outputs_arr, outShape);
     }
 };

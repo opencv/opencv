@@ -1,4 +1,4 @@
-README for libpng version 1.6.53
+README for libpng version 1.6.57
 ================================
 
 See the note about version numbers near the top of `png.h`.
@@ -24,14 +24,14 @@ for more things than just PNG files.  You can use zlib as a drop-in
 replacement for `fread()` and `fwrite()`, if you are so inclined.
 
 zlib should be available at the same place that libpng is, or at
-https://zlib.net .
+<https://zlib.net>.
 
 You may also want a copy of the PNG specification.  It is available
 as an RFC, a W3C Recommendation, and an ISO/IEC Standard.  You can find
-these at http://www.libpng.org/pub/png/pngdocs.html .
+these at <http://www.libpng.org/pub/png/pngdocs.html>.
 
-This code is currently being archived at https://libpng.sourceforge.io
-in the download area, and at http://libpng.download/src .
+This code is currently being archived at <https://libpng.sourceforge.io>
+in the download area, and at <http://libpng.download/src>.
 
 This release, based in a large way on Glenn's, Guy's and Andreas'
 earlier work, was created and will be supported by myself and the PNG
@@ -39,12 +39,12 @@ development group.
 
 Send comments, corrections and commendations to `png-mng-implement`
 at `lists.sourceforge.net`.  (Subscription is required; visit
-https://lists.sourceforge.net/lists/listinfo/png-mng-implement
+<https://lists.sourceforge.net/lists/listinfo/png-mng-implement>
 to subscribe.)
 
 Send general questions about the PNG specification to `png-mng-misc`
 at `lists.sourceforge.net`.  (Subscription is required; visit
-https://lists.sourceforge.net/lists/listinfo/png-mng-misc
+<https://lists.sourceforge.net/lists/listinfo/png-mng-misc>
 to subscribe.)
 
 Historical notes

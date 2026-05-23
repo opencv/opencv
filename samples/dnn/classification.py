@@ -72,6 +72,7 @@ def main(func_args=None):
         help()
         exit(1)
 
+    cv.utils.logging.setLogLevel(cv.utils.logging.LOG_LEVEL_INFO)
     args.model = findModel(args.model, args.sha1)
     args.labels = findFile(args.labels)
 
@@ -88,6 +89,8 @@ def main(func_args=None):
     net = cv.dnn.readNetFromONNX(args.model, engine)
     net.setPreferableBackend(get_backend_id(args.backend))
     net.setPreferableTarget(get_target_id(args.target))
+    if hasattr(cv.dnn, 'DNN_PROFILE_SUMMARY'):
+        net.setProfilingMode(cv.dnn.DNN_PROFILE_SUMMARY)
 
     winName = 'Deep learning image classification in OpenCV'
     cv.namedWindow(winName, cv.WINDOW_NORMAL)
@@ -138,6 +141,7 @@ def main(func_args=None):
         t0 = cv.getTickCount()
         out = net.forward()
         t = (cv.getTickCount() - t0) / cv.getTickFrequency()
+        net.printPerfProfile()
 
         (h, w, _) = frame.shape
         roi_rows = min(300, h)

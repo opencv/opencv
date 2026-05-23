@@ -5,6 +5,7 @@
 #include <opencv2/dnn.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
+#include <opencv2/core/utils/logger.hpp>
 
 #include "common.hpp"
 
@@ -91,6 +92,8 @@ static bool readStringList( const string& filename, vector<string>& l )
 
 int main(int argc, char** argv)
 {
+    utils::logging::setLogLevel(utils::logging::LOG_LEVEL_INFO);
+
     CommandLineParser parser(argc, argv, keys);
 
     if (!parser.has("@alias") || parser.has("help"))
@@ -150,6 +153,7 @@ int main(int argc, char** argv)
     Net net = readNetFromONNX(model, engine);
     net.setPreferableBackend(getBackendID(backend));
     net.setPreferableTarget(getTargetID(target));
+    net.setProfilingMode(DNN_PROFILE_SUMMARY);
     //! [Read and initialize network]
 
     // Create a window
@@ -229,6 +233,7 @@ int main(int argc, char** argv)
         timeRecorder.start();
         prob = net.forward();
         timeRecorder.stop();
+        net.printPerfProfile();
         //! [Make forward pass]
 
         //! [Get a class with a highest score]

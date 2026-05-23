@@ -5,6 +5,7 @@ import numpy as np
 import cv2 as cv
 import io
 import sys
+import tempfile
 
 from tests_common import NewOpenCVTests
 
@@ -86,6 +87,23 @@ class Bindings(NewOpenCVTests):
         hasFrame, frame = cap.read()
         self.assertTrue(hasFrame)
         self.assertEqual(frame.shape, (576, 768, 3))
+
+    def test_context_manager(self):
+        video_file = self.find_file("cv/video/768x576.avi")
+
+        with cv.VideoCapture(video_file) as cap:
+            self.assertTrue(cap.isOpened(), "VideoCapture should be opened within context manager")
+
+        with tempfile.NamedTemporaryFile(suffix='.avi') as tmp:
+            with cv.VideoWriter(tmp.name, cv.VideoWriter_fourcc(*'MJPG'), 25, (640, 480)) as writer:
+                self.assertTrue(isinstance(writer, cv.VideoWriter))
+
+        try:
+            with cv.VideoCapture(video_file) as cap:
+                self.assertTrue(cap.isOpened())
+                raise RuntimeError("Testing context manager exception safety")
+        except RuntimeError:
+            pass
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

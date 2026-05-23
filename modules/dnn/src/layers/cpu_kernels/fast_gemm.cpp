@@ -11,6 +11,7 @@
 
 #include "../../precomp.hpp"
 #include "fast_gemm.hpp"
+#include "mlas_gemm.hpp"
 
 #define CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 #include "fast_gemm_kernels.simd.hpp"
@@ -528,6 +529,20 @@ void fastGemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
         return fast_gemm_thin(alpha, beta, M, N, K, a, lda0, lda1, b, ldb0, c, ldc, opt.multi_thread);
     }
 
+#ifdef HAVE_MLAS
+    const bool a_row_major = (lda0 == 1 || lda1 == 1);
+    const bool b_row_major = (ldb0 == 1 || ldb1 == 1);
+    if (a_row_major && b_row_major) {
+        const int phys_lda = std::max(lda0, lda1);
+        const int phys_ldb = std::max(ldb0, ldb1);
+        if (mlasSgemm(trans_a, trans_b, M, N, K,
+                      alpha, A, phys_lda, B, phys_ldb,
+                      beta, C, ldc)) {
+            return;
+        }
+    }
+#endif
+
 #if CV_TRY_NEON
     if (opt.use_neon) {
         opt_NEON::fastGemmKernel(M, N, K, alpha, a, lda0, lda1,
@@ -601,14 +616,44 @@ void fastGemmBatch(size_t batch, const size_t *A_offsets, const size_t *B_offset
     // Below ~10K MACs (M*N*K) the blocked SIMD kernel's pack/tile overhead outweighs its speedup, so route tiny problems through the unblocked thin path.
     if (ldb1 == 1 && (fastGemmThinEligible(M, N, K) || (uint64_t)M * N * K <= 10000)) {
         const size_t esz = sizeof(float);
-        for (size_t i = 0; i < batch; i++) {
-            fast_gemm_thin(alpha, beta, M, N, K,
-                           a + A_offsets[i] * esz, lda0, lda1,
-                           b + B_offsets[i] * esz, ldb0,
-                           c + C_offsets[i] * esz, ldc, opt.multi_thread);
+        // Parallelise over batch with single-thread inner thin gemm
+        if (opt.multi_thread && batch > 1) {
+            parallel_for_(Range(0, (int)batch), [&](const Range& r) {
+                for (int i = r.start; i < r.end; i++) {
+                    fast_gemm_thin(alpha, beta, M, N, K,
+                                   a + A_offsets[i] * esz, lda0, lda1,
+                                   b + B_offsets[i] * esz, ldb0,
+                                   c + C_offsets[i] * esz, ldc, false);
+                }
+            }, (double)batch * M * N * K * (1.0 / 1024.0));
+        } else {
+            for (size_t i = 0; i < batch; i++) {
+                fast_gemm_thin(alpha, beta, M, N, K,
+                               a + A_offsets[i] * esz, lda0, lda1,
+                               b + B_offsets[i] * esz, ldb0,
+                               c + C_offsets[i] * esz, ldc, opt.multi_thread);
+            }
         }
         return;
     }
+
+#ifdef HAVE_MLAS
+    bool a_ok = false, b_ok = false;
+    bool mlas_trans_a = false, mlas_trans_b = false;
+    int  mlas_lda = 0, mlas_ldb = 0;
+    if (lda1 == 1)      { a_ok = true; mlas_trans_a = false; mlas_lda = lda0; }
+    else if (lda0 == 1) { a_ok = true; mlas_trans_a = true;  mlas_lda = lda1; }
+    if (ldb1 == 1)      { b_ok = true; mlas_trans_b = false; mlas_ldb = ldb0; }
+    else if (ldb0 == 1) { b_ok = true; mlas_trans_b = true;  mlas_ldb = ldb1; }
+    if (a_ok && b_ok) {
+        if (mlasSgemmBatch(batch, A_offsets, B_offsets, C_offsets,
+                            mlas_trans_a, mlas_trans_b, M, N, K,
+                            alpha, A, mlas_lda, B, mlas_ldb,
+                            beta, C, ldc)) {
+            return;
+        }
+    }
+#endif
 
 #if CV_TRY_NEON
     if (opt.use_neon) {
@@ -703,11 +748,22 @@ void fastGemmBatch(size_t batch,
 
     if (ldb1 == 1 && (fastGemmThinEligible(M, N, K) || (uint64_t)M * N * K <= 10000)) {
         const size_t esz = sizeof(float);
-        for (size_t i = 0; i < batch; i++) {
-            fast_gemm_thin(alpha, beta, M, N, K,
-                           a + A_offsets[i] * esz, lda0, lda1,
-                           b + B_offsets[i] * esz, ldb0,
-                           c + C_offsets[i] * esz, ldc, opt.multi_thread);
+        if (opt.multi_thread && batch > 1) {
+            parallel_for_(Range(0, (int)batch), [&](const Range& r) {
+                for (int i = r.start; i < r.end; i++) {
+                    fast_gemm_thin(alpha, beta, M, N, K,
+                                   a + A_offsets[i] * esz, lda0, lda1,
+                                   b + B_offsets[i] * esz, ldb0,
+                                   c + C_offsets[i] * esz, ldc, false);
+                }
+            }, (double)batch * M * N * K * (1.0 / 1024.0));
+        } else {
+            for (size_t i = 0; i < batch; i++) {
+                fast_gemm_thin(alpha, beta, M, N, K,
+                               a + A_offsets[i] * esz, lda0, lda1,
+                               b + B_offsets[i] * esz, ldb0,
+                               c + C_offsets[i] * esz, ldc, opt.multi_thread);
+            }
         }
         return;
     }

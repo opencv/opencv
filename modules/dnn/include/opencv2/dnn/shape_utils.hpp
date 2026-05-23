@@ -152,7 +152,7 @@ static inline MatShape shape(int a0, int a1=-1, int a2=-1, int a3=-1)
     return shape(shape_, dims);
 }
 
-static inline int total(const MatShape& shape, int start = -1, int end = -1)
+static inline size_t total(const MatShape& shape, int start = -1, int end = -1)
 {
     //if (shape.empty())
     //    return 0;
@@ -166,16 +166,16 @@ static inline int total(const MatShape& shape, int start = -1, int end = -1)
     CV_CheckLE(start, end, "");
     CV_CheckLE(end, dims, "");
 
-    int elems = 1;
+    size_t elems = 1;
     for (int i = start; i < end; i++)
     {
-        elems *= shape[i];
+        elems *= (size_t)shape[i];
     }
     return elems;
 }
 
 // TODO: rename to countDimsElements()
-static inline int total(const Mat& mat, int start = -1, int end = -1)
+static inline size_t total(const Mat& mat, int start = -1, int end = -1)
 {
     if (mat.empty())
         return 0;
@@ -189,10 +189,10 @@ static inline int total(const Mat& mat, int start = -1, int end = -1)
     CV_CheckLE(start, end, "");
     CV_CheckLE(end, dims, "");
 
-    int elems = 1;
+    size_t elems = 1;
     for (int i = start; i < end; i++)
     {
-        elems *= mat.size[i];
+        elems *= (size_t)mat.size[i];
     }
     return elems;
 }

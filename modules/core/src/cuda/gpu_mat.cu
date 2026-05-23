@@ -565,9 +565,9 @@ void cv::cuda::GpuMat::convertTo(OutputArray _dst, int rtype, Stream& stream) co
         {convertToNoScale<ushort, uchar>, convertToNoScale<ushort, schar>, 0, convertToNoScale<ushort, short>, convertToNoScale<ushort, int>, convertToNoScale<ushort, float>, convertToNoScale<ushort, double>, 0, 0, 0, convertToNoScale<ushort, uint64_t>, convertToNoScale<ushort, int64_t>, convertToNoScale<ushort, uint32_t>},
         {convertToNoScale<short, uchar>, convertToNoScale<short, schar>, convertToNoScale<short, ushort>, 0, convertToNoScale<short, int>, convertToNoScale<short, float>, convertToNoScale<short, double>, 0, 0, 0, convertToNoScale<short, uint64_t>, convertToNoScale<short, int64_t>, convertToNoScale<short, uint32_t>},
         {convertToNoScale<int, uchar>, convertToNoScale<int, schar>, convertToNoScale<int, ushort>, convertToNoScale<int, short>, 0, convertToNoScale<int, float>, convertToNoScale<int, double>, 0, 0, 0, convertToNoScale<int, uint64_t>, convertToNoScale<int, int64_t>, convertToNoScale<int, uint32_t>},
-        {convertToNoScale<float, uchar>, convertToNoScale<float, schar>, convertToNoScale<float, ushort>, convertToNoScale<float, short>, convertToNoScale<float, int>, 0, convertToNoScale<float, double>, 0, 0, 0, convertToNoScale<float, uint64_t>, convertToNoScale<float, int64_t>, convertToNoScale<float, uint32_t>},
+        {convertToNoScale<float, uchar>, convertToNoScale<float, schar>, convertToNoScale<float, ushort>, convertToNoScale<float, short>, convertToNoScale<float, int>, 0, convertToNoScale<float, double>, convertScaleHalf<float, short>, 0, 0, convertToNoScale<float, uint64_t>, convertToNoScale<float, int64_t>, convertToNoScale<float, uint32_t>},
         {convertToNoScale<double, uchar>, convertToNoScale<double, schar>, convertToNoScale<double, ushort>, convertToNoScale<double, short>, convertToNoScale<double, int>, convertToNoScale<double, float>, 0, 0, 0, 0, convertToNoScale<double, uint64_t>, convertToNoScale<double, int64_t>, convertToNoScale<double, uint32_t>},
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, convertScaleHalf<short, float>, 0, 0, 0, 0, 0, 0, 0},
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
         {convertToNoScale<uint64_t, uchar>, convertToNoScale<uint64_t, schar>, convertToNoScale<uint64_t, ushort>, convertToNoScale<uint64_t, short>, convertToNoScale<uint64_t, int>, convertToNoScale<uint64_t, float>, convertToNoScale<uint64_t, double>, 0, 0, 0, 0, convertToNoScale<uint64_t, int64_t>, convertToNoScale<uint64_t, uint32_t>},
@@ -617,40 +617,6 @@ void cv::cuda::GpuMat::convertTo(OutputArray _dst, int rtype, double alpha, doub
     CV_Assert(func);
 
     func(src.reshape(1), dst.reshape(1), alpha, beta, stream);
-}
-
-void cv::cuda::convertFp16(InputArray _src, OutputArray _dst, Stream& stream)
-{
-    GpuMat src = _src.getGpuMat();
-    int ddepth = 0;
-
-    switch(src.depth())
-    {
-    case CV_32F:
-        ddepth = CV_16F;
-        break;
-    case CV_16F:
-        ddepth = CV_32F;
-        break;
-    default:
-        CV_Error(Error::StsUnsupportedFormat, "Unsupported input depth");
-        return;
-    }
-    int type = CV_MAKE_TYPE(CV_MAT_DEPTH(ddepth), src.channels());
-    _dst.create(src.size(), type);
-    GpuMat dst = _dst.getGpuMat();
-
-    typedef void (*func_t)(const GpuMat& src, const GpuMat& dst, Stream& stream);
-    static const func_t funcs[] =
-    {
-        0, 0, 0,
-        0, 0, convertScaleHalf<short, float>,
-        0, convertScaleHalf<float, short>, 0,
-    };
-
-    func_t func = funcs[ddepth];
-    CV_Assert(func);
-    func(src.reshape(1), dst.reshape(1), stream);
 }
 
 #endif

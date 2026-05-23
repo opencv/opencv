@@ -1245,6 +1245,26 @@ _Tp Point_<_Tp>::dot(const Point_& pt) const
     return saturate_cast<_Tp>(x*pt.x + y*pt.y);
 }
 
+template<> inline
+int Point_<int>::dot(const Point_<int>& pt) const
+{
+    const int64_t xx = (int64_t)x * pt.x;
+    const int64_t yy = (int64_t)y * pt.y;
+
+    // detect int64 overflow before adding
+    if (yy > 0 && xx > INT64_MAX - yy)
+    {
+        return INT32_MAX;
+    }
+    if (yy < 0 && xx < INT64_MIN - yy)
+    {
+        return INT32_MIN;
+    }
+
+    const int64_t v = xx + yy;
+    return cv::saturate_cast<int>(v);
+}
+
 template<typename _Tp> inline
 double Point_<_Tp>::ddot(const Point_& pt) const
 {
@@ -1488,6 +1508,50 @@ template<typename _Tp> inline
 _Tp Point3_<_Tp>::dot(const Point3_& pt) const
 {
     return saturate_cast<_Tp>(x*pt.x + y*pt.y + z*pt.z);
+}
+
+template<> inline
+int Point3_<int>::dot(const Point3_<int>& pt) const
+{
+    const int64_t xx = (int64_t)x * pt.x;
+    const int64_t yy = (int64_t)y * pt.y;
+    const int64_t zz = (int64_t)z * pt.z;
+
+    // Sort the three products so that lo <= mid <= hi.
+    // We add in the order (lo + hi) first, then add mid.
+    // This minimizes the absolute value of the intermediate sum,
+    // reducing the chance of int64 overflow during addition.
+    int64_t lo = xx, mid = yy, hi = zz;
+    if (lo > mid) std::swap(lo, mid);
+    if (mid > hi) std::swap(mid, hi);
+    if (lo > mid) std::swap(lo, mid);
+
+    // Step 1: lo + hi
+    // If lo + hi overflows int64, the final result must saturate to INT32_MAX/INT32_MIN.
+    // The middle value (mid) cannot bring the result back into the int32 range,
+    // so we can return immediately without considering mid.
+    if (hi > 0 && lo > INT64_MAX - hi)
+    {
+        return INT32_MAX;
+    }
+    if (hi < 0 && lo < INT64_MIN - hi)
+    {
+        return INT32_MIN;
+    }
+    int64_t sum = lo + hi;
+
+    // Step 2: sum + mid
+    if (mid > 0 && sum > INT64_MAX - mid)
+    {
+        return INT32_MAX;
+    }
+    if (mid < 0 && sum < INT64_MIN - mid)
+    {
+        return INT32_MIN;
+    }
+    sum += mid;
+
+    return cv::saturate_cast<int>(sum);
 }
 
 template<typename _Tp> inline

@@ -750,6 +750,22 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
 
     if( ksize == 1 || ksize == 3 )
     {
+        Mat src = _src.getMat();
+        Mat dst = _dst.getMat();
+
+        Point ofs;
+        Size wsz(src.cols, src.rows);
+        if(!(borderType & BORDER_ISOLATED))
+            src.locateROI(wsz, ofs);
+
+        CALL_HAL(laplacian, cv_hal_laplacian,
+                src.ptr(), src.step,
+                dst.ptr(), dst.step,
+                src.cols, src.rows,
+                sdepth, ddepth, cn,
+                ksize, borderType & ~BORDER_ISOLATED,
+                (uint8_t)0);
+
         filter2D( _src, _dst, ddepth, kernel, Point(-1, -1), delta, borderType );
     }
     else

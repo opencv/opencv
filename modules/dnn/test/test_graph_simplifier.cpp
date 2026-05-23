@@ -153,7 +153,10 @@ TEST_F(Test_Graph_Simplifier, BiasedMatMulSubgraph) {
     /* Test for 1 subgraphs
         - BiasedMatMulSubgraph
     */
-    test("biased_matmul", "MatMul");
+    auto engine_forced = static_cast<cv::dnn::EngineType>(
+        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
+    const std::string expected = engine_forced == cv::dnn::ENGINE_CLASSIC ? "MatMul" : "Gemm";
+    test("biased_matmul", expected);
 }
 
 }}

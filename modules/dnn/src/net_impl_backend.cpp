@@ -88,6 +88,17 @@ void Net::Impl::finalizeOrt()
         }
     }
 
+    // If the user set DNN_PROFILE_*, turn on ORT's session profiler. The JSON
+    // file is parsed lazily by collectOrtProfileData() inside getPerfProfile()/printPerfProfile().
+    ort_profile_path_prefix.clear();
+    ort_profile_collected = false;
+    ort_profile_runs = 0;
+    ort_profile_data.clear();
+    if (profilingMode != DNN_PROFILE_NONE) {
+        ort_profile_path_prefix = cv::tempfile("opencv_ort_profile_");
+        opts.EnableProfiling(ort_profile_path_prefix.c_str());
+    }
+
 #ifdef _WIN32
     std::wstring wpath(modelFileName.begin(), modelFileName.end());
     ort_session = std::make_shared<Ort::Session>(*ort_env, wpath.c_str(), opts);

@@ -6,6 +6,7 @@
 #define __OPENCV_TEST_COMMON_HPP__
 
 #include "opencv2/dnn/utils/inference_engine.hpp"
+#include <string>
 
 #ifdef HAVE_OPENCL
 #include "opencv2/core/ocl.hpp"
@@ -246,6 +247,23 @@ protected:
 };
 
 void runLayer(cv::Ptr<cv::dnn::Layer> layer, std::vector<cv::Mat> &inpBlobs, std::vector<cv::Mat> &outBlobs);
+
+inline std::string getCurrentTestNameNoParams()
+{
+    const ::testing::TestInfo* const test_info =
+        ::testing::UnitTest::GetInstance()->current_test_info();
+    if (!test_info)
+        return std::string();
+    std::string suite = test_info->test_case_name();
+    std::string name  = test_info->name();
+    const auto suite_slash = suite.find('/');
+    if (suite_slash != std::string::npos)
+        suite = suite.substr(0, suite_slash);
+    const auto name_slash = name.find('/');
+    if (name_slash != std::string::npos)
+        name = name.substr(0, name_slash);
+    return suite + "." + name;
+}
 
 } // namespace
 

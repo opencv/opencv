@@ -6,6 +6,12 @@
 
 #include "net_impl.hpp"
 
+#ifdef HAVE_ONNXRUNTIME
+#include <onnxruntime_cxx_api.h>
+#include <fstream>
+#include <sstream>
+#endif
+
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -1324,11 +1330,11 @@ void Net::Impl::getLayerShapesRecursively(int id, LayersShapesMap& inOutShapes)
 
     try
     {
-        for (int i = 0; i < ints.size(); i++)
-            CV_CheckGT(total(ints[i]), 0, "");
+        for (int i = 0; i < (int)ints.size(); i++)
+            CV_CheckGT(total(ints[i]), (size_t)0, "");
 
-        for (int i = 0; i < os.size(); i++)
-            CV_CheckGT(total(os[i]), 0, "");
+        for (int i = 0; i < (int)os.size(); i++)
+            CV_CheckGT(total(os[i]), (size_t)0, "");
     }
     catch (const cv::Exception& e)
     {
@@ -1670,6 +1676,13 @@ void Net::Impl::setParam(const std::string& outputTensorName, int numParam, cons
             Conv2Layer* conv = dynamic_cast<Conv2Layer*>(layer.get());
             if (conv && numParam == 0) {
                 conv->setWeights(blob, Mat(), defaultC0, accuracy);
+                finalizeLayers = true;
+                return;
+            }
+
+            ConvTranspose2Layer* deconv = dynamic_cast<ConvTranspose2Layer*>(layer.get());
+            if (deconv && numParam == 0) {
+                deconv->setWeights(blob, Mat(), defaultC0, accuracy);
                 finalizeLayers = true;
                 return;
             }
@@ -2371,10 +2384,32 @@ std::vector<String> Net::Impl::getLayerNames() const
 }
 
 
-// FIXIT drop "unconnected" API
 std::vector<int> Net::Impl::getUnconnectedOutLayers() const
 {
     std::vector<int> layersIds;
+
+    if (mainGraph) {
+        const std::vector<Arg>& outargs = mainGraph->outputs();
+        std::set<int> outArgIdxs;
+        for (const auto& out : outargs)
+            outArgIdxs.insert(out.idx);
+
+        int graph_ofs = 0;
+        for (const auto& graph : allgraphs) {
+            const std::vector<Ptr<Layer>>& prog = graph->prog();
+            for (int i = 0; i < (int)prog.size(); i++) {
+                for (const auto& layerOut : prog[i]->outputs) {
+                    if (outArgIdxs.count(layerOut.idx)) {
+                        layersIds.push_back(graph_ofs + i);
+                        break;
+                    }
+                }
+            }
+            graph_ofs += (int)prog.size();
+        }
+        if (!layersIds.empty())
+            return layersIds;
+    }
 
     // registerOutput() flow
     if (!outputNameToId.empty())
@@ -2613,6 +2648,251 @@ int64 Net::Impl::getPerfProfile(std::vector<double>& timings) const
     return total;
 }
 
+void Net::Impl::collectLayerInfo(std::vector<String>& names, std::vector<String>& types) const
+{
+    if (mainGraph) {
+        names.reserve(totalLayers);
+        types.reserve(totalLayers);
+        for (const Ptr<Graph>& graph : allgraphs) {
+            const std::vector<Ptr<Layer>>& prog = graph->prog();
+            for (const Ptr<Layer>& layer : prog) {
+                names.push_back(layer ? layer->name : "null");
+                types.push_back(layer ? layer->type : "null");
+            }
+        }
+    } else {
+        for (MapIdToLayerData::const_iterator it = layers.begin(); it != layers.end(); ++it) {
+            if (it->second.id) {  // skip Data layer (id==0)
+                names.push_back(it->second.name);
+                types.push_back(it->second.type);
+            }
+        }
+    }
+}
+
+#ifdef HAVE_ONNXRUNTIME
+static void parseOrtProfileJson(const std::string& text,
+                                std::map<std::string, std::pair<std::string, double>>& out_ms)
+{
+    const std::string wrapped = "{\"events\":" + text + "}";
+    FileStorage fs(wrapped, FileStorage::READ | FileStorage::MEMORY | FileStorage::FORMAT_JSON);
+    if (!fs.isOpened()) {
+        CV_LOG_WARNING(NULL, "DNN/ORT: failed to parse profile JSON");
+        return;
+    }
+
+    static const std::string KT = "_kernel_time";
+    FileNode events = fs["events"];
+    for (FileNodeIterator it = events.begin(); it != events.end(); ++it) {
+        FileNode entry = *it;
+        if (!entry.isMap()) continue;
+        if ((std::string)entry["cat"] != "Node") continue;
+
+        const std::string name = (std::string)entry["name"];
+        if (name.size() < KT.size() ||
+            name.compare(name.size() - KT.size(), KT.size(), KT) != 0)
+            continue;
+
+        FileNode args = entry["args"];
+        if (args.empty()) continue;
+        const std::string op = (std::string)args["op_name"];
+        const double dur_us  = (double)entry["dur"];
+        if (op.empty() || dur_us <= 0) continue;
+
+        const std::string canonical = name.substr(0, name.size() - KT.size());
+        auto& slot = out_ms[canonical];
+        slot.first = op;
+        slot.second += dur_us / 1000.0;
+    }
+}
+
+void Net::Impl::collectOrtProfileData() const
+{
+    if (ort_profile_collected) return;
+    ort_profile_collected = true;
+    if (!ort_session || ort_profile_path_prefix.empty()) return;
+
+    // EndProfiling closes the file ORT has been writing to and returns its path.
+    Ort::AllocatorWithDefaultOptions allocator;
+    Ort::AllocatedStringPtr profile_path = ort_session->EndProfilingAllocated(allocator);
+    if (!profile_path) {
+        CV_LOG_WARNING(NULL, "DNN/ORT: EndProfiling did not return a path (prefix=" << ort_profile_path_prefix << ")");
+        return;
+    }
+
+    // Read the JSON entirely into memory, then parse it from the string.
+    std::ifstream in(profile_path.get());
+    if (!in.is_open()) {
+        CV_LOG_WARNING(NULL, "DNN/ORT: failed to open profile JSON " << profile_path.get());
+        return;
+    }
+    std::stringstream ss; ss << in.rdbuf();
+    const std::string text = ss.str();
+
+    std::map<std::string, std::pair<std::string, double>> by_name;
+    parseOrtProfileJson(text, by_name);
+
+    const int runs = ort_profile_runs > 0 ? ort_profile_runs : 1;
+    ort_profile_data.clear();
+    ort_profile_data.reserve(by_name.size());
+    for (auto& kv : by_name) {
+        const String name = kv.first;
+        const String type = kv.second.first;
+        const double ms_per_run = kv.second.second / runs;
+        ort_profile_data.emplace_back(name, type, ms_per_run);
+    }
+}
+#endif
+
+PerfProfile Net::Impl::getPerfProfile() const
+{
+    PerfProfile result;
+    result.mode = profilingMode;
+
+    if (profilingMode == DNN_PROFILE_NONE)
+        return result;
+
+#ifdef HAVE_ONNXRUNTIME
+    if (useOrtEngine && ort_session) {
+        collectOrtProfileData();
+        if (profilingMode == DNN_PROFILE_DETAILED) {
+            for (const auto& t : ort_profile_data) {
+                if (std::get<2>(t) <= 0) continue;
+                PerfProfileEntry e;
+                e.label = std::get<0>(t) + " (" + std::get<1>(t) + ")";
+                e.timeMs = std::get<2>(t);
+                e.count = 1;
+                result.entries.push_back(e);
+            }
+        } else if (profilingMode == DNN_PROFILE_SUMMARY) {
+            std::map<String, double> typeTimings;
+            std::map<String, int> typeCounts;
+            for (const auto& t : ort_profile_data) {
+                if (std::get<2>(t) <= 0) continue;
+                typeTimings[std::get<1>(t)] += std::get<2>(t);
+                typeCounts[std::get<1>(t)]++;
+            }
+            result.entries.reserve(typeTimings.size());
+            for (auto it = typeTimings.begin(); it != typeTimings.end(); ++it) {
+                PerfProfileEntry e;
+                e.label = it->first;
+                e.timeMs = it->second;
+                e.count = typeCounts[it->first];
+                result.entries.push_back(e);
+            }
+        }
+        std::sort(result.entries.begin(), result.entries.end(),
+                  [](const PerfProfileEntry& a, const PerfProfileEntry& b) {
+                      return a.timeMs > b.timeMs;
+                  });
+        return result;
+    }
+#endif
+
+    std::vector<double> timings(layersTimings.begin() + 1, layersTimings.end());
+    double tickFreq = getTickFrequency();
+
+    std::vector<String> names;
+    std::vector<String> types;
+    collectLayerInfo(names, types);
+
+    size_t n = std::min(timings.size(), names.size());
+
+    if (profilingMode == DNN_PROFILE_DETAILED) {
+        for (size_t i = 0; i < n; i++) {
+            if (timings[i] > 0) {
+                PerfProfileEntry e;
+                e.label = names[i] + " (" + types[i] + ")";
+                e.timeMs = timings[i] * 1000.0 / tickFreq;
+                e.count = 1;
+                result.entries.push_back(e);
+            }
+        }
+    } else if (profilingMode == DNN_PROFILE_SUMMARY) {
+        std::map<String, double> typeTimings;
+        std::map<String, int> typeCounts;
+        for (size_t i = 0; i < n; i++) {
+            if (timings[i] > 0) {
+                typeTimings[types[i]] += timings[i] * 1000.0 / tickFreq;
+                typeCounts[types[i]]++;
+            }
+        }
+        result.entries.reserve(typeTimings.size());
+        for (auto it = typeTimings.begin(); it != typeTimings.end(); ++it) {
+            PerfProfileEntry e;
+            e.label = it->first;
+            e.timeMs = it->second;
+            e.count = typeCounts[it->first];
+            result.entries.push_back(e);
+        }
+    }
+
+    std::sort(result.entries.begin(), result.entries.end(),
+              [](const PerfProfileEntry& a, const PerfProfileEntry& b) {
+                  return a.timeMs > b.timeMs;
+              });
+
+    return result;
+}
+
+void Net::Impl::getPerfProfile(std::vector<std::string>& names,
+                               std::vector<std::string>& timems,
+                               std::vector<std::string>& counts) const
+{
+    PerfProfile profile = getPerfProfile();
+    names.clear();
+    timems.clear();
+    counts.clear();
+    names.reserve(profile.entries.size());
+    timems.reserve(profile.entries.size());
+    counts.reserve(profile.entries.size());
+    for (const PerfProfileEntry& e : profile.entries) {
+        names.push_back(e.label);
+        timems.push_back(cv::format("%.3f", e.timeMs));
+        counts.push_back(cv::format("%d", e.count));
+    }
+}
+
+void Net::Impl::printPerfProfile() const
+{
+    PerfProfile profile = getPerfProfile();
+    if (profile.mode == DNN_PROFILE_NONE)
+        return;
+
+    double totalMs = 0.0;
+    for (const PerfProfileEntry& e : profile.entries)
+        totalMs += e.timeMs;
+    if (totalMs <= 0.0)
+        return;
+
+    if (profile.mode == DNN_PROFILE_DETAILED) {
+        CV_LOG_INFO(NULL, "\n=== DNN Layer Profiling (Detailed) ===");
+        CV_LOG_INFO(NULL, cv::format("%-5s %-60s %10s %8s", "ID", "Layer (Type)", "Time (ms)", "   (%)"));
+        CV_LOG_INFO(NULL, "-----------------------------------------------------------------------------------------------");
+        for (size_t i = 0; i < profile.entries.size(); i++) {
+            const PerfProfileEntry& e = profile.entries[i];
+            double pct = e.timeMs * 100.0 / totalMs;
+            CV_LOG_INFO(NULL, cv::format("%-5zu %-60s %10.3f %7.1f%%",
+                   i, e.label.c_str(), e.timeMs, pct));
+        }
+        CV_LOG_INFO(NULL, "-----------------------------------------------------------------------------------------------");
+        CV_LOG_INFO(NULL, cv::format("%-5s %-60s %10.3f %7s", "", "TOTAL", totalMs, "100.0%"));
+        CV_LOG_INFO(NULL, "");
+    } else if (profile.mode == DNN_PROFILE_SUMMARY) {
+        CV_LOG_INFO(NULL, "\n=== DNN Layer Profiling (Summary by Type) ===");
+        CV_LOG_INFO(NULL, cv::format("%-25s %6s %10s %8s", "Layer Type", "Count", "Time (ms)", "   (%)"));
+        CV_LOG_INFO(NULL, "-----------------------------------------------------------");
+        for (const PerfProfileEntry& e : profile.entries) {
+            double pct = e.timeMs * 100.0 / totalMs;
+            CV_LOG_INFO(NULL, cv::format("%-25s %6d %10.3f %7.1f%%",
+                   e.label.c_str(), e.count, e.timeMs, pct));
+        }
+        CV_LOG_INFO(NULL, "-----------------------------------------------------------");
+        CV_LOG_INFO(NULL, cv::format("%-25s %6s %10.3f %7s", "TOTAL", "", totalMs, "100.0%"));
+        CV_LOG_INFO(NULL, "");
+    }
+}
+
 void Net::Impl::getMemoryConsumption(
         const std::vector<MatShape>& netInputShapes,
         const std::vector<MatType>& netInputTypes,
@@ -2719,6 +2999,20 @@ void Net::Impl::getLayerTypes(std::vector<String>& layersTypes) const
 // TODO drop?
 int Net::Impl::getLayersCount(const String& layerType) const
 {
+    if (mainGraph) {
+        int count = 0;
+        for (const Ptr<Graph>& g: allgraphs) {
+            const std::vector<Ptr<Layer> >& prog = g->prog();
+            for (const Ptr<Layer>& layer: prog) {
+                if (!layer)
+                    continue;
+                if (layer->type == layerType)
+                    count++;
+            }
+        }
+        return count;
+    }
+
     int count = 0;
     for (Impl::MapIdToLayerData::const_iterator it = layers.begin();
             it != layers.end(); it++)

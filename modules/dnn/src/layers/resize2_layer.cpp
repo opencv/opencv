@@ -278,15 +278,12 @@ void resizeNearest(const Mat &inp, Mat &out,
                    float start_x = 0.0f, float end_x = 1.0f,
                    float extrapolation_value = 0.0f)
 {
-    int numPlanes = inp.size[0] * inp.size[1];
     int inH       = inp.size[2], inW       = inp.size[3];
     int outH      = out.size[2], outW      = out.size[3];
     CV_Assert(inp.isContinuous() && out.isContinuous());
 
-    Mat inpP = inp.reshape(1, numPlanes * inH);
-    Mat outP = out.reshape(1, numPlanes * outH);
-
     CoordTransMode coordMode = parseCoordTransMode(coordTransMode);
+    const bool tf_crop_and_resize_mode = (coordMode == CoordTransMode::TF_CROP_AND_RESIZE);
 
     std::vector<int> mapY(outH);
     buildNearestIndexMap(mapY, outH, inH, scaleH, lenY, start_y, end_y,
@@ -296,9 +293,64 @@ void resizeNearest(const Mat &inp, Mat &out,
     buildNearestIndexMap(mapX, outW, inW, scaleW, lenX, start_x, end_x,
                          coordMode, nearestMode, halfPixelCenters);
 
+    if (inp.shape().layout == DATA_LAYOUT_BLOCK) {
+        CV_Assert(inp.dims == 5 && out.dims == 5);
+        const int N = inp.size[0], C1 = inp.size[1], C0 = inp.size[4];
+
+        const size_t inStep0 = inp.step.p[0] / inp.elemSize();
+        const size_t inStep1 = inp.step.p[1] / inp.elemSize();
+        const size_t inStep2 = inp.step.p[2] / inp.elemSize();
+        const size_t inStep3 = inp.step.p[3] / inp.elemSize();
+        const size_t outStep0 = out.step.p[0] / out.elemSize();
+        const size_t outStep1 = out.step.p[1] / out.elemSize();
+        const size_t outStep2 = out.step.p[2] / out.elemSize();
+        const size_t outStep3 = out.step.p[3] / out.elemSize();
+        const size_t C0bytes = (size_t)C0 * sizeof(T);
+
+        const int nplanes = N * C1 * outH;
+        parallel_for_(Range(0, nplanes), [&](const Range& range) {
+            const T* inptr0 = reinterpret_cast<const T*>(inp.data);
+            T* outptr0 = reinterpret_cast<T*>(out.data);
+            T ext = saturate_cast<T>(extrapolation_value);
+
+            for (int plane = range.start; plane < range.end; ++plane) {
+                int t = plane;
+                int oy = t % outH; t /= outH;
+                int c1 = t % C1;
+                int n = t / C1;
+
+                int iy = mapY[oy];
+                T* outRow = outptr0 + n * outStep0 + c1 * outStep1 + oy * outStep2;
+
+                if (tf_crop_and_resize_mode && iy == -1) {
+                    for (int ox = 0; ox < outW; ++ox) {
+                        T* outPix = outRow + ox * outStep3;
+                        for (int c0 = 0; c0 < C0; ++c0) outPix[c0] = ext;
+                    }
+                    continue;
+                }
+
+                const T* inRow = inptr0 + n * inStep0 + c1 * inStep1 + iy * inStep2;
+                for (int ox = 0; ox < outW; ++ox) {
+                    int ix = mapX[ox];
+                    if (tf_crop_and_resize_mode && ix == -1) {
+                        T* outPix = outRow + ox * outStep3;
+                        for (int c0 = 0; c0 < C0; ++c0) outPix[c0] = ext;
+                    } else {
+                        memcpy(outRow + ox * outStep3, inRow + ix * inStep3, C0bytes);
+                    }
+                }
+            }
+        }, kResizeNumStripes);
+        return;
+    }
+
+    int numPlanes = inp.size[0] * inp.size[1];
+    Mat inpP = inp.reshape(1, numPlanes * inH);
+    Mat outP = out.reshape(1, numPlanes * outH);
+
     const int nstripes = kResizeNumStripes;
     parallel_for_(Range(0, nstripes), [&](const Range& range) {
-        const bool tf_crop_and_resize_mode = (coordMode == CoordTransMode::TF_CROP_AND_RESIZE);
         int row0 = range.start * (outH * numPlanes) / nstripes;
         float extrapolation_value_ = extrapolation_value;
         int row1 = range.end   * (outH * numPlanes) / nstripes - 1;
@@ -346,13 +398,9 @@ void resizeBilinear(const Mat &inp, Mat &out,
                     float start_x = 0.0f, float end_x = 1.0f,
                     float extrapolation_value = 0.0f)
 {
-    int numPlanes = inp.size[0]*inp.size[1];
     int inH       = inp.size[2], inW = inp.size[3];
     int outH      = out.size[2], outW = out.size[3];
     CV_Assert(inp.isContinuous() && out.isContinuous());
-
-    Mat inpP = inp.reshape(1, numPlanes*inH);
-    Mat outP = out.reshape(1, numPlanes*outH);
 
     CoordTransMode coordMode = parseCoordTransMode(coordTransMode);
     const bool tf_crop_and_resize_mode = (coordMode == CoordTransMode::TF_CROP_AND_RESIZE);
@@ -370,6 +418,70 @@ void resizeBilinear(const Mat &inp, Mat &out,
     buildBilinearIndexAndLerp(y0, y1, ly, outOfBoundsY,
                               outH, inH, scaleH, lenY, start_y, end_y,
                               coordMode, halfPixelCenters, tf_crop_and_resize_mode);
+
+    if (inp.shape().layout == DATA_LAYOUT_BLOCK) {
+        CV_Assert(inp.dims == 5 && out.dims == 5);
+        const int N = inp.size[0], C1 = inp.size[1], C0 = inp.size[4];
+
+        const size_t inStep0 = inp.step.p[0] / inp.elemSize();
+        const size_t inStep1 = inp.step.p[1] / inp.elemSize();
+        const size_t inStep2 = inp.step.p[2] / inp.elemSize();
+        const size_t inStep3 = inp.step.p[3] / inp.elemSize();
+        const size_t outStep0 = out.step.p[0] / out.elemSize();
+        const size_t outStep1 = out.step.p[1] / out.elemSize();
+        const size_t outStep2 = out.step.p[2] / out.elemSize();
+        const size_t outStep3 = out.step.p[3] / out.elemSize();
+
+        const int nplanes = N * C1 * outH;
+        parallel_for_(Range(0, nplanes), [&](const Range& range) {
+            const T* inptr0 = reinterpret_cast<const T*>(inp.data);
+            T* outptr0 = reinterpret_cast<T*>(out.data);
+            T ext = saturate_cast<T>(extrapolation_value);
+
+            for (int plane = range.start; plane < range.end; ++plane) {
+                int t = plane;
+                int oy = t % outH; t /= outH;
+                int c1 = t % C1;
+                int n = t / C1;
+
+                T* outRow = outptr0 + n * outStep0 + c1 * outStep1 + oy * outStep2;
+                if (tf_crop_and_resize_mode && outOfBoundsY[oy]) {
+                    for (int ox = 0; ox < outW; ++ox) {
+                        T* outPix = outRow + ox * outStep3;
+                        for (int c0 = 0; c0 < C0; ++c0) outPix[c0] = ext;
+                    }
+                    continue;
+                }
+
+                const T* row00 = inptr0 + n * inStep0 + c1 * inStep1 + y0[oy] * inStep2;
+                const T* row01 = inptr0 + n * inStep0 + c1 * inStep1 + y1[oy] * inStep2;
+                float fy = ly[oy];
+
+                for (int ox = 0; ox < outW; ++ox) {
+                    T* outPix = outRow + ox * outStep3;
+                    if (tf_crop_and_resize_mode && outOfBoundsX[ox]) {
+                        for (int c0 = 0; c0 < C0; ++c0) outPix[c0] = ext;
+                        continue;
+                    }
+                    const T* p00 = row00 + x0[ox] * inStep3;
+                    const T* p01 = row00 + x1[ox] * inStep3;
+                    const T* p10 = row01 + x0[ox] * inStep3;
+                    const T* p11 = row01 + x1[ox] * inStep3;
+                    float fx = lx[ox];
+                    for (int c0 = 0; c0 < C0; ++c0) {
+                        float top = static_cast<float>(p00[c0]) + fx * (static_cast<float>(p01[c0]) - static_cast<float>(p00[c0]));
+                        float bot = static_cast<float>(p10[c0]) + fx * (static_cast<float>(p11[c0]) - static_cast<float>(p10[c0]));
+                        outPix[c0] = saturate_cast<T>(top + fy * (bot - top));
+                    }
+                }
+            }
+        }, kResizeNumStripes);
+        return;
+    }
+
+    int numPlanes = inp.size[0] * inp.size[1];
+    Mat inpP = inp.reshape(1, numPlanes * inH);
+    Mat outP = out.reshape(1, numPlanes * outH);
 
     const int nstripes = kResizeNumStripes;
     parallel_for_(Range(0, nstripes), [&](const Range& range) {
@@ -448,12 +560,8 @@ void resizeCubic(const Mat &inp, Mat &out,
                  float start_x = 0.0f, float end_x = 1.0f,
                  float extrapolation_value = 0.0f)
 {
-    int numPlanes = inp.size[0] * inp.size[1];
     int inH = inp.size[2], inW = inp.size[3];
     int outH = out.size[2], outW = out.size[3];
-
-    Mat inpPlanes = inp.reshape(1, numPlanes * inH);
-    Mat outPlanes = out.reshape(1, numPlanes * outH);
 
     CoordTransMode coordMode = parseCoordTransMode(coordTransMode);
     const bool tf_crop_and_resize_mode = (coordMode == CoordTransMode::TF_CROP_AND_RESIZE);
@@ -473,6 +581,96 @@ void resizeCubic(const Mat &inp, Mat &out,
                               outH, inH, scaleH, lenY, start_y, end_y,
                               coordMode, halfPixelCenters, tf_crop_and_resize_mode,
                               excludeOutside, cubicA);
+
+    if (inp.shape().layout == DATA_LAYOUT_BLOCK) {
+        CV_Assert(inp.dims == 5 && out.dims == 5);
+        CV_Assert(inp.isContinuous() && out.isContinuous());
+        const int N = inp.size[0], C1 = inp.size[1], C0 = inp.size[4];
+
+        const size_t inStep0 = inp.step.p[0] / inp.elemSize();
+        const size_t inStep1 = inp.step.p[1] / inp.elemSize();
+        const size_t inStep2 = inp.step.p[2] / inp.elemSize();
+        const size_t inStep3 = inp.step.p[3] / inp.elemSize();
+        const size_t outStep0 = out.step.p[0] / out.elemSize();
+        const size_t outStep1 = out.step.p[1] / out.elemSize();
+        const size_t outStep2 = out.step.p[2] / out.elemSize();
+        const size_t outStep3 = out.step.p[3] / out.elemSize();
+
+        const int nplanes = N * C1 * outH;
+        parallel_for_(Range(0, nplanes), [&](const Range& range) {
+            const T* inptr0 = reinterpret_cast<const T*>(inp.data);
+            T* outptr0 = reinterpret_cast<T*>(out.data);
+            T ext = saturate_cast<T>(extrapolation_value);
+
+            for (int plane = range.start; plane < range.end; ++plane) {
+                int t = plane;
+                int oy = t % outH; t /= outH;
+                int c1 = t % C1;
+                int n = t / C1;
+
+                T* outRow = outptr0 + n * outStep0 + c1 * outStep1 + oy * outStep2;
+                if (tf_crop_and_resize_mode && outOfBoundsY[oy]) {
+                    for (int ox = 0; ox < outW; ++ox) {
+                        T* outPix = outRow + ox * outStep3;
+                        for (int c0 = 0; c0 < C0; ++c0) outPix[c0] = ext;
+                    }
+                    continue;
+                }
+
+                const int yy0 = y_id[oy][0], yy1 = y_id[oy][1], yy2 = y_id[oy][2], yy3 = y_id[oy][3];
+                const float wy0 = y_w[oy][0], wy1 = y_w[oy][1], wy2 = y_w[oy][2], wy3 = y_w[oy][3];
+
+                const T* row0 = yy0 >= 0 ? inptr0 + n * inStep0 + c1 * inStep1 + yy0 * inStep2 : nullptr;
+                const T* row1 = yy1 >= 0 ? inptr0 + n * inStep0 + c1 * inStep1 + yy1 * inStep2 : nullptr;
+                const T* row2 = yy2 >= 0 ? inptr0 + n * inStep0 + c1 * inStep1 + yy2 * inStep2 : nullptr;
+                const T* row3 = yy3 >= 0 ? inptr0 + n * inStep0 + c1 * inStep1 + yy3 * inStep2 : nullptr;
+
+                for (int ox = 0; ox < outW; ++ox) {
+                    T* outPix = outRow + ox * outStep3;
+                    if (tf_crop_and_resize_mode && outOfBoundsX[ox]) {
+                        for (int c0 = 0; c0 < C0; ++c0) outPix[c0] = ext;
+                        continue;
+                    }
+                    const int xx0 = x_id[ox][0], xx1 = x_id[ox][1], xx2 = x_id[ox][2], xx3 = x_id[ox][3];
+                    const float wx0 = x_w[ox][0], wx1 = x_w[ox][1], wx2 = x_w[ox][2], wx3 = x_w[ox][3];
+
+                    for (int c0 = 0; c0 < C0; ++c0) {
+                        float val = 0.f;
+                        if (row0) {
+                            if (xx0 >= 0) val += wy0 * wx0 * static_cast<float>(row0[xx0 * inStep3 + c0]);
+                            if (xx1 >= 0) val += wy0 * wx1 * static_cast<float>(row0[xx1 * inStep3 + c0]);
+                            if (xx2 >= 0) val += wy0 * wx2 * static_cast<float>(row0[xx2 * inStep3 + c0]);
+                            if (xx3 >= 0) val += wy0 * wx3 * static_cast<float>(row0[xx3 * inStep3 + c0]);
+                        }
+                        if (row1) {
+                            if (xx0 >= 0) val += wy1 * wx0 * static_cast<float>(row1[xx0 * inStep3 + c0]);
+                            if (xx1 >= 0) val += wy1 * wx1 * static_cast<float>(row1[xx1 * inStep3 + c0]);
+                            if (xx2 >= 0) val += wy1 * wx2 * static_cast<float>(row1[xx2 * inStep3 + c0]);
+                            if (xx3 >= 0) val += wy1 * wx3 * static_cast<float>(row1[xx3 * inStep3 + c0]);
+                        }
+                        if (row2) {
+                            if (xx0 >= 0) val += wy2 * wx0 * static_cast<float>(row2[xx0 * inStep3 + c0]);
+                            if (xx1 >= 0) val += wy2 * wx1 * static_cast<float>(row2[xx1 * inStep3 + c0]);
+                            if (xx2 >= 0) val += wy2 * wx2 * static_cast<float>(row2[xx2 * inStep3 + c0]);
+                            if (xx3 >= 0) val += wy2 * wx3 * static_cast<float>(row2[xx3 * inStep3 + c0]);
+                        }
+                        if (row3) {
+                            if (xx0 >= 0) val += wy3 * wx0 * static_cast<float>(row3[xx0 * inStep3 + c0]);
+                            if (xx1 >= 0) val += wy3 * wx1 * static_cast<float>(row3[xx1 * inStep3 + c0]);
+                            if (xx2 >= 0) val += wy3 * wx2 * static_cast<float>(row3[xx2 * inStep3 + c0]);
+                            if (xx3 >= 0) val += wy3 * wx3 * static_cast<float>(row3[xx3 * inStep3 + c0]);
+                        }
+                        outPix[c0] = saturate_cast<T>(val);
+                    }
+                }
+            }
+        }, kResizeNumStripes);
+        return;
+    }
+
+    int numPlanes = inp.size[0] * inp.size[1];
+    Mat inpPlanes = inp.reshape(1, numPlanes * inH);
+    Mat outPlanes = out.reshape(1, numPlanes * outH);
 
     const int nstripes = kResizeNumStripes;
     parallel_for_(Range(0, nstripes), [&](const Range& range) {
@@ -633,6 +831,30 @@ public:
         return false;
     }
 
+    int getLayouts(const std::vector<DataLayout>& actualInputs,
+                   std::vector<DataLayout>& desiredInputs,
+                   const int requiredOutputs,
+                   std::vector<DataLayout>& outputs) const CV_OVERRIDE
+    {
+        CV_Assert(!actualInputs.empty());
+        desiredInputs = actualInputs;
+        outputs.assign(requiredOutputs, actualInputs[0]);
+
+        if (actualInputs[0] != DATA_LAYOUT_BLOCK)
+            return 0;
+
+        if (interpolation == "nearest" || interpolation == "bilinear" || interpolation == "opencv_linear" || interpolation == "cubic") {
+            desiredInputs[0] = DATA_LAYOUT_BLOCK;
+            outputs.assign(requiredOutputs, DATA_LAYOUT_BLOCK);
+        } else {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            DataLayout defaultLayout = netimpl_ ? netimpl_->originalLayout : DATA_LAYOUT_NCHW;
+            desiredInputs[0] = defaultLayout;
+            outputs.assign(requiredOutputs, DATA_LAYOUT_UNKNOWN);
+        }
+        return outputs[0] == DATA_LAYOUT_BLOCK ? getNetImpl(this)->defaultC0 : 0;
+    }
+
     MatShape getOutShape(const MatShape& inpShape, const std::vector<int>& sizes,
                          const std::vector<float>& scales) const
     {
@@ -734,7 +956,7 @@ public:
 
     void updateOutSizeAndScale(const MatShape& inpShape, const MatShape& outShape)
     {
-        CV_Assert(outShape.dims == 4);
+        CV_Assert(inpShape.dims >= 4 && outShape.dims >= 4);
         outHeight = outShape[2];
         outWidth = outShape[3];
         if (alignCorners && outHeight > 1)
@@ -865,8 +1087,10 @@ public:
         if(interpolation=="nearest"){
             switch(depth){
             case CV_8S:
-            case CV_8U:
                 resizeNearest<int8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                break;
+            case CV_8U:
+                resizeNearest<uint8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
                 break;
             case CV_16F:
                 resizeNearest<hfloat>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);

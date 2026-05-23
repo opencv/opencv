@@ -273,9 +273,11 @@ int main(int argc, char *argv[])
     namedWindow("Output3", 1);
     imshow("Input", src);
 
-    kernel = (Mat_<double>(3, 3) << 1, 0, -1,
-              1, 0, -1,
-              1, 0, -1);
+    kernel = Mat_<double>({3, 3}, {
+        1, 0, -1,
+        1, 0, -1,
+        1, 0, -1
+    });
 
     /*
     Uncomment the kernels you want to use or write your own kernels to test out

@@ -157,6 +157,33 @@ public:
         internals.clear();
     }
 
+    int getLayouts(const std::vector<DataLayout>& actualInputs,
+                   std::vector<DataLayout>& desiredInputs,
+                   const int requiredOutputs,
+                   std::vector<DataLayout>& outputs) const CV_OVERRIDE
+    {
+        auto* netimpl_ = getNetImpl(this);
+        DataLayout defaultLayout = netimpl_->originalLayout;
+        const size_t ninputs = actualInputs.size();
+        desiredInputs = actualInputs;
+        outputs.assign(requiredOutputs, DATA_LAYOUT_UNKNOWN);
+
+        bool allBlock = ninputs > 0;
+        for (size_t i = 0; i < ninputs; ++i)
+            if (actualInputs[i] != DATA_LAYOUT_BLOCK) { allBlock = false; break; }
+
+        // BLOCK layout on the channel axis would expose inner-block padding as real channels; let TransformLayout repack instead.
+        const bool canKeepBlock = allBlock && axis >= 0 && axis != 1;
+
+        if (canKeepBlock) {
+            outputs.assign(requiredOutputs, DATA_LAYOUT_BLOCK);
+        } else {
+            for (size_t i = 0; i < ninputs; ++i)
+                if (actualInputs[i] == DATA_LAYOUT_BLOCK) desiredInputs[i] = defaultLayout;
+        }
+        return outputs[0] == DATA_LAYOUT_BLOCK ? netimpl_->defaultC0 : 0;
+    }
+
     void finalize(InputArrayOfArrays, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
     {
     }

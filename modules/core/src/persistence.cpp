@@ -529,7 +529,6 @@ bool FileStorage::Impl::open(const char *filename_or_buf, int _flags, const char
     bool write_base64 = (write_mode || append) && (_flags & FileStorage::BASE64) != 0;
 
     bool isGZ = false;
-    size_t fnamelen = 0;
 
     std::vector<std::string> params;
     //if ( !mem_mode )
@@ -552,18 +551,30 @@ bool FileStorage::Impl::open(const char *filename_or_buf, int _flags, const char
     flags = _flags;
 
     if (!mem_mode) {
-        char *dot_pos = strrchr((char *) filename.c_str(), '.');
+        size_t dot_idx = filename.find_last_of('.');
         char compression = '\0';
 
-        if (dot_pos && dot_pos[1] == 'g' && dot_pos[2] == 'z' &&
-            (dot_pos[3] == '\0' || (cv_isdigit(dot_pos[3]) && dot_pos[4] == '\0'))) {
-            if (append) {
-                CV_Error(cv::Error::StsNotImplemented, "Appending data to compressed file is not implemented");
+        if (dot_idx != std::string::npos)
+        {
+            std::string ext = filename.substr(dot_idx);
+
+            // Instead of `ext.starts_with(".gz")
+            if (ext.size() >= 3 && (ext[1] == 'g') && (ext[2] == 'z') )
+            {
+                if (ext.size() == 3)
+                {
+                    // ".gz"
+                    isGZ = true;
+                }
+
+                else if(ext.size() == 4 && cv_isdigit(ext[3]))
+                {
+                    // ".gz[0-9]"
+                    isGZ = true;
+                    compression = ext[3];
+                    filename.pop_back(); // Replace `gz[0-9]' to 'gz'.
+                }
             }
-            isGZ = true;
-            compression = dot_pos[3];
-            if (compression)
-                dot_pos[3] = '\0', fnamelen--;
         }
 
         if (!isGZ) {
@@ -575,6 +586,9 @@ bool FileStorage::Impl::open(const char *filename_or_buf, int _flags, const char
             }
         } else {
 #if USE_ZLIB
+            if (append) {
+                CV_Error(cv::Error::StsNotImplemented, "Appending data to compressed file is not implemented");
+            }
             char mode[] = {write_mode ? 'w' : 'r', 'b', compression ? compression : '3', '\0'};
             gzfile = gzopen(filename.c_str(), mode);
             if (!gzfile)
@@ -695,9 +709,13 @@ bool FileStorage::Impl::open(const char *filename_or_buf, int _flags, const char
             }
 
             emitter_do_not_use_direct_dereference = createXMLEmitter(this);
-        } else if (fmt == FileStorage::FORMAT_YAML) {
-            if (!append)
-                puts("%YAML:1.0\n---\n");
+        } else if (fmt == FileStorage::FORMAT_YAML || fmt == FileStorage::FORMAT_YAML_1_0) {
+                if (!append) {
+                    if (fmt == FileStorage::FORMAT_YAML_1_0)
+                        puts("%YAML:1.0\n---\n"); // Legacy Flag -> Legacy Header
+                    else
+                        puts("%YAML 1.2\n---\n"); // Default -> Modern Header
+                }
             else
                 puts("...\n---\n");
 
@@ -750,16 +768,15 @@ bool FileStorage::Impl::open(const char *filename_or_buf, int _flags, const char
         char *bufPtr = cv_skip_BOM(buf);
         size_t bufOffset = bufPtr - buf;
 
+        // NOTE: Yaml 1.2 allows to skip header. Data without type signature is read as YAML
         if (strncmp(bufPtr, yaml_signature, strlen(yaml_signature)) == 0)
             fmt = FileStorage::FORMAT_YAML;
         else if (strncmp(bufPtr, json_signature, strlen(json_signature)) == 0)
             fmt = FileStorage::FORMAT_JSON;
         else if (strncmp(bufPtr, xml_signature, strlen(xml_signature)) == 0)
             fmt = FileStorage::FORMAT_XML;
-        else if (strbufsize == bufOffset)
-            CV_Error(cv::Error::StsBadArg, "Input file is invalid");
         else
-            CV_Error(cv::Error::StsBadArg, "Unsupported file storage format");
+            fmt = FileStorage::FORMAT_YAML;
 
         rewind();
         strbufpos = bufOffset;
@@ -782,6 +799,7 @@ bool FileStorage::Impl::open(const char *filename_or_buf, int _flags, const char
                     parser_do_not_use_direct_dereference = createXMLParser(this);
                     break;
                 case FileStorage::FORMAT_YAML:
+                case FileStorage::FORMAT_YAML_1_0:
                     parser_do_not_use_direct_dereference = createYAMLParser(this);
                     break;
                 case FileStorage::FORMAT_JSON:
@@ -2156,7 +2174,13 @@ void write( FileStorage& fs, const String& name, const String& value )
     fs.p->write(name, value);
 }
 
+void write( FileStorage& fs, const String& name, bool value )
+{
+    fs.p->write(name, value);
+}
+
 void FileStorage::write(const String& name, int val) { p->write(name, val); }
+void FileStorage::write(const String& name, bool val) { p->write(name, val); }
 void FileStorage::write(const String& name, int64_t val) { p->write(name, val); }
 void FileStorage::write(const String& name, double val) { p->write(name, val); }
 void FileStorage::write(const String& name, const String& val) { p->write(name, val); }
@@ -2410,7 +2434,7 @@ FileNode::operator float() const
 
     if( type == INT )
     {
-        return (float)readInt(p);
+        return (float)readLong(p);
     }
     else if( type == REAL )
     {
@@ -2431,7 +2455,7 @@ FileNode::operator double() const
 
     if( type == INT )
     {
-        return (double)readInt(p);
+        return (double)readLong(p);
     }
     else if( type == REAL )
     {
@@ -2442,6 +2466,7 @@ FileNode::operator double() const
 }
 
 double FileNode::real() const  { return double(*this); }
+
 std::string FileNode::string() const
 {
     const uchar* p = ptr();
@@ -2891,6 +2916,20 @@ void read(const FileNode& node, std::string& val, const std::string& default_val
     if( !node.empty() )
     {
         val = (std::string)node;
+    }
+}
+void FileStorage::Impl::write(const String &key, bool value)
+{
+    CV_Assert(write_mode);
+    if (fmt != FileStorage::FORMAT_YAML)
+    {
+        // Legacy behavior: Write as integer 1 or 0
+        getEmitter().write(key.c_str(), (int)value);
+    }
+    else
+    {
+        // Default/Modern behavior: Write as "true" or "false"
+        getEmitter().write(key.c_str(), value ? "true" : "false", false);
     }
 }
 

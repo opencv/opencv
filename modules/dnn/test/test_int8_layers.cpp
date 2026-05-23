@@ -212,7 +212,10 @@ TEST_P(Test_Int8_layers, AvePooling)
     if (backend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         testLayer("layer_pooling_ave", "Caffe", 0.0021, 0.0075);
     testLayer("ave_pool_same", "TensorFlow", 0.00153, 0.0041);
-    testLayer("average_pooling_1d", "ONNX", 0.002, 0.0048);
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2025030000)
+    if (backend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+#endif
+        testLayer("average_pooling_1d", "ONNX", 0.002, 0.0048);
     if (backend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         testLayer("average_pooling", "ONNX", 0.0014, 0.0032);
     testLayer("average_pooling_dynamic_axes", "ONNX", 0.0014, 0.006);
@@ -648,9 +651,9 @@ public:
         normAssert(ref, out, "", l1, lInf);
     }
 
-    void testDarknetModel(const std::string& cfg, const std::string& weights,
-                          const cv::Mat& ref, double scoreDiff, double iouDiff,
-                          float confThreshold = 0.24, float nmsThreshold = 0.4, bool perChannel = true)
+    void testYOLOModel(const std::string& model,
+                      const cv::Mat& ref, double scoreDiff, double iouDiff,
+                      float confThreshold = 0.24, float nmsThreshold = 0.4, bool perChannel = true)
     {
         CV_Assert(ref.cols == 7);
         std::vector<std::vector<int> > refClassIds;
@@ -689,7 +692,7 @@ public:
 
         Mat inp = blobFromImages(samples, 1.0/255, Size(416, 416), Scalar(), true, false);
 
-        Net baseNet = readNetFromDarknet(findDataFile("dnn/" + cfg), findDataFile("dnn/" + weights, false));
+        Net baseNet = readNet(findDataFile("dnn/" + model, false));
         Net qnet = baseNet.quantize(inp, CV_32F, CV_32F, perChannel);
         qnet.setPreferableBackend(backend);
         qnet.setPreferableTarget(target);
@@ -1225,86 +1228,6 @@ TEST_P(Test_Int8_nets, RFCN)
     testFaster(net, ref, confThreshold, scoreDiff, iouDiff);
 }
 
-TEST_P(Test_Int8_nets, YoloVoc)
-{
-    applyTestTag(
-#if defined(OPENCV_32BIT_CONFIGURATION) && defined(HAVE_OPENCL)
-        CV_TEST_TAG_MEMORY_2GB,
-#else
-        CV_TEST_TAG_MEMORY_1GB,
-#endif
-        CV_TEST_TAG_LONG,
-        CV_TEST_TAG_DEBUG_VERYLONG
-    );
-
-    if (target == DNN_TARGET_OPENCL_FP16 && !ocl::Device::getDefault().isIntel())
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
-    if (target == DNN_TARGET_OPENCL && !ocl::Device::getDefault().isIntel())
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
-
-    Mat ref = (Mat_<float>(6, 7) << 0, 6,  0.750469f, 0.577374f, 0.127391f, 0.902949f, 0.300809f,
-                                    0, 1,  0.780879f, 0.270762f, 0.264102f, 0.732475f, 0.745412f,
-                                    0, 11, 0.901615f, 0.1386f,   0.338509f, 0.421337f, 0.938789f,
-                                    1, 14, 0.623813f, 0.183179f, 0.381921f, 0.247726f, 0.625847f,
-                                    1, 6,  0.667770f, 0.446555f, 0.453578f, 0.499986f, 0.519167f,
-                                    1, 6,  0.844947f, 0.637058f, 0.460398f, 0.828508f, 0.66427f);
-
-    std::string config_file = "yolo-voc.cfg";
-    std::string weights_file = "yolo-voc.weights";
-
-    double scoreDiff = 0.12, iouDiff = 0.3;
-    {
-    SCOPED_TRACE("batch size 1");
-    testDarknetModel(config_file, weights_file, ref.rowRange(0, 3), scoreDiff, iouDiff);
-    }
-
-    {
-    SCOPED_TRACE("batch size 2");
-    testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff);
-    }
-}
-
-TEST_P(Test_Int8_nets, TinyYoloVoc)
-{
-    applyTestTag(
-        CV_TEST_TAG_MEMORY_512MB,
-        CV_TEST_TAG_DEBUG_VERYLONG
-    );
-
-    if (target == DNN_TARGET_OPENCL_FP16 && !ocl::Device::getDefault().isIntel())
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
-    if (target == DNN_TARGET_OPENCL && !ocl::Device::getDefault().isIntel())
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
-
-    Mat ref = (Mat_<float>(4, 7) << 0, 6,  0.761967f, 0.579042f, 0.159161f, 0.894482f, 0.31994f,
-                                    0, 11, 0.780595f, 0.129696f, 0.386467f, 0.445275f, 0.920994f,
-                                    1, 6,  0.651450f, 0.460526f, 0.458019f, 0.522527f, 0.5341f,
-                                    1, 6,  0.928758f, 0.651024f, 0.463539f, 0.823784f, 0.654998f);
-
-    std::string config_file = "tiny-yolo-voc.cfg";
-    std::string weights_file = "tiny-yolo-voc.weights";
-
-    double scoreDiff = 0.043, iouDiff = 0.12;
-    {
-    SCOPED_TRACE("batch size 1");
-    testDarknetModel(config_file, weights_file, ref.rowRange(0, 2), scoreDiff, iouDiff);
-        {
-            SCOPED_TRACE("Per-tensor quantize");
-            testDarknetModel(config_file, weights_file, ref.rowRange(0, 2), 0.1, 0.2, 0.24, 0.6, false);
-        }
-    }
-
-    {
-    SCOPED_TRACE("batch size 2");
-    testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff);
-
-        {
-            SCOPED_TRACE("Per-tensor quantize");
-            testDarknetModel(config_file, weights_file, ref, 0.1, 0.2, 0.24, 0.6, false);
-        }
-    }
-}
-
 TEST_P(Test_Int8_nets, YOLOv3)
 {
     applyTestTag(
@@ -1334,18 +1257,17 @@ TEST_P(Test_Int8_nets, YOLOv3)
     };
     Mat ref(N0 + N1, 7, CV_32FC1, (void*)ref_);
 
-    std::string config_file = "yolov3.cfg";
-    std::string weights_file = "yolov3.weights";
+    std::string model_file = "yolov3.onnx";
 
     double scoreDiff = 0.08, iouDiff = 0.21, confThreshold = 0.25;
     {
         SCOPED_TRACE("batch size 1");
-        testDarknetModel(config_file, weights_file, ref.rowRange(0, N0), scoreDiff, iouDiff, confThreshold);
+        testYOLOModel(model_file, ref.rowRange(0, N0), scoreDiff, iouDiff, confThreshold);
     }
 
     {
         SCOPED_TRACE("batch size 2");
-        testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff, confThreshold);
+        testYOLOModel(model_file, ref, scoreDiff, iouDiff, confThreshold);
     }
 }
 
@@ -1379,18 +1301,17 @@ TEST_P(Test_Int8_nets, YOLOv4)
     };
     Mat ref(N0 + N1, 7, CV_32FC1, (void*)ref_);
 
-    std::string config_file = "yolov4.cfg";
-    std::string weights_file = "yolov4.weights";
+    std::string model_file = "yolov4.onnx";
     double scoreDiff = 0.15, iouDiff = 0.2;
     {
         SCOPED_TRACE("batch size 1");
-        testDarknetModel(config_file, weights_file, ref.rowRange(0, N0), scoreDiff, iouDiff);
+        testYOLOModel(model_file, ref.rowRange(0, N0), scoreDiff, iouDiff);
     }
 
     {
         SCOPED_TRACE("batch size 2");
 
-        testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff);
+        testYOLOModel(model_file, ref, scoreDiff, iouDiff);
     }
 }
 
@@ -1421,18 +1342,17 @@ TEST_P(Test_Int8_nets, YOLOv4_tiny)
     };
     Mat ref(N0 + N1, 7, CV_32FC1, (void*)ref_);
 
-    std::string config_file = "yolov4-tiny-2020-12.cfg";
-    std::string weights_file = "yolov4-tiny-2020-12.weights";
+    std::string model_file = "yolov4-tiny.onnx";
     double scoreDiff = 0.12;
     double iouDiff = target == DNN_TARGET_OPENCL_FP16 ? 0.2 : 0.118;
 
     {
         SCOPED_TRACE("batch size 1");
-        testDarknetModel(config_file, weights_file, ref.rowRange(0, N0), scoreDiff, iouDiff, confThreshold);
+        testYOLOModel(model_file, ref.rowRange(0, N0), scoreDiff, iouDiff, confThreshold);
 
         {
             SCOPED_TRACE("Per-tensor quantize");
-            testDarknetModel(config_file, weights_file, ref.rowRange(0, N0), scoreDiff, 0.224, 0.7, 0.4, false);
+            testYOLOModel(model_file, ref.rowRange(0, N0), scoreDiff, 0.224, 0.7, 0.4, false);
         }
     }
 
@@ -1440,7 +1360,7 @@ TEST_P(Test_Int8_nets, YOLOv4_tiny)
     /* bad accuracy on second image
     {
         SCOPED_TRACE("batch size 2");
-        testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff, confThreshold);
+        testYOLOModel(model_file, ref, scoreDiff, iouDiff, confThreshold);
     }
     */
 }

@@ -23,7 +23,7 @@
  */
 
 void png_read_filter_row_up_mmi(png_row_infop row_info, png_bytep row,
-                                png_const_bytep prev_row)
+    png_const_bytep prev_row)
 {
    int istop = row_info->rowbytes;
    double rp,pp;
@@ -46,7 +46,7 @@ void png_read_filter_row_up_mmi(png_row_infop row_info, png_bytep row,
 }
 
 void png_read_filter_row_sub3_mmi(png_row_infop row_info, png_bytep row,
-   png_const_bytep prev)
+    png_const_bytep prev)
 {
    int istop = row_info->rowbytes;
    double rp, pp, dest;
@@ -105,7 +105,7 @@ void png_read_filter_row_sub3_mmi(png_row_infop row_info, png_bytep row,
 }
 
 void png_read_filter_row_sub4_mmi(png_row_infop row_info, png_bytep row,
-   png_const_bytep prev)
+    png_const_bytep prev)
 {
    /* The Sub filter predicts each pixel as the previous pixel, a.
     * There is no pixel to the left of the first pixel.  It's encoded directly.
@@ -133,7 +133,7 @@ void png_read_filter_row_sub4_mmi(png_row_infop row_info, png_bytep row,
 }
 
 void png_read_filter_row_avg3_mmi(png_row_infop row_info, png_bytep row,
-   png_const_bytep prev)
+    png_const_bytep prev)
 {
    int istop = row_info->rowbytes;
    double rp, pp, rp1, pp1;
@@ -225,7 +225,7 @@ void png_read_filter_row_avg3_mmi(png_row_infop row_info, png_bytep row,
 }
 
 void png_read_filter_row_avg4_mmi(png_row_infop row_info, png_bytep row,
-   png_const_bytep prev)
+    png_const_bytep prev)
 {
    int istop = row_info->rowbytes;
    double rp,pp;
@@ -261,7 +261,7 @@ void png_read_filter_row_avg4_mmi(png_row_infop row_info, png_bytep row,
 }
 
 void png_read_filter_row_paeth3_mmi(png_row_infop row_info, png_bytep row,
-   png_const_bytep prev)
+    png_const_bytep prev)
 {
    /* Paeth tries to predict pixel d using the pixel to the left of it, a,
     * and two pixels from the previous row, b and c:
@@ -449,7 +449,7 @@ void png_read_filter_row_paeth3_mmi(png_row_infop row_info, png_bytep row,
 }
 
 void png_read_filter_row_paeth4_mmi(png_row_infop row_info, png_bytep row,
-   png_const_bytep prev)
+    png_const_bytep prev)
 {
    /* Paeth tries to predict pixel d using the pixel to the left of it, a,
     * and two pixels from the previous row, b and c:

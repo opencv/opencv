@@ -60,6 +60,32 @@ struct ModelFusionAttention
         return dynamic_cast<MatMulLayer*>(prog[idx].get()) != nullptr;
     }
 
+    static bool isProjCandidate(const Ptr<Layer>& l)
+    {
+        if (l->blobs.empty() || l->inputs.size() != 1) return false;
+        if (dynamic_cast<MatMulLayer*>(l.get()))
+            return true;
+        GemmLayer* g = dynamic_cast<GemmLayer*>(l.get());
+        if (!g) return false;
+        if (g->trans_a || g->alpha != 1.f) return false;
+        if (l->blobs.size() == 2 && g->beta != 1.f) return false;
+        return true;
+    }
+
+    // Returns the projection weight in [K, N] (input_hidden, output_hidden)
+    // layout, transposing if the source is a Gemm with trans_b.
+    static Mat getProjWeight(const Ptr<Layer>& l)
+    {
+        const Mat& W = l->blobs[0];
+        GemmLayer* g = dynamic_cast<GemmLayer*>(l.get());
+        if (g && g->trans_b) {
+            Mat Wt;
+            cv::transpose(W, Wt);
+            return Wt;
+        }
+        return W;
+    }
+
     bool isScalarBinOp(const vector<Ptr<Layer>>& prog, int idx,
                        NaryEltwiseLayer::OPERATION op, float* val) const
     {
@@ -91,6 +117,56 @@ struct ModelFusionAttention
     bool isScalarDiv(const vector<Ptr<Layer>>& prog, int idx, float* val) const
     {
         return isScalarBinOp(prog, idx, NaryEltwiseLayer::OPERATION::DIV, val);
+    }
+
+    // True if `arg` is produced by the dynamic scale chain Sqrt<-Cast<-Div(1,.)<-Sqrt<-Cast<-Slice<-Shape; visited ops are appended to `chain_ops`.
+    bool isRuntimeQKScaleChain(const vector<Ptr<Layer>>& prog, Arg arg,
+                                std::set<int>& chain_ops) const
+    {
+        const std::vector<std::string> expected = {
+            "Sqrt", "Cast2", "NaryEltwise" /*Div*/, "Sqrt",
+            "Cast2", "Slice2", "Shape"
+        };
+        Arg cur = arg;
+        for (const std::string& want : expected) {
+            auto it = producer_.find(cur.idx);
+            if (it == producer_.end()) return false;
+            int idx = it->second;
+            if (idx < 0 || idx >= (int)prog.size() || !prog[idx]) return false;
+            const Ptr<Layer>& l = prog[idx];
+            if (want == "NaryEltwise") {
+                NaryEltwiseLayer* elt = dynamic_cast<NaryEltwiseLayer*>(l.get());
+                if (!elt || elt->op != NaryEltwiseLayer::OPERATION::DIV) return false;
+
+                bool one_seen = false;
+                Arg runtime_in;
+                bool runtime_seen = false;
+                for (Arg in : l->inputs) {
+                    if (netimpl->isConstArg(in)) {
+                        Mat t = netimpl->argTensor(in);
+                        if (t.total() != 1) return false;
+                        float v = 0.f;
+                        if      (t.type() == CV_32F) v = t.at<float>(0);
+                        else if (t.type() == CV_64F) v = (float)t.at<double>(0);
+                        else return false;
+                        if (std::abs(v - 1.f) > 1e-5f) return false;
+                        one_seen = true;
+                    } else {
+                        runtime_in = in;
+                        runtime_seen = true;
+                    }
+                }
+                if (!one_seen || !runtime_seen) return false;
+                chain_ops.insert(idx);
+                cur = runtime_in;
+            } else {
+                if (l->type != want) return false;
+                chain_ops.insert(idx);
+                if (l->inputs.empty()) return false;
+                cur = l->inputs[0];
+            }
+        }
+        return true;
     }
 
     // Accept Add op with exactly two inputs; identify the non-constant runtime
@@ -251,10 +327,7 @@ struct ModelFusionAttention
         std::map<int, vector<int>> qkv_candidates;
         for (size_t i = 0; i < nops; i++) {
             if (!prog[i]) continue;
-            MatMulLayer* mm = dynamic_cast<MatMulLayer*>(prog[i].get());
-            if (!mm) continue;
-            if (prog[i]->blobs.empty() || prog[i]->inputs.size() != 1)
-                continue;
+            if (!isProjCandidate(prog[i])) continue;
             Arg inp = prog[i]->inputs[0];
             qkv_candidates[inp.idx].push_back((int)i);
         }
@@ -310,11 +383,19 @@ struct ModelFusionAttention
                 { int j = 0; for (int k = 0; k < 3; k++) if (k != k_slot) remaining[j++] = k; }
 
                 Arg k_tr_out = prog[transpose_idx[k_slot]]->outputs[0];
-                int k_next = singleConsumer(k_tr_out);
+                // Tolerate a Shape consumer alongside the Mul/MatMul: the runtime-scale chain (Shape->Slice->Cast->Sqrt...) branches off the Q/K transpose.
+                int k_next = findMatchingConsumer(prog, k_tr_out,
+                    [](Layer* L) {
+                        return dynamic_cast<NaryEltwiseLayer*>(L) != nullptr ||
+                               dynamic_cast<MatMulLayer*>(L) != nullptr;
+                    },
+                    &extra_ops);
                 int k_mul_idx = -1;
                 float k_scale_val = 1.f;
                 int qk_matmul_idx = -1;
                 bool vit_style;
+                bool runtime_qk_scale = false;
+                std::set<int> qk_scale_chain_ops;
                 if (isScalarMul(prog, k_next, &k_scale_val)) {
                     vit_style = true;
                     k_mul_idx = k_next;
@@ -322,6 +403,26 @@ struct ModelFusionAttention
                 } else if (isMatMul(prog, k_next)) {
                     vit_style = false;
                     qk_matmul_idx = k_next;
+                } else if (k_next >= 0 && k_next < (int)prog.size() && prog[k_next]) {
+                    // K_Transpose -> Mul(K, runtime_scale) where scale = Sqrt(Cast(Div(1,Sqrt(Cast(Slice(Shape(...))))))) and the same scale feeds the Q-side Mul (verified later).
+                    NaryEltwiseLayer* elt = dynamic_cast<NaryEltwiseLayer*>(prog[k_next].get());
+                    if (!elt || elt->op != NaryEltwiseLayer::OPERATION::PROD ||
+                        prog[k_next]->inputs.size() != 2) {
+                        continue;
+                    }
+                    Arg k_scale_in;
+                    bool tensor_input_seen = false;
+                    for (Arg in : prog[k_next]->inputs) {
+                        if (in.idx == k_tr_out.idx) tensor_input_seen = true;
+                        else k_scale_in = in;
+                    }
+                    if (!tensor_input_seen) continue;
+                    if (!isRuntimeQKScaleChain(prog, k_scale_in, qk_scale_chain_ops)) continue;
+
+                    runtime_qk_scale = true;
+                    vit_style = true;
+                    k_mul_idx = k_next;
+                    qk_matmul_idx = singleConsumer(prog[k_mul_idx]->outputs[0]);
                 } else {
                     continue;
                 }
@@ -337,8 +438,32 @@ struct ModelFusionAttention
                     Arg q_tr_out = prog[transpose_idx[q_slot]]->outputs[0];
 
                     if (vit_style) {
-                        int q_next = singleConsumer(q_tr_out);
-                        if (!isScalarMul(prog, q_next, &q_scale_val)) continue;
+                        int q_next = findMatchingConsumer(prog, q_tr_out,
+                            [](Layer* L) {
+                                return dynamic_cast<NaryEltwiseLayer*>(L) != nullptr ||
+                                       dynamic_cast<MatMulLayer*>(L) != nullptr;
+                            },
+                            &extra_ops);
+                        if (isScalarMul(prog, q_next, &q_scale_val)) {
+                            // existing constant-scalar path
+                        } else if (runtime_qk_scale && q_next >= 0 &&
+                                   q_next < (int)prog.size() && prog[q_next]) {
+                            NaryEltwiseLayer* elt = dynamic_cast<NaryEltwiseLayer*>(prog[q_next].get());
+                            if (!elt || elt->op != NaryEltwiseLayer::OPERATION::PROD ||
+                                prog[q_next]->inputs.size() != 2) {
+                                continue;
+                            }
+                            Arg q_scale_in;
+                            bool tensor_input_seen = false;
+                            for (Arg in : prog[q_next]->inputs) {
+                                if (in.idx == q_tr_out.idx) tensor_input_seen = true;
+                                else q_scale_in = in;
+                            }
+                            if (!tensor_input_seen) continue;
+                            if (!isRuntimeQKScaleChain(prog, q_scale_in, qk_scale_chain_ops)) continue;
+                        } else {
+                            continue;
+                        }
                         q_mul_idx = q_next;
                         Arg q_mul_out = prog[q_mul_idx]->outputs[0];
                         int q_dest = singleConsumer(q_mul_out);
@@ -406,9 +531,11 @@ struct ModelFusionAttention
                             collectShapeChain(prog, it->second, extra_ops);
                     }
 
-                    const Mat& Wq = prog[indices[q_slot]]->blobs[0];
-                    const Mat& Wk = prog[indices[k_slot]]->blobs[0];
-                    const Mat& Wv = prog[indices[v_slot]]->blobs[0];
+                    // Normalize each projection weight to [K, N] regardless of
+                    // whether the source op is MatMul or Gemm-with-trans_b.
+                    Mat Wq = getProjWeight(prog[indices[q_slot]]);
+                    Mat Wk = getProjWeight(prog[indices[k_slot]]);
+                    Mat Wv = getProjWeight(prog[indices[v_slot]]);
                     int input_hidden = Wq.size[0];
                     int q_hidden = Wq.size[1];
                     int k_hidden = Wk.size[1];
@@ -438,8 +565,20 @@ struct ModelFusionAttention
                         memcpy(dst + bq.total() + bk.total(), bv.ptr<float>(), bv.total() * sizeof(float));
                     }
 
-                    float param_scale = vit_style ? (1.f / (q_scale_val * k_scale_val))
-                                                  : post_scale_val;
+                    float param_scale;
+                    if (runtime_qk_scale) {
+                        // Both Q and K were scaled by head_dim^-0.25, so
+                        // (Q'*K'^T) = (1/sqrt(d)) * (Q*K^T). The Attention
+                        // layer's `scale` param is the divisor applied
+                        // before softmax — i.e., sqrt(d).
+                        if (num_heads[0] <= 0 || q_hidden % num_heads[0] != 0) continue;
+                        int head_dim = q_hidden / num_heads[0];
+                        if (head_dim <= 0) continue;
+                        param_scale = std::sqrt((float)head_dim);
+                    } else {
+                        param_scale = vit_style ? (1.f / (q_scale_val * k_scale_val))
+                                                : post_scale_val;
+                    }
 
                     LayerParams attn_params;
                     attn_params.name = prog[indices[q_slot]]->name + "_fused_attention";
@@ -479,6 +618,24 @@ struct ModelFusionAttention
                     if (qk_div_idx >= 0) to_remove.insert(qk_div_idx);
                     if (qk_add_idx >= 0) to_remove.insert(qk_add_idx);
                     for (int op : extra_ops) to_remove.insert(op);
+
+                    // Drop chain ops (Sqrt/Cast/Div/Slice/Shape) only if every consumer is also being removed — by this fusion or another chain op already in the set; the upstream is shared between Q and K branches so the chain is treated as a unit.
+                    for (int op_idx : qk_scale_chain_ops) {
+                        if (op_idx < 0 || op_idx >= (int)prog.size() || !prog[op_idx]) continue;
+                        bool all_consumers_removed = true;
+                        for (Arg out : prog[op_idx]->outputs) {
+                            auto cit = consumers_.find(out.idx);
+                            if (cit == consumers_.end()) continue;
+                            for (int c : cit->second) {
+                                if (to_remove.count(c) || qk_scale_chain_ops.count(c)) continue;
+                                all_consumers_removed = false;
+                                break;
+                            }
+                            if (!all_consumers_removed) break;
+                        }
+                        if (all_consumers_removed) to_remove.insert(op_idx);
+                    }
+
                     for (int op : to_remove)
                         removed_ops.insert(op);
 

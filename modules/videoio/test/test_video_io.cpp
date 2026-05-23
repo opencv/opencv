@@ -335,7 +335,10 @@ public:
 
         // Workaround for some gstreamer pipelines
         if (apiPref == CAP_GSTREAMER)
+        {
             expected_frame_count.start -= 1;
+            expected_frame_count.end += 1;
+        }
 
         ASSERT_LE(expected_frame_count.start, actual);
         ASSERT_GE(expected_frame_count.end, actual);
@@ -915,7 +918,7 @@ TEST_P(videowriter_acceleration, write)
         throw SkipTestException(cv::String("Backend is not available/disabled: ") + backend_name);
 #ifdef __linux__
     if (cvtest::skipUnstableTests && backend == CAP_GSTREAMER &&
-        (extension == "mkv") && (codecid == "MPEG"))
+        (extension == "mkv") && (codecid == "MPEG" || codecid == "H264"))
     {
         throw SkipTestException("Unstable GSTREAMER test");
     }

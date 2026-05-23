@@ -46,7 +46,7 @@ int main(int, char**)
         img = Scalar::all(0);
         state.at<float>(0) = 0.0f;
         state.at<float>(1) = 2.f * (float)CV_PI / 6;
-        KF.transitionMatrix = (Mat_<float>(2, 2) << 1, 1, 0, 1);
+        KF.transitionMatrix = Mat_<float>({2, 2}, {1, 1, 0, 1});
 
         setIdentity(KF.measurementMatrix);
         setIdentity(KF.processNoiseCov, Scalar::all(1e-5));
