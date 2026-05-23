@@ -1770,12 +1770,16 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
             nonZeroCoeffs++;
         }
     }
-    Point maxU, minV;
-    minMaxLoc(u, nullptr, nullptr, nullptr, &maxU);
-    minMaxLoc(v, nullptr, nullptr, &minV);
-    u.at<double>(maxU) = 0;
-    v.at<double>(minV) = 0;
-    double scale = (sum(u).val[0] + sum(v).val[0]) / (2 * nonZeroCoeffs - 2);
+    double scale = 1;
+    if( nonZeroCoeffs > 2 )
+    {
+        Point maxU, minV;
+        minMaxLoc(u, nullptr, nullptr, nullptr, &maxU);
+        minMaxLoc(v, nullptr, nullptr, &minV);
+        u.at<double>(maxU) = 0;
+        v.at<double>(minV) = 0;
+        scale = (sum(u).val[0] + sum(v).val[0]) / (2 * nonZeroCoeffs - 2);
+    }
 
     C p(scale, 0), r(cos(CV_2PI / n), sin(CV_2PI / n));
 
