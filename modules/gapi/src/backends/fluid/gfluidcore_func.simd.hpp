@@ -347,6 +347,18 @@ int merge4_simd(const uchar in1[], const uchar in2[], const uchar in3[],
                 const uchar in4[], uchar out[], const int width);
 
 
+
+#define DECLARE_SELECT_SIMD(SRC)                                                    \
+int select_simd(const SRC in1[], const SRC in2[], const uchar in3[],                \
+                SRC out[], const int length, const int chan);
+
+DECLARE_SELECT_SIMD(uchar)
+DECLARE_SELECT_SIMD(ushort)
+DECLARE_SELECT_SIMD(short)
+
+#undef DECLARE_SELECT_SIMD
+
+
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
 #define SRC_SHORT_OR_USHORT std::is_same<SRC, short>::value || std::is_same<SRC, ushort>::value
@@ -3378,6 +3390,163 @@ INRANGE_SIMD(ushort)
 INRANGE_SIMD(short)
 
 #undef INRANGE_SIMD
+
+//-----------------------------------
+//
+// Fluid kernels: Select
+//
+//-----------------------------------
+
+
+
+CV_ALWAYS_INLINE int select_simd_impl(const uchar in1[], const uchar in2[], const uchar in3[],
+                                      uchar out[], const int length, const int chan)
+{
+    const int nlanes = VTraits<v_uint8>::vlanes();
+    if (length < nlanes) return 0;
+
+    int x = 0;
+    for (;;)
+    {
+        for (; x <= length - nlanes; x += nlanes)
+        {
+            v_uint8 m = vx_load(&in3[x]);
+            m = v_ne(m, vx_setzero_u8());
+            if (chan == 1)
+            {
+                v_uint8 a = vx_load(&in1[x]);
+                v_uint8 b = vx_load(&in2[x]);
+                v_store(&out[x], v_select(m, a, b));
+            }
+            else if (chan == 2)
+            {
+                v_uint8 a0, a1, b0, b1;
+                v_load_deinterleave(&in1[2 * x], a0, a1);
+                v_load_deinterleave(&in2[2 * x], b0, b1);
+                v_store_interleave(&out[2 * x], v_select(m, a0, b0),
+                                                v_select(m, a1, b1));
+            }
+            else if (chan == 3)
+            {
+                v_uint8 a0, a1, a2, b0, b1, b2;
+                v_load_deinterleave(&in1[3 * x], a0, a1, a2);
+                v_load_deinterleave(&in2[3 * x], b0, b1, b2);
+                v_store_interleave(&out[3 * x], v_select(m, a0, b0),
+                                                v_select(m, a1, b1),
+                                                v_select(m, a2, b2));
+            }
+            else if (chan == 4)
+            {
+                v_uint8 a0, a1, a2, a3, b0, b1, b2, b3;
+                v_load_deinterleave(&in1[4 * x], a0, a1, a2, a3);
+                v_load_deinterleave(&in2[4 * x], b0, b1, b2, b3);
+                v_store_interleave(&out[4 * x], v_select(m, a0, b0),
+                                                v_select(m, a1, b1),
+                                                v_select(m, a2, b2),
+                                                v_select(m, a3, b3));
+            }
+        }
+
+        if (x < length) { x = length - nlanes; continue; }
+        break;
+    }
+    return x;
+}
+
+
+CV_ALWAYS_INLINE int select_simd_impl(const ushort in1[], const ushort in2[], const uchar in3[],
+                                      ushort out[], const int length, const int chan)
+{
+    const int nlanes = VTraits<v_uint16>::vlanes();
+    if (length < nlanes) return 0;
+    int x = 0;
+    for (;;)
+    {
+        for (; x <= length - nlanes; x += nlanes)
+        {
+            v_uint16 m = vx_load_expand(&in3[x]);
+            m = v_ne(m, vx_setzero_u16());
+
+            if (chan == 1) {
+                v_uint16 a = vx_load(&in1[x]);
+                v_uint16 b = vx_load(&in2[x]);
+                v_store(&out[x], v_select(m, a, b));
+            } else if (chan == 2) {
+                v_uint16 a0, a1, b0, b1;
+                v_load_deinterleave(&in1[2 * x], a0, a1);
+                v_load_deinterleave(&in2[2 * x], b0, b1);
+                v_store_interleave(&out[2 * x], v_select(m, a0, b0), v_select(m, a1, b1));
+            } else if (chan == 3) {
+                v_uint16 a0, a1, a2, b0, b1, b2;
+                v_load_deinterleave(&in1[3 * x], a0, a1, a2);
+                v_load_deinterleave(&in2[3 * x], b0, b1, b2);
+                v_store_interleave(&out[3 * x], v_select(m, a0, b0), v_select(m, a1, b1), v_select(m, a2, b2));
+            } else if (chan == 4) {
+                v_uint16 a0, a1, a2, a3, b0, b1, b2, b3;
+                v_load_deinterleave(&in1[4 * x], a0, a1, a2, a3);
+                v_load_deinterleave(&in2[4 * x], b0, b1, b2, b3);
+                v_store_interleave(&out[4 * x], v_select(m, a0, b0), v_select(m, a1, b1), v_select(m, a2, b2), v_select(m, a3, b3));
+            }
+        }
+        if (x < length) { x = length - nlanes; continue; }
+        break;
+    }
+    return x;
+}
+
+CV_ALWAYS_INLINE int select_simd_impl(const short in1[], const short in2[], const uchar in3[],
+                                      short out[], const int length, const int chan)
+{
+    const int nlanes = VTraits<v_int16>::vlanes();
+    if (length < nlanes) return 0;
+    int x = 0;
+    for (;;)
+    {
+        for (; x <= length - nlanes; x += nlanes)
+        {
+            v_int16 m = v_reinterpret_as_s16(vx_load_expand(&in3[x]));
+            m = v_ne(m, vx_setzero_s16());
+
+            if (chan == 1) {
+                v_int16 a = vx_load(&in1[x]);
+                v_int16 b = vx_load(&in2[x]);
+                v_store(&out[x], v_select(m, a, b));
+            } else if (chan == 2) {
+                v_int16 a0, a1, b0, b1;
+                v_load_deinterleave(&in1[2 * x], a0, a1);
+                v_load_deinterleave(&in2[2 * x], b0, b1);
+                v_store_interleave(&out[2 * x], v_select(m, a0, b0), v_select(m, a1, b1));
+            } else if (chan == 3) {
+                v_int16 a0, a1, a2, b0, b1, b2;
+                v_load_deinterleave(&in1[3 * x], a0, a1, a2);
+                v_load_deinterleave(&in2[3 * x], b0, b1, b2);
+                v_store_interleave(&out[3 * x], v_select(m, a0, b0), v_select(m, a1, b1), v_select(m, a2, b2));
+            } else if (chan == 4) {
+                v_int16 a0, a1, a2, a3, b0, b1, b2, b3;
+                v_load_deinterleave(&in1[4 * x], a0, a1, a2, a3);
+                v_load_deinterleave(&in2[4 * x], b0, b1, b2, b3);
+                v_store_interleave(&out[4 * x], v_select(m, a0, b0), v_select(m, a1, b1), v_select(m, a2, b2), v_select(m, a3, b3));
+            }
+        }
+        if (x < length) { x = length - nlanes; continue; }
+        break;
+    }
+    return x;
+}
+
+
+#define SELECT_SIMD(SRC)                                                            \
+int select_simd(const SRC in1[], const SRC in2[], const uchar in3[],                \
+                SRC out[], const int length, const int chan)                        \
+{                                                                                   \
+    return select_simd_impl(in1, in2, in3, out, length, chan);                      \
+}
+
+SELECT_SIMD(uchar)
+SELECT_SIMD(ushort)
+SELECT_SIMD(short)
+
+#undef SELECT_SIMD
 
 #endif  // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
