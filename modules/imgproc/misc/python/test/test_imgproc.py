@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import numpy as np
 import cv2 as cv
+from PIL import Image
 
 from tests_common import NewOpenCVTests
 
@@ -28,3 +29,14 @@ class Imgproc_Tests(NewOpenCVTests):
         img_blur0 = cv.filter2D(img, cv.CV_32F, kernel*(1./9))
         img_blur1 = cv.filter2Dp(img, kernel, ddepth=cv.CV_32F, scale=1./9)
         self.assertLess(cv.norm(img_blur0 - img_blur1, cv.NORM_INF), eps)
+
+    def test_resize_pillow(self):
+        r = np.random.randint(0, 255, size=(128, 147, 3), dtype="uint8")
+        target_size=[(128,128), (129,129), (160,160)]
+        for ts in target_size:
+
+            pil_result = np.array(Image.fromarray(r).resize(ts, Image.NEAREST))
+            ocv_result = cv.resize(r, dsize=ts, interpolation=cv.INTER_NEAREST_EXACT)
+            status = np.all(pil_result == ocv_result)
+            print(ts, status)
+            self.assertTrue(status)
