@@ -3020,26 +3020,58 @@ public:
         }
 
         std::string model_path = "dnn/onnx/models/test_attention_kv_cache_" + layout + ".onnx";
-        std::string model_path_with_mask = "dnn/onnx/models/test_attention_kv_cache_" + layout + "_with_mask.onnx";
 
         Net netWithKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_NEW);
-        Net netWithoutKVCache = readNetFromONNX(findDataFile(model_path_with_mask, true), cv::dnn::ENGINE_NEW);
+        netWithKVCache.enableKVCache();
+        Net netWithoutKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_NEW);
 
-        Mat Q_all = blobFromNPY(findDataFile("dnn/onnx/data/input_test_attention_kv_cache_" + layout + "_0.npy", true));
-        Mat K_all = blobFromNPY(findDataFile("dnn/onnx/data/input_test_attention_kv_cache_" + layout + "_1.npy", true));
-        Mat V_all = blobFromNPY(findDataFile("dnn/onnx/data/input_test_attention_kv_cache_" + layout + "_2.npy", true));
-        Mat mask  = blobFromNPY(findDataFile("dnn/onnx/data/input_test_attention_kv_cache_" + layout + "_3.npy", true));
+        int T = 523, Nq = 8, Nkv = 4, D = 256;
+        int T_pref = T;
 
-        int B = Q_all.size[0];
-        int T = (layout == "3d") ? Q_all.size[1] : Q_all.size[2];
-        int T_pref = T / 2;
+        std::vector<int> q_sz, k_sz, v_sz;
+        if (layout == "3d") {
+            q_sz = {1, T, Nq * D};
+            k_sz = {1, T, Nkv * D};
+            v_sz = {1, T, Nkv * D};
+        } else {
+            q_sz = {1, Nq, T, D};
+            k_sz = {1, Nkv, T, D};
+            v_sz = {1, Nkv, T, D};
+        }
+
+        Mat Q_all(q_sz, CV_32F);
+        Mat K_all(k_sz, CV_32F);
+        Mat V_all(v_sz, CV_32F);
+
+        cv::randn(Q_all, 0.0, 1.0);
+        cv::randn(K_all, 0.0, 1.0);
+        cv::randn(V_all, 0.0, 1.0);
+
+        std::vector<int> mask_sz = {1, Nq, T, T};
+        Mat mask(mask_sz, CV_32S, cv::Scalar(0));
+
+        int* mask_ptr = (int*)mask.data;
+        for (int n = 0; n < Nq; n++) {
+            for (int i = 0; i < T; i++) {
+                for (int j = 0; j < T; j++) {
+                    int idx = n * T * T +
+                              i * T + j;
+                    if (i < T_pref) {
+                        if (j < T_pref) mask_ptr[idx] = 1;
+                    } else {
+                        if (j <= i) mask_ptr[idx] = 1;
+                    }
+                }
+            }
+        }
+
 
         Mat Y;
         if (layout == "3d") {
-            std::vector<int> sz = {B, T, V_all.size[2]};
+            std::vector<int> sz = {1, T, Nq * D};
             Y = Mat(sz, CV_32F);
         } else {
-            std::vector<int> sz = {B, Q_all.size[1], T, Q_all.size[3]};
+            std::vector<int> sz = {1, Nq, T, D};
             Y = Mat(sz, CV_32F);
         }
         Y.setTo(0);
@@ -3059,15 +3091,13 @@ public:
         netWithKVCache.setInput(Q_pref, "Q");
         netWithKVCache.setInput(K_pref, "K");
         netWithKVCache.setInput(V_pref, "V");
-        netWithKVCache.forward(); // warmup
-        netWithKVCache.enableKVCache();
-
         Mat prefillResult = netWithKVCache.forward(); // prefill
         prefillResult.copyTo(Y(ranges_pref));
-
+        std::cout << "Prefill done for " << layout << std::endl;
         // 2. Generate
         for(int t = T_pref; t < T; t++)
         {
+            std::cout << "Generating token " << t << " for " << layout << std::endl;
             std::vector<Range> ranges_gen;
             if (layout == "3d") {
                 ranges_gen = {Range::all(), Range(t, t + 1), Range::all()};
