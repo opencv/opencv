@@ -4206,6 +4206,10 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
     Size ssize = _src.size();
 
     CV_Assert( !ssize.empty() );
+
+    CV_Assert(dsize.width >= 0 && dsize.height >= 0 && "resize: dsize cannot be negative");
+    CV_Assert(interpolation >= 0 && interpolation <= INTER_LANCZOS4 && "resize: invalid interpolation method");
+    
     if( dsize.empty() )
     {
         CV_Assert(inv_scale_x > 0); CV_Assert(inv_scale_y > 0);
