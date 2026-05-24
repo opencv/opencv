@@ -4111,7 +4111,7 @@ png_image_finish_read(png_imagep image, png_const_colorp background,
             row_stride = (png_int_32)/*SAFE*/png_row_stride;
 
          if (row_stride < 0)
-            check = -(png_uint_32)row_stride;
+            check = (png_uint_32)-row_stride;
 
          else
             check = (png_uint_32)row_stride;
