@@ -593,11 +593,11 @@ TEST_P(ReadExif_Sanity, Check)
 
     std::vector<int> metadata_types, metadata_types2;
     std::vector<std::vector<uchar> >  metadata, metadata2;
-    Mat img = imreadWithMetadata(filename, metadata_types, metadata);
+    Mat img = imreadWithMetadata(filename, metadata_types, metadata, cv::IMREAD_ANYCOLOR);
 
     std::vector<uchar> compressed;
     imencodeWithMetadata(".jpg", img, metadata_types, metadata, compressed);
-    img = imdecodeWithMetadata(compressed, metadata_types2, metadata2);
+    img = imdecodeWithMetadata(compressed, metadata_types2, metadata2, cv::IMREAD_ANYCOLOR);
 
     EXPECT_EQ(metadata_types, metadata_types2);
     EXPECT_EQ(metadata, metadata2);
