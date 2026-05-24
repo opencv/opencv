@@ -1748,7 +1748,40 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
             break;
     }
 
-    C p(1, 0), r(1, 1);
+    // Related issue: https://github.com/opencv/opencv/issues/23644,
+    // This the initialization scheme of "Initial approximations in Durand-Kerner's root finding method" by Guggenheimer.
+    // https://link.springer.com/article/10.1007/BF01935059
+    // We put the initial points equidistantly on a circle on the complex plane. This code computes the circle radius as in the paper.
+    Mat absCoeffs(n + 1, 1, CV_64F);
+    for( i = 0; i <= n; i++ )
+        absCoeffs.at<double>(i) = abs(coeffs[i]);
+
+    int nonZeroCoeffs = 0;
+    Mat u(n, 1, CV_64F, Scalar(0)), v(n, 1, CV_64F, Scalar(0));
+    for( i = 0; i <= n; i++ )
+    {
+        double coeff = absCoeffs.at<double>(i);
+        if( coeff > DBL_EPSILON )
+        {
+            if( i != n )
+                u.at<double>(i) = 2.0 * pow(coeff / absCoeffs.at<double>(n), 1.0 / (n - i));
+            if( i != 0 )
+                v.at<double>(i - 1) = 0.5 * pow(absCoeffs.at<double>(0) / coeff, 1.0 / i);
+            nonZeroCoeffs++;
+        }
+    }
+    double scale = 1;
+    if( nonZeroCoeffs > 2 )
+    {
+        Point maxU, minV;
+        minMaxLoc(u, nullptr, nullptr, nullptr, &maxU);
+        minMaxLoc(v, nullptr, nullptr, &minV);
+        u.at<double>(maxU) = 0;
+        v.at<double>(minV) = 0;
+        scale = (sum(u).val[0] + sum(v).val[0]) / (2 * nonZeroCoeffs - 2);
+    }
+
+    C p(scale, 0), r(cos(CV_2PI / n), sin(CV_2PI / n));
 
     for( i = 0; i < n; i++ )
     {
