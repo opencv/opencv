@@ -32,7 +32,7 @@ Adding --dynamic parameter will build {framework_name}.framework as App Store dy
 """
 
 from __future__ import print_function, unicode_literals
-import glob, os, os.path, shutil, string, sys, argparse, traceback, multiprocessing, codecs, io
+import glob, os, os.path, shutil, string, sys, argparse, traceback, multiprocessing, io
 from subprocess import check_call, check_output, CalledProcessError
 
 if sys.version_info >= (3, 8): # Python 3.8+
@@ -190,7 +190,7 @@ class Builder:
                                 body = body[:insert_pos] + "import " + self.framework_name + "\n" + body[insert_pos:]
                             else:
                                 body = "import " + self.framework_name + "\n\n" + body
-                            with codecs.open(os.path.join(swift_sources_dir, file), "w", "utf-8") as file_out:
+                            with open(os.path.join(swift_sources_dir, file), "w", encoding="utf-8") as file_out:
                                 file_out.write(body)
 
     def build(self, outdir):
@@ -380,7 +380,7 @@ class Builder:
                     framework = self.framework_name,
                     hosting_base_path = self.hosting_base_path
                 )
-                with codecs.open(os.path.join(docs_dir, "HOWTO.md"), "w", "utf-8") as file:
+                with open(os.path.join(docs_dir, "HOWTO.md"), "w", encoding="utf-8") as file:
                     file.write(howto)
                 self.docs_built = True
             execute(["cmake", "-DBUILD_TYPE=%s" % self.getConfiguration(), "-DCMAKE_INSTALL_PREFIX=%s" % (builddir + "/install"), "-P", "cmake_install.cmake"], cwd = framework_build_dir)
@@ -473,11 +473,11 @@ class Builder:
             for dirname, dirs, files in os.walk(os.path.join(dstdir, "Headers")):
                 for filename in files:
                     filepath = os.path.join(dirname, filename)
-                    with codecs.open(filepath, "r", "utf-8") as file:
+                    with open(filepath, "r", encoding="utf-8") as file:
                         body = file.read()
                     body = body.replace("include \"opencv2/", "include \"" + name + "/")
                     body = body.replace("include <opencv2/", "include <" + name + "/")
-                    with codecs.open(filepath, "w", "utf-8") as file:
+                    with open(filepath, "w", encoding="utf-8") as file:
                         file.write(body)
         if self.build_objc_wrapper:
             copy_tree(os.path.join(builddirs[0], "install", "lib", name + ".framework", "Headers"), os.path.join(dstdir, "Headers"))
