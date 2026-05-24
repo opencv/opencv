@@ -1190,8 +1190,13 @@ public:
 
     The function/method writes the specified image to video file. It must have the same size as has
     been specified when opening the video writer.
+
+    @return `true` if the frame was written successfully by the underlying backend,
+    `false` otherwise (for example, on network errors when streaming, encoder failures,
+    or unsupported input frames). Backends that do not surface per-frame status from
+    their native API report `true` on best-effort success.
      */
-    CV_WRAP virtual void write(InputArray image);
+    CV_WRAP virtual bool write(InputArray image);
 
     /** @brief Sets a property in the VideoWriter.
 

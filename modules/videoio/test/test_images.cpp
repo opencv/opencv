@@ -137,6 +137,25 @@ TEST(videoio_images, bad)
     }
 }
 
+TEST(videoio_images, write_returns_status)
+{
+    ImageCollection col;
+    col.generate(1);
+    VideoWriter wri(col.getFirstFilename(), CAP_IMAGES, 0, 0, col.getFrame(0).size());
+    ASSERT_TRUE(wri.isOpened());
+
+    const Mat frame = col.getFrame(0);
+
+    EXPECT_TRUE(wri.write(frame));
+    wri.release();
+    ASSERT_FALSE(wri.isOpened());
+    EXPECT_FALSE(wri.write(frame));
+
+    VideoWriter empty;
+    EXPECT_FALSE(empty.isOpened());
+    EXPECT_FALSE(empty.write(frame));
+}
+
 TEST(videoio_images, seek)
 {
     // check files: test0005.png, ..., test0024.png

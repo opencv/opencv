@@ -2211,7 +2211,7 @@ public:
     bool open(const std::string &filename, int fourcc,
               double fps, const Size &frameSize, const VideoWriterParameters& params );
     void close();
-    void write(InputArray) CV_OVERRIDE;
+    bool write(InputArray) CV_OVERRIDE;
 
     int getIplDepth() const { return ipl_depth; }
 
@@ -2683,12 +2683,13 @@ bool CvVideoWriter_GStreamer::open( const std::string &filename, int fourcc,
 /*!
  * \brief CvVideoWriter_GStreamer::writeFrame
  * \param image
- * \return
+ * \return true on success, false on failure (rejected frame format or
+ * a non-OK GstFlowReturn from the appsrc push).
  * Pushes the given frame on the pipeline.
  * The timestamp for the buffer is generated from the framerate set in open
  * and ensures a smooth video
  */
-void CvVideoWriter_GStreamer::write(InputArray image)
+bool CvVideoWriter_GStreamer::write(InputArray image)
 {
     GstClockTime duration, timestamp;
     GstFlowReturn ret;
@@ -2698,31 +2699,31 @@ void CvVideoWriter_GStreamer::write(InputArray image)
     if (input_pix_fmt == GST_VIDEO_FORMAT_ENCODED) {
         if (image.type() != CV_8UC1 || image.size().height != 1) {
             CV_WARN("write frame skipped - expected CV_8UC1, height==1");
-            return;
+            return false;
         }
     }
     else
     if(input_pix_fmt == GST_VIDEO_FORMAT_BGR) {
         if (image.type() != CV_8UC3) {
             CV_WARN("write frame skipped - expected CV_8UC3");
-            return;
+            return false;
         }
     }
     else if (input_pix_fmt == GST_VIDEO_FORMAT_GRAY8) {
         if (image.type() != CV_8UC1) {
             CV_WARN("write frame skipped - expected CV_8UC1");
-            return;
+            return false;
         }
     }
     else if (input_pix_fmt == GST_VIDEO_FORMAT_GRAY16_LE) {
         if (image.type() != CV_16UC1) {
             CV_WARN("write frame skipped - expected CV_16UC1");
-            return;
+            return false;
         }
     }
     else {
         CV_WARN("write frame skipped - unsupported format");
-        return;
+        return false;
     }
 
     Mat imageMat = image.getMat();
@@ -2747,12 +2748,13 @@ void CvVideoWriter_GStreamer::write(InputArray image)
     if (ret != GST_FLOW_OK)
     {
         CV_WARN("Error pushing buffer to GStreamer pipeline");
-        return;
+        return false;
     }
 
     //GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(pipeline), GST_DEBUG_GRAPH_SHOW_ALL, "pipeline");
 
     ++num_frames;
+    return true;
 }
 
 

@@ -205,7 +205,7 @@ public:
     virtual double getProperty(int) const { return 0; }
     virtual bool setProperty(int, double) { return false; }
     virtual bool isOpened() const = 0;
-    virtual void write(InputArray) = 0;
+    virtual bool write(InputArray) = 0;
     virtual int getCaptureDomain() const { return cv::CAP_ANY; } // Return the type of the capture object: CAP_FFMPEG, etc...
 };
 
