@@ -2626,6 +2626,24 @@ TEST(Mat1D, DISABLED_basic)
     }
 }
 
+TEST(Mat, regression_cvReshapeMatND_continuous)
+{
+    int sizes[] = {2, 3, 4};
+    Mat mat(3, sizes, CV_32SC1);
+    CvMatND src = cvMatND(mat);
+    CvMatND reshaped;
+    int new_sizes[] = {4, 3, 2};
+    CvArr* result = 0;
+
+    ASSERT_NO_THROW(result = cvReshapeMatND(&src, sizeof(reshaped), &reshaped, 0, 3, new_sizes));
+    ASSERT_NE((CvArr*)0, result);
+    EXPECT_EQ(3, reshaped.dims);
+    EXPECT_EQ(new_sizes[0], reshaped.dim[0].size);
+    EXPECT_EQ(new_sizes[1], reshaped.dim[1].size);
+    EXPECT_EQ(new_sizes[2], reshaped.dim[2].size);
+    EXPECT_EQ(src.data.ptr, reshaped.data.ptr);
+}
+
 TEST(Mat, ptrVecni_20044)
 {
     Mat_<int> m(3,4); m << 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12;
