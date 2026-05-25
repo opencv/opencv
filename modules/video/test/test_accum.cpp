@@ -373,7 +373,7 @@ static void checkAccumulate32FC4Masked(Size size, int pattern)
     cv::accumulate(src, dst, mask);
 
     double err = maxAbsDiff32FC4(dst, dstRef);
-    EXPECT_LE(err, 1e-5) << "size=" << size << ", pattern=" << pattern;
+    EXPECT_EQ(0.0, err) << "size=" << size << ", pattern=" << pattern;
 }
 
 static void checkAccumulate8UC4To32FC4Masked(Size size, int pattern)
@@ -395,7 +395,7 @@ static void checkAccumulate8UC4To32FC4Masked(Size size, int pattern)
 
     double err = maxAbsDiff32FC4(dst, dstRef);
 
-    EXPECT_LE(err, 1e-5) << "size=" << size << ", pattern=" << pattern;
+    EXPECT_EQ(0.0, err) << "size=" << size << ", pattern=" << pattern;
 }
 
 TEST(Video_Acc, accuracy_32FC4_masked_cn4)

@@ -464,19 +464,35 @@ void acc_simd_(const uchar* src, float* dst, const uchar* mask, int len, int cn)
 
                     v_load_deinterleave(dst + x * cn, v_dst0, v_dst1, v_dst2, v_dst3);
 
-                    v_store_interleave(dst + x * cn, v_add(v_dst0, v_src0_f0), v_add(v_dst1, v_src1_f0), v_add(v_dst2, v_src2_f0), v_add(v_dst3, v_src3_f0));
+                    v_store_interleave(dst + x * cn,
+                                        v_add(v_dst0, v_src0_f0),
+                                        v_add(v_dst1, v_src1_f0),
+                                        v_add(v_dst2, v_src2_f0),
+                                        v_add(v_dst3, v_src3_f0));
 
                     v_load_deinterleave(dst + (x + step) * cn, v_dst0, v_dst1, v_dst2, v_dst3);
 
-                    v_store_interleave(dst + (x + step) * cn, v_add(v_dst0, v_src0_f1), v_add(v_dst1, v_src1_f1), v_add(v_dst2, v_src2_f1), v_add(v_dst3, v_src3_f1));
+                    v_store_interleave(dst + (x + step) * cn,
+                                        v_add(v_dst0, v_src0_f1),
+                                        v_add(v_dst1, v_src1_f1),
+                                        v_add(v_dst2, v_src2_f1),
+                                        v_add(v_dst3, v_src3_f1));
 
                     v_load_deinterleave(dst + (x + 2 * step) * cn, v_dst0, v_dst1, v_dst2, v_dst3);
 
-                    v_store_interleave(dst + (x + 2 * step) * cn, v_add(v_dst0, v_src0_f2), v_add(v_dst1, v_src1_f2), v_add(v_dst2, v_src2_f2), v_add(v_dst3, v_src3_f2));
+                    v_store_interleave(dst + (x + 2 * step) * cn,
+                                        v_add(v_dst0, v_src0_f2),
+                                        v_add(v_dst1, v_src1_f2),
+                                        v_add(v_dst2, v_src2_f2),
+                                        v_add(v_dst3, v_src3_f2));
 
                     v_load_deinterleave(dst + (x + 3 * step) * cn, v_dst0, v_dst1, v_dst2, v_dst3);
 
-                    v_store_interleave(dst + (x + 3 * step) * cn, v_add(v_dst0, v_src0_f3), v_add(v_dst1, v_src1_f3), v_add(v_dst2, v_src2_f3), v_add(v_dst3, v_src3_f3));
+                    v_store_interleave(dst + (x + 3 * step) * cn,
+                                        v_add(v_dst0, v_src0_f3),
+                                        v_add(v_dst1, v_src1_f3),
+                                        v_add(v_dst2, v_src2_f3),
+                                        v_add(v_dst3, v_src3_f3));
                 }
             }
         }
@@ -635,7 +651,7 @@ void acc_simd_(const float* src, float* dst, const uchar* mask, int len, int cn)
             }
             else if (cn == 4)
             {
-                    for (; x <=  len - 2 * cVectorWidth; x += cVectorWidth)
+                    for (; x <= len - cVectorWidth; x += cVectorWidth)
                     {
                         v_uint16 v_masku16 = vx_load_expand(mask + x);
 
@@ -676,9 +692,17 @@ void acc_simd_(const float* src, float* dst, const uchar* mask, int len, int cn)
 
                         v_load_deinterleave(dst + (x + step) * cn, v_dst01, v_dst11, v_dst21, v_dst31);
 
-                        v_store_interleave(dst + x * cn,v_add(v_dst00, v_src00),v_add(v_dst10, v_src10),v_add(v_dst20, v_src20),v_add(v_dst30, v_src30));
+                        v_store_interleave(dst + x * cn,
+                                            v_add(v_dst00, v_src00),
+                                            v_add(v_dst10, v_src10),
+                                            v_add(v_dst20, v_src20),
+                                            v_add(v_dst30, v_src30));
 
-                        v_store_interleave(dst + (x + step) * cn,v_add(v_dst01, v_src01),v_add(v_dst11, v_src11),v_add(v_dst21, v_src21),v_add(v_dst31, v_src31));
+                        v_store_interleave(dst + (x + step) * cn,
+                                            v_add(v_dst01, v_src01),
+                                            v_add(v_dst11, v_src11),
+                                            v_add(v_dst21, v_src21),
+                                            v_add(v_dst31, v_src31));
                     }
             }
         }
