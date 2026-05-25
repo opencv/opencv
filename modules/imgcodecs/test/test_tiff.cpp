@@ -1102,7 +1102,7 @@ TEST(Imgcodecs_Tiff_Modes, write_multipage)
     ASSERT_TRUE(res);
 
     vector<Mat> read_pages;
-    imreadmulti(tmp_filename, read_pages);
+    imreadmulti(tmp_filename, read_pages, cv::IMREAD_ANYCOLOR);
     for (size_t i = 0; i < page_count; i++)
     {
         EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), read_pages[i], pages[i]);
