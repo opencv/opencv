@@ -524,8 +524,9 @@ public:
         const float* scaleptr = fusedBatchNorm ? fusedScale.ptr<float>() : nullptr;
         const float* fbiasptr = fusedBatchNorm ? fusedBias.ptr<float>() : biasptr;
         const FastActivation act = fastActivation;
-        const float relu_alpha = (act == FAST_ACTIV_LEAKY_RELU || act == FAST_ACTIV_PRELU)
-                                 ? activParams[0] : 0.f;
+        // PReLU has per-channel slopes; LEAKY_RELU broadcasts a single one.
+        const float* alphaptr = (act == FAST_ACTIV_PRELU) ? activParams.data() : nullptr;
+        const float leaky_alpha = (act == FAST_ACTIV_LEAKY_RELU) ? activParams[0] : 0.f;
         const float clip_min = (act == FAST_ACTIV_CLIP) ? activParams[0] : -FLT_MAX;
         const float clip_max = (act == FAST_ACTIV_CLIP) ? activParams[1] :  FLT_MAX;
 
@@ -539,17 +540,19 @@ public:
 
                 CV_DECL_ALIGNED(32) float scalebuf[8] = {0};
                 CV_DECL_ALIGNED(32) float biasbuf[8]  = {0};
+                CV_DECL_ALIGNED(32) float alphabuf[8] = {0};
                 for (int c0 = 0; c0 < n_valid; c0++) {
                     scalebuf[c0] = scaleptr ? scaleptr[c_base + c0] : 1.f;
                     biasbuf[c0]  = fbiasptr ? fbiasptr[c_base + c0] : 0.f;
+                    alphabuf[c0] = alphaptr ? alphaptr[c_base + c0] : leaky_alpha;
                 }
 
 #if CV_SIMD256 && defined(__AVX2__)
                 if (n_valid == 8) {
                     const __m256 vscale = _mm256_loadu_ps(scalebuf);
                     const __m256 vbias  = _mm256_loadu_ps(biasbuf);
+                    const __m256 valpha = _mm256_loadu_ps(alphabuf);
                     const __m256 vzero  = _mm256_setzero_ps();
-                    const __m256 valpha = _mm256_set1_ps(relu_alpha);
                     const __m256 vlo    = _mm256_set1_ps(clip_min);
                     const __m256 vhi    = _mm256_set1_ps(clip_max);
                     for (int mi = 0; mi < M; mi++) {
@@ -561,7 +564,7 @@ public:
                         }
                         if (act == FAST_ACTIV_RELU) {
                             v = _mm256_max_ps(v, vzero);
-                        } else if (act == FAST_ACTIV_LEAKY_RELU) {
+                        } else if (act == FAST_ACTIV_LEAKY_RELU || act == FAST_ACTIV_PRELU) {
                             __m256 neg = _mm256_mul_ps(v, valpha);
                             __m256 mask = _mm256_cmp_ps(v, vzero, _CMP_GE_OQ);
                             v = _mm256_blendv_ps(neg, v, mask);
@@ -579,8 +582,8 @@ public:
                             if (scaleptr) v = v * scalebuf[c0] + biasbuf[c0];
                             else if (fbiasptr) v = v + biasbuf[c0];
                             if (act == FAST_ACTIV_RELU) v = v > 0.f ? v : 0.f;
-                            else if (act == FAST_ACTIV_LEAKY_RELU)
-                                v = v > 0.f ? v : v * relu_alpha;
+                            else if (act == FAST_ACTIV_LEAKY_RELU || act == FAST_ACTIV_PRELU)
+                                v = v > 0.f ? v : v * alphabuf[c0];
                             else if (act == FAST_ACTIV_CLIP)
                                 v = std::min(std::max(v, clip_min), clip_max);
                             dst[(size_t)mi * 8 + c0] = v;
@@ -605,6 +608,7 @@ public:
         const int Cout = mlas_packed_M_;
         const int Cin  = mlas_packed_K_;
         const int ndims = inpshape.dims;
+        const int N = inpshape[0];
         const int H = ndims >= 5 ? inpshape[ndims - 3] : 1;
         const int W = inpshape[ndims - 2];
         const int HW = H * W;
@@ -624,24 +628,32 @@ public:
         if ((int)scratch_C_.total() < CHUNK * Cout)
             scratch_C_.create(1, CHUNK * Cout, CV_32F);
 
-        for (int p_start = 0; p_start < HW; p_start += CHUNK) {
-            int p_end = std::min(p_start + CHUNK, HW);
-            int M = p_end - p_start;
+        const size_t in_batch_stride  = (size_t)C1_in  * (size_t)HW * 8;
+        const size_t out_batch_stride = (size_t)C1_out * (size_t)HW * 8;
 
-            gatherNCHWcToNHWC(inpdata, C1_in, HW, p_start, p_end,
-                              scratch_A_.ptr<float>(), Cin);
+        for (int n = 0; n < N; n++) {
+            const float* inp_n = inpdata + (size_t)n * in_batch_stride;
+            float* out_n       = outdata + (size_t)n * out_batch_stride;
 
-            // C = A @ W^T (W is (Cout, Cin), packed with trans_b=true).
-            bool ok = mlasSgemmPacked(false, true, M, Cout, Cin,
-                                      1.0f,
-                                      scratch_A_.ptr<float>(), Cin,
-                                      mlas_packed_B_.data,
-                                      0.0f,
-                                      scratch_C_.ptr<float>(), Cout);
-            CV_Assert(ok);
+            for (int p_start = 0; p_start < HW; p_start += CHUNK) {
+                int p_end = std::min(p_start + CHUNK, HW);
+                int M = p_end - p_start;
 
-            scatterAndActivate(scratch_C_.ptr<float>(), M, p_start,
-                               C1_out, HW, outdata);
+                gatherNCHWcToNHWC(inp_n, C1_in, HW, p_start, p_end,
+                                  scratch_A_.ptr<float>(), Cin);
+
+                // C = A @ W^T (W is (Cout, Cin), packed with trans_b=true).
+                bool ok = mlasSgemmPacked(false, true, M, Cout, Cin,
+                                          1.0f,
+                                          scratch_A_.ptr<float>(), Cin,
+                                          mlas_packed_B_.data,
+                                          0.0f,
+                                          scratch_C_.ptr<float>(), Cout);
+                CV_Assert(ok);
+
+                scatterAndActivate(scratch_C_.ptr<float>(), M, p_start,
+                                   C1_out, HW, out_n);
+            }
         }
     }
 
