@@ -96,6 +96,12 @@ static Moments contourMoments( const Mat& contour )
 {
     Moments m;
     int lpt = contour.checkVector(2);
+
+    if (lpt < 3) {
+        CV_LOG_WARNING(NULL, "contour has less than 3 points, returning zero moments");
+        return m;
+    }
+
     int is_float = contour.depth() == CV_32F;
     const Point* ptsi = contour.ptr<Point>();
     const Point2f* ptsf = contour.ptr<Point2f>();
