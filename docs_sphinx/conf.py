@@ -43,7 +43,7 @@ DOC_JS_MODULES = [
 
 DOC_PY_MODULES = [
     m.strip()
-    for m in (_os.environ.get("OPENCV_DOC_PY_MODULES") or "py_gui").split(",")
+    for m in (_os.environ.get("OPENCV_DOC_PY_MODULES") or "py_gui,py_features,py_calib3d,py_ml,py_bindings").split(",")
     if m.strip()
 ]
 
@@ -569,6 +569,11 @@ def _translate(text: str, docname: str | None = None) -> str:
         r"^(?P<title>[^\n{]+?)\s*\n={3,}\s*$",
         lambda m: f"## {m.group('title').strip()}",
         text, flags=re.MULTILINE)
+    # 1c. "N. Title\n---" Setext h2 — CommonMark parses "N. " as a list item, not a heading.
+    text = re.sub(
+        r"^(\d+\.[^\n]+)\n-{3,}\s*$",
+        lambda m: f"## {m.group(1).strip()}",
+        text, flags=re.MULTILINE)
 
     # 1b. Convert a trailing setext heading at EOF to ATX. Otherwise
     #     docutils rejects the doc as ending with a transition.
@@ -1054,8 +1059,25 @@ def _translate(text: str, docname: str | None = None) -> str:
     text = re.sub(r"^@(?:next|prev)_tutorial\{[^}]*\}\s*$", "",
                   text, flags=re.MULTILINE)
 
+    # 10a. col-8 -# under a col-0 parent: move to col 5 (avoids CommonMark code-block threshold).
+    def _fix_nested_ordered(src: str) -> str:
+        lines = src.split("\n")
+        out = []
+        for i, line in enumerate(lines):
+            if re.match(r"^        -#\s", line):
+                nearest = ""
+                for j in range(i - 1, max(i - 40, -1), -1):
+                    m = re.match(r"^([ \t]*)-", lines[j])
+                    if m and len(m.group(1)) < 8:
+                        nearest = lines[j]
+                        break
+                out.append(line if (nearest and re.match(r"^    ", nearest)) else "     " + line[8:])
+            else:
+                out.append(line)
+        return "\n".join(out)
+    text = _fix_nested_ordered(text)
+
     # 10b. Doxygen ordered-list marker: "-#" -> "1."
-    #      Doxygen uses -# for numbered lists; MyST uses standard 1. notation.
     text = re.sub(r"^([ \t]*)-#([ \t]+)", r"\g<1>1.\g<2>",
                   text, flags=re.MULTILINE)
 
