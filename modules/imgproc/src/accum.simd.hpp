@@ -325,7 +325,7 @@ void acc_simd_(const uchar* src, float* dst, const uchar* mask, int len, int cn)
                 for ( ; x <= len - cVectorWidth; x += cVectorWidth)
                 {
                     v_uint8 v_mask = vx_load(mask + x);
-                    v_mask = v_not(v_eq(v_0, v_mask));
+                    v_mask = v_ne(v_0, v_mask);
                     v_uint8 v_src = vx_load(src + x);
                     v_src = v_and(v_src, v_mask);
                     v_uint16 v_src0, v_src1;
@@ -346,7 +346,7 @@ void acc_simd_(const uchar* src, float* dst, const uchar* mask, int len, int cn)
                 for ( ; x <= len - cVectorWidth; x += cVectorWidth)
                 {
                     v_uint8 v_mask = vx_load(mask + x);
-                    v_mask = v_not(v_eq(v_0, v_mask));
+                    v_mask = v_ne(v_0, v_mask);
                     v_uint8 v_src0, v_src1, v_src2;
                     v_load_deinterleave(src + (x * cn), v_src0, v_src1, v_src2);
                     v_src0 = v_and(v_src0, v_mask);
@@ -401,7 +401,7 @@ void acc_simd_(const uchar* src, float* dst, const uchar* mask, int len, int cn)
                 for (; x <= len - cVectorWidth; x += cVectorWidth)
                 {
                     v_uint8 v_mask = vx_load(mask + x);
-                    v_mask = v_not(v_eq(v_mask, v_zero));
+                    v_mask = v_ne(v_mask, v_zero);
 
                     v_uint8 v_src0, v_src1, v_src2, v_src3;
 
@@ -658,9 +658,9 @@ void acc_simd_(const float* src, float* dst, const uchar* mask, int len, int cn)
                         v_uint32 v_masku320, v_masku321;
                         v_expand(v_masku16, v_masku320, v_masku321);
 
-                        v_float32 v_mask0 = v_reinterpret_as_f32(v_not(v_eq(v_masku320, v_reinterpret_as_u32(v_0))));
+                        v_float32 v_mask0 = v_reinterpret_as_f32(v_ne(v_masku320, v_reinterpret_as_u32(v_0)));
 
-                        v_float32 v_mask1 = v_reinterpret_as_f32(v_not(v_eq(v_masku321, v_reinterpret_as_u32(v_0))));
+                        v_float32 v_mask1 = v_reinterpret_as_f32(v_ne(v_masku321, v_reinterpret_as_u32(v_0)));
 
                         v_float32 v_src00, v_src01;
                         v_float32 v_src10, v_src11;
