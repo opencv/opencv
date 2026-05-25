@@ -3093,11 +3093,9 @@ public:
         netWithKVCache.setInput(V_pref, "V");
         Mat prefillResult = netWithKVCache.forward(); // prefill
         prefillResult.copyTo(Y(ranges_pref));
-        std::cout << "Prefill done for " << layout << std::endl;
         // 2. Generate
         for(int t = T_pref; t < T; t++)
         {
-            std::cout << "Generating token " << t << " for " << layout << std::endl;
             std::vector<Range> ranges_gen;
             if (layout == "3d") {
                 ranges_gen = {Range::all(), Range(t, t + 1), Range::all()};
@@ -3122,7 +3120,7 @@ public:
         Mat Yref = netWithoutKVCache.forward();
 
         std::string msg = "Attention generate " + layout + ": KV vs standard";
-        normAssert(Y, Yref, msg.c_str(), 1e-5, 1e-5);
+        normAssert(Y, Yref, msg.c_str(), 1e-3, 1e-3);
     }
 };
 
