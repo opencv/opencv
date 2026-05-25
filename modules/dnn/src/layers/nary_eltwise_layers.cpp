@@ -640,16 +640,11 @@ public:
         const Mat& b = inputs[1];
         Mat& out = outputs[0];
 
-        if (op == OPERATION::POW && std::is_same<T, RESULT_T>::value && b.total() == 1){
-            CV_LOG_WARNING(NULL,"running into cv::pow(a, (double)(*(const T*)b.data), out);");
-    
-        }
-        if (op == OPERATION::POW && std::is_same<T, RESULT_T>::value &&
-            !std::is_integral<T>::value && b.total() == 1) {
+        if (op == OPERATION::POW && std::is_same<T, RESULT_T>::value && b.total() == 1) {
             cv::pow(a, (double)(*(const T*)b.data), out);
             return;
         }
-        CV_LOG_WARNING(NULL,"passing to binary_forward_impl");
+
         CV_Assert(helper.shapes.size() == 3 && helper.steps.size() == 3);
         binary_forward_impl<T, RESULT_T, Functor>(f, helper.max_ndims, helper.shapes[0], a.ptr<char>(), helper.steps[1],
                                         b.ptr<char>(), helper.steps[2], out.ptr<char>(), helper.steps[0], block_size);
