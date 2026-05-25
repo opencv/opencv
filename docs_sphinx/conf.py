@@ -37,7 +37,7 @@ DOC_MODULES = [
 ]
 DOC_JS_MODULES = [
     m.strip()
-    for m in (_os.environ.get("OPENCV_DOC_JS_MODULES") or "js_gui,js_core").split(",")
+    for m in (_os.environ.get("OPENCV_DOC_JS_MODULES") or "js_gui,js_core,js_imgproc,js_video,js_dnn").split(",")
     if m.strip()
 ]
 
@@ -129,9 +129,13 @@ _TAG_FILE = pathlib.Path(_os.environ.get(
     "OPENCV_DOXYGEN_TAGFILE",
     str(HERE.parent.parent / "build" / "doc" / "doxygen" / "html" / "opencv.tag"),
 ))
+if not _TAG_FILE.is_file():
+    _TAG_FILE = HERE.parent.parent / "build" / "doc" / "opencv.tag"
 
 # anchor -> doxygen URL filename (from opencv.tag if available).
 _TAG_FILENAMES: dict[str, str] = {}
+# cv API name -> full doxygen URL (for cv.Name auto-linking).
+_CV_API: dict[str, str] = {}
 if _TAG_FILE.is_file():
     try:
         import xml.etree.ElementTree as _ET
@@ -140,6 +144,17 @@ if _TAG_FILE.is_file():
                 _n, _f = _c.findtext("name"), _c.findtext("filename")
                 if _n and _f:
                     _TAG_FILENAMES[_n] = _f if _f.endswith(".html") else _f + ".html"
+            if _c.get("kind") == "class":
+                _cn = (_c.findtext("name") or "").split("::")[-1]
+                _cf = _c.findtext("filename", "")
+                if _cn and _cf:
+                    _CV_API.setdefault(_cn, DOXYGEN_BASE_URL + (_cf if _cf.endswith(".html") else _cf + ".html"))
+            for _m in _c.findall("member"):
+                _n = _m.findtext("name", "")
+                _af = _m.findtext("anchorfile", "")
+                _an = _m.findtext("anchor", "")
+                if _n and _af and _an:
+                    _CV_API.setdefault(_n, DOXYGEN_BASE_URL + _af + "#" + _an)
     except Exception:
         pass
 
@@ -290,7 +305,14 @@ for _toc in (DOC_ROOT / "js_tutorials").glob("*/js_table_of_contents_*.markdown"
 
 _IMAGE_INDEX: dict[str, str] = {}
 _IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".bmp", ".webp"}
-for _img in (DOC_ROOT / "tutorials").rglob("images/*"):
+for _img_tree in (DOC_ROOT / "tutorials", DOC_ROOT / "js_tutorials", DOC_ROOT / "py_tutorials"):
+    for _img in _img_tree.rglob("images/*"):
+        if _img.is_file():
+            _IMAGE_INDEX.setdefault(_img.name, _img.relative_to(DOC_ROOT).as_posix())
+for _img in (DOC_ROOT / "js_tutorials" / "js_assets").glob("*"):
+    if _img.is_file():
+        _IMAGE_INDEX.setdefault(_img.name, _img.relative_to(DOC_ROOT).as_posix())
+for _img in (DOC_ROOT / "images").glob("*"):
     if _img.is_file():
         _IMAGE_INDEX.setdefault(_img.name,
                                 _img.relative_to(DOC_ROOT).as_posix())
@@ -525,6 +547,10 @@ def _translate(text: str, docname: str | None = None) -> str:
         r"^(?P<hashes>#+)\s+(?P<title>[^\n]+?)\s*\{#(?P<anchor>[\w-]+)\}\s*$",
         lambda m: f"({m.group('anchor')})=\n{m.group('hashes')} {m.group('title')}",
         text, flags=re.MULTILINE)
+    text = re.sub(
+        r"^(?P<title>[^\n{]+?)\s*\n={3,}\s*$",
+        lambda m: f"## {m.group('title').strip()}",
+        text, flags=re.MULTILINE)
 
     # 1b. Convert a trailing setext heading at EOF to ATX. Otherwise
     #     docutils rejects the doc as ending with a transition.
@@ -638,19 +664,38 @@ def _translate(text: str, docname: str | None = None) -> str:
         r"^(?P<indent>[ \t]*)@(?P<dir>note|see|warning|sa)[ \t]*\n?(?P<body>.+?)(?=\n[ \t]*\n|\n[ \t]*@[A-Za-z]|\Z)",
         _admon_repl, text, flags=re.DOTALL | re.MULTILINE)
 
-    # 1c. @param name desc / @return desc → MyST definition list.
+    # 1c. @param / @return → MyST definition list.
     def _param_block_repl(m: re.Match) -> str:
-        items = []
-        for line in m.group(0).strip().split("\n"):
-            pm = re.match(r"@param\s+(\S+)\s+(.*)", line.strip())
+        items: list[list] = []
+        for line in m.group(0).split("\n"):
+            pm = re.match(r"^@param\s+(\S+)\s*(.*)", line)
+            rm = re.match(r"^@return\s*(.*)", line)
             if pm:
-                items.append(f"`{pm.group(1)}`\n: {pm.group(2).strip()}")
-            rm = re.match(r"@return\s+(.*)", line.strip())
-            if rm:
-                items.append(f"*(return value)*\n: {rm.group(1).strip()}")
-        return "\n\n".join(items) + "\n"
+                items.append([f"`{pm.group(1)}`", [pm.group(2).strip()]])
+            elif rm:
+                items.append(["*(return value)*", [rm.group(1).strip()]])
+            elif items and line.strip():
+                items[-1][1].append(line.strip())
+        def _inline_block_math(s: str) -> str:
+            if re.match(r"^\\f\[.+\\f\]$", s.strip()):
+                return s
+            return re.sub(r"\\f\[(.+?)\\f\]", lambda mm: f"${mm.group(1).strip()}$", s)
+        result = []
+        has_param = False
+        for key, desc_lines in items:
+            desc_lines = [l for l in desc_lines if l]
+            if not desc_lines:
+                continue
+            if key != "*(return value)*":
+                has_param = True
+            entry = f"{key}\n: {_inline_block_math(desc_lines[0])}"
+            for cont in desc_lines[1:]:
+                entry += f"\n  {_inline_block_math(cont)}"
+            result.append(entry)
+        header = "\n**Parameters**\n\n" if has_param else "\n"
+        return header + "\n\n".join(result) + "\n"
     text = re.sub(
-        r"(^@(?:param\s+\S+|return)\s+[^\n]+\n)+",
+        r"((?:^@(?:param\s+\S+|return)\s+[^\n]+\n(?:[ \t]+[^\n]+\n)*)+)",
         _param_block_repl, text, flags=re.MULTILINE)
 
     # 2. Doxygen LaTeX math markers.
@@ -864,6 +909,18 @@ def _translate(text: str, docname: str | None = None) -> str:
     text = re.sub(r'@ref\s+(?P<name>[\w:-]+)(?:\s+"(?P<disp>[^"]+)")?',
                   _ref_repl, text)
 
+    # 7b. cv.Name → [cv.Name](doxygen url) for names in the API index.
+    if _CV_API:
+        def _cvlink_repl(m: re.Match) -> str:
+            url = _CV_API.get(m.group(1))
+            return f'[cv.{m.group(1)}]({url})' if url else m.group(0)
+        _parts = re.split(r'(```.*?```|`[^`\n]+`)', text, flags=re.DOTALL)
+        text = ''.join(
+            p if i % 2 else re.sub(
+                r'(?<!\[)(?<!\()cv\.([A-Za-z][A-Za-z0-9_]*)',
+                _cvlink_repl, p)
+            for i, p in enumerate(_parts))
+
     # 8. @cite KEY → [[KEY]](link to docs.opencv.org citelist)
     text = re.sub(
         r"@cite\s+([\w-]+)",
@@ -920,13 +977,13 @@ def _translate(text: str, docname: str | None = None) -> str:
     #    `- <module>. @subpage <id>` form used by contrib_root.markdown.
     def _subpage_list_to_toctree(src: str) -> str:
         pat = re.compile(
-            r"((?:^[ \t]*-\s+@subpage\s+[\w-]+[^\n]*\n(?:[ \t]*\n[ \t]+[^\n]+\n)*)+)",
+            r"((?:^[ \t]*-\s+@subpage\s+[\w-]+[^\n]*\n(?:(?:[ \t]*\n)?[ \t]+[^\n]+\n)*)+)",
             re.MULTILINE)
         def repl(m: re.Match) -> str:
             block = m.group(1)
             entries = re.findall(r"@subpage\s+([\w-]+)", block)
             dm = re.search(
-                r"@subpage\s+[\w-]+[^\n]*\n(?:[ \t]*\n([ \t]+[^\n]+)\n)?", block)
+                r"@subpage\s+[\w-]+[^\n]*\n(?:(?:[ \t]*\n)?([ \t]+[^\n]+)\n)?", block)
             desc = dm.group(1).strip() if dm and dm.group(1) else None
             lines = []
             for e in entries:
@@ -967,6 +1024,8 @@ def _translate(text: str, docname: str | None = None) -> str:
     text = re.sub(r"^@endcond\s*$", "", text, flags=re.MULTILINE)
     text = re.sub(r"^[ \t]*@parblock\s*$", "", text, flags=re.MULTILINE)
     text = re.sub(r"^[ \t]*@endparblock\s*$", "", text, flags=re.MULTILINE)
+
+    text = re.sub(r"</?center>", "", text, flags=re.IGNORECASE)
 
     # 11c. @anchor NAME  ->  MyST label "(NAME)=" so the following block
     #      element (typically a heading) becomes the cross-reference target.
@@ -1072,6 +1131,8 @@ def _translate(text: str, docname: str | None = None) -> str:
             if hit.startswith("contrib_modules/"):
                 return _emit_contrib_img(hit[len("contrib_modules/"):], alt)
             return f'![{alt}](/{hit})'
+        if docname and docname.startswith("js_tutorials/"):
+            return m.group(0)
         return f'![{alt}](/tutorials/others/images/{rel})'
     text = re.sub(
         r'!\[(?P<alt>[^\]]*)\]\((?:[^)]*?/)?images/(?P<rel>[^)]+)\)',
