@@ -471,34 +471,44 @@ public:
         const int M = p_end - p_start;
         cv::parallel_for_(cv::Range(0, C1), [&](const cv::Range& r) {
             for (int c1 = r.start; c1 < r.end; c1++) {
+                const int c_base = c1 * 8;
+                const int n_valid_in = std::min(8, Cin - c_base);
                 const float* src = inp + (size_t)c1 * (size_t)HW * 8
                                        + (size_t)p_start * 8;
-                float* dst_col = dst + c1 * 8;
+                float* dst_col = dst + c_base;
                 int mi = 0;
+                if (n_valid_in == 8) {
 #if CV_SIMD256 && defined(__AVX2__)
-                for (; mi + 8 <= M; mi += 8) {
-                    __m256 r0 = _mm256_loadu_ps(src + 0 * 8);
-                    __m256 r1 = _mm256_loadu_ps(src + 1 * 8);
-                    __m256 r2 = _mm256_loadu_ps(src + 2 * 8);
-                    __m256 r3 = _mm256_loadu_ps(src + 3 * 8);
-                    __m256 r4 = _mm256_loadu_ps(src + 4 * 8);
-                    __m256 r5 = _mm256_loadu_ps(src + 5 * 8);
-                    __m256 r6 = _mm256_loadu_ps(src + 6 * 8);
-                    __m256 r7 = _mm256_loadu_ps(src + 7 * 8);
-                    _mm256_storeu_ps(dst_col + (size_t)(mi + 0) * Cin, r0);
-                    _mm256_storeu_ps(dst_col + (size_t)(mi + 1) * Cin, r1);
-                    _mm256_storeu_ps(dst_col + (size_t)(mi + 2) * Cin, r2);
-                    _mm256_storeu_ps(dst_col + (size_t)(mi + 3) * Cin, r3);
-                    _mm256_storeu_ps(dst_col + (size_t)(mi + 4) * Cin, r4);
-                    _mm256_storeu_ps(dst_col + (size_t)(mi + 5) * Cin, r5);
-                    _mm256_storeu_ps(dst_col + (size_t)(mi + 6) * Cin, r6);
-                    _mm256_storeu_ps(dst_col + (size_t)(mi + 7) * Cin, r7);
-                    src += 8 * 8;
-                }
+                    for (; mi + 8 <= M; mi += 8) {
+                        __m256 r0 = _mm256_loadu_ps(src + 0 * 8);
+                        __m256 r1 = _mm256_loadu_ps(src + 1 * 8);
+                        __m256 r2 = _mm256_loadu_ps(src + 2 * 8);
+                        __m256 r3 = _mm256_loadu_ps(src + 3 * 8);
+                        __m256 r4 = _mm256_loadu_ps(src + 4 * 8);
+                        __m256 r5 = _mm256_loadu_ps(src + 5 * 8);
+                        __m256 r6 = _mm256_loadu_ps(src + 6 * 8);
+                        __m256 r7 = _mm256_loadu_ps(src + 7 * 8);
+                        _mm256_storeu_ps(dst_col + (size_t)(mi + 0) * Cin, r0);
+                        _mm256_storeu_ps(dst_col + (size_t)(mi + 1) * Cin, r1);
+                        _mm256_storeu_ps(dst_col + (size_t)(mi + 2) * Cin, r2);
+                        _mm256_storeu_ps(dst_col + (size_t)(mi + 3) * Cin, r3);
+                        _mm256_storeu_ps(dst_col + (size_t)(mi + 4) * Cin, r4);
+                        _mm256_storeu_ps(dst_col + (size_t)(mi + 5) * Cin, r5);
+                        _mm256_storeu_ps(dst_col + (size_t)(mi + 6) * Cin, r6);
+                        _mm256_storeu_ps(dst_col + (size_t)(mi + 7) * Cin, r7);
+                        src += 8 * 8;
+                    }
 #endif
-                for (; mi < M; mi++) {
-                    std::memcpy(dst_col + (size_t)mi * Cin, src, 8 * sizeof(float));
-                    src += 8;
+                    for (; mi < M; mi++) {
+                        std::memcpy(dst_col + (size_t)mi * Cin, src, 8 * sizeof(float));
+                        src += 8;
+                    }
+                } else {
+                    const size_t copy_bytes = (size_t)n_valid_in * sizeof(float);
+                    for (; mi < M; mi++) {
+                        std::memcpy(dst_col + (size_t)mi * Cin, src, copy_bytes);
+                        src += 8;
+                    }
                 }
             }
         });
@@ -535,45 +545,48 @@ public:
                 }
 
 #if CV_SIMD256 && defined(__AVX2__)
-                const __m256 vscale = _mm256_loadu_ps(scalebuf);
-                const __m256 vbias  = _mm256_loadu_ps(biasbuf);
-                const __m256 vzero  = _mm256_setzero_ps();
-                const __m256 valpha = _mm256_set1_ps(relu_alpha);
-                const __m256 vlo    = _mm256_set1_ps(clip_min);
-                const __m256 vhi    = _mm256_set1_ps(clip_max);
-                for (int mi = 0; mi < M; mi++) {
-                    __m256 v = _mm256_loadu_ps(row + (size_t)mi * Cout);
-                    if (scaleptr) {
-                        v = _mm256_fmadd_ps(v, vscale, vbias);
-                    } else if (fbiasptr) {
-                        v = _mm256_add_ps(v, vbias);
+                if (n_valid == 8) {
+                    const __m256 vscale = _mm256_loadu_ps(scalebuf);
+                    const __m256 vbias  = _mm256_loadu_ps(biasbuf);
+                    const __m256 vzero  = _mm256_setzero_ps();
+                    const __m256 valpha = _mm256_set1_ps(relu_alpha);
+                    const __m256 vlo    = _mm256_set1_ps(clip_min);
+                    const __m256 vhi    = _mm256_set1_ps(clip_max);
+                    for (int mi = 0; mi < M; mi++) {
+                        __m256 v = _mm256_loadu_ps(row + (size_t)mi * Cout);
+                        if (scaleptr) {
+                            v = _mm256_fmadd_ps(v, vscale, vbias);
+                        } else if (fbiasptr) {
+                            v = _mm256_add_ps(v, vbias);
+                        }
+                        if (act == FAST_ACTIV_RELU) {
+                            v = _mm256_max_ps(v, vzero);
+                        } else if (act == FAST_ACTIV_LEAKY_RELU) {
+                            __m256 neg = _mm256_mul_ps(v, valpha);
+                            __m256 mask = _mm256_cmp_ps(v, vzero, _CMP_GE_OQ);
+                            v = _mm256_blendv_ps(neg, v, mask);
+                        } else if (act == FAST_ACTIV_CLIP) {
+                            v = _mm256_min_ps(_mm256_max_ps(v, vlo), vhi);
+                        }
+                        _mm256_storeu_ps(dst + (size_t)mi * 8, v);
                     }
-                    if (act == FAST_ACTIV_RELU) {
-                        v = _mm256_max_ps(v, vzero);
-                    } else if (act == FAST_ACTIV_LEAKY_RELU) {
-                        __m256 neg = _mm256_mul_ps(v, valpha);
-                        __m256 mask = _mm256_cmp_ps(v, vzero, _CMP_GE_OQ);
-                        v = _mm256_blendv_ps(neg, v, mask);
-                    } else if (act == FAST_ACTIV_CLIP) {
-                        v = _mm256_min_ps(_mm256_max_ps(v, vlo), vhi);
-                    }
-                    _mm256_storeu_ps(dst + (size_t)mi * 8, v);
-                }
-#else
-                for (int mi = 0; mi < M; mi++) {
-                    for (int c0 = 0; c0 < 8; c0++) {
-                        float v = (c0 < n_valid) ? row[(size_t)mi * Cout + c0] : 0.f;
-                        if (scaleptr) v = v * scalebuf[c0] + biasbuf[c0];
-                        else if (fbiasptr) v = v + biasbuf[c0];
-                        if (act == FAST_ACTIV_RELU) v = v > 0.f ? v : 0.f;
-                        else if (act == FAST_ACTIV_LEAKY_RELU)
-                            v = v > 0.f ? v : v * relu_alpha;
-                        else if (act == FAST_ACTIV_CLIP)
-                            v = std::min(std::max(v, clip_min), clip_max);
-                        dst[(size_t)mi * 8 + c0] = v;
-                    }
-                }
+                } else
 #endif
+                {
+                    for (int mi = 0; mi < M; mi++) {
+                        for (int c0 = 0; c0 < 8; c0++) {
+                            float v = (c0 < n_valid) ? row[(size_t)mi * Cout + c0] : 0.f;
+                            if (scaleptr) v = v * scalebuf[c0] + biasbuf[c0];
+                            else if (fbiasptr) v = v + biasbuf[c0];
+                            if (act == FAST_ACTIV_RELU) v = v > 0.f ? v : 0.f;
+                            else if (act == FAST_ACTIV_LEAKY_RELU)
+                                v = v > 0.f ? v : v * relu_alpha;
+                            else if (act == FAST_ACTIV_CLIP)
+                                v = std::min(std::max(v, clip_min), clip_max);
+                            dst[(size_t)mi * 8 + c0] = v;
+                        }
+                    }
+                }
             }
         });
         if (activationFunc) {
