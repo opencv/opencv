@@ -318,6 +318,10 @@ namespace minEnclosingTriangle {
 static void findMinEnclosingTriangle(cv::InputArray points,
                                      CV_OUT cv::OutputArray triangle, CV_OUT double &area) {
     CV_Assert(!points.empty());
+
+    int n = points.getMat().checkVector(2);
+    CV_CheckGE(n, 3, "At least 3 points are required to form a triangle");
+
     std::vector<cv::Point2f> resultingTriangle;
     cv::Mat polygon;
     convexHull(points, polygon, true, true);

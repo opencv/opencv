@@ -1020,9 +1020,7 @@ double cv::minEnclosingConvexPolygon(cv::InputArray points, cv::OutputArray poly
 {
     int n = (int)points.getMat().checkVector(2);
 
-    CV_Assert(!points.empty());
-    CV_CheckGE(n, 0, "Input must be a valid set of 2D points");
-    CV_CheckGE(n, k, "Number of input points must be >= k");
+    CV_Assert(!points.empty() && n >= k);
     CV_CheckGE(n, 3, "ngon must have 3 or more different points enclosing an area");
     CV_CheckGE(k, 3, "k must be 3 or higher");
 
