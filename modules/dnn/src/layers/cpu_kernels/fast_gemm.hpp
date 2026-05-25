@@ -159,6 +159,7 @@ void fastGemmPackB(const Mat &m, std::vector<float> &packed_B, bool trans, FastG
 int fastGemmMC(const FastGemmOpt &opt);
 int fastGemmNC(const FastGemmOpt &opt);
 int fastGemmKC(const FastGemmOpt &opt);
+int fastGemmNR(const FastGemmOpt &opt);
 
 void fastGemmPackB(bool trans, size_t N, size_t K, const float *B, size_t ldb, float *packed_B, const FastGemmOpt &opt);
 
@@ -196,12 +197,12 @@ void fastGemmThin(int M, int N, int K, float alpha,
 
 void pagedAttnQKGemm(
     const Mat& Q, const std::vector<Mat> &K, Mat& A,
-    int T_q, int Nq, int N_k, int T_s, int D,
-    const FastGemmOpt &opts
+    int T_q, int Nq, int N_k, int T_s, int D, size_t T_k,
+    float sm_scale, const FastGemmOpt &opts
 );
 void pagedAttnAVGemm(
     const Mat& A,const std::vector<Mat> &V, Mat& Out,
-    int T_q, int Nq, int N_k, int T_s, int D,
+    int T_q, int Nq, int N_k, int T_s, int D, int T_v,
     const FastGemmOpt &opt
 );
 

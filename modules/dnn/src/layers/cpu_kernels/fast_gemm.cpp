@@ -99,6 +99,34 @@ int fastGemmKC(const FastGemmOpt &opt) {
     }
 }
 
+int fastGemmNR(const FastGemmOpt &opt) {
+#if CV_TRY_NEON
+    if (opt.use_neon) {
+        return opt_NEON::fastGemmNR();
+    } else
+#endif
+#if CV_TRY_AVX2
+    if (opt.use_avx2) {
+        return opt_AVX2::fastGemmNR();
+    } else
+#endif
+#if CV_TRY_AVX
+    if (opt.use_avx) {
+        return opt_AVX::fastGemmNR();
+    } else
+#endif
+#if CV_TRY_LASX
+    if (opt.use_lasx) {
+        return opt_LASX::fastGemmNR();
+    } else
+#endif
+    {
+        return cpu_baseline::fastGemmNR();
+    }
+}
+
+
+
 size_t fastGemmPackBSize(size_t N, size_t K, const FastGemmOpt &opt) {
 #if CV_TRY_NEON
     if (opt.use_neon) {
@@ -768,8 +796,8 @@ void fastGemmBatch(size_t batch,
 
 void pagedAttnQKGemm(
     const Mat& Q,const std::vector<Mat> &K, Mat& A,
-    int T_q, int Nq, int N_k, int T_s, int D,
-    const FastGemmOpt &opt
+    int T_q, int Nq, int N_k, int T_s, int D, size_t T_k,
+    float sm_scale, const FastGemmOpt &opt
 ) {
     size_t esz = Q.elemSize();
 
@@ -780,7 +808,7 @@ void pagedAttnQKGemm(
     CV_CheckTypeEQ(Q.type(), A.type(), "pagedAttnQKGemmKernel: Q and A should have the same type");
 
     CV_CheckTrue(
-        T_s % fastGemmNC(opt) == 0,
+        T_s % fastGemmNR(opt) == 0,
         "pagedAttnQKGemmKernel: T_s should be divisible by the macro tile size"
     );
 
@@ -801,7 +829,7 @@ void pagedAttnQKGemm(
         );
         CV_CheckEQ(shape_k[0], B, "pagedAttnQKGemmKernel: the batch size of K should be the same as A");
         CV_CheckEQ(shape_k[1], N_k, "pagedAttnQKGemmKernel: the number of heads in K should match that of Q");
-        CV_CheckEQ(shape_k[2], D * T_s, "pagedAttnQKGemmKernel: the head dimension of K should match that of Q and A");
+        CV_Assert(shape_k[2] == D * T_s);
     }
 
     std::vector<const char*> packed_K;
@@ -815,8 +843,8 @@ void pagedAttnQKGemm(
     if (opt.use_neon)
         opt_NEON::pagedAttnQKGemmKernel(
             Q.ptr<const char>(), packed_K, a,
-            B, T_q, Nq, N_k, T_s, D,
-            esz, isQ3D
+            B, T_q, Nq, N_k, T_s, D, T_k,
+            sm_scale, esz, isQ3D
         );
     else
 #endif
@@ -824,8 +852,8 @@ void pagedAttnQKGemm(
     if (opt.use_avx2)
         opt_AVX2::pagedAttnQKGemmKernel(
             Q.ptr<const char>(), packed_K, a,
-            B, T_q, Nq, N_k, T_s, D,
-            esz, isQ3D
+            B, T_q, Nq, N_k, T_s, D, T_k,
+            sm_scale, esz, isQ3D
         );
     else
 #endif
@@ -833,8 +861,8 @@ void pagedAttnQKGemm(
     if (opt.use_avx)
         opt_AVX::pagedAttnQKGemmKernel(
             Q.ptr<const char>(), packed_K, a,
-            B, T_q, Nq, N_k, T_s, D,
-            esz, isQ3D
+            B, T_q, Nq, N_k, T_s, D, T_k,
+            sm_scale, esz, isQ3D
         );
     else
 #endif
@@ -842,15 +870,15 @@ void pagedAttnQKGemm(
     if (opt.use_lasx)
         opt_LASX::pagedAttnQKGemmKernel(
             Q.ptr<const char>(), packed_K, a,
-            B, T_q, Nq, N_k, T_s, D,
-            esz, isQ3D
+            B, T_q, Nq, N_k, T_s, D, T_k,
+            sm_scale, esz, isQ3D
         );
     else
 #endif
     cpu_baseline::pagedAttnQKGemmKernel(
         Q.ptr<const char>(), packed_K, a,
-        B, T_q, Nq, N_k, T_s, D,
-        esz, isQ3D
+        B, T_q, Nq, N_k, T_s, D, T_k,
+        sm_scale, esz, isQ3D
     );
 
 
@@ -859,7 +887,7 @@ void pagedAttnQKGemm(
 
 void pagedAttnAVGemm(
     const Mat& A,const std::vector<Mat> &V, Mat& Out,
-    int T_q, int Nq, int N_k, int T_s, int D,
+    int T_q, int Nq, int N_k, int T_s, int D, int T_v,
     const FastGemmOpt &opt
 ) {
     size_t esz = A.elemSize();
@@ -904,7 +932,7 @@ void pagedAttnAVGemm(
     if (opt.use_neon)
         opt_NEON::pagedAttnAVGemmKernel(
             A.ptr<const char>(), packed_V, Out.ptr<char>(),
-            B, T_q, Nq, N_k, T_s, D,
+            B, T_q, Nq, N_k, T_s, D, T_v,
             esz, canonical_layout, fastGemmPackBSize(D, T_s, opt)
         );
     else
@@ -913,7 +941,7 @@ void pagedAttnAVGemm(
     if (opt.use_avx2) {
         opt_AVX2::pagedAttnAVGemmKernel(
             A.ptr<const char>(), packed_V, Out.ptr<char>(),
-            B, T_q, Nq, N_k, T_s, D,
+            B, T_q, Nq, N_k, T_s, D, T_v,
             esz, canonical_layout, fastGemmPackBSize(D, T_s, opt)
         );
     }
@@ -923,7 +951,7 @@ void pagedAttnAVGemm(
     if (opt.use_avx){
         opt_AVX::pagedAttnAVGemmKernel(
             A.ptr<const char>(), packed_V, Out.ptr<char>(),
-            B, T_q, Nq, N_k, T_s, D,
+            B, T_q, Nq, N_k, T_s, D, T_v,
             esz, canonical_layout, fastGemmPackBSize(D, T_s, opt)
         );
     }
@@ -933,7 +961,7 @@ void pagedAttnAVGemm(
     if (opt.use_lasx){
         opt_LASX::pagedAttnAVGemmKernel(
             A.ptr<const char>(), packed_V, Out.ptr<char>(),
-            B, T_q, Nq, N_k, T_s, D,
+            B, T_q, Nq, N_k, T_s, D, T_v,
             esz, canonical_layout, fastGemmPackBSize(D, T_s, opt)
         );
     }
@@ -942,7 +970,7 @@ void pagedAttnAVGemm(
     {
         cpu_baseline::pagedAttnAVGemmKernel(
                 A.ptr<const char>(), packed_V, Out.ptr<char>(),
-                B, T_q, Nq, N_k, T_s, D,
+                B, T_q, Nq, N_k, T_s, D, T_v,
                 esz, canonical_layout, fastGemmPackBSize(D, T_s, opt)
             );
 

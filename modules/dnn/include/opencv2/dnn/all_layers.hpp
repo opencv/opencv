@@ -1876,6 +1876,8 @@ CV__DNN_INLINE_NS_BEGIN
 
     class CV_EXPORTS AttentionOnnxAiLayer : public Layer {
      public:
+        int kv_num_heads;
+
         static Ptr<AttentionOnnxAiLayer> create(const LayerParams &params);
     };
 

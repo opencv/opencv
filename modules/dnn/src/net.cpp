@@ -493,6 +493,25 @@ bool Net::haveArg(const std::string& name) const
     return impl->haveArg(name);
 }
 
+void Net::enableKVCache()
+{
+    CV_Assert(impl);
+    setKVCacheManager(impl);
+}
+
+void Net::disableKVCache()
+{
+    CV_Assert(impl);
+    impl->kvCacheManager = KVCacheManager();
+}
+
+void Net::resetKVCache()
+{
+    CV_Assert(impl);
+    setKVCacheManager(impl);
+}
+
+
 Ptr<Graph> Net::getMainGraph() const
 {
     CV_Assert(impl);
