@@ -486,7 +486,16 @@ struct ModelFusionQDQ
                                         symmetric_pads = false;
                                 }
 
-                                if (all_wzp_zero && symmetric_pads) {
+                                // Conv2Int8's VNNI kernel processes K0=8 output channels per
+                                // SIMD iteration. When ngroups>1 and Kg<K0, multiple groups map
+                                // to the same K0-wide output slot and clobber one another, so
+                                // skip the fusion and fall back to the unfused float path.
+                                // See https://github.com/opencv/opencv/issues/28798
+                                const int outChannelsPerGroup = outCn / std::max(conv->ngroups, 1);
+                                const bool kernelSupportsGrouping =
+                                    conv->ngroups <= 1 || outChannelsPerGroup >= 8;
+
+                                if (all_wzp_zero && symmetric_pads && kernelSupportsGrouping) {
                                     Mat bias = Mat::zeros(1, outCn, CV_32S);
                                     bool biasOk = true;
                                     int dq_bias_idx = -1;

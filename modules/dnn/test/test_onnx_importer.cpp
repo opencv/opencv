@@ -2197,6 +2197,11 @@ TEST_P(Test_ONNX_layers, Quantized_Convolution)
         testONNXModels("quantized_conv_int8_weights", npy, 0.03, 0.5);
         testONNXModels("quantized_conv_per_channel_weights", npy, 0.06, 0.4);
         testONNXModels("quantized_conv_asymmetric_pads_int8_weights");
+        // Regression test for https://github.com/opencv/opencv/issues/28798:
+        // depthwise QLinearConv (Kg=1 < kernel SIMD width K0=8) used to be
+        // miscompiled by Conv2Int8's VNNI kernel because multiple groups
+        // wrote into the same K0-wide output slot.
+        testONNXModels("quantized_depthwise_conv_int8_weights", npy, 0.06, 0.5);
     }
 
     {
