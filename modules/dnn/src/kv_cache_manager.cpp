@@ -264,21 +264,16 @@ void KCache::growGenerate(const Mat& newData){
     auto* page = pages[cur_page].ptr<float>();
     const auto* data = newData.ptr<float>();
 
-    for (int b = 0; b < batch_size; b++){
-        for (int h = 0; h < nHeads; h++){
-            for(int j = 0; j < headDim; j++) {
-                int step =
-                    b * nHeads * headDim +
-                    h * headDim +
-                    j;
-                page[
-                    b * nHeads * Ps +
-                    h * Ps +
-                    t0 + pageSize * j
-                ] = *(data + step);
-            }
+    const int nstripes = batch_size * nHeads;
+    parallel_for_(Range(0, nstripes), [&](const Range& r) {
+        for (int i = r.start; i < r.end; i++) {
+            int b = i / nHeads, h = i % nHeads;
+            const float* src = data + (b * nHeads + h) * headDim;
+            float* dst = page + b * nHeads * Ps + h * Ps + t0;
+            for (int j = 0; j < headDim; j++)
+                dst[j * pageSize] = src[j];
         }
-    }
+    });
 
     nTokens += 1;
 }
@@ -298,8 +293,10 @@ void VCache::growGenerate(const Mat& newData){
     auto* page = pages[cur_page].ptr<float>();
     const auto* data = newData.ptr<float>();
 
-    for (int b = 0; b < batch_size; b++){
-        for (int h = 0; h < nHeads; h++){
+    const int nstripes = batch_size * nHeads;
+    parallel_for_(Range(0, nstripes), [&](const Range& r) {
+        for (int i = r.start; i < r.end; i++) {
+            int b = i / nHeads, h = i % nHeads;
             for (int j = 0; j <= (headDim - 1) / Nr; j++) {
                 int step = b * nHeads * headDim + h * headDim + j * Nr;
                 int copy_size = std::min(Nr, headDim - j * Nr);
@@ -315,7 +312,7 @@ void VCache::growGenerate(const Mat& newData){
                 }
             }
         }
-    }
+    });
 
     nTokens += 1;
 }
