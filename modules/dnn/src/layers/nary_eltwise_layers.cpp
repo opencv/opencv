@@ -406,9 +406,13 @@ public:
             {
                 out_type = (inputs[0] == inputs[1]) ? inputs[0] : CV_32F;
             }
-            else if (baseIsFloat != expIsFloat)
+            else if (baseIsFloat && !expIsFloat)
             {
                 out_type = inputs[0];
+            }
+            else if (!baseIsFloat && expIsFloat)
+            {
+                out_type = CV_32F;
             }
             else
             {
