@@ -572,12 +572,6 @@ struct ModelFusionQDQ
                                 // SIMD iteration. When ngroups>1 and Kg<K0, multiple groups map
                                 // to the same K0-wide output slot and clobber one another, so
                                 // skip the fusion and fall back to the unfused float path.
-<<<<<<< HEAD
-                                // See https://github.com/opencv/opencv/issues/28798
-                                const int outChannelsPerGroup = outCn / std::max(conv->ngroups, 1);
-                                const bool kernelSupportsGrouping =
-                                    conv->ngroups <= 1 || outChannelsPerGroup >= 8;
-=======
                                 // Exception: pure depthwise (ngroups==outCn, Cg==1) is routed to
                                 // convInt8BlockDepthwise before the VNNI path and is correct.
                                 // See https://github.com/opencv/opencv/issues/28798
@@ -586,7 +580,6 @@ struct ModelFusionQDQ
                                 const bool isDepthwise = (conv->ngroups == outCn) && (inChannelsPerGroup == 1) && (outCn > 1);
                                 const bool kernelSupportsGrouping =
                                     conv->ngroups <= 1 || outChannelsPerGroup >= 8 || isDepthwise;
->>>>>>> 296821d866 (dnn: INT8 inference optimations)
 
                                 if (all_wzp_zero && symmetric_pads && kernelSupportsGrouping) {
                                     Mat bias = Mat::zeros(1, outCn, CV_32S);

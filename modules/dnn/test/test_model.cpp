@@ -830,8 +830,9 @@ TEST_P(Reproducibility_ResNet50_QDQ_ONNX, Accuracy)
     for (const auto& r : ref) {
         auto it = res_map.find(r.first);
         EXPECT_NE(it, res_map.end()) << "Expected class " << r.first << " not found in top-4";
-        if (it != res_map.end())
+        if (it != res_map.end()) {
             EXPECT_NEAR(r.second, it->second, eps) << "Score mismatch for class " << r.first;
+        }
     }
 }
 INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_ResNet50_QDQ_ONNX,
