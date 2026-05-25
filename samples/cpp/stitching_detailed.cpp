@@ -16,6 +16,9 @@
 #include "opencv2/stitching/detail/seam_finders.hpp"
 #include "opencv2/stitching/detail/warpers.hpp"
 #include "opencv2/stitching/warpers.hpp"
+#include "opencv2/features.hpp"
+#include "opencv2/calib3d.hpp"
+#include "opencv2/core/ocl.hpp"
 
 #ifdef HAVE_OPENCV_XFEATURES2D
 #include "opencv2/xfeatures2d.hpp"
@@ -45,9 +48,10 @@ static void printUsage(char** argv)
         "\nMotion Estimation Flags:\n"
         "  --work_megapix <float>\n"
         "      Resolution for image registration step. The default is 0.6 Mpx.\n"
-        "  --features (surf|orb|sift|akaze)\n"
+        "  --features (surf|orb|sift|akaze|aliked)\n"
         "      Type of features used for images matching.\n"
         "      The default is surf if available, orb otherwise.\n"
+        "      When using 'aliked', requires --matcher lightglue and DNN model paths.\n"
         "  --matcher (homography|affine)\n"
         "      Matcher used for pairwise image matching.\n"
         "  --estimator (homography|affine)\n"
@@ -103,7 +107,14 @@ static void printUsage(char** argv)
         "  --timelapse (as_is|crop) \n"
         "      Output warped images separately as frames of a time lapse movie, with 'fixed_' prepended to input file names.\n"
         "  --rangewidth <int>\n"
-        "      uses range_width to limit number of images to match with.\n";
+        "      uses range_width to limit number of images to match with.\n"
+        "\nDNN Feature Options (when --features aliked --matcher lightglue):\n"
+        "  --aliked_model <path>\n"
+        "      Path to ALIKED ONNX model file.\n"
+        "  --lightglue_model <path>\n"
+        "      Path to LightGlue ONNX model file (for ALIKED descriptors).\n"
+        "  --lg_score_thresh <float>\n"
+        "      LightGlue confidence threshold. The default is 0.0 (accept all).\n";
 }
 
 
@@ -142,6 +153,9 @@ float blend_strength = 5;
 string result_name = "result.jpg";
 bool timelapse = false;
 int range_width = -1;
+String aliked_model_path;
+String lightglue_model_path;
+float lg_score_thresh = 0.0f;
 
 
 static int parseCmdArgs(int argc, char** argv)
@@ -204,7 +218,7 @@ static int parseCmdArgs(int argc, char** argv)
         }
         else if (string(argv[i]) == "--matcher")
         {
-            if (string(argv[i + 1]) == "homography" || string(argv[i + 1]) == "affine")
+            if (string(argv[i + 1]) == "homography" || string(argv[i + 1]) == "affine" || string(argv[i + 1]) == "lightglue")
                 matcher_type = argv[i + 1];
             else
             {
@@ -376,6 +390,21 @@ static int parseCmdArgs(int argc, char** argv)
             result_name = argv[i + 1];
             i++;
         }
+        else if (string(argv[i]) == "--aliked_model")
+        {
+            aliked_model_path = argv[i + 1];
+            i++;
+        }
+        else if (string(argv[i]) == "--lightglue_model")
+        {
+            lightglue_model_path = argv[i + 1];
+            i++;
+        }
+        else if (string(argv[i]) == "--lg_score_thresh")
+        {
+            lg_score_thresh = static_cast<float>(atof(argv[i + 1]));
+            i++;
+        }
         else
             img_names.push_back(argv[i]);
     }
@@ -383,8 +412,180 @@ static int parseCmdArgs(int argc, char** argv)
     {
         compose_megapix = 0.6;
     }
+
+    // Validate DNN options
+    if (features_type == "aliked" && matcher_type != "lightglue")
+    {
+        cout << "Error: --features aliked requires --matcher lightglue\n";
+        return -1;
+    }
+    if (features_type == "aliked" && (aliked_model_path.empty() || lightglue_model_path.empty()))
+    {
+        cout << "Error: --features aliked requires --aliked_model and --lightglue_model\n";
+        return -1;
+    }
+
     return 0;
 }
+
+
+// ============================================================================
+//  LightGlueFeaturesMatcher — adapts LightGlueMatcher (DescriptorMatcher)
+//  to the stitching pipeline's FeaturesMatcher interface.
+// ============================================================================
+class LightGlueFeaturesMatcher : public FeaturesMatcher
+{
+public:
+    LightGlueFeaturesMatcher(Ptr<LightGlueMatcher> lgMatcher,
+                             int num_matches_thresh1 = 6,
+                             int num_matches_thresh2 = 6,
+                             double matches_confidence_thresh = 3.0)
+        : FeaturesMatcher(false),  // not thread-safe: setPairInfo() mutates state
+          lgMatcher_(lgMatcher),
+          num_matches_thresh1_(num_matches_thresh1),
+          num_matches_thresh2_(num_matches_thresh2),
+          matches_confidence_thresh_(matches_confidence_thresh),
+          lg_score_thresh_(0.0f)
+    {}
+
+    void setScoreThreshold(float thresh) { lg_score_thresh_ = thresh; }
+
+    void match(const ImageFeatures &features1, const ImageFeatures &features2,
+               MatchesInfo &matches_info) CV_OVERRIDE
+    {
+        matches_info.src_img_idx = features1.img_idx;
+        matches_info.dst_img_idx = features2.img_idx;
+        matches_info.confidence = 0;
+
+        // Guard empty keypoints
+        if (features1.keypoints.empty() || features2.keypoints.empty())
+            return;
+
+        const int N = static_cast<int>(features1.keypoints.size());
+        const int M = static_cast<int>(features2.keypoints.size());
+
+        // Build Nx2 keypoint coordinate matrices
+        Mat kpts1Mat(N, 2, CV_32F);
+        Mat kpts2Mat(M, 2, CV_32F);
+        for (int i = 0; i < N; i++)
+        {
+            kpts1Mat.at<float>(i, 0) = features1.keypoints[i].pt.x;
+            kpts1Mat.at<float>(i, 1) = features1.keypoints[i].pt.y;
+        }
+        for (int i = 0; i < M; i++)
+        {
+            kpts2Mat.at<float>(i, 0) = features2.keypoints[i].pt.x;
+            kpts2Mat.at<float>(i, 1) = features2.keypoints[i].pt.y;
+        }
+
+        // Set pair context for LightGlue spatial reasoning
+        lgMatcher_->setPairInfo(kpts1Mat, kpts2Mat, features1.img_size, features2.img_size);
+
+        // Run LightGlue matching
+        Mat desc1 = features1.descriptors.getMat(ACCESS_READ);
+        Mat desc2 = features2.descriptors.getMat(ACCESS_READ);
+        vector<DMatch> matches;
+        lgMatcher_->match(desc1, desc2, matches);
+
+        // Filter by score threshold
+        if (lg_score_thresh_ > 0.0f)
+        {
+            float maxDist = 1.0f - lg_score_thresh_;
+            vector<DMatch> filtered;
+            filtered.reserve(matches.size());
+            for (const auto& m : matches)
+            {
+                if (m.distance <= maxDist)
+                    filtered.push_back(m);
+            }
+            matches.swap(filtered);
+        }
+
+        // Store matches before homography estimation
+        matches_info.matches = matches;
+
+        // Guard: need at least 4 matches for findHomography
+        if (matches.size() < 4)
+            return;
+
+        // Estimate homography with centered coordinates
+        Mat src_points(1, static_cast<int>(matches.size()), CV_32FC2);
+        Mat dst_points(1, static_cast<int>(matches.size()), CV_32FC2);
+        for (size_t i = 0; i < matches.size(); ++i)
+        {
+            const DMatch& m = matches[i];
+
+            Point2f p = features1.keypoints[m.queryIdx].pt;
+            p.x -= features1.img_size.width * 0.5f;
+            p.y -= features1.img_size.height * 0.5f;
+            src_points.at<Point2f>(0, static_cast<int>(i)) = p;
+
+            p = features2.keypoints[m.trainIdx].pt;
+            p.x -= features2.img_size.width * 0.5f;
+            p.y -= features2.img_size.height * 0.5f;
+            dst_points.at<Point2f>(0, static_cast<int>(i)) = p;
+        }
+
+        matches_info.H = findHomography(src_points, dst_points, matches_info.inliers_mask, RANSAC);
+        if (matches_info.H.empty() ||
+            std::abs(determinant(matches_info.H)) < std::numeric_limits<double>::epsilon())
+            return;
+
+        // Compute inliers and confidence (Brown & Lowe formula)
+        matches_info.num_inliers = 0;
+        for (size_t i = 0; i < matches_info.inliers_mask.size(); ++i)
+            if (matches_info.inliers_mask[i])
+                matches_info.num_inliers++;
+
+        matches_info.confidence = matches_info.num_inliers /
+                                  (8 + 0.3 * matches_info.matches.size());
+
+        // Zero confidence for too-close image pairs
+        if (matches_info.confidence > matches_confidence_thresh_)
+            matches_info.confidence = 0.;
+
+        // Refine homography on inliers if enough
+        if (matches_info.num_inliers >= num_matches_thresh2_)
+        {
+            src_points.create(1, matches_info.num_inliers, CV_32FC2);
+            dst_points.create(1, matches_info.num_inliers, CV_32FC2);
+            int inlier_idx = 0;
+            for (size_t i = 0; i < matches_info.matches.size(); ++i)
+            {
+                if (!matches_info.inliers_mask[i])
+                    continue;
+
+                const DMatch& m = matches_info.matches[i];
+
+                Point2f p = features1.keypoints[m.queryIdx].pt;
+                p.x -= features1.img_size.width * 0.5f;
+                p.y -= features1.img_size.height * 0.5f;
+                src_points.at<Point2f>(0, inlier_idx) = p;
+
+                p = features2.keypoints[m.trainIdx].pt;
+                p.x -= features2.img_size.width * 0.5f;
+                p.y -= features2.img_size.height * 0.5f;
+                dst_points.at<Point2f>(0, inlier_idx) = p;
+
+                inlier_idx++;
+            }
+
+            matches_info.H = findHomography(src_points, dst_points, RANSAC);
+        }
+
+        LOGLN("  Pair " << features1.img_idx << "->" << features2.img_idx
+              << ": matches=" << matches_info.matches.size()
+              << ", inliers=" << matches_info.num_inliers
+              << ", conf=" << matches_info.confidence);
+    }
+
+private:
+    Ptr<LightGlueMatcher> lgMatcher_;
+    int num_matches_thresh1_;
+    int num_matches_thresh2_;
+    double matches_confidence_thresh_;
+    float lg_score_thresh_;
+};
 
 
 int main(int argc, char* argv[])
@@ -400,6 +601,11 @@ int main(int argc, char* argv[])
     int retval = parseCmdArgs(argc, argv);
     if (retval)
         return retval;
+
+    // Disable OpenCL for DNN-based features to avoid backend sync issues
+    bool use_aliked = (features_type == "aliked");
+    if (use_aliked)
+        cv::ocl::setUseOpenCL(false);
 
     // Check if have enough images
     int num_images = static_cast<int>(img_names.size());
@@ -418,7 +624,11 @@ int main(int argc, char* argv[])
 #endif
 
     Ptr<Feature2D> finder;
-    if (features_type == "orb")
+    if (use_aliked)
+    {
+        // ALIKED will be created per-image in the loop below
+    }
+    else if (features_type == "orb")
     {
         finder = ORB::create();
     }
@@ -488,7 +698,15 @@ int main(int argc, char* argv[])
             is_seam_scale_set = true;
         }
 
-        computeImageFeatures(finder, img, features[i]);
+        if (use_aliked)
+        {
+            Ptr<ALIKED> aliked = ALIKED::create(aliked_model_path);
+            computeImageFeatures(aliked, img, features[i]);
+        }
+        else
+        {
+            computeImageFeatures(finder, img, features[i]);
+        }
         features[i].img_idx = i;
         LOGLN("Features in image #" << i+1 << ": " << features[i].keypoints.size());
 
@@ -507,7 +725,14 @@ int main(int argc, char* argv[])
 #endif
     vector<MatchesInfo> pairwise_matches;
     Ptr<FeaturesMatcher> matcher;
-    if (matcher_type == "affine")
+    if (use_aliked && matcher_type == "lightglue")
+    {
+        Ptr<LightGlueMatcher> lg = LightGlueMatcher::create(lightglue_model_path);
+        Ptr<LightGlueFeaturesMatcher> lgMatcher = makePtr<LightGlueFeaturesMatcher>(lg);
+        lgMatcher->setScoreThreshold(lg_score_thresh);
+        matcher = lgMatcher;
+    }
+    else if (matcher_type == "affine")
         matcher = makePtr<AffineBestOf2NearestMatcher>(false, try_cuda, match_conf);
     else if (range_width==-1)
         matcher = makePtr<BestOf2NearestMatcher>(try_cuda, match_conf);
