@@ -325,6 +325,13 @@ static void findMinEnclosingTriangle(cv::InputArray points,
     std::vector<cv::Point2f> resultingTriangle;
     cv::Mat polygon;
     convexHull(points, polygon, true, true);
+
+    double hullArea = cv::contourArea(polygon);
+    if (hullArea < MIN_ENCLOSING_TRIANGLE_EPSILON) {
+        CV_Error(cv::Error::StsBadArg, 
+                 "Input points are collinear - cannot form a triangle");
+    }
+
     findMinEnclosingTriangle(polygon, resultingTriangle, area);
     cv::Mat(resultingTriangle).copyTo(triangle);
 }
