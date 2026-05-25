@@ -175,6 +175,7 @@ bool calib::parametersController::loadFromParser(cv::CommandLineParser &parser)
         else if (arucoDictName == "DICT_APRILTAG_25h9") { mCapParams.charucoDictName = cv::aruco::DICT_APRILTAG_25h9; }
         else if (arucoDictName == "DICT_APRILTAG_36h10") { mCapParams.charucoDictName = cv::aruco::DICT_APRILTAG_36h10; }
         else if (arucoDictName == "DICT_APRILTAG_36h11") { mCapParams.charucoDictName = cv::aruco::DICT_APRILTAG_36h11; }
+        else if (arucoDictName == "DICT_ARUCO_MIP_36h12") { mCapParams.charucoDictName = cv::aruco::DICT_ARUCO_MIP_36h12; }
         else {
             std::cout << "incorrect name of aruco dictionary \n";
             return false;

@@ -60,7 +60,7 @@ static int print_help(char** argv)
         << "DICT_4X4_1000, DICT_5X5_50, DICT_5X5_100, DICT_5X5_250, DICT_5X5_1000, "
         << "DICT_6X6_50, DICT_6X6_100, DICT_6X6_250, DICT_6X6_1000, DICT_7X7_50, "
         << "DICT_7X7_100, DICT_7X7_250, DICT_7X7_1000, DICT_ARUCO_ORIGINAL, "
-        << "DICT_APRILTAG_16h5, DICT_APRILTAG_25h9, DICT_APRILTAG_36h10, DICT_APRILTAG_36h11\n";
+        << "DICT_APRILTAG_16h5, DICT_APRILTAG_25h9, DICT_APRILTAG_36h10, DICT_APRILTAG_36h11, DICT_ARUCO_MIP_36h12\n";
 
     return 0;
 }
@@ -437,6 +437,7 @@ int main(int argc, char** argv)
     else if (arucoDictName == "DICT_APRILTAG_25h9") { arucoDict = cv::aruco::DICT_APRILTAG_25h9; }
     else if (arucoDictName == "DICT_APRILTAG_36h10") { arucoDict = cv::aruco::DICT_APRILTAG_36h10; }
     else if (arucoDictName == "DICT_APRILTAG_36h11") { arucoDict = cv::aruco::DICT_APRILTAG_36h11; }
+    else if (arucoDictName == "DICT_ARUCO_MIP_36h12") { arucoDict = cv::aruco::DICT_ARUCO_MIP_36h12; }
     else {
         cout << "incorrect name of aruco dictionary \n";
         return 1;

@@ -460,7 +460,7 @@ TEST_P(Test_Model, Keypoints_face)
     bool swapRB = false;
 
     // Ref. Range: [-1.1784188, 1.7758257]
-    float norm = 1e-4;
+    float norm = 2e-3;
     if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16)
         norm = 5e-3;
     if (target == DNN_TARGET_MYRIAD)

@@ -4,7 +4,6 @@ from __future__ import print_function, unicode_literals
 import sys, re, os.path, errno, fnmatch
 import json
 import logging
-import codecs
 import io
 from shutil import copyfile
 from pprint import pformat
@@ -903,7 +902,7 @@ class ObjectiveCWrapperGenerator(object):
                 content = f.read()
                 if content == buf:
                     return
-        with codecs.open(path, "w", "utf-8") as f:
+        with open(path, "w", encoding="utf-8") as f:
             f.write(buf)
         updated_files += 1
 
@@ -1531,7 +1530,7 @@ typedef NS_ENUM(int, {1}) {{
                         body = file.read()
                     body = body.replace("import OpenCV", "import " + framework_name)
                     body = body.replace("#import <OpenCV/OpenCV.h>", "#import <" + framework_name + "/" + framework_name + ".h>")
-                    with codecs.open(filepath, "w", "utf-8") as file:
+                    with open(filepath, "w", encoding="utf-8") as file:
                         file.write(body)
 
 

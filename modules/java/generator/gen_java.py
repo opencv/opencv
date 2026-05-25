@@ -3,7 +3,6 @@
 import sys, re, os.path, errno, fnmatch
 import json
 import logging
-import codecs
 from shutil import copyfile
 from pprint import pformat
 from string import Template
@@ -601,7 +600,7 @@ class JavaWrapperGenerator(object):
                 content = f.read()
                 if content == buf:
                     return
-        with codecs.open(path, "w", "utf-8") as f:
+        with open(path, "w", encoding="utf-8") as f:
             f.write(buf)
         updated_files += 1
 

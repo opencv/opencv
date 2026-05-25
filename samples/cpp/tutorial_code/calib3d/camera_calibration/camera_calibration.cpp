@@ -340,6 +340,7 @@ int main(int argc, char* argv[])
             else if (s.arucoDictName == "DICT_APRILTAG_25h9") { arucoDict = cv::aruco::DICT_APRILTAG_25h9; }
             else if (s.arucoDictName == "DICT_APRILTAG_36h10") { arucoDict = cv::aruco::DICT_APRILTAG_36h10; }
             else if (s.arucoDictName == "DICT_APRILTAG_36h11") { arucoDict = cv::aruco::DICT_APRILTAG_36h11; }
+            else if (s.arucoDictName == "DICT_ARUCO_MIP_36h12") { arucoDict = cv::aruco::DICT_ARUCO_MIP_36h12; }
             else {
                 cout << "incorrect name of aruco dictionary \n";
                 return 1;

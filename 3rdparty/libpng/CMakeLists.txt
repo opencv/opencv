@@ -278,6 +278,7 @@ endif(PNG_HARDWARE_OPTIMIZATIONS)
 
 if(MSVC)
   add_definitions(-D_CRT_SECURE_NO_DEPRECATE)
+  ocv_warnings_disable(CMAKE_C_FLAGS /wd4146)
 endif(MSVC)
 
 add_library(${PNG_LIBRARY} STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${lib_srcs} ${lib_hdrs})

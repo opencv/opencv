@@ -100,7 +100,8 @@ def main():
         'DICT_APRILTAG_16h5': cv.aruco.DICT_APRILTAG_16h5,
         'DICT_APRILTAG_25h9': cv.aruco.DICT_APRILTAG_25h9,
         'DICT_APRILTAG_36h10': cv.aruco.DICT_APRILTAG_36h10,
-        'DICT_APRILTAG_36h11': cv.aruco.DICT_APRILTAG_36h11
+        'DICT_APRILTAG_36h11': cv.aruco.DICT_APRILTAG_36h11,
+        'DICT_ARUCO_MIP_36h12': cv.aruco.DICT_ARUCO_MIP_36h12
     }
 
     if (aruco_dict_name not in set(aruco_dicts.keys())):

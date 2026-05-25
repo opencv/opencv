@@ -78,6 +78,65 @@
         @sa @cite Aruco2014
         This code has been originally developed by Sergio Garrido-Jurado as a project
         for Google Summer of Code 2015 (GSoC 15).
+
+        <br>
+
+        @warning In OpenCV, the order of the returned corners locations for the AprilTag family is not aligned with the ArUco one.\n
+        Note that this order is also different from the convention adopted by the official [AprilTag library](https://github.com/AprilRobotics/apriltag/).
+        ![](pics/AprilTag_corners_comparison_opencv_april.png) { width=80% }
+
+        <br>
+
+        An overview of the supported ArUco markers family is visible in the following image:
+        ![](pics/ArUco_family.png) { width=80% }
+
+        <br>
+
+        An overview of the supported AprilTag markers family is visible in the following image:
+        ![](pics/AprilTag_family.png) { width=80% }
+
+        @note The generated images (in the above picture) using @ref aruco::generateImageMarker for the AprilTag markers have been
+        rotated by 180 degree in order to match the official AprilTag images.
+        When using the @ref aruco::generateImageMarker function, it will output by default a different image from the official AprilTag convention,
+        see the [AprilRobotics/apriltag-imgs](https://github.com/AprilRobotics/apriltag-imgs) repository.
+        This is the reason why you see a different corners order between ArUco and AprilTag in the above image.
+
+        <br>
+
+        For the ArUco marker family, the recommended family is the DICT_ARUCO_MIP_36h12 one, [see](https://stackoverflow.com/a/51511558).
+        In general, a smaller marker family (e.g. `4x4` vs `6x6`) should give you a better detection rate with respect to the camera distance,
+        at the expense of having more probability to have issues with false detection or marker id decoding error.
+        The number of marker ids in a family is also something to take into account with respect to the application use case and the ability
+        to correct wrong bits during the marker id decoding process.
+
+        You can download some pregenerated MIP_36h12 ArUco marker images from:
+          - https://sourceforge.net/projects/aruco/files/
+          - or use the `samples/cpp/tutorial_code/objectDetection/create_marker.cpp` sample to generate the marker image for your
+          desired marker family (which uses the @ref aruco::generateImageMarker function)
+
+        For the AprilTag family, you can find some pregenerated marker images in the
+        [AprilRobotics/apriltag-imgs](https://github.com/AprilRobotics/apriltag-imgs) repository.
+
+        @note For accurate corners location extraction, a white border (to have a strong gradient between white and black transition) around the marker is important.
+        This is necessary to precisely extract the marker contour in difficult conditions such as bad illumination, confusing color background, etc.
+
+        <br>
+
+        There are multiple parameters which can be tweaked to improve the marker detection rate or to be adapted to your use case (e.g. image resolution).
+        Please refer to the:
+          - @ref aruco::DetectorParameters
+          - "Detector Parameters" section in the @ref tutorial_aruco_detection tutorial or in the @ref tutorial_aruco_faq page
+          - [ArUco Library Documentation](https://drive.google.com/file/d/1OiavRVYVJ-WH88sQg1LUsh8CuJZUQyrX) for additional information from the ArUco library
+
+        The corner refinement method can be changed according to the @ref aruco::CornerRefineMethod to improve the corners location accuracy
+        at the expense of more computation time.
+
+        <br>
+
+        To estimate the marker pose with respect to the camera frame, we recommend you to look at the following sources of information:
+          - @ref tutorial_aruco_detection for a tutorial about ArUco markers detection
+          - @ref calib for some theoretical background about the pinhole camera model and the @ref calib3d_solvePnP page
+          - @ref solvePnP, @ref solvePnPGeneric, @ref solveP3P for the relevant pose estimation methods
     @}
 
 @}

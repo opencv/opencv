@@ -1278,4 +1278,21 @@ VideoCaptureAPIs seekable_backeinds[] = {CAP_FFMPEG, CAP_MSMF, CAP_AVFOUNDATION}
 
 INSTANTIATE_TEST_CASE_P(videoio, PreciseSeekingTest, testing::ValuesIn(seekable_backeinds), safe_capture_name_printer);
 
+// Regression test for heap-buffer-overflow in mjpeg_buffer::put_bits (GitHub issue #29112).
+// When len == bits_free the old guard used strict '>' and skipped the resize, causing
+// an out-of-bounds write after '++m_pos' advanced past data.size().
+TEST(Videoio_MJPEG, put_bits_no_heap_overflow)
+{
+    const std::string filename = cv::tempfile(".avi");
+    cv::Mat frame(1, 1, CV_8UC1, cv::Scalar::all(255));
+    int fourcc = cv::VideoWriter::fourcc('M', 'J', 'P', 'G');
+    {
+        cv::VideoWriter writer;
+        ASSERT_NO_THROW(writer.open(filename, CAP_OPENCV_MJPEG, fourcc, 25.0, cv::Size(1, 1), false));
+        ASSERT_TRUE(writer.isOpened());
+        EXPECT_NO_THROW(writer.write(frame));
+    }
+    remove(filename.c_str());
+}
+
 } // namespace

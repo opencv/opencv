@@ -161,7 +161,7 @@ public:
     inline void put_bits(unsigned bits, int len)
     {
         CV_Assert(len >=0 && len < 32);
-        if((m_pos == (data.size() - 1) && len > bits_free) || m_pos == data.size())
+        if((m_pos == (data.size() - 1) && len >= bits_free) || m_pos == data.size())
         {
             resize(int(2*data.size()));
         }

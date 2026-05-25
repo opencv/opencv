@@ -1283,7 +1283,7 @@ struct MaskedNormInf_SIMD<float, float> {
             v_float32 acc = vx_setzero_f32();
 
             for (; i <= len - vstep; i += vstep) {
-                v_uint32 m = v_reinterpret_as_u32(vx_load_expand(mask + i));
+                v_uint32 m = vx_load_expand_q(mask + i);
                 v_uint32 cmp = v_gt(m, vx_setzero_u32());
                 v_float32 s = vx_load(src + i);
                 s = v_abs(s);

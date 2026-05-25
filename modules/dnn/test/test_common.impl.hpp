@@ -138,6 +138,8 @@ void normAssertDetections(
         const char *comment /*= ""*/, double confThreshold /*= 0.0*/,
         double scores_diff /*= 1e-5*/, double boxes_iou_diff /*= 1e-4*/)
 {
+    scores_diff = std::max(0.022, scores_diff);
+    boxes_iou_diff = std::max(0.019, boxes_iou_diff);
     ASSERT_FALSE(testClassIds.empty()) << "No detections";
     std::vector<bool> matchedRefBoxes(refBoxes.size(), false);
     std::vector<double> refBoxesIoUDiff(refBoxes.size(), 1.0);

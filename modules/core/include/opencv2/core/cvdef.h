@@ -708,9 +708,15 @@ __CV_ENUM_FLAGS_BITWISE_XOR_EQ   (EnumType, EnumType)                           
 #endif
 
 #if defined(__clang__) || defined(__GNUC__)
-  #define CV_DISABLE_UBSAN __attribute__((no_sanitize("undefined")))
-#else
-  #define CV_DISABLE_UBSAN
+#  if defined(__has_attribute)
+#    if __has_attribute(no_sanitize)
+#      define CV_DISABLE_UBSAN __attribute__((no_sanitize("undefined")))
+#    endif
+#  endif
+#endif
+
+#ifndef CV_DISABLE_UBSAN
+#  define CV_DISABLE_UBSAN
 #endif
 
 /****************************************************************************************\
