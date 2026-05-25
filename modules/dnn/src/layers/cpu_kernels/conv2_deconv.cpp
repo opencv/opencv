@@ -119,53 +119,56 @@ static void deconvBlock32f(const void* inp__, const void* /*residual*/,
                 if (simd_ok) {
                     const int VLANES = VTraits<v_float32>::vlanes();
                     const int v_per_block = C0 / VLANES;
-                    // Hold the C0-wide accumulator in registers across all
-                    // (ks, c1p) iterations so we only touch out_ptr once.
-                    v_float32 acc[8];  // C0 <= 8*VLANES covers everything realistic
-                    for (int v = 0; v < v_per_block; v++)
-                        acc[v] = v_load(out_ptr + v * VLANES);
+                    const bool two_vecs = (v_per_block == 2);
+                    if (v_per_block == 1 || two_vecs) {
+                        v_float32 acc0 = vx_load(out_ptr);
+                        v_float32 acc1 = two_vecs ? vx_load(out_ptr + VLANES)
+                                                  : vx_setzero_f32();
 
-                    for (int ks = 0; ks < ksize; ks++) {
-                        bool valid = true;
-                        int ipos_flat = 0;
-                        for (int i = 0; i < sdims; i++) {
-                            int di = MAX_DIMS - sdims + i;
-                            int raw = ocoords[di] + cs.pads[di]
-                                      - kcoords_tab[ks][di] * cs.dilations[di];
-                            if (raw < 0 || raw % cs.strides[di] != 0) {
-                                valid = false; break;
+                        for (int ks = 0; ks < ksize; ks++) {
+                            bool valid = true;
+                            int ipos_flat = 0;
+                            for (int i = 0; i < sdims; i++) {
+                                int di = MAX_DIMS - sdims + i;
+                                int raw = ocoords[di] + cs.pads[di]
+                                          - kcoords_tab[ks][di] * cs.dilations[di];
+                                if (raw < 0 || raw % cs.strides[di] != 0) {
+                                    valid = false; break;
+                                }
+                                int ic = raw / cs.strides[di];
+                                if (ic >= iDims[di]) { valid = false; break; }
+                                ipos_flat = ipos_flat * iDims[di] + ic;
                             }
-                            int ic = raw / cs.strides[di];
-                            if (ic >= iDims[di]) { valid = false; break; }
-                            ipos_flat = ipos_flat * iDims[di] + ic;
-                        }
-                        if (!valid) continue;
+                            if (!valid) continue;
 
-                        const float* w_base = wdata +
-                            ((int64_t)(simd_g * Kblk + simd_kblk) * ksize + ks)
-                            * C1Max * C0 * K0;
+                            const float* w_base = wdata +
+                                ((int64_t)(simd_g * Kblk + simd_kblk) * ksize + ks)
+                                * C1Max * C0 * K0;
 
-                        for (int c1p = 0; c1p < C1Max; c1p++) {
-                            const int c1_abs = simd_c1_abs_base + c1p;
-                            if (c1_abs >= C1) break;
+                            for (int c1p = 0; c1p < C1Max; c1p++) {
+                                const int c1_abs = simd_c1_abs_base + c1p;
+                                if (c1_abs >= C1) break;
 
-                            const float* inp_ptr = inp_n +
-                                (int64_t)(c1_abs * ispatial + ipos_flat) * C0;
-                            const float* w_c1p = w_base + (int64_t)c1p * C0 * K0;
+                                const float* inp_ptr = inp_n +
+                                    (int64_t)(c1_abs * ispatial + ipos_flat) * C0;
+                                const float* w_c1p = w_base + (int64_t)c1p * C0 * K0;
 
-                            for (int c0 = 0; c0 < C0; c0++) {
-                                v_float32 inp_v = vx_setall_f32(inp_ptr[c0]);
-                                for (int v = 0; v < v_per_block; v++) {
-                                    v_float32 w_row = v_load(w_c1p + c0 * K0 + v * VLANES);
-                                    acc[v] = v_fma(inp_v, w_row, acc[v]);
+                                for (int c0 = 0; c0 < C0; c0++) {
+                                    v_float32 inp_v = vx_setall_f32(inp_ptr[c0]);
+                                    v_float32 w0 = vx_load(w_c1p + c0 * K0);
+                                    acc0 = v_fma(inp_v, w0, acc0);
+                                    if (two_vecs) {
+                                        v_float32 w1 = vx_load(w_c1p + c0 * K0 + VLANES);
+                                        acc1 = v_fma(inp_v, w1, acc1);
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    for (int v = 0; v < v_per_block; v++)
-                        v_store(out_ptr + v * VLANES, acc[v]);
-                    continue;
+                        vx_store(out_ptr, acc0);
+                        if (two_vecs) vx_store(out_ptr + VLANES, acc1);
+                        continue;
+                    }
                 }
 #endif
 

@@ -751,7 +751,6 @@ static void conv32fC8_1x1_kpair(const void* inp__, const void* residual__, void*
 
     CV_Assert_N(inpshape.layout == DATA_LAYOUT_BLOCK, outshape.layout == DATA_LAYOUT_BLOCK);
 
-    int K_ = outshape.channels();
     int ndims_ = outshape.dims;
     int N = outshape[0];
     int D_ = ndims_ >= 6 ? outshape[ndims_ - 4] : 1;
@@ -770,7 +769,7 @@ static void conv32fC8_1x1_kpair(const void* inp__, const void* residual__, void*
 
     parallel_for_(Range(0, total_tasks), [&](const Range& range) {
         constexpr int SPAT_BLOCK_SIZE = 6;
-        constexpr int C0shift = 3, K0shift = C0shift;
+        constexpr int C0shift = 3;
         constexpr int C0 = 1 << C0shift, K0 = C0;
 
         CV_Assert_N(inpshape.back() == C0, outshape.back() == K0);
@@ -1255,7 +1254,6 @@ static void conv32fC8_3x3s1_kpair(const void* inp__, const void* residual__, voi
 
     CV_Assert_N(inpshape.layout == DATA_LAYOUT_BLOCK, outshape.layout == DATA_LAYOUT_BLOCK);
 
-    int K_ = outshape.channels();
     int ndims_ = outshape.dims;
     int N = outshape[0];
     int H_ = ndims_ >= 5 ? outshape[ndims_ - 3] : 1;
@@ -1273,7 +1271,7 @@ static void conv32fC8_3x3s1_kpair(const void* inp__, const void* residual__, voi
 
     parallel_for_(Range(0, total_tasks), [&](const Range& range) {
         constexpr int SPAT_BLOCK_SIZE = 6;
-        constexpr int C0shift = 3, K0shift = C0shift;
+        constexpr int C0shift = 3;
         constexpr int C0 = 1 << C0shift, K0 = C0;
 
         CV_Assert_N(inpshape.back() == C0, outshape.back() == K0);

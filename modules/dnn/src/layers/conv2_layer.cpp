@@ -424,15 +424,21 @@ public:
         void* outptr = out.data;
         const void* wptr = weights.data;
 
-        // MLAS 1x1 SGEMM path. Generic activations and addResidual fall
-        // through to the standard NCHWc kernel.
+        // MLAS 1x1 SGEMM path. Skipped for small spatial: the gather/scatter
+        // tax exceeds MLAS's SGEMM speedup over the in-place NCHWc8 kernel.
         if (mlas1x1Enabled() && inptype == CV_32F &&
             !activationFunc && !addResidual && inpshape.back() == 8)
         {
-            forwardMlas1x1(inp, out);
-            if (uouts) out.copyTo(uouts->at(0));
-            if (dynamicWeights) weights.release();
-            return;
+            const int ndims = inpshape.dims;
+            int HW = 1;
+            for (int i = 2; i < ndims - 1; i++) HW *= inpshape[i];
+            constexpr int MLAS_MIN_SPATIAL = 256;
+            if (HW >= MLAS_MIN_SPATIAL) {
+                forwardMlas1x1(inp, out);
+                if (uouts) out.copyTo(uouts->at(0));
+                if (dynamicWeights) weights.release();
+                return;
+            }
         }
 
         ConvFunc func = cs.depthwise ? getDepthwiseConvFunc(inptype) : getConvFunc(inptype, C0);
