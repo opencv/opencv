@@ -1049,15 +1049,6 @@ CV__DNN_INLINE_NS_BEGIN
          * Does nothing if profiling is disabled (DNN_PROFILE_NONE) or all timings are zero.
          */
         CV_WRAP void printPerfProfile() const;
-        
-        /** @brief Enables KV-Cache for all AttentionOnnxI layers */
-        CV_WRAP void enableKVCache();
-
-        /** @brief Disables KV-Cache for all AttentionOnnxI layers */
-        CV_WRAP void disableKVCache();
-
-        /** @brief Resets KV-Cache for all AttentionOnnxI layers */
-        CV_WRAP void resetKVCache();
 
         // Get the main model graph
         Ptr<Graph> getMainGraph() const;

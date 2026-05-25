@@ -502,12 +502,7 @@ void Net::enableKVCache()
 void Net::disableKVCache()
 {
     CV_Assert(impl);
-<<<<<<< HEAD
     impl->kvCacheManager = KVCacheManager();
-=======
-    auto manager = std::make_unique<KVCacheManager>();
-    impl->kvCacheManager = std::move(manager);
->>>>>>> ead16ba0b8 (expose functionality)
 }
 
 void Net::resetKVCache()

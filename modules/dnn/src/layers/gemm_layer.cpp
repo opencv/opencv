@@ -304,6 +304,7 @@ public:
                 }
             }
 #endif
+            last_packed_blob_data = blobs[0].data;
         }
 
         if (constC(mode) && flatten_a) {
