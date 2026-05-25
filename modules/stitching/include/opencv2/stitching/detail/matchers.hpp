@@ -259,6 +259,46 @@ protected:
     bool full_affine_;
 };
 
+/** @brief Features matcher that adapts LightGlueMatcher (DescriptorMatcher) to the
+stitching pipeline's FeaturesMatcher interface.
+
+This matcher uses DNN-based LightGlue for feature matching, requiring ALIKED-style
+keypoints with spatial context for positional encoding.
+
+@sa cv::detail::FeaturesMatcher cv::LightGlueMatcher
+ */
+class CV_EXPORTS_W LightGlueFeaturesMatcher : public FeaturesMatcher
+{
+public:
+    /** @brief Constructs a LightGlue features matcher.
+
+    @param lgMatcher LightGlueMatcher instance for DNN-based matching
+    @param num_matches_thresh1 Minimum number of matches required for the 2D projective transform
+    estimation used in the inliers classification step
+    @param num_matches_thresh2 Minimum number of matches required for the 2D projective transform
+    re-estimation on inliers
+    @param matches_confidence_thresh Matching confidence threshold to take the match into account.
+     */
+    CV_WRAP LightGlueFeaturesMatcher(Ptr<LightGlueMatcher> lgMatcher,
+                              int num_matches_thresh1 = 6,
+                              int num_matches_thresh2 = 6,
+                              double matches_confidence_thresh = 3.0);
+
+    /** @brief Sets the LightGlue confidence threshold for filtering matches.
+     */
+    CV_WRAP void setScoreThreshold(float thresh);
+
+protected:
+    void match(const ImageFeatures &features1, const ImageFeatures &features2,
+               MatchesInfo &matches_info) CV_OVERRIDE;
+
+    Ptr<LightGlueMatcher> lgMatcher_;
+    int num_matches_thresh1_;
+    int num_matches_thresh2_;
+    double matches_confidence_thresh_;
+    float lg_score_thresh_;
+};
+
 //! @} stitching_match
 
 } // namespace detail
