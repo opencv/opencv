@@ -519,7 +519,7 @@ CV_EXPORTS_W bool findCirclesGrid( InputArray image, Size patternSize,
 /** @overload */
 CV_EXPORTS_W bool findCirclesGrid( InputArray image, Size patternSize,
                                    OutputArray centers, int flags = CALIB_CB_SYMMETRIC_GRID,
-                                   const Ptr<FeatureDetector> &blobDetector = SimpleBlobDetector::create());
+                                   const Ptr<FeatureDetector> &blobDetector = cv::SimpleBlobDetector::create());
 
 //! @}
 }
