@@ -489,9 +489,9 @@ class SVG:
             f.close()
 
         else:
-            f = codecs.open(fileName, "w", encoding=encoding)
-            f.write(self.standalone_xml(encoding=encoding))
-            f.close()
+            with open(fileName, "w", encoding=encoding) as f:
+                f.write(self.standalone_xml(encoding=encoding))
+
 
     def inkview(self, fileName=None, encoding="utf-8"):
         """View in "inkview", assuming that program is available on your system.
