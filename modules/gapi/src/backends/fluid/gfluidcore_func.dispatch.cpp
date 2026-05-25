@@ -420,8 +420,30 @@ INRANGE_SIMD(short)
 
 #undef INRANGE_SIMD
 
+//-----------------------------------
+//
+// Fluid kernels: Select
+//
+//-----------------------------------
+
+#define DISPATCH_SELECT_SIMD(SRC)                                                   \
+int select_simd(const SRC in1[], const SRC in2[], const uchar in3[],                \
+                SRC out[], const int length, const int chan)                        \
+{                                                                                   \
+    CV_CPU_DISPATCH(select_simd, (in1, in2, in3, out, length, chan),                \
+                    CV_CPU_DISPATCH_MODES_ALL);                                     \
+}
+
+DISPATCH_SELECT_SIMD(uchar)
+DISPATCH_SELECT_SIMD(ushort)
+DISPATCH_SELECT_SIMD(short)
+
+#undef DISPATCH_SELECT_SIMD
+
 } // namespace fluid
 } // namespace gapi
 } // namespace cv
+
+
 #endif // CV_SIMD
 #endif // !defined(GAPI_STANDALONE)

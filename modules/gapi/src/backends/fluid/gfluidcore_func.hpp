@@ -331,8 +331,26 @@ INRANGE_SIMD(short)
 
 #undef INRANGE_SIMD
 
+//-----------------------------------
+//
+// Fluid kernels: Select
+//
+//-----------------------------------
+#define SELECT_SIMD(SRC)                                                            \
+int select_simd(const SRC in1[], const SRC in2[], const uchar in3[],                \
+                SRC out[], const int length, const int chan);
+
+SELECT_SIMD(uchar)
+SELECT_SIMD(ushort)
+SELECT_SIMD(short)
+
+#undef SELECT_SIMD
+
 }  // namespace fluid
 }  // namespace gapi
 }  // namespace cv
+
+
+
 
 #endif // !defined(GAPI_STANDALONE)

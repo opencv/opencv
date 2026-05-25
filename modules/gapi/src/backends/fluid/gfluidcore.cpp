@@ -2195,63 +2195,27 @@ GAPI_FLUID_KERNEL(GFluidInRange, cv::gapi::core::GInRange, false)
 //
 //----------------------
 
-// manually vectored function for important case if RGB/BGR image
-static void run_select_row3(int width, uchar out[], uchar in1[], uchar in2[], uchar in3[])
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+
+template<typename SRC>
+static CV_ALWAYS_INLINE
+typename std::enable_if<std::is_integral<SRC>::value, int>::type
+call_select_simd(const SRC in1[], const SRC in2[], const uchar in3[],
+                 SRC out[], int width, int chan)
 {
-    int w = 0; // cycle index
+    return select_simd(in1, in2, in3, out, width, chan);
+}
 
-#if CV_SIMD128
-    for (; w <= width-16; w+=16)
-    {
-        v_uint8x16 a1, b1, c1;
-        v_uint8x16 a2, b2, c2;
-        v_uint8x16 mask;
-        v_uint8x16 a, b, c;
 
-        v_load_deinterleave(&in1[3*w], a1, b1, c1);
-        v_load_deinterleave(&in2[3*w], a2, b2, c2);
-
-        mask = v_load(&in3[w]);
-        mask = v_ne(mask, v_setzero_u8());
-
-        a = v_select(mask, a1, a2);
-        b = v_select(mask, b1, b2);
-        c = v_select(mask, c1, c2);
-
-        v_store_interleave(&out[3*w], a, b, c);
-    }
+template<typename SRC>
+static CV_ALWAYS_INLINE
+typename std::enable_if<!std::is_integral<SRC>::value, int>::type
+call_select_simd(const SRC[], const SRC[], const uchar[],
+                 SRC[], int, int)
+{
+    return 0;
+}
 #endif
-
-    for (; w < width; w++)
-    {
-        out[3*w    ] = in3[w]? in1[3*w    ]: in2[3*w    ];
-        out[3*w + 1] = in3[w]? in1[3*w + 1]: in2[3*w + 1];
-        out[3*w + 2] = in3[w]? in1[3*w + 2]: in2[3*w + 2];
-    }
-}
-
-// parameter chan is compile-time known constant, normally chan=1..4
-template<int chan, typename DST, typename SRC1, typename SRC2, typename SRC3>
-static void run_select_row(int width, DST out[], SRC1 in1[], SRC2 in2[], SRC3 in3[])
-{
-    if (std::is_same<DST,uchar>::value && chan==3)
-    {
-        // manually vectored function for important case if RGB/BGR image
-        run_select_row3(width, (uchar*)out, (uchar*)in1, (uchar*)in2, (uchar*)in3);
-        return;
-    }
-
-    // because `chan` is template parameter, its value is known at compilation time,
-    // so that modern compilers would efficiently vectorize this cycle if chan==1
-    // (if chan>1, compilers may need help with de-interleaving of the channels)
-    for (int w=0; w < width; w++)
-    {
-        for (int c=0; c < chan; c++)
-        {
-            out[w*chan + c] = in3[w]? in1[w*chan + c]: in2[w*chan + c];
-        }
-    }
-}
 
 template<typename DST, typename SRC1, typename SRC2, typename SRC3>
 static void run_select(Buffer &dst, const View &src1, const View &src2, const View &src3)
@@ -2261,7 +2225,6 @@ static void run_select(Buffer &dst, const View &src1, const View &src2, const Vi
     static_assert(std::is_same<uchar, SRC3>::value, "wrong types");
 
     auto *out = dst.OutLine<DST>();
-
     const auto *in1 = src1.InLine<SRC1>(0);
     const auto *in2 = src2.InLine<SRC2>(0);
     const auto *in3 = src3.InLine<SRC3>(0);
@@ -2269,13 +2232,18 @@ static void run_select(Buffer &dst, const View &src1, const View &src2, const Vi
     int width = dst.length();
     int chan  = dst.meta().chan;
 
-    switch (chan)
+    int w = 0;
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    w = call_select_simd(in1, in2, in3, out, width, chan);
+#endif
+
+    for (; w < width; w++)
     {
-    case 1: run_select_row<1>(width, out, in1, in2, in3); break;
-    case 2: run_select_row<2>(width, out, in1, in2, in3); break;
-    case 3: run_select_row<3>(width, out, in1, in2, in3); break;
-    case 4: run_select_row<4>(width, out, in1, in2, in3); break;
-    default: CV_Error(cv::Error::StsBadArg, "unsupported number of channels");
+        for (int c = 0; c < chan; c++)
+        {
+            out[w*chan + c] = in3[w] ? in1[w*chan + c] : in2[w*chan + c];
+        }
     }
 }
 
