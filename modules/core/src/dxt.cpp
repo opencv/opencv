@@ -3773,6 +3773,202 @@ void cv::mulSpectrums( InputArray _srcA, InputArray _srcB,
     }
 }
 
+void cv::divSpectrums( InputArray _srcA, InputArray _srcB, OutputArray _dst, int flags, bool conjB)
+{
+    Mat srcA = _srcA.getMat(), srcB = _srcB.getMat();
+    int depth = srcA.depth(), cn = srcA.channels(), type = srcA.type();
+    int rows = srcA.rows, cols = srcA.cols;
+    int j, k;
+
+    CV_Assert( type == srcB.type() && srcA.size() == srcB.size() );
+    CV_Assert( type == CV_32FC1 || type == CV_32FC2 || type == CV_64FC1 || type == CV_64FC2 );
+
+    _dst.create( srcA.rows, srcA.cols, type );
+    Mat dst = _dst.getMat();
+
+    CV_Assert(dst.data != srcA.data); // non-inplace check
+    CV_Assert(dst.data != srcB.data); // non-inplace check
+
+    bool is_1d = (flags & DFT_ROWS) || (rows == 1 || (cols == 1 &&
+    srcA.isContinuous() && srcB.isContinuous() && dst.isContinuous()));
+
+    if( is_1d && !(flags & DFT_ROWS) )
+        cols = cols + rows - 1, rows = 1;
+
+    int ncols = cols*cn;
+    int j0 = cn == 1;
+    int j1 = ncols - (cols % 2 == 0 && cn == 1);
+
+    if( depth == CV_32F )
+    {
+        const float* dataA = srcA.ptr<float>();
+        const float* dataB = srcB.ptr<float>();
+        float* dataC = dst.ptr<float>();
+        float eps = FLT_EPSILON; // prevent div0 problems
+
+        size_t stepA = srcA.step/sizeof(dataA[0]);
+        size_t stepB = srcB.step/sizeof(dataB[0]);
+        size_t stepC = dst.step/sizeof(dataC[0]);
+
+        if( !is_1d && cn == 1 )
+        {
+            for( k = 0; k < (cols % 2 ? 1 : 2); k++ )
+            {
+                if( k == 1 )
+                    dataA += cols - 1, dataB += cols - 1, dataC += cols - 1;
+                dataC[0] = dataA[0] / (dataB[0] + eps);
+                if( rows % 2 == 0 )
+                    dataC[(rows-1)*stepC] = dataA[(rows-1)*stepA] / (dataB[(rows-1)*stepB] + eps);
+                if( !conjB )
+                    for( j = 1; j <= rows - 2; j += 2 )
+                    {
+                        double denom = (double)dataB[j*stepB]*dataB[j*stepB] +
+                        (double)dataB[(j+1)*stepB]*dataB[(j+1)*stepB] + (double)eps;
+
+                        double re = (double)dataA[j*stepA]*dataB[j*stepB] +
+                        (double)dataA[(j+1)*stepA]*dataB[(j+1)*stepB];
+
+                        double im = (double)dataA[(j+1)*stepA]*dataB[j*stepB] -
+                        (double)dataA[j*stepA]*dataB[(j+1)*stepB];
+
+                        dataC[j*stepC] = (float)(re / denom);
+                        dataC[(j+1)*stepC] = (float)(im / denom);
+                    }
+                    else
+                        for( j = 1; j <= rows - 2; j += 2 )
+                        {
+
+                            double denom = (double)dataB[j*stepB]*dataB[j*stepB] +
+                            (double)dataB[(j+1)*stepB]*dataB[(j+1)*stepB] + (double)eps;
+
+                            double re = (double)dataA[j*stepA]*dataB[j*stepB] -
+                            (double)dataA[(j+1)*stepA]*dataB[(j+1)*stepB];
+
+                            double im = (double)dataA[(j+1)*stepA]*dataB[j*stepB] +
+                            (double)dataA[j*stepA]*dataB[(j+1)*stepB];
+
+                            dataC[j*stepC] = (float)(re / denom);
+                            dataC[(j+1)*stepC] = (float)(im / denom);
+                        }
+                    if( k == 1 )
+                        dataA -= cols - 1, dataB -= cols - 1, dataC -= cols - 1;
+            }
+        }
+
+        for( ; rows--; dataA += stepA, dataB += stepB, dataC += stepC )
+        {
+            if( is_1d && cn == 1 )
+            {
+                dataC[0] = dataA[0] / (dataB[0] + eps);
+                if( cols % 2 == 0 )
+                    dataC[j1] = dataA[j1] / (dataB[j1] + eps);
+            }
+
+            if( !conjB )
+                for( j = j0; j < j1; j += 2 )
+                {
+                    double denom = (double)dataB[j]*dataB[j] + (double)dataB[j+1]*dataB[j+1] + (double)eps;
+                    double re = (double)dataA[j]*dataB[j] + (double)dataA[j+1]*dataB[j+1];
+                    double im = (double)dataA[j+1]*dataB[j] - (double)dataA[j]*dataB[j+1];
+                    dataC[j] = (float)(re / denom);
+                    dataC[j+1] = (float)(im / denom);
+                }
+                else
+                    for( j = j0; j < j1; j += 2 )
+                    {
+                        double denom = (double)dataB[j]*dataB[j] + (double)dataB[j+1]*dataB[j+1] + (double)eps;
+                        double re = (double)dataA[j]*dataB[j] - (double)dataA[j+1]*dataB[j+1];
+                        double im = (double)dataA[j+1]*dataB[j] + (double)dataA[j]*dataB[j+1];
+                        dataC[j] = (float)(re / denom);
+                        dataC[j+1] = (float)(im / denom);
+                    }
+        }
+    }
+    else
+    {
+        const double* dataA = srcA.ptr<double>();
+        const double* dataB = srcB.ptr<double>();
+        double* dataC = dst.ptr<double>();
+        double eps = DBL_EPSILON; // prevent div0 problems
+
+        size_t stepA = srcA.step/sizeof(dataA[0]);
+        size_t stepB = srcB.step/sizeof(dataB[0]);
+        size_t stepC = dst.step/sizeof(dataC[0]);
+
+        if( !is_1d && cn == 1 )
+        {
+            for( k = 0; k < (cols % 2 ? 1 : 2); k++ )
+            {
+                if( k == 1 )
+                    dataA += cols - 1, dataB += cols - 1, dataC += cols - 1;
+                dataC[0] = dataA[0] / (dataB[0] + eps);
+                if( rows % 2 == 0 )
+                    dataC[(rows-1)*stepC] = dataA[(rows-1)*stepA] / (dataB[(rows-1)*stepB] + eps);
+                if( !conjB )
+                    for( j = 1; j <= rows - 2; j += 2 )
+                    {
+                        double denom = dataB[j*stepB]*dataB[j*stepB] +
+                        dataB[(j+1)*stepB]*dataB[(j+1)*stepB] + eps;
+
+                        double re = dataA[j*stepA]*dataB[j*stepB] +
+                        dataA[(j+1)*stepA]*dataB[(j+1)*stepB];
+
+                        double im = dataA[(j+1)*stepA]*dataB[j*stepB] -
+                        dataA[j*stepA]*dataB[(j+1)*stepB];
+
+                        dataC[j*stepC] = re / denom;
+                        dataC[(j+1)*stepC] = im / denom;
+                    }
+                    else
+                        for( j = 1; j <= rows - 2; j += 2 )
+                        {
+                            double denom = dataB[j*stepB]*dataB[j*stepB] +
+                            dataB[(j+1)*stepB]*dataB[(j+1)*stepB] + eps;
+
+                            double re = dataA[j*stepA]*dataB[j*stepB] -
+                            dataA[(j+1)*stepA]*dataB[(j+1)*stepB];
+
+                            double im = dataA[(j+1)*stepA]*dataB[j*stepB] +
+                            dataA[j*stepA]*dataB[(j+1)*stepB];
+
+                            dataC[j*stepC] = re / denom;
+                            dataC[(j+1)*stepC] = im / denom;
+                        }
+                    if( k == 1 )
+                        dataA -= cols - 1, dataB -= cols - 1, dataC -= cols - 1;
+            }
+        }
+
+        for( ; rows--; dataA += stepA, dataB += stepB, dataC += stepC )
+        {
+            if( is_1d && cn == 1 )
+            {
+                dataC[0] = dataA[0] / (dataB[0] + eps);
+                if( cols % 2 == 0 )
+                    dataC[j1] = dataA[j1] / (dataB[j1] + eps);
+            }
+
+            if( !conjB )
+                for( j = j0; j < j1; j += 2 )
+                {
+                    double denom = dataB[j]*dataB[j] + dataB[j+1]*dataB[j+1] + eps;
+                    double re = dataA[j]*dataB[j] + dataA[j+1]*dataB[j+1];
+                    double im = dataA[j+1]*dataB[j] - dataA[j]*dataB[j+1];
+                    dataC[j] = re / denom;
+                    dataC[j+1] = im / denom;
+                }
+                else
+                    for( j = j0; j < j1; j += 2 )
+                    {
+                        double denom = dataB[j]*dataB[j] + dataB[j+1]*dataB[j+1] + eps;
+                        double re = dataA[j]*dataB[j] - dataA[j+1]*dataB[j+1];
+                        double im = dataA[j+1]*dataB[j] + dataA[j]*dataB[j+1];
+                        dataC[j] = re / denom;
+                        dataC[j+1] = im / denom;
+                    }
+        }
+    }
+}
 
 /****************************************************************************************\
                                Discrete Cosine Transform

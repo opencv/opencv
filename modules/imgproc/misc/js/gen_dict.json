@@ -35,7 +35,6 @@
             "dilate",
             "distanceTransform",
             "distanceTransformWithLabels",
-            "divSpectrums",
             "drawContours",
             "drawMarker",
             "ellipse",
