@@ -329,9 +329,6 @@
 "test_lppool_3d_default",
 "test_matmulinteger",  // Issues::Layer does not exist. Can't create layer "onnx_node_output_0!Y" of type "MatMulInteger" in function 'getLayerInstance'
 "test_maxpool_2d_ceil_output_size_reduce_by_one",
-"test_maxpool_3d_dilations",
-"test_maxpool_3d_dilations_use_ref_impl",
-"test_maxpool_3d_dilations_use_ref_impl_large", //shape mismatch
 "test_melweightmatrix",
 "test_momentum",  // Issues::Layer does not exist. Can't create layer "onnx_node_output_0!X1_new" of type "ai.onnx.preview.training.Momentum" in function 'getLayerInstance'
 "test_momentum_multiple",  // ---- same as above ---

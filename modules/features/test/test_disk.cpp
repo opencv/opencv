@@ -14,8 +14,7 @@ static std::string findDiskModelOrSkip()
 {
     try
     {
-        return "/media/abhishek/hugedrive1/opencv_abhishek/test_models/disk.onnx";
-        // return cvtest::findDataFile("dnn/disk_standalone.onnx", false);
+        return cvtest::findDataFile("dnn/disk.onnx", false);
     }
     catch (const cv::Exception&)
     {

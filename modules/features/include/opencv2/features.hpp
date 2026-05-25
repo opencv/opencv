@@ -679,9 +679,9 @@ public:
 
 DISK (Deep Image Structure and Keypoints) is a learned local-feature pipeline that produces
 keypoints and 128-D L2-normalized descriptors via a single forward pass through a fully
-convolutional network. See @cite Tyszkiewicz2020DISK . This class wraps an ONNX export of
-the pre-trained DISK model through cv::dnn::Net and exposes it under the standard cv::Feature2D
-interface so it can be used as a drop-in alternative to SIFT/ORB.
+convolutional network. This class wraps an ONNX export of the pre-trained DISK model through
+cv::dnn::Net and exposes it under the standard cv::Feature2D interface so it can be used as
+a drop-in alternative to SIFT/ORB.
 
 The class assumes the ONNX model has a single input named `image` taking an N×3×H×W float32
 tensor in [0, 1] (RGB channel order) and three outputs named `keypoints` (N×2), `scores` (N)
