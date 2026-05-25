@@ -1185,7 +1185,7 @@ public:
             uchar* D = dst.ptr(y);
             // Fixed-point coordinate mapping: floor((y + 0.5) * src_height / dst_height)
             // Using integer arithmetic: ((y * 2 + 1) * src_height) / (dst_height * 2)
-            int sy = std::min((int)(((int64_t)(y * 2 + 1) * src_height) / (dst_height * 2)), ssize.height-1);
+            int sy = std::min((int)((((int64_t)y * 2 + 1) * src_height) / ((int64_t)dst_height * 2)), ssize.height-1);
             const uchar* S = src.ptr(sy);
 
             int x = 0;
@@ -1277,7 +1277,7 @@ static void resizeNN_bitexact( const Mat& src, Mat& dst, double /*fx*/, double /
     // Using integer arithmetic to guarantee bit-exact results across platforms.
     for( int x = 0; x < dsize.width; x++ )
     {
-        x_ofse[x] = std::min((int)(((int64_t)(x * 2 + 1) * ssize.width) / (dsize.width * 2)), ssize.width-1);
+        x_ofse[x] = std::min((int)((((int64_t)x * 2 + 1) * ssize.width) / ((int64_t)dsize.width * 2)), ssize.width-1);
     }
     Range range(0, dsize.height);
     resizeNN_bitexactInvoker invoker(src, dst, x_ofse, ssize.height, dsize.height);

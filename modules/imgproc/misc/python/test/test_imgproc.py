@@ -4,7 +4,10 @@ from __future__ import print_function
 
 import numpy as np
 import cv2 as cv
-from PIL import Image
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
 
 from tests_common import NewOpenCVTests
 
@@ -31,6 +34,9 @@ class Imgproc_Tests(NewOpenCVTests):
         self.assertLess(cv.norm(img_blur0 - img_blur1, cv.NORM_INF), eps)
 
     def test_resize_pillow(self):
+        if Image is None:
+            self.skipTest("Pillow is not available")
+
         r = np.random.randint(0, 255, size=(128, 147, 3), dtype="uint8")
         target_size=[(128,128), (129,129), (160,160)]
         for ts in target_size:

@@ -253,7 +253,7 @@ TEST(Resize_Bitexact, NearestExact_PillowCompat)
         mapping.resize(dst_dim);
         for (int i = 0; i < dst_dim; i++)
         {
-            mapping[i] = std::min((int)(((int64_t)(i * 2 + 1) * src_dim) / (dst_dim * 2)), src_dim - 1);
+            mapping[i] = std::min((int)((((int64_t)i * 2 + 1) * src_dim) / ((int64_t)dst_dim * 2)), src_dim - 1);
         }
     };
 
