@@ -592,6 +592,37 @@ TEST_F(ONNXClassification, InferTensor)
     validate();
 }
 
+TEST_F(ONNXClassification, InferU8Tensor4D)
+{
+    // Create a U8 N-D (4D) tensor matching model input dims {1, 3, 224, 224}.
+    // This simulates tools like protopipe that feed pre-filled U8 N-D tensors
+    // directly to the ONNX backend (bypassing 2D image preprocessing).
+    // Without checking dims, preprocess() enters the image path and throws
+    // "Couldn't identify input tensor layout" because channels()==1 for N-D mats.
+
+    useModel("classification/squeezenet/model/squeezenet1.0-9");
+
+    // ONNX_API code
+    cv::Mat backing_buf({1, 3, 224, 224}, CV_32F);
+    cv::randu(backing_buf, 0.f, 255.f);
+    infer<float>(backing_buf, out_onnx);
+
+    // G_API code
+    cv::Mat tensor(4, backing_buf.size.p, CV_8U, backing_buf.data);
+    G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
+    cv::GMat in;
+    cv::GMat out = cv::gapi::infer<SqueezNet>(in);
+    cv::GComputation comp(cv::GIn(in), cv::GOut(out));
+    auto net = cv::gapi::onnx::Params<SqueezNet> {
+        model_path
+    }.cfgNormalize({false});
+    comp.apply(cv::gin(tensor),
+               cv::gout(out_gapi.front()),
+               cv::compile_args(cv::gapi::networks(net)));
+    // Validate
+    validate();
+}
+
 TEST_F(ONNXClassification, InferROI)
 {
     useModel("classification/squeezenet/model/squeezenet1.0-9");
