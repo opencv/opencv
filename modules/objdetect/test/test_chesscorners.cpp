@@ -211,13 +211,13 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
         case CHESSBOARD:
         case CHESSBOARD_SB:
         case CHESSBOARD_PLAIN:
-            folder = string(ts->get_data_path()) + "cv/cameracalibration/";
+            folder = string(ts->get_data_path()) + "cameracalibration/";
             break;
         case CIRCLES_GRID:
-            folder = string(ts->get_data_path()) + "cv/cameracalibration/circles/";
+            folder = string(ts->get_data_path()) + "cameracalibration/circles/";
             break;
         case ASYMMETRIC_CIRCLES_GRID:
-            folder = string(ts->get_data_path()) + "cv/cameracalibration/asymmetric_circles/";
+            folder = string(ts->get_data_path()) + "cameracalibration/asymmetric_circles/";
             break;
     }
 
@@ -681,8 +681,9 @@ TEST(Calib3d_AsymmetricCirclesPatternDetectorWithClustering, accuracy) { CV_Ches
 
 TEST(Calib3d_ChessboardWithMarkers, regression_25806_white)
 {
-    const cv::String dataDir = string(TS::ptr()->get_data_path()) + "cv/cameracalibration/";
+    const cv::String dataDir = string(TS::ptr()->get_data_path()) + "cameracalibration/";
     const cv::Mat image = cv::imread(dataDir + "checkerboard_marker_white.png");
+    ASSERT_FALSE(image.empty());
 
     std::vector<Point2f> corners;
     const bool success = cv::findChessboardCornersSB(image, Size(9, 14), corners, CALIB_CB_MARKER);
@@ -691,8 +692,9 @@ TEST(Calib3d_ChessboardWithMarkers, regression_25806_white)
 
 TEST(Calib3d_ChessboardWithMarkers, regression_25806_black)
 {
-    const cv::String dataDir = string(TS::ptr()->get_data_path()) + "cv/cameracalibration/";
+    const cv::String dataDir = string(TS::ptr()->get_data_path()) + "cameracalibration/";
     const cv::Mat image = cv::imread(dataDir + "checkerboard_marker_black.png");
+    ASSERT_FALSE(image.empty());
 
     std::vector<Point2f> corners;
     const bool success = cv::findChessboardCornersSB(image, Size(9, 14), corners, CALIB_CB_MARKER);
@@ -701,7 +703,7 @@ TEST(Calib3d_ChessboardWithMarkers, regression_25806_black)
 
 TEST(Calib3d_CirclesPatternDetectorWithClustering, accuracy)
 {
-    cv::String dataDir = string(TS::ptr()->get_data_path()) + "cv/cameracalibration/circles/";
+    cv::String dataDir = string(TS::ptr()->get_data_path()) + "cameracalibration/circles/";
 
     cv::Mat expected;
     FileStorage fs(dataDir + "circles_corners15.dat", FileStorage::READ);
@@ -709,6 +711,7 @@ TEST(Calib3d_CirclesPatternDetectorWithClustering, accuracy)
     fs.release();
 
     cv::Mat image = cv::imread(dataDir + "circles15.png");
+    ASSERT_FALSE(image.empty());
 
     std::vector<Point2f> centers;
     cv::findCirclesGrid(image, Size(10, 8), centers, CALIB_CB_SYMMETRIC_GRID | CALIB_CB_CLUSTERING);
@@ -814,7 +817,7 @@ TEST(Calib3d_AsymmetricCirclesPatternDetector, regression_19498)
 
 TEST(Calib3d_RotatedCirclesPatternDetector, issue_24964)
 {
-    string path = cvtest::findDataFile("cv/cameracalibration/circles/circles_24964.png");
+    string path = cvtest::findDataFile("cameracalibration/circles/circles_24964.png");
     Mat image = cv::imread(path);
     ASSERT_FALSE(image.empty()) << "Can't read image: " << path;
 
@@ -850,7 +853,7 @@ TEST(Calib3d_RotatedCirclesPatternDetector, issue_24964)
 }
 
 TEST(Calib3d_CornerOrdering, issue_26830) {
-    const cv::String dataDir = string(TS::ptr()->get_data_path()) + "cv/cameracalibration/";
+    const cv::String dataDir = string(TS::ptr()->get_data_path()) + "cameracalibration/";
     const cv::Mat image = cv::imread(dataDir + "checkerboard_marker_white.png");
 
     std::vector<Point2f> cornersMinimumSizeMatchesPatternSize;

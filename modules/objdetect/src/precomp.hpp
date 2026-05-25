@@ -57,4 +57,11 @@
 #include <array>
 #include <vector>
 
+namespace cv {
+
+int checkChessboardBinary(const Mat & img, const Size & size);
+
+
+}
+
 #endif

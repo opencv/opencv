@@ -72,7 +72,7 @@ void CV_ChessboardDetectorTimingTest::run( int start_from )
     int  idx, max_idx;
     int  progress = 0;
 
-    filepath = cv::format("%scv/cameracalibration/", ts->get_data_path().c_str() );
+    filepath = cv::format("%scameracalibration/", ts->get_data_path().c_str() );
     filename = cv::format("%schessboard_timing_list.dat", filepath.c_str() );
     cv::FileStorage fs( filename, FileStorage::READ );
     cv::FileNode board_list = fs["boards"];
