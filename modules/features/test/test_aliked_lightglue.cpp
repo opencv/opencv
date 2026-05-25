@@ -10,7 +10,7 @@ namespace opencv_test { namespace {
 
 TEST(Features2d_ALIKED, create_from_model)
 {
-    std::string modelPath = cvtest::findDataFile("../dnn/onnx/models/aliked-n16rot-top1k-640.onnx", false);
+    std::string modelPath = cvtest::findDataFile("dnn/onnx/models/aliked-n16rot-top1k-640.onnx", false);
     Ptr<ALIKED> aliked = ALIKED::create(modelPath);
     ASSERT_FALSE(aliked.empty());
     ASSERT_FALSE(aliked->empty());
@@ -18,7 +18,7 @@ TEST(Features2d_ALIKED, create_from_model)
 
 TEST(Features2d_ALIKED, detectAndCompute)
 {
-    std::string modelPath = cvtest::findDataFile("../dnn/onnx/models/aliked-n16rot-top1k-640.onnx", false);
+    std::string modelPath = cvtest::findDataFile("dnn/onnx/models/aliked-n16rot-top1k-640.onnx", false);
     Ptr<ALIKED> aliked = ALIKED::create(modelPath);
 
     Mat image = imread(cvtest::findDataFile("features2d/tsukuba.png"));
@@ -36,7 +36,7 @@ TEST(Features2d_ALIKED, detectAndCompute)
 
 TEST(Features2d_ALIKED, detect_only)
 {
-    std::string modelPath = cvtest::findDataFile("../dnn/onnx/models/aliked-n16rot-top1k-640.onnx", false);
+    std::string modelPath = cvtest::findDataFile("dnn/onnx/models/aliked-n16rot-top1k-640.onnx", false);
     Ptr<ALIKED> aliked = ALIKED::create(modelPath);
 
     Mat image = imread(cvtest::findDataFile("features2d/tsukuba.png"));
@@ -49,7 +49,7 @@ TEST(Features2d_ALIKED, detect_only)
 
 TEST(Features2d_ALIKED, descriptor_properties)
 {
-    std::string modelPath = cvtest::findDataFile("../dnn/onnx/models/aliked-n16rot-top1k-640.onnx", false);
+    std::string modelPath = cvtest::findDataFile("dnn/onnx/models/aliked-n16rot-top1k-640.onnx", false);
     Ptr<ALIKED> aliked = ALIKED::create(modelPath);
 
     ASSERT_EQ(aliked->descriptorSize(), 128);
@@ -59,15 +59,15 @@ TEST(Features2d_ALIKED, descriptor_properties)
 
 TEST(Features2d_LightGlueMatcher, create_from_model)
 {
-    std::string modelPath = cvtest::findDataFile("../dnn/onnx/models/aliked_lightglue.onnx", false);
+    std::string modelPath = cvtest::findDataFile("dnn/onnx/models/aliked_lightglue.onnx", false);
     Ptr<LightGlueMatcher> lg = LightGlueMatcher::create(modelPath);
     ASSERT_FALSE(lg.empty());
 }
 
 TEST(Features2d_LightGlueMatcher, setPairInfo_and_match)
 {
-    std::string alikedPath = cvtest::findDataFile("../dnn/onnx/models/aliked-n16rot-top1k-640.onnx", false);
-    std::string lgPath = cvtest::findDataFile("../dnn/onnx/models/aliked_lightglue.onnx", false);
+    std::string alikedPath = cvtest::findDataFile("dnn/onnx/models/aliked-n16rot-top1k-640.onnx", false);
+    std::string lgPath = cvtest::findDataFile("dnn/onnx/models/aliked_lightglue.onnx", false);
 
     Ptr<ALIKED> aliked = ALIKED::create(alikedPath);
     Ptr<LightGlueMatcher> lg = LightGlueMatcher::create(lgPath);
@@ -112,7 +112,7 @@ TEST(Features2d_LightGlueMatcher, setPairInfo_and_match)
 
 TEST(Features2d_LightGlueMatcher, match_without_context_throws)
 {
-    std::string lgPath = cvtest::findDataFile("../dnn/onnx/models/aliked_lightglue.onnx", false);
+    std::string lgPath = cvtest::findDataFile("dnn/onnx/models/aliked_lightglue.onnx", false);
     Ptr<LightGlueMatcher> lg = LightGlueMatcher::create(lgPath);
 
     Mat desc1 = Mat::zeros(10, 128, CV_32F);
@@ -124,8 +124,8 @@ TEST(Features2d_LightGlueMatcher, match_without_context_throws)
 
 TEST(Features2d_LightGlueMatcher, knnMatch_k1)
 {
-    std::string alikedPath = cvtest::findDataFile("../dnn/onnx/models/aliked-n16rot-top1k-640.onnx", false);
-    std::string lgPath = cvtest::findDataFile("../dnn/onnx/models/aliked_lightglue.onnx", false);
+    std::string alikedPath = cvtest::findDataFile("dnn/onnx/models/aliked-n16rot-top1k-640.onnx", false);
+    std::string lgPath = cvtest::findDataFile("dnn/onnx/models/aliked_lightglue.onnx", false);
 
     Ptr<ALIKED> aliked = ALIKED::create(alikedPath);
     Ptr<LightGlueMatcher> lg = LightGlueMatcher::create(lgPath);
@@ -158,7 +158,7 @@ TEST(Features2d_LightGlueMatcher, knnMatch_k1)
 
 TEST(Features2d_LightGlueMatcher, knnMatch_k2_throws)
 {
-    std::string lgPath = cvtest::findDataFile("../dnn/onnx/models/aliked_lightglue.onnx", false);
+    std::string lgPath = cvtest::findDataFile("dnn/onnx/models/aliked_lightglue.onnx", false);
     Ptr<LightGlueMatcher> lg = LightGlueMatcher::create(lgPath);
 
     Mat desc1 = Mat::zeros(10, 128, CV_32F);

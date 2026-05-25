@@ -859,6 +859,9 @@ public:
         CV_WRAP Params();
         CV_PROP_RW Size inputSize;              //!< Input image size for the network, default 640x640
         CV_PROP_RW bool normalizeDescriptors;   //!< Whether to L2-normalize descriptors, default true
+        CV_PROP_RW int engine;                  //!< DNN engine type (dnn::EngineType), default ENGINE_ORT
+        CV_PROP_RW int backend;                 //!< DNN backend, default DNN_BACKEND_DEFAULT
+        CV_PROP_RW int target;                  //!< DNN target, default DNN_TARGET_CPU
     };
 
     /** @brief Creates ALIKED from a model file path.
@@ -1314,8 +1317,11 @@ public:
     struct CV_EXPORTS_W_SIMPLE Params
     {
         CV_WRAP Params();
-        CV_PROP_RW float scoreThreshold;   //!< Match confidence threshold, default 0.0
-        CV_PROP_RW bool disableWinograd;   //!< Disable Winograd convolution, default false
+        CV_PROP_RW float scoreThreshold;        //!< Match confidence threshold, default 0.0
+        CV_PROP_RW bool disableWinograd;        //!< Disable Winograd convolution, default false
+        CV_PROP_RW int engine;                  //!< DNN engine type (dnn::EngineType), default ENGINE_ORT
+        CV_PROP_RW int backend;                 //!< DNN backend, default DNN_BACKEND_DEFAULT
+        CV_PROP_RW int target;                  //!< DNN target, default DNN_TARGET_CPU
     };
 
     /** @brief Creates LightGlueMatcher from a model file path.

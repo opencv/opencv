@@ -19,6 +19,15 @@ LightGlueMatcher::Params::Params()
 {
     scoreThreshold = 0.0f;
     disableWinograd = false;
+#ifdef HAVE_OPENCV_DNN
+    engine = dnn::ENGINE_ORT;
+    backend = dnn::DNN_BACKEND_DEFAULT;
+    target = dnn::DNN_TARGET_CPU;
+#else
+    engine = -1;
+    backend = -1;
+    target = -1;
+#endif
 }
 
 #ifdef HAVE_OPENCV_DNN
@@ -49,10 +58,10 @@ public:
     LightGlueMatcherImpl(const LightGlueMatcher::Params& _params, const String& modelPath)
         : params(_params)
     {
-        net = dnn::readNet(modelPath, "", "", dnn::ENGINE_ORT);
+        net = dnn::readNet(modelPath, "", "", static_cast<dnn::EngineType>(params.engine));
         CV_Assert(!net.empty());
-        net.setPreferableBackend(dnn::DNN_BACKEND_DEFAULT);
-        net.setPreferableTarget(dnn::DNN_TARGET_CPU);
+        net.setPreferableBackend(params.backend);
+        net.setPreferableTarget(params.target);
     }
 
     LightGlueMatcherImpl(const std::vector<uchar>& modelData, const LightGlueMatcher::Params& _params)
@@ -60,6 +69,8 @@ public:
     {
         net = dnn::readNetFromONNX(modelData);
         CV_Assert(!net.empty());
+        net.setPreferableBackend(params.backend);
+        net.setPreferableTarget(params.target);
     }
 
     // Private constructor for clone() — shares the already-loaded network
