@@ -1,6 +1,7 @@
 Detection of ArUco Markers {#tutorial_aruco_detection}
 ==========================
 
+@prev_tutorial{tutorial_table_of_content_aruco}
 @next_tutorial{tutorial_aruco_board_detection}
 
 |    |    |

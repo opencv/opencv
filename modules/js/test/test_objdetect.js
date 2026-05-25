@@ -216,3 +216,233 @@ QUnit.test('Charuco detector', function (assert) {
         chess_corners.delete();
     }
 });
+
+QUnit.test('ArUco2 detection', function (assert) {
+    let params = new cv.aruco2_DetectionParameters();
+    params.boxFilterSize = 5;
+    let DICT = cv.aruco2_DictionaryType.DICT_4X4_50;
+
+    let img = new cv.Mat();
+    cv.aruco2_getFiducialMarkerImage(img, DICT, 0, 100, true);
+    assert.ok(!img.empty());
+
+    let markers = cv.aruco2_detectFiducialMarkers(img, DICT, params);
+    assert.equal(markers.size(), 1);
+    assert.equal(markers.get(0).id, 0);
+    assert.equal(markers.get(0).corners.size(), 4);
+
+    params.delete();
+    img.delete();
+    markers.delete();
+});
+
+QUnit.test('ArUco2 MIP dictionary detection', function (assert) {
+    let DICT = cv.aruco2_DictionaryType.DICT_ARUCO_MIP_36h12;
+    let img = new cv.Mat();
+    cv.aruco2_getFiducialMarkerImage(img, DICT, 42, 200, true);
+    assert.ok(!img.empty());
+
+    let markers = cv.aruco2_detectFiducialMarkers(img, DICT);
+    assert.equal(markers.size(), 1);
+    assert.equal(markers.get(0).id, 42);
+    assert.equal(markers.get(0).corners.size(), 4);
+
+    img.delete();
+    markers.delete();
+});
+
+QUnit.test('ArUco2 drawFiducialMarkers', function (assert) {
+    let DICT = cv.aruco2_DictionaryType.DICT_4X4_50;
+    let img = new cv.Mat();
+    cv.aruco2_getFiducialMarkerImage(img, DICT, 5, 100, true);
+    assert.ok(!img.empty());
+
+    let markers = cv.aruco2_detectFiducialMarkers(img, DICT);
+    assert.equal(markers.size(), 1);
+
+    let colorImg = new cv.Mat();
+    cv.cvtColor(img, colorImg, cv.COLOR_GRAY2BGR);
+    cv.aruco2_drawFiducialMarkers(colorImg, markers);
+    assert.ok(!colorImg.empty());
+
+    img.delete();
+    colorImg.delete();
+    markers.delete();
+});
+
+QUnit.test('ArUco2 GridBoard generate and detect', function (assert) {
+    let DICT = cv.aruco2_DictionaryType.DICT_ARUCO_MIP_36h12;
+    let img = new cv.Mat();
+    let gridSize = new cv.Size(3, 2);
+    cv.aruco2_getGridBoardImage(img, gridSize, DICT, 20);
+    assert.ok(!img.empty());
+
+    let canvas = new cv.Mat(img.rows + 100, img.cols + 100, cv.CV_8UC1);
+    canvas.setTo([255]);
+    let roi = new cv.Rect(50, 50, img.cols, img.rows);
+    let sub = canvas.roi(roi);
+    img.copyTo(sub);
+    sub.delete();
+
+    let board = new cv.aruco2_GridBoard();
+    let found = cv.aruco2_detectGridBoard(canvas, gridSize, DICT, board);
+    assert.ok(found);
+    assert.equal(board.markers.size(), 6);
+    assert.equal(board.gridSize.width, 3);
+    assert.equal(board.gridSize.height, 2);
+
+    let colorCanvas = new cv.Mat();
+    cv.cvtColor(canvas, colorCanvas, cv.COLOR_GRAY2BGR);
+    cv.aruco2_drawGridBoard(colorCanvas, board);
+    assert.ok(!colorCanvas.empty());
+
+    let objPts = new cv.Mat();
+    let imgPts = new cv.Mat();
+    cv.aruco2_getSolvePnpPoints1(board, objPts, imgPts);
+    // JS bindings return 1×N Mats for these outputs
+    assert.equal(objPts.cols, 12);
+    assert.equal(imgPts.cols, 12);
+
+    img.delete(); canvas.delete(); board.delete(); colorCanvas.delete();
+    objPts.delete(); imgPts.delete();
+});
+
+QUnit.test('ArUco2 getSolvePnpPoints FiducialMarker', function (assert) {
+    let DICT = cv.aruco2_DictionaryType.DICT_ARUCO_MIP_36h12;
+    let img = new cv.Mat();
+    cv.aruco2_getFiducialMarkerImage(img, DICT, 100, 20, false);
+
+    let canvas = new cv.Mat(img.rows * 2, img.cols * 2, cv.CV_8UC1);
+    canvas.setTo([255]);
+    let roi = new cv.Rect(img.cols / 2 | 0, img.rows / 2 | 0, img.cols, img.rows);
+    let sub = canvas.roi(roi);
+    img.copyTo(sub);
+    sub.delete();
+
+    let markers = cv.aruco2_detectFiducialMarkers(canvas, DICT);
+    assert.equal(markers.size(), 1);
+
+    let objPts = new cv.Mat();
+    let imgPts = new cv.Mat();
+    cv.aruco2_getSolvePnpPoints(markers.get(0), objPts, imgPts);
+    assert.equal(objPts.cols, 4);
+    assert.equal(imgPts.cols, 4);
+
+    img.delete(); canvas.delete(); markers.delete(); objPts.delete(); imgPts.delete();
+});
+
+QUnit.test('ArUco2 multi-dict detection', function (assert) {
+    let DICT1 = cv.aruco2_DictionaryType.DICT_4X4_50;
+    let DICT2 = cv.aruco2_DictionaryType.DICT_ARUCO_MIP_36h12;
+
+    let img1 = new cv.Mat();
+    let img2 = new cv.Mat();
+    cv.aruco2_getFiducialMarkerImage(img1, DICT1, 5, 20, false);
+    cv.aruco2_getFiducialMarkerImage(img2, DICT2, 10, 20, false);
+
+    let canvas = new cv.Mat(600, 600, cv.CV_8UC1);
+    canvas.setTo([255]);
+    let sub1 = canvas.roi(new cv.Rect(100, 100, img1.cols, img1.rows));
+    img1.copyTo(sub1);
+    sub1.delete();
+    let sub2 = canvas.roi(new cv.Rect(300, 300, img2.cols, img2.rows));
+    img2.copyTo(sub2);
+    sub2.delete();
+
+    let dicts = new cv.DictionaryTypeVector();
+    dicts.push_back(DICT1);
+    dicts.push_back(DICT2);
+    let markers = cv.aruco2_detectFiducialMarkers1(canvas, dicts);
+    assert.equal(markers.size(), 2);
+
+    img1.delete(); img2.delete(); canvas.delete(); dicts.delete(); markers.delete();
+});
+
+QUnit.test('ArUco2 drawAxis', function (assert) {
+    let DICT = cv.aruco2_DictionaryType.DICT_ARUCO_MIP_36h12;
+    let img = new cv.Mat();
+    cv.aruco2_getFiducialMarkerImage(img, DICT, 42, 20, true);
+
+    let colorImg = new cv.Mat();
+    cv.cvtColor(img, colorImg, cv.COLOR_GRAY2BGR);
+
+    let cameraMatrix = cv.matFromArray(3, 3, cv.CV_64F, [500, 0, 200, 0, 500, 200, 0, 0, 1]);
+    let distCoeffs = cv.Mat.zeros(4, 1, cv.CV_64F);
+    let rvec = cv.Mat.zeros(3, 1, cv.CV_64F);
+    let tvec = cv.matFromArray(3, 1, cv.CV_64F, [0, 0, 1]);
+
+    cv.aruco2_drawAxis(colorImg, cameraMatrix, distCoeffs, rvec, tvec, 0.1);
+    assert.ok(!colorImg.empty());
+
+    img.delete(); colorImg.delete();
+    cameraMatrix.delete(); distCoeffs.delete(); rvec.delete(); tvec.delete();
+});
+
+QUnit.test('ArUco2 Diamond workflow', function (assert) {
+    let DICT = cv.aruco2_DictionaryType.DICT_ARUCO_MIP_36h12;
+    let diamondImg = new cv.Mat();
+    cv.aruco2_getDiamondImage(diamondImg, DICT, [5, 10, 15, 20], 20);
+    assert.ok(!diamondImg.empty());
+
+    let canvas = new cv.Mat(diamondImg.rows + 100, diamondImg.cols + 100, cv.CV_8UC1);
+    canvas.setTo([255]);
+    let sub = canvas.roi(new cv.Rect(50, 50, diamondImg.cols, diamondImg.rows));
+    diamondImg.copyTo(sub);
+    sub.delete();
+
+    let diamonds = cv.aruco2_detectDiamonds(canvas, DICT);
+    assert.equal(diamonds.size(), 1);
+    assert.equal(diamonds.get(0).id[0], 5);
+    assert.equal(diamonds.get(0).id[1], 10);
+    assert.equal(diamonds.get(0).id[2], 15);
+    assert.equal(diamonds.get(0).id[3], 20);
+    assert.equal(diamonds.get(0).markers.size(), 4);
+
+    let colorCanvas = new cv.Mat();
+    cv.cvtColor(canvas, colorCanvas, cv.COLOR_GRAY2BGR);
+    cv.aruco2_drawDiamonds(colorCanvas, diamonds);
+    assert.ok(!colorCanvas.empty());
+
+    let objPts = new cv.Mat();
+    let imgPts = new cv.Mat();
+    cv.aruco2_getSolvePnpPoints2(diamonds.get(0), objPts, imgPts);
+    // JS bindings return 1×N Mats for these outputs
+    assert.equal(objPts.cols, 9);
+    assert.equal(imgPts.cols, 9);
+
+    diamondImg.delete(); canvas.delete(); diamonds.delete();
+    colorCanvas.delete(); objPts.delete(); imgPts.delete();
+});
+
+QUnit.test('ArUco2 Fractal workflow', function (assert) {
+    let fractalImg = new cv.Mat();
+    cv.aruco2_getFractalMarkerImage(fractalImg, cv.aruco2_FractalType.FRACTAL_2L_6, 40);
+    assert.ok(!fractalImg.empty());
+    assert.equal(fractalImg.rows, fractalImg.cols);
+
+    let canvas = new cv.Mat(fractalImg.rows + 100, fractalImg.cols + 100, cv.CV_8UC1);
+    canvas.setTo([255]);
+    let sub = canvas.roi(new cv.Rect(50, 50, fractalImg.cols, fractalImg.rows));
+    fractalImg.copyTo(sub);
+    sub.delete();
+
+    let fractals = cv.aruco2_detectFractals(canvas, cv.aruco2_FractalType.FRACTAL_2L_6);
+    assert.equal(fractals.size(), 1);
+    assert.equal(fractals.get(0).id, 0);
+    assert.equal(fractals.get(0).type, 0); // FRACTAL_2L_6
+    assert.equal(fractals.get(0).corners.size(), 4);
+
+    let colorCanvas = new cv.Mat();
+    cv.cvtColor(canvas, colorCanvas, cv.COLOR_GRAY2BGR);
+    cv.aruco2_drawFractals(colorCanvas, fractals);
+    assert.ok(!colorCanvas.empty());
+
+    let objPts = new cv.Mat();
+    let imgPts = new cv.Mat();
+    cv.aruco2_getSolvePnpPoints3(fractals.get(0), objPts, imgPts);
+    assert.ok(objPts.rows >= 4);
+    assert.equal(objPts.rows, imgPts.rows);
+
+    fractalImg.delete(); canvas.delete(); fractals.delete();
+    colorCanvas.delete(); objPts.delete(); imgPts.delete();
+});

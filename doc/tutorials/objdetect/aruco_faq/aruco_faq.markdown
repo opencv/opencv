@@ -2,7 +2,7 @@ Aruco module FAQ {#tutorial_aruco_faq}
 ================
 
 @prev_tutorial{tutorial_aruco_calibration}
-@next_tutorial{tutorial_barcode_detect_and_decode}
+@next_tutorial{tutorial_table_of_content_aruco2}
 
 This is a compilation of questions that can be useful for those that want to use the aruco module.
 

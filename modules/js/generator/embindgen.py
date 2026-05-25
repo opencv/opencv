@@ -1066,6 +1066,7 @@ if __name__ == "__main__":
         namespace_prefix_override = {
             'dnn' : '',
             'aruco' : '',
+            'aruco2' : 'aruco2',
         }
     else:
         print("Unexpected format of OpenCV config file", whitelist_file_path)
