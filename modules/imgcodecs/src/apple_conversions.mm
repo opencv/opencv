@@ -5,6 +5,10 @@
 #include "apple_conversions.h"
 #include "precomp.hpp"
 
+#ifndef __bridge
+#define __bridge
+#endif
+
 CGImageRef MatToCGImage(const cv::Mat& image) {
     NSData *data = [NSData dataWithBytes:image.data
                                   length:image.step.p[0] * image.rows];
