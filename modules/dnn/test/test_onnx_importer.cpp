@@ -3433,6 +3433,34 @@ TEST_P(Test_ONNX_layers, PyTorchAttentionSingleHead) {
     testONNXModels("pytorch_attention_single_head");
 }
 
+TEST_P(Test_ONNX_layers, SDPA_SingleHead) {
+    auto engine_forced = static_cast<cv::dnn::EngineType>(
+        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
+    if (engine_forced == cv::dnn::ENGINE_CLASSIC) {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+        return;
+    }
+    testONNXModels("sdpa_single_head", npy, 1e-5, 1e-4, false, true, 3);
+}
+TEST_P(Test_ONNX_layers, SDPA_MultiHead) {
+    auto engine_forced = static_cast<cv::dnn::EngineType>(
+        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
+    if (engine_forced == cv::dnn::ENGINE_CLASSIC) {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+        return;
+    }
+    testONNXModels("sdpa_multi_head", npy, 1e-4, 5e-4, false, true, 3);
+}
+TEST_P(Test_ONNX_layers, SDPA_CrossAttention) {
+    auto engine_forced = static_cast<cv::dnn::EngineType>(
+        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
+    if (engine_forced == cv::dnn::ENGINE_CLASSIC) {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+        return;
+    }
+    testONNXModels("sdpa_cross_attention", npy, 1e-4, 5e-4, false, true, 3);
+}
+
 TEST_P(Test_ONNX_layers, PyTorchUnflatten){
     testONNXModels("unflatten");
 }
