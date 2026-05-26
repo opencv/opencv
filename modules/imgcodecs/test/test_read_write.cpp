@@ -264,7 +264,6 @@ TEST_P(Imgcodecs_Image, read_write_GRAYSCALE)
 
     if (false
         || ext == "ppm"  // grayscale is not implemented
-        || ext == "ras"  // broken (black result)
     )
         throw SkipTestException("GRAYSCALE mode is not supported");
 
@@ -290,6 +289,38 @@ TEST_P(Imgcodecs_Image, read_write_GRAYSCALE)
 }
 
 INSTANTIATE_TEST_CASE_P(imgcodecs, Imgcodecs_Image, testing::ValuesIn(exts));
+
+#ifdef HAVE_IMGCODEC_SUNRASTER
+// Regression test: imread(file, IMREAD_GRAYSCALE) for a .ras file written by
+// imwrite() used to return an all-black image because gray_palette[] was never
+// populated when the file has no color palette (RMT_NONE, which is what
+// SunRasterEncoder always writes).
+TEST(Imgcodecs_SunRaster, imread_grayscale_roundtrip)
+{
+    // Build a 16x16 ramp covering all 256 values so a silent all-zero result
+    // is immediately obvious.
+    Mat src(16, 16, CV_8UC1);
+    for (int i = 0; i < src.rows; i++)
+        for (int j = 0; j < src.cols; j++)
+            src.at<uchar>(i, j) = (uchar)(i * src.cols + j);
+
+    const string fname = cv::tempfile(".ras");
+    ASSERT_TRUE(imwrite(fname, src)) << "imwrite failed for .ras";
+
+    Mat dst = imread(fname, IMREAD_GRAYSCALE);
+    ASSERT_FALSE(dst.empty()) << "imread returned empty Mat";
+    ASSERT_EQ(src.size(), dst.size());
+    ASSERT_EQ(src.type(), dst.type());
+
+    // Before the fix every pixel read back as 0 (black), so norm would equal
+    // the sum of all original values instead of 0.
+    EXPECT_EQ(0, cvtest::norm(src, dst, NORM_INF))
+        << "imread(IMREAD_GRAYSCALE) returned wrong pixel values for .ras — "
+           "expected exact roundtrip, got all-zero (black) image";
+
+    EXPECT_EQ(0, remove(fname.c_str()));
+}
+#endif
 
 TEST(Imgcodecs_Image, regression_9376)
 {
