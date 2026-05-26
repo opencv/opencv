@@ -255,7 +255,7 @@ public:
         LayerGemmOpMode mode = getOpMode(inputs.size(), blobs.size());
 
         // pack B if it is const
-        if (constB(mode)) {
+        if (constB(mode) && blobs[0].data != last_packed_blob_data) {
             fastGemmPackB(blobs[0], packed_B, trans_b, opt);
 
             // Pre-pack B in the "thin" layout when the gemm shape has a
@@ -304,6 +304,7 @@ public:
                 }
             }
 #endif
+            last_packed_blob_data = blobs[0].data;
         }
 
         if (constC(mode) && flatten_a) {
@@ -578,6 +579,7 @@ private:
     std::vector<float> broadcast_C;
     int real_ndims_C;
     FastGemmOpt opt;
+    const uchar* last_packed_blob_data = nullptr;
 };
 
 Ptr<GemmLayer> GemmLayer::create(const LayerParams& params) {

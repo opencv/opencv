@@ -154,20 +154,24 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                    C_shape = shape(outputs[0]);
         helper.compute(trans_a, trans_b, A_shape, B_shape, C_shape);
 
-        if (!blobs.empty()) {
-            fastGemmPackB(blobs[0], packed_input_B, trans_b, opt);
+        // Pack only 2D weight matrices; skip higher-dim tensors (e.g. Q@K^T in attention).
+        const Mat* B_mat = !blobs.empty() ? &blobs[0] :
+                           (inputs.size() >= 2 && inputs[1].dims == 2 ? &inputs[1] : nullptr);
+        if (B_mat && B_mat->data != last_packed_input_B_data) {
+            fastGemmPackB(*B_mat, packed_input_B, trans_b, opt);
             helper.updatePackedBOffsets(packed_input_B.size());
 
-            if (helper.batch == 1 && blobs[0].type() == CV_32F &&
+            if (helper.batch == 1 && B_mat->type() == CV_32F &&
                 fastGemmThinEligible(helper.M, helper.N, helper.K)) {
                 thin_packed_B.resize(fastGemmThinPackBSize(helper.N, helper.K));
                 fastGemmThinPackB(helper.N, helper.K,
-                                  blobs[0].ptr<const float>(),
+                                  B_mat->ptr<const float>(),
                                   (size_t)helper.ldb0, (size_t)helper.ldb1,
                                   thin_packed_B.data());
             } else {
                 thin_packed_B.clear();
             }
+            last_packed_input_B_data = B_mat->data;
         }
 
         // broadcast bias if needed
@@ -289,10 +293,17 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                          a, helper.lda0, helper.lda1,
                          thin_packed_B.data(), beta,
                          y, helper.ldc, opt.multi_thread);
-        } else {
+        } else if (!packed_input_B.empty()) {
             fastGemmBatch(helper.batch, helper.A_offsets.data(), helper.packed_B_offsets.data(), helper.C_offsets.data(),
                           helper.M, helper.N, helper.K, alpha, a, helper.lda0, helper.lda1,
                           packed_input_B.data(), beta, y, helper.ldc, opt);
+        } else {
+            // truly dynamic B (changes every call — no packing cache available)
+            const auto &B = inputs[1];
+            const auto *b = B.ptr<const float>();
+            fastGemmBatch(helper.batch, helper.A_offsets.data(), helper.B_offsets.data(), helper.C_offsets.data(),
+                          helper.M, helper.N, helper.K, alpha, a, helper.lda0, helper.lda1,
+                          b, helper.ldb0, helper.ldb1, beta, y, helper.ldc, opt);
         }
     }
 
@@ -522,6 +533,8 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
     std::vector<float> packed_input_B;
     std::vector<float> thin_packed_B;
     Mat broadcast_bias;
+
+    const uchar* last_packed_input_B_data = nullptr;
 
     FastGemmOpt opt;
     MatMulHelper helper;

@@ -48,6 +48,7 @@ void setKVCacheManager(Ptr<Net::Impl> netimpl)
     manager.netimpl = netimpl;
     manager.opt.init();
     initKVDataRecursively(netimpl->mainGraph, manager.kData, manager.vData, manager.opt);
+    manager.buildRoutes();
 
     manager.isInitialized = true;
     netimpl->useKVCache = true;
@@ -59,6 +60,78 @@ void KVCacheManager::init()
     // Construction of per-layer caches happens in setKVCacheManager.
     // This method is retained as a callable hook for deferred re-init if needed.
     CV_Assert(isInitialized);
+}
+
+void KVCacheManager::buildRoutes()
+{
+    presentToPastRoutes.clear();
+    hasRoutes = false;
+
+    if (!netimpl || !netimpl->mainGraph)
+        return;
+
+    const std::vector<Arg>& gr_outputs = netimpl->mainGraph->outputs();
+    for (const Arg& out_arg : gr_outputs)
+    {
+        const ArgData& out_adata = netimpl->args.at(out_arg.idx);
+        const std::string& out_name = out_adata.name;
+
+        if (out_name.compare(0, 8, "present.") != 0)
+            continue;
+
+        std::string past_name = "past_key_values." + out_name.substr(8);
+        auto it = netimpl->argnames.find(past_name);
+        if (it == netimpl->argnames.end())
+            continue;
+
+        Arg past_arg((int)it->second);
+        if (netimpl->args.at(past_arg.idx).kind != DNN_ARG_INPUT)
+            continue;
+
+        presentToPastRoutes.emplace_back(out_arg.idx, past_arg.idx);
+    }
+
+    hasRoutes = !presentToPastRoutes.empty();
+    if (hasRoutes)
+        initPastTensors();
+}
+
+void KVCacheManager::initPastTensors()
+{
+    for (const auto& route : presentToPastRoutes)
+    {
+        const ArgData& past_adata = netimpl->args.at(route.second);
+        const MatShape& decl_shape = past_adata.shape;
+        if (decl_shape.dims <= 0)
+            continue;
+
+        // Replace symbolic dims (stored as <=0): batch (dim 0) -> 1, all others -> 0 for empty-sequence state.
+        std::vector<int> shape_vec(decl_shape.dims);
+        for (int d = 0; d < decl_shape.dims; d++)
+            shape_vec[d] = (decl_shape[d] > 0) ? decl_shape[d] : (d == 0 ? 1 : 0);
+
+        int dtype = past_adata.type;
+        if (dtype < 0)
+            dtype = CV_32F;
+
+        Mat& past_t = netimpl->__tensors__.at(route.second);
+        past_t = Mat(shape_vec, dtype, Scalar(0));
+        netimpl->finalizeLayers = true;
+    }
+}
+
+void KVCacheManager::applyRoutes()
+{
+    for (const auto& route : presentToPastRoutes)
+    {
+        const Mat& present_t = netimpl->argTensor(Arg(route.first));
+        Mat& past_t = netimpl->__tensors__.at(route.second);
+        if (present_t.empty())
+            continue;
+        if (past_t.shape() != present_t.shape() || past_t.type() != present_t.type())
+            netimpl->finalizeLayers = true;
+        present_t.copyTo(past_t);
+    }
 }
 
 void KVCache::grow(const Mat& newData) {
@@ -191,21 +264,16 @@ void KCache::growGenerate(const Mat& newData){
     auto* page = pages[cur_page].ptr<float>();
     const auto* data = newData.ptr<float>();
 
-    for (int b = 0; b < batch_size; b++){
-        for (int h = 0; h < nHeads; h++){
-            for(int j = 0; j < headDim; j++) {
-                int step =
-                    b * nHeads * headDim +
-                    h * headDim +
-                    j;
-                page[
-                    b * nHeads * Ps +
-                    h * Ps +
-                    t0 + pageSize * j
-                ] = *(data + step);
-            }
+    const int nstripes = batch_size * nHeads;
+    parallel_for_(Range(0, nstripes), [&](const Range& r) {
+        for (int i = r.start; i < r.end; i++) {
+            int b = i / nHeads, h = i % nHeads;
+            const float* src = data + (b * nHeads + h) * headDim;
+            float* dst = page + b * nHeads * Ps + h * Ps + t0;
+            for (int j = 0; j < headDim; j++)
+                dst[j * pageSize] = src[j];
         }
-    }
+    });
 
     nTokens += 1;
 }
@@ -225,8 +293,10 @@ void VCache::growGenerate(const Mat& newData){
     auto* page = pages[cur_page].ptr<float>();
     const auto* data = newData.ptr<float>();
 
-    for (int b = 0; b < batch_size; b++){
-        for (int h = 0; h < nHeads; h++){
+    const int nstripes = batch_size * nHeads;
+    parallel_for_(Range(0, nstripes), [&](const Range& r) {
+        for (int i = r.start; i < r.end; i++) {
+            int b = i / nHeads, h = i % nHeads;
             for (int j = 0; j <= (headDim - 1) / Nr; j++) {
                 int step = b * nHeads * headDim + h * headDim + j * Nr;
                 int copy_size = std::min(Nr, headDim - j * Nr);
@@ -242,11 +312,10 @@ void VCache::growGenerate(const Mat& newData){
                 }
             }
         }
-    }
+    });
 
     nTokens += 1;
 }
-
 
 CV__DNN_INLINE_NS_END
 }}
