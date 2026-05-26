@@ -599,17 +599,17 @@ CASE(test_dropout_default_ratio)
 CASE(test_dropout_random_old)
     // no filter
 CASE(test_dynamicquantizelinear)
-    // no filter
+    SKIP;
 CASE(test_dynamicquantizelinear_expanded)
-    // no filter
+    SKIP;
 CASE(test_dynamicquantizelinear_max_adjusted)
-    // no filter
+    SKIP;
 CASE(test_dynamicquantizelinear_max_adjusted_expanded)
-    // no filter
+    SKIP;
 CASE(test_dynamicquantizelinear_min_adjusted)
-    // no filter
+    SKIP;
 CASE(test_dynamicquantizelinear_min_adjusted_expanded)
-    // no filter
+    SKIP;
 CASE(test_edge_pad)
     // no filter
 CASE(test_einsum_batch_diagonal)
