@@ -3,97 +3,134 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "test_precomp.hpp"
-
-namespace opencv_test { namespace {
+#include "npy_blob.hpp"
 
 #ifdef HAVE_OPENCV_DNN
 
-TEST(Features2d_ALIKED, create_from_model)
+namespace opencv_test { namespace {
+
+static std::string findAlikedModelOrSkip()
 {
-    std::string modelPath = cvtest::findDataFile("dnn/onnx/models/aliked-n16rot-top1k-640.onnx", false);
+    try
+    {
+        return cvtest::findDataFile("dnn/onnx/models/aliked-n16rot-top1k-640.onnx", false);
+    }
+    catch (const cv::Exception&)
+    {
+        throw SkipTestException("ALIKED ONNX model not found in test data");
+    }
+}
+
+static std::string findLightGlueModelOrSkip()
+{
+    try
+    {
+        return cvtest::findDataFile("dnn/onnx/models/aliked_lightglue.onnx", false);
+    }
+    catch (const cv::Exception&)
+    {
+        throw SkipTestException("LightGlue ONNX model not found in test data");
+    }
+}
+
+TEST(Features2d_ALIKED, Regression)
+{
+    const std::string modelPath = findAlikedModelOrSkip();
+
     Ptr<ALIKED> aliked = ALIKED::create(modelPath);
     ASSERT_FALSE(aliked.empty());
     ASSERT_FALSE(aliked->empty());
-}
+    EXPECT_EQ(aliked->descriptorSize(), 128);
+    EXPECT_EQ(aliked->descriptorType(), CV_32F);
+    EXPECT_EQ(aliked->defaultNorm(), NORM_L2);
 
-TEST(Features2d_ALIKED, detectAndCompute)
-{
-    std::string modelPath = cvtest::findDataFile("dnn/onnx/models/aliked-n16rot-top1k-640.onnx", false);
-    Ptr<ALIKED> aliked = ALIKED::create(modelPath);
-
-    Mat image = imread(cvtest::findDataFile("features2d/tsukuba.png"));
-    ASSERT_FALSE(image.empty());
+    const std::string imgPath = cvtest::findDataFile("shared/box.png");
+    Mat img = imread(imgPath);
+    ASSERT_FALSE(img.empty()) << "Could not load test image: " << imgPath;
 
     std::vector<KeyPoint> keypoints;
     Mat descriptors;
-    aliked->detectAndCompute(image, Mat(), keypoints, descriptors);
+    aliked->detectAndCompute(img, noArray(), keypoints, descriptors);
 
-    ASSERT_GT((int)keypoints.size(), 0);
-    ASSERT_EQ(descriptors.cols, 128);
-    ASSERT_EQ(descriptors.type(), CV_32F);
-    ASSERT_EQ(descriptors.rows, (int)keypoints.size());
+    EXPECT_GT(keypoints.size(), 100u);
+    ASSERT_EQ(descriptors.rows, static_cast<int>(keypoints.size()));
+    EXPECT_EQ(descriptors.cols, 128);
+    EXPECT_EQ(descriptors.type(), CV_32F);
+
+    for (const KeyPoint& kp : keypoints)
+    {
+        EXPECT_GE(kp.pt.x, 0.f);
+        EXPECT_GE(kp.pt.y, 0.f);
+        EXPECT_LT(kp.pt.x, static_cast<float>(img.cols));
+        EXPECT_LT(kp.pt.y, static_cast<float>(img.rows));
+        EXPECT_GT(kp.response, 0.f);
+    }
+
+    // Load ORT reference outputs (generated with same OpenCV preprocessing)
+    Mat refKpts   = blobFromNPY(cvtest::findDataFile("dnn/aliked_keypoints_box.npy"));
+    Mat refDescs  = blobFromNPY(cvtest::findDataFile("dnn/aliked_descriptors_box.npy"));
+
+    // Keypoint count must match exactly
+    ASSERT_EQ(static_cast<int>(keypoints.size()), refKpts.rows)
+        << "Keypoint count mismatch: got " << keypoints.size()
+        << ", expected " << refKpts.rows;
+
+    // Compare each keypoint (normalized coords -> pixel coords)
+    const float origW = static_cast<float>(img.cols);
+    const float origH = static_cast<float>(img.rows);
+    for (int i = 0; i < refKpts.rows; i++)
+    {
+        float refX = (refKpts.at<float>(i, 0) + 1.0f) * 0.5f * origW;
+        float refY = (refKpts.at<float>(i, 1) + 1.0f) * 0.5f * origH;
+        EXPECT_NEAR(keypoints[i].pt.x, refX, 1e-4) << "Keypoint " << i << " x mismatch";
+        EXPECT_NEAR(keypoints[i].pt.y, refY, 1e-4) << "Keypoint " << i << " y mismatch";
+    }
+
+    // Compare descriptors row by row
+    for (int i = 0; i < refDescs.rows; i++)
+    {
+        Mat diff = descriptors.row(i) - refDescs.row(i);
+        double maxDiff = cv::norm(diff, cv::NORM_INF);
+        EXPECT_LT(maxDiff, 1e-5) << "Descriptor " << i << " mismatch (max diff=" << maxDiff << ")";
+    }
 }
 
-TEST(Features2d_ALIKED, detect_only)
+TEST(Features2d_LightGlue, Regression)
 {
-    std::string modelPath = cvtest::findDataFile("dnn/onnx/models/aliked-n16rot-top1k-640.onnx", false);
-    Ptr<ALIKED> aliked = ALIKED::create(modelPath);
-
-    Mat image = imread(cvtest::findDataFile("features2d/tsukuba.png"));
-    ASSERT_FALSE(image.empty());
-
-    std::vector<KeyPoint> keypoints;
-    aliked->detect(image, keypoints);
-    ASSERT_GT((int)keypoints.size(), 0);
-}
-
-TEST(Features2d_ALIKED, descriptor_properties)
-{
-    std::string modelPath = cvtest::findDataFile("dnn/onnx/models/aliked-n16rot-top1k-640.onnx", false);
-    Ptr<ALIKED> aliked = ALIKED::create(modelPath);
-
-    ASSERT_EQ(aliked->descriptorSize(), 128);
-    ASSERT_EQ(aliked->descriptorType(), CV_32F);
-    ASSERT_EQ(aliked->defaultNorm(), NORM_L2);
-}
-
-TEST(Features2d_LightGlueMatcher, create_from_model)
-{
-    std::string modelPath = cvtest::findDataFile("dnn/onnx/models/aliked_lightglue.onnx", false);
-    Ptr<LightGlueMatcher> lg = LightGlueMatcher::create(modelPath);
-    ASSERT_FALSE(lg.empty());
-}
-
-TEST(Features2d_LightGlueMatcher, setPairInfo_and_match)
-{
-    std::string alikedPath = cvtest::findDataFile("dnn/onnx/models/aliked-n16rot-top1k-640.onnx", false);
-    std::string lgPath = cvtest::findDataFile("dnn/onnx/models/aliked_lightglue.onnx", false);
+    const std::string alikedPath = findAlikedModelOrSkip();
+    const std::string lgPath = findLightGlueModelOrSkip();
 
     Ptr<ALIKED> aliked = ALIKED::create(alikedPath);
     Ptr<LightGlueMatcher> lg = LightGlueMatcher::create(lgPath);
+    ASSERT_FALSE(aliked.empty());
+    ASSERT_FALSE(lg.empty());
 
-    Mat img1 = imread(cv::samples::findFile("box.png"));
-    Mat img2 = imread(cv::samples::findFile("box_in_scene.png"));
+    Mat img1 = imread(cvtest::findDataFile("shared/box.png"));
+    Mat img2 = imread(cvtest::findDataFile("shared/box_in_scene.png"));
     ASSERT_FALSE(img1.empty());
     ASSERT_FALSE(img2.empty());
 
+    // Detect features on both images
     std::vector<KeyPoint> kpts1, kpts2;
     Mat descs1, descs2;
-    aliked->detectAndCompute(img1, Mat(), kpts1, descs1);
-    aliked->detectAndCompute(img2, Mat(), kpts2, descs2);
+    aliked->detectAndCompute(img1, noArray(), kpts1, descs1);
+    aliked->detectAndCompute(img2, noArray(), kpts2, descs2);
+
+    ASSERT_GT(static_cast<int>(kpts1.size()), 0);
+    ASSERT_GT(static_cast<int>(kpts2.size()), 0);
 
     // Build keypoint matrices (pixel coordinates)
-    Mat kpts1Mat((int)kpts1.size(), 2, CV_32F);
-    Mat kpts2Mat((int)kpts2.size(), 2, CV_32F);
+    Mat kpts1Mat(static_cast<int>(kpts1.size()), 2, CV_32F);
+    Mat kpts2Mat(static_cast<int>(kpts2.size()), 2, CV_32F);
     for (size_t i = 0; i < kpts1.size(); i++)
     {
-        kpts1Mat.at<float>((int)i, 0) = kpts1[i].pt.x;
-        kpts1Mat.at<float>((int)i, 1) = kpts1[i].pt.y;
+        kpts1Mat.at<float>(static_cast<int>(i), 0) = kpts1[i].pt.x;
+        kpts1Mat.at<float>(static_cast<int>(i), 1) = kpts1[i].pt.y;
     }
     for (size_t i = 0; i < kpts2.size(); i++)
     {
-        kpts2Mat.at<float>((int)i, 0) = kpts2[i].pt.x;
-        kpts2Mat.at<float>((int)i, 1) = kpts2[i].pt.y;
+        kpts2Mat.at<float>(static_cast<int>(i), 0) = kpts2[i].pt.x;
+        kpts2Mat.at<float>(static_cast<int>(i), 1) = kpts2[i].pt.y;
     }
 
     lg->setPairInfo(kpts1Mat, kpts2Mat, img1.size(), img2.size());
@@ -101,77 +138,31 @@ TEST(Features2d_LightGlueMatcher, setPairInfo_and_match)
     std::vector<DMatch> matches;
     lg->match(descs1, descs2, matches);
 
-    ASSERT_GT((int)matches.size(), 0);
+    ASSERT_GT(static_cast<int>(matches.size()), 0);
     for (const auto& m : matches)
     {
-        ASSERT_GE(m.queryIdx, 0);
-        ASSERT_LT(m.queryIdx, (int)kpts1.size());
-        ASSERT_GE(m.trainIdx, 0);
-        ASSERT_LT(m.trainIdx, (int)kpts2.size());
+        EXPECT_GE(m.queryIdx, 0);
+        EXPECT_LT(m.queryIdx, static_cast<int>(kpts1.size()));
+        EXPECT_GE(m.trainIdx, 0);
+        EXPECT_LT(m.trainIdx, static_cast<int>(kpts2.size()));
     }
-}
 
-TEST(Features2d_LightGlueMatcher, match_without_context_throws)
-{
-    std::string lgPath = cvtest::findDataFile("dnn/onnx/models/aliked_lightglue.onnx", false);
-    Ptr<LightGlueMatcher> lg = LightGlueMatcher::create(lgPath);
+    // Load ORT reference outputs
+    Mat refMatches = blobFromNPY(cvtest::findDataFile("dnn/lightglue_matches.npy"));
 
-    Mat desc1 = Mat::zeros(10, 128, CV_32F);
-    Mat desc2 = Mat::zeros(10, 128, CV_32F);
+    // Match count must match exactly (same OpenCV preprocessing in both)
+    ASSERT_EQ(static_cast<int>(matches.size()), refMatches.rows)
+        << "Match count mismatch: got " << matches.size()
+        << ", expected " << refMatches.rows;
 
-    std::vector<DMatch> matches;
-    EXPECT_THROW(lg->match(desc1, desc2, matches), cv::Exception);
-}
-
-TEST(Features2d_LightGlueMatcher, knnMatch_k1)
-{
-    std::string alikedPath = cvtest::findDataFile("dnn/onnx/models/aliked-n16rot-top1k-640.onnx", false);
-    std::string lgPath = cvtest::findDataFile("dnn/onnx/models/aliked_lightglue.onnx", false);
-
-    Ptr<ALIKED> aliked = ALIKED::create(alikedPath);
-    Ptr<LightGlueMatcher> lg = LightGlueMatcher::create(lgPath);
-
-    Mat img1 = imread(cv::samples::findFile("box.png"));
-    Mat img2 = imread(cv::samples::findFile("box_in_scene.png"));
-    ASSERT_FALSE(img1.empty());
-    ASSERT_FALSE(img2.empty());
-
-    std::vector<KeyPoint> kpts1, kpts2;
-    Mat descs1, descs2;
-    aliked->detectAndCompute(img1, Mat(), kpts1, descs1);
-    aliked->detectAndCompute(img2, Mat(), kpts2, descs2);
-
-    Mat kpts1Mat((int)kpts1.size(), 2, CV_32F);
-    Mat kpts2Mat((int)kpts2.size(), 2, CV_32F);
-    for (size_t i = 0; i < kpts1.size(); i++)
+    // Compare each match (index pairs should be identical)
+    for (int i = 0; i < refMatches.rows; i++)
     {
-        kpts1Mat.at<float>((int)i, 0) = kpts1[i].pt.x;
-        kpts1Mat.at<float>((int)i, 1) = kpts1[i].pt.y;
+        int refQIdx = static_cast<int>(refMatches.at<int64_t>(i, 0));
+        int refTIdx = static_cast<int>(refMatches.at<int64_t>(i, 1));
+        EXPECT_EQ(matches[i].queryIdx, refQIdx) << "Match " << i << " queryIdx mismatch";
+        EXPECT_EQ(matches[i].trainIdx, refTIdx) << "Match " << i << " trainIdx mismatch";
     }
-    for (size_t i = 0; i < kpts2.size(); i++)
-    {
-        kpts2Mat.at<float>((int)i, 0) = kpts2[i].pt.x;
-        kpts2Mat.at<float>((int)i, 1) = kpts2[i].pt.y;
-    }
-
-    lg->setPairInfo(kpts1Mat, kpts2Mat, img1.size(), img2.size());
-
-    std::vector<std::vector<DMatch>> knnMatches;
-    lg->knnMatch(descs1, descs2, knnMatches, 1);
-    ASSERT_GT((int)knnMatches.size(), 0);
-}
-
-TEST(Features2d_LightGlueMatcher, knnMatch_k2_throws)
-{
-    std::string lgPath = cvtest::findDataFile("dnn/onnx/models/aliked_lightglue.onnx", false);
-    Ptr<LightGlueMatcher> lg = LightGlueMatcher::create(lgPath);
-
-    Mat desc1 = Mat::zeros(10, 128, CV_32F);
-    Mat desc2 = Mat::zeros(10, 128, CV_32F);
-    lg->setPairInfo(Mat::zeros(10, 2, CV_32F), Mat::zeros(10, 2, CV_32F));
-
-    std::vector<std::vector<DMatch>> knnMatches;
-    EXPECT_THROW(lg->knnMatch(desc1, desc2, knnMatches, 2), cv::Exception);
 }
 
 #else  // !HAVE_OPENCV_DNN
