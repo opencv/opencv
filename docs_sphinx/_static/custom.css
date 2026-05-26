@@ -417,3 +417,16 @@ dl.cpp.function .sig-prename.descclassname { color: var(--pst-color-text-muted);
 
 /* --- MathJax inline alignment tweak ----------------------------------- */
 mjx-container.MathJax:not([display="true"]) { vertical-align: -0.15em !important; }
+
+/* --- Side-by-side images ---------------------------------------------- */
+/* When a paragraph contains multiple consecutive <img> tags (Doxygen's
+   pattern for showing two images horizontally — e.g. py_photo's chromatic
+   aberration "before/after" examples), constrain each image's width so
+   they fit on one row instead of stacking. */
+.bd-content p:has(img + img) img {
+    max-width: 49%;
+    height: auto;
+    display: inline-block;
+    vertical-align: top;
+}
+.bd-content p img + img { margin-left: 0.25rem; }
