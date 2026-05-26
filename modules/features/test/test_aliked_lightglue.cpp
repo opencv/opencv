@@ -72,9 +72,10 @@ TEST(Features2d_LightGlueMatcher, setPairInfo_and_match)
     Ptr<ALIKED> aliked = ALIKED::create(alikedPath);
     Ptr<LightGlueMatcher> lg = LightGlueMatcher::create(lgPath);
 
-    Mat img1 = imread(cvtest::findDataFile("features2d/tsukuba.png"));
-    Mat img2 = imread(cvtest::findDataFile("features2d/tsukuba.png"));
+    Mat img1 = imread(cv::samples::findFile("box.png"));
+    Mat img2 = imread(cv::samples::findFile("box_in_scene.png"));
     ASSERT_FALSE(img1.empty());
+    ASSERT_FALSE(img2.empty());
 
     std::vector<KeyPoint> kpts1, kpts2;
     Mat descs1, descs2;
@@ -130,11 +131,15 @@ TEST(Features2d_LightGlueMatcher, knnMatch_k1)
     Ptr<ALIKED> aliked = ALIKED::create(alikedPath);
     Ptr<LightGlueMatcher> lg = LightGlueMatcher::create(lgPath);
 
-    Mat img = imread(cvtest::findDataFile("features2d/tsukuba.png"));
+    Mat img1 = imread(cv::samples::findFile("box.png"));
+    Mat img2 = imread(cv::samples::findFile("box_in_scene.png"));
+    ASSERT_FALSE(img1.empty());
+    ASSERT_FALSE(img2.empty());
+
     std::vector<KeyPoint> kpts1, kpts2;
     Mat descs1, descs2;
-    aliked->detectAndCompute(img, Mat(), kpts1, descs1);
-    aliked->detectAndCompute(img, Mat(), kpts2, descs2);
+    aliked->detectAndCompute(img1, Mat(), kpts1, descs1);
+    aliked->detectAndCompute(img2, Mat(), kpts2, descs2);
 
     Mat kpts1Mat((int)kpts1.size(), 2, CV_32F);
     Mat kpts2Mat((int)kpts2.size(), 2, CV_32F);
@@ -149,7 +154,7 @@ TEST(Features2d_LightGlueMatcher, knnMatch_k1)
         kpts2Mat.at<float>((int)i, 1) = kpts2[i].pt.y;
     }
 
-    lg->setPairInfo(kpts1Mat, kpts2Mat, img.size(), img.size());
+    lg->setPairInfo(kpts1Mat, kpts2Mat, img1.size(), img2.size());
 
     std::vector<std::vector<DMatch>> knnMatches;
     lg->knnMatch(descs1, descs2, knnMatches, 1);
