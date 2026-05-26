@@ -11,11 +11,13 @@
 #if IPP_VERSION_X100 >= 810
 
 #if defined(HAVE_IPP_IW)
+
+#define CV_TYPE(src_type) (src_type & (CV_DEPTH_MAX - 1))
+
 int ipp_hal_warpAffine(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar *dst_data, size_t dst_step, int dst_width,
                        int dst_height, const double M[6], int interpolation, int borderType, const double borderValue[4]);
 #undef cv_hal_warpAffine
 #define cv_hal_warpAffine ipp_hal_warpAffine
-#endif
 
 #if IPP_VERSION_X100 >= 202600
 
@@ -24,14 +26,16 @@ int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step
 #undef cv_hal_warpPerspective
 #define cv_hal_warpPerspective ipp_hal_warpPerspective
 
-#endif // IPP_VERSION_X100 >= 202600
-
 int ipp_hal_remap32f(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height,
     uchar *dst_data, size_t dst_step, int dst_width, int dst_height,
     float* mapx, size_t mapx_step, float* mapy, size_t mapy_step,
     int interpolation, int border_type, const double border_value[4]);
 #undef cv_hal_remap32f
 #define cv_hal_remap32f ipp_hal_remap32f
+
+#endif // IPP_VERSION_X100 >= 202600
+
+#endif // defined(HAVE_IPP_IW)
 
 #endif //IPP_VERSION_X100 >= 810
 
