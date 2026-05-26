@@ -290,6 +290,56 @@ TEST_P(Test_Model, Classify)
     testClassifyModel(weights_file, "", img_path, ref, norm, size);
 }
 
+TEST_P(Test_Model, YOLOv3)
+{
+    applyTestTag(
+        CV_TEST_TAG_LONG,
+        CV_TEST_TAG_MEMORY_2GB,
+        CV_TEST_TAG_DEBUG_VERYLONG
+    );
+
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+
+    std::string model_file = _tf("yolov3.onnx", false);
+    std::string img_path = _tf("dog416.png"); // Matches standard YOLO inference classes
+
+    // Extracted from original flat ref_ array: batchId, classId, confidence, left, top, right, bottom
+    std::vector<int> refClassIds = {7, 16, 1};
+    std::vector<float> refConfidences = {0.606292f, 0.55195f, 0.433444f};
+
+    // Rect2d requires (x, y, width, height) format
+    std::vector<Rect2d> refBoxes = {
+        Rect2d(0.612037f, 0.149921f, 0.910763f - 0.612037f, 0.300503f - 0.149921f), // Class 7
+        Rect2d(0.170690f, 0.356024f, 0.471459f - 0.170690f, 0.877178f - 0.356024f), // Class 16
+        Rect2d(0.199235f, 0.301175f, 0.753253f - 0.199235f, 0.744156f - 0.301175f)  // Class 1
+    };
+
+    // Setting precision tolerances
+    double scoreDiff = 8e-5, iouDiff = 3e-4;
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
+    {
+        scoreDiff = 0.006;
+        iouDiff = 0.042;
+    }
+    else if (target == DNN_TARGET_CUDA_FP16)
+    {
+        scoreDiff = 0.04;
+        iouDiff = 0.03;
+    }
+
+    // Model parameters
+    double confThreshold = 0.24;
+    double nmsThreshold = 0.4;
+    Size size{640, 640};
+    double scale = 1.0 / 255.0; // Standard image scaling for YOLO models
+    Scalar mean = Scalar();
+    bool swapRB = true; // YOLO expects RGB
+
+    testDetectModel(model_file, "", img_path, refClassIds, refConfidences, refBoxes,
+                    scoreDiff, iouDiff, confThreshold, nmsThreshold, size, mean, scale, swapRB);
+}
+
 TEST_P(Test_Model, Keypoints_pose)
 {
     if (target == DNN_TARGET_OPENCL_FP16)

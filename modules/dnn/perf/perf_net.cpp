@@ -147,7 +147,7 @@ PERF_TEST_P_(DNNTestNetwork, SSD)
     processNet("dnn/ssd_vgg16.onnx", "", cv::Size(300, 300));
 }
 
-PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_Caffe)
+PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_v1_ONNX)
 {
     processNet("dnn/ssd_mobilenet_v1_12.onnx", "", cv::Size(300, 300));
 }
