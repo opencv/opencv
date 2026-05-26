@@ -20,6 +20,7 @@
 int ipp_hal_warpAffine(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar *dst_data, size_t dst_step,
                        int dst_width, int dst_height, const double M[6], int interpolation, int borderType, const double borderValue[4])
 {
+    CV_HAL_CHECK_USE_IPP();
     //CV_INSTRUMENT_REGION_IPP();
 
     IppiInterpolationType ippInter  = ippiGetInterpolation(interpolation);
@@ -65,6 +66,7 @@ int ipp_hal_warpAffine(int src_type, const uchar *src_data, size_t src_step, int
         iwSrc.Init(IwiSize{src_width, src_height}, ippiGetDataType(src_type), CV_MAT_CN(src_type), IwiBorderSize(), src_data, IwSize(src_step));
         ::ipp::IwiImage        iwDst(IwiSize{dst_width, dst_height}, ippiGetDataType(src_type), CV_MAT_CN(src_type), IwiBorderSize(), dst_data, IwSize(dst_step));
         ::ipp::IwiBorderType   ippBorder(ippiGetBorderType(borderType), {borderValue, 4});
+        // OpenCV inverts the affine matrix before calling the HAL (lines 2401-2411 of imgwarp.cpp), so the HAL receives the inverse transform.
         IwTransDirection       iwTransDirection = iwTransInverse;
 
         if ((int)ippBorder == -1)
@@ -126,6 +128,7 @@ int ipp_hal_warpAffine(int src_type, const uchar *src_data, size_t src_step, int
 int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar * dst_data, size_t dst_step,
                             int dst_width, int dst_height, const double M[9], int interpolation, int borderType, const double borderValue[4])
 {
+    CV_HAL_CHECK_USE_IPP();
     //CV_INSTRUMENT_REGION_IPP();
 
     IppiInterpolationType ippInter = ippiGetInterpolation(interpolation);
