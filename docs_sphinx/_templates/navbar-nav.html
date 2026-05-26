@@ -3,17 +3,45 @@
    configured external_links in one bar. For OpenCV we want ONLY the
    Doxygen-style external nav (Main Page, Related Pages, Namespaces,
    …) in the header — the tutorial module tree belongs in the left
-   sidebar, not the header. So we render external_links only. #}
+   sidebar, not the header. So we render external_links only.
+
+   conf.py builds each link's URL from DOXYGEN_BASE_URL (default
+   https://docs.opencv.org/5.x/) + a filename. By default we rewrite
+   those to a depth-aware relative path into the local Doxygen output
+   at <build>/doc/doxygen/html/. Exception: "Main Page" routes to the
+   Sphinx master_doc (tutorials/tutorials) via `pathto`, because the
+   Sphinx-rendered site IS the redesigned landing page — sending the
+   user to the legacy Doxygen index would feel like a regression.
+
+   The `+ 2` in _doxygen_local covers climbing out of html/ and
+   docs_sphinx/ to reach build/doc/doxygen/html/. #}
+{%- set _depth = (pagename or '').count('/') %}
+{%- set _doxygen_local = ('../' * (_depth + 2)) ~ 'doc/doxygen/html/' %}
 <nav>
   <ul class="bd-navbar-elements navbar-nav">
     {%- for link in (theme_external_links or []) %}
+    {%- set _internal = (link.name == 'Main Page') %}
+    {%- if _internal %}
+      {%- set _href = pathto(master_doc) %}
+    {%- else %}
+      {%- set _href = link.url %}
+      {%- if doxygen_base_url and _href.startswith(doxygen_base_url) %}
+        {%- set _href = _doxygen_local ~ _href[doxygen_base_url|length:] %}
+      {%- endif %}
+    {%- endif %}
     <li class="nav-item">
       {# PyData's CSS adds the ↗ icon via .nav-external::after — don't
-         render a second one inline or it doubles up. #}
+         render a second one inline or it doubles up. Internal links
+         drop the external class + target so they stay in-tab and
+         don't show the ↗ glyph. #}
+      {%- if _internal %}
+      <a class="nav-link" href="{{ _href }}">{{ link.name }}</a>
+      {%- else %}
       <a class="nav-link nav-external"
-         href="{{ link.url }}"
+         href="{{ _href }}"
          target="_blank"
          rel="noopener noreferrer">{{ link.name }}</a>
+      {%- endif %}
     </li>
     {%- endfor %}
   </ul>
