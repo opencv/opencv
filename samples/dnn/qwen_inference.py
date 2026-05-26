@@ -9,7 +9,7 @@ Exporting Qwen2.5 model to ONNX:
 
 1. Install the required dependencies:
 
-    pip install optimum[exporters] torch transformers
+    pip install optimum[exporters] optimum-onnx[onnxruntime] torch transformers
 
 2. Export the model to ONNX:
 
