@@ -331,9 +331,7 @@ template<> inline int VBLAS<double>::dot(const double* a, const double* b, int n
 
         s0 = v_add(s0, v_mul(a0, b0));
     }
-    double sbuf[2];
-    v_store(sbuf, s0);
-    *result = sbuf[0] + sbuf[1];
+    *result = v_reduce_sum(s0);
     vx_cleanup();
     return k;
 }
