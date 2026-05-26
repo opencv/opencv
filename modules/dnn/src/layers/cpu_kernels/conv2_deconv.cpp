@@ -63,13 +63,11 @@ static void deconvBlock32f(const void* inp__, const void* /*residual*/,
     const float* wdata = (const float*)weights__;
     const float* bias  = bias__;
 
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     // SIMD path is safe when ngroups==1 or Kg%C0==0; repackDeconvWeights()
     // zero-fills padded lanes.
     const bool simd_ok =
-#if (CV_SIMD || CV_SIMD_SCALABLE)
         ((ngroups == 1) || (Kg % C0 == 0)) && (C0 % VTraits<v_float32>::vlanes() == 0);
-#else
-        false;
 #endif
 
     const int NK1 = N * K1;
