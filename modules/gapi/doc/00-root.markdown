@@ -113,8 +113,7 @@ Several important concepts are illustrated by this example:
 * Graph declaration and graph execution are distinct steps;
 * Graph is built implicitly from a sequence of G-API expressions;
 * G-API supports function-like calls -- e.g. cv::gapi::resize(), and
-  operators, e.g. \link cv::gapi::operator| operator|()\endlink, which
-  can be used inside G-API graphs;
+  operators, e.g. @ref cv::operator|(const cv::GMat& lhs, const cv::GMat& rhs) "operator|()", which is used to compute bitwise OR;
 * G-API syntax aims to look pure: every operation call within a graph
   yields a new result, thus forming a directed acyclic graph (DAG);
 * Graph declaration is not bound to any data -- real data objects
