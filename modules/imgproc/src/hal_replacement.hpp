@@ -1576,6 +1576,8 @@ inline int hal_ni_demosaicing(const uchar* src_data, size_t src_step, int src_ty
 #define cv_hal_demosaicing hal_ni_demosaicing
 //! @endcond
 
+//! @}
+
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #elif defined(_MSC_VER)
