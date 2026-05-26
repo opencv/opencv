@@ -335,7 +335,8 @@ struct ModelFusionAttention
         bool modified = false;
         std::set<int> removed_ops;
 
-        for (auto& [inp_idx, matmul_indices] : qkv_candidates) {
+        for (auto& candidate : qkv_candidates) {
+            auto matmul_indices = candidate.second;
             if (matmul_indices.size() < 3) continue;
 
             for (size_t qi = 0; qi + 2 < matmul_indices.size(); qi++)

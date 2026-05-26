@@ -147,7 +147,8 @@ struct ModelFusionSharedGemm
         std::set<int> removed_ops;
         vector<std::pair<int, vector<Ptr<Layer>>>> insertions;  // (insert_pos, fused-and-slice layers)
 
-        for (auto& [key, infos] : groups) {
+        for (auto& group : groups) {
+            auto infos = group.second;
             if (infos.size() < 2) continue;
 
             bool all_have_bias = infos[0].has_bias;
