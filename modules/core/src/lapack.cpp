@@ -302,12 +302,13 @@ template<> inline int VBLAS<float>::givens(float* a, float* b, int n, float c, f
         return 0;
     int k = 0;
     v_float32 c4 = vx_setall_f32(c), s4 = vx_setall_f32(s);
+    v_float32 ns4 = vx_setall_f32(-s);
     for( ; k <= n - VTraits<v_float32>::vlanes(); k += VTraits<v_float32>::vlanes() )
     {
         v_float32 a0 = vx_load(a + k);
         v_float32 b0 = vx_load(b + k);
-        v_float32 t0 = v_add(v_mul(a0, c4), v_mul(b0, s4));
-        v_float32 t1 = v_sub(v_mul(b0, c4), v_mul(a0, s4));
+        v_float32 t0 = v_fma(a0, c4, v_mul(b0, s4));
+        v_float32 t1 = v_fma(a0, ns4, v_mul(b0, c4));
         v_store(a + k, t0);
         v_store(b + k, t1);
     }
@@ -342,12 +343,13 @@ template<> inline int VBLAS<double>::givens(double* a, double* b, int n, double 
 {
     int k = 0;
     v_float64 c2 = vx_setall_f64(c), s2 = vx_setall_f64(s);
+    v_float64 ns2 = vx_setall_f64(-s);
     for( ; k <= n - VTraits<v_float64>::vlanes(); k += VTraits<v_float64>::vlanes() )
     {
         v_float64 a0 = vx_load(a + k);
         v_float64 b0 = vx_load(b + k);
-        v_float64 t0 = v_add(v_mul(a0, c2), v_mul(b0, s2));
-        v_float64 t1 = v_sub(v_mul(b0, c2), v_mul(a0, s2));
+        v_float64 t0 = v_fma(a0, c2, v_mul(b0, s2));
+        v_float64 t1 = v_fma(a0, ns2, v_mul(b0, c2));
         v_store(a + k, t0);
         v_store(b + k, t1);
     }
