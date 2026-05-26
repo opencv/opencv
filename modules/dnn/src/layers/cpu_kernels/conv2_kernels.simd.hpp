@@ -1598,7 +1598,9 @@ static void conv32fC8_1x1_strided(const void* inp__, const void* residual__, voi
         int iplanesize = Hi*Wi*C0;
 
         const int Sy = cs.strides[1], Sx = cs.strides[2];
+#ifdef CONV_ENABLE_SIMD
         const int x_step = Sx * C0;
+#endif
 
         const float* scaleptr = (const float*)scale__;
         const float* biasptr = (const float*)bias__;
@@ -1784,7 +1786,9 @@ static void conv32fC8_3x3_strided(const void* inp__, const void* residual__, voi
         int Wi = inpshape[ndims_-2];
         const int Sy = cs.strides[1], Sx = cs.strides[2];
         const int padY = cs.pads[1], padX = cs.pads[2];
+#ifdef CONV_ENABLE_SIMD
         const int x_step = Sx * C0;
+#endif
         const float* scaleptr = (const float*)scale__;
         const float* biasptr = (const float*)bias__;
         int planeblocks = planeblocks_;

@@ -85,6 +85,7 @@ static void deconvBlock32f(const void* inp__, const void* /*residual*/,
             float* out_k1 = (float*)out__ + ((int64_t)n * K1 + k1) * ospatial * C0;
             const float* inp_n = (const float*)inp__ + (int64_t)n * C1 * ispatial * C0;
 
+#if (CV_SIMD || CV_SIMD_SCALABLE)
             // Precompute the shared (g, kblk, c1_abs_base) for the SIMD path.
             int simd_g = 0, simd_kblk = 0, simd_c1_abs_base = 0;
             if (simd_ok) {
@@ -93,6 +94,7 @@ static void deconvBlock32f(const void* inp__, const void* /*residual*/,
                 const int c_start = simd_g * Cg;
                 simd_c1_abs_base  = c_start / C0;
             }
+#endif
 
             for (int opos_flat = 0; opos_flat < ospatial; opos_flat++) {
                 float* out_ptr = out_k1 + opos_flat * C0;
