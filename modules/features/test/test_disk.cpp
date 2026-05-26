@@ -24,6 +24,8 @@ static std::string findDiskModelOrSkip()
 
 TEST(Features2d_DISK, Regression)
 {
+    applyTestTag(CV_TEST_TAG_MEMORY_2GB);
+
     const std::string modelPath = findDiskModelOrSkip();
 
     Ptr<DISK> detector;
@@ -62,6 +64,8 @@ TEST(Features2d_DISK, Regression)
 
 TEST(Features2d_DISK, MaxKeypointsAndThreshold)
 {
+    applyTestTag(CV_TEST_TAG_MEMORY_2GB);
+
     const std::string modelPath = findDiskModelOrSkip();
 
     Ptr<DISK> detector = DISK::create(modelPath);
@@ -99,6 +103,8 @@ TEST(Features2d_DISK, MaxKeypointsAndThreshold)
 
 TEST(Features2d_DISK, MaskSupport)
 {
+    applyTestTag(CV_TEST_TAG_MEMORY_2GB);
+
     const std::string modelPath = findDiskModelOrSkip();
 
     Ptr<DISK> detector = DISK::create(modelPath);
