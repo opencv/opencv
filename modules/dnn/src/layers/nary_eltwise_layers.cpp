@@ -326,6 +326,7 @@ public:
                     outShape[j] = inpsz != 1 ? inpsz : outsz;
                 } else {
                     // Clamp to minimum to tolerate off-by-1 spatial mismatches from Caffe→ONNX export.
+                    CV_LOG_WARNING(NULL, "NaryEltwiseLayer: Shape mismatch detected at dimension " << j << " (" << inpsz << " vs " << outsz << "). Clamping to " << std::min(inpsz, outsz) << ".");
                     outShape[j] = std::min(inpsz, outsz);
                 }
             }
