@@ -313,7 +313,7 @@ operator!=(const MLFloat16& left, const MLFloat16& right)
 
 #endif  // BUILD_MLAS_NO_ONNXRUNTIME
 
-static_assert(sizeof(MLAS_FP16) == FP16_SIZE);
+static_assert(sizeof(MLAS_FP16) == FP16_SIZE, "");
 
 
 //
@@ -3080,7 +3080,7 @@ MLAS_FORCEINLINE
 void
 MlasSetInt4Element(uint8_t* Output, size_t ElemIndex, UnpackedType Value)
 {
-    static_assert(std::is_same_v<UnpackedType, uint8_t> || std::is_same_v<UnpackedType, int8_t>);
+    static_assert(std::is_same<UnpackedType, uint8_t>::value || std::is_same<UnpackedType, int8_t>::value, "");
 
     const size_t OutputIndex = ElemIndex >> 1;  // which byte
     const size_t NibbleIndex = ElemIndex & 0x1; // which 4-bit elem in the byte
@@ -3097,6 +3097,6 @@ MLAS_FORCEINLINE
 void
 MlasPackInt4Elements(uint8_t* Output, UnpackedType ValueLow, UnpackedType ValueHigh)
 {
-    static_assert(std::is_same_v<UnpackedType, uint8_t> || std::is_same_v<UnpackedType, int8_t>);
+    static_assert(std::is_same<UnpackedType, uint8_t>::value || std::is_same<UnpackedType, int8_t>::value, "");
     *Output = static_cast<uint8_t>(((ValueHigh & 0xF) << 4) | (ValueLow & 0xF));
 }
