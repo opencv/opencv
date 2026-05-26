@@ -5,6 +5,8 @@
 #include "apple_conversions.h"
 #include "precomp.hpp"
 
+#import <Foundation/Foundation.h>
+
 #ifndef __bridge
 #define __bridge
 #endif
