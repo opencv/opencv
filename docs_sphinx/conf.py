@@ -18,7 +18,7 @@ from toctrees automatically.
 """
 
 from __future__ import annotations
-import pathlib, re
+import pathlib, re, textwrap as _textwrap
 
 HERE = pathlib.Path(__file__).parent.resolve()
 DOC_ROOT = (HERE.parent / "doc").resolve()
@@ -53,6 +53,31 @@ PY_DOC_MODULES = [
     if m.strip()
 ]
 
+# ---------------------------------------------------------------------------
+# SCOPE — contrib tree.  Folder names under opencv_contrib/modules/.
+# Override via env var to avoid editing this file:
+#     OPENCV_CONTRIB_MODULES=ml,bgsegm cmake --build <build> --target sphinx
+# Empty list = main-only build (legacy behavior, no contrib site).
+# ---------------------------------------------------------------------------
+CONTRIB_MODULES = [
+    m.strip()
+    for m in (_os.environ.get("OPENCV_CONTRIB_MODULES") or "ml,bgsegm,bioinspired,cannops,ccalib,cnn_3dobj,cvv,dnn_objdetect,dnn_superres,gapi,hdf,julia,line_descriptor,phase_unwrapping,structured_light,viz,tracking").split(",")
+    if m.strip()
+]
+CONTRIB_ROOT = pathlib.Path(
+    _os.environ.get("OPENCV_CONTRIB_ROOT")
+    or str(HERE.parent.parent / "opencv_contrib" / "modules")
+).resolve()
+
+# Sphinx srcdir as seen by conf.py.  CMake stages a merged tree at
+# ${CMAKE_BINARY_DIR}/docs_sphinx_input/ and forwards this env var.
+# Default = DOC_ROOT so ad-hoc sphinx-build runs keep working. The `or`
+# idiom (rather than dict.get's default) treats an empty-string env var
+# the same as unset — CMake forwards "" when contrib is disabled.
+SPHINX_INPUT_ROOT = pathlib.Path(
+    _os.environ.get("OPENCV_SPHINX_INPUT_ROOT") or str(DOC_ROOT)
+).resolve()
+
 # -- Project ----------------------------------------------------------------
 project = "OpenCV"
 author = "OpenCV Team"
@@ -74,7 +99,8 @@ source_suffix = {".md": "markdown", ".markdown": "markdown"}
 # regardless of how many modules are in DOC_MODULES.
 master_doc = "tutorials/tutorials"
 
-# Source dir is opencv/doc/ — scope to the master + enabled modules only.
+# Source dir is the staged tree (or DOC_ROOT for legacy ad-hoc runs).
+# Scope: master + enabled main modules + (optionally) enabled contrib modules.
 include_patterns = ["tutorials/tutorials.markdown"] + [
     f"tutorials/{m}/**" for m in DOC_MODULES
 ] + (["js_tutorials/js_tutorials.markdown"] if JS_DOC_MODULES else []) + [
@@ -82,6 +108,9 @@ include_patterns = ["tutorials/tutorials.markdown"] + [
 ] + (["py_tutorials/py_tutorials.markdown"] if PY_DOC_MODULES else []) + [
     f"py_tutorials/{m}/**" for m in PY_DOC_MODULES
 ]
+if CONTRIB_MODULES and (SPHINX_INPUT_ROOT / "tutorials_contrib").is_dir():
+    include_patterns.append("tutorials_contrib/contrib_root.markdown")
+    include_patterns += [f"tutorials_contrib/{m}/**" for m in CONTRIB_MODULES]
 exclude_patterns = [
     "**/Thumbs.db", "**/.DS_Store", "**/_old/**",
     "tutorials/core/how_to_use_OpenCV_parallel_for_/**",
@@ -305,10 +334,13 @@ _HEAD_RE = re.compile(
     r"^#+\s+(?P<title2>[^\n]+?)\s*\{#(?P<anchor2>[\w-]+)\}\s*$",
     re.MULTILINE)
 
-def _scan_internal(path: pathlib.Path) -> None:
+def _scan_internal(path: pathlib.Path, base: pathlib.Path | None = None) -> None:
     """Add every {#anchor} and standalone `@anchor NAME` in `path` (file
     or dir) to _ANCHOR_TO_DOC. Picks up both `.markdown` (the bulk of the
-    tree) and `.md` (the form used by ports like dnn/dnn_pytorch_tf_*)."""
+    tree) and `.md` (the form used by ports like dnn/dnn_pytorch_tf_*).
+    Docname is computed relative to `base` (default SPHINX_INPUT_ROOT) so
+    the same scanner serves both main and contrib trees."""
+    base = base or SPHINX_INPUT_ROOT
     _SUFFIXES = (".markdown", ".md")
     if path.is_file():
         files = [path] if path.suffix in _SUFFIXES else []
@@ -324,7 +356,16 @@ def _scan_internal(path: pathlib.Path) -> None:
             body = md.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
-        rel = md.relative_to(DOC_ROOT).with_suffix("").as_posix()
+        # Use the unresolved path so symlinks in the staged input tree
+        # produce docnames relative to the staging root, not to their
+        # real source location (opencv/doc/ or opencv_contrib/modules/).
+        try:
+            rel = md.relative_to(base).with_suffix("").as_posix()
+        except ValueError:
+            # File lives outside `base` (e.g. js_tutorials/py_tutorials
+            # scanned from DOC_ROOT while base=SPHINX_INPUT_ROOT). Fall
+            # back to DOC_ROOT-relative naming.
+            rel = md.relative_to(DOC_ROOT).with_suffix("").as_posix()
         for m in re.finditer(r"\{#([\w-]+)\}", body):
             _ANCHOR_TO_DOC[m.group(1)] = rel
         for m in re.finditer(r"^@anchor\s+([\w-]+)\s*$", body, re.MULTILINE):
@@ -355,20 +396,29 @@ def _scan_external(toc_file: pathlib.Path) -> None:
     url = DOXYGEN_BASE_URL + _TAG_FILENAMES.get(anchor, "index.html")
     _ANCHOR_TO_EXTERNAL[anchor] = (title, url)
 
-# Internal scan: master + every enabled module subtree.
-_scan_internal(DOC_ROOT / "tutorials" / "tutorials.markdown")
-for _m in DOC_MODULES:
-    _scan_internal(DOC_ROOT / "tutorials" / _m)
+# Internal scan: master + every enabled main and contrib module subtree.
+# Walk the staged tree so docnames stay relative to SPHINX_INPUT_ROOT (Sphinx
+# srcdir), regardless of where the actual source files live on disk.
+    _scan_internal(SPHINX_INPUT_ROOT / "tutorials" / _m)
 if JS_DOC_MODULES:
-    _scan_internal(DOC_ROOT / "js_tutorials" / "js_tutorials.markdown")
+    _scan_internal(DOC_ROOT / "js_tutorials" / "js_tutorials.markdown",
+                   base=DOC_ROOT)
 for _m in JS_DOC_MODULES:
-    _scan_internal(DOC_ROOT / "js_tutorials" / _m)
+    _scan_internal(DOC_ROOT / "js_tutorials" / _m, base=DOC_ROOT)
 if PY_DOC_MODULES:
-    _scan_internal(DOC_ROOT / "py_tutorials" / "py_tutorials.markdown")
+    _scan_internal(DOC_ROOT / "py_tutorials" / "py_tutorials.markdown",
+                   base=DOC_ROOT)
 for _m in PY_DOC_MODULES:
-    _scan_internal(DOC_ROOT / "py_tutorials" / _m)
+    _scan_internal(DOC_ROOT / "py_tutorials" / _m, base=DOC_ROOT)
+_contrib_root_md = SPHINX_INPUT_ROOT / "tutorials_contrib" / "contrib_root.markdown"
+if _contrib_root_md.is_file():
+    _scan_internal(_contrib_root_md)
+for _m in CONTRIB_MODULES:
+    _scan_internal(SPHINX_INPUT_ROOT / "tutorials_contrib" / _m)
 
-# External scan: every OTHER module's top-level table_of_content_*.markdown.
+# External scan: every OTHER main module's top-level table_of_content_*.markdown.
+# Sources live under DOC_ROOT (the staged tree only contains *enabled* main
+# modules, not the rest), so scan DOC_ROOT directly here.
 for _toc in (DOC_ROOT / "tutorials").glob("*/table_of_content_*.markdown"):
     if _toc.parent.name not in DOC_MODULES:
         _scan_external(_toc)
@@ -382,14 +432,16 @@ for _toc in (DOC_ROOT / "py_tutorials").glob("*/py_table_of_contents_*.markdown"
         _scan_external(_toc)
 
 # Doxygen flattens IMAGE_PATH across every `images/` folder under the tutorial
-# tree plus the top-level `doc/images/` (per Doxyfile.in), so a tutorial can
-# reference `images/foo.png` even when `foo.png` lives in a sibling module's
-# `images/` directory or in `doc/images/`. Mirror that behavior by building a
-# basename -> doc-root-relative-path index once at import time.
-_IMAGE_INDEX: dict[str, str] = {}
+# tree plus the top-level `doc/images/` (per Doxyfile.in). Mirror that behavior
+# by building a basename -> doc-root-relative-path index once at import time.
 # js_tutorials/ uses `js_assets/` (flat directory at the js_tutorials root)
 # instead of per-tutorial `images/` folders. Include both lookup roots so
-# `![alt](js_assets/foo.jpg)` references resolve the same way.
+# `![alt](js_assets/foo.jpg)` references resolve the same way. Contrib trees
+# are scanned below: under <m>/tutorials they're indexed against the staged
+# tutorials_contrib/<m> symlink; outside <m>/tutorials they use a
+# `contrib_modules/<rel>` URL served from html_extra_path (see below).
+_IMAGE_INDEX: dict[str, str] = {}
+_IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".bmp", ".webp"}
 for _root in ((DOC_ROOT / "tutorials").rglob("images/*"),
               (DOC_ROOT / "js_tutorials").rglob("images/*"),
               (DOC_ROOT / "js_tutorials" / "js_assets").glob("*"),
@@ -398,18 +450,63 @@ for _root in ((DOC_ROOT / "tutorials").rglob("images/*"),
     for _img in _root:
         if _img.is_file():
             _IMAGE_INDEX.setdefault(_img.name, _img.relative_to(DOC_ROOT).as_posix())
+for _m in CONTRIB_MODULES:
+    _tut = CONTRIB_ROOT / _m / "tutorials"
+    if _tut.is_dir():
+        for _img in _tut.rglob("images/*"):
+            if _img.is_file():
+                _rel = _img.relative_to(_tut).as_posix()
+                _IMAGE_INDEX.setdefault(_img.name,
+                                        f"tutorials_contrib/{_m}/{_rel}")
+    # Contrib images outside <m>/tutorials/ (<m>/doc/pics, <m>/samples).
+    # URL is /contrib_modules/<m>/<rest>. Files are served from there via
+    # html_extra_path set below — no copies in srcdir.
+    for _sub in ("doc", "samples"):
+        _src = CONTRIB_ROOT / _m / _sub
+        if _src.is_dir():
+            for _img in _src.rglob("*"):
+                if _img.is_file() and _img.suffix.lower() in _IMAGE_EXTS:
+                    _rel = _img.relative_to(CONTRIB_ROOT).as_posix()
+                    _IMAGE_INDEX.setdefault(_img.name,
+                                            f"contrib_modules/{_rel}")
+
+
+# Expose each enabled contrib module as a symlink under a build-dir subdir
+# and let Sphinx's html_extra_path publish the tree to the output. Output
+# URLs are /contrib_modules/<m>/... — no files duplicated in srcdir.
+# Skipped when SPHINX_INPUT_ROOT lives inside a source tree (i.e. ad-hoc
+# sphinx-build without CMake's OPENCV_SPHINX_INPUT_ROOT) — matches the
+# documented "always build through CMake" expectation.
+html_extra_path: list[str] = []
+def _in_source_tree(p: pathlib.Path) -> bool:
+    for _root in (DOC_ROOT, CONTRIB_ROOT):
+        try: p.relative_to(_root); return True
+        except ValueError: pass
+    return False
+if not _in_source_tree(SPHINX_INPUT_ROOT):
+    _extras = SPHINX_INPUT_ROOT.parent / "contrib_extras"
+    _prefix = _extras / "contrib_modules"
+    _prefix.mkdir(parents=True, exist_ok=True)
+    for _m in CONTRIB_MODULES:
+        _src, _link = CONTRIB_ROOT / _m, _prefix / _m
+        if _src.is_dir() and not _link.exists():
+            try: _os.symlink(_src, _link, target_is_directory=True)
+            except (OSError, NotImplementedError): pass
+    html_extra_path = [str(_extras)]
 
 _TOGGLE_LABELS = {"cpp": "C++", "java": "Java", "python": "Python"}
 
 
 # Mirror of Doxygen's EXAMPLE_PATH (see opencv/doc/Doxyfile.in) — the bases a
 # bare `@snippet some/path.cpp` is resolved against. OPENCV_ROOT comes first so
-# fully-qualified paths like `samples/cpp/...` keep working.
+# fully-qualified paths like `samples/cpp/...` keep working. Contrib module
+# samples are appended so `@snippet introduction_to_svm.cpp ...` in a contrib
+# tutorial resolves to opencv_contrib/modules/<m>/samples/...
 _SNIPPET_BASES = [
     OPENCV_ROOT,
     OPENCV_ROOT / "samples",
     OPENCV_ROOT / "apps",
-]
+] + [CONTRIB_ROOT / _m / "samples" for _m in CONTRIB_MODULES]
 
 # Doxygen's Doxyfile has EXAMPLE_RECURSIVE = YES, so a bare basename like
 # `@snippet linux_quick_install.sh body` resolves to
@@ -426,7 +523,9 @@ _SNIPPET_EXTENSIONS = {
     ".js", ".ts", ".rb",
 }
 _SNIPPET_INDEX: dict[str, pathlib.Path] = {}
-for _root in (OPENCV_ROOT / "samples", OPENCV_ROOT / "apps"):
+_snippet_scan_roots = [OPENCV_ROOT / "samples", OPENCV_ROOT / "apps"] + [
+    CONTRIB_ROOT / _m / "samples" for _m in CONTRIB_MODULES]
+for _root in _snippet_scan_roots:
     if _root.is_dir():
         for _f in _root.rglob("*"):
             if _f.is_file() and _f.suffix.lower() in _SNIPPET_EXTENSIONS:
@@ -441,6 +540,10 @@ _LANG_ALIASES = {
     "unparsed": "text",
     "guess": "text",
     "gradle": "groovy",
+    # `run` is a custom convention some contrib tutorials use to mean
+    # "this is a shell command you run" (e.g. dnn_superres/upscale_image_*).
+    # Pygments has no `run` lexer — map to bash so it highlights as shell.
+    "run": "bash",
 }
 
 def _normalize_lang(lang: str) -> str:
@@ -627,6 +730,45 @@ def _translate(text: str, docname: str | None = None) -> str:
         lambda m: f"({m.group('anchor')})=\n{m.group('hashes')} {m.group('title')}",
         text, flags=re.MULTILINE)
 
+    # 1b. Convert a trailing setext heading at EOF to ATX. Otherwise
+    #     docutils rejects the doc as ending with a transition.
+    text = re.sub(
+        r"^(?P<title>[^\n#=\-][^\n]*?)[ \t]*\n(?P<bar>[=\-])[=\-]{2,}[ \t]*$\s*\Z",
+        lambda m: f"{'#' if m.group('bar') == '=' else '##'} {m.group('title').strip()}\n",
+        text, flags=re.MULTILINE)
+
+    # 1c. Convert remaining mid-doc setext H1s to ATX so 1d can see them.
+    text = re.sub(
+        r"^(?P<title>[^\n#=\-][^\n]*?)[ \t]*\n=[=]{2,}[ \t]*$",
+        lambda m: f"# {m.group('title').strip()}",
+        text, flags=re.MULTILINE)
+
+    # 1d. Demote every H1 after the first to H2 so multi-H1 Doxygen docs
+    #     (one `# Heading` per section) end up with a proper "1 title +
+    #     N sections" outline. Without this, Sphinx's toctree lists every
+    #     H1 as a separate entry on the parent TOC page.
+    def _demote_extra_h1s(src: str) -> str:
+        fence_open_re = re.compile(r'^[ \t]*(?:`{3,}|~{3,})')
+        atx_h1_re = re.compile(r'^#\s')
+        h1_count = 0
+        in_fence = False
+        out = []
+        for line in src.split('\n'):
+            if fence_open_re.match(line):
+                in_fence = not in_fence
+                out.append(line)
+                continue
+            if in_fence:
+                out.append(line)
+                continue
+            if atx_h1_re.match(line):
+                h1_count += 1
+                if h1_count > 1:
+                    line = '#' + line   # H1 → H2
+            out.append(line)
+        return '\n'.join(out)
+    text = _demote_extra_h1s(text)
+
     # 2. Doxygen LaTeX math markers
     text = re.sub(r"\\f\[(.+?)\\f\]",
                   lambda m: f"\n$$\n{m.group(1).strip()}\n$$\n",
@@ -644,13 +786,22 @@ def _translate(text: str, docname: str | None = None) -> str:
                   + r"\end{matrix}",
         text)
 
-    # 3. @code{.lang} ... @endcode
+    # 3. @code{.lang} ... @endcode → fenced block. Preserve the indent
+    #    so blocks nested under a bullet item stay inside the list; for
+    #    col-0 @code keep the legacy .strip() form (byte-identical).
     def _code_repl(m: re.Match) -> str:
+        indent = m.group("indent") or ""
         lang = _normalize_lang(m.group("lang") or "")
-        return f"\n```{lang}\n{m.group('body').strip()}\n```\n"
+        body = m.group("body")
+        if indent:
+            body = _textwrap.dedent(body).strip("\n")
+            body = "\n".join((indent + line) if line else line
+                             for line in body.split("\n"))
+            return f"\n{indent}```{lang}\n{body}\n{indent}```\n"
+        return f"\n```{lang}\n{body.strip()}\n```\n"
     text = re.sub(
-        r"@code(?:\{(?P<lang>[^}]*)\})?\s*\n(?P<body>.*?)\n\s*@endcode",
-        _code_repl, text, flags=re.DOTALL)
+        r"^(?P<indent>[ \t]*)@code(?:\{(?P<lang>[^}]*)\})?\s*\n(?P<body>.*?)\n[ \t]*@endcode",
+        _code_repl, text, flags=re.DOTALL | re.MULTILINE)
 
     # 3b. Tilde-fenced code blocks: `~~~~{.lang} ... ~~~~` (Doxygen-style).
     #     MyST treats `{.lang}` as a directive name, so `.py` raises an
@@ -692,6 +843,7 @@ def _translate(text: str, docname: str | None = None) -> str:
     # @include and @snippet both emit a plain backtick fence with the
     # captured leading indent prefixed to every body line so the fence
     # stays within an enclosing list-item content scope.
+    # ({code-block} and `:::` colon-fence forms break inside tab-items.)
     def _emit_codeblock(indent: str, lang: str, body: str) -> str:
         body_lines = body.rstrip().splitlines()
         body_indented = "\n".join(indent + line for line in body_lines)
@@ -982,12 +1134,32 @@ def _translate(text: str, docname: str | None = None) -> str:
         r"(?P<body>.+?)(?=\n[ \t]*\n|\n[ \t]*@[A-Za-z]|\Z)",
         _admon_repl, text, flags=re.DOTALL | re.MULTILINE)
 
+    # 8d. Dedent indented description paragraphs after `- @subpage X`
+    #     so they render as normal text, not as code blocks.
+    def _dedent_subpage_descriptions(src: str) -> str:
+        # Accept either 4+ spaces/tabs OR a single leading tab as the
+        # continuation indent (one tab = bullet content column in
+        # CommonMark — phase_unwrapping uses this).
+        pat = re.compile(
+            r"^(?P<bullet>[ \t]*-\s+[^\n]*@subpage\s+[\w-]+[^\n]*)\n"
+            r"(?P<desc>(?:[ \t]*\n|(?:\t|[ \t]{4,})[^\n]+(?:\n|$))+)",
+            re.MULTILINE)
+        def repl(m: re.Match) -> str:
+            desc = _textwrap.dedent(m.group("desc")).strip("\n")
+            if not desc.strip():
+                return m.group(0)
+            return f"{m.group('bullet')}\n\n{desc}\n\n"
+        return pat.sub(repl, src)
+    text = _dedent_subpage_descriptions(text)
+
     # 10. @next_tutorial / @prev_tutorial  -> drop
     text = re.sub(r"^@(?:next|prev)_tutorial\{[^}]*\}\s*$", "",
                   text, flags=re.MULTILINE)
 
-    # 11. @tableofcontents -> drop (PyData right sidebar replaces it)
-    text = re.sub(r"^@tableofcontents\s*$", "", text, flags=re.MULTILINE)
+    # 11. @tableofcontents / [TOC] -> drop. PyData's right sidebar
+    #     already shows the per-page outline.
+    text = re.sub(r"^(?:@tableofcontents|\[TOC\])\s*$", "",
+                  text, flags=re.MULTILINE)
 
     # 11b. @cond NAME ... @endcond  -> strip just the markers; if the
     #      enclosed @subpage points to a disabled module it gets dropped
@@ -1056,35 +1228,104 @@ def _translate(text: str, docname: str | None = None) -> str:
         lambda m: m.group(1) + re.sub(r"^    ", "", m.group(2), flags=re.MULTILINE),
         text, flags=re.MULTILINE)
 
+    # Depth-relative prefix from the current doc back to the site root,
+    # used to point `<img src>` at `<output>/contrib_modules/...` files
+    # that html_extra_path publishes (Sphinx can't pathto-rewrite URLs
+    # for files outside srcdir, so we compute the ../ count ourselves).
+    _depth = docname.count("/") if docname else 0
+    _contrib_url_prefix = ("../" * _depth) + "contrib_modules/"
+
+    def _emit_contrib_img(rel_url: str, alt: str) -> str:
+        """Raw-HTML <img> (or <figure> if alt is 'Figure ...') for a
+        contrib_modules/<rel> path — bypasses Sphinx's image processing
+        so the depth-relative URL survives to the rendered HTML."""
+        src = _contrib_url_prefix + rel_url
+        img = f'<img src="{src}" alt="{alt}"/>'
+        if alt.startswith("Figure "):
+            return (f'<figure>{img}'
+                    f'<figcaption>{alt}</figcaption></figure>')
+        return img
+
     # 12. Image paths "images/foo.png" or "js_assets/foo.jpg" — resolve like
     #     Doxygen's flat IMAGE_PATH: prefer the doc's own asset sibling, then
     #     fall back to a global basename lookup across every tutorial `images/`
     #     folder plus `js_tutorials/js_assets/`. As a final fallback, point at
-    #     the consolidated `tutorials/others/images/` dir (where modules like
-    #     `photo` store their assets). Also matches `<prefix>/images/foo.png`
-    #     — some tutorials prefix the directory name (multiview_calibration
-    #     does this) which Doxygen IMAGE_PATH ignores but MyST would resolve
-    #     literally and miss.
+    #     the consolidated `tutorials/others/images/` dir. For contrib pages,
+    #     resolves under `<m>/tutorials/<rest>/images/`. Also matches
+    #     `<prefix>/images/...` — some tutorials prefix the directory name
+    #     (multiview_calibration does this) which Doxygen IMAGE_PATH ignores
+    #     but MyST would resolve literally and miss.
     def _img_repl(m: re.Match) -> str:
+        alt = m.group("alt")
         rel = m.group("rel")
         asset_dir = m.group("dir")
         if docname:
-            local = DOC_ROOT / pathlib.Path(docname).parent / asset_dir / rel
-            if local.is_file():
-                return f'{m.group("pre")}images/{rel})'
+            parts = pathlib.Path(docname).parent.parts
+            local = None
+            if parts and parts[0] in ("tutorials", "js_tutorials", "py_tutorials"):
+                local = DOC_ROOT / pathlib.Path(docname).parent / asset_dir / rel
+            elif len(parts) >= 2 and parts[0] == "tutorials_contrib":
+                # Contrib doc → resolve under <m>/tutorials/<rest>/images/.
+                rest = pathlib.Path(*parts[2:]) if len(parts) > 2 else pathlib.Path()
+                local = CONTRIB_ROOT / parts[1] / "tutorials" / rest / asset_dir / rel
+            if local is not None and local.is_file():
+                return f'![{alt}]({asset_dir}/{rel})'
         hit = _IMAGE_INDEX.get(pathlib.Path(rel).name)
         if hit:
-            return f'{m.group("pre")}/{hit})'
-        return f'{m.group("pre")}/tutorials/others/images/{rel})'
+            if hit.startswith("contrib_modules/"):
+                return _emit_contrib_img(hit[len("contrib_modules/"):], alt)
+            return f'![{alt}](/{hit})'
+        return f'![{alt}](/tutorials/others/images/{rel})'
     text = re.sub(
-        r'(?P<pre>!\[[^\]]*\]\()(?:[^)]*?/)?(?P<dir>images|js_assets)/(?P<rel>[^)]+)\)',
+        r'!\[(?P<alt>[^\]]*)\]\((?:[^)]*?/)?(?P<dir>images|js_assets)/(?P<rel>[^)]+)\)',
         _img_repl, text)
 
-    # 13. Front-matter table: OpenCV tutorials use the "| -: | :- |"
-    #     alignment pattern for the Original-author/Compatibility block.
-    #     Wrap it in a {div} carrying .opencv-meta-table so custom.css
-    #     can pin the rounded card + label-column styling without us
-    #     modifying the .markdown source.
+    # 12b. Cross-tree image refs for contrib pages (Doxygen IMAGE_PATH
+    #      flattening): `pics/foo.jpg` → <m>/doc/pics/, `<m>/samples/...`,
+    #      etc. Try module-relative bases; first match becomes raw-HTML
+    #      <img> with a depth-relative /contrib_modules/<m>/<rest> URL.
+    def _img_xtree(m: re.Match) -> str:
+        alt, rel = m.group("alt"), m.group("rel")
+        if rel.startswith("/") or "://" in rel:
+            return m.group(0)
+        if rel.startswith("./"):
+            rel = rel[2:]
+        if not docname or not docname.startswith("tutorials_contrib/"):
+            return m.group(0)
+        parts = pathlib.Path(docname).parent.parts
+        if len(parts) < 2:
+            return m.group(0)
+        module = parts[1]
+        for cand in (f"{module}/doc/{rel}",
+                     f"{module}/{rel}",
+                     rel):
+            if (CONTRIB_ROOT / cand).is_file():
+                return _emit_contrib_img(cand, alt)
+        return m.group(0)
+    text = re.sub(
+        r'!\[(?P<alt>[^\]]*)\]\((?P<rel>[^)]+)\)',
+        _img_xtree, text)
+
+    # 12d. Force a blank line between consecutive `Label: ![](image)`
+    #      lines so each pair becomes its own paragraph (otherwise the
+    #      images flow inline). Skip `|`-prefixed table rows.
+    text = re.sub(
+        r"^(?P<line>(?!\|)[^\n]*!\[[^\]]*\]\([^)]+\)[^\n]*)\n"
+        r"(?=(?!\|)[^\n]*!\[[^\]]*\]\([^)]+\))",
+        r"\g<line>\n\n", text, flags=re.MULTILINE)
+
+    # 12e. `![Figure N: caption](url)` → MyST `{figure}` directive so the
+    #      caption renders visibly (plain image syntax keeps caption only
+    #      in alt=). Used by hdf/* tutorials.
+    text = re.sub(
+        r"^(?P<indent>[ \t]*)!\[(?P<caption>Figure\s[^\]]+)\]\((?P<url>[^)]+)\)\s*$",
+        lambda m: (f"{m.group('indent')}:::{{figure}} {m.group('url')}\n"
+                   f"{m.group('indent')}{m.group('caption')}\n"
+                   f"{m.group('indent')}:::"),
+        text, flags=re.MULTILINE)
+
+    # 13. Wrap the Original-author/Compatibility front-matter table
+    #     in a `.opencv-meta-table` div so custom.css can style it.
     def _wrap_front_matter(src: str) -> str:
         pat = re.compile(
             r"(^\|[^\n]*\|[ \t]*\n"     # header row (often empty)
@@ -1197,13 +1438,23 @@ def _linkify_cv_symbols(src: str) -> str:
 
 
 def _source_read(app, docname, source):
-    # Translate any tutorial doc — the root index plus everything under a
-    # module we enabled in DOC_MODULES / JS_DOC_MODULES / PY_DOC_MODULES.
+    # Translate any tutorial doc — the root index, everything under an enabled
+    # main / js / py module, plus (when staged) everything under an enabled
+    # contrib module.
     if not (docname.startswith("tutorials/")
             or docname.startswith("js_tutorials/")
-            or docname.startswith("py_tutorials/")):
+            or docname.startswith("py_tutorials/")
+            or docname.startswith("tutorials_contrib/")):
         return
-    source[0] = _translate(source[0], docname)
+    text = source[0]
+    # On the master doc, append `- @subpage tutorial_contrib_root` so the
+    # contrib site appears in the unified left sidebar without modifying
+    # opencv/doc/tutorials/tutorials.markdown on disk.
+    if (docname == "tutorials/tutorials"
+            and CONTRIB_MODULES
+            and "tutorial_contrib_root" in _ANCHOR_TO_DOC):
+        text = text.rstrip() + "\n\n- @subpage tutorial_contrib_root\n"
+    source[0] = _translate(text, docname)
 
 
 def setup(app):
