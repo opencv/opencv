@@ -8,15 +8,15 @@ typedef tuple<std::string, cv::Size> String_Size_t;
 typedef perf::TestBaseWithParam<String_Size_t> String_Size;
 
 PERF_TEST_P(String_Size, asymm_circles_grid, testing::Values(
-                String_Size_t("cv/cameracalibration/asymmetric_circles/acircles1.png", Size(7,13)),
-                String_Size_t("cv/cameracalibration/asymmetric_circles/acircles2.png", Size(7,13)),
-                String_Size_t("cv/cameracalibration/asymmetric_circles/acircles3.png", Size(7,13)),
-                String_Size_t("cv/cameracalibration/asymmetric_circles/acircles4.png", Size(5,5)),
-                String_Size_t("cv/cameracalibration/asymmetric_circles/acircles5.png", Size(5,5)),
-                String_Size_t("cv/cameracalibration/asymmetric_circles/acircles6.png", Size(5,5)),
-                String_Size_t("cv/cameracalibration/asymmetric_circles/acircles7.png", Size(3,9)),
-                String_Size_t("cv/cameracalibration/asymmetric_circles/acircles8.png", Size(3,9)),
-                String_Size_t("cv/cameracalibration/asymmetric_circles/acircles9.png", Size(3,9))
+                String_Size_t("cameracalibration/asymmetric_circles/acircles1.png", Size(7,13)),
+                String_Size_t("cameracalibration/asymmetric_circles/acircles2.png", Size(7,13)),
+                String_Size_t("cameracalibration/asymmetric_circles/acircles3.png", Size(7,13)),
+                String_Size_t("cameracalibration/asymmetric_circles/acircles4.png", Size(5,5)),
+                String_Size_t("cameracalibration/asymmetric_circles/acircles5.png", Size(5,5)),
+                String_Size_t("cameracalibration/asymmetric_circles/acircles6.png", Size(5,5)),
+                String_Size_t("cameracalibration/asymmetric_circles/acircles7.png", Size(3,9)),
+                String_Size_t("cameracalibration/asymmetric_circles/acircles8.png", Size(3,9)),
+                String_Size_t("cameracalibration/asymmetric_circles/acircles9.png", Size(3,9))
                 )
             )
 {
