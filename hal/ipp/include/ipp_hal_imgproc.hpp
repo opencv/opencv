@@ -18,6 +18,9 @@
 #if IPP_VERSION_X100 >= 810
 
 #if defined(HAVE_IPP_IW)
+
+#define CV_TYPE(src_type) (src_type & (CV_DEPTH_MAX - 1))
+
 int ipp_hal_warpAffine(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar *dst_data, size_t dst_step, int dst_width,
                        int dst_height, const double M[6], int interpolation, int borderType, const double borderValue[4]);
 
@@ -39,8 +42,6 @@ int ipp_hal_scharr(const uchar* src_data, size_t src_step, uchar* dst_data, size
 #undef cv_hal_scharr
 #define cv_hal_scharr ipp_hal_scharr
 
-#endif
-
 #if IPP_VERSION_X100 >= 202600
 
 int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar *dst_data, size_t dst_step, int dst_width,
@@ -52,12 +53,19 @@ int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step
 
 #endif // IPP_VERSION_X100 >= 202600
 
-#if defined(HAVE_IPP_IW)
 int ipp_hal_resize(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height,
                    uchar *dst_data, size_t dst_step, int dst_width, int dst_height,
                    double inv_scale_x, double inv_scale_y, int interpolation);
 #undef cv_hal_resize
 #define cv_hal_resize ipp_hal_resize
+
+int ipp_hal_remap32f(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height,
+    uchar *dst_data, size_t dst_step, int dst_width, int dst_height,
+    float* mapx, size_t mapx_step, float* mapy, size_t mapy_step,
+    int interpolation, int border_type, const double border_value[4]);
+#undef cv_hal_remap32f
+#define cv_hal_remap32f ipp_hal_remap32f
+
 #endif // HAVE_IPP_IW
 
 #if defined(HAVE_IPP_IW) && !DISABLE_IPP_BOX_FILTER
