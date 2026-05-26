@@ -174,14 +174,17 @@ struct ModelFusionQDQ
                             int8_inputs.push_back(dq->inputs[0]);
                         }
 
-                        const int eltwise_out_type = !outputs.empty() ? netimpl->argData(outputs[0]).type : -1;
-                        const bool eltwise_out_int8 = (eltwise_out_type == CV_8S || eltwise_out_type == CV_8U);
+                        const int eltwise_out_zp_type = netimpl->argData(out_zp).type;
+                        const bool eltwise_out_int8 = (eltwise_out_zp_type == CV_8S || eltwise_out_zp_type == CV_8U);
                         if (dq_ptrs.size() == add->inputs.size() && eltwise_out_int8) {
                             vector<float> in_scales(2);
                             vector<int>   in_zps(2);
                             bool eltwise_in_int8 = true;
                             for (int k = 0; k < 2; k++) {
-                                int inp_type = netimpl->argData(dq_ptrs[k]->inputs[0]).type;
+                                const int inp_type0 = netimpl->argData(dq_ptrs[k]->inputs[0]).type;
+                                const int zp_type = (dq_ptrs[k]->inputs.size() >= 3 && netimpl->isConstArg(dq_ptrs[k]->inputs[2]))
+                                    ? netimpl->argData(dq_ptrs[k]->inputs[2]).type : -1;
+                                const int inp_type = (inp_type0 >= 0) ? inp_type0 : zp_type;
                                 eltwise_in_int8 = eltwise_in_int8 && (inp_type == CV_8S || inp_type == CV_8U);
                                 in_scales[k] = netimpl->argTensor(dq_ptrs[k]->inputs[1]).at<float>(0);
                                 const Mat& zp_m = netimpl->argTensor(dq_ptrs[k]->inputs[2]);
@@ -204,6 +207,8 @@ struct ModelFusionQDQ
                             ep.input_zeropoints = in_zps;
                             ep.output_sc = out_scale_val;
                             ep.output_zp = out_zp_val;
+                            ep.operation = (add->op == NaryEltwiseLayer::OPERATION::PROD)
+                                ? "mul" : "add";
                             Ptr<Eltwise2Int8Layer> eltwiseInt8 = Eltwise2Int8Layer::create(ep);
                             eltwiseInt8->netimpl = netimpl;
                             fused_layer_idx = add_layer_idx;
@@ -288,6 +293,81 @@ struct ModelFusionQDQ
                             break;
                         }
                     }
+                }
+
+                {
+                int sig_layer_idx = -1;
+                SigmoidLayer* sigmoid_layer = 0;
+                if (getQdqPatternContext<SigmoidLayer>(layer_ptr, ninputs, inputs, producer_of,
+                                                       newprog, q_data_in, out_scale, out_zp,
+                                                       sig_layer_idx, sigmoid_layer) &&
+                    sigmoid_layer->inputs.size() == 1) {
+                    Arg sig_in = sigmoid_layer->inputs[0];
+                    int dq_idx = producer_of.at(sig_in.idx);
+                    DequantizeLinearLayer* dq = getLayer<DequantizeLinearLayer>(newprog, dq_idx);
+
+                    const int sig_out_zp_type = netimpl->argData(out_zp).type;
+                    const bool sig_out_int8 = (sig_out_zp_type == CV_8S || sig_out_zp_type == CV_8U);
+                    const int sig_in_zp_type = (dq && dq->inputs.size() >= 3 && netimpl->isConstArg(dq->inputs[2]))
+                        ? netimpl->argData(dq->inputs[2]).type : -1;
+                    const bool sig_in_int8 = (sig_in_zp_type == CV_8S || sig_in_zp_type == CV_8U);
+
+                    if (dq && dq->inputs.size() >= 3 &&
+                        areDqArgsConst(dq) &&
+                        sig_in_int8 && sig_out_int8 &&
+                        usecounts.at(sig_in.idx) == 1) {
+                        const float inp_sc = netimpl->argTensor(dq->inputs[1]).at<float>(0);
+                        const Mat& sig_in_zp_m = netimpl->argTensor(dq->inputs[2]);
+                        const int inp_zp = sig_in_zp_m.depth() == CV_8U
+                            ? (int)sig_in_zp_m.at<uint8_t>(0)
+                            : (int)sig_in_zp_m.at<int8_t>(0);
+                        const float out_sc = netimpl->argTensor(out_scale).at<float>(0);
+                        const Mat& sig_out_zp_m = netimpl->argTensor(out_zp);
+                        const int out_zp_i = sig_out_zp_m.depth() == CV_8U
+                            ? (int)sig_out_zp_m.at<uint8_t>(0)
+                            : (int)sig_out_zp_m.at<int8_t>(0);
+
+                        if (inp_sc > 0.f && out_sc > 0.f) {
+                            const bool isU8 = (sig_in_zp_type == CV_8U);
+                            Mat lookUpTable(1, 256, isU8 ? CV_8U : CV_8S);
+                            if (isU8) {
+                                uint8_t* table = lookUpTable.ptr<uint8_t>();
+                                for (int t = 0; t < 256; t++) {
+                                    float x = inp_sc * (t - inp_zp);
+                                    float y = 1.f / (1.f + std::exp(-x));
+                                    int q = out_zp_i + cvRound(y / out_sc);
+                                    table[t] = saturate_cast<uint8_t>(q);
+                                }
+                            } else {
+                                int8_t* table = lookUpTable.ptr<int8_t>();
+                                for (int t = -128; t < 128; t++) {
+                                    float x = inp_sc * (t - inp_zp);
+                                    float y = 1.f / (1.f + std::exp(-x));
+                                    int q = out_zp_i + cvRound(y / out_sc);
+                                    table[t + 128] = saturate_cast<int8_t>(q);
+                                }
+                            }
+
+                            ActivationInt8Params ap;
+                            ap.name = sigmoid_layer->name;
+                            ap.activationType = "SigmoidInt8";
+                            ap.input_sc = inp_sc;
+                            ap.input_zp = inp_zp;
+                            ap.output_sc = out_sc;
+                            ap.output_zp = out_zp_i;
+                            ap.activationLUT = lookUpTable;
+                            Ptr<ActivationLayerInt8> sigmoidInt8 = ActivationLayerInt8::create(ap);
+                            sigmoidInt8->netimpl = netimpl;
+                            fused_layer_idx = sig_layer_idx;
+                            newprog[sig_layer_idx] = sigmoidInt8;
+                            fused_inputs.assign(1, dq->inputs[0]);
+                            removed_args.push_back(q_data_in);
+                            removed_args.push_back(sig_in);
+                            newprog[dq_idx] = Ptr<Layer>();
+                            break;
+                        }
+                    }
+                }
                 }
 
                 QuantizeLinearLayer* ql_compound = dynamic_cast<QuantizeLinearLayer*>(layer_ptr);
@@ -390,6 +470,8 @@ struct ModelFusionQDQ
                                         ep2.output_sc = out_sc2;
                                         ep2.output_zp = out_zp_val2;
                                         ep2.with_relu = true;
+                                        ep2.operation = (add2->op == NaryEltwiseLayer::OPERATION::PROD)
+                                            ? "mul" : "add";
                                         Ptr<Eltwise2Int8Layer> eltInt8 = Eltwise2Int8Layer::create(ep2);
                                         eltInt8->netimpl = netimpl;
 
@@ -490,10 +572,14 @@ struct ModelFusionQDQ
                                 // SIMD iteration. When ngroups>1 and Kg<K0, multiple groups map
                                 // to the same K0-wide output slot and clobber one another, so
                                 // skip the fusion and fall back to the unfused float path.
+                                // Exception: pure depthwise (ngroups==outCn, Cg==1) is routed to
+                                // convInt8BlockDepthwise before the VNNI path and is correct.
                                 // See https://github.com/opencv/opencv/issues/28798
                                 const int outChannelsPerGroup = outCn / std::max(conv->ngroups, 1);
+                                const int inChannelsPerGroup = (w_q.dims >= 2) ? w_q.size[1] : 1;
+                                const bool isDepthwise = (conv->ngroups == outCn) && (inChannelsPerGroup == 1) && (outCn > 1);
                                 const bool kernelSupportsGrouping =
-                                    conv->ngroups <= 1 || outChannelsPerGroup >= 8;
+                                    conv->ngroups <= 1 || outChannelsPerGroup >= 8 || isDepthwise;
 
                                 if (all_wzp_zero && symmetric_pads && kernelSupportsGrouping) {
                                     Mat bias = Mat::zeros(1, outCn, CV_32S);
@@ -531,8 +617,9 @@ struct ModelFusionQDQ
                                                 Mat bq = netimpl->argTensor(dq_b->inputs[0]);
                                                 if (bq.empty() || bq.total() != (size_t)outCn || bq.depth() != CV_32S)
                                                     biasOk = false;
-                                                else
+                                                else {
                                                     bias = bq.reshape(1, 1);
+                                                }
                                             }
                                         }
                                     }
@@ -542,7 +629,7 @@ struct ModelFusionQDQ
                                     const bool inputIsU8 =
                                         (netimpl->argData(dq_x->inputs[0]).type == CV_8U) ||
                                         (x_zp_m.depth() == CV_8U);
-                                    const int inp_zp_kernel = inputIsU8 ? (inp_zp - 128) : inp_zp;
+                                    const int inp_zp_kernel = inputIsU8 ? 0 : inp_zp;
                                     Mat weights_2d = w_q.reshape(1, outCn);
                                     Mat biasFused(1, outCn, CV_32S);
                                     Mat outputMultiplier(1, outCn, CV_32F);
@@ -950,55 +1037,47 @@ struct ModelFusionQDQ
                     }
                 }
 
+                // Fuse DQ -> MaxPool -> QL into Pool2Int8 when scales/zps match.
+                {
                 int pool_layer_idx = -1;
-                PoolingLayer* pool = 0;
-                if (getQdqPatternContext<PoolingLayer>(layer_ptr, ninputs, inputs, producer_of,
+                MaxPoolLayer* maxpool = 0;
+                if (getQdqPatternContext<MaxPoolLayer>(layer_ptr, ninputs, inputs, producer_of,
                                                        newprog, q_data_in, out_scale, out_zp,
-                                                       pool_layer_idx, pool) &&
-                    pool->inputs.size() == 1) {
-                        Arg pool_in = pool->inputs[0];
+                                                       pool_layer_idx, maxpool) &&
+                    maxpool->inputs.size() == 1) {
+                        Arg pool_in = maxpool->inputs[0];
                         int dq_idx = producer_of.at(pool_in.idx);
                         DequantizeLinearLayer* dq = getLayer<DequantizeLinearLayer>(newprog, dq_idx);
-                        float inp_sc = 0.f, out_sc = 0.f;
-                        int inp_zp = 0, out_zp_i = 0;
-                        const int pool_out_type = !outputs.empty() ? netimpl->argData(outputs[0]).type : -1;
-                        const bool pool_out_int8 = (pool_out_type == CV_8S || pool_out_type == CV_8U);
-                        const int pool_in_type = (dq && !dq->inputs.empty()) ? netimpl->argData(dq->inputs[0]).type : -1;
+                        const int pool_out_zp_type = netimpl->argData(out_zp).type;
+                        const bool pool_out_int8 = (pool_out_zp_type == CV_8S || pool_out_zp_type == CV_8U);
+                        const int pool_in_type = (dq && dq->inputs.size() >= 3 && netimpl->isConstArg(dq->inputs[2]))
+                            ? netimpl->argData(dq->inputs[2]).type
+                            : ((dq && !dq->inputs.empty()) ? netimpl->argData(dq->inputs[0]).type : -1);
                         const bool pool_in_int8 = (pool_in_type == CV_8S || pool_in_type == CV_8U);
                         if (dq && dq->inputs.size() >= 3 &&
                             areDqArgsConst(dq) &&
                             pool_in_int8 && pool_out_int8 &&
                             usecounts.at(pool_in.idx) == 1) {
-                            inp_sc = netimpl->argTensor(dq->inputs[1]).at<float>(0);
+                            float inp_sc = netimpl->argTensor(dq->inputs[1]).at<float>(0);
                             const Mat& pool_zp_m = netimpl->argTensor(dq->inputs[2]);
-                            inp_zp = pool_zp_m.depth() == CV_8U
+                            int inp_zp = pool_zp_m.depth() == CV_8U
                                 ? (int)pool_zp_m.at<uint8_t>(0)
                                 : (int)pool_zp_m.at<int8_t>(0);
-                            out_sc = netimpl->argTensor(out_scale).at<float>(0);
+                            float out_sc = netimpl->argTensor(out_scale).at<float>(0);
                             const Mat& pool_out_zp_m = netimpl->argTensor(out_zp);
-                            out_zp_i = pool_out_zp_m.depth() == CV_8U
+                            int out_zp_i = pool_out_zp_m.depth() == CV_8U
                                 ? (int)pool_out_zp_m.at<uint8_t>(0)
                                 : (int)pool_out_zp_m.at<int8_t>(0);
-                            bool isGlobalAve = pool->globalPooling;
-                            bool isMax = !isGlobalAve;
-                            if ((isGlobalAve && inp_sc > 0.f && out_sc > 0.f) ||
-                                (isMax && std::abs(inp_sc - out_sc) < 1e-6f && inp_zp == out_zp_i)) {
+                            if (std::abs(inp_sc - out_sc) < 1e-6f && inp_zp == out_zp_i) {
                                 Pool2Int8Params p;
-                                p.name = pool->name;
-                                p.kernel_shape.assign(pool->kernel_size.begin(), pool->kernel_size.end());
-                                p.strides.assign(pool->strides.begin(), pool->strides.end());
-                                if (!pool->pads_begin.empty()) {
-                                    p.pads.reserve(pool->pads_begin.size() + pool->pads_end.size());
-                                    for (size_t v : pool->pads_begin) p.pads.push_back((int)v);
-                                    for (size_t v : pool->pads_end) p.pads.push_back((int)v);
-                                }
-                                if (pool->padMode == "SAME")
-                                    p.auto_pad = AUTO_PAD_SAME_UPPER;
-                                else if (pool->padMode == "VALID")
-                                    p.auto_pad = AUTO_PAD_VALID;
-                                p.ceil_mode = pool->ceilMode;
-                                p.is_global_pooling = isGlobalAve;
-                                p.is_max_pool = isMax;
+                                p.name = maxpool->name;
+                                p.kernel_shape = maxpool->kernel_shape;
+                                p.strides = maxpool->strides;
+                                p.pads = maxpool->pads;
+                                p.auto_pad = maxpool->auto_pad;
+                                p.ceil_mode = maxpool->ceil_mode;
+                                p.is_global_pooling = false;
+                                p.is_max_pool = true;
                                 p.input_sc = inp_sc;
                                 p.input_zp = inp_zp;
                                 p.output_sc = out_sc;
@@ -1015,6 +1094,7 @@ struct ModelFusionQDQ
                             }
                         }
                     }
+                }
 
                 // fuse DequantizeLinear -> DataShuffling/MaxPool -> QuantizeLinear
                 // when DQ and Q have same scale/zp, the op can work directly on int8 data.
@@ -1177,6 +1257,53 @@ struct ModelFusionQDQ
             poolInt8->inputs = maxpool->inputs;
             poolInt8->outputs = maxpool->outputs;
             newprog[j] = poolInt8;
+            modified = true;
+        }
+
+        // Fuse input QuantizeLinear into the first Conv2Int8 (float_input=true).
+        for (size_t j = 0; j < newprog.size(); j++)
+        {
+            if (newprog[j].empty()) continue;
+            Conv2Int8Layer* conv = dynamic_cast<Conv2Int8Layer*>(newprog[j].get());
+            if (!conv || conv->inputs.empty() || conv->float_input)
+                continue;
+
+            Arg conv_in0 = conv->inputs[0];
+
+            size_t ql_idx = newprog.size();
+            for (size_t k = 0; k < j; k++) {
+                if (newprog[k].empty()) continue;
+                QuantizeLinearLayer* ql_cand = dynamic_cast<QuantizeLinearLayer*>(newprog[k].get());
+                if (!ql_cand || ql_cand->outputs.empty())
+                    continue;
+                if (ql_cand->outputs[0].idx == conv_in0.idx) {
+                    ql_idx = k;
+                    break;
+                }
+            }
+            if (ql_idx >= newprog.size()) continue;
+            QuantizeLinearLayer* ql = dynamic_cast<QuantizeLinearLayer*>(newprog[ql_idx].get());
+
+            if (ql->inputs.size() < 2) continue;
+            const Arg& ql_data = ql->inputs[0];
+            if (netimpl->argKind(ql_data) != DNN_ARG_INPUT) continue;
+            int ql_out_uc = 0;
+            for (size_t k = 0; k < newprog.size(); k++) {
+                if (newprog[k].empty()) continue;
+                for (const Arg& a : newprog[k]->inputs)
+                    if (a.idx == conv_in0.idx) ql_out_uc++;
+            }
+            if (ql_out_uc != 1) continue;
+            if (!netimpl->isConstArg(ql->inputs[1])) continue;
+            if (ql->inputs.size() >= 3 && !netimpl->isConstArg(ql->inputs[2])) continue;
+            if (ql->inputs.size() >= 3) {
+                int zp_type = netimpl->argData(ql->inputs[2]).type;
+                if (zp_type != CV_8S && zp_type != CV_8U) continue;
+            }
+
+            conv->float_input = true;
+            conv->inputs[0] = ql_data;
+            newprog[ql_idx] = Ptr<Layer>();
             modified = true;
         }
 

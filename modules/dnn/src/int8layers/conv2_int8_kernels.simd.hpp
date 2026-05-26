@@ -6,6 +6,9 @@
 
 #include "opencv2/core/hal/intrin.hpp"
 #include "../layers/conv2_common.hpp"
+#if CV_AVX2 && (defined(__x86_64__) || defined(_M_X64))
+#include <immintrin.h>
+#endif
 
 #if !defined(CV_AVXVNNI_AVAILABLE)
 #if (CV_TRY_AVX2 || CV_AVX2) && \
@@ -94,10 +97,16 @@ static void convInt8BlockVNNI(const void* inp_, const void* residual_,
     size_t outtotal = outshape.total();
     if ((Kg % K0) != 0) memset(out, 0, outtotal);
 
-    int total_blocks = N * ngroups * Kblk;
+    int nkb = N * ngroups * Kblk;
+    int nthreads = std::max(1, cv::getNumThreads());
+    int min_ntiles = std::max(1, (nthreads * 4 + nkb - 1) / nkb);
+    int TILE = std::max(SPAT_BLOCK_SIZE,
+        ((planeblocks_ + min_ntiles - 1) / min_ntiles + SPAT_BLOCK_SIZE - 1) & ~(SPAT_BLOCK_SIZE - 1));
+    int ntiles = (planeblocks_ + TILE - 1) / TILE;
+    int total_tasks = nkb * ntiles;
     const __m256i v_xor = inputIsU8 ? _mm256_setzero_si256() : _mm256_set1_epi8((char)0x80);
 
-    parallel_for_(Range(0, total_blocks), [&](const Range& range) {
+    parallel_for_(Range(0, total_tasks), [&](const Range& range) {
         constexpr int C0 = 8, K0 = 8;
         constexpr int C0shift = 3;
         int D = D_, H = H_, W = W_;
@@ -115,9 +124,11 @@ static void convInt8BlockVNNI(const void* inp_, const void* residual_,
         memset(zbuf, (uint8_t)inp_zp, C0);
 
         for (int t = range.start; t < range.end; t++) {
-            int n = t / (ngroups * Kblk);
-            int rem = t - n * (ngroups * Kblk);
-            int g = rem / Kblk;
+            int tile = t % ntiles;
+            int kt   = t / ntiles;
+            int n    = kt / (ngroups * Kblk);
+            int rem  = kt - n * (ngroups * Kblk);
+            int g    = rem / Kblk;
             int kblk = rem - g * Kblk;
 
             int k_base = g * Kg + kblk * K0;
@@ -141,6 +152,12 @@ static void convInt8BlockVNNI(const void* inp_, const void* residual_,
             alignas(32) float multbuf[K0];
             memcpy(multbuf, multiplier + k_base, K0 * sizeof(float));
 
+            const int k0_off_dw = k_base & (K0-1);
+            if (cs.depthwise) {
+                biasbuf[k0_off_dw] = biasbuf[0];
+                multbuf[k0_off_dw] = multbuf[0];
+            }
+
             int D_l = D, H_l = H, W_l = W;
             int Di_l = Di, Hi_l = Hi, Wi_l = Wi;
             int iplanesize_l = iplanesize;
@@ -155,11 +172,13 @@ static void convInt8BlockVNNI(const void* inp_, const void* residual_,
                 planeblocks_l = W_l;
             }
 
-            int p = 0;
-            for (; p < planeblocks_l; p += SPAT_BLOCK_SIZE) {
-                if (p + SPAT_BLOCK_SIZE > planeblocks_l) {
-                    if (p == 0) break;
-                    p = planeblocks_l - SPAT_BLOCK_SIZE;
+            int p_start = tile * TILE;
+            int p_end   = std::min(p_start + TILE, planeblocks_l);
+            int p = p_start;
+            for (; p < p_end; p += SPAT_BLOCK_SIZE) {
+                if (p + SPAT_BLOCK_SIZE > p_end) {
+                    if (p == p_start) break;
+                    p = p_end - SPAT_BLOCK_SIZE;
                 }
 
                 Vec3i pt[SPAT_BLOCK_SIZE];
@@ -275,8 +294,9 @@ static void convInt8BlockVNNI(const void* inp_, const void* residual_,
                     __m256 facc = _mm256_add_ps( \
                         _mm256_mul_ps(_mm256_cvtepi32_ps(s##j), vmult), vzp); \
                     if (resptr) { \
-                        __m256i res32 = _mm256_cvtepi8_epi32( \
-                            _mm_loadl_epi64((const __m128i*)(resptr + (p + (j)) * K0))); \
+                        __m256i res32 = inputIsU8 \
+                            ? _mm256_cvtepu8_epi32(_mm_loadl_epi64((const __m128i*)(resptr + (p + (j)) * K0))) \
+                            : _mm256_cvtepi8_epi32(_mm_loadl_epi64((const __m128i*)(resptr + (p + (j)) * K0))); \
                         facc = _mm256_add_ps(facc, \
                             _mm256_sub_ps(_mm256_cvtepi32_ps(res32), vzp)); \
                     } \
@@ -287,13 +307,24 @@ static void convInt8BlockVNNI(const void* inp_, const void* residual_,
                     __m128i packed8 = inputIsU8 ? _mm_packus_epi16(packed16, packed16) \
                                                 : _mm_packs_epi16(packed16, packed16); \
                     int8_t* optr = outptr + (p + (j)) * K0; \
-                    if (activLUT) { \
-                        alignas(16) int8_t tmp8[16]; \
-                        _mm_store_si128((__m128i*)tmp8, packed8); \
-                        for (int k = 0; k < K0; k++) \
-                            optr[k] = (int8_t)activLUT[(int)tmp8[k] + 128]; \
+                    alignas(16) int8_t tmp8[16]; \
+                    _mm_store_si128((__m128i*)tmp8, packed8); \
+                    if (!cs.depthwise) { \
+                        if (activLUT) { \
+                            for (int k = 0; k < K0; k++) { \
+                                int lut_idx = inputIsU8 ? (int)(uint8_t)tmp8[k] : ((int)tmp8[k] + 128); \
+                                optr[k] = (int8_t)activLUT[lut_idx]; \
+                            } \
+                        } else { \
+                            _mm_storel_epi64((__m128i*)optr, packed8); \
+                        } \
                     } else { \
-                        _mm_storel_epi64((__m128i*)optr, packed8); \
+                        if (activLUT) { \
+                            int lut_idx = inputIsU8 ? (int)(uint8_t)tmp8[k0_off_dw] : ((int)tmp8[k0_off_dw] + 128); \
+                            optr[k0_off_dw] = (int8_t)activLUT[lut_idx]; \
+                        } else { \
+                            optr[k0_off_dw] = tmp8[k0_off_dw]; \
+                        } \
                     } \
                 }
                 CONV_VNNI_STORE(0); CONV_VNNI_STORE(1);
@@ -304,7 +335,7 @@ static void convInt8BlockVNNI(const void* inp_, const void* residual_,
             }
 
             // Scalar tail
-            for (; p < planeblocks_l; p++) {
+            for (; p < p_end; p++) {
                 alignas(32) int32_t acc[K0];
                 memcpy(acc, biasbuf, K0 * sizeof(int32_t));
 
@@ -326,15 +357,23 @@ static void convInt8BlockVNNI(const void* inp_, const void* residual_,
                         for (int c0 = 0; c0 < C0; c0++) {
                             int ival = inputIsU8 ? (int)(uint8_t)inptr[c0]
                                                  : (int)(uint8_t)((uint8_t)inptr[c0] ^ 0x80u);
-                            const int8_t* wp = wptr + c0 * K0;
-                            for (int k0 = 0; k0 < K0; k0++)
-                                acc[k0] += ival * (int)wp[k0];
+                            // VNNI-repacked weights: weight(c0,k0) = wptr[k0*4 + c0] (c0<4)
+                            // else wptr[32 + k0*4 + (c0-4)]
+                            if (c0 < 4) {
+                                for (int k0 = 0; k0 < K0; k0++)
+                                    acc[k0] += ival * (int)wptr[k0 * 4 + c0];
+                            } else {
+                                for (int k0 = 0; k0 < K0; k0++)
+                                    acc[k0] += ival * (int)wptr[32 + k0 * 4 + (c0 - 4)];
+                            }
                         }
                     }
                 }
                 int8_t* optr = outptr + p * K0;
                 const int8_t* rptr = resptr ? resptr + p * K0 : nullptr;
-                for (int k0 = 0; k0 < K0; k0++) {
+                int k0_lo = cs.depthwise ? k0_off_dw : 0;
+                int k0_hi = cs.depthwise ? k0_off_dw + 1 : K0;
+                for (int k0 = k0_lo; k0 < k0_hi; k0++) {
                     float val = (float)acc[k0] * multbuf[k0] + (float)out_zp;
                     if (rptr) val += (float)((int)rptr[k0] - out_zp);
                     int ival = cvRound(val);
@@ -352,6 +391,210 @@ static void convInt8BlockVNNI(const void* inp_, const void* residual_,
         }
     });
 }
+
+static void convInt8Block1x1(const void* inp_, const void* residual_,
+                              void* out_, const ConvState& cs,
+                              const void* weightsVNNI_,
+                              const int* biasVNNI, const float* multiplier,
+                              int inp_zp, int out_zp,
+                              const int8_t* activLUT,
+                              bool inputIsU8)
+{
+    constexpr int C0 = 8, K0 = 8;
+    constexpr int SPAT_BLOCK_SIZE = 8;
+
+    const MatShape& inpshape = cs.inpshape;
+    const MatShape& outshape = cs.outshape;
+
+    int N     = outshape[0];
+    int ndims = outshape.dims;
+    int K     = outshape.channels();
+    int C     = inpshape.channels();
+    int K1    = (K + K0 - 1) / K0;
+    int C1    = (C + C0 - 1) / C0;
+
+    int D_  = ndims >= 6 ? outshape[ndims-4] : 1;
+    int H_  = ndims >= 5 ? outshape[ndims-3] : 1;
+    int W_  = outshape[ndims-2];
+    int P   = D_ * H_ * W_;
+
+    int Di_ = ndims >= 6 ? inpshape[ndims-4] : 1;
+    int Hi_ = ndims >= 5 ? inpshape[ndims-3] : 1;
+    int Wi_ = inpshape[ndims-2];
+    int Pi  = Di_ * Hi_ * Wi_;
+
+    int ngroups = cs.ngroups;
+    int Kg    = K / ngroups;
+    int Cg    = C / ngroups;
+    int Kblk  = cs.wshape[1];
+    int C1Max = cs.wshape[3];
+
+    const int8_t* inp      = (const int8_t*)inp_;
+    const int8_t* residual = (const int8_t*)residual_;
+    int8_t*       out      = (int8_t*)out_;
+    const int8_t* wdata    = (const int8_t*)weightsVNNI_;
+
+    int iplanesize = Pi * C0;
+    int planesize  = P * K0;
+
+    if ((Kg % K0) != 0)
+        memset(out, 0, outshape.total());
+
+    constexpr int SB_TILE = 8;
+    int nthreads    = std::max(1, cv::getNumThreads());
+    int nkb         = N * ngroups * Kblk;
+    int min_ntiles  = std::max(1, (nthreads * 4 + nkb - 1) / nkb);
+    int TILE        = std::max(SB_TILE,
+        ((P + min_ntiles - 1) / min_ntiles + SB_TILE - 1) & ~(SB_TILE - 1));
+    int ntiles      = (P + TILE - 1) / TILE;
+    int total_tasks = nkb * ntiles;
+
+    const __m256i v_xor = inputIsU8 ? _mm256_setzero_si256() : _mm256_set1_epi8((char)0x80);
+
+    parallel_for_(Range(0, total_tasks), [&](const Range& range) {
+        constexpr int C0 = 8, K0 = 8;
+        constexpr int C0shift = 3;
+
+        for (int t = range.start; t < range.end; t++) {
+            int tile = t % ntiles;
+            int kt   = t / ntiles;
+            int n    = kt / (ngroups * Kblk);
+            int rem  = kt - n * (ngroups * Kblk);
+            int g    = rem / Kblk;
+            int kblk = rem - g * Kblk;
+
+            int k_base = g * Kg + kblk * K0;
+            if (k_base >= K) continue;
+
+            int c_start  = g * Cg;
+            int c1_start = c_start >> C0shift;
+            int c00      = c_start & (C0 - 1);
+            int cblocks  = (c00 + Cg + C0 - 1) >> C0shift;
+
+            const int8_t* inpbaseptr = inp + (size_t)(n * C1 + c1_start) * iplanesize;
+            const int8_t* wbaseptr   = wdata + (size_t)(g * Kblk + kblk) * C1Max * C0 * K0;
+
+            int k1 = k_base >> C0shift;
+            int8_t*       outptr = out      + (size_t)(n * K1 + k1) * planesize;
+            const int8_t* resptr = residual ? residual + (size_t)(n * K1 + k1) * planesize : nullptr;
+
+            alignas(32) int32_t biasbuf[K0];
+            alignas(32) float   multbuf[K0];
+            memcpy(biasbuf, biasVNNI   + k_base, K0 * sizeof(int32_t));
+            memcpy(multbuf, multiplier + k_base, K0 * sizeof(float));
+
+            int p_start = tile * TILE;
+            int p_end   = std::min(p_start + TILE, P);
+            int p = p_start;
+
+            for (; p + SPAT_BLOCK_SIZE <= p_end; p += SPAT_BLOCK_SIZE) {
+                __m256i vbias = _mm256_load_si256((const __m256i*)biasbuf);
+                __m256i s0 = vbias, s1 = vbias, s2 = vbias, s3 = vbias;
+                __m256i s4 = vbias, s5 = vbias, s6 = vbias, s7 = vbias;
+
+                const int8_t* inptr[SPAT_BLOCK_SIZE];
+                for (int j = 0; j < SPAT_BLOCK_SIZE; j++)
+                    inptr[j] = inpbaseptr + (p + j) * C0;
+
+                const int8_t* wptr = wbaseptr;
+                for (int c1 = 0; c1 < cblocks; c1++, wptr += C0 * K0) {
+                    __m256i wg0 = _mm256_load_si256((const __m256i*)(wptr));
+                    __m256i wg1 = _mm256_load_si256((const __m256i*)(wptr + 32));
+
+                    #define CONV_1x1_MAC(j) { \
+                        __m256i x0 = _mm256_xor_si256(_mm256_set1_epi32(*(const int32_t*)(inptr[(j)]    )), v_xor); \
+                        __m256i x1 = _mm256_xor_si256(_mm256_set1_epi32(*(const int32_t*)(inptr[(j)] + 4)), v_xor); \
+                        s##j = _mm256_dpbusd_epi32(s##j, x0, wg0); \
+                        s##j = _mm256_dpbusd_epi32(s##j, x1, wg1); \
+                    }
+                    CONV_1x1_MAC(0); CONV_1x1_MAC(1);
+                    CONV_1x1_MAC(2); CONV_1x1_MAC(3);
+                    CONV_1x1_MAC(4); CONV_1x1_MAC(5);
+                    CONV_1x1_MAC(6); CONV_1x1_MAC(7);
+                    #undef CONV_1x1_MAC
+
+                    for (int j = 0; j < SPAT_BLOCK_SIZE; j++)
+                        inptr[j] += iplanesize;
+                }
+
+                __m256 vmult = _mm256_load_ps(multbuf);
+                __m256 vzp   = _mm256_set1_ps((float)out_zp);
+
+                #define CONV_1x1_STORE(j) { \
+                    __m256 facc = _mm256_add_ps( \
+                        _mm256_mul_ps(_mm256_cvtepi32_ps(s##j), vmult), vzp); \
+                    if (resptr) { \
+                        __m256i res32 = inputIsU8 \
+                            ? _mm256_cvtepu8_epi32(_mm_loadl_epi64((const __m128i*)(resptr + (p + (j)) * K0))) \
+                            : _mm256_cvtepi8_epi32(_mm_loadl_epi64((const __m128i*)(resptr + (p + (j)) * K0))); \
+                        facc = _mm256_add_ps(facc, \
+                            _mm256_sub_ps(_mm256_cvtepi32_ps(res32), vzp)); \
+                    } \
+                    __m256i ival = _mm256_cvtps_epi32(facc); \
+                    __m128i lo = _mm256_castsi256_si128(ival); \
+                    __m128i hi = _mm256_extracti128_si256(ival, 1); \
+                    __m128i packed16 = _mm_packs_epi32(lo, hi); \
+                    __m128i packed8  = inputIsU8 ? _mm_packus_epi16(packed16, packed16) \
+                                                 : _mm_packs_epi16(packed16, packed16); \
+                    int8_t* optr = outptr + (p + (j)) * K0; \
+                    if (activLUT) { \
+                        alignas(16) int8_t tmp8[16]; \
+                        _mm_store_si128((__m128i*)tmp8, packed8); \
+                        for (int k = 0; k < K0; k++) { \
+                            int lut_idx = inputIsU8 ? (int)(uint8_t)tmp8[k] : ((int)tmp8[k] + 128); \
+                            optr[k] = (int8_t)activLUT[lut_idx]; \
+                        } \
+                    } else { \
+                        _mm_storel_epi64((__m128i*)optr, packed8); \
+                    } \
+                }
+                CONV_1x1_STORE(0); CONV_1x1_STORE(1);
+                CONV_1x1_STORE(2); CONV_1x1_STORE(3);
+                CONV_1x1_STORE(4); CONV_1x1_STORE(5);
+                CONV_1x1_STORE(6); CONV_1x1_STORE(7);
+                #undef CONV_1x1_STORE
+            }
+
+            for (; p < p_end; p++) {
+                alignas(32) int32_t acc[K0];
+                memcpy(acc, biasbuf, K0 * sizeof(int32_t));
+
+                const int8_t* inptr_s = inpbaseptr + (size_t)p * C0;
+                const int8_t* wptr    = wbaseptr;
+                for (int c1 = 0; c1 < cblocks; c1++, inptr_s += iplanesize, wptr += C0 * K0) {
+                    for (int c0 = 0; c0 < C0; c0++) {
+                        int iv = inputIsU8 ? (int)(uint8_t)inptr_s[c0]
+                                           : (int)(uint8_t)((uint8_t)inptr_s[c0] ^ 0x80u);
+                        const int8_t* wp = wptr + c0 * K0;
+                        for (int k0 = 0; k0 < K0; k0++)
+                            acc[k0] += iv * (int)wp[k0];
+                    }
+                }
+
+                int8_t*       optr = outptr + (size_t)p * K0;
+                const int8_t* rptr = resptr ? resptr + (size_t)p * K0 : nullptr;
+                for (int k0 = 0; k0 < K0; k0++) {
+                    float val = (float)acc[k0] * multbuf[k0] + (float)out_zp;
+                    if (rptr) {
+                        val += inputIsU8 ? (float)(int)(uint8_t)rptr[k0] - (float)out_zp
+                                         : (float)(int)rptr[k0] - (float)out_zp;
+                    }
+                    int iv = cvRound(val);
+                    if (inputIsU8) {
+                        iv = std::max(0, std::min(255, iv));
+                        if (activLUT) iv = (int)(uint8_t)activLUT[iv];
+                        ((uint8_t*)optr)[k0] = (uint8_t)iv;
+                    } else {
+                        iv = std::max(-128, std::min(127, iv));
+                        if (activLUT) iv = (int)activLUT[iv + 128];
+                        optr[k0] = (int8_t)iv;
+                    }
+                }
+            }
+        }
+    });
+}
+
 #ifdef __clang__
 #pragma clang attribute pop
 #else
@@ -861,6 +1104,395 @@ static void convInt8BlockNEON(const void* inp_, const void* residual_,
 #undef CONV_NEON_STORE
 #endif // CV_NEON && CV_NEON_DOT
 
+// INT8 depthwise convolution kernel (ngroups==K==C, Kg==Cg==1).
+static void convInt8BlockDepthwise(const void* inp_, const void* residual_,
+                                   void* out_, const ConvState& cs,
+                                   const void* weights_,
+                                   const int* bias, const float* multiplier,
+                                   int inp_zp, int out_zp,
+                                   const int8_t* activLUT,
+                                   bool inputIsU8)
+{
+    constexpr int C0 = 8, K0 = 8;
+    constexpr int MAX_CONV_DIMS = ConvState::MAX_CONV_DIMS;
+
+    const MatShape& inpshape = cs.inpshape;
+    const MatShape& outshape = cs.outshape;
+
+    int N    = outshape[0];
+    int ndims = outshape.dims;
+    int K    = outshape.channels();
+    int C    = inpshape.channels();
+    int K1   = (K + K0 - 1) / K0;
+    int C1   = (C + C0 - 1) / C0;
+
+    int D_  = ndims >= 6 ? outshape[ndims-4] : 1;
+    int H_  = ndims >= 5 ? outshape[ndims-3] : 1;
+    int W_  = outshape[ndims-2];
+    int planeblocks_ = D_ * H_ * W_;
+
+    int Di_ = ndims >= 6 ? inpshape[ndims-4] : 1;
+    int Hi_ = ndims >= 5 ? inpshape[ndims-3] : 1;
+    int Wi_ = inpshape[ndims-2];
+
+    int ngroups = cs.ngroups;
+    int ksize_  = cs.wshape[2];
+    int C1Max   = cs.wshape[3];
+
+    int Sz = cs.strides[0], Sy = cs.strides[1], Sx = cs.strides[2];
+    int padZ = cs.pads[0], padY = cs.pads[1], padX = cs.pads[2];
+
+    int innerZ0 = cs.inner[0], innerZ1 = cs.inner[MAX_CONV_DIMS];
+    int innerY0 = cs.inner[1], innerY1 = cs.inner[MAX_CONV_DIMS+1];
+    int innerX0 = cs.inner[2], innerX1 = cs.inner[MAX_CONV_DIMS+2];
+
+    const int8_t* inp      = (const int8_t*)inp_;
+    const int8_t* residual = (const int8_t*)residual_;
+    int8_t*       out      = (int8_t*)out_;
+    const int8_t* wdata    = (const int8_t*)weights_;
+    const int*    ofsZYX   = cs.coordtab.data();
+
+    int iplanesize_ = Di_ * Hi_ * Wi_ * C0;
+    int planesize_  = planeblocks_ * K0;
+
+    // Spatial tiling: split planeblocks into ntiles tiles so the total task count
+    // is N*K1*ntiles, giving all threads work even when K is small (e.g. K=16 → K1=2).
+    constexpr int SB_TILE = 8;
+    int nthreads = std::max(1, cv::getNumThreads());
+    int TILE = std::max(SB_TILE,
+        ((planeblocks_ + nthreads * 4 - 1) / (nthreads * 4) + SB_TILE - 1) & ~(SB_TILE - 1));
+    int ntiles = (planeblocks_ + TILE - 1) / TILE;
+    int total_tasks = N * K1 * ntiles;
+
+    parallel_for_(Range(0, total_tasks), [&](const Range& range) {
+        int H = H_, W = W_;
+        int Di = Di_, Hi = Hi_, Wi = Wi_;
+        int planeblocks = planeblocks_;
+        int iplanesize = iplanesize_;
+        int planesize  = planesize_;
+        int ksize      = ksize_;
+
+        for (int task = range.start; task < range.end; task++) {
+            int nk   = task / ntiles;
+            int tile = task - nk * ntiles;
+            int n    = nk / K1;
+            int k1   = nk - n * K1;
+
+            int g_start      = k1 * K0;
+            int g_end        = std::min(g_start + K0, ngroups);
+            int p_task_start = tile * TILE;
+            int p_task_end   = std::min(p_task_start + TILE, planeblocks);
+
+            const int8_t* inpbaseptr = inp      + (size_t)(n * C1 + k1) * iplanesize;
+            int8_t*       outbase    = out      + (size_t)(n * K1 + k1) * planesize;
+            const int8_t* resbase    = residual ? residual + (size_t)(n * K1 + k1) * planesize
+                                                : nullptr;
+
+
+#if CV_AVX2 && (defined(__x86_64__) || defined(_M_X64))
+            if (ksize <= 128) {
+                int n_g = g_end - g_start;
+                constexpr int SB = 8;
+
+                // Pre-gather weights for this group block into wbuf[ksize * K0].
+                alignas(32) int8_t wbuf[128 * K0];
+                for (int i = 0; i < ksize; i++) {
+                    for (int j = 0; j < n_g; j++) {
+                        int g  = g_start + j;
+                        int c0 = g % C0;
+                        wbuf[i * K0 + j] = wdata[(size_t)g * ksize * C1Max * C0 * K0
+                                                + (size_t)i * C1Max * C0 * K0
+                                                + (size_t)c0 * K0];
+                    }
+                    for (int j = n_g; j < K0; j++)
+                        wbuf[i * K0 + j] = 0;
+                }
+
+                __m256i vbias = _mm256_loadu_si256((const __m256i*)(bias + g_start));
+                __m256  vmult = _mm256_loadu_ps(multiplier + g_start);
+                __m256  vzp   = _mm256_set1_ps((float)out_zp);
+                __m128i v_xor = inputIsU8 ? _mm_setzero_si128()
+                                          : _mm_set1_epi8((char)0x80);
+
+                int p = p_task_start;
+                for (; p < p_task_end; p += SB) {
+                    if (p + SB > p_task_end) {
+                        if (p == p_task_start) break;
+                        p = p_task_end - SB;
+                    }
+
+                    Vec3i pt[SB];
+                    bool  inner_pix[SB];
+                    bool  all_inner = true;
+                    bool  same_row  = false;
+
+                    if ((p % W) + SB <= W) {
+                        same_row = true;
+                        int zj  = p / (H * W);
+                        int yxj = p - zj * H * W;
+                        int yj  = yxj / W;
+                        int xj0 = yxj - yj * W;
+                        bool zy_inner = (zj >= innerZ0 && zj < innerZ1) &&
+                                        (yj >= innerY0 && yj < innerY1);
+                        for (int j = 0; j < SB; j++) {
+                            int xj = xj0 + j;
+                            pt[j] = Vec3i(zj*Sz - padZ, yj*Sy - padY, xj*Sx - padX);
+                            inner_pix[j] = zy_inner && (xj >= innerX0 && xj < innerX1);
+                            all_inner   &= inner_pix[j];
+                        }
+                    } else {
+                        for (int j = 0; j < SB; j++) {
+                            int pj  = p + j;
+                            int zj  = pj / (H * W);
+                            int yxj = pj - zj * H * W;
+                            int yj  = yxj / W;
+                            int xj  = yxj - yj * W;
+                            pt[j] = Vec3i(zj*Sz - padZ, yj*Sy - padY, xj*Sx - padX);
+                            inner_pix[j] = (zj >= innerZ0 && zj < innerZ1) &&
+                                           (yj >= innerY0 && yj < innerY1) &&
+                                           (xj >= innerX0 && xj < innerX1);
+                            all_inner &= inner_pix[j];
+                        }
+                    }
+
+                    __m256i s0 = vbias, s1 = vbias, s2 = vbias, s3 = vbias;
+                    __m256i s4 = vbias, s5 = vbias, s6 = vbias, s7 = vbias;
+
+                    if (all_inner && same_row) {
+                        const int step = Sx * C0;
+                        for (int i = 0; i < ksize; i++) {
+                            __m128i w8  = _mm_loadl_epi64((const __m128i*)(wbuf + i * K0));
+                            __m256i w32 = _mm256_cvtepi8_epi32(w8);
+                            int zi_eff = pt[0][0] + ofsZYX[i*3];
+                            int yi_eff = pt[0][1] + ofsZYX[i*3+1];
+                            int xi_eff = pt[0][2] + ofsZYX[i*3+2];
+                            const int8_t* ip = inpbaseptr +
+                                (((zi_eff * Hi) + yi_eff) * Wi + xi_eff) * C0;
+                            #define DW_HOT(j) { \
+                                __m256i inp32 = _mm256_cvtepu8_epi32(_mm_xor_si128( \
+                                    _mm_loadl_epi64((const __m128i*)(ip+(j)*step)), v_xor)); \
+                                s##j = _mm256_add_epi32(s##j, \
+                                    _mm256_mullo_epi32(inp32, w32)); \
+                            }
+                            DW_HOT(0); DW_HOT(1); DW_HOT(2); DW_HOT(3);
+                            DW_HOT(4); DW_HOT(5); DW_HOT(6); DW_HOT(7);
+                            #undef DW_HOT
+                        }
+                    } else if (all_inner) {
+                        for (int i = 0; i < ksize; i++) {
+                            __m128i w8  = _mm_loadl_epi64((const __m128i*)(wbuf + i * K0));
+                            __m256i w32 = _mm256_cvtepi8_epi32(w8);
+                            #define DW_INNER(j) { \
+                                int zi = pt[j][0] + ofsZYX[i*3]; \
+                                int yi = pt[j][1] + ofsZYX[i*3+1]; \
+                                int xi = pt[j][2] + ofsZYX[i*3+2]; \
+                                const int8_t* ip = inpbaseptr + \
+                                    (((zi * Hi) + yi) * Wi + xi) * C0; \
+                                __m256i inp32 = _mm256_cvtepu8_epi32(_mm_xor_si128( \
+                                    _mm_loadl_epi64((const __m128i*)ip), v_xor)); \
+                                s##j = _mm256_add_epi32(s##j, \
+                                    _mm256_mullo_epi32(inp32, w32)); \
+                            }
+                            DW_INNER(0); DW_INNER(1); DW_INNER(2); DW_INNER(3);
+                            DW_INNER(4); DW_INNER(5); DW_INNER(6); DW_INNER(7);
+                            #undef DW_INNER
+                        }
+                    } else {
+                        for (int i = 0; i < ksize; i++) {
+                            __m128i w8  = _mm_loadl_epi64((const __m128i*)(wbuf + i * K0));
+                            __m256i w32 = _mm256_cvtepi8_epi32(w8);
+                            #define DW_BORDER(j) { \
+                                int zi = pt[j][0] + ofsZYX[i*3]; \
+                                int yi = pt[j][1] + ofsZYX[i*3+1]; \
+                                int xi = pt[j][2] + ofsZYX[i*3+2]; \
+                                __m256i inp32; \
+                                if (!((unsigned)zi >= (unsigned)Di || \
+                                      (unsigned)yi >= (unsigned)Hi || \
+                                      (unsigned)xi >= (unsigned)Wi)) { \
+                                    const int8_t* ip = inpbaseptr + \
+                                        (((zi * Hi) + yi) * Wi + xi) * C0; \
+                                    inp32 = _mm256_cvtepu8_epi32(_mm_xor_si128( \
+                                        _mm_loadl_epi64((const __m128i*)ip), v_xor)); \
+                                } else { \
+                                    inp32 = inputIsU8 \
+                                        ? _mm256_set1_epi32(inp_zp) \
+                                        : _mm256_set1_epi32((int)(uint8_t)((uint8_t)inp_zp ^ 0x80u)); \
+                                } \
+                                s##j = _mm256_add_epi32(s##j, _mm256_mullo_epi32(inp32, w32)); \
+                            }
+                            DW_BORDER(0); DW_BORDER(1); DW_BORDER(2); DW_BORDER(3);
+                            DW_BORDER(4); DW_BORDER(5); DW_BORDER(6); DW_BORDER(7);
+                            #undef DW_BORDER
+                        }
+                    }
+
+                    #define DW_STORE(j) { \
+                        __m256 facc = _mm256_add_ps( \
+                            _mm256_mul_ps(_mm256_cvtepi32_ps(s##j), vmult), vzp); \
+                        int8_t*       optr = outbase + (p + (j)) * K0; \
+                        const int8_t* rptr = resbase \
+                            ? resbase + (p + (j)) * K0 : nullptr; \
+                        if (rptr) { \
+                            __m256i r32 = _mm256_cvtepi8_epi32( \
+                                _mm_loadl_epi64((const __m128i*)rptr)); \
+                            facc = _mm256_add_ps(facc, _mm256_sub_ps( \
+                                _mm256_cvtepi32_ps(r32), vzp)); \
+                        } \
+                        __m256i iv  = _mm256_cvtps_epi32(facc); \
+                        __m128i lo  = _mm256_castsi256_si128(iv); \
+                        __m128i hi  = _mm256_extracti128_si256(iv, 1); \
+                        __m128i p16 = _mm_packs_epi32(lo, hi); \
+                        __m128i p8  = inputIsU8 ? _mm_packus_epi16(p16, p16) \
+                                                : _mm_packs_epi16(p16, p16); \
+                        if (activLUT) { \
+                            alignas(16) int8_t tmp8[16]; \
+                            _mm_store_si128((__m128i*)tmp8, p8); \
+                            if (inputIsU8) { \
+                                for (int jj = 0; jj < n_g; jj++) \
+                                    ((uint8_t*)optr)[jj] = \
+                                        (uint8_t)activLUT[(int)(uint8_t)tmp8[jj]]; \
+                            } else { \
+                                for (int jj = 0; jj < n_g; jj++) \
+                                    optr[jj] = (int8_t)activLUT[(int)tmp8[jj]+128]; \
+                            } \
+                        } else if (n_g == K0) { \
+                            _mm_storel_epi64((__m128i*)optr, p8); \
+                        } else { \
+                            alignas(16) int8_t tmp8[16]; \
+                            _mm_store_si128((__m128i*)tmp8, p8); \
+                            memcpy(optr, tmp8, n_g); \
+                        } \
+                    }
+                    DW_STORE(0); DW_STORE(1); DW_STORE(2); DW_STORE(3);
+                    DW_STORE(4); DW_STORE(5); DW_STORE(6); DW_STORE(7);
+                    #undef DW_STORE
+                }
+                for (; p < p_task_end; p++) {
+                    int zj  = p / (H * W);
+                    int yxj = p - zj * H * W;
+                    int yj  = yxj / W;
+                    int xj  = yxj - yj * W;
+                    int zi_base = zj * Sz - padZ, yi_base = yj * Sy - padY,
+                        xi_base = xj * Sx - padX;
+                    __m256i acc = vbias;
+                    for (int i = 0; i < ksize; i++) {
+                        int zi = zi_base + ofsZYX[i*3], yi = yi_base + ofsZYX[i*3+1],
+                            xi = xi_base + ofsZYX[i*3+2];
+                        if ((unsigned)zi>=(unsigned)Di || (unsigned)yi>=(unsigned)Hi ||
+                            (unsigned)xi>=(unsigned)Wi) continue;
+                        const int8_t* ip = inpbaseptr + (((zi*Hi)+yi)*Wi+xi)*C0;
+                        __m256i inp32 = _mm256_cvtepu8_epi32(
+                            _mm_xor_si128(_mm_loadl_epi64((const __m128i*)ip), v_xor));
+                        __m256i w32 = _mm256_cvtepi8_epi32(
+                            _mm_loadl_epi64((const __m128i*)(wbuf + i*K0)));
+                        acc = _mm256_add_epi32(acc, _mm256_mullo_epi32(inp32, w32));
+                    }
+                    __m256 facc = _mm256_add_ps(
+                        _mm256_mul_ps(_mm256_cvtepi32_ps(acc), vmult), vzp);
+                    int8_t* optr = outbase + p * K0;
+                    const int8_t* rptr = resbase ? resbase + p * K0 : nullptr;
+                    if (rptr) {
+                        facc = _mm256_add_ps(facc, _mm256_sub_ps(_mm256_cvtepi32_ps(
+                            _mm256_cvtepi8_epi32(_mm_loadl_epi64((const __m128i*)rptr))), vzp));
+                    }
+                    __m256i iv = _mm256_cvtps_epi32(facc);
+                    __m128i p16 = _mm_packs_epi32(_mm256_castsi256_si128(iv),
+                                                  _mm256_extracti128_si256(iv, 1));
+                    __m128i p8  = inputIsU8 ? _mm_packus_epi16(p16, p16)
+                                            : _mm_packs_epi16(p16, p16);
+                    if (activLUT) {
+                        alignas(16) int8_t tmp8[16];
+                        _mm_store_si128((__m128i*)tmp8, p8);
+                        if (inputIsU8)
+                            for (int jj=0; jj<n_g; jj++)
+                                ((uint8_t*)optr)[jj]=(uint8_t)activLUT[(int)(uint8_t)tmp8[jj]];
+                        else
+                            for (int jj=0; jj<n_g; jj++)
+                                optr[jj]=(int8_t)activLUT[(int)tmp8[jj]+128];
+                    } else if (n_g == K0) {
+                        _mm_storel_epi64((__m128i*)optr, p8);
+                    } else {
+                        alignas(16) int8_t tmp8[16];
+                        _mm_store_si128((__m128i*)tmp8, p8);
+                        memcpy(optr, tmp8, n_g);
+                    }
+                }
+                continue;
+            }
+#endif // CV_AVX2
+
+            for (int p = p_task_start; p < p_task_end; p++) {
+                int zj  = p / (H * W);
+                int yxj = p - zj * H * W;
+                int yj  = yxj / W;
+                int xj  = yxj - yj * W;
+
+                bool is_inner = (zj >= innerZ0 && zj < innerZ1) &&
+                                (yj >= innerY0 && yj < innerY1) &&
+                                (xj >= innerX0 && xj < innerX1);
+
+                int zi_base = zj * Sz - padZ;
+                int yi_base = yj * Sy - padY;
+                int xi_base = xj * Sx - padX;
+
+                int8_t*       optr = outbase + p * K0;
+                const int8_t* rptr = resbase ? resbase + p * K0 : nullptr;
+
+                for (int g = g_start; g < g_end; g++) {
+                    int j  = g - g_start;
+                    // For Kg=1 depthwise: kin=0, k0=0, c0=g%C0
+                    int c0 = g % C0;
+                    const int8_t* wbase_g = wdata + (size_t)g * ksize * C1Max * C0 * K0;
+                    int32_t acc = bias[g];
+
+                    if (is_inner) {
+                        for (int i = 0; i < ksize; i++) {
+                            int zi = zi_base + ofsZYX[i * 3];
+                            int yi = yi_base + ofsZYX[i * 3 + 1];
+                            int xi = xi_base + ofsZYX[i * 3 + 2];
+                            const int8_t* ip = inpbaseptr + (((zi * Hi) + yi) * Wi + xi) * C0;
+                            int ival = inputIsU8 ? (int)(uint8_t)ip[c0]
+                                                 : (int)(uint8_t)((uint8_t)ip[c0] ^ 0x80u);
+                            acc += ival * (int)wbase_g[(size_t)i * C1Max * C0 * K0 + c0 * K0];
+                        }
+                    } else {
+                        for (int i = 0; i < ksize; i++) {
+                            int zi = zi_base + ofsZYX[i * 3];
+                            int yi = yi_base + ofsZYX[i * 3 + 1];
+                            int xi = xi_base + ofsZYX[i * 3 + 2];
+                            int ival;
+                            if ((unsigned)zi >= (unsigned)Di ||
+                                (unsigned)yi >= (unsigned)Hi ||
+                                (unsigned)xi >= (unsigned)Wi) {
+                                ival = inputIsU8 ? inp_zp
+                                                 : (int)(uint8_t)((uint8_t)inp_zp ^ 0x80u);
+                            } else {
+                                const int8_t* ip = inpbaseptr + (((zi * Hi) + yi) * Wi + xi) * C0;
+                                ival = inputIsU8 ? (int)(uint8_t)ip[c0]
+                                                 : (int)(uint8_t)((uint8_t)ip[c0] ^ 0x80u);
+                            }
+                            acc += ival * (int)wbase_g[(size_t)i * C1Max * C0 * K0 + c0 * K0];
+                        }
+                    }
+
+                    float val = (float)acc * multiplier[g] + (float)out_zp;
+                    if (rptr) val += (float)((int)rptr[j] - out_zp);
+                    int ival = cvRound(val);
+                    if (inputIsU8) {
+                        ival = std::max(0, std::min(255, ival));
+                        if (activLUT) ival = (int)(uint8_t)activLUT[ival];
+                        ((uint8_t*)optr)[j] = (uint8_t)ival;
+                    } else {
+                        ival = std::max(-128, std::min(127, ival));
+                        if (activLUT) ival = (int)activLUT[ival + 128];
+                        optr[j] = (int8_t)ival;
+                    }
+                }
+            }
+        }
+    });
+}
+
 void convInt8Block(const void* inp_, const void* residual_,
                    void* out_, const ConvState& cs,
                    const void* weights_,
@@ -871,8 +1503,21 @@ void convInt8Block(const void* inp_, const void* residual_,
                    const int8_t* activLUT,
                    bool inputIsU8)
 {
+    // Dispatch to dedicated depthwise kernel before the general VNNI path.
+    if (cs.depthwise) {
+        const int* dw_bias = biasVNNI_ ? biasVNNI_ : bias;
+        convInt8BlockDepthwise(inp_, residual_, out_, cs, weights_,
+                               dw_bias, multiplier, inp_zp, out_zp, activLUT, inputIsU8);
+        return;
+    }
 #if CV_AVXVNNI_AVAILABLE
     if (cv::checkHardwareSupport(CV_CPU_AVX_VNNI) && weightsVNNI_ && biasVNNI_) {
+        if (cs.wshape[2] == 1 &&
+            cs.strides[0] == 1 && cs.strides[1] == 1 && cs.strides[2] == 1) {
+            convInt8Block1x1(inp_, residual_, out_, cs, weightsVNNI_,
+                             biasVNNI_, multiplier, inp_zp, out_zp, activLUT, inputIsU8);
+            return;
+        }
         convInt8BlockVNNI(inp_, residual_, out_, cs, weightsVNNI_,
                           biasVNNI_, multiplier, inp_zp, out_zp, activLUT, inputIsU8);
         return;
@@ -999,10 +1644,14 @@ void convInt8Block(const void* inp_, const void* residual_,
             }
 
             alignas(32) int32_t biasbuf[K0];
-            memcpy(biasbuf, bias + k_base, K0 * sizeof(int32_t));
-
             alignas(32) float multbuf[K0];
-            memcpy(multbuf, multiplier + k_base, K0 * sizeof(float));
+            {
+                int k_valid = std::min(K0, K - k_base);
+                memcpy(biasbuf, bias + k_base, k_valid * sizeof(int32_t));
+                memset(biasbuf + k_valid, 0, (K0 - k_valid) * sizeof(int32_t));
+                memcpy(multbuf, multiplier + k_base, k_valid * sizeof(float));
+                memset(multbuf + k_valid, 0, (K0 - k_valid) * sizeof(float));
+            }
 
         #if CV_AVX2
             int p = 0;
@@ -1143,8 +1792,10 @@ void convInt8Block(const void* inp_, const void* residual_,
                     if (activLUT) {
                         alignas(16) int8_t tmp8[16];
                         _mm_store_si128((__m128i*)tmp8, packed8);
-                        for (int k = 0; k < K0; k++)
-                            optr[k] = (int8_t)activLUT[(int)tmp8[k] + 128];
+                        for (int k = 0; k < K0; k++) {
+                            int lut_idx = inputIsU8 ? (int)(uint8_t)tmp8[k] : ((int)tmp8[k] + 128);
+                            optr[k] = (int8_t)activLUT[lut_idx];
+                        }
                     } else {
                         _mm_storel_epi64((__m128i*)optr, packed8);
                     }
