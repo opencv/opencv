@@ -330,7 +330,8 @@ inline void preprocess(const cv::Mat& src,
                              cv::Mat& dst) {
     // CNN input type
     const auto type = toCV(ti.type);
-    if (src.depth() != CV_8U) {
+
+    if (src.depth() != CV_8U || src.dims > 2) {
         // Just pass the tensor as-is.
         // No layout or dimension transformations done here!
         // TODO: This needs to be aligned across all NN backends.
@@ -338,10 +339,10 @@ inline void preprocess(const cv::Mat& src,
         if (tensor_dims.size() == ti.dims.size()) {
             for (size_t i = 0; i < ti.dims.size(); ++i) {
                 GAPI_Assert((ti.dims[i] == -1 || ti.dims[i] == tensor_dims[i]) &&
-                            "Non-U8 tensor dimensions should match with all non-dynamic NN input dimensions");
+                            "Tensor dimensions should match with all non-dynamic NN input dimensions");
             }
         } else {
-            GAPI_Error("Non-U8 tensor size should match with NN input");
+            GAPI_Error("Tensor size should match with NN input");
         }
 
         dst = src;
