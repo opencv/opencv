@@ -101,7 +101,8 @@ master_doc = "tutorials/tutorials"
 
 # Source dir is the staged tree (or DOC_ROOT for legacy ad-hoc runs).
 # Scope: master + enabled main modules + (optionally) enabled contrib modules.
-include_patterns = ["tutorials/tutorials.markdown"] + [
+include_patterns = ["tutorials/tutorials.markdown", "faq.markdown",
+                    "citelist.markdown", "intro.markdown"] + [
     f"tutorials/{m}/**" for m in DOC_MODULES
 ] + (["js_tutorials/js_tutorials.markdown"] if JS_DOC_MODULES else []) + [
     f"js_tutorials/{m}/**" for m in JS_DOC_MODULES
@@ -189,6 +190,18 @@ if _TAG_FILE.is_file():
                     _af = _c.findtext("filename")
                     if _short and _af:
                         _CV_SYMBOL_URL.setdefault(_short, DOXYGEN_BASE_URL + _af)
+            elif _kind == "group":
+                # Doxygen module pages (core, imgproc, dnn, …) live as
+                # `kind="group"` compounds in the tagfile. Without capturing
+                # them here, inline `@ref core` and bullet-list refs to module
+                # roots in intro.markdown don't resolve to anything.
+                _n = _c.findtext("name")
+                _f = _c.findtext("filename")
+                _t = _c.findtext("title")
+                if _n and _f:
+                    _TAG_FILENAMES[_n] = _f if _f.endswith(".html") else _f + ".html"
+                if _n and _t:
+                    _TAG_TITLES[_n] = _t
             else:
                 # `CV_*` C macros (e.g. CV_8U, CV_64F, CV_16S) live as
                 # `kind="define"` members of source-file or group compounds.
@@ -218,15 +231,290 @@ def _doxygen_url(page: str) -> str:
 # `doc/opencv.bib` sorted case-insensitively by key (Doxygen's default
 # ordering). Doxygen's live citelist.html numbers map keys to integers the
 # same way; reading from the bib means our build is self-contained and
-# doesn't need a network fetch.
+# doesn't need a network fetch.  The same parsed entries also feed the
+# Sphinx-side bibliography page generated further down, so the `[N]`
+# emitted at @cite-resolution time always matches the `[N]` rendered on
+# the citelist page.
+def _bib_parse(text: str) -> list[dict]:
+    """Walk a BibTeX file into a list of {_type, _key, field: value, ...}.
+    Brace-balanced; handles `{...}` and `"..."` value forms. Concatenation
+    (`val # "more"`) is not supported — opencv.bib doesn't use it."""
+    out: list[dict] = []
+    n, i = len(text), 0
+    while i < n:
+        m = re.search(r"@(\w+)\s*\{\s*([^\s,]+)\s*,", text[i:])
+        if not m:
+            break
+        kind, key = m.group(1), m.group(2)
+        i += m.end()
+        depth, body_start = 1, i
+        while i < n and depth > 0:
+            c = text[i]
+            if c == "{":
+                depth += 1
+            elif c == "}":
+                depth -= 1
+            i += 1
+        if depth != 0:
+            break  # malformed entry; stop rather than misparse the rest
+        out.append({"_type": kind.lower(), "_key": key,
+                    **_bib_fields(text[body_start:i - 1])})
+    return out
+
+def _bib_fields(body: str) -> dict[str, str]:
+    fields: dict[str, str] = {}
+    n, j = len(body), 0
+    while j < n:
+        while j < n and body[j] in " \t\n\r,":
+            j += 1
+        if j >= n:
+            break
+        ns = j
+        while j < n and (body[j].isalnum() or body[j] == "_"):
+            j += 1
+        name = body[ns:j].lower()
+        if not name:
+            break
+        while j < n and body[j] in " \t\n\r":
+            j += 1
+        if j >= n or body[j] != "=":
+            break
+        j += 1
+        while j < n and body[j] in " \t\n\r":
+            j += 1
+        if j >= n:
+            break
+        if body[j] == "{":
+            j += 1
+            depth, vs = 1, j
+            while j < n and depth > 0:
+                if body[j] == "{":
+                    depth += 1
+                elif body[j] == "}":
+                    depth -= 1
+                j += 1
+            value = body[vs:j - 1]
+        elif body[j] == '"':
+            j += 1
+            vs = j
+            while j < n and body[j] != '"':
+                if body[j] == "\\" and j + 1 < n:
+                    j += 1
+                j += 1
+            value = body[vs:j]
+            if j < n:
+                j += 1
+        else:
+            vs = j
+            while j < n and body[j] not in ",\n":
+                j += 1
+            value = body[vs:j].strip()
+        fields[name] = value
+    return fields
+
+# LaTeX accent + special-char cleanup. Just enough to render opencv.bib
+# readably; not a full parser.
+_LATEX_ACCENT_RE = re.compile(r"\\([\"'`^~.])\s*\{?\s*([A-Za-z])\s*\}?")
+_LATEX_ACCENT_MAP = {
+    ('"', 'a'): 'ä', ('"', 'e'): 'ë', ('"', 'i'): 'ï', ('"', 'o'): 'ö',
+    ('"', 'u'): 'ü', ('"', 'A'): 'Ä', ('"', 'O'): 'Ö', ('"', 'U'): 'Ü',
+    ("'", 'a'): 'á', ("'", 'e'): 'é', ("'", 'i'): 'í', ("'", 'o'): 'ó',
+    ("'", 'u'): 'ú', ("'", 'c'): 'ć', ("'", 'n'): 'ń', ("'", 'A'): 'Á',
+    ("'", 'E'): 'É', ("'", 'I'): 'Í', ("'", 'O'): 'Ó', ("'", 'U'): 'Ú',
+    ("`", 'a'): 'à', ("`", 'e'): 'è', ("`", 'i'): 'ì', ("`", 'o'): 'ò',
+    ("`", 'u'): 'ù',
+    ('^', 'a'): 'â', ('^', 'e'): 'ê', ('^', 'i'): 'î', ('^', 'o'): 'ô',
+    ('^', 'u'): 'û',
+    ('~', 'a'): 'ã', ('~', 'n'): 'ñ', ('~', 'o'): 'õ',
+    ('.', 'c'): 'ċ', ('.', 'e'): 'ė',
+}
+_LATEX_SPECIAL = {
+    r"\&": "&", r"\%": "%", r"\#": "#", r"\$": "$",
+    r"\_": "_", r"\{": "{", r"\}": "}",
+    r"\textendash": "–", r"\textemdash": "—",
+    r"\ldots": "…", r"\dots": "…",
+    r"\o": "ø", r"\O": "Ø", r"\ss": "ß",
+    r"\aa": "å", r"\AA": "Å", r"\ae": "æ", r"\AE": "Æ",
+    "---": "—", "--": "–",
+}
+
+def _bib_clean(s: str) -> str:
+    s = re.sub(r"\s+", " ", s or "").strip()
+    s = _LATEX_ACCENT_RE.sub(
+        lambda m: _LATEX_ACCENT_MAP.get((m.group(1), m.group(2)), m.group(2)), s)
+    for k, v in _LATEX_SPECIAL.items():
+        s = s.replace(k, v)
+    return s.replace("{", "").replace("}", "").strip()
+
+def _bib_join_authors(field: str) -> str:
+    """Render an author/editor list bibtex-plain style:
+        1 author  -> "A"
+        2 authors -> "A and B"
+        3+        -> "A, B, and C"  (Oxford comma + 'and')"""
+    if not field:
+        return ""
+    parts = re.split(r"\s+and\s+", field)
+    out: list[str] = []
+    for p in parts:
+        p = _bib_clean(p)
+        if "," in p:  # "Last, First" → "First Last"
+            last, first = p.split(",", 1)
+            p = f"{first.strip()} {last.strip()}"
+        out.append(p)
+    if len(out) <= 1:
+        return out[0] if out else ""
+    if len(out) == 2:
+        return f"{out[0]} and {out[1]}"
+    return ", ".join(out[:-1]) + f", and {out[-1]}"
+
+def _bib_render_entry(e: dict, num: int | None) -> str:
+    key = e["_key"]
+    bracket = f"[{num}]" if num is not None else f"[{key}]"
+    authors = _bib_join_authors(e.get("author") or e.get("editor") or "")
+    title  = _bib_clean(e.get("title", ""))
+    year   = _bib_clean(e.get("year", ""))
+    month  = _bib_clean(e.get("month", ""))
+    pages  = _bib_clean(e.get("pages", ""))
+    volume = _bib_clean(e.get("volume", ""))
+    number = _bib_clean(e.get("number", ""))
+    doi    = _bib_clean(e.get("doi", ""))
+    url    = _bib_clean(e.get("url", ""))
+    journal   = _bib_clean(e.get("journal", ""))
+    booktitle = _bib_clean(e.get("booktitle", ""))
+    publisher = _bib_clean(e.get("publisher") or e.get("howpublished")
+                           or e.get("institution") or "")
+
+    # bibtex `plain` style wraps the title in the URL hyperlink (or DOI URL
+    # when no `url` field is set). DOI without a URL field is rendered as a
+    # https://doi.org/... link on the title.
+    title_url = url or (f"https://doi.org/{doi}" if doi else "")
+    title_md = f"[{title}]({title_url})" if (title and title_url) else title
+
+    # date = month + year ("nov 2012") — bibtex's plain `byear` formatter.
+    date = (f"{month} {year}".strip()) if (month or year) else ""
+
+    bits: list[str] = []
+    if authors:
+        bits.append(authors)
+    if title_md:
+        bits.append(title_md)
+
+    # Venue formatting differs by entry kind (Doxygen/bibtex plain style):
+    #   @article       -> "*Journal*, V(N):pages, date."
+    #   @inproceedings -> "In *Booktitle*, pages X-Y. Publisher, date."
+    #   @incollection  -> "In *Booktitle*, pages X-Y. Publisher, date."
+    #   @book/@misc    -> "Publisher, date."   (or just date)
+    kind = e.get("_type", "")
+    if kind == "article" and journal:
+        seg = f"*{journal}*"
+        if volume:
+            seg += f", {volume}" + (f"({number})" if number else "")
+            if pages:
+                seg += f":{pages}"
+        elif pages:
+            seg += f", {pages}"
+        if date:
+            seg += f", {date}"
+        bits.append(seg)
+    elif kind in ("inproceedings", "incollection") and booktitle:
+        seg = f"In *{booktitle}*"
+        if pages:
+            seg += f", pages {pages}"
+        if publisher:
+            seg += f". {publisher}"
+        if date:
+            seg += f", {date}"
+        bits.append(seg)
+    else:
+        # @book / @misc / @techreport / fallback
+        tail = []
+        if publisher:
+            tail.append(publisher)
+        if booktitle and not publisher:
+            tail.append(f"*{booktitle}*")
+        if date:
+            tail.append(date)
+        if tail:
+            bits.append(", ".join(tail))
+
+    body = ". ".join(bits)
+    if body and not body.endswith("."):
+        body += "."
+
+    # Raw HTML anchor preserves the original CITEREF_<Key> case (matches
+    # Doxygen's URL convention exactly, so cached links to
+    # `citelist.html#CITEREF_<Key>` keep resolving on the new site too).
+    return f'<a id="CITEREF_{key}"></a>\n\n**{bracket}** {body}'
+
+def _bib_render_all(entries: list[dict], numbering: dict[str, int]) -> str:
+    out = ["Bibliography {#citelist}", "============", ""]
+    for e in entries:
+        out.append(_bib_render_entry(e, numbering.get(e["_key"])))
+        out.append("")
+    return "\n".join(out)
+
+
+def _bib_sort_key(e: dict) -> tuple:
+    """bibtex `plain` style: sort by first author's last name, then year,
+    then title.  Without this, our citelist numbering doesn't match
+    docs.opencv.org/5.x — Doxygen runs bibtex with LATEX_BIB_STYLE=plain
+    (set in doc/Doxyfile.in), which sorts by author, NOT by bib key."""
+    authors = e.get("author") or e.get("editor") or "zzz"
+    first = re.split(r"\s+and\s+", authors)[0]
+    first = _bib_clean(first)
+    if "," in first:                       # "Last, First"
+        last = first.split(",", 1)[0].strip()
+    else:                                  # "First Middle Last"
+        toks = first.split()
+        last = toks[-1] if toks else "zzz"
+    return (last.lower(),
+            _bib_clean(e.get("year", "")),
+            _bib_clean(e.get("title", "")).lower())
+
+# Discover every .bib file Doxygen would feed bibtex (see opencv/doc/
+# CMakeLists.txt: paths_bib accumulates `${m}.bib` for each module in
+# OPENCV_DOC_LIST plus the main opencv.bib).  Reading them all here is
+# what makes `[1] Achanta…` appear first — that entry lives in
+# opencv_contrib/modules/ximgproc/doc/ximgproc.bib, not in doc/opencv.bib.
+_BIB_FILES: list[pathlib.Path] = []
+if (DOC_ROOT / "opencv.bib").is_file():
+    _BIB_FILES.append(DOC_ROOT / "opencv.bib")
+_BIB_FILES += sorted((OPENCV_ROOT / "modules").glob("*/doc/*.bib"))
+if CONTRIB_ROOT.is_dir():
+    _BIB_FILES += sorted(CONTRIB_ROOT.glob("*/doc/*.bib"))
+
 _CITE_NUMBER: dict[str, int] = {}
-_BIB_FILE = DOC_ROOT / "opencv.bib"
-if _BIB_FILE.is_file():
+# Parsed entries kept in module scope so the citelist generator (below) reuses
+# the same sort order that fed `_CITE_NUMBER`. Numbering stays consistent
+# without re-parsing or re-sorting in two places.
+_BIB_ENTRIES_SORTED: list[dict] = []
+_seen_keys: set[str] = set()  # dedupe across bibs; first occurrence wins
+_all_entries: list[dict] = []
+for _bf in _BIB_FILES:
     try:
-        _bib_text = _BIB_FILE.read_text(encoding="utf-8", errors="replace")
-        _bib_keys = re.findall(r"@\w+\s*\{\s*(\S+?)\s*,", _bib_text)
-        for _i, _k in enumerate(sorted(_bib_keys, key=str.lower), 1):
-            _CITE_NUMBER[_k] = _i
+        _txt = _bf.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        continue
+    for _e in _bib_parse(_txt):
+        if _e["_key"] in _seen_keys:
+            continue
+        _seen_keys.add(_e["_key"])
+        _all_entries.append(_e)
+_BIB_ENTRIES_SORTED = sorted(_all_entries, key=_bib_sort_key)
+for _i, _e in enumerate(_BIB_ENTRIES_SORTED, 1):
+    _CITE_NUMBER[_e["_key"]] = _i
+
+# Stage the bibliography into the Sphinx srcdir so `@subpage citelist`
+# below resolves to an internal docname. Skipped when SPHINX_INPUT_ROOT
+# is DOC_ROOT (ad-hoc sphinx-build) — writing into opencv/doc/ is
+# forbidden, and `@cite` falls back to the external Doxygen URL in that
+# case (see _cite_repl).
+if _BIB_ENTRIES_SORTED and SPHINX_INPUT_ROOT != DOC_ROOT:
+    try:
+        SPHINX_INPUT_ROOT.mkdir(parents=True, exist_ok=True)
+        (SPHINX_INPUT_ROOT / "citelist.markdown").write_text(
+            _bib_render_all(_BIB_ENTRIES_SORTED, _CITE_NUMBER),
+            encoding="utf-8")
     except OSError:
         pass
 
@@ -399,6 +687,8 @@ def _scan_external(toc_file: pathlib.Path) -> None:
 # Internal scan: master + every enabled main and contrib module subtree.
 # Walk the staged tree so docnames stay relative to SPHINX_INPUT_ROOT (Sphinx
 # srcdir), regardless of where the actual source files live on disk.
+_scan_internal(SPHINX_INPUT_ROOT / "tutorials" / "tutorials.markdown")
+for _m in DOC_MODULES:
     _scan_internal(SPHINX_INPUT_ROOT / "tutorials" / _m)
 if JS_DOC_MODULES:
     _scan_internal(DOC_ROOT / "js_tutorials" / "js_tutorials.markdown",
@@ -415,6 +705,12 @@ if _contrib_root_md.is_file():
     _scan_internal(_contrib_root_md)
 for _m in CONTRIB_MODULES:
     _scan_internal(SPHINX_INPUT_ROOT / "tutorials_contrib" / _m)
+# Standalone top-level pages (siblings of tutorials/ in the staged tree).
+# Registers their {#anchor} in _ANCHOR_TO_DOC so the master-doc @subpage
+# injection below resolves to an internal docname instead of being dropped.
+_scan_internal(SPHINX_INPUT_ROOT / "faq.markdown")
+_scan_internal(SPHINX_INPUT_ROOT / "citelist.markdown")
+_scan_internal(SPHINX_INPUT_ROOT / "intro.markdown")
 
 # External scan: every OTHER main module's top-level table_of_content_*.markdown.
 # Sources live under DOC_ROOT (the staged tree only contains *enabled* main
@@ -643,10 +939,21 @@ def _translate(text: str, docname: str | None = None) -> str:
     #    is forbidden, so injection here is the only way to surface those
     #    trees in the master sidebar.
     if docname == "tutorials/tutorials":
+        # Prepend `intro` before the first existing module bullet so it
+        # leads the sidebar — matches the order in opencv/doc/root.markdown.in
+        # ("- @ref intro" sits above "- @ref tutorial_root"). FAQ and
+        # Bibliography stay appended at the end (still after the modules).
+        if "intro" in _ANCHOR_TO_DOC:
+            text = re.sub(r"^- @subpage", "- @subpage intro\n- @subpage",
+                          text, count=1, flags=re.MULTILINE)
         if JS_DOC_MODULES:
             text += "\n- @subpage tutorial_js_root\n"
         if PY_DOC_MODULES:
             text += "\n- @subpage tutorial_py_root\n"
+        if "faq" in _ANCHOR_TO_DOC:
+            text += "\n- @subpage faq\n"
+        if "citelist" in _ANCHOR_TO_DOC:
+            text += "\n- @subpage citelist\n"
 
     # 0a. py_tutorials root: rewrite specific cross-tree `@ref` items to
     #     `@subpage` so the targets join the sidebar nav. The author of
@@ -969,20 +1276,30 @@ def _translate(text: str, docname: str | None = None) -> str:
         desc_re = r"(?:(?:[ \t]*\n)*(?:[ \t]+[^\n]+\n)+)*"
         pat = re.compile(rf"((?:{bullet}{desc_re}(?:[ \t]*\n)*)+)", re.MULTILINE)
         item_pat = re.compile(
-            rf"^[ \t]*-\s+(?P<prefix>[^\n@]*?)@(?P<kind>subpage|ref)\s+(?P<anchor>[\w-]+)[^\n]*\n"
+            rf"^[ \t]*-\s+(?P<prefix>[^\n@]*?)@(?P<kind>subpage|ref)\s+(?P<anchor>[\w-]+)"
+            rf'(?:[ \t]+"(?P<disp>[^"\n]+)")?'   # optional `@ref X "Display"`
+            rf"(?P<inline>[^\n]*)\n"             # rest of line — prose like ` - desc`
             rf"(?P<desc>{desc_re})",
             re.MULTILINE)
 
         def repl(m: re.Match) -> str:
-            resolved: list[tuple[str, str, str, str, str, str]] = []  # kind, doctype, target, title, desc, prefix
+            # (kind, doctype, target, title, desc, prefix, inline)
+            resolved: list[tuple[str, str, str, str, str, str, str]] = []
             for im in item_pat.finditer(m.group(1)):
                 kind = im.group("kind")  # "subpage" or "ref"
                 anchor = im.group("anchor")
+                disp = im.group("disp")  # explicit `"Display"` overrides scanner title
                 # Bullet prefix (e.g. `stitching. ` in `-   stitching. @subpage X`)
                 # — kept as plain text before the link so the "others" TOC
                 # reads "stitching. High level stitching API" the way Doxygen
                 # renders it.
                 prefix = (im.group("prefix") or "").strip()
+                # Same-line content after the anchor (e.g. ` - build and install...`
+                # in tutorials.markdown, or ` (**core**) - a compact module...` in
+                # intro.markdown). Previously discarded; keeping it preserves the
+                # author's prose and stops bullet lists like intro's module rundown
+                # from rendering as link-only stubs.
+                inline = im.group("inline") or ""
                 desc_lines = [l.strip() for l in (im.group("desc") or "").splitlines() if l.strip()]
                 description = " ".join(desc_lines)
                 # `@ref` follows redirect chains; `@subpage` does not (it
@@ -990,14 +1307,16 @@ def _translate(text: str, docname: str | None = None) -> str:
                 lookup = _resolve_redirect(anchor) if kind == "ref" else anchor
                 if lookup in _ANCHOR_TO_DOC:
                     resolved.append((kind, "internal", _ANCHOR_TO_DOC[lookup],
-                                     _ANCHOR_TO_TITLE.get(lookup, lookup), description, prefix))
+                                     disp or _ANCHOR_TO_TITLE.get(lookup, lookup),
+                                     description, prefix, inline))
                 elif lookup in _ANCHOR_TO_EXTERNAL:
                     title, url = _ANCHOR_TO_EXTERNAL[lookup]
-                    resolved.append((kind, "external", url, title, description, prefix))
+                    resolved.append((kind, "external", url, disp or title,
+                                     description, prefix, inline))
                 elif lookup in _TAG_FILENAMES:
                     title = _TAG_TITLES.get(lookup, lookup)
                     resolved.append((kind, "external", _doxygen_url(lookup),
-                                     title, description, prefix))
+                                     disp or title, description, prefix, inline))
             if not resolved:
                 return ""
 
@@ -1010,15 +1329,24 @@ def _translate(text: str, docname: str | None = None) -> str:
             # py_tutorials root's reference to objdetect), inject a
             # synthetic @subpage in step 0 instead.
             tt_lines = []
-            for kind, doctype, target, title, _, _ in resolved:
+            for t in resolved:
+                kind, doctype, target, title = t[0], t[1], t[2], t[3]
                 if kind != "subpage":
                     continue
                 tt_lines.append("/" + target if doctype == "internal"
                                 else f"{title} <{target}>")
             tt_body = "\n".join(tt_lines)
 
-            has_descriptions = any(d for *_, d, _ in resolved)
-            has_prefixes = any(p for *_, p in resolved)
+            has_descriptions = any(t[4] for t in resolved)
+            has_prefixes     = any(t[5] for t in resolved)
+            # `inline` (same-line trailing content) alone does NOT trigger
+            # the visible-list mode — tutorials.markdown's master nav uses
+            # the `- @subpage X - one-line label` shape and was always meant
+            # to render as a plain toctree (cleaner sidebar, no body bullets).
+            # Visible mode is reserved for bullets with continuation lines
+            # (intro module rundown, py-tutorials TOCs) or a prefix label
+            # ("others" TOC). Inline still shows when visible mode is
+            # already triggered for other reasons.
             if not (has_descriptions or has_prefixes):
                 # Plain rendering -> Sphinx-style toctree directive (kept
                 # for the photo / objdetect / etc. TOCs whose bullets are
@@ -1031,11 +1359,17 @@ def _translate(text: str, docname: str | None = None) -> str:
             # Hidden toctree (subpages only) + visible list (all items).
             # Prefix sits OUTSIDE the link so Doxygen-style category labels
             # (`stitching. <link>`, `video. <link>`) render as plain text.
+            # Same-line `inline` content stays attached to the link (matches
+            # the source layout — e.g. `[link] - desc` for nav-style bullets
+            # or `[link] (**core**) - prose…` for intro's module rundown).
+            # `desc` (multi-line continuation) keeps its paragraph break so
+            # py-tutorials TOCs still render their description blocks below.
             list_lines = []
-            for _kind, doctype, target, title, desc, prefix in resolved:
+            for t in resolved:
+                doctype, target, title, desc, prefix, inline = t[1], t[2], t[3], t[4], t[5], t[6]
                 href = f"/{target}" if doctype == "internal" else target
                 prefix_text = f"{prefix} " if prefix else ""
-                list_lines.append(f"- {prefix_text}[{title}]({href})")
+                list_lines.append(f"- {prefix_text}[{title}]({href}){inline}")
                 if desc:
                     list_lines.append("")
                     list_lines.append(f"  {desc}")
@@ -1084,8 +1418,17 @@ def _translate(text: str, docname: str | None = None) -> str:
         key = m.group("key")
         num = _CITE_NUMBER.get(key)
         label = f"[{num}]" if num is not None else f"[{key}]"
-        return (f'<a href="{DOXYGEN_BASE_URL}citelist.html#CITEREF_'
-                f'{key}">{label}</a>')
+        # Internal citelist when the page got staged + scanned; otherwise
+        # fall back to the Doxygen build's citelist.html (e.g. ad-hoc
+        # sphinx-build with SPHINX_INPUT_ROOT == DOC_ROOT, where the
+        # generated page isn't written). The depth-relative URL matches
+        # the same trick used for contrib images.
+        if "citelist" in _ANCHOR_TO_DOC:
+            depth = docname.count("/") if docname else 0
+            href = ("../" * depth) + f"citelist.html#CITEREF_{key}"
+        else:
+            href = f"{DOXYGEN_BASE_URL}citelist.html#CITEREF_{key}"
+        return f'<a href="{href}">{label}</a>'
     text = _apply_outside_code(text, lambda chunk: re.sub(
         r"@cite\s+(?P<key>[\w-]+)", _cite_repl, chunk))
 
@@ -1444,7 +1787,10 @@ def _source_read(app, docname, source):
     if not (docname.startswith("tutorials/")
             or docname.startswith("js_tutorials/")
             or docname.startswith("py_tutorials/")
-            or docname.startswith("tutorials_contrib/")):
+            or docname.startswith("tutorials_contrib/")
+            or docname == "faq"
+            or docname == "citelist"
+            or docname == "intro"):
         return
     text = source[0]
     # On the master doc, append `- @subpage tutorial_contrib_root` so the

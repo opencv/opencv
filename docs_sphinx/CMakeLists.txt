@@ -44,6 +44,20 @@ file(CREATE_LINK
   "${CMAKE_SOURCE_DIR}/doc/tutorials/tutorials.markdown"
   "${_SPHINX_INPUT_TUTORIALS}/tutorials.markdown"
   SYMBOLIC COPY_ON_ERROR)
+
+# Top-level standalone pages staged at srcdir root (siblings of tutorials/).
+# Add further `file(CREATE_LINK …)` lines here if more top-level pages get
+# onboarded.  intro.markdown lives inside modules/core/doc/ (it's the core
+# module's @page; the legacy Doxygen build pulls it in via the same module
+# scan it uses for bib files) — symlink it under a flat name at srcdir root.
+file(CREATE_LINK
+  "${CMAKE_SOURCE_DIR}/doc/faq.markdown"
+  "${_SPHINX_INPUT_ROOT}/faq.markdown"
+  SYMBOLIC COPY_ON_ERROR)
+file(CREATE_LINK
+  "${CMAKE_SOURCE_DIR}/modules/core/doc/intro.markdown"
+  "${_SPHINX_INPUT_ROOT}/intro.markdown"
+  SYMBOLIC COPY_ON_ERROR)
 file(GLOB _main_tutorial_children
      RELATIVE "${CMAKE_SOURCE_DIR}/doc/tutorials"
      "${CMAKE_SOURCE_DIR}/doc/tutorials/*")
