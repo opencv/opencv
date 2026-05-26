@@ -64,7 +64,6 @@
 
 #include "opencv2/3d.hpp"
 #include "opencv2/imgproc.hpp"
-#include "opencv2/features.hpp"
 
 #include "opencv2/core/ocl.hpp"
 #include "opencv2/core/hal/intrin.hpp"
