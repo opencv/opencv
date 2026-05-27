@@ -554,7 +554,7 @@ void filterHomographyDecompByVisibleRefpoints(InputArrayOfArrays _rotations,
         }
     }
 
-    AutoBuffer<int> possibleSolutions(0);
+    std::vector<int> possibleSolutions;
     for( int i = 0; i < nsolutions; i++ )
         if( solutionMask[i] )
             possibleSolutions.push_back(i);
