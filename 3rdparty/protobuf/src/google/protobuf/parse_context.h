@@ -699,16 +699,22 @@ const char* EpsCopyInputStream::ReadPackedFixed(const char* ptr, int size,
   int nbytes = buffer_end_ + kSlopBytes - ptr;
   while (size > nbytes) {
     int num = nbytes / sizeof(T);
-    int old_entries = out->size();
-    out->Reserve(old_entries + num);
     int block_size = num * sizeof(T);
-    auto dst = out->AddNAlreadyReserved(num);
+    // Only reserve/write when there is at least one complete element in this
+    // buffer chunk.  When num==0 the AddNAlreadyReserved call would return a
+    // null pointer (uninitialized RepeatedField), making the memcpy UB even
+    // though block_size is 0 (C11 §7.1.4, __nonnull).
+    if (num > 0) {
+      int old_entries = out->size();
+      out->Reserve(old_entries + num);
+      auto dst = out->AddNAlreadyReserved(num);
 #ifdef PROTOBUF_LITTLE_ENDIAN
-    std::memcpy(dst, ptr, block_size);
+      std::memcpy(dst, ptr, block_size);
 #else
-    for (int i = 0; i < num; i++)
-      dst[i] = UnalignedLoad<T>(ptr + i * sizeof(T));
+      for (int i = 0; i < num; i++)
+        dst[i] = UnalignedLoad<T>(ptr + i * sizeof(T));
 #endif
+    }
     size -= block_size;
     if (limit_ <= kSlopBytes) return nullptr;
     ptr = Next();
@@ -716,6 +722,11 @@ const char* EpsCopyInputStream::ReadPackedFixed(const char* ptr, int size,
     ptr += kSlopBytes - (nbytes - block_size);
     nbytes = buffer_end_ + kSlopBytes - ptr;
   }
+  // A payload whose byte count is not a multiple of sizeof(T) is malformed.
+  // Checking here prevents truncation (size/sizeof(T)==0 when size<sizeof(T)),
+  // which would cause AddNAlreadyReserved to return a null pointer and the
+  // subsequent memcpy(null, ...) to invoke undefined behavior (C11 §7.1.4).
+  if (size % static_cast<int>(sizeof(T)) != 0) return nullptr;
   int num = size / sizeof(T);
   int old_entries = out->size();
   out->Reserve(old_entries + num);
@@ -727,7 +738,6 @@ const char* EpsCopyInputStream::ReadPackedFixed(const char* ptr, int size,
   for (int i = 0; i < num; i++) dst[i] = UnalignedLoad<T>(ptr + i * sizeof(T));
 #endif
   ptr += block_size;
-  if (size != block_size) return nullptr;
   return ptr;
 }
 
