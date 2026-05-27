@@ -739,6 +739,229 @@ static void conv32fC8_1x1(const void* inp__, const void* residual__, void* out__
     });
 }
 
+#if CV_SIMD256 && defined(__AVX2__)
+// 1x1 stride-1 conv, 6x16 AVX2 tile over 2 Kblks (16 Cout) per task.
+// Dispatcher requires Kblk even, K%K0==0, ngroups==1.
+static void conv32fC8_1x1_kpair(const void* inp__, const void* residual__, void* out__,
+                                 const ConvState& cs, const void* weights__,
+                                 const float* scale__, const float* bias__)
+{
+    const MatShape& inpshape = cs.inpshape;
+    const MatShape& outshape = cs.outshape;
+
+    CV_Assert_N(inpshape.layout == DATA_LAYOUT_BLOCK, outshape.layout == DATA_LAYOUT_BLOCK);
+
+    int ndims_ = outshape.dims;
+    int N = outshape[0];
+    int D_ = ndims_ >= 6 ? outshape[ndims_ - 4] : 1;
+    int H_ = ndims_ >= 5 ? outshape[ndims_ - 3] : 1;
+    int W_ = outshape[ndims_-2];
+    int planeblocks_ = D_*H_*W_;
+
+    int Kblk_ = cs.wshape[1];
+    int C1Max_ = cs.wshape[3];
+    CV_Assert((Kblk_ & 1) == 0);
+    int Kpair_ = Kblk_ / 2;
+    int total_blocks_pair = N * cs.ngroups * Kpair_;
+
+    int nSpatChunks_ = computeSpatChunks(total_blocks_pair, planeblocks_);
+    int total_tasks = total_blocks_pair * nSpatChunks_;
+
+    parallel_for_(Range(0, total_tasks), [&](const Range& range) {
+        constexpr int SPAT_BLOCK_SIZE = 6;
+        constexpr int C0shift = 3;
+        constexpr int C0 = 1 << C0shift, K0 = C0;
+
+        CV_Assert_N(inpshape.back() == C0, outshape.back() == K0);
+
+        const int C = inpshape.channels(), K = outshape.channels();
+        const int C1 = (C + C0 - 1)/C0, K1 = (K + K0 - 1)/K0;
+        const int ngroups = cs.ngroups, Kblk = Kblk_, C1Max = C1Max_;
+        const int Kpair = Kpair_;
+        const int Cg = C / ngroups;
+        const int Kg = K / ngroups;
+        const int nSpatChunks = nSpatChunks_;
+
+        int planeblocks = planeblocks_;
+        int planesize = planeblocks*K0;
+        int ndims = ndims_;
+        int Di = ndims >= 6 ? inpshape[ndims-4] : 1;
+        int Hi = ndims >= 5 ? inpshape[ndims-3] : 1;
+        int Wi = inpshape[ndims-2];
+        int iplanesize = Di*Hi*Wi*C0;
+
+        const float* scaleptr = (const float*)scale__;
+        const float* biasptr = (const float*)bias__;
+
+        FastActivation fastActivation;
+        const float* activParams;
+        ActivationFunc activation;
+        float maxval, defaultAlpha;
+        float scalebufA[K0], biasbufA[K0], alphabufA[K0];
+        float scalebufB[K0], biasbufB[K0], alphabufB[K0];
+        setupActivation(cs, K, fastActivation, activParams, activation, maxval, defaultAlpha);
+
+        for (int t = range.start; t < range.end; t++) {
+            const int block_id = t / nSpatChunks;
+            const int chunk_id = t % nSpatChunks;
+            const int p0 = chunk_id * planeblocks / nSpatChunks;
+            const int p1 = (chunk_id + 1) * planeblocks / nSpatChunks;
+            const int n = block_id / (ngroups * Kpair);
+            const int rem = block_id - n * (ngroups * Kpair);
+            const int g = rem / Kpair;
+            const int kpair_idx = rem - g * Kpair;
+            const int kblkA = kpair_idx * 2;
+            const int kblkB = kpair_idx * 2 + 1;
+
+            const int k_baseA = g * Kg + kblkA * K0;
+            const int k_baseB = g * Kg + kblkB * K0;
+            if (k_baseB >= K) continue;
+
+            const int c_start  = g * Cg;
+            const int c1_start = c_start >> C0shift;
+            const int cblocks  = (Cg + C0 - 1) >> C0shift;
+            const float* inpbaseptr = (float*)inp__ + (n * C1 + c1_start) * iplanesize;
+            const float* wbaseptrA = (float*)weights__ + (g*Kblk + kblkA)*(1*C1Max*C0*K0);
+            const float* wbaseptrB = (float*)weights__ + (g*Kblk + kblkB)*(1*C1Max*C0*K0);
+
+            fillCoeffBufs(fastActivation, activParams, defaultAlpha, K0, k_baseA, scaleptr, biasptr, scalebufA, biasbufA, alphabufA);
+            fillCoeffBufs(fastActivation, activParams, defaultAlpha, K0, k_baseB, scaleptr, biasptr, scalebufB, biasbufB, alphabufB);
+
+            float* outbaseA = (float*)out__ + n*(K1*planesize) + k_baseA*planeblocks;
+            float* outbaseB = (float*)out__ + n*(K1*planesize) + k_baseB*planeblocks;
+            const float* resbaseA = residual__ ? (float*)residual__ + n*(K1*planesize) + k_baseA*planeblocks : nullptr;
+            const float* resbaseB = residual__ ? (float*)residual__ + n*(K1*planesize) + k_baseB*planeblocks : nullptr;
+
+            const __m256 vscaleA = _mm256_loadu_ps(scalebufA);
+            const __m256 vbiasA  = _mm256_loadu_ps(biasbufA);
+            const __m256 valphaA = _mm256_loadu_ps(alphabufA);
+            const __m256 vscaleB = _mm256_loadu_ps(scalebufB);
+            const __m256 vbiasB  = _mm256_loadu_ps(biasbufB);
+            const __m256 valphaB = _mm256_loadu_ps(alphabufB);
+            const __m256 vmaxval = _mm256_set1_ps(maxval);
+            const __m256 vzero   = _mm256_setzero_ps();
+
+            int p = p0;
+            for (; p + SPAT_BLOCK_SIZE <= p1; p += SPAT_BLOCK_SIZE)
+            {
+                __m256 s0a = _mm256_setzero_ps(), s0b = _mm256_setzero_ps();
+                __m256 s1a = _mm256_setzero_ps(), s1b = _mm256_setzero_ps();
+                __m256 s2a = _mm256_setzero_ps(), s2b = _mm256_setzero_ps();
+                __m256 s3a = _mm256_setzero_ps(), s3b = _mm256_setzero_ps();
+                __m256 s4a = _mm256_setzero_ps(), s4b = _mm256_setzero_ps();
+                __m256 s5a = _mm256_setzero_ps(), s5b = _mm256_setzero_ps();
+
+                const float* inptr[SPAT_BLOCK_SIZE];
+                for (int j = 0; j < SPAT_BLOCK_SIZE; j++) {
+                    inptr[j] = inpbaseptr + (size_t)(p + j) * C0;
+                }
+                const float* wptrA = wbaseptrA;
+                const float* wptrB = wbaseptrB;
+
+                for (int c1 = 0; c1 < cblocks; c1++) {
+                    #define KPAIR_FMA_STEP(kk) do { \
+                        __m256 wa = _mm256_loadu_ps(wptrA + (kk)*K0); \
+                        __m256 wb = _mm256_loadu_ps(wptrB + (kk)*K0); \
+                        __m256 x; \
+                        x = _mm256_broadcast_ss(&inptr[0][kk]); s0a = _mm256_fmadd_ps(x, wa, s0a); s0b = _mm256_fmadd_ps(x, wb, s0b); \
+                        x = _mm256_broadcast_ss(&inptr[1][kk]); s1a = _mm256_fmadd_ps(x, wa, s1a); s1b = _mm256_fmadd_ps(x, wb, s1b); \
+                        x = _mm256_broadcast_ss(&inptr[2][kk]); s2a = _mm256_fmadd_ps(x, wa, s2a); s2b = _mm256_fmadd_ps(x, wb, s2b); \
+                        x = _mm256_broadcast_ss(&inptr[3][kk]); s3a = _mm256_fmadd_ps(x, wa, s3a); s3b = _mm256_fmadd_ps(x, wb, s3b); \
+                        x = _mm256_broadcast_ss(&inptr[4][kk]); s4a = _mm256_fmadd_ps(x, wa, s4a); s4b = _mm256_fmadd_ps(x, wb, s4b); \
+                        x = _mm256_broadcast_ss(&inptr[5][kk]); s5a = _mm256_fmadd_ps(x, wa, s5a); s5b = _mm256_fmadd_ps(x, wb, s5b); \
+                    } while (0)
+
+                    KPAIR_FMA_STEP(0); KPAIR_FMA_STEP(1);
+                    KPAIR_FMA_STEP(2); KPAIR_FMA_STEP(3);
+                    KPAIR_FMA_STEP(4); KPAIR_FMA_STEP(5);
+                    KPAIR_FMA_STEP(6); KPAIR_FMA_STEP(7);
+                    #undef KPAIR_FMA_STEP
+
+                    wptrA += C0*K0;
+                    wptrB += C0*K0;
+                    inptr[0] += iplanesize; inptr[1] += iplanesize;
+                    inptr[2] += iplanesize; inptr[3] += iplanesize;
+                    inptr[4] += iplanesize; inptr[5] += iplanesize;
+                }
+
+                float* outA = outbaseA + (size_t)p * K0;
+                float* outB = outbaseB + (size_t)p * K0;
+
+                #define KPAIR_FINALIZE(idx) do { \
+                    __m256 sa = _mm256_fmadd_ps(s##idx##a, vscaleA, vbiasA); \
+                    __m256 sb = _mm256_fmadd_ps(s##idx##b, vscaleB, vbiasB); \
+                    if (resbaseA) { \
+                        sa = _mm256_add_ps(sa, _mm256_loadu_ps(resbaseA + (size_t)(p + idx) * K0)); \
+                        sb = _mm256_add_ps(sb, _mm256_loadu_ps(resbaseB + (size_t)(p + idx) * K0)); \
+                    } \
+                    __m256 maskA = _mm256_cmp_ps(sa, vzero, _CMP_GE_OQ); \
+                    __m256 maskB = _mm256_cmp_ps(sb, vzero, _CMP_GE_OQ); \
+                    sa = _mm256_blendv_ps(_mm256_mul_ps(sa, valphaA), sa, maskA); \
+                    sb = _mm256_blendv_ps(_mm256_mul_ps(sb, valphaB), sb, maskB); \
+                    sa = _mm256_min_ps(sa, vmaxval); \
+                    sb = _mm256_min_ps(sb, vmaxval); \
+                    _mm256_storeu_ps(outA + (size_t)idx * K0, sa); \
+                    _mm256_storeu_ps(outB + (size_t)idx * K0, sb); \
+                } while (0)
+
+                KPAIR_FINALIZE(0); KPAIR_FINALIZE(1); KPAIR_FINALIZE(2);
+                KPAIR_FINALIZE(3); KPAIR_FINALIZE(4); KPAIR_FINALIZE(5);
+                #undef KPAIR_FINALIZE
+
+                if (activation) {
+                    activation(outA, outA, SPAT_BLOCK_SIZE*K0, activParams);
+                    activation(outB, outB, SPAT_BLOCK_SIZE*K0, activParams);
+                }
+            }
+
+            // Scalar tail.
+            for (; p < p1; p++)
+            {
+                __m256 sa = _mm256_setzero_ps();
+                __m256 sb = _mm256_setzero_ps();
+
+                const float* inptr = inpbaseptr + (size_t)p * C0;
+                const float* wptrA_s = wbaseptrA;
+                const float* wptrB_s = wbaseptrB;
+
+                for (int c1 = 0; c1 < cblocks; ++c1, inptr += iplanesize, wptrA_s += K0*C0, wptrB_s += K0*C0) {
+                    for (int kk = 0; kk < C0; kk++) {
+                        __m256 wa = _mm256_loadu_ps(wptrA_s + kk*K0);
+                        __m256 wb = _mm256_loadu_ps(wptrB_s + kk*K0);
+                        __m256 x  = _mm256_broadcast_ss(&inptr[kk]);
+                        sa = _mm256_fmadd_ps(x, wa, sa);
+                        sb = _mm256_fmadd_ps(x, wb, sb);
+                    }
+                }
+
+                sa = _mm256_fmadd_ps(sa, vscaleA, vbiasA);
+                sb = _mm256_fmadd_ps(sb, vscaleB, vbiasB);
+                if (resbaseA) {
+                    sa = _mm256_add_ps(sa, _mm256_loadu_ps(resbaseA + (size_t)p * K0));
+                    sb = _mm256_add_ps(sb, _mm256_loadu_ps(resbaseB + (size_t)p * K0));
+                }
+                __m256 maskA = _mm256_cmp_ps(sa, vzero, _CMP_GE_OQ);
+                __m256 maskB = _mm256_cmp_ps(sb, vzero, _CMP_GE_OQ);
+                sa = _mm256_blendv_ps(_mm256_mul_ps(sa, valphaA), sa, maskA);
+                sb = _mm256_blendv_ps(_mm256_mul_ps(sb, valphaB), sb, maskB);
+                sa = _mm256_min_ps(sa, vmaxval);
+                sb = _mm256_min_ps(sb, vmaxval);
+
+                float* outA_s = outbaseA + (size_t)p * K0;
+                float* outB_s = outbaseB + (size_t)p * K0;
+                _mm256_storeu_ps(outA_s, sa);
+                _mm256_storeu_ps(outB_s, sb);
+
+                if (activation) {
+                    activation(outA_s, outA_s, K0, activParams);
+                    activation(outB_s, outB_s, K0, activParams);
+                }
+            }
+        }
+    });
+}
+#endif // CV_SIMD256 && __AVX2__
+
 // Specialized 2D 3x3 convolution kernel with stride=1, dilation=1.
 static void conv32fC8_3x3s1(const void* inp__, const void* residual__, void* out__,
                               const ConvState& cs, const void* weights__,
@@ -1019,18 +1242,826 @@ static void conv32fC8_3x3s1(const void* inp__, const void* residual__, void* out
     });
 }
 
+#if CV_SIMD256 && defined(__AVX2__)
+// 3x3 stride-1 conv, same 6x16 AVX2 / 2-Kblk shape as conv32fC8_1x1_kpair.
+// Dispatcher requires ksize=9, strides=1, dilations=1, Kblk even, K%K0==0, ngroups==1.
+static void conv32fC8_3x3s1_kpair(const void* inp__, const void* residual__, void* out__,
+                                  const ConvState& cs, const void* weights__,
+                                  const float* scale__, const float* bias__)
+{
+    const MatShape& inpshape = cs.inpshape;
+    const MatShape& outshape = cs.outshape;
+
+    CV_Assert_N(inpshape.layout == DATA_LAYOUT_BLOCK, outshape.layout == DATA_LAYOUT_BLOCK);
+
+    int ndims_ = outshape.dims;
+    int N = outshape[0];
+    int H_ = ndims_ >= 5 ? outshape[ndims_ - 3] : 1;
+    int W_ = outshape[ndims_-2];
+    int planeblocks_ = H_*W_;
+
+    int Kblk_ = cs.wshape[1];
+    int C1Max_ = cs.wshape[3];
+    CV_Assert((Kblk_ & 1) == 0);
+    int Kpair_ = Kblk_ / 2;
+    int total_blocks_pair = N * cs.ngroups * Kpair_;
+
+    int nSpatChunks_ = computeSpatChunks(total_blocks_pair, planeblocks_);
+    int total_tasks = total_blocks_pair * nSpatChunks_;
+
+    parallel_for_(Range(0, total_tasks), [&](const Range& range) {
+        constexpr int SPAT_BLOCK_SIZE = 6;
+        constexpr int C0shift = 3;
+        constexpr int C0 = 1 << C0shift, K0 = C0;
+
+        CV_Assert_N(inpshape.back() == C0, outshape.back() == K0);
+
+        const int C = inpshape.channels(), K = outshape.channels();
+        const int C1 = (C + C0 - 1)/C0, K1 = (K + K0 - 1)/K0;
+        const int ngroups = cs.ngroups, Kblk = Kblk_, C1Max = C1Max_;
+        const int Kpair = Kpair_;
+        const int Cg = C / ngroups;
+        const int Kg = K / ngroups;
+        const int nSpatChunks = nSpatChunks_;
+        const int W = W_;
+        const int Hi = ndims_ >= 5 ? inpshape[ndims_-3] : 1;
+        const int Wi = inpshape[ndims_-2];
+        const int padY = cs.pads[1], padX = cs.pads[2];
+        int planeblocks = planeblocks_;
+        int planesize = planeblocks*K0;
+        int iplanesize = Hi*Wi*C0;
+
+        constexpr int MAX_CONV_DIMS = ConvState::MAX_CONV_DIMS;
+        const int innerY0 = cs.inner[1], innerY1 = cs.inner[MAX_CONV_DIMS+1];
+        const int innerX0 = cs.inner[2], innerX1 = cs.inner[MAX_CONV_DIMS+2];
+
+        const float* scaleptr = (const float*)scale__;
+        const float* biasptr = (const float*)bias__;
+
+        FastActivation fastActivation;
+        const float* activParams;
+        ActivationFunc activation;
+        float maxval, defaultAlpha;
+        float scalebufA[K0], biasbufA[K0], alphabufA[K0];
+        float scalebufB[K0], biasbufB[K0], alphabufB[K0];
+        setupActivation(cs, K, fastActivation, activParams, activation, maxval, defaultAlpha);
+
+        for (int t = range.start; t < range.end; t++) {
+            const int block_id = t / nSpatChunks;
+            const int chunk_id = t % nSpatChunks;
+            const int p0 = chunk_id * planeblocks / nSpatChunks;
+            const int p1 = (chunk_id + 1) * planeblocks / nSpatChunks;
+            const int n = block_id / (ngroups * Kpair);
+            const int rem = block_id - n * (ngroups * Kpair);
+            const int g = rem / Kpair;
+            const int kpair_idx = rem - g * Kpair;
+            const int kblkA = kpair_idx * 2;
+            const int kblkB = kpair_idx * 2 + 1;
+
+            const int k_baseA = g * Kg + kblkA * K0;
+            const int k_baseB = g * Kg + kblkB * K0;
+            if (k_baseB >= K) continue;
+
+            const int c_start  = g * Cg;
+            const int c1_start = c_start >> C0shift;
+            const int cblocks  = (Cg + C0 - 1) >> C0shift;
+            const float* inpbaseptr = (float*)inp__ + (n * C1 + c1_start) * iplanesize;
+            const float* wbaseptrA = (float*)weights__ + (g*Kblk + kblkA)*(9*C1Max*C0*K0);
+            const float* wbaseptrB = (float*)weights__ + (g*Kblk + kblkB)*(9*C1Max*C0*K0);
+
+            fillCoeffBufs(fastActivation, activParams, defaultAlpha, K0, k_baseA, scaleptr, biasptr, scalebufA, biasbufA, alphabufA);
+            fillCoeffBufs(fastActivation, activParams, defaultAlpha, K0, k_baseB, scaleptr, biasptr, scalebufB, biasbufB, alphabufB);
+
+            float* outbaseA = (float*)out__ + n*(K1*planesize) + k_baseA*planeblocks;
+            float* outbaseB = (float*)out__ + n*(K1*planesize) + k_baseB*planeblocks;
+            const float* resbaseA = residual__ ? (float*)residual__ + n*(K1*planesize) + k_baseA*planeblocks : nullptr;
+            const float* resbaseB = residual__ ? (float*)residual__ + n*(K1*planesize) + k_baseB*planeblocks : nullptr;
+
+            const __m256 vscaleA = _mm256_loadu_ps(scalebufA);
+            const __m256 vbiasA  = _mm256_loadu_ps(biasbufA);
+            const __m256 valphaA = _mm256_loadu_ps(alphabufA);
+            const __m256 vscaleB = _mm256_loadu_ps(scalebufB);
+            const __m256 vbiasB  = _mm256_loadu_ps(biasbufB);
+            const __m256 valphaB = _mm256_loadu_ps(alphabufB);
+            const __m256 vmaxval = _mm256_set1_ps(maxval);
+            const __m256 vzero   = _mm256_setzero_ps();
+
+            int inp_ofs[9];
+            for (int ky = 0; ky < 3; ky++)
+                for (int kx = 0; kx < 3; kx++)
+                    inp_ofs[ky*3 + kx] = (ky * Wi + kx) * C0;
+            float zbuf[C0] = {};
+
+            int p = p0;
+            for (; p + SPAT_BLOCK_SIZE <= p1; p += SPAT_BLOCK_SIZE)
+            {
+                __m256 s0a = _mm256_setzero_ps(), s0b = _mm256_setzero_ps();
+                __m256 s1a = _mm256_setzero_ps(), s1b = _mm256_setzero_ps();
+                __m256 s2a = _mm256_setzero_ps(), s2b = _mm256_setzero_ps();
+                __m256 s3a = _mm256_setzero_ps(), s3b = _mm256_setzero_ps();
+                __m256 s4a = _mm256_setzero_ps(), s4b = _mm256_setzero_ps();
+                __m256 s5a = _mm256_setzero_ps(), s5b = _mm256_setzero_ps();
+
+                int yj = p / W;
+                int xj = p - yj * W;
+                int yi_base = yj - padY;
+                int xi_base = xj - padX;
+                bool same_row = (xj + SPAT_BLOCK_SIZE <= W);
+                bool y_inner = (yj >= innerY0 && yj < innerY1);
+                bool all_inner = same_row && y_inner && (xj >= innerX0) &&
+                                 (xj + SPAT_BLOCK_SIZE - 1 < innerX1);
+
+                #define KPAIR3_FMA_BODY(getbase) do { \
+                    for (int kpos = 0; kpos < 9; kpos++) { \
+                        const float* kwptrA = wbaseptrA + kpos * C1Max * C0 * K0; \
+                        const float* kwptrB = wbaseptrB + kpos * C1Max * C0 * K0; \
+                        for (int c1 = 0; c1 < cblocks; c1++) { \
+                            const float* b0 = getbase(0, kpos, c1); \
+                            const float* b1 = getbase(1, kpos, c1); \
+                            const float* b2 = getbase(2, kpos, c1); \
+                            const float* b3 = getbase(3, kpos, c1); \
+                            const float* b4 = getbase(4, kpos, c1); \
+                            const float* b5 = getbase(5, kpos, c1); \
+                            const float* wA = kwptrA + c1 * C0 * K0; \
+                            const float* wB = kwptrB + c1 * C0 * K0; \
+                            for (int kk = 0; kk < C0; kk++) { \
+                                __m256 wa = _mm256_loadu_ps(wA + kk * K0); \
+                                __m256 wb = _mm256_loadu_ps(wB + kk * K0); \
+                                __m256 x; \
+                                x = _mm256_broadcast_ss(&b0[kk]); s0a = _mm256_fmadd_ps(x, wa, s0a); s0b = _mm256_fmadd_ps(x, wb, s0b); \
+                                x = _mm256_broadcast_ss(&b1[kk]); s1a = _mm256_fmadd_ps(x, wa, s1a); s1b = _mm256_fmadd_ps(x, wb, s1b); \
+                                x = _mm256_broadcast_ss(&b2[kk]); s2a = _mm256_fmadd_ps(x, wa, s2a); s2b = _mm256_fmadd_ps(x, wb, s2b); \
+                                x = _mm256_broadcast_ss(&b3[kk]); s3a = _mm256_fmadd_ps(x, wa, s3a); s3b = _mm256_fmadd_ps(x, wb, s3b); \
+                                x = _mm256_broadcast_ss(&b4[kk]); s4a = _mm256_fmadd_ps(x, wa, s4a); s4b = _mm256_fmadd_ps(x, wb, s4b); \
+                                x = _mm256_broadcast_ss(&b5[kk]); s5a = _mm256_fmadd_ps(x, wa, s5a); s5b = _mm256_fmadd_ps(x, wb, s5b); \
+                            } \
+                        } \
+                    } \
+                } while (0)
+
+                if (all_inner) {
+                    const float* inp_yx_base = inpbaseptr + (yi_base * Wi + xi_base) * C0;
+                    const float* inp_pos[SPAT_BLOCK_SIZE];
+                    for (int j = 0; j < SPAT_BLOCK_SIZE; j++)
+                        inp_pos[j] = inp_yx_base + j * C0;
+
+                    #define GET_BASE_INNER(j, kpos, c1) (inp_pos[j] + inp_ofs[kpos] + (c1) * iplanesize)
+                    KPAIR3_FMA_BODY(GET_BASE_INNER);
+                    #undef GET_BASE_INNER
+                } else {
+                    int yi_arr[SPAT_BLOCK_SIZE], xi_arr[SPAT_BLOCK_SIZE];
+                    bool inner_arr[SPAT_BLOCK_SIZE];
+
+                    if (same_row) {
+                        for (int j = 0; j < SPAT_BLOCK_SIZE; j++) {
+                            yi_arr[j] = yj - padY;
+                            xi_arr[j] = xj + j - padX;
+                            inner_arr[j] = y_inner && ((xj + j) >= innerX0 && (xj + j) < innerX1);
+                        }
+                    } else {
+                        for (int j = 0; j < SPAT_BLOCK_SIZE; j++) {
+                            int pj = p + j;
+                            int yj_ = pj / W;
+                            int xj_ = pj - yj_ * W;
+                            yi_arr[j] = yj_ - padY;
+                            xi_arr[j] = xj_ - padX;
+                            inner_arr[j] = (yj_ >= innerY0 && yj_ < innerY1) &&
+                                           (xj_ >= innerX0 && xj_ < innerX1);
+                        }
+                    }
+
+                    int inp_spatial_ofs[9][SPAT_BLOCK_SIZE];
+                    for (int kpos = 0; kpos < 9; kpos++) {
+                        int ky = kpos / 3, kx = kpos % 3;
+                        for (int j = 0; j < SPAT_BLOCK_SIZE; j++) {
+                            int yij = yi_arr[j] + ky;
+                            int xij = xi_arr[j] + kx;
+                            if (inner_arr[j] ||
+                                (((unsigned)yij < (unsigned)Hi) &
+                                 ((unsigned)xij < (unsigned)Wi))) {
+                                inp_spatial_ofs[kpos][j] = (yij * Wi + xij) * C0;
+                            } else {
+                                inp_spatial_ofs[kpos][j] = -1;
+                            }
+                        }
+                    }
+
+                    #define GET_BASE_OUTER(j, kpos, c1) \
+                        (inp_spatial_ofs[kpos][j] >= 0 ? \
+                            inpbaseptr + (c1) * iplanesize + inp_spatial_ofs[kpos][j] : zbuf)
+                    KPAIR3_FMA_BODY(GET_BASE_OUTER);
+                    #undef GET_BASE_OUTER
+                }
+
+                #undef KPAIR3_FMA_BODY
+
+                float* outA = outbaseA + (size_t)p * K0;
+                float* outB = outbaseB + (size_t)p * K0;
+
+                #define KPAIR3_FIN(idx) do { \
+                    __m256 sa = _mm256_fmadd_ps(s##idx##a, vscaleA, vbiasA); \
+                    __m256 sb = _mm256_fmadd_ps(s##idx##b, vscaleB, vbiasB); \
+                    if (resbaseA) { \
+                        sa = _mm256_add_ps(sa, _mm256_loadu_ps(resbaseA + (size_t)(p + idx) * K0)); \
+                        sb = _mm256_add_ps(sb, _mm256_loadu_ps(resbaseB + (size_t)(p + idx) * K0)); \
+                    } \
+                    __m256 maskA = _mm256_cmp_ps(sa, vzero, _CMP_GE_OQ); \
+                    __m256 maskB = _mm256_cmp_ps(sb, vzero, _CMP_GE_OQ); \
+                    sa = _mm256_blendv_ps(_mm256_mul_ps(sa, valphaA), sa, maskA); \
+                    sb = _mm256_blendv_ps(_mm256_mul_ps(sb, valphaB), sb, maskB); \
+                    sa = _mm256_min_ps(sa, vmaxval); \
+                    sb = _mm256_min_ps(sb, vmaxval); \
+                    _mm256_storeu_ps(outA + (size_t)idx * K0, sa); \
+                    _mm256_storeu_ps(outB + (size_t)idx * K0, sb); \
+                } while (0)
+
+                KPAIR3_FIN(0); KPAIR3_FIN(1); KPAIR3_FIN(2);
+                KPAIR3_FIN(3); KPAIR3_FIN(4); KPAIR3_FIN(5);
+                #undef KPAIR3_FIN
+
+                if (activation) {
+                    activation(outA, outA, SPAT_BLOCK_SIZE*K0, activParams);
+                    activation(outB, outB, SPAT_BLOCK_SIZE*K0, activParams);
+                }
+            }
+
+            // Scalar tail.
+            for (; p < p1; p++)
+            {
+                int yj = p / W;
+                int xj = p - yj * W;
+                int yi_s = yj - padY;
+                int xi_s = xj - padX;
+
+                __m256 sa = _mm256_setzero_ps();
+                __m256 sb = _mm256_setzero_ps();
+
+                for (int ky = 0; ky < 3; ky++) {
+                    int yi = yi_s + ky;
+                    if ((unsigned)yi >= (unsigned)Hi) continue;
+                    for (int kx = 0; kx < 3; kx++) {
+                        int xi = xi_s + kx;
+                        if ((unsigned)xi >= (unsigned)Wi) continue;
+                        int kpos = ky*3 + kx;
+                        const float* kwptrA_s = wbaseptrA + kpos * C1Max * C0 * K0;
+                        const float* kwptrB_s = wbaseptrB + kpos * C1Max * C0 * K0;
+                        const float* inptr_s = inpbaseptr + (yi*Wi + xi)*C0;
+                        for (int c1 = 0; c1 < cblocks; ++c1, inptr_s += iplanesize) {
+                            const float* wA = kwptrA_s + c1 * C0 * K0;
+                            const float* wB = kwptrB_s + c1 * C0 * K0;
+                            for (int kk = 0; kk < C0; kk++) {
+                                __m256 wa = _mm256_loadu_ps(wA + kk * K0);
+                                __m256 wb = _mm256_loadu_ps(wB + kk * K0);
+                                __m256 x = _mm256_broadcast_ss(&inptr_s[kk]);
+                                sa = _mm256_fmadd_ps(x, wa, sa);
+                                sb = _mm256_fmadd_ps(x, wb, sb);
+                            }
+                        }
+                    }
+                }
+
+                sa = _mm256_fmadd_ps(sa, vscaleA, vbiasA);
+                sb = _mm256_fmadd_ps(sb, vscaleB, vbiasB);
+                if (resbaseA) {
+                    sa = _mm256_add_ps(sa, _mm256_loadu_ps(resbaseA + (size_t)p * K0));
+                    sb = _mm256_add_ps(sb, _mm256_loadu_ps(resbaseB + (size_t)p * K0));
+                }
+                __m256 maskA = _mm256_cmp_ps(sa, vzero, _CMP_GE_OQ);
+                __m256 maskB = _mm256_cmp_ps(sb, vzero, _CMP_GE_OQ);
+                sa = _mm256_blendv_ps(_mm256_mul_ps(sa, valphaA), sa, maskA);
+                sb = _mm256_blendv_ps(_mm256_mul_ps(sb, valphaB), sb, maskB);
+                sa = _mm256_min_ps(sa, vmaxval);
+                sb = _mm256_min_ps(sb, vmaxval);
+
+                float* outA_s = outbaseA + (size_t)p * K0;
+                float* outB_s = outbaseB + (size_t)p * K0;
+                _mm256_storeu_ps(outA_s, sa);
+                _mm256_storeu_ps(outB_s, sb);
+
+                if (activation) {
+                    activation(outA_s, outA_s, K0, activParams);
+                    activation(outB_s, outB_s, K0, activParams);
+                }
+            }
+        }
+    });
+}
+#endif // CV_SIMD256 && __AVX2__
+
+// 2D 1x1 convolution with stride > 1 and pad = 0.
+static void conv32fC8_1x1_strided(const void* inp__, const void* residual__, void* out__,
+                                   const ConvState& cs, const void* weights__,
+                                   const float* scale__, const float* bias__)
+{
+    const MatShape& inpshape = cs.inpshape;
+    const MatShape& outshape = cs.outshape;
+
+    CV_Assert_N(inpshape.layout == DATA_LAYOUT_BLOCK, outshape.layout == DATA_LAYOUT_BLOCK);
+
+    int K_ = outshape.channels();
+    int ndims_ = outshape.dims;
+    int N = outshape[0];
+    int H_ = ndims_ >= 5 ? outshape[ndims_ - 3] : 1;
+    int W_ = outshape[ndims_-2];
+    int planeblocks_ = H_*W_;
+    size_t outtotal = outshape.total();
+
+    int Kblk_ = cs.wshape[1];
+    int C1Max_ = cs.wshape[3];
+    int total_blocks = N * cs.ngroups * Kblk_;
+
+    if ((K_/cs.ngroups) % inpshape.back() != 0) {
+        memset(out__, 0, outtotal*sizeof(float));
+    }
+
+    int nSpatChunks_ = computeSpatChunks(total_blocks, planeblocks_);
+    int total_tasks = total_blocks * nSpatChunks_;
+
+    parallel_for_(Range(0, total_tasks), [&](const Range& range) {
+        constexpr int SPAT_BLOCK_SIZE = 10;
+        constexpr int C0shift = 3, K0shift = C0shift;
+        constexpr int C0 = 1 << C0shift, K0 = C0;
+
+        CV_Assert_N(inpshape.back() == C0, outshape.back() == K0);
+
+        const int C = inpshape.channels(), K = outshape.channels();
+        const int C1 = (C + C0 - 1)/C0, K1 = (K + K0 - 1)/K0;
+        const int ngroups = cs.ngroups, Kblk = Kblk_, C1Max = C1Max_;
+        const int Cg = C / ngroups;
+        const int Kg = K / ngroups;
+        const int nSpatChunks = nSpatChunks_;
+        int W = W_;
+        int Hi = ndims_ >= 5 ? inpshape[ndims_-3] : 1;
+        int Wi = inpshape[ndims_-2];
+        int planeblocks = planeblocks_;
+        int planesize = planeblocks*K0;
+        int iplanesize = Hi*Wi*C0;
+
+        const int Sy = cs.strides[1], Sx = cs.strides[2];
+#ifdef CONV_ENABLE_SIMD
+        const int x_step = Sx * C0;
+#endif
+
+        const float* scaleptr = (const float*)scale__;
+        const float* biasptr = (const float*)bias__;
+
+        FastActivation fastActivation;
+        const float* activParams;
+        ActivationFunc activation;
+        float maxval, defaultAlpha;
+        float scalebuf[K0], biasbuf[K0], alphabuf[K0];
+        setupActivation(cs, K, fastActivation, activParams, activation, maxval, defaultAlpha);
+
+        for (int t = range.start; t < range.end; t++) {
+            const int block_id = t / nSpatChunks;
+            const int chunk_id = t % nSpatChunks;
+            const int p0 = chunk_id * planeblocks / nSpatChunks;
+            const int p1 = (chunk_id + 1) * planeblocks / nSpatChunks;
+            const int n = block_id / (ngroups * Kblk);
+            const int rem = block_id - n * (ngroups * Kblk);
+            const int g = rem / Kblk;
+            const int kblk = rem - g * Kblk;
+
+            const int k_base = g * Kg + kblk * K0;
+            if (k_base >= K) continue;
+
+            const int k_count = std::min(std::min(K0, Kg - kblk*K0), K - k_base);
+            bool aligned_k = (k_base & (K0-1)) == 0 && k_count == K0;
+
+            const int c_start  = g * Cg;
+            const int c00      = c_start & (C0-1);
+            const int c1_start = c_start >> C0shift;
+            const int cblocks  = (c00 + Cg + C0 - 1) >> C0shift;
+            const float* inpbaseptr = (float*)inp__ + (n * C1 + c1_start) * iplanesize;
+            const float* wbaseptr = (float*)weights__ + (g*Kblk + kblk)*(1*C1Max*C0*K0);
+
+            fillCoeffBufs(fastActivation, activParams, defaultAlpha, k_count, k_base, scaleptr, biasptr, scalebuf, biasbuf, alphabuf);
+
+            float* outptr = (float*)out__ + n*(K1*planesize) + p0*K0;
+            const float* resptr = residual__ ? (float*)residual__ + n*(K1*planesize) + p0*K0 : nullptr;
+            float tmpbuf[SPAT_BLOCK_SIZE*K0] = {};
+            int p = p0;
+
+        #ifdef CONV_ENABLE_SIMD
+            for (; p < p1; p += SPAT_BLOCK_SIZE,
+                           outptr += SPAT_BLOCK_SIZE*K0)
+            {
+                if (simdTailAdjust(SPAT_BLOCK_SIZE, p, p0, p1, K0, outptr, resptr)) break;
+                copyResidualBlock(aligned_k, k_base, k_count, K0shift, K0, planeblocks, planesize, SPAT_BLOCK_SIZE, tmpbuf, resptr);
+                CONV_INIT_SUMS();
+
+                int yj = p / W;
+                int xj = p - yj * W;
+                bool same_row = (xj + SPAT_BLOCK_SIZE <= W);
+
+                const float* inptr[SPAT_BLOCK_SIZE];
+                int inpstep[SPAT_BLOCK_SIZE];
+
+                if (same_row) {
+                    const float* in_base = inpbaseptr + ((size_t)(yj*Sy) * Wi + (size_t)(xj*Sx)) * C0;
+                    for (int j = 0; j < SPAT_BLOCK_SIZE; j++) {
+                        inptr[j] = in_base + j * x_step;
+                        inpstep[j] = iplanesize;
+                    }
+                } else {
+                    for (int j = 0; j < SPAT_BLOCK_SIZE; j++) {
+                        int pj = p + j;
+                        int yj_ = pj / W;
+                        int xj_ = pj - yj_ * W;
+                        inptr[j] = inpbaseptr + ((size_t)(yj_*Sy) * Wi + (size_t)(xj_*Sx)) * C0;
+                        inpstep[j] = iplanesize;
+                    }
+                }
+                const float* wptr = wbaseptr;
+                for (int c1 = 0; c1 < cblocks; c1++, wptr += C0*K0) {
+                    CONV_UPDATE_LOOP_BODY();
+                }
+
+                float* outbuf = aligned_k ? outptr + k_base*planeblocks : tmpbuf;
+                CONV_FINALIZE_OUT_ALL();
+                if (activation) { activation(outbuf, outbuf, SPAT_BLOCK_SIZE*K0, activParams); }
+                scatterOutputBlock(aligned_k, k_base, k_count, K0shift, K0, planeblocks, planesize, SPAT_BLOCK_SIZE, outptr, tmpbuf);
+            }
+        #endif
+
+            float resbuf[K0] = {};
+
+            for (; p < p1; p++, outptr += K0, resptr += (resptr ? K0 : 0))
+            {
+                int yj = p / W;
+                int xj = p - yj * W;
+
+                CONV_INIT_SCALAR_SUMS();
+                loadScalarResidual(resptr, k_base, k_count, K0shift, K0, planesize, resbuf);
+
+                const float* inptr_s = inpbaseptr + ((size_t)(yj*Sy) * Wi + (size_t)(xj*Sx)) * C0;
+                const float* wptr = wbaseptr;
+
+                for (int c1 = 0; c1 < cblocks; ++c1, inptr_s += iplanesize, wptr += K0*C0) {
+                    const float* inptr = inptr_s;
+                #if CV_SIMD256
+                    v_float32x8 w, x;
+                    #undef CONV_UPDATE_BLOCK1
+                    #define CONV_UPDATE_BLOCK1(ofs) \
+                        w = v256_load(wptr + ofs*K0); \
+                        x = v256_setall_f32(inptr[ofs]); \
+                        s0 = v_fma(x, w, s0)
+                    CONV_UPDATE_BLOCK1(0); CONV_UPDATE_BLOCK1(1);
+                    CONV_UPDATE_BLOCK1(2); CONV_UPDATE_BLOCK1(3);
+                    CONV_UPDATE_BLOCK1(4); CONV_UPDATE_BLOCK1(5);
+                    CONV_UPDATE_BLOCK1(6); CONV_UPDATE_BLOCK1(7);
+                #elif CV_SIMD128
+                    v_float32x4 w0, w1, x;
+                    #undef CONV_UPDATE_BLOCK1
+                    #define CONV_UPDATE_BLOCK1(ofs) \
+                        w0 = v_load(wptr + ofs*K0); w1 = v_load(wptr + ofs*K0 + 4); \
+                        x = v_setall_f32(inptr[ofs]); \
+                        s0 = v_fma(x, w0, s0); s1 = v_fma(x, w1, s1)
+                    CONV_UPDATE_BLOCK1(0); CONV_UPDATE_BLOCK1(1);
+                    CONV_UPDATE_BLOCK1(2); CONV_UPDATE_BLOCK1(3);
+                    CONV_UPDATE_BLOCK1(4); CONV_UPDATE_BLOCK1(5);
+                    CONV_UPDATE_BLOCK1(6); CONV_UPDATE_BLOCK1(7);
+                #else
+                    for (int c0 = 0; c0 < C0; ++c0) {
+                        const float xval = inptr[c0];
+                        for (int kk = 0; kk < K0; ++kk)
+                            tmpbuf[kk] += xval * wptr[c0*K0 + kk];
+                    }
+                #endif
+                }
+
+                float* outbuf = aligned_k ? outptr + k_base*planeblocks : tmpbuf;
+                CONV_FINALIZE_SCALAR_OUT(outbuf);
+                callActivationScalar(activation, outbuf, K0, activParams);
+                scatterScalarOut(aligned_k, k_base, k_count, K0shift, K0, planesize, outptr, outbuf);
+            }
+        }
+    });
+}
+
+// 2D 3x3 convolution with arbitrary stride and dilation = 1.
+static void conv32fC8_3x3_strided(const void* inp__, const void* residual__, void* out__,
+                                   const ConvState& cs, const void* weights__,
+                                   const float* scale__, const float* bias__)
+{
+    const MatShape& inpshape = cs.inpshape;
+    const MatShape& outshape = cs.outshape;
+
+    CV_Assert_N(inpshape.layout == DATA_LAYOUT_BLOCK, outshape.layout == DATA_LAYOUT_BLOCK);
+
+    int K_ = outshape.channels();
+    int ndims_ = outshape.dims;
+    int N = outshape[0];
+    int H_ = ndims_ >= 5 ? outshape[ndims_ - 3] : 1;
+    int W_ = outshape[ndims_-2];
+    int planeblocks_ = H_*W_;
+    size_t outtotal = outshape.total();
+
+    int Kblk_ = cs.wshape[1];
+    int C1Max_ = cs.wshape[3];
+    int total_blocks = N * cs.ngroups * Kblk_;
+
+    if ((K_/cs.ngroups) % inpshape.back() != 0) {
+        memset(out__, 0, outtotal*sizeof(float));
+    }
+
+    int nSpatChunks_ = computeSpatChunks(total_blocks, planeblocks_);
+    int total_tasks = total_blocks * nSpatChunks_;
+
+    parallel_for_(Range(0, total_tasks), [&](const Range& range) {
+        constexpr int SPAT_BLOCK_SIZE = 10;
+        constexpr int C0shift = 3, K0shift = C0shift;
+        constexpr int C0 = 1 << C0shift, K0 = C0;
+
+        CV_Assert_N(inpshape.back() == C0, outshape.back() == K0);
+
+        const int C = inpshape.channels(), K = outshape.channels();
+        const int C1 = (C + C0 - 1)/C0, K1 = (K + K0 - 1)/K0;
+        const int ngroups = cs.ngroups, Kblk = Kblk_, C1Max = C1Max_;
+        const int Cg = C / ngroups;
+        const int Kg = K / ngroups;
+        const int nSpatChunks = nSpatChunks_;
+        int W = W_;
+        int Hi = ndims_ >= 5 ? inpshape[ndims_-3] : 1;
+        int Wi = inpshape[ndims_-2];
+        const int Sy = cs.strides[1], Sx = cs.strides[2];
+        const int padY = cs.pads[1], padX = cs.pads[2];
+#ifdef CONV_ENABLE_SIMD
+        const int x_step = Sx * C0;
+#endif
+        const float* scaleptr = (const float*)scale__;
+        const float* biasptr = (const float*)bias__;
+        int planeblocks = planeblocks_;
+        int planesize = planeblocks*K0;
+        int iplanesize = Hi*Wi*C0;
+
+    #ifdef CONV_ENABLE_SIMD
+        constexpr int MAX_CONV_DIMS = ConvState::MAX_CONV_DIMS;
+        int innerY0 = cs.inner[1], innerY1 = cs.inner[MAX_CONV_DIMS+1];
+        int innerX0 = cs.inner[2], innerX1 = cs.inner[MAX_CONV_DIMS+2];
+    #endif
+
+        FastActivation fastActivation;
+        const float* activParams;
+        ActivationFunc activation;
+        float maxval, defaultAlpha;
+        float scalebuf[K0], biasbuf[K0], alphabuf[K0];
+        setupActivation(cs, K, fastActivation, activParams, activation, maxval, defaultAlpha);
+
+        for (int t = range.start; t < range.end; t++) {
+            const int block_id = t / nSpatChunks;
+            const int chunk_id = t % nSpatChunks;
+            const int p0 = chunk_id * planeblocks / nSpatChunks;
+            const int p1 = (chunk_id + 1) * planeblocks / nSpatChunks;
+            const int n = block_id / (ngroups * Kblk);
+            const int rem = block_id - n * (ngroups * Kblk);
+            const int g = rem / Kblk;
+            const int kblk = rem - g * Kblk;
+
+            const int k_base = g * Kg + kblk * K0;
+            if (k_base >= K) continue;
+
+            const int k_count = std::min(std::min(K0, Kg - kblk*K0), K - k_base);
+            bool aligned_k = (k_base & (K0-1)) == 0 && k_count == K0;
+
+            const int c_start  = g * Cg;
+            const int c00      = c_start & (C0-1);
+            const int c1_start = c_start >> C0shift;
+            const int cblocks  = (c00 + Cg + C0 - 1) >> C0shift;
+            const float* inpbaseptr = (float*)inp__ + (n * C1 + c1_start) * iplanesize;
+            const float* wbaseptr = (float*)weights__ + (g*Kblk + kblk)*(9*C1Max*C0*K0);
+
+            fillCoeffBufs(fastActivation, activParams, defaultAlpha, k_count, k_base, scaleptr, biasptr, scalebuf, biasbuf, alphabuf);
+
+            float* outptr = (float*)out__ + n*(K1*planesize) + p0*K0;
+            const float* resptr = residual__ ? (float*)residual__ + n*(K1*planesize) + p0*K0 : nullptr;
+            float tmpbuf[SPAT_BLOCK_SIZE*K0] = {};
+            int p = p0;
+
+        #ifdef CONV_ENABLE_SIMD
+            int inp_ofs[9];
+            for (int ky = 0; ky < 3; ky++)
+                for (int kx = 0; kx < 3; kx++)
+                    inp_ofs[ky*3 + kx] = (ky * Wi + kx) * C0;
+            float zbuf[C0] = {};
+            for (; p < p1; p += SPAT_BLOCK_SIZE,
+                           outptr += SPAT_BLOCK_SIZE*K0)
+            {
+                if (simdTailAdjust(SPAT_BLOCK_SIZE, p, p0, p1, K0, outptr, resptr)) break;
+                copyResidualBlock(aligned_k, k_base, k_count, K0shift, K0, planeblocks, planesize, SPAT_BLOCK_SIZE, tmpbuf, resptr);
+
+                CONV_INIT_SUMS();
+
+                bool all_inner = false;
+                int yi_base, xi_base;
+                int yj_blk = p / W;
+                int xj_blk = p - yj_blk * W;
+                bool same_row = (xj_blk + SPAT_BLOCK_SIZE <= W);
+
+                if (same_row) {
+                    yi_base = yj_blk * Sy - padY;
+                    xi_base = xj_blk * Sx - padX;
+                    bool y_inner = (yj_blk >= innerY0 && yj_blk < innerY1);
+                    all_inner = y_inner && (xj_blk >= innerX0) &&
+                                (xj_blk + SPAT_BLOCK_SIZE - 1 < innerX1);
+                } else {
+                    yi_base = yj_blk * Sy - padY;
+                    xi_base = xj_blk * Sx - padX;
+                }
+
+                if (all_inner) {
+                    const float* inp_yx_base0 = inpbaseptr + (yi_base * Wi + xi_base) * C0;
+
+                    const float* inp_pos[SPAT_BLOCK_SIZE];
+                    for (int j = 0; j < SPAT_BLOCK_SIZE; j++)
+                        inp_pos[j] = inp_yx_base0 + j * x_step;
+
+                    for (int kpos = 0; kpos < 9; kpos++) {
+                        const float* kwptr = wbaseptr + kpos * C1Max * C0 * K0;
+                        const int kofs = inp_ofs[kpos];
+                        for (int c1 = 0; c1 < cblocks; c1++) {
+                            const int c1_ofs = c1 * iplanesize;
+                            const float* inptr[SPAT_BLOCK_SIZE];
+                            int inpstep[SPAT_BLOCK_SIZE];
+                            for (int j = 0; j < SPAT_BLOCK_SIZE; j++) {
+                                inptr[j] = inp_pos[j] + kofs + c1_ofs;
+                                inpstep[j] = 0;
+                            }
+                            const float* wptr = kwptr + c1 * C0 * K0;
+                            CONV_UPDATE_LOOP_BODY();
+                        }
+                    }
+                } else {
+                    int yi_arr[SPAT_BLOCK_SIZE], xi_arr[SPAT_BLOCK_SIZE];
+                    bool inner_arr[SPAT_BLOCK_SIZE];
+
+                    if (same_row) {
+                        bool y_inner = (yj_blk >= innerY0 && yj_blk < innerY1);
+                        for (int j = 0; j < SPAT_BLOCK_SIZE; j++) {
+                            yi_arr[j] = yj_blk * Sy - padY;
+                            xi_arr[j] = (xj_blk + j) * Sx - padX;
+                            inner_arr[j] = y_inner && ((xj_blk + j) >= innerX0 && (xj_blk + j) < innerX1);
+                        }
+                    } else {
+                        for (int j = 0; j < SPAT_BLOCK_SIZE; j++) {
+                            int pj = p + j;
+                            int yj_ = pj / W;
+                            int xj_ = pj - yj_ * W;
+                            yi_arr[j] = yj_ * Sy - padY;
+                            xi_arr[j] = xj_ * Sx - padX;
+                            inner_arr[j] = (yj_ >= innerY0 && yj_ < innerY1) &&
+                                           (xj_ >= innerX0 && xj_ < innerX1);
+                        }
+                    }
+                    int inp_spatial_ofs[9][SPAT_BLOCK_SIZE];
+                    for (int kpos = 0; kpos < 9; kpos++) {
+                        int ky = kpos / 3, kx = kpos % 3;
+                        for (int j = 0; j < SPAT_BLOCK_SIZE; j++) {
+                            int yij = yi_arr[j] + ky;
+                            int xij = xi_arr[j] + kx;
+                            if (inner_arr[j] ||
+                                (((unsigned)yij < (unsigned)Hi) &
+                                ((unsigned)xij < (unsigned)Wi))) {
+                                inp_spatial_ofs[kpos][j] = (yij * Wi + xij) * C0;
+                            } else {
+                                inp_spatial_ofs[kpos][j] = -1;
+                            }
+                        }
+                    }
+
+                    for (int kpos = 0; kpos < 9; kpos++) {
+                        const float* kwptr = wbaseptr + kpos * C1Max * C0 * K0;
+                        for (int c1 = 0; c1 < cblocks; c1++) {
+                            const float* inpbase_c1 = inpbaseptr + c1 * iplanesize;
+                            const float* inptr[SPAT_BLOCK_SIZE];
+                            int inpstep[SPAT_BLOCK_SIZE];
+                            for (int j = 0; j < SPAT_BLOCK_SIZE; j++) {
+                                int ofs = inp_spatial_ofs[kpos][j];
+                                inptr[j] = (ofs >= 0) ? inpbase_c1 + ofs : zbuf;
+                                inpstep[j] = 0;
+                            }
+                            const float* wptr = kwptr + c1 * C0 * K0;
+                            CONV_UPDATE_LOOP_BODY();
+                        }
+                    }
+                }
+
+                float* outbuf = aligned_k ? outptr + k_base*planeblocks : tmpbuf;
+                CONV_FINALIZE_OUT_ALL();
+                if (activation) { activation(outbuf, outbuf, SPAT_BLOCK_SIZE*K0, activParams); }
+                scatterOutputBlock(aligned_k, k_base, k_count, K0shift, K0, planeblocks, planesize, SPAT_BLOCK_SIZE, outptr, tmpbuf);
+            }
+        #endif // CONV_ENABLE_SIMD
+
+            float resbuf[K0] = {};
+
+            for (; p < p1; p++, outptr += K0, resptr += (resptr ? K0 : 0))
+            {
+                int yj = p / W;
+                int xj = p - yj * W;
+                int yi_s = yj * Sy - padY;
+                int xi_s = xj * Sx - padX;
+
+                CONV_INIT_SCALAR_SUMS();
+                loadScalarResidual(resptr, k_base, k_count, K0shift, K0, planesize, resbuf);
+
+                for (int ky = 0; ky < 3; ky++) {
+                    int yi = yi_s + ky;
+                    if ((unsigned)yi >= (unsigned)Hi) continue;
+                    for (int kx = 0; kx < 3; kx++) {
+                        int xi = xi_s + kx;
+                        if ((unsigned)xi >= (unsigned)Wi) continue;
+                        int kpos = ky*3 + kx;
+                        const float* kwptr = wbaseptr + kpos * C1Max * C0 * K0;
+                        const float* inptr_s = inpbaseptr;
+                        for (int c1 = 0; c1 < cblocks; ++c1, inptr_s += iplanesize) {
+                            const float* inptr = inptr_s + (yi*Wi + xi)*C0;
+                            const float* wptr = kwptr + c1 * C0 * K0;
+                        #if CV_SIMD256
+                            v_float32x8 w, xv;
+                            #undef CONV_UPDATE_BLOCK1
+                            #define CONV_UPDATE_BLOCK1(ofs) \
+                                w = v256_load(wptr + ofs*K0); \
+                                xv = v256_setall_f32(inptr[ofs]); \
+                                s0 = v_fma(xv, w, s0)
+                            CONV_UPDATE_BLOCK1(0); CONV_UPDATE_BLOCK1(1);
+                            CONV_UPDATE_BLOCK1(2); CONV_UPDATE_BLOCK1(3);
+                            CONV_UPDATE_BLOCK1(4); CONV_UPDATE_BLOCK1(5);
+                            CONV_UPDATE_BLOCK1(6); CONV_UPDATE_BLOCK1(7);
+                        #elif CV_SIMD128
+                            v_float32x4 w0, w1, xv;
+                            #undef CONV_UPDATE_BLOCK1
+                            #define CONV_UPDATE_BLOCK1(ofs) \
+                                w0 = v_load(wptr + ofs*K0); w1 = v_load(wptr + ofs*K0 + 4); \
+                                xv = v_setall_f32(inptr[ofs]); \
+                                s0 = v_fma(xv, w0, s0); s1 = v_fma(xv, w1, s1)
+                            CONV_UPDATE_BLOCK1(0); CONV_UPDATE_BLOCK1(1);
+                            CONV_UPDATE_BLOCK1(2); CONV_UPDATE_BLOCK1(3);
+                            CONV_UPDATE_BLOCK1(4); CONV_UPDATE_BLOCK1(5);
+                            CONV_UPDATE_BLOCK1(6); CONV_UPDATE_BLOCK1(7);
+                        #else
+                            for (int c0 = 0; c0 < C0; ++c0) {
+                                const float xval = inptr[c0];
+                                for (int kk = 0; kk < K0; ++kk)
+                                    tmpbuf[kk] += xval * wptr[c0*K0 + kk];
+                            }
+                        #endif
+                        }
+                    }
+                }
+
+                float* outbuf = aligned_k ? outptr + k_base*planeblocks : tmpbuf;
+                CONV_FINALIZE_SCALAR_OUT(outbuf);
+                callActivationScalar(activation, outbuf, K0, activParams);
+                scatterScalarOut(aligned_k, k_base, k_count, K0shift, K0, planesize, outptr, outbuf);
+            }
+        }
+    });
+}
+
 static void conv32fC8(const void* inp__, const void* residual__, void* out__,
                       const ConvState& cs, const void* weights__,
                       const float* scale__, const float* bias__)
 {
     int ksize = cs.wshape[2];
     if (ksize == 1 && cs.strides[0]*cs.strides[1]*cs.strides[2] == 1) {
+    #if CV_SIMD256 && defined(__AVX2__)
+        // Pair-Kblk fast path: 6×16 AVX2 microkernel for wide-C 1x1 stride=1.
+        // Requires Kblk even and K aligned to K0 (so both Kblks are full).
+        int Kblk = cs.wshape[1];
+        int Cg = cs.inpshape.channels() / cs.ngroups;
+        int cblocks = (Cg + 7) / 8;
+        int K_ = cs.outshape.channels();
+        if ((Kblk & 1) == 0 && (K_ % 8) == 0 && cblocks >= 8) {
+            return conv32fC8_1x1_kpair(inp__, residual__, out__, cs, weights__, scale__, bias__);
+        }
+    #endif
         return conv32fC8_1x1(inp__, residual__, out__, cs, weights__, scale__, bias__);
+    }
+    if (ksize == 1 && cs.strides[0] == 1 &&
+        cs.pads[1] == 0 && cs.pads[2] == 0 &&
+        cs.pads[ConvState::MAX_CONV_DIMS+1] == 0 && cs.pads[ConvState::MAX_CONV_DIMS+2] == 0 &&
+        cs.outshape.dims <= 5) {
+        return conv32fC8_1x1_strided(inp__, residual__, out__, cs, weights__, scale__, bias__);
     }
     if (ksize == 9 && cs.strides[1] == 1 && cs.strides[2] == 1 &&
         cs.dilations[1] == 1 && cs.dilations[2] == 1 &&
         cs.outshape.dims <= 5) {
+    #if CV_SIMD256 && defined(__AVX2__)
+        int Kblk = cs.wshape[1];
+        int Cg = cs.inpshape.channels() / cs.ngroups;
+        int cblocks = (Cg + 7) / 8;
+        int K_ = cs.outshape.channels();
+        if ((Kblk & 1) == 0 && (K_ % 8) == 0 && cblocks >= 8 && cs.ngroups == 1) {
+            return conv32fC8_3x3s1_kpair(inp__, residual__, out__, cs, weights__, scale__, bias__);
+        }
+    #endif
         return conv32fC8_3x3s1(inp__, residual__, out__, cs, weights__, scale__, bias__);
+    }
+    if (ksize == 9 && cs.strides[0] == 1 &&
+        cs.dilations[1] == 1 && cs.dilations[2] == 1 &&
+        cs.outshape.dims <= 5) {
+        return conv32fC8_3x3_strided(inp__, residual__, out__, cs, weights__, scale__, bias__);
     }
 
     const MatShape& inpshape = cs.inpshape;

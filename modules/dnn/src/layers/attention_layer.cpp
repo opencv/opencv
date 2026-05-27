@@ -568,5 +568,4 @@ Ptr<AttentionLayer> AttentionLayer::create(const LayerParams &params) {
     return makePtr<AttentionLayerImpl>(params);
 }
 
-
 }} // cv::dnn

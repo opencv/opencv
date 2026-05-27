@@ -6,7 +6,10 @@
 #include "../net_impl.hpp"
 #include "layers_common.hpp"
 #include "conv2_common.hpp"
+#include "cpu_kernels/mlas_gemm.hpp"
 #include "opencv2/core/hal/intrin.hpp"
+#include <algorithm>
+#include <cstring>
 
 namespace cv
 {
@@ -123,6 +126,41 @@ public:
         if (!bias_.empty()) {
             CV_Assert(bias_.isContinuous() && bias_.total() == wshape0[0]);
             bias_.convertTo(bias, CV_32F);
+        }
+
+        // Pre-pack for MLAS 1x1 SGEMM (1x1 dense, stride-1, FP32, Cout*Cin
+        // >= 256*256 so the reorder cost is amortized).
+        mlas_packed_B_.release();
+        mlas_packed_M_ = mlas_packed_K_ = 0;
+        if (!depthwise && ngroups == 1 && wtype0 == CV_32F &&
+            wtype == CV_32F && mlasAvailable())
+        {
+            bool ksize_all_one = wshape0.dims >= 3;
+            for (int k = 2; k < wshape0.dims; k++)
+                if (wshape0[k] != 1) { ksize_all_one = false; break; }
+            bool strides_all_one = !strides.empty();
+            for (int s : strides) if (s != 1) { strides_all_one = false; break; }
+            const int Cout = wshape0[0];
+            const int Cin  = wshape0[1];
+            const bool big_enough = (int64_t)Cout * (int64_t)Cin >= (int64_t)(256 * 256);
+            if (ksize_all_one && strides_all_one && big_enough) {
+                size_t pack_bytes = mlasSgemmPackBSize(false, true, Cout, Cin);
+                if (pack_bytes > 0) {
+                    mlas_packed_B_.create(1, (int)pack_bytes, CV_8U);
+                    // Weight is (Cout, Cin, 1, ..., 1) contiguous; reshape to
+                    // (Cout, Cin) and PackB with trans_b=true.
+                    Mat W2D = weights_.reshape(1, Cout);
+                    if (!mlasSgemmPackB(false, true, Cout, Cin,
+                                        W2D.ptr<float>(), Cin,
+                                        mlas_packed_B_.data))
+                    {
+                        mlas_packed_B_.release();
+                    } else {
+                        mlas_packed_M_ = Cout;
+                        mlas_packed_K_ = Cin;
+                    }
+                }
+            }
         }
     }
 
@@ -386,6 +424,23 @@ public:
         void* outptr = out.data;
         const void* wptr = weights.data;
 
+        // MLAS 1x1 SGEMM path. Skipped for small spatial: the gather/scatter
+        // tax exceeds MLAS's SGEMM speedup over the in-place NCHWc8 kernel.
+        if (mlas1x1Enabled() && inptype == CV_32F &&
+            !activationFunc && !addResidual && inpshape.back() == 8)
+        {
+            const int ndims = inpshape.dims;
+            int HW = 1;
+            for (int i = 2; i < ndims - 1; i++) HW *= inpshape[i];
+            constexpr int MLAS_MIN_SPATIAL = 256;
+            if (HW >= MLAS_MIN_SPATIAL) {
+                forwardMlas1x1(inp, out);
+                if (uouts) out.copyTo(uouts->at(0));
+                if (dynamicWeights) weights.release();
+                return;
+            }
+        }
+
         ConvFunc func = cs.depthwise ? getDepthwiseConvFunc(inptype) : getConvFunc(inptype, C0);
         CV_Assert(func != nullptr);
         func(inptr, resptr, outptr, cs, wptr, scale_data, bias_data);
@@ -402,6 +457,206 @@ public:
         }
     }
 
+    // True iff setWeights() armed the MLAS 1x1 SGEMM path for this conv.
+    bool mlas1x1Enabled() const {
+        return !mlas_packed_B_.empty() && !addResidual && mlasAvailable();
+    }
+
+    // NCHWc8 -> row-major (M_chunk, Cin); (c1-outer, mi-inner) so each
+    // thread streams one C-block.
+    static void gatherNCHWcToNHWC(const float* inp, int C1, int HW,
+                                  int p_start, int p_end,
+                                  float* dst, int Cin)
+    {
+        const int M = p_end - p_start;
+        cv::parallel_for_(cv::Range(0, C1), [&](const cv::Range& r) {
+            for (int c1 = r.start; c1 < r.end; c1++) {
+                const int c_base = c1 * 8;
+                const int n_valid_in = std::min(8, Cin - c_base);
+                const float* src = inp + (size_t)c1 * (size_t)HW * 8
+                                       + (size_t)p_start * 8;
+                float* dst_col = dst + c_base;
+                int mi = 0;
+                if (n_valid_in == 8) {
+#if CV_SIMD256 && defined(__AVX2__)
+                    for (; mi + 8 <= M; mi += 8) {
+                        __m256 r0 = _mm256_loadu_ps(src + 0 * 8);
+                        __m256 r1 = _mm256_loadu_ps(src + 1 * 8);
+                        __m256 r2 = _mm256_loadu_ps(src + 2 * 8);
+                        __m256 r3 = _mm256_loadu_ps(src + 3 * 8);
+                        __m256 r4 = _mm256_loadu_ps(src + 4 * 8);
+                        __m256 r5 = _mm256_loadu_ps(src + 5 * 8);
+                        __m256 r6 = _mm256_loadu_ps(src + 6 * 8);
+                        __m256 r7 = _mm256_loadu_ps(src + 7 * 8);
+                        _mm256_storeu_ps(dst_col + (size_t)(mi + 0) * Cin, r0);
+                        _mm256_storeu_ps(dst_col + (size_t)(mi + 1) * Cin, r1);
+                        _mm256_storeu_ps(dst_col + (size_t)(mi + 2) * Cin, r2);
+                        _mm256_storeu_ps(dst_col + (size_t)(mi + 3) * Cin, r3);
+                        _mm256_storeu_ps(dst_col + (size_t)(mi + 4) * Cin, r4);
+                        _mm256_storeu_ps(dst_col + (size_t)(mi + 5) * Cin, r5);
+                        _mm256_storeu_ps(dst_col + (size_t)(mi + 6) * Cin, r6);
+                        _mm256_storeu_ps(dst_col + (size_t)(mi + 7) * Cin, r7);
+                        src += 8 * 8;
+                    }
+#endif
+                    for (; mi < M; mi++) {
+                        std::memcpy(dst_col + (size_t)mi * Cin, src, 8 * sizeof(float));
+                        src += 8;
+                    }
+                } else {
+                    const size_t copy_bytes = (size_t)n_valid_in * sizeof(float);
+                    for (; mi < M; mi++) {
+                        std::memcpy(dst_col + (size_t)mi * Cin, src, copy_bytes);
+                        src += 8;
+                    }
+                }
+            }
+        });
+    }
+
+    // Row-major (M_chunk, Cout) -> NCHWc8 with fused BN + bias + activation
+    // in the same pass; writes stream within one C-block.
+    void scatterAndActivate(const float* src, int M, int p_start,
+                            int K1, int HW, float* out) const
+    {
+        const int Cout = mlas_packed_M_;
+        const float* biasptr = bias.empty() ? nullptr : bias.ptr<float>();
+        const float* scaleptr = fusedBatchNorm ? fusedScale.ptr<float>() : nullptr;
+        const float* fbiasptr = fusedBatchNorm ? fusedBias.ptr<float>() : biasptr;
+        const FastActivation act = fastActivation;
+        // PReLU has per-channel slopes; LEAKY_RELU broadcasts a single one.
+        const float* alphaptr = (act == FAST_ACTIV_PRELU) ? activParams.data() : nullptr;
+        const float leaky_alpha = (act == FAST_ACTIV_LEAKY_RELU) ? activParams[0] : 0.f;
+        const float clip_min = (act == FAST_ACTIV_CLIP) ? activParams[0] : -FLT_MAX;
+        const float clip_max = (act == FAST_ACTIV_CLIP) ? activParams[1] :  FLT_MAX;
+
+        cv::parallel_for_(cv::Range(0, K1), [&](const cv::Range& r) {
+            for (int c1 = r.start; c1 < r.end; c1++) {
+                const int c_base = c1 * 8;
+                const int n_valid = std::min(8, Cout - c_base);
+                float* dst = out + (size_t)c1 * (size_t)HW * 8
+                                 + (size_t)p_start * 8;
+                const float* row = src + c_base;
+
+                CV_DECL_ALIGNED(32) float scalebuf[8] = {0};
+                CV_DECL_ALIGNED(32) float biasbuf[8]  = {0};
+                CV_DECL_ALIGNED(32) float alphabuf[8] = {0};
+                for (int c0 = 0; c0 < n_valid; c0++) {
+                    scalebuf[c0] = scaleptr ? scaleptr[c_base + c0] : 1.f;
+                    biasbuf[c0]  = fbiasptr ? fbiasptr[c_base + c0] : 0.f;
+                    alphabuf[c0] = alphaptr ? alphaptr[c_base + c0] : leaky_alpha;
+                }
+
+#if CV_SIMD256 && defined(__AVX2__)
+                if (n_valid == 8) {
+                    const __m256 vscale = _mm256_loadu_ps(scalebuf);
+                    const __m256 vbias  = _mm256_loadu_ps(biasbuf);
+                    const __m256 valpha = _mm256_loadu_ps(alphabuf);
+                    const __m256 vzero  = _mm256_setzero_ps();
+                    const __m256 vlo    = _mm256_set1_ps(clip_min);
+                    const __m256 vhi    = _mm256_set1_ps(clip_max);
+                    for (int mi = 0; mi < M; mi++) {
+                        __m256 v = _mm256_loadu_ps(row + (size_t)mi * Cout);
+                        if (scaleptr) {
+                            v = _mm256_fmadd_ps(v, vscale, vbias);
+                        } else if (fbiasptr) {
+                            v = _mm256_add_ps(v, vbias);
+                        }
+                        if (act == FAST_ACTIV_RELU) {
+                            v = _mm256_max_ps(v, vzero);
+                        } else if (act == FAST_ACTIV_LEAKY_RELU || act == FAST_ACTIV_PRELU) {
+                            __m256 neg = _mm256_mul_ps(v, valpha);
+                            __m256 mask = _mm256_cmp_ps(v, vzero, _CMP_GE_OQ);
+                            v = _mm256_blendv_ps(neg, v, mask);
+                        } else if (act == FAST_ACTIV_CLIP) {
+                            v = _mm256_min_ps(_mm256_max_ps(v, vlo), vhi);
+                        }
+                        _mm256_storeu_ps(dst + (size_t)mi * 8, v);
+                    }
+                } else
+#endif
+                {
+                    for (int mi = 0; mi < M; mi++) {
+                        for (int c0 = 0; c0 < 8; c0++) {
+                            float v = (c0 < n_valid) ? row[(size_t)mi * Cout + c0] : 0.f;
+                            if (scaleptr) v = v * scalebuf[c0] + biasbuf[c0];
+                            else if (fbiasptr) v = v + biasbuf[c0];
+                            if (act == FAST_ACTIV_RELU) v = v > 0.f ? v : 0.f;
+                            else if (act == FAST_ACTIV_LEAKY_RELU || act == FAST_ACTIV_PRELU)
+                                v = v > 0.f ? v : v * alphabuf[c0];
+                            else if (act == FAST_ACTIV_CLIP)
+                                v = std::min(std::max(v, clip_min), clip_max);
+                            dst[(size_t)mi * 8 + c0] = v;
+                        }
+                    }
+                }
+            }
+        });
+        if (activationFunc) {
+            float* dst = out;
+            int total = K1 * HW * 8;
+            activationFunc(dst, dst, total, activParams.data());
+        }
+    }
+
+    // Chunked 1x1 SGEMM-as-conv: gather NCHWc8 -> SGEMM -> scatter+activate
+    // per spatial chunk. Scratch is ~CHUNK*(Cin+Cout)*4 bytes.
+    void forwardMlas1x1(const Mat& inp, Mat& out)
+    {
+        const MatShape& inpshape = inp.shape();
+        const MatShape& outshape = out.shape();
+        const int Cout = mlas_packed_M_;
+        const int Cin  = mlas_packed_K_;
+        const int ndims = inpshape.dims;
+        const int N = inpshape[0];
+        const int H = ndims >= 5 ? inpshape[ndims - 3] : 1;
+        const int W = inpshape[ndims - 2];
+        const int HW = H * W;
+        const int C1_in  = (Cin  + 7) / 8;
+        const int C1_out = (Cout + 7) / 8;
+
+        CV_Assert(inpshape.back() == 8 && outshape.back() == 8);
+        CV_Assert(C1_in == inpshape[1]);
+
+        const int CHUNK = std::min(HW, 1024);
+        const float* inpdata = inp.ptr<float>();
+        float* outdata = out.ptr<float>();
+
+        // Per-layer scratch, grown lazily.
+        if ((int)scratch_A_.total() < CHUNK * Cin)
+            scratch_A_.create(1, CHUNK * Cin, CV_32F);
+        if ((int)scratch_C_.total() < CHUNK * Cout)
+            scratch_C_.create(1, CHUNK * Cout, CV_32F);
+
+        const size_t in_batch_stride  = (size_t)C1_in  * (size_t)HW * 8;
+        const size_t out_batch_stride = (size_t)C1_out * (size_t)HW * 8;
+
+        for (int n = 0; n < N; n++) {
+            const float* inp_n = inpdata + (size_t)n * in_batch_stride;
+            float* out_n       = outdata + (size_t)n * out_batch_stride;
+
+            for (int p_start = 0; p_start < HW; p_start += CHUNK) {
+                int p_end = std::min(p_start + CHUNK, HW);
+                int M = p_end - p_start;
+
+                gatherNCHWcToNHWC(inp_n, C1_in, HW, p_start, p_end,
+                                  scratch_A_.ptr<float>(), Cin);
+
+                // C = A @ W^T (W is (Cout, Cin), packed with trans_b=true).
+                bool ok = mlasSgemmPacked(false, true, M, Cout, Cin,
+                                          1.0f,
+                                          scratch_A_.ptr<float>(), Cin,
+                                          mlas_packed_B_.data,
+                                          0.0f,
+                                          scratch_C_.ptr<float>(), Cout);
+                CV_Assert(ok);
+
+                scatterAndActivate(scratch_C_.ptr<float>(), M, p_start,
+                                   C1_out, HW, out_n);
+            }
+        }
+    }
+
     std::vector<int> emptyKernelShape;
     Ptr<Layer> activ, batchNorm;
     Mat weights, bias, fusedScale, fusedBias;
@@ -412,6 +667,13 @@ public:
     ActivationFunc activationFunc;
     std::vector<float> activParams;
     bool addResidual;
+
+    // MLAS 1x1 fast path: prepacked weight + per-layer scratch.
+    Mat mlas_packed_B_;
+    Mat scratch_A_;
+    Mat scratch_C_;
+    int mlas_packed_M_ = 0;   // == Cout
+    int mlas_packed_K_ = 0;   // == Cin
 };
 
 Ptr<Conv2Layer> Conv2Layer::create(const LayerParams& params)

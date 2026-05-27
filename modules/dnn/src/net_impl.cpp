@@ -2738,7 +2738,7 @@ void Net::Impl::collectOrtProfileData() const
     for (auto& kv : by_name) {
         const String name = kv.first;
         const String type = kv.second.first;
-        const double ms_per_run = kv.second.second / runs;
+        const double ms_per_run = kv.second.second / std::max(1, runs);
         ort_profile_data.emplace_back(name, type, ms_per_run);
     }
 }
