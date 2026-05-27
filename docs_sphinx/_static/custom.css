@@ -519,3 +519,46 @@ html[data-theme="dark"] button.copybtn.success {
 @media (max-width: 768px) {
     button.copybtn { opacity: 1 !important; }
 }
+
+/* --- Class collaboration diagram (.opencv-coll-graph) ------------------- */
+/* The per-class stub embeds the SVG that the legacy Doxygen HTML build
+   rendered (see _find_collaboration_svg in conf.py). Constrain it so a wide
+   diagram never overflows the content column, and keep it left-aligned to
+   match the reference docs.opencv.org class-page layout. */
+/* Two theme variants are emitted (conf.py): a light SVG (native Doxygen, with
+   a transparent backdrop) and a dark SVG (recoloured light-on-dark, also
+   transparent backdrop). They carry the theme's native `.only-light` /
+   `.only-dark` classes, so pydata-sphinx-theme shows exactly one per colour
+   mode and exempts the dark one from its forced-white image background. We
+   only need to size them here — no `display`/`filter` rules, which would
+   fight the theme's `!important` swap. */
+img.opencv-coll-graph {
+    display: block;                  /* needed for margin-auto centering    */
+    margin: 1rem auto 1.5rem;        /* horizontally centered in the column  */
+    max-width: 100%;                 /* never overflow the content width     */
+    height: auto;                    /* preserve aspect ratio                */
+    /* Diagrams vary widely (≈270pt–580pt). The narrow ones are narrow
+       because they're tall, so widening them all would blow up their height.
+       Instead, only the small ones are nudged up to a comfortable minimum;
+       already-large diagrams keep their native size. `min(…, 100%)` keeps it
+       safe on narrow screens (never wider than the column). */
+    min-width: min(30rem, 100%);
+}
+
+/* --- "On this page" TOC: C++ domain entries ---------------------------- */
+/* Breathe's per-member directives register C++ domain objects, so their
+   TOC entries arrive wrapped in <code class="literal"> pills — unlike the
+   plain section entries. Strip the pill so each reads as an ordinary,
+   clickable TOC link that picks up the nav-link colour (and the accent
+   highlight on the active/hovered entry) like its siblings. */
+.toc-entry a.nav-link code,
+.bd-toc-nav a.nav-link code,
+.toc-entry a.nav-link code.literal,
+.bd-toc-nav a.nav-link code.literal {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    color: inherit !important;
+    font-size: inherit !important;
+    font-weight: inherit !important;
+}

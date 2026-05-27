@@ -994,10 +994,24 @@ def _enum_synopsis_lines(m: dict) -> list[str]:
 def _function_signature(member: dict) -> str:
     """Disambiguator used after a qualified function name in `{doxygenfunction}`.
     Breathe expects `name(type1, type2, …)` with parameter names dropped (it
-    matches against Doxygen's `<param><type>` text). Empty-arg functions get
-    `()` — required for breathe to match correctly even for non-overloads."""
+    matches against Doxygen's `<param><type>` text, and on the type-mangled
+    signature — parameter names *and* default values are irrelevant to the
+    match). Empty-arg functions get `()` — required for breathe to match
+    correctly even for non-overloads.
+
+    Trailing `const` is appended for const member functions: breathe matches
+    the cv-qualifier as part of the declaration, so a bare `(types)` arg list
+    fails to resolve a `const` method. Doxygen stores `int channels(int i=-1)
+    const`; `{doxygenfunction} cv::_InputArray::channels(int)` (no const)
+    parses to a non-const AST and reports "Unable to resolve function … with
+    arguments (int)". Appending ` const` makes the directive arg-list match
+    the stored declaration. Group-page members carry no `const` key, so free
+    functions are unaffected."""
     types = ", ".join((t or "").strip() for t in member.get("param_types", []))
-    return f"({types})"
+    sig = f"({types})"
+    if member.get("const"):
+        sig += " const"
+    return sig
 
 
 def _class_page_name(refid: str) -> str:
@@ -1316,6 +1330,55 @@ def _read_class_data(refid: str, xml_dir: pathlib.Path) -> dict | None:
     }
 
 
+def _find_collaboration_svg(refid: str, html_root: pathlib.Path) -> pathlib.Path | None:
+    """Locate the Doxygen-generated collaboration-diagram SVG for a class.
+
+    Our XML pipeline (CMakeLists.txt's `Doxyfile-xml`) sets
+    `COLLABORATION_GRAPH = NO` and friends — graph elements in XML would be
+    forwarded by breathe as `graphviz` docutils nodes, which need an
+    extension we don't load. So the diagram never reaches the XML.
+
+    The *legacy* Doxygen HTML build (the `doxygen` target, separate from
+    `sphinx-xml`) still renders it as `<refid>__coll__graph.svg`, written
+    into a content-addressed subdir because the legacy Doxyfile keeps
+    `CREATE_SUBDIRS=YES`. The HTML tree sits next to the XML tree
+    (`…/doxygen/html` ⟷ `…/doxygen/xml`). We read that asset read-only —
+    nothing in the Doxygen output is modified. Returns None when the legacy
+    HTML build hasn't run (graphs simply stay absent, no crash)."""
+    if not html_root.is_dir():
+        return None
+    matches = sorted(html_root.rglob(f"{refid}__coll__graph.svg"))
+    return matches[0] if matches else None
+
+
+def _svg_make_transparent(text: str) -> str:
+    """Light-mode variant: only the full-canvas backdrop is made transparent
+    so the white page shows through (native Doxygen look). Graphviz paints the
+    canvas as a single `fill="white" stroke="transparent"` polygon."""
+    return text.replace('fill="white" stroke="transparent"',
+                        'fill="none" stroke="transparent"', 1)
+
+
+def _svg_dark_variant(text: str) -> str:
+    """Dark-mode variant: recolour the (light) Doxygen SVG into a dark diagram
+    matching docs.opencv.org — transparent canvas (page slate shows through),
+    dark node fills, light borders/text, lightened connector arrows. We recolour
+    the SVG itself (rather than a CSS `filter: invert`, which turns the large
+    white node boxes solid black) so the result blends with the dark page.
+
+    Order matters: blank the backdrop first, *then* repaint the remaining white
+    node fills, so the two `fill="white"` cases don't collide."""
+    text = _svg_make_transparent(text)              # backdrop → transparent
+    text = text.replace('fill="white"', 'fill="#1c2128"')   # node box fills → dark slate
+    text = text.replace('fill="#bfbfbf"', 'fill="#373e47"')  # header bar → darker grey
+    text = text.replace('stroke="black"', 'stroke="#c9d1d9"')  # borders → light
+    text = text.replace('stroke="#404040"', 'stroke="#768390"')  # arrows → lighter grey
+    # Graphviz <text> has no fill attribute (defaults to black); inject a light
+    # fill so labels are readable on the dark canvas.
+    text = text.replace('<text ', '<text fill="#adbac7" ')
+    return text
+
+
 def _write_class_stub(cls: dict, out_dir: pathlib.Path,
                       xml_dir: pathlib.Path) -> None:
     """One .md per inner class. Mirrors Doxygen's class-page layout:
@@ -1342,6 +1405,59 @@ def _write_class_stub(cls: dict, out_dir: pathlib.Path,
     # docname-derived target. `_generate_api_stubs` seeds the
     # refid→docname mapping into `_ANCHOR_TO_DOC` for `@ref` resolution.
     lines = [f"# {title}", ""]
+
+    # Collaboration diagram — surface the SVG the legacy Doxygen HTML build
+    # already rendered (the XML pipeline disables graphs; see
+    # `_find_collaboration_svg`). Copy it next to the stub so Sphinx's image
+    # collector publishes it to `_images/`, then reference it relative to the
+    # api/ doc. The `images/`/`js_assets/` rewrite in `_translate` doesn't
+    # touch this path (no such dir segment), and `_img_xtree` leaves
+    # non-contrib image refs unchanged. Absent SVG → section silently omitted.
+    _svg = _find_collaboration_svg(cls["refid"], xml_dir.parent / "html")
+    _light_name = _dark_name = None
+    if _svg is not None:
+        import hashlib as _hashlib
+        try:
+            _raw = _svg.read_text(encoding="utf-8")
+            # Two theme variants: light = native Doxygen with a transparent
+            # backdrop (white page shows through); dark = recoloured to
+            # light-on-dark so it matches docs.opencv.org and blends with the
+            # dark page. custom.css shows exactly one per active theme.
+            #
+            # Filenames are content-hashed: Doxygen names every diagram
+            # `<refid>__coll__graph.svg`; if a browser cached an older copy
+            # under that fixed name it would keep serving the stale image
+            # (query-string busts don't always work — some caches key on path
+            # only). A hashed filename is a brand-new URL whenever the SVG
+            # content changes, so it can never be served stale.
+            _light_txt = _svg_make_transparent(_raw)
+            _dark_txt = _svg_dark_variant(_raw)
+            _lh = _hashlib.md5(_light_txt.encode("utf-8")).hexdigest()[:10]
+            _dh = _hashlib.md5(_dark_txt.encode("utf-8")).hexdigest()[:10]
+            _light_name = f"{_svg.stem}.{_lh}.svg"
+            _dark_name = f"{_svg.stem}.{_dh}.dark.svg"
+            (out_dir / _light_name).write_text(_light_txt, encoding="utf-8")
+            (out_dir / _dark_name).write_text(_dark_txt, encoding="utf-8")
+        except OSError:
+            _light_name = _dark_name = None
+    if _light_name is not None:
+        # `only-light` / `only-dark` are pydata-sphinx-theme's native
+        # theme-aware image classes: the theme shows exactly one per active
+        # colour mode (via `display:none !important`), and — critically —
+        # exempts `.only-dark` images from its
+        # `html[data-theme=dark] .bd-content img { background:#fff }` rule, so
+        # our dark (transparent-backdrop) variant blends with the dark page
+        # instead of getting a white card behind it.
+        lines += [
+            f"Collaboration diagram for {qualified}:",
+            "",
+            f"![Collaboration diagram for {qualified}]({_light_name})"
+            "{.opencv-coll-graph .only-light}",
+            "",
+            f"![Collaboration diagram for {qualified}]({_dark_name})"
+            "{.opencv-coll-graph .only-dark}",
+            "",
+        ]
 
     data = _read_class_data(cls["refid"], xml_dir)
     if data is None:
@@ -1402,6 +1518,19 @@ def _write_class_stub(cls: dict, out_dir: pathlib.Path,
     #    Documentation". Typedefs → "Member Typedef Documentation".
     #    Enums → "Member Enumeration Documentation" (synopsis code block).
     class_simple = qualified.rsplit("::", 1)[-1]
+
+    # Doxygen leaves <qualifiedname> empty for the members of some classes
+    # (cv::_InputArray is one), so `m["qualified"]` falls back to the bare
+    # member name. A bare name makes breathe search the *whole* project: it
+    # resolves only when the name+signature is unique across all documented
+    # symbols (e.g. `channels(int) const`), but common methods shared with
+    # other classes stay ambiguous — `copyTo`, `empty`, `getFlags`, `size`
+    # all collide with Mat/UMat/etc. and render as "Unable to resolve".
+    # Scope every member to this class so the lookup is unambiguous.
+    def _scoped(m: dict) -> str:
+        q = m.get("qualified") or m["name"]
+        return q if "::" in q else f"{qualified}::{m['name']}"
+
     typedef_items: list[dict] = []
     enum_items_all: list[dict] = []
     ctor_dtor_items: list[dict] = []
@@ -1434,7 +1563,7 @@ def _write_class_stub(cls: dict, out_dir: pathlib.Path,
     if typedef_items:
         lines += ["## Member Typedef Documentation", ""]
         for m in typedef_items:
-            lines += _emit_member_directive(m, "doxygentypedef", m["qualified"])
+            lines += _emit_member_directive(m, "doxygentypedef", _scoped(m))
 
     if enum_items_all:
         # Enums render as code-block synopses (matches the group-page
@@ -1466,19 +1595,19 @@ def _write_class_stub(cls: dict, out_dir: pathlib.Path,
     if ctor_dtor_items:
         lines += ["## Constructor & Destructor Documentation", ""]
         for m in _dedupe(ctor_dtor_items):
-            spec = m["qualified"] + _function_signature(m)
+            spec = _scoped(m) + _function_signature(m)
             lines += _emit_member_directive(m, "doxygenfunction", spec)
 
     if func_items:
         lines += ["## Member Function Documentation", ""]
         for m in _dedupe(func_items):
-            spec = m["qualified"] + _function_signature(m)
+            spec = _scoped(m) + _function_signature(m)
             lines += _emit_member_directive(m, "doxygenfunction", spec)
 
     if var_items:
         lines += ["## Member Data Documentation", ""]
         for m in _dedupe(var_items):
-            lines += _emit_member_directive(m, "doxygenvariable", m["qualified"])
+            lines += _emit_member_directive(m, "doxygenvariable", _scoped(m))
 
     out.write_text("\n".join(lines), encoding="utf-8")
 
