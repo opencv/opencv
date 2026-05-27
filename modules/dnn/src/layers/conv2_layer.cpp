@@ -195,8 +195,11 @@ public:
     virtual bool fuseBatchNorm(const Ptr<Layer>& bnlayer) override
     {
         BatchNorm2Layer* bn = dynamic_cast<BatchNorm2Layer*>(bnlayer.get());
+        // addResidual means the graph order is conv->add->bn: the residual is added
+        // before BN, but the conv applies the fused BN scale only to conv(x), not to
+        // the residual. Refuse so BN stays separate and runs on (conv + residual).
         if (fusedBatchNorm || !bn || bn->inputs.size() > 1 ||
-            fastActivation != FAST_ACTIV_NONE || !activ.empty())
+            fastActivation != FAST_ACTIV_NONE || !activ.empty() || addResidual)
             return false;
         fuseBatchNormWeights(bn);
         fusedBatchNorm = true;
