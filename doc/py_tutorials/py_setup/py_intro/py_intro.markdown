@@ -43,7 +43,7 @@ OpenCV-Python Tutorials
 -----------------------
 
 OpenCV introduces a new set of tutorials which will guide you through various functions available in
-OpenCV-Python. **This guide is mainly focused on OpenCV 3.x version** (although most of the
+OpenCV-Python. **This guide is mainly focused on OpenCV 4.x version** (although most of the
 tutorials will also work with OpenCV 2.x).
 
 Prior knowledge of Python and Numpy is recommended as they won't be covered in this guide.
@@ -73,15 +73,15 @@ Contributors
 
 Below is the list of contributors who submitted tutorials to OpenCV-Python.
 
--#  Alexander Mordvintsev (GSoC-2013 mentor)
+1.  Alexander Mordvintsev (GSoC-2013 mentor)
 2.  Abid Rahman K. (GSoC-2013 intern)
 
 Additional Resources
 --------------------
 
--#  A Quick guide to Python - [A Byte of Python](https://python.swaroopch.com/)
-1.  [A Quick guide to Python](https://www.freecodecamp.org/news/the-python-guide-for-beginners/)
-2.  [NumPy Quickstart tutorial](https://numpy.org/doc/stable/user/quickstart.html)
-3.  [NumPy Reference](https://numpy.org/doc/stable/reference/index.html)
-4.  [OpenCV Documentation](https://docs.opencv.org/)
-5.  [OpenCV Forum](https://forum.opencv.org/)
+1.  A Quick guide to Python - [A Byte of Python](https://python.swaroopch.com/)
+2.  [A Quick guide to Python](https://www.freecodecamp.org/news/the-python-guide-for-beginners/)
+3.  [NumPy Quickstart tutorial](https://numpy.org/doc/stable/user/quickstart.html)
+4.  [NumPy Reference](https://numpy.org/doc/stable/reference/index.html)
+5.  [OpenCV Documentation](https://docs.opencv.org/)
+6.  [OpenCV Forum](https://forum.opencv.org/)
