@@ -41,6 +41,7 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/stereo.hpp"
+#include "opencv2/objdetect.hpp"
 
 namespace opencv_test { namespace {
 

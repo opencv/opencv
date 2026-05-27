@@ -48,6 +48,7 @@
 #include "opencv2/objdetect/barcode.hpp"
 #include "opencv2/imgproc.hpp"
 
+#include <opencv2/core/utils/logger.hpp>
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/ocl.hpp"
 #include "opencv2/core/private.hpp"
@@ -55,5 +56,12 @@
 #include <numeric>
 #include <array>
 #include <vector>
+
+namespace cv {
+
+int checkChessboardBinary(const Mat & img, const Size & size);
+
+
+}
 
 #endif

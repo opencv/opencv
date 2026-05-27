@@ -42,6 +42,7 @@
 
 #include "test_precomp.hpp"
 #include "test_chessboardgenerator.hpp"
+#include "opencv2/objdetect.hpp"
 
 namespace opencv_test { namespace {
 

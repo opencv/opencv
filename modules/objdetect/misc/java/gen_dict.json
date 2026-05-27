@@ -65,5 +65,9 @@
             "suffix": "Ljava_util_List",
             "v_type": "vector_NativeByteArray"
         }
+    },
+    "func_arg_fix" : {
+        "findChessboardCorners" : { "corners" : {"ctype" : "vector_Point2f"} },
+        "drawChessboardCorners" : { "corners" : {"ctype" : "vector_Point2f"} }
     }
 }

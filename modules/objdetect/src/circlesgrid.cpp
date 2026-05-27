@@ -57,6 +57,8 @@
 #  endif
 #endif
 
+#include "opencv2/3d.hpp"
+
 namespace cv {
 
 #ifdef DEBUG_CIRCLES

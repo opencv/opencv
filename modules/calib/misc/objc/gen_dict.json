@@ -1,10 +1,5 @@
 {
     "namespaces_dict": {
         "cv.fisheye": "fisheye"
-    },
-    "func_arg_fix" : {
-        "Calib" : {
-            "findCirclesGrid" : { "blobDetector" : {"defval" : "cv::SimpleBlobDetector::create()"} }
-        }
     }
 }
