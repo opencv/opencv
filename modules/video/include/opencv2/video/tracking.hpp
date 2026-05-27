@@ -446,7 +446,7 @@ struct CV_EXPORTS_W_SIMPLE ECCParameters
 {
     CV_WRAP ECCParameters() {}
     CV_PROP_RW int motionType = MOTION_AFFINE;
-    CV_PROP_RW cv::TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 50, 1e-6);
+    CV_PROP_RW cv::TermCriteria criteria;
     CV_PROP_RW std::vector<int> itersPerLevel;
     CV_PROP_RW int gaussFiltSize = 5;
     CV_PROP_RW int nlevels = 4;

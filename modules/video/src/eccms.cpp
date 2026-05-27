@@ -741,9 +741,10 @@ static void checkParams(const MatPyramid& referencePyramid,
                  const MatPyramid& samplePyramid,
                  Mat& map,
                  std::vector<int>& itersPerLevel,
+                 const TermCriteria& criteria,
                  const ECCParameters& eccParams) {
     if (itersPerLevel.empty()) {
-        itersPerLevel.resize(eccParams.nlevels, eccParams.criteria.maxCount);
+        itersPerLevel.resize(eccParams.nlevels, criteria.maxCount);
     }
     CV_Assert(eccParams.interpolation == INTER_NEAREST || eccParams.interpolation == INTER_LINEAR);
     CV_Assert(static_cast<int>(itersPerLevel.size()) == eccParams.nlevels);
@@ -777,8 +778,8 @@ static void checkParams(const MatPyramid& referencePyramid,
         CV_Error(Error::BadImageSize, "warpMatrix has incorrect size");
     }
 
-    if (!((bool)(eccParams.criteria.type & TermCriteria::COUNT) || (bool)(eccParams.criteria.type & TermCriteria::EPS))) {
-        CV_Error(Error::StsError, "Incorrect stop eccParams.criteria");
+    if (!((bool)(criteria.type & TermCriteria::COUNT) || (bool)(criteria.type & TermCriteria::EPS))) {
+        CV_Error(Error::StsError, "Incorrect stop criteria");
     }
 }
 
@@ -811,6 +812,10 @@ double findTransformECCMultiScale(InputArray reference,
     MatPyramid samplePyramid = prepareECCPyramid(sample, sampleMask, eccParams.gaussFiltSize, eccParams.nlevels);
     Mat& warpMatrix = warpMatrixA.getMatRef();
     std::vector<int> itersPerLevelCopy = eccParams.itersPerLevel;
+    TermCriteria criteria = eccParams.criteria;
+    if(criteria.type == 0 && criteria.maxCount == 0 && criteria.epsilon) {
+        criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 50, 1e-6);
+    }
     // If the user passed an un-initialized warpMatrix, initialize to identity
     if (warpMatrix.empty())
     {
@@ -827,6 +832,7 @@ double findTransformECCMultiScale(InputArray reference,
                 samplePyramid,
                 warpMatrix,
                 itersPerLevelCopy,
+                criteria,
                 eccParams);
 
     int nparams = 0;
@@ -847,10 +853,10 @@ double findTransformECCMultiScale(InputArray reference,
             CV_Error(Error::StsBadArg, "Incorrect motion type");
     }
 
-    const std::vector<int> numberOfIterations = ((eccParams.criteria.type & TermCriteria::COUNT) != 0)
+    const std::vector<int> numberOfIterations = ((criteria.type & TermCriteria::COUNT) != 0)
                                                     ? itersPerLevelCopy
                                                     : std::vector<int>(eccParams.nlevels, 200);
-    const double terminationEPS = (bool)(eccParams.criteria.type & TermCriteria::EPS) ? eccParams.criteria.epsilon : -1;
+    const double terminationEPS = (bool)(criteria.type & TermCriteria::EPS) ? criteria.epsilon : -1;
 
     // Scale warp matrix multiple times to lower pyramid level
     for (int pyrLevel = 0; pyrLevel < eccParams.nlevels - 1; pyrLevel++) {
