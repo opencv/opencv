@@ -15,6 +15,7 @@ import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
+import org.opencv.objdetect.Objdetect;
 
 import android.util.Log;
 
@@ -124,8 +125,8 @@ public class CameraCalibrator {
     }
 
     private void findPattern(Mat grayFrame) {
-        mPatternWasFound = Calib.findCirclesGrid(grayFrame, mPatternSize,
-                mCorners, Calib.CALIB_CB_ASYMMETRIC_GRID);
+        mPatternWasFound = Objdetect.findCirclesGrid(grayFrame, mPatternSize,
+                mCorners, Objdetect.CALIB_CB_ASYMMETRIC_GRID);
     }
 
     public void addCorners() {
@@ -135,7 +136,7 @@ public class CameraCalibrator {
     }
 
     private void drawPoints(Mat rgbaFrame) {
-        Calib.drawChessboardCorners(rgbaFrame, mPatternSize, mCorners, mPatternWasFound);
+        Objdetect.drawChessboardCorners(rgbaFrame, mPatternSize, mCorners, mPatternWasFound);
     }
 
     private void renderFrame(Mat rgbaFrame) {
