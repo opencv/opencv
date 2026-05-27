@@ -2740,4 +2740,61 @@ TEST(Imgproc_Filter2D, padding_bounds_roi_isolated)
     }
 }
 
+class FastFilterEngineTest : public ::testing::Test {
+  protected:
+      void SetUp() override {
+          // Prepare separable kernels (3x3 averaging filter [1, 1, 1]).
+          kX = cv::Mat::ones(1, 3, CV_32F) / 3.0f;
+          kY = cv::Mat::ones(3, 1, CV_32F) / 3.0f;
+      }
+
+      cv::Mat kX, kY;
+};
+
+TEST_F(FastFilterEngineTest, Submatrix) {
+    // num_threads == 2 triggers the fast path.
+    for(int num_threads : {1, 2}) {
+        setNumThreads(num_threads);
+        Mat1b parent(1200, 1200, 255);
+        Mat roi = parent(Rect(100, 100, 1024, 1024));
+        roi.setTo(Scalar(0));
+        Mat dst;
+
+        sepFilter2D(roi, dst, -1, kX, kY, Point(-1, -1), 0, BORDER_REPLICATE);
+
+        // Before fix in fast path: dst.at<uchar>(0,0) == 0 (treated as isolated).
+        // With fix in fast path: dst.at<uchar>(0,0) > 0 (correctly reads 255 padding from parent).
+        EXPECT_GT(dst.at<uchar>(0, 0), 0);
+
+        // Filter in-place directly into 'roi' (dst == roi).
+        sepFilter2D(roi, roi, -1, kX, kY, Point(-1, -1), 0, BORDER_REPLICATE);
+
+        // Before fix in fast path: roi.at<uchar>(0,0) == 0 (cloned only ROI, lost parent padding).
+        // With fix in fast path: roi.at<uchar>(0,0) > 0 (clones required_region including padding).
+        EXPECT_GT(roi.at<uchar>(0, 0), 0);
+    }
+}
+
+TEST_F(FastFilterEngineTest, FullImage) {
+    // num_threads == 2 triggers the fast path.
+    for(int num_threads : {1, 2}) {
+        setNumThreads(num_threads);
+        Mat1b img(1024, 1024, 100);
+
+        Mat dst;
+
+        sepFilter2D(img, dst, -1, kX, kY, Point(-1, -1), 0, BORDER_REPLICATE);
+
+        // Verifies direct pass-through (src_copy = src) executes correctly.
+        EXPECT_EQ(dst.at<uchar>(0, 0), 100);
+
+        // Filter in-place directly into 'img' (dst == img).
+        sepFilter2D(img, img, -1, kX, kY, Point(-1, -1), 0, BORDER_REPLICATE);
+
+        // Verifies that full-image cloning (src.clone()) executes correctly without memory corruption.
+        EXPECT_EQ(img.at<uchar>(0, 0), 100);
+    }
+}
+
+
 }} // namespace
