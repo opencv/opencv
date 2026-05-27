@@ -28,6 +28,63 @@ static std::string _tf(TString filename, bool required = true)
     return findDataFile(std::string("dnn/onnx/") + filename, required);
 }
 
+static Mat sdpaReference(const Mat& Q, const Mat& KT, const Mat& V, float scale)
+{
+    CV_Assert(Q.dims == 4 && KT.dims == 4 && V.dims == 4);
+    const int B = Q.size[0], H = Q.size[1], S_q = Q.size[2], D = Q.size[3];
+    const int S_kv = V.size[2], D_v = V.size[3];
+
+    const float* q  = Q.ptr<float>();
+    const float* kt = KT.ptr<float>();
+    const float* v  = V.ptr<float>();
+
+    int szY[3] = {B, S_q, H * D_v};
+    Mat Y(3, szY, CV_32F, Scalar(0));
+    float* y = Y.ptr<float>();
+
+    const float inv_scale = (scale > 0.f) ? 1.f / scale : 1.f;
+    std::vector<float> attn(S_kv);
+
+    for (int b = 0; b < B; b++)
+    for (int h = 0; h < H; h++)
+    {
+        const float* Q_bh  = q  + ((size_t)(b * H + h) * S_q ) * D;
+        const float* KT_bh = kt + ((size_t)(b * H + h) * D   ) * S_kv;
+        const float* V_bh  = v  + ((size_t)(b * H + h) * S_kv) * D_v;
+
+        for (int i = 0; i < S_q; i++)
+        {
+            for (int j = 0; j < S_kv; j++)
+            {
+                float s = 0.f;
+                for (int d = 0; d < D; d++)
+                    s += Q_bh[i * D + d] * KT_bh[d * S_kv + j];
+                attn[j] = s * inv_scale;
+            }
+            float mx = attn[0];
+            for (int j = 1; j < S_kv; j++)
+                mx = std::max(mx, attn[j]);
+            float sum = 0.f;
+            for (int j = 0; j < S_kv; j++)
+            {
+                attn[j] = std::exp(attn[j] - mx);
+                sum += attn[j];
+            }
+            const float inv_sum = 1.f / sum;
+
+            float* out_row = y + ((size_t)(b * S_q + i) * H + h) * D_v;
+            for (int d = 0; d < D_v; d++)
+            {
+                float acc = 0.f;
+                for (int j = 0; j < S_kv; j++)
+                    acc += attn[j] * V_bh[j * D_v + d];
+                out_row[d] = acc * inv_sum;
+            }
+        }
+    }
+    return Y;
+}
+
 class Test_ONNX_layers : public DNNTestLayer
 {
 public:
@@ -154,6 +211,40 @@ public:
         normAssert(ref, out, basename.c_str(), l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
         if (checkNoFallbacks)
             expectNoFallbacksFromIE(net);
+    }
+
+    // Runs an SDPA ONNX model through the importer + SDPALayer and checks the
+    // output against an in-test attention reference computed from the same inputs.
+    void testSDPAModel(const String& basename, double l1, double lInf)
+    {
+        // SDPA is only handled by the new-engine ONNX importer.
+        auto engine_forced = static_cast<cv::dnn::EngineType>(
+            cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
+        if (engine_forced == cv::dnn::ENGINE_CLASSIC) {
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+            return;
+        }
+
+        Mat Q  = blobFromNPY(_tf("data/input_" + basename + "_0.npy"));
+        Mat KT = blobFromNPY(_tf("data/input_" + basename + "_1.npy"));
+        Mat V  = blobFromNPY(_tf("data/input_" + basename + "_2.npy"));
+
+        Net net = readNetFromONNX(_tf("models/" + basename + ".onnx", required));
+        ASSERT_FALSE(net.empty());
+        net.setPreferableBackend(backend);
+        net.setPreferableTarget(target);
+
+        net.setInputsNames({"0", "1", "2"});
+        net.setInput(Q,  "0");
+        net.setInput(KT, "1");
+        net.setInput(V,  "2");
+        Mat out = net.forward("");
+
+        // The models are generated with scale = sqrt(head_dim).
+        Mat ref = sdpaReference(Q, KT, V, std::sqrt((float)Q.size[3]));
+
+        EXPECT_EQ(ref.shape(), out.shape());
+        normAssert(ref, out, basename.c_str(), l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
     }
 };
 
@@ -3433,32 +3524,14 @@ TEST_P(Test_ONNX_layers, PyTorchAttentionSingleHead) {
     testONNXModels("pytorch_attention_single_head");
 }
 
-TEST_P(Test_ONNX_layers, SDPA_SingleHead) {
-    auto engine_forced = static_cast<cv::dnn::EngineType>(
-        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
-    if (engine_forced == cv::dnn::ENGINE_CLASSIC) {
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
-        return;
-    }
-    testONNXModels("sdpa_single_head", npy, 1e-5, 1e-4, false, true, 3);
-}
+// Batch + multi-head, square attention (B=2, H=4, S_q=S_kv=16, D=D_v=32).
 TEST_P(Test_ONNX_layers, SDPA_MultiHead) {
-    auto engine_forced = static_cast<cv::dnn::EngineType>(
-        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
-    if (engine_forced == cv::dnn::ENGINE_CLASSIC) {
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
-        return;
-    }
-    testONNXModels("sdpa_multi_head", npy, 1e-4, 5e-4, false, true, 3);
+    testSDPAModel("sdpa_multi_head", 1e-4, 5e-4);
 }
+// Cross-attention with asymmetric shapes (S_q=12 != S_kv=20, D=16 != D_v=24)
+// to exercise the K^T re-transpose and head-merge indexing.
 TEST_P(Test_ONNX_layers, SDPA_CrossAttention) {
-    auto engine_forced = static_cast<cv::dnn::EngineType>(
-        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
-    if (engine_forced == cv::dnn::ENGINE_CLASSIC) {
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
-        return;
-    }
-    testONNXModels("sdpa_cross_attention", npy, 1e-4, 5e-4, false, true, 3);
+    testSDPAModel("sdpa_cross_attention", 1e-4, 5e-4);
 }
 
 TEST_P(Test_ONNX_layers, PyTorchUnflatten){
