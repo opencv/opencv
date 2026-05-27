@@ -69,6 +69,20 @@ CONTRIB_ROOT = pathlib.Path(
     or str(HERE.parent.parent / "opencv_contrib" / "modules")
 ).resolve()
 
+# ---------------------------------------------------------------------------
+# SCOPE — API reference. Module folder names under opencv/modules/. Each
+# entry's umbrella header (modules/<m>/include/opencv2/<m>.hpp) must declare
+# `@defgroup <m> …` at the top — that's the breathe target. Override:
+#     OPENCV_API_MODULES=core,imgproc cmake --build <build> --target sphinx
+# Empty = legacy behavior (no API pages in Sphinx; navbar's external_links
+# still routes users to the Doxygen-rendered group__*.html).
+# ---------------------------------------------------------------------------
+API_MODULES = [
+    m.strip()
+    for m in (_os.environ.get("OPENCV_API_MODULES") or "core").split(",")
+    if m.strip()
+]
+
 # Sphinx srcdir as seen by conf.py.  CMake stages a merged tree at
 # ${CMAKE_BINARY_DIR}/docs_sphinx_input/ and forwards this env var.
 # Default = DOC_ROOT so ad-hoc sphinx-build runs keep working. The `or`
@@ -93,7 +107,50 @@ for _ext in ("sphinx_design", "sphinx_copybutton"):
         pass
 HAVE_SPHINX_DESIGN = "sphinx_design" in extensions
 
+# -- Breathe (Doxygen XML -> Sphinx C++ domain) -----------------------------
+# Gated on API_MODULES being non-empty AND breathe being importable. A
+# stripped env (no breathe) or empty API_MODULES degrades to tutorial-only,
+# matching today's pre-API behavior. XML dir is forwarded by
+# docs_sphinx/CMakeLists.txt via OPENCV_DOXYGEN_XML_DIR; fallback path
+# matches the canonical build_doc layout for ad-hoc sphinx-build runs.
+_API_XML_DIR = pathlib.Path(
+    _os.environ.get("OPENCV_DOXYGEN_XML_DIR")
+    or str(HERE.parent.parent / "build_doc" / "doc" / "doxygen" / "xml")
+).resolve()
+# Patched XML dir (see `_patch_namespace_xml_for_breathe` below). breathe is
+# pointed at this rather than the raw Doxygen output so that functions defined
+# inside `@addtogroup` regions (which Doxygen lists only as `<member refid>`
+# in namespace XML, not full `<memberdef>`) become findable. The dir is built
+# at sphinx-build time, mirrors the original XML via symlinks, and only the
+# affected namespace XMLs are rewritten in place.
+_PATCHED_XML_DIR = _API_XML_DIR.parent / "xml_for_sphinx"
+if API_MODULES:
+    try:
+        import breathe  # noqa: F401
+        extensions.append("breathe")
+        breathe_projects = {"opencv": str(_PATCHED_XML_DIR)}
+        breathe_default_project = "opencv"
+        breathe_default_members = ("members",)
+    except ImportError:
+        API_MODULES = []
+
 source_suffix = {".md": "markdown", ".markdown": "markdown"}
+
+# Tell Sphinx's C/C++ domain parser to treat OpenCV's compatibility macros
+# as identifier attributes (i.e. swallow them silently during parsing).
+# Without this, signatures like
+#     inline virtual const char *getName() const CV_OVERRIDE
+# raise "Invalid C++ declaration: Expected end of definition" because the
+# parser sees CV_OVERRIDE as an unknown token after `const`. These macros
+# expand to `override` / `noexcept` / `final` / nothing in cvdef.h.
+cpp_id_attributes = [
+    "CV_OVERRIDE", "CV_FINAL", "CV_NOEXCEPT",
+    "CV_NORETURN", "CV_DEPRECATED", "CV_DEPRECATED_EXTERNAL",
+    "CV_NODISCARD_STD", "CV_NODISCARD",
+    "CV_EXPORTS", "CV_EXPORTS_W",
+    "CV_WRAP",
+]
+c_id_attributes = list(cpp_id_attributes)
 
 # Root tutorial index (lists all modules via @subpage). Stays the master
 # regardless of how many modules are in DOC_MODULES.
@@ -112,6 +169,12 @@ include_patterns = ["tutorials/tutorials.markdown", "faq.markdown",
 if CONTRIB_MODULES and (SPHINX_INPUT_ROOT / "tutorials_contrib").is_dir():
     include_patterns.append("tutorials_contrib/contrib_root.markdown")
     include_patterns += [f"tutorials_contrib/{m}/**" for m in CONTRIB_MODULES]
+if API_MODULES:
+    # Stubs are generated below (in `_generate_api_stubs()`); the file set is
+    # recursive over the Doxygen group hierarchy and unknown at this point,
+    # so use a glob. The check happens at Sphinx source-enumeration time —
+    # if no files exist, the pattern just matches nothing.
+    include_patterns.append("api/**")
 exclude_patterns = [
     "**/Thumbs.db", "**/.DS_Store", "**/_old/**",
     "tutorials/core/how_to_use_OpenCV_parallel_for_/**",
@@ -600,6 +663,11 @@ html_theme_options = {
                     "icon": "fa-brands fa-github"}],
 }
 
+# Exposed to templates/navbar-nav.html so it can rewrite external_links
+# whose URL starts with this base into depth-aware relative paths to the
+# local Doxygen output, instead of redirecting users to docs.opencv.org.
+html_context = {"doxygen_base_url": DOXYGEN_BASE_URL}
+
 # ===========================================================================
 #  Doxygen-flavored .markdown  ->  MyST translation via source-read.
 #  Nothing on disk under opencv/doc/ is modified.
@@ -711,6 +779,873 @@ for _m in CONTRIB_MODULES:
 _scan_internal(SPHINX_INPUT_ROOT / "faq.markdown")
 _scan_internal(SPHINX_INPUT_ROOT / "citelist.markdown")
 _scan_internal(SPHINX_INPUT_ROOT / "intro.markdown")
+# Generate the API stub tree from Doxygen XML, then scan it. Stub layout
+# mirrors Doxygen's group hierarchy: parent groups (those with <innergroup>
+# children in their XML) become navigation index pages with `@subpage`
+# toctrees; leaf groups get a single `{doxygengroup} <name>` directive.
+# This matches what docs.opencv.org/.../group__core.html does — Doxygen
+# also separates navigation from content; only one breathe directive
+# (`{doxygengroup} core :inner:`) flattens the whole hierarchy onto one
+# page, which is why we don't use it.
+def _itertext(el) -> str:
+    """Flatten an XML element's inner text. None-safe."""
+    return "".join(el.itertext()).strip() if el is not None else ""
+
+
+# memberdef@kind → display section title. Mirrors Doxygen's group-page order.
+_MEMBERDEF_SECTIONS = (
+    ("typedef",  "Typedefs"),
+    ("enum",     "Enumerations"),
+    ("function", "Functions"),
+    ("variable", "Variables"),
+    ("define",   "Macros"),
+)
+
+
+def _read_class_brief(refid: str, xml_dir: pathlib.Path,
+                      _cache: dict = {}) -> str:
+    """Read brief description from a class/struct's compound XML. Cached."""
+    if refid in _cache:
+        return _cache[refid]
+    import xml.etree.ElementTree as _ET
+    xml_path = xml_dir / f"{refid}.xml"
+    brief = ""
+    if xml_path.is_file():
+        try:
+            ccd = _ET.parse(xml_path).getroot().find("compounddef")
+            if ccd is not None:
+                brief = _itertext(ccd.find("briefdescription"))
+        except _ET.ParseError:
+            pass
+    _cache[refid] = brief
+    return brief
+
+
+def _build_api_hierarchy(refid: str, xml_dir: pathlib.Path,
+                         _seen: set | None = None) -> dict | None:
+    """Walk a group XML's <innergroup> children recursively.
+    Returns {name, title, detailed, innerclasses, sections, children} or None.
+    `_seen` guards against the rare case of cycles in the group graph."""
+    import xml.etree.ElementTree as _ET
+    _seen = _seen if _seen is not None else set()
+    if refid in _seen:
+        return None
+    _seen.add(refid)
+    xml_path = xml_dir / f"{refid}.xml"
+    if not xml_path.is_file():
+        return None
+    try:
+        root = _ET.parse(xml_path).getroot()
+    except _ET.ParseError:
+        return None
+    cd = root.find("compounddef")
+    if cd is None:
+        return None
+    name = (cd.findtext("compoundname") or "").strip()
+    title = (cd.findtext("title") or name).strip()
+    # Detailed description (used on parent index pages; breathe handles it
+    # on leaf pages, so we extract it for context-display only).
+    detailed_el = cd.find("detaileddescription")
+    detailed = ""
+    if detailed_el is not None:
+        paras = [_itertext(p) for p in detailed_el.findall("para")]
+        detailed = "\n\n".join(p for p in paras if p)
+    # Inner classes (public only). One read per class's XML for its brief.
+    # `qualified` is what `{doxygenclass}` needs (e.g. cv::ocl::Context); the
+    # innerclass element's text already carries that, but normalize spaces.
+    innerclasses = []
+    for ic in cd.findall("innerclass"):
+        if ic.get("prot") != "public":
+            continue
+        ic_refid = ic.get("refid", "")
+        qualified = " ".join((ic.text or "").split())
+        innerclasses.append({
+            "refid": ic_refid,
+            "name": qualified,
+            "qualified": qualified,
+            "kind": "struct" if ic_refid.startswith("struct") else "class",
+            "brief": _read_class_brief(ic_refid, xml_dir),
+        })
+    # Section members (typedefs, enums, functions, variables, macros).
+    # `qualified` and `param_types` exist so we can emit per-member breathe
+    # directives (doxygenenum / doxygenfunction / …) instead of one big
+    # doxygengroup; the latter inlines every <innerclass> on the group page,
+    # which is the opposite of Doxygen's group-page layout.
+    sections: dict[str, list[dict]] = {}
+    for sd in cd.findall("sectiondef"):
+        for md in sd.findall("memberdef"):
+            kind = md.get("kind", "")
+            section_title = dict(_MEMBERDEF_SECTIONS).get(kind)
+            if not section_title:
+                continue
+            qualified = (md.findtext("qualifiedname") or "").strip()
+            if not qualified:
+                qualified = (md.findtext("name") or "").strip()
+            # Param types: <type> text plus any <array> suffix (Doxygen
+            # stores `int foo[3]` as <type>int</type>...<array>[3]</array>;
+            # without merging them our breathe disambiguator omits the `[3]`
+            # and breathe reports "Unable to resolve function with
+            # arguments (…, const double)" even though the function exists).
+            def _param_type(p) -> str:
+                t = _itertext(p.find("type"))
+                arr = (p.findtext("array") or "").strip()
+                return (t + arr) if arr else t
+            param_types = [_param_type(p) for p in md.findall("param")]
+            # Enum values + scoped-vs-unscoped flag (for Doxygen-style
+            # synopsis rendering — one code block per enum with all values
+            # inside `{ }`, instead of breathe's discrete signature blocks).
+            enum_values = []
+            is_strong = md.get("strong", "no") == "yes"
+            if kind == "enum":
+                for ev in md.findall("enumvalue"):
+                    enum_values.append({
+                        "name":        (ev.findtext("name") or "").strip(),
+                        "initializer": (ev.findtext("initializer") or "").strip(),
+                    })
+            sections.setdefault(section_title, []).append({
+                "id":          md.get("id", ""),
+                "kind":        kind,
+                "name":        (md.findtext("name") or "").strip(),
+                "qualified":   qualified,
+                "type":        _itertext(md.find("type")),
+                "args":        (md.findtext("argsstring") or "").strip(),
+                "param_types": param_types,
+                "brief":       _itertext(md.find("briefdescription")),
+                "enum_values": enum_values,
+                "strong":      is_strong,
+            })
+    # Recurse into subgroups.
+    children = []
+    for ig in cd.findall("innergroup"):
+        child = _build_api_hierarchy(ig.get("refid"), xml_dir, _seen)
+        if child is not None:
+            children.append(child)
+    return {"name": name, "title": title, "detailed": detailed,
+            "innerclasses": innerclasses, "sections": sections,
+            "children": children}
+
+
+def _md_escape_cell(text: str) -> str:
+    """Make `text` safe for a single Markdown table cell."""
+    # Newlines collapse to spaces, pipes escape, angle brackets stay.
+    return (text or "").replace("\n", " ").replace("\r", " ") \
+                       .replace("|", "\\|").strip()
+
+
+# Per-member breathe directive selector. The full doxygengroup directive
+# recursively inlines every <innerclass> + <innernamespace>, which is the
+# *opposite* of how Doxygen's group page lays out (classes are links to
+# separate pages there). Emitting one directive per member keeps each
+# member's detail block scoped to itself and lets us push classes to their
+# own per-class pages — see _write_class_stub.
+_MEMBER_DIRECTIVE = {
+    "enum":     "doxygenenum",
+    "function": "doxygenfunction",
+    "typedef":  "doxygentypedef",
+    "variable": "doxygenvariable",
+    "define":   "doxygendefine",
+}
+# Section header for each member kind's detail block. Mirrors what Doxygen
+# emits on a group page (e.g. group__core__opencl.html has separate
+# "Enumeration Type Documentation" and "Function Documentation" sections,
+# not one collapsed "Detailed Description").
+_MEMBER_DETAIL_SECTION = {
+    "Typedefs":     "Typedef Documentation",
+    "Enumerations": "Enumeration Type Documentation",
+    "Functions":    "Function Documentation",
+    "Variables":    "Variable Documentation",
+    "Macros":       "Macro Definition Documentation",
+}
+
+
+def _enum_synopsis_lines(m: dict) -> list[str]:
+    """Render an enum as a Doxygen-style code synopsis: one `enum {…}` block
+    listing every value with its initializer. Used in place of breathe's
+    `{doxygenenum}` directive, which emits a discrete signature box per
+    enumerator (one box for the enum + one per value) — that's the layout
+    in the user's "before" screenshot. Doxygen's group page renders the
+    enum as a single code-style box; this helper reproduces that.
+
+    Value-name qualification follows Doxygen:
+      * Scoped (`enum class`) → values prefixed with the enum's own
+        qualified name.
+      * Unscoped → values prefixed with the enum's *parent* scope
+        (namespace or enclosing class), so they look like the C++ name
+        you'd actually write in code."""
+    qualified = m.get("qualified") or m["name"]
+    is_strong = bool(m.get("strong"))
+    keyword = "enum class" if is_strong else "enum"
+    if is_strong:
+        prefix = qualified + "::"
+    elif "::" in qualified:
+        prefix = qualified.rsplit("::", 1)[0] + "::"
+    else:
+        prefix = ""
+    out = [f"{keyword} {qualified} {{"]
+    vals = m.get("enum_values", []) or []
+    for i, v in enumerate(vals):
+        comma = "," if i < len(vals) - 1 else ""
+        init = (" " + v["initializer"]) if v["initializer"] else ""
+        out.append(f"    {prefix}{v['name']}{init}{comma}")
+    out.append("}")
+    return out
+
+
+def _function_signature(member: dict) -> str:
+    """Disambiguator used after a qualified function name in `{doxygenfunction}`.
+    Breathe expects `name(type1, type2, …)` with parameter names dropped (it
+    matches against Doxygen's `<param><type>` text). Empty-arg functions get
+    `()` — required for breathe to match correctly even for non-overloads."""
+    types = ", ".join((t or "").strip() for t in member.get("param_types", []))
+    return f"({types})"
+
+
+def _class_page_name(refid: str) -> str:
+    """Filename (without extension) for the per-class page. We use the Doxygen
+    refid verbatim so MyST cross-refs and internal links from breathe stay
+    stable (breathe's class anchors are the C++-mangled `_CPPv4N…` form, not
+    the refid — so there's no collision with the page name)."""
+    return refid
+
+
+def _write_api_stub(node: dict, out_dir: pathlib.Path,
+                    classes_seen: dict) -> None:
+    """Write one .md per group node. Recurses into children.
+
+    Parent groups (have <innergroup> children) → navigation index pages with
+    @subpage toctrees. Leaf groups → Doxygen-style summary tables (Classes /
+    Typedefs / Enumerations / Functions / Variables / Macros) at top, then
+    a per-member detail block per kind (one breathe directive per member, not
+    the recursive `{doxygengroup}` which inlines every nested class). Inner
+    classes get their own pages — emitted later by `_generate_api_stubs` from
+    `classes_seen`, which this fn populates."""
+    name = node["name"]
+    title = node["title"]
+    out = out_dir / f"{name}.md"
+
+    if node["children"]:
+        # Navigation index page — list children as @subpage entries; the
+        # existing _subpage_list_to_toctree rule converts them to a real
+        # toctree at translate time.
+        lines = [f"# {title} {{#api_{name}}}", ""]
+        if node["detailed"]:
+            lines += [node["detailed"], ""]
+        lines += ["## Topics", ""]
+        for child in node["children"]:
+            lines.append(f"- @subpage api_{child['name']}")
+        out.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        for child in node["children"]:
+            _write_api_stub(child, out_dir, classes_seen)
+        return
+
+    # ---- Leaf page ----------------------------------------------------------
+    lines = [f"# {title} {{#api_{name}}}", ""]
+
+    # Classes summary table — link to the per-class page that
+    # `_generate_api_stubs` emits (one .md per refid, deduped across groups).
+    if node["innerclasses"]:
+        lines += ["## Classes", "",
+                  "| Name | Description |", "|---|---|"]
+        for c in node["innerclasses"]:
+            classes_seen.setdefault(c["refid"], c)
+            page = _class_page_name(c["refid"])
+            link = f"[`{c['kind']} {c['name']}`]({page}.md)"
+            lines.append(f"| {link} | {_md_escape_cell(c['brief'])} |")
+        lines.append("")
+
+    # Build a fast lookup of class qualified names known so far — used to
+    # detect when a group's "Functions"/"Variables" sectiondef is actually
+    # listing a class member (Doxygen groups span class boundaries). Such
+    # members get rendered on the class page, not as standalone breathe
+    # directives.
+    class_qualifieds = {c.get("qualified") for c in classes_seen.values()
+                        if c.get("qualified")}
+
+    def _is_class_member(m: dict) -> bool:
+        q = m.get("qualified") or ""
+        if "::" not in q:
+            return False
+        parent = q.rsplit("::", 1)[0]
+        return parent in class_qualifieds
+
+    def _is_template_spec(m: dict) -> bool:
+        # Explicit template specializations carry `<…>` in the name (Doxygen
+        # stores `cv::saturate_cast< unsigned >`). breathe's C++ parser
+        # rejects this as a function-name argument, so we can't emit a
+        # `doxygenfunction` directive for them — the summary table still
+        # lists them; only the per-member detail block is skipped.
+        return "<" in (m.get("name") or "")
+
+
+    # Section summary tables in Doxygen's order. For class-member items the
+    # in-page anchor breathe would have emitted doesn't exist (we skip the
+    # per-member directive below) — point the link at the parent class page
+    # instead so the table stays clickable.
+    def _member_anchor_link(m: dict, label: str) -> str:
+        if _is_class_member(m):
+            q = m["qualified"]
+            parent_qualified = q.rsplit("::", 1)[0]
+            for c in classes_seen.values():
+                if c.get("qualified") == parent_qualified:
+                    return f"[`{label}`]({_class_page_name(c['refid'])}.md)"
+        return f"[`{label}`](#{m['id']})"
+
+    for _, section_title in _MEMBERDEF_SECTIONS:
+        items = node["sections"].get(section_title, [])
+        if not items:
+            continue
+        lines.append(f"## {section_title}")
+        lines.append("")
+        if section_title == "Functions":
+            lines += ["| Return | Name | Description |", "|---|---|---|"]
+            for m in items:
+                ret = _md_escape_cell(m["type"]) or "&nbsp;"
+                label = f"{m['name']}{_md_escape_cell(m['args'])}"
+                sig_link = _member_anchor_link(m, label)
+                lines.append(
+                    f"| `{ret}` | {sig_link} | {_md_escape_cell(m['brief'])} |")
+        elif section_title in ("Typedefs", "Variables"):
+            lines += ["| Type | Name | Description |", "|---|---|---|"]
+            for m in items:
+                t = _md_escape_cell(m["type"]) or "&nbsp;"
+                name_link = _member_anchor_link(m, m["name"])
+                lines.append(f"| `{t}` | {name_link} | {_md_escape_cell(m['brief'])} |")
+        elif section_title == "Enumerations":
+            # Code-style synopsis (Doxygen layout) instead of name/desc table.
+            # Both summary and detail-block representations would duplicate
+            # the same content — we only emit the synopsis here, and skip
+            # enums in the detail-block loop below.
+            for m in items:
+                if m["brief"]:
+                    lines.append(_md_escape_cell(m["brief"]))
+                    lines.append("")
+                lines.append("```cpp")
+                lines.extend(_enum_synopsis_lines(m))
+                lines.append("```")
+                lines.append("")
+            continue   # already appended trailing blank
+        else:  # Macros
+            lines += ["| Name | Description |", "|---|---|"]
+            for m in items:
+                name_link = _member_anchor_link(m, m["name"])
+                lines.append(f"| {name_link} | {_md_escape_cell(m['brief'])} |")
+        lines.append("")
+
+    # Per-member detail blocks (Enumeration Type Documentation,
+    # Function Documentation, …). One breathe directive per item — except
+    # for enums, which are rendered as a single code-style synopsis (one
+    # `enum {…}` block listing all values) to match Doxygen's group-page
+    # layout. breathe's `{doxygenenum}` instead emits a discrete signature
+    # box per enumerator, which looks fragmented and doesn't match the
+    # reference rendering. Class members and template specializations are
+    # skipped — see `_is_*`. Macros are deduped by name: Doxygen can emit
+    # multiple <memberdef>s for an arity-overloaded macro, but breathe
+    # renders the same C declaration each time and docutils complains
+    # about duplicate IDs.
+    seen_define_names: set[str] = set()
+    for kind_key, section_title in _MEMBERDEF_SECTIONS:
+        items = node["sections"].get(section_title, [])
+        if not items:
+            continue
+        directive = _MEMBER_DIRECTIVE.get(kind_key)
+        if not directive:
+            continue
+        # `rendered` collects entries with one of two shapes:
+        #   ("breathe", spec, directive_name)  — emitted as a breathe block
+        #   ("synopsis", brief, code_lines)    — emitted as a fenced block
+        rendered = []
+        for m in items:
+            # Class members render on the class page; skip on the group page.
+            if kind_key in ("function", "variable") and _is_class_member(m):
+                continue
+            # Explicit template specializations: breathe can't parse the
+            # `<T>` in the function name, so we leave them out of the
+            # detail section (table above still lists them).
+            if _is_template_spec(m):
+                continue
+            if m["kind"] == "enum":
+                # Enums are rendered as synopses in the "Enumerations"
+                # summary section above; no separate detail block needed.
+                continue
+            qualified = m["qualified"] or m["name"]
+            if m["kind"] == "function":
+                # Always pass the param-types disambiguator. breathe sees
+                # multiple matches for common names (e.g. cv::cos lives in
+                # both core_quaternion and core_utils_softfloat) — without
+                # a signature it can't pick. The XML patcher above
+                # guarantees the matching <memberdef> is reachable for
+                # breathe's lookup.
+                spec = qualified + _function_signature(m)
+            elif m["kind"] == "define":
+                # Preprocessor macros aren't namespaced. Dedupe by name —
+                # arity-overloaded macros (e.g. CV_LOG_VERBOSE) appear as
+                # multiple memberdefs but render to the same C declaration.
+                if m["name"] in seen_define_names:
+                    continue
+                seen_define_names.add(m["name"])
+                spec = m["name"]
+            else:
+                spec = qualified
+            rendered.append(("breathe", spec, directive))
+        if not rendered:
+            continue
+        lines.append(f"## {_MEMBER_DETAIL_SECTION[section_title]}")
+        lines.append("")
+        for entry in rendered:
+            if entry[0] == "synopsis":
+                _, brief, code_lines = entry
+                if brief:
+                    lines.append(brief)
+                    lines.append("")
+                lines.append("```cpp")
+                lines.extend(code_lines)
+                lines.append("```")
+                lines.append("")
+            else:
+                _, spec, dname = entry
+                lines += [
+                    f"```{{{dname}}} {spec}",
+                    ":project: opencv",
+                    "```",
+                    "",
+                ]
+
+    # Hidden toctree for per-class pages — needed so Sphinx knows these
+    # files exist and so the left sidebar lists them under this group.
+    if node["innerclasses"]:
+        lines += ["```{toctree}", ":hidden:", ":maxdepth: 1", ""]
+        for c in node["innerclasses"]:
+            lines.append(_class_page_name(c["refid"]))
+        lines += ["```", ""]
+
+    out.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+# Class-XML sectiondef kind → (summary heading, detail heading).
+# Order in this mapping is the order Doxygen uses on a class page.
+_CLASS_SUMMARY_SECTIONS = [
+    ("public-type",             "Public Types"),
+    ("public-func",             "Public Member Functions"),
+    ("public-static-func",      "Static Public Member Functions"),
+    ("public-attrib",           "Public Attributes"),
+    ("public-static-attrib",    "Static Public Attributes"),
+    ("protected-type",          "Protected Types"),
+    ("protected-func",          "Protected Member Functions"),
+    ("protected-static-func",   "Static Protected Member Functions"),
+    ("protected-attrib",        "Protected Attributes"),
+    ("protected-static-attrib", "Static Protected Attributes"),
+    ("friend",                  "Friends"),
+]
+
+
+def _read_class_data(refid: str, xml_dir: pathlib.Path) -> dict | None:
+    """Walk a class/struct compound XML and return everything the per-class
+    page needs: brief + detailed for the class itself, and a list of
+    members grouped by sectiondef kind. Returns None if the XML file is
+    missing or unparseable — callers should fall back to a bare
+    `{doxygenclass}` directive in that case.
+
+    Each member dict carries the same fields `_build_api_hierarchy`
+    captures, plus the `protection`, `static`, `const`, `virtual`,
+    `explicit` flags from memberdef attributes (needed to render
+    Doxygen-style annotations in the summary table)."""
+    import xml.etree.ElementTree as _ET
+    xml_path = xml_dir / f"{refid}.xml"
+    if not xml_path.is_file():
+        return None
+    try:
+        root = _ET.parse(xml_path).getroot()
+    except _ET.ParseError:
+        return None
+    cd = root.find("compounddef")
+    if cd is None:
+        return None
+
+    def _param_type(p) -> str:
+        t = _itertext(p.find("type"))
+        arr = (p.findtext("array") or "").strip()
+        return (t + arr) if arr else t
+
+    sections: dict[str, list[dict]] = {}
+    for sd in cd.findall("sectiondef"):
+        skind = sd.get("kind", "")
+        items: list[dict] = []
+        for md in sd.findall("memberdef"):
+            mkind = md.get("kind", "")
+            qualified = (md.findtext("qualifiedname") or "").strip()
+            name = (md.findtext("name") or "").strip()
+            enum_values = []
+            if mkind == "enum":
+                for ev in md.findall("enumvalue"):
+                    enum_values.append({
+                        "name":        (ev.findtext("name") or "").strip(),
+                        "initializer": (ev.findtext("initializer") or "").strip(),
+                    })
+            items.append({
+                "id":          md.get("id", ""),
+                "kind":        mkind,
+                "name":        name,
+                "qualified":   qualified or name,
+                "type":        _itertext(md.find("type")),
+                "args":        (md.findtext("argsstring") or "").strip(),
+                "param_types": [_param_type(p) for p in md.findall("param")],
+                "brief":       _itertext(md.find("briefdescription")),
+                "static":      md.get("static") == "yes",
+                "virt":        md.get("virt", "non-virtual"),
+                "const":       md.get("const") == "yes",
+                "explicit":    md.get("explicit") == "yes",
+                "enum_values": enum_values,
+                "strong":      md.get("strong", "no") == "yes",
+            })
+        if items:
+            sections[skind] = items
+
+    detailed_el = cd.find("detaileddescription")
+    detailed_paras = []
+    if detailed_el is not None:
+        for p in detailed_el.findall("para"):
+            txt = _itertext(p)
+            if txt:
+                detailed_paras.append(txt)
+
+    return {
+        "name":     (cd.findtext("compoundname") or "").strip(),
+        "brief":    _itertext(cd.find("briefdescription")),
+        "detailed": "\n\n".join(detailed_paras),
+        "sections": sections,
+    }
+
+
+def _write_class_stub(cls: dict, out_dir: pathlib.Path,
+                      xml_dir: pathlib.Path) -> None:
+    """One .md per inner class. Mirrors Doxygen's class-page layout:
+      * Brief + detailed description for the class itself
+      * Summary tables, one per sectiondef kind (Public Member Functions,
+        Static Public Member Functions, Protected Attributes, etc.)
+      * Detail blocks per member, grouped Doxygen-style into Constructor &
+        Destructor Documentation / Member Function Documentation /
+        Member Data Documentation / etc.
+
+    Detail blocks are per-member breathe directives (`{doxygenfunction}` /
+    `{doxygenvariable}` / `{doxygentypedef}`), not the recursive
+    `{doxygenclass} :members:` — the latter is breathe's discrete
+    one-signature-per-method layout that the user wanted replaced.
+
+    Falls back to a bare `{doxygenclass}` / `{doxygenstruct}` if the class
+    XML can't be read (e.g. XML wasn't regenerated)."""
+    page = _class_page_name(cls["refid"])
+    out = out_dir / f"{page}.md"
+    qualified = cls["qualified"] or cls["name"]
+    kind_label = cls["kind"].title()  # "Class" / "Struct"
+    title = f"{kind_label} {qualified}"
+    # Note: no `{#refid}` anchor in the heading — duplicates the
+    # docname-derived target. `_generate_api_stubs` seeds the
+    # refid→docname mapping into `_ANCHOR_TO_DOC` for `@ref` resolution.
+    lines = [f"# {title}", ""]
+
+    data = _read_class_data(cls["refid"], xml_dir)
+    if data is None:
+        # Fallback for missing XML.
+        directive = "doxygenstruct" if cls["kind"] == "struct" else "doxygenclass"
+        lines += [
+            f"```{{{directive}}} {qualified}",
+            ":project: opencv",
+            ":members:",
+            ":protected-members:",
+            ":undoc-members:",
+            "```",
+            "",
+        ]
+        out.write_text("\n".join(lines), encoding="utf-8")
+        return
+
+    # 1) Summary tables in Doxygen's order.
+    for sd_kind, summary_title in _CLASS_SUMMARY_SECTIONS:
+        items = data["sections"].get(sd_kind, [])
+        if not items:
+            continue
+        lines.append(f"## {summary_title}")
+        lines.append("")
+        # Type-bearing sections (functions, variables, typedefs) get a
+        # Return/Type column. Enum-bearing public-type sections get
+        # rendered as code-block synopses instead (matches the group-page
+        # treatment).
+        non_enum_items = [m for m in items if m["kind"] != "enum"]
+        enum_items = [m for m in items if m["kind"] == "enum"]
+        if non_enum_items:
+            lines += ["| Return | Name | Description |", "|---|---|---|"]
+            for m in non_enum_items:
+                ret = _md_escape_cell(m["type"]) or "&nbsp;"
+                if m["static"]:
+                    ret = "static " + ret
+                sig = f"{m['name']}{_md_escape_cell(m['args'])}"
+                sig_link = f"[`{sig}`](#{m['id']})"
+                lines.append(
+                    f"| `{ret}` | {sig_link} | {_md_escape_cell(m['brief'])} |")
+            lines.append("")
+        for m in enum_items:
+            if m["brief"]:
+                lines.append(_md_escape_cell(m["brief"]))
+                lines.append("")
+            lines.append("```cpp")
+            lines.extend(_enum_synopsis_lines(m))
+            lines.append("```")
+            lines.append("")
+
+    # 2) "Detailed Description" section for the class itself.
+    if data["detailed"]:
+        lines += ["## Detailed Description", "", data["detailed"], ""]
+
+    # 3) Per-member detail blocks. Functions split into ctor/dtor vs
+    #    others (mirrors Doxygen's "Constructor & Destructor Documentation"
+    #    + "Member Function Documentation"). Variables → "Member Data
+    #    Documentation". Typedefs → "Member Typedef Documentation".
+    #    Enums → "Member Enumeration Documentation" (synopsis code block).
+    class_simple = qualified.rsplit("::", 1)[-1]
+    typedef_items: list[dict] = []
+    enum_items_all: list[dict] = []
+    ctor_dtor_items: list[dict] = []
+    func_items: list[dict] = []
+    var_items: list[dict] = []
+    for sd_items in data["sections"].values():
+        for m in sd_items:
+            if m["kind"] == "typedef":
+                typedef_items.append(m)
+            elif m["kind"] == "enum":
+                enum_items_all.append(m)
+            elif m["kind"] == "function":
+                if m["name"] == class_simple or m["name"] == f"~{class_simple}":
+                    ctor_dtor_items.append(m)
+                else:
+                    func_items.append(m)
+            elif m["kind"] == "variable":
+                var_items.append(m)
+
+    def _emit_member_directive(m: dict, directive: str, spec: str) -> list[str]:
+        # MyST anchor label so the summary-table `#refid` link resolves.
+        return [
+            f"({m['id']})=",
+            f"```{{{directive}}} {spec}",
+            ":project: opencv",
+            "```",
+            "",
+        ]
+
+    if typedef_items:
+        lines += ["## Member Typedef Documentation", ""]
+        for m in typedef_items:
+            lines += _emit_member_directive(m, "doxygentypedef", m["qualified"])
+
+    if enum_items_all:
+        # Enums render as code-block synopses (matches the group-page
+        # treatment — breathe's `{doxygenenum}` gives the discrete
+        # one-signature-per-value layout the user wanted replaced).
+        lines += ["## Member Enumeration Documentation", ""]
+        for m in enum_items_all:
+            lines.append(f"({m['id']})=")
+            if m["brief"]:
+                lines.append(_md_escape_cell(m["brief"]))
+                lines.append("")
+            lines.append("```cpp")
+            lines.extend(_enum_synopsis_lines(m))
+            lines.append("```")
+            lines.append("")
+
+    # Dedupe functions: a method can appear in multiple sectiondefs (e.g.
+    # the same memberdef appearing in `public-func` and again via a
+    # `<member refid>` we inlined). The refid is unique per memberdef.
+    def _dedupe(items: list[dict]) -> list[dict]:
+        seen, out = set(), []
+        for m in items:
+            if m["id"] in seen:
+                continue
+            seen.add(m["id"])
+            out.append(m)
+        return out
+
+    if ctor_dtor_items:
+        lines += ["## Constructor & Destructor Documentation", ""]
+        for m in _dedupe(ctor_dtor_items):
+            spec = m["qualified"] + _function_signature(m)
+            lines += _emit_member_directive(m, "doxygenfunction", spec)
+
+    if func_items:
+        lines += ["## Member Function Documentation", ""]
+        for m in _dedupe(func_items):
+            spec = m["qualified"] + _function_signature(m)
+            lines += _emit_member_directive(m, "doxygenfunction", spec)
+
+    if var_items:
+        lines += ["## Member Data Documentation", ""]
+        for m in _dedupe(var_items):
+            lines += _emit_member_directive(m, "doxygenvariable", m["qualified"])
+
+    out.write_text("\n".join(lines), encoding="utf-8")
+
+
+def _patch_namespace_xml_for_breathe(xml_dir: pathlib.Path,
+                                     out_dir: pathlib.Path) -> None:
+    """Mirror `xml_dir` into `out_dir` via symlinks, then rewrite every
+    *non-group* compound XML to inline `<memberdef>` blocks that exist only
+    in the group XML.
+
+    Why: Doxygen lists functions declared inside `@addtogroup` regions as
+    `<member refid="group__…">` in the parent namespace XML (for `cv::*`
+    free functions) or the parent file XML (for global `hal_ni_*`-style
+    functions) — *without* a full `<memberdef>` block. The memberdef lives
+    only in the group XML file. breathe's function-by-name lookup walks
+    `<memberdef>` blocks in namespace/file XMLs and ignores bare refs, so
+    directives like `{doxygenfunction} cv::log` or
+    `{doxygenfunction} hal_ni_merge8u` fail with "Cannot find function".
+
+    Patching: for each `<member refid>` in a target compound's sectiondef
+    whose id targets `group__…`, we open the group XML, find the matching
+    `<memberdef id="…">`, and append it into the compound's sectiondef.
+    The original XML on disk is untouched."""
+    import xml.etree.ElementTree as _ET
+    import os as _osmod, shutil as _shutil
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # 1) Mirror every file from xml_dir into out_dir as a symlink. Cleaning
+    #    out_dir each time keeps this idempotent across rebuilds (Doxygen
+    #    XML changes are picked up because the symlinks resolve fresh).
+    for child in list(out_dir.iterdir()):
+        if child.is_symlink() or child.is_file():
+            child.unlink()
+        elif child.is_dir():
+            _shutil.rmtree(child)
+    for src in xml_dir.iterdir():
+        dst = out_dir / src.name
+        try:
+            _osmod.symlink(src, dst)
+        except (OSError, NotImplementedError):
+            _shutil.copy2(src, dst)
+
+    # 2) Cache for parsed group XMLs (each is read once even if referenced
+    #    by many compounds).
+    _group_cache: dict[str, _ET.ElementTree] = {}
+
+    def _load_group(group_id: str):
+        if group_id in _group_cache:
+            return _group_cache[group_id]
+        gx = xml_dir / f"{group_id}.xml"
+        if not gx.is_file():
+            _group_cache[group_id] = None
+            return None
+        try:
+            _group_cache[group_id] = _ET.parse(gx)
+        except _ET.ParseError:
+            _group_cache[group_id] = None
+        return _group_cache[group_id]
+
+    # 3) For each non-group compound XML (namespace, file, dir, …) patch
+    #    `<member refid>` entries that point at group memberdefs.
+    #    `index.xml` is the project index (not a compound) → skip it.
+    #    `class*.xml`/`struct*.xml`/`union*.xml` already carry full
+    #    memberdefs for their methods, but they may *also* have
+    #    `<member refid>` from @addtogroup tagged methods — patch them too.
+    _SKIP_PREFIXES = ("group", "index")
+    for compound_file in xml_dir.glob("*.xml"):
+        if any(compound_file.name.startswith(p) for p in _SKIP_PREFIXES):
+            continue
+        try:
+            tree = _ET.parse(compound_file)
+        except _ET.ParseError:
+            continue
+        root = tree.getroot()
+        cd = root.find("compounddef")
+        if cd is None:
+            continue
+        existing_ids = {md.get("id") for md in cd.iter("memberdef")}
+        patched = False
+        for sd in cd.findall("sectiondef"):
+            for member in list(sd.findall("member")):
+                refid = member.get("refid", "")
+                if not refid or refid in existing_ids:
+                    continue
+                # Member refids inside groups look like
+                # "group__core__utils__softfloat_1ga…". The compound id is
+                # everything before "_1" (which separates member from
+                # compound in Doxygen's id scheme).
+                if not refid.startswith("group__"):
+                    continue
+                sep = refid.find("_1")
+                if sep < 0:
+                    continue
+                group_id = refid[:sep]
+                gtree = _load_group(group_id)
+                if gtree is None:
+                    continue
+                for md in gtree.getroot().iter("memberdef"):
+                    if md.get("id") == refid:
+                        sd.append(md)
+                        existing_ids.add(refid)
+                        patched = True
+                        break
+        if patched:
+            out_file = out_dir / compound_file.name
+            if out_file.is_symlink() or out_file.is_file():
+                out_file.unlink()
+            tree.write(out_file, encoding="utf-8", xml_declaration=True)
+
+
+def _generate_api_stubs(modules, xml_dir, out_dir):
+    """Generate the full api/ stub tree. Idempotent — wipes and regenerates
+    on every sphinx-build so stale stubs from removed modules disappear.
+
+    Two passes:
+      1. Walk each module's group hierarchy → emit one group .md per node
+         (parent index pages + leaf pages with summary tables + per-member
+         detail blocks). `classes_seen` is populated as a side-effect.
+      2. Emit one .md per unique inner class — these are the per-class
+         subpages the group pages link to."""
+    if not modules:
+        return
+    if not xml_dir.is_dir():
+        return  # No XML yet (sphinx-xml not run); degrade silently.
+    import shutil
+    if out_dir.exists():
+        shutil.rmtree(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    root_lines = [
+        "API Reference {#api_root}",
+        "=============",
+        "",
+        "Sphinx-rendered API reference for OpenCV main modules. Each entry",
+        "below is a module's umbrella `@defgroup`; sub-pages mirror the",
+        "Doxygen subgroup hierarchy.",
+        "",
+    ]
+    classes_seen: dict[str, dict] = {}
+    for m in modules:
+        tree = _build_api_hierarchy(
+            "group__" + m.replace("_", "__"), xml_dir)
+        if tree is None:
+            continue
+        root_lines.append(f"- @subpage api_{tree['name']}")
+        _write_api_stub(tree, out_dir, classes_seen)
+    # Per-class pages (one per unique refid across all groups). We also
+    # seed `_ANCHOR_TO_DOC` directly with refid -> docname so `@ref`
+    # cross-references in tutorial markdown (and in any group page) keep
+    # working — the per-class page no longer carries a `{#refid}` heading
+    # anchor (would duplicate the docname-derived target).
+    for cls in classes_seen.values():
+        _write_class_stub(cls, out_dir, xml_dir)
+        _ANCHOR_TO_DOC[cls["refid"]] = f"api/{_class_page_name(cls['refid'])}"
+    (out_dir / "api_root.markdown").write_text(
+        "\n".join(root_lines) + "\n", encoding="utf-8")
+
+
+if API_MODULES:
+    # 1) Build a patched XML tree breathe will read (inlines group-only
+    #    <memberdef>s into namespace XML so name lookups succeed).
+    if _API_XML_DIR.is_dir():
+        _patch_namespace_xml_for_breathe(_API_XML_DIR, _PATCHED_XML_DIR)
+    # 2) Generate the api/ stub tree from the ORIGINAL XML — the stub
+    #    generator only reads group XML, which is unchanged.
+    _generate_api_stubs(API_MODULES, _API_XML_DIR, SPHINX_INPUT_ROOT / "api")
+    # Recursive scan picks up api_root.markdown + every group stub.
+    _scan_internal(SPHINX_INPUT_ROOT / "api")
 
 # External scan: every OTHER main module's top-level table_of_content_*.markdown.
 # Sources live under DOC_ROOT (the staged tree only contains *enabled* main
@@ -747,6 +1682,8 @@ for _root in ((DOC_ROOT / "tutorials").rglob("images/*"),
         if _img.is_file():
             _IMAGE_INDEX.setdefault(_img.name, _img.relative_to(DOC_ROOT).as_posix())
 for _m in CONTRIB_MODULES:
+    # <m>/tutorials/**/images/* — same shape as main, reachable through
+    # the existing tutorials_contrib/<m> symlink CMake stages.
     _tut = CONTRIB_ROOT / _m / "tutorials"
     if _tut.is_dir():
         for _img in _tut.rglob("images/*"):
@@ -1489,6 +2426,8 @@ def _translate(text: str, docname: str | None = None) -> str:
             re.MULTILINE)
         def repl(m: re.Match) -> str:
             desc = _textwrap.dedent(m.group("desc")).strip("\n")
+            # All-blank description (e.g. `- @subpage X\n\n##### Section`):
+            # don't rewrite, or we'd accumulate extra blank lines.
             if not desc.strip():
                 return m.group(0)
             return f"{m.group('bullet')}\n\n{desc}\n\n"
@@ -1783,24 +2722,80 @@ def _linkify_cv_symbols(src: str) -> str:
 def _source_read(app, docname, source):
     # Translate any tutorial doc — the root index, everything under an enabled
     # main / js / py module, plus (when staged) everything under an enabled
-    # contrib module.
+    # contrib module. Also translate API stubs so their `@subpage` / `@ref`
+    # lines turn into proper toctree entries; the body's MyST `{doxygengroup}`
+    # blocks pass through untouched (no `@` directives to rewrite).
     if not (docname.startswith("tutorials/")
             or docname.startswith("js_tutorials/")
             or docname.startswith("py_tutorials/")
             or docname.startswith("tutorials_contrib/")
+            or docname.startswith("api/")
             or docname == "faq"
             or docname == "citelist"
             or docname == "intro"):
         return
     text = source[0]
-    # On the master doc, append `- @subpage tutorial_contrib_root` so the
-    # contrib site appears in the unified left sidebar without modifying
-    # opencv/doc/tutorials/tutorials.markdown on disk.
-    if (docname == "tutorials/tutorials"
-            and CONTRIB_MODULES
-            and "tutorial_contrib_root" in _ANCHOR_TO_DOC):
-        text = text.rstrip() + "\n\n- @subpage tutorial_contrib_root\n"
+    # On the master doc, append `- @subpage tutorial_contrib_root` / `api_root`
+    # so the contrib + API sites appear in the unified left sidebar without
+    # modifying opencv/doc/tutorials/tutorials.markdown on disk.
+    if docname == "tutorials/tutorials":
+        if CONTRIB_MODULES and "tutorial_contrib_root" in _ANCHOR_TO_DOC:
+            text = text.rstrip() + "\n\n- @subpage tutorial_contrib_root\n"
+        if API_MODULES and "api_root" in _ANCHOR_TO_DOC:
+            text = text.rstrip() + "\n\n- @subpage api_root\n"
     source[0] = _translate(text, docname)
+
+
+def _patch_cpp_xref_resolver():
+    """Guard the C++ domain's xref resolver against an upstream assertion on
+    template-class cross-references. Sphinx 8.1.x asserts `parentSymbol`
+    inside `_resolve_xref_inner`; some breathe-emitted class-page xrefs
+    (e.g. `cv::Affine3<T>`) trigger that path with no parent symbol.
+    Treat it as an unresolved xref instead of crashing the whole build."""
+    try:
+        from sphinx.domains.cpp import CPPDomain
+    except ImportError:
+        return
+    original = CPPDomain._resolve_xref_inner
+
+    def guarded(self, env, fromdocname, builder, typ, target, node, contnode):
+        try:
+            return original(self, env, fromdocname, builder, typ, target,
+                            node, contnode)
+        except AssertionError:
+            return None, None
+    CPPDomain._resolve_xref_inner = guarded
+
+
+_patch_cpp_xref_resolver()
+
+
+def _silence_breathe_anon_enum_warning():
+    """Suppress the docutils "Invalid C++ declaration: Expected identifier
+    in nested name." warning that breathe triggers when rendering an
+    *anonymous* nested enum inside a struct (e.g. `cv::MatShape` has an
+    enum whose `<name>` element is empty — Doxygen XML allows it, but the
+    Sphinx C++ domain parser rejects the resulting declaration).
+
+    The render is otherwise fine (the enum values still appear); only the
+    parse-time warning is noise. We filter it via a Python logging filter
+    rather than monkey-patching the parser so the same fix survives Sphinx
+    version bumps."""
+    import logging
+    class _AnonEnumFilter(logging.Filter):
+        def filter(self, record: logging.LogRecord) -> bool:
+            msg = record.getMessage()
+            return not (
+                "Invalid C++ declaration" in msg
+                and "Expected identifier in nested name" in msg
+            )
+    # docutils warning messages route through both 'sphinx' and 'docutils'
+    # loggers depending on entry point; attach to both for coverage.
+    for _name in ("sphinx", "docutils"):
+        logging.getLogger(_name).addFilter(_AnonEnumFilter())
+
+
+_silence_breathe_anon_enum_warning()
 
 
 def setup(app):

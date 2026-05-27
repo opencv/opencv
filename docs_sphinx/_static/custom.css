@@ -431,7 +431,6 @@ mjx-container.MathJax:not([display="true"]) { vertical-align: -0.15em !important
 }
 .bd-content p img + img { margin-left: 0.25rem; }
 
-
 /* --- Copy-to-clipboard button -----------------------------------------
  * Provided by the `sphinx-copybutton` extension, which injects
  * `<button class="copybtn">` into every `div.highlight > pre` at runtime
