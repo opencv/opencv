@@ -1163,6 +1163,7 @@ static void convInt8BlockDepthwise(const void* inp_, const void* residual_,
         ((planeblocks_ + nthreads * 4 - 1) / (nthreads * 4) + SB_TILE - 1) & ~(SB_TILE - 1));
     int ntiles = (planeblocks_ + TILE - 1) / TILE;
     int total_tasks = N * K1 * ntiles;
+    constexpr int WBUF_SIZE = 128 * 8;  // 128 * K0, K0=8; named constant for MSVC compatibility
 
     parallel_for_(Range(0, total_tasks), [&](const Range& range) {
         int H = H_, W = W_;
@@ -1195,7 +1196,7 @@ static void convInt8BlockDepthwise(const void* inp_, const void* residual_,
                 constexpr int SB = 8;
 
                 // Pre-gather weights for this group block into wbuf[ksize * K0].
-                alignas(32) int8_t wbuf[128 * K0];
+                alignas(32) int8_t wbuf[WBUF_SIZE];
                 for (int i = 0; i < ksize; i++) {
                     for (int j = 0; j < n_g; j++) {
                         int g  = g_start + j;
@@ -1584,13 +1585,14 @@ void convInt8Block(const void* inp_, const void* residual_,
     }
 
     int total_blocks = N * ngroups * Kblk;
+    constexpr int SUMBUF_SIZE = 8 * 8;  // SPAT_BLOCK_SIZE * K0, both=8; named constant for MSVC compatibility
 
     parallel_for_(Range(0, total_blocks), [&](const Range& range) {
         constexpr int C0 = 8, K0 = 8;
         constexpr int C0shift = 3;
 #if CV_AVX2
         constexpr int SPAT_BLOCK_SIZE = 8;
-        alignas(32) int32_t sumbuf[SPAT_BLOCK_SIZE * K0];
+        alignas(32) int32_t sumbuf[SUMBUF_SIZE];
 #endif
         const uint8_t xor_val = inputIsU8 ? 0x80 : 0;
 
