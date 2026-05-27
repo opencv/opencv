@@ -129,6 +129,11 @@ int integral(int depth, int sdepth, int sqdepth,
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     }
 
+    // CV_32F sqsum kept on generic path due to accumulation-order sensitivity, see #27407
+    if (sqsum_data && (sdepth == CV_32F || sqdepth == CV_32F)) {
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    }
+
     // Skip images that are too small
     if (!(width >> 8 || height >> 8)) {
         return CV_HAL_ERROR_NOT_IMPLEMENTED;

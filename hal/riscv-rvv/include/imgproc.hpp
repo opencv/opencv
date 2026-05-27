@@ -236,10 +236,8 @@ int integral(int depth, int sdepth, int sqdepth,
              uchar* tilted_data, [[maybe_unused]] size_t tilted_step,
              int width, int height, int cn);
 
-// Diasbled due to accuracy issue.
-// Details see https://github.com/opencv/opencv/issues/27407.
-//#undef cv_hal_integral
-//#define cv_hal_integral cv::rvv_hal::imgproc::integral
+#undef cv_hal_integral
+#define cv_hal_integral cv::rvv_hal::imgproc::integral
 
 /* ############ laplacian ############ */
 int laplacian(const uint8_t* src_data, size_t src_step,
