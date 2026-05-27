@@ -34,3 +34,11 @@ Please read the [contribution guidelines](https://github.com/opencv/opencv/wiki/
 * [Follow OpenCV on Mastodon](http://mastodon.social/@opencv) in the Fediverse
 * [Follow OpenCV on Twitter](https://twitter.com/opencvlive)
 * [OpenCV.ai](https://opencv.ai): Computer Vision and AI development services from the OpenCV team.
+
+* ==What about the application of the Solomonoff induction to the person to person information exchange?==
+
+It seems it adds some principial boottleneck to the human to human communications. You have to guess what the other person mean.
+
+More details here in russian: https://transitional-writes.dreamwidth.org/41031.html It seems it is proof of the famous Mises calculation argument theorem. The only mean to circumvent this bottleneck is to use physically preserve money like gold, uran, platinum.
+
+https://en.wikipedia.org/wiki/Talk:Solomonoff%27s_theory_of_inductive_inference
