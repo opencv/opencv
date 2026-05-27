@@ -246,59 +246,26 @@ TEST(Video_AccSquared, accuracy) { CV_SquareAccTest test; test.safe_run(); }
 TEST(Video_AccProduct, accuracy) { CV_MultiplyAccTest test; test.safe_run(); }
 TEST(Video_RunningAvg, accuracy) { CV_RunningAvgTest test; test.safe_run(); }
 
-static void referenceAccumulate32FC4(const Mat& src, Mat& dst, const Mat& mask)
+typedef testing::TestWithParam<tuple<Size, int, int> > Video_Acc_Cn4;
+
+TEST_P(Video_Acc_Cn4, accuracy)
 {
-    CV_Assert(src.type() == CV_32FC4);
-    CV_Assert(dst.type() == CV_32FC4);
-    CV_Assert(mask.empty() || mask.type() == CV_8UC1);
-    CV_Assert(src.size() == dst.size());
-    CV_Assert(mask.empty() || mask.size() == src.size());
+    const Size size = get<0>(GetParam());
+    const int pattern = get<1>(GetParam());
+    const int srcType = get<2>(GetParam());
 
-    for (int y = 0; y < src.rows; ++y)
-    {
-        const Vec4f* srcRow = src.ptr<Vec4f>(y);
-        Vec4f* dstRow = dst.ptr<Vec4f>(y);
-        const uchar* maskRow = mask.empty() ? nullptr : mask.ptr<uchar>(y);
+    RNG& rng = theRNG();
 
-        for (int x = 0; x < src.cols; ++x)
-        {
-            if (!maskRow || maskRow[x])
-            {
-                for (int c = 0; c < 4; ++c)
-                    dstRow[x][c] += srcRow[x][c];
-            }
-        }
-    }
-}
+    Mat src(size, srcType);
+    Mat dst(size, CV_32FC4);
+    Mat mask(size, CV_8UC1);
 
-static void referenceAccumulate8UC4To32FC4(const Mat& src, Mat& dst, const Mat& mask)
-{
-    CV_Assert(src.type() == CV_8UC4);
-    CV_Assert(dst.type() == CV_32FC4);
-    CV_Assert(mask.empty() || mask.type() == CV_8UC1);
-    CV_Assert(src.size() == dst.size());
-    CV_Assert(mask.empty() || mask.size() == src.size());
+    if (srcType == CV_8UC4)
+        rng.fill(src, RNG::UNIFORM, Scalar::all(0), Scalar::all(256));
+    else
+        rng.fill(src, RNG::UNIFORM, Scalar::all(-10.0), Scalar::all(10.0));
 
-    for (int y = 0; y < src.rows; ++y)
-    {
-        const Vec4b* srcRow = src.ptr<Vec4b>(y);
-        Vec4f* dstRow = dst.ptr<Vec4f>(y);
-        const uchar* maskRow = mask.empty() ? nullptr : mask.ptr<uchar>(y);
-
-        for (int x = 0; x < src.cols; ++x)
-        {
-            if (!maskRow || maskRow[x])
-            {
-                for (int c = 0; c < 4; ++c)
-                    dstRow[x][c] += static_cast<float>(srcRow[x][c]);
-            }
-        }
-    }
-}
-
-static void fillAccumMask(Mat& mask, int pattern)
-{
-    CV_Assert(mask.type() == CV_8UC1);
+    rng.fill(dst, RNG::UNIFORM, Scalar::all(-1000.0), Scalar::all(1000.0));
 
     for (int y = 0; y < mask.rows; ++y)
     {
@@ -326,119 +293,68 @@ static void fillAccumMask(Mat& mask, int pattern)
             }
         }
     }
-}
 
-static double maxAbsDiff32FC4(const Mat& a, const Mat& b)
-{
-    CV_Assert(a.type() == CV_32FC4);
-    CV_Assert(b.type() == CV_32FC4);
-    CV_Assert(a.size() == b.size());
+    Mat dstRef = dst.clone();
 
-    double maxErr = 0.0;
-
-    for (int y = 0; y < a.rows; ++y)
+    if (srcType == CV_32FC4)
     {
-        const Vec4f* aRow = a.ptr<Vec4f>(y);
-        const Vec4f* bRow = b.ptr<Vec4f>(y);
-
-        for (int x = 0; x < a.cols; ++x)
+        for (int y = 0; y < src.rows; ++y)
         {
-            for (int c = 0; c < 4; ++c)
+            const Vec4f* srcRow = src.ptr<Vec4f>(y);
+            Vec4f* dstRefRow = dstRef.ptr<Vec4f>(y);
+            const uchar* maskRow = mask.ptr<uchar>(y);
+
+            for (int x = 0; x < src.cols; ++x)
             {
-                double diff = std::abs((double)aRow[x][c] - (double)bRow[x][c]);
-                if (diff > maxErr)
-                    maxErr = diff;
+                if (maskRow[x])
+                {
+                    for (int c = 0; c < 4; ++c)
+                        dstRefRow[x][c] += srcRow[x][c];
+                }
+            }
+        }
+    }
+    else
+    {
+        CV_Assert(srcType == CV_8UC4);
+
+        for (int y = 0; y < src.rows; ++y)
+        {
+            const Vec4b* srcRow = src.ptr<Vec4b>(y);
+            Vec4f* dstRefRow = dstRef.ptr<Vec4f>(y);
+            const uchar* maskRow = mask.ptr<uchar>(y);
+
+            for (int x = 0; x < src.cols; ++x)
+            {
+                if (maskRow[x])
+                {
+                    for (int c = 0; c < 4; ++c)
+                        dstRefRow[x][c] += static_cast<float>(srcRow[x][c]);
+                }
             }
         }
     }
 
-    return maxErr;
-}
-
-static void checkAccumulate32FC4Masked(Size size, int pattern)
-{
-
-    Mat src(size, CV_32FC4);
-    Mat dst(size, CV_32FC4);
-    Mat mask(size, CV_8UC1);
-
-    RNG rng(0x12345678 + size.width * 31 + size.height * 131 + pattern);
-    rng.fill(src, RNG::UNIFORM, Scalar::all(-100.0), Scalar::all(100.0));
-    rng.fill(dst, RNG::UNIFORM, Scalar::all(-1000.0), Scalar::all(1000.0));
-    fillAccumMask(mask, pattern);
-
-    Mat dstRef = dst.clone();
-
-    referenceAccumulate32FC4(src, dstRef, mask);
     cv::accumulate(src, dst, mask);
 
-    double err = maxAbsDiff32FC4(dst, dstRef);
-    EXPECT_EQ(0.0, err) << "size=" << size << ", pattern=" << pattern;
+    const double err = cv::norm(dst, dstRef, NORM_INF);
+
+    EXPECT_EQ(0.0, err)
+        << "size=" << size
+        << ", pattern=" << pattern
+        << ", srcType=" << srcType;
 }
 
-static void checkAccumulate8UC4To32FC4Masked(Size size, int pattern)
-{
-    RNG rng(0x87654321 + size.width * 31 + size.height * 131 + pattern);
-
-    Mat src(size, CV_8UC4);
-    Mat dst(size, CV_32FC4);
-    Mat mask(size, CV_8UC1);
-
-    rng.fill(src, RNG::UNIFORM, Scalar::all(0), Scalar::all(256));
-    rng.fill(dst, RNG::UNIFORM, Scalar::all(-1000.0), Scalar::all(1000.0));
-    fillAccumMask(mask, pattern);
-
-    Mat dstRef = dst.clone();
-
-    referenceAccumulate8UC4To32FC4(src, dstRef, mask);
-    cv::accumulate(src, dst, mask);
-
-    double err = maxAbsDiff32FC4(dst, dstRef);
-
-    EXPECT_EQ(0.0, err) << "size=" << size << ", pattern=" << pattern;
-}
-
-TEST(Video_Acc, accuracy_32FC4_masked_cn4)
-{
-
-    const Size sizes[] =
-    {
-        Size(1, 1),
-        Size(3, 5),
-        Size(17, 7),
-        Size(37, 19),
-        Size(128, 16),
-        Size(641, 37)
-    };
-
-    for (size_t i = 0; i < sizeof(sizes) / sizeof(sizes[0]); ++i)
-    {
-        for (int pattern = 0; pattern < 5; ++pattern)
-        {
-            checkAccumulate32FC4Masked(sizes[i], pattern);
-        }
-    }
-}
-
-TEST(Video_Acc, accuracy_8UC4_to_32FC4_masked_cn4)
-{
-    const Size sizes[] =
-    {
-        Size(1, 1),
-        Size(3, 5),
-        Size(17, 7),
-        Size(37, 19),
-        Size(128, 16),
-        Size(641, 37)
-    };
-
-    for (size_t i = 0; i < sizeof(sizes) / sizeof(sizes[0]); ++i)
-    {
-        for (int pattern = 0; pattern < 5; ++pattern)
-        {
-            checkAccumulate8UC4To32FC4Masked(sizes[i], pattern);
-        }
-    }
-}
+INSTANTIATE_TEST_CASE_P(Accumulate,
+    Video_Acc_Cn4,
+    testing::Combine(
+        testing::Values(Size(1, 1),
+                        Size(3, 5),
+                        Size(17, 7),
+                        Size(37, 19),
+                        Size(128, 16),
+                        Size(641, 37)),
+        testing::Values(0, 1, 2, 3, 4),
+        testing::Values(CV_32FC4, CV_8UC4)));
 
 }} // namespace
