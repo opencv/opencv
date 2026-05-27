@@ -13,6 +13,9 @@ File Input and Output using XML / YAML / JSON files {#tutorial_file_input_output
 
 Goal
 ----
+Note:
+cv::FileStorage only supports OpenCV-formatted XML/YAML/JSON files and cannot parse arbitrary files.
+The file must follow the structure expected by OpenCV serialization.
 
 You'll find answers to the following questions:
 
