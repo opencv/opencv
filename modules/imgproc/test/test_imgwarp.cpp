@@ -1114,5 +1114,63 @@ TEST(Imgproc_getPerspectiveTransform, issue_26916)
     EXPECT_MAT_NEAR(obtained_homogeneous_dst_points, expected_homogeneous_dst_points, 1e-10);
 }
 
+/*static void rotation2affine(float scale, float angle, float cx, float cy, float* M)
+{
+    // (x - cx)*cos(a) + (y - cy)*sin(a) + cx
+    // -(x - cx)*sin(a) + (y - cy)*cos(a) + cy
+    float ca = cosf(angle), sa = sinf(angle);
+    M[0] = scale*ca; M[1] = scale*sa; M[2] = scale*(-cx*ca - cy*sa) + cx;
+    M[3] = -scale*sa; M[4] = scale*ca; M[5] = scale*(cx*sa - cy*ca) + cy;
+}
+
+TEST(Imgproc_Warping, playground)
+{
+    auto ts = cvtest::TS::ptr();
+    Mat img0 = imread(string(ts->get_data_path()) + "stereomatching/datasets/tsukuba/im2.png", 1), img1, img;
+    int iangle = -1;
+    int borderType = BORDER_CONSTANT;
+    Scalar borderValue(0, 128, 0);
+    int imgtype = CV_8U;
+    int imgcn = 3;
+    double cvtscale = imgtype == CV_16U ? 256. : 1.;
+    if (imgcn == 1) {
+        cvtColor(img0, img1, COLOR_BGR2GRAY);
+    } else if (imgcn == 4) {
+        cvtColor(img0, img1, COLOR_BGR2BGRA);
+    } else {
+        img1 = img0;
+    }
+    img1.convertTo(img, imgtype, cvtscale);
+    Mat canvas0(img.size(), imgtype), canvas8;
+    float cx = img.cols/2, cy = img.rows/2;
+    if (img.depth() == CV_32F) {
+        borderValue = Scalar(100, 0, 100);
+    }
+
+    for(;;) {
+        iangle = (iangle + 1) % (360*4);
+        float angle = iangle*CV_PI/180.f*0.25f;
+        float scale = 1 + 0.2f*sin(angle);
+        float Mdata[9] = {1, 0, 0, 0, 1, 0, 0, 0, 1};
+        rotation2affine(scale, angle, cx, cy, Mdata);
+        Mat M(3, 3, CV_32F, Mdata);
+
+        double t0 = getTickCount();
+        warpPerspective(img, canvas0, M, canvas0.size(), INTER_CUBIC, borderType, borderValue);
+        t0 = getTickCount() - t0;
+
+        canvas0.convertTo(canvas8, CV_8U, 1./cvtscale);
+        printf("opencv time = %.1fms\n", t0*1000./getTickFrequency());
+        imshow("result (opencv)", canvas8);
+        int c = waitKey(1);
+        if (c < 0)
+            continue;
+        if ((c & 255) == 27)
+            break;
+        if ((waitKey() & 255) == 27)
+            break;
+    }
+}*/
+
 }} // namespace
 /* End of file. */

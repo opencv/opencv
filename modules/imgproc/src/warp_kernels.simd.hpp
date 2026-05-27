@@ -106,6 +106,8 @@
 namespace cv{
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
+ImgWarpFunc getBicubicWarpFunc_(int type);
+
 void warpAffineNearestInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
                                    uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                                    const double M[6], int border_type, const double border_value[4]);
@@ -6989,6 +6991,1527 @@ void remapLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src_step, int
                             border_type, border_value,
                             map1_data, map1_step, map2_data, map2_step, is_relative);
 #endif
+}
+
+
+namespace {
+
+static CV_ALWAYS_INLINE void
+bicubicWeights(float alpha, float A, float& w0, float& w1, float& w2, float& w3)
+{
+    float a2 = alpha*alpha;
+    float b = 1.f - alpha;
+    float b2 = b*b;
+
+    w0 = A*alpha*b2;
+    w3 = A*a2*b;
+    w1 = a2*((A + 2.f)*alpha - (A + 3.f)) + 1.f;
+    w2 = 1.f - w0 - w1 - w3;
+}
+
+static CV_ALWAYS_INLINE int
+bicubicCoeffs(float xs0, float ys0,
+              size_t srcstep, Size size, int bpp, float A,
+              int bordertype, int& tl_x, int& tl_y, int& tl_ofs,
+              float& wx0, float& wx1, float& wx2, float& wx3,
+              float& wy0, float& wy1, float& wy2, float& wy3)
+{
+    constexpr int MIN_SIZE = 16;
+    int width = size.width, height = size.height;
+    int bigwidth = std::max(width, MIN_SIZE);
+    int bigheight = std::max(height, MIN_SIZE);
+    float minx = float(-bigwidth), maxx = float(bigwidth*2);
+    float miny = float(-bigheight), maxy = float(bigheight*2);
+
+    // clamp coordinates in floating-point to try to avoid unpredictable
+    // behavior if the floating-point coordinates are huge
+    float vx0 = std::clamp(xs0, minx, maxx);
+    float vy0 = std::clamp(ys0, miny, maxy);
+
+    int ix0 = cvFloor(vx0);
+    int iy0 = cvFloor(vy0);
+    float alpha = vx0 - ix0;
+    float beta = vy0 - iy0;
+
+    ix0--;
+    iy0--;
+
+    int all_outliers = int((unsigned)(ix0 + 4) >= (unsigned)(width + 4)) |
+                       int((unsigned)(iy0 + 4) >= (unsigned)(height + 4));
+    if (all_outliers && (bordertype == BORDER_CONSTANT || bordertype == BORDER_TRANSPARENT))
+        return -1;
+
+    int all_inliers = int((unsigned)ix0 < (unsigned)std::max(width - 3, 0)) &
+                      int((unsigned)iy0 < (unsigned)std::max(height - 5, 0));
+
+    tl_x = ix0;
+    tl_y = iy0;
+    tl_ofs = iy0*(int)srcstep + ix0*bpp;
+
+    bicubicWeights(alpha, A, wx0, wx1, wx2, wx3);
+    bicubicWeights(beta, A, wy0, wy1, wy2, wy3);
+
+    return all_inliers;
+}
+
+template<typename _Tp, typename _Fp>
+static void bicubicFetchPixels(const _Tp* src, size_t srcstep, Size size, int cn,
+                               const int32_t* tl_x, const int32_t* tl_y,
+                               int32_t* goodx, int row, _Fp* pixbuf, int len,
+                               int borderType, const _Tp* defVal)
+{
+    int width = size.width, height = size.height;
+    srcstep /= sizeof(_Tp);
+    if (borderType == BORDER_CONSTANT || borderType == BORDER_TRANSPARENT) {
+        _Tp defR = defVal[0], defG = defVal[1], defB = defVal[2];
+        for (int i = 0; i < len; i++) {
+            int x0 = tl_x[i], y0 = tl_y[i] + row;
+            int x1 = x0 + 1, x2 = x0 + 2, x3 = x0 + 3;
+            int my = int((unsigned)y0 < (unsigned)height);
+            int mx0 = int((unsigned)x0 < (unsigned)width) & my;
+            int mx1 = int((unsigned)x1 < (unsigned)width) & my;
+            int mx2 = int((unsigned)x2 < (unsigned)width) & my;
+            int mx3 = int((unsigned)x2 < (unsigned)width) & my;
+            y0 = std::clamp(y0, 0, height-1);
+            x0 = std::clamp(x0, 0, width-1)*cn;
+            x1 = std::clamp(x1, 0, width-1)*cn;
+            x2 = std::clamp(x2, 0, width-1)*cn;
+            x3 = std::clamp(x3, 0, width-1)*cn;
+            const _Tp* srcrow = src + srcstep*y0;
+            pixbuf[i] = (_Fp)(srcrow[x0]*mx0 + defR*(1 - mx0));
+            pixbuf[i + len] = (_Fp)(srcrow[x1]*mx1 + defR*(1 - mx1));
+            pixbuf[i + len*2] = (_Fp)(srcrow[x2]*mx2 + defR*(1 - mx2));
+            pixbuf[i + len*3] = (_Fp)(srcrow[x3]*mx3 + defR*(1 - mx3));
+            if (cn > 1) {
+                pixbuf[i + len*4] = (_Fp)(srcrow[x0 + 1]*mx0 + defG*(1 - mx0));
+                pixbuf[i + len*5] = (_Fp)(srcrow[x1 + 1]*mx1 + defG*(1 - mx1));
+                pixbuf[i + len*6] = (_Fp)(srcrow[x2 + 1]*mx2 + defG*(1 - mx2));
+                pixbuf[i + len*7] = (_Fp)(srcrow[x3 + 1]*mx3 + defG*(1 - mx3));
+                if (cn > 2) {
+                    pixbuf[i + len*8] = (_Fp)(srcrow[x0 + 2]*mx0 + defB*(1 - mx0));
+                    pixbuf[i + len*9] = (_Fp)(srcrow[x1 + 2]*mx1 + defB*(1 - mx1));
+                    pixbuf[i + len*10] = (_Fp)(srcrow[x2 + 2]*mx2 + defB*(1 - mx2));
+                    pixbuf[i + len*11] = (_Fp)(srcrow[x3 + 2]*mx3 + defB*(1 - mx3));
+                    if (cn > 3) {
+                        pixbuf[i + len*12] = (_Fp)(srcrow[x0 + 3]*mx0 + defB*(1 - mx0));
+                        pixbuf[i + len*13] = (_Fp)(srcrow[x1 + 3]*mx1 + defB*(1 - mx1));
+                        pixbuf[i + len*14] = (_Fp)(srcrow[x2 + 3]*mx2 + defB*(1 - mx2));
+                        pixbuf[i + len*15] = (_Fp)(srcrow[x3 + 3]*mx3 + defB*(1 - mx3));
+                    }
+                }
+            }
+        }
+    } else {
+        for (int i = 0; i < len; i++) {
+            int y0 = borderInterpolate_fast(tl_y[i] + row, height, borderType);
+            int x0, x1, x2, x3;
+            if (row == 0) {
+                int x0_ = tl_x[i];
+                if ((unsigned)x0_ < (unsigned)std::max(width - 3, 0)) {
+                    x0 = x0_*cn;
+                    x1 = (x0_ + 1)*cn;
+                    x2 = (x0_ + 2)*cn;
+                    x3 = (x0_ + 3)*cn;
+                } else {
+                    x0 = borderInterpolate_fast(x0_, width, borderType)*cn;
+                    x1 = borderInterpolate_fast(x0_ + 1, width, borderType)*cn;
+                    x2 = borderInterpolate_fast(x0_ + 2, width, borderType)*cn;
+                    x3 = borderInterpolate_fast(x0_ + 3, width, borderType)*cn;
+                }
+                goodx[i*4] = x0;
+                goodx[i*4 + 1] = x1;
+                goodx[i*4 + 2] = x2;
+                goodx[i*4 + 3] = x3;
+            } else {
+                x0 = goodx[i*4];
+                x1 = goodx[i*4 + 1];
+                x2 = goodx[i*4 + 2];
+                x3 = goodx[i*4 + 3];
+            }
+            const _Tp* srcrow = src + srcstep*y0;
+            pixbuf[i] = (_Fp)srcrow[x0];
+            pixbuf[i + len] = (_Fp)srcrow[x1];
+            pixbuf[i + len*2] = (_Fp)srcrow[x2];
+            pixbuf[i + len*3] = (_Fp)srcrow[x3];
+            if (cn > 1) {
+                pixbuf[i + len*4] = (_Fp)srcrow[x0 + 1];
+                pixbuf[i + len*5] = (_Fp)srcrow[x1 + 1];
+                pixbuf[i + len*6] = (_Fp)srcrow[x2 + 1];
+                pixbuf[i + len*7] = (_Fp)srcrow[x3 + 1];
+                if (cn > 2) {
+                    pixbuf[i + len*8] = (_Fp)srcrow[x0 + 2];
+                    pixbuf[i + len*9] = (_Fp)srcrow[x1 + 2];
+                    pixbuf[i + len*10] = (_Fp)srcrow[x2 + 2];
+                    pixbuf[i + len*11] = (_Fp)srcrow[x3 + 2];
+                    if (cn > 3) {
+                        pixbuf[i + len*12] = (_Fp)srcrow[x0 + 3];
+                        pixbuf[i + len*13] = (_Fp)srcrow[x1 + 3];
+                        pixbuf[i + len*14] = (_Fp)srcrow[x2 + 3];
+                        pixbuf[i + len*15] = (_Fp)srcrow[x3 + 3];
+                    }
+                }
+            }
+        }
+    }
+}
+
+#undef BICUBIC_UPDATE_ACC
+#define BICUBIC_UPDATE_ACC(acc, v0, v1, v2, v3, wy) \
+    acc += (v0*wx0 + v1*wx1 + v2*wx2 + v3*wx3)*wy
+
+#undef BICUBIC_UPDATE_ACC_VEC
+#define BICUBIC_UPDATE_ACC_VEC(acc, v0, v1, v2, v3, wy) \
+    sumwx = v_fma(v1, wx1, v_mul(v0, wx0)); \
+    sumwx = v_fma(v2, wx2, sumwx); \
+    sumwx = v_fma(v3, wx3, sumwx); \
+    acc = v_fma(sumwx, wy, acc)
+
+#undef BICUBIC_PROCESS_INLIERS_C1_SCALAR
+#define BICUBIC_PROCESS_INLIERS_C1_SCALAR(row) \
+    srcrow = (const chtype*)((const uint8_t*)src + row*srcstep + tl_ofs); \
+    V0 = buftype(srcrow[0]); \
+    V1 = buftype(srcrow[1]); \
+    V2 = buftype(srcrow[2]); \
+    V3 = buftype(srcrow[3]); \
+    BICUBIC_UPDATE_ACC(acc_r, V0, V1, V2, V3, wy##row)
+
+#undef BICUBIC_PROCESS_INLIERS_C3_SCALAR
+#define BICUBIC_PROCESS_INLIERS_C3_SCALAR(row) \
+    srcrow = (const chtype*)((const uint8_t*)src + row*srcstep + tl_ofs); \
+    V0 = buftype(srcrow[0]); \
+    V1 = buftype(srcrow[3]); \
+    V2 = buftype(srcrow[6]); \
+    V3 = buftype(srcrow[9]); \
+    BICUBIC_UPDATE_ACC(acc_r, V0, V1, V2, V3, wy##row); \
+    V0 = buftype(srcrow[1]); \
+    V1 = buftype(srcrow[4]); \
+    V2 = buftype(srcrow[7]); \
+    V3 = buftype(srcrow[10]); \
+    BICUBIC_UPDATE_ACC(acc_g, V0, V1, V2, V3, wy##row); \
+    V0 = buftype(srcrow[2]); \
+    V1 = buftype(srcrow[5]); \
+    V2 = buftype(srcrow[8]); \
+    V3 = buftype(srcrow[11]); \
+    BICUBIC_UPDATE_ACC(acc_b, V0, V1, V2, V3, wy##row)
+
+#undef BICUBIC_PROCESS_INLIERS_C4_SCALAR
+#define BICUBIC_PROCESS_INLIERS_C4_SCALAR(row) \
+    srcrow = (const chtype*)((const uint8_t*)src + row*srcstep + tl_ofs); \
+    V0 = buftype(srcrow[0]); \
+    V1 = buftype(srcrow[4]); \
+    V2 = buftype(srcrow[8]); \
+    V3 = buftype(srcrow[12]); \
+    BICUBIC_UPDATE_ACC(acc_r, V0, V1, V2, V3, wy##row); \
+    V0 = buftype(srcrow[1]); \
+    V1 = buftype(srcrow[5]); \
+    V2 = buftype(srcrow[9]); \
+    V3 = buftype(srcrow[13]); \
+    BICUBIC_UPDATE_ACC(acc_g, V0, V1, V2, V3, wy##row); \
+    V0 = buftype(srcrow[2]); \
+    V1 = buftype(srcrow[6]); \
+    V2 = buftype(srcrow[10]); \
+    V3 = buftype(srcrow[14]); \
+    BICUBIC_UPDATE_ACC(acc_b, V0, V1, V2, V3, wy##row); \
+    V0 = buftype(srcrow[3]); \
+    V1 = buftype(srcrow[7]); \
+    V2 = buftype(srcrow[11]); \
+    V3 = buftype(srcrow[15]); \
+    BICUBIC_UPDATE_ACC(acc_a, V0, V1, V2, V3, wy##row)
+
+template<typename chtype, int NCHANNELS>
+static void bicubicRef(const float* srcx, const float* srcy, int len,
+                       const void* src, size_t srcstep, Size size,
+                       chtype* dst, const float* params, int borderType, chtype* borderVal)
+{
+    constexpr float defaultA = -0.75f;
+    float A = params ? *params : defaultA;
+
+    constexpr int BPP = int(NCHANNELS*sizeof(dst[0]));
+    using buftype = std::conditional_t<std::is_same_v<chtype, float>, float, int>;
+    using pixtype = std::conditional_t<NCHANNELS == 1, chtype, Vec<chtype, NCHANNELS>>;
+
+    pixtype bval = borderVal ? *(pixtype*)borderVal : pixtype();
+
+    for (int i = 0; i < len; i++, dst += NCHANNELS) {
+        buftype pixbuf[NCHANNELS][4];
+        int tl_x, tl_y, tl_ofs, goodx[4];
+        float V0, V1, V2, V3;
+        float wx0, wx1, wx2, wx3, wy0, wy1, wy2, wy3;
+        float xs = srcx[i], ys = srcy[i];
+
+        int code = bicubicCoeffs(xs, ys, srcstep, size, BPP, A,
+                                 borderType, tl_x, tl_y, tl_ofs,
+                                 wx0, wx1, wx2, wx3, wy0, wy1, wy2, wy3);
+        if (code > 0) {
+            const chtype* srcrow;
+            if constexpr (NCHANNELS == 1) {
+                float acc_r = 0.f;
+                BICUBIC_PROCESS_INLIERS_C1_SCALAR(0);
+                BICUBIC_PROCESS_INLIERS_C1_SCALAR(1);
+                BICUBIC_PROCESS_INLIERS_C1_SCALAR(2);
+                BICUBIC_PROCESS_INLIERS_C1_SCALAR(3);
+                dst[0] = saturate_cast<chtype>(acc_r);
+            } else if constexpr (NCHANNELS == 3) {
+                float acc_r = 0.f, acc_g = 0.f, acc_b = 0.f;
+                BICUBIC_PROCESS_INLIERS_C3_SCALAR(0);
+                BICUBIC_PROCESS_INLIERS_C3_SCALAR(1);
+                BICUBIC_PROCESS_INLIERS_C3_SCALAR(2);
+                BICUBIC_PROCESS_INLIERS_C3_SCALAR(3);
+                dst[0] = saturate_cast<chtype>(acc_r);
+                dst[1] = saturate_cast<chtype>(acc_g);
+                dst[2] = saturate_cast<chtype>(acc_b);
+            } else if constexpr (NCHANNELS == 4) {
+                float acc_r = 0.f, acc_g = 0.f, acc_b = 0.f, acc_a = 0.f;
+                BICUBIC_PROCESS_INLIERS_C4_SCALAR(0);
+                BICUBIC_PROCESS_INLIERS_C4_SCALAR(1);
+                BICUBIC_PROCESS_INLIERS_C4_SCALAR(2);
+                BICUBIC_PROCESS_INLIERS_C4_SCALAR(3);
+                dst[0] = saturate_cast<chtype>(acc_r);
+                dst[1] = saturate_cast<chtype>(acc_g);
+                dst[2] = saturate_cast<chtype>(acc_b);
+                dst[3] = saturate_cast<chtype>(acc_a);
+            }
+        } else if (code < 0) {
+            if (borderType == BORDER_CONSTANT) {
+                *((pixtype*)dst) = bval;
+            }
+            continue;
+        } else {
+            float acc[NCHANNELS] = {};
+            float wys[] = {wy0, wy1, wy2, wy3};
+            const chtype* defVal = borderType == BORDER_TRANSPARENT ? dst : borderVal;
+            for (int row = 0; row < 4; row++) {
+                bicubicFetchPixels((const chtype*)src, srcstep, size, NCHANNELS, &tl_x, &tl_y,
+                                   goodx, row, &pixbuf[0][0], 1, borderType, defVal);
+                float wy = wys[row];
+                for (int c = 0; c < NCHANNELS; c++) {
+                    V0 = buftype(pixbuf[c][0]);
+                    V1 = buftype(pixbuf[c][1]);
+                    V2 = buftype(pixbuf[c][2]);
+                    V3 = buftype(pixbuf[c][3]);
+                    BICUBIC_UPDATE_ACC(acc[c], V0, V1, V2, V3, wy);
+                }
+            }
+            for (int c = 0; c < NCHANNELS; c++) {
+                dst[c] = saturate_cast<chtype>(acc[c]);
+            }
+        }
+    }
+}
+
+#if CV_SIMD
+
+CV_ALWAYS_INLINE void
+bicubicWeights(const v_float32& alpha, float A,
+               v_float32& w0, v_float32& w1,
+               v_float32& w2, v_float32& w3)
+{
+    const v_float32 vA   = vx_setall_f32(A);
+    const v_float32 vAp2 = vx_setall_f32(A + 2.0f);
+    const v_float32 vAp3 = vx_setall_f32(-(A + 3.0f));
+    const v_float32 v1   = vx_setall_f32(1.0f);
+
+    const v_float32 a2 = v_mul(alpha, alpha);            // α²
+    const v_float32 b  = v_sub(v1, alpha);               // b = 1-α
+    const v_float32 b2 = v_mul(b, b);                    // b²
+
+    w0 = v_mul(vA, v_mul(alpha, b2));                    // A·α·b²
+    w3 = v_mul(vA, v_mul(a2, b));                        // A·α²·b
+    w1 = v_fma(a2, v_fma(vAp2, alpha, vAp3), v1);       // a²·((A+2)α-(A+3))+1
+    w2 = v_sub(v_sub(v_sub(v1, w0), w1), w3);
+}
+
+static CV_ALWAYS_INLINE int
+bicubicCoeffs(const float* srcx, const float* srcy,
+              size_t srcstep, Size size, int bpp, float A,
+              int bordertype, int32_t* tl_x, int32_t* tl_y, int32_t* tl_ofs,
+              v_float32& wx0, v_float32& wx1, v_float32& wx2, v_float32& wx3,
+              v_float32& wy0, v_float32& wy1, v_float32& wy2, v_float32& wy3)
+{
+    constexpr int MIN_SIZE = 16;
+    int width = size.width, height = size.height;
+    int bigwidth = std::max(width, MIN_SIZE);
+    int bigheight = std::max(height, MIN_SIZE);
+    v_float32 minx = vx_setall_f32(float(-bigwidth)), maxx = vx_setall_f32(float(bigwidth*2));
+    v_float32 miny = vx_setall_f32(float(-bigheight)), maxy = vx_setall_f32(float(bigheight*2));
+
+    // clamp coordinates in floating-point to try to avoid unpredictable
+    // behavior if the floating-point coordinates are huge
+    v_float32 xs0 = v_load(srcx), ys0 = v_load(srcy);
+    v_float32 vx0 = v_min(v_max(xs0, minx), maxx);
+    v_float32 vy0 = v_min(v_max(ys0, miny), maxy);
+
+    v_int32 ix0 = v_floor(vx0);
+    v_int32 iy0 = v_floor(vy0);
+    v_float32 alpha = v_sub(vx0, v_cvt_f32(ix0));
+    v_float32 beta = v_sub(vy0, v_cvt_f32(iy0));
+
+    v_int32 one_i = vx_setall_s32(1), four_i = vx_setall_s32(4);
+    ix0 = v_sub(ix0, one_i);
+    iy0 = v_sub(iy0, one_i);
+
+    v_uint32 width_outer = vx_setall_u32((uint32_t)(width + 4));
+    v_uint32 height_outer = vx_setall_u32((uint32_t)(height + 4));
+
+    v_uint32 outliers_mask = v_or(v_ge(v_reinterpret_as_u32(v_add(ix0, four_i)), width_outer),
+                                  v_ge(v_reinterpret_as_u32(v_add(iy0, four_i)), height_outer));
+
+    bool all_outliers = v_check_all(outliers_mask);
+    if (all_outliers && (bordertype == BORDER_CONSTANT || bordertype == BORDER_TRANSPARENT))
+        return -1;
+
+    v_uint32 width_inner = vx_setall_u32((uint32_t)std::max(width - 3, 0));
+    v_uint32 height_inner = vx_setall_u32((uint32_t)std::max(height - 5, 0));
+
+    v_uint32 inliers_mask = v_and(v_lt(v_reinterpret_as_u32(ix0), width_inner),
+                                  v_lt(v_reinterpret_as_u32(iy0), height_inner));
+
+    bool all_inliers = v_check_all(inliers_mask);
+    v_int32 tl_ofs0 = v_add(v_mul(iy0, v_setall_s32((int)srcstep)), v_mul(ix0, v_setall_s32(bpp)));
+
+    v_store(tl_x, ix0);
+    v_store(tl_y, iy0);
+    v_store(tl_ofs, tl_ofs0);
+
+    bicubicWeights(alpha, A, wx0, wx1, wx2, wx3);
+    bicubicWeights(beta, A, wy0, wy1, wy2, wy3);
+
+    return int(all_inliers);
+}
+
+#if CV_SIMD_FP16
+CV_ALWAYS_INLINE void
+bicubicWeights(const v_float16& alpha, float A,
+               v_float16& w0, v_float16& w1,
+               v_float16& w2, v_float16& w3)
+{
+    const v_float16 vA   = vx_setall_f16(hfloat(A));
+    const v_float16 vAp2 = vx_setall_f16(hfloat(A + 2.0f));
+    const v_float16 vAp3 = vx_setall_f16(hfloat(-(A + 3.0f)));
+    const v_float16 v1   = vx_setall_f16(hfloat(1.0f));
+
+    const v_float16 a2 = v_mul(alpha, alpha);            // α²
+    const v_float16 b  = v_sub(v1, alpha);               // b = 1-α
+    const v_float16 b2 = v_mul(b, b);                    // b²
+
+    w0 = v_mul(vA, v_mul(alpha, b2));                    // A·α·b²
+    w3 = v_mul(vA, v_mul(a2, b));                        // A·α²·b
+    w1 = v_fma(a2, v_fma(vAp2, alpha, vAp3), v1);       // a²·((A+2)α-(A+3))+1
+    w2 = v_sub(v_sub(v_sub(v1, w0), w1), w3);
+}
+
+static CV_ALWAYS_INLINE int
+bicubicCoeffs(const float* srcx, const float* srcy,
+              size_t srcstep, Size size, int bpp, float A,
+              int bordertype, int32_t* tl_x, int32_t* tl_y, int32_t* tl_ofs,
+              v_float16& wx0, v_float16& wx1, v_float16& wx2, v_float16& wx3,
+              v_float16& wy0, v_float16& wy1, v_float16& wy2, v_float16& wy3)
+{
+    constexpr int nlanes32 = VTraits<v_float32>::nlanes;
+    constexpr int MIN_SIZE = 16;
+    int width = size.width, height = size.height;
+    int bigwidth = std::max(width, MIN_SIZE);
+    int bigheight = std::max(height, MIN_SIZE);
+    v_float32 minx = vx_setall_f32(float(-bigwidth)), maxx = vx_setall_f32(float(bigwidth*2));
+    v_float32 miny = vx_setall_f32(float(-bigheight)), maxy = vx_setall_f32(float(bigheight*2));
+
+    // clamp coordinates in floating-point to try to avoid unpredictable
+    // behavior if the floating-point coordinates are huge
+    v_float32 xs0 = v_load(srcx), ys0 = v_load(srcy);
+    v_float32 xs1 = v_load(srcx + nlanes32), ys1 = v_load(srcy + nlanes32);
+    v_float32 vx0 = v_min(v_max(xs0, minx), maxx);
+    v_float32 vy0 = v_min(v_max(ys0, miny), maxy);
+    v_float32 vx1 = v_min(v_max(xs1, minx), maxx);
+    v_float32 vy1 = v_min(v_max(ys1, miny), maxy);
+
+    v_int32 ix0 = v_floor(vx0);
+    v_int32 iy0 = v_floor(vy0);
+    v_int32 ix1 = v_floor(vx1);
+    v_int32 iy1 = v_floor(vy1);
+    v_float32 alpha0 = v_sub(vx0, v_cvt_f32(ix0));
+    v_float32 beta0 = v_sub(vy0, v_cvt_f32(iy0));
+    v_float32 alpha1 = v_sub(vx1, v_cvt_f32(ix1));
+    v_float32 beta1 = v_sub(vy1, v_cvt_f32(iy1));
+
+    hfloat abuf[nlanes32*2], bbuf[nlanes32*2];
+
+    v_pack_store(abuf, alpha0);
+    v_pack_store(abuf + nlanes32, alpha1);
+    v_pack_store(bbuf, beta0);
+    v_pack_store(bbuf + nlanes32, beta1);
+
+    v_float16 alpha = v_load(abuf);
+    v_float16 beta = v_load(bbuf);
+
+    v_int32 one_i = vx_setall_s32(1), four_i = vx_setall_s32(4);
+    ix0 = v_sub(ix0, one_i);
+    iy0 = v_sub(iy0, one_i);
+    ix1 = v_sub(ix1, one_i);
+    iy1 = v_sub(iy1, one_i);
+
+    v_uint32 width_outer = vx_setall_u32((uint32_t)(width + 4));
+    v_uint32 height_outer = vx_setall_u32((uint32_t)(height + 4));
+
+    v_uint32 outliers_mask0 = v_or(v_ge(v_reinterpret_as_u32(v_add(ix0, four_i)), width_outer),
+                                  v_ge(v_reinterpret_as_u32(v_add(iy0, four_i)), height_outer));
+    v_uint32 outliers_mask1 = v_or(v_ge(v_reinterpret_as_u32(v_add(ix1, four_i)), width_outer),
+                                  v_ge(v_reinterpret_as_u32(v_add(iy1, four_i)), height_outer));
+
+    bool all_outliers = v_check_all(v_and(outliers_mask0, outliers_mask1));
+    if (all_outliers && (bordertype == BORDER_CONSTANT || bordertype == BORDER_TRANSPARENT))
+        return -1;
+
+    v_uint32 width_inner = vx_setall_u32((uint32_t)std::max(width - 3, 0));
+    v_uint32 height_inner = vx_setall_u32((uint32_t)std::max(height - 5, 0));
+
+    v_uint32 inliers_mask0 = v_and(v_lt(v_reinterpret_as_u32(ix0), width_inner),
+                                   v_lt(v_reinterpret_as_u32(iy0), height_inner));
+    v_uint32 inliers_mask1 = v_and(v_lt(v_reinterpret_as_u32(ix1), width_inner),
+                                   v_lt(v_reinterpret_as_u32(iy1), height_inner));
+
+    bool all_inliers = v_check_all(v_and(inliers_mask0, inliers_mask1));
+    v_int32 tl_ofs0 = v_add(v_mul(iy0, v_setall_s32((int)srcstep)), v_mul(ix0, v_setall_s32(bpp)));
+    v_int32 tl_ofs1 = v_add(v_mul(iy1, v_setall_s32((int)srcstep)), v_mul(ix1, v_setall_s32(bpp)));
+
+    v_store(tl_x, ix0);
+    v_store(tl_y, iy0);
+    v_store(tl_ofs, tl_ofs0);
+    v_store(tl_x + nlanes32, ix1);
+    v_store(tl_y + nlanes32, iy1);
+    v_store(tl_ofs + nlanes32, tl_ofs1);
+
+    bicubicWeights(alpha, A, wx0, wx1, wx2, wx3);
+    bicubicWeights(beta, A, wy0, wy1, wy2, wy3);
+
+    return int(all_inliers);
+}
+
+CV_ALWAYS_INLINE v_float16 v_mul(const v_int16& a, const v_float16& b)
+{
+    return v_mul(v_cvt_f16(a), b);
+}
+
+CV_ALWAYS_INLINE v_float16 v_fma(const v_int16& a, const v_float16& b, const v_float16& c)
+{
+    return v_fma(v_cvt_f16(a), b, c);
+}
+
+#endif
+
+CV_ALWAYS_INLINE v_float32 v_mul(const v_int32& a, const v_float32& b)
+{
+    return v_mul(v_cvt_f32(a), b);
+}
+
+CV_ALWAYS_INLINE v_float32 v_fma(const v_int32& a, const v_float32& b, const v_float32& c)
+{
+    return v_fma(v_cvt_f32(a), b, c);
+}
+
+#undef FETCH_INLIERS_C1_DEFAULT
+#define FETCH_INLIERS_C1_DEFAULT(row) \
+    for (int j = 0; j < BATCH; j++) { \
+        const chtype* srcj = (const chtype*)((const uint8_t*)src + row*srcstep + tl_ofs[j]); \
+        pixbuf[0][j] = buftype(srcj[1]); \
+        pixbuf[0][j + BATCH] = buftype(srcj[2]); \
+        pixbuf[0][j + BATCH*2] = buftype(srcj[3]); \
+        pixbuf[0][j + BATCH*3] = buftype(srcj[4]); \
+    } \
+    R0 = v_load(&pixbuf[0][0]); \
+    R1 = v_load(&pixbuf[0][BATCH]); \
+    R2 = v_load(&pixbuf[0][BATCH*2]); \
+    R3 = v_load(&pixbuf[0][BATCH*3])
+
+#undef FETCH_INLIERS_C3_DEFAULT
+#define FETCH_INLIERS_C3_DEFAULT(row) \
+    for (int j = 0; j < BATCH; j++) { \
+        const chtype* srcj = (const chtype*)((const uint8_t*)src + row*srcstep + tl_ofs[j]); \
+        pixbuf[0][j] = buftype(srcj[0]); \
+        pixbuf[0][j + BATCH] = buftype(srcj[3]); \
+        pixbuf[0][j + BATCH*2] = buftype(srcj[6]); \
+        pixbuf[0][j + BATCH*3] = buftype(srcj[9]); \
+        pixbuf[1][j] = buftype(srcj[1]); \
+        pixbuf[1][j + BATCH] = buftype(srcj[4]); \
+        pixbuf[1][j + BATCH*2] = buftype(srcj[7]); \
+        pixbuf[1][j + BATCH*3] = buftype(srcj[10]); \
+        pixbuf[2][j] = buftype(srcj[2]); \
+        pixbuf[2][j + BATCH] = buftype(srcj[5]); \
+        pixbuf[2][j + BATCH*2] = buftype(srcj[8]); \
+        pixbuf[2][j + BATCH*3] = buftype(srcj[11]); \
+    } \
+    R0 = v_load(&pixbuf[0][0]); \
+    R1 = v_load(&pixbuf[0][BATCH]); \
+    R2 = v_load(&pixbuf[0][BATCH*2]); \
+    R3 = v_load(&pixbuf[0][BATCH*3]); \
+    G0 = v_load(&pixbuf[1][0]); \
+    G1 = v_load(&pixbuf[1][BATCH]); \
+    G2 = v_load(&pixbuf[1][BATCH*2]); \
+    G3 = v_load(&pixbuf[1][BATCH*3]); \
+    B0 = v_load(&pixbuf[2][0]); \
+    B1 = v_load(&pixbuf[2][BATCH]); \
+    B2 = v_load(&pixbuf[2][BATCH*2]); \
+    B3 = v_load(&pixbuf[2][BATCH*3])
+
+#undef FETCH_INLIERS_C4_DEFAULT
+#define FETCH_INLIERS_C4_DEFAULT(row) \
+    for (int j = 0; j < BATCH; j++) { \
+        const chtype* srcj = (const chtype*)((const uint8_t*)src + row*srcstep + tl_ofs[j]); \
+        pixbuf[0][j] = buftype(srcj[0]); \
+        pixbuf[0][j + BATCH] = buftype(srcj[4]); \
+        pixbuf[0][j + BATCH*2] = buftype(srcj[8]); \
+        pixbuf[0][j + BATCH*3] = buftype(srcj[12]); \
+        pixbuf[1][j] = buftype(srcj[1]); \
+        pixbuf[1][j + BATCH] = buftype(srcj[5]); \
+        pixbuf[1][j + BATCH*2] = buftype(srcj[9]); \
+        pixbuf[1][j + BATCH*3] = buftype(srcj[13]); \
+        pixbuf[2][j] = buftype(srcj[2]); \
+        pixbuf[2][j + BATCH] = buftype(srcj[6]); \
+        pixbuf[2][j + BATCH*2] = buftype(srcj[10]); \
+        pixbuf[2][j + BATCH*3] = buftype(srcj[14]); \
+        pixbuf[3][j] = buftype(srcj[3]); \
+        pixbuf[3][j + BATCH] = buftype(srcj[7]); \
+        pixbuf[3][j + BATCH*2] = buftype(srcj[11]); \
+        pixbuf[3][j + BATCH*3] = buftype(srcj[15]); \
+    } \
+    R0 = v_load(&pixbuf[0][0]); \
+    R1 = v_load(&pixbuf[0][BATCH]); \
+    R2 = v_load(&pixbuf[0][BATCH*2]); \
+    R3 = v_load(&pixbuf[0][BATCH*3]); \
+    G0 = v_load(&pixbuf[1][0]); \
+    G1 = v_load(&pixbuf[1][BATCH]); \
+    G2 = v_load(&pixbuf[1][BATCH*2]); \
+    G3 = v_load(&pixbuf[1][BATCH*3]); \
+    B0 = v_load(&pixbuf[2][0]); \
+    B1 = v_load(&pixbuf[2][BATCH]); \
+    B2 = v_load(&pixbuf[2][BATCH*2]); \
+    B3 = v_load(&pixbuf[2][BATCH*3]); \
+    A0 = v_load(&pixbuf[3][0]); \
+    A1 = v_load(&pixbuf[3][BATCH]); \
+    A2 = v_load(&pixbuf[3][BATCH*2]); \
+    A3 = v_load(&pixbuf[3][BATCH*3])
+
+#undef FETCH_INLIERS_8UC1
+#define FETCH_INLIERS_8UC1(row) \
+    FETCH_INLIERS_C1_DEFAULT(row)
+
+#undef FETCH_INLIERS_8UC3
+#define FETCH_INLIERS_8UC3(row) \
+    FETCH_INLIERS_C3_DEFAULT(row)
+
+#undef FETCH_INLIERS_8UC4
+#define FETCH_INLIERS_8UC4(row) \
+    FETCH_INLIERS_C4_DEFAULT(row)
+
+#undef FETCH_INLIERS_16UC1
+#define FETCH_INLIERS_16UC1(row) \
+    FETCH_INLIERS_C1_DEFAULT(row)
+
+#undef FETCH_INLIERS_16UC3
+#define FETCH_INLIERS_16UC3(row) \
+    FETCH_INLIERS_C3_DEFAULT(row)
+
+#undef FETCH_INLIERS_16UC4
+#define FETCH_INLIERS_16UC4(row) \
+    FETCH_INLIERS_C4_DEFAULT(row)
+
+#undef FETCH_INLIERS_32FC1
+#define FETCH_INLIERS_32FC1(row) \
+    FETCH_INLIERS_C1_DEFAULT(row)
+
+#undef FETCH_INLIERS_32FC3
+#define FETCH_INLIERS_32FC3(row) \
+    FETCH_INLIERS_C3_DEFAULT(row)
+
+#undef FETCH_INLIERS_32FC4
+#define FETCH_INLIERS_32FC4(row) \
+    FETCH_INLIERS_C4_DEFAULT(row)
+
+// NEON-optimized macros for super-fast pixels retrieval and reordering
+#ifdef __ARM_NEON
+
+#if CV_SIMD_FP16
+
+#undef FETCH_INLIERS_8UC1
+#define FETCH_INLIERS_8UC1(row) { \
+    const uint8_t* srcrow = (const uint8_t*)src + row*srcstep; \
+    uint8x8_t _r0 = vld1_u8(srcrow + tl_ofs[0]); \
+    uint8x8_t _r1 = vld1_u8(srcrow + tl_ofs[1]); \
+    uint8x8_t _r2 = vld1_u8(srcrow + tl_ofs[2]); \
+    uint8x8_t _r3 = vld1_u8(srcrow + tl_ofs[3]); \
+    uint8x8_t _r4 = vld1_u8(srcrow + tl_ofs[4]); \
+    uint8x8_t _r5 = vld1_u8(srcrow + tl_ofs[5]); \
+    uint8x8_t _r6 = vld1_u8(srcrow + tl_ofs[6]); \
+    uint8x8_t _r7 = vld1_u8(srcrow + tl_ofs[7]); \
+    \
+    uint8x16_t _r0415 = vcombine_u8(vzip1_u8(_r0, _r4), vzip1_u8(_r1, _r5)); \
+    uint8x16_t _r2637 = vcombine_u8(vzip1_u8(_r2, _r6), vzip1_u8(_r3, _r7)); \
+    uint8x16_t _r0246 = vzip1q_u8(_r0415, _r2637); \
+    uint8x16_t _r1357 = vzip2q_u8(_r0415, _r2637); \
+    uint8x16_t _r_c01 = vzip1q_u8(_r0246, _r1357); \
+    uint8x16_t _r_c23 = vzip2q_u8(_r0246, _r1357); \
+    \
+    R0.val = vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(_r_c01))); \
+    R1.val = vreinterpretq_s16_u16(vmovl_high_u8(_r_c01));         \
+    R2.val = vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(_r_c23))); \
+    R3.val = vreinterpretq_s16_u16(vmovl_high_u8(_r_c23)); }
+
+#undef FETCH_INLIERS_8UC3
+#define FETCH_INLIERS_8UC3(row) { \
+    const uint8x16_t mask_rgb = { 0, 3, 6, 9, 1, 4, 7, 10, 2, 5, 8, 11, 255, 255, 255, 255 }; \
+    const uint8_t* srcrow = (const uint8_t*)src + row*srcstep; \
+    uint8x16_t _r0 = vqtbl1q_u8(vld1q_u8((const chtype*)(srcrow + tl_ofs[0])), mask_rgb); \
+    uint8x16_t _r1 = vqtbl1q_u8(vld1q_u8((const chtype*)(srcrow + tl_ofs[1])), mask_rgb); \
+    uint8x16_t _r2 = vqtbl1q_u8(vld1q_u8((const chtype*)(srcrow + tl_ofs[2])), mask_rgb); \
+    uint8x16_t _r3 = vqtbl1q_u8(vld1q_u8((const chtype*)(srcrow + tl_ofs[3])), mask_rgb); \
+    uint8x16_t _r4 = vqtbl1q_u8(vld1q_u8((const chtype*)(srcrow + tl_ofs[4])), mask_rgb); \
+    uint8x16_t _r5 = vqtbl1q_u8(vld1q_u8((const chtype*)(srcrow + tl_ofs[5])), mask_rgb); \
+    uint8x16_t _r6 = vqtbl1q_u8(vld1q_u8((const chtype*)(srcrow + tl_ofs[6])), mask_rgb); \
+    uint8x16_t _r7 = vqtbl1q_u8(vld1q_u8((const chtype*)(srcrow + tl_ofs[7])), mask_rgb); \
+    \
+    uint8x16_t _z04a = vzip1q_u8(_r0, _r4);        \
+    uint8x16_t _z15a = vzip1q_u8(_r1, _r5);        \
+    uint8x16_t _z26a = vzip1q_u8(_r2, _r6);        \
+    uint8x16_t _z37a = vzip1q_u8(_r3, _r7);        \
+    uint8x16_t _z04b = vzip2q_u8(_r0, _r4);        \
+    uint8x16_t _z15b = vzip2q_u8(_r1, _r5);        \
+    uint8x16_t _z26b = vzip2q_u8(_r2, _r6);        \
+    uint8x16_t _z37b = vzip2q_u8(_r3, _r7);        \
+    \
+    uint8x16_t _r0246 = vzip1q_u8(_z04a, _z26a);   \
+    uint8x16_t _g0246 = vzip2q_u8(_z04a, _z26a);   \
+    uint8x16_t _r1357 = vzip1q_u8(_z15a, _z37a);   \
+    uint8x16_t _g1357 = vzip2q_u8(_z15a, _z37a);   \
+    uint8x16_t _b0246 = vzip1q_u8(_z04b, _z26b);   \
+    uint8x16_t _b1357 = vzip1q_u8(_z15b, _z37b);   \
+    \
+    uint8x16_t _r_c01 = vzip1q_u8(_r0246, _r1357); \
+    uint8x16_t _r_c23 = vzip2q_u8(_r0246, _r1357); \
+    uint8x16_t _g_c01 = vzip1q_u8(_g0246, _g1357); \
+    uint8x16_t _g_c23 = vzip2q_u8(_g0246, _g1357); \
+    uint8x16_t _b_c01 = vzip1q_u8(_b0246, _b1357); \
+    uint8x16_t _b_c23 = vzip2q_u8(_b0246, _b1357); \
+    \
+    R0.val = vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(_r_c01)));  \
+    R1.val = vreinterpretq_s16_u16(vmovl_high_u8(_r_c01));          \
+    R2.val = vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(_r_c23)));  \
+    R3.val = vreinterpretq_s16_u16(vmovl_high_u8(_r_c23));          \
+    G0.val = vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(_g_c01)));  \
+    G1.val = vreinterpretq_s16_u16(vmovl_high_u8(_g_c01));          \
+    G2.val = vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(_g_c23)));  \
+    G3.val = vreinterpretq_s16_u16(vmovl_high_u8(_g_c23));          \
+    B0.val = vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(_b_c01)));  \
+    B1.val = vreinterpretq_s16_u16(vmovl_high_u8(_b_c01));          \
+    B2.val = vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(_b_c23)));  \
+    B3.val = vreinterpretq_s16_u16(vmovl_high_u8(_b_c23)); }
+
+#undef FETCH_INLIERS_8UC4
+#define FETCH_INLIERS_8UC4(row) { \
+    const uint8x16_t mask_rgb = { 0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15 }; \
+    const uint8_t* srcrow = (const uint8_t*)src + row*srcstep; \
+    uint8x16_t _r0 = vqtbl1q_u8(vld1q_u8((const chtype*)(srcrow + tl_ofs[0])), mask_rgb); \
+    uint8x16_t _r1 = vqtbl1q_u8(vld1q_u8((const chtype*)(srcrow + tl_ofs[1])), mask_rgb); \
+    uint8x16_t _r2 = vqtbl1q_u8(vld1q_u8((const chtype*)(srcrow + tl_ofs[2])), mask_rgb); \
+    uint8x16_t _r3 = vqtbl1q_u8(vld1q_u8((const chtype*)(srcrow + tl_ofs[3])), mask_rgb); \
+    uint8x16_t _r4 = vqtbl1q_u8(vld1q_u8((const chtype*)(srcrow + tl_ofs[4])), mask_rgb); \
+    uint8x16_t _r5 = vqtbl1q_u8(vld1q_u8((const chtype*)(srcrow + tl_ofs[5])), mask_rgb); \
+    uint8x16_t _r6 = vqtbl1q_u8(vld1q_u8((const chtype*)(srcrow + tl_ofs[6])), mask_rgb); \
+    uint8x16_t _r7 = vqtbl1q_u8(vld1q_u8((const chtype*)(srcrow + tl_ofs[7])), mask_rgb); \
+    \
+    uint8x16_t _z04a = vzip1q_u8(_r0, _r4);        \
+    uint8x16_t _z15a = vzip1q_u8(_r1, _r5);        \
+    uint8x16_t _z26a = vzip1q_u8(_r2, _r6);        \
+    uint8x16_t _z37a = vzip1q_u8(_r3, _r7);        \
+    uint8x16_t _z04b = vzip2q_u8(_r0, _r4);        \
+    uint8x16_t _z15b = vzip2q_u8(_r1, _r5);        \
+    uint8x16_t _z26b = vzip2q_u8(_r2, _r6);        \
+    uint8x16_t _z37b = vzip2q_u8(_r3, _r7);        \
+    \
+    uint8x16_t _r0246 = vzip1q_u8(_z04a, _z26a);   \
+    uint8x16_t _g0246 = vzip2q_u8(_z04a, _z26a);   \
+    uint8x16_t _r1357 = vzip1q_u8(_z15a, _z37a);   \
+    uint8x16_t _g1357 = vzip2q_u8(_z15a, _z37a);   \
+    uint8x16_t _b0246 = vzip1q_u8(_z04b, _z26b);   \
+    uint8x16_t _a0246 = vzip2q_u8(_z04b, _z26b);   \
+    uint8x16_t _b1357 = vzip1q_u8(_z15b, _z37b);   \
+    uint8x16_t _a1357 = vzip2q_u8(_z15b, _z37b);   \
+    \
+    uint8x16_t _r_c01 = vzip1q_u8(_r0246, _r1357); \
+    uint8x16_t _r_c23 = vzip2q_u8(_r0246, _r1357); \
+    uint8x16_t _g_c01 = vzip1q_u8(_g0246, _g1357); \
+    uint8x16_t _g_c23 = vzip2q_u8(_g0246, _g1357); \
+    uint8x16_t _b_c01 = vzip1q_u8(_b0246, _b1357); \
+    uint8x16_t _b_c23 = vzip2q_u8(_b0246, _b1357); \
+    uint8x16_t _a_c01 = vzip1q_u8(_a0246, _a1357); \
+    uint8x16_t _a_c23 = vzip2q_u8(_a0246, _a1357); \
+    \
+    R0.val = vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(_r_c01)));  \
+    R1.val = vreinterpretq_s16_u16(vmovl_high_u8(_r_c01));          \
+    R2.val = vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(_r_c23)));  \
+    R3.val = vreinterpretq_s16_u16(vmovl_high_u8(_r_c23));          \
+    G0.val = vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(_g_c01)));  \
+    G1.val = vreinterpretq_s16_u16(vmovl_high_u8(_g_c01));          \
+    G2.val = vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(_g_c23)));  \
+    G3.val = vreinterpretq_s16_u16(vmovl_high_u8(_g_c23));          \
+    B0.val = vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(_b_c01)));  \
+    B1.val = vreinterpretq_s16_u16(vmovl_high_u8(_b_c01));          \
+    B2.val = vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(_b_c23)));  \
+    B3.val = vreinterpretq_s16_u16(vmovl_high_u8(_b_c23));          \
+    A0.val = vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(_a_c01)));  \
+    A1.val = vreinterpretq_s16_u16(vmovl_high_u8(_a_c01));          \
+    A2.val = vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(_a_c23)));  \
+    A3.val = vreinterpretq_s16_u16(vmovl_high_u8(_a_c23)); }
+
+#else
+#undef FETCH_INLIERS_8UC1
+#define FETCH_INLIERS_8UC1(row) { \
+    const uint8_t* srcrow = (const uint8_t*)src + row*srcstep; \
+    uint8x8_t _r0 = vld1_u8(srcrow + tl_ofs[0]); \
+    uint8x8_t _r1 = vld1_u8(srcrow + tl_ofs[1]); \
+    uint8x8_t _r2 = vld1_u8(srcrow + tl_ofs[2]); \
+    uint8x8_t _r3 = vld1_u8(srcrow + tl_ofs[3]); \
+    uint16x4_t _rw0 = vget_low_u16(vmovl_u8(_r0)); \
+    uint16x4_t _rw1 = vget_low_u16(vmovl_u8(_r1)); \
+    uint16x4_t _rw2 = vget_low_u16(vmovl_u8(_r2)); \
+    uint16x4_t _rw3 = vget_low_u16(vmovl_u8(_r3)); \
+    \
+    uint16x4_t _r02a = vzip1_u16(_rw0, _rw2);      \
+    uint16x4_t _r02b = vzip2_u16(_rw0, _rw2);      \
+    uint16x4_t _r13a = vzip1_u16(_rw1, _rw3);      \
+    uint16x4_t _r13b = vzip2_u16(_rw1, _rw3);      \
+    R0.val = vreinterpretq_s32_u32(vmovl_u16(vzip1_u16(_r02a, _r13a)));   \
+    R1.val = vreinterpretq_s32_u32(vmovl_u16(vzip2_u16(_r02a, _r13a)));   \
+    R2.val = vreinterpretq_s32_u32(vmovl_u16(vzip1_u16(_r02b, _r13b)));   \
+    R3.val = vreinterpretq_s32_u32(vmovl_u16(vzip2_u16(_r02b, _r13b))); }
+
+#undef FETCH_INLIERS_8UC3
+#define FETCH_INLIERS_8UC3(row) { \
+    const uint8x16_t mask_rgb = { 0, 3, 6, 9, 1, 4, 7, 10, 2, 5, 8, 11, 255, 255, 255, 255 }; \
+    const uint8_t* srcrow = (const uint8_t*)src + row*srcstep; \
+    uint8x16_t _r0 = vqtbl1q_u8(vld1q_u8(srcrow + tl_ofs[0]), mask_rgb); \
+    uint8x16_t _r1 = vqtbl1q_u8(vld1q_u8(srcrow + tl_ofs[1]), mask_rgb); \
+    uint8x16_t _r2 = vqtbl1q_u8(vld1q_u8(srcrow + tl_ofs[2]), mask_rgb); \
+    uint8x16_t _r3 = vqtbl1q_u8(vld1q_u8(srcrow + tl_ofs[3]), mask_rgb); \
+    \
+    uint8x16_t _z02a = vzip1q_u8(_r0, _r2);        \
+    uint8x16_t _z02b = vzip2q_u8(_r0, _r2);        \
+    uint8x16_t _z13a = vzip1q_u8(_r1, _r3);        \
+    uint8x16_t _z13b = vzip2q_u8(_r1, _r3);        \
+    \
+    uint8x16_t _r_c0123 = vzip1q_u8(_z02a, _z13a); \
+    uint8x16_t _g_c0123 = vzip2q_u8(_z02a, _z13a); \
+    uint8x16_t _b_c0123 = vzip1q_u8(_z02b, _z13b); \
+    \
+    uint16x8_t _rl = vmovl_u8(vget_low_u8(_r_c0123)); \
+    uint16x8_t _rh = vmovl_high_u8(_r_c0123); \
+    uint16x8_t _gl = vmovl_u8(vget_low_u8(_g_c0123)); \
+    uint16x8_t _gh = vmovl_high_u8(_g_c0123); \
+    uint16x8_t _bl = vmovl_u8(vget_low_u8(_b_c0123)); \
+    uint16x8_t _bh = vmovl_high_u8(_b_c0123); \
+    \
+    R0.val = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(_rl))); \
+    R1.val = vreinterpretq_s32_u32(vmovl_high_u16(_rl)); \
+    R2.val = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(_rh))); \
+    R3.val = vreinterpretq_s32_u32(vmovl_high_u16(_rh)); \
+    G0.val = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(_gl))); \
+    G1.val = vreinterpretq_s32_u32(vmovl_high_u16(_gl)); \
+    G2.val = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(_gh))); \
+    G3.val = vreinterpretq_s32_u32(vmovl_high_u16(_gh)); \
+    B0.val = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(_bl))); \
+    B1.val = vreinterpretq_s32_u32(vmovl_high_u16(_bl)); \
+    B2.val = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(_bh))); \
+    B3.val = vreinterpretq_s32_u32(vmovl_high_u16(_bh)); }
+
+#undef FETCH_INLIERS_8UC4
+#define FETCH_INLIERS_8UC4(row) { \
+    const uint8x16_t mask_rgb = { 0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15 }; \
+    const uint8_t* srcrow = (const uint8_t*)src + row*srcstep; \
+    uint8x16_t _r0 = vqtbl1q_u8(vld1q_u8(srcrow + tl_ofs[0]), mask_rgb); \
+    uint8x16_t _r1 = vqtbl1q_u8(vld1q_u8(srcrow + tl_ofs[1]), mask_rgb); \
+    uint8x16_t _r2 = vqtbl1q_u8(vld1q_u8(srcrow + tl_ofs[2]), mask_rgb); \
+    uint8x16_t _r3 = vqtbl1q_u8(vld1q_u8(srcrow + tl_ofs[3]), mask_rgb); \
+    \
+    uint8x16_t _z02a = vzip1q_u8(_r0, _r2);        \
+    uint8x16_t _z02b = vzip2q_u8(_r0, _r2);        \
+    uint8x16_t _z13a = vzip1q_u8(_r1, _r3);        \
+    uint8x16_t _z13b = vzip2q_u8(_r1, _r3);        \
+    \
+    uint8x16_t _r_c0123 = vzip1q_u8(_z02a, _z13a); \
+    uint8x16_t _g_c0123 = vzip2q_u8(_z02a, _z13a); \
+    uint8x16_t _b_c0123 = vzip1q_u8(_z02b, _z13b); \
+    uint8x16_t _a_c0123 = vzip2q_u8(_z02b, _z13b); \
+    \
+    uint16x8_t _rl = vmovl_u8(vget_low_u8(_r_c0123)); \
+    uint16x8_t _rh = vmovl_high_u8(_r_c0123); \
+    uint16x8_t _gl = vmovl_u8(vget_low_u8(_g_c0123)); \
+    uint16x8_t _gh = vmovl_high_u8(_g_c0123); \
+    uint16x8_t _bl = vmovl_u8(vget_low_u8(_b_c0123)); \
+    uint16x8_t _bh = vmovl_high_u8(_b_c0123); \
+    uint16x8_t _al = vmovl_u8(vget_low_u8(_a_c0123)); \
+    uint16x8_t _ah = vmovl_high_u8(_a_c0123); \
+    \
+    R0.val = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(_rl))); \
+    R1.val = vreinterpretq_s32_u32(vmovl_high_u16(_rl)); \
+    R2.val = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(_rh))); \
+    R3.val = vreinterpretq_s32_u32(vmovl_high_u16(_rh)); \
+    G0.val = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(_gl))); \
+    G1.val = vreinterpretq_s32_u32(vmovl_high_u16(_gl)); \
+    G2.val = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(_gh))); \
+    G3.val = vreinterpretq_s32_u32(vmovl_high_u16(_gh)); \
+    B0.val = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(_bl))); \
+    B1.val = vreinterpretq_s32_u32(vmovl_high_u16(_bl)); \
+    B2.val = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(_bh))); \
+    B3.val = vreinterpretq_s32_u32(vmovl_high_u16(_bh)); \
+    A0.val = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(_al))); \
+    A1.val = vreinterpretq_s32_u32(vmovl_high_u16(_al)); \
+    A2.val = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(_ah))); \
+    A3.val = vreinterpretq_s32_u32(vmovl_high_u16(_ah)); }
+#endif
+
+#undef FETCH_INLIERS_16UC1
+#define FETCH_INLIERS_16UC1(row) { \
+    const uint8_t* srcrow = (const uint8_t*)src + row*srcstep; \
+    uint16x4_t _r0 = vld1_u16((const chtype*)(srcrow + tl_ofs[0])); \
+    uint16x4_t _r1 = vld1_u16((const chtype*)(srcrow + tl_ofs[1])); \
+    uint16x4_t _r2 = vld1_u16((const chtype*)(srcrow + tl_ofs[2])); \
+    uint16x4_t _r3 = vld1_u16((const chtype*)(srcrow + tl_ofs[3])); \
+    \
+    uint16x4_t _r02a = vzip1_u16(_r0, _r2);       \
+    uint16x4_t _r02b = vzip2_u16(_r0, _r2);       \
+    uint16x4_t _r13a = vzip1_u16(_r1, _r3);       \
+    uint16x4_t _r13b = vzip2_u16(_r1, _r3);       \
+    R0.val = vreinterpretq_s32_u32(vmovl_u16(vzip1_u16(_r02a, _r13a)));   \
+    R1.val = vreinterpretq_s32_u32(vmovl_u16(vzip2_u16(_r02a, _r13a)));   \
+    R2.val = vreinterpretq_s32_u32(vmovl_u16(vzip1_u16(_r02b, _r13b)));   \
+    R3.val = vreinterpretq_s32_u32(vmovl_u16(vzip2_u16(_r02b, _r13b))); }
+
+#undef FETCH_INLIERS_16UC3
+#define FETCH_INLIERS_16UC3(row) { \
+    const uint8_t* srcrow = (const uint8_t*)src + row*srcstep; \
+    uint16x4x3_t _r0 = vld3_u16((const chtype*)(srcrow + tl_ofs[0])); \
+    uint16x4x3_t _r1 = vld3_u16((const chtype*)(srcrow + tl_ofs[1])); \
+    uint16x4x3_t _r2 = vld3_u16((const chtype*)(srcrow + tl_ofs[2])); \
+    uint16x4x3_t _r3 = vld3_u16((const chtype*)(srcrow + tl_ofs[3])); \
+    uint16x4_t _r02a = vzip1_u16(_r0.val[0], _r2.val[0]);   \
+    uint16x4_t _r02b = vzip2_u16(_r0.val[0], _r2.val[0]);   \
+    uint16x4_t _r13a = vzip1_u16(_r1.val[0], _r3.val[0]);   \
+    uint16x4_t _r13b = vzip2_u16(_r1.val[0], _r3.val[0]);   \
+    uint16x4_t _g02a = vzip1_u16(_r0.val[1], _r2.val[1]);   \
+    uint16x4_t _g02b = vzip2_u16(_r0.val[1], _r2.val[1]);   \
+    uint16x4_t _g13a = vzip1_u16(_r1.val[1], _r3.val[1]);   \
+    uint16x4_t _g13b = vzip2_u16(_r1.val[1], _r3.val[1]);   \
+    uint16x4_t _b02a = vzip1_u16(_r0.val[2], _r2.val[2]);   \
+    uint16x4_t _b02b = vzip2_u16(_r0.val[2], _r2.val[2]);   \
+    uint16x4_t _b13a = vzip1_u16(_r1.val[2], _r3.val[2]);   \
+    uint16x4_t _b13b = vzip2_u16(_r1.val[2], _r3.val[2]);   \
+    R0.val = vreinterpretq_s32_u32(vmovl_u16(vzip1_u16(_r02a, _r13a))); \
+    R1.val = vreinterpretq_s32_u32(vmovl_u16(vzip2_u16(_r02a, _r13a))); \
+    R2.val = vreinterpretq_s32_u32(vmovl_u16(vzip1_u16(_r02b, _r13b))); \
+    R3.val = vreinterpretq_s32_u32(vmovl_u16(vzip2_u16(_r02b, _r13b))); \
+    G0.val = vreinterpretq_s32_u32(vmovl_u16(vzip1_u16(_g02a, _g13a))); \
+    G1.val = vreinterpretq_s32_u32(vmovl_u16(vzip2_u16(_g02a, _g13a))); \
+    G2.val = vreinterpretq_s32_u32(vmovl_u16(vzip1_u16(_g02b, _g13b))); \
+    G3.val = vreinterpretq_s32_u32(vmovl_u16(vzip2_u16(_g02b, _g13b))); \
+    B0.val = vreinterpretq_s32_u32(vmovl_u16(vzip1_u16(_b02a, _b13a))); \
+    B1.val = vreinterpretq_s32_u32(vmovl_u16(vzip2_u16(_b02a, _b13a))); \
+    B2.val = vreinterpretq_s32_u32(vmovl_u16(vzip1_u16(_b02b, _b13b))); \
+    B3.val = vreinterpretq_s32_u32(vmovl_u16(vzip2_u16(_b02b, _b13b))); }
+
+#undef FETCH_INLIERS_16UC4
+#define FETCH_INLIERS_16UC4(row) { \
+    const uint8_t* srcrow = (const uint8_t*)src + row*srcstep; \
+    uint16x4x4_t _r0 = vld4_u16((const chtype*)(srcrow + tl_ofs[0])); \
+    uint16x4x4_t _r1 = vld4_u16((const chtype*)(srcrow + tl_ofs[1])); \
+    uint16x4x4_t _r2 = vld4_u16((const chtype*)(srcrow + tl_ofs[2])); \
+    uint16x4x4_t _r3 = vld4_u16((const chtype*)(srcrow + tl_ofs[3])); \
+    uint16x4_t _r02a = vzip1_u16(_r0.val[0], _r2.val[0]);   \
+    uint16x4_t _r02b = vzip2_u16(_r0.val[0], _r2.val[0]);   \
+    uint16x4_t _r13a = vzip1_u16(_r1.val[0], _r3.val[0]);   \
+    uint16x4_t _r13b = vzip2_u16(_r1.val[0], _r3.val[0]);   \
+    uint16x4_t _g02a = vzip1_u16(_r0.val[1], _r2.val[1]);   \
+    uint16x4_t _g02b = vzip2_u16(_r0.val[1], _r2.val[1]);   \
+    uint16x4_t _g13a = vzip1_u16(_r1.val[1], _r3.val[1]);   \
+    uint16x4_t _g13b = vzip2_u16(_r1.val[1], _r3.val[1]);   \
+    uint16x4_t _b02a = vzip1_u16(_r0.val[2], _r2.val[2]);   \
+    uint16x4_t _b02b = vzip2_u16(_r0.val[2], _r2.val[2]);   \
+    uint16x4_t _b13a = vzip1_u16(_r1.val[2], _r3.val[2]);   \
+    uint16x4_t _b13b = vzip2_u16(_r1.val[2], _r3.val[2]);   \
+    uint16x4_t _a02a = vzip1_u16(_r0.val[3], _r2.val[3]);   \
+    uint16x4_t _a02b = vzip2_u16(_r0.val[3], _r2.val[3]);   \
+    uint16x4_t _a13a = vzip1_u16(_r1.val[3], _r3.val[3]);   \
+    uint16x4_t _a13b = vzip2_u16(_r1.val[3], _r3.val[3]);   \
+    R0.val = vreinterpretq_s32_u32(vmovl_u16(vzip1_u16(_r02a, _r13a))); \
+    R1.val = vreinterpretq_s32_u32(vmovl_u16(vzip2_u16(_r02a, _r13a))); \
+    R2.val = vreinterpretq_s32_u32(vmovl_u16(vzip1_u16(_r02b, _r13b))); \
+    R3.val = vreinterpretq_s32_u32(vmovl_u16(vzip2_u16(_r02b, _r13b))); \
+    G0.val = vreinterpretq_s32_u32(vmovl_u16(vzip1_u16(_g02a, _g13a))); \
+    G1.val = vreinterpretq_s32_u32(vmovl_u16(vzip2_u16(_g02a, _g13a))); \
+    G2.val = vreinterpretq_s32_u32(vmovl_u16(vzip1_u16(_g02b, _g13b))); \
+    G3.val = vreinterpretq_s32_u32(vmovl_u16(vzip2_u16(_g02b, _g13b))); \
+    B0.val = vreinterpretq_s32_u32(vmovl_u16(vzip1_u16(_b02a, _b13a))); \
+    B1.val = vreinterpretq_s32_u32(vmovl_u16(vzip2_u16(_b02a, _b13a))); \
+    B2.val = vreinterpretq_s32_u32(vmovl_u16(vzip1_u16(_b02b, _b13b))); \
+    B3.val = vreinterpretq_s32_u32(vmovl_u16(vzip2_u16(_b02b, _b13b))); \
+    A0.val = vreinterpretq_s32_u32(vmovl_u16(vzip1_u16(_a02a, _a13a))); \
+    A1.val = vreinterpretq_s32_u32(vmovl_u16(vzip2_u16(_a02a, _a13a))); \
+    A2.val = vreinterpretq_s32_u32(vmovl_u16(vzip1_u16(_a02b, _a13b))); \
+    A3.val = vreinterpretq_s32_u32(vmovl_u16(vzip2_u16(_a02b, _a13b))); }
+
+#undef FETCH_INLIERS_32FC1
+#define FETCH_INLIERS_32FC1(row) { \
+    const uint8_t* srcrow = (const uint8_t*)src + row*srcstep; \
+    float32x4_t _r0 = vld1q_f32((const chtype*)(srcrow + tl_ofs[0])); \
+    float32x4_t _r1 = vld1q_f32((const chtype*)(srcrow + tl_ofs[1])); \
+    float32x4_t _r2 = vld1q_f32((const chtype*)(srcrow + tl_ofs[2])); \
+    float32x4_t _r3 = vld1q_f32((const chtype*)(srcrow + tl_ofs[3])); \
+    \
+    float32x4_t _r02a = vzip1q_f32(_r0, _r2);       \
+    float32x4_t _r02b = vzip2q_f32(_r0, _r2);       \
+    float32x4_t _r13a = vzip1q_f32(_r1, _r3);       \
+    float32x4_t _r13b = vzip2q_f32(_r1, _r3);       \
+    R0.val = vzip1q_f32(_r02a, _r13a);   \
+    R1.val = vzip2q_f32(_r02a, _r13a);   \
+    R2.val = vzip1q_f32(_r02b, _r13b);   \
+    R3.val = vzip2q_f32(_r02b, _r13b); }
+
+#undef FETCH_INLIERS_32FC3
+#define FETCH_INLIERS_32FC3(row) { \
+    const uint8_t* srcrow = (const uint8_t*)src + row*srcstep; \
+    float32x4x3_t _r0 = vld3q_f32((const chtype*)(srcrow + tl_ofs[0])); \
+    float32x4x3_t _r1 = vld3q_f32((const chtype*)(srcrow + tl_ofs[1])); \
+    float32x4x3_t _r2 = vld3q_f32((const chtype*)(srcrow + tl_ofs[2])); \
+    float32x4x3_t _r3 = vld3q_f32((const chtype*)(srcrow + tl_ofs[3])); \
+    float32x4_t _r02a = vzip1q_f32(_r0.val[0], _r2.val[0]);   \
+    float32x4_t _r02b = vzip2q_f32(_r0.val[0], _r2.val[0]);   \
+    float32x4_t _r13a = vzip1q_f32(_r1.val[0], _r3.val[0]);   \
+    float32x4_t _r13b = vzip2q_f32(_r1.val[0], _r3.val[0]);   \
+    float32x4_t _g02a = vzip1q_f32(_r0.val[1], _r2.val[1]);   \
+    float32x4_t _g02b = vzip2q_f32(_r0.val[1], _r2.val[1]);   \
+    float32x4_t _g13a = vzip1q_f32(_r1.val[1], _r3.val[1]);   \
+    float32x4_t _g13b = vzip2q_f32(_r1.val[1], _r3.val[1]);   \
+    float32x4_t _b02a = vzip1q_f32(_r0.val[2], _r2.val[2]);   \
+    float32x4_t _b02b = vzip2q_f32(_r0.val[2], _r2.val[2]);   \
+    float32x4_t _b13a = vzip1q_f32(_r1.val[2], _r3.val[2]);   \
+    float32x4_t _b13b = vzip2q_f32(_r1.val[2], _r3.val[2]);   \
+    R0.val = vzip1q_f32(_r02a, _r13a);             \
+    R1.val = vzip2q_f32(_r02a, _r13a);             \
+    R2.val = vzip1q_f32(_r02b, _r13b);             \
+    R3.val = vzip2q_f32(_r02b, _r13b);             \
+    G0.val = vzip1q_f32(_g02a, _g13a);             \
+    G1.val = vzip2q_f32(_g02a, _g13a);             \
+    G2.val = vzip1q_f32(_g02b, _g13b);             \
+    G3.val = vzip2q_f32(_g02b, _g13b);             \
+    B0.val = vzip1q_f32(_b02a, _b13a);             \
+    B1.val = vzip2q_f32(_b02a, _b13a);             \
+    B2.val = vzip1q_f32(_b02b, _b13b);             \
+    B3.val = vzip2q_f32(_b02b, _b13b); }
+
+#undef FETCH_INLIERS_32FC4
+#define FETCH_INLIERS_32FC4(row) { \
+    const uint8_t* srcrow = (const uint8_t*)src + row*srcstep; \
+    float32x4x4_t _r0 = vld4q_f32((const chtype*)(srcrow + tl_ofs[0])); \
+    float32x4x4_t _r1 = vld4q_f32((const chtype*)(srcrow + tl_ofs[1])); \
+    float32x4x4_t _r2 = vld4q_f32((const chtype*)(srcrow + tl_ofs[2])); \
+    float32x4x4_t _r3 = vld4q_f32((const chtype*)(srcrow + tl_ofs[3])); \
+    float32x4_t _r02a = vzip1q_f32(_r0.val[0], _r2.val[0]);   \
+    float32x4_t _r02b = vzip2q_f32(_r0.val[0], _r2.val[0]);   \
+    float32x4_t _r13a = vzip1q_f32(_r1.val[0], _r3.val[0]);   \
+    float32x4_t _r13b = vzip2q_f32(_r1.val[0], _r3.val[0]);   \
+    float32x4_t _g02a = vzip1q_f32(_r0.val[1], _r2.val[1]);   \
+    float32x4_t _g02b = vzip2q_f32(_r0.val[1], _r2.val[1]);   \
+    float32x4_t _g13a = vzip1q_f32(_r1.val[1], _r3.val[1]);   \
+    float32x4_t _g13b = vzip2q_f32(_r1.val[1], _r3.val[1]);   \
+    float32x4_t _b02a = vzip1q_f32(_r0.val[2], _r2.val[2]);   \
+    float32x4_t _b02b = vzip2q_f32(_r0.val[2], _r2.val[2]);   \
+    float32x4_t _b13a = vzip1q_f32(_r1.val[2], _r3.val[2]);   \
+    float32x4_t _b13b = vzip2q_f32(_r1.val[2], _r3.val[2]);   \
+    float32x4_t _a02a = vzip1q_f32(_r0.val[3], _r2.val[3]);   \
+    float32x4_t _a02b = vzip2q_f32(_r0.val[3], _r2.val[3]);   \
+    float32x4_t _a13a = vzip1q_f32(_r1.val[3], _r3.val[3]);   \
+    float32x4_t _a13b = vzip2q_f32(_r1.val[3], _r3.val[3]);   \
+    R0.val = vzip1q_f32(_r02a, _r13a);  \
+    R1.val = vzip2q_f32(_r02a, _r13a);  \
+    R2.val = vzip1q_f32(_r02b, _r13b);  \
+    R3.val = vzip2q_f32(_r02b, _r13b);  \
+    G0.val = vzip1q_f32(_g02a, _g13a);  \
+    G1.val = vzip2q_f32(_g02a, _g13a);  \
+    G2.val = vzip1q_f32(_g02b, _g13b);  \
+    G3.val = vzip2q_f32(_g02b, _g13b);  \
+    B0.val = vzip1q_f32(_b02a, _b13a);  \
+    B1.val = vzip2q_f32(_b02a, _b13a);  \
+    B2.val = vzip1q_f32(_b02b, _b13b);  \
+    B3.val = vzip2q_f32(_b02b, _b13b);  \
+    A0.val = vzip1q_f32(_a02a, _a13a);  \
+    A1.val = vzip2q_f32(_a02a, _a13a);  \
+    A2.val = vzip1q_f32(_a02b, _a13b);  \
+    A3.val = vzip2q_f32(_a02b, _a13b); }
+
+#endif
+
+#undef BICUBIC_C1_PROCESS_ROW
+#define BICUBIC_C1_PROCESS_ROW(row, fetch_inliers) \
+    fetch_inliers(row); \
+    BICUBIC_UPDATE_ACC_VEC(acc_r, R0, R1, R2, R3, wy##row)
+
+#undef BICUBIC_C3_PROCESS_ROW
+#define BICUBIC_C3_PROCESS_ROW(row, fetch_inliers) \
+    fetch_inliers(row); \
+    BICUBIC_UPDATE_ACC_VEC(acc_r, R0, R1, R2, R3, wy##row); \
+    BICUBIC_UPDATE_ACC_VEC(acc_g, G0, G1, G2, G3, wy##row); \
+    BICUBIC_UPDATE_ACC_VEC(acc_b, B0, B1, B2, B3, wy##row)
+
+#undef BICUBIC_C4_PROCESS_ROW
+#define BICUBIC_C4_PROCESS_ROW(row, fetch_inliers) \
+    fetch_inliers(row); \
+    BICUBIC_UPDATE_ACC_VEC(acc_r, R0, R1, R2, R3, wy##row); \
+    BICUBIC_UPDATE_ACC_VEC(acc_g, G0, G1, G2, G3, wy##row); \
+    BICUBIC_UPDATE_ACC_VEC(acc_b, B0, B1, B2, B3, wy##row); \
+    BICUBIC_UPDATE_ACC_VEC(acc_a, A0, A1, A2, A3, wy##row)
+
+template<typename chtype, int NCHANNELS, typename vecfptype, typename vecbuftype>
+static void
+bicubicVec(const float* srcx, const float* srcy, int len,
+           const void* src, size_t srcstep, Size size,
+           chtype* dst, const float* params,
+           int borderType, chtype* borderVal)
+{
+    constexpr float defaultA = -0.75f;
+    float A = params ? *params : defaultA;
+
+    using pixtype = std::conditional_t<NCHANNELS == 1, chtype, Vec<chtype, NCHANNELS>>;
+    using buftype = typename VTraits<vecbuftype>::lane_type;
+
+    constexpr int BPP = int(NCHANNELS*sizeof(dst[0]));
+    constexpr int BATCH = VTraits<vecfptype>::nlanes;
+    float xbuf[BATCH] = {}, ybuf[BATCH] = {};
+    pixtype bval = borderVal ? *(pixtype*)borderVal : pixtype();
+
+    int savestorelen = borderType == BORDER_TRANSPARENT ? 0 : len;
+
+    vecfptype acc_r = v_setzero_<vecfptype>(), acc_g = v_setzero_<vecfptype>(),
+              acc_b = v_setzero_<vecfptype>(), acc_a = v_setzero_<vecfptype>();
+
+    for (int i = 0; i < len; i += BATCH, dst += BATCH*NCHANNELS) {
+        if (i + BATCH > len && i > 0 && borderType != BORDER_TRANSPARENT) {
+            int i1 = len - BATCH;
+            dst -= (i - i1)*NCHANNELS;
+            i = i1;
+        }
+        int dlen = std::min(BATCH, len - i);
+        int32_t tl_x[BATCH], tl_y[BATCH], tl_ofs[BATCH], goodx[BATCH*4];
+        buftype pixbuf[NCHANNELS][BATCH*4];
+        vecfptype wx0, wx1, wx2, wx3, wy0, wy1, wy2, wy3, sumwx;
+        const float *xptr = srcx + i, *yptr = srcy + i;
+        if (dlen < BATCH) {
+            memcpy(xbuf, srcx + i, dlen*sizeof(srcx[0]));
+            memcpy(ybuf, srcy + i, dlen*sizeof(srcy[0]));
+            xptr = xbuf;
+            yptr = ybuf;
+        }
+        int code = bicubicCoeffs(xptr, yptr, srcstep, size, BPP, A,
+                                 borderType, tl_x, tl_y, tl_ofs,
+                                 wx0, wx1, wx2, wx3, wy0, wy1, wy2, wy3);
+
+        if (code > 0) {
+            if constexpr (NCHANNELS == 1) {
+                vecbuftype R0, R1, R2, R3;
+                acc_r = v_setzero_<vecfptype>();
+                if constexpr (std::is_same_v<chtype, uint8_t>) {
+                    BICUBIC_C1_PROCESS_ROW(0, FETCH_INLIERS_8UC1);
+                    BICUBIC_C1_PROCESS_ROW(1, FETCH_INLIERS_8UC1);
+                    BICUBIC_C1_PROCESS_ROW(2, FETCH_INLIERS_8UC1);
+                    BICUBIC_C1_PROCESS_ROW(3, FETCH_INLIERS_8UC1);
+                } else if constexpr (std::is_same_v<chtype, uint16_t>) {
+                    BICUBIC_C1_PROCESS_ROW(0, FETCH_INLIERS_16UC1);
+                    BICUBIC_C1_PROCESS_ROW(1, FETCH_INLIERS_16UC1);
+                    BICUBIC_C1_PROCESS_ROW(2, FETCH_INLIERS_16UC1);
+                    BICUBIC_C1_PROCESS_ROW(3, FETCH_INLIERS_16UC1);
+                } else if constexpr (std::is_same_v<chtype, float>) {
+                    BICUBIC_C1_PROCESS_ROW(0, FETCH_INLIERS_32FC1);
+                    BICUBIC_C1_PROCESS_ROW(1, FETCH_INLIERS_32FC1);
+                    BICUBIC_C1_PROCESS_ROW(2, FETCH_INLIERS_32FC1);
+                    BICUBIC_C1_PROCESS_ROW(3, FETCH_INLIERS_32FC1);
+                }
+            } else if constexpr (NCHANNELS == 3) {
+                vecbuftype R0, R1, R2, R3, G0, G1, G2, G3, B0, B1, B2, B3;
+                acc_r = acc_g = acc_b = v_setzero_<vecfptype>();
+                if constexpr (std::is_same_v<chtype, uint8_t>) {
+                    BICUBIC_C3_PROCESS_ROW(0, FETCH_INLIERS_8UC3);
+                    BICUBIC_C3_PROCESS_ROW(1, FETCH_INLIERS_8UC3);
+                    BICUBIC_C3_PROCESS_ROW(2, FETCH_INLIERS_8UC3);
+                    BICUBIC_C3_PROCESS_ROW(3, FETCH_INLIERS_8UC3);
+                } else if constexpr (std::is_same_v<chtype, uint16_t>) {
+                    BICUBIC_C3_PROCESS_ROW(0, FETCH_INLIERS_16UC3);
+                    BICUBIC_C3_PROCESS_ROW(1, FETCH_INLIERS_16UC3);
+                    BICUBIC_C3_PROCESS_ROW(2, FETCH_INLIERS_16UC3);
+                    BICUBIC_C3_PROCESS_ROW(3, FETCH_INLIERS_16UC3);
+                } else if constexpr (std::is_same_v<chtype, float>) {
+                    BICUBIC_C3_PROCESS_ROW(0, FETCH_INLIERS_32FC3);
+                    BICUBIC_C3_PROCESS_ROW(1, FETCH_INLIERS_32FC3);
+                    BICUBIC_C3_PROCESS_ROW(2, FETCH_INLIERS_32FC3);
+                    BICUBIC_C3_PROCESS_ROW(3, FETCH_INLIERS_32FC3);
+                }
+            } else if constexpr (NCHANNELS == 4) {
+                vecbuftype R0, R1, R2, R3, G0, G1, G2, G3, B0, B1, B2, B3, A0, A1, A2, A3;
+                acc_r = acc_g = acc_b = acc_a = v_setzero_<vecfptype>();
+                if constexpr (std::is_same_v<chtype, uint8_t>) {
+                    BICUBIC_C4_PROCESS_ROW(0, FETCH_INLIERS_8UC4);
+                    BICUBIC_C4_PROCESS_ROW(1, FETCH_INLIERS_8UC4);
+                    BICUBIC_C4_PROCESS_ROW(2, FETCH_INLIERS_8UC4);
+                    BICUBIC_C4_PROCESS_ROW(3, FETCH_INLIERS_8UC4);
+                } else if constexpr (std::is_same_v<chtype, uint16_t>) {
+                    BICUBIC_C4_PROCESS_ROW(0, FETCH_INLIERS_16UC4);
+                    BICUBIC_C4_PROCESS_ROW(1, FETCH_INLIERS_16UC4);
+                    BICUBIC_C4_PROCESS_ROW(2, FETCH_INLIERS_16UC4);
+                    BICUBIC_C4_PROCESS_ROW(3, FETCH_INLIERS_16UC4);
+                } else if constexpr (std::is_same_v<chtype, float>) {
+                    BICUBIC_C4_PROCESS_ROW(0, FETCH_INLIERS_32FC4);
+                    BICUBIC_C4_PROCESS_ROW(1, FETCH_INLIERS_32FC4);
+                    BICUBIC_C4_PROCESS_ROW(2, FETCH_INLIERS_32FC4);
+                    BICUBIC_C4_PROCESS_ROW(3, FETCH_INLIERS_32FC4);
+                }
+            }
+        } else if (code < 0) {
+            if (borderType == BORDER_CONSTANT) {
+                for (int j = 0; j < dlen; j++) {
+                    ((pixtype*)dst)[j] = bval;
+                }
+            }
+            continue;
+        } else {
+            const chtype* defVal = borderType == BORDER_TRANSPARENT ? dst : borderVal;
+            vecfptype wys[4] = {wy0, wy1, wy2, wy3};
+            vecbuftype V0, V1, V2, V3;
+            acc_r = acc_g = acc_b = acc_a = v_setzero_<vecfptype>();
+
+            for (int row = 0; row < 4; row++) {
+                bicubicFetchPixels((const chtype*)src, srcstep, size, NCHANNELS, tl_x, tl_y,
+                                    goodx, row, &pixbuf[0][0], BATCH, borderType, defVal);
+                vecfptype wy = wys[row];
+                V0 = v_load(&pixbuf[0][0]);
+                V1 = v_load(&pixbuf[0][BATCH]);
+                V2 = v_load(&pixbuf[0][BATCH*2]);
+                V3 = v_load(&pixbuf[0][BATCH*3]);
+                BICUBIC_UPDATE_ACC_VEC(acc_r, V0, V1, V2, V3, wy);
+                if (NCHANNELS > 1) {
+                    V0 = v_load(&pixbuf[1][0]);
+                    V1 = v_load(&pixbuf[1][BATCH]);
+                    V2 = v_load(&pixbuf[1][BATCH*2]);
+                    V3 = v_load(&pixbuf[1][BATCH*3]);
+                    BICUBIC_UPDATE_ACC_VEC(acc_g, V0, V1, V2, V3, wy);
+                    V0 = v_load(&pixbuf[2][0]);
+                    V1 = v_load(&pixbuf[2][BATCH]);
+                    V2 = v_load(&pixbuf[2][BATCH*2]);
+                    V3 = v_load(&pixbuf[2][BATCH*3]);
+                    BICUBIC_UPDATE_ACC_VEC(acc_b, V0, V1, V2, V3, wy);
+                    if (NCHANNELS > 3) {
+                        V0 = v_load(&pixbuf[3][0]);
+                        V1 = v_load(&pixbuf[3][BATCH]);
+                        V2 = v_load(&pixbuf[3][BATCH*2]);
+                        V3 = v_load(&pixbuf[3][BATCH*3]);
+                        BICUBIC_UPDATE_ACC_VEC(acc_a, V0, V1, V2, V3, wy);
+                    }
+                }
+            }
+        }
+        
+        // store the result
+        chtype outbuf[BATCH*NCHANNELS*4];
+        if constexpr (NCHANNELS == 1) {
+            if constexpr (std::is_same_v<chtype, uint8_t>) {
+            #if CV_SIMD_FP16
+                v_int16 wacc_r = v_round(acc_r);
+            #else
+                v_int32 iacc_r = v_round(acc_r);
+                v_int16 wacc_r = v_pack(iacc_r, iacc_r);
+            #endif
+                v_uint8 bacc_r = v_pack_u(wacc_r, wacc_r);
+                if (i + BATCH*4 <= savestorelen) {
+                    v_store(dst, bacc_r);
+                    continue;
+                }
+                v_store(outbuf, bacc_r);
+            } else if constexpr (std::is_same_v<chtype, uint16_t>) {
+                v_int32 iacc_r = v_round(acc_r);
+                v_uint16 wacc_r = v_pack_u(iacc_r, iacc_r);
+                if (i + BATCH*2 <= savestorelen) {
+                    v_store(dst, wacc_r);
+                    continue;
+                }
+                v_store(outbuf, wacc_r);
+            } else if constexpr (std::is_same_v<chtype, float>) {
+                if (i + BATCH <= savestorelen) {
+                    v_store(dst, acc_r);
+                    continue;
+                }
+                v_store(outbuf, acc_r);
+            }
+        } else if constexpr (NCHANNELS == 3) {
+            if constexpr (std::is_same_v<chtype, uint8_t>) {
+            #if CV_SIMD_FP16
+                v_int16 wacc_r = v_round(acc_r);
+                v_int16 wacc_g = v_round(acc_g);
+                v_int16 wacc_b = v_round(acc_b);
+            #else
+                v_int32 iacc_r = v_round(acc_r);
+                v_int32 iacc_g = v_round(acc_g);
+                v_int32 iacc_b = v_round(acc_b);
+                v_int16 wacc_r = v_pack(iacc_r, iacc_r);
+                v_int16 wacc_g = v_pack(iacc_g, iacc_g);
+                v_int16 wacc_b = v_pack(iacc_b, iacc_b);
+            #endif
+                v_uint8 bacc_r = v_pack_u(wacc_r, wacc_r);
+                v_uint8 bacc_g = v_pack_u(wacc_g, wacc_g);
+                v_uint8 bacc_b = v_pack_u(wacc_b, wacc_b);
+                if (i + BATCH*4 <= savestorelen) {
+                    v_store_interleave(dst, bacc_r, bacc_g, bacc_b);
+                    continue;
+                }
+                v_store_interleave(outbuf, bacc_r, bacc_g, bacc_b);
+            } else if constexpr (std::is_same_v<chtype, uint16_t>) {
+                v_int32 iacc_r = v_round(acc_r), iacc_g = v_round(acc_g), iacc_b = v_round(acc_b);
+                v_uint16 wacc_r = v_pack_u(iacc_r, iacc_r);
+                v_uint16 wacc_g = v_pack_u(iacc_g, iacc_g);
+                v_uint16 wacc_b = v_pack_u(iacc_b, iacc_b);
+                if (i + BATCH*2 <= savestorelen) {
+                    v_store_interleave(dst, wacc_r, wacc_g, wacc_b);
+                    continue;
+                }
+                v_store_interleave(outbuf, wacc_r, wacc_g, wacc_b);
+            } else if constexpr (std::is_same_v<chtype, float>) {
+                if (i + BATCH <= savestorelen) {
+                    v_store_interleave(dst, acc_r, acc_g, acc_b);
+                    continue;
+                }
+                v_store_interleave(outbuf, acc_r, acc_g, acc_b);
+            }
+        } else if constexpr (NCHANNELS == 4) {
+            if constexpr (std::is_same_v<chtype, uint8_t>) {
+            #if CV_SIMD_FP16
+                v_int16 wacc_r = v_round(acc_r);
+                v_int16 wacc_g = v_round(acc_g);
+                v_int16 wacc_b = v_round(acc_b);
+                v_int16 wacc_a = v_round(acc_a);
+            #else
+                v_int32 iacc_r = v_round(acc_r);
+                v_int32 iacc_g = v_round(acc_g);
+                v_int32 iacc_b = v_round(acc_b);
+                v_int32 iacc_a = v_round(acc_a);
+                v_int16 wacc_r = v_pack(iacc_r, iacc_r);
+                v_int16 wacc_g = v_pack(iacc_g, iacc_g);
+                v_int16 wacc_b = v_pack(iacc_b, iacc_b);
+                v_int16 wacc_a = v_pack(iacc_a, iacc_a);
+            #endif
+                v_uint8 bacc_r = v_pack_u(wacc_r, wacc_r);
+                v_uint8 bacc_g = v_pack_u(wacc_g, wacc_g);
+                v_uint8 bacc_b = v_pack_u(wacc_b, wacc_b);
+                v_uint8 bacc_a = v_pack_u(wacc_a, wacc_a);
+                if (i + BATCH*4 <= savestorelen) {
+                    v_store_interleave(dst, bacc_r, bacc_g, bacc_b, bacc_a);
+                    continue;
+                }
+                v_store_interleave(outbuf, bacc_r, bacc_g, bacc_b, bacc_a);
+            } else if constexpr (std::is_same_v<chtype, uint16_t>) {
+                v_int32 iacc_r = v_round(acc_r), iacc_g = v_round(acc_g);
+                v_int32 iacc_b = v_round(acc_b), iacc_a = v_round(acc_a);
+                v_uint16 wacc_r = v_pack_u(iacc_r, iacc_r);
+                v_uint16 wacc_g = v_pack_u(iacc_g, iacc_g);
+                v_uint16 wacc_b = v_pack_u(iacc_b, iacc_b);
+                v_uint16 wacc_a = v_pack_u(iacc_a, iacc_a);
+                if (i + BATCH*2 <= savestorelen) {
+                    v_store_interleave(dst, wacc_r, wacc_g, wacc_b, wacc_a);
+                    continue;
+                }
+                v_store_interleave(outbuf, wacc_r, wacc_g, wacc_b, wacc_a);
+            } else if constexpr (std::is_same_v<chtype, float>) {
+                if (i + BATCH <= savestorelen) {
+                    v_store_interleave(dst, acc_r, acc_g, acc_b, acc_a);
+                    continue;
+                }
+                v_store_interleave(outbuf, acc_r, acc_g, acc_b, acc_a);
+            }
+        }
+
+        memcpy(dst, outbuf, dlen*NCHANNELS*sizeof(dst[0]));
+    }
+}
+#endif
+
+static void
+bicubic8uC1(const float* srcx, const float* srcy, int len,
+            const void* src, size_t srcstep, Size size,
+            uint8_t* dst, const float* params,
+            int borderType, uint8_t* borderVal)
+{
+#if CV_SIMD_FP16
+    bicubicVec<uint8_t, 1, v_float16, v_int16>(srcx, srcy, len, src, srcstep, size,
+                                               dst, params, borderType, borderVal);
+#elif CV_SIMD
+    bicubicVec<uint8_t, 1, v_float32, v_int32>(srcx, srcy, len, src, srcstep, size,
+                                               dst, params, borderType, borderVal);
+#else
+    bicubicRef<uint8_t, 1>(srcx, srcy, len, src, srcstep, size,
+                           dst, params, borderType, borderVal);
+#endif
+}
+
+static void
+bicubic8uC3(const float* srcx, const float* srcy, int len,
+            const void* src, size_t srcstep, Size size,
+            uint8_t* dst, const float* params,
+            int borderType, uint8_t* borderVal)
+{
+#if CV_SIMD_FP16
+    bicubicVec<uint8_t, 3, v_float16, v_int16>(srcx, srcy, len, src, srcstep, size,
+                                               dst, params, borderType, borderVal);
+#elif CV_SIMD
+    bicubicVec<uint8_t, 3, v_float32, v_int32>(srcx, srcy, len, src, srcstep, size,
+                                               dst, params, borderType, borderVal);
+#else
+    bicubicRef<uint8_t, 3>(srcx, srcy, len, src, srcstep, size,
+                           dst, params, borderType, borderVal);
+#endif
+}
+
+static void
+bicubic8uC4(const float* srcx, const float* srcy, int len,
+            const void* src, size_t srcstep, Size size,
+            uint8_t* dst, const float* params,
+            int borderType, uint8_t* borderVal)
+{
+#if CV_SIMD_FP16
+    bicubicVec<uint8_t, 4, v_float16, v_int16>(srcx, srcy, len, src, srcstep, size,
+                                                    dst, params, borderType, borderVal);
+#elif CV_SIMD
+    bicubicVec<uint8_t, 4, v_float32, v_int32>(srcx, srcy, len, src, srcstep, size,
+                                                    dst, params, borderType, borderVal);
+#else
+    bicubicRef<uint8_t, 4>(srcx, srcy, len, src, srcstep, size,
+                                dst, params, borderType, borderVal);
+#endif
+}
+
+static void
+bicubic16uC1(const float* srcx, const float* srcy, int len,
+            const void* src, size_t srcstep, Size size,
+            uint16_t* dst, const float* params,
+            int borderType, uint16_t* borderVal)
+{
+#if CV_SIMD
+    bicubicVec<uint16_t, 1, v_float32, v_int32>(srcx, srcy, len, src, srcstep, size,
+                                                    dst, params, borderType, borderVal);
+#else
+    bicubicRef<uint16_t, 1>(srcx, srcy, len, src, srcstep, size,
+                                dst, params, borderType, borderVal);
+#endif
+}
+
+static void
+bicubic16uC3(const float* srcx, const float* srcy, int len,
+            const void* src, size_t srcstep, Size size,
+             uint16_t* dst, const float* params,
+            int borderType, uint16_t* borderVal)
+{
+#if CV_SIMD
+    bicubicVec<uint16_t, 3, v_float32, v_int32>(srcx, srcy, len, src, srcstep, size,
+                                                    dst, params, borderType, borderVal);
+#else
+    bicubicRef<uint16_t, 3>(srcx, srcy, len, src, srcstep, size,
+                                dst, params, borderType, borderVal);
+#endif
+}
+
+static void
+bicubic16uC4(const float* srcx, const float* srcy, int len,
+            const void* src, size_t srcstep, Size size,
+             uint16_t* dst, const float* params,
+            int borderType, uint16_t* borderVal)
+{
+#if CV_SIMD
+    bicubicVec<uint16_t, 4, v_float32, v_int32>(srcx, srcy, len, src, srcstep, size,
+                                                    dst, params, borderType, borderVal);
+#else
+    bicubicRef<uint16_t, 4>(srcx, srcy, len, src, srcstep, size,
+                                dst, params, borderType, borderVal);
+#endif
+}
+
+static void
+bicubic32fC1(const float* srcx, const float* srcy, int len,
+             const void* src, size_t srcstep, Size size,
+             float* dst, const float* params,
+             int borderType, float* borderVal)
+{
+#if CV_SIMD
+    bicubicVec<float, 1, v_float32, v_float32>(srcx, srcy, len, src, srcstep, size,
+                                                      dst, params, borderType, borderVal);
+#else
+    bicubicRef<float, 1>(srcx, srcy, len, src, srcstep, size,
+                                dst, params, borderType, borderVal);
+#endif
+}
+
+static void
+bicubic32fC3(const float* srcx, const float* srcy, int len,
+             const void* src, size_t srcstep, Size size,
+             float* dst, const float* params,
+             int borderType, float* borderVal)
+{
+#if CV_SIMD
+    bicubicVec<float, 3, v_float32, v_float32>(srcx, srcy, len, src, srcstep, size,
+                                                      dst, params, borderType, borderVal);
+#else
+    bicubicRef<float, 3>(srcx, srcy, len, src, srcstep, size,
+                                dst, params, borderType, borderVal);
+#endif
+}
+
+static void
+bicubic32fC4(const float* srcx, const float* srcy, int len,
+             const void* src, size_t srcstep, Size size,
+             float* dst, const float* params,
+             int borderType, float* borderVal)
+{
+#if CV_SIMD
+    bicubicVec<float, 4, v_float32, v_float32>(srcx, srcy, len, src, srcstep, size,
+                                                      dst, params, borderType, borderVal);
+#else
+    bicubicRef<float, 4>(srcx, srcy, len, src, srcstep, size,
+                                dst, params, borderType, borderVal);
+#endif
+}
+
+}
+
+ImgWarpFunc getBicubicWarpFunc_(int type)
+{
+    if (type == CV_8UC1) {
+        return (ImgWarpFunc)bicubic8uC1;
+    }
+    if (type == CV_8UC3) {
+        return (ImgWarpFunc)bicubic8uC3;
+    }
+    if (type == CV_8UC4) {
+        return (ImgWarpFunc)bicubic8uC4;
+    }
+    if (type == CV_16UC1) {
+        return (ImgWarpFunc)bicubic16uC1;
+    }
+    if (type == CV_16UC3) {
+        return (ImgWarpFunc)bicubic16uC3;
+    }
+    if (type == CV_16UC4) {
+        return (ImgWarpFunc)bicubic16uC4;
+    }
+    if (type == CV_32FC1) {
+        return (ImgWarpFunc)bicubic32fC1;
+    }
+    if (type == CV_32FC3) {
+        return (ImgWarpFunc)bicubic32fC3;
+    }
+    if (type == CV_32FC4) {
+        return (ImgWarpFunc)bicubic32fC4;
+    }
+    return (ImgWarpFunc)nullptr;
 }
 
 #endif // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY

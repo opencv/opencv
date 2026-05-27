@@ -55,13 +55,160 @@
 #include "opencv2/core/softfloat.hpp"
 #include "imgwarp.hpp"
 
+#include "warp_common.hpp"
 #include "warp_kernels.simd.hpp"
 #include "warp_kernels.simd_declarations.hpp"
 
-using namespace cv;
-
 namespace cv
 {
+
+///////////////////////////// new-style kernel-base image warping without tables ////////////////////////
+
+ImgWarpFunc getImgWarpFunc(int type, int interpolation)
+{
+    if (interpolation == INTER_CUBIC) {
+        CV_CPU_DISPATCH(getBicubicWarpFunc_, (type), CV_CPU_DISPATCH_MODES_ALL);
+    }
+    return (ImgWarpFunc)nullptr;
+}
+
+static bool anyWarp(const Mat& src, const Mat& M_, const Mat& mapx, const Mat& mapy, Mat& dst,
+                    int interpolation, int borderType_, const Scalar& borderValue, bool relativeMap_)
+{
+    constexpr int MAX_CHANNELS = 4;
+    int srctype = src.type();
+
+    ImgWarpFunc func = getImgWarpFunc(srctype, interpolation);
+    if (!func) {
+        return false; // not implemented;
+    }
+
+    CV_Assert(src.type() == dst.type());
+    CV_Assert(src.channels() <= MAX_CHANNELS);
+    float Mdata[9] = {1.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 1.f};
+
+    if (!M_.empty()) {
+        if (!mapx.empty() || !mapy.empty()) {
+            CV_Error(Error::StsBadArg, "Either M or both mapx and mapy must be empty");
+        }
+        CV_Assert(M_.size() == Size(3, 2) || M_.size() == Size(3, 3));
+        CV_Assert(M_.type() == CV_32F || M_.type() == CV_64F);
+        Mat Mcopy(M_.size(), CV_32F, Mdata);
+        M_.convertTo(Mcopy, CV_32F);
+    } else {
+        if (mapx.empty()) {
+            CV_Error(Error::StsBadArg, "When M is empty, mapx and/or mapy must be non-empty");
+        }
+        CV_Assert(mapx.size() == dst.size());
+        if (mapy.empty()) {
+            CV_Assert(mapx.type() == CV_32FC2);
+        } else {
+            if (mapx.type() == mapy.type()) {
+                CV_Assert(mapx.type() == CV_32FC1);
+            } else {
+                CV_Assert(mapx.type() == CV_16SC2 && mapy.type() == CV_16UC1);
+            }
+            CV_Assert(mapx.size() == mapy.size());
+        }
+    }
+
+    int64_t borderValBuf_[MAX_CHANNELS];
+    scalarToRawData(borderValue, borderValBuf_, src.type());
+
+    parallel_for_(Range(0, dst.rows), [&](const Range& range) {
+        constexpr float FIXPT_SCALE = 1.f/32;
+        constexpr int BLOCK_SIZE = 128;
+        const uint8_t* srcdata = src.data;
+        const float* fparams = nullptr;
+        size_t srcstep = src.step;
+        Size srcsize = src.size();
+        int dstcols = dst.cols;
+        int borderType = borderType_;
+        size_t bpp = src.elemSize();
+
+        bool warping = !M_.empty();
+        bool warpAffine = warping && M_.rows == 2;
+        bool warpPerspective = warping && M_.rows == 3;
+
+        bool relativeMap = relativeMap_;
+        float relscale = relativeMap ? 1.f : 0.f;
+        bool interleavedmap = !warping && (mapx.type() == CV_32F);
+        bool planarmap = !warping && (mapx.type() == mapy.type());
+        bool fixedmap = !warping && (mapx.type() == CV_16UC2);
+
+        float M[9];
+        for (int i = 0; i < 9; i++)
+            M[i] = Mdata[i];
+        const uint8_t* borderValBuf = (const uint8_t*)borderValBuf_;
+        float M_xx = M[0], M_yx = M[3], M_zx = M[6];
+        float xbuf[BLOCK_SIZE], ybuf[BLOCK_SIZE];
+        const float* xbufptr = xbuf;
+        const float* ybufptr = ybuf;
+
+        for (int y = range.start; y < range.end; y++) {
+            uint8_t* dstptr = dst.ptr(y);
+            float M_x = float(y)*M[1] + M[2];
+            float M_y = float(y)*M[4] + M[5];
+            float M_z = float(y)*M[7] + M[8];
+            const Vec2s* xysptr = fixedmap ? mapx.ptr<Vec2s>(y) : nullptr;
+            const ushort* idxptr = fixedmap ? mapy.ptr<ushort>(y) : nullptr;
+            const Vec2f* xyfptr = interleavedmap ? mapx.ptr<Vec2f>(y) : nullptr;
+            const float* xfptr = planarmap ? mapx.ptr<float>(y) : nullptr;
+            const float* yfptr = planarmap ? mapy.ptr<float>(y) : nullptr;
+            float y0 = relativeMap ? float(y) : 0.f;
+
+            for (int x = 0; x < dstcols; x += BLOCK_SIZE) {
+                int blocksize = std::min(BLOCK_SIZE, dstcols - x);
+                if (warpAffine) {
+                    for (int dx = 0; dx < blocksize; dx++) {
+                        float xf = float(x + dx);
+                        xbuf[dx] = M_x + M_xx*xf;
+                        ybuf[dx] = M_y + M_yx*xf;
+                    }
+                } else if (warpPerspective) {
+                    for (int dx = 0; dx < blocksize; dx++) {
+                        double xf = double(x + dx);
+                        double invz = 1./(M_z + M_zx*xf);
+                        xbuf[dx] = float((M_x + M_xx*xf)*invz);
+                        ybuf[dx] = float((M_y + M_yx*xf)*invz);
+                    }
+                } else if (fixedmap) {
+                    for (int dx = 0; dx < blocksize; dx++) {
+                        Vec2s xy = xysptr[x + dx];
+                        ushort idx = idxptr[x + dx];
+                        float xf = float(xy[0]) + (idx & 31)*FIXPT_SCALE + (x + dx)*relscale;
+                        float yf = float(xy[1]) + ((idx >> 5) & 31)*FIXPT_SCALE + y0;
+                        xbuf[dx] = xf;
+                        ybuf[dx] = yf;
+                    }
+                } else if (interleavedmap) {
+                    for (int dx = 0; dx < blocksize; dx++) {
+                        Vec2f xy = xyfptr[x + dx];
+                        float xf = xy[0] + (x + dx)*relscale;
+                        float yf = xy[1] + y0;
+                        xbuf[dx] = xf;
+                        ybuf[dx] = yf;
+                    }
+                } else if (relativeMap) {
+                    for (int dx = 0; dx < blocksize; dx++) {
+                        float xf = xfptr[x + dx] + (x + dx)*relscale;
+                        float yf = yfptr[x + dx] + y0;
+                        xbuf[dx] = xf;
+                        ybuf[dx] = yf;
+                    }
+                } else {
+                    // planar absolute map — just use it as-is without copying
+                    xbufptr = xfptr + x;
+                    ybufptr = yfptr + x;
+                }
+                func(xbufptr, ybufptr, blocksize, srcdata, srcstep, srcsize,
+                     dstptr + x*bpp, fparams, borderType, borderValBuf);
+            }
+        }
+    });
+
+    return true;
+}
 
 /************** interpolation formulas and tables ***************/
 
@@ -78,9 +225,6 @@ static short BilinearTab_iC4_buf[INTER_TAB_SIZE2+2][2][8];
 static short (*BilinearTab_iC4)[2][8] = (short (*)[2][8])alignPtr(BilinearTab_iC4_buf, 16);
 #endif
 
-static float BicubicTab_f[INTER_TAB_SIZE2][4][4];
-static short BicubicTab_i[INTER_TAB_SIZE2][4][4];
-
 static float Lanczos4Tab_f[INTER_TAB_SIZE2][8][8];
 static short Lanczos4Tab_i[INTER_TAB_SIZE2][8][8];
 
@@ -88,16 +232,6 @@ static inline void interpolateLinear( float x, float* coeffs )
 {
     coeffs[0] = 1.f - x;
     coeffs[1] = x;
-}
-
-static inline void interpolateCubic( float x, float* coeffs )
-{
-    const float A = -0.75f;
-
-    coeffs[0] = ((A*(x + 1) - 5*A)*(x + 1) + 8*A)*(x + 1) - 4*A;
-    coeffs[1] = ((A + 2)*x - (A + 3))*x*x + 1;
-    coeffs[2] = ((A + 2)*(1 - x) - (A + 3))*(1 - x)*(1 - x) + 1;
-    coeffs[3] = 1.f - coeffs[0] - coeffs[1] - coeffs[2];
 }
 
 static inline void interpolateLanczos4( float x, float* coeffs )
@@ -138,8 +272,7 @@ static void initInterTab1D(int method, float* tab, int tabsz)
     }
     else if( method == INTER_CUBIC )
     {
-        for( int i = 0; i < tabsz; i++, tab += 4 )
-            interpolateCubic( i*scale, tab );
+        ; // pass
     }
     else if( method == INTER_LANCZOS4 )
     {
@@ -154,13 +287,15 @@ static void initInterTab1D(int method, float* tab, int tabsz)
 static const void* initInterTab2D( int method, bool fixpt )
 {
     static bool inittab[INTER_MAX+1] = {false};
+
+    if( method == INTER_CUBIC )
+        return nullptr;
+
     float* tab = 0;
     short* itab = 0;
     int ksize = 0;
     if( method == INTER_LINEAR )
         tab = BilinearTab_f[0][0], itab = BilinearTab_i[0][0], ksize=2;
-    else if( method == INTER_CUBIC )
-        tab = BicubicTab_f[0][0], itab = BicubicTab_i[0][0], ksize=4;
     else if( method == INTER_LANCZOS4 )
         tab = Lanczos4Tab_f[0][0], itab = Lanczos4Tab_i[0][0], ksize=8;
     else
@@ -232,8 +367,6 @@ static bool initAllInterTab2D()
 {
     return  initInterTab2D( INTER_LINEAR, false ) &&
             initInterTab2D( INTER_LINEAR, true ) &&
-            initInterTab2D( INTER_CUBIC, false ) &&
-            initInterTab2D( INTER_CUBIC, true ) &&
             initInterTab2D( INTER_LANCZOS4, false ) &&
             initInterTab2D( INTER_LANCZOS4, true );
 }
@@ -846,111 +979,6 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
 
 
 template<class CastOp, typename AT, int ONE, bool isRelative>
-static void remapBicubic( const Mat& _src, Mat& _dst, const Mat& _xy,
-                          const Mat& _fxy, const void* _wtab,
-                          int borderType, const Scalar& _borderValue, const Point& _offset )
-{
-    typedef typename CastOp::rtype T;
-    typedef typename CastOp::type1 WT;
-    Size ssize = _src.size(), dsize = _dst.size();
-    const int cn = _src.channels();
-    const AT* wtab = (const AT*)_wtab;
-    const T* S0 = _src.ptr<T>();
-    size_t sstep = _src.step/sizeof(S0[0]);
-    T cval[CV_CN_MAX];
-    CastOp castOp;
-
-    for(int k = 0; k < cn; k++ )
-        cval[k] = saturate_cast<T>(_borderValue[k & 3]);
-
-    int borderType1 = borderType != BORDER_TRANSPARENT ? borderType : BORDER_REFLECT_101;
-
-    unsigned width1 = std::max(ssize.width-3, 0), height1 = std::max(ssize.height-3, 0);
-
-    if( _dst.isContinuous() && _xy.isContinuous() && _fxy.isContinuous() && !isRelative )
-    {
-        dsize.width *= dsize.height;
-        dsize.height = 1;
-    }
-
-    for(int dy = 0; dy < dsize.height; dy++ )
-    {
-        T* D = _dst.ptr<T>(dy);
-        const short* XY = _xy.ptr<short>(dy);
-        const ushort* FXY = _fxy.ptr<ushort>(dy);
-        const int off_y = isRelative ? (_offset.y+dy) : 0;
-        for(int dx = 0; dx < dsize.width; dx++, D += cn )
-        {
-            const int off_x = isRelative ? (_offset.x+dx) : 0;
-            int sx = XY[dx*2]-1+off_x, sy = XY[dx*2+1]-1+off_y;
-            const AT* w = wtab + FXY[dx]*16;
-            if( (unsigned)sx < width1 && (unsigned)sy < height1 )
-            {
-                const T* S = S0 + sy*sstep + sx*cn;
-                for(int k = 0; k < cn; k++ )
-                {
-                    WT sum = S[0]*w[0] + S[cn]*w[1] + S[cn*2]*w[2] + S[cn*3]*w[3];
-                    S += sstep;
-                    sum += S[0]*w[4] + S[cn]*w[5] + S[cn*2]*w[6] + S[cn*3]*w[7];
-                    S += sstep;
-                    sum += S[0]*w[8] + S[cn]*w[9] + S[cn*2]*w[10] + S[cn*3]*w[11];
-                    S += sstep;
-                    sum += S[0]*w[12] + S[cn]*w[13] + S[cn*2]*w[14] + S[cn*3]*w[15];
-                    S -= sstep * 3 - 1;
-                    D[k] = castOp(sum);
-                }
-            }
-            else
-            {
-                int x[4], y[4];
-                if( borderType == BORDER_TRANSPARENT &&
-                    ((unsigned)(sx+1) >= (unsigned)ssize.width ||
-                    (unsigned)(sy+1) >= (unsigned)ssize.height) )
-                    continue;
-
-                if( borderType1 == BORDER_CONSTANT &&
-                    (sx >= ssize.width || sx+4 <= 0 ||
-                    sy >= ssize.height || sy+4 <= 0))
-                {
-                    for(int k = 0; k < cn; k++ )
-                        D[k] = cval[k];
-                    continue;
-                }
-
-                for(int i = 0; i < 4; i++ )
-                {
-                    x[i] = borderInterpolate(sx + i, ssize.width, borderType1)*cn;
-                    y[i] = borderInterpolate(sy + i, ssize.height, borderType1);
-                }
-
-                for(int k = 0; k < cn; k++, S0++, w -= 16 )
-                {
-                    WT cv = cval[k], sum = cv*ONE;
-                    for(int i = 0; i < 4; i++, w += 4 )
-                    {
-                        int yi = y[i];
-                        if( yi < 0 )
-                            continue;
-                        const T* S = S0 + yi*sstep;
-                        if( x[0] >= 0 )
-                            sum += (S[x[0]] - cv)*w[0];
-                        if( x[1] >= 0 )
-                            sum += (S[x[1]] - cv)*w[1];
-                        if( x[2] >= 0 )
-                            sum += (S[x[2]] - cv)*w[2];
-                        if( x[3] >= 0 )
-                            sum += (S[x[3]] - cv)*w[3];
-                    }
-                    D[k] = castOp(sum);
-                }
-                S0 -= cn;
-            }
-        }
-    }
-}
-
-
-template<class CastOp, typename AT, int ONE, bool isRelative>
 static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
                            const Mat& _fxy, const void* _wtab,
                            int borderType, const Scalar& _borderValue, const Point& _offset )
@@ -1395,7 +1423,6 @@ void cv::remap( InputArray _src, OutputArray _dst,
     _dst.create( map1.size(), src.type() );
     Mat dst = _dst.getMat();
 
-
     CV_Assert( dst.cols < SHRT_MAX && dst.rows < SHRT_MAX && src.cols < SHRT_MAX && src.rows < SHRT_MAX );
 
     if( dst.data == src.data )
@@ -1422,6 +1449,10 @@ void cv::remap( InputArray _src, OutputArray _dst,
     interpolation &= ~cv::WARP_RELATIVE_MAP;
     if( interpolation == INTER_AREA )
         interpolation = INTER_LINEAR;
+
+    if (anyWarp(src, Mat(), map1, map2, dst, interpolation, borderType, borderValue, hasRelativeFlag)) {
+        return;
+    }
 
     int type = src.type(), depth = CV_MAT_DEPTH(type);
 
@@ -1575,24 +1606,6 @@ void cv::remap( InputArray _src, OutputArray _dst,
         }
     };
 
-    static RemapFunc cubic_tab[2][CV_DEPTH_MAX] =
-    {
-        {
-            remapBicubic<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE, false>, 0,
-            remapBicubic<Cast<float, ushort>, float, 1, false>,
-            remapBicubic<Cast<float, short>, float, 1, false>, 0,
-            remapBicubic<Cast<float, float>, float, 1, false>,
-            remapBicubic<Cast<double, double>, float, 1, false>, 0
-        },
-        {
-            remapBicubic<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE, true>, 0,
-            remapBicubic<Cast<float, ushort>, float, 1, true>,
-            remapBicubic<Cast<float, short>, float, 1, true>, 0,
-            remapBicubic<Cast<float, float>, float, 1, true>,
-            remapBicubic<Cast<double, double>, float, 1, true>, 0
-        }
-    };
-
     static RemapFunc lanczos4_tab[2][8] =
     {
         {
@@ -1621,10 +1634,6 @@ void cv::remap( InputArray _src, OutputArray _dst,
     {
         if( interpolation == INTER_LINEAR )
             ifunc = linear_tab[relativeOptionIndex][depth];
-        else if( interpolation == INTER_CUBIC ){
-            ifunc = cubic_tab[relativeOptionIndex][depth];
-            CV_Assert( _src.channels() <= 4 );
-        }
         else if( interpolation == INTER_LANCZOS4 ){
             ifunc = lanczos4_tab[relativeOptionIndex][depth];
             CV_Assert( _src.channels() <= 4 );
@@ -2490,6 +2499,10 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
         M[2] = b1; M[5] = b2;
     }
 
+    if (anyWarp(src, matM, Mat(), Mat(), dst, interpolation, borderType, borderValue, false)) {
+        return;
+    }
+
     hal::warpAffine(src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows,
                     M, interpolation, borderType, borderValue.val, hint);
 }
@@ -3036,6 +3049,10 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
 
     if( !(flags & WARP_INVERSE_MAP) )
         invert(matM, matM);
+
+    if (anyWarp(src, matM, Mat(), Mat(), dst, interpolation, borderType, borderValue, false)) {
+        return;
+    }
 
     hal::warpPerspective(src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows,
                         matM.ptr<double>(), interpolation, borderType, borderValue.val, hint);
