@@ -768,8 +768,6 @@ TEST(Layer_MHARoPe_Test_Accuracy_with_, Pytorch)
     normAssert(h_t_reference, outputs[0]);
 }
 
-
-
 TEST_P(Test_Caffe_layers, Accum)
 {
 #ifdef OPENCV_DNN_EXTERNAL_PROTOBUF

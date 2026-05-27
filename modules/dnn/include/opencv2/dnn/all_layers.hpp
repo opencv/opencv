@@ -1872,6 +1872,12 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<AttentionLayer> create(const LayerParams &params);
     };
 
+    // Scaled-dot-product attention on pre-projected, pre-reshaped Q / K^T / V.
+    class CV_EXPORTS SDPALayer : public Layer {
+     public:
+        static Ptr<SDPALayer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS RotaryEmbeddingLayer : public Layer {
      public:
         static Ptr<RotaryEmbeddingLayer> create(const LayerParams &params);
