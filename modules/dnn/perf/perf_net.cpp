@@ -30,7 +30,7 @@ public:
 
     void processNet(std::string weights, std::string proto,
                     const std::vector<std::tuple<Mat, std::string>>& inputs, const std::string& outputLayer = ""){
-        weights = findDataFile(weights, false);
+        weights = findDataFile(weights);
         if (!proto.empty())
             proto = findDataFile(proto);
         net = readNet(weights, proto);
