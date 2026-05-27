@@ -73,6 +73,17 @@ static void
 FillConvexPoly( Mat& img, const Point2l* v, int npts,
                 const void* color, int line_type, int shift );
 
+// Use multiplication to avoid undefined behavior from left-shifting negative coordinates.
+static inline int64
+ScaleToFixedPoint( int64 v, int shift )
+{
+    CV_Assert( 0 <= shift && shift <= XY_SHIFT );
+    const int64 factor = static_cast<int64>(1) << (XY_SHIFT - shift);
+    CV_DbgAssert( v >= std::numeric_limits<int64>::min() / factor &&
+                  v <= std::numeric_limits<int64>::max() / factor );
+    return v * factor;
+}
+
 /****************************************************************************************\
 *                                   Lines                                                *
 \****************************************************************************************/
@@ -1117,11 +1128,10 @@ FillConvexPoly( Mat& img, const Point2l* v, int npts, const void* color, int lin
     else
         delta1 = XY_ONE - 1, delta2 = 0;
 
-    p0 = v[npts - 1];
-    p0.x <<= XY_SHIFT - shift;
-    p0.y <<= XY_SHIFT - shift;
-
     CV_Assert( 0 <= shift && shift <= XY_SHIFT );
+    p0 = v[npts - 1];
+    p0.x = ScaleToFixedPoint(p0.x, shift);
+    p0.y = ScaleToFixedPoint(p0.y, shift);
     xmin = xmax = v[0].x;
     ymin = ymax = v[0].y;
 
@@ -1138,8 +1148,8 @@ FillConvexPoly( Mat& img, const Point2l* v, int npts, const void* color, int lin
         xmax = std::max( xmax, p.x );
         xmin = MIN( xmin, p.x );
 
-        p.x <<= XY_SHIFT - shift;
-        p.y <<= XY_SHIFT - shift;
+        p.x = ScaleToFixedPoint(p.x, shift);
+        p.y = ScaleToFixedPoint(p.y, shift);
 
         if( line_type <= 8 )
         {
@@ -1202,8 +1212,8 @@ FillConvexPoly( Mat& img, const Point2l* v, int npts, const void* color, int lin
                             int64 xe = v[idx].x;
                             if (shift != XY_SHIFT)
                             {
-                                xs <<= XY_SHIFT - shift;
-                                xe <<= XY_SHIFT - shift;
+                                xs = ScaleToFixedPoint(xs, shift);
+                                xe = ScaleToFixedPoint(xe, shift);
                             }
 
                             edge[i].ye = ty;
@@ -1264,7 +1274,7 @@ CollectPolyEdges( Mat& img, const Point2l* v, int count, std::vector<PolyEdge>& 
 {
     int i, delta = offset.y + ((1 << shift) >> 1);
     Point2l pt0 = v[count-1], pt1;
-    pt0.x = (pt0.x + offset.x) << (XY_SHIFT - shift);
+    pt0.x = ScaleToFixedPoint(pt0.x + offset.x, shift);
     pt0.y = (pt0.y + delta) >> shift;
 
     edges.reserve( edges.size() + count );
@@ -1275,7 +1285,7 @@ CollectPolyEdges( Mat& img, const Point2l* v, int count, std::vector<PolyEdge>& 
         PolyEdge edge;
 
         pt1 = v[i];
-        pt1.x = (pt1.x + offset.x) << (XY_SHIFT - shift);
+        pt1.x = ScaleToFixedPoint(pt1.x + offset.x, shift);
         pt1.y = (pt1.y + delta) >> shift;
 
         Point2l pt0c(pt0), pt1c(pt1);
@@ -1301,14 +1311,14 @@ CollectPolyEdges( Mat& img, const Point2l* v, int count, std::vector<PolyEdge>& 
                 }
             }
 
-            pt0c.x = (int64)(t0.x) << XY_SHIFT;
-            pt1c.x = (int64)(t1.x) << XY_SHIFT;
+            pt0c.x = ScaleToFixedPoint(t0.x, 0);
+            pt1c.x = ScaleToFixedPoint(t1.x, 0);
         }
         else
         {
             t0.x = pt0.x; t1.x = pt1.x;
-            t0.y = pt0.y << XY_SHIFT;
-            t1.y = pt1.y << XY_SHIFT;
+            t0.y = ScaleToFixedPoint(pt0.y, 0);
+            t1.y = ScaleToFixedPoint(pt1.y, 0);
             LineAA(img, t0, t1, color);
         }
 
@@ -1659,10 +1669,10 @@ ThickLine( Mat& img, Point2l p0, Point2l p1, const void* color,
         p1 -= offset;
     }
 
-    p0.x <<= XY_SHIFT - shift;
-    p0.y <<= XY_SHIFT - shift;
-    p1.x <<= XY_SHIFT - shift;
-    p1.y <<= XY_SHIFT - shift;
+    p0.x = ScaleToFixedPoint(p0.x, shift);
+    p0.y = ScaleToFixedPoint(p0.y, shift);
+    p1.x = ScaleToFixedPoint(p1.x, shift);
+    p1.y = ScaleToFixedPoint(p1.y, shift);
 
     if( thickness <= 1 )
     {

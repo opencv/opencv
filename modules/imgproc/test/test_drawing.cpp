@@ -1104,6 +1104,26 @@ TEST(Drawing, contours_filled)
     }
 }
 
+TEST(Drawing, drawContours_negative_offset_regression_28940)
+{
+    Mat roi(80, 80, CV_8UC1, Scalar::all(0));
+    vector<vector<Point> > contours(1);
+    contours[0].push_back(Point(100, 100));
+    contours[0].push_back(Point(160, 100));
+    contours[0].push_back(Point(160, 160));
+    contours[0].push_back(Point(100, 160));
+
+    // Negative offsets are used when drawing full-image contours into an ROI.
+    drawContours(roi, contours, -1, Scalar(255), 2, LINE_8, noArray(), INT_MAX, Point(-120, -120));
+
+    // The contour is shifted to the rectangle with corners (-20, -20) and (40, 40),
+    // so only the bottom and right parts should be visible in the ROI after clipping.
+    EXPECT_NE(0, roi.at<uchar>(20, 40));
+    EXPECT_NE(0, roi.at<uchar>(40, 20));
+    EXPECT_NE(0, roi.at<uchar>(40, 40));
+    EXPECT_EQ(0, countNonZero(roi(Rect(60, 60, 20, 20))));
+}
+
 // Test for LINE_4 vs LINE_8 connectivity behavior
 // Regression test for issue #26413
 TEST(Drawing, line_connectivity_regression_26413)
