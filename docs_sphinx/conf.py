@@ -55,7 +55,7 @@ DOC_PY_MODULES = [
 # ---------------------------------------------------------------------------
 CONTRIB_MODULES = [
     m.strip()
-    for m in (_os.environ.get("OPENCV_CONTRIB_MODULES") or "ml,bgsegm,bioinspired,cannops,ccalib,cnn_3dobj,cvv,dnn_objdetect,dnn_superres,gapi,hdf,julia,line_descriptor,phase_unwrapping,structured_light").split(",")
+    for m in (_os.environ.get("OPENCV_CONTRIB_MODULES") or "ml,bgsegm,bioinspired,cannops,ccalib,cnn_3dobj,cvv,dnn_objdetect,dnn_superres,gapi,hdf,julia,line_descriptor,phase_unwrapping,structured_light,sfm").split(",")
     if m.strip()
 ]
 CONTRIB_ROOT = pathlib.Path(
@@ -317,6 +317,19 @@ for _m in DOC_PY_MODULES:
 for _toc in (DOC_ROOT / "py_tutorials").glob("*/py_table_of_contents_*.markdown"):
     if _toc.parent.name not in DOC_PY_MODULES:
         _scan_external(_toc)
+
+for _m in CONTRIB_MODULES:
+    _tut_dir = CONTRIB_ROOT / _m / "tutorials"
+    if not _tut_dir.is_dir():
+        continue
+    for _md in list(_tut_dir.rglob("*.markdown")) + list(_tut_dir.rglob("*.md")):
+        try:
+            _head = _md.read_text(encoding="utf-8", errors="replace")[:4000]
+        except OSError:
+            continue
+        _rel = "tutorials_contrib/" + _m + "/" + _md.relative_to(_tut_dir).with_suffix("").as_posix()
+        for _mm in re.finditer(r"\{#([\w-]+)\}", _head):
+            _ANCHOR_TO_DOC[_mm.group(1)] = _rel
 
 # Basename -> srcdir-relative URL index for image lookup, mirroring
 # Doxygen's flat IMAGE_PATH. Walks source trees directly (not the staged
@@ -666,6 +679,9 @@ def _translate(text: str, docname: str | None = None) -> str:
         lambda m: m.group(1) + re.sub(r"^    ", "", m.group(2), flags=re.MULTILINE),
         text, flags=re.MULTILINE)
 
+    # 1b0. \b word → **word** (Doxygen bold macro — single next word only).
+    text = re.sub(r"\\b\s+(\S+)", r"**\1**", text)
+
     # 1b. @note ... / @see ...  -> MyST admonitions.
     #     Runs BEFORE math conversion so that \f[...\f] inside a note body is
     #     still on one logical line and does not create a blank-line terminator
@@ -922,6 +938,8 @@ def _translate(text: str, docname: str | None = None) -> str:
 
     # 7. toctree before @ref so list-item @ref tutorial_* entries aren't converted first
     def _subpage_list_to_toctree(src: str) -> str:
+        if not src.endswith("\n"):
+            src += "\n"
         pat = re.compile(
             r"((?:^[ \t]*-\s+@(?:subpage\s+[\w-]+|ref\s+tutorial_[\w-]+)[^\n]*\n(?:(?:[ \t]*\n)?[ \t]+[^\n]+\n)*)+)",
             re.MULTILINE)
@@ -931,7 +949,13 @@ def _translate(text: str, docname: str | None = None) -> str:
             dm = re.search(
                 r"@(?:subpage|ref)\s+[\w-]+[^\n]*\n((?:(?:[ \t]*\n)?[ \t]+[^\n]+\n)*)", block)
             desc_raw = dm.group(1) if dm and dm.group(1) else ""
-            desc = " ".join(l.strip() for l in desc_raw.splitlines() if l.strip()) or None
+            _groups: list[list[str]] = [[]]
+            for _l in desc_raw.splitlines():
+                if _l.strip():
+                    _groups[-1].append(_l.strip())
+                elif _groups[-1]:
+                    _groups.append([])
+            desc = "\n\n".join(" ".join(g) for g in _groups if g) or None
             lines = []
             for e in entries:
                 if e in _ANCHOR_TO_DOC:
@@ -1153,8 +1177,22 @@ def _translate(text: str, docname: str | None = None) -> str:
         lambda m: m.group(1) + re.sub(r"^    ", "", m.group(2), flags=re.MULTILINE),
         text, flags=re.MULTILINE)
 
-    # 11g. Wrap bare http(s) URLs in <> for CommonMark autolink.
+    # 11h. Escape C++ template <Type> in paragraph text; skip fenced code blocks.
+    _cpp_tpl_re = re.compile(r'\b(\w+)<([A-Za-z_][\w:, *&]*?)>')
+    _lines_out: list[str] = []
+    _in_fence = False
+    for _ln in text.splitlines(keepends=True):
+        if re.match(r'^\s*```', _ln):
+            _in_fence = not _in_fence
+        if not _in_fence:
+            _ln = _cpp_tpl_re.sub(lambda m: f'{m.group(1)}&lt;{m.group(2)}&gt;', _ln)
+        _lines_out.append(_ln)
+    text = "".join(_lines_out)
+
+    # 11g. Wrap bare http(s) URLs in <> for CommonMark autolink; skip [text](url).
     def _autolink_repl(m: re.Match) -> str:
+        if m.group(1):
+            return m.group(1)
         url = m.group(0)
         trail = ""
         while url and url[-1] in ".,;:!?)":
@@ -1162,7 +1200,7 @@ def _translate(text: str, docname: str | None = None) -> str:
             url = url[:-1]
         return f"<{url}>{trail}" if url else m.group(0)
     text = re.sub(
-        r'(?<!\]\()(?<![<"])https?://\S+',
+        r'(\[[^\]]*\]\([^)]*\))|(?<!\]\()(?<![<"])https?://\S+',
         _autolink_repl, text)
 
     # Depth-relative prefix from the current doc back to the site root,
@@ -1207,6 +1245,19 @@ def _translate(text: str, docname: str | None = None) -> str:
     text = re.sub(
         r'!\[(?P<alt>[^\]]*)\]\((?:[^)]*?/)?images/(?P<rel>[^)]+)\)',
         _img_repl, text)
+
+    # 12a2. "pics/foo.png" — contrib modules use pics/ instead of images/.
+    def _pics_img_repl(m: re.Match) -> str:
+        alt = m.group("alt")
+        hit = _IMAGE_INDEX.get(pathlib.Path(m.group("rel")).name)
+        if hit:
+            if hit.startswith("contrib_modules/"):
+                return _emit_contrib_img(hit[len("contrib_modules/"):], alt)
+            return f'![{alt}](/{hit})'
+        return m.group(0)
+    text = re.sub(
+        r'!\[(?P<alt>[^\]]*)\]\(pics/(?P<rel>[^)]+)\)',
+        _pics_img_repl, text)
 
     # 12b. Cross-tree image refs for contrib pages (Doxygen IMAGE_PATH
     #      flattening): `pics/foo.jpg` → <m>/doc/pics/, `<m>/samples/...`,
@@ -1396,6 +1447,11 @@ def _source_read(app, docname, source):
         source[0] += (
             "\n\n```{toctree}\n:maxdepth: 1\n:caption: Python Tutorials\n\n"
             "/py_tutorials/py_tutorials\n```\n"
+        )
+    if docname == "tutorials/tutorials" and CONTRIB_MODULES:
+        source[0] += (
+            "\n\n```{toctree}\n:maxdepth: 1\n:caption: Contrib Tutorials\n\n"
+            "/tutorials_contrib/contrib_root\n```\n"
         )
 
 
