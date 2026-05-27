@@ -61,9 +61,21 @@ bool  SunRasterDecoder::readHeader()
         int palSize = (m_bpp > 0 && m_bpp <= 8) ? (3*(1 << m_bpp)) : 0;
 
         m_strm.skip( 4 );
-        m_encoding = (SunRasType)m_strm.getDWord();
-        m_maptype = (SunRasMapType)m_strm.getDWord();
+        // Read as plain integers first; validate before casting to enum types.
+        // Casting an out-of-range integer directly to an enum with no fixed
+        // underlying type is undefined behavior (C++11 §7.2/8). Reject invalid
+        // values early so no downstream code ever touches an ill-formed enum.
+        const int raw_encoding = (int)m_strm.getDWord();
+        const int raw_maptype  = (int)m_strm.getDWord();
         m_maplength = m_strm.getDWord();
+
+        if (raw_encoding < RAS_OLD || raw_encoding > RAS_FORMAT_RGB)
+            return false;
+        if (raw_maptype < RMT_NONE || raw_maptype > RMT_EQUAL_RGB)
+            return false;
+
+        m_encoding = (SunRasType)raw_encoding;
+        m_maptype  = (SunRasMapType)raw_maptype;
 
         if( m_width > 0 && m_height > 0 &&
             (m_bpp == 1 || m_bpp == 8 || m_bpp == 24 || m_bpp == 32) &&
