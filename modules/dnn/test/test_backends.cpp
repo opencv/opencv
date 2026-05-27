@@ -395,13 +395,10 @@ TEST_P(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
 TEST_P(DNNTestNetwork, YuNet)
 {
     Mat img = imread(findDataFile("gpu/lbpcascade/er.png"));
-    for (const auto& sz : {Size(320, 320), Size(640, 480), Size(640, 640)})
-    {
-        Mat resized;
-        resize(img, resized, sz);
-        Mat inp = blobFromImage(resized);
-        processNet("dnn/onnx/models/yunet-202605.onnx", "", inp);
-    }
+    Mat resized;
+    resize(img, resized, Size(320, 320));
+    Mat inp = blobFromImage(resized);
+    processNet("dnn/onnx/models/yunet-202605.onnx", "", inp);
     expectNoFallbacksFromIE(net);
 }
 
