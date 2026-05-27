@@ -7337,7 +7337,7 @@ bicubicCoeffs(const float* srcx, const float* srcy,
 
     // clamp coordinates in floating-point to try to avoid unpredictable
     // behavior if the floating-point coordinates are huge
-    v_float32 xs0 = v_load(srcx), ys0 = v_load(srcy);
+    v_float32 xs0 = vx_load(srcx), ys0 = vx_load(srcy);
     v_float32 vx0 = v_min(v_max(xs0, minx), maxx);
     v_float32 vy0 = v_min(v_max(ys0, miny), maxy);
 
@@ -7367,7 +7367,7 @@ bicubicCoeffs(const float* srcx, const float* srcy,
                                   v_lt(v_reinterpret_as_u32(iy0), height_inner));
 
     bool all_inliers = v_check_all(inliers_mask);
-    v_int32 tl_ofs0 = v_add(v_mul(iy0, v_setall_s32((int)srcstep)), v_mul(ix0, v_setall_s32(bpp)));
+    v_int32 tl_ofs0 = v_add(v_mul(iy0, vx_setall_s32((int)srcstep)), v_mul(ix0, vx_setall_s32(bpp)));
 
     v_store(tl_x, ix0);
     v_store(tl_y, iy0);
@@ -7417,8 +7417,8 @@ bicubicCoeffs(const float* srcx, const float* srcy,
 
     // clamp coordinates in floating-point to try to avoid unpredictable
     // behavior if the floating-point coordinates are huge
-    v_float32 xs0 = v_load(srcx), ys0 = v_load(srcy);
-    v_float32 xs1 = v_load(srcx + nlanes32), ys1 = v_load(srcy + nlanes32);
+    v_float32 xs0 = vx_load(srcx), ys0 = vx_load(srcy);
+    v_float32 xs1 = vx_load(srcx + nlanes32), ys1 = vx_load(srcy + nlanes32);
     v_float32 vx0 = v_min(v_max(xs0, minx), maxx);
     v_float32 vy0 = v_min(v_max(ys0, miny), maxy);
     v_float32 vx1 = v_min(v_max(xs1, minx), maxx);
@@ -7440,8 +7440,8 @@ bicubicCoeffs(const float* srcx, const float* srcy,
     v_pack_store(bbuf, beta0);
     v_pack_store(bbuf + nlanes32, beta1);
 
-    v_float16 alpha = v_load(abuf);
-    v_float16 beta = v_load(bbuf);
+    v_float16 alpha = vx_load(abuf);
+    v_float16 beta = vx_load(bbuf);
 
     v_int32 one_i = vx_setall_s32(1), four_i = vx_setall_s32(4);
     ix0 = v_sub(ix0, one_i);
@@ -7470,8 +7470,8 @@ bicubicCoeffs(const float* srcx, const float* srcy,
                                    v_lt(v_reinterpret_as_u32(iy1), height_inner));
 
     bool all_inliers = v_check_all(v_and(inliers_mask0, inliers_mask1));
-    v_int32 tl_ofs0 = v_add(v_mul(iy0, v_setall_s32((int)srcstep)), v_mul(ix0, v_setall_s32(bpp)));
-    v_int32 tl_ofs1 = v_add(v_mul(iy1, v_setall_s32((int)srcstep)), v_mul(ix1, v_setall_s32(bpp)));
+    v_int32 tl_ofs0 = v_add(v_mul(iy0, vx_setall_s32((int)srcstep)), v_mul(ix0, vx_setall_s32(bpp)));
+    v_int32 tl_ofs1 = v_add(v_mul(iy1, vx_setall_s32((int)srcstep)), v_mul(ix1, vx_setall_s32(bpp)));
 
     v_store(tl_x, ix0);
     v_store(tl_y, iy0);
@@ -7517,10 +7517,10 @@ CV_ALWAYS_INLINE v_float32 v_fma(const v_int32& a, const v_float32& b, const v_f
         pixbuf[0][j + BATCH*2] = buftype(srcj[3]); \
         pixbuf[0][j + BATCH*3] = buftype(srcj[4]); \
     } \
-    R0 = v_load(&pixbuf[0][0]); \
-    R1 = v_load(&pixbuf[0][BATCH]); \
-    R2 = v_load(&pixbuf[0][BATCH*2]); \
-    R3 = v_load(&pixbuf[0][BATCH*3])
+    R0 = vx_load(&pixbuf[0][0]); \
+    R1 = vx_load(&pixbuf[0][BATCH]); \
+    R2 = vx_load(&pixbuf[0][BATCH*2]); \
+    R3 = vx_load(&pixbuf[0][BATCH*3])
 
 #undef FETCH_INLIERS_C3_DEFAULT
 #define FETCH_INLIERS_C3_DEFAULT(row) \
@@ -7539,18 +7539,18 @@ CV_ALWAYS_INLINE v_float32 v_fma(const v_int32& a, const v_float32& b, const v_f
         pixbuf[2][j + BATCH*2] = buftype(srcj[8]); \
         pixbuf[2][j + BATCH*3] = buftype(srcj[11]); \
     } \
-    R0 = v_load(&pixbuf[0][0]); \
-    R1 = v_load(&pixbuf[0][BATCH]); \
-    R2 = v_load(&pixbuf[0][BATCH*2]); \
-    R3 = v_load(&pixbuf[0][BATCH*3]); \
-    G0 = v_load(&pixbuf[1][0]); \
-    G1 = v_load(&pixbuf[1][BATCH]); \
-    G2 = v_load(&pixbuf[1][BATCH*2]); \
-    G3 = v_load(&pixbuf[1][BATCH*3]); \
-    B0 = v_load(&pixbuf[2][0]); \
-    B1 = v_load(&pixbuf[2][BATCH]); \
-    B2 = v_load(&pixbuf[2][BATCH*2]); \
-    B3 = v_load(&pixbuf[2][BATCH*3])
+    R0 = vx_load(&pixbuf[0][0]); \
+    R1 = vx_load(&pixbuf[0][BATCH]); \
+    R2 = vx_load(&pixbuf[0][BATCH*2]); \
+    R3 = vx_load(&pixbuf[0][BATCH*3]); \
+    G0 = vx_load(&pixbuf[1][0]); \
+    G1 = vx_load(&pixbuf[1][BATCH]); \
+    G2 = vx_load(&pixbuf[1][BATCH*2]); \
+    G3 = vx_load(&pixbuf[1][BATCH*3]); \
+    B0 = vx_load(&pixbuf[2][0]); \
+    B1 = vx_load(&pixbuf[2][BATCH]); \
+    B2 = vx_load(&pixbuf[2][BATCH*2]); \
+    B3 = vx_load(&pixbuf[2][BATCH*3])
 
 #undef FETCH_INLIERS_C4_DEFAULT
 #define FETCH_INLIERS_C4_DEFAULT(row) \
@@ -7573,22 +7573,22 @@ CV_ALWAYS_INLINE v_float32 v_fma(const v_int32& a, const v_float32& b, const v_f
         pixbuf[3][j + BATCH*2] = buftype(srcj[11]); \
         pixbuf[3][j + BATCH*3] = buftype(srcj[15]); \
     } \
-    R0 = v_load(&pixbuf[0][0]); \
-    R1 = v_load(&pixbuf[0][BATCH]); \
-    R2 = v_load(&pixbuf[0][BATCH*2]); \
-    R3 = v_load(&pixbuf[0][BATCH*3]); \
-    G0 = v_load(&pixbuf[1][0]); \
-    G1 = v_load(&pixbuf[1][BATCH]); \
-    G2 = v_load(&pixbuf[1][BATCH*2]); \
-    G3 = v_load(&pixbuf[1][BATCH*3]); \
-    B0 = v_load(&pixbuf[2][0]); \
-    B1 = v_load(&pixbuf[2][BATCH]); \
-    B2 = v_load(&pixbuf[2][BATCH*2]); \
-    B3 = v_load(&pixbuf[2][BATCH*3]); \
-    A0 = v_load(&pixbuf[3][0]); \
-    A1 = v_load(&pixbuf[3][BATCH]); \
-    A2 = v_load(&pixbuf[3][BATCH*2]); \
-    A3 = v_load(&pixbuf[3][BATCH*3])
+    R0 = vx_load(&pixbuf[0][0]); \
+    R1 = vx_load(&pixbuf[0][BATCH]); \
+    R2 = vx_load(&pixbuf[0][BATCH*2]); \
+    R3 = vx_load(&pixbuf[0][BATCH*3]); \
+    G0 = vx_load(&pixbuf[1][0]); \
+    G1 = vx_load(&pixbuf[1][BATCH]); \
+    G2 = vx_load(&pixbuf[1][BATCH*2]); \
+    G3 = vx_load(&pixbuf[1][BATCH*3]); \
+    B0 = vx_load(&pixbuf[2][0]); \
+    B1 = vx_load(&pixbuf[2][BATCH]); \
+    B2 = vx_load(&pixbuf[2][BATCH*2]); \
+    B3 = vx_load(&pixbuf[2][BATCH*3]); \
+    A0 = vx_load(&pixbuf[3][0]); \
+    A1 = vx_load(&pixbuf[3][BATCH]); \
+    A2 = vx_load(&pixbuf[3][BATCH*2]); \
+    A3 = vx_load(&pixbuf[3][BATCH*3])
 
 #undef FETCH_INLIERS_8UC1
 #define FETCH_INLIERS_8UC1(row) \
@@ -8187,27 +8187,27 @@ bicubicVec(const float* srcx, const float* srcy, int len,
                 bicubicFetchPixels((const chtype*)src, srcstep, size, NCHANNELS, tl_x, tl_y,
                                     goodx, row, &pixbuf[0][0], BATCH, borderType, defVal);
                 vecfptype wy = wys[row];
-                V0 = v_load(&pixbuf[0][0]);
-                V1 = v_load(&pixbuf[0][BATCH]);
-                V2 = v_load(&pixbuf[0][BATCH*2]);
-                V3 = v_load(&pixbuf[0][BATCH*3]);
+                V0 = vx_load(&pixbuf[0][0]);
+                V1 = vx_load(&pixbuf[0][BATCH]);
+                V2 = vx_load(&pixbuf[0][BATCH*2]);
+                V3 = vx_load(&pixbuf[0][BATCH*3]);
                 BICUBIC_UPDATE_ACC_VEC(acc_r, V0, V1, V2, V3, wy);
                 if (NCHANNELS > 1) {
-                    V0 = v_load(&pixbuf[1][0]);
-                    V1 = v_load(&pixbuf[1][BATCH]);
-                    V2 = v_load(&pixbuf[1][BATCH*2]);
-                    V3 = v_load(&pixbuf[1][BATCH*3]);
+                    V0 = vx_load(&pixbuf[1][0]);
+                    V1 = vx_load(&pixbuf[1][BATCH]);
+                    V2 = vx_load(&pixbuf[1][BATCH*2]);
+                    V3 = vx_load(&pixbuf[1][BATCH*3]);
                     BICUBIC_UPDATE_ACC_VEC(acc_g, V0, V1, V2, V3, wy);
-                    V0 = v_load(&pixbuf[2][0]);
-                    V1 = v_load(&pixbuf[2][BATCH]);
-                    V2 = v_load(&pixbuf[2][BATCH*2]);
-                    V3 = v_load(&pixbuf[2][BATCH*3]);
+                    V0 = vx_load(&pixbuf[2][0]);
+                    V1 = vx_load(&pixbuf[2][BATCH]);
+                    V2 = vx_load(&pixbuf[2][BATCH*2]);
+                    V3 = vx_load(&pixbuf[2][BATCH*3]);
                     BICUBIC_UPDATE_ACC_VEC(acc_b, V0, V1, V2, V3, wy);
                     if (NCHANNELS > 3) {
-                        V0 = v_load(&pixbuf[3][0]);
-                        V1 = v_load(&pixbuf[3][BATCH]);
-                        V2 = v_load(&pixbuf[3][BATCH*2]);
-                        V3 = v_load(&pixbuf[3][BATCH*3]);
+                        V0 = vx_load(&pixbuf[3][0]);
+                        V1 = vx_load(&pixbuf[3][BATCH]);
+                        V2 = vx_load(&pixbuf[3][BATCH*2]);
+                        V3 = vx_load(&pixbuf[3][BATCH*3]);
                         BICUBIC_UPDATE_ACC_VEC(acc_a, V0, V1, V2, V3, wy);
                     }
                 }
