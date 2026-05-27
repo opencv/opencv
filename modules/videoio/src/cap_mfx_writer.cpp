@@ -206,9 +206,9 @@ bool VideoWriter_IntelMFX::isOpened() const
     return good;
 }
 
-void VideoWriter_IntelMFX::write(cv::InputArray input)
+bool VideoWriter_IntelMFX::write(cv::InputArray input)
 {
-    write_one(input);
+    return write_one(input);
 }
 
 bool VideoWriter_IntelMFX::write_one(cv::InputArray bgr)

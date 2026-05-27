@@ -3,7 +3,7 @@
 core = {
     '': [
         'absdiff', 'add', 'addWeighted', 'bitwise_and', 'bitwise_not', 'bitwise_or', 'bitwise_xor', 'cartToPolar',
-        'compare', 'convertScaleAbs', 'copyMakeBorder', 'countNonZero', 'determinant', 'dft', 'divide', 'eigen',
+        'compare', 'convertScaleAbs', 'copyMakeBorder', 'countNonZero', 'determinant', 'dft', 'divide', 'divSpectrums', 'eigen',
         'exp', 'flip', 'getOptimalDFTSize','gemm', 'hconcat', 'inRange', 'invert', 'kmeans', 'log', 'magnitude',
         'max', 'mean', 'meanStdDev', 'merge', 'min', 'minMaxLoc', 'mixChannels', 'multiply', 'norm', 'normalize',
         'perspectiveTransform', 'polarToCart', 'pow', 'randn', 'randu', 'reduce', 'repeat', 'rotate', 'setIdentity', 'setRNGSeed',
@@ -49,7 +49,6 @@ imgproc = {
         'dilate',
         'distanceTransform',
         'distanceTransformWithLabels',
-        'divSpectrums',
         'drawContours',
         'drawMarker',
         'ellipse',
@@ -172,7 +171,7 @@ video = {
 }
 
 dnn = {'dnn_Net': ['setInput', 'forward', 'setPreferableBackend','getUnconnectedOutLayersNames'],
-       '': ['readNetFromCaffe', 'readNetFromTensorflow', 'readNetFromDarknet',
+       '': ['readNetFromCaffe', 'readNetFromTensorflow',
             'readNetFromONNX', 'readNetFromTFLite', 'readNet', 'blobFromImage']}
 
 features = {'Feature2D': ['detect', 'compute', 'detectAndCompute', 'descriptorSize', 'descriptorType', 'defaultNorm', 'empty', 'getDefaultName'],

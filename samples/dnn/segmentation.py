@@ -73,6 +73,7 @@ def main(func_args=None):
         help()
         exit(1)
 
+    cv.utils.logging.setLogLevel(cv.utils.logging.LOG_LEVEL_INFO)
     args.model = findModel(args.model, args.sha1)
     if args.labels is not None:
         args.labels = findFile(args.labels)
@@ -105,6 +106,8 @@ def main(func_args=None):
     net = cv.dnn.readNetFromONNX(args.model, engine)
     net.setPreferableBackend(get_backend_id(args.backend))
     net.setPreferableTarget(get_target_id(args.target))
+    if hasattr(cv.dnn, 'DNN_PROFILE_SUMMARY'):
+        net.setProfilingMode(cv.dnn.DNN_PROFILE_SUMMARY)
 
     winName = 'Deep learning semantic segmentation in OpenCV'
     cv.namedWindow(winName, cv.WINDOW_AUTOSIZE)
@@ -138,6 +141,7 @@ def main(func_args=None):
         t0 = cv.getTickCount()
         if args.alias == 'u2netp':
             output = net.forward(net.getUnconnectedOutLayersNames())
+            net.printPerfProfile()
             pred = output[0][0, 0, :, :]
             mask = (pred * 255).astype(np.uint8)
             mask = cv.resize(mask, (frame.shape[1], frame.shape[0]), interpolation=cv.INTER_AREA)
@@ -149,6 +153,7 @@ def main(func_args=None):
             frame = cv.addWeighted(frame, 0.25, foreground_overlay, 0.75, 0)
         else:
             score = net.forward()
+            net.printPerfProfile()
 
             numClasses = score.shape[1]
             height = score.shape[2]

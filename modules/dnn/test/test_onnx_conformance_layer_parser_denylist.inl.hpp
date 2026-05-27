@@ -269,18 +269,7 @@
 "test_constantofshape_int_shape_zero",  // Issue::Parser::Weights are required as inputs
 "test_convinteger_with_padding",  // Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "ConvInteger" in function 'getLayerInstance'
 "test_convinteger_without_padding",  //Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "ConvInteger" in function 'getLayerInstance'
-"test_convtranspose",  // Issue::Parser::Weights are required as inputs
-"test_convtranspose_1d",  // Issue::Parser::Weights are required as inputs
-"test_convtranspose_3d",  // Issue::Parser::Weights are required as inputs
-"test_convtranspose_autopad_same",  // Issue::Parser::Weights are required as inputs
-"test_convtranspose_dilations",  // Issue::Parser::Weights are required as inputs
-"test_convtranspose_group_2",
-"test_convtranspose_group_2_image_3",
-"test_convtranspose_kernel_shape",  // Issue::Parser::Weights are required as inputs
-"test_convtranspose_output_shape",  // Issue::Parser::Weights are required as inputs
-"test_convtranspose_pad",  // Issue::Parser::Weights are required as inputs
-"test_convtranspose_pads",  // Issue::Parser::Weights are required as inputs
-"test_convtranspose_with_kernel",  // Issue::Parser::Weights are required as inputs
+"test_convtranspose_autopad_same",
 "test_deform_conv_with_mask_bias",
 "test_deform_conv_with_multiple_offset_groups",
 "test_dequantizelinear_e4m3fn",
@@ -330,7 +319,6 @@
 "test_l2normalization_axis_1",
 "test_loop13_seq",  // Loop with tensor sequences output, not yet supported in OpenCV
 "test_loop16_seq_none",  // Loop with optional tensor sequences, not yet supported in OpenCV
-"test_lpnormalization_default",
 "test_lppool_1d_default",
 "test_lppool_2d_default",
 "test_lppool_2d_dilations",
@@ -369,14 +357,11 @@
 "test_optional_has_element_tensor_input",
 "test_prelu_broadcast",  // Issue::Parser:Blob slope not found in const blobs in function 'getBlob' (weights are required as inputs)
 "test_prelu_example",  // ---- same as above ---
-"test_qlinearconv",  // Issue::Parser:  Blob x_scale not found in const blobs in function 'getBlob' (weights are required as inputs)
-"test_qlinearmatmul_2D",  // Issue:: Parser: Variable weights is not supported in function 'parseQMatMul'
-"test_qlinearmatmul_2D_int8_float16",
+"test_qlinearmatmul_2D_int8_float16",  // Float output QLinearMatMul variants not supported
 "test_qlinearmatmul_2D_int8_float32",
 "test_qlinearmatmul_2D_uint8_float16",
 "test_qlinearmatmul_2D_uint8_float32",
-"test_qlinearmatmul_3D",  // ---- same as above ---
-"test_qlinearmatmul_3D_int8_float16",
+"test_qlinearmatmul_3D_int8_float16",  // Float output QLinearMatMul variants not supported
 "test_qlinearmatmul_3D_int8_float32",
 "test_qlinearmatmul_3D_uint8_float16",
 "test_qlinearmatmul_3D_uint8_float32",

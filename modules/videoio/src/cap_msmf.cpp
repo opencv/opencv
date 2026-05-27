@@ -2483,7 +2483,7 @@ public:
     virtual bool open(const cv::String& filename, int fourcc,
                       double fps, cv::Size frameSize, const cv::VideoWriterParameters& params);
     virtual void close();
-    virtual void write(cv::InputArray);
+    virtual bool write(cv::InputArray);
 
     virtual double getProperty(int) const override;
     virtual bool setProperty(int, double) { return false; }
@@ -2714,12 +2714,12 @@ void CvVideoWriter_MSMF::close()
     }
 }
 
-void CvVideoWriter_MSMF::write(cv::InputArray img)
+bool CvVideoWriter_MSMF::write(cv::InputArray img)
 {
     if (img.empty() ||
         (img.channels() != 1 && img.channels() != 3 && img.channels() != 4) ||
         (UINT32)img.cols() != videoWidth || (UINT32)img.rows() != videoHeight)
-        return;
+        return false;
 
     const LONG cbWidth = 4 * videoWidth;
     const DWORD cbBuffer = cbWidth * videoHeight;
@@ -2747,8 +2747,10 @@ void CvVideoWriter_MSMF::write(cv::InputArray img)
         if (SUCCEEDED(sinkWriter->WriteSample(streamIndex, sample.Get())))
         {
             rtStart += rtDuration;
+            return true;
         }
     }
+    return false;
 }
 
 

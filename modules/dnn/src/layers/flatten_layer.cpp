@@ -87,6 +87,10 @@ public:
                backendId == DNN_BACKEND_CANN;
     }
 
+    bool isDataShuffling() const CV_OVERRIDE { return true; }
+
+    virtual bool alwaysSupportInplace() const CV_OVERRIDE { return true; }
+
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
@@ -117,9 +121,12 @@ public:
         CV_Assert(startAxis >= 0 && startAxis <= numAxes);
 
         if (_onnxMode) {
+            int onnxAxis = _startAxis;
+            if (onnxAxis < 0) onnxAxis += numAxes;
+            onnxAxis = std::max(0, std::min(onnxAxis, numAxes));
             size_t outer = 1, inner = 1;
             int i = 0;
-            for (; i < startAxis; i++)
+            for (; i < onnxAxis; i++)
                 outer *= inputs[0][i];
             for (; i < numAxes; i++)
                 inner *= inputs[0][i];
@@ -165,8 +172,10 @@ public:
         inputs_arr.getMatVector(inputs);
 
         int numAxes = inputs[0].dims;
-        _startAxis = normalize_axis(_startAxis, numAxes);
-        _endAxis = normalize_axis(_endAxis, numAxes);
+        if (!_onnxMode) {
+            _startAxis = normalize_axis(_startAxis, numAxes);
+            _endAxis = normalize_axis(_endAxis, numAxes);
+        }
     }
 
 #ifdef HAVE_OPENCL
@@ -202,18 +211,11 @@ public:
                    outputs_arr.isUMatVector(),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        std::vector<Mat> inputs, outputs;
-        inputs_arr.getMatVector(inputs);
-        outputs_arr.getMatVector(outputs);
-
-        for (size_t i = 0; i < inputs.size(); i++)
-        {
-            MatShape outShape = shape(outputs[i]);
-            if (inputs[i].data != outputs[i].data)
-            {
-                inputs[i].reshape(1, (int)outShape.size(), &outShape[0]).copyTo(outputs[i]);
-            }
-        }
+        std::vector<Mat> outs;
+        outputs_arr.getMatVector(outs);
+        CV_Assert(!outs.empty());
+        const MatShape outShape = outs[0].shape();
+        reshapeAndCopyFirst(inputs_arr, outputs_arr, outShape);
     }
 
 #ifdef HAVE_CANN
@@ -253,11 +255,14 @@ public:
         std::vector<size_t> dims = ieInpNode.get_shape();
 
         int numAxes = dims.size();
-        int startAxis = normalize_axis(_startAxis, numAxes);
-        int endAxis = normalize_axis(_endAxis, numAxes);
+        int startAxis = _startAxis;
+        if (startAxis < 0) startAxis += numAxes;
+        startAxis = std::max(0, std::min(startAxis, numAxes));
+        int endAxis = _endAxis;
+        if (endAxis < 0) endAxis += numAxes;
+        endAxis = std::max(0, std::min(endAxis, numAxes - 1));
 
         CV_Assert(startAxis >= 0);
-        CV_Assert(endAxis >= startAxis && endAxis < numAxes);
         int64_t flattenedDimensionSize = std::accumulate(dims.begin() + startAxis,
                                          dims.begin() + endAxis + 1, 1, std::multiplies<size_t>());
 

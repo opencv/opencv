@@ -495,6 +495,13 @@ CV__DNN_INLINE_NS_BEGIN
         // so that forward() can assume that the outputs are already allocated.
         virtual bool dynamicOutputShapes() const;
 
+        // returns true if the layer only rearranges data without changing values.
+        // Examples: Flatten, Reshape, Transpose, Permute, Squeeze, Unsqueeze,
+        // Concat, Split, Slice, Tile, MaxPool.
+        // Used by QDQ fusion to elide redundant dequantize-quantize pairs
+        // when the scale and zero point are the same.
+        virtual bool isDataShuffling() const;
+
         // dumps attributes of the layer (e.g. strides, dilations in Convolution, MaxPool)
         virtual std::ostream& dumpAttrs(std::ostream& strm, int indent) const;
 
@@ -1020,6 +1027,29 @@ CV__DNN_INLINE_NS_BEGIN
          */
         CV_WRAP int64 getPerfProfile(CV_OUT std::vector<double>& timings);
 
+        /** @brief Enables KV-Cache for all AttentionOnnxI layers */
+        CV_WRAP void enableKVCache();
+
+        /** @brief Disables KV-Cache for all AttentionOnnxI layers */
+        CV_WRAP void disableKVCache();
+
+        /** @brief Resets KV-Cache for all AttentionOnnxI layers */
+        CV_WRAP void resetKVCache();
+        /** @brief Returns profiling data captured during the last forward pass.
+         *
+         * Entries are sorted by time in descending order. Empty vectors are returned
+         * if profiling is disabled (DNN_PROFILE_NONE).
+         */
+        CV_WRAP void getPerfProfile(CV_OUT std::vector<std::string>& names, CV_OUT std::vector<std::string>& timems, CV_OUT std::vector<std::string>& counts) const;
+
+        /** @brief Prints the profile captured during the last forward pass in a formatted table using CV_LOG_INFO.
+         *
+         * In DNN_PROFILE_DETAILED mode, prints per-layer label, time, and percentage.
+         * In DNN_PROFILE_SUMMARY mode, prints per-type count, time, and percentage.
+         * Does nothing if profiling is disabled (DNN_PROFILE_NONE) or all timings are zero.
+         */
+        CV_WRAP void printPerfProfile() const;
+
         // Get the main model graph
         Ptr<Graph> getMainGraph() const;
 
@@ -1043,6 +1073,7 @@ CV__DNN_INLINE_NS_BEGIN
                               bool comma=true, bool dump_details=false) const;
         std::ostream& dumpDim(std::ostream& strm, int value) const;
 
+
         struct Impl;
         inline Impl* getImpl() const { return impl.get(); }
         inline Impl& getImplRef() const { CV_DbgAssert(impl); return *impl.get(); }
@@ -1058,31 +1089,6 @@ CV__DNN_INLINE_NS_BEGIN
         ENGINE_AUTO=3,    //!< Try to use the new engine and then fall back to the classic version.
         ENGINE_ORT=4      //!< Try to use ONNX Runtime wrapper (ONNX only, requires build with WITH_ONNXRUNTIME=ON).
     };
-
-    /** @brief Reads a network model stored in <a href="https://pjreddie.com/darknet/">Darknet</a> model files.
-    *  @param cfgFile      path to the .cfg file with text description of the network architecture.
-    *  @param darknetModel path to the .weights file with learned network.
-    *  @returns Network object that ready to do forward, throw an exception in failure cases.
-    */
-    CV_EXPORTS_W Net readNetFromDarknet(CV_WRAP_FILE_PATH const String &cfgFile, CV_WRAP_FILE_PATH const String &darknetModel = String());
-
-    /** @brief Reads a network model stored in <a href="https://pjreddie.com/darknet/">Darknet</a> model files.
-     *  @param bufferCfg   A buffer contains a content of .cfg file with text description of the network architecture.
-     *  @param bufferModel A buffer contains a content of .weights file with learned network.
-     *  @returns Net object.
-     */
-    CV_EXPORTS_W Net readNetFromDarknet(const std::vector<uchar>& bufferCfg,
-                                        const std::vector<uchar>& bufferModel = std::vector<uchar>());
-
-    /** @brief Reads a network model stored in <a href="https://pjreddie.com/darknet/">Darknet</a> model files.
-     *  @param bufferCfg   A buffer contains a content of .cfg file with text description of the network architecture.
-     *  @param lenCfg      Number of bytes to read from bufferCfg
-     *  @param bufferModel A buffer contains a content of .weights file with learned network.
-     *  @param lenModel    Number of bytes to read from bufferModel
-     *  @returns Net object.
-     */
-    CV_EXPORTS Net readNetFromDarknet(const char *bufferCfg, size_t lenCfg,
-                                      const char *bufferModel = NULL, size_t lenModel = 0);
 
     /** @brief Reads a network model stored in <a href="http://caffe.berkeleyvision.org">Caffe</a> framework's format.
       * @param prototxt   path to the .prototxt file with text description of the network architecture.
@@ -1197,14 +1203,12 @@ CV__DNN_INLINE_NS_BEGIN
       *                  extensions are expected for models from different frameworks:
       *                  * `*.caffemodel` (Caffe, http://caffe.berkeleyvision.org/)
       *                  * `*.pb` (TensorFlow, https://www.tensorflow.org/)
-      *                  * `*.weights` (Darknet, https://pjreddie.com/darknet/)
       *                  * `*.bin` | `*.onnx` (OpenVINO, https://software.intel.com/openvino-toolkit)
       *                  * `*.onnx` (ONNX, https://onnx.ai/)
       * @param[in] config Text file contains network configuration. It could be a
       *                   file with the following extensions:
       *                  * `*.prototxt` (Caffe, http://caffe.berkeleyvision.org/)
       *                  * `*.pbtxt` (TensorFlow, https://www.tensorflow.org/)
-      *                  * `*.cfg` (Darknet, https://pjreddie.com/darknet/)
       *                  * `*.xml` (OpenVINO, https://software.intel.com/openvino-toolkit)
       * @param[in] framework Explicit framework name tag to determine a format.
       * @param[in] engine select DNN engine to be used. With auto selection the new engine is used first and falls back to classic.
@@ -1213,9 +1217,8 @@ CV__DNN_INLINE_NS_BEGIN
       * @returns Net object.
       *
       * This function automatically detects an origin framework of trained model
-      * and calls an appropriate function such @ref readNetFromCaffe, @ref readNetFromTensorflow
-      * or @ref readNetFromDarknet. An order of @p model and @p config
-      * arguments does not matter.
+      * and calls an appropriate function such @ref readNetFromCaffe, @ref readNetFromTensorflow.
+      * An order of @p model and @p config arguments does not matter.
       */
      CV_EXPORTS_W Net readNet(CV_WRAP_FILE_PATH const String& model,
                               CV_WRAP_FILE_PATH const String& config = "",

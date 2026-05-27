@@ -20,7 +20,10 @@
             "public" : [
                 ["SVD_MODIFY_A", 1], ["SVD_NO_UV", 2], ["SVD_FULL_UV", 4],
                 ["FILLED", -1],
-                ["REDUCE_SUM", 0], ["REDUCE_AVG", 1], ["REDUCE_MAX", 2], ["REDUCE_MIN", 3]
+                ["REDUCE_SUM", 0], ["REDUCE_AVG", 1], ["REDUCE_MAX", 2], ["REDUCE_MIN", 3],
+                ["DATA_LAYOUT_UNKNOWN", 0], ["DATA_LAYOUT_ND", 1], ["DATA_LAYOUT_NCHW", 2],
+                ["DATA_LAYOUT_NCDHW", 3], ["DATA_LAYOUT_NHWC", 4], ["DATA_LAYOUT_NDHWC", 5],
+                ["DATA_LAYOUT_PLANAR", 6], ["DATA_LAYOUT_BLOCK", 7]
             ]
         }
     },
@@ -165,6 +168,14 @@
             "jni_var": "Range %(n)s(%(n)s_start, %(n)s_end)",
             "suffix": "II",
             "j_import": "org.opencv.core.Range"
+        },
+        "DataLayout": {
+            "cast_from": "int",
+            "cast_to": "cv::DataLayout",
+            "j_type": "int",
+            "jn_type": "int",
+            "jni_type": "jint",
+            "suffix": "I"
         },
         "CvTermCriteria": {
             "j_type": "TermCriteria",

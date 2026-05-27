@@ -6,6 +6,10 @@
 #include "layers_common.hpp"
 #include "../net_impl.hpp"
 
+#if defined(__AVX2__)
+#include <immintrin.h>
+#endif
+
 namespace cv
 {
 namespace dnn
@@ -38,6 +42,51 @@ template<typename _Tp>
 static inline void transpose8x8(const _Tp* inp_, size_t istep,
                                 _Tp* out_, size_t ostep)
 {
+#if defined(__AVX2__)
+    if (sizeof(_Tp) == 4u) {
+        // 8x8 32-bit transpose via 256-bit AVX2: 8 unpack + 8 shuffle + 8 perm.
+        // Roughly 2x faster than the four v_transpose4x4 path on AVX2 hosts.
+        const float* inp = (const float*)inp_;
+        float* out = (float*)out_;
+        __m256 r0 = _mm256_loadu_ps(inp + istep*0);
+        __m256 r1 = _mm256_loadu_ps(inp + istep*1);
+        __m256 r2 = _mm256_loadu_ps(inp + istep*2);
+        __m256 r3 = _mm256_loadu_ps(inp + istep*3);
+        __m256 r4 = _mm256_loadu_ps(inp + istep*4);
+        __m256 r5 = _mm256_loadu_ps(inp + istep*5);
+        __m256 r6 = _mm256_loadu_ps(inp + istep*6);
+        __m256 r7 = _mm256_loadu_ps(inp + istep*7);
+
+        __m256 t0 = _mm256_unpacklo_ps(r0, r1);
+        __m256 t1 = _mm256_unpackhi_ps(r0, r1);
+        __m256 t2 = _mm256_unpacklo_ps(r2, r3);
+        __m256 t3 = _mm256_unpackhi_ps(r2, r3);
+        __m256 t4 = _mm256_unpacklo_ps(r4, r5);
+        __m256 t5 = _mm256_unpackhi_ps(r4, r5);
+        __m256 t6 = _mm256_unpacklo_ps(r6, r7);
+        __m256 t7 = _mm256_unpackhi_ps(r6, r7);
+
+        __m256 v0 = _mm256_shuffle_ps(t0, t2, _MM_SHUFFLE(1,0,1,0));
+        __m256 v1 = _mm256_shuffle_ps(t0, t2, _MM_SHUFFLE(3,2,3,2));
+        __m256 v2 = _mm256_shuffle_ps(t1, t3, _MM_SHUFFLE(1,0,1,0));
+        __m256 v3 = _mm256_shuffle_ps(t1, t3, _MM_SHUFFLE(3,2,3,2));
+        __m256 v4 = _mm256_shuffle_ps(t4, t6, _MM_SHUFFLE(1,0,1,0));
+        __m256 v5 = _mm256_shuffle_ps(t4, t6, _MM_SHUFFLE(3,2,3,2));
+        __m256 v6 = _mm256_shuffle_ps(t5, t7, _MM_SHUFFLE(1,0,1,0));
+        __m256 v7 = _mm256_shuffle_ps(t5, t7, _MM_SHUFFLE(3,2,3,2));
+
+        // 0x20 -> {lo of A, lo of B}; 0x31 -> {hi of A, hi of B}
+        _mm256_storeu_ps(out + ostep*0, _mm256_permute2f128_ps(v0, v4, 0x20));
+        _mm256_storeu_ps(out + ostep*1, _mm256_permute2f128_ps(v1, v5, 0x20));
+        _mm256_storeu_ps(out + ostep*2, _mm256_permute2f128_ps(v2, v6, 0x20));
+        _mm256_storeu_ps(out + ostep*3, _mm256_permute2f128_ps(v3, v7, 0x20));
+        _mm256_storeu_ps(out + ostep*4, _mm256_permute2f128_ps(v0, v4, 0x31));
+        _mm256_storeu_ps(out + ostep*5, _mm256_permute2f128_ps(v1, v5, 0x31));
+        _mm256_storeu_ps(out + ostep*6, _mm256_permute2f128_ps(v2, v6, 0x31));
+        _mm256_storeu_ps(out + ostep*7, _mm256_permute2f128_ps(v3, v7, 0x31));
+        return;
+    }
+#endif
 #if CV_SIMD128
     if (sizeof(_Tp) == 4u) {
         const uint32_t* inp = (const uint32_t*)inp_;
@@ -257,10 +306,14 @@ void transformLayout(const Mat& inp, Mat& out,
     }
 
     size_t total = N*C1*planesize*C0;
-    constexpr size_t min_elems_per_chunk = 1 << 17;
+    // Tuned to keep small encoder/decoder transforms (e.g. 256ch * 14*14 ~ 50K elems)
+    // from running single-threaded. 16K elems ~ 64 KB ~ L1-resident chunk.
+    constexpr size_t min_elems_per_chunk = 1 << 14;
     int nblocks = int((total + min_elems_per_chunk/2) / min_elems_per_chunk);
-    nblocks = clamp(nblocks, 1, 128);
+    int nthreads = std::max(1, getNumThreads());
+    nblocks = clamp(nblocks, 1, std::max(N*C1, 1) * 4);
     nblocks = (nblocks + N*C1 - 1)/(N*C1);
+    nblocks = std::min(nblocks, std::max(1, nthreads));
 
     parallel_for_(Range(0, N*C1*nblocks), [&](const Range& range)
     {

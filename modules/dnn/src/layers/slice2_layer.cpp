@@ -115,17 +115,58 @@ public:
                             std::min(end, inpsz);
             if (allStarts)
                 allStarts[axis] = start;
-            if (allEnds)
-                allEnds[axis] = end;
             if (allSteps)
                 allSteps[axis] = step;
             int outsz = step > 0 ? (end - start + step-1)/step :
                                    (start - end - step-1)/(-step);
-            CV_Assert(outsz >= 0);
+            if (outsz < 0) {
+                outsz = 0;
+                end = start;
+            }
+            if (allEnds)
+                allEnds[axis] = end;
             outShape[axis] = outsz;
         }
 
         return outShape;
+    }
+
+    bool isDataShuffling() const CV_OVERRIDE { return true; }
+
+    int getLayouts(const std::vector<DataLayout>& actualInputs,
+                   std::vector<DataLayout>& desiredInputs,
+                   const int requiredOutputs,
+                   std::vector<DataLayout>& outputs) const CV_OVERRIDE
+    {
+        auto* netimpl_ = getNetImpl(this);
+        DataLayout defaultLayout = netimpl_->originalLayout;
+        const size_t ninputs = actualInputs.size();
+        desiredInputs = actualInputs;
+        outputs.assign(requiredOutputs, DATA_LAYOUT_UNKNOWN);
+
+        const bool inputIsBlock = ninputs >= 1 && actualInputs[0] == DATA_LAYOUT_BLOCK;
+
+        std::vector<int> resolvedAxes = axes;
+        if (resolvedAxes.empty() && this->inputs.size() > 3 &&
+            netimpl_->isConstArg(this->inputs[3])) {
+            Mat axesT = netimpl_->argTensor(this->inputs[3]);
+            tensorToIntVec(axesT, resolvedAxes);
+        }
+        bool axesOK = !resolvedAxes.empty();
+        if (axesOK) {
+            const int channelAxis = (defaultLayout == DATA_LAYOUT_NCHW) ? 1 :
+                                    (defaultLayout == DATA_LAYOUT_NHWC) ? 3 : -1;
+            for (int a : resolvedAxes) {
+                if (a < 0 || a == channelAxis) { axesOK = false; break; }
+            }
+        }
+
+        if (inputIsBlock && axesOK) {
+            outputs.assign(requiredOutputs, DATA_LAYOUT_BLOCK);
+        } else if (inputIsBlock) {
+            desiredInputs[0] = defaultLayout;
+        }
+        return outputs[0] == DATA_LAYOUT_BLOCK ? netimpl_->defaultC0 : 0;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,

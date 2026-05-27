@@ -95,6 +95,11 @@ int filterInit(cvhalFilter2D **context,
     if(kdepth != CV_32F || (sdepth != CV_8U && sdepth != CV_16U) || ddepth != sdepth)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
+    if(anchor_x < 0 || anchor_x >= kernel_width || anchor_y < 0 || anchor_y >= kernel_height)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    borderType &= ~CV_HAL_BORDER_ISOLATED;
+
     FilterData *ctx = new FilterData(kernel_data, kernel_step, kernel_type, src_type, dst_type, borderType,
         kernel_width, kernel_height, max_width, max_height, delta, anchor_x, anchor_y);
 
@@ -180,9 +185,13 @@ int filter(cvhalFilter2D *context,
 
         // center
         int rborder = MIN(cal_width, full_width - cal_x);
-        ogn_ptr = ogn_data + y * ogn_step + (j + cal_x) * cnes;
-        pad_ptr = pad_data + i * pad_step + j * cnes;
-        memcpy(pad_ptr, ogn_ptr, cnes * (rborder - j));
+        const int center_width = rborder - j;
+        if (center_width > 0)
+        {
+            ogn_ptr = ogn_data + y * ogn_step + (j + cal_x) * cnes;
+            pad_ptr = pad_data + i * pad_step + j * cnes;
+            memcpy(pad_ptr, ogn_ptr, (size_t)cnes * center_width);
+        }
 
         // right border
         j = rborder;

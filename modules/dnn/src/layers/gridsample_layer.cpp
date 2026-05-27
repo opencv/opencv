@@ -5,6 +5,14 @@
 // Third party copyrights are property of their respective owners.
 
 #include "../precomp.hpp"
+
+// Dispatch infrastructure for the SIMD GridSample kernels.
+#include "cpu_kernels/gridsample_kernels.simd.hpp"
+#include "layers/cpu_kernels/gridsample_kernels.simd_declarations.hpp"
+#define CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN namespace cpu_baseline {
+#define CV_CPU_OPTIMIZATION_NAMESPACE_END }
+#undef CV_CPU_DISPATCH_MODES_ALL
+
 #include "layers_common.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/core/utility.hpp>
@@ -234,6 +242,7 @@ static inline void gridSampleComputeRows(
     });
 }
 
+
 template<typename T>
 static inline void gridSampleDispatch(
         const T* Xptr,
@@ -245,6 +254,24 @@ static inline void gridSampleDispatch(
         int mode, int padding,
         float cubic_alpha)
 {
+    if (std::is_same<T, float>::value) {
+        const float* X = reinterpret_cast<const float*>(Xptr);
+        float* Y = reinterpret_cast<float*>(Yptr);
+        if (mode == M_NEAREST) {
+            CV_CPU_DISPATCH(gridSampleNearest2D_f32_,
+                            (X, Gptr, Y, N, C, H, W, Hout, Wout, align_corners, padding),
+                            NEON, AVX2, AVX, BASELINE);
+        } else if (mode == M_BILINEAR) {
+            CV_CPU_DISPATCH(gridSampleBilinear2D_f32_,
+                            (X, Gptr, Y, N, C, H, W, Hout, Wout, align_corners, padding),
+                            NEON, AVX2, AVX, BASELINE);
+        } else {
+            CV_CPU_DISPATCH(gridSampleBicubic2D_f32_,
+                            (X, Gptr, Y, N, C, H, W, Hout, Wout, align_corners, padding, cubic_alpha),
+                            NEON, AVX2, AVX, BASELINE);
+        }
+        return;
+    }
     if (mode == M_NEAREST) {
         if (padding == P_ZEROS) gridSampleComputeRows<T, M_NEAREST, P_ZEROS>(Xptr, Gptr, Yptr, N, C, H, W, Hout, Wout, align_corners, cubic_alpha);
         else if (padding == P_BORDER) gridSampleComputeRows<T, M_NEAREST, P_BORDER>(Xptr, Gptr, Yptr, N, C, H, W, Hout, Wout, align_corners, cubic_alpha);
@@ -387,6 +414,7 @@ static inline void gridSampleCompute3D(
     });
 }
 
+
 template<typename T>
 static inline void gridSampleDispatch3D(
         const T* Xptr,
@@ -397,6 +425,22 @@ static inline void gridSampleDispatch3D(
         bool align_corners,
         int mode, int padding)
 {
+    if (std::is_same<T, float>::value) {
+        const float* X = reinterpret_cast<const float*>(Xptr);
+        float* Y = reinterpret_cast<float*>(Yptr);
+        if (mode == M_NEAREST) {
+            CV_CPU_DISPATCH(gridSampleNearest3D_f32_,
+                            (X, Gptr, Y, N, C, D, H, W, Dout, Hout, Wout, align_corners, padding),
+                            NEON, AVX2, AVX, BASELINE);
+        } else if (mode == M_BILINEAR) {
+            CV_CPU_DISPATCH(gridSampleBilinear3D_f32_,
+                            (X, Gptr, Y, N, C, D, H, W, Dout, Hout, Wout, align_corners, padding),
+                            NEON, AVX2, AVX, BASELINE);
+        } else {
+            CV_Error(Error::StsNotImplemented, "GridSample bicubic mode is not supported for 5D inputs");
+        }
+        return;
+    }
     if (mode == M_NEAREST) {
         if (padding == P_ZEROS) gridSampleCompute3D<T, M_NEAREST, P_ZEROS>(Xptr, Gptr, Yptr, N, C, D, H, W, Dout, Hout, Wout, align_corners);
         else if (padding == P_BORDER) gridSampleCompute3D<T, M_NEAREST, P_BORDER>(Xptr, Gptr, Yptr, N, C, D, H, W, Dout, Hout, Wout, align_corners);

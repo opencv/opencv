@@ -35,7 +35,6 @@
             "dilate",
             "distanceTransform",
             "distanceTransformWithLabels",
-            "divSpectrums",
             "drawContours",
             "drawMarker",
             "ellipse",
@@ -102,16 +101,6 @@
             "watershed"
         ],
         "CLAHE": ["apply", "collectGarbage", "getClipLimit", "getTilesGridSize", "setClipLimit", "setTilesGridSize"],
-        "segmentation_IntelligentScissorsMB": [
-            "IntelligentScissorsMB",
-            "setWeights",
-            "setGradientMagnitudeMaxLimit",
-            "setEdgeFeatureZeroCrossingParameters",
-            "setEdgeFeatureCannyParameters",
-            "applyImage",
-            "applyImageFeatures",
-            "buildMap",
-            "getContour"
-        ]
+        "FontFace": ["set", "getName", "setInstance", "getInstance", "getBuiltinFontData"]
     }
 }

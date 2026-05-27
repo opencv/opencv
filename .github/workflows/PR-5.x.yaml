@@ -11,6 +11,9 @@ jobs:
     with:
       workflow_branch: 'main'
 
+  Linux-no-HAL:
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-Linux-NoHAL.yaml@main
+
   Windows:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-Windows.yaml@main
     with:

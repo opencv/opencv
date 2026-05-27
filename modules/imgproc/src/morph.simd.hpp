@@ -43,6 +43,7 @@
 #include "precomp.hpp"
 #include <limits.h>
 #include "opencv2/core/hal/intrin.hpp"
+#include "filter.hpp"
 
 /****************************************************************************************\
                      Basic Morphological Operations: Erosion & Dilation
@@ -495,6 +496,8 @@ template<class Op, class VecOp> struct MorphRowFilter : public BaseRowFilter
         anchor = _anchor;
     }
 
+    bool isStateless() const CV_OVERRIDE { return true; }
+
     void operator()(const uchar* src, uchar* dst, int width, int cn) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
@@ -550,6 +553,8 @@ template<class Op, class VecOp> struct MorphColumnFilter : public BaseColumnFilt
         ksize = _ksize;
         anchor = _anchor;
     }
+
+    bool isStateless() const CV_OVERRIDE { return true; }
 
     void operator()(const uchar** _src, uchar* dst, int dststep, int count, int width) CV_OVERRIDE
     {
@@ -638,7 +643,7 @@ template<class Op, class VecOp> struct MorphColumnFilter : public BaseColumnFilt
 };
 
 
-template<class Op, class VecOp> struct MorphFilter : BaseFilter
+template<class Op, class VecOp> struct MorphFilter : public BaseFilter
 {
     typedef typename Op::rtype T;
 
@@ -651,16 +656,18 @@ template<class Op, class VecOp> struct MorphFilter : BaseFilter
         std::vector<uchar> coeffs; // we do not really the values of non-zero
         // kernel elements, just their locations
         preprocess2DKernel( _kernel, coords, coeffs );
-        ptrs.resize( coords.size() );
     }
+
+    bool isStateless() const CV_OVERRIDE { return true; }
 
     void operator()(const uchar** src, uchar* dst, int dststep, int count, int width, int cn) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
 
         const Point* pt = &coords[0];
-        const T** kp = (const T**)&ptrs[0];
         int i, k, nz = (int)coords.size();
+        AutoBuffer<const T*> _kp(nz);
+        const T** kp = _kp.data();
         Op op;
 
         width *= cn;
@@ -671,7 +678,7 @@ template<class Op, class VecOp> struct MorphFilter : BaseFilter
             for( k = 0; k < nz; k++ )
                 kp[k] = (const T*)src[pt[k].y] + pt[k].x*cn;
 
-            i = vecOp(&ptrs[0], nz, dst, width);
+            i = vecOp((uchar**)kp, nz, dst, width);
             #if CV_ENABLE_UNROLLED
             for( ; i <= width - 4; i += 4 )
             {
@@ -700,7 +707,6 @@ template<class Op, class VecOp> struct MorphFilter : BaseFilter
     }
 
     std::vector<Point> coords;
-    std::vector<uchar*> ptrs;
     VecOp vecOp;
 };
 

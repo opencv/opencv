@@ -14,6 +14,10 @@ ocv_add_dispatched_file("layers/cpu_kernels/conv2_depthwise" AVX AVX2 NEON NEON_
 ocv_add_dispatched_file("layers/cpu_kernels/conv2_kernels" AVX AVX2 NEON NEON_FP16)
 ocv_add_dispatched_file_force_all("int8layers/conv2_int8_kernels" AVX2)
 ocv_add_dispatched_file("layers/cpu_kernels/activation_kernels" AVX AVX2 NEON NEON_FP16)
+ocv_add_dispatched_file_force_all("layers/cpu_kernels/reduce2_kernels" AVX AVX2 NEON RVV LASX)
+ocv_add_dispatched_file_force_all("layers/cpu_kernels/transpose_kernels" AVX AVX2 NEON RVV LASX)
+ocv_add_dispatched_file_force_all("layers/cpu_kernels/gridsample_kernels" AVX AVX2 NEON RVV LASX)
+ocv_add_dispatched_file_force_all("layers/cpu_kernels/nary_eltwise_kernels" AVX AVX2 NEON RVV LASX)
 
 ocv_add_module(dnn opencv_core opencv_imgproc WRAP python java objc js)
 
@@ -35,6 +39,13 @@ endif()
 
 if(HAVE_CANN)
   ocv_target_compile_definitions(${the_module} PRIVATE "HAVE_CANN=1")
+endif()
+
+if(MSVC)
+  ocv_target_compile_options(${the_module} PRIVATE "/fp:fast")
+elseif(CV_GCC OR CV_CLANG)
+  ocv_target_compile_options(${the_module} PRIVATE -ffast-math)
+  ocv_target_compile_options(${the_module} PRIVATE -fno-finite-math-only)
 endif()
 
 ocv_option(OPENCV_DNN_CUDA "Build with CUDA support"
@@ -117,7 +128,7 @@ ocv_option(WITH_ONNXRUNTIME "Build with ONNX Runtime support" OFF)
 ocv_option(DOWNLOAD_ONNXRUNTIME "Download ONNX Runtime prebuilt binaries" OFF IF WITH_ONNXRUNTIME)
 ocv_option(DOWNLOAD_ONNXRUNTIME_GPU "Download GPU-enabled ONNX Runtime prebuilt binaries when available" OFF IF WITH_ONNXRUNTIME)
 
-set(ONNXRUNTIME_VERSION "1.24.2" CACHE STRING "ONNX Runtime version to download (prebuilt binaries)")
+set(ONNXRUNTIME_VERSION "1.25.1" CACHE STRING "ONNX Runtime version to download (prebuilt binaries)")
 
 if(WITH_ONNXRUNTIME)
   include("${OpenCV_SOURCE_DIR}/cmake/FindONNX.cmake")
@@ -476,6 +487,30 @@ if(NOT EMSCRIPTEN)
   endif()
 endif()
 
+# Vendored MLAS (Microsoft Linear Algebra Subprograms) from ONNX Runtime.
+# Sources live in 3rdparty/mlas/. Builds to an OBJECT library whose objects
+# link directly into opencv_dnn. Skipped under Emscripten: MLAS is a native
+# CPU SGEMM accelerator (asm/intrinsic kernels) and the wasm scalar fallback
+# offers no benefit for the JS bindings build that produces opencv.js.
+set(HAVE_MLAS 0)
+# Reset status flags + arch booleans
+foreach(_v OPENCV_DNN_MLAS_ENABLED OPENCV_DNN_MLAS_SKIP_REASON
+           MLAS_X86_64 MLAS_X86 MLAS_ARM MLAS_ARM64 MLAS_POWER
+           MLAS_LOONGARCH64 MLAS_S390X MLAS_RISCV64 MLAS_WASM
+           MLAS_HAS_ASM MLAS_HAS_POWER10 MLAS_HAS_RISCV64_RVV)
+  unset(${_v} CACHE)
+endforeach()
+if(NOT EMSCRIPTEN)
+  add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/mlas" "${CMAKE_BINARY_DIR}/3rdparty/mlas")
+endif()
+if(HAVE_MLAS)
+  add_definitions(-DHAVE_MLAS=1)
+  list(APPEND include_dirs ${MLAS_INCLUDE_DIRS})
+  message(STATUS "DNN: MLAS (vendored) enabled.")
+else()
+  message(STATUS "DNN: MLAS (vendored) disabled — host arch/OS not wired up.")
+endif()
+
 ocv_module_include_directories(${include_dirs})
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   ocv_append_source_files_cxx_compiler_options(fw_srcs "-Wno-suggest-override")  # GCC
@@ -497,7 +532,7 @@ set(dnn_plugin_srcs ${dnn_srcs} ${dnn_int_hdrs})
 ocv_list_filterout_ex(dnn_plugin_srcs
     "/src/dnn.cpp$|/src/dnn_utils.cpp$|/src/dnn_read.cpp$|/src/registry.cpp$|/src/backend.cpp$"
     # importers
-    "/src/(caffe|darknet|onnx|tensorflow)/"
+    "/src/(caffe|onnx|tensorflow)/"
     # executors
     "/src/(cuda|cuda4dnn|ocl4dnn|vkcom|webnn)/"
 )
@@ -523,7 +558,7 @@ endif()
 
 ocv_install_used_external_targets(${libs} ${dnn_runtime_libs})
 
-ocv_glob_module_sources(${sources_options} SOURCES ${fw_srcs} ${webnn_srcs})
+ocv_glob_module_sources(${sources_options} SOURCES ${fw_srcs} ${webnn_srcs} ${MLAS_OBJECTS})
 ocv_create_module(${libs} ${dnn_runtime_libs})
 ocv_add_samples()
 ocv_add_accuracy_tests(${dnn_runtime_libs})

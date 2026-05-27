@@ -1820,12 +1820,18 @@ public class CoreTest extends OpenCVTestCase {
 
         assertGE(1e-6, Math.abs(Core.solvePoly(coeffs, roots)));
 
-        truth = new Mat(3, 1, CvType.CV_32FC2) {
+        List<Mat> rootsReIm = new ArrayList<Mat>();
+        Core.split(roots, rootsReIm);
+        Core.sort(rootsReIm.get(0), dst, Core.SORT_EVERY_COLUMN);
+
+        Mat truthRe = new Mat(3, 1, CvType.CV_32F) {
             {
-                put(0, 0, 1, 0, 2, 0, 3, 0);
+                put(0, 0, 1, 2, 3);
             }
         };
-        assertMatEqual(truth, roots, EPS);
+        Mat truthIm = Mat.zeros(3, 1, CvType.CV_32F);
+        assertMatEqual(truthRe, dst, EPS);
+        assertMatEqual(truthIm, rootsReIm.get(1), EPS);
     }
 
     public void testSolvePolyMatMatInt() {
@@ -1836,14 +1842,20 @@ public class CoreTest extends OpenCVTestCase {
         };
         Mat roots = new Mat();
 
-        assertEquals(10.198039027185569, Core.solvePoly(coeffs, roots, 1));
+        assertGE(1e-6, Core.solvePoly(coeffs, roots, 10));
 
-        truth = new Mat(3, 1, CvType.CV_32FC2) {
+        List<Mat> rootsReIm = new ArrayList<Mat>();
+        Core.split(roots, rootsReIm);
+        Core.sort(rootsReIm.get(0), dst, Core.SORT_EVERY_COLUMN);
+
+        Mat truthRe = new Mat(3, 1, CvType.CV_32F) {
             {
-                put(0, 0, 1, 0, -1, 2, -2, 12);
+                put(0, 0, 1, 2, 3);
             }
         };
-        assertMatEqual(truth, roots, EPS);
+        Mat truthIm = Mat.zeros(3, 1, CvType.CV_32F);
+        assertMatEqual(truthRe, dst, EPS);
+        assertMatEqual(truthIm, rootsReIm.get(1), EPS);
     }
 
     public void testSort() {

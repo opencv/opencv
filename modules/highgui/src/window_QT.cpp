@@ -317,8 +317,8 @@ void setWindowTitle_QT(const String& winname, const String& title)
     QMetaObject::invokeMethod(guiMainThread,
         "setWindowTitle",
         autoBlockingConnection(),
-        Q_ARG(QString, QString(winname.c_str())),
-        Q_ARG(QString, QString(title.c_str())));
+        Q_ARG(QString, QString::fromUtf8(winname.c_str())),
+        Q_ARG(QString, QString::fromUtf8(title.c_str())));
 }
 
 
@@ -562,10 +562,10 @@ int namedWindowImpl(const char* name, int flags)
         QMetaObject::invokeMethod(guiMainThread,
         "createWindow",
         Qt::BlockingQueuedConnection,  // block so that we can do useful stuff once we confirm it is created
-        Q_ARG(QString, QString(name)),
+        Q_ARG(QString, QString::fromUtf8(name)),
         Q_ARG(int, flags));
      } else {
-        guiMainThread->createWindow(QString(name), flags);
+        guiMainThread->createWindow(QString::fromUtf8(name), flags);
      }
 
     return 1; //Dummy value - probably should return the result of the invocation.
@@ -702,11 +702,11 @@ void showImageImpl(const char* name, InputArray arr)
         QMetaObject::invokeMethod(guiMainThread,
             "showImage",
              autoBlockingConnection(),
-             Q_ARG(QString, QString(name)),
+             Q_ARG(QString, QString::fromUtf8(name)),
              Q_ARG(cv::InputArray, arr)
         );
      } else {
-        guiMainThread->showImage(QString(name), arr);
+        guiMainThread->showImage(QString::fromUtf8(name), arr);
      }
 }
 
@@ -873,7 +873,7 @@ double GuiReceiver::getRatioWindow(QString name)
 
 void GuiReceiver::setRatioWindow(QString name, double arg2)
 {
-    QPointer<CvWindow> w = icvFindWindowByName( name.toLatin1().data() );
+    QPointer<CvWindow> w = icvFindWindowByName(name);
 
     if (!w)
         return;
@@ -923,7 +923,7 @@ void GuiReceiver::setWindowTitle(QString name, QString title)
 
     if (!w)
     {
-        namedWindowImpl(name.toLatin1().data());
+        namedWindowImpl(name.toUtf8().constData());
         w = icvFindWindowByName(name);
     }
 
@@ -973,7 +973,7 @@ void GuiReceiver::createWindow(QString name, int flags)
         CV_Error(cv::Error::StsNullPtr, "NULL session handler" );
 
     // Check the name in the storage
-    if (icvFindWindowByName(name.toLatin1().data()))
+    if (icvFindWindowByName(name))
     {
         return;
     }
@@ -1014,7 +1014,7 @@ void GuiReceiver::showImage(QString name, _InputArray arr)
 
     if (!w) //as observed in the previous implementation (W32, GTK), create a new window is the pointer returned is null
     {
-        namedWindowImpl(name.toLatin1().data());
+        namedWindowImpl(name.toUtf8().constData());
         w = icvFindWindowByName(name);
     }
 

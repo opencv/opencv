@@ -137,6 +137,8 @@ public:
     virtual ~FileStorage_API();
     virtual FileStorage* getFS() = 0;
 
+    virtual int getFormat() const = 0;
+
     virtual void puts( const char* str ) = 0;
     virtual char* gets() = 0;
     virtual bool eof() = 0;

@@ -192,8 +192,23 @@ public:
         }
     }
 
-    PriorBoxLayerImpl(const LayerParams &params)
+    static LayerParams normalizeONNXParams(const LayerParams& params)
     {
+        LayerParams p = params;
+        auto remap = [&](const std::string& from, const std::string& to) {
+            if (p.has(from) && !p.has(to))
+                p.set(to, p.get(from));
+        };
+        remap("variances",     "variance");
+        remap("min_sizes",     "min_size");
+        remap("max_sizes",     "max_size");
+        remap("aspect_ratios", "aspect_ratio");
+        return p;
+    }
+
+    PriorBoxLayerImpl(const LayerParams &params_)
+    {
+        const LayerParams params = normalizeONNXParams(params_);
         setParamsFrom(params);
         _flip = getParameter<bool>(params, "flip", 0, false, true);
         _clip = getParameter<bool>(params, "clip", 0, false, true);
@@ -404,7 +419,7 @@ public:
         // set the variance.
         {
             ocl::Kernel kernel("set_variance", ocl::dnn::prior_box_oclsrc, opts);
-            int offset = total(shape(outputs[0]), 2);
+            int offset = (int)total(shape(outputs[0]), 2);
             size_t nthreads = _layerHeight * _layerWidth * _numPriors;
             kernel.set(0, (int)nthreads);
             kernel.set(1, (int)offset);

@@ -735,7 +735,7 @@ namespace colormap
         if(src.type() != CV_8UC1  &&  src.type() != CV_8UC3)
             CV_Error(Error::StsBadArg, "cv::ColorMap only supports source images of type CV_8UC1 or CV_8UC3");
 
-        CV_CheckEQ(src.dims, 2, "Not supported");
+        CV_CheckLE(src.dims, 2, "Not supported");
 
         CV_Assert(_lut.isContinuous());
         const int lut_type = _lut.type();

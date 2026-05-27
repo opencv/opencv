@@ -1389,6 +1389,27 @@ inline int hal_ni_scharr(const uchar* src_data, size_t src_step, uchar* dst_data
 //! @endcond
 
 /**
+   @brief Computes Laplacian filter
+   @param src_data Source image data
+   @param src_step Source image step
+   @param dst_data Destination image data
+   @param dst_step Destination image step
+   @param width Source image width
+   @param height Source image height
+   @param src_depth Depth of source image
+   @param dst_depth Depth of destination image
+   @param cn Number of channels
+   @param ksize Kernel size (1, 3, or 5)
+   @param border_type Border type
+   @param border_value Border value for CONSTANT
+ */
+inline int hal_ni_laplacian(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int src_depth, int dst_depth, int cn, int ksize, int border_type, uchar border_value)  { return CV_HAL_ERROR_NOT_IMPLEMENTED;}
+
+//! @cond IGNORED
+#define cv_hal_laplacian hal_ni_laplacian
+//! @endcond
+
+/**
    @brief Perform Gaussian Blur and downsampling for input tile.
    @param depth Depths of source and destination image
    @param src_data Source image data

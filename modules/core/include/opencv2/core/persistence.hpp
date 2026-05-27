@@ -273,6 +273,7 @@ public:
         FORMAT_XML  = (1<<3), //!< flag, XML format
         FORMAT_YAML = (2<<3), //!< flag, YAML format
         FORMAT_JSON = (3<<3), //!< flag, JSON format
+        FORMAT_YAML_1_0 = (4<<3), //!< flag, Legacy YAML 1.0 format (strict headers, booleans as ints)
 
         BASE64      = 64,     //!< flag, write rawdata in Base64 by default. (consider using WRITE_BASE64)
         WRITE_BASE64 = BASE64 | WRITE, //!< flag, enable both WRITE and BASE64
@@ -306,8 +307,12 @@ public:
      before opening the file.
      @param filename Name of the file to open or the text string to read the data from.
      Extension of the file (.xml, .yml/.yaml or .json) determines its format (XML, YAML or JSON
-     respectively). Also you can append .gz to work with compressed files, for example myHugeMatrix.xml.gz. If both
-     FileStorage::WRITE and FileStorage::MEMORY flags are specified, source is used just to specify
+     respectively). Also you can append .gz to work with compressed files, for example myHugeMatrix.xml.gz.
+     You can also specify a compression level from 0 to 9 by appending it to the extension
+     (e.g. ".gz0" for no compression, ".gz9" for high compression).
+     The last digit will be truncated internally to write/read.
+     (e.g. If "a.xml.gz9" is specified, "a.xml.gz" is used for the actual file name.)
+     If both FileStorage::WRITE and FileStorage::MEMORY flags are specified, source is used just to specify
      the output file format (e.g. mydata.xml, .yml etc.). A file name can also contain parameters.
      You can use this format, "*?base64" (e.g. "file.json?base64" (case sensitive)), as an alternative to
      FileStorage::BASE64 flag.
@@ -365,6 +370,8 @@ public:
      */
     CV_WRAP void write(const String& name, int val);
     /// @overload
+    CV_WRAP void write(const String& name, bool val);
+
     CV_WRAP void write(const String& name, int64_t val);
     /// @overload
     CV_WRAP void write(const String& name, double val);
@@ -658,6 +665,7 @@ protected:
 /////////////////// XML & YAML I/O implementation //////////////////
 
 CV_EXPORTS void write( FileStorage& fs, const String& name, int value );
+CV_EXPORTS void write( FileStorage& fs, const String& name, bool value );
 CV_EXPORTS void write( FileStorage& fs, const String& name, int64_t value );
 CV_EXPORTS void write( FileStorage& fs, const String& name, float value );
 CV_EXPORTS void write( FileStorage& fs, const String& name, double value );

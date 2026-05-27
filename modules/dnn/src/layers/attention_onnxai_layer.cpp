@@ -81,15 +81,32 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
 
         const int batch_size = inputs[0][0];
         const int seq_len_q = inputs[0][input_dims - 2];
-        const int seq_len_kv = inputs[1][input_dims - 2];
+        int seq_len_k = inputs[1][input_dims - 2];
+        int seq_len_v = inputs[2][input_dims - 2];
+
+        Net::Impl* netimpl = getNetImpl(const_cast<AttentionOnnxAiLayerImpl*>(this));
+        if (netimpl && netimpl->useKVCache) {
+            KVCacheManager& kvCacheManager = netimpl->kvCacheManager;
+            if (kvCacheManager.isInitialized) {
+                auto it_k = kvCacheManager.kData.find(name);
+                CV_Assert(it_k != kvCacheManager.kData.end());
+                if (it_k != kvCacheManager.kData.end())
+                    seq_len_k += it_k->second.getNumTokens();
+
+                auto it_v = kvCacheManager.vData.find(name);
+                CV_Assert(it_v != kvCacheManager.vData.end());
+                if (it_v != kvCacheManager.vData.end())
+                    seq_len_v += it_v->second.getNumTokens();
+            }
+        }
 
         const int q_hn = input_dims == 4 ?
             inputs[0][1] : q_num_heads;
         const int kv_hn =input_dims == 4 ?
             inputs[1][1] : kv_num_heads;
 
-        CV_CheckTrue(inputs[2][input_dims - 2] == seq_len_kv,
-                     "Key and query sequence lengths must be equal");
+        CV_CheckTrue(seq_len_v == seq_len_k,
+                     "Key and value sequence lengths must be equal");
         const int nhq = input_dims == 4 ? inputs[0][1] : q_num_heads;
 
         CV_CheckTrue(q_hn % kv_hn == 0,
@@ -113,7 +130,7 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
             outputs.push_back(output_shape);
         }
 
-        MatShape attention_prob_shape{batch_size , nhq, seq_len_q, seq_len_kv};
+        MatShape attention_prob_shape{batch_size , nhq, seq_len_q, seq_len_k};
         internals.push_back(attention_prob_shape);
 
         return false;
@@ -143,6 +160,13 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE {
         opt.init();
 
+        Net::Impl* netimpl = getNetImpl(this);
+        bool with_kv_cache = false;
+
+        if (netimpl && netimpl->useKVCache) {
+            with_kv_cache = netimpl->kvCacheManager.isInitialized;
+        }
+
         if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
@@ -153,78 +177,109 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
         internals_arr.getMatVector(internals);
+        Mat &attention_prob = internals[internals.size() - 1];
 
         const int input_dims = inputs[0].dims;
+
         const int batch_size = inputs[0].size[0];
 
+        const int seq_len_q = input_dims == 3 ?
+                            inputs[0].size[1]:
+                            inputs[0].size[2];
+
+        int seq_len_kv = input_dims == 3 ?
+                            inputs[1].size[1]:
+                            inputs[1].size[2];
+
         const int nhq = input_dims == 3 ?
-                         q_num_heads :
-                         inputs[0].size[1];
-        const int nhkv = input_dims == 3 ?
-                         kv_num_heads :
-                         inputs[1].size[1];
+                        q_num_heads :
+                        inputs[0].size[1];
 
         const int qk_head_size = input_dims == 3 ?
                                  inputs[0].size[2] / nhq :
                                  inputs[0].size[3];
+
+        const int nhkv = input_dims == 3 ?
+                        kv_num_heads :
+                        inputs[1].size[1];
+
         const int v_head_size  = input_dims == 3 ?
-                                 inputs[2].size[2] / nhkv :
-                                 inputs[2].size[3];
-        const int num_gq_groups = nhq / nhkv;
-        const int seq_len_q = input_dims == 3 ?
-                                inputs[0].size[1]:
-                                inputs[0].size[2];
-        const int seq_len_kv = input_dims == 3 ?
-                                inputs[1].size[1]:
-                                inputs[1].size[2];
-        const auto seq_len_square = seq_len_q * seq_len_kv;
+                                inputs[2].size[2] / nhkv :
+                                inputs[2].size[3];
 
-        const auto* Q =  inputs[0].ptr<const float>();
-        const auto* K =  inputs[1].ptr<const float>();
-        const auto* V =  inputs[2].ptr<const float>();
+        std::vector<size_t> _q_offsets, _k_offsets, _v_offsets,
+                            _a_offsets, _o_offsets;
 
-        scale = is_scale_set ? scale : 1.0f / std::sqrt(static_cast<float>(qk_head_size));
+        if (with_kv_cache){
+            KVCacheManager& kvCacheManager = netimpl->kvCacheManager;
 
-        std::vector<size_t> _q_offsets(nhq * batch_size),
-                _k_offsets(nhq * batch_size),
-                _a_offsets(nhq * batch_size),
-                _v_offsets(nhq * batch_size),
-                _o_offsets(nhq * batch_size);
+            auto it_k = kvCacheManager.kData.find(name);
+            CV_Assert(it_k != kvCacheManager.kData.end());
+            KCache&kData = it_k->second;
 
-        for (int b = 0; b < batch_size; b++)
-            for (int n = 0; n < nhq; n++){
-                _q_offsets[b * nhq + n] =
-                    b * seq_len_q * qk_head_size * nhq +
-                    (input_dims == 3 ? n * qk_head_size : n * qk_head_size * seq_len_q);
-                _k_offsets[b * nhq + n] =
-                    b * seq_len_kv * qk_head_size * nhkv +
-                    (n / num_gq_groups * qk_head_size) * (input_dims == 3 ? 1 : seq_len_kv);
-                _v_offsets[b * nhq + n] =
-                    b * seq_len_kv * v_head_size * nhkv +
-                    (n / num_gq_groups * v_head_size) * (input_dims == 3 ? 1 : seq_len_kv);
-                _a_offsets[b * nhq + n] =
-                    b * seq_len_square * nhq +
-                    n * seq_len_square;
-                _o_offsets[b * nhq + n] =
-                    b * seq_len_q * v_head_size * nhq +
-                    (input_dims == 3 ? n * v_head_size : n * v_head_size * seq_len_q);
-            }
+            kData.grow(inputs[1]);
 
-        const int ldq0 = input_dims == 3 ? qk_head_size * nhq : qk_head_size;
-        const int ldk0 = input_dims == 3 ? qk_head_size * nhkv : qk_head_size;
-        auto &attention_prob = internals[internals.size() - 1];
+            const std::vector<Mat>& kCachePages = kData.getPages();
+            seq_len_kv = kData.getNumTokens();
 
-        fastGemmBatch(
-            batch_size * nhq,
-            _q_offsets.data(), _k_offsets.data(), _a_offsets.data(),
-            seq_len_q, seq_len_kv, qk_head_size , scale,
-            Q, ldq0, 1,
-            K, 1, ldk0,
-            0.f,
-            attention_prob.ptr<float>(), seq_len_kv,
-            opt
-        );
+            scale = is_scale_set ? scale : 1.0f / std::sqrt(static_cast<float>(qk_head_size));
 
+            pagedAttnQKGemm(
+                inputs[0], kCachePages, attention_prob,
+                seq_len_q, nhq, nhkv, kData.getPageSize(),
+                qk_head_size, seq_len_kv,
+                scale, opt
+            );
+        } else {
+            const auto* Q =  inputs[0].ptr<const float>();
+            const auto* K =  inputs[1].ptr<const float>();
+
+            const int num_gq_groups = nhq / nhkv;
+
+            const auto seq_len_square = seq_len_q * seq_len_kv;
+
+            scale = is_scale_set ? scale : 1.0f / std::sqrt(static_cast<float>(qk_head_size));
+
+            _q_offsets.resize(nhq * batch_size);
+            _k_offsets.resize(nhq * batch_size);
+            _a_offsets.resize(nhq * batch_size);
+            _v_offsets.resize(nhq * batch_size);
+            _o_offsets.resize(nhq * batch_size);
+
+            for (int b = 0; b < batch_size; b++)
+                for (int n = 0; n < nhq; n++){
+                    _q_offsets[b * nhq + n] =
+                        b * seq_len_q * qk_head_size * nhq +
+                        (input_dims == 3 ? n * qk_head_size : n * qk_head_size * seq_len_q);
+                    _k_offsets[b * nhq + n] =
+                        b * seq_len_kv * qk_head_size * nhkv +
+                        (n / num_gq_groups * qk_head_size) * (input_dims == 3 ? 1 : seq_len_kv);
+                    _v_offsets[b * nhq + n] =
+                        b * seq_len_kv * v_head_size * nhkv +
+                        (n / num_gq_groups * v_head_size) * (input_dims == 3 ? 1 : seq_len_kv);
+                    _a_offsets[b * nhq + n] =
+                        b * seq_len_square * nhq +
+                        n * seq_len_square;
+                    _o_offsets[b * nhq + n] =
+                        b * seq_len_q * v_head_size * nhq +
+                        (input_dims == 3 ? n * v_head_size : n * v_head_size * seq_len_q);
+                }
+
+            const int ldq0 = input_dims == 3 ? qk_head_size * nhq : qk_head_size;
+            const int ldk0 = input_dims == 3 ? qk_head_size * nhkv : qk_head_size;
+            auto &attention_prob = internals[internals.size() - 1];
+
+            fastGemmBatch(
+                batch_size * nhq,
+                _q_offsets.data(), _k_offsets.data(), _a_offsets.data(),
+                seq_len_q, seq_len_kv, qk_head_size , scale,
+                Q, ldq0, 1,
+                K, 1, ldk0,
+                0.f,
+                attention_prob.ptr<float>(), seq_len_kv,
+                opt
+            );
+        }
 
         fused_softmax_softcap_mask(
             attention_prob,
@@ -236,25 +291,41 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
             is_causal
         );
 
+        if (with_kv_cache){
+            KVCacheManager& kvCacheManager = netimpl->kvCacheManager;
+            auto it_v = kvCacheManager.vData.find(name);
+            CV_Assert(it_v != kvCacheManager.vData.end());
+            VCache& vData = it_v->second;
 
-        const int ldv0 = input_dims == 3 ? v_head_size * nhkv : v_head_size;
-        const int ldout = input_dims == 3 ? v_head_size * nhq : v_head_size;
+            vData.grow(inputs[2]);
+            seq_len_kv = vData.getNumTokens();
 
-        fastGemmBatch(
-            batch_size * nhq,
-            _a_offsets.data(), _v_offsets.data(), _o_offsets.data(),
-            seq_len_q, v_head_size, seq_len_kv, 1.f,
-            attention_prob.ptr<float>(), seq_len_kv, 1,
-            V, ldv0, 1,
-            0.f,
-            outputs[0].ptr<float>(), ldout,
-            opt
-        );
+            pagedAttnAVGemm(
+                attention_prob, vData.getPages(), outputs[0],
+                seq_len_q, nhq, nhkv, vData.getPageSize() , v_head_size, seq_len_kv,
+                opt
+            );
+        } else {
+            const auto* V =  inputs[2].ptr<const float>();
+
+            const int ldv0 = input_dims == 3 ? v_head_size * nhkv : v_head_size;
+            const int ldout = input_dims == 3 ? v_head_size * nhq : v_head_size;
+
+            fastGemmBatch(
+                batch_size * nhq,
+                _a_offsets.data(), _v_offsets.data(), _o_offsets.data(),
+                seq_len_q, v_head_size, seq_len_kv, 1.f,
+                attention_prob.ptr<float>(), seq_len_kv, 1,
+                V, ldv0, 1,
+                0.f,
+                outputs[0].ptr<float>(), ldout,
+                opt
+            );
+        }
     }
 
  private:
     bool is_causal;
-    int kv_num_heads;
     int q_num_heads;
     int qk_matmul_output_mode;
     float scale;

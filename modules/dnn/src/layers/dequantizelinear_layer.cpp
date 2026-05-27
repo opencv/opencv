@@ -100,7 +100,26 @@ static void dequantizeLinear(const _InpTp* inp_, const _ScaleTp* scale_,
             const _ScaleTp* sc = scale_ + scale_ofs;
             _OutTp* out = out_ + block_ofs;
 
-            if (slice_size > 1) {
+            if (slice_size > 1 && block_size > 0) {
+                // Blocked mode: each of `delta` blocks has `block_size` rows along the
+                // axis (clipped at sz_a), and within each row the scale/zp vary across
+                // the `slice_size` trailing positions. The same `slice_size` scales/zps
+                // are reused for every row inside one block.
+                for (int k = 0; k < delta; k++) {
+                    int rows = std::min(block_size, sz_a - (block_idx + k)*block_size);
+                    for (int b = 0; b < rows; b++) {
+                        for (int64_t j = 0; j < slice_size; j++) {
+                            float scval = (float)sc[j];
+                            _InpTp zpval = zp ? zp[j] : (_InpTp)0;
+                            out[j] = _OutTp((inp[j] - zpval)*scval);
+                        }
+                        inp += slice_size;
+                        out += slice_size;
+                    }
+                    sc += scale_step;
+                    if (zp) zp += zp_step;
+                }
+            } else if (slice_size > 1) {
                 for (int k = 0; k < delta; k++, inp += slice_size, out += slice_size,
                                                 sc += scale_step, zp += zp_step) {
                     float scval = (float)*sc;
@@ -170,12 +189,15 @@ static void dequantizeLinear(const Mat& inp, const Mat& scale_, const Mat& zp,
         CV_Assert(zpshape == scshape);
     }
 
-    axis = normalize_axis(axis, ndims);
+    if (ndims > 0)
+        axis = normalize_axis(axis, ndims);
+    else
+        axis = 0;
     for (i = 0; i < axis; i++)
         nslices *= inpshape[i];
     for (i = axis+1; i < ndims; i++)
         slice_size *= inpshape[i];
-    int sz_a = inpshape[axis];
+    int sz_a = ndims > 0 ? inpshape[axis] : 1;
 
     if (block_size == 0) {
         size_t sc_total = scshape.total();

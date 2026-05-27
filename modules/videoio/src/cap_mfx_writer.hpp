@@ -23,7 +23,7 @@ public:
     double getProperty(int) const CV_OVERRIDE;
     bool setProperty(int, double) CV_OVERRIDE;
     bool isOpened() const CV_OVERRIDE;
-    void write(cv::InputArray input) CV_OVERRIDE;
+    bool write(cv::InputArray input) CV_OVERRIDE;
     int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_INTEL_MFX; }
 protected:
     bool write_one(cv::InputArray bgr);

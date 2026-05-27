@@ -1495,6 +1495,7 @@ FillEdgeCollection( Mat& img, std::vector<PolyEdge>& edges, const void* color )
 
 
 /* draws simple or filled circle */
+CV_DISABLE_UBSAN
 static void
 Circle( Mat& img, Point center, int radius, const void* color, int fill )
 {

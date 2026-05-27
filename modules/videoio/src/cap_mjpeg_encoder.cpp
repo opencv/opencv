@@ -161,7 +161,7 @@ public:
     inline void put_bits(unsigned bits, int len)
     {
         CV_Assert(len >=0 && len < 32);
-        if((m_pos == (data.size() - 1) && len > bits_free) || m_pos == data.size())
+        if((m_pos == (data.size() - 1) && len >= bits_free) || m_pos == data.size())
         {
             resize(int(2*data.size()));
         }
@@ -453,7 +453,7 @@ public:
 
     bool isOpened() const CV_OVERRIDE { return container.isOpenedStream(); }
 
-    void write(InputArray _img) CV_OVERRIDE
+    bool write(InputArray _img) CV_OVERRIDE
     {
         Mat img = _img.getMat();
         size_t chunkPointer = container.getStreamPos();
@@ -504,6 +504,7 @@ public:
             container.pushFrameSize(tempChunkPointer - chunkPointer - 8);       // Size excludes '00dc' and size field
             container.endWriteChunk(); // end '00dc'
         }
+        return true;
     }
 
     double getProperty(int propId) const CV_OVERRIDE

@@ -37,8 +37,13 @@
 #include "cap_interface.hpp"
 #include <iostream>
 #include <Availability.h>
+#include <TargetConditionals.h>
 #import <AVFoundation/AVFoundation.h>
 #import <Foundation/NSException.h>
+
+#ifndef TARGET_OS_VISION
+#define TARGET_OS_VISION 0
+#endif
 
 #define CV_CAP_MODE_BGR CV_FOURCC_MACRO('B','G','R','3')
 #define CV_CAP_MODE_RGB CV_FOURCC_MACRO('R','G','B','3')
@@ -185,7 +190,7 @@ class CvVideoWriter_AVFoundation : public cv::IVideoWriter{
                 int is_color=1);
         ~CvVideoWriter_AVFoundation();
         bool isOpened() const CV_OVERRIDE { return mMovieWriter != NULL && mMovieWriter.status != AVAssetWriterStatusFailed; }
-        void write(cv::InputArray image) CV_OVERRIDE;
+        bool write(cv::InputArray image) CV_OVERRIDE;
         int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_AVFOUNDATION; }
     private:
         cv::Mat argbimage;
@@ -1104,9 +1109,19 @@ bool CvCaptureFile::setProperty(int property_id, double value) {
             t.value = value * t.timescale / 1000;
             retval = setupReadingAt(t);
             break;
-        case cv::CAP_PROP_POS_FRAMES:
-            retval = mAssetTrack.nominalFrameRate > 0 ? setupReadingAt(CMTimeMake(value, mAssetTrack.nominalFrameRate)) : false;
+        case cv::CAP_PROP_POS_FRAMES: {
+            // Build the seek CMTime from the track's native rational frame
+            // duration so non-integer rates (e.g. 23.976 = 24000/1001) are exact.
+            CMTime frameDuration = mAssetTrack.minFrameDuration;
+            if (frameDuration.timescale > 0 && frameDuration.value > 0) {
+                retval = setupReadingAt(CMTimeMultiply(frameDuration, (int32_t)value));
+            } else if (mAssetTrack.nominalFrameRate > 0) {
+                retval = setupReadingAt(CMTimeMake(value, mAssetTrack.nominalFrameRate));
+            } else {
+                retval = false;
+            }
             break;
+        }
         case cv::CAP_PROP_POS_AVI_RATIO:
             t = mAsset.duration;
             t.value = round(t.value * value);
@@ -1283,20 +1298,20 @@ CvVideoWriter_AVFoundation::~CvVideoWriter_AVFoundation() {
     }
 }
 
-void CvVideoWriter_AVFoundation::write(cv::InputArray image) {
+bool CvVideoWriter_AVFoundation::write(cv::InputArray image) {
     @autoreleasepool {
         // writer status check
         if (![mMovieWriterInput isReadyForMoreMediaData] || mMovieWriter.status != AVAssetWriterStatusWriting) {
             NSLog(@"[mMovieWriterInput isReadyForMoreMediaData] Not ready for media data or ...");
             NSLog(@"mMovieWriter.status: %d. Error: %@", (int)mMovieWriter.status, [mMovieWriter.error localizedDescription]);
-            return;
+            return false;
         }
 
         BOOL success = FALSE;
 
         if (image.size().height != movieSize.height || image.size().width != movieSize.width) {
             std::cout << "Frame size does not match video size." << std::endl;
-            return;
+            return false;
         }
 
         if (movieColor) {
@@ -1341,10 +1356,10 @@ void CvVideoWriter_AVFoundation::write(cv::InputArray image) {
 
         if (success) {
             frameCount++;
-            return;
+            return true;
         } else {
             NSLog(@"Frame appendPixelBuffer failed.");
-            return;
+            return false;
         }
     }
 }

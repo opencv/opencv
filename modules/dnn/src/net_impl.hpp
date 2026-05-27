@@ -25,6 +25,8 @@
 
 #include "legacy_backend.hpp"  // wrapMat BlobManager OpenCLBackendWrapper
 
+#include "kv_cache_manager.hpp"
+
 #include <unordered_map>
 
 #ifdef HAVE_ONNXRUNTIME
@@ -47,6 +49,33 @@ typedef std::unordered_map<std::string, int64_t> NamesHash;
 #ifdef HAVE_ONNXRUNTIME
 struct OrtNamesCache;
 #endif
+
+/** @brief Single entry in a @ref PerfProfile.
+ *
+ * In DNN_PROFILE_DETAILED mode, @p label is "layer_name (type)" and @p count is 1.
+ * In DNN_PROFILE_SUMMARY mode, @p label is the layer type and @p count is the
+ * number of layers of that type that contributed to @p timeMs.
+ */
+struct PerfProfileEntry
+{
+    PerfProfileEntry() : timeMs(0.0), count(0) {}
+    String label;
+    double timeMs;
+    int count;
+};
+
+/** @brief Self-describing snapshot of profiling data from one inference.
+ *
+ * Carries the @ref ProfilingMode it was captured in so it can be saved, kept across
+ * runs (e.g. best-of-N by total time), and printed later via @ref Net::printPerfProfile
+ * without needing access to the originating @ref Net.
+ */
+struct PerfProfile
+{
+    PerfProfile() : mode(DNN_PROFILE_NONE) {}
+    ProfilingMode mode;
+    std::vector<PerfProfileEntry> entries;
+};
 
 // NB: Implementation is divided between of multiple .cpp files
 struct Net::Impl : public detail::NetImplBase
@@ -80,6 +109,8 @@ struct Net::Impl : public detail::NetImplBase
     bool fusion;
     bool isAsync;  // FIXIT: drop
     bool useWinograd;
+    bool useKVCache = false;
+
     std::vector<int64> layersTimings;
 
     std::string modelFileName;
@@ -98,6 +129,7 @@ struct Net::Impl : public detail::NetImplBase
     std::vector<Mat> buffers;
     std::vector<Mat> scratchBufs;
     std::vector<Ptr<Graph> > allgraphs;
+    KVCacheManager kvCacheManager;
 
     Ptr<Graph> mainGraph;
     int globGraphIdx;
@@ -254,11 +286,17 @@ struct Net::Impl : public detail::NetImplBase
     void finalizeOrt();
     void refreshOrtMainGraphOutputs();
     void applyStagedOrtInputs();
+    void collectOrtProfileData() const;
     std::vector<std::pair<std::string, Mat>> ort_staged_inputs;
     std::shared_ptr<Ort::Env> ort_env;
     std::shared_ptr<Ort::Session> ort_session;
     std::shared_ptr<OrtNamesCache> ort_names_cache;
-    bool ortNeedsReinit = true;  // session needs (re)creation on next finalizeNet
+    bool useOrtEngine = false;   // true only when user explicitly selected ENGINE_ORT
+    bool ortNeedsReinit = false;  // session needs (re)creation on next finalizeNet
+    std::string ort_profile_path_prefix;          // prefix passed to EnableProfiling
+    mutable bool ort_profile_collected = false;   // EndProfiling was already called once
+    mutable int  ort_profile_runs = 0;            // number of session.Run calls since profiling started
+    mutable std::vector<std::tuple<String, String, double>> ort_profile_data;  // (name, type, ms_per_run)
 #endif
 
     void allocateLayer(int lid, const LayersShapesMap& layersShapes);
@@ -329,6 +367,10 @@ struct Net::Impl : public detail::NetImplBase
             std::vector<int>& layerIds, std::vector<size_t>& weights,
             std::vector<size_t>& blobs) /*const*/;
     int64 getPerfProfile(std::vector<double>& timings) const;
+    void collectLayerInfo(std::vector<String>& names, std::vector<String>& types) const;
+    PerfProfile getPerfProfile() const;
+    void getPerfProfile(std::vector<std::string>& names, std::vector<std::string>& timems, std::vector<std::string>& counts) const;
+    void printPerfProfile() const;
 
     // TODO drop
     LayerPin getLatestLayerPin(const std::vector<LayerPin>& pins) const;
@@ -453,6 +495,19 @@ struct Net::Impl : public detail::NetImplBase
     void assignBuffers();
     // fuse batch norm, add bias and activation to convolution
     void fuseBasic();
+    // fuse ViT-style multi-head attention subgraphs
+    void fuseAttention();
+    // rewrite MatMul(A, const_B [, const_bias]) into Gemm so projection-style
+    // matmuls reach the MLAS pre-packed sgemm path
+    void fuseMatMulConstBToGemm();
+    // fuse Gemm layers that share the same input into one wider Gemm
+    void fuseSharedInputGemm();
+    // collapse redundant Reshape/Transpose chains
+    void fuseReshapeTranspose();
+    // absorb a last-two-dims Transpose into the consuming MatMul
+    void fuseTransposeMatMul();
+    // fold a scalar Mul/Div before Softmax into Softmax::scale (CPU only)
+    void fuseScaleSoftmax();
     // replace constant sub-expressions with their results
 
     void fuseQDQ();
@@ -463,6 +518,8 @@ struct Net::Impl : public detail::NetImplBase
     // insert transformLayout operations where necessary;
     // use block layout for convolution, pooling and some other operations where it matters
     void useBlockLayout();
+    // fuse BN into following Conv2 weights
+    void fuseBN();
 
 };  // Net::Impl
 

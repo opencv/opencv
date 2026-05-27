@@ -172,8 +172,10 @@ class Conv2Int8LayerImpl CV_FINAL : public Conv2Int8Layer
 public:
     Mat weights;       // repacked int8 weights in block format
     Mat weightsVNNI;   // VNNI-transposed weights (pre-computed)
-    Mat biasInt32;     // int32 fused bias
-    Mat biasVNNI;      // int32 VNNI-adjusted bias (pre-computed)
+    Mat biasInt32;
+    Mat biasVNNI;
+    Mat biasU8;
+    Mat biasBaselineU8;
     Mat outMultiplier; // float32 per-channel output multiplier
     MatShape wshape0;  // original weight shape (K x Cg x kH x kW)
     MatShape prevInpshape;
@@ -212,13 +214,43 @@ public:
         }
     }
 
+    Conv2Int8LayerImpl(const Conv2Int8Params& p)
+    {
+        name = p.name;
+        type = "Conv2Int8";
+        strides = p.strides;
+        dilations = p.dilations;
+        pads = p.pads;
+        ngroups = p.ngroups;
+        auto_pad = p.auto_pad;
+        ceil_mode = p.ceil_mode;
+        input_sc = p.input_sc;
+        input_zp = p.input_zp;
+        output_sc = p.output_sc;
+        output_zp = p.output_zp;
+        per_channel = p.per_channel;
+        inputIsU8 = p.input_is_u8;
+        float_input = p.float_input;
+        addResidual = false;
+
+        if (!p.weights.empty()) {
+            wshape0 = p.weights.shape();
+            biasInt32 = p.bias;
+            outMultiplier = p.outputMultiplier;
+            blobs = { p.weights, p.bias, p.outputMultiplier };
+        }
+    }
+
     void getTypes(const std::vector<MatType>& inputs,
                   const int requiredOutputs, const int,
                   std::vector<MatType>& outputs,
                   std::vector<MatType>& internals) const CV_OVERRIDE
     {
-        // Input can be CV_8SC1 or CV_8UC1; output matches input type
-        int outtype = !inputs.empty() ? inputs[0] : CV_8SC1;
+        int outtype;
+        if (float_input)
+            outtype = inputIsU8 ? CV_8UC1 : CV_8SC1;
+        else
+            outtype = !inputs.empty() ? inputs[0] : CV_8SC1;
         outputs.assign(requiredOutputs, outtype);
         internals.clear();
     }
@@ -232,7 +264,14 @@ public:
         CV_Assert(ninputs >= 1);
 
         std::vector<int> emptyKernelShape;
-        outshapes.assign(1, convInferShape(inpshapes[0], wshape0, emptyKernelShape,
+        MatShape inpshape = inpshapes[0];
+        if (float_input && inpshape.layout != DATA_LAYOUT_BLOCK) {
+            if (inpshape.layout == DATA_LAYOUT_UNKNOWN)
+                inpshape.layout = DATA_LAYOUT_NCHW;
+            int C0 = getNetImpl(this)->defaultC0;
+            inpshape = inpshape.toLayout(DATA_LAYOUT_BLOCK, C0);
+        }
+        outshapes.assign(1, convInferShape(inpshape, wshape0, emptyKernelShape,
                                            ngroups, strides, dilations,
                                            pads, auto_pad, ceil_mode));
         tempshapes.clear();
@@ -247,7 +286,7 @@ public:
         size_t ninputs = actualInputs.size();
         CV_Assert(ninputs >= 1u && requiredOutputs == 1u);
         desiredInputs = actualInputs;
-        desiredInputs[0] = DATA_LAYOUT_BLOCK;
+        desiredInputs[0] = float_input ? DATA_LAYOUT_NCHW : DATA_LAYOUT_BLOCK;
         for (size_t i = 1; i < ninputs; i++)
             desiredInputs[i] = DATA_LAYOUT_UNKNOWN;
         outputs.assign(requiredOutputs, DATA_LAYOUT_BLOCK);
@@ -275,11 +314,56 @@ public:
         Ptr<ActivationLayerInt8> activ_int8 = layer.dynamicCast<ActivationLayerInt8>();
         if (!activ_int8.empty()) {
             activ = activ_int8;
-            if (!activ_int8->blobs.empty())
-                activ_int8->blobs[0].convertTo(activationLUT, CV_8S);
+            if (!activ_int8->activationLUT.empty())
+                activationLUT = activ_int8->activationLUT;
+            else if (!activ_int8->blobs.empty())
+                activ_int8->blobs[0].copyTo(activationLUT);
             return true;
         }
         return false;
+    }
+
+    void quantizeInterleaveBlock(const Mat& fp32_nchw, Mat& int8_block, int C0) const
+    {
+        MatShape nchw = fp32_nchw.shape();
+        if (nchw.layout == DATA_LAYOUT_UNKNOWN)
+            nchw.layout = DATA_LAYOUT_NCHW;
+        CV_Assert(nchw.dims >= 2);
+        int N = nchw[0], C = nchw[1];
+        int planesize = 1;
+        for (int d = 2; d < nchw.dims; d++) planesize *= nchw[d];
+        int C1 = (C + C0 - 1) / C0;
+
+        MatShape blkshape = nchw.toLayout(DATA_LAYOUT_BLOCK, C0);
+        int8_block.fit(blkshape, inputIsU8 ? CV_8UC1 : CV_8SC1);
+
+        float inv_sc = input_sc > 0.f ? 1.f / input_sc : 0.f;
+        int zp = input_zp;
+        const bool is_u8 = inputIsU8;
+        const float* src = fp32_nchw.ptr<float>();
+        uint8_t* dst = int8_block.ptr<uint8_t>();
+
+        parallel_for_(Range(0, N * C1), [&](const Range& range) {
+            for (int nc = range.start; nc < range.end; nc++) {
+                int n = nc / C1, c1 = nc % C1;
+                int c_base = c1 * C0;
+                int nzc = std::min(C0, C - c_base);
+                const float* src_block = src + (n * C + c_base) * planesize;
+                uint8_t* dst_block = dst + (size_t)(n * C1 + c1) * planesize * C0;
+                for (int i = 0; i < planesize; i++) {
+                    for (int c = 0; c < nzc; c++) {
+                        float x = src_block[c * planesize + i];
+                        int q = cvRound(x * inv_sc) + zp;
+                        if (is_u8)
+                            dst_block[i * C0 + c] = saturate_cast<uchar>(q);
+                        else
+                            dst_block[i * C0 + c] = (uint8_t)(int8_t)saturate_cast<schar>(q);
+                    }
+                    for (int c = nzc; c < C0; c++)
+                        dst_block[i * C0 + c] = 0;
+                }
+            }
+        });
     }
 
     void forward(InputArrayOfArrays input_arrs,
@@ -289,7 +373,16 @@ public:
         int ninputs = (int)input_arrs.total();
         CV_Assert(ninputs >= 1);
 
-        const Mat& inp = input_arrs.getMat(0);
+        Mat inp_storage;
+        Mat inp_ref = input_arrs.getMat(0);
+
+        if (float_input) {
+            CV_Assert(inp_ref.type() == CV_32F);
+            int C0 = getNetImpl(this)->defaultC0;
+            quantizeInterleaveBlock(inp_ref, inp_storage, C0);
+        }
+
+        const Mat& inp = float_input ? inp_storage : inp_ref;
         MatShape inpshape = inp.shape();
         CV_Assert(inpshape.layout == DATA_LAYOUT_BLOCK);
         CV_Assert(inp.type() == CV_8SC1 || inp.type() == CV_8UC1);
@@ -306,6 +399,20 @@ public:
             int Kg = K / ngroups;
             repackWeightsForVNNI(weights, ngroups, Kg, Cg,
                                   biasInt32, weightsVNNI, biasVNNI);
+
+            if (inputIsU8) {
+                biasU8.create({K}, CV_32SC1);
+                biasBaselineU8.create({K}, CV_32SC1);
+                const int32_t* bI = biasInt32.ptr<int32_t>();
+                const int32_t* bV = biasVNNI.ptr<int32_t>();
+                int32_t* bU = biasU8.ptr<int32_t>();
+                int32_t* bB = biasBaselineU8.ptr<int32_t>();
+                for (int k = 0; k < K; k++) {
+                    int32_t wsum = (bI[k] - bV[k]) / 128;
+                    bU[k] = bI[k] - input_zp * wsum;
+                    bB[k] = bI[k] + (128 - input_zp) * wsum;
+                }
+            }
         }
 
         Mat residual;
@@ -341,16 +448,28 @@ public:
             cs.initConv(inpshape, wshape0, outshape, ngroups,
                         strides, dilations, pads, auto_pad, ceil_mode,
                         FAST_ACTIV_NONE, nullptr, {});
+
+            if (cs.depthwise) {
+                cs.wshape = getWpackShapeInt8(wshape0, ngroups, C0);
+            }
             prevInpshape = inpshape;
         }
 
         const int8_t* lutptr = !activationLUT.empty() ? activationLUT.ptr<int8_t>() : nullptr;
 
+        const int* effectiveBiasVNNI = inputIsU8
+            ? (biasU8.empty()   ? nullptr : biasU8.ptr<int>())
+            : (biasVNNI.empty() ? nullptr : biasVNNI.ptr<int>());
+
+        const int* baselineBias = (inputIsU8 && !biasBaselineU8.empty())
+            ? biasBaselineU8.ptr<int>()
+            : biasInt32.ptr<int>();
+
         convInt8Block(inp.data, resptr, out.data, cs,
                       weights.data,
                       weightsVNNI.empty() ? nullptr : weightsVNNI.data,
-                      biasInt32.ptr<int>(),
-                      biasVNNI.empty() ? nullptr : biasVNNI.ptr<int>(),
+                      baselineBias,
+                      effectiveBiasVNNI,
                       outMultiplier.ptr<float>(),
                       input_zp, output_zp,
                       lutptr, inputIsU8);
@@ -363,6 +482,11 @@ public:
 };
 
 Ptr<Conv2Int8Layer> Conv2Int8Layer::create(const LayerParams& params)
+{
+    return Ptr<Conv2Int8Layer>(new Conv2Int8LayerImpl(params));
+}
+
+Ptr<Conv2Int8Layer> Conv2Int8Layer::create(const Conv2Int8Params& params)
 {
     return Ptr<Conv2Int8Layer>(new Conv2Int8LayerImpl(params));
 }

@@ -611,6 +611,69 @@ float Utils::findMedian (std::vector<float> &array) {
     }
 }
 
+// Flann radiusMatch
+struct FlannMatcher
+{
+    Ptr<flann::IndexParams> indexParams;
+    Ptr<flann::SearchParams> searchParams;
+    Ptr<flann::Index> flannIndex;
+
+    FlannMatcher( const Ptr<flann::IndexParams>& _indexParams, const Ptr<flann::SearchParams>& _searchParams )
+    : indexParams(_indexParams), searchParams(_searchParams)
+    {
+        CV_Assert( _indexParams );
+        CV_Assert( _searchParams );
+    }
+
+    void radiusMatch( const Mat& queryDescriptors, const Mat& trainDescriptors,
+                      std::vector<std::vector<DMatch> >& matches, float maxDistance)
+    {
+        CV_Assert( maxDistance > std::numeric_limits<float>::epsilon() );
+
+        if( trainDescriptors.empty() || queryDescriptors.empty() )
+            return;
+
+        matches.clear();
+
+        flannIndex = makePtr<flann::Index>( trainDescriptors, *indexParams );
+
+        Mat indices( queryDescriptors.rows, 1, CV_32SC1, Scalar::all(-1) );
+        Mat dists( queryDescriptors.rows, 1, CV_32FC1, Scalar::all(-1) );
+        for( int qIdx = 0; qIdx < queryDescriptors.rows; qIdx++ )
+        {
+            Mat queryDescriptorsRow = queryDescriptors.row(qIdx);
+            Mat indicesRow = indices.row(qIdx);
+            Mat distsRow = dists.row(qIdx);
+            flannIndex->radiusSearch( queryDescriptorsRow, indicesRow, distsRow, maxDistance*maxDistance, 1, *searchParams );
+        }
+
+        convertToDMatches( indices, dists, matches );
+    }
+
+    void convertToDMatches( const Mat& indices, const Mat& dists, std::vector<std::vector<DMatch> >& matches )
+    {
+        matches.resize( indices.rows );
+        for( int i = 0; i < indices.rows; i++ )
+        {
+            for( int j = 0; j < indices.cols; j++ )
+            {
+                int idx = indices.at<int>(i, j);
+                if( idx >= 0 )
+                {
+                    int imgIdx = 0;
+                    int trainIdx = idx;
+                    float dist = 0;
+                    if (dists.type() == CV_32S)
+                        dist = static_cast<float>( dists.at<int>(i,j) );
+                    else
+                        dist = std::sqrt(dists.at<float>(i,j));
+                    matches[i].push_back( DMatch( i, trainIdx, imgIdx, dist ) );
+                }
+            }
+        }
+    }
+};
+
 ///////////////////////////////// Radius Search Graph /////////////////////////////////////////////
 class RadiusSearchNeighborhoodGraphImpl : public RadiusSearchNeighborhoodGraph {
 private:
@@ -621,7 +684,7 @@ public:
         // Radius search OpenCV works only with float data
         CV_Assert(container_.type() == CV_32F);
 
-        FlannBasedMatcher flann(makePtr<flann::KDTreeIndexParams>(num_kd_trees), makePtr<flann::SearchParams>(flann_search_params));
+        FlannMatcher flann(makePtr<flann::KDTreeIndexParams>(num_kd_trees), makePtr<flann::SearchParams>(flann_search_params));
         std::vector<std::vector<DMatch>> neighbours;
         flann.radiusMatch(container_, container_, neighbours, (float)radius);
 

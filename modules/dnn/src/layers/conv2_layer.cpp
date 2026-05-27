@@ -157,7 +157,8 @@ public:
     virtual bool fuseBatchNorm(const Ptr<Layer>& bnlayer) override
     {
         BatchNorm2Layer* bn = dynamic_cast<BatchNorm2Layer*>(bnlayer.get());
-        if (fusedBatchNorm || !bn || bn->inputs.size() > 1)
+        if (fusedBatchNorm || !bn || bn->inputs.size() > 1 ||
+            fastActivation != FAST_ACTIV_NONE || !activ.empty())
             return false;
         fuseBatchNormWeights(bn);
         fusedBatchNorm = true;
@@ -286,6 +287,8 @@ public:
         desiredInputs[0] = DATA_LAYOUT_BLOCK;
         for (size_t i = 1; i < ninputs; i++)
             desiredInputs[i] = DATA_LAYOUT_UNKNOWN;
+        if (addResidual && ninputs > 1)
+            desiredInputs[ninputs - 1] = DATA_LAYOUT_BLOCK;
         outputs.assign(requiredOutputs, DATA_LAYOUT_BLOCK);
         return getNetImpl(this)->defaultC0;
     }

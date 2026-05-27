@@ -6,6 +6,7 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
+#include <opencv2/core/utils/logger.hpp>
 
 #include <mutex>
 #include <thread>
@@ -161,6 +162,8 @@ private:
 
 int main(int argc, char** argv)
 {
+    utils::logging::setLogLevel(utils::logging::LOG_LEVEL_INFO);
+
     CommandLineParser parser(argc, argv, keys);
 
     string zooFile = parser.get<String>("zoo");
@@ -225,6 +228,7 @@ int main(int argc, char** argv)
     int backend = getBackendID(parser.get<String>("backend"));
     net.setPreferableBackend(backend);
     net.setPreferableTarget(getTargetID(parser.get<String>("target")));
+    net.setProfilingMode(DNN_PROFILE_SUMMARY);
     //![read_net]
 
     // Create a window
@@ -302,6 +306,7 @@ int main(int argc, char** argv)
                         //![forward]
                         vector<Mat> outs;
                         net.forward(outs, net.getUnconnectedOutLayersNames());
+                        net.printPerfProfile();
                         predictionsQueue.push(outs);
                         //![forward]
                     }
@@ -372,6 +377,7 @@ int main(int argc, char** argv)
             tickMeter.start();
             net.forward(outs, net.getUnconnectedOutLayersNames());
             tickMeter.stop();
+            net.printPerfProfile();
 
             classIds.clear();
             confidences.clear();

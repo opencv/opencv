@@ -112,6 +112,7 @@ public:
                     case CV_16F: forward_impl<int64_t, int16_t>(data, indices, out); break;
                     case CV_32F: forward_impl<int64_t, float>(data, indices, out); break;
                     case CV_64F: forward_impl<int64_t, double>(data, indices, out); break;
+                    case CV_64S: forward_impl<int64_t, int64_t>(data, indices, out); break;
                     default: CV_Error(Error::StsNotImplemented, "Unsupported data type");
                 }
             } break;
@@ -150,6 +151,10 @@ public:
         const int inner_size = out.total() / outer_size;
         const int nstripes =  outer_size * inner_size / 1024;
 
+        size_t num_slices_per_batch = 1;
+        for (int d = batch_dims; d < static_cast<int>(q) - 1; ++d)
+            num_slices_per_batch *= indices.size[d];
+
         parallel_for_(Range(0, outer_size), [&](const Range& range) {
             for (size_t i = range.start; i < range.end; ++i)
             {
@@ -162,8 +167,10 @@ public:
                 }
 
                 if (batch_dims > 0)
-                    offset += data_strides[batch_dims - 1] * i;
-
+                {
+                    const int batch_idx = i / num_slices_per_batch;
+                    offset += (size_t)batch_idx * data_strides[batch_dims - 1];
+                }
                 // copy data from data to out
                 for (size_t j = 0; j < inner_size; ++j)
                 {

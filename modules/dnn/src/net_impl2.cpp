@@ -221,6 +221,7 @@ std::vector<Mat> Net::Impl::runOrtSession(std::vector<Mat> inputBlobs, const std
         Ort::RunOptions{nullptr},
         in_names.data(), input_tensors.data(), input_tensors.size(),
         out_names.data(), out_names.size());
+    if (profilingMode != DNN_PROFILE_NONE) ort_profile_runs++;
 
     CV_CheckEQ(output_tensors.size(), out_names.size(), "DNN/ORT: ORT returned unexpected number of outputs");
 
@@ -547,9 +548,16 @@ void Net::Impl::prepareForInference()
     if (!prepared) {
         fuseQDQ();
         constFold();
+        fuseBN();
         constArgs();
-        useBlockLayout();
+        fuseAttention();
+        fuseMatMulConstBToGemm();
+        fuseSharedInputGemm();
+        fuseReshapeTranspose();
+        fuseTransposeMatMul();
+        fuseScaleSoftmax();
         fuseBasic();
+        useBlockLayout();
         assignBuffers();
         totalLayers = updateGraphOfs(mainGraph, 0, true);
         prepared = true;
@@ -590,6 +598,9 @@ void Net::Impl::allocateLayerOutputs(
     CV_Assert(tempShapes.size() == tempTypes.size());
     CV_Assert(outShapes.size() == outTypes.size());
     CV_Assert(outShapes.size() == noutputs);
+
+    for (int i = 0; i < (int)tempShapes.size(); i++)
+        CV_CheckGT(total(tempShapes[i]), (size_t)0, "");
     outputs.assign(noutputs, Mat());
     outOrigData.resize(noutputs);
     for (size_t i = 0; i < noutputs; i++) {
@@ -619,7 +630,7 @@ void Net::Impl::allocateLayerOutputs(
 void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays outputs)
 {
 #ifdef HAVE_ONNXRUNTIME
-    if (mainGraph && modelFormat == DNN_MODEL_ONNX && !modelFileName.empty())
+    if (useOrtEngine && mainGraph && modelFormat == DNN_MODEL_ONNX && !modelFileName.empty())
         finalizeOrt();
     if (this->ort_session)
     {
@@ -673,12 +684,16 @@ void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays 
     // [TODO] if a target or backend change or there are some other important
     // global changes in configuration, finalizeLayers should be set to 'true' again
     finalizeLayers = false;
+
+    // Feed present.* outputs back as past_key_values.* inputs for the next step (causal-lm-with-past).
+    if (useKVCache && kvCacheManager.hasRoutes)
+        kvCacheManager.applyRoutes();
 }
 
 void Net::Impl::forwardWithSingleOutput(const std::string& outname, OutputArrayOfArrays outputBlobs)
 {
 #ifdef HAVE_ONNXRUNTIME
-    if (mainGraph && modelFormat == DNN_MODEL_ONNX && !modelFileName.empty())
+    if (useOrtEngine && mainGraph && modelFormat == DNN_MODEL_ONNX && !modelFileName.empty())
         finalizeOrt();
     if (this->ort_session)
     {
@@ -763,7 +778,7 @@ void Net::Impl::forwardWithSingleOutput(const std::string& outname, OutputArrayO
 void Net::Impl::forwardWithMultipleOutputs(OutputArrayOfArrays outblobs, const std::vector<std::string>& outnames)
 {
 #ifdef HAVE_ONNXRUNTIME
-    if (mainGraph && modelFormat == DNN_MODEL_ONNX && !modelFileName.empty())
+    if (useOrtEngine && mainGraph && modelFormat == DNN_MODEL_ONNX && !modelFileName.empty())
         finalizeOrt();
     if (this->ort_session)
     {
@@ -947,7 +962,7 @@ void Net::Impl::traceArg(std::ostream& strm_, const char* prefix, size_t i, Arg 
 void Net::Impl::setMainGraphInput(InputArray m, const std::string& inpname)
 {
 #ifdef HAVE_ONNXRUNTIME
-    if (ortNeedsReinit && mainGraph && modelFormat == DNN_MODEL_ONNX && !modelFileName.empty())
+    if (useOrtEngine && ortNeedsReinit && mainGraph && modelFormat == DNN_MODEL_ONNX && !modelFileName.empty())
     {
         Mat inputMat = m.getMat();
         if (inputMat.empty())
@@ -1237,8 +1252,9 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                     mCond = outputs[0];
                     active = loopLayer->cond(mCond);
 
+                    // Deep-copy: body buffers (and their UMats via Mat::fit reuse) are recycled across iterations.
                     for (int i = 0; i < n_state; i++)
-                        state[i] = outputs[1 + i];
+                        state[i] = outputs[1 + i].clone();
                     for (int i = 0; i < n_accum; i++)
                         history[i].push_back(outputs[1 + n_state + i].clone());
                 }
@@ -1618,6 +1634,9 @@ bool Net::Impl::tryInferGraphShapes(const Ptr<Graph>& graph,
         CV_Assert((int)outShapes.size() == noutputs);
         layer->getTypes(inpTypes, noutputs, (int)tempShapes.size(), outTypes, tempTypes);
         CV_Assert((int)outTypes.size() == noutputs);
+
+        for (int i = 0; i < (int)tempShapes.size(); i++)
+            CV_CheckGT(total(tempShapes[i]), (size_t)0, "");
 
         for (int i = 0; i < noutputs; i++) {
             Arg out = outputs[i];

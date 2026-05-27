@@ -680,6 +680,13 @@ public:
  double angle = 30, a = cos(angle*CV_PI/180), b = sin(angle*CV_PI/180);
  Mat R = (Mat_<double>(2,2) << a, -b, b, a);
  \endcode
+
+ \deprecated Use constructors with std::initializer_list instead:
+ \code
+ Mat_<int> m1({1, 2, 3, 4}); // 4x1 Mat
+ Mat_<uchar> m2({2, 3}, {1, 2, 3, 4, 5, 6}); // 2x3 Mat
+
+ Mat_<double> R({2, 2}, {a, -b, b, a}); // from example
 */
 template<typename _Tp> class MatCommaInitializer_
 {
@@ -1261,7 +1268,7 @@ public:
 
     /** @overload
     */
-    template<typename _Tp> explicit Mat(const MatCommaInitializer_<_Tp>& commaInitializer);
+    template<typename _Tp> CV_DEPRECATED_EXTERNAL explicit Mat(const MatCommaInitializer_<_Tp>& commaInitializer);
 
     //! download data from GpuMat
     explicit Mat(const cuda::GpuMat& m);
@@ -2618,7 +2625,7 @@ public:
     template<int m, int n> explicit Mat_(const Matx<typename DataType<_Tp>::channel_type, m, n>& mtx, bool copyData=true);
     explicit Mat_(const Point_<typename DataType<_Tp>::channel_type>& pt, bool copyData=true);
     explicit Mat_(const Point3_<typename DataType<_Tp>::channel_type>& pt, bool copyData=true);
-    explicit Mat_(const MatCommaInitializer_<_Tp>& commaInitializer);
+    CV_DEPRECATED_EXTERNAL explicit Mat_(const MatCommaInitializer_<_Tp>& commaInitializer);
 
     Mat_(std::initializer_list<_Tp> values);
     explicit Mat_(const std::initializer_list<int> sizes, const std::initializer_list<_Tp> values);

@@ -18,8 +18,7 @@ class aruco_objdetect_test(NewOpenCVTests):
             square_size = 100
             aruco_type = [cv.aruco.DICT_4X4_1000, cv.aruco.DICT_5X5_1000, cv.aruco.DICT_6X6_1000,
                         cv.aruco.DICT_7X7_1000, cv.aruco.DICT_ARUCO_ORIGINAL, cv.aruco.DICT_APRILTAG_16h5,
-                        cv.aruco.DICT_APRILTAG_25h9, cv.aruco.DICT_APRILTAG_36h10, cv.aruco.DICT_APRILTAG_36h11,
-                        cv.aruco.DICT_ARUCO_MIP_36h12]
+                        cv.aruco.DICT_APRILTAG_25h9, cv.aruco.DICT_APRILTAG_36h10, cv.aruco.DICT_APRILTAG_36h11, cv.aruco.DICT_ARUCO_MIP_36h12]
             aruco_type_str = ['DICT_4X4_1000','DICT_5X5_1000', 'DICT_6X6_1000',
                         'DICT_7X7_1000', 'DICT_ARUCO_ORIGINAL', 'DICT_APRILTAG_16h5',
                         'DICT_APRILTAG_25h9', 'DICT_APRILTAG_36h10', 'DICT_APRILTAG_36h11', 'DICT_ARUCO_MIP_36h12']

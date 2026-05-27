@@ -302,9 +302,16 @@ public:
                         ov::Shape(pads_begin), ov::Shape(pads_end), ov::Shape(kernel_size),
                         rounding_type, pad_type);
         } else if (type == AVE) {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2025030000)
+            std::vector<size_t> dilations(kernel_size.size(), 1);
+            pool = std::make_shared<ov::op::v16::AvgPool>(input, ov::Strides(strides), ov::Strides(dilations),
+                        ov::Shape(pads_begin), ov::Shape(pads_end), ov::Shape(kernel_size),
+                        !avePoolPaddedArea, rounding_type, pad_type);
+#else
             pool = std::make_shared<ov::op::v1::AvgPool>(input, ov::Strides(strides),
                         ov::Shape(pads_begin), ov::Shape(pads_end), ov::Shape(kernel_size),
                         !avePoolPaddedArea, rounding_type, pad_type);
+#endif
         } else if (type == SUM) {
             ov::Shape inpShape = input.get_shape();
             CV_Assert(inpShape.size() == 2 + kernel_size.size());

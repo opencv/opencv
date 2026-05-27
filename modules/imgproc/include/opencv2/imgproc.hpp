@@ -2951,22 +2951,6 @@ An example is shown below:
  */
 CV_EXPORTS_W void createHanningWindow(OutputArray dst, Size winSize, int type);
 
-/** @brief Performs the per-element division of the first Fourier spectrum by the second Fourier spectrum.
-
-The function cv::divSpectrums performs the per-element division of the first array by the second array.
-The arrays are CCS-packed or complex matrices that are results of a real or complex Fourier transform.
-
-@param a first input array.
-@param b second input array of the same size and type as src1 .
-@param c output array of the same size and type as src1 .
-@param flags operation flags; currently, the only supported flag is cv::DFT_ROWS, which indicates that
-each row of src1 and src2 is an independent 1D Fourier spectrum. If you do not want to use this flag, then simply add a `0` as value.
-@param conjB optional flag that conjugates the second input array before the multiplication (true)
-or not (false).
-*/
-CV_EXPORTS_W void divSpectrums(InputArray a, InputArray b, OutputArray c,
-                               int flags, bool conjB = false);
-
 //! @} imgproc_motion
 
 //! @addtogroup imgproc_misc
@@ -3960,9 +3944,14 @@ CV_EXPORTS_W int connectedComponentsWithStats(InputArray image, OutputArray labe
 
 /** @brief Finds contours in a binary image.
 
-The function retrieves contours from the binary image using the algorithm @cite Suzuki85 . The contours
+The function retrieves contours from the binary image. The contours
 are a useful tool for shape analysis and object detection and recognition. See squares.cpp in the
 OpenCV sample directory.
+
+@note Since OpenCV 4.14, when mode is #RETR_LIST and no hierarchy is requested, this function
+automatically uses the TRUCO parallel algorithm @cite TRUCO2026, a scalable lock-free method for
+contour extraction. In all other cases, the sequential @cite Suzuki85 algorithm is used.
+
 @note Since opencv 3.2 source image is not modified by this function.
 
 @param image Source, an 8-bit single-channel image. Non-zero pixels are treated as 1's. Zero
@@ -3991,6 +3980,7 @@ CV_EXPORTS_W void findContours( InputArray image, OutputArrayOfArrays contours,
 /** @overload */
 CV_EXPORTS void findContours( InputArray image, OutputArrayOfArrays contours,
                               int mode, int method, Point offset = Point());
+
 
 //! @brief Find contours using link runs algorithm
 //!
@@ -5221,9 +5211,5 @@ Point LineIterator::pos() const
 //! @} imgproc
 
 } // cv
-
-
-#include "./imgproc/segmentation.hpp"
-
 
 #endif

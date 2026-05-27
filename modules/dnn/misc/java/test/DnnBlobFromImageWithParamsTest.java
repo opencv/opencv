@@ -15,17 +15,28 @@ import org.opencv.test.OpenCVTestCase;
 
 public class DnnBlobFromImageWithParamsTest extends OpenCVTestCase {
 
+        // test for DATA_LAYOUT_* and DNN_LAYOUT_* access from Core
+        public void testDataLayoutConstants()
+        {
+            assertEquals(0, Core.DATA_LAYOUT_UNKNOWN);
+            assertEquals(1, Core.DATA_LAYOUT_ND);
+            assertEquals(2, Core.DATA_LAYOUT_NCHW);
+            assertEquals(3, Core.DATA_LAYOUT_NCDHW);
+            assertEquals(4, Core.DATA_LAYOUT_NHWC);
+            assertEquals(5, Core.DATA_LAYOUT_NDHWC);
+            assertEquals(6, Core.DATA_LAYOUT_PLANAR);
+            assertEquals(7, Core.DATA_LAYOUT_BLOCK);
+        }
+
         public void testBlobFromImageWithParamsNHWCScalarScale()
         {
             // https://github.com/opencv/opencv/issues/27264
-            /*
             Mat img = new Mat(10, 10, CvType.CV_8UC4, new Scalar(0, 1, 2, 3));
             Scalar scalefactor = new Scalar(0.1, 0.2, 0.3, 0.4);
 
             Image2BlobParams params = new Image2BlobParams();
             params.set_scalefactor(scalefactor);
             params.set_datalayout(Core.DATA_LAYOUT_NHWC);
-            return;
 
             Mat blob = Dnn.blobFromImageWithParams(img, params); // [1, 10, 10, 4]
 
@@ -43,7 +54,6 @@ public class DnnBlobFromImageWithParamsTest extends OpenCVTestCase {
                       }
                 }
             }
-            */
         }
 
         public void testBlobFromImageWithParamsCustomPaddingLetterBox()
@@ -105,7 +115,6 @@ public class DnnBlobFromImageWithParamsTest extends OpenCVTestCase {
         // https://github.com/opencv/opencv/issues/27264
         public void testBlobFromImageWithParams4chMultiImage()
         {
-            /*
             Mat img = new Mat(10, 10, CvType.CV_8UC4, new Scalar(0, 1, 2, 3));
 
             Scalar scalefactor = new Scalar(0.1, 0.2, 0.3, 0.4);
@@ -113,7 +122,6 @@ public class DnnBlobFromImageWithParamsTest extends OpenCVTestCase {
             Image2BlobParams param = new Image2BlobParams();
             param.set_scalefactor(scalefactor);
             param.set_datalayout(Core.DATA_LAYOUT_NHWC);
-            return;
 
             List<Mat> images = new ArrayList<>();
             images.add(img);
@@ -137,6 +145,5 @@ public class DnnBlobFromImageWithParamsTest extends OpenCVTestCase {
             Core.multiply(blob0, Scalar.all(2), blob0);
 
             assertEquals(0, Core.norm(blob0, blob1, Core.NORM_INF), EPS);
-            */
         }
 }

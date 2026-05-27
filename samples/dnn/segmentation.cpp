@@ -5,6 +5,7 @@
 #include <opencv2/dnn.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
+#include <opencv2/core/utils/logger.hpp>
 
 #include "common.hpp"
 
@@ -139,6 +140,8 @@ static void showLegend(FontFace fontFace)
 
 int main(int argc, char **argv)
 {
+    utils::logging::setLogLevel(utils::logging::LOG_LEVEL_INFO);
+
     CommandLineParser parser(argc, argv, keys);
 
     const string modelName = parser.get<String>("@alias");
@@ -218,7 +221,8 @@ int main(int argc, char **argv)
     Net net = readNetFromONNX(model, engine);
     net.setPreferableBackend(getBackendID(backend));
     net.setPreferableTarget(getTargetID(target));
-    //! [Read and initialize network]
+    net.setProfilingMode(DNN_PROFILE_SUMMARY);
+     //! [Read and initialize network]
     // Create a window
     static const string kWinName = "Deep learning semantic segmentation in OpenCV";
     namedWindow(kWinName, WINDOW_AUTOSIZE);
@@ -263,6 +267,7 @@ int main(int argc, char **argv)
         {
             vector<Mat> output;
             net.forward(output, net.getUnconnectedOutLayersNames());
+            net.printPerfProfile();
 
             Mat pred = output[0].reshape(1, output[0].size[2]);
             pred.convertTo(pred, CV_8U, 255.0);
@@ -284,6 +289,7 @@ int main(int argc, char **argv)
         {
             //! [Make forward pass]
             Mat score = net.forward();
+            net.printPerfProfile();
             //! [Make forward pass]
             Mat segm;
             colorizeSegmentation(score, segm);

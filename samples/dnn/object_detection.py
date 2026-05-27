@@ -71,6 +71,7 @@ if args.alias is None or hasattr(args, 'help'):
     help()
     exit(1)
 
+cv.utils.logging.setLogLevel(cv.utils.logging.LOG_LEVEL_INFO)
 args.model = findModel(args.model, args.sha1)
 if args.config is not None:
     args.config = findModel(args.config, args.config_sha1)
@@ -104,6 +105,8 @@ if args.backend != "default" or args.target != "cpu":
 net = cv.dnn.readNet(args.model, args.config, "", engine)
 net.setPreferableBackend(get_backend_id(args.backend))
 net.setPreferableTarget(get_target_id(args.target))
+if hasattr(cv.dnn, 'DNN_PROFILE_SUMMARY'):
+    net.setProfilingMode(cv.dnn.DNN_PROFILE_SUMMARY)
 outNames = net.getUnconnectedOutLayersNames()
 
 confThreshold = args.thr
@@ -340,6 +343,7 @@ def processingThreadBody():
                 futureOutputs.append(net.forwardAsync())
             else:
                 outs = net.forward(outNames)
+                net.printPerfProfile()
                 predictionsQueue.put(copy.deepcopy(outs))
 
         while futureOutputs and futureOutputs[0].wait_for(0):
@@ -408,6 +412,7 @@ else:
 
         net.setInput(blob)
         outs = net.forward(outNames)
+        net.printPerfProfile()
 
         boxes, classIds, confidences, indices = postprocess(frame, outs)
         drawPred(classIds, confidences, boxes, indices, (stdSize*max(frame.shape[:2]))/stdImgSize, (stdWeight*max(frame.shape[:2]))//stdImgSize)

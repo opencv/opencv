@@ -10,6 +10,7 @@
 #include <opencv2/core/ocl.hpp>
 #include <opencv2/core/opencl/ocl_defs.hpp>
 #include <opencv2/dnn/layer.details.hpp>  // CV_DNN_REGISTER_LAYER_CLASS
+#include <opencv2/dnn/shape_utils.hpp>
 
 namespace opencv_test { namespace {
 
@@ -246,9 +247,6 @@ TEST(readNet, Regression)
 {
     Net net = readNet(findDataFile("dnn/squeezenet_v1.1.prototxt"),
                       findDataFile("dnn/squeezenet_v1.1.caffemodel", false));
-    EXPECT_FALSE(net.empty());
-    net = readNet(findDataFile("dnn/tiny-yolo-voc.cfg"),
-                  findDataFile("dnn/tiny-yolo-voc.weights", false));
     EXPECT_FALSE(net.empty());
     net = readNet(findDataFile("dnn/ssd_mobilenet_v1_coco.pbtxt"),
                   findDataFile("dnn/ssd_mobilenet_v1_coco.pb", false));
@@ -1073,5 +1071,13 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_two_inputs, Combine(
     Values(CV_32F),
     dnnBackendsAndTargets()
 ));
+
+TEST(Net, ShapeUtils_total_no_int32_overflow)
+{
+    cv::MatShape shape = cv::dnn::shape(1920, 1478656);
+
+    size_t t = cv::dnn::total(shape);
+    EXPECT_EQ(t, 2839019520llu);
+}
 
 }} // namespace

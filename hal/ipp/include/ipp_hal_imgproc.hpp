@@ -19,12 +19,16 @@ int ipp_hal_warpAffine(int src_type, const uchar *src_data, size_t src_step, int
 //#define cv_hal_warpAffine ipp_hal_warpAffine
 #endif
 
+#if IPP_VERSION_X100 >= 202600
+
 int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar *dst_data, size_t dst_step, int dst_width,
                             int dst_height, const double M[9], int interpolation, int borderType, const double borderValue[4]);
 
 // Does not pass tests in 5.x branch
 //#undef cv_hal_warpPerspective
 //#define cv_hal_warpPerspective ipp_hal_warpPerspective
+
+#endif // IPP_VERSION_X100 >= 202600
 
 int ipp_hal_remap32f(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height,
     uchar *dst_data, size_t dst_step, int dst_width, int dst_height,

@@ -41,6 +41,7 @@
 
 #include "test_precomp.hpp"
 #include <opencv2/core/ocl.hpp>
+#include <opencv2/core/fast_math.hpp>
 #include "npy_blob.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/dnn/all_layers.hpp>
@@ -2863,6 +2864,51 @@ TEST(Layer_If, resize)
     }
 }
 
+TEST(Layer_If, subgraph_name_scoping)
+{
+    auto engine_forced = static_cast<cv::dnn::EngineType>(
+            cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
+    if (engine_forced == cv::dnn::ENGINE_CLASSIC)
+    {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+        return;
+    }
+
+    const std::string modelname = findDataFile("dnn/onnx/models/subgraph_name_scoping.onnx", true);
+    dnn::Net net = dnn::readNetFromONNX(modelname, ENGINE_NEW);
+
+    int xshape[1] = {2};
+    Mat x(1, xshape, CV_32F);
+    x.at<float>(0) = 1.f;
+    x.at<float>(1) = 2.f;
+
+    for (int f = 0; f <= 1; f++) {
+        Mat cond(1, 1, CV_BoolC1, cv::Scalar(f));
+
+        net.setInput(cond, "cond");
+        net.setInput(x.clone(), "x");
+
+        std::vector<Mat> outs;
+        net.forward(outs, std::vector<String>{"sum_outer", "branch_val"});
+        ASSERT_EQ(outs.size(), 2u);
+
+        // sum_outer = x + outer "shared" ([10, 20]).
+        const float* sumP = outs[0].ptr<float>();
+        EXPECT_FLOAT_EQ(sumP[0], 11.f);
+        EXPECT_FLOAT_EQ(sumP[1], 22.f);
+
+        // branch_val is the body's locally-scoped "shared": [1, 2] or [100, 200].
+        const float* brP = outs[1].ptr<float>();
+        if (f) {
+            EXPECT_FLOAT_EQ(brP[0], 1.f);
+            EXPECT_FLOAT_EQ(brP[1], 2.f);
+        } else {
+            EXPECT_FLOAT_EQ(brP[0], 100.f);
+            EXPECT_FLOAT_EQ(brP[1], 200.f);
+        }
+    }
+}
+
 TEST(Layer_Size, onnx_1d)
 {
     auto engine_forced = static_cast<cv::dnn::EngineType>(
@@ -2957,6 +3003,189 @@ TEST(ConvolutionWinograd, Accuracy)
 
     normAssert(outSmall, refSmall, "Small input after large", 0.0, 0.0);
     normAssert(outLarge, refLarge, "Large input after small", 0.0, 0.0);
+}
+
+class TESTKVCache : public testing::TestWithParam<std::string>
+{
+public:
+    void testKVCache(const std::string& layout)
+    {
+        auto engine_forced = static_cast<cv::dnn::EngineType>(
+                cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
+        if (engine_forced == cv::dnn::ENGINE_CLASSIC)
+        {
+            // Mark the test as skipped and exit early.
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+            return;
+        }
+
+        std::string model_path = "dnn/onnx/models/test_attention_kv_cache_" + layout + ".onnx";
+
+        Net netWithKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_NEW);
+        netWithKVCache.enableKVCache();
+        Net netWithoutKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_NEW);
+
+        int T = 523, Nq = 8, Nkv = 4, D = 256;
+        int T_pref = T;
+
+        std::vector<int> q_sz, k_sz, v_sz;
+        if (layout == "3d") {
+            q_sz = {1, T, Nq * D};
+            k_sz = {1, T, Nkv * D};
+            v_sz = {1, T, Nkv * D};
+        } else {
+            q_sz = {1, Nq, T, D};
+            k_sz = {1, Nkv, T, D};
+            v_sz = {1, Nkv, T, D};
+        }
+
+        Mat Q_all(q_sz, CV_32F);
+        Mat K_all(k_sz, CV_32F);
+        Mat V_all(v_sz, CV_32F);
+
+        cv::randn(Q_all, 0.0, 1.0);
+        cv::randn(K_all, 0.0, 1.0);
+        cv::randn(V_all, 0.0, 1.0);
+
+        std::vector<int> mask_sz = {1, Nq, T, T};
+        Mat mask(mask_sz, CV_32S, cv::Scalar(0));
+
+        int* mask_ptr = (int*)mask.data;
+        for (int n = 0; n < Nq; n++) {
+            for (int i = 0; i < T; i++) {
+                for (int j = 0; j < T; j++) {
+                    int idx = n * T * T +
+                              i * T + j;
+                    if (i < T_pref) {
+                        if (j < T_pref) mask_ptr[idx] = 1;
+                    } else {
+                        if (j <= i) mask_ptr[idx] = 1;
+                    }
+                }
+            }
+        }
+
+
+        Mat Y;
+        if (layout == "3d") {
+            std::vector<int> sz = {1, T, Nq * D};
+            Y = Mat(sz, CV_32F);
+        } else {
+            std::vector<int> sz = {1, Nq, T, D};
+            Y = Mat(sz, CV_32F);
+        }
+        Y.setTo(0);
+
+        std::vector<Range> ranges_pref;
+        if (layout == "3d") {
+            ranges_pref = {Range::all(), Range(0, T_pref), Range::all()};
+        } else {
+            ranges_pref = {Range::all(), Range::all(), Range(0, T_pref), Range::all()};
+        }
+
+        Mat Q_pref = Q_all(ranges_pref);
+        Mat K_pref = K_all(ranges_pref);
+        Mat V_pref = V_all(ranges_pref);
+
+        // 1.  Prefill
+        netWithKVCache.setInput(Q_pref, "Q");
+        netWithKVCache.setInput(K_pref, "K");
+        netWithKVCache.setInput(V_pref, "V");
+        Mat prefillResult = netWithKVCache.forward(); // prefill
+        prefillResult.copyTo(Y(ranges_pref));
+        // 2. Generate
+        for(int t = T_pref; t < T; t++)
+        {
+            std::vector<Range> ranges_gen;
+            if (layout == "3d") {
+                ranges_gen = {Range::all(), Range(t, t + 1), Range::all()};
+            } else {
+                ranges_gen = {Range::all(), Range::all(), Range(t, t + 1), Range::all()};
+            }
+
+            netWithKVCache.setInput(Q_all(ranges_gen), "Q");
+            netWithKVCache.setInput(K_all(ranges_gen), "K");
+            netWithKVCache.setInput(V_all(ranges_gen), "V");
+
+            Mat nextToken = netWithKVCache.forward();
+            nextToken.copyTo(Y(ranges_gen));
+        }
+
+        // 3. Standard path
+        netWithoutKVCache.setInput(Q_all, "Q");
+        netWithoutKVCache.setInput(K_all, "K");
+        netWithoutKVCache.setInput(V_all, "V");
+        netWithoutKVCache.setInput(mask, "Mask");
+
+        Mat Yref = netWithoutKVCache.forward();
+
+        std::string msg = "Attention generate " + layout + ": KV vs standard";
+        normAssert(Y, Yref, msg.c_str(), 1e-3, 1e-3);
+    }
+};
+
+TEST_P(TESTKVCache, layouts)
+{
+    testKVCache(GetParam());
+}
+
+INSTANTIATE_TEST_CASE_P(KV_Cache, TESTKVCache, testing::Values("3d", "4d"));
+
+
+
+TEST(Layer_Test_GeluApprox, NoNaN_LargeInput)
+{
+    LayerParams lp;
+    lp.type = "GeluApproximation";
+    lp.name = "test_gelu_approx";
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("GeluApproximation", lp);
+    ASSERT_TRUE(layer != nullptr);
+
+    float data[] = {-15.f, -10.f, -7.4f, -1.f, 0.f, 1.f, 5.f, 10.6f, 15.f, 20.f};
+    int dims[] = {1, 1, 10};
+    Mat inp(3, dims, CV_32F, data);
+    std::vector<Mat> inpVec = {inp};
+    std::vector<Mat> outVec;
+
+    runLayer(layer, inpVec, outVec);
+    ASSERT_EQ(outVec.size(), (size_t)1);
+
+    Mat& out = outVec[0];
+    for (int i = 0; i < 10; i++) {
+        float val = out.ptr<float>()[i];
+        EXPECT_FALSE(cvIsNaN(val)) << "NaN at index " << i << " (input=" << data[i] << ")";
+        EXPECT_FALSE(cvIsInf(val)) << "Inf at index " << i << " (input=" << data[i] << ")";
+    }
+
+    EXPECT_NEAR(out.ptr<float>()[9], 20.f, 0.01f);
+    EXPECT_NEAR(out.ptr<float>()[0], 0.f, 1e-6f);
+    EXPECT_NEAR(out.ptr<float>()[4], 0.f, 1e-6f);
+}
+
+TEST(Layer_Test_Softmax, NoNaN_AllNegInf)
+{
+    LayerParams lp;
+    lp.type = "Softmax";
+    lp.name = "test_softmax";
+    lp.set("axis", 1);
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("Softmax", lp);
+    ASSERT_TRUE(layer != nullptr);
+
+    int dims[] = {1, 8};
+    Mat inp(2, dims, CV_32F, Scalar(-std::numeric_limits<float>::infinity()));
+    std::vector<Mat> inpVec = {inp};
+    std::vector<Mat> outVec;
+
+    runLayer(layer, inpVec, outVec);
+    ASSERT_EQ(outVec.size(), (size_t)1);
+
+    Mat& out = outVec[0];
+    for (int i = 0; i < 8; i++) {
+        float val = out.ptr<float>()[i];
+        EXPECT_FALSE(cvIsNaN(val)) << "NaN at index " << i;
+        EXPECT_FALSE(cvIsInf(val)) << "Inf at index " << i;
+        EXPECT_EQ(val, 0.f) << "Expected 0 at index " << i;
+    }
 }
 
 }} // namespace

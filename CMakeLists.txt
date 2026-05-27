@@ -224,6 +224,9 @@ OCV_OPTION(WITH_WAYLAND "Include Wayland support" OFF
 OCV_OPTION(WITH_IPP "Include Intel IPP support" (NOT MINGW AND NOT CV_DISABLE_OPTIMIZATION)
   VISIBLE_IF (X86_64 OR X86) AND NOT WINRT AND NOT IOS AND NOT XROS
   VERIFY HAVE_IPP)
+OCV_OPTION(WITH_ARMPL "Include ARM Performance Libraries support (auto-download)" OFF
+   VISIBLE_IF (AARCH64 OR ARM64) AND NOT WINRT AND NOT IOS AND NOT XROS
+   VERIFY HAVE_ARMPL)
 OCV_OPTION(WITH_VULKAN "Include Vulkan support" OFF
   VISIBLE_IF TRUE
   VERIFY HAVE_VULKAN)
@@ -399,7 +402,7 @@ OCV_OPTION(DOWNLOAD_ONNXRUNTIME_GPU "Download GPU-enabled ONNX Runtime prebuilt 
   VISIBLE_IF WITH_ONNXRUNTIME)
 OCV_OPTION(ONNXRUNTIME_PREFER_STATIC "Prefer static ONNX Runtime library when available" ON
   VISIBLE_IF WITH_ONNXRUNTIME)
-set(ONNXRUNTIME_VERSION "1.24.2" CACHE STRING "ONNX Runtime version to download (prebuilt binaries)")
+set(ONNXRUNTIME_VERSION "1.25.1" CACHE STRING "ONNX Runtime version to download (prebuilt binaries)")
 
 # Backward compatibility for previous option name.
 if(DEFINED WITH_ONNX AND WITH_ONNX AND NOT WITH_ONNXRUNTIME)
@@ -903,6 +906,13 @@ if(HAVE_FASTCV)
   endif()
 endif()
 
+if(HAVE_ARMPL)
+  ocv_debug_message(STATUS "Enable ARMPL acceleration")
+  if(NOT ";${OpenCV_HAL};" MATCHES ";armpl;")
+    set(OpenCV_HAL "armpl_hal;${OpenCV_HAL}")
+  endif()
+endif()
+
 if(HAVE_KLEIDICV)
   ocv_debug_message(STATUS "Enable KleidiCV acceleration")
   if(NOT ";${OpenCV_HAL};" MATCHES ";kleidicv;")
@@ -947,6 +957,14 @@ foreach(hal ${OpenCV_HAL})
       list(APPEND OpenCV_USED_HAL "fastcv (ver ${FASTCV_HAL_VERSION})")
     else()
       message(STATUS "FastCV: fastcv is not available, disabling fastcv...")
+    endif()
+  elseif(hal STREQUAL "armpl_hal")
+    if((ARM OR AARCH64 OR ARM64) AND NOT WINRT AND NOT IOS AND NOT XROS)
+      add_subdirectory(hal/armpl)
+      ocv_hal_register(ARMPL_HAL_LIBRARIES ARMPL_HAL_HEADERS ARMPL_HAL_INCLUDE_DIRS)
+      list(APPEND OpenCV_USED_HAL "ARMPL (ver ${ARMPL_HAL_VERSION})")
+    else()
+      message(STATUS "ARMPL: ARM Performance Libraries not available on this platform, disabling armpl...")
     endif()
   elseif(hal STREQUAL "kleidicv")
     add_subdirectory(hal/kleidicv)
@@ -1465,8 +1483,14 @@ if(WITH_SPNG)
   elseif(HAVE_SPNG)
     status("    PNG:" "${SPNG_LIBRARY} (ver ${SPNG_VERSION})")
   endif()
+
+  status("      Metadata Support:" "EXIF XMP ICC") # SPNG does not support cICP chunk.
 elseif(WITH_PNG OR HAVE_PNG)
-  status("    PNG:"  PNG_FOUND  THEN "${PNG_LIBRARY} (ver ${PNG_VERSION_STRING})" ELSE "build (ver ${PNG_VERSION_STRING})")
+  if(BUILD_PNG)
+    status("    PNG:" FALSE THEN "" ELSE "build (ver ${PNG_VERSION_STRING})")
+  else()
+    status("    PNG:"  PNG_FOUND  THEN "${PNG_LIBRARY} (ver ${PNG_VERSION_STRING})" ELSE "build (ver ${PNG_VERSION_STRING})")
+  endif()
   if(BUILD_PNG AND PNG_HARDWARE_OPTIMIZATIONS)
     status("      SIMD Support Request:" "YES")
     if(PNG_INTEL_SSE)
@@ -1492,6 +1516,14 @@ elseif(WITH_PNG OR HAVE_PNG)
   endif()
   elseif(BUILD_PNG)
     status("      SIMD Support Request:" "NO")
+  endif()
+
+  if(NOT (PNG_VERSION_STRING VERSION_LESS "1.6.45"))
+    status("      Metadata Support:" "EXIF XMP ICC cICP")
+  elseif(NOT (PNG_VERSION_STRING VERSION_LESS "1.6.31"))
+    status("      Metadata Support:" "EXIF XMP ICC")
+  else()
+    status("      Metadata Support:" "XMP ICC")
   endif()
 endif()
 
@@ -1711,6 +1743,12 @@ if(WITH_IPP AND HAVE_IPP)
   endif()
 endif()
 
+if(WITH_ARMPL AND HAVE_ARMPL)
+  status("    ARM Perf Lib:" "${ARMPL_VERSION_STR}")
+  status("           at:" "${ARMPL_ROOT_DIR}")
+  status("      variant:" "${ARMPL_LIB_NAME}")
+endif()
+
 if(WITH_VA OR HAVE_VA)
   status("    VA:"            HAVE_VA          THEN "YES" ELSE NO)
 endif()
@@ -1781,12 +1819,51 @@ if(BUILD_opencv_dnn AND OPENCV_DNN_BACKEND_DEFAULT)
     status("    Default DNN backend:" ${OPENCV_DNN_BACKEND_DEFAULT})
 endif()
 
+if(BUILD_opencv_dnn AND (OPENCV_DNN_MLAS_ENABLED OR OPENCV_DNN_MLAS_SKIP_REASON))
+  status("    DNN MLAS:" OPENCV_DNN_MLAS_ENABLED THEN "YES (SGEMM-only, vendored)"
+                                                 ELSE "NO (${OPENCV_DNN_MLAS_SKIP_REASON})")
+  if(OPENCV_DNN_MLAS_ENABLED)
+    if(MLAS_X86_64)
+      status("      ASM kernels:" "YES (X86_64: SSE2, AVX, FMA3, AVX512F)")
+    elseif(MLAS_X86)
+      status("      ASM kernels:" "YES (X86: SSE2, AVX)")
+    elseif(MLAS_ARM64)
+      status("      ASM kernels:" "YES (ARM64: NEON SGEMM, NEON SGEMV)")
+    elseif(MLAS_ARM)
+      status("      ASM kernels:" "NO (ARM 32-bit, scalar C++ sgemmc.cpp)")
+    elseif(MLAS_LOONGARCH64)
+      status("      ASM kernels:" "YES (LoongArch: LSX, LASX)")
+    elseif(MLAS_POWER)
+      status("      ASM kernels:" MLAS_HAS_POWER10 AND MLAS_HAS_ASM
+                                  THEN "YES (POWER10 PackA)"
+                                  ELSE "NO (POWER base, no .S kernels)")
+    elseif(MLAS_S390X)
+      status("      ASM kernels:" "NO (S390X ZVECTOR via intrinsics)")
+    elseif(MLAS_RISCV64)
+      status("      ASM kernels:" MLAS_HAS_RISCV64_RVV
+                                  THEN "NO (RISCV64 with RVV intrinsics)"
+                                  ELSE "NO (RISCV64 scalar fallback)")
+    elseif(MLAS_WASM)
+      status("      ASM kernels:" "NO (WASM scalar fallback)")
+    else()
+      status("      ASM kernels:" "NO (scalar fallback)")
+    endif()
+  endif()
+endif()
+
 if(WITH_EIGEN OR HAVE_EIGEN)
   status("    Eigen:"      HAVE_EIGEN       THEN "YES (ver ${EIGEN_WORLD_VERSION}.${EIGEN_MAJOR_VERSION}.${EIGEN_MINOR_VERSION})" ELSE NO)
 endif()
 
+if(WITH_CLP OR HAVE_CLP)
+  status("    CLP:"        HAVE_CLP         THEN "YES" ELSE NO)
+endif()
+
 if(WITH_FASTCV OR HAVE_FASTCV)
   status("    FastCV:"     HAVE_FASTCV      THEN "YES (${FASTCV_LIBRARY})" ELSE "NO")
+endif()
+if(WITH_ARMPL OR HAVE_ARMPL)
+  status("    ARM Perf Lib:"     HAVE_ARMPL      THEN "YES (${ARMPL_LIBRARY})" ELSE "NO")
 endif()
 
 status("    Custom HAL:" OpenCV_USED_HAL  THEN "YES (${OpenCV_USED_HAL})" ELSE "NO")

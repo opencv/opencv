@@ -1370,6 +1370,8 @@ TEST(Core_Matx, from_initializer_list)
     Mat_<double> a = (Mat_<double>(2,2) << 10, 11, 12, 13);
     Matx22d b = {10, 11, 12, 13};
     ASSERT_EQ( cvtest::norm(a, b, NORM_INF), 0.);
+    Mat_<double> c({2, 2}, {10, 11, 12, 13});
+    ASSERT_EQ( cvtest::norm(c, b, NORM_INF), 0.);
 }
 
 TEST(Core_Mat, regression_9507)
@@ -1825,6 +1827,11 @@ TEST(Mat, from_initializer_list)
     auto D = Mat_<double>({2, 3}, {1, 2, 3, 4, 5, 6});
     EXPECT_EQ(2, D.rows);
     EXPECT_EQ(3, D.cols);
+
+    double angle = 30, a = cos(angle*CV_PI/180), b = sin(angle*CV_PI/180);
+    Mat R({2, 2}, {a, -b, b, a});
+    ASSERT_EQ(CV_64FC1, R.type());
+    ASSERT_EQ(cv::Size(2, 2), R.size());
 }
 
 TEST(Mat_, from_initializer_list)
@@ -1837,6 +1844,11 @@ TEST(Mat_, from_initializer_list)
     ASSERT_DOUBLE_EQ(cvtest::norm(A, B, NORM_INF), 0.);
     ASSERT_DOUBLE_EQ(cvtest::norm(A, C, NORM_INF), 0.);
     ASSERT_DOUBLE_EQ(cvtest::norm(B, C, NORM_INF), 0.);
+
+    double angle = 30, a = cos(angle*CV_PI/180), b = sin(angle*CV_PI/180);
+    Mat_<double> R({2, 2}, {a, -b, b, a});
+    ASSERT_EQ(CV_64FC1, R.type());
+    ASSERT_EQ(cv::Size(2, 2), R.size());
 }
 
 
@@ -2964,6 +2976,70 @@ TEST(Mat, issue_27080)
     const std::vector<int> src4 = {INT_MIN};
     EXPECT_EQ(cv::norm(src1, src2, NORM_L1), 32321818045.);
     EXPECT_EQ(cv::norm(src3, src4, NORM_L1), UINT_MAX);
+}
+
+template<typename _Tp, int cn> static void make_vector(std::vector<cv::Vec<_Tp, cn> >& v, int n)
+{
+    v.clear();
+    v.resize(n);
+    _Tp* data = &v[0][0];
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < cn; j++) {
+            int k = j % 4;
+            int val = (k == 0 ? 1 : k == 1 ? -1 : k == 2 ? (i+1) : -(i+1))*(i+1);
+            data[i*cn + j] = (_Tp)val;
+        }
+    }
+}
+
+TEST(Core_InputOutputArray, std_vector_vector)
+{
+    std::vector<Vec3s> vv0_s, vv1_s;
+    std::vector<std::vector<short> > cn_s;
+    make_vector(vv0_s, 100);
+
+    split(vv0_s, cn_s);
+    merge(cn_s, vv1_s);
+
+    double err0 = cvtest::norm(vv0_s, vv1_s, NORM_INF);
+    EXPECT_EQ(0, err0);
+
+    _InputArray iarr_s(cn_s);
+    _OutputArray oarr_s(cn_s);
+    EXPECT_EQ(3u, iarr_s.total(-1));
+    size_t narr = iarr_s.total(-1);
+    for (size_t i = 0; i < narr; i++) {
+        EXPECT_EQ(MatShape({int(cn_s[i].size())}), iarr_s.shape(int(i)));
+    }
+    size_t newsize_s = vv0_s.size()*2;
+    oarr_s.create(Size((int)newsize_s, 1), CV_16S, 2);
+    EXPECT_EQ(newsize_s, cn_s[2].size());
+    cn_s[1].clear();
+    EXPECT_EQ(true, oarr_s.empty(1));
+
+    std::vector<Vec4d> vv0_d, vv1_d;
+    std::vector<std::vector<double> > cn_d;
+    make_vector(vv0_d, 1000);
+
+    split(vv0_d, cn_d);
+    merge(cn_d, vv1_d);
+
+    double err1 = cvtest::norm(vv0_d, vv1_d, NORM_INF);
+    EXPECT_EQ(0., err1);
+
+    _InputArray iarr_d(cn_d);
+    _OutputArray oarr_d(cn_d);
+    EXPECT_EQ(4u, iarr_d.total(-1));
+    size_t newsize_d = vv0_d.size()*3;
+    oarr_d.create(Size((int)newsize_d, 1), CV_64F, 3);
+    EXPECT_EQ(newsize_d, cn_d[3].size());
+    cn_d[1].clear();
+    EXPECT_EQ(true, oarr_d.empty(1));
+    Mat m2 = oarr_d.getMat(2);
+
+    double err2 = cvtest::norm(m2, Mat(cn_d[2]), NORM_INF);
+    EXPECT_EQ(m2.ptr<double>(), &cn_d[2][0]);
+    EXPECT_EQ(0., err2);
 }
 
 }} // namespace

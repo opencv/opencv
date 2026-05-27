@@ -21,6 +21,17 @@
                                 "getSigmaColor", "setSigmaColor", "getSigmaSpace","setSigmaSpace"],
             "TonemapMantiuk" : ["getScale", "setScale", "getSaturation", "setSaturation"],
             "TonemapReinhard" : ["getIntensity", "setIntensity", "getLightAdaptation", "setLightAdaptation",
-                                    "getColorAdaptation", "setColorAdaptation"]
+                                    "getColorAdaptation", "setColorAdaptation"],
+        "segmentation_IntelligentScissorsMB": [
+            "IntelligentScissorsMB",
+            "setWeights",
+            "setGradientMagnitudeMaxLimit",
+            "setEdgeFeatureZeroCrossingParameters",
+            "setEdgeFeatureCannyParameters",
+            "applyImage",
+            "applyImageFeatures",
+            "buildMap",
+            "getContour"
+        ]
     }
 }

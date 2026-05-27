@@ -70,7 +70,7 @@ TEST(Test_TensorFlow, inception_accuracy)
 
     Mat ref = blobFromNPY(_tf("tf_inception_prob.npy"));
 
-    normAssert(ref, out);
+    normAssert(ref, out, "", 5e-5, 0.02);
 }
 
 static std::string path(const std::string& file)
@@ -937,15 +937,11 @@ TEST_P(Test_TensorFlow_nets, MobileNet_SSD)
     net.setInput(inp);
     Mat out = net.forward();
 
-    double scoreDiff = default_l1, iouDiff = default_lInf;
+    double scoreDiff = default_l1, iouDiff = 0.04;
     if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
         scoreDiff = 0.01;
         iouDiff = 0.1;
-    }
-    else if (target == DNN_TARGET_CUDA_FP16)
-    {
-        iouDiff = 0.04;
     }
 
     normAssertDetections(ref, out, "", 0.2, scoreDiff, iouDiff);

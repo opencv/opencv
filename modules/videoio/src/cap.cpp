@@ -862,14 +862,15 @@ String VideoWriter::getBackendName() const
     return cv::videoio_registry::getBackendName(static_cast<VideoCaptureAPIs>(api));
 }
 
-void VideoWriter::write(InputArray image)
+bool VideoWriter::write(InputArray image)
 {
     CV_INSTRUMENT_REGION();
 
     if (iwriter)
     {
-        iwriter->write(image);
+        return iwriter->write(image);
     }
+    return false;
 }
 
 VideoWriter& VideoWriter::operator << (const Mat& image)

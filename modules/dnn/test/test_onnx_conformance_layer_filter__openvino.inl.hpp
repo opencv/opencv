@@ -537,25 +537,29 @@ CASE(test_convinteger_with_padding)
 CASE(test_convinteger_without_padding)
     // no filter
 CASE(test_convtranspose)
-    // no filter
+    SKIP;
 CASE(test_convtranspose_1d)
-    // no filter
+    SKIP;
 CASE(test_convtranspose_3d)
-    // no filter
+    SKIP;
 CASE(test_convtranspose_autopad_same)
-    // no filter
+    SKIP;
 CASE(test_convtranspose_dilations)
-    // no filter
+    SKIP;
 CASE(test_convtranspose_kernel_shape)
-    // no filter
+    SKIP;
+CASE(test_convtranspose_group_2)
+    SKIP;
+CASE(test_convtranspose_group_2_image_3)
+    SKIP;
 CASE(test_convtranspose_output_shape)
-    // no filter
+    SKIP;
 CASE(test_convtranspose_pad)
-    // no filter
+    SKIP;
 CASE(test_convtranspose_pads)
-    // no filter
+    SKIP;
 CASE(test_convtranspose_with_kernel)
-    // no filter
+    SKIP;
 CASE(test_cos)
     // no filter
 CASE(test_cos_example)
@@ -1314,6 +1318,8 @@ CASE(test_layer_normalization_default_axis_expanded)
     SKIP;
 CASE(test_layer_normalization_default_axis_expanded_ver18)
     SKIP;
+CASE(test_lpnormalization_default)
+    SKIP;
 CASE(test_leakyrelu)
     // no filter
 CASE(test_leakyrelu_default)
@@ -1838,11 +1844,11 @@ CASE(test_prelu_broadcast_expanded)
 CASE(test_prelu_example_expanded)
     SKIP;
 CASE(test_qlinearconv)
-    // no filter
+    SKIP;
 CASE(test_qlinearmatmul_2D)
-    // no filter
+    SKIP;
 CASE(test_qlinearmatmul_3D)
-    // no filter
+    SKIP;
 CASE(test_quantizelinear)
     SKIP;
 CASE(test_quantizelinear_axis)

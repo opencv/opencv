@@ -48,6 +48,8 @@ public:
         return backendId == DNN_BACKEND_OPENCV;
     }
 
+    virtual bool alwaysSupportInplace() const CV_OVERRIDE { return true; }
+
     MatShape getOutShape(const MatShape& inpShape, const std::vector<int>& axes_) const
     {
         bool squeezeMask[MatShape::MAX_DIMS];
@@ -80,6 +82,8 @@ public:
         outShape.dims = j;
         return outShape;
     }
+
+    bool isDataShuffling() const CV_OVERRIDE { return true; }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int,

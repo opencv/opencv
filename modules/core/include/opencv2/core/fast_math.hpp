@@ -361,6 +361,7 @@ CV_INLINE int cvRound( int value )
 }
 
 /** @overload */
+CV_DISABLE_UBSAN
 CV_INLINE int cvFloor( float value )
 {
 #if defined CV__FASTMATH_ENABLE_GCC_MATH_BUILTINS || \

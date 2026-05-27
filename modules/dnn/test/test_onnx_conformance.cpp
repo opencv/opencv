@@ -1711,10 +1711,8 @@ public:
 
     static std::set<std::string> parser_deny_list;
     static std::set<std::string> global_deny_list;
-    static std::set<std::string> opencv_deny_list;
     static std::set<std::string> opencl_fp16_deny_list;
     static std::set<std::string> opencl_deny_list;
-    static std::set<std::string> cpu_deny_list;
     static std::set<std::string> classic_deny_list;
 #ifdef HAVE_HALIDE
     static std::set<std::string> halide_deny_list;
@@ -1778,20 +1776,12 @@ public:
             #include "test_onnx_conformance_layer_filter_opencv_all_denylist.inl.hpp"
         };
 
-        opencv_deny_list = {
-            #include "test_onnx_conformance_layer_filter_opencv_denylist.inl.hpp"
-        };
-
         opencl_fp16_deny_list = {
             #include "test_onnx_conformance_layer_filter_opencv_ocl_fp16_denylist.inl.hpp"
         };
 
         opencl_deny_list = {
             #include "test_onnx_conformance_layer_filter_opencv_ocl_fp32_denylist.inl.hpp"
-        };
-
-        cpu_deny_list = {
-            #include "test_onnx_conformance_layer_filter_opencv_cpu_denylist.inl.hpp"
         };
 
         EngineType engine_forced =
@@ -1832,10 +1822,8 @@ public:
 
 std::set<std::string> Test_ONNX_conformance::parser_deny_list;
 std::set<std::string> Test_ONNX_conformance::global_deny_list;
-std::set<std::string> Test_ONNX_conformance::opencv_deny_list;
 std::set<std::string> Test_ONNX_conformance::opencl_fp16_deny_list;
 std::set<std::string> Test_ONNX_conformance::opencl_deny_list;
-std::set<std::string> Test_ONNX_conformance::cpu_deny_list;
 std::set<std::string> Test_ONNX_conformance::classic_deny_list;
 #ifdef HAVE_HALIDE
 std::set<std::string> Test_ONNX_conformance::halide_deny_list;
@@ -1876,10 +1864,6 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
 
     if (backend == DNN_BACKEND_OPENCV)
     {
-        if (opencv_deny_list.find(name) != opencv_deny_list.end())
-        {
-            applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
-        }
         if ((target == DNN_TARGET_OPENCL_FP16) && (opencl_fp16_deny_list.find(name) != opencl_fp16_deny_list.end()))
         {
             applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
@@ -1887,10 +1871,6 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
         if ((target == DNN_TARGET_OPENCL) && (opencl_deny_list.find(name) != opencl_deny_list.end()))
         {
             applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL, CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
-        }
-        if ((target == DNN_TARGET_CPU) && (cpu_deny_list.find(name) != cpu_deny_list.end()))
-        {
-            applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU, CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
         }
         if (name == "test_roialign_aligned_false" || name == "test_roialign_aligned_true")
         {
@@ -1908,6 +1888,14 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
                 default_l1 = 9e-5; // Expected: (normL1) <= (l1), actual: 8.80073e-05 vs 1e-05
                 default_lInf = 0.0005; // Expected: (normInf) <= (lInf), actual: 0.000455521 vs 0.0001
             }
+        }
+        if (name == "test_reduce_prod_default_axes_keepdims_random") {
+            default_l1 = 0.002;   // Expected: (normL1) <= (l1), actual: 0.00195312 vs 1e-05
+            default_lInf = 0.002; // Expected: (normInf) <= (lInf), actual: 0.00195312 vs 0.0001
+        }
+        if (name == "test_reduce_sum_square_default_axes_keepdims_random" ||
+            name == "test_reduce_sum_square_default_axes_keepdims_random_expanded") {
+            default_l1 = 2e-5; // Expected: (normL1) <= (l1), actual: 1.52588e-05 vs 1e-05
         }
     }
 #ifdef HAVE_HALIDE

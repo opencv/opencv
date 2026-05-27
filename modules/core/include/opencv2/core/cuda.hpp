@@ -158,6 +158,10 @@ public:
     //! decreases reference counter, deallocate the data when reference counter reaches 0
     CV_WRAP void release();
 
+    //! allocates or reuses underlying storage to fit the requested 2D size and type (no-op if already compatible)
+    void fit(int rows, int cols, int type);
+    void fit(Size size, int type);
+
     //! swaps with other smart pointer
     CV_WRAP void swap(GpuMat& mat);
 
@@ -394,7 +398,7 @@ struct CV_EXPORTS_W GpuData
 class CV_EXPORTS_W GpuMatND
 {
 public:
-    using SizeArray = std::vector<int>;
+    using SizeArray = MatShape;
     using StepArray = std::vector<size_t>;
     using IndexArray = std::vector<int>;
 
@@ -405,14 +409,14 @@ public:
     GpuMatND();
 
     /** @overload
-    @param size Array of integers specifying an n-dimensional array shape.
+    @param shape Array of integers specifying an n-dimensional array shape.
     @param type Array type. Use CV_8UC1, ..., CV_16FC4 to create 1-4 channel matrices, or
     CV_8UC(n), ..., CV_64FC(n) to create multi-channel (up to CV_CN_MAX channels) matrices.
     */
-    GpuMatND(SizeArray size, int type);
+    GpuMatND(const MatShape& shape, int type);
 
     /** @overload
-    @param size Array of integers specifying an n-dimensional array shape.
+    @param shape Array of integers specifying an n-dimensional array shape.
     @param type Array type. Use CV_8UC1, ..., CV_16FC4 to create 1-4 channel matrices, or
     CV_8UC(n), ..., CV_64FC(n) to create multi-channel (up to CV_CN_MAX channels) matrices.
     @param data Pointer to the user data. Matrix constructors that take data and step parameters do not
@@ -420,11 +424,11 @@ public:
     data, which means that no data is copied. This operation is very efficient and can be used to
     process external data using OpenCV functions. The external data is not automatically deallocated, so
     you should take care of it.
-    @param step Array of _size.size() or _size.size()-1 steps in case of a multi-dimensional array
+    @param step Array of shape.size() or shape.size()-1 steps in case of a multi-dimensional array
     (if specified, the last step must be equal to the element size, otherwise it will be added as such).
     If not specified, the matrix is assumed to be continuous.
     */
-    GpuMatND(SizeArray size, int type, void* data, StepArray step = StepArray());
+    GpuMatND(const MatShape& shape, int type, void* data, StepArray step = StepArray());
 
     /** @brief Allocates GPU memory.
     Suppose there is some GPU memory already allocated. In that case, this method may choose to reuse that
@@ -433,11 +437,18 @@ public:
     (i.e., isSubmatrix() is false). In other words, this method guarantees that the GPU memory allocated by
     this method is always continuous and is not a sub-region of another GpuMatND.
     */
-    void create(SizeArray size, int type);
+    void create(const MatShape& shape, int type);
 
     void release();
 
     void swap(GpuMatND& m) noexcept;
+
+    /** @brief Allocates or reuses underlying storage to fit the requested n-D size and type.
+    - No-op if already compatible (sufficient capacity, continuous, not a submatrix, not external, no ROI).
+    - Reallocates otherwise.
+    Mirrors 2D GpuMat::fit semantics for multi-dimensional tensors.
+    */
+    void fit(const MatShape& shape, int type);
 
     /** @brief Creates a full copy of the array and the underlying data.
     The method creates a full copy of the array. It mimics the behavior of Mat::clone(), i.e.
@@ -538,7 +549,7 @@ public:
 
 private:
     //! internal use
-    void setFields(SizeArray size, int type, StepArray step = StepArray());
+    void setFields(MatShape size, int type, StepArray step = StepArray());
 
 public:
     /*! includes several bit-fields:
@@ -553,7 +564,7 @@ public:
     int dims;
 
     //! shape of this array
-    SizeArray size;
+    MatShape size;
 
     /*! step values
     Their semantics is identical to the semantics of step for Mat.
@@ -579,6 +590,11 @@ private:
     */
     size_t offset;
 };
+
+// Provide namespace-level aliases for nested array types used in bindings
+using SizeArray = GpuMatND::SizeArray;
+using StepArray = GpuMatND::StepArray;
+using IndexArray = GpuMatND::IndexArray;
 
 /** @brief Creates a continuous matrix.
 
@@ -1326,15 +1342,6 @@ private:
 
 CV_EXPORTS_W void printCudaDeviceInfo(int device);
 CV_EXPORTS_W void printShortCudaDeviceInfo(int device);
-
-/** @brief Converts an array to half precision floating number.
-
-@param _src input array.
-@param _dst output array.
-@param stream Stream for the asynchronous version.
-@sa cv::Mat::convertTo
-*/
-CV_EXPORTS void convertFp16(InputArray _src, OutputArray _dst, Stream& stream = Stream::Null());
 
 //! @} cudacore_init
 

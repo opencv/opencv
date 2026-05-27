@@ -482,7 +482,7 @@ TEST(Imgcodecs_APNG, imwritemulti_gray)
     string output = cv::tempfile(".png");
     EXPECT_TRUE(imwrite(output, s_animation.frames));
     vector<Mat> read_frames;
-    EXPECT_TRUE(imreadmulti(output, read_frames));
+    EXPECT_TRUE(imreadmulti(output, read_frames, cv::IMREAD_ANYCOLOR));
     EXPECT_EQ(1, read_frames[0].channels());
     read_frames.clear();
     EXPECT_TRUE(imreadmulti(output, read_frames, IMREAD_UNCHANGED));
