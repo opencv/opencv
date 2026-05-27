@@ -20,10 +20,22 @@ else()
     ocv_clear_vars(ZLIB_FOUND)
   else()
     ocv_clear_internal_cache_vars(ZLIB_LIBRARY ZLIB_INCLUDE_DIR)
-  if(ANDROID)
+  # The Android-only suffix override below (PR #19522, 2021) forces
+  # find_library to look for libz.so so opencv links against the system
+  # libz shipped with the device, not the NDK's libz.a. That assumption
+  # breaks when a downstream package manager (Conan, Hunter, …) provides
+  # its own FindZLIB.cmake on CMAKE_MODULE_PATH and ships a static
+  # libz.a: the .so-only restriction propagates into the user-provided
+  # FindZLIB.cmake's internal find_library() and configure fails with
+  # "Library 'z' not found in package". Detect that case by looking for
+  # a caller-provided FindZLIB.cmake on the module path and skip the
+  # override so the caller's find_package wins.
+  find_file(_OCV_USER_FINDZLIB FindZLIB.cmake PATHS ${CMAKE_MODULE_PATH} NO_DEFAULT_PATH)
+  if(ANDROID AND NOT _OCV_USER_FINDZLIB)
     set(_zlib_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
     set(CMAKE_FIND_LIBRARY_SUFFIXES .so)
   endif()
+  unset(_OCV_USER_FINDZLIB CACHE)
   if(QNX)
     set(ZLIB_FOUND TRUE)
     set(ZLIB_LIBRARY z)
@@ -31,7 +43,7 @@ else()
   else()
     find_package(ZLIB "${MIN_VER_ZLIB}")
   endif()
-  if(ANDROID)
+  if(ANDROID AND DEFINED _zlib_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES)
     set(CMAKE_FIND_LIBRARY_SUFFIXES ${_zlib_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES})
     unset(_zlib_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES)
   endif()
