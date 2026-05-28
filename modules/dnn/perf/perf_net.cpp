@@ -29,8 +29,9 @@ public:
     }
 
     void processNet(std::string weights, std::string proto,
-                    const std::vector<std::tuple<Mat, std::string>>& inputs, const std::string& outputLayer = ""){
-        weights = findDataFile(weights);
+                    const std::vector<std::tuple<Mat, std::string>>& inputs, const std::string& outputLayer = "",
+                    bool weightsRequired = false){
+        weights = findDataFile(weights, weightsRequired);
         if (!proto.empty())
             proto = findDataFile(proto);
         net = readNet(weights, proto);
@@ -79,18 +80,20 @@ public:
     }
 
     void processNet(std::string weights, std::string proto,
-                    Mat &input, const std::string& outputLayer = "")
+                    Mat &input, const std::string& outputLayer = "",
+                    bool weightsRequired = false)
     {
-        processNet(weights, proto, {std::make_tuple(input, "")}, outputLayer);
+        processNet(weights, proto, {std::make_tuple(input, "")}, outputLayer, weightsRequired);
     }
 
     void processNet(std::string weights, std::string proto,
-                    Size inpSize, const std::string& outputLayer = "")
+                    Size inpSize, const std::string& outputLayer = "",
+                    bool weightsRequired = false)
     {
         Mat input_data(inpSize, CV_32FC3);
         randu(input_data, 0.0f, 1.0f);
         Mat input = blobFromImage(input_data, 1.0, Size(), Scalar(), false);
-        processNet(weights, proto, input, outputLayer);
+        processNet(weights, proto, input, outputLayer, weightsRequired);
     }
 };
 
@@ -333,15 +336,15 @@ PERF_TEST_P_(DNNTestNetwork, EfficientNet)
 }
 
 PERF_TEST_P_(DNNTestNetwork, YuNet_320) {
-    processNet("dnn/onnx/models/yunet-202605.onnx", "", cv::Size(320, 320));
+    processNet("dnn/onnx/models/yunet-202605.onnx", "", cv::Size(320, 320), "", true);
 }
 
 PERF_TEST_P_(DNNTestNetwork, YuNet_640) {
-    processNet("dnn/onnx/models/yunet-202605.onnx", "", cv::Size(640, 640));
+    processNet("dnn/onnx/models/yunet-202605.onnx", "", cv::Size(640, 640), "", true);
 }
 
 PERF_TEST_P_(DNNTestNetwork, YuNet_1280) {
-    processNet("dnn/onnx/models/yunet-202605.onnx", "", cv::Size(1280, 736));
+    processNet("dnn/onnx/models/yunet-202605.onnx", "", cv::Size(1280, 736), "", true);
 }
 
 PERF_TEST_P_(DNNTestNetwork, SFace) {

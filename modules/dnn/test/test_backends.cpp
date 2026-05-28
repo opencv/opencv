@@ -33,7 +33,7 @@ public:
         l1 = l1 ? l1 : default_l1;
         lInf = lInf ? lInf : default_lInf;
 
-        weights = findDataFile(weights);
+        weights = findDataFile(weights, false);
         if (!proto.empty())
             proto = findDataFile(proto);
 
@@ -394,11 +394,15 @@ TEST_P(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
 
 TEST_P(DNNTestNetwork, YuNet)
 {
+    checkBackend();
     Mat img = imread(findDataFile("gpu/lbpcascade/er.png"));
     Mat resized;
     resize(img, resized, Size(320, 320));
-    Mat inp = blobFromImage(resized);
-    processNet("dnn/onnx/models/yunet-202605.onnx", "", inp);
+    net = readNet(findDataFile("dnn/onnx/models/yunet-202605.onnx"));
+    net.setInput(blobFromImage(resized));
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+    net.forward();
     expectNoFallbacksFromIE(net);
 }
 
