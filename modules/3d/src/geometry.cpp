@@ -554,4 +554,3 @@ float cv::intersectConvexConvex( InputArray _p1, InputArray _p2, OutputArray _p1
     }
     return (float)fabs(area);
 }
-

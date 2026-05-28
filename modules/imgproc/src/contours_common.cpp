@@ -6,6 +6,8 @@
 #include "contours_common.hpp"
 #include <map>
 #include <limits>
+#include "opencv2/core/hal/intrin.hpp"
+#include "opencv2/core/check.hpp"
 
 using namespace std;
 using namespace cv;
@@ -68,65 +70,65 @@ static Rect maskBoundingRect( const Mat& img )
                     xmax = j;
                 have_nz = 1;
             }
-            if( offset < size.width )
+        if( offset < size.width )
+        {
+            xmin -= offset;
+            xmax -= offset;
+            size.width -= offset;
+            j = 0;
+            for( ; j <= xmin - 4; j += 4 )
+                if( *((int*)(ptr+j)) )
+                    break;
+            for( ; j < xmin; j++ )
+                if( ptr[j] )
+                {
+                    xmin = j;
+                    if( j > xmax )
+                        xmax = j;
+                    have_nz = 1;
+                    break;
+                }
+            k_min = MAX(j-1, xmax);
+            k = size.width - 1;
+            for( ; k > k_min && (k&3) != 3; k-- )
+                if( ptr[k] )
+                    break;
+            if( k > k_min && (k&3) == 3 )
             {
-                xmin -= offset;
-                xmax -= offset;
-                size.width -= offset;
-                j = 0;
-                for( ; j <= xmin - 4; j += 4 )
+                for( ; k > k_min+3; k -= 4 )
+                    if( *((int*)(ptr+k-3)) )
+                        break;
+            }
+            for( ; k > k_min; k-- )
+                if( ptr[k] )
+                {
+                    xmax = k;
+                    have_nz = 1;
+                    break;
+                }
+            if( !have_nz )
+            {
+                j &= ~3;
+                for( ; j <= k - 3; j += 4 )
                     if( *((int*)(ptr+j)) )
                         break;
-                for( ; j < xmin; j++ )
+                for( ; j <= k; j++ )
                     if( ptr[j] )
                     {
-                        xmin = j;
-                        if( j > xmax )
-                            xmax = j;
                         have_nz = 1;
                         break;
                     }
-                    k_min = MAX(j-1, xmax);
-                k = size.width - 1;
-                for( ; k > k_min && (k&3) != 3; k-- )
-                    if( ptr[k] )
-                        break;
-                if( k > k_min && (k&3) == 3 )
-                {
-                    for( ; k > k_min+3; k -= 4 )
-                        if( *((int*)(ptr+k-3)) )
-                            break;
-                }
-                for( ; k > k_min; k-- )
-                    if( ptr[k] )
-                    {
-                        xmax = k;
-                        have_nz = 1;
-                        break;
-                    }
-                    if( !have_nz )
-                    {
-                        j &= ~3;
-                        for( ; j <= k - 3; j += 4 )
-                            if( *((int*)(ptr+j)) )
-                                break;
-                        for( ; j <= k; j++ )
-                            if( ptr[j] )
-                            {
-                                have_nz = 1;
-                                break;
-                            }
-                    }
-                    xmin += offset;
-                    xmax += offset;
-                    size.width += offset;
             }
-            if( have_nz )
-            {
-                if( ymin < 0 )
-                    ymin = i;
-                ymax = i;
-            }
+            xmin += offset;
+            xmax += offset;
+            size.width += offset;
+        }
+        if( have_nz )
+        {
+            if( ymin < 0 )
+                ymin = i;
+            ymax = i;
+        }
     }
 
     if( xmin >= size.width )
