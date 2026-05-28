@@ -1164,7 +1164,7 @@ static void convInt8BlockDepthwise(const void* inp_, const void* residual_,
     int ntiles = (planeblocks_ + TILE - 1) / TILE;
     int total_tasks = N * K1 * ntiles;
 #if CV_AVX2 && (defined(__x86_64__) || defined(_M_X64))
-    constexpr int WBUF_SIZE = 128 * 8;  // 128 * K0, K0=8; named for MSVC
+    static constexpr int WBUF_SIZE = 128 * 8;  // 128 * K0, K0=8; static for MSVC 19.29
 #endif
 
     parallel_for_(Range(0, total_tasks), [&](const Range& range) {
@@ -1587,7 +1587,7 @@ void convInt8Block(const void* inp_, const void* residual_,
 
     int total_blocks = N * ngroups * Kblk;
 #if CV_AVX2
-    constexpr int SUMBUF_SIZE = 8 * 8;  // SPAT_BLOCK_SIZE * K0, both=8; named for MSVC
+    static constexpr int SUMBUF_SIZE = 8 * 8;  // SPAT_BLOCK_SIZE * K0, both=8; static for MSVC 19.29
 #endif
 
     parallel_for_(Range(0, total_blocks), [&](const Range& range) {
