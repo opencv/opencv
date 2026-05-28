@@ -8,6 +8,7 @@
 #include "opencv2/core.hpp"
 #include "opencv2/core/utils/logger.hpp"
 
+#include "opencv2/3d/2d.hpp"
 #include "opencv2/3d/depth.hpp"
 #include "opencv2/3d/odometry.hpp"
 #include "opencv2/3d/odometry_frame.hpp"

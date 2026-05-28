@@ -41,6 +41,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/photo.hpp"
+#include "opencv2/3d.hpp"
 
 #include "seamless_cloning.hpp"
 

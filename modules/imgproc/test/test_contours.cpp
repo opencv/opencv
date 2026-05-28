@@ -208,20 +208,6 @@ TEST(Imgproc_DrawContours, regression_26264)
     ASSERT_EQ(0, cvtest::norm(img2, img3, NORM_INF));
 }
 
-TEST(Imgproc_PointPolygonTest, regression_10222)
-{
-    vector<Point> contour;
-    contour.push_back(Point(0, 0));
-    contour.push_back(Point(0, 100000));
-    contour.push_back(Point(100000, 100000));
-    contour.push_back(Point(100000, 50000));
-    contour.push_back(Point(100000, 0));
-
-    const Point2f point(40000, 40000);
-    const double result = cv::pointPolygonTest(contour, point, false);
-    EXPECT_GT(result, 0) << "Desired result: point is inside polygon - actual result: point is not inside polygon";
-}
-
 TEST(Imgproc_DrawContours, MatListOfMatIntScalarInt)
 {
     Mat gray0 = Mat::zeros(10, 10, CV_8U);

@@ -145,21 +145,6 @@ public class ImgprocTest extends OpenCVTestCase {
         assertEquals(src.rows(), Core.countNonZero(dst));
     }
 
-    public void testApproxPolyDP() {
-        MatOfPoint2f curve = new MatOfPoint2f(new Point(1, 3), new Point(2, 4), new Point(3, 5), new Point(4, 4), new Point(5, 3));
-
-        MatOfPoint2f approxCurve = new MatOfPoint2f();
-
-        Imgproc.approxPolyDP(curve, approxCurve, EPS, true);
-
-        List<Point> approxCurveGold =  new ArrayList<Point>(3);
-        approxCurveGold.add(new Point(1, 3));
-        approxCurveGold.add(new Point(3, 5));
-        approxCurveGold.add(new Point(5, 3));
-
-        assertListPointEquals(approxCurve.toList(), approxCurveGold, EPS);
-    }
-
     public void testArcLength() {
         MatOfPoint2f curve = new MatOfPoint2f(new Point(1, 3), new Point(2, 4), new Point(3, 5), new Point(4, 4), new Point(5, 3));
 
@@ -410,65 +395,6 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truthMap1, dstmap1);
         Mat truthMap2 = new Mat(1, 3, CvType.CV_16UC1, new Scalar(0));
         assertMatEqual(truthMap2, dstmap2);
-    }
-
-    public void testConvexHullMatMat() {
-        MatOfPoint points = new MatOfPoint(
-                new Point(20, 0),
-                new Point(40, 0),
-                new Point(30, 20),
-                new Point(0,  20),
-                new Point(20, 10),
-                new Point(30, 10)
-        );
-
-        MatOfInt hull = new MatOfInt();
-
-        Imgproc.convexHull(points, hull);
-
-        MatOfInt expHull = new MatOfInt(
-                0, 1, 2, 3
-        );
-        assertMatEqual(expHull, hull.reshape(1, (int)hull.total()), EPS);
-    }
-
-    public void testConvexHullMatMatBooleanBoolean() {
-        MatOfPoint points = new MatOfPoint(
-                new Point(2, 0),
-                new Point(4, 0),
-                new Point(3, 2),
-                new Point(0, 2),
-                new Point(2, 1),
-                new Point(3, 1)
-        );
-
-        MatOfInt hull = new MatOfInt();
-
-        Imgproc.convexHull(points, hull, true);
-
-        MatOfInt expHull = new MatOfInt(
-                3, 2, 1, 0
-        );
-        assertMatEqual(expHull, hull.reshape(1, hull.cols()), EPS);
-    }
-
-    public void testConvexityDefects() {
-        MatOfPoint points = new MatOfPoint(
-                new Point(20, 0),
-                new Point(40, 0),
-                new Point(30, 20),
-                new Point(0,  20),
-                new Point(20, 10),
-                new Point(30, 10)
-        );
-
-        MatOfInt hull = new MatOfInt();
-        Imgproc.convexHull(points, hull);
-
-        MatOfInt4 convexityDefects = new MatOfInt4();
-        Imgproc.convexityDefects(points, hull, convexityDefects);
-
-        assertMatEqual(new MatOfInt4(3, 0, 5, 3620), convexityDefects.reshape(4, convexityDefects.cols()));
     }
 
     public void testCornerEigenValsAndVecsMatMatIntInt() {
@@ -789,33 +715,6 @@ public class ImgprocTest extends OpenCVTestCase {
         hierarchy.get(0, 0, iBuff);
         Log.d("findContours", Arrays.toString(iBuff));
         */
-    }
-
-    public void testFitEllipse() {
-        MatOfPoint2f points = new MatOfPoint2f(new Point(0, 0), new Point(-1, 1), new Point(1, 1), new Point(1, -1), new Point(-1, -1));
-        RotatedRect rrect = new RotatedRect();
-
-        rrect = Imgproc.fitEllipse(points);
-
-        double FIT_ELLIPSE_CENTER_EPS = 0.01;
-        double FIT_ELLIPSE_SIZE_EPS = 0.4;
-
-        assertEquals(0.0, rrect.center.x, FIT_ELLIPSE_CENTER_EPS);
-        assertEquals(0.0, rrect.center.y, FIT_ELLIPSE_CENTER_EPS);
-        assertEquals(2.828, rrect.size.width, FIT_ELLIPSE_SIZE_EPS);
-        assertEquals(2.828, rrect.size.height, FIT_ELLIPSE_SIZE_EPS);
-    }
-
-    public void testFitLine() {
-        Mat points = new Mat(1, 4, CvType.CV_32FC2);
-        points.put(0, 0, 0, 0, 2, 3, 3, 4, 5, 8);
-
-        Mat linePoints = new Mat(4, 1, CvType.CV_32FC1);
-        linePoints.put(0, 0, 0.53198653, 0.84675282, 2.5, 3.75);
-
-        Imgproc.fitLine(points, dst, Imgproc.DIST_L12, 0, 0.01, 0.01);
-
-        assertMatEqual(linePoints, dst, EPS);
     }
 
     public void testFloodFillMatMatPointScalar() {
@@ -1243,16 +1142,6 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
-    public void testIsContourConvex() {
-        MatOfPoint contour1 = new MatOfPoint(new Point(0, 0), new Point(10, 0), new Point(10, 10), new Point(5, 4));
-
-        assertFalse(Imgproc.isContourConvex(contour1));
-
-        MatOfPoint contour2 = new MatOfPoint(new Point(0, 0), new Point(10, 0), new Point(10, 10), new Point(5, 6));
-
-        assertTrue(Imgproc.isContourConvex(contour2));
-    }
-
     public void testLaplacianMatMatInt() {
         Imgproc.Laplacian(gray0, dst, CvType.CV_8U);
 
@@ -1282,17 +1171,6 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
-    public void testMatchShapes() {
-        Mat contour1 = new Mat(1, 4, CvType.CV_32FC2);
-        Mat contour2 = new Mat(1, 4, CvType.CV_32FC2);
-        contour1.put(0, 0, 1, 1, 5, 1, 4, 3, 6, 2);
-        contour2.put(0, 0, 1, 1, 6, 1, 4, 1, 2, 5);
-
-        double distance = Imgproc.matchShapes(contour1, contour2, Imgproc.CONTOURS_MATCH_I1, 1);
-
-        assertEquals(2.81109697365334, distance, EPS);
-    }
-
     public void testMatchTemplate() {
         Mat image = new Mat(imgprocSz, imgprocSz, CvType.CV_8U);
         Mat templ = new Mat(imgprocSz, imgprocSz, CvType.CV_8U);
@@ -1317,27 +1195,6 @@ public class ImgprocTest extends OpenCVTestCase {
         Imgproc.medianBlur(gray2, dst, 3);
         assertMatEqual(gray2, dst);
         // TODO_: write better test
-    }
-
-    public void testMinAreaRect() {
-        MatOfPoint2f points = new MatOfPoint2f(new Point(1, 1), new Point(5, 1), new Point(4, 3), new Point(6, 2));
-
-        RotatedRect rrect = Imgproc.minAreaRect(points);
-
-        assertEquals(new Size(2, 5), rrect.size);
-        assertEquals(-90., rrect.angle);
-        assertEquals(new Point(3.5, 2), rrect.center);
-    }
-
-    public void testMinEnclosingCircle() {
-        MatOfPoint2f points = new MatOfPoint2f(new Point(0, 0), new Point(-100, 0), new Point(0, -100), new Point(100, 0), new Point(0, 100));
-        Point actualCenter = new Point();
-        float[] radius = new float[1];
-
-        Imgproc.minEnclosingCircle(points, actualCenter, radius);
-
-        assertEquals(new Point(0, 0), actualCenter);
-        assertEquals(100.0f, radius[0], 1.0);
     }
 
     public void testMomentsMat() {
@@ -1387,15 +1244,6 @@ public class ImgprocTest extends OpenCVTestCase {
         };
         assertMatEqual(truth, dst);
         // TODO_: write better test
-    }
-
-    public void testPointPolygonTest() {
-        MatOfPoint2f contour = new MatOfPoint2f(new Point(0, 0), new Point(1, 3), new Point(3, 4), new Point(4, 3), new Point(2, 1));
-        double sign1 = Imgproc.pointPolygonTest(contour, new Point(2, 2), false);
-        assertEquals(1.0, sign1);
-
-        double sign2 = Imgproc.pointPolygonTest(contour, new Point(4, 4), true);
-        assertEquals(-Math.sqrt(0.5), sign2);
     }
 
     public void testPreCornerDetectMatMatInt() {

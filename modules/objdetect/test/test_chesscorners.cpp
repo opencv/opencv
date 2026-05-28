@@ -43,6 +43,7 @@
 #include "test_chessboardgenerator.hpp"
 
 #include <functional>
+#include <numeric>
 
 namespace opencv_test { namespace {
 
