@@ -72,8 +72,8 @@ ImgWarpFunc getImgWarpFunc(int type, int interpolation)
     return (ImgWarpFunc)nullptr;
 }
 
-static bool anyWarp(const Mat& src, const Mat& M_, const Mat& mapx, const Mat& mapy, Mat& dst,
-                    int interpolation, int borderType_, const Scalar& borderValue, bool relativeMap_)
+static bool genericWarp(const Mat& src, const Mat& M_, const Mat& mapx, const Mat& mapy, Mat& dst,
+                        int interpolation, int borderType_, const Scalar& borderValue, bool relativeMap_)
 {
     constexpr int MAX_CHANNELS = 4;
     int srctype = src.type();
@@ -115,6 +115,11 @@ static bool anyWarp(const Mat& src, const Mat& M_, const Mat& mapx, const Mat& m
     int64_t borderValBuf_[MAX_CHANNELS];
     scalarToRawData(borderValue, borderValBuf_, src.type());
 
+//    printf("~~~~~~~~~~~~~~~~~~~~~~~~~~ mode: %s%s%s ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n",
+//           (M_.empty() ? "remap" : M_.rows == 2 ? "warpaffine" : "warpperspective"),
+//           (M_.empty() && mapx.depth() < CV_32F ? " fixedpoint" : ""),
+//           (M_.empty() && relativeMap_ ? " relative" : ""));
+
     parallel_for_(Range(0, dst.rows), [&](const Range& range) {
         constexpr float FIXPT_SCALE = 1.f/32;
         constexpr int BLOCK_SIZE = 128;
@@ -130,7 +135,7 @@ static bool anyWarp(const Mat& src, const Mat& M_, const Mat& mapx, const Mat& m
         bool warpAffine = warping && M_.rows == 2;
         bool warpPerspective = warping && M_.rows == 3;
 
-        bool relativeMap = relativeMap_;
+        bool relativeMap = relativeMap_ && !warping;
         float relscale = relativeMap ? 1.f : 0.f;
         bool interleavedmap = !warping && (mapx.type() == CV_32FC2);
         bool planarmap = !warping && (mapx.type() == mapy.type());
@@ -156,6 +161,8 @@ static bool anyWarp(const Mat& src, const Mat& M_, const Mat& mapx, const Mat& m
             const float* xfptr = planarmap ? mapx.ptr<float>(y) : nullptr;
             const float* yfptr = planarmap ? mapy.ptr<float>(y) : nullptr;
             float y0 = relativeMap ? float(y) : 0.f;
+
+            //printf("y = %d: ", y);
 
             for (int x = 0; x < dstcols; x += BLOCK_SIZE) {
                 int blocksize = std::min(BLOCK_SIZE, dstcols - x);
@@ -201,9 +208,13 @@ static bool anyWarp(const Mat& src, const Mat& M_, const Mat& mapx, const Mat& m
                     xbufptr = xfptr + x;
                     ybufptr = yfptr + x;
                 }
+
+                //for (int dx = 0; dx < blocksize; dx++)
+                //    printf("(%.2f, %.2f), ", xbufptr[dx], ybufptr[dx]);
                 func(xbufptr, ybufptr, blocksize, srcdata, srcstep, srcsize,
                      dstptr + x*bpp, fparams, borderType, borderValBuf);
             }
+            //printf("\n");
         }
     });
 
@@ -1450,7 +1461,7 @@ void cv::remap( InputArray _src, OutputArray _dst,
     if( interpolation == INTER_AREA )
         interpolation = INTER_LINEAR;
 
-    if (anyWarp(src, Mat(), map1, map2, dst, interpolation, borderType, borderValue, hasRelativeFlag)) {
+    if (genericWarp(src, Mat(), map1, map2, dst, interpolation, borderType, borderValue, hasRelativeFlag)) {
         return;
     }
 
@@ -2464,11 +2475,12 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
                                         interpolation != INTER_CUBIC) );
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() &&
-               _src.cols() <= SHRT_MAX && _src.rows() <= SHRT_MAX,
+               _src.cols() <= SHRT_MAX && _src.rows() <= SHRT_MAX &&
+               interpolation != INTER_CUBIC,
                ocl_warpTransform_cols4(_src, _dst, _M0, dsize, flags, borderType,
                                        borderValue, OCL_OP_AFFINE))
 
-    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() && interpolation != INTER_CUBIC,
                ocl_warpTransform(_src, _dst, _M0, dsize, flags, borderType,
                                  borderValue, OCL_OP_AFFINE))
 
@@ -2499,7 +2511,7 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
         M[2] = b1; M[5] = b2;
     }
 
-    if (anyWarp(src, matM, Mat(), Mat(), dst, interpolation, borderType, borderValue, false)) {
+    if (genericWarp(src, matM, Mat(), Mat(), dst, interpolation, borderType, borderValue, false)) {
         return;
     }
 
@@ -3022,12 +3034,16 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
 
     CV_Assert( _src.total() > 0 );
 
+    int interpolation = flags & INTER_MAX;
+
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() &&
-               _src.cols() <= SHRT_MAX && _src.rows() <= SHRT_MAX,
+               _src.cols() <= SHRT_MAX && _src.rows() <= SHRT_MAX &&
+               interpolation != INTER_CUBIC,
                ocl_warpTransform_cols4(_src, _dst, _M0, dsize, flags, borderType, borderValue,
                                        OCL_OP_PERSPECTIVE))
 
-    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() &&
+               interpolation != INTER_CUBIC,
                ocl_warpTransform(_src, _dst, _M0, dsize, flags, borderType, borderValue,
                               OCL_OP_PERSPECTIVE))
 
@@ -3040,7 +3056,7 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
 
     double M[9];
     Mat matM(3, 3, CV_64F, M);
-    int interpolation = flags & INTER_MAX;
+
     if( interpolation == INTER_AREA )
         interpolation = INTER_LINEAR;
 
@@ -3050,7 +3066,7 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
     if( !(flags & WARP_INVERSE_MAP) )
         invert(matM, matM);
 
-    if (anyWarp(src, matM, Mat(), Mat(), dst, interpolation, borderType, borderValue, false)) {
+    if (genericWarp(src, matM, Mat(), Mat(), dst, interpolation, borderType, borderValue, false)) {
         return;
     }
 

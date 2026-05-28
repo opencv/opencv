@@ -1128,7 +1128,7 @@ TEST(Imgproc_Warping, playground)
     auto ts = cvtest::TS::ptr();
     Mat img0 = imread(string(ts->get_data_path()) + "stereomatching/datasets/tsukuba/im2.png", 1), img1, img;
     int iangle = -1;
-    int borderType = BORDER_CONSTANT;
+    int borderType = BORDER_REPLICATE;
     Scalar borderValue(0, 128, 0);
     int imgtype = CV_32F;
     int imgcn = 2;

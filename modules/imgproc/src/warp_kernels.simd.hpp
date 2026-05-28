@@ -7063,7 +7063,8 @@ static void bicubicFetchPixels(const _Tp* src, size_t srcstep, Size size, int cn
     int width = size.width, height = size.height;
     srcstep /= sizeof(_Tp);
     if (borderType == BORDER_CONSTANT || borderType == BORDER_TRANSPARENT) {
-        _Tp defR = defVal[0], defG = defVal[1], defB = defVal[2];
+        _Tp defR = defVal[0], defG = cn > 1 ? defVal[1] : _Tp();
+        _Tp defB = cn > 2 ? defVal[2] : _Tp(), defA = cn > 3 ? defVal[3] : _Tp();
         for (int i = 0; i < len; i++) {
             int x0 = tl_x[i], y0 = tl_y[i] + row;
             int x1 = x0 + 1, x2 = x0 + 2, x3 = x0 + 3;
@@ -7093,10 +7094,10 @@ static void bicubicFetchPixels(const _Tp* src, size_t srcstep, Size size, int cn
                     pixbuf[i + len*10] = (_Fp)(srcrow[x2 + 2]*mx2 + defB*(1 - mx2));
                     pixbuf[i + len*11] = (_Fp)(srcrow[x3 + 2]*mx3 + defB*(1 - mx3));
                     if (cn > 3) {
-                        pixbuf[i + len*12] = (_Fp)(srcrow[x0 + 3]*mx0 + defB*(1 - mx0));
-                        pixbuf[i + len*13] = (_Fp)(srcrow[x1 + 3]*mx1 + defB*(1 - mx1));
-                        pixbuf[i + len*14] = (_Fp)(srcrow[x2 + 3]*mx2 + defB*(1 - mx2));
-                        pixbuf[i + len*15] = (_Fp)(srcrow[x3 + 3]*mx3 + defB*(1 - mx3));
+                        pixbuf[i + len*12] = (_Fp)(srcrow[x0 + 3]*mx0 + defA*(1 - mx0));
+                        pixbuf[i + len*13] = (_Fp)(srcrow[x1 + 3]*mx1 + defA*(1 - mx1));
+                        pixbuf[i + len*14] = (_Fp)(srcrow[x2 + 3]*mx2 + defA*(1 - mx2));
+                        pixbuf[i + len*15] = (_Fp)(srcrow[x3 + 3]*mx3 + defA*(1 - mx3));
                     }
                 }
             }
@@ -8235,7 +8236,7 @@ bicubicVec(const float* srcx, const float* srcy, int len,
                 }
             }
         }
-        
+
         // store the result
         chtype outbuf[BATCH*NCHANNELS*4];
         if constexpr (NCHANNELS == 1) {
