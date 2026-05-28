@@ -444,7 +444,7 @@ Affects accuracy, especially when motionType == MOTION_TRANSLATION. (DEFAULT: IN
  */
 struct CV_EXPORTS_W_SIMPLE ECCParameters
 {
-    CV_WRAP ECCParameters() {}
+    CV_WRAP ECCParameters();
     CV_PROP_RW int motionType = MOTION_AFFINE;
     CV_PROP_RW cv::TermCriteria criteria;
     CV_PROP_RW std::vector<int> itersPerLevel;
