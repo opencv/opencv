@@ -1040,6 +1040,7 @@ ocv_register_modules()
 
 # Generate targets for documentation
 add_subdirectory(doc)
+add_subdirectory(docs_sphinx)
 
 # various data that is used by cv libraries and/or demo applications.
 # add_subdirectory(data)
@@ -1310,6 +1311,7 @@ ocv_build_features_string(docs_status
     IF TARGET doxygen_cpp THEN "doxygen"
     IF TARGET doxygen_python THEN "python"
     IF TARGET doxygen_javadoc THEN "javadoc"
+    IF TARGET sphinx THEN "sphinx"
     IF BUILD_opencv_js OR DEFINED OPENCV_JS_LOCATION THEN "js"
     ELSE "NO"
 )
