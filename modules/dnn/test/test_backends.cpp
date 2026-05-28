@@ -33,7 +33,7 @@ public:
         l1 = l1 ? l1 : default_l1;
         lInf = lInf ? lInf : default_lInf;
 
-        weights = findDataFile(weights, false);
+        weights = findDataFile(weights);
         if (!proto.empty())
             proto = findDataFile(proto);
 
