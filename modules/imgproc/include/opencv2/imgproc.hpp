@@ -871,6 +871,9 @@ enum ColorConversionCodes {
     COLOR_COLORCVT_MAX  = 155
 };
 
+//! @addtogroup imgproc_shape
+//! @{
+
 /** types of line
 @ingroup imgproc_draw
 */
