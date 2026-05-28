@@ -1130,15 +1130,21 @@ TEST(Imgproc_Warping, playground)
     int iangle = -1;
     int borderType = BORDER_CONSTANT;
     Scalar borderValue(0, 128, 0);
-    int imgtype = CV_8U;
-    int imgcn = 3;
-    double cvtscale = imgtype == CV_16U ? 256. : 1.;
+    int imgtype = CV_32F;
+    int imgcn = 2;
+    double cvtscale = imgtype == CV_16U ? 256. : imgtype == CV_32F ? 1./256 : 1.;
     if (imgcn == 1) {
         cvtColor(img0, img1, COLOR_BGR2GRAY);
     } else if (imgcn == 4) {
         cvtColor(img0, img1, COLOR_BGR2BGRA);
-    } else {
+    } else if (imgcn == 3) {
         img1 = img0;
+    } else {
+        CV_Assert(imgcn == 2);
+        std::vector<Mat> ch;
+        split(img0, ch);
+        ch.pop_back();
+        merge(ch, img1);
     }
     img1.convertTo(img, imgtype, cvtscale);
     Mat canvas0(img.size(), imgtype), canvas8;
@@ -1160,6 +1166,12 @@ TEST(Imgproc_Warping, playground)
         t0 = getTickCount() - t0;
 
         canvas0.convertTo(canvas8, CV_8U, 1./cvtscale);
+        if (canvas8.channels() == 2) {
+            std::vector<Mat> ch;
+            split(canvas8, ch);
+            ch.push_back(Mat::zeros(canvas8.size(), CV_8U));
+            merge(ch, canvas8);
+        }
         printf("opencv time = %.1fms\n", t0*1000./getTickFrequency());
         imshow("result (opencv)", canvas8);
         int c = waitKey(1);

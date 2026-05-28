@@ -85,7 +85,7 @@ static bool anyWarp(const Mat& src, const Mat& M_, const Mat& mapx, const Mat& m
 
     CV_Assert(src.type() == dst.type());
     CV_Assert(src.channels() <= MAX_CHANNELS);
-    float Mdata[9] = {1.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 1.f};
+    Matx33f Mdata(1.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 1.f);
 
     if (!M_.empty()) {
         if (!mapx.empty() || !mapy.empty()) {
@@ -93,7 +93,7 @@ static bool anyWarp(const Mat& src, const Mat& M_, const Mat& mapx, const Mat& m
         }
         CV_Assert(M_.size() == Size(3, 2) || M_.size() == Size(3, 3));
         CV_Assert(M_.type() == CV_32F || M_.type() == CV_64F);
-        Mat Mcopy(M_.size(), CV_32F, Mdata);
+        Mat Mcopy(M_.size(), CV_32F, Mdata.val);
         M_.convertTo(Mcopy, CV_32F);
     } else {
         if (mapx.empty()) {
@@ -106,7 +106,7 @@ static bool anyWarp(const Mat& src, const Mat& M_, const Mat& mapx, const Mat& m
             if (mapx.type() == mapy.type()) {
                 CV_Assert(mapx.type() == CV_32FC1);
             } else {
-                CV_Assert(mapx.type() == CV_16SC2 && mapy.type() == CV_16UC1);
+                CV_Assert(mapx.type() == CV_16SC2 && (mapy.type() == CV_16UC1 || mapy.type() == CV_16SC1));
             }
             CV_Assert(mapx.size() == mapy.size());
         }
@@ -132,24 +132,24 @@ static bool anyWarp(const Mat& src, const Mat& M_, const Mat& mapx, const Mat& m
 
         bool relativeMap = relativeMap_;
         float relscale = relativeMap ? 1.f : 0.f;
-        bool interleavedmap = !warping && (mapx.type() == CV_32F);
+        bool interleavedmap = !warping && (mapx.type() == CV_32FC2);
         bool planarmap = !warping && (mapx.type() == mapy.type());
-        bool fixedmap = !warping && (mapx.type() == CV_16UC2);
+        bool fixedmap = !warping && (mapx.type() == CV_16SC2);
 
-        float M[9];
-        for (int i = 0; i < 9; i++)
-            M[i] = Mdata[i];
+        CV_Assert(warping || interleavedmap || planarmap || fixedmap);
+
+        Matx33f M = Mdata;
         const uint8_t* borderValBuf = (const uint8_t*)borderValBuf_;
-        float M_xx = M[0], M_yx = M[3], M_zx = M[6];
+        float M_xx = M(0, 0), M_yx = M(1, 0), M_zx = M(2, 0);
         float xbuf[BLOCK_SIZE], ybuf[BLOCK_SIZE];
         const float* xbufptr = xbuf;
         const float* ybufptr = ybuf;
 
         for (int y = range.start; y < range.end; y++) {
             uint8_t* dstptr = dst.ptr(y);
-            float M_x = float(y)*M[1] + M[2];
-            float M_y = float(y)*M[4] + M[5];
-            float M_z = float(y)*M[7] + M[8];
+            float M_x = float(y)*M(0, 1) + M(0, 2);
+            float M_y = float(y)*M(1, 1) + M(1, 2);
+            float M_z = float(y)*M(2, 1) + M(2, 2);
             const Vec2s* xysptr = fixedmap ? mapx.ptr<Vec2s>(y) : nullptr;
             const ushort* idxptr = fixedmap ? mapy.ptr<ushort>(y) : nullptr;
             const Vec2f* xyfptr = interleavedmap ? mapx.ptr<Vec2f>(y) : nullptr;

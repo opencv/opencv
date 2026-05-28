@@ -7175,6 +7175,20 @@ static void bicubicFetchPixels(const _Tp* src, size_t srcstep, Size size, int cn
     V3 = buftype(srcrow[3]); \
     BICUBIC_UPDATE_ACC(acc_r, V0, V1, V2, V3, wy##row)
 
+#undef BICUBIC_PROCESS_INLIERS_C2_SCALAR
+#define BICUBIC_PROCESS_INLIERS_C2_SCALAR(row) \
+    srcrow = (const chtype*)((const uint8_t*)src + row*srcstep + tl_ofs); \
+    V0 = buftype(srcrow[0]); \
+    V1 = buftype(srcrow[2]); \
+    V2 = buftype(srcrow[4]); \
+    V3 = buftype(srcrow[6]); \
+    BICUBIC_UPDATE_ACC(acc_r, V0, V1, V2, V3, wy##row); \
+    V0 = buftype(srcrow[1]); \
+    V1 = buftype(srcrow[3]); \
+    V2 = buftype(srcrow[5]); \
+    V3 = buftype(srcrow[7]); \
+    BICUBIC_UPDATE_ACC(acc_g, V0, V1, V2, V3, wy##row)
+
 #undef BICUBIC_PROCESS_INLIERS_C3_SCALAR
 #define BICUBIC_PROCESS_INLIERS_C3_SCALAR(row) \
     srcrow = (const chtype*)((const uint8_t*)src + row*srcstep + tl_ofs); \
@@ -7251,6 +7265,14 @@ static void bicubicRef(const float* srcx, const float* srcy, int len,
                 BICUBIC_PROCESS_INLIERS_C1_SCALAR(2);
                 BICUBIC_PROCESS_INLIERS_C1_SCALAR(3);
                 dst[0] = saturate_cast<chtype>(acc_r);
+            } else if constexpr (NCHANNELS == 2) {
+                float acc_r = 0.f, acc_g = 0.f;
+                BICUBIC_PROCESS_INLIERS_C2_SCALAR(0);
+                BICUBIC_PROCESS_INLIERS_C2_SCALAR(1);
+                BICUBIC_PROCESS_INLIERS_C2_SCALAR(2);
+                BICUBIC_PROCESS_INLIERS_C2_SCALAR(3);
+                dst[0] = saturate_cast<chtype>(acc_r);
+                dst[1] = saturate_cast<chtype>(acc_g);
             } else if constexpr (NCHANNELS == 3) {
                 float acc_r = 0.f, acc_g = 0.f, acc_b = 0.f;
                 BICUBIC_PROCESS_INLIERS_C3_SCALAR(0);
@@ -8355,6 +8377,16 @@ bicubic8uC1(const float* srcx, const float* srcy, int len,
 }
 
 static void
+bicubic8uC2(const float* srcx, const float* srcy, int len,
+            const void* src, size_t srcstep, Size size,
+            uint8_t* dst, const float* params,
+            int borderType, uint8_t* borderVal)
+{
+    bicubicRef<uint8_t, 2>(srcx, srcy, len, src, srcstep, size,
+                           dst, params, borderType, borderVal);
+}
+
+static void
 bicubic8uC3(const float* srcx, const float* srcy, int len,
             const void* src, size_t srcstep, Size size,
             uint8_t* dst, const float* params,
@@ -8406,6 +8438,16 @@ bicubic16uC1(const float* srcx, const float* srcy, int len,
 }
 
 static void
+bicubic16uC2(const float* srcx, const float* srcy, int len,
+             const void* src, size_t srcstep, Size size,
+             uint16_t* dst, const float* params,
+             int borderType, uint16_t* borderVal)
+{
+    bicubicRef<uint16_t, 2>(srcx, srcy, len, src, srcstep, size,
+                            dst, params, borderType, borderVal);
+}
+
+static void
 bicubic16uC3(const float* srcx, const float* srcy, int len,
             const void* src, size_t srcstep, Size size,
              uint16_t* dst, const float* params,
@@ -8436,6 +8478,46 @@ bicubic16uC4(const float* srcx, const float* srcy, int len,
 }
 
 static void
+bicubic16sC1(const float* srcx, const float* srcy, int len,
+             const void* src, size_t srcstep, Size size,
+             int16_t* dst, const float* params,
+             int borderType, int16_t* borderVal)
+{
+    bicubicRef<int16_t, 1>(srcx, srcy, len, src, srcstep, size,
+                            dst, params, borderType, borderVal);
+}
+
+static void
+bicubic16sC2(const float* srcx, const float* srcy, int len,
+             const void* src, size_t srcstep, Size size,
+             int16_t* dst, const float* params,
+             int borderType, int16_t* borderVal)
+{
+    bicubicRef<int16_t, 2>(srcx, srcy, len, src, srcstep, size,
+                            dst, params, borderType, borderVal);
+}
+
+static void
+bicubic16sC3(const float* srcx, const float* srcy, int len,
+             const void* src, size_t srcstep, Size size,
+             int16_t* dst, const float* params,
+             int borderType, int16_t* borderVal)
+{
+    bicubicRef<int16_t, 3>(srcx, srcy, len, src, srcstep, size,
+                            dst, params, borderType, borderVal);
+}
+
+static void
+bicubic16sC4(const float* srcx, const float* srcy, int len,
+             const void* src, size_t srcstep, Size size,
+             int16_t* dst, const float* params,
+             int borderType, int16_t* borderVal)
+{
+    bicubicRef<int16_t, 4>(srcx, srcy, len, src, srcstep, size,
+                            dst, params, borderType, borderVal);
+}
+
+static void
 bicubic32fC1(const float* srcx, const float* srcy, int len,
              const void* src, size_t srcstep, Size size,
              float* dst, const float* params,
@@ -8448,6 +8530,16 @@ bicubic32fC1(const float* srcx, const float* srcy, int len,
     bicubicRef<float, 1>(srcx, srcy, len, src, srcstep, size,
                                 dst, params, borderType, borderVal);
 #endif
+}
+
+static void
+bicubic32fC2(const float* srcx, const float* srcy, int len,
+             const void* src, size_t srcstep, Size size,
+             float* dst, const float* params,
+             int borderType, float* borderVal)
+{
+    bicubicRef<float, 2>(srcx, srcy, len, src, srcstep, size,
+                                dst, params, borderType, borderVal);
 }
 
 static void
@@ -8480,12 +8572,55 @@ bicubic32fC4(const float* srcx, const float* srcy, int len,
 #endif
 }
 
+static void
+bicubic64fC1(const float* srcx, const float* srcy, int len,
+             const void* src, size_t srcstep, Size size,
+             double* dst, const float* params,
+             int borderType, double* borderVal)
+{
+    bicubicRef<double, 1>(srcx, srcy, len, src, srcstep, size,
+                            dst, params, borderType, borderVal);
+}
+
+static void
+bicubic64fC2(const float* srcx, const float* srcy, int len,
+             const void* src, size_t srcstep, Size size,
+             double* dst, const float* params,
+             int borderType, double* borderVal)
+{
+    bicubicRef<double, 2>(srcx, srcy, len, src, srcstep, size,
+                            dst, params, borderType, borderVal);
+}
+
+static void
+bicubic64fC3(const float* srcx, const float* srcy, int len,
+             const void* src, size_t srcstep, Size size,
+             double* dst, const float* params,
+             int borderType, double* borderVal)
+{
+    bicubicRef<double, 3>(srcx, srcy, len, src, srcstep, size,
+                            dst, params, borderType, borderVal);
+}
+
+static void
+bicubic64fC4(const float* srcx, const float* srcy, int len,
+             const void* src, size_t srcstep, Size size,
+             double* dst, const float* params,
+             int borderType, double* borderVal)
+{
+    bicubicRef<double, 4>(srcx, srcy, len, src, srcstep, size,
+                            dst, params, borderType, borderVal);
+}
+
 }
 
 ImgWarpFunc getBicubicWarpFunc_(int type)
 {
     if (type == CV_8UC1) {
         return (ImgWarpFunc)bicubic8uC1;
+    }
+    if (type == CV_8UC2) {
+        return (ImgWarpFunc)bicubic8uC2;
     }
     if (type == CV_8UC3) {
         return (ImgWarpFunc)bicubic8uC3;
@@ -8496,20 +8631,50 @@ ImgWarpFunc getBicubicWarpFunc_(int type)
     if (type == CV_16UC1) {
         return (ImgWarpFunc)bicubic16uC1;
     }
+    if (type == CV_16UC2) {
+        return (ImgWarpFunc)bicubic16uC2;
+    }
     if (type == CV_16UC3) {
         return (ImgWarpFunc)bicubic16uC3;
     }
     if (type == CV_16UC4) {
         return (ImgWarpFunc)bicubic16uC4;
     }
+    if (type == CV_16SC1) {
+        return (ImgWarpFunc)bicubic16sC1;
+    }
+    if (type == CV_16SC2) {
+        return (ImgWarpFunc)bicubic16sC2;
+    }
+    if (type == CV_16SC3) {
+        return (ImgWarpFunc)bicubic16sC3;
+    }
+    if (type == CV_16SC4) {
+        return (ImgWarpFunc)bicubic16sC4;
+    }
     if (type == CV_32FC1) {
         return (ImgWarpFunc)bicubic32fC1;
+    }
+    if (type == CV_32FC2) {
+        return (ImgWarpFunc)bicubic32fC2;
     }
     if (type == CV_32FC3) {
         return (ImgWarpFunc)bicubic32fC3;
     }
     if (type == CV_32FC4) {
         return (ImgWarpFunc)bicubic32fC4;
+    }
+    if (type == CV_64FC1) {
+        return (ImgWarpFunc)bicubic64fC1;
+    }
+    if (type == CV_64FC2) {
+        return (ImgWarpFunc)bicubic64fC2;
+    }
+    if (type == CV_64FC3) {
+        return (ImgWarpFunc)bicubic64fC3;
+    }
+    if (type == CV_64FC4) {
+        return (ImgWarpFunc)bicubic64fC4;
     }
     return (ImgWarpFunc)nullptr;
 }
