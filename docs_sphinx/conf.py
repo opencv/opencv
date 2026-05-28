@@ -67,7 +67,10 @@ author = "OpenCV Team"
 release = "5.x"
 
 # -- Sphinx core ------------------------------------------------------------
-extensions = ["myst_parser"]
+extensions = ["myst_parser", "sphinx.ext.graphviz"]
+# Render Doxygen \dot ... \enddot blocks as inline SVG (matches Doxygen's
+# DOT_IMAGE_FORMAT=svg default — keeps text crisp and selectable).
+graphviz_output_format = "svg"
 for _ext in ("sphinx_design", "sphinx_copybutton"):
     try:
         __import__(_ext)
@@ -540,6 +543,21 @@ def _translate(text: str, docname: str | None = None) -> str:
     text = re.sub(
         r"^(?P<indent>[ \t]*)@code(?:\{(?P<lang>[^}]*)\})?\s*\n(?P<body>.*?)\n[ \t]*@endcode",
         _code_repl, text, flags=re.DOTALL | re.MULTILINE)
+
+    # 3a. \dot ... \enddot → MyST `{graphviz}` fenced directive. Body is
+    #     raw DOT source; the fenced form keeps it out of MyST's smartquotes
+    #     and URL-autolink passes.
+    def _dot_repl(m: re.Match) -> str:
+        indent = m.group("indent") or ""
+        body = _textwrap.dedent(m.group("body")).strip("\n")
+        if indent:
+            body = "\n".join((indent + line) if line else line
+                             for line in body.split("\n"))
+            return f"\n{indent}```{{graphviz}}\n{body}\n{indent}```\n"
+        return f"\n```{{graphviz}}\n{body}\n```\n"
+    text = re.sub(
+        r"^(?P<indent>[ \t]*)\\dot[ \t]*\n(?P<body>.*?)\n[ \t]*\\enddot[ \t]*$",
+        _dot_repl, text, flags=re.DOTALL | re.MULTILINE)
 
     # 3b. Plain Markdown fences with a Doxygen-flavored language spec
     #     (e.g. "```.sh") confuse Pygments — strip the leading dot and apply
