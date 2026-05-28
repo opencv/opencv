@@ -13,8 +13,7 @@ endif()
 # CMake command line:  -DSPHINX_BUILD=/path/to/sphinx-build
 find_program(SPHINX_BUILD
   NAMES sphinx-build
-  HINTS /home/abhishek/miniconda3/envs/opencvpy310/bin
-  DOC "Path to sphinx-build")
+  DOC "Path to sphinx-build tool")
 
 if(NOT SPHINX_BUILD)
   message(STATUS "docs_sphinx: sphinx-build not found; `sphinx` target disabled")
