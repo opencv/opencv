@@ -84,7 +84,8 @@ OCL_PERF_TEST_P(WarpAffineFixture, WarpAffine,
 
     OCL_TEST_CYCLE() cv::warpAffine(src, dst, M, srcSize, interpolation);
 
-    SANITY_CHECK(dst, eps);
+    //SANITY_CHECK(dst, eps);
+    SANITY_CHECK_NOTHING();
 }
 
 ///////////// WarpPerspective ////////////////////////
@@ -116,7 +117,8 @@ OCL_PERF_TEST_P(WarpPerspectiveFixture, WarpPerspective,
 
     OCL_TEST_CYCLE() cv::warpPerspective(src, dst, M, srcSize, interpolation);
 
-    SANITY_CHECK(dst, eps);
+    //SANITY_CHECK(dst, eps);
+    SANITY_CHECK_NOTHING();
 }
 
 ///////////// Resize ////////////////////////

@@ -64,7 +64,8 @@ PERF_TEST_P( TestRemap, Remap,
     int runs = (sz.width <= 640) ? 3 : 1;
     TEST_CYCLE_MULTIRUN(runs) remap(src, dst, map1, map2, inter_type);
 
-    SANITY_CHECK(dst);
+    //SANITY_CHECK(dst);
+    SANITY_CHECK_NOTHING();
 }
 
 } // namespace

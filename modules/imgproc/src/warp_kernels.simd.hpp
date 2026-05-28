@@ -7170,67 +7170,67 @@ static void bicubicFetchPixels(const _Tp* src, size_t srcstep, Size size, int cn
 #undef BICUBIC_PROCESS_INLIERS_C1_SCALAR
 #define BICUBIC_PROCESS_INLIERS_C1_SCALAR(row) \
     srcrow = (const chtype*)((const uint8_t*)src + row*srcstep + tl_ofs); \
-    V0 = buftype(srcrow[0]); \
-    V1 = buftype(srcrow[1]); \
-    V2 = buftype(srcrow[2]); \
-    V3 = buftype(srcrow[3]); \
+    V0 = float(srcrow[0]); \
+    V1 = float(srcrow[1]); \
+    V2 = float(srcrow[2]); \
+    V3 = float(srcrow[3]); \
     BICUBIC_UPDATE_ACC(acc_r, V0, V1, V2, V3, wy##row)
 
 #undef BICUBIC_PROCESS_INLIERS_C2_SCALAR
 #define BICUBIC_PROCESS_INLIERS_C2_SCALAR(row) \
     srcrow = (const chtype*)((const uint8_t*)src + row*srcstep + tl_ofs); \
-    V0 = buftype(srcrow[0]); \
-    V1 = buftype(srcrow[2]); \
-    V2 = buftype(srcrow[4]); \
-    V3 = buftype(srcrow[6]); \
+    V0 = float(srcrow[0]); \
+    V1 = float(srcrow[2]); \
+    V2 = float(srcrow[4]); \
+    V3 = float(srcrow[6]); \
     BICUBIC_UPDATE_ACC(acc_r, V0, V1, V2, V3, wy##row); \
-    V0 = buftype(srcrow[1]); \
-    V1 = buftype(srcrow[3]); \
-    V2 = buftype(srcrow[5]); \
-    V3 = buftype(srcrow[7]); \
+    V0 = float(srcrow[1]); \
+    V1 = float(srcrow[3]); \
+    V2 = float(srcrow[5]); \
+    V3 = float(srcrow[7]); \
     BICUBIC_UPDATE_ACC(acc_g, V0, V1, V2, V3, wy##row)
 
 #undef BICUBIC_PROCESS_INLIERS_C3_SCALAR
 #define BICUBIC_PROCESS_INLIERS_C3_SCALAR(row) \
     srcrow = (const chtype*)((const uint8_t*)src + row*srcstep + tl_ofs); \
-    V0 = buftype(srcrow[0]); \
-    V1 = buftype(srcrow[3]); \
-    V2 = buftype(srcrow[6]); \
-    V3 = buftype(srcrow[9]); \
+    V0 = float(srcrow[0]); \
+    V1 = float(srcrow[3]); \
+    V2 = float(srcrow[6]); \
+    V3 = float(srcrow[9]); \
     BICUBIC_UPDATE_ACC(acc_r, V0, V1, V2, V3, wy##row); \
-    V0 = buftype(srcrow[1]); \
-    V1 = buftype(srcrow[4]); \
-    V2 = buftype(srcrow[7]); \
-    V3 = buftype(srcrow[10]); \
+    V0 = float(srcrow[1]); \
+    V1 = float(srcrow[4]); \
+    V2 = float(srcrow[7]); \
+    V3 = float(srcrow[10]); \
     BICUBIC_UPDATE_ACC(acc_g, V0, V1, V2, V3, wy##row); \
-    V0 = buftype(srcrow[2]); \
-    V1 = buftype(srcrow[5]); \
-    V2 = buftype(srcrow[8]); \
-    V3 = buftype(srcrow[11]); \
+    V0 = float(srcrow[2]); \
+    V1 = float(srcrow[5]); \
+    V2 = float(srcrow[8]); \
+    V3 = float(srcrow[11]); \
     BICUBIC_UPDATE_ACC(acc_b, V0, V1, V2, V3, wy##row)
 
 #undef BICUBIC_PROCESS_INLIERS_C4_SCALAR
 #define BICUBIC_PROCESS_INLIERS_C4_SCALAR(row) \
     srcrow = (const chtype*)((const uint8_t*)src + row*srcstep + tl_ofs); \
-    V0 = buftype(srcrow[0]); \
-    V1 = buftype(srcrow[4]); \
-    V2 = buftype(srcrow[8]); \
-    V3 = buftype(srcrow[12]); \
+    V0 = float(srcrow[0]); \
+    V1 = float(srcrow[4]); \
+    V2 = float(srcrow[8]); \
+    V3 = float(srcrow[12]); \
     BICUBIC_UPDATE_ACC(acc_r, V0, V1, V2, V3, wy##row); \
-    V0 = buftype(srcrow[1]); \
-    V1 = buftype(srcrow[5]); \
-    V2 = buftype(srcrow[9]); \
-    V3 = buftype(srcrow[13]); \
+    V0 = float(srcrow[1]); \
+    V1 = float(srcrow[5]); \
+    V2 = float(srcrow[9]); \
+    V3 = float(srcrow[13]); \
     BICUBIC_UPDATE_ACC(acc_g, V0, V1, V2, V3, wy##row); \
-    V0 = buftype(srcrow[2]); \
-    V1 = buftype(srcrow[6]); \
-    V2 = buftype(srcrow[10]); \
-    V3 = buftype(srcrow[14]); \
+    V0 = float(srcrow[2]); \
+    V1 = float(srcrow[6]); \
+    V2 = float(srcrow[10]); \
+    V3 = float(srcrow[14]); \
     BICUBIC_UPDATE_ACC(acc_b, V0, V1, V2, V3, wy##row); \
-    V0 = buftype(srcrow[3]); \
-    V1 = buftype(srcrow[7]); \
-    V2 = buftype(srcrow[11]); \
-    V3 = buftype(srcrow[15]); \
+    V0 = float(srcrow[3]); \
+    V1 = float(srcrow[7]); \
+    V2 = float(srcrow[11]); \
+    V3 = float(srcrow[15]); \
     BICUBIC_UPDATE_ACC(acc_a, V0, V1, V2, V3, wy##row)
 
 template<typename chtype, int NCHANNELS>
@@ -7308,10 +7308,10 @@ static void bicubicRef(const float* srcx, const float* srcy, int len,
                                    goodx, row, &pixbuf[0][0], 1, borderType, defVal);
                 float wy = wys[row];
                 for (int c = 0; c < NCHANNELS; c++) {
-                    V0 = buftype(pixbuf[c][0]);
-                    V1 = buftype(pixbuf[c][1]);
-                    V2 = buftype(pixbuf[c][2]);
-                    V3 = buftype(pixbuf[c][3]);
+                    V0 = float(pixbuf[c][0]);
+                    V1 = float(pixbuf[c][1]);
+                    V2 = float(pixbuf[c][2]);
+                    V3 = float(pixbuf[c][3]);
                     BICUBIC_UPDATE_ACC(acc[c], V0, V1, V2, V3, wy);
                 }
             }
@@ -7650,7 +7650,7 @@ CV_ALWAYS_INLINE v_float32 v_fma(const v_int32& a, const v_float32& b, const v_f
     FETCH_INLIERS_C4_DEFAULT(row)
 
 // NEON-optimized macros for super-fast pixels retrieval and reordering
-#ifdef __ARM_NEON
+#if defined __ARM_NEON && defined __aarch64__
 
 #if CV_SIMD_FP16
 
@@ -8215,7 +8215,7 @@ bicubicVec(const float* srcx, const float* srcy, int len,
                 V2 = vx_load(&pixbuf[0][BATCH*2]);
                 V3 = vx_load(&pixbuf[0][BATCH*3]);
                 BICUBIC_UPDATE_ACC_VEC(acc_r, V0, V1, V2, V3, wy);
-                if (NCHANNELS > 1) {
+                if constexpr (NCHANNELS > 1) {
                     V0 = vx_load(&pixbuf[1][0]);
                     V1 = vx_load(&pixbuf[1][BATCH]);
                     V2 = vx_load(&pixbuf[1][BATCH*2]);
@@ -8226,7 +8226,7 @@ bicubicVec(const float* srcx, const float* srcy, int len,
                     V2 = vx_load(&pixbuf[2][BATCH*2]);
                     V3 = vx_load(&pixbuf[2][BATCH*3]);
                     BICUBIC_UPDATE_ACC_VEC(acc_b, V0, V1, V2, V3, wy);
-                    if (NCHANNELS > 3) {
+                    if constexpr (NCHANNELS > 3) {
                         V0 = vx_load(&pixbuf[3][0]);
                         V1 = vx_load(&pixbuf[3][BATCH]);
                         V2 = vx_load(&pixbuf[3][BATCH*2]);
