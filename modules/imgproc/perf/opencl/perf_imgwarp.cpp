@@ -75,7 +75,7 @@ OCL_PERF_TEST_P(WarpAffineFixture, WarpAffine,
 
     // BUG: OpenCL and CPU version diverges a bit
     // Ticket: https://github.com/opencv/opencv/issues/26235
-    const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 2 : interpolation == INTER_CUBIC ? 2e-3 : 3e-2;
+    // const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 2 : interpolation == INTER_CUBIC ? 2e-3 : 3e-2;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -108,7 +108,7 @@ OCL_PERF_TEST_P(WarpPerspectiveFixture, WarpPerspective,
     const WarpPerspectiveParams params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), interpolation = get<2>(params);
-    const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : 1e-4;
+    //const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : 1e-4;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
