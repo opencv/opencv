@@ -10,7 +10,7 @@
 
 namespace cv {
 
-//! @addtogroup imgproc_shape
+//! @addtogroup geometry_shape
 //! @{
 
 //! types of intersection between rectangles
@@ -28,7 +28,7 @@ enum LineSegmentDetectorModes {
     //!< refined through increase of precision, decrement in size, etc.
 };
 
-//! @addtogroup imgproc_subdiv2d
+//! @addtogroup geometry_subdiv2d
 //! @{
 
 class CV_EXPORTS_W Subdiv2D
@@ -304,9 +304,9 @@ protected:
     Point2f bottomRight;
 };
 
-//! @} imgproc_subdiv2d
+//! @} geometry_subdiv2d
 
-//! @addtogroup imgproc_feature
+//! @addtogroup geometry_feature
 //! @{
 
 /** @example samples/cpp/snippets/lsd_lines.cpp
@@ -388,7 +388,7 @@ CV_EXPORTS_W Ptr<LineSegmentDetector> createLineSegmentDetector(
     double sigma_scale = 0.6, double quant = 2.0, double ang_th = 22.5,
     double log_eps = 0, double density_th = 0.7, int n_bins = 1024);
 
-//! @} imgproc_feature
+//! @} geometry_feature
 
 /** @example samples/python/snippets/squares.py
  A n example using approxPolyDP function in python.        *

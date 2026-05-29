@@ -5,7 +5,16 @@
 #ifndef OPENCV_GEOMETRY_HPP
 #define OPENCV_GEOMETRY_HPP
 
+/**
+@defgroup geometry Computational geometry primitives module.
+*/
+
+//! @addtogroup geometry
+//! @{
+
 #include "opencv2/geometry/2d.hpp"
 #include "opencv2/geometry/3d.hpp"
+
+//! @} geometry
 
 #endif
