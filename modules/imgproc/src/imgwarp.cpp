@@ -115,11 +115,6 @@ static bool genericWarp(const Mat& src, const Mat& M_, const Mat& mapx, const Ma
     int64_t borderValBuf_[MAX_CHANNELS];
     scalarToRawData(borderValue, borderValBuf_, src.type());
 
-//    printf("~~~~~~~~~~~~~~~~~~~~~~~~~~ mode: %s%s%s ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n",
-//           (M_.empty() ? "remap" : M_.rows == 2 ? "warpaffine" : "warpperspective"),
-//           (M_.empty() && mapx.depth() < CV_32F ? " fixedpoint" : ""),
-//           (M_.empty() && relativeMap_ ? " relative" : ""));
-
     parallel_for_(Range(0, dst.rows), [&](const Range& range) {
         constexpr float FIXPT_SCALE = 1.f/32;
         constexpr int BLOCK_SIZE = 128;
@@ -161,8 +156,6 @@ static bool genericWarp(const Mat& src, const Mat& M_, const Mat& mapx, const Ma
             const float* xfptr = planarmap ? mapx.ptr<float>(y) : nullptr;
             const float* yfptr = planarmap ? mapy.ptr<float>(y) : nullptr;
             float y0 = relativeMap ? float(y) : 0.f;
-
-            //printf("y = %d: ", y);
 
             for (int x = 0; x < dstcols; x += BLOCK_SIZE) {
                 int blocksize = std::min(BLOCK_SIZE, dstcols - x);
@@ -209,12 +202,9 @@ static bool genericWarp(const Mat& src, const Mat& M_, const Mat& mapx, const Ma
                     ybufptr = yfptr + x;
                 }
 
-                //for (int dx = 0; dx < blocksize; dx++)
-                //    printf("(%.2f, %.2f), ", xbufptr[dx], ybufptr[dx]);
                 func(xbufptr, ybufptr, blocksize, srcdata, srcstep, srcsize,
                      dstptr + x*bpp, fparams, borderType, borderValBuf);
             }
-            //printf("\n");
         }
     });
 
@@ -1427,7 +1417,7 @@ void cv::remap( InputArray _src, OutputArray _dst,
     CV_Assert( !_map1.empty() );
     CV_Assert( _map2.empty() || (_map2.size() == _map1.size()));
 
-    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() && interpolation != INTER_CUBIC,
                ocl_remap(_src, _dst, _map1, _map2, interpolation, borderType, borderValue))
 
     Mat src = _src.getMat(), map1 = _map1.getMat(), map2 = _map2.getMat();

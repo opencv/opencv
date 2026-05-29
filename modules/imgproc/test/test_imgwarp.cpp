@@ -1114,7 +1114,7 @@ TEST(Imgproc_getPerspectiveTransform, issue_26916)
     EXPECT_MAT_NEAR(obtained_homogeneous_dst_points, expected_homogeneous_dst_points, 1e-10);
 }
 
-/*static void rotation2affine(float scale, float angle, float cx, float cy, float* M)
+static void rotation2affine(float scale, float angle, float cx, float cy, float* M)
 {
     // (x - cx)*cos(a) + (y - cy)*sin(a) + cx
     // -(x - cx)*sin(a) + (y - cy)*cos(a) + cy
@@ -1123,7 +1123,7 @@ TEST(Imgproc_getPerspectiveTransform, issue_26916)
     M[3] = -scale*sa; M[4] = scale*ca; M[5] = scale*(cx*sa - cy*ca) + cy;
 }
 
-TEST(Imgproc_Warping, playground)
+TEST(Imgproc_Warping, DISABLED_playground)
 {
     auto ts = cvtest::TS::ptr();
     Mat img0 = imread(string(ts->get_data_path()) + "stereomatching/datasets/tsukuba/im2.png", 1), img1, img;
@@ -1182,7 +1182,7 @@ TEST(Imgproc_Warping, playground)
         if ((waitKey() & 255) == 27)
             break;
     }
-}*/
+}
 
 }} // namespace
 /* End of file. */
