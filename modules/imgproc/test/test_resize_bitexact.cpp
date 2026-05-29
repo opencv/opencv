@@ -240,20 +240,18 @@ TEST(Resize_Bitexact, Nearest8U)
     }
 }
 
-// Regression test for #28429: INTER_NEAREST_EXACT uses fixed-point integer
-// arithmetic for center-of-pixel coordinate mapping. The formula
-// floor((i + 0.5) * src / dst) is computed as ((i*2+1)*src) / (dst*2)
-// using int64_t to avoid overflow and guarantee bit-exact results
-// across all platforms without hardware FP dependency.
+// Regression test for #28429: INTER_NEAREST_EXACT matches Pillow's
+// center-of-pixel nearest-neighbor mapping.
 TEST(Resize_Bitexact, NearestExact_PillowCompat)
 {
-    // Fixed-point center-of-pixel mapping: floor((i + 0.5) * src_dim / dst_dim)
-    // Integer form: ((i * 2 + 1) * src_dim) / (dst_dim * 2)
     auto center_pixel_map = [](int src_dim, int dst_dim, std::vector<int>& mapping) {
+        softdouble scale = softdouble(src_dim) / softdouble(dst_dim);
+        softdouble f = scale * softdouble(0.5);
         mapping.resize(dst_dim);
         for (int i = 0; i < dst_dim; i++)
         {
-            mapping[i] = std::min((int)((((int64_t)i * 2 + 1) * src_dim) / ((int64_t)dst_dim * 2)), src_dim - 1);
+            mapping[i] = std::min(cvTrunc(f), src_dim - 1);
+            f += scale;
         }
     };
 

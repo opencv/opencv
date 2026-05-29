@@ -45,4 +45,4 @@ class Imgproc_Tests(NewOpenCVTests):
             ocv_result = cv.resize(r, dsize=ts, interpolation=cv.INTER_NEAREST_EXACT)
             status = np.all(pil_result == ocv_result)
             print(ts, status)
-            self.assertTrue(status)
+            self.assertTrue(status, "resize result differs from Pillow for target size %s" % (ts,))

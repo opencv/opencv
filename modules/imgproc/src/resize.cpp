@@ -1173,19 +1173,17 @@ resizeNN( const Mat& src, Mat& dst, double fx, double fy )
 class resizeNN_bitexactInvoker : public ParallelLoopBody
 {
 public:
-    resizeNN_bitexactInvoker(const Mat& _src, Mat& _dst, int* _x_ofse, int _src_height, int _dst_height)
-        : src(_src), dst(_dst), x_ofse(_x_ofse), src_height(_src_height), dst_height(_dst_height) {}
+    resizeNN_bitexactInvoker(const Mat& _src, Mat& _dst, int* _x_ofse, int* _y_ofse)
+        : src(_src), dst(_dst), x_ofse(_x_ofse), y_ofse(_y_ofse) {}
 
     virtual void operator() (const Range& range) const CV_OVERRIDE
     {
-        Size ssize = src.size(), dsize = dst.size();
+        Size dsize = dst.size();
         int pix_size = (int)src.elemSize();
         for( int y = range.start; y < range.end; y++ )
         {
             uchar* D = dst.ptr(y);
-            // Fixed-point coordinate mapping: floor((y + 0.5) * src_height / dst_height)
-            // Using integer arithmetic: ((y * 2 + 1) * src_height) / (dst_height * 2)
-            int sy = std::min((int)((((int64_t)y * 2 + 1) * src_height) / ((int64_t)dst_height * 2)), ssize.height-1);
+            int sy = y_ofse[y];
             const uchar* S = src.ptr(sy);
 
             int x = 0;
@@ -1260,9 +1258,22 @@ private:
     const Mat& src;
     Mat& dst;
     int* x_ofse;
-    const int src_height;
-    const int dst_height;
+    int* y_ofse;
 };
+
+static void resizeNN_bitexact_tab(int src_dim, int dst_dim, int* ofse)
+{
+    // Match Pillow's nearest-neighbor resize path: start at half a pixel,
+    // truncate the current coordinate, then increment by scale. softdouble
+    // keeps the IEEE-754 rounding deterministic across platforms.
+    const softdouble scale = softdouble(src_dim) / softdouble(dst_dim);
+    softdouble f = scale * softdouble(0.5);
+    for( int i = 0; i < dst_dim; i++ )
+    {
+        ofse[i] = std::min(cvTrunc(f), src_dim-1);
+        f += scale;
+    }
+}
 
 static void resizeNN_bitexact( const Mat& src, Mat& dst, double /*fx*/, double /*fy*/ )
 {
@@ -1270,17 +1281,16 @@ static void resizeNN_bitexact( const Mat& src, Mat& dst, double /*fx*/, double /
 
     cv::utils::BufferArea area;
     int* x_ofse = 0;
+    int* y_ofse = 0;
     area.allocate(x_ofse, dsize.width, CV_SIMD_WIDTH);
+    area.allocate(y_ofse, dsize.height, CV_SIMD_WIDTH);
     area.commit();
 
-    // Fixed-point coordinate mapping: floor((x + 0.5) * src_width / dst_width)
-    // Using integer arithmetic to guarantee bit-exact results across platforms.
-    for( int x = 0; x < dsize.width; x++ )
-    {
-        x_ofse[x] = std::min((int)((((int64_t)x * 2 + 1) * ssize.width) / ((int64_t)dsize.width * 2)), ssize.width-1);
-    }
+    resizeNN_bitexact_tab(ssize.width, dsize.width, x_ofse);
+    resizeNN_bitexact_tab(ssize.height, dsize.height, y_ofse);
+
     Range range(0, dsize.height);
-    resizeNN_bitexactInvoker invoker(src, dst, x_ofse, ssize.height, dsize.height);
+    resizeNN_bitexactInvoker invoker(src, dst, x_ofse, y_ofse);
     parallel_for_(range, invoker, dst.total()/(double)(1<<16));
 }
 
