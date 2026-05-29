@@ -132,12 +132,15 @@ suppress_warnings = [
 DOXYGEN_BASE_URL = (
     _os.environ.get("OPENCV_DOXYGEN_BASE_URL", "https://docs.opencv.org/5.x/")
     .rstrip("/") + "/")
-_TAG_FILE = pathlib.Path(_os.environ.get(
-    "OPENCV_DOXYGEN_TAGFILE",
-    str(HERE.parent.parent / "build" / "doc" / "doxygen" / "html" / "opencv.tag"),
-))
-if not _TAG_FILE.is_file():
-    _TAG_FILE = HERE.parent.parent / "build" / "doc" / "opencv.tag"
+_TAG_FILE = pathlib.Path(_os.environ.get("OPENCV_DOXYGEN_TAGFILE", ""))
+if not (_TAG_FILE.name and _TAG_FILE.is_file()):
+    _TAG_FILE_CANDIDATES = (
+        [HERE.parent.parent / "build" / "doc" / "doxygen" / "html" / "opencv.tag",
+         HERE.parent.parent / "build" / "doc" / "opencv.tag"]
+        + sorted((HERE.parent.parent).glob("build*/doc/opencv.tag"))
+        + sorted((HERE.parent.parent).glob("build*/doc/doxygen/html/opencv.tag"))
+    )
+    _TAG_FILE = next((p for p in _TAG_FILE_CANDIDATES if p.is_file()), pathlib.Path(""))
 
 # anchor -> doxygen URL filename (from opencv.tag if available).
 _TAG_FILENAMES: dict[str, str] = {}
@@ -156,7 +159,7 @@ if _TAG_FILE.is_file():
                     _TAG_FILENAMES[_n] = _f if _f.endswith(".html") else _f + ".html"
                     if _t:
                         _TAG_PAGE_TITLES[_n] = _t
-            if _c.get("kind") == "class":
+            if _c.get("kind") in ("class", "namespace"):
                 _cn = (_c.findtext("name") or "").split("::")[-1]
                 _cf = _c.findtext("filename", "")
                 if _cn and _cf:
@@ -304,16 +307,16 @@ for _toc in (DOC_ROOT / "tutorials").glob("*/table_of_content_*.markdown"):
     if _toc.parent.name not in DOC_MODULES:
         _scan_external(_toc)
 
-_scan_internal(DOC_ROOT / "js_tutorials" / "js_tutorials.markdown")
+_scan_internal(SPHINX_INPUT_ROOT / "js_tutorials" / "js_tutorials.markdown")
 for _m in DOC_JS_MODULES:
-    _scan_internal(DOC_ROOT / "js_tutorials" / _m)
+    _scan_internal(SPHINX_INPUT_ROOT / "js_tutorials" / _m)
 for _toc in (DOC_ROOT / "js_tutorials").glob("*/js_table_of_contents_*.markdown"):
     if _toc.parent.name not in DOC_JS_MODULES:
         _scan_external(_toc)
 
-_scan_internal(DOC_ROOT / "py_tutorials" / "py_tutorials.markdown")
+_scan_internal(SPHINX_INPUT_ROOT / "py_tutorials" / "py_tutorials.markdown")
 for _m in DOC_PY_MODULES:
-    _scan_internal(DOC_ROOT / "py_tutorials" / _m)
+    _scan_internal(SPHINX_INPUT_ROOT / "py_tutorials" / _m)
 for _toc in (DOC_ROOT / "py_tutorials").glob("*/py_table_of_contents_*.markdown"):
     if _toc.parent.name not in DOC_PY_MODULES:
         _scan_external(_toc)
@@ -789,9 +792,6 @@ def _translate(text: str, docname: str | None = None) -> str:
         lang = _normalize_lang(m.group("lang") or "")
         if lang == "m":
             lang = "objc"
-                lang = _normalize_lang(m.group("lang") or "")
-        if lang == "m":
-            lang = "objc"
         if lang == "js":
             lang = "javascript"
         body = m.group("body")
@@ -999,6 +999,18 @@ def _translate(text: str, docname: str | None = None) -> str:
                 r'(?<!\[)(?<!\()cv\.([A-Za-z][A-Za-z0-9_]*)',
                 _cvlink_repl, p)
             for i, p in enumerate(_parts))
+
+    # 7c. `cv::Name` inline code → [`cv::Name`](doxygen url).
+    # Tag-file lookup when available; search URL fallback for tutorials-only builds.
+    def _cvcodelink_repl(m: re.Match) -> str:
+        full = m.group("name")
+        last = full.split("::")[-1]
+        url = (_CV_API.get(full) or _CV_API.get(last)
+               or f"{DOXYGEN_BASE_URL}search.html?q={last}")
+        return f'[`{full}`]({url})'
+    text = re.sub(
+        r'`{1,3}(?P<name>cv::[A-Za-z_][\w:]*)`{1,3}',
+        _cvcodelink_repl, text)
 
     # 8. @cite KEY → [[KEY]](link to docs.opencv.org citelist)
     text = re.sub(
