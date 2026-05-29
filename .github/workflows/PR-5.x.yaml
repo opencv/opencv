@@ -7,56 +7,56 @@ on:
 
 jobs:
   Linux:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-Linux.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-Linux.yaml@geometry_module
     with:
-      workflow_branch: 'main'
+      workflow_branch: 'geometry_module'
 
   Linux-no-HAL:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-Linux-NoHAL.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-Linux-NoHAL.yaml@geometry_module
 
   Windows:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-Windows.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-Windows.yaml@geometry_module
     with:
-      workflow_branch: main
+      workflow_branch: geometry_module
 
   Ubuntu2404-ARM64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-ARM64.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-ARM64.yaml@geometry_module
 
   Ubuntu2404-ARM64-Debug:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-ARM64-Debug.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-ARM64-Debug.yaml@geometry_module
 
   Ubuntu2004-x64-OpenVINO:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-U20-OpenVINO.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-U20-OpenVINO.yaml@geometry_module
 
   Ubuntu2004-x64-CUDA:
     if: "${{ contains(github.event.pull_request.labels.*.name, 'category: dnn') }} || ${{ contains(github.event.pull_request.labels.*.name, 'category: dnn (onnx)') }}"
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-U20-Cuda.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-U20-Cuda.yaml@geometry_module
 
 # Vulkan configuration disabled as Vulkan backend for DNN does not support int/int64 for now
 # Details: https://github.com/opencv/opencv/issues/25110
 #  Windows10-x64-Vulkan:
-#    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-W10-Vulkan.yaml@main
+#    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-W10-Vulkan.yaml@geometry_module
 
   macOS-ARM64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-macOS-ARM64.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-macOS-ARM64.yaml@geometry_module
 
 #  macOS-ARM64-Vulkan:
-#    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-macOS-ARM64-Vulkan.yaml@main
+#    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-macOS-ARM64-Vulkan.yaml@geometry_module
 
   macOS-x64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-macOS-x86_64.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-macOS-x86_64.yaml@geometry_module
 
   iOS:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-iOS.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-iOS.yaml@geometry_module
 
   Android:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-Android.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-Android.yaml@geometry_module
 
   TIM-VX:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-timvx-backend-tests-4.x.yml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-timvx-backend-tests-4.x.yml@geometry_module
 
   docs:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-docs.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-docs.yaml@geometry_module
 
   Linux-RISC-V-Clang:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-RISCV.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-RISCV.yaml@geometry_module
