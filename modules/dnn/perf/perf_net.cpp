@@ -332,8 +332,16 @@ PERF_TEST_P_(DNNTestNetwork, EfficientNet)
     processNet("dnn/efficientnet-lite4.onnx", "", inp);
 }
 
-PERF_TEST_P_(DNNTestNetwork, YuNet) {
-    processNet("dnn/onnx/models/yunet-202303.onnx", "", cv::Size(640, 640));
+PERF_TEST_P_(DNNTestNetwork, YuNet_320) {
+    processNet("dnn/onnx/models/yunet-202605.onnx", "", cv::Size(320, 320));
+}
+
+PERF_TEST_P_(DNNTestNetwork, YuNet_640) {
+    processNet("dnn/onnx/models/yunet-202605.onnx", "", cv::Size(640, 640));
+}
+
+PERF_TEST_P_(DNNTestNetwork, YuNet_1280) {
+    processNet("dnn/onnx/models/yunet-202605.onnx", "", cv::Size(1280, 736));
 }
 
 PERF_TEST_P_(DNNTestNetwork, SFace) {
