@@ -63,7 +63,7 @@ static void deconvBlock32f(const void* inp__, const void* /*residual*/,
     const float* wdata = (const float*)weights__;
     const float* bias  = bias__;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD)
     // SIMD path is safe when ngroups==1 or Kg%C0==0; repackDeconvWeights()
     // zero-fills padded lanes.
     const bool simd_ok =
@@ -83,7 +83,7 @@ static void deconvBlock32f(const void* inp__, const void* /*residual*/,
             float* out_k1 = (float*)out__ + ((int64_t)n * K1 + k1) * ospatial * C0;
             const float* inp_n = (const float*)inp__ + (int64_t)n * C1 * ispatial * C0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD)
             // Precompute the shared (g, kblk, c1_abs_base) for the SIMD path.
             int simd_g = 0, simd_kblk = 0, simd_c1_abs_base = 0;
             if (simd_ok) {
@@ -115,7 +115,7 @@ static void deconvBlock32f(const void* inp__, const void* /*residual*/,
                     }
                 }
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD)
                 if (simd_ok) {
                     const int VLANES = VTraits<v_float32>::vlanes();
                     const int v_per_block = C0 / VLANES;

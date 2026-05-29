@@ -52,7 +52,7 @@ static void avgPool32f(const void* inp_, void* out_,
         float* out = (float*)out_ + nc0*planesize;
         float iksize = 1.f/ksize;
 
-#if CV_SIMD || CV_SIMD_SCALABLE
+#if CV_SIMD
         int nlanes = VTraits<v_float32>::vlanes();
         CV_Assert(C0 == nlanes || C0 == nlanes*2 || C0 % (nlanes*4) == 0);
         v_float32 z = vx_setzero_f32();
@@ -68,12 +68,12 @@ static void avgPool32f(const void* inp_, void* out_,
                         y0 >= inner_y0 && y0 < inner_y1 ? inner_x0 : W;
                     int yi_ = y0*SY - padY0;
 
-                #if !(CV_SIMD || CV_SIMD_SCALABLE)
+                #if !(CV_SIMD)
                     memset(out, 0, W*C0*sizeof(out[0]));
                 #endif
 
                     for(;;) {
-                    #if CV_SIMD || CV_SIMD_SCALABLE
+                    #if CV_SIMD
                         if (nlanes == C0) {
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
@@ -152,7 +152,7 @@ static void avgPool32f(const void* inp_, void* out_,
                             break;
                         x1 = inner_x1;
 
-                    #if CV_SIMD || CV_SIMD_SCALABLE
+                    #if CV_SIMD
                         if (nlanes == C0) {
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
