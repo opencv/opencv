@@ -22,7 +22,8 @@ OPENCV_ROOT = HERE.parent.resolve()
 import os as _os
 DOC_MODULES = [
     m.strip()
-    for m in (_os.environ.get("OPENCV_DOC_MODULES") or "photo,objdetect,dnn,gpu,others,core,calib3d,features,introduction").split(",")
+    # Trailing entries (imgproc,3d,app,ios) cherry-picked from PR #30.
+    for m in (_os.environ.get("OPENCV_DOC_MODULES") or "photo,objdetect,dnn,gpu,others,core,calib3d,features,introduction,imgproc,3d,app,ios").split(",")
     if m.strip()
 ]
 
@@ -31,7 +32,8 @@ DOC_MODULES = [
 # top-level toctree entry of the master doc when this list is non-empty.
 JS_DOC_MODULES = [
     m.strip()
-    for m in (_os.environ.get("OPENCV_JS_DOC_MODULES") or "js_setup").split(",")
+    # js_gui,js_core,js_imgproc,js_video,js_dnn cherry-picked from PR #30.
+    for m in (_os.environ.get("OPENCV_JS_DOC_MODULES") or "js_setup,js_gui,js_core,js_imgproc,js_video,js_dnn").split(",")
     if m.strip()
 ]
 
@@ -39,7 +41,8 @@ JS_DOC_MODULES = [
 # js_tutorials (root index + per-module table_of_content + sub-tutorials).
 PY_DOC_MODULES = [
     m.strip()
-    for m in (_os.environ.get("OPENCV_PY_DOC_MODULES") or "py_setup,py_core,py_imgproc,py_video,py_photo,py_objdetect").split(",")
+    # py_gui,py_features,py_calib3d,py_ml,py_bindings cherry-picked from PR #30.
+    for m in (_os.environ.get("OPENCV_PY_DOC_MODULES") or "py_setup,py_core,py_imgproc,py_video,py_photo,py_objdetect,py_gui,py_features,py_calib3d,py_ml,py_bindings").split(",")
     if m.strip()
 ]
 
@@ -51,7 +54,11 @@ PY_DOC_MODULES = [
 # ---------------------------------------------------------------------------
 CONTRIB_MODULES = [
     m.strip()
-    for m in (_os.environ.get("OPENCV_CONTRIB_MODULES") or "ml,bgsegm,bioinspired,cannops,ccalib,cnn_3dobj,cvv,dnn_objdetect,dnn_superres,gapi,hdf,julia,line_descriptor,phase_unwrapping,structured_light,viz,tracking").split(",")
+    # Trailing entry (sfm) cherry-picked from PR #30. Dormant until
+    # opencv_contrib/modules/sfm/ exists — the symlink + include-pattern logic
+    # already skips modules whose source dir is absent, so it's a no-op now and
+    # activates automatically on a contrib build.
+    for m in (_os.environ.get("OPENCV_CONTRIB_MODULES") or "ml,bgsegm,bioinspired,cannops,ccalib,cnn_3dobj,cvv,dnn_objdetect,dnn_superres,gapi,hdf,julia,line_descriptor,phase_unwrapping,structured_light,viz,tracking,sfm").split(",")
     if m.strip()
 ]
 CONTRIB_ROOT = pathlib.Path(
@@ -107,6 +114,58 @@ _API_XML_DIR = pathlib.Path(
 # at sphinx-build time, mirrors the original XML via symlinks, and only the
 # affected namespace XMLs are rewritten in place.
 _PATCHED_XML_DIR = _API_XML_DIR.parent / "xml_for_sphinx"
+
+# -- Python enum/constant signatures (cherry-picked from PR #30) -------------
+# Maps a C++ enumerator's fully-qualified name -> its cv2.* Python name(s), so
+# API enum pages can annotate each value with "Python: cv2.FOO". The mapping is
+# produced by `cmake --build <build> --target gen_opencv_python_source`
+# (pyopencv_signatures.json under the build's python_bindings_generator dir).
+# DORMANT by design: when that artifact is absent the mapping stays empty and
+# `_python_enum_name` always returns None, so no annotation is emitted. It lights
+# up automatically once the signatures file is built. Override the path with
+# OPENCV_PYTHON_SIGNATURES_FILE.
+_PY_SIGNATURES: dict = {}
+import json as _json
+for _pysigs_candidate in (
+    _API_XML_DIR.parents[2] / "modules" / "python_bindings_generator"
+        / "pyopencv_signatures.json",
+    _os.environ.get("OPENCV_PYTHON_SIGNATURES_FILE") or None,
+):
+    if not _pysigs_candidate:
+        continue
+    _pysigs_path = pathlib.Path(str(_pysigs_candidate))
+    if _pysigs_path.is_file():
+        try:
+            _PY_SIGNATURES = _json.loads(_pysigs_path.read_text(encoding="utf-8"))
+        except (ValueError, OSError):
+            _PY_SIGNATURES = {}
+        break
+
+
+def _python_enum_name(enum_qualified: str, value_name: str,
+                      strong: bool) -> str | None:
+    """Return the cv2.* Python name for one C++ enumerator, or None.
+
+    No-op (returns None) whenever `_PY_SIGNATURES` is empty, i.e. until the
+    signatures artifact is built. Scope resolution mirrors Doxygen: a scoped
+    `enum class` qualifies its values under the enum itself; an unscoped enum
+    qualifies them under the enclosing namespace/class. This is the new-structure
+    home for PR #30's per-enumerator `Python: cv2.X` annotation (the PR rendered
+    it in a now-removed Markdown enum table; see conf_helpers/stubs.py)."""
+    if not _PY_SIGNATURES:
+        return None
+    if strong:
+        scope = enum_qualified
+    elif "::" in enum_qualified:
+        scope = enum_qualified.rsplit("::", 1)[0]
+    else:
+        scope = ""
+    cpp_key = f"{scope}::{value_name}" if scope else value_name
+    entries = _PY_SIGNATURES.get(cpp_key)
+    if entries:
+        return entries[0].get("name")
+    return None
+
 
 # -- Breathe availability ----------------------------------------------------
 # Extension registration + breathe_projects config live in conf.py; here we
@@ -541,6 +600,12 @@ def _resolve_redirect(anchor: str) -> str:
 _ANCHOR_TO_DOC: dict[str, str] = {}
 _ANCHOR_TO_EXTERNAL: dict[str, tuple[str, str]] = {}
 _ANCHOR_TO_TITLE: dict[str, str] = {}
+# Every anchor that something `@subpage`s or `@ref`s (i.e. is reachable from a
+# nav/toctree or an inline link). Pages whose anchor is in NONE of these are
+# orphans — _source_read marks them `:orphan:` so Sphinx doesn't warn
+# "document isn't included in any toctree" (we can't edit opencv/doc/ to add
+# the missing link). Populated by _scan_internal + a few injected roots.
+_REFERENCED_ANCHORS: set[str] = set()
 
 _HEAD_RE = re.compile(
     r"^(?P<title1>[^\n]+?)\s*\{#(?P<anchor1>[\w-]+)\}\s*\n[=\-]{3,}\s*$"
@@ -584,6 +649,10 @@ def _scan_internal(path: pathlib.Path, base: pathlib.Path | None = None) -> None
             _ANCHOR_TO_DOC[m.group(1)] = rel
         for m in re.finditer(r"^@anchor\s+([\w-]+)\s*$", body, re.MULTILINE):
             _ANCHOR_TO_DOC[m.group(1)] = rel
+        # Anchors this file links to (toctree children + inline refs) — used
+        # for orphan detection in _source_read.
+        for m in re.finditer(r"@(?:subpage|ref)\s+([\w-]+)", body):
+            _REFERENCED_ANCHORS.add(m.group(1))
         # Capture the first heading's title alongside its anchor so subpage
         # lists with descriptions can render with real link text.
         tm = _HEAD_RE.search(body[:4000])
@@ -649,12 +718,14 @@ __all__ = [
     "DOC_MODULES", "JS_DOC_MODULES", "PY_DOC_MODULES",
     "CONTRIB_MODULES", "CONTRIB_ROOT", "SPHINX_INPUT_ROOT", "API_MODULES",
     "_API_XML_DIR", "_PATCHED_XML_DIR",
+    "_PY_SIGNATURES", "_python_enum_name",
     "HAVE_SPHINX_DESIGN", "HAVE_BREATHE",
     "DOXYGEN_BASE_URL", "_doxygen_url",
     "_TAG_FILE", "_TAG_FILENAMES", "_TAG_TITLES", "_CV_SYMBOL_URL",
     "_CITE_NUMBER", "_BIB_ENTRIES_SORTED", "_bib_render_all",
     "_REDIRECT_MAP", "_resolve_redirect",
-    "_ANCHOR_TO_DOC", "_ANCHOR_TO_EXTERNAL", "_ANCHOR_TO_TITLE", "_HEAD_RE",
+    "_ANCHOR_TO_DOC", "_ANCHOR_TO_EXTERNAL", "_ANCHOR_TO_TITLE",
+    "_REFERENCED_ANCHORS", "_HEAD_RE",
     "_scan_internal", "_scan_external",
     "_IMAGE_INDEX", "_SNIPPET_INDEX", "_SNIPPET_BASES",
     "_TOGGLE_LABELS", "_LANG_ALIASES",

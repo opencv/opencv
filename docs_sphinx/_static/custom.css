@@ -1065,3 +1065,158 @@ table.api-typedef-table tbody tr td:nth-child(3):has(> p:empty:only-child) {
 .table-wrapper:has(> table.api-typedef-table) {
     overflow: visible;
 }
+
+
+/* ===================================================================
+   Class-page header, Detailed Description & Examples (cherry-picked
+   from PR #7). Selectors: .opencv-class-brief / .opencv-class-include /
+   a.opencv-class-more / section#detailed-description / dl.opencv-examples
+   / a.opencv-example-link / .opencv-example-brief.
+   =================================================================== */
+/* --- Class-page header: #include + brief + "More..." ------------------ */
+/* Mirrors docs.opencv.org's class-page header: a small monospace `#include
+   <header.hpp>` line, then the one-line brief description followed by a
+   "More..." link that jumps down to the Detailed Description section. */
+.opencv-class-include {
+    margin: 0.25rem 0 0.75rem;
+    font-size: 0.85rem;
+    color: var(--pst-color-text-muted);
+}
+.opencv-class-include code {
+    background: var(--pst-color-surface);
+    border: 1px solid var(--pst-color-border);
+    border-radius: 4px;
+    padding: 0.1rem 0.45rem;
+    font-family: var(--pst-font-family-monospace);
+    color: var(--pst-color-text-base);
+}
+.opencv-class-brief {
+    margin: 0 0 1rem;
+    font-size: 1rem;
+    line-height: 1.55;
+    color: var(--pst-color-text-base);
+}
+a.opencv-class-more {
+    color: #0969da;
+    font-weight: 500;
+    text-decoration: none;
+    margin-left: 0.25rem;
+    white-space: nowrap;
+}
+a.opencv-class-more:hover {
+    color: #0550ae;
+    text-decoration: underline;
+}
+html[data-theme="dark"] a.opencv-class-more { color: #539bf5; }
+html[data-theme="dark"] a.opencv-class-more:hover { color: #6cb6ff; }
+
+/* --- Detailed Description: rendered by Breathe ------------------------ */
+/* The detailed description is now produced by `{doxygenclass} :no-members:`
+   and trimmed by the `_strip_breathe_class_clutter` build-finished hook
+   (see conf.py). Sphinx + Pygments already style `<pre>` code blocks via
+   `.highlight`, so we don't need any custom code-block CSS here — the
+   default chrome already matches the rest of the page.
+   We only add a subtle inline-code chip for the body's `<code>` elements
+   so refs like `cv::Mat` read as code, matching docs.opencv.org. */
+/* Breathing room between the section heading and the first content line.
+   Without this the first paragraph hugs the underline of the <h2>, which
+   reads as too tight against the rest of the page's heading spacing. */
+section#detailed-description > h2 {
+    margin-bottom: 1.5rem;
+}
+section#detailed-description code,
+section#member-enumeration-documentation code {
+    background: var(--pst-color-surface);
+    border: 1px solid var(--pst-color-border);
+    border-radius: 3px;
+    padding: 0 0.3rem;
+    font-family: var(--pst-font-family-monospace);
+    font-size: 0.88em;
+}
+/* Cross-references inside the Detailed Description (Breathe emits these
+   for every Doxygen <ref>) come through as `<a class="reference internal">
+   <span class="std std-ref">cv::Mat</span></a>` — plain text, no chip.
+   docs.opencv.org renders these in monospace with a subtle chip background.
+   Match that look: monospace, chip, link colour, link colour from
+   surrounding <a>, no underline. */
+section#detailed-description a.reference > span.std-ref,
+section#member-enumeration-documentation a.reference > span.std-ref {
+    background: var(--pst-color-surface);
+    border: 1px solid var(--pst-color-border);
+    border-radius: 3px;
+    padding: 0 0.3rem;
+    font-family: var(--pst-font-family-monospace);
+    font-size: 0.88em;
+    color: inherit;    /* take the parent <a>'s link colour */
+}
+/* Elements that already style themselves as monospace panels (the enum
+   detail `<dt>` cards) shouldn't double-chip. */
+.opencv-enum-detail dt code,
+.opencv-enum-detail dt .opencv-enum-name,
+.opencv-enum-detail dt .opencv-enum-init {
+    background: transparent;
+    border: 0;
+    padding: 0;
+}
+
+/* --- Per-class "Examples" cross-reference (docs.opencv.org parity) ----- */
+/* Emitted by `_write_class_stub` from `_render_examples_block` at the foot
+   of the Detailed Description. Mirrors docs.opencv.org's "Examples:"
+   footer: a single bold label, then plain blue links joined by Oxford
+   commas. NO inline-code chip on the links — the reference site renders
+   them as ordinary cross-reference links (same as their `\see` / `\ref`
+   look), not as code pills, and the user explicitly called that out.
+   No top divider and no left indent on the `<dd>` — the block sits flush
+   against the surrounding text on the same left margin as the rest of
+   the page (matching how docs.opencv.org's <dl class="section examples">
+   renders). */
+dl.opencv-examples {
+    margin: 1.5rem 0 0;
+    padding: 0;
+}
+dl.opencv-examples > dt {
+    font-weight: 600;
+    font-size: 1rem;
+    margin: 0 0 0.4rem;
+    color: var(--pst-color-text-base);
+}
+dl[class].opencv-examples > dd {
+    /* `dl[class]…` (not just `dl.opencv-examples`) is intentional: it
+       matches the specificity of pydata-sphinx-theme's blanket
+       `dl[class]:not(.option-list,…,.simple) dd { margin-left: 2rem }`
+       rule (both (0, 2, 2) = 22) so that cascade order — custom.css
+       loads after pydata — lets ours win the tie. Simplifying to
+       `dl.opencv-examples > dd` (specificity 12) loses to pydata's 22
+       and leaves the inherited 2rem indent visible. We want the list of
+       example links flush with the page content's left margin instead
+       of inset under the "Examples" label. */
+    margin: 0;
+    padding: 0;
+    line-height: 1.7;
+}
+/* Plain blue link, no background/border/padding — same chrome the rest of
+   the site gives `<a>` cross-references. Underline only on hover so the
+   inline paragraph stays clean. */
+dl.opencv-examples a.opencv-example-link {
+    text-decoration: none;
+    color: #0969da;
+}
+html[data-theme="dark"] dl.opencv-examples a.opencv-example-link {
+    color: #539bf5;
+}
+dl.opencv-examples a.opencv-example-link:hover {
+    text-decoration: underline;
+}
+/* The Detailed Description's blanket `code { background:…; border:… }` rule
+   would otherwise re-chip any `<code>` Sphinx happens to inject inside an
+   Examples link (e.g. if a future renderer wraps the path in one again).
+   Defang that explicitly so the link styling above stays authoritative. */
+dl.opencv-examples a.opencv-example-link code {
+    background: transparent;
+    border: 0;
+    padding: 0;
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
+}
+

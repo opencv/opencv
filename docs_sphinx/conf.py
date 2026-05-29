@@ -99,6 +99,12 @@ if API_MODULES:
     # so use a glob. The check happens at Sphinx source-enumeration time —
     # if no files exist, the pattern just matches nothing.
     include_patterns.append("api/**")
+    # Per-sample example pages (PR #7) written by `_generate_example_pages`
+    # alongside the class stubs. Each is `:orphan:`; the only inbound links are
+    # the `../examples/<name>.html` references baked into class pages by
+    # `_render_examples_block`. Without this glob Sphinx's include filter would
+    # drop the whole directory and the Examples links would 404.
+    include_patterns.append("examples/**")
 
 exclude_patterns = [
     "**/Thumbs.db", "**/.DS_Store", "**/_old/**",
@@ -115,6 +121,11 @@ suppress_warnings = [
     "myst.header", "myst.xref_missing", "toc.not_included",
     "misc.highlighting_failure",
     "image.not_readable",
+    # The same C++ symbol is legitimately declared on more than one generated
+    # page (e.g. a free function listed both on its group page and surfaced via
+    # a namespace page, or breathe re-emitting an `@ingroup` member). The C++
+    # domain warns on the redeclaration; it's expected here, not a doc error.
+    "cpp.duplicate_declaration",
 ]
 
 # -- HTML / PyData theme ----------------------------------------------------
@@ -135,11 +146,15 @@ html_css_files = [
 ]
 html_theme_options = {
     "logo": {"text": f"OpenCV {release}"},
-    # Show all 7 Doxygen-style external links inline (no "More" dropdown).
+    # Show all 7 Doxygen-style nav links inline (no "More" dropdown).
     "header_links_before_dropdown": 7,
     # Doxygen-style top-level nav (the legacy site's MAIN PAGE / RELATED
     # PAGES / NAMESPACES / CLASSES / FILES / EXAMPLES / JAVA DOCUMENTATION).
-    # All external — they target the existing Doxygen build.
+    # Declared via the theme's `external_links` slot only because that's the
+    # data hook for a custom header nav — but these are NOT external: the
+    # navbar-nav.html override rewrites each DOXYGEN_BASE_URL target to a
+    # relative path into the locally-built Doxygen output and renders them as
+    # in-tab links, so navigation stays on-site (see html_context below).
     "external_links": [
         {"url": _doxygen_url("index.html"),       "name": "Main Page"},
         {"url": _doxygen_url("pages.html"),       "name": "Related Pages"},

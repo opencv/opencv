@@ -142,15 +142,12 @@ def _translate(text: str, docname: str | None = None) -> str:
                 "@subpage tutorial_py_table_of_contents_video",
                 text,
             )
-        # Object Detection lives in the C++ `objdetect` module (which is in
-        # DOC_MODULES by default); promote the @ref so the section appears
-        # under Python Tutorials in the sidebar.
-        if "objdetect" in DOC_MODULES:
-            text = re.sub(
-                r"@ref\s+tutorial_table_of_content_objdetect\b",
-                "@subpage tutorial_table_of_content_objdetect",
-                text,
-            )
+        # NOTE: Object Detection (`tutorial_table_of_content_objdetect`) is
+        # intentionally NOT promoted to @subpage here. It lives in the C++
+        # `objdetect` module which is already in the main tutorials toctree, so
+        # promoting it in the Python root too would put one document in two
+        # toctrees ("document is referenced in multiple toctrees"). It stays an
+        # @ref — a plain in-page link to the main-tree page.
 
     # 0d. py_video and py_objdetect are pure "Content has been moved" stub
     #     trees — every page just redirects to the corresponding C++
@@ -955,6 +952,28 @@ def _linkify_cv_symbols(src: str) -> str:
     return _apply_outside_code(src, transform)
 
 
+_referenced_docs_cache: set[str] | None = None
+
+
+def _referenced_docs() -> set[str]:
+    """Docnames reachable from some `@subpage`/`@ref` (computed once). A
+    tutorial page absent from this set is an orphan."""
+    global _referenced_docs_cache
+    if _referenced_docs_cache is None:
+        _referenced_docs_cache = {
+            _ANCHOR_TO_DOC[a] for a in _REFERENCED_ANCHORS
+            if a in _ANCHOR_TO_DOC
+        }
+    return _referenced_docs_cache
+
+
+# Tutorial doc roots whose pages participate in the @subpage/@ref nav graph
+# (so orphans among them are detectable). `api/` is excluded — those pages are
+# wired via explicit `{toctree}` directives, not @subpage anchors.
+_TUTORIAL_PREFIXES = ("tutorials/", "js_tutorials/",
+                      "py_tutorials/", "tutorials_contrib/")
+
+
 def _source_read(app, docname, source):
     # Translate any tutorial doc — the root index, everything under an enabled
     # main / js / py module, plus (when staged) everything under an enabled
@@ -979,4 +998,16 @@ def _source_read(app, docname, source):
             text = text.rstrip() + "\n\n- @subpage tutorial_contrib_root\n"
         if API_MODULES and "api_root" in _ANCHOR_TO_DOC:
             text = text.rstrip() + "\n\n- @subpage api_root\n"
-    source[0] = _translate(text, docname)
+    out = _translate(text, docname)
+    # Mark genuinely-unreferenced tutorial pages `:orphan:` so Sphinx doesn't
+    # warn "document isn't included in any toctree". These pages (e.g. moved
+    # redirect stubs, or sub-TOCs whose parent links the children directly) are
+    # not @subpage'd / @ref'd anywhere, and we can't edit opencv/doc/ to add the
+    # link. Skip the master, anything already carrying front matter (step 0d),
+    # and pages that are in fact referenced.
+    if (docname.startswith(_TUTORIAL_PREFIXES)
+            and docname != "tutorials/tutorials"
+            and docname not in _referenced_docs()
+            and not out.lstrip().startswith("---")):
+        out = "---\norphan: true\n---\n\n" + out
+    source[0] = out

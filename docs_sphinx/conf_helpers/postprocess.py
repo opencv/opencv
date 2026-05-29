@@ -72,8 +72,69 @@ def _inline_collaboration_svgs(api_dir: pathlib.Path,
             html.write_text(new, encoding="utf-8")
 
 
+def _strip_breathe_class_clutter(api_dir: pathlib.Path) -> None:
+    """Lift the detailed-description body out of Breathe's `<dl class="cpp
+    class">` scaffolding on each class page, dropping the duplicate signature
+    header (`<dt>`) Breathe emits (PR #7).
+
+    `{doxygenclass} … :no-members:` produces, inside our
+    `<section id="detailed-description">`:
+
+        <dl class="cpp class">
+          <dt id="…">class cv::_InputArray</dt>   ← duplicates our <h1>
+          <dd>
+            <p>This is the proxy class …</p>       ← brief (kept: opens the
+            <p>It is defined as …</p>                 Detailed Description, the
+            …                                         header `More...` lands here)
+          </dd>
+        </dl>
+
+    We scope to that section and swap the whole `<dl>…</dl>` for just its
+    `<dd>` body, also dropping Breathe's trailing "Subclassed by …" line
+    (shown elsewhere). Runs on `build-finished`; idempotent — a re-run finds
+    no `<dl class="cpp class">` left and no-ops."""
+    import re
+    if not api_dir.is_dir():
+        return
+    section_re = re.compile(
+        r'(<section id="detailed-description"[^>]*>)'
+        r'(?P<body>[\s\S]*?)'
+        r'(</section>)'
+    )
+    dl_re = re.compile(
+        r'<dl[^>]*\bclass="[^"]*\bclass\b[^"]*"[^>]*>\s*'
+        r'<dt[^>]*>[\s\S]*?</dt>\s*'
+        r'<dd>(?P<dd>[\s\S]*?)</dd>\s*'
+        r'</dl>'
+    )
+    subclassed_re = re.compile(r'<p>Subclassed by[\s\S]*?</p>\s*')
+
+    for h in api_dir.glob("classcv*.html"):
+        text = h.read_text(encoding="utf-8")
+        if "detailed-description" not in text:
+            continue
+
+        def _strip_section(sm):
+            head, body, tail = sm.group(1), sm.group("body"), sm.group(3)
+
+            def _strip_dl(dm):
+                dd_body = dm.group("dd").strip()
+                dd_body = subclassed_re.sub("", dd_body).strip()
+                return dd_body
+
+            new_body = dl_re.sub(_strip_dl, body, count=1)
+            return head + new_body + tail
+
+        new = section_re.sub(_strip_section, text, count=1)
+        if new != text:
+            h.write_text(new, encoding="utf-8")
+
+
 def _inline_coll_graphs_on_finish(app, exception):
+    """build-finished entry point. Steps are small + idempotent so they chain
+    safely on the same hook."""
     if exception is not None:
         return
     out = pathlib.Path(app.outdir)
     _inline_collaboration_svgs(out / "api", out / "_images")
+    _strip_breathe_class_clutter(out / "api")

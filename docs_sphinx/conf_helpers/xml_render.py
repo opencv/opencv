@@ -45,6 +45,138 @@ def _read_class_brief(refid: str, xml_dir: pathlib.Path,
     return brief
 
 
+def _member_template(md) -> str:
+    """`template<...>` prefix for a memberdef, or "" when not templated."""
+    tpl = md.find("templateparamlist")
+    if tpl is None:
+        return ""
+    parts = []
+    for p in tpl.findall("param"):
+        t = _itertext(p.find("type"))
+        d = (p.findtext("declname") or "").strip()
+        parts.append(f"{t} {d}".strip() if d else t)
+    return f"template<{', '.join(parts)}>" if parts else ""
+
+
+def _member_detail_parts(md):
+    """Return (detailed_md, params, returns) from a memberdef's
+    <detaileddescription>. params = [(names, desc), …]; returns = str.
+    Plain-text prose (no rich markup) — enough for a readable member detail
+    block rendered without breathe."""
+    de = md.find("detaileddescription")
+    if de is None:
+        return "", [], ""
+    params, returns, prose = [], "", []
+    for para in de.findall("para"):
+        pls = para.findall("parameterlist")
+        sss = para.findall("simplesect")
+        for pl in pls:
+            if pl.get("kind") in ("param", "templateparam"):
+                for it in pl.findall("parameteritem"):
+                    nm = ", ".join(
+                        t for t in (_itertext(n) for n in
+                                    it.findall(".//parametername")) if t)
+                    d = _itertext(it.find("parameterdescription"))
+                    if nm:
+                        params.append((nm, d))
+        for ss in sss:
+            if ss.get("kind") == "return":
+                returns = _itertext(ss)
+        if pls or sss:
+            lead = (para.text or "").strip()  # prose before the block, if any
+            if lead:
+                prose.append(lead)
+        else:
+            t = _itertext(para)
+            if t:
+                prose.append(t)
+    return "\n\n".join(prose), params, returns
+
+
+# cv I/O proxy types only ever appear as *function parameter* types, never as
+# real data members. A `<memberdef kind="variable">` whose type is built from
+# them is a Doxygen phantom (parameter docs leaking into a fake variable, e.g.
+# group__core__array lists "variables" eigenvalues/eigenvectors/mean with types
+# like "InputOutputArray OutputArray OutputArray"). Drop those.
+_PHANTOM_VAR_TYPE_RE = re.compile(
+    r"\b(?:Input|Output|InputOutput)Array(?:OfArrays)?\b")
+
+
+def _is_phantom_variable(member: dict) -> bool:
+    return (member.get("kind") == "variable"
+            and bool(_PHANTOM_VAR_TYPE_RE.search(member.get("type") or "")))
+
+
+def _parse_member_sections(cd) -> dict[str, list[dict]]:
+    """Parse a compounddef's ``<sectiondef><memberdef>`` blocks into the shared
+    ``{section_title: [member dict]}`` shape consumed by the stub writers.
+
+    Shared by ``_build_api_hierarchy`` (group pages) and ``_read_namespace_data``
+    (namespace pages) so both produce identically-shaped member dicts. A
+    memberdef can recur across sectiondefs (Doxygen lists `@addtogroup` members
+    in several places) — deduped by id."""
+    sections: dict[str, list[dict]] = {}
+    _seen_member_ids: set[str] = set()
+    for sd in cd.findall("sectiondef"):
+        for md in sd.findall("memberdef"):
+            kind = md.get("kind", "")
+            section_title = dict(_MEMBERDEF_SECTIONS).get(kind)
+            if not section_title:
+                continue
+            _mid = md.get("id", "")
+            if _mid and _mid in _seen_member_ids:
+                continue
+            _seen_member_ids.add(_mid)
+            qualified = (md.findtext("qualifiedname") or "").strip()
+            if not qualified:
+                qualified = (md.findtext("name") or "").strip()
+            # Param types: <type> text plus any <array> suffix (Doxygen
+            # stores `int foo[3]` as <type>int</type>...<array>[3]</array>;
+            # without merging them our breathe disambiguator omits the `[3]`
+            # and breathe reports "Unable to resolve function with
+            # arguments (…, const double)" even though the function exists).
+            def _param_type(p) -> str:
+                t = _itertext(p.find("type"))
+                arr = (p.findtext("array") or "").strip()
+                return (t + arr) if arr else t
+            param_types = [_param_type(p) for p in md.findall("param")]
+            # Enum values + scoped-vs-unscoped flag (for Doxygen-style
+            # synopsis rendering — one code block per enum with all values
+            # inside `{ }`, instead of breathe's discrete signature blocks).
+            enum_values = []
+            is_strong = md.get("strong", "no") == "yes"
+            if kind == "enum":
+                for ev in md.findall("enumvalue"):
+                    enum_values.append({
+                        "name":        (ev.findtext("name") or "").strip(),
+                        "initializer": (ev.findtext("initializer") or "").strip(),
+                    })
+            _dtl, _params, _returns = _member_detail_parts(md)
+            member = {
+                "id":          md.get("id", ""),
+                "kind":        kind,
+                "name":        (md.findtext("name") or "").strip(),
+                "qualified":   qualified,
+                "type":        _itertext(md.find("type")),
+                "args":        (md.findtext("argsstring") or "").strip(),
+                "param_types": param_types,
+                "brief":       _itertext(md.find("briefdescription")),
+                "enum_values": enum_values,
+                "strong":      is_strong,
+                "static":      md.get("static") == "yes",
+                "const":       md.get("const") == "yes",
+                "template":    _member_template(md),
+                "detailed":    _dtl,
+                "params":      _params,
+                "returns":     _returns,
+            }
+            # Drop Doxygen phantom variables (function-param artifacts).
+            if _is_phantom_variable(member):
+                continue
+            sections.setdefault(section_title, []).append(member)
+    return sections
+
+
 def _build_api_hierarchy(refid: str, xml_dir: pathlib.Path,
                          _seen: set | None = None) -> dict | None:
     """Walk a group XML's <innergroup> children recursively.
@@ -90,54 +222,11 @@ def _build_api_hierarchy(refid: str, xml_dir: pathlib.Path,
             "kind": "struct" if ic_refid.startswith("struct") else "class",
             "brief": _read_class_brief(ic_refid, xml_dir),
         })
-    # Section members (typedefs, enums, functions, variables, macros).
-    # `qualified` and `param_types` exist so we can emit per-member breathe
-    # directives (doxygenenum / doxygenfunction / …) instead of one big
-    # doxygengroup; the latter inlines every <innerclass> on the group page,
-    # which is the opposite of Doxygen's group-page layout.
-    sections: dict[str, list[dict]] = {}
-    for sd in cd.findall("sectiondef"):
-        for md in sd.findall("memberdef"):
-            kind = md.get("kind", "")
-            section_title = dict(_MEMBERDEF_SECTIONS).get(kind)
-            if not section_title:
-                continue
-            qualified = (md.findtext("qualifiedname") or "").strip()
-            if not qualified:
-                qualified = (md.findtext("name") or "").strip()
-            # Param types: <type> text plus any <array> suffix (Doxygen
-            # stores `int foo[3]` as <type>int</type>...<array>[3]</array>;
-            # without merging them our breathe disambiguator omits the `[3]`
-            # and breathe reports "Unable to resolve function with
-            # arguments (…, const double)" even though the function exists).
-            def _param_type(p) -> str:
-                t = _itertext(p.find("type"))
-                arr = (p.findtext("array") or "").strip()
-                return (t + arr) if arr else t
-            param_types = [_param_type(p) for p in md.findall("param")]
-            # Enum values + scoped-vs-unscoped flag (for Doxygen-style
-            # synopsis rendering — one code block per enum with all values
-            # inside `{ }`, instead of breathe's discrete signature blocks).
-            enum_values = []
-            is_strong = md.get("strong", "no") == "yes"
-            if kind == "enum":
-                for ev in md.findall("enumvalue"):
-                    enum_values.append({
-                        "name":        (ev.findtext("name") or "").strip(),
-                        "initializer": (ev.findtext("initializer") or "").strip(),
-                    })
-            sections.setdefault(section_title, []).append({
-                "id":          md.get("id", ""),
-                "kind":        kind,
-                "name":        (md.findtext("name") or "").strip(),
-                "qualified":   qualified,
-                "type":        _itertext(md.find("type")),
-                "args":        (md.findtext("argsstring") or "").strip(),
-                "param_types": param_types,
-                "brief":       _itertext(md.find("briefdescription")),
-                "enum_values": enum_values,
-                "strong":      is_strong,
-            })
+    # Section members (typedefs, enums, functions, variables, macros) —
+    # parsed into the shared {section_title: [member dict]} shape. `qualified`
+    # and `param_types` let us emit per-member breathe directives instead of
+    # one big doxygengroup (which would inline every <innerclass>).
+    sections = _parse_member_sections(cd)
     # Recurse into subgroups.
     children = []
     for ig in cd.findall("innergroup"):
@@ -403,6 +492,7 @@ def _read_class_data(refid: str, xml_dir: pathlib.Path) -> dict | None:
                         # row carries its own description, like docs.opencv.org).
                         "brief":       _itertext(ev.find("briefdescription")).strip(),
                     })
+            _dtl, _params, _returns = _member_detail_parts(md)
             items.append({
                 "id":          md.get("id", ""),
                 "kind":        mkind,
@@ -418,23 +508,31 @@ def _read_class_data(refid: str, xml_dir: pathlib.Path) -> dict | None:
                 "explicit":    md.get("explicit") == "yes",
                 "enum_values": enum_values,
                 "strong":      md.get("strong", "no") == "yes",
+                "template":    _member_template(md),
+                "detailed":    _dtl,
+                "params":      _params,
+                "returns":     _returns,
             })
         if items:
             sections[skind] = items
 
+    # Detailed description: store only a BOOLEAN flag now (PR #7). Rendering is
+    # delegated to Breathe's `{doxygenclass} … :no-members:` directive emitted
+    # by `_write_class_stub`; we just need to know *whether* there is content,
+    # to decide whether to emit the directive (and the header's `More...` link).
     detailed_el = cd.find("detaileddescription")
-    detailed_paras = []
-    if detailed_el is not None:
-        for p in detailed_el.findall("para"):
-            txt = _itertext(p)
-            if txt:
-                detailed_paras.append(txt)
-
+    has_detailed = bool(detailed_el is not None and any(
+        _itertext(p).strip() for p in detailed_el.findall("para")
+    ))
+    # `<includes>` gives the header file Doxygen recorded for this class
+    # (e.g. `opencv2/core/mat.hpp`) — used by the page header's `#include` line.
+    include = (cd.findtext("includes") or "").strip()
     return {
         "name":     (cd.findtext("compoundname") or "").strip(),
         "brief":    _itertext(cd.find("briefdescription")),
-        "detailed": "\n\n".join(detailed_paras),
+        "detailed": has_detailed,
         "sections": sections,
+        "include":  include,
     }
 
 
@@ -549,9 +647,24 @@ def _patch_namespace_xml_for_breathe(xml_dir: pathlib.Path,
     Patching: for each `<member refid>` in a target compound's sectiondef
     whose id targets `group__…`, we open the group XML, find the matching
     `<memberdef id="…">`, and append it into the compound's sectiondef.
-    The original XML on disk is untouched."""
+    The original XML on disk is untouched.
+
+    Freshness guard: skip the whole rebuild when `out_dir/index.xml` is at
+    least as new as `xml_dir/index.xml`. The patcher mirrors+parses ~1500
+    compound XMLs on a clean run — rerunning that on every sphinx-build is
+    what made incremental rebuilds feel sluggish. `sphinx-xml` bumps the
+    source `xml/` tree's mtimes, so a real Doxygen change always invalidates
+    this cache."""
     import xml.etree.ElementTree as _ET
     import os as _osmod, shutil as _shutil
+    src_index = xml_dir / "index.xml"
+    dst_index = out_dir / "index.xml"
+    # `index.xml` is mirrored as a symlink (it's never patched), so compare the
+    # link's OWN mtime (set when the mirror was last rebuilt) via lstat — NOT
+    # stat, which would follow the link to the source and always tie.
+    if (src_index.is_file() and (dst_index.is_symlink() or dst_index.is_file())
+            and dst_index.lstat().st_mtime >= src_index.stat().st_mtime):
+        return
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # 1) Mirror every file from xml_dir into out_dir as a symlink. Cleaning
@@ -637,11 +750,138 @@ def _patch_namespace_xml_for_breathe(xml_dir: pathlib.Path,
             tree.write(out_file, encoding="utf-8", xml_declaration=True)
 
 
+# -- Namespace pages ---------------------------------------------------------
+# Doxygen 1.12 group XML carries `<innernamespace>` refs but namespace XML
+# lacks `<innerclass>`; these readers bridge that so we can emit one
+# `api/namespace_<slug>.md` per namespace and link it from its owning group
+# pages. Pure XML reads — the markdown assembly lives in stubs.py.
+
+def _build_ns_group_map(all_refids: list[str],
+                        xml_dir: pathlib.Path) -> dict[str, set]:
+    """Return ``namespace_name -> set(group compound-name)``.
+
+    Reads ``<innernamespace>`` directly from each group XML (Doxygen 1.12+).
+    Namespaces under detail/internal/impl scopes are dropped — they're not
+    part of the public surface."""
+    import xml.etree.ElementTree as _ET
+    ns_to_groups: dict[str, set] = {}
+    for refid in all_refids:
+        xml_path = xml_dir / f"{refid}.xml"
+        if not xml_path.is_file():
+            continue
+        try:
+            cd = _ET.parse(xml_path).getroot().find("compounddef")
+        except _ET.ParseError:
+            continue
+        if cd is None:
+            continue
+        cname = (cd.findtext("compoundname") or "").strip()
+        for inn in cd.findall("innernamespace"):
+            ns_xml = xml_dir / f"{inn.get('refid', '')}.xml"
+            if not ns_xml.is_file():
+                continue
+            try:
+                ns_cd = _ET.parse(ns_xml).getroot().find("compounddef")
+            except _ET.ParseError:
+                continue
+            if ns_cd is None:
+                continue
+            ns_name = (ns_cd.findtext("compoundname") or "").strip()
+            if any(p in ns_name.split("::") for p in ("detail", "internal", "impl")):
+                continue
+            ns_to_groups.setdefault(ns_name, set()).add(cname)
+    return ns_to_groups
+
+
+def _namespaces_for_group(group_name: str, xml_dir: pathlib.Path,
+                          ns_group_map: dict[str, set]) -> list[dict]:
+    """Return ``{name, refid, brief, detailed}`` dicts for the namespaces that
+    belong to ``group_name`` (per ``ns_group_map``). Resolves each namespace's
+    XML file by mangled name, falling back to a ``namespacecv*`` scan."""
+    import xml.etree.ElementTree as _ET, glob as _glob
+    wanted = {ns for ns, grps in ns_group_map.items() if group_name in grps}
+    out: list[dict] = []
+    for ns_name in sorted(wanted):
+        ns_file = xml_dir / ("namespace" + "_1_1".join(ns_name.split("::")) + ".xml")
+        if not ns_file.is_file():
+            for f in _glob.glob(str(xml_dir / "namespacecv*.xml")):
+                try:
+                    cd = _ET.parse(f).getroot().find("compounddef")
+                except _ET.ParseError:
+                    continue
+                if cd is not None and (cd.findtext("compoundname") or "").strip() == ns_name:
+                    ns_file = pathlib.Path(f)
+                    break
+        if not ns_file.is_file():
+            continue
+        try:
+            cd = _ET.parse(ns_file).getroot().find("compounddef")
+        except _ET.ParseError:
+            continue
+        if cd is None:
+            continue
+        brief = _itertext(cd.find("briefdescription"))
+        detailed_el = cd.find("detaileddescription")
+        detailed = "\n\n".join(
+            p for p in (_itertext(e) for e in
+                        (detailed_el.findall("para") if detailed_el is not None else []))
+            if p)
+        out.append({"name": ns_name, "refid": cd.get("id", ""),
+                    "brief": brief, "detailed": detailed})
+    return out
+
+
+def _read_namespace_member_sections(ns_refid: str,
+                                    patched_xml_dir: pathlib.Path) -> dict:
+    """Member sections for a namespace, read from the PATCHED XML (which has
+    the group-only `<memberdef>`s inlined — see
+    ``_patch_namespace_xml_for_breathe``). Same shape as group sections."""
+    import xml.etree.ElementTree as _ET
+    if not ns_refid:
+        return {}
+    xml_path = patched_xml_dir / f"{ns_refid}.xml"
+    if not xml_path.is_file():
+        return {}
+    try:
+        cd = _ET.parse(xml_path).getroot().find("compounddef")
+    except _ET.ParseError:
+        return {}
+    return _parse_member_sections(cd) if cd is not None else {}
+
+
+def _namespace_innerclasses(ns_name: str, xml_dir: pathlib.Path) -> list[tuple]:
+    """Return ``(refid, qualified_name, kind, brief)`` for classes/structs
+    directly inside ``ns_name``. Namespace XML lacks ``<innerclass>`` in
+    Doxygen 1.12, so glob class/struct XMLs by the mangled refid prefix and
+    skip those that live in a sub-namespace."""
+    import xml.etree.ElementTree as _ET
+    ns_prefix = ns_name + "::"
+    refid_prefix = ns_name.replace("::", "_1_1") + "_1_1"
+    out: list[tuple] = []
+    for kind in ("struct", "class"):
+        for xml_file in sorted(xml_dir.glob(f"{kind}{refid_prefix}*.xml")):
+            try:
+                cd = _ET.parse(xml_file).getroot().find("compounddef")
+            except _ET.ParseError:
+                continue
+            if cd is None:
+                continue
+            cname = (cd.findtext("compoundname") or "").strip()
+            if "::" in cname[len(ns_prefix):]:   # nested in a sub-namespace
+                continue
+            out.append((xml_file.stem, cname, kind,
+                        _itertext(cd.find("briefdescription"))))
+    return out
+
+
 __all__ = [
     "_itertext", "_MEMBERDEF_SECTIONS", "_read_class_brief",
-    "_build_api_hierarchy", "_md_escape_cell", "_MEMBER_DIRECTIVE",
-    "_MEMBER_DETAIL_SECTION", "_sphinx_cpp_v4_id", "_enum_synopsis_html",
-    "_enum_synopsis_lines", "_function_signature", "_class_page_name",
-    "_read_class_data", "_find_collaboration_svg", "_svg_make_transparent",
-    "_svg_dark_variant", "_patch_namespace_xml_for_breathe",
+    "_build_api_hierarchy", "_parse_member_sections", "_md_escape_cell",
+    "_MEMBER_DIRECTIVE", "_MEMBER_DETAIL_SECTION", "_sphinx_cpp_v4_id",
+    "_enum_synopsis_html", "_enum_synopsis_lines", "_function_signature",
+    "_class_page_name", "_read_class_data", "_find_collaboration_svg",
+    "_svg_make_transparent", "_svg_dark_variant",
+    "_patch_namespace_xml_for_breathe",
+    "_build_ns_group_map", "_namespaces_for_group",
+    "_read_namespace_member_sections", "_namespace_innerclasses",
 ]

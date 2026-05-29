@@ -79,6 +79,15 @@ for _toc in (DOC_ROOT / "py_tutorials").glob("*/py_table_of_contents_*.markdown"
     if _toc.parent.name not in PY_DOC_MODULES:
         _scan_external(_toc)
 
+# These roots reach the master toctree via @subpage lines injected at
+# translate/source-read time (not present in any scanned source file), so add
+# them to the referenced set explicitly — otherwise orphan detection would
+# wrongly flag the js/py/contrib roots and the standalone pages.
+_REFERENCED_ANCHORS.update({
+    "intro", "faq", "citelist",
+    "tutorial_js_root", "tutorial_py_root", "tutorial_contrib_root", "api_root",
+})
+
 # Image basename index (mirrors Doxygen's flat IMAGE_PATH lookup).
 _IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".bmp", ".webp"}
 for _root in ((DOC_ROOT / "tutorials").rglob("images/*"),

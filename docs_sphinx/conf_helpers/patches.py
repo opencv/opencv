@@ -28,6 +28,38 @@ def _patch_cpp_xref_resolver():
             return None, None
     CPPDomain._resolve_xref_inner = guarded
 
+    # Log-filter half (PR #7): when Breathe renders a detailed description it
+    # emits a `pending_xref` for every `<ref>` in the prose; many don't resolve
+    # to a symbol on our pages (templates, conversion operators, overloads the
+    # matcher gives up on) so the C++ domain logs "Unable to resolve …" /
+    # "Cannot find …" — dozens per page. The text still renders fine (falls back
+    # to plain `<code>`), so these are pure noise. Drop just those shapes;
+    # everything else flows through untouched.
+    import logging
+    _UNRESOLVED_XREF_PATTERNS = (
+        "Unable to resolve function",
+        "Unable to resolve class",
+        "Cannot find function",
+        "Cannot find class",
+        "Cannot find variable",
+        "Cannot find typedef",
+        "Cannot find enum",
+        "Cannot find enumerator",
+        "Cannot find define",
+        # Breathe sometimes re-declares an already-known C++ symbol across an
+        # incremental rebuild; the duplicate is harmless (Sphinx ignores it).
+        "Duplicate C++ declaration",
+    )
+
+    class _UnresolvedXrefFilter(logging.Filter):
+        def filter(self, record: logging.LogRecord) -> bool:
+            msg = record.getMessage()
+            return not any(p in msg for p in _UNRESOLVED_XREF_PATTERNS)
+
+    _filt = _UnresolvedXrefFilter()
+    for _logger_name in ("sphinx", "docutils"):
+        logging.getLogger(_logger_name).addFilter(_filt)
+
 
 _patch_cpp_xref_resolver()
 
@@ -143,3 +175,64 @@ def _patch_breathe_operator_signatures():
 
 
 _patch_breathe_operator_signatures()
+
+
+def _patch_breathe_docsect():
+    """Render Doxygen ``docSect{1,2,3}`` nodes that carry no title.
+
+    Cherry-picked from PR #30. Breathe 4.36 assumes every ``docSectN`` node
+    has a title, but Doxygen 1.12 emits ``docSect2TypeSub`` (and deeper)
+    elements whose title is optional. When the title is absent breathe raises
+    while rendering a "Detailed Description", dropping the section's body. Wrap
+    the section visitor so a title-less node just renders its content; nodes
+    that do have a title fall through to breathe's original visitor.
+
+    Idempotent and a no-op when breathe is unavailable.
+    """
+    try:
+        from breathe.renderer import sphinxrenderer as _bsr
+    except ImportError:
+        return
+    _methods = _bsr.SphinxRenderer.methods
+    # Already patched? our wrapper sets this marker.
+    if getattr(_methods.get("docsect1"), "_opencv_docsect_patch", False):
+        return
+    _orig_visit = _methods["docsect1"]
+
+    def _visit_docsectN(self, node):
+        if not getattr(node, "title", None):
+            return self.render_iterable(node.content_)
+        return _orig_visit(self, node)
+
+    _visit_docsectN._opencv_docsect_patch = True
+    for _kind in ("docsect1", "docsect2", "docsect3"):
+        _methods[_kind] = _visit_docsectN
+
+
+_patch_breathe_docsect()
+
+
+def _silence_orphan_toctree_warning():
+    """Suppress Sphinx's "document isn't included in any toctree" warning.
+
+    The wrapper renders an external tree (opencv/doc/) we must not edit, which
+    contains intentionally-unlinked pages: moved-redirect stubs and sub-TOCs
+    whose parent links the children directly. ``_source_read`` already marks
+    such pages ``:orphan:`` (the correct fix) — but that only takes effect when
+    Sphinx re-reads the source. On an INCREMENTAL build the cached environment
+    is reused (Sphinx tracks conf.py, not conf_helpers/), so the consistency
+    check still emits the warning from the stale doctree. The condition isn't
+    actionable here (we can't add the missing link without editing doc/), so we
+    filter the message — same approach as the breathe / cpp-domain noise above.
+    A clean build silences it via the ``:orphan:`` metadata regardless."""
+    import logging
+
+    class _OrphanFilter(logging.Filter):
+        def filter(self, record: logging.LogRecord) -> bool:
+            return "included in any toctree" not in record.getMessage()
+
+    for _name in ("sphinx", "docutils"):
+        logging.getLogger(_name).addFilter(_OrphanFilter())
+
+
+_silence_orphan_toctree_warning()
