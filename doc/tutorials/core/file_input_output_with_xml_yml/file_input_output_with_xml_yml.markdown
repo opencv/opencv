@@ -4,6 +4,7 @@ File Input and Output using XML / YAML / JSON files {#tutorial_file_input_output
 @tableofcontents
 
 @prev_tutorial{tutorial_discrete_fourier_transform}
+@next_tutorial{tutorial_how_to_use_OpenCV_parallel_for_}
 @next_tutorial{tutorial_how_to_use_OpenCV_parallel_for_new}
 
 |    |    |
