@@ -129,7 +129,7 @@ public:
     int bayer2Gray(const uchar* bayer, int bayer_step, uchar* dst,
                    int width, int bcoeff, int gcoeff, int rcoeff)
     {
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 #if CV_NEON
         uint16x8_t masklo = vdupq_n_u16(255);
         const uchar* bayer_end = bayer + width;
@@ -288,7 +288,7 @@ public:
          G R G R | G R G R | G R G R | G R G R
          B G B G | B G B G | B G B G | B G B G
          */
-#if CV_SIMD128
+#if (CV_SIMD128 || CV_SIMD_SCALABLE)
 #if CV_NEON
         uint16x8_t masklo = vdupq_n_u16(255);
         uint8x16x3_t pix;
@@ -425,7 +425,7 @@ public:
          B G B G | B G B G | B G B G | B G B G
          */
 
-#if CV_SIMD128
+#if (CV_SIMD128 || CV_SIMD_SCALABLE)
 #if CV_NEON
         uint16x8_t masklo = vdupq_n_u16(255);
         uint8x16x4_t pix;
@@ -556,7 +556,7 @@ public:
 
     int bayer2RGB_EA(const uchar* bayer, int bayer_step, uchar* dst, int width, int blue) const
     {
-#if CV_SIMD128
+#if (CV_SIMD128 || CV_SIMD_SCALABLE)
         const uchar* bayer_end = bayer + width;
         v_uint16x8 masklow = v_setall_u16(0x00ff);
         v_uint16x8 delta1 = v_setall_u16(1), delta2 = v_setall_u16(2);
@@ -1119,7 +1119,7 @@ static void Bayer2RGB_VNG_8u( const Mat& _srcmat, Mat& dstmat, int code )
 
             i = 1;
 
-#if CV_SIMD128
+#if (CV_SIMD128 || CV_SIMD_SCALABLE)
             for( ; i <= N-9; i += 8, srow += 8, brow += 8 )
             {
                 v_uint16x8 s1, s2, s3, s4, s6, s7, s8, s9;
@@ -1183,7 +1183,7 @@ static void Bayer2RGB_VNG_8u( const Mat& _srcmat, Mat& dstmat, int code )
         bool greenCell = greenCell0;
 
         i = 2;
-#if CV_SIMD128
+#if (CV_SIMD128 || CV_SIMD_SCALABLE)
         int limit = greenCell ? std::min(3, N-2) : 2;
 #else
         int limit = N - 2;
@@ -1351,7 +1351,7 @@ static void Bayer2RGB_VNG_8u( const Mat& _srcmat, Mat& dstmat, int code )
                 greenCell = !greenCell;
             }
 
-#if CV_SIMD128
+#if (CV_SIMD128 || CV_SIMD_SCALABLE)
             v_uint32x4 emask = v_setall_u32(0x0000ffff), omask = v_setall_u32(0xffff0000);
             v_uint16x8 one = v_setall_u16(1), z = v_setzero_u16();
             v_float32x4 _0_5 = v_setall_f32(0.5f);
