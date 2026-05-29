@@ -89,7 +89,7 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
             defaultAlpha = 1.f;
         }
 
-    #if CV_SIMD || CV_SIMD_SCALABLE
+    #if CV_SIMD
         v_float32 v_maxval = vx_setall_f32(maxval);
         v_float32 z = vx_setzero_f32();
         const int nlanes = VTraits<v_float32>::vlanes();
@@ -126,12 +126,12 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
                         y0 >= inner_y0 && y0 < inner_y1 ? inner_x0 : W;
                     int yi_ = y0*SY - padY0;
 
-                #if !(CV_SIMD || CV_SIMD_SCALABLE)
+                #if !(CV_SIMD)
                     memset(out, 0, W*C0*sizeof(out[0]));
                 #endif
 
                     for(;;) {
-                    #if CV_SIMD || CV_SIMD_SCALABLE
+                    #if CV_SIMD
                         if (nlanes == C0) {
                             v_float32 sc0 = vx_load(scalebuf), b0 = vx_load(biasbuf);
                             v_float32 alpha0 = vx_load(alphabuf);
@@ -218,7 +218,7 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
                             break;
                         x1 = inner_x1;
 
-                    #if CV_SIMD || CV_SIMD_SCALABLE
+                    #if CV_SIMD
                         if (nlanes == C0) {
                             v_float32 sc0 = vx_load(scalebuf), b0 = vx_load(biasbuf), alpha0 = vx_load(alphabuf);
                             for (; x0 < x1; x0++) {
@@ -335,7 +335,7 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
                         x1 = W;
                     }
 
-                #if !(CV_SIMD || CV_SIMD_SCALABLE)
+                #if !(CV_SIMD)
                     if (residual) {
                         for (int x = 0; x < W*C0; x += C0) {
                             for (int c = 0; c < C0; c++) {

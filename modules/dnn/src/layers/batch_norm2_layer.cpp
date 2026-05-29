@@ -19,7 +19,7 @@ namespace dnn {
 */
 
 #undef CV_SIMD_ONLY
-#if CV_SIMD || CV_SIMD_SCALABLE
+#if CV_SIMD
 #define CV_SIMD_ONLY(expr) expr
 #else
 #define CV_SIMD_ONLY(expr)
@@ -135,7 +135,7 @@ static void batchnorm(const Mat& inp, Mat& out, const Mat& scale,
                     }
                 }
             }
-        #if CV_SIMD || CV_SIMD_SCALABLE
+        #if CV_SIMD
             /*
                 [TODO] support C0 == vlanes/2, maybe C0 == vlanes/4.
                 in this case, load everything into vsc0 and vb0, process
