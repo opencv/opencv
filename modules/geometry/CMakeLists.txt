@@ -1,4 +1,4 @@
-set(the_description "Computational geometry rimitives")
+set(the_description "Computational geometry primitives")
 
 ocv_add_dispatched_file(undistort SSE2 AVX2)
 

@@ -1215,7 +1215,7 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
     CV_INSTRUMENT_REGION();
 #ifndef HAVE_OPENCV_GEOMETRY
     CV_UNUSED(src1); CV_UNUSED(src2); CV_UNUSED(fullAffine);
-    CV_Error(Error::StsError, "estimateRigidTransform requires 3d module");
+    CV_Error(Error::StsError, "estimateRigidTransform requires geometry module");
 #else
     Mat A = src1.getMat(), B = src2.getMat();
 
