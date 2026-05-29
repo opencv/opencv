@@ -14,7 +14,23 @@
             "projectPoints",
             "undistort",
             "fisheye_initUndistortRectifyMap",
-            "fisheye_projectPoints"
+            "fisheye_projectPoints",
+            "approxPolyDP",
+            "approxPolyN",
+            "boundingRect",
+            "minAreaRect",
+            "minEnclosingCircle",
+            "minEnclosingTriangle",
+            "matchShapes",
+            "convexHull",
+            "convexityDefects",
+            "isContourConvex",
+            "intersectConvexConvex",
+            "fitEllipse",
+            "fitEllipseAMS",
+            "fitEllipseDirect",
+            "fitLine",
+            "pointPolygonTest"
         ],
         "UsacParams": ["UsacParams"]
     }
