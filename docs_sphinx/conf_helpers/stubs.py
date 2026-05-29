@@ -228,12 +228,26 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
         if section_title == "Functions":
             lines += ["{.api-reference-table .api-function-table}",
                       "| Return | Name | Description |", "|---|---|---|"]
+            # Rich Return cell on api/core_basic only: prepend the `template<…>`
+            # clause + `static` storage spec so the layout matches the live
+            # Doxygen group page. Other group pages keep the bare-type cell.
+            _rich_return = (name == "core_basic")
             for m in items:
-                ret = _md_escape_cell(m["type"]) or "&nbsp;"
+                ret_type = _md_escape_cell(m["type"]) or "&nbsp;"
                 label = f"{m['name']}{_md_escape_cell(m['args'])}"
                 sig_link = _member_anchor_link(m, label)
+                if _rich_return:
+                    # Hide the Doxygen-visible CV_EXPORTS* macro (live docs do).
+                    ret_type = re.sub(r"^CV_EXPORTS(?:_[A-Z]+)?\s+", "", ret_type)
+                    storage = "static " if m.get("static") else ""
+                    if m.get("template"):
+                        ret = f"`{m['template']}`<br>`{storage}{ret_type}`"
+                    else:
+                        ret = f"`{storage}{ret_type}`"
+                else:
+                    ret = f"`{ret_type}`"
                 lines.append(
-                    f"| `{ret}` | {sig_link} | {_md_escape_cell(m['brief'])} |")
+                    f"| {ret} | {sig_link} | {_md_escape_cell(m['brief'])} |")
         elif section_title in ("Typedefs", "Variables"):
             # Typedefs get their own table style; variables reuse the generic one.
             marker = ("{.api-typedef-table}" if section_title == "Typedefs"
@@ -278,6 +292,18 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
         items = node["sections"].get(section_title, [])
         if not items or kind_key == "enum":
             continue
+        # api/core_basic functions use a hand-rolled rich block (see
+        # `_render_core_basic_func`) instead of `_render_member_detail`. Count
+        # overloads per short name first so headings can show `[i/n]`.
+        _core_basic_funcs = (name == "core_basic" and kind_key == "function")
+        _ov_total: dict[str, int] = {}
+        _ov_idx: dict[str, int] = {}
+        _slug_seen: set[str] = set()
+        if _core_basic_funcs:
+            for m in items:
+                if _is_class_member(m) or _is_template_spec(m):
+                    continue
+                _ov_total[m["name"]] = _ov_total.get(m["name"], 0) + 1
         blocks: list[list[str]] = []
         for m in items:
             # Class members render on their own class page; skip on the group.
@@ -286,6 +312,15 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
             # Explicit template specializations (`saturate_cast< unsigned >`)
             # carry `<…>` in the name — the summary table still lists them.
             if _is_template_spec(m):
+                continue
+            if _core_basic_funcs:
+                short = m["name"]
+                _ov_idx[short] = _ov_idx.get(short, 0) + 1
+                slug = _func_slug(short)
+                emit_anchor = slug not in _slug_seen
+                _slug_seen.add(slug)
+                blocks.append(_render_core_basic_func(
+                    m, _ov_idx[short], _ov_total.get(short, 1), emit_anchor))
                 continue
             if kind_key == "define":
                 # Macros aren't namespaced; dedupe arity-overloaded ones.
@@ -386,6 +421,46 @@ def _render_member_detail(m: dict, full_name: str) -> list[str]:
     return out
 
 
+def _render_core_basic_func(m: dict, idx: int, total: int,
+                            emit_anchor: bool) -> list[str]:
+    """Hand-rolled Function Documentation block for the api/core_basic page.
+
+    breathe's `{doxygenfunction}` can't parse the templated OpenCV signatures
+    on this page (dozens of "Cannot find function" warnings), so we render the
+    block straight from the Doxygen metadata to match the live group page.
+    Signature + template clause are emitted as inline code spans so the
+    downstream token-linkifier (translate step 8g) can make `_Tp`, `Matx`,
+    `uchar`, … clickable. The heading carries a `{#cv-slug}` anchor (first
+    overload only) that the Functions-table links (translate step 8i) target.
+    `[i/n]` overload markers mirror the live page."""
+    short = m["name"]
+    slug = _func_slug(short)
+    suffix = f" [{idx}/{total}]" if total > 1 else ""
+    head = f"### {short}(){suffix}"
+    out = [f"{head} {{#{slug}}}" if emit_anchor else head, ""]
+    if m.get("template"):
+        out += [f"`{m['template']}`", ""]
+    ret = re.sub(r"^CV_EXPORTS(?:_[A-Z]+)?\s+", "", m.get("type") or "")
+    storage = ("static " if m.get("static") else "") \
+        + ("inline " if m.get("inline") else "")
+    qname = m["qualified"] or m["name"]
+    out += [f"`{storage}{ret} {qname}{m['args']}`", ""]
+    if m.get("include_file"):
+        out += [f"`#include <{m['include_file']}>`", ""]
+    if m.get("brief"):
+        out += [m["brief"], ""]
+    if m.get("detailed"):
+        out += [m["detailed"], ""]
+    if m.get("params"):
+        out += ["**Parameters**", ""]
+        for nm, desc in m["params"]:
+            out.append(f"- `{nm}` — {desc}" if desc else f"- `{nm}`")
+        out.append("")
+    if m.get("returns"):
+        out += [f"**Returns** — {m['returns']}", ""]
+    return out
+
+
 def _write_class_stub(cls: dict, out_dir: pathlib.Path,
                       xml_dir: pathlib.Path) -> None:
     """One .md per inner class. Mirrors Doxygen's class-page layout:
@@ -472,6 +547,12 @@ def _write_class_stub(cls: dict, out_dir: pathlib.Path,
             _dark_name = f"{_svg.stem}.{_dh}.dark.svg"
             (out_dir / _light_name).write_text(_light_txt, encoding="utf-8")
             (out_dir / _dark_name).write_text(_dark_txt, encoding="utf-8")
+            # Register them so the stale-file sweep at the end of
+            # `_generate_api_stubs` (which unlinks anything in out_dir not in
+            # `_stub_written`) doesn't delete the diagram SVGs — without this
+            # the `<img>` resolves to a missing file and renders broken.
+            _stub_written.add(out_dir / _light_name)
+            _stub_written.add(out_dir / _dark_name)
         except OSError:
             _light_name = _dark_name = None
     if _light_name is not None:

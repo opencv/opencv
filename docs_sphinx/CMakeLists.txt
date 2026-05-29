@@ -20,6 +20,27 @@ if(NOT SPHINX_BUILD)
   return()
 endif()
 
+# Graphviz `dot` — required for the collaboration-diagram images on API
+# class pages. The diagrams come from the legacy Doxygen HTML build, which
+# only emits `<refid>__coll__graph.svg` (conf.py inlines + recolours them for
+# dark mode) when Doxygen runs with HAVE_DOT=YES — and that flag is set by
+# find_package(Doxygen) in opencv/doc/CMakeLists.txt only when `dot` is on
+# PATH. So installing graphviz and re-running cmake is all that's needed;
+# we surface a clear, actionable message when it's missing rather than
+# silently shipping diagram-less class pages.
+find_program(DOT_EXECUTABLE NAMES dot
+  DOC "Path to graphviz `dot` (required for API collaboration diagrams)")
+if(NOT DOT_EXECUTABLE)
+  message(WARNING
+    "docs_sphinx: graphviz `dot` not found — API class-page collaboration "
+    "diagrams will be skipped. Install graphviz (e.g. `sudo apt-get install "
+    "graphviz`) and re-run cmake so the Doxygen HTML build enables HAVE_DOT.")
+else()
+  message(STATUS
+    "docs_sphinx: graphviz dot found (${DOT_EXECUTABLE}) — "
+    "collaboration diagrams enabled")
+endif()
+
 set(_SPHINX_CONFDIR    "${CMAKE_CURRENT_SOURCE_DIR}")
 set(_SPHINX_OUTDIR     "${CMAKE_CURRENT_BINARY_DIR}/html")
 set(_SPHINX_INPUT_ROOT "${CMAKE_CURRENT_BINARY_DIR}/docs_sphinx_input")
@@ -235,6 +256,19 @@ endif()
 # Auto-generate Python binding signatures (needed for Python names in enum tables).
 if(TARGET gen_opencv_python_source)
   add_dependencies(sphinx gen_opencv_python_source)
+endif()
+# Collaboration-diagram SVGs on API class pages come from the legacy Doxygen
+# HTML build (conf.py reads <refid>__coll__graph.svg from doc/doxygen/html and
+# inlines + dark-recolours it). Depend on the `doxygen` target so the SVGs are
+# regenerated automatically on `cmake --build <build> --target sphinx` — no
+# separate `--target doxygen` step. Requires graphviz `dot` (see DOT_EXECUTABLE
+# check above); without it Doxygen emits no graphs and the diagram is omitted.
+# NOTE: the Doxygen HTML pass is heavy and stamp-less, so it re-runs each sphinx
+# build. Set -DSPHINX_BUILD_DIAGRAMS=OFF to skip it for fast tutorial-only runs.
+option(SPHINX_BUILD_DIAGRAMS
+  "Rebuild the Doxygen HTML (collaboration diagrams) as part of the sphinx target" ON)
+if(SPHINX_BUILD_DIAGRAMS AND TARGET doxygen)
+  add_dependencies(sphinx doxygen)
 endif()
 
 # Clean rebuild: `cmake --build <build> --target sphinx-clean`

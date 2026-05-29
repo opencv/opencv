@@ -191,6 +191,14 @@ DOXYGEN_BASE_URL = (
 _TAG_CANDIDATES = (
     HERE.parent / "build" / "doc" / "doxygen" / "html" / "opencv.tag",
     HERE.parent.parent / "build" / "doc" / "doxygen" / "html" / "opencv.tag",
+    # Extra build-dir layouts (vanilla `build/`, `build_contrib/`, and the
+    # nested `build/build_contrib/build_contrib/` CI layout). Empty default
+    # would silently break the _LOCAL_*_URL maps and api/core_basic linkifiers.
+    HERE.parent.parent / "build" / "doc" / "opencv.tag",
+    HERE.parent.parent / "build_contrib" / "doc" / "doxygen" / "html" / "opencv.tag",
+    HERE.parent.parent / "build_contrib" / "doc" / "opencv.tag",
+    HERE.parent.parent / "build" / "build_contrib" / "build_contrib"
+        / "doc" / "doxygen" / "html" / "opencv.tag",
 )
 _TAG_FILE = pathlib.Path(_os.environ.get(
     "OPENCV_DOXYGEN_TAGFILE",
@@ -273,6 +281,209 @@ if _TAG_FILE.is_file():
 
 def _doxygen_url(page: str) -> str:
     return DOXYGEN_BASE_URL + _TAG_FILENAMES.get(page, page)
+
+
+# -- Live (docs.opencv.org) tagfile for API stub URL construction ----------
+# The local Doxygen build runs with CREATE_SUBDIRS=NO (Breathe XML can't handle
+# subdirs), so its tagfile filenames are flat like `group__core__basic.html` —
+# which 404 on docs.opencv.org, where pages live under hash-based subdirs (e.g.
+# `dc/d84/group__core__basic.html`). The live tagfile at
+# https://docs.opencv.org/5.x/opencv.tag has the subdir prefixes baked in:
+#     curl https://docs.opencv.org/5.x/opencv.tag \
+#       -o <build>/doc/doxygen/opencv-live.tag
+# and the api/core_basic link rewriter (translate steps 8a/8b) picks it up.
+# Falls back silently to the flat URL form when absent.
+_LIVE_TAG_FILE = pathlib.Path(_os.environ.get(
+    "OPENCV_DOXYGEN_LIVE_TAGFILE",
+    str(HERE.parent.parent / "build" / "doc" / "doxygen" / "opencv-live.tag"),
+))
+if not _LIVE_TAG_FILE.is_file():
+    for _alt in (
+        HERE.parent.parent / "build" / "build_contrib" / "build_contrib"
+            / "doc" / "doxygen" / "opencv-live.tag",
+        HERE.parent.parent / "build_contrib" / "doc" / "doxygen" / "opencv-live.tag",
+    ):
+        if _alt.is_file():
+            _LIVE_TAG_FILE = _alt
+            break
+
+_LIVE_GROUP_URL: dict[str, str] = {}    # 'group__core__basic' -> live URL
+_LIVE_CLASS_URL: dict[str, str] = {}    # 'Matx' -> live URL
+_LIVE_TYPEDEF_URL: dict[str, str] = {}  # 'uchar' -> live URL (group anchor)
+if _LIVE_TAG_FILE.is_file():
+    try:
+        import xml.etree.ElementTree as _ET
+        for _c in _ET.parse(str(_LIVE_TAG_FILE)).getroot().iter("compound"):
+            _kind = _c.get("kind")
+            _n = _c.findtext("name") or ""
+            _f = _c.findtext("filename") or ""
+            if not (_n and _f):
+                continue
+            _fn = _f if _f.endswith(".html") else _f + ".html"
+            if _kind == "group":
+                # Key by the filename basename (matches the anchor pattern
+                # `group__<name>_1<hash>`); 'core_basic' tag name has filename
+                # 'group__core__basic.html'.
+                _basename = pathlib.PurePosixPath(_fn).name[:-5]  # strip .html
+                _LIVE_GROUP_URL[_basename] = DOXYGEN_BASE_URL + _fn
+            elif _kind == "class":
+                _short = _n.split("::")[-1]
+                _LIVE_CLASS_URL.setdefault(_short, DOXYGEN_BASE_URL + _fn)
+            # Typedef members from any compound → maps `uchar` to its live
+            # anchor URL, used by the api/core_basic Type-column linkifier.
+            for _mem in _c.findall("member"):
+                if _mem.get("kind") != "typedef":
+                    continue
+                _mn = (_mem.findtext("name") or "").strip()
+                _maf = (_mem.findtext("anchorfile") or "").strip()
+                _man = (_mem.findtext("anchor") or "").strip()
+                if _mn and _maf and _man:
+                    _LIVE_TYPEDEF_URL.setdefault(
+                        _mn, f"{DOXYGEN_BASE_URL}{_maf}#{_man}")
+    except Exception:
+        pass
+
+
+# -- Local-link variants of the maps above ----------------------------------
+# Used by the api/core_basic token-linkifier (translate step 8g) so clickables
+# inside `<…>` brackets point at LOCAL Sphinx api pages (sibling files), not
+# docs.opencv.org. Values are URLs relative to the api/ directory.
+#
+# Source: prefer the LOCAL Doxygen tagfile (`_TAG_FILE`) — always written by
+# the Doxygen build, so these populate whenever Doxygen ran, without the
+# separate opencv-live.tag download. Fall back to the live tagfile.
+_LOCAL_SRC_TAG = _TAG_FILE if _TAG_FILE.is_file() else _LIVE_TAG_FILE
+_LOCAL_CLASS_URL: dict[str, str] = {
+    # `_Tp` is OpenCV's conventional template-parameter placeholder. Register
+    # the conventional stub filename so the token-linkifier emits a link
+    # wherever `_Tp` appears in code spans on the basic-structures page.
+    "_Tp": "class_Tp.html",
+}
+_LOCAL_TYPEDEF_URL: dict[str, str] = {}  # 'uchar' -> 'core_hal_interface.html#_CPPv45uchar'
+if _LOCAL_SRC_TAG.is_file():
+    try:
+        import xml.etree.ElementTree as _ET
+        for _c in _ET.parse(str(_LOCAL_SRC_TAG)).getroot().iter("compound"):
+            if _c.get("kind") == "class":
+                _n = _c.findtext("name") or ""
+                _f = _c.findtext("filename") or ""
+                if _n and _f:
+                    _short = _n.split("::")[-1]
+                    _fn = _f if _f.endswith(".html") else _f + ".html"
+                    _LOCAL_CLASS_URL.setdefault(
+                        _short, pathlib.PurePosixPath(_fn).name)
+            for _mem in _c.findall("member"):
+                # Accept `typedef`/`enumeration` from any compound; accept
+                # `variable` ONLY from namespace compounds. The local tagfile
+                # classifies reference typedefs (e.g.
+                # `typedef const _InputArray& InputArray;`) as `variable`
+                # (underlying type is a reference) — always in a namespace
+                # compound. Class/struct `variable` members (single-letter
+                # names like `m`, `a`, `cn`) would otherwise poison the map
+                # and linkify parameter names to random class members.
+                _mk = _mem.get("kind")
+                if _mk == "typedef":
+                    pass
+                elif _mk == "enumeration":
+                    pass   # enum types like cv::DataLayout — linkable
+                elif _mk == "variable" and _c.get("kind") == "namespace":
+                    pass
+                else:
+                    continue
+                _mn = (_mem.findtext("name") or "").strip()
+                _maf = (_mem.findtext("anchorfile") or "").strip()
+                if not (_mn and _maf):
+                    continue
+                if _mn in _LOCAL_TYPEDEF_URL:
+                    continue   # first-occurrence wins
+                _bn = pathlib.PurePosixPath(_maf).name
+                if _bn.startswith("group__"):
+                    # group__core__hal__interface.html -> core_hal_interface.html
+                    # (strip `group__`; collapse `__` mangling back to `_`).
+                    _local_page = (_bn[len("group__"):]
+                                   .replace(".html", "")
+                                   .replace("__", "_")
+                                   + ".html")
+                elif _bn.startswith("namespacecv"):
+                    # Namespace-anchored typedefs (e.g. InputArray) are rendered
+                    # by Breathe onto the group page; the only page using this
+                    # rewrite is api/core_basic.
+                    _local_page = "core_basic.html"
+                else:
+                    _local_page = _bn   # class/struct pages keep their basename
+                # HAL interface typedefs are global C types (uchar, int64, …);
+                # everything else is cv::-scoped. cpp-domain v4 anchor mirrors
+                # this split.
+                if "hal_interface" in _local_page:
+                    _anchor = f"_CPPv4{len(_mn)}{_mn}"
+                else:
+                    _anchor = f"_CPPv4N2cv{len(_mn)}{_mn}E"
+                _LOCAL_TYPEDEF_URL[_mn] = f"{_local_page}#{_anchor}"
+    except Exception:
+        pass
+
+
+# -- Class template-parameter display map -----------------------------------
+# class short name (e.g. 'Mat_', 'Vec', 'Matx') -> its template-parameter list
+# as Doxygen renders it (e.g. '< _Tp >', '< _Tp, cn >'). Read from the local
+# Doxygen XML. Empty `declname` on a typename/class param defaults to `_Tp`
+# (OpenCV convention). Used only by the api/core_basic Classes-table rewrite
+# (translate step 8e).
+_CLASS_TEMPLATE_DISPLAY: dict[str, str] = {}
+if _API_XML_DIR.is_dir():
+    try:
+        import xml.etree.ElementTree as _ET
+        for _xml in _API_XML_DIR.glob("classcv_1_1*.xml"):
+            try:
+                _cd = _ET.parse(_xml).getroot().find("compounddef")
+            except _ET.ParseError:
+                continue
+            if _cd is None:
+                continue
+            _tpl = _cd.find("templateparamlist")
+            if _tpl is None:
+                continue
+            _names = []
+            for _p in _tpl.findall("param"):
+                _decl = (_p.findtext("declname")
+                         or _p.findtext("defname") or "").strip()
+                _type = (_p.findtext("type") or "").strip()
+                if _decl:
+                    _names.append(_decl)
+                elif _type in ("typename", "class"):
+                    _names.append("_Tp")
+                elif _type:
+                    _names.append(_type)
+            if _names:
+                _name = (_cd.findtext("compoundname") or "").split("::")[-1]
+                _CLASS_TEMPLATE_DISPLAY[_name] = f"< {', '.join(_names)} >"
+    except Exception:
+        pass
+
+
+# Punctuation → short alpha token, so operator overloads (operator+, operator==,
+# operator<<, …) get distinct slugs instead of all collapsing to "operator-".
+_FUNC_SLUG_PUNCT = {
+    "=": "eq", "!": "ne", "<": "lt", ">": "gt", "+": "plus", "-": "minus",
+    "*": "mul", "/": "div", "&": "amp", "|": "or", "%": "mod", "^": "xor",
+    "~": "tilde", "[": "lbr", "]": "rbr",
+}
+
+
+def _func_slug(name: str) -> str:
+    """In-page anchor slug for a function name on the api/core_basic page.
+    Shared by the stub generator (heading `{#cv-slug}`) and the translator
+    (table-row `#cv-slug` links + fallback anchor injection) so both agree."""
+    parts = []
+    for ch in name.lower():
+        if ch.isalnum() or ch == "_":
+            parts.append(ch)
+        elif ch in _FUNC_SLUG_PUNCT:
+            parts.append("-" + _FUNC_SLUG_PUNCT[ch])
+        else:
+            parts.append("-")
+    s = re.sub(r"-+", "-", "".join(parts)).strip("-")
+    return f"cv-{s}" if s else "cv"
 
 
 # ---- Citation numbering --------------------------------------------------
@@ -722,6 +933,9 @@ __all__ = [
     "HAVE_SPHINX_DESIGN", "HAVE_BREATHE",
     "DOXYGEN_BASE_URL", "_doxygen_url",
     "_TAG_FILE", "_TAG_FILENAMES", "_TAG_TITLES", "_CV_SYMBOL_URL",
+    "_LIVE_GROUP_URL", "_LIVE_CLASS_URL", "_LIVE_TYPEDEF_URL",
+    "_LOCAL_CLASS_URL", "_LOCAL_TYPEDEF_URL", "_CLASS_TEMPLATE_DISPLAY",
+    "_func_slug",
     "_CITE_NUMBER", "_BIB_ENTRIES_SORTED", "_bib_render_all",
     "_REDIRECT_MAP", "_resolve_redirect",
     "_ANCHOR_TO_DOC", "_ANCHOR_TO_EXTERNAL", "_ANCHOR_TO_TITLE",

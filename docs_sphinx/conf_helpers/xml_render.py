@@ -152,6 +152,10 @@ def _parse_member_sections(cd) -> dict[str, list[dict]]:
                         "initializer": (ev.findtext("initializer") or "").strip(),
                     })
             _dtl, _params, _returns = _member_detail_parts(md)
+            # `<location file="…">` feeds the `#include <…>` line shown on the
+            # api/core_basic Function Documentation blocks.
+            _loc = md.find("location")
+            _include_file = (_loc.get("file") if _loc is not None else "") or ""
             member = {
                 "id":          md.get("id", ""),
                 "kind":        kind,
@@ -164,8 +168,10 @@ def _parse_member_sections(cd) -> dict[str, list[dict]]:
                 "enum_values": enum_values,
                 "strong":      is_strong,
                 "static":      md.get("static") == "yes",
+                "inline":      md.get("inline") == "yes",
                 "const":       md.get("const") == "yes",
                 "template":    _member_template(md),
+                "include_file": _include_file,
                 "detailed":    _dtl,
                 "params":      _params,
                 "returns":     _returns,
@@ -658,12 +664,15 @@ def _patch_namespace_xml_for_breathe(xml_dir: pathlib.Path,
     import xml.etree.ElementTree as _ET
     import os as _osmod, shutil as _shutil
     src_index = xml_dir / "index.xml"
-    dst_index = out_dir / "index.xml"
-    # `index.xml` is mirrored as a symlink (it's never patched), so compare the
-    # link's OWN mtime (set when the mirror was last rebuilt) via lstat — NOT
-    # stat, which would follow the link to the source and always tie.
-    if (src_index.is_file() and (dst_index.is_symlink() or dst_index.is_file())
-            and dst_index.lstat().st_mtime >= src_index.stat().st_mtime):
+    # Use a dedicated stamp file (not dst_index) for the freshness check.
+    # dst_index is symlinked to src_index, so stat() on it follows the symlink
+    # and always returns src's mtime — making a `dst_index.mtime >= src.mtime`
+    # guard ALWAYS true after the first mirror, freezing the patched dir even
+    # after Doxygen regenerated the source. The stamp is a real file whose
+    # mtime records when the LAST mirror+patch finished.
+    stamp = out_dir / ".mirror_complete"
+    if (src_index.is_file() and stamp.is_file()
+            and stamp.stat().st_mtime >= src_index.stat().st_mtime):
         return
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -748,6 +757,11 @@ def _patch_namespace_xml_for_breathe(xml_dir: pathlib.Path,
             if out_file.is_symlink() or out_file.is_file():
                 out_file.unlink()
             tree.write(out_file, encoding="utf-8", xml_declaration=True)
+
+    # 4) Record completion. Subsequent invocations compare this stamp's mtime
+    #    against `index.xml`; if Doxygen has run since, the stamp is older and
+    #    a full re-mirror is triggered.
+    stamp.touch()
 
 
 # -- Namespace pages ---------------------------------------------------------
