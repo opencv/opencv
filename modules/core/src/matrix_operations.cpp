@@ -6,12 +6,6 @@
 #include "opencv2/core/mat.hpp"
 #include "opencl_kernels_core.hpp"
 
-#undef HAVE_IPP
-#undef CV_IPP_RUN_FAST
-#define CV_IPP_RUN_FAST(f, ...)
-#undef CV_IPP_RUN
-#define CV_IPP_RUN(c, f, ...)
-
 /*************************************************************************************************\
                                         Matrix Operations
 \*************************************************************************************************/
@@ -515,6 +509,12 @@ typedef void (*ReduceFunc)( const Mat& src, Mat& dst );
 #ifdef HAVE_IPP
 static inline bool ipp_reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& dstmat)
 {
+    /* IPP processes rows sequentially; OpenCV's reduceC_ uses parallel_for_ which is faster in MT mode */
+    if(cv::getNumThreads() > 1)
+    {
+        return false;
+    }
+
     int sstep = (int)srcmat.step, stype = srcmat.type(),
             ddepth = dstmat.depth();
 
@@ -611,17 +611,22 @@ static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& ds
 #define reduceSumC16u64f reduceC_<ushort,double,OpAdd<double> >
 #define reduceSumC16s64f reduceC_<short, double,OpAdd<double> >
 #define reduceSumC32f64f reduceC_<float, double,OpAdd<double> >
+#endif
 
 #define reduceSum2C8u64f  reduceC_<uchar, double,OpAddSqr<int>,   OpSqr<int> >
 #define reduceSum2C16u64f reduceC_<ushort,double,OpAddSqr<double>,OpSqr<double> >
 #define reduceSum2C16s64f reduceC_<short, double,OpAddSqr<double>,OpSqr<double> >
 #define reduceSum2C32f64f reduceC_<float, double,OpAddSqr<double>,OpSqr<double> >
-#endif
 
 #ifdef HAVE_IPP
 #define REDUCE_OP(favor, optype, type1, type2) \
 static inline bool ipp_reduce##optype##C##favor(const cv::Mat& srcmat, cv::Mat& dstmat) \
 { \
+    /* IPP processes rows sequentially; OpenCV's reduceC_ uses parallel_for_ which is faster in MT mode */ \
+    if(cv::getNumThreads() > 1) \
+    { \
+        return false; \
+    } \
     if((srcmat.channels() == 1)) \
     { \
         int sstep = (int)srcmat.step; \

@@ -110,7 +110,7 @@ static bool ocl_medianFilter(InputArray _src, OutputArray _dst, int m)
 
 #endif
 
-#if 0 //defined HAVE_IPP
+#if defined HAVE_IPP
 static bool ipp_medianFilter(Mat &src0, Mat &dst, int ksize)
 {
     CV_INSTRUMENT_REGION_IPP();
@@ -121,11 +121,26 @@ static bool ipp_medianFilter(Mat &src0, Mat &dst, int ksize)
         return false;
 #endif
 
+    int channels = src0.channels();
+    int depth = src0.depth();
+
+    // IPP could be better for C1 large kernels (ksize >= 7)
+    if(channels == 1 && ksize >= 7)
+        return false;
+    // IPP could be better for any channel with very large kernels
+    if(ksize > 7)
+        return false;
+    // IPP could be better for multi-channel ksize == 3 (all types)
+    if(channels >= 3 && ksize == 3)
+        return false;
+    // IPP could be better for 16u/16s C3 ksize == 5
+    if(channels == 3 && ksize == 5 && depth != CV_8U)
+        return false;
+
     {
         int         bufSize;
         IppiSize    dstRoiSize = ippiSize(dst.cols, dst.rows), maskSize = ippiSize(ksize, ksize);
         IppDataType ippType = ippiGetDataType(src0.type());
-        int         channels = src0.channels();
         IppAutoBuffer<Ipp8u> buffer;
 
         if(src0.isSubmatrix())
@@ -207,7 +222,7 @@ void medianBlur( InputArray _src0, OutputArray _dst, int ksize )
     CALL_HAL(medianBlur, cv_hal_medianBlur, src0.data, src0.step, dst.data, dst.step, src0.cols, src0.rows, src0.depth(),
              src0.channels(), ksize);
 
-    //CV_IPP_RUN_FAST(ipp_medianFilter(src0, dst, ksize));
+    CV_IPP_RUN_FAST(ipp_medianFilter(src0, dst, ksize));
 
     CV_CPU_DISPATCH(medianBlur, (src0, dst, ksize),
         CV_CPU_DISPATCH_MODES_ALL);

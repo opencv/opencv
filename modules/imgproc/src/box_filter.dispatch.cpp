@@ -314,7 +314,7 @@ Ptr<FilterEngine> createBoxFilter(int srcType, int dstType, Size ksize,
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
-#if 0 //defined(HAVE_IPP)
+#if defined(HAVE_IPP)
 static bool ipp_boxfilter(Mat &src, Mat &dst, Size ksize, Point anchor, bool normalize, int borderType)
 {
 #ifdef HAVE_IPP_IW
@@ -331,6 +331,26 @@ static bool ipp_boxfilter(Mat &src, Mat &dst, Size ksize, Point anchor, bool nor
 #endif
 
     if(!normalize)
+        return false;
+
+    int depth = src.depth();
+    int cn = src.channels();
+    int kw = ksize.width;
+
+    // IPP could optimize more for 8U C3 all kernel sizes
+    if(depth == CV_8U && cn == 3)
+        return false;
+    // IPP could optimize more for 8U C4 with small/medium kernels (but it's good for ksize 21)
+    if(depth == CV_8U && cn == 4 && kw <= 7)
+        return false;
+    // IPP could optimize more for 8U C1 with ksize >= 5
+    if(depth == CV_8U && cn == 1 && kw >= 5)
+        return false;
+    // IPP could optimize more for 16U/16S C3 with small kernels
+    if((depth == CV_16U || depth == CV_16S) && cn == 3 && kw <= 5)
+        return false;
+    // IPP could optimize more for 16U/16S C4 all kernel sizes
+    if((depth == CV_16U || depth == CV_16S) && cn == 4)
         return false;
 
     if(!ippiCheckAnchor(anchor, ksize))
@@ -401,7 +421,7 @@ void boxFilter(InputArray _src, OutputArray _dst, int ddepth,
              ofs.x, ofs.y, wsz.width - src.cols - ofs.x, wsz.height - src.rows - ofs.y, ksize.width, ksize.height,
              anchor.x, anchor.y, normalize, borderType&~BORDER_ISOLATED);
 
-    //CV_IPP_RUN_FAST(ipp_boxfilter(src, dst, ksize, anchor, normalize, borderType));
+    CV_IPP_RUN_FAST(ipp_boxfilter(src, dst, ksize, anchor, normalize, borderType));
 
     borderType = (borderType&~BORDER_ISOLATED);
 
