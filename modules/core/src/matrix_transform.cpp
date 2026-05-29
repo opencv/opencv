@@ -557,6 +557,18 @@ void transposeND(InputArray src_, const std::vector<int>& order, OutputArray dst
     {
         CV_CheckEQ(static_cast<size_t>(order_[i]), i, "New order should be a valid permutation of the old one");
     }
+    
+    bool isIdentityOrder = true;
+    for (size_t i = 0; i < order.size(); ++i)
+    {
+        if (order[i] != static_cast<int>(i))
+        {
+            isIdentityOrder = false;
+            break;
+        }
+    }
+
+    const bool is2DSwap = inp.dims == 2 && order.size() == 2 && order[0] == 1 && order[1] == 0;
 
     std::vector<int> newShape(order.size());
     for (size_t i = 0; i < order.size(); ++i)
@@ -568,6 +580,18 @@ void transposeND(InputArray src_, const std::vector<int>& order, OutputArray dst
     Mat out = dst_.getMat();
     CV_Assert(out.isContinuous());
     CV_Assert(inp.data != out.data);
+
+    if (isIdentityOrder)
+    {
+        inp.copyTo(out);
+        return;
+    }
+
+    if (is2DSwap)
+    {
+        transpose(inp, out);
+        return;
+    }
 
     int continuous_idx = 0;
     for (int i = static_cast<int>(order.size()) - 1; i >= 0; --i)
