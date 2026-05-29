@@ -1193,8 +1193,6 @@ void CV_Remap_Test::remap_generic(const Mat& _src, Mat& _dst)
     float ix[8], w[16];
     interpolate_method inter_func = inter_array[interpolation - (interpolation == INTER_LANCZOS4 ? 2 : 1)];
 
-    //printf("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
-
     for (int dy = 0; dy < dsize.height; ++dy)
     {
         const short* Mxy = nullptr;
@@ -1211,7 +1209,6 @@ void CV_Remap_Test::remap_generic(const Mat& _src, Mat& _dst)
         }
 
         float* yD = _dst.ptr<float>(dy);
-        //printf("y = %d: ", dy);
 
         for (int dx = 0; dx < dsize.width; ++dx)
         {
@@ -1231,7 +1228,6 @@ void CV_Remap_Test::remap_generic(const Mat& _src, Mat& _dst)
                 alpha = sx - isx;
                 beta = sy - isy;
             }
-            //printf("(%.2f, %.2f), ", isx + alpha, isy + beta);
 
             inter_func(alpha, w);
             inter_func(beta, w + ksize);
@@ -1287,8 +1283,6 @@ void CV_Remap_Test::remap_generic(const Mat& _src, Mat& _dst)
                 }
             }
         }
-
-        //printf("\n");
     }
 }
 
@@ -1366,7 +1360,6 @@ void CV_WarpAffine_Test::generate_test_data()
 
 void CV_WarpAffine_Test::run_func()
 {
-    //printf("test case idx = %d, srcdepth = %d, srccn = %d, dstdepth = %d, inversemap=%d, interpolation=%d, bordertype=%d\n", ts->get_current_test_info()->test_case_idx, src.depth(), src.channels(), dst.depth(), (interpolation & WARP_INVERSE_MAP) != 0, (interpolation & INTER_MAX), borderType);
     cv::warpAffine(src, dst, M, dst.size(), interpolation, borderType, borderValue);
 }
 
