@@ -7,7 +7,6 @@
 
 #include "../precomp.hpp"
 #include "color_tsdf_functions.hpp"
-#include "opencl_kernels_3d.hpp"
 
 namespace cv {
 
