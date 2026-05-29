@@ -64,12 +64,14 @@ CONTRIB_ROOT = pathlib.Path(
 # entry's umbrella header (modules/<m>/include/opencv2/<m>.hpp) must declare
 # `@defgroup <m> …` at the top — that's the breathe target. Override:
 #     OPENCV_API_MODULES=core,imgproc cmake --build <build> --target sphinx
+#     OPENCV_API_MODULES=core;imgproc cmake --build <build> --target sphinx
 # Empty = legacy behavior (no API pages in Sphinx; navbar's external_links
 # still routes users to the Doxygen-rendered group__*.html).
 # ---------------------------------------------------------------------------
 API_MODULES = [
     m.strip()
-    for m in (_os.environ.get("OPENCV_API_MODULES") or "core").split(",")
+    for m in re.split(r"[,;]", _os.environ.get("OPENCV_API_MODULES")
+                      or "core;photo;imgproc;objdetect;3d")
     if m.strip()
 ]
 

@@ -32,6 +32,19 @@ h3 { font-size: 1.125rem; font-weight: 600; line-height: 1.4; }
 .bd-content ol ol ol { list-style-type: lower-roman; }
 .bd-content ol > li > p:first-child > strong:first-child::after { content: ":"; }
 
+/* --- Landing page (generated index.markdown — .ocv-landing wrapper) ------
+ * The index page has no secondary "On this page" sidebar (emptied in
+ * conf.py), so the content column is full-width. Cap the entry list's width
+ * and auto-center it so the category headings + links sit in the middle of
+ * the page instead of hugging the left edge. */
+.ocv-landing {
+    max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.ocv-landing h2:first-child { margin-top: 1rem; }
+.ocv-landing p { margin: 0.25rem 0 0.5rem; }
+
 html[data-theme="light"] {
     --pst-color-link: #0969da;
     --pst-color-link-hover: #0550ae;
@@ -407,23 +420,95 @@ dt:hover a.headerlink { opacity: 1; }
     opacity: 0.92 !important;
 }
 
-/* --- C++ symbol signatures (Breathe-rendered API pages, when enabled) - */
-dl.cpp.function > dt.sig,
-dl.cpp.class > dt.sig,
-dl.cpp.struct > dt.sig,
-dl.cpp.type > dt.sig {
-    background: var(--pst-color-surface);
-    border: 1px solid var(--pst-color-border);
-    border-left: 3px solid var(--opencv-accent);
-    border-radius: 0.4rem;
-    padding: 0.75rem 1rem;
+/* --- C++ API member blocks (Breathe-rendered API pages, when enabled) -----
+ * Each per-member directive (doxygenfunction / doxygentypedef /
+ * doxygenvariable / doxygenenum / doxygenstruct …) renders as
+ *   <dl class="cpp <kind>"><dt class="sig">…signature…</dt><dd>…body…</dd></dl>
+ * We style the whole <dl> as ONE card (matching the summary-table card
+ * palette) with the signature as a shaded header strip and the description as
+ * the card body — instead of giving each signature line its own bordered box,
+ * which read as several disconnected strips. */
+dl.cpp.function,
+dl.cpp.class,
+dl.cpp.struct,
+dl.cpp.type,
+dl.cpp.var,
+dl.cpp.enum,
+dl.cpp.member,
+dl.cpp.macro {
+    border: 1px solid var(--pst-color-border, #d0d7de);
+    border-radius: 8px;
+    background: #ffffff;
+    margin: 0.85rem 0 1.35rem;
+    padding: 0;
+    overflow: hidden;
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+dl.cpp.function:hover,
+dl.cpp.class:hover,
+dl.cpp.struct:hover,
+dl.cpp.type:hover,
+dl.cpp.var:hover,
+dl.cpp.enum:hover,
+dl.cpp.member:hover,
+dl.cpp.macro:hover {
+    border-color: var(--pst-color-link, #0969da);
+    box-shadow: 0 1px 6px rgba(9, 105, 218, 0.12);
+}
+html[data-theme="dark"] dl.cpp.function,
+html[data-theme="dark"] dl.cpp.class,
+html[data-theme="dark"] dl.cpp.struct,
+html[data-theme="dark"] dl.cpp.type,
+html[data-theme="dark"] dl.cpp.var,
+html[data-theme="dark"] dl.cpp.enum,
+html[data-theme="dark"] dl.cpp.member,
+html[data-theme="dark"] dl.cpp.macro {
+    background: #1a2234;
+    border-color: #2d3748;
+}
+html[data-theme="dark"] dl.cpp.function:hover,
+html[data-theme="dark"] dl.cpp.class:hover,
+html[data-theme="dark"] dl.cpp.struct:hover,
+html[data-theme="dark"] dl.cpp.type:hover,
+html[data-theme="dark"] dl.cpp.var:hover,
+html[data-theme="dark"] dl.cpp.enum:hover,
+html[data-theme="dark"] dl.cpp.member:hover,
+html[data-theme="dark"] dl.cpp.macro:hover {
+    border-color: #58a6ff;
+    box-shadow: none;
+}
+
+/* Signature line = card header strip. The bottom divider only shows when a
+   description (or anything) follows, so a body-less member is a clean header. */
+dl.cpp > dt.sig {
+    background: var(--pst-color-surface, #f6f8fa);
+    border: none;
+    border-radius: 0;
+    padding: 0.7rem 1rem;
+    margin: 0;
+    font-family: var(--pst-font-family-monospace);
     font-size: 0.9rem;
     line-height: 1.8;
     overflow-x: auto;
-    margin-bottom: 0.5rem;
 }
-dl.cpp.function .sig-name.descname { color: var(--opencv-accent); font-weight: 700; }
-dl.cpp.function .sig-prename.descclassname { color: var(--pst-color-text-muted); }
+dl.cpp > dt.sig:not(:last-child) {
+    border-bottom: 1px solid var(--pst-color-border, #d0d7de);
+}
+html[data-theme="dark"] dl.cpp > dt.sig {
+    background: #111622;
+}
+html[data-theme="dark"] dl.cpp > dt.sig:not(:last-child) {
+    border-bottom-color: #2d3748;
+}
+dl.cpp .sig-name.descname { color: var(--opencv-accent); font-weight: 700; }
+dl.cpp .sig-prename.descclassname { color: var(--pst-color-text-muted); }
+
+/* Card body (description, parameter lists, returns). */
+dl.cpp > dd {
+    margin: 0;
+    padding: 0.85rem 1rem 0.6rem;
+}
+dl.cpp > dd > :last-child { margin-bottom: 0; }
 
 /* --- MathJax inline alignment tweak ----------------------------------- */
 mjx-container.MathJax:not([display="true"]) { vertical-align: -0.15em !important; }

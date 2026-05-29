@@ -105,29 +105,7 @@ def _translate(text: str, docname: str | None = None) -> str:
         lambda m: _verbatim_save(m.group("body"), inline=True),
         text)
 
-    # 0. Master doc: synthesize @subpage entries for the js_tutorials and/or
-    #    py_tutorials roots so step 9 picks them up as toctree entries.
-    #    tutorials.markdown has no direct reference to either, and editing it
-    #    is forbidden, so injection here is the only way to surface those
-    #    trees in the master sidebar.
-    if docname == "tutorials/tutorials":
-        # Prepend `intro` before the first existing module bullet so it
-        # leads the sidebar — matches the order in opencv/doc/root.markdown.in
-        # ("- @ref intro" sits above "- @ref tutorial_root"). FAQ and
-        # Bibliography stay appended at the end (still after the modules).
-        if "intro" in _ANCHOR_TO_DOC:
-            text = re.sub(r"^- @subpage", "- @subpage intro\n- @subpage",
-                          text, count=1, flags=re.MULTILINE)
-        if JS_DOC_MODULES:
-            text += "\n- @subpage tutorial_js_root\n"
-        if PY_DOC_MODULES:
-            text += "\n- @subpage tutorial_py_root\n"
-        if "faq" in _ANCHOR_TO_DOC:
-            text += "\n- @subpage faq\n"
-        if "citelist" in _ANCHOR_TO_DOC:
-            text += "\n- @subpage citelist\n"
-
-    # 0a. py_tutorials root: rewrite specific cross-tree `@ref` items to
+    # 0. py_tutorials root: rewrite specific cross-tree `@ref` items to
     #     `@subpage` so the targets join the sidebar nav. The author of
     #     py_tutorials.markdown used `@ref` for these (rather than @subpage)
     #     because they live in the C++ tutorial tree, but pyData's sidebar
@@ -968,15 +946,8 @@ def _source_read(app, docname, source):
             or docname.startswith("api/")
             or docname == "faq"
             or docname == "citelist"
-            or docname == "intro"):
+            or docname == "intro"
+            or docname == "index"):
         return
     text = source[0]
-    # On the master doc, append `- @subpage tutorial_contrib_root` / `api_root`
-    # so the contrib + API sites appear in the unified left sidebar without
-    # modifying opencv/doc/tutorials/tutorials.markdown on disk.
-    if docname == "tutorials/tutorials":
-        if CONTRIB_MODULES and "tutorial_contrib_root" in _ANCHOR_TO_DOC:
-            text = text.rstrip() + "\n\n- @subpage tutorial_contrib_root\n"
-        if API_MODULES and "api_root" in _ANCHOR_TO_DOC:
-            text = text.rstrip() + "\n\n- @subpage api_root\n"
     source[0] = _translate(text, docname)

@@ -41,7 +41,7 @@ if PY_DOC_MODULES:
                    base=DOC_ROOT)
 for _m in PY_DOC_MODULES:
     _scan_internal(DOC_ROOT / "py_tutorials" / _m, base=DOC_ROOT)
-_contrib_root_md = SPHINX_INPUT_ROOT / "tutorials_contrib" / "contrib_root.markdown"
+_contrib_root_md = SPHINX_INPUT_ROOT / "tutorials_contrib" / "tutorials_contrib.markdown"
 if _contrib_root_md.is_file():
     _scan_internal(_contrib_root_md)
 for _m in CONTRIB_MODULES:
@@ -63,6 +63,87 @@ if API_MODULES:
     _generate_api_stubs(API_MODULES, _API_XML_DIR, SPHINX_INPUT_ROOT / "api")
     # Recursive scan picks up api_root.markdown + every group stub.
     _scan_internal(SPHINX_INPUT_ROOT / "api")
+
+
+def _write_root_index() -> None:
+    """Generate the Sphinx landing page at ``index.html``.
+
+    The legacy tutorials root remains focused on C++ tutorials. Cross-family
+    entry points live here so the site root no longer redirects users straight
+    to ``tutorials/tutorials.html``.
+
+    Each entry renders as a section heading (the category) with the page link
+    on the line beneath it. FAQ and Bibliography are direct links whose heading
+    *is* the link. A hidden toctree mirrors the same order to drive the sidebar.
+    """
+    if SPHINX_INPUT_ROOT == DOC_ROOT:
+        return
+
+    # (heading, link_text, docname). link_text=None => the heading itself is
+    # the link (FAQ / Bibliography). This order is both the rendered order and
+    # the hidden-toctree order.
+    entries: list[tuple[str, str | None, str]] = []
+
+    def add(heading: str, link_text: str | None, docname: str,
+            condition: bool = True) -> None:
+        if condition:
+            entries.append((heading, link_text, docname))
+
+    add("Introduction", "Introduction", "intro", "intro" in _ANCHOR_TO_DOC)
+    add("OpenCV Tutorials", "OpenCV tutorials", "tutorials/tutorials")
+    add("Python Tutorials", "OpenCV-Python tutorials",
+        "py_tutorials/py_tutorials", bool(PY_DOC_MODULES))
+    add("Javascript Tutorials", "OpenCV.js tutorials",
+        "js_tutorials/js_tutorials", bool(JS_DOC_MODULES))
+    add("Contrib Tutorials", "tutorials for contrib module",
+        "tutorials_contrib/tutorials_contrib",
+        bool(CONTRIB_MODULES) and _contrib_root_md.is_file())
+    add("Main modules", "main modules", "api/api_root",
+        bool(API_MODULES) and "api_root" in _ANCHOR_TO_DOC)
+    add("Frequently Asked Questions", None, "faq", "faq" in _ANCHOR_TO_DOC)
+    add("Bibliography", None, "citelist", "citelist" in _ANCHOR_TO_DOC)
+
+    toctree = "\n".join(
+        f"{heading} <{docname}>" for heading, _link, docname in entries)
+
+    # Body is raw HTML, NOT markdown links. A markdown `[x](intro.html)` is
+    # resolved by MyST as an internal cross-reference and emitted as
+    # `href="#intro.html"` (i.e. index.html#intro.html), which never
+    # navigates. A raw `<a href>` is passed through verbatim and resolves
+    # relative to index.html → the correct page. Raw `<h2>` headings (rather
+    # than `##`) also keep these entries out of the page-local TOC, so the
+    # "On this page" secondary sidebar stays empty here (see conf.py, where
+    # the index page's secondary_sidebar_items is emptied). No blank lines
+    # inside the block so MyST treats it as one passthrough HTML block.
+    html_lines = ['<div class="ocv-landing">']
+    for heading, link_text, docname in entries:
+        if link_text is None:
+            html_lines.append(
+                f'<h2><a href="{docname}.html">{heading}</a></h2>')
+        else:
+            html_lines.append(f'<h2>{heading}</h2>')
+            html_lines.append(f'<p><a href="{docname}.html">{link_text}</a></p>')
+    html_lines.append("</div>")
+    body = "\n".join(html_lines)
+
+    text = (
+        "OpenCV modules\n"
+        "==============\n\n"
+        "```{toctree}\n"
+        ":hidden:\n"
+        ":maxdepth: 1\n"
+        ":titlesonly:\n\n"
+        f"{toctree}\n"
+        "```\n\n"
+        f"{body}\n"
+    )
+    try:
+        (SPHINX_INPUT_ROOT / "index.markdown").write_text(text, encoding="utf-8")
+    except OSError:
+        pass
+
+
+_write_root_index()
 
 # External scan: every OTHER main module's top-level table_of_content_*.markdown.
 # Sources live under DOC_ROOT (the staged tree only contains *enabled* main

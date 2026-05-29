@@ -75,7 +75,7 @@ endforeach()
 # Contrib tree: stage when OPENCV_EXTRA_MODULES_PATH is set; unselected modules dropped by conf.py.
 if(OPENCV_EXTRA_MODULES_PATH AND EXISTS "${OPENCV_EXTRA_MODULES_PATH}")
   file(MAKE_DIRECTORY "${_SPHINX_INPUT_CONTRIB}")
-  set(_contrib_root_md "${_SPHINX_INPUT_CONTRIB}/contrib_root.markdown")
+  set(_contrib_root_md "${_SPHINX_INPUT_CONTRIB}/tutorials_contrib.markdown")
   file(WRITE "${_contrib_root_md}"
     "Tutorials for contrib modules {#tutorial_contrib_root}\n"
     "=============================\n\n")
@@ -115,7 +115,7 @@ set(_DOXYGEN_XML_DIR "${CMAKE_BINARY_DIR}/doc/doxygen/xml")
 # sphinx-build time. Default "core" matches conf.py's OPENCV_API_MODULES default.
 # Override: cmake -DSPHINX_API_MODULES="core;photo;imgproc;objdetect;3d"
 if(NOT DEFINED SPHINX_API_MODULES)
-  set(SPHINX_API_MODULES "core")
+  set(SPHINX_API_MODULES "core;photo;imgproc;objdetect;3d")
 endif()
 set(_doxy_input "")
 foreach(_m ${SPHINX_API_MODULES})

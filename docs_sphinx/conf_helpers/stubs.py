@@ -48,11 +48,12 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
     # `_generate_api_stubs` emits (one .md per refid, deduped across groups).
     if node["innerclasses"]:
         lines += ["## Classes", "",
+                  "{.api-reference-table}",
                   "| Name | Description |", "|---|---|"]
         for c in node["innerclasses"]:
             classes_seen.setdefault(c["refid"], c)
             page = _class_page_name(c["refid"])
-            link = f"[`{c['kind']} {c['name']}`]({page}.md)"
+            link = f"{c['kind']} [`{c['name']}`]({page}.md)"
             lines.append(f"| {link} | {_md_escape_cell(c['brief'])} |")
         lines.append("")
 
@@ -79,6 +80,38 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
         # lists them; only the per-member detail block is skipped.
         return "<" in (m.get("name") or "")
 
+    def _needs_manual_function_detail(m: dict) -> bool:
+        # Breathe resolves these two `cv::operator!=` overloads by scanning
+        # same-name candidates first. In this tree that candidate set includes
+        # CUDA-style vector operators whose `__device__ __forceinline__`
+        # signatures Sphinx's C++ parser rejects, producing noisy warnings.
+        # The overloads have no detailed body, so a local signature block with
+        # the same anchor is equivalent and avoids the bad candidate parse.
+        return (
+            m.get("kind") == "function"
+            and m.get("qualified") == "cv::operator!="
+            and m.get("args") in (
+                "(const MatShape &shape1, const MatShape &shape2)",
+                "(const Matx< _Tp, m, n > &a, const Matx< _Tp, m, n > &b)",
+            )
+        )
+
+    def _manual_function_detail(m: dict) -> list[str]:
+        signature = " ".join(
+            part for part in (
+                _md_escape_cell(m["type"]),
+                m.get("qualified") or m["name"],
+                _md_escape_cell(m["args"]),
+            )
+            if part
+        )
+        return [
+            f"({m['id']})=",
+            "```cpp",
+            signature,
+            "```",
+            "",
+        ]
 
     # Section summary tables in Doxygen's order. For class-member items the
     # in-page anchor breathe would have emitted doesn't exist (we skip the
@@ -100,15 +133,41 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
         lines.append(f"## {section_title}")
         lines.append("")
         if section_title == "Functions":
-            lines += ["| Return | Name | Description |", "|---|---|---|"]
+            lines += ["{.api-reference-table .api-function-table}",
+                      "| Return | Name | Description |", "|---|---|---|"]
             for m in items:
+                prefixes = []
+                if m.get("static") in ("yes", True):
+                    prefixes.append("static")
+                if m.get("inline") in ("yes", True):
+                    prefixes.append("inline")
+                if m.get("virtual") in ("yes", "virtual", True):
+                    prefixes.append("virtual")
+                prefix = (" ".join(prefixes) + " ") if prefixes else ""
+
                 ret = _md_escape_cell(m["type"]) or "&nbsp;"
-                label = f"{m['name']}{_md_escape_cell(m['args'])}"
+                full_return_type = f"{prefix}{ret}"
+                template = m.get("template", "")
+                template_html = (
+                    f"<div class='api-template'>{_md_escape_cell(template)}</div>"
+                    if template else ""
+                )
+                label = f"cv::{m['name']}{_md_escape_cell(m['args'])}"
                 sig_link = _member_anchor_link(m, label)
                 lines.append(
-                    f"| `{ret}` | {sig_link} | {_md_escape_cell(m['brief'])} |")
-        elif section_title in ("Typedefs", "Variables"):
-            lines += ["| Type | Name | Description |", "|---|---|---|"]
+                    f"| {template_html}{full_return_type} | {sig_link} | "
+                    f"{_md_escape_cell(m['brief'])} |")
+        elif section_title == "Typedefs":
+            lines += ["{.api-typedef-table}",
+                      "| Type | Name | Description |", "|---|---|---|"]
+            for m in items:
+                t = _md_escape_cell(m["type"]) or "&nbsp;"
+                name_link = _member_anchor_link(m, f"cv::{m['name']}")
+                lines.append(
+                    f"| typedef {t} | {name_link} | {_md_escape_cell(m['brief'])} |")
+        elif section_title == "Variables":
+            lines += ["{.api-reference-table}",
+                      "| Type | Name | Description |", "|---|---|---|"]
             for m in items:
                 t = _md_escape_cell(m["type"]) or "&nbsp;"
                 name_link = _member_anchor_link(m, m["name"])
@@ -128,7 +187,8 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
                 lines.append("")
             continue   # already appended trailing blank
         else:  # Macros
-            lines += ["| Name | Description |", "|---|---|"]
+            lines += ["{.api-reference-table}",
+                      "| Name | Description |", "|---|---|"]
             for m in items:
                 name_link = _member_anchor_link(m, m["name"])
                 lines.append(f"| {name_link} | {_md_escape_cell(m['brief'])} |")
@@ -189,7 +249,7 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
                 spec = m["name"]
             else:
                 spec = qualified
-            rendered.append(("breathe", spec, directive))
+            rendered.append(("breathe", spec, directive, m))
         if not rendered:
             continue
         lines.append(f"## {_MEMBER_DETAIL_SECTION[section_title]}")
@@ -205,13 +265,17 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
                 lines.append("```")
                 lines.append("")
             else:
-                _, spec, dname = entry
-                lines += [
-                    f"```{{{dname}}} {spec}",
-                    ":project: opencv",
-                    "```",
-                    "",
-                ]
+                _, spec, dname = entry[:3]
+                source = entry[3] if len(entry) > 3 else None
+                if source is not None and _needs_manual_function_detail(source):
+                    lines += _manual_function_detail(source)
+                else:
+                    lines += [
+                        f"```{{{dname}}} {spec}",
+                        ":project: opencv",
+                        "```",
+                        "",
+                    ]
 
     # Hidden toctree for per-class pages — needed so Sphinx knows these
     # files exist and so the left sidebar lists them under this group.
@@ -351,7 +415,8 @@ def _write_class_stub(cls: dict, out_dir: pathlib.Path,
         non_enum_items = [m for m in items if m["kind"] != "enum"]
         enum_items = [m for m in items if m["kind"] == "enum"]
         if non_enum_items:
-            lines += ["| Return | Name | Description |", "|---|---|---|"]
+            lines += ["{.api-reference-table}",
+                      "| Return | Name | Description |", "|---|---|---|"]
             for m in non_enum_items:
                 ret = _md_escape_cell(m["type"]) or "&nbsp;"
                 if m["static"]:
