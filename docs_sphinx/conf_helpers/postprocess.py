@@ -1,10 +1,4 @@
-"""build-finished hook: inline collaboration-diagram SVGs.
-
-After the HTML is written, replace each collaboration-diagram ``<img>`` with
-the SVG inlined into the page so its internal class links become clickable and
-resolve against the local Sphinx site. conf.py connects
-``_inline_coll_graphs_on_finish`` to Sphinx's ``build-finished`` event.
-"""
+"""build-finished hook: inline coll-diagram SVGs, strip Breathe clutter."""
 from __future__ import annotations
 import pathlib, re
 
@@ -13,20 +7,7 @@ from .state import DOXYGEN_BASE_URL
 
 def _inline_collaboration_svgs(api_dir: pathlib.Path,
                               image_dir: pathlib.Path) -> None:
-    """After the HTML is written, replace each collaboration-diagram `<img>`
-    with the SVG inlined into the page.
-
-    Why: an SVG embedded via `<img>` is rendered as a flat picture — its
-    internal `<a>` links are dead. Inlining the `<svg>` makes those links
-    clickable, and (being inside the page) they resolve against our Sphinx
-    site. Each `xlink:href` is rewritten from the legacy Doxygen path
-    (`../../d6/d50/classcv_1_1Size__.html`) to the matching Sphinx class page
-    when we generate one (`classcv_1_1Size__.html`, same `api/` dir), else to
-    the upstream docs.opencv.org page so the link still resolves.
-
-    Connected to `build-finished`, so it runs once the output exists. It is
-    idempotent: a page whose diagram is already inlined has no `<img>` left to
-    match, so a re-run (incremental build) is a no-op."""
+    """Inline coll-diagram SVGs so their links work; idempotent."""
     import re
     if not api_dir.is_dir():
         return
@@ -38,12 +19,12 @@ def _inline_collaboration_svgs(api_dir: pathlib.Path,
 
     def _rewrite_href(m: "re.Match") -> str:
         path = m.group("path")
-        if "://" in path:                       # already absolute/external
+        if "://" in path:
             return m.group(0)
         base = path.rsplit("/", 1)[-1]
-        if (api_dir / base).is_file():           # we generate this class page
+        if (api_dir / base).is_file():
             return f'xlink:href="{base}"'
-        rel = path.lstrip("./")                  # strip leading ../ and ./
+        rel = path.lstrip("./")
         return f'xlink:href="{DOXYGEN_BASE_URL}{rel}"'
 
     for html in api_dir.glob("*.html"):
@@ -56,12 +37,11 @@ def _inline_collaboration_svgs(api_dir: pathlib.Path,
             if not svg_path.is_file():
                 return m.group(0)
             svg = svg_path.read_text(encoding="utf-8")
-            start = svg.find("<svg")             # drop xml decl / doctype / comments
+            start = svg.find("<svg")
             if start < 0:
                 return m.group(0)
             svg = href_re.sub(_rewrite_href, svg[start:])
-            # Carry the img's theme classes + alt onto the inline <svg> so the
-            # light/dark swap still works and it stays accessible.
+            # carry theme classes + alt for dark mode / a11y
             return svg.replace(
                 "<svg ",
                 f'<svg class="{m.group("cls")}" role="img" '
@@ -73,26 +53,7 @@ def _inline_collaboration_svgs(api_dir: pathlib.Path,
 
 
 def _strip_breathe_class_clutter(api_dir: pathlib.Path) -> None:
-    """Lift the detailed-description body out of Breathe's `<dl class="cpp
-    class">` scaffolding on each class page, dropping the duplicate signature
-    header (`<dt>`) Breathe emits (PR #7).
-
-    `{doxygenclass} … :no-members:` produces, inside our
-    `<section id="detailed-description">`:
-
-        <dl class="cpp class">
-          <dt id="…">class cv::_InputArray</dt>   ← duplicates our <h1>
-          <dd>
-            <p>This is the proxy class …</p>       ← brief (kept: opens the
-            <p>It is defined as …</p>                 Detailed Description, the
-            …                                         header `More...` lands here)
-          </dd>
-        </dl>
-
-    We scope to that section and swap the whole `<dl>…</dl>` for just its
-    `<dd>` body, also dropping Breathe's trailing "Subclassed by …" line
-    (shown elsewhere). Runs on `build-finished`; idempotent — a re-run finds
-    no `<dl class="cpp class">` left and no-ops."""
+    """Drop Breathe's duplicate class signature header; idempotent."""
     import re
     if not api_dir.is_dir():
         return
@@ -130,11 +91,28 @@ def _strip_breathe_class_clutter(api_dir: pathlib.Path) -> None:
             h.write_text(new, encoding="utf-8")
 
 
+def _generate_search_map(out_dir: pathlib.Path) -> None:
+    """Write _static/search_map.js: stem→Sphinx-path for every built HTML page."""
+    import json
+    skip = {"_static", "_sources", "_images", "_sphinx_design_static"}
+    mapping = {}
+    for f in out_dir.rglob("*.html"):
+        rel = f.relative_to(out_dir)
+        if rel.parts[0] in skip:
+            continue
+        mapping[f.stem] = rel.as_posix()
+    lines = ["var sphinxPageMap = {"]
+    for k, v in sorted(mapping.items()):
+        lines.append(f"  {json.dumps(k)}: {json.dumps(v)},")
+    lines.append("};")
+    (out_dir / "_static" / "search_map.js").write_text("\n".join(lines), encoding="utf-8")
+
+
 def _inline_coll_graphs_on_finish(app, exception):
-    """build-finished entry point. Steps are small + idempotent so they chain
-    safely on the same hook."""
+    """build-finished entry point."""
     if exception is not None:
         return
     out = pathlib.Path(app.outdir)
     _inline_collaboration_svgs(out / "api", out / "_images")
     _strip_breathe_class_clutter(out / "api")
+    _generate_search_map(out)

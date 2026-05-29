@@ -1,11 +1,4 @@
-/*
- * docs_sphinx/_static/custom.css
- * Ported visual layer from the Prasadayus/opencv#27 Sphinx port,
- * trimmed to the rules that apply to our minimal wrapper (PyData
- * pydata-sphinx-theme + MyST, no doxysnippet/opencv_code_links/tabs
- * extensions). Rules that target HTML markup we don't emit are
- * dropped; rules that are pure pydata overrides are kept verbatim.
- */
+/* Visual layer for the PyData/MyST wrapper (ported from opencv#27, trimmed). */
 
 :root,
 html[data-theme="light"],
@@ -32,6 +25,24 @@ h3 { font-size: 1.125rem; font-weight: 600; line-height: 1.4; }
 .bd-content ol ol ol { list-style-type: lower-roman; }
 .bd-content ol > li > p:first-child > strong:first-child::after { content: ":"; }
 
+/* In-content toctree (API "Topics" list): bullets + breathing room. */
+.bd-content .toctree-wrapper > ul { list-style: disc; padding-left: 1.5rem; }
+.bd-content .toctree-wrapper li { list-style: disc; margin: 0.4rem 0; }
+.bd-content .toctree-wrapper { margin: 0.5rem 0 1.5rem; }
+
+/* --- Landing page (generated index.markdown — .ocv-landing wrapper) ------
+ * The index page has no secondary "On this page" sidebar (emptied in
+ * conf.py), so the content column is full-width. Cap the entry list's width
+ * and auto-center it so the category headings + links sit in the middle of
+ * the page instead of hugging the left edge. */
+.ocv-landing {
+    max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.ocv-landing h2:first-child { margin-top: 1rem; }
+.ocv-landing p { margin: 0.25rem 0 0.5rem; }
+
 html[data-theme="light"] {
     --pst-color-link: #0969da;
     --pst-color-link-hover: #0550ae;
@@ -52,7 +63,26 @@ html[data-theme="dark"] .bd-article-container a { color: #539bf5 !important; }
 html[data-theme="dark"] .bd-article-container a:hover { color: #6cb6ff !important; }
 .bd-content a > code, .bd-content code > a { color: inherit; }
 
-/* --- Front-matter table (.opencv-meta-table — applied in source-read) -- */
+/* Enum #include line: blue link in light mode. */
+html:not([data-theme="dark"]) .bd-content code > a.opencv-include-link {
+    color: var(--pst-color-link, #0969da) !important;
+}
+/* Enum signature type name: blue link in light mode. */
+html:not([data-theme="dark"]) .bd-content code.opencv-enum-sig > a {
+    color: var(--pst-color-link, #0969da) !important;
+}
+/* Clickable enum synopsis tokens: blue in light mode. */
+html:not([data-theme="dark"]) .bd-content .opencv-enum-clickable a,
+html:not([data-theme="dark"]) .bd-content .opencv-enum-clickable a span {
+    color: var(--pst-color-link, #0969da) !important;
+}
+
+/* Typedef Documentation: blue clickable tokens in light mode. */
+html:not([data-theme="dark"]) .bd-content #typedef-documentation a {
+    color: var(--pst-color-link, #0969da) !important;
+}
+
+/* --- Front-matter table (.opencv-meta-table) --------------------------- */
 .opencv-meta-table,
 .opencv-meta-table .pst-scrollable-table-container { margin: 0 !important; padding: 0 !important; }
 .opencv-meta-table table { margin-bottom: 0 !important; }
@@ -148,7 +178,7 @@ html[data-theme="dark"] table.opencv-meta-table td:last-child { border-right: no
 .bd-content p:has(> img:only-child) { text-align: center; }
 .bd-content p > img { display: inline-block; }
 
-/* --- YouTube embeds (.opencv-youtube — emitted by @youtube{ID} rule) --- */
+/* --- YouTube embeds (.opencv-youtube) ---------------------------------- */
 .opencv-youtube {
     position: relative;
     width: 100%;
@@ -322,7 +352,7 @@ html[data-theme="dark"] { color-scheme: dark; }
 html[data-theme="dark"] div.highlight span,
 html[data-theme="dark"] div.highlight * { color: unset !important; }
 
-/* Dark-mode Pygments tokens (matches the PR's mapping) */
+/* Dark-mode Pygments tokens */
 html[data-theme="dark"] .highlight .c, html[data-theme="dark"] .highlight .c1,
 html[data-theme="dark"] .highlight .c2, html[data-theme="dark"] .highlight .cm,
 html[data-theme="dark"] .highlight .cp, html[data-theme="dark"] .highlight .cs,
@@ -383,7 +413,7 @@ dt:hover a.headerlink { opacity: 1; }
     color: var(--pst-color-muted) !important;
 }
 
-/* --- Back-to-top pill (PyData's built-in #pst-back-to-top) ------------ */
+/* --- Back-to-top pill (PyData #pst-back-to-top) ------------------------ */
 #pst-back-to-top {
     font-family: var(--pst-font-family-base) !important;
     font-size: 0.82rem !important;
@@ -407,32 +437,230 @@ dt:hover a.headerlink { opacity: 1; }
     opacity: 0.92 !important;
 }
 
-/* --- C++ symbol signatures (Breathe-rendered API pages, when enabled) - */
-dl.cpp.function > dt.sig,
-dl.cpp.class > dt.sig,
-dl.cpp.struct > dt.sig,
-dl.cpp.type > dt.sig {
-    background: var(--pst-color-surface);
-    border: 1px solid var(--pst-color-border);
-    border-left: 3px solid var(--opencv-accent);
-    border-radius: 0.4rem;
-    padding: 0.75rem 1rem;
+/* --- C++ API member blocks rendered as cards -------------------------- */
+dl.cpp.function,
+dl.cpp.class,
+dl.cpp.struct,
+dl.cpp.type,
+dl.cpp.var,
+dl.cpp.enum,
+dl.cpp.member,
+dl.cpp.macro {
+    border: 1px solid var(--pst-color-border, #d0d7de);
+    border-radius: 8px;
+    background: #ffffff;
+    margin: 0.85rem 0 1.35rem;
+    padding: 0;
+    overflow: hidden;
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+dl.cpp.function:hover,
+dl.cpp.class:hover,
+dl.cpp.struct:hover,
+dl.cpp.type:hover,
+dl.cpp.var:hover,
+dl.cpp.enum:hover,
+dl.cpp.member:hover,
+dl.cpp.macro:hover {
+    border-color: var(--pst-color-link, #0969da);
+    box-shadow: 0 1px 6px rgba(9, 105, 218, 0.12);
+}
+html[data-theme="dark"] dl.cpp.function,
+html[data-theme="dark"] dl.cpp.class,
+html[data-theme="dark"] dl.cpp.struct,
+html[data-theme="dark"] dl.cpp.type,
+html[data-theme="dark"] dl.cpp.var,
+html[data-theme="dark"] dl.cpp.enum,
+html[data-theme="dark"] dl.cpp.member,
+html[data-theme="dark"] dl.cpp.macro {
+    background: #1a2234;
+    border-color: #2d3748;
+}
+html[data-theme="dark"] dl.cpp.function:hover,
+html[data-theme="dark"] dl.cpp.class:hover,
+html[data-theme="dark"] dl.cpp.struct:hover,
+html[data-theme="dark"] dl.cpp.type:hover,
+html[data-theme="dark"] dl.cpp.var:hover,
+html[data-theme="dark"] dl.cpp.enum:hover,
+html[data-theme="dark"] dl.cpp.member:hover,
+html[data-theme="dark"] dl.cpp.macro:hover {
+    border-color: #58a6ff;
+    box-shadow: none;
+}
+
+/* Signature line = card header strip. The bottom divider only shows when a
+   description (or anything) follows, so a body-less member is a clean header. */
+dl.cpp > dt.sig {
+    background: var(--pst-color-surface, #f6f8fa);
+    border: none;
+    border-radius: 0;
+    padding: 0.7rem 1rem;
+    margin: 0;
+    font-family: var(--pst-font-family-monospace);
     font-size: 0.9rem;
     line-height: 1.8;
     overflow-x: auto;
-    margin-bottom: 0.5rem;
 }
-dl.cpp.function .sig-name.descname { color: var(--opencv-accent); font-weight: 700; }
-dl.cpp.function .sig-prename.descclassname { color: var(--pst-color-text-muted); }
+dl.cpp > dt.sig:not(:last-child) {
+    border-bottom: 1px solid var(--pst-color-border, #d0d7de);
+}
+html[data-theme="dark"] dl.cpp > dt.sig {
+    background: #111622;
+}
+html[data-theme="dark"] dl.cpp > dt.sig:not(:last-child) {
+    border-bottom-color: #2d3748;
+}
+dl.cpp .sig-name.descname { color: var(--opencv-accent); font-weight: 700; }
+dl.cpp .sig-prename.descclassname { color: var(--pst-color-text-muted); }
+
+/* Card body (description, parameter lists, returns). */
+dl.cpp > dd {
+    margin: 0;
+    padding: 0.85rem 1rem 0.6rem;
+}
+dl.cpp > dd > :last-child { margin-bottom: 0; }
+
+/* ===========================================================================
+ * API member DETAIL cards — the hand-rolled detail blocks emitted by
+ * stubs._render_member_detail / _render_core_basic_func (Function /
+ * Constructor & Destructor / Member Typedef / Member Data Documentation).
+ * Each member is `<section id="name">` holding an <h3> name + signature rows
+ * (<p><code>…</code></p> on api/core_basic, or a ```cpp code block on class /
+ * other group pages) + brief / Parameters / Returns. We wrap each as a
+ * bordered card: the <h3> is the header strip (row 1, with a ◆ marker), and
+ * the signature / #include / prose lines are the card-body rows. The parent
+ * "… Documentation" heading's section id always ends in "-documentation",
+ * which scopes these rules to detail blocks (summary tables sit under
+ * "typedefs" / "functions" / … ids and stay untouched).
+ * ===========================================================================
+*/
+section[id$="-documentation"] > section {
+    border: 1px solid var(--pst-color-border, #d0d7de);
+    border-radius: 8px;
+    background: #ffffff;
+    margin: 1rem 0 1.4rem;
+    overflow: hidden;
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+section[id$="-documentation"] > section:hover {
+    border-color: var(--pst-color-link, #0969da);
+    box-shadow: 0 1px 6px rgba(9, 105, 218, 0.12);
+}
+html[data-theme="dark"] section[id$="-documentation"] > section {
+    background: #1a2234;
+    border-color: #2d3748;
+}
+html[data-theme="dark"] section[id$="-documentation"] > section:hover {
+    border-color: #58a6ff;
+    box-shadow: none;
+}
+
+/* Row 1 — the member name as a content-width chip (NOT a full-width strip),
+   with a ◆ marker like Doxygen. `width: fit-content` shrink-wraps to the name. */
+section[id$="-documentation"] > section > h3 {
+    display: flex;
+    width: fit-content;
+    max-width: 100%;
+    align-items: baseline;
+    margin: 0.7rem 0.9rem 0.35rem;
+    padding: 0.3rem 0.7rem;
+    background: var(--pst-color-surface, #f6f8fa);
+    border: 1px solid var(--pst-color-border, #d0d7de);
+    border-radius: 6px;
+    font-size: 1.0rem;
+    font-weight: 600;
+}
+section[id$="-documentation"] > section > h3::before {
+    content: "\25C6";              /* ◆ */
+    color: var(--pst-color-link, #0969da);
+    margin-right: 0.5rem;
+    font-size: 0.8em;
+    align-self: center;
+}
+section[id$="-documentation"] > section > h3 > a.headerlink { margin-left: 0.4rem; }
+html[data-theme="dark"] section[id$="-documentation"] > section > h3 {
+    background: #111622;
+    border-color: #2d3748;
+}
+html[data-theme="dark"] section[id$="-documentation"] > section > h3::before { color: #58a6ff; }
+
+/* Row 2 — the signature block (template clause + declaration, clubbed into one
+   paragraph with a <br>, NO separator between the lines) plus brief / params.
+   No dashed inter-row separators: the template + signature read as one unit. */
+section[id$="-documentation"] > section > p,
+section[id$="-documentation"] > section > ul,
+section[id$="-documentation"] > section > dl,
+section[id$="-documentation"] > section > div[class*="highlight"] {
+    margin: 0;
+    padding: 0.35rem 1rem;
+}
+/* Bulleted / numbered lists in a card body: the shared row padding above sets
+   padding-left to 1rem, but `list-style-position: outside` draws the marker in
+   that left padding — at 1rem it lands in the gutter and gets clipped at the
+   card edge. Indent so the marker sits ~1rem inside the body and the item text
+   lines up past it (the "tab" space). */
+section[id$="-documentation"] > section > ul,
+section[id$="-documentation"] > section > ol {
+    padding-left: 2.5rem;
+}
+/* Signature line-height a touch looser so the clubbed template/declaration
+   pair breathes. */
+section[id$="-documentation"] > section > p:has(> code) { line-height: 1.7; }
+/* Signature code spans fill the row cleanly — drop the inline-code pill. */
+section[id$="-documentation"] > section > p > code {
+    background: transparent;
+    border: none;
+    padding: 0;
+    font-size: 0.875rem;
+}
+/* Multi-line function signatures align parameter names against a padded type
+   column built from spaces. Inline <code> collapses runs of spaces by default,
+   which would destroy that alignment — preserve them (and keep wrapping so a
+   long parameter list never overflows the card). */
+section[id$="-documentation"] > section > p.opencv-api-sig > code {
+    white-space: pre-wrap;
+}
+/* Dark mode: the global `html[data-theme="dark"] code { background-color:
+   #2d333b !important }` rule otherwise paints a slate pill behind every
+   signature / #include code span inside a card. Force them transparent (the
+   card body, header chip and include box already supply the background) so
+   the code sits flat on the card instead of on its own block. */
+html[data-theme="dark"] section[id$="-documentation"] > section code,
+html[data-theme="dark"] section[id$="-documentation"] > section code span {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+/* `#include <…>` row → a distinct inset box inside the card (Doxygen-style):
+   shaded, bordered, rounded, set in from the card edges with its own spacing.
+   Overrides the generic body-row padding and the dashed inter-row separator. */
+section[id$="-documentation"] > section > p.opencv-api-include {
+    margin: 0.65rem 1rem 0.85rem;
+    padding: 0.45rem 0.75rem;
+    background: var(--pst-color-surface, #f6f8fa);
+    border: 1px solid var(--pst-color-border, #d0d7de);
+    border-radius: 6px;
+}
+html[data-theme="dark"] section[id$="-documentation"] > section > p.opencv-api-include {
+    background: #111622;
+    border-color: #2d3748;
+}
+/* Land summary-table anchor jumps (`#refid`) below the sticky navbar. The
+   jump target is the empty `<span id="…">` at the top of each card; without
+   this margin a short card (e.g. a one-line typedef) scrolls right under the
+   header, so the NEXT card looks like the target (clicking Mat1b appeared to
+   land on Mat1f). 5rem clears the navbar + a little breathing room. */
+section[id$="-documentation"] > section,
+section[id$="-documentation"] > section > span[id],
+section[id$="-documentation"] > section > h3 {
+    scroll-margin-top: 5rem;
+}
 
 /* --- MathJax inline alignment tweak ----------------------------------- */
 mjx-container.MathJax:not([display="true"]) { vertical-align: -0.15em !important; }
 
-/* --- Side-by-side images ---------------------------------------------- */
-/* When a paragraph contains multiple consecutive <img> tags (Doxygen's
-   pattern for showing two images horizontally — e.g. py_photo's chromatic
-   aberration "before/after" examples), constrain each image's width so
-   they fit on one row instead of stacking. */
+/* --- Side-by-side images ----------------------------------------------- */
+/* Constrain consecutive <img> in one <p> so Doxygen's two-image rows don't stack. */
 .bd-content p:has(img + img) img {
     max-width: 49%;
     height: auto;
@@ -441,14 +669,8 @@ mjx-container.MathJax:not([display="true"]) { vertical-align: -0.15em !important
 }
 .bd-content p img + img { margin-left: 0.25rem; }
 
-/* --- Copy-to-clipboard button -----------------------------------------
- * Provided by the `sphinx-copybutton` extension, which injects
- * `<button class="copybtn">` into every `div.highlight > pre` at runtime
- * and ships its own `copybutton.css`. We override its defaults here so
- * the button uses the same design tokens (PST surface + opencv-accent)
- * as the rest of the wrapper. custom.css is loaded after copybutton.css
- * so these rules win on equal-specificity matches.
- */
+/* --- Copy-to-clipboard button (sphinx-copybutton) ---------------------- */
+/* Override the extension's defaults with our design tokens; custom.css loads after copybutton.css. */
 button.copybtn {
     width: 1.85rem !important;
     height: 1.85rem !important;
@@ -457,7 +679,7 @@ button.copybtn {
     color: var(--pst-color-text-muted) !important;
     background: var(--pst-color-surface) !important;
     border: 1px solid var(--pst-color-border) !important;
-    border-radius: 0.4rem !important;       /* matches code-block radius */
+    border-radius: 0.4rem !important;
     transition: opacity 0.15s ease, color 0.15s ease,
                 border-color 0.15s ease, background 0.15s ease,
                 transform 0.05s ease !important;
@@ -480,8 +702,7 @@ button.copybtn:focus-visible {
 }
 button.copybtn:active { transform: translateY(1px); }
 
-/* Confirmation: use the OpenCV accent rather than the default green so the
-   success state reads as on-brand. */
+/* Success state uses the OpenCV accent, not the default green. */
 button.copybtn.success {
     color: var(--opencv-accent) !important;
     border-color: var(--opencv-accent) !important;
@@ -489,7 +710,6 @@ button.copybtn.success {
     opacity: 1 !important;
 }
 
-/* Light-mode fine-tune to match the code block's #f6f8fa surface. */
 html[data-theme="light"] button.copybtn {
     background: #ffffff !important;
     color: #57606a !important;
@@ -501,7 +721,6 @@ html[data-theme="light"] button.copybtn.success {
     border-color: var(--opencv-accent) !important;
 }
 
-/* Dark-mode tune to match the slate code-block surface (#2d333b). */
 html[data-theme="dark"] button.copybtn {
     background: #373e47 !important;
     color: #adbac7 !important;
@@ -513,8 +732,6 @@ html[data-theme="dark"] button.copybtn.success {
     border-color: var(--opencv-accent) !important;
 }
 
-/* Tooltip from the extension's `o-tooltip--left` helper — soften the
-   default grey/white pill into something that matches our type stack. */
 .o-tooltip--left:after {
     font-family: var(--pst-font-family-base);
     background: var(--pst-color-surface);
@@ -530,50 +747,20 @@ html[data-theme="dark"] button.copybtn.success {
     button.copybtn { opacity: 1 !important; }
 }
 
-/* --- Class collaboration diagram (.opencv-coll-graph) ------------------- */
-/* The per-class stub embeds the SVG that the legacy Doxygen HTML build
-   rendered (see _find_collaboration_svg in conf.py). Constrain it so a wide
-   diagram never overflows the content column, and keep it left-aligned to
-   match the reference docs.opencv.org class-page layout. */
-/* Two theme variants are emitted (conf.py): a light SVG (native Doxygen, with
-   a transparent backdrop) and a dark SVG (recoloured light-on-dark, also
-   transparent backdrop). They carry the theme's native `.only-light` /
-   `.only-dark` classes, so pydata-sphinx-theme shows exactly one per colour
-   mode and exempts the dark one from its forced-white image background. We
-   only need to size them here — no `display`/`filter` rules, which would
-   fight the theme's `!important` swap. */
-/* Class-only selector: the diagram is inlined as <svg> at build-finished
-   (conf.py) so its links work, so this must match <svg>, not just <img>. */
+/* --- Class collaboration diagram (.opencv-coll-graph) ------------------ */
+/* Inlined as <svg> at build-finished (so links work); two theme variants carry
+   the theme's .only-light/.only-dark classes. Size only — no display/filter. */
 .opencv-coll-graph {
-    /* Centre small diagrams in the column. Margin-auto needs a block-level
-       element to work. */
     display: block;
     margin: 1rem auto 1.5rem;
-
-    /* Render at the SVG's NATIVE intrinsic size. Doxygen / Graphviz already
-       sized each diagram so the text is readable — we just honour that.
-       `width: auto` + `height: auto` keep the aspect ratio. */
+    /* Native intrinsic size; auto/auto keeps aspect ratio. */
     width: auto;
     height: auto;
-
-    /* Crucially NO `max-width: 100%` and NO `max-height: …` here. Those caps
-       used to squash wide diagrams (e.g. cv::NAryMatIterator) down to the
-       content-column width — and once a graph is shrunk uniformly, every
-       label inside it shrinks proportionally and becomes illegible. By
-       removing the caps the diagram keeps its native size; small diagrams
-       fit naturally, large ones overflow into the scrollable wrapper below. */
+    /* NO max-width/max-height: a uniform shrink makes wide diagrams' labels
+       illegible. Native size + the scrollable <p> wrapper below handle overflow. */
 }
 
-/* The Sphinx `<p>` that wraps the inlined SVG becomes the horizontal-scroll
-   container. So:
-   * A SMALL diagram (narrower than the column) just sits at native size,
-     centred by the margin:auto above — `text-align: center` keeps it
-     centred for browsers that handle inline svg as inline.
-   * A WIDE diagram (e.g. NAryMatIterator at ~580pt ≈ 770px, or anything
-     larger than the column) overflows to the right, and `overflow-x: auto`
-     exposes a horizontal scrollbar instead of clipping or downscaling.
-   We DON'T touch the `<p>`'s vertical sizing, so tall diagrams still flow
-   normally and push the rest of the content down — they just don't squash. */
+/* The wrapping <p> is the horizontal-scroll container; vertical sizing untouched. */
 .bd-content p:has(> svg.opencv-coll-graph),
 .bd-content p:has(> img.opencv-coll-graph) {
     overflow-x: auto;
@@ -581,35 +768,24 @@ html[data-theme="dark"] button.copybtn.success {
     text-align: center;
 }
 
-/* --- Clickable enum synopsis (.opencv-enum-synopsis) -------------------- */
-/* The class-page enum block is emitted by _enum_synopsis_html() as raw HTML
-   that uses the Pygments-cpp span classes (`k` keyword, `n` name, `o`
-   operator, `p` punctuation, …). Wrapping it in `.highlight-cpp .highlight`
-   makes Sphinx's existing code-block CSS (background, padding, monospace)
-   apply automatically — we don't have to re-style the block itself. Only
-   the inner anchors need explicit colouring so the names stand out as links
-   instead of inheriting the dark `.n` (identifier) colour. */
-/* Match the exact hex the body uses for every other link so the enum
-   names sit in the same blue palette as `cv::Mat` / `cv::KeyPoint` text
-   links elsewhere on the page. No underline, just the colour. */
+/* --- Clickable enum synopsis (.opencv-enum-synopsis) ------------------- */
+/* Raw HTML using Pygments-cpp span classes; only the anchors need link colour. */
 .opencv-enum-synopsis a.opencv-enum-link {
     color: #0969da !important;
     text-decoration: none;
     border-radius: 2px;
 }
 .opencv-enum-synopsis a.opencv-enum-link:hover {
-    color: #0550ae !important;          /* matches `.bd-content a:hover` */
+    color: #0550ae !important;
 }
 html[data-theme="dark"] .opencv-enum-synopsis a.opencv-enum-link {
-    color: #539bf5 !important;          /* matches the dark body-link rule */
+    color: #539bf5 !important;
 }
 html[data-theme="dark"] .opencv-enum-synopsis a.opencv-enum-link:hover {
     color: #6cb6ff !important;
 }
 
-/* The Member Enumeration Documentation block has the same synopsis as a
-   plain Pygments code block (no `<a>` wrappers). Paint its identifiers
-   with the same hex so the two sections look identical. */
+/* Member Enumeration Documentation synopsis has no <a> wrappers; paint its identifiers to match. */
 section#member-enumeration-documentation .highlight-cpp .n {
     color: #0969da !important;
 }
@@ -617,25 +793,18 @@ html[data-theme="dark"] section#member-enumeration-documentation .highlight-cpp 
     color: #539bf5 !important;
 }
 
-/* (Legacy) Anchor target hidden in the detail section. Empty inline spans
-   used to live here before the per-row layout below replaced them; kept for
-   pages that still carry the old markup. */
+/* Legacy anchor target, kept for pages with old markup. */
 .opencv-enum-target {
     scroll-margin-top: 5rem;
 }
 
 /* --- Member Enumeration Documentation: per-value detail list ----------- */
-/* Each enum becomes a heading + a `<dl>` where every value is its own row.
-   This is visually distinct from the code-block synopsis at the top of the
-   page, so navigating from a Public Types link feels like a real jump. Each
-   `<dt>` carries an `id="_CPPv4…E"` anchor so clicks land on the specific
-   value, not just the top of the enum block. */
 .opencv-enum-heading {
     margin: 1.5rem 0 0.5rem;
     font-size: 1.05rem;
     font-weight: 600;
     color: var(--pst-color-text-base);
-    scroll-margin-top: 5rem;        /* keep below the sticky navbar */
+    scroll-margin-top: 5rem;        /* clear the sticky navbar */
 }
 .opencv-enum-heading .opencv-enum-name {
     color: #0969da;
@@ -649,8 +818,6 @@ html[data-theme="dark"] .opencv-enum-heading .opencv-enum-name {
     padding: 0;
 }
 .opencv-enum-detail dt {
-    /* card-style row so each enumerator is visually a clear entry, not just
-       another line of code. */
     padding: 0.5rem 0.8rem;
     margin-top: 0.5rem;
     background: var(--pst-color-surface);
@@ -658,9 +825,7 @@ html[data-theme="dark"] .opencv-enum-heading .opencv-enum-name {
     border-radius: 0 4px 4px 0;
     font-family: var(--pst-font-family-monospace);
     font-size: 0.9rem;
-    /* scroll-margin-top so a URL-hash landing on this row sits below the
-       sticky navbar instead of behind it. */
-    scroll-margin-top: 5rem;
+    scroll-margin-top: 5rem;        /* clear the sticky navbar on hash landing */
 }
 html[data-theme="dark"] .opencv-enum-detail dt {
     border-left-color: #539bf5;
@@ -679,30 +844,21 @@ html[data-theme="dark"] .opencv-enum-detail dt .opencv-enum-name {
     margin: 0.25rem 0 0 1.5rem;
     color: var(--pst-color-text-muted);
 }
-/* Subtle target highlight: when the URL hash matches a row, fade it in so
-   the user sees exactly where they landed. */
+/* Highlight the row the URL hash targets. */
 .opencv-enum-detail dt:target {
     background: color-mix(in srgb, var(--pst-color-link) 12%, transparent);
     transition: background 0.6s ease-out;
 }
-/* The inner `<span class="n">` carries Pygments' identifier colour; the
-   anchor's colour above should win, but be explicit to defeat any theme
-   override on `.highlight .n`. */
+/* Defeat any theme override on the inner `.highlight .n`. */
 .opencv-enum-synopsis a.opencv-enum-link > span.n {
     color: inherit !important;
 }
-/* Soft scroll-anchor padding so when a shared URL hash lands here, the line
-   isn't flush against the site header — gives a bit of breathing room. */
 .opencv-enum-synopsis a.opencv-enum-link {
     scroll-margin-top: 4rem;
 }
 
 /* --- "On this page" TOC: C++ domain entries ---------------------------- */
-/* Breathe's per-member directives register C++ domain objects, so their
-   TOC entries arrive wrapped in <code class="literal"> pills — unlike the
-   plain section entries. Strip the pill so each reads as an ordinary,
-   clickable TOC link that picks up the nav-link colour (and the accent
-   highlight on the active/hovered entry) like its siblings. */
+/* Breathe's C++ TOC entries arrive wrapped in <code> pills; strip them to plain links. */
 .toc-entry a.nav-link code,
 .bd-toc-nav a.nav-link code,
 .toc-entry a.nav-link code.literal,
@@ -714,10 +870,8 @@ html[data-theme="dark"] .opencv-enum-detail dt .opencv-enum-name {
     font-size: inherit !important;
     font-weight: inherit !important;
 }
-/* ===========================================================================
- * API reference — card-style tables (classes, typedefs, functions, enums)
- * ===========================================================================
-*/
+
+/* === API reference — card-style tables (classes/typedefs/functions/enums) === */
 
 table.api-reference-table {
     display: block;
@@ -743,7 +897,7 @@ table.api-reference-table tbody {
     display: block;
 }
 
-/* --- Card row: clean outline, uniform background, border-only hover ------- */
+/* --- Card row: border-only hover --------------------------------------- */
 table.api-reference-table tbody tr,
 table.api-reference-table tbody tr:nth-child(even),
 table.api-reference-table tbody tr:nth-child(odd) {
@@ -760,17 +914,15 @@ table.api-reference-table tbody tr:last-child {
     margin-bottom: 0 !important;
 }
 
-/* Hover effect modifies the border ONLY — background remains perfectly locked */
 table.api-reference-table tbody tr:hover {
     border-color: var(--pst-color-link, #0969da) !important;
     background: #ffffff !important;
 }
 
-/* Dark theme card settings */
 html[data-theme="dark"] table.api-reference-table tbody tr,
 html[data-theme="dark"] table.api-reference-table tbody tr:nth-child(even),
 html[data-theme="dark"] table.api-reference-table tbody tr:nth-child(odd) {
-    background: #1a2234 !important; /* "Little bluish" dark theme cards */
+    background: #1a2234 !important;
     border-color: #2d3748 !important;
 }
 
@@ -779,7 +931,7 @@ html[data-theme="dark"] table.api-reference-table tbody tr:hover {
     background: #1a2234 !important;
 }
 
-/* --- Cells: block layout, zero internal borders -------------------------- */
+/* --- Cells: block layout, zero internal borders ------------------------ */
 table.api-reference-table tbody tr td {
     display: block;
     border: none !important;
@@ -793,13 +945,13 @@ table.api-reference-table tbody tr td > p {
     background: transparent !important;
 }
 
-/* --- Hide empty description cells ---------------------------------------- */
+/* Hide empty description cells. */
 table.api-reference-table tbody tr td:not(:first-child):empty,
 table.api-reference-table tbody tr td:not(:first-child):has(> p:empty:only-child) {
     display: none  !important;
 }
 
-/* --- Title cell (class/function name) ------------------------------------ */
+/* --- Title cell (class/function name) ---------------------------------- */
 table.api-reference-table tbody tr td:first-child {
     font-size: 0.95rem;
     font-weight: 500;
@@ -808,7 +960,7 @@ table.api-reference-table tbody tr td:first-child {
     line-height: 1.4;
 }
 
-/* FIXED: Aggressively strips out the inner gray theme-strip behind the text strings */
+/* Strip the inner gray theme-strip behind the title text. */
 table.api-reference-table tbody tr td:first-child,
 table.api-reference-table tbody tr td:first-child * {
     background: transparent !important;
@@ -817,7 +969,7 @@ table.api-reference-table tbody tr td:first-child * {
     border: none !important;
 }
 
-/* Keywords like "class", "typedef" — muted, not clickable */
+/* Keywords like "class"/"typedef" — muted, not clickable. */
 table.api-reference-table tbody tr td:first-child {
     color: var(--pst-color-text-muted, #656d76) !important;
 }
@@ -846,28 +998,55 @@ html[data-theme="dark"] table.api-reference-table tbody tr td a:active {
     color: #ffffff !important;
 }
 
-/* Make `<code>` inside a link inherit the link color (and drop its inline-code
- * background/border/padding). Without this, the `td:not(:first-child) code`
- * rule below paints the visible link text dark — which is what makes
- * Function and Variable Name links (which live in column 2 and are wrapped
- * `<a><code>name</code></a>`) appear "black" instead of blue. */
-table.api-reference-table tbody tr td a > code,
-table.api-reference-table tbody tr td a > code * {
+/* Function-name links (the Name column) are emitted with markdown backticks, so
+   they render as a boxed, dark code chip instead of a plain link. Class members
+   add an extra `<span class="std std-ref">` wrapper (`a > span > code`), so the
+   old direct-child `a > code` selector missed them and they stayed boxed/bold.
+   Use a descendant combinator to reach through the span, and `:not(:first-child)`
+   to outrank the description-code rule below — so they read as blue, non-boxed,
+   clickable function links (matching inline @ref references). */
+table.api-reference-table tbody tr td a code,
+table.api-reference-table tbody tr td a code *,
+table.api-reference-table tbody tr td:not(:first-child) a code,
+table.api-reference-table tbody tr td:not(:first-child) a code * {
     color: inherit !important;
     background: transparent !important;
+    background-color: transparent !important;
     border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
     padding: 0 !important;
+    font-weight: 500 !important;
     font-size: inherit !important;
 }
 
-/* When description is empty, collapse the bottom margin on the title */
+html[data-theme="dark"] table.api-reference-table tbody tr td:not(:first-child) a code,
+html[data-theme="dark"] table.api-reference-table tbody tr td:not(:first-child) a code * {
+    color: inherit !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+}
+
+/* Functions summary cards: the signature is split one parameter per line, each
+   line its own <code> span joined by <br>, with a padded type column built from
+   spaces (à la `_signature_lines`). Inline <code> collapses runs of spaces,
+   which would wreck that alignment — preserve them and keep wrapping for long
+   lists, so the card signature reads like the detail-block declaration. */
+table.api-function-table tbody tr td:not(:first-child) a code,
+table.api-function-table tbody tr td:not(:first-child) code {
+    white-space: pre-wrap;
+}
+
+/* No description -> collapse the title's bottom margin. */
 table.api-reference-table tbody tr td:first-child:last-child,
 table.api-reference-table tbody tr:has(> td:not(:first-child):empty) td:first-child,
 table.api-reference-table tbody tr:has(> td:not(:first-child):has(> p:empty:only-child)) td:first-child {
     margin-bottom: 0 !important;
 }
 
-/* --- Description cell ---------------------------------------------------- */
+/* --- Description cell -------------------------------------------------- */
 table.api-reference-table tbody tr td:not(:first-child) {
     color: var(--pst-color-text-muted, #656d76);
     font-size: 0.9rem;
@@ -875,7 +1054,6 @@ table.api-reference-table tbody tr td:not(:first-child) {
     background: transparent !important;
 }
 
-/* FIXED: Explicitly force inner paragraphs inside descriptions to drop background gray bands */
 table.api-reference-table tbody tr td:not(:first-child) p {
     background: transparent !important;
     background-color: transparent !important;
@@ -903,10 +1081,7 @@ html[data-theme="dark"] table.api-reference-table tbody tr td:not(:first-child) 
 }
 
 
-/* ===========================================================================
- * Typedef table — single-line compact cards
- * ===========================================================================
-*/
+/* === Typedef table — single-line compact cards === */
 table.api-typedef-table {
     display: block !important;
     width: 100%;
@@ -915,7 +1090,7 @@ table.api-typedef-table {
     border-spacing: 0;
     margin: 0.5rem 0 1rem;
     padding: 8px !important;
-    background: #f0f2f5 !important; /* Outer container frame */
+    background: #f0f2f5 !important;
     border-radius: 10px;
 }
 
@@ -923,7 +1098,6 @@ html[data-theme="dark"] table.api-typedef-table {
     background: #111622 !important;
 }
 
-/* FIXED: Explicitly hide the headers that were breaking the layout grid */
 table.api-typedef-table thead {
     display: none !important;
 }
@@ -933,15 +1107,15 @@ table.api-typedef-table tbody {
     width: 100% !important;
 }
 
-/* Converted into a clean, justified flex container row */
+/* Flex row: type + alias name. */
 table.api-typedef-table tbody tr,
 table.api-typedef-table tbody tr:nth-child(even),
 table.api-typedef-table tbody tr:nth-child(odd) {
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
-    justify-content: flex-start !important; /* Centers both columns relative to the card container */
-    gap: 32px !important;               /* Controls the distance between the two text items */
+    justify-content: flex-start !important;
+    gap: 32px !important;
     padding: 8px 12px !important;
     margin-bottom: 4px !important;
     background: #ffffff !important;
@@ -991,9 +1165,7 @@ table.api-typedef-table tbody tr td {
     max-width: 45%;
 }
 
-/* FIXED: Target cells explicitly by index to prevent selector blending */
-
-/* Column 1: Type declaration (e.g., Vec<uchar, 2>) — Left side alignment */
+/* Column 1: type declaration. */
 table.api-typedef-table tbody tr td:nth-child(1) {
     color: var(--pst-color-text-muted, #656d76) !important;
     font-weight: 400;
@@ -1009,12 +1181,12 @@ html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(1) {
     color: #8b949e !important;
 }
 
-/* Column 2: Alias Name (e.g., Vec2b) — Pushed to the right side.
- * Normal weight (not bold) per user spec; the `<code>` wrapper that the
- * MyST link emits (`[`cv::Vec2b`](…)` → `<a><code>cv::Vec2b</code></a>`)
- * carries the theme's default code background + border, which would draw
- * an unwanted pill around the title — strip both, and force the code to
- * inherit the link color so the cv:: text stays a clean blue / white. */
+/* Light-mode: blue Type-cell links. */
+html:not([data-theme="dark"]) table.api-typedef-table tbody tr td:nth-child(1) a {
+    color: var(--pst-color-link, #0969da) !important;
+}
+
+/* Column 2: alias name — strip the code pill and inherit the link colour. */
 table.api-typedef-table tbody tr td:nth-child(2) {
     color: var(--pst-color-link, #0969da) !important;
     font-weight: 400 !important;
@@ -1042,8 +1214,6 @@ table.api-typedef-table tbody tr td:nth-child(2) a:hover {
     text-decoration: underline !important;
 }
 
-/* Strip the inline-code pill from the Name cell — no border, no background,
- * no padding. The cv::xyz title should read as a flat link, not a code chip. */
 table.api-typedef-table tbody tr td:nth-child(2) code,
 table.api-typedef-table tbody tr td:nth-child(2) code * {
     background: transparent !important;
@@ -1054,29 +1224,21 @@ table.api-typedef-table tbody tr td:nth-child(2) code * {
     font-size: inherit !important;
 }
 
-/* Column 3: Description cell — Drop completely if empty so it doesn't skew spacing */
+/* Column 3: drop empty description so it doesn't skew spacing. */
 table.api-typedef-table tbody tr td:nth-child(3):empty,
 table.api-typedef-table tbody tr td:nth-child(3):has(> p:empty:only-child) {
     display: none !important;
 }
 
-/* Disable overflow wrapper for card tables */
+/* Disable the overflow wrapper for card tables. */
 .table-wrapper:has(> table.api-reference-table),
 .table-wrapper:has(> table.api-typedef-table) {
     overflow: visible;
 }
 
 
-/* ===================================================================
-   Class-page header, Detailed Description & Examples (cherry-picked
-   from PR #7). Selectors: .opencv-class-brief / .opencv-class-include /
-   a.opencv-class-more / section#detailed-description / dl.opencv-examples
-   / a.opencv-example-link / .opencv-example-brief.
-   =================================================================== */
+/* === Class-page header, Detailed Description & Examples (from PR #7) === */
 /* --- Class-page header: #include + brief + "More..." ------------------ */
-/* Mirrors docs.opencv.org's class-page header: a small monospace `#include
-   <header.hpp>` line, then the one-line brief description followed by a
-   "More..." link that jumps down to the Detailed Description section. */
 .opencv-class-include {
     margin: 0.25rem 0 0.75rem;
     font-size: 0.85rem;
@@ -1110,17 +1272,16 @@ a.opencv-class-more:hover {
 html[data-theme="dark"] a.opencv-class-more { color: #539bf5; }
 html[data-theme="dark"] a.opencv-class-more:hover { color: #6cb6ff; }
 
-/* --- Detailed Description: rendered by Breathe ------------------------ */
-/* The detailed description is now produced by `{doxygenclass} :no-members:`
-   and trimmed by the `_strip_breathe_class_clutter` build-finished hook
-   (see conf.py). Sphinx + Pygments already style `<pre>` code blocks via
-   `.highlight`, so we don't need any custom code-block CSS here — the
-   default chrome already matches the rest of the page.
-   We only add a subtle inline-code chip for the body's `<code>` elements
-   so refs like `cv::Mat` read as code, matching docs.opencv.org. */
-/* Breathing room between the section heading and the first content line.
-   Without this the first paragraph hugs the underline of the <h2>, which
-   reads as too tight against the rest of the page's heading spacing. */
+/* --- Class-page source-file footer ("generated from the following file") ---
+ * Emitted under a popping `## ` heading (see _write_class_stub) so it renders
+ * OUTSIDE the last member's card. The heading exists only to break markdown's
+ * section nesting — hide it (and its in-page TOC entry) so only the Doxygen-
+ * style footer line shows below the cards. */
+.opencv-class-files { margin-top: 1.75rem; }
+.opencv-class-files > h2 { display: none; }
+nav a[href="#source-file"] { display: none; }
+
+/* --- Detailed Description (Breathe-rendered) --------------------------- */
 section#detailed-description > h2 {
     margin-bottom: 1.5rem;
 }
@@ -1133,12 +1294,7 @@ section#member-enumeration-documentation code {
     font-family: var(--pst-font-family-monospace);
     font-size: 0.88em;
 }
-/* Cross-references inside the Detailed Description (Breathe emits these
-   for every Doxygen <ref>) come through as `<a class="reference internal">
-   <span class="std std-ref">cv::Mat</span></a>` — plain text, no chip.
-   docs.opencv.org renders these in monospace with a subtle chip background.
-   Match that look: monospace, chip, link colour, link colour from
-   surrounding <a>, no underline. */
+/* Breathe <ref> cross-refs: monospace chip, inherit the parent <a> link colour. */
 section#detailed-description a.reference > span.std-ref,
 section#member-enumeration-documentation a.reference > span.std-ref {
     background: var(--pst-color-surface);
@@ -1147,10 +1303,9 @@ section#member-enumeration-documentation a.reference > span.std-ref {
     padding: 0 0.3rem;
     font-family: var(--pst-font-family-monospace);
     font-size: 0.88em;
-    color: inherit;    /* take the parent <a>'s link colour */
+    color: inherit;
 }
-/* Elements that already style themselves as monospace panels (the enum
-   detail `<dt>` cards) shouldn't double-chip. */
+/* Enum detail <dt> cards already self-style as monospace panels — don't double-chip. */
 .opencv-enum-detail dt code,
 .opencv-enum-detail dt .opencv-enum-name,
 .opencv-enum-detail dt .opencv-enum-init {
@@ -1159,17 +1314,7 @@ section#member-enumeration-documentation a.reference > span.std-ref {
     padding: 0;
 }
 
-/* --- Per-class "Examples" cross-reference (docs.opencv.org parity) ----- */
-/* Emitted by `_write_class_stub` from `_render_examples_block` at the foot
-   of the Detailed Description. Mirrors docs.opencv.org's "Examples:"
-   footer: a single bold label, then plain blue links joined by Oxford
-   commas. NO inline-code chip on the links — the reference site renders
-   them as ordinary cross-reference links (same as their `\see` / `\ref`
-   look), not as code pills, and the user explicitly called that out.
-   No top divider and no left indent on the `<dd>` — the block sits flush
-   against the surrounding text on the same left margin as the rest of
-   the page (matching how docs.opencv.org's <dl class="section examples">
-   renders). */
+/* --- Per-class "Examples" cross-reference ------------------------------ */
 dl.opencv-examples {
     margin: 1.5rem 0 0;
     padding: 0;
@@ -1181,22 +1326,12 @@ dl.opencv-examples > dt {
     color: var(--pst-color-text-base);
 }
 dl[class].opencv-examples > dd {
-    /* `dl[class]…` (not just `dl.opencv-examples`) is intentional: it
-       matches the specificity of pydata-sphinx-theme's blanket
-       `dl[class]:not(.option-list,…,.simple) dd { margin-left: 2rem }`
-       rule (both (0, 2, 2) = 22) so that cascade order — custom.css
-       loads after pydata — lets ours win the tie. Simplifying to
-       `dl.opencv-examples > dd` (specificity 12) loses to pydata's 22
-       and leaves the inherited 2rem indent visible. We want the list of
-       example links flush with the page content's left margin instead
-       of inset under the "Examples" label. */
+    /* `dl[class]…` matches pydata's blanket dd-indent specificity (0,2,2) so our
+       margin:0 wins the tie (custom.css loads later) and the links stay flush. */
     margin: 0;
     padding: 0;
     line-height: 1.7;
 }
-/* Plain blue link, no background/border/padding — same chrome the rest of
-   the site gives `<a>` cross-references. Underline only on hover so the
-   inline paragraph stays clean. */
 dl.opencv-examples a.opencv-example-link {
     text-decoration: none;
     color: #0969da;
@@ -1207,10 +1342,7 @@ html[data-theme="dark"] dl.opencv-examples a.opencv-example-link {
 dl.opencv-examples a.opencv-example-link:hover {
     text-decoration: underline;
 }
-/* The Detailed Description's blanket `code { background:…; border:… }` rule
-   would otherwise re-chip any `<code>` Sphinx happens to inject inside an
-   Examples link (e.g. if a future renderer wraps the path in one again).
-   Defang that explicitly so the link styling above stays authoritative. */
+/* Defang the Detailed Description's blanket code-chip rule on example links. */
 dl.opencv-examples a.opencv-example-link code {
     background: transparent;
     border: 0;
@@ -1220,3 +1352,164 @@ dl.opencv-examples a.opencv-example-link code {
     color: inherit;
 }
 
+/* Doxygen search-box variables (consumed by the local search.css) — light. */
+:root {
+    --search-background-color: white;
+    --search-foreground-color: #909090;
+    --search-active-color: black;
+    --search-filter-background-color: #F9FAFC;
+    --search-filter-foreground-color: black;
+    --search-filter-border-color: #90A5CE;
+    --search-filter-highlight-text-color: white;
+    --search-filter-highlight-bg-color: #3D578C;
+    --search-results-foreground-color: #425E97;
+    --search-results-background-color: #EEF1F7;
+    --search-results-border-color: black;
+    --search-box-shadow: inset 0.5px 0.5px 3px 0px #555;
+}
+html[data-theme="dark"] {
+    --search-background-color: black;
+    --search-foreground-color: #C5C5C5;
+    --search-active-color: #C5C5C5;
+    --search-filter-background-color: #101826;
+    --search-filter-foreground-color: #90A5CE;
+    --search-filter-border-color: #7C95C6;
+    --search-filter-highlight-text-color: #BCC9E2;
+    --search-filter-highlight-bg-color: #283A5D;
+    --search-results-foreground-color: #90A5CE;
+    --search-results-background-color: #101826;
+    --search-results-border-color: #7C95C6;
+    --search-box-shadow: inset 0.5px 0.5px 3px 0px #2F436C;
+}
+
+/* Centered search modal — mimics the native PyData search dialog: dimmed
+   backdrop, panel pinned near top-center. The Doxygen box lives inside. */
+.opencv-search-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1055;
+    background: rgba(0, 0, 0, 0.5);
+}
+.opencv-search-overlay.opencv-search-open { display: block; }
+.opencv-search-modal {
+    position: absolute;
+    top: 15%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(92vw, 640px);
+}
+
+/* Doxygen MSearchBox — large field styled like the native search input. */
+#MSearchBox {
+    width: 100%;
+    height: 3rem;
+    border: 1px solid var(--pst-color-border);
+    border-radius: 0.375rem;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 0.6rem;
+    background: var(--pst-color-background) !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3) !important;
+}
+#MSearchBox.MSearchBoxActive,
+#MSearchBox:focus-within {
+    border-color: #d63384;
+    outline: 2px solid rgba(214, 51, 132, 0.25);
+}
+#MSearchBox .left {
+    flex: 1;
+    display: inline-flex !important;
+    align-items: center;
+    height: 100% !important;
+    min-width: 0;
+}
+#MSearchSelect {
+    flex-shrink: 0;
+    width: 26px !important;
+    height: 26px !important;
+    margin: 0 0.25em 0 0 !important;
+    cursor: pointer;
+    border-radius: 4px;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    background-size: 20px 20px !important;
+    opacity: 0.85;
+}
+#MSearchSelect:hover {
+    opacity: 1;
+    background-color: var(--pst-color-surface, rgba(128, 128, 128, 0.15));
+}
+#MSearchField {
+    flex: 1;
+    width: auto !important;
+    min-width: 0;
+    height: auto !important;
+    font-size: 1.05rem;
+    background: transparent !important;
+    color: var(--pst-color-text-base) !important;
+}
+#MSearchBox .right {
+    flex-shrink: 0;
+    width: auto !important;
+    height: auto !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+#MSearchKbd { display: inline-flex; align-items: center; gap: 2px; }
+.MSearchBoxActive #MSearchKbd { display: none; }
+#MSearchCloseImg { width: 16px; height: 16px; }
+
+/* Popups: solid, theme-aware styling (Doxygen's var-based search.css renders transparent here) */
+#MSearchResultsWindow,
+#MSearchSelectWindow {
+    background: var(--pst-color-background) !important;
+    border: 1px solid var(--pst-color-border) !important;
+    border-radius: 6px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.28) !important;
+    z-index: 10005 !important;
+}
+#MSearchResultsWindow {
+    width: 420px !important;
+    max-height: 70vh;
+    height: auto !important;
+    overflow-y: auto;
+    padding: 2px 0;
+}
+#MSearchSelectWindow { padding: 4px 0; min-width: 160px; }
+a.SelectItem {
+    display: block !important;
+    padding: 4px 16px !important;
+    color: var(--pst-color-text-base) !important;
+    white-space: nowrap;
+}
+a.SelectItem:hover {
+    background: var(--pst-color-primary) !important;
+    color: #fff !important;
+}
+/* One result per row: bold symbol, scope on its own muted line, separators */
+div.SRPage { background: transparent !important; }
+.SRResult { display: block; }
+.SRPage .SREntry {
+    padding: 7px 16px !important;
+    font-size: 0.85rem !important;
+    line-height: 1.35;
+    border-bottom: 1px solid var(--pst-color-border);
+}
+.SRSymbol { color: var(--pst-color-link) !important; font-weight: 600; }
+/* Single result: scope sits inline after the symbol (like original). */
+span.SRScope {
+    padding-left: 6px;
+    font-size: 0.82rem;
+    font-weight: 400;
+    color: var(--pst-color-text-muted) !important;
+}
+/* Multiple results: child pages stack, indented (like original). */
+a.SRScope {
+    display: block !important;
+    font-size: 0.8rem !important;
+    font-weight: 400;
+    color: var(--pst-color-text-muted) !important;
+}
+.SRPage .SRStatus { color: var(--pst-color-text-muted); padding: 8px 16px; }

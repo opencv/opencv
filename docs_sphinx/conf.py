@@ -1,36 +1,25 @@
-"""Sphinx wrapper for opencv/doc/.
+"""Sphinx wrapper for opencv/doc/ (single conf.py, config-dir/source-dir
+separation so the legacy tree is never duplicated). Build via CMake:
 
-The wrapper lives in opencv/docs_sphinx/ as a single conf.py. Sphinx is
-invoked with config-dir / source-dir separation so the wrapper never
-duplicates the legacy tree. Build via the CMake `sphinx` target:
+    cmake --build <build> --target sphinx   # -> <build>/docs_sphinx/html/
 
-    cmake --build <build> --target sphinx
-    # output -> <build>/docs_sphinx/html/
-
-opencv/doc/ stays untouched: Doxygen-flavored directives in the .markdown
-sources are translated to MyST in a `source-read` hook below.
-
-To enable additional tutorial modules, append their directory names (the
-folder under opencv/doc/tutorials/) to DOC_MODULES below. The root index
-(tutorials/tutorials.markdown) lists every module, but only modules in
-DOC_MODULES are actually compiled — entries for the rest are dropped
-from toctrees automatically.
+opencv/doc/ stays untouched; Doxygen directives are translated to MyST in the
+`source-read` hook. Enable tutorial modules by adding their folder names to
+DOC_MODULES (state.py); only enabled modules compile, others drop from toctrees.
 """
 from __future__ import annotations
 import os as _os, pathlib, sys as _sys
 
-# Sphinx is invoked with config-dir / source-dir separation and does NOT place
-# the config directory on sys.path, so make the local conf_helpers package
-# importable regardless of how sphinx-build is launched.
+# Config dir isn't on sys.path under config/source-dir separation; add it.
 _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
 
 from conf_helpers.state import (
     DOC_ROOT, CONTRIB_ROOT, SPHINX_INPUT_ROOT,
     DOC_MODULES, JS_DOC_MODULES, PY_DOC_MODULES, CONTRIB_MODULES, API_MODULES,
     DOXYGEN_BASE_URL, _doxygen_url, _PATCHED_XML_DIR, HAVE_BREATHE,
+    USE_INDEX_LANDING,
 )
-import conf_helpers.build      # noqa: F401  bib staging + anchor scans + API-stub
-#                                            generation + image/snippet indexing.
+import conf_helpers.build      # noqa: F401  bib staging, scans, API stubs, indexes.
 import conf_helpers.patches    # noqa: F401  Sphinx C++ xref + warning patches.
 from conf_helpers.translate import _source_read
 from conf_helpers.postprocess import _inline_coll_graphs_on_finish
@@ -50,52 +39,40 @@ for _ext in ("sphinx_design", "sphinx_copybutton"):
         pass
 
 # -- Breathe (Doxygen XML -> Sphinx C++ domain) -----------------------------
-# Availability detection lives in conf_helpers.state; here we just register the
-# extension and point breathe at the patched XML tree.
 if HAVE_BREATHE:
     extensions.append("breathe")
     breathe_projects = {"opencv": str(_PATCHED_XML_DIR)}
     breathe_default_project = "opencv"
-    # No global members default: each class page renders its own summary tables
-    # + per-member detail blocks (see _write_class_stub), and the "Detailed
-    # Description" `{doxygenclass}` is meant to be description-only. A global
-    # `("members",)` default would force members back into that block —
-    # duplicating the hand-rolled member docs and feeding macro-bearing
-    # declarations (e.g. `CV_PROP_RW Point2f pt`) to the C++ domain parser. The
-    # missing-XML fallback passes `:members:` explicitly, so it's unaffected.
+    # Empty so class pages stay description-only (members are hand-rolled in
+    # _write_class_stub); a global ("members",) would duplicate them and feed
+    # macro-bearing decls to the C++ parser. Missing-XML fallback sets it itself.
     breathe_default_members = ()
 
 source_suffix = {".md": "markdown", ".markdown": "markdown"}
 
-# Tell Sphinx's C/C++ domain parser to treat OpenCV's compatibility macros
-# as identifier attributes (i.e. swallow them silently during parsing).
-# Without this, signatures like
-#     inline virtual const char *getName() const CV_OVERRIDE
-# raise "Invalid C++ declaration: Expected end of definition" because the
-# parser sees CV_OVERRIDE as an unknown token after `const`. These macros
-# expand to `override` / `noexcept` / `final` / nothing in cvdef.h.
+# Swallow OpenCV's compatibility macros during C++ parsing, else signatures
+# like `... getName() const CV_OVERRIDE` raise "Invalid C++ declaration".
 cpp_id_attributes = [
     "CV_OVERRIDE", "CV_FINAL", "CV_NOEXCEPT",
     "CV_NORETURN", "CV_DEPRECATED", "CV_DEPRECATED_EXTERNAL",
     "CV_NODISCARD_STD", "CV_NODISCARD",
     "CV_EXPORTS", "CV_EXPORTS_W",
     "CV_WRAP",
-    # Python-binding annotation macros (expand to nothing in C++): they prefix
-    # member/parameter declarations like `CV_PROP_RW Point2f pt` and otherwise
-    # raise "Invalid C++ declaration" when a `{doxygenclass} :members:` block
-    # (the missing-XML fallback) feeds them to the C++ domain parser.
+    # Python-binding macros prefixing decls like `CV_PROP_RW Point2f pt`.
     "CV_PROP", "CV_PROP_RW", "CV_PROP_W",
     "CV_OUT", "CV_IN_OUT",
 ]
 c_id_attributes = list(cpp_id_attributes)
 
-# Root tutorial index (lists all modules via @subpage). Stays the master
-# regardless of how many modules are in DOC_MODULES.
-master_doc = "tutorials/tutorials"
+# Master doc. By default the generated `index.markdown` landing page is the
+# site root (USE_INDEX_LANDING); its toctree lists every cross-family root and
+# its body is the OpenCV-modules link list. Setting the flag False falls back
+# to the legacy layout where `tutorials/tutorials` is the root.
+master_doc = "index" if USE_INDEX_LANDING else "tutorials/tutorials"
 
-# Source dir is the staged tree (or DOC_ROOT for legacy ad-hoc runs).
 # Scope: master + enabled main modules + (optionally) enabled contrib modules.
-include_patterns = ["tutorials/tutorials.markdown", "faq.markdown",
+include_patterns = (["index.markdown"] if USE_INDEX_LANDING else []) + [
+                    "tutorials/tutorials.markdown", "faq.markdown",
                     "citelist.markdown", "intro.markdown"] + [
     f"tutorials/{m}/**" for m in DOC_MODULES
 ] + (["js_tutorials/js_tutorials.markdown"] if JS_DOC_MODULES else []) + [
@@ -107,16 +84,9 @@ if CONTRIB_MODULES and (SPHINX_INPUT_ROOT / "tutorials_contrib").is_dir():
     include_patterns.append("tutorials_contrib/contrib_root.markdown")
     include_patterns += [f"tutorials_contrib/{m}/**" for m in CONTRIB_MODULES]
 if API_MODULES:
-    # Stubs are generated below (in `_generate_api_stubs()`); the file set is
-    # recursive over the Doxygen group hierarchy and unknown at this point,
-    # so use a glob. The check happens at Sphinx source-enumeration time —
-    # if no files exist, the pattern just matches nothing.
+    # Glob: the stub file set (generated later) is unknown here.
     include_patterns.append("api/**")
-    # Per-sample example pages (PR #7) written by `_generate_example_pages`
-    # alongside the class stubs. Each is `:orphan:`; the only inbound links are
-    # the `../examples/<name>.html` references baked into class pages by
-    # `_render_examples_block`. Without this glob Sphinx's include filter would
-    # drop the whole directory and the Examples links would 404.
+    # Orphan example pages; without this glob the class-page Examples links 404.
     include_patterns.append("examples/**")
 
 exclude_patterns = [
@@ -130,14 +100,35 @@ myst_enable_extensions = [
     "attrs_inline", "attrs_block", "smartquotes",
 ]
 myst_heading_anchors = 4
+
+# OpenCV's custom LaTeX macros (\vecthree, \cameramatrix, …) — ported from
+# doc/mymath.js so MathJax resolves them the same way the Doxygen site does.
+mathjax3_config = {
+    "loader": {"load": ["[tex]/ams"]},
+    "tex": {
+        "packages": {"[+]": ["ams"]},
+        "macros": {
+            "matTT": [r"\[ \left|\begin{array}{ccc} #1 & #2 & #3\\ #4 & #5 & #6\\ #7 & #8 & #9 \end{array}\right| \]", 9],
+            "fork": [r"\left\{ \begin{array}{l l} #1 & \mbox{#2}\\ #3 & \mbox{#4}\\ \end{array} \right.", 4],
+            "forkthree": [r"\left\{ \begin{array}{l l} #1 & \mbox{#2}\\ #3 & \mbox{#4}\\ #5 & \mbox{#6}\\ \end{array} \right.", 6],
+            "forkfour": [r"\left\{ \begin{array}{l l} #1 & \mbox{#2}\\ #3 & \mbox{#4}\\ #5 & \mbox{#6}\\ #7 & \mbox{#8}\\ \end{array} \right.", 8],
+            "vecthree": [r"\begin{bmatrix} #1\\ #2\\ #3 \end{bmatrix}", 3],
+            "vecthreethree": [r"\begin{bmatrix} #1 & #2 & #3\\ #4 & #5 & #6\\ #7 & #8 & #9 \end{bmatrix}", 9],
+            "cameramatrix": [r"#1 = \begin{bmatrix} f_x & 0 & c_x\\ 0 & f_y & c_y\\ 0 & 0 & 1 \end{bmatrix}", 1],
+            "distcoeffs": [r"(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]]) \text{ of 4, 5, 8, 12 or 14 elements}"],
+            "distcoeffsfisheye": [r"(k_1, k_2, k_3, k_4)"],
+            "hdotsfor": [r"\dots", 1],
+            "mathbbm": [r"\mathbb{#1}", 1],
+            "bordermatrix": [r"\matrix{#1}", 1],
+        },
+    },
+}
+
 suppress_warnings = [
     "myst.header", "myst.xref_missing", "toc.not_included",
     "misc.highlighting_failure",
     "image.not_readable",
-    # The same C++ symbol is legitimately declared on more than one generated
-    # page (e.g. a free function listed both on its group page and surfaced via
-    # a namespace page, or breathe re-emitting an `@ingroup` member). The C++
-    # domain warns on the redeclaration; it's expected here, not a doc error.
+    # Same C++ symbol legitimately appears on >1 generated page (group + namespace).
     "cpp.duplicate_declaration",
 ]
 
@@ -159,15 +150,11 @@ html_css_files = [
 ]
 html_theme_options = {
     "logo": {"text": f"OpenCV {release}"},
-    # Show all 7 Doxygen-style nav links inline (no "More" dropdown).
+    # Show all 7 nav links inline (no "More" dropdown).
     "header_links_before_dropdown": 7,
-    # Doxygen-style top-level nav (the legacy site's MAIN PAGE / RELATED
-    # PAGES / NAMESPACES / CLASSES / FILES / EXAMPLES / JAVA DOCUMENTATION).
-    # Declared via the theme's `external_links` slot only because that's the
-    # data hook for a custom header nav — but these are NOT external: the
-    # navbar-nav.html override rewrites each DOXYGEN_BASE_URL target to a
-    # relative path into the locally-built Doxygen output and renders them as
-    # in-tab links, so navigation stays on-site (see html_context below).
+    # Doxygen-style top nav. Uses the `external_links` slot as the data hook, but
+    # navbar-nav.html rewrites each DOXYGEN_BASE_URL target to a local relative
+    # path, so these stay on-site (see html_context).
     "external_links": [
         {"url": _doxygen_url("index.html"),       "name": "Main Page"},
         {"url": _doxygen_url("pages.html"),       "name": "Related Pages"},
@@ -177,12 +164,20 @@ html_theme_options = {
         {"url": _doxygen_url("examples.html"),    "name": "Examples"},
         {"url": DOXYGEN_BASE_URL + "javadoc/",    "name": "Java Documentation"},
     ],
+    # Doxygen search engine replaces the native one; render a single trigger in
+    # navbar_end (navbar_persistent renders twice → duplicate element IDs).
+    "navbar_persistent": [],
+    "navbar_end": ["search-button-field", "theme-switcher", "navbar-icon-links"],
+    "disable_search": True,
     "show_toc_level": 2,
     "navigation_with_keys": True,
     "show_prev_next": True,
     "show_nav_level": 2,
     "navigation_depth": 4,
-    "secondary_sidebar_items": ["page-toc"],
+    # Every page shows the in-page "On this page" TOC, except the generated
+    # landing page (index), where an empty list removes the secondary sidebar
+    # entirely so the centered entry list isn't pushed off to the left.
+    "secondary_sidebar_items": {"**": ["page-toc"], "index": []},
     "back_to_top_button": True,
     "show_version_warning_banner": False,
     "icon_links": [{"name": "GitHub",
@@ -190,17 +185,12 @@ html_theme_options = {
                     "icon": "fa-brands fa-github"}],
 }
 
-# Exposed to templates/navbar-nav.html so it can rewrite external_links
-# whose URL starts with this base into depth-aware relative paths to the
-# local Doxygen output, instead of redirecting users to docs.opencv.org.
+# Lets navbar-nav.html rewrite DOXYGEN_BASE_URL nav links to local relative paths.
 html_context = {"doxygen_base_url": DOXYGEN_BASE_URL}
 
-# Expose each enabled contrib module as a symlink under a build-dir subdir
-# and let Sphinx's html_extra_path publish the tree to the output. Output
-# URLs are /contrib_modules/<m>/... — no files duplicated in srcdir.
-# Skipped when SPHINX_INPUT_ROOT lives inside a source tree (i.e. ad-hoc
-# sphinx-build without CMake's OPENCV_SPHINX_INPUT_ROOT) — matches the
-# documented "always build through CMake" expectation.
+# Publish each contrib module via a build-dir symlink + html_extra_path (URLs
+# /contrib_modules/<m>/..., nothing duplicated in srcdir). Skipped for ad-hoc
+# sphinx-build inside a source tree (CMake-only path).
 html_extra_path: list[str] = []
 def _in_source_tree(p: pathlib.Path) -> bool:
     for _root in (DOC_ROOT, CONTRIB_ROOT):

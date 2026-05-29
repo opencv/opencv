@@ -1,0 +1,127 @@
+{% extends "!layout.html" %}
+{%- set _doxy = ('../' * ((pagename or '').count('/') + 2)) ~ 'doc/doxygen/html/' %}
+{%- set _search = _doxy ~ 'search/' %}
+{% block extrahead %}
+{{ super() }}
+<link rel="stylesheet" href="{{ _search }}search.css"/>
+<script src="{{ pathto('_static/search_map.js', 1) }}"></script>
+<script src="{{ _search }}searchdata.js"></script>
+<script src="{{ _search }}search.js"></script>
+<script>
+  // SearchBox lives in search.js; guard so a load failure can't abort this
+  // script (which would leave the modal trigger unwired).
+  var searchBox;
+  try { searchBox = new SearchBox("searchBox", "{{ _search }}", '.html'); } catch (e) {}
+
+  // Open/close the centered modal. Defined early so the Ctrl+K handler can use
+  // them, and kept independent of the Doxygen backend so opening always works.
+  function opencvOpenSearch() {
+    var ov = document.getElementById("opencvSearchOverlay");
+    if (!ov) return;
+    ov.classList.add("opencv-search-open");
+    var f = document.getElementById("MSearchField");
+    if (f) { f.focus(); f.select(); }
+  }
+  function opencvCloseSearch() {
+    var ov = document.getElementById("opencvSearchOverlay");
+    if (ov) ov.classList.remove("opencv-search-open");
+    if (window.searchBox && searchBox.CloseResultsWindow) searchBox.CloseResultsWindow();
+  }
+
+  // Win Ctrl+K over the theme's deferred handler + the browser (registered
+  // before the theme's, so stopImmediatePropagation pre-empts it).
+  window.addEventListener("keydown", function (e) {
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && /^k$/i.test(e.key)) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      opencvOpenSearch();
+    }
+  }, true);
+
+  document.addEventListener("DOMContentLoaded", function () {
+    // The theme renders navbar_end twice (desktop header + mobile drawer), so
+    // the search component appears twice → duplicate #opencvSearchTrigger /
+    // #opencvSearchOverlay IDs. Keep ONE overlay; wire EVERY trigger to it
+    // (the visible button may be the second copy — getElementById sees only the
+    // first, which is why clicking did nothing before).
+    var overlays = document.querySelectorAll("#opencvSearchOverlay");
+    for (var k = overlays.length - 1; k >= 1; k--) overlays[k].parentNode.removeChild(overlays[k]);
+    var overlay = overlays[0];
+    if (overlay && overlay.parentNode !== document.body) document.body.appendChild(overlay);
+
+    // 1) Wire opening FIRST so the modal works even if Doxygen init throws.
+    document.querySelectorAll("#opencvSearchTrigger").forEach(function (btn) {
+      btn.addEventListener("click", function (e) { e.preventDefault(); opencvOpenSearch(); });
+    });
+    if (overlay) overlay.addEventListener("mousedown", function (e) { if (e.target === overlay) opencvCloseSearch(); });
+    document.addEventListener("keydown", function (e) { if (/^Escape$/i.test(e.key)) opencvCloseSearch(); });
+
+    // 2) Doxygen search backend (guarded: a failure must not break typing).
+    try {
+      var boxes = document.querySelectorAll("#MSearchBox");
+      for (var i = 1; i < boxes.length; i++) boxes[i].remove();
+
+      var sel = document.createElement("div");
+      sel.id = "MSearchSelectWindow";
+      sel.setAttribute("onmouseover", "return searchBox.OnSearchSelectShow()");
+      sel.setAttribute("onmouseout", "return searchBox.OnSearchSelectHide()");
+      sel.setAttribute("onkeydown", "return searchBox.OnSearchSelectKey(event)");
+      document.body.appendChild(sel);
+
+      var res = document.createElement("div");
+      res.id = "MSearchResultsWindow";
+      res.innerHTML = '<div id="MSearchResults"><div class="SRPage"><div id="SRIndex">' +
+        '<div id="SRResults"></div>' +
+        '<div class="SRStatus" id="Loading">Loading...</div>' +
+        '<div class="SRStatus" id="Searching">Searching...</div>' +
+        '<div class="SRStatus" id="NoMatches">No Matches</div></div></div></div>';
+      document.body.appendChild(res);
+
+      init_search();
+      searchBox.OnSelectItem(0); // default to "All" on every page load
+
+      // Redirect result clicks: Doxygen filename → Sphinx page via sphinxPageMap.
+      var sphinxRoot = "{{ '../' * (pagename or '').count('/') }}";
+      document.body.addEventListener("click", function (e) {
+        var a = e.target.closest ? e.target.closest("a.SRSymbol, a.SRScope") : null;
+        if (!a) return;
+        var href = a.getAttribute("href") || "";
+        if (!href || href.startsWith("javascript:")) return;
+        var fname = href.split("/").pop().replace(/#.*$/, ""); // e.g. "group__core.html"
+        var stem = fname.replace(/\.html$/, "");              // e.g. "group__core"
+        // Normalise to the Sphinx stem: strip group__/tutorial_ prefix, __ → _
+        var key = stem.replace(/^group__/, "").replace(/^tutorial_/, "").replace(/__/g, "_");
+        // Also try exact stem (covers classcv_*, structcv_*, namespacecv_*, etc.)
+        var sphinxPath = (typeof sphinxPageMap !== "undefined") &&
+                         (sphinxPageMap[stem] || sphinxPageMap[key]);
+        if (sphinxPath) {
+          e.preventDefault();
+          e.stopPropagation();
+          window.location.href = sphinxRoot + sphinxPath;
+        }
+      }, true);
+
+      // Pin the Doxygen popups under the (centered) box with position:fixed
+      // (Doxygen places them absolute at document-top → off-screen here).
+      var box = boxes[0];
+      function pin(w, left) {
+        if (!box) return;
+        var r = box.getBoundingClientRect();
+        w.style.setProperty("position", "fixed", "important");
+        w.style.setProperty("top", (r.bottom + 4) + "px", "important");
+        var x = left ? r.left : Math.max(8, r.right - (w.offsetWidth || 300));
+        w.style.setProperty("left", x + "px", "important");
+      }
+      [[res, false], [sel, true]].forEach(function (p) {
+        var w = p[0], opt = { attributes: true, attributeFilter: ["style"] };
+        var obs = new MutationObserver(function () {
+          if (w.style.display === "block") { obs.disconnect(); pin(w, p[1]); obs.observe(w, opt); }
+        });
+        obs.observe(w, opt);
+      });
+    } catch (err) {
+      if (window.console) console.error("Doxygen search init failed:", err);
+    }
+  });
+</script>
+{% endblock %}

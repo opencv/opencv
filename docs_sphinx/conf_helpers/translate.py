@@ -1,15 +1,4 @@
-"""Doxygen-flavored .markdown -> MyST translation (the source-read engine).
-
-``_translate`` rewrites a single document's text and ``_source_read`` is the
-Sphinx hook conf.py registers. Also holds the snippet/toggle helpers and the
-bare-URL / cv-symbol auto-linkifiers the translation passes rely on. Reads
-shared state (anchor maps, tag URLs, citation numbers, redirect map, image &
-snippet indexes, constants) from ``state``.
-
-Note: ``_translate`` is one large sequential rewrite pass (~800 lines). Its
-steps are ordered and interdependent, so it is intentionally left as a single
-function rather than split across files.
-"""
+"""Doxygen-flavored .markdown -> MyST translation (the source-read engine)."""
 from __future__ import annotations
 import pathlib, re, os as _os, shutil as _shutil, textwrap as _textwrap
 from .state import *
@@ -22,15 +11,10 @@ def _normalize_lang(lang: str) -> str:
 
 def _read_snippet(rel_path: str, label: str | None) -> tuple[str, str]:
     """Return (code_text, language) for an @include / @snippet directive."""
-    # Some sources write the path with a leading slash (e.g. `@include
-    # /samples/android/.../tutorial1_surface_view.xml`). pathlib's `/` would
-    # treat that as absolute and lose the snippet base, so strip it.
     rel_norm = rel_path.lstrip("/")
     p = next((b / rel_norm for b in _SNIPPET_BASES
               if (b / rel_norm).is_file()), None)
-    # Doxygen does a recursive basename lookup across EXAMPLE_PATH (see
-    # opencv/doc/Doxyfile.in: EXAMPLE_RECURSIVE = YES). If the direct join
-    # doesn't find the file, fall back to the prebuilt basename index.
+    # Doxygen EXAMPLE_RECURSIVE basename lookup.
     if p is None:
         hit = _SNIPPET_INDEX.get(pathlib.Path(rel_norm).name)
         if hit and hit.is_file():
@@ -45,10 +29,7 @@ def _read_snippet(rel_path: str, label: str | None) -> tuple[str, str]:
             ".sh": "bash", ".bash": "bash"}.get(ext, "text")
     if label is None:
         return text, lang
-    # Doxygen matches `[label]` after any comment-style marker anywhere on a
-    # line: //, //! and // for C/C++/Java/Kotlin, # and ## for Python/shell,
-    # <!-- for XML/HTML. Block-comment-wrapped labels like
-    # `/* //! [label] */` are matched via the `//`-prefix branch too.
+    # Match `[label]` after any comment marker.
     pat = re.compile(r"^[^\[\n]*(?://!|//|##|#|<!--)[^\[\n]*\[" + re.escape(label)
                      + r"\][^\n]*$", re.MULTILINE)
     matches = list(pat.finditer(text))
@@ -71,7 +52,7 @@ def _emit_toggles(tabs: list[tuple[str, str]]) -> str:
             out += [f"`````{{tab-item}} {label}", body, "`````"]
         out += ["``````", ""]
         return "\n".join(out)
-    # Fallback: render each toggle as a labeled section.
+    # Fallback without sphinx-design.
     out = [""]
     for lang, body in tabs:
         label = _TOGGLE_LABELS.get(lang, lang.title())
@@ -79,13 +60,7 @@ def _emit_toggles(tabs: list[tuple[str, str]]) -> str:
     return "\n".join(out)
 
 def _translate(text: str, docname: str | None = None) -> str:
-    # 0v. @verbatim ... @endverbatim — stash content first so neither math
-    #     markers, @code, nor any other rule below mangles the body. Used
-    #     heavily in introduction/documenting_opencv/documentation_tutorial,
-    #     which shows Doxygen syntax (so the body contains literal directives,
-    #     `\f[...\f]` math, and code-fences as examples). Body is restored at
-    #     the very end of this function so the inserted text is safe from
-    #     re-processing.
+    # 0v. @verbatim — stash body; restored at end.
     _verbatim_stash: dict[str, str] = {}
     def _verbatim_save(body: str, inline: bool) -> str:
         key = f"VERBATIM_{len(_verbatim_stash)}"
@@ -94,27 +69,22 @@ def _translate(text: str, docname: str | None = None) -> str:
         else:
             _verbatim_stash[key] = f"\n```text\n{body.strip()}\n```\n"
         return key
-    # Block form (markers on separate lines) — run first; DOTALL across body.
+    # Block form — run first.
     text = re.sub(
         r"@verbatim[ \t]*\n(?P<body>.*?)\n[ \t]*@endverbatim",
         lambda m: _verbatim_save(m.group("body"), inline=False),
         text, flags=re.DOTALL)
-    # Inline form (both markers on the same line).
+    # Inline form.
     text = re.sub(
         r"@verbatim[ \t]+(?P<body>[^\n]+?)[ \t]+@endverbatim",
         lambda m: _verbatim_save(m.group("body"), inline=True),
         text)
 
-    # 0. Master doc: synthesize @subpage entries for the js_tutorials and/or
-    #    py_tutorials roots so step 9 picks them up as toctree entries.
-    #    tutorials.markdown has no direct reference to either, and editing it
-    #    is forbidden, so injection here is the only way to surface those
-    #    trees in the master sidebar.
-    if docname == "tutorials/tutorials":
-        # Prepend `intro` before the first existing module bullet so it
-        # leads the sidebar — matches the order in opencv/doc/root.markdown.in
-        # ("- @ref intro" sits above "- @ref tutorial_root"). FAQ and
-        # Bibliography stay appended at the end (still after the modules).
+    # 0. Master doc: synthesize js/py root @subpage entries.
+    #    Skipped under USE_INDEX_LANDING: those roots live in index's
+    #    own toctree, so injecting here would double-nest them.
+    if docname == "tutorials/tutorials" and not USE_INDEX_LANDING:
+        # Lead sidebar with intro; faq/bibliography stay appended.
         if "intro" in _ANCHOR_TO_DOC:
             text = re.sub(r"^- @subpage", "- @subpage intro\n- @subpage",
                           text, count=1, flags=re.MULTILINE)
@@ -127,14 +97,7 @@ def _translate(text: str, docname: str | None = None) -> str:
         if "citelist" in _ANCHOR_TO_DOC:
             text += "\n- @subpage citelist\n"
 
-    # 0a. py_tutorials root: rewrite specific cross-tree `@ref` items to
-    #     `@subpage` so the targets join the sidebar nav. The author of
-    #     py_tutorials.markdown used `@ref` for these (rather than @subpage)
-    #     because they live in the C++ tutorial tree, but pyData's sidebar
-    #     hierarchy benefits from surfacing them under Python tutorials too.
-    #     Doing this only for known cases avoids the cycle that a generic
-    #     @ref-to-toctree promotion would trigger from reciprocal links
-    #     between py_setup pages.
+    # 0a. py_tutorials root: promote @ref to @subpage (case-by-case avoids cycles).
     if docname == "py_tutorials/py_tutorials":
         if "py_video" in PY_DOC_MODULES:
             text = re.sub(
@@ -142,36 +105,18 @@ def _translate(text: str, docname: str | None = None) -> str:
                 "@subpage tutorial_py_table_of_contents_video",
                 text,
             )
-        # NOTE: Object Detection (`tutorial_table_of_content_objdetect`) is
-        # intentionally NOT promoted to @subpage here. It lives in the C++
-        # `objdetect` module which is already in the main tutorials toctree, so
-        # promoting it in the Python root too would put one document in two
-        # toctrees ("document is referenced in multiple toctrees"). It stays an
-        # @ref — a plain in-page link to the main-tree page.
+        # Object Detection stays @ref (its C++ page is already in main toctree).
 
-    # 0d. py_video and py_objdetect are pure "Content has been moved" stub
-    #     trees — every page just redirects to the corresponding C++
-    #     tutorial. Mark them as `:orphan:` so they're compiled (for legacy
-    #     URL compatibility) but stay out of the sidebar nav and don't
-    #     trigger "not in any toctree" warnings. The py_tutorials root's
-    #     visible link for these sections is already routed (via step 0a)
-    #     to the actual destination.
+    # 0d. py_video/py_objdetect stub trees -> :orphan: (real link via 0a).
     if docname and (docname.startswith("py_tutorials/py_video/")
                     or docname.startswith("py_tutorials/py_objdetect/")):
         text = "---\norphan: true\n---\n\n" + text
 
-    # 0b. Doxygen automatic-numbered list items: "-# foo" -> "1. foo". MyST /
-    #     CommonMark sequentially numbers identical-marker ordered lists, so
-    #     successive "1." items render as 1, 2, 3, ...
+    # 0b. "-# foo" -> "1. foo".
     text = re.sub(r"^(?P<indent>[ \t]*)-#[ \t]+",
                   lambda m: f"{m.group('indent')}1. ", text, flags=re.MULTILINE)
 
-    # 0c. Dedent "orphan" indented bullets that sit directly under a
-    #     paragraph (e.g. `In this chapter, you will learn\n    -   foo` in
-    #     py_imgproc/py_template_matching). Doxygen renders these as a real
-    #     bullet list; CommonMark treats them as paragraph continuation or
-    #     (after a blank line) as a code block. Insert a paragraph break and
-    #     strip the leading indent so CommonMark sees a proper list.
+    # 0c. Dedent orphan indented bullets under a paragraph.
     _orphan_bullets_re = re.compile(
         r"^(?P<before>(?![ \t#=*\->]).+\n)"
         r"(?P<bullets>(?:[ \t]{2,}-[ \t]+[^\n]+\n)+)",
@@ -191,9 +136,7 @@ def _translate(text: str, docname: str | None = None) -> str:
         return before + "\n" + dedented
     text = _orphan_bullets_re.sub(_dedent_orphan_bullets, text)
 
-    # 1. Heading anchors: "Title {#name}\n===" (setext) and "## Title {#name}" (ATX).
-    #    Strip the anchor from the rendered heading and emit a MyST label
-    #    "(name)=" immediately above. Setext converted to ATX for simplicity.
+    # 1. Heading anchors "Title {#name}" -> MyST label + ATX.
     def _setext_repl(m: re.Match) -> str:
         title = m.group("title").strip()
         level = 1 if m.group("bar") == "=" else 2
@@ -206,23 +149,19 @@ def _translate(text: str, docname: str | None = None) -> str:
         lambda m: f"({m.group('anchor')})=\n{m.group('hashes')} {m.group('title')}",
         text, flags=re.MULTILINE)
 
-    # 1b. Convert a trailing setext heading at EOF to ATX. Otherwise
-    #     docutils rejects the doc as ending with a transition.
+    # 1b. Trailing setext heading at EOF -> ATX (docutils rejects trailing transition).
     text = re.sub(
         r"^(?P<title>[^\n#=\-][^\n]*?)[ \t]*\n(?P<bar>[=\-])[=\-]{2,}[ \t]*$\s*\Z",
         lambda m: f"{'#' if m.group('bar') == '=' else '##'} {m.group('title').strip()}\n",
         text, flags=re.MULTILINE)
 
-    # 1c. Convert remaining mid-doc setext H1s to ATX so 1d can see them.
+    # 1c. Remaining mid-doc setext H1s -> ATX (so 1d sees them).
     text = re.sub(
         r"^(?P<title>[^\n#=\-][^\n]*?)[ \t]*\n=[=]{2,}[ \t]*$",
         lambda m: f"# {m.group('title').strip()}",
         text, flags=re.MULTILINE)
 
-    # 1d. Demote every H1 after the first to H2 so multi-H1 Doxygen docs
-    #     (one `# Heading` per section) end up with a proper "1 title +
-    #     N sections" outline. Without this, Sphinx's toctree lists every
-    #     H1 as a separate entry on the parent TOC page.
+    # 1d. Demote every H1 after the first to H2.
     def _demote_extra_h1s(src: str) -> str:
         fence_open_re = re.compile(r'^[ \t]*(?:`{3,}|~{3,})')
         atx_h1_re = re.compile(r'^#\s')
@@ -240,31 +179,52 @@ def _translate(text: str, docname: str | None = None) -> str:
             if atx_h1_re.match(line):
                 h1_count += 1
                 if h1_count > 1:
-                    line = '#' + line   # H1 → H2
+                    line = '#' + line
             out.append(line)
         return '\n'.join(out)
     text = _demote_extra_h1s(text)
 
-    # 2. Doxygen LaTeX math markers
+    # 1b. @note / @see -> MyST admonitions; runs BEFORE math so \f[...\f] inside
+    # a note is still one token (no blank-line terminator cuts the body short).
+    _ADMON_KIND = {"note": "note", "see": "seealso", "warning": "warning",
+                   "sa": "seealso"}
+    def _admon_repl(m: re.Match) -> str:
+        kind = _ADMON_KIND[m.group("dir")]
+        raw = m.group("body")
+        lines = raw.split("\n")
+        min_ind = min(
+            (len(l) - len(l.lstrip()) for l in lines if l.strip()), default=0)
+        body = "\n".join(l[min_ind:] for l in lines).strip()
+        return f"\n:::{{{kind}}}\n{body}\n:::\n"
+    text = re.sub(
+        r"^[ \t]*@(?P<dir>note|see|warning|sa)[ \t]*\n?(?P<body>.+?)(?=\n[ \t]*\n|\n[ \t]*@[A-Za-z]|\Z)",
+        _admon_repl, text, flags=re.DOTALL | re.MULTILINE)
+
+    # 2. Doxygen LaTeX math markers; preserve indent so blocks inside list items stay in the list.
+    def _split_adj_math(m: re.Match) -> str:
+        indent = m.group("indent")
+        return m.group(0).replace("\\f]\\f[", f"\\f]\n{indent}\\f[")
+    text = re.sub(r"^(?P<indent>[ \t]*)[^\n]*\\f\]\\f\[",
+                  _split_adj_math, text, flags=re.MULTILINE)
+    def _fblock(m: re.Match) -> str:
+        ind = m.group("indent")
+        return f"\n{ind}$$\n{m.group('body').strip()}\n{ind}$$\n"
+    text = re.sub(r"^(?P<indent>[ \t]*)\\f\[(?P<body>.+?)\\f\]",
+                  _fblock, text, flags=re.DOTALL | re.MULTILINE)
     text = re.sub(r"\\f\[(.+?)\\f\]",
                   lambda m: f"\n$$\n{m.group(1).strip()}\n$$\n",
                   text, flags=re.DOTALL)
     text = re.sub(r"\\f\$(.+?)\\f\$", lambda m: f"${m.group(1)}$",
                   text, flags=re.DOTALL)
 
-    # 2b. \bordermatrix{...} is a Plain-TeX macro (not LaTeX), so MathJax
-    #     leaves it raw. Convert to a standard `matrix` environment and
-    #     translate `\cr` row separators to `\\`. Loses the bracket lines
-    #     of bordermatrix but the contents render correctly.
+    # 2b. \bordermatrix is Plain-TeX; convert to a `matrix` env, `\cr` -> `\\`.
     text = re.sub(
         r"\\bordermatrix\s*\{([^}]*)\}",
         lambda m: r"\begin{matrix}" + m.group(1).replace(r"\cr", r"\\")
                   + r"\end{matrix}",
         text)
 
-    # 3. @code{.lang} ... @endcode → fenced block. Preserve the indent
-    #    so blocks nested under a bullet item stay inside the list; for
-    #    col-0 @code keep the legacy .strip() form (byte-identical).
+    # 3. @code{.lang} ... @endcode -> fenced block (indent preserved).
     def _code_repl(m: re.Match) -> str:
         indent = m.group("indent") or ""
         lang = _normalize_lang(m.group("lang") or "")
@@ -279,9 +239,7 @@ def _translate(text: str, docname: str | None = None) -> str:
         r"^(?P<indent>[ \t]*)@code(?:\{(?P<lang>[^}]*)\})?\s*\n(?P<body>.*?)\n[ \t]*@endcode",
         _code_repl, text, flags=re.DOTALL | re.MULTILINE)
 
-    # 3b. Tilde-fenced code blocks: `~~~~{.lang} ... ~~~~` (Doxygen-style).
-    #     MyST treats `{.lang}` as a directive name, so `.py` raises an
-    #     "Unknown directive" warning. Normalise to backtick-fenced output.
+    # 3b. Tilde fences `~~~~{.lang}` -> backtick fences (MyST reads `{.lang}` as directive).
     def _tilde_repl(m: re.Match) -> str:
         lang = (m.group("lang") or "").strip().lstrip(".") or "text"
         if lang == "none":
@@ -292,64 +250,44 @@ def _translate(text: str, docname: str | None = None) -> str:
         r"(?P<body>.*?)\n^~~~+[ \t]*$",
         _tilde_repl, text, flags=re.DOTALL | re.MULTILINE)
 
-    # 3c. Normalize `yml` fence lexer -> `yaml`.
-    #     Pygments emits "Lexer succeeded for unknown lexer 'yml'" otherwise.
-    #     Runs after 3 and 3b so @code{.yml} / ~~~~{.yml} fences caught here too.
+    # 3c. Fence lexer `yml` -> `yaml` (Pygments warns on 'yml'); runs after 3/3b.
     text = re.sub(
         r"^(?P<fence>`{3,}|~{3,})yml\b(?P<rest>[ \t]*)$",
         lambda m: f"{m.group('fence')}yaml{m.group('rest')}",
         text, flags=re.MULTILINE)
 
-    # 3d. \htmlonly ... \endhtmlonly  ->  raw HTML embed (used by js_tutorials
-    #     for the interactive `<iframe>` "Try it" panels). MyST's `{raw} html`
-    #     directive passes the body through to the HTML writer unchanged.
+    # 3d. \htmlonly ... \endhtmlonly -> `{raw} html`.
     text = re.sub(
         r"\\htmlonly\s*\n(?P<body>.*?)\n\s*\\endhtmlonly",
         lambda m: f"\n```{{raw}} html\n{m.group('body').strip()}\n```\n",
         text, flags=re.DOTALL)
 
-    # 3e. Plain Markdown fences with a Doxygen-flavored language spec
-    #     (e.g. "```.sh") confuse Pygments — strip the leading dot and apply
-    #     the same alias map as @code{.lang}.
+    # 3e. Plain fences with Doxygen lang spec ("```.sh") -> strip dot, alias-map.
     text = re.sub(
         r"^(?P<fence>`{3,})(?P<lang>\.?[\w-]+)[ \t]*$",
         lambda m: f"{m.group('fence')}{_normalize_lang(m.group('lang'))}",
         text, flags=re.MULTILINE)
 
-    # @include and @snippet both emit a plain backtick fence with the
-    # captured leading indent prefixed to every body line so the fence
-    # stays within an enclosing list-item content scope.
-    # ({code-block} and `:::` colon-fence forms break inside tab-items.)
+    # Backtick fence with per-line indent (other fence forms break in tab-items).
     def _emit_codeblock(indent: str, lang: str, body: str) -> str:
         body_lines = body.rstrip().splitlines()
         body_indented = "\n".join(indent + line for line in body_lines)
         return f"\n{indent}```{lang}\n{body_indented}\n{indent}```\n"
 
-    # 4. @include path  /  @includelineno path
-    #    (line numbering hint is dropped — MyST fenced blocks don't take :linenos:
-    #    and PyData's code-block styling is already legible without it.)
+    # 4. @include path / @includelineno path.
     def _include_repl(m: re.Match) -> str:
         code, lang = _read_snippet(m.group("path"), None)
         return _emit_codeblock(m.group("indent") or "", lang, code)
     text = re.sub(r"^(?P<indent>[ \t]*)@include(?:lineno)?\s+(?P<path>\S+)",
                   _include_repl, text, flags=re.MULTILINE)
 
-    # 4b. Remove stray @snippet that immediately follows @end_toggle at the same
-    #     indent (no blank line between them). These are Doxygen fallback snippets
-    #     for non-toggle Doxygen mode; the Sphinx build already shows them inside
-    #     the tab-set, so the stray duplicate must be dropped before step 5
-    #     would otherwise emit a second copy at document level.
+    # 4b. Drop a stray @snippet right after @end_toggle (duplicate of tab-set).
     text = re.sub(
         r"(^([ \t]*)@end_toggle[ \t]*\n)\2@snippet[^\n]*\n",
         r"\1",
         text, flags=re.MULTILINE)
 
-    # 4b. @htmlinclude path  -> raw HTML embed.
-    #     Doxygen's EXAMPLE_PATH search is recursive, so a bare basename
-    #     like `js_face_recognition.html` still resolves to its sample
-    #     directory. If the file is a complete HTML document, lift just
-    #     the <body>...</body> content to avoid nesting <html> inside
-    #     the rendered page.
+    # 4b. @htmlinclude path -> raw HTML embed; lift just <body> for full docs.
     def _htmlinclude_repl(m: re.Match) -> str:
         rel = m.group("path")
         p = next((b / rel for b in _SNIPPET_BASES
@@ -364,8 +302,7 @@ def _translate(text: str, docname: str | None = None) -> str:
         if p is None:
             return f"<!-- htmlinclude not found: {rel} -->"
         raw = p.read_text(encoding="utf-8", errors="replace")
-        # `<body ...>` opener: allow quoted attribute values so a `=>`
-        # arrow function inside `onload="..."` doesn't terminate the tag.
+        # Allow quoted attrs so a `=>` inside onload="..." doesn't end the tag.
         body = re.search(
             r"<body\b(?:[^>\"']|\"[^\"]*\"|'[^']*')*>(.*?)</body>",
             raw, re.DOTALL | re.IGNORECASE)
@@ -382,7 +319,7 @@ def _translate(text: str, docname: str | None = None) -> str:
         r"^(?P<indent>[ \t]*)@snippet\s+(?P<path>\S+)\s+(?P<label>[^\n]+?)\s*$",
         _snippet_repl, text, flags=re.MULTILINE)
 
-    # 6. @add_toggle_LANG ... @end_toggle  (coalesce runs into one tab-set)
+    # 6. @add_toggle_LANG ... @end_toggle -> one tab-set
     def _toggle_collapse(src: str) -> str:
         out, i = [], 0
         opener = re.compile(r"^\s*@add_toggle_(\w+)\s*$", re.MULTILINE)
@@ -411,12 +348,7 @@ def _translate(text: str, docname: str | None = None) -> str:
         return "".join(out)
     text = _toggle_collapse(text)
 
-    # 6b. @link target [display text] @endlink  ->  @ref target ["display"]
-    #     Doxygen's @link/@endlink pair is the verbose form of @ref. MyST has
-    #     no equivalent, so normalise to @ref and let step 7 resolve the anchor
-    #     against _ANCHOR_TO_DOC (covers e.g. dnn_googlenet automatically).
-    #     Display text is non-greedy and may span lines; embedded `"` chars are
-    #     stripped because step 7's disp parser is `"[^"]+"`.
+    # 6b. @link target [display] @endlink -> @ref form (step 7 resolves).
     def _link_repl(m: re.Match) -> str:
         target = m.group("target")
         disp = (m.group("disp") or "").strip().replace('"', '')
@@ -425,51 +357,19 @@ def _translate(text: str, docname: str | None = None) -> str:
         r"@link\s+(?P<target>[\w-]+)(?P<disp>.*?)@endlink",
         _link_repl, text, flags=re.DOTALL)
 
-
-    if docname == "api/core_basic":
-        _vec_rows_re = re.compile(
-            r"(?:^\| `Vec<[^`]*` \| [^\n]*\n)+", re.MULTILINE)
-        _vm = _vec_rows_re.search(text)
-        if _vm:
-            _vec_rows = _vm.group(0)
-            text = text[:_vm.start()] + text[_vm.end():]
-            _shorter = (
-                "## Shorter aliases for the most popular specializations of "
-                "Vec<T,n>\n\n"
-                "| Type | Name | Description |\n"
-                "|---|---|---|\n"
-                + _vec_rows + "\n")
-            text = text.replace(
-                "## Typedef Documentation",
-                _shorter + "## Typedef Documentation",
-                1)
-
-        # 8c. Replace `{doxygentypedef} cv::Ptr` with a hand-rolled cpp:type
-        #     directive: breathe's doxygentypedef silently emits nothing for
-        #     C++11 alias templates (`using cv::Ptr = std::shared_ptr<_Tp>`),
-        #     so the Ptr entry went missing. Sphinx's native cpp:type supports
-        #     alias templates; reach it via eval-rst. Anchor `_CPPv4N2cv3PtrE`
-        #     matches what step 8a generates for the Name-column link.
-        text = re.sub(
-            r"```\{doxygentypedef\} cv::Ptr\s*\n:project: opencv\s*\n```",
-            "```{eval-rst}\n"
-            ".. cpp:namespace:: cv\n"
-            ".. cpp:type:: template<typename _Tp> Ptr = std::shared_ptr<_Tp>\n"
-            "```",
-            text)
-
-        # 8e. Classes table rows: (i) append the template-parameter list
-        #     (`< _Tp >`) to the class name, matching Doxygen; (ii) append a
-        #     "More..." link to the description cell.
+    # 8e. Class summary rows (ALL API pages): append template params + a
+    # "View details" link to the class detail page, like the legacy docs.
+    if docname and docname.startswith("api/"):
         def _rewrite_class_row(m: re.Match) -> str:
             kind = m.group("kind")
-            name = m.group("name")       # 'cv::Mat_'
-            page = m.group("page")       # 'classcv_1_1Mat__'
+            name = m.group("name")       # 'cv::dnn::BackendNode'
+            page = m.group("page")       # 'classcv_1_1dnn_1_1BackendNode'
             desc = m.group("desc").strip()
             short = name.split("::")[-1]
             tparams = _CLASS_TEMPLATE_DISPLAY.get(short, "")
             label = f"{kind} {name}{tparams}"
-            more = f"[More...]({page}.md)"
+            more = (f'<a class="opencv-class-more" '
+                    f'href="{page}.html#detailed-description">View details</a>')
             desc_out = f"{desc} {more}" if desc else more
             return f"| [`{label}`]({page}.md) | {desc_out} |"
         text = re.sub(
@@ -478,22 +378,26 @@ def _translate(text: str, docname: str | None = None) -> str:
             r" \| (?P<desc>[^\n|]*?) \|",
             _rewrite_class_row, text)
 
-        # 8a. Name-column typedef anchors: the stub emits a `#group__…` in-page
-        #     anchor with no matching element on the Sphinx page. Rewrite simple
-        #     identifiers to the cpp-domain v4 anchor of the typedef so the
-        #     table entry and the right-sidebar TOC jump to the same place.
+
+    if docname == "api/core_basic":
+        # 8c. `{doxygentypedef} cv::Ptr` -> hand-rolled cpp:type (breathe skips C++11 aliases).
         text = re.sub(
-            r"\[`(?P<name>[A-Za-z_][A-Za-z0-9_]*)`\]"
-            r"\(#group__[a-z0-9_]+?_1[a-z0-9]+\)",
-            lambda m: (f"[`{m.group('name')}`]"
-                       f"(#_CPPv4N2cv{len(m.group('name'))}"
-                       f"{m.group('name')}E)"),
+            r"```\{doxygentypedef\} cv::Ptr\s*\n:project: opencv\s*\n```",
+            "```{eval-rst}\n"
+            ".. cpp:namespace:: cv\n"
+            ".. cpp:type:: template<typename _Tp> Ptr = std::shared_ptr<_Tp>\n"
+            "```",
             text)
 
-        # 8i. Functions-table rows: split the single broken-`#group__…`-anchor
-        #     link wrapping the whole signature into a name link to the in-page
-        #     `#cv-<slug>` anchor (emitted by `_render_core_basic_func`) plus a
-        #     separate `(params)` code span that step 8g then linkifies.
+        # 8a. Name-column typedef anchors -> slugified detail-block id.
+        text = re.sub(
+            r"\[`(?P<name>[A-Za-z_][A-Za-z0-9_]*)`\]"
+            r"\(#(?P<ref>group__[a-z0-9_]+?_1[a-z0-9]+)\)",
+            lambda m: (f"[`{m.group('name')}`]"
+                       f"(#{re.sub(r'_+', '-', m.group('ref'))})"),
+            text)
+
+        # 8i. Functions-table rows: split broken-anchor link into name link + params span.
         def _rewrite_function_row(m: re.Match) -> str:
             ret = m.group("ret").strip()
             name = m.group("name")
@@ -509,10 +413,7 @@ def _translate(text: str, docname: str | None = None) -> str:
             r"(?P<desc>[^\n|]*) \|",
             _rewrite_function_row, text)
 
-        # 8j. Fallback anchor injection: if any `{doxygenfunction}` directive
-        #     survived (a function we didn't hand-roll), inject a raw HTML
-        #     anchor before it so the table link still resolves. Deduped across
-        #     overload sets (HTML5 forbids duplicate ids; first wins).
+        # 8j. Inject a raw HTML anchor before surviving `{doxygenfunction}` (dedup; first wins).
         _seen_anchors: set[str] = set()
         def _inject_func_anchor(m: re.Match) -> str:
             qname = m.group("qname").strip()       # "cv::log" / "cv::operator!="
@@ -527,9 +428,7 @@ def _translate(text: str, docname: str | None = None) -> str:
             r"```",
             _inject_func_anchor, text, flags=re.MULTILINE)
 
-        # 8b. Type-column class names like `Matx< double, 1, 2 >` are a single
-        #     code span with nothing clickable. Rewrite to inline HTML linking
-        #     the class name to its LOCAL sibling api page (filename only).
+        # 8b. Type-column class code spans -> inline HTML link to sibling api page.
         if _LIVE_CLASS_URL:
             def _linkify_class_codespan(m: re.Match) -> str:
                 cls = m.group("cls")
@@ -548,24 +447,25 @@ def _translate(text: str, docname: str | None = None) -> str:
                 r"`(?P<cls>[A-Z][A-Za-z0-9_]*)(?P<rest><[^`\n]*>)`",
                 _linkify_class_codespan, text)
 
-        # 8g. Linkify class/typedef tokens in code spans step 8b didn't cover:
-        #     inner template-param types (`uchar` in `Vec< uchar, 2 >`) and
-        #     non-template Type cells (`_InputArray` in `const _InputArray &`).
-        #     Two passes: inner HTML of step-8b `<code>` blocks (skipping their
-        #     existing `<a>`), then remaining plain markdown code spans.
+        # 8g. Linkify tokens step 8b missed: inner 8b `<code>`, then plain code spans.
         if _LOCAL_CLASS_URL or _LOCAL_TYPEDEF_URL:
             def _token_url(tok: str) -> str | None:
-                # LOCAL sibling api page URL; tokens not in the tagfile (int,
-                # float, …) stay plain text — matches the live page.
+                # Tokens absent from the tagfile stay plain.
                 return _LOCAL_CLASS_URL.get(tok) or _LOCAL_TYPEDEF_URL.get(tok)
-            _tok_re = re.compile(r"\b_?[A-Za-z][A-Za-z0-9_]*\b")
+            # Match an optional `cv::` prefix so the anchor spans `cv::Name`.
+            _tok_re = re.compile(r"(?:cv::)?_?[A-Za-z][A-Za-z0-9_]*")
+            def _bare(tok: str) -> str:
+                return tok[4:] if tok.startswith("cv::") else tok
+            def _anchor_text(tok: str) -> str:
+                # Encode `::` so the later cv-linkifier doesn't nest a second anchor.
+                return tok.replace("::", "&#58;&#58;")
             def _linkify_html_segment(seg: str) -> str:
                 def _sub(m: re.Match) -> str:
-                    url = _token_url(m.group(0))
+                    url = _token_url(_bare(m.group(0)))
                     if not url:
                         return m.group(0)
                     return (f'<a class="reference internal" '
-                            f'href="{url}">{m.group(0)}</a>')
+                            f'href="{url}">{_anchor_text(m.group(0))}</a>')
                 return _tok_re.sub(_sub, seg)
             def _linkify_inside_code(m: re.Match) -> str:
                 inner = m.group("inner")
@@ -589,8 +489,10 @@ def _translate(text: str, docname: str | None = None) -> str:
 
             def _linkify_markdown_codespan(m: re.Match) -> str:
                 content = m.group("content")
+                # Prefix-aware: `cv::Name` is one hit so the anchor covers both.
                 hits = [(t.start(), t.end(), t.group(0)) for t in
-                        _tok_re.finditer(content) if _token_url(t.group(0))]
+                        _tok_re.finditer(content)
+                        if _token_url(_bare(t.group(0)))]
                 if not hits:
                     return m.group(0)
                 from html import escape as _esc
@@ -598,72 +500,49 @@ def _translate(text: str, docname: str | None = None) -> str:
                 for s, e, tok in hits:
                     parts.append(_esc(content[last:s]))
                     parts.append(f'<a class="reference internal" '
-                                 f'href="{_token_url(tok)}">{tok}</a>')
+                                 f'href="{_token_url(_bare(tok))}">'
+                                 f'{_anchor_text(tok)}</a>')
                     last = e
                 parts.append(_esc(content[last:]))
                 return (f'<code class="docutils literal notranslate">'
                         f'{"".join(parts)}</code>')
-            # Mask out markdown links `[`…`](…)` first: their interior
-            # backticks would otherwise confuse the codespan pairing (a row can
-            # have 4+ backticks across the name link and the `(params)` span).
+            # Mask markdown links first (interior backticks confuse codespan pairing).
+            # The `(?:…|<br>)+` form also covers multi-line signature links whose
+            # text is several code spans joined by `<br>`, so their inner type
+            # tokens aren't linkified into anchors nested in the outer link.
             _masked: list[str] = []
             def _mask(m: re.Match) -> str:
                 _masked.append(m.group(0))
                 return f"\x00MDLINK{len(_masked)-1}\x00"
-            text = re.sub(r"\[`[^`\n]+`\]\([^)\n]+\)", _mask, text)
+            text = re.sub(r"\[(?:`[^`\n]+`|<br>)+\]\([^)\n]+\)", _mask, text)
             text = re.sub(r"`(?P<content>[^`\n]+?)`",
                           _linkify_markdown_codespan, text)
             text = re.sub(r"\x00MDLINK(\d+)\x00",
                           lambda m: _masked[int(m.group(1))], text)
 
-    # 6c. Bullet lists of @subpage / @ref items (collected runs -> toctree +
-    #     visible list). Runs BEFORE step 7 so @ref items are still in raw
-    #     form. @subpage entries register in the toctree (navigation tree);
-    #     @ref entries are render-only links — useful for module roots like
-    #     py_tutorials.markdown that mix both. When items carry indented
-    #     descriptions (the `js`/`py` table_of_contents format), emits a
-    #     hidden toctree plus a visible link+description list so the
-    #     descriptions render as paragraphs, not code blocks.
+    # 6c. Bullet lists of @subpage/@ref -> toctree + visible list. Runs BEFORE step 7.
     def _subpage_list_to_toctree(src: str) -> str:
-        # A bullet item: `-` + optional prefix text + @subpage/@ref + anchor.
-        # E.g. `-   stitching. @subpage tutorial_stitcher` (tutorials/others/).
         bullet  = r"^[ \t]*-\s+[^\n@]*?@(?:subpage|ref)\s+[\w-]+(?:[^\n]*)\n"
-        # Description: 0+ "description blocks", each being optional blank
-        # lines followed by 1+ indented content lines. Accepts both
-        # `- @subpage X\n\n    desc` (blank line before desc) and
-        # `- @subpage X\n    desc` (desc on immediately-next line, as in
-        # py_imgproc/py_transforms/py_table_of_contents_transforms.markdown).
         desc_re = r"(?:(?:[ \t]*\n)*(?:[ \t]+[^\n]+\n)+)*"
         pat = re.compile(rf"((?:{bullet}{desc_re}(?:[ \t]*\n)*)+)", re.MULTILINE)
         item_pat = re.compile(
             rf"^[ \t]*-\s+(?P<prefix>[^\n@]*?)@(?P<kind>subpage|ref)\s+(?P<anchor>[\w-]+)"
-            rf'(?:[ \t]+"(?P<disp>[^"\n]+)")?'   # optional `@ref X "Display"`
-            rf"(?P<inline>[^\n]*)\n"             # rest of line — prose like ` - desc`
+            rf'(?:[ \t]+"(?P<disp>[^"\n]+)")?'
+            rf"(?P<inline>[^\n]*)\n"
             rf"(?P<desc>{desc_re})",
             re.MULTILINE)
 
         def repl(m: re.Match) -> str:
-            # (kind, doctype, target, title, desc, prefix, inline)
             resolved: list[tuple[str, str, str, str, str, str, str]] = []
             for im in item_pat.finditer(m.group(1)):
-                kind = im.group("kind")  # "subpage" or "ref"
+                kind = im.group("kind")
                 anchor = im.group("anchor")
-                disp = im.group("disp")  # explicit `"Display"` overrides scanner title
-                # Bullet prefix (e.g. `stitching. ` in `-   stitching. @subpage X`)
-                # — kept as plain text before the link so the "others" TOC
-                # reads "stitching. High level stitching API" the way Doxygen
-                # renders it.
+                disp = im.group("disp")
                 prefix = (im.group("prefix") or "").strip()
-                # Same-line content after the anchor (e.g. ` - build and install...`
-                # in tutorials.markdown, or ` (**core**) - a compact module...` in
-                # intro.markdown). Previously discarded; keeping it preserves the
-                # author's prose and stops bullet lists like intro's module rundown
-                # from rendering as link-only stubs.
                 inline = im.group("inline") or ""
                 desc_lines = [l.strip() for l in (im.group("desc") or "").splitlines() if l.strip()]
                 description = " ".join(desc_lines)
-                # `@ref` follows redirect chains; `@subpage` does not (it
-                # determines navigation, so we want the literal target).
+                # @ref follows redirects; @subpage uses literal target.
                 lookup = _resolve_redirect(anchor) if kind == "ref" else anchor
                 if lookup in _ANCHOR_TO_DOC:
                     resolved.append((kind, "internal", _ANCHOR_TO_DOC[lookup],
@@ -680,14 +559,7 @@ def _translate(text: str, docname: str | None = None) -> str:
             if not resolved:
                 return ""
 
-            # toctree gets only @subpage entries (navigation). Putting all
-            # internal @ref targets in the toctree would create cycles —
-            # py_setup pages cross-reference each other (`tutorial_py_root`,
-            # `tutorial_py_pip_install`, etc.) and folding those into the
-            # nav tree makes Sphinx hit RecursionError. When a particular
-            # cross-tree @ref needs to surface in the sidebar (e.g. the
-            # py_tutorials root's reference to objdetect), inject a
-            # synthetic @subpage in step 0 instead.
+            # toctree gets only @subpage (internal @ref would create cycles).
             tt_lines = []
             for t in resolved:
                 kind, doctype, target, title = t[0], t[1], t[2], t[3]
@@ -699,31 +571,13 @@ def _translate(text: str, docname: str | None = None) -> str:
 
             has_descriptions = any(t[4] for t in resolved)
             has_prefixes     = any(t[5] for t in resolved)
-            # `inline` (same-line trailing content) alone does NOT trigger
-            # the visible-list mode — tutorials.markdown's master nav uses
-            # the `- @subpage X - one-line label` shape and was always meant
-            # to render as a plain toctree (cleaner sidebar, no body bullets).
-            # Visible mode is reserved for bullets with continuation lines
-            # (intro module rundown, py-tutorials TOCs) or a prefix label
-            # ("others" TOC). Inline still shows when visible mode is
-            # already triggered for other reasons.
+            # `inline` alone stays a plain toctree; visible mode needs desc/prefix.
             if not (has_descriptions or has_prefixes):
-                # Plain rendering -> Sphinx-style toctree directive (kept
-                # for the photo / objdetect / etc. TOCs whose bullets are
-                # bare `- @subpage X`). `:titlesonly:` blocks H2 expansion.
                 if tt_body:
                     return f"\n```{{toctree}}\n:maxdepth: 1\n:titlesonly:\n\n{tt_body}\n```\n"
-                # All @ref + no descriptions/prefixes: drop the run.
                 return ""
 
-            # Hidden toctree (subpages only) + visible list (all items).
-            # Prefix sits OUTSIDE the link so Doxygen-style category labels
-            # (`stitching. <link>`, `video. <link>`) render as plain text.
-            # Same-line `inline` content stays attached to the link (matches
-            # the source layout — e.g. `[link] - desc` for nav-style bullets
-            # or `[link] (**core**) - prose…` for intro's module rundown).
-            # `desc` (multi-line continuation) keeps its paragraph break so
-            # py-tutorials TOCs still render their description blocks below.
+            # Hidden toctree (subpages) + visible list (all items).
             list_lines = []
             for t in resolved:
                 doctype, target, title, desc, prefix, inline = t[1], t[2], t[3], t[4], t[5], t[6]
@@ -740,19 +594,9 @@ def _translate(text: str, docname: str | None = None) -> str:
         return pat.sub(repl, src)
     text = _subpage_list_to_toctree(text)
 
-    # 7. @ref name [optional "Display Text"]
-    #    Resolution order: enabled-module anchor (internal docname) ->
-    #    Doxygen tag (external URL) -> fragment-only fallback. The Doxygen
-    #    fallback keeps cross-module refs (e.g. js_setup -> js_imgproc) from
-    #    rendering as broken in-page anchors when the target module isn't
-    #    onboarded into the Sphinx wrapper yet.
+    # 7. @ref name -> internal docname / Doxygen tag URL / fragment fallback.
     def _ref_repl(m: re.Match) -> str:
         name = m.group("name"); disp = m.group("disp")
-        # Follow chained "Content has been moved: @ref X" redirects so
-        # users land directly at the final destination — e.g. the inline
-        # ref `@ref tutorial_table_of_content_video` inside the py_video
-        # TOC resolves through `tutorial_table_of_content_video` (itself
-        # a stub) to `tutorial_table_of_content_other` (the real page).
         resolved = _resolve_redirect(name)
         target = _ANCHOR_TO_DOC.get(resolved)
         if target:
@@ -763,26 +607,15 @@ def _translate(text: str, docname: str | None = None) -> str:
             link_text = disp or _TAG_TITLES.get(resolved, resolved)
             return f"[{link_text}]({_doxygen_url(resolved)})"
         return f"[{disp or resolved}](#{resolved})"
-    # Names may be qualified C++ identifiers like `cv::saturate_cast`, so
-    # the character class allows `:` in addition to word chars and `-`.
+    # `:` allowed for qualified C++ identifiers.
     text = re.sub(r'@ref\s+(?P<name>[\w:-]+)(?:\s+"(?P<disp>[^"]+)")?',
                   _ref_repl, text)
 
-    # 8. @cite KEY -> `[N]` HTML anchor linking to the Doxygen citelist page,
-    #    where N is the entry's alphabetical position in doc/opencv.bib
-    #    (built into `_CITE_NUMBER` at module load). HTML anchor so the
-    #    brackets survive markdown processing. Falls back to the key when
-    #    not in the bib map. `_apply_outside_code` keeps citations inside
-    #    code blocks literal.
+    # 8. @cite KEY -> `[N]` HTML anchor to citelist (N from opencv.bib order).
     def _cite_repl(m: re.Match) -> str:
         key = m.group("key")
         num = _CITE_NUMBER.get(key)
         label = f"[{num}]" if num is not None else f"[{key}]"
-        # Internal citelist when the page got staged + scanned; otherwise
-        # fall back to the Doxygen build's citelist.html (e.g. ad-hoc
-        # sphinx-build with SPHINX_INPUT_ROOT == DOC_ROOT, where the
-        # generated page isn't written). The depth-relative URL matches
-        # the same trick used for contrib images.
         if "citelist" in _ANCHOR_TO_DOC:
             depth = docname.count("/") if docname else 0
             href = ("../" * depth) + f"citelist.html#CITEREF_{key}"
@@ -792,7 +625,7 @@ def _translate(text: str, docname: str | None = None) -> str:
     text = _apply_outside_code(text, lambda chunk: re.sub(
         r"@cite\s+(?P<key>[\w-]+)", _cite_repl, chunk))
 
-    # 8b. @youtube{ID}  -> responsive embed (raw HTML, passed through by MyST).
+    # 8b. @youtube{ID} -> responsive raw-HTML embed.
     text = re.sub(
         r"^@youtube\{(?P<id>[\w-]+)\}\s*$",
         lambda m: (
@@ -804,97 +637,48 @@ def _translate(text: str, docname: str | None = None) -> str:
         ),
         text, flags=re.MULTILINE)
 
-    # 8c. @note ... / @see ... / @warning ... -> MyST admonitions. Each body
-    #     runs until the next blank line, the next @directive, or end of file
-    #     (Doxygen's paragraph-level semantics). Leading whitespace before
-    #     `@note` is preserved so admonitions inside `-#` list items render as
-    #     nested admonitions instead of indented code blocks.
-    _ADMON_KIND = {"note": "note", "see": "seealso", "warning": "warning"}
-    def _admon_repl(m: re.Match) -> str:
-        kind = _ADMON_KIND[m.group("dir")]
-        indent = m.group("indent") or ""
-        body = m.group("body").rstrip()
-        # When the fence is indented (admonition inside a `-#`/`1.` list
-        # item) the body's content block must also sit at that column for
-        # MyST to recognize it. Re-indent lines that don't already match:
-        # this covers same-line forms like `    @note Foo...\n    bar...`
-        # whose first body line has zero leading whitespace because the
-        # regex's `[ \t]*` ate the space after the directive name.
-        if indent:
-            re_indented = []
-            for line in body.split("\n"):
-                if not line.strip() or line.startswith(indent):
-                    re_indented.append(line)
-                else:
-                    re_indented.append(indent + line.lstrip(" \t"))
-            body = "\n".join(re_indented)
-        return f"\n{indent}:::{{{kind}}}\n{body}\n{indent}:::\n"
-    # The optional `:?` after the directive name accepts the (non-standard
-    # but common in OpenCV-Python docs) form `@note: text` alongside the
-    # canonical `@note text` / `@note\n text`.
-    text = re.sub(
-        r"^(?P<indent>[ \t]*)@(?P<dir>note|see|warning):?[ \t]*\n?"
-        r"(?P<body>.+?)(?=\n[ \t]*\n|\n[ \t]*@[A-Za-z]|\Z)",
-        _admon_repl, text, flags=re.DOTALL | re.MULTILINE)
+    # 8c. @note / @see / @warning handled at step 1b above.
 
-    # 8d. Dedent indented description paragraphs after `- @subpage X`
-    #     so they render as normal text, not as code blocks.
+    # 8d. Dedent indented descriptions after `- @subpage X`.
     def _dedent_subpage_descriptions(src: str) -> str:
-        # Accept either 4+ spaces/tabs OR a single leading tab as the
-        # continuation indent (one tab = bullet content column in
-        # CommonMark — phase_unwrapping uses this).
+        # Continuation indent: 4+ spaces/tabs or a single leading tab.
         pat = re.compile(
             r"^(?P<bullet>[ \t]*-\s+[^\n]*@subpage\s+[\w-]+[^\n]*)\n"
             r"(?P<desc>(?:[ \t]*\n|(?:\t|[ \t]{4,})[^\n]+(?:\n|$))+)",
             re.MULTILINE)
         def repl(m: re.Match) -> str:
             desc = _textwrap.dedent(m.group("desc")).strip("\n")
-            # All-blank description (e.g. `- @subpage X\n\n##### Section`):
-            # don't rewrite, or we'd accumulate extra blank lines.
             if not desc.strip():
                 return m.group(0)
             return f"{m.group('bullet')}\n\n{desc}\n\n"
         return pat.sub(repl, src)
     text = _dedent_subpage_descriptions(text)
 
-    # 10. @next_tutorial / @prev_tutorial  -> drop
+    # 10. @next_tutorial / @prev_tutorial -> drop
     text = re.sub(r"^@(?:next|prev)_tutorial\{[^}]*\}\s*$", "",
                   text, flags=re.MULTILINE)
 
-    # 11. @tableofcontents / [TOC] -> drop. PyData's right sidebar
-    #     already shows the per-page outline.
+    # 11. @tableofcontents / [TOC] -> drop
     text = re.sub(r"^(?:@tableofcontents|\[TOC\])\s*$", "",
                   text, flags=re.MULTILINE)
 
-    # 11b. @cond NAME ... @endcond  -> strip just the markers; if the
-    #      enclosed @subpage points to a disabled module it gets dropped
-    #      by _subpage_list_to_toctree above.  Same treatment for @parblock /
-    #      @endparblock — they exist only to let Doxygen accept multi-
-    #      paragraph arguments to directives like @note, which Markdown
-    #      already handles natively, so the markers can be dropped.
+    # 11b. @cond/@endcond and @parblock/@endparblock -> strip markers.
     text = re.sub(r"^@cond\s+\S+\s*$", "", text, flags=re.MULTILINE)
     text = re.sub(r"^@endcond\s*$", "", text, flags=re.MULTILINE)
     text = re.sub(r"^[ \t]*@parblock\s*$", "", text, flags=re.MULTILINE)
     text = re.sub(r"^[ \t]*@endparblock\s*$", "", text, flags=re.MULTILINE)
 
-    # 11c. @anchor NAME  ->  MyST label "(NAME)=" so the following block
-    #      element (typically a heading) becomes the cross-reference target.
+    # 11c. @anchor NAME -> MyST label "(NAME)=".
     text = re.sub(r"^@anchor\s+(?P<name>[\w-]+)\s*$",
                   lambda m: f"({m.group('name')})=",
                   text, flags=re.MULTILINE)
 
-    # 11d. Doxygen numbered-list marker `-#` at line start -> Markdown `1.`.
-    #      Markdown auto-increments numbered lists, so emitting `1.` for every
-    #      item produces the right output. Preserves leading indent for nested
-    #      lists.
+    # 11d. `-#` -> `1.` (indent preserved).
     text = re.sub(r"^(?P<indent>[ \t]*)-#(?P<sp>[ \t]+)",
                   lambda m: f"{m.group('indent')}1.{m.group('sp')}",
                   text, flags=re.MULTILINE)
 
-    # 11e. Bullet markers with 5+ spaces between marker and content cause MyST
-    #      to treat the continuation lines as code blocks. Normalize such
-    #      bullets to 3-space separation and re-flow the continuation column
-    #      by the same delta so nested content stays aligned with the marker.
+    # 11e. Normalize 5+ space bullet markers to 3 (avoids code-block reading).
     def _normalize_over_indented_markers(src: str) -> str:
         lines_in = src.split("\n")
         out: list[str] = []
@@ -924,26 +708,18 @@ def _translate(text: str, docname: str | None = None) -> str:
         return "\n".join(out)
     text = _normalize_over_indented_markers(text)
 
-    # 11f. Bullet lists immediately after a heading are sometimes indented by
-    #      4 spaces in Doxygen sources — Markdown would interpret that as a
-    #      code block. Strip exactly one level of 4-space indent off such
-    #      runs so MyST renders a proper list.
+    # 11f. Strip one 4-space level from bullets right after a heading.
     text = re.sub(
         r"(^#{1,6}[ \t][^\n]+\n(?:[ \t]*\n)*)((?:    [ \t]*[-*+][^\n]*\n)+)",
         lambda m: m.group(1) + re.sub(r"^    ", "", m.group(2), flags=re.MULTILINE),
         text, flags=re.MULTILINE)
 
-    # Depth-relative prefix from the current doc back to the site root,
-    # used to point `<img src>` at `<output>/contrib_modules/...` files
-    # that html_extra_path publishes (Sphinx can't pathto-rewrite URLs
-    # for files outside srcdir, so we compute the ../ count ourselves).
+    # Depth-relative prefix to site root for contrib_modules/ <img src> URLs.
     _depth = docname.count("/") if docname else 0
     _contrib_url_prefix = ("../" * _depth) + "contrib_modules/"
 
     def _emit_contrib_img(rel_url: str, alt: str) -> str:
-        """Raw-HTML <img> (or <figure> if alt is 'Figure ...') for a
-        contrib_modules/<rel> path — bypasses Sphinx's image processing
-        so the depth-relative URL survives to the rendered HTML."""
+        """Raw-HTML <img>/<figure> for a contrib_modules/<rel> path."""
         src = _contrib_url_prefix + rel_url
         img = f'<img src="{src}" alt="{alt}"/>'
         if alt.startswith("Figure "):
@@ -951,15 +727,7 @@ def _translate(text: str, docname: str | None = None) -> str:
                     f'<figcaption>{alt}</figcaption></figure>')
         return img
 
-    # 12. Image paths "images/foo.png" or "js_assets/foo.jpg" — resolve like
-    #     Doxygen's flat IMAGE_PATH: prefer the doc's own asset sibling, then
-    #     fall back to a global basename lookup across every tutorial `images/`
-    #     folder plus `js_tutorials/js_assets/`. As a final fallback, point at
-    #     the consolidated `tutorials/others/images/` dir. For contrib pages,
-    #     resolves under `<m>/tutorials/<rest>/images/`. Also matches
-    #     `<prefix>/images/...` — some tutorials prefix the directory name
-    #     (multiview_calibration does this) which Doxygen IMAGE_PATH ignores
-    #     but MyST would resolve literally and miss.
+    # 12. Image paths -> doc-sibling, global basename, or tutorials/others/images/.
     def _img_repl(m: re.Match) -> str:
         alt = m.group("alt")
         rel = m.group("rel")
@@ -970,7 +738,6 @@ def _translate(text: str, docname: str | None = None) -> str:
             if parts and parts[0] in ("tutorials", "js_tutorials", "py_tutorials"):
                 local = DOC_ROOT / pathlib.Path(docname).parent / asset_dir / rel
             elif len(parts) >= 2 and parts[0] == "tutorials_contrib":
-                # Contrib doc → resolve under <m>/tutorials/<rest>/images/.
                 rest = pathlib.Path(*parts[2:]) if len(parts) > 2 else pathlib.Path()
                 local = CONTRIB_ROOT / parts[1] / "tutorials" / rest / asset_dir / rel
             if local is not None and local.is_file():
@@ -985,10 +752,7 @@ def _translate(text: str, docname: str | None = None) -> str:
         r'!\[(?P<alt>[^\]]*)\]\((?:[^)]*?/)?(?P<dir>images|js_assets)/(?P<rel>[^)]+)\)',
         _img_repl, text)
 
-    # 12b. Cross-tree image refs for contrib pages (Doxygen IMAGE_PATH
-    #      flattening): `pics/foo.jpg` → <m>/doc/pics/, `<m>/samples/...`,
-    #      etc. Try module-relative bases; first match becomes raw-HTML
-    #      <img> with a depth-relative /contrib_modules/<m>/<rest> URL.
+    # 12b. Cross-tree contrib image refs -> raw-HTML <img>, depth-relative URL.
     def _img_xtree(m: re.Match) -> str:
         alt, rel = m.group("alt"), m.group("rel")
         if rel.startswith("/") or "://" in rel:
@@ -1011,17 +775,13 @@ def _translate(text: str, docname: str | None = None) -> str:
         r'!\[(?P<alt>[^\]]*)\]\((?P<rel>[^)]+)\)',
         _img_xtree, text)
 
-    # 12d. Force a blank line between consecutive `Label: ![](image)`
-    #      lines so each pair becomes its own paragraph (otherwise the
-    #      images flow inline). Skip `|`-prefixed table rows.
+    # 12d. Blank line between consecutive `Label: ![](image)` lines (skip table rows).
     text = re.sub(
         r"^(?P<line>(?!\|)[^\n]*!\[[^\]]*\]\([^)]+\)[^\n]*)\n"
         r"(?=(?!\|)[^\n]*!\[[^\]]*\]\([^)]+\))",
         r"\g<line>\n\n", text, flags=re.MULTILINE)
 
-    # 12e. `![Figure N: caption](url)` → MyST `{figure}` directive so the
-    #      caption renders visibly (plain image syntax keeps caption only
-    #      in alt=). Used by hdf/* tutorials.
+    # 12e. `![Figure N: caption](url)` -> MyST `{figure}`.
     text = re.sub(
         r"^(?P<indent>[ \t]*)!\[(?P<caption>Figure\s[^\]]+)\]\((?P<url>[^)]+)\)\s*$",
         lambda m: (f"{m.group('indent')}:::{{figure}} {m.group('url')}\n"
@@ -1029,30 +789,22 @@ def _translate(text: str, docname: str | None = None) -> str:
                    f"{m.group('indent')}:::"),
         text, flags=re.MULTILINE)
 
-    # 13. Wrap the Original-author/Compatibility front-matter table
-    #     in a `.opencv-meta-table` div so custom.css can style it.
+    # 13. Wrap front-matter table in a `.opencv-meta-table` div.
     def _wrap_front_matter(src: str) -> str:
         pat = re.compile(
-            r"(^\|[^\n]*\|[ \t]*\n"     # header row (often empty)
-            r"\|[ \t]*-:[ \t]*\|[ \t]*:-[ \t]*\|[ \t]*\n"  # alignment row
-            r"(?:\|[^\n]*\|[ \t]*\n)+)",  # one or more body rows
+            r"(^\|[^\n]*\|[ \t]*\n"
+            r"\|[ \t]*-:[ \t]*\|[ \t]*:-[ \t]*\|[ \t]*\n"
+            r"(?:\|[^\n]*\|[ \t]*\n)+)",
             re.MULTILINE)
         def repl(m: re.Match) -> str:
             return f":::{{div}} opencv-meta-table\n\n{m.group(1)}\n:::\n"
         return pat.sub(repl, src, count=1)
     text = _wrap_front_matter(text)
 
-    # 14a. Auto-link `cv.SymbolName` references in Python tutorial prose so
-    #      they point at the matching Doxygen API page (Doxygen's auto-linker
-    #      does this magic out of the box; CommonMark doesn't). Skip when the
-    #      symbol isn't in the tag-file map so unknown names stay literal.
+    # 14a. Auto-link `cv.SymbolName` in prose.
     text = _linkify_cv_symbols(text)
 
-    # 14b. Auto-linkify bare URLs. CommonMark requires explicit `<URL>` or
-    #      `[text](URL)` markup to make a URL clickable — Doxygen's renderer
-    #      was lenient and turned bare `https://...` into links. Mirror that
-    #      by wrapping bare URLs in `<...>`. Runs after the cv-symbol step
-    #      so the new `[cv.X](URL)` links aren't picked up as bare URLs.
+    # 14b. Wrap bare URLs in `<...>` (runs after 14a).
     text = _linkify_bare_urls(text)
 
     # 15. Restore @verbatim stash (see step 0v).
@@ -1067,31 +819,23 @@ _BARE_URL_RE = re.compile(
     r"(?<![<\[(\w\"'=])"
     r"(?P<url>https?://[^\s<>()`\"']+[^\s<>()`\"'.,;:!?])"
 )
-# Match `cv.X` (Python) or `cv::X` (C++) — both reference the same OpenCV
-# symbol map. Negative lookbehind blocks `frame.cv.X`, `mycv.X`, `[cv::X`,
-# and `foo::cv::X`-style false positives. Captures the separator so the
-# link text preserves the source's style (`cv.cvtColor` vs `cv::cvtColor`).
-# Optionally consumes a following `()` so the link reads `cv.foo()` /
-# `cv::foo()` when the source used the parens-only call form.
+# `cv.X`/`cv::X`; lookbehind blocks `frame.cv.X`-style false positives.
 _CV_SYMBOL_RE = re.compile(
     r"(?<![/\w.:\[])(?P<sep>cv(?:\.|::))(?P<sym>[A-Za-z_]\w*)(?P<parens>\(\))?"
 )
-# Bare `funcName()` references — Doxygen auto-linked these too, even without
-# the `cv.` prefix. The angle-bracket exclusions in the lookbehind avoid
-# nested-anchor double-wrapping after `_CV_SYMBOL_RE` already replaced
-# `cv.X()` -> `<a ...>cv.X()</a>` (the X part inside the anchor is preceded
-# by `.`, but ensure other anchor internals are also off-limits).
+# Bare `funcName()` (Doxygen auto-linked these).
 _BARE_FN_RE = re.compile(r"(?<![/\w.<>\"])(?P<sym>[A-Za-z_]\w{2,})\(\)")
 _FENCED_BLOCK_RE = re.compile(
     r"^(?P<fence>[`~]{3,})[^\n]*\n[\s\S]*?\n(?P=fence)[ \t]*$",
     re.MULTILINE,
 )
 _INLINE_CODE_RE = re.compile(r"`+[^`\n]*?`+")
+# ATX heading line; exempted from the auto-linkifier.
+_ATX_HEADING_RE = re.compile(r"^[ \t]{0,3}#{1,6}[ \t]")
 
 
 def _apply_outside_code(src: str, transform) -> str:
-    """Apply `transform(str) -> str` to every region of `src` that is not
-    inside a fenced code block or an inline code span."""
+    """Apply `transform` to regions outside fenced/inline code."""
     def _segment(text: str) -> str:
         out, last = [], 0
         for cm in _INLINE_CODE_RE.finditer(text):
@@ -1122,13 +866,8 @@ def _linkify_cv_symbols(src: str) -> str:
         url = _CV_SYMBOL_URL.get(sym)
         if not url:
             return m.group(0)
-        sep = m.group("sep")  # "cv." (Python) or "cv::" (C++)
+        sep = m.group("sep")
         parens = m.group("parens") or ""
-        # HTML anchor (not markdown `[text](url)`) so the link survives when
-        # the source embeds the reference inside raw HTML — e.g. the
-        # `<center><em>cv.calcHist(...)</em></center>` function-signature
-        # blocks in py_histograms. CommonMark doesn't re-parse markdown
-        # inside raw HTML blocks; inline HTML inside markdown does render.
         return f'<a href="{url}">{sep}{sym}{parens}</a>'
     def repl_bare(m: re.Match) -> str:
         sym = m.group("sym")
@@ -1137,9 +876,16 @@ def _linkify_cv_symbols(src: str) -> str:
             return m.group(0)
         return f'<a href="{url}">{sym}()</a>'
     def transform(chunk: str) -> str:
-        chunk = _CV_SYMBOL_RE.sub(repl_cv, chunk)
-        chunk = _BARE_FN_RE.sub(repl_bare, chunk)
-        return chunk
+        # Headings are definitions — don't linkify.
+        out_lines = []
+        for line in chunk.split("\n"):
+            if _ATX_HEADING_RE.match(line):
+                out_lines.append(line)
+                continue
+            line = _CV_SYMBOL_RE.sub(repl_cv, line)
+            line = _BARE_FN_RE.sub(repl_bare, line)
+            out_lines.append(line)
+        return "\n".join(out_lines)
     return _apply_outside_code(src, transform)
 
 
@@ -1147,8 +893,7 @@ _referenced_docs_cache: set[str] | None = None
 
 
 def _referenced_docs() -> set[str]:
-    """Docnames reachable from some `@subpage`/`@ref` (computed once). A
-    tutorial page absent from this set is an orphan."""
+    """Docnames reachable from some @subpage/@ref (computed once)."""
     global _referenced_docs_cache
     if _referenced_docs_cache is None:
         _referenced_docs_cache = {
@@ -1158,19 +903,13 @@ def _referenced_docs() -> set[str]:
     return _referenced_docs_cache
 
 
-# Tutorial doc roots whose pages participate in the @subpage/@ref nav graph
-# (so orphans among them are detectable). `api/` is excluded — those pages are
-# wired via explicit `{toctree}` directives, not @subpage anchors.
+# Tutorial roots in the @subpage/@ref nav graph (api/ wired via explicit toctrees).
 _TUTORIAL_PREFIXES = ("tutorials/", "js_tutorials/",
                       "py_tutorials/", "tutorials_contrib/")
 
 
 def _source_read(app, docname, source):
-    # Translate any tutorial doc — the root index, everything under an enabled
-    # main / js / py module, plus (when staged) everything under an enabled
-    # contrib module. Also translate API stubs so their `@subpage` / `@ref`
-    # lines turn into proper toctree entries; the body's MyST `{doxygengroup}`
-    # blocks pass through untouched (no `@` directives to rewrite).
+    # Translate tutorial docs + API stubs; doxygengroup bodies pass through.
     if not (docname.startswith("tutorials/")
             or docname.startswith("js_tutorials/")
             or docname.startswith("py_tutorials/")
@@ -1178,24 +917,18 @@ def _source_read(app, docname, source):
             or docname.startswith("api/")
             or docname == "faq"
             or docname == "citelist"
-            or docname == "intro"):
+            or docname == "intro"
+            or docname == "index"):
         return
     text = source[0]
-    # On the master doc, append `- @subpage tutorial_contrib_root` / `api_root`
-    # so the contrib + API sites appear in the unified left sidebar without
-    # modifying opencv/doc/tutorials/tutorials.markdown on disk.
-    if docname == "tutorials/tutorials":
+    # Master doc: append contrib/api roots without editing tutorials.markdown.
+    if docname == "tutorials/tutorials" and not USE_INDEX_LANDING:
         if CONTRIB_MODULES and "tutorial_contrib_root" in _ANCHOR_TO_DOC:
             text = text.rstrip() + "\n\n- @subpage tutorial_contrib_root\n"
         if API_MODULES and "api_root" in _ANCHOR_TO_DOC:
             text = text.rstrip() + "\n\n- @subpage api_root\n"
     out = _translate(text, docname)
-    # Mark genuinely-unreferenced tutorial pages `:orphan:` so Sphinx doesn't
-    # warn "document isn't included in any toctree". These pages (e.g. moved
-    # redirect stubs, or sub-TOCs whose parent links the children directly) are
-    # not @subpage'd / @ref'd anywhere, and we can't edit opencv/doc/ to add the
-    # link. Skip the master, anything already carrying front matter (step 0d),
-    # and pages that are in fact referenced.
+    # Mark unreferenced tutorial pages :orphan: (skip master/front-matter/referenced).
     if (docname.startswith(_TUTORIAL_PREFIXES)
             and docname != "tutorials/tutorials"
             and docname not in _referenced_docs()
