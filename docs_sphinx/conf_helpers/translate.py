@@ -425,6 +425,197 @@ def _translate(text: str, docname: str | None = None) -> str:
         r"@link\s+(?P<target>[\w-]+)(?P<disp>.*?)@endlink",
         _link_repl, text, flags=re.DOTALL)
 
+
+    if docname == "api/core_basic":
+        _vec_rows_re = re.compile(
+            r"(?:^\| `Vec<[^`]*` \| [^\n]*\n)+", re.MULTILINE)
+        _vm = _vec_rows_re.search(text)
+        if _vm:
+            _vec_rows = _vm.group(0)
+            text = text[:_vm.start()] + text[_vm.end():]
+            _shorter = (
+                "## Shorter aliases for the most popular specializations of "
+                "Vec<T,n>\n\n"
+                "| Type | Name | Description |\n"
+                "|---|---|---|\n"
+                + _vec_rows + "\n")
+            text = text.replace(
+                "## Typedef Documentation",
+                _shorter + "## Typedef Documentation",
+                1)
+
+        # 8c. Replace `{doxygentypedef} cv::Ptr` with a hand-rolled cpp:type
+        #     directive: breathe's doxygentypedef silently emits nothing for
+        #     C++11 alias templates (`using cv::Ptr = std::shared_ptr<_Tp>`),
+        #     so the Ptr entry went missing. Sphinx's native cpp:type supports
+        #     alias templates; reach it via eval-rst. Anchor `_CPPv4N2cv3PtrE`
+        #     matches what step 8a generates for the Name-column link.
+        text = re.sub(
+            r"```\{doxygentypedef\} cv::Ptr\s*\n:project: opencv\s*\n```",
+            "```{eval-rst}\n"
+            ".. cpp:namespace:: cv\n"
+            ".. cpp:type:: template<typename _Tp> Ptr = std::shared_ptr<_Tp>\n"
+            "```",
+            text)
+
+        # 8e. Classes table rows: (i) append the template-parameter list
+        #     (`< _Tp >`) to the class name, matching Doxygen; (ii) append a
+        #     "More..." link to the description cell.
+        def _rewrite_class_row(m: re.Match) -> str:
+            kind = m.group("kind")
+            name = m.group("name")       # 'cv::Mat_'
+            page = m.group("page")       # 'classcv_1_1Mat__'
+            desc = m.group("desc").strip()
+            short = name.split("::")[-1]
+            tparams = _CLASS_TEMPLATE_DISPLAY.get(short, "")
+            label = f"{kind} {name}{tparams}"
+            more = f"[More...]({page}.md)"
+            desc_out = f"{desc} {more}" if desc else more
+            return f"| [`{label}`]({page}.md) | {desc_out} |"
+        text = re.sub(
+            r"\| \[`(?P<kind>class|struct) (?P<name>cv::[A-Za-z0-9_:]+)`\]"
+            r"\((?P<page>(?:class|struct)cv_1_1[A-Za-z0-9_]+)\.md\)"
+            r" \| (?P<desc>[^\n|]*?) \|",
+            _rewrite_class_row, text)
+
+        # 8a. Name-column typedef anchors: the stub emits a `#group__…` in-page
+        #     anchor with no matching element on the Sphinx page. Rewrite simple
+        #     identifiers to the cpp-domain v4 anchor of the typedef so the
+        #     table entry and the right-sidebar TOC jump to the same place.
+        text = re.sub(
+            r"\[`(?P<name>[A-Za-z_][A-Za-z0-9_]*)`\]"
+            r"\(#group__[a-z0-9_]+?_1[a-z0-9]+\)",
+            lambda m: (f"[`{m.group('name')}`]"
+                       f"(#_CPPv4N2cv{len(m.group('name'))}"
+                       f"{m.group('name')}E)"),
+            text)
+
+        # 8i. Functions-table rows: split the single broken-`#group__…`-anchor
+        #     link wrapping the whole signature into a name link to the in-page
+        #     `#cv-<slug>` anchor (emitted by `_render_core_basic_func`) plus a
+        #     separate `(params)` code span that step 8g then linkifies.
+        def _rewrite_function_row(m: re.Match) -> str:
+            ret = m.group("ret").strip()
+            name = m.group("name")
+            params = m.group("params")
+            desc = m.group("desc")
+            slug = _func_slug(name)
+            return (f"| {ret} | [`cv::{name}`](#{slug}) "
+                    f"`({params})` | {desc} |")
+        text = re.sub(
+            r"\| (?P<ret>[^|\n]*?) \| "
+            r"\[`(?P<name>[^(`\n]+?)\((?P<params>[^`\n]*)\)`\]"
+            r"\(#group__[a-z0-9_]+?_1[a-z0-9]+\) \| "
+            r"(?P<desc>[^\n|]*) \|",
+            _rewrite_function_row, text)
+
+        # 8j. Fallback anchor injection: if any `{doxygenfunction}` directive
+        #     survived (a function we didn't hand-roll), inject a raw HTML
+        #     anchor before it so the table link still resolves. Deduped across
+        #     overload sets (HTML5 forbids duplicate ids; first wins).
+        _seen_anchors: set[str] = set()
+        def _inject_func_anchor(m: re.Match) -> str:
+            qname = m.group("qname").strip()       # "cv::log" / "cv::operator!="
+            slug = _func_slug(qname.rsplit("::", 1)[-1])
+            if slug in _seen_anchors:
+                return m.group(0)
+            _seen_anchors.add(slug)
+            return f'<a id="{slug}"></a>\n\n{m.group(0)}'
+        text = re.sub(
+            r"^```\{doxygenfunction\} (?P<qname>[^\n(]+)\([^\n]*\n"
+            r":project: opencv\n"
+            r"```",
+            _inject_func_anchor, text, flags=re.MULTILINE)
+
+        # 8b. Type-column class names like `Matx< double, 1, 2 >` are a single
+        #     code span with nothing clickable. Rewrite to inline HTML linking
+        #     the class name to its LOCAL sibling api page (filename only).
+        if _LIVE_CLASS_URL:
+            def _linkify_class_codespan(m: re.Match) -> str:
+                cls = m.group("cls")
+                rest = m.group("rest")
+                full = _LIVE_CLASS_URL.get(cls)
+                if not full:
+                    return m.group(0)
+                href = pathlib.PurePosixPath(full).name  # same api/ directory
+                rest_esc = (rest.replace("&", "&amp;")
+                                .replace("<", "&lt;")
+                                .replace(">", "&gt;"))
+                return (f'<code class="docutils literal notranslate">'
+                        f'<a class="reference internal" href="{href}">{cls}</a>'
+                        f'{rest_esc}</code>')
+            text = re.sub(
+                r"`(?P<cls>[A-Z][A-Za-z0-9_]*)(?P<rest><[^`\n]*>)`",
+                _linkify_class_codespan, text)
+
+        # 8g. Linkify class/typedef tokens in code spans step 8b didn't cover:
+        #     inner template-param types (`uchar` in `Vec< uchar, 2 >`) and
+        #     non-template Type cells (`_InputArray` in `const _InputArray &`).
+        #     Two passes: inner HTML of step-8b `<code>` blocks (skipping their
+        #     existing `<a>`), then remaining plain markdown code spans.
+        if _LOCAL_CLASS_URL or _LOCAL_TYPEDEF_URL:
+            def _token_url(tok: str) -> str | None:
+                # LOCAL sibling api page URL; tokens not in the tagfile (int,
+                # float, …) stay plain text — matches the live page.
+                return _LOCAL_CLASS_URL.get(tok) or _LOCAL_TYPEDEF_URL.get(tok)
+            _tok_re = re.compile(r"\b_?[A-Za-z][A-Za-z0-9_]*\b")
+            def _linkify_html_segment(seg: str) -> str:
+                def _sub(m: re.Match) -> str:
+                    url = _token_url(m.group(0))
+                    if not url:
+                        return m.group(0)
+                    return (f'<a class="reference internal" '
+                            f'href="{url}">{m.group(0)}</a>')
+                return _tok_re.sub(_sub, seg)
+            def _linkify_inside_code(m: re.Match) -> str:
+                inner = m.group("inner")
+                out, i, n = [], 0, len(m.group("inner"))
+                while i < n:
+                    if inner.startswith("<a ", i):
+                        j = inner.find("</a>", i)
+                        if j < 0:
+                            out.append(inner[i:]); break
+                        out.append(inner[i:j + 4]); i = j + 4
+                    else:
+                        k = inner.find("<a ", i)
+                        if k < 0:
+                            out.append(_linkify_html_segment(inner[i:])); break
+                        out.append(_linkify_html_segment(inner[i:k])); i = k
+                return m.group("open") + "".join(out) + m.group("close")
+            text = re.sub(
+                r'(?P<open><code class="docutils literal notranslate">)'
+                r'(?P<inner>.*?)(?P<close></code>)',
+                _linkify_inside_code, text, flags=re.DOTALL)
+
+            def _linkify_markdown_codespan(m: re.Match) -> str:
+                content = m.group("content")
+                hits = [(t.start(), t.end(), t.group(0)) for t in
+                        _tok_re.finditer(content) if _token_url(t.group(0))]
+                if not hits:
+                    return m.group(0)
+                from html import escape as _esc
+                parts, last = [], 0
+                for s, e, tok in hits:
+                    parts.append(_esc(content[last:s]))
+                    parts.append(f'<a class="reference internal" '
+                                 f'href="{_token_url(tok)}">{tok}</a>')
+                    last = e
+                parts.append(_esc(content[last:]))
+                return (f'<code class="docutils literal notranslate">'
+                        f'{"".join(parts)}</code>')
+            # Mask out markdown links `[`…`](…)` first: their interior
+            # backticks would otherwise confuse the codespan pairing (a row can
+            # have 4+ backticks across the name link and the `(params)` span).
+            _masked: list[str] = []
+            def _mask(m: re.Match) -> str:
+                _masked.append(m.group(0))
+                return f"\x00MDLINK{len(_masked)-1}\x00"
+            text = re.sub(r"\[`[^`\n]+`\]\([^)\n]+\)", _mask, text)
+            text = re.sub(r"`(?P<content>[^`\n]+?)`",
+                          _linkify_markdown_codespan, text)
+            text = re.sub(r"\x00MDLINK(\d+)\x00",
+                          lambda m: _masked[int(m.group(1))], text)
+
     # 6c. Bullet lists of @subpage / @ref items (collected runs -> toctree +
     #     visible list). Runs BEFORE step 7 so @ref items are still in raw
     #     form. @subpage entries register in the toctree (navigation tree);

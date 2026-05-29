@@ -632,10 +632,15 @@ def _write_class_stub(cls: dict, out_dir: pathlib.Path,
 
     # 2) "Detailed Description" — delegated to Breathe's `{doxygenclass}` (PR #7)
     #    so every Doxygen tag (programlisting, ref, tables, …) renders natively.
-    #    `:no-members:` leaves just the class brief + detailed body; the
-    #    duplicate signature header + leading brief paragraph Breathe emits are
-    #    stripped at build-finished time by `_strip_breathe_class_clutter`. A
-    #    per-class "Examples" cross-reference is appended under the same heading.
+    #    Members are deliberately omitted (they're rendered as the hand-rolled
+    #    summary tables + per-member detail blocks above/below); Breathe renders
+    #    description-only by default now that there's no global
+    #    `breathe_default_members` (see conf.py). `:no-members:` is *not* a valid
+    #    Breathe option — passing it raised a MyST "Unknown option keys" warning
+    #    and didn't actually suppress members. The duplicate signature header +
+    #    leading brief paragraph Breathe emits are stripped at build-finished
+    #    time by `_strip_breathe_class_clutter`. A per-class "Examples"
+    #    cross-reference is appended under the same heading.
     _directive = "doxygenstruct" if cls["kind"] == "struct" else "doxygenclass"
     examples = _find_examples_for_class(qualified.rsplit("::", 1)[-1])
     if data["detailed"]:
@@ -644,7 +649,6 @@ def _write_class_stub(cls: dict, out_dir: pathlib.Path,
             "",
             f"```{{{_directive}}} {qualified}",
             ":project: opencv",
-            ":no-members:",
             "```",
             "",
         ]

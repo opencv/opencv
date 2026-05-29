@@ -74,9 +74,32 @@ CONTRIB_ROOT = pathlib.Path(
 # Empty = legacy behavior (no API pages in Sphinx; navbar's external_links
 # still routes users to the Doxygen-rendered group__*.html).
 # ---------------------------------------------------------------------------
+def _discover_api_modules() -> list[str]:
+    """Every main module whose umbrella header declares `@defgroup`.
+
+    Scans opencv/modules/<m>/include/opencv2/<m>.hpp — that umbrella header is
+    exactly breathe's target, so a module is API-documentable iff its header
+    opens a Doxygen group. Discovered (not hardcoded) so new modules are picked
+    up automatically. Sorted for a deterministic, reproducible build order.
+    """
+    found = []
+    for _hdr in (OPENCV_ROOT / "modules").glob("*/include/opencv2/*.hpp"):
+        if _hdr.stem != _hdr.parents[2].name:   # only the umbrella <m>/.../<m>.hpp
+            continue
+        try:
+            if "@defgroup" in _hdr.read_text(encoding="utf-8", errors="ignore"):
+                found.append(_hdr.stem)
+        except OSError:
+            pass
+    return sorted(found)
+
+
+# Default = the discovered full set. Override with OPENCV_API_MODULES to build a
+# subset; set it empty for legacy tutorial-only behavior.
 API_MODULES = [
     m.strip()
-    for m in (_os.environ.get("OPENCV_API_MODULES") or "core").split(",")
+    for m in (_os.environ.get("OPENCV_API_MODULES") or
+              ",".join(_discover_api_modules())).split(",")
     if m.strip()
 ]
 

@@ -56,7 +56,14 @@ if HAVE_BREATHE:
     extensions.append("breathe")
     breathe_projects = {"opencv": str(_PATCHED_XML_DIR)}
     breathe_default_project = "opencv"
-    breathe_default_members = ("members",)
+    # No global members default: each class page renders its own summary tables
+    # + per-member detail blocks (see _write_class_stub), and the "Detailed
+    # Description" `{doxygenclass}` is meant to be description-only. A global
+    # `("members",)` default would force members back into that block —
+    # duplicating the hand-rolled member docs and feeding macro-bearing
+    # declarations (e.g. `CV_PROP_RW Point2f pt`) to the C++ domain parser. The
+    # missing-XML fallback passes `:members:` explicitly, so it's unaffected.
+    breathe_default_members = ()
 
 source_suffix = {".md": "markdown", ".markdown": "markdown"}
 
@@ -73,6 +80,12 @@ cpp_id_attributes = [
     "CV_NODISCARD_STD", "CV_NODISCARD",
     "CV_EXPORTS", "CV_EXPORTS_W",
     "CV_WRAP",
+    # Python-binding annotation macros (expand to nothing in C++): they prefix
+    # member/parameter declarations like `CV_PROP_RW Point2f pt` and otherwise
+    # raise "Invalid C++ declaration" when a `{doxygenclass} :members:` block
+    # (the missing-XML fallback) feeds them to the C++ domain parser.
+    "CV_PROP", "CV_PROP_RW", "CV_PROP_W",
+    "CV_OUT", "CV_IN_OUT",
 ]
 c_id_attributes = list(cpp_id_attributes)
 

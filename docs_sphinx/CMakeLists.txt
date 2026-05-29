@@ -148,10 +148,26 @@ set(_LEGACY_DOXYFILE "${CMAKE_BINARY_DIR}/doc/Doxyfile")
 set(_DOXYGEN_XML_DIR "${CMAKE_BINARY_DIR}/doc/doxygen/xml")
 
 # Modules to process with Doxygen — must match OPENCV_API_MODULES used at
-# sphinx-build time. Default "core" matches conf.py's OPENCV_API_MODULES default.
+# sphinx-build time. Default = every main module whose umbrella header
+# (modules/<m>/include/opencv2/<m>.hpp) declares `@defgroup`, discovered the
+# same way conf.py's _discover_api_modules() does so the two stay in sync and
+# new modules are picked up automatically.
 # Override: cmake -DSPHINX_API_MODULES="core;photo;imgproc;objdetect;3d"
 if(NOT DEFINED SPHINX_API_MODULES)
-  set(SPHINX_API_MODULES "core")
+  set(SPHINX_API_MODULES "")
+  file(GLOB _umbrella_headers "${CMAKE_SOURCE_DIR}/modules/*/include/opencv2/*.hpp")
+  foreach(_hdr ${_umbrella_headers})
+    get_filename_component(_stem "${_hdr}" NAME_WE)
+    # Only the umbrella header modules/<m>/include/opencv2/<m>.hpp.
+    if(_hdr MATCHES "/modules/${_stem}/include/opencv2/${_stem}\\.hpp$")
+      file(READ "${_hdr}" _hdr_contents)
+      if(_hdr_contents MATCHES "@defgroup")
+        list(APPEND SPHINX_API_MODULES "${_stem}")
+      endif()
+    endif()
+  endforeach()
+  list(SORT SPHINX_API_MODULES)
+  message(STATUS "docs_sphinx: discovered API modules: ${SPHINX_API_MODULES}")
 endif()
 set(_doxy_input "")
 foreach(_m ${SPHINX_API_MODULES})
