@@ -1,16 +1,18 @@
-How to use the OpenCV parallel_for_ to parallelize your code {#tutorial_how_to_use_OpenCV_parallel_for_}
+How to use the OpenCV parallel_for_ function to parallelize your code (Mandelbrot set example) {#tutorial_how_to_use_OpenCV_parallel_for_}
 ==================================================================
 
 @tableofcontents
 
 @prev_tutorial{tutorial_file_input_output_with_xml_yml}
+@next_tutorial{tutorial_how_to_use_OpenCV_parallel_for_new}
+@next_tutorial{tutorial_univ_intrin}
 
 |    |    |
 | -: | :- |
 | Compatibility | OpenCV >= 3.0 |
 
 
-@note See also C++ lambda usage with parallel for in [tuturial](@ref tutorial_how_to_use_OpenCV_parallel_for_new).
+@note See this [tuturial](@ref tutorial_how_to_use_OpenCV_parallel_for_new) for a `parallel_for_` usage applied to image convolution.
 
 Goal
 ----
@@ -26,17 +28,17 @@ Precondition
 ------------
 
 The first precondition is to have OpenCV built with a parallel framework.
-In OpenCV 3.2, the following parallel frameworks are available in that order:
+In OpenCV 4, the following parallel frameworks are available in that order:
+
 1.   Intel Threading Building Blocks (3rdparty library, should be explicitly enabled)
-2.   C= Parallel C/C++ Programming Language Extension (3rdparty library, should be explicitly enabled)
-3.   OpenMP (integrated to compiler, should be explicitly enabled)
-4.   APPLE GCD (system wide, used automatically (APPLE only))
-5.   Windows RT concurrency (system wide, used automatically (Windows RT only))
-6.   Windows concurrency (part of runtime, used automatically (Windows only - MSVC++ >= 10))
-7.   Pthreads (if available)
+2.   OpenMP (integrated to compiler, should be explicitly enabled)
+3.   APPLE GCD (system wide, used automatically (APPLE only))
+4.   Windows RT concurrency (system wide, used automatically (Windows RT only))
+5.   Windows concurrency (part of runtime, used automatically (Windows only - MSVC++ >= 10))
+6.   Pthreads (if available)
 
 As you can see, several parallel frameworks can be used in the OpenCV library. Some parallel libraries
-are third party libraries and have to be explicitly built and enabled in CMake (e.g. TBB, C=), others are
+are third party libraries and have to be explicitly built and enabled in CMake (e.g. TBB), others are
 automatically available with the platform (e.g. APPLE GCD) but chances are that you should be enable to
 have access to a parallel framework either directly or by enabling the option in CMake and rebuild the library.
 
@@ -120,7 +122,7 @@ Escape time algorithm implementation
 
 @snippet how_to_use_OpenCV_parallel_for_.cpp mandelbrot-escape-time-algorithm
 
-Here, we used the [`std::complex`](http://en.cppreference.com/w/cpp/numeric/complex) template class to represent a
+Here, we used the [`std::complex`](https://en.cppreference.com/cpp/numeric/complex) template class to represent a
 complex number. This function performs the test to check if the pixel is in set or not and returns the "escaped" iteration.
 
 Sequential Mandelbrot implementation
@@ -143,7 +145,7 @@ Finally, to assign the grayscale value to the pixels, we use the following rule:
 
 Using a linear scale transformation is not enough to perceive the grayscale variation. To overcome this, we will boost
 the perception by using a square root scale transformation (borrowed from Jeremy D. Frens in his
-[blog post](http://www.programming-during-recess.net/2016/06/26/color-schemes-for-mandelbrot-sets/)):
+[blog post](https://web.archive.org/web/20250419124416/http://www.programming-during-recess.net/2016/06/26/color-schemes-for-mandelbrot-sets/)):
 \f$ f \left( x \right) = \sqrt{\frac{x}{\text{maxIter}}} \times 255 \f$
 
 ![](images/how_to_use_OpenCV_parallel_for_sqrt_scale_transformation.png)
@@ -179,7 +181,7 @@ or setting `nstripes=2` should be the same as by default it will use all the pro
 workload only on two threads.
 
 @note
-C++ 11 standard allows to simplify the parallel implementation by get rid of the `ParallelMandelbrot` class and replacing it with lambda expression:
+C++ 11 standard allows simplifying the parallel implementation by get rid of the `ParallelMandelbrot` class and replacing it with lambda expression:
 
 @snippet how_to_use_OpenCV_parallel_for_.cpp mandelbrot-parallel-call-cxx11
 

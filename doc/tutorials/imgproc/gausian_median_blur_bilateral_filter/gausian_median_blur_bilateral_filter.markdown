@@ -26,7 +26,7 @@ Theory
 ------
 
 @note The explanation below belongs to the book [Computer Vision: Algorithms and
-Applications](http://szeliski.org/Book/) by Richard Szeliski and to *LearningOpenCV*
+Applications](https://szeliski.org/Book/) by Richard Szeliski and to *LearningOpenCV*
 
 -   *Smoothing*, also called *blurring*, is a simple and frequently used image processing
     operation.

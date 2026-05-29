@@ -25,7 +25,7 @@ Theory
 
 @note
    The explanation below belongs to the book [Computer Vision: Algorithms and
-    Applications](http://szeliski.org/Book/) by Richard Szeliski
+    Applications](https://szeliski.org/Book/) by Richard Szeliski
 
 From our previous tutorial, we already know a bit of *Pixel operators*. An interesting dyadic
 (two-input) operator is the *linear blend operator*:
