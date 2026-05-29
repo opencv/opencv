@@ -35,6 +35,20 @@ file(CREATE_LINK
   "${CMAKE_SOURCE_DIR}/doc/tutorials/tutorials.markdown"
   "${_SPHINX_INPUT_TUTORIALS}/tutorials.markdown"
   SYMBOLIC COPY_ON_ERROR)
+
+# Top-level standalone pages staged at srcdir root (siblings of tutorials/).
+# Add further `file(CREATE_LINK …)` lines here if more top-level pages get
+# onboarded.  intro.markdown lives inside modules/core/doc/ (it's the core
+# module's @page; the legacy Doxygen build pulls it in via the same module
+# scan it uses for bib files) — symlink it under a flat name at srcdir root.
+file(CREATE_LINK
+  "${CMAKE_SOURCE_DIR}/doc/faq.markdown"
+  "${_SPHINX_INPUT_ROOT}/faq.markdown"
+  SYMBOLIC COPY_ON_ERROR)
+file(CREATE_LINK
+  "${CMAKE_SOURCE_DIR}/modules/core/doc/intro.markdown"
+  "${_SPHINX_INPUT_ROOT}/intro.markdown"
+  SYMBOLIC COPY_ON_ERROR)
 file(GLOB _main_tutorial_children
      RELATIVE "${CMAKE_SOURCE_DIR}/doc/tutorials"
      "${CMAKE_SOURCE_DIR}/doc/tutorials/*")
@@ -102,7 +116,8 @@ add_custom_target(sphinx
 # Clean rebuild: `cmake --build <build> --target sphinx-clean`
 add_custom_target(sphinx-clean
   COMMAND ${CMAKE_COMMAND} -E rm -rf ${_SPHINX_OUTDIR}
-  COMMENT "Removing ${_SPHINX_OUTDIR}"
+  COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_CURRENT_BINARY_DIR}/.doctrees
+  COMMENT "Removing ${_SPHINX_OUTDIR} and .doctrees env cache"
   VERBATIM)
 
 message(STATUS "docs_sphinx: sphinx target enabled (sphinx-build: ${SPHINX_BUILD})")
