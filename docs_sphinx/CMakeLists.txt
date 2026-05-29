@@ -24,15 +24,7 @@ set(_SPHINX_CONFDIR    "${CMAKE_CURRENT_SOURCE_DIR}")
 set(_SPHINX_OUTDIR     "${CMAKE_CURRENT_BINARY_DIR}/html")
 set(_SPHINX_INPUT_ROOT "${CMAKE_CURRENT_BINARY_DIR}/docs_sphinx_input")
 
-# ---------------------------------------------------------------------------
-# Stage a merged input tree at ${CMAKE_BINARY_DIR}/docs_sphinx_input/.
-# Sphinx requires a single srcdir, but the wrapper needs to see both
-# opencv/doc/tutorials/ and (optionally) opencv_contrib/modules/<m>/tutorials/.
-# We symlink each main module subtree under tutorials/ and each enabled contrib
-# module subtree under tutorials_contrib/, then auto-generate the contrib root
-# page — the same pattern opencv/doc/CMakeLists.txt already uses for Doxygen.
-# Nothing under opencv/doc/ or opencv_contrib/modules/ is modified.
-# ---------------------------------------------------------------------------
+# Stage merged input tree: symlink main + contrib tutorial subtrees into one srcdir.
 set(_SPHINX_INPUT_TUTORIALS "${_SPHINX_INPUT_ROOT}/tutorials")
 set(_SPHINX_INPUT_CONTRIB   "${_SPHINX_INPUT_ROOT}/tutorials_contrib")
 file(REMOVE_RECURSE "${_SPHINX_INPUT_ROOT}")
@@ -55,14 +47,17 @@ foreach(_d ${_main_tutorial_children})
   endif()
 endforeach()
 
-# Contrib tree: only when OPENCV_EXTRA_MODULES_PATH is set, matching the legacy
-# Doxygen contrib build's activation gate exactly. Stage every contrib module
-# that has a tutorials/ dir — the canonical "which modules to compile" list
-# lives in conf.py's CONTRIB_MODULES, exactly parallel to DOC_MODULES for main.
-# Staged-but-unselected modules have their @subpage entries silently dropped
-# by the toctree machinery (conf.py only populates _ANCHOR_TO_DOC for enabled
-# modules), so listing them all in contrib_root.markdown is safe and means
-# adding a new contrib module is a one-line conf.py edit (no reconfigure).
+# js_tutorials, py_tutorials, images/ sit directly under opencv/doc/.
+foreach(_root js_tutorials py_tutorials images)
+  if(EXISTS "${CMAKE_SOURCE_DIR}/doc/${_root}")
+    file(CREATE_LINK
+      "${CMAKE_SOURCE_DIR}/doc/${_root}"
+      "${_SPHINX_INPUT_ROOT}/${_root}"
+      SYMBOLIC COPY_ON_ERROR)
+  endif()
+endforeach()
+
+# Contrib tree: stage when OPENCV_EXTRA_MODULES_PATH is set; unselected modules dropped by conf.py.
 if(OPENCV_EXTRA_MODULES_PATH AND EXISTS "${OPENCV_EXTRA_MODULES_PATH}")
   file(MAKE_DIRECTORY "${_SPHINX_INPUT_CONTRIB}")
   set(_contrib_root_md "${_SPHINX_INPUT_CONTRIB}/contrib_root.markdown")
@@ -76,25 +71,19 @@ if(OPENCV_EXTRA_MODULES_PATH AND EXISTS "${OPENCV_EXTRA_MODULES_PATH}")
     if(IS_DIRECTORY "${_tut_dir}")
       file(CREATE_LINK "${_tut_dir}" "${_SPHINX_INPUT_CONTRIB}/${_m}"
            SYMBOLIC COPY_ON_ERROR)
-      # Match every top-level *.markdown in <m>/tutorials/, the same shape the
-      # legacy Doxygen build uses (opencv/doc/CMakeLists.txt) — many contrib
-      # modules use names like alphamat_tutorial.markdown or fuzzy.markdown
-      # instead of the table_of_content_<m>.markdown convention.
       file(GLOB _tocs RELATIVE "${_tut_dir}" "${_tut_dir}/*.markdown")
       foreach(_t ${_tocs})
         file(STRINGS "${_tut_dir}/${_t}" _id LIMIT_COUNT 1 REGEX ".*\\{#[^}]+\\}")
         string(REGEX REPLACE ".*\\{#([^}]+)\\}.*" "\\1" _id "${_id}")
         if(_id)
-          file(APPEND "${_contrib_root_md}" "- ${_m}. @subpage ${_id}\n")
+          file(APPEND "${_contrib_root_md}" "- @subpage ${_id}\n")
         endif()
       endforeach()
     endif()
   endforeach()
 endif()
 
-# Forward staging info to conf.py via env. OPENCV_CONTRIB_MODULES is NOT
-# forwarded — conf.py's default list wins unless the caller sets it in their
-# shell env (OPENCV_CONTRIB_MODULES=ml cmake --build ...) to override per-build.
+# Forward staging paths via env. OPENCV_CONTRIB_MODULES is not forwarded; set it in shell to override.
 set(_SPHINX_ENV
   "OPENCV_SPHINX_INPUT_ROOT=${_SPHINX_INPUT_ROOT}"
   "OPENCV_CONTRIB_ROOT=${OPENCV_EXTRA_MODULES_PATH}"

@@ -32,7 +32,18 @@ OPENCV_ROOT = HERE.parent.resolve()
 import os as _os
 DOC_MODULES = [
     m.strip()
-    for m in (_os.environ.get("OPENCV_DOC_MODULES") or "photo,objdetect,core,calib3d,features,introduction").split(",")
+    for m in (_os.environ.get("OPENCV_DOC_MODULES") or "photo,objdetect,core,calib3d,features,3d,app,introduction,imgproc,ios").split(",")
+    if m.strip()
+]
+DOC_JS_MODULES = [
+    m.strip()
+    for m in (_os.environ.get("OPENCV_DOC_JS_MODULES") or "js_gui,js_core,js_imgproc,js_video,js_dnn").split(",")
+    if m.strip()
+]
+
+DOC_PY_MODULES = [
+    m.strip()
+    for m in (_os.environ.get("OPENCV_DOC_PY_MODULES") or "py_gui,py_features,py_calib3d,py_ml,py_bindings").split(",")
     if m.strip()
 ]
 
@@ -44,7 +55,7 @@ DOC_MODULES = [
 # ---------------------------------------------------------------------------
 CONTRIB_MODULES = [
     m.strip()
-    for m in (_os.environ.get("OPENCV_CONTRIB_MODULES") or "ml,bgsegm,bioinspired,cannops,ccalib,cnn_3dobj,cvv,dnn_objdetect,dnn_superres,gapi,hdf,julia,line_descriptor,phase_unwrapping,structured_light").split(",")
+    for m in (_os.environ.get("OPENCV_CONTRIB_MODULES") or "ml,bgsegm,bioinspired,cannops,ccalib,cnn_3dobj,cvv,dnn_objdetect,dnn_superres,gapi,hdf,julia,line_descriptor,phase_unwrapping,structured_light,sfm").split(",")
     if m.strip()
 ]
 CONTRIB_ROOT = pathlib.Path(
@@ -89,7 +100,11 @@ master_doc = "tutorials/tutorials"
 # Scope: master + enabled main modules + (optionally) enabled contrib modules.
 include_patterns = ["tutorials/tutorials.markdown"] + [
     f"tutorials/{m}/**" for m in DOC_MODULES
-]
+] + (["js_tutorials/js_tutorials.markdown"] + [
+    f"js_tutorials/{m}/**" for m in DOC_JS_MODULES
+] if DOC_JS_MODULES else []) + (["py_tutorials/py_tutorials.markdown"] + [
+    f"py_tutorials/{m}/**" for m in DOC_PY_MODULES
+] if DOC_PY_MODULES else [])
 if CONTRIB_MODULES and (SPHINX_INPUT_ROOT / "tutorials_contrib").is_dir():
     include_patterns.append("tutorials_contrib/contrib_root.markdown")
     include_patterns += [f"tutorials_contrib/{m}/**" for m in CONTRIB_MODULES]
@@ -97,6 +112,7 @@ exclude_patterns = [
     "**/Thumbs.db", "**/.DS_Store",
     "tutorials/core/how_to_use_OpenCV_parallel_for_/**",
     "tutorials/introduction/load_save_image/**",
+    "tutorials/app/_old/**",
 ]
 
 myst_enable_extensions = [
@@ -116,21 +132,44 @@ suppress_warnings = [
 DOXYGEN_BASE_URL = (
     _os.environ.get("OPENCV_DOXYGEN_BASE_URL", "https://docs.opencv.org/5.x/")
     .rstrip("/") + "/")
-_TAG_FILE = pathlib.Path(_os.environ.get(
-    "OPENCV_DOXYGEN_TAGFILE",
-    str(HERE.parent.parent / "build" / "doc" / "doxygen" / "html" / "opencv.tag"),
-))
+_TAG_FILE = pathlib.Path(_os.environ.get("OPENCV_DOXYGEN_TAGFILE", ""))
+if not (_TAG_FILE.name and _TAG_FILE.is_file()):
+    _TAG_FILE_CANDIDATES = (
+        [HERE.parent.parent / "build" / "doc" / "doxygen" / "html" / "opencv.tag",
+         HERE.parent.parent / "build" / "doc" / "opencv.tag"]
+        + sorted((HERE.parent.parent).glob("build*/doc/opencv.tag"))
+        + sorted((HERE.parent.parent).glob("build*/doc/doxygen/html/opencv.tag"))
+    )
+    _TAG_FILE = next((p for p in _TAG_FILE_CANDIDATES if p.is_file()), pathlib.Path(""))
 
 # anchor -> doxygen URL filename (from opencv.tag if available).
 _TAG_FILENAMES: dict[str, str] = {}
+# anchor -> human-readable page title (from opencv.tag).
+_TAG_PAGE_TITLES: dict[str, str] = {}
+# cv API name -> full doxygen URL (for cv.Name auto-linking).
+_CV_API: dict[str, str] = {}
 if _TAG_FILE.is_file():
     try:
         import xml.etree.ElementTree as _ET
         for _c in _ET.parse(str(_TAG_FILE)).getroot().iter("compound"):
             if _c.get("kind") == "page":
                 _n, _f = _c.findtext("name"), _c.findtext("filename")
+                _t = _c.findtext("title", "")
                 if _n and _f:
                     _TAG_FILENAMES[_n] = _f if _f.endswith(".html") else _f + ".html"
+                    if _t:
+                        _TAG_PAGE_TITLES[_n] = _t
+            if _c.get("kind") in ("class", "namespace"):
+                _cn = (_c.findtext("name") or "").split("::")[-1]
+                _cf = _c.findtext("filename", "")
+                if _cn and _cf:
+                    _CV_API.setdefault(_cn, DOXYGEN_BASE_URL + (_cf if _cf.endswith(".html") else _cf + ".html"))
+            for _m in _c.findall("member"):
+                _n = _m.findtext("name", "")
+                _af = _m.findtext("anchorfile", "")
+                _an = _m.findtext("anchor", "")
+                if _n and _af and _an:
+                    _CV_API.setdefault(_n, DOXYGEN_BASE_URL + _af + "#" + _an)
     except Exception:
         pass
 
@@ -180,6 +219,16 @@ html_theme_options = {
     "icon_links": [{"name": "GitHub",
                     "url": "https://github.com/opencv/opencv",
                     "icon": "fa-brands fa-github"}],
+}
+
+# Doxygen defines \fork{a}{b}{c}{d} as a piecewise-function shorthand.
+# Define it as a MathJax macro so threshold.markdown renders correctly.
+mathjax3_config = {
+    "tex": {
+        "macros": {
+            "fork": [r"\left\{ \begin{array}{ll} #1 & \mbox{#2}\\ #3 & \mbox{#4}\end{array} \right.", 4],
+        }
+    }
 }
 
 # ===========================================================================
@@ -258,12 +307,46 @@ for _toc in (DOC_ROOT / "tutorials").glob("*/table_of_content_*.markdown"):
     if _toc.parent.name not in DOC_MODULES:
         _scan_external(_toc)
 
+_scan_internal(SPHINX_INPUT_ROOT / "js_tutorials" / "js_tutorials.markdown")
+for _m in DOC_JS_MODULES:
+    _scan_internal(SPHINX_INPUT_ROOT / "js_tutorials" / _m)
+for _toc in (DOC_ROOT / "js_tutorials").glob("*/js_table_of_contents_*.markdown"):
+    if _toc.parent.name not in DOC_JS_MODULES:
+        _scan_external(_toc)
+
+_scan_internal(SPHINX_INPUT_ROOT / "py_tutorials" / "py_tutorials.markdown")
+for _m in DOC_PY_MODULES:
+    _scan_internal(SPHINX_INPUT_ROOT / "py_tutorials" / _m)
+for _toc in (DOC_ROOT / "py_tutorials").glob("*/py_table_of_contents_*.markdown"):
+    if _toc.parent.name not in DOC_PY_MODULES:
+        _scan_external(_toc)
+
+for _m in CONTRIB_MODULES:
+    _tut_dir = CONTRIB_ROOT / _m / "tutorials"
+    if not _tut_dir.is_dir():
+        continue
+    for _md in list(_tut_dir.rglob("*.markdown")) + list(_tut_dir.rglob("*.md")):
+        try:
+            _head = _md.read_text(encoding="utf-8", errors="replace")[:4000]
+        except OSError:
+            continue
+        _rel = "tutorials_contrib/" + _m + "/" + _md.relative_to(_tut_dir).with_suffix("").as_posix()
+        for _mm in re.finditer(r"\{#([\w-]+)\}", _head):
+            _ANCHOR_TO_DOC[_mm.group(1)] = _rel
+
 # Basename -> srcdir-relative URL index for image lookup, mirroring
 # Doxygen's flat IMAGE_PATH. Walks source trees directly (not the staged
 # tree) because pathlib.rglob in Python <3.13 doesn't follow symlinks.
 _IMAGE_INDEX: dict[str, str] = {}
 _IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".bmp", ".webp"}
-for _img in (DOC_ROOT / "tutorials").rglob("images/*"):
+for _img_tree in (DOC_ROOT / "tutorials", DOC_ROOT / "js_tutorials", DOC_ROOT / "py_tutorials"):
+    for _img in _img_tree.rglob("images/*"):
+        if _img.is_file():
+            _IMAGE_INDEX.setdefault(_img.name, _img.relative_to(DOC_ROOT).as_posix())
+for _img in (DOC_ROOT / "js_tutorials" / "js_assets").glob("*"):
+    if _img.is_file():
+        _IMAGE_INDEX.setdefault(_img.name, _img.relative_to(DOC_ROOT).as_posix())
+for _img in (DOC_ROOT / "images").glob("*"):
     if _img.is_file():
         _IMAGE_INDEX.setdefault(_img.name,
                                 _img.relative_to(DOC_ROOT).as_posix())
@@ -413,19 +496,35 @@ def _read_snippet(rel_path: str, label: str | None) -> tuple[str, str]:
     return "\n".join(lines), lang
 
 
-def _emit_toggles(tabs: list[tuple[str, str]]) -> str:
+def _emit_toggles(tabs: list[tuple[str, str]], indent: str = "") -> str:
+    def _dedent(body: str) -> str:
+        # Fully dedent the tab-item body to column 0. The {tab-item} directive
+        # resets the parser context, so directives (```{code-block}```) must be
+        # at column 0 to be recognised — not at 4-space where CommonMark treats
+        # them as indented code blocks. Using the actual minimum indent of all
+        # non-empty lines (instead of exactly len(indent)) handles the case
+        # where @snippet/@include is indented deeper than @add_toggle (e.g.
+        # 8-space snippet inside a 4-space toggle block).
+        lines = body.split("\n")
+        non_empty = [l for l in lines if l.strip()]
+        if not non_empty:
+            return body
+        min_ind = min(len(l) - len(l.lstrip()) for l in non_empty)
+        if min_ind == 0:
+            return body
+        return "\n".join(l[min_ind:] if l.strip() else l for l in lines)
     if HAVE_SPHINX_DESIGN:
         out = ["", "``````{tab-set}"]
         for lang, body in tabs:
             label = _TOGGLE_LABELS.get(lang, lang.title())
-            out += [f"`````{{tab-item}} {label}", body, "`````"]
+            out += [f"`````{{tab-item}} {label}", _dedent(body), "`````"]
         out += ["``````", ""]
         return "\n".join(out)
     # Fallback: render each toggle as a labeled section.
     out = [""]
     for lang, body in tabs:
         label = _TOGGLE_LABELS.get(lang, lang.title())
-        out += [f"**{label}**", "", body, ""]
+        out += [f"**{label}**", "", _dedent(body), ""]
     return "\n".join(out)
 
 
@@ -439,7 +538,7 @@ def _translate(text: str, docname: str | None = None) -> str:
     #    inserted text is safe from re-processing.
     _verbatim_stash: dict[str, str] = {}
     def _verbatim_save(body: str, inline: bool) -> str:
-        key = f"VERBATIM_{len(_verbatim_stash)}"
+        key = f"VERBATIM_{len(_verbatim_stash)}"
         if inline:
             _verbatim_stash[key] = f"`{body.strip()}`"
         else:
@@ -456,6 +555,18 @@ def _translate(text: str, docname: str | None = None) -> str:
         lambda m: _verbatim_save(m.group("body"), inline=True),
         text)
 
+    # 0b. \htmlonly ... \endhtmlonly → raw HTML block; rewrite relative iframe
+    #     src (../../foo.html) to absolute docs.opencv.org URL so demos load.
+    def _htmlonly_repl(m: re.Match) -> str:
+        body = re.sub(r'src="\.\.\/\.\.\/([\w/.-]+)"',
+                      lambda mm: f'src="{DOXYGEN_BASE_URL}{mm.group(1)}"',
+                      m.group(1))
+        body = re.sub(r'\s*onload="[^"]*"', ' height="700px"', body)
+        return f"\n```{{raw}} html\n{body}\n```\n"
+    text = re.sub(r"^\\htmlonly\s*\n(.*?)\\endhtmlonly\s*$",
+                  _htmlonly_repl, text, flags=re.DOTALL | re.MULTILINE)
+
+
     # 1. Heading anchors: "Title {#name}\n===" (setext) and "## Title {#name}" (ATX).
     #    Strip the anchor from the rendered heading and emit a MyST label
     #    "(name)=" immediately above. Setext converted to ATX for simplicity.
@@ -469,6 +580,15 @@ def _translate(text: str, docname: str | None = None) -> str:
     text = re.sub(
         r"^(?P<hashes>#+)\s+(?P<title>[^\n]+?)\s*\{#(?P<anchor>[\w-]+)\}\s*$",
         lambda m: f"({m.group('anchor')})=\n{m.group('hashes')} {m.group('title')}",
+        text, flags=re.MULTILINE)
+    text = re.sub(
+        r"^(?P<title>[^\n{]+?)\s*\n={3,}\s*$",
+        lambda m: f"## {m.group('title').strip()}",
+        text, flags=re.MULTILINE)
+    # 1c. "N. Title\n---" Setext h2 — CommonMark parses "N. " as a list item, not a heading.
+    text = re.sub(
+        r"^(\d+\.[^\n]+)\n-{3,}\s*$",
+        lambda m: f"## {m.group(1).strip()}",
         text, flags=re.MULTILINE)
 
     # 1b. Convert a trailing setext heading at EOF to ATX. Otherwise
@@ -511,13 +631,146 @@ def _translate(text: str, docname: str | None = None) -> str:
     text = _demote_extra_h1s(text)
 
     # 2. Doxygen LaTeX math markers
+    # 1a-i. Over-indented list markers.
+    #   A bullet marker (-/*/+) followed by 5+ spaces causes CommonMark to use
+    #   marker_col+2 as the continuation indent (the extra spaces beyond 4 are
+    #   treated as content), making the actual text 6+ spaces into the content —
+    #   above the 4-space threshold for indented code blocks.  Normalise to
+    #   exactly 3 spaces after the marker and reduce all continuation lines by
+    #   the same delta so nested structure is preserved.
+    def _normalize_over_indented_markers(src: str) -> str:
+        lines_in = src.split("\n")
+        out: list[str] = []
+        i = 0
+        while i < len(lines_in):
+            m = re.match(r"^([ \t]*)([-*+])( {5,})(.*)", lines_in[i])
+            if m:
+                outer, marker, spaces, content = (
+                    m.group(1), m.group(2), m.group(3), m.group(4))
+                old_col = len(outer) + 1 + len(spaces)
+                new_col = len(outer) + 1 + 3
+                delta = old_col - new_col
+                out.append(f"{outer}{marker}   {content}")
+                i += 1
+                while i < len(lines_in):
+                    line = lines_in[i]
+                    stripped = line.lstrip(" \t")
+                    actual = len(line) - len(stripped)
+                    if not stripped:
+                        out.append(line); i += 1; continue
+                    if actual >= old_col:
+                        out.append(" " * (actual - delta) + stripped); i += 1
+                    else:
+                        break
+            else:
+                out.append(lines_in[i]); i += 1
+        return "\n".join(out)
+    text = _normalize_over_indented_markers(text)
+
+    # 1a-ii. 4-space indented list items directly under a heading.
+    #   Doxygen ignores visual indentation; CommonMark treats 4-space-indented
+    #   lines as indented code blocks.  Strip the 4-space prefix when list items
+    #   immediately follow a heading (with optional blank lines between).
+    text = re.sub(
+        r"(^#{1,6}[ \t][^\n]+\n(?:[ \t]*\n)*)((?:    [ \t]*[-*+][^\n]*\n)+)",
+        lambda m: m.group(1) + re.sub(r"^    ", "", m.group(2), flags=re.MULTILINE),
+        text, flags=re.MULTILINE)
+
+    # 1a-iii. 4-space list items under a plain paragraph line → strip to fix lazy continuation.
+    text = re.sub(
+        r"(^(?![ \t#@`]|-#|[-*+]\s|\d+[.)]\s)[^\n]+\n)((?:    [-*+][ \t][^\n]*\n(?:[ \t]{5,}[^\n]*\n)*)+)",
+        lambda m: m.group(1) + re.sub(r"^    ", "", m.group(2), flags=re.MULTILINE),
+        text, flags=re.MULTILINE)
+
+    # 1b0. \b word → **word** (Doxygen bold macro — single next word only).
+    text = re.sub(r"\\b\s+(\S+)", r"**\1**", text)
+
+    # 1b. @note ... / @see ...  -> MyST admonitions.
+    #     Runs BEFORE math conversion so that \f[...\f] inside a note body is
+    #     still on one logical line and does not create a blank-line terminator
+    #     that would cut the body short.
+    #     Allow optional leading indent and bare @note (body on next line).
+    #     Dedent the body so indented lines don't become code blocks inside
+    #     the directive.
+    _ADMON_KIND = {"note": "note", "see": "seealso", "warning": "warning", "sa": "seealso"}
+    def _admon_repl(m: re.Match) -> str:
+        indent = m.group("indent")
+        kind = _ADMON_KIND[m.group("dir")]
+        raw = m.group("body")
+        lines = raw.split("\n")
+        min_ind = min(
+            (len(l) - len(l.lstrip()) for l in lines if l.strip()), default=0)
+        body = "\n".join(l[min_ind:] for l in lines).strip()
+        return f"\n{indent}:::{{{kind}}}\n{indent}{body}\n{indent}:::\n"
+    text = re.sub(
+        r"^(?P<indent>[ \t]*)@(?P<dir>note|see|warning|sa)[ \t]*\n?(?P<body>.+?)(?=\n[ \t]*\n|\n[ \t]*@[A-Za-z]|\Z)",
+        _admon_repl, text, flags=re.DOTALL | re.MULTILINE)
+
+    # 1c. @param / @return → MyST definition list.
+    def _param_block_repl(m: re.Match) -> str:
+        items: list[list] = []
+        for line in m.group(0).split("\n"):
+            pm = re.match(r"^@param\s+(\S+)\s*(.*)", line)
+            rm = re.match(r"^@return\s*(.*)", line)
+            if pm:
+                items.append([f"`{pm.group(1)}`", [pm.group(2).strip()]])
+            elif rm:
+                items.append(["*(return value)*", [rm.group(1).strip()]])
+            elif items and line.strip():
+                items[-1][1].append(line.strip())
+        def _inline_block_math(s: str) -> str:
+            if re.match(r"^\\f\[.+\\f\]$", s.strip()):
+                return s
+            return re.sub(r"\\f\[(.+?)\\f\]", lambda mm: f"${mm.group(1).strip()}$", s)
+        result = []
+        has_param = False
+        for key, desc_lines in items:
+            desc_lines = [l for l in desc_lines if l]
+            if not desc_lines:
+                continue
+            if key != "*(return value)*":
+                has_param = True
+            entry = f"{key}\n: {_inline_block_math(desc_lines[0])}"
+            for cont in desc_lines[1:]:
+                entry += f"\n  {_inline_block_math(cont)}"
+            result.append(entry)
+        header = "\n**Parameters**\n\n" if has_param else "\n"
+        return header + "\n\n".join(result) + "\n"
+    text = re.sub(
+        r"((?:^@(?:param\s+\S+|return)\s+[^\n]+\n(?:[ \t]+[^\n]+\n)*)+)",
+        _param_block_repl, text, flags=re.MULTILINE)
+
+    # 2. Doxygen LaTeX math markers.
+    #    Block \f[...\f]: consume leading indent and re-emit it on the $$
+    #    fence lines so the block stays inside any enclosing list item and
+    #    the text that follows (at the same indent) is not misread as a code block.
+    #
+    #    Preprocess: when two \f[...\f] blocks are adjacent on the same source
+    #    line (e.g. \end{bmatrix}\f]\f[G_{y}), split them onto separate lines
+    #    and prefix the second \f[ with the line's own leading indent.  Without
+    #    this the primary regex below would convert the first block correctly but
+    #    leave the second \f[ at column 0 in the output; the fallback then emits
+    #    that block at column 0, breaking any enclosing list structure.
+    def _split_adj_math(m: re.Match) -> str:
+        indent = m.group("indent")
+        return m.group(0).replace("\\f]\\f[", f"\\f]\n{indent}\\f[")
+    text = re.sub(r"^(?P<indent>[ \t]*)[^\n]*\\f\]\\f\[",
+                  _split_adj_math, text, flags=re.MULTILINE)
+
+    def _block_math_repl(m: re.Match) -> str:
+        ind = m.group("indent")
+        return f"\n{ind}$$\n{m.group('body').strip()}\n{ind}$$\n"
+    text = re.sub(r"^(?P<indent>[ \t]*)\\f\[(?P<body>.+?)\\f\]",
+                  _block_math_repl, text, flags=re.DOTALL | re.MULTILINE)
+    # Fallback for any \f[...\f] not at line-start (e.g. two adjacent blocks).
     text = re.sub(r"\\f\[(.+?)\\f\]",
                   lambda m: f"\n$$\n{m.group(1).strip()}\n$$\n",
                   text, flags=re.DOTALL)
+    # Inline math.
     text = re.sub(r"\\f\$(.+?)\\f\$", lambda m: f"${m.group(1)}$",
                   text, flags=re.DOTALL)
 
-    # 2b. \bordermatrix{...} is a Plain-TeX macro (not LaTeX), so MathJax
+     # 2b. \bordermatrix{...} is a Plain-TeX macro (not LaTeX), so MathJax
     #     leaves it raw. Convert to a standard `matrix` environment and
     #     translate `\cr` row separators to `\\`. Loses the bracket lines
     #     of bordermatrix but the contents render correctly.
@@ -527,12 +780,20 @@ def _translate(text: str, docname: str | None = None) -> str:
                   + r"\end{matrix}",
         text)
 
+    # 2c. Normalise unknown Pygments lexer names: plaintext/bash/sh → text.
+    text = re.sub(r"^([ \t]*)```plaintext\b", r"\1```text", text, flags=re.MULTILINE)
+    text = re.sub(r"^([ \t]*)```(?:bash|sh)\b", r"\1```text", text, flags=re.MULTILINE)
+
     # 3. @code{.lang} ... @endcode → fenced block. Preserve the indent
     #    so blocks nested under a bullet item stay inside the list; for
     #    col-0 @code keep the legacy .strip() form (byte-identical).
     def _code_repl(m: re.Match) -> str:
         indent = m.group("indent") or ""
         lang = _normalize_lang(m.group("lang") or "")
+        if lang == "m":
+            lang = "objc"
+        if lang == "js":
+            lang = "javascript"
         body = m.group("body")
         if indent:
             body = _textwrap.dedent(body).strip("\n")
@@ -540,8 +801,9 @@ def _translate(text: str, docname: str | None = None) -> str:
                              for line in body.split("\n"))
             return f"\n{indent}```{lang}\n{body}\n{indent}```\n"
         return f"\n```{lang}\n{body.strip()}\n```\n"
+
     text = re.sub(
-        r"^(?P<indent>[ \t]*)@code(?:\{(?P<lang>[^}]*)\})?\s*\n(?P<body>.*?)\n[ \t]*@endcode",
+        r"^(?P<indent>[ \t]*)@code(?:\{(?P<lang>[^}]*)\})?\s*\n(?P<body>.*?)\n?[ \t]*@endcode",
         _code_repl, text, flags=re.DOTALL | re.MULTILINE)
 
     # 3a. \dot ... \enddot → MyST `{graphviz}` fenced directive. Body is
@@ -576,9 +838,9 @@ def _translate(text: str, docname: str | None = None) -> str:
         return f"\n{indent}```{lang}\n{body_indented}\n{indent}```\n"
 
     # 4. @include path  /  @includelineno path
-    #    (line numbering hint is dropped — MyST fenced blocks don't take :linenos:
-    #    and PyData's code-block styling is already legible without it.)
+    #    Indent preserved so code blocks inside list items don't break the list.
     def _include_repl(m: re.Match) -> str:
+        indent = m.group("indent")
         code, lang = _read_snippet(m.group("path"), None)
         return _emit_codeblock(m.group("indent") or "", lang, code)
     text = re.sub(r"^(?P<indent>[ \t]*)@include(?:lineno)?\s+(?P<path>\S+)",
@@ -595,26 +857,42 @@ def _translate(text: str, docname: str | None = None) -> str:
         text, flags=re.MULTILINE)
 
     # 5. @snippet path [Label]
+    # Indent preserved so code blocks inside list items don't break the list.
     def _snippet_repl(m: re.Match) -> str:
+        indent = m.group("indent")
         code, lang = _read_snippet(m.group("path"), m.group("label"))
         return _emit_codeblock(m.group("indent") or "", lang, code)
     text = re.sub(
         r"^(?P<indent>[ \t]*)@snippet\s+(?P<path>\S+)\s+(?P<label>[^\n]+?)\s*$",
         _snippet_repl, text, flags=re.MULTILINE)
 
+    # 5b. @snippetlineno — same as @snippet with :linenos:.
+    def _snippetlineno_repl(m: re.Match) -> str:
+        indent = m.group("indent")
+        code, lang = _read_snippet(m.group("path"), m.group("label"))
+        body = "\n".join(indent + l for l in code.rstrip().split("\n"))
+        return f"\n{indent}```{{code-block}} {lang}\n{indent}:linenos:\n{body}\n{indent}```\n"
+    text = re.sub(r"^(?P<indent>[ \t]*)@snippetlineno\s+(?P<path>\S+)\s+(?P<label>[^\n]+?)\s*$",
+                  _snippetlineno_repl, text, flags=re.MULTILINE)
+
     # 6. @add_toggle_LANG ... @end_toggle  (coalesce runs into one tab-set)
+    #    Capture the leading indent of each toggle block and emit the tab-set
+    #    fence lines at the same indent, so toggles inside list items stay as
+    #    list-item continuation content (where 4-space fences are valid).
+    #    Body content is dedented so code blocks at column 0 inside the
+    #    directive body are parsed correctly by myst-parser.
     def _toggle_collapse(src: str) -> str:
         out, i = [], 0
-        opener = re.compile(r"^\s*@add_toggle_(\w+)\s*$", re.MULTILINE)
+        opener = re.compile(r"^([ \t]*)@add_toggle_(\w+)[ \t]*$", re.MULTILINE)
         while True:
             m = opener.search(src, i)
             if not m:
                 out.append(src[i:]); break
             out.append(src[i:m.start()])
-            tabs, j = [], m.start()
+            block_ind, tabs, j = m.group(1), [], m.start()
             while True:
                 m2 = re.match(
-                    r"\s*@add_toggle_(\w+)\s*\n(.*?)\n\s*@end_toggle\s*\n?",
+                    r"[ \t]*@add_toggle_(\w+)[ \t]*\n(.*?)\n[ \t]*@end_toggle[ \t]*\n?",
                     src[j:], flags=re.DOTALL)
                 if not m2:
                     break
@@ -626,12 +904,78 @@ def _translate(text: str, docname: str | None = None) -> str:
                 j += k.end()
             if not tabs:
                 out.append(src[m.start():m.start() + 1]); i = m.start() + 1; continue
-            out.append(_emit_toggles(tabs))
+            out.append(_emit_toggles(tabs, block_ind))
             i = j
         return "".join(out)
     text = _toggle_collapse(text)
 
-    # 7. @ref name [optional "Display Text"]
+    # 6b. Strip list-item continuation indent stranded after a col-0 tab-set close.
+    def _strip_tabset_continuations(src: str) -> str:
+        lines = src.split("\n")
+        out: list[str] = []
+        i = 0
+        while i < len(lines):
+            line = lines[i]
+            if line == "``````":
+                out.append(line)
+                i += 1
+                while i < len(lines):
+                    ln = lines[i]
+                    if ln.startswith("    "):
+                        out.append(ln[4:])
+                        i += 1
+                    elif not ln.strip():
+                        out.append(ln)
+                        i += 1
+                    else:
+                        break
+            else:
+                out.append(line)
+                i += 1
+        return "\n".join(out)
+    text = _strip_tabset_continuations(text)
+
+    # 7. toctree before @ref so list-item @ref tutorial_* entries aren't converted first
+    def _subpage_list_to_toctree(src: str) -> str:
+        if not src.endswith("\n"):
+            src += "\n"
+        pat = re.compile(
+            r"((?:^[ \t]*-\s+@(?:subpage\s+[\w-]+|ref\s+tutorial_[\w-]+)[^\n]*\n(?:(?:[ \t]*\n)?[ \t]+[^\n]+\n)*)+)",
+            re.MULTILINE)
+        def repl(m: re.Match) -> str:
+            block = m.group(1)
+            entries = re.findall(r"@(?:subpage|ref)\s+([\w-]+)", block)
+            dm = re.search(
+                r"@(?:subpage|ref)\s+[\w-]+[^\n]*\n((?:(?:[ \t]*\n)?[ \t]+[^\n]+\n)*)", block)
+            desc_raw = dm.group(1) if dm and dm.group(1) else ""
+            _groups: list[list[str]] = [[]]
+            for _l in desc_raw.splitlines():
+                if _l.strip():
+                    _groups[-1].append(_l.strip())
+                elif _groups[-1]:
+                    _groups.append([])
+            desc = "\n\n".join(" ".join(g) for g in _groups if g) or None
+            lines = []
+            for e in entries:
+                if e in _ANCHOR_TO_DOC:
+                    lines.append("/" + _ANCHOR_TO_DOC[e])
+                elif e in _ANCHOR_TO_EXTERNAL:
+                    title, url = _ANCHOR_TO_EXTERNAL[e]
+                    lines.append(f"{title} <{url}>")
+                elif e in _TAG_FILENAMES:
+                    title = _TAG_PAGE_TITLES.get(e, e)
+                    lines.append(f"{title} <{DOXYGEN_BASE_URL + _TAG_FILENAMES[e]}>")
+            if not lines:
+                return ""
+            body = "\n".join(lines)
+            result = f"\n```{{toctree}}\n:maxdepth: 1\n\n{body}\n```\n"
+            if desc:
+                result += f"\n{desc}\n"
+            return result
+        return pat.sub(repl, src)
+    text = _subpage_list_to_toctree(text)
+
+    # 7b. @ref name [optional "Display Text"]
     def _ref_repl(m: re.Match) -> str:
         name = m.group("name"); disp = m.group("disp")
         target = _ANCHOR_TO_DOC.get(name)
@@ -643,8 +987,35 @@ def _translate(text: str, docname: str | None = None) -> str:
     text = re.sub(r'@ref\s+(?P<name>[\w:-]+)(?:\s+"(?P<disp>[^"]+)")?',
                   _ref_repl, text)
 
-    # 8. @cite KEY -> [KEY]
-    text = re.sub(r"@cite\s+([\w-]+)", r"[\1]", text)
+    # 7b. cv.Name → [cv.Name](doxygen url) for names in the API index.
+    if _CV_API:
+        def _cvlink_repl(m: re.Match) -> str:
+            url = _CV_API.get(m.group(1))
+            return f'[cv.{m.group(1)}]({url})' if url else m.group(0)
+        _parts = re.split(r'(```.*?```|`[^`\n]+`)', text, flags=re.DOTALL)
+        text = ''.join(
+            p if i % 2 else re.sub(
+                r'(?<!\[)(?<!\()cv\.([A-Za-z][A-Za-z0-9_]*)',
+                _cvlink_repl, p)
+            for i, p in enumerate(_parts))
+
+    # 7c. `cv::Name` inline code → [`cv::Name`](doxygen url).
+    # Tag-file lookup when available; search URL fallback for tutorials-only builds.
+    def _cvcodelink_repl(m: re.Match) -> str:
+        full = m.group("name")
+        last = full.split("::")[-1]
+        url = (_CV_API.get(full) or _CV_API.get(last)
+               or f"{DOXYGEN_BASE_URL}search.html?q={last}")
+        return f'[`{full}`]({url})'
+    text = re.sub(
+        r'`{1,3}(?P<name>cv::[A-Za-z_][\w:]*)`{1,3}',
+        _cvcodelink_repl, text)
+
+    # 8. @cite KEY → [[KEY]](link to docs.opencv.org citelist)
+    text = re.sub(
+        r"@cite\s+([\w-]+)",
+        lambda m: f"[[{m.group(1)}]](https://docs.opencv.org/5.x/d0/de3/citelist.html#CITEREF_{m.group(1)})",
+        text)
 
     # 8b. @youtube{ID}  -> responsive embed (raw HTML, passed through by MyST).
     text = re.sub(
@@ -682,8 +1053,6 @@ def _translate(text: str, docname: str | None = None) -> str:
             re.MULTILINE)
         def repl(m: re.Match) -> str:
             desc = _textwrap.dedent(m.group("desc")).strip("\n")
-            # All-blank description (e.g. `- @subpage X\n\n##### Section`):
-            # don't rewrite, or we'd accumulate extra blank lines.
             if not desc.strip():
                 return m.group(0)
             return f"{m.group('bullet')}\n\n{desc}\n\n"
@@ -696,10 +1065,14 @@ def _translate(text: str, docname: str | None = None) -> str:
     #    `- <module>. @subpage <id>` form used by contrib_root.markdown.
     def _subpage_list_to_toctree(src: str) -> str:
         pat = re.compile(
-            r"((?:^[ \t]*-\s+[^\n]*?@subpage\s+[\w-]+(?:[^\n]*)\n)+)",
+            r"((?:^[ \t]*-\s+@subpage\s+[\w-]+[^\n]*\n(?:(?:[ \t]*\n)?[ \t]+[^\n]+\n)*)+)",
             re.MULTILINE)
         def repl(m: re.Match) -> str:
-            entries = re.findall(r"@subpage\s+([\w-]+)", m.group(1))
+            block = m.group(1)
+            entries = re.findall(r"@subpage\s+([\w-]+)", block)
+            dm = re.search(
+                r"@subpage\s+[\w-]+[^\n]*\n(?:(?:[ \t]*\n)?([ \t]+[^\n]+)\n)?", block)
+            desc = dm.group(1).strip() if dm and dm.group(1) else None
             lines = []
             for e in entries:
                 if e in _ANCHOR_TO_DOC:
@@ -710,7 +1083,10 @@ def _translate(text: str, docname: str | None = None) -> str:
             if not lines:
                 return ""
             body = "\n".join(lines)
-            return f"\n```{{toctree}}\n:maxdepth: 1\n\n{body}\n```\n"
+            result = f"\n```{{toctree}}\n:maxdepth: 1\n\n{body}\n```\n"
+            if desc:
+                result += f"\n{desc}\n"
+            return result
         return pat.sub(repl, src)
     text = _subpage_list_to_toctree(text)
 
@@ -718,10 +1094,30 @@ def _translate(text: str, docname: str | None = None) -> str:
     text = re.sub(r"^@(?:next|prev)_tutorial\{[^}]*\}\s*$", "",
                   text, flags=re.MULTILINE)
 
-    # 11. @tableofcontents / [TOC] -> drop. PyData's right sidebar
-    #     already shows the per-page outline.
-    text = re.sub(r"^(?:@tableofcontents|\[TOC\])\s*$", "",
+    # 10a. col-8 -# under a col-0 parent: move to col 5 (avoids CommonMark code-block threshold).
+    def _fix_nested_ordered(src: str) -> str:
+        lines = src.split("\n")
+        out = []
+        for i, line in enumerate(lines):
+            if re.match(r"^        -#\s", line):
+                nearest = ""
+                for j in range(i - 1, max(i - 40, -1), -1):
+                    m = re.match(r"^([ \t]*)-", lines[j])
+                    if m and len(m.group(1)) < 8:
+                        nearest = lines[j]
+                        break
+                out.append(line if (nearest and re.match(r"^    ", nearest)) else "     " + line[8:])
+            else:
+                out.append(line)
+        return "\n".join(out)
+    text = _fix_nested_ordered(text)
+
+    # 10b. Doxygen ordered-list marker: "-#" -> "1."
+    text = re.sub(r"^([ \t]*)-#([ \t]+)", r"\g<1>1.\g<2>",
                   text, flags=re.MULTILINE)
+
+    # 11. @tableofcontents -> drop (PyData right sidebar replaces it)
+    text = re.sub(r"^(?:@tableofcontents|\[TOC\])\s*$", "", text, flags=re.MULTILINE)
 
     # 11b. @cond NAME ... @endcond  -> strip just the markers; if the
     #      enclosed @subpage points to a disabled module it gets dropped
@@ -733,6 +1129,8 @@ def _translate(text: str, docname: str | None = None) -> str:
     text = re.sub(r"^@endcond\s*$", "", text, flags=re.MULTILINE)
     text = re.sub(r"^[ \t]*@parblock\s*$", "", text, flags=re.MULTILINE)
     text = re.sub(r"^[ \t]*@endparblock\s*$", "", text, flags=re.MULTILINE)
+
+    text = re.sub(r"</?center>", "", text, flags=re.IGNORECASE)
 
     # 11c. @anchor NAME  ->  MyST label "(NAME)=" so the following block
     #      element (typically a heading) becomes the cross-reference target.
@@ -790,6 +1188,32 @@ def _translate(text: str, docname: str | None = None) -> str:
         lambda m: m.group(1) + re.sub(r"^    ", "", m.group(2), flags=re.MULTILINE),
         text, flags=re.MULTILINE)
 
+    # 11h. Escape C++ template <Type> in paragraph text; skip fenced code blocks.
+    _cpp_tpl_re = re.compile(r'\b(\w+)<([A-Za-z_][\w:, *&]*?)>')
+    _lines_out: list[str] = []
+    _in_fence = False
+    for _ln in text.splitlines(keepends=True):
+        if re.match(r'^\s*```', _ln):
+            _in_fence = not _in_fence
+        if not _in_fence:
+            _ln = _cpp_tpl_re.sub(lambda m: f'{m.group(1)}&lt;{m.group(2)}&gt;', _ln)
+        _lines_out.append(_ln)
+    text = "".join(_lines_out)
+
+    # 11g. Wrap bare http(s) URLs in <> for CommonMark autolink; skip [text](url).
+    def _autolink_repl(m: re.Match) -> str:
+        if m.group(1):
+            return m.group(1)
+        url = m.group(0)
+        trail = ""
+        while url and url[-1] in ".,;:!?)":
+            trail = url[-1] + trail
+            url = url[:-1]
+        return f"<{url}>{trail}" if url else m.group(0)
+    text = re.sub(
+        r'(\[[^\]]*\]\([^)]*\))|(?<!\]\()(?<![<"])https?://\S+',
+        _autolink_repl, text)
+
     # Depth-relative prefix from the current doc back to the site root,
     # used to point `<img src>` at `<output>/contrib_modules/...` files
     # that html_extra_path publishes (Sphinx can't pathto-rewrite URLs
@@ -798,9 +1222,6 @@ def _translate(text: str, docname: str | None = None) -> str:
     _contrib_url_prefix = ("../" * _depth) + "contrib_modules/"
 
     def _emit_contrib_img(rel_url: str, alt: str) -> str:
-        """Raw-HTML <img> (or <figure> if alt is 'Figure ...') for a
-        contrib_modules/<rel> path — bypasses Sphinx's image processing
-        so the depth-relative URL survives to the rendered HTML."""
         src = _contrib_url_prefix + rel_url
         img = f'<img src="{src}" alt="{alt}"/>'
         if alt.startswith("Figure "):
@@ -829,10 +1250,25 @@ def _translate(text: str, docname: str | None = None) -> str:
             if hit.startswith("contrib_modules/"):
                 return _emit_contrib_img(hit[len("contrib_modules/"):], alt)
             return f'![{alt}](/{hit})'
+        if docname and docname.startswith("js_tutorials/"):
+            return m.group(0)
         return f'![{alt}](/tutorials/others/images/{rel})'
     text = re.sub(
         r'!\[(?P<alt>[^\]]*)\]\((?:[^)]*?/)?images/(?P<rel>[^)]+)\)',
         _img_repl, text)
+
+    # 12a2. "pics/foo.png" — contrib modules use pics/ instead of images/.
+    def _pics_img_repl(m: re.Match) -> str:
+        alt = m.group("alt")
+        hit = _IMAGE_INDEX.get(pathlib.Path(m.group("rel")).name)
+        if hit:
+            if hit.startswith("contrib_modules/"):
+                return _emit_contrib_img(hit[len("contrib_modules/"):], alt)
+            return f'![{alt}](/{hit})'
+        return m.group(0)
+    text = re.sub(
+        r'!\[(?P<alt>[^\]]*)\]\(pics/(?P<rel>[^)]+)\)',
+        _pics_img_repl, text)
 
     # 12b. Cross-tree image refs for contrib pages (Doxygen IMAGE_PATH
     #      flattening): `pics/foo.jpg` → <m>/doc/pics/, `<m>/samples/...`,
@@ -880,6 +1316,70 @@ def _translate(text: str, docname: str | None = None) -> str:
 
     # 13. Wrap the Original-author/Compatibility front-matter table
     #     in a `.opencv-meta-table` div so custom.css can style it.
+    # 12b. Bare image filenames with no directory prefix (e.g. "psf.png") that
+    #      Doxygen resolves via IMAGE_PATH but Sphinx cannot find as-is.
+    #      Redirect to images/<name> when the file lives in the doc's own
+    #      images/ sibling, otherwise fall back to the global index.
+    def _bare_img_repl(m: re.Match) -> str:
+        rel = m.group("rel")
+        if docname:
+            local = DOC_ROOT / pathlib.Path(docname).parent / "images" / rel
+            if local.is_file():
+                return f'{m.group("pre")}images/{rel})'
+        hit = _IMAGE_INDEX.get(rel)
+        if hit:
+            return f'{m.group("pre")}/{hit})'
+        return m.group(0)
+    text = re.sub(
+        r'(?P<pre>!\[[^\]]*\]\()(?P<rel>[A-Za-z0-9_.-]+\.[A-Za-z]{2,4})\)',
+        _bare_img_repl, text)
+
+    # 12c. Standalone ![Caption](path) → {figure} so alt text is a visible caption.
+    text = re.sub(
+        r"^([ \t]*)!\[(?P<alt>[^\]]+)\]\((?P<path>[^)\n]+)\)[ \t]*$",
+        lambda m: (
+            f"\n{m.group(1)}```{{figure}} {m.group('path')}\n"
+            f"{m.group(1)}{m.group('alt').strip()}\n"
+            f"{m.group(1)}```\n"
+        ),
+        text, flags=re.MULTILINE)
+
+    # 12d. Doxygen ^ rowspan cell → merge into row above via <hr class="cv-rowdiv">.
+    def _merge_caret_rows(src: str) -> str:
+        lines = src.split("\n")
+        out: list[str] = []
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith("|") and "|" in stripped[1:]:
+                cells = [c.strip() for c in stripped.strip("|").split("|")]
+                if "^" in cells:
+                    prev_idx = next(
+                        (k for k in range(len(out) - 1, -1, -1)
+                         if out[k].strip().startswith("|") and
+                            not re.match(r"^\|[\s|:-]+\|$", out[k].strip())),
+                        None)
+                    if prev_idx is not None:
+                        prev_cells = [c.strip() for c in
+                                      out[prev_idx].strip().strip("|").split("|")]
+                        merged = []
+                        for j, cell in enumerate(cells):
+                            pv = prev_cells[j] if j < len(prev_cells) else ""
+                            if cell == "^":
+                                merged.append(pv)
+                            else:
+                                sep = '<hr class="cv-rowdiv">'
+                                merged.append(f"{pv}{sep}{cell}" if pv else cell)
+                        out[prev_idx] = "| " + " | ".join(merged) + " |"
+                        continue
+            out.append(line)
+        return "\n".join(out)
+    text = _merge_caret_rows(text)
+
+    # 13. Front-matter table: OpenCV tutorials use the "| -: | :- |"
+    #     alignment pattern for the Original-author/Compatibility block.
+    #     Wrap it in a {div} carrying .opencv-meta-table so custom.css
+    #     can pin the rounded card + label-column styling without us
+    #     modifying the .markdown source.
     def _wrap_front_matter(src: str) -> str:
         pat = re.compile(
             r"(^\|[^\n]*\|[ \t]*\n"     # header row (often empty)
@@ -938,20 +1438,32 @@ def _translate(text: str, docname: str | None = None) -> str:
 
 
 def _source_read(app, docname, source):
-    # Translate any tutorial doc — the root index, everything under an enabled
-    # main module, and (when staged) everything under an enabled contrib module.
     if not (docname.startswith("tutorials/")
-            or docname.startswith("tutorials_contrib/")):
+            or docname.startswith("tutorials_contrib/")
+            or docname.startswith("js_tutorials/")
+            or docname.startswith("py_tutorials/")):
         return
     text = source[0]
-    # On the master doc, append `- @subpage tutorial_contrib_root` so the
-    # contrib site appears in the unified left sidebar without modifying
-    # opencv/doc/tutorials/tutorials.markdown on disk.
     if (docname == "tutorials/tutorials"
             and CONTRIB_MODULES
             and "tutorial_contrib_root" in _ANCHOR_TO_DOC):
         text = text.rstrip() + "\n\n- @subpage tutorial_contrib_root\n"
     source[0] = _translate(text, docname)
+    if docname == "tutorials/tutorials" and DOC_JS_MODULES:
+        source[0] += (
+            "\n\n```{toctree}\n:maxdepth: 1\n:caption: JavaScript Tutorials\n\n"
+            "/js_tutorials/js_tutorials\n```\n"
+        )
+    if docname == "tutorials/tutorials" and DOC_PY_MODULES:
+        source[0] += (
+            "\n\n```{toctree}\n:maxdepth: 1\n:caption: Python Tutorials\n\n"
+            "/py_tutorials/py_tutorials\n```\n"
+        )
+    if docname == "tutorials/tutorials" and CONTRIB_MODULES:
+        source[0] += (
+            "\n\n```{toctree}\n:maxdepth: 1\n:caption: Contrib Tutorials\n\n"
+            "/tutorials_contrib/contrib_root\n```\n"
+        )
 
 
 def setup(app):
