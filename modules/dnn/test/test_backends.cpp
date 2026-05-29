@@ -394,7 +394,13 @@ TEST_P(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
 
 TEST_P(DNNTestNetwork, YuNet)
 {
-    processNet("dnn/onnx/models/yunet-202605.onnx", "", Size(320, 320));
+    double l1 = 0.0, lInf = 0.0;
+    if (target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16)
+    {
+        l1 = 0.01;
+        lInf = 0.05;
+    }
+    processNet("dnn/onnx/models/yunet-202605.onnx", "", Size(320, 320), "", l1, lInf);
     expectNoFallbacksFromIE(net);
 }
 
