@@ -57,7 +57,11 @@ html[data-theme="dark"] .bd-article-container a:hover { color: #6cb6ff !importan
 .opencv-meta-table .pst-scrollable-table-container { margin: 0 !important; padding: 0 !important; }
 .opencv-meta-table table { margin-bottom: 0 !important; }
 .opencv-meta-table + p,
-div.opencv-meta-table + p { margin-top: 1.5rem !important; }
+.opencv-meta-table + ul,
+.opencv-meta-table + ol,
+div.opencv-meta-table + p,
+div.opencv-meta-table + ul,
+div.opencv-meta-table + ol { margin-top: 1.5rem !important; }
 .opencv-meta-table .pst-scrollable-table-container,
 .opencv-meta-table table,
 table.opencv-meta-table {
@@ -95,6 +99,12 @@ table.opencv-meta-table tr:last-child td { border-bottom: none; }
 table.opencv-meta-table td:last-child { border-right: none; }
 .opencv-meta-table table thead,
 table.opencv-meta-table thead { display: none; }
+.opencv-meta-table td hr.cv-rowdiv {
+    margin: 4px -1rem;
+    border: none;
+    border-top: 1px solid var(--pst-color-border);
+    opacity: 1;
+}
 
 html[data-theme="dark"] .opencv-meta-table table,
 html[data-theme="dark"] table.opencv-meta-table {
@@ -418,6 +428,19 @@ dl.cpp.function .sig-prename.descclassname { color: var(--pst-color-text-muted);
 /* --- MathJax inline alignment tweak ----------------------------------- */
 mjx-container.MathJax:not([display="true"]) { vertical-align: -0.15em !important; }
 
+/* --- Side-by-side images ---------------------------------------------- */
+/* When a paragraph contains multiple consecutive <img> tags (Doxygen's
+   pattern for showing two images horizontally — e.g. py_photo's chromatic
+   aberration "before/after" examples), constrain each image's width so
+   they fit on one row instead of stacking. */
+.bd-content p:has(img + img) img {
+    max-width: 49%;
+    height: auto;
+    display: inline-block;
+    vertical-align: top;
+}
+.bd-content p img + img { margin-left: 0.25rem; }
+
 /* --- Copy-to-clipboard button -----------------------------------------
  * Provided by the `sphinx-copybutton` extension, which injects
  * `<button class="copybtn">` into every `div.highlight > pre` at runtime
@@ -505,4 +528,540 @@ html[data-theme="dark"] button.copybtn.success {
 /* On touch devices the hover-reveal is invisible — keep it shown. */
 @media (max-width: 768px) {
     button.copybtn { opacity: 1 !important; }
+}
+
+/* --- Class collaboration diagram (.opencv-coll-graph) ------------------- */
+/* The per-class stub embeds the SVG that the legacy Doxygen HTML build
+   rendered (see _find_collaboration_svg in conf.py). Constrain it so a wide
+   diagram never overflows the content column, and keep it left-aligned to
+   match the reference docs.opencv.org class-page layout. */
+/* Two theme variants are emitted (conf.py): a light SVG (native Doxygen, with
+   a transparent backdrop) and a dark SVG (recoloured light-on-dark, also
+   transparent backdrop). They carry the theme's native `.only-light` /
+   `.only-dark` classes, so pydata-sphinx-theme shows exactly one per colour
+   mode and exempts the dark one from its forced-white image background. We
+   only need to size them here — no `display`/`filter` rules, which would
+   fight the theme's `!important` swap. */
+/* Class-only selector: the diagram is inlined as <svg> at build-finished
+   (conf.py) so its links work, so this must match <svg>, not just <img>. */
+.opencv-coll-graph {
+    /* Centre small diagrams in the column. Margin-auto needs a block-level
+       element to work. */
+    display: block;
+    margin: 1rem auto 1.5rem;
+
+    /* Render at the SVG's NATIVE intrinsic size. Doxygen / Graphviz already
+       sized each diagram so the text is readable — we just honour that.
+       `width: auto` + `height: auto` keep the aspect ratio. */
+    width: auto;
+    height: auto;
+
+    /* Crucially NO `max-width: 100%` and NO `max-height: …` here. Those caps
+       used to squash wide diagrams (e.g. cv::NAryMatIterator) down to the
+       content-column width — and once a graph is shrunk uniformly, every
+       label inside it shrinks proportionally and becomes illegible. By
+       removing the caps the diagram keeps its native size; small diagrams
+       fit naturally, large ones overflow into the scrollable wrapper below. */
+}
+
+/* The Sphinx `<p>` that wraps the inlined SVG becomes the horizontal-scroll
+   container. So:
+   * A SMALL diagram (narrower than the column) just sits at native size,
+     centred by the margin:auto above — `text-align: center` keeps it
+     centred for browsers that handle inline svg as inline.
+   * A WIDE diagram (e.g. NAryMatIterator at ~580pt ≈ 770px, or anything
+     larger than the column) overflows to the right, and `overflow-x: auto`
+     exposes a horizontal scrollbar instead of clipping or downscaling.
+   We DON'T touch the `<p>`'s vertical sizing, so tall diagrams still flow
+   normally and push the rest of the content down — they just don't squash. */
+.bd-content p:has(> svg.opencv-coll-graph),
+.bd-content p:has(> img.opencv-coll-graph) {
+    overflow-x: auto;
+    max-width: 100%;
+    text-align: center;
+}
+
+/* --- Clickable enum synopsis (.opencv-enum-synopsis) -------------------- */
+/* The class-page enum block is emitted by _enum_synopsis_html() as raw HTML
+   that uses the Pygments-cpp span classes (`k` keyword, `n` name, `o`
+   operator, `p` punctuation, …). Wrapping it in `.highlight-cpp .highlight`
+   makes Sphinx's existing code-block CSS (background, padding, monospace)
+   apply automatically — we don't have to re-style the block itself. Only
+   the inner anchors need explicit colouring so the names stand out as links
+   instead of inheriting the dark `.n` (identifier) colour. */
+/* Match the exact hex the body uses for every other link so the enum
+   names sit in the same blue palette as `cv::Mat` / `cv::KeyPoint` text
+   links elsewhere on the page. No underline, just the colour. */
+.opencv-enum-synopsis a.opencv-enum-link {
+    color: #0969da !important;
+    text-decoration: none;
+    border-radius: 2px;
+}
+.opencv-enum-synopsis a.opencv-enum-link:hover {
+    color: #0550ae !important;          /* matches `.bd-content a:hover` */
+}
+html[data-theme="dark"] .opencv-enum-synopsis a.opencv-enum-link {
+    color: #539bf5 !important;          /* matches the dark body-link rule */
+}
+html[data-theme="dark"] .opencv-enum-synopsis a.opencv-enum-link:hover {
+    color: #6cb6ff !important;
+}
+
+/* The Member Enumeration Documentation block has the same synopsis as a
+   plain Pygments code block (no `<a>` wrappers). Paint its identifiers
+   with the same hex so the two sections look identical. */
+section#member-enumeration-documentation .highlight-cpp .n {
+    color: #0969da !important;
+}
+html[data-theme="dark"] section#member-enumeration-documentation .highlight-cpp .n {
+    color: #539bf5 !important;
+}
+
+/* (Legacy) Anchor target hidden in the detail section. Empty inline spans
+   used to live here before the per-row layout below replaced them; kept for
+   pages that still carry the old markup. */
+.opencv-enum-target {
+    scroll-margin-top: 5rem;
+}
+
+/* --- Member Enumeration Documentation: per-value detail list ----------- */
+/* Each enum becomes a heading + a `<dl>` where every value is its own row.
+   This is visually distinct from the code-block synopsis at the top of the
+   page, so navigating from a Public Types link feels like a real jump. Each
+   `<dt>` carries an `id="_CPPv4…E"` anchor so clicks land on the specific
+   value, not just the top of the enum block. */
+.opencv-enum-heading {
+    margin: 1.5rem 0 0.5rem;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--pst-color-text-base);
+    scroll-margin-top: 5rem;        /* keep below the sticky navbar */
+}
+.opencv-enum-heading .opencv-enum-name {
+    color: #0969da;
+    font-family: var(--pst-font-family-monospace);
+}
+html[data-theme="dark"] .opencv-enum-heading .opencv-enum-name {
+    color: #539bf5;
+}
+.opencv-enum-detail {
+    margin: 0 0 1.5rem;
+    padding: 0;
+}
+.opencv-enum-detail dt {
+    /* card-style row so each enumerator is visually a clear entry, not just
+       another line of code. */
+    padding: 0.5rem 0.8rem;
+    margin-top: 0.5rem;
+    background: var(--pst-color-surface);
+    border-left: 3px solid #0969da;
+    border-radius: 0 4px 4px 0;
+    font-family: var(--pst-font-family-monospace);
+    font-size: 0.9rem;
+    /* scroll-margin-top so a URL-hash landing on this row sits below the
+       sticky navbar instead of behind it. */
+    scroll-margin-top: 5rem;
+}
+html[data-theme="dark"] .opencv-enum-detail dt {
+    border-left-color: #539bf5;
+}
+.opencv-enum-detail dt .opencv-enum-name {
+    color: #0969da;
+}
+html[data-theme="dark"] .opencv-enum-detail dt .opencv-enum-name {
+    color: #539bf5;
+}
+.opencv-enum-detail dt .opencv-enum-init {
+    color: var(--pst-color-text-muted);
+    font-weight: normal;
+}
+.opencv-enum-detail dd {
+    margin: 0.25rem 0 0 1.5rem;
+    color: var(--pst-color-text-muted);
+}
+/* Subtle target highlight: when the URL hash matches a row, fade it in so
+   the user sees exactly where they landed. */
+.opencv-enum-detail dt:target {
+    background: color-mix(in srgb, var(--pst-color-link) 12%, transparent);
+    transition: background 0.6s ease-out;
+}
+/* The inner `<span class="n">` carries Pygments' identifier colour; the
+   anchor's colour above should win, but be explicit to defeat any theme
+   override on `.highlight .n`. */
+.opencv-enum-synopsis a.opencv-enum-link > span.n {
+    color: inherit !important;
+}
+/* Soft scroll-anchor padding so when a shared URL hash lands here, the line
+   isn't flush against the site header — gives a bit of breathing room. */
+.opencv-enum-synopsis a.opencv-enum-link {
+    scroll-margin-top: 4rem;
+}
+
+/* --- "On this page" TOC: C++ domain entries ---------------------------- */
+/* Breathe's per-member directives register C++ domain objects, so their
+   TOC entries arrive wrapped in <code class="literal"> pills — unlike the
+   plain section entries. Strip the pill so each reads as an ordinary,
+   clickable TOC link that picks up the nav-link colour (and the accent
+   highlight on the active/hovered entry) like its siblings. */
+.toc-entry a.nav-link code,
+.bd-toc-nav a.nav-link code,
+.toc-entry a.nav-link code.literal,
+.bd-toc-nav a.nav-link code.literal {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    color: inherit !important;
+    font-size: inherit !important;
+    font-weight: inherit !important;
+}
+/* ===========================================================================
+ * API reference — card-style tables (classes, typedefs, functions, enums)
+ * ===========================================================================
+*/
+
+table.api-reference-table {
+    display: block;
+    width: 100%;
+    border: none;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 0.5rem 0 1rem;
+    padding: 8px !important;
+    border-radius: 10px;
+    background: #f0f2f5 !important;
+}
+
+html[data-theme="dark"] table.api-reference-table {
+    background: #111622 !important;
+}
+
+table.api-reference-table thead {
+    display: none  !important;
+}
+
+table.api-reference-table tbody {
+    display: block;
+}
+
+/* --- Card row: clean outline, uniform background, border-only hover ------- */
+table.api-reference-table tbody tr,
+table.api-reference-table tbody tr:nth-child(even),
+table.api-reference-table tbody tr:nth-child(odd) {
+    display: block;
+    margin-bottom: 6px !important;
+    padding: 10px 14px !important;
+    border-radius: 6px;
+    border: 1px solid var(--pst-color-border, #d0d7de) !important;
+    background: #ffffff !important;
+    transition: border-color 100ms ease;
+}
+
+table.api-reference-table tbody tr:last-child {
+    margin-bottom: 0 !important;
+}
+
+/* Hover effect modifies the border ONLY — background remains perfectly locked */
+table.api-reference-table tbody tr:hover {
+    border-color: var(--pst-color-link, #0969da) !important;
+    background: #ffffff !important;
+}
+
+/* Dark theme card settings */
+html[data-theme="dark"] table.api-reference-table tbody tr,
+html[data-theme="dark"] table.api-reference-table tbody tr:nth-child(even),
+html[data-theme="dark"] table.api-reference-table tbody tr:nth-child(odd) {
+    background: #1a2234 !important; /* "Little bluish" dark theme cards */
+    border-color: #2d3748 !important;
+}
+
+html[data-theme="dark"] table.api-reference-table tbody tr:hover {
+    border-color: #58a6ff !important;
+    background: #1a2234 !important;
+}
+
+/* --- Cells: block layout, zero internal borders -------------------------- */
+table.api-reference-table tbody tr td {
+    display: block;
+    border: none !important;
+    padding: 0 !important;
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+table.api-reference-table tbody tr td > p {
+    margin: 0;
+    background: transparent !important;
+}
+
+/* --- Hide empty description cells ---------------------------------------- */
+table.api-reference-table tbody tr td:not(:first-child):empty,
+table.api-reference-table tbody tr td:not(:first-child):has(> p:empty:only-child) {
+    display: none  !important;
+}
+
+/* --- Title cell (class/function name) ------------------------------------ */
+table.api-reference-table tbody tr td:first-child {
+    font-size: 0.95rem;
+    font-weight: 500;
+    font-family: 'JetBrains Mono', var(--pst-font-family-monospace-system);
+    margin-bottom: 4px;
+    line-height: 1.4;
+}
+
+/* FIXED: Aggressively strips out the inner gray theme-strip behind the text strings */
+table.api-reference-table tbody tr td:first-child,
+table.api-reference-table tbody tr td:first-child * {
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+/* Keywords like "class", "typedef" — muted, not clickable */
+table.api-reference-table tbody tr td:first-child {
+    color: var(--pst-color-text-muted, #656d76) !important;
+}
+
+html[data-theme="dark"] table.api-reference-table tbody tr td:first-child {
+    color: #8b949e !important;
+}
+
+table.api-reference-table tbody tr td a,
+table.api-reference-table tbody tr td a:link,
+table.api-reference-table tbody tr td a:visited {
+    color: var(--pst-color-link, #0969da) !important;
+    text-decoration: none !important;
+    font-weight: 500 !important;
+}
+
+table.api-reference-table tbody tr td:first-child a:hover {
+    text-decoration: underline !important;
+}
+
+html[data-theme="dark"] table.api-reference-table tbody tr td a,
+html[data-theme="dark"] table.api-reference-table tbody tr td a:link,
+html[data-theme="dark"] table.api-reference-table tbody tr td a:visited,
+html[data-theme="dark"] table.api-reference-table tbody tr td a:hover,
+html[data-theme="dark"] table.api-reference-table tbody tr td a:active {
+    color: #ffffff !important;
+}
+
+/* Make `<code>` inside a link inherit the link color (and drop its inline-code
+ * background/border/padding). Without this, the `td:not(:first-child) code`
+ * rule below paints the visible link text dark — which is what makes
+ * Function and Variable Name links (which live in column 2 and are wrapped
+ * `<a><code>name</code></a>`) appear "black" instead of blue. */
+table.api-reference-table tbody tr td a > code,
+table.api-reference-table tbody tr td a > code * {
+    color: inherit !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    font-size: inherit !important;
+}
+
+/* When description is empty, collapse the bottom margin on the title */
+table.api-reference-table tbody tr td:first-child:last-child,
+table.api-reference-table tbody tr:has(> td:not(:first-child):empty) td:first-child,
+table.api-reference-table tbody tr:has(> td:not(:first-child):has(> p:empty:only-child)) td:first-child {
+    margin-bottom: 0 !important;
+}
+
+/* --- Description cell ---------------------------------------------------- */
+table.api-reference-table tbody tr td:not(:first-child) {
+    color: var(--pst-color-text-muted, #656d76);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    background: transparent !important;
+}
+
+/* FIXED: Explicitly force inner paragraphs inside descriptions to drop background gray bands */
+table.api-reference-table tbody tr td:not(:first-child) p {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+html[data-theme="dark"] table.api-reference-table tbody tr td:not(:first-child) {
+    color: #8b949e;
+}
+
+html[data-theme="dark"] table.api-reference-table tbody tr:hover td:not(:first-child) {
+    color: #ffffff !important;
+}
+
+table.api-reference-table tbody tr td:not(:first-child) code {
+    color: var(--pst-color-text, #24292f);
+    background: var(--pst-color-surface, transparent);
+    padding: 0 0.2rem;
+    border-radius: 3px;
+    font-size: 0.88em;
+}
+
+html[data-theme="dark"] table.api-reference-table tbody tr td:not(:first-child) code {
+    color: #c9d1d9;
+    background: #2d333b;
+}
+
+
+/* ===========================================================================
+ * Typedef table — single-line compact cards
+ * ===========================================================================
+*/
+table.api-typedef-table {
+    display: block !important;
+    width: 100%;
+    border: none;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 0.5rem 0 1rem;
+    padding: 8px !important;
+    background: #f0f2f5 !important; /* Outer container frame */
+    border-radius: 10px;
+}
+
+html[data-theme="dark"] table.api-typedef-table {
+    background: #111622 !important;
+}
+
+/* FIXED: Explicitly hide the headers that were breaking the layout grid */
+table.api-typedef-table thead {
+    display: none !important;
+}
+
+table.api-typedef-table tbody {
+    display: block !important;
+    width: 100% !important;
+}
+
+/* Converted into a clean, justified flex container row */
+table.api-typedef-table tbody tr,
+table.api-typedef-table tbody tr:nth-child(even),
+table.api-typedef-table tbody tr:nth-child(odd) {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important; /* Centers both columns relative to the card container */
+    gap: 32px !important;               /* Controls the distance between the two text items */
+    padding: 8px 12px !important;
+    margin-bottom: 4px !important;
+    background: #ffffff !important;
+    border: 1px solid var(--pst-color-border, #d0d7de) !important;
+    border-radius: 6px;
+    transition: border-color 100ms ease;
+}
+
+table.api-typedef-table tbody tr:last-child {
+    margin-bottom: 0 !important;
+}
+
+table.api-typedef-table tbody tr:hover {
+    border-color: var(--pst-color-link, #0969da) !important;
+}
+
+table.api-typedef-table tbody tr:hover td,
+table.api-typedef-table tbody tr:hover td * {
+    border-color: #58a6ff !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+}
+
+html[data-theme="dark"] table.api-typedef-table tbody tr,
+html[data-theme="dark"] table.api-typedef-table tbody tr:nth-child(even),
+html[data-theme="dark"] table.api-typedef-table tbody tr:nth-child(odd) {
+    background: #1a2234 !important;
+    border-color: #2d3748 !important;
+}
+
+html[data-theme="dark"] table.api-typedef-table tbody tr:hover {
+    border-color: #58a6ff !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+}
+
+table.api-typedef-table tbody tr td {
+    display: block !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    font-family: 'JetBrains Mono', var(--pst-font-family-monospace-system);
+    font-size: 0.9rem;
+    flex: 1 !important;
+    max-width: 45%;
+}
+
+/* FIXED: Target cells explicitly by index to prevent selector blending */
+
+/* Column 1: Type declaration (e.g., Vec<uchar, 2>) — Left side alignment */
+table.api-typedef-table tbody tr td:nth-child(1) {
+    color: var(--pst-color-text-muted, #656d76) !important;
+    font-weight: 400;
+    text-align: left  !important;
+}
+
+table.api-typedef-table tbody tr td:nth-child(1) * {
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(1) {
+    color: #8b949e !important;
+}
+
+/* Column 2: Alias Name (e.g., Vec2b) — Pushed to the right side.
+ * Normal weight (not bold) per user spec; the `<code>` wrapper that the
+ * MyST link emits (`[`cv::Vec2b`](…)` → `<a><code>cv::Vec2b</code></a>`)
+ * carries the theme's default code background + border, which would draw
+ * an unwanted pill around the title — strip both, and force the code to
+ * inherit the link color so the cv:: text stays a clean blue / white. */
+table.api-typedef-table tbody tr td:nth-child(2) {
+    color: var(--pst-color-link, #0969da) !important;
+    font-weight: 400 !important;
+    text-align: left  !important;
+}
+
+html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(2),
+html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(2) a,
+html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(2) a:link,
+html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(2) a:visited,
+html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(2) a:hover {
+    color: #ffffff !important;
+}
+
+table.api-typedef-table tbody tr td:nth-child(2) a,
+table.api-typedef-table tbody tr td:nth-child(2) a:link,
+table.api-typedef-table tbody tr td:nth-child(2) a:visited,
+table.api-typedef-table tbody tr td:nth-child(2) a:hover {
+    color: inherit !important;
+    text-decoration: none !important;
+    font-weight: 400 !important;
+}
+
+table.api-typedef-table tbody tr td:nth-child(2) a:hover {
+    text-decoration: underline !important;
+}
+
+/* Strip the inline-code pill from the Name cell — no border, no background,
+ * no padding. The cv::xyz title should read as a flat link, not a code chip. */
+table.api-typedef-table tbody tr td:nth-child(2) code,
+table.api-typedef-table tbody tr td:nth-child(2) code * {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    color: inherit !important;
+    font-weight: 400 !important;
+    font-size: inherit !important;
+}
+
+/* Column 3: Description cell — Drop completely if empty so it doesn't skew spacing */
+table.api-typedef-table tbody tr td:nth-child(3):empty,
+table.api-typedef-table tbody tr td:nth-child(3):has(> p:empty:only-child) {
+    display: none !important;
+}
+
+/* Disable overflow wrapper for card tables */
+.table-wrapper:has(> table.api-reference-table),
+.table-wrapper:has(> table.api-typedef-table) {
+    overflow: visible;
 }
