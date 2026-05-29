@@ -802,7 +802,6 @@ def _translate(text: str, docname: str | None = None) -> str:
             return f"\n{indent}```{lang}\n{body}\n{indent}```\n"
         return f"\n```{lang}\n{body.strip()}\n```\n"
 
-        
     text = re.sub(
         r"^(?P<indent>[ \t]*)@code(?:\{(?P<lang>[^}]*)\})?\s*\n(?P<body>.*?)\n?[ \t]*@endcode",
         _code_repl, text, flags=re.DOTALL | re.MULTILINE)
