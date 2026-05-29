@@ -201,22 +201,29 @@ public:
             }
             else
             {
-                int k_best = 0;
-                double min_dist = DBL_MAX;
+                const int K = centers.rows;
+                cv::AutoBuffer<float, 64> _dbuf(K);
+                float* dbuf = _dbuf.data();
 
+                cv::AutoBuffer<const float*, 64> _cptrs(K);
+                const float** cptrs = _cptrs.data();
                 for (int k = 0; k < K; k++)
-                {
-                    const float* center = centers.ptr<float>(k);
-                    const double dist = hal::normL2Sqr_(sample, center, dims);
+                    cptrs[k] = centers.ptr<float>(k);
 
-                    if (min_dist > dist)
+                hal::normL2SqrBatch_(sample, cptrs, K, dims, dbuf);
+
+                int k_best = 0;
+                float min_dist = dbuf[0];
+                for (int k = 1; k < K; k++)
+                {
+                    if (dbuf[k] < min_dist)
                     {
-                        min_dist = dist;
+                        min_dist = dbuf[k];
                         k_best = k;
                     }
                 }
 
-                distances[i] = min_dist;
+                distances[i] = (double)min_dist;
                 labels[i] = k_best;
             }
         }

@@ -178,6 +178,58 @@ float normL2Sqr_(const float* a, const float* b, int n)
     return d;
 }
 
+void normL2SqrBatch_(const float* a, const float* const* b, int K, int n, float* dists)
+{
+    
+    if (K <= 0) return;
+
+
+    int k = 0;
+    for (; k <= K - 2; k += 2)
+    {
+        const float* b0 = b[k];
+        const float* b1 = b[k + 1];
+        int j = 0;
+        float d0 = 0.f, d1 = 0.f;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        v_float32 v_d00 = vx_setzero_f32(), v_d01 = vx_setzero_f32();
+        v_float32 v_d10 = vx_setzero_f32(), v_d11 = vx_setzero_f32();
+        const int vlanes = VTraits<v_float32>::vlanes();
+        for (; j <= n - 2 * vlanes; j += 2 * vlanes)
+        {
+            v_float32 va0 = vx_load(a + j);
+            v_float32 va1 = vx_load(a + j + vlanes);
+
+            v_float32 t00 = v_sub(va0, vx_load(b0 + j));
+            v_float32 t01 = v_sub(va1, vx_load(b0 + j + vlanes));
+            v_d00 = v_muladd(t00, t00, v_d00);
+            v_d01 = v_muladd(t01, t01, v_d01);
+
+            v_float32 t10 = v_sub(va0, vx_load(b1 + j));
+            v_float32 t11 = v_sub(va1, vx_load(b1 + j + vlanes));
+            v_d10 = v_muladd(t10, t10, v_d10);
+            v_d11 = v_muladd(t11, t11, v_d11);
+        }
+        d0 = v_reduce_sum(v_add(v_d00, v_d01));
+        d1 = v_reduce_sum(v_add(v_d10, v_d11));
+#endif
+        for (; j < n; j++)
+        {
+            float u0 = a[j] - b0[j];
+            float u1 = a[j] - b1[j];
+            d0 += u0 * u0;
+            d1 += u1 * u1;
+        }
+        dists[k]     = d0;
+        dists[k + 1] = d1;
+    }
+
+    
+    for (; k < K; k++)
+    {
+        dists[k] = normL2Sqr_(a, b[k], n);
+    }
+}
 
 float normL1_(const float* a, const float* b, int n)
 {
