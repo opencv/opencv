@@ -33,8 +33,7 @@ model, but the methodology applies to other supported models.
 - [YOLOv5](https://github.com/ultralytics/yolov5),
 - [YOLOv4](https://github.com/Tianxiaomo/pytorch-YOLOv4).
 
-This support includes pre and post-processing routines specific to these models. While other older
-version of YOLO are also supported by OpenCV in Darknet format, they are out of the scope of this tutorial.
+This support includes pre and post-processing routines specific to these models. Older versions of YOLO (v1–v3) are no longer supported, as Darknet format support was removed from OpenCV's DNN module.
 
 
 Assuming that we have successfully trained YOLOX model, the subsequent step involves exporting and
@@ -170,7 +169,7 @@ Once we have our ONNX graph of the model, we just simply can run with OpenCV's s
 - --nms: Non-maximum suppression threshold (e.g., 0.4).
 - --mean: Mean normalization value (e.g., 0.0 for no mean normalization).
 - --scale: Scale factor for input normalization (e.g., 1.0, 1/255.0, etc).
-- --yolo: YOLO model version (e.g., YOLOv3, YOLOv4, etc.).
+- --yolo: YOLO model version (e.g., YOLOv8, YOLOX, YOLOv10, etc.).
 - --padvalue: Padding value used in pre-processing (e.g., 114.0).
 - --paddingmode: Method for handling image resizing and padding. Options: 0 (resize without extra processing), 1 (crop after resize), 2 (resize with aspect ratio preservation).
 - --backend: Selection of computation backend (0 for automatic, 1 for Halide, 2 for OpenVINO, etc.).
