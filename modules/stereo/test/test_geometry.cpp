@@ -4,7 +4,7 @@
 
 #include "test_precomp.hpp"
 #include <opencv2/ts/cuda_test.hpp> // EXPECT_MAT_NEAR
-#include "opencv2/3d.hpp"
+#include "opencv2/geometry.hpp"
 #include <opencv2/core/utils/logger.hpp>
 
 namespace opencv_test { namespace {

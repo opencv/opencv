@@ -9,7 +9,7 @@
 #include "nms.inl.hpp"
 
 #include <opencv2/imgproc.hpp>
-#include <opencv2/3d.hpp>
+#include <opencv2/geometry/2d.hpp>
 
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN

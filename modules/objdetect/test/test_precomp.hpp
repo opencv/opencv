@@ -5,7 +5,7 @@
 #define __OPENCV_TEST_PRECOMP_HPP__
 
 #include "opencv2/ts.hpp"
-#include "opencv2/3d.hpp"
+#include "opencv2/geometry.hpp"
 #include "opencv2/objdetect.hpp"
 
 #include <random>

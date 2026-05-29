@@ -4,7 +4,7 @@
 
 #include "test_precomp.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
-#include <opencv2/3d.hpp>
+#include <opencv2/geometry/2d.hpp>
 #include "npy_blob.hpp"
 #include <map>
 #include <set>

@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
-#include "opencv2/3d.hpp"
+#include "opencv2/geometry.hpp"
 #include "opencv2/features.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"

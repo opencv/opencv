@@ -4,7 +4,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/flann.hpp"
-#include "opencv2/3d.hpp"
+#include "opencv2/geometry.hpp"
 #include "chessboard.hpp"
 #include "math.h"
 

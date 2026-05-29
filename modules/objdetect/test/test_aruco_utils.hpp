@@ -3,7 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "test_precomp.hpp"
-#include "opencv2/3d.hpp"
+#include "opencv2/geometry.hpp"
 
 namespace opencv_test {
 

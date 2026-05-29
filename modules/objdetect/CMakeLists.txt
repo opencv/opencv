@@ -3,7 +3,7 @@ ocv_define_module(objdetect
     opencv_core
     opencv_imgproc
     opencv_features
-    opencv_3d
+    opencv_geometry
     OPTIONAL
         opencv_dnn
     WRAP

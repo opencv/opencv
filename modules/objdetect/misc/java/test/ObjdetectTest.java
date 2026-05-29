@@ -2,7 +2,6 @@ package org.opencv.test.objdetect;
 
 import java.util.ArrayList;
 
-import org.opencv.cv3d.Cv3d;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;

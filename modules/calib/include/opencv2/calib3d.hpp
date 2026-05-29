@@ -7,7 +7,7 @@
 #ifndef OPENCV_CALIB3D_HPP
 #define OPENCV_CALIB3D_HPP
 
-#include "opencv2/3d.hpp"
+#include "opencv2/geometry.hpp"
 #include "opencv2/stereo.hpp"
 #include "opencv2/calib.hpp"
 

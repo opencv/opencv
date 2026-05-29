@@ -11,7 +11,7 @@
  */
 
 #include <opencv2/core.hpp>
-#include <opencv2/3d.hpp>
+#include <opencv2/geometry.hpp>
 
 bool customFunc(const std::vector<double> &model_coefficients);
 
