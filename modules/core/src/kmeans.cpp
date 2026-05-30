@@ -72,50 +72,59 @@ public:
         const int begin = range.start;
         const int end = range.end;
         const int dims = data.cols;
+
+        if (dims <= 8) {
+            const int UNROLL_FACTOR = 4;
+            const int PREFETCH_AHEAD = 16;
         
-        const int UNROLL_FACTOR = 4;
-        const int PREFETCH_AHEAD = 16;
+            int i = begin;
         
-        int i = begin;
-        
-        if (dims <= 4)
-        {
-            for (; i < end; i++)
+            if (dims <= 4)
             {
-                const float* sample = data.ptr<float>(i);
-                const float* center = data.ptr<float>(ci);
-                
-                float sum_sq = 0.0f;
-                for (int d = 0; d < dims; d++)
+                for (; i < end; i++)
                 {
-                   float diff = sample[d] - center[d];
-                   sum_sq += diff * diff;
+                    const float* sample = data.ptr<float>(i);
+                    const float* center = data.ptr<float>(ci);
+                
+                    float sum_sq = 0.0f;
+                    for (int d = 0; d < dims; d++)
+                    {
+                        float diff = sample[d] - center[d];
+                        sum_sq += diff * diff;
+                    }
+            
+                    tdist2[i] = std::min(sum_sq, dist[i]);
+                }
+            }
+            else
+            {
+                for (; i + UNROLL_FACTOR - 1 < end; i += UNROLL_FACTOR)
+                {
+                    if (i + PREFETCH_AHEAD < end)
+                    {
+                        for (int j = 0; j < UNROLL_FACTOR; j++)
+                        {
+                            int idx = i + PREFETCH_AHEAD + j;
+                            __builtin_prefetch(data.ptr<float>(idx), 0, 3);
+                            __builtin_prefetch(&dist[idx], 0, 3);
+                        }
+                    }
+            
+                    tdist2[i] = std::min(hal::normL2Sqr_(data.ptr<float>(i), data.ptr<float>(ci), dims), dist[i]);
+                    tdist2[i+1] = std::min(hal::normL2Sqr_(data.ptr<float>(i+1), data.ptr<float>(ci), dims), dist[i+1]);
+                    tdist2[i+2] = std::min(hal::normL2Sqr_(data.ptr<float>(i+2), data.ptr<float>(ci), dims), dist[i+2]);
+                    tdist2[i+3] = std::min(hal::normL2Sqr_(data.ptr<float>(i+3), data.ptr<float>(ci), dims), dist[i+3]);
                 }
             
-                tdist2[i] = std::min(sum_sq, dist[i]);
+                for (; i < end; i++)
+                {
+                    tdist2[i] = std::min(hal::normL2Sqr_(data.ptr<float>(i), data.ptr<float>(ci), dims), dist[i]);
+                }
             }
         }
-           else
+        else
         {
-            for (; i + UNROLL_FACTOR - 1 < end; i += UNROLL_FACTOR)
-            {
-                if (i + PREFETCH_AHEAD < end)
-                {
-                    for (int j = 0; j < UNROLL_FACTOR; j++)
-                    {
-                        int idx = i + PREFETCH_AHEAD + j;
-                        __builtin_prefetch(data.ptr<float>(idx), 0, 3);
-                        __builtin_prefetch(&dist[idx], 0, 3);
-                    }
-                }
-            
-                tdist2[i] = std::min(hal::normL2Sqr_(data.ptr<float>(i), data.ptr<float>(ci), dims), dist[i]);
-                tdist2[i+1] = std::min(hal::normL2Sqr_(data.ptr<float>(i+1), data.ptr<float>(ci), dims), dist[i+1]);
-                tdist2[i+2] = std::min(hal::normL2Sqr_(data.ptr<float>(i+2), data.ptr<float>(ci), dims), dist[i+2]);
-                tdist2[i+3] = std::min(hal::normL2Sqr_(data.ptr<float>(i+3), data.ptr<float>(ci), dims), dist[i+3]);
-            }
-            
-            for (; i < end; i++)
+            for (int i = begin; i < end; i++) 
             {
                 tdist2[i] = std::min(hal::normL2Sqr_(data.ptr<float>(i), data.ptr<float>(ci), dims), dist[i]);
             }
