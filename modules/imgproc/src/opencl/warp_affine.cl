@@ -51,6 +51,13 @@
 #endif
 #endif
 
+#define CV_64F 6
+#if defined SRC_DEPTH && SRC_DEPTH == CV_64F
+#define WT1 double
+#else
+#define WT1 float
+#endif
+
 #define INTER_BITS 5
 #define INTER_TAB_SIZE (1 << INTER_BITS)
 #define INTER_SCALE 1.f/INTER_TAB_SIZE
@@ -137,8 +144,8 @@ __kernel void warpAffine(__global const uchar * srcptr, int src_step, int src_of
             int sx = convert_short_rtn(X0);
             int sy = convert_short_rtn(Y0);
 
-            float ax = X0 - (CT)sx;
-            float ay = Y0 - (CT)sy;
+            WT1 ax = (WT1)(X0 - (CT)sx);
+            WT1 ay = (WT1)(Y0 - (CT)sy);
 
             WT v0 = scalar, v1 = scalar, v2 = scalar, v3 = scalar;
             if (sx >= 0 && sx < src_cols)
@@ -168,14 +175,14 @@ __kernel void warpAffine(__global const uchar * srcptr, int src_step, int src_of
 
 #elif defined INTER_CUBIC
 
-inline void interpolateCubic( float x, float* coeffs )
+inline void interpolateCubic( float x, WT1* coeffs )
 {
     const float A = -0.75f;
 
-    coeffs[0] = fma(fma(fma(A, (x + 1.f), - 5.0f*A), (x + 1.f), 8.0f*A), x + 1.f, - 4.0f*A);
-    coeffs[1] = fma(fma(A + 2.f, x, - (A + 3.f)), x*x, 1.f);
-    coeffs[2] = fma(fma(A + 2.f, 1.f - x, - (A + 3.f)), (1.f - x)*(1.f - x), 1.f);
-    coeffs[3] = 1.f - coeffs[0] - coeffs[1] - coeffs[2];
+    coeffs[0] = (WT1)fma(fma(fma(A, (x + 1.f), - 5.0f*A), (x + 1.f), 8.0f*A), x + 1.f, - 4.0f*A);
+    coeffs[1] = (WT1)fma(fma(A + 2.f, x, - (A + 3.f)), x*x, 1.f);
+    coeffs[2] = (WT1)fma(fma(A + 2.f, 1.f - x, - (A + 3.f)), (1.f - x)*(1.f - x), 1.f);
+    coeffs[3] = (WT1)(1. - coeffs[0] - coeffs[1] - coeffs[2]);
 }
 
 __kernel void warpAffine(__global const uchar * srcptr, int src_step, int src_offset, int src_rows, int src_cols,
@@ -198,7 +205,7 @@ __kernel void warpAffine(__global const uchar * srcptr, int src_step, int src_of
         sx--;
         sy--;
 
-        float taby[4], tabx[4];
+        WT1 taby[4], tabx[4];
         interpolateCubic(ay, taby);
         interpolateCubic(ax, tabx);
 
@@ -213,7 +220,7 @@ __kernel void warpAffine(__global const uchar * srcptr, int src_step, int src_of
                 WT v1 = CONVERT_TO_WT(loadpix(srcptr + mad24(sx + 1, pixsize, row_offset)));
                 WT v2 = CONVERT_TO_WT(loadpix(srcptr + mad24(sx + 2, pixsize, row_offset)));
                 WT v3 = CONVERT_TO_WT(loadpix(srcptr + mad24(sx + 2, pixsize, row_offset)));
-                WT wsum = WT(0);
+                WT wsum = (WT)(0);
                 wsum = fma(v0, tabx[0], wsum);
                 wsum = fma(v1, tabx[1], wsum);
                 wsum = fma(v2, tabx[2], wsum);
