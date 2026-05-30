@@ -625,6 +625,34 @@ def _translate(text: str, docname: str | None = None) -> str:
     text = _apply_outside_code(text, lambda chunk: re.sub(
         r"@cite\s+(?P<key>[\w-]+)", _cite_repl, chunk))
 
+    # 8a. Bare bib-key references -> citation link. Doxygen frequently
+    # fails to resolve `@cite KEY` inside `@addtogroup ... { ... }`
+    # blocks (the key reaches the XML as plain text, not a `<ref>`),
+    # so the rendered stub has bare `Kannala2006`, `Felzenszwalb2006`,
+    # etc. Match every key from the bib (compiled to a single
+    # alternation regex) and emit the same `[N]` link as step 8.
+    # Excludes citelist itself (where the keys are the targets) and
+    # text already inside markdown link/anchor brackets to avoid
+    # re-linkifying step-8 output.
+    if _CITE_NUMBER and docname != "citelist":
+        _CITE_KEY_RE = re.compile(
+            r"(?<![\[\w])(?P<key>"
+            + "|".join(re.escape(k) for k in _CITE_NUMBER)
+            + r")(?![\w\]])"
+        )
+        def _bare_cite_repl(m: re.Match) -> str:
+            key = m.group("key")
+            num = _CITE_NUMBER.get(key)
+            label = f"[{num}]" if num is not None else f"[{key}]"
+            if "citelist" in _ANCHOR_TO_DOC:
+                depth = docname.count("/") if docname else 0
+                href = ("../" * depth) + f"citelist.html#CITEREF_{key}"
+            else:
+                href = f"{DOXYGEN_BASE_URL}citelist.html#CITEREF_{key}"
+            return f'<a href="{href}">{label}</a>'
+        text = _apply_outside_code(
+            text, lambda chunk: _CITE_KEY_RE.sub(_bare_cite_repl, chunk))
+
     # 8b. @youtube{ID} -> responsive raw-HTML embed.
     text = re.sub(
         r"^@youtube\{(?P<id>[\w-]+)\}\s*$",
@@ -807,6 +835,12 @@ def _translate(text: str, docname: str | None = None) -> str:
     # 14b. Wrap bare URLs in `<...>` (runs after 14a).
     text = _linkify_bare_urls(text)
 
+    # 14c. Resolve `opencv_source_code/<path>` Doxygen alias -> GitHub link.
+    text = _linkify_opencv_source_code(text)
+
+    # 14d. Resolve Doxygen `#funcName` cross-references in prose -> link.
+    text = _linkify_dox_hash_refs(text)
+
     # 15. Restore @verbatim stash (see step 0v).
     for _vk, _vv in _verbatim_stash.items():
         text = text.replace(_vk, _vv)
@@ -858,12 +892,66 @@ def _linkify_bare_urls(src: str) -> str:
         lambda chunk: _BARE_URL_RE.sub(r"<\g<url>>", chunk))
 
 
+# Doxygen alias `opencv_source_code/<path>` -> GitHub source URL. The
+# Doxygen build resolves the alias via configuration; the Sphinx wrapper
+# has no equivalent macro, so without this pass the alias would render
+# as plain unclickable text (calib.hpp / 3d.hpp note admonitions hit
+# this pattern repeatedly).
+_OPENCV_SOURCE_CODE_RE = re.compile(
+    r"\bopencv_source_code/(?P<path>[\w./\-]+)"
+)
+
+
+def _linkify_opencv_source_code(src: str) -> str:
+    def _repl(m: re.Match) -> str:
+        path = m.group("path")
+        url = f"https://github.com/opencv/opencv/blob/5.x/{path}"
+        return f"[opencv_source_code/{path}]({url})"
+    return _apply_outside_code(
+        src, lambda chunk: _OPENCV_SOURCE_CODE_RE.sub(_repl, chunk))
+
+
+# Doxygen `#funcName` (and `#ClassName`) cross-reference in prose ->
+# a markdown link. Looked up in `_CV_SYMBOL_URL` (populated from the
+# Doxygen tagfile). Bare references like "See also #calibrationMatrixValues"
+# in @note blocks would otherwise render as literal text on Sphinx because
+# Doxygen's `#name` syntax has no MyST equivalent. The lookbehind keeps
+# this from chewing on heading markers (`### Heading`), MyST attribute
+# blocks (`{#anchor}`), and existing markdown link targets (`(#anchor)`).
+_DOX_HASH_REF_RE = re.compile(
+    r"(?<![{(#\w])#(?P<name>[A-Za-z_]\w*)\b"
+)
+
+
+def _linkify_dox_hash_refs(src: str) -> str:
+    if not _CV_SYMBOL_URL:
+        return src
+    def _repl(m: re.Match) -> str:
+        name = m.group("name")
+        url = _CV_SYMBOL_URL.get(name)
+        if not url:
+            return m.group(0)
+        return f"[{name}]({url})"
+    return _apply_outside_code(
+        src, lambda chunk: _DOX_HASH_REF_RE.sub(_repl, chunk))
+
+
 def _linkify_cv_symbols(src: str) -> str:
     if not _CV_SYMBOL_URL:
         return src
+    def _local_url(sym: str) -> str | None:
+        """Prefer a Sphinx-local URL when one exists for `sym`.
+        `_LOCAL_CLASS_URL` and `_LOCAL_TYPEDEF_URL` are populated from
+        the tagfile but rewritten to point at the local api/ tree
+        (e.g. `classcv_1_1Mat.html`, `core_basic.html#vec2b`). If no
+        local entry exists, return None so the caller drops the link —
+        we never bounce readers off-site for symbols whose Sphinx
+        version isn't present in this build.
+        """
+        return _LOCAL_CLASS_URL.get(sym) or _LOCAL_TYPEDEF_URL.get(sym)
     def repl_cv(m: re.Match) -> str:
         sym = m.group("sym")
-        url = _CV_SYMBOL_URL.get(sym)
+        url = _local_url(sym)
         if not url:
             return m.group(0)
         sep = m.group("sep")
@@ -871,7 +959,7 @@ def _linkify_cv_symbols(src: str) -> str:
         return f'<a href="{url}">{sep}{sym}{parens}</a>'
     def repl_bare(m: re.Match) -> str:
         sym = m.group("sym")
-        url = _CV_SYMBOL_URL.get(sym)
+        url = _local_url(sym)
         if not url:
             return m.group(0)
         return f'<a href="{url}">{sym}()</a>'

@@ -815,11 +815,13 @@ def _render_member_detail(m: dict, full_name: str) -> list[str]:
     _sig = ([f"`{tmpl}`"] if tmpl else []) + [f"`{ln}`" for ln in sig_lines]
     out += ["{.opencv-api-sig}", "\\\n".join(_sig), ""]
 
-    # `#include <…>` card row, like docs.opencv.org. For typedefs the path is
-    # a blue link to the Doxygen file page; other kinds keep the plain chip.
+    # `#include <…>` card row, like docs.opencv.org. The path inside `<>` is a
+    # blue clickable link to the Doxygen file page (the `opencv-include-link`
+    # class picks up the light-mode CSS rule) for every member kind, so
+    # function/typedef/variable/macro detail blocks all link consistently.
     inc = (m.get("include_file") or "").strip()
     if inc:
-        _ifile = _FILE_URL.get(inc) if kind == "typedef" else None
+        _ifile = _FILE_URL.get(inc)
         if _ifile:
             _href = f"../../../doc/doxygen/html/{_ifile}"
             out += [
@@ -892,8 +894,19 @@ def _render_core_basic_func(m: dict, idx: int, total: int,
         [f"`{ln}`" for ln in sig_lines]
     out += ["{.opencv-api-sig}", "\\\n".join(_sig), ""]
     if m.get("include_file"):
-        out += ["{.opencv-api-include}",
-                f"`#include <{m['include_file']}>`", ""]
+        _ipath = m["include_file"]
+        _ifile = _FILE_URL.get(_ipath)
+        if _ifile:
+            _href = f"../../../doc/doxygen/html/{_ifile}"
+            out += [
+                "{.opencv-api-include}",
+                f'<code class="docutils literal notranslate">'
+                f'#include &lt;<a class="reference external '
+                f'opencv-include-link" href="{_href}">{_ipath}</a>&gt;</code>',
+                "",
+            ]
+        else:
+            out += ["{.opencv-api-include}", f"`#include <{_ipath}>`", ""]
     if m.get("brief"):
         out += [m["brief"], ""]
     if m.get("detailed"):

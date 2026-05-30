@@ -70,8 +70,23 @@ html:not([data-theme="dark"]) .bd-content .opencv-enum-clickable a span {
     color: var(--pst-color-link, #0969da) !important;
 }
 
-/* Typedef Documentation: blue clickable tokens in light mode. */
+/* Typedef Documentation: every clickable token in the per-typedef
+ * detail blocks (e.g. `Vec`, `uchar`, `cv::Vec2b` inside the
+ * declaration `typedef Vec<uchar,2> cv::Vec2b`) is an `<a>` inside a
+ * `<code>` and gets dimmed by the `code > a { color: inherit }` rule
+ * above. Force the theme link blue on every anchor inside the section
+ * in light mode; dark mode is left alone. */
 html:not([data-theme="dark"]) .bd-content #typedef-documentation a {
+    color: var(--pst-color-link, #0969da) !important;
+}
+
+/* Function Documentation: same problem as the typedef section — every
+ * clickable token inside per-function detail blocks (parameter types
+ * like `Matx`, `_Tp`, the include path, etc.) is an `<a>` inside a
+ * `<code>` and gets dimmed by `code > a { color: inherit }`. Force
+ * the theme link blue on every anchor inside the section in light
+ * mode; dark mode is left alone. */
+html:not([data-theme="dark"]) .bd-content #function-documentation a {
     color: var(--pst-color-link, #0969da) !important;
 }
 

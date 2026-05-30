@@ -412,12 +412,48 @@ def _doxygen_desc_to_md(el, h_level: int = 3) -> str:
                 table_lines = md_rows
             result.append("\n".join(table_lines))
 
-    def _listitem_text(item) -> str:
-        parts = []
+    def _listitem_text(item, indent: int = 0) -> str:
+        """Render one <listitem>'s content, recursively including nested
+        lists. Without this, sub-bullets (e.g. the Modern-Robotics
+        link / det(R)=1 properties / Slerp item under the camera-calib
+        Note) were silently dropped — `_inline` breaks at the first
+        block tag so the nested `<itemizedlist>` inside the parent
+        `<para>` was never recursed into. Doxygen puts the nested list
+        BOTH inside `<para>` (the common case) AND occasionally as a
+        direct child of `<listitem>`, so we check both spots."""
+        first = ""
+        extras: list[str] = []
+        pad = " " * (indent + 2)
+
+        def _emit_sublist(nl) -> None:
+            if nl.tag == "itemizedlist":
+                for sub in nl.findall("listitem"):
+                    extras.append(
+                        f"{pad}- {_listitem_text(sub, indent + 2)}")
+            elif nl.tag == "orderedlist":
+                for i, sub in enumerate(nl.findall("listitem"), 1):
+                    extras.append(
+                        f"{pad}{i}. {_listitem_text(sub, indent + 2)}")
+
         for child in item:
             if child.tag == "para":
-                parts.append(_inline(child).strip())
-        return " ".join(p for p in parts if p)
+                # Inline text up to (but not including) the first block tag.
+                txt = _inline(child).strip()
+                if txt:
+                    if not first:
+                        first = txt
+                    else:
+                        extras.append(pad + txt)
+                # Nested lists living inside the <para> (Doxygen's
+                # typical layout for the OpenCV @note bullets).
+                for inner in child:
+                    if inner.tag in ("itemizedlist", "orderedlist"):
+                        _emit_sublist(inner)
+            elif child.tag in ("itemizedlist", "orderedlist"):
+                _emit_sublist(child)
+        if extras:
+            return first + "\n" + "\n".join(extras) if first else "\n".join(extras)
+        return first
 
     def _inline(node) -> str:
         parts = []
