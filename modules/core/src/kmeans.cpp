@@ -73,7 +73,8 @@ public:
         const int end = range.end;
         const int dims = data.cols;
 
-        if (dims <= 8) {
+        if (dims <= 8) 
+        {
             const int UNROLL_FACTOR = 4;
             const int PREFETCH_AHEAD = 16;
         
