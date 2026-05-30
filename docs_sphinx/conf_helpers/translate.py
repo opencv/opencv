@@ -367,13 +367,21 @@ def _translate(text: str, docname: str | None = None) -> str:
             desc = m.group("desc").strip()
             short = name.split("::")[-1]
             tparams = _CLASS_TEMPLATE_DISPLAY.get(short, "")
-            label = f"{kind} {name}{tparams}"
+            # Keep the `class`/`struct` keyword as a separate, plain
+            # (non-clickable) code chip. The clickable link starts at
+            # `cv::Name` and covers only the qualified type name plus
+            # any template-parameter display.
+            link_label = f"{name}{tparams}"
             more = (f'<a class="opencv-class-more" '
                     f'href="{page}.html#detailed-description">View details</a>')
             desc_out = f"{desc} {more}" if desc else more
-            return f"| [`{label}`]({page}.md) | {desc_out} |"
+            return (f"| `{kind}` [`{link_label}`]({page}.md) "
+                    f"| {desc_out} |")
         text = re.sub(
-            r"\| \[`(?P<kind>class|struct) (?P<name>cv::[A-Za-z0-9_:]+)`\]"
+            # `name` accepts template specializations (`< _Tp, ... >`)
+            # by allowing anything non-backtick, so the split also fires
+            # on rows like `cv::ParamType< _Tp, std::enable_if<...> >`.
+            r"\| \[`(?P<kind>class|struct) (?P<name>cv::[^`]+)`\]"
             r"\((?P<page>(?:class|struct)cv_1_1[A-Za-z0-9_]+)\.md\)"
             r" \| (?P<desc>[^\n|]*?) \|",
             _rewrite_class_row, text)
