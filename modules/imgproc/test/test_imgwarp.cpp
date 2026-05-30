@@ -1125,14 +1125,17 @@ static void rotation2affine(float scale, float angle, float cx, float cy, float*
 
 TEST(Imgproc_Warping, DISABLED_playground)
 {
+    int imgtype = CV_32F;
+    int imgcn = 3;
+    bool useOpenCL = true;
+
     auto ts = cvtest::TS::ptr();
     Mat img0 = imread(string(ts->get_data_path()) + "stereomatching/datasets/tsukuba/im2.png", 1), img1, img;
     int iangle = -1;
-    int borderType = BORDER_REPLICATE;
+    int borderType = BORDER_CONSTANT;
     Scalar borderValue(0, 128, 0);
-    int imgtype = CV_32F;
-    int imgcn = 2;
-    double cvtscale = imgtype == CV_16U ? 256. : imgtype == CV_32F ? 1./256 : 1.;
+
+    double cvtscale = imgtype == CV_16U ? 256. : imgtype == CV_32F ? 1./255 : 1.;
     if (imgcn == 1) {
         cvtColor(img0, img1, COLOR_BGR2GRAY);
     } else if (imgcn == 4) {
@@ -1150,7 +1153,11 @@ TEST(Imgproc_Warping, DISABLED_playground)
     Mat canvas0(img.size(), imgtype), canvas8;
     float cx = img.cols/2, cy = img.rows/2;
     if (img.depth() == CV_32F) {
-        borderValue = Scalar(100, 0, 100);
+        borderValue = Scalar(100*cvtscale, 0*cvtscale, 100*cvtscale);
+    }
+    UMat uimg, ucanvas;
+    if (useOpenCL) {
+        img.copyTo(uimg);
     }
 
     for(;;) {
@@ -1159,12 +1166,20 @@ TEST(Imgproc_Warping, DISABLED_playground)
         float scale = 1 + 0.2f*sin(angle);
         float Mdata[9] = {1, 0, 0, 0, 1, 0, 0, 0, 1};
         rotation2affine(scale, angle, cx, cy, Mdata);
-        Mat M(3, 3, CV_32F, Mdata);
+        Mat M(2, 3, CV_32F, Mdata);
 
         double t0 = getTickCount();
-        warpPerspective(img, canvas0, M, canvas0.size(), INTER_CUBIC, borderType, borderValue);
+        if (!useOpenCL) {
+            warpAffine(img, canvas0, M, canvas0.size(), INTER_CUBIC, borderType, borderValue);
+        } else {
+            warpAffine(uimg, ucanvas, M, uimg.size(), INTER_CUBIC, borderType, borderValue);
+            ocl::finish();
+        }
         t0 = getTickCount() - t0;
 
+        if (useOpenCL) {
+            ucanvas.copyTo(canvas0);
+        }
         canvas0.convertTo(canvas8, CV_8U, 1./cvtscale);
         if (canvas8.channels() == 2) {
             std::vector<Mat> ch;

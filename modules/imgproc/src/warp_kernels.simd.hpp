@@ -7042,7 +7042,7 @@ bicubicCoeffs(float xs0, float ys0,
         return -1;
 
     int all_inliers = int((unsigned)ix0 < (unsigned)std::max(width - 3, 0)) &
-                      int((unsigned)iy0 < (unsigned)std::max(height - 5, 0));
+                      int((unsigned)iy0 < (unsigned)std::max(height - 3, 0));
 
     tl_x = ix0;
     tl_y = iy0;
@@ -7072,7 +7072,7 @@ static void bicubicFetchPixels(const _Tp* src, size_t srcstep, Size size, int cn
             int mx0 = int((unsigned)x0 < (unsigned)width) & my;
             int mx1 = int((unsigned)x1 < (unsigned)width) & my;
             int mx2 = int((unsigned)x2 < (unsigned)width) & my;
-            int mx3 = int((unsigned)x2 < (unsigned)width) & my;
+            int mx3 = int((unsigned)x3 < (unsigned)width) & my;
             y0 = std::clamp(y0, 0, height-1);
             x0 = std::clamp(x0, 0, width-1)*cn;
             x1 = std::clamp(x1, 0, width-1)*cn;

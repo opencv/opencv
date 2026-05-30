@@ -1417,7 +1417,7 @@ void cv::remap( InputArray _src, OutputArray _dst,
     CV_Assert( !_map1.empty() );
     CV_Assert( _map2.empty() || (_map2.size() == _map1.size()));
 
-    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() && interpolation != INTER_CUBIC,
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_remap(_src, _dst, _map1, _map2, interpolation, borderType, borderValue))
 
     Mat src = _src.getMat(), map1 = _map1.getMat(), map2 = _map2.getMat();
@@ -2072,7 +2072,7 @@ static bool ocl_warpTransform_cols4(InputArray _src, OutputArray _dst, InputArra
     ocl::ProgramSource program = ocl::imgproc::warp_transform_oclsrc;
     String kernelName = format("warp%s_%s_8u", warp_op[op_type], interpolationMap[interpolation]);
 
-    bool is32f = (interpolation == INTER_CUBIC || interpolation == INTER_LINEAR) && op_type == OCL_OP_AFFINE;
+    bool is32f = interpolation == INTER_CUBIC || interpolation == INTER_LINEAR;
     int wdepth = interpolation == INTER_NEAREST ? depth : std::max(is32f ? CV_32F : CV_32S, depth);
     int sctype = CV_MAKETYPE(wdepth, cn);
 
@@ -2155,9 +2155,7 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
     const char * const kernelName = op_type == OCL_OP_AFFINE ? "warpAffine" : "warpPerspective";
 
     int scalarcn = cn == 3 ? 4 : cn;
-    bool is32f = op_type == OCL_OP_AFFINE ?
-                 /* Affine*/ !dev.isAMD() && (interpolation == INTER_CUBIC || interpolation == INTER_LINEAR) :
-                 /* Perspective*/ interpolation == INTER_LINEAR;
+    bool is32f = interpolation == INTER_CUBIC || interpolation == INTER_LINEAR;
     int wdepth = interpolation == INTER_NEAREST ? depth : std::max(is32f ? CV_32F : CV_32S, depth);
     int sctype = CV_MAKETYPE(wdepth, scalarcn);
 
@@ -2465,12 +2463,11 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
                                         interpolation != INTER_CUBIC) );
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() &&
-               _src.cols() <= SHRT_MAX && _src.rows() <= SHRT_MAX &&
-               interpolation != INTER_CUBIC,
+               _src.cols() <= SHRT_MAX && _src.rows() <= SHRT_MAX,
                ocl_warpTransform_cols4(_src, _dst, _M0, dsize, flags, borderType,
                                        borderValue, OCL_OP_AFFINE))
 
-    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() && interpolation != INTER_CUBIC,
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_warpTransform(_src, _dst, _M0, dsize, flags, borderType,
                                  borderValue, OCL_OP_AFFINE))
 
@@ -3027,13 +3024,11 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
     int interpolation = flags & INTER_MAX;
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() &&
-               _src.cols() <= SHRT_MAX && _src.rows() <= SHRT_MAX &&
-               interpolation != INTER_CUBIC,
+               _src.cols() <= SHRT_MAX && _src.rows() <= SHRT_MAX,
                ocl_warpTransform_cols4(_src, _dst, _M0, dsize, flags, borderType, borderValue,
                                        OCL_OP_PERSPECTIVE))
 
-    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() &&
-               interpolation != INTER_CUBIC,
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_warpTransform(_src, _dst, _M0, dsize, flags, borderType, borderValue,
                               OCL_OP_PERSPECTIVE))
 

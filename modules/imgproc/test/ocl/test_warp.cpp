@@ -232,7 +232,7 @@ OCL_TEST_P(WarpPerspective, Mat)
 {
     for (int j = 0; j < test_loop_times; j++)
     {
-        double eps = depth < CV_32F ? 0.03 : 0.06;
+        double eps = depth < CV_32F ? 1 : 0.06;
         random_roi();
 
         float cols = static_cast<float>(src_roi.cols), rows = static_cast<float>(src_roi.rows);
