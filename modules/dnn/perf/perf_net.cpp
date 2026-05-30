@@ -144,12 +144,12 @@ PERF_TEST_P_(DNNTestNetwork, SSD)
 {
     applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
 
-    processNet("dnn/ssd_vgg16.onnx", "", cv::Size(300, 300));
+    processNet("dnn/onnx/models/ssd_vgg16.onnx", "", cv::Size(300, 300));
 }
 
 PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_v1_ONNX)
 {
-    processNet("dnn/ssd_mobilenet_v1_12.onnx", "", cv::Size(300, 300));
+    processNet("dnn/onnx/models/ssd_mobilenet_v1_12.onnx", "", cv::Size(300, 300));
 }
 
 PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow)
@@ -176,7 +176,7 @@ PERF_TEST_P_(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
     // The same .caffemodel but modified .prototxt
     // See https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/src/openpose/pose/poseParameters.cpp
     // processNet("dnn/openpose_pose_mpi.caffemodel", "dnn/openpose_pose_mpi_faster_4_stages.prototxt", cv::Size(368, 368));
-    processNet("dnn/openpose_pose_mpi.onnx", "", cv::Size(368, 368));
+    processNet("dnn/onnx/models/openpose_pose_mpi.onnx", "", cv::Size(368, 368));
 }
 
 PERF_TEST_P_(DNNTestNetwork, Inception_v2_SSD_TensorFlow)

@@ -21,7 +21,7 @@ static std::string _tf(TString filename, bool required = true)
 class Test_Model : public DNNTestLayer
 {
 public:
-    void testDetectModel(const std::string& weights, const std::string& cfg,
+    void testDetectModel(const std::string& weights, const std::string& /*cfg*/,
                          const std::string& imgPath, const std::vector<int>& refClassIds,
                          const std::vector<float>& refConfidences,
                          const std::vector<Rect2d>& refBoxes,
@@ -29,35 +29,67 @@ public:
                          double confThreshold = 0.24, double nmsThreshold = 0.0,
                          const Size& size = {-1, -1}, Scalar mean = Scalar(),
                          double scale = 1.0, bool swapRB = false, bool crop = false,
-                         bool nmsAcrossClasses = false)
+                         const std::vector<String>& outNames = {"boxes", "scores", "class_idx"})
     {
         checkBackend();
+        CV_Assert(outNames.size() == 3);
 
         Mat frame = imread(imgPath);
-        DetectionModel model(weights, cfg);
+        Net net = readNet(weights);
 
-        model.setInputSize(size).setInputMean(mean).setInputScale(scale)
-             .setInputSwapRB(swapRB).setInputCrop(crop);
-
-        model.setPreferableBackend(backend);
-        model.setPreferableTarget(target);
-
-        model.setNmsAcrossClasses(nmsAcrossClasses);
+        net.setPreferableBackend(backend);
+        net.setPreferableTarget(target);
         if (target == DNN_TARGET_CPU_FP16)
-            model.enableWinograd(false);
+            net.enableWinograd(false);
 
-        std::vector<int> classIds;
+        net.setInput(blobFromImage(frame, scale, size, mean, swapRB, crop, CV_32F));
+
+        std::vector<Mat> outs;
+        net.forward(outs, outNames);
+        ASSERT_EQ(outs.size(), 3u);
+
+        Mat outBoxes  = outs[0].reshape(1, (int)outs[0].total() / 4);
+        const Mat& outScores = outs[1];
+        const Mat& outClsIds = outs[2];
+
+        std::vector<Rect2d> boxes;
         std::vector<float> confidences;
-        std::vector<Rect> boxes;
+        std::vector<int> classIds;
+        for (int i = 0; i < outBoxes.rows; ++i)
+        {
+            float confidence = outScores.at<float>(i);
+            if (confidence < confThreshold)
+                continue;
 
-        model.detect(frame, classIds, confidences, boxes, confThreshold, nmsThreshold);
-
-        std::vector<Rect2d> boxesDouble(boxes.size());
-        for (int i = 0; i < boxes.size(); i++) {
-            boxesDouble[i] = boxes[i];
+            const float* box = outBoxes.ptr<float>(i);
+            boxes.emplace_back(box[0] / size.width, box[1] / size.height,
+                               (box[2] - box[0]) / size.width, (box[3] - box[1]) / size.height);
+            confidences.push_back(confidence);
+            classIds.push_back((int)outClsIds.at<float>(i));
         }
-        normAssertDetections(refClassIds, refConfidences, refBoxes, classIds,
-                             confidences, boxesDouble, "",
+
+        if (nmsThreshold > 0)
+        {
+            std::vector<int> keep;
+            NMSBoxesBatched(boxes, confidences, classIds,
+                            (float)confThreshold, (float)nmsThreshold, keep);
+
+            std::vector<Rect2d> nmsBoxes;
+            std::vector<float> nmsConfidences;
+            std::vector<int> nmsClassIds;
+            for (int idx : keep)
+            {
+                nmsBoxes.push_back(boxes[idx]);
+                nmsConfidences.push_back(confidences[idx]);
+                nmsClassIds.push_back(classIds[idx]);
+            }
+            boxes = std::move(nmsBoxes);
+            confidences = std::move(nmsConfidences);
+            classIds = std::move(nmsClassIds);
+        }
+
+        normAssertDetections(refClassIds, refConfidences, refBoxes,
+                             classIds, confidences, boxes, "",
                              confThreshold, scoreDiff, iouDiff);
     }
 

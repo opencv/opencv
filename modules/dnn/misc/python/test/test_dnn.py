@@ -205,7 +205,7 @@ class dnn_test(NewOpenCVTests):
 
     def test_model(self):
         img_path = self.find_dnn_file("dnn/street.png")
-        weights = self.find_dnn_file("dnn/ssd_mobilenet_v1_12.onnx", required=False)
+        weights = self.find_dnn_file("dnn/onnx/models/ssd_mobilenet_v1_12.onnx", required=False)
         if weights is None:
             raise unittest.SkipTest("Missing DNN test files (dnn/ssd_mobilenet_v1_12.onnx). Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
 

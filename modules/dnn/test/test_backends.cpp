@@ -274,7 +274,7 @@ TEST_P(DNNTestNetwork, SSD_VGG16)
         iouDiff = 0.13;
     }
 
-    processNet("dnn/ssd_vgg16.onnx", "",
+    processNet("dnn/onnx/models/ssd_vgg16.onnx", "",
                inp, "detection_out", scoreDiff,
                iouDiff, 0.2, false);
     expectNoFallbacksFromIE(net);
@@ -292,7 +292,7 @@ TEST_P(DNNTestNetwork, OpenPose_pose_coco)
 
     const float l1 = (target == DNN_TARGET_MYRIAD) ? 0.009 : 0.0;
     const float lInf = (target == DNN_TARGET_MYRIAD) ? 0.09 : 0.0;
-    processNet("dnn/openpose_pose_coco.onnx", "",
+    processNet("dnn/onnx/models/openpose_pose_coco.onnx", "",
                Size(46, 46), "", l1, lInf);
     expectNoFallbacksFromIE(net);
     expectNoFallbacksFromCUDA(net);
@@ -311,7 +311,7 @@ TEST_P(DNNTestNetwork, OpenPose_pose_mpi)
     // output range: [-0.001, 0.97]
     const float l1 = (target == DNN_TARGET_MYRIAD) ? 0.02 : 0.0;
     const float lInf = (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16) ? 0.2 : 0.0;
-    processNet("dnn/openpose_pose_mpi.onnx", "",
+    processNet("dnn/onnx/models/openpose_pose_mpi.onnx", "",
                Size(46, 46), "", l1, lInf);
     expectNoFallbacksFromIE(net);
     expectNoFallbacksFromCUDA(net);
@@ -327,7 +327,7 @@ TEST_P(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
 #endif
 
     // See https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/src/openpose/pose/poseParameters.cpp
-    processNet("dnn/openpose_pose_mpi_faster_4_stages.onnx", "",
+    processNet("dnn/onnx/models/openpose_pose_mpi_faster_4_stages.onnx", "",
                Size(46, 46));
     expectNoFallbacksFromIE(net);
     expectNoFallbacksFromCUDA(net);

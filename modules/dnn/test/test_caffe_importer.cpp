@@ -90,7 +90,7 @@ TEST(Reproducibility_SSD, Accuracy)
         CV_TEST_TAG_DEBUG_VERYLONG
     );
 
-    Net net = readNetFromONNX(findDataFile("dnn/ssd_vgg16.onnx", false));
+    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/ssd_vgg16.onnx", false));
     ASSERT_FALSE(net.empty());
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
 
