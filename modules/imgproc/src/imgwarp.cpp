@@ -2062,7 +2062,7 @@ static bool ocl_warpTransform_cols4(InputArray _src, OutputArray _dst, InputArra
 
     if ( !dev.isIntel() || !(type == CV_8UC1) ||
          !(dtype == CV_8UC1) || !(_dst.cols() % 4 == 0) ||
-         (op_type == OCL_OP_PERSPECTIVE && interpolation == INTER_LINEAR && (cn == 1 || cn == 3 || cn == 4)) ||
+         (op_type == OCL_OP_PERSPECTIVE && interpolation != INTER_NEAREST) ||
          !(borderType == cv::BORDER_CONSTANT &&
           (interpolation == cv::INTER_NEAREST || interpolation == cv::INTER_LINEAR || interpolation == cv::INTER_CUBIC)))
         return false;
