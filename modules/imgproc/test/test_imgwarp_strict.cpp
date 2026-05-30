@@ -1446,8 +1446,13 @@ static void computeWarpMaps(const Mat& M, Mat& mapx, Mat& mapy)
 
             if (perspective) {
                 double z = dataM[6] * dx + dataM[7] * dy + dataM[8];
-                x /= z;
-                y /= z;
+                if (z != 0.0) {
+                    x /= z;
+                    y /= z;
+                } else {
+                    x = 0.0;
+                    y = 0.0;
+                }
             }
 
             mapxrow[dx] = float(x);

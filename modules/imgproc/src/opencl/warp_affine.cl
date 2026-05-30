@@ -219,7 +219,7 @@ __kernel void warpAffine(__global const uchar * srcptr, int src_step, int src_of
                 WT v0 = CONVERT_TO_WT(loadpix(srcptr + mad24(sx, pixsize, row_offset)));
                 WT v1 = CONVERT_TO_WT(loadpix(srcptr + mad24(sx + 1, pixsize, row_offset)));
                 WT v2 = CONVERT_TO_WT(loadpix(srcptr + mad24(sx + 2, pixsize, row_offset)));
-                WT v3 = CONVERT_TO_WT(loadpix(srcptr + mad24(sx + 2, pixsize, row_offset)));
+                WT v3 = CONVERT_TO_WT(loadpix(srcptr + mad24(sx + 3, pixsize, row_offset)));
                 WT wsum = (WT)(0);
                 wsum = fma(v0, tabx[0], wsum);
                 wsum = fma(v1, tabx[1], wsum);
