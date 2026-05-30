@@ -1,5 +1,146 @@
 #include "perf_precomp.hpp"
 
+namespace opencv_test {
+using namespace perf;
+
+///////////// reduce() performance tests /////////////
+
+typedef std::tuple<cv::Size, MatType, MatDepth> Size_MatType_OutDepth_t;
+typedef TestBaseWithParam<Size_MatType_OutDepth_t> Size_MatType_OutDepth;
+
+// Test: reduce SUM with float input -> float output (most common case)
+PERF_TEST_P(Size_MatType_OutDepth, reduceSum,
+    testing::Combine(
+        testing::Values(TYPICAL_MAT_SIZES),
+        testing::Values(CV_32FC1),
+        testing::Values(CV_32F)
+    )
+)
+{
+    Size sz = std::get<0>(GetParam());
+    int srcType = std::get<1>(GetParam());
+    int dstDepth = std::get<2>(GetParam());
+
+    Mat src(sz, srcType);
+    Mat dst(1, sz.width, CV_MAKETYPE(dstDepth, 1));
+
+    declare.in(src, WARMUP_RNG).out(dst).iterations(100);
+
+    TEST_CYCLE()
+    {
+        cv::reduce(src, dst, 0, REDUCE_SUM, dstDepth);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+// Test: reduce SUM with uchar input -> int output (tests SIMD widening path)
+PERF_TEST_P(Size_MatType_OutDepth, reduceSum8u32s,
+    testing::Combine(
+        testing::Values(TYPICAL_MAT_SIZES),
+        testing::Values(CV_8UC1, CV_8UC3),
+        testing::Values(CV_32S)
+    )
+)
+{
+    Size sz = std::get<0>(GetParam());
+    int srcType = std::get<1>(GetParam());
+    int dstDepth = std::get<2>(GetParam());
+
+    Mat src(sz, srcType);
+    int cn = CV_MAT_CN(srcType);
+    Mat dst(1, sz.width * cn, CV_MAKETYPE(dstDepth, 1));
+
+    declare.in(src, WARMUP_RNG).out(dst).iterations(100);
+
+    TEST_CYCLE()
+    {
+        cv::reduce(src, dst, 0, REDUCE_SUM, dstDepth);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+// Test: reduce MAX with float input
+PERF_TEST_P(Size_MatType_OutDepth, reduceMax,
+    testing::Combine(
+        testing::Values(TYPICAL_MAT_SIZES),
+        testing::Values(CV_32FC1),
+        testing::Values(CV_32F)
+    )
+)
+{
+    Size sz = std::get<0>(GetParam());
+    int srcType = std::get<1>(GetParam());
+    int dstDepth = std::get<2>(GetParam());
+
+    Mat src(sz, srcType);
+    Mat dst(1, sz.width, CV_MAKETYPE(dstDepth, 1));
+
+    declare.in(src, WARMUP_RNG).out(dst).iterations(100);
+
+    TEST_CYCLE()
+    {
+        cv::reduce(src, dst, 0, REDUCE_MAX, dstDepth);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+// Test: reduce MIN with float input
+PERF_TEST_P(Size_MatType_OutDepth, reduceMin,
+    testing::Combine(
+        testing::Values(TYPICAL_MAT_SIZES),
+        testing::Values(CV_32FC1),
+        testing::Values(CV_32F)
+    )
+)
+{
+    Size sz = std::get<0>(GetParam());
+    int srcType = std::get<1>(GetParam());
+    int dstDepth = std::get<2>(GetParam());
+
+    Mat src(sz, srcType);
+    Mat dst(1, sz.width, CV_MAKETYPE(dstDepth, 1));
+
+    declare.in(src, WARMUP_RNG).out(dst).iterations(100);
+
+    TEST_CYCLE()
+    {
+        cv::reduce(src, dst, 0, REDUCE_MIN, dstDepth);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+// Test: column-wise reduce SUM (reduce to single column)
+PERF_TEST_P(Size_MatType_OutDepth, reduceSumCol,
+    testing::Combine(
+        testing::Values(TYPICAL_MAT_SIZES),
+        testing::Values(CV_32FC1),
+        testing::Values(CV_32F)
+    )
+)
+{
+    Size sz = std::get<0>(GetParam());
+    int srcType = std::get<1>(GetParam());
+    int dstDepth = std::get<2>(GetParam());
+
+    Mat src(sz, srcType);
+    Mat dst(sz.height, 1, CV_MAKETYPE(dstDepth, 1));
+
+    declare.in(src, WARMUP_RNG).out(dst).iterations(100);
+
+    TEST_CYCLE()
+    {
+        cv::reduce(src, dst, 1, REDUCE_SUM, dstDepth);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+} // namespace opencv_test
+
 namespace opencv_test
 {
 using namespace perf;

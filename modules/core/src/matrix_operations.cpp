@@ -354,6 +354,97 @@ struct ReduceR_SIMD
     }
 };
 
+#if CV_SIMD || CV_SIMD_SCALABLE
+
+// SIMD specialization: float sum reduction (reduceSum, type CV_32F -> CV_32F/64F)
+template <>
+struct ReduceR_SIMD<float, float, OpAdd<float>>
+{
+    int operator()(const float* src, int start, int end, float* buf, const OpAdd<float>&) const
+    {
+        int i = start;
+        const int vl = VTraits<v_float32>::vlanes();
+        for (; i <= end - vl; i += vl)
+        {
+            v_float32 v_buf = vx_load(buf + i);
+            v_float32 v_src = vx_load(src + i);
+            v_store(buf + i, v_add(v_buf, v_src));
+        }
+        return i;
+    }
+};
+
+// SIMD specialization: uchar->int sum reduction (reduceSum, type CV_8U -> CV_32S)
+// Load 8-bit values, widen to 32-bit via two-stage expansion, then vector-add.
+template <>
+struct ReduceR_SIMD<uchar, int, OpAdd<int>>
+{
+    int operator()(const uchar* src, int start, int end, int* buf, const OpAdd<int>&) const
+    {
+        int i = start;
+        const int vl8  = VTraits<v_uint8>::vlanes();
+        const int vl32 = VTraits<v_int32>::vlanes();  // vl8 / 4
+        for (; i <= end - vl8; i += vl8)
+        {
+            v_uint8  v_src8 = vx_load(src + i);
+            v_uint16 v_lo16, v_hi16;
+            v_expand(v_src8, v_lo16, v_hi16);
+            // Second-stage widen: 16-bit -> 32-bit
+            v_uint32 v0, v1, v2, v3;
+            v_expand(v_lo16, v0, v1);
+            v_expand(v_hi16, v2, v3);
+            // Load 4 groups of int32 accumulators and add
+            v_int32 b0 = vx_load(buf + i);
+            v_int32 b1 = vx_load(buf + i + vl32);
+            v_int32 b2 = vx_load(buf + i + vl32 * 2);
+            v_int32 b3 = vx_load(buf + i + vl32 * 3);
+            v_store(buf + i,            v_add(b0, v_reinterpret_as_s32(v0)));
+            v_store(buf + i + vl32,     v_add(b1, v_reinterpret_as_s32(v1)));
+            v_store(buf + i + vl32 * 2, v_add(b2, v_reinterpret_as_s32(v2)));
+            v_store(buf + i + vl32 * 3, v_add(b3, v_reinterpret_as_s32(v3)));
+        }
+        return i;
+    }
+};
+
+// SIMD specialization: float max reduction
+template <>
+struct ReduceR_SIMD<float, float, OpMax<float>>
+{
+    int operator()(const float* src, int start, int end, float* buf, const OpMax<float>&) const
+    {
+        int i = start;
+        const int vl = VTraits<v_float32>::vlanes();
+        for (; i <= end - vl; i += vl)
+        {
+            v_float32 v_buf = vx_load(buf + i);
+            v_float32 v_src = vx_load(src + i);
+            v_store(buf + i, v_max(v_buf, v_src));
+        }
+        return i;
+    }
+};
+
+// SIMD specialization: float min reduction
+template <>
+struct ReduceR_SIMD<float, float, OpMin<float>>
+{
+    int operator()(const float* src, int start, int end, float* buf, const OpMin<float>&) const
+    {
+        int i = start;
+        const int vl = VTraits<v_float32>::vlanes();
+        for (; i <= end - vl; i += vl)
+        {
+            v_float32 v_buf = vx_load(buf + i);
+            v_float32 v_src = vx_load(src + i);
+            v_store(buf + i, v_min(v_buf, v_src));
+        }
+        return i;
+    }
+};
+
+#endif // CV_SIMD || CV_SIMD_SCALABLE
+
 
 template<typename T, typename ST, typename WT, class Op, class OpInit>
 class ReduceR_Invoker : public ParallelLoopBody
