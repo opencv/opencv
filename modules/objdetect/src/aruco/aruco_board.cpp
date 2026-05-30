@@ -328,13 +328,13 @@ struct CharucoBoard1Impl : CharucoBoardBaseImpl {
     // for each charuco corner, nearest marker corner id of each marker
     std::vector<std::vector<int> > nearestMarkerCorners;
 
-    void createCharucoBoard()override;
+    void createCharucoBoard() CV_OVERRIDE;
     void calcNearestMarkerCorners();
 
     void matchImagePoints(InputArrayOfArrays detectedCharuco, InputArray detectedIds,
-                          OutputArray objPoints, OutputArray imgPoints) const override;
+                          OutputArray objPoints, OutputArray imgPoints) const CV_OVERRIDE;
 
-    void generateImage(Size outSize, OutputArray img, int marginSize, int borderBits) const override;
+    void generateImage(Size outSize, OutputArray img, int marginSize, int borderBits) const CV_OVERRIDE;
 };
 
 
@@ -549,10 +549,10 @@ struct CharucoBoard2Impl : CharucoBoardBaseImpl {
         CharucoBoardBaseImpl(_dictionary, _size, _squareLength, _markerLength)
     {}
 
-    void createCharucoBoard() override;
+    void createCharucoBoard() CV_OVERRIDE;
     void matchImagePoints(InputArrayOfArrays detectedCharuco, InputArray detectedIds,
-                          OutputArray objPoints, OutputArray imgPoints) const override;
-    void generateImage(Size outSize, OutputArray img, int marginSize, int borderBits) const override;
+                          OutputArray objPoints, OutputArray imgPoints) const CV_OVERRIDE;
+    void generateImage(Size outSize, OutputArray img, int marginSize, int borderBits) const CV_OVERRIDE;
 };
 
 void CharucoBoard2Impl::createCharucoBoard() {
@@ -591,14 +591,15 @@ void CharucoBoard2Impl::generateImage(Size outSize, OutputArray img, int marginS
     board2.generateImage(outSize, mat, marginSize, borderBits);
     mat.copyTo(img);
 }
-CharucoBoard::CharucoBoard(){}
+CharucoBoard::CharucoBoard() : type_(CHARUCO_1) {}
 
 CharucoBoard::CharucoBoard(const Size& size, float squareLength, float markerLength,
-                           const Dictionary &dictionary, InputArray ids,CharucoBoardType type):
+                           const Dictionary &dictionary, InputArray ids, CharucoBoardType type):
     Board(  (type==CHARUCO_1? static_cast<Board::Impl*>(new CharucoBoard1Impl(dictionary, size, squareLength, markerLength)):
-                static_cast<Board::Impl*>(new CharucoBoard2Impl(dictionary, size, squareLength, squareLength))) ){
+                static_cast<Board::Impl*>(new CharucoBoard2Impl(dictionary, size, squareLength, squareLength))) ),
+    type_(type)
+{
 
-    type_=type;
     CV_Assert(size.width > 1 && size.height > 1 );
     if(type==CHARUCO_1)
         CV_Assert(markerLength > 0  && squareLength > markerLength);
@@ -618,10 +619,11 @@ CharucoBoard::CharucoBoard(const Size& size, float squareLength, float markerLen
 
 CharucoBoard::CharucoBoard(const Size& size, float squareLength,
                            const Dictionary &dictionary):
-    Board(new CharucoBoard2Impl(dictionary, size, squareLength, squareLength) ){
+    Board(new CharucoBoard2Impl(dictionary, size, squareLength, squareLength) ),
+    type_(CHARUCO_2)
+{
 
     CV_Assert(size.width > 1 && size.height > 1 );
-    type_=CHARUCO_2;
     static_pointer_cast<CharucoBoardBaseImpl>(impl)->createCharucoBoard();
 }
 

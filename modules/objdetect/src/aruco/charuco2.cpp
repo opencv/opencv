@@ -371,9 +371,9 @@ std::vector<std::vector<cv::Point>> MarkerDetector::visitedAwareTracingContour(c
                 for (; c <= cols - cv::VTraits<cv::v_uint8>::vlanes(); c+= cv::VTraits<cv::v_uint8>::vlanes())
                 {
                     cv::v_uint8 vmask = (cv::v_ne(cv::vx_load((uchar*)(row_ptr + c)), v_zero));
-                    if (v_check_any(vmask))
+                    if (cv::v_check_any(vmask))
                     {
-                        c += v_scan_forward(vmask);
+                        c += cv::v_scan_forward(vmask);
                         break;
                     }
                 }

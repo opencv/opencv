@@ -355,7 +355,7 @@ struct  Charuco1DetectorImpl : public CharucoDetector::CharucoBaseDetectorImpl{
     }
 
     void detectBoardWithCheck(InputArray image, OutputArray charucoCorners, OutputArray charucoIds,
-                              InputOutputArrayOfArrays markerCorners, InputOutputArray markerIds) override{
+                              InputOutputArrayOfArrays markerCorners, InputOutputArray markerIds) CV_OVERRIDE{
         vector<vector<Point2f>> tmpMarkerCorners;
         vector<int> tmpMarkerIds;
         InputOutputArrayOfArrays _markerCorners = markerCorners.needed() ? markerCorners : _InputOutputArray(tmpMarkerCorners);
@@ -369,7 +369,7 @@ struct  Charuco1DetectorImpl : public CharucoDetector::CharucoBaseDetectorImpl{
     }
 
     void detectDiamonds(InputArray image, OutputArrayOfArrays _diamondCorners, OutputArray _diamondIds,
-                        InputOutputArrayOfArrays inMarkerCorners, InputOutputArray inMarkerIds) override;
+                        InputOutputArrayOfArrays inMarkerCorners, InputOutputArray inMarkerIds) CV_OVERRIDE;
 };
 
 
@@ -386,18 +386,18 @@ struct  Charuco2DetectorImpl : public CharucoDetector::CharucoBaseDetectorImpl{
     virtual  ~Charuco2DetectorImpl() {}
 
     void detectDiamonds(InputArray image, OutputArrayOfArrays _diamondCorners, OutputArray _diamondIds,
-                        InputOutputArrayOfArrays inMarkerCorners, InputOutputArray inMarkerIds) override{
+                        InputOutputArrayOfArrays inMarkerCorners, InputOutputArray inMarkerIds) CV_OVERRIDE{
         charucoDetector2.detectDiamonds(image,_diamondCorners,_diamondIds,inMarkerCorners,inMarkerIds);
          }
 
-    void setBoard(const CharucoBoard& _board) override {
+    void setBoard(const CharucoBoard& _board) CV_OVERRIDE {
         CharucoBaseDetectorImpl::setBoard(_board);
         charucoDetector2.setBoard(CharucoBoard2(_board.getChessboardSize(), _board.getMarkerLength(), 0,
                                                _board.getDictionary()));
-    }
+     }
 
     void detectBoardWithCheck(InputArray image, OutputArray charucoCorners, OutputArray charucoIds,
-                              InputOutputArrayOfArrays markerCorners, InputOutputArray markerIds) override{
+                              InputOutputArrayOfArrays markerCorners, InputOutputArray markerIds) CV_OVERRIDE{
 
         charucoDetector2.detectBoard(image,charucoCorners,charucoIds, markerCorners, markerIds);
     }
