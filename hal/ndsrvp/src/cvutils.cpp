@@ -17,6 +17,8 @@ namespace ndsrvp {
 
 void* fastMalloc(size_t size)
 {
+    if(size > (size_t)-1 - sizeof(void*) - CV_MALLOC_ALIGN)
+        ndsrvp_error(Error::StsNoMem, "fastMalloc(): Too large allocation request");
     uchar* udata = (uchar*)malloc(size + sizeof(void*) + CV_MALLOC_ALIGN);
     if(!udata)
         ndsrvp_error(Error::StsNoMem, "fastMalloc(): Not enough memory");
