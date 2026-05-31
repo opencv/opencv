@@ -88,7 +88,7 @@ public:
 
     virtual double getProperty_(int propId) const CV_OVERRIDE
     {
-        return ffmpegCapture ? icvGetCaptureProperty_FFMPEG_p(ffmpegCapture, propId) : 0;
+        return ffmpegCapture ? icvGetCaptureProperty_FFMPEG_p(ffmpegCapture, propId) : static_cast<double>(CAP_PROP_UNKNOWN);
     }
     virtual bool setProperty_(int propId, double value) CV_OVERRIDE
     {
@@ -238,7 +238,7 @@ public:
 
     virtual double getProperty(int propId) const CV_OVERRIDE {
         if(!ffmpegWriter)
-            return 0;
+            return CAP_PROP_UNKNOWN;
         return ffmpegWriter->getProperty(propId);
     }
 

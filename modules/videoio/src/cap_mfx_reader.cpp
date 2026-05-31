@@ -137,7 +137,7 @@ double VideoCapture_IntelMFX::getProperty(int prop) const
     if (!good)
     {
         MSG(cerr << "MFX: can not call getProperty(), backend has not been initialized" << endl);
-        return 0;
+        return CAP_PROP_UNKNOWN;
     }
     switch (prop)
     {
@@ -147,7 +147,7 @@ double VideoCapture_IntelMFX::getProperty(int prop) const
             return frameSize.height;
         default:
             MSG(cerr << "MFX: unsupported property" << endl);
-            return -1.0;
+            return CAP_PROP_UNKNOWN;
     }
 }
 

@@ -476,7 +476,7 @@ double CvCaptureCAM::getProperty(int property_id) const{
 
     CMFormatDescriptionRef format = mCaptureDevice.activeFormat.formatDescription;
     CMVideoDimensions s1 = CMVideoFormatDescriptionGetDimensions(format);
-    double retval = -1.0;
+    double retval = cv::CAP_PROP_UNKNOWN;
 
     switch (property_id) {
         case cv::CAP_PROP_FRAME_WIDTH:
@@ -985,7 +985,7 @@ bool CvCaptureFile::retrieveFrame_(int, cv::OutputArray arr) {
 }
 
 double CvCaptureFile::getProperty_(int property_id) const{
-    if (mAsset == nil) return 0;
+    if (mAsset == nil) return cv::CAP_PROP_UNKNOWN;
 
     CMTime t;
 
@@ -1016,7 +1016,7 @@ double CvCaptureFile::getProperty_(int property_id) const{
             break;
     }
 
-    return 0;
+    return cv::CAP_PROP_UNKNOWN;
 }
 
 bool CvCaptureFile::setProperty_(int property_id, double value) {

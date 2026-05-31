@@ -2100,7 +2100,7 @@ static inline double getCodecIdFourcc(const AVCodecID codec_id)
 
 double CvCapture_FFMPEG::getProperty( int property_id ) const
 {
-    if( !video_st || (!rawMode && !context) ) return 0;
+    if( !video_st || (!rawMode && !context) ) return CAP_PROP_UNKNOWN;
 
     switch( property_id )
     {
@@ -2129,7 +2129,7 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
         if (fourcc != -1) return fourcc;
         const double codec_tag = (double)video_st->CV_FFMPEG_CODEC_FIELD->codec_tag;
         if (codec_tag) return codec_tag;
-        else return -1;
+        else return CAP_PROP_UNKNOWN;
     }
     case CAP_PROP_SAR_NUM:
         return _opencv_ffmpeg_get_sample_aspect_ratio(ic->streams[video_stream]).num;
@@ -2143,11 +2143,11 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
         AVPixelFormat pix_fmt = video_st->codec->pix_fmt;
 #endif
         unsigned int fourcc_tag = avcodec_pix_fmt_to_codec_tag(pix_fmt);
-        return (fourcc_tag == 0) ? -1.0 : (double)fourcc_tag;
+        return (fourcc_tag == 0) ? static_cast<double>(CAP_PROP_UNKNOWN) : (double)fourcc_tag;
     }
     case CAP_PROP_FORMAT:
         if (rawMode)
-            return -1;
+            return CAP_PROP_UNKNOWN;
         else if (!convertRGB)
             return CV_8UC1;
         else if (enableAlpha)
@@ -2181,6 +2181,8 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
     case CAP_PROP_N_THREADS:
         if (!rawMode)
             return static_cast<double>(context->thread_count);
+        else
+            return 0;
         break;
     case CAP_PROP_PTS:
         return static_cast<double>(pts_in_fps_time_base);
@@ -2190,7 +2192,7 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
         break;
     }
 
-    return -1.0;
+    return CAP_PROP_UNKNOWN;
 }
 
 double CvCapture_FFMPEG::r2d(AVRational r) const
@@ -3007,7 +3009,7 @@ double CvVideoWriter_FFMPEG::getProperty(int propId) const
         return static_cast<double>(use_opencl);
     }
 #endif
-    return 0;
+    return CAP_PROP_UNKNOWN;
 }
 
 bool CvVideoWriter_FFMPEG::setProperty(int property_id, double value)

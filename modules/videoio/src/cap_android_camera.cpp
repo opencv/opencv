@@ -358,7 +358,7 @@ public:
                 break;
         }
         // unknown parameter or value not available
-        return -1;
+        return CAP_PROP_UNKNOWN;
     }
 
     bool setProperty(int property_id, double value) CV_OVERRIDE

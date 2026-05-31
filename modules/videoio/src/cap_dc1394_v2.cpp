@@ -523,7 +523,7 @@ double CvCaptureCAM_DC1394_v2_CPP::getProperty(int propId) const
         return fps;
     case CAP_PROP_RECTIFICATION:
         CV_LOG_WARNING(NULL, "cap_dc1394: rectification support has been removed from videoio module");
-        return 0;
+        return CAP_PROP_UNKNOWN;
     case CAP_PROP_WHITE_BALANCE_BLUE_U:
         if (dc1394_feature_whitebalance_get_value(dcCam,
                                                   &fs.feature[DC1394_FEATURE_WHITE_BALANCE-DC1394_FEATURE_MIN].BU_value,
@@ -555,7 +555,7 @@ double CvCaptureCAM_DC1394_v2_CPP::getProperty(int propId) const
                 &fs.feature[dc1394properties[propId]-DC1394_FEATURE_MIN].value) == DC1394_SUCCESS)
               return feature_set.feature[dc1394properties[propId]-DC1394_FEATURE_MIN].value;
     }
-    return -1.0;
+    return CAP_PROP_UNKNOWN;
 }
 
 bool CvCaptureCAM_DC1394_v2_CPP::setProperty(int propId, double value)

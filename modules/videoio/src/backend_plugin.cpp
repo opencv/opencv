@@ -540,10 +540,10 @@ public:
     }
     double getProperty(int prop) const CV_OVERRIDE
     {
-        double val = -1;
+        double val = CAP_PROP_UNKNOWN;
         if (plugin_api_->v0.Capture_getProperty)
             if (CV_ERROR_OK != plugin_api_->v0.Capture_getProperty(capture_, prop, &val))
-                val = -1;
+                val = CAP_PROP_UNKNOWN;
         return val;
     }
     bool setProperty(int prop, double val) CV_OVERRIDE
@@ -664,10 +664,10 @@ public:
     }
     double getProperty(int prop) const CV_OVERRIDE
     {
-        double val = -1;
+        double val = CAP_PROP_UNKNOWN;
         if (plugin_api_->v0.Writer_getProperty)
             if (CV_ERROR_OK != plugin_api_->v0.Writer_getProperty(writer_, prop, &val))
-                val = -1;
+                val = CAP_PROP_UNKNOWN;
         return val;
     }
     bool setProperty(int prop, double val) CV_OVERRIDE

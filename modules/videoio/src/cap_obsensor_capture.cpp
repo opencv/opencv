@@ -216,7 +216,7 @@ bool VideoCapture_obsensor::retrieveFrame(int outputType, OutputArray frame)
 }
 
 double VideoCapture_obsensor::getProperty(int propIdx) const {
-    double rst = 0.0;
+    double rst = CAP_PROP_UNKNOWN;
     propIdx = propIdx & (~CAP_OBSENSOR_GENERATORS_MASK);
     // int gen = propIdx & CAP_OBSENSOR_GENERATORS_MASK;
     switch (propIdx)

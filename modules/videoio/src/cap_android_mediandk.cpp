@@ -236,7 +236,7 @@ public:
         }
 
         // unknown parameter or value not available
-        return -1;
+        return CAP_PROP_UNKNOWN;
     }
 
     bool setProperty(int property_id, double value) CV_OVERRIDE
@@ -736,7 +736,7 @@ public:
         fd = -1;
     }
 
-    virtual double getProperty(int) const CV_OVERRIDE { return 0.; }
+    virtual double getProperty(int) const CV_OVERRIDE { return CAP_PROP_UNKNOWN; }
     virtual bool setProperty(int, double) CV_OVERRIDE { return false; }
     virtual bool isOpened() const CV_OVERRIDE { return NULL != encoder; }
 };

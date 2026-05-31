@@ -256,7 +256,7 @@ double CvCaptureCAM_PvAPI::getProperty( int property_id ) const
         PvAttrEnumGet(Camera.Handle,"MulticastEnable",mEnable,sizeof(mEnable),NULL);
         if (strcmp(mEnable, "Off") == 0)
         {
-            return -1.0;
+            return CAP_PROP_UNKNOWN;
         }
         else
         {
@@ -286,7 +286,7 @@ double CvCaptureCAM_PvAPI::getProperty( int property_id ) const
         else if (strcmp(triggerMode, "Software")==0)
             return 4.0;
         else
-            return -1.0;
+            return CAP_PROP_UNKNOWN;
     case CAP_PROP_PVAPI_DECIMATIONHORIZONTAL:
         PvAttrUint32Get(Camera.Handle, "DecimationHorizontal", &nTemp);
         return (double)nTemp;
@@ -319,7 +319,7 @@ double CvCaptureCAM_PvAPI::getProperty( int property_id ) const
         else if (strcmp(pixelFormat, "Bgra32")==0)
             return 8.0;
     }
-    return -1.0;
+    return CAP_PROP_UNKNOWN;
 }
 
 bool CvCaptureCAM_PvAPI::setProperty( int property_id, double value )

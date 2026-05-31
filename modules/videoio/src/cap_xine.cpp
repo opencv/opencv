@@ -213,15 +213,15 @@ class XINECapture : public IVideoCapture
 
         switch (property_id)
         {
-        case CAP_PROP_POS_MSEC: return res ? pos_t : 0;
+        case CAP_PROP_POS_MSEC: return res ? pos_t : CAP_PROP_UNKNOWN;
         case CAP_PROP_POS_FRAMES: return frame_number;
-        case CAP_PROP_POS_AVI_RATIO: return length && res ? pos_l / 65535.0 : 0.0;
+        case CAP_PROP_POS_AVI_RATIO: return length && res ? pos_l / 65535.0 : CAP_PROP_UNKNOWN;
         case CAP_PROP_FRAME_WIDTH: return size.width;
         case CAP_PROP_FRAME_HEIGHT: return size.height;
         case CAP_PROP_FPS: return frame_rate;
         case CAP_PROP_FOURCC: return (double)xine_get_stream_info(stream, XINE_STREAM_INFO_VIDEO_FOURCC);
         }
-        return -1.0;
+        return CAP_PROP_UNKNOWN;
     }
 
     bool setProperty(int property_id, double value) CV_OVERRIDE

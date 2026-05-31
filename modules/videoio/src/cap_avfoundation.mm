@@ -526,7 +526,7 @@ double CvCaptureCAM::getProperty(int property_id) const{
             return mCaptureDevice.torchMode;
 
         default:
-            return -1.0;
+            return cv::CAP_PROP_UNKNOWN;
     }
 
 
@@ -1061,7 +1061,7 @@ bool CvCaptureFile::retrieveFrame(int, cv::OutputArray arr) {
 }
 
 double CvCaptureFile::getProperty(int property_id) const{
-    if (mAsset == nil) return 0;
+    if (mAsset == nil) return cv::CAP_PROP_UNKNOWN;
 
     CMTime t;
 
@@ -1069,7 +1069,7 @@ double CvCaptureFile::getProperty(int property_id) const{
         case cv::CAP_PROP_POS_MSEC:
             return mFrameTimestamp.value * 1000.0 / mFrameTimestamp.timescale;
         case cv::CAP_PROP_POS_FRAMES:
-            return mAssetTrack.nominalFrameRate > 0 ? mFrameNum : 0;
+            return mAssetTrack.nominalFrameRate > 0 ? mFrameNum : cv::CAP_PROP_UNKNOWN;
         case cv::CAP_PROP_POS_AVI_RATIO:
             t = [mAsset duration];
             return (mFrameTimestamp.value * t.timescale) / double(mFrameTimestamp.timescale * t.value);
@@ -1092,7 +1092,7 @@ double CvCaptureFile::getProperty(int property_id) const{
             break;
     }
 
-    return 0;
+    return cv::CAP_PROP_UNKNOWN;
 }
 
 bool CvCaptureFile::setProperty(int property_id, double value) {

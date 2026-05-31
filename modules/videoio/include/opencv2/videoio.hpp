@@ -129,6 +129,7 @@ enum VideoCaptureAPIs {
  @sa videoio_flags_others, VideoCapture::get(), VideoCapture::set()
 */
 enum VideoCaptureProperties {
+       CAP_PROP_UNKNOWN        =-1,
        CAP_PROP_POS_MSEC       =0, //!< Current position of the video file in milliseconds.
        CAP_PROP_POS_FRAMES     =1, //!< 0-based index of the frame to be decoded/captured next. When the index i is set in RAW mode (CAP_PROP_FORMAT == -1) this will seek to the key frame k, where k <= i.
        CAP_PROP_POS_AVI_RATIO  =2, //!< Relative position of the video file: 0=start of the film, 1=end of the film.
@@ -999,7 +1000,7 @@ public:
 
     @param propId Property identifier from cv::VideoCaptureProperties (eg. cv::CAP_PROP_POS_MSEC, cv::CAP_PROP_POS_FRAMES, ...)
     or one from @ref videoio_flags_others
-    @return Value for the specified property. Value -1 is returned when querying a property that is
+    @return Value for the specified property. Value cv::CAP_PROP_UNKNOWN is returned when querying a property that is
     not supported by the backend used by the VideoCapture instance.
 
     @note Reading / writing properties involves many layers. Some unexpected result might happens

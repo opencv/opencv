@@ -1431,7 +1431,7 @@ int videoInput::getWidth(int id) const
         return VDList[id] ->width;
     }
 
-    return 0;
+    return CAP_PROP_UNKNOWN;
 
 }
 
@@ -1448,7 +1448,7 @@ int videoInput::getHeight(int id) const
         return VDList[id] ->height;
     }
 
-    return 0;
+    return CAP_PROP_UNKNOWN;
 
 }
 
@@ -1463,7 +1463,7 @@ int videoInput::getFourcc(int id) const
         return getFourccFromMediaSubtype(VDList[id]->videoType);
     }
 
-    return 0;
+    return CAP_PROP_UNKNOWN;
 
 }
 
@@ -1477,14 +1477,14 @@ double videoInput::getFPS(int id) const
         }
     }
 
-    return 0;
+    return CAP_PROP_UNKNOWN;
 
 }
 
 int videoInput::getChannel(int deviceID) const
 {
     if (!isDeviceSetup(deviceID))
-        return 0;
+        return CAP_PROP_UNKNOWN;
     return VDList[deviceID]->storeConn;
 }
 
@@ -1500,7 +1500,7 @@ int videoInput::getSize(int id) const
         return VDList[id] ->videoSize;
     }
 
-    return 0;
+    return CAP_PROP_UNKNOWN;
 
 }
 
@@ -2406,7 +2406,7 @@ int videoInput::getVideoPropertyFromCV(int cv_property){
         case CAP_PROP_GAIN:
             return VideoProcAmp_Gain;
     }
-    return -1;
+    return CAP_PROP_UNKNOWN;
 }
 
 int videoInput::getCameraPropertyFromCV(int cv_property){
@@ -2437,7 +2437,7 @@ int videoInput::getCameraPropertyFromCV(int cv_property){
         default:
             break;
     }
-    return -1;
+    return CAP_PROP_UNKNOWN;
 }
 
 bool videoInput::isDeviceDisconnected(int deviceNumber)
@@ -3359,7 +3359,7 @@ int videoInput::property_window_count(int idx)
     if (isDeviceSetup(idx))
         return (int)InterlockedCompareExchange(&VDList[idx]->property_window_count, 0L, 0L);
 
-    return 0;
+    return CAP_PROP_UNKNOWN;
 }
 
 namespace cv
@@ -3457,7 +3457,7 @@ double VideoCapture_DShow::getProperty(int propIdx) const
         break;
     }
     // unknown parameter or value not available
-    return -1;
+    return CAP_PROP_UNKNOWN;
 }
 bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
 {

@@ -1010,7 +1010,7 @@ bool CvCaptureCAM_XIMEA::setProperty( int property_id, double value )
 double CvCaptureCAM_XIMEA::getProperty( int property_id ) const
 {
     XI_RETURN stat = XI_OK;
-    double getPropVal = -1.0;
+    double getPropVal = CAP_PROP_UNKNOWN;
     int ival = 0;
     float fval = 0;
     string ximea_param = "";
@@ -1019,7 +1019,7 @@ double CvCaptureCAM_XIMEA::getProperty( int property_id ) const
     if(hmv == NULL)
     {
         errMsg("CvCaptureCAM_XIMEA::getProperty", XI_INVALID_HANDLE);
-        return -1.0;
+        return CAP_PROP_UNKNOWN;
     }
 
     // convert OCV property id to XIMEA id if necessary
@@ -1625,7 +1625,7 @@ double CvCaptureCAM_XIMEA::getProperty( int property_id ) const
     default:
         // report invalid parameter as it is not of string type
         errMsg("CvCaptureCAM_XIMEA::getProperty", XI_UNKNOWN_PARAM);
-        return -1.0;
+        return CAP_PROP_UNKNOWN;
     }
 
     switch(value_type)
@@ -1646,6 +1646,7 @@ double CvCaptureCAM_XIMEA::getProperty( int property_id ) const
     default:
         // unknown value type selected
         errMsg("CvCaptureCAM_XIMEA::getProperty", XI_WRONG_PARAM_TYPE);
+        getPropVal = CAP_PROP_UNKNOWN;
     }
     return getPropVal;
 }

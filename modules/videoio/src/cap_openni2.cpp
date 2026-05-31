@@ -421,7 +421,7 @@ bool CvCapture_OpenNI2::readCamerasParams()
 
 double CvCapture_OpenNI2::getProperty( int propIdx ) const
 {
-    double propValue = 0;
+    double propValue = CAP_PROP_UNKNOWN;
 
     if( isOpened() )
     {
@@ -478,7 +478,7 @@ bool CvCapture_OpenNI2::setProperty( int propIdx, double propValue )
 
 double CvCapture_OpenNI2::getCommonProperty( int propIdx ) const
 {
-    double propValue = -1.0;
+    double propValue = CAP_PROP_UNKNOWN;
 
     switch( propIdx )
     {
@@ -576,13 +576,13 @@ double CvCapture_OpenNI2::getDepthGeneratorProperty( int propIdx ) const
     case CAP_PROP_OPENNI_BASELINE :
         if(baseline <= 0)
             if (!const_cast<CvCapture_OpenNI2*>(this)->readCamerasParams())
-                return 0;
+                return CAP_PROP_UNKNOWN;
         propValue = baseline;
         break;
     case CAP_PROP_OPENNI_FOCAL_LENGTH :
         if(depthFocalLength_VGA <= 0)
             if (!const_cast<CvCapture_OpenNI2*>(this)->readCamerasParams())
-                return 0;
+                return CAP_PROP_UNKNOWN;
         propValue = (double)depthFocalLength_VGA;
         break;
     case CAP_PROP_OPENNI_REGISTRATION :

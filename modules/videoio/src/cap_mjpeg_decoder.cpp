@@ -132,7 +132,7 @@ double MotionJpegCapture::getProperty(int property) const
             return (double)m_mjpeg_frames.size();
         case CAP_PROP_FORMAT:
         default:
-            return -1.0;
+            return CAP_PROP_UNKNOWN;
     }
 }
 
