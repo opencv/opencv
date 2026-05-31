@@ -203,6 +203,7 @@ private:
     void parseAbs                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parsePRelu                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseLRN                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseLpNormalization      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseInstanceNormalization(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseBatchNormalization   (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseGemm                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -1926,6 +1927,12 @@ void ONNXImporter::parseLRN(LayerParams& layerParams, const opencv_onnx::NodePro
     addLayer(layerParams, node_proto);
 }
 
+void ONNXImporter::parseLpNormalization(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "NormalizeBBox";
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter::parseInstanceNormalization(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto) {
     int num_inputs = node_proto.input_size();
     CV_CheckEQ(num_inputs, 3, "DNN/ONNXImporter - InstanceNorm: three inputs are required");
@@ -2929,6 +2936,12 @@ void ONNXImporter::parseDetectionOutput(LayerParams& layerParams, const opencv_o
 {
     opencv_onnx::NodeProto node_proto = node_proto_;
     CV_CheckEQ(node_proto.input_size(), 3, "");
+    // Some ONNX converters store code_type as an int; the layer expects a string.
+    if (layerParams.has("code_type") && layerParams.get("code_type").isInt())
+    {
+        int ct = layerParams.get<int>("code_type");
+        layerParams.set("code_type", ct == 2 ? "CENTER_SIZE" : "CORNER");
+    }
     if (constBlobs.find(node_proto.input(2)) != constBlobs.end())
     {
         Mat priors = getBlob(node_proto, 2);
@@ -4102,6 +4115,7 @@ void ONNXImporter::buildDispatchMap_ONNX_AI()
     dispatch["Abs"] = &ONNXImporter::parseAbs;
     dispatch["PRelu"] = &ONNXImporter::parsePRelu;
     dispatch["LRN"] = &ONNXImporter::parseLRN;
+    dispatch["LpNormalization"] = &ONNXImporter::parseLpNormalization;
     dispatch["InstanceNormalization"] = &ONNXImporter::parseInstanceNormalization;
     dispatch["BatchNormalization"] = &ONNXImporter::parseBatchNormalization;
     dispatch["Gemm"] = &ONNXImporter::parseGemm;

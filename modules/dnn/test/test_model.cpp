@@ -333,6 +333,10 @@ TEST_P(Test_Model, YOLOv3)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 
+    // The in-graph YOLO decode (Split) is not evaluable by the OpenVINO backend.
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+
     std::string model_file = _tf("yolov3.onnx", false);
     std::string img_path = _tf("dog416.png"); // Matches standard YOLO inference classes
 

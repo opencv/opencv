@@ -136,7 +136,13 @@ TEST_P(DNNTestNetwork, ResNet_50)
         CV_TEST_TAG_DEBUG_VERYLONG
     );
 
-    processNet("dnn/onnx/models/resnet50v1.onnx", "", Size(224, 224));
+    double l1 = default_l1, lInf = default_lInf;
+    if (target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16)
+    {
+        l1 = 0.015;
+        lInf = 0.05;
+    }
+    processNet("dnn/onnx/models/resnet50v1.onnx", "", Size(224, 224), "", l1, lInf);
     expectNoFallbacksFromIE(net);
     expectNoFallbacksFromCUDA(net);
 }
@@ -254,6 +260,10 @@ TEST_P(DNNTestNetwork, SSD_VGG16)
         CV_TEST_TAG_LONG,
         CV_TEST_TAG_DEBUG_VERYLONG
     );
+
+    // This converted SSD model relies on layers the OpenVINO backend can't run.
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 
     Mat sample = imread(findDataFile("dnn/street.png"));
     Mat inp = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);

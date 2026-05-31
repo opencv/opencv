@@ -1164,13 +1164,11 @@ CV__DNN_INLINE_NS_BEGIN
       * @brief Read deep learning network represented in one of the supported formats.
       * @param[in] model Binary file contains trained weights. The following file
       *                  extensions are expected for models from different frameworks:
-      *                  * `*.caffemodel` (Caffe, http://caffe.berkeleyvision.org/)
       *                  * `*.pb` (TensorFlow, https://www.tensorflow.org/)
       *                  * `*.bin` | `*.onnx` (OpenVINO, https://software.intel.com/openvino-toolkit)
       *                  * `*.onnx` (ONNX, https://onnx.ai/)
       * @param[in] config Text file contains network configuration. It could be a
       *                   file with the following extensions:
-      *                  * `*.prototxt` (Caffe, http://caffe.berkeleyvision.org/)
       *                  * `*.pbtxt` (TensorFlow, https://www.tensorflow.org/)
       *                  * `*.xml` (OpenVINO, https://software.intel.com/openvino-toolkit)
       * @param[in] framework Explicit framework name tag to determine a format.
@@ -1180,7 +1178,7 @@ CV__DNN_INLINE_NS_BEGIN
       * @returns Net object.
       *
       * This function automatically detects an origin framework of trained model
-      * and calls an appropriate function such @ref readNetFromCaffe, @ref readNetFromTensorflow.
+      * and calls an appropriate function such @ref readNetFromTensorflow, @ref readNetFromONNX.
       * An order of @p model and @p config arguments does not matter.
       */
      CV_EXPORTS_W Net readNet(CV_WRAP_FILE_PATH const String& model,

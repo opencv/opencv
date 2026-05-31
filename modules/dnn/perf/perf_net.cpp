@@ -149,7 +149,16 @@ PERF_TEST_P_(DNNTestNetwork, SSD)
 
 PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_v1_ONNX)
 {
-    processNet("dnn/onnx/models/ssd_mobilenet_v1_12.onnx", "", cv::Size(300, 300));
+    // Dynamic-shape preprocessing in this model needs the new engine; OpenVINO uses the classic one.
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+
+    // This model expects a uint8 NHWC image as input.
+    Mat image(cv::Size(300, 300), CV_8UC3);
+    randu(image, 0, 255);
+    int imsize[] = {1, image.rows, image.cols, 3};
+    Mat input(4, imsize, CV_8U, image.data);
+    processNet("dnn/onnx/models/ssd_mobilenet_v1_12.onnx", "", input);
 }
 
 PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow)
