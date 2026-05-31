@@ -17,7 +17,10 @@ namespace ndsrvp {
 
 void* fastMalloc(size_t size)
 {
-    uchar* udata = (uchar*)malloc(size + sizeof(void*) + CV_MALLOC_ALIGN);
+    size_t totalSize = size + sizeof(void*) + CV_MALLOC_ALIGN;
+    if(totalSize < size)
+        ndsrvp_error(Error::StsNoMem, "fastMalloc(): Integer overflow in size calculation");
+    uchar* udata = (uchar*)malloc(totalSize);
     if(!udata)
         ndsrvp_error(Error::StsNoMem, "fastMalloc(): Not enough memory");
     uchar** adata = (uchar**)align((size_t)((uchar**)udata + 1), CV_MALLOC_ALIGN);
