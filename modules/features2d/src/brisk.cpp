@@ -104,6 +104,8 @@ public:
     }
     virtual void setPatternScale(float _patternScale) CV_OVERRIDE
     {
+      CV_CheckGT(_patternScale, 0.f, "patternScale must be positive");
+
       patternScale = _patternScale;
       std::vector<float> rList;
       std::vector<int> nList;

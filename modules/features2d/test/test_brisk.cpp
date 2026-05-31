@@ -105,4 +105,10 @@ void CV_BRISKTest::run( int )
 
 TEST(Features2d_BRISK, regression) { CV_BRISKTest test; test.safe_run(); }
 
+TEST(Features2d_BRISK, invalidCreateParameters)
+{
+    EXPECT_THROW(BRISK::create(30, 3, 0.0f), cv::Exception);
+    EXPECT_THROW(BRISK::create(30, 3, -1.0f), cv::Exception);
+}
+
 }} // namespace
