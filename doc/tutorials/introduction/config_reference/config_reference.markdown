@@ -156,17 +156,17 @@ cmake \
 
 Each module is a subdirectory of the `modules` directory. It is possible to disable one module:
 ```.sh
-cmake -DBUILD_opencv_3d=OFF ../opencv
+cmake -DBUILD_opencv_geometry=OFF ../opencv
 ```
 
 The opposite option is to build only specified modules and all modules they depend on:
 ```.sh
-cmake -DBUILD_LIST=calib3d,videoio,ts ../opencv
+cmake -DBUILD_LIST=geometry,videoio,ts ../opencv
 ```
 In this example we requested 3 modules and configuration script has determined all dependencies automatically:
 ```
 --   OpenCV modules:
---     To be built:                 calib3d core features flann highgui imgcodecs imgproc ts videoio
+--     To be built:                 core features flann geometry highgui imgcodecs imgproc ts videoio
 ```
 
 

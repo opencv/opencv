@@ -3,7 +3,7 @@ import java.util.List;
 import java.util.Random;
 
 import org.opencv.core.*;
-import org.opencv.3d.Cv3d;
+import org.opencv.geometry.Geometry;
 import org.opencv.calib.Calib;
 import org.opencv.highgui.HighGui;
 import org.opencv.imgcodecs.Imgcodecs;
@@ -29,7 +29,7 @@ class PerspectiveCorrectionRun {
 
         //! [estimate-homography]
         Mat H = new Mat();
-        H = Cv3d.findHomography(corners1, corners2);
+        H = Geometry.findHomography(corners1, corners2);
         System.out.println(H.dump());
         //! [estimate-homography]
 

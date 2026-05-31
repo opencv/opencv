@@ -7,7 +7,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/objdetect.hpp"
-#include "opencv2/3d.hpp"
+#include "opencv2/geometry.hpp"
 #include <opencv2/core/utils/logger.hpp>
 #include "graphical_code_detector_impl.hpp"
 

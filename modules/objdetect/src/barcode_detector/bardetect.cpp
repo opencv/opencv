@@ -5,7 +5,7 @@
 
 #include "../precomp.hpp"
 #include "bardetect.hpp"
-#include "opencv2/3d.hpp"
+#include "opencv2/geometry.hpp"
 
 namespace cv {
 namespace barcode {

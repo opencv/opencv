@@ -19,7 +19,7 @@ ocv_add_dispatched_file_force_all("layers/cpu_kernels/transpose_kernels" AVX AVX
 ocv_add_dispatched_file_force_all("layers/cpu_kernels/gridsample_kernels" AVX AVX2 NEON RVV LASX)
 ocv_add_dispatched_file_force_all("layers/cpu_kernels/nary_eltwise_kernels" AVX AVX2 NEON RVV LASX)
 
-ocv_add_module(dnn opencv_core opencv_imgproc opencv_3d WRAP python java objc js)
+ocv_add_module(dnn opencv_core opencv_imgproc opencv_geometry WRAP python java objc js)
 
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/plugin.cmake)
 

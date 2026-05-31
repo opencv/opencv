@@ -11,7 +11,7 @@
 #include "PnPProblem.h"
 #include "Mesh.h"
 
-#include <opencv2/3d.hpp>
+#include <opencv2/geometry.hpp>
 
 /* Functions for Möller-Trumbore intersection algorithm */
 static cv::Point3f CROSS(cv::Point3f v1, cv::Point3f v2)

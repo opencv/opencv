@@ -11,7 +11,7 @@ opencv_hdr_list = [
 "../../flann/include/opencv2/flann/miniflann.hpp",
 "../../ml/include/opencv2/ml.hpp",
 "../../imgproc/include/opencv2/imgproc.hpp",
-"../../3d/include/opencv2/3d.hpp",
+"../../geometry/include/opencv2/geometry.hpp",
 "../../stereo/include/opencv2/stereo.hpp",
 "../../calib/include/opencv2/calib.hpp",
 "../../features/include/opencv2/features.hpp",

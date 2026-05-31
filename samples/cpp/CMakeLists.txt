@@ -11,7 +11,7 @@ set(OPENCV_CPP_SAMPLES_REQUIRED_DEPS
   opencv_objdetect
   opencv_photo
   opencv_features
-  opencv_3d
+  opencv_geometry
   opencv_stereo
   opencv_calib
   opencv_stitching
