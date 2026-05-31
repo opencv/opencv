@@ -1162,8 +1162,8 @@ TEST(Imgproc_Warping, DISABLED_playground)
 
     for(;;) {
         iangle = (iangle + 1) % (360*4);
-        float angle = iangle*CV_PI/180.f*0.25f;
-        float scale = 1 + 0.2f*sin(angle);
+        float angle = float(iangle*CV_PI/180.f*0.25f);
+        float scale = float(1 + 0.2f*sin(angle));
         float Mdata[9] = {1, 0, 0, 0, 1, 0, 0, 0, 1};
         rotation2affine(scale, angle, cx, cy, Mdata);
         Mat M(2, 3, CV_32F, Mdata);

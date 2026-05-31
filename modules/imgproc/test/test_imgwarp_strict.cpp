@@ -846,7 +846,6 @@ void CV_Remap_Test::generate_test_data()
 
 void CV_Remap_Test::run_func()
 {
-    // printf("test case idx = %d, srcdepth = %d, srccn = %d, dstdepth = %d, interpolation=%d, bordertype=%d\n", ts->get_current_test_info()->test_case_idx, src.depth(), src.channels(), dst.depth(), (interpolation & INTER_MAX), borderType);
     remap(src, dst, mapx, mapy, interpolation, borderType, borderValue);
 }
 
