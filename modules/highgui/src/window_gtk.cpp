@@ -45,7 +45,7 @@
 #if defined (HAVE_GTK)
 
 #include <gtk/gtk.h>
-#include <X11/Xlib.h>
+#include <dlfcn.h>
 
 #if (GTK_MAJOR_VERSION == 2) && defined(HAVE_OPENGL) && !defined(HAVE_GTKGLEXT)
   #undef HAVE_OPENGL  // gtkglext is required
@@ -632,14 +632,28 @@ CV_IMPL int cvInitSystem( int argc, char** argv )
     // check initialization status
     if( !wasInitialized )
     {
-        // XInitThreads() must be called before any X11/GTK operations.
-        // When libraries like PyAV independently load FFmpeg and interact with X11,
-        // XCB's internal lock state can be corrupted unless X11 thread-safety
-        // is initialized first. Without this, cv2.imshow() hangs indefinitely
-        // when `av` is imported before `cv2`.
+        // Attempt to call XInitThreads() via dlopen to enable X11 thread-safety
+        // before GTK initialization. This prevents a deadlock when libraries like
+        // PyAV have already loaded a conflicting FFmpeg version into the process,
+        // corrupting XCB internal lock state. Using dlopen avoids a hard dependency
+        // on libX11, making this a safe no-op on pure Wayland builds.
         // See: https://github.com/opencv/opencv/issues/29195
         //      https://github.com/opencv/opencv/issues/21952
+        #if defined(HAVE_X11)
         XInitThreads();
+        #else
+        {
+            void* x11 = dlopen("libX11.so.6", RTLD_LAZY | RTLD_NOLOAD);
+            if (!x11) x11 = dlopen("libX11.so", RTLD_LAZY);
+            if (x11)
+            {
+                typedef int (*fn_t)(void);
+                fn_t fn = (fn_t)dlsym(x11, "XInitThreads");
+                if (fn) fn();
+                dlclose(x11);
+            }
+        }
+        #endif
 
         if (!gtk_init_check(&argc, &argv))
         {
