@@ -1151,7 +1151,7 @@ TEST(Imgproc_Warping, DISABLED_playground)
     }
     img1.convertTo(img, imgtype, cvtscale);
     Mat canvas0(img.size(), imgtype), canvas8;
-    float cx = img.cols/2, cy = img.rows/2;
+    float cx = img.cols*0.5f, cy = img.rows*0.5f;
     if (img.depth() == CV_32F) {
         borderValue = Scalar(100*cvtscale, 0*cvtscale, 100*cvtscale);
     }
@@ -1168,14 +1168,14 @@ TEST(Imgproc_Warping, DISABLED_playground)
         rotation2affine(scale, angle, cx, cy, Mdata);
         Mat M(2, 3, CV_32F, Mdata);
 
-        double t0 = getTickCount();
+        double t0 = (double)getTickCount();
         if (!useOpenCL) {
             warpAffine(img, canvas0, M, canvas0.size(), INTER_CUBIC, borderType, borderValue);
         } else {
             warpAffine(uimg, ucanvas, M, uimg.size(), INTER_CUBIC, borderType, borderValue);
             ocl::finish();
         }
-        t0 = getTickCount() - t0;
+        t0 = (double)getTickCount() - t0;
 
         if (useOpenCL) {
             ucanvas.copyTo(canvas0);
