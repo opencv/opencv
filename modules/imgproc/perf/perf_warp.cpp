@@ -307,4 +307,31 @@ PERF_TEST(Transform, getPerspectiveTransform_QR_1000)
     SANITY_CHECK_NOTHING();
 }
 
+// Performance test for warpPerspective with large images (issue #29182)
+PERF_TEST(TestWarpPerspective, WarpPerspective_LargeImage_29182)
+{
+    Size szSrc(1920, 1080);
+    Size szDst(1920, 1080);
+
+    Mat src(szSrc, CV_8UC3);
+    cvtest::fillGradient(src);
+    Mat dst(szDst, CV_8UC3);
+
+    Mat rotMat = getRotationMatrix2D(Point2f(src.cols/2.f, src.rows/2.f), 15., 1.1);
+    Mat warpMat(3, 3, CV_64FC1);
+    for(int r = 0; r < 2; r++)
+        for(int c = 0; c < 3; c++)
+            warpMat.at<double>(r, c) = rotMat.at<double>(r, c);
+    warpMat.at<double>(2, 0) = .0001;
+    warpMat.at<double>(2, 1) = .0001;
+    warpMat.at<double>(2, 2) = 1;
+
+    declare.in(src).out(dst);
+    declare.time(30);
+
+    TEST_CYCLE() warpPerspective(src, dst, warpMat, szDst, INTER_NEAREST, BORDER_CONSTANT);
+
+    SANITY_CHECK(dst, 1);
+}
+
 } // namespace

@@ -55,6 +55,20 @@
 #include "opencv2/core/softfloat.hpp"
 #include "imgwarp.hpp"
 
+#if defined(__linux__) || defined(__ANDROID__)
+    #include <sys/mman.h>
+#endif
+
+// Software prefetch hint - no-op on unsupported platforms
+#if defined(__GNUC__) || defined(__clang__)
+    #define CV_PREFETCH(addr, rw, locality) __builtin_prefetch(addr, rw, locality)
+#elif defined(_MSC_VER) && (defined(_M_X64) || defined(_M_IX86))
+    #include <xmmintrin.h>
+    #define CV_PREFETCH(addr, rw, locality) _mm_prefetch((const char*)(addr), _MM_HINT_T0)
+#else
+    #define CV_PREFETCH(addr, rw, locality) ((void)0)
+#endif
+
 using namespace cv;
 
 namespace cv
@@ -297,6 +311,16 @@ static void remapNearest( const Mat& _src, Mat& _dst, const Mat& _xy,
             {
                 const int off_x = isRelative ? (_offset.x+dx) : 0;
                 int sx = XY[dx*2]+off_x, sy = XY[dx*2+1]+off_y;
+
+                // Prefetch source data for upcoming pixels to reduce stalls
+                // on mmap-ed or uncached memory (see #29182)
+                if( dx + 16 < dsize.width )
+                {
+                    int psx = XY[(dx+16)*2]+off_x, psy = XY[(dx+16)*2+1]+off_y;
+                    if( (unsigned)psx < width1 && (unsigned)psy < height1 )
+                        CV_PREFETCH(&S0[psy*sstep + psx], 0, 0);
+                }
+
                 if( (unsigned)sx < width1 && (unsigned)sy < height1 )
                     D[dx] = S0[sy*sstep + sx];
                 else
@@ -325,6 +349,16 @@ static void remapNearest( const Mat& _src, Mat& _dst, const Mat& _xy,
                 const int off_x = isRelative ? (_offset.x+dx) : 0;
                 int sx = XY[dx*2]+off_x, sy = XY[dx*2+1]+off_y;
                 const T *S;
+
+                // Prefetch source data for upcoming pixels to reduce stalls
+                // on mmap-ed or uncached memory (see #29182)
+                if( dx + 16 < dsize.width )
+                {
+                    int psx = XY[(dx+16)*2]+off_x, psy = XY[(dx+16)*2+1]+off_y;
+                    if( (unsigned)psx < width1 && (unsigned)psy < height1 )
+                        CV_PREFETCH(&S0[psy*sstep + psx*cn], 0, 0);
+                }
+
                 if( (unsigned)sx < width1 && (unsigned)sy < height1 )
                 {
                     if( cn == 3 )
@@ -2695,6 +2729,16 @@ public:
         int bh0 = std::min(BLOCK_SZ/2, height);
         int bw0 = std::min(BLOCK_SZ*BLOCK_SZ/bh0, width);
         bh0 = std::min(BLOCK_SZ*BLOCK_SZ/bw0, height);
+
+#if defined(__linux__) || defined(__ANDROID__)
+        // Pre-fault source pages for mmap-ed buffers to avoid page fault
+        // storms during scattered reads in the remap phase (see #29182)
+        if( src.datastart )
+        {
+            size_t src_size = src.step * src.rows;
+            madvise(const_cast<uchar*>(src.datastart), src_size, MADV_WILLNEED);
+        }
+#endif
 
         for( y = range.start; y < range.end; y += bh0 )
         {
