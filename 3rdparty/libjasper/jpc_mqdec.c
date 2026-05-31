@@ -181,6 +181,9 @@ void jpc_mqdec_init(jpc_mqdec_t *mqdec)
 
 void jpc_mqdec_setinput(jpc_mqdec_t *mqdec, jas_stream_t *in)
 {
+    if (!mqdec || !in) {
+        return;
+    }
     mqdec->in = in;
 }
 
