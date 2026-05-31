@@ -45,6 +45,7 @@
 #if defined (HAVE_GTK)
 
 #include <gtk/gtk.h>
+#include <X11/Xlib.h>
 
 #if (GTK_MAJOR_VERSION == 2) && defined(HAVE_OPENGL) && !defined(HAVE_GTKGLEXT)
   #undef HAVE_OPENGL  // gtkglext is required
@@ -631,6 +632,15 @@ CV_IMPL int cvInitSystem( int argc, char** argv )
     // check initialization status
     if( !wasInitialized )
     {
+        // XInitThreads() must be called before any X11/GTK operations.
+        // When libraries like PyAV independently load FFmpeg and interact with X11,
+        // XCB's internal lock state can be corrupted unless X11 thread-safety
+        // is initialized first. Without this, cv2.imshow() hangs indefinitely
+        // when `av` is imported before `cv2`.
+        // See: https://github.com/opencv/opencv/issues/29195
+        //      https://github.com/opencv/opencv/issues/21952
+        XInitThreads();
+
         if (!gtk_init_check(&argc, &argv))
         {
             hasError = true;
