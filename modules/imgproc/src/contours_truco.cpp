@@ -618,7 +618,7 @@ void findTRUContours(InputArray _src, OutputArrayOfArrays _contours, int minSize
 {
     CV_INSTRUMENT_REGION();
     Mat src = _src.getMat();
-    CV_Assert(!src.empty() && src.type() == CV_8UC1);
+    CV_Assert(src.type() == CV_8UC1);
 
     // Buffer handling
     cv::Mat padded;

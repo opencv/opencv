@@ -649,7 +649,7 @@ void cv::findContours(InputArray _image,
     }
 
     // Fast path: RETR_LIST without hierarchy → findTRUContours (parallel contour extraction)
-    if (mode == RETR_LIST && !_hierarchy.needed())
+    if (mode == RETR_LIST && !_hierarchy.needed() && _image.type() == CV_8UC1)
     {
         // findTRUContours requires FOREGROUND=255; binarize=true thresholds the padded
         // image in-place, avoiding an extra allocation (findContours accepts any non-zero value)

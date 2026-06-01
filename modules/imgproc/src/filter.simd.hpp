@@ -415,22 +415,21 @@ public:
             int w = std::min(tileSize, dst.cols - dst_x);
             int h = std::min(tileSize, dst.rows - dst_y);
 
-            int src_x1 = dst_x - dx1, src_y1 = dst_y - dy1;
-            int src_x2 = dst_x + w + dx2, src_y2 = dst_y + h + dy2;
+            Size wholeSize;
+            Point ofs;
+            src.locateROI(wholeSize, ofs);
+
+            // Parent coordinates.
+            int src_x1 = ofs.x + dst_x - dx1, src_y1 = ofs.y + dst_y - dy1;
+            int src_x2 = ofs.x + dst_x + w + dx2,
+                src_y2 = ofs.y + dst_y + h + dy2;
 
             int pad_top    = std::max(0, -src_y1);
-            int pad_bottom = std::max(0,  src_y2 - src.rows);
+            int pad_bottom = std::max(0, src_y2 - wholeSize.height);
             int pad_left   = std::max(0, -src_x1);
-            int pad_right  = std::max(0,  src_x2 - src.cols);
+            int pad_right = std::max(0, src_x2 - wholeSize.width);
 
-            int clamped_x1 = std::max(0, src_x1);
-            int clamped_y1 = std::max(0, src_y1);
-            int clamped_x2 = std::min(src.cols, src_x2);
-            int clamped_y2 = std::min(src.rows, src_y2);
-
-            Mat src_region = src(Rect(clamped_x1, clamped_y1,
-                                      clamped_x2 - clamped_x1,
-                                      clamped_y2 - clamped_y1));
+            Mat src_region = src(Rect(dst_x, dst_y, w, h)).adjustROI(dy1, dy2, dx1, dx2);
 
             Mat tile_mat;
             if (pad_top == 0 && pad_bottom == 0 && pad_left == 0 && pad_right == 0)
@@ -542,9 +541,41 @@ void FilterEngine__apply(FilterEngine& this_, const Mat& src, Mat& dst, const Si
         (size_t)src.total() >= std::max((size_t)1024 * 1024, (size_t)nthreads * 64 * 1024) &&
         this_.rowBorderType == this_.columnBorderType)
     {
-        // For in-place operations (e.g. morphologyEx MORPH_OPEN), clone src so that
-        // concurrent tiles read from an immutable snapshot rather than racing on writes.
-        Mat src_copy = (src.data == dst.data) ? src.clone() : src;
+        // Robust cloning for in-place/overlapping operations with ROI support.
+        Size resolved_wsz = wsz;
+        Point resolved_ofs = ofs;
+        if (resolved_wsz.width < 0) {
+            src.locateROI(resolved_wsz, resolved_ofs);
+        }
+
+        bool overlap = (src.data <= dst.dataend && dst.data <= src.dataend);
+        Mat src_copy;
+        if (resolved_wsz == src.size()) {
+            src_copy = overlap ? src.clone() : src;
+        } else {
+            // In case of ROI.
+            Mat parent(resolved_wsz, src.type(),
+                       (void*)(src.data - resolved_ofs.y * src.step -
+                               resolved_ofs.x * src.elemSize()),
+                       src.step);
+            if (overlap) {
+                int dx1 = this_.anchor.x, dx2 = this_.ksize.width - dx1 - 1;
+                int dy1 = this_.anchor.y, dy2 = this_.ksize.height - dy1 - 1;
+
+                int p_x1 = std::max(0, resolved_ofs.x - dx1);
+                int p_y1 = std::max(0, resolved_ofs.y - dy1);
+
+                // Clone the required region only.
+                Mat required_region = parent(Rect(resolved_ofs, src.size())).adjustROI(dy1, dy2, dx1, dx2).clone();
+
+                src_copy = required_region(Rect(resolved_ofs - Point(p_x1, p_y1), src.size()));
+            } else {
+                // Actually src_copy = src but makes sure src_copy is seen as a sub-matrix
+                // because sepFilter2D creates a submatrix on the fly without having it be
+                // an official sub-matrix (which would make locateROI fail in TiledFilterInvoker)
+                src_copy = parent(Rect(resolved_ofs, src.size()));
+            }
+        }
 
         // Heuristic: Balance L2 cache locality (128) vs parallel load balancing (64).
         int tileSize = (src.total() < (size_t)nthreads * 128 * 128 * 4) ? 64 : 128;

@@ -1410,6 +1410,30 @@ inline int hal_ni_laplacian(const uchar* src_data, size_t src_step, uchar* dst_d
 //! @endcond
 
 /**
+   @brief Compute spatial gradient (Sobel X and Y simultaneously).
+   @param src_data Source image data (8-bit single channel)
+   @param src_step Source image step
+   @param dx_data  Destination X-gradient data (16-bit signed)
+   @param dx_step  Destination X-gradient step
+   @param dy_data  Destination Y-gradient data (16-bit signed)
+   @param dy_step  Destination Y-gradient step
+   @param width    Image width
+   @param height   Image height
+   @param ksize    Kernel size (must be 3)
+   @param border_type Border type (BORDER_DEFAULT or BORDER_REPLICATE)
+*/
+inline int hal_ni_spatialGradient(const uchar* src_data, size_t src_step,
+                                   short* dx_data, size_t dx_step,
+                                   short* dy_data, size_t dy_step,
+                                   int width, int height,
+                                   int ksize, int border_type)
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_spatialGradient hal_ni_spatialGradient
+//! @endcond
+
+/**
    @brief Perform Gaussian Blur and downsampling for input tile.
    @param depth Depths of source and destination image
    @param src_data Source image data

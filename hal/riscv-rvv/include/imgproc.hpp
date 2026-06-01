@@ -238,10 +238,8 @@ int integral(int depth, int sdepth, int sqdepth,
              uchar* tilted_data, [[maybe_unused]] size_t tilted_step,
              int width, int height, int cn);
 
-// Diasbled due to accuracy issue.
-// Details see https://github.com/opencv/opencv/issues/27407.
-//#undef cv_hal_integral
-//#define cv_hal_integral cv::rvv_hal::imgproc::integral
+#undef cv_hal_integral
+#define cv_hal_integral cv::rvv_hal::imgproc::integral
 
 /* ############ laplacian ############ */
 int laplacian(const uint8_t* src_data, size_t src_step,
@@ -275,6 +273,16 @@ int canny(const uint8_t *src_data, size_t src_step,
 
 #undef cv_hal_canny
 #define cv_hal_canny cv::rvv_hal::imgproc::canny
+
+/* ############ spatialGradient ############ */
+int spatialGradient(const uint8_t* src_data, size_t src_step,
+                    int16_t* dx_data, size_t dx_step,
+                    int16_t* dy_data, size_t dy_step,
+                    int width, int height,
+                    int ksize, int border_type);
+
+#undef cv_hal_spatialGradient
+#define cv_hal_spatialGradient cv::rvv_hal::imgproc::spatialGradient
 
 #endif // CV_HAL_RVV_1P0_ENABLED
 

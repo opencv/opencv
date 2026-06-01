@@ -62,6 +62,141 @@ inline int convertScale_8U32F(const uchar* src, size_t src_step, uchar* dst, siz
     return CV_HAL_ERROR_OK;
 }
 
+inline int convertScale_8U16U(const uchar* src, size_t src_step, uchar* dst, size_t dst_step, int width, int height, double alpha, double beta)
+{
+    if (alpha == 1.0 && beta == 0.0)
+    {
+        for (int i = 0; i < height; i++)
+        {
+            const uchar* src_row = src + i * src_step;
+            ushort* dst_row = reinterpret_cast<ushort*>(dst + i * dst_step);
+            int vl;
+            for (int j = 0; j < width; j += vl)
+            {
+                vl = __riscv_vsetvl_e8m2(width - j);
+                auto vec_src = __riscv_vle8_v_u8m2(src_row + j, vl);
+                auto vec_dst = __riscv_vzext_vf2(vec_src, vl);
+                __riscv_vse16_v_u16m4(dst_row + j, vec_dst, vl);
+            }
+        }
+
+        return CV_HAL_ERROR_OK;
+    }
+
+    int vlmax = __riscv_vsetvlmax_e32m8();
+    auto vec_b = __riscv_vfmv_v_f_f32m8(beta, vlmax);
+    float a = alpha;
+
+    for (int i = 0; i < height; i++)
+    {
+        const uchar* src_row = src + i * src_step;
+        ushort* dst_row = reinterpret_cast<ushort*>(dst + i * dst_step);
+        int vl;
+        for (int j = 0; j < width; j += vl)
+        {
+            vl = __riscv_vsetvl_e8m2(width - j);
+            auto vec_src = __riscv_vle8_v_u8m2(src_row + j, vl);
+            auto vec_src_u16 = __riscv_vzext_vf2(vec_src, vl);
+            auto vec_src_f32 = __riscv_vfwcvt_f(vec_src_u16, vl);
+            auto vec_fma = __riscv_vfmadd(vec_src_f32, a, vec_b, vl);
+            auto vec_dst = __riscv_vfncvt_xu(vec_fma, vl);
+            __riscv_vse16_v_u16m4(dst_row + j, vec_dst, vl);
+        }
+    }
+
+    return CV_HAL_ERROR_OK;
+}
+
+inline int convertScale_8U16S(const uchar* src, size_t src_step, uchar* dst, size_t dst_step, int width, int height, double alpha, double beta)
+{
+    if (alpha == 1.0 && beta == 0.0)
+    {
+        for (int i = 0; i < height; i++)
+        {
+            const uchar* src_row = src + i * src_step;
+            short* dst_row = reinterpret_cast<short*>(dst + i * dst_step);
+            int vl;
+            for (int j = 0; j < width; j += vl)
+            {
+                vl = __riscv_vsetvl_e8m2(width - j);
+                auto vec_src = __riscv_vle8_v_u8m2(src_row + j, vl);
+                auto vec_dst = __riscv_vreinterpret_v_u16m4_i16m4(__riscv_vzext_vf2(vec_src, vl));
+                __riscv_vse16_v_i16m4(dst_row + j, vec_dst, vl);
+            }
+        }
+
+        return CV_HAL_ERROR_OK;
+    }
+
+    int vlmax = __riscv_vsetvlmax_e32m8();
+    auto vec_b = __riscv_vfmv_v_f_f32m8(beta, vlmax);
+    float a = alpha;
+
+    for (int i = 0; i < height; i++)
+    {
+        const uchar* src_row = src + i * src_step;
+        short* dst_row = reinterpret_cast<short*>(dst + i * dst_step);
+        int vl;
+        for (int j = 0; j < width; j += vl)
+        {
+            vl = __riscv_vsetvl_e8m2(width - j);
+            auto vec_src = __riscv_vle8_v_u8m2(src_row + j, vl);
+            auto vec_src_u16 = __riscv_vzext_vf2(vec_src, vl);
+            auto vec_src_f32 = __riscv_vfwcvt_f(vec_src_u16, vl);
+            auto vec_fma = __riscv_vfmadd(vec_src_f32, a, vec_b, vl);
+            auto vec_dst = __riscv_vfncvt_x(vec_fma, vl);
+            __riscv_vse16_v_i16m4(dst_row + j, vec_dst, vl);
+        }
+    }
+
+    return CV_HAL_ERROR_OK;
+}
+
+inline int convertScale_16U8U(const uchar* src, size_t src_step, uchar* dst, size_t dst_step, int width, int height, double alpha, double beta)
+{
+    if (alpha == 1.0 && beta == 0.0)
+    {
+        for (int i = 0; i < height; i++)
+        {
+            const ushort* src_row = reinterpret_cast<const ushort*>(src + i * src_step);
+            uchar* dst_row = dst + i * dst_step;
+            int vl;
+            for (int j = 0; j < width; j += vl)
+            {
+                vl = __riscv_vsetvl_e16m4(width - j);
+                auto vec_src = __riscv_vle16_v_u16m4(src_row + j, vl);
+                auto vec_dst = __riscv_vnclipu(vec_src, 0, __RISCV_VXRM_RNU, vl);
+                __riscv_vse8_v_u8m2(dst_row + j, vec_dst, vl);
+            }
+        }
+
+        return CV_HAL_ERROR_OK;
+    }
+
+    int vlmax = __riscv_vsetvlmax_e32m8();
+    auto vec_b = __riscv_vfmv_v_f_f32m8(beta, vlmax);
+    float a = alpha;
+
+    for (int i = 0; i < height; i++)
+    {
+        const ushort* src_row = reinterpret_cast<const ushort*>(src + i * src_step);
+        uchar* dst_row = dst + i * dst_step;
+        int vl;
+        for (int j = 0; j < width; j += vl)
+        {
+            vl = __riscv_vsetvl_e16m4(width - j);
+            auto vec_src = __riscv_vle16_v_u16m4(src_row + j, vl);
+            auto vec_src_f32 = __riscv_vfwcvt_f(vec_src, vl);
+            auto vec_fma = __riscv_vfmadd(vec_src_f32, a, vec_b, vl);
+            auto vec_dst_u16 = __riscv_vfncvt_xu(vec_fma, vl);
+            auto vec_dst = __riscv_vnclipu(vec_dst_u16, 0, __RISCV_VXRM_RNU, vl);
+            __riscv_vse8_v_u8m2(dst_row + j, vec_dst, vl);
+        }
+    }
+
+    return CV_HAL_ERROR_OK;
+}
+
 inline int convertScale_16U32F(const uchar* src, size_t src_step, uchar* dst, size_t dst_step, int width, int height, double alpha, double beta)
 {
     int vlmax = __riscv_vsetvlmax_e32m8();
@@ -164,6 +299,13 @@ int convertScale(const uchar* src, size_t src_step, uchar* dst, size_t dst_step,
     if (!dst)
         return CV_HAL_ERROR_OK;
 
+    if ((unsigned)ddepth >= CV_DEPTH_MAX)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    // Column-shaped sources can target row-shaped continuous vectors.
+    if (width == 1 && height > 1 && dst_step != CV_ELEM_SIZE1(ddepth))
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
     switch (sdepth)
     {
     case CV_8U:
@@ -171,6 +313,10 @@ int convertScale(const uchar* src, size_t src_step, uchar* dst, size_t dst_step,
         {
         case CV_8U:
             return convertScale_8U8U(src, src_step, dst, dst_step, width, height, alpha, beta);
+        case CV_16U:
+            return convertScale_8U16U(src, src_step, dst, dst_step, width, height, alpha, beta);
+        case CV_16S:
+            return convertScale_8U16S(src, src_step, dst, dst_step, width, height, alpha, beta);
         case CV_32F:
             return convertScale_8U32F(src, src_step, dst, dst_step, width, height, alpha, beta);
         }
@@ -178,6 +324,8 @@ int convertScale(const uchar* src, size_t src_step, uchar* dst, size_t dst_step,
     case CV_16U:
         switch (ddepth)
         {
+        case CV_8U:
+            return convertScale_16U8U(src, src_step, dst, dst_step, width, height, alpha, beta);
         case CV_32F:
             return convertScale_16U32F(src, src_step, dst, dst_step, width, height, alpha, beta);
         }
