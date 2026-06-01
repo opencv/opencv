@@ -68,7 +68,7 @@ public:
 // TODO: Requires FFmpeg wrapper rebuild for Windows
 #ifdef _WIN32
         if (apiPref != CAP_FFMPEG)
-            EXPECT_EQ(CAP_PROP_UNKNOWN, writer.get(CV__CAP_PROP_LATEST));
+            EXPECT_EQ(CAP_PROP_UNKNOWN, cap.get(CV__CAP_PROP_LATEST));
 #else
         EXPECT_EQ(CAP_PROP_UNKNOWN, cap.get(CV__CAP_PROP_LATEST));
 #endif
