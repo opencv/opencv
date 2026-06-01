@@ -1,4 +1,4 @@
-"""build-finished hook: inline coll-diagram SVGs, strip Breathe clutter."""
+"""build-finished hook: inline coll-diagram SVGs, strip Breathe clutter, re-theme Doxygen."""
 from __future__ import annotations
 import pathlib, re
 
