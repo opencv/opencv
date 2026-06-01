@@ -1,3 +1,9 @@
+# This file is part of OpenCV project.
+# It is subject to the license terms in the LICENSE file found in the top-level directory
+# of this distribution and at http://opencv.org/license.html.
+# Copyright (C) 2026, BigVision LLC, all rights reserved.
+# Third party copyrights are property of their respective owners.
+
 """build-finished hook: inline coll-diagram SVGs, strip Breathe clutter, re-theme Doxygen."""
 from __future__ import annotations
 import pathlib, re
@@ -44,18 +50,13 @@ def _inline_collaboration_svgs(api_dir: pathlib.Path,
         if "://" in path:
             return m.group(0)
         base = path.rsplit("/", 1)[-1]
-        page, _, frag = base.partition("#")   # split off the Doxygen anchor
-        # Resolve the Doxygen page to its Sphinx equivalent; whatever the
-        # original docs linked, link the same — but into the NEW Sphinx docs.
+        page, _, frag = base.partition("#")
         local = _doxy_page_to_local(page)
         if not (api_dir / local).is_file():
             # Nested type with no own page -> enclosing class page (inline docs).
             parent = _doxy_parent_page(page, api_dir)
             if parent:
                 local = parent
-            # else keep `local` even if not generated this build (contrib/CUDA
-            # off, or the _Tp stub) — never fall back to docs.opencv.org.
-        # Jump to the exact member when the Doxygen anchor maps to Sphinx's.
         member = _DOXY_ANCHOR_TO_MEMBER.get(frag) if frag else None
         if member:
             return f'xlink:href="{local}#{member}"'

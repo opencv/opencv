@@ -1,6 +1,11 @@
+# This file is part of OpenCV project.
+# It is subject to the license terms in the LICENSE file found in the top-level directory
+# of this distribution and at http://opencv.org/license.html.
+# Copyright (C) 2026, BigVision LLC, all rights reserved.
+# Third party copyrights are property of their respective owners.
+
 """Runtime patches for Sphinx C++ domain and breathe; applied at import."""
 from __future__ import annotations
-
 
 def _patch_cpp_xref_resolver():
     """Work around Sphinx 8.1.x parentSymbol assert in _resolve_xref_inner."""

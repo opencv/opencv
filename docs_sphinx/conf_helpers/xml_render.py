@@ -1,3 +1,9 @@
+# This file is part of OpenCV project.
+# It is subject to the license terms in the LICENSE file found in the top-level directory
+# of this distribution and at http://opencv.org/license.html.
+# Copyright (C) 2026, BigVision LLC, all rights reserved.
+# Third party copyrights are property of their respective owners.
+
 """Doxygen XML -> Markdown primitives for the API-reference stubs."""
 from __future__ import annotations
 import copy as _copy
@@ -16,13 +22,6 @@ def _wrap_emphasis(inner: str, delim: str) -> str:
     trail = inner[len(inner.rstrip()):]
     return f"{lead}{delim}{stripped}{delim}{trail}"
 
-
-# AMS block environments MyST's `amsmath` extension renders on their own. A
-# `$$`-wrapped body containing `\\` makes Sphinx/docutils nest it inside
-# `\begin{split}`; for a full alignment environment that yields
-# `\[\begin{split}\begin{align*}…\end{align*}\end{split}\]`, which MathJax
-# rejects with "Erroneous nesting of equation structures". Emitting these bare
-# lets the amsmath extension handle them with no split wrapper.
 _AMS_BLOCK_ENVS = frozenset((
     "align", "align*", "alignat", "alignat*", "flalign", "flalign*",
     "gather", "gather*", "multline", "multline*",
@@ -31,9 +30,6 @@ _AMS_BLOCK_ENVS = frozenset((
 
 
 def _render_formula(raw: str) -> str:
-    """Doxygen <formula> -> MyST math. Display `\\[..\\]` -> `$$..$$`, except a
-    standalone AMS alignment environment, emitted bare for the amsmath
-    extension. Inline `$..$` (or anything else) passes through unchanged."""
     s = (raw or "").strip()
     if s.startswith("\\[") and s.endswith("\\]"):
         inner = s[2:-2].strip()
@@ -46,12 +42,6 @@ def _render_formula(raw: str) -> str:
 
 
 def _render_image(node) -> str:
-    """Render a Doxygen <image> as a Markdown image. Doxygen duplicates each
-    `@image` once per output format (html, latex, rtf, docbook, xml); we keep
-    only the html variant — emitting all five would repeat the caption (or a
-    blank embed) five times. Resolves the basename via `_IMAGE_INDEX`; returns
-    '' for non-html variants or unresolved files (so the caption never leaks
-    into the prose as bare text)."""
     if node.get("type") != "html":
         return ""
     name = (node.get("name") or "").strip()
@@ -63,11 +53,6 @@ def _render_image(node) -> str:
 
 
 def _itertext(el) -> str:
-    """Flatten an XML element's inner text. None-safe.
-    Converts Doxygen <formula> elements to MyST-compatible math syntax:
-      \\[...\\]  →  $$\\n...\\n$$   (display math; AMS envs emitted bare)
-      $...$      →  $...$           (inline math, unchanged)
-    """
     if el is None:
         return ""
     parts: list[str] = []
@@ -132,40 +117,22 @@ def _member_template(md) -> str:
 
 
 def _member_detail_parts(md):
-    """Return (detailed_md, params, returns) from a memberdef.
-
-    Params and the @return value are pulled out and rendered separately by the
-    page template, so they're stripped from the prose. Everything else — bullet
-    lists, @note/@warning admonitions, code blocks, tables — is rendered with
-    the full block-aware converter (`_doxygen_desc_to_md`), the same one used
-    for class/namespace/group descriptions. Using `_itertext` here instead
-    flattened `<itemizedlist>` into a run-on paragraph and silently dropped
-    note `simplesect`s.
-    """
     de = md.find("detaileddescription")
     if de is None:
         return "", [], ""
     params, returns = [], ""
-    # Recursive: Doxygen sometimes nests <parameterlist> below the top-level
-    # <para> (seen on several overloads), so walk the whole subtree — not just
-    # direct <para> children — or those params leak into the prose.
     for pl in de.iter("parameterlist"):
         if pl.get("kind") in ("param", "templateparam"):
             for it in pl.findall("parameteritem"):
                 nm = ", ".join(
                     t for t in (_itertext(n) for n in
                                 it.findall(".//parametername")) if t)
-                # Block-aware: a description carrying an <itemizedlist>
-                # (e.g. calibration `flags`) keeps its bullets as real
-                # Markdown instead of collapsing into a run-on paragraph.
                 d = _doxygen_desc_to_md(it.find("parameterdescription"))
                 if nm:
                     params.append((nm, d))
     for ss in de.iter("simplesect"):
         if ss.get("kind") == "return":
             returns = _itertext(ss)
-    # Prune the param/return chrome (rendered separately) wherever it sits, then
-    # convert the rest with full block support so lists and notes survive.
     pruned = _copy.deepcopy(de)
     def _strip(el):
         for child in list(el):
@@ -590,13 +557,6 @@ def _doxygen_desc_to_md(el, h_level: int = 3) -> str:
 
 
 def _normalize_include(path: str) -> str:
-    """Reduce a header path to its canonical `opencv2/...` form.
-
-    Doxygen records ABSOLUTE paths for out-of-tree (contrib) modules — e.g.
-    `/…/opencv_contrib/modules/cnn_3dobj/include/opencv2/cnn_3dobj.hpp` — which
-    leak into the #include line / source-file footer and miss `_FILE_URL` (so no
-    link). Main-tree headers are already `opencv2/…`. Trim everything up to and
-    including the last `/include/` so both behave identically."""
     p = (path or "").replace("\\", "/").strip()
     marker = "/include/"
     i = p.rfind(marker)
@@ -604,16 +564,6 @@ def _normalize_include(path: str) -> str:
 
 
 def _enum_value_desc(ev) -> str:
-    """Block Markdown for one `<enumvalue>` (brief + detailed).
-
-    Doxygen puts a single-sentence enumerator doc in `<briefdescription>` but a
-    multi-paragraph one (or one with `@note`/`@see`) in `<detaileddescription>`
-    — reading only the brief silently drops the latter (e.g. dnn's
-    `DNN_BACKEND_INFERENCE_ENGINE`). Render BOTH with the generic block converter
-    so `@note` becomes a real admonition, lists stay lists, and refs become
-    links — exactly like every other description. The enumerator detail is laid
-    out with a `{list-table}` (not a pipe table) so cells can hold this block
-    content; see `_enumerator_list_table`."""
     if ev is None:
         return ""
     parts = [_doxygen_desc_to_md(ev.find(t)).strip()
@@ -917,29 +867,10 @@ def _svg_dark_variant(text: str) -> str:
     return text
 
 
-# Sentence-initial phrases whose subject is the function itself, never a single
-# parameter ("This function returns…", "The function internally…"). When one of
-# these runs on inside a @param description — because the source Doxygen comment
-# omitted the blank line that ends the parameter — the text from the marker
-# onward (and any list it introduces) actually belongs to the function body.
 _SPILLED_PROSE_RE = re.compile(r"\b(?:This|The)\s+(?:function|method)\b")
 
 
 def _hoist_spilled_param_prose(cd) -> bool:
-    """Move function-level prose that ran on into a @param back out into the
-    function's detailed description (authoring fix done at the XML layer so it
-    applies to both breathe and the custom renderer, without touching headers).
-
-    Conservative by design — only fires when ALL of these hold, so a parameter
-    that legitimately contains prose or a bullet list is left untouched:
-      * inside a `<parameterdescription>`, on its first `<para>`;
-      * the marker (`_SPILLED_PROSE_RE`) sits in the para's leading text, so
-        every child element is unambiguously part of the spilled tail;
-      * a real parameter sentence precedes the marker (marker not at offset 0);
-      * the parameter is NOT itself a callback / function pointer, and the kept
-        sentence doesn't describe one — otherwise "This function …" refers to
-        the callback (e.g. createTrackbar's onChange), not the documented one.
-    Returns True if anything changed."""
     import xml.etree.ElementTree as _ET
     changed = False
     for md in cd.iter("memberdef"):

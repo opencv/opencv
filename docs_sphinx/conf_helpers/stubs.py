@@ -1,3 +1,9 @@
+# This file is part of OpenCV project.
+# It is subject to the license terms in the LICENSE file found in the top-level directory
+# of this distribution and at http://opencv.org/license.html.
+# Copyright (C) 2026, BigVision LLC, all rights reserved.
+# Third party copyrights are property of their respective owners.
+
 """API-reference stub writers. Entry point: ``_generate_api_stubs``."""
 from __future__ import annotations
 import pathlib, os as _os, shutil as _shutil, textwrap as _textwrap
@@ -18,10 +24,6 @@ def _stub_write(path: pathlib.Path, content: str) -> None:
         path.write_text(content, encoding="utf-8")
     _stub_written.add(path)
 
-
-# Set once per run by `_generate_api_stubs`; let the member renderers reach the
-# legacy Doxygen graph SVGs and the stub output dir without threading both
-# through every signature (mirrors the existing `_stub_written` global).
 _DOXY_HTML_ROOT: pathlib.Path | None = None
 _API_OUT_DIR: pathlib.Path | None = None
 
@@ -170,10 +172,6 @@ def _write_namespace_stub(ns: dict, out_dir: pathlib.Path,
                             "static":      md.get("static") == "yes",
                             "args":        (md.findtext("argsstring") or "").strip(),
                             "param_types": [_pt(p) for p in md.findall("param")],
-                            # (type, name, default) per param — feeds the
-                            # multi-line `_func_sig_md` signature in the table
-                            # (mirrors _parse_member_sections; without it the
-                            # namespace page would drop every function's args).
                             "params_sig":  [(_pt(p),
                                              (p.findtext("declname") or "").strip(),
                                              _itertext(p.find("defval")))
@@ -367,10 +365,6 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
 
     lines = [f"# {title} {{#api_{name}}}", ""]
 
-    # Subgroup index: emit the @subpage Topics list first (the
-    # `_subpage_list_to_toctree` rule turns it into a real toctree), then fall
-    # through to this group's OWN members below — a group can have both, which
-    # matches the live Doxygen group-page layout. Children are recursed at the end.
     if node["children"]:
         lines += ["## Topics", ""]
         for child in node["children"]:
@@ -395,7 +389,6 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
             lines.append(f"| {link} | {_md_escape_cell(c['brief'])} |")
         lines.append("")
 
-    # Class members listed in group sections render on the class page.
     class_qualifieds = {c.get("qualified") for c in classes_seen.values()
                         if c.get("qualified")}
 
@@ -407,18 +400,11 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
         return parent in class_qualifieds
 
     def _is_template_spec(m: dict) -> bool:
-        # breathe's C++ parser rejects `<…>` names; skip detail block.
-        # But `operator<<` / `operator<` aren't template specs (the `<` is
-        # part of the name), so keep them in the detail section.
         name = m.get("name") or ""
         if name.startswith("operator"):
             return False
         return "<" in name
 
-
-    # Class members lack an in-page anchor; link to the class page.
-    # `raw=True` treats `label` as pre-formatted link text (already wrapped in
-    # code spans, e.g. a multi-line signature) instead of backticking it whole.
     def _member_anchor_link(m: dict, label: str, raw: bool = False) -> str:
         text = label if raw else f"`{label}`"
         if _is_class_member(m):
@@ -429,10 +415,6 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
                     return f"[{text}]({_class_page_name(c['refid'])}.md)"
         return f"[{text}](#{m['id']})"
 
-    # Renders the summary table (or enum synopsis) for one member kind given a
-    # list of members — used both for the standard per-kind sections and for
-    # the @name-group sections appended afterwards. Returns markdown lines
-    # (no `## heading`); enum output already carries its own trailing blanks.
     _rich_return = (name == "core_basic")
 
     def _summary_block(section_title: str, members: list) -> list[str]:
@@ -442,8 +424,6 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
                     "| Return | Name | Description |", "|---|---|---|"]
             for m in members:
                 ret_type = _md_escape_cell(m["type"])
-                # Multi-line, one-param-per-line signature (matching the detail
-                # block); return type stays in its own cell, so head = name.
                 label = _func_sig_md(m["name"], m.get("params_sig"))
                 sig_link = _member_anchor_link(m, label, raw=True)
                 if not ret_type:
@@ -475,11 +455,6 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
                 name_link = _member_anchor_link(m, m["name"])
                 out.append(f"| {t_cell} | {name_link} | {_md_escape_cell(m['brief'])} |")
         elif section_title == "Enumerations":
-            # Clickable HTML synopsis + on-page detail link, for every module
-            # (previously core_basic-only). Each enumerator links to the enum's
-            # detail block. Anchor: named enums use the detail heading slug;
-            # anonymous enums (no name) fall back to the stable Doxygen id so the
-            # link still resolves and never collides.
             import html as _html_mod
             # Encode `::` so translate's cv-linkifier skips it.
             def _safe(s: str) -> str:
@@ -524,9 +499,6 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
                 out.append('<span class="p">}</span></pre></div></div>')
                 # Blank line closes the raw-HTML block (CommonMark rule 7).
                 out.append("")
-                # "View details" is a raw-HTML link (not markdown) so it resolves
-                # to both the heading slug (named) and the raw-HTML id (anonymous).
-                # Shown with or without a brief.
                 _details = (f'<a class="reference internal" '
                             f'href="{_href}">View details</a>')
                 if m["brief"]:
@@ -541,12 +513,6 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
                 out.append(f"| {name_link} | {_md_escape_cell(m['brief'])} |")
         return out
 
-    # Standard per-kind summary sections list only the *ungrouped* members (no
-    # Doxygen `@name` header). Members that DO carry an `@name` header — e.g.
-    # the "Shorter aliases for the most popular specializations of Vec<T,n>"
-    # group — are pulled out and rendered as their own `##` sections AFTER the
-    # standard sections (per the requested layout: typedefs, then functions,
-    # then each named group with its members).
     _named_groups: list[tuple[str, str, list]] = []   # (header, section_title, members)
     for _, section_title in _MEMBERDEF_SECTIONS:
         items = node["sections"].get(section_title, [])
@@ -574,9 +540,6 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
         items = node["sections"].get(section_title, [])
         if not items:
             continue
-        # Enum detail blocks render on every module page (targets of the
-        # clickable synopsis above), not just core_basic.
-        # core_basic funcs: count overloads first for `[i/n]` headings.
         _core_basic_funcs = (name == "core_basic" and kind_key == "function")
         _ov_total: dict[str, int] = {}
         _ov_idx: dict[str, int] = {}
@@ -608,14 +571,8 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
                 _qual = m["qualified"] or m["name"]
                 _is_strong = bool(m.get("strong"))
                 _keyword = "enum class" if _is_strong else "enum"
-                # Encode `::` so translate's cv-linkifier skips it (avoids a
-                # nested off-site anchor stealing the click).
                 _qual_safe = _qual.replace("::", "&#58;&#58;")
                 if m.get("name"):
-                    # Named: markdown heading (its slug == the synopsis anchor,
-                    # also feeds the on-this-page TOC) + a C++ id label so
-                    # `cv::Name` cross-references resolve here. Signature line is
-                    # the full cv::Name as one clickable anchor.
                     _enum_href = f"#{m['name'].lower()}"
                     blk: list[str] = [
                         f"({_sphinx_cpp_v4_id(_qual)})=",
@@ -627,15 +584,7 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
                         "",
                     ]
                 else:
-                    # Anonymous enum: no name to slug, so carry the synopsis
-                    # anchor on a raw-HTML heading id (the stable Doxygen id).
-                    # No markdown heading (avoids an empty TOC entry) and no MyST
-                    # label (avoids colliding with the namespace page's label).
                     blk = [f'<h3 id="{m["id"]}">{_keyword}</h3>', ""]
-                # #include line: blue clickable link to the Doxygen file page
-                # (the `opencv-include-link` class beats the generic
-                # `code > a { color: inherit }` cascade), inside the inset box —
-                # same treatment as `_render_member_detail`.
                 if m.get("include_file"):
                     _einc = m["include_file"]
                     _eifile = _FILE_URL.get(_einc)
@@ -667,9 +616,6 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
                 if m["name"] in seen_define_names:
                     continue
                 seen_define_names.add(m["name"])
-            # Hand-rolled block (breathe's {doxygendefine} drops the #include and
-            # the macro's Value); `_render_member_detail` keeps `#define NAME(…)`,
-            # the include row and the Value, and emits the `(id)=` cross-ref anchor.
             blocks.append(
                 _render_member_detail(m, m["qualified"] or m["name"]))
         if not blocks:
@@ -717,8 +663,6 @@ def _param_item_lines(nm: str, desc: str) -> list[str]:
         return [f"- `{nm}`"]
     lines = desc.split("\n")
     out = [f"- `{nm}` — {lines[0]}"]
-    # Continuation lines align with the bullet's content column (2 spaces);
-    # blank lines stay empty so the nested list/paragraphs render loosely.
     out += [f"  {ln}" if ln.strip() else "" for ln in lines[1:]]
     return out
 
@@ -752,8 +696,6 @@ def _enumerator_list_table(values: list[dict], enum_qualified: str,
             if desc:
                 _dl = desc.split("\n")
                 out.append(f"  - {_dl[0]}")
-                # Continuation lines indent to the cell's content column (4 sp);
-                # blank lines stay empty so nested blocks render loosely.
                 out += [("    " + ln) if ln.strip() else "" for ln in _dl[1:]]
             else:
                 out.append("  -")
@@ -831,10 +773,6 @@ def _render_member_detail(m: dict, full_name: str) -> list[str]:
     _sig = ([f"`{tmpl}`"] if tmpl else []) + [f"`{ln}`" for ln in sig_lines]
     out += ["{.opencv-api-sig}", "\\\n".join(_sig), ""]
 
-    # `#include <…>` card row, like docs.opencv.org. The path inside `<>` is a
-    # blue clickable link to the Doxygen file page (the `opencv-include-link`
-    # class picks up the light-mode CSS rule) for every member kind, so
-    # function/typedef/variable/macro detail blocks all link consistently.
     inc = (m.get("include_file") or "").strip()
     if inc:
         _ifile = _FILE_URL.get(inc)
@@ -969,10 +907,6 @@ def _write_class_stub(cls: dict, out_dir: pathlib.Path,
             lines.append("")
         _inc = (_header_data.get("include") or "").strip()
         if _inc:
-            # Blue clickable link to the Doxygen file page, same as the
-            # member-detail #include lines (`opencv-include-link` beats the
-            # generic `code > a { color: inherit }` cascade). Plain chip when
-            # the header isn't in the tagfile.
             _cifile = _FILE_URL.get(_inc)
             if _cifile:
                 _inc_code = (
@@ -987,7 +921,6 @@ def _write_class_stub(cls: dict, out_dir: pathlib.Path,
             )
             lines.append("")
 
-    # Collaboration diagram: reuse legacy Doxygen HTML build's SVG.
     _svg = _find_collaboration_svg(cls["refid"], xml_dir.parent / "html")
     if _svg is not None:
         lines += _diagram_svg_lines(
@@ -1026,13 +959,7 @@ def _write_class_stub(cls: dict, out_dir: pathlib.Path,
                 ret = _md_escape_cell(m["type"])
                 if ret and m["static"]:
                     ret = "static " + ret
-                # ctors/dtors have no return type: blank cell. Use a literal
-                # NBSP char, NOT a backticked "&nbsp;" (which renders as that
-                # literal text inside a code span) and not the bare entity
-                # (MyST may not decode it in a table cell).
                 ret_cell = f"`{ret}`" if ret else "\u00a0"
-                # Functions get the multi-line, one-param-per-line signature
-                # (matching the detail block); attributes stay single-line.
                 if m["kind"] == "function":
                     sig_link = f"[{_func_sig_md(m['name'], m.get('params_sig'))}](#{m['id']})"
                 else:
@@ -1049,9 +976,6 @@ def _write_class_stub(cls: dict, out_dir: pathlib.Path,
             lines.extend(_enum_synopsis_html(m, strip_scope=qualified))
             lines.append("")
 
-    # 2) Detailed Description via Breathe (description-only; no
-    #    breathe_default_members). `:no-members:` is NOT valid Breathe. Breathe's
-    #    duplicate header stripped later by `_strip_breathe_class_clutter`.
     _directive = "doxygenstruct" if cls["kind"] == "struct" else "doxygenclass"
     examples = _find_examples_for_class(qualified.rsplit("::", 1)[-1])
     if data["detailed"]:
@@ -1110,9 +1034,6 @@ def _write_class_stub(cls: dict, out_dir: pathlib.Path,
             )
             if m["brief"]:
                 lines.append(f"<p>{_html.escape(_md_escape_cell(m['brief']))}</p>")
-            # `{list-table}` (with per-value `<span id>` anchors) so each
-            # enumerator's description keeps block content — @note admonitions,
-            # lists, links — instead of being flattened into a raw-HTML `<dd>`.
             lines += _enumerator_list_table(
                 m.get("enum_values") or [], enum_qualified,
                 bool(m.get("strong")), with_anchors=True)
@@ -1142,9 +1063,6 @@ def _write_class_stub(cls: dict, out_dir: pathlib.Path,
         for m in _dedupe(var_items):
             lines += _render_member_detail(m, f"{qualified}::{m['name']}")
 
-    # Footer: source header, mirroring Doxygen's "generated from the following
-    # file" line. The basename links to the legacy Doxygen file page via the
-    # same _FILE_URL scheme the member #include lines use.
     _src_inc = (_header_data.get("include") or "").strip() if _header_data else ""
     if _src_inc:
         import html as _html_pkg2
@@ -1159,14 +1077,6 @@ def _write_class_stub(cls: dict, out_dir: pathlib.Path,
                       f'{_html_pkg2.escape(_base)}</a>')
         else:
             _flink = _html_pkg2.escape(_src_inc)
-        # Emit under a popping `##` heading so the footer lands OUTSIDE the last
-        # member's card (markdown nests trailing content into the preceding
-        # section; only a heading breaks out of it). The attrs_block CLASS tags
-        # the section so custom.css can hide the heading + its page-TOC entry,
-        # leaving just the Doxygen-style "generated from" line below the cards.
-        # NB: no explicit `{#id}` — a fixed id repeated across every class page
-        # registers a global label and triggers "duplicate label" warnings; the
-        # per-page heading slug (#source-file) does not.
         lines += [
             "",
             "{.opencv-class-files}",
@@ -1262,8 +1172,6 @@ def _generate_api_stubs(modules, xml_dir, out_dir,
         "",
     ]
     classes_seen: dict[str, dict] = {}
-    # Pass 1 — accumulate group_info + ns_group_map across all modules so
-    # namespaces in multiple modules (e.g. cv::traits) get all breadcrumbs.
     global_group_info: dict[str, dict] = {}
     global_ns_group_map: dict[str, set] = {}
     trees: list = []

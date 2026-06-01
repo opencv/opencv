@@ -1,3 +1,9 @@
+# This file is part of OpenCV project.
+# It is subject to the license terms in the LICENSE file found in the top-level directory
+# of this distribution and at http://opencv.org/license.html.
+# Copyright (C) 2026, BigVision LLC, all rights reserved.
+# Third party copyrights are property of their respective owners.
+
 """Shared configuration & state for the OpenCV Sphinx wrapper."""
 from __future__ import annotations
 import pathlib, re, os as _os, shutil as _shutil, textwrap as _textwrap
@@ -726,9 +732,6 @@ _BIB_ENTRIES_SORTED = sorted(_all_entries, key=_bib_sort_key)
 for _i, _e in enumerate(_BIB_ENTRIES_SORTED, 1):
     _CITE_NUMBER[_e["_key"]] = _i
 
-
-# ---- Redirect-page map ---------------------------------------------------
-# "Content has been moved: @ref dest" stubs -> real target
 _REDIRECT_MAP: dict[str, str] = {}
 _REDIRECT_RE = re.compile(
     r"\{#(?P<src>[\w-]+)\}\s*\n[=\-]+\s*\n+"
@@ -828,10 +831,6 @@ def _scan_external(toc_file: pathlib.Path) -> None:
 _IMAGE_INDEX: dict[str, str] = {}
 _SNIPPET_INDEX: dict[str, pathlib.Path] = {}
 
-# API inventories for the aggregate "Class List" / "Namespace List" header
-# pages. Populated by stubs.py as it writes the per-class / per-namespace pages
-# (across both the main and contrib stub passes); read by build.py to render
-# the two index pages with local links + brief descriptions.
 _ALL_CLASSES: dict[str, dict] = {}      # refid -> {qualified, kind, brief, docname}
 _ALL_NAMESPACES: dict[str, dict] = {}   # name  -> {refid, brief, docname}
 
@@ -860,14 +859,6 @@ _LANG_ALIASES = {
     "plaintext": "text",
 }
 
-# Whether the generated `index.markdown` landing page is the master doc (the
-# site root). When True (the default), the cross-family roots — intro, js/py
-# tutorial roots, faq, citelist, contrib root, api root — are listed in the
-# index page's own toctree, so they must NOT also be injected into the
-# `tutorials/tutorials` page (doing both puts each doc in two toctrees and
-# double-nests them in the sidebar). conf.py reads this to pick `master_doc`;
-# translate.py reads it to skip the `tutorials/tutorials` @subpage injection.
-# Set False to fall back to the legacy "tutorials/tutorials is the root" layout.
 USE_INDEX_LANDING = True
 
 __all__ = [

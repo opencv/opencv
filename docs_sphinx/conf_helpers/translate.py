@@ -1,3 +1,9 @@
+# This file is part of OpenCV project.
+# It is subject to the license terms in the LICENSE file found in the top-level directory
+# of this distribution and at http://opencv.org/license.html.
+# Copyright (C) 2026, BigVision LLC, all rights reserved.
+# Third party copyrights are property of their respective owners.
+
 """Doxygen-flavored .markdown -> MyST translation (the source-read engine)."""
 from __future__ import annotations
 import pathlib, re, os as _os, shutil as _shutil, textwrap as _textwrap
@@ -80,9 +86,6 @@ def _translate(text: str, docname: str | None = None) -> str:
         lambda m: _verbatim_save(m.group("body"), inline=True),
         text)
 
-    # 0. Master doc: synthesize js/py root @subpage entries.
-    #    Skipped under USE_INDEX_LANDING: those roots live in index's
-    #    own toctree, so injecting here would double-nest them.
     if docname == "tutorials/tutorials" and not USE_INDEX_LANDING:
         # Lead sidebar with intro; faq/bibliography stay appended.
         if "intro" in _ANCHOR_TO_DOC:
@@ -184,8 +187,6 @@ def _translate(text: str, docname: str | None = None) -> str:
         return '\n'.join(out)
     text = _demote_extra_h1s(text)
 
-    # 1b. @note / @see -> MyST admonitions; runs BEFORE math so \f[...\f] inside
-    # a note is still one token (no blank-line terminator cuts the body short).
     _ADMON_KIND = {"note": "note", "see": "seealso", "warning": "warning",
                    "sa": "seealso"}
     def _admon_repl(m: re.Match) -> str:
@@ -348,7 +349,6 @@ def _translate(text: str, docname: str | None = None) -> str:
         return "".join(out)
     text = _toggle_collapse(text)
 
-    # 6b. @link target [display] @endlink -> @ref form (step 7 resolves).
     def _link_repl(m: re.Match) -> str:
         target = m.group("target")
         disp = (m.group("disp") or "").strip().replace('"', '')
@@ -357,8 +357,6 @@ def _translate(text: str, docname: str | None = None) -> str:
         r"@link\s+(?P<target>[\w-]+)(?P<disp>.*?)@endlink",
         _link_repl, text, flags=re.DOTALL)
 
-    # 8e. Class summary rows (ALL API pages): append template params + a
-    # "View details" link to the class detail page, like the legacy docs.
     if docname and (docname.startswith("main_modules/") or docname.startswith("extra_modules/")):
         def _rewrite_class_row(m: re.Match) -> str:
             kind = m.group("kind")
@@ -367,10 +365,6 @@ def _translate(text: str, docname: str | None = None) -> str:
             desc = m.group("desc").strip()
             short = name.split("::")[-1]
             tparams = _CLASS_TEMPLATE_DISPLAY.get(short, "")
-            # Keep the `class`/`struct` keyword as a separate, plain
-            # (non-clickable) code chip. The clickable link starts at
-            # `cv::Name` and covers only the qualified type name plus
-            # any template-parameter display.
             link_label = f"{name}{tparams}"
             more = (f'<a class="opencv-class-more" '
                     f'href="{page}.html#detailed-description">View details</a>')
@@ -378,9 +372,6 @@ def _translate(text: str, docname: str | None = None) -> str:
             return (f"| `{kind}` [`{link_label}`]({page}.md) "
                     f"| {desc_out} |")
         text = re.sub(
-            # `name` accepts template specializations (`< _Tp, ... >`)
-            # by allowing anything non-backtick, so the split also fires
-            # on rows like `cv::ParamType< _Tp, std::enable_if<...> >`.
             r"\| \[`(?P<kind>class|struct) (?P<name>cv::[^`]+)`\]"
             r"\((?P<page>(?:class|struct)cv_1_1[A-Za-z0-9_]+)\.md\)"
             r" \| (?P<desc>[^\n|]*?) \|",
@@ -514,10 +505,6 @@ def _translate(text: str, docname: str | None = None) -> str:
                 parts.append(_esc(content[last:]))
                 return (f'<code class="docutils literal notranslate">'
                         f'{"".join(parts)}</code>')
-            # Mask markdown links first (interior backticks confuse codespan pairing).
-            # The `(?:…|<br>)+` form also covers multi-line signature links whose
-            # text is several code spans joined by `<br>`, so their inner type
-            # tokens aren't linkified into anchors nested in the outer link.
             _masked: list[str] = []
             def _mask(m: re.Match) -> str:
                 _masked.append(m.group(0))
@@ -633,15 +620,6 @@ def _translate(text: str, docname: str | None = None) -> str:
     text = _apply_outside_code(text, lambda chunk: re.sub(
         r"@cite\s+(?P<key>[\w-]+)", _cite_repl, chunk))
 
-    # 8a. Bare bib-key references -> citation link. Doxygen frequently
-    # fails to resolve `@cite KEY` inside `@addtogroup ... { ... }`
-    # blocks (the key reaches the XML as plain text, not a `<ref>`),
-    # so the rendered stub has bare `Kannala2006`, `Felzenszwalb2006`,
-    # etc. Match every key from the bib (compiled to a single
-    # alternation regex) and emit the same `[N]` link as step 8.
-    # Excludes citelist itself (where the keys are the targets) and
-    # text already inside markdown link/anchor brackets to avoid
-    # re-linkifying step-8 output.
     if _CITE_NUMBER and docname != "citelist":
         _CITE_KEY_RE = re.compile(
             r"(?<![\[\w])(?P<key>"
@@ -899,12 +877,6 @@ def _linkify_bare_urls(src: str) -> str:
     return _apply_outside_code(src,
         lambda chunk: _BARE_URL_RE.sub(r"<\g<url>>", chunk))
 
-
-# Doxygen alias `opencv_source_code/<path>` -> GitHub source URL. The
-# Doxygen build resolves the alias via configuration; the Sphinx wrapper
-# has no equivalent macro, so without this pass the alias would render
-# as plain unclickable text (calib.hpp / 3d.hpp note admonitions hit
-# this pattern repeatedly).
 _OPENCV_SOURCE_CODE_RE = re.compile(
     r"\bopencv_source_code/(?P<path>[\w./\-]+)"
 )
@@ -918,14 +890,6 @@ def _linkify_opencv_source_code(src: str) -> str:
     return _apply_outside_code(
         src, lambda chunk: _OPENCV_SOURCE_CODE_RE.sub(_repl, chunk))
 
-
-# Doxygen `#funcName` (and `#ClassName`) cross-reference in prose ->
-# a markdown link. Looked up in `_CV_SYMBOL_URL` (populated from the
-# Doxygen tagfile). Bare references like "See also #calibrationMatrixValues"
-# in @note blocks would otherwise render as literal text on Sphinx because
-# Doxygen's `#name` syntax has no MyST equivalent. The lookbehind keeps
-# this from chewing on heading markers (`### Heading`), MyST attribute
-# blocks (`{#anchor}`), and existing markdown link targets (`(#anchor)`).
 _DOX_HASH_REF_RE = re.compile(
     r"(?<![{(#\w])#(?P<name>[A-Za-z_]\w*)\b"
 )
@@ -999,7 +963,6 @@ def _referenced_docs() -> set[str]:
     return _referenced_docs_cache
 
 
-# Tutorial roots in the @subpage/@ref nav graph (API stubs wired via explicit toctrees).
 _TUTORIAL_PREFIXES = ("tutorials/", "js_tutorials/",
                       "py_tutorials/", "tutorials_contrib/")
 

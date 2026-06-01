@@ -1,3 +1,9 @@
+# This file is part of OpenCV project.
+# It is subject to the license terms in the LICENSE file found in the top-level directory
+# of this distribution and at http://opencv.org/license.html.
+# Copyright (C) 2026, BigVision LLC, all rights reserved.
+# Third party copyrights are property of their respective owners.
+
 """Per-class "Examples" cross-reference system."""
 from __future__ import annotations
 import re, pathlib
@@ -161,10 +167,6 @@ def _scan_tutorial_sample_refs() -> dict[str, str]:
 
 _TUTORIAL_SAMPLE_REFS: dict[str, str] = _scan_tutorial_sample_refs()
 
-
-# ----------------------- @example declaration scanner -----------------------
-
-# `*/` guard stops capture before the next comment block's @brief.
 _DOXY_EXAMPLE_RE = re.compile(
     r"[@\\]example\s+(\S+)"              # declared path
     r"[^\n]*\n"
@@ -347,10 +349,6 @@ def _extract_sample_brief(text: str) -> str:
             return first
     return ""
 
-
-# Doxygen markup inside `@example` description text: `@ref` cross-references
-# and Markdown image embeds. The generated page skips the `_translate`
-# source-read pipeline, so resolve these here via translate's shared indexes.
 _BRIEF_REF_RE = re.compile(r'@ref\s+(?P<anchor>[\w:-]+)(?:\s+"(?P<label>[^"]+)")?')
 _BRIEF_IMG_RE = re.compile(r'!\[(?P<alt>[^\]]*)\]\((?P<src>[^)]+)\)')
 

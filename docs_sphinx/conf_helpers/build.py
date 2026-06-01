@@ -1,3 +1,9 @@
+# This file is part of OpenCV project.
+# It is subject to the license terms in the LICENSE file found in the top-level directory
+# of this distribution and at http://opencv.org/license.html.
+# Copyright (C) 2026, BigVision LLC, all rights reserved.
+# Third party copyrights are property of their respective owners.
+
 """Import-time orchestration: populate the shared indexes."""
 from __future__ import annotations
 import pathlib, re, os as _os, shutil as _shutil, textwrap as _textwrap
@@ -29,11 +35,7 @@ if PY_DOC_MODULES:
                    base=DOC_ROOT)
 for _m in PY_DOC_MODULES:
     _scan_internal(DOC_ROOT / "py_tutorials" / _m, base=DOC_ROOT)
-# Contrib root page filename differs by staging vintage: the current CMake
-# (docs_sphinx/CMakeLists.txt) auto-generates `contrib_root.markdown` (heading
-# anchor `tutorial_contrib_root`); older staged trees named it
-# `tutorials_contrib.markdown`. Accept whichever exists so the landing-page
-# link and the anchor scan both resolve regardless of which produced the tree.
+
 _contrib_dir = SPHINX_INPUT_ROOT / "tutorials_contrib"
 _contrib_root_md = next(
     (p for p in (_contrib_dir / "contrib_root.markdown",
@@ -77,13 +79,6 @@ for _m in CONTRIB_MODULES:
                                             f"contrib_modules/{_rel}")
 
 if API_MODULES:
-    # 0) Module API figures (e.g. modules/calib/doc/pics/pinhole_camera_model.png,
-    #    referenced by Doxygen `@image html …` in group docs) live OUTSIDE
-    #    DOC_ROOT, so the tutorial scan above never indexed or staged them.
-    #    Mirror them flat into `api_pics/` under the srcdir and index by
-    #    filename so the XML `<image>` converter resolves them as
-    #    `/api_pics/<name>`. (Doxygen's IMAGE_PATH is flat, so basenames are
-    #    effectively unique; first writer wins on the rare clash.)
     _api_pics = SPHINX_INPUT_ROOT / "api_pics"
     _stage_pics = SPHINX_INPUT_ROOT != DOC_ROOT
     if _stage_pics:
@@ -107,12 +102,10 @@ if API_MODULES:
                                 _shutil.copy2(_img, _link)
                             except OSError:
                                 pass
-    # 1) Build a patched XML tree breathe will read (inlines group-only
-    #    <memberdef>s into namespace XML so name lookups succeed).
+
     if _API_XML_DIR.is_dir():
         _patch_namespace_xml_for_breathe(_API_XML_DIR, _PATCHED_XML_DIR)
-    # 2) Generate stub trees from the ORIGINAL XML. Split by origin: main tree
-    #    (opencv/modules) → main_modules/, contrib tree → extra_modules/.
+
     from conf_helpers.state import OPENCV_ROOT, CONTRIB_ROOT
     _is_contrib = lambda m: (CONTRIB_ROOT / m).is_dir() and not (
         OPENCV_ROOT / "modules" / m).is_dir()
@@ -141,9 +134,6 @@ def _write_root_index() -> None:
     if SPHINX_INPUT_ROOT == DOC_ROOT:
         return
 
-    # (heading, link_text, docname). link_text=None => the heading itself is
-    # the link (FAQ / Bibliography). This order is both the rendered order and
-    # the hidden-toctree order.
     entries: list[tuple[str, str | None, str]] = []
 
     def add(heading: str, link_text: str | None, docname: str,
@@ -387,9 +377,6 @@ if API_MODULES:
     _write_namespace_list_index()
     _write_class_list_index()
 
-# External scan: every OTHER main module's top-level table_of_content_*.markdown.
-# Sources live under DOC_ROOT (the staged tree only contains *enabled* main
-# modules, not the rest), so scan DOC_ROOT directly here.
 for _toc in (DOC_ROOT / "tutorials").glob("*/table_of_content_*.markdown"):
     if _toc.parent.name not in DOC_MODULES:
         _scan_external(_toc)
@@ -402,10 +389,6 @@ for _toc in (DOC_ROOT / "py_tutorials").glob("*/py_table_of_contents_*.markdown"
     if _toc.parent.name not in PY_DOC_MODULES:
         _scan_external(_toc)
 
-# These roots reach the master toctree via @subpage lines injected at
-# translate/source-read time (not present in any scanned source file), so add
-# them to the referenced set explicitly — otherwise orphan detection would
-# wrongly flag the js/py/contrib roots and the standalone pages.
 _REFERENCED_ANCHORS.update({
     "intro", "faq", "citelist",
     "tutorial_js_root", "tutorial_py_root", "tutorial_contrib_root",

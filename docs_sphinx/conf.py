@@ -1,12 +1,9 @@
-"""Sphinx wrapper for opencv/doc/ (single conf.py, config-dir/source-dir
-separation so the legacy tree is never duplicated). Build via CMake:
+# This file is part of OpenCV project.
+# It is subject to the license terms in the LICENSE file found in the top-level directory
+# of this distribution and at http://opencv.org/license.html.
+# Copyright (C) 2026, BigVision LLC, all rights reserved.
+# Third party copyrights are property of their respective owners.
 
-    cmake --build <build> --target sphinx   # -> <build>/docs_sphinx/html/
-
-opencv/doc/ stays untouched; Doxygen directives are translated to MyST in the
-`source-read` hook. Enable tutorial modules by adding their folder names to
-DOC_MODULES (state.py); only enabled modules compile, others drop from toctrees.
-"""
 from __future__ import annotations
 import os as _os, pathlib, sys as _sys
 
@@ -43,9 +40,6 @@ if HAVE_BREATHE:
     extensions.append("breathe")
     breathe_projects = {"opencv": str(_PATCHED_XML_DIR)}
     breathe_default_project = "opencv"
-    # Empty so class pages stay description-only (members are hand-rolled in
-    # _write_class_stub); a global ("members",) would duplicate them and feed
-    # macro-bearing decls to the C++ parser. Missing-XML fallback sets it itself.
     breathe_default_members = ()
 
 source_suffix = {".md": "markdown", ".markdown": "markdown"}
@@ -64,10 +58,6 @@ cpp_id_attributes = [
 ]
 c_id_attributes = list(cpp_id_attributes)
 
-# Master doc. By default the generated `index.markdown` landing page is the
-# site root (USE_INDEX_LANDING); its toctree lists every cross-family root and
-# its body is the OpenCV-modules link list. Setting the flag False falls back
-# to the legacy layout where `tutorials/tutorials` is the root.
 master_doc = "index" if USE_INDEX_LANDING else "tutorials/tutorials"
 
 # Scope: master + enabled main modules + (optionally) enabled contrib modules.
@@ -153,20 +143,7 @@ html_css_files = [
 ]
 html_theme_options = {
     "logo": {"text": f"OpenCV {release}"},
-    # Show all nav links inline (no "More" dropdown).
     "header_links_before_dropdown": 6,
-    # Header nav. Uses the theme's `external_links` slot as the data hook, but
-    # navbar-nav.html resolves every entry ON-SITE against the Sphinx tree:
-    #   * `docname` entries -> depth-correct relative link via `pathto`
-    #     (the Sphinx-rendered pages — landing, tutorials, module roots);
-    #   * a `url` entry marked `external` -> rendered verbatim, new tab
-    #     (javadoc has no Sphinx equivalent).
-    # The tutorial module tree stays in the left sidebar, not the header.
-    # Mirrors the legacy Doxygen header layout, but every entry resolves to a
-    # LOCAL Sphinx page. Related Pages / Namespaces / Classes / Examples are all
-    # generated index pages (conf_helpers/build.py). Java docs are the one
-    # genuinely off-site target (no local javadoc), so kept `external`.
-    # (Files is dropped — the Sphinx site has no per-file listing.)
     "external_links": [
         {"docname": master_doc,                "name": "Main Page"},
         {"docname": "related_pages",           "name": "Related Pages"},
@@ -176,8 +153,6 @@ html_theme_options = {
         {"url": DOXYGEN_BASE_URL + "javadoc/", "name": "Java documentation",
          "external": True},
     ],
-    # Doxygen search engine replaces the native one; render a single trigger in
-    # navbar_end (navbar_persistent renders twice → duplicate element IDs).
     "navbar_persistent": [],
     "navbar_end": ["search-button-field", "theme-switcher", "navbar-icon-links"],
     "disable_search": True,
@@ -186,9 +161,6 @@ html_theme_options = {
     "show_prev_next": True,
     "show_nav_level": 2,
     "navigation_depth": 4,
-    # Every page shows the in-page "On this page" TOC, except the generated
-    # landing page (index), where an empty list removes the secondary sidebar
-    # entirely so the centered entry list isn't pushed off to the left.
     "secondary_sidebar_items": {"**": ["page-toc"], "index": []},
     "back_to_top_button": True,
     "show_version_warning_banner": False,
@@ -197,9 +169,6 @@ html_theme_options = {
                     "icon": "fa-brands fa-github"}],
 }
 
-# Publish each contrib module via a build-dir symlink + html_extra_path (URLs
-# /contrib_modules/<m>/..., nothing duplicated in srcdir). Skipped for ad-hoc
-# sphinx-build inside a source tree (CMake-only path).
 html_extra_path: list[str] = []
 def _in_source_tree(p: pathlib.Path) -> bool:
     for _root in (DOC_ROOT, CONTRIB_ROOT):
