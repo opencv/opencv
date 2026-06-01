@@ -121,28 +121,50 @@ def _member_detail_parts(md):
     if de is None:
         return "", [], ""
     params, returns = [], ""
-    for pl in de.iter("parameterlist"):
-        if pl.get("kind") in ("param", "templateparam"):
-            for it in pl.findall("parameteritem"):
-                nm = ", ".join(
-                    t for t in (_itertext(n) for n in
-                                it.findall(".//parametername")) if t)
-                d = _doxygen_desc_to_md(it.find("parameterdescription"))
-                if nm:
-                    params.append((nm, d))
-    for ss in de.iter("simplesect"):
-        if ss.get("kind") == "return":
-            returns = _itertext(ss)
+    for para in de.findall("para"):
+        for pl in para.findall("parameterlist"):
+            if pl.get("kind") in ("param", "templateparam"):
+                for it in pl.findall("parameteritem"):
+                    nm = ", ".join(
+                        t for t in (_itertext(n) for n in
+                                    it.findall(".//parametername")) if t)
+                    # Block-aware: a description carrying an <itemizedlist>
+                    # (e.g. calibration `flags`) keeps its bullets as real
+                    # Markdown instead of collapsing into a run-on paragraph.
+                    d = _doxygen_desc_to_md(it.find("parameterdescription"))
+                    if nm:
+                        params.append((nm, d))
+        for ss in para.findall("simplesect"):
+            if ss.get("kind") == "return":
+                returns = _itertext(ss)
+    # Prune the param/return chrome (rendered separately) then convert the rest
+    # with full block support so lists and notes survive. Preserve tail text when
+    # removing elements so descriptions after parameterlist are not lost.
     pruned = _copy.deepcopy(de)
-    def _strip(el):
-        for child in list(el):
-            if child.tag == "parameterlist" or (
-                    child.tag == "simplesect"
-                    and child.get("kind") in ("param", "templateparam", "return")):
-                el.remove(child)
-            else:
-                _strip(child)
-    _strip(pruned)
+    for para in pruned.findall("para"):
+        for child in list(para):
+            if child.tag == "parameterlist":
+                # Preserve tail text (text after the element) by moving it to previous sibling
+                if child.tail:
+                    prev_idx = list(para).index(child) - 1
+                    if prev_idx >= 0:
+                        prev_sibling = para[prev_idx]
+                        prev_sibling.tail = (prev_sibling.tail or "") + child.tail
+                    else:
+                        # No previous sibling, prepend to para text
+                        para.text = (para.text or "") + child.tail
+                para.remove(child)
+            elif (child.tag == "simplesect"
+                  and child.get("kind") in ("param", "templateparam", "return")):
+                # Same tail preservation for simplesect
+                if child.tail:
+                    prev_idx = list(para).index(child) - 1
+                    if prev_idx >= 0:
+                        prev_sibling = para[prev_idx]
+                        prev_sibling.tail = (prev_sibling.tail or "") + child.tail
+                    else:
+                        para.text = (para.text or "") + child.tail
+                para.remove(child)
     return _doxygen_desc_to_md(pruned), params, returns
 
 
