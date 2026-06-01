@@ -238,7 +238,7 @@ public:
 
     virtual double getProperty(int propId) const CV_OVERRIDE {
         if(!ffmpegWriter)
-            return CAP_PROP_UNKNOWN;
+            return VIDEOWRITER_PROP_UNKNOWN;
         return ffmpegWriter->getProperty(propId);
     }
 

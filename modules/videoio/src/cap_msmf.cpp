@@ -2764,7 +2764,7 @@ double CvVideoWriter_MSMF::getProperty(int propId) const
     {
         return static_cast<double>(va_device);
     }
-    return CAP_PROP_UNKNOWN;
+    return VIDEOWRITER_PROP_UNKNOWN;
 }
 
 cv::Ptr<cv::IVideoWriter> cv::cvCreateVideoWriter_MSMF( const std::string& filename, int fourcc,

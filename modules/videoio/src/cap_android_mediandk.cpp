@@ -736,7 +736,7 @@ public:
         fd = -1;
     }
 
-    virtual double getProperty(int) const CV_OVERRIDE { return CAP_PROP_UNKNOWN; }
+    virtual double getProperty(int) const CV_OVERRIDE { return VIDEOWRITER_PROP_UNKNOWN; }
     virtual bool setProperty(int, double) CV_OVERRIDE { return false; }
     virtual bool isOpened() const CV_OVERRIDE { return NULL != encoder; }
 };

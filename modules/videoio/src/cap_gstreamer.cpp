@@ -2768,7 +2768,7 @@ double CvVideoWriter_GStreamer::getProperty(int propId) const
     {
         return static_cast<double>(hw_device);
     }
-    return CAP_PROP_UNKNOWN;
+    return VIDEOWRITER_PROP_UNKNOWN;
 }
 
 Ptr<IVideoWriter> create_GStreamer_writer(const std::string& filename, int fourcc, double fps,

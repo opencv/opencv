@@ -383,7 +383,7 @@ public:
     void close();
 
     ~CvVideoWriter_Images() CV_OVERRIDE { close(); }
-    double getProperty(int) const CV_OVERRIDE { return CAP_PROP_UNKNOWN; }
+    double getProperty(int) const CV_OVERRIDE { return VIDEOWRITER_PROP_UNKNOWN; }
     bool setProperty( int, double ) CV_OVERRIDE; // FIXIT doesn't work: IVideoWriter interface only!
     bool isOpened() const CV_OVERRIDE { return !filename_pattern.empty(); }
     bool write( InputArray ) CV_OVERRIDE;
