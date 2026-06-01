@@ -13,7 +13,7 @@
 #include <opencv2/core/utility.hpp> // parallel_for_
 
 #define FAST_GEMM_STORAGE (1<<20) // 2^20
-#define FAST_GEMM_MAX_STACKBUF (1 << 14)
+#define FAST_GEMM_MAX_STACKBUF (1 << 13)
 
 #if CV_AVX
 #define FAST_GEMM_F32_MC 60
