@@ -46,7 +46,7 @@
 #include "opencv2/core/private.hpp"
 
 #include "opencv2/stereo.hpp"
-#include "opencv2/3d.hpp"
+#include "opencv2/geometry.hpp"
 #include "opencv2/imgproc.hpp"
 
 #include "opencv2/core/ocl.hpp"

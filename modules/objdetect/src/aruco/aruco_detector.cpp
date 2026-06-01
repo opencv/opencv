@@ -3,7 +3,7 @@
 // of this distribution and at http://opencv.org/license.html
 
 #include "../precomp.hpp"
-#include <opencv2/3d.hpp>
+#include <opencv2/geometry.hpp>
 
 #include "opencv2/objdetect/aruco_detector.hpp"
 #include "opencv2/objdetect/aruco_board.hpp"

@@ -156,17 +156,17 @@ cmake \
 
 Each module is a subdirectory of the `modules` directory. It is possible to disable one module:
 ```.sh
-cmake -DBUILD_opencv_3d=OFF ../opencv
+cmake -DBUILD_opencv_geometry=OFF ../opencv
 ```
 
 The opposite option is to build only specified modules and all modules they depend on:
 ```.sh
-cmake -DBUILD_LIST=calib3d,videoio,ts ../opencv
+cmake -DBUILD_LIST=geometry,videoio,ts ../opencv
 ```
 In this example we requested 3 modules and configuration script has determined all dependencies automatically:
 ```
 --   OpenCV modules:
---     To be built:                 calib3d core features flann highgui imgcodecs imgproc ts videoio
+--     To be built:                 core features flann geometry highgui imgcodecs imgproc ts videoio
 ```
 
 
@@ -324,7 +324,7 @@ Following formats can be read by OpenCV without help of any third-party library:
 | [PNG](https://en.wikipedia.org/wiki/Portable_Network_Graphics) | [libpng](https://en.wikipedia.org/wiki/Libpng)| `WITH_PNG` | _ON_ | `BUILD_PNG` |
 |^| [libspng(simple png)](https://libspng.org/) | `WITH_SPNG` | _OFF_ | `BUILD_SPNG` |
 | [JPEG](https://en.wikipedia.org/wiki/JPEG) | [libjpeg-turbo](https://en.wikipedia.org/wiki/Libjpeg) | `WITH_JPEG` | _ON_ | `BUILD_JPEG` |
-|^| [libjpeg](https://en.wikipedia.org/wiki/Libjpeg) | `WITH_JPEG` | _OFF_ | `BUILD_JPEG` with `BUILD_JPEG_TURBO_DISABLE` |
+|^| [libjpeg](https://en.wikipedia.org/wiki/Libjpeg) | `WITH_JPEG` | _OFF_ | Not supported. (see note) |
 | [TIFF](https://en.wikipedia.org/wiki/TIFF) | [LibTIFF](https://en.wikipedia.org/wiki/LibTIFF) | `WITH_TIFF` | _ON_ | `BUILD_TIFF` |
 | [WebP](https://en.wikipedia.org/wiki/WebP) || `WITH_WEBP` | _ON_ | `BUILD_WEBP` |
 | [JPEG 2000](https://en.wikipedia.org/wiki/JPEG_2000) | [OpenJPEG](https://en.wikipedia.org/wiki/OpenJPEG) | `WITH_OPENJPEG` | _ON_ | `BUILD_OPENJPEG` |
@@ -339,8 +339,8 @@ Corresponding BUILD_* options will force building and using the bundled librarie
 
 @note (All) Only one library for each image format can be enabled(e.g. In order to use JasPer for JPEG 2000 format, OpenJPEG must be disabled).
 @note (JPEG 2000) OpenJPEG have higher priority than JasPer which is deprecated.
-@note (JPEG XL) OpenCV doesn't contain libjxl source code, so `BUILD_JPEGXL` is not supported.
-@note (EXR) OpenCV 5 doesn't contain OpenEXR source code, so `BUILD_OPENEXR` is not supported.
+@note (JPEG) OpenCV 5 doesn't contain libjpeg source code, so `BUILD_JPEG_TURBO_DISABLE` is not supported. Users can use a system-wide installed libjpeg instead of libjpeg-turbo.
+@note (EXR) OpenCV 5 doesn't contain OpenEXR source code, so `BUILD_OPENEXR` is not supported. Users must provide a system-wide installation of libopenexr.
 @note (JPEG XL) OpenCV doesn't contain libjxl source code, so `BUILD_JPEGXL` is not supported. Users must provide a system-wide installation of libjxl.
 @note (AVIF) OpenCV doesn't contain libavif source code, so `BUILD_AVIF` is not supported. Users must provide a system-wide installation of libavif.
 

@@ -44,10 +44,12 @@
 
 #include "../test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp"
+#ifdef HAVE_OPENCV_FEATURES
 #include "opencv2/features.hpp"
+#endif
 
 
-#ifdef HAVE_OPENCL
+#if defined(HAVE_OPENCL) && defined(HAVE_OPENCV_FEATURES)
 
 namespace opencv_test { namespace ocl {
 

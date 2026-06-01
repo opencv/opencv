@@ -62,8 +62,7 @@ foreach(_d ${_main_tutorial_children})
   endif()
 endforeach()
 
-# js_tutorials, py_tutorials, and images/ sit directly under opencv/doc/ —
-# symlink them into the staged input tree.
+# js_tutorials, py_tutorials, images/ sit directly under opencv/doc/.
 foreach(_root js_tutorials py_tutorials images)
   if(EXISTS "${CMAKE_SOURCE_DIR}/doc/${_root}")
     file(CREATE_LINK

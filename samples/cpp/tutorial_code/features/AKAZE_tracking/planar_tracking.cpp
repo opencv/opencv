@@ -7,7 +7,7 @@
 #include "opencv2/xfeatures2d.hpp"
 #include <opencv2/videoio.hpp>
 #include <opencv2/imgproc.hpp>
-#include <opencv2/3d.hpp>
+#include <opencv2/geometry.hpp>
 #include <opencv2/highgui.hpp>      //for imshow
 
 #include "stats.h" // Stats structure definition

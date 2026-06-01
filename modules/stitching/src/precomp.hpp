@@ -70,7 +70,7 @@
 #include "opencv2/stitching/detail/warpers.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/features.hpp"
-#include "opencv2/3d.hpp"
+#include "opencv2/geometry.hpp"
 
 #ifdef HAVE_OPENCV_CUDAARITHM
 #  include "opencv2/cudaarithm.hpp"

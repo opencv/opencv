@@ -114,7 +114,7 @@ Making a project
             since I plan to use the whole bunch:
 
             opencv_core opencv_imgproc opencv_imgcodecs opencv_highgui opencv_videoio opencv_video opencv_features
-            opencv_3d opencv_objdetect opencv_flann
+            opencv_geometry opencv_objdetect opencv_flann
 
             ![](images/a10.png)
 
@@ -125,7 +125,7 @@ Making a project
             @endcode
             My output (in case you want to check) was:
             @code{.bash}
-            -L/usr/local/lib -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_video -lopencv_features -lopencv_3d -lopencv_calib -lopencv_stereo -lopencv_objdetect -lopencv_videoio -lopencv_imgcodecs -lopencv_flann
+            -L/usr/local/lib -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_video -lopencv_features -lopencv_geometry -lopencv_calib -lopencv_stereo -lopencv_objdetect -lopencv_videoio -lopencv_imgcodecs -lopencv_flann
             @endcode
             Now you are done. Click **OK**
 

@@ -4,7 +4,7 @@
 
 #include "../precomp.hpp"
 
-#include <opencv2/3d.hpp>
+#include <opencv2/geometry.hpp>
 #include <opencv2/core/utils/logger.hpp>
 #include "opencv2/objdetect/charuco_detector.hpp"
 #include "aruco_utils.hpp"

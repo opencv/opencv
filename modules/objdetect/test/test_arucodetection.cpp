@@ -4,7 +4,7 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/objdetect/aruco_detector.hpp"
-#include "opencv2/3d.hpp"
+#include "opencv2/geometry.hpp"
 
 namespace cv {
     namespace aruco {

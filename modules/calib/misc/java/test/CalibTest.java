@@ -2,7 +2,6 @@ package org.opencv.test.calib;
 
 import java.util.ArrayList;
 
-import org.opencv.cv3d.Cv3d;
 import org.opencv.calib.Calib;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
