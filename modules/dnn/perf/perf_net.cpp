@@ -9,6 +9,7 @@
 #include "opencv2/core/ocl.hpp"
 
 #include "opencv2/dnn/shape_utils.hpp"
+#include <opencv2/core/utils/configuration.private.hpp>
 
 #include "../test/test_common.hpp"
 
@@ -143,6 +144,13 @@ PERF_TEST_P_(DNNTestNetwork, Inception_5h)
 PERF_TEST_P_(DNNTestNetwork, SSD)
 {
     applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
+
+    // The Caffe-SSD specific handling lives in the new engine importer only;
+    // the classic importer can no longer load this model.
+    auto engine_forced = static_cast<dnn::EngineType>(
+        utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", dnn::ENGINE_AUTO));
+    if (engine_forced == dnn::ENGINE_CLASSIC)
+        throw SkipTestException("SSD_VGG16 is supported on the new DNN engine only");
 
     processNet("dnn/onnx/models/ssd_vgg16.onnx", "", cv::Size(300, 300));
 }

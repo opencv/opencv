@@ -459,7 +459,8 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        // Some ONNX converters repeat the image input; only the first two are used.
+        // PriorBox uses layer parameters and inputs[0]/inputs[1] shapes; tensor data is never read.
+        // Extra inputs (e.g., in ssd_vgg16.onnx) are ignored, so require >= 2 inputs instead of exactly 2.
         CV_Assert(inputs.size() >= 2);
 
         int _layerWidth = inputs[0].size[3];
@@ -529,7 +530,8 @@ public:
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        // Some ONNX converters repeat the image input; only the first two are used.
+        // PriorBox uses layer parameters and inputs[0]/inputs[1] shapes; tensor data is never read.
+        // Extra inputs (e.g., in ssd_vgg16.onnx) are ignored, so require >= 2 inputs instead of exactly 2.
         CV_Assert(nodes.size() >= 2);
         auto layer = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         auto image = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;

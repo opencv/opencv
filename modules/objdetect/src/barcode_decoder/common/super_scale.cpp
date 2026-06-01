@@ -18,9 +18,10 @@ namespace barcode {
 
 constexpr static float MAX_SCALE = 4.0f;
 
-int SuperScale::init(const std::string &proto_path, const std::string &model_path)
+int SuperScale::init(const std::string &model_path)
 {
-    srnet_ = dnn::readNet(proto_path, model_path);
+    // Super Resolution is loaded from a single-file ONNX model (e.g. dnn/wechat_2021-01/sr.onnx).
+    srnet_ = dnn::readNetFromONNX(model_path);
     net_loaded_ = true;
     return 0;
 }
@@ -77,9 +78,8 @@ int SuperScale::superResolutionScale(const Mat &src, Mat &dst)
 
 #else // HAVE_OPENCV_DNN
 
-int SuperScale::init(const std::string &proto_path, const std::string &model_path)
+int SuperScale::init(const std::string &model_path)
 {
-    CV_UNUSED(proto_path);
     CV_UNUSED(model_path);
     return 0;
 }

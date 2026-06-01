@@ -54,14 +54,14 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
         }
 
         //! [init_model_from_memory]
-        mModelBuffer = loadFileFromResource(R.raw.mobilenet_iter_73000);
-        mConfigBuffer = loadFileFromResource(R.raw.deploy);
-        if (mModelBuffer == null || mConfigBuffer == null) {
+        // Load a single-file MobileNet-SSD ONNX model (res/raw/mobilenet.onnx).
+        mModelBuffer = loadFileFromResource(R.raw.mobilenet);
+        if (mModelBuffer == null) {
             Log.e(TAG, "Failed to load model from resources");
         } else
-            Log.i(TAG, "Model files loaded successfully");
+            Log.i(TAG, "Model file loaded successfully");
 
-        net = Dnn.readNet("caffe", mModelBuffer, mConfigBuffer);
+        net = Dnn.readNetFromONNX(mModelBuffer);
         Log.i(TAG, "Network loaded successfully");
         //! [init_model_from_memory]
 
@@ -92,7 +92,6 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
             mOpenCvCameraView.disableView();
 
         mModelBuffer.release();
-        mConfigBuffer.release();
     }
 
     // Load a network.
@@ -188,7 +187,6 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
             "motorbike", "person", "pottedplant",
             "sheep", "sofa", "train", "tvmonitor"};
 
-    private MatOfByte            mConfigBuffer;
     private MatOfByte            mModelBuffer;
     private Net                  net;
     private CameraBridgeViewBase mOpenCvCameraView;

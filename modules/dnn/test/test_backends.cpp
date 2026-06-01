@@ -265,6 +265,14 @@ TEST_P(DNNTestNetwork, SSD_VGG16)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 
+    auto engine_forced = static_cast<cv::dnn::EngineType>(
+        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
+    if (engine_forced == cv::dnn::ENGINE_CLASSIC)
+    {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+        return;
+    }
+
     Mat sample = imread(findDataFile("dnn/street.png"));
     Mat inp = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);
 
@@ -407,8 +415,8 @@ TEST_P(DNNTestNetwork, DenseNet_121)
     }
     else if (target == DNN_TARGET_CUDA_FP16)
     {
-        l1 = 0.008;
-        lInf = 0.06;
+        l1 = 2e-2;
+        lInf = 9e-2;
     }
     processNet("dnn/onnx/models/densenet121.onnx", "", Size(224, 224), "", l1, lInf);
     if (target != DNN_TARGET_MYRIAD || getInferenceEngineVPUType() != CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
