@@ -85,7 +85,8 @@ if CONTRIB_MODULES and (SPHINX_INPUT_ROOT / "tutorials_contrib").is_dir():
     include_patterns += [f"tutorials_contrib/{m}/**" for m in CONTRIB_MODULES]
 if API_MODULES:
     # Glob: the stub file set (generated later) is unknown here.
-    include_patterns.append("api/**")
+    include_patterns.append("main_modules/**")
+    include_patterns.append("extra_modules/**")
     # Orphan example pages; without this glob the class-page Examples links 404.
     include_patterns.append("examples/**")
 

@@ -31,15 +31,8 @@ h3 { font-size: 1.125rem; font-weight: 600; line-height: 1.4; }
 .bd-content .toctree-wrapper { margin: 0.5rem 0 1.5rem; }
 
 /* --- Landing page (generated index.markdown — .ocv-landing wrapper) ------
- * The index page has no secondary "On this page" sidebar (emptied in
- * conf.py), so the content column is full-width. Cap the entry list's width
- * and auto-center it so the category headings + links sit in the middle of
- * the page instead of hugging the left edge. */
-.ocv-landing {
-    max-width: 720px;
-    margin-left: auto;
-    margin-right: auto;
-}
+ * Left-aligned; title and entries share the same left edge. */
+.ocv-landing { max-width: 720px; }
 .ocv-landing h2:first-child { margin-top: 1rem; }
 .ocv-landing p { margin: 0.25rem 0 0.5rem; }
 

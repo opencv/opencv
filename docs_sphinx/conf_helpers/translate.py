@@ -359,7 +359,7 @@ def _translate(text: str, docname: str | None = None) -> str:
 
     # 8e. Class summary rows (ALL API pages): append template params + a
     # "View details" link to the class detail page, like the legacy docs.
-    if docname and docname.startswith("api/"):
+    if docname and (docname.startswith("main_modules/") or docname.startswith("extra_modules/")):
         def _rewrite_class_row(m: re.Match) -> str:
             kind = m.group("kind")
             name = m.group("name")       # 'cv::dnn::BackendNode'
@@ -379,7 +379,7 @@ def _translate(text: str, docname: str | None = None) -> str:
             _rewrite_class_row, text)
 
 
-    if docname == "api/core_basic":
+    if docname == "main_modules/core_basic":
         # 8c. `{doxygentypedef} cv::Ptr` -> hand-rolled cpp:type (breathe skips C++11 aliases).
         text = re.sub(
             r"```\{doxygentypedef\} cv::Ptr\s*\n:project: opencv\s*\n```",
@@ -436,7 +436,7 @@ def _translate(text: str, docname: str | None = None) -> str:
                 full = _LIVE_CLASS_URL.get(cls)
                 if not full:
                     return m.group(0)
-                href = pathlib.PurePosixPath(full).name  # same api/ directory
+                href = pathlib.PurePosixPath(full).name  # same module directory
                 rest_esc = (rest.replace("&", "&amp;")
                                 .replace("<", "&lt;")
                                 .replace(">", "&gt;"))
@@ -903,7 +903,7 @@ def _referenced_docs() -> set[str]:
     return _referenced_docs_cache
 
 
-# Tutorial roots in the @subpage/@ref nav graph (api/ wired via explicit toctrees).
+# Tutorial roots in the @subpage/@ref nav graph (API stubs wired via explicit toctrees).
 _TUTORIAL_PREFIXES = ("tutorials/", "js_tutorials/",
                       "py_tutorials/", "tutorials_contrib/")
 
@@ -914,7 +914,8 @@ def _source_read(app, docname, source):
             or docname.startswith("js_tutorials/")
             or docname.startswith("py_tutorials/")
             or docname.startswith("tutorials_contrib/")
-            or docname.startswith("api/")
+            or docname.startswith("main_modules/")
+            or docname.startswith("extra_modules/")
             or docname == "faq"
             or docname == "citelist"
             or docname == "intro"

@@ -113,6 +113,7 @@ def _inline_coll_graphs_on_finish(app, exception):
     if exception is not None:
         return
     out = pathlib.Path(app.outdir)
-    _inline_collaboration_svgs(out / "api", out / "_images")
-    _strip_breathe_class_clutter(out / "api")
+    for _api in ("main_modules", "extra_modules"):
+        _inline_collaboration_svgs(out / _api, out / "_images")
+        _strip_breathe_class_clutter(out / _api)
     _generate_search_map(out)

@@ -111,11 +111,20 @@ if API_MODULES:
     #    <memberdef>s into namespace XML so name lookups succeed).
     if _API_XML_DIR.is_dir():
         _patch_namespace_xml_for_breathe(_API_XML_DIR, _PATCHED_XML_DIR)
-    # 2) Generate the api/ stub tree from the ORIGINAL XML — the stub
-    #    generator only reads group XML, which is unchanged.
-    _generate_api_stubs(API_MODULES, _API_XML_DIR, SPHINX_INPUT_ROOT / "api")
-    # Recursive scan picks up api_root.markdown + every group stub.
-    _scan_internal(SPHINX_INPUT_ROOT / "api")
+    # 2) Generate stub trees from the ORIGINAL XML. Split by origin: main tree
+    #    (opencv/modules) → main_modules/, contrib tree → extra_modules/.
+    from conf_helpers.state import OPENCV_ROOT, CONTRIB_ROOT
+    _is_contrib = lambda m: (CONTRIB_ROOT / m).is_dir() and not (
+        OPENCV_ROOT / "modules" / m).is_dir()
+    _main_api = [m for m in API_MODULES if not _is_contrib(m)]
+    _extra_api = [m for m in API_MODULES if _is_contrib(m)]
+    _generate_api_stubs(_main_api, _API_XML_DIR, SPHINX_INPUT_ROOT / "main_modules",
+                        root_anchor="api_root", root_title="Main modules")
+    _scan_internal(SPHINX_INPUT_ROOT / "main_modules")
+    if _extra_api:
+        _generate_api_stubs(_extra_api, _API_XML_DIR, SPHINX_INPUT_ROOT / "extra_modules",
+                            root_anchor="extra_api_root", root_title="Extra modules")
+        _scan_internal(SPHINX_INPUT_ROOT / "extra_modules")
 
 
 def _write_root_index() -> None:
@@ -148,26 +157,20 @@ def _write_root_index() -> None:
         "py_tutorials/py_tutorials", bool(PY_DOC_MODULES))
     add("Javascript Tutorials", "OpenCV.js tutorials",
         "js_tutorials/js_tutorials", bool(JS_DOC_MODULES))
-    add("Contrib Tutorials", "tutorials for contrib module",
+    add("Contrib Tutorials", "Tutorials for contrib module",
         f"tutorials_contrib/{_contrib_root_md.stem}",
         bool(CONTRIB_MODULES) and _contrib_root_md.is_file())
-    add("Main modules", "main modules", "api/api_root",
-        bool(API_MODULES) and "api_root" in _ANCHOR_TO_DOC)
+    add("Main modules", "Documentation for main modules",
+        "main_modules/api_root", "api_root" in _ANCHOR_TO_DOC)
+    add("Extra modules", "Documentation for extra modules",
+        "extra_modules/api_root", "extra_api_root" in _ANCHOR_TO_DOC)
     add("Frequently Asked Questions", None, "faq", "faq" in _ANCHOR_TO_DOC)
     add("Bibliography", None, "citelist", "citelist" in _ANCHOR_TO_DOC)
 
     toctree = "\n".join(
         f"{heading} <{docname}>" for heading, _link, docname in entries)
 
-    # Body is raw HTML, NOT markdown links. A markdown `[x](intro.html)` is
-    # resolved by MyST as an internal cross-reference and emitted as
-    # `href="#intro.html"` (i.e. index.html#intro.html), which never
-    # navigates. A raw `<a href>` is passed through verbatim and resolves
-    # relative to index.html → the correct page. Raw `<h2>` headings (rather
-    # than `##`) also keep these entries out of the page-local TOC, so the
-    # "On this page" secondary sidebar stays empty here (see conf.py, where
-    # the index page's secondary_sidebar_items is emptied). No blank lines
-    # inside the block so MyST treats it as one passthrough HTML block.
+    # Body: raw HTML so links resolve correctly relative to index.html.
     html_lines = ['<div class="ocv-landing">']
     for heading, link_text, docname in entries:
         if link_text is None:
@@ -219,7 +222,8 @@ for _toc in (DOC_ROOT / "py_tutorials").glob("*/py_table_of_contents_*.markdown"
 # wrongly flag the js/py/contrib roots and the standalone pages.
 _REFERENCED_ANCHORS.update({
     "intro", "faq", "citelist",
-    "tutorial_js_root", "tutorial_py_root", "tutorial_contrib_root", "api_root",
+    "tutorial_js_root", "tutorial_py_root", "tutorial_contrib_root",
+    "api_root", "extra_api_root",
 })
 
 # Snippet basename index (mirrors Doxygen EXAMPLE_RECURSIVE lookup).

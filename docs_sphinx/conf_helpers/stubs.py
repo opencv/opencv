@@ -103,7 +103,7 @@ def _write_namespace_stub(ns: dict, out_dir: pathlib.Path,
                           xml_dir: pathlib.Path,
                           ns_group_map: dict | None = None,
                           group_info: dict | None = None) -> tuple[str, str]:
-    """Write api/namespace_<slug>.md for one namespace. Returns (anchor, fname)."""
+    """Write namespace_<slug>.md under out_dir. Returns (anchor, fname)."""
     import xml.etree.ElementTree as _ET
     slug = ns["name"].replace("::", "__")
     anchor = f"api_ns_{slug}"
@@ -872,7 +872,7 @@ def _render_member_detail(m: dict, full_name: str) -> list[str]:
 
 def _render_core_basic_func(m: dict, idx: int, total: int,
                             emit_anchor: bool) -> list[str]:
-    """Hand-rolled Function block for api/core_basic (breathe can't parse it).
+    """Hand-rolled Function block for core_basic (breathe can't parse it).
 
     Signature is inline code for token-linkifier (translate step 8g); heading
     `{#cv-slug}` anchor (first overload) is the Functions-table target (step 8i)."""
@@ -1141,12 +1141,19 @@ def _write_class_stub(cls: dict, out_dir: pathlib.Path,
     _stub_write(out, "\n".join(lines))
 
 
-def _generate_api_stubs(modules, xml_dir, out_dir):
-    """Generate the api/ stub tree: group/namespace pages, then class pages."""
+def _generate_api_stubs(modules, xml_dir, out_dir,
+                        root_anchor="api_root", root_title="API Reference",
+                        root_desc=None):
+    """Generate a stub tree (group/namespace/class pages) under out_dir.
+
+    Docnames are prefixed with out_dir.name so the same generator drives both
+    main_modules/ and extra_modules/ (contrib) trees from separate calls."""
     if not modules:
         return
     if not xml_dir.is_dir():
         return  # No XML yet; degrade silently.
+
+    _doc_prefix = out_dir.name
 
     # Where the member renderers find legacy graph SVGs / write their variants.
     global _DOXY_HTML_ROOT, _API_OUT_DIR
@@ -1170,7 +1177,7 @@ def _generate_api_stubs(modules, xml_dir, out_dir):
         for stub in out_dir.iterdir():
             n = stub.name
             if n.endswith(".md") and (n.startswith("class") or n.startswith("struct")):
-                _ANCHOR_TO_DOC[n[:-3]] = f"api/{n[:-3]}"
+                _ANCHOR_TO_DOC[n[:-3]] = f"{_doc_prefix}/{n[:-3]}"
         return
 
     import shutil
@@ -1179,13 +1186,14 @@ def _generate_api_stubs(modules, xml_dir, out_dir):
     out_dir.mkdir(parents=True, exist_ok=True)
     global _stub_written
     _stub_written = set()
+    _desc = root_desc or (
+        "Sphinx-rendered API reference. Each entry below is a module's "
+        "umbrella `@defgroup`; sub-pages mirror the Doxygen subgroup hierarchy.")
     root_lines = [
-        "API Reference {#api_root}",
-        "=============",
+        f"{root_title} {{#{root_anchor}}}",
+        "=" * len(root_title),
         "",
-        "Sphinx-rendered API reference for OpenCV main modules. Each entry",
-        "below is a module's umbrella `@defgroup`; sub-pages mirror the",
-        "Doxygen subgroup hierarchy.",
+        _desc,
         "",
     ]
     classes_seen: dict[str, dict] = {}
@@ -1194,12 +1202,14 @@ def _generate_api_stubs(modules, xml_dir, out_dir):
     global_group_info: dict[str, dict] = {}
     global_ns_group_map: dict[str, set] = {}
     trees: list = []
+    module_rows: list = []  # (folder, page_stem, title) for the api_root list
     for m in modules:
-        tree = _build_api_hierarchy("group__" + m.replace("_", "__"), xml_dir)
+        stem = _module_group_stem(m)
+        tree = _build_api_hierarchy("group__" + stem.replace("_", "__"), xml_dir)
         if tree is None:
             continue
         trees.append(tree)
-        root_lines.append(f"- @subpage api_{tree['name']}")
+        module_rows.append((m, tree["name"], tree["title"]))
         all_group_names = _collect_all_group_names(tree)
         all_refids = ["group__" + n.replace("_", "__") for n in all_group_names]
         for ns_name, grps in _build_ns_group_map(all_refids, xml_dir).items():
@@ -1226,7 +1236,14 @@ def _generate_api_stubs(modules, xml_dir, out_dir):
     # Per-class pages; seed `_ANCHOR_TO_DOC` refid→docname for `@ref`.
     for cls in classes_seen.values():
         _write_class_stub(cls, out_dir, xml_dir)
-        _ANCHOR_TO_DOC[cls["refid"]] = f"api/{_class_page_name(cls['refid'])}"
+        _ANCHOR_TO_DOC[cls["refid"]] = f"{_doc_prefix}/{_class_page_name(cls['refid'])}"
+    # Hidden toctree drives nav/sidebar; the visible list shows "folder. Title".
+    root_lines += ["```{toctree}", ":hidden:", ":maxdepth: 1", ""]
+    root_lines += [stem for _m, stem, _t in module_rows]
+    root_lines += ["```", ""]
+    for _m, stem, title in module_rows:
+        root_lines.append(f"- {_m}. [{title}]({stem}.md)")
+    root_lines.append("")
     _stub_write(out_dir / "api_root.markdown", "\n".join(root_lines) + "\n")
     # Sweep stale files.
     for _p in list(out_dir.iterdir()):
