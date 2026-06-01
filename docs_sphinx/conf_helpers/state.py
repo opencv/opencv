@@ -764,6 +764,7 @@ def _resolve_redirect(anchor: str) -> str:
 _ANCHOR_TO_DOC: dict[str, str] = {}            # anchor -> docname (internal)
 _ANCHOR_TO_EXTERNAL: dict[str, tuple[str, str]] = {}  # anchor -> (title, url)
 _ANCHOR_TO_TITLE: dict[str, str] = {}          # anchor -> first-heading title
+_LOCAL_MEMBER_IDS: set[str] = set()            # member detail targets we emit
 # anchors reachable via @subpage/@ref; rest are orphans
 _REFERENCED_ANCHORS: set[str] = set()
 
@@ -879,7 +880,7 @@ __all__ = [
     "_func_slug",
     "_CITE_NUMBER", "_BIB_ENTRIES_SORTED", "_bib_render_all",
     "_REDIRECT_MAP", "_resolve_redirect",
-    "_ANCHOR_TO_DOC", "_ANCHOR_TO_EXTERNAL", "_ANCHOR_TO_TITLE",
+    "_ANCHOR_TO_DOC", "_ANCHOR_TO_EXTERNAL", "_ANCHOR_TO_TITLE", "_LOCAL_MEMBER_IDS",
     "_REFERENCED_ANCHORS", "_HEAD_RE",
     "_scan_internal", "_scan_external",
     "_IMAGE_INDEX", "_SNIPPET_INDEX", "_SNIPPET_BASES",

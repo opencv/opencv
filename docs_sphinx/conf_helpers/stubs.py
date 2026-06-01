@@ -747,6 +747,8 @@ def _render_member_detail(m: dict, full_name: str) -> list[str]:
     kind = m["kind"]
     # Heading is just `name()` for functions; full signature is in the block below.
     head = f"{short}()" if kind == "function" else short
+    if m.get("id"):
+        _LOCAL_MEMBER_IDS.add(m["id"])
     out = [f"({m['id']})=", f"### {head}".rstrip(), ""]
 
     # Declaration (template line, if any, then the C++ signature).

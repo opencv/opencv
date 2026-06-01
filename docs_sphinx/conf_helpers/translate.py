@@ -668,6 +668,19 @@ def _translate(text: str, docname: str | None = None) -> str:
         return pat.sub(repl, src)
     text = _dedent_subpage_descriptions(text)
 
+    # 9z. Doxygen group/member URLs -> local cross-ref when we built that page.
+    def _doxy_to_local(m: re.Match) -> str:
+        base, anchor = m.group("base"), m.group("anchor")
+        if anchor:
+            tgt = f"{base}_1{anchor}"
+            return f"](#{tgt})" if tgt in _LOCAL_MEMBER_IDS else m.group(0)
+        tgt = f"api_{base[len('group__'):].replace('__', '_')}"
+        return f"](#{tgt})" if tgt in _ANCHOR_TO_DOC else m.group(0)
+    text = re.sub(
+        r"\]\(" + re.escape(DOXYGEN_BASE_URL)
+        + r"(?:[\w-]+/)*?(?P<base>group__\w+)\.html(?:#(?P<anchor>\w+))?\)",
+        _doxy_to_local, text)
+
     # 10. @next_tutorial / @prev_tutorial -> drop
     text = re.sub(r"^@(?:next|prev)_tutorial\{[^}]*\}\s*$", "",
                   text, flags=re.MULTILINE)
