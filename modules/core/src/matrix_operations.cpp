@@ -338,6 +338,9 @@ cv::Mat cv::Mat::cross(InputArray _m) const
 namespace cv
 {
 
+typedef void (*ReduceSumFunc)(const Mat& src, Mat& dst);
+ReduceSumFunc getReduceCSumFunc(int sdepth, int ddepth);
+
 template<typename stype, typename itype>
 struct ReduceOpAdd
 {
@@ -1162,12 +1165,13 @@ public:
 
     const int nlanes = VecOp::vlanes;
 
-    for (int cn = 0; cn < channels; cn++)
+    for (int h = range.start; h < range.end; h++)
     {
-        for (int h = range.start; h < range.end; h++)
+        const T *srcrow = srcmat.ptr<T>(h);
+        ST *dst = dstmat.ptr<ST>(h);
+        for (int cn = 0; cn < channels; cn++)
         {
-            const T *src = srcmat.ptr<T>(h)+cn;
-            ST *dst = dstmat.ptr<ST>(h);
+            const T *src = srcrow + cn;
             VT vbuf = vop.init();
             int w = 0;
             for (; w <= width - nlanes; w += nlanes)
@@ -1622,7 +1626,10 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     {
         if(op == REDUCE_SUM)
         {
-            if(sdepth == CV_8U && ddepth == CV_32S)
+            ReduceSumFunc simd_func = getReduceCSumFunc(sdepth, ddepth);
+            if(simd_func)
+                func = (ReduceFunc)simd_func;
+            else if(sdepth == CV_8U && ddepth == CV_32S)
                 func = reduceSumC8u32s;
             else if(sdepth == CV_8U && ddepth == CV_32F)
                 func = reduceSumC8u32f;
