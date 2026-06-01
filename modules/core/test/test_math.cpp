@@ -4488,5 +4488,38 @@ testing::Values(
                       INT_MIN)
 ));
 
+// Regression test for signed integer overflow in cv::cubeRoot() (issue #28926)
+// For any float with |value| >= 2.0f, the expression m.i*2 at mathfuncs.cpp:141
+// overflowed signed int, triggering UBSan. Fixed by casting to unsigned.
+TEST(Core_CubeRoot, no_signed_overflow_28926)
+{
+    // Values at and above the overflow boundary (|value| >= 2.0f)
+    const float test_values[] = {
+        2.0f, 3.14f, 100.0f, 1e10f, 1e20f,
+        -2.0f, -3.14f, -100.0f, -1e10f, -1e20f,
+        // Values below the boundary (should always have worked)
+        1.0f, -1.0f, 0.5f, -0.5f, 1.9999f, -1.9999f,
+        // Edge cases
+        0.0f, -0.0f,
+        FLT_MIN, -FLT_MIN, FLT_MAX
+    };
+
+    for (size_t i = 0; i < sizeof(test_values) / sizeof(test_values[0]); i++)
+    {
+        float val = test_values[i];
+        float result = cv::cubeRoot(val);
+        float expected = (float)std::cbrt((double)val);
+
+        // cubeRoot returns absolute value of cube root
+        EXPECT_NEAR(std::abs(result), std::abs(expected), std::abs(expected) * 1e-6f + 1e-38f)
+            << "cubeRoot(" << val << ") = " << result
+            << ", expected ~" << expected;
+    }
+
+    // Verify +0.0f and -0.0f both return exactly 0.0f
+    EXPECT_EQ(0.0f, cv::cubeRoot(0.0f));
+    EXPECT_EQ(0.0f, cv::cubeRoot(-0.0f));
+}
+
 }} // namespace
 /* End of file. */
