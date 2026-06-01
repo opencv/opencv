@@ -1,44 +1,35 @@
 {# Override of pydata_sphinx_theme's components/navbar-nav.html.
-   PyData's default renders both top-level toctree items AND the
-   configured external_links in one bar. For OpenCV we want ONLY the
-   Doxygen-style nav (Main Page, Related Pages, Namespaces, …) in the
-   header — the tutorial module tree belongs in the left sidebar, not
-   the header. So we render external_links only.
+
+   PyData's default renders both top-level toctree items AND the configured
+   external_links in one bar. For OpenCV we want ONLY this header nav (the
+   tutorial module tree belongs in the left sidebar, not the header), so we
+   render the `external_links` slot exclusively.
 
    These are NOT external links: conf.py declares them via the theme's
-   `external_links` key only because that's the data slot for a custom
-   header nav, but every target resolves WITHIN this build. conf.py
-   builds each URL from DOXYGEN_BASE_URL (default
-   https://docs.opencv.org/5.x/) + a filename; we rewrite any URL with
-   that prefix to a depth-aware relative path into the local Doxygen
-   output at <build>/doc/doxygen/html/, so the link stays on-site and
-   resolves to the Doxygen pages built alongside this Sphinx tree.
-   "Main Page" instead routes to the Sphinx master_doc
-   (tutorials/tutorials) via `pathto`, because the Sphinx-rendered site
-   IS the redesigned landing page — sending the user to the legacy
-   Doxygen index would feel like a regression.
+   `external_links` key only because that's the data slot for a custom header
+   nav. Each entry is one of:
+     * internal  -> {"docname": "<docname>", "name": ...}
+       resolved with `pathto` so the relative URL is correct at ANY page depth
+       and points at the Sphinx-rendered page (landing, tutorials, module roots);
+     * external  -> {"url": "<abs-url>", "name": ..., "external": true}
+       rendered verbatim and opened in a new tab (e.g. the Java docs, which
+       have no Sphinx equivalent).
 
-   All entries render as plain in-tab nav-links (no target="_blank",
-   no nav-external class, no ↗ glyph) since navigation never leaves
-   the site.
-
-   The `+ 2` in _doxygen_local covers climbing out of html/ and
-   docs_sphinx/ to reach build/doc/doxygen/html/. #}
-{%- set _depth = (pagename or '').count('/') %}
-{%- set _doxygen_local = ('../' * (_depth + 2)) ~ 'doc/doxygen/html/' %}
+   Internal entries carry no target="_blank" / nav-external glyph since
+   navigation never leaves the site. #}
 <nav>
   <ul class="bd-navbar-elements navbar-nav">
     {%- for link in (theme_external_links or []) %}
-    {%- if link.name == 'Main Page' %}
-      {%- set _href = pathto(master_doc) %}
+    {%- if link.docname %}
+      {%- set _href = pathto(link.docname) %}
+      {%- set _external = false %}
     {%- else %}
       {%- set _href = link.url %}
-      {%- if doxygen_base_url and _href.startswith(doxygen_base_url) %}
-        {%- set _href = _doxygen_local ~ _href[doxygen_base_url|length:] %}
-      {%- endif %}
+      {%- set _external = link.get('external', false) %}
     {%- endif %}
     <li class="nav-item">
-      <a class="nav-link" href="{{ _href }}">{{ link.name }}</a>
+      <a class="nav-link" href="{{ _href }}"
+         {%- if _external %} target="_blank" rel="noopener noreferrer"{% endif %}>{{ link.name }}</a>
     </li>
     {%- endfor %}
   </ul>

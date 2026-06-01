@@ -183,10 +183,16 @@ _TAG_FILE = pathlib.Path(_os.environ.get(
 _TAG_FILENAMES: dict[str, str] = {}
 # anchor -> title
 _TAG_TITLES: dict[str, str] = {}
+# Page-only subset of _TAG_TITLES (kind="page" compounds only — NOT groups/files),
+# i.e. Doxygen's "Related Pages" set: \page docs like intro, faq, cuda_intro, …
+_DOC_PAGE_TITLES: dict[str, str] = {}
 # (compound-stem, member-name, normalized-args) -> Doxygen HTML anchor.
 # Bridges our XML-driven members to the HTML anchors that name the call/caller
 # graph SVGs (XML memberdef ids and HTML anchors live in disjoint hash spaces).
 _CALL_GRAPH_ANCHORS: dict[tuple[str, str, str], str] = {}
+# Doxygen member anchor -> Sphinx anchor (lowercased member name). Lets diagram
+# cross-links jump to the exact member, as the original Doxygen pages did.
+_DOXY_ANCHOR_TO_MEMBER: dict[str, str] = {}
 
 
 def _norm_args(arglist: str) -> str:
@@ -216,6 +222,8 @@ if _TAG_FILE.is_file():
                 _fstem = pathlib.Path(_faf).stem
                 _CALL_GRAPH_ANCHORS.setdefault(
                     (_fstem, _fn, _norm_args(_fm.findtext("arglist") or "")), _fan)
+                # Doxygen anchor -> Sphinx member anchor (lowercased name).
+                _DOXY_ANCHOR_TO_MEMBER.setdefault(_fan, _fn.lower())
             if _kind == "page":
                 _n, _f = _c.findtext("name"), _c.findtext("filename")
                 _t = _c.findtext("title")
@@ -223,6 +231,7 @@ if _TAG_FILE.is_file():
                     _TAG_FILENAMES[_n] = _f if _f.endswith(".html") else _f + ".html"
                 if _n and _t:
                     _TAG_TITLES[_n] = _t
+                    _DOC_PAGE_TITLES[_n] = _t
             elif _kind == "namespace" and _c.findtext("name") == "cv":
                 for _m in _c.findall("member"):
                     _n = _m.findtext("name")
@@ -336,18 +345,31 @@ _LOCAL_CLASS_URL: dict[str, str] = {
     "_Tp": "class_Tp.html",
 }
 _LOCAL_TYPEDEF_URL: dict[str, str] = {}  # 'uchar' -> 'core_hal_interface.html#_CPPv45uchar'
+# Doxygen template-param placeholder pages -> (display name, Sphinx page).
+# Sphinx mirrors these as stubs (stubs._write_placeholder_stubs) so diagram
+# cross-links resolve instead of 404ing.
+_PLACEHOLDER_STUBS: dict[str, tuple[str, str]] = {
+    "class__Tp.html":        ("_Tp",        "class_Tp.html"),
+    "classfloat__type.html": ("float_type", "classfloat_type.html"),
+}
+# Doxygen compound filename -> Sphinx page filename (class/struct compounds).
+_LOCAL_PAGE_BY_DOXY_FILE: dict[str, str] = {
+    _doxy: _page for _doxy, (_disp, _page) in _PLACEHOLDER_STUBS.items()}
 if _LOCAL_SRC_TAG.is_file():
     try:
         import xml.etree.ElementTree as _ET
         for _c in _ET.parse(str(_LOCAL_SRC_TAG)).getroot().iter("compound"):
-            if _c.get("kind") == "class":
+            if _c.get("kind") in ("class", "struct"):
                 _n = _c.findtext("name") or ""
                 _f = _c.findtext("filename") or ""
                 if _n and _f:
                     _short = _n.split("::")[-1]
                     _fn = _f if _f.endswith(".html") else _f + ".html"
-                    _LOCAL_CLASS_URL.setdefault(
-                        _short, pathlib.PurePosixPath(_fn).name)
+                    _doxy_base = pathlib.PurePosixPath(_fn).name
+                    _LOCAL_CLASS_URL.setdefault(_short, _doxy_base)
+                    # Sphinx mirrors Doxygen's filename except the few remapped.
+                    _LOCAL_PAGE_BY_DOXY_FILE.setdefault(
+                        _doxy_base, _LOCAL_CLASS_URL.get(_short, _doxy_base))
             for _mem in _c.findall("member"):
                 # variable only from namespaces; class-member vars poison the map
                 _mk = _mem.get("kind")
@@ -384,6 +406,21 @@ if _LOCAL_SRC_TAG.is_file():
                 _LOCAL_TYPEDEF_URL[_mn] = f"{_local_page}#{_anchor}"
     except Exception:
         pass
+
+
+def _doxy_page_to_local(basename: str) -> str:
+    """Map a Doxygen compound page filename to the Sphinx page for the same
+    symbol. Pure name transform — the caller verifies the file exists.
+        group__core__utils.html -> core_utils.html
+        namespacecv*.html       -> core_basic.html
+        class*/struct*/union*   -> unchanged (or remapped, e.g. the _Tp stub)
+    """
+    if basename.startswith("group__"):
+        return (basename[len("group__"):].replace(".html", "")
+                .replace("__", "_") + ".html")
+    if basename.startswith("namespace"):
+        return "core_basic.html"
+    return _LOCAL_PAGE_BY_DOXY_FILE.get(basename, basename)
 
 
 # -- Class template-parameter display map (step 8e) -------------------------
@@ -791,6 +828,13 @@ def _scan_external(toc_file: pathlib.Path) -> None:
 _IMAGE_INDEX: dict[str, str] = {}
 _SNIPPET_INDEX: dict[str, pathlib.Path] = {}
 
+# API inventories for the aggregate "Class List" / "Namespace List" header
+# pages. Populated by stubs.py as it writes the per-class / per-namespace pages
+# (across both the main and contrib stub passes); read by build.py to render
+# the two index pages with local links + brief descriptions.
+_ALL_CLASSES: dict[str, dict] = {}      # refid -> {qualified, kind, brief, docname}
+_ALL_NAMESPACES: dict[str, dict] = {}   # name  -> {refid, brief, docname}
+
 _TOGGLE_LABELS = {"cpp": "C++", "java": "Java", "python": "Python"}
 
 
@@ -835,10 +879,12 @@ __all__ = [
     "_PY_SIGNATURES", "_python_enum_name",
     "HAVE_SPHINX_DESIGN", "HAVE_BREATHE",
     "DOXYGEN_BASE_URL", "_doxygen_url",
-    "_TAG_FILE", "_TAG_FILENAMES", "_TAG_TITLES", "_CV_SYMBOL_URL", "_FILE_URL",
-    "_CALL_GRAPH_ANCHORS", "_norm_args",
+    "_TAG_FILE", "_TAG_FILENAMES", "_TAG_TITLES", "_DOC_PAGE_TITLES",
+    "_CV_SYMBOL_URL", "_FILE_URL",
+    "_CALL_GRAPH_ANCHORS", "_DOXY_ANCHOR_TO_MEMBER", "_norm_args",
     "_LIVE_GROUP_URL", "_LIVE_CLASS_URL", "_LIVE_TYPEDEF_URL",
     "_LOCAL_CLASS_URL", "_LOCAL_TYPEDEF_URL", "_CLASS_TEMPLATE_DISPLAY",
+    "_LOCAL_PAGE_BY_DOXY_FILE", "_PLACEHOLDER_STUBS", "_doxy_page_to_local",
     "_func_slug",
     "_CITE_NUMBER", "_BIB_ENTRIES_SORTED", "_bib_render_all",
     "_REDIRECT_MAP", "_resolve_redirect",
@@ -846,5 +892,6 @@ __all__ = [
     "_REFERENCED_ANCHORS", "_HEAD_RE",
     "_scan_internal", "_scan_external",
     "_IMAGE_INDEX", "_SNIPPET_INDEX", "_SNIPPET_BASES",
+    "_ALL_CLASSES", "_ALL_NAMESPACES",
     "_TOGGLE_LABELS", "_LANG_ALIASES",
 ]

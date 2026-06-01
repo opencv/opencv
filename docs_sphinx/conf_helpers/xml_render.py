@@ -146,32 +146,36 @@ def _member_detail_parts(md):
     if de is None:
         return "", [], ""
     params, returns = [], ""
-    for para in de.findall("para"):
-        for pl in para.findall("parameterlist"):
-            if pl.get("kind") in ("param", "templateparam"):
-                for it in pl.findall("parameteritem"):
-                    nm = ", ".join(
-                        t for t in (_itertext(n) for n in
-                                    it.findall(".//parametername")) if t)
-                    # Block-aware: a description carrying an <itemizedlist>
-                    # (e.g. calibration `flags`) keeps its bullets as real
-                    # Markdown instead of collapsing into a run-on paragraph.
-                    d = _doxygen_desc_to_md(it.find("parameterdescription"))
-                    if nm:
-                        params.append((nm, d))
-        for ss in para.findall("simplesect"):
-            if ss.get("kind") == "return":
-                returns = _itertext(ss)
-    # Prune the param/return chrome (rendered separately) then convert the rest
-    # with full block support so lists and notes survive.
+    # Recursive: Doxygen sometimes nests <parameterlist> below the top-level
+    # <para> (seen on several overloads), so walk the whole subtree — not just
+    # direct <para> children — or those params leak into the prose.
+    for pl in de.iter("parameterlist"):
+        if pl.get("kind") in ("param", "templateparam"):
+            for it in pl.findall("parameteritem"):
+                nm = ", ".join(
+                    t for t in (_itertext(n) for n in
+                                it.findall(".//parametername")) if t)
+                # Block-aware: a description carrying an <itemizedlist>
+                # (e.g. calibration `flags`) keeps its bullets as real
+                # Markdown instead of collapsing into a run-on paragraph.
+                d = _doxygen_desc_to_md(it.find("parameterdescription"))
+                if nm:
+                    params.append((nm, d))
+    for ss in de.iter("simplesect"):
+        if ss.get("kind") == "return":
+            returns = _itertext(ss)
+    # Prune the param/return chrome (rendered separately) wherever it sits, then
+    # convert the rest with full block support so lists and notes survive.
     pruned = _copy.deepcopy(de)
-    for para in pruned.findall("para"):
-        for child in list(para):
-            if child.tag == "parameterlist":
-                para.remove(child)
-            elif (child.tag == "simplesect"
-                  and child.get("kind") in ("param", "templateparam", "return")):
-                para.remove(child)
+    def _strip(el):
+        for child in list(el):
+            if child.tag == "parameterlist" or (
+                    child.tag == "simplesect"
+                    and child.get("kind") in ("param", "templateparam", "return")):
+                el.remove(child)
+            else:
+                _strip(child)
+    _strip(pruned)
     return _doxygen_desc_to_md(pruned), params, returns
 
 

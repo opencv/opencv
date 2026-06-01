@@ -56,18 +56,36 @@ html[data-theme="dark"] .bd-article-container a { color: #539bf5 !important; }
 html[data-theme="dark"] .bd-article-container a:hover { color: #6cb6ff !important; }
 .bd-content a > code, .bd-content code > a { color: inherit; }
 
-/* Enum #include line: blue link in light mode. */
-html:not([data-theme="dark"]) .bd-content code > a.opencv-include-link {
+/* Enum links: ONE consistent style across ALL modules — blue (both themes),
+   never underlined. Covers every enum link class; add new ones here. */
+.bd-content a.opencv-enum-link,
+.bd-content code.opencv-enum-sig > a,
+.bd-content .opencv-enum-clickable a,
+.bd-content .opencv-enum-clickable a span,
+.bd-content code > a.opencv-include-link {
     color: var(--pst-color-link, #0969da) !important;
+    text-decoration: none;
+    border-radius: 2px;
 }
-/* Enum signature type name: blue link in light mode. */
-html:not([data-theme="dark"]) .bd-content code.opencv-enum-sig > a {
-    color: var(--pst-color-link, #0969da) !important;
+.bd-content a.opencv-enum-link:hover,
+.bd-content code.opencv-enum-sig > a:hover,
+.bd-content .opencv-enum-clickable a:hover,
+.bd-content code > a.opencv-include-link:hover {
+    color: var(--pst-color-link-hover, #0550ae) !important;
+    text-decoration: none;          /* blue only — no underline on hover */
 }
-/* Clickable enum synopsis tokens: blue in light mode. */
-html:not([data-theme="dark"]) .bd-content .opencv-enum-clickable a,
-html:not([data-theme="dark"]) .bd-content .opencv-enum-clickable a span {
-    color: var(--pst-color-link, #0969da) !important;
+html[data-theme="dark"] .bd-content a.opencv-enum-link,
+html[data-theme="dark"] .bd-content code.opencv-enum-sig > a,
+html[data-theme="dark"] .bd-content .opencv-enum-clickable a,
+html[data-theme="dark"] .bd-content .opencv-enum-clickable a span,
+html[data-theme="dark"] .bd-content code > a.opencv-include-link {
+    color: #539bf5 !important;
+}
+html[data-theme="dark"] .bd-content a.opencv-enum-link:hover,
+html[data-theme="dark"] .bd-content code.opencv-enum-sig > a:hover,
+html[data-theme="dark"] .bd-content .opencv-enum-clickable a:hover,
+html[data-theme="dark"] .bd-content code > a.opencv-include-link:hover {
+    color: #6cb6ff !important;
 }
 
 /* Typedef Documentation: every clickable token in the per-typedef
@@ -777,21 +795,8 @@ html[data-theme="dark"] button.copybtn.success {
 }
 
 /* --- Clickable enum synopsis (.opencv-enum-synopsis) ------------------- */
-/* Raw HTML using Pygments-cpp span classes; only the anchors need link colour. */
-.opencv-enum-synopsis a.opencv-enum-link {
-    color: #0969da !important;
-    text-decoration: none;
-    border-radius: 2px;
-}
-.opencv-enum-synopsis a.opencv-enum-link:hover {
-    color: #0550ae !important;
-}
-html[data-theme="dark"] .opencv-enum-synopsis a.opencv-enum-link {
-    color: #539bf5 !important;
-}
-html[data-theme="dark"] .opencv-enum-synopsis a.opencv-enum-link:hover {
-    color: #6cb6ff !important;
-}
+/* Link colour + no-underline handled by the central enum-links rule near the
+   top of this file; only structural tweaks live here. */
 
 /* Member Enumeration Documentation synopsis has no <a> wrappers; paint its identifiers to match. */
 section#member-enumeration-documentation .highlight-cpp .n {

@@ -632,10 +632,26 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
                     # No markdown heading (avoids an empty TOC entry) and no MyST
                     # label (avoids colliding with the namespace page's label).
                     blk = [f'<h3 id="{m["id"]}">{_keyword}</h3>', ""]
-                # #include line, linkified to the Doxygen file page.
+                # #include line: blue clickable link to the Doxygen file page
+                # (the `opencv-include-link` class beats the generic
+                # `code > a { color: inherit }` cascade), inside the inset box —
+                # same treatment as `_render_member_detail`.
                 if m.get("include_file"):
-                    blk += ["{.opencv-api-include}",
-                            f"`#include <{m['include_file']}>`", ""]
+                    _einc = m["include_file"]
+                    _eifile = _FILE_URL.get(_einc)
+                    if _eifile:
+                        blk += [
+                            "{.opencv-api-include}",
+                            f'<code class="docutils literal notranslate">'
+                            f'#include &lt;<a class="reference external '
+                            f'opencv-include-link" '
+                            f'href="../../../doc/doxygen/html/{_eifile}">'
+                            f'{_einc}</a>&gt;</code>',
+                            "",
+                        ]
+                    else:
+                        blk += ["{.opencv-api-include}",
+                                f"`#include <{_einc}>`", ""]
                 if m.get("brief"):
                     blk += [m["brief"], ""]
                 if m.get("detailed"):
@@ -746,8 +762,8 @@ def _enumerator_list_table(values: list[dict], enum_qualified: str,
 
 
 def _signature_lines(head: str, params_sig: list) -> list[str]:
-    """Doxygen-style declaration split across lines, one parameter per line with
-    a padded type column so names line up (à la docs.opencv.org's memproto).
+    """Doxygen-style declaration split across lines, one parameter per line
+    (`type name`, single-spaced — no column padding).
 
     `head` is everything up to the `(` (e.g. ``double cv::calibrateCamera``).
     Returns plain strings; the caller wraps each as inline code. A 0/1-param
@@ -760,12 +776,12 @@ def _signature_lines(head: str, params_sig: list) -> list[str]:
         t, nm, dv = params_sig[0]
         inner = f"{t} {_decl(nm, dv)}".strip()
         return [f"{head}({inner})"]
-    width = max(len(t) for t, _, _ in params_sig)
     lines = [f"{head}("]
     last = len(params_sig) - 1
     for i, (t, nm, dv) in enumerate(params_sig):
         tail = " )" if i == last else ","
-        lines.append(f"    {t.ljust(width)}  {_decl(nm, dv)}{tail}".rstrip())
+        # Single space between type and name (no column padding).
+        lines.append(f"    {t} {_decl(nm, dv)}{tail}".rstrip())
     return lines
 
 
@@ -953,9 +969,21 @@ def _write_class_stub(cls: dict, out_dir: pathlib.Path,
             lines.append("")
         _inc = (_header_data.get("include") or "").strip()
         if _inc:
+            # Blue clickable link to the Doxygen file page, same as the
+            # member-detail #include lines (`opencv-include-link` beats the
+            # generic `code > a { color: inherit }` cascade). Plain chip when
+            # the header isn't in the tagfile.
+            _cifile = _FILE_URL.get(_inc)
+            if _cifile:
+                _inc_code = (
+                    f'#include &lt;<a class="reference external '
+                    f'opencv-include-link" '
+                    f'href="../../../doc/doxygen/html/{_cifile}">'
+                    f'{_html_pkg.escape(_inc)}</a>&gt;')
+            else:
+                _inc_code = f'#include &lt;{_html_pkg.escape(_inc)}&gt;'
             lines.append(
-                f'<div class="opencv-class-include">'
-                f'<code>#include &lt;{_html_pkg.escape(_inc)}&gt;</code></div>'
+                f'<div class="opencv-class-include"><code>{_inc_code}</code></div>'
             )
             lines.append("")
 
@@ -1154,6 +1182,30 @@ def _write_class_stub(cls: dict, out_dir: pathlib.Path,
     _stub_write(out, "\n".join(lines))
 
 
+def _write_placeholder_stubs(out_dir: pathlib.Path,
+                             xml_dir: pathlib.Path) -> None:
+    """Stub pages for Doxygen's bare template-param classes (`_Tp`, `float_type`).
+    Doxygen renders near-empty `class…` pages for these (title + collaboration
+    diagram); mirror that so diagram cross-links resolve instead of 404ing.
+    Marked `orphan` since nothing toctrees them."""
+    html_root = xml_dir.parent / "html"
+    for _doxy_file, (_display, _page) in _PLACEHOLDER_STUBS.items():
+        stem = _page[:-5] if _page.endswith(".html") else _page
+        refid = _doxy_file[:-5] if _doxy_file.endswith(".html") else _doxy_file
+        lines = ["---", "orphan: true", "---", "",
+                 f"# {_display} Class Reference", ""]
+        _svg = _find_collaboration_svg(refid, html_root)
+        if _svg is not None:
+            lines += _diagram_svg_lines(
+                _svg, out_dir,
+                f"Collaboration diagram for {_display}",
+                f"Collaboration diagram for {_display}:")
+        lines += ["", "The documentation for this class was generated from the "
+                  "following files:", ""]
+        _stub_write(out_dir / f"{stem}.md", "\n".join(lines))
+        _ANCHOR_TO_DOC[stem] = f"{out_dir.name}/{stem}"
+
+
 def _generate_api_stubs(modules, xml_dir, out_dir,
                         root_anchor="api_root", root_title="API Reference",
                         root_desc=None):
@@ -1244,12 +1296,27 @@ def _generate_api_stubs(modules, xml_dir, out_dir,
                     _write_namespace_stub(ns, out_dir, xml_dir,
                                           global_ns_group_map, global_group_info)
                     written_ns.add(ns["name"])
+                    _ALL_NAMESPACES[ns["name"]] = {
+                        "refid": ns.get("refid", ""),
+                        "brief": ns.get("brief", ""),
+                        "docname": f"{_doc_prefix}/namespace_"
+                                   f"{ns['name'].replace('::', '__')}",
+                    }
                 ns_map.setdefault(group_name, []).append((ns["name"], anchor))
         _write_api_stub(tree, out_dir, classes_seen, ns_map)
     # Per-class pages; seed `_ANCHOR_TO_DOC` refid→docname for `@ref`.
     for cls in classes_seen.values():
         _write_class_stub(cls, out_dir, xml_dir)
-        _ANCHOR_TO_DOC[cls["refid"]] = f"{_doc_prefix}/{_class_page_name(cls['refid'])}"
+        _docname = f"{_doc_prefix}/{_class_page_name(cls['refid'])}"
+        _ANCHOR_TO_DOC[cls["refid"]] = _docname
+        _ALL_CLASSES[cls["refid"]] = {
+            "qualified": cls.get("qualified") or cls.get("name", ""),
+            "kind": cls.get("kind", "class"),
+            "brief": cls.get("brief", ""),
+            "docname": _docname,
+        }
+    # Placeholder stubs for bare template params (_Tp, …) so diagram links resolve.
+    _write_placeholder_stubs(out_dir, xml_dir)
     # Hidden toctree drives nav/sidebar; the visible list shows "folder. Title".
     root_lines += ["```{toctree}", ":hidden:", ":maxdepth: 1", ""]
     root_lines += [stem for _m, stem, _t in module_rows]
