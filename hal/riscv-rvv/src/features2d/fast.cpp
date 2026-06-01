@@ -56,31 +56,34 @@ inline int fast_16(const uchar* src_data, size_t src_step,
             size_t vl;
             for (; j < width - 3; j += vl, ptr += vl)
             {
-                vl = __riscv_vsetvl_e16m1(width - 3 - j);
+                /* u8mf2 pre-screen: same VL as i16m1, defer vzext until needed */
+                vl = __riscv_vsetvl_e8mf2(width - 3 - j);
+                vuint8mf2_t vcen_8 = __riscv_vle8_v_u8mf2(ptr, vl);
+                vuint8mf2_t vlo_8  = __riscv_vssubu_vx_u8mf2(vcen_8, (uint8_t)threshold, vl);
+                vuint8mf2_t vhi_8  = __riscv_vsaddu_vx_u8mf2(vcen_8, (uint8_t)threshold, vl);
+                vuint8mf2_t vk0_8  = __riscv_vle8_v_u8mf2(ptr + pixel[0],  vl);
+                vuint8mf2_t vk4_8  = __riscv_vle8_v_u8mf2(ptr + pixel[4],  vl);
+                vuint8mf2_t vk8_8  = __riscv_vle8_v_u8mf2(ptr + pixel[8],  vl);
+                vuint8mf2_t vk12_8 = __riscv_vle8_v_u8mf2(ptr + pixel[12], vl);
 
-                /* Load center pixel and widen to int16 */
-                vint16m1_t vcen = __riscv_vreinterpret_v_u16m1_i16m1(
-                    __riscv_vzext_vf2(__riscv_vle8_v_u8mf2(ptr, vl), vl));
-                vint16m1_t vlo = __riscv_vsub_vx_i16m1(vcen, threshold, vl);
-                vint16m1_t vhi = __riscv_vadd_vx_i16m1(vcen, threshold, vl);
-
-                /* 4-direction quick reject */
-                vint16m1_t vk0  = __riscv_vreinterpret_v_u16m1_i16m1(__riscv_vzext_vf2(__riscv_vle8_v_u8mf2(ptr + pixel[0],  vl), vl));
-                vint16m1_t vk4  = __riscv_vreinterpret_v_u16m1_i16m1(__riscv_vzext_vf2(__riscv_vle8_v_u8mf2(ptr + pixel[4],  vl), vl));
-                vint16m1_t vk8  = __riscv_vreinterpret_v_u16m1_i16m1(__riscv_vzext_vf2(__riscv_vle8_v_u8mf2(ptr + pixel[8],  vl), vl));
-                vint16m1_t vk12 = __riscv_vreinterpret_v_u16m1_i16m1(__riscv_vzext_vf2(__riscv_vle8_v_u8mf2(ptr + pixel[12], vl), vl));
-
-                vbool16_t bright = __riscv_vmand_mm_b16(__riscv_vmsgt_vv_i16m1_b16(vk0, vhi, vl), __riscv_vmsgt_vv_i16m1_b16(vk4, vhi, vl), vl);
-                vbool16_t dark   = __riscv_vmand_mm_b16(__riscv_vmsgt_vv_i16m1_b16(vlo, vk0, vl),  __riscv_vmsgt_vv_i16m1_b16(vlo, vk4, vl),  vl);
-                bright = __riscv_vmor_mm_b16(bright, __riscv_vmand_mm_b16(__riscv_vmsgt_vv_i16m1_b16(vk4,  vhi, vl), __riscv_vmsgt_vv_i16m1_b16(vk8,  vhi, vl), vl), vl);
-                dark   = __riscv_vmor_mm_b16(dark,   __riscv_vmand_mm_b16(__riscv_vmsgt_vv_i16m1_b16(vlo, vk4, vl),  __riscv_vmsgt_vv_i16m1_b16(vlo, vk8, vl),  vl), vl);
-                bright = __riscv_vmor_mm_b16(bright, __riscv_vmand_mm_b16(__riscv_vmsgt_vv_i16m1_b16(vk8,  vhi, vl), __riscv_vmsgt_vv_i16m1_b16(vk12, vhi, vl), vl), vl);
-                dark   = __riscv_vmor_mm_b16(dark,   __riscv_vmand_mm_b16(__riscv_vmsgt_vv_i16m1_b16(vlo, vk8, vl),  __riscv_vmsgt_vv_i16m1_b16(vlo, vk12, vl), vl), vl);
-                bright = __riscv_vmor_mm_b16(bright, __riscv_vmand_mm_b16(__riscv_vmsgt_vv_i16m1_b16(vk12, vhi, vl), __riscv_vmsgt_vv_i16m1_b16(vk0,  vhi, vl), vl), vl);
-                dark   = __riscv_vmor_mm_b16(dark,   __riscv_vmand_mm_b16(__riscv_vmsgt_vv_i16m1_b16(vlo, vk12, vl), __riscv_vmsgt_vv_i16m1_b16(vlo, vk0,  vl), vl), vl);
+                vbool16_t bright = __riscv_vmand_mm_b16(__riscv_vmsgtu_vv_u8mf2_b16(vk0_8, vhi_8, vl), __riscv_vmsgtu_vv_u8mf2_b16(vk4_8, vhi_8, vl), vl);
+                vbool16_t dark   = __riscv_vmand_mm_b16(__riscv_vmsgtu_vv_u8mf2_b16(vlo_8, vk0_8, vl),  __riscv_vmsgtu_vv_u8mf2_b16(vlo_8, vk4_8, vl),  vl);
+                bright = __riscv_vmor_mm_b16(bright, __riscv_vmand_mm_b16(__riscv_vmsgtu_vv_u8mf2_b16(vk4_8,  vhi_8, vl), __riscv_vmsgtu_vv_u8mf2_b16(vk8_8,  vhi_8, vl), vl), vl);
+                dark   = __riscv_vmor_mm_b16(dark,   __riscv_vmand_mm_b16(__riscv_vmsgtu_vv_u8mf2_b16(vlo_8, vk4_8, vl),  __riscv_vmsgtu_vv_u8mf2_b16(vlo_8, vk8_8, vl),  vl), vl);
+                bright = __riscv_vmor_mm_b16(bright, __riscv_vmand_mm_b16(__riscv_vmsgtu_vv_u8mf2_b16(vk8_8,  vhi_8, vl), __riscv_vmsgtu_vv_u8mf2_b16(vk12_8, vhi_8, vl), vl), vl);
+                dark   = __riscv_vmor_mm_b16(dark,   __riscv_vmand_mm_b16(__riscv_vmsgtu_vv_u8mf2_b16(vlo_8, vk8_8, vl),  __riscv_vmsgtu_vv_u8mf2_b16(vlo_8, vk12_8, vl), vl), vl);
+                bright = __riscv_vmor_mm_b16(bright, __riscv_vmand_mm_b16(__riscv_vmsgtu_vv_u8mf2_b16(vk12_8, vhi_8, vl), __riscv_vmsgtu_vv_u8mf2_b16(vk0_8,  vhi_8, vl), vl), vl);
+                dark   = __riscv_vmor_mm_b16(dark,   __riscv_vmand_mm_b16(__riscv_vmsgtu_vv_u8mf2_b16(vlo_8, vk12_8, vl),  __riscv_vmsgtu_vv_u8mf2_b16(vlo_8, vk0_8,  vl), vl), vl);
 
                 if (__riscv_vfirst_m_b16(__riscv_vmor_mm_b16(bright, dark, vl), vl) < 0)
                     continue;
+
+                /* Widen pre-loaded u8mf2 to i16m1 for score computation */
+                vint16m1_t vcen = __riscv_vreinterpret_v_u16m1_i16m1(__riscv_vzext_vf2(vcen_8, vl));
+                vint16m1_t vk0  = __riscv_vreinterpret_v_u16m1_i16m1(__riscv_vzext_vf2(vk0_8,  vl));
+                vint16m1_t vk4  = __riscv_vreinterpret_v_u16m1_i16m1(__riscv_vzext_vf2(vk4_8,  vl));
+                vint16m1_t vk8  = __riscv_vreinterpret_v_u16m1_i16m1(__riscv_vzext_vf2(vk8_8,  vl));
+                vint16m1_t vk12 = __riscv_vreinterpret_v_u16m1_i16m1(__riscv_vzext_vf2(vk12_8, vl));
 
                 /* Load remaining 12 neighbors */
                 vint16m1_t vk1  = __riscv_vreinterpret_v_u16m1_i16m1(__riscv_vzext_vf2(__riscv_vle8_v_u8mf2(ptr + pixel[1],  vl), vl));
