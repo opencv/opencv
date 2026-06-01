@@ -1,12 +1,10 @@
-/*
- * docs_sphinx/_static/custom.css
- * Ported visual layer from the Prasadayus/opencv#27 Sphinx port,
- * trimmed to the rules that apply to our minimal wrapper (PyData
- * pydata-sphinx-theme + MyST, no doxysnippet/opencv_code_links/tabs
- * extensions). Rules that target HTML markup we don't emit are
- * dropped; rules that are pure pydata overrides are kept verbatim.
- */
-
+/* 
+This file is part of OpenCV project.
+It is subject to the license terms in the LICENSE file found in the top-level directory
+of this distribution and at http://opencv.org/license.html.
+Copyright (C) 2026, BigVision LLC, all rights reserved.
+Third party copyrights are property of their respective owners.
+*/
 :root,
 html[data-theme="light"],
 html[data-theme="dark"] {
@@ -32,6 +30,14 @@ h3 { font-size: 1.125rem; font-weight: 600; line-height: 1.4; }
 .bd-content ol ol ol { list-style-type: lower-roman; }
 .bd-content ol > li > p:first-child > strong:first-child::after { content: ":"; }
 
+.bd-content .toctree-wrapper > ul { list-style: disc; padding-left: 1.5rem; }
+.bd-content .toctree-wrapper li { list-style: disc; margin: 0.4rem 0; }
+.bd-content .toctree-wrapper { margin: 0.5rem 0 1.5rem; }
+
+.ocv-landing { max-width: 720px; }
+.ocv-landing h2:first-child { margin-top: 1rem; }
+.ocv-landing p { margin: 0.25rem 0 0.5rem; }
+
 html[data-theme="light"] {
     --pst-color-link: #0969da;
     --pst-color-link-hover: #0550ae;
@@ -52,7 +58,44 @@ html[data-theme="dark"] .bd-article-container a { color: #539bf5 !important; }
 html[data-theme="dark"] .bd-article-container a:hover { color: #6cb6ff !important; }
 .bd-content a > code, .bd-content code > a { color: inherit; }
 
-/* --- Front-matter table (.opencv-meta-table — applied in source-read) -- */
+.bd-content a.opencv-enum-link,
+.bd-content code.opencv-enum-sig > a,
+.bd-content .opencv-enum-clickable a,
+.bd-content .opencv-enum-clickable a span,
+.bd-content code > a.opencv-include-link {
+    color: var(--pst-color-link, #0969da) !important;
+    text-decoration: none;
+    border-radius: 2px;
+}
+.bd-content a.opencv-enum-link:hover,
+.bd-content code.opencv-enum-sig > a:hover,
+.bd-content .opencv-enum-clickable a:hover,
+.bd-content code > a.opencv-include-link:hover {
+    color: var(--pst-color-link-hover, #0550ae) !important;
+    text-decoration: none;          /* blue only — no underline on hover */
+}
+html[data-theme="dark"] .bd-content a.opencv-enum-link,
+html[data-theme="dark"] .bd-content code.opencv-enum-sig > a,
+html[data-theme="dark"] .bd-content .opencv-enum-clickable a,
+html[data-theme="dark"] .bd-content .opencv-enum-clickable a span,
+html[data-theme="dark"] .bd-content code > a.opencv-include-link {
+    color: #539bf5 !important;
+}
+html[data-theme="dark"] .bd-content a.opencv-enum-link:hover,
+html[data-theme="dark"] .bd-content code.opencv-enum-sig > a:hover,
+html[data-theme="dark"] .bd-content .opencv-enum-clickable a:hover,
+html[data-theme="dark"] .bd-content code > a.opencv-include-link:hover {
+    color: #6cb6ff !important;
+}
+
+html:not([data-theme="dark"]) .bd-content #typedef-documentation a {
+    color: var(--pst-color-link, #0969da) !important;
+}
+
+html:not([data-theme="dark"]) .bd-content #function-documentation a {
+    color: var(--pst-color-link, #0969da) !important;
+}
+
 .opencv-meta-table,
 .opencv-meta-table .pst-scrollable-table-container { margin: 0 !important; padding: 0 !important; }
 .opencv-meta-table table { margin-bottom: 0 !important; }
@@ -134,7 +177,6 @@ html[data-theme="dark"] table.opencv-meta-table tr:last-child td { border-bottom
 html[data-theme="dark"] .opencv-meta-table table td:last-child,
 html[data-theme="dark"] table.opencv-meta-table td:last-child { border-right: none !important; }
 
-/* --- Images & figures -------------------------------------------------- */
 .bd-content figure figcaption,
 .bd-content figure figcaption p,
 .bd-content figure figcaption .caption-text {
@@ -148,7 +190,6 @@ html[data-theme="dark"] table.opencv-meta-table td:last-child { border-right: no
 .bd-content p:has(> img:only-child) { text-align: center; }
 .bd-content p > img { display: inline-block; }
 
-/* --- YouTube embeds (.opencv-youtube — emitted by @youtube{ID} rule) --- */
 .opencv-youtube {
     position: relative;
     width: 100%;
@@ -167,7 +208,6 @@ html[data-theme="dark"] table.opencv-meta-table td:last-child { border-right: no
     border: 0;
 }
 
-/* --- Generic tables ---------------------------------------------------- */
 .bd-content table {
     border-collapse: collapse !important;
     width: 100%;
@@ -191,7 +231,6 @@ html[data-theme="dark"] table.opencv-meta-table td:last-child { border-right: no
 }
 .bd-content table tbody tr:hover td { background: var(--pst-color-surface) !important; }
 
-/* --- Header & navbar --------------------------------------------------- */
 .bd-header {
     border-bottom: 1px solid var(--pst-color-border);
     backdrop-filter: blur(8px);
@@ -255,7 +294,6 @@ html[data-theme="dark"] table.opencv-meta-table td:last-child { border-right: no
     .bd-main .bd-article { padding-left: 0; padding-right: 0; }
 }
 
-/* --- Left sidebar nav -------------------------------------------------- */
 .bd-sidebar-primary nav.bd-links { margin-right: 0 !important; }
 .bd-sidebar-primary nav.bd-docs-nav p.bd-links__title {
     font-size: 0.9rem !important;
@@ -322,7 +360,6 @@ html[data-theme="dark"] { color-scheme: dark; }
 html[data-theme="dark"] div.highlight span,
 html[data-theme="dark"] div.highlight * { color: unset !important; }
 
-/* Dark-mode Pygments tokens (matches the PR's mapping) */
 html[data-theme="dark"] .highlight .c, html[data-theme="dark"] .highlight .c1,
 html[data-theme="dark"] .highlight .c2, html[data-theme="dark"] .highlight .cm,
 html[data-theme="dark"] .highlight .cp, html[data-theme="dark"] .highlight .cs,
@@ -359,13 +396,11 @@ html[data-theme="dark"] .sig {
     color: #cdd9e5 !important;
 }
 
-/* --- Heading anchors fade-in ------------------------------------------ */
 a.headerlink { opacity: 0; transition: opacity 120ms; }
 h1:hover a.headerlink, h2:hover a.headerlink, h3:hover a.headerlink,
 h4:hover a.headerlink, h5:hover a.headerlink, h6:hover a.headerlink,
 dt:hover a.headerlink { opacity: 1; }
 
-/* --- Prev/next strip --------------------------------------------------- */
 .prev-next-area { overflow: hidden; clear: both; }
 .prev-next-area .prev-next-title {
     color: var(--pst-color-link) !important;
@@ -383,7 +418,6 @@ dt:hover a.headerlink { opacity: 1; }
     color: var(--pst-color-muted) !important;
 }
 
-/* --- Back-to-top pill (PyData's built-in #pst-back-to-top) ------------ */
 #pst-back-to-top {
     font-family: var(--pst-font-family-base) !important;
     font-size: 0.82rem !important;
@@ -407,35 +441,192 @@ dt:hover a.headerlink { opacity: 1; }
     opacity: 0.92 !important;
 }
 
-/* --- C++ symbol signatures (Breathe-rendered API pages, when enabled) - */
-dl.cpp.function > dt.sig,
-dl.cpp.class > dt.sig,
-dl.cpp.struct > dt.sig,
-dl.cpp.type > dt.sig {
-    background: var(--pst-color-surface);
-    border: 1px solid var(--pst-color-border);
-    border-left: 3px solid var(--opencv-accent);
-    border-radius: 0.4rem;
-    padding: 0.75rem 1rem;
+dl.cpp.function,
+dl.cpp.class,
+dl.cpp.struct,
+dl.cpp.type,
+dl.cpp.var,
+dl.cpp.enum,
+dl.cpp.member,
+dl.cpp.macro {
+    border: 1px solid var(--pst-color-border, #d0d7de);
+    border-radius: 8px;
+    background: #ffffff;
+    margin: 0.85rem 0 1.35rem;
+    padding: 0;
+    overflow: hidden;
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+dl.cpp.function:hover,
+dl.cpp.class:hover,
+dl.cpp.struct:hover,
+dl.cpp.type:hover,
+dl.cpp.var:hover,
+dl.cpp.enum:hover,
+dl.cpp.member:hover,
+dl.cpp.macro:hover {
+    border-color: var(--pst-color-link, #0969da);
+    box-shadow: 0 1px 6px rgba(9, 105, 218, 0.12);
+}
+html[data-theme="dark"] dl.cpp.function,
+html[data-theme="dark"] dl.cpp.class,
+html[data-theme="dark"] dl.cpp.struct,
+html[data-theme="dark"] dl.cpp.type,
+html[data-theme="dark"] dl.cpp.var,
+html[data-theme="dark"] dl.cpp.enum,
+html[data-theme="dark"] dl.cpp.member,
+html[data-theme="dark"] dl.cpp.macro {
+    background: #1a2234;
+    border-color: #2d3748;
+}
+html[data-theme="dark"] dl.cpp.function:hover,
+html[data-theme="dark"] dl.cpp.class:hover,
+html[data-theme="dark"] dl.cpp.struct:hover,
+html[data-theme="dark"] dl.cpp.type:hover,
+html[data-theme="dark"] dl.cpp.var:hover,
+html[data-theme="dark"] dl.cpp.enum:hover,
+html[data-theme="dark"] dl.cpp.member:hover,
+html[data-theme="dark"] dl.cpp.macro:hover {
+    border-color: #58a6ff;
+    box-shadow: none;
+}
+
+dl.cpp > dt.sig {
+    background: var(--pst-color-surface, #f6f8fa);
+    border: none;
+    border-radius: 0;
+    padding: 0.7rem 1rem;
+    margin: 0;
+    font-family: var(--pst-font-family-monospace);
     font-size: 0.9rem;
     line-height: 1.8;
     overflow-x: auto;
-    margin-bottom: 0.5rem;
 }
-dl.cpp.function .sig-name.descname { color: var(--opencv-accent); font-weight: 700; }
-dl.cpp.function .sig-prename.descclassname { color: var(--pst-color-text-muted); }
+dl.cpp > dt.sig:not(:last-child) {
+    border-bottom: 1px solid var(--pst-color-border, #d0d7de);
+}
+html[data-theme="dark"] dl.cpp > dt.sig {
+    background: #111622;
+}
+html[data-theme="dark"] dl.cpp > dt.sig:not(:last-child) {
+    border-bottom-color: #2d3748;
+}
+dl.cpp .sig-name.descname { color: var(--opencv-accent); font-weight: 700; }
+dl.cpp .sig-prename.descclassname { color: var(--pst-color-text-muted); }
 
-/* --- MathJax inline alignment tweak ----------------------------------- */
+dl.cpp > dd {
+    margin: 0;
+    padding: 0.85rem 1rem 0.6rem;
+}
+dl.cpp > dd > :last-child { margin-bottom: 0; }
+
+section[id$="-documentation"] > section {
+    border: 1px solid var(--pst-color-border, #d0d7de);
+    border-radius: 8px;
+    background: #ffffff;
+    margin: 1rem 0 1.4rem;
+    overflow: hidden;
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+section[id$="-documentation"] > section:hover {
+    border-color: var(--pst-color-link, #0969da);
+    box-shadow: 0 1px 6px rgba(9, 105, 218, 0.12);
+}
+html[data-theme="dark"] section[id$="-documentation"] > section {
+    background: #1a2234;
+    border-color: #2d3748;
+}
+html[data-theme="dark"] section[id$="-documentation"] > section:hover {
+    border-color: #58a6ff;
+    box-shadow: none;
+}
+
+section[id$="-documentation"] > section > h3 {
+    display: flex;
+    width: fit-content;
+    max-width: 100%;
+    align-items: baseline;
+    margin: 0.7rem 0.9rem 0.35rem;
+    padding: 0.3rem 0.7rem;
+    background: var(--pst-color-surface, #f6f8fa);
+    border: 1px solid var(--pst-color-border, #d0d7de);
+    border-radius: 6px;
+    font-size: 1.0rem;
+    font-weight: 600;
+}
+section[id$="-documentation"] > section > h3::before {
+    content: "\25C6";              /* ◆ */
+    color: var(--pst-color-link, #0969da);
+    margin-right: 0.5rem;
+    font-size: 0.8em;
+    align-self: center;
+}
+section[id$="-documentation"] > section > h3 > a.headerlink { margin-left: 0.4rem; }
+html[data-theme="dark"] section[id$="-documentation"] > section > h3 {
+    background: #111622;
+    border-color: #2d3748;
+}
+html[data-theme="dark"] section[id$="-documentation"] > section > h3::before { color: #58a6ff; }
+
+section[id$="-documentation"] > section > p,
+section[id$="-documentation"] > section > ul,
+section[id$="-documentation"] > section > dl,
+section[id$="-documentation"] > section > div[class*="highlight"] {
+    margin: 0;
+    padding: 0.35rem 1rem;
+}
+
+section[id$="-documentation"] > section > ul,
+section[id$="-documentation"] > section > ol {
+    padding-left: 2.5rem;
+}
+
+section[id$="-documentation"] > section > p:has(> code) { line-height: 1.7; }
+section[id$="-documentation"] > section > p > code {
+    background: transparent;
+    border: none;
+    padding: 0;
+    font-size: 0.875rem;
+}
+
+section[id$="-documentation"] > section > p.opencv-api-sig > code {
+    white-space: pre-wrap;
+}
+
+html[data-theme="dark"] section[id$="-documentation"] > section code,
+html[data-theme="dark"] section[id$="-documentation"] > section code span {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+section[id$="-documentation"] > section > p.opencv-api-include {
+    margin: 0.65rem 1rem 0.85rem;
+    padding: 0.45rem 0.75rem;
+    background: var(--pst-color-surface, #f6f8fa);
+    border: 1px solid var(--pst-color-border, #d0d7de);
+    border-radius: 6px;
+}
+html[data-theme="dark"] section[id$="-documentation"] > section > p.opencv-api-include {
+    background: #111622;
+    border-color: #2d3748;
+}
+
+section[id$="-documentation"] > section,
+section[id$="-documentation"] > section > span[id],
+section[id$="-documentation"] > section > h3 {
+    scroll-margin-top: 5rem;
+}
+
 mjx-container.MathJax:not([display="true"]) { vertical-align: -0.15em !important; }
 
-/* --- Copy-to-clipboard button -----------------------------------------
- * Provided by the `sphinx-copybutton` extension, which injects
- * `<button class="copybtn">` into every `div.highlight > pre` at runtime
- * and ships its own `copybutton.css`. We override its defaults here so
- * the button uses the same design tokens (PST surface + opencv-accent)
- * as the rest of the wrapper. custom.css is loaded after copybutton.css
- * so these rules win on equal-specificity matches.
- */
+.bd-content p:has(img + img) img {
+    max-width: 49%;
+    height: auto;
+    display: inline-block;
+    vertical-align: top;
+}
+.bd-content p img + img { margin-left: 0.25rem; }
+
 button.copybtn {
     width: 1.85rem !important;
     height: 1.85rem !important;
@@ -444,7 +635,7 @@ button.copybtn {
     color: var(--pst-color-text-muted) !important;
     background: var(--pst-color-surface) !important;
     border: 1px solid var(--pst-color-border) !important;
-    border-radius: 0.4rem !important;       /* matches code-block radius */
+    border-radius: 0.4rem !important;
     transition: opacity 0.15s ease, color 0.15s ease,
                 border-color 0.15s ease, background 0.15s ease,
                 transform 0.05s ease !important;
@@ -467,8 +658,6 @@ button.copybtn:focus-visible {
 }
 button.copybtn:active { transform: translateY(1px); }
 
-/* Confirmation: use the OpenCV accent rather than the default green so the
-   success state reads as on-brand. */
 button.copybtn.success {
     color: var(--opencv-accent) !important;
     border-color: var(--opencv-accent) !important;
@@ -476,7 +665,6 @@ button.copybtn.success {
     opacity: 1 !important;
 }
 
-/* Light-mode fine-tune to match the code block's #f6f8fa surface. */
 html[data-theme="light"] button.copybtn {
     background: #ffffff !important;
     color: #57606a !important;
@@ -488,7 +676,6 @@ html[data-theme="light"] button.copybtn.success {
     border-color: var(--opencv-accent) !important;
 }
 
-/* Dark-mode tune to match the slate code-block surface (#2d333b). */
 html[data-theme="dark"] button.copybtn {
     background: #373e47 !important;
     color: #adbac7 !important;
@@ -500,8 +687,6 @@ html[data-theme="dark"] button.copybtn.success {
     border-color: var(--opencv-accent) !important;
 }
 
-/* Tooltip from the extension's `o-tooltip--left` helper — soften the
-   default grey/white pill into something that matches our type stack. */
 .o-tooltip--left:after {
     font-family: var(--pst-font-family-base);
     background: var(--pst-color-surface);
@@ -516,3 +701,714 @@ html[data-theme="dark"] button.copybtn.success {
 @media (max-width: 768px) {
     button.copybtn { opacity: 1 !important; }
 }
+
+.opencv-coll-graph {
+    display: block;
+    margin: 1rem auto 1.5rem;
+    width: auto;
+    height: auto;
+}
+
+.bd-content p:has(> svg.opencv-coll-graph),
+.bd-content p:has(> img.opencv-coll-graph) {
+    overflow-x: auto;
+    max-width: 100%;
+    text-align: center;
+}
+
+section#member-enumeration-documentation .highlight-cpp .n {
+    color: #0969da !important;
+}
+html[data-theme="dark"] section#member-enumeration-documentation .highlight-cpp .n {
+    color: #539bf5 !important;
+}
+
+.opencv-enum-target {
+    scroll-margin-top: 5rem;
+}
+
+/* --- Member Enumeration Documentation: per-value detail list ----------- */
+.opencv-enum-heading {
+    margin: 1.5rem 0 0.5rem;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--pst-color-text-base);
+    scroll-margin-top: 5rem;        /* clear the sticky navbar */
+}
+.opencv-enum-heading .opencv-enum-name {
+    color: #0969da;
+    font-family: var(--pst-font-family-monospace);
+}
+html[data-theme="dark"] .opencv-enum-heading .opencv-enum-name {
+    color: #539bf5;
+}
+.opencv-enum-detail {
+    margin: 0 0 1.5rem;
+    padding: 0;
+}
+.opencv-enum-detail dt {
+    padding: 0.5rem 0.8rem;
+    margin-top: 0.5rem;
+    background: var(--pst-color-surface);
+    border-left: 3px solid #0969da;
+    border-radius: 0 4px 4px 0;
+    font-family: var(--pst-font-family-monospace);
+    font-size: 0.9rem;
+    scroll-margin-top: 5rem;        /* clear the sticky navbar on hash landing */
+}
+html[data-theme="dark"] .opencv-enum-detail dt {
+    border-left-color: #539bf5;
+}
+.opencv-enum-detail dt .opencv-enum-name {
+    color: #0969da;
+}
+html[data-theme="dark"] .opencv-enum-detail dt .opencv-enum-name {
+    color: #539bf5;
+}
+.opencv-enum-detail dt .opencv-enum-init {
+    color: var(--pst-color-text-muted);
+    font-weight: normal;
+}
+.opencv-enum-detail dd {
+    margin: 0.25rem 0 0 1.5rem;
+    color: var(--pst-color-text-muted);
+}
+/* Highlight the row the URL hash targets. */
+.opencv-enum-detail dt:target {
+    background: color-mix(in srgb, var(--pst-color-link) 12%, transparent);
+    transition: background 0.6s ease-out;
+}
+/* Defeat any theme override on the inner `.highlight .n`. */
+.opencv-enum-synopsis a.opencv-enum-link > span.n {
+    color: inherit !important;
+}
+.opencv-enum-synopsis a.opencv-enum-link {
+    scroll-margin-top: 4rem;
+}
+
+.toc-entry a.nav-link code,
+.bd-toc-nav a.nav-link code,
+.toc-entry a.nav-link code.literal,
+.bd-toc-nav a.nav-link code.literal {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    color: inherit !important;
+    font-size: inherit !important;
+    font-weight: inherit !important;
+}
+
+table.api-reference-table {
+    display: block;
+    width: 100%;
+    border: none;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 0.5rem 0 1rem;
+    padding: 8px !important;
+    border-radius: 10px;
+    background: #f0f2f5 !important;
+}
+
+html[data-theme="dark"] table.api-reference-table {
+    background: #111622 !important;
+}
+
+table.api-reference-table thead {
+    display: none  !important;
+}
+
+table.api-reference-table tbody {
+    display: block;
+}
+
+/* --- Card row: border-only hover --------------------------------------- */
+table.api-reference-table tbody tr,
+table.api-reference-table tbody tr:nth-child(even),
+table.api-reference-table tbody tr:nth-child(odd) {
+    display: block;
+    margin-bottom: 6px !important;
+    padding: 10px 14px !important;
+    border-radius: 6px;
+    border: 1px solid var(--pst-color-border, #d0d7de) !important;
+    background: #ffffff !important;
+    transition: border-color 100ms ease;
+}
+
+table.api-reference-table tbody tr:last-child {
+    margin-bottom: 0 !important;
+}
+
+table.api-reference-table tbody tr:hover {
+    border-color: var(--pst-color-link, #0969da) !important;
+    background: #ffffff !important;
+}
+
+html[data-theme="dark"] table.api-reference-table tbody tr,
+html[data-theme="dark"] table.api-reference-table tbody tr:nth-child(even),
+html[data-theme="dark"] table.api-reference-table tbody tr:nth-child(odd) {
+    background: #1a2234 !important;
+    border-color: #2d3748 !important;
+}
+
+html[data-theme="dark"] table.api-reference-table tbody tr:hover {
+    border-color: #58a6ff !important;
+    background: #1a2234 !important;
+}
+
+table.api-reference-table tbody tr td {
+    display: block;
+    border: none !important;
+    padding: 0 !important;
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+table.api-reference-table tbody tr td > p {
+    margin: 0;
+    background: transparent !important;
+}
+
+/* Hide empty description cells. */
+table.api-reference-table tbody tr td:not(:first-child):empty,
+table.api-reference-table tbody tr td:not(:first-child):has(> p:empty:only-child) {
+    display: none  !important;
+}
+
+/* --- Title cell (class/function name) ---------------------------------- */
+table.api-reference-table tbody tr td:first-child {
+    font-size: 0.95rem;
+    font-weight: 500;
+    font-family: 'JetBrains Mono', var(--pst-font-family-monospace-system);
+    margin-bottom: 4px;
+    line-height: 1.4;
+}
+
+/* Strip the inner gray theme-strip behind the title text. */
+table.api-reference-table tbody tr td:first-child,
+table.api-reference-table tbody tr td:first-child * {
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+/* Keywords like "class"/"typedef" — muted, not clickable. */
+table.api-reference-table tbody tr td:first-child {
+    color: var(--pst-color-text-muted, #656d76) !important;
+}
+
+html[data-theme="dark"] table.api-reference-table tbody tr td:first-child {
+    color: #8b949e !important;
+}
+
+table.api-reference-table tbody tr td a,
+table.api-reference-table tbody tr td a:link,
+table.api-reference-table tbody tr td a:visited {
+    color: var(--pst-color-link, #0969da) !important;
+    text-decoration: none !important;
+    font-weight: 500 !important;
+}
+
+table.api-reference-table tbody tr td:first-child a:hover {
+    text-decoration: underline !important;
+}
+
+html[data-theme="dark"] table.api-reference-table tbody tr td a,
+html[data-theme="dark"] table.api-reference-table tbody tr td a:link,
+html[data-theme="dark"] table.api-reference-table tbody tr td a:visited,
+html[data-theme="dark"] table.api-reference-table tbody tr td a:hover,
+html[data-theme="dark"] table.api-reference-table tbody tr td a:active {
+    color: #ffffff !important;
+}
+
+table.api-reference-table tbody tr td a code,
+table.api-reference-table tbody tr td a code *,
+table.api-reference-table tbody tr td:not(:first-child) a code,
+table.api-reference-table tbody tr td:not(:first-child) a code * {
+    color: inherit !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    font-weight: 500 !important;
+    font-size: inherit !important;
+}
+
+html[data-theme="dark"] table.api-reference-table tbody tr td:not(:first-child) a code,
+html[data-theme="dark"] table.api-reference-table tbody tr td:not(:first-child) a code * {
+    color: inherit !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+}
+
+table.api-function-table tbody tr td:not(:first-child) a code,
+table.api-function-table tbody tr td:not(:first-child) code {
+    white-space: pre-wrap;
+}
+
+/* No description -> collapse the title's bottom margin. */
+table.api-reference-table tbody tr td:first-child:last-child,
+table.api-reference-table tbody tr:has(> td:not(:first-child):empty) td:first-child,
+table.api-reference-table tbody tr:has(> td:not(:first-child):has(> p:empty:only-child)) td:first-child {
+    margin-bottom: 0 !important;
+}
+
+/* --- Description cell -------------------------------------------------- */
+table.api-reference-table tbody tr td:not(:first-child) {
+    color: var(--pst-color-text-muted, #656d76);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    background: transparent !important;
+}
+
+table.api-reference-table tbody tr td:not(:first-child) p {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+html[data-theme="dark"] table.api-reference-table tbody tr td:not(:first-child) {
+    color: #8b949e;
+}
+
+html[data-theme="dark"] table.api-reference-table tbody tr:hover td:not(:first-child) {
+    color: #ffffff !important;
+}
+
+table.api-reference-table tbody tr td:not(:first-child) code {
+    color: var(--pst-color-text, #24292f);
+    background: var(--pst-color-surface, transparent);
+    padding: 0 0.2rem;
+    border-radius: 3px;
+    font-size: 0.88em;
+}
+
+html[data-theme="dark"] table.api-reference-table tbody tr td:not(:first-child) code {
+    color: #c9d1d9;
+    background: #2d333b;
+}
+
+table.api-typedef-table {
+    display: block !important;
+    width: 100%;
+    border: none;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 0.5rem 0 1rem;
+    padding: 8px !important;
+    background: #f0f2f5 !important;
+    border-radius: 10px;
+}
+
+html[data-theme="dark"] table.api-typedef-table {
+    background: #111622 !important;
+}
+
+table.api-typedef-table thead {
+    display: none !important;
+}
+
+table.api-typedef-table tbody {
+    display: block !important;
+    width: 100% !important;
+}
+
+table.api-typedef-table tbody tr,
+table.api-typedef-table tbody tr:nth-child(even),
+table.api-typedef-table tbody tr:nth-child(odd) {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 32px !important;
+    padding: 8px 12px !important;
+    margin-bottom: 4px !important;
+    background: #ffffff !important;
+    border: 1px solid var(--pst-color-border, #d0d7de) !important;
+    border-radius: 6px;
+    transition: border-color 100ms ease;
+}
+
+table.api-typedef-table tbody tr:last-child {
+    margin-bottom: 0 !important;
+}
+
+table.api-typedef-table tbody tr:hover {
+    border-color: var(--pst-color-link, #0969da) !important;
+}
+
+table.api-typedef-table tbody tr:hover td,
+table.api-typedef-table tbody tr:hover td * {
+    border-color: #58a6ff !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+}
+
+html[data-theme="dark"] table.api-typedef-table tbody tr,
+html[data-theme="dark"] table.api-typedef-table tbody tr:nth-child(even),
+html[data-theme="dark"] table.api-typedef-table tbody tr:nth-child(odd) {
+    background: #1a2234 !important;
+    border-color: #2d3748 !important;
+}
+
+html[data-theme="dark"] table.api-typedef-table tbody tr:hover {
+    border-color: #58a6ff !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+}
+
+table.api-typedef-table tbody tr td {
+    display: block !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    font-family: 'JetBrains Mono', var(--pst-font-family-monospace-system);
+    font-size: 0.9rem;
+    flex: 1 !important;
+    max-width: 45%;
+}
+
+/* Column 1: type declaration. */
+table.api-typedef-table tbody tr td:nth-child(1) {
+    color: var(--pst-color-text-muted, #656d76) !important;
+    font-weight: 400;
+    text-align: left  !important;
+}
+
+table.api-typedef-table tbody tr td:nth-child(1) * {
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(1) {
+    color: #8b949e !important;
+}
+
+/* Light-mode: blue Type-cell links. */
+html:not([data-theme="dark"]) table.api-typedef-table tbody tr td:nth-child(1) a {
+    color: var(--pst-color-link, #0969da) !important;
+}
+
+/* Column 2: alias name — strip the code pill and inherit the link colour. */
+table.api-typedef-table tbody tr td:nth-child(2) {
+    color: var(--pst-color-link, #0969da) !important;
+    font-weight: 400 !important;
+    text-align: left  !important;
+}
+
+html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(2),
+html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(2) a,
+html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(2) a:link,
+html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(2) a:visited,
+html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(2) a:hover {
+    color: #ffffff !important;
+}
+
+table.api-typedef-table tbody tr td:nth-child(2) a,
+table.api-typedef-table tbody tr td:nth-child(2) a:link,
+table.api-typedef-table tbody tr td:nth-child(2) a:visited,
+table.api-typedef-table tbody tr td:nth-child(2) a:hover {
+    color: inherit !important;
+    text-decoration: none !important;
+    font-weight: 400 !important;
+}
+
+table.api-typedef-table tbody tr td:nth-child(2) a:hover {
+    text-decoration: underline !important;
+}
+
+table.api-typedef-table tbody tr td:nth-child(2) code,
+table.api-typedef-table tbody tr td:nth-child(2) code * {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    color: inherit !important;
+    font-weight: 400 !important;
+    font-size: inherit !important;
+}
+
+/* Column 3: drop empty description so it doesn't skew spacing. */
+table.api-typedef-table tbody tr td:nth-child(3):empty,
+table.api-typedef-table tbody tr td:nth-child(3):has(> p:empty:only-child) {
+    display: none !important;
+}
+
+/* Disable the overflow wrapper for card tables. */
+.table-wrapper:has(> table.api-reference-table),
+.table-wrapper:has(> table.api-typedef-table) {
+    overflow: visible;
+}
+
+.opencv-class-include {
+    margin: 0.25rem 0 0.75rem;
+    font-size: 0.85rem;
+    color: var(--pst-color-text-muted);
+}
+.opencv-class-include code {
+    background: var(--pst-color-surface);
+    border: 1px solid var(--pst-color-border);
+    border-radius: 4px;
+    padding: 0.1rem 0.45rem;
+    font-family: var(--pst-font-family-monospace);
+    color: var(--pst-color-text-base);
+}
+.opencv-class-brief {
+    margin: 0 0 1rem;
+    font-size: 1rem;
+    line-height: 1.55;
+    color: var(--pst-color-text-base);
+}
+a.opencv-class-more {
+    color: #0969da;
+    font-weight: 500;
+    text-decoration: none;
+    margin-left: 0.25rem;
+    white-space: nowrap;
+}
+a.opencv-class-more:hover {
+    color: #0550ae;
+    text-decoration: underline;
+}
+html[data-theme="dark"] a.opencv-class-more { color: #539bf5; }
+html[data-theme="dark"] a.opencv-class-more:hover { color: #6cb6ff; }
+
+.opencv-class-files { margin-top: 1.75rem; }
+.opencv-class-files > h2 { display: none; }
+nav a[href="#source-file"] { display: none; }
+
+/* --- Detailed Description (Breathe-rendered) --------------------------- */
+section#detailed-description > h2 {
+    margin-bottom: 1.5rem;
+}
+section#detailed-description code,
+section#member-enumeration-documentation code {
+    background: var(--pst-color-surface);
+    border: 1px solid var(--pst-color-border);
+    border-radius: 3px;
+    padding: 0 0.3rem;
+    font-family: var(--pst-font-family-monospace);
+    font-size: 0.88em;
+}
+/* Breathe <ref> cross-refs: monospace chip, inherit the parent <a> link colour. */
+section#detailed-description a.reference > span.std-ref,
+section#member-enumeration-documentation a.reference > span.std-ref {
+    background: var(--pst-color-surface);
+    border: 1px solid var(--pst-color-border);
+    border-radius: 3px;
+    padding: 0 0.3rem;
+    font-family: var(--pst-font-family-monospace);
+    font-size: 0.88em;
+    color: inherit;
+}
+/* Enum detail <dt> cards already self-style as monospace panels — don't double-chip. */
+.opencv-enum-detail dt code,
+.opencv-enum-detail dt .opencv-enum-name,
+.opencv-enum-detail dt .opencv-enum-init {
+    background: transparent;
+    border: 0;
+    padding: 0;
+}
+
+/* --- Per-class "Examples" cross-reference ------------------------------ */
+dl.opencv-examples {
+    margin: 1.5rem 0 0;
+    padding: 0;
+}
+dl.opencv-examples > dt {
+    font-weight: 600;
+    font-size: 1rem;
+    margin: 0 0 0.4rem;
+    color: var(--pst-color-text-base);
+}
+dl[class].opencv-examples > dd {
+    margin: 0;
+    padding: 0;
+    line-height: 1.7;
+}
+dl.opencv-examples a.opencv-example-link {
+    text-decoration: none;
+    color: #0969da;
+}
+html[data-theme="dark"] dl.opencv-examples a.opencv-example-link {
+    color: #539bf5;
+}
+dl.opencv-examples a.opencv-example-link:hover {
+    text-decoration: underline;
+}
+/* Defang the Detailed Description's blanket code-chip rule on example links. */
+dl.opencv-examples a.opencv-example-link code {
+    background: transparent;
+    border: 0;
+    padding: 0;
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
+}
+
+/* Doxygen search-box variables (consumed by the local search.css) — light. */
+:root {
+    --search-background-color: white;
+    --search-foreground-color: #909090;
+    --search-active-color: black;
+    --search-filter-background-color: #F9FAFC;
+    --search-filter-foreground-color: black;
+    --search-filter-border-color: #90A5CE;
+    --search-filter-highlight-text-color: white;
+    --search-filter-highlight-bg-color: #3D578C;
+    --search-results-foreground-color: #425E97;
+    --search-results-background-color: #EEF1F7;
+    --search-results-border-color: black;
+    --search-box-shadow: inset 0.5px 0.5px 3px 0px #555;
+}
+html[data-theme="dark"] {
+    --search-background-color: black;
+    --search-foreground-color: #C5C5C5;
+    --search-active-color: #C5C5C5;
+    --search-filter-background-color: #101826;
+    --search-filter-foreground-color: #90A5CE;
+    --search-filter-border-color: #7C95C6;
+    --search-filter-highlight-text-color: #BCC9E2;
+    --search-filter-highlight-bg-color: #283A5D;
+    --search-results-foreground-color: #90A5CE;
+    --search-results-background-color: #101826;
+    --search-results-border-color: #7C95C6;
+    --search-box-shadow: inset 0.5px 0.5px 3px 0px #2F436C;
+}
+
+/* Centered search modal — mimics the native PyData search dialog: dimmed
+   backdrop, panel pinned near top-center. The Doxygen box lives inside. */
+.opencv-search-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1055;
+    background: rgba(0, 0, 0, 0.5);
+}
+.opencv-search-overlay.opencv-search-open { display: block; }
+.opencv-search-modal {
+    position: absolute;
+    top: 15%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(92vw, 640px);
+}
+
+/* Doxygen MSearchBox — large field styled like the native search input. */
+#MSearchBox {
+    width: 100%;
+    height: 3rem;
+    border: 1px solid var(--pst-color-border);
+    border-radius: 0.375rem;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 0.6rem;
+    background: var(--pst-color-background) !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3) !important;
+}
+#MSearchBox.MSearchBoxActive,
+#MSearchBox:focus-within {
+    border-color: #d63384;
+    outline: 2px solid rgba(214, 51, 132, 0.25);
+}
+#MSearchBox .left {
+    flex: 1;
+    display: inline-flex !important;
+    align-items: center;
+    height: 100% !important;
+    min-width: 0;
+}
+#MSearchSelect {
+    flex-shrink: 0;
+    width: 26px !important;
+    height: 26px !important;
+    margin: 0 0.25em 0 0 !important;
+    cursor: pointer;
+    border-radius: 4px;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    background-size: 20px 20px !important;
+    opacity: 0.85;
+}
+#MSearchSelect:hover {
+    opacity: 1;
+    background-color: var(--pst-color-surface, rgba(128, 128, 128, 0.15));
+}
+#MSearchField {
+    flex: 1;
+    width: auto !important;
+    min-width: 0;
+    height: auto !important;
+    font-size: 1.05rem;
+    background: transparent !important;
+    color: var(--pst-color-text-base) !important;
+}
+#MSearchBox .right {
+    flex-shrink: 0;
+    width: auto !important;
+    height: auto !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+#MSearchKbd { display: inline-flex; align-items: center; gap: 2px; }
+.MSearchBoxActive #MSearchKbd { display: none; }
+#MSearchCloseImg { width: 16px; height: 16px; }
+
+/* Popups: solid, theme-aware styling (Doxygen's var-based search.css renders transparent here) */
+#MSearchResultsWindow,
+#MSearchSelectWindow {
+    background: var(--pst-color-background) !important;
+    border: 1px solid var(--pst-color-border) !important;
+    border-radius: 6px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.28) !important;
+    z-index: 10005 !important;
+}
+#MSearchResultsWindow {
+    width: 420px !important;
+    max-height: 70vh;
+    height: auto !important;
+    overflow-y: auto;
+    padding: 2px 0;
+}
+#MSearchSelectWindow { padding: 4px 0; min-width: 160px; }
+a.SelectItem {
+    display: block !important;
+    padding: 4px 16px !important;
+    color: var(--pst-color-text-base) !important;
+    white-space: nowrap;
+}
+a.SelectItem:hover {
+    background: var(--pst-color-primary) !important;
+    color: #fff !important;
+}
+/* One result per row: bold symbol, scope on its own muted line, separators */
+div.SRPage { background: transparent !important; }
+.SRResult { display: block; }
+.SRPage .SREntry {
+    padding: 7px 16px !important;
+    font-size: 0.85rem !important;
+    line-height: 1.35;
+    border-bottom: 1px solid var(--pst-color-border);
+}
+.SRSymbol { color: var(--pst-color-link) !important; font-weight: 600; }
+/* Single result: scope sits inline after the symbol (like original). */
+span.SRScope {
+    padding-left: 6px;
+    font-size: 0.82rem;
+    font-weight: 400;
+    color: var(--pst-color-text-muted) !important;
+}
+/* Multiple results: child pages stack, indented (like original). */
+a.SRScope {
+    display: block !important;
+    font-size: 0.8rem !important;
+    font-weight: 400;
+    color: var(--pst-color-text-muted) !important;
+}
+.SRPage .SRStatus { color: var(--pst-color-text-muted); padding: 8px 16px; }

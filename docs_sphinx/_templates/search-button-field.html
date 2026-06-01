@@ -1,0 +1,40 @@
+{%- set _search = ('../' * ((pagename or '').count('/') + 2)) ~ 'doc/doxygen/html/search/' %}
+{# Set magnifier directly; a CSS var here resolves against search.css and 404s. #}
+<style>
+  #MSearchSelect { background-image: url('{{ _search }}mag_sel.svg') !important; }
+  html[data-theme="dark"] #MSearchSelect { background-image: url('{{ _search }}mag_seld.svg') !important; }
+</style>
+{# Navbar trigger: native PyData look (.search-button-field), but NOT the
+   .search-button__button class — that is the theme's own show-modal hook. #}
+<button id="opencvSearchTrigger" type="button" class="btn search-button-field"
+        title="{{ _('Search') }}" aria-label="{{ _('Search') }}">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <span class="search-button__default-text">{{ _('Search') }}</span>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+{# Centered modal overlay (layout.html moves it to <body> and toggles the open
+   class). Holds the Doxygen search box; results render via Doxygen's search.js. #}
+<div id="opencvSearchOverlay" class="opencv-search-overlay" role="dialog"
+     aria-modal="true" aria-label="{{ _('Search') }}">
+  <div class="opencv-search-modal">
+    <div id="MSearchBox" class="MSearchBoxInactive">
+      <span class="left">
+        <span id="MSearchSelect"
+              onmouseover="return searchBox.OnSearchSelectShow()"
+              onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+        <input type="text" id="MSearchField" value="" placeholder="Search the docs ..."
+               accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)"
+               onblur="searchBox.OnSearchFieldFocus(false)"
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+      </span>
+      <span class="right">
+        <span id="MSearchKbd" class="search-button__kbd-shortcut">
+          <kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd>
+        </span>
+        <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()">
+          <img id="MSearchCloseImg" border="0" src="{{ _search }}close.svg" alt=""/></a>
+      </span>
+    </div>
+  </div>
+</div>

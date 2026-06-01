@@ -1,19 +1,35 @@
 {# Override of pydata_sphinx_theme's components/navbar-nav.html.
-   PyData's default renders both top-level toctree items AND the
-   configured external_links in one bar. For OpenCV we want ONLY the
-   Doxygen-style external nav (Main Page, Related Pages, Namespaces,
-   …) in the header — the tutorial module tree belongs in the left
-   sidebar, not the header. So we render external_links only. #}
+
+   PyData's default renders both top-level toctree items AND the configured
+   external_links in one bar. For OpenCV we want ONLY this header nav (the
+   tutorial module tree belongs in the left sidebar, not the header), so we
+   render the `external_links` slot exclusively.
+
+   These are NOT external links: conf.py declares them via the theme's
+   `external_links` key only because that's the data slot for a custom header
+   nav. Each entry is one of:
+     * internal  -> {"docname": "<docname>", "name": ...}
+       resolved with `pathto` so the relative URL is correct at ANY page depth
+       and points at the Sphinx-rendered page (landing, tutorials, module roots);
+     * external  -> {"url": "<abs-url>", "name": ..., "external": true}
+       rendered verbatim and opened in a new tab (e.g. the Java docs, which
+       have no Sphinx equivalent).
+
+   Internal entries carry no target="_blank" / nav-external glyph since
+   navigation never leaves the site. #}
 <nav>
   <ul class="bd-navbar-elements navbar-nav">
     {%- for link in (theme_external_links or []) %}
+    {%- if link.docname %}
+      {%- set _href = pathto(link.docname) %}
+      {%- set _external = false %}
+    {%- else %}
+      {%- set _href = link.url %}
+      {%- set _external = link.get('external', false) %}
+    {%- endif %}
     <li class="nav-item">
-      {# PyData's CSS adds the ↗ icon via .nav-external::after — don't
-         render a second one inline or it doubles up. #}
-      <a class="nav-link nav-external"
-         href="{{ link.url }}"
-         target="_blank"
-         rel="noopener noreferrer">{{ link.name }}</a>
+      <a class="nav-link" href="{{ _href }}"
+         {%- if _external %} target="_blank" rel="noopener noreferrer"{% endif %}>{{ link.name }}</a>
     </li>
     {%- endfor %}
   </ul>

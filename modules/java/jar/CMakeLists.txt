@@ -87,7 +87,15 @@ install(FILES ${OPENCV_JAR_FILE} OPTIONAL DESTINATION ${OPENCV_JAR_INSTALL_PATH}
 
 add_dependencies(${the_module} ${the_module}_jar)
 
-if(BUILD_DOCS)
+# Javadoc generation can be disabled independently of BUILD_DOCS so the C++
+# Doxygen / Sphinx docs still build when the Java bindings carry Doxygen-style
+# tags (e.g. @retval, @remarks) that JDK doclint rejects as fatal errors.
+# Default ON for parity with upstream; when OFF the `doxygen_javadoc` target is
+# never created and doc/CMakeLists.txt's `if(TARGET doxygen_javadoc)` guard
+# drops it from the doxygen_cpp dependency chain automatically.
+option(BUILD_JAVADOC "Generate Javadoc as part of the documentation build" ON)
+
+if(BUILD_DOCS AND BUILD_JAVADOC)
   if(OPENCV_JAVA_SDK_BUILD_TYPE STREQUAL "ANT")
     add_custom_command(OUTPUT "${OPENCV_DEPHELPER}/${the_module}doc"
       COMMAND ${ANT_EXECUTABLE} -noinput -k javadoc
