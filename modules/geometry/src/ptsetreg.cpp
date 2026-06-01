@@ -863,7 +863,6 @@ Mat    estimateAffine3D(InputArray _from, InputArray _to,
     Mat from = _from.getMat(), to = _to.getMat();
     int count = from.checkVector(3);
 
-    CV_CheckGE(count, 0, "Points need to be 3d");
     CV_CheckGE(count, 3, "At least 3 points are needed for affine transformation estimation.");
     CV_CheckEQ(to.checkVector(3), count, "Point matches need to have the same size");
 
