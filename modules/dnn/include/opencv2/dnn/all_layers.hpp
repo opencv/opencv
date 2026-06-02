@@ -577,6 +577,17 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<MaxPoolLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS LpPoolLayer : public Layer
+    {
+    public:
+        std::vector<int> kernel_shape, strides, dilations, pads;
+        AutoPadding auto_pad;
+        bool ceil_mode;
+        int p;
+
+        static Ptr<LpPoolLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS GlobalAveragePoolLayer : public Layer
     {
     public:

@@ -226,6 +226,7 @@ protected:
     void parseLayerNorm            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseLeakyRelu            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseLpNormalization      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseLpPool               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseLRN                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseLSTM                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseMatMul               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -1214,6 +1215,12 @@ void ONNXImporter2::parseGlobalPool(LayerParams &layerParams, const opencv_onnx:
     CV_Assert(!layerParams.has("axes"));
     layerParams.set("global_pooling", true);
     layerParams.set("pool", pool);
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseLpPool(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "LpPool";
     addLayer(layerParams, node_proto);
 }
 
@@ -2635,6 +2642,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["MaxPool"] = &ONNXImporter2::parseMaxPool;
     dispatch["AveragePool"] = &ONNXImporter2::parseAveragePool;
     dispatch["GlobalAveragePool"] = dispatch["GlobalMaxPool"] = &ONNXImporter2::parseGlobalPool;
+    dispatch["LpPool"] = &ONNXImporter2::parseLpPool;
     dispatch["ReduceMax"] = dispatch["ReduceMin"] = dispatch["ReduceMean"] = dispatch["ReduceSum"] =
             dispatch["ReduceSumSquare"] = dispatch["ReduceProd"] = dispatch["ReduceL1"] =
             dispatch["ReduceL2"] = dispatch["ReduceLogSum"] = dispatch["ReduceLogSumExp"] = &ONNXImporter2::parseReduce;
