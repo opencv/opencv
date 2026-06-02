@@ -80,7 +80,16 @@ OCL_PERF_TEST_P(WarpAffineFixture, WarpAffine,
 
     OCL_TEST_CYCLE() cv::warpAffine(src, dst, M, srcSize, interpolation);
 
-    SANITY_CHECK_NOTHING();
+    if (interpolation == INTER_CUBIC)
+    {
+        SANITY_CHECK_NOTHING();
+    }
+    else
+    {
+        // Ticket: https://github.com/opencv/opencv/issues/26235
+        const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 2 : interpolation == INTER_CUBIC ? 2e-3 : 3e-2;
+        SANITY_CHECK(dst, eps);
+    }
 }
 
 ///////////// WarpPerspective ////////////////////////
@@ -111,7 +120,15 @@ OCL_PERF_TEST_P(WarpPerspectiveFixture, WarpPerspective,
 
     OCL_TEST_CYCLE() cv::warpPerspective(src, dst, M, srcSize, interpolation);
 
-    SANITY_CHECK_NOTHING();
+    if (interpolation == INTER_CUBIC)
+    {
+        SANITY_CHECK_NOTHING();
+    }
+    else
+    {
+        const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : 1e-4;
+        SANITY_CHECK(dst, eps);
+    }
 }
 
 ///////////// Resize ////////////////////////
