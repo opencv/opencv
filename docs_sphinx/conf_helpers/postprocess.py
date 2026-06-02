@@ -8,7 +8,8 @@
 from __future__ import annotations
 import pathlib, re
 
-from .state import _doxy_page_to_local, _DOXY_ANCHOR_TO_MEMBER
+from .state import (_doxy_page_to_local, _DOXY_ANCHOR_TO_MEMBER, DOXYGEN_BASE_URL,
+                    _API_XML_DIR)
 
 
 def _doxy_parent_page(page: str, api_dir: pathlib.Path) -> str:
@@ -142,6 +143,80 @@ def _generate_search_map(out_dir: pathlib.Path) -> None:
     lines.append("};")
     (out_dir / "_static" / "search_map.js").write_text("\n".join(lines), encoding="utf-8")
 
+_SYM = r"(?:group__|classcv|structcv|unioncv|namespacecv)\w*\.html"
+
+def _localize_doxygen_links(out_dir: pathlib.Path) -> None:
+    """Point symbol-page links at the local Sphinx page when we built it:
+    docs.opencv.org URLs, and bare relative names that 404 off the API dir."""
+    import os
+    skip = {"_static", "_sources", "_images", "_sphinx_design_static"}
+    page_paths: dict[str, str] = {}
+    for f in out_dir.rglob("*.html"):
+        rel = f.relative_to(out_dir)
+        if rel.parts and rel.parts[0] in skip:
+            continue
+        page_paths.setdefault(f.name, rel.as_posix())
+    ext_re = re.compile(
+        r'(?P<a><a class="reference external"\s+)?'
+        r'href="' + re.escape(DOXYGEN_BASE_URL) + r'(?:[\w-]+/)*?'
+        r'(?P<page>' + _SYM + r')(?:#(?P<frag>\w+))?"')
+    bare_re = re.compile(r'href="(?P<page>' + _SYM + r')(?:#(?P<frag>[\w:.-]+))?"')
+
+    for html in out_dir.rglob("*.html"):
+        rel = html.relative_to(out_dir)
+        if rel.parts and rel.parts[0] in skip:
+            continue
+        text = html.read_text(encoding="utf-8")
+        cur = rel.parent.as_posix()
+
+        def _href(local: str, anchor: str) -> str | None:
+            target = page_paths.get(local)
+            if not target:
+                return None
+            href = target if cur == "." else os.path.relpath(target, cur)
+            return f'href="{href}{anchor}"'
+
+        def _ext(m: "re.Match") -> str:
+            member = _DOXY_ANCHOR_TO_MEMBER.get(m.group("frag") or "")
+            h = _href(_doxy_page_to_local(m.group("page")),
+                      f"#{member}" if member else "")
+            if not h:
+                return m.group(0)
+            # Flip the now-local link from external to internal styling.
+            return f'<a class="reference internal" {h}' if m.group("a") else h
+
+        def _bare(m: "re.Match") -> str:
+            frag = m.group("frag")
+            return _href(m.group("page"), f"#{frag}" if frag else "") or m.group(0)
+
+        new = bare_re.sub(_bare, ext_re.sub(_ext, text))
+        if new != text:
+            html.write_text(new, encoding="utf-8")
+
+
+def _drop_moved_stub_search_entries() -> None:
+    """Drop moved-tutorial stub pages from the Doxygen search index."""
+    doxy_html = _API_XML_DIR.parent / "html"
+    search_dir = doxy_html / "search"
+    if not search_dir.is_dir():
+        return
+    stubs = set()
+    for h in doxy_html.rglob("*table_of_content*.html"):
+        try:
+            if "has been moved to this page" in h.read_text(encoding="utf-8", errors="ignore"):
+                stubs.add(h.name)
+        except OSError:
+            pass
+    if not stubs:
+        return
+    for js in search_dir.glob("*.js"):
+        lines = js.read_text(encoding="utf-8", errors="ignore").splitlines(keepends=True)
+        # Drop only single-target stub entries; keep multi-target terms.
+        kept = [ln for ln in lines if not (
+                ln.count("['../") == 1 and any(f"/{s}'" in ln for s in stubs))]
+        if len(kept) != len(lines):
+            js.write_text("".join(kept), encoding="utf-8")
+
 
 def _inline_coll_graphs_on_finish(app, exception):
     """build-finished entry point."""
@@ -151,4 +226,6 @@ def _inline_coll_graphs_on_finish(app, exception):
     for _api in ("main_modules", "extra_modules"):
         _inline_collaboration_svgs(out / _api, out / "_images")
         _strip_breathe_class_clutter(out / _api)
+    _localize_doxygen_links(out)
+    _drop_moved_stub_search_entries()
     _generate_search_map(out)

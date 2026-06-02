@@ -171,6 +171,9 @@ DOXYGEN_BASE_URL = (
     .rstrip("/") + "/")
 # First existing wins; env OPENCV_DOXYGEN_TAGFILE overrides
 _TAG_CANDIDATES = (
+    # Track cmake's actual build dir via the XML dir.
+    _API_XML_DIR.parent / "html" / "opencv.tag",
+    _API_XML_DIR.parent / "opencv.tag",
     HERE.parent / "build" / "doc" / "doxygen" / "html" / "opencv.tag",
     HERE.parent.parent / "build" / "doc" / "doxygen" / "html" / "opencv.tag",
     # extra build-dir layouts (vanilla, contrib, nested CI)
@@ -250,11 +253,15 @@ if _TAG_FILE.is_file():
                     )
             elif _kind in ("class", "struct"):
                 _full = _c.findtext("name") or ""
-                if _full.startswith("cv::"):
+                # Skip G-API/detail internals; a bare cv::Point isn't gapi::own::Point.
+                if _full.startswith("cv::") and not any(
+                        _x in _full for _x in ("::own::", "::wip::", "::detail::")):
                     _short = _full.split("::")[-1]
                     _af = _c.findtext("filename")
-                    if _short and _af:
-                        _CV_SYMBOL_URL.setdefault(_short, DOXYGEN_BASE_URL + _af)
+                    # Prefer canonical cv::<short> over nested homonyms.
+                    if _short and _af and (
+                            _short not in _CV_SYMBOL_URL or _full == f"cv::{_short}"):
+                        _CV_SYMBOL_URL[_short] = DOXYGEN_BASE_URL + _af
             elif _kind == "group":
                 # module pages are kind="group"
                 _n = _c.findtext("name")
@@ -361,6 +368,7 @@ _PLACEHOLDER_STUBS: dict[str, tuple[str, str]] = {
 # Doxygen compound filename -> Sphinx page filename (class/struct compounds).
 _LOCAL_PAGE_BY_DOXY_FILE: dict[str, str] = {
     _doxy: _page for _doxy, (_disp, _page) in _PLACEHOLDER_STUBS.items()}
+_cls_cands: dict[str, set] = {}  # short name -> set of full names (collision check)
 if _LOCAL_SRC_TAG.is_file():
     try:
         import xml.etree.ElementTree as _ET
@@ -372,7 +380,12 @@ if _LOCAL_SRC_TAG.is_file():
                     _short = _n.split("::")[-1]
                     _fn = _f if _f.endswith(".html") else _f + ".html"
                     _doxy_base = pathlib.PurePosixPath(_fn).name
-                    _LOCAL_CLASS_URL.setdefault(_short, _doxy_base)
+                    # Skip G-API/detail internals as bare `cv::` targets.
+                    if not any(_x in _n for _x in ("::own::", "::wip::", "::detail::")):
+                        _cls_cands.setdefault(_short, set()).add(_n)
+                        # Prefer canonical cv::<short> over nested homonyms.
+                        if _short not in _LOCAL_CLASS_URL or _n == f"cv::{_short}":
+                            _LOCAL_CLASS_URL[_short] = _doxy_base
                     # Sphinx mirrors Doxygen's filename except the few remapped.
                     _LOCAL_PAGE_BY_DOXY_FILE.setdefault(
                         _doxy_base, _LOCAL_CLASS_URL.get(_short, _doxy_base))
@@ -412,6 +425,11 @@ if _LOCAL_SRC_TAG.is_file():
                 _LOCAL_TYPEDEF_URL[_mn] = f"{_local_page}#{_anchor}"
     except Exception:
         pass
+    # Drop ambiguous short names (>1 class, no canonical cv::<short>) so a bare
+    # `cv::Point` stays plain text instead of linking to a wrong homonym.
+    for _s, _cands in _cls_cands.items():
+        if len(_cands) > 1 and f"cv::{_s}" not in _cands:
+            _LOCAL_CLASS_URL.pop(_s, None)
 
 
 def _doxy_page_to_local(basename: str) -> str:
