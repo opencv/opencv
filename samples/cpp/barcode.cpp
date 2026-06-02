@@ -175,8 +175,7 @@ int main(int argc, char **argv)
                         "{i in     |        | input image path (also switches to image detection mode) }"
                         "{detect   | false  | detect 1D barcode only (skip decoding) }"
                         "{o out    |        | path to result file (only for single image decode) }"
-                        "{sr_prototxt|      | super resolution prototxt path }"
-                        "{sr_model |        | super resolution model path }";
+                        "{sr_model |        | optional super resolution ONNX model path (e.g. sr.onnx) }";
     CommandLineParser cmd_parser(argc, argv, keys);
     cmd_parser.about("This program detects the 1D barcodes from camera or images using the OpenCV library.");
     if (cmd_parser.has("help"))
@@ -186,7 +185,6 @@ int main(int argc, char **argv)
     }
     const string in_file = cmd_parser.get<string>("in");
     const string out_file = cmd_parser.get<string>("out");
-    const string sr_prototxt = cmd_parser.get<string>("sr_prototxt");
     const string sr_model = cmd_parser.get<string>("sr_model");
     if (!cmd_parser.check())
     {
@@ -199,17 +197,17 @@ int main(int argc, char **argv)
     //! [initialize]
     try
     {
-        app.bardet = makePtr<barcode::BarcodeDetector>(sr_prototxt, sr_model);
+        app.bardet = makePtr<barcode::BarcodeDetector>(sr_model);
     }
     catch (const std::exception& e)
     {
         cout <<
              "\n---------------------------------------------------------------\n"
              "Failed to initialize super resolution.\n"
-             "Please, download 'sr.*' from\n"
+             "Please, download 'sr.onnx' from\n"
              "https://github.com/WeChatCV/opencv_3rdparty/tree/wechat_qrcode\n"
-             "and put them into the current directory.\n"
-             "Or you can leave sr_prototxt and sr_model unspecified.\n"
+             "and put it into the current directory.\n"
+             "Or you can leave sr_model unspecified.\n"
              "---------------------------------------------------------------\n";
         cout << e.what() << endl;
         return -1;
