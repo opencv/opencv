@@ -456,6 +456,96 @@ def _write_namespace_stub(ns: dict, out_dir: pathlib.Path,
     return anchor, fname
 
 
+def _read_gapi_full_content() -> str:
+    """Read and convert full content from gapi 00-root.markdown for gapi_ref stub."""
+    import re as _re
+    candidates = [
+        CONTRIB_ROOT / "gapi" / "doc" / "00-root.markdown",
+        CONTRIB_ROOT / "modules" / "gapi" / "doc" / "00-root.markdown",
+    ]
+    root_md = next((p for p in candidates if p.is_file()), None)
+    if root_md is None:
+        return ""
+
+    # Find sample file for API Example
+    sample_candidates = [
+        CONTRIB_ROOT / "gapi" / "samples" / "api_example.cpp",
+        CONTRIB_ROOT / "modules" / "gapi" / "samples" / "api_example.cpp",
+    ]
+    sample_file = next((p for p in sample_candidates if p.is_file()), None)
+
+    text = root_md.read_text(encoding="utf-8", errors="ignore")
+
+    # Strip top-level title — gapi_ref stub has its own title
+    text = _re.sub(r"^# Graph API[^\n]*\n+", "", text)
+
+    # Downgrade # headings to ## (since gapi_ref stub already has a # title)
+    text = _re.sub(r"^# ([^\n]+)", r"## \1", text, flags=_re.MULTILINE)
+
+    # Strip Doxygen heading anchors like {#gapi_root_intro}
+    text = _re.sub(r"\s*\{#\w+\}", "", text)
+
+    # Convert @note to MyST admonition (three colons required)
+    def _note(m):
+        body = m.group(1).strip()
+        return f"\n:::{{note}}\n{body}\n:::\n"
+    text = _re.sub(r"@note\s+(.*?)(?=\n##|\n- |\Z)", _note, text, flags=_re.DOTALL)
+
+    # Chapter subpages: link to Doxygen HTML pages in contrib_modules
+    _chapter_pages = {
+        "gapi_purposes":   ("Why Graph API?",               "../contrib_modules/gapi/doc/01-background.html"),
+        "gapi_hld":        ("High-level design overview",   "../contrib_modules/gapi/doc/10-hld-overview.html"),
+        "gapi_kernel_api": ("Kernel API",                   "../contrib_modules/gapi/doc/20-kernel-api.html"),
+        "gapi_impl":       ("Implementation details",       "../contrib_modules/gapi/doc/30-implementation.html"),
+    }
+
+    # API group subpages → links to extra_modules pages
+    _api_groups = {
+        "gapi_ref":     ("G-API framework",                            "gapi_ref"),
+        "gapi_core":    ("G-API Core functionality",                   "gapi_core"),
+        "gapi_imgproc": ("G-API Image processing functionality",       "gapi_imgproc"),
+        "gapi_video":   ("G-API Video processing functionality",       "gapi_video"),
+        "gapi_draw":    ("G-API Drawing and composition functionality", "gapi_draw"),
+    }
+
+    def _subpage(m):
+        name = m.group(1)
+        if name in _chapter_pages:
+            label, url = _chapter_pages[name]
+            return f"[{label}]({url})"
+        if name in _api_groups:
+            label, page = _api_groups[name]
+            return f"[{label}](../extra_modules/{page}.md)"
+        return name
+    text = _re.sub(r"@subpage\s+(\w+)", _subpage, text)
+
+    # Convert @ref tutorial_table_of_content_gapi → link to gapi tutorial page
+    text = _re.sub(
+        r"@ref\s+tutorial_table_of_content_gapi",
+        "[tutorials and porting examples](../tutorials_contrib/gapi/gapi.md)",
+        text)
+
+    # Replace @include with fenced code block
+    def _include(m):
+        rel = m.group(1).strip()
+        if sample_file and sample_file.is_file():
+            code = sample_file.read_text(encoding="utf-8", errors="ignore")
+            return f"\n```cpp\n{code.rstrip()}\n```\n"
+        return f"\n`{rel}`\n"
+    text = _re.sub(r"@include\s+(\S+)", _include, text)
+
+    # Rewrite relative image paths to point to contrib_modules location
+    text = _re.sub(
+        r"!\[([^\]]*)\]\(pics/([^)]+)\)",
+        r"![\1](../contrib_modules/gapi/doc/pics/\2)",
+        text)
+
+    # Strip HTML comments
+    text = _re.sub(r"<!--.*?-->", "", text, flags=_re.DOTALL)
+
+    return text.strip()
+
+
 def _write_api_stub(node: dict, out_dir: pathlib.Path,
                     classes_seen: dict, ns_map: dict | None = None) -> None:
     """Write one .md per group node, recursing into children.
@@ -1314,13 +1404,19 @@ def _generate_api_stubs(modules, xml_dir, out_dir,
     global_ns_group_map: dict[str, set] = {}
     trees: list = []
     module_rows: list = []  # (folder, page_stem, title) for the api_root list
+    _gapi_tree = None  # saved to write gapi.md wrapper after all stubs
     for m in modules:
         stem = _module_group_stem(m)
         tree = _build_api_hierarchy("group__" + stem.replace("_", "__"), xml_dir)
         if tree is None:
             continue
         trees.append(tree)
-        module_rows.append((m, tree["name"], tree["title"]))
+        # gapi: expose as top-level "Graph API" wrapper page, not "G-API framework"
+        if m == "gapi":
+            _gapi_tree = tree
+            module_rows.append((m, "gapi", "Graph API"))
+        else:
+            module_rows.append((m, tree["name"], tree["title"]))
         all_group_names = _collect_all_group_names(tree)
         all_refids = ["group__" + n.replace("_", "__") for n in all_group_names]
         for ns_name, grps in _build_ns_group_map(all_refids, xml_dir).items():
@@ -1363,6 +1459,23 @@ def _generate_api_stubs(modules, xml_dir, out_dir,
         }
     # Placeholder stubs for bare template params (_Tp, …) so diagram links resolve.
     _write_placeholder_stubs(out_dir, xml_dir)
+
+    # Write standalone "Graph API" page for gapi module (replaces gapi_ref as entry)
+    if _gapi_tree is not None:
+        content = _read_gapi_full_content()
+        # Collect all gapi subgroup page names for the hidden toctree
+        all_gapi_names = _collect_all_group_names(_gapi_tree)
+        gapi_toctree = "\n".join(all_gapi_names)
+        gapi_lines = ["# Graph API {#api_gapi}", ""]
+        if content:
+            gapi_lines += [content, ""]
+        gapi_lines += [
+            "```{toctree}", ":hidden:", ":maxdepth: 2", "",
+            gapi_toctree,
+            "```", "",
+        ]
+        _stub_write(out_dir / "gapi.md", "\n".join(gapi_lines) + "\n")
+
     # Hidden toctree drives nav/sidebar; the visible list shows "folder. Title".
     root_lines += ["```{toctree}", ":hidden:", ":maxdepth: 1", ""]
     root_lines += [stem for _m, stem, _t in module_rows]

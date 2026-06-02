@@ -109,10 +109,10 @@ def _module_group_stem(m: str) -> str:
     # module folder (folder `3d` -> `@defgroup _3d`). Return that real stem.
     if (_API_XML_DIR / f"group__{m.replace('_', '__')}.xml").is_file():
         return m
-    for _root in (OPENCV_ROOT / "modules", CONTRIB_ROOT):
+    for _root in (OPENCV_ROOT / "modules", CONTRIB_ROOT / "modules", CONTRIB_ROOT):
         _hdr = _root / m / "include" / "opencv2" / f"{m}.hpp"
         if _hdr.is_file():
-            _mm = re.search(r"@defgroup\s+(\S+)",
+            _mm = re.search(r"[@\\]defgroup\s+(\S+)",
                             _hdr.read_text(encoding="utf-8", errors="ignore"))
             return _mm.group(1) if _mm else m
     return m
