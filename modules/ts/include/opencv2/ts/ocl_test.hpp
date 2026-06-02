@@ -110,6 +110,18 @@ do \
         << "Size: " << (mat1).size() << std::endl; \
 } while ((void)0, 0)
 
+#define EXPECT_MAT_N_DIFF_EPS(mat1, mat2, eps, num) \
+do \
+{ \
+    ASSERT_EQ(mat1.type(), mat2.type()); \
+    ASSERT_EQ(mat1.size(), mat2.size()); \
+    Mat diff, mask; \
+    absdiff(mat1, mat2, diff); \
+    cv::compare(diff.reshape(1), Scalar::all(eps), mask, CMP_GT); \
+    EXPECT_LE(countNonZero(mask), num) \
+    << "Size: " << mat1.size() << std::endl; \
+} while ((void)0, 0)
+
 #define EXPECT_MAT_N_DIFF(mat1, mat2, num) \
 do \
 { \
