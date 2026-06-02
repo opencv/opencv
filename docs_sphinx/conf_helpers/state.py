@@ -399,11 +399,13 @@ if _LIVE_TAG_FILE.is_file():
 
 # -- Local-link variants of the maps above (step 8g) ------------------------
 _LOCAL_SRC_TAG = _TAG_FILE if _TAG_FILE.is_file() else _LIVE_TAG_FILE
-_LOCAL_CLASS_URL: dict[str, str] = {
-    # _Tp template-parameter placeholder stub
-    "_Tp": "class_Tp.html",
-}
-_LOCAL_TYPEDEF_URL: dict[str, str] = {}  # 'uchar' -> 'core_hal_interface.html#_CPPv45uchar'
+_LOCAL_CLASS_URL: dict[str, str] = {}
+# NOTE: `_Tp` (the template-parameter placeholder) used to map to
+# `class_Tp.html`, but no stub page is actually written for it — every
+# `<a href="class_Tp.html">` was a 404. Removing the entry leaves `_Tp`
+# tokens as plain (non-clickable) text in signatures, matching the
+# "no 404 clickables" requirement.
+_LOCAL_TYPEDEF_URL: dict[str, str] = {}  # 'uchar' -> 'core_hal_interface.html#uchar'
 # Doxygen template-param placeholder pages -> (display name, Sphinx page).
 # Sphinx mirrors these as stubs (stubs._write_placeholder_stubs) so diagram
 # cross-links resolve instead of 404ing.
@@ -450,7 +452,16 @@ if _LOCAL_SRC_TAG.is_file():
                 _maf = (_mem.findtext("anchorfile") or "").strip()
                 if not (_mn and _maf):
                     continue
-                if _mn in _LOCAL_TYPEDEF_URL:
+                # The tagfile emits each typedef twice: once with the
+                # bare name (`InputArray`) and once fully-qualified
+                # (`cv::InputArray`). Normalize to the bare short name
+                # so we don't end up with a second map entry whose
+                # anchor literally contains `cv::` (e.g.
+                # `core_basic.html#cv::inputarray`) — that anchor never
+                # exists on the rendered page and every `cv::InputArray`
+                # codespan ends up 404-ing.
+                _short_mn = _mn.split("::")[-1]
+                if _short_mn in _LOCAL_TYPEDEF_URL:
                     continue   # first-occurrence wins
                 _bn = pathlib.PurePosixPath(_maf).name
                 if _bn.startswith("group__"):

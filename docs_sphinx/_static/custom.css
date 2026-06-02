@@ -55,7 +55,16 @@ html[data-theme="dark"] .bd-article-container a { color: #539bf5 !important; }
     text-decoration-thickness: 1px;
     color: #0550ae;
 }
-html[data-theme="dark"] .bd-article-container a:hover { color: #6cb6ff !important; }
+/* Hover keeps the SAME #0969da — no separate hover-blue shade in dark
+ * mode (per "no hover blue, everything at rest"). */
+html[data-theme="dark"] .bd-article-container a:hover,
+html[data-theme="dark"] .bd-article-container a.reference:hover,
+html[data-theme="dark"] .bd-article-container a.reference.internal:hover,
+html[data-theme="dark"] .bd-article-container a.reference.external:hover,
+html[data-theme="dark"] .bd-article-container .toctree-wrapper a:hover,
+html[data-theme="dark"] .bd-article-container li > a:hover {
+    color: #0969da !important;
+}
 .bd-content a > code, .bd-content code > a { color: inherit; }
 
 .bd-content a.opencv-enum-link,
@@ -364,6 +373,35 @@ div.highlight pre {
 .highlight .c, .highlight .ch, .highlight .cm,
 .highlight .cpf, .highlight .c1, .highlight .cs { font-style: normal !important; }
 
+/* Clickable tokens inside code blocks: force link blue on every
+ * descendant of `<a>` inside `<pre>`. Pygments wraps identifiers in
+ * `<span class="n">…</span>` (or `nc`/`nf`/…) and colours them per
+ * the theme stylesheet — those rules win over the inherited `<a>`
+ * color, so the link text renders as ordinary dark-grey code, not
+ * blue. This rule (high specificity, !important) restores the
+ * theme-link blue across both modes, the same blue we use everywhere
+ * else clickable tokens appear. */
+div.highlight pre a,
+div.highlight pre a *,
+div.highlight pre a span {
+    color: #0969da !important;
+}
+html[data-theme="dark"] div.highlight pre a,
+html[data-theme="dark"] div.highlight pre a *,
+html[data-theme="dark"] div.highlight pre a span {
+    color: #0969da !important;
+}
+div.highlight pre a:hover,
+div.highlight pre a:hover *,
+div.highlight pre a:hover span,
+html[data-theme="dark"] div.highlight pre a:hover,
+html[data-theme="dark"] div.highlight pre a:hover *,
+html[data-theme="dark"] div.highlight pre a:hover span {
+    color: #0969da !important;
+    text-decoration: underline !important;
+    text-underline-offset: 0.18em;
+}
+
 html[data-theme="dark"] { color-scheme: dark; }
 html[data-theme="dark"] div.highlight span,
 html[data-theme="dark"] div.highlight * { color: unset !important; }
@@ -396,7 +434,7 @@ html[data-theme="dark"] .highlight .mo { color: #6cb6ff !important; }
 html[data-theme="dark"] div.highlight pre {
     background: #2d333b !important;
     color: #cdd9e5 !important;
-    border-left: 3px solid #539bf5 !important;
+    border-left: 3px solid #0969da !important;
 }
 html[data-theme="dark"] code,
 html[data-theme="dark"] .sig {
@@ -574,7 +612,7 @@ html[data-theme="dark"] section[id$="-documentation"] > section > h3 {
     background: #111622;
     border-color: #2d3748;
 }
-html[data-theme="dark"] section[id$="-documentation"] > section > h3::before { color: #58a6ff; }
+html[data-theme="dark"] section[id$="-documentation"] > section > h3::before { color: #0969da; }
 
 section[id$="-documentation"] > section > p,
 section[id$="-documentation"] > section > ul,
@@ -811,6 +849,23 @@ pre.opencv-decl a,
 html[data-theme="dark"] pre.opencv-decl a,
 html[data-theme="dark"] .opencv-decl a,
 html[data-theme="dark"] .opencv-decl a.reference { color: #539bf5 !important; }
+/* --- Clickable enum synopsis (.opencv-enum-synopsis) ------------------- */
+/* Link colour + no-underline handled by the central enum-links rule near
+ * the top of this file; this block layers explicit dark-mode coverage so
+ * the unified `#0969da` (no hover differentiation) applies even if the
+ * central rule changes. */
+.opencv-enum-synopsis a.opencv-enum-link {
+    color: #0969da !important;
+    text-decoration: none;
+    border-radius: 2px;
+}
+.opencv-enum-synopsis a.opencv-enum-link:hover {
+    color: #0550ae !important;
+}
+html[data-theme="dark"] .opencv-enum-synopsis a.opencv-enum-link,
+html[data-theme="dark"] .opencv-enum-synopsis a.opencv-enum-link:hover {
+    color: #0969da !important;
+}
 
 section#member-enumeration-documentation .highlight-cpp .n {
     color: #0969da !important;
@@ -1000,7 +1055,10 @@ html[data-theme="dark"] table.api-reference-table tbody tr td:first-child {
 
 table.api-reference-table tbody tr td a,
 table.api-reference-table tbody tr td a:link,
-table.api-reference-table tbody tr td a:visited {
+table.api-reference-table tbody tr td a:visited,
+table.api-reference-table tbody tr td a *,
+table.api-reference-table tbody tr td a:link *,
+table.api-reference-table tbody tr td a:visited * {
     color: var(--pst-color-link, #0969da) !important;
     text-decoration: none !important;
     font-weight: 500 !important;
@@ -1014,12 +1072,22 @@ html[data-theme="dark"] table.api-reference-table tbody tr td a,
 html[data-theme="dark"] table.api-reference-table tbody tr td a:link,
 html[data-theme="dark"] table.api-reference-table tbody tr td a:visited,
 html[data-theme="dark"] table.api-reference-table tbody tr td a:hover,
-html[data-theme="dark"] table.api-reference-table tbody tr td a:active {
-    color: #ffffff !important;
+html[data-theme="dark"] table.api-reference-table tbody tr td a:active,
+html[data-theme="dark"] table.api-reference-table tbody tr td a *,
+html[data-theme="dark"] table.api-reference-table tbody tr td a:link *,
+html[data-theme="dark"] table.api-reference-table tbody tr td a:visited *,
+html[data-theme="dark"] table.api-reference-table tbody tr td a:hover *,
+html[data-theme="dark"] table.api-reference-table tbody tr td a:active * {
+    color: #0969da !important;
 }
 
 table.api-reference-table tbody tr td a code,
 table.api-reference-table tbody tr td a code *,
+table.api-reference-table tbody tr td a span,
+table.api-reference-table tbody tr td a .std,
+table.api-reference-table tbody tr td a .std-doc,
+table.api-reference-table tbody tr td a .xref,
+table.api-reference-table tbody tr td a .pre,
 table.api-reference-table tbody tr td:not(:first-child) a code,
 table.api-reference-table tbody tr td:not(:first-child) a code * {
     color: inherit !important;
@@ -1042,6 +1110,43 @@ html[data-theme="dark"] table.api-reference-table tbody tr td:not(:first-child) 
     border-radius: 0 !important;
 }
 
+/* Functions-table signature cell: the row is rendered as
+ *   `<a><code>cv::name</code></a> <code>(<a>Type</a> arg, …)</code>`
+ * The unanchored `<code>` wrapping the parameter list (and any `<code>`
+ * around inline tokens) picks up the default code-chip background +
+ * border via the global `code` rule, which renders as a "grey box"
+ * around the clickables. Strip the chip styling AND the 500 weight
+ * that makes the link text read as bold — clickables here should be
+ * plain blue text, not boxed-and-bold. Applies to both the cell
+ * `<code>` and any inner `<span class="pre">` Sphinx wraps long
+ * tokens in. */
+table.api-function-table tbody tr td code,
+table.api-function-table tbody tr td code *,
+table.api-function-table tbody tr td a,
+table.api-function-table tbody tr td a code,
+table.api-function-table tbody tr td a code * {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    font-weight: normal !important;
+    font-size: inherit !important;
+}
+html[data-theme="dark"] table.api-function-table tbody tr td code,
+html[data-theme="dark"] table.api-function-table tbody tr td code *,
+html[data-theme="dark"] table.api-function-table tbody tr td a code,
+html[data-theme="dark"] table.api-function-table tbody tr td a code * {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+/* Functions summary cards: the signature is split one parameter per line, each
+   line its own <code> span joined by <br>, with a padded type column built from
+   spaces (à la `_signature_lines`). Inline <code> collapses runs of spaces,
+   which would wreck that alignment — preserve them and keep wrapping for long
+   lists, so the card signature reads like the detail-block declaration. */
 table.api-function-table tbody tr td:not(:first-child) a code,
 table.api-function-table tbody tr td:not(:first-child) code {
     white-space: pre-wrap;
@@ -1198,12 +1303,15 @@ table.api-typedef-table tbody tr td:nth-child(2) {
     text-align: left  !important;
 }
 
-html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(2),
 html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(2) a,
 html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(2) a:link,
 html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(2) a:visited,
-html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(2) a:hover {
-    color: #ffffff !important;
+html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(2) a:hover,
+html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(2) a *,
+html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(2) a:link *,
+html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(2) a:visited *,
+html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(2) a:hover * {
+    color: #0969da !important;
 }
 
 table.api-typedef-table tbody tr td:nth-child(2) a,
@@ -1271,8 +1379,8 @@ a.opencv-class-more:hover {
     color: #0550ae;
     text-decoration: underline;
 }
-html[data-theme="dark"] a.opencv-class-more { color: #539bf5; }
-html[data-theme="dark"] a.opencv-class-more:hover { color: #6cb6ff; }
+html[data-theme="dark"] a.opencv-class-more { color: #0969da; }
+html[data-theme="dark"] a.opencv-class-more:hover { color: #0969da; }
 
 .opencv-class-files { margin-top: 1.75rem; }
 .opencv-class-files > h2 { display: none; }
@@ -1508,3 +1616,70 @@ a.SRScope {
     color: var(--pst-color-text-muted) !important;
 }
 .SRPage .SRStatus { color: var(--pst-color-text-muted); padding: 8px 16px; }
+
+/* ============================================================
+ * GLOBAL DARK-MODE CLICKABLE-BLUE OVERRIDE
+ * ------------------------------------------------------------
+ * One rule to keep every clickable a consistent blue in dark
+ * mode. Light mode already paints links `#0969da`; pst-sphinx
+ * repaints them lighter (or grey, or visited-purple) in dark
+ * mode through dozens of class-specific rules. Rather than
+ * chase each one, this final block forces every `<a>` (and
+ * every descendant of `<a>`) inside `html[data-theme="dark"]`
+ * back to the same `#0969da` link blue used in light mode —
+ * body content, sidebar, TOC, tables, code chips, code-block
+ * tokens, See-Also lines, breadcrumbs, footers. Visited /
+ * hover / active / focused all collapse to the same hex per
+ * the "no hover-blue, everything at rest" rule.
+ *
+ * Specificity: `html[data-theme="dark"] a` is (0,0,1,2); the
+ * `* { color: unset }` rule earlier in the file is (0,0,1,2)
+ * too but ours runs LATER and uses `!important`, so it wins.
+ * ============================================================ */
+html[data-theme="dark"] a,
+html[data-theme="dark"] a:link,
+html[data-theme="dark"] a:visited,
+html[data-theme="dark"] a:focus,
+html[data-theme="dark"] a *,
+html[data-theme="dark"] a:link *,
+html[data-theme="dark"] a:visited *,
+html[data-theme="dark"] a:focus * {
+    color: #0969da !important;
+}
+html[data-theme="dark"] a:hover,
+html[data-theme="dark"] a:hover *,
+html[data-theme="dark"] a:active,
+html[data-theme="dark"] a:active * {
+    color: #0969da !important;
+}
+
+/* Pygments-tokens-inside-link override.
+ * The dark-mode Pygments rule `html[data-theme="dark"] .highlight .n
+ * { color:#cdd9e5 !important }` (3-class specificity) was beating the
+ * global `html[data-theme="dark"] a *` rule above (1-class) when a
+ * Pygments identifier span (`.n`, `.nc`, `.nf`, `.na`, `.nb`, `.nv`,
+ * `.nn`, `.pre`) sat inside an `<a>` — so enum-synopsis entries like
+ * `cv::NORM_INF` rendered the same grey as plain identifiers. Adding
+ * `.highlight` to the selector raises specificity to (0,0,3,2),
+ * enough to win on every token class Pygments uses for names. */
+html[data-theme="dark"] .highlight a,
+html[data-theme="dark"] .highlight a *,
+html[data-theme="dark"] .highlight a .n,
+html[data-theme="dark"] .highlight a .na,
+html[data-theme="dark"] .highlight a .nb,
+html[data-theme="dark"] .highlight a .nc,
+html[data-theme="dark"] .highlight a .nf,
+html[data-theme="dark"] .highlight a .nv,
+html[data-theme="dark"] .highlight a .nn,
+html[data-theme="dark"] .highlight a .pre,
+html[data-theme="dark"] .highlight a .o,
+html[data-theme="dark"] .highlight a .p {
+    color: #0969da !important;
+}
+html[data-theme="dark"] .highlight a:hover,
+html[data-theme="dark"] .highlight a:hover *,
+html[data-theme="dark"] .highlight a:hover .n,
+html[data-theme="dark"] .highlight a:hover .nc,
+html[data-theme="dark"] .highlight a:hover .nf {
+    color: #0969da !important;
+}

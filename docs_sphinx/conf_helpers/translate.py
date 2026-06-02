@@ -357,7 +357,61 @@ def _translate(text: str, docname: str | None = None) -> str:
         r"@link\s+(?P<target>[\w-]+)(?P<disp>.*?)@endlink",
         _link_repl, text, flags=re.DOTALL)
 
-    if docname and (docname.startswith("main_modules/") or docname.startswith("extra_modules/")):
+    # API stub rewrites — extended from `api/core_basic` to every `api/`
+    # page so the Functions/Typedefs detail blocks on `core_array`,
+    # `core_utils`, `core_cluster`, … get the same per-token token
+    # linkifier (step 8g) that turns `InputArray`, `OutputArray`,
+    # `Mat`, `_Tp`, etc. inside the signature codespans into individual
+    # `<a>` anchors. The pre-existing regex-driven steps (8a, 8b, 8e,
+    # 8i, 8j and the Vec-rows / cv::Ptr rewrites) are no-ops on pages
+    # whose markdown doesn't match their patterns, so widening the gate
+    # is safe.
+    if docname and (docname.startswith("api/")
+                    or docname.startswith("main_modules/")
+                    or docname.startswith("extra_modules/")):
+        # Idempotency guard: the stub generator now emits the
+        # "Shorter aliases for the most popular specializations of
+        # Vec<T,n>" section itself (via the `@name` named-group path
+        # in `_summary_block`), so the source MD already contains
+        # both the heading and the Vec rows. The legacy rewrite
+        # below also extracts the rows and injects a fresh section
+        # before "## Typedef Documentation" — without this guard the
+        # heading renders TWICE, the first instance an empty table.
+        # Skip the rewrite when the source MD already has the
+        # heading.
+        if "## Shorter aliases for the most popular specializations of Vec<T,n>" not in text:
+            _vec_rows_re = re.compile(
+                r"(?:^\| `Vec<[^`]*` \| [^\n]*\n)+", re.MULTILINE)
+            _vm = _vec_rows_re.search(text)
+            if _vm:
+                _vec_rows = _vm.group(0)
+                text = text[:_vm.start()] + text[_vm.end():]
+                _shorter = (
+                    "## Shorter aliases for the most popular specializations of "
+                    "Vec<T,n>\n\n"
+                    # Carry the `.api-typedef-table` class so the section
+                    # inherits the same table styling (and the light-mode
+                    # blue Type-cell anchor rule) as the main Typedefs table
+                    # above.
+                    "{.api-typedef-table}\n"
+                    "| Type | Name | Description |\n"
+                    "|---|---|---|\n"
+                    + _vec_rows + "\n")
+                text = text.replace(
+                    "## Typedef Documentation",
+                    _shorter + "## Typedef Documentation",
+                    1)
+
+        # 8c. `{doxygentypedef} cv::Ptr` -> hand-rolled cpp:type (breathe skips C++11 aliases).
+        text = re.sub(
+            r"```\{doxygentypedef\} cv::Ptr\s*\n:project: opencv\s*\n```",
+            "```{eval-rst}\n"
+            ".. cpp:namespace:: cv\n"
+            ".. cpp:type:: template<typename _Tp> Ptr = std::shared_ptr<_Tp>\n"
+            "```",
+            text)
+
+        # 8e. Classes table rows: append template params + "View details" link.
         def _rewrite_class_row(m: re.Match) -> str:
             kind = m.group("kind")
             name = m.group("name")       # 'cv::dnn::BackendNode'
@@ -486,13 +540,31 @@ def _translate(text: str, docname: str | None = None) -> str:
                 r'(?P<inner>.*?)(?P<close></code>)',
                 _linkify_inside_code, text, flags=re.DOTALL)
 
-            def _linkify_markdown_codespan(m: re.Match) -> str:
-                content = m.group("content")
-                # Prefix-aware: `cv::Name` is one hit so the anchor covers both.
-                hits = [(t.start(), t.end(), t.group(0)) for t in
-                        _tok_re.finditer(content)
-                        if _token_url(_bare(t.group(0)))]
-                if not hits:
+    # 8g. Linkify recognized type tokens in code spans across every API
+    # page (Functions summary + Function Documentation detail blocks).
+    # Was previously gated to `main_modules/core_basic` only — that
+    # left parameter types in other module pages (calib, dnn, …) as
+    # plain code chips even though their local typedef/class targets
+    # exist. Pass 1 walks any existing `<code>` HTML left by step 8b;
+    # pass 2 walks remaining markdown code spans.
+    if (docname and (docname.startswith("api/")
+                     or docname.startswith("main_modules/")
+                     or docname.startswith("extra_modules/"))
+            and (_LOCAL_CLASS_URL or _LOCAL_TYPEDEF_URL)):
+        def _token_url(tok: str) -> str | None:
+            # Tokens absent from the tagfile stay plain.
+            return _LOCAL_CLASS_URL.get(tok) or _LOCAL_TYPEDEF_URL.get(tok)
+        # Match an optional `cv::` prefix so the anchor spans `cv::Name`.
+        _tok_re = re.compile(r"(?:cv::)?_?[A-Za-z][A-Za-z0-9_]*")
+        def _bare(tok: str) -> str:
+            return tok[4:] if tok.startswith("cv::") else tok
+        def _anchor_text(tok: str) -> str:
+            # Encode `::` so the later cv-linkifier doesn't nest a second anchor.
+            return tok.replace("::", "&#58;&#58;")
+        def _linkify_html_segment(seg: str) -> str:
+            def _sub(m: re.Match) -> str:
+                url = _token_url(_bare(m.group(0)))
+                if not url:
                     return m.group(0)
                 from html import escape as _esc
                 parts, last = [], 0

@@ -350,27 +350,232 @@ def _doxygen_desc_to_md(el, h_level: int = 3) -> str:
                 parts.append(child.tail)
         return "".join(parts)
 
+    # Doxygen <highlight class="…"> → Pygments token class, so the
+    # rendered <pre> picks up the existing `.highlight pre .k/.n/.kt/.s/.c`
+    # CSS styling and our `code > a { color: inherit }` rule won't dim the
+    # link colour.
+    _HL_PYG_CLASS = {
+        "keyword": "k", "keywordtype": "kt", "keywordflow": "k",
+        "preprocessor": "cp", "comment": "c", "comment-multiline": "cm",
+        "stringliteral": "s", "charliteral": "sc",
+    }
+    # Identifier-only token regex; used to linkify `InputArray`,
+    # `OutputArray`, `Mat`, `Scalar`, `DFT_INVERSE`, … left as plain
+    # text by Doxygen (no `<ref>` on them).
+    _IDENT_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+    # `#include "opencv2/…"` / `#include <opencv2/…>` regex. Doxygen
+    # wraps the WHOLE include directive (keyword + quoted/angled path)
+    # in one `<highlight class="preprocessor">` span — no separate
+    # token for the path — so the per-identifier linkifier above can't
+    # see the path. Match the include line and wrap just the path in
+    # an `<a>` to its local Doxygen file page (`_FILE_URL`).
+    _INCLUDE_PATH_RE = re.compile(
+        r'(#include\s*)(["<])([A-Za-z0-9_./+\-]+\.[A-Za-z0-9]+)([">])'
+    )
+
     def _programlisting(node) -> str:
-        lines = []
-        for codeline in node.findall("codeline"):
-            lines.append("".join(_hl_text(hl) for hl in codeline.findall("highlight")))
-        return "```cpp\n" + "\n".join(lines) + "\n```"
+        """Emit `<programlisting>` as a raw HTML `<pre>` block with
+        per-token `<a>` anchors. The user's spec: code listings must
+        be CLICKABLE — every recognised identifier (class/typedef/enum
+        member or `<ref>`-marked token) becomes a link to its local
+        Sphinx target. Falls back to plain text for unknown tokens, so
+        keywords/numbers/operators stay un-linked but still picked up
+        by the Pygments-style span classes for colouring."""
+        from html import escape as _esc
+        out = ['<div class="highlight-cpp notranslate"><div class="highlight"><pre>']
+
+        def _linkify_plain(text: str) -> str:
+            """Wrap identifier runs that resolve via `_local_url`
+            with an `<a>`; everything else stays HTML-escaped text."""
+            parts: list[str] = []
+            last = 0
+            for m in _IDENT_RE.finditer(text):
+                if m.start() > last:
+                    parts.append(_esc(text[last:m.start()]))
+                tok = m.group(0)
+                url = _LOCAL_CLASS_URL.get(tok) or _LOCAL_TYPEDEF_URL.get(tok)
+                if url:
+                    parts.append(
+                        f'<a class="reference internal" href="{url}">'
+                        f'<span class="n">{_esc(tok)}</span></a>')
+                else:
+                    parts.append(_esc(tok))
+                last = m.end()
+            parts.append(_esc(text[last:]))
+            return "".join(parts)
+
+        def _linkify_include_path(escaped: str) -> str:
+            """Find `#include "opencv2/…"` patterns in already-escaped
+            text and wrap the path in an `<a>` to its Doxygen file
+            page. Operates on POST-escape text (where `"` is `&quot;`
+            and `<>` are `&lt;`/`&gt;`)."""
+            def _sub(m: re.Match) -> str:
+                kw, openq, path, closeq = m.groups()
+                file_url = _FILE_URL.get(path)
+                if not file_url:
+                    return m.group(0)
+                href = f"../../../doc/doxygen/html/{file_url}"
+                return (f'{kw}{openq}'
+                        f'<a class="reference external opencv-include-link" '
+                        f'href="{href}">{path}</a>{closeq}')
+            # The escape map converts `"` → `&quot;`, `<` → `&lt;`,
+            # `>` → `&gt;`; rewrite the regex once for that form.
+            def _re_escaped() -> "re.Pattern":
+                return re.compile(
+                    r'(#include\s*)(&quot;|&lt;)'
+                    r'([A-Za-z0-9_./+\-]+\.[A-Za-z0-9]+)'
+                    r'(&quot;|&gt;)'
+                )
+            return _re_escaped().sub(_sub, escaped)
+
+        def _emit_highlight(hl) -> str:
+            """One `<highlight class="…">` → optionally-wrapped span
+            sequence preserving inline `<ref>` link targets."""
+            klass = _HL_PYG_CLASS.get(hl.get("class", ""), "")
+            segs: list[str] = []
+            if hl.text:
+                segs.append(_linkify_plain(hl.text))
+            for child in hl:
+                if child.tag == "sp":
+                    segs.append(" ")
+                elif child.tag == "ref":
+                    inner = "".join(child.itertext())
+                    url = _local_url(child.get("refid", ""), inner)
+                    if url:
+                        segs.append(
+                            f'<a class="reference internal" href="{url}">'
+                            f'<span class="n">{_esc(inner)}</span></a>')
+                    else:
+                        segs.append(_linkify_plain(inner))
+                else:
+                    segs.append(_linkify_plain("".join(child.itertext())))
+                if child.tail:
+                    segs.append(_linkify_plain(child.tail))
+            body = "".join(segs)
+            # Preprocessor lines: linkify any `#include "path"` AFTER
+            # the per-identifier pass (Doxygen lumps the whole include
+            # directive into one `class="preprocessor"` span, so the
+            # path can only be found at the assembled-body level).
+            if klass == "cp":
+                body = _linkify_include_path(body)
+            # Wrap in a Pygments-style `<span class="X">` only for token
+            # kinds whose colouring would otherwise be lost. The "normal"
+            # highlight class is the un-coloured default — emit without
+            # the outer span so embedded `<a>` link colours win.
+            if klass and body:
+                return f'<span class="{klass}">{body}</span>'
+            return body
+
+        codelines = node.findall("codeline")
+        for i, cl in enumerate(codelines):
+            parts = [_emit_highlight(hl) for hl in cl.findall("highlight")]
+            line = "".join(parts)
+            # Empty codeline → emit `<span></span>` placeholder so the
+            # blank line doesn't terminate the surrounding raw-HTML
+            # block under CommonMark rule 7.
+            out.append(line if line else "<span></span>")
+        out.append('</pre></div></div>')
+        # Wrap the whole thing in a `\n` so MyST parses it as a raw
+        # HTML block (CommonMark type 6) — the leading line is `<div…>`
+        # which qualifies. Trailing blank line ends the block.
+        return "\n".join(out) + "\n"
 
     def _ref_link(refid: str, text: str) -> str:
-        if not (refid and text):
-            return f"`{text}`" if text else ""
-        # Link into the local Sphinx api tree (main_modules/ or extra_modules/),
-        # never docs.opencv.org. Functions / class members carry a `(refid)=`
-        # global MyST label on their detail block, so `[text](#refid)` resolves
-        # cross-page and cross-dir (same form the Functions summary uses). Enum
-        # values (anchor prefix "gg") and compound pages have no such label, so
-        # link the page docname (sibling), mapped to the local page name.
-        m = re.search(r'_1([a-z]{1,3})[0-9a-f]{20,}$', refid)
-        if m and not m.group(1).startswith("gg"):
-            return f"[`{text}`](#{refid})"
-        stem = _doxy_page_to_local((refid[:m.start()] if m else refid) + ".html")[:-5]
-        return f"[`{text}`]({stem}.md)"
+        """Inline `<ref>` → blue link to a LOCAL Sphinx target.
+        The user's spec for cross-references: "blue text, no grey
+        chip, redirect to local pages, no off-site bounce". So:
+          - LOCAL URLs only via `_local_url(refid, text)`; when no
+            local target exists we drop the link (return plain text)
+            instead of routing the reader to docs.opencv.org.
+          - emitted as RAW HTML (`<a class="reference internal" …>`)
+            rather than markdown `[text](url)`. Markdown link syntax
+            in MyST/Sphinx with a `#fragment` URL is interpreted as a
+            pending domain xref — when the fragment doesn't match a
+            registered domain target the result is `<span class="xref
+            myst">text</span>` (unresolved) plus a `#` prefix on the
+            already-`#` href. Raw HTML bypasses the xref resolver so
+            the anchor stays a plain in-page link.
+          - no backticks → no `<code>` grey chip and no 500-weight
+            on the text.
+        """
+        if not text:
+            return ""
+        url = _local_url(refid, text) if refid else None
+        if not url:
+            return text
+        from html import escape as _esc_rl
+        return (f'<a class="reference internal" href="{url}">'
+                f'{_esc_rl(text)}</a>')
 
+    def _local_url(refid: str, name: str) -> str | None:
+        """Resolve a Doxygen `<ref>` to a Sphinx-local URL.
+        Layered lookup:
+          1. Class/struct short-name → curated map (`Mat`, `InputArray`,…)
+             from `_LOCAL_CLASS_URL`/`_LOCAL_TYPEDEF_URL`.
+          2. Class/struct member refid (`classcv_1_1Mat_1a<hex>`) →
+             class page + slugified member anchor.
+          3. Group-anchored function refid (`group__core__array_1ga<hex>`)
+             → same-page slugified anchor (the function's detail block
+             emits `({refid})=` which MyST turns into `<span id="…">`).
+          4. Bare class/struct compound refid → class page.
+        Returns None when nothing matches — caller renders plain text."""
+        if not refid:
+            return None
+        # Try both the full name and its short form (after the last
+        # `::`). The typedef/class maps key on the short name only
+        # (e.g. `InputArray`, not `cv::InputArray`), so a `<ref>` whose
+        # text says `cv::InputArray` would otherwise miss this lookup
+        # and fall through to the function-slug branch below — minting
+        # a non-existent `#cv-inputarray` anchor instead of the real
+        # typedef target `core_basic.html#inputarray`.
+        short_name = name.rsplit("::", 1)[-1] if name else ""
+        direct = (_LOCAL_CLASS_URL.get(name) or _LOCAL_TYPEDEF_URL.get(name)
+                  or _LOCAL_CLASS_URL.get(short_name)
+                  or _LOCAL_TYPEDEF_URL.get(short_name))
+        if direct:
+            return direct
+        # Class-member refid (long hex suffix).
+        cm = re.match(
+            r"^((?:class|struct)cv_1_1[A-Za-z0-9_]+?)_1"
+            r"([a-z]{1,3}[0-9a-f]{20,})$", refid)
+        if cm:
+            page = cm.group(1)
+            slug = re.sub(r"_+", "-", refid)
+            return f"{page}.html#{slug}"
+        # Group-anchored member on the current group page.
+        #
+        # Doxygen uses two refid suffixes for group members:
+        #   * `_1ga<hex>`  — function in a group → anchor is the
+        #                    `_func_slug(name)` (cv-name) emitted by
+        #                    `_render_core_basic_func`.
+        #   * `_1gga<hex>` — enum VALUE in a group → anchor is the
+        #                    C++ v4 id (`_CPPv4N…E`) emitted by the
+        #                    per-value `<span id>` in the enum
+        #                    detail table. The enum-type's parent
+        #                    name is captured via `_CV_SYMBOL_URL`
+        #                    elsewhere; here we use the value name
+        #                    + the parent enum name when available
+        #                    to mint the same id.
+        m = re.search(r"_1(gga|ga)([0-9a-f]+)$", refid)
+        if m:
+            kind = m.group(1)
+            if kind == "ga":  # function
+                short = (name.rsplit("::", 1)[-1] if name else "")
+                short = short.split("(", 1)[0].strip()
+                if short:
+                    return f"#{_func_slug(short)}"
+            # Enum-value `gga` — let it fall through; the value's
+            # per-row `<span id="_CPPv4…">` anchor is on the page only
+            # if the enum's detail block was emitted, but we don't
+            # have the enum type from the refid alone. The
+            # `_LOCAL_CLASS_URL`/`_LOCAL_TYPEDEF_URL` lookup above
+            # already covered the enum TYPE name; for values, leave
+            # the link out and the caller renders plain text.
+            return None
+        # Bare class/struct compound page.
+        if refid.startswith(("classcv_1_1", "structcv_1_1")):
+            return f"{refid}.html"
+        return None
     _formula_md = _render_formula
 
     _BLOCK_TAGS = {"orderedlist", "itemizedlist", "programlisting", "simplesect",
