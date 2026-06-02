@@ -77,14 +77,10 @@ if(OPENCV_WORKAROUND_CMAKE_20989)
   set(CMAKE_SYSTEM_PROCESSOR ${CMAKE_SYSTEM_PROCESSOR_BACKUP})
 endif()
 
-# Enable generic ASM at top-level scope: enable_language(ASM) from a subdir fails
-# (CMAKE_ASM_COMPILE_OBJECT unset) once ASM_NASM is enabled. Skip on Android (NDK).
-if(NOT ANDROID AND NOT CMAKE_SYSTEM_NAME STREQUAL "Android")
-  include(CheckLanguage)
-  check_language(ASM)
-  if(CMAKE_ASM_COMPILER)
-    enable_language(ASM)
-  endif()
+include(CheckLanguage)
+check_language(ASM)
+if(CMAKE_ASM_COMPILER)
+  enable_language(ASM)
 endif()
 
 enable_testing()

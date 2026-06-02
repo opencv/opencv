@@ -83,15 +83,7 @@ set(_MLAS_REQUIRES_ASM FALSE)
 if(MLAS_X86_64 OR MLAS_X86 OR MLAS_ARM64 OR MLAS_LOONGARCH64)
   set(_MLAS_REQUIRES_ASM TRUE)
 endif()
-if(ANDROID AND _MLAS_REQUIRES_ASM)
-  set(OPENCV_DNN_MLAS_SKIP_REASON
-    "skipped on Android ${CMAKE_ANDROID_ARCH_ABI}; enable_language(ASM) from subdir is unreliable"
-    CACHE INTERNAL "" FORCE)
-  message(STATUS "MLAS: skipping on Android ${CMAKE_ANDROID_ARCH_ABI} "
-                 "(enable_language(ASM) from subdir is unreliable here); "
-                 "DNN will use its built-in SGEMM")
-  return()
-endif()
+
 include(CheckLanguage)
 set(MLAS_HAS_ASM FALSE CACHE INTERNAL "" FORCE)
 check_language(ASM)
