@@ -365,8 +365,14 @@ def _write_namespace_stub(ns: dict, out_dir: pathlib.Path,
         elif section_title in ("Typedefs", "Variables"):
             for m in items:
                 lines.append("```cpp")
-                lines.append(f"typedef {m['type']} {m['name']}" if section_title == "Typedefs"
-                              else f"{m['type']} {m['name']}")
+                if section_title == "Typedefs":
+                    # Append <argsstring> so function-pointer typedefs (the name
+                    # lives inside the "void(*" type) don't truncate; empty for
+                    # plain typedefs.
+                    _args = (m.get("args") or "").strip()
+                    lines.append(f"typedef {m['type']} {m['name']}{_args}")
+                else:
+                    lines.append(f"{m['type']} {m['name']}")
                 lines.append("```")
                 lines.append("")
             continue
@@ -541,7 +547,22 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
             for m in members:
                 t = _md_escape_cell(m["type"])
                 t_cell = f"`{t}`" if t else "\u00a0"
-                name_link = _member_anchor_link(m, f"cv::{m['name']}")
+                # Function-pointer typedefs (e.g. cv::dnn::ActivationFunc) store
+                # the name inside the type ("void(*") with the params in
+                # <argsstring> (")(const void *...)"). Split the type: keep only
+                # the return type ("void") in the Type column and move the
+                # "(*<qualified>)(args)" declarator into the Name column, so the
+                # row reads naturally as "void | (*cv::dnn::ActivationFunc)(...)"
+                # rather than the disjoint "void(*" / "cv::ActivationFunc)(...)".
+                # Plain typedefs have no argsstring, so they keep "cv::<name>".
+                fp_args = (m.get("args") or "").strip()
+                if fp_args and "(" in (m.get("type") or ""):
+                    ret, _sep, rest = (m.get("type") or "").strip().partition("(")
+                    t_cell = f"`{_md_escape_cell(ret.strip())}`" if ret.strip() else "\u00a0"
+                    label = "(" + rest + (m.get("qualified") or f"cv::{m['name']}") + fp_args
+                else:
+                    label = f"cv::{m['name']}"
+                name_link = _member_anchor_link(m, label.replace("|", "\\|"))
                 out.append(f"| {t_cell} | {name_link} | {_md_escape_cell(m['brief'])} |")
         elif section_title == "Variables":
             out += ["{.api-reference-table}",
@@ -872,7 +893,13 @@ def _render_member_detail(m: dict, full_name: str) -> list[str]:
         params = f"({', '.join(mp)})" if mp else ""
         sig_lines = [f"#define {short}{params}"]
     elif kind == "typedef":
-        sig_lines = [f"typedef {typ} {full_name}".strip()]
+        # Function-pointer typedefs (e.g. cv::dnn::ActivationFunc) are split by
+        # Doxygen across <type>/<name>/<argsstring>: type="void(*", the name sits
+        # in the middle, and argsstring=")(const void *input, …)". Append the
+        # args or the decl truncates to "typedef void(* cv::dnn::ActivationFunc".
+        # Plain typedefs carry an empty argsstring, so this is a no-op for them.
+        args = (m.get("args") or "").strip()
+        sig_lines = [f"typedef {typ} {full_name}{args}".strip()]
     else:  # variable / attribute — append the `= value` initializer if present.
         decl = f"{prefix}{typ + ' ' if typ else ''}{full_name}".strip()
         init = (m.get("initializer") or "").strip()
