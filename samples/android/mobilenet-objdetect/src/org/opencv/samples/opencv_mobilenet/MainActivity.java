@@ -54,15 +54,19 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
         }
 
         //! [init_model_from_memory]
-        // Load a single-file MobileNet-SSD ONNX model (res/raw/mobilenet.onnx).
-        mModelBuffer = loadFileFromResource(R.raw.mobilenet);
-        if (mModelBuffer == null) {
-            Log.e(TAG, "Failed to load model from resources");
-        } else
-            Log.i(TAG, "Model file loaded successfully");
+        // Load a single-file MobileNet-SSD ONNX model from res/raw/mobilenet.onnx.
+        // The resource is resolved by name at runtime so the sample still builds when the
+        // (optionally downloaded) model is absent; object detection is simply disabled then.
+        int modelResId = getResources().getIdentifier("mobilenet", "raw", getPackageName());
+        if (modelResId != 0)
+            mModelBuffer = loadFileFromResource(modelResId);
 
-        net = Dnn.readNetFromONNX(mModelBuffer);
-        Log.i(TAG, "Network loaded successfully");
+        if (mModelBuffer == null) {
+            Log.e(TAG, "MobileNet ONNX model (res/raw/mobilenet.onnx) not found - object detection disabled");
+        } else {
+            net = Dnn.readNetFromONNX(mModelBuffer);
+            Log.i(TAG, "Network loaded successfully");
+        }
         //! [init_model_from_memory]
 
         setContentView(R.layout.activity_main);
@@ -91,7 +95,8 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
         if (mOpenCvCameraView != null)
             mOpenCvCameraView.disableView();
 
-        mModelBuffer.release();
+        if (mModelBuffer != null)
+            mModelBuffer.release();
     }
 
     // Load a network.
@@ -106,7 +111,10 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
         final double MEAN_VAL = 127.5;
         final double THRESHOLD = 0.2;
 
-        // Get a new frame
+        if (net == null) {
+            return inputFrame.rgba();
+        }
+
         Log.d(TAG, "handle new frame!");
         Mat frame = inputFrame.rgba();
         Imgproc.cvtColor(frame, frame, Imgproc.COLOR_RGBA2RGB);
