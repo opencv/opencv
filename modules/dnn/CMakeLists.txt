@@ -110,6 +110,17 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS
 set(include_dirs "")
 set(libs "")
 
+if(HAVE_IPP)
+  # Define IPP_HAL_DNN to enable IPP HAL optimizations in dnn_ipp.cpp
+  ocv_target_compile_definitions(${the_module} PRIVATE "IPP_HAL_DNN=1")
+
+  # IPP HAL headers are needed for DNN IPP implementation
+  list(APPEND include_dirs ${IPP_HAL_INCLUDE_DIRS})
+
+  # Link the IPP HAL library
+  list(APPEND libs ${IPP_HAL_LIBRARIES})
+endif()
+
 if(HAVE_PROTOBUF)
   ocv_target_compile_definitions(${the_module} PRIVATE "HAVE_PROTOBUF=1")
 

@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "precomp.hpp"
+#include "ipp/dnn_ipp.hpp"
 
 #include <opencv2/imgproc.hpp>
 #include <opencv2/core/utils/logger.hpp>
@@ -259,11 +260,21 @@ void blobFromImagesWithParamsImpl(InputArrayOfArrays images_, Tmat& blob_, const
     Scalar scalefactor = param.scalefactor;
     Scalar mean = param.mean;
 
+    Size targetSize = size;
+    if (targetSize == Size())
+        targetSize = images[0].size();
+
+    if (param.datalayout == DNN_LAYOUT_NCHW || param.datalayout == DNN_LAYOUT_NHWC)
+    {
+        // Try fast HAL optimization if exists for the given data layout and input type
+        if (blobFromImages_HAL(images, blob_, param, targetSize))
+            return;
+    }
+
+    size = targetSize;
     for (size_t i = 0; i < images.size(); i++)
     {
         Size imgSize = images[i].size();
-        if (size == Size())
-            size = imgSize;
         if (size != imgSize)
         {
             if (param.paddingmode == DNN_PMODE_CROP_CENTER)

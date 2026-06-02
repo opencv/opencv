@@ -5,6 +5,7 @@
 #ifndef __PRECOMP_IPP_HPP__
 #define __PRECOMP_IPP_HPP__
 
+#include "ipp_utils.hpp"
 #include <opencv2/imgproc.hpp>
 
 #ifdef HAVE_IPP_IW
