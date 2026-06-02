@@ -5,68 +5,82 @@
 // Third party copyrights are property of their respective owners.
 
 #include "test_precomp.hpp"
+#include "npy_blob.hpp"
 
 #ifdef HAVE_OPENCV_DNN
 
 namespace opencv_test { namespace {
 
-static std::string findDiskModelOrSkip()
-{
-    try
-    {
-        return cvtest::findDataFile("dnn/disk.onnx", false);
-    }
-    catch (const cv::Exception&)
-    {
-        throw SkipTestException("DISK ONNX model not found in test data");
-    }
-}
-
-TEST(Features2d_DISK, Regression)
+static void testDiskRegression(const Size& imageSize, const std::string& tag)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_2GB);
 
-    const std::string modelPath = findDiskModelOrSkip();
+    // Reference keypoints are stored as N x 3 rows of (x, y, response), kept as the N strongest
+    // detections (sorted by descending response); descriptors as the matching N x 128.
+    Mat refKpts = blobFromNPY(cvtest::findDataFile("features/disk/box_in_scene_" + tag + "_kpts.npy"));
+    Mat refDesc = blobFromNPY(cvtest::findDataFile("features/disk/box_in_scene_" + tag + "_desc.npy"));
+    if (refKpts.type() != CV_32F)
+        refKpts.convertTo(refKpts, CV_32F);
+    ASSERT_EQ(refKpts.cols, 3);
+    const int n = refKpts.rows;
 
+    const std::string modelPath = cvtest::findDataFile("dnn/disk.onnx", false);
+
+    // Cap detection to the same number of strongest keypoints the reference was generated with.
     Ptr<DISK> detector;
-    ASSERT_NO_THROW(detector = DISK::create(modelPath));
+    ASSERT_NO_THROW(detector = DISK::create(modelPath, n, 0.0f, imageSize));
     ASSERT_TRUE(detector);
     EXPECT_FALSE(detector->empty());
     EXPECT_EQ(detector->descriptorSize(), 128);
     EXPECT_EQ(detector->descriptorType(), CV_32F);
     EXPECT_EQ(detector->defaultNorm(),    NORM_L2);
-    EXPECT_EQ(detector->getMaxKeypoints(), -1);
-    EXPECT_FLOAT_EQ(detector->getScoreThreshold(), 0.0f);
-    EXPECT_EQ(detector->getImageSize(), Size());
 
-    const std::string imgPath = cvtest::findDataFile("shared/lena.png");
-    Mat img = imread(imgPath);
-    ASSERT_FALSE(img.empty()) << "Could not load test image: " << imgPath;
+    Mat img = imread(samples::findFile("box_in_scene.png"));
+    ASSERT_FALSE(img.empty());
 
     std::vector<KeyPoint> keypoints;
     Mat descriptors;
     detector->detectAndCompute(img, noArray(), keypoints, descriptors);
 
-    EXPECT_GT(keypoints.size(), 100u);
-    ASSERT_EQ(descriptors.rows, static_cast<int>(keypoints.size()));
-    EXPECT_EQ(descriptors.cols, 128);
-    EXPECT_EQ(descriptors.type(), CV_32F);
+    ASSERT_EQ(static_cast<int>(keypoints.size()), n) << "keypoint count mismatch (" << tag << ")";
+    ASSERT_EQ(descriptors.rows, n);
+    ASSERT_EQ(descriptors.cols, refDesc.cols);
+    ASSERT_EQ(descriptors.type(), CV_32F);
 
-    for (const KeyPoint& kp : keypoints)
+    Mat pos(n, 2, CV_32F), resp(n, 1, CV_32F);
+    for (int i = 0; i < n; ++i)
     {
-        EXPECT_GE(kp.pt.x, 0.f);
-        EXPECT_GE(kp.pt.y, 0.f);
-        EXPECT_LT(kp.pt.x, static_cast<float>(img.cols));
-        EXPECT_LT(kp.pt.y, static_cast<float>(img.rows));
-        EXPECT_GT(kp.response, 0.f);
+        pos.at<float>(i, 0) = keypoints[i].pt.x;
+        pos.at<float>(i, 1) = keypoints[i].pt.y;
+        resp.at<float>(i, 0) = keypoints[i].response;
     }
+
+    // Positions are integer network coordinates rescaled to the image, so they reproduce exactly.
+    EXPECT_LE(cvtest::norm(pos, refKpts.colRange(0, 2), NORM_INF), 1e-3)
+        << "keypoint positions differ (" << tag << ")";
+    // Responses and descriptors are raw network floats; allow a small numerical drift. Responses
+    // are O(100) in magnitude here, so the bound is scaled accordingly.
+    EXPECT_LE(cvtest::norm(resp, refKpts.col(2), NORM_INF), 0.1)
+        << "keypoint responses differ (" << tag << ")";
+    EXPECT_LE(cvtest::norm(descriptors, refDesc, NORM_INF), 1e-2)
+        << "descriptors differ (" << tag << ")";
+}
+
+TEST(Features2d_DISK, regression_default)
+{
+    testDiskRegression(Size(), "default");
+}
+
+TEST(Features2d_DISK, regression_512x384)
+{
+    testDiskRegression(Size(512, 384), "512x384");
 }
 
 TEST(Features2d_DISK, MaxKeypointsAndThreshold)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_2GB);
 
-    const std::string modelPath = findDiskModelOrSkip();
+    const std::string modelPath = cvtest::findDataFile("dnn/disk.onnx", false);
 
     Ptr<DISK> detector = DISK::create(modelPath);
     ASSERT_TRUE(detector);
@@ -105,7 +119,7 @@ TEST(Features2d_DISK, MaskSupport)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_2GB);
 
-    const std::string modelPath = findDiskModelOrSkip();
+    const std::string modelPath = cvtest::findDataFile("dnn/disk.onnx", false);
 
     Ptr<DISK> detector = DISK::create(modelPath);
     Mat img = imread(cvtest::findDataFile("shared/lena.png"));
@@ -131,7 +145,7 @@ TEST(Features2d_DISK, MaskSupport)
 
 TEST(Features2d_DISK, InvalidImageSize)
 {
-    const std::string modelPath = findDiskModelOrSkip();
+    const std::string modelPath = cvtest::findDataFile("dnn/disk.onnx", false);
 
     // Sizes that are not positive multiples of 16 must be rejected.
     EXPECT_THROW(DISK::create(modelPath, -1, 0.0f, Size(1000, 1024)), cv::Exception);

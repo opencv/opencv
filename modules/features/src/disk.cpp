@@ -30,15 +30,22 @@ class DISK_Impl CV_FINAL : public DISK
 public:
     DISK_Impl(const String& modelPath, int maxKeypoints, float scoreThreshold,
               const Size& imageSize, int backendId, int targetId)
-        : modelPath_(modelPath),
-          maxKeypoints_(maxKeypoints),
+        : maxKeypoints_(maxKeypoints),
           scoreThreshold_(scoreThreshold),
           imageSize_(imageSize)
     {
         validateImageSize(imageSize_);
-        net_ = readNetFromONNX(modelPath);
-        net_.setPreferableBackend(backendId);
-        net_.setPreferableTarget(targetId);
+        initNet(readNetFromONNX(modelPath), backendId, targetId);
+    }
+
+    DISK_Impl(const std::vector<uchar>& bufferModel, int maxKeypoints, float scoreThreshold,
+              const Size& imageSize, int backendId, int targetId)
+        : maxKeypoints_(maxKeypoints),
+          scoreThreshold_(scoreThreshold),
+          imageSize_(imageSize)
+    {
+        validateImageSize(imageSize_);
+        initNet(readNetFromONNX(bufferModel), backendId, targetId);
     }
 
     void detectAndCompute(InputArray _image, InputArray _mask,
@@ -181,6 +188,13 @@ public:
     String getDefaultName() const CV_OVERRIDE { return Feature2D::getDefaultName() + ".DISK"; }
 
 private:
+    void initNet(const Net& net, int backendId, int targetId)
+    {
+        net_ = net;
+        net_.setPreferableBackend(backendId);
+        net_.setPreferableTarget(targetId);
+    }
+
     static void validateImageSize(const Size& size)
     {
         if (size.width == 0 && size.height == 0)
@@ -190,7 +204,6 @@ private:
         CV_Assert(size.height % kDiskStride == 0);
     }
 
-    String modelPath_;
     int    maxKeypoints_;
     float  scoreThreshold_;
     Size   imageSize_;
@@ -202,6 +215,13 @@ Ptr<DISK> DISK::create(const String& modelPath, int maxKeypoints, float scoreThr
 {
     CV_TRACE_FUNCTION();
     return makePtr<DISK_Impl>(modelPath, maxKeypoints, scoreThreshold, imageSize, backendId, targetId);
+}
+
+Ptr<DISK> DISK::create(const std::vector<uchar>& bufferModel, int maxKeypoints, float scoreThreshold,
+                       const Size& imageSize, int backendId, int targetId)
+{
+    CV_TRACE_FUNCTION();
+    return makePtr<DISK_Impl>(bufferModel, maxKeypoints, scoreThreshold, imageSize, backendId, targetId);
 }
 
 String DISK::getDefaultName() const

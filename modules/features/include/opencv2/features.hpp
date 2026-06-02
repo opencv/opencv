@@ -709,6 +709,30 @@ public:
                                     int backendId = 0,
                                     int targetId = 0);
 
+    /** @brief Creates a DISK detector from an in-memory model buffer.
+
+    This overload loads the DISK ONNX model from a buffer instead of a file on disk. It is
+    intended for cases where the model is read from application resources (for example Android
+    assets) and is not available as a path on the filesystem.
+
+    @param bufferModel A buffer containing the contents of the DISK ONNX model.
+    @param maxKeypoints Maximum number of keypoints to return per image. The strongest
+                        responses (by network score) are kept; -1 keeps all detections.
+    @param scoreThreshold Discard keypoints with network score strictly below this value.
+    @param imageSize Target input size (width, height) fed to the network. Use Size()
+                     (the default) to fall back to the network's expected fixed input
+                     shape of 1024x1024. When overriding, both dimensions must be
+                     positive multiples of 16, since DISK downsamples by a factor of 16.
+    @param backendId DNN backend identifier (see cv::dnn::Backend); 0 = DNN_BACKEND_DEFAULT.
+    @param targetId  DNN target identifier (see cv::dnn::Target);  0 = DNN_TARGET_CPU.
+    */
+    CV_WRAP static Ptr<DISK> create(const std::vector<uchar>& bufferModel,
+                                    int maxKeypoints = -1,
+                                    float scoreThreshold = 0.0f,
+                                    const Size& imageSize = Size(),
+                                    int backendId = 0,
+                                    int targetId = 0);
+
     CV_WRAP virtual void setMaxKeypoints(int maxKeypoints) = 0;
     CV_WRAP virtual int  getMaxKeypoints() const = 0;
 
