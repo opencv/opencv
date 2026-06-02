@@ -370,6 +370,11 @@ def _doxygen_desc_to_md(el, h_level: int = 3) -> str:
 
     _BLOCK_TAGS = {"orderedlist", "itemizedlist", "programlisting", "simplesect", "table"}
 
+    # Map missing 'see' and 'sa' Doxygen sections to MyST 'seealso' admonitions to fix unboxed reference rendering.
+    _ADMON_BY_KIND = {"note": "note", "warning": "warning",
+                      "attention": "warning", "remark": "note",
+                      "see": "seealso", "sa": "seealso"}
+
     def _emit_block(sub, result: list, level: int) -> None:
         t = sub.tag
         if t == "programlisting":
@@ -382,8 +387,7 @@ def _doxygen_desc_to_md(el, h_level: int = 3) -> str:
                 result.append(f"- {_listitem_text(item)}")
         elif t == "simplesect":
             kind = sub.get("kind", "")
-            admon = {"note": "note", "warning": "warning",
-                     "attention": "warning", "remark": "note"}.get(kind)
+            admon = _ADMON_BY_KIND.get(kind)
             body = "\n\n".join(_blocks(sub, level))
             if admon:
                 result.append(f":::{{{admon}}}\n{body}\n:::")
@@ -497,8 +501,7 @@ def _doxygen_desc_to_md(el, h_level: int = 3) -> str:
             elif t == "simplesect":
                 # Merge consecutive simplesects of the same kind into one admonition.
                 kind = child.get("kind", "")
-                admon = {"note": "note", "warning": "warning",
-                         "attention": "warning", "remark": "note"}.get(kind)
+                admon = _ADMON_BY_KIND.get(kind)
                 bodies = []
                 while (i < len(children) and children[i].tag == "simplesect"
                        and children[i].get("kind", "") == kind):

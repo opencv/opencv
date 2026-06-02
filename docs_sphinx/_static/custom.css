@@ -1,4 +1,4 @@
-/* 
+/*
 This file is part of OpenCV project.
 It is subject to the license terms in the LICENSE file found in the top-level directory
 of this distribution and at http://opencv.org/license.html.
@@ -702,6 +702,38 @@ html[data-theme="dark"] button.copybtn.success {
     button.copybtn { opacity: 1 !important; }
 }
 
+/* --- Keep the copy button reachable on tall code blocks ---------------- */
+/* sphinx-copybutton pins the button (`position: absolute; top`) to the top of
+   its code block, so on a block taller than the viewport — e.g. the long C++
+   sample under group functions like cv::imwrite — it scrolls out of sight the
+   moment you read past the first lines, and the whole button looks "missing".
+   Make it `position: sticky` so it rides along at the top-right of the visible
+   area instead. Hover-reveal behaviour is untouched (no opacity change); the
+   button is still a child of `.highlight`, so `.highlight:hover .copybtn` still
+   fires.
+   Sticky needs NO non-`visible` overflow between the button and the scrolling
+   viewport (the window). Two ancestors set overflow and silently disabled it:
+   the member-detail card (rounded-corner clip) and the theme's
+   `.bd-article-container`. Neither actually scrolls — the window does — so
+   relaxing them is safe; the secondary "On this page" TOC stays sticky
+   (verified). `display:flex` + `order:-1` put the button above <pre> in flow so
+   `top` has something to pin to; the negative bottom margin cancels the
+   button's own box so it overlays the code instead of pushing it down. */
+div.bd-article-container { overflow: visible !important; }
+section[id$="-documentation"] > section { overflow: visible !important; }
+div.highlight { display: flex !important; flex-direction: column; }
+div.highlight > pre { min-width: 0; }   /* let the flex item shrink so overflow-x: auto still scrolls */
+div.highlight > button.copybtn {
+    order: -1;                            /* render above <pre> so sticky `top` can pin it */
+    position: sticky;
+    align-self: flex-end;                 /* hold it at the right edge */
+    margin: 0.5rem 0.5rem -2.35rem 0;     /* negative bottom overlays the code, no extra height */
+    z-index: 2;
+}
+
+/* --- Class collaboration diagram (.opencv-coll-graph) ------------------ */
+/* Inlined as <svg> at build-finished (so links work); two theme variants carry
+   the theme's .only-light/.only-dark classes. Size only — no display/filter. */
 .opencv-coll-graph {
     display: block;
     margin: 1rem auto 1.5rem;
