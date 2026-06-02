@@ -2292,7 +2292,7 @@ double CvCapture_MSMF::getProperty( int property_id ) const
         default:
             break;
         }
-    return -1;
+    return CAP_PROP_UNKNOWN;
 }
 
 template <typename CtrlT>
@@ -2766,7 +2766,7 @@ double CvVideoWriter_MSMF::getProperty(int propId) const
     {
         return static_cast<double>(va_device);
     }
-    return 0;
+    return VIDEOWRITER_PROP_UNKNOWN;
 }
 
 cv::Ptr<cv::IVideoWriter> cv::cvCreateVideoWriter_MSMF( const std::string& filename, int fourcc,

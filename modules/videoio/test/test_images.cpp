@@ -143,6 +143,7 @@ TEST(videoio_images, write_returns_status)
     col.generate(1);
     VideoWriter wri(col.getFirstFilename(), CAP_IMAGES, 0, 0, col.getFrame(0).size());
     ASSERT_TRUE(wri.isOpened());
+    EXPECT_EQ(CAP_PROP_UNKNOWN, wri.get(CV__CAP_PROP_LATEST));
 
     const Mat frame = col.getFrame(0);
 
@@ -345,6 +346,7 @@ TEST_P(videoio_image_seq_start, open)
         ASSERT_TRUE(cap.open(pattern, apiPref,
                              { CAP_PROP_IMAGE_SEQ_START, start }));
         ASSERT_TRUE(cap.isOpened());
+        EXPECT_EQ(CAP_PROP_UNKNOWN, cap.get(CV__CAP_PROP_LATEST));
         for (size_t idx = 0; idx < count; ++idx)
         {
             Mat img;

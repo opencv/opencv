@@ -169,6 +169,7 @@ TEST(videoio_ffmpeg, camera_index)
     ASSERT_TRUE(cap.open(0, CAP_FFMPEG));
     Mat frame;
     ASSERT_TRUE(cap.read(frame));
+    EXPECT_EQ(CAP_PROP_UNKNOWN, cap.get(CV__CAP_PROP_LATEST));
     ASSERT_FALSE(frame.empty());
 }
 

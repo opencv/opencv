@@ -45,6 +45,7 @@ class Bindings(NewOpenCVTests):
         with open(self.find_file("cv/video/768x576.avi"), "rb") as f:
             cap = cv.VideoCapture(f, api_pref, [])
             self.assertTrue(cap.isOpened())
+            self.assertEqual(cv.CAP_PROP_UNKNOWN, cap.get(-1))
             hasFrame, frame = cap.read()
             self.assertTrue(hasFrame)
             self.assertEqual(frame.shape, (576, 768, 3))

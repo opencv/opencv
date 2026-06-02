@@ -514,11 +514,11 @@ public:
         if( propId == VIDEOWRITER_PROP_FRAMEBYTES )
         {
             bool isEmpty = container.isEmptyFrameSize();
-            return isEmpty ? 0. : container.atFrameSize(container.countFrameSize() - 1);
+            return isEmpty ? static_cast<double>(CAP_PROP_UNKNOWN) : container.atFrameSize(container.countFrameSize() - 1);
         }
         if( propId == VIDEOWRITER_PROP_NSTRIPES )
             return nstripes;
-        return 0.;
+        return static_cast<double>(CAP_PROP_UNKNOWN);
     }
 
     bool setProperty(int propId, double value) CV_OVERRIDE

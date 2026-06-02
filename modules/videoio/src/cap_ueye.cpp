@@ -159,7 +159,7 @@ VideoCapture_uEye::VideoCapture_uEye(int camera)
 
 double VideoCapture_uEye::getProperty(int property_id) const
 {
-    auto value = 0.;
+    auto value = CAP_PROP_UNKNOWN;
     switch (property_id)
     {
     case CAP_PROP_FRAME_WIDTH:

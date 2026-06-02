@@ -190,7 +190,7 @@ class IVideoCapture
 {
 public:
     virtual ~IVideoCapture() {}
-    virtual double getProperty(int) const { return 0; }
+    virtual double getProperty(int) const { return CAP_PROP_UNKNOWN; }
     virtual bool setProperty(int, double) { return false; }
     virtual bool grabFrame() = 0;
     virtual bool retrieveFrame(int, OutputArray) = 0;
@@ -202,7 +202,7 @@ class IVideoWriter
 {
 public:
     virtual ~IVideoWriter() {}
-    virtual double getProperty(int) const { return 0; }
+    virtual double getProperty(int) const { return CAP_PROP_UNKNOWN; }
     virtual bool setProperty(int, double) { return false; }
     virtual bool isOpened() const = 0;
     virtual bool write(InputArray) = 0;
