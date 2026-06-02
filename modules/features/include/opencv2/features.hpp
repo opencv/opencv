@@ -725,8 +725,12 @@ public:
                      positive multiples of 16, since DISK downsamples by a factor of 16.
     @param backendId DNN backend identifier (see cv::dnn::Backend); 0 = DNN_BACKEND_DEFAULT.
     @param targetId  DNN target identifier (see cv::dnn::Target);  0 = DNN_TARGET_CPU.
+
+    @note In C++ this is an overload of @ref create. The Python/Java/Objective-C bindings expose
+          it as `createFromMemory`, because Objective-C selectors are not disambiguated by argument
+          type and would otherwise clash with the file-path @ref create.
     */
-    CV_WRAP static Ptr<DISK> create(const std::vector<uchar>& bufferModel,
+    CV_WRAP_AS(createFromMemory) static Ptr<DISK> create(const std::vector<uchar>& bufferModel,
                                     int maxKeypoints = -1,
                                     float scoreThreshold = 0.0f,
                                     const Size& imageSize = Size(),

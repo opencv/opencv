@@ -9,14 +9,24 @@
 
 #ifdef HAVE_OPENCV_DNN
 
+#include "opencv2/dnn.hpp"
+#include "opencv2/core/utils/configuration.private.hpp"
+
 namespace opencv_test { namespace {
+
+static void skipIfClassicDnnEngine()
+{
+    const auto engine = static_cast<cv::dnn::EngineType>(
+        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
+    if (engine == cv::dnn::ENGINE_CLASSIC)
+        throw SkipTestException("DISK ONNX model is not supported by the classic DNN engine");
+}
 
 static void testDiskRegression(const Size& imageSize, const std::string& tag)
 {
+    skipIfClassicDnnEngine();
     applyTestTag(CV_TEST_TAG_MEMORY_2GB);
 
-    // Reference keypoints are stored as N x 3 rows of (x, y, response), kept as the N strongest
-    // detections (sorted by descending response); descriptors as the matching N x 128.
     Mat refKpts = blobFromNPY(cvtest::findDataFile("features/disk/box_in_scene_" + tag + "_kpts.npy"));
     Mat refDesc = blobFromNPY(cvtest::findDataFile("features/disk/box_in_scene_" + tag + "_desc.npy"));
     if (refKpts.type() != CV_32F)
@@ -26,7 +36,6 @@ static void testDiskRegression(const Size& imageSize, const std::string& tag)
 
     const std::string modelPath = cvtest::findDataFile("dnn/disk.onnx", false);
 
-    // Cap detection to the same number of strongest keypoints the reference was generated with.
     Ptr<DISK> detector;
     ASSERT_NO_THROW(detector = DISK::create(modelPath, n, 0.0f, imageSize));
     ASSERT_TRUE(detector);
@@ -55,11 +64,8 @@ static void testDiskRegression(const Size& imageSize, const std::string& tag)
         resp.at<float>(i, 0) = keypoints[i].response;
     }
 
-    // Positions are integer network coordinates rescaled to the image, so they reproduce exactly.
     EXPECT_LE(cvtest::norm(pos, refKpts.colRange(0, 2), NORM_INF), 1e-3)
         << "keypoint positions differ (" << tag << ")";
-    // Responses and descriptors are raw network floats; allow a small numerical drift. Responses
-    // are O(100) in magnitude here, so the bound is scaled accordingly.
     EXPECT_LE(cvtest::norm(resp, refKpts.col(2), NORM_INF), 0.1)
         << "keypoint responses differ (" << tag << ")";
     EXPECT_LE(cvtest::norm(descriptors, refDesc, NORM_INF), 1e-2)
@@ -78,6 +84,7 @@ TEST(Features2d_DISK, regression_512x384)
 
 TEST(Features2d_DISK, MaxKeypointsAndThreshold)
 {
+    skipIfClassicDnnEngine();
     applyTestTag(CV_TEST_TAG_MEMORY_2GB);
 
     const std::string modelPath = cvtest::findDataFile("dnn/disk.onnx", false);
@@ -117,6 +124,7 @@ TEST(Features2d_DISK, MaxKeypointsAndThreshold)
 
 TEST(Features2d_DISK, MaskSupport)
 {
+    skipIfClassicDnnEngine();
     applyTestTag(CV_TEST_TAG_MEMORY_2GB);
 
     const std::string modelPath = cvtest::findDataFile("dnn/disk.onnx", false);
@@ -145,14 +153,13 @@ TEST(Features2d_DISK, MaskSupport)
 
 TEST(Features2d_DISK, InvalidImageSize)
 {
+    skipIfClassicDnnEngine();
     const std::string modelPath = cvtest::findDataFile("dnn/disk.onnx", false);
 
-    // Sizes that are not positive multiples of 16 must be rejected.
     EXPECT_THROW(DISK::create(modelPath, -1, 0.0f, Size(1000, 1024)), cv::Exception);
     EXPECT_THROW(DISK::create(modelPath, -1, 0.0f, Size(1024, 1000)), cv::Exception);
     EXPECT_THROW(DISK::create(modelPath, -1, 0.0f, Size(-16, 1024)),  cv::Exception);
 
-    // Size() means "use default", so it must succeed.
     Ptr<DISK> detector;
     ASSERT_NO_THROW(detector = DISK::create(modelPath, -1, 0.0f, Size()));
     ASSERT_TRUE(detector);
