@@ -845,8 +845,6 @@ TEST(videoio_ffmpeg, create_with_property_badarg)
     EXPECT_FALSE(cap.isOpened());
 }
 
-// requires FFmpeg wrapper rebuild on Windows
-#ifndef _WIN32
 TEST(videoio_ffmpeg, open_with_format_cv8uc3)
 {
     if (!videoio_registry::hasBackend(CAP_FFMPEG))
@@ -862,7 +860,6 @@ TEST(videoio_ffmpeg, open_with_format_cv8uc3)
     ASSERT_TRUE(cap.read(frame));
     EXPECT_EQ(frame.channels(), 3);
 }
-#endif
 
 // related issue: https://github.com/opencv/opencv/issues/16821
 TEST(videoio_ffmpeg, DISABLED_open_from_web)
@@ -1049,12 +1046,9 @@ inline static std::string videoio_ffmpeg_mismatch_name_printer(const testing::Te
 
 INSTANTIATE_TEST_CASE_P(/**/, videoio_ffmpeg_channel_mismatch, testing::ValuesIn(mismatch_cases), videoio_ffmpeg_mismatch_name_printer);
 
-#ifndef _WIN32
-
 typedef tuple<string, string> AlphaChannelParams;
 typedef testing::TestWithParam< AlphaChannelParams > videoio_ffmpeg_alpha_channel;
 
-// New feature in https://github.com/opencv/opencv/pull/28751 requires FFmpeg wrapper rebuild on Windows
 TEST_P(videoio_ffmpeg_alpha_channel, write_read)
 {
     if (!videoio_registry::hasBackend(CAP_FFMPEG))
@@ -1116,11 +1110,6 @@ AlphaChannelParams alpha_params[] =
 };
 
 INSTANTIATE_TEST_CASE_P(/**/, videoio_ffmpeg_alpha_channel, testing::ValuesIn(alpha_params));
-#endif
-
-// PR: https://github.com/opencv/opencv/pull/27523
-// TODO: Enable the tests back on Windows after FFmpeg plugin rebuild
-#ifndef _WIN32
 
 // related issue: https://github.com/opencv/opencv/issues/23088
 TEST(ffmpeg_cap_properties, set_pos_get_msec)
@@ -1198,6 +1187,5 @@ TEST(videoio_ffmpeg, seek_with_negative_dts)
         EXPECT_GE(cap.get(CAP_PROP_POS_FRAMES), f);
     }
 }
-#endif // _WIN32
 
 }} // namespace
