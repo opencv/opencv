@@ -433,23 +433,30 @@ int ipp_hal_blobFromImages(const uchar* const* src_data, const size_t* src_step,
                 {
                     dstPlanes[c] = (Ipp32f*)(dst_img + c * dst_step[1]);
                 }
+
+                // Mean/scale are applied by destination plane index, so swap
+                // indices 0 and 2 when swapRB to match the reference implementation.
+                float localMean[4] = {mean[0], mean[1], mean[2], mean[3]};
+                float localScale[4] = {scalefactor[0], scalefactor[1], scalefactor[2], scalefactor[3]};
                 if (swapRB && channels >= 3)
                 {
                     std::swap(dstPlanes[0], dstPlanes[2]);
+                    std::swap(localMean[0], localMean[2]);
+                    std::swap(localScale[0], localScale[2]);
                 }
 
                 // Convert each 8u temp plane -> 32f dst plane, then apply mean/scale
                 for (int c = 0; c < channels; c++)
                 {
-                    if (mean[c] == 0.0f)
+                    if (localMean[c] == 0.0f)
                     {
-                        if (scalefactor[c] != 1.0f)
+                        if (localScale[c] != 1.0f)
                         {
                             const Ipp8u* srcPlane = tempPtrs[c];
                             Ipp32f* dstPlane = dstPlanes[c];
                             for (int j = 0; j < planeSize; j++)
                             {
-                                dstPlane[j] = (float)srcPlane[j] * scalefactor[c];
+                                dstPlane[j] = (float)srcPlane[j] * localScale[c];
                             }
                         }
                         else
@@ -460,8 +467,8 @@ int ipp_hal_blobFromImages(const uchar* const* src_data, const size_t* src_step,
                     }
                     else
                     {
-                        const float scale = scalefactor[c];
-                        const float bias = -mean[c] * scale;
+                        const float scale = localScale[c];
+                        const float bias = -localMean[c] * scale;
                         const Ipp8u* srcPlane = tempPtrs[c];
                         Ipp32f* dstPlane = dstPlanes[c];
                         for (int j = 0; j < planeSize; j++)
@@ -484,27 +491,33 @@ int ipp_hal_blobFromImages(const uchar* const* src_data, const size_t* src_step,
                     {
                         dstPlanes[c] = (Ipp32f*)(dst_img + c * dst_step[1]);
                     }
-                    // mean/scale indices follow source channel order, swap dst pointers to match
+
+                    // Mean/scale are applied by destination plane index, so swap
+                    // indices 0 and 2 when swapRB to match the reference implementation.
+                    float localMean[4] = {mean[0], mean[1], mean[2], mean[3]};
+                    float localScale[4] = {scalefactor[0], scalefactor[1], scalefactor[2], scalefactor[3]};
                     if (swapRB && channels >= 3)
                     {
                         std::swap(dstPlanes[0], dstPlanes[2]);
+                        std::swap(localMean[0], localMean[2]);
+                        std::swap(localScale[0], localScale[2]);
                     }
 
                     for (int c = 0; c < channels; c++)
                     {
-                        if (mean[c] == 0.0f)
+                        if (localMean[c] == 0.0f)
                         {
-                            if (scalefactor[c] != 1.0f)
+                            if (localScale[c] != 1.0f)
                             {
                                 // Only scale needed: dst = dst * scale
-                                CV_HAL_IPP_STATUS_CHECK(CV_INSTRUMENT_FUN_IPP(ippiMulC_32f_C1IR_L, scalefactor[c], dstPlanes[c], (int)dst_step[2], planeRoiL));
+                                CV_HAL_IPP_STATUS_CHECK(CV_INSTRUMENT_FUN_IPP(ippiMulC_32f_C1IR_L, localScale[c], dstPlanes[c], (int)dst_step[2], planeRoiL));
                             }
                             // No mean/scale needed if mean == 0 and scale == 1, skip
                         }
                         else
                         {
-                            const float scale = scalefactor[c];
-                            const float bias = -mean[c] * scale; // precompute for FMA: pixel * scale + bias
+                            const float scale = localScale[c];
+                            const float bias = -localMean[c] * scale;
                             Ipp32f* dstPlane = dstPlanes[c];
                             const int planeSize = planeRoi.width * planeRoi.height;
                             for (int j = 0; j < planeSize; j++)
@@ -525,19 +538,36 @@ int ipp_hal_blobFromImages(const uchar* const* src_data, const size_t* src_step,
         {
             if (ddepth == CV_32F && depth == CV_8U)
             {
-                // Convert 8u->32f with mean/scale in HWC, then copy to dst
-                CV_HAL_IPP_STATUS_CHECK(ipp_convert_8u_to_32f_scaled(processedImg, floatImg, channels, scalefactor, mean));
+                // Mean/scale are applied in destination channel order (after swapRB).
+                // Swap indices 0 and 2 so that the correct mean/scale is applied
+                // to each channel before the channel swap during copy.
+                float localMean[4] = {mean[0], mean[1], mean[2], mean[3]};
+                float localScale[4] = {scalefactor[0], scalefactor[1], scalefactor[2], scalefactor[3]};
+                if (swapRB && channels >= 3)
+                {
+                    std::swap(localMean[0], localMean[2]);
+                    std::swap(localScale[0], localScale[2]);
+                }
+                CV_HAL_IPP_STATUS_CHECK(ipp_convert_8u_to_32f_scaled(processedImg, floatImg, channels, localScale, localMean));
                 CV_HAL_IPP_STATUS_CHECK(ipp_copy_interleaved(floatImg, dst_img, dst_step[1], channels, CV_32F, swapRB));
             }
             else if (ddepth == CV_32F && depth == CV_32F)
             {
                 if (needMean || needScale)
                 {
-                    // OpenCV order: mean/scale first, then swapRB.
-                    // Copy to dst without swapRB, apply mean/scale in-place, then swapRB if needed.
+                    // Mean/scale are applied in destination channel order (after swapRB).
+                    // Swap indices 0 and 2 so that the correct mean/scale is applied
+                    // to each channel before the channel swap during copy.
+                    float localMean[4] = {mean[0], mean[1], mean[2], mean[3]};
+                    float localScale[4] = {scalefactor[0], scalefactor[1], scalefactor[2], scalefactor[3]};
+                    if (swapRB && channels >= 3)
+                    {
+                        std::swap(localMean[0], localMean[2]);
+                        std::swap(localScale[0], localScale[2]);
+                    }
                     CV_HAL_IPP_STATUS_CHECK(ipp_copy_interleaved(processedImg, dst_img, dst_step[1], channels, CV_32F, false));
                     cv::Mat dstMat(processedImg.rows, processedImg.cols, CV_MAKETYPE(CV_32F, channels), dst_img, dst_step[1]);
-                    CV_HAL_IPP_STATUS_CHECK(ipp_apply_mean_scale_32f(dstMat, mean, scalefactor, channels));
+                    CV_HAL_IPP_STATUS_CHECK(ipp_apply_mean_scale_32f(dstMat, localMean, localScale, channels));
                     if (swapRB && channels >= 3)
                     {
                         IppiSize roi = ippiSize(dstMat.cols, dstMat.rows);
