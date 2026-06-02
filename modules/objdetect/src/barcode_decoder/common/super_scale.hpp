@@ -22,7 +22,7 @@ public:
 
     ~SuperScale() = default;
 
-    int init(const std::string &proto_path, const std::string &model_path);
+    int init(const std::string &model_path);
 
     void processImageScale(const Mat &src, Mat &dst, float scale, const bool &use_sr, int sr_max_size = 160);
 

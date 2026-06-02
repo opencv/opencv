@@ -348,11 +348,13 @@ BarcodeDetector::BarcodeDetector(const string &prototxt_path, const string &mode
     Ptr<BarcodeImpl> p_ = new BarcodeImpl();
     p = p_;
     p_->sr = make_shared<SuperScale>();
-    if (!prototxt_path.empty() && !model_path.empty())
+    // The Super Resolution model is now a single-file ONNX network; the legacy Caffe
+    // prototxt argument is retained for API compatibility but is no longer used.
+    CV_UNUSED(prototxt_path);
+    if (!model_path.empty())
     {
-        CV_Assert(utils::fs::exists(prototxt_path));
         CV_Assert(utils::fs::exists(model_path));
-        int res = p_->sr->init(prototxt_path, model_path);
+        int res = p_->sr->init(model_path);
         CV_Assert(res == 0);
         p_->use_nn_sr = true;
     }
