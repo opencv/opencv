@@ -235,6 +235,8 @@ def _parse_member_sections(cd) -> dict[str, list[dict]]:
                 "kind":        kind,
                 "name":        (md.findtext("name") or "").strip(),
                 "qualified":   qualified,
+                "definition":  (md.findtext("definition") or "").strip(),
+                "virt":        md.get("virt", "non-virtual"),
                 "type":        _itertext(md.find("type")),
                 "args":        (md.findtext("argsstring") or "").strip(),
                 "param_types": param_types,

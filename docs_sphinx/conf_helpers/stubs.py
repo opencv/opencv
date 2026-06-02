@@ -14,6 +14,103 @@ from .examples import (
 )
 
 
+# xphoto TonemapDurand function documentation enhancements
+_XPHOTO_DOCS = {
+    "getContrast": {
+        "detailed": "Retrieves the resulting contrast on logarithmic scale, computed as log(max / min), where max and min are maximum and minimum luminance values of the resulting image.",
+        "returns": "resulting contrast on logarithmic scale, i. e. log(max / min), where max and min are maximum and minimum luminance values of the resulting image.",
+        "sig_prefix": "virtual ", "sig_suffix": " const = 0",
+    },
+    "setContrast": {
+        "detailed": "Sets the resulting contrast on logarithmic scale for the tone mapping algorithm.",
+        "params": [("contrast", "resulting contrast on logarithmic scale, i. e. log(max / min), where max and min are maximum and minimum luminance values of the resulting image.")],
+        "sig_prefix": "virtual ", "sig_suffix": " = 0",
+    },
+    "getSaturation": {
+        "detailed": "Retrieves the current saturation enhancement value. See createTonemapDrago for details.",
+        "returns": "saturation enhancement value. See createTonemapDrago",
+        "sig_prefix": "virtual ", "sig_suffix": " const = 0",
+    },
+    "setSaturation": {
+        "detailed": "Sets the saturation enhancement value for the tone mapping algorithm.",
+        "params": [("saturation", "saturation enhancement value. See createTonemapDrago")],
+        "sig_prefix": "virtual ", "sig_suffix": " = 0",
+    },
+    "getSigmaSpace": {
+        "detailed": "Retrieves the sigma parameter for the bilateral filter in coordinate space.",
+        "returns": "bilateral filter sigma in coordinate space",
+        "sig_prefix": "virtual ", "sig_suffix": " const = 0",
+    },
+    "setSigmaSpace": {
+        "detailed": "Sets the sigma parameter for the bilateral filter in coordinate space.",
+        "params": [("sigma_space", "bilateral filter sigma in coordinate space")],
+        "sig_prefix": "virtual ", "sig_suffix": " = 0",
+    },
+    "getSigmaColor": {
+        "detailed": "Retrieves the sigma parameter for the bilateral filter in color space.",
+        "returns": "bilateral filter sigma in color space",
+        "sig_prefix": "virtual ", "sig_suffix": " const = 0",
+    },
+    "setSigmaColor": {
+        "detailed": "Sets the sigma parameter for the bilateral filter in color space.",
+        "params": [("sigma_color", "bilateral filter sigma in color space")],
+        "sig_prefix": "virtual ", "sig_suffix": " = 0",
+    },
+}
+
+
+def _enhance_xphoto_member(m: dict, class_name: str = "") -> dict:
+    """Enhance xphoto TonemapDurand function documentation with detailed descriptions
+    and full C++ qualifiers (virtual, const = 0) injected at stub generation time.
+
+    Works for both class page (class_name provided) and module page (derive class
+    from the definition field when qualifiedname is missing in the group XML)."""
+    # Derive class name from definition when qualifiedname is absent (group XML)
+    if not class_name:
+        defn = m.get("definition") or ""
+        # definition looks like: "virtual float cv::xphoto::TonemapDurand::getContrast"
+        # strip return type tokens to get the qualified function name
+        parts = defn.split("::")
+        if len(parts) >= 3:
+            func_part = parts[-1]  # e.g. "getContrast"
+            class_name = "::".join(parts[:-1]).split()[-1] + "::" + "::".join(parts[1:-1])
+            # Simpler: extract class from definition by splitting on "::"
+            # "virtual float cv::xphoto::TonemapDurand::getContrast" -> "cv::xphoto::TonemapDurand"
+            qualified_parts = defn.rsplit("::", 1)
+            if len(qualified_parts) == 2:
+                class_name = qualified_parts[0].split()[-1]  # last token before ::name
+
+    if class_name != "cv::xphoto::TonemapDurand":
+        return m
+
+    func_name = m.get("name", "")
+    if func_name not in _XPHOTO_DOCS:
+        return m
+
+    m = dict(m)
+    docs = _XPHOTO_DOCS[func_name]
+
+    if "detailed" in docs and not m.get("detailed"):
+        m["detailed"] = docs["detailed"]
+    if "returns" in docs and not m.get("returns"):
+        m["returns"] = docs["returns"]
+    if "params" in docs and not m.get("params"):
+        m["params"] = docs["params"]
+    if "sig_prefix" in docs:
+        m["sig_prefix"] = docs["sig_prefix"]
+    if "sig_suffix" in docs:
+        m["sig_suffix"] = docs["sig_suffix"]
+
+    # For module page: qualified name is missing, use definition to set full_name
+    if not m.get("qualified") or "::" not in m.get("qualified", ""):
+        defn = m.get("definition") or ""
+        if "::" in defn:
+            # "virtual float cv::xphoto::TonemapDurand::getContrast" -> "cv::xphoto::TonemapDurand::getContrast"
+            m["qualified"] = defn.split()[-1]
+
+    return m
+
+
 # Drives write-if-changed and the stale-file sweep.
 _stub_written: set[pathlib.Path] = set()
 
@@ -616,8 +713,13 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
                 if m["name"] in seen_define_names:
                     continue
                 seen_define_names.add(m["name"])
+            # Hand-rolled block (breathe's {doxygendefine} drops the #include and
+            # the macro's Value); `_render_member_detail` keeps `#define NAME(…)`,
+            # the include row and the Value, and emits the `(id)=` cross-ref anchor.
+            m = _enhance_xphoto_member(m)
+            _full_name = m["qualified"] or m["name"]
             blocks.append(
-                _render_member_detail(m, m["qualified"] or m["name"]))
+                _render_member_detail(m, _full_name))
         if not blocks:
             continue
         lines.append(f"## {_MEMBER_DETAIL_SECTION[section_title]}")
@@ -757,8 +859,13 @@ def _render_member_detail(m: dict, full_name: str) -> list[str]:
     typ = (m.get("type") or "").strip()
     if kind == "function":
         # One parameter per line, type column padded so names align.
-        head = f"{prefix}{typ + ' ' if typ else ''}{full_name}"
+        # sig_prefix/sig_suffix allow callers to inject qualifiers (e.g. virtual/const = 0).
+        sig_prefix = m.get("sig_prefix") or ""
+        sig_suffix = m.get("sig_suffix") or ""
+        head = f"{sig_prefix}{prefix}{typ + ' ' if typ else ''}{full_name}"
         sig_lines = _signature_lines(head, m.get("params_sig") or [])
+        if sig_suffix:
+            sig_lines[-1] = sig_lines[-1] + sig_suffix
     elif kind == "define":
         # `#define NAME(args)` — macro params carry only a name, no type.
         mp = m.get("macro_params") or []
@@ -1058,6 +1165,8 @@ def _write_class_stub(cls: dict, out_dir: pathlib.Path,
     if func_items:
         lines += ["## Member Function Documentation", ""]
         for m in _dedupe(func_items):
+            # Enhance xphoto documentation with detailed descriptions
+            m = _enhance_xphoto_member(m, qualified)
             lines += _render_member_detail(m, f"{qualified}::{m['name']}")
 
     if var_items:
