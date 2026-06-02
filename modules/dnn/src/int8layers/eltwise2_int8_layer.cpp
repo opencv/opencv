@@ -356,6 +356,10 @@ public:
                     float32x4_t vc0 = vdupq_n_f32(c0);
                     float32x4_t vc1 = vdupq_n_f32(c1);
                     float32x4_t voff = vdupq_n_f32(off);
+                    float32x4_t vmc = vdupq_n_f32(mc);
+                    float32x4_t vzp0 = vdupq_n_f32(zp0f);
+                    float32x4_t vzp1 = vdupq_n_f32(zp1f);
+                    float32x4_t vozp = vdupq_n_f32(ozpf);
                     int32x4_t vmin = vdupq_n_s32(out_min);
                     int32x4_t vmax = vdupq_n_s32(out_max);
 
@@ -365,17 +369,19 @@ public:
                         uint16x8_t a16 = vmovl_u8(a8);
                         uint16x8_t b16 = vmovl_u8(b8);
 
-                        int32x4_t a32_lo = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(a16)));
-                        int32x4_t b32_lo = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(b16)));
-                        int32x4_t a32_hi = vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(a16)));
-                        int32x4_t b32_hi = vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(b16)));
+                        float32x4_t af_lo = vcvtq_f32_s32(vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(a16))));
+                        float32x4_t bf_lo = vcvtq_f32_s32(vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(b16))));
+                        float32x4_t af_hi = vcvtq_f32_s32(vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(a16))));
+                        float32x4_t bf_hi = vcvtq_f32_s32(vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(b16))));
 
-                        float32x4_t val_lo = vaddq_f32(vaddq_f32(voff,
-                                        vmulq_f32(vc0, vcvtq_f32_s32(a32_lo))),
-                                        vmulq_f32(vc1, vcvtq_f32_s32(b32_lo)));
-                        float32x4_t val_hi = vaddq_f32(vaddq_f32(voff,
-                                        vmulq_f32(vc0, vcvtq_f32_s32(a32_hi))),
-                                        vmulq_f32(vc1, vcvtq_f32_s32(b32_hi)));
+                        float32x4_t val_lo, val_hi;
+                        if (isMul) {
+                            val_lo = vaddq_f32(vmulq_f32(vmulq_f32(vsubq_f32(af_lo, vzp0), vsubq_f32(bf_lo, vzp1)), vmc), vozp);
+                            val_hi = vaddq_f32(vmulq_f32(vmulq_f32(vsubq_f32(af_hi, vzp0), vsubq_f32(bf_hi, vzp1)), vmc), vozp);
+                        } else {
+                            val_lo = vaddq_f32(vaddq_f32(voff, vmulq_f32(vc0, af_lo)), vmulq_f32(vc1, bf_lo));
+                            val_hi = vaddq_f32(vaddq_f32(voff, vmulq_f32(vc0, af_hi)), vmulq_f32(vc1, bf_hi));
+                        }
 
 #if CV_NEON_AARCH64
                         int32x4_t ival_lo = vminq_s32(vmaxq_s32(vcvtnq_s32_f32(val_lo), vmin), vmax);
@@ -492,6 +498,10 @@ public:
                     float32x4_t vc0 = vdupq_n_f32(c0);
                     float32x4_t vc1 = vdupq_n_f32(c1);
                     float32x4_t voff = vdupq_n_f32(off);
+                    float32x4_t vmc = vdupq_n_f32(mc);
+                    float32x4_t vzp0 = vdupq_n_f32(zp0f);
+                    float32x4_t vzp1 = vdupq_n_f32(zp1f);
+                    float32x4_t vozp = vdupq_n_f32(ozpf);
                     int32x4_t vmin = vdupq_n_s32(out_min);
                     int32x4_t vmax = vdupq_n_s32(out_max);
 
@@ -501,17 +511,19 @@ public:
                         int16x8_t a16 = vmovl_s8(a8);
                         int16x8_t b16 = vmovl_s8(b8);
 
-                        int32x4_t a32_lo = vmovl_s16(vget_low_s16(a16));
-                        int32x4_t b32_lo = vmovl_s16(vget_low_s16(b16));
-                        int32x4_t a32_hi = vmovl_s16(vget_high_s16(a16));
-                        int32x4_t b32_hi = vmovl_s16(vget_high_s16(b16));
+                        float32x4_t af_lo = vcvtq_f32_s32(vmovl_s16(vget_low_s16(a16)));
+                        float32x4_t bf_lo = vcvtq_f32_s32(vmovl_s16(vget_low_s16(b16)));
+                        float32x4_t af_hi = vcvtq_f32_s32(vmovl_s16(vget_high_s16(a16)));
+                        float32x4_t bf_hi = vcvtq_f32_s32(vmovl_s16(vget_high_s16(b16)));
 
-                        float32x4_t val_lo = vaddq_f32(vaddq_f32(voff,
-                                        vmulq_f32(vc0, vcvtq_f32_s32(a32_lo))),
-                                        vmulq_f32(vc1, vcvtq_f32_s32(b32_lo)));
-                        float32x4_t val_hi = vaddq_f32(vaddq_f32(voff,
-                                        vmulq_f32(vc0, vcvtq_f32_s32(a32_hi))),
-                                        vmulq_f32(vc1, vcvtq_f32_s32(b32_hi)));
+                        float32x4_t val_lo, val_hi;
+                        if (isMul) {
+                            val_lo = vaddq_f32(vmulq_f32(vmulq_f32(vsubq_f32(af_lo, vzp0), vsubq_f32(bf_lo, vzp1)), vmc), vozp);
+                            val_hi = vaddq_f32(vmulq_f32(vmulq_f32(vsubq_f32(af_hi, vzp0), vsubq_f32(bf_hi, vzp1)), vmc), vozp);
+                        } else {
+                            val_lo = vaddq_f32(vaddq_f32(voff, vmulq_f32(vc0, af_lo)), vmulq_f32(vc1, bf_lo));
+                            val_hi = vaddq_f32(vaddq_f32(voff, vmulq_f32(vc0, af_hi)), vmulq_f32(vc1, bf_hi));
+                        }
 
 #if CV_NEON_AARCH64
                         int32x4_t ival_lo = vminq_s32(vmaxq_s32(vcvtnq_s32_f32(val_lo), vmin), vmax);
