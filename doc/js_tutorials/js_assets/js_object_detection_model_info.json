@@ -1,39 +1,44 @@
 {
-    "caffe": [
+    "onnx": [
         {
-            "model": "mobilenet_SSD",
+            "model": "ssd_mobilenet_v1",
             "inputSize": "300, 300",
-            "mean": "127.5, 127.5, 127.5",
-            "std": "0.007843",
+            "mean": "0, 0, 0",
+            "std": "1",
             "swapRB": "false",
             "outType": "SSD",
-            "labelsUrl": "https://raw.githubusercontent.com/opencv/opencv/5.x/samples/data/dnn/object_detection_classes_pascal_voc.txt",
-            "modelUrl": "https://raw.githubusercontent.com/chuanqi305/MobileNet-SSD/master/mobilenet_iter_73000.caffemodel",
-            "configUrl": "https://raw.githubusercontent.com/chuanqi305/MobileNet-SSD/master/deploy.prototxt"
+            "labelsUrl": "https://raw.githubusercontent.com/opencv/opencv/5.x/samples/data/dnn/object_detection_classes_coco.txt",
+            "modelUrl": "https://huggingface.co/onnxmodelzoo/ssd_mobilenet_v1_12/resolve/main/ssd_mobilenet_v1_12.onnx"
         },
         {
-            "model": "VGG_SSD",
+            "model": "ssd_vgg16",
             "inputSize": "300, 300",
             "mean": "104, 117, 123",
             "std": "1",
             "swapRB": "false",
             "outType": "SSD",
             "labelsUrl": "https://raw.githubusercontent.com/opencv/opencv/5.x/samples/data/dnn/object_detection_classes_pascal_voc.txt",
-            "modelUrl": "https://drive.google.com/uc?id=0BzKzrI_SkD1_WVVTSmQxU0dVRzA&export=download",
-            "configUrl": "https://drive.google.com/uc?id=0BzKzrI_SkD1_WVVTSmQxU0dVRzA&export=download"
-        }
-    ],
-    "darknet": [
+            "modelUrl": "https://github.com/omrope79/opencv-test-models/releases/download/v1.2.0/ssd_vgg16.onnx"
+        },
         {
-            "model": "yolov2_tiny",
+            "model": "yolov4-tiny",
             "inputSize": "416, 416",
             "mean": "0, 0, 0",
             "std": "0.00392",
-            "swapRB": "false",
+            "swapRB": "true",
             "outType": "YOLO",
             "labelsUrl": "https://raw.githubusercontent.com/opencv/opencv/5.x/samples/data/dnn/object_detection_classes_yolov3.txt",
-            "modelUrl": "https://pjreddie.com/media/files/yolov2-tiny.weights",
-            "configUrl": "https://raw.githubusercontent.com/pjreddie/darknet/master/cfg/yolov2-tiny.cfg"
+            "modelUrl": "https://huggingface.co/opencv/opencv_contribution/resolve/main/yolov4/yolov4-tiny.onnx"
+        },
+        {
+            "model": "yolov3",
+            "inputSize": "416, 416",
+            "mean": "0, 0, 0",
+            "std": "0.00392",
+            "swapRB": "true",
+            "outType": "YOLO",
+            "labelsUrl": "https://raw.githubusercontent.com/opencv/opencv/5.x/samples/data/dnn/object_detection_classes_yolov3.txt",
+            "modelUrl": "https://huggingface.co/qualcomm/Yolo-v3/resolve/226ada6de9dcb32eebad7f74bf526714e2af6136/Yolo-v3.onnx"
         }
     ]
 }

@@ -164,6 +164,12 @@ def _translate(text: str, docname: str | None = None) -> str:
         lambda m: f"# {m.group('title').strip()}",
         text, flags=re.MULTILINE)
 
+    # 1c2. Setext H2s starting with digit+dot ("1. Moments\n---") -> ATX ##.
+    text = re.sub(
+        r"^(?P<title>\d+\.[^\n]+?)[ \t]*\n-[-]{2,}[ \t]*$",
+        lambda m: f"## {m.group('title').strip()}",
+        text, flags=re.MULTILINE)
+
     # 1d. Demote every H1 after the first to H2.
     def _demote_extra_h1s(src: str) -> str:
         fence_open_re = re.compile(r'^[ \t]*(?:`{3,}|~{3,})')
@@ -197,9 +203,46 @@ def _translate(text: str, docname: str | None = None) -> str:
             (len(l) - len(l.lstrip()) for l in lines if l.strip()), default=0)
         body = "\n".join(l[min_ind:] for l in lines).strip()
         return f"\n:::{{{kind}}}\n{body}\n:::\n"
+    _ac_stash: dict[str, str] = {}
+    def _ac_hide(m: re.Match) -> str:
+        k = f"\x00AC{len(_ac_stash)}\x00"; _ac_stash[k] = m.group(0); return k
+    _t = re.sub(r"@code(?:\{[^}]*\})?.*?@endcode", _ac_hide, text, flags=re.DOTALL)
+    _t = re.sub(
+        r"^[ \t]*@(?P<dir>note|see|warning|sa)[ \t]*\n?(?P<body>.+?)"
+        r"(?=\n[ \t]*\n|\n[ \t]*@[A-Za-z]|\Z)",
+        _admon_repl, _t, flags=re.DOTALL | re.MULTILINE)
+    for _k, _v in _ac_stash.items():
+        _t = _t.replace(_k, _v)
+    text = _t
+
+    # MyST definition list with "Parameters" heading.
+    def _inline_block_math(s: str) -> str:
+        if re.match(r"^\\f\[.+\\f\]$", s.strip()):
+            return s
+        return re.sub(r"\\f\[(.+?)\\f\]", lambda mm: f"${mm.group(1).strip()}$", s)
+    def _param_block_repl(m: re.Match) -> str:
+        result, has_param, cur_name, cur_desc = [], False, None, []
+        for line in m.group(0).split("\n"):
+            pm = re.match(r"@param\s+(\S+)\s+(.*)", line.strip())
+            rm = re.match(r"@return\s+(.*)", line.strip())
+            if pm:
+                if cur_name:
+                    result.append(f"`{cur_name}`\n: {_inline_block_math(' '.join(cur_desc))}")
+                cur_name, cur_desc, has_param = pm.group(1), [pm.group(2).strip()], True
+            elif rm:
+                if cur_name:
+                    result.append(f"`{cur_name}`\n: {_inline_block_math(' '.join(cur_desc))}")
+                    cur_name = None
+                result.append(f"*(return value)*\n: {_inline_block_math(rm.group(1).strip())}")
+            elif cur_name and line.strip():
+                cur_desc.append(line.strip())
+        if cur_name:
+            result.append(f"`{cur_name}`\n: {_inline_block_math(' '.join(cur_desc))}")
+        header = "\n**Parameters**\n\n" if has_param else "\n"
+        return header + "\n\n".join(result) + "\n"
     text = re.sub(
-        r"^[ \t]*@(?P<dir>note|see|warning|sa)[ \t]*\n?(?P<body>.+?)(?=\n[ \t]*\n|\n[ \t]*@[A-Za-z]|\Z)",
-        _admon_repl, text, flags=re.DOTALL | re.MULTILINE)
+        r"((?:^@(?:param\s+\S+|return)\s+[^\n]+\n(?:[ \t]+[^\n]+\n)*)+)",
+        _param_block_repl, text, flags=re.MULTILINE)
 
     # 2. Doxygen LaTeX math markers; preserve indent so blocks inside list items stay in the list.
     def _split_adj_math(m: re.Match) -> str:
@@ -209,7 +252,11 @@ def _translate(text: str, docname: str | None = None) -> str:
                   _split_adj_math, text, flags=re.MULTILINE)
     def _fblock(m: re.Match) -> str:
         ind = m.group("indent")
-        return f"\n{ind}$$\n{m.group('body').strip()}\n{ind}$$\n"
+        body = m.group("body").strip()
+        if "\\\\" in body:
+            body = re.sub(r"\n\s*\n", "\n", body)
+            return f"\n{ind}```{{math}}\n{ind}{body}\n{ind}```\n"
+        return f"\n{ind}$$\n{body}\n{ind}$$\n"
     text = re.sub(r"^(?P<indent>[ \t]*)\\f\[(?P<body>.+?)\\f\]",
                   _fblock, text, flags=re.DOTALL | re.MULTILINE)
     text = re.sub(r"\\f\[(.+?)\\f\]",
@@ -258,10 +305,17 @@ def _translate(text: str, docname: str | None = None) -> str:
         text, flags=re.MULTILINE)
 
     # 3d. \htmlonly ... \endhtmlonly -> `{raw} html`.
+    _depth = len(docname.split("/")) - 1 if docname else 1
+    _to_root = "../" * _depth
+    def _htmlonly_repl(m: re.Match) -> str:
+        body = re.sub(r'src="(?:\.\./)+(?P<f>js_[^"]+)"',
+                      lambda mm: f'src="{_to_root}js_tutorials/{mm.group("f")}"',
+                      m.group("body"))
+        body = re.sub(r'\s*onload="[^"]*"', ' height="700px"', body)
+        return f"\n```{{raw}} html\n{body.strip()}\n```\n"
     text = re.sub(
         r"\\htmlonly\s*\n(?P<body>.*?)\n\s*\\endhtmlonly",
-        lambda m: f"\n```{{raw}} html\n{m.group('body').strip()}\n```\n",
-        text, flags=re.DOTALL)
+        _htmlonly_repl, text, flags=re.DOTALL)
 
     # 3e. Plain fences with Doxygen lang spec ("```.sh") -> strip dot, alias-map.
     text = re.sub(
@@ -678,6 +732,17 @@ def _translate(text: str, docname: str | None = None) -> str:
     text = re.sub(r'@ref\s+(?P<name>[\w:-]+)(?:\s+"(?P<disp>[^"]+)")?',
                   _ref_repl, text)
 
+    # 7c. cv.Name -> Markdown link using _CV_SYMBOL_URL; skips code spans.
+    if _CV_SYMBOL_URL:
+        def _cvlink_repl(m: re.Match) -> str:
+            url = _CV_SYMBOL_URL.get(m.group(1))
+            return f'[cv.{m.group(1)}]({url})' if url else m.group(0)
+        _parts = re.split(r'(```.*?```|`[^`\n]+`)', text, flags=re.DOTALL)
+        text = ''.join(
+            p if i % 2 else re.sub(
+                r'(?<!\[)(?<!\()cv\.([A-Za-z][A-Za-z0-9_]*)', _cvlink_repl, p)
+            for i, p in enumerate(_parts))
+
     # 8. @cite KEY -> `[N]` HTML anchor to citelist (N from opencv.bib order).
     def _cite_repl(m: re.Match) -> str:
         key = m.group("key")
@@ -851,7 +916,20 @@ def _translate(text: str, docname: str | None = None) -> str:
         r'!\[(?P<alt>[^\]]*)\]\((?:[^)]*?/)?(?P<dir>images|js_assets)/(?P<rel>[^)]+)\)',
         _img_repl, text)
 
-    # 12b. Cross-tree contrib image refs -> raw-HTML <img>, depth-relative URL.
+    # 12b. Bare image filename (no dir prefix, e.g. "shape.jpg") -> _IMAGE_INDEX lookup.
+    def _bare_img_repl(m: re.Match) -> str:
+        rel = m.group("rel")
+        if docname:
+            local = DOC_ROOT / pathlib.Path(docname).parent / "images" / rel
+            if local.is_file():
+                return f'{m.group("pre")}images/{rel})'
+        hit = _IMAGE_INDEX.get(rel)
+        return f'{m.group("pre")}/{hit})' if hit else m.group(0)
+    text = re.sub(
+        r'(?P<pre>!\[[^\]]*\]\()(?P<rel>[A-Za-z0-9_.-]+\.[A-Za-z]{2,4})\)',
+        _bare_img_repl, text)
+
+    # 12c. Cross-tree contrib image refs -> raw-HTML <img>, depth-relative URL.
     def _img_xtree(m: re.Match) -> str:
         alt, rel = m.group("alt"), m.group("rel")
         if rel.startswith("/") or "://" in rel:

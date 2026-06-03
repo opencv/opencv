@@ -191,6 +191,23 @@ if(NOT SPHINX_JOBS)
   set(SPHINX_JOBS "auto")
 endif()
 set(_SPHINX_WARNINGS "${CMAKE_CURRENT_BINARY_DIR}/sphinx-warnings.log")
+# opencv.js (JS Try-it): download once into the build dir, bundled into html output.
+set(_OPENCV_JS "${CMAKE_CURRENT_BINARY_DIR}/opencv.js")
+if(NOT EXISTS "${_OPENCV_JS}")
+  message(STATUS "docs_sphinx: downloading opencv.js (one-time)")
+  file(DOWNLOAD "https://docs.opencv.org/5.x/opencv.js" "${_OPENCV_JS}"
+       SHOW_PROGRESS STATUS _DL_STATUS)
+  list(GET _DL_STATUS 0 _DL_OK)
+  if(NOT _DL_OK EQUAL 0)
+    message(WARNING "docs_sphinx: opencv.js download failed — Try-it won't run")
+    file(REMOVE "${_OPENCV_JS}")
+    set(_OPENCV_JS "")
+  endif()
+endif()
+if(_OPENCV_JS)
+  list(APPEND _SPHINX_ENV "OPENCV_JS_PATH=${_OPENCV_JS}")
+endif()
+
 add_custom_target(sphinx
   COMMAND ${CMAKE_COMMAND} -E make_directory ${_SPHINX_OUTDIR}
   COMMAND ${CMAKE_COMMAND} -E env ${_SPHINX_ENV}
