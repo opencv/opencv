@@ -384,6 +384,7 @@ public:
         pads = params.getVector<int>("pad");
         ceil_mode = params.get<bool>("ceil_mode", false);
         p = params.get<int>("p", 2);
+        CV_Check(p, p >= 1, "DNN/LpPool: p must be a positive integer (>= 1)");
     }
 
     virtual std::ostream& dumpAttrs(std::ostream& strm, int indent) const CV_OVERRIDE

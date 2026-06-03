@@ -753,3 +753,10 @@
 "test_convtranspose_pad",
 "test_convtranspose_pads",
 "test_convtranspose_with_kernel",
+"test_lppool_1d_default", // LpPool layer requires the block data layout 
+"test_lppool_2d_default",
+"test_lppool_2d_dilations",
+"test_lppool_2d_pads",
+"test_lppool_2d_same_upper",
+"test_lppool_2d_strides",
+"test_lppool_3d_default",
