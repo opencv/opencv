@@ -6,6 +6,7 @@
 // Copyright(c) 2012, Anatoly Baksheev. All rights reserved.
 
 #include "precomp.hpp"
+#include "opencv2/ptcloud/detail/kinfu_frame.hpp"
 #include "utils.hpp"
 #include "opencl_kernels_ptcloud.hpp"
 

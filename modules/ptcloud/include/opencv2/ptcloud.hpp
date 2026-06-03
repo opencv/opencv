@@ -213,6 +213,194 @@ CV_EXPORTS_W void triangleRasterizeColor(InputArray vertices, InputArray indices
                                          InputArray world2cam, double fovY, double zNear, double zFar,
                                          const TriangleRasterizeSettings& settings = TriangleRasterizeSettings());
 
+/** @brief Octree for 3D vision.
+ *
+ * In 3D vision filed, the Octree is used to process and accelerate the pointcloud data. The class Octree represents
+ * the Octree data structure. Each Octree will have a fixed depth. The depth of Octree refers to the distance from
+ * the root node to the leaf node.All OctreeNodes will not exceed this depth.Increasing the depth will increase
+ * the amount of calculation exponentially. And the small number of depth refers low resolution of Octree.
+ * Each node contains 8 children, which are used to divide the space cube into eight parts. Each octree node represents
+ * a cube. And these eight children will have a fixed order, the order is described as follows:
+ *
+ * For illustration, assume,
+ *
+ * rootNode: origin == (0, 0, 0), size == 2
+ *
+ * Then,
+ *
+ * children[0]: origin == (0, 0, 0), size == 1
+ *
+ * children[1]: origin == (1, 0, 0), size == 1, along X-axis next to child 0
+ *
+ * children[2]: origin == (0, 1, 0), size == 1, along Y-axis next to child 0
+ *
+ * children[3]: origin == (1, 1, 0), size == 1, in X-Y plane
+ *
+ * children[4]: origin == (0, 0, 1), size == 1, along Z-axis next to child 0
+ *
+ * children[5]: origin == (1, 0, 1), size == 1, in X-Z plane
+ *
+ * children[6]: origin == (0, 1, 1), size == 1, in Y-Z plane
+ *
+ * children[7]: origin == (1, 1, 1), size == 1, furthest from child 0
+ */
+
+class CV_EXPORTS_W Octree
+{
+public:
+    //! Default constructor.
+    Octree();
+
+    /** @overload
+     * @brief Creates an empty Octree with given maximum depth
+     *
+     * @param maxDepth The max depth of the Octree
+     * @param size bounding box size for the Octree
+     * @param origin Initial center coordinate
+     * @param withColors Whether to keep per-point colors or not
+     * @return resulting Octree
+     */
+    CV_WRAP static Ptr<Octree> createWithDepth(int maxDepth, double size, const Point3f& origin = { }, bool withColors = false);
+
+    /** @overload
+     * @brief Create an Octree from the PointCloud data with the specific maxDepth
+     *
+     * @param maxDepth Max depth of the octree
+     * @param pointCloud point cloud data, should be 3-channel float array
+     * @param colors color attribute of point cloud in the same 3-channel float format
+     * @return resulting Octree
+     */
+    CV_WRAP static Ptr<Octree> createWithDepth(int maxDepth, InputArray pointCloud, InputArray colors = noArray());
+
+    /** @overload
+     * @brief Creates an empty Octree with given resolution
+     *
+     * @param resolution The size of the octree leaf node
+     * @param size bounding box size for the Octree
+     * @param origin Initial center coordinate
+     * @param withColors Whether to keep per-point colors or not
+     * @return resulting Octree
+     */
+    CV_WRAP static Ptr<Octree> createWithResolution(double resolution, double size, const Point3f& origin = { }, bool withColors = false);
+
+    /** @overload
+     * @brief Create an Octree from the PointCloud data with the specific resolution
+     *
+     * @param resolution The size of the octree leaf node
+     * @param pointCloud point cloud data, should be 3-channel float array
+     * @param colors color attribute of point cloud in the same 3-channel float format
+     * @return resulting octree
+     */
+    CV_WRAP static Ptr<Octree> createWithResolution(double resolution, InputArray pointCloud, InputArray colors = noArray());
+
+    //! Default destructor
+    ~Octree();
+
+    /** @overload
+     * @brief Insert a point data with color to a OctreeNode.
+     *
+     * @param point The point data in Point3f format.
+     * @param color The color attribute of point in Point3f format.
+     * @return Returns whether the insertion is successful.
+     */
+    CV_WRAP bool insertPoint(const Point3f& point, const Point3f& color = { });
+
+    /** @brief Determine whether the point is within the space range of the specific cube.
+     *
+     * @param point The point coordinates.
+     * @return If point is in bound, return ture. Otherwise, false.
+     */
+    CV_WRAP bool isPointInBound(const Point3f& point) const;
+
+    //! returns true if the rootnode is NULL.
+    CV_WRAP bool empty() const;
+
+    /** @brief Reset all octree parameter.
+     *
+     *  Clear all the nodes of the octree and initialize the parameters.
+     */
+    CV_WRAP void clear();
+
+    /** @brief Delete a given point from the Octree.
+     *
+     * Delete the corresponding element from the pointList in the corresponding leaf node. If the leaf node
+     * does not contain other points after deletion, this node will be deleted. In the same way,
+     * its parent node may also be deleted if its last child is deleted.
+     * @param point The point coordinates, comparison is epsilon-based
+     * @return return ture if the point is deleted successfully.
+     */
+    CV_WRAP bool deletePoint(const Point3f& point);
+
+    /** @brief restore point cloud data from Octree.
+     *
+     * Restore the point cloud data from existing octree. The points in same leaf node will be seen as the same point.
+     * This point is the center of the leaf node. If the resolution is small, it will work as a downSampling function.
+     * @param restoredPointCloud The output point cloud data, can be replaced by noArray() if not needed
+     * @param restoredColor The color attribute of point cloud data, can be omitted if not needed
+     */
+    CV_WRAP void getPointCloudByOctree(OutputArray restoredPointCloud, OutputArray restoredColor = noArray());
+
+    /** @brief Radius Nearest Neighbor Search in Octree.
+     *
+     * Search all points that are less than or equal to radius.
+     * And return the number of searched points.
+     * @param query Query point.
+     * @param radius Retrieved radius value.
+     * @param points Point output. Contains searched points in 3-float format, and output vector is not in order,
+     * can be replaced by noArray() if not needed
+     * @param squareDists Dist output. Contains searched squared distance in floats, and output vector is not in order,
+     * can be omitted if not needed
+     * @return the number of searched points.
+     */
+    CV_WRAP int radiusNNSearch(const Point3f& query, float radius, OutputArray points, OutputArray squareDists = noArray()) const;
+
+    /** @overload
+     *  @brief Radius Nearest Neighbor Search in Octree.
+     *
+     * Search all points that are less than or equal to radius.
+     * And return the number of searched points.
+     * @param query Query point.
+     * @param radius Retrieved radius value.
+     * @param points Point output. Contains searched points in 3-float format, and output vector is not in order,
+     * can be replaced by noArray() if not needed
+     * @param colors Color output. Contains colors corresponding to points in pointSet, can be replaced by noArray() if not needed
+     * @param squareDists Dist output. Contains searched squared distance in floats, and output vector is not in order,
+     * can be replaced by noArray() if not needed
+     * @return the number of searched points.
+     */
+    CV_WRAP int radiusNNSearch(const Point3f& query, float radius, OutputArray points, OutputArray colors, OutputArray squareDists) const;
+
+    /** @brief K Nearest Neighbor Search in Octree.
+     *
+     * Find the K nearest neighbors to the query point.
+     * @param query Query point.
+     * @param K amount of nearest neighbors to find
+     * @param points Point output. Contains K points in 3-float format, arranged in order of distance from near to far,
+     * can be replaced by noArray() if not needed
+     * @param squareDists Dist output. Contains K squared distance in floats, arranged in order of distance from near to far,
+     * can be omitted if not needed
+     */
+    CV_WRAP void KNNSearch(const Point3f& query, const int K, OutputArray points, OutputArray squareDists = noArray()) const;
+
+    /** @overload
+     *  @brief K Nearest Neighbor Search in Octree.
+     *
+     * Find the K nearest neighbors to the query point.
+     * @param query Query point.
+     * @param K amount of nearest neighbors to find
+     * @param points Point output. Contains K points in 3-float format, arranged in order of distance from near to far,
+     * can be replaced by noArray() if not needed
+     * @param colors Color output. Contains colors corresponding to points in pointSet, can be replaced by noArray() if not needed
+     * @param squareDists Dist output. Contains K squared distance in floats, arranged in order of distance from near to far,
+     * can be replaced by noArray() if not needed
+     */
+    CV_WRAP void KNNSearch(const Point3f& query, const int K, OutputArray points, OutputArray colors, OutputArray squareDists) const;
+
+protected:
+    struct Impl;
+    Ptr<Impl> p;
+};
+
 } // namespace cv
 
 #endif
