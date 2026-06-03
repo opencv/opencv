@@ -19,7 +19,7 @@
 "test_einsum_transpose",
 "test_logsoftmax_large_number", // fp16 accuracy issue
 "test_logsoftmax_large_number_expanded", // fp16 accuracy issue
-"test_lppool_1d_default", 
+"test_lppool_1d_default",
 "test_lppool_2d_default",
 "test_lppool_2d_dilations",
 "test_lppool_2d_pads",
