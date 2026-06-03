@@ -69,7 +69,6 @@
 #include "opencv2/core/hal/intrin.hpp"
 
 #include "opencv2/geometry/detail/optimizer.hpp"
-#include "opencv2/geometry/detail/kinfu_frame.hpp"
 
 #include <atomic>
 #include <algorithm>
