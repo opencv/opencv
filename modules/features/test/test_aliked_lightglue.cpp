@@ -9,33 +9,9 @@
 
 namespace opencv_test { namespace {
 
-static std::string findAlikedModelOrSkip()
-{
-    try
-    {
-        return cvtest::findDataFile("dnn/onnx/models/aliked-n16rot-top1k-640.onnx", false);
-    }
-    catch (const cv::Exception&)
-    {
-        throw SkipTestException("ALIKED ONNX model not found in test data");
-    }
-}
-
-static std::string findLightGlueModelOrSkip()
-{
-    try
-    {
-        return cvtest::findDataFile("dnn/onnx/models/aliked_lightglue.onnx", false);
-    }
-    catch (const cv::Exception&)
-    {
-        throw SkipTestException("LightGlue ONNX model not found in test data");
-    }
-}
-
 TEST(Features2d_ALIKED, Regression)
 {
-    const std::string modelPath = findAlikedModelOrSkip();
+    const std::string modelPath = cvtest::findDataFile("dnn/onnx/models/aliked-n16rot-top1k-640.onnx", false);
 
     Ptr<ALIKED> aliked = ALIKED::create(modelPath);
     ASSERT_FALSE(aliked.empty());
@@ -97,8 +73,8 @@ TEST(Features2d_ALIKED, Regression)
 
 TEST(Features2d_LightGlue, Regression)
 {
-    const std::string alikedPath = findAlikedModelOrSkip();
-    const std::string lgPath = findLightGlueModelOrSkip();
+    const std::string alikedPath = cvtest::findDataFile("dnn/onnx/models/aliked-n16rot-top1k-640.onnx", false);
+    const std::string lgPath = cvtest::findDataFile("dnn/onnx/models/aliked_lightglue.onnx", false);
 
     Ptr<ALIKED> aliked = ALIKED::create(alikedPath);
     Ptr<LightGlueMatcher> lg = LightGlueMatcher::create(lgPath);

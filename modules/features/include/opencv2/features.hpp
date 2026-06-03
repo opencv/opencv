@@ -1314,28 +1314,22 @@ protected:
 public:
     virtual ~LightGlueMatcher();
 
-    struct CV_EXPORTS_W_SIMPLE Params
-    {
-        CV_WRAP Params();
-        CV_PROP_RW float scoreThreshold;        //!< Match confidence threshold, default 0.0
-        CV_PROP_RW bool disableWinograd;        //!< Disable Winograd convolution, default false
-        CV_PROP_RW int engine;                  //!< DNN engine type (dnn::EngineType), default ENGINE_ORT
-        CV_PROP_RW int backend;                 //!< DNN backend, default DNN_BACKEND_DEFAULT
-        CV_PROP_RW int target;                  //!< DNN target, default DNN_TARGET_CPU
-    };
-
     /** @brief Creates LightGlueMatcher from a model file path.
     @param modelPath Path to the ONNX model file.
-    @param params LightGlue parameters.
+    @param scoreThreshold Match confidence threshold.
+    @param backend DNN backend
+    @param target DNN target
     */
-    CV_WRAP static Ptr<LightGlueMatcher> create(const String& modelPath, const LightGlueMatcher::Params& params = LightGlueMatcher::Params());
+    CV_WRAP static Ptr<LightGlueMatcher> create(const String& modelPath, float scoreThreshold = 0.0f, int backend = 0, int target = 0);
 
 #ifdef HAVE_OPENCV_DNN
     /** @brief Creates LightGlueMatcher from in-memory model data.
     @param modelData Buffer containing the model data.
-    @param params LightGlue parameters.
+    @param scoreThreshold Match confidence threshold.
+    @param backend DNN backend
+    @param target DNN target
     */
-    static Ptr<LightGlueMatcher> create(const std::vector<uchar>& modelData, const LightGlueMatcher::Params& params = LightGlueMatcher::Params());
+    CV_WRAP_AS(createFromMemory) static Ptr<LightGlueMatcher> create(const std::vector<uchar>& modelData, float scoreThreshold = 0.0f, int backend = 0, int target = 0);
 #endif
 
     /** @brief Sets the keypoint and image size context for the next match() call.

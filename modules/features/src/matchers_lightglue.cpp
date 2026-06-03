@@ -15,21 +15,6 @@ namespace cv
 LightGlueMatcher::LightGlueMatcher() {}
 LightGlueMatcher::~LightGlueMatcher() {}
 
-LightGlueMatcher::Params::Params()
-{
-    scoreThreshold = 0.0f;
-    disableWinograd = false;
-#ifdef HAVE_OPENCV_DNN
-    engine = dnn::ENGINE_ORT;
-    backend = dnn::DNN_BACKEND_DEFAULT;
-    target = dnn::DNN_TARGET_CPU;
-#else
-    engine = -1;
-    backend = -1;
-    target = -1;
-#endif
-}
-
 #ifdef HAVE_OPENCV_DNN
 
 struct LightGluePairContext
@@ -55,27 +40,27 @@ struct LightGluePairContext
 class LightGlueMatcherImpl : public LightGlueMatcher
 {
 public:
-    LightGlueMatcherImpl(const LightGlueMatcher::Params& _params, const String& modelPath)
-        : params(_params)
+    LightGlueMatcherImpl(const String& modelPath, float _scoreThreshold, int backend, int target)
     {
-        net = dnn::readNet(modelPath, "", "", static_cast<dnn::EngineType>(params.engine));
+        scoreThreshold = _scoreThreshold;
+        net = dnn::readNet(modelPath, "", "");
         CV_Assert(!net.empty());
-        net.setPreferableBackend(params.backend);
-        net.setPreferableTarget(params.target);
+        net.setPreferableBackend(backend);
+        net.setPreferableTarget(target);
     }
 
-    LightGlueMatcherImpl(const std::vector<uchar>& modelData, const LightGlueMatcher::Params& _params)
-        : params(_params)
+    LightGlueMatcherImpl(const std::vector<uchar>& modelData, float _scoreThreshold, int backend, int target)
     {
+        scoreThreshold = _scoreThreshold;
         net = dnn::readNetFromONNX(modelData);
         CV_Assert(!net.empty());
-        net.setPreferableBackend(params.backend);
-        net.setPreferableTarget(params.target);
+        net.setPreferableBackend(backend);
+        net.setPreferableTarget(target);
     }
 
     // Private constructor for clone() — shares the already-loaded network
-    LightGlueMatcherImpl(const dnn::Net& _net, const LightGlueMatcher::Params& _params)
-        : net(_net), params(_params) {}
+    LightGlueMatcherImpl(const dnn::Net& _net, float _scoreThreshold)
+        : net(_net), scoreThreshold(_scoreThreshold) {};
 
     // DescriptorMatcher interface
     bool isMaskSupported() const CV_OVERRIDE { return false; }
@@ -105,13 +90,13 @@ protected:
                         Size& queryImgSize, Size& trainImgSize);
 
     dnn::Net net;
-    LightGlueMatcher::Params params;
+    float scoreThreshold;
     LightGluePairContext pairContext;
 };
 
 Ptr<DescriptorMatcher> LightGlueMatcherImpl::clone(bool emptyTrainData) const
 {
-    Ptr<LightGlueMatcherImpl> m = makePtr<LightGlueMatcherImpl>(net, params);
+    Ptr<LightGlueMatcherImpl> m = makePtr<LightGlueMatcherImpl>(net, scoreThreshold);
     // Always copy pairContext - it's matcher state, not train data
     m->pairContext = pairContext;
     if (!emptyTrainData)
@@ -218,7 +203,7 @@ void LightGlueMatcherImpl::lightglueMatch(const Mat& queryDesc, const Mat& train
         if (qIdx >= 0 && tIdx >= 0 && qIdx < N && tIdx < M)
         {
             float score = scoresMat.at<float>(i);
-            if (score >= params.scoreThreshold)
+            if (score >= scoreThreshold)
             {
                 matches.push_back(DMatch(qIdx, tIdx, 1.0f - score));
             }
@@ -268,25 +253,26 @@ void LightGlueMatcherImpl::radiusMatchImpl(InputArray, std::vector<std::vector<D
              "radiusMatch is not supported by LightGlueMatcher. Use match() or knnMatch().");
 }
 
-Ptr<LightGlueMatcher> LightGlueMatcher::create(const String& modelPath,
-                                                 const LightGlueMatcher::Params& params)
+Ptr<LightGlueMatcher> LightGlueMatcher::create(const String& modelPath, float scoreThreshold, int backend, int target)
 {
-    return makePtr<LightGlueMatcherImpl>(params, modelPath);
+    return makePtr<LightGlueMatcherImpl>(modelPath, scoreThreshold, backend, target);
 }
 
 Ptr<LightGlueMatcher> LightGlueMatcher::create(const std::vector<uchar>& modelData,
-                                                 const LightGlueMatcher::Params& params)
+                                               float scoreThreshold, int backend, int target)
 {
-    return makePtr<LightGlueMatcherImpl>(modelData, params);
+    return makePtr<LightGlueMatcherImpl>(modelData, scoreThreshold, backend, target);
 }
 
 #else  // !HAVE_OPENCV_DNN
 
 Ptr<LightGlueMatcher> LightGlueMatcher::create(const String& modelPath,
-                                                 const LightGlueMatcher::Params& params)
+                                                 float scoreThreshold, int backend, int target)
 {
     CV_UNUSED(modelPath);
-    CV_UNUSED(params);
+    CV_UNUSED(scoreThreshold);
+    CV_UNUSED(backend);
+    CV_UNUSED(target);
     CV_Error(cv::Error::StsNotImplemented,
              "LightGlueMatcher requires OpenCV built with opencv_dnn module!");
 }
