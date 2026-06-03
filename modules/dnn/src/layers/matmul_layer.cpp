@@ -158,8 +158,9 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         const Mat* B_mat = !blobs.empty() ? &blobs[0] :
                            (inputs.size() >= 2 && inputs[1].dims == 2 ? &inputs[1] : nullptr);
         if (B_mat && B_mat->data != last_packed_input_B_data) {
-            fastGemmPackB(*B_mat, packed_input_B, trans_b, opt);
-            helper.updatePackedBOffsets(packed_input_B.size());
+            packed_input_B.clear();
+            packed_input_B.shrink_to_fit();
+            thin_packed_B.clear();
 
             if (helper.batch == 1 && B_mat->type() == CV_32F &&
                 fastGemmThinEligible(helper.M, helper.N, helper.K)) {
@@ -169,7 +170,8 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                                   (size_t)helper.ldb0, (size_t)helper.ldb1,
                                   thin_packed_B.data());
             } else {
-                thin_packed_B.clear();
+                fastGemmPackB(*B_mat, packed_input_B, trans_b, opt);
+                helper.updatePackedBOffsets(packed_input_B.size());
             }
             last_packed_input_B_data = B_mat->data;
         }
