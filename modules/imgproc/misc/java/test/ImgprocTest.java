@@ -145,14 +145,6 @@ public class ImgprocTest extends OpenCVTestCase {
         assertEquals(src.rows(), Core.countNonZero(dst));
     }
 
-    public void testArcLength() {
-        MatOfPoint2f curve = new MatOfPoint2f(new Point(1, 3), new Point(2, 4), new Point(3, 5), new Point(4, 4), new Point(5, 3));
-
-        double arcLength = Imgproc.arcLength(curve, false);
-
-        assertEquals(5.656854249, arcLength, 0.000001);
-    }
-
     public void testBilateralFilterMatMatIntDoubleDouble() {
         Imgproc.bilateralFilter(gray255, dst, 5, 10, 5);
 
@@ -186,17 +178,6 @@ public class ImgprocTest extends OpenCVTestCase {
         Imgproc.blur(gray0, dst, size, anchorPoint, Core.BORDER_REFLECT);
         assertMatEqual(gray0, dst);
         // TODO_: write better test
-    }
-
-    public void testBoundingRect() {
-        MatOfPoint points = new MatOfPoint(new Point(0, 0), new Point(0, 4), new Point(4, 0), new Point(4, 4));
-        Point p1 = new Point(1, 1);
-        Point p2 = new Point(-5, -2);
-
-        Rect bbox = Imgproc.boundingRect(points);
-
-        assertTrue(bbox.contains(p1));
-        assertFalse(bbox.contains(p2));
     }
 
     public void testBoxFilterMatMatIntSize() {
@@ -345,25 +326,6 @@ public class ImgprocTest extends OpenCVTestCase {
         double distance = Imgproc.compareHist(H1, H2, Imgproc.HISTCMP_CORREL);
 
         assertEquals(1., distance, EPS);
-    }
-
-    public void testContourAreaMat() {
-        Mat contour = new Mat(1, 4, CvType.CV_32FC2);
-        contour.put(0, 0, 0, 0, 10, 0, 10, 10, 5, 4);
-
-        double area = Imgproc.contourArea(contour);
-
-        assertEquals(45., area, EPS);
-    }
-
-    public void testContourAreaMatBoolean() {
-        Mat contour = new Mat(1, 4, CvType.CV_32FC2);
-        contour.put(0, 0, 0, 0, 10, 0, 10, 10, 5, 4);
-
-        double area = Imgproc.contourArea(contour, true);
-
-        assertEquals(45., area, EPS);
-        // TODO_: write better test
     }
 
     public void testConvertMapsMatMatMatMatInt() {
