@@ -1,8 +1,6 @@
 {
     "func_arg_fix" : {
         "Dnn": {
-            "(Net*)readNetFromCaffe:(NSString*)prototxt caffeModel:(NSString*)caffeModel engine:(int)engine" : { "readNetFromCaffe" : {"name" : "readNetFromCaffeFile"} },
-            "(Net*)readNetFromCaffe:(ByteVector*)bufferProto bufferModel:(ByteVector*)bufferModel engine:(int)engine" : { "readNetFromCaffe" : {"name" : "readNetFromCaffeBuffer"} },
             "(Net*)readNetFromONNX:(NSString*)onnxFile engine:(int)engine" : { "readNetFromONNX" : {"name" : "readNetFromONNXFile"} },
             "(Net*)readNetFromONNX:(ByteVector*)buffer engine:(int)engine" : { "readNetFromONNX" : {"name" : "readNetFromONNXBuffer"} },
             "(Net*)readNetFromTensorflow:(NSString*)model config:(NSString*)config engine:(int)engine extraOutputs:(NSArray<NSString*>*)extraOutputs" : { "readNetFromTensorflow" : {"name" : "readNetFromTensorflowFile"} },

@@ -501,7 +501,7 @@ double CvCaptureCAM_Aravis::getProperty( int property_id ) const
         }
         break;
     }
-    return -1.0;
+    return CAP_PROP_UNKNOWN;
 }
 
 double CvCaptureCAM_Aravis::getExpectedMidGrey(ArvPixelFormat fmt) const

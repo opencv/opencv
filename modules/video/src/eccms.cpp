@@ -9,6 +9,9 @@
 \****************************************************************************************/
 
 namespace cv {
+ECCParameters::ECCParameters() : criteria(TermCriteria::COUNT + TermCriteria::EPS, 50, 1e-6)
+{}
+
 typedef std::vector<cv::Mat> MatPyramid;
 
 template<int motionType> struct MotionTraits {};

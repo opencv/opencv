@@ -21,7 +21,7 @@ static std::string _tf(TString filename, bool required = true)
 class Test_Model : public DNNTestLayer
 {
 public:
-    void testDetectModel(const std::string& weights, const std::string& cfg,
+    void testDetectModel(const std::string& weights, const std::string& /*cfg*/,
                          const std::string& imgPath, const std::vector<int>& refClassIds,
                          const std::vector<float>& refConfidences,
                          const std::vector<Rect2d>& refBoxes,
@@ -29,35 +29,67 @@ public:
                          double confThreshold = 0.24, double nmsThreshold = 0.0,
                          const Size& size = {-1, -1}, Scalar mean = Scalar(),
                          double scale = 1.0, bool swapRB = false, bool crop = false,
-                         bool nmsAcrossClasses = false)
+                         const std::vector<String>& outNames = {"boxes", "scores", "class_idx"})
     {
         checkBackend();
+        CV_Assert(outNames.size() == 3);
 
         Mat frame = imread(imgPath);
-        DetectionModel model(weights, cfg);
+        Net net = readNet(weights);
 
-        model.setInputSize(size).setInputMean(mean).setInputScale(scale)
-             .setInputSwapRB(swapRB).setInputCrop(crop);
-
-        model.setPreferableBackend(backend);
-        model.setPreferableTarget(target);
-
-        model.setNmsAcrossClasses(nmsAcrossClasses);
+        net.setPreferableBackend(backend);
+        net.setPreferableTarget(target);
         if (target == DNN_TARGET_CPU_FP16)
-            model.enableWinograd(false);
+            net.enableWinograd(false);
 
-        std::vector<int> classIds;
+        net.setInput(blobFromImage(frame, scale, size, mean, swapRB, crop, CV_32F));
+
+        std::vector<Mat> outs;
+        net.forward(outs, outNames);
+        ASSERT_EQ(outs.size(), 3u);
+
+        Mat outBoxes  = outs[0].reshape(1, (int)outs[0].total() / 4);
+        const Mat& outScores = outs[1];
+        const Mat& outClsIds = outs[2];
+
+        std::vector<Rect2d> boxes;
         std::vector<float> confidences;
-        std::vector<Rect> boxes;
+        std::vector<int> classIds;
+        for (int i = 0; i < outBoxes.rows; ++i)
+        {
+            float confidence = outScores.at<float>(i);
+            if (confidence < confThreshold)
+                continue;
 
-        model.detect(frame, classIds, confidences, boxes, confThreshold, nmsThreshold);
-
-        std::vector<Rect2d> boxesDouble(boxes.size());
-        for (int i = 0; i < boxes.size(); i++) {
-            boxesDouble[i] = boxes[i];
+            const float* box = outBoxes.ptr<float>(i);
+            boxes.emplace_back(box[0] / size.width, box[1] / size.height,
+                               (box[2] - box[0]) / size.width, (box[3] - box[1]) / size.height);
+            confidences.push_back(confidence);
+            classIds.push_back((int)outClsIds.at<float>(i));
         }
-        normAssertDetections(refClassIds, refConfidences, refBoxes, classIds,
-                             confidences, boxesDouble, "",
+
+        if (nmsThreshold > 0)
+        {
+            std::vector<int> keep;
+            NMSBoxesBatched(boxes, confidences, classIds,
+                            (float)confThreshold, (float)nmsThreshold, keep);
+
+            std::vector<Rect2d> nmsBoxes;
+            std::vector<float> nmsConfidences;
+            std::vector<int> nmsClassIds;
+            for (int idx : keep)
+            {
+                nmsBoxes.push_back(boxes[idx]);
+                nmsConfidences.push_back(confidences[idx]);
+                nmsClassIds.push_back(classIds[idx]);
+            }
+            boxes = std::move(nmsBoxes);
+            confidences = std::move(nmsConfidences);
+            classIds = std::move(nmsClassIds);
+        }
+
+        normAssertDetections(refClassIds, refConfidences, refBoxes,
+                             classIds, confidences, boxes, "",
                              confThreshold, scoreDiff, iouDiff);
     }
 
@@ -282,133 +314,66 @@ TEST_P(Test_Model, Classify)
     std::pair<int, float> ref(652, 0.641789);
 
     std::string img_path = _tf("grace_hopper_227.png");
-    std::string config_file = _tf("bvlc_alexnet.prototxt");
-    std::string weights_file = _tf("bvlc_alexnet.caffemodel", false);
+    std::string weights_file = _tf("onnx/models/alexnet.onnx", false);
 
     Size size{227, 227};
     float norm = 1e-4;
 
-    testClassifyModel(weights_file, config_file, img_path, ref, norm, size);
+    testClassifyModel(weights_file, "", img_path, ref, norm, size);
 }
 
-
-TEST_P(Test_Model, DetectionOutput)
+TEST_P(Test_Model, YOLOv3)
 {
-    applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
-
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Check 'backward_compatible_check || in_out_elements_equal' failed at core/src/op/reshape.cpp:427:
-    // While validating node 'v1::Reshape bbox_pred_reshape (ave_bbox_pred_rois[0]:f32{1,8,1,1}, Constant_388[0]:i64{4}) -> (f32{?,?,?,?})' with friendly_name 'bbox_pred_reshape':
-    // Requested output shape {1,300,8,1} is incompatible with input shape {1, 8, 1, 1}
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#elif defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
-    // Exception: Function contains several inputs and outputs with one friendly name! (HETERO bug?)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target != DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+    applyTestTag(
+        CV_TEST_TAG_LONG,
+        CV_TEST_TAG_MEMORY_2GB,
+        CV_TEST_TAG_DEBUG_VERYLONG
+    );
 
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#elif defined(INF_ENGINE_RELEASE)
-    // FIXIT DNN_BACKEND_INFERENCE_ENGINE is misused
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 
-    if (target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
-#endif
+    // The in-graph YOLO decode (Split) is not evaluable by the OpenVINO backend.
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 
-    std::vector<int> refClassIds = {7, 12};
-    std::vector<float> refConfidences = {0.991359f, 0.94786f};
-    std::vector<Rect2d> refBoxes = {Rect2d(491, 81, 212, 98),
-                                    Rect2d(132, 223, 207, 344)};
+    std::string model_file = _tf("yolov3.onnx", false);
+    std::string img_path = _tf("dog416.png"); // Matches standard YOLO inference classes
 
-    std::string img_path = _tf("dog416.png");
-    std::string weights_file = _tf("resnet50_rfcn_final.caffemodel", false);
-    std::string config_file = _tf("rfcn_pascal_voc_resnet50.prototxt");
+    // Extracted from original flat ref_ array: batchId, classId, confidence, left, top, right, bottom
+    std::vector<int> refClassIds = {7, 16, 1};
+    std::vector<float> refConfidences = {0.606292f, 0.55195f, 0.433444f};
 
-    Scalar mean = Scalar(102.9801, 115.9465, 122.7717);
-    Size size{800, 600};
+    // Rect2d requires (x, y, width, height) format
+    std::vector<Rect2d> refBoxes = {
+        Rect2d(0.612037f, 0.149921f, 0.910763f - 0.612037f, 0.300503f - 0.149921f), // Class 7
+        Rect2d(0.170690f, 0.356024f, 0.471459f - 0.170690f, 0.877178f - 0.356024f), // Class 16
+        Rect2d(0.199235f, 0.301175f, 0.753253f - 0.199235f, 0.744156f - 0.301175f)  // Class 1
+    };
 
-    double scoreDiff = default_l1, iouDiff = 1e-5;
-    float confThreshold = 0.8;
-    double nmsThreshold = 0.0;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_CPU_FP16)
+    // Setting precision tolerances
+    double scoreDiff = 8e-5, iouDiff = 3e-4;
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
-        if (backend == DNN_BACKEND_OPENCV)
-            scoreDiff = 4e-3;
-        else
-            scoreDiff = 2e-2;
-        iouDiff = 1.8e-1;
-    }
-#if defined(INF_ENGINE_RELEASE)
-        if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        {
-            scoreDiff = 0.05;
-            iouDiff = 0.08;
-        }
-#endif
-
-    testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences, refBoxes,
-                    scoreDiff, iouDiff, confThreshold, nmsThreshold, size, mean);
-}
-
-
-TEST_P(Test_Model, DetectionMobilenetSSD)
-{
-    Mat ref = blobFromNPY(_tf("mobilenet_ssd_caffe_out.npy"));
-    ref = ref.reshape(1, ref.size[2]);
-
-    std::string img_path = _tf("street.png");
-    Mat frame = imread(img_path);
-    int frameWidth  = frame.cols;
-    int frameHeight = frame.rows;
-
-    std::vector<int> refClassIds;
-    std::vector<float> refConfidences;
-    std::vector<Rect2d> refBoxes;
-    for (int i = 0; i < ref.rows; i++)
-    {
-        refClassIds.emplace_back(ref.at<float>(i, 1));
-        refConfidences.emplace_back(ref.at<float>(i, 2));
-        int left   = ref.at<float>(i, 3) * frameWidth;
-        int top    = ref.at<float>(i, 4) * frameHeight;
-        int right  = ref.at<float>(i, 5) * frameWidth;
-        int bottom = ref.at<float>(i, 6) * frameHeight;
-        int width  = right  - left + 1;
-        int height = bottom - top + 1;
-        refBoxes.emplace_back(left, top, width, height);
-    }
-
-    std::string weights_file = _tf("MobileNetSSD_deploy_19e3ec3.caffemodel", false);
-    std::string config_file = _tf("MobileNetSSD_deploy_19e3ec3.prototxt");
-
-    Scalar mean = Scalar(127.5, 127.5, 127.5);
-    double scale = 1.0 / 127.5;
-    Size size{300, 300};
-
-    double scoreDiff = 1e-5, iouDiff = 1e-5;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16)
-    {
-        scoreDiff = 1.7e-2;
-        iouDiff = 6.91e-2;
-    }
-    else if (target == DNN_TARGET_MYRIAD)
-    {
-        scoreDiff = 0.017;
-        if (getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-            iouDiff = 0.1;
+        scoreDiff = 0.006;
+        iouDiff = 0.042;
     }
     else if (target == DNN_TARGET_CUDA_FP16)
     {
-        scoreDiff = 0.0028;
-        iouDiff = 1e-2;
+        scoreDiff = 0.04;
+        iouDiff = 0.03;
     }
-    float confThreshold = FLT_MIN;
-    double nmsThreshold = 0.0;
 
-    testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences, refBoxes,
-                    scoreDiff, iouDiff, confThreshold, nmsThreshold, size, mean, scale);
+    // Model parameters
+    double confThreshold = 0.24;
+    double nmsThreshold = 0.4;
+    Size size{640, 640};
+    double scale = 1.0 / 255.0; // Standard image scaling for YOLO models
+    Scalar mean = Scalar();
+    bool swapRB = true; // YOLO expects RGB
+
+    testDetectModel(model_file, "", img_path, refClassIds, refConfidences, refBoxes,
+                    scoreDiff, iouDiff, confThreshold, nmsThreshold, size, mean, scale, swapRB);
 }
 
 TEST_P(Test_Model, Keypoints_pose)
@@ -476,44 +441,6 @@ TEST_P(Test_Model, Keypoints_face)
         norm = 0.004; // l1 = 0.0006, lInf = 0.004
 
     testKeypointsModel(weights, "", inp, exp, norm, size, mean, scale, swapRB);
-}
-
-TEST_P(Test_Model, Detection_normalized)
-{
-    std::string img_path = _tf("grace_hopper_227.png");
-    std::vector<int> refClassIds = {15};
-    std::vector<float> refConfidences = {0.999222f};
-    std::vector<Rect2d> refBoxes = {Rect2d(0, 4, 227, 222)};
-
-    std::string weights_file = _tf("MobileNetSSD_deploy_19e3ec3.caffemodel", false);
-    std::string config_file = _tf("MobileNetSSD_deploy_19e3ec3.prototxt");
-
-    Scalar mean = Scalar(127.5, 127.5, 127.5);
-    double scale = 1.0 / 127.5;
-    Size size{300, 300};
-
-    double scoreDiff = 1e-5, iouDiff = 1e-5;
-    float confThreshold = FLT_MIN;
-    double nmsThreshold = 0.0;
-    if (target == DNN_TARGET_CUDA)
-    {
-        scoreDiff = 3e-4;
-        iouDiff = 0.018;
-    }
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_CPU_FP16)
-    {
-        scoreDiff = 5e-3;
-        iouDiff = 0.09;
-    }
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2020040000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
-    {
-        scoreDiff = 0.02;
-        iouDiff = 0.1f;
-    }
-#endif
-    testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences, refBoxes,
-                    scoreDiff, iouDiff, confThreshold, nmsThreshold, size, mean, scale);
 }
 
 TEST_P(Test_Model, Segmentation)

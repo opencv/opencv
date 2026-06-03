@@ -619,11 +619,11 @@ double VideoCapture::get(int propId) const
         }
         if (api <= 0)
         {
-            return -1.0;
+            return CAP_PROP_UNKNOWN;
         }
         return static_cast<double>(api);
     }
-    return !icap.empty() ? icap->getProperty(propId) : 0;
+    return !icap.empty() ? icap->getProperty(propId) : static_cast<double>(CAP_PROP_UNKNOWN);
 }
 
 
@@ -848,7 +848,7 @@ double VideoWriter::get(int propId) const
     {
         return iwriter->getProperty(propId);
     }
-    return 0.;
+    return CAP_PROP_UNKNOWN;
 }
 
 String VideoWriter::getBackendName() const

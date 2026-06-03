@@ -192,7 +192,7 @@ VideoWriter_IntelMFX::~VideoWriter_IntelMFX()
 double VideoWriter_IntelMFX::getProperty(int) const
 {
     MSG(cerr << "MFX: getProperty() is not implemented" << endl);
-    return 0;
+    return CAP_PROP_UNKNOWN;
 }
 
 bool VideoWriter_IntelMFX::setProperty(int, double)

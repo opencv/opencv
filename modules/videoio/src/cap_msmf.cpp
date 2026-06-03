@@ -1633,7 +1633,9 @@ bool CvCapture_MSMF::configureAudioFrame()
             chunkLengthOfBytes = bufferAudioData.size();
             audioSamplePos += chunkLengthOfBytes/bytesPerSample;
         }
-        CV_Check((double)chunkLengthOfBytes, chunkLengthOfBytes >= INT_MIN || chunkLengthOfBytes <= INT_MAX, "MSMF: The chunkLengthOfBytes is out of the allowed range");
+        if ((LONGLONG)bufferAudioData.size() < chunkLengthOfBytes)
+            chunkLengthOfBytes = (LONGLONG)bufferAudioData.size();
+        CV_Check((double)chunkLengthOfBytes, chunkLengthOfBytes >= INT_MIN && chunkLengthOfBytes <= INT_MAX, "MSMF: The chunkLengthOfBytes is out of the allowed range");
         copy(bufferAudioData.begin(), bufferAudioData.begin() + (int)chunkLengthOfBytes, std::back_inserter(audioDataInUse));
         bufferAudioData.erase(bufferAudioData.begin(), bufferAudioData.begin() + (int)chunkLengthOfBytes);
         if (audioFrame.empty())
@@ -2290,7 +2292,7 @@ double CvCapture_MSMF::getProperty( int property_id ) const
         default:
             break;
         }
-    return -1;
+    return CAP_PROP_UNKNOWN;
 }
 
 template <typename CtrlT>
@@ -2764,7 +2766,7 @@ double CvVideoWriter_MSMF::getProperty(int propId) const
     {
         return static_cast<double>(va_device);
     }
-    return 0;
+    return VIDEOWRITER_PROP_UNKNOWN;
 }
 
 cv::Ptr<cv::IVideoWriter> cv::cvCreateVideoWriter_MSMF( const std::string& filename, int fourcc,

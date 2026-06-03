@@ -393,7 +393,7 @@ if(HAVE_PROTOBUF)
   ocv_target_compile_definitions(${the_module} PRIVATE "HAVE_PROTOBUF=1")
 
   if(PROTOBUF_UPDATE_FILES)
-    file(GLOB proto_files "${CMAKE_CURRENT_LIST_DIR}/src/tensorflow/*.proto" "${CMAKE_CURRENT_LIST_DIR}/src/caffe/opencv-caffe.proto" "${CMAKE_CURRENT_LIST_DIR}/src/onnx/opencv-onnx.proto")
+    file(GLOB proto_files "${CMAKE_CURRENT_LIST_DIR}/src/tensorflow/*.proto" "${CMAKE_CURRENT_LIST_DIR}/src/onnx/opencv-onnx.proto")
     if(CMAKE_VERSION VERSION_LESS "3.13.0")
       set(PROTOBUF_GENERATE_CPP_APPEND_PATH ON) # required for tensorflow
       protobuf_generate_cpp(fw_srcs fw_hdrs ${proto_files})
@@ -586,28 +586,6 @@ ocv_add_perf_tests(${dnn_runtime_libs}
     FILES Src ${perf_srcs}
     FILES Include ${perf_hdrs}
 )
-
-ocv_option(OPENCV_DNN_PERF_CAFFE "Add performance tests of Caffe framework" OFF)
-ocv_option(OPENCV_DNN_PERF_CLCAFFE "Add performance tests of clCaffe framework" OFF)
-if(BUILD_PERF_TESTS)
-  if (OPENCV_DNN_PERF_CAFFE
-      OR ${the_module}_PERF_CAFFE  # compatibility for deprecated option
-  )
-    find_package(Caffe QUIET)
-    if (Caffe_FOUND)
-      ocv_target_compile_definitions(opencv_perf_dnn PRIVATE "HAVE_CAFFE=1")
-      ocv_target_link_libraries(opencv_perf_dnn caffe)
-    endif()
-  elseif(OPENCV_DNN_PERF_CLCAFFE
-         OR ${the_module}_PERF_CAFFE  # compatibility for deprecated option
-  )
-    find_package(Caffe QUIET)
-    if (Caffe_FOUND)
-      ocv_target_compile_definitions(opencv_perf_dnn PRIVATE "HAVE_CLCAFFE=1")
-      ocv_target_link_libraries(opencv_perf_dnn caffe)
-    endif()
-  endif()
-endif()
 
 if(DNN_ENABLE_PLUGINS)
   ocv_target_compile_definitions(${the_module} PRIVATE ENABLE_PLUGINS)

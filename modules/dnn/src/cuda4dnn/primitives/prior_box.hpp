@@ -95,7 +95,9 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             const std::vector<cv::Ptr<BackendWrapper>>& outputs,
             csl::Workspace& workspace) override
         {
-            CV_Assert(inputs.size() == 2); /* we don't need the inputs but we are given */
+            // PriorBox uses layer parameters and inputs[0]/inputs[1] shapes; tensor data is never read.
+            // Extra inputs (e.g., in ssd_vgg16.onnx) are ignored, so require >= 2 inputs instead of exactly 2.
+            CV_Assert(inputs.size() >= 2);
             CV_Assert(outputs.size() == 1);
 
             auto output_wrapper = outputs[0].dynamicCast<wrapper_type>();

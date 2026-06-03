@@ -1856,7 +1856,7 @@ double GStreamerCapture::getProperty(int propId) const
 
     if(!pipeline) {
         CV_WARN("GStreamer: no pipeline");
-        return 0;
+        return CAP_PROP_UNKNOWN;
     }
 
     switch(propId)
@@ -1868,14 +1868,14 @@ double GStreamerCapture::getProperty(int propId) const
         {
             if (isPosFramesEmulated)
                 return emulatedFrameNumber;
-            return 0; // TODO getProperty() "unsupported" value should be changed
+            return CAP_PROP_UNKNOWN;
         }
         format = GST_FORMAT_DEFAULT;
         status = gst_element_query_position(sink.get(), CV_GST_FORMAT(format), &value);
         if(!status) {
             handleMessage(pipeline);
             CV_WARN("GStreamer: unable to query position of stream");
-            return 0;
+            return CAP_PROP_UNKNOWN;
         }
         return value;
     case CAP_PROP_POS_AVI_RATIO:
@@ -1884,7 +1884,7 @@ double GStreamerCapture::getProperty(int propId) const
         if(!status) {
             handleMessage(pipeline);
             CV_WARN("GStreamer: unable to query position of stream");
-            return 0;
+            return CAP_PROP_UNKNOWN;
         }
         return ((double) value) / GST_FORMAT_PERCENT_MAX;
     case CAP_PROP_FRAME_WIDTH:
@@ -1918,7 +1918,7 @@ double GStreamerCapture::getProperty(int propId) const
         if(!sink)
         {
             CV_WARN("there is no sink yet");
-            return 0;
+            return CAP_PROP_UNKNOWN;
         }
         return gst_app_sink_get_max_buffers(GST_APP_SINK(sink.get()));
     case CAP_PROP_AUDIO_TOTAL_CHANNELS:
@@ -1931,26 +1931,26 @@ double GStreamerCapture::getProperty(int propId) const
         return audioBaseIndex;
     case CAP_PROP_AUDIO_TOTAL_STREAMS:
         CV_LOG_ONCE_WARNING(NULL, "OpenCV | GStreamer: CAP_PROP_AUDIO_TOTAL_STREAMS property is not supported");
-        return 0;
+        return CAP_PROP_UNKNOWN;
     case CAP_PROP_AUDIO_POS:
         return audioSamplePosInSamples;
     case CAP_PROP_AUDIO_SHIFT_NSEC:
         CV_LOG_ONCE_WARNING(NULL, "OpenCV | GStreamer: CAP_PROP_AUDIO_SHIFT_NSEC property is not supported");
-        return 0;
+        return CAP_PROP_UNKNOWN;
     case CAP_PROP_OPEN_TIMEOUT_MSEC:
         return GST_TIME_AS_MSECONDS(openTimeout);
     case CAP_PROP_READ_TIMEOUT_MSEC:
 #if FULL_GST_VERSION >= VERSION_NUM(1,10,0)
         return GST_TIME_AS_MSECONDS(readTimeout);
 #else
-        return 0;
+        return CAP_PROP_UNKNOWN;
 #endif
     default:
         CV_WARN("unhandled property: " << propId);
         break;
     }
 
-    return 0;
+    return CAP_PROP_UNKNOWN;
 }
 
 /*!
@@ -2768,7 +2768,7 @@ double CvVideoWriter_GStreamer::getProperty(int propId) const
     {
         return static_cast<double>(hw_device);
     }
-    return 0;
+    return VIDEOWRITER_PROP_UNKNOWN;
 }
 
 Ptr<IVideoWriter> create_GStreamer_writer(const std::string& filename, int fourcc, double fps,

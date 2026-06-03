@@ -320,13 +320,10 @@ Mat findHomography( InputArray _points1, InputArray _points2,
             npoints = p.checkVector(3, -1, false);
             if( npoints < 0 )
                 CV_Error(Error::StsBadArg, "The input arrays should be 2D or 3D point sets");
-            if( npoints == 0 )
-                return Mat();
             convertPointsFromHomogeneous(p, p);
         }
         // Need at least 4 point correspondences to calculate Homography
-        if( npoints < 4 )
-            CV_Error(Error::StsVecLengthErr , "The input arrays should have at least 4 corresponding point sets to calculate Homography");
+        CV_CheckGE(npoints, 4, "The input arrays should have at least 4 corresponding point sets to calculate Homography");
         p.reshape(2, npoints).convertTo(m, CV_32F);
     }
 

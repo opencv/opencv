@@ -576,6 +576,7 @@ CameraWidget * DigitalCameraCapture::getGenericProperty(int propertyId,
         case CAP_PROP_VIEWFINDER:
             return findWidgetByName(PROP_VIEWFINDER);
     }
+    output = CAP_PROP_UNKNOWN;
     return NULL;
 }
 
@@ -586,7 +587,7 @@ CameraWidget * DigitalCameraCapture::getGenericProperty(int propertyId,
 double DigitalCameraCapture::getProperty(int propertyId) const
 {
     CameraWidget * widget = NULL;
-    double output = 0;
+    double output = CAP_PROP_UNKNOWN;
     if (propertyId < 0)
     {
         widget = getWidget(-propertyId);
@@ -600,10 +601,10 @@ double DigitalCameraCapture::getProperty(int propertyId) const
                 return preview;
             case CAP_PROP_GPHOTO2_WIDGET_ENUMERATE:
                 if (rootWidget == NULL)
-                    return 0;
+                    return CAP_PROP_UNKNOWN;
                 return (intptr_t) widgetInfo.c_str();
             case CAP_PROP_GPHOTO2_RELOAD_CONFIG:
-                return 0; // Trigger, only by set
+                return CAP_PROP_UNKNOWN; // Trigger, only by set
             case CAP_PROP_GPHOTO2_RELOAD_ON_CHANGE:
                 return reloadOnChange;
             case CAP_PROP_GPHOTO2_COLLECT_MSGS:
@@ -642,7 +643,7 @@ double DigitalCameraCapture::getProperty(int propertyId) const
                         return i;
                     }
                 }
-                return -1;
+                return CAP_PROP_UNKNOWN;
             }
             case GP_WIDGET_TOGGLE:
             {
@@ -669,7 +670,7 @@ double DigitalCameraCapture::getProperty(int propertyId) const
         char buf[128] = "";
         snprintf(buf, sizeof(buf), "cannot get property: %d", propertyId);
         message(WARNING, (const char *) buf, e);
-        return 0;
+        return CAP_PROP_UNKNOWN;
     }
 }
 

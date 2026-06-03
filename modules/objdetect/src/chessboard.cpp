@@ -704,7 +704,7 @@ void FastX::detectImpl(const cv::Mat& _gray_image,
     CV_CheckTypeEQ(_gray_image.type(), CV_8UC1, "Unsupported image type");
 
     // up-sample if needed
-    cv::UMat gray_image;
+    cv::Mat gray_image;
     const int super_res = int(parameters.super_resolution);
     if(super_res)
         cv::resize(_gray_image,gray_image,cv::Size(),2,2);
@@ -728,9 +728,9 @@ void FastX::detectImpl(const cv::Mat& _gray_image,
             int scale_id = scale-parameters.min_scale;
             int scale_size = int(std::pow(2,scale+1+super_res));
             int scale_size2 = int((scale_size/7)*2+1);
-            std::vector<cv::UMat> images;
+            std::vector<cv::Mat> images;
             images.resize(2*num);
-            cv::UMat rotated,filtered_h,filtered_v;
+            cv::Mat rotated,filtered_h,filtered_v;
             cv::boxFilter(gray_image,images[0],-1,cv::Size(scale_size,scale_size2));
             cv::boxFilter(gray_image,images[num],-1,cv::Size(scale_size2,scale_size));
             for(int i=1;i<num;++i)

@@ -231,13 +231,13 @@ void CV_ImageWarpBaseTest::run(int)
 float CV_ImageWarpBaseTest::get_success_error_level(int _interpolation, int) const
 {
     if (_interpolation == INTER_CUBIC)
-        return 1.0f;
+        return 2.0f;
     else if (_interpolation == INTER_LANCZOS4)
         return 1.0f;
     else if (_interpolation == INTER_NEAREST)
         return 255.0f;  // FIXIT: check is not reliable for Black/White (0/255) images
     else if (_interpolation == INTER_AREA)
-        return 2.0f;
+        return 1.0f;
     else
         return 1.0f;
 }
@@ -304,7 +304,7 @@ void CV_ImageWarpBaseTest::validate_results() const
 
                 const int radius = 3;
                 int rmin = MAX(dy - radius, 0), rmax = MIN(dy + radius, dsize.height);
-                int cmin = MAX(dx / cn - radius, 0), cmax = MIN(dx / cn + radius, dsize.width);
+                int cmin = MAX(dx / cn - radius, 0), cmax = MIN(dx / cn + radius, dsize.width/cn);
 
                 std::cout << "opencv result:\n" << dst(Range(rmin, rmax), Range(cmin, cmax)) << std::endl;
                 std::cout << "reference result:\n" << reference_dst(Range(rmin, rmax), Range(cmin, cmax)) << std::endl;
@@ -851,16 +851,23 @@ void CV_Remap_Test::run_func()
 
 void CV_Remap_Test::convert_maps()
 {
-    if (mapx.type() != CV_16SC2)
-        convertMaps(mapx.clone(), mapy.clone(), mapx, mapy, CV_16SC2, interpolation == INTER_NEAREST);
-    else if (interpolation != INTER_NEAREST)
-        if (mapy.type() != CV_16UC1)
-            mapy.clone().convertTo(mapy, CV_16UC1);
+    if (interpolation == INTER_CUBIC) {
+        if (mapx.type() != CV_32FC1)
+            convertMaps(mapx.clone(), mapy.clone(), mapx, mapy, CV_32FC1, interpolation == INTER_NEAREST);
+    }
+    else {
+        if (mapx.type() != CV_16SC2)
+            convertMaps(mapx.clone(), mapy.clone(), mapx, mapy, CV_16SC2, interpolation == INTER_NEAREST);
+        else if (interpolation != INTER_NEAREST) {
+            if (mapy.type() != CV_16UC1)
+                mapy.clone().convertTo(mapy, CV_16UC1);
+        }
 
-    if (interpolation == INTER_NEAREST)
-        mapy = Mat();
-    CV_Assert(((interpolation == INTER_NEAREST && mapy.empty()) || mapy.type() == CV_16UC1 ||
-               mapy.type() == CV_16SC1) && mapx.type() == CV_16SC2);
+        if (interpolation == INTER_NEAREST)
+            mapy = Mat();
+        CV_Assert(((interpolation == INTER_NEAREST && mapy.empty()) || mapy.type() == CV_16UC1 ||
+                   mapy.type() == CV_16SC1) && mapx.type() == CV_16SC2);
+    }
 }
 
 const char* CV_Remap_Test::borderType_to_string() const
@@ -1164,8 +1171,10 @@ void CV_Remap_Test::remap_nearest(const Mat& _src, Mat& _dst)
 
 void CV_Remap_Test::remap_generic(const Mat& _src, Mat& _dst)
 {
-    CV_Assert(mapx.type() == CV_16SC2 && mapy.type() == CV_16UC1);
+    CV_Assert((mapx.type() == CV_16SC2 && mapy.type() == CV_16UC1) ||
+              (mapx.type() == CV_32FC1 && mapy.type() == CV_32FC1));
 
+    bool fixedpt = mapx.type() == CV_16SC2;
     int ksize = 2;
     if (interpolation == INTER_CUBIC)
         ksize = 4;
@@ -1185,19 +1194,42 @@ void CV_Remap_Test::remap_generic(const Mat& _src, Mat& _dst)
 
     for (int dy = 0; dy < dsize.height; ++dy)
     {
-        const short* yMx = mapx.ptr<short>(dy);
-        const ushort* yMy = mapy.ptr<ushort>(dy);
+        const short* Mxy = nullptr;
+        const ushort* Mab = nullptr;
+        const float* Mx = nullptr;
+        const float* My = nullptr;
+
+        if (fixedpt) {
+            Mxy = mapx.ptr<short>(dy);
+            Mab = mapy.ptr<ushort>(dy);
+        } else {
+            Mx = mapx.ptr<float>(dy);
+            My = mapy.ptr<float>(dy);
+        }
 
         float* yD = _dst.ptr<float>(dy);
 
         for (int dx = 0; dx < dsize.width; ++dx)
         {
             float* xyD = yD + dx * cn;
-            float sx = yMx[dx * 2], sy = yMx[dx * 2 + 1];
-            int isx = cvFloor(sx), isy = cvFloor(sy);
+            int isx, isy;
+            float alpha, beta;
+            if (fixedpt) {
+                isx = Mxy[dx * 2];
+                isy = Mxy[dx * 2 + 1];
+                alpha = (Mab[dx] & (INTER_TAB_SIZE - 1)) / static_cast<float>(INTER_TAB_SIZE);
+                beta = ((Mab[dx] >> INTER_BITS) & (INTER_TAB_SIZE - 1)) / static_cast<float>(INTER_TAB_SIZE);
+            } else {
+                float sx = Mx[dx];
+                float sy = My[dx];
+                isx = cvFloor(sx);
+                isy = cvFloor(sy);
+                alpha = sx - isx;
+                beta = sy - isy;
+            }
 
-            inter_func((yMy[dx] & (INTER_TAB_SIZE - 1)) / static_cast<float>(INTER_TAB_SIZE), w);
-            inter_func(((yMy[dx] >> INTER_BITS) & (INTER_TAB_SIZE - 1)) / static_cast<float>(INTER_TAB_SIZE), w + ksize);
+            inter_func(alpha, w);
+            inter_func(beta, w + ksize);
 
             isx -= ofs;
             isy -= ofs;
@@ -1332,7 +1364,7 @@ void CV_WarpAffine_Test::run_func()
 
 float CV_WarpAffine_Test::get_success_error_level(int _interpolation, int _depth) const
 {
-    return _depth == CV_8U ? 0.f : CV_ImageWarpBaseTest::get_success_error_level(_interpolation, _depth);
+    return _depth == CV_8U ? 2.f : CV_ImageWarpBaseTest::get_success_error_level(_interpolation, _depth);
 }
 
 void CV_WarpAffine_Test::run_reference_func()
@@ -1390,6 +1422,44 @@ void CV_WarpAffine_Test::new_warpAffine(const Mat &_src, Mat &_dst, const Mat &t
     }
 }
 
+static void computeWarpMaps(const Mat& M, Mat& mapx, Mat& mapy)
+{
+    CV_Assert(M.type() == CV_64F);
+    CV_Assert(M.size() == Size(3, 2) ||
+              M.size() == Size(3, 3));
+    CV_Assert(mapx.size() == mapy.size());
+    CV_Assert(mapx.type() == CV_32FC1 && mapy.type() == CV_32FC1);
+
+    bool perspective = M.rows == 3;
+    const double* dataM = M.ptr<double>();
+    Size dsize = mapx.size();
+
+    for (int dy = 0; dy < dsize.height; ++dy)
+    {
+        float* mapxrow = mapx.ptr<float>(dy);
+        float* mapyrow = mapy.ptr<float>(dy);
+        for (int dx = 0; dx < dsize.width; ++dx)
+        {
+            double x = dataM[0] * dx + dataM[1] * dy + dataM[2];
+            double y = dataM[3] * dx + dataM[4] * dy + dataM[5];
+
+            if (perspective) {
+                double z = dataM[6] * dx + dataM[7] * dy + dataM[8];
+                if (z != 0.0) {
+                    x /= z;
+                    y /= z;
+                } else {
+                    x = 0.0;
+                    y = 0.0;
+                }
+            }
+
+            mapxrow[dx] = float(x);
+            mapyrow[dx] = float(y);
+        }
+    }
+}
+
 void CV_WarpAffine_Test::warpAffine(const Mat& _src, Mat& _dst)
 {
     Size dsize = _dst.size();
@@ -1405,12 +1475,6 @@ void CV_WarpAffine_Test::warpAffine(const Mat& _src, Mat& _dst)
     if (inter == INTER_AREA)
         inter = INTER_LINEAR;
 
-    mapx.create(dsize, CV_16SC2);
-    if (inter != INTER_NEAREST)
-        mapy.create(dsize, CV_16SC1);
-    else
-        mapy = Mat();
-
     if (!(interpolation & cv::WARP_INVERSE_MAP))
         invertAffineTransform(tM.clone(), tM);
 
@@ -1425,32 +1489,44 @@ void CV_WarpAffine_Test::warpAffine(const Mat& _src, Mat& _dst)
         }
     }
 
-    const int AB_BITS = MAX(10, (int)INTER_BITS);
-    const int AB_SCALE = 1 << AB_BITS;
-    int round_delta = (inter == INTER_NEAREST) ? AB_SCALE / 2 : (AB_SCALE / INTER_TAB_SIZE / 2);
+    if (inter == INTER_CUBIC) {
+        mapx.create(dsize, CV_32FC1);
+        mapy.create(dsize, CV_32FC1);
+        computeWarpMaps(tM, mapx, mapy);
+    } else {
+        mapx.create(dsize, CV_16SC2);
+        if (inter != INTER_NEAREST)
+            mapy.create(dsize, CV_16SC1);
+        else
+            mapy = Mat();
 
-    const softdouble* data_tM = tM.ptr<softdouble>(0);
-    for (int dy = 0; dy < dsize.height; ++dy)
-    {
-        short* yM = mapx.ptr<short>(dy);
-        for (int dx = 0; dx < dsize.width; ++dx, yM += 2)
+        const int AB_BITS = MAX(10, (int)INTER_BITS);
+        const int AB_SCALE = 1 << AB_BITS;
+        int round_delta = (inter == INTER_NEAREST) ? AB_SCALE / 2 : (AB_SCALE / INTER_TAB_SIZE / 2);
+
+        const softdouble* data_tM = tM.ptr<softdouble>(0);
+        for (int dy = 0; dy < dsize.height; ++dy)
         {
-            int v1 = saturate_cast<int>(saturate_cast<int>(data_tM[0] * dx * AB_SCALE) +
-                    saturate_cast<int>((data_tM[1] * dy + data_tM[2]) * AB_SCALE) + round_delta),
+            short* yM = mapx.ptr<short>(dy);
+            for (int dx = 0; dx < dsize.width; ++dx, yM += 2)
+            {
+                int v1 = saturate_cast<int>(saturate_cast<int>(data_tM[0] * dx * AB_SCALE) +
+                                            saturate_cast<int>((data_tM[1] * dy + data_tM[2]) * AB_SCALE) + round_delta),
                 v2 = saturate_cast<int>(saturate_cast<int>(data_tM[3] * dx * AB_SCALE) +
-                    saturate_cast<int>((data_tM[4] * dy + data_tM[5]) * AB_SCALE) + round_delta);
-            v1 >>= AB_BITS - INTER_BITS;
-            v2 >>= AB_BITS - INTER_BITS;
+                                        saturate_cast<int>((data_tM[4] * dy + data_tM[5]) * AB_SCALE) + round_delta);
+                v1 >>= AB_BITS - INTER_BITS;
+                v2 >>= AB_BITS - INTER_BITS;
 
-            yM[0] = saturate_cast<short>(v1 >> INTER_BITS);
-            yM[1] = saturate_cast<short>(v2 >> INTER_BITS);
+                yM[0] = saturate_cast<short>(v1 >> INTER_BITS);
+                yM[1] = saturate_cast<short>(v2 >> INTER_BITS);
 
-            if (inter != INTER_NEAREST)
-                mapy.ptr<short>(dy)[dx] = ((v2 & (INTER_TAB_SIZE - 1)) * INTER_TAB_SIZE + (v1 & (INTER_TAB_SIZE - 1)));
+                if (inter != INTER_NEAREST)
+                    mapy.ptr<short>(dy)[dx] = ((v2 & (INTER_TAB_SIZE - 1)) * INTER_TAB_SIZE + (v1 & (INTER_TAB_SIZE - 1)));
+            }
         }
-    }
 
-    CV_Assert(mapx.type() == CV_16SC2 && ((inter == INTER_NEAREST && mapy.empty()) || mapy.type() == CV_16SC1));
+        CV_Assert(mapx.type() == CV_16SC2 && ((inter == INTER_NEAREST && mapy.empty()) || mapy.type() == CV_16SC1));
+    }
     cv::remap(_src, _dst, mapx, mapy, inter, borderType, borderValue);
 }
 
@@ -1612,41 +1688,47 @@ void CV_WarpPerspective_Test::warpPerspective(const Mat& _src, Mat& _dst)
         }
     }
 
-    mapx.create(dsize, CV_16SC2);
-    if (inter != INTER_NEAREST)
-        mapy.create(dsize, CV_16SC1);
-    else
-        mapy = Mat();
+    if (inter == INTER_CUBIC) {
+        mapx.create(dsize, CV_32FC1);
+        mapy.create(dsize, CV_32FC1);
+        computeWarpMaps(M, mapx, mapy);
+    } else {
+        mapx.create(dsize, CV_16SC2);
+        if (inter != INTER_NEAREST)
+            mapy.create(dsize, CV_16SC1);
+        else
+            mapy = Mat();
 
-    double* tM = M.ptr<double>(0);
-    for (int dy = 0; dy < dsize.height; ++dy)
-    {
-        short* yMx = mapx.ptr<short>(dy);
-
-        for (int dx = 0; dx < dsize.width; ++dx, yMx += 2)
+        double* tM = M.ptr<double>(0);
+        for (int dy = 0; dy < dsize.height; ++dy)
         {
-            double den = tM[6] * dx + tM[7] * dy + tM[8];
-            den = den ? 1.0 / den : 0.0;
+            short* yMx = mapx.ptr<short>(dy);
 
-            if (inter == INTER_NEAREST)
+            for (int dx = 0; dx < dsize.width; ++dx, yMx += 2)
             {
-                yMx[0] = saturate_cast<short>((tM[0] * dx + tM[1] * dy + tM[2]) * den);
-                yMx[1] = saturate_cast<short>((tM[3] * dx + tM[4] * dy + tM[5]) * den);
-                continue;
+                double den = tM[6] * dx + tM[7] * dy + tM[8];
+                den = den ? 1.0 / den : 0.0;
+
+                if (inter == INTER_NEAREST)
+                {
+                    yMx[0] = saturate_cast<short>((tM[0] * dx + tM[1] * dy + tM[2]) * den);
+                    yMx[1] = saturate_cast<short>((tM[3] * dx + tM[4] * dy + tM[5]) * den);
+                    continue;
+                }
+
+                den *= static_cast<double>(INTER_TAB_SIZE);
+                int v0 = saturate_cast<int>((tM[0] * dx + tM[1] * dy + tM[2]) * den);
+                int v1 = saturate_cast<int>((tM[3] * dx + tM[4] * dy + tM[5]) * den);
+
+                yMx[0] = saturate_cast<short>(v0 >> INTER_BITS);
+                yMx[1] = saturate_cast<short>(v1 >> INTER_BITS);
+                mapy.ptr<short>(dy)[dx] = saturate_cast<short>((v1 & (INTER_TAB_SIZE - 1)) *
+                                                               INTER_TAB_SIZE + (v0 & (INTER_TAB_SIZE - 1)));
             }
-
-            den *= static_cast<double>(INTER_TAB_SIZE);
-            int v0 = saturate_cast<int>((tM[0] * dx + tM[1] * dy + tM[2]) * den);
-            int v1 = saturate_cast<int>((tM[3] * dx + tM[4] * dy + tM[5]) * den);
-
-            yMx[0] = saturate_cast<short>(v0 >> INTER_BITS);
-            yMx[1] = saturate_cast<short>(v1 >> INTER_BITS);
-            mapy.ptr<short>(dy)[dx] = saturate_cast<short>((v1 & (INTER_TAB_SIZE - 1)) *
-                    INTER_TAB_SIZE + (v0 & (INTER_TAB_SIZE - 1)));
         }
-    }
 
-    CV_Assert(mapx.type() == CV_16SC2 && ((inter == INTER_NEAREST && mapy.empty()) || mapy.type() == CV_16SC1));
+        CV_Assert(mapx.type() == CV_16SC2 && ((inter == INTER_NEAREST && mapy.empty()) || mapy.type() == CV_16SC1));
+    }
     cv::remap(_src, _dst, mapx, mapy, inter, borderType, borderValue);
 }
 

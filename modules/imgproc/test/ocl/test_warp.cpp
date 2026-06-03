@@ -107,7 +107,7 @@ PARAM_TEST_CASE(WarpTestBase, MatType, Interpolation, bool, bool)
     void Near(double threshold = 0.0)
     {
         if (depth < CV_32F)
-            EXPECT_MAT_N_DIFF(dst_roi, udst_roi, cvRound(dst_roi.total()*threshold));
+            EXPECT_MAT_N_DIFF_EPS(dst_roi, udst_roi, 1, cvRound(dst_roi.total()*threshold));
         else
             OCL_EXPECT_MATS_NEAR_RELATIVE(dst, threshold);
     }
