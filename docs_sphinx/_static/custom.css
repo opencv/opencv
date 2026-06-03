@@ -817,9 +817,11 @@ div.highlight > button.copybtn {
     max-width: 100%;
     max-height: 80vh;
     margin: 1rem 0 1.5rem;
+    text-align: center;   /* center a graph narrower than the content area */
 }
 .opencv-graph-scroll > svg.opencv-coll-graph {
-    margin: 0;          /* wrapper owns spacing */
+    display: block;
+    margin: 0 auto;     /* centered when it fits; auto-margins collapse on pan */
     max-width: none;    /* keep natural size so the box can pan a big graph */
 }
 

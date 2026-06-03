@@ -404,10 +404,7 @@ void preprocess(const Mat& frame, Net& net, Size inpSize)
 
     // Prepare the blob from the image
     Mat inp;
-    if(framework == "weights"){ // checks whether model is darknet
-        blobFromImage(frame, inp, scale, size, meanv, swapRB, false, CV_32F);
-    }
-    else{
+    {
         //![preprocess_call]
         Image2BlobParams imgParams(
             Scalar::all(scale),
@@ -552,35 +549,66 @@ void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, int backend, vec
             }
         }
     }
-    else if (postprocessing == "darknet")
+    else if (postprocessing == "yolov4")
     {
-        for (size_t i = 0; i < outs.size(); ++i)
+        // boxes[b,N,1,4]+confs[b,N,classes] (normalized) or boxes[b,N,4]+scores[b,N]+classIdx[b,N] (model-px)
+        bool isBoxConfsFormat = (outs.size() == 2 && outs[0].dims == 4 && outs[0].size[outs[0].dims - 1] == 4);
+        bool isBoxScoresIdxFormat = (outs.size() == 3 && outs[0].dims == 3 && outs[0].size[2] == 4);
+        if (isBoxScoresIdxFormat)
         {
-            // Network produces output blob with a shape NxC where N is a number of
-            // detected objects and C is a number of classes + 4 where the first 4
-            // numbers are [center_x, center_y, width, height]
-            float* data = (float*)outs[i].data;
-            for (int j = 0; j < outs[i].rows; ++j, data += outs[i].cols)
+            int N = outs[0].size[1];
+            const float* boxesPtr = outs[0].ptr<float>(0);
+            const float* scoresPtr = outs[1].ptr<float>(0);
+            const float* classIdxPtr = outs[2].ptr<float>(0);
+            for (int j = 0; j < N; ++j)
             {
-                Mat scores = outs[i].row(j).colRange(5, outs[i].cols);
-                Point classIdPoint;
-                double confidence;
-                minMaxLoc(scores, 0, &confidence, 0, &classIdPoint);
-                if (confidence > confThreshold)
+                float score = scoresPtr[j];
+                if (score > confThreshold)
                 {
-                    int centerX = (int)(data[0] * frame.cols);
-                    int centerY = (int)(data[1] * frame.rows);
-                    int width = (int)(data[2] * frame.cols);
-                    int height = (int)(data[3] * frame.rows);
-                    int left = centerX - width / 2;
-                    int top = centerY - height / 2;
-
-                    classIds.push_back(classIdPoint.x);
-                    confidences.push_back((float)confidence);
-                    boxes.push_back(Rect(left, top, width, height));
+                    float x1 = boxesPtr[j * 4 + 0];
+                    float y1 = boxesPtr[j * 4 + 1];
+                    float x2 = boxesPtr[j * 4 + 2];
+                    float y2 = boxesPtr[j * 4 + 3];
+                    boxes.push_back(Rect((int)x1, (int)y1, (int)(x2 - x1), (int)(y2 - y1)));
+                    confidences.push_back(score);
+                    classIds.push_back((int)classIdxPtr[j]);
                 }
             }
         }
+        else if (isBoxConfsFormat)
+        {
+            Mat boxesMat = outs[0];
+            Mat confsMat = outs[1];
+            int numBoxes = (int)(boxesMat.total() / 4);
+            boxesMat = boxesMat.reshape(1, numBoxes);
+            confsMat = confsMat.reshape(1, numBoxes);
+            for (int j = 0; j < numBoxes; ++j)
+            {
+                Point maxLoc;
+                double confidence;
+                minMaxLoc(confsMat.row(j), 0, &confidence, 0, &maxLoc);
+                if (confidence > confThreshold)
+                {
+                    const float* box = boxesMat.ptr<float>(j);
+                    boxes.push_back(Rect((int)(box[0] * inpWidth), (int)(box[1] * inpHeight),
+                                         (int)((box[2] - box[0]) * inpWidth), (int)((box[3] - box[1]) * inpHeight)));
+                    confidences.push_back((float)confidence);
+                    classIds.push_back(maxLoc.x);
+                }
+            }
+        }
+        else
+        {
+            cout << "Unsupported YOLO ONNX output format" << endl;
+            exit(-1);
+        }
+        Image2BlobParams paramNet;
+        paramNet.scalefactor = Scalar::all(scale);
+        paramNet.size = Size(inpWidth, inpHeight);
+        paramNet.mean = meanv;
+        paramNet.swapRB = swapRB;
+        paramNet.paddingmode = paddingMode;
+        paramNet.blobRectsToImageRects(boxes, boxes, frame.size());
     }
     else if (postprocessing == "yolov8" || postprocessing == "yolov5")
     {
@@ -620,7 +648,7 @@ void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, int backend, vec
 
     // NMS is used inside Region layer only on DNN_BACKEND_OPENCV for other backends we need NMS in sample
     // or NMS is required if the number of outputs > 1
-    if (outLayers.size() > 1 || (postprocessing == "darknet" && backend != DNN_BACKEND_OPENCV))
+    if (outLayers.size() > 1)
     {
         map<int, vector<size_t> > class2indices;
         for (size_t i = 0; i < classIds.size(); i++)

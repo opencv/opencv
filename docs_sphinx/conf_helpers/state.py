@@ -450,6 +450,7 @@ if _LOCAL_SRC_TAG.is_file():
                     continue
                 _mn = (_mem.findtext("name") or "").strip()
                 _maf = (_mem.findtext("anchorfile") or "").strip()
+                _man = (_mem.findtext("anchor") or "").strip()
                 if not (_mn and _maf):
                     continue
                 # The tagfile emits each typedef twice: once with the
@@ -474,11 +475,21 @@ if _LOCAL_SRC_TAG.is_file():
                     _local_page = "core_basic.html"
                 else:
                     _local_page = _bn
-                # HAL typedefs are global C; else cv::-scoped (cpp-domain v4 anchor)
-                if "hal_interface" in _local_page:
-                    _anchor = f"_CPPv4{len(_mn)}{_mn}"
-                else:
-                    _anchor = f"_CPPv4N2cv{len(_mn)}{_mn}E"
+                # Anchor: the typedef detail block is rendered (by
+                # stubs._render_member_detail) with a MyST `({refid})=`
+                # target, where `refid` is the Doxygen member id
+                # "<anchorfile-stem>_1<anchor>". docutils' make_id then
+                # lowercases that id and collapses every run of non-alnum
+                # chars to a single "-". Mirror it exactly so the link
+                # lands on the id that is actually emitted on the page.
+                #
+                # (The previous `_CPPv4…` cpp-domain id was never emitted
+                # for typedefs — those are hand-rolled markdown sections,
+                # not breathe `cpp:type` directives — so every typedef
+                # cross-reference 404'd.)
+                _stem = _bn[:-5] if _bn.endswith(".html") else _bn
+                _refid = f"{_stem}_1{_man}" if _man else _stem
+                _anchor = re.sub(r"[^a-z0-9]+", "-", _refid.lower()).strip("-")
                 _LOCAL_TYPEDEF_URL[_mn] = f"{_local_page}#{_anchor}"
     except Exception:
         pass

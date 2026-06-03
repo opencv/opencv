@@ -587,7 +587,8 @@ def _namespaces_section(entries: list) -> list[str]:
 def _write_namespace_stub(ns: dict, out_dir: pathlib.Path,
                           xml_dir: pathlib.Path,
                           ns_group_map: dict | None = None,
-                          group_info: dict | None = None) -> tuple[str, str]:
+                          group_info: dict | None = None,
+                          classes_seen: dict | None = None) -> tuple[str, str]:
     """Write namespace_<slug>.md under out_dir. Returns (anchor, fname)."""
     import xml.etree.ElementTree as _ET
     slug = ns["name"].replace("::", "__")
@@ -754,17 +755,40 @@ def _write_namespace_stub(ns: dict, out_dir: pathlib.Path,
         lines.append(f"## {section_title}")
         lines.append("")
         if section_title == "Functions":
-            lines += ["{.api-function-table}", "| Return | Name |", "|---|---|"]
+            lines += ["{.api-reference-table .api-function-table}",
+                      "| Return | Name |", "|---|---|"]
+            from html import escape as _esc_html_ns
+            def _ns_func_row(m: dict) -> str:
+                target = f"#{m['id']}"
+                qual = (m.get("qualified") or m["name"])
+                name_text = qual.replace("::", "&#58;&#58;")
+                name_html = (f'<a class="reference internal" '
+                             f'href="{target}">{name_text}</a>')
+                params_sig = m.get("params_sig") or []
+                def _esc(s: str) -> str:
+                    return _esc_html_ns(s).replace("|", "&#124;")
+                if not params_sig:
+                    inner = f"{name_html}()"
+                elif len(params_sig) == 1:
+                    t, nm, dv = params_sig[0]
+                    decl = nm + (f" = {dv}" if dv else "")
+                    inner = f"{name_html}({_esc(t)} {_esc(decl)})"
+                else:
+                    last_i = len(params_sig) - 1
+                    parts = [f"{name_html}("]
+                    for i, (t, nm, dv) in enumerate(params_sig):
+                        tail = " )" if i == last_i else ","
+                        decl = nm + (f" = {dv}" if dv else "")
+                        parts.append(f"    {_esc(t)} {_esc(decl)}{tail}")
+                    inner = "<br>".join(parts)
+                return f'<code class="docutils literal notranslate">{inner}</code>'
             for m in items:
                 ret_md = _type_to_md(m.get("type_elem"))
                 if not ret_md:
                     ret_md = _md_escape_cell(m["type"]) or "\u00a0"
                 if m.get("static"):
                     ret_md = "static " + ret_md
-                # Multi-line, one-param-per-line signature (matching the detail
-                # block); return type stays in its own cell, so head = name.
-                label = _func_sig_md(m["name"], m.get("params_sig"))
-                lines.append(f"| {ret_md} | [{label}](#{m['id']}) |")
+                lines.append(f"| {ret_md} | {_ns_func_row(m)} |")
         elif section_title in ("Typedefs", "Variables"):
             for m in items:
                 lines.append("```cpp")
@@ -1171,14 +1195,14 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
             # pointing to that enum's detail block in the "Enumeration
             # Type Documentation" section emitted by the detail loop
             # below.
-            _enum_more_link = _is_core_page
+            _enum_more_link = True
             # On every Core-functionality page the synopsis is emitted
             # as raw HTML (NOT a ```cpp code fence) so every `cv::…`
             # token becomes its own `<a>` linking to the enum's detail
             # block. We hand-roll Pygments-style spans (`k`, `n`, `p`)
             # so the existing `.highlight pre` styling kicks in and the
             # synopsis still looks like a code block.
-            _clickable_synopsis = _is_core_page
+            _clickable_synopsis = True
             import html as _html_mod
             # Encode `::` so translate's cv-linkifier skips it.
             def _safe(s: str) -> str:
@@ -1190,7 +1214,7 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
                     # (`### AccessFlag` → `#accessflag`). Same target
                     # the clickable synopsis tokens use, and a literal
                     # match on the actual element id on the page.
-                    _more = f"[More...](#{m['name'].lower()})"
+                    _more = f"[View details](#{m['name'].lower()})"
                 if _clickable_synopsis:
                     _qual = m["qualified"] or m["name"]
                     _is_strong = bool(m.get("strong"))
@@ -1224,13 +1248,12 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
                         _init = (' ' + _html_mod.escape(_v["initializer"])
                                  if _v.get("initializer") else '')
                         _full = _val_prefix + _v["name"]
-                        # Per-value anchor: each enumerator scrolls to its own
-                        # row in the detail table (which emits the matching
-                        # `<span id="_CPPv4…">` per row).
-                        _v_href = (f"#{_sphinx_cpp_v4_id(_qual + '::' + _v['name'])}"
-                                   if _qual else _href)
+                        # All enumerators link to the enum's detail section via
+                        # its `#<name>` heading anchor (which exists on the
+                        # page). Per-value `_CPPv4…` ids are NOT emitted in the
+                        # detail block, so a per-value href would dead-link.
                         out.append(
-                            f'    <a class="reference internal opencv-enum-link" href="{_v_href}">'
+                            f'    <a class="reference internal opencv-enum-link" href="{_href}">'
                             f'<span class="n">{_safe(_full)}</span></a>'
                             f'{_init}{_comma}'
                         )
@@ -1285,15 +1308,6 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
         items = node["sections"].get(section_title, [])
         if not items:
             continue
-        # Enum detail blocks are emitted on every Core-functionality
-        # group page — the clickable summary synopsis and "More..." link
-        # both target these `#enumname` anchors. Non-core pages keep the
-        # summary-only treatment.
-        if kind_key == "enum" and not _is_core_page:
-            continue
-        # Hand-rolled function detail blocks (with [i/n] overload index
-        # in the heading) for every core_* group. Same renderer as the
-        # original core_basic-only path.
         _core_basic_funcs = (_is_core_page and kind_key == "function")
         _ov_total: dict[str, int] = {}
         _ov_idx: dict[str, int] = {}
@@ -1499,7 +1513,13 @@ def _enumerator_list_table(values: list[dict], enum_qualified: str,
     if not values:
         return []
     has_desc = any((v.get("brief") or "").strip() for v in values)
-    out = ["```{list-table}", ":header-rows: 0",
+    # Lead with a blank line: the class-member enum path emits a raw `<h3>` (and
+    # optional `<p>` brief) immediately before this table. Without the separator
+    # CommonMark folds the `​```{list-table}` opener and its `:option:` lines into
+    # that HTML block (HTML blocks run until a blank line), leaving the closing
+    # ``` orphaned — it then opens a stray code block that swallows the rest of
+    # the page (Member Function docs, etc.) as literal text.
+    out = ["", "```{list-table}", ":header-rows: 0",
            f":widths: {'30 70' if has_desc else '100'}",
            ":class: opencv-enum-table", ""]
     for v in values:
@@ -1756,13 +1776,10 @@ def _write_class_stub(cls: dict, out_dir: pathlib.Path,
         import html as _html_pkg
         _brief = (_header_data.get("brief") or "").strip()
         if _brief:
-            # A Detailed Description section now always exists when there's any
-            # description (detailed, or the brief shown there as a fallback), so
-            # link to it in either case.
+            # Link only when there's a detailed description to jump to.
             _more = (
-                ' <a class="opencv-class-more" href="#detailed-description">More...</a>'
-                if (_header_data.get("detailed")
-                    or (_header_data.get("brief") or "").strip()) else ""
+                ' <a class="opencv-class-more" href="#detailed-description">View details</a>'
+                if _header_data.get("detailed") else ""
             )
             lines.append(
                 f'<p class="opencv-class-brief">'
@@ -2091,6 +2108,20 @@ _FALLBACK_MODULE_DATA: dict = {
             "interface.",
         "classes": [
             ("class", "cv::quality::QualityBase", ""),
+            ("class", "cv::quality::QualityBRISQUE",
+             "BRISQUE (Blind/Referenceless Image Spatial Quality Evaluator) is "
+             "a No Reference Image Quality Assessment (NR-IQA) algorithm."),
+            ("class", "cv::quality::QualityGMSD",
+             "Full reference GMSD algorithm"),
+            ("class", "cv::quality::QualityMSE",
+             "Full reference mean square error algorithm  "
+             "https://en.wikipedia.org/wiki/Mean_squared_error"),
+            ("class", "cv::quality::QualityPSNR",
+             "Full reference peak signal to noise ratio (PSNR) algorithm  "
+             "https://en.wikipedia.org/wiki/Peak_signal-to-noise_ratio"),
+            ("class", "cv::quality::QualitySSIM",
+             "Full reference structural similarity algorithm  "
+             "https://en.wikipedia.org/wiki/Structural_similarity"),
         ],
         "functions": [],
     },
@@ -2404,7 +2435,8 @@ def _generate_api_stubs(modules, xml_dir, out_dir,
                 anchor = f"api_ns_{ns['name'].replace('::', '__')}"
                 if ns["name"] not in written_ns:
                     _write_namespace_stub(ns, out_dir, xml_dir,
-                                          global_ns_group_map, global_group_info)
+                                          global_ns_group_map, global_group_info,
+                                          classes_seen)
                     written_ns.add(ns["name"])
                     _ALL_NAMESPACES[ns["name"]] = {
                         "refid": ns.get("refid", ""),

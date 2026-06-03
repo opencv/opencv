@@ -145,8 +145,7 @@ PERF_TEST_P_(DNNTestNetwork, SSD)
 {
     applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
 
-    // The Caffe-SSD specific handling lives in the new engine importer only;
-    // the classic importer can no longer load this model.
+    // SSD_VGG16's specialized preprocessing is handled by the new engine importer only.
     auto engine_forced = static_cast<dnn::EngineType>(
         utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", dnn::ENGINE_AUTO));
     if (engine_forced == dnn::ENGINE_CLASSIC)
@@ -190,9 +189,7 @@ PERF_TEST_P_(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
 
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_HDDL))
         throw SkipTestException("");
-    // The same .caffemodel but modified .prototxt
     // See https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/src/openpose/pose/poseParameters.cpp
-    // processNet("dnn/openpose_pose_mpi.caffemodel", "dnn/openpose_pose_mpi_faster_4_stages.prototxt", cv::Size(368, 368));
     processNet("dnn/onnx/models/openpose_pose_mpi.onnx", "", cv::Size(368, 368));
 }
 

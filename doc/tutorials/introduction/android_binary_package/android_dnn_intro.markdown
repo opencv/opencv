@@ -26,9 +26,9 @@ Tutorial was written for Android Studio 2022.2.1.
 - Get the latest pre-built OpenCV for Android release from https://github.com/opencv/opencv/releases
 and unpack it (for example, `opencv-4.X.Y-android-sdk.zip`, minimum version 4.9 is required).
 
-- Download MobileNet object detection model from https://github.com/chuanqi305/MobileNet-SSD.
-Configuration file `MobileNetSSD_deploy.prototxt` and model weights `MobileNetSSD_deploy.caffemodel`
-are required.
+- Download the MobileNet-SSD object detection model in ONNX format and save it as
+`mobilenet.onnx`. This single file contains both the network topology and its
+trained weights.
 
 ## Create an empty Android Studio project and add OpenCV dependency
 
@@ -59,7 +59,7 @@ a correct screen orientation and allow to use a camera.
 @snippet android/mobilenet-objdetect/src/org/opencv/samples/opencv_mobilenet/MainActivity.java mobilenet_tutorial_package
 @snippet android/mobilenet-objdetect/src/org/opencv/samples/opencv_mobilenet/MainActivity.java mobilenet_tutorial
 
-- Put downloaded `deploy.prototxt` and `mobilenet_iter_73000.caffemodel`
+- Put the downloaded `mobilenet.onnx`
 into `app/src/main/res/raw` folder. OpenCV DNN model is mainly designed to load ML and DNN models
 from file. Modern Android does not allow it without extra permissions, but provides Java API to load
 bytes from resources. The sample uses alternative DNN API that initializes a model from in-memory

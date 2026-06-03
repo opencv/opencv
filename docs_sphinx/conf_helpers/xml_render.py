@@ -540,7 +540,7 @@ def _doxygen_desc_to_md(el, h_level: int = 3) -> str:
             r"([a-z]{1,3}[0-9a-f]{20,})$", refid)
         if cm:
             page = cm.group(1)
-            slug = re.sub(r"_+", "-", refid)
+            slug = re.sub(r"_+", "-", refid).lower()
             return f"{page}.html#{slug}"
         # Group-anchored member on the current group page.
         #
@@ -556,14 +556,16 @@ def _doxygen_desc_to_md(el, h_level: int = 3) -> str:
         #                    elsewhere; here we use the value name
         #                    + the parent enum name when available
         #                    to mint the same id.
-        m = re.search(r"_1(gga|ga)([0-9a-f]+)$", refid)
+        m = re.search(r"^group__(?P<grp>[A-Za-z0-9_]+?)_1(?P<kind>gga|ga)(?P<hex>[0-9a-f]+)$", refid)
         if m:
-            kind = m.group(1)
+            kind = m.group("kind")
             if kind == "ga":  # function
                 short = (name.rsplit("::", 1)[-1] if name else "")
                 short = short.split("(", 1)[0].strip()
-                if short:
-                    return f"#{_func_slug(short)}"
+                if not short:
+                    return None
+                page_stem = m.group("grp").replace("__", "_")
+                return f"{page_stem}.html#{short.lower()}"
             # Enum-value `gga` — let it fall through; the value's
             # per-row `<span id="_CPPv4…">` anchor is on the page only
             # if the enum's detail block was emitted, but we don't

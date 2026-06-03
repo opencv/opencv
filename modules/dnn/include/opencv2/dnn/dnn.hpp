@@ -126,7 +126,6 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_MODEL_ONNX = 1, //!< ONNX model
         DNN_MODEL_TF = 2, //!< TF model
         DNN_MODEL_TFLITE = 3, //!< TFLite model
-        DNN_MODEL_CAFFE = 4, //!< Caffe model
     };
 
     CV_EXPORTS std::string modelFormatToString(ModelFormat modelFormat);

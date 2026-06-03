@@ -10,7 +10,7 @@ There are different preprocessing parameters such mean subtraction or scale fact
 You may check the most popular models and their parameters at [models.yml](https://github.com/opencv/opencv/blob/5.x/samples/dnn/models.yml) configuration file. It might be also used for aliasing samples parameters. In example,
 
 ```bash
-python object_detection.py opencv_fd --model /path/to/caffemodel --config /path/to/prototxt
+python object_detection.py opencv_fd --model /path/to/model.onnx
 ```
 
 Check `-h` option to know which values are used by default:
@@ -34,14 +34,14 @@ You also can use the script to download necessary files from your code. Assume y
 ```python
 from download_models import downloadFile
 
-filepath1 = downloadFile("https://drive.google.com/uc?export=download&id=0B3gersZ2cHIxRm5PMWRoTkdHdHc", None, filename="MobileNetSSD_deploy.caffemodel", save_dir="save_dir_1")
-filepath2 = downloadFile("https://drive.google.com/uc?export=download&id=0B3gersZ2cHIxRm5PMWRoTkdHdHc", "994d30a8afaa9e754d17d2373b2d62a7dfbaaf7a", filename="MobileNetSSD_deploy.caffemodel")
+filepath1 = downloadFile("https://huggingface.co/onnxmodelzoo/ssd_mobilenet_v1_12/resolve/main/ssd_mobilenet_v1_12.onnx", None, filename="ssd_mobilenet_v1_12.onnx", save_dir="save_dir_1")
+filepath2 = downloadFile("https://huggingface.co/onnxmodelzoo/ssd_mobilenet_v1_12/resolve/main/ssd_mobilenet_v1_12.onnx", "83536889adce1eda154175f8e3b156dd20443631", filename="ssd_mobilenet_v1_12.onnx")
 print(filepath1)
 print(filepath2)
 # Your code
 ```
 
-By running the following commands, you will get **MobileNetSSD_deploy.caffemodel** file:
+By running the following commands, you will get **ssd_mobilenet_v1_12.onnx** file:
 ```bash
 export OPENCV_DOWNLOAD_DATA_PATH=download_folder
 python your_script.py
