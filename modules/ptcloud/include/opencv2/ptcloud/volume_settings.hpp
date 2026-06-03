@@ -7,7 +7,7 @@
 #define OPENCV_3D_VOLUME_SETTINGS_HPP
 
 #include <opencv2/core.hpp>
-#include <opencv2/geometry/volume.hpp>
+#include <opencv2/ptcloud/volume.hpp>
 
 namespace cv
 {

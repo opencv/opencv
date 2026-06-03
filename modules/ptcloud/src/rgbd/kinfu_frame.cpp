@@ -7,7 +7,7 @@
 
 #include "../precomp.hpp"
 #include "utils.hpp"
-#include "opencl_kernels_geometry.hpp"
+#include "opencl_kernels_ptcloud.hpp"
 
 namespace cv {
 
@@ -383,7 +383,7 @@ bool computePointsNormalsGpu(const Intr intr, float depthFactor, const UMat& dep
 
     cv::String errorStr;
     cv::String name = "computePointsNormals";
-    ocl::ProgramSource source = ocl::geometry::kinfu_frame_oclsrc;
+    ocl::ProgramSource source = ocl::ptcloud::kinfu_frame_oclsrc;
     cv::String options = "-cl-mad-enable";
     ocl::Kernel k;
     k.create(name.c_str(), source, options, &errorStr);
@@ -416,7 +416,7 @@ bool pyrDownBilateralGpu(const UMat& depth, UMat& depthDown, float sigma)
 
     cv::String errorStr;
     cv::String name = "pyrDownBilateral";
-    ocl::ProgramSource source = ocl::geometry::kinfu_frame_oclsrc;
+    ocl::ProgramSource source = ocl::ptcloud::kinfu_frame_oclsrc;
     cv::String options = "-cl-mad-enable";
     ocl::Kernel k;
     k.create(name.c_str(), source, options, &errorStr);
@@ -450,7 +450,7 @@ bool customBilateralFilterGpu(const UMat src /* udepth */, UMat& dst /* smooth *
 
     cv::String errorStr;
     cv::String name = "customBilateral";
-    ocl::ProgramSource source = ocl::geometry::kinfu_frame_oclsrc;
+    ocl::ProgramSource source = ocl::ptcloud::kinfu_frame_oclsrc;
     cv::String options = "-cl-mad-enable";
     ocl::Kernel k;
     k.create(name.c_str(), source, options, &errorStr);
@@ -479,7 +479,7 @@ bool pyrDownPointsNormalsGpu(const UMat p, const UMat n, UMat &pdown, UMat &ndow
 
     cv::String errorStr;
     cv::String name = "pyrDownPointsNormals";
-    ocl::ProgramSource source = ocl::geometry::kinfu_frame_oclsrc;
+    ocl::ProgramSource source = ocl::ptcloud::kinfu_frame_oclsrc;
     cv::String options = "-cl-mad-enable";
     ocl::Kernel k;
     k.create(name.c_str(), source, options, &errorStr);
@@ -510,7 +510,7 @@ static bool ocl_renderPointsNormals(const UMat points, const UMat normals,
 
     cv::String errorStr;
     cv::String name = "render";
-    ocl::ProgramSource source = ocl::geometry::kinfu_frame_oclsrc;
+    ocl::ProgramSource source = ocl::ptcloud::kinfu_frame_oclsrc;
     cv::String options = "-cl-mad-enable";
     ocl::Kernel k;
     k.create(name.c_str(), source, options, &errorStr);

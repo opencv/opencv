@@ -4,7 +4,7 @@
 
 #include "precomp.hpp"
 #include "octree.hpp"
-#include "opencv2/geometry/3d.hpp"
+#include "opencv2/ptcloud.hpp"
 
 namespace cv{
 

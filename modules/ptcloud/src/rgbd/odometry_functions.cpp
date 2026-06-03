@@ -5,7 +5,7 @@
 #include "odometry_functions.hpp"
 #include "../precomp.hpp"
 #include "utils.hpp"
-#include "opencl_kernels_geometry.hpp"
+#include "opencl_kernels_ptcloud.hpp"
 
 #include "opencv2/imgproc.hpp"
 #include <opencv2/core/hal/intrin.hpp>
@@ -1394,7 +1394,7 @@ bool ocl_calcICPLsmMatricesFast(Matx33f cameraMatrix, const UMat& oldPts, const 
     UMat groupedSumBuffer;
     cv::String errorStr;
     String name = "getAb";
-    ocl::ProgramSource source = ocl::geometry::icp_oclsrc;
+    ocl::ProgramSource source = ocl::ptcloud::icp_oclsrc;
     cv::String options = "-cl-mad-enable";
     ocl::Kernel k;
     k.create(name.c_str(), source, options, &errorStr);

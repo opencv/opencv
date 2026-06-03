@@ -4,7 +4,7 @@
 
 #include "../precomp.hpp"
 #include "utils.hpp"
-#include "opencv2/geometry/odometry.hpp"
+#include "opencv2/ptcloud/odometry.hpp"
 #include "odometry_functions.hpp"
 
 namespace cv

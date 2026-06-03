@@ -6,32 +6,65 @@
 // Copyright(c) 2012, Anatoly Baksheev. All rights reserved.
 
 #include "../precomp.hpp"
-#include "color_tsdf_functions.hpp"
-#include "opencl_kernels_geometry.hpp"
+#include "tsdf_functions.hpp"
+#include "opencl_kernels_ptcloud.hpp"
 
 namespace cv {
 
-
-void integrateColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
-                                  InputArray _depth, InputArray _rgb, InputArray _pixNorms, InputArray _volume)
-{
-    Matx44f volumePose;
-    settings.getVolumePose(volumePose);
-    integrateColorTsdfVolumeUnit(settings, volumePose, cameraPose, _depth, _rgb, _pixNorms, _volume);
-}
-
-
-void integrateColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& volumePose, const Matx44f& cameraPose,
-                                  InputArray _depth, InputArray _rgb, InputArray _pixNorms, InputArray _volume)
+void preCalculationPixNorm(Size size, const Intr& intrinsics, Mat& pixNorm)
 {
     CV_TRACE_FUNCTION();
 
+    Point2f fl(intrinsics.fx, intrinsics.fy);
+    Point2f pp(intrinsics.cx, intrinsics.cy);
+    pixNorm = Mat(size.height, size.width, CV_32F);
+    std::vector<float> x(size.width);
+    std::vector<float> y(size.height);
+    for (int i = 0; i < size.width; i++)
+        x[i] = (i - pp.x) / fl.x;
+    for (int i = 0; i < size.height; i++)
+        y[i] = (i - pp.y) / fl.y;
+
+    for (int i = 0; i < size.height; i++)
+    {
+        for (int j = 0; j < size.width; j++)
+        {
+            pixNorm.at<float>(i, j) = sqrtf(x[j] * x[j] + y[i] * y[i] + 1.0f);
+        }
+    }
+
+}
+
+#ifdef HAVE_OPENCL
+void ocl_preCalculationPixNorm(Size size, const Intr& intrinsics, UMat& pixNorm)
+{
+    // calculating this on CPU then uploading to GPU is faster than calculating this on GPU
+    Mat cpuPixNorm;
+    preCalculationPixNorm(size, intrinsics, cpuPixNorm);
+    cpuPixNorm.copyTo(pixNorm);
+
+}
+#endif
+
+// Integrate
+
+void integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
+                             InputArray _depth, InputArray _pixNorms, InputArray _volume)
+{
+    Matx44f volumePose;
+    settings.getVolumePose(volumePose);
+    integrateTsdfVolumeUnit(settings, volumePose, cameraPose, _depth, _pixNorms, _volume);
+}
+
+
+void integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& volumePose, const Matx44f& cameraPose,
+                             InputArray _depth, InputArray _pixNorms, InputArray _volume)
+{
     Depth depth = _depth.getMat();
-    Colors color = _rgb.getMat();
     Mat volume = _volume.getMat();
     Mat pixNorms = _pixNorms.getMat();
 
-    RGBTsdfVoxel* volDataStart = volume.ptr<RGBTsdfVoxel>();
+    TsdfVoxel* volDataStart = volume.ptr<TsdfVoxel>();
 
     Vec4i volStrides;
     settings.getVolumeStrides(volStrides);
@@ -46,8 +79,7 @@ void integrateColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f&
 
     Matx33f intr;
     settings.getCameraIntegrateIntrinsics(intr);
-    const Intr::Projector projDepth = Intr(intr).makeProjector();
-
+    const Intr::Projector proj = Intr(intr).makeProjector();
     const float dfac(1.f / settings.getDepthFactor());
     const float truncDist = settings.getTsdfTruncateDistance();
     const float truncDistInv = 1.f / truncDist;
@@ -64,15 +96,15 @@ void integrateColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f&
             vol2cam.matrix(2, 2)) * voxelSize;
 
         v_float32x4 zStep(zStepPt.x, zStepPt.y, zStepPt.z, 0);
-        v_float32x4 vfxy(projDepth.fx, projDepth.fy, 0.f, 0.f), vcxy(projDepth.cx, projDepth.cy, 0.f, 0.f);
+        v_float32x4 vfxy(proj.fx, proj.fy, 0.f, 0.f), vcxy(proj.cx, proj.cy, 0.f, 0.f);
         const v_float32x4 upLimits = v_cvt_f32(v_int32x4(depth.cols - 1, depth.rows - 1, 0, 0));
 
         for (int x = range.start; x < range.end; x++)
         {
-            RGBTsdfVoxel* volDataX = volDataStart + x * volStrides[0];
+            TsdfVoxel* volDataX = volDataStart + x * volStrides[0];
             for (int y = 0; y < volResolution.y; y++)
             {
-                RGBTsdfVoxel* volDataY = volDataX + y * volStrides[1];
+                TsdfVoxel* volDataY = volDataX + y * volStrides[1];
                 // optimization of camSpace transformation (vector addition instead of matmul at each z)
                 Point3f basePt = vol2cam * (Point3f((float)x, (float)y, 0) * voxelSize);
                 v_float32x4 camSpacePt(basePt.x, basePt.y, basePt.z, 0);
@@ -122,7 +154,7 @@ void integrateColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f&
                     v_float32x4 projected = v_muladd(camPixVec, vfxy, vcxy);
                     // leave only first 2 lanes
                     projected = v_reinterpret_as_f32(v_and(v_reinterpret_as_u32(projected),
-                                                           v_uint32x4(0xFFFFFFFF, 0xFFFFFFFF, 0, 0)));
+                        v_uint32x4(0xFFFFFFFF, 0xFFFFFFFF, 0, 0)));
 
                     depthType v;
                     // bilinearly interpolate depth at projected
@@ -130,7 +162,7 @@ void integrateColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f&
                         const v_float32x4& pt = projected;
                         // check coords >= 0 and < imgSize
                         v_uint32x4 limits = v_or(v_reinterpret_as_u32(v_lt(pt, v_setzero_f32())),
-                                                 v_reinterpret_as_u32(v_ge(pt, upLimits)));
+                            v_reinterpret_as_u32(v_ge(pt, upLimits)));
                         limits = v_or(limits, v_rotate_right<1>(limits));
                         if (v_get0(limits))
                             continue;
@@ -154,7 +186,7 @@ void integrateColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f&
 
                         // assume correct depth is positive
                         // don't fix missing data
-                        if (v_check_all( v_gt(vall, v_setzero_f32())))
+                        if (v_check_all(v_gt(vall, v_setzero_f32())))
                         {
                             v_float32x4 t = v_sub(pt, v_cvt_f32(ip));
                             float tx = v_get0(t);
@@ -174,36 +206,26 @@ void integrateColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f&
                     // norm(camPixVec) produces double which is too slow
                     int _u = (int)v_get0(projected);
                     int _v = (int)v_get0(v_rotate_right<1>(projected));
-
                     if (!(_u >= 0 && _u < depth.cols && _v >= 0 && _v < depth.rows))
                         continue;
                     float pixNorm = pixNorms.at<float>(_v, _u);
-                    // TODO: Add support of 3point and 4 point representation
-                    Vec3f colorRGB = color.at<Vec3f>(_v, _u);
-                    //float pixNorm = sqrt(v_reduce_sum(camPixVec*camPixVec));
+                    // float pixNorm = sqrt(v_reduce_sum(camPixVec*camPixVec));
                     // difference between distances of point and of surface to camera
                     float sdf = pixNorm * (v * dfac - zCamSpace);
                     // possible alternative is:
                     // kftype sdf = norm(camSpacePt)*(v*dfac/camSpacePt.z - 1);
+
                     if (sdf >= -truncDist)
                     {
                         TsdfType tsdf = floatToTsdf(fmin(1.f, sdf * truncDistInv));
 
-                        RGBTsdfVoxel& voxel = volDataY[z * volStrides[2]];
+                        TsdfVoxel& voxel = volDataY[z * volStrides[2]];
                         WeightType& weight = voxel.weight;
                         TsdfType& value = voxel.tsdf;
-                        ColorType& r = voxel.r;
-                        ColorType& g = voxel.g;
-                        ColorType& b = voxel.b;
 
-                        // update RGB
-                        r = (ColorType)((float)(r * weight) + (colorRGB[0])) / (weight + 1);
-                        g = (ColorType)((float)(g * weight) + (colorRGB[1])) / (weight + 1);
-                        b = (ColorType)((float)(b * weight) + (colorRGB[2])) / (weight + 1);
-                        colorFix(r, g, b);
                         // update TSDF
                         value = floatToTsdf((tsdfToFloat(value) * weight + tsdfToFloat(tsdf)) / (weight + 1));
-                        weight = WeightType(min(int(weight + 1), int(maxWeight)));
+                        weight = (weight + 1) < maxWeight ? (weight + 1) : (WeightType)maxWeight;
                     }
                 }
             }
@@ -214,10 +236,10 @@ void integrateColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f&
     {
         for (int x = range.start; x < range.end; x++)
         {
-            RGBTsdfVoxel* volDataX = volDataStart + x * volStrides[0];
+            TsdfVoxel* volDataX = volDataStart + x * volStrides[0];
             for (int y = 0; y < volResolution.y; y++)
             {
-                RGBTsdfVoxel* volDataY = volDataX + y * volStrides[1];
+                TsdfVoxel* volDataY = volDataX + y * volStrides[1];
                 // optimization of camSpace transformation (vector addition instead of matmul at each z)
                 Point3f basePt = vol2cam * (Point3f(float(x), float(y), 0.0f) * voxelSize);
                 Point3f camSpacePt = basePt;
@@ -268,7 +290,7 @@ void integrateColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f&
                         continue;
 
                     Point3f camPixVec;
-                    Point2f projected = projDepth(camSpacePt, camPixVec);
+                    Point2f projected = proj(camSpacePt, camPixVec);
 
                     depthType v = bilinearDepth(depth, projected);
                     if (v == 0) {
@@ -276,13 +298,10 @@ void integrateColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f&
                     }
                     int _u = (int)projected.x;
                     int _v = (int)projected.y;
-
                     if (!(_u >= 0 && _u < depth.cols && _v >= 0 && _v < depth.rows))
                         continue;
 
                     float pixNorm = pixNorms.at<float>(_v, _u);
-                    // TODO: Add support of 3point and 4 point representation
-                    Vec3f colorRGB = color.at<Vec3f>(_v, _u);
 
                     // difference between distances of point and of surface to camera
                     float sdf = pixNorm * (v * dfac - camSpacePt.z);
@@ -292,20 +311,9 @@ void integrateColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f&
                     {
                         TsdfType tsdf = floatToTsdf(fmin(1.f, sdf * truncDistInv));
 
-                        RGBTsdfVoxel& voxel = volDataY[z * volStrides[2]];
+                        TsdfVoxel& voxel = volDataY[z * volStrides[2]];
                         WeightType& weight = voxel.weight;
                         TsdfType& value = voxel.tsdf;
-
-                        ColorType& r = voxel.r;
-                        ColorType& g = voxel.g;
-                        ColorType& b = voxel.b;
-                        // update RGB
-                        if (weight < 1)
-                        {
-                            r = (ColorType)((float)(r * weight) + (colorRGB[0])) / (weight + 1);
-                            g = (ColorType)((float)(g * weight) + (colorRGB[1])) / (weight + 1);
-                            b = (ColorType)((float)(b * weight) + (colorRGB[2])) / (weight + 1);
-                        }
 
                         // update TSDF
                         value = floatToTsdf((tsdfToFloat(value) * weight + tsdfToFloat(tsdf)) / (weight + 1));
@@ -317,16 +325,86 @@ void integrateColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f&
     };
 #endif
     parallel_for_(integrateRange, IntegrateInvoker);
+    //IntegrateInvoker(integrateRange);
 }
 
+#ifdef HAVE_OPENCL
+void ocl_integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
+                                 InputArray _depth, InputArray _pixNorms, InputArray _volume)
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(!_depth.empty());
 
+    UMat depth = _depth.getUMat();
+    UMat volume = _volume.getUMat();
+    UMat pixNorms = _pixNorms.getUMat();
+
+    String errorStr;
+    String name = "integrate";
+    ocl::ProgramSource source = ocl::ptcloud::tsdf_oclsrc;
+    String options = "-cl-mad-enable";
+    ocl::Kernel k;
+    k.create(name.c_str(), source, options, &errorStr);
+
+    if (k.empty())
+        throw std::runtime_error("Failed to create kernel: " + errorStr);
+
+    Matx44f _pose;
+    settings.getVolumePose(_pose);
+    const Affine3f pose = Affine3f(_pose);
+    UMat vol2camGpu;
+    Affine3f vol2cam(Affine3f(cameraPose.inv()) * pose);
+    Mat(vol2cam.matrix).copyTo(vol2camGpu);
+
+    float dfac = 1.f / settings.getDepthFactor();
+    Vec3i resolution;
+    settings.getVolumeResolution(resolution);
+    const Point3i volResolution = Point3i(resolution);
+    Vec4i volResGpu(volResolution.x, volResolution.y, volResolution.z);
+    Matx33f intr;
+    settings.getCameraIntegrateIntrinsics(intr);
+    Intr intrinsics(intr);
+    Vec2f fxy(intrinsics.fx, intrinsics.fy), cxy(intrinsics.cx, intrinsics.cy);
+    const Vec4i volDims;
+    settings.getVolumeStrides(volDims);
+
+    const float voxelSize = settings.getVoxelSize();
+    const float truncatedDistance = settings.getTsdfTruncateDistance();
+    const int maxWeight = settings.getMaxWeight();
+
+    // TODO: optimization possible
+    // Use sampler for depth (mask needed)
+    k.args(ocl::KernelArg::ReadOnly(depth),
+        ocl::KernelArg::PtrReadWrite(volume),
+        ocl::KernelArg::PtrReadOnly(vol2camGpu),
+        voxelSize,
+        volResGpu.val,
+        volDims.val,
+        fxy.val,
+        cxy.val,
+        dfac,
+        truncatedDistance,
+        maxWeight,
+        ocl::KernelArg::PtrReadOnly(pixNorms));
+
+    size_t globalSize[2];
+    globalSize[0] = (size_t)volResolution.x;
+    globalSize[1] = (size_t)volResolution.y;
+
+    if (!k.run(2, globalSize, NULL, true))
+        throw std::runtime_error("Failed to run kernel");
+
+}
+#endif
+
+
+// Raycast
 
 #if USE_INTRINSICS
 // all coordinate checks should be done in inclosing cycle
-
-inline float interpolateColorVoxel(const Mat& volume,
-                                   const Vec4i& volDims, const Vec8i& neighbourCoords,
-                                   const v_float32x4& p)
+inline float interpolateTsdfVoxel(const Mat& volume,
+    const Vec4i& volDims, const Vec8i& neighbourCoords,
+    const v_float32x4& p)
 {
     // tx, ty, tz = floor(p)
     v_int32x4 ip = v_floor(p);
@@ -338,7 +416,7 @@ inline float interpolateColorVoxel(const Mat& volume,
     float tz = v_get0(t);
 
     int xdim = volDims[0], ydim = volDims[1], zdim = volDims[2];
-    const RGBTsdfVoxel* volData = volume.ptr<RGBTsdfVoxel>();
+    const TsdfVoxel* volData = volume.ptr<TsdfVoxel>();
 
     int ix = v_get0(ip);
     ip = v_rotate_right<1>(ip);
@@ -367,19 +445,18 @@ inline float interpolateColorVoxel(const Mat& volume,
     return v0 + tx * (v1 - v0);
 }
 
-inline float interpolateColorVoxel(const Mat& volume,
-                                   const Vec4i& volDims, const Vec8i& neighbourCoords,
-                                   const Point3f& _p)
+inline float interpolateTsdfVoxel( const Mat& volume,
+    const Vec4i& volDims, const Vec8i& neighbourCoords,
+    const Point3f& _p)
 {
     v_float32x4 p(_p.x, _p.y, _p.z, 0);
-    return interpolateColorVoxel(volume, volDims, neighbourCoords, p);
+    return interpolateTsdfVoxel(volume, volDims, neighbourCoords, p);
 }
 
-
 #else
-inline float interpolateColorVoxel(const Mat& volume,
-                                   const Vec4i& volDims, const Vec8i& neighbourCoords,
-                                   const Point3f& p)
+inline float interpolateTsdfVoxel( const Mat& volume,
+    const Vec4i& volDims, const Vec8i& neighbourCoords,
+    const Point3f& p)
 {
     int xdim = volDims[0], ydim = volDims[1], zdim = volDims[2];
 
@@ -392,7 +469,7 @@ inline float interpolateColorVoxel(const Mat& volume,
     float tz = p.z - iz;
 
     int coordBase = ix * xdim + iy * ydim + iz * zdim;
-    const RGBTsdfVoxel* volData = volume.ptr<RGBTsdfVoxel>();
+    const TsdfVoxel* volData = volume.ptr<TsdfVoxel>();
 
     float vx[8];
     for (int i = 0; i < 8; i++)
@@ -414,10 +491,9 @@ inline float interpolateColorVoxel(const Mat& volume,
 
 #if USE_INTRINSICS
 //gradientDeltaFactor is fixed at 1.0 of voxel size
-
-inline v_float32x4 getNormalColorVoxel(const Mat& volume,
-                                       const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
-                                       const v_float32x4& p)
+inline v_float32x4 getNormalVoxel( const Mat& volume,
+    const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
+    const v_float32x4& p)
 {
     if (v_check_any(v_lt(p, v_float32x4(1.f, 1.f, 1.f, 0.f))) ||
         v_check_any(v_ge(p, v_float32x4((float)(volResolution.x - 2),
@@ -435,7 +511,7 @@ inline v_float32x4 getNormalColorVoxel(const Mat& volume,
     float tz = v_get0(t);
 
     const int xdim = volDims[0], ydim = volDims[1], zdim = volDims[2];
-    const RGBTsdfVoxel* volData = volume.ptr<RGBTsdfVoxel>();
+    const TsdfVoxel* volData = volume.ptr<TsdfVoxel>();
 
     int ix = v_get0(ip); ip = v_rotate_right<1>(ip);
     int iy = v_get0(ip); ip = v_rotate_right<1>(ip);
@@ -476,23 +552,23 @@ inline v_float32x4 getNormalColorVoxel(const Mat& volume,
     return v_get0(Norm) < 0.0001f ? nanv : v_div(n, Norm);
 }
 
-inline Point3f getNormalColorVoxel(const Mat& volume,
-                                   const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
-                                   const Point3f& _p)
+inline Point3f getNormalVoxel( const Mat& volume,
+    const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
+    const Point3f& _p)
 {
     v_float32x4 p(_p.x, _p.y, _p.z, 0.f);
-    v_float32x4 result = getNormalColorVoxel(volume, volDims, neighbourCoords, volResolution, p);
+    v_float32x4 result = getNormalVoxel(volume, volDims, neighbourCoords, volResolution, p);
     float CV_DECL_ALIGNED(16) ares[4];
     v_store_aligned(ares, result);
     return Point3f(ares[0], ares[1], ares[2]);
 }
 #else
-inline Point3f getNormalColorVoxel(const Mat& volume,
-                                   const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
-                                   const Point3f& p)
+inline Point3f getNormalVoxel( const Mat& volume,
+    const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
+    const Point3f& p)
 {
     int xdim = volDims[0], ydim = volDims[1], zdim = volDims[2];
-    const RGBTsdfVoxel* volData = volume.ptr<RGBTsdfVoxel>();
+    const TsdfVoxel* volData = volume.ptr<TsdfVoxel>();
 
     if (p.x < 1 || p.x >= volResolution.x - 2 ||
         p.y < 1 || p.y >= volResolution.y - 2 ||
@@ -538,174 +614,22 @@ inline Point3f getNormalColorVoxel(const Mat& volume,
 }
 #endif
 
-#if USE_INTRINSICS
-inline float interpolateColor(float tx, float ty, float tz, float vx[8])
-{
-    v_float32x4 v0246, v1357;
-    v_load_deinterleave(vx, v0246, v1357);
-
-    v_float32x4 vxx = v_add(v0246, v_mul(v_setall_f32(tz), v_sub(v1357, v0246)));
-
-    v_float32x4 v00_10 = vxx;
-    v_float32x4 v01_11 = v_reinterpret_as_f32(v_rotate_right<1>(v_reinterpret_as_u32(vxx)));
-
-    v_float32x4 v0_1 = v_add(v00_10, v_mul(v_setall_f32(ty), v_sub(v01_11, v00_10)));
-    float v0 = v_get0(v0_1);
-    v0_1 = v_reinterpret_as_f32(v_rotate_right<2>(v_reinterpret_as_u32(v0_1)));
-    float v1 = v_get0(v0_1);
-
-    return v0 + tx * (v1 - v0);
-}
-#else
-inline float interpolateColor(float tx, float ty, float tz, float vx[8])
-{
-    float v00 = vx[0] + tz * (vx[1] - vx[0]);
-    float v01 = vx[2] + tz * (vx[3] - vx[2]);
-    float v10 = vx[4] + tz * (vx[5] - vx[4]);
-    float v11 = vx[6] + tz * (vx[7] - vx[6]);
-
-    float v0 = v00 + ty * (v01 - v00);
-    float v1 = v10 + ty * (v11 - v10);
-
-    return v0 + tx * (v1 - v0);
-}
-#endif
-
-
-#if USE_INTRINSICS
-//gradientDeltaFactor is fixed at 1.0 of voxel size
-
-inline v_float32x4 getColorVoxel(const Mat& volume,
-    const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
-    const float voxelSizeInv, const v_float32x4& p)
-{
-    if (v_check_any(v_lt(p, v_float32x4(1.f, 1.f, 1.f, 0.f))) ||
-        v_check_any(v_ge(p, v_float32x4((float)(volResolution.x - 2),
-            (float)(volResolution.y - 2),
-            (float)(volResolution.z - 2), 1.f)))
-        )
-        return nanv;
-
-    v_int32x4 ip = v_floor(p);
-
-    const int xdim = volDims[0], ydim = volDims[1], zdim = volDims[2];
-    const RGBTsdfVoxel* volData = volume.ptr<RGBTsdfVoxel>();
-
-    int ix = v_get0(ip); ip = v_rotate_right<1>(ip);
-    int iy = v_get0(ip); ip = v_rotate_right<1>(ip);
-    int iz = v_get0(ip);
-
-    int coordBase = ix * xdim + iy * ydim + iz * zdim;
-    float CV_DECL_ALIGNED(16) rgb[4];
-
-#if USE_INTERPOLATION_IN_GETNORMAL
-    float r[8], g[8], b[8];
-    for (int i = 0; i < 8; i++)
-    {
-        r[i] = (float)volData[neighbourCoords[i] + coordBase].r;
-        g[i] = (float)volData[neighbourCoords[i] + coordBase].g;
-        b[i] = (float)volData[neighbourCoords[i] + coordBase].b;
-    }
-
-    v_float32x4 vsi(voxelSizeInv, voxelSizeInv, voxelSizeInv, voxelSizeInv);
-    v_float32x4 ptVox = v_mul(p, vsi);
-    v_int32x4 iptVox = v_floor(ptVox);
-    v_float32x4 t = v_sub(ptVox, v_cvt_f32(iptVox));
-    float tx = v_get0(t); t = v_rotate_right<1>(t);
-    float ty = v_get0(t); t = v_rotate_right<1>(t);
-    float tz = v_get0(t);
-    rgb[0] = interpolateColor(tx, ty, tz, r);
-    rgb[1] = interpolateColor(tx, ty, tz, g);
-    rgb[2] = interpolateColor(tx, ty, tz, b);
-    rgb[3] = 0.f;
-#else
-    rgb[0] = volData[coordBase].r;
-    rgb[1] = volData[coordBase].g;
-    rgb[2] = volData[coordBase].b;
-    rgb[3] = 0.f;
-#endif
-    v_float32x4 res = v_load_aligned(rgb);
-    return res;
-}
-
-inline Point3f getColorVoxel(const Mat& volume,
-    const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
-    const float voxelSizeInv, const Point3f& _p)
-{
-    v_float32x4 p(_p.x, _p.y, _p.z, 0.f);
-    v_float32x4 result = getColorVoxel(volume, volDims, neighbourCoords, volResolution, voxelSizeInv, p);
-    float CV_DECL_ALIGNED(16) ares[4];
-    v_store_aligned(ares, result);
-    return Point3f(ares[0], ares[1], ares[2]);
-}
-
-
-#else
-inline Point3f getColorVoxel(const Mat& volume,
-    const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
-    const float voxelSizeInv, const Point3f& p)
-{
-    const int xdim = volDims[0], ydim = volDims[1], zdim = volDims[2];
-    const RGBTsdfVoxel* volData = volume.ptr<RGBTsdfVoxel>();
-
-    if (p.x < 1 || p.x >= volResolution.x - 2 ||
-        p.y < 1 || p.y >= volResolution.y - 2 ||
-        p.z < 1 || p.z >= volResolution.z - 2)
-        return nan3;
-
-    int ix = cvFloor(p.x);
-    int iy = cvFloor(p.y);
-    int iz = cvFloor(p.z);
-
-    int coordBase = ix * xdim + iy * ydim + iz * zdim;
-    Point3f res;
-
-#if USE_INTERPOLATION_IN_GETNORMAL
-    // TODO: create better interpolation or remove this simple version
-    float r[8], g[8], b[8];
-    for (int i = 0; i < 8; i++)
-    {
-        r[i] = (float)volData[neighbourCoords[i] + coordBase].r;
-        g[i] = (float)volData[neighbourCoords[i] + coordBase].g;
-        b[i] = (float)volData[neighbourCoords[i] + coordBase].b;
-    }
-
-    Point3f ptVox = p * voxelSizeInv;
-    Vec3i iptVox(cvFloor(ptVox.x), cvFloor(ptVox.y), cvFloor(ptVox.z));
-    float tx = ptVox.x - iptVox[0];
-    float ty = ptVox.y - iptVox[1];
-    float tz = ptVox.z - iptVox[2];
-
-    res = Point3f(interpolateColor(tx, ty, tz, r),
-        interpolateColor(tx, ty, tz, g),
-        interpolateColor(tx, ty, tz, b));
-#else
-    res = Point3f(volData[coordBase].r, volData[coordBase].g, volData[coordBase].b);
-#endif
-    colorFix(res);
-    return res;
-}
-#endif
-
-
-void raycastColorTsdfVolumeUnit(const VolumeSettings &settings, const Matx44f &cameraPose,
-                                int height, int width, InputArray intr,
-                                InputArray _volume, OutputArray _points, OutputArray _normals, OutputArray _colors)
+void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
+                           int height, int width, InputArray intr,
+                           InputArray _volume, OutputArray _points, OutputArray _normals)
 {
     CV_TRACE_FUNCTION();
 
-    Size frameSize(width, height);
+    const Size frameSize(width, height);
     CV_Assert(frameSize.area() > 0);
 
     Matx33f mintr(intr.getMat());
 
     _points.create(frameSize, POINT_TYPE);
     _normals.create(frameSize, POINT_TYPE);
-    _colors.create(frameSize, COLOR_TYPE);
 
     Points points = _points.getMat();
     Normals normals = _normals.getMat();
-    Colors colors = _colors.getMat();
 
     const Vec4i volDims;
     settings.getVolumeStrides(volDims);
@@ -725,8 +649,6 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings &settings, const Matx44f &c
     const Point3i volResolution = Point3i(resolution);
     const Point3f volSize = Point3f(volResolution) * settings.getVoxelSize();
 
-    const Intr::Reprojector reprojDepth = Intr(mintr).makeReprojector();
-
     Matx44f _pose;
     settings.getVolumePose(_pose);
     const Affine3f pose = Affine3f(_pose);
@@ -739,15 +661,16 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings &settings, const Matx44f &c
     const Mat volume = _volume.getMat();
     float voxelSize = settings.getVoxelSize();
     float voxelSizeInv = 1.0f / voxelSize;
+    const Intr::Reprojector reproj = Intr(mintr).makeReprojector();
     float tstep = settings.getTsdfTruncateDistance() * settings.getRaycastStepFactor();
 
     Range raycastRange = Range(0, points.rows);
-
+    //TODO::  swap realization, they are missplaced :)
 #if USE_INTRINSICS
     auto RaycastInvoker = [&](const Range& range)
     {
-        const v_float32x4 vfxy(reprojDepth.fxinv, reprojDepth.fyinv, 0, 0);
-        const v_float32x4 vcxy(reprojDepth.cx, reprojDepth.cy, 0, 0);
+        const v_float32x4 vfxy(reproj.fxinv, reproj.fyinv, 0, 0);
+        const v_float32x4 vcxy(reproj.cx, reproj.cy, 0, 0);
 
         const float(&cm)[16] = cam2vol.matrix.val;
         const v_float32x4 camRot0(cm[0], cm[4], cm[8], 0);
@@ -758,9 +681,7 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings &settings, const Matx44f &c
         const v_float32x4 boxDown(boxMin.x, boxMin.y, boxMin.z, 0.f);
         const v_float32x4 boxUp(boxMax.x, boxMax.y, boxMax.z, 0.f);
 
-        const v_float32x4 invVoxelSize = v_float32x4(voxelSizeInv,
-            voxelSizeInv,
-            voxelSizeInv, 1.f);
+        const v_float32x4 invVoxelSize = v_float32x4(voxelSizeInv, voxelSizeInv, voxelSizeInv, 1.f);
 
         const float(&vm)[16] = vol2cam.matrix.val;
         const v_float32x4 volRot0(vm[0], vm[4], vm[8], 0);
@@ -772,11 +693,10 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings &settings, const Matx44f &c
         {
             ptype* ptsRow = points[y];
             ptype* nrmRow = normals[y];
-            ptype* clrRow = colors[y];
 
             for (int x = 0; x < points.cols; x++)
             {
-                v_float32x4 point = nanv, normal = nanv, color = nanv;
+                v_float32x4 point = nanv, normal = nanv;
 
                 v_float32x4 orig = camTrans;
 
@@ -826,7 +746,7 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings &settings, const Matx44f &c
                     int zdim = volDims[2];
                     v_float32x4 rayStep = v_mul(dir, v_setall_f32(tstep));
                     v_float32x4 next = v_add(orig, v_mul(dir, v_setall_f32(tmin)));
-                    float f = interpolateColorVoxel(volume, volDims, neighbourCoords, next);
+                    float f = interpolateTsdfVoxel(volume, volDims, neighbourCoords, next);
                     float fnext = f;
 
                     //raymarch
@@ -841,10 +761,10 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings &settings, const Matx44f &c
                         int iz = v_get0(ip);
                         int coord = ix * xdim + iy * ydim + iz * zdim;
 
-                        fnext = tsdfToFloat(volume.at<RGBTsdfVoxel>(coord).tsdf);
+                        fnext = tsdfToFloat(volume.at<TsdfVoxel>(coord).tsdf);
                         if (fnext != f)
                         {
-                            fnext = interpolateColorVoxel(volume, volDims, neighbourCoords, next);
+                            fnext = interpolateTsdfVoxel(volume, volDims, neighbourCoords, next);
 
                             // when ray crosses a surface
                             if (std::signbit(f) != std::signbit(fnext))
@@ -859,20 +779,18 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings &settings, const Matx44f &c
                     if (f > 0.f && fnext < 0.f)
                     {
                         v_float32x4 tp = v_sub(next, rayStep);
-                        float ft = interpolateColorVoxel(volume, volDims, neighbourCoords, tp);
-                        float ftdt = interpolateColorVoxel(volume, volDims, neighbourCoords, next);
+                        float ft = interpolateTsdfVoxel(volume, volDims, neighbourCoords, tp);
+                        float ftdt = interpolateTsdfVoxel(volume, volDims, neighbourCoords, next);
                         float ts = tmin + tstep * (steps - ft / (ftdt - ft));
 
                         // avoid division by zero
                         if (!cvIsNaN(ts) && !cvIsInf(ts))
                         {
                             v_float32x4 pv = v_add(orig, v_mul(dir, v_setall_f32(ts)));
-                            v_float32x4 nv = getNormalColorVoxel(volume, volDims, neighbourCoords, volResolution, pv);
-                            v_float32x4 cv = getColorVoxel(volume, volDims, neighbourCoords, volResolution, voxelSizeInv, pv);
+                            v_float32x4 nv = getNormalVoxel(volume, volDims, neighbourCoords, volResolution, pv);
 
                             if (!isNaN(nv))
                             {
-                                color = cv;
                                 //convert pv and nv to camera space
                                 normal = v_matmuladd(nv, volRot0, volRot1, volRot2, v_setzero_f32());
                                 // interpolation optimized a little
@@ -885,7 +803,6 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings &settings, const Matx44f &c
 
                 v_store((float*)(&ptsRow[x]), point);
                 v_store((float*)(&nrmRow[x]), normal);
-                v_store((float*)(&clrRow[x]), color);
             }
         }
     };
@@ -900,15 +817,14 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings &settings, const Matx44f &c
         {
             ptype* ptsRow = points[y];
             ptype* nrmRow = normals[y];
-            ptype* clrRow = colors[y];
 
             for (int x = 0; x < points.cols; x++)
             {
-                Point3f point = nan3, normal = nan3, color = nan3;
+                Point3f point = nan3, normal = nan3;
 
                 Point3f orig = camTrans;
                 // direction through pixel in volume space
-                Point3f dir = normalize(Vec3f(camRot * reprojDepth(Point3f(float(x), float(y), 1.f))));
+                Point3f dir = normalize(Vec3f(camRot * reproj(Point3f(float(x), float(y), 1.f))));
 
                 // compute intersection of ray with all six bbox planes
                 Vec3f rayinv(1.f / dir.x, 1.f / dir.y, 1.f / dir.z);
@@ -938,7 +854,7 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings &settings, const Matx44f &c
 
                     Point3f rayStep = dir * tstep;
                     Point3f next = (orig + dir * tmin);
-                    float f = interpolateColorVoxel(volume, volDims, neighbourCoords, next);
+                    float f = interpolateTsdfVoxel(volume, volDims, neighbourCoords, next);
                     float fnext = f;
 
                     //raymarch
@@ -953,10 +869,10 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings &settings, const Matx44f &c
                         int ix = cvRound(next.x);
                         int iy = cvRound(next.y);
                         int iz = cvRound(next.z);
-                        fnext = tsdfToFloat(volume.at<RGBTsdfVoxel>(ix * xdim + iy * ydim + iz * zdim).tsdf);
+                        fnext = tsdfToFloat(volume.at<TsdfVoxel>(ix * xdim + iy * ydim + iz * zdim).tsdf);
                         if (fnext != f)
                         {
-                            fnext = interpolateColorVoxel(volume, volDims, neighbourCoords, next);
+                            fnext = interpolateTsdfVoxel(volume, volDims, neighbourCoords, next);
                             // when ray crosses a surface
                             if (std::signbit(f) != std::signbit(fnext))
                                 break;
@@ -969,8 +885,8 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings &settings, const Matx44f &c
                     if (f > 0.f && fnext < 0.f)
                     {
                         Point3f tp = next - rayStep;
-                        float ft = interpolateColorVoxel(volume, volDims, neighbourCoords, tp);
-                        float ftdt = interpolateColorVoxel(volume, volDims, neighbourCoords, next);
+                        float ft = interpolateTsdfVoxel(volume, volDims, neighbourCoords, tp);
+                        float ftdt = interpolateTsdfVoxel(volume, volDims, neighbourCoords, next);
                         // float t = tmin + steps*tstep;
                         // float ts = t - tstep*ft/(ftdt - ft);
                         float ts = tmin + tstep * (steps - ft / (ftdt - ft));
@@ -979,13 +895,12 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings &settings, const Matx44f &c
                         if (!cvIsNaN(ts) && !cvIsInf(ts))
                         {
                             Point3f pv = (orig + dir * ts);
-                            Point3f nv = getNormalColorVoxel(volume, volDims, neighbourCoords, volResolution, pv);
-                            Point3f cv = getColorVoxel(volume, volDims, neighbourCoords, volResolution, voxelSizeInv, pv);
+                            Point3f nv = getNormalVoxel(volume, volDims, neighbourCoords, volResolution, pv);
+
                             if (!isNaN(nv))
                             {
                                 //convert pv and nv to camera space
                                 normal = volRot * nv;
-                                color = cv;
                                 // interpolation optimized a little
                                 point = vol2cam * (pv * voxelSize);
                             }
@@ -994,19 +909,116 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings &settings, const Matx44f &c
                 }
                 ptsRow[x] = toPtype(point);
                 nrmRow[x] = toPtype(normal);
-                clrRow[x] = toPtype(color);
             }
         }
-
     };
-#endif
 
+#endif
     parallel_for_(raycastRange, RaycastInvoker);
 }
 
 
-void fetchNormalsFromColorTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume,
-                                         InputArray _points, OutputArray _normals)
+#ifdef HAVE_OPENCL
+void ocl_raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
+                               int height, int width, InputArray intr,
+                               InputArray _volume, OutputArray _points, OutputArray _normals)
+{
+    CV_TRACE_FUNCTION();
+
+    const Size frameSize(width, height);
+    CV_Assert(frameSize.area() > 0);
+
+    Matx33f mintr(intr.getMat());
+
+    String errorStr;
+    String name = "raycast";
+    ocl::ProgramSource source = ocl::ptcloud::tsdf_oclsrc;
+    String options = "-cl-mad-enable";
+    ocl::Kernel k;
+    k.create(name.c_str(), source, options, &errorStr);
+
+    if (k.empty())
+        throw std::runtime_error("Failed to create kernel: " + errorStr);
+
+    _points.create(frameSize, CV_32FC4);
+    _normals.create(frameSize, CV_32FC4);
+
+    UMat points = _points.getUMat();
+    UMat normals = _normals.getUMat();
+
+    const Vec4i volDims;
+    settings.getVolumeStrides(volDims);
+    const Vec8i neighbourCoords = Vec8i(
+        volDims.dot(Vec4i(0, 0, 0)),
+        volDims.dot(Vec4i(0, 0, 1)),
+        volDims.dot(Vec4i(0, 1, 0)),
+        volDims.dot(Vec4i(0, 1, 1)),
+        volDims.dot(Vec4i(1, 0, 0)),
+        volDims.dot(Vec4i(1, 0, 1)),
+        volDims.dot(Vec4i(1, 1, 0)),
+        volDims.dot(Vec4i(1, 1, 1))
+    );
+
+    Vec3i resolution;
+    settings.getVolumeResolution(resolution);
+    const Point3i volResolution = Point3i(resolution);
+    const Point3f volSize = Point3f(volResolution) * settings.getVoxelSize();
+
+    Matx44f _pose;
+    settings.getVolumePose(_pose);
+    const Affine3f pose = Affine3f(_pose);
+
+    UMat vol2camGpu, cam2volGpu;
+    Affine3f vol2cam = Affine3f(cameraPose.inv()) * pose;
+    Affine3f cam2vol = pose.inv() * Affine3f(cameraPose);
+    Mat(cam2vol.matrix).copyTo(cam2volGpu);
+    Mat(vol2cam.matrix).copyTo(vol2camGpu);
+
+    Intr intrinsics(mintr);
+    Intr::Reprojector r = intrinsics.makeReprojector();
+
+    const UMat volume = _volume.getUMat();
+    float voxelSize = settings.getVoxelSize();
+    float raycastStepFactor = settings.getRaycastStepFactor();
+    float truncatedDistance = settings.getTsdfTruncateDistance();
+
+    // We do subtract voxel size to minimize checks after
+    // Note: origin of volume coordinate is placed
+    // in the center of voxel (0,0,0), not in the corner of the voxel!
+    Vec4f boxMin, boxMax(volSize.x - voxelSize,
+        volSize.y - voxelSize,
+        volSize.z - voxelSize);
+    Vec2f finv(r.fxinv, r.fyinv), cxy(r.cx, r.cy);
+    float tstep = truncatedDistance * raycastStepFactor;
+
+    Vec4i volResGpu(volResolution.x, volResolution.y, volResolution.z);
+
+    k.args(ocl::KernelArg::WriteOnlyNoSize(points),
+        ocl::KernelArg::WriteOnlyNoSize(normals),
+        frameSize,
+        ocl::KernelArg::PtrReadOnly(volume),
+        ocl::KernelArg::PtrReadOnly(vol2camGpu),
+        ocl::KernelArg::PtrReadOnly(cam2volGpu),
+        finv.val, cxy.val,
+        boxMin.val, boxMax.val,
+        tstep,
+        voxelSize,
+        volResGpu.val,
+        volDims.val,
+        neighbourCoords.val);
+
+    size_t globalSize[2];
+    globalSize[0] = (size_t)frameSize.width;
+    globalSize[1] = (size_t)frameSize.height;
+
+    if (!k.run(2, globalSize, NULL, true))
+        throw std::runtime_error("Failed to run kernel");
+}
+#endif
+
+// Fetch
+
+void fetchNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume, InputArray _points, OutputArray _normals)
 {
     CV_TRACE_FUNCTION();
     CV_Assert(!_points.empty());
@@ -1025,6 +1037,7 @@ void fetchNormalsFromColorTsdfVolumeUnit(const VolumeSettings& settings, InputAr
     settings.getVolumePose(_pose);
     const Affine3f pose = Affine3f(_pose);
     Affine3f invPose(pose.inv());
+    Matx33f r = pose.rotation();
     float voxelSizeInv = 1.f / settings.getVoxelSize();
 
     const Vec4i volDims;
@@ -1052,18 +1065,91 @@ void fetchNormalsFromColorTsdfVolumeUnit(const VolumeSettings& settings, InputAr
         {
             Point3f voxPt = (invPose * p);
             voxPt = voxPt * voxelSizeInv;
-            n = pose.rotation() * getNormalColorVoxel(volume, volDims, neighbourCoords, volResolution, voxPt);
+            n = r * getNormalVoxel(volume, volDims, neighbourCoords, volResolution, voxPt);
         }
         normals(position[0], position[1]) = toPtype(n);
     };
     points.forEach(PushNormals);
-
 }
 
-inline void coord(
-    const Mat& volume, const RGBTsdfVoxel* volDataStart, std::vector<ptype>& points, std::vector<ptype>& normals, std::vector<ptype>& colors,
-    const Point3i volResolution, const Vec4i volDims, const Vec8i neighbourCoords, const Affine3f pose,
-    const float voxelSize, const float voxelSizeInv, bool needNormals, bool needColors, int x, int y, int z, Point3f V, float v0, int axis)
+#ifdef HAVE_OPENCL
+void ocl_fetchNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume, InputArray _points, OutputArray _normals)
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(!_points.empty());
+    if (!_normals.needed())
+        return;
+
+    UMat points = _points.getUMat();
+    CV_Assert(points.type() == POINT_TYPE);
+
+    _normals.createSameSize(_points, POINT_TYPE);
+    UMat normals = _normals.getUMat();
+
+    const UMat volume = _volume.getUMat();
+
+    Matx44f _pose;
+    settings.getVolumePose(_pose);
+    const Affine3f pose = Affine3f(_pose);
+    float voxelSizeInv = 1.f / settings.getVoxelSize();
+
+    const Vec4i volDims;
+    settings.getVolumeStrides(volDims);
+    const Vec8i neighbourCoords = Vec8i(
+        volDims.dot(Vec4i(0, 0, 0)),
+        volDims.dot(Vec4i(0, 0, 1)),
+        volDims.dot(Vec4i(0, 1, 0)),
+        volDims.dot(Vec4i(0, 1, 1)),
+        volDims.dot(Vec4i(1, 0, 0)),
+        volDims.dot(Vec4i(1, 0, 1)),
+        volDims.dot(Vec4i(1, 1, 0)),
+        volDims.dot(Vec4i(1, 1, 1))
+    );
+
+    Vec3i resolution;
+    settings.getVolumeResolution(resolution);
+    const Point3i volResolution = Point3i(resolution);
+
+    String errorStr;
+    String name = "getNormals";
+    ocl::ProgramSource source = ocl::ptcloud::tsdf_oclsrc;
+    String options = "-cl-mad-enable";
+    ocl::Kernel k;
+    k.create(name.c_str(), source, options, &errorStr);
+
+    if (k.empty())
+        throw std::runtime_error("Failed to create kernel: " + errorStr);
+
+    UMat volPoseGpu, invPoseGpu;
+    Mat(pose.matrix).copyTo(volPoseGpu);
+    Mat(pose.inv().matrix).copyTo(invPoseGpu);
+    Vec4i volResGpu(volResolution.x, volResolution.y, volResolution.z);
+    Size frameSize = points.size();
+
+    k.args(ocl::KernelArg::ReadOnlyNoSize(points),
+           ocl::KernelArg::WriteOnlyNoSize(normals),
+           frameSize,
+           ocl::KernelArg::PtrReadOnly(volume),
+           ocl::KernelArg::PtrReadOnly(volPoseGpu),
+           ocl::KernelArg::PtrReadOnly(invPoseGpu),
+           voxelSizeInv,
+           volResGpu.val,
+           volDims.val,
+           neighbourCoords.val);
+
+    size_t globalSize[2];
+    globalSize[0] = (size_t)points.cols;
+    globalSize[1] = (size_t)points.rows;
+
+    if (!k.run(2, globalSize, NULL, true))
+        throw std::runtime_error("Failed to run kernel");
+
+}
+#endif
+
+inline void coord(const Mat& volume, const TsdfVoxel* volDataStart, std::vector<ptype>& points, std::vector<ptype>& normals,
+                  const Point3i volResolution, const Vec4i volDims, const Vec8i neighbourCoords, const Affine3f pose,
+                  const float voxelSize, const float voxelSizeInv, bool needNormals, int x, int y, int z, Point3f V, float v0, int axis)
 {
     // 0 for x, 1 for y, 2 for z
     bool limits = false;
@@ -1090,11 +1176,10 @@ inline void coord(
 
     if (limits)
     {
-        const RGBTsdfVoxel& voxeld = volDataStart[(x + shift.x) * volDims[0] +
-            (y + shift.y) * volDims[1] +
-            (z + shift.z) * volDims[2]];
+        const TsdfVoxel &voxeld = volDataStart[(x + shift.x) * volDims[0] +
+                                               (y + shift.y) * volDims[1] +
+                                               (z + shift.z) * volDims[2]];
         float vd = tsdfToFloat(voxeld.tsdf);
-
         if (voxeld.weight != 0 && vd != 1.f)
         {
             if ((v0 > 0 && vd < 0) || (v0 < 0 && vd > 0))
@@ -1105,30 +1190,21 @@ inline void coord(
                 float inter = (Vc * abs(vd) + Vn * abs(v0)) * dinv;
 
                 Point3f p(shift.x ? inter : V.x,
-                    shift.y ? inter : V.y,
-                    shift.z ? inter : V.z);
+                          shift.y ? inter : V.y,
+                          shift.z ? inter : V.z);
                 {
                     points.push_back(toPtype(pose * p));
                     if (needNormals)
                         normals.push_back(toPtype(pose.rotation() *
-                            getNormalColorVoxel(volume, volDims, neighbourCoords, volResolution, p * voxelSizeInv)));
-                    if (needColors)
-                        colors.push_back(toPtype(pose.rotation() *
-                            getColorVoxel(volume, volDims, neighbourCoords, volResolution, voxelSizeInv, p * voxelSizeInv)));
+                                          getNormalVoxel(volume, volDims, neighbourCoords, volResolution, p * voxelSizeInv)));
                 }
             }
         }
     }
 }
 
-void fetchPointsNormalsFromColorTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume,
-    OutputArray _points, OutputArray _normals)
-{
-    fetchPointsNormalsColorsFromColorTsdfVolumeUnit(settings, _volume, _points, _normals, noArray());
-}
 
-void fetchPointsNormalsColorsFromColorTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume,
-    OutputArray _points, OutputArray _normals, OutputArray _colors)
+void fetchPointsNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume, OutputArray _points, OutputArray _normals)
 {
     if (!_points.needed())
         return;
@@ -1158,52 +1234,50 @@ void fetchPointsNormalsColorsFromColorTsdfVolumeUnit(const VolumeSettings& setti
     const Point3i volResolution = Point3i(resolution);
 
     bool needNormals = _normals.needed();
-    bool needColors  = _colors.needed();
 
-    std::vector<std::vector<ptype>> pVecs, nVecs, cVecs;
+    std::vector<std::vector<ptype>> pVecs, nVecs;
     Range fetchRange(0, volResolution.x);
     const int nstripes = -1;
-    const RGBTsdfVoxel* volDataStart = volume.ptr<RGBTsdfVoxel>();
+    const TsdfVoxel* volDataStart = volume.ptr<TsdfVoxel>();
     Mutex mutex;
-    auto FetchPointsNormalsInvoker = [&](const Range& range) {
 
-        std::vector<ptype> points, normals, colors;
+    auto FetchPointsNormalsInvoker = [&](const Range& range) {
+        std::vector<ptype> points, normals;
         for (int x = range.start; x < range.end; x++)
         {
-            const RGBTsdfVoxel* volDataX = volDataStart + x * volDims[0];
+            const TsdfVoxel* volDataX = volDataStart + x * volDims[0];
             for (int y = 0; y < volResolution.y; y++)
             {
-                const RGBTsdfVoxel* volDataY = volDataX + y * volDims[1];
+                const TsdfVoxel* volDataY = volDataX + y * volDims[1];
                 for (int z = 0; z < volResolution.z; z++)
                 {
-                    const RGBTsdfVoxel& voxel0 = volDataY[z * volDims[2]];
+                    const TsdfVoxel& voxel0 = volDataY[z * volDims[2]];
                     float v0 = tsdfToFloat(voxel0.tsdf);
                     if (voxel0.weight != 0 && v0 != 1.f)
                     {
                         Point3f V(Point3f((float)x + 0.5f, (float)y + 0.5f, (float)z + 0.5f) * voxelSize);
 
-                        coord(volume, volDataStart, points, normals, colors, volResolution, volDims, neighbourCoords, pose, voxelSize, voxelSizeInv, needNormals, needColors, x, y, z, V, v0, 0);
-                        coord(volume, volDataStart, points, normals, colors, volResolution, volDims, neighbourCoords, pose, voxelSize, voxelSizeInv, needNormals, needColors, x, y, z, V, v0, 1);
-                        coord(volume, volDataStart, points, normals, colors, volResolution, volDims, neighbourCoords, pose, voxelSize, voxelSizeInv, needNormals, needColors, x, y, z, V, v0, 2);
+                        coord(volume, volDataStart, points, normals, volResolution, volDims, neighbourCoords, pose, voxelSize, voxelSizeInv, needNormals, x, y, z, V, v0, 0);
+                        coord(volume, volDataStart, points, normals, volResolution, volDims, neighbourCoords, pose, voxelSize, voxelSizeInv, needNormals, x, y, z, V, v0, 1);
+                        coord(volume, volDataStart, points, normals, volResolution, volDims, neighbourCoords, pose, voxelSize, voxelSizeInv, needNormals, x, y, z, V, v0, 2);
 
                     } // if voxel is not empty
                 }
             }
         }
+
         AutoLock al(mutex);
         pVecs.push_back(points);
         nVecs.push_back(normals);
-        cVecs.push_back(colors);
     };
 
     parallel_for_(fetchRange, FetchPointsNormalsInvoker, nstripes);
 
-    std::vector<ptype> points, normals, colors;
+    std::vector<ptype> points, normals;
     for (size_t i = 0; i < pVecs.size(); i++)
     {
         points.insert(points.end(), pVecs[i].begin(), pVecs[i].end());
         normals.insert(normals.end(), nVecs[i].begin(), nVecs[i].end());
-        colors.insert(colors.end(), cVecs[i].begin(), cVecs[i].end());
     }
 
     _points.create((int)points.size(), 1, POINT_TYPE);
@@ -1217,13 +1291,158 @@ void fetchPointsNormalsColorsFromColorTsdfVolumeUnit(const VolumeSettings& setti
             Mat((int)normals.size(), 1, POINT_TYPE, &normals[0]).copyTo(_normals.getMat());
     }
 
-    if (_colors.needed())
+}
+
+
+#ifdef HAVE_OPENCL
+void ocl_fetchPointsNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume, OutputArray points, OutputArray normals)
+{
+    CV_TRACE_FUNCTION();
+
+    if (!points.needed())
+        return;
+
+
+    const UMat volume = _volume.getUMat();
+
+    Matx44f _pose;
+    settings.getVolumePose(_pose);
+    const Affine3f pose = Affine3f(_pose);
+
+    float voxelSize = settings.getVoxelSize();
+    float voxelSizeInv = 1.f / settings.getVoxelSize();
+
+    const Vec4i volDims;
+    settings.getVolumeStrides(volDims);
+    const Vec8i neighbourCoords = Vec8i(
+        volDims.dot(Vec4i(0, 0, 0)),
+        volDims.dot(Vec4i(0, 0, 1)),
+        volDims.dot(Vec4i(0, 1, 0)),
+        volDims.dot(Vec4i(0, 1, 1)),
+        volDims.dot(Vec4i(1, 0, 0)),
+        volDims.dot(Vec4i(1, 0, 1)),
+        volDims.dot(Vec4i(1, 1, 0)),
+        volDims.dot(Vec4i(1, 1, 1))
+    );
+
+    Vec3i resolution;
+    settings.getVolumeResolution(resolution);
+    const Point3i volResolution = Point3i(resolution);
+
+
+    bool needNormals = normals.needed();
+
+    // 1. scan to count points in each group and allocate output arrays
+
+    ocl::Kernel kscan;
+
+    String errorStr;
+    ocl::ProgramSource source = ocl::ptcloud::tsdf_oclsrc;
+    String options = "-cl-mad-enable";
+
+    kscan.create("scanSize", source, options, &errorStr);
+
+    if (kscan.empty())
+        throw std::runtime_error("Failed to create kernel: " + errorStr);
+
+    size_t globalSize[3];
+    globalSize[0] = (size_t)volResolution.x;
+    globalSize[1] = (size_t)volResolution.y;
+    globalSize[2] = (size_t)volResolution.z;
+
+    const ocl::Device& device = ocl::Device::getDefault();
+    size_t wgsLimit = device.maxWorkGroupSize();
+    size_t memSize = device.localMemSize();
+    // local mem should keep a point (and a normal) for each thread in a group
+    // use 4 float per each point and normal
+    size_t elemSize = (sizeof(float) * 4) * (needNormals ? 2 : 1);
+    const size_t lcols = 8;
+    const size_t lrows = 8;
+    size_t lplanes = min(memSize / elemSize, wgsLimit) / lcols / lrows;
+    lplanes = roundDownPow2(lplanes);
+    size_t localSize[3] = { lcols, lrows, lplanes };
+    Vec3i ngroups((int)divUp(globalSize[0], (unsigned int)localSize[0]),
+        (int)divUp(globalSize[1], (unsigned int)localSize[1]),
+        (int)divUp(globalSize[2], (unsigned int)localSize[2]));
+
+    const size_t counterSize = sizeof(int);
+    size_t lszscan = localSize[0] * localSize[1] * localSize[2] * counterSize;
+
+    const int gsz[3] = { ngroups[2], ngroups[1], ngroups[0] };
+    UMat groupedSum(3, gsz, CV_32S, Scalar(0));
+
+    UMat volPoseGpu;
+    Mat(pose.matrix).copyTo(volPoseGpu);
+    Vec4i volResGpu(volResolution.x, volResolution.y, volResolution.z);
+
+    kscan.args(ocl::KernelArg::PtrReadOnly(volume),
+        volResGpu.val,
+        volDims.val,
+        neighbourCoords.val,
+        ocl::KernelArg::PtrReadOnly(volPoseGpu),
+        voxelSize,
+        voxelSizeInv,
+        ocl::KernelArg::Local(lszscan),
+        ocl::KernelArg::WriteOnlyNoSize(groupedSum));
+
+    if (!kscan.run(3, globalSize, localSize, true))
+        throw std::runtime_error("Failed to run kernel");
+
+    Mat groupedSumCpu = groupedSum.getMat(ACCESS_READ);
+    int gpuSum = (int)sum(groupedSumCpu)[0];
+    // should be no CPU copies when new kernel is executing
+    groupedSumCpu.release();
+
+    // 2. fill output arrays according to per-group points count
+
+    points.create(gpuSum, 1, POINT_TYPE);
+    UMat pts = points.getUMat();
+    UMat nrm;
+    if (needNormals)
     {
-        _colors.create((int)colors.size(), 1, COLOR_TYPE);
-        if (!colors.empty())
-            Mat((int)colors.size(), 1, COLOR_TYPE, &colors[0]).copyTo(_colors.getMat());
+        normals.create(gpuSum, 1, POINT_TYPE);
+        nrm = normals.getUMat();
+    }
+    else
+    {
+        // it won't be accessed but empty args are forbidden
+        nrm = UMat(1, 1, POINT_TYPE);
+    }
+
+    if (gpuSum)
+    {
+        ocl::Kernel kfill;
+        kfill.create("fillPtsNrm", source, options, &errorStr);
+
+        if (kfill.empty())
+            throw std::runtime_error("Failed to create kernel: " + errorStr);
+
+        UMat atomicCtr(1, 1, CV_32S, Scalar(0));
+
+        // mem size to keep pts (and normals optionally) for all work-items in a group
+        size_t lszfill = localSize[0] * localSize[1] * localSize[2] * elemSize;
+
+        kfill.args(ocl::KernelArg::PtrReadOnly(volume),
+            volResGpu.val,
+            volDims.val,
+            neighbourCoords.val,
+            ocl::KernelArg::PtrReadOnly(volPoseGpu),
+            voxelSize,
+            voxelSizeInv,
+            ((int)needNormals),
+            ocl::KernelArg::Local(lszfill),
+            ocl::KernelArg::PtrReadWrite(atomicCtr),
+            ocl::KernelArg::ReadOnlyNoSize(groupedSum),
+            ocl::KernelArg::WriteOnlyNoSize(pts),
+            ocl::KernelArg::WriteOnlyNoSize(nrm)
+        );
+
+        if (!kfill.run(3, globalSize, localSize, true))
+            throw std::runtime_error("Failed to run kernel");
     }
 }
+#endif
+
 
 
 } // namespace cv

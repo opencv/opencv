@@ -7,7 +7,7 @@
 
 #include "../precomp.hpp"
 #include "hash_tsdf_functions.hpp"
-#include "opencl_kernels_geometry.hpp"
+#include "opencl_kernels_ptcloud.hpp"
 
 namespace cv {
 
@@ -445,7 +445,7 @@ void markActive(
     //! Mark volumes in the camera frustum as active
     String errorStr;
     String name = "markActive";
-    ocl::ProgramSource source = ocl::geometry::hash_tsdf_oclsrc;
+    ocl::ProgramSource source = ocl::ptcloud::hash_tsdf_oclsrc;
     String options = "-cl-mad-enable";
     ocl::Kernel k;
     k.create(name.c_str(), source, options, &errorStr);
@@ -567,7 +567,7 @@ void ocl_integrateHashTsdfVolumeUnit(
     //! Integrate the correct volumeUnits
     String errorStr;
     String name = "integrateAllVolumeUnits";
-    ocl::ProgramSource source = ocl::geometry::hash_tsdf_oclsrc;
+    ocl::ProgramSource source = ocl::ptcloud::hash_tsdf_oclsrc;
     String options = "-cl-mad-enable";
     ocl::Kernel k;
     k.create(name.c_str(), source, options, &errorStr);
@@ -1140,7 +1140,7 @@ void ocl_raycastHashTsdfVolumeUnit(
 
     String errorStr;
     String name = "raycast";
-    ocl::ProgramSource source = ocl::geometry::hash_tsdf_oclsrc;
+    ocl::ProgramSource source = ocl::ptcloud::hash_tsdf_oclsrc;
     String options = "-cl-mad-enable";
     ocl::Kernel k;
     k.create(name.c_str(), source, options, &errorStr);
