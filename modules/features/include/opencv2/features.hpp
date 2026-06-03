@@ -669,8 +669,87 @@ public:
 
     CV_WRAP virtual void setK(double k) = 0;
     CV_WRAP virtual double getK() const = 0;
+
     CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 };
+
+#if defined(HAVE_OPENCV_DNN) || defined(CV_DOXYGEN)
+
+/** @brief DISK feature detector and descriptor, based on a DNN model.
+
+DISK (Deep Image Structure and Keypoints) is a learned local-feature pipeline that produces
+keypoints and 128-D L2-normalized descriptors via a single forward pass through a fully
+convolutional network. This class wraps an ONNX export of the pre-trained DISK model through
+cv::dnn::Net and exposes it under the standard cv::Feature2D interface so it can be used as
+a drop-in alternative to SIFT/ORB.
+
+The class assumes the ONNX model has a single input named `image` taking an N×3×H×W float32
+tensor in [0, 1] (RGB channel order) and three outputs named `keypoints` (N×2), `scores` (N)
+and `descriptors` (N×128).
+ */
+class CV_EXPORTS_W DISK : public Feature2D
+{
+public:
+    /** @brief Creates a DISK detector.
+    @param modelPath Path to the DISK ONNX model.
+    @param maxKeypoints Maximum number of keypoints to return per image. The strongest
+                        responses (by network score) are kept; -1 keeps all detections.
+    @param scoreThreshold Discard keypoints with network score strictly below this value.
+    @param imageSize Target input size (width, height) fed to the network. Use Size()
+                     (the default) to fall back to the network's expected fixed input
+                     shape of 1024x1024. When overriding, both dimensions must be
+                     positive multiples of 16, since DISK downsamples by a factor of 16.
+    @param backendId DNN backend identifier (see cv::dnn::Backend); 0 = DNN_BACKEND_DEFAULT.
+    @param targetId  DNN target identifier (see cv::dnn::Target);  0 = DNN_TARGET_CPU.
+    */
+    CV_WRAP static Ptr<DISK> create(const String& modelPath,
+                                    int maxKeypoints = -1,
+                                    float scoreThreshold = 0.0f,
+                                    const Size& imageSize = Size(),
+                                    int backendId = 0,
+                                    int targetId = 0);
+
+    /** @brief Creates a DISK detector from an in-memory model buffer.
+
+    This overload loads the DISK ONNX model from a buffer instead of a file on disk. It is
+    intended for cases where the model is read from application resources (for example Android
+    assets) and is not available as a path on the filesystem.
+
+    @param bufferModel A buffer containing the contents of the DISK ONNX model.
+    @param maxKeypoints Maximum number of keypoints to return per image. The strongest
+                        responses (by network score) are kept; -1 keeps all detections.
+    @param scoreThreshold Discard keypoints with network score strictly below this value.
+    @param imageSize Target input size (width, height) fed to the network. Use Size()
+                     (the default) to fall back to the network's expected fixed input
+                     shape of 1024x1024. When overriding, both dimensions must be
+                     positive multiples of 16, since DISK downsamples by a factor of 16.
+    @param backendId DNN backend identifier (see cv::dnn::Backend); 0 = DNN_BACKEND_DEFAULT.
+    @param targetId  DNN target identifier (see cv::dnn::Target);  0 = DNN_TARGET_CPU.
+
+    @note In C++ this is an overload of @ref create. The Python/Java/Objective-C bindings expose
+          it as `createFromMemory`, because Objective-C selectors are not disambiguated by argument
+          type and would otherwise clash with the file-path @ref create.
+    */
+    CV_WRAP_AS(createFromMemory) static Ptr<DISK> create(const std::vector<uchar>& bufferModel,
+                                    int maxKeypoints = -1,
+                                    float scoreThreshold = 0.0f,
+                                    const Size& imageSize = Size(),
+                                    int backendId = 0,
+                                    int targetId = 0);
+
+    CV_WRAP virtual void setMaxKeypoints(int maxKeypoints) = 0;
+    CV_WRAP virtual int  getMaxKeypoints() const = 0;
+
+    CV_WRAP virtual void  setScoreThreshold(float threshold) = 0;
+    CV_WRAP virtual float getScoreThreshold() const = 0;
+
+    CV_WRAP virtual void setImageSize(const Size& size) = 0;
+    CV_WRAP virtual Size getImageSize() const = 0;
+
+    CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
+};
+
+#endif // HAVE_OPENCV_DNN || CV_DOXYGEN
 
 /** @brief Class for extracting blobs from an image. :
 

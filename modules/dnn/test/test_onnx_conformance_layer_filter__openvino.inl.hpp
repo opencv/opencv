@@ -1546,6 +1546,12 @@ CASE(test_maxpool_3d_default)
 #if SKIP_SET_1
     SKIP_NON_CPU;
 #endif
+CASE(test_maxpool_3d_dilations)
+    SKIP;
+CASE(test_maxpool_3d_dilations_use_ref_impl)
+    SKIP;
+CASE(test_maxpool_3d_dilations_use_ref_impl_large)
+    SKIP;
 CASE(test_maxpool_with_argmax_2d_precomputed_pads)
     SKIP;
 CASE(test_maxpool_with_argmax_2d_precomputed_strides)

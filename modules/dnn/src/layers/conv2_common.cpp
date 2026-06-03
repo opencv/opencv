@@ -54,7 +54,7 @@ MatShape convInferShape(const MatShape& inpShape, const MatShape& wshape,
                         const std::vector<int>& pads,
                         AutoPadding autoPad, bool ceilMode)
 {
-    bool blockLayout = true;
+    bool blockLayout = (inpShape.layout == DATA_LAYOUT_BLOCK);
     int ndims = inpShape.dims;
     size_t nspatialdims = (size_t)(ndims - 2 - int(blockLayout));
     MatShape outshape = inpShape;

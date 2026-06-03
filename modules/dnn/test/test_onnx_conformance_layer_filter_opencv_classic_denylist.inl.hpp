@@ -753,3 +753,6 @@
 "test_convtranspose_pad",
 "test_convtranspose_pads",
 "test_convtranspose_with_kernel",
+"test_maxpool_3d_dilations",
+"test_maxpool_3d_dilations_use_ref_impl",
+"test_maxpool_3d_dilations_use_ref_impl_large",

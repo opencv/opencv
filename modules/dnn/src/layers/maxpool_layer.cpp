@@ -376,6 +376,53 @@ static void maxPool16bf(const void* inp_, void* out_, const ConvState& cs)
 
 typedef void (*MaxPoolFunc)(const void* inp, void* out, const ConvState& cs);
 
+// 2-output (values + ONNX-style int64 indices) NCHW scalar implementation.
+static void maxPool32f_nchw_with_indices(const float* inp, float* out, int64_t* outIdx,
+                                         int N, int C, int Hi, int Wi, int H, int W,
+                                         int kH, int kW, int sH, int sW,
+                                         int padH, int padW, int dilH, int dilW)
+{
+    int NC = N * C;
+    int inHW = Hi * Wi;
+    int outHW = H * W;
+    parallel_for_(Range(0, NC), [&](const Range& r) {
+        for (int nc = r.start; nc < r.end; nc++) {
+            int c = nc % C;
+            const float* inp_nc = inp + nc * inHW;
+            float*       out_nc = out + nc * outHW;
+            int64_t*     idx_nc = outIdx + nc * outHW;
+            for (int yo = 0; yo < H; yo++) {
+                for (int xo = 0; xo < W; xo++) {
+                    float vmax = -FLT_MAX;
+                    int64_t idxmax = -1;
+                    for (int ky = 0; ky < kH; ky++) {
+                        int yi = yo * sH - padH + ky * dilH;
+                        if ((unsigned)yi >= (unsigned)Hi)
+                            continue;
+                        for (int kx = 0; kx < kW; kx++) {
+                            int xi = xo * sW - padW + kx * dilW;
+                            if ((unsigned)xi >= (unsigned)Wi)
+                                continue;
+                            float v = inp_nc[yi * Wi + xi];
+                            if (v > vmax) {
+                                vmax = v;
+                                // ONNX storage_order=0: index = (c*Hi + yi)*Wi + xi
+                                idxmax = (int64_t)(c * Hi + yi) * Wi + xi;
+                            }
+                        }
+                    }
+                    if (idxmax < 0) {
+                        vmax = 0.f;
+                        idxmax = (int64_t)(c * Hi + 0) * Wi + 0;
+                    }
+                    out_nc[yo * W + xo] = vmax;
+                    idx_nc[yo * W + xo] = idxmax;
+                }
+            }
+        }
+    });
+}
+
 class MaxPoolLayerImpl : public MaxPoolLayer
 {
 public:
@@ -452,7 +499,10 @@ public:
         int ninputs = (int)inptypes.size();
         CV_Assert(ninputs == 1);
 
-        outtypes.assign(1, inferType(inptypes[0]));
+        outtypes.clear();
+        outtypes.push_back(inferType(inptypes[0]));
+        if (outputs.size() == 2u)
+            outtypes.push_back(CV_64S); // ONNX MaxPool indices
         temptypes.clear();
     }
 
@@ -463,13 +513,14 @@ public:
                                  std::vector<MatShape> &outshapes,
                                  std::vector<MatShape> &tempshapes) const CV_OVERRIDE
     {
-        CV_Assert(outputs.size() == 1u);
+        CV_Assert(outputs.size() == 1u || outputs.size() == 2u);
         size_t ninputs = inpshapes.size();
         CV_Assert(ninputs == 1);
 
-        outshapes.assign(1, convInferShape(inpshapes[0], MatShape(),
+        MatShape outshape = convInferShape(inpshapes[0], MatShape(),
                                            kernel_shape, 0, strides, dilations,
-                                           pads, auto_pad, ceil_mode));
+                                           pads, auto_pad, ceil_mode);
+        outshapes.assign(outputs.size(), outshape);
         tempshapes.clear();
         return true;
     }
@@ -480,9 +531,12 @@ public:
                     std::vector<DataLayout>& outputs) const CV_OVERRIDE
     {
         CV_Assert(actualInputs.size() == 1u);
-        desiredInputs.assign(1, DATA_LAYOUT_BLOCK);
-        outputs.assign(requiredOutputs, DATA_LAYOUT_BLOCK);
-        return getNetImpl(this)->defaultC0;
+
+        const bool wantsIndices = requiredOutputs == 2;
+        const DataLayout layout = wantsIndices ? DATA_LAYOUT_NCHW : DATA_LAYOUT_BLOCK;
+        desiredInputs.assign(1, layout);
+        outputs.assign(requiredOutputs, layout);
+        return wantsIndices ? 0 : getNetImpl(this)->defaultC0;
     }
 
     void finalize(InputArrayOfArrays, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
@@ -493,38 +547,83 @@ public:
                  OutputArrayOfArrays outputs_arr,
                  OutputArrayOfArrays) CV_OVERRIDE
     {
-        size_t ninputs = inputs_arr.total();
-        CV_Assert(ninputs == 1);
+        CV_Assert(inputs_arr.total() == 1);
+        const int inptype = inputs_arr.type(0);
+        const MatShape inpshape = inputs_arr.shape(0);
 
-        int inptype = inputs_arr.type(0);
-        MatShape inpshape = inputs_arr.shape(0);
-        MatShape outshape = convInferShape(inpshape, MatShape(),
-                                           kernel_shape, 0, strides, dilations,
-                                           pads, auto_pad, ceil_mode);
-        int outKind = outputs_arr.kind();
+        const int outKind = outputs_arr.kind();
         CV_Assert(outKind == _InputArray::STD_VECTOR_MAT ||
                   outKind == _InputArray::STD_VECTOR_UMAT);
 
-        ConvState cs;
-        cs.initPooling(inpshape, outshape, kernel_shape, strides,
-                       dilations, pads, auto_pad, ceil_mode);
+        const size_t noutputs = outputs.size();
+        CV_Assert(noutputs == 1u || noutputs == 2u);
+        const bool wantsIndices = (noutputs == 2u);
+
+        if (wantsIndices) {
+            CV_Assert(inptype == CV_32F && "MaxPool with indices currently supports CV_32F only");
+            CV_Assert(inpshape.dims == 4 && "MaxPool with indices: only 4D (N,C,H,W) inputs supported");
+            CV_Assert(inpshape.layout != DATA_LAYOUT_BLOCK &&
+                      "MaxPool with indices does not run on a BLOCK-layout input");
+        }
+
+        const MatShape outshape = convInferShape(inpshape, MatShape(),
+                                                 kernel_shape, 0, strides, dilations,
+                                                 pads, auto_pad, ceil_mode);
+        Mat inp = inputs_arr.getMat(0);
 
         if (outKind == _InputArray::STD_VECTOR_MAT) {
-            Mat inp = inputs_arr.getMat(0);
             std::vector<Mat>& outs = outputs_arr.getMatVecRef();
-            outs.resize(1);
+            outs.resize(noutputs);
             outs[0].fit(outshape, inptype);
-            runOp(inp, outs[0], cs);
+            if (wantsIndices)
+                outs[1].fit(outshape, CV_64S);
+            runForward(inp, outs, inpshape, outshape);
         } else {
             // [TODO] more efficient OpenCL implementation
-            Mat inp = inputs_arr.getMat(0);
             std::vector<UMat>& outs = outputs_arr.getUMatVecRef();
-            outs.resize(1);
+            outs.resize(noutputs);
             outs[0].fit(outshape, inptype);
-            Mat temp(outshape, inptype);
-            runOp(inp, temp, cs);
-            temp.copyTo(outs[0]);
+            if (wantsIndices)
+                outs[1].fit(outshape, CV_64S);
+
+            std::vector<Mat> tmp(noutputs);
+            tmp[0].create(outshape, inptype);
+            if (wantsIndices)
+                tmp[1].create(outshape, CV_64S);
+            runForward(inp, tmp, inpshape, outshape);
+            for (size_t i = 0; i < noutputs; ++i)
+                tmp[i].copyTo(outs[i]);
         }
+    }
+
+    void runForward(const Mat& inp, std::vector<Mat>& outs,
+                    const MatShape& inpshape, const MatShape& outshape)
+    {
+        if (outs.size() == 1u) {
+            ConvState cs;
+            cs.initPooling(inpshape, outshape, kernel_shape, strides,
+                           dilations, pads, auto_pad, ceil_mode);
+            runOp(inp, outs[0], cs);
+        } else {
+            runOpWithIndices(inp, outs[0], outs[1]);
+        }
+    }
+
+    void runOpWithIndices(const Mat& inp, Mat& outVal, Mat& outIdx)
+    {
+        const int N = inp.size[0], C = inp.size[1], Hi = inp.size[2], Wi = inp.size[3];
+        const int H = outVal.size[2], W = outVal.size[3];
+        const int kH = (int)kernel_shape[0];
+        const int kW = (int)kernel_shape[1];
+        const int sH   = strides.size() > 0 ? (int)strides[0] : 1;
+        const int sW   = strides.size() > 1 ? (int)strides[1] : sH;
+        const int dilH = dilations.size() > 0 ? (int)dilations[0] : 1;
+        const int dilW = dilations.size() > 1 ? (int)dilations[1] : dilH;
+        const int padH = pads.size() > 0 ? (int)pads[0] : 0;
+        const int padW = pads.size() > 1 ? (int)pads[1] : padH;
+        maxPool32f_nchw_with_indices(
+            inp.ptr<float>(), outVal.ptr<float>(), outIdx.ptr<int64_t>(),
+            N, C, Hi, Wi, H, W, kH, kW, sH, sW, padH, padW, dilH, dilW);
     }
 
     void runOp(const Mat& inp, Mat& out, const ConvState& cs)
