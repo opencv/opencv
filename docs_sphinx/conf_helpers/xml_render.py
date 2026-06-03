@@ -359,16 +359,22 @@ def _doxygen_desc_to_md(el, h_level: int = 3) -> str:
     def _ref_link(refid: str, text: str) -> str:
         if not (refid and text):
             return f"`{text}`" if text else ""
-        m = re.search(r'_1([a-z]{1,3}[0-9a-f]{20,})$', refid)
-        if m:
-            url = f"{DOXYGEN_BASE_URL}{refid[:m.start()]}.html#{m.group(1)}"
-        else:
-            url = f"{DOXYGEN_BASE_URL}{refid}.html"
-        return f"[`{text}`]({url})"
+        # Link into the local Sphinx api tree (main_modules/ or extra_modules/),
+        # never docs.opencv.org. Functions / class members carry a `(refid)=`
+        # global MyST label on their detail block, so `[text](#refid)` resolves
+        # cross-page and cross-dir (same form the Functions summary uses). Enum
+        # values (anchor prefix "gg") and compound pages have no such label, so
+        # link the page docname (sibling), mapped to the local page name.
+        m = re.search(r'_1([a-z]{1,3})[0-9a-f]{20,}$', refid)
+        if m and not m.group(1).startswith("gg"):
+            return f"[`{text}`](#{refid})"
+        stem = _doxy_page_to_local((refid[:m.start()] if m else refid) + ".html")[:-5]
+        return f"[`{text}`]({stem}.md)"
 
     _formula_md = _render_formula
 
-    _BLOCK_TAGS = {"orderedlist", "itemizedlist", "programlisting", "simplesect", "table"}
+    _BLOCK_TAGS = {"orderedlist", "itemizedlist", "programlisting", "simplesect",
+                   "table", "xrefsect"}
 
     # Map missing 'see' and 'sa' Doxygen sections to MyST 'seealso' admonitions to fix unboxed reference rendering.
     _ADMON_BY_KIND = {"note": "note", "warning": "warning",
@@ -393,6 +399,14 @@ def _doxygen_desc_to_md(el, h_level: int = 3) -> str:
                 result.append(f":::{{{admon}}}\n{body}\n:::")
             elif body:
                 result.append(body)
+        elif t == "xrefsect":
+            # @todo/@bug/@deprecated -> a titled admonition box (like Doxygen's).
+            title = (sub.findtext("xreftitle") or "Note").strip()
+            desc = sub.find("xrefdescription")
+            body = "\n\n".join(_blocks(desc, level)) if desc is not None else ""
+            if body:
+                result.append(
+                    f":::{{admonition}} {title}\n:class: {title.lower()}\n\n{body}\n:::")
         elif t == "table":
             rows = sub.findall("row")
             if not rows:
@@ -789,6 +803,17 @@ def _read_class_data(refid: str, xml_dir: pathlib.Path) -> dict | None:
                 "detailed":    _dtl,
                 "params":      _params,
                 "returns":     _returns,
+                # (text, refid) for every <ref> in the return type, param types
+                # and default values — the exact tokens Doxygen hyperlinks in a
+                # signature (classes, typedefs, enum values), keyed by refid.
+                "sig_refs":    [((r.text or "").strip(), r.get("refid", ""))
+                                for el in ([md.find("type")]
+                                           + [c for p in md.findall("param")
+                                              for c in (p.find("type"),
+                                                        p.find("defval"))])
+                                if el is not None
+                                for r in el.iter("ref")
+                                if (r.text or "").strip() and r.get("refid")],
             })
         if items:
             sections[skind] = items
@@ -799,12 +824,15 @@ def _read_class_data(refid: str, xml_dir: pathlib.Path) -> dict | None:
         _itertext(p).strip() for p in detailed_el.findall("para")
     ))
     include = _normalize_include(cd.findtext("includes") or "")
+    bases = [(b.get("refid"), (b.text or "").strip(), b.get("prot", "public"))
+             for b in cd.findall("basecompoundref") if b.get("refid")]
     return {
         "name":     (cd.findtext("compoundname") or "").strip(),
         "brief":    _itertext(cd.find("briefdescription")),
         "detailed": has_detailed,
         "sections": sections,
         "include":  include,
+        "bases":    bases,
     }
 
 
@@ -882,6 +910,9 @@ def _svg_dark_variant(text: str) -> str:
         block = block.replace('fill="grey"',  'fill="none"')
         block = block.replace('fill="#999999"', 'fill="#2d333b"')
         block = block.replace('fill="#bfbfbf"', 'fill="#2d333b"')
+        # Non-clickable leaf boxes (std headers) are light grey #e0e0e0 — make
+        # them the same darker grey as the current-file box, white text below.
+        block = block.replace('fill="#e0e0e0"', 'fill="#2d333b"')
         block = block.replace('<text ', '<text fill="#ffffff" ')
         return block
     text = _re.sub(r'<g[^>]*class="node"[^>]*>.*?</g>',
@@ -889,6 +920,7 @@ def _svg_dark_variant(text: str) -> str:
     text = text.replace('fill="grey"',     'fill="none"')
     text = text.replace('fill="#999999"',  'fill="#2d333b"')
     text = text.replace('fill="#bfbfbf"',  'fill="#2d333b"')
+    text = text.replace('fill="#e0e0e0"',  'fill="#2d333b"')
     # Lookahead avoids double-prefixing per-node texts.
     text = _re.sub(r'<text (?!fill)', '<text fill="#ffffff" ', text)
     return text

@@ -288,10 +288,18 @@ html[data-theme="dark"] table.opencv-meta-table td:last-child { border-right: no
     .bd-page-width,
     .bd-container__inner.bd-page-width { max-width: none !important; }
     .bd-container { max-width: none !important; }
-    .bd-sidebar-primary { padding-left: 1rem !important; padding-right: 1rem !important; }
+    .bd-sidebar-primary { padding-left: 0.1rem !important; padding-right: 0.75rem !important; }
     .bd-main .bd-content,
     .bd-main .bd-article-container { padding-left: 2rem; padding-right: 2rem; }
     .bd-main .bd-article { padding-left: 0; padding-right: 0; }
+}
+
+/* Narrower left section-nav sidebar — the theme default is width:25%, which is
+   ~480px on a wide screen (very intrusive). Pin it to a sensible fixed width so
+   the content and the (often wide) diagrams get more room. Desktop only; the
+   mobile off-canvas drawer keeps the theme's own sizing. */
+@media (min-width: 960px) {
+    .bd-sidebar-primary { width: 16rem; flex: 0 0 16rem; }
 }
 
 .bd-sidebar-primary nav.bd-links { margin-right: 0 !important; }
@@ -592,6 +600,21 @@ section[id$="-documentation"] > section > p > code {
 section[id$="-documentation"] > section > p.opencv-api-sig > code {
     white-space: pre-wrap;
 }
+/* Clickable type / enum-value tokens inside a member-detail signature: light
+   blue, no underline. The ID-qualified selectors out-specify the per-section
+   `#…-documentation a` colour rules so signature links win everywhere. */
+.bd-content a.opencv-sig-link,
+#function-documentation a.opencv-sig-link,
+#typedef-documentation a.opencv-sig-link {
+    color: #4ea1ff !important;
+    text-decoration: none !important;
+}
+.bd-content a.opencv-sig-link:hover { color: #6cb6ff !important; }
+html[data-theme="dark"] .bd-content a.opencv-sig-link,
+html[data-theme="dark"] #function-documentation a.opencv-sig-link,
+html[data-theme="dark"] #typedef-documentation a.opencv-sig-link {
+    color: #6cb6ff !important;
+}
 
 html[data-theme="dark"] section[id$="-documentation"] > section code,
 html[data-theme="dark"] section[id$="-documentation"] > section code span {
@@ -747,6 +770,47 @@ div.highlight > button.copybtn {
     max-width: 100%;
     text-align: center;
 }
+
+/* Scroll box wrapping every inlined diagram (class collaboration graphs AND the
+   large file include-dependency graphs). The whole graph stays reachable —
+   scrolls when wider/taller than the content area, fits otherwise, never cut. */
+.opencv-graph-scroll {
+    overflow: auto;
+    max-width: 100%;
+    max-height: 80vh;
+    margin: 1rem 0 1.5rem;
+}
+.opencv-graph-scroll > svg.opencv-coll-graph {
+    margin: 0;          /* wrapper owns spacing */
+    max-width: none;    /* keep natural size so the box can pan a big graph */
+}
+
+/* File-page member declaration boxes (parsed-literal). Look like a code block
+   but contain a clickable member name. The `:class:` lands on the <pre>
+   (pre.opencv-decl); guard against a wrapper too (.opencv-decl pre). */
+pre.opencv-decl,
+.opencv-decl pre,
+.opencv-decl {
+    font-family: var(--pst-font-family-monospace);
+    font-size: 0.85em;
+    line-height: 1.5;
+    padding: 0.6rem 0.9rem;
+    margin: 0.25rem 0 0.5rem;
+    border-radius: 0.35rem;
+    overflow-x: auto;                 /* long signatures scroll, never clip */
+    background-color: var(--pst-color-surface);
+    border: 1px solid var(--pst-color-border);
+}
+/* The one real link in the box (the member name): blue, no underline. */
+pre.opencv-decl a,
+.opencv-decl a,
+.opencv-decl a.reference {
+    color: #0969da !important;
+    text-decoration: none !important;
+}
+html[data-theme="dark"] pre.opencv-decl a,
+html[data-theme="dark"] .opencv-decl a,
+html[data-theme="dark"] .opencv-decl a.reference { color: #539bf5 !important; }
 
 section#member-enumeration-documentation .highlight-cpp .n {
     color: #0969da !important;

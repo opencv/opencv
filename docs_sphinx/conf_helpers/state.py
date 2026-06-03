@@ -56,21 +56,41 @@ CONTRIB_MODULES = ([m.strip() for m in _contrib_env.split(",") if m.strip()]
 
 # SCOPE — env OPENCV_API_MODULES (comma/semicolon); empty disables API pages
 def _discover_api_modules() -> list[str]:
-    """Main + contrib modules whose umbrella header declares `@defgroup`."""
-    found = []
-    # Scan both the main tree and opencv_contrib/modules.
+    """Main + contrib modules that declare an `@defgroup`, by module dir name.
+
+    The `@defgroup` is not always in the umbrella `opencv2/<module>.hpp`: some
+    modules declare it in a sub-header (datasets/dataset.hpp,
+    quality/qualitybase.hpp, reg/map.hpp) or a differently-named top header
+    (dnn_objdetect's core_detect.hpp, cannops' cann.hpp). So scan every header
+    under each module's include/ tree, and use the module DIRECTORY name (which
+    equals the top `@defgroup` / `group__<name>` by convention) as the id."""
+    found: set[str] = set()
     _roots = [OPENCV_ROOT / "modules"]
     if CONTRIB_ROOT.is_dir():
         _roots.append(CONTRIB_ROOT)
+
+    def _has_defgroup(hdr) -> bool:
+        try:
+            return "@defgroup" in hdr.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            return False
+
     for _root in _roots:
-        for _hdr in _root.glob("*/include/opencv2/*.hpp"):
-            if _hdr.stem != _hdr.parents[2].name:   # only the umbrella header
+        if not _root.is_dir():
+            continue
+        for _mod in _root.iterdir():
+            _inc = _mod / "include" / "opencv2"
+            if not _inc.is_dir():
                 continue
-            try:
-                if "@defgroup" in _hdr.read_text(encoding="utf-8", errors="ignore"):
-                    found.append(_hdr.stem)
-            except OSError:
-                pass
+            # Umbrella / top-level headers first (cheap, the common case)…
+            if any(_has_defgroup(h) for h in sorted(_inc.glob("*.hpp"))):
+                found.add(_mod.name)
+                continue
+            # …else fall back to sub-directory headers.
+            for _h in _inc.rglob("*.hpp"):
+                if _has_defgroup(_h):
+                    found.add(_mod.name)
+                    break
     return sorted(found)
 
 
@@ -297,6 +317,32 @@ if _TAG_FILE.is_file():
     except Exception:
         pass
 
+# Canonical public header for each optional module that may be absent from a
+# build's Doxygen group XML. Ensure a `_FILE_URL` entry exists so the umbrella
+# `#include` on the module's placeholder page resolves (and a file-reference
+# page is generated for it). `setdefault` → a real tag entry always wins.
+_FALLBACK_MODULE_HEADERS: dict[str, str] = {
+    "datasets":      "opencv2/datasets/dataset.hpp",
+    "dnn_objdetect": "opencv2/core_detect.hpp",
+    "quality":       "opencv2/quality.hpp",
+    "reg":           "opencv2/reg/map.hpp",
+    "cannops":       "opencv2/cann.hpp",
+}
+# Every header path referenced by a fallback page (umbrella + per-function
+# includes), ensured present in `_FILE_URL` so each `#include` resolves to a
+# generated file-reference page. `setdefault` → real tag entries always win.
+_FALLBACK_FILE_HEADERS: list[str] = [
+    "opencv2/datasets/dataset.hpp", "opencv2/datasets/util.hpp",
+    "opencv2/core_detect.hpp",
+    "opencv2/quality.hpp", "opencv2/quality/qualitybase.hpp",
+    "opencv2/reg/map.hpp", "opencv2/reg/mapper.hpp",
+    "opencv2/cann.hpp", "opencv2/cann_interface.hpp",
+]
+for _inc in list(_FALLBACK_MODULE_HEADERS.values()) + _FALLBACK_FILE_HEADERS:
+    # Doxygen file-page stem: `.`->`_8`, `_`->`__` on the bare filename.
+    _fn = _inc.rsplit("/", 1)[-1].replace("_", "__").replace(".", "_8")
+    _FILE_URL.setdefault(_inc, f"{_fn}.html")
+
 def _doxygen_url(page: str) -> str:
     return DOXYGEN_BASE_URL + _TAG_FILENAMES.get(page, page)
 
@@ -506,27 +552,41 @@ def _func_slug(name: str) -> str:
 # ---- Citation numbering --------------------------------------------------
 # @cite KEY -> [N], N = bibtex-plain sort position
 def _bib_parse(text: str) -> list[dict]:
-    """Walk a BibTeX file into a list of {_type, _key, field: value, ...}."""
+    """Walk a BibTeX file into a list of {_type, _key, field: value, ...}.
+
+    Tolerant of a missing closing `}` (as bibtex/Doxygen are): a new
+    `@type{key,` at the start of a line implicitly closes the previous entry,
+    so one malformed record can't swallow the rest of the file. (e.g.
+    ximgproc.bib's `akinlar201782` has no closing brace upstream.)"""
     out: list[dict] = []
-    n, i = len(text), 0
-    while i < n:
-        m = re.search(r"@(\w+)\s*\{\s*([^\s,]+)\s*,", text[i:])
+    n = len(text)
+    header = re.compile(r"@(\w+)\s*\{\s*([^\s,]+)\s*,")
+    # Every entry header that begins a line is a hard boundary.
+    starts = [m.start() for m in
+              re.finditer(r"(?m)^[^\S\n]*@\w+\s*\{\s*[^\s,]+\s*,", text)]
+    for idx, s in enumerate(starts):
+        m = header.match(text, s)
         if not m:
-            break
+            continue
         kind, key = m.group(1), m.group(2)
-        i += m.end()
-        depth, body_start = 1, i
-        while i < n and depth > 0:
+        body_start = m.end()
+        limit = starts[idx + 1] if idx + 1 < len(starts) else n
+        # Matching close within this entry's span; if unbalanced (missing `}`),
+        # fall back to the next entry's boundary, trimming a trailing brace.
+        depth, i, end = 1, body_start, None
+        while i < limit:
             c = text[i]
             if c == "{":
                 depth += 1
             elif c == "}":
                 depth -= 1
+                if depth == 0:
+                    end = i
+                    break
             i += 1
-        if depth != 0:
-            break  # malformed entry
-        out.append({"_type": kind.lower(), "_key": key,
-                    **_bib_fields(text[body_start:i - 1])})
+        body = (text[body_start:end] if end is not None
+                else text[body_start:limit].rstrip().rstrip("}"))
+        out.append({"_type": kind.lower(), "_key": key, **_bib_fields(body)})
     return out
 
 def _bib_fields(body: str) -> dict[str, str]:
@@ -890,7 +950,7 @@ __all__ = [
     "HAVE_SPHINX_DESIGN", "HAVE_BREATHE",
     "DOXYGEN_BASE_URL", "_doxygen_url",
     "_TAG_FILE", "_TAG_FILENAMES", "_TAG_TITLES", "_DOC_PAGE_TITLES",
-    "_CV_SYMBOL_URL", "_FILE_URL",
+    "_CV_SYMBOL_URL", "_FILE_URL", "_FALLBACK_MODULE_HEADERS",
     "_CALL_GRAPH_ANCHORS", "_DOXY_ANCHOR_TO_MEMBER", "_norm_args",
     "_LIVE_GROUP_URL", "_LIVE_CLASS_URL", "_LIVE_TYPEDEF_URL",
     "_LOCAL_CLASS_URL", "_LOCAL_TYPEDEF_URL", "_CLASS_TEMPLATE_DISPLAY",

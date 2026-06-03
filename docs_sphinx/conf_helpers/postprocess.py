@@ -78,10 +78,14 @@ def _inline_collaboration_svgs(api_dir: pathlib.Path,
                 return m.group(0)
             svg = href_re.sub(_rewrite_href, svg[start:])
             # carry theme classes + alt for dark mode / a11y
-            return svg.replace(
+            svg = svg.replace(
                 "<svg ",
                 f'<svg class="{m.group("cls")}" role="img" '
                 f'aria-label="{m.group("alt")}" ', 1)
+            # Wrap in a scroll box so large graphs (e.g. file include graphs)
+            # stay fully reachable instead of being clipped — scrolls when wider
+            # than the content area, fits otherwise.
+            return f'<div class="opencv-graph-scroll">{svg}</div>'
 
         new = img_re.sub(_inline, text)
         if new != text:
