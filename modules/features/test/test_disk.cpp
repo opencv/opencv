@@ -44,7 +44,7 @@ static void testDiskRegression(const Size& imageSize, const std::string& tag)
     EXPECT_EQ(detector->descriptorType(), CV_32F);
     EXPECT_EQ(detector->defaultNorm(),    NORM_L2);
 
-    Mat img = imread(samples::findFile("box_in_scene.png"));
+    Mat img = imread(cvtest::findDataFile("shared/box_in_scene.png"));
     ASSERT_FALSE(img.empty());
 
     std::vector<KeyPoint> keypoints;
