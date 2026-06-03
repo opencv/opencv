@@ -256,56 +256,67 @@ public:
 
         // pack B if it is const
         if (constB(mode) && blobs[0].data != last_packed_blob_data) {
-            fastGemmPackB(blobs[0], packed_B, trans_b, opt);
-
-            // Pre-pack B in the "thin" layout when the gemm shape has a
-            // small leading dim (M <= FAST_GEMM_THIN_MAX_M).
+            packed_B.clear();
+            packed_B.shrink_to_fit();
             thin_packed_B.clear();
-            if (!trans_a && blobs[0].type() == CV_32F) {
+            thin_packed_B.shrink_to_fit();
+
+            bool mlas_packed = false;
+#ifdef HAVE_MLAS
+            packed_B_mlas.release();
+            packed_B_mlas_M = packed_B_mlas_N = packed_B_mlas_K = 0;
+            if (mlasAvailable()) {
                 std::vector<Mat> outputs;
                 outputs_arr.getMatVector(outputs);
-                if (!outputs.empty()) {
-                    const auto &Y = outputs[0];
-                    const auto shape_Y = shape(Y);
-                    const int N = shape_Y.back();
-                    const int K = trans_b ? blobs[0].size[1] : blobs[0].size[0];
-                    const int rows_thin = flatten_a ? shape_Y[shape_Y.size() - 2]
-                                                    : (int)(Y.total() / (size_t)N);
-                    if (fastGemmThinEligible(rows_thin, N, K)) {
-                        thin_packed_B.resize(fastGemmThinPackBSize(N, K));
-                        const size_t ldb_K = trans_b ? 1 : N;
-                        const size_t ldb_N = trans_b ? K : 1;
-                        fastGemmThinPackB(N, K, blobs[0].ptr<const float>(),
-                                          ldb_K, ldb_N, thin_packed_B.data());
+                const auto shape_A = shape(inputs[0]);
+                const auto shape_Y = shape(outputs[0]);
+                const int na = shape_A[shape_A.size() - 1];
+                const int ma = shape_A[shape_A.size() - 2];
+                const int N  = shape_Y[shape_Y.size() - 1];
+                const int M  = shape_Y[shape_Y.size() - 2];
+                const int K  = trans_a ? ma : na;
+                const Mat& Bmat = blobs[0];
+                const int ldb = Bmat.size[Bmat.dims - 1];
+                const size_t packed_bytes = mlasSgemmPackBSize(trans_a, trans_b, N, K);
+                if (packed_bytes > 0 && packed_bytes <= static_cast<size_t>(INT_MAX)) {
+                    packed_B_mlas.create(1, static_cast<int>(packed_bytes), CV_8U);
+                    if (mlasSgemmPackB(trans_a, trans_b, N, K,
+                                       Bmat.ptr<const float>(), ldb,
+                                       packed_B_mlas.data)) {
+                        packed_B_mlas_M = M;
+                        packed_B_mlas_N = N;
+                        packed_B_mlas_K = K;
+                        mlas_packed = true;
+                    } else {
+                        packed_B_mlas.release();
                     }
                 }
             }
-#ifdef HAVE_MLAS
-            std::vector<Mat> outputs;
-            outputs_arr.getMatVector(outputs);
-            const auto shape_A = shape(inputs[0]);
-            const auto shape_Y = shape(outputs[0]);
-            const int na = shape_A[shape_A.size() - 1];
-            const int ma = shape_A[shape_A.size() - 2];
-            const int N  = shape_Y[shape_Y.size() - 1];
-            const int M  = shape_Y[shape_Y.size() - 2];
-            const int K  = trans_a ? ma : na;
-            const Mat& Bmat = blobs[0];
-            const int ldb = Bmat.size[Bmat.dims - 1];
-            const size_t packed_bytes = mlasSgemmPackBSize(trans_a, trans_b, N, K);
-            if (packed_bytes > 0) {
-                packed_B_mlas.create(1, static_cast<int>(packed_bytes), CV_8U);
-                if (mlasSgemmPackB(trans_a, trans_b, N, K,
-                                   Bmat.ptr<const float>(), ldb,
-                                   packed_B_mlas.data)) {
-                    packed_B_mlas_M = M;
-                    packed_B_mlas_N = N;
-                    packed_B_mlas_K = K;
-                } else {
-                    packed_B_mlas.release();
+#endif
+            if (!mlas_packed) {
+                fastGemmPackB(blobs[0], packed_B, trans_b, opt);
+
+                if (!trans_a && blobs[0].type() == CV_32F) {
+                    std::vector<Mat> outputs;
+                    outputs_arr.getMatVector(outputs);
+                    if (!outputs.empty()) {
+                        const auto &Y = outputs[0];
+                        const auto shape_Y = shape(Y);
+                        const int N = shape_Y.back();
+                        const int K = trans_b ? blobs[0].size[1] : blobs[0].size[0];
+                        const int rows_thin = flatten_a ? shape_Y[shape_Y.size() - 2]
+                                                        : (int)(Y.total() / (size_t)N);
+                        if (fastGemmThinEligible(rows_thin, N, K)) {
+                            thin_packed_B.resize(fastGemmThinPackBSize(N, K));
+                            const size_t ldb_K = trans_b ? 1 : N;
+                            const size_t ldb_N = trans_b ? K : 1;
+                            fastGemmThinPackB(N, K, blobs[0].ptr<const float>(),
+                                              ldb_K, ldb_N, thin_packed_B.data());
+                        }
+                    }
                 }
             }
-#endif
+
             last_packed_blob_data = blobs[0].data;
         }
 

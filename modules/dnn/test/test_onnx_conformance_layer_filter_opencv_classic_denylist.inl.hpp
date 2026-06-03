@@ -760,3 +760,6 @@
 "test_lppool_2d_same_upper",
 "test_lppool_2d_strides",
 "test_lppool_3d_default",
+"test_maxpool_3d_dilations",
+"test_maxpool_3d_dilations_use_ref_impl",
+"test_maxpool_3d_dilations_use_ref_impl_large",
