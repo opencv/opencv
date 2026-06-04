@@ -102,14 +102,90 @@ struct RowSum :
         }
         else if( cn == 1 )
         {
-            ST s = 0;
-            for( i = 0; i < ksz_cn; i++ )
-                s += (ST)S[i];
-            D[0] = s;
-            for( i = 0; i < width; i++ )
+        #if CV_NEON
+            if constexpr (std::is_same<T, float>::value && std::is_same<ST, double>::value)
             {
-                s += (ST)S[i + ksz_cn] - (ST)S[i];
-                D[i+1] = s;
+                ST s = 0;
+                i = 0;
+                {
+                    float64x2_t vsum0 = vdupq_n_f64(0.0);
+                    float64x2_t vsum1 = vdupq_n_f64(0.0);
+                    for( ; i <= ksz_cn - 8; i += 8 )
+                    {
+                        float32x4_t va = vld1q_f32(S + i);
+                        float32x4_t vb = vld1q_f32(S + i + 4);
+                        vsum0 = vaddq_f64(vsum0, vcvt_f64_f32(vget_low_f32(va)));
+                        vsum0 = vaddq_f64(vsum0, vcvt_f64_f32(vget_high_f32(va)));
+                        vsum1 = vaddq_f64(vsum1, vcvt_f64_f32(vget_low_f32(vb)));
+                        vsum1 = vaddq_f64(vsum1, vcvt_f64_f32(vget_high_f32(vb)));
+                    }
+                    for( ; i <= ksz_cn - 4; i += 4 )
+                    {
+                        float32x4_t v = vld1q_f32(S + i);
+                        vsum0 = vaddq_f64(vsum0, vcvt_f64_f32(vget_low_f32(v)));
+                        vsum0 = vaddq_f64(vsum0, vcvt_f64_f32(vget_high_f32(v)));
+                    }
+                    vsum0 = vaddq_f64(vsum0, vsum1);
+                    s = vgetq_lane_f64(vsum0, 0) + vgetq_lane_f64(vsum0, 1);
+                    for( ; i < ksz_cn; i++ )
+                        s += (ST)S[i];
+                }
+                D[0] = s;
+                static const int CHUNK = 512;
+                double delta[CHUNK];
+                const float64x2_t vzero = vdupq_n_f64(0.0);
+
+                i = 0;
+                while( i < width )
+                {
+                    const int chunk_sz = std::min(width - i, CHUNK);
+                    int j = 0;
+                    for( ; j <= chunk_sz - 4; j += 4 )
+                    {
+                        float32x4_t vnew = vld1q_f32(S + i + j + ksz_cn);
+                        float32x4_t vold = vld1q_f32(S + i + j);
+                        vst1q_f64(delta + j, vsubq_f64(vcvt_f64_f32(vget_low_f32(vnew)), vcvt_f64_f32(vget_low_f32(vold))));
+                        vst1q_f64(delta + j + 2, vsubq_f64(vcvt_f64_f32(vget_high_f32(vnew)), vcvt_f64_f32(vget_high_f32(vold))));
+                    }
+                    for( ; j < chunk_sz; j++ )
+                        delta[j] = (double)S[i + j + ksz_cn] - (double)S[i + j];
+
+                    j = 0;
+                    for( ; j <= chunk_sz - 4; j += 4 )
+                    {
+                        float64x2_t vd0 = vld1q_f64(delta + j);
+                        float64x2_t vd1 = vld1q_f64(delta + j + 2);
+                        float64x2_t vp0 = vaddq_f64(vd0, vextq_f64(vzero, vd0, 1));
+                        float64x2_t vp1 = vaddq_f64(vd1, vextq_f64(vzero, vd1, 1));
+                        double pair0_sum = vgetq_lane_f64(vp0, 1);
+                        float64x2_t vp1off = vaddq_f64(vp1, vdupq_n_f64(pair0_sum));
+                        float64x2_t vc  = vdupq_n_f64(s);
+                        vst1q_f64(D + i + j + 1, vaddq_f64(vp0, vc));
+                        float64x2_t vr2 = vaddq_f64(vp1off, vc);
+                        vst1q_f64(D + i + j + 3, vr2);
+                        s = vgetq_lane_f64(vr2, 1);
+                    }
+                    for( ; j < chunk_sz; j++ )
+                    {
+                        s += delta[j];
+                        D[i + j + 1] = s;
+                    }
+
+                    i += chunk_sz;
+                }
+            }
+            else
+        #endif
+            {
+                ST s = 0;
+                for( i = 0; i < ksz_cn; i++ )
+                    s += (ST)S[i];
+                D[0] = s;
+                for( i = 0; i < width; i++ )
+                {
+                    s += (ST)S[i + ksz_cn] - (ST)S[i];
+                    D[i + 1] = s;
+                }
             }
         }
         else if( cn == 3 )
