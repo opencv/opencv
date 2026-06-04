@@ -1,0 +1,21 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+#ifndef __OPENCV_TEST_PRECOMP_HPP__
+#define __OPENCV_TEST_PRECOMP_HPP__
+
+#include <functional>
+#include <numeric>
+
+#include "opencv2/ts.hpp"
+#include "opencv2/geometry.hpp"
+#include "opencv2/ptcloud.hpp"
+#include <opencv2/core/utils/logger.hpp>
+#include "opencv2/ptcloud/depth.hpp"
+#include "opencv2/ptcloud/odometry.hpp"
+
+#ifdef HAVE_OPENCL
+#include <opencv2/core/ocl.hpp>
+#endif
+
+#endif

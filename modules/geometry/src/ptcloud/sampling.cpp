@@ -7,7 +7,7 @@
 
 
 #include "../precomp.hpp"
-#include "opencv2/geometry/ptcloud.hpp"
+#include "opencv2/geometry/segment.hpp"
 #include "ptcloud_utils.hpp"
 #include <unordered_map>
 
