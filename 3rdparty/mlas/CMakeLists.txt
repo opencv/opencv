@@ -83,15 +83,7 @@ set(_MLAS_REQUIRES_ASM FALSE)
 if(MLAS_X86_64 OR MLAS_X86 OR MLAS_ARM64 OR MLAS_LOONGARCH64)
   set(_MLAS_REQUIRES_ASM TRUE)
 endif()
-if(ANDROID AND _MLAS_REQUIRES_ASM)
-  set(OPENCV_DNN_MLAS_SKIP_REASON
-    "skipped on Android ${CMAKE_ANDROID_ARCH_ABI}; enable_language(ASM) from subdir is unreliable"
-    CACHE INTERNAL "" FORCE)
-  message(STATUS "MLAS: skipping on Android ${CMAKE_ANDROID_ARCH_ABI} "
-                 "(enable_language(ASM) from subdir is unreliable here); "
-                 "DNN will use its built-in SGEMM")
-  return()
-endif()
+
 include(CheckLanguage)
 set(MLAS_HAS_ASM FALSE CACHE INTERNAL "" FORCE)
 check_language(ASM)
@@ -261,12 +253,11 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang"
     "$<$<COMPILE_LANGUAGE:ASM>:-Wa,--noexecstack>"
   )
 endif()
-# platform.cpp's __linux__ branch calls syscall() but upstream only includes
-# <sys/syscall.h>, not <unistd.h> (where syscall() is declared on glibc).
-# Force-include unistd.h on non-Windows x86_64 builds. MSVC doesn't ship
-# unistd.h and doesn't recognize the -include flag; its _WIN32 branch in
-# platform.cpp doesn't need syscall() anyway.
-if(MLAS_X86_64 AND NOT WIN32)
+# platform.cpp's MlasInitAMX() calls syscall() but only includes <sys/syscall.h>,
+# not <unistd.h> where glibc declares it. It's compiled on both x86 and x86_64
+# (shared MLAS_TARGET_AMD64_IX86 block), so force-include unistd.h on both.
+# MSVC has no unistd.h and its _WIN32 path doesn't use syscall() anyway.
+if((MLAS_X86_64 OR MLAS_X86) AND NOT WIN32)
   set_source_files_properties(${MLAS_SRC_DIR}/platform.cpp
     PROPERTIES COMPILE_FLAGS "-include unistd.h")
 endif()

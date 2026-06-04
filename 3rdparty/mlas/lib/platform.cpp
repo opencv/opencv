@@ -363,7 +363,7 @@ MLAS_PLATFORM::MLAS_PLATFORM(void)
             this->KernelM1Routine            = MlasSgemmKernelM1Avx;
             this->KernelM1TransposeBRoutine  = MlasSgemmKernelM1TransposeBAvx;
             this->TransposePackB16x4Routine  = MlasSgemmTransposePackB16x4Avx;
-#endif
+            // FMA3/AVX512F kernels exist for x86_64 only; 32-bit x86 stops at AVX.
             unsigned Cpuid7[4];
 #if defined(_WIN32)
             __cpuidex((int*)Cpuid7, 7, 0);
@@ -378,6 +378,7 @@ MLAS_PLATFORM::MLAS_PLATFORM(void)
                     this->GemmFloatKernel = MlasGemmFloatKernelAvx512F;
                 }
             }
+#endif // MLAS_TARGET_AMD64
         }
     }
 #endif // MLAS_TARGET_AMD64_IX86
