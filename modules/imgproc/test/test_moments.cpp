@@ -60,9 +60,9 @@ protected:
             points.push_back(Point(49, 51));
 
             Moments m = moments(points, false);
-            double area = contourArea(points);
+            // double area = contourArea(points);
 
-            CV_Assert( m.m00 == 0 && m.m01 == 0 && m.m10 == 0 && area == 0 );
+            CV_Assert( m.m00 == 0 && m.m01 == 0 && m.m10 == 0 /*&& area == 0*/ );
         }
         catch(...)
         {

@@ -10,6 +10,7 @@ import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfDouble;
 import org.opencv.core.MatOfPoint;
+import org.opencv.core.Rect;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.MatOfPoint3f;
 import org.opencv.core.MatOfInt;
@@ -733,12 +734,50 @@ public class GeometryTest extends OpenCVTestCase {
         assertEquals(100.0f, radius[0], 1.0);
     }
 
-        public void testPointPolygonTest() {
+    public void testPointPolygonTest() {
         MatOfPoint2f contour = new MatOfPoint2f(new Point(0, 0), new Point(1, 3), new Point(3, 4), new Point(4, 3), new Point(2, 1));
         double sign1 = Geometry.pointPolygonTest(contour, new Point(2, 2), false);
         assertEquals(1.0, sign1);
 
         double sign2 = Geometry.pointPolygonTest(contour, new Point(4, 4), true);
         assertEquals(-Math.sqrt(0.5), sign2);
+    }
+
+        public void testContourAreaMat() {
+        Mat contour = new Mat(1, 4, CvType.CV_32FC2);
+        contour.put(0, 0, 0, 0, 10, 0, 10, 10, 5, 4);
+
+        double area = Geometry.contourArea(contour);
+
+        assertEquals(45., area, EPS);
+    }
+
+    public void testContourAreaMatBoolean() {
+        Mat contour = new Mat(1, 4, CvType.CV_32FC2);
+        contour.put(0, 0, 0, 0, 10, 0, 10, 10, 5, 4);
+
+        double area = Geometry.contourArea(contour, true);
+
+        assertEquals(45., area, EPS);
+        // TODO_: write better test
+    }
+
+    public void testArcLength() {
+        MatOfPoint2f curve = new MatOfPoint2f(new Point(1, 3), new Point(2, 4), new Point(3, 5), new Point(4, 4), new Point(5, 3));
+
+        double arcLength = Geometry.arcLength(curve, false);
+
+        assertEquals(5.656854249, arcLength, 0.000001);
+    }
+
+    public void testBoundingRect() {
+        MatOfPoint points = new MatOfPoint(new Point(0, 0), new Point(0, 4), new Point(4, 0), new Point(4, 4));
+        Point p1 = new Point(1, 1);
+        Point p2 = new Point(-5, -2);
+
+        Rect bbox = Geometry.boundingRect(points);
+
+        assertTrue(bbox.contains(p1));
+        assertFalse(bbox.contains(p2));
     }
 }

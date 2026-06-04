@@ -3616,57 +3616,6 @@ CV_EXPORTS_W void findContoursLinkRuns(InputArray image, OutputArrayOfArrays con
 //! @overload
 CV_EXPORTS_W void findContoursLinkRuns(InputArray image, OutputArrayOfArrays contours);
 
-/** @brief Calculates the up-right bounding rectangle of a point set or non-zero pixels of gray-scale image.
- *
- * The function calculates and returns the minimal up-right bounding rectangle for the specified point set or
- * non-zero pixels of gray-scale image.
- *
- * @param array Input gray-scale image or 2D point set, stored in std::vector or Mat.
- */
-CV_EXPORTS_W Rect boundingRect( InputArray array );
-
-/** @brief Calculates a contour perimeter or a curve length.
-
-The function computes a curve length or a closed contour perimeter.
-
-@param curve Input vector of 2D points, stored in std::vector or Mat.
-@param closed Flag indicating whether the curve is closed or not.
- */
-CV_EXPORTS_W double arcLength( InputArray curve, bool closed );
-
-/** @brief Calculates a contour area.
-
-The function computes a contour area. Similarly to moments , the area is computed using the Green
-formula. Thus, the returned area and the number of non-zero pixels, if you draw the contour using
-#drawContours or #fillPoly , can be different. Also, the function will most certainly give a wrong
-results for contours with self-intersections.
-
-Example:
-@code
-    vector<Point> contour;
-    contour.push_back(Point2f(0, 0));
-    contour.push_back(Point2f(10, 0));
-    contour.push_back(Point2f(10, 10));
-    contour.push_back(Point2f(5, 4));
-
-    double area0 = contourArea(contour);
-    vector<Point> approx;
-    approxPolyDP(contour, approx, 5, true);
-    double area1 = contourArea(approx);
-
-    cout << "area0 =" << area0 << endl <<
-            "area1 =" << area1 << endl <<
-            "approx poly vertices" << approx.size() << endl;
-@endcode
-@param contour Input vector of 2D points (contour vertices), stored in std::vector or Mat.
-@param oriented Oriented area flag. If it is true, the function returns a signed area value,
-depending on the contour orientation (clockwise or counter-clockwise). Using this feature you can
-determine orientation of a contour by taking the sign of an area. By default, the parameter is
-false, which means that the absolute value is returned.
- */
-CV_EXPORTS_W double contourArea( InputArray contour, bool oriented = false );
-
-
 /** @brief Creates a smart pointer to a cv::GeneralizedHoughBallard class and initializes it.
 */
 CV_EXPORTS_W Ptr<GeneralizedHoughBallard> createGeneralizedHoughBallard();
