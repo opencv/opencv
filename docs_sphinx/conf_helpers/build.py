@@ -11,6 +11,37 @@ from .state import *
 from .xml_render import _patch_namespace_xml_for_breathe
 from .stubs import _generate_api_stubs
 
+
+def _discover_orphan_groups(xml_dir):
+    if not xml_dir.is_dir():
+        return [], []
+    folders = set()
+    for _root in (OPENCV_ROOT / "modules", CONTRIB_ROOT):
+        if _root.is_dir():
+            folders.update(d.name for d in _root.iterdir()
+                           if (d / "include" / "opencv2").is_dir())
+    skip = set(folders) | {f.replace("_", "__") for f in folders}
+    skip |= {_module_group_stem(m) for m in folders}
+    all_groups, child = set(), set()
+    for gx in xml_dir.glob("group__*.xml"):
+        all_groups.add(gx.stem)
+        try:
+            xml = gx.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        child.update(re.findall(r'<innergroup refid="(group__[^"]+)"', xml))
+    main, extra = [], []
+    for g in sorted(all_groups - child):
+        stem = g[len("group__"):]
+        name = stem.replace("__", "_")
+        if stem in skip or name in skip:
+            continue
+        xml = (xml_dir / f"{g}.xml").read_text(encoding="utf-8", errors="ignore")
+        loc = re.search(r'<location file="([^"]*)"', xml)
+        (extra if loc and "opencv_contrib/" in loc.group(1) else main).append(name)
+    return main, extra
+
+
 # Skip when input root is DOC_ROOT: writing there is forbidden.
 if _BIB_ENTRIES_SORTED and SPHINX_INPUT_ROOT != DOC_ROOT:
     try:
@@ -111,12 +142,15 @@ if API_MODULES:
         OPENCV_ROOT / "modules" / m).is_dir()
     _main_api = [m for m in API_MODULES if not _is_contrib(m)]
     _extra_api = [m for m in API_MODULES if _is_contrib(m)]
+    _main_orphans, _extra_orphans = _discover_orphan_groups(_API_XML_DIR)
     _generate_api_stubs(_main_api, _API_XML_DIR, SPHINX_INPUT_ROOT / "main_modules",
-                        root_anchor="api_root", root_title="Main modules")
+                        root_anchor="api_root", root_title="Main modules",
+                        extra_groups=_main_orphans)
     _scan_internal(SPHINX_INPUT_ROOT / "main_modules")
-    if _extra_api:
+    if _extra_api or _extra_orphans:
         _generate_api_stubs(_extra_api, _API_XML_DIR, SPHINX_INPUT_ROOT / "extra_modules",
-                            root_anchor="extra_api_root", root_title="Extra modules")
+                            root_anchor="extra_api_root", root_title="Extra modules",
+                            extra_groups=_extra_orphans)
         _scan_internal(SPHINX_INPUT_ROOT / "extra_modules")
 
 

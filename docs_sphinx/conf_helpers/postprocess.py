@@ -222,6 +222,13 @@ def _localize_doxygen_links(out_dir: pathlib.Path) -> None:
         r'href="' + re.escape(DOXYGEN_BASE_URL) + r'(?:[\w-]+/)*?'
         r'(?P<page>' + _SYM + r')(?:#(?P<frag>\w+))?"')
     bare_re = re.compile(r'href="(?P<page>' + _SYM + r')(?:#(?P<frag>[\w:.-]+))?"')
+    # `#include` links -> local file-reference page (same Doxygen file stem).
+    inc_re = re.compile(
+        r'<a class="reference external opencv-include-link" '
+        r'href="[^"]*doc/doxygen/html/[^"]*?(?P<file>[^/"]+\.html)">(?P<path>[^<]+)</a>')
+    strip_re = re.compile(
+        r'<a\b[^>]*\bhref="(?:' + re.escape(DOXYGEN_BASE_URL) + r'|[^"]*doc/doxygen/html/)'
+        r'(?![^"]*javadoc)[^"]*"[^>]*>(?P<txt>[^<]*)</a>')
 
     for html in out_dir.rglob("*.html"):
         rel = html.relative_to(out_dir)
@@ -250,7 +257,14 @@ def _localize_doxygen_links(out_dir: pathlib.Path) -> None:
             frag = m.group("frag")
             return _href(m.group("page"), f"#{frag}" if frag else "") or m.group(0)
 
-        new = bare_re.sub(_bare, ext_re.sub(_ext, text))
+        def _inc(m: "re.Match") -> str:
+            h = _href(m.group("file"), "")
+            if not h:
+                return m.group(0)
+            return f'<a class="reference internal opencv-include-link" {h}>{m.group("path")}</a>'
+
+        new = inc_re.sub(_inc, bare_re.sub(_bare, ext_re.sub(_ext, text)))
+        new = strip_re.sub(lambda m: m.group("txt"), new)
         if new != text:
             html.write_text(new, encoding="utf-8")
 

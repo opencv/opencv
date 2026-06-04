@@ -77,7 +77,7 @@ string modelName, framework;
 
 static void preprocess(const Mat& frame, Net& net, Size inpSize);
 
-static void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, int backend, vector<int>& classIds, vector<float>& confidences, vector<Rect>& boxes, const string postprocessing);
+static void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, vector<int>& classIds, vector<float>& confidences, vector<Rect>& boxes, const string postprocessing);
 
 static void drawPred(vector<int>& classIds, vector<float>& confidences, vector<Rect>& boxes, Mat& frame, FontFace& sans, int stdSize, int stdWeight, int stdImgSize, int stdThickness);
 
@@ -334,7 +334,7 @@ int main(int argc, char** argv)
             classIds.clear();
             confidences.clear();
             boxes.clear();
-            postprocess(frame, outs, net, backend, classIds, confidences, boxes, postprocessing);
+            postprocess(frame, outs, net, classIds, confidences, boxes, postprocessing);
 
             drawPred(classIds, confidences, boxes, frame, sans, stdSize, stdWeight, stdImgSize, stdThickness);
 
@@ -383,7 +383,7 @@ int main(int argc, char** argv)
             confidences.clear();
             boxes.clear();
 
-            postprocess(frame, outs, net, backend, classIds, confidences, boxes, postprocessing);
+            postprocess(frame, outs, net, classIds, confidences, boxes, postprocessing);
 
             drawPred(classIds, confidences, boxes, frame, sans, stdSize, stdWeight, stdImgSize, stdThickness);
 
@@ -510,7 +510,7 @@ void yoloPostProcessing(
     }
 }
 
-void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, int backend, vector<int>& classIds, vector<float>& confidences, vector<Rect>& boxes, const string postprocessing)
+void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, vector<int>& classIds, vector<float>& confidences, vector<Rect>& boxes, const string postprocessing)
 {
     static vector<int> outLayers = net.getUnconnectedOutLayers();
     if (postprocessing == "ssd")

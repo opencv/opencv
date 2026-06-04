@@ -81,24 +81,42 @@
       init_search();
       searchBox.OnSelectItem(0); // default to "All" on every page load
 
-      // Redirect result clicks: Doxygen filename → Sphinx page via sphinxPageMap.
       var sphinxRoot = "{{ '../' * (pagename or '').count('/') }}";
+      // Doxygen result href -> Sphinx page, or "" if that page is not in our build.
+      function resolveSphinx(href) {
+        if (!href || href.indexOf("javascript:") === 0) return "";
+        var map = (typeof sphinxPageMap !== "undefined") ? sphinxPageMap : {};
+        var stem = href.split("/").pop().replace(/#.*$/, "").replace(/\.html$/, "");
+        var key = stem.replace(/^group__/, "").replace(/^tutorial_/, "").replace(/__/g, "_");
+        var path = map[stem] || map[key];
+        if (!path && stem.indexOf("namespace") === 0) path = map["core_basic"];
+        var rest = stem;
+        while (!path && rest.indexOf("_1_1") >= 0) {
+          rest = rest.substring(0, rest.lastIndexOf("_1_1"));
+          path = map[rest];
+        }
+        return path || "";
+      }
+
       document.body.addEventListener("click", function (e) {
         var a = e.target.closest ? e.target.closest("a.SRSymbol, a.SRScope") : null;
         if (!a) return;
         var href = a.getAttribute("href") || "";
-        if (!href || href.startsWith("javascript:")) return;
-        var fname = href.split("/").pop().replace(/#.*$/, ""); // e.g. "group__core.html"
-        var stem = fname.replace(/\.html$/, "");              // e.g. "group__core"
-        // Normalise to the Sphinx stem: strip group__/tutorial_ prefix, __ → _
-        var key = stem.replace(/^group__/, "").replace(/^tutorial_/, "").replace(/__/g, "_");
-        // Also try exact stem (covers classcv_*, structcv_*, namespacecv_*, etc.)
-        var sphinxPath = (typeof sphinxPageMap !== "undefined") &&
-                         (sphinxPageMap[stem] || sphinxPageMap[key]);
+        var sphinxPath = resolveSphinx(href);
         if (sphinxPath) {
           e.preventDefault();
           e.stopPropagation();
-          window.location.href = sphinxRoot + sphinxPath;
+          // Doxygen #autotoc_md anchors don't exist in Sphinx; rebuild from heading text.
+          var frag = "";
+          if (/#autotoc_md/.test(href)) {
+            var slug = (a.textContent || "").trim().toLowerCase()
+                         .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+            if (slug) frag = "#" + slug;
+          }
+          window.location.href = sphinxRoot + sphinxPath + frag;
+        } else if (href.indexOf("doc/doxygen/html/") >= 0) {
+          e.preventDefault();
+          e.stopPropagation();
         }
       }, true);
 

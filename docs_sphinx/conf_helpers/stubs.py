@@ -2342,12 +2342,14 @@ def _fallback_module_tree(name: str):
 
 def _generate_api_stubs(modules, xml_dir, out_dir,
                         root_anchor="api_root", root_title="API Reference",
-                        root_desc=None):
+                        root_desc=None, extra_groups=()):
     """Generate a stub tree (group/namespace/class pages) under out_dir.
 
     Docnames are prefixed with out_dir.name so the same generator drives both
-    main_modules/ and extra_modules/ (contrib) trees from separate calls."""
-    if not modules:
+    main_modules/ and extra_modules/ (contrib) trees from separate calls.
+    extra_groups: orphan group stems rendered as pages but kept out of the
+    module index (referenced groups not nested under any module top)."""
+    if not modules and not extra_groups:
         return
     if not xml_dir.is_dir():
         return  # No XML yet; degrade silently.
@@ -2403,7 +2405,8 @@ def _generate_api_stubs(modules, xml_dir, out_dir,
     trees: list = []
     module_rows: list = []  # (folder, page_stem, title) for the api_root list
     _gapi_tree = None  # saved to write gapi.md wrapper after all stubs
-    for m in modules:
+    for m in list(modules) + list(extra_groups):
+        is_extra = m in extra_groups
         stem = _module_group_stem(m)
         tree = _build_api_hierarchy("group__" + stem.replace("_", "__"), xml_dir)
         if tree is None:
@@ -2413,8 +2416,10 @@ def _generate_api_stubs(modules, xml_dir, out_dir,
         if tree is None:
             continue
         trees.append(tree)
-        # gapi: expose as top-level "Graph API" wrapper page, not "G-API framework"
-        if m == "gapi":
+        if is_extra:
+            pass
+        elif m == "gapi":
+            # gapi: expose as top-level "Graph API" wrapper page, not "G-API framework"
             _gapi_tree = tree
             module_rows.append((m, "gapi", "Graph API"))
         else:
