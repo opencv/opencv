@@ -12,12 +12,10 @@
  * the dropdown on every version's pages at once. Do not maintain a second
  * list anywhere. */
 window.OPENCV_DOC_VERSIONS = [
-    ['4.14.0-dev', '/4.x'],
     ['4.13.0', '/4.13.0'],
     ['4.12.0', '/4.12.0'],
     ['4.11.0', '/4.11.0'],
     ['5.0', '/5.0'],
-    ['5.0.0-pre', '/5.x'],
     ['5.0.0alpha', '/5.0.0-alpha'],
     ['4.10.0', '/4.10.0'],
     ['4.9.0', '/4.9.0'],
@@ -68,7 +66,23 @@ window.OPENCV_DOC_VERSIONS = [
     ['3.0.0', '/3.0.0'],
 ];
 
-document.addEventListener("DOMContentLoaded", function() {
+// Present the dropdown newest-first regardless of the order entries were added
+// above, so publishing a release stays a one-line append (no manual re-sorting).
+// Sort by numeric major.minor.patch descending; suffixes like "-dev"/"-pre"/
+// "alpha" carry no digits and are ignored by the key, so same-base variants
+// (e.g. "5.0" / "5.0.0-pre" / "5.0.0alpha") tie — Array.sort is stable, so they
+// keep the order written above.
+window.OPENCV_DOC_VERSIONS.sort(function (a, b) {
+    var ka = (a[0].match(/\d+/g) || []).map(Number);
+    var kb = (b[0].match(/\d+/g) || []).map(Number);
+    for (var i = 0; i < Math.max(ka.length, kb.length); i++) {
+        var d = (kb[i] || 0) - (ka[i] || 0);
+        if (d) return d;
+    }
+    return 0;
+});
+
+function renderDoxygenVersionDropdown() {
   // Doxygen-only rendering. The Sphinx pages have no `#projectnumber` and
   // no jQuery, so bail early there — they read OPENCV_DOC_VERSIONS above
   // and build their own dropdown in the navbar template.
@@ -95,20 +109,27 @@ document.addEventListener("DOMContentLoaded", function() {
               break;
           }
       }
-      if (path) {
-          var location = window.location;
-          var url = location.href;
-          var new_url = url.replace(window.location.hostname + '/' + current_ver,
-                                    window.location.hostname + path);
-          if (url == new_url) {
-              var current_ver = /\/[^\/]+/.exec(location.pathname)
-              new_url = url.replace(window.location.hostname + current_ver,
-                                    window.location.hostname + path);
-          }
-          console.log(new_url);
-          if (url != new_url)
-              window.location.href = new_url; // navigate
-      }
+      if (!path) return;
+      // Go straight to the chosen version's index via its site-absolute path,
+      // so switching works from ANY page of ANY version — no fragile attempt to
+      // substitute the current version inside the current URL (which fails on
+      // pages whose path isn't "/<version>/...", e.g. the 5.0 C++ API tree).
+      // The S3 *website* endpoint serves "/4.13.0/" as index.html, but the plain
+      // REST endpoint does not, so append index.html explicitly.
+      if (!/\.html?($|[?#])/.test(path))
+          path = path.replace(/\/+$/, '') + '/index.html';
+      window.location.href = path; // navigate
   });
   return current_ver;
-});
+}
+
+// Run as soon as possible. On a normal page load this fires on DOMContentLoaded;
+// but on the already-deployed legacy pages this file is pulled in dynamically
+// (a loader appended to dynsections.js) and may arrive AFTER DOMContentLoaded
+// has fired — in which case render immediately instead of waiting for an event
+// that will never come again.
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", renderDoxygenVersionDropdown);
+} else {
+  renderDoxygenVersionDropdown();
+}
