@@ -338,6 +338,11 @@ bool BarcodeImpl::detectAndDecodeMulti(InputArray img, vector<string> &decoded_i
 //==================================================================================================
 // Public class implementation
 
+BarcodeDetector::BarcodeDetector()
+    : BarcodeDetector(std::string())
+{
+}
+
 BarcodeDetector::BarcodeDetector(const string &super_resolution_model_path)
 {
     Ptr<BarcodeImpl> p_ = new BarcodeImpl();

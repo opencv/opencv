@@ -18,11 +18,14 @@ namespace barcode {
 class CV_EXPORTS_W_SIMPLE BarcodeDetector : public cv::GraphicalCodeDetector
 {
 public:
-    /** @brief Initialize the BarcodeDetector.
+    /** @brief Initialize the BarcodeDetector. Super resolution is disabled.
+    */
+    CV_WRAP BarcodeDetector();
+
+    /** @brief Initialize the BarcodeDetector with a Super Resolution model.
      *
-     * Optionally loads a Super Resolution DNN model in ONNX format. When provided, it is
-     * used to upscale small/low-quality barcode crops before decoding for better quality.
-     * Leave the path empty to disable super resolution.
+     * Loads a Super Resolution DNN model in ONNX format, used to upscale small/low-quality
+     * barcode crops before decoding for better quality.
      *
      * @note Caffe models (`sr.prototxt` / `sr.caffemodel`) are no longer supported; convert
      * the model to ONNX (a converted `sr.onnx` is available from
@@ -30,7 +33,7 @@ public:
      *
      * @param super_resolution_model_path path to a single-file ONNX Super Resolution model.
      */
-    CV_WRAP BarcodeDetector(CV_WRAP_FILE_PATH const std::string &super_resolution_model_path = "");
+    CV_WRAP BarcodeDetector(CV_WRAP_FILE_PATH const std::string &super_resolution_model_path);
     ~BarcodeDetector();
 
     /** @brief Decodes barcode in image once it's found by the detect() method.
