@@ -859,7 +859,7 @@ public:
         CV_WRAP Params();
         CV_PROP_RW Size inputSize;              //!< Input image size for the network, default 640x640
         CV_PROP_RW bool normalizeDescriptors;   //!< Whether to L2-normalize descriptors, default true
-        CV_PROP_RW int engine;                  //!< DNN engine type (dnn::EngineType), default ENGINE_ORT
+        CV_PROP_RW int engine;                  //!< DNN engine type (dnn::EngineType), default ENGINE_NEW
         CV_PROP_RW int backend;                 //!< DNN backend, default DNN_BACKEND_DEFAULT
         CV_PROP_RW int target;                  //!< DNN target, default DNN_TARGET_CPU
     };

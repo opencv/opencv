@@ -20,7 +20,7 @@ ALIKED::Params::Params()
     inputSize = Size(640, 640);
     normalizeDescriptors = true;
 #ifdef HAVE_OPENCV_DNN
-    engine = dnn::ENGINE_ORT;
+    engine = dnn::ENGINE_NEW;
     backend = dnn::DNN_BACKEND_DEFAULT;
     target = dnn::DNN_TARGET_CPU;
 #else
