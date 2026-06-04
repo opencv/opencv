@@ -27,6 +27,9 @@ Routine Description:
 
         .p2align 4
         .weak  __x86.get_pc_thunk.bx
+        // Hidden = non-preemptible, so the PC-relative call in the SGEMM
+        // kernels binds locally in the .so (no R_386_PC32 link error).
+        .hidden __x86.get_pc_thunk.bx
         .type   __x86.get_pc_thunk.bx,@function
 __x86.get_pc_thunk.bx:
         mov ebx, [esp]
