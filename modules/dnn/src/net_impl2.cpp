@@ -97,7 +97,7 @@ void Net::Impl::applyStagedOrtInputs()
     {
         const std::string& inpname = ort_staged_inputs[k].first;
         const Mat& inputMat = ort_staged_inputs[k].second;
-        if (inputMat.dims == 0)
+        if (!inputMat.data)
             continue;  // truly absent input — skip
 
         size_t inputIdx = 0;
@@ -255,7 +255,7 @@ std::vector<Mat> Net::Impl::runOrtSession(std::vector<Mat> inputBlobs, const std
     input_tensors.reserve(ninputs);
     for (size_t i = 0; i < ninputs; ++i)
     {
-        if (inputBlobs[i].dims == 0)
+        if (!inputBlobs[i].data)
             CV_Error_(Error::StsError, ("DNN/ORT: input '%s' has no data", names.input_names[i].c_str()));
 
         std::vector<int64_t> inputDims;
@@ -1022,7 +1022,7 @@ void Net::Impl::setMainGraphInput(InputArray m, const std::string& inpname)
     if (useOrtEngine && !ort_session)
     {
         Mat inputMat = m.getMat();
-        if (inputMat.dims == 0)
+        if (!inputMat.data)
             return;  // truly absent input (e.g. optional empty axes tensor) — ORT uses its default
 
         bool updated = false;
