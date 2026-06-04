@@ -423,6 +423,70 @@ def _linkify_code_blocks(html_dir: pathlib.Path) -> None:
                 pass
 
 
+_INLINE_CODE_RE = re.compile(
+    r'<code class="docutils literal notranslate">(?P<body>[^<]*?)</code>'
+)
+_A_BLOCK_RE = re.compile(r'<a\b[^>]*>.*?</a>', re.DOTALL)
+_INLINE_TOK_RE = re.compile(r'(?:cv::)?_?[A-Za-z][A-Za-z0-9_]*')
+
+
+def _linkify_inline_code(html_dir: pathlib.Path) -> None:
+    if not (_LOCAL_CLASS_URL or _LOCAL_TYPEDEF_URL):
+        return
+    if not html_dir.is_dir():
+        return
+
+    def _resolve(name: str) -> str | None:
+        bare = name[4:] if name.startswith("cv::") else name
+        return _LOCAL_CLASS_URL.get(bare) or _LOCAL_TYPEDEF_URL.get(bare)
+
+    def _anchor_text(tok: str) -> str:
+        return tok.replace("::", "&#58;&#58;")
+
+    def _linkify_body(body: str) -> str:
+        def _sub(m: re.Match) -> str:
+            tok = m.group(0)
+            url = _resolve(tok)
+            if not url:
+                return tok
+            return (f'<a class="reference internal" '
+                    f'href="{url}">{_anchor_text(tok)}</a>')
+        return _INLINE_TOK_RE.sub(_sub, body)
+
+    def _rewrite_code(m: re.Match) -> str:
+        body = m.group("body")
+        new_body = _linkify_body(body)
+        if new_body == body:
+            return m.group(0)
+        return (f'<code class="docutils literal notranslate">'
+                f'{new_body}</code>')
+
+    for html in html_dir.rglob("*.html"):
+        try:
+            text = html.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        if 'class="docutils literal notranslate"' not in text:
+            continue
+        masked: list[str] = []
+        def _mask(m: re.Match) -> str:
+            masked.append(m.group(0))
+            return f"\x00A{len(masked) - 1}\x00"
+        masked_text = _A_BLOCK_RE.sub(_mask, text)
+        new_masked = _INLINE_CODE_RE.sub(_rewrite_code, masked_text)
+        if new_masked == masked_text:
+            continue
+        new_text = re.sub(
+            r"\x00A(\d+)\x00",
+            lambda mm: masked[int(mm.group(1))],
+            new_masked,
+        )
+        try:
+            html.write_text(new_text, encoding="utf-8")
+        except OSError:
+            pass
+
+
 def _inline_coll_graphs_on_finish(app, exception):
     """build-finished entry point."""
     if exception is not None:
@@ -432,6 +496,7 @@ def _inline_coll_graphs_on_finish(app, exception):
         _inline_collaboration_svgs(out / _api, out / "_images")
         _strip_breathe_class_clutter(out / _api)
         _linkify_code_blocks(out)
+    _linkify_inline_code(out)
     _localize_doxygen_links(out)
     _drop_moved_stub_search_entries()
     _copy_js_tryit_files(out)
