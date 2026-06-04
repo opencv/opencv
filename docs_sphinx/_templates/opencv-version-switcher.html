@@ -3,12 +3,13 @@
    version selector sits inline with the wordmark.
 
    Single source of truth: the options are built client-side from
-   `window.OPENCV_DOC_VERSIONS`, defined in the canonical `/version.js` at the
-   site root — the SAME file the legacy Doxygen pages use. There is no
-   build-time scrape and no second list: publishing a release is one edit to
-   `/version.js`. The dropdown therefore only populates on the deployed site
-   (where `/version.js` resolves at the bucket root); under a local
-   `sphinx-build` preview it gracefully shows just the current release.
+   `window.OPENCV_DOC_VERSIONS`, defined in `_static/version.js` — the SAME
+   list the legacy Doxygen pages carry. There is no build-time scrape and no
+   second list: publishing a release is one edit to that file. We load it via
+   `pathto('_static/version.js', 1)` (the theme's own idiom for JS assets) so
+   the script resolves relative to each page, which means the dropdown
+   populates fully in a local `sphinx-build` preview AND on the deployed site,
+   regardless of how deep the page sits or which prefix it lands under.
 
    The option whose label equals this build's `release` is marked selected;
    every other option carries that version's site-absolute path and the
@@ -22,7 +23,7 @@
     <option value="" selected>{{ release }}</option>
   </select>
 </form>
-<script src="/version.js"></script>
+<script src="{{ pathto('_static/version.js', 1) }}"></script>
 <script>
   (function () {
     var current = {{ release | tojson }};

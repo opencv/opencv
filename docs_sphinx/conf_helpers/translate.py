@@ -599,8 +599,11 @@ def _translate(text: str, docname: str | None = None) -> str:
     # Was previously gated to `main_modules/core_basic` only — that
     # left parameter types in other module pages (calib, dnn, …) as
     # plain code chips even though their local typedef/class targets
-    # exist. Pass 1 walks any existing `<code>` HTML left by step 8b;
-    # pass 2 walks remaining markdown code spans.
+    # exist. Pass 1 walks any existing `<code>` HTML emitted by
+    # `_func_row_split_md` (function name already wrapped in `<a>`;
+    # remaining text tokens get individual anchors). Pass 2 walks
+    # remaining markdown code spans for any rows still using the
+    # backticked-signature form.
     if (docname and (docname.startswith("api/")
                      or docname.startswith("main_modules/")
                      or docname.startswith("extra_modules/"))
@@ -615,34 +618,36 @@ def _translate(text: str, docname: str | None = None) -> str:
         def _anchor_text(tok: str) -> str:
             # Encode `::` so the later cv-linkifier doesn't nest a second anchor.
             return tok.replace("::", "&#58;&#58;")
-        def _linkify_markdown_codespan(m: re.Match) -> str:
-            content = m.group("content")
-            # Prefix-aware: `cv::Name` is one hit so the anchor covers both.
-            hits = [(t.start(), t.end(), t.group(0)) for t in
-                    _tok_re.finditer(content)
-                    if _token_url(_bare(t.group(0)))]
-            if not hits:
-                return m.group(0)
-            from html import escape as _esc
-            parts, last = [], 0
-            for s, e, tok in hits:
-                parts.append(_esc(content[last:s]))
-                parts.append(f'<a class="reference internal" '
-                             f'href="{_token_url(_bare(tok))}">'
-                             f'{_anchor_text(tok)}</a>')
-                last = e
-            parts.append(_esc(content[last:]))
-            return (f'<code class="docutils literal notranslate">'
-                    f'{"".join(parts)}</code>')
-        _masked: list[str] = []
-        def _mask(m: re.Match) -> str:
-            _masked.append(m.group(0))
-            return f"\x00MDLINK{len(_masked)-1}\x00"
-        text = re.sub(r"\[(?:`[^`\n]+`|<br>)+\]\([^)\n]+\)", _mask, text)
-        text = re.sub(r"`(?P<content>[^`\n]+?)`",
-                      _linkify_markdown_codespan, text)
-        text = re.sub(r"\x00MDLINK(\d+)\x00",
-                      lambda m: _masked[int(m.group(1))], text)
+        def _linkify_html_segment(seg: str) -> str:
+            def _sub(m: re.Match) -> str:
+                url = _token_url(_bare(m.group(0)))
+                if not url:
+                    return m.group(0)
+                return (f'<a class="reference internal" '
+                        f'href="{url}">{_anchor_text(m.group(0))}</a>')
+            return _tok_re.sub(_sub, seg)
+        # Pass 1: walk every `<code class="docutils literal notranslate">…</code>`
+        # block; skip any `<a>` already inside (function-name anchor from
+        # `_func_row_split_md`), linkify recognized tokens in the rest.
+        def _linkify_inside_code(m: re.Match) -> str:
+            inner = m.group("inner")
+            out, i, n = [], 0, len(inner)
+            while i < n:
+                if inner.startswith("<a ", i):
+                    j = inner.find("</a>", i)
+                    if j < 0:
+                        out.append(inner[i:]); break
+                    out.append(inner[i:j + 4]); i = j + 4
+                else:
+                    k = inner.find("<a ", i)
+                    if k < 0:
+                        out.append(_linkify_html_segment(inner[i:])); break
+                    out.append(_linkify_html_segment(inner[i:k])); i = k
+            return m.group("open") + "".join(out) + m.group("close")
+        text = re.sub(
+            r'(?P<open><code class="docutils literal notranslate">)'
+            r'(?P<inner>.*?)(?P<close></code>)',
+            _linkify_inside_code, text, flags=re.DOTALL)
 
     # 6c. Bullet lists of @subpage/@ref -> toctree + visible list. Runs BEFORE step 7.
     def _subpage_list_to_toctree(src: str) -> str:
