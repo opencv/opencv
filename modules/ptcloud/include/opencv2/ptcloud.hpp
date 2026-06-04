@@ -12,6 +12,13 @@
 #include "opencv2/ptcloud/odometry_frame.hpp"
 #include "opencv2/ptcloud/odometry_settings.hpp"
 
+/**
+@defgroup ptcloud Point Clound Processing
+*/
+
+//! @addtogroup ptcloud
+//! @{
+
 namespace cv {
 
 /** @brief Loads a point cloud from a file.
@@ -402,5 +409,7 @@ protected:
 };
 
 } // namespace cv
+
+//! @} ptcloud
 
 #endif
