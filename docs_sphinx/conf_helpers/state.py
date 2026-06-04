@@ -475,21 +475,37 @@ if _LOCAL_SRC_TAG.is_file():
                     _local_page = "core_basic.html"
                 else:
                     _local_page = _bn
-                # Anchor: the typedef detail block is rendered (by
-                # stubs._render_member_detail) with a MyST `({refid})=`
-                # target, where `refid` is the Doxygen member id
-                # "<anchorfile-stem>_1<anchor>". docutils' make_id then
-                # lowercases that id and collapses every run of non-alnum
-                # chars to a single "-". Mirror it exactly so the link
-                # lands on the id that is actually emitted on the page.
+                # Anchor: mirror exactly the MyST target the detail block
+                # emits, since docutils' make_id lowercases the label and
+                # collapses every run of non-alnum chars to a single "-".
+                # The label differs by kind/where it renders:
                 #
-                # (The previous `_CPPv4…` cpp-domain id was never emitted
-                # for typedefs — those are hand-rolled markdown sections,
-                # not breathe `cpp:type` directives — so every typedef
-                # cross-reference 404'd.)
-                _stem = _bn[:-5] if _bn.endswith(".html") else _bn
-                _refid = f"{_stem}_1{_man}" if _man else _stem
-                _anchor = re.sub(r"[^a-z0-9]+", "-", _refid.lower()).strip("-")
+                #  * typedefs, namespace variables, and CLASS-member enums
+                #    render via `_render_member_detail` / the class-enum
+                #    path, both keyed by the Doxygen member refid
+                #    `({m['id']})=` (= "<anchorfile-stem>_1<anchor>").
+                #    (The old `_CPPv4…` cpp-domain id was never emitted for
+                #    these hand-rolled markdown sections, so every such
+                #    cross-reference 404'd.)
+                #
+                #  * GROUP/namespace enums render (stubs, kind_key=="enum")
+                #    with `({_sphinx_cpp_v4_id(qualified)})=` instead — the
+                #    member refid is NOT used — so their anchor is the
+                #    mangled, lowercased cpp-v4 id, not the refid.
+                _is_class_pg = _bn.startswith(("class", "struct", "union"))
+                if _mk == "enumeration" and not _is_class_pg:
+                    _ns = (_c.findtext("name") or "").strip()
+                    _qual = _mn if "::" in _mn else (
+                        f"{_ns}::{_mn}" if _ns and _c.get("kind") == "namespace"
+                        else _mn)
+                    # _sphinx_cpp_v4_id: "_CPPv4N" + join(f"{len(p)}{p}") + "E"
+                    _label = ("_CPPv4N"
+                              + "".join(f"{len(_p)}{_p}" for _p in _qual.split("::"))
+                              + "E")
+                else:
+                    _stem = _bn[:-5] if _bn.endswith(".html") else _bn
+                    _label = f"{_stem}_1{_man}" if _man else _stem
+                _anchor = re.sub(r"[^a-z0-9]+", "-", _label.lower()).strip("-")
                 _LOCAL_TYPEDEF_URL[_mn] = f"{_local_page}#{_anchor}"
     except Exception:
         pass

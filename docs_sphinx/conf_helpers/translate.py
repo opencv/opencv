@@ -615,31 +615,34 @@ def _translate(text: str, docname: str | None = None) -> str:
         def _anchor_text(tok: str) -> str:
             # Encode `::` so the later cv-linkifier doesn't nest a second anchor.
             return tok.replace("::", "&#58;&#58;")
-        def _linkify_html_segment(seg: str) -> str:
-            def _sub(m: re.Match) -> str:
-                url = _token_url(_bare(m.group(0)))
-                if not url:
-                    return m.group(0)
-                from html import escape as _esc
-                parts, last = [], 0
-                for s, e, tok in hits:
-                    parts.append(_esc(content[last:s]))
-                    parts.append(f'<a class="reference internal" '
-                                 f'href="{_token_url(_bare(tok))}">'
-                                 f'{_anchor_text(tok)}</a>')
-                    last = e
-                parts.append(_esc(content[last:]))
-                return (f'<code class="docutils literal notranslate">'
-                        f'{"".join(parts)}</code>')
-            _masked: list[str] = []
-            def _mask(m: re.Match) -> str:
-                _masked.append(m.group(0))
-                return f"\x00MDLINK{len(_masked)-1}\x00"
-            text = re.sub(r"\[(?:`[^`\n]+`|<br>)+\]\([^)\n]+\)", _mask, text)
-            text = re.sub(r"`(?P<content>[^`\n]+?)`",
-                          _linkify_markdown_codespan, text)
-            text = re.sub(r"\x00MDLINK(\d+)\x00",
-                          lambda m: _masked[int(m.group(1))], text)
+        def _linkify_markdown_codespan(m: re.Match) -> str:
+            content = m.group("content")
+            # Prefix-aware: `cv::Name` is one hit so the anchor covers both.
+            hits = [(t.start(), t.end(), t.group(0)) for t in
+                    _tok_re.finditer(content)
+                    if _token_url(_bare(t.group(0)))]
+            if not hits:
+                return m.group(0)
+            from html import escape as _esc
+            parts, last = [], 0
+            for s, e, tok in hits:
+                parts.append(_esc(content[last:s]))
+                parts.append(f'<a class="reference internal" '
+                             f'href="{_token_url(_bare(tok))}">'
+                             f'{_anchor_text(tok)}</a>')
+                last = e
+            parts.append(_esc(content[last:]))
+            return (f'<code class="docutils literal notranslate">'
+                    f'{"".join(parts)}</code>')
+        _masked: list[str] = []
+        def _mask(m: re.Match) -> str:
+            _masked.append(m.group(0))
+            return f"\x00MDLINK{len(_masked)-1}\x00"
+        text = re.sub(r"\[(?:`[^`\n]+`|<br>)+\]\([^)\n]+\)", _mask, text)
+        text = re.sub(r"`(?P<content>[^`\n]+?)`",
+                      _linkify_markdown_codespan, text)
+        text = re.sub(r"\x00MDLINK(\d+)\x00",
+                      lambda m: _masked[int(m.group(1))], text)
 
     # 6c. Bullet lists of @subpage/@ref -> toctree + visible list. Runs BEFORE step 7.
     def _subpage_list_to_toctree(src: str) -> str:
