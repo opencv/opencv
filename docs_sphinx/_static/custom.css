@@ -292,6 +292,54 @@ html[data-theme="dark"] table.opencv-meta-table td:last-child { border-right: no
 .bd-header button.theme-switch-button:hover,
 .bd-header .navbar-icon-links a.nav-link:hover { color: var(--opencv-accent); }
 
+/* --- Version switcher dropdown (navbar) -------------------------------- *
+ * Sits in the `navbar_start` slot right after `navbar-logo`. The custom
+ * template `_templates/opencv-version-switcher.html` renders a plain
+ * `<select>`; styles below give it a compact pill shape that reads as a
+ * peer of the wordmark in both light and dark themes. */
+.opencv-version-switcher {
+    display: inline-flex;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+}
+.opencv-version-switcher #opencv-version-select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    font: 500 0.85rem/1.2 "Inter", sans-serif;
+    color: var(--pst-color-text-base);
+    background-color: var(--pst-color-surface);
+    border: 1px solid var(--pst-color-border);
+    border-radius: 6px;
+    padding: 0.2rem 1.8rem 0.2rem 0.6rem;
+    /* Dropdown arrow drawn via background SVG so we can colour it via
+     * CSS variables (light/dark) instead of relying on the UA default. */
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='%23656d76' d='M0 0l5 6 5-6z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 0.55rem center;
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.opencv-version-switcher #opencv-version-select:hover {
+    border-color: var(--opencv-accent, #0969da);
+}
+.opencv-version-switcher #opencv-version-select:focus {
+    outline: none;
+    border-color: var(--opencv-accent, #0969da);
+    box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.25);
+}
+html[data-theme="dark"] .opencv-version-switcher #opencv-version-select {
+    color: #e6edf3;
+    background-color: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.18);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='%238b949e' d='M0 0l5 6 5-6z'/></svg>");
+}
+html[data-theme="dark"] .opencv-version-switcher #opencv-version-select option {
+    background-color: #1c2128;
+    color: #e6edf3;
+}
+
 /* --- Wider reading column ---------------------------------------------- */
 @media (min-width: 960px) {
     .bd-page-width,

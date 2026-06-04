@@ -1,0 +1,70 @@
+{# Navbar version switcher: a plain `<select>` rendered right after the
+   `navbar-logo` slot, mirroring the legacy docs.opencv.org header where the
+   version selector sits inline with the wordmark.
+
+   Single source of truth: the options are built client-side from
+   `window.OPENCV_DOC_VERSIONS`, defined in the canonical `/version.js` at the
+   site root — the SAME file the legacy Doxygen pages use. There is no
+   build-time scrape and no second list: publishing a release is one edit to
+   `/version.js`. The dropdown therefore only populates on the deployed site
+   (where `/version.js` resolves at the bucket root); under a local
+   `sphinx-build` preview it gracefully shows just the current release.
+
+   The option whose label equals this build's `release` is marked selected;
+   every other option carries that version's site-absolute path and the
+   `onchange` handler navigates the same tab there. #}
+<form class="opencv-version-switcher" role="search"
+      aria-label="OpenCV documentation version"
+      onsubmit="return false">
+  <select id="opencv-version-select"
+          aria-label="Select OpenCV documentation version"
+          onchange="if(this.value){window.location.href=this.value;}">
+    <option value="" selected>{{ release }}</option>
+  </select>
+</form>
+<script src="/version.js"></script>
+<script>
+  (function () {
+    var current = {{ release | tojson }};
+
+    function populate() {
+      var versions = window.OPENCV_DOC_VERSIONS;
+      if (!Array.isArray(versions)) return;   // /version.js absent (local preview)
+      document.querySelectorAll('#opencv-version-select').forEach(function (sel) {
+        // Rebuild from the canonical list so the order matches the legacy
+        // docs.opencv.org dropdown exactly.
+        while (sel.firstChild) sel.removeChild(sel.firstChild);
+        versions.forEach(function (v) {
+          var label = v[0], path = v[1];
+          var opt = document.createElement('option');
+          // Selecting the current version is a no-op (empty value -> the
+          // inline `onchange` guard skips navigation); every other option
+          // navigates to that version's site-absolute path.
+          opt.value = (label === current) ? '' : path;
+          opt.textContent = label;
+          if (label === current) opt.selected = true;
+          sel.appendChild(opt);
+        });
+      });
+    }
+
+    function resetSelection() {
+      // After picking an older version and hitting Back, the browser can
+      // restore the <select> from bfcache with the OLD choice. Snap it back
+      // to the current release (the option whose value is empty).
+      document.querySelectorAll('#opencv-version-select').forEach(function (sel) {
+        for (var i = 0; i < sel.options.length; i++) {
+          if (sel.options[i].value === '') { sel.selectedIndex = i; break; }
+        }
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', populate);
+    } else {
+      populate();
+    }
+    // `pageshow` fires on initial load AND on bfcache restore (Back button).
+    window.addEventListener('pageshow', resetSelection);
+  })();
+</script>
