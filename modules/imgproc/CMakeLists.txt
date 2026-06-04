@@ -1,4 +1,5 @@
 set(the_description "Image Processing")
+
 ocv_add_dispatched_file(accum SSE4_1 AVX AVX2)
 ocv_add_dispatched_file(bilateral_filter SSE2 AVX2 AVX512_SKX AVX512_ICL)
 ocv_add_dispatched_file(box_filter SSE2 SSE4_1 AVX2 AVX512_SKX)
@@ -11,7 +12,9 @@ ocv_add_dispatched_file(morph SSE2 SSE4_1 AVX2)
 ocv_add_dispatched_file(smooth SSE2 SSE4_1 AVX2 AVX512_ICL)
 ocv_add_dispatched_file(sumpixels SSE2 AVX2 AVX512_SKX)
 ocv_add_dispatched_file(warp_kernels SSE2 SSE4_1 AVX2 NEON NEON_FP16 RVV LASX)
-ocv_define_module(imgproc opencv_core WRAP java objc python js)
+ocv_add_dispatched_file(undistort SSE2 AVX2)
+
+ocv_define_module(imgproc opencv_core opencv_geometry WRAP java objc python js)
 
 ocv_module_include_directories(opencv_imgproc ${ZLIB_INCLUDE_DIRS})
 

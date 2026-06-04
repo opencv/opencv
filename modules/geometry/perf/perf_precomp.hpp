@@ -11,4 +11,8 @@
 #include <opencv2/core/ocl.hpp>
 #endif
 
+namespace opencv_test {
+    using namespace perf;
+} // namespace
+
 #endif

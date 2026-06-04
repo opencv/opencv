@@ -6,6 +6,7 @@
 
 #include "opencv2/ts.hpp"
 #include "opencv2/video.hpp"
+#include "opencv2/geometry.hpp"
 #include <opencv2/ts/ts_perf.hpp>
 #include "opencv2/core/utils/configuration.private.hpp"
 
