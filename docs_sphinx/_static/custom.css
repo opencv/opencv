@@ -246,8 +246,36 @@ html[data-theme="dark"] table.opencv-meta-table td:last-child { border-right: no
     -webkit-backdrop-filter: blur(8px);
 }
 .bd-header .navbar { min-height: 3.25rem; padding-top: 0.25rem; padding-bottom: 0.25rem; }
-.bd-header .navbar-header-items__start { gap: 1rem; align-items: center; }
-.bd-header img.logo__image { max-height: 36px; }
+.bd-header .navbar-header-items__start { gap: 15px; align-items: center; padding-left: 3rem; }
+/* OpenCV SVG logo: scale the vector to the official proportions. */
+.bd-header img.logo__image {
+    height: 46px;
+    width: auto;
+    max-width: 50px;
+    object-fit: contain;
+    vertical-align: middle;
+}
+.navbar-brand .logo__title {
+    font-weight: 600;
+    font-size: 1.45rem;
+    color: inherit;
+}
+/* "OpenCV" wordmark + "Open Source Computer Vision" subtitle stacked in a
+   column to the right of the SVG mark (see _templates/navbar-logo.html). */
+.navbar-brand.logo .logo__textwrap {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    line-height: 1.1;
+}
+.navbar-brand.logo .logo__textwrap .logo__title { margin: 0; }
+.navbar-brand.logo .logo__subtitle {
+    margin: 0;
+    font-size: 0.72rem;
+    font-weight: 400;
+    color: var(--pst-color-text-muted);
+    white-space: nowrap;
+}
 
 .version-badge {
     display: inline-block;
@@ -1732,4 +1760,24 @@ html[data-theme="dark"] .highlight a:hover .n,
 html[data-theme="dark"] .highlight a:hover .nc,
 html[data-theme="dark"] .highlight a:hover .nf {
     color: #0969da !important;
+}
+
+/* Parameter-name box in member-detail "Parameters" lists (light + dark). The
+   `section[…-documentation]` selector out-specifies the blanket transparent
+   `<code>` rule so the box survives in dark mode. */
+code.opencv-param-name,
+section[id$="-documentation"] code.opencv-param-name {
+    background-color: #eff1f3 !important;
+    border: 1px solid #d0d7de !important;
+    border-radius: 4px !important;
+    padding: 0.1em 0.4em !important;
+    font-size: 0.85em !important;
+    color: #24292f !important;
+    white-space: nowrap;
+}
+html[data-theme="dark"] code.opencv-param-name,
+html[data-theme="dark"] section[id$="-documentation"] code.opencv-param-name {
+    background-color: #2d333b !important;
+    border: 1px solid #444c56 !important;
+    color: #adbac7 !important;
 }

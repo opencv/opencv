@@ -1,0 +1,37 @@
+{# OpenCV navbar logo: the built-in pydata `navbar-logo`, plus an
+   "Open Source Computer Vision" subtitle stacked under the wordmark —
+   mirrors the legacy docs.opencv.org header. The title + subtitle are
+   wrapped in `.logo__textwrap` so they form a column to the right of the
+   SVG mark; the version switcher (a separate navbar_start slot) still sits
+   inline beside the title. Link-resolution logic is copied verbatim from
+   the theme's own navbar-logo.html so the brand href behaves identically. #}
+{% if theme_logo_link %}
+  {% set href = theme_logo_link %}
+{% else %}
+  {% if not theme_logo.get("link") %}
+    {% set href = pathto(root_doc) %}
+  {% elif hasdoc(theme_logo.get("link")) %}
+    {% set href = pathto(theme_logo.get("link")) %} {# internal page #}
+  {% else %}
+    {% set href = theme_logo.get("link") %} {# external url #}
+  {% endif %}
+{% endif %}
+
+<a class="navbar-brand logo" href="{{ href }}">
+  {% set is_logo = "light" in theme_logo["image_relative"] %}
+  {% set alt = theme_logo.get("alt_text", "" if theme_logo.get("text") else "%s - Home" % docstitle) %}
+  {% if is_logo %}
+    {% if default_mode is undefined or default_mode == "auto" %}
+      {% set default_mode = "light" %}
+    {% endif %}
+    {% set js_mode = "light" if default_mode == "dark" else "dark" %}
+    <img src="{{ theme_logo['image_relative'][default_mode] }}" class="logo__image only-{{ default_mode }}" alt="{{ alt }}"/>
+    <img src="{{ theme_logo['image_relative'][js_mode] }}" class="logo__image only-{{ js_mode }} pst-js-only" alt="{{ alt }}"/>
+  {% endif %}
+  {% if not is_logo or theme_logo.get("text") %}
+    <span class="logo__textwrap">
+      <p class="title logo__title">{{ theme_logo.get("text") or docstitle }}</p>
+      <p class="logo__subtitle">Open Source Computer Vision</p>
+    </span>
+  {% endif %}
+</a>

@@ -28,9 +28,19 @@
   (function () {
     var current = {{ release | tojson }};
 
+    // Each version.js entry is a bare directory path (e.g. "/4.13.0"). Link
+    // straight to that directory's index document: the S3 *website* endpoint
+    // would resolve "/4.13.0/" to index.html on its own, but the plain REST
+    // endpoint (bucket.s3.amazonaws.com) does NOT — there "/4.13.0" is a
+    // missing object key. Appending "/index.html" works on both endpoints.
+    function toHref(path) {
+      if (/\.html?($|[?#])/.test(path)) return path;   // already a file
+      return path.replace(/\/+$/, '') + '/index.html';
+    }
+
     function populate() {
       var versions = window.OPENCV_DOC_VERSIONS;
-      if (!Array.isArray(versions)) return;   // /version.js absent (local preview)
+      if (!Array.isArray(versions)) return;   // version.js absent (list stays at current release)
       document.querySelectorAll('#opencv-version-select').forEach(function (sel) {
         // Rebuild from the canonical list so the order matches the legacy
         // docs.opencv.org dropdown exactly.
@@ -40,8 +50,8 @@
           var opt = document.createElement('option');
           // Selecting the current version is a no-op (empty value -> the
           // inline `onchange` guard skips navigation); every other option
-          // navigates to that version's site-absolute path.
-          opt.value = (label === current) ? '' : path;
+          // navigates to that version's index document.
+          opt.value = (label === current) ? '' : toHref(path);
           opt.textContent = label;
           if (label === current) opt.selected = true;
           sel.appendChild(opt);

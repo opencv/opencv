@@ -143,7 +143,11 @@ html_css_files = [
     "custom.css",
 ]
 html_theme_options = {
-    "logo": {"text": f"OpenCV {release}"},
+    "logo": {
+        "text": f"OpenCV {release}",
+        "image_light": "_static/opencv-logo.svg",
+        "image_dark": "_static/opencv-logo.svg",
+    },
     # Navbar layout: logo on the left, version switcher right beside it —
     # mirrors the legacy docs.opencv.org header where the version selector
     # sits inline with the wordmark. The switcher template reads the shared

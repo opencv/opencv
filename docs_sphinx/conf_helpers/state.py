@@ -406,6 +406,8 @@ _LOCAL_CLASS_URL: dict[str, str] = {}
 # tokens as plain (non-clickable) text in signatures, matching the
 # "no 404 clickables" requirement.
 _LOCAL_TYPEDEF_URL: dict[str, str] = {}  # 'uchar' -> 'core_hal_interface.html#uchar'
+# Group-enum refid -> page#anchor; lets enum-VALUE <ref>s link to their enum doc.
+_ENUM_REF_URL: dict[str, str] = {}
 # Doxygen template-param placeholder pages -> (display name, Sphinx page).
 # Sphinx mirrors these as stubs (stubs._write_placeholder_stubs) so diagram
 # cross-links resolve instead of 404ing.
@@ -507,6 +509,11 @@ if _LOCAL_SRC_TAG.is_file():
                     _label = f"{_stem}_1{_man}" if _man else _stem
                 _anchor = re.sub(r"[^a-z0-9]+", "-", _label.lower()).strip("-")
                 _LOCAL_TYPEDEF_URL[_mn] = f"{_local_page}#{_anchor}"
+                # Index group enums by refid so enum-VALUE <ref>s can resolve here.
+                if _mk == "enumeration" and not _is_class_pg and _man:
+                    _est = _bn[:-5] if _bn.endswith(".html") else _bn
+                    _ENUM_REF_URL.setdefault(f"{_est}_1{_man}",
+                                             f"{_local_page}#{_anchor}")
     except Exception:
         pass
     # Drop ambiguous short names (>1 class, no canonical cv::<short>) so a bare
@@ -991,7 +998,7 @@ __all__ = [
     "_CV_SYMBOL_URL", "_FILE_URL", "_FALLBACK_MODULE_HEADERS",
     "_CALL_GRAPH_ANCHORS", "_DOXY_ANCHOR_TO_MEMBER", "_norm_args",
     "_LIVE_GROUP_URL", "_LIVE_CLASS_URL", "_LIVE_TYPEDEF_URL",
-    "_LOCAL_CLASS_URL", "_LOCAL_TYPEDEF_URL", "_CLASS_TEMPLATE_DISPLAY",
+    "_LOCAL_CLASS_URL", "_LOCAL_TYPEDEF_URL", "_ENUM_REF_URL", "_CLASS_TEMPLATE_DISPLAY",
     "_LOCAL_PAGE_BY_DOXY_FILE", "_PLACEHOLDER_STUBS", "_doxy_page_to_local",
     "_func_slug",
     "_CITE_NUMBER", "_BIB_ENTRIES_SORTED", "_bib_render_all",

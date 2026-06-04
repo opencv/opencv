@@ -995,6 +995,12 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
             _stub_write(out_dir / f"{_cn}.md", _md + "\n")
         return
 
+    # Brief + "View details" under the title (mirrors the Doxygen group page).
+    _brief = node.get("brief") or ""
+    if _brief:
+        _more = " [View details](#detailed-description)" if node["detailed"] else ""
+        lines += [f"{_brief}{_more}", ""]
+
     if node["children"]:
         lines += ["## Topics", ""]
         for child in node["children"]:
@@ -1003,7 +1009,8 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
 
     # Detailed Description heading — shown even when empty (ayush's layout).
     if node["detailed"]:
-        lines += ["## Detailed Description", "", node["detailed"], ""]
+        _dd = f"{_brief}\n\n{node['detailed']}" if _brief else node["detailed"]
+        lines += ["## Detailed Description", "", _dd, ""]
     elif node["innerclasses"] or node["sections"] or node["children"]:
         lines += ["## Detailed Description", ""]
     if ns_map and ns_map.get(name):
@@ -1487,14 +1494,14 @@ def _param_item_lines(nm: str, desc: str) -> list[str]:
     carrying its own list (e.g. calibration `flags`) collapses into a run-on
     blob or breaks out past the card boundary as a flat sibling list.
 
-    Param NAME is emitted as PLAIN TEXT (no surrounding backticks) so it
-    doesn't render as a `<code>` grey chip — per the "no grey boxes, no
-    bold on clickables" rule. Param names are not links; they read as
-    inline text alongside the description."""
+    Param NAME renders as a monospace box (`code.opencv-param-name`, styled
+    for light + dark in custom.css)."""
+    import html as _html
+    chip = f'<code class="opencv-param-name">{_html.escape(nm)}</code>'
     if not desc:
-        return [f"- {nm}"]
+        return [f"- {chip}"]
     lines = desc.split("\n")
-    out = [f"- {nm} — {lines[0]}"]
+    out = [f"- {chip} — {lines[0]}"]
     # Continuation lines align with the bullet's content column (2 spaces);
     # blank lines stay empty so the nested list/paragraphs render loosely.
     out += [f"  {ln}" if ln.strip() else "" for ln in lines[1:]]

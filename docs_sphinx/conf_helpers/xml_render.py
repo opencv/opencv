@@ -282,6 +282,8 @@ def _build_api_hierarchy(refid: str, xml_dir: pathlib.Path,
         return None
     name = (cd.findtext("compoundname") or "").strip()
     title = (cd.findtext("title") or name).strip()
+    brief_el = cd.find("briefdescription")
+    brief = _doxygen_desc_to_md(brief_el).strip() if brief_el is not None else ""
     detailed_el = cd.find("detaileddescription")
     detailed = _doxygen_desc_to_md(detailed_el) if detailed_el is not None else ""
     # Inner classes (public only). One read per class's XML for its brief.
@@ -306,7 +308,7 @@ def _build_api_hierarchy(refid: str, xml_dir: pathlib.Path,
         child = _build_api_hierarchy(ig.get("refid"), xml_dir, _seen)
         if child is not None:
             children.append(child)
-    return {"name": name, "title": title, "detailed": detailed,
+    return {"name": name, "title": title, "brief": brief, "detailed": detailed,
             "innerclasses": innerclasses, "sections": sections,
             "children": children}
 
@@ -566,13 +568,12 @@ def _doxygen_desc_to_md(el, h_level: int = 3) -> str:
                     return None
                 page_stem = m.group("grp").replace("__", "_")
                 return f"{page_stem}.html#{short.lower()}"
-            # Enum-value `gga` — let it fall through; the value's
-            # per-row `<span id="_CPPv4…">` anchor is on the page only
-            # if the enum's detail block was emitted, but we don't
-            # have the enum type from the refid alone. The
-            # `_LOCAL_CLASS_URL`/`_LOCAL_TYPEDEF_URL` lookup above
-            # already covered the enum TYPE name; for values, leave
-            # the link out and the caller renders plain text.
+            # Enum VALUE `gga<enumhash>a<valuehash>`: group pages carry no
+            # per-value anchor, so link to the enum TYPE's doc (refid ga<enumhash>).
+            hexv = m.group("hex")
+            if len(hexv) == 65 and hexv[32] == "a":
+                return _ENUM_REF_URL.get(
+                    f"group__{m.group('grp')}_1ga{hexv[:32]}")
             return None
         # Bare class/struct compound page.
         if refid.startswith(("classcv_1_1", "structcv_1_1")):
