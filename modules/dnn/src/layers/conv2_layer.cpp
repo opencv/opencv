@@ -145,7 +145,7 @@ public:
             const bool big_enough = (int64_t)Cout * (int64_t)Cin >= (int64_t)(256 * 256);
             if (ksize_all_one && strides_all_one && big_enough) {
                 size_t pack_bytes = mlasSgemmPackBSize(false, true, Cout, Cin);
-                if (pack_bytes > 0) {
+                if (pack_bytes > 0 && pack_bytes <= (size_t)INT_MAX) {
                     mlas_packed_B_.create(1, (int)pack_bytes, CV_8U);
                     // Weight is (Cout, Cin, 1, ..., 1) contiguous; reshape to
                     // (Cout, Cin) and PackB with trans_b=true.

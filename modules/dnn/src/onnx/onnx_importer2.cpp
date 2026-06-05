@@ -1181,7 +1181,7 @@ void ONNXImporter2::parseMaxUnpool(LayerParams& layerParams, const opencv_onnx::
 
 void ONNXImporter2::parseMaxPool(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    CV_CheckEQ(node_outputs.size(), 1u, "the new engine does not support MaxPool with 2 outputs yet");
+    CV_CheckLE(node_outputs.size(), 2u, "MaxPool may have at most 2 outputs (values + indices)");
     layerParams.type = "MaxPool";
     addLayer(layerParams, node_proto);
 }

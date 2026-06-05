@@ -7,7 +7,7 @@
 
 #include "../precomp.hpp"
 #include "sac_segmentation.hpp"
-#include "opencv2/geometry/ptcloud.hpp"
+#include "opencv2/geometry/segment.hpp"
 #include "ptcloud_utils.hpp"
 #include "../usac.hpp"
 
