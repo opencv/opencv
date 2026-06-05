@@ -990,8 +990,8 @@ int resize(int src_type, const uchar *src_data, size_t src_step, int src_width, 
 {
     inv_scale_x = 1 / inv_scale_x;
     inv_scale_y = 1 / inv_scale_y;
-    if (interpolation == CV_HAL_INTER_NEAREST || interpolation == CV_HAL_INTER_NEAREST_EXACT)
-        return resizeNN(src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, inv_scale_x, inv_scale_y, interpolation);
+    //if (interpolation == CV_HAL_INTER_NEAREST || interpolation == CV_HAL_INTER_NEAREST_EXACT)
+    //    return resizeNN(src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, inv_scale_x, inv_scale_y, interpolation);
     if (interpolation == CV_HAL_INTER_LINEAR || interpolation == CV_HAL_INTER_LINEAR_EXACT)
         return resizeLinear(src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, inv_scale_x, inv_scale_y, interpolation);
     if (interpolation == CV_HAL_INTER_AREA)
