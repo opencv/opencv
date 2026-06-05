@@ -60,9 +60,9 @@ protected:
             points.push_back(Point(49, 51));
 
             Moments m = moments(points, false);
-            // double area = contourArea(points);
+            double area = contourArea(points);
 
-            CV_Assert( m.m00 == 0 && m.m01 == 0 && m.m10 == 0 /*&& area == 0*/ );
+            CV_Assert( m.m00 == 0 && m.m01 == 0 && m.m10 == 0 && area == 0 );
         }
         catch(...)
         {
@@ -72,5 +72,20 @@ protected:
 };
 
 TEST(Imgproc_ContourMoment, small) { CV_SmallContourMomentTest test; test.safe_run(); }
+
+TEST(Imgproc_Moments, degenerateContours)
+{
+    std::vector<cv::Point> c1;
+    c1.push_back(cv::Point(10,10));
+    cv::Moments m1 = cv::moments(c1, false);
+    EXPECT_EQ(m1.m00, 0);
+
+    std::vector<cv::Point> c2;
+    c2.push_back(cv::Point(0,0));
+    c2.push_back(cv::Point(5,5));
+    c2.push_back(cv::Point(10,10));
+    cv::Moments m2 = cv::moments(c2, false);
+    EXPECT_EQ(m2.m00, 0);
+}
 
 }} // namespace

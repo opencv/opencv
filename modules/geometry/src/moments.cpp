@@ -40,7 +40,8 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencl_kernels_imgproc.hpp"
+#include "hal_replacement.hpp"
+#include "opencl_kernels_geometry.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
 namespace cv
@@ -408,7 +409,7 @@ static bool ocl_moments( InputArray _src, Moments& m, bool binary)
     if (ntiles == 0)
         return false;
 
-    ocl::Kernel k = ocl::Kernel("moments", ocl::imgproc::moments_oclsrc,
+    ocl::Kernel k = ocl::Kernel("moments", ocl::geometry::moments_oclsrc,
         format("-D TILE_SIZE=%d%s",
         TILE_SIZE,
         binary ? " -D OP_MOMENTS_BINARY" : ""));

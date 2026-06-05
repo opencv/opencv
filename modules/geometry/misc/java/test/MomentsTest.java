@@ -1,12 +1,12 @@
-package org.opencv.test.imgproc;
+package org.opencv.test.geometry;
 
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.CvType;
 import org.opencv.core.Scalar;
-import org.opencv.imgproc.Imgproc;
-import org.opencv.imgproc.Moments;
+import org.opencv.geometry.Geometry;
+import org.opencv.geometry.Moments;
 
 public class MomentsTest extends OpenCVTestCase {
 
@@ -21,7 +21,7 @@ public class MomentsTest extends OpenCVTestCase {
     }
 
     public void testAll() {
-        Moments res = Imgproc.moments(data);
+        Moments res = Geometry.moments(data);
         assertEquals(res.m00, 21.0, EPS);
         assertEquals(res.m10, 21.0, EPS);
         assertEquals(res.m01, 21.0, EPS);

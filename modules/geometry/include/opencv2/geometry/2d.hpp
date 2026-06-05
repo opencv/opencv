@@ -20,12 +20,17 @@ enum RectanglesIntersectTypes {
     INTERSECT_FULL  = 2 //!< One of the rectangle is fully enclosed in the other
 };
 
-//! Variants of Line Segment %Detector
-enum LineSegmentDetectorModes {
-    LSD_REFINE_NONE = 0, //!< No refinement applied
-    LSD_REFINE_STD  = 1, //!< Standard refinement is applied. E.g. breaking arches into smaller straighter line approximations.
-    LSD_REFINE_ADV  = 2  //!< Advanced refinement. Number of false alarms is calculated, lines are
-    //!< refined through increase of precision, decrement in size, etc.
+//! Distance types for Distance Transform and M-estimators
+//! @see distanceTransform, fitLine
+enum DistanceTypes {
+    DIST_USER    = -1,  //!< User defined distance
+    DIST_L1      = 1,   //!< distance = |x1-x2| + |y1-y2|
+    DIST_L2      = 2,   //!< the simple euclidean distance
+    DIST_C       = 3,   //!< distance = max(|x1-x2|,|y1-y2|)
+    DIST_L12     = 4,   //!< L1-L2 metric: distance = 2(sqrt(1+x*x/2) - 1))
+    DIST_FAIR    = 5,   //!< distance = c^2(|x|/c-log(1+|x|/c)), c = 1.3998
+    DIST_WELSCH  = 6,   //!< distance = c^2/2(1-exp(-(x/c)^2)), c = 2.9846
+    DIST_HUBER   = 7    //!< distance = |x|<c ? x^2/2 : c(|x|-c/2), c=1.345
 };
 
 //! @addtogroup geometry_subdiv2d
@@ -306,90 +311,6 @@ protected:
 
 //! @} geometry_subdiv2d
 
-//! @addtogroup geometry_feature
-//! @{
-
-/** @example samples/cpp/snippets/lsd_lines.cpp
-An example using the LineSegmentDetector
-\image html building_lsd.png "Sample output image" width=434 height=300
-*/
-
-/** @brief Line segment detector class
-
-following the algorithm described at @cite Rafael12 .
-
-@note Implementation has been removed from OpenCV version 3.4.6 to 3.4.15 and version 4.1.0 to 4.5.3 due original code license conflict.
-restored again after [Computation of a NFA](https://github.com/rafael-grompone-von-gioi/binomial_nfa) code published under the MIT license.
-*/
-class CV_EXPORTS_W LineSegmentDetector : public Algorithm
-{
-public:
-
-    /** @brief Finds lines in the input image.
-
-    This is the output of the default parameters of the algorithm on the above shown image.
-
-    ![image](pics/building_lsd.png)
-
-    @param image A grayscale (CV_8UC1) input image. If only a roi needs to be selected, use:
-    `lsd_ptr-\>detect(image(roi), lines, ...); lines += Scalar(roi.x, roi.y, roi.x, roi.y);`
-    @param lines A vector of Vec4f elements specifying the beginning and ending point of a line. Where
-    Vec4f is (x1, y1, x2, y2), point 1 is the start, point 2 - end. Returned lines are strictly
-    oriented depending on the gradient.
-    @param width Vector of widths of the regions, where the lines are found. E.g. Width of line.
-    @param prec Vector of precisions with which the lines are found.
-    @param nfa Vector containing number of false alarms in the line region, with precision of 10%. The
-    bigger the value, logarithmically better the detection.
-    - -1 corresponds to 10 mean false alarms
-    - 0 corresponds to 1 mean false alarm
-    - 1 corresponds to 0.1 mean false alarms
-    This vector will be calculated only when the objects type is #LSD_REFINE_ADV.
-    */
-    CV_WRAP virtual void detect(InputArray image, OutputArray lines,
-                        OutputArray width = noArray(), OutputArray prec = noArray(),
-                        OutputArray nfa = noArray()) = 0;
-
-    /** @brief Draws the line segments on a given image.
-    @param image The image, where the lines will be drawn. Should be bigger or equal to the image,
-    where the lines were found.
-    @param lines A vector of the lines that needed to be drawn.
-     */
-    CV_WRAP virtual void drawSegments(InputOutputArray image, InputArray lines) = 0;
-
-    /** @brief Draws two groups of lines in blue and red, counting the non overlapping (mismatching) pixels.
-
-    @param size The size of the image, where lines1 and lines2 were found.
-    @param lines1 The first group of lines that needs to be drawn. It is visualized in blue color.
-    @param lines2 The second group of lines. They visualized in red color.
-    @param image Optional image, where the lines will be drawn. The image should be color(3-channel)
-    in order for lines1 and lines2 to be drawn in the above mentioned colors.
-     */
-    CV_WRAP virtual int compareSegments(const Size& size, InputArray lines1, InputArray lines2, InputOutputArray image = noArray()) = 0;
-
-    virtual ~LineSegmentDetector() { }
-};
-
-/** @brief Creates a smart pointer to a LineSegmentDetector object and initializes it.
-
-The LineSegmentDetector algorithm is defined using the standard values. Only advanced users may want
-to edit those, as to tailor it for their own application.
-
-@param refine The way found lines will be refined, see #LineSegmentDetectorModes
-@param scale The scale of the image that will be used to find the lines. Range (0..1].
-@param sigma_scale Sigma for Gaussian filter. It is computed as sigma = sigma_scale/scale.
-@param quant Bound to the quantization error on the gradient norm.
-@param ang_th Gradient angle tolerance in degrees.
-@param log_eps Detection threshold: -log10(NFA) \> log_eps. Used only when advance refinement is chosen.
-@param density_th Minimal density of aligned region points in the enclosing rectangle.
-@param n_bins Number of bins in pseudo-ordering of gradient modulus.
- */
-CV_EXPORTS_W Ptr<LineSegmentDetector> createLineSegmentDetector(
-    LineSegmentDetectorModes refine = LSD_REFINE_STD, double scale = 0.8,
-    double sigma_scale = 0.6, double quant = 2.0, double ang_th = 22.5,
-    double log_eps = 0, double density_th = 0.7, int n_bins = 1024);
-
-//! @} geometry_feature
-
 /** @example samples/python/snippets/squares.py
  A n example using approxPolyDP function in python.        *
  */
@@ -517,6 +438,59 @@ CV_EXPORTS_W double minEnclosingTriangle( InputArray points, CV_OUT OutputArray 
 
 CV_EXPORTS_W double minEnclosingConvexPolygon ( InputArray points, OutputArray polygon, int k );
 
+/** @brief Calculates all of the moments up to the third order of a polygon or rasterized shape.
+ *
+ * The function computes moments, up to the 3rd order, of a vector shape or a rasterized shape. The
+ * results are returned in the structure cv::Moments.
+ *
+ * @param array Single channel raster image (CV_8U, CV_16U, CV_16S, CV_32F, CV_64F) or an array (
+ * \f$1 \times N\f$ or \f$N \times 1\f$ ) of 2D points (Point or Point2f).
+ * @param binaryImage If it is true, all non-zero image pixels are treated as 1's. The parameter is
+ * used for images only.
+ * @returns moments.
+ *
+ * @note Only applicable to contour moments calculations from Python bindings: Note that the numpy
+ * type for the input array should be either np.int32 or np.float32.
+ *
+ * @note For contour-based moments, the zeroth-order moment \c m00 represents
+ * the contour area.
+ *
+ * If the input contour is degenerate (for example, a single point or all points
+ * are collinear), the area is zero and therefore \c m00 == 0.
+ *
+ * In this case, the centroid coordinates (\c m10/m00, \c m01/m00) are undefined
+ * and must be handled explicitly by the caller.
+ *
+ * A common workaround is to compute the center using cv::boundingRect() or by
+ * averaging the input points.
+ *
+ * @sa  contourArea, arcLength
+ */
+CV_EXPORTS_W Moments moments( InputArray array, bool binaryImage = false );
+
+/** @brief Calculates seven Hu invariants.
+ *
+ * The function calculates seven Hu invariants (introduced in @cite Hu62; see also
+ * <https://en.wikipedia.org/wiki/Image_moment>) defined as:
+ *
+ * \f[\begin{array}{l} hu[0]= \eta _{20}+ \eta _{02} \\ hu[1]=( \eta _{20}- \eta _{02})^{2}+4 \eta _{11}^{2} \\ hu[2]=( \eta _{30}-3 \eta _{12})^{2}+ (3 \eta _{21}- \eta _{03})^{2} \\ hu[3]=( \eta _{30}+ \eta _{12})^{2}+ ( \eta _{21}+ \eta _{03})^{2} \\ hu[4]=( \eta _{30}-3 \eta _{12})( \eta _{30}+ \eta _{12})[( \eta _{30}+ \eta _{12})^{2}-3( \eta _{21}+ \eta _{03})^{2}]+(3 \eta _{21}- \eta _{03})( \eta _{21}+ \eta _{03})[3( \eta _{30}+ \eta _{12})^{2}-( \eta _{21}+ \eta _{03})^{2}] \\ hu[5]=( \eta _{20}- \eta _{02})[( \eta _{30}+ \eta _{12})^{2}- ( \eta _{21}+ \eta _{03})^{2}]+4 \eta _{11}( \eta _{30}+ \eta _{12})( \eta _{21}+ \eta _{03}) \\ hu[6]=(3 \eta _{21}- \eta _{03})( \eta _{21}+ \eta _{03})[3( \eta _{30}+ \eta _{12})^{2}-( \eta _{21}+ \eta _{03})^{2}]-( \eta _{30}-3 \eta _{12})( \eta _{21}+ \eta _{03})[3( \eta _{30}+ \eta _{12})^{2}-( \eta _{21}+ \eta _{03})^{2}] \\ \end{array}\f]
+ *
+ * where \f$\eta_{ji}\f$ stands for \f$\texttt{Moments::nu}_{ji}\f$ .
+ *
+ * These values are proved to be invariants to the image scale, rotation, and reflection except the
+ * seventh one, whose sign is changed by reflection. This invariance is proved with the assumption of
+ * infinite image resolution. In case of raster images, the computed Hu invariants for the original and
+ * transformed images are a bit different.
+ *
+ * @param moments Input moments computed with moments .
+ * @param hu Output Hu invariants.
+ *
+ * @sa matchShapes
+ */
+CV_EXPORTS void HuMoments( const Moments& moments, double hu[7] );
+
+/** @overload */
+CV_EXPORTS_W void HuMoments( const Moments& m, OutputArray hu );
 
 /** @brief Compares two shapes.
  *
@@ -855,6 +829,90 @@ CV_EXPORTS_W double contourArea( InputArray contour, bool oriented = false );
  * @param array Input gray-scale image or 2D point set, stored in std::vector or Mat.
  */
 CV_EXPORTS_W Rect boundingRect( InputArray array );
+
+/** @brief Calculates an affine matrix of 2D rotation.
+
+The function calculates the following matrix:
+
+\f[\begin{bmatrix} \alpha &  \beta & (1- \alpha )  \cdot \texttt{center.x} -  \beta \cdot \texttt{center.y} \\ - \beta &  \alpha &  \beta \cdot \texttt{center.x} + (1- \alpha )  \cdot \texttt{center.y} \end{bmatrix}\f]
+
+where
+
+\f[\begin{array}{l} \alpha =  \texttt{scale} \cdot \cos \texttt{angle} , \\ \beta =  \texttt{scale} \cdot \sin \texttt{angle} \end{array}\f]
+
+The transformation maps the rotation center to itself. If this is not the target, adjust the shift.
+
+@param center Center of the rotation in the source image.
+@param angle Rotation angle in degrees. Positive values mean counter-clockwise rotation (the
+coordinate origin is assumed to be the top-left corner).
+@param scale Isotropic scale factor.
+
+@sa  getAffineTransform, warpAffine, transform
+ */
+CV_EXPORTS_W Mat getRotationMatrix2D(Point2f center, double angle, double scale);
+
+/** @sa getRotationMatrix2D */
+CV_EXPORTS Matx23d getRotationMatrix2D_(Point2f center, double angle, double scale);
+
+inline
+Mat getRotationMatrix2D(Point2f center, double angle, double scale)
+{
+    return Mat(getRotationMatrix2D_(center, angle, scale), true);
+}
+
+/** @brief Calculates an affine transform from three pairs of the corresponding points.
+ *
+ * The function calculates the \f$2 \times 3\f$ matrix of an affine transform so that:
+ *
+ * \f[\begin{bmatrix} x'_i \\ y'_i \end{bmatrix} = \texttt{map_matrix} \cdot \begin{bmatrix} x_i \\ y_i \\ 1 \end{bmatrix}\f]
+ *
+ * where
+ *
+ * \f[dst(i)=(x'_i,y'_i), src(i)=(x_i, y_i), i=0,1,2\f]
+ *
+ * @param src Coordinates of triangle vertices in the source image.
+ * @param dst Coordinates of the corresponding triangle vertices in the destination image.
+ *
+ * @sa  warpAffine, transform
+ */
+CV_EXPORTS Mat getAffineTransform( const Point2f src[], const Point2f dst[] );
+
+/** @brief Inverts an affine transformation.
+ *
+ * The function computes an inverse affine transformation represented by \f$2 \times 3\f$ matrix M:
+ *
+ * \f[\begin{bmatrix} a_{11} & a_{12} & b_1  \\ a_{21} & a_{22} & b_2 \end{bmatrix}\f]
+ *
+ * The result is also a \f$2 \times 3\f$ matrix of the same type as M.
+ *
+ * @param M Original affine transformation.
+ * @param iM Output reverse affine transformation.
+ */
+CV_EXPORTS_W void invertAffineTransform( InputArray M, OutputArray iM );
+
+/** @brief Calculates a perspective transform from four pairs of the corresponding points.
+ *
+ * The function calculates the \f$3 \times 3\f$ matrix of a perspective transform so that:
+ *
+ * \f[\begin{bmatrix} t_i x'_i \\ t_i y'_i \\ t_i \end{bmatrix} = \texttt{map_matrix} \cdot \begin{bmatrix} x_i \\ y_i \\ 1 \end{bmatrix}\f]
+ *
+ * where
+ *
+ * \f[dst(i)=(x'_i,y'_i), src(i)=(x_i, y_i), i=0,1,2,3\f]
+ *
+ * @param src Coordinates of quadrangle vertices in the source image.
+ * @param dst Coordinates of the corresponding quadrangle vertices in the destination image.
+ * @param solveMethod method passed to cv::solve (#DecompTypes)
+ *
+ * @sa  findHomography, warpPerspective, perspectiveTransform
+ */
+CV_EXPORTS_W Mat getPerspectiveTransform(InputArray src, InputArray dst, int solveMethod = DECOMP_LU);
+
+/** @overload */
+CV_EXPORTS Mat getPerspectiveTransform(const Point2f src[], const Point2f dst[], int solveMethod = DECOMP_LU);
+
+
+CV_EXPORTS_W Mat getAffineTransform( InputArray src, InputArray dst );
 
 } // namespace cv
 

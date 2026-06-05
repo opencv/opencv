@@ -40,6 +40,7 @@
 //M*/
 #include "precomp.hpp"
 #include "opencv2/core/hal/intrin.hpp"
+#include "opencv2/core/softfloat.hpp"
 
 using namespace cv;
 
@@ -711,9 +712,204 @@ cv::Rect boundingRect(InputArray array)
     return m.depth() <= CV_8U ? maskBoundingRect(m) : pointSetBoundingRect(m);
 }
 
+cv::Matx23d getRotationMatrix2D_(Point2f center, double angle, double scale)
+{
+    CV_INSTRUMENT_REGION();
+
+    angle *= CV_PI/180;
+    double alpha = std::cos(angle)*scale;
+    double beta = std::sin(angle)*scale;
+
+    Matx23d M(
+        alpha, beta, (1-alpha)*center.x - beta*center.y,
+              -beta, alpha, beta*center.x + (1-alpha)*center.y
+    );
+    return M;
 }
 
-float cv::intersectConvexConvex( InputArray _p1, InputArray _p2, OutputArray _p12, bool handleNested )
+/* Calculates coefficients of perspective transformation
+ * which maps (xi,yi) to (ui,vi), (i=1,2,3,4):
+ *
+ *      c00*xi + c01*yi + c02
+ * ui = ---------------------
+ *      c20*xi + c21*yi + c22
+ *
+ *      c10*xi + c11*yi + c12
+ * vi = ---------------------
+ *      c20*xi + c21*yi + c22
+ *
+ * Coefficients are calculated by solving one of 2 linear systems:
+ * / x0 y0  1  0  0  0 -x0*u0 -y0*u0 \ /c00\ /u0\
+ * | x1 y1  1  0  0  0 -x1*u1 -y1*u1 | |c01| |u1|
+ * | x2 y2  1  0  0  0 -x2*u2 -y2*u2 | |c02| |u2|
+ * | x3 y3  1  0  0  0 -x3*u3 -y3*u3 |.|c10|=|u3|,
+ * |  0  0  0 x0 y0  1 -x0*v0 -y0*v0 | |c11| |v0|
+ * |  0  0  0 x1 y1  1 -x1*v1 -y1*v1 | |c12| |v1|
+ * |  0  0  0 x2 y2  1 -x2*v2 -y2*v2 | |c20| |v2|
+ * \  0  0  0 x3 y3  1 -x3*v3 -y3*v3 / \c21/ \v3/
+ *
+ * where:
+ *   cij - matrix coefficients, c22 = 1
+ *
+ * or
+ *
+ * / x0 y0  1  0  0  0 -x0*u0 -y0*u0 -u0 \ /c00\ /0\
+ * | x1 y1  1  0  0  0 -x1*u1 -y1*u1 -u1 | |c01| |0|
+ * | x2 y2  1  0  0  0 -x2*u2 -y2*u2 -u2 | |c02| |0|
+ * | x3 y3  1  0  0  0 -x3*u3 -y3*u3 -u3 |.|c10|=|0|,
+ * |  0  0  0 x0 y0  1 -x0*v0 -y0*v0 -v0 | |c11| |0|
+ * |  0  0  0 x1 y1  1 -x1*v1 -y1*v1 -v1 | |c12| |0|
+ * |  0  0  0 x2 y2  1 -x2*v2 -y2*v2 -v2 | |c20| |0|
+ * \  0  0  0 x3 y3  1 -x3*v3 -y3*v3 -v3 / |c21| \0/
+ *                                         \c22/
+ *
+ * where:
+ *   cij - matrix coefficients, c00^2 + c01^2 + c02^2 + c10^2 + c11^2 + c12^2 + c20^2 + c21^2 + c22^2 = 1
+ */
+cv::Mat getPerspectiveTransform(const Point2f src[], const Point2f dst[], int solveMethod)
+{
+    CV_INSTRUMENT_REGION();
+
+    // try c22 = 1
+    Mat M(3, 3, CV_64F), X8(8, 1, CV_64F, M.ptr());
+    double a[8][8], b[8];
+    Mat A(8, 8, CV_64F, a), B(8, 1, CV_64F, b);
+
+    for( int i = 0; i < 4; ++i )
+    {
+        a[i][0] = a[i+4][3] = src[i].x;
+        a[i][1] = a[i+4][4] = src[i].y;
+        a[i][2] = a[i+4][5] = 1;
+        a[i][3] = a[i][4] = a[i][5] =
+        a[i+4][0] = a[i+4][1] = a[i+4][2] = 0;
+        a[i][6] = -src[i].x*dst[i].x;
+        a[i][7] = -src[i].y*dst[i].x;
+        a[i+4][6] = -src[i].x*dst[i].y;
+        a[i+4][7] = -src[i].y*dst[i].y;
+        b[i] = dst[i].x;
+        b[i+4] = dst[i].y;
+    }
+
+    if (solve(A, B, X8, solveMethod) && norm(A * X8, B) < 1e-8)
+    {
+        M.ptr<double>()[8] = 1.;
+
+        return M;
+    }
+
+    // c00^2 + c01^2 + c02^2 + c10^2 + c11^2 + c12^2 + c20^2 + c21^2 + c22^2 = 1
+    hconcat(A, -B, A);
+
+    Mat AtA;
+    mulTransposed(A, AtA, true);
+
+    Mat D, U;
+    SVDecomp(AtA, D, U, noArray());
+
+    Mat X9(9, 1, CV_64F, M.ptr());
+    U.col(8).copyTo(X9);
+
+    return M;
+}
+
+/* Calculates coefficients of affine transformation
+ * which maps (xi,yi) to (ui,vi), (i=1,2,3):
+ *
+ * ui = c00*xi + c01*yi + c02
+ *
+ * vi = c10*xi + c11*yi + c12
+ *
+ * Coefficients are calculated by solving linear system:
+ * / x0 y0  1  0  0  0 \ /c00\ /u0\
+ * | x1 y1  1  0  0  0 | |c01| |u1|
+ * | x2 y2  1  0  0  0 | |c02| |u2|
+ * |  0  0  0 x0 y0  1 | |c10| |v0|
+ * |  0  0  0 x1 y1  1 | |c11| |v1|
+ * \  0  0  0 x2 y2  1 / |c12| |v2|
+ *
+ * where:
+ *   cij - matrix coefficients
+ */
+
+cv::Mat getAffineTransform( const Point2f src[], const Point2f dst[] )
+{
+    Mat M(2, 3, CV_64F), X(6, 1, CV_64F, M.ptr());
+    double a[6*6], b[6];
+    Mat A(6, 6, CV_64F, a), B(6, 1, CV_64F, b);
+
+    for( int i = 0; i < 3; i++ )
+    {
+        int j = i*12;
+        int k = i*12+6;
+        a[j] = a[k+3] = src[i].x;
+        a[j+1] = a[k+4] = src[i].y;
+        a[j+2] = a[k+5] = 1;
+        a[j+3] = a[j+4] = a[j+5] = 0;
+        a[k] = a[k+1] = a[k+2] = 0;
+        b[i*2] = dst[i].x;
+        b[i*2+1] = dst[i].y;
+    }
+
+    solve( A, B, X );
+    return M;
+}
+
+void invertAffineTransform(InputArray _matM, OutputArray __iM)
+{
+    Mat matM = _matM.getMat();
+    CV_Assert(matM.rows == 2 && matM.cols == 3);
+    __iM.create(2, 3, matM.type());
+    Mat _iM = __iM.getMat();
+
+    if( matM.type() == CV_32F )
+    {
+        const softfloat* M = matM.ptr<softfloat>();
+        softfloat* iM = _iM.ptr<softfloat>();
+        int step = (int)(matM.step/sizeof(M[0])), istep = (int)(_iM.step/sizeof(iM[0]));
+
+        softdouble D = M[0]*M[step+1] - M[1]*M[step];
+        D = D != 0. ? softdouble(1.)/D : softdouble(0.);
+        softdouble A11 = M[step+1]*D, A22 = M[0]*D, A12 = -M[1]*D, A21 = -M[step]*D;
+        softdouble b1 = -A11*M[2] - A12*M[step+2];
+        softdouble b2 = -A21*M[2] - A22*M[step+2];
+
+        iM[0] = A11; iM[1] = A12; iM[2] = b1;
+        iM[istep] = A21; iM[istep+1] = A22; iM[istep+2] = b2;
+    }
+    else if( matM.type() == CV_64F )
+    {
+        const softdouble* M = matM.ptr<softdouble>();
+        softdouble* iM = _iM.ptr<softdouble>();
+        int step = (int)(matM.step/sizeof(M[0])), istep = (int)(_iM.step/sizeof(iM[0]));
+
+        softdouble D = M[0]*M[step+1] - M[1]*M[step];
+        D = D != 0. ? softdouble(1.)/D : softdouble(0.);
+        softdouble A11 = M[step+1]*D, A22 = M[0]*D, A12 = -M[1]*D, A21 = -M[step]*D;
+        softdouble b1 = -A11*M[2] - A12*M[step+2];
+        softdouble b2 = -A21*M[2] - A22*M[step+2];
+
+        iM[0] = A11; iM[1] = A12; iM[2] = b1;
+        iM[istep] = A21; iM[istep+1] = A22; iM[istep+2] = b2;
+    }
+    else
+        CV_Error( cv::Error::StsUnsupportedFormat, "" );
+}
+
+cv::Mat getPerspectiveTransform(InputArray _src, InputArray _dst, int solveMethod)
+{
+    Mat src = _src.getMat(), dst = _dst.getMat();
+    CV_Assert(src.checkVector(2, CV_32F) == 4 && dst.checkVector(2, CV_32F) == 4);
+    return getPerspectiveTransform((const Point2f*)src.data, (const Point2f*)dst.data, solveMethod);
+}
+
+cv::Mat getAffineTransform(InputArray _src, InputArray _dst)
+{
+    Mat src = _src.getMat(), dst = _dst.getMat();
+    CV_Assert(src.checkVector(2, CV_32F) == 3 && dst.checkVector(2, CV_32F) == 3);
+    return getAffineTransform((const Point2f*)src.data, (const Point2f*)dst.data);
+}
+
+float intersectConvexConvex( InputArray _p1, InputArray _p2, OutputArray _p12, bool handleNested )
 {
     CV_INSTRUMENT_REGION();
 
@@ -832,3 +1028,5 @@ float cv::intersectConvexConvex( InputArray _p1, InputArray _p2, OutputArray _p1
     }
     return (float)fabs(area);
 }
+
+} // namespace cv

@@ -7,7 +7,7 @@
 import XCTest
 import OpenCV
 
-class Cv3dTest: OpenCVTestCase {
+class GeometryTest: OpenCVTestCase {
 
     var size = Size()
 
@@ -38,7 +38,7 @@ class Cv3dTest: OpenCVTestCase {
         let outTvec = Mat(rows: 3, cols: 1, type: CvType.CV_32F)
         try outTvec.put(row: 0, col: 0, data: [1.4560841, 1.0680628, 0.81598103])
 
-        Cv3d.composeRT(rvec1: rvec1, tvec1: tvec1, rvec2: rvec2, tvec2: tvec2, rvec3: rvec3, tvec3: tvec3)
+        Geometry.composeRT(rvec1: rvec1, tvec1: tvec1, rvec2: rvec2, tvec2: tvec2, rvec3: rvec3, tvec3: tvec3)
 
         try assertMatEqual(outRvec, rvec3, OpenCVTestCase.EPS)
         try assertMatEqual(outTvec, tvec3, OpenCVTestCase.EPS)
@@ -59,7 +59,7 @@ class Cv3dTest: OpenCVTestCase {
             try transformedPoints.put(row:i, col:0, data:[y, x])
         }
 
-        let hmg = Cv3d.findHomography(srcPoints: originalPoints, dstPoints: transformedPoints)
+        let hmg = Geometry.findHomography(srcPoints: originalPoints, dstPoints: transformedPoints)
 
         truth = Mat(rows: 3, cols: 3, type: CvType.CV_64F)
         try truth!.put(row:0, col:0, data:[0, 1, 0, 1, 0, 0, 0, 0, 1] as [Double])
@@ -72,14 +72,14 @@ class Cv3dTest: OpenCVTestCase {
 
         try r.put(row:0, col:0, data:[.pi, 0, 0] as [Float])
 
-        Cv3d.Rodrigues(src: r, dst: R)
+        Geometry.Rodrigues(src: r, dst: R)
 
         truth = Mat(rows: 3, cols: 3, type: CvType.CV_32F)
         try truth!.put(row:0, col:0, data:[1, 0, 0, 0, -1, 0, 0, 0, -1] as [Float])
         try assertMatEqual(truth!, R, OpenCVTestCase.EPS)
 
         let r2 = Mat()
-        Cv3d.Rodrigues(src: R, dst: r2)
+        Geometry.Rodrigues(src: R, dst: r2)
 
         try assertMatEqual(r, r2, OpenCVTestCase.EPS)
     }
@@ -107,7 +107,7 @@ class Cv3dTest: OpenCVTestCase {
 
         let rvec = Mat()
         let tvec = Mat()
-        Cv3d.solvePnP(objectPoints: points3d, imagePoints: points2d, cameraMatrix: intrinsics, distCoeffs: MatOfDouble(), rvec: rvec, tvec: tvec)
+        Geometry.solvePnP(objectPoints: points3d, imagePoints: points2d, cameraMatrix: intrinsics, distCoeffs: MatOfDouble(), rvec: rvec, tvec: tvec)
 
         let truth_rvec = Mat(rows: 3, cols: 1, type: CvType.CV_64F)
         try truth_rvec.put(row: 0, col: 0, data: [0, .pi / 2, 0] as [Double])
@@ -128,7 +128,7 @@ class Cv3dTest: OpenCVTestCase {
         let lines = Mat()
         let truth = Mat(rows: 1, cols: 1, type: CvType.CV_32FC3)
         try truth.put(row: 0, col: 0, data: [-0.70735186, 0.70686162, -0.70588124])
-        Cv3d.computeCorrespondEpilines(points: left, whichImage: 1, F: fundamental, lines: lines)
+        Geometry.computeCorrespondEpilines(points: left, whichImage: 1, F: fundamental, lines: lines)
         try assertMatEqual(truth, lines, OpenCVTestCase.EPS)
     }
 
@@ -161,7 +161,7 @@ class Cv3dTest: OpenCVTestCase {
 
         let reprojectionError = Mat(rows: 2, cols: 1, type: CvType.CV_64FC1)
 
-        Cv3d.solvePnPGeneric(objectPoints: points3d, imagePoints: points2d, cameraMatrix: intrinsics, distCoeffs: MatOfDouble(), rvecs: &rvecs, tvecs: &tvecs, useExtrinsicGuess: false, flags: .SOLVEPNP_IPPE, rvec: rvec, tvec: tvec, reprojectionError: reprojectionError)
+        Geometry.solvePnPGeneric(objectPoints: points3d, imagePoints: points2d, cameraMatrix: intrinsics, distCoeffs: MatOfDouble(), rvecs: &rvecs, tvecs: &tvecs, useExtrinsicGuess: false, flags: .SOLVEPNP_IPPE, rvec: rvec, tvec: tvec, reprojectionError: reprojectionError)
 
         let truth_rvec = Mat(rows: 3, cols: 1, type: CvType.CV_64F)
         try truth_rvec.put(row: 0, col: 0, data: [0, .pi / 2, 0] as [Double])
@@ -174,14 +174,14 @@ class Cv3dTest: OpenCVTestCase {
     }
 
     func testGetDefaultNewCameraMatrixMat() {
-        let mtx = Cv3d.getDefaultNewCameraMatrix(cameraMatrix: gray0)
+        let mtx = Geometry.getDefaultNewCameraMatrix(cameraMatrix: gray0)
 
         XCTAssertFalse(mtx.empty())
         XCTAssertEqual(0, Core.countNonZero(src: mtx))
     }
 
     func testGetDefaultNewCameraMatrixMatSizeBoolean() {
-        let mtx = Cv3d.getDefaultNewCameraMatrix(cameraMatrix: gray0, imgsize: size, centerPrincipalPoint: true)
+        let mtx = Geometry.getDefaultNewCameraMatrix(cameraMatrix: gray0, imgsize: size, centerPrincipalPoint: true)
 
         XCTAssertFalse(mtx.empty())
         XCTAssertFalse(0 == Core.countNonZero(src: mtx))
@@ -198,7 +198,7 @@ class Cv3dTest: OpenCVTestCase {
         let distCoeffs = Mat(rows: 1, cols: 4, type: CvType.CV_32F)
         try distCoeffs.put(row: 0, col: 0, data: [1, 3, 2, 4] as [Float])
 
-        Cv3d.undistort(src: src, dst: dst, cameraMatrix: cameraMatrix, distCoeffs: distCoeffs)
+        Geometry.undistort(src: src, dst: dst, cameraMatrix: cameraMatrix, distCoeffs: distCoeffs)
 
         truth = Mat(rows: 3, cols: 3, type: CvType.CV_32F)
         try truth!.put(row: 0, col: 0, data: [0, 0, 0] as [Float])
@@ -220,7 +220,7 @@ class Cv3dTest: OpenCVTestCase {
 
         let newCameraMatrix = Mat(rows: 3, cols: 3, type: CvType.CV_32F, scalar: Scalar(1))
 
-        Cv3d.undistort(src: src, dst: dst, cameraMatrix: cameraMatrix, distCoeffs: distCoeffs, newCameraMatrix: newCameraMatrix)
+        Geometry.undistort(src: src, dst: dst, cameraMatrix: cameraMatrix, distCoeffs: distCoeffs, newCameraMatrix: newCameraMatrix)
 
         truth = Mat(rows: 3, cols: 3, type: CvType.CV_32F, scalar: Scalar(3))
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
@@ -233,8 +233,154 @@ class Cv3dTest: OpenCVTestCase {
         let cameraMatrix = Mat.eye(rows: 3, cols: 3, type: CvType.CV_64FC1)
         let distCoeffs = Mat(rows: 8, cols: 1, type: CvType.CV_64FC1, scalar: Scalar(0))
 
-        Cv3d.undistortPoints(src: src, dst: dst, cameraMatrix: cameraMatrix, distCoeffs: distCoeffs)
+        Geometry.undistortPoints(src: src, dst: dst, cameraMatrix: cameraMatrix, distCoeffs: distCoeffs)
 
         XCTAssertEqual(src.toArray(), dst.toArray())
     }
+
+    func testApproxPolyDP() {
+        let curve = [Point2f(x: 1, y: 3), Point2f(x: 2, y: 4), Point2f(x: 3, y: 5), Point2f(x: 4, y: 4), Point2f(x: 5, y: 3)]
+
+        var approxCurve = [Point2f]()
+
+        Geometry.approxPolyDP(curve: curve, approxCurve: &approxCurve, epsilon: OpenCVTestCase.EPS, closed: true)
+
+        let approxCurveGold = [Point2f(x: 1, y: 3), Point2f(x: 3, y: 5), Point2f(x: 5, y: 3)]
+
+        XCTAssert(approxCurve == approxCurveGold)
+    }
+
+    func testArcLength() {
+        let curve = [Point2f(x: 1, y: 3), Point2f(x: 2, y: 4), Point2f(x: 3, y: 5), Point2f(x: 4, y: 4), Point2f(x: 5, y: 3)]
+
+        let arcLength = Geometry.arcLength(curve: curve, closed: false)
+
+        XCTAssertEqual(5.656854249, arcLength, accuracy:0.000001)
+    }
+
+    func testContourAreaMat() throws {
+        let contour = Mat(rows: 1, cols: 4, type: CvType.CV_32FC2)
+        try contour.put(row: 0, col: 0, data: [0, 0, 10, 0, 10, 10, 5, 4] as [Float])
+
+        let area = Geometry.contourArea(contour: contour)
+
+        XCTAssertEqual(45.0, area, accuracy: OpenCVTestCase.EPS)
+    }
+
+    func testContourAreaMatBoolean() throws {
+        let contour = Mat(rows: 1, cols: 4, type: CvType.CV_32FC2)
+        try contour.put(row: 0, col: 0, data: [0, 0, 10, 0, 10, 10, 5, 4] as [Float])
+
+        let area = Geometry.contourArea(contour: contour, oriented: true)
+
+        XCTAssertEqual(45.0, area, accuracy: OpenCVTestCase.EPS)
+    }
+
+    func testConvexHullMatMatBooleanBoolean() {
+        let points = [Point(x: 2, y: 0),
+                      Point(x: 4, y: 0),
+                      Point(x: 3, y: 2),
+                      Point(x: 0, y: 2),
+                      Point(x: 2, y: 1),
+                      Point(x: 3, y: 1)]
+
+        var hull = [Int32]()
+
+        Geometry.convexHull(points: points, hull: &hull, clockwise: true)
+
+        XCTAssert([3, 2, 1, 0] == hull)
+    }
+
+    func testConvexityDefects() throws {
+        let points = [Point(x: 20, y: 0),
+                      Point(x: 40, y: 0),
+                      Point(x: 30, y: 20),
+                      Point(x: 0,  y: 20),
+                      Point(x: 20, y: 10),
+                      Point(x: 30, y: 10)]
+
+        var hull = [Int32]()
+        Geometry.convexHull(points: points, hull: &hull)
+
+        var convexityDefects = [Int4]()
+        Geometry.convexityDefects(contour: points, convexhull: hull, convexityDefects: &convexityDefects)
+
+        XCTAssertTrue(Int4(v0: 3, v1: 0, v2: 5, v3: 3620) == convexityDefects[0])
+    }
+
+    func testGetAffineTransform() throws {
+        let src = [Point2f(x: 2, y: 3), Point2f(x: 3, y: 1), Point2f(x: 1, y: 4)]
+        let dst = [Point2f(x: 3, y: 3), Point2f(x: 7, y: 4), Point2f(x: 5, y: 6)]
+
+        let transform = Geometry.getAffineTransform(src: src, dst: dst)
+
+        let truth = Mat(rows: 2, cols: 3, type: CvType.CV_64FC1)
+
+        try truth.put(row: 0, col: 0, data: [-8.0, -6.0, 37.0])
+        try truth.put(row: 1, col: 0, data: [-7.0, -4.0, 29.0])
+        try assertMatEqual(truth, transform, OpenCVTestCase.EPS)
+    }
+
+    func testGetRotationMatrix2D() throws {
+        let center = Point2f(x: 0, y: 0)
+
+        dst = Geometry.getRotationMatrix2D(center: center, angle: 0, scale: 1)
+
+        truth = Mat(rows: 2, cols: 3, type: CvType.CV_64F)
+        try truth!.put(row: 0, col: 0, data: [1.0, 0.0, 0.0])
+        try truth!.put(row: 1, col: 0, data: [0.0, 1.0, 0.0])
+
+        try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
+    }
+
+    func testInvertAffineTransform() throws {
+        let src = Mat(rows: 2, cols: 3, type: CvType.CV_64F, scalar: Scalar(1))
+
+        Geometry.invertAffineTransform(M: src, iM: dst)
+
+        truth = Mat(rows: 2, cols: 3, type: CvType.CV_64F, scalar: Scalar(0))
+        try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
+    }
+
+    func testIsContourConvex() {
+        let contour1 = [Point(x: 0, y: 0), Point(x: 10, y: 0), Point(x: 10, y: 10), Point(x: 5, y: 4)]
+
+        XCTAssertFalse(Geometry.isContourConvex(contour: contour1))
+
+        let contour2 = [Point(x: 0, y: 0), Point(x: 10, y: 0), Point(x: 10, y: 10), Point(x: 5, y: 6)]
+
+        XCTAssert(Geometry.isContourConvex(contour: contour2))
+    }
+
+    func testMinAreaRect() {
+        let points = [Point2f(x: 1, y: 1), Point2f(x: 5, y: 1), Point2f(x: 4, y: 3), Point2f(x: 6, y: 2)]
+
+        let rrect = Geometry.minAreaRect(points: points)
+
+        XCTAssertEqual(Size2f(width: 5, height: 2), rrect.size)
+        XCTAssertEqual(0.0, rrect.angle)
+        XCTAssertEqual(Point2f(x: 3.5, y: 2), rrect.center)
+    }
+
+    func testMinEnclosingCircle() {
+        let points = [Point2f(x: 0, y: 0), Point2f(x: -100, y: 0), Point2f(x: 0, y: -100), Point2f(x: 100, y: 0), Point2f(x: 0, y: 100)]
+        let actualCenter = Point2f()
+        var radius:Float = 0
+
+        Geometry.minEnclosingCircle(points: points, center: actualCenter, radius: &radius)
+
+        XCTAssertEqual(Point2f(x: 0, y: 0), actualCenter)
+        XCTAssertEqual(100.0, radius, accuracy: 1.0)
+    }
+
+    func testPointPolygonTest() {
+        let contour = [Point2f(x: 0, y: 0), Point2f(x: 1, y: 3), Point2f(x: 3, y: 4), Point2f(x: 4, y: 3), Point2f(x: 2, y: 1)]
+        let sign1 = Geometry.pointPolygonTest(contour: contour, pt: Point2f(x: 2, y: 2), measureDist: false)
+        XCTAssertEqual(1.0, sign1)
+
+        let sign2 = Geometry.pointPolygonTest(contour: contour, pt: Point2f(x: 4, y: 4), measureDist: true)
+        XCTAssertEqual(-sqrt(0.5), sign2)
+    }
+
+
 }

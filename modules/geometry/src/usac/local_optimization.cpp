@@ -4,7 +4,7 @@
 
 #include "../precomp.hpp"
 #include "../usac.hpp"
-#include "opencv2/imgproc/detail/gcgraph.hpp"
+#include "opencv2/geometry/detail/gcgraph.hpp"
 
 namespace cv { namespace usac {
 class GraphCutImpl : public GraphCut {

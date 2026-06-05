@@ -63,7 +63,6 @@
 #include "opencv2/core/utils/trace.hpp"
 
 #include "opencv2/geometry.hpp"
-#include "opencv2/imgproc.hpp"
 
 #include "opencv2/core/ocl.hpp"
 #include "opencv2/core/hal/intrin.hpp"
