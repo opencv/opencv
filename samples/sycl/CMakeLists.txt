@@ -1,6 +1,7 @@
 if(OPENCV_SKIP_SAMPLES_SYCL)
   return()
 endif()
+cmake_minimum_required(VERSION 3.10)
 
 ocv_install_example_src(sycl *.cpp *.hpp CMakeLists.txt)
 
@@ -15,13 +16,6 @@ ocv_check_dependencies(${OPENCV_SYCL_SAMPLES_REQUIRED_DEPS})
 if(NOT BUILD_EXAMPLES OR NOT OCV_DEPENDENCIES_FOUND OR OPENCV_SKIP_SAMPLES_BUILD_SYCL)
   return()
 endif()
-
-if(CMAKE_VERSION VERSION_LESS "3.5")
-  message(STATUS "SYCL samples require CMake 3.5+")
-  return()
-endif()
-
-cmake_policy(VERSION 3.5)
 
 find_package(SYCL QUIET)  # will oneAPI support this straightforward way?
 

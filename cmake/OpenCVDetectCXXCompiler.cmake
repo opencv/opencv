@@ -199,16 +199,6 @@ elseif(MINGW)
   endif()
 endif()
 
-# Fix handling of duplicated files in the same static library:
-# https://public.kitware.com/Bug/view.php?id=14874
-if(CMAKE_VERSION VERSION_LESS "3.1")
-  foreach(var CMAKE_C_ARCHIVE_APPEND CMAKE_CXX_ARCHIVE_APPEND)
-    if(${var} MATCHES "^<CMAKE_AR> r")
-      string(REPLACE "<CMAKE_AR> r" "<CMAKE_AR> q" ${var} "${${var}}")
-    endif()
-  endforeach()
-endif()
-
 # See https://github.com/opencv/opencv/issues/27105
 # - CMAKE_COMPILE_FEATURES is used to detect what features are available by the compiler.
 # - CMAKE_CXX_STANDARD is used to detect what features are available in this configuration.

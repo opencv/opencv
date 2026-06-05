@@ -373,7 +373,7 @@ function(ocv_target_include_directories target)
       endif()
     endif()
   endforeach()
-  if(HAVE_CUDA OR CMAKE_VERSION VERSION_LESS 2.8.11)
+  if(HAVE_CUDA)
     include_directories(${__params})
     include_directories(SYSTEM ${__system_params})
   else()
@@ -915,15 +915,9 @@ if(DEFINED ENV{BUILD_USE_SYMLINKS})
 endif()
 OCV_OPTION(BUILD_USE_SYMLINKS "Use symlinks instead of files copying during build (and !!INSTALL!!)" (${__symlink_default}) IF (UNIX OR DEFINED __symlink_default))
 
-if(CMAKE_VERSION VERSION_LESS "3.2")
-  macro(ocv_cmake_byproducts var_name)
-    set(${var_name}) # nothing
-  endmacro()
-else()
-  macro(ocv_cmake_byproducts var_name)
-    set(${var_name} BYPRODUCTS ${ARGN})
-  endmacro()
-endif()
+macro(ocv_cmake_byproducts var_name)
+  set(${var_name} BYPRODUCTS ${ARGN})
+endmacro()
 
 set(OPENCV_DEPHELPER "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/dephelper" CACHE INTERNAL "")
 file(MAKE_DIRECTORY ${OPENCV_DEPHELPER})
@@ -1267,13 +1261,8 @@ function(ocv_install_target)
 
     # don't move this into global scope of this file: compiler settings (like MSVC variable) are not available during processing
     if(BUILD_SHARED_LIBS)  # no defaults for static libs (modern CMake is required)
-      if(NOT CMAKE_VERSION VERSION_LESS 3.6.0)
-        option(INSTALL_PDB_COMPONENT_EXCLUDE_FROM_ALL "Don't install PDB files by default" ON)
-        option(INSTALL_PDB "Add install PDB rules" ON)
-      elseif(NOT CMAKE_VERSION VERSION_LESS 3.1.0)
-        option(INSTALL_PDB_COMPONENT_EXCLUDE_FROM_ALL "Don't install PDB files by default (not supported)" OFF)
-        option(INSTALL_PDB "Add install PDB rules" OFF)
-      endif()
+      option(INSTALL_PDB_COMPONENT_EXCLUDE_FROM_ALL "Don't install PDB files by default" ON)
+      option(INSTALL_PDB "Add install PDB rules" ON)
     endif()
 
     if(INSTALL_PDB AND NOT INSTALL_IGNORE_PDB
@@ -1305,36 +1294,28 @@ function(ocv_install_target)
 
 #      message(STATUS "Process ${__target} dst=${__dst}...")
       if(DEFINED __dst)
-        if(NOT CMAKE_VERSION VERSION_LESS 3.1.0)
-          set(__pdb_install_component "pdb")
-          if(DEFINED INSTALL_PDB_COMPONENT AND INSTALL_PDB_COMPONENT)
-            set(__pdb_install_component "${INSTALL_PDB_COMPONENT}")
-          endif()
-          set(__pdb_exclude_from_all "")
-          if(INSTALL_PDB_COMPONENT_EXCLUDE_FROM_ALL)
-            if(NOT CMAKE_VERSION VERSION_LESS 3.6.0)
-              set(__pdb_exclude_from_all EXCLUDE_FROM_ALL)
-            else()
-              message(WARNING "INSTALL_PDB_COMPONENT_EXCLUDE_FROM_ALL requires CMake 3.6+")
-            endif()
-          endif()
+        set(__pdb_install_component "pdb")
+        if(DEFINED INSTALL_PDB_COMPONENT AND INSTALL_PDB_COMPONENT)
+          set(__pdb_install_component "${INSTALL_PDB_COMPONENT}")
+        endif()
+        set(__pdb_exclude_from_all "")
+        if(INSTALL_PDB_COMPONENT_EXCLUDE_FROM_ALL)
+          set(__pdb_exclude_from_all EXCLUDE_FROM_ALL)
+        endif()
 
-#          message(STATUS "Adding PDB file installation rule: target=${__target} dst=${__dst} component=${__pdb_install_component}")
-          if("${__target_type}" STREQUAL "SHARED_LIBRARY" OR "${__target_type}" STREQUAL "MODULE_LIBRARY")
-            install(FILES "$<TARGET_PDB_FILE:${__target}>" DESTINATION "${__dst}"
-                COMPONENT ${__pdb_install_component} OPTIONAL ${__pdb_exclude_from_all})
-          else()
-            # There is no generator expression similar to TARGET_PDB_FILE and TARGET_PDB_FILE can't be used: https://gitlab.kitware.com/cmake/cmake/issues/16932
-            # However we still want .pdb files like: 'lib/Debug/opencv_core341d.pdb' or '3rdparty/lib/zlibd.pdb'
-            install(FILES "$<TARGET_PROPERTY:${__target},ARCHIVE_OUTPUT_DIRECTORY>/$<CONFIG>/$<IF:$<BOOL:$<TARGET_PROPERTY:${__target},COMPILE_PDB_NAME_DEBUG>>,$<TARGET_PROPERTY:${__target},COMPILE_PDB_NAME_DEBUG>,$<TARGET_PROPERTY:${__target},COMPILE_PDB_NAME>>.pdb"
-                DESTINATION "${__dst}" CONFIGURATIONS Debug
-                COMPONENT ${__pdb_install_component} OPTIONAL ${__pdb_exclude_from_all})
-            install(FILES "$<TARGET_PROPERTY:${__target},ARCHIVE_OUTPUT_DIRECTORY>/$<CONFIG>/$<IF:$<BOOL:$<TARGET_PROPERTY:${__target},COMPILE_PDB_NAME_RELEASE>>,$<TARGET_PROPERTY:${__target},COMPILE_PDB_NAME_RELEASE>,$<TARGET_PROPERTY:${__target},COMPILE_PDB_NAME>>.pdb"
-                DESTINATION "${__dst}" CONFIGURATIONS Release
-                COMPONENT ${__pdb_install_component} OPTIONAL ${__pdb_exclude_from_all})
-          endif()
+#         message(STATUS "Adding PDB file installation rule: target=${__target} dst=${__dst} component=${__pdb_install_component}")
+        if("${__target_type}" STREQUAL "SHARED_LIBRARY" OR "${__target_type}" STREQUAL "MODULE_LIBRARY")
+          install(FILES "$<TARGET_PDB_FILE:${__target}>" DESTINATION "${__dst}"
+              COMPONENT ${__pdb_install_component} OPTIONAL ${__pdb_exclude_from_all})
         else()
-          message(WARNING "PDB files installation is not supported (need CMake >= 3.1.0)")
+          # There is no generator expression similar to TARGET_PDB_FILE and TARGET_PDB_FILE can't be used: https://gitlab.kitware.com/cmake/cmake/issues/16932
+          # However we still want .pdb files like: 'lib/Debug/opencv_core341d.pdb' or '3rdparty/lib/zlibd.pdb'
+          install(FILES "$<TARGET_PROPERTY:${__target},ARCHIVE_OUTPUT_DIRECTORY>/$<CONFIG>/$<IF:$<BOOL:$<TARGET_PROPERTY:${__target},COMPILE_PDB_NAME_DEBUG>>,$<TARGET_PROPERTY:${__target},COMPILE_PDB_NAME_DEBUG>,$<TARGET_PROPERTY:${__target},COMPILE_PDB_NAME>>.pdb"
+              DESTINATION "${__dst}" CONFIGURATIONS Debug
+              COMPONENT ${__pdb_install_component} OPTIONAL ${__pdb_exclude_from_all})
+          install(FILES "$<TARGET_PROPERTY:${__target},ARCHIVE_OUTPUT_DIRECTORY>/$<CONFIG>/$<IF:$<BOOL:$<TARGET_PROPERTY:${__target},COMPILE_PDB_NAME_RELEASE>>,$<TARGET_PROPERTY:${__target},COMPILE_PDB_NAME_RELEASE>,$<TARGET_PROPERTY:${__target},COMPILE_PDB_NAME>>.pdb"
+              DESTINATION "${__dst}" CONFIGURATIONS Release
+              COMPONENT ${__pdb_install_component} OPTIONAL ${__pdb_exclude_from_all})
         endif()
       endif()
     endif()
@@ -1784,7 +1765,7 @@ endmacro()
 
 
 function(ocv_add_test_from_target test_name test_kind the_target)
-  if(CMAKE_VERSION VERSION_GREATER "2.8" AND NOT CMAKE_CROSSCOMPILING)
+  if(NOT CMAKE_CROSSCOMPILING)
     if(NOT "${test_kind}" MATCHES "^(Accuracy|Performance|Sanity)$")
       message(FATAL_ERROR "Unknown test kind : ${test_kind}")
     endif()
@@ -1977,14 +1958,6 @@ macro(ocv_get_smart_file_name output_var fpath)
   endif()
   unset(__subir)
 endmacro()
-
-# Needed by install(DIRECTORY ...)
-if(NOT CMAKE_VERSION VERSION_LESS 3.1)
-  set(compatible_MESSAGE_NEVER MESSAGE_NEVER)
-else()
-  set(compatible_MESSAGE_NEVER "")
-endif()
-
 
 macro(ocv_git_describe var_name path)
   if(GIT_FOUND)

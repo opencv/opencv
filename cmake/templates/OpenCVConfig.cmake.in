@@ -54,8 +54,7 @@ SET(OpenCV_VERSION_STATUS "@OPENCV_VERSION_STATUS@")
 
 include(FindPackageHandleStandardArgs)
 
-if(NOT CMAKE_VERSION VERSION_LESS 2.8.8
-    AND OpenCV_FIND_COMPONENTS  # prevent excessive output
+if(OpenCV_FIND_COMPONENTS  # prevent excessive output
 )
   # HANDLE_COMPONENTS was introduced in CMake 2.8.8
   list(APPEND _OpenCV_FPHSA_ARGS HANDLE_COMPONENTS)
@@ -65,13 +64,6 @@ if(NOT CMAKE_VERSION VERSION_LESS 2.8.8
 else()
   # The missing components will be handled by this config.
   set(_OpenCV_HANDLE_COMPONENTS_MANUALLY TRUE)
-endif()
-
-# Extract directory name from full path of the file currently being processed.
-# Note that CMake 2.8.3 introduced CMAKE_CURRENT_LIST_DIR. We reimplement it
-# for older versions of CMake to support these as well.
-if(CMAKE_VERSION VERSION_LESS "2.8.3")
-  get_filename_component(CMAKE_CURRENT_LIST_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
 endif()
 
 # Extract the directory where *this* file has been installed (determined at cmake run-time)
@@ -128,19 +120,15 @@ if(NOT TARGET opencv_core)
   include(${CMAKE_CURRENT_LIST_DIR}/OpenCVModules${OpenCV_MODULES_SUFFIX}.cmake)
 endif()
 
-if(NOT CMAKE_VERSION VERSION_LESS "2.8.11")
-  # Target property INTERFACE_INCLUDE_DIRECTORIES available since 2.8.11:
-  # * http://www.cmake.org/cmake/help/v2.8.11/cmake.html#prop_tgt:INTERFACE_INCLUDE_DIRECTORIES
-  foreach(__component ${OpenCV_LIB_COMPONENTS})
-    if(TARGET ${__component})
-      set_target_properties(
-          ${__component}
-          PROPERTIES
-          INTERFACE_INCLUDE_DIRECTORIES "${OpenCV_INCLUDE_DIRS}"
-      )
-    endif()
-  endforeach()
-endif()
+foreach(__component ${OpenCV_LIB_COMPONENTS})
+  if(TARGET ${__component})
+    set_target_properties(
+        ${__component}
+        PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${OpenCV_INCLUDE_DIRS}"
+    )
+  endif()
+endforeach()
 
 
 if(NOT DEFINED OPENCV_MAP_IMPORTED_CONFIG)
@@ -276,30 +264,22 @@ endif()
 set(OpenCV_LIBRARIES ${OpenCV_LIBS})
 
 # Require C++11 features for OpenCV modules
-if(CMAKE_VERSION VERSION_LESS "3.1")
-  if(NOT OpenCV_FIND_QUIETLY AND NOT OPENCV_HIDE_WARNING_COMPILE_FEATURES)
-    message(STATUS "OpenCV: CMake version is low (${CMAKE_VERSION}, required 3.1+). Can't enable C++11 features: https://github.com/opencv/opencv/issues/13000")
-  endif()
-else()
-  set(__target opencv_core)
-  if(TARGET opencv_world)
-    set(__target opencv_world)
-  endif()
-  set(__compile_features cxx_std_11)  # CMake 3.8+
-  if(DEFINED OPENCV_COMPILE_FEATURES)
-    set(__compile_features ${OPENCV_COMPILE_FEATURES})  # custom override
-  elseif(CMAKE_VERSION VERSION_LESS "3.8")
-    set(__compile_features cxx_auto_type cxx_rvalue_references cxx_lambdas)
-  endif()
-  if(__compile_features)
-    # Simulate exported result of target_compile_features(opencv_core PUBLIC ...)
-    set_target_properties(${__target} PROPERTIES
-        INTERFACE_COMPILE_FEATURES "${__compile_features}"
-    )
-  endif()
-  unset(__target)
-  unset(__compile_features)
+set(__target opencv_core)
+if(TARGET opencv_world)
+  set(__target opencv_world)
 endif()
+set(__compile_features cxx_std_11)  # CMake 3.8+
+if(DEFINED OPENCV_COMPILE_FEATURES)
+  set(__compile_features ${OPENCV_COMPILE_FEATURES})  # custom override
+endif()
+if(__compile_features)
+  # Simulate exported result of target_compile_features(opencv_core PUBLIC ...)
+  set_target_properties(${__target} PROPERTIES
+      INTERFACE_COMPILE_FEATURES "${__compile_features}"
+  )
+endif()
+unset(__target)
+unset(__compile_features)
 
 #
 # Some macros for samples

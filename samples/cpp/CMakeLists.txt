@@ -71,11 +71,9 @@ endforeach()
 include("tutorial_code/calib3d/real_time_pose_estimation/CMakeLists.txt" OPTIONAL)
 
 # Standalone samples only
-if(OpenCV_FOUND AND NOT CMAKE_VERSION VERSION_LESS "3.1")
+if(OpenCV_FOUND)
   add_subdirectory("example_cmake")
 endif()
-if(OpenCV_FOUND AND NOT CMAKE_VERSION VERSION_LESS "3.9"
-    AND NOT OPENCV_EXAMPLES_SKIP_PARALLEL_BACKEND
-)
+if(OpenCV_FOUND AND NOT OPENCV_EXAMPLES_SKIP_PARALLEL_BACKEND)
   add_subdirectory("tutorial_code/core/parallel_backend")
 endif()

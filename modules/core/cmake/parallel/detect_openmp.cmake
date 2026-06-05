@@ -1,7 +1,3 @@
-if(CMAKE_VERSION VERSION_LESS "3.9")
-  message(STATUS "OpenMP detection requires CMake 3.9+")  # OpenMP::OpenMP_CXX target
-endif()
-
 find_package(OpenMP)
 if(OpenMP_FOUND)
   if(TARGET OpenMP::OpenMP_CXX)
