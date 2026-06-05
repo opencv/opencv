@@ -21,6 +21,40 @@ namespace cv { namespace dnn {
 
 namespace
 {
+    // ONNX Cast float->int truncates toward zero; Mat::convertTo rounds. Truncate to match the spec.
+    template<typename DT>
+    inline void truncateToIntImpl(const Mat& src, Mat& dst)
+    {
+        const int n = (int)src.total() * src.channels();
+        DT* d = dst.ptr<DT>();
+        if (src.depth() == CV_32F)
+        {
+            const float* s = src.ptr<float>();
+            for (int i = 0; i < n; ++i)
+                d[i] = saturate_cast<DT>(std::trunc(s[i]));
+        }
+        else
+        {
+            const double* s = src.ptr<double>();
+            for (int i = 0; i < n; ++i)
+                d[i] = saturate_cast<DT>(std::trunc(s[i]));
+        }
+    }
+
+    inline void truncateFloatToInt(const Mat& src, Mat& dst)
+    {
+        switch (dst.depth())
+        {
+            case CV_8U:   truncateToIntImpl<uchar>(src, dst);   break;
+            case CV_8S:   truncateToIntImpl<schar>(src, dst);   break;
+            case CV_16U:  truncateToIntImpl<ushort>(src, dst);  break;
+            case CV_16S:  truncateToIntImpl<short>(src, dst);   break;
+            case CV_32S:  truncateToIntImpl<int>(src, dst);     break;
+            case CV_64S:  truncateToIntImpl<int64_t>(src, dst); break;
+            default:      src.convertTo(dst, dst.depth());      break;
+        }
+    }
+
     inline void castQuantized(const Mat& src, Mat& dst, int targetDepth)
     {
         if (targetDepth == CV_16F)
@@ -296,6 +330,10 @@ public:
             }
             else
                 src.convertTo(dst, ddepth);
+        }
+        else if ((sdepth == CV_32F || sdepth == CV_64F) && CV_IS_INT_TYPE(ddepth))
+        {
+            truncateFloatToInt(src, dst);
         }
         else
         {

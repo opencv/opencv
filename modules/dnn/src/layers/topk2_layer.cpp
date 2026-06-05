@@ -50,7 +50,6 @@ public:
         axis    = params.get<int>("axis", -1);
         largest = params.get<int>("largest", 1) == 1;
         sorted  = params.get<int>("sorted", 1) == 1;
-        CV_CheckTrue(sorted, "TopK2: sorted == false is not supported");
         if (params.has("k")) {
             K = params.get<int>("k");
             CV_CheckGT(K, 0, "TopK2: K needs to be a positive integer");

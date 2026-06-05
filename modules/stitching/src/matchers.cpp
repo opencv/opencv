@@ -565,5 +565,148 @@ void AffineBestOf2NearestMatcher::match(const ImageFeatures &features1, const Im
 }
 
 
+LightGlueFeaturesMatcher::LightGlueFeaturesMatcher(Ptr<LightGlueMatcher> lgMatcher,
+                                                     int num_matches_thresh1,
+                                                     int num_matches_thresh2,
+                                                     double matches_confidence_thresh)
+    : FeaturesMatcher(false),  // not thread-safe: setPairInfo() mutates state
+      lgMatcher_(lgMatcher),
+      num_matches_thresh1_(num_matches_thresh1),
+      num_matches_thresh2_(num_matches_thresh2),
+      matches_confidence_thresh_(matches_confidence_thresh),
+      lg_score_thresh_(0.0f)
+{
+}
+
+void LightGlueFeaturesMatcher::setScoreThreshold(float thresh)
+{
+    lg_score_thresh_ = thresh;
+}
+
+void LightGlueFeaturesMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2,
+                                      MatchesInfo &matches_info)
+{
+    matches_info.src_img_idx = features1.img_idx;
+    matches_info.dst_img_idx = features2.img_idx;
+    matches_info.confidence = 0;
+
+    // Guard empty keypoints
+    if (features1.keypoints.empty() || features2.keypoints.empty())
+        return;
+
+    const int N = static_cast<int>(features1.keypoints.size());
+    const int M = static_cast<int>(features2.keypoints.size());
+
+    // Build Nx2 keypoint coordinate matrices
+    Mat kpts1Mat(N, 2, CV_32F);
+    Mat kpts2Mat(M, 2, CV_32F);
+    for (int i = 0; i < N; i++)
+    {
+        kpts1Mat.at<float>(i, 0) = features1.keypoints[i].pt.x;
+        kpts1Mat.at<float>(i, 1) = features1.keypoints[i].pt.y;
+    }
+    for (int i = 0; i < M; i++)
+    {
+        kpts2Mat.at<float>(i, 0) = features2.keypoints[i].pt.x;
+        kpts2Mat.at<float>(i, 1) = features2.keypoints[i].pt.y;
+    }
+
+    // Set pair context for LightGlue spatial reasoning
+    lgMatcher_->setPairInfo(kpts1Mat, kpts2Mat, features1.img_size, features2.img_size);
+
+    // Run LightGlue matching
+    Mat desc1 = features1.descriptors.getMat(ACCESS_READ);
+    Mat desc2 = features2.descriptors.getMat(ACCESS_READ);
+    std::vector<DMatch> matches;
+    lgMatcher_->match(desc1, desc2, matches);
+
+    // Filter by score threshold
+    if (lg_score_thresh_ > 0.0f)
+    {
+        float maxDist = 1.0f - lg_score_thresh_;
+        std::vector<DMatch> filtered;
+        filtered.reserve(matches.size());
+        for (const auto& m : matches)
+        {
+            if (m.distance <= maxDist)
+                filtered.push_back(m);
+        }
+        matches.swap(filtered);
+    }
+
+    // Store matches before homography estimation
+    matches_info.matches = matches;
+
+    // Guard: need at least 4 matches for findHomography
+    if (matches.size() < 4)
+        return;
+
+    // Estimate homography with centered coordinates
+    Mat src_points(1, static_cast<int>(matches.size()), CV_32FC2);
+    Mat dst_points(1, static_cast<int>(matches.size()), CV_32FC2);
+    for (size_t i = 0; i < matches.size(); ++i)
+    {
+        const DMatch& m = matches[i];
+
+        Point2f p = features1.keypoints[m.queryIdx].pt;
+        p.x -= features1.img_size.width * 0.5f;
+        p.y -= features1.img_size.height * 0.5f;
+        src_points.at<Point2f>(0, static_cast<int>(i)) = p;
+
+        p = features2.keypoints[m.trainIdx].pt;
+        p.x -= features2.img_size.width * 0.5f;
+        p.y -= features2.img_size.height * 0.5f;
+        dst_points.at<Point2f>(0, static_cast<int>(i)) = p;
+    }
+
+    matches_info.H = findHomography(src_points, dst_points, matches_info.inliers_mask, RANSAC);
+    if (matches_info.H.empty() ||
+        std::abs(determinant(matches_info.H)) < std::numeric_limits<double>::epsilon())
+        return;
+
+    // Compute inliers and confidence (Brown & Lowe formula)
+    matches_info.num_inliers = 0;
+    for (size_t i = 0; i < matches_info.inliers_mask.size(); ++i)
+        if (matches_info.inliers_mask[i])
+            matches_info.num_inliers++;
+
+    matches_info.confidence = matches_info.num_inliers /
+                              (8 + 0.3 * matches_info.matches.size());
+
+    // Zero confidence for too-close image pairs
+    if (matches_info.confidence > matches_confidence_thresh_)
+        matches_info.confidence = 0.;
+
+    // Refine homography on inliers if enough
+    if (matches_info.num_inliers >= num_matches_thresh2_)
+    {
+        src_points.create(1, matches_info.num_inliers, CV_32FC2);
+        dst_points.create(1, matches_info.num_inliers, CV_32FC2);
+        int inlier_idx = 0;
+        for (size_t i = 0; i < matches_info.matches.size(); ++i)
+        {
+            if (!matches_info.inliers_mask[i])
+                continue;
+
+            const DMatch& m = matches_info.matches[i];
+
+            Point2f p = features1.keypoints[m.queryIdx].pt;
+            p.x -= features1.img_size.width * 0.5f;
+            p.y -= features1.img_size.height * 0.5f;
+            src_points.at<Point2f>(0, inlier_idx) = p;
+
+            p = features2.keypoints[m.trainIdx].pt;
+            p.x -= features2.img_size.width * 0.5f;
+            p.y -= features2.img_size.height * 0.5f;
+            dst_points.at<Point2f>(0, inlier_idx) = p;
+
+            inlier_idx++;
+        }
+
+        matches_info.H = findHomography(src_points, dst_points, RANSAC);
+    }
+}
+
+
 } // namespace detail
 } // namespace cv

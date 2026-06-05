@@ -16,6 +16,8 @@
 #include "opencv2/stitching/detail/seam_finders.hpp"
 #include "opencv2/stitching/detail/warpers.hpp"
 #include "opencv2/stitching/warpers.hpp"
+#include "opencv2/features.hpp"
+#include "opencv2/core/ocl.hpp"
 
 #ifdef HAVE_OPENCV_XFEATURES2D
 #include "opencv2/xfeatures2d.hpp"
@@ -45,9 +47,10 @@ static void printUsage(char** argv)
         "\nMotion Estimation Flags:\n"
         "  --work_megapix <float>\n"
         "      Resolution for image registration step. The default is 0.6 Mpx.\n"
-        "  --features (surf|orb|sift|akaze)\n"
+        "  --features (surf|orb|sift|akaze|aliked)\n"
         "      Type of features used for images matching.\n"
         "      The default is surf if available, orb otherwise.\n"
+        "      When using 'aliked', requires --matcher lightglue and DNN model paths.\n"
         "  --matcher (homography|affine)\n"
         "      Matcher used for pairwise image matching.\n"
         "  --estimator (homography|affine)\n"
@@ -103,7 +106,14 @@ static void printUsage(char** argv)
         "  --timelapse (as_is|crop) \n"
         "      Output warped images separately as frames of a time lapse movie, with 'fixed_' prepended to input file names.\n"
         "  --rangewidth <int>\n"
-        "      uses range_width to limit number of images to match with.\n";
+        "      uses range_width to limit number of images to match with.\n"
+        "\nDNN Feature Options (when --features aliked --matcher lightglue):\n"
+        "  --aliked_model <path>\n"
+        "      Path to ALIKED ONNX model file.\n"
+        "  --lightglue_model <path>\n"
+        "      Path to LightGlue ONNX model file (for ALIKED descriptors).\n"
+        "  --lg_score_thresh <float>\n"
+        "      LightGlue confidence threshold. The default is 0.0 (accept all).\n";
 }
 
 
@@ -142,6 +152,9 @@ float blend_strength = 5;
 string result_name = "result.jpg";
 bool timelapse = false;
 int range_width = -1;
+String aliked_model_path;
+String lightglue_model_path;
+float lg_score_thresh = 0.0f;
 
 
 static int parseCmdArgs(int argc, char** argv)
@@ -204,7 +217,7 @@ static int parseCmdArgs(int argc, char** argv)
         }
         else if (string(argv[i]) == "--matcher")
         {
-            if (string(argv[i + 1]) == "homography" || string(argv[i + 1]) == "affine")
+            if (string(argv[i + 1]) == "homography" || string(argv[i + 1]) == "affine" || string(argv[i + 1]) == "lightglue")
                 matcher_type = argv[i + 1];
             else
             {
@@ -376,6 +389,21 @@ static int parseCmdArgs(int argc, char** argv)
             result_name = argv[i + 1];
             i++;
         }
+        else if (string(argv[i]) == "--aliked_model")
+        {
+            aliked_model_path = argv[i + 1];
+            i++;
+        }
+        else if (string(argv[i]) == "--lightglue_model")
+        {
+            lightglue_model_path = argv[i + 1];
+            i++;
+        }
+        else if (string(argv[i]) == "--lg_score_thresh")
+        {
+            lg_score_thresh = static_cast<float>(atof(argv[i + 1]));
+            i++;
+        }
         else
             img_names.push_back(argv[i]);
     }
@@ -383,6 +411,19 @@ static int parseCmdArgs(int argc, char** argv)
     {
         compose_megapix = 0.6;
     }
+
+    // Validate DNN options
+    if (features_type == "aliked" && matcher_type != "lightglue")
+    {
+        cout << "Error: --features aliked requires --matcher lightglue\n";
+        return -1;
+    }
+    if (features_type == "aliked" && (aliked_model_path.empty() || lightglue_model_path.empty()))
+    {
+        cout << "Error: --features aliked requires --aliked_model and --lightglue_model\n";
+        return -1;
+    }
+
     return 0;
 }
 
@@ -401,6 +442,11 @@ int main(int argc, char* argv[])
     if (retval)
         return retval;
 
+    // Disable OpenCL for DNN-based features to avoid backend sync issues
+    bool use_aliked = (features_type == "aliked");
+    if (use_aliked)
+        cv::ocl::setUseOpenCL(false);
+
     // Check if have enough images
     int num_images = static_cast<int>(img_names.size());
     if (num_images < 2)
@@ -418,7 +464,11 @@ int main(int argc, char* argv[])
 #endif
 
     Ptr<Feature2D> finder;
-    if (features_type == "orb")
+    if (use_aliked)
+    {
+        // ALIKED will be created per-image in the loop below
+    }
+    else if (features_type == "orb")
     {
         finder = ORB::create();
     }
@@ -488,7 +538,15 @@ int main(int argc, char* argv[])
             is_seam_scale_set = true;
         }
 
-        computeImageFeatures(finder, img, features[i]);
+        if (use_aliked)
+        {
+            Ptr<ALIKED> aliked = ALIKED::create(aliked_model_path);
+            computeImageFeatures(aliked, img, features[i]);
+        }
+        else
+        {
+            computeImageFeatures(finder, img, features[i]);
+        }
         features[i].img_idx = i;
         LOGLN("Features in image #" << i+1 << ": " << features[i].keypoints.size());
 
@@ -507,7 +565,14 @@ int main(int argc, char* argv[])
 #endif
     vector<MatchesInfo> pairwise_matches;
     Ptr<FeaturesMatcher> matcher;
-    if (matcher_type == "affine")
+    if (use_aliked && matcher_type == "lightglue")
+    {
+        Ptr<LightGlueMatcher> lg = LightGlueMatcher::create(lightglue_model_path);
+        Ptr<LightGlueFeaturesMatcher> lgMatcher = makePtr<LightGlueFeaturesMatcher>(lg);
+        lgMatcher->setScoreThreshold(lg_score_thresh);
+        matcher = lgMatcher;
+    }
+    else if (matcher_type == "affine")
         matcher = makePtr<AffineBestOf2NearestMatcher>(false, try_cuda, match_conf);
     else if (range_width==-1)
         matcher = makePtr<BestOf2NearestMatcher>(try_cuda, match_conf);
