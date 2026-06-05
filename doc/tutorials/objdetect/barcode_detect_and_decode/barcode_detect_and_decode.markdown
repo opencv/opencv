@@ -33,7 +33,7 @@ While coding, we firstly need to create a cv::barcode::BarcodeDetector object. I
 
 #### Initialization
 
-Optionally user can construct barcode detector with super resolution model which should be downloaded from https://github.com/WeChatCV/opencv_3rdparty/tree/wechat_qrcode (`sr.caffemodel`, `sr.prototxt`).
+Optionally user can construct barcode detector with a super resolution model, passed as a single-file ONNX network (`sr.onnx`). A converted model can be downloaded from https://github.com/WeChatCV/opencv_3rdparty/tree/wechat_qrcode. Caffe models (`sr.prototxt` / `sr.caffemodel`) are no longer supported.
 
 @snippet cpp/barcode.cpp initialize
 

@@ -227,4 +227,27 @@ TEST(BarcodeDetector_parameters, invalid)
     EXPECT_ANY_THROW(bardet.setGradientThreshold(-0.1));
 }
 
+TEST(BarcodeDetector_super_resolution, accuracy)
+{
+    // Reuse the existing WeChat Super Resolution ONNX model shipped in opencv_extra.
+    const string sr_path = findDataFile("dnn/wechat_2021-01/sr.onnx", false);
+    if (sr_path.empty())
+        throw SkipTestException("Missing super resolution model (dnn/wechat_2021-01/sr.onnx)");
+
+    const string fname = "single/book.jpg";
+    const string image_path = findDataFile("barcode/" + fname);
+    Mat img = imread(image_path);
+    ASSERT_FALSE(img.empty()) << "Can't read image: " << image_path;
+
+    // Construct with the ONNX super resolution model enabled.
+    barcode::BarcodeDetector det(sr_path);
+
+    vector<string> lines, types;
+    vector<Point2f> points;
+    bool res = det.detectAndDecodeWithType(img, lines, types, points);
+    ASSERT_TRUE(res);
+    EXPECT_EQ(toSet(testResults[fname].type), toSet(types));
+    EXPECT_EQ(toSet(testResults[fname].data), toSet(lines));
+}
+
 }} // opencv_test::<anonymous>::
