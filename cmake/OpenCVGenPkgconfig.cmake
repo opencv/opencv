@@ -110,8 +110,7 @@ endif()
 # =============================================================================
 else() # DEFINED CMAKE_HELPER_SCRIPT
 
-cmake_minimum_required(VERSION 3.5)
-cmake_policy(SET CMP0012 NEW)
+cmake_minimum_required(VERSION 3.10)
 include("${CMAKE_HELPER_SCRIPT}")
 include("${OpenCV_SOURCE_DIR}/cmake/OpenCVUtils.cmake")
 
