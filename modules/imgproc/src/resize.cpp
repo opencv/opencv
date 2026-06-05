@@ -58,6 +58,8 @@
 #include "opencv2/core/softfloat.hpp"
 #include "fixedpoint.inl.hpp"
 
+#include <iostream>
+
 using namespace cv;
 
 namespace
@@ -1261,6 +1263,19 @@ private:
     int* y_ofse;
 };
 
+template<typename _Tp>
+static std::ostream& operator << (std::ostream& strm, const std::vector<_Tp>& vec)
+{
+    strm << '[';
+    for (size_t i = 0; i < vec.size(); i++) {
+        if (i > 0)
+            strm << ", ";
+        strm << vec[i];
+    }
+    strm << ']';
+    return strm;
+}
+
 static void resizeNN_bitexact_tab(int src_dim, int dst_dim, int* ofse)
 {
     // Match Pillow's nearest-neighbor resize path: start at half a pixel,
@@ -1270,7 +1285,7 @@ static void resizeNN_bitexact_tab(int src_dim, int dst_dim, int* ofse)
     softdouble f = scale * softdouble(0.5);
     for( int i = 0; i < dst_dim; i++ )
     {
-        ofse[i] = std::min(cvTrunc(f), src_dim-1);
+        ofse[i] = std::min(cvFloor(f), src_dim-1);
         f += scale;
     }
 }
@@ -3844,7 +3859,12 @@ void resize(int src_type,
         inv_scale_y = static_cast<double>(dst_height) / src_height;
     }
 
-    CALL_HAL(resize, cv_hal_resize, src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, inv_scale_x, inv_scale_y, interpolation);
+#ifdef __riscv
+    if (interpolation != INTER_NEAREST && interpolation != INTER_NEAREST_EXACT)
+#endif
+    {
+        CALL_HAL(resize, cv_hal_resize, src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, inv_scale_x, inv_scale_y, interpolation);
+    }
 
     int  depth = CV_MAT_DEPTH(src_type), cn = CV_MAT_CN(src_type);
     Size dsize = Size(saturate_cast<int>(src_width*inv_scale_x),

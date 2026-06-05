@@ -277,18 +277,26 @@ TEST(Resize_Bitexact, NearestExact_PillowCompat)
         Mat result;
         resize(src, result, Size(dst_w, dst_h), 0, 0, INTER_NEAREST_EXACT);
 
+        int nerrs = 0;
         for (int y = 0; y < dst_h; y++)
         {
             for (int x = 0; x < dst_w; x++)
             {
                 Vec3b expected = src.at<Vec3b>(y_map[y], x_map[x]);
                 Vec3b actual = result.at<Vec3b>(y, x);
-                EXPECT_EQ(expected, actual)
-                    << "Mismatch at dst(" << y << "," << x << ") -> src("
-                    << y_map[y] << "," << x_map[x] << ") for "
-                    << src_h << "x" << src_w << " -> " << dst_h << "x" << dst_w;
+                nerrs += expected != actual;
+                if (nerrs <= 10) {
+                    EXPECT_EQ(expected, actual)
+                        << "Mismatch at dst(" << y << "," << x << ") -> src("
+                        << y_map[y] << "," << x_map[x] << ") for "
+                        << src_h << "x" << src_w << " -> " << dst_h << "x" << dst_w;
+                }
             }
         }
+
+        ASSERT_EQ(nerrs, 0) << "nerrs=" << nerrs << " when"
+            << " src_h=" << src_h << ", src_w=" << src_w
+            << " dst_h=" << dst_h << ", dst_w=" << dst_w;
     }
 }
 
