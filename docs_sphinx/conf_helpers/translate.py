@@ -15,6 +15,73 @@ def _normalize_lang(lang: str) -> str:
     return _LANG_ALIASES.get(lang, lang)
 
 
+# Snippet boundary markers across the languages OpenCV samples use —
+# one self-contained comment line each. Stripped from `_read_snippet`
+# output so they don't show as visible code in the rendered block
+# (mirrors docs.opencv.org's behaviour). Matched at line start with
+# optional leading whitespace; anything other than the bare comment-
+# marker + `[name]` on the line leaves it alone so we never drop real
+# code that happens to embed a `[token]`.
+_SNIPPET_MARKER_RE = re.compile(
+    r"^[ \t]*(?://!|//|##|#)[ \t]*\[[\w\- ]+\][ \t]*$"
+    r"|^[ \t]*<!--[ \t]*\[[\w\- ]+\][ \t]*-->[ \t]*$"
+)
+
+# Doxygen-style block comments — `/** … */` and `/*! … */` — appear
+# throughout OpenCV's C/C++/Java sample files as decorative chrome:
+# file-level banners at the top (`/** @file foo.cpp … */`), mid-file
+# function/class headers (`/** @function main */`,
+# `/** * @function update_map * @brief Fill … */`), and brief inline
+# notes (`/** Global Variables */`). docs.opencv.org strips all of
+# these before rendering the code block, regardless of position or
+# whether the body carries any `@tag` directive. We mirror that.
+#
+# Single-asterisk `/* … */` C block comments, `//` line comments, and
+# `///` line-doc comments are NOT touched — those are meant to stay
+# as visible inline code commentary.
+#
+# Two passes: first removes blocks that occupy whole lines (consuming
+# leading whitespace + the block + trailing whitespace + one
+# terminating newline, so the line doesn't leave a hollow blank
+# behind); second sweeps any remaining inline blocks (rare — a block
+# starting in the middle of a code line) without eating the
+# surrounding code.
+_DOXY_LINE_BLOCK_RE = re.compile(
+    r"^[ \t]*/\*[*!].*?\*/[ \t]*\n?",
+    re.DOTALL | re.MULTILINE,
+)
+_DOXY_INLINE_BLOCK_RE = re.compile(
+    r"/\*[*!].*?\*/",
+    re.DOTALL,
+)
+
+
+def _strip_snippet_markers(text: str) -> str:
+    """Drop `## [name]` / `//! [name]` / `// [name]` / `# [name]` /
+    `<!-- [name] -->` snippet-boundary marker lines from a code body.
+    The whole line (including its newline) is removed so the strip
+    doesn't leave hollow blank lines where the markers used to be.
+    Runs of three or more consecutive blank lines that result from
+    densely-marked files are collapsed back to two — matches the
+    rendering on docs.opencv.org."""
+    out = [ln for ln in text.split("\n")
+           if not _SNIPPET_MARKER_RE.match(ln)]
+    joined = "\n".join(out)
+    return re.sub(r"\n{3,}", "\n\n", joined)
+
+
+def _strip_doxygen_block_comments(text: str) -> str:
+    """Drop every `/** … */` and `/*! … */` Doxygen block comment from
+    a code snippet, anywhere in the file, regardless of whether the
+    body contains `@tag` directives. Subsumes file-level banners,
+    mid-file function/class doc-headers, and short notes like
+    `/** Global Variables */`. Plain `/* … */`, `//`, and `///`
+    comments stay intact."""
+    text = _DOXY_LINE_BLOCK_RE.sub("", text)
+    text = _DOXY_INLINE_BLOCK_RE.sub("", text)
+    return text
+
+
 def _read_snippet(rel_path: str, label: str | None) -> tuple[str, str]:
     """Return (code_text, language) for an @include / @snippet directive."""
     rel_norm = rel_path.lstrip("/")
@@ -34,7 +101,14 @@ def _read_snippet(rel_path: str, label: str | None) -> tuple[str, str]:
             ".xml": "xml", ".html": "html",
             ".sh": "bash", ".bash": "bash"}.get(ext, "text")
     if label is None:
-        return text, lang
+        # `@include`: whole file. Drop every Doxygen `/** … */` /
+        # `/*! … */` block comment AND any `## [name]` / `//! [name]`
+        # snippet boundary marker so the rendered code block matches
+        # docs.opencv.org's output (which starts straight at the first
+        # `#include` / `import`, with no banner and no decorative
+        # mid-file doc-headers littering the body).
+        return _strip_snippet_markers(
+            _strip_doxygen_block_comments(text)), lang
     # Match `[label]` after any comment marker.
     pat = re.compile(r"^[^\[\n]*(?://!|//|##|#|<!--)[^\[\n]*\[" + re.escape(label)
                      + r"\][^\n]*$", re.MULTILINE)
@@ -42,6 +116,11 @@ def _read_snippet(rel_path: str, label: str | None) -> tuple[str, str]:
     if len(matches) < 2:
         return f"// snippet not found: {rel_path} [{label}]\n", lang
     body = text[matches[0].end():matches[1].start()].strip("\n")
+    # Strip NESTED marker lines AND any mid-snippet Doxygen blocks
+    # (samples often place a `/** @function bar */` doc-header inside
+    # a labelled range).
+    body = _strip_doxygen_block_comments(body)
+    body = _strip_snippet_markers(body)
     lines = body.split("\n")
     indents = [len(l) - len(l.lstrip(" ")) for l in lines if l.strip()]
     if indents:
@@ -776,16 +855,24 @@ def _translate(text: str, docname: str | None = None) -> str:
     text = re.sub(r'@ref\s+(?P<name>[\w:-]+)(?:\s+"(?P<disp>[^"]+)")?',
                   _ref_repl, text)
 
-    # 7c. cv.Name -> Markdown link using _CV_SYMBOL_URL; skips code spans.
+    # 7c. cv.Name -> Markdown link using _CV_SYMBOL_URL; skips fenced
+    # code blocks (including nested in tab-sets) and inline code
+    # spans. Previous implementation used `re.split` on a brittle
+    # ` ``` … ``` ` regex that mis-paired fence widths inside
+    # tab-set > tab-item > ` ```python` hierarchies, so the cv-linkifier
+    # rewrote every `cv.foo` token inside Python/C++/Java tutorial
+    # snippets as `[cv.foo](#anchor)` — visible as literal markdown
+    # syntax in the Pygments-rendered code block. Routing through
+    # `_apply_outside_code` (which now uses `_code_regions`) protects
+    # all code-block bodies across every tutorial language.
     if _CV_SYMBOL_URL:
+        _cv_dot_re = re.compile(
+            r'(?<!\[)(?<!\()cv\.([A-Za-z][A-Za-z0-9_]*)')
         def _cvlink_repl(m: re.Match) -> str:
             url = _CV_SYMBOL_URL.get(m.group(1))
             return f'[cv.{m.group(1)}]({url})' if url else m.group(0)
-        _parts = re.split(r'(```.*?```|`[^`\n]+`)', text, flags=re.DOTALL)
-        text = ''.join(
-            p if i % 2 else re.sub(
-                r'(?<!\[)(?<!\()cv\.([A-Za-z][A-Za-z0-9_]*)', _cvlink_repl, p)
-            for i, p in enumerate(_parts))
+        text = _apply_outside_code(
+            text, lambda chunk: _cv_dot_re.sub(_cvlink_repl, chunk))
 
     # 8. @cite KEY -> `[N]` HTML anchor to citelist (N from opencv.bib order).
     def _cite_repl(m: re.Match) -> str:
@@ -1059,10 +1146,102 @@ _FENCED_BLOCK_RE = re.compile(
 _INLINE_CODE_RE = re.compile(r"`+[^`\n]*?`+")
 # ATX heading line; exempted from the auto-linkifier.
 _ATX_HEADING_RE = re.compile(r"^[ \t]{0,3}#{1,6}[ \t]")
+# Per-line fence detector used by `_code_regions`. Allows ANY leading
+# whitespace — not just CommonMark's ≤3 spaces. This is deliberate:
+# `_emit_codeblock` preserves the indent of the originating
+# `@include` / `@snippet` directive (typically 4 spaces, because the
+# directive sits inside an `@add_toggle_LANG` block in the tutorial
+# markdown), so the fences our pipeline emits are routinely indented
+# 4+ spaces. With the strict CommonMark limit, those fences slipped
+# past the detector and the cv-linkifier (step 7c) leaked
+# `[cv.foo](#anchor)` markdown syntax into every affected Python /
+# C++ / Java code block. Worst-case downside of the relaxation is
+# that an unrelated 4+ space-indented line beginning with three
+# backticks would be classified as a fence — that just means MORE
+# text gets protected from the linkifiers, not less.
+_FENCE_LINE_RE = re.compile(
+    r"^(?P<indent>[ \t]*)(?P<fence>`{3,}|~{3,})(?P<info>.*)$"
+)
+
+
+def _code_regions(src: str) -> list[tuple[int, int]]:
+    """Return sorted `[(start, end), ...]` byte ranges spanning every
+    fenced code block (including the fence lines themselves) in `src`.
+
+    Correctly handles MyST/Sphinx nested fences where the outer
+    container is wider than the inner code fence — e.g.
+    ` ``````{tab-set}` (6) > ` `````{tab-item} Python` (5) >
+    ` ```python` (3) > body > ` ``` ` > ` ````` ` > ` `````` `. The
+    previous regex-based detector (`_FENCED_BLOCK_RE`) anchored at
+    line start AND required exact fence-width pairing, so it missed
+    indented fences and mis-paired the inner code fence with one half
+    of the outer container — leaking code-block bodies to the
+    downstream linkifiers.
+
+    A fence with a non-empty info string is treated as an opener; the
+    info determines whether the block is *code* (typed language like
+    `python`, or empty) or a *container* (MyST `{directive}` form,
+    e.g. `{tab-set}`, `{note}`). Only code-block ranges are returned —
+    container bodies are still walked by the caller so their nested
+    prose stays linkifiable. Inside a code fence further fence-shaped
+    lines are inert per CommonMark §4.5."""
+    out: list[tuple[int, int]] = []
+    # Each stack entry: (fence_char, fence_width, is_code, opener_offset).
+    stack: list[tuple[str, int, bool, int]] = []
+    pos = 0
+    for line in src.splitlines(keepends=True):
+        line_start = pos
+        next_pos = pos + len(line)
+        ln = line.rstrip("\n").rstrip("\r")
+        m = _FENCE_LINE_RE.match(ln)
+        if m is None:
+            pos = next_pos
+            continue
+        fc = m.group("fence")[0]
+        fw = len(m.group("fence"))
+        info = m.group("info").strip()
+        # Inside a code fence nothing matters except the matching closer.
+        if stack and stack[-1][2]:
+            top_char, top_width, _, opener_start = stack[-1]
+            if fc == top_char and fw >= top_width and not info:
+                out.append((opener_start, next_pos))
+                stack.pop()
+            pos = next_pos
+            continue
+        # Outside code: an info-less fence of the same char & ≥ width
+        # closes the nearest open fence (which must be a container, per
+        # the branch above). A fence with info opens a new block.
+        if stack and not info:
+            top_char, top_width, _, _ = stack[-1]
+            if fc == top_char and fw >= top_width:
+                stack.pop()
+                pos = next_pos
+                continue
+        # Opener. Empty info or a language tag → code block; `{…}` info
+        # → container. (Plain text after a fence is also a code block
+        # per CommonMark, so `info=""` falls into is_code=True.)
+        is_code = (not info) or (not info.startswith("{"))
+        stack.append((fc, fw, is_code, line_start))
+        pos = next_pos
+    # Unclosed code fences: extend protection to EOF so we don't mangle
+    # the tail of a pathologically-truncated document.
+    while stack:
+        char, width, is_code, opener_start = stack.pop()
+        if is_code:
+            out.append((opener_start, len(src)))
+    out.sort()
+    return out
 
 
 def _apply_outside_code(src: str, transform) -> str:
-    """Apply `transform` to regions outside fenced/inline code."""
+    """Apply `transform` to regions outside fenced and inline code.
+
+    Uses `_code_regions` for fence detection so nested container >
+    code fences (tab-set > tab-item > ` ```python`) are handled
+    correctly — the previous `_FENCED_BLOCK_RE` regex anchored at
+    column 0 only and back-referenced an exact fence width, which
+    let the cv-linkifier write `[cv.foo](#anchor)` markdown link
+    syntax inside tab-set code bodies."""
     def _segment(text: str) -> str:
         out, last = [], 0
         for cm in _INLINE_CODE_RE.finditer(text):
@@ -1072,10 +1251,10 @@ def _apply_outside_code(src: str, transform) -> str:
         out.append(transform(text[last:]))
         return "".join(out)
     out, last = [], 0
-    for fm in _FENCED_BLOCK_RE.finditer(src):
-        out.append(_segment(src[last:fm.start()]))
-        out.append(fm.group(0))
-        last = fm.end()
+    for s, e in _code_regions(src):
+        out.append(_segment(src[last:s]))
+        out.append(src[s:e])
+        last = e
     out.append(_segment(src[last:]))
     return "".join(out)
 
