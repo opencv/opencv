@@ -1673,6 +1673,21 @@ inline v_uint8x32 v256_lut(const uchar* tab, const int* idx) { return v_reinterp
 inline v_uint8x32 v256_lut_pairs(const uchar* tab, const int* idx) { return v_reinterpret_as_u8(v256_lut_pairs((const schar *)tab, idx)); }
 inline v_uint8x32 v256_lut_quads(const uchar* tab, const int* idx) { return v_reinterpret_as_u8(v256_lut_quads((const schar *)tab, idx)); }
 
+// Byte-indexed LUT: 32 byte indices in a vector -> 32 looked-up bytes
+inline v_uint8x32 v256_lut(const uchar* tab, const v_uint8x32& idx)
+{
+    uchar CV_DECL_ALIGNED(32) indices[32], result[32];
+    __lasx_xvst(idx.val, indices, 0);
+    for (int i = 0; i < 32; i++) result[i] = tab[indices[i]];
+    return v_uint8x32(__lasx_xvld(result, 0));
+}
+inline v_int8x32 v256_lut(const schar* tab, const v_uint8x32& idx)
+{ return v_reinterpret_as_s8(v256_lut((const uchar*)tab, idx)); }
+
+// Universal v_lut overloads for vector byte indices (aliases to v256_lut)
+inline v_uint8x32 v_lut(const uchar* tab, const v_uint8x32& idx) { return v256_lut(tab, idx); }
+inline v_int8x32 v_lut(const schar* tab, const v_uint8x32& idx) { return v256_lut(tab, idx); }
+
 inline v_int16x16 v256_lut(const short* tab, const int* idx)
 {
     return v_int16x16(_v256_setr_h(tab[idx[ 0]], tab[idx[ 1]], tab[idx[ 2]], tab[idx[ 3]], tab[idx[ 4]],

@@ -1598,6 +1598,41 @@ inline v_uint8x32 v256_lut(const uchar* tab, const int* idx) { return v_reinterp
 inline v_uint8x32 v256_lut_pairs(const uchar* tab, const int* idx) { return v_reinterpret_as_u8(v256_lut_pairs((const schar *)tab, idx)); }
 inline v_uint8x32 v256_lut_quads(const uchar* tab, const int* idx) { return v_reinterpret_as_u8(v256_lut_quads((const schar *)tab, idx)); }
 
+inline v_uint8x32 v256_lut(const uchar* tab, const v_uint8x32& idx)
+{
+    __m128i i_lo = _mm256_castsi256_si128(idx.val);
+    __m128i i_hi = _mm256_extracti128_si256(idx.val, 1);
+
+    __m256i e0 = _mm256_cvtepu8_epi32(i_lo);
+    __m256i e1 = _mm256_cvtepu8_epi32(_mm_bsrli_si128(i_lo, 8));
+    __m256i e2 = _mm256_cvtepu8_epi32(i_hi);
+    __m256i e3 = _mm256_cvtepu8_epi32(_mm_bsrli_si128(i_hi, 8));
+
+    __m256i g0 = _mm256_i32gather_epi32((const int*)tab, e0, 1);
+    __m256i g1 = _mm256_i32gather_epi32((const int*)tab, e1, 1);
+    __m256i g2 = _mm256_i32gather_epi32((const int*)tab, e2, 1);
+    __m256i g3 = _mm256_i32gather_epi32((const int*)tab, e3, 1);
+
+    const __m256i mask = _mm256_set1_epi32(0xFF);
+    g0 = _mm256_and_si256(g0, mask);
+    g1 = _mm256_and_si256(g1, mask);
+    g2 = _mm256_and_si256(g2, mask);
+    g3 = _mm256_and_si256(g3, mask);
+
+    __m256i p01 = _mm256_packus_epi32(g0, g1);
+    __m256i p23 = _mm256_packus_epi32(g2, g3);
+    __m256i packed = _mm256_packus_epi16(p01, p23);
+
+    return v_uint8x32(_mm256_permutevar8x32_epi32(packed,
+                       _mm256_setr_epi32(0, 4, 1, 5, 2, 6, 3, 7)));
+}
+inline v_int8x32 v256_lut(const schar* tab, const v_uint8x32& idx)
+{ return v_reinterpret_as_s8(v256_lut((const uchar *)tab, idx)); }
+
+
+inline v_uint8x32 v_lut(const uchar* tab, const v_uint8x32& idx) { return v256_lut(tab, idx); }
+inline v_int8x32 v_lut(const schar* tab, const v_uint8x32& idx) { return v256_lut(tab, idx); }
+
 inline v_int16x16 v256_lut(const short* tab, const int* idx)
 {
     return v_int16x16(_mm256_setr_epi16(tab[idx[0]], tab[idx[1]], tab[idx[ 2]], tab[idx[ 3]], tab[idx[ 4]], tab[idx[ 5]], tab[idx[ 6]], tab[idx[ 7]],

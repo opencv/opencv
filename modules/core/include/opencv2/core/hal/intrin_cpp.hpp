@@ -14,6 +14,7 @@
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Copyright (C) 2015, Itseez Inc., all rights reserved.
+// Copyright (C) 2026, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -2713,6 +2714,16 @@ template<typename _Tp> inline v_reg<_Tp, simd128_width / sizeof(_Tp)> v_lut_quad
         c.s[i] = tab[idx[i / 4] + i % 4];
     return c;
 }
+
+template<int n> inline v_reg<uchar, n> v_lut(const uchar* tab, const v_reg<uchar, n>& idx)
+{
+    v_reg<uchar, n> c;
+    for( int i = 0; i < n; i++ )
+        c.s[i] = tab[idx.s[i]];
+    return c;
+}
+template<int n> inline v_reg<schar, n> v_lut(const schar* tab, const v_reg<uchar, n>& idx)
+{ return v_reinterpret_as_s8(v_lut((const uchar*)tab, idx)); }
 
 template<int n> inline v_reg<int, n> v_lut(const int* tab, const v_reg<int, n>& idx)
 {
