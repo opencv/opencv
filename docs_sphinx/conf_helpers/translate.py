@@ -351,17 +351,15 @@ def _translate(text: str, docname: str | None = None) -> str:
                   + r"\end{matrix}",
         text)
 
-    # 3. @code{.lang} ... @endcode -> fenced block (indent preserved).
+    # 3. @code{.lang} ... @endcode -> fenced block at COLUMN 0.
+    # Source-side indent (typically 4 spaces, when the `@code` directive
+    # sits inside a `-#` list item) is dedented from the body and NOT
+    # re-applied to the fence — see `_emit_codeblock` above for the same
+    # rationale and what the indented-fence form rendered as before.
     def _code_repl(m: re.Match) -> str:
-        indent = m.group("indent") or ""
         lang = _normalize_lang(m.group("lang") or "")
-        body = m.group("body")
-        if indent:
-            body = _textwrap.dedent(body).strip("\n")
-            body = "\n".join((indent + line) if line else line
-                             for line in body.split("\n"))
-            return f"\n{indent}```{lang}\n{body}\n{indent}```\n"
-        return f"\n```{lang}\n{body.strip()}\n```\n"
+        body = _textwrap.dedent(m.group("body")).strip("\n")
+        return f"\n```{lang}\n{body}\n```\n"
     text = re.sub(
         r"^(?P<indent>[ \t]*)@code(?:\{(?P<lang>[^}]*)\})?\s*\n(?P<body>.*?)\n[ \t]*@endcode",
         _code_repl, text, flags=re.DOTALL | re.MULTILINE)
@@ -402,11 +400,22 @@ def _translate(text: str, docname: str | None = None) -> str:
         lambda m: f"{m.group('fence')}{_normalize_lang(m.group('lang'))}",
         text, flags=re.MULTILINE)
 
-    # Backtick fence with per-line indent (other fence forms break in tab-items).
+    # Backtick fence emitted at COLUMN 0 — the `indent` argument is kept
+    # in the signature for caller compatibility but no longer applied to
+    # the fence or its body. Reason: when the originating directive
+    # (`@include` / `@snippet`) sits inside a `-#` numbered-list item or
+    # other nested context, its captured indent is 4+ spaces. Preserving
+    # that indent on the emitted fence used to produce
+    #     `    ```cpp\n    body\n    ``` `
+    # which CommonMark / MyST treats as an INDENTED code block (with the
+    # backticks as literal content), not a fenced one — Pygments saw no
+    # language, rendered as `highlight-none`, and the rendered page
+    # showed the bare ` ```cpp `/` ``` ` lines bracketing the actual
+    # code. Emitting the fence at column 0 makes MyST recognise it as a
+    # fenced block in every context. The body keeps whatever natural
+    # language-indent `_read_snippet` already dedented it to.
     def _emit_codeblock(indent: str, lang: str, body: str) -> str:
-        body_lines = body.rstrip().splitlines()
-        body_indented = "\n".join(indent + line for line in body_lines)
-        return f"\n{indent}```{lang}\n{body_indented}\n{indent}```\n"
+        return f"\n```{lang}\n{body.rstrip()}\n```\n"
 
     # 4. @include path / @includelineno path.
     def _include_repl(m: re.Match) -> str:
@@ -1130,7 +1139,17 @@ def _translate(text: str, docname: str | None = None) -> str:
 
 
 _BARE_URL_RE = re.compile(
-    r"(?<![<\[(\w\"'=])"
+    # Block the URL part of a markdown link `[text](url)` /
+    # `![alt](url)` via a 2-char lookbehind on `](`. Plain `(` in
+    # prose — e.g. `- PyPI (https://pypi.org/search/?q=opencv)` —
+    # used to fall under the old single-char `(` exclusion, leaving
+    # those URLs un-clickable on every tutorial page that lists
+    # parenthesised resource URLs (install pages, "see also" lists,
+    # third-party-package indexes). The split lookbehind keeps the
+    # markdown-link / autolink / HTML-attribute exclusions intact
+    # while letting bare URLs in parens get autolinkified.
+    r"(?<!\]\()"
+    r"(?<![<\[\w\"'=])"
     r"(?P<url>https?://[^\s<>()`\"']+[^\s<>()`\"'.,;:!?])"
 )
 # `cv.X`/`cv::X`; lookbehind blocks `frame.cv.X`-style false positives.
