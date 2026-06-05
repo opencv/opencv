@@ -225,6 +225,9 @@ public:
             throw SkipTestException(cv::String("Backend ") +  cv::videoio_registry::getBackendName(apiPref) +
                     cv::String(" does not support CAP_PROP_POS_MSEC option"));
 
+        if (cvtest::skipUnstableTests && apiPref == CAP_MSMF && (ext == "h264" || ext == "h265" || ext == "mpg"))
+            throw SkipTestException("Unstable MSMF test");
+
         VideoCapture cap;
         EXPECT_NO_THROW(cap.open(video_file, apiPref));
         if (!cap.isOpened())
