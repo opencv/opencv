@@ -1,4 +1,4 @@
-/* 
+/*
 This file is part of OpenCV project.
 It is subject to the license terms in the LICENSE file found in the top-level directory
 of this distribution and at http://opencv.org/license.html.
@@ -55,7 +55,16 @@ html[data-theme="dark"] .bd-article-container a { color: #539bf5 !important; }
     text-decoration-thickness: 1px;
     color: #0550ae;
 }
-html[data-theme="dark"] .bd-article-container a:hover { color: #6cb6ff !important; }
+/* Hover keeps the SAME #0969da — no separate hover-blue shade in dark
+ * mode (per "no hover blue, everything at rest"). */
+html[data-theme="dark"] .bd-article-container a:hover,
+html[data-theme="dark"] .bd-article-container a.reference:hover,
+html[data-theme="dark"] .bd-article-container a.reference.internal:hover,
+html[data-theme="dark"] .bd-article-container a.reference.external:hover,
+html[data-theme="dark"] .bd-article-container .toctree-wrapper a:hover,
+html[data-theme="dark"] .bd-article-container li > a:hover {
+    color: #0969da !important;
+}
 .bd-content a > code, .bd-content code > a { color: inherit; }
 
 .bd-content a.opencv-enum-link,
@@ -237,8 +246,36 @@ html[data-theme="dark"] table.opencv-meta-table td:last-child { border-right: no
     -webkit-backdrop-filter: blur(8px);
 }
 .bd-header .navbar { min-height: 3.25rem; padding-top: 0.25rem; padding-bottom: 0.25rem; }
-.bd-header .navbar-header-items__start { gap: 1rem; align-items: center; }
-.bd-header img.logo__image { max-height: 36px; }
+.bd-header .navbar-header-items__start { gap: 15px; align-items: center; padding-left: 3rem; }
+/* OpenCV SVG logo: scale the vector to the official proportions. */
+.bd-header img.logo__image {
+    height: 46px;
+    width: auto;
+    max-width: 50px;
+    object-fit: contain;
+    vertical-align: middle;
+}
+.navbar-brand .logo__title {
+    font-weight: 600;
+    font-size: 1.45rem;
+    color: inherit;
+}
+/* "OpenCV" wordmark + "Open Source Computer Vision" subtitle stacked in a
+   column to the right of the SVG mark (see _templates/navbar-logo.html). */
+.navbar-brand.logo .logo__textwrap {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    line-height: 1.1;
+}
+.navbar-brand.logo .logo__textwrap .logo__title { margin: 0; }
+.navbar-brand.logo .logo__subtitle {
+    margin: 0;
+    font-size: 0.72rem;
+    font-weight: 400;
+    color: var(--pst-color-text-muted);
+    white-space: nowrap;
+}
 
 .version-badge {
     display: inline-block;
@@ -283,15 +320,71 @@ html[data-theme="dark"] table.opencv-meta-table td:last-child { border-right: no
 .bd-header button.theme-switch-button:hover,
 .bd-header .navbar-icon-links a.nav-link:hover { color: var(--opencv-accent); }
 
+/* --- Version switcher dropdown (navbar) -------------------------------- *
+ * Sits in the `navbar_start` slot right after `navbar-logo`. The custom
+ * template `_templates/opencv-version-switcher.html` renders a plain
+ * `<select>`; styles below give it a compact pill shape that reads as a
+ * peer of the wordmark in both light and dark themes. */
+.opencv-version-switcher {
+    display: inline-flex;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+}
+.opencv-version-switcher #opencv-version-select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    font: 500 0.85rem/1.2 "Inter", sans-serif;
+    color: var(--pst-color-text-base);
+    background-color: var(--pst-color-surface);
+    border: 1px solid var(--pst-color-border);
+    border-radius: 6px;
+    padding: 0.2rem 1.8rem 0.2rem 0.6rem;
+    /* Dropdown arrow drawn via background SVG so we can colour it via
+     * CSS variables (light/dark) instead of relying on the UA default. */
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='%23656d76' d='M0 0l5 6 5-6z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 0.55rem center;
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.opencv-version-switcher #opencv-version-select:hover {
+    border-color: var(--opencv-accent, #0969da);
+}
+.opencv-version-switcher #opencv-version-select:focus {
+    outline: none;
+    border-color: var(--opencv-accent, #0969da);
+    box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.25);
+}
+html[data-theme="dark"] .opencv-version-switcher #opencv-version-select {
+    color: #e6edf3;
+    background-color: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.18);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='%238b949e' d='M0 0l5 6 5-6z'/></svg>");
+}
+html[data-theme="dark"] .opencv-version-switcher #opencv-version-select option {
+    background-color: #1c2128;
+    color: #e6edf3;
+}
+
 /* --- Wider reading column ---------------------------------------------- */
 @media (min-width: 960px) {
     .bd-page-width,
     .bd-container__inner.bd-page-width { max-width: none !important; }
     .bd-container { max-width: none !important; }
-    .bd-sidebar-primary { padding-left: 1rem !important; padding-right: 1rem !important; }
+    .bd-sidebar-primary { padding-left: 0.1rem !important; padding-right: 0.75rem !important; }
     .bd-main .bd-content,
     .bd-main .bd-article-container { padding-left: 2rem; padding-right: 2rem; }
     .bd-main .bd-article { padding-left: 0; padding-right: 0; }
+}
+
+/* Narrower left section-nav sidebar — the theme default is width:25%, which is
+   ~480px on a wide screen (very intrusive). Pin it to a sensible fixed width so
+   the content and the (often wide) diagrams get more room. Desktop only; the
+   mobile off-canvas drawer keeps the theme's own sizing. */
+@media (min-width: 960px) {
+    .bd-sidebar-primary { width: 16rem; flex: 0 0 16rem; }
 }
 
 .bd-sidebar-primary nav.bd-links { margin-right: 0 !important; }
@@ -356,6 +449,35 @@ div.highlight pre {
 .highlight .c, .highlight .ch, .highlight .cm,
 .highlight .cpf, .highlight .c1, .highlight .cs { font-style: normal !important; }
 
+/* Clickable tokens inside code blocks: force link blue on every
+ * descendant of `<a>` inside `<pre>`. Pygments wraps identifiers in
+ * `<span class="n">…</span>` (or `nc`/`nf`/…) and colours them per
+ * the theme stylesheet — those rules win over the inherited `<a>`
+ * color, so the link text renders as ordinary dark-grey code, not
+ * blue. This rule (high specificity, !important) restores the
+ * theme-link blue across both modes, the same blue we use everywhere
+ * else clickable tokens appear. */
+div.highlight pre a,
+div.highlight pre a *,
+div.highlight pre a span {
+    color: #0969da !important;
+}
+html[data-theme="dark"] div.highlight pre a,
+html[data-theme="dark"] div.highlight pre a *,
+html[data-theme="dark"] div.highlight pre a span {
+    color: #0969da !important;
+}
+div.highlight pre a:hover,
+div.highlight pre a:hover *,
+div.highlight pre a:hover span,
+html[data-theme="dark"] div.highlight pre a:hover,
+html[data-theme="dark"] div.highlight pre a:hover *,
+html[data-theme="dark"] div.highlight pre a:hover span {
+    color: #0969da !important;
+    text-decoration: underline !important;
+    text-underline-offset: 0.18em;
+}
+
 html[data-theme="dark"] { color-scheme: dark; }
 html[data-theme="dark"] div.highlight span,
 html[data-theme="dark"] div.highlight * { color: unset !important; }
@@ -388,7 +510,7 @@ html[data-theme="dark"] .highlight .mo { color: #6cb6ff !important; }
 html[data-theme="dark"] div.highlight pre {
     background: #2d333b !important;
     color: #cdd9e5 !important;
-    border-left: 3px solid #539bf5 !important;
+    border-left: 3px solid #0969da !important;
 }
 html[data-theme="dark"] code,
 html[data-theme="dark"] .sig {
@@ -566,7 +688,7 @@ html[data-theme="dark"] section[id$="-documentation"] > section > h3 {
     background: #111622;
     border-color: #2d3748;
 }
-html[data-theme="dark"] section[id$="-documentation"] > section > h3::before { color: #58a6ff; }
+html[data-theme="dark"] section[id$="-documentation"] > section > h3::before { color: #0969da; }
 
 section[id$="-documentation"] > section > p,
 section[id$="-documentation"] > section > ul,
@@ -591,6 +713,21 @@ section[id$="-documentation"] > section > p > code {
 
 section[id$="-documentation"] > section > p.opencv-api-sig > code {
     white-space: pre-wrap;
+}
+/* Clickable type / enum-value tokens inside a member-detail signature: light
+   blue, no underline. The ID-qualified selectors out-specify the per-section
+   `#…-documentation a` colour rules so signature links win everywhere. */
+.bd-content a.opencv-sig-link,
+#function-documentation a.opencv-sig-link,
+#typedef-documentation a.opencv-sig-link {
+    color: #4ea1ff !important;
+    text-decoration: none !important;
+}
+.bd-content a.opencv-sig-link:hover { color: #6cb6ff !important; }
+html[data-theme="dark"] .bd-content a.opencv-sig-link,
+html[data-theme="dark"] #function-documentation a.opencv-sig-link,
+html[data-theme="dark"] #typedef-documentation a.opencv-sig-link {
+    color: #6cb6ff !important;
 }
 
 html[data-theme="dark"] section[id$="-documentation"] > section code,
@@ -702,6 +839,38 @@ html[data-theme="dark"] button.copybtn.success {
     button.copybtn { opacity: 1 !important; }
 }
 
+/* --- Keep the copy button reachable on tall code blocks ---------------- */
+/* sphinx-copybutton pins the button (`position: absolute; top`) to the top of
+   its code block, so on a block taller than the viewport — e.g. the long C++
+   sample under group functions like cv::imwrite — it scrolls out of sight the
+   moment you read past the first lines, and the whole button looks "missing".
+   Make it `position: sticky` so it rides along at the top-right of the visible
+   area instead. Hover-reveal behaviour is untouched (no opacity change); the
+   button is still a child of `.highlight`, so `.highlight:hover .copybtn` still
+   fires.
+   Sticky needs NO non-`visible` overflow between the button and the scrolling
+   viewport (the window). Two ancestors set overflow and silently disabled it:
+   the member-detail card (rounded-corner clip) and the theme's
+   `.bd-article-container`. Neither actually scrolls — the window does — so
+   relaxing them is safe; the secondary "On this page" TOC stays sticky
+   (verified). `display:flex` + `order:-1` put the button above <pre> in flow so
+   `top` has something to pin to; the negative bottom margin cancels the
+   button's own box so it overlays the code instead of pushing it down. */
+div.bd-article-container { overflow: visible !important; }
+section[id$="-documentation"] > section { overflow: visible !important; }
+div.highlight { display: flex !important; flex-direction: column; }
+div.highlight > pre { min-width: 0; }   /* let the flex item shrink so overflow-x: auto still scrolls */
+div.highlight > button.copybtn {
+    order: -1;                            /* render above <pre> so sticky `top` can pin it */
+    position: sticky;
+    align-self: flex-end;                 /* hold it at the right edge */
+    margin: 0.5rem 0.5rem -2.35rem 0;     /* negative bottom overlays the code, no extra height */
+    z-index: 2;
+}
+
+/* --- Class collaboration diagram (.opencv-coll-graph) ------------------ */
+/* Inlined as <svg> at build-finished (so links work); two theme variants carry
+   the theme's .only-light/.only-dark classes. Size only — no display/filter. */
 .opencv-coll-graph {
     display: block;
     margin: 1rem auto 1.5rem;
@@ -714,6 +883,66 @@ html[data-theme="dark"] button.copybtn.success {
     overflow-x: auto;
     max-width: 100%;
     text-align: center;
+}
+
+/* Scroll box wrapping every inlined diagram (class collaboration graphs AND the
+   large file include-dependency graphs). The whole graph stays reachable —
+   scrolls when wider/taller than the content area, fits otherwise, never cut. */
+.opencv-graph-scroll {
+    overflow: auto;
+    max-width: 100%;
+    max-height: 80vh;
+    margin: 1rem 0 1.5rem;
+    text-align: center;   /* center a graph narrower than the content area */
+}
+.opencv-graph-scroll > svg.opencv-coll-graph {
+    display: block;
+    margin: 0 auto;     /* centered when it fits; auto-margins collapse on pan */
+    max-width: none;    /* keep natural size so the box can pan a big graph */
+}
+
+/* File-page member declaration boxes (parsed-literal). Look like a code block
+   but contain a clickable member name. The `:class:` lands on the <pre>
+   (pre.opencv-decl); guard against a wrapper too (.opencv-decl pre). */
+pre.opencv-decl,
+.opencv-decl pre,
+.opencv-decl {
+    font-family: var(--pst-font-family-monospace);
+    font-size: 0.85em;
+    line-height: 1.5;
+    padding: 0.6rem 0.9rem;
+    margin: 0.25rem 0 0.5rem;
+    border-radius: 0.35rem;
+    overflow-x: auto;                 /* long signatures scroll, never clip */
+    background-color: var(--pst-color-surface);
+    border: 1px solid var(--pst-color-border);
+}
+/* The one real link in the box (the member name): blue, no underline. */
+pre.opencv-decl a,
+.opencv-decl a,
+.opencv-decl a.reference {
+    color: #0969da !important;
+    text-decoration: none !important;
+}
+html[data-theme="dark"] pre.opencv-decl a,
+html[data-theme="dark"] .opencv-decl a,
+html[data-theme="dark"] .opencv-decl a.reference { color: #539bf5 !important; }
+/* --- Clickable enum synopsis (.opencv-enum-synopsis) ------------------- */
+/* Link colour + no-underline handled by the central enum-links rule near
+ * the top of this file; this block layers explicit dark-mode coverage so
+ * the unified `#0969da` (no hover differentiation) applies even if the
+ * central rule changes. */
+.opencv-enum-synopsis a.opencv-enum-link {
+    color: #0969da !important;
+    text-decoration: none;
+    border-radius: 2px;
+}
+.opencv-enum-synopsis a.opencv-enum-link:hover {
+    color: #0550ae !important;
+}
+html[data-theme="dark"] .opencv-enum-synopsis a.opencv-enum-link,
+html[data-theme="dark"] .opencv-enum-synopsis a.opencv-enum-link:hover {
+    color: #0969da !important;
 }
 
 section#member-enumeration-documentation .highlight-cpp .n {
@@ -904,7 +1133,10 @@ html[data-theme="dark"] table.api-reference-table tbody tr td:first-child {
 
 table.api-reference-table tbody tr td a,
 table.api-reference-table tbody tr td a:link,
-table.api-reference-table tbody tr td a:visited {
+table.api-reference-table tbody tr td a:visited,
+table.api-reference-table tbody tr td a *,
+table.api-reference-table tbody tr td a:link *,
+table.api-reference-table tbody tr td a:visited * {
     color: var(--pst-color-link, #0969da) !important;
     text-decoration: none !important;
     font-weight: 500 !important;
@@ -918,12 +1150,22 @@ html[data-theme="dark"] table.api-reference-table tbody tr td a,
 html[data-theme="dark"] table.api-reference-table tbody tr td a:link,
 html[data-theme="dark"] table.api-reference-table tbody tr td a:visited,
 html[data-theme="dark"] table.api-reference-table tbody tr td a:hover,
-html[data-theme="dark"] table.api-reference-table tbody tr td a:active {
-    color: #ffffff !important;
+html[data-theme="dark"] table.api-reference-table tbody tr td a:active,
+html[data-theme="dark"] table.api-reference-table tbody tr td a *,
+html[data-theme="dark"] table.api-reference-table tbody tr td a:link *,
+html[data-theme="dark"] table.api-reference-table tbody tr td a:visited *,
+html[data-theme="dark"] table.api-reference-table tbody tr td a:hover *,
+html[data-theme="dark"] table.api-reference-table tbody tr td a:active * {
+    color: #0969da !important;
 }
 
 table.api-reference-table tbody tr td a code,
 table.api-reference-table tbody tr td a code *,
+table.api-reference-table tbody tr td a span,
+table.api-reference-table tbody tr td a .std,
+table.api-reference-table tbody tr td a .std-doc,
+table.api-reference-table tbody tr td a .xref,
+table.api-reference-table tbody tr td a .pre,
 table.api-reference-table tbody tr td:not(:first-child) a code,
 table.api-reference-table tbody tr td:not(:first-child) a code * {
     color: inherit !important;
@@ -946,6 +1188,43 @@ html[data-theme="dark"] table.api-reference-table tbody tr td:not(:first-child) 
     border-radius: 0 !important;
 }
 
+/* Functions-table signature cell: the row is rendered as
+ *   `<a><code>cv::name</code></a> <code>(<a>Type</a> arg, …)</code>`
+ * The unanchored `<code>` wrapping the parameter list (and any `<code>`
+ * around inline tokens) picks up the default code-chip background +
+ * border via the global `code` rule, which renders as a "grey box"
+ * around the clickables. Strip the chip styling AND the 500 weight
+ * that makes the link text read as bold — clickables here should be
+ * plain blue text, not boxed-and-bold. Applies to both the cell
+ * `<code>` and any inner `<span class="pre">` Sphinx wraps long
+ * tokens in. */
+table.api-function-table tbody tr td code,
+table.api-function-table tbody tr td code *,
+table.api-function-table tbody tr td a,
+table.api-function-table tbody tr td a code,
+table.api-function-table tbody tr td a code * {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    font-weight: normal !important;
+    font-size: inherit !important;
+}
+html[data-theme="dark"] table.api-function-table tbody tr td code,
+html[data-theme="dark"] table.api-function-table tbody tr td code *,
+html[data-theme="dark"] table.api-function-table tbody tr td a code,
+html[data-theme="dark"] table.api-function-table tbody tr td a code * {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+/* Functions summary cards: the signature is split one parameter per line, each
+   line its own <code> span joined by <br>, with a padded type column built from
+   spaces (à la `_signature_lines`). Inline <code> collapses runs of spaces,
+   which would wreck that alignment — preserve them and keep wrapping for long
+   lists, so the card signature reads like the detail-block declaration. */
 table.api-function-table tbody tr td:not(:first-child) a code,
 table.api-function-table tbody tr td:not(:first-child) code {
     white-space: pre-wrap;
@@ -1102,12 +1381,15 @@ table.api-typedef-table tbody tr td:nth-child(2) {
     text-align: left  !important;
 }
 
-html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(2),
 html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(2) a,
 html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(2) a:link,
 html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(2) a:visited,
-html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(2) a:hover {
-    color: #ffffff !important;
+html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(2) a:hover,
+html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(2) a *,
+html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(2) a:link *,
+html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(2) a:visited *,
+html[data-theme="dark"] table.api-typedef-table tbody tr td:nth-child(2) a:hover * {
+    color: #0969da !important;
 }
 
 table.api-typedef-table tbody tr td:nth-child(2) a,
@@ -1175,8 +1457,8 @@ a.opencv-class-more:hover {
     color: #0550ae;
     text-decoration: underline;
 }
-html[data-theme="dark"] a.opencv-class-more { color: #539bf5; }
-html[data-theme="dark"] a.opencv-class-more:hover { color: #6cb6ff; }
+html[data-theme="dark"] a.opencv-class-more { color: #0969da; }
+html[data-theme="dark"] a.opencv-class-more:hover { color: #0969da; }
 
 .opencv-class-files { margin-top: 1.75rem; }
 .opencv-class-files > h2 { display: none; }
@@ -1412,3 +1694,90 @@ a.SRScope {
     color: var(--pst-color-text-muted) !important;
 }
 .SRPage .SRStatus { color: var(--pst-color-text-muted); padding: 8px 16px; }
+
+/* ============================================================
+ * GLOBAL DARK-MODE CLICKABLE-BLUE OVERRIDE
+ * ------------------------------------------------------------
+ * One rule to keep every clickable a consistent blue in dark
+ * mode. Light mode already paints links `#0969da`; pst-sphinx
+ * repaints them lighter (or grey, or visited-purple) in dark
+ * mode through dozens of class-specific rules. Rather than
+ * chase each one, this final block forces every `<a>` (and
+ * every descendant of `<a>`) inside `html[data-theme="dark"]`
+ * back to the same `#0969da` link blue used in light mode —
+ * body content, sidebar, TOC, tables, code chips, code-block
+ * tokens, See-Also lines, breadcrumbs, footers. Visited /
+ * hover / active / focused all collapse to the same hex per
+ * the "no hover-blue, everything at rest" rule.
+ *
+ * Specificity: `html[data-theme="dark"] a` is (0,0,1,2); the
+ * `* { color: unset }` rule earlier in the file is (0,0,1,2)
+ * too but ours runs LATER and uses `!important`, so it wins.
+ * ============================================================ */
+html[data-theme="dark"] a,
+html[data-theme="dark"] a:link,
+html[data-theme="dark"] a:visited,
+html[data-theme="dark"] a:focus,
+html[data-theme="dark"] a *,
+html[data-theme="dark"] a:link *,
+html[data-theme="dark"] a:visited *,
+html[data-theme="dark"] a:focus * {
+    color: #0969da !important;
+}
+html[data-theme="dark"] a:hover,
+html[data-theme="dark"] a:hover *,
+html[data-theme="dark"] a:active,
+html[data-theme="dark"] a:active * {
+    color: #0969da !important;
+}
+
+/* Pygments-tokens-inside-link override.
+ * The dark-mode Pygments rule `html[data-theme="dark"] .highlight .n
+ * { color:#cdd9e5 !important }` (3-class specificity) was beating the
+ * global `html[data-theme="dark"] a *` rule above (1-class) when a
+ * Pygments identifier span (`.n`, `.nc`, `.nf`, `.na`, `.nb`, `.nv`,
+ * `.nn`, `.pre`) sat inside an `<a>` — so enum-synopsis entries like
+ * `cv::NORM_INF` rendered the same grey as plain identifiers. Adding
+ * `.highlight` to the selector raises specificity to (0,0,3,2),
+ * enough to win on every token class Pygments uses for names. */
+html[data-theme="dark"] .highlight a,
+html[data-theme="dark"] .highlight a *,
+html[data-theme="dark"] .highlight a .n,
+html[data-theme="dark"] .highlight a .na,
+html[data-theme="dark"] .highlight a .nb,
+html[data-theme="dark"] .highlight a .nc,
+html[data-theme="dark"] .highlight a .nf,
+html[data-theme="dark"] .highlight a .nv,
+html[data-theme="dark"] .highlight a .nn,
+html[data-theme="dark"] .highlight a .pre,
+html[data-theme="dark"] .highlight a .o,
+html[data-theme="dark"] .highlight a .p {
+    color: #0969da !important;
+}
+html[data-theme="dark"] .highlight a:hover,
+html[data-theme="dark"] .highlight a:hover *,
+html[data-theme="dark"] .highlight a:hover .n,
+html[data-theme="dark"] .highlight a:hover .nc,
+html[data-theme="dark"] .highlight a:hover .nf {
+    color: #0969da !important;
+}
+
+/* Parameter-name box in member-detail "Parameters" lists (light + dark). The
+   `section[…-documentation]` selector out-specifies the blanket transparent
+   `<code>` rule so the box survives in dark mode. */
+code.opencv-param-name,
+section[id$="-documentation"] code.opencv-param-name {
+    background-color: #eff1f3 !important;
+    border: 1px solid #d0d7de !important;
+    border-radius: 4px !important;
+    padding: 0.1em 0.4em !important;
+    font-size: 0.85em !important;
+    color: #24292f !important;
+    white-space: nowrap;
+}
+html[data-theme="dark"] code.opencv-param-name,
+html[data-theme="dark"] section[id$="-documentation"] code.opencv-param-name {
+    background-color: #2d333b !important;
+    border: 1px solid #444c56 !important;
+    color: #adbac7 !important;
+}

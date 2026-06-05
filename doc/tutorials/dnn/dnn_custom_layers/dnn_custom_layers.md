@@ -96,38 +96,9 @@ After network was initialized only `forward` method is called for every network'
 reallocate all the internal memory. That leads to efficiency gaps. Try to initialize
 and deploy models using a fixed batch size and image's dimensions.
 
-## Example: custom layer from Caffe
-Let's create a custom layer `Interp` from https://github.com/cdmh/deeplab-public.
-It's just a simple resize that takes an input blob of size `N x C x Hi x Wi` and returns
-an output blob of size `N x C x Ho x Wo` where `N` is a batch size, `C` is a number of channels,
-`Hi x Wi` and `Ho x Wo` are input and output `height x width` correspondingly.
-This layer has no trainable weights but it has hyper-parameters to specify an output size.
-
-In example,
-~~~~~~~~~~~~~
-layer {
-  name: "output"
-  type: "Interp"
-  bottom: "input"
-  top: "output"
-  interp_param {
-    height: 9
-    width: 8
-  }
-}
-~~~~~~~~~~~~~
-
-This way our implementation can look like:
-
-@snippet dnn/custom_layers.hpp InterpLayer
-
-Next we need to register a new layer type and try to import the model.
-
-@snippet dnn/custom_layers.hpp Register InterpLayer
-
 ## Example: custom layer from TensorFlow
 This is an example of how to import a network with [tf.image.resize_bilinear](https://www.tensorflow.org/versions/master/api_docs/python/tf/image/resize_bilinear)
-operation. This is also a resize but with an implementation different from OpenCV's or `Interp` above.
+operation. This is also a resize but with an implementation different from OpenCV's built-in resize.
 
 Let's create a single layer network:
 ~~~~~~~~~~~~~{.py}
@@ -235,13 +206,11 @@ in the opencv_extra repository.
 ## Define a custom layer in Python
 The following example shows how to customize OpenCV's layers in Python.
 
-Let's consider [Holistically-Nested Edge Detection](https://arxiv.org/abs/1504.06375)
-deep learning model. That was trained with one and only difference comparing to
-a current version of [Caffe framework](http://caffe.berkeleyvision.org/). `Crop`
-layers that receive two input blobs and crop the first one to match spatial dimensions
-of the second one used to crop from the center. Nowadays Caffe's layer does it
-from the top-left corner. So using the latest version of Caffe or OpenCV you will
-get shifted results with filled borders.
+Let's consider the [Holistically-Nested Edge Detection](https://arxiv.org/abs/1504.06375)
+model. Its `Crop` layers receive two input blobs and crop the first one to match the
+spatial dimensions of the second. OpenCV's built-in `Crop` layer trims from the
+top-left corner, whereas this model expects cropping from the center, so using the
+built-in behaviour directly would produce shifted results with filled borders.
 
 Next we're going to replace OpenCV's `Crop` layer that makes top-left cropping by
 a centric one.

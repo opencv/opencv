@@ -6,7 +6,7 @@
             "mean": "0, 0, 0",
             "std": "1",
             "swapRB": "true",
-            "modelUrl": "https://media.githubusercontent.com/media/onnx/models/main/vision/style_transfer/fast_neural_style/model/mosaic-9.onnx"
+            "modelUrl": "https://media.githubusercontent.com/media/onnx/models/main/validated/vision/style_transfer/fast_neural_style/model/mosaic-9.onnx"
         },
         {
             "model": "candy-9.onnx",
@@ -14,7 +14,7 @@
             "mean": "0, 0, 0",
             "std": "1",
             "swapRB": "true",
-            "modelUrl": "https://media.githubusercontent.com/media/onnx/models/main/vision/style_transfer/fast_neural_style/model/candy-9.onnx"
+            "modelUrl": "https://media.githubusercontent.com/media/onnx/models/main/validated/vision/style_transfer/fast_neural_style/model/candy-9.onnx"
         },
         {
             "model": "rain-princess-9.onnx",
@@ -22,7 +22,7 @@
             "mean": "0, 0, 0",
             "std": "1",
             "swapRB": "true",
-            "modelUrl": "https://media.githubusercontent.com/media/onnx/models/main/vision/style_transfer/fast_neural_style/model/rain-princess-9.onnx"
+            "modelUrl": "https://media.githubusercontent.com/media/onnx/models/main/validated/vision/style_transfer/fast_neural_style/model/rain-princess-9.onnx"
         },
         {
             "model": "udnie-9.onnx",
@@ -30,7 +30,7 @@
             "mean": "0, 0, 0",
             "std": "1",
             "swapRB": "true",
-            "modelUrl": "https://media.githubusercontent.com/media/onnx/models/main/vision/style_transfer/fast_neural_style/model/udnie-9.onnx"
+            "modelUrl": "https://media.githubusercontent.com/media/onnx/models/main/validated/vision/style_transfer/fast_neural_style/model/udnie-9.onnx"
         },
         {
             "model": "pointilism-9.onnx",
@@ -38,7 +38,7 @@
             "mean": "0, 0, 0",
             "std": "1",
             "swapRB": "true",
-            "modelUrl": "https://media.githubusercontent.com/media/onnx/models/main/vision/style_transfer/fast_neural_style/model/pointilism-9.onnx"
+            "modelUrl": "https://media.githubusercontent.com/media/onnx/models/main/validated/vision/style_transfer/fast_neural_style/model/pointilism-9.onnx"
         }
     ]
 }

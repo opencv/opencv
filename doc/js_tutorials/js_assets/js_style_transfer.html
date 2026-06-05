@@ -11,7 +11,7 @@
 <h2>Style Transfer Example</h2>
 <p>
     This tutorial shows you how to write an style transfer example with OpenCV.js.<br>
-    To try the example you should click the <b>modelFile</b> button(and <b>configFile</b> button if needed) to upload inference model.
+    To try the example you should click the <b>modelFile</b> button to upload an ONNX model file.
     You can find the model URLs and parameters in the <a href="#appendix">model info</a> section.
     Then You should change the parameters in the first code snippet according to the uploaded model.
     Finally click <b>Try it</b> button to see the result. You can choose any other images.<br>
@@ -42,13 +42,6 @@
             <td>
                 <div class="caption">
                     modelFile <input type="file" id="modelFile" name="file">
-                </div>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <div class="caption">
-                    configFile <input type="file" id="configFile">
                 </div>
             </td>
         </tr>
@@ -90,7 +83,7 @@ swapRB = false;
 <script id="codeSnippet1" type="text/code-snippet">
 main = async function() {
     const input = getBlobFromImage(inputSize, mean, std, swapRB, 'canvasInput');
-    let net = cv.readNet(configPath, modelPath);
+    let net = cv.readNet(modelPath);
     net.setInput(input);
     const start = performance.now();
     const result = net.forward();
@@ -146,7 +139,7 @@ postProcess = function(result) {
     let ctx = canvas.getContext('2d');
     let img = new Image();
     img.crossOrigin = 'anonymous';
-    img.src = 'lena.png';
+    img.src = 'lena.jpg';
     img.onload = function() {
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     };
@@ -171,22 +164,12 @@ postProcess = function(result) {
         loadImageToCanvas(e, 'canvasInput');
     });
 
-    let configPath = "";
-    let configFile = document.getElementById('configFile');
-    configFile.addEventListener('change', async (e) => {
-        initStatus();
-        configPath = await loadModel(e);
-        document.getElementById('status').innerHTML = `The config file '${configPath}' is created successfully.`;
-    });
-
     let modelPath = "";
     let modelFile = document.getElementById('modelFile');
     modelFile.addEventListener('change', async (e) => {
         initStatus();
         modelPath = await loadModel(e);
         document.getElementById('status').innerHTML = `The model file '${modelPath}' is created successfully.`;
-        configPath = "";
-        configFile.value = "";
     });
 
     utils.loadOpenCv(() => {

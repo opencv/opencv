@@ -24,7 +24,7 @@ from conf_helpers.postprocess import _inline_coll_graphs_on_finish
 # -- Project ----------------------------------------------------------------
 project = "OpenCV"
 author = "OpenCV Team"
-release = "5.x"
+release = "5.0"
 
 # -- Sphinx core ------------------------------------------------------------
 extensions = ["myst_parser"]
@@ -143,7 +143,16 @@ html_css_files = [
     "custom.css",
 ]
 html_theme_options = {
-    "logo": {"text": f"OpenCV {release}"},
+    "logo": {
+        "text": f"OpenCV {release}",
+        "image_light": "_static/opencv-logo.svg",
+        "image_dark": "_static/opencv-logo.svg",
+    },
+    # Navbar layout: logo on the left, version switcher right beside it —
+    # mirrors the legacy docs.opencv.org header where the version selector
+    # sits inline with the wordmark. The switcher template reads the shared
+    # /version.js (window.OPENCV_DOC_VERSIONS); no build-time list is generated.
+    "navbar_start": ["navbar-logo", "opencv-version-switcher"],
     "header_links_before_dropdown": 6,
     "external_links": [
         {"docname": master_doc,                "name": "Main Page"},

@@ -164,6 +164,12 @@ def _translate(text: str, docname: str | None = None) -> str:
         lambda m: f"# {m.group('title').strip()}",
         text, flags=re.MULTILINE)
 
+    # 1c2. Setext H2s starting with digit+dot ("1. Moments\n---") -> ATX ##.
+    text = re.sub(
+        r"^(?P<title>\d+\.[^\n]+?)[ \t]*\n-[-]{2,}[ \t]*$",
+        lambda m: f"## {m.group('title').strip()}",
+        text, flags=re.MULTILINE)
+
     # 1d. Demote every H1 after the first to H2.
     def _demote_extra_h1s(src: str) -> str:
         fence_open_re = re.compile(r'^[ \t]*(?:`{3,}|~{3,})')
@@ -197,9 +203,46 @@ def _translate(text: str, docname: str | None = None) -> str:
             (len(l) - len(l.lstrip()) for l in lines if l.strip()), default=0)
         body = "\n".join(l[min_ind:] for l in lines).strip()
         return f"\n:::{{{kind}}}\n{body}\n:::\n"
+    _ac_stash: dict[str, str] = {}
+    def _ac_hide(m: re.Match) -> str:
+        k = f"\x00AC{len(_ac_stash)}\x00"; _ac_stash[k] = m.group(0); return k
+    _t = re.sub(r"@code(?:\{[^}]*\})?.*?@endcode", _ac_hide, text, flags=re.DOTALL)
+    _t = re.sub(
+        r"^[ \t]*@(?P<dir>note|see|warning|sa)[ \t]*\n?(?P<body>.+?)"
+        r"(?=\n[ \t]*\n|\n[ \t]*@[A-Za-z]|\Z)",
+        _admon_repl, _t, flags=re.DOTALL | re.MULTILINE)
+    for _k, _v in _ac_stash.items():
+        _t = _t.replace(_k, _v)
+    text = _t
+
+    # MyST definition list with "Parameters" heading.
+    def _inline_block_math(s: str) -> str:
+        if re.match(r"^\\f\[.+\\f\]$", s.strip()):
+            return s
+        return re.sub(r"\\f\[(.+?)\\f\]", lambda mm: f"${mm.group(1).strip()}$", s)
+    def _param_block_repl(m: re.Match) -> str:
+        result, has_param, cur_name, cur_desc = [], False, None, []
+        for line in m.group(0).split("\n"):
+            pm = re.match(r"@param\s+(\S+)\s+(.*)", line.strip())
+            rm = re.match(r"@return\s+(.*)", line.strip())
+            if pm:
+                if cur_name:
+                    result.append(f"`{cur_name}`\n: {_inline_block_math(' '.join(cur_desc))}")
+                cur_name, cur_desc, has_param = pm.group(1), [pm.group(2).strip()], True
+            elif rm:
+                if cur_name:
+                    result.append(f"`{cur_name}`\n: {_inline_block_math(' '.join(cur_desc))}")
+                    cur_name = None
+                result.append(f"*(return value)*\n: {_inline_block_math(rm.group(1).strip())}")
+            elif cur_name and line.strip():
+                cur_desc.append(line.strip())
+        if cur_name:
+            result.append(f"`{cur_name}`\n: {_inline_block_math(' '.join(cur_desc))}")
+        header = "\n**Parameters**\n\n" if has_param else "\n"
+        return header + "\n\n".join(result) + "\n"
     text = re.sub(
-        r"^[ \t]*@(?P<dir>note|see|warning|sa)[ \t]*\n?(?P<body>.+?)(?=\n[ \t]*\n|\n[ \t]*@[A-Za-z]|\Z)",
-        _admon_repl, text, flags=re.DOTALL | re.MULTILINE)
+        r"((?:^@(?:param\s+\S+|return)\s+[^\n]+\n(?:[ \t]+[^\n]+\n)*)+)",
+        _param_block_repl, text, flags=re.MULTILINE)
 
     # 2. Doxygen LaTeX math markers; preserve indent so blocks inside list items stay in the list.
     def _split_adj_math(m: re.Match) -> str:
@@ -209,7 +252,11 @@ def _translate(text: str, docname: str | None = None) -> str:
                   _split_adj_math, text, flags=re.MULTILINE)
     def _fblock(m: re.Match) -> str:
         ind = m.group("indent")
-        return f"\n{ind}$$\n{m.group('body').strip()}\n{ind}$$\n"
+        body = m.group("body").strip()
+        if "\\\\" in body:
+            body = re.sub(r"\n\s*\n", "\n", body)
+            return f"\n{ind}```{{math}}\n{ind}{body}\n{ind}```\n"
+        return f"\n{ind}$$\n{body}\n{ind}$$\n"
     text = re.sub(r"^(?P<indent>[ \t]*)\\f\[(?P<body>.+?)\\f\]",
                   _fblock, text, flags=re.DOTALL | re.MULTILINE)
     text = re.sub(r"\\f\[(.+?)\\f\]",
@@ -258,10 +305,17 @@ def _translate(text: str, docname: str | None = None) -> str:
         text, flags=re.MULTILINE)
 
     # 3d. \htmlonly ... \endhtmlonly -> `{raw} html`.
+    _depth = len(docname.split("/")) - 1 if docname else 1
+    _to_root = "../" * _depth
+    def _htmlonly_repl(m: re.Match) -> str:
+        body = re.sub(r'src="(?:\.\./)+(?P<f>js_[^"]+)"',
+                      lambda mm: f'src="{_to_root}js_tutorials/{mm.group("f")}"',
+                      m.group("body"))
+        body = re.sub(r'\s*onload="[^"]*"', ' height="700px"', body)
+        return f"\n```{{raw}} html\n{body.strip()}\n```\n"
     text = re.sub(
         r"\\htmlonly\s*\n(?P<body>.*?)\n\s*\\endhtmlonly",
-        lambda m: f"\n```{{raw}} html\n{m.group('body').strip()}\n```\n",
-        text, flags=re.DOTALL)
+        _htmlonly_repl, text, flags=re.DOTALL)
 
     # 3e. Plain fences with Doxygen lang spec ("```.sh") -> strip dot, alias-map.
     text = re.sub(
@@ -357,7 +411,61 @@ def _translate(text: str, docname: str | None = None) -> str:
         r"@link\s+(?P<target>[\w-]+)(?P<disp>.*?)@endlink",
         _link_repl, text, flags=re.DOTALL)
 
-    if docname and (docname.startswith("main_modules/") or docname.startswith("extra_modules/")):
+    # API stub rewrites — extended from `api/core_basic` to every `api/`
+    # page so the Functions/Typedefs detail blocks on `core_array`,
+    # `core_utils`, `core_cluster`, … get the same per-token token
+    # linkifier (step 8g) that turns `InputArray`, `OutputArray`,
+    # `Mat`, `_Tp`, etc. inside the signature codespans into individual
+    # `<a>` anchors. The pre-existing regex-driven steps (8a, 8b, 8e,
+    # 8i, 8j and the Vec-rows / cv::Ptr rewrites) are no-ops on pages
+    # whose markdown doesn't match their patterns, so widening the gate
+    # is safe.
+    if docname and (docname.startswith("api/")
+                    or docname.startswith("main_modules/")
+                    or docname.startswith("extra_modules/")):
+        # Idempotency guard: the stub generator now emits the
+        # "Shorter aliases for the most popular specializations of
+        # Vec<T,n>" section itself (via the `@name` named-group path
+        # in `_summary_block`), so the source MD already contains
+        # both the heading and the Vec rows. The legacy rewrite
+        # below also extracts the rows and injects a fresh section
+        # before "## Typedef Documentation" — without this guard the
+        # heading renders TWICE, the first instance an empty table.
+        # Skip the rewrite when the source MD already has the
+        # heading.
+        if "## Shorter aliases for the most popular specializations of Vec<T,n>" not in text:
+            _vec_rows_re = re.compile(
+                r"(?:^\| `Vec<[^`]*` \| [^\n]*\n)+", re.MULTILINE)
+            _vm = _vec_rows_re.search(text)
+            if _vm:
+                _vec_rows = _vm.group(0)
+                text = text[:_vm.start()] + text[_vm.end():]
+                _shorter = (
+                    "## Shorter aliases for the most popular specializations of "
+                    "Vec<T,n>\n\n"
+                    # Carry the `.api-typedef-table` class so the section
+                    # inherits the same table styling (and the light-mode
+                    # blue Type-cell anchor rule) as the main Typedefs table
+                    # above.
+                    "{.api-typedef-table}\n"
+                    "| Type | Name | Description |\n"
+                    "|---|---|---|\n"
+                    + _vec_rows + "\n")
+                text = text.replace(
+                    "## Typedef Documentation",
+                    _shorter + "## Typedef Documentation",
+                    1)
+
+        # 8c. `{doxygentypedef} cv::Ptr` -> hand-rolled cpp:type (breathe skips C++11 aliases).
+        text = re.sub(
+            r"```\{doxygentypedef\} cv::Ptr\s*\n:project: opencv\s*\n```",
+            "```{eval-rst}\n"
+            ".. cpp:namespace:: cv\n"
+            ".. cpp:type:: template<typename _Tp> Ptr = std::shared_ptr<_Tp>\n"
+            "```",
+            text)
+
+        # 8e. Classes table rows: append template params + "View details" link.
         def _rewrite_class_row(m: re.Match) -> str:
             kind = m.group("kind")
             name = m.group("name")       # 'cv::dnn::BackendNode'
@@ -486,34 +594,96 @@ def _translate(text: str, docname: str | None = None) -> str:
                 r'(?P<inner>.*?)(?P<close></code>)',
                 _linkify_inside_code, text, flags=re.DOTALL)
 
-            def _linkify_markdown_codespan(m: re.Match) -> str:
-                content = m.group("content")
-                # Prefix-aware: `cv::Name` is one hit so the anchor covers both.
-                hits = [(t.start(), t.end(), t.group(0)) for t in
-                        _tok_re.finditer(content)
-                        if _token_url(_bare(t.group(0)))]
-                if not hits:
+    # 8g. Linkify recognized type tokens in code spans across every API
+    # page (Functions summary + Function Documentation detail blocks).
+    # Was previously gated to `main_modules/core_basic` only — that
+    # left parameter types in other module pages (calib, dnn, …) as
+    # plain code chips even though their local typedef/class targets
+    # exist. Pass 1 walks any existing `<code>` HTML emitted by
+    # `_func_row_split_md` (function name already wrapped in `<a>`;
+    # remaining text tokens get individual anchors). Pass 2 walks
+    # remaining markdown code spans for any rows still using the
+    # backticked-signature form.
+    if (docname and (docname.startswith("api/")
+                     or docname.startswith("main_modules/")
+                     or docname.startswith("extra_modules/"))
+            and (_LOCAL_CLASS_URL or _LOCAL_TYPEDEF_URL)):
+        def _token_url(tok: str) -> str | None:
+            # Tokens absent from the tagfile stay plain.
+            return _LOCAL_CLASS_URL.get(tok) or _LOCAL_TYPEDEF_URL.get(tok)
+        # Match an optional `cv::` prefix so the anchor spans `cv::Name`.
+        _tok_re = re.compile(r"(?:cv::)?_?[A-Za-z][A-Za-z0-9_]*")
+        def _bare(tok: str) -> str:
+            return tok[4:] if tok.startswith("cv::") else tok
+        def _anchor_text(tok: str) -> str:
+            # Encode `::` so the later cv-linkifier doesn't nest a second anchor.
+            return tok.replace("::", "&#58;&#58;")
+        def _linkify_html_segment(seg: str) -> str:
+            def _sub(m: re.Match) -> str:
+                url = _token_url(_bare(m.group(0)))
+                if not url:
                     return m.group(0)
-                from html import escape as _esc
-                parts, last = [], 0
-                for s, e, tok in hits:
-                    parts.append(_esc(content[last:s]))
-                    parts.append(f'<a class="reference internal" '
-                                 f'href="{_token_url(_bare(tok))}">'
-                                 f'{_anchor_text(tok)}</a>')
-                    last = e
-                parts.append(_esc(content[last:]))
-                return (f'<code class="docutils literal notranslate">'
-                        f'{"".join(parts)}</code>')
-            _masked: list[str] = []
-            def _mask(m: re.Match) -> str:
-                _masked.append(m.group(0))
-                return f"\x00MDLINK{len(_masked)-1}\x00"
-            text = re.sub(r"\[(?:`[^`\n]+`|<br>)+\]\([^)\n]+\)", _mask, text)
-            text = re.sub(r"`(?P<content>[^`\n]+?)`",
-                          _linkify_markdown_codespan, text)
-            text = re.sub(r"\x00MDLINK(\d+)\x00",
-                          lambda m: _masked[int(m.group(1))], text)
+                return (f'<a class="reference internal" '
+                        f'href="{url}">{_anchor_text(m.group(0))}</a>')
+            return _tok_re.sub(_sub, seg)
+        # Pass 1: walk every `<code class="docutils literal notranslate">…</code>`
+        # block; skip any `<a>` already inside (function-name anchor from
+        # `_func_row_split_md`), linkify recognized tokens in the rest.
+        def _linkify_inside_code(m: re.Match) -> str:
+            inner = m.group("inner")
+            out, i, n = [], 0, len(inner)
+            while i < n:
+                if inner.startswith("<a ", i):
+                    j = inner.find("</a>", i)
+                    if j < 0:
+                        out.append(inner[i:]); break
+                    out.append(inner[i:j + 4]); i = j + 4
+                else:
+                    k = inner.find("<a ", i)
+                    if k < 0:
+                        out.append(_linkify_html_segment(inner[i:])); break
+                    out.append(_linkify_html_segment(inner[i:k])); i = k
+            return m.group("open") + "".join(out) + m.group("close")
+        text = re.sub(
+            r'(?P<open><code class="docutils literal notranslate">)'
+            r'(?P<inner>.*?)(?P<close></code>)',
+            _linkify_inside_code, text, flags=re.DOTALL)
+        # Pass 2: remaining markdown code spans — the Type-column typedef
+        # chips (`InputArray`, `Mat_<uchar>`, `const _InputArray &`, …)
+        # and any other backticked tokens that MyST only turns into
+        # `<code><span class="pre">…</span></code>` at render time, AFTER
+        # this step has run (so pass 1's `<code>` walk can't reach them,
+        # and postprocess's inline walker can't either — Sphinx's
+        # `<span class="pre">` wrapper defeats its body regex). Markdown
+        # links are masked first so anchored Name-column cells stay intact.
+        def _linkify_markdown_codespan(m: re.Match) -> str:
+            content = m.group("content")
+            # Prefix-aware: `cv::Name` is one hit so the anchor covers both.
+            hits = [(t.start(), t.end(), t.group(0)) for t in
+                    _tok_re.finditer(content)
+                    if _token_url(_bare(t.group(0)))]
+            if not hits:
+                return m.group(0)
+            from html import escape as _esc
+            parts, last = [], 0
+            for s, e, tok in hits:
+                parts.append(_esc(content[last:s]))
+                parts.append(f'<a class="reference internal" '
+                             f'href="{_token_url(_bare(tok))}">'
+                             f'{_anchor_text(tok)}</a>')
+                last = e
+            parts.append(_esc(content[last:]))
+            return (f'<code class="docutils literal notranslate">'
+                    f'{"".join(parts)}</code>')
+        _masked: list[str] = []
+        def _mask(m: re.Match) -> str:
+            _masked.append(m.group(0))
+            return f"\x00MDLINK{len(_masked)-1}\x00"
+        text = re.sub(r"\[(?:`[^`\n]+`|<br>)+\]\([^)\n]+\)", _mask, text)
+        text = re.sub(r"`(?P<content>[^`\n]+?)`",
+                      _linkify_markdown_codespan, text)
+        text = re.sub(r"\x00MDLINK(\d+)\x00",
+                      lambda m: _masked[int(m.group(1))], text)
 
     # 6c. Bullet lists of @subpage/@ref -> toctree + visible list. Runs BEFORE step 7.
     def _subpage_list_to_toctree(src: str) -> str:
@@ -606,6 +776,17 @@ def _translate(text: str, docname: str | None = None) -> str:
     text = re.sub(r'@ref\s+(?P<name>[\w:-]+)(?:\s+"(?P<disp>[^"]+)")?',
                   _ref_repl, text)
 
+    # 7c. cv.Name -> Markdown link using _CV_SYMBOL_URL; skips code spans.
+    if _CV_SYMBOL_URL:
+        def _cvlink_repl(m: re.Match) -> str:
+            url = _CV_SYMBOL_URL.get(m.group(1))
+            return f'[cv.{m.group(1)}]({url})' if url else m.group(0)
+        _parts = re.split(r'(```.*?```|`[^`\n]+`)', text, flags=re.DOTALL)
+        text = ''.join(
+            p if i % 2 else re.sub(
+                r'(?<!\[)(?<!\()cv\.([A-Za-z][A-Za-z0-9_]*)', _cvlink_repl, p)
+            for i, p in enumerate(_parts))
+
     # 8. @cite KEY -> `[N]` HTML anchor to citelist (N from opencv.bib order).
     def _cite_repl(m: re.Match) -> str:
         key = m.group("key")
@@ -667,6 +848,19 @@ def _translate(text: str, docname: str | None = None) -> str:
             return f"{m.group('bullet')}\n\n{desc}\n\n"
         return pat.sub(repl, src)
     text = _dedent_subpage_descriptions(text)
+
+    # 9z. Doxygen group/member URLs -> local cross-ref when we built that page.
+    def _doxy_to_local(m: re.Match) -> str:
+        base, anchor = m.group("base"), m.group("anchor")
+        if anchor:
+            tgt = f"{base}_1{anchor}"
+            return f"](#{tgt})" if tgt in _LOCAL_MEMBER_IDS else m.group(0)
+        tgt = f"api_{base[len('group__'):].replace('__', '_')}"
+        return f"](#{tgt})" if tgt in _ANCHOR_TO_DOC else m.group(0)
+    text = re.sub(
+        r"\]\(" + re.escape(DOXYGEN_BASE_URL)
+        + r"(?:[\w-]+/)*?(?P<base>group__\w+)\.html(?:#(?P<anchor>\w+))?\)",
+        _doxy_to_local, text)
 
     # 10. @next_tutorial / @prev_tutorial -> drop
     text = re.sub(r"^@(?:next|prev)_tutorial\{[^}]*\}\s*$", "",
@@ -766,7 +960,20 @@ def _translate(text: str, docname: str | None = None) -> str:
         r'!\[(?P<alt>[^\]]*)\]\((?:[^)]*?/)?(?P<dir>images|js_assets)/(?P<rel>[^)]+)\)',
         _img_repl, text)
 
-    # 12b. Cross-tree contrib image refs -> raw-HTML <img>, depth-relative URL.
+    # 12b. Bare image filename (no dir prefix, e.g. "shape.jpg") -> _IMAGE_INDEX lookup.
+    def _bare_img_repl(m: re.Match) -> str:
+        rel = m.group("rel")
+        if docname:
+            local = DOC_ROOT / pathlib.Path(docname).parent / "images" / rel
+            if local.is_file():
+                return f'{m.group("pre")}images/{rel})'
+        hit = _IMAGE_INDEX.get(rel)
+        return f'{m.group("pre")}/{hit})' if hit else m.group(0)
+    text = re.sub(
+        r'(?P<pre>!\[[^\]]*\]\()(?P<rel>[A-Za-z0-9_.-]+\.[A-Za-z]{2,4})\)',
+        _bare_img_repl, text)
+
+    # 12c. Cross-tree contrib image refs -> raw-HTML <img>, depth-relative URL.
     def _img_xtree(m: re.Match) -> str:
         alt, rel = m.group("alt"), m.group("rel")
         if rel.startswith("/") or "://" in rel:

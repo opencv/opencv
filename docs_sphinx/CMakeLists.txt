@@ -101,23 +101,28 @@ set(_LEGACY_DOXYFILE "${CMAKE_BINARY_DIR}/doc/Doxyfile")
 set(_DOXYGEN_XML_DIR "${CMAKE_BINARY_DIR}/doc/doxygen/xml")
 
 if(NOT DEFINED SPHINX_API_MODULES)
+  # Any module whose include tree declares an @defgroup, keyed on dir name; matlab excluded.
   set(SPHINX_API_MODULES "")
-  file(GLOB _umbrella_headers "${CMAKE_SOURCE_DIR}/modules/*/include/opencv2/*.hpp")
-  # Also scan opencv_contrib modules when present.
+  set(_api_module_roots "${CMAKE_SOURCE_DIR}/modules")
   if(OPENCV_EXTRA_MODULES_PATH AND EXISTS "${OPENCV_EXTRA_MODULES_PATH}")
-    file(GLOB _contrib_umbrellas "${OPENCV_EXTRA_MODULES_PATH}/*/include/opencv2/*.hpp")
-    list(APPEND _umbrella_headers ${_contrib_umbrellas})
+    list(APPEND _api_module_roots "${OPENCV_EXTRA_MODULES_PATH}")
   endif()
-  foreach(_hdr ${_umbrella_headers})
-    get_filename_component(_stem "${_hdr}" NAME_WE)
-    # Only the umbrella header modules/<m>/include/opencv2/<m>.hpp.
-    if(_hdr MATCHES "/modules/${_stem}/include/opencv2/${_stem}\\.hpp$")
-      file(READ "${_hdr}" _hdr_contents)
-      if(_hdr_contents MATCHES "@defgroup")
-        list(APPEND SPHINX_API_MODULES "${_stem}")
+  foreach(_root ${_api_module_roots})
+    file(GLOB _api_module_dirs RELATIVE "${_root}" "${_root}/*")
+    foreach(_m ${_api_module_dirs})
+      if(IS_DIRECTORY "${_root}/${_m}/include/opencv2" AND NOT _m STREQUAL "matlab")
+        file(GLOB_RECURSE _api_hdrs "${_root}/${_m}/include/opencv2/*.hpp")
+        foreach(_hdr ${_api_hdrs})
+          file(READ "${_hdr}" _hdr_contents)
+          if(_hdr_contents MATCHES "@defgroup")
+            list(APPEND SPHINX_API_MODULES "${_m}")
+            break()
+          endif()
+        endforeach()
       endif()
-    endif()
+    endforeach()
   endforeach()
+  list(REMOVE_DUPLICATES SPHINX_API_MODULES)
   list(SORT SPHINX_API_MODULES)
   message(STATUS "docs_sphinx: discovered API modules: ${SPHINX_API_MODULES}")
 endif()
@@ -141,7 +146,6 @@ if(EXISTS "${_LEGACY_DOXYFILE}")
     "XML_OUTPUT = xml\n"
     "XML_PROGRAMLISTING = NO\n"
     "CREATE_SUBDIRS = NO\n"
-    "EXCLUDE_PATTERNS += cap_ios.h\n"
     "CLASS_GRAPH = NO\n"
     "COLLABORATION_GRAPH = NO\n"
     "GROUP_GRAPHS = NO\n"
@@ -191,6 +195,23 @@ if(NOT SPHINX_JOBS)
   set(SPHINX_JOBS "auto")
 endif()
 set(_SPHINX_WARNINGS "${CMAKE_CURRENT_BINARY_DIR}/sphinx-warnings.log")
+# opencv.js (JS Try-it): download once into the build dir, bundled into html output.
+set(_OPENCV_JS "${CMAKE_CURRENT_BINARY_DIR}/opencv.js")
+if(NOT EXISTS "${_OPENCV_JS}")
+  message(STATUS "docs_sphinx: downloading opencv.js (one-time)")
+  file(DOWNLOAD "https://docs.opencv.org/5.x/opencv.js" "${_OPENCV_JS}"
+       SHOW_PROGRESS STATUS _DL_STATUS)
+  list(GET _DL_STATUS 0 _DL_OK)
+  if(NOT _DL_OK EQUAL 0)
+    message(WARNING "docs_sphinx: opencv.js download failed — Try-it won't run")
+    file(REMOVE "${_OPENCV_JS}")
+    set(_OPENCV_JS "")
+  endif()
+endif()
+if(_OPENCV_JS)
+  list(APPEND _SPHINX_ENV "OPENCV_JS_PATH=${_OPENCV_JS}")
+endif()
+
 add_custom_target(sphinx
   COMMAND ${CMAKE_COMMAND} -E make_directory ${_SPHINX_OUTDIR}
   COMMAND ${CMAKE_COMMAND} -E env ${_SPHINX_ENV}
