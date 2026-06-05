@@ -938,7 +938,11 @@ int cv::borderInterpolate( int p, int len, int borderType )
     {
         CV_Assert(len > 0);
         if( p < 0 )
-            p -= ((p-len+1)/len)*len;
+            // Use long long arithmetic to avoid signed integer overflow when p is
+            // close to INT_MIN. The sub-expression (p - len + 1) can underflow if
+            // performed in 32-bit, which is undefined behavior.  The final result
+            // is always in [0, len) and fits safely back in int.
+            p = (int)((long long)p - (((long long)p - len + 1) / len) * (long long)len);
         if( p >= len )
             p %= len;
     }

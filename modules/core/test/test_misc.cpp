@@ -952,4 +952,96 @@ TEST_F(TestSetUpSkip, NoBodyRun) {
     FAIL() << "Unreachable code called";
 }
 
+// ── Tests for cv::borderInterpolate with BORDER_WRAP ──────────────────────
+// Regression tests for signed integer overflow (UB) when the coordinate p
+// is close to INT_MIN.  See https://github.com/opencv/opencv/issues/29232
+//
+// The expected values are derived from mathematical modulo (always >= 0):
+//   result == ((p % len) + len) % len
+
+// Reference helper: 64-bit modulo, always non-negative
+static int borderWrapRef(int p, int len) {
+    long long r = (long long)p % len;
+    return (int)((r + len) % len);
+}
+
+// Basic correctness – small negative coordinates
+TEST(Core_BorderInterpolate, WrapSmallNegative)
+{
+    const int len = 10;
+    for (int p = -50; p < 0; ++p) {
+        int got = cv::borderInterpolate(p, len, cv::BORDER_WRAP);
+        int exp = borderWrapRef(p, len);
+        EXPECT_EQ(exp, got) << "p=" << p << " len=" << len;
+        EXPECT_GE(got, 0);
+        EXPECT_LT(got, len);
+    }
+}
+
+// Basic correctness – non-negative coordinates (passthrough / modulo path)
+TEST(Core_BorderInterpolate, WrapNonNegative)
+{
+    const int len = 10;
+    for (int p = 0; p < 50; ++p) {
+        int got = cv::borderInterpolate(p, len, cv::BORDER_WRAP);
+        int exp = borderWrapRef(p, len);
+        EXPECT_EQ(exp, got) << "p=" << p << " len=" << len;
+        EXPECT_GE(got, 0);
+        EXPECT_LT(got, len);
+    }
+}
+
+// Overflow regression – exact PoC from the bug report (issue #29232).
+// p = -2147483583 (near INT_MIN) caused signed integer overflow in the
+// original code: (-2147483583 - 269 + 1) underflows a 32-bit signed int.
+TEST(Core_BorderInterpolate, WrapNearIntMinPoC)
+{
+    const int p   = -2147483583;  // near INT_MIN (-2147483648)
+    const int len = 269;
+    const int exp = borderWrapRef(p, len);  // 176
+    int got = cv::borderInterpolate(p, len, cv::BORDER_WRAP);
+    EXPECT_EQ(exp, got);
+    EXPECT_GE(got, 0);
+    EXPECT_LT(got, len);
+}
+
+// Overflow regression – INT_MIN itself with various lengths
+TEST(Core_BorderInterpolate, WrapIntMin)
+{
+    const int p = INT_MIN;
+    const int lens[] = {1, 2, 10, 100, 1000, 32768, INT_MAX};
+    for (int len : lens) {
+        int got = cv::borderInterpolate(p, len, cv::BORDER_WRAP);
+        int exp = borderWrapRef(p, len);
+        EXPECT_EQ(exp, got) << "p=INT_MIN len=" << len;
+        EXPECT_GE(got, 0);
+        EXPECT_LT(got, len);
+    }
+}
+
+// Verify that all results are within [0, len) for a wide range of inputs
+// including values adjacent to INT_MIN.
+TEST(Core_BorderInterpolate, WrapResultInRange)
+{
+    const struct { int p; int len; } cases[] = {
+        {INT_MIN,         1},
+        {INT_MIN,     10000},
+        {INT_MIN,   INT_MAX},
+        {INT_MIN + 1, INT_MAX},
+        {INT_MIN + 2, INT_MAX - 1},
+        {-2147483583,    269},
+        {-2147483583, INT_MAX},
+        {-1,              1},
+        {-1,             10},
+        {INT_MAX,    INT_MAX},  // p == len, should wrap to 0
+    };
+    for (const auto& c : cases) {
+        int got = cv::borderInterpolate(c.p, c.len, cv::BORDER_WRAP);
+        int exp = borderWrapRef(c.p, c.len);
+        EXPECT_EQ(exp, got) << "p=" << c.p << " len=" << c.len;
+        EXPECT_GE(got, 0)      << "p=" << c.p << " len=" << c.len;
+        EXPECT_LT(got, c.len)  << "p=" << c.p << " len=" << c.len;
+    }
+}
+
 }} // namespace
