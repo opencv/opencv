@@ -14,33 +14,33 @@ namespace cv
 static std::string getType(const std::string& header)
 {
     std::string field = "'descr':";
-    int idx = header.find(field);
-    CV_Assert(idx != -1);
+    size_t idx = header.find(field);
+    CV_Assert(idx != std::string::npos);
 
-    int from = header.find('\'', idx + field.size()) + 1;
-    int to = header.find('\'', from);
+    size_t from = header.find('\'', idx + field.size()) + 1;
+    size_t to = header.find('\'', from);
     return header.substr(from, to - from);
 }
 
 static std::string getFortranOrder(const std::string& header)
 {
     std::string field = "'fortran_order':";
-    int idx = header.find(field);
-    CV_Assert(idx != -1);
+    size_t idx = header.find(field);
+    CV_Assert(idx != std::string::npos);
 
-    int from = header.find_last_of(' ', idx + field.size()) + 1;
-    int to = header.find(',', from);
+    size_t from = header.find_last_of(' ', idx + field.size()) + 1;
+    size_t to = header.find(',', from);
     return header.substr(from, to - from);
 }
 
 static std::vector<int> getShape(const std::string& header)
 {
     std::string field = "'shape':";
-    int idx = header.find(field);
-    CV_Assert(idx != -1);
+    size_t idx = header.find(field);
+    CV_Assert(idx != std::string::npos);
 
-    int from = header.find('(', idx + field.size()) + 1;
-    int to = header.find(')', from);
+    size_t from = header.find('(', idx + field.size()) + 1;
+    size_t to = header.find(')', from);
 
     std::string shapeStr = header.substr(from, to - from);
     if (shapeStr.empty())
