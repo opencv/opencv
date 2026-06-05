@@ -1944,9 +1944,6 @@ macro(ocv_get_smart_file_name output_var fpath)
   unset(__subir)
 endmacro()
 
-# Needed by install(DIRECTORY ...)
-set(compatible_MESSAGE_NEVER MESSAGE_NEVER)
-
 macro(ocv_git_describe var_name path)
   if(GIT_FOUND)
     execute_process(COMMAND "${GIT_EXECUTABLE}" describe --tags --exact-match --dirty
