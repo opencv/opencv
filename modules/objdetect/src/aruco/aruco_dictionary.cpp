@@ -76,6 +76,32 @@ void Dictionary::writeDictionary(FileStorage& fs, const String &name)
 bool Dictionary::identify(const Mat &onlyCellPixelRatio, CV_OUT int &idx, CV_OUT int &rotation, double maxCorrectionRate, float validBitIdThreshold) const {
     CV_Assert(onlyCellPixelRatio.rows == markerSize && onlyCellPixelRatio.cols == markerSize);
 
+    // Fill bit masks of cells that are not black (not0) and not white (not1).
+    const int s = (markerSize * markerSize + 8 - 1) / 8;
+    Mat1b temp(4, s);
+    uint8_t* not0 = temp.ptr(0), * not1 = temp.ptr(1);
+    int not0Byte = 0, not1Byte = 0, currentByte = 0, currentBit = 0;
+    for(int j = 0; j < markerSize; j++) {
+        for(int i = 0; i < markerSize; i++) {
+            not0Byte <<= 1; not1Byte <<= 1;
+            if(onlyCellPixelRatio.at<float>(j, i) > validBitIdThreshold) not0Byte |= 1;
+            if(onlyCellPixelRatio.at<float>(j, i) < 1 - validBitIdThreshold) not1Byte |= 1;
+            ++currentBit;
+            if(currentBit == 8) {
+                not0[currentByte] = not0Byte;
+                not1[currentByte] = not1Byte;
+                not0Byte = not1Byte = 0;
+                ++currentByte;
+                currentBit = 0;
+            }
+        }
+    }
+    if (currentBit != 0) {
+        not0[currentByte] = not0Byte;
+        not1[currentByte] = not1Byte;
+    }
+    uint8_t* temp0 = temp.ptr(2), * temp1 = temp.ptr(3);
+
     int maxCorrectionRecalculed = int(double(maxCorrectionBits) * maxCorrectionRate);
 
     idx = -1; // by default, not found
@@ -85,20 +111,16 @@ bool Dictionary::identify(const Mat &onlyCellPixelRatio, CV_OUT int &idx, CV_OUT
         int currentMinDistance = markerSize * markerSize + 1;
         int currentRotation = -1;
         for(int r = 0; r < 4; r++) {
-
-            Mat bitsRot = getBitsFromByteList(bytesList.rowRange(m, m + 1), markerSize, r);
-            bitsRot.convertTo(bitsRot, CV_32F);
-
-            // Loop over all bits dictBitsList [m, markerSize * markerSize, 4]; onlyCellPixelRatio [markerSize, markerSize]
-            int currentHamming = 0;
-            for(int i = 0; i < markerSize; i++) {
-                for(int j = 0; j < markerSize; j++) {
-                    // If detected bit is too far from the ground truth, consider it false.
-                    if(fabs(onlyCellPixelRatio.at<float>(i, j) - static_cast<float>(bitsRot.at<float>(i, j))) > validBitIdThreshold){
-                        currentHamming++;
-                    }
-                }
-            }
+            const uchar* bytesRot = bytesList.ptr(m) + r*s;
+            // We want: if (marker is 0 and input is not 0) or (marker is 1 and input is not 1)
+            // or: (!bytesRot && not0) || (bytesRot && not1)
+            // This is actually: not0 ^ ((not0 ^ not1) & bytesRot)
+            // temp0 = not0 ^ not1
+            hal::xor8u(not0, s, not1, s, temp0, s, s, 1, nullptr);
+            // temp1 = temp0 & bytesRot
+            hal::and8u(temp0, s, bytesRot, s, temp1, s, s, 1, nullptr);
+            hal::xor8u(not0, s, temp1, s, temp0, s, s, 1, nullptr);
+            int currentHamming = cv::hal::normHamming(temp0, s);
 
             if(currentHamming < currentMinDistance) {
                 currentMinDistance = currentHamming;
