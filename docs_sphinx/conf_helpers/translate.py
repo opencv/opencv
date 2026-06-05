@@ -129,6 +129,113 @@ def _read_snippet(rel_path: str, label: str | None) -> tuple[str, str]:
     return "\n".join(lines), lang
 
 
+# Patterns used by `_dedent_dash_hash_indent` to skip code regions.
+_DEDENT_AT_CODE_OPEN_RE = re.compile(r"^[ \t]*@code(?:\{[^}]*\})?\s*$")
+_DEDENT_AT_CODE_CLOSE_RE = re.compile(r"^[ \t]*@endcode\s*$")
+_DEDENT_FENCE_OPEN_RE = re.compile(r"^[ \t]*(`{3,}|~{3,})")
+_DEDENT_FENCE_CLOSE_RE = re.compile(r"^[ \t]*([`~]{3,})[ \t]*$")
+_DEDENT_DASH_HASH_RE = re.compile(r"^[ \t]*-#[ \t]")
+
+
+def _dedent_dash_hash_indent(src: str) -> str:
+    """Compress 4-space-per-level indent of `-#` Doxygen ordered-list
+    items (and every line of their body content) to 3-space-per-level.
+
+    OpenCV's tutorial sources use `-#` with 4 spaces of indent per
+    level of nesting — exactly the threshold at which CommonMark / MyST
+    classifies a line as an *indented code block*. The collision shows
+    up two ways in the rendered output:
+      * fence lines (` ``` cpp` / ` ``` python`) inside a `-#` body
+        rendering as literal text with `highlight-none` colouring;
+      * prose-continuation paragraphs and nested bullets inside a `-#`
+        body ending up wrapped in `highlight-none` code-block frames.
+    Both stem from the same root cause: 4-space indent → indented-code.
+
+    By mapping each level from 4 → 3 spaces, the deepest line in a
+    nested `-#` body stays below the 4-space-from-baseline threshold,
+    and CommonMark stops mis-classifying continuation as code. The
+    `-#` semantics are preserved — step 0b still converts to `1. ` and
+    MyST renders nested ordered lists.
+
+    Lines inside `@code…@endcode` blocks and pre-existing fenced code
+    blocks are passed through unchanged so snippet bodies retain their
+    language-native indentation.
+
+    Lines OUTSIDE any active `-#` context are also passed through —
+    the dedent only applies while a `-#` ancestor is open."""
+    lines = src.split("\n")
+    out: list[str] = []
+    # Each stack entry tracks one open `-#` ancestor:
+    #   (marker_col, baseline_col=marker_col+4)
+    # The list is "open" for any line whose indent >= the baseline of
+    # the topmost remaining ancestor.
+    stack: list[tuple[int, int]] = []
+    in_at_code = False
+    in_fence = False
+    fence_char = ""
+
+    def map_indent(n: int) -> int:
+        # 4-space-per-level → 3-space-per-level. Remainder within a
+        # level (0–3 spaces) is preserved as-is.
+        return (n // 4) * 3 + (n % 4)
+
+    for line in lines:
+        # @code…@endcode body — pass through unchanged.
+        if in_at_code:
+            out.append(line)
+            if _DEDENT_AT_CODE_CLOSE_RE.match(line):
+                in_at_code = False
+            continue
+        # Fenced code body — pass through.
+        if in_fence:
+            out.append(line)
+            cm = _DEDENT_FENCE_CLOSE_RE.match(line)
+            if cm and cm.group(1)[0] == fence_char:
+                in_fence = False
+            continue
+        # @code opener — enter skip mode for body.
+        if _DEDENT_AT_CODE_OPEN_RE.match(line):
+            in_at_code = True
+            out.append(line)
+            continue
+        # Fence opener — enter skip mode for body.
+        fm = _DEDENT_FENCE_OPEN_RE.match(line)
+        if fm:
+            fence_char = fm.group(1)[0]
+            in_fence = True
+            out.append(line)
+            continue
+
+        # Measure leading whitespace.
+        m_ind = re.match(r"^( *)", line)
+        indent = len(m_ind.group(1))
+        stripped = line[indent:]
+        # Blank line keeps the current `-#` context open without
+        # changing the stack.
+        if not stripped:
+            out.append(line)
+            continue
+
+        # `-#` marker — open a new level or replace the matching one.
+        if _DEDENT_DASH_HASH_RE.match(line):
+            while stack and stack[-1][0] >= indent:
+                stack.pop()
+            stack.append((indent, indent + 4))
+            out.append(" " * map_indent(indent) + stripped)
+            continue
+
+        # Non-`-#` line: pop ancestors whose baseline > this line's
+        # indent (we've fallen below them).
+        while stack and stack[-1][1] > indent:
+            stack.pop()
+        if not stack:
+            out.append(line)
+        else:
+            out.append(" " * map_indent(indent) + stripped)
+
+    return "\n".join(out)
+
+
 def _emit_toggles(tabs: list[tuple[str, str]]) -> str:
     if HAVE_SPHINX_DESIGN:
         out = ["", "``````{tab-set}"]
@@ -193,6 +300,12 @@ def _translate(text: str, docname: str | None = None) -> str:
     if docname and (docname.startswith("py_tutorials/py_video/")
                     or docname.startswith("py_tutorials/py_objdetect/")):
         text = "---\norphan: true\n---\n\n" + text
+
+    # 0a-dedent. Reduce 4-space-per-level `-#` nesting indent to 3 so
+    # continuation prose and nested markers stay below CommonMark's
+    # 4-space-indented-code threshold — see `_dedent_dash_hash_indent`
+    # for the rationale and the two bugs this addresses.
+    text = _dedent_dash_hash_indent(text)
 
     # 0b. "-# foo" -> "1. foo".
     text = re.sub(r"^(?P<indent>[ \t]*)-#[ \t]+",
