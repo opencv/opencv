@@ -52,7 +52,7 @@ class UndistortionFrameRender extends FrameRender {
     @Override
     public Mat render(CvCameraViewFrame inputFrame) {
         Mat renderedFrame = new Mat(inputFrame.rgba().size(), inputFrame.rgba().type());
-        Geometry.undistort(inputFrame.rgba(), renderedFrame,
+        Imgproc.undistort(inputFrame.rgba(), renderedFrame,
                 mCalibrator.getCameraMatrix(), mCalibrator.getDistortionCoefficients());
 
         return renderedFrame;
@@ -73,7 +73,7 @@ class ComparisonFrameRender extends FrameRender {
     @Override
     public Mat render(CvCameraViewFrame inputFrame) {
         Mat undistortedFrame = new Mat(inputFrame.rgba().size(), inputFrame.rgba().type());
-        Geometry.undistort(inputFrame.rgba(), undistortedFrame,
+        Imgproc.undistort(inputFrame.rgba(), undistortedFrame,
                 mCalibrator.getCameraMatrix(), mCalibrator.getDistortionCoefficients());
 
         Mat comparisonFrame = inputFrame.rgba();
