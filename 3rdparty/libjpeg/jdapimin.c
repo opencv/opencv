@@ -263,6 +263,9 @@ jpeg_read_header (j_decompress_ptr cinfo, boolean require_image)
       cinfo->global_state != DSTATE_INHEADER)
     ERREXIT1(cinfo, JERR_BAD_STATE, cinfo->global_state);
 
+  if (cinfo->src == NULL)		/* front end must have set up data source */
+    ERREXIT(cinfo, JERR_INPUT_EMPTY);
+
   retcode = jpeg_consume_input(cinfo);
 
   switch (retcode) {
