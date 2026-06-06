@@ -165,9 +165,9 @@ class aruco_objdetect_test(NewOpenCVTests):
         erroneous_ratio = ratio_marker.copy()
         erroneous_ratio[0, 0] = 1.0 - erroneous_ratio[0, 0]
         dist = aruco_dict.getDistanceToId(onlyCellPixelRatio=erroneous_ratio,
-                                          id=idx,
-                                          allRotations=True,
-                                          validBitIdThreshold=valid_bit_id_threshold)
+                                        id=idx,
+                                        allRotations=True,
+                                        validBitIdThreshold=valid_bit_id_threshold)
         self.assertEqual(dist, 1)
 
     def test_aruco_detector(self):

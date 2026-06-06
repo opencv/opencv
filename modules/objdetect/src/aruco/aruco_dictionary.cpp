@@ -94,14 +94,80 @@ struct CellBitMasks {
     uint8_t *temp0;  // internal scratch workspace
 };
 
+// Equivalent of CellBitMasks for dictionaries with DICT_ENCODING_CELL_RATIO encoding.
+// A cell counts as an error when |observedRatio - expectedRatio| > validBitIdThreshold.
+// As the expected ratios are integers in [0,100], the test is precomputed once per candidate as an
+// inclusive [lower, upper] range of valid expected values per cell:
+//   |observed - expected/100| <= threshold  <=>  ceil(100*(observed - threshold)) <= expected &&
+//                                                expected <= floor(100*(observed + threshold))
+// Each rotation is then a branch-free integer pass over markerSize*markerSize bytes.
+struct CellRatioDistance {
+    CellRatioDistance(const Mat &onlyCellPixelRatio, int markerSize, float validBitIdThreshold)
+        : totalCells(markerSize * markerSize),
+          bounds(2 * totalCells),
+          lower(bounds.data()), width(bounds.data() + totalCells) {
+        uint8_t* lowerWritable = bounds.data();
+        uint8_t* widthWritable = lowerWritable + totalCells;
 
-Dictionary::Dictionary(): markerSize(0), maxCorrectionBits(0) {}
+        const float threshold = 100.f * validBitIdThreshold;
+        int cell = 0;
+        for(int j = 0; j < markerSize; j++) {
+            const float* cellPixelRatioRow = onlyCellPixelRatio.ptr<float>(j);
+            for(int i = 0; i < markerSize; i++, cell++) {
+                const float observed = 100.f * cellPixelRatioRow[i];
+                const int lo = saturate_cast<uint8_t>(std::ceil(observed - threshold));
+                const int hi = saturate_cast<uint8_t>(std::floor(observed + threshold));
+                lowerWritable[cell] = static_cast<uint8_t>(lo);
+                widthWritable[cell] = static_cast<uint8_t>(hi - lo); // hi >= lo
+            }
+        }
+    }
+
+    // Smallest number of erroneous cells between the candidate and dictionary marker `id`,
+    // searching the tested rotations; `rotation` returns the best one.
+    int distanceToId(const Mat& bytesList, int id, bool allRotations, int& rotation) const {
+        CV_Assert(id >= 0 && id < bytesList.rows);
+
+        const unsigned int nRotations = allRotations ? 4u : 1u;
+        int currentMinDistance = totalCells + 1;
+        rotation = -1;
+
+        const uchar* expectedRatios = bytesList.ptr(id);
+        for(unsigned int r = 0; r < nRotations; r++, expectedRatios += totalCells) {
+            // A cell is an error when the expected ratio is outside [lower, lower+width]. The
+            // unsigned wrap turns the two-sided range test into a single compare (all values are in [0,255]):
+            // values below 'lower' underflow to numbers (>=156), which exceeds the max width (<=100).
+            int currentDistance = 0;
+            for(int i = 0; i < totalCells; i++)
+                currentDistance += static_cast<uint8_t>(expectedRatios[i] - lower[i]) > width[i];
+
+            if(currentDistance < currentMinDistance) {
+                currentMinDistance = currentDistance;
+                rotation = static_cast<int>(r);
+                // Break for perfect distance.
+                if(currentMinDistance == 0) break;
+            }
+        }
+
+        return currentMinDistance;
+    }
+
+    const int totalCells;
+    std::vector<uint8_t> bounds;   // [lower | width]: cell ok when expected in [lower, lower+width]
+    const uint8_t *lower, *width;
+};
+
+Dictionary::Dictionary(): markerSize(0), maxCorrectionBits(0), dictEncoding(DICT_ENCODING_BINARY) {}
 
 
-Dictionary::Dictionary(const Mat &_bytesList, int _markerSize, int _maxcorr) {
+Dictionary::Dictionary(const Mat &_bytesList, int _markerSize, int _maxcorr, int _dictEncoding) {
+    CV_Assert(_dictEncoding == DICT_ENCODING_BINARY || _dictEncoding == DICT_ENCODING_CELL_RATIO);
+    if(_dictEncoding == DICT_ENCODING_CELL_RATIO && !_bytesList.empty())
+        CV_Assert(_bytesList.cols * _bytesList.channels() == 4 * _markerSize * _markerSize);
     markerSize = _markerSize;
     maxCorrectionBits = _maxcorr;
     bytesList = _bytesList;
+    dictEncoding = _dictEncoding;
 }
 
 
@@ -109,6 +175,33 @@ bool Dictionary::readDictionary(const cv::FileNode& fn) {
     int nMarkers = 0, _markerSize = 0;
     if (fn.empty() || !readParameter("nmarkers", nMarkers, fn) || !readParameter("markersize", _markerSize, fn))
         return false;
+    int _dictEncoding = (int)DICT_ENCODING_BINARY;
+    readParameter("dictEncoding", _dictEncoding, fn);
+    int _maxCorrectionBits = 0;
+    readParameter("maxCorrectionBits", _maxCorrectionBits, fn);
+
+    if (_dictEncoding == DICT_ENCODING_CELL_RATIO) {
+        // markers are stored as the list of their cell ratios in percent, only the 0 deg rotation
+        Mat ratioList(0, 0, CV_8UC4), cellRatios(_markerSize, _markerSize, CV_8UC1);
+        std::vector<int> markerValues;
+        for (int i = 0; i < nMarkers; i++) {
+            std::ostringstream ostr;
+            ostr << i;
+            if (!readParameter("marker_" + ostr.str(), markerValues, fn))
+                return false;
+            if (markerValues.size() != (size_t)(_markerSize * _markerSize))
+                return false;
+            for (int j = 0; j < (int)markerValues.size(); j++) {
+                if (markerValues[j] < 0 || markerValues[j] > 100)
+                    return false;
+                cellRatios.at<unsigned char>(j) = (unsigned char)markerValues[j];
+            }
+            ratioList.push_back(Dictionary::getRatioListFromCellRatios(cellRatios));
+        }
+        *this = Dictionary(ratioList, _markerSize, _maxCorrectionBits, DICT_ENCODING_CELL_RATIO);
+        return true;
+    }
+
     Mat bytes(0, 0, CV_8UC1), marker(_markerSize, _markerSize, CV_8UC1);
     std::string markerString;
     for (int i = 0; i < nMarkers; i++) {
@@ -120,8 +213,6 @@ bool Dictionary::readDictionary(const cv::FileNode& fn) {
             marker.at<unsigned char>(j) = (markerString[j] == '0') ? 0 : 1;
         bytes.push_back(Dictionary::getByteListFromBits(marker));
     }
-    int _maxCorrectionBits = 0;
-    readParameter("maxCorrectionBits", _maxCorrectionBits, fn);
     *this = Dictionary(bytes, _markerSize, _maxCorrectionBits);
     return true;
 }
@@ -137,16 +228,26 @@ void Dictionary::writeDictionary(FileStorage& fs, const String &name)
     fs << "nmarkers" << bytesList.rows;
     fs << "markersize" << markerSize;
     fs << "maxCorrectionBits" << maxCorrectionBits;
+    if (dictEncoding == DICT_ENCODING_CELL_RATIO)
+        fs << "dictEncoding" << dictEncoding;
     for (int i = 0; i < bytesList.rows; i++) {
-        Mat row = bytesList.row(i);;
-        Mat bitMarker = getBitsFromByteList(row, markerSize);
+        Mat row = bytesList.row(i);
         std::ostringstream ostr;
         ostr << i;
         string markerName = "marker_" + ostr.str();
-        string marker;
-        for (int j = 0; j < markerSize * markerSize; j++)
-            marker.push_back(bitMarker.at<uint8_t>(j) + '0');
-        fs << markerName << marker;
+        if (dictEncoding == DICT_ENCODING_CELL_RATIO) {
+            Mat cellRatios = getCellRatiosFromRatioList(row, markerSize);
+            std::vector<int> markerValues(markerSize * markerSize);
+            for (int j = 0; j < (int)markerValues.size(); j++)
+                markerValues[j] = cellRatios.at<uint8_t>(j);
+            fs << markerName << markerValues;
+        } else {
+            Mat bitMarker = getBitsFromByteList(row, markerSize);
+            string marker;
+            for (int j = 0; j < markerSize * markerSize; j++)
+                marker.push_back(bitMarker.at<uint8_t>(j) + '0');
+            fs << markerName << marker;
+        }
     }
 
     if (!name.empty())
@@ -158,22 +259,36 @@ bool Dictionary::identify(const Mat &onlyCellPixelRatio, CV_OUT int &idx, CV_OUT
     CV_Assert(onlyCellPixelRatio.rows == markerSize && onlyCellPixelRatio.cols == markerSize);
     CV_Assert(onlyCellPixelRatio.type() == CV_32FC1);
 
-    CellBitMasks cellBitMasks(onlyCellPixelRatio, markerSize, validBitIdThreshold);
-
     int maxCorrectionRecalculed = int(double(maxCorrectionBits) * maxCorrectionRate);
 
     idx = -1; // by default, not found
 
     // search closest marker in dict
-    for(int m = 0; m < bytesList.rows; m++) {
-        int currentRotation = -1;
-        int currentMinDistance = cellBitMasks.hammingDistanceToId(bytesList, m, true, currentRotation);
+    if(dictEncoding == DICT_ENCODING_CELL_RATIO) {
+        CellRatioDistance cellRatioDistance(onlyCellPixelRatio, markerSize, validBitIdThreshold);
+        for(int m = 0; m < bytesList.rows; m++) {
+            int currentRotation = -1;
+            int currentMinDistance = cellRatioDistance.distanceToId(bytesList, m, true, currentRotation);
 
-        // if maxCorrection is fulfilled, return this one
-        if(currentMinDistance <= maxCorrectionRecalculed) {
-            idx = m;
-            rotation = currentRotation;
-            break;
+            // if maxCorrection is fulfilled, return this one
+            if(currentMinDistance <= maxCorrectionRecalculed) {
+                idx = m;
+                rotation = currentRotation;
+                break;
+            }
+        }
+    } else {
+        CellBitMasks cellBitMasks(onlyCellPixelRatio, markerSize, validBitIdThreshold);
+        for(int m = 0; m < bytesList.rows; m++) {
+            int currentRotation = -1;
+            int currentMinDistance = cellBitMasks.hammingDistanceToId(bytesList, m, true, currentRotation);
+
+            // if maxCorrection is fulfilled, return this one
+            if(currentMinDistance <= maxCorrectionRecalculed) {
+                idx = m;
+                rotation = currentRotation;
+                break;
+            }
         }
     }
 
@@ -193,6 +308,12 @@ bool Dictionary::identify(const Mat &onlyBits, CV_OUT int &idx, CV_OUT int &rota
 int Dictionary::getDistanceToId(InputArray bits, int id, bool allRotations) const {
 
     CV_Assert(id >= 0 && id < bytesList.rows);
+
+    if(dictEncoding == DICT_ENCODING_CELL_RATIO) {
+        Mat candidateBitRatio;
+        Mat(bits.getMat() > 0).convertTo(candidateBitRatio, CV_32F, 1.0 / 255.0);
+        return getDistanceToId(candidateBitRatio, id, allRotations, DEFAULT_VALID_BIT_ID_THRESHOLD);
+    }
 
     unsigned int nRotations = 4;
     if(!allRotations) nRotations = 1;
@@ -221,6 +342,10 @@ int Dictionary::getDistanceToId(InputArray onlyCellPixelRatio, int id, bool allR
     CV_Assert(id >= 0 && id < bytesList.rows);
 
     int rotation = -1;
+    if(dictEncoding == DICT_ENCODING_CELL_RATIO) {
+        CellRatioDistance cellRatioDistance(onlyCellPixelRatioMat, markerSize, validBitIdThreshold);
+        return cellRatioDistance.distanceToId(bytesList, id, allRotations, rotation);
+    }
     CellBitMasks cellBitMasks(onlyCellPixelRatioMat, markerSize, validBitIdThreshold);
     return cellBitMasks.hammingDistanceToId(bytesList, id, allRotations, rotation);
 }
@@ -289,16 +414,70 @@ Mat Dictionary::getByteListFromBits(const Mat &bits) {
 
 Mat Dictionary::getMarkerBits(int markerId, int rotationId) const {
 
-    const int nbRotations = 4;
-    CV_Assert(markerId < bytesList.rows);
-    CV_Assert(rotationId < nbRotations);
+    CV_Assert(markerId >= 0 && markerId < bytesList.rows);
+    CV_Assert(rotationId >= 0 && rotationId < 4);
 
     Mat bits(markerSize, markerSize, CV_32F, Scalar::all(0));
-    Mat bitsUints = getBitsFromByteList(bytesList.rowRange(markerId, markerId + 1), markerSize, rotationId);
-    bitsUints.convertTo(bits, CV_32F);
+    if(dictEncoding == DICT_ENCODING_CELL_RATIO) {
+        Mat cellRatios = getCellRatiosFromRatioList(bytesList.rowRange(markerId, markerId + 1), markerSize, rotationId);
+        cellRatios.convertTo(bits, CV_32F, 1.0 / 100.0);
+    } else {
+        Mat bitsUints = getBitsFromByteList(bytesList.rowRange(markerId, markerId + 1), markerSize, rotationId);
+        bitsUints.convertTo(bits, CV_32F);
+    }
 
     CV_Assert(bits.rows == markerSize && bits.cols == markerSize);
     return bits;
+}
+
+
+Mat Dictionary::getRatioListFromCellRatios(const Mat &cellRatios) {
+    CV_Assert(cellRatios.type() == CV_8UC1);
+    CV_Assert(cellRatios.rows == cellRatios.cols && cellRatios.rows > 0);
+
+    const int markerSize = cellRatios.rows;
+    const int totalCells = markerSize * markerSize;
+
+    // the 4 rotations, stored with the same order as in getByteListFromBits()
+    Mat ratioList(1, totalCells, CV_8UC4);
+    uchar* rot0 = ratioList.ptr();
+    uchar* rot1 = rot0 + totalCells;
+    uchar* rot2 = rot1 + totalCells;
+    uchar* rot3 = rot2 + totalCells;
+
+    for(int row = 0; row < markerSize; row++) {
+        for(int col = 0; col < markerSize; col++) {
+            const int cell = row * markerSize + col;
+            rot0[cell] = cellRatios.at<uchar>(row, col);
+            rot1[cell] = cellRatios.at<uchar>(col, markerSize - 1 - row);
+            rot2[cell] = cellRatios.at<uchar>(markerSize - 1 - row, markerSize - 1 - col);
+            rot3[cell] = cellRatios.at<uchar>(markerSize - 1 - col, row);
+        }
+    }
+    return ratioList;
+}
+
+
+Mat Dictionary::getCellRatiosFromRatioList(const Mat &ratioList, int markerSize, int rotationId) {
+    const int totalCells = markerSize * markerSize;
+    CV_Assert(markerSize > 0 && ratioList.rows == 1);
+    CV_Assert(ratioList.total() * ratioList.channels() == (size_t)(4 * totalCells));
+    CV_Assert(rotationId >= 0 && rotationId < 4);
+
+    return Mat(markerSize, markerSize, CV_8UC1, (void*)(ratioList.ptr() + rotationId * totalCells)).clone();
+}
+
+
+Dictionary Dictionary::convertToCellRatioDictionary() const {
+    CV_Assert(dictEncoding == DICT_ENCODING_BINARY);
+
+    Mat ratioList(0, 0, CV_8UC4), cellRatios;
+    for(int id = 0; id < bytesList.rows; id++) {
+        getMarkerBits(id).convertTo(cellRatios, CV_8U, 100.0);
+        ratioList.push_back(getRatioListFromCellRatios(cellRatios));
+    }
+
+    return Dictionary(ratioList, markerSize, maxCorrectionBits, DICT_ENCODING_CELL_RATIO);
 }
 
 
@@ -490,6 +669,8 @@ Dictionary extendDictionary(int nMarkers, int markerSize, const Dictionary &base
     // if baseDictionary is provided, calculate its intermarker distance
     if(baseDictionary.bytesList.rows > 0) {
         CV_Assert(baseDictionary.markerSize == markerSize);
+        // random marker generation is only implemented for binary dictionaries
+        CV_Assert(baseDictionary.dictEncoding == DICT_ENCODING_BINARY);
         out.bytesList = baseDictionary.bytesList.rowRange(0, min(nMarkers, baseDictionary.bytesList.rows)).clone();
 
         int minDistance = markerSize * markerSize + 1;

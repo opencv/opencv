@@ -13,8 +13,19 @@ namespace aruco {
 //! @{
 
 
+/** @brief Encoding used to store the markers of a Dictionary in `Dictionary::bytesList`
+ */
+enum DictionaryEncoding {
+    /// binary cells (black=0 / white=1) packed in bytes (default)
+    DICT_ENCODING_BINARY = 0,
+    /// each cell stores its white pixel ratio in percent [0,100], one byte per cell.
+    /// This allows non-binary cells, e.g. a cell holding a nested marker
+    DICT_ENCODING_CELL_RATIO = 1
+};
+
 /** @brief Dictionary is a set of unique ArUco markers of the same size
  *
+ * If `dictEncoding` is DICT_ENCODING_BINARY:
  * `bytesList` storing as 2-dimensions Mat with 4-th channels (CV_8UC4 type was used) and contains the marker codewords where:
  * - bytesList.rows is the dictionary size
  * - each marker is encoded using `nbytes = ceil(markerSize*markerSize/8.)` bytes
@@ -25,6 +36,18 @@ namespace aruco {
  * @note Python bindings generate matrix with shape of bytesList `dictionary_size x nbytes x 4`,
  * but it should be indexed like C++ version. Python example for j-th byte of i-th marker, in its k-th rotation:
  * `aruco_dict.bytesList[id].ravel()[k*nbytes + j]`
+ *
+ * If `dictEncoding` is DICT_ENCODING_CELL_RATIO:
+ * `bytesList` stores one byte per marker cell instead of one bit:
+ * - bytesList.rows is the dictionary size
+ * - each row is a CV_8UC4 Mat with `markerSize*markerSize` columns and contains all 4 rotations of the
+ *   marker, so its length is `4*markerSize*markerSize` bytes:
+ * `//cells without rotation/cells with rotation 1/cells with rotation 2/cells with rotation 3//`
+ * - each cell value is the ratio of white pixels in the cell in percent, between 0 (black cell) and
+ *   100 (white cell), e.g. 75 describes a cell with 75% white and 25% black pixels.
+ *
+ * Non-binary cells allow markers to be nested inside the cells of larger markers
+ * (see DetectorParameters::detectNestedMarkers).
  */
 class CV_EXPORTS_W_SIMPLE Dictionary {
 
@@ -32,6 +55,7 @@ class CV_EXPORTS_W_SIMPLE Dictionary {
     CV_PROP_RW Mat bytesList;         ///< marker code information. See class description for more details
     CV_PROP_RW int markerSize;        ///< number of bits per dimension
     CV_PROP_RW int maxCorrectionBits; ///< maximum number of bits that can be corrected
+    CV_PROP_RW int dictEncoding;      ///< encoding of bytesList, see DictionaryEncoding (default DICT_ENCODING_BINARY)
 
     CV_WRAP Dictionary();
 
@@ -40,8 +64,9 @@ class CV_EXPORTS_W_SIMPLE Dictionary {
      * @param bytesList bits for all ArUco markers in dictionary see memory layout in the class description
      * @param _markerSize ArUco marker size in units
      * @param maxcorr maximum number of bits that can be corrected
+     * @param dictEncoding encoding of bytesList, see DictionaryEncoding
      */
-    CV_WRAP Dictionary(const Mat &bytesList, int _markerSize, int maxcorr = 0);
+    CV_WRAP Dictionary(const Mat &bytesList, int _markerSize, int maxcorr = 0, int dictEncoding = (int)DICT_ENCODING_BINARY);
 
     /** @brief Read a new dictionary from FileNode.
      *
@@ -52,6 +77,15 @@ class CV_EXPORTS_W_SIMPLE Dictionary {
      * marker_0: "101011111011111001001001101100000000"\n
      * ...\n
      * marker_34: "011111010000111011111110110101100101"
+     *
+     * Dictionaries with DICT_ENCODING_CELL_RATIO encoding add a `dictEncoding` entry and store each
+     * marker as the list of its cell ratios in percent:\n
+     * nmarkers: 35\n
+     * markersize: 6\n
+     * maxCorrectionBits: 5\n
+     * dictEncoding: 1\n
+     * marker_0: [100, 0, 75, ...]\n
+     * If the `dictEncoding` entry is missing, DICT_ENCODING_BINARY is assumed.
      */
     CV_WRAP bool readDictionary(const cv::FileNode& fn);
 
@@ -94,6 +128,11 @@ class CV_EXPORTS_W_SIMPLE Dictionary {
     CV_WRAP int getDistanceToId(InputArray onlyCellPixelRatio, int id, bool allRotations, float validBitIdThreshold) const;
 
     /** @brief Generate a canonical marker image
+     *
+     * For `DICT_ENCODING_CELL_RATIO` dictionaries, this function renders each cell as a constant
+     * grayscale intensity proportional to the expected ratio (0..255). It does not synthesize a
+     * binary pattern with the requested white-pixel ratio, so non-binary cells are primarily intended
+     * for visualization and may not be directly detectable by the ArUco detector.
      */
     CV_WRAP void generateImageMarker(int id, int sidePixels, OutputArray _img, int borderBits = 1) const;
 
@@ -107,9 +146,40 @@ class CV_EXPORTS_W_SIMPLE Dictionary {
       */
     CV_WRAP static Mat getBitsFromByteList(const Mat &byteList, int markerSize, int rotationId = 0);
 
-    /** @brief Get ground truth bits float
+
+    /** @brief Transform matrix of cell ratios to list of cell ratios with 4 marker rotations
+      *
+      * @param cellRatios marker cells as `markerSize x markerSize` CV_8UC1 Mat, each cell holding its
+      * white pixel ratio in percent [0,100]
+      *
+      * Returns one `bytesList` row for a dictionary with DICT_ENCODING_CELL_RATIO encoding.
       */
-     CV_WRAP Mat getMarkerBits(int markerId, int rotationId = 0) const;
+    CV_WRAP static Mat getRatioListFromCellRatios(const Mat &cellRatios);
+
+
+    /** @brief Transform list of cell ratios to matrix of cell ratios, see getRatioListFromCellRatios()
+      */
+    CV_WRAP static Mat getCellRatiosFromRatioList(const Mat &ratioList, int markerSize, int rotationId = 0);
+
+
+    /** @brief Create a cell-ratio encoded copy of this binary dictionary
+      *
+      * The returned dictionary preserves the marker ids, marker size, rotations, and maximum
+      * correction bits, but stores each binary cell as a ratio value: 0 for black and 100 for white.
+      * This is useful as a starting point for custom cell-ratio dictionaries, for example when
+      * replacing some marker cells with non-binary ratios that represent nested markers.
+      *
+      * The source dictionary must use DICT_ENCODING_BINARY.
+      */
+    CV_WRAP Dictionary convertToCellRatioDictionary() const;
+
+
+    /** @brief Get the expected cell values of a marker as a `markerSize x markerSize` CV_32FC1 Mat
+      *
+      * Each cell holds its expected white pixel ratio in [0,1]. For DICT_ENCODING_BINARY dictionaries
+      * the values are exactly 0 or 1.
+      */
+    CV_WRAP Mat getMarkerBits(int markerId, int rotationId = 0) const;
 };
 
 
