@@ -456,7 +456,6 @@ static float _getMarkerConfidence(const Mat& groundTruthbits, const Mat &cellPix
     return std::max(0.f, std::min(1.f, normalizedMarkerConfidence));
 }
 
-
 /**
  * @brief Tries to identify one candidate given the dictionary
  * @return candidate typ. zero if the candidate is not valid,
@@ -1398,15 +1397,14 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Board& _board
                     detectorParams.perspectiveRemovePixelPerCell,
                     detectorParams.perspectiveRemoveIgnoredMarginPerCell, detectorParams.minOtsuStdDev);
 
-                Mat bits;
-                cellPixelRatio.convertTo(bits, CV_8UC1);
+                Mat onlyCellPixelRatio =
+                    cellPixelRatio.rowRange(detectorParams.markerBorderBits,
+                                            cellPixelRatio.rows - detectorParams.markerBorderBits)
+                        .colRange(detectorParams.markerBorderBits,
+                                  cellPixelRatio.cols - detectorParams.markerBorderBits);
 
-                Mat onlyBits =
-                    bits.rowRange(detectorParams.markerBorderBits, bits.rows - detectorParams.markerBorderBits)
-                        .colRange(detectorParams.markerBorderBits, bits.rows - detectorParams.markerBorderBits);
-
-                codeDistance =
-                    dictionary.getDistanceToId(onlyBits, undetectedMarkersIds[i], false);
+                codeDistance = dictionary.getDistanceToId(onlyCellPixelRatio, undetectedMarkersIds[i],
+                                                          false, detectorParams.validBitIdThreshold);
             }
 
             // if everythin is ok, assign values to current best match

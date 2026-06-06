@@ -24,6 +24,39 @@ Dictionary::Dictionary(const Mat &_bytesList, int _markerSize, int _maxcorr) {
     bytesList = _bytesList;
 }
 
+int Dictionary::getDistanceToIdImpl(const Mat& onlyCellPixelRatio, int id, bool allRotations,
+                                    int& rotation, float validBitIdThreshold) const {
+    CV_Assert(onlyCellPixelRatio.rows == markerSize && onlyCellPixelRatio.cols == markerSize);
+    CV_Assert(onlyCellPixelRatio.type() == CV_32FC1);
+    CV_Assert(id >= 0 && id < bytesList.rows);
+
+    const unsigned int nRotations = allRotations ? 4u : 1u;
+    int currentMinDistance = (int)onlyCellPixelRatio.total() + 1;
+    rotation = -1;
+
+    for(unsigned int r = 0; r < nRotations; r++) {
+        Mat bitsRot = getBitsFromByteList(bytesList.rowRange(id, id + 1), markerSize, (int)r);
+
+        int currentHamming = 0;
+        for(int i = 0; i < markerSize; i++) {
+            for(int j = 0; j < markerSize; j++) {
+                // If detected bit is too far from the ground truth, consider it false.
+                if(fabs(onlyCellPixelRatio.at<float>(i, j) -
+                        static_cast<float>(bitsRot.at<uchar>(i, j))) > validBitIdThreshold) {
+                    currentHamming++;
+                }
+            }
+        }
+
+        if(currentHamming < currentMinDistance) {
+            currentMinDistance = currentHamming;
+            rotation = static_cast<int>(r);
+        }
+    }
+
+    return currentMinDistance;
+}
+
 
 bool Dictionary::readDictionary(const cv::FileNode& fn) {
     int nMarkers = 0, _markerSize = 0;
@@ -75,6 +108,7 @@ void Dictionary::writeDictionary(FileStorage& fs, const String &name)
 
 bool Dictionary::identify(const Mat &onlyCellPixelRatio, CV_OUT int &idx, CV_OUT int &rotation, double maxCorrectionRate, float validBitIdThreshold) const {
     CV_Assert(onlyCellPixelRatio.rows == markerSize && onlyCellPixelRatio.cols == markerSize);
+    CV_Assert(onlyCellPixelRatio.type() == CV_32FC1);
 
     // Fill bit masks of cells that are not black (not0) and not white (not1).
     const int s = (markerSize * markerSize + 8 - 1) / 8;
@@ -112,25 +146,9 @@ bool Dictionary::identify(const Mat &onlyCellPixelRatio, CV_OUT int &idx, CV_OUT
 
     // search closest marker in dict
     for(int m = 0; m < bytesList.rows; m++) {
-        int currentMinDistance = markerSize * markerSize + 1;
         int currentRotation = -1;
-        const uchar* bytesRot = bytesList.ptr(m);
-        for(int r = 0; r < 4; r++, bytesRot += s) {
-            // Error if: (marker is 0 and input is not 0) or (marker is 1 and input is not 1)
-            // i.e. if: (!bytesRot && not0) || (bytesRot && not1)
-            // This is actually: not0 ^ ((not0 ^ not1) & bytesRot)
-            // Computing: temp0 = (not0 ^ not1) & bytesRot
-            hal::and8u(notXor, s, bytesRot, s, temp0, s, s, 1, nullptr);
-            // Computing the final result (xor is performed internally).
-            int currentHamming = cv::hal::normHamming(not0, temp0, s);
-
-            if(currentHamming < currentMinDistance) {
-                currentMinDistance = currentHamming;
-                currentRotation = r;
-                // Break for perfect distance.
-                if (currentMinDistance == 0) break;
-            }
-        }
+        int currentMinDistance = getDistanceToIdImpl(onlyCellPixelRatio, m, true,
+                                                     currentRotation, validBitIdThreshold);
 
         // if maxCorrection is fulfilled, return this one
         if(currentMinDistance <= maxCorrectionRecalculed) {
@@ -174,6 +192,12 @@ int Dictionary::getDistanceToId(InputArray bits, int id, bool allRotations) cons
         }
     }
     return currentMinDistance;
+}
+
+int Dictionary::getDistanceToId(InputArray onlyCellPixelRatio, int id, bool allRotations, float validBitIdThreshold) const {
+
+    int rotation = -1;
+    return getDistanceToIdImpl(onlyCellPixelRatio.getMat(), id, allRotations, rotation, validBitIdThreshold);
 }
 
 
