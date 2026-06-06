@@ -56,6 +56,7 @@ struct CV_EXPORTS_W_SIMPLE DetectorParameters {
         aprilTagMinWhiteBlackDiff = 5;
         aprilTagDeglitch = 0;
         detectInvertedMarker = false;
+        detectNestedMarkers = false;
         useAruco3Detection = false;
         minSideLengthCanonicalImg = 32;
         minMarkerLengthRatioOriginalImg = 0.0;
@@ -220,6 +221,16 @@ struct CV_EXPORTS_W_SIMPLE DetectorParameters {
      * In order to generate a "white" marker just invert a normal marker by using a tilde, ~markerImage. (default false)
      */
     CV_PROP_RW bool detectInvertedMarker;
+
+    /** @brief enable the detection of markers nested inside other markers. (default false)
+     *
+     * By default, when a marker is identified inside another candidate, the surrounding candidate is
+     * discarded as it is usually an outer contour of the same physical marker. Setting this flag keeps
+     * the surrounding candidates so that both the nested marker and the marker that contains it are
+     * returned. The cells of the containing marker that hold nested markers are not binary anymore, so
+     * the containing marker should belong to a dictionary with DICT_ENCODING_CELL_RATIO.
+     */
+    CV_PROP_RW bool detectNestedMarkers;
 
     /** @brief enable the new and faster Aruco detection strategy.
      *
@@ -483,6 +494,11 @@ CV_EXPORTS_W void drawDetectedMarkers(InputOutputArray image, InputArrayOfArrays
  * @param borderBits width of the marker border.
  *
  * This function returns a marker image in its canonical form (i.e. ready to be printed)
+ *
+ * For `DICT_ENCODING_CELL_RATIO` dictionaries, each cell is rendered as a constant grayscale
+ * intensity proportional to the expected ratio (0..255) rather than a binary pattern with the
+ * requested white-pixel ratio. Such non-binary cells are primarily intended for visualization and
+ * may not be directly detectable by the ArUco detector.
  */
 CV_EXPORTS_W void generateImageMarker(const Dictionary &dictionary, int id, int sidePixels, OutputArray img,
                                       int borderBits = 1);

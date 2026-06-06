@@ -425,7 +425,6 @@ static void _getBorderErrors(const Mat &cellPixelRatio, int markerSize, int bord
  * The confidence is defined as 1 - normalized uncertainty, where 1 describes a pixel perfect detection.
  * The rotation is set to 0,1,2,3 for [0, 90, 180, 270] deg CCW rotations.
  */
-
 static float _getMarkerConfidence(const Mat& groundTruthbits, const Mat &cellPixelRatio, const int markerSize, const int borderSize) {
 
     CV_Assert(markerSize == groundTruthbits.cols && markerSize == groundTruthbits.rows);
@@ -993,11 +992,13 @@ struct ArucoDetector::ArucoDetectorImpl {
         }
 
         for (vector<size_t>& grouped : groupedCandidates) {
-            if (detectorParams.detectInvertedMarker) // if detectInvertedMarker choose smallest contours
+            // with detectNestedMarkers, smaller (e.g. inverted) markers nested in larger markers are
+            // kept as their own candidates, prefer the largest contour (correct for the host markers)
+            if (detectorParams.detectInvertedMarker && !detectorParams.detectNestedMarkers) // if detectInvertedMarker choose smallest contours
                 std::stable_sort(grouped.begin(), grouped.end(), [](const size_t &a, const size_t &b) {
                     return a > b;
                 });
-            else // if detectInvertedMarker==false choose largest contours
+            else // otherwise choose largest contours
                 std::stable_sort(grouped.begin(), grouped.end());
             size_t currId = grouped[0];
             // check if it is too near to the image border
@@ -1034,13 +1035,17 @@ struct ArucoDetector::ArucoDetectorImpl {
             }
         }
 
-        // find hierarchy in the candidate tree
-        for (int i = (int)selectedCandidates.size()-1; i >= 0; i--) {
-            for (int j = i - 1; j >= 0; j--) {
-                if (checkMarker1InMarker2(selectedCandidates[i].corners, selectedCandidates[j].corners)) {
-                    selectedCandidates[i].parent = j;
-                    selectedCandidates[j].depth = max(selectedCandidates[j].depth, selectedCandidates[i].depth + 1);
-                    break;
+        // find hierarchy in the candidate tree. The hierarchy is used to discard the candidates
+        // surrounding an identified marker, so it must be skipped when nested markers are expected,
+        // otherwise a marker identified inside another marker would suppress the marker containing it.
+        if (!detectorParams.detectNestedMarkers) {
+            for (int i = (int)selectedCandidates.size()-1; i >= 0; i--) {
+                for (int j = i - 1; j >= 0; j--) {
+                    if (checkMarker1InMarker2(selectedCandidates[i].corners, selectedCandidates[j].corners)) {
+                        selectedCandidates[i].parent = j;
+                        selectedCandidates[j].depth = max(selectedCandidates[j].depth, selectedCandidates[i].depth + 1);
+                        break;
+                    }
                 }
             }
         }
@@ -1406,8 +1411,8 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Board& _board
 
                 Mat onlyCellPixelRatio = cellPixelRatio(
                     Rect(detectorParams.markerBorderBits, detectorParams.markerBorderBits,
-                         cellPixelRatio.cols - 2 * detectorParams.markerBorderBits,
-                         cellPixelRatio.rows - 2 * detectorParams.markerBorderBits));
+                        cellPixelRatio.cols - 2 * detectorParams.markerBorderBits,
+                        cellPixelRatio.rows - 2 * detectorParams.markerBorderBits));
 
                 codeDistance = dictionary.getDistanceToId(onlyCellPixelRatio, undetectedMarkersIds[i],
                                                           false, detectorParams.validBitIdThreshold);
