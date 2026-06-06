@@ -507,6 +507,32 @@ TEST(CV_ArucoDictionary, getDistanceToIdCellPixelRatio) {
     EXPECT_EQ(1, dictionary.getDistanceToId(rejectedRatio, markerId, false, validBitIdThreshold));
 }
 
+TEST(CV_ArucoDictionary, identifyBitMask) {
+    const int markerId = 7;
+    aruco::Dictionary dictionary = aruco::getPredefinedDictionary(aruco::DICT_4X4_50);
+
+    // Start with a 0/1 bit matrix for the marker and confirm that the bit-based
+    // identify overload handles it without any ratio threshold input.
+    Mat bits = aruco::Dictionary::getBitsFromByteList(dictionary.bytesList.rowRange(markerId, markerId + 1),
+                                                      dictionary.markerSize);
+
+    int idx = -1;
+    int rotation = -1;
+    ASSERT_TRUE(dictionary.identify(bits, idx, rotation, 0.0));
+    EXPECT_EQ(markerId, idx);
+    EXPECT_EQ(0, rotation);
+
+    // OpenCV comparisons produce masks with values 0 and 255, not 0 and 1. The raw-bit
+    // identify overload must normalize those masks before delegating to the ratio path.
+    Mat bitMask;
+    bits.convertTo(bitMask, CV_8U, 255.0);
+    idx = -1;
+    rotation = -1;
+    ASSERT_TRUE(dictionary.identify(bitMask, idx, rotation, 0.0));
+    EXPECT_EQ(markerId, idx);
+    EXPECT_EQ(0, rotation);
+}
+
 TEST(CV_ArucoBoardGenerateImage_RotationTest, HandlesRotatedMarkersWithoutBoundingBoxError)
 {
     using namespace cv;

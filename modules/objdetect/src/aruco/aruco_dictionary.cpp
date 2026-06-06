@@ -166,9 +166,8 @@ bool Dictionary::identify(const Mat &onlyBits, CV_OUT int &idx, CV_OUT int &rota
     CV_Assert(onlyBits.rows == markerSize && onlyBits.cols == markerSize);
 
     Mat candidateBitRatio;
-    onlyBits.convertTo(candidateBitRatio, CV_32F);
-    const float validBitIdThreshold = DEFAULT_VALID_BIT_ID_THRESHOLD;
-    return identify(candidateBitRatio, idx, rotation, maxCorrectionRate, validBitIdThreshold);
+    Mat(onlyBits > 0).convertTo(candidateBitRatio, CV_32F, 1.0 / 255.0);
+    return identify(candidateBitRatio, idx, rotation, maxCorrectionRate, 0.5f);
 }
 
 
