@@ -45,7 +45,9 @@
 #if defined (HAVE_GTK)
 
 #include <gtk/gtk.h>
+#if !defined(_WIN32)
 #include <dlfcn.h>
+#endif
 
 #if (GTK_MAJOR_VERSION == 2) && defined(HAVE_OPENGL) && !defined(HAVE_GTKGLEXT)
   #undef HAVE_OPENGL  // gtkglext is required
@@ -639,18 +641,18 @@ CV_IMPL int cvInitSystem( int argc, char** argv )
         // on libX11, making this a safe no-op on pure Wayland builds.
         // See: https://github.com/opencv/opencv/issues/29195
         //      https://github.com/opencv/opencv/issues/21952
-        #if defined(HAVE_X11)
-        XInitThreads();
-        #else
+        #if !defined(_WIN32)
         {
-            void* x11 = dlopen("libX11.so.6", RTLD_LAZY | RTLD_NOLOAD);
+            void* x11 = NULL;
+            #ifdef RTLD_NOLOAD
+            x11 = dlopen("libX11.so.6", RTLD_LAZY | RTLD_NOLOAD);
+            #endif
             if (!x11) x11 = dlopen("libX11.so", RTLD_LAZY);
             if (x11)
             {
                 typedef int (*fn_t)(void);
                 fn_t fn = (fn_t)dlsym(x11, "XInitThreads");
                 if (fn) fn();
-                dlclose(x11);
             }
         }
         #endif
