@@ -5,9 +5,8 @@
 
 #include "ipp_hal_dnn.hpp"
 #include "precomp_ipp.hpp"
-#include <iostream>
 
-#if IPP_VERSION_X100 >= 201700
+#if IPP_VERSION_X100 >= 201700 && !defined(HAVE_IPP_ICV)
 
 // Requires `status` variable (IppStatus) to be declared in the calling scope.
 #define CV_HAL_IPP_STATUS_CHECK(call) if ((status = (call)) < 0) return status
@@ -314,7 +313,7 @@ int ipp_hal_blobFromImages(const uchar* const* src_data, const size_t* src_step,
                                uchar* dst_data, size_t* dst_step, int layout,
                                int interpolation)
 {
-#if IPP_VERSION_X100 >= 201700
+#if IPP_VERSION_X100 >= 201700 && !defined(HAVE_IPP_ICV)
     #ifndef HAVE_IPP_IW
     // IPP IW (Integrated Wrapper) is required for resize operations
     // Without it, IPP acceleration is not available
@@ -618,4 +617,3 @@ int ipp_hal_blobFromImages(const uchar* const* src_data, const size_t* src_step,
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
 #endif // IPP_VERSION_X100 >= 201700
 }
-
