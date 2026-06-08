@@ -78,7 +78,7 @@ bool Dictionary::identify(const Mat &onlyCellPixelRatio, CV_OUT int &idx, CV_OUT
 
     // Fill bit masks of cells that are not black (not0) and not white (not1).
     const int s = (markerSize * markerSize + 8 - 1) / 8;
-    Mat1b temp(4, s);
+    Mat1b temp(5, s);
     uint8_t* not0 = temp.ptr(0), * not1 = temp.ptr(1);
     int not0Byte = 0, not1Byte = 0, currentByte = 0, currentBit = 0;
     for(int j = 0; j < markerSize; j++) {
@@ -100,7 +100,9 @@ bool Dictionary::identify(const Mat &onlyCellPixelRatio, CV_OUT int &idx, CV_OUT
         not0[currentByte] = not0Byte;
         not1[currentByte] = not1Byte;
     }
-    uint8_t* temp0 = temp.ptr(2), * temp1 = temp.ptr(3);
+    uint8_t* notXor = temp.ptr(2), * temp0 = temp.ptr(3), * temp1 = temp.ptr(4);
+    // Computing: notXor = not0 ^ not1
+    hal::xor8u(not0, s, not1, s, notXor, s, s, 1, nullptr);
 
     int maxCorrectionRecalculed = int(double(maxCorrectionBits) * maxCorrectionRate);
 
@@ -115,18 +117,17 @@ bool Dictionary::identify(const Mat &onlyCellPixelRatio, CV_OUT int &idx, CV_OUT
             // We want: if (marker is 0 and input is not 0) or (marker is 1 and input is not 1)
             // i.e.: (!bytesRot && not0) || (bytesRot && not1)
             // This is actually: not0 ^ ((not0 ^ not1) & bytesRot)
-            // Computing: temp0 = not0 ^ not1
-            hal::xor8u(not0, s, not1, s, temp0, s, s, 1, nullptr);
-            // Computing: temp1 = temp0 & bytesRot
-            hal::and8u(temp0, s, bytesRot, s, temp1, s, s, 1, nullptr);
-            hal::xor8u(not0, s, temp1, s, temp0, s, s, 1, nullptr);
-            int currentHamming = cv::hal::normHamming(temp0, s);
+            // Computing: temp0 = (not0 ^ not1) & bytesRot
+            hal::and8u(notXor, s, bytesRot, s, temp0, s, s, 1, nullptr);
+            // Computing the final result.
+            hal::xor8u(not0, s, temp0, s, temp1, s, s, 1, nullptr);
+            int currentHamming = cv::hal::normHamming(temp1, s);
 
             if(currentHamming < currentMinDistance) {
                 currentMinDistance = currentHamming;
+                currentRotation = r;
                 // Break for perfect distance.
                 if (currentMinDistance == 0) break;
-                currentRotation = r;
             }
         }
 
