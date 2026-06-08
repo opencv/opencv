@@ -1160,20 +1160,23 @@ static LABLUVLUT_s16_t initLUTforLABLUVs16(const softfloat & un, const softfloat
 
     AutoBuffer<int16_t> RGB2Labprev(LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3);
     AutoBuffer<int16_t> RGB2Luvprev(LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3);
-    for(int p = 0; p < LAB_LUT_DIM; p++)
+
+    softfloat gammaTab[LAB_LUT_DIM];
+    for(int n = 0; n < LAB_LUT_DIM; n++)
+        gammaTab[n] = applyGamma(softfloat(n)/lld);
+
+    cv::parallel_for_(cv::Range(0, LAB_LUT_DIM), [&](const cv::Range& prange)
+    {
+    for(int p = prange.start; p < prange.end; p++)
     {
         for(int q = 0; q < LAB_LUT_DIM; q++)
         {
             for(int r = 0; r < LAB_LUT_DIM; r++)
             {
                 int idx = p*3 + q*LAB_LUT_DIM*3 + r*LAB_LUT_DIM*LAB_LUT_DIM*3;
-                softfloat R = softfloat(p)/lld;
-                softfloat G = softfloat(q)/lld;
-                softfloat B = softfloat(r)/lld;
-
-                R = applyGamma(R);
-                G = applyGamma(G);
-                B = applyGamma(B);
+                softfloat R = gammaTab[p];
+                softfloat G = gammaTab[q];
+                softfloat B = gammaTab[r];
 
                 //RGB 2 Lab LUT building
                 {
@@ -1214,6 +1217,7 @@ static LABLUVLUT_s16_t initLUTforLABLUVs16(const softfloat & un, const softfloat
             }
         }
     }
+    });
 
     int16_t *RGB2LabLUT_s16 = cv::allocSingleton<int16_t>(LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3*8);
     int16_t *RGB2LuvLUT_s16 = cv::allocSingleton<int16_t>(LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3*8);
