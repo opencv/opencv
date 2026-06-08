@@ -733,6 +733,21 @@ def _translate(text: str, docname: str | None = None) -> str:
                 k = re.match(r"\s*", src[j:])
                 if not k or not re.match(r"@add_toggle_", src[j + k.end():]):
                     break
+                # A repeated language starts a NEW logical tab-set rather than
+                # adding a duplicate tab: sources sometimes place
+                # `cpp / python / cpp` consecutively (e.g. an inside+outside
+                # pair followed by a C++-only block) — that must render as
+                # [C++|Python] then [C++], not one C++/Python/C++ widget.
+                # Genuinely distinct languages (cpp/java/python) still merge.
+                _nxt = re.match(r"@add_toggle_(\w+)", src[j + k.end():])
+                if _nxt and _nxt.group(1) in {t[0] for t in tabs}:
+                    # Rewind to the next toggle's LINE START so the outer
+                    # loop's `^`-anchored opener re-matches it: the inner
+                    # `@end_toggle\s*\n?` above may have eaten the next line's
+                    # leading indent, which would otherwise leave the toggle
+                    # stranded mid-line and uncollapsed.
+                    j = src.rfind("\n", 0, j + k.end()) + 1
+                    break
                 j += k.end()
             if not tabs:
                 out.append(src[m.start():m.start() + 1]); i = m.start() + 1; continue

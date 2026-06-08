@@ -109,6 +109,48 @@ for _m in CONTRIB_MODULES:
                     _IMAGE_INDEX.setdefault(_img.name,
                                             f"contrib_modules/{_rel}")
 
+# Doxygen's IMAGE_PATH also spans opencv/samples (+ apps), so a tutorial can
+# reference an image that lives only under samples — e.g. the Clojure tutorial's
+# `![](images/lena.png)`, whose file is opencv/samples/java/clojure/.../lena.png.
+# Those resolve to nothing in the tutorial-only index and render broken. Mirror
+# Doxygen, but bounded: index+stage ONLY sample images that a tutorial actually
+# references and that aren't already provided by a tutorial `images/` dir, so we
+# don't copy the whole samples image set. Staged under sample_pics/ like the
+# api_pics mechanism above.
+_referenced_images: set[str] = set()
+for _md in (DOC_ROOT / "tutorials").rglob("*.markdown"):
+    try:
+        _txt = _md.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        continue
+    for _m in re.finditer(r'!\[[^\]]*\]\((?:[^)\s]*?/)?images/([^)\s]+)\)', _txt):
+        _referenced_images.add(pathlib.Path(_m.group(1)).name)
+_missing_images = {n for n in _referenced_images if n not in _IMAGE_INDEX}
+if _missing_images:
+    _sample_pics = SPHINX_INPUT_ROOT / "sample_pics"
+    _stage_samples = SPHINX_INPUT_ROOT != DOC_ROOT
+    for _base in (OPENCV_ROOT / "samples", OPENCV_ROOT / "apps"):
+        if not _base.is_dir() or not _missing_images:
+            continue
+        for _img in _base.rglob("*"):
+            if (_img.name in _missing_images and _img.is_file()
+                    and _img.suffix.lower() in _IMAGE_EXTS):
+                _IMAGE_INDEX[_img.name] = f"sample_pics/{_img.name}"
+                _missing_images.discard(_img.name)   # first match wins; stop looking
+                if _stage_samples:
+                    _sample_pics.mkdir(parents=True, exist_ok=True)
+                    _link = _sample_pics / _img.name
+                    if not _link.exists():
+                        try:
+                            _os.symlink(_img, _link)
+                        except (OSError, NotImplementedError):
+                            try:
+                                _shutil.copy2(_img, _link)
+                            except OSError:
+                                pass
+            if not _missing_images:
+                break
+
 if API_MODULES:
     _api_pics = SPHINX_INPUT_ROOT / "api_pics"
     _stage_pics = SPHINX_INPUT_ROOT != DOC_ROOT
