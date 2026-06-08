@@ -1,6 +1,7 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+// Copyright (C) 2026, Advanced Micro Devices, Inc., all rights reserved.
 //
 // Copyright (C) 2020, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
@@ -144,8 +145,15 @@ struct IntelligentScissorsMB::Impl
         if (!Ix_.empty())
             return;
         initGrayscale_(image);
-        Sobel(grayscale_, Ix_, CV_32FC1, 1, 0, sobelKernelSize);
-        Sobel(grayscale_, Iy_, CV_32FC1, 0, 1, sobelKernelSize);
+        if (sobelKernelSize == 3 || sobelKernelSize == 5)
+        {
+            Sobel2D(grayscale_, Ix_, Iy_, sobelKernelSize, CV_32FC1);
+        }
+        else
+        {
+            Sobel(grayscale_, Ix_, CV_32FC1, 1, 0, sobelKernelSize);
+            Sobel(grayscale_, Iy_, CV_32FC1, 0, 1, sobelKernelSize);
+        }
     }
     Mat image_magnitude_;
     void initImageMagnitude_(InputArray image)

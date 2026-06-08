@@ -11,6 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Copyright (C) 2026, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -1868,6 +1869,134 @@ TEST(Imgproc_MorphologyEx, accuracy) { CV_MorphExTest test; test.safe_run(); }
 TEST(Imgproc_Filter2D, accuracy) { CV_FilterTest test; test.safe_run(); }
 TEST(Imgproc_Sobel, accuracy) { CV_SobelTest test; test.safe_run(); }
 TEST(Imgproc_SpatialGradient, accuracy) { CV_SpatialGradientTest test; test.safe_run(); }
+
+// Sobel2D must match the two separate cv::Sobel calls it fuses: bit-exact for
+// ddepth=CV_16S/scale=1, and within float rounding for ddepth=CV_32F/scale.
+TEST(Imgproc_Sobel2D, accuracy)
+{
+    RNG& rng = TS::ptr()->get_rng();
+    const int ksizes[]  = { 3, 5 };
+    const int borders[] = { BORDER_DEFAULT, BORDER_REPLICATE, BORDER_REFLECT,
+                            BORDER_REFLECT_101, BORDER_CONSTANT };
+
+    for (int iter = 0; iter < 16; iter++)
+    {
+        Size sz(rng.uniform(3, 320), rng.uniform(3, 240));
+        Mat src(sz, CV_8UC1);
+        rng.fill(src, RNG::UNIFORM, 0, 256);
+
+        for (int ksize : ksizes)
+            for (int border : borders)
+                for (int ddepth : {CV_16S, CV_32F})
+                    for (double scale : {1.0, 0.25})
+                    {
+                        if (ddepth == CV_16S && scale != 1.0)
+                            continue; // int16 + non-unit scale is the fallback only
+                        Mat dx, dy, dxRef, dyRef;
+                        Sobel2D(src, dx, dy, ksize, ddepth, scale, border);
+                        Sobel(src, dxRef, ddepth, 1, 0, ksize, scale, 0, border);
+                        Sobel(src, dyRef, ddepth, 0, 1, ksize, scale, 0, border);
+
+                        EXPECT_EQ(CV_MAKETYPE(ddepth, 1), dx.type());
+                        EXPECT_EQ(sz, dx.size());
+                        // CV_16S/scale=1 is bit-exact; CV_32F allows float rounding.
+                        double tol = (ddepth == CV_16S) ? 0.0 : 1e-3;
+                        EXPECT_LE(cvtest::norm(dx, dxRef, NORM_INF), tol)
+                            << "dx: ksize=" << ksize << " border=" << border
+                            << " ddepth=" << ddepth << " scale=" << scale << " size=" << sz;
+                        EXPECT_LE(cvtest::norm(dy, dyRef, NORM_INF), tol)
+                            << "dy: ksize=" << ksize << " border=" << border
+                            << " ddepth=" << ddepth << " scale=" << scale << " size=" << sz;
+                    }
+    }
+
+    // CV_32FC1 source must work via the fallback and match cv::Sobel.
+    {
+        Mat src(120, 90, CV_32FC1);
+        rng.fill(src, RNG::UNIFORM, -5.f, 5.f);
+        for (int ks : {3, 5})
+        {
+            Mat dx, dy, dxRef, dyRef;
+            Sobel2D(src, dx, dy, ks, CV_32F, 1, BORDER_DEFAULT);
+            Sobel(src, dxRef, CV_32F, 1, 0, ks, 1, 0, BORDER_DEFAULT);
+            Sobel(src, dyRef, CV_32F, 0, 1, ks, 1, 0, BORDER_DEFAULT);
+            EXPECT_LE(cvtest::norm(dx, dxRef, NORM_INF), 1e-4) << "float-src dx ksize=" << ks;
+            EXPECT_LE(cvtest::norm(dy, dyRef, NORM_INF), 1e-4) << "float-src dy ksize=" << ks;
+        }
+    }
+
+    // full-width row-range ROI (as Canny uses): must match cv::Sobel on the ROI.
+    {
+        Mat parent(200, 160, CV_8UC1);
+        rng.fill(parent, RNG::UNIFORM, 0, 256);
+        for (int ks : {3, 5})
+            for (int b : {BORDER_DEFAULT, BORDER_REPLICATE, BORDER_REFLECT, BORDER_CONSTANT})
+                for (int ddepth : {CV_16S, CV_32F})
+                {
+                    Mat roi = parent.rowRange(40, 120);
+                    Mat dx, dy, dxRef, dyRef;
+                    Sobel2D(roi, dx, dy, ks, ddepth, 1, b);
+                    Sobel(roi, dxRef, ddepth, 1, 0, ks, 1, 0, b);
+                    Sobel(roi, dyRef, ddepth, 0, 1, ks, 1, 0, b);
+                    double tol = (ddepth == CV_16S) ? 0.0 : 1e-3;
+                    EXPECT_LE(cvtest::norm(dx, dxRef, NORM_INF), tol) << "ROI dx ksize=" << ks << " border=" << b << " ddepth=" << ddepth;
+                    EXPECT_LE(cvtest::norm(dy, dyRef, NORM_INF), tol) << "ROI dy ksize=" << ks << " border=" << b << " ddepth=" << ddepth;
+                }
+    }
+
+    // invalid aperture sizes must be rejected
+    Mat src(16, 16, CV_8UC1), dx, dy;
+    EXPECT_ANY_THROW(Sobel2D(src, dx, dy, 7));
+    EXPECT_ANY_THROW(Sobel2D(src, dx, dy, 1));
+}
+
+// Reproduces parallelCanny's per-slice row splitting and checks each slice's
+// Sobel2D output matches the whole-image gradient (i.e. multi-threaded == single).
+TEST(Imgproc_Sobel2D, slice_equivalence)
+{
+    RNG& rng = TS::ptr()->get_rng();
+
+    for (int ksize : {3, 5})
+        for (int border : {BORDER_REPLICATE, BORDER_REFLECT, BORDER_REFLECT_101})
+        {
+            Mat src(193, 137, CV_8UC1);   // odd dims to stress tail handling
+            rng.fill(src, RNG::UNIFORM, 0, 256);
+
+            Mat dxRef, dyRef;
+            Sobel2D(src, dxRef, dyRef, ksize, CV_16S, 1, border);
+
+            for (int nThreads : {2, 3, 4, 7, 16})
+            {
+                for (int t = 0; t < nThreads; t++)
+                {
+                    int start = (int)((int64)src.rows * t / nThreads);
+                    int end   = (int)((int64)src.rows * (t + 1) / nThreads);
+                    if (start >= end)
+                        continue;
+
+                    int rowStart = std::max(0, start - 1);
+                    int rowEnd   = std::min(src.rows, end + 1);
+
+                    Mat dx, dy;
+                    Sobel2D(src.rowRange(rowStart, rowEnd), dx, dy, ksize, CV_16S, 1, border);
+
+                    // rows [start, end) live at offset (start - rowStart) in the slice output
+                    int off = start - rowStart;
+                    Mat dxSlice = dx.rowRange(off, off + (end - start));
+                    Mat dySlice = dy.rowRange(off, off + (end - start));
+                    Mat dxWhole = dxRef.rowRange(start, end);
+                    Mat dyWhole = dyRef.rowRange(start, end);
+
+                    EXPECT_EQ(0.0, cvtest::norm(dxSlice, dxWhole, NORM_INF))
+                        << "dx slice mismatch: ksize=" << ksize << " border=" << border
+                        << " nThreads=" << nThreads << " t=" << t;
+                    EXPECT_EQ(0.0, cvtest::norm(dySlice, dyWhole, NORM_INF))
+                        << "dy slice mismatch: ksize=" << ksize << " border=" << border
+                        << " nThreads=" << nThreads << " t=" << t;
+                }
+            }
+        }
+}
 TEST(Imgproc_Laplace, accuracy) { CV_LaplaceTest test; test.safe_run(); }
 TEST(Imgproc_Blur, accuracy) { CV_BlurTest test; test.safe_run(); }
 TEST(Imgproc_GaussianBlur, accuracy) { CV_GaussianBlurTest test; test.safe_run(); }

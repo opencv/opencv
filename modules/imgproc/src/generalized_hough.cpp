@@ -11,6 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Copyright (C) 2026, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -115,8 +116,7 @@ namespace
         CV_Assert( cannyLowThresh_ > 0 && cannyLowThresh_ < cannyHighThresh_ );
 
         Canny(src, edges, cannyLowThresh_, cannyHighThresh_);
-        Sobel(src, dx, CV_32F, 1, 0);
-        Sobel(src, dy, CV_32F, 0, 1);
+        Sobel2D(src, dx, dy, 3, CV_32F);
     }
 
     void GeneralizedHoughBase::setTemplateImpl(InputArray templ, Point templCenter)
