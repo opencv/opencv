@@ -45,7 +45,7 @@
 #if defined (HAVE_GTK)
 
 #include <gtk/gtk.h>
-#if !defined(_WIN32)
+#if defined(__linux__)
 #include <dlfcn.h>
 #endif
 
@@ -641,7 +641,7 @@ CV_IMPL int cvInitSystem( int argc, char** argv )
         // on libX11, making this a safe no-op on pure Wayland builds.
         // See: https://github.com/opencv/opencv/issues/29195
         //      https://github.com/opencv/opencv/issues/21952
-        #if !defined(_WIN32)
+        #if defined(__linux__)
         {
             void* x11 = NULL;
             #ifdef RTLD_NOLOAD
