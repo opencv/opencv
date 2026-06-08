@@ -78,14 +78,15 @@ bool Dictionary::identify(const Mat &onlyCellPixelRatio, CV_OUT int &idx, CV_OUT
 
     // Fill bit masks of cells that are not black (not0) and not white (not1).
     const int s = (markerSize * markerSize + 8 - 1) / 8;
-    Mat1b temp(5, s);
-    uint8_t* not0 = temp.ptr(0), * not1 = temp.ptr(1);
+    AutoBuffer<uint8_t> temp(4 * s);
+    uint8_t* not0 = temp.data(), * not1 = not0 + s;
     int not0Byte = 0, not1Byte = 0, currentByte = 0, currentBit = 0;
     for(int j = 0; j < markerSize; j++) {
+        const float* cellPixelRatioRow = onlyCellPixelRatio.ptr<float>(j);
         for(int i = 0; i < markerSize; i++) {
             not0Byte <<= 1; not1Byte <<= 1;
-            if(onlyCellPixelRatio.at<float>(j, i) > validBitIdThreshold) not0Byte |= 1;
-            if(onlyCellPixelRatio.at<float>(j, i) < 1 - validBitIdThreshold) not1Byte |= 1;
+            if(cellPixelRatioRow[i] > validBitIdThreshold) not0Byte |= 1;
+            if(cellPixelRatioRow[i] < 1 - validBitIdThreshold) not1Byte |= 1;
             ++currentBit;
             if(currentBit == 8) {
                 not0[currentByte] = not0Byte;
@@ -100,7 +101,7 @@ bool Dictionary::identify(const Mat &onlyCellPixelRatio, CV_OUT int &idx, CV_OUT
         not0[currentByte] = not0Byte;
         not1[currentByte] = not1Byte;
     }
-    uint8_t* notXor = temp.ptr(2), * temp0 = temp.ptr(3), * temp1 = temp.ptr(4);
+    uint8_t* notXor = not1 + s, * temp0 = notXor + s;
     // Computing: notXor = not0 ^ not1
     hal::xor8u(not0, s, not1, s, notXor, s, s, 1, nullptr);
 
@@ -112,16 +113,15 @@ bool Dictionary::identify(const Mat &onlyCellPixelRatio, CV_OUT int &idx, CV_OUT
     for(int m = 0; m < bytesList.rows; m++) {
         int currentMinDistance = markerSize * markerSize + 1;
         int currentRotation = -1;
-        for(int r = 0; r < 4; r++) {
-            const uchar* bytesRot = bytesList.ptr(m) + r*s;
+        const uchar* bytesRot = bytesList.ptr(m);
+        for(int r = 0; r < 4; r++, bytesRot += s) {
             // We want: if (marker is 0 and input is not 0) or (marker is 1 and input is not 1)
             // i.e.: (!bytesRot && not0) || (bytesRot && not1)
             // This is actually: not0 ^ ((not0 ^ not1) & bytesRot)
             // Computing: temp0 = (not0 ^ not1) & bytesRot
             hal::and8u(notXor, s, bytesRot, s, temp0, s, s, 1, nullptr);
-            // Computing the final result.
-            hal::xor8u(not0, s, temp0, s, temp1, s, s, 1, nullptr);
-            int currentHamming = cv::hal::normHamming(temp1, s);
+            // Computing the final result (xor is performed internally).
+            int currentHamming = cv::hal::normHamming(not0, temp0, s);
 
             if(currentHamming < currentMinDistance) {
                 currentMinDistance = currentHamming;
