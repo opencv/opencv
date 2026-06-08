@@ -258,6 +258,9 @@ OCV_OPTION(WITH_JPEGXL "Include JPEG XL support" OFF
 OCV_OPTION(WITH_WEBP "Include WebP support" ON
   VISIBLE_IF NOT WINRT
   VERIFY HAVE_WEBP)
+OCV_OPTION(WITH_HARFBUZZ "Enable HarfBuzz text shaping for putText/getTextSize" ON
+  VISIBLE_IF TRUE
+  VERIFY HAVE_HARFBUZZ)
 OCV_OPTION(WITH_OPENEXR "Include ILM support via OpenEXR" (WIN32 OR ANDROID OR APPLE) OR NOT CMAKE_CROSSCOMPILING
   VISIBLE_IF NOT APPLE_FRAMEWORK AND NOT WINRT
   VERIFY HAVE_OPENEXR)
@@ -767,6 +770,7 @@ endif()
 include(cmake/OpenCVFindFrameworks.cmake)
 
 include(cmake/OpenCVFindLibsGrfmt.cmake)
+include(cmake/OpenCVFindHarfBuzz.cmake)
 include(cmake/OpenCVFindLibsGUI.cmake)
 include(cmake/OpenCVFindLibsVideo.cmake)
 include(cmake/OpenCVFindLibsPerf.cmake)
@@ -1732,6 +1736,8 @@ endif()
 # ========================== Other third-party libraries ==========================
 status("")
 status("  Other third-party libraries:")
+
+status("    HarfBuzz:"   HAVE_HARFBUZZ THEN "build (ver 14.2.1)" ELSE "NO")
 
 if(WITH_IPP AND HAVE_IPP)
   status("    Intel IPP:" "${IPP_VERSION_STR} [${IPP_VERSION_MAJOR}.${IPP_VERSION_MINOR}.${IPP_VERSION_BUILD}]")
