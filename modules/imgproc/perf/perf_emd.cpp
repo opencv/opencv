@@ -11,8 +11,8 @@ typedef tuple<int, int> EMD_Size_Dim_t;
 typedef perf::TestBaseWithParam<EMD_Size_Dim_t> EMD_Fixture;
 
 PERF_TEST_P(EMD_Fixture, L1_Distance, testing::Combine(
-            testing::Values(100, 500,1000), 
-            testing::Values(3, 64)           
+            testing::Values(100, 500, 1000),
+            testing::Values(3, 64)          
 ))
 {
     int size = get<0>(GetParam());
@@ -21,14 +21,8 @@ PERF_TEST_P(EMD_Fixture, L1_Distance, testing::Combine(
     Mat sign1(size, dims + 1, CV_32FC1);
     Mat sign2(size, dims + 1, CV_32FC1);
 
-    RNG rng(12345);
-    rng.fill(sign1, RNG::UNIFORM, 0.1, 1.0);
-    rng.fill(sign2, RNG::UNIFORM, 0.1, 1.0);
-
-    for (int i = 0; i < size; ++i) {
-        sign1.at<float>(i, 0) = std::abs(sign1.at<float>(i, 0)) + 0.1f;
-        sign2.at<float>(i, 0) = std::abs(sign2.at<float>(i, 0)) + 0.1f;
-    }
+    theRNG().fill(sign1, RNG::UNIFORM, 0.1, 1.0);
+    theRNG().fill(sign2, RNG::UNIFORM, 0.1, 1.0);
 
     declare.in(sign1, sign2);
 
