@@ -1142,10 +1142,9 @@ TEST(Imgproc_Drawing, arrowedLine_tipLength_validation)
     // 2. Validate illegal parameters: expect cv::Exception to be thrown (Boundary violations)
     // Negative ratio (tipLength <= 0.0)
     EXPECT_THROW(cv::arrowedLine(img, pt1, pt2, cv::Scalar(255, 255, 255), 1, 8, 0, -0.5), cv::Exception);
-    
+
     // Overflow ratio (tipLength > 1.0)
     EXPECT_THROW(cv::arrowedLine(img, pt1, pt2, cv::Scalar(255, 255, 255), 1, 8, 0, 1.5), cv::Exception);
 }
 
 }} // namespace
-
