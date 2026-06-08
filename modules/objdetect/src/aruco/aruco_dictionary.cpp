@@ -167,7 +167,7 @@ bool Dictionary::identify(const Mat &onlyBits, CV_OUT int &idx, CV_OUT int &rota
 
     Mat candidateBitRatio;
     Mat(onlyBits > 0).convertTo(candidateBitRatio, CV_32F, 1.0 / 255.0);
-    return identify(candidateBitRatio, idx, rotation, maxCorrectionRate, 0.5f);
+    return identify(candidateBitRatio, idx, rotation, maxCorrectionRate, DEFAULT_VALID_BIT_ID_THRESHOLD);
 }
 
 
