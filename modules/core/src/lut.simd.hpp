@@ -10,7 +10,13 @@
 // Non-x86 (NEON, etc.) benefits from v_lut implementation.
 #if CV_AVX_512VBMI
 #define CV_LUT8U_SIMD 1
-#elif !defined(CV_CPU_COMPILE_SSE2) && (CV_SIMD || CV_SIMD_SCALABLE)
+#elif (defined(CV_CPU_COMPILE_SSE) || defined(CV_CPU_COMPILE_SSE2) || defined(CV_CPU_COMPILE_SSE3) || \
+       defined(CV_CPU_COMPILE_SSSE3) || defined(CV_CPU_COMPILE_SSE4_1) || defined(CV_CPU_COMPILE_SSE4_2) || \
+       defined(CV_CPU_COMPILE_AVX) || defined(CV_CPU_COMPILE_AVX2) || defined(CV_CPU_COMPILE_AVX_512F) || \
+       defined(CV_CPU_COMPILE_AVX512_COMMON) || defined(CV_CPU_COMPILE_AVX512_SKX) || \
+       defined(CV_CPU_COMPILE_AVX512_CNL) || defined(CV_CPU_COMPILE_AVX512_CLX))
+#define CV_LUT8U_SIMD 0
+#elif CV_SIMD || CV_SIMD_SCALABLE
 #define CV_LUT8U_SIMD 1
 #else
 #define CV_LUT8U_SIMD 0

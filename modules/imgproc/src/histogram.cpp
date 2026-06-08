@@ -3449,7 +3449,7 @@ void cv::equalizeHist( InputArray _src, OutputArray _dst )
 
     const int hist_sz = EqualizeHistCalcHist_Invoker::HIST_SZ;
     int hist[hist_sz] = {0,};
-    int lut[hist_sz];
+    int lut[hist_sz] = {0,};
 
     EqualizeHistCalcHist_Invoker calcBody(src, hist, &histogramLockInstance);
     cv::Range heightRange(0, src.rows);

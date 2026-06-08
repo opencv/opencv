@@ -10,13 +10,28 @@
 
 namespace cv {
 
+namespace {
+
+typedef void (*EqualizeHistLutFunc)( const uchar*, uchar*, int, const uchar* );
+
+static EqualizeHistLutFunc resolveEqualizeHistLutFunc()
+{
+#if CV_TRY_AVX512_ICL
+    if (cv::checkHardwareSupport(CV_CPU_AVX512_ICL))
+        return opt_AVX512_ICL::equalizeHistLut_;
+#endif
+    return cpu_baseline::equalizeHistLut_;
+}
+
+} // namespace
+
 void equalizeHistLut_dispatch( const uchar* src, uchar* dst, int len, const uchar* lut );
 
 void equalizeHistLut_dispatch( const uchar* src, uchar* dst, int len, const uchar* lut )
 {
     CV_INSTRUMENT_REGION();
-    CV_CPU_DISPATCH(equalizeHistLut_, (src, dst, len, lut),
-        CV_CPU_DISPATCH_MODES_ALL);
+    static EqualizeHistLutFunc fn = resolveEqualizeHistLutFunc();
+    fn(src, dst, len, lut);
 }
 
 } // namespace cv

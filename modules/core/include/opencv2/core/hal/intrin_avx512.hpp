@@ -1659,16 +1659,10 @@ inline v_uint8x64 v512_lut(const uchar* tab, const v_uint8x64& idx)
     __m512i high = _mm512_mask_blend_epi8(k6, r2, r3);
     return v_uint8x64(_mm512_mask_blend_epi8(k7, low, high));
 #else
-    __m128i i0 = _mm512_castsi512_si128(idx.val);
-    __m128i i1 = _mm512_extracti32x4_epi32(idx.val, 1);
-    __m128i i2 = _mm512_extracti32x4_epi32(idx.val, 2);
-    __m128i i3 = _mm512_extracti32x4_epi32(idx.val, 3);
-
-    __m128i p0 = _mm512_cvtepi32_epi8(_mm512_i32gather_epi32(_mm512_cvtepu8_epi32(i0), (const int *)tab, 1));
-    __m128i p1 = _mm512_cvtepi32_epi8(_mm512_i32gather_epi32(_mm512_cvtepu8_epi32(i1), (const int *)tab, 1));
-    __m128i p2 = _mm512_cvtepi32_epi8(_mm512_i32gather_epi32(_mm512_cvtepu8_epi32(i2), (const int *)tab, 1));
-    __m128i p3 = _mm512_cvtepi32_epi8(_mm512_i32gather_epi32(_mm512_cvtepu8_epi32(i3), (const int *)tab, 1));
-    return v_uint8x64(_mm512_inserti32x4(_mm512_inserti32x4(_mm512_inserti32x4(_mm512_castsi128_si512(p0), p1, 1), p2, 2), p3, 3));
+    uchar CV_DECL_ALIGNED(64) indices[64], result[64];
+    _mm512_store_si512((__m512i*)indices, idx.val);
+    for (int i = 0; i < 64; i++) result[i] = tab[indices[i]];
+    return v_uint8x64(_mm512_load_si512((const __m512i*)result));
 #endif
 }
 inline v_int8x64 v512_lut(const schar* tab, const v_uint8x64& idx)
@@ -1709,11 +1703,10 @@ inline v_uint8x64 v512_lut_pairs(const uchar* tab, const v_uint8x64& idx)
     __m512i high = _mm512_mask_blend_epi8(k6, r2, r3);
     return v_uint8x64(_mm512_mask_blend_epi8(k7, low, high));
 #else
-    __m128i i0 = _mm512_castsi512_si128(idx.val);
-    __m128i i1 = _mm512_extracti32x4_epi32(idx.val, 1);
-    __m256i p0 = _mm512_cvtepi32_epi16(_mm512_i32gather_epi32(_mm512_cvtepu8_epi32(i0), (const int *)tab, 1));
-    __m256i p1 = _mm512_cvtepi32_epi16(_mm512_i32gather_epi32(_mm512_cvtepu8_epi32(i1), (const int *)tab, 1));
-    return v_uint8x64(_v512_combine(p0, p1));
+    uchar CV_DECL_ALIGNED(64) indices[64], result[64];
+    _mm512_store_si512((__m512i*)indices, idx.val);
+    for (int i = 0; i < 64; i++) result[i] = tab[indices[i]];
+    return v_uint8x64(_mm512_load_si512((const __m512i*)result));
 #endif
 }
 inline v_int8x64 v512_lut_pairs(const schar* tab, const v_uint8x64& idx)
@@ -1748,7 +1741,10 @@ inline v_uint8x64 v512_lut_quads(const uchar* tab, const v_uint8x64& idx)
     __m512i high = _mm512_mask_blend_epi8(k6, r2, r3);
     return v_uint8x64(_mm512_mask_blend_epi8(k7, low, high));
 #else
-    return v_uint8x64(_mm512_i32gather_epi32(_mm512_cvtepu8_epi32(_mm512_castsi512_si128(idx.val)), (const int *)tab, 1));
+    uchar CV_DECL_ALIGNED(64) indices[64], result[64];
+    _mm512_store_si512((__m512i*)indices, idx.val);
+    for (int i = 0; i < 64; i++) result[i] = tab[indices[i]];
+    return v_uint8x64(_mm512_load_si512((const __m512i*)result));
 #endif
 }
 inline v_int8x64 v512_lut_quads(const schar* tab, const v_uint8x64& idx)
