@@ -45,12 +45,42 @@ Ptr<Layer> __LayerStaticRegisterer_func_##type(LayerParams &params) \
     { return Ptr<Layer>(new class(params)); }                       \
 static cv::dnn::details::_LayerStaticRegisterer __LayerStaticRegisterer_##type(#type, __LayerStaticRegisterer_func_##type);
 
+/** @brief Registers an OpData (metadata node) class for the new graph engine.
+ *  @param type string, containing the operation type name.
+ *  @param class C++ class derived from OpData, providing `static Ptr<OpData> create(const LayerParams&)`.
+ *  @details This macro must be placed inside the function code (e.g. initializeLayerFactory()).
+ */
+#define CV_DNN_REGISTER_OP_CLASS(type, class) \
+    cv::dnn::LayerFactory::registerOp(#type, cv::dnn::details::_opDynamicRegisterer<class>);
+
+/** @brief Registers a backend executor class for the new graph engine.
+ *  @param type string, containing the operation type name.
+ *  @param backendId backend id the executor targets (e.g. DNN_BACKEND_OPENCV, DNN_BACKEND_CUDA).
+ *  @param class C++ class derived from Layer, providing
+ *         `static Ptr<Layer> create(const Ptr<OpData>&, void* backendCtx)` (null Ptr if unsupported).
+ *  @details This macro must be placed inside the function code.
+ */
+#define CV_DNN_REGISTER_EXEC_CLASS(type, backendId, class) \
+    cv::dnn::LayerFactory::registerExec(#type, backendId, cv::dnn::details::_execDynamicRegisterer<class>);
+
 namespace details {
 
 template<typename LayerClass>
 Ptr<Layer> _layerDynamicRegisterer(LayerParams &params)
 {
     return Ptr<Layer>(LayerClass::create(params));
+}
+
+template<typename OpClass>
+Ptr<OpData> _opDynamicRegisterer(const LayerParams &params)
+{
+    return Ptr<OpData>(OpClass::create(params));
+}
+
+template<typename ExecClass>
+Ptr<Layer> _execDynamicRegisterer(const Ptr<OpData>& data, void* backendCtx)
+{
+    return Ptr<Layer>(ExecClass::create(data, backendCtx));
 }
 
 //allows automatically register created layer on module load time
