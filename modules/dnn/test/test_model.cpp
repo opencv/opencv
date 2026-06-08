@@ -664,17 +664,31 @@ static void topK(const Mat& probs, std::vector<std::pair<int, float> >& result, 
     }
 }
 
-typedef testing::TestWithParam<Target> Reproducibility_ResNet50_ONNX;
+// Returns the CPU (OpenCV backend) and CUDA backend/target pairs for benchmarking.
+static std::vector<tuple<Backend, Target> > resnet50BackendsAndTargets()
+{
+    std::vector<tuple<Backend, Target> > targets;
+    targets.push_back(make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU));
+#ifdef HAVE_CUDA
+    for (auto target : getAvailableTargets(DNN_BACKEND_CUDA))
+        targets.push_back(make_tuple(DNN_BACKEND_CUDA, target));
+#endif
+    return targets;
+}
+
+typedef testing::TestWithParam<tuple<Backend, Target> > Reproducibility_ResNet50_ONNX;
 TEST_P(Reproducibility_ResNet50_ONNX, Accuracy)
 {
-    Target targetId = GetParam();
+    Backend backendId = get<0>(GetParam());
+    Target targetId = get<1>(GetParam());
     applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
-    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
+    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16
+                || backendId == DNN_BACKEND_CUDA);
 
     std::string modelname = _tf("onnx/models/resnet50v1.onnx", false);
     Net net = readNetFromONNX(modelname);
 
-    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableBackend(backendId);
     net.setPreferableTarget(targetId);
 
     if (targetId == DNN_TARGET_CPU_FP16)
@@ -712,9 +726,37 @@ TEST_P(Reproducibility_ResNet50_ONNX, Accuracy)
     for (int i = 0; i < K; i++) {
         EXPECT_NEAR(ref[i].second, res[i].second, eps);
     }
+
+    // Benchmark: warmup runs followed by timed runs, reporting avg/min/max forward time.
+    const int numWarmup = 5;
+    const int numRuns = 30;
+    for (int i = 0; i < numWarmup; i++)
+    {
+        net.setInput(input);
+        net.forward();
+    }
+
+    double timeMin = DBL_MAX, timeMax = 0.0, timeSum = 0.0;
+    for (int i = 0; i < numRuns; i++)
+    {
+        net.setInput(input);
+        TickMeter tm;
+        tm.start();
+        net.forward();
+        tm.stop();
+        double t = tm.getTimeMilli();
+        timeSum += t;
+        timeMin = std::min(timeMin, t);
+        timeMax = std::max(timeMax, t);
+    }
+
+    std::cout << "[ BENCHMARK ] ResNet50 ONNX (backend=" << backendId << ", target=" << targetId << ") over "
+              << numRuns << " runs: avg=" << (timeSum / numRuns) << " ms"
+              << ", min=" << timeMin << " ms"
+              << ", max=" << timeMax << " ms" << std::endl;
 }
 INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_ResNet50_ONNX,
-                        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
+                        testing::ValuesIn(resnet50BackendsAndTargets()));
 
 typedef testing::TestWithParam<Target> Reproducibility_ResNet50_QDQ_ONNX;
 TEST_P(Reproducibility_ResNet50_QDQ_ONNX, Accuracy)

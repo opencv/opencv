@@ -48,6 +48,11 @@
 
 namespace cv {
 namespace dnn {
+
+#ifdef HAVE_CUDA
+void registerConv2CudaBackend();  // defined in layers/conv2_layer.cpp (plain cv::dnn namespace)
+#endif
+
 CV__DNN_INLINE_NS_BEGIN
 
 static Mutex* __initialization_mutex = NULL;
@@ -76,12 +81,22 @@ public:
 } // namespace
 #endif
 
+#ifdef HAVE_CUDA
+void registerCudaCommonExecs();  // op_cuda.cpp (inline namespace)
+#endif
+
 void initializeLayerFactory()
 {
     CV_TRACE_FUNCTION();
 
 #if defined(HAVE_PROTOBUF) && !defined(BUILD_PLUGIN)
     static ProtobufShutdown protobufShutdown; CV_UNUSED(protobufShutdown);
+#endif
+
+#ifdef HAVE_CUDA
+    // New graph engine: per-op CUDA executors.
+    registerConv2CudaBackend();
+    registerCudaCommonExecs();
 #endif
 
     CV_DNN_REGISTER_LAYER_CLASS(If,             IfLayer);

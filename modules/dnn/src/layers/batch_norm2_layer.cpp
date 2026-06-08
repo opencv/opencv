@@ -7,6 +7,10 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../net_impl.hpp"
+#include "../op_cuda.hpp"
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/batch_norm.hpp"
+#endif
 
 namespace cv {
 namespace dnn {
@@ -355,8 +359,26 @@ public:
 
     bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV
+#ifdef HAVE_CUDA
+               || backendId == DNN_BACKEND_CUDA
+#endif
+               ;
     }
+
+#ifdef HAVE_CUDA
+    // Channel-wise scale+shift on CUDA; reused by the new graph engine via CUDALegacyExec.
+    Ptr<BackendNode> initCUDA(void* context_,
+                              const std::vector<Ptr<BackendWrapper> >&,
+                              const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
+    {
+        auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
+        Mat scale, bias;
+        getScaleBias(scale, bias);  // per-channel FP32 scale and shift
+        return make_cuda_node<cuda4dnn::BatchNormOp>(
+            preferableTarget, std::move(context->stream), scale, bias);
+    }
+#endif
 
     MatShape getOutShape(const MatShape& inpShape) const
     {

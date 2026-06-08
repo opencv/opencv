@@ -167,7 +167,7 @@ protected:
     std::string onnxBasePath;
     Ptr<Graph> curr_graph;
     opencv_onnx::GraphProto* curr_graph_proto;
-    std::vector<Ptr<Layer> > curr_prog;
+    std::vector<Ptr<OpData> > curr_prog;
     std::vector<Arg> node_inputs, node_outputs;
 
     std::string framework_name;
@@ -896,7 +896,7 @@ Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool 
 
     opencv_onnx::GraphProto* saved_graph_proto = curr_graph_proto;
     Ptr<Graph> saved_graph = curr_graph;
-    std::vector<Ptr<Layer> > saved_prog;
+    std::vector<Ptr<OpData> > saved_prog;
 
     curr_graph_proto = graph_proto;
     std::vector<Arg> inputs, outputs;
@@ -1492,9 +1492,12 @@ void ONNXImporter2::parseGemm(LayerParams& layerParams, const opencv_onnx::NodeP
     if (net.isConstArg(node_inputs[1]) && (n_inputs == 2 || net.isConstArg(node_inputs[2]))) {
         Mat B = net.argTensor(node_inputs[1]);
         layerParams.blobs.push_back(B);
+        layerParams.set("constB", true);  // weight folded into blobs[0] (enables CUDA InnerProduct)
         if (n_inputs > 2) {
             Mat bias = net.argTensor(node_inputs[2]);
             layerParams.blobs.push_back(bias);
+            layerParams.set("have_bias", true);
+            layerParams.set("constC", true);
         }
         n_inputs = 1;
     }
@@ -1704,7 +1707,7 @@ void ONNXImporter2::parseLoop(LayerParams& layerParams,
 
     CV_Assert(!subgraphs[0].empty());
 
-    Ptr<Layer>& loopLayer = curr_prog.back();
+    Ptr<OpData>& loopLayer = curr_prog.back();
     *loopLayer->subgraphs() = subgraphs;
 }
 
@@ -1729,7 +1732,7 @@ void ONNXImporter2::parseIf(LayerParams& layerParams,
 
     CV_Assert_N(!thenelse[0].empty(), !thenelse[1].empty());
 
-    Ptr<Layer>& ifLayer = curr_prog.back();
+    Ptr<OpData>& ifLayer = curr_prog.back();
     *ifLayer->subgraphs() = thenelse;
 }
 
