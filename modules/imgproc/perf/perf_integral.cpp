@@ -159,4 +159,32 @@ PERF_TEST_P( Size_MatType_OutMatDepth, integral_sqsum_tilted,
     SANITY_CHECK(tilted, 1e-6, tilted.depth() > CV_32S ? ERROR_RELATIVE : ERROR_ABSOLUTE);
 }
 
+// sum=CV_32S, sqsum=CV_64F: the default output types of cv::integral(src, sum, sqsum)
+// for an 8-bit image. The integral_sqsum test above pairs sum and sqsum at the same
+// depth, so this common combination was not measured.
+PERF_TEST_P(Size_MatType_OutMatDepth, integral_sqsum_64f,
+            testing::Combine(
+                testing::Values(TYPICAL_MAT_SIZES),
+                testing::Values(CV_8UC1, CV_8UC3),
+                testing::Values(CV_32S)
+                )
+            )
+{
+    Size sz = get<0>(GetParam());
+    int matType = get<1>(GetParam());
+    int sdepth = get<2>(GetParam());
+
+    Mat src(sz, matType);
+    Mat sum(sz, sdepth);
+    Mat sqsum(sz, CV_64F);
+
+    declare.in(src, WARMUP_RNG).out(sum, sqsum);
+    declare.time(100);
+
+    TEST_CYCLE() integral(src, sum, sqsum, sdepth, CV_64F);
+
+    SANITY_CHECK(sum, 1e-6);
+    SANITY_CHECK(sqsum, 1e-6);
+}
+
 } // namespace

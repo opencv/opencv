@@ -84,11 +84,13 @@ struct Integral_SIMD<uchar, int, double>
 
     bool operator()(const uchar * src, size_t _srcstep,
                     int * sum, size_t _sumstep,
-                    double * sqsum, size_t,
+                    double * sqsum, size_t _sqsumstep,
                     int * tilted, size_t,
                     int width, int height, int cn) const
     {
-        if (sqsum || tilted || cn > 4)
+        // sqsum is vectorized for single-channel only (see below); other channel
+        // counts and the tilted case still fall back to the scalar path.
+        if ((sqsum && cn != 1) || tilted || cn > 4)
             return false;
 #if !CV_SSE4_1 && CV_SSE2
         // 3 channel code is slower for SSE2 & SSE3
@@ -100,6 +102,8 @@ struct Integral_SIMD<uchar, int, double>
 
         // the first iteration
         memset(sum, 0, (width + cn) * sizeof(int));
+        if (sqsum)
+            memset(sqsum, 0, (width + cn) * sizeof(double));
 
         if (cn == 1)
         {
@@ -112,11 +116,18 @@ struct Integral_SIMD<uchar, int, double>
 
                 sum_row[-1] = 0;
 
+                double * prev_sqsum_row = sqsum ? (double *)((uchar *)sqsum + _sqsumstep * i) + 1 : 0;
+                double * sqsum_row      = sqsum ? (double *)((uchar *)sqsum + _sqsumstep * (i + 1)) + 1 : 0;
+                if (sqsum)
+                    sqsum_row[-1] = 0;
+
                 v_int32 prev = vx_setzero_s32();
+                v_int32 prev_sq = vx_setzero_s32();
                 int j = 0;
                 for ( ; j + VTraits<v_uint16>::vlanes() <= width; j += VTraits<v_uint16>::vlanes())
                 {
-                    v_int16 el8 = v_reinterpret_as_s16(vx_load_expand(src_row + j));
+                    v_uint16 px = vx_load_expand(src_row + j);
+                    v_int16 el8 = v_reinterpret_as_s16(px);
                     v_int32 el4l, el4h;
 #if CV_AVX2 && CV_SIMD_WIDTH == 32
                     __m256i vsum = _mm256_add_epi16(el8.val, _mm256_slli_si256(el8.val, 2));
@@ -142,10 +153,53 @@ struct Integral_SIMD<uchar, int, double>
 #endif
                     v_store(sum_row + j                  , v_add(el4l, vx_load(prev_sum_row + j)));
                     v_store(sum_row + j + VTraits<v_int32>::vlanes(), v_add(el4h, vx_load(prev_sum_row + j + VTraits<v_int32>::vlanes())));
+
+                    if (sqsum)
+                    {
+                        // Integral of squared pixels. The per-row running sum of squares
+                        // (<= width * 255^2) fits in int32, so the horizontal prefix sum is
+                        // done in int32 with the same rotate/broadcast idiom as the sum above,
+                        // then accumulated into the double output together with the row above.
+                        v_uint32 sqlo_u, sqhi_u;
+                        v_mul_expand(px, px, sqlo_u, sqhi_u);
+                        v_int32 sqlo = v_reinterpret_as_s32(sqlo_u);
+                        v_int32 sqhi = v_reinterpret_as_s32(sqhi_u);
+                        sqlo = v_add(sqlo, v_rotate_left<1>(sqlo));
+                        sqlo = v_add(sqlo, v_rotate_left<2>(sqlo));
+                        sqhi = v_add(sqhi, v_rotate_left<1>(sqhi));
+                        sqhi = v_add(sqhi, v_rotate_left<2>(sqhi));
+#if CV_SIMD_WIDTH >= 32
+                        sqlo = v_add(sqlo, v_rotate_left<4>(sqlo));
+                        sqhi = v_add(sqhi, v_rotate_left<4>(sqhi));
+#if CV_SIMD_WIDTH == 64
+                        sqlo = v_add(sqlo, v_rotate_left<8>(sqlo));
+                        sqhi = v_add(sqhi, v_rotate_left<8>(sqhi));
+#endif
+#endif
+                        sqlo = v_add(sqlo, prev_sq);
+                        sqhi = v_add(sqhi, v_broadcast_highest(sqlo));
+                        prev_sq = v_broadcast_highest(sqhi);
+                        const int vl64 = VTraits<v_float64>::vlanes();
+                        v_store(sqsum_row + j            , v_add(v_cvt_f64(sqlo),      vx_load(prev_sqsum_row + j)));
+                        v_store(sqsum_row + j +     vl64 , v_add(v_cvt_f64_high(sqlo), vx_load(prev_sqsum_row + j +     vl64)));
+                        v_store(sqsum_row + j + 2 * vl64 , v_add(v_cvt_f64(sqhi),      vx_load(prev_sqsum_row + j + 2 * vl64)));
+                        v_store(sqsum_row + j + 3 * vl64 , v_add(v_cvt_f64_high(sqhi), vx_load(prev_sqsum_row + j + 3 * vl64)));
+                    }
                 }
 
-                for (int v = sum_row[j - 1] - prev_sum_row[j - 1]; j < width; ++j)
-                    sum_row[j] = (v += src_row[j]) + prev_sum_row[j];
+                int jt = j;
+                for (int v = sum_row[jt - 1] - prev_sum_row[jt - 1]; jt < width; ++jt)
+                    sum_row[jt] = (v += src_row[jt]) + prev_sum_row[jt];
+                if (sqsum)
+                {
+                    double s = sqsum_row[j - 1] - prev_sqsum_row[j - 1];
+                    for ( ; j < width; ++j)
+                    {
+                        int it = src_row[j];
+                        s += (double)it * it;
+                        sqsum_row[j] = s + prev_sqsum_row[j];
+                    }
+                }
             }
         }
         else if (cn == 2)
