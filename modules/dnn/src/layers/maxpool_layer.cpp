@@ -7,6 +7,10 @@
 #include "../net_impl.hpp"
 #include "conv2_common.hpp"
 #include "opencv2/core/hal/intrin.hpp"
+#include "../op_cuda.hpp"
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/pooling.hpp"
+#endif
 
 namespace cv
 {
@@ -473,8 +477,47 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA) {
+            if (kernel_shape.size() != 2 || outputs.size() != 1)
+                return false;
+            for (int d : dilations) if (d != 1) return false;
+            return auto_pad == AUTO_PAD_NONE || auto_pad == AUTO_PAD_VALID;
+        }
+#endif
         return backendId == DNN_BACKEND_OPENCV;
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void* context_,
+                              const std::vector<Ptr<BackendWrapper> >& inputs,
+                              const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
+    {
+        auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
+        auto inW = inputs[0].dynamicCast<CUDABackendWrapper>();
+        MatShape inShape = inW->getShape();
+        const int nspatial = (int)kernel_shape.size();
+
+        cuda4dnn::PoolingConfiguration config;
+        config.poolMode = cuda4dnn::PoolingConfiguration::PoolingMode::MAX;
+        config.window_size.assign(kernel_shape.begin(), kernel_shape.end());
+        for (int i = 0; i < nspatial; i++)
+            config.strides.push_back(strides.empty() ? 1 : (size_t)strides[i]);
+        config.padMode = (auto_pad == AUTO_PAD_VALID)
+            ? cuda4dnn::PoolingConfiguration::PaddingMode::VALID
+            : cuda4dnn::PoolingConfiguration::PaddingMode::MANUAL;
+        if (config.padMode == cuda4dnn::PoolingConfiguration::PaddingMode::MANUAL) {
+            for (int i = 0; i < nspatial; i++) {
+                config.pads_begin.push_back(pads.empty() ? 0 : (size_t)pads[i]);
+                config.pads_end.push_back(pads.empty() ? 0 : (size_t)pads[i + nspatial]);
+            }
+        }
+        config.roundMode = ceil_mode ? cuda4dnn::PoolingConfiguration::RoundingMode::CEIL
+                                     : cuda4dnn::PoolingConfiguration::RoundingMode::FLOOR;
+        config.input_shape.assign(inShape.begin(), inShape.end());
+        return make_cuda_node<cuda4dnn::PoolingOp>(preferableTarget, std::move(context->cudnn_handle), config);
+    }
+#endif
 
     virtual int64_t getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE
