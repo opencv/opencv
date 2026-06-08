@@ -17,6 +17,9 @@
         "DescriptorMatcher": {
             "(DescriptorMatcher*)create:(NSString*)descriptorMatcherType" : { "create" : {"name" : "create2"} }
         },
+        "LightGlueMatcher": {
+            "(LightGlueMatcher*)create:(NSString*)modelPath scoreThreshold:(float)scoreThreshold backend:(int)backend target:(int)target" : { "create" : {"name" : "createFromFile"} }
+        },
         "FlannBasedMatcher": {
             "FlannBasedMatcher": { "indexParams" : {"defval" : "cv::makePtr<cv::flann::KDTreeIndexParams>()"}, "searchParams" : {"defval" : "cv::makePtr<cv::flann::SearchParams>()"} }
         },
