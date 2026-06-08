@@ -113,17 +113,19 @@ bool Dictionary::identify(const Mat &onlyCellPixelRatio, CV_OUT int &idx, CV_OUT
         for(int r = 0; r < 4; r++) {
             const uchar* bytesRot = bytesList.ptr(m) + r*s;
             // We want: if (marker is 0 and input is not 0) or (marker is 1 and input is not 1)
-            // or: (!bytesRot && not0) || (bytesRot && not1)
+            // i.e.: (!bytesRot && not0) || (bytesRot && not1)
             // This is actually: not0 ^ ((not0 ^ not1) & bytesRot)
-            // temp0 = not0 ^ not1
+            // Computing: temp0 = not0 ^ not1
             hal::xor8u(not0, s, not1, s, temp0, s, s, 1, nullptr);
-            // temp1 = temp0 & bytesRot
+            // Computing: temp1 = temp0 & bytesRot
             hal::and8u(temp0, s, bytesRot, s, temp1, s, s, 1, nullptr);
             hal::xor8u(not0, s, temp1, s, temp0, s, s, 1, nullptr);
             int currentHamming = cv::hal::normHamming(temp0, s);
 
             if(currentHamming < currentMinDistance) {
                 currentMinDistance = currentHamming;
+                // Break for perfect distance.
+                if (currentMinDistance == 0) break;
                 currentRotation = r;
             }
         }
