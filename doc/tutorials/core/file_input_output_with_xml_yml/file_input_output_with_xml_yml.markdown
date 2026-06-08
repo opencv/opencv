@@ -96,7 +96,7 @@ you may access it. For sequences you need to go through them to query a specific
     @snippet cpp/tutorial_code/core/file_input_output/file_input_output.cpp readNum
     @end_toggle
     @add_toggle_python
-    @snippet cpp/tutorial_code/core/file_input_output/file_input_output.cpp readNum
+    @snippet python/tutorial_code/core/file_input_output/file_input_output.py readNum
     @end_toggle
 -#  **Input/Output of OpenCV Data structures.** Well these behave exactly just as the basic C++
     and Python types:

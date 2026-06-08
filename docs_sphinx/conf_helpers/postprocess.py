@@ -9,7 +9,8 @@ from __future__ import annotations
 import pathlib, re
 
 from .state import (_doxy_page_to_local, _DOXY_ANCHOR_TO_MEMBER, DOXYGEN_BASE_URL,
-                    _LOCAL_CLASS_URL, _LOCAL_TYPEDEF_URL, _FILE_URL, _API_XML_DIR, DOC_ROOT)
+                    _LOCAL_CLASS_URL, _LOCAL_TYPEDEF_URL, _FILE_URL, _API_XML_DIR, DOC_ROOT,
+                    _CV_SYMBOL_URL)
 
 
 def _doxy_parent_page(page: str, api_dir: pathlib.Path) -> str:
@@ -328,6 +329,34 @@ _PYG_CPF_SPAN_RE = re.compile(
 )
 
 
+# Conservative C++ free-function linkifier for code blocks. A Pygments name
+# span IMMEDIATELY followed by an opening-paren punctuation span is a function
+# *call*, so linking it can't mistake a like-named local variable (`log`,
+# `min`, `split`, …) for the cv:: function — only calls are linked. Scoped to
+# C++ Pygments blocks. The `(` lookahead also makes the pass idempotent and
+# class-safe: once wrapped (or for a pre-linked class constructor) the name
+# span is followed by `</a>`, not the paren span, so it never matches again.
+_PYG_CPP_PRE_RE = re.compile(
+    r'(?P<open><div class="highlight-cpp[^"]*"><div class="highlight"><pre>)'
+    r'(?P<body>.*?)(?P<close></pre>)', re.DOTALL)
+_PYG_CALL_SPAN_RE = re.compile(
+    r'(?P<span><span class="n">)(?P<name>[A-Za-z_][A-Za-z0-9_]*)(?P<end></span>)'
+    r'(?=<span class="p">\()'
+)
+# Python free-function calls. Same call-based heuristic, but additionally
+# REQUIRES a `cv.`/`cv2.` namespace prefix — OpenCV's Python API is always
+# module-qualified (`import cv2 as cv`), so this avoids ever linking a bare
+# builtin (`min(`, `split(`, `append(`) or a `np.`/other-module call.
+_PYG_PY_PRE_RE = re.compile(
+    r'(?P<open><div class="highlight-(?:python|py|pycon|ipython3?|default)[^"]*">'
+    r'<div class="highlight"><pre>)(?P<body>.*?)(?P<close></pre>)', re.DOTALL)
+_PYG_PY_CALL_RE = re.compile(
+    r'(?P<pre><span class="n">cv2?</span><span class="o">\.</span>)'
+    r'(?P<span><span class="n">)(?P<name>[A-Za-z_][A-Za-z0-9_]*)(?P<end></span>)'
+    r'(?=<span class="p">\()'
+)
+
+
 def _linkify_code_blocks(html_dir: pathlib.Path) -> None:
     """Walk every `.html` under `html_dir` and turn known identifier
     tokens inside Pygments-rendered `<pre>` blocks into clickable
@@ -335,14 +364,79 @@ def _linkify_code_blocks(html_dir: pathlib.Path) -> None:
     don't accidentally repaint inline `<code class="n">` chips in
     prose; the rule above already targets only Pygments span classes
     that Pygments uses inside its `<pre>` output."""
-    if not (_LOCAL_CLASS_URL or _LOCAL_TYPEDEF_URL or _FILE_URL):
+    if not (_LOCAL_CLASS_URL or _LOCAL_TYPEDEF_URL or _FILE_URL or _CV_SYMBOL_URL):
         return
     if not html_dir.is_dir():
         return
     import os
 
+    # Map every built page's basename -> its path relative to the html root,
+    # so a stored URL like `core_basic.html#…` / `classcv_1_1Mat.html` (which
+    # is relative to main_modules/) can be re-pointed correctly from a page at
+    # any depth. Without this, those links 404 on tutorial pages (only the
+    # `classcv…`-style names happen to be fixed up later by
+    # `_localize_doxygen_links`, whose `_SYM` doesn't match module-page names
+    # like `core_basic.html`).
+    _skip_dirs = {"_static", "_sources", "_images", "_sphinx_design_static"}
+    _page_paths: dict[str, str] = {}
+    for _f in html_dir.rglob("*.html"):
+        _rel = _f.relative_to(html_dir)
+        if _rel.parts and _rel.parts[0] in _skip_dirs:
+            continue
+        _page_paths.setdefault(_f.name, _rel.as_posix())
+
+    def _rel_local(url: str, current_html: pathlib.Path) -> "str | None":
+        # Relativize a bare local Sphinx page URL (`page` or `page#frag`) to
+        # the current page. Returns None when the target page wasn't built
+        # locally (e.g. a nested struct documented inline on its parent, which
+        # has no standalone page) so the caller can drop the link rather than
+        # emit a 404. Non-local URLs (http/already-relative) pass through.
+        page, sep, frag = url.partition("#")
+        if page.startswith(("http://", "https://", "../", "/")):
+            return url
+        tgt = _page_paths.get(page)
+        if not tgt:
+            return None
+        rel = os.path.relpath(html_dir / tgt, start=current_html.parent)
+        return rel + (sep + frag if sep else "")
+
     def _resolve(name: str) -> str | None:
         return _LOCAL_CLASS_URL.get(name) or _LOCAL_TYPEDEF_URL.get(name)
+
+    # Free-function calls: present in the Doxygen symbol map but NOT a
+    # class/typedef (those already get a local link from `_resolve`). Emits
+    # the docs.opencv.org URL; `_localize_doxygen_links` (run right after)
+    # rewrites it to the local Sphinx page when one exists, exactly as it
+    # does for prose function refs.
+    def _resolve_fn(name: str) -> str | None:
+        if name in _LOCAL_CLASS_URL or name in _LOCAL_TYPEDEF_URL:
+            return None
+        return _CV_SYMBOL_URL.get(name)
+
+    def _wrap_call(m: "re.Match") -> str:
+        url = _resolve_fn(m.group("name"))
+        if not url:
+            return m.group(0)
+        return (f'<a class="reference external" href="{url}">'
+                f'{m.group("span")}{m.group("name")}{m.group("end")}</a>')
+
+    def _rewrite_cpp_calls(m: "re.Match") -> str:
+        return (m.group("open")
+                + _PYG_CALL_SPAN_RE.sub(_wrap_call, m.group("body"))
+                + m.group("close"))
+
+    def _wrap_py_call(m: "re.Match") -> str:
+        url = _resolve_fn(m.group("name"))
+        if not url:
+            return m.group(0)
+        return (m.group("pre")
+                + f'<a class="reference external" href="{url}">'
+                + f'{m.group("span")}{m.group("name")}{m.group("end")}</a>')
+
+    def _rewrite_py_calls(m: "re.Match") -> str:
+        return (m.group("open")
+                + _PYG_PY_CALL_RE.sub(_wrap_py_call, m.group("body"))
+                + m.group("close"))
 
     # `<pre>…</pre>` blocks only — keeps the substitution from touching
     # inline `<span class="n">` runs that may appear in other contexts.
@@ -361,10 +455,13 @@ def _linkify_code_blocks(html_dir: pathlib.Path) -> None:
         except ValueError:
             return f"../../../doc/doxygen/html/{file_url}"
 
-    def _wrap_span(m: re.Match) -> str:
+    def _wrap_span(m: re.Match, current_html: pathlib.Path) -> str:
         name = m.group("name")
         url = _resolve(name)
         if not url:
+            return m.group(0)
+        url = _rel_local(url, current_html)
+        if url is None:        # target page not built — don't emit a 404 link
             return m.group(0)
         return (f'<a class="reference internal" href="{url}">'
                 f'{m.group("prefix")}{name}{m.group("suffix")}</a>')
@@ -408,13 +505,13 @@ def _linkify_code_blocks(html_dir: pathlib.Path) -> None:
                 k = inner.find("<a ", i)
                 if k < 0:
                     seg = inner[i:]
-                    seg = _PYG_IDENT_SPAN_RE.sub(_wrap_span, seg)
+                    seg = _PYG_IDENT_SPAN_RE.sub(lambda mm: _wrap_span(mm, current_html), seg)
                     seg = _PYG_CPF_SPAN_RE.sub(
                         lambda mm: _wrap_cpf(mm, current_html), seg)
                     out.append(seg)
                     break
                 seg = inner[i:k]
-                seg = _PYG_IDENT_SPAN_RE.sub(_wrap_span, seg)
+                seg = _PYG_IDENT_SPAN_RE.sub(lambda mm: _wrap_span(mm, current_html), seg)
                 seg = _PYG_CPF_SPAN_RE.sub(
                     lambda mm: _wrap_cpf(mm, current_html), seg)
                 out.append(seg)
@@ -430,6 +527,11 @@ def _linkify_code_blocks(html_dir: pathlib.Path) -> None:
             continue
         new_text = _PRE_BLOCK_RE.sub(
             lambda m: _rewrite_pre(m, html), text)
+        # C++ free-function calls (runs after the class/typedef pass so
+        # constructors are already wrapped and skipped by the `(` lookahead).
+        new_text = _PYG_CPP_PRE_RE.sub(_rewrite_cpp_calls, new_text)
+        # Python `cv.`/`cv2.`-namespaced function calls.
+        new_text = _PYG_PY_PRE_RE.sub(_rewrite_py_calls, new_text)
         if new_text != text:
             try:
                 html.write_text(new_text, encoding="utf-8")
