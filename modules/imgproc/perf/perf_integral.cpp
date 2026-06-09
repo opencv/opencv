@@ -187,4 +187,43 @@ PERF_TEST_P(Size_MatType_OutMatDepth, integral_sqsum_64f,
     SANITY_CHECK(sqsum, 1e-6);
 }
 
+// Enabled coverage for the combinations the widened 8-bit integral sqsum path
+// vectorizes: 8-bit source, every channel count, and every sum/sqsum output-depth
+// pair that now has a SIMD path. (The full 12-combo matrix lives in the DISABLED
+// test above; this curated subset is cheap enough to run by default.) Correctness
+// is covered by the Imgproc_Integral.accuracy test.
+static std::vector<std::tuple<MatType, IntegralOutputDepths>> GetSqsum8UDepthPairs() {
+    static int pairs[5] = { DEPTH_32S_64F, DEPTH_32S_32F, DEPTH_32S_32S, DEPTH_32F_64F, DEPTH_64F_64F };
+    std::vector<std::tuple<MatType, IntegralOutputDepths>> valid_pairs;
+    for (int cn = 1; cn <= 4; cn++)
+        for (int p = 0; p < 5; p++)
+            valid_pairs.emplace_back(CV_MAKETYPE(CV_8U, cn), pairs[p]);
+    return valid_pairs;
+}
+
+PERF_TEST_P(Size_MatType_OutMatDepthArray, integral_sqsum_8u,
+            testing::Combine(
+                testing::Values(TYPICAL_MAT_SIZES),
+                testing::ValuesIn(GetSqsum8UDepthPairs())
+                )
+            )
+{
+    Size sz = get<0>(GetParam());
+    auto depths = get<1>(GetParam());
+    int matType = get<0>(depths);
+    int sdepth  = extraOutputDepths[get<1>(depths)][0];
+    int sqdepth = extraOutputDepths[get<1>(depths)][1];
+
+    Mat src(sz, matType);
+    Mat sum(sz, sdepth);
+    Mat sqsum(sz, sqdepth);
+
+    declare.in(src, WARMUP_RNG).out(sum, sqsum);
+    declare.time(100);
+
+    TEST_CYCLE() integral(src, sum, sqsum, sdepth, sqdepth);
+
+    SANITY_CHECK_NOTHING();
+}
+
 } // namespace
