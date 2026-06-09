@@ -108,9 +108,9 @@ static inline void v_store_sqsum_block(int* dst, const int* prev,
 
 // In-register horizontal prefix sum of squared 8-bit pixels for one vector block.
 // px holds the block's pixels expanded to uint16; the running per-row carry
-// prev_sq is folded in and updated. The per-row sum of squares (<= width*255^2)
-// fits in int32, so the prefix uses the same rotate/broadcast idiom as the sum.
-// Returns the prefix as two int32 halves (lo, hi).
+// prev_sq is folded in and updated. The prefix runs in int32 (callers gate on
+// width * 255^2 <= INT32_MAX via sqsum_cn_ok, so it never overflows), using the
+// same rotate/broadcast idiom as the plain sum. Returns the two int32 halves.
 static inline void v_sqsum_prefix(const v_uint16& px, v_int32& prev_sq,
                                   v_int32& sqlo, v_int32& sqhi)
 {
@@ -149,7 +149,10 @@ struct Integral_SIMD<uchar, int, QT>
         // sqsum is vectorized for cn 1..3 at any SIMD width, and cn==4 only at
         // 128-bit width (where the 4 channels map to two pixels per vector). Wider
         // cn==4 sqsum and the tilted case still fall back to the scalar path.
-        const bool sqsum_cn_ok = (cn == 1 || cn == 2 || cn == 3 || (cn == 4 && CV_SIMD_WIDTH == 16));
+        // The squared prefix runs in int32, so it is valid only while a row's
+        // sum of squares (width * 255^2) fits in int32; wider rows fall back to scalar.
+        const bool sqsum_cn_ok = (cn == 1 || cn == 2 || cn == 3 || (cn == 4 && CV_SIMD_WIDTH == 16))
+                                 && width <= 0x7FFFFFFF / (255 * 255);
         if ((sqsum && !sqsum_cn_ok) || tilted || cn > 4)
             return false;
 #if !CV_SSE4_1 && CV_SSE2
@@ -618,7 +621,10 @@ struct Integral_SIMD<uchar, float, QT>
     {
         // sqsum is vectorized for cn 1..3 at any SIMD width, and cn==4 only at
         // 128-bit width; wider cn==4 sqsum and the tilted case fall back to scalar.
-        const bool sqsum_cn_ok = (cn == 1 || cn == 2 || cn == 3 || (cn == 4 && CV_SIMD_WIDTH == 16));
+        // The squared prefix runs in int32, so it is valid only while a row's
+        // sum of squares (width * 255^2) fits in int32; wider rows fall back to scalar.
+        const bool sqsum_cn_ok = (cn == 1 || cn == 2 || cn == 3 || (cn == 4 && CV_SIMD_WIDTH == 16))
+                                 && width <= 0x7FFFFFFF / (255 * 255);
         if ((sqsum && !sqsum_cn_ok) || tilted || cn > 4)
             return false;
 
@@ -1081,13 +1087,14 @@ struct Integral_SIMD<uchar, double, double>
             calculate_integral_avx512(src, _srcstep, sum, _sumstep, sqsum, _sqsumstep, width, height, cn);
             return true;
         }
-#else
-        CV_UNUSED(_sqsumstep);
 #endif
         // sqsum is vectorized for cn 1..3 at any SIMD width and cn==4 at 128-bit
         // width (the AVX-512 path above already covers the multi-channel case);
         // wider cn==4 sqsum and the tilted case fall back to scalar here.
-        const bool sqsum_cn_ok = (cn == 1 || cn == 2 || cn == 3 || (cn == 4 && CV_SIMD_WIDTH == 16));
+        // The squared prefix runs in int32, so it is valid only while a row's
+        // sum of squares (width * 255^2) fits in int32; wider rows fall back to scalar.
+        const bool sqsum_cn_ok = (cn == 1 || cn == 2 || cn == 3 || (cn == 4 && CV_SIMD_WIDTH == 16))
+                                 && width <= 0x7FFFFFFF / (255 * 255);
         if ((sqsum && !sqsum_cn_ok) || tilted || cn > 4)
             return false;
 
