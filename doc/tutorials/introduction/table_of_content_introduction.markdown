@@ -39,6 +39,7 @@ Introduction to OpenCV {#tutorial_table_of_content_introduction}
 -   @ref tutorial_ios_install
 
 ##### Usage basics
+-   @subpage tutorial_using_prebuilt_binaries - Use an existing OpenCV 5 install in your own C++/Python project
 -   @subpage tutorial_display_image - We will learn how to load an image from file and display it using OpenCV
 
 ##### Miscellaneous

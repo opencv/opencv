@@ -180,9 +180,11 @@ _GROUP_DOC_OVERRIDES: dict = {
 # node in an overridden module's tree. Groups with a real title are left alone
 # (e.g. "d_projection" already renders as "3D vision functionality").
 _GROUP_TITLE_OVERRIDES: dict = {
+    "geometry":          "Computational Geometry Primitives Module",
     "geometry_shape":    "Shape analysis and fitting",
     "geometry_subdiv2d": "Planar subdivision",
     "_3d":               "Point-cloud sampling and segmentation",
+    "ptcloud":           "Point Cloud Processing",  # header typo'd "Clound"
 }
 # Group ids re-parented by an override — skipped by orphan-group emission so each
 # renders once, nested under its module, not also as a standalone page.
