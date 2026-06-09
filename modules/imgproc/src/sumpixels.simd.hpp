@@ -146,9 +146,11 @@ struct Integral_SIMD<uchar, int, QT>
                     int * tilted, size_t,
                     int width, int height, int cn) const
     {
-        // sqsum is vectorized for 1- and 2-channel (see below); 3/4-channel sqsum
-        // and the tilted case still fall back to the scalar path.
-        if ((sqsum && cn != 1 && cn != 2) || tilted || cn > 4)
+        // sqsum is vectorized for cn 1..3 at any SIMD width, and cn==4 only at
+        // 128-bit width (where the 4 channels map to two pixels per vector). Wider
+        // cn==4 sqsum and the tilted case still fall back to the scalar path.
+        const bool sqsum_cn_ok = (cn == 1 || cn == 2 || cn == 3 || (cn == 4 && CV_SIMD_WIDTH == 16));
+        if ((sqsum && !sqsum_cn_ok) || tilted || cn > 4)
             return false;
 #if !CV_SSE4_1 && CV_SSE2
         // 3 channel code is slower for SSE2 & SSE3
@@ -355,11 +357,19 @@ struct Integral_SIMD<uchar, int, QT>
                 int * prev_sum_row = (int *)((uchar *)sum + _sumstep * i) + cn;
                 int * sum_row = (int *)((uchar *)sum + _sumstep * (i + 1)) + cn;
                 int row_cache[VTraits<v_int32>::max_nlanes * 6];
+                int sq_cache[VTraits<v_int32>::max_nlanes * 6];
 
                 sum_row[-1] = sum_row[-2] = sum_row[-3] = 0;
 
+                QT * prev_sqsum_row = sqsum ? (QT *)((uchar *)sqsum + _sqsumstep * i) + cn : 0;
+                QT * sqsum_row      = sqsum ? (QT *)((uchar *)sqsum + _sqsumstep * (i + 1)) + cn : 0;
+                if (sqsum)
+                    sqsum_row[-1] = sqsum_row[-2] = sqsum_row[-3] = 0;
+
                 v_int32 prev_1 = vx_setzero_s32(), prev_2 = vx_setzero_s32(),
                         prev_3 = vx_setzero_s32();
+                v_int32 prev_sq_1 = vx_setzero_s32(), prev_sq_2 = vx_setzero_s32(),
+                        prev_sq_3 = vx_setzero_s32();
                 int j = 0;
                 const int j_max =
                         ((_srcstep * i + (width - VTraits<v_uint16>::vlanes() * cn + VTraits<v_uint8>::vlanes() * cn)) >= _srcstep * height)
@@ -372,6 +382,26 @@ struct Integral_SIMD<uchar, int, QT>
                     v_int16 el8_1 = v_reinterpret_as_s16(v_expand_low(v_src_row_1));
                     v_int16 el8_2 = v_reinterpret_as_s16(v_expand_low(v_src_row_2));
                     v_int16 el8_3 = v_reinterpret_as_s16(v_expand_low(v_src_row_3));
+
+                    if (sqsum)
+                    {
+                        // Per-channel squared prefix (el8_x hold raw channel values),
+                        // then re-interleaved through sq_cache like the sum below.
+                        v_int32 sl1, sh1, sl2, sh2, sl3, sh3;
+                        v_sqsum_prefix(v_reinterpret_as_u16(el8_1), prev_sq_1, sl1, sh1);
+                        v_sqsum_prefix(v_reinterpret_as_u16(el8_2), prev_sq_2, sl2, sh2);
+                        v_sqsum_prefix(v_reinterpret_as_u16(el8_3), prev_sq_3, sl3, sh3);
+                        const int vl = VTraits<v_int32>::vlanes();
+                        v_store_interleave(sq_cache         , sl1, sl2, sl3);
+                        v_store_interleave(sq_cache + vl * 3, sh1, sh2, sh3);
+                        v_int32 z0 = vx_load(sq_cache         ), z1 = vx_load(sq_cache + vl    );
+                        v_int32 z2 = vx_load(sq_cache + vl * 2), z3 = vx_load(sq_cache + vl * 3);
+                        v_int32 z4 = vx_load(sq_cache + vl * 4), z5 = vx_load(sq_cache + vl * 5);
+                        v_store_sqsum_block(sqsum_row + j         , prev_sqsum_row + j         , z0, z1);
+                        v_store_sqsum_block(sqsum_row + j + vl * 2, prev_sqsum_row + j + vl * 2, z2, z3);
+                        v_store_sqsum_block(sqsum_row + j + vl * 4, prev_sqsum_row + j + vl * 4, z4, z5);
+                    }
+
                     v_int32 el4l_1, el4h_1, el4l_2, el4h_2, el4l_3, el4h_3;
 #if CV_AVX2 && CV_SIMD_WIDTH == 32
                     __m256i vsum_1 = _mm256_add_epi16(el8_1.val, _mm256_slli_si256(el8_1.val, 2));
@@ -439,13 +469,28 @@ struct Integral_SIMD<uchar, int, QT>
                     v_store(sum_row + j + VTraits<v_int32>::vlanes() * 5, v_add(el4h_3, vx_load(prev_sum_row + j + VTraits<v_int32>::vlanes() * 5)));
                 }
 
-                for (int v3 = sum_row[j - 1] - prev_sum_row[j - 1],
-                         v2 = sum_row[j - 2] - prev_sum_row[j - 2],
-                         v1 = sum_row[j - 3] - prev_sum_row[j - 3]; j < width; j += 3)
+                int jt = j;
+                for (int v3 = sum_row[jt - 1] - prev_sum_row[jt - 1],
+                         v2 = sum_row[jt - 2] - prev_sum_row[jt - 2],
+                         v1 = sum_row[jt - 3] - prev_sum_row[jt - 3]; jt < width; jt += 3)
                 {
-                    sum_row[j]     = (v1 += src_row[j])     + prev_sum_row[j];
-                    sum_row[j + 1] = (v2 += src_row[j + 1]) + prev_sum_row[j + 1];
-                    sum_row[j + 2] = (v3 += src_row[j + 2]) + prev_sum_row[j + 2];
+                    sum_row[jt]     = (v1 += src_row[jt])     + prev_sum_row[jt];
+                    sum_row[jt + 1] = (v2 += src_row[jt + 1]) + prev_sum_row[jt + 1];
+                    sum_row[jt + 2] = (v3 += src_row[jt + 2]) + prev_sum_row[jt + 2];
+                }
+                if (sqsum)
+                {
+                    QT s3 = sqsum_row[j - 1] - prev_sqsum_row[j - 1];
+                    QT s2 = sqsum_row[j - 2] - prev_sqsum_row[j - 2];
+                    QT s1 = sqsum_row[j - 3] - prev_sqsum_row[j - 3];
+                    for ( ; j < width; j += 3)
+                    {
+                        int i1 = src_row[j], i2 = src_row[j + 1], i3 = src_row[j + 2];
+                        s1 += (QT)i1 * i1; s2 += (QT)i2 * i2; s3 += (QT)i3 * i3;
+                        sqsum_row[j]     = s1 + prev_sqsum_row[j];
+                        sqsum_row[j + 1] = s2 + prev_sqsum_row[j + 1];
+                        sqsum_row[j + 2] = s3 + prev_sqsum_row[j + 2];
+                    }
                 }
             }
         }
@@ -461,12 +506,37 @@ struct Integral_SIMD<uchar, int, QT>
 
                 sum_row[-1] = sum_row[-2] = sum_row[-3] = sum_row[-4] = 0;
 
+                QT * prev_sqsum_row = sqsum ? (QT *)((uchar *)sqsum + _sqsumstep * i) + cn : 0;
+                QT * sqsum_row      = sqsum ? (QT *)((uchar *)sqsum + _sqsumstep * (i + 1)) + cn : 0;
+                if (sqsum)
+                    sqsum_row[-1] = sqsum_row[-2] = sqsum_row[-3] = sqsum_row[-4] = 0;
+
                 v_int32 prev = vx_setzero_s32();
+#if CV_SIMD_WIDTH == 16
+                v_int32 prev_sq = vx_setzero_s32();
+#endif
                 int j = 0;
                 for ( ; j + VTraits<v_uint16>::vlanes() <= width; j += VTraits<v_uint16>::vlanes())
                 {
-                    v_int16 el8 = v_reinterpret_as_s16(vx_load_expand(src_row + j));
+                    v_uint16 px = vx_load_expand(src_row + j);
+                    v_int16 el8 = v_reinterpret_as_s16(px);
                     v_int32 el4l, el4h;
+#if CV_SIMD_WIDTH == 16
+                    // cn==4 sqsum is enabled only at 128-bit width (see bail): the 8
+                    // expanded pixels are exactly two 4-channel pixels, so the squared
+                    // prefix is the same two-pixel accumulate as the sum below.
+                    if (sqsum)
+                    {
+                        v_uint32 sq_lo_u, sq_hi_u;
+                        v_mul_expand(px, px, sq_lo_u, sq_hi_u);
+                        v_int32 sq_l = v_reinterpret_as_s32(sq_lo_u);
+                        v_int32 sq_h = v_reinterpret_as_s32(sq_hi_u);
+                        sq_l = v_add(sq_l, prev_sq);
+                        sq_h = v_add(sq_h, sq_l);
+                        prev_sq = sq_h;
+                        v_store_sqsum_block(sqsum_row + j, prev_sqsum_row + j, sq_l, sq_h);
+                    }
+#endif
 #if CV_AVX2 && CV_SIMD_WIDTH == 32
                     __m256i vsum = _mm256_add_epi16(el8.val, _mm256_slli_si256(el8.val, 8));
                     el4l.val = _mm256_add_epi32(_mm256_cvtepi16_epi32(_v256_extract_low(vsum)), prev.val);
@@ -496,15 +566,32 @@ struct Integral_SIMD<uchar, int, QT>
                     v_store(sum_row + j + VTraits<v_int32>::vlanes(), v_add(el4h, vx_load(prev_sum_row + j + VTraits<v_int32>::vlanes())));
                 }
 
-                for (int v4 = sum_row[j - 1] - prev_sum_row[j - 1],
-                         v3 = sum_row[j - 2] - prev_sum_row[j - 2],
-                         v2 = sum_row[j - 3] - prev_sum_row[j - 3],
-                         v1 = sum_row[j - 4] - prev_sum_row[j - 4]; j < width; j += 4)
+                int jt = j;
+                for (int v4 = sum_row[jt - 1] - prev_sum_row[jt - 1],
+                         v3 = sum_row[jt - 2] - prev_sum_row[jt - 2],
+                         v2 = sum_row[jt - 3] - prev_sum_row[jt - 3],
+                         v1 = sum_row[jt - 4] - prev_sum_row[jt - 4]; jt < width; jt += 4)
                 {
-                    sum_row[j]     = (v1 += src_row[j])     + prev_sum_row[j];
-                    sum_row[j + 1] = (v2 += src_row[j + 1]) + prev_sum_row[j + 1];
-                    sum_row[j + 2] = (v3 += src_row[j + 2]) + prev_sum_row[j + 2];
-                    sum_row[j + 3] = (v4 += src_row[j + 3]) + prev_sum_row[j + 3];
+                    sum_row[jt]     = (v1 += src_row[jt])     + prev_sum_row[jt];
+                    sum_row[jt + 1] = (v2 += src_row[jt + 1]) + prev_sum_row[jt + 1];
+                    sum_row[jt + 2] = (v3 += src_row[jt + 2]) + prev_sum_row[jt + 2];
+                    sum_row[jt + 3] = (v4 += src_row[jt + 3]) + prev_sum_row[jt + 3];
+                }
+                if (sqsum)
+                {
+                    QT s4 = sqsum_row[j - 1] - prev_sqsum_row[j - 1];
+                    QT s3 = sqsum_row[j - 2] - prev_sqsum_row[j - 2];
+                    QT s2 = sqsum_row[j - 3] - prev_sqsum_row[j - 3];
+                    QT s1 = sqsum_row[j - 4] - prev_sqsum_row[j - 4];
+                    for ( ; j < width; j += 4)
+                    {
+                        int i1 = src_row[j], i2 = src_row[j + 1], i3 = src_row[j + 2], i4 = src_row[j + 3];
+                        s1 += (QT)i1 * i1; s2 += (QT)i2 * i2; s3 += (QT)i3 * i3; s4 += (QT)i4 * i4;
+                        sqsum_row[j]     = s1 + prev_sqsum_row[j];
+                        sqsum_row[j + 1] = s2 + prev_sqsum_row[j + 1];
+                        sqsum_row[j + 2] = s3 + prev_sqsum_row[j + 2];
+                        sqsum_row[j + 3] = s4 + prev_sqsum_row[j + 3];
+                    }
                 }
             }
         }
