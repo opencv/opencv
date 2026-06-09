@@ -56,20 +56,21 @@ void LUT8u_( const uchar* src, const uchar* lut, uchar* dst, int len, int cn, in
         uchar CV_DECL_ALIGNED(64) lut0[256], lut1[256], lut2[256];
         const int nlanes = VTraits<v_uint8>::vlanes();
         {
-            int j = 0;
-            for( ; j <= 256 - nlanes; j += nlanes )
+            unsigned j = 0;
+            for( ; j + (unsigned)nlanes <= 256; j += (unsigned)nlanes )
             {
                 v_uint8 a, b, c;
-                v_load_deinterleave(lut + j*3, a, b, c);
+                v_load_deinterleave(lut + j * 3, a, b, c);
                 v_store(lut0 + j, a);
                 v_store(lut1 + j, b);
                 v_store(lut2 + j, c);
             }
             for( ; j < 256; j++ )
             {
-                lut0[j] = lut[j*3];
-                lut1[j] = lut[j*3 + 1];
-                lut2[j] = lut[j*3 + 2];
+                const unsigned idx = j * 3;
+                lut0[j] = lut[idx];
+                lut1[j] = lut[idx + 1];
+                lut2[j] = lut[idx + 2];
             }
         }
         int i = 0;
