@@ -12,7 +12,7 @@ typedef perf::TestBaseWithParam<EMD_Size_Dim_t> EMD_Fixture;
 
 PERF_TEST_P(EMD_Fixture, L1_Distance, testing::Combine(
             testing::Values(100, 500, 1000),
-            testing::Values(3, 64)          
+            testing::Values(3, 64)
 ))
 {
     int size = get<0>(GetParam());
@@ -34,4 +34,4 @@ PERF_TEST_P(EMD_Fixture, L1_Distance, testing::Combine(
     SANITY_CHECK_NOTHING();
 }
 
-}} 
+}}
