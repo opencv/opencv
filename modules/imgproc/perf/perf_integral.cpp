@@ -193,10 +193,10 @@ PERF_TEST_P(Size_MatType_OutMatDepth, integral_sqsum_64f,
 // test above; this curated subset is cheap enough to run by default.) Correctness
 // is covered by the Imgproc_Integral.accuracy test.
 static std::vector<std::tuple<MatType, IntegralOutputDepths>> GetSqsum8UDepthPairs() {
-    static int pairs[5] = { DEPTH_32S_64F, DEPTH_32S_32F, DEPTH_32S_32S, DEPTH_32F_64F, DEPTH_64F_64F };
+    static int pairs[6] = { DEPTH_32S_64F, DEPTH_32S_32F, DEPTH_32S_32S, DEPTH_32F_64F, DEPTH_32F_32F, DEPTH_64F_64F };
     std::vector<std::tuple<MatType, IntegralOutputDepths>> valid_pairs;
     for (int cn = 1; cn <= 4; cn++)
-        for (int p = 0; p < 5; p++)
+        for (int p = 0; p < 6; p++)
             valid_pairs.emplace_back(CV_MAKETYPE(CV_8U, cn), pairs[p]);
     return valid_pairs;
 }
