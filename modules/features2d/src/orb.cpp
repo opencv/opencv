@@ -1266,7 +1266,25 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
 Ptr<ORB> ORB::create(int nfeatures, float scaleFactor, int nlevels, int edgeThreshold,
            int firstLevel, int wta_k, ORB::ScoreType scoreType, int patchSize, int fastThreshold)
 {
-    CV_Assert(firstLevel >= 0);
+    CV_CheckGE(nfeatures, 0, "nfeatures must be non-negative");
+    CV_CheckGT(scaleFactor, 1.f, "scaleFactor must be greater than 1");
+    CV_CheckGT(nlevels, 0, "nlevels must be positive");
+    CV_CheckGE(edgeThreshold, 0, "edgeThreshold must be non-negative");
+    CV_CheckGE(firstLevel, 0, "firstLevel must be non-negative");
+    CV_CheckGE(patchSize, 2, "patchSize must be at least 2");
+
+    if (wta_k != 2 && wta_k != 3 && wta_k != 4)
+    {
+        CV_Error_(Error::StsBadArg,
+                  ("wta_k must be 2, 3, or 4, but got %d", wta_k));
+    }
+
+    if (scoreType != ORB::HARRIS_SCORE && scoreType != ORB::FAST_SCORE)
+    {
+        CV_Error_(Error::StsBadArg,
+                  ("Unknown ORB score type: %d", static_cast<int>(scoreType)));
+    }
+
     return makePtr<ORB_Impl>(nfeatures, scaleFactor, nlevels, edgeThreshold,
                              firstLevel, wta_k, scoreType, patchSize, fastThreshold);
 }
