@@ -58,6 +58,207 @@ template<> struct SobelStore<float>
     inline void scalar(float* p, int j, int v) const { p[j] = s * (float)v; }
 };
 
+// CV_32F output must follow sepFilter2D uchar->float row pass + float column pass
+// (see RowFilter<uchar,float> and ColumnFilter<float,float>) so results match
+// cv::Sobel(..., CV_32F, ..., scale, ...) bit-for-bit. int16 intermediates used
+// for CV_16S are not numerically identical once scale is applied as float.
+static void Sobel3x3_f32(const uchar* src, size_t src_step, int srcRows, int srcCols,
+                         int rowStart, int rowEnd,
+                         float* dx, float* dy, size_t dst_step, float scale, int borderType)
+{
+    const int width = srcCols;
+    if (width <= 0 || rowEnd <= rowStart)
+        return;
+
+    cv::AutoBuffer<float> _buf((size_t)width * 6);
+    float* hd[3];
+    float* hs[3];
+    for (int k = 0; k < 3; ++k)
+    {
+        hd[k] = _buf.data() + (size_t)k * 2 * width;
+        hs[k] = hd[k] + width;
+    }
+
+    auto cidx = [&](int x) { return borderInterpolate(x, width, borderType); };
+
+    auto horiz = [&](const uchar* s, float* hdo, float* hso)
+    {
+        {
+            float l = (float)s[cidx(-1)], c = (float)s[0], r = (float)s[cidx(1)];
+            hdo[0] = r - l;
+            hso[0] = l + 2.f * c + r;
+        }
+
+        int j = 1;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        for (; j + VTraits<v_float32>::vlanes() <= width - 1; j += VTraits<v_float32>::vlanes())
+        {
+            v_float32 l = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(s + j - 1)));
+            v_float32 c = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(s + j)));
+            v_float32 r = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(s + j + 1)));
+            v_store(hdo + j, v_sub(r, l));
+            v_store(hso + j, v_add(v_add(l, r), v_add(c, c)));
+        }
+#endif
+        for (; j < width - 1; ++j)
+        {
+            float l = (float)s[j - 1], c = (float)s[j], r = (float)s[j + 1];
+            hdo[j] = r - l;
+            hso[j] = l + 2.f * c + r;
+        }
+
+        if (width > 1)
+        {
+            int x = width - 1;
+            float l = (float)s[x - 1], c = (float)s[x], r = (float)s[cidx(x + 1)];
+            hdo[x] = r - l;
+            hso[x] = l + 2.f * c + r;
+        }
+    };
+
+    auto combine = [&](const float* hdm, const float* hd0, const float* hdp,
+                       const float* hsm, const float* hsp,
+                       float* odx, float* ody)
+    {
+        int j = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        v_float32 vs = vx_setall_f32(scale);
+        for (; j <= width - VTraits<v_float32>::vlanes(); j += VTraits<v_float32>::vlanes())
+        {
+            v_float32 sum_dx = v_add(v_add(vx_load(hdm + j), vx_load(hdp + j)),
+                                     v_add(vx_load(hd0 + j), vx_load(hd0 + j)));
+            v_store(odx + j, v_mul(sum_dx, vs));
+            v_store(ody + j, v_mul(v_sub(vx_load(hsp + j), vx_load(hsm + j)), vs));
+        }
+#endif
+        for (; j < width; ++j)
+        {
+            odx[j] = scale * (hdm[j] + 2.f * hd0[j] + hdp[j]);
+            ody[j] = scale * (hsp[j] - hsm[j]);
+        }
+    };
+
+    for (int r = rowStart - 1; r <= rowEnd; ++r)
+    {
+        int rc = borderInterpolate(r, srcRows, borderType);
+        int slot = ((r % 3) + 3) % 3;
+        horiz(src + (size_t)rc * src_step, hd[slot], hs[slot]);
+
+        int a = r - 1;
+        if (a >= rowStart && a < rowEnd)
+        {
+            int sm = (((a - 1) % 3) + 3) % 3;
+            int s0 = ((a % 3) + 3) % 3;
+            int sp = (((a + 1) % 3) + 3) % 3;
+            combine(hd[sm], hd[s0], hd[sp], hs[sm], hs[sp],
+                    dx + (size_t)(a - rowStart) * dst_step,
+                    dy + (size_t)(a - rowStart) * dst_step);
+        }
+    }
+}
+
+static void Sobel5x5_f32(const uchar* src, size_t src_step, int srcRows, int srcCols,
+                         int rowStart, int rowEnd,
+                         float* dx, float* dy, size_t dst_step, float scale, int borderType)
+{
+    const int width = srcCols;
+    if (width <= 0 || rowEnd <= rowStart)
+        return;
+
+    cv::AutoBuffer<float> _buf((size_t)width * 10);
+    float* hd[5];
+    float* hs[5];
+    for (int k = 0; k < 5; ++k)
+    {
+        hd[k] = _buf.data() + (size_t)k * 2 * width;
+        hs[k] = hd[k] + width;
+    }
+
+    auto cidx = [&](int x) { return borderInterpolate(x, width, borderType); };
+
+    auto horiz = [&](const uchar* s, float* hdo, float* hso)
+    {
+        auto scalarCol = [&](int x)
+        {
+            float m2 = (float)s[cidx(x - 2)], m1 = (float)s[cidx(x - 1)], c = (float)s[x];
+            float p1 = (float)s[cidx(x + 1)], p2 = (float)s[cidx(x + 2)];
+            hdo[x] = p2 + 2.f * p1 - 2.f * m1 - m2;
+            hso[x] = m2 + 4.f * m1 + 6.f * c + 4.f * p1 + p2;
+        };
+
+        int j = 0;
+        for (; j < 2 && j < width; ++j)
+            scalarCol(j);
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        for (; j + VTraits<v_float32>::vlanes() <= width - 2; j += VTraits<v_float32>::vlanes())
+        {
+            v_float32 m2 = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(s + j - 2)));
+            v_float32 m1 = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(s + j - 1)));
+            v_float32 c  = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(s + j)));
+            v_float32 p1 = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(s + j + 1)));
+            v_float32 p2 = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(s + j + 2)));
+            v_store(hdo + j, v_sub(v_sub(v_add(p2, v_add(p1, p1)), v_add(m1, m1)), m2));
+            v_store(hso + j, v_add(v_add(v_add(m2, p2), v_mul(vx_setall_f32(4.f), v_add(m1, p1))),
+                                   v_mul(vx_setall_f32(6.f), c)));
+        }
+#endif
+        for (; j < width; ++j)
+            scalarCol(j);
+    };
+
+    auto combine = [&](const float* hdm2, const float* hdm1, const float* hd0,
+                       const float* hdp1, const float* hdp2,
+                       const float* hsm2, const float* hsm1,
+                       const float* hsp1, const float* hsp2,
+                       float* odx, float* ody)
+    {
+        int j = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        v_float32 vs = vx_setall_f32(scale);
+        v_float32 v4 = vx_setall_f32(4.f);
+        v_float32 v6 = vx_setall_f32(6.f);
+        v_float32 v2 = vx_setall_f32(2.f);
+        for (; j <= width - VTraits<v_float32>::vlanes(); j += VTraits<v_float32>::vlanes())
+        {
+            v_float32 sum_dx = v_add(v_add(vx_load(hdm2 + j), vx_load(hdp2 + j)),
+                                     v_mul(v4, v_add(vx_load(hdm1 + j), vx_load(hdp1 + j))));
+            sum_dx = v_add(sum_dx, v_mul(v6, vx_load(hd0 + j)));
+            v_store(odx + j, v_mul(sum_dx, vs));
+
+            v_float32 sum_dy = v_add(v_sub(vx_load(hsp2 + j), vx_load(hsm2 + j)),
+                                     v_mul(v2, v_sub(vx_load(hsp1 + j), vx_load(hsm1 + j))));
+            v_store(ody + j, v_mul(sum_dy, vs));
+        }
+#endif
+        for (; j < width; ++j)
+        {
+            odx[j] = scale * (hdm2[j] + 4.f * hdm1[j] + 6.f * hd0[j] + 4.f * hdp1[j] + hdp2[j]);
+            ody[j] = scale * (-hsm2[j] - 2.f * hsm1[j] + 2.f * hsp1[j] + hsp2[j]);
+        }
+    };
+
+    for (int r = rowStart - 2; r <= rowEnd + 1; ++r)
+    {
+        int rc = borderInterpolate(r, srcRows, borderType);
+        int slot = ((r % 5) + 5) % 5;
+        horiz(src + (size_t)rc * src_step, hd[slot], hs[slot]);
+
+        int a = r - 2;
+        if (a >= rowStart && a < rowEnd)
+        {
+            int s_m2 = (((a - 2) % 5) + 5) % 5;
+            int s_m1 = (((a - 1) % 5) + 5) % 5;
+            int s_0  = ((a % 5) + 5) % 5;
+            int s_p1 = (((a + 1) % 5) + 5) % 5;
+            int s_p2 = (((a + 2) % 5) + 5) % 5;
+            combine(hd[s_m2], hd[s_m1], hd[s_0], hd[s_p1], hd[s_p2],
+                    hs[s_m2], hs[s_m1], hs[s_p1], hs[s_p2],
+                    dx + (size_t)(a - rowStart) * dst_step,
+                    dy + (size_t)(a - rowStart) * dst_step);
+        }
+    }
+}
+
 // Fused 3x3 Sobel. A separable Sobel needs, per row, a horizontal difference
 // (hd = src[x+1]-src[x-1]) for dx and a horizontal smoothing
 // (hs = src[x-1]+2*src[x]+src[x+1]) for dy. We compute both with one read of the
@@ -311,16 +512,16 @@ void Sobel3x3f(const uchar* src, size_t src_step, int srcRows, int srcCols,
                int rowStart, int rowEnd,
                float* dx, float* dy, size_t dst_step, float scale, int borderType)
 {
-    Sobel3x3_<float>(src, src_step, srcRows, srcCols, rowStart, rowEnd,
-                     dx, dy, dst_step, (double)scale, borderType);
+    Sobel3x3_f32(src, src_step, srcRows, srcCols, rowStart, rowEnd,
+                 dx, dy, dst_step, scale, borderType);
 }
 
 void Sobel5x5f(const uchar* src, size_t src_step, int srcRows, int srcCols,
                int rowStart, int rowEnd,
                float* dx, float* dy, size_t dst_step, float scale, int borderType)
 {
-    Sobel5x5_<float>(src, src_step, srcRows, srcCols, rowStart, rowEnd,
-                     dx, dy, dst_step, (double)scale, borderType);
+    Sobel5x5_f32(src, src_step, srcRows, srcCols, rowStart, rowEnd,
+                 dx, dy, dst_step, scale, borderType);
 }
 
 #endif // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY

@@ -113,7 +113,8 @@ void Sobel2D( InputArray _src, OutputArray _dx, OutputArray _dy,
     // support the reflect/replicate border family on an 8-bit source. For a full-width,
     // non-isolated ROI we feed the parent buffer with absolute row bounds so the ROI edge
     // rows read the real neighbouring rows (matching cv::Sobel). CV_16S output is written
-    // directly (bit-exact); CV_32F output folds scale into the same single pass. Anything
+    // directly (bit-exact); CV_32F uses float intermediates matching sepFilter2D (bit-exact).
+    // Anything
     // else (float source, constant/wrap border, isolated/column-offset ROI) falls back to
     // two separable Sobel passes.
     const int bt = borderType & ~BORDER_ISOLATED;
