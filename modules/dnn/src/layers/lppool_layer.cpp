@@ -15,7 +15,183 @@ namespace cv
 namespace dnn
 {
 
-static void lpPool32f(const void* inp_, void* out_, const ConvState& cs, int p)
+/*
+    LpPool layer, as defined in ONNX specification:
+    https://onnx.ai/onnx/operators/onnx__LpPool.html
+    Supported opsets: 1-18
+
+    Computes the Lp-norm pooling (sum(|x|^p))^(1/p) over a sliding window.
+*/
+
+#if CV_SIMD
+// Vectorized per-element policies for the common norms. Each policy supplies
+// the accumulation step (applied per loaded vector) and the final reduction
+// (applied once per output element). This lets a single templated kernel cover
+// both p == 1 and p == 2 instead of duplicating the loop nest for each.
+struct LpPoolL1
+{
+    static inline v_float32 accum(const v_float32& acc, const v_float32& v) { return v_add(acc, v_abs(v)); }
+    static inline v_float32 finalize(const v_float32& acc) { return acc; }
+};
+
+struct LpPoolL2
+{
+    static inline v_float32 accum(const v_float32& acc, const v_float32& v) { return v_add(acc, v_mul(v, v)); }
+    static inline v_float32 finalize(const v_float32& acc) { return v_sqrt(acc); }
+};
+
+template<class Op>
+static void lpPoolSIMD(const float* inp_, float* out_, const ConvState& cs)
+{
+    int NC1 = cs.inpshape[0]*cs.inpshape[1];
+
+    CV_Assert(cs.inpshape.layout == DATA_LAYOUT_BLOCK);
+    CV_Assert(cs.outshape.layout == DATA_LAYOUT_BLOCK);
+    CV_Assert(cs.inpshape.dims == cs.outshape.dims);
+
+    parallel_for_(Range(0, NC1), [&](const Range& r) {
+        constexpr int MAX_POOL_DIMS = ConvState::MAX_CONV_DIMS;
+
+        CV_Assert(cs.nspatialdims <= MAX_POOL_DIMS && MAX_POOL_DIMS == 3);
+
+        int sdims = cs.nspatialdims;
+        int nc0 = r.start, nc1 = r.end;
+        int C0 = cs.inpshape.back();
+        int Di = sdims > 2 ? cs.inpshape[sdims - 1] : 1;
+        int Hi = sdims > 1 ? cs.inpshape[sdims] : 1;
+        int Wi = cs.inpshape[sdims + 1];
+        int D = sdims > 2 ? cs.outshape[sdims - 1] : 1;
+        int H = sdims > 1 ? cs.outshape[sdims] : 1;
+        int W = cs.outshape[sdims + 1];
+        int iplanesize = Di*Hi*Wi*C0;
+        int planesize = D*H*W*C0;
+        int SZ = cs.strides[0], SY = cs.strides[1], SX = cs.strides[2];
+        int padZ0 = cs.pads[0], padY0 = cs.pads[1], padX0 = cs.pads[2];
+        int inner_z0 = cs.inner[0], inner_z1 = cs.inner[MAX_POOL_DIMS];
+        int inner_y0 = cs.inner[1], inner_y1 = cs.inner[MAX_POOL_DIMS + 1];
+        int inner_x0 = cs.inner[2], inner_x1 = cs.inner[MAX_POOL_DIMS + 2];
+        int ksize = (int)cs.ofstab.size();
+        const int* zyxtab = cs.coordtab.data();
+        const int* ofstab = cs.ofstab.data();
+
+        const float* inp = inp_ + nc0*iplanesize;
+        float* out = out_ + nc0*planesize;
+
+        int nlanes = VTraits<v_float32>::vlanes();
+        CV_Assert(C0 == nlanes || C0 == nlanes*2 || C0 % (nlanes*4) == 0);
+        v_float32 z = vx_setzero_f32();
+
+        for (int nc = nc0; nc < nc1; nc++, inp += iplanesize) {
+            for (int z0 = 0; z0 < D; z0++) {
+                int zi_ = z0*SZ - padZ0;
+                for (int y0 = 0; y0 < H; y0++, out += W*C0) {
+                    int x0 = 0;
+                    int x1 = z0 >= inner_z0 && z0 < inner_z1 &&
+                        y0 >= inner_y0 && y0 < inner_y1 ? inner_x0 : W;
+                    int yi_ = y0*SY - padY0;
+
+                    for(;;) {
+                        // Boundary (outer) path — needs per-element bounds check
+                        if (nlanes == C0) {
+                            for (; x0 < x1; x0++) {
+                                int xi_ = x0*SX - padX0;
+                                v_float32 s0 = z;
+                                for (int k = 0; k < ksize; k++) {
+                                    int zi = zi_ + zyxtab[k*MAX_POOL_DIMS];
+                                    int yi = yi_ + zyxtab[k*MAX_POOL_DIMS+1];
+                                    int xi = xi_ + zyxtab[k*MAX_POOL_DIMS+2];
+                                    if ((unsigned)zi >= (unsigned)Di ||
+                                        (unsigned)yi >= (unsigned)Hi ||
+                                        (unsigned)xi >= (unsigned)Wi)
+                                        continue;
+                                    s0 = Op::accum(s0, vx_load(inp + ((zi*Hi + yi)*Wi + xi)*C0));
+                                }
+                                vx_store(out + x0*C0, Op::finalize(s0));
+                            }
+                        } else {
+                            for (; x0 < x1; x0++) {
+                                int xi_ = x0*SX - padX0;
+                                for (int c = 0; c < C0; c += nlanes*2) {
+                                    v_float32 s0 = z, s1 = z;
+                                    for (int k = 0; k < ksize; k++) {
+                                        int zi = zi_ + zyxtab[k*MAX_POOL_DIMS];
+                                        int yi = yi_ + zyxtab[k*MAX_POOL_DIMS+1];
+                                        int xi = xi_ + zyxtab[k*MAX_POOL_DIMS+2];
+                                        if ((unsigned)zi >= (unsigned)Di ||
+                                            (unsigned)yi >= (unsigned)Hi ||
+                                            (unsigned)xi >= (unsigned)Wi)
+                                            continue;
+                                        int ofs_k = ((zi*Hi + yi)*Wi + xi)*C0 + c;
+                                        s0 = Op::accum(s0, vx_load(inp + ofs_k));
+                                        s1 = Op::accum(s1, vx_load(inp + ofs_k + nlanes));
+                                    }
+                                    vx_store(out + x0*C0 + c, Op::finalize(s0));
+                                    vx_store(out + x0*C0 + c + nlanes, Op::finalize(s1));
+                                }
+                            }
+                        }
+
+                        if (x0 == W)
+                            break;
+                        x1 = inner_x1;
+
+                        // Inner path — no bounds check needed
+                        if (nlanes == C0) {
+                            for (; x0 < x1; x0++) {
+                                int xi_ = x0*SX - padX0;
+                                const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
+
+                                v_float32 s0 = z;
+                                for (int k = 0; k < ksize; k++)
+                                    s0 = Op::accum(s0, vx_load(inp_xi + ofstab[k]));
+                                vx_store(out + x0*C0, Op::finalize(s0));
+                            }
+                        } else if (nlanes*2 == C0) {
+                            for (; x0 < x1; x0++) {
+                                int xi_ = x0*SX - padX0;
+                                const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
+
+                                v_float32 s0 = z, s1 = z;
+                                for (int k = 0; k < ksize; k++) {
+                                    int ofs_k = ofstab[k];
+                                    s0 = Op::accum(s0, vx_load(inp_xi + ofs_k));
+                                    s1 = Op::accum(s1, vx_load(inp_xi + ofs_k + nlanes));
+                                }
+                                vx_store(out + x0*C0, Op::finalize(s0));
+                                vx_store(out + x0*C0 + nlanes, Op::finalize(s1));
+                            }
+                        } else {
+                            for (; x0 < x1; x0++) {
+                                int xi_ = x0*SX - padX0;
+                                for (int c = 0; c < C0; c += nlanes*4) {
+                                    const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0 + c;
+
+                                    v_float32 s0 = z, s1 = z, s2 = z, s3 = z;
+                                    for (int k = 0; k < ksize; k++) {
+                                        int ofs_k = ofstab[k];
+                                        s0 = Op::accum(s0, vx_load(inp_xi + ofs_k));
+                                        s1 = Op::accum(s1, vx_load(inp_xi + ofs_k + nlanes));
+                                        s2 = Op::accum(s2, vx_load(inp_xi + ofs_k + nlanes*2));
+                                        s3 = Op::accum(s3, vx_load(inp_xi + ofs_k + nlanes*3));
+                                    }
+                                    vx_store(out + x0*C0 + c, Op::finalize(s0));
+                                    vx_store(out + x0*C0 + c + nlanes, Op::finalize(s1));
+                                    vx_store(out + x0*C0 + c + nlanes*2, Op::finalize(s2));
+                                    vx_store(out + x0*C0 + c + nlanes*3, Op::finalize(s3));
+                                }
+                            }
+                        }
+                        x1 = W;
+                    }
+                }
+            }
+        }
+    });
+}
+#endif
+
+// Scalar implementation for arbitrary p (also used when CV_SIMD is disabled).
+static void lpPoolScalar(const float* inp_, float* out_, const ConvState& cs, int p)
 {
     int NC1 = cs.inpshape[0]*cs.inpshape[1];
 
@@ -49,14 +225,8 @@ static void lpPool32f(const void* inp_, void* out_, const ConvState& cs, int p)
         const int* ofstab = cs.ofstab.data();
         float inv_p = 1.f / (float)p;
 
-        const float* inp = (const float*)inp_ + nc0*iplanesize;
-        float* out = (float*)out_ + nc0*planesize;
-
-    #if CV_SIMD
-        int nlanes = VTraits<v_float32>::vlanes();
-        CV_Assert(C0 == nlanes || C0 == nlanes*2 || C0 % (nlanes*4) == 0);
-        v_float32 z = vx_setzero_f32();
-    #endif
+        const float* inp = inp_ + nc0*iplanesize;
+        float* out = out_ + nc0*planesize;
 
         for (int nc = nc0; nc < nc1; nc++, inp += iplanesize) {
             for (int z0 = 0; z0 < D; z0++) {
@@ -67,100 +237,8 @@ static void lpPool32f(const void* inp_, void* out_, const ConvState& cs, int p)
                         y0 >= inner_y0 && y0 < inner_y1 ? inner_x0 : W;
                     int yi_ = y0*SY - padY0;
 
-                    // Boundary (outer) path — needs per-element bounds check
-                #if !(CV_SIMD)
-                    memset(out, 0, W*C0*sizeof(out[0]));
-                #endif
-
                     for(;;) {
-                    #if CV_SIMD
-                        if (p == 2) {
-                            if (nlanes == C0) {
-                                for (; x0 < x1; x0++) {
-                                    int xi_ = x0*SX - padX0;
-                                    v_float32 s0 = z;
-                                    for (int k = 0; k < ksize; k++) {
-                                        int zi = zi_ + zyxtab[k*MAX_POOL_DIMS];
-                                        int yi = yi_ + zyxtab[k*MAX_POOL_DIMS+1];
-                                        int xi = xi_ + zyxtab[k*MAX_POOL_DIMS+2];
-                                        if ((unsigned)zi >= (unsigned)Di ||
-                                            (unsigned)yi >= (unsigned)Hi ||
-                                            (unsigned)xi >= (unsigned)Wi)
-                                            continue;
-                                        v_float32 v0 = vx_load(inp + ((zi*Hi + yi)*Wi + xi)*C0);
-                                        s0 = v_add(s0, v_mul(v0, v0));
-                                    }
-                                    vx_store(out + x0*C0, v_sqrt(s0));
-                                }
-                            } else {
-                                for (; x0 < x1; x0++) {
-                                    int xi_ = x0*SX - padX0;
-                                    for (int c = 0; c < C0; c += nlanes*2) {
-                                        v_float32 s0 = z, s1 = z;
-                                        for (int k = 0; k < ksize; k++) {
-                                            int zi = zi_ + zyxtab[k*MAX_POOL_DIMS];
-                                            int yi = yi_ + zyxtab[k*MAX_POOL_DIMS+1];
-                                            int xi = xi_ + zyxtab[k*MAX_POOL_DIMS+2];
-                                            if ((unsigned)zi >= (unsigned)Di ||
-                                                (unsigned)yi >= (unsigned)Hi ||
-                                                (unsigned)xi >= (unsigned)Wi)
-                                                continue;
-                                            int ofs_k = ((zi*Hi + yi)*Wi + xi)*C0 + c;
-                                            v_float32 v0 = vx_load(inp + ofs_k);
-                                            v_float32 v1 = vx_load(inp + ofs_k + nlanes);
-                                            s0 = v_add(s0, v_mul(v0, v0));
-                                            s1 = v_add(s1, v_mul(v1, v1));
-                                        }
-                                        vx_store(out + x0*C0 + c, v_sqrt(s0));
-                                        vx_store(out + x0*C0 + c + nlanes, v_sqrt(s1));
-                                    }
-                                }
-                            }
-                        } else if (p == 1) {
-                            if (nlanes == C0) {
-                                for (; x0 < x1; x0++) {
-                                    int xi_ = x0*SX - padX0;
-                                    v_float32 s0 = z;
-                                    for (int k = 0; k < ksize; k++) {
-                                        int zi = zi_ + zyxtab[k*MAX_POOL_DIMS];
-                                        int yi = yi_ + zyxtab[k*MAX_POOL_DIMS+1];
-                                        int xi = xi_ + zyxtab[k*MAX_POOL_DIMS+2];
-                                        if ((unsigned)zi >= (unsigned)Di ||
-                                            (unsigned)yi >= (unsigned)Hi ||
-                                            (unsigned)xi >= (unsigned)Wi)
-                                            continue;
-                                        v_float32 v0 = vx_load(inp + ((zi*Hi + yi)*Wi + xi)*C0);
-                                        s0 = v_add(s0, v_abs(v0));
-                                    }
-                                    vx_store(out + x0*C0, s0);
-                                }
-                            } else {
-                                for (; x0 < x1; x0++) {
-                                    int xi_ = x0*SX - padX0;
-                                    for (int c = 0; c < C0; c += nlanes*2) {
-                                        v_float32 s0 = z, s1 = z;
-                                        for (int k = 0; k < ksize; k++) {
-                                            int zi = zi_ + zyxtab[k*MAX_POOL_DIMS];
-                                            int yi = yi_ + zyxtab[k*MAX_POOL_DIMS+1];
-                                            int xi = xi_ + zyxtab[k*MAX_POOL_DIMS+2];
-                                            if ((unsigned)zi >= (unsigned)Di ||
-                                                (unsigned)yi >= (unsigned)Hi ||
-                                                (unsigned)xi >= (unsigned)Wi)
-                                                continue;
-                                            int ofs_k = ((zi*Hi + yi)*Wi + xi)*C0 + c;
-                                            v_float32 v0 = vx_load(inp + ofs_k);
-                                            v_float32 v1 = vx_load(inp + ofs_k + nlanes);
-                                            s0 = v_add(s0, v_abs(v0));
-                                            s1 = v_add(s1, v_abs(v1));
-                                        }
-                                        vx_store(out + x0*C0 + c, s0);
-                                        vx_store(out + x0*C0 + c + nlanes, s1);
-                                    }
-                                }
-                            }
-                        } else {
-                    #endif
-                        // Scalar fallback for arbitrary p (also used when CV_SIMD disabled)
+                        // Boundary (outer) path — needs per-element bounds check
                         for (; x0 < x1; x0++) {
                             int xi_ = x0*SX - padX0;
                             for (int c = 0; c < C0; c++)
@@ -193,152 +271,24 @@ static void lpPool32f(const void* inp_, void* out_, const ConvState& cs, int p)
                                     out[x0*C0 + c] = std::pow(out[x0*C0 + c], inv_p);
                             }
                         }
-                    #if CV_SIMD
-                        } // end else (non-SIMD p)
-                    #endif
 
                         if (x0 == W)
                             break;
                         x1 = inner_x1;
 
                         // Inner path — no bounds check needed
-                    #if CV_SIMD
-                        if (p == 2) {
-                            if (nlanes == C0) {
-                                for (; x0 < x1; x0++) {
-                                    int xi_ = x0*SX - padX0;
-                                    const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
-
-                                    v_float32 v0 = vx_load(inp_xi + ofstab[0]);
-                                    v_float32 s0 = v_mul(v0, v0);
-                                    for (int k = 1; k < ksize; k++) {
-                                        v0 = vx_load(inp_xi + ofstab[k]);
-                                        s0 = v_add(s0, v_mul(v0, v0));
-                                    }
-                                    vx_store(out + x0*C0, v_sqrt(s0));
-                                }
-                            } else if (nlanes*2 == C0) {
-                                for (; x0 < x1; x0++) {
-                                    int xi_ = x0*SX - padX0;
-                                    const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
-
-                                    int ofs_k = ofstab[0];
-                                    v_float32 v0 = vx_load(inp_xi + ofs_k);
-                                    v_float32 v1 = vx_load(inp_xi + ofs_k + nlanes);
-                                    v_float32 s0 = v_mul(v0, v0);
-                                    v_float32 s1 = v_mul(v1, v1);
-                                    for (int k = 1; k < ksize; k++) {
-                                        ofs_k = ofstab[k];
-                                        v0 = vx_load(inp_xi + ofs_k);
-                                        v1 = vx_load(inp_xi + ofs_k + nlanes);
-                                        s0 = v_add(s0, v_mul(v0, v0));
-                                        s1 = v_add(s1, v_mul(v1, v1));
-                                    }
-                                    vx_store(out + x0*C0, v_sqrt(s0));
-                                    vx_store(out + x0*C0 + nlanes, v_sqrt(s1));
-                                }
-                            } else {
-                                for (; x0 < x1; x0++) {
-                                    int xi_ = x0*SX - padX0;
-                                    for (int c = 0; c < C0; c += nlanes*4) {
-                                        const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0 + c;
-
-                                        int ofs_k = ofstab[0];
-                                        v_float32 a0 = vx_load(inp_xi + ofs_k);
-                                        v_float32 a1 = vx_load(inp_xi + ofs_k + nlanes);
-                                        v_float32 a2 = vx_load(inp_xi + ofs_k + nlanes*2);
-                                        v_float32 a3 = vx_load(inp_xi + ofs_k + nlanes*3);
-                                        v_float32 s0 = v_mul(a0, a0);
-                                        v_float32 s1 = v_mul(a1, a1);
-                                        v_float32 s2 = v_mul(a2, a2);
-                                        v_float32 s3 = v_mul(a3, a3);
-                                        for (int k = 1; k < ksize; k++) {
-                                            ofs_k = ofstab[k];
-                                            a0 = vx_load(inp_xi + ofs_k);
-                                            a1 = vx_load(inp_xi + ofs_k + nlanes);
-                                            a2 = vx_load(inp_xi + ofs_k + nlanes*2);
-                                            a3 = vx_load(inp_xi + ofs_k + nlanes*3);
-                                            s0 = v_add(s0, v_mul(a0, a0));
-                                            s1 = v_add(s1, v_mul(a1, a1));
-                                            s2 = v_add(s2, v_mul(a2, a2));
-                                            s3 = v_add(s3, v_mul(a3, a3));
-                                        }
-                                        vx_store(out + x0*C0 + c, v_sqrt(s0));
-                                        vx_store(out + x0*C0 + c + nlanes, v_sqrt(s1));
-                                        vx_store(out + x0*C0 + c + nlanes*2, v_sqrt(s2));
-                                        vx_store(out + x0*C0 + c + nlanes*3, v_sqrt(s3));
-                                    }
-                                }
-                            }
-                        } else if (p == 1) {
-                            if (nlanes == C0) {
-                                for (; x0 < x1; x0++) {
-                                    int xi_ = x0*SX - padX0;
-                                    const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
-
-                                    v_float32 s0 = v_abs(vx_load(inp_xi + ofstab[0]));
-                                    for (int k = 1; k < ksize; k++)
-                                        s0 = v_add(s0, v_abs(vx_load(inp_xi + ofstab[k])));
-                                    vx_store(out + x0*C0, s0);
-                                }
-                            } else if (nlanes*2 == C0) {
-                                for (; x0 < x1; x0++) {
-                                    int xi_ = x0*SX - padX0;
-                                    const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
-
-                                    int ofs_k = ofstab[0];
-                                    v_float32 s0 = v_abs(vx_load(inp_xi + ofs_k));
-                                    v_float32 s1 = v_abs(vx_load(inp_xi + ofs_k + nlanes));
-                                    for (int k = 1; k < ksize; k++) {
-                                        ofs_k = ofstab[k];
-                                        s0 = v_add(s0, v_abs(vx_load(inp_xi + ofs_k)));
-                                        s1 = v_add(s1, v_abs(vx_load(inp_xi + ofs_k + nlanes)));
-                                    }
-                                    vx_store(out + x0*C0, s0);
-                                    vx_store(out + x0*C0 + nlanes, s1);
-                                }
-                            } else {
-                                for (; x0 < x1; x0++) {
-                                    int xi_ = x0*SX - padX0;
-                                    for (int c = 0; c < C0; c += nlanes*4) {
-                                        const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0 + c;
-
-                                        int ofs_k = ofstab[0];
-                                        v_float32 s0 = v_abs(vx_load(inp_xi + ofs_k));
-                                        v_float32 s1 = v_abs(vx_load(inp_xi + ofs_k + nlanes));
-                                        v_float32 s2 = v_abs(vx_load(inp_xi + ofs_k + nlanes*2));
-                                        v_float32 s3 = v_abs(vx_load(inp_xi + ofs_k + nlanes*3));
-                                        for (int k = 1; k < ksize; k++) {
-                                            ofs_k = ofstab[k];
-                                            s0 = v_add(s0, v_abs(vx_load(inp_xi + ofs_k)));
-                                            s1 = v_add(s1, v_abs(vx_load(inp_xi + ofs_k + nlanes)));
-                                            s2 = v_add(s2, v_abs(vx_load(inp_xi + ofs_k + nlanes*2)));
-                                            s3 = v_add(s3, v_abs(vx_load(inp_xi + ofs_k + nlanes*3)));
-                                        }
-                                        vx_store(out + x0*C0 + c, s0);
-                                        vx_store(out + x0*C0 + c + nlanes, s1);
-                                        vx_store(out + x0*C0 + c + nlanes*2, s2);
-                                        vx_store(out + x0*C0 + c + nlanes*3, s3);
-                                    }
-                                }
-                            }
-                        } else {
-                    #endif
-                        // Scalar inner path for arbitrary p
                         for (; x0 < x1; x0++) {
                             int xi_ = x0*SX - padX0;
                             const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
+                            for (int c = 0; c < C0; c++)
+                                out[x0*C0 + c] = 0.f;
                             if (p == 1) {
-                                for (int c = 0; c < C0; c++)
-                                    out[x0*C0 + c] = 0.f;
                                 for (int k = 0; k < ksize; k++) {
                                     const float* inptr = inp_xi + ofstab[k];
                                     for (int c = 0; c < C0; c++)
                                         out[x0*C0 + c] += std::abs(inptr[c]);
                                 }
                             } else if (p == 2) {
-                                for (int c = 0; c < C0; c++)
-                                    out[x0*C0 + c] = 0.f;
                                 for (int k = 0; k < ksize; k++) {
                                     const float* inptr = inp_xi + ofstab[k];
                                     for (int c = 0; c < C0; c++)
@@ -347,8 +297,6 @@ static void lpPool32f(const void* inp_, void* out_, const ConvState& cs, int p)
                                 for (int c = 0; c < C0; c++)
                                     out[x0*C0 + c] = std::sqrt(out[x0*C0 + c]);
                             } else {
-                                for (int c = 0; c < C0; c++)
-                                    out[x0*C0 + c] = 0.f;
                                 for (int k = 0; k < ksize; k++) {
                                     const float* inptr = inp_xi + ofstab[k];
                                     for (int c = 0; c < C0; c++)
@@ -358,15 +306,30 @@ static void lpPool32f(const void* inp_, void* out_, const ConvState& cs, int p)
                                     out[x0*C0 + c] = std::pow(out[x0*C0 + c], inv_p);
                             }
                         }
-                    #if CV_SIMD
-                        } // end else (non-SIMD p)
-                    #endif
                         x1 = W;
                     }
                 }
             }
         }
     });
+}
+
+static void lpPool32f(const void* inp_, void* out_, const ConvState& cs, int p)
+{
+    const float* inp = (const float*)inp_;
+    float* out = (float*)out_;
+#if CV_SIMD
+    // SIMD fast paths for the common norms; scalar fallback for any other p.
+    if (p == 1) {
+        lpPoolSIMD<LpPoolL1>(inp, out, cs);
+        return;
+    }
+    if (p == 2) {
+        lpPoolSIMD<LpPoolL2>(inp, out, cs);
+        return;
+    }
+#endif
+    lpPoolScalar(inp, out, cs, p);
 }
 
 typedef void (*LpPoolFunc)(const void* inp, void* out, const ConvState& cs, int p);
