@@ -45,28 +45,32 @@ template <> inline
 vint16m2_t div_sat(const vint16m2_t &v1, const vint16m2_t &v2, const float scale, const int vl) {
     auto f1 = __riscv_vfwcvt_f(v1, vl);
     auto f2 = __riscv_vfwcvt_f(v2, vl);
-    auto res = __riscv_vfmul(f1, __riscv_vfmul(common::__riscv_vfrec(f2, vl), scale, vl), vl);
+    auto scaled = __riscv_vfmul(f1, scale, vl);
+    auto res = __riscv_vfdiv(scaled, f2, vl);
     return __riscv_vfncvt_x(res, vl);
 }
 template <> inline
 vuint16m2_t div_sat(const vuint16m2_t &v1, const vuint16m2_t &v2, const float scale, const int vl) {
     auto f1 = __riscv_vfwcvt_f(v1, vl);
     auto f2 = __riscv_vfwcvt_f(v2, vl);
-    auto res = __riscv_vfmul(f1, __riscv_vfmul(common::__riscv_vfrec(f2, vl), scale, vl), vl);
+    auto scaled = __riscv_vfmul(f1, scale, vl);
+    auto res = __riscv_vfdiv(scaled, f2, vl);
     return __riscv_vfncvt_xu(res, vl);
 }
 template <> inline
 vint32m4_t div_sat(const vint32m4_t &v1, const vint32m4_t &v2, const float scale, const int vl) {
     auto f1 = __riscv_vfcvt_f(v1, vl);
     auto f2 = __riscv_vfcvt_f(v2, vl);
-    auto res = __riscv_vfmul(f1, __riscv_vfmul(common::__riscv_vfrec(f2, vl), scale, vl), vl);
+    auto scaled = __riscv_vfmul(f1, scale, vl);
+    auto res = __riscv_vfdiv(scaled, f2, vl);
     return __riscv_vfcvt_x(res, vl);
 }
 template <> inline
 vuint32m4_t div_sat(const vuint32m4_t &v1, const vuint32m4_t &v2, const float scale, const int vl) {
     auto f1 = __riscv_vfcvt_f(v1, vl);
     auto f2 = __riscv_vfcvt_f(v2, vl);
-    auto res = __riscv_vfmul(f1, __riscv_vfmul(common::__riscv_vfrec(f2, vl), scale, vl), vl);
+    auto scaled = __riscv_vfmul(f1, scale, vl);
+    auto res = __riscv_vfdiv(scaled, f2, vl);
     return __riscv_vfcvt_xu(res, vl);
 }
 
@@ -173,7 +177,7 @@ int div(const float *src1, size_t step1, const float *src2, size_t step2,
                 auto v1 = vle(src1_h + w, vl);
                 auto v2 = vle(src2_h + w, vl);
 
-                vse(dst_h + w, __riscv_vfmul(v1, __riscv_vfmul(common::__riscv_vfrec(v2, vl), scale, vl), vl), vl);
+                vse(dst_h + w, __riscv_vfdiv(__riscv_vfmul(v1, scale, vl), v2, vl), vl);
             }
         }
     }
