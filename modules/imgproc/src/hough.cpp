@@ -184,8 +184,9 @@ HoughLinesStandard( InputArray src, OutputArray lines, int type,
                      irho, tabSin, tabCos);
 
     // stage 1. fill accumulator
-    // Original Single Tread
-    if (numangle < 100) {
+    // Use the serial implementation for small numangle values to avoid parallel overhead.
+    constexpr int kParallelAngleThreshold = 100;
+    if (numangle < kParallelAngleThreshold) {
         if (use_edgeval) {
             for( i = 0; i < height; i++ )
                 for( j = 0; j < width; j++ )
