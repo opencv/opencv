@@ -213,12 +213,9 @@ HoughLinesStandard( InputArray src, OutputArray lines, int type,
                 }
         }
     } else {
-        int accum_size = (numangle + 2) * (numrho + 2);
-        memset(accum, 0, accum_size * sizeof(int));
-
         // Extract the coordinates of all edge points
         std::vector<int> x_coords, y_coords, edge_vals;
-        size_t estimated_edges = (size_t)(width * height * 0.1);
+        size_t estimated_edges = (size_t)width * (size_t)height / 10;
         x_coords.reserve(estimated_edges);
         y_coords.reserve(estimated_edges);
         if (use_edgeval) {
