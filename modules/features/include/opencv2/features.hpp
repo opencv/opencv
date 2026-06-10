@@ -50,6 +50,10 @@
 #include "opencv2/flann/miniflann.hpp"
 #endif
 
+#ifdef HAVE_OPENCV_DNN
+#include "opencv2/dnn.hpp"
+#endif
+
 /**
   @defgroup features Features Framework
   @{
@@ -835,6 +839,46 @@ public:
   CV_WRAP virtual const std::vector<std::vector<cv::Point> >& getBlobContours() const = 0;
 };
 
+/** @brief ALIKED feature detector and descriptor extractor.
+
+ALIKED (A Lightweight Image KEYpoint Detector) is a CNN-based feature detector and descriptor
+extractor, as described in @cite Zhao23 . It produces 128-dimensional float descriptors and
+keypoints with sub-pixel accuracy.
+
+The model expects RGB input [1,3,H,W] and internally converts BGR images to RGB.
+*/
+class CV_EXPORTS_W ALIKED : public Feature2D
+{
+protected:
+    ALIKED();
+public:
+    virtual ~ALIKED();
+
+    struct CV_EXPORTS_W_SIMPLE Params
+    {
+        CV_WRAP Params();
+        CV_PROP_RW Size inputSize;              //!< Input image size for the network, default 640x640
+        CV_PROP_RW bool normalizeDescriptors;   //!< Whether to L2-normalize descriptors, default true
+        CV_PROP_RW int engine;                  //!< DNN engine type (dnn::EngineType), default ENGINE_NEW
+        CV_PROP_RW int backend;                 //!< DNN backend, default DNN_BACKEND_DEFAULT
+        CV_PROP_RW int target;                  //!< DNN target, default DNN_TARGET_CPU
+    };
+
+    /** @brief Creates ALIKED from a model file path.
+    @param modelPath Path to the ONNX model file.
+    @param params ALIKED parameters.
+    */
+    CV_WRAP static Ptr<ALIKED> create(const String& modelPath, const ALIKED::Params& params = ALIKED::Params());
+
+#ifdef HAVE_OPENCV_DNN
+    /** @brief Creates ALIKED from in-memory model data.
+    @param modelData Buffer containing the model data.
+    @param params ALIKED parameters.
+    */
+    static Ptr<ALIKED> create(const std::vector<uchar>& modelData, const ALIKED::Params& params = ALIKED::Params());
+#endif
+};
+
 
 /****************************************************************************************\
 *                                      Distance                                          *
@@ -1251,6 +1295,61 @@ protected:
 };
 
 #endif
+
+/** @brief LightGlue feature matcher.
+
+LightGlue is a CNN-based feature matcher, as described in @cite Lindenberger23 . It takes
+keypoint locations and descriptors from two images and directly predicts match pairs. Unlike
+traditional matchers that compute descriptor distances, LightGlue uses attention mechanisms
+to produce confidence scores for each potential match pair.
+
+The matcher extends DescriptorMatcher and supports the standard match(), knnMatch(), and
+radiusMatch() interfaces. Context (keypoints and image sizes) must be provided via
+setPairInfo() before matching.
+*/
+class CV_EXPORTS_W LightGlueMatcher : public DescriptorMatcher
+{
+protected:
+    LightGlueMatcher();
+public:
+    virtual ~LightGlueMatcher();
+
+    /** @brief Creates LightGlueMatcher from a model file path.
+    @param modelPath Path to the ONNX model file.
+    @param scoreThreshold Match confidence threshold.
+    @param backend DNN backend
+    @param target DNN target
+    */
+    CV_WRAP static Ptr<LightGlueMatcher> create(const String& modelPath, float scoreThreshold = 0.0f, int backend = 0, int target = 0);
+
+#ifdef HAVE_OPENCV_DNN
+    /** @brief Creates LightGlueMatcher from in-memory model data.
+    @param modelData Buffer containing the model data.
+    @param scoreThreshold Match confidence threshold.
+    @param backend DNN backend
+    @param target DNN target
+    */
+    CV_WRAP_AS(createFromMemory) static Ptr<LightGlueMatcher> create(const std::vector<uchar>& modelData, float scoreThreshold = 0.0f, int backend = 0, int target = 0);
+#endif
+
+    /** @brief Sets the keypoint and image size context for the next match() call.
+
+    This provides the spatial context that LightGlue needs in addition to descriptors.
+    Must be called before match()/knnMatch()/radiusMatch() unless using automatic context
+    from in-process ALIKED instances.
+
+    @param queryKpts Query image keypoints (Nx2 float matrix with x,y coordinates).
+    @param trainKpts Train image keypoints (Nx2 float matrix with x,y coordinates).
+    @param queryImageSize Size of the query image (width, height).
+    @param trainImageSize Size of the train image (width, height).
+    */
+    CV_WRAP virtual void setPairInfo(InputArray queryKpts, InputArray trainKpts,
+                                     Size queryImageSize = Size(), Size trainImageSize = Size()) = 0;
+
+    /** @brief Clears stored pair context information.
+    */
+    CV_WRAP virtual void clearPairInfo() = 0;
+};
 
 //! @} features_match
 

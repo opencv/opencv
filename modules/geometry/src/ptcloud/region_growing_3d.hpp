@@ -7,7 +7,7 @@
 #ifndef OPENCV_REGION_ROWING_3D_HPP
 #define OPENCV_REGION_ROWING_3D_HPP
 
-#include "opencv2/geometry/ptcloud.hpp"
+#include "opencv2/geometry/segment.hpp"
 #include "ptcloud_utils.hpp"
 
 namespace cv {

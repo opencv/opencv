@@ -1176,7 +1176,7 @@ struct MaskedNormInf_SIMD {
                 if (mask[i]) {
                     const T* elem = src + i * cn;
                     int k = 0;
-                #if CV_ENABLE_UNROLLED
+                #if CV_ENABLE_UNROLLED && !CV_SIMD_SCALABLE
                     for (; k <= cn - 4; k += 4) {
                         s = std::max(s, (ST)cv_abs(elem[k]));
                         s = std::max(s, (ST)cv_abs(elem[k + 1]));
@@ -1210,7 +1210,7 @@ struct MaskedNormL1_SIMD {
                 if (mask[i]) {
                     const T* elem = src + i * cn;
                     int k = 0;
-                #if CV_ENABLE_UNROLLED
+                #if CV_ENABLE_UNROLLED && !CV_SIMD_SCALABLE
                     for (; k <= cn - 4; k += 4) {
                         s += (ST)cv_abs(elem[k]);
                         s += (ST)cv_abs(elem[k + 1]);
@@ -1234,7 +1234,7 @@ struct MaskedNormL2_SIMD {
         ST s = 0;
         if (cn == 1) {
             int i = 0;
-        #if CV_ENABLE_UNROLLED
+        #if CV_ENABLE_UNROLLED && !CV_SIMD_SCALABLE
             for (; i <= len - 4; i += 4) {
                 if (mask[i])     { T v0 = src[i];     s += (ST)v0 * v0; }
                 if (mask[i + 1]) { T v1 = src[i + 1]; s += (ST)v1 * v1; }
@@ -1254,7 +1254,7 @@ struct MaskedNormL2_SIMD {
                 if (mask[i]) {
                     const T* elem = src + i * cn;
                     int k = 0;
-                #if CV_ENABLE_UNROLLED
+                #if CV_ENABLE_UNROLLED && !CV_SIMD_SCALABLE
                     for (; k <= cn - 4; k += 4) {
                         T v0 = elem[k];     s += (ST)v0 * v0;
                         T v1 = elem[k + 1]; s += (ST)v1 * v1;
@@ -1269,6 +1269,7 @@ struct MaskedNormL2_SIMD {
                 }
             }
         }
+
         return s;
     }
 };

@@ -295,19 +295,6 @@ enum InterpolationMasks {
 //! @addtogroup imgproc_misc
 //! @{
 
-//! Distance types for Distance Transform and M-estimators
-//! @see distanceTransform, fitLine
-enum DistanceTypes {
-    DIST_USER    = -1,  //!< User defined distance
-    DIST_L1      = 1,   //!< distance = |x1-x2| + |y1-y2|
-    DIST_L2      = 2,   //!< the simple euclidean distance
-    DIST_C       = 3,   //!< distance = max(|x1-x2|,|y1-y2|)
-    DIST_L12     = 4,   //!< L1-L2 metric: distance = 2(sqrt(1+x*x/2) - 1))
-    DIST_FAIR    = 5,   //!< distance = c^2(|x|/c-log(1+|x|/c)), c = 1.3998
-    DIST_WELSCH  = 6,   //!< distance = c^2/2(1-exp(-(x/c)^2)), c = 2.9846
-    DIST_HUBER   = 7    //!< distance = |x|<c ? x^2/2 : c(|x|-c/2), c=1.345
-};
-
 //! Mask size for distance transform
 enum DistanceTransformMasks {
     DIST_MASK_3       = 3, //!< mask=3
@@ -520,6 +507,14 @@ enum HistCompMethods {
     /** Kullback-Leibler divergence
     \f[d(H_1,H_2) = \sum _I H_1(I) \log \left(\frac{H_1(I)}{H_2(I)}\right)\f] */
     HISTCMP_KL_DIV        = 5
+};
+
+//! Variants of Line Segment %Detector
+enum LineSegmentDetectorModes {
+    LSD_REFINE_NONE = 0, //!< No refinement applied
+    LSD_REFINE_STD  = 1, //!< Standard refinement is applied. E.g. breaking arches into smaller straighter line approximations.
+    LSD_REFINE_ADV  = 2  //!< Advanced refinement. Number of false alarms is calculated, lines are
+    //!< refined through increase of precision, decrement in size, etc.
 };
 
 /** the color conversion codes
@@ -1071,6 +1066,90 @@ public:
 };
 
 //! @} imgproc_hist
+
+//! @addtogroup imgproc_feature
+//! @{
+
+/** @example samples/cpp/snippets/lsd_lines.cpp
+An example using the LineSegmentDetector
+\image html building_lsd.png "Sample output image" width=434 height=300
+*/
+
+/** @brief Line segment detector class
+
+following the algorithm described at @cite Rafael12 .
+
+@note Implementation has been removed from OpenCV version 3.4.6 to 3.4.15 and version 4.1.0 to 4.5.3 due original code license conflict.
+restored again after [Computation of a NFA](https://github.com/rafael-grompone-von-gioi/binomial_nfa) code published under the MIT license.
+*/
+class CV_EXPORTS_W LineSegmentDetector : public Algorithm
+{
+public:
+
+    /** @brief Finds lines in the input image.
+
+    This is the output of the default parameters of the algorithm on the above shown image.
+
+    ![image](pics/building_lsd.png)
+
+    @param image A grayscale (CV_8UC1) input image. If only a roi needs to be selected, use:
+    `lsd_ptr-\>detect(image(roi), lines, ...); lines += Scalar(roi.x, roi.y, roi.x, roi.y);`
+    @param lines A vector of Vec4f elements specifying the beginning and ending point of a line. Where
+    Vec4f is (x1, y1, x2, y2), point 1 is the start, point 2 - end. Returned lines are strictly
+    oriented depending on the gradient.
+    @param width Vector of widths of the regions, where the lines are found. E.g. Width of line.
+    @param prec Vector of precisions with which the lines are found.
+    @param nfa Vector containing number of false alarms in the line region, with precision of 10%. The
+    bigger the value, logarithmically better the detection.
+    - -1 corresponds to 10 mean false alarms
+    - 0 corresponds to 1 mean false alarm
+    - 1 corresponds to 0.1 mean false alarms
+    This vector will be calculated only when the objects type is #LSD_REFINE_ADV.
+    */
+    CV_WRAP virtual void detect(InputArray image, OutputArray lines,
+                        OutputArray width = noArray(), OutputArray prec = noArray(),
+                        OutputArray nfa = noArray()) = 0;
+
+    /** @brief Draws the line segments on a given image.
+    @param image The image, where the lines will be drawn. Should be bigger or equal to the image,
+    where the lines were found.
+    @param lines A vector of the lines that needed to be drawn.
+     */
+    CV_WRAP virtual void drawSegments(InputOutputArray image, InputArray lines) = 0;
+
+    /** @brief Draws two groups of lines in blue and red, counting the non overlapping (mismatching) pixels.
+
+    @param size The size of the image, where lines1 and lines2 were found.
+    @param lines1 The first group of lines that needs to be drawn. It is visualized in blue color.
+    @param lines2 The second group of lines. They visualized in red color.
+    @param image Optional image, where the lines will be drawn. The image should be color(3-channel)
+    in order for lines1 and lines2 to be drawn in the above mentioned colors.
+     */
+    CV_WRAP virtual int compareSegments(const Size& size, InputArray lines1, InputArray lines2, InputOutputArray image = noArray()) = 0;
+
+    virtual ~LineSegmentDetector() { }
+};
+
+/** @brief Creates a smart pointer to a LineSegmentDetector object and initializes it.
+
+The LineSegmentDetector algorithm is defined using the standard values. Only advanced users may want
+to edit those, as to tailor it for their own application.
+
+@param refine The way found lines will be refined, see #LineSegmentDetectorModes
+@param scale The scale of the image that will be used to find the lines. Range (0..1].
+@param sigma_scale Sigma for Gaussian filter. It is computed as sigma = sigma_scale/scale.
+@param quant Bound to the quantization error on the gradient norm.
+@param ang_th Gradient angle tolerance in degrees.
+@param log_eps Detection threshold: -log10(NFA) \> log_eps. Used only when advance refinement is chosen.
+@param density_th Minimal density of aligned region points in the enclosing rectangle.
+@param n_bins Number of bins in pseudo-ordering of gradient modulus.
+*/
+CV_EXPORTS_W Ptr<LineSegmentDetector> createLineSegmentDetector(
+    LineSegmentDetectorModes refine = LSD_REFINE_STD, double scale = 0.8,
+    double sigma_scale = 0.6, double quant = 2.0, double ang_th = 22.5,
+    double log_eps = 0, double density_th = 0.7, int n_bins = 1024);
+
+//! @} imgproc_feature
 
 //! @addtogroup imgproc_filter
 //! @{
@@ -2166,89 +2245,252 @@ CV_EXPORTS_W void convertMaps( InputArray map1, InputArray map2,
                                OutputArray dstmap1, OutputArray dstmap2,
                                int dstmap1type, bool nninterpolation = false );
 
-/** @brief Calculates an affine matrix of 2D rotation.
-
-The function calculates the following matrix:
-
-\f[\begin{bmatrix} \alpha &  \beta & (1- \alpha )  \cdot \texttt{center.x} -  \beta \cdot \texttt{center.y} \\ - \beta &  \alpha &  \beta \cdot \texttt{center.x} + (1- \alpha )  \cdot \texttt{center.y} \end{bmatrix}\f]
-
-where
-
-\f[\begin{array}{l} \alpha =  \texttt{scale} \cdot \cos \texttt{angle} , \\ \beta =  \texttt{scale} \cdot \sin \texttt{angle} \end{array}\f]
-
-The transformation maps the rotation center to itself. If this is not the target, adjust the shift.
-
-@param center Center of the rotation in the source image.
-@param angle Rotation angle in degrees. Positive values mean counter-clockwise rotation (the
-coordinate origin is assumed to be the top-left corner).
-@param scale Isotropic scale factor.
-
-@sa  getAffineTransform, warpAffine, transform
- */
-CV_EXPORTS_W Mat getRotationMatrix2D(Point2f center, double angle, double scale);
-
-/** @sa getRotationMatrix2D */
-CV_EXPORTS Matx23d getRotationMatrix2D_(Point2f center, double angle, double scale);
-
-inline
-Mat getRotationMatrix2D(Point2f center, double angle, double scale)
+//! cv::undistort mode
+enum UndistortTypes
 {
-    return Mat(getRotationMatrix2D_(center, angle, scale), true);
+    PROJ_SPHERICAL_ORTHO  = 0,
+    PROJ_SPHERICAL_EQRECT = 1
+};
+
+/** @brief Transforms an image to compensate for lens distortion.
+
+The function transforms an image to compensate radial and tangential lens distortion.
+
+The function is simply a combination of #initUndistortRectifyMap (with unity R ) and #remap
+(with bilinear interpolation). See the former function for details of the transformation being
+performed.
+
+Those pixels in the destination image, for which there is no correspondent pixels in the source
+image, are filled with zeros (black color).
+
+A particular subset of the source image that will be visible in the corrected image can be regulated
+by newCameraMatrix. You can use #getOptimalNewCameraMatrix to compute the appropriate
+newCameraMatrix depending on your requirements.
+
+The camera matrix and the distortion parameters can be determined using #calibrateCamera. If
+the resolution of images is different from the resolution used at the calibration stage, \f$f_x,
+f_y, c_x\f$ and \f$c_y\f$ need to be scaled accordingly, while the distortion coefficients remain
+the same.
+
+@param src Input (distorted) image.
+@param dst Output (corrected) image that has the same size and type as src .
+@param cameraMatrix Input camera matrix \f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
+@param distCoeffs Input vector of distortion coefficients
+\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
+of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
+@param newCameraMatrix Camera matrix of the distorted image. By default, it is the same as
+cameraMatrix but you may additionally scale and shift the result by using a different matrix.
+ */
+CV_EXPORTS_W void undistort( InputArray src, OutputArray dst,
+                             InputArray cameraMatrix,
+                             InputArray distCoeffs,
+                             InputArray newCameraMatrix = noArray() );
+
+/** @brief Computes the undistortion and rectification transformation map.
+
+The function computes the joint undistortion and rectification transformation and represents the
+result in the form of maps for #remap. The undistorted image looks like original, as if it is
+captured with a camera using the camera matrix =newCameraMatrix and zero distortion. In case of a
+monocular camera, newCameraMatrix is usually equal to cameraMatrix, or it can be computed by
+#getOptimalNewCameraMatrix for a better control over scaling. In case of a stereo camera,
+newCameraMatrix is normally set to P1 or P2 computed by #stereoRectify .
+
+Also, this new camera is oriented differently in the coordinate space, according to R. That, for
+example, helps to align two heads of a stereo camera so that the epipolar lines on both images
+become horizontal and have the same y- coordinate (in case of a horizontally aligned stereo camera).
+
+The function actually builds the maps for the inverse mapping algorithm that is used by #remap. That
+is, for each pixel \f$(u, v)\f$ in the destination (corrected and rectified) image, the function
+computes the corresponding coordinates in the source image (that is, in the original image from
+camera). The following process is applied:
+\f[
+\begin{array}{l}
+x  \leftarrow (u - {c'}_x)/{f'}_x  \\
+y  \leftarrow (v - {c'}_y)/{f'}_y  \\
+{[X\,Y\,W]} ^T  \leftarrow R^{-1}*[x \, y \, 1]^T  \\
+x'  \leftarrow X/W  \\
+y'  \leftarrow Y/W  \\
+r^2  \leftarrow x'^2 + y'^2 \\
+x''  \leftarrow x' \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6}
++ 2p_1 x' y' + p_2(r^2 + 2 x'^2)  + s_1 r^2 + s_2 r^4\\
+y''  \leftarrow y' \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6}
++ p_1 (r^2 + 2 y'^2) + 2 p_2 x' y' + s_3 r^2 + s_4 r^4 \\
+s\vecthree{x'''}{y'''}{1} =
+\vecthreethree{R_{33}(\tau_x, \tau_y)}{0}{-R_{13}((\tau_x, \tau_y)}
+{0}{R_{33}(\tau_x, \tau_y)}{-R_{23}(\tau_x, \tau_y)}
+{0}{0}{1} R(\tau_x, \tau_y) \vecthree{x''}{y''}{1}\\
+map_x(u,v)  \leftarrow x''' f_x + c_x  \\
+map_y(u,v)  \leftarrow y''' f_y + c_y
+\end{array}
+\f]
+where \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
+are the distortion coefficients.
+
+In case of a stereo camera, this function is called twice: once for each camera head, after
+#stereoRectify, which in its turn is called after #stereoCalibrate. But if the stereo camera
+was not calibrated, it is still possible to compute the rectification transformations directly from
+the fundamental matrix using #stereoRectifyUncalibrated. For each camera, the function computes
+homography H as the rectification transformation in a pixel domain, not a rotation matrix R in 3D
+space. R can be computed from H as
+\f[\texttt{R} = \texttt{cameraMatrix} ^{-1} \cdot \texttt{H} \cdot \texttt{cameraMatrix}\f]
+where cameraMatrix can be chosen arbitrarily.
+
+@param cameraMatrix Input camera matrix \f$A=\vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
+@param distCoeffs Input vector of distortion coefficients
+\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
+of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
+@param R Optional rectification transformation in the object space (3x3 matrix). R1 or R2 ,
+computed by #stereoRectify can be passed here. If the matrix is empty, the identity transformation
+is assumed. In #initUndistortRectifyMap R assumed to be an identity matrix.
+@param newCameraMatrix New camera matrix \f$A'=\vecthreethree{f_x'}{0}{c_x'}{0}{f_y'}{c_y'}{0}{0}{1}\f$.
+@param size Undistorted image size.
+@param m1type Type of the first output map that can be CV_32FC1, CV_32FC2 or CV_16SC2, see #convertMaps
+@param map1 The first output map.
+@param map2 The second output map.
+ */
+CV_EXPORTS_W
+void initUndistortRectifyMap(InputArray cameraMatrix, InputArray distCoeffs,
+                             InputArray R, InputArray newCameraMatrix,
+                             Size size, int m1type, OutputArray map1, OutputArray map2);
+
+/** @brief Computes the projection and inverse-rectification transformation map. In essense, this is the inverse of
+#initUndistortRectifyMap to accomodate stereo-rectification of projectors ('inverse-cameras') in projector-camera pairs.
+
+The function computes the joint projection and inverse rectification transformation and represents the
+result in the form of maps for #remap. The projected image looks like a distorted version of the original which,
+once projected by a projector, should visually match the original. In case of a monocular camera, newCameraMatrix
+is usually equal to cameraMatrix, or it can be computed by
+#getOptimalNewCameraMatrix for a better control over scaling. In case of a projector-camera pair,
+newCameraMatrix is normally set to P1 or P2 computed by #stereoRectify .
+
+The projector is oriented differently in the coordinate space, according to R. In case of projector-camera pairs,
+this helps align the projector (in the same manner as #initUndistortRectifyMap for the camera) to create a stereo-rectified pair. This
+allows epipolar lines on both images to become horizontal and have the same y-coordinate (in case of a horizontally aligned projector-camera pair).
+
+The function builds the maps for the inverse mapping algorithm that is used by #remap. That
+is, for each pixel \f$(u, v)\f$ in the destination (projected and inverse-rectified) image, the function
+computes the corresponding coordinates in the source image (that is, in the original digital image). The following process is applied:
+
+\f[
+\begin{array}{l}
+\text{newCameraMatrix}\\
+x  \leftarrow (u - {c'}_x)/{f'}_x  \\
+y  \leftarrow (v - {c'}_y)/{f'}_y  \\
+
+\\\text{Undistortion}
+\\\scriptsize{\textit{though equation shown is for radial undistortion, function implements cv::undistortPoints()}}\\
+r^2  \leftarrow x^2 + y^2 \\
+\theta \leftarrow \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6}\\
+x' \leftarrow \frac{x}{\theta} \\
+y'  \leftarrow \frac{y}{\theta} \\
+
+\\\text{Rectification}\\
+{[X\,Y\,W]} ^T  \leftarrow R*[x' \, y' \, 1]^T  \\
+x''  \leftarrow X/W  \\
+y''  \leftarrow Y/W  \\
+
+\\\text{cameraMatrix}\\
+map_x(u,v)  \leftarrow x'' f_x + c_x  \\
+map_y(u,v)  \leftarrow y'' f_y + c_y
+\end{array}
+\f]
+where \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
+are the distortion coefficients vector distCoeffs.
+
+In case of a stereo-rectified projector-camera pair, this function is called for the projector while #initUndistortRectifyMap is called for the camera head.
+This is done after #stereoRectify, which in turn is called after #stereoCalibrate. If the projector-camera pair
+is not calibrated, it is still possible to compute the rectification transformations directly from
+the fundamental matrix using #stereoRectifyUncalibrated. For the projector and camera, the function computes
+homography H as the rectification transformation in a pixel domain, not a rotation matrix R in 3D
+space. R can be computed from H as
+\f[\texttt{R} = \texttt{cameraMatrix} ^{-1} \cdot \texttt{H} \cdot \texttt{cameraMatrix}\f]
+where cameraMatrix can be chosen arbitrarily.
+
+@param cameraMatrix Input camera matrix \f$A=\vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
+@param distCoeffs Input vector of distortion coefficients
+\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
+of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
+@param R Optional rectification transformation in the object space (3x3 matrix). R1 or R2,
+computed by #stereoRectify can be passed here. If the matrix is empty, the identity transformation
+is assumed.
+@param newCameraMatrix New camera matrix \f$A'=\vecthreethree{f_x'}{0}{c_x'}{0}{f_y'}{c_y'}{0}{0}{1}\f$.
+@param size Distorted image size.
+@param m1type Type of the first output map. Can be CV_32FC1, CV_32FC2 or CV_16SC2, see #convertMaps
+@param map1 The first output map for #remap.
+@param map2 The second output map for #remap.
+ */
+CV_EXPORTS_W
+void initInverseRectificationMap( InputArray cameraMatrix, InputArray distCoeffs,
+                           InputArray R, InputArray newCameraMatrix,
+                           const Size& size, int m1type, OutputArray map1, OutputArray map2 );
+
+//! initializes maps for #remap for wide-angle
+CV_EXPORTS
+float initWideAngleProjMap(InputArray cameraMatrix, InputArray distCoeffs,
+                           Size imageSize, int destImageWidth,
+                           int m1type, OutputArray map1, OutputArray map2,
+                           enum UndistortTypes projType = PROJ_SPHERICAL_EQRECT, double alpha = 0);
+static inline
+float initWideAngleProjMap(InputArray cameraMatrix, InputArray distCoeffs,
+                           Size imageSize, int destImageWidth,
+                           int m1type, OutputArray map1, OutputArray map2,
+                           int projType, double alpha = 0)
+{
+    return initWideAngleProjMap(cameraMatrix, distCoeffs, imageSize, destImageWidth,
+                                m1type, map1, map2, (UndistortTypes)projType, alpha);
 }
 
-/** @brief Calculates an affine transform from three pairs of the corresponding points.
- *
- * The function calculates the \f$2 \times 3\f$ matrix of an affine transform so that:
- *
- * \f[\begin{bmatrix} x'_i \\ y'_i \end{bmatrix} = \texttt{map_matrix} \cdot \begin{bmatrix} x_i \\ y_i \\ 1 \end{bmatrix}\f]
- *
- * where
- *
- * \f[dst(i)=(x'_i,y'_i), src(i)=(x_i, y_i), i=0,1,2\f]
- *
- * @param src Coordinates of triangle vertices in the source image.
- * @param dst Coordinates of the corresponding triangle vertices in the destination image.
- *
- * @sa  warpAffine, transform
+namespace fisheye {
+
+/** @brief Computes undistortion and rectification maps for image transform by cv::remap(). If D is empty zero
+distortion is used, if R or P is empty identity matrixes are used.
+
+@param K Camera intrinsic matrix \f$cameramatrix{K}\f$.
+@param D Input vector of distortion coefficients \f$\distcoeffsfisheye\f$.
+@param R Rectification transformation in the object space: 3x3 1-channel, or vector: 3x1/1x3
+1-channel or 1x1 3-channel
+@param P New camera intrinsic matrix (3x3) or new projection matrix (3x4)
+@param size Undistorted image size.
+@param m1type Type of the first output map that can be CV_32FC1 or CV_16SC2 . See convertMaps()
+for details.
+@param map1 The first output map.
+@param map2 The second output map.
  */
-CV_EXPORTS Mat getAffineTransform( const Point2f src[], const Point2f dst[] );
+CV_EXPORTS_W void initUndistortRectifyMap(InputArray K, InputArray D, InputArray R, InputArray P,
+    const cv::Size& size, int m1type, OutputArray map1, OutputArray map2);
 
-/** @brief Inverts an affine transformation.
- *
- * The function computes an inverse affine transformation represented by \f$2 \times 3\f$ matrix M:
- *
- * \f[\begin{bmatrix} a_{11} & a_{12} & b_1  \\ a_{21} & a_{22} & b_2 \end{bmatrix}\f]
- *
- * The result is also a \f$2 \times 3\f$ matrix of the same type as M.
- *
- * @param M Original affine transformation.
- * @param iM Output reverse affine transformation.
+/** @brief Transforms an image to compensate for fisheye lens distortion.
+
+@param distorted image with fisheye lens distortion.
+@param undistorted Output image with compensated fisheye lens distortion.
+@param K Camera intrinsic matrix \f$cameramatrix{K}\f$.
+@param D Input vector of distortion coefficients \f$\distcoeffsfisheye\f$.
+@param Knew Camera intrinsic matrix of the distorted image. By default, it is the identity matrix but you
+may additionally scale and shift the result by using a different matrix.
+@param new_size the new size
+
+The function transforms an image to compensate radial and tangential lens distortion.
+
+The function is simply a combination of #cv::fisheye::initUndistortRectifyMap (with unity R ) and remap
+(with bilinear interpolation). See the former function for details of the transformation being
+performed.
+
+See below the results of undistortImage.
+   -   a\) result of undistort of perspective camera model (all possible coefficients (k_1, k_2, k_3,
+        k_4, k_5, k_6) of distortion were optimized under calibration)
+    -   b\) result of #cv::fisheye::undistortImage of fisheye camera model (all possible coefficients (k_1, k_2,
+        k_3, k_4) of fisheye distortion were optimized under calibration)
+    -   c\) original image was captured with fisheye lens
+
+Pictures a) and b) almost the same. But if we consider points of image located far from the center
+of image, we can notice that on image a) these points are distorted.
+
+![image](pics/fisheye_undistorted.jpg)
  */
-CV_EXPORTS_W void invertAffineTransform( InputArray M, OutputArray iM );
+CV_EXPORTS_W void undistortImage(InputArray distorted, OutputArray undistorted,
+    InputArray K, InputArray D, InputArray Knew = cv::noArray(), const Size& new_size = Size());
 
-/** @brief Calculates a perspective transform from four pairs of the corresponding points.
- *
- * The function calculates the \f$3 \times 3\f$ matrix of a perspective transform so that:
- *
- * \f[\begin{bmatrix} t_i x'_i \\ t_i y'_i \\ t_i \end{bmatrix} = \texttt{map_matrix} \cdot \begin{bmatrix} x_i \\ y_i \\ 1 \end{bmatrix}\f]
- *
- * where
- *
- * \f[dst(i)=(x'_i,y'_i), src(i)=(x_i, y_i), i=0,1,2,3\f]
- *
- * @param src Coordinates of quadrangle vertices in the source image.
- * @param dst Coordinates of the corresponding quadrangle vertices in the destination image.
- * @param solveMethod method passed to cv::solve (#DecompTypes)
- *
- * @sa  findHomography, warpPerspective, perspectiveTransform
- */
-CV_EXPORTS_W Mat getPerspectiveTransform(InputArray src, InputArray dst, int solveMethod = DECOMP_LU);
-
-/** @overload */
-CV_EXPORTS Mat getPerspectiveTransform(const Point2f src[], const Point2f dst[], int solveMethod = DECOMP_LU);
-
-
-CV_EXPORTS_W Mat getAffineTransform( InputArray src, InputArray dst );
+}
 
 /** @brief Retrieves a pixel rectangle from an image with sub-pixel accuracy.
 
@@ -3337,65 +3579,6 @@ CV_EXPORTS_W void demosaicing(InputArray src, OutputArray dst, int code, int dst
 
 //! @} imgproc_color_conversions
 
-//! @addtogroup imgproc_shape
-//! @{
-
-/** @brief Calculates all of the moments up to the third order of a polygon or rasterized shape.
-
-The function computes moments, up to the 3rd order, of a vector shape or a rasterized shape. The
-results are returned in the structure cv::Moments.
-
-@param array Single channel raster image (CV_8U, CV_16U, CV_16S, CV_32F, CV_64F) or an array (
-\f$1 \times N\f$ or \f$N \times 1\f$ ) of 2D points (Point or Point2f).
-@param binaryImage If it is true, all non-zero image pixels are treated as 1's. The parameter is
-used for images only.
-@returns moments.
-
-@note Only applicable to contour moments calculations from Python bindings: Note that the numpy
-type for the input array should be either np.int32 or np.float32.
-
-@note For contour-based moments, the zeroth-order moment \c m00 represents
-the contour area.
-
-If the input contour is degenerate (for example, a single point or all points
-are collinear), the area is zero and therefore \c m00 == 0.
-
-In this case, the centroid coordinates (\c m10/m00, \c m01/m00) are undefined
-and must be handled explicitly by the caller.
-
-A common workaround is to compute the center using cv::boundingRect() or by
-averaging the input points.
-
-@sa  contourArea, arcLength
- */
-CV_EXPORTS_W Moments moments( InputArray array, bool binaryImage = false );
-
-/** @brief Calculates seven Hu invariants.
-
-The function calculates seven Hu invariants (introduced in @cite Hu62; see also
-<https://en.wikipedia.org/wiki/Image_moment>) defined as:
-
-\f[\begin{array}{l} hu[0]= \eta _{20}+ \eta _{02} \\ hu[1]=( \eta _{20}- \eta _{02})^{2}+4 \eta _{11}^{2} \\ hu[2]=( \eta _{30}-3 \eta _{12})^{2}+ (3 \eta _{21}- \eta _{03})^{2} \\ hu[3]=( \eta _{30}+ \eta _{12})^{2}+ ( \eta _{21}+ \eta _{03})^{2} \\ hu[4]=( \eta _{30}-3 \eta _{12})( \eta _{30}+ \eta _{12})[( \eta _{30}+ \eta _{12})^{2}-3( \eta _{21}+ \eta _{03})^{2}]+(3 \eta _{21}- \eta _{03})( \eta _{21}+ \eta _{03})[3( \eta _{30}+ \eta _{12})^{2}-( \eta _{21}+ \eta _{03})^{2}] \\ hu[5]=( \eta _{20}- \eta _{02})[( \eta _{30}+ \eta _{12})^{2}- ( \eta _{21}+ \eta _{03})^{2}]+4 \eta _{11}( \eta _{30}+ \eta _{12})( \eta _{21}+ \eta _{03}) \\ hu[6]=(3 \eta _{21}- \eta _{03})( \eta _{21}+ \eta _{03})[3( \eta _{30}+ \eta _{12})^{2}-( \eta _{21}+ \eta _{03})^{2}]-( \eta _{30}-3 \eta _{12})( \eta _{21}+ \eta _{03})[3( \eta _{30}+ \eta _{12})^{2}-( \eta _{21}+ \eta _{03})^{2}] \\ \end{array}\f]
-
-where \f$\eta_{ji}\f$ stands for \f$\texttt{Moments::nu}_{ji}\f$ .
-
-These values are proved to be invariants to the image scale, rotation, and reflection except the
-seventh one, whose sign is changed by reflection. This invariance is proved with the assumption of
-infinite image resolution. In case of raster images, the computed Hu invariants for the original and
-transformed images are a bit different.
-
-@param moments Input moments computed with moments .
-@param hu Output Hu invariants.
-
-@sa matchShapes
- */
-CV_EXPORTS void HuMoments( const Moments& moments, double hu[7] );
-
-/** @overload */
-CV_EXPORTS_W void HuMoments( const Moments& m, OutputArray hu );
-
-//! @} imgproc_shape
-
 //! @addtogroup imgproc_object
 //! @{
 
@@ -3616,57 +3799,6 @@ CV_EXPORTS_W void findContoursLinkRuns(InputArray image, OutputArrayOfArrays con
 //! @overload
 CV_EXPORTS_W void findContoursLinkRuns(InputArray image, OutputArrayOfArrays contours);
 
-/** @brief Calculates the up-right bounding rectangle of a point set or non-zero pixels of gray-scale image.
- *
- * The function calculates and returns the minimal up-right bounding rectangle for the specified point set or
- * non-zero pixels of gray-scale image.
- *
- * @param array Input gray-scale image or 2D point set, stored in std::vector or Mat.
- */
-CV_EXPORTS_W Rect boundingRect( InputArray array );
-
-/** @brief Calculates a contour perimeter or a curve length.
-
-The function computes a curve length or a closed contour perimeter.
-
-@param curve Input vector of 2D points, stored in std::vector or Mat.
-@param closed Flag indicating whether the curve is closed or not.
- */
-CV_EXPORTS_W double arcLength( InputArray curve, bool closed );
-
-/** @brief Calculates a contour area.
-
-The function computes a contour area. Similarly to moments , the area is computed using the Green
-formula. Thus, the returned area and the number of non-zero pixels, if you draw the contour using
-#drawContours or #fillPoly , can be different. Also, the function will most certainly give a wrong
-results for contours with self-intersections.
-
-Example:
-@code
-    vector<Point> contour;
-    contour.push_back(Point2f(0, 0));
-    contour.push_back(Point2f(10, 0));
-    contour.push_back(Point2f(10, 10));
-    contour.push_back(Point2f(5, 4));
-
-    double area0 = contourArea(contour);
-    vector<Point> approx;
-    approxPolyDP(contour, approx, 5, true);
-    double area1 = contourArea(approx);
-
-    cout << "area0 =" << area0 << endl <<
-            "area1 =" << area1 << endl <<
-            "approx poly vertices" << approx.size() << endl;
-@endcode
-@param contour Input vector of 2D points (contour vertices), stored in std::vector or Mat.
-@param oriented Oriented area flag. If it is true, the function returns a signed area value,
-depending on the contour orientation (clockwise or counter-clockwise). Using this feature you can
-determine orientation of a contour by taking the sign of an area. By default, the parameter is
-false, which means that the absolute value is returned.
- */
-CV_EXPORTS_W double contourArea( InputArray contour, bool oriented = false );
-
-
 /** @brief Creates a smart pointer to a cv::GeneralizedHoughBallard class and initializes it.
 */
 CV_EXPORTS_W Ptr<GeneralizedHoughBallard> createGeneralizedHoughBallard();
@@ -3769,6 +3901,26 @@ The function cv::arrowedLine draws an arrow between pt1 and pt2 points in the im
  */
 CV_EXPORTS_W void arrowedLine(InputOutputArray img, Point pt1, Point pt2, const Scalar& color,
                      int thickness=1, int line_type=8, int shift=0, double tipLength=0.1);
+
+/** @brief Draw axes of the world/object coordinate system from pose estimation. @sa solvePnP
+ *
+ * @param image Input/output image. It must have 1 or 3 channels. The number of channels is not altered.
+ * @param cameraMatrix Input 3x3 floating-point matrix of camera intrinsic parameters.
+ * \f$\cameramatrix{A}\f$
+ * @param distCoeffs Input vector of distortion coefficients
+ * \f$\distcoeffs\f$. If the vector is empty, the zero distortion coefficients are assumed.
+ * @param rvec Rotation vector (see @ref Rodrigues ) that, together with tvec, brings points from
+ * the model coordinate system to the camera coordinate system.
+ * @param tvec Translation vector.
+ * @param length Length of the painted axes in the same unit than tvec (usually in meters).
+ * @param thickness Line thickness of the painted axes.
+ *
+ * This function draws the axes of the world/object coordinate system w.r.t. to the camera frame.
+ * OX is drawn in red, OY in green and OZ in blue.
+ */
+CV_EXPORTS_W void drawFrameAxes(InputOutputArray image, InputArray cameraMatrix, InputArray distCoeffs,
+                                InputArray rvec, InputArray tvec, float length, int thickness=3);
+
 
 /** @brief Draws a simple, thick, or filled up-right rectangle.
 

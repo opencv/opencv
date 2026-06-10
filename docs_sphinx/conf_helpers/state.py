@@ -56,21 +56,41 @@ CONTRIB_MODULES = ([m.strip() for m in _contrib_env.split(",") if m.strip()]
 
 # SCOPE — env OPENCV_API_MODULES (comma/semicolon); empty disables API pages
 def _discover_api_modules() -> list[str]:
-    """Main + contrib modules whose umbrella header declares `@defgroup`."""
-    found = []
-    # Scan both the main tree and opencv_contrib/modules.
+    """Main + contrib modules that declare an `@defgroup`, by module dir name.
+
+    The `@defgroup` is not always in the umbrella `opencv2/<module>.hpp`: some
+    modules declare it in a sub-header (datasets/dataset.hpp,
+    quality/qualitybase.hpp, reg/map.hpp) or a differently-named top header
+    (dnn_objdetect's core_detect.hpp, cannops' cann.hpp). So scan every header
+    under each module's include/ tree, and use the module DIRECTORY name (which
+    equals the top `@defgroup` / `group__<name>` by convention) as the id."""
+    found: set[str] = set()
     _roots = [OPENCV_ROOT / "modules"]
     if CONTRIB_ROOT.is_dir():
         _roots.append(CONTRIB_ROOT)
+
+    def _has_defgroup(hdr) -> bool:
+        try:
+            return "@defgroup" in hdr.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            return False
+
     for _root in _roots:
-        for _hdr in _root.glob("*/include/opencv2/*.hpp"):
-            if _hdr.stem != _hdr.parents[2].name:   # only the umbrella header
+        if not _root.is_dir():
+            continue
+        for _mod in _root.iterdir():
+            _inc = _mod / "include" / "opencv2"
+            if not _inc.is_dir():
                 continue
-            try:
-                if "@defgroup" in _hdr.read_text(encoding="utf-8", errors="ignore"):
-                    found.append(_hdr.stem)
-            except OSError:
-                pass
+            # Umbrella / top-level headers first (cheap, the common case)…
+            if any(_has_defgroup(h) for h in sorted(_inc.glob("*.hpp"))):
+                found.add(_mod.name)
+                continue
+            # …else fall back to sub-directory headers.
+            for _h in _inc.rglob("*.hpp"):
+                if _has_defgroup(_h):
+                    found.add(_mod.name)
+                    break
     return sorted(found)
 
 
@@ -109,10 +129,10 @@ def _module_group_stem(m: str) -> str:
     # module folder (folder `3d` -> `@defgroup _3d`). Return that real stem.
     if (_API_XML_DIR / f"group__{m.replace('_', '__')}.xml").is_file():
         return m
-    for _root in (OPENCV_ROOT / "modules", CONTRIB_ROOT):
+    for _root in (OPENCV_ROOT / "modules", CONTRIB_ROOT / "modules", CONTRIB_ROOT):
         _hdr = _root / m / "include" / "opencv2" / f"{m}.hpp"
         if _hdr.is_file():
-            _mm = re.search(r"@defgroup\s+(\S+)",
+            _mm = re.search(r"[@\\]defgroup\s+(\S+)",
                             _hdr.read_text(encoding="utf-8", errors="ignore"))
             return _mm.group(1) if _mm else m
     return m
@@ -171,6 +191,9 @@ DOXYGEN_BASE_URL = (
     .rstrip("/") + "/")
 # First existing wins; env OPENCV_DOXYGEN_TAGFILE overrides
 _TAG_CANDIDATES = (
+    # Track cmake's actual build dir via the XML dir.
+    _API_XML_DIR.parent / "html" / "opencv.tag",
+    _API_XML_DIR.parent / "opencv.tag",
     HERE.parent / "build" / "doc" / "doxygen" / "html" / "opencv.tag",
     HERE.parent.parent / "build" / "doc" / "doxygen" / "html" / "opencv.tag",
     # extra build-dir layouts (vanilla, contrib, nested CI)
@@ -250,11 +273,15 @@ if _TAG_FILE.is_file():
                     )
             elif _kind in ("class", "struct"):
                 _full = _c.findtext("name") or ""
-                if _full.startswith("cv::"):
+                # Skip G-API/detail internals; a bare cv::Point isn't gapi::own::Point.
+                if _full.startswith("cv::") and not any(
+                        _x in _full for _x in ("::own::", "::wip::", "::detail::")):
                     _short = _full.split("::")[-1]
                     _af = _c.findtext("filename")
-                    if _short and _af:
-                        _CV_SYMBOL_URL.setdefault(_short, DOXYGEN_BASE_URL + _af)
+                    # Prefer canonical cv::<short> over nested homonyms.
+                    if _short and _af and (
+                            _short not in _CV_SYMBOL_URL or _full == f"cv::{_short}"):
+                        _CV_SYMBOL_URL[_short] = DOXYGEN_BASE_URL + _af
             elif _kind == "group":
                 # module pages are kind="group"
                 _n = _c.findtext("name")
@@ -289,6 +316,32 @@ if _TAG_FILE.is_file():
                         )
     except Exception:
         pass
+
+# Canonical public header for each optional module that may be absent from a
+# build's Doxygen group XML. Ensure a `_FILE_URL` entry exists so the umbrella
+# `#include` on the module's placeholder page resolves (and a file-reference
+# page is generated for it). `setdefault` → a real tag entry always wins.
+_FALLBACK_MODULE_HEADERS: dict[str, str] = {
+    "datasets":      "opencv2/datasets/dataset.hpp",
+    "dnn_objdetect": "opencv2/core_detect.hpp",
+    "quality":       "opencv2/quality.hpp",
+    "reg":           "opencv2/reg/map.hpp",
+    "cannops":       "opencv2/cann.hpp",
+}
+# Every header path referenced by a fallback page (umbrella + per-function
+# includes), ensured present in `_FILE_URL` so each `#include` resolves to a
+# generated file-reference page. `setdefault` → real tag entries always win.
+_FALLBACK_FILE_HEADERS: list[str] = [
+    "opencv2/datasets/dataset.hpp", "opencv2/datasets/util.hpp",
+    "opencv2/core_detect.hpp",
+    "opencv2/quality.hpp", "opencv2/quality/qualitybase.hpp",
+    "opencv2/reg/map.hpp", "opencv2/reg/mapper.hpp",
+    "opencv2/cann.hpp", "opencv2/cann_interface.hpp",
+]
+for _inc in list(_FALLBACK_MODULE_HEADERS.values()) + _FALLBACK_FILE_HEADERS:
+    # Doxygen file-page stem: `.`->`_8`, `_`->`__` on the bare filename.
+    _fn = _inc.rsplit("/", 1)[-1].replace("_", "__").replace(".", "_8")
+    _FILE_URL.setdefault(_inc, f"{_fn}.html")
 
 def _doxygen_url(page: str) -> str:
     return DOXYGEN_BASE_URL + _TAG_FILENAMES.get(page, page)
@@ -346,11 +399,15 @@ if _LIVE_TAG_FILE.is_file():
 
 # -- Local-link variants of the maps above (step 8g) ------------------------
 _LOCAL_SRC_TAG = _TAG_FILE if _TAG_FILE.is_file() else _LIVE_TAG_FILE
-_LOCAL_CLASS_URL: dict[str, str] = {
-    # _Tp template-parameter placeholder stub
-    "_Tp": "class_Tp.html",
-}
-_LOCAL_TYPEDEF_URL: dict[str, str] = {}  # 'uchar' -> 'core_hal_interface.html#_CPPv45uchar'
+_LOCAL_CLASS_URL: dict[str, str] = {}
+# NOTE: `_Tp` (the template-parameter placeholder) used to map to
+# `class_Tp.html`, but no stub page is actually written for it — every
+# `<a href="class_Tp.html">` was a 404. Removing the entry leaves `_Tp`
+# tokens as plain (non-clickable) text in signatures, matching the
+# "no 404 clickables" requirement.
+_LOCAL_TYPEDEF_URL: dict[str, str] = {}  # 'uchar' -> 'core_hal_interface.html#uchar'
+# Group-enum refid -> page#anchor; lets enum-VALUE <ref>s link to their enum doc.
+_ENUM_REF_URL: dict[str, str] = {}
 # Doxygen template-param placeholder pages -> (display name, Sphinx page).
 # Sphinx mirrors these as stubs (stubs._write_placeholder_stubs) so diagram
 # cross-links resolve instead of 404ing.
@@ -361,6 +418,7 @@ _PLACEHOLDER_STUBS: dict[str, tuple[str, str]] = {
 # Doxygen compound filename -> Sphinx page filename (class/struct compounds).
 _LOCAL_PAGE_BY_DOXY_FILE: dict[str, str] = {
     _doxy: _page for _doxy, (_disp, _page) in _PLACEHOLDER_STUBS.items()}
+_cls_cands: dict[str, set] = {}  # short name -> set of full names (collision check)
 if _LOCAL_SRC_TAG.is_file():
     try:
         import xml.etree.ElementTree as _ET
@@ -372,7 +430,12 @@ if _LOCAL_SRC_TAG.is_file():
                     _short = _n.split("::")[-1]
                     _fn = _f if _f.endswith(".html") else _f + ".html"
                     _doxy_base = pathlib.PurePosixPath(_fn).name
-                    _LOCAL_CLASS_URL.setdefault(_short, _doxy_base)
+                    # Skip G-API/detail internals as bare `cv::` targets.
+                    if not any(_x in _n for _x in ("::own::", "::wip::", "::detail::")):
+                        _cls_cands.setdefault(_short, set()).add(_n)
+                        # Prefer canonical cv::<short> over nested homonyms.
+                        if _short not in _LOCAL_CLASS_URL or _n == f"cv::{_short}":
+                            _LOCAL_CLASS_URL[_short] = _doxy_base
                     # Sphinx mirrors Doxygen's filename except the few remapped.
                     _LOCAL_PAGE_BY_DOXY_FILE.setdefault(
                         _doxy_base, _LOCAL_CLASS_URL.get(_short, _doxy_base))
@@ -389,9 +452,19 @@ if _LOCAL_SRC_TAG.is_file():
                     continue
                 _mn = (_mem.findtext("name") or "").strip()
                 _maf = (_mem.findtext("anchorfile") or "").strip()
+                _man = (_mem.findtext("anchor") or "").strip()
                 if not (_mn and _maf):
                     continue
-                if _mn in _LOCAL_TYPEDEF_URL:
+                # The tagfile emits each typedef twice: once with the
+                # bare name (`InputArray`) and once fully-qualified
+                # (`cv::InputArray`). Normalize to the bare short name
+                # so we don't end up with a second map entry whose
+                # anchor literally contains `cv::` (e.g.
+                # `core_basic.html#cv::inputarray`) — that anchor never
+                # exists on the rendered page and every `cv::InputArray`
+                # codespan ends up 404-ing.
+                _short_mn = _mn.split("::")[-1]
+                if _short_mn in _LOCAL_TYPEDEF_URL:
                     continue   # first-occurrence wins
                 _bn = pathlib.PurePosixPath(_maf).name
                 if _bn.startswith("group__"):
@@ -404,14 +477,50 @@ if _LOCAL_SRC_TAG.is_file():
                     _local_page = "core_basic.html"
                 else:
                     _local_page = _bn
-                # HAL typedefs are global C; else cv::-scoped (cpp-domain v4 anchor)
-                if "hal_interface" in _local_page:
-                    _anchor = f"_CPPv4{len(_mn)}{_mn}"
+                # Anchor: mirror exactly the MyST target the detail block
+                # emits, since docutils' make_id lowercases the label and
+                # collapses every run of non-alnum chars to a single "-".
+                # The label differs by kind/where it renders:
+                #
+                #  * typedefs, namespace variables, and CLASS-member enums
+                #    render via `_render_member_detail` / the class-enum
+                #    path, both keyed by the Doxygen member refid
+                #    `({m['id']})=` (= "<anchorfile-stem>_1<anchor>").
+                #    (The old `_CPPv4…` cpp-domain id was never emitted for
+                #    these hand-rolled markdown sections, so every such
+                #    cross-reference 404'd.)
+                #
+                #  * GROUP/namespace enums render (stubs, kind_key=="enum")
+                #    with `({_sphinx_cpp_v4_id(qualified)})=` instead — the
+                #    member refid is NOT used — so their anchor is the
+                #    mangled, lowercased cpp-v4 id, not the refid.
+                _is_class_pg = _bn.startswith(("class", "struct", "union"))
+                if _mk == "enumeration" and not _is_class_pg:
+                    _ns = (_c.findtext("name") or "").strip()
+                    _qual = _mn if "::" in _mn else (
+                        f"{_ns}::{_mn}" if _ns and _c.get("kind") == "namespace"
+                        else _mn)
+                    # _sphinx_cpp_v4_id: "_CPPv4N" + join(f"{len(p)}{p}") + "E"
+                    _label = ("_CPPv4N"
+                              + "".join(f"{len(_p)}{_p}" for _p in _qual.split("::"))
+                              + "E")
                 else:
-                    _anchor = f"_CPPv4N2cv{len(_mn)}{_mn}E"
+                    _stem = _bn[:-5] if _bn.endswith(".html") else _bn
+                    _label = f"{_stem}_1{_man}" if _man else _stem
+                _anchor = re.sub(r"[^a-z0-9]+", "-", _label.lower()).strip("-")
                 _LOCAL_TYPEDEF_URL[_mn] = f"{_local_page}#{_anchor}"
+                # Index group enums by refid so enum-VALUE <ref>s can resolve here.
+                if _mk == "enumeration" and not _is_class_pg and _man:
+                    _est = _bn[:-5] if _bn.endswith(".html") else _bn
+                    _ENUM_REF_URL.setdefault(f"{_est}_1{_man}",
+                                             f"{_local_page}#{_anchor}")
     except Exception:
         pass
+    # Drop ambiguous short names (>1 class, no canonical cv::<short>) so a bare
+    # `cv::Point` stays plain text instead of linking to a wrong homonym.
+    for _s, _cands in _cls_cands.items():
+        if len(_cands) > 1 and f"cv::{_s}" not in _cands:
+            _LOCAL_CLASS_URL.pop(_s, None)
 
 
 def _doxy_page_to_local(basename: str) -> str:
@@ -488,27 +597,41 @@ def _func_slug(name: str) -> str:
 # ---- Citation numbering --------------------------------------------------
 # @cite KEY -> [N], N = bibtex-plain sort position
 def _bib_parse(text: str) -> list[dict]:
-    """Walk a BibTeX file into a list of {_type, _key, field: value, ...}."""
+    """Walk a BibTeX file into a list of {_type, _key, field: value, ...}.
+
+    Tolerant of a missing closing `}` (as bibtex/Doxygen are): a new
+    `@type{key,` at the start of a line implicitly closes the previous entry,
+    so one malformed record can't swallow the rest of the file. (e.g.
+    ximgproc.bib's `akinlar201782` has no closing brace upstream.)"""
     out: list[dict] = []
-    n, i = len(text), 0
-    while i < n:
-        m = re.search(r"@(\w+)\s*\{\s*([^\s,]+)\s*,", text[i:])
+    n = len(text)
+    header = re.compile(r"@(\w+)\s*\{\s*([^\s,]+)\s*,")
+    # Every entry header that begins a line is a hard boundary.
+    starts = [m.start() for m in
+              re.finditer(r"(?m)^[^\S\n]*@\w+\s*\{\s*[^\s,]+\s*,", text)]
+    for idx, s in enumerate(starts):
+        m = header.match(text, s)
         if not m:
-            break
+            continue
         kind, key = m.group(1), m.group(2)
-        i += m.end()
-        depth, body_start = 1, i
-        while i < n and depth > 0:
+        body_start = m.end()
+        limit = starts[idx + 1] if idx + 1 < len(starts) else n
+        # Matching close within this entry's span; if unbalanced (missing `}`),
+        # fall back to the next entry's boundary, trimming a trailing brace.
+        depth, i, end = 1, body_start, None
+        while i < limit:
             c = text[i]
             if c == "{":
                 depth += 1
             elif c == "}":
                 depth -= 1
+                if depth == 0:
+                    end = i
+                    break
             i += 1
-        if depth != 0:
-            break  # malformed entry
-        out.append({"_type": kind.lower(), "_key": key,
-                    **_bib_fields(text[body_start:i - 1])})
+        body = (text[body_start:end] if end is not None
+                else text[body_start:limit].rstrip().rstrip("}"))
+        out.append({"_type": kind.lower(), "_key": key, **_bib_fields(body)})
     return out
 
 def _bib_fields(body: str) -> dict[str, str]:
@@ -764,6 +887,7 @@ def _resolve_redirect(anchor: str) -> str:
 _ANCHOR_TO_DOC: dict[str, str] = {}            # anchor -> docname (internal)
 _ANCHOR_TO_EXTERNAL: dict[str, tuple[str, str]] = {}  # anchor -> (title, url)
 _ANCHOR_TO_TITLE: dict[str, str] = {}          # anchor -> first-heading title
+_LOCAL_MEMBER_IDS: set[str] = set()            # member detail targets we emit
 # anchors reachable via @subpage/@ref; rest are orphans
 _REFERENCED_ANCHORS: set[str] = set()
 
@@ -871,15 +995,15 @@ __all__ = [
     "HAVE_SPHINX_DESIGN", "HAVE_BREATHE",
     "DOXYGEN_BASE_URL", "_doxygen_url",
     "_TAG_FILE", "_TAG_FILENAMES", "_TAG_TITLES", "_DOC_PAGE_TITLES",
-    "_CV_SYMBOL_URL", "_FILE_URL",
+    "_CV_SYMBOL_URL", "_FILE_URL", "_FALLBACK_MODULE_HEADERS",
     "_CALL_GRAPH_ANCHORS", "_DOXY_ANCHOR_TO_MEMBER", "_norm_args",
     "_LIVE_GROUP_URL", "_LIVE_CLASS_URL", "_LIVE_TYPEDEF_URL",
-    "_LOCAL_CLASS_URL", "_LOCAL_TYPEDEF_URL", "_CLASS_TEMPLATE_DISPLAY",
+    "_LOCAL_CLASS_URL", "_LOCAL_TYPEDEF_URL", "_ENUM_REF_URL", "_CLASS_TEMPLATE_DISPLAY",
     "_LOCAL_PAGE_BY_DOXY_FILE", "_PLACEHOLDER_STUBS", "_doxy_page_to_local",
     "_func_slug",
     "_CITE_NUMBER", "_BIB_ENTRIES_SORTED", "_bib_render_all",
     "_REDIRECT_MAP", "_resolve_redirect",
-    "_ANCHOR_TO_DOC", "_ANCHOR_TO_EXTERNAL", "_ANCHOR_TO_TITLE",
+    "_ANCHOR_TO_DOC", "_ANCHOR_TO_EXTERNAL", "_ANCHOR_TO_TITLE", "_LOCAL_MEMBER_IDS",
     "_REFERENCED_ANCHORS", "_HEAD_RE",
     "_scan_internal", "_scan_external",
     "_IMAGE_INDEX", "_SNIPPET_INDEX", "_SNIPPET_BASES",

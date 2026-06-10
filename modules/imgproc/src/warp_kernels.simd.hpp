@@ -7535,10 +7535,10 @@ CV_ALWAYS_INLINE v_float32 v_fma(const v_int32& a, const v_float32& b, const v_f
 #define FETCH_INLIERS_C1_DEFAULT(row) \
     for (int j = 0; j < BATCH; j++) { \
         const chtype* srcj = (const chtype*)((const uint8_t*)src + row*srcstep + tl_ofs[j]); \
-        pixbuf[0][j] = buftype(srcj[1]); \
-        pixbuf[0][j + BATCH] = buftype(srcj[2]); \
-        pixbuf[0][j + BATCH*2] = buftype(srcj[3]); \
-        pixbuf[0][j + BATCH*3] = buftype(srcj[4]); \
+        pixbuf[0][j] = buftype(srcj[0]); \
+        pixbuf[0][j + BATCH] = buftype(srcj[1]); \
+        pixbuf[0][j + BATCH*2] = buftype(srcj[2]); \
+        pixbuf[0][j + BATCH*3] = buftype(srcj[3]); \
     } \
     R0 = vx_load(&pixbuf[0][0]); \
     R1 = vx_load(&pixbuf[0][BATCH]); \

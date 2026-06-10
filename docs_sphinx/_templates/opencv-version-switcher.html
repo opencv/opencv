@@ -1,0 +1,81 @@
+{# Navbar version switcher: a plain `<select>` rendered right after the
+   `navbar-logo` slot, mirroring the legacy docs.opencv.org header where the
+   version selector sits inline with the wordmark.
+
+   Single source of truth: the options are built client-side from
+   `window.OPENCV_DOC_VERSIONS`, defined in `_static/version.js` — the SAME
+   list the legacy Doxygen pages carry. There is no build-time scrape and no
+   second list: publishing a release is one edit to that file. We load it via
+   `pathto('_static/version.js', 1)` (the theme's own idiom for JS assets) so
+   the script resolves relative to each page, which means the dropdown
+   populates fully in a local `sphinx-build` preview AND on the deployed site,
+   regardless of how deep the page sits or which prefix it lands under.
+
+   The option whose label equals this build's `release` is marked selected;
+   every other option carries that version's site-absolute path and the
+   `onchange` handler navigates the same tab there. #}
+<form class="opencv-version-switcher" role="search"
+      aria-label="OpenCV documentation version"
+      onsubmit="return false">
+  <select id="opencv-version-select"
+          aria-label="Select OpenCV documentation version"
+          onchange="if(this.value){window.location.href=this.value;}">
+    <option value="" selected>{{ release }}</option>
+  </select>
+</form>
+<script src="{{ pathto('_static/version.js', 1) }}"></script>
+<script>
+  (function () {
+    var current = {{ release | tojson }};
+
+    // Each version.js entry is a bare directory path (e.g. "/4.13.0"). Link
+    // straight to that directory's index document: the S3 *website* endpoint
+    // would resolve "/4.13.0/" to index.html on its own, but the plain REST
+    // endpoint (bucket.s3.amazonaws.com) does NOT — there "/4.13.0" is a
+    // missing object key. Appending "/index.html" works on both endpoints.
+    function toHref(path) {
+      if (/\.html?($|[?#])/.test(path)) return path;   // already a file
+      return path.replace(/\/+$/, '') + '/index.html';
+    }
+
+    function populate() {
+      var versions = window.OPENCV_DOC_VERSIONS;
+      if (!Array.isArray(versions)) return;   // version.js absent (list stays at current release)
+      document.querySelectorAll('#opencv-version-select').forEach(function (sel) {
+        // Rebuild from the canonical list so the order matches the legacy
+        // docs.opencv.org dropdown exactly.
+        while (sel.firstChild) sel.removeChild(sel.firstChild);
+        versions.forEach(function (v) {
+          var label = v[0], path = v[1];
+          var opt = document.createElement('option');
+          // Selecting the current version is a no-op (empty value -> the
+          // inline `onchange` guard skips navigation); every other option
+          // navigates to that version's index document.
+          opt.value = (label === current) ? '' : toHref(path);
+          opt.textContent = label;
+          if (label === current) opt.selected = true;
+          sel.appendChild(opt);
+        });
+      });
+    }
+
+    function resetSelection() {
+      // After picking an older version and hitting Back, the browser can
+      // restore the <select> from bfcache with the OLD choice. Snap it back
+      // to the current release (the option whose value is empty).
+      document.querySelectorAll('#opencv-version-select').forEach(function (sel) {
+        for (var i = 0; i < sel.options.length; i++) {
+          if (sel.options[i].value === '') { sel.selectedIndex = i; break; }
+        }
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', populate);
+    } else {
+      populate();
+    }
+    // `pageshow` fires on initial load AND on bfcache restore (Back button).
+    window.addEventListener('pageshow', resetSelection);
+  })();
+</script>

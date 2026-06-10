@@ -3,7 +3,6 @@
     {
         "": [
             "findHomography",
-            "drawFrameAxes",
             "estimateAffine2D",
             "getDefaultNewCameraMatrix",
             "initUndistortRectifyMap",
@@ -13,7 +12,6 @@
             "solvePnPRefineLM",
             "projectPoints",
             "undistort",
-            "fisheye_initUndistortRectifyMap",
             "fisheye_projectPoints",
             "approxPolyDP",
             "approxPolyN",
@@ -30,7 +28,14 @@
             "fitEllipseAMS",
             "fitEllipseDirect",
             "fitLine",
-            "pointPolygonTest"
+            "pointPolygonTest",
+            "getAffineTransform",
+            "getPerspectiveTransform",
+            "getRotationMatrix2D",
+            "HuMoments",
+            "invertAffineTransform",
+            "moments",
+            "rotatedRectangleIntersection"
         ],
         "UsacParams": ["UsacParams"]
     }

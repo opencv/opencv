@@ -9,6 +9,28 @@ namespace opencv_test { namespace {
 
 using namespace perf;
 
+typedef TestBaseWithParam< tuple<MatDepth, int> > TestBoundingRect;
+
+PERF_TEST_P(TestBoundingRect, BoundingRect,
+            Combine(
+                testing::Values(CV_32S, CV_32F), // points type
+                    Values(400, 511, 1000, 10000, 100000) // points count
+            )
+)
+
+{
+    int ptType = get<0>(GetParam());
+    int n = get<1>(GetParam());
+
+    Mat pts(n, 2, ptType);
+    declare.in(pts, WARMUP_RNG);
+
+    cv::Rect rect;
+    TEST_CYCLE() rect = boundingRect(pts);
+
+    SANITY_CHECK_NOTHING();
+}
+
 typedef TestBaseWithParam< tuple<MatDepth, int> > TestMinEnclosingCircle;
 PERF_TEST_P(TestMinEnclosingCircle, minEnclosingCircle,
             Combine(

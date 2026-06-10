@@ -19,6 +19,7 @@ import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.core.TermCriteria;
 import org.opencv.imgproc.Imgproc;
+import org.opencv.geometry.Geometry;
 import org.opencv.test.OpenCVTestCase;
 
 public class ImgprocTest extends OpenCVTestCase {
@@ -145,14 +146,6 @@ public class ImgprocTest extends OpenCVTestCase {
         assertEquals(src.rows(), Core.countNonZero(dst));
     }
 
-    public void testArcLength() {
-        MatOfPoint2f curve = new MatOfPoint2f(new Point(1, 3), new Point(2, 4), new Point(3, 5), new Point(4, 4), new Point(5, 3));
-
-        double arcLength = Imgproc.arcLength(curve, false);
-
-        assertEquals(5.656854249, arcLength, 0.000001);
-    }
-
     public void testBilateralFilterMatMatIntDoubleDouble() {
         Imgproc.bilateralFilter(gray255, dst, 5, 10, 5);
 
@@ -186,17 +179,6 @@ public class ImgprocTest extends OpenCVTestCase {
         Imgproc.blur(gray0, dst, size, anchorPoint, Core.BORDER_REFLECT);
         assertMatEqual(gray0, dst);
         // TODO_: write better test
-    }
-
-    public void testBoundingRect() {
-        MatOfPoint points = new MatOfPoint(new Point(0, 0), new Point(0, 4), new Point(4, 0), new Point(4, 4));
-        Point p1 = new Point(1, 1);
-        Point p2 = new Point(-5, -2);
-
-        Rect bbox = Imgproc.boundingRect(points);
-
-        assertTrue(bbox.contains(p1));
-        assertFalse(bbox.contains(p2));
     }
 
     public void testBoxFilterMatMatIntSize() {
@@ -345,25 +327,6 @@ public class ImgprocTest extends OpenCVTestCase {
         double distance = Imgproc.compareHist(H1, H2, Imgproc.HISTCMP_CORREL);
 
         assertEquals(1., distance, EPS);
-    }
-
-    public void testContourAreaMat() {
-        Mat contour = new Mat(1, 4, CvType.CV_32FC2);
-        contour.put(0, 0, 0, 0, 10, 0, 10, 10, 5, 4);
-
-        double area = Imgproc.contourArea(contour);
-
-        assertEquals(45., area, EPS);
-    }
-
-    public void testContourAreaMatBoolean() {
-        Mat contour = new Mat(1, 4, CvType.CV_32FC2);
-        contour.put(0, 0, 0, 0, 10, 0, 10, 10, 5, 4);
-
-        double area = Imgproc.contourArea(contour, true);
-
-        assertEquals(45., area, EPS);
-        // TODO_: write better test
     }
 
     public void testConvertMapsMatMatMatMatInt() {
@@ -562,7 +525,7 @@ public class ImgprocTest extends OpenCVTestCase {
         Mat dstLables = getMat(CvType.CV_32SC1, 0);
         Mat labels = new Mat();
 
-        Imgproc.distanceTransformWithLabels(gray128, dst, labels, Imgproc.DIST_L2, 3);
+        Imgproc.distanceTransformWithLabels(gray128, dst, labels, Geometry.DIST_L2, 3);
 
         assertMatEqual(dstLables, labels);
         assertMatEqual(getMat(CvType.CV_32FC1, 65533.805), dst, EPS);
@@ -779,21 +742,6 @@ public class ImgprocTest extends OpenCVTestCase {
         // TODO_: write better test
     }
 
-    public void testGetAffineTransform() {
-        MatOfPoint2f src = new MatOfPoint2f(new Point(2, 3), new Point(3, 1), new Point(1, 4));
-        MatOfPoint2f dst = new MatOfPoint2f(new Point(3, 3), new Point(7, 4), new Point(5, 6));
-
-        Mat transform = Imgproc.getAffineTransform(src, dst);
-
-        Mat truth = new Mat(2, 3, CvType.CV_64FC1) {
-            {
-                put(0, 0, -8, -6, 37);
-                put(1, 0, -7, -4, 29);
-            }
-        };
-        assertMatEqual(truth, transform, EPS);
-    }
-
     public void testGetDerivKernelsMatMatIntIntInt() {
         Mat kx = new Mat(imgprocSz, imgprocSz, CvType.CV_32F);
         Mat ky = new Mat(imgprocSz, imgprocSz, CvType.CV_32F);
@@ -868,21 +816,6 @@ public class ImgprocTest extends OpenCVTestCase {
         Imgproc.getRectSubPix(src, patchSize, center, dst);
 
         truth = new Mat(5, 5, CvType.CV_32F, new Scalar(2));
-        assertMatEqual(truth, dst, EPS);
-    }
-
-    public void testGetRotationMatrix2D() {
-        Point center = new Point(0, 0);
-
-        dst = Imgproc.getRotationMatrix2D(center, 0, 1);
-
-        truth = new Mat(2, 3, CvType.CV_64F) {
-            {
-                put(0, 0, 1, 0, 0);
-                put(1, 0, 0, 1, 0);
-            }
-        };
-
         assertMatEqual(truth, dst, EPS);
     }
 
@@ -1130,15 +1063,6 @@ public class ImgprocTest extends OpenCVTestCase {
                 put(2, 0, 0, 4, 8);
             }
         };
-        assertMatEqual(truth, dst, EPS);
-    }
-
-    public void testInvertAffineTransform() {
-        Mat src = new Mat(2, 3, CvType.CV_64F, new Scalar(1));
-
-        Imgproc.invertAffineTransform(src, dst);
-
-        truth = new Mat(2, 3, CvType.CV_64F, new Scalar(0));
         assertMatEqual(truth, dst, EPS);
     }
 
@@ -1900,5 +1824,99 @@ public class ImgprocTest extends OpenCVTestCase {
         // check that border is not corrupted
         Imgproc.rectangle(img, new Point(10, 10), new Point(labelSize.width + 10, labelSize.height + 10), colorBlack, Imgproc.FILLED);
         assertEquals(0, Core.countNonZero(img));
+    }
+        public void testInitUndistortRectifyMap() {
+        fail("Not yet implemented");
+        Mat cameraMatrix = new Mat(3, 3, CvType.CV_32F);
+        cameraMatrix.put(0, 0, 1, 0, 1);
+        cameraMatrix.put(1, 0, 0, 1, 1);
+        cameraMatrix.put(2, 0, 0, 0, 1);
+
+        Mat R = new Mat(3, 3, CvType.CV_32F, new Scalar(2));
+        Mat newCameraMatrix = new Mat(3, 3, CvType.CV_32F, new Scalar(3));
+
+        Mat distCoeffs = new Mat();
+        Mat map1 = new Mat();
+        Mat map2 = new Mat();
+
+        // TODO: complete this test
+        Imgproc.initUndistortRectifyMap(cameraMatrix, distCoeffs, R, newCameraMatrix, size, CvType.CV_32F, map1, map2);
+    }
+
+    public void testInitWideAngleProjMapMatMatSizeIntIntMatMat() {
+        fail("Not yet implemented");
+        Mat cameraMatrix = new Mat(3, 3, CvType.CV_32F);
+        Mat distCoeffs = new Mat(1, 4, CvType.CV_32F);
+        // Size imageSize = new Size(2, 2);
+
+        cameraMatrix.put(0, 0, 1, 0, 1);
+        cameraMatrix.put(1, 0, 0, 1, 2);
+        cameraMatrix.put(2, 0, 0, 0, 1);
+
+        distCoeffs.put(0, 0, 1, 3, 2, 4);
+        truth = new Mat(3, 3, CvType.CV_32F);
+        truth.put(0, 0, 0, 0, 0);
+        truth.put(1, 0, 0, 0, 0);
+        truth.put(2, 0, 0, 3, 0);
+        // TODO: No documentation for this function
+        // Imgproc.initWideAngleProjMap(cameraMatrix, distCoeffs, imageSize,
+        // 5, m1type, truthput1, truthput2);
+    }
+
+    public void testInitWideAngleProjMapMatMatSizeIntIntMatMatInt() {
+        fail("Not yet implemented");
+    }
+
+    public void testInitWideAngleProjMapMatMatSizeIntIntMatMatIntDouble() {
+        fail("Not yet implemented");
+    }
+
+    public void testUndistortMatMatMatMat() {
+        Mat src = new Mat(3, 3, CvType.CV_32F, new Scalar(3));
+        Mat cameraMatrix = new Mat(3, 3, CvType.CV_32F) {
+            {
+                put(0, 0, 1, 0, 1);
+                put(1, 0, 0, 1, 2);
+                put(2, 0, 0, 0, 1);
+            }
+        };
+        Mat distCoeffs = new Mat(1, 4, CvType.CV_32F) {
+            {
+                put(0, 0, 1, 3, 2, 4);
+            }
+        };
+
+        Imgproc.undistort(src, dst, cameraMatrix, distCoeffs);
+
+        truth = new Mat(3, 3, CvType.CV_32F) {
+            {
+                put(0, 0, 0, 0, 0);
+                put(1, 0, 0, 0, 0);
+                put(2, 0, 0, 3, 0);
+            }
+        };
+        assertMatEqual(truth, dst, EPS);
+    }
+
+    public void testUndistortMatMatMatMatMat() {
+        Mat src = new Mat(3, 3, CvType.CV_32F, new Scalar(3));
+        Mat cameraMatrix = new Mat(3, 3, CvType.CV_32F) {
+            {
+                put(0, 0, 1, 0, 1);
+                put(1, 0, 0, 1, 2);
+                put(2, 0, 0, 0, 1);
+            }
+        };
+        Mat distCoeffs = new Mat(1, 4, CvType.CV_32F) {
+            {
+                put(0, 0, 2, 1, 4, 5);
+            }
+        };
+        Mat newCameraMatrix = new Mat(3, 3, CvType.CV_32F, new Scalar(1));
+
+        Imgproc.undistort(src, dst, cameraMatrix, distCoeffs, newCameraMatrix);
+
+        truth = new Mat(3, 3, CvType.CV_32F, new Scalar(3));
+        assertMatEqual(truth, dst, EPS);
     }
 }

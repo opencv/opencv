@@ -7,7 +7,7 @@
 #ifndef OPENCV_3D_SAC_SEGMENTATION_HPP
 #define OPENCV_3D_SAC_SEGMENTATION_HPP
 
-#include "opencv2/geometry/ptcloud.hpp"
+#include "opencv2/geometry/segment.hpp"
 
 namespace cv {
 

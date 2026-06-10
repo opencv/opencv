@@ -63,13 +63,11 @@
 #include "opencv2/core/utils/trace.hpp"
 
 #include "opencv2/geometry.hpp"
-#include "opencv2/imgproc.hpp"
 
 #include "opencv2/core/ocl.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
 #include "opencv2/geometry/detail/optimizer.hpp"
-#include "opencv2/geometry/detail/kinfu_frame.hpp"
 
 #include <atomic>
 #include <algorithm>

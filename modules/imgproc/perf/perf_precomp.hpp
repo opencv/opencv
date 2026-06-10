@@ -6,6 +6,7 @@
 
 #include "opencv2/ts.hpp"
 #include "opencv2/imgproc.hpp"
+#include "opencv2/geometry.hpp"
 
 namespace opencv_test {
 using namespace perf;

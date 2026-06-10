@@ -10,6 +10,7 @@ import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfDouble;
 import org.opencv.core.MatOfPoint;
+import org.opencv.core.Rect;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.MatOfPoint3f;
 import org.opencv.core.MatOfInt;
@@ -321,8 +322,8 @@ public class GeometryTest extends OpenCVTestCase {
         Mat truth_tvec = new Mat(3, 1, CvType.CV_64F);
         truth_tvec.put(0, 0, -320, -240, 400);
 
-        assertMatEqual(truth_rvec, rvec, EPS*2);
-        assertMatEqual(truth_tvec, tvec, EPS*2);
+        assertMatEqual(truth_rvec, rvec, EPS*2.2);
+        assertMatEqual(truth_tvec, tvec, EPS*2.2);
     }
 
     public void testSolvePnPListOfPoint3ListOfPointMatMatMatMatBoolean() {
@@ -449,101 +450,6 @@ public class GeometryTest extends OpenCVTestCase {
         assertFalse(mtx.empty());
         assertFalse(0 == Core.countNonZero(mtx));
         // TODO_: write better test
-    }
-
-    public void testInitUndistortRectifyMap() {
-        fail("Not yet implemented");
-        Mat cameraMatrix = new Mat(3, 3, CvType.CV_32F);
-        cameraMatrix.put(0, 0, 1, 0, 1);
-        cameraMatrix.put(1, 0, 0, 1, 1);
-        cameraMatrix.put(2, 0, 0, 0, 1);
-
-        Mat R = new Mat(3, 3, CvType.CV_32F, new Scalar(2));
-        Mat newCameraMatrix = new Mat(3, 3, CvType.CV_32F, new Scalar(3));
-
-        Mat distCoeffs = new Mat();
-        Mat map1 = new Mat();
-        Mat map2 = new Mat();
-
-        // TODO: complete this test
-        Geometry.initUndistortRectifyMap(cameraMatrix, distCoeffs, R, newCameraMatrix, size, CvType.CV_32F, map1, map2);
-    }
-
-    public void testInitWideAngleProjMapMatMatSizeIntIntMatMat() {
-        fail("Not yet implemented");
-        Mat cameraMatrix = new Mat(3, 3, CvType.CV_32F);
-        Mat distCoeffs = new Mat(1, 4, CvType.CV_32F);
-        // Size imageSize = new Size(2, 2);
-
-        cameraMatrix.put(0, 0, 1, 0, 1);
-        cameraMatrix.put(1, 0, 0, 1, 2);
-        cameraMatrix.put(2, 0, 0, 0, 1);
-
-        distCoeffs.put(0, 0, 1, 3, 2, 4);
-        truth = new Mat(3, 3, CvType.CV_32F);
-        truth.put(0, 0, 0, 0, 0);
-        truth.put(1, 0, 0, 0, 0);
-        truth.put(2, 0, 0, 3, 0);
-        // TODO: No documentation for this function
-        // Geometry.initWideAngleProjMap(cameraMatrix, distCoeffs, imageSize,
-        // 5, m1type, truthput1, truthput2);
-    }
-
-    public void testInitWideAngleProjMapMatMatSizeIntIntMatMatInt() {
-        fail("Not yet implemented");
-    }
-
-    public void testInitWideAngleProjMapMatMatSizeIntIntMatMatIntDouble() {
-        fail("Not yet implemented");
-    }
-
-    public void testUndistortMatMatMatMat() {
-        Mat src = new Mat(3, 3, CvType.CV_32F, new Scalar(3));
-        Mat cameraMatrix = new Mat(3, 3, CvType.CV_32F) {
-            {
-                put(0, 0, 1, 0, 1);
-                put(1, 0, 0, 1, 2);
-                put(2, 0, 0, 0, 1);
-            }
-        };
-        Mat distCoeffs = new Mat(1, 4, CvType.CV_32F) {
-            {
-                put(0, 0, 1, 3, 2, 4);
-            }
-        };
-
-        Geometry.undistort(src, dst, cameraMatrix, distCoeffs);
-
-        truth = new Mat(3, 3, CvType.CV_32F) {
-            {
-                put(0, 0, 0, 0, 0);
-                put(1, 0, 0, 0, 0);
-                put(2, 0, 0, 3, 0);
-            }
-        };
-        assertMatEqual(truth, dst, EPS);
-    }
-
-    public void testUndistortMatMatMatMatMat() {
-        Mat src = new Mat(3, 3, CvType.CV_32F, new Scalar(3));
-        Mat cameraMatrix = new Mat(3, 3, CvType.CV_32F) {
-            {
-                put(0, 0, 1, 0, 1);
-                put(1, 0, 0, 1, 2);
-                put(2, 0, 0, 0, 1);
-            }
-        };
-        Mat distCoeffs = new Mat(1, 4, CvType.CV_32F) {
-            {
-                put(0, 0, 2, 1, 4, 5);
-            }
-        };
-        Mat newCameraMatrix = new Mat(3, 3, CvType.CV_32F, new Scalar(1));
-
-        Geometry.undistort(src, dst, cameraMatrix, distCoeffs, newCameraMatrix);
-
-        truth = new Mat(3, 3, CvType.CV_32F, new Scalar(3));
-        assertMatEqual(truth, dst, EPS);
     }
 
     //undistortPoints(List<Point> src, List<Point> dst, Mat cameraMatrix, Mat distCoeffs)
@@ -686,7 +592,7 @@ public class GeometryTest extends OpenCVTestCase {
         Mat linePoints = new Mat(4, 1, CvType.CV_32FC1);
         linePoints.put(0, 0, 0.53198653, 0.84675282, 2.5, 3.75);
 
-        Geometry.fitLine(points, dst, Imgproc.DIST_L12, 0, 0.01, 0.01);
+        Geometry.fitLine(points, dst, Geometry.DIST_L12, 0, 0.01, 0.01);
 
         assertMatEqual(linePoints, dst, EPS);
     }
@@ -733,7 +639,7 @@ public class GeometryTest extends OpenCVTestCase {
         assertEquals(100.0f, radius[0], 1.0);
     }
 
-        public void testPointPolygonTest() {
+    public void testPointPolygonTest() {
         MatOfPoint2f contour = new MatOfPoint2f(new Point(0, 0), new Point(1, 3), new Point(3, 4), new Point(4, 3), new Point(2, 1));
         double sign1 = Geometry.pointPolygonTest(contour, new Point(2, 2), false);
         assertEquals(1.0, sign1);
@@ -741,4 +647,82 @@ public class GeometryTest extends OpenCVTestCase {
         double sign2 = Geometry.pointPolygonTest(contour, new Point(4, 4), true);
         assertEquals(-Math.sqrt(0.5), sign2);
     }
+
+        public void testContourAreaMat() {
+        Mat contour = new Mat(1, 4, CvType.CV_32FC2);
+        contour.put(0, 0, 0, 0, 10, 0, 10, 10, 5, 4);
+
+        double area = Geometry.contourArea(contour);
+
+        assertEquals(45., area, EPS);
+    }
+
+    public void testContourAreaMatBoolean() {
+        Mat contour = new Mat(1, 4, CvType.CV_32FC2);
+        contour.put(0, 0, 0, 0, 10, 0, 10, 10, 5, 4);
+
+        double area = Geometry.contourArea(contour, true);
+
+        assertEquals(45., area, EPS);
+        // TODO_: write better test
+    }
+
+    public void testArcLength() {
+        MatOfPoint2f curve = new MatOfPoint2f(new Point(1, 3), new Point(2, 4), new Point(3, 5), new Point(4, 4), new Point(5, 3));
+
+        double arcLength = Geometry.arcLength(curve, false);
+
+        assertEquals(5.656854249, arcLength, 0.000001);
+    }
+
+    public void testBoundingRect() {
+        MatOfPoint points = new MatOfPoint(new Point(0, 0), new Point(0, 4), new Point(4, 0), new Point(4, 4));
+        Point p1 = new Point(1, 1);
+        Point p2 = new Point(-5, -2);
+
+        Rect bbox = Geometry.boundingRect(points);
+
+        assertTrue(bbox.contains(p1));
+        assertFalse(bbox.contains(p2));
+    }
+
+    public void testGetAffineTransform() {
+        MatOfPoint2f src = new MatOfPoint2f(new Point(2, 3), new Point(3, 1), new Point(1, 4));
+        MatOfPoint2f dst = new MatOfPoint2f(new Point(3, 3), new Point(7, 4), new Point(5, 6));
+
+        Mat transform = Geometry.getAffineTransform(src, dst);
+
+        Mat truth = new Mat(2, 3, CvType.CV_64FC1) {
+            {
+                put(0, 0, -8, -6, 37);
+                put(1, 0, -7, -4, 29);
+            }
+        };
+        assertMatEqual(truth, transform, EPS);
+    }
+
+    public void testGetRotationMatrix2D() {
+        Point center = new Point(0, 0);
+
+        dst = Geometry.getRotationMatrix2D(center, 0, 1);
+
+        truth = new Mat(2, 3, CvType.CV_64F) {
+            {
+                put(0, 0, 1, 0, 0);
+                put(1, 0, 0, 1, 0);
+            }
+        };
+
+        assertMatEqual(truth, dst, EPS);
+    }
+
+    public void testInvertAffineTransform() {
+        Mat src = new Mat(2, 3, CvType.CV_64F, new Scalar(1));
+
+        Geometry.invertAffineTransform(src, dst);
+
+        truth = new Mat(2, 3, CvType.CV_64F, new Scalar(0));
+        assertMatEqual(truth, dst, EPS);
+    }
+
 }

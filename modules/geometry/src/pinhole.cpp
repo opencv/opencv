@@ -1,0 +1,352 @@
+/*M///////////////////////////////////////////////////////////////////////////////////////
+//
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+//  By downloading, copying, installing or using the software you agree to this license.
+//  If you do not agree to this license, do not download, install,
+//  copy or use the software.
+//
+//
+//                           License Agreement
+//                For Open Source Computer Vision Library
+//
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Third party copyrights are property of their respective owners.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+//   * Redistribution's of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
+//
+//   * Redistribution's in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
+//
+//   * The name of the copyright holders may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+//
+// This software is provided by the copyright holders and contributors "as is" and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
+//
+//M*/
+
+#include "opencv2/core/types.hpp"
+#include "precomp.hpp"
+#include "distortion_model.hpp"
+
+namespace cv {
+
+Mat getDefaultNewCameraMatrix( InputArray _cameraMatrix, Size imgsize,
+                               bool centerPrincipalPoint )
+{
+    Mat cameraMatrix = _cameraMatrix.getMat();
+    if( !centerPrincipalPoint && cameraMatrix.type() == CV_64F )
+        return cameraMatrix;
+
+    Mat newCameraMatrix;
+    cameraMatrix.convertTo(newCameraMatrix, CV_64F);
+    if( centerPrincipalPoint )
+    {
+        newCameraMatrix.ptr<double>()[2] = (imgsize.width-1)*0.5;
+        newCameraMatrix.ptr<double>()[5] = (imgsize.height-1)*0.5;
+    }
+    return newCameraMatrix;
+}
+
+void calibrationMatrixValues( InputArray _cameraMatrix, Size imageSize,
+                              double apertureWidth, double apertureHeight,
+                              double& fovx, double& fovy, double& focalLength,
+                              Point2d& principalPoint, double& aspectRatio )
+{
+    CV_INSTRUMENT_REGION();
+
+    if(_cameraMatrix.size() != Size(3, 3))
+        CV_Error(cv::Error::StsUnmatchedSizes, "Size of cameraMatrix must be 3x3!");
+
+    Matx33d A;
+    _cameraMatrix.getMat().convertTo(A, CV_64F);
+    CV_DbgAssert(imageSize.width != 0 && imageSize.height != 0 && A(0, 0) != 0.0 && A(1, 1) != 0.0);
+
+    /* Calculate pixel aspect ratio. */
+    aspectRatio = A(1, 1) / A(0, 0);
+
+    /* Calculate number of pixel per realworld unit. */
+    double mx, my;
+    if(apertureWidth != 0.0 && apertureHeight != 0.0) {
+        mx = imageSize.width / apertureWidth;
+        my = imageSize.height / apertureHeight;
+    } else {
+        mx = 1.0;
+        my = aspectRatio;
+    }
+
+    /* Calculate fovx and fovy. */
+    fovx = atan2(A(0, 2), A(0, 0)) + atan2(imageSize.width  - A(0, 2), A(0, 0));
+    fovy = atan2(A(1, 2), A(1, 1)) + atan2(imageSize.height - A(1, 2), A(1, 1));
+    fovx *= 180.0 / CV_PI;
+    fovy *= 180.0 / CV_PI;
+
+    /* Calculate focal length. */
+    focalLength = A(0, 0) / mx;
+
+    /* Calculate principle point. */
+    principalPoint = Point2d(A(0, 2) / mx, A(1, 2) / my);
+}
+
+static void undistortPointsInternal( const Mat& _src, Mat& _dst, const Mat& _cameraMatrix,
+                   const Mat& _distCoeffs, const Mat& matR, const Mat& matP, TermCriteria criteria)
+{
+    CV_Assert(criteria.isValid());
+    double A[3][3], RR[3][3], k[14]={0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    Mat matA(3, 3, CV_64F, A), _Dk;
+    Mat _RR(3, 3, CV_64F, RR);
+    cv::Matx33d invMatTilt = cv::Matx33d::eye();
+    cv::Matx33d matTilt = cv::Matx33d::eye();
+    bool haveDistCoeffs = !_distCoeffs.empty();
+
+    CV_Assert( (_src.rows == 1 || _src.cols == 1) &&
+        (_dst.rows == 1 || _dst.cols == 1) &&
+        _src.cols + _src.rows - 1 == _dst.rows + _dst.cols - 1 &&
+        (_src.type() == CV_32FC2 || _src.type() == CV_64FC2) &&
+        (_dst.type() == CV_32FC2 || _dst.type() == CV_64FC2));
+
+    CV_Assert( _cameraMatrix.rows == 3 && _cameraMatrix.cols == 3 && _cameraMatrix.channels() == 1 );
+    _cameraMatrix.convertTo(matA, CV_64F);
+
+    if( haveDistCoeffs )
+    {
+        CV_Assert(
+            (_distCoeffs.rows == 1 || _distCoeffs.cols == 1) &&
+            (_distCoeffs.rows*_distCoeffs.cols == 4 ||
+             _distCoeffs.rows*_distCoeffs.cols == 5 ||
+             _distCoeffs.rows*_distCoeffs.cols == 8 ||
+             _distCoeffs.rows*_distCoeffs.cols == 12 ||
+             _distCoeffs.rows*_distCoeffs.cols == 14));
+
+        _Dk = Mat( _distCoeffs.rows, _distCoeffs.cols,
+            CV_MAKETYPE(CV_64F,_distCoeffs.channels()), k);
+        _distCoeffs.convertTo(_Dk, CV_64F);
+        CV_Assert(_Dk.ptr<double>() == k);
+        if (k[12] != 0 || k[13] != 0)
+        {
+            computeTiltProjectionMatrix<double>(k[12], k[13], NULL, NULL, NULL, &invMatTilt);
+            computeTiltProjectionMatrix<double>(k[12], k[13], &matTilt, NULL, NULL);
+        }
+    }
+
+    if( !matR.empty() )
+    {
+        CV_Assert( matR.rows == 3 && matR.cols == 3 && matR.channels() == 1 );
+        matR.convertTo(_RR, CV_64F);
+        CV_Assert(_RR.ptr<double>() == &RR[0][0]);
+    }
+    else
+        setIdentity(_RR);
+
+    if( !matP.empty() )
+    {
+        double PP[3][3];
+        Mat _PP(3, 3, CV_64F, PP);
+        CV_Assert( matP.rows == 3 && (matP.cols == 3 || matP.cols == 4));
+        matP.colRange(0, 3).convertTo(_PP, CV_64F);
+        CV_Assert(_PP.ptr<double>() == &PP[0][0]);
+        _RR = _PP*_RR;
+    }
+
+    const Point2f* srcf = (const Point2f*)_src.data;
+    const Point2d* srcd = (const Point2d*)_src.data;
+    Point2f* dstf = (Point2f*)_dst.data;
+    Point2d* dstd = (Point2d*)_dst.data;
+    int stype = _src.type();
+    int dtype = _dst.type();
+    int sstep = _src.rows == 1 ? 1 : (int)(_src.step/_src.elemSize());
+    int dstep = _dst.rows == 1 ? 1 : (int)(_dst.step/_dst.elemSize());
+
+    double fx = A[0][0];
+    double fy = A[1][1];
+    double ifx = 1./fx;
+    double ify = 1./fy;
+    double cx = A[0][2];
+    double cy = A[1][2];
+
+    int n = _src.rows + _src.cols - 1;
+    for( int i = 0; i < n; i++ )
+    {
+        double x, y, x0 = 0, y0 = 0, u, v;
+        if( stype == CV_32FC2 )
+        {
+            x = srcf[i*sstep].x;
+            y = srcf[i*sstep].y;
+        }
+        else
+        {
+            x = srcd[i*sstep].x;
+            y = srcd[i*sstep].y;
+        }
+        // [u, v]^T = [fx * x''' + cx, fy * y''' + cy]^T =>
+        // [x''', y''']^T = [(u - cx) / fx, (v - cy) / fy]^T
+        u = x; v = y;
+        x = (x - cx)*ifx;
+        y = (y - cy)*ify;
+
+        if( haveDistCoeffs ) {
+            // compensate tilt distortion
+            // s * [x''', y''', 1]^T = matTilt * [x'', y'', 1]^T =>
+            // s * matTilt^{-1} * [x''', y''', 1]^T = [x'', y'', 1]^T =>
+            // (invMatTilt := matTilt^{-1}, vecUntilt := invMatTilt * [x''', y''', 1]^T)
+            // s * vecUntilt = [x'', y'', 1]^T =>
+            // s * vecUntilt_1 = x'', s * vecUntilt_2 = y'', s * vecUntilt_3 = 1 =>
+            // invProj := s = 1 / vecUntilt_3, x'' = invProj * vecUntilt_1, y'' = invProj * vecUntilt_2
+            cv::Vec3d vecUntilt = invMatTilt * cv::Vec3d(x, y, 1);
+            double invProj = vecUntilt(2) ? 1./vecUntilt(2) : 1;
+            x0 = x = invProj * vecUntilt(0);
+            y0 = y = invProj * vecUntilt(1);
+
+            double error = std::numeric_limits<double>::max();
+            double prevError = std::numeric_limits<double>::max();
+            // compensate distortion iteratively using fixed-point iteration
+
+            // parameter for damped fixed-point iteration
+            double alpha = 1.;
+
+            for( int j = 0; ; j++ )
+            {
+                if ((criteria.type & TermCriteria::COUNT) && j >= criteria.maxCount)
+                    break;
+                if ((criteria.type & TermCriteria::EPS) && error < criteria.epsilon)
+                    break;
+                // r^2 = x'^2 + y'^2
+                double r2 = x*x + y*y;
+                // icdist := (1 + k4 * r^2 + k5 * r^4 + k6 * r^6) / (1 + k1 * r^2 + k2 * r^4 + k3 * r^6)
+                double icdist = (1 + ((k[7]*r2 + k[6])*r2 + k[5])*r2)/(1 + ((k[4]*r2 + k[1])*r2 + k[0])*r2);
+                if (icdist < 0)  // test: undistortPoints.regression_14583
+                {
+                    x = (u - cx)*ifx;
+                    y = (v - cy)*ify;
+                    break;
+                }
+                // deltaX := 2 * p1 * x' * y' + p2 * (r^2 + 2 * x'^2) + s1 * r^2 + s2 * r^4
+                // deltaY := p1 * (r^2 + 2 * y'^2) + 2 * p2 * x' * y' + s3 * r^2 + s4 * r^4
+                double deltaX = 2*k[2]*x*y + k[3]*(r2 + 2*x*x)+ k[8]*r2+k[9]*r2*r2;
+                double deltaY = k[2]*(r2 + 2*y*y) + 2*k[3]*x*y+ k[10]*r2+k[11]*r2*r2;
+                // [x'', y'']^T = [x' / icdist + deltaX, y' / icdist + deltaY]^T =>
+                // [x', y']^T = [(x'' - deltaX) * icdist, (y'' - deltaY) * icdist]^T =>
+                // x' = f1(x') := (x'' - deltaX) * icdist, y' = f2(y') := (y'' - deltaY) * icdist
+                // Damped fixed-point iteration:
+                //   f1(x') = (x'' - deltaX) * icdist, f2(y') = (y'' - deltaY) * icdist
+                //   new_x' = (1 - alpha) * x' + alpha * f1(x'), new_y' = (1 - alpha) * y' + alpha * f2(y')
+                double new_x = (1. - alpha)*x + alpha*(x0 - deltaX)*icdist;
+                double new_y = (1. - alpha)*y + alpha*(y0 - deltaY)*icdist;
+
+                if(criteria.type & TermCriteria::EPS)
+                {
+                    double r4, r6, a1, a2, a3, cdist, icdist2;
+                    double xd, yd, xd0, yd0;
+                    Vec3d vecTilt;
+
+                    // r^2 = x'^2 + y'^2
+                    r2 = new_x*new_x + new_y*new_y;
+                    r4 = r2*r2;
+                    r6 = r4*r2;
+                    a1 = 2*new_x*new_y;
+                    a2 = r2 + 2*new_x*new_x;
+                    a3 = r2 + 2*new_y*new_y;
+                    // cdist := 1 + k1 * r^2 + k2 * r^4 + k3 * r^6
+                    cdist = 1 + k[0]*r2 + k[1]*r4 + k[4]*r6;
+                    // icdist2 := 1 / (1 + k4 * r^2 + k5 * r^4 + k6 * r^6)
+                    icdist2 = 1./(1 + k[5]*r2 + k[6]*r4 + k[7]*r6);
+                    // x'' = x' * cdist * icdist2 + 2 * p1 * x' * y' + p2 * (r^2 + 2 * x'^2) + s1 * r^2 + s2 * r^4
+                    // y'' = y' * cdist * icdist2 + p1 * (r^2 + 2 * y'^2) + 2 * p2 * x' * y' + s3 * r^2 + s4 * r^4
+                    xd0 = new_x*cdist*icdist2 + k[2]*a1 + k[3]*a2 + k[8]*r2+k[9]*r4;
+                    yd0 = new_y*cdist*icdist2 + k[2]*a3 + k[3]*a1 + k[10]*r2+k[11]*r4;
+
+                    // s * [x''', y''', 1]^T = matTilt * [x'', y'', 1]^T =>
+                    // (vecTilt := matTilt * [x'', y'', 1]^T)
+                    // s * [x''', y''', 1]^T = vecTilt =>
+                    // s * x''' = vecTilt_1, s * y''' = vecTilt_2, s = vecTilt_3 =>
+                    // invProj := 1 / s = 1 / vecTilt_3, x''' = invProj * vecTilt_1, y''' = invProj * vecTilt_2
+                    vecTilt = matTilt*cv::Vec3d(xd0, yd0, 1);
+                    invProj = vecTilt(2) ? 1./vecTilt(2) : 1;
+                    xd = invProj * vecTilt(0);
+                    yd = invProj * vecTilt(1);
+
+                    // [u, v]^T = [fx * x''' + cx, fy * y''' + cy]^T
+                    double x_proj = xd*fx + cx;
+                    double y_proj = yd*fy + cy;
+
+                    error = sqrt( std::pow(x_proj - u, 2) + std::pow(y_proj - v, 2) );
+                }
+                if (error > prevError) {
+                    alpha *= .5;
+                } else {
+                    x = new_x;
+                    y = new_y;
+                }
+                prevError = error;
+            }
+        }
+
+        if( !matR.empty() || !matP.empty() )
+        {
+            double xx = RR[0][0]*x + RR[0][1]*y + RR[0][2];
+            double yy = RR[1][0]*x + RR[1][1]*y + RR[1][2];
+            double ww = 1./(RR[2][0]*x + RR[2][1]*y + RR[2][2]);
+            x = xx*ww;
+            y = yy*ww;
+        }
+
+        if( dtype == CV_32FC2 )
+        {
+            dstf[i*dstep].x = (float)x;
+            dstf[i*dstep].y = (float)y;
+        }
+        else
+        {
+            dstd[i*dstep].x = x;
+            dstd[i*dstep].y = y;
+        }
+    }
+}
+
+void undistortPoints(InputArray _src, OutputArray _dst,
+                     InputArray _cameraMatrix,
+                     InputArray _distCoeffs,
+                     InputArray _Rmat,
+                     InputArray _Pmat,
+                     TermCriteria criteria)
+{
+    Mat src = _src.getMat(), cameraMatrix = _cameraMatrix.getMat();
+    Mat distCoeffs = _distCoeffs.getMat(), R = _Rmat.getMat(), P = _Pmat.getMat();
+
+    int npoints = src.checkVector(2), depth = src.depth();
+    if (npoints < 0)
+        src = src.t();
+    npoints = src.checkVector(2);
+    CV_Assert(npoints >= 0 && src.isContinuous() && (depth == CV_32F || depth == CV_64F));
+
+    if (src.cols == 2)
+        src = src.reshape(2);
+
+    _dst.create(npoints, 1, CV_MAKETYPE(depth, 2), -1, true);
+    Mat dst = _dst.getMat();
+
+    undistortPointsInternal(src, dst, cameraMatrix, distCoeffs, R, P, criteria);
+}
+
+void undistortImagePoints(InputArray src, OutputArray dst, InputArray cameraMatrix, InputArray distCoeffs, TermCriteria termCriteria)
+{
+    undistortPoints(src, dst, cameraMatrix, distCoeffs, noArray(), cameraMatrix, termCriteria);
+}
+
+}
+/*  End of file  */

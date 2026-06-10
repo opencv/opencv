@@ -65,13 +65,8 @@ public:
             return;
         }
 
-// TODO: Requires FFmpeg wrapper rebuild for Windows
-#ifdef _WIN32
-        if (apiPref != CAP_FFMPEG)
-            EXPECT_EQ(CAP_PROP_UNKNOWN, cap.get(CV__CAP_PROP_LATEST));
-#else
         EXPECT_EQ(CAP_PROP_UNKNOWN, cap.get(CV__CAP_PROP_LATEST));
-#endif
+
         int n_frames = -1;
         EXPECT_NO_THROW(n_frames = (int)cap.get(CAP_PROP_FRAME_COUNT));
         if (n_frames > 0)
@@ -229,6 +224,9 @@ public:
         if (((apiPref == CAP_FFMPEG || apiPref == CAP_GSTREAMER) && ((ext == "h264") || (ext == "h265"))))
             throw SkipTestException(cv::String("Backend ") +  cv::videoio_registry::getBackendName(apiPref) +
                     cv::String(" does not support CAP_PROP_POS_MSEC option"));
+
+        if (cvtest::skipUnstableTests && apiPref == CAP_MSMF && (ext == "h264" || ext == "h265" || ext == "mpg"))
+            throw SkipTestException("Unstable MSMF test");
 
         VideoCapture cap;
         EXPECT_NO_THROW(cap.open(video_file, apiPref));
@@ -537,13 +535,7 @@ TEST_P(Videoio_Writer, write_nothing)
     EXPECT_NO_THROW(writer.open(video_file, apiPref, fourcc, fps, frame_size, true));
     ASSERT_TRUE(writer.isOpened());
 
-// TODO: Requires FFmpeg wrapper rebuild for Windows
-#ifdef _WIN32
-    if (apiPref != CAP_FFMPEG)
-        EXPECT_EQ(CAP_PROP_UNKNOWN, writer.get(CV__CAP_PROP_LATEST));
-#else
     EXPECT_EQ(cv::VIDEOWRITER_PROP_UNKNOWN, writer.get(CV__CAP_PROP_LATEST));
-#endif
 
 #if 0  // no frames
     cv::Mat m(frame_size, CV_8UC3, Scalar::all(127));

@@ -74,7 +74,7 @@
 
         The implementation is based on the ArUco Library by R. Muñoz-Salinas and S. Garrido-Jurado @cite Aruco2014.
 
-        Markers can also be detected based on the AprilTag 2 @cite wang2016iros fiducial detection method.
+        Markers can also be detected based on the AprilTag 2 @cite wang2016iros fiducial marker detection method.
 
         @sa @cite Aruco2014
         This code has been originally developed by Sergio Garrido-Jurado as a project
@@ -136,7 +136,7 @@
 
         To estimate the marker pose with respect to the camera frame, we recommend you to look at the following sources of information:
           - @ref tutorial_aruco_detection for a tutorial about ArUco markers detection
-          - @ref calib for some theoretical background about the pinhole camera model and the @ref calib3d_solvePnP page
+          - @ref _3d for some theoretical background about the pinhole camera model and the @ref calib3d_solvePnP page
           - @ref solvePnP, @ref solvePnPGeneric, @ref solveP3P for the relevant pose estimation methods
     @}
 

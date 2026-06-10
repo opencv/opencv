@@ -11,7 +11,7 @@
 <h2>Object Detection Example with Camera </h2>
 <p>
     This tutorial shows you how to write an object detection example with camera.<br>
-    To try the example you should click the <b>modelFile</b> button(and <b>configInput</b> button if needed) to upload inference model.
+    To try the example you should click the <b>modelFile</b> button to upload an ONNX model file.
     You can find the model URLs and parameters in the <a href="#appendix">model info</a> section.
     Then You should change the parameters in the first code snippet according to the uploaded model.
     Finally click <b>Start/Stop</b> button to start or stop the camera capture.<br>
@@ -42,13 +42,6 @@
             <td>
                 <div class="caption">
                     modelFile <input type="file" id="modelFile" name="file">
-                </div>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <div class="caption">
-                    configFile <input type="file" id="configFile">
                 </div>
             </td>
         </tr>
@@ -84,17 +77,17 @@
 
 <script id="codeSnippet" type="text/code-snippet">
 inputSize = [300, 300];
-mean = [127.5, 127.5, 127.5];
-std = 0.007843;
+mean = [0, 0, 0];
+std = 1;
 swapRB = false;
 confThreshold = 0.5;
 nmsThreshold = 0.4;
 
-// the type of output, can be YOLO or SSD
+// The type of output, can be YOLO or SSD
 outType = "SSD";
 
 // url for label file, can from local or Internet
-labelsUrl = "https://raw.githubusercontent.com/opencv/opencv/5.x/samples/data/dnn/object_detection_classes_pascal_voc.txt";
+labelsUrl = "https://raw.githubusercontent.com/opencv/opencv/5.x/samples/data/dnn/object_detection_classes_coco.txt";
 </script>
 
 <script id="codeSnippet1" type="text/code-snippet">
@@ -104,7 +97,7 @@ let cap = new cv.VideoCapture(videoInput);
 main = async function(frame) {
     const labels = await loadLables(labelsUrl);
     const input = getBlobFromImage(inputSize, mean, std, swapRB, frame);
-    let net = cv.readNet(configPath, modelPath);
+    let net = cv.readNet(modelPath);
     net.setInput(input);
     const start = performance.now();
     const result = net.forward();
@@ -331,22 +324,12 @@ postProcess = function(result, labels, frame) {
         }
     });
 
-    let configPath = "";
-    let configFile = document.getElementById('configFile');
-    configFile.addEventListener('change', async (e) => {
-        initStatus();
-        configPath = await loadModel(e);
-        document.getElementById('status').innerHTML = `The config file '${configPath}' is created successfully.`;
-    });
-
     let modelPath = "";
     let modelFile = document.getElementById('modelFile');
     modelFile.addEventListener('change', async (e) => {
         initStatus();
         modelPath = await loadModel(e);
         document.getElementById('status').innerHTML = `The model file '${modelPath}' is created successfully.`;
-        configPath = "";
-        configFile.value = "";
     });
 
     utils.loadOpenCv(() => {

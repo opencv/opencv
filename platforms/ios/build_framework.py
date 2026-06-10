@@ -218,6 +218,12 @@ class Builder:
             "-DOPENCV_INCLUDE_INSTALL_PATH=include",
             "-DOPENCV_3P_LIB_INSTALL_PATH=lib/3rdparty",
             "-DFRAMEWORK_NAME=%s" % self.framework_name,
+            # With the Xcode generator CMAKE_CXX_STANDARD / per-target
+            # CXX_STANDARD is not translated into CLANG_CXX_LANGUAGE_STANDARD,
+            # so bundled 3rdparty libraries that require C++17 (e.g. KleidiCV)
+            # are compiled at the toolchain default and fail to build. Set the
+            # standard explicitly at the project level.
+            "-DCMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD=gnu++17",
         ]
         if self.dynamic:
             args += [

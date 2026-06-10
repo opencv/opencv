@@ -40,7 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/imgproc/detail/gcgraph.hpp"
+#include "opencv2/geometry/detail/gcgraph.hpp"
 #include <limits>
 
 using namespace cv;

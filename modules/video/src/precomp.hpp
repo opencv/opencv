@@ -48,5 +48,6 @@
 #include "opencv2/core/private.hpp"
 #include "opencv2/core/ocl.hpp"
 #include "opencv2/core.hpp"
+#include "opencv2/geometry.hpp"
 
 #endif

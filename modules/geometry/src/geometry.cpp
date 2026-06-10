@@ -40,6 +40,7 @@
 //M*/
 #include "precomp.hpp"
 #include "opencv2/core/hal/intrin.hpp"
+#include "opencv2/core/softfloat.hpp"
 
 using namespace cv;
 
@@ -433,9 +434,482 @@ static int intersectConvexConvex_( const Point2f* P, int n, const Point2f* Q, in
     return nr-1;
 }
 
+// area of a whole sequence
+double contourArea( InputArray _contour, bool oriented )
+{
+    CV_INSTRUMENT_REGION();
+
+    Mat contour = _contour.getMat();
+    int npoints = contour.checkVector(2);
+    int depth = contour.depth();
+    CV_Assert(npoints >= 0 && (depth == CV_32F || depth == CV_32S));
+
+    if( npoints == 0 )
+        return 0.;
+
+    double a00 = 0;
+    bool is_float = depth == CV_32F;
+    const Point* ptsi = contour.ptr<Point>();
+    const Point2f* ptsf = contour.ptr<Point2f>();
+    Point2f prev = is_float ? ptsf[npoints-1] : Point2f((float)ptsi[npoints-1].x, (float)ptsi[npoints-1].y);
+
+    for( int i = 0; i < npoints; i++ )
+    {
+        Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
+        a00 += (double)prev.x * p.y - (double)prev.y * p.x;
+        prev = p;
+    }
+
+    a00 *= 0.5;
+    if( !oriented )
+        a00 = fabs(a00);
+
+    return a00;
 }
 
-float cv::intersectConvexConvex( InputArray _p1, InputArray _p2, OutputArray _p12, bool handleNested )
+// calculates length of a curve (e.g. contour perimeter)
+double arcLength( InputArray _curve, bool is_closed )
+{
+    CV_INSTRUMENT_REGION();
+
+    Mat curve = _curve.getMat();
+    int count = curve.checkVector(2);
+    int depth = curve.depth();
+    CV_Assert( count >= 0 && (depth == CV_32F || depth == CV_32S));
+    double perimeter = 0;
+
+    int i;
+
+    if( count <= 1 )
+        return 0.;
+
+    bool is_float = depth == CV_32F;
+    int last = is_closed ? count-1 : 0;
+    const Point* pti = curve.ptr<Point>();
+    const Point2f* ptf = curve.ptr<Point2f>();
+
+    Point2f prev = is_float ? ptf[last] : Point2f((float)pti[last].x,(float)pti[last].y);
+
+    for( i = 0; i < count; i++ )
+    {
+        Point2f p = is_float ? ptf[i] : Point2f((float)pti[i].x,(float)pti[i].y);
+        float dx = p.x - prev.x, dy = p.y - prev.y;
+        perimeter += std::sqrt(dx*dx + dy*dy);
+
+        prev = p;
+    }
+
+    return perimeter;
+}
+
+static Rect maskBoundingRect( const Mat& img )
+{
+    CV_Assert( img.depth() <= CV_8S && img.channels() == 1 );
+
+    Size size = img.size();
+    int xmin = size.width, ymin = -1, xmax = -1, ymax = -1, i, j, k;
+
+    for( i = 0; i < size.height; i++ )
+    {
+        const uchar* _ptr = img.ptr(i);
+        const uchar* ptr = (const uchar*)alignPtr(_ptr, 4);
+        int have_nz = 0, k_min, offset = (int)(ptr - _ptr);
+        j = 0;
+        offset = MIN(offset, size.width);
+        for( ; j < offset; j++ )
+            if( _ptr[j] )
+            {
+                if( j < xmin )
+                    xmin = j;
+                if( j > xmax )
+                    xmax = j;
+                have_nz = 1;
+            }
+        if( offset < size.width )
+        {
+            xmin -= offset;
+            xmax -= offset;
+            size.width -= offset;
+            j = 0;
+            for( ; j <= xmin - 4; j += 4 )
+                if( *((int*)(ptr+j)) )
+                    break;
+            for( ; j < xmin; j++ )
+                if( ptr[j] )
+                {
+                    xmin = j;
+                    if( j > xmax )
+                        xmax = j;
+                    have_nz = 1;
+                    break;
+                }
+            k_min = MAX(j-1, xmax);
+            k = size.width - 1;
+            for( ; k > k_min && (k&3) != 3; k-- )
+                if( ptr[k] )
+                    break;
+            if( k > k_min && (k&3) == 3 )
+            {
+                for( ; k > k_min+3; k -= 4 )
+                    if( *((int*)(ptr+k-3)) )
+                        break;
+            }
+            for( ; k > k_min; k-- )
+                if( ptr[k] )
+                {
+                    xmax = k;
+                    have_nz = 1;
+                    break;
+                }
+            if( !have_nz )
+            {
+                j &= ~3;
+                for( ; j <= k - 3; j += 4 )
+                    if( *((int*)(ptr+j)) )
+                        break;
+                for( ; j <= k; j++ )
+                    if( ptr[j] )
+                    {
+                        have_nz = 1;
+                        break;
+                    }
+            }
+            xmin += offset;
+            xmax += offset;
+            size.width += offset;
+        }
+        if( have_nz )
+        {
+            if( ymin < 0 )
+                ymin = i;
+            ymax = i;
+        }
+    }
+
+    if( xmin >= size.width )
+        xmin = ymin = 0;
+    return Rect(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1);
+}
+
+// Calculates bounding rectangle of a point set or retrieves already calculated
+static Rect pointSetBoundingRect( const Mat& points )
+{
+    int npoints = points.checkVector(2);
+    int depth = points.depth();
+    CV_Assert(npoints >= 0 && (depth == CV_32F || depth == CV_32S));
+
+    int  xmin = 0, ymin = 0, xmax = -1, ymax = -1, i = 0;
+    bool is_float = depth == CV_32F;
+
+    if( npoints == 0 )
+        return Rect();
+
+    if( !is_float )
+    {
+        const int32_t* pts = points.ptr<int32_t>();
+        int64_t firstval = 0;
+        std::memcpy(&firstval, pts, sizeof(pts[0]) * 2);
+        xmin = xmax = pts[0];
+        ymin = ymax = pts[1];
+        #if CV_SIMD || CV_SIMD_SCALABLE
+        v_int32 minval, maxval;
+        minval = maxval = v_reinterpret_as_s32(vx_setall_s64(firstval)); //min[0]=pt.x, min[1]=pt.y, min[2]=pt.x, min[3]=pt.y
+        const int nlanes = VTraits<v_int32>::vlanes()/2;
+        for (; i < npoints; i += nlanes)
+        {
+            if (i > npoints - nlanes)
+            {
+                if (i == 0)
+                    break;
+                i = npoints - nlanes;
+            }
+            v_int32 ptXY2 = vx_load(pts + 2 * i);
+            minval = v_min(ptXY2, minval);
+            maxval = v_max(ptXY2, maxval);
+        }
+        constexpr int max_nlanes = VTraits<v_int32>::max_nlanes;
+        int arr_minval[max_nlanes], arr_maxval[max_nlanes];
+        vx_store(arr_minval, minval);
+        vx_store(arr_maxval, maxval);
+        for (int j = 0; j < nlanes; j++)
+        {
+            xmin = std::min(xmin, arr_minval[2*j]);
+            ymin = std::min(ymin, arr_minval[2*j+1]);
+            xmax = std::max(xmax, arr_maxval[2*j]);
+            ymax = std::max(ymax, arr_maxval[2*j+1]);
+        }
+        #endif
+        for( ; i < npoints; i++ )
+        {
+            int pt_x = pts[2*i];
+            int pt_y = pts[2*i+1];
+
+            xmin = std::min(xmin, pt_x);
+            xmax = std::max(xmax, pt_x);
+            ymin = std::min(ymin, pt_y);
+            ymax = std::max(ymax, pt_y);
+        }
+    }
+    else
+    {
+        const float* pts = points.ptr<float>();
+        int64_t firstval = 0;
+        std::memcpy(&firstval, pts, sizeof(pts[0]) * 2);
+        xmin = xmax = cvFloor(pts[0]);
+        ymin = ymax = cvFloor(pts[1]);
+        #if CV_SIMD || CV_SIMD_SCALABLE
+        v_float32 minval, maxval;
+        minval = maxval = v_reinterpret_as_f32(vx_setall_s64(firstval)); //min[0]=pt.x, min[1]=pt.y, min[2]=pt.x, min[3]=pt.y
+        const int nlanes = VTraits<v_float32>::vlanes()/2;
+        for (; i < npoints; i += nlanes)
+        {
+            if (i > npoints - nlanes)
+            {
+                if (i == 0)
+                    break;
+                i = npoints - nlanes;
+            }
+            v_float32 ptXY2 = vx_load(pts + 2 * i);
+            minval = v_min(ptXY2, minval);
+            maxval = v_max(ptXY2, maxval);
+        }
+        constexpr int max_nlanes = VTraits<v_int32>::max_nlanes;
+        float arr_minval[max_nlanes], arr_maxval[max_nlanes];
+        vx_store(arr_minval, minval);
+        vx_store(arr_maxval, maxval);
+        for (int j = 0; j < nlanes; j++)
+        {
+            int _xmin = cvFloor(arr_minval[2*j]), _ymin = cvFloor(arr_minval[2*j+1]);
+            int _xmax = cvFloor(arr_maxval[2*j]), _ymax = cvFloor(arr_maxval[2*j+1]);
+            xmin = std::min(xmin, _xmin);
+            ymin = std::min(ymin, _ymin);
+            xmax = std::max(xmax, _xmax);
+            ymax = std::max(ymax, _ymax);
+        }
+        #endif
+        for( ; i < npoints; i++ )
+        {
+            // because right and bottom sides of the bounding rectangle are not inclusive
+            // (note +1 in width and height calculation below), cvFloor is used here instead of cvCeil
+            int pt_x = cvFloor(pts[2*i]);
+            int pt_y = cvFloor(pts[2*i+1]);
+
+            xmin = std::min(xmin, pt_x);
+            xmax = std::max(xmax, pt_x);
+            ymin = std::min(ymin, pt_y);
+            ymax = std::max(ymax, pt_y);
+        }
+    }
+
+    return Rect(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1);
+}
+
+cv::Rect boundingRect(InputArray array)
+{
+    CV_INSTRUMENT_REGION();
+
+    Mat m = array.getMat();
+    return m.depth() <= CV_8U ? maskBoundingRect(m) : pointSetBoundingRect(m);
+}
+
+cv::Matx23d getRotationMatrix2D_(Point2f center, double angle, double scale)
+{
+    CV_INSTRUMENT_REGION();
+
+    angle *= CV_PI/180;
+    double alpha = std::cos(angle)*scale;
+    double beta = std::sin(angle)*scale;
+
+    Matx23d M(
+        alpha, beta, (1-alpha)*center.x - beta*center.y,
+              -beta, alpha, beta*center.x + (1-alpha)*center.y
+    );
+    return M;
+}
+
+/* Calculates coefficients of perspective transformation
+ * which maps (xi,yi) to (ui,vi), (i=1,2,3,4):
+ *
+ *      c00*xi + c01*yi + c02
+ * ui = ---------------------
+ *      c20*xi + c21*yi + c22
+ *
+ *      c10*xi + c11*yi + c12
+ * vi = ---------------------
+ *      c20*xi + c21*yi + c22
+ *
+ * Coefficients are calculated by solving one of 2 linear systems:
+ * / x0 y0  1  0  0  0 -x0*u0 -y0*u0 \ /c00\ /u0\
+ * | x1 y1  1  0  0  0 -x1*u1 -y1*u1 | |c01| |u1|
+ * | x2 y2  1  0  0  0 -x2*u2 -y2*u2 | |c02| |u2|
+ * | x3 y3  1  0  0  0 -x3*u3 -y3*u3 |.|c10|=|u3|,
+ * |  0  0  0 x0 y0  1 -x0*v0 -y0*v0 | |c11| |v0|
+ * |  0  0  0 x1 y1  1 -x1*v1 -y1*v1 | |c12| |v1|
+ * |  0  0  0 x2 y2  1 -x2*v2 -y2*v2 | |c20| |v2|
+ * \  0  0  0 x3 y3  1 -x3*v3 -y3*v3 / \c21/ \v3/
+ *
+ * where:
+ *   cij - matrix coefficients, c22 = 1
+ *
+ * or
+ *
+ * / x0 y0  1  0  0  0 -x0*u0 -y0*u0 -u0 \ /c00\ /0\
+ * | x1 y1  1  0  0  0 -x1*u1 -y1*u1 -u1 | |c01| |0|
+ * | x2 y2  1  0  0  0 -x2*u2 -y2*u2 -u2 | |c02| |0|
+ * | x3 y3  1  0  0  0 -x3*u3 -y3*u3 -u3 |.|c10|=|0|,
+ * |  0  0  0 x0 y0  1 -x0*v0 -y0*v0 -v0 | |c11| |0|
+ * |  0  0  0 x1 y1  1 -x1*v1 -y1*v1 -v1 | |c12| |0|
+ * |  0  0  0 x2 y2  1 -x2*v2 -y2*v2 -v2 | |c20| |0|
+ * \  0  0  0 x3 y3  1 -x3*v3 -y3*v3 -v3 / |c21| \0/
+ *                                         \c22/
+ *
+ * where:
+ *   cij - matrix coefficients, c00^2 + c01^2 + c02^2 + c10^2 + c11^2 + c12^2 + c20^2 + c21^2 + c22^2 = 1
+ */
+cv::Mat getPerspectiveTransform(const Point2f src[], const Point2f dst[], int solveMethod)
+{
+    CV_INSTRUMENT_REGION();
+
+    // try c22 = 1
+    Mat M(3, 3, CV_64F), X8(8, 1, CV_64F, M.ptr());
+    double a[8][8], b[8];
+    Mat A(8, 8, CV_64F, a), B(8, 1, CV_64F, b);
+
+    for( int i = 0; i < 4; ++i )
+    {
+        a[i][0] = a[i+4][3] = src[i].x;
+        a[i][1] = a[i+4][4] = src[i].y;
+        a[i][2] = a[i+4][5] = 1;
+        a[i][3] = a[i][4] = a[i][5] =
+        a[i+4][0] = a[i+4][1] = a[i+4][2] = 0;
+        a[i][6] = -src[i].x*dst[i].x;
+        a[i][7] = -src[i].y*dst[i].x;
+        a[i+4][6] = -src[i].x*dst[i].y;
+        a[i+4][7] = -src[i].y*dst[i].y;
+        b[i] = dst[i].x;
+        b[i+4] = dst[i].y;
+    }
+
+    if (solve(A, B, X8, solveMethod) && norm(A * X8, B) < 1e-8)
+    {
+        M.ptr<double>()[8] = 1.;
+
+        return M;
+    }
+
+    // c00^2 + c01^2 + c02^2 + c10^2 + c11^2 + c12^2 + c20^2 + c21^2 + c22^2 = 1
+    hconcat(A, -B, A);
+
+    Mat AtA;
+    mulTransposed(A, AtA, true);
+
+    Mat D, U;
+    SVDecomp(AtA, D, U, noArray());
+
+    Mat X9(9, 1, CV_64F, M.ptr());
+    U.col(8).copyTo(X9);
+
+    return M;
+}
+
+/* Calculates coefficients of affine transformation
+ * which maps (xi,yi) to (ui,vi), (i=1,2,3):
+ *
+ * ui = c00*xi + c01*yi + c02
+ *
+ * vi = c10*xi + c11*yi + c12
+ *
+ * Coefficients are calculated by solving linear system:
+ * / x0 y0  1  0  0  0 \ /c00\ /u0\
+ * | x1 y1  1  0  0  0 | |c01| |u1|
+ * | x2 y2  1  0  0  0 | |c02| |u2|
+ * |  0  0  0 x0 y0  1 | |c10| |v0|
+ * |  0  0  0 x1 y1  1 | |c11| |v1|
+ * \  0  0  0 x2 y2  1 / |c12| |v2|
+ *
+ * where:
+ *   cij - matrix coefficients
+ */
+
+cv::Mat getAffineTransform( const Point2f src[], const Point2f dst[] )
+{
+    Mat M(2, 3, CV_64F), X(6, 1, CV_64F, M.ptr());
+    double a[6*6], b[6];
+    Mat A(6, 6, CV_64F, a), B(6, 1, CV_64F, b);
+
+    for( int i = 0; i < 3; i++ )
+    {
+        int j = i*12;
+        int k = i*12+6;
+        a[j] = a[k+3] = src[i].x;
+        a[j+1] = a[k+4] = src[i].y;
+        a[j+2] = a[k+5] = 1;
+        a[j+3] = a[j+4] = a[j+5] = 0;
+        a[k] = a[k+1] = a[k+2] = 0;
+        b[i*2] = dst[i].x;
+        b[i*2+1] = dst[i].y;
+    }
+
+    solve( A, B, X );
+    return M;
+}
+
+void invertAffineTransform(InputArray _matM, OutputArray __iM)
+{
+    Mat matM = _matM.getMat();
+    CV_Assert(matM.rows == 2 && matM.cols == 3);
+    __iM.create(2, 3, matM.type());
+    Mat _iM = __iM.getMat();
+
+    if( matM.type() == CV_32F )
+    {
+        const softfloat* M = matM.ptr<softfloat>();
+        softfloat* iM = _iM.ptr<softfloat>();
+        int step = (int)(matM.step/sizeof(M[0])), istep = (int)(_iM.step/sizeof(iM[0]));
+
+        softdouble D = M[0]*M[step+1] - M[1]*M[step];
+        D = D != 0. ? softdouble(1.)/D : softdouble(0.);
+        softdouble A11 = M[step+1]*D, A22 = M[0]*D, A12 = -M[1]*D, A21 = -M[step]*D;
+        softdouble b1 = -A11*M[2] - A12*M[step+2];
+        softdouble b2 = -A21*M[2] - A22*M[step+2];
+
+        iM[0] = A11; iM[1] = A12; iM[2] = b1;
+        iM[istep] = A21; iM[istep+1] = A22; iM[istep+2] = b2;
+    }
+    else if( matM.type() == CV_64F )
+    {
+        const softdouble* M = matM.ptr<softdouble>();
+        softdouble* iM = _iM.ptr<softdouble>();
+        int step = (int)(matM.step/sizeof(M[0])), istep = (int)(_iM.step/sizeof(iM[0]));
+
+        softdouble D = M[0]*M[step+1] - M[1]*M[step];
+        D = D != 0. ? softdouble(1.)/D : softdouble(0.);
+        softdouble A11 = M[step+1]*D, A22 = M[0]*D, A12 = -M[1]*D, A21 = -M[step]*D;
+        softdouble b1 = -A11*M[2] - A12*M[step+2];
+        softdouble b2 = -A21*M[2] - A22*M[step+2];
+
+        iM[0] = A11; iM[1] = A12; iM[2] = b1;
+        iM[istep] = A21; iM[istep+1] = A22; iM[istep+2] = b2;
+    }
+    else
+        CV_Error( cv::Error::StsUnsupportedFormat, "" );
+}
+
+cv::Mat getPerspectiveTransform(InputArray _src, InputArray _dst, int solveMethod)
+{
+    Mat src = _src.getMat(), dst = _dst.getMat();
+    CV_Assert(src.checkVector(2, CV_32F) == 4 && dst.checkVector(2, CV_32F) == 4);
+    return getPerspectiveTransform((const Point2f*)src.data, (const Point2f*)dst.data, solveMethod);
+}
+
+cv::Mat getAffineTransform(InputArray _src, InputArray _dst)
+{
+    Mat src = _src.getMat(), dst = _dst.getMat();
+    CV_Assert(src.checkVector(2, CV_32F) == 3 && dst.checkVector(2, CV_32F) == 3);
+    return getAffineTransform((const Point2f*)src.data, (const Point2f*)dst.data);
+}
+
+float intersectConvexConvex( InputArray _p1, InputArray _p2, OutputArray _p12, bool handleNested )
 {
     CV_INSTRUMENT_REGION();
 
@@ -554,3 +1028,5 @@ float cv::intersectConvexConvex( InputArray _p1, InputArray _p2, OutputArray _p1
     }
     return (float)fabs(area);
 }
+
+} // namespace cv
