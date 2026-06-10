@@ -1682,11 +1682,12 @@ Context& initializeContextFromGL()
 
                 if(extensionSize > 0)
                 {
-                    std::string devString(extensionSize+1, 0);
-                    char* extensionsBuffer = const_cast<char*>(devString.c_str());
-                    status = clGetDeviceInfo(devices[j], CL_DEVICE_EXTENSIONS, extensionSize, extensionsBuffer, &extensionSize);
-                    if (status != CL_SUCCESS)
-                        continue;
+std::string devString(extensionSize, '\0');
+status = clGetDeviceInfo(devices[j], CL_DEVICE_EXTENSIONS, devString.size(), &devString[0], &extensionSize);
+if (status != CL_SUCCESS)
+    continue;
+if (extensionSize > 0 && devString.size() >= extensionSize)
+    devString.resize(extensionSize - 1);
 
                     size_t oldPos = 0;
                     size_t spacePos = devString.find(' ', oldPos); // extensions string is space delimited
