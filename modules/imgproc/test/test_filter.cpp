@@ -1871,7 +1871,7 @@ TEST(Imgproc_Sobel, accuracy) { CV_SobelTest test; test.safe_run(); }
 TEST(Imgproc_SpatialGradient, accuracy) { CV_SpatialGradientTest test; test.safe_run(); }
 
 // Sobel2D must match the two separate cv::Sobel calls it fuses: bit-exact for
-// ddepth=CV_16S/scale=1, and within float rounding for ddepth=CV_32F/scale.
+// ddepth=CV_16S/scale=1 and ddepth=CV_32F (scale folded into kernels like cv::Sobel).
 TEST(Imgproc_Sobel2D, accuracy)
 {
     RNG& rng = TS::ptr()->get_rng();
@@ -1899,8 +1899,7 @@ TEST(Imgproc_Sobel2D, accuracy)
 
                         EXPECT_EQ(CV_MAKETYPE(ddepth, 1), dx.type());
                         EXPECT_EQ(sz, dx.size());
-                        // CV_16S/scale=1 is bit-exact; CV_32F allows float rounding.
-                        double tol = (ddepth == CV_16S) ? 0.0 : 1e-3;
+                        double tol = 0.0;
                         EXPECT_LE(cvtest::norm(dx, dxRef, NORM_INF), tol)
                             << "dx: ksize=" << ksize << " border=" << border
                             << " ddepth=" << ddepth << " scale=" << scale << " size=" << sz;
@@ -1938,9 +1937,8 @@ TEST(Imgproc_Sobel2D, accuracy)
                     Sobel2D(roi, dx, dy, ks, ddepth, 1, b);
                     Sobel(roi, dxRef, ddepth, 1, 0, ks, 1, 0, b);
                     Sobel(roi, dyRef, ddepth, 0, 1, ks, 1, 0, b);
-                    double tol = (ddepth == CV_16S) ? 0.0 : 1e-3;
-                    EXPECT_LE(cvtest::norm(dx, dxRef, NORM_INF), tol) << "ROI dx ksize=" << ks << " border=" << b << " ddepth=" << ddepth;
-                    EXPECT_LE(cvtest::norm(dy, dyRef, NORM_INF), tol) << "ROI dy ksize=" << ks << " border=" << b << " ddepth=" << ddepth;
+                    EXPECT_LE(cvtest::norm(dx, dxRef, NORM_INF), 0.0) << "ROI dx ksize=" << ks << " border=" << b << " ddepth=" << ddepth;
+                    EXPECT_LE(cvtest::norm(dy, dyRef, NORM_INF), 0.0) << "ROI dy ksize=" << ks << " border=" << b << " ddepth=" << ddepth;
                 }
     }
 

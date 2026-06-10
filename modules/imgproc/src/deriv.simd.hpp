@@ -58,10 +58,10 @@ template<> struct SobelStore<float>
     inline void scalar(float* p, int j, int v) const { p[j] = s * (float)v; }
 };
 
-// CV_32F output must follow sepFilter2D uchar->float row pass + float column pass
-// (see RowFilter<uchar,float> and ColumnFilter<float,float>) so results match
-// cv::Sobel(..., CV_32F, ..., scale, ...) bit-for-bit. int16 intermediates used
-// for CV_16S are not numerically identical once scale is applied as float.
+// CV_32F output must match cv::Sobel(..., CV_32F, ..., scale, ...), which folds scale
+// into the smoothing kernel (ky for dx, kx for dy) before sepFilter2D — not as a final
+// post-multiply. dx column: odx = (2*scale)*hd0 + scale*(hdm+hdp); dy row: hs already
+// carries scale, then ody = hsp - hsm.
 static void Sobel3x3_f32(const uchar* src, size_t src_step, int srcRows, int srcCols,
                          int rowStart, int rowEnd,
                          float* dx, float* dy, size_t dst_step, float scale, int borderType)
@@ -69,6 +69,11 @@ static void Sobel3x3_f32(const uchar* src, size_t src_step, int srcRows, int src
     const int width = srcCols;
     if (width <= 0 || rowEnd <= rowStart)
         return;
+
+    const float sk0 = 2.f * scale; // scaled [1,2,1] row kernel center tap
+    const float sk1 = scale;       // scaled [1,2,1] row kernel side taps
+    const float dk0 = sk0;         // scaled [1,2,1] column kernel center tap (dx)
+    const float dk1 = sk1;         // scaled [1,2,1] column kernel side taps (dx)
 
     cv::AutoBuffer<float> _buf((size_t)width * 6);
     float* hd[3];
@@ -86,25 +91,27 @@ static void Sobel3x3_f32(const uchar* src, size_t src_step, int srcRows, int src
         {
             float l = (float)s[cidx(-1)], c = (float)s[0], r = (float)s[cidx(1)];
             hdo[0] = r - l;
-            hso[0] = l + 2.f * c + r;
+            hso[0] = sk0 * c + sk1 * (l + r);
         }
 
         int j = 1;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
+        v_float32 v_sk0 = vx_setall_f32(sk0);
+        v_float32 v_sk1 = vx_setall_f32(sk1);
         for (; j + VTraits<v_float32>::vlanes() <= width - 1; j += VTraits<v_float32>::vlanes())
         {
             v_float32 l = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(s + j - 1)));
             v_float32 c = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(s + j)));
             v_float32 r = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(s + j + 1)));
             v_store(hdo + j, v_sub(r, l));
-            v_store(hso + j, v_add(v_add(l, r), v_add(c, c)));
+            v_store(hso + j, v_muladd(v_add(l, r), v_sk1, v_mul(c, v_sk0)));
         }
 #endif
         for (; j < width - 1; ++j)
         {
             float l = (float)s[j - 1], c = (float)s[j], r = (float)s[j + 1];
             hdo[j] = r - l;
-            hso[j] = l + 2.f * c + r;
+            hso[j] = sk0 * c + sk1 * (l + r);
         }
 
         if (width > 1)
@@ -112,7 +119,7 @@ static void Sobel3x3_f32(const uchar* src, size_t src_step, int srcRows, int src
             int x = width - 1;
             float l = (float)s[x - 1], c = (float)s[x], r = (float)s[cidx(x + 1)];
             hdo[x] = r - l;
-            hso[x] = l + 2.f * c + r;
+            hso[x] = sk0 * c + sk1 * (l + r);
         }
     };
 
@@ -122,19 +129,19 @@ static void Sobel3x3_f32(const uchar* src, size_t src_step, int srcRows, int src
     {
         int j = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-        v_float32 vs = vx_setall_f32(scale);
+        v_float32 v_dk0 = vx_setall_f32(dk0);
+        v_float32 v_dk1 = vx_setall_f32(dk1);
         for (; j <= width - VTraits<v_float32>::vlanes(); j += VTraits<v_float32>::vlanes())
         {
-            v_float32 sum_dx = v_add(v_add(vx_load(hdm + j), vx_load(hdp + j)),
-                                     v_add(vx_load(hd0 + j), vx_load(hd0 + j)));
-            v_store(odx + j, v_mul(sum_dx, vs));
-            v_store(ody + j, v_mul(v_sub(vx_load(hsp + j), vx_load(hsm + j)), vs));
+            v_float32 hd0v = vx_load(hd0 + j);
+            v_store(odx + j, v_muladd(v_add(vx_load(hdm + j), vx_load(hdp + j)), v_dk1, v_mul(hd0v, v_dk0)));
+            v_store(ody + j, v_sub(vx_load(hsp + j), vx_load(hsm + j)));
         }
 #endif
         for (; j < width; ++j)
         {
-            odx[j] = scale * (hdm[j] + 2.f * hd0[j] + hdp[j]);
-            ody[j] = scale * (hsp[j] - hsm[j]);
+            odx[j] = dk0 * hd0[j] + dk1 * (hdm[j] + hdp[j]);
+            ody[j] = hsp[j] - hsm[j];
         }
     };
 
@@ -165,6 +172,13 @@ static void Sobel5x5_f32(const uchar* src, size_t src_step, int srcRows, int src
     if (width <= 0 || rowEnd <= rowStart)
         return;
 
+    const float sk0 = 6.f * scale;
+    const float sk1 = 4.f * scale;
+    const float sk2 = scale;
+    const float dk0 = sk0;
+    const float dk1 = sk1;
+    const float dk2 = sk2;
+
     cv::AutoBuffer<float> _buf((size_t)width * 10);
     float* hd[5];
     float* hs[5];
@@ -183,13 +197,16 @@ static void Sobel5x5_f32(const uchar* src, size_t src_step, int srcRows, int src
             float m2 = (float)s[cidx(x - 2)], m1 = (float)s[cidx(x - 1)], c = (float)s[x];
             float p1 = (float)s[cidx(x + 1)], p2 = (float)s[cidx(x + 2)];
             hdo[x] = p2 + 2.f * p1 - 2.f * m1 - m2;
-            hso[x] = m2 + 4.f * m1 + 6.f * c + 4.f * p1 + p2;
+            hso[x] = sk2 * (m2 + p2) + sk1 * (m1 + p1) + sk0 * c;
         };
 
         int j = 0;
         for (; j < 2 && j < width; ++j)
             scalarCol(j);
 #if (CV_SIMD || CV_SIMD_SCALABLE)
+        v_float32 v_sk0 = vx_setall_f32(sk0);
+        v_float32 v_sk1 = vx_setall_f32(sk1);
+        v_float32 v_sk2 = vx_setall_f32(sk2);
         for (; j + VTraits<v_float32>::vlanes() <= width - 2; j += VTraits<v_float32>::vlanes())
         {
             v_float32 m2 = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(s + j - 2)));
@@ -198,8 +215,8 @@ static void Sobel5x5_f32(const uchar* src, size_t src_step, int srcRows, int src
             v_float32 p1 = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(s + j + 1)));
             v_float32 p2 = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(s + j + 2)));
             v_store(hdo + j, v_sub(v_sub(v_add(p2, v_add(p1, p1)), v_add(m1, m1)), m2));
-            v_store(hso + j, v_add(v_add(v_add(m2, p2), v_mul(vx_setall_f32(4.f), v_add(m1, p1))),
-                                   v_mul(vx_setall_f32(6.f), c)));
+            v_store(hso + j, v_muladd(v_add(m2, p2), v_sk2,
+                                      v_muladd(v_add(m1, p1), v_sk1, v_mul(c, v_sk0))));
         }
 #endif
         for (; j < width; ++j)
@@ -214,26 +231,24 @@ static void Sobel5x5_f32(const uchar* src, size_t src_step, int srcRows, int src
     {
         int j = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-        v_float32 vs = vx_setall_f32(scale);
-        v_float32 v4 = vx_setall_f32(4.f);
-        v_float32 v6 = vx_setall_f32(6.f);
+        v_float32 v_dk0 = vx_setall_f32(dk0);
+        v_float32 v_dk1 = vx_setall_f32(dk1);
+        v_float32 v_dk2 = vx_setall_f32(dk2);
         v_float32 v2 = vx_setall_f32(2.f);
         for (; j <= width - VTraits<v_float32>::vlanes(); j += VTraits<v_float32>::vlanes())
         {
-            v_float32 sum_dx = v_add(v_add(vx_load(hdm2 + j), vx_load(hdp2 + j)),
-                                     v_mul(v4, v_add(vx_load(hdm1 + j), vx_load(hdp1 + j))));
-            sum_dx = v_add(sum_dx, v_mul(v6, vx_load(hd0 + j)));
-            v_store(odx + j, v_mul(sum_dx, vs));
-
-            v_float32 sum_dy = v_add(v_sub(vx_load(hsp2 + j), vx_load(hsm2 + j)),
-                                     v_mul(v2, v_sub(vx_load(hsp1 + j), vx_load(hsm1 + j))));
-            v_store(ody + j, v_mul(sum_dy, vs));
+            v_float32 hd0v = vx_load(hd0 + j);
+            v_store(odx + j, v_muladd(v_add(vx_load(hdm2 + j), vx_load(hdp2 + j)), v_dk2,
+                                      v_muladd(v_add(vx_load(hdm1 + j), vx_load(hdp1 + j)), v_dk1,
+                                               v_mul(hd0v, v_dk0))));
+            v_store(ody + j, v_add(v_sub(vx_load(hsp2 + j), vx_load(hsm2 + j)),
+                                   v_mul(v2, v_sub(vx_load(hsp1 + j), vx_load(hsm1 + j)))));
         }
 #endif
         for (; j < width; ++j)
         {
-            odx[j] = scale * (hdm2[j] + 4.f * hdm1[j] + 6.f * hd0[j] + 4.f * hdp1[j] + hdp2[j]);
-            ody[j] = scale * (-hsm2[j] - 2.f * hsm1[j] + 2.f * hsp1[j] + hsp2[j]);
+            odx[j] = dk0 * hd0[j] + dk1 * (hdm1[j] + hdp1[j]) + dk2 * (hdm2[j] + hdp2[j]);
+            ody[j] = (hsp2[j] - hsm2[j]) + 2.f * (hsp1[j] - hsm1[j]);
         }
     };
 
