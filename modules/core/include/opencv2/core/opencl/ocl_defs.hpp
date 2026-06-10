@@ -10,6 +10,7 @@
 
 #include "opencv2/core/utility.hpp"
 #include "cvconfig.h"
+#include "opencv2/core/hal/backend_registry.hpp"
 
 namespace cv { namespace ocl {
 #ifdef HAVE_OPENCL
@@ -20,6 +21,58 @@ static inline bool isOpenCLActivated() { return false; }
 #endif
 }} // namespace
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CV_GPU_RUN — dispatches to the first registered GPU backend that supports
+// op_id.  Mirrors the structure of CV_OCL_RUN_ below.
+// Must appear before CV_OCL_RUN in this file.
+// ─────────────────────────────────────────────────────────────────────────────
+
+#ifdef CV_GPU_RUN_VERBOSE
+#define CV_GPU_RUN_(op_id, src, dst, ...)                                       \
+    {                                                                           \
+        cv::hal::Backend* _cv_gpu_b = cv::hal::findBackend(op_id);              \
+        if (_cv_gpu_b && _cv_gpu_b->run((op_id), (src), (dst)))                 \
+        {                                                                       \
+            printf("%s: GPU backend is running\n", CV_Func);                    \
+            fflush(stdout);                                                     \
+            return __VA_ARGS__;                                                 \
+        }                                                                       \
+        else                                                                    \
+        {                                                                       \
+            printf("%s: CPU implementation is running\n", CV_Func);             \
+            fflush(stdout);                                                     \
+        }                                                                       \
+    }
+#elif defined CV_GPU_RUN_ASSERT
+#define CV_GPU_RUN_(op_id, src, dst, ...)                                       \
+    {                                                                           \
+        cv::hal::Backend* _cv_gpu_b = cv::hal::findBackend(op_id);              \
+        if (_cv_gpu_b)                                                          \
+        {                                                                       \
+            if (_cv_gpu_b->run((op_id), (src), (dst)))                          \
+            {                                                                   \
+                return __VA_ARGS__;                                             \
+            }                                                                   \
+            else                                                                \
+            {                                                                   \
+                CV_Error(cv::Error::StsAssert,                                  \
+                         "GPU backend run() returned false for this op_id");    \
+            }                                                                   \
+        }                                                                       \
+    }
+#else
+#define CV_GPU_RUN_(op_id, src, dst, ...)                                       \
+    {                                                                           \
+        cv::hal::Backend* _cv_gpu_b = cv::hal::findBackend(op_id);              \
+        if (_cv_gpu_b && _cv_gpu_b->run((op_id), (src), (dst)))                 \
+        {                                                                       \
+            return __VA_ARGS__;                                                 \
+        }                                                                       \
+    }
+#endif
+
+#define CV_GPU_RUN(op_id, src, dst) CV_GPU_RUN_(op_id, src, dst)
 
 //#define CV_OPENCL_RUN_ASSERT
 
