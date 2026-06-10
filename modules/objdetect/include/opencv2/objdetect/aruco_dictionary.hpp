@@ -102,16 +102,6 @@ class CV_EXPORTS_W_SIMPLE Dictionary {
     /** @brief Get ground truth bits float
       */
      CV_WRAP Mat getMarkerBits(int markerId, int rotationId = 0) const;
-
-private:
-    /** @brief Shared cell to pixel ratio distance used by identify() and getDistanceToId().
-     *
-     * Counts the inner cells whose ratio differs from the marker's bit value by more than
-     * `validBitIdThreshold`. When `allRotations` is set, the four rotations are tested and
-     * `rotation` returns the one yielding the smallest distance.
-     */
-    int getDistanceToIdImpl(const Mat& onlyCellPixelRatio, int id, bool allRotations,
-                            int& rotation, float validBitIdThreshold) const;
 };
 
 

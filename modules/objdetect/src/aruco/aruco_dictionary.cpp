@@ -15,6 +15,84 @@ namespace aruco {
 
 using namespace std;
 
+struct CellBitMasks {
+    CellBitMasks(const Mat &onlyCellPixelRatio, int markerSize, float validBitIdThreshold)
+        : s((markerSize * markerSize + 8 - 1) / 8),
+          totalCells(markerSize * markerSize),
+          temp(4 * s),
+          not0(temp.data()), not1(not0 + s), notXor(not1 + s), temp0(temp.data() + 3 * s) {
+        uint8_t* not0Writable = temp.data();
+        uint8_t* not1Writable = not0Writable + s;
+        uint8_t* notXorWritable = not1Writable + s;
+
+        // Fill bit masks of cells that are not black (not0) and not white (not1).
+        int not0Byte = 0, not1Byte = 0, currentByte = 0, currentBit = 0;
+        for(int j = 0; j < markerSize; j++) {
+            const float* cellPixelRatioRow = onlyCellPixelRatio.ptr<float>(j);
+            for(int i = 0; i < markerSize; i++) {
+                not0Byte <<= 1; not1Byte <<= 1;
+                if(cellPixelRatioRow[i] > validBitIdThreshold) not0Byte |= 1;
+                if(cellPixelRatioRow[i] < 1 - validBitIdThreshold) not1Byte |= 1;
+                ++currentBit;
+                if(currentBit == 8) {
+                    not0Writable[currentByte] = (uchar)not0Byte;
+                    not1Writable[currentByte] = (uchar)not1Byte;
+                    not0Byte = not1Byte = 0;
+                    ++currentByte;
+                    currentBit = 0;
+                }
+            }
+        }
+        if(currentBit != 0) {
+            not0Writable[currentByte] = (uchar)not0Byte;
+            not1Writable[currentByte] = (uchar)not1Byte;
+        }
+
+        // Computing: notXor = not0 ^ not1
+        hal::xor8u(not0, s, not1, s, notXorWritable, s, s, 1, nullptr);
+    }
+
+    CellBitMasks(const CellBitMasks&) = delete;
+    CellBitMasks& operator=(const CellBitMasks&) = delete;
+
+    // Smallest Hamming distance between these cell masks and dictionary marker `id`,
+    // searching the tested rotations; `rotation` returns the best one.
+    // Mutates the internal buffer (temp0).
+    int hammingDistanceToId(const Mat& bytesList, int id, bool allRotations, int& rotation) {
+        CV_Assert(id >= 0 && id < bytesList.rows);
+
+        const unsigned int nRotations = allRotations ? 4u : 1u;
+        int currentMinDistance = totalCells + 1;
+        rotation = -1;
+
+        const uchar* bytesRot = bytesList.ptr(id);
+        for(unsigned int r = 0; r < nRotations; r++, bytesRot += s) {
+            // Error if (marker is 0 and input is not 0) or (marker is 1 and input is not 1)
+            // i.e.: (!bytesRot && not0) || (bytesRot && not1)
+            // This is equivalent to: not0 ^ ((not0 ^ not1) & bytesRot)
+            // Computing: temp0 = (not0 ^ not1) & bytesRot
+            hal::and8u(notXor, s, bytesRot, s, temp0, s, s, 1, nullptr);
+            // Computing the final result (xor is performed internally).
+            int currentHamming = cv::hal::normHamming(not0, temp0, s);
+
+            if(currentHamming < currentMinDistance) {
+                currentMinDistance = currentHamming;
+                rotation = static_cast<int>(r);
+                // Break for perfect distance.
+                if(currentMinDistance == 0) break;
+            }
+        }
+
+        return currentMinDistance;
+    }
+
+    const int s; // bytes per rotation
+    const int totalCells;
+    AutoBuffer<uint8_t> temp;
+    const uint8_t *not0, *not1, *notXor;
+    uint8_t *temp0;  // internal scratch workspace
+};
+
 Dictionary::Dictionary(): markerSize(0), maxCorrectionBits(0) {}
 
 
@@ -23,40 +101,6 @@ Dictionary::Dictionary(const Mat &_bytesList, int _markerSize, int _maxcorr) {
     maxCorrectionBits = _maxcorr;
     bytesList = _bytesList;
 }
-
-int Dictionary::getDistanceToIdImpl(const Mat& onlyCellPixelRatio, int id, bool allRotations,
-                                    int& rotation, float validBitIdThreshold) const {
-    CV_Assert(onlyCellPixelRatio.rows == markerSize && onlyCellPixelRatio.cols == markerSize);
-    CV_Assert(onlyCellPixelRatio.type() == CV_32FC1);
-    CV_Assert(id >= 0 && id < bytesList.rows);
-
-    const unsigned int nRotations = allRotations ? 4u : 1u;
-    int currentMinDistance = (int)onlyCellPixelRatio.total() + 1;
-    rotation = -1;
-
-    for(unsigned int r = 0; r < nRotations; r++) {
-        Mat bitsRot = getBitsFromByteList(bytesList.rowRange(id, id + 1), markerSize, (int)r);
-
-        int currentHamming = 0;
-        for(int i = 0; i < markerSize; i++) {
-            for(int j = 0; j < markerSize; j++) {
-                // If detected bit is too far from the ground truth, consider it false.
-                if(fabs(onlyCellPixelRatio.at<float>(i, j) -
-                        static_cast<float>(bitsRot.at<uchar>(i, j))) > validBitIdThreshold) {
-                    currentHamming++;
-                }
-            }
-        }
-
-        if(currentHamming < currentMinDistance) {
-            currentMinDistance = currentHamming;
-            rotation = static_cast<int>(r);
-        }
-    }
-
-    return currentMinDistance;
-}
-
 
 bool Dictionary::readDictionary(const cv::FileNode& fn) {
     int nMarkers = 0, _markerSize = 0;
@@ -110,35 +154,7 @@ bool Dictionary::identify(const Mat &onlyCellPixelRatio, CV_OUT int &idx, CV_OUT
     CV_Assert(onlyCellPixelRatio.rows == markerSize && onlyCellPixelRatio.cols == markerSize);
     CV_Assert(onlyCellPixelRatio.type() == CV_32FC1);
 
-    // Fill bit masks of cells that are not black (not0) and not white (not1).
-    const int s = (markerSize * markerSize + 8 - 1) / 8;
-    AutoBuffer<uint8_t> temp(4 * s);
-    uint8_t* not0 = temp.data(), * not1 = not0 + s;
-    uint8_t not0Byte = 0, not1Byte = 0;
-    int currentByte = 0, currentBit = 0;
-    for(int j = 0; j < markerSize; j++) {
-        const float* cellPixelRatioRow = onlyCellPixelRatio.ptr<float>(j);
-        for(int i = 0; i < markerSize; i++) {
-            not0Byte <<= 1; not1Byte <<= 1;
-            if(cellPixelRatioRow[i] > validBitIdThreshold) not0Byte |= 1;
-            if(cellPixelRatioRow[i] < 1 - validBitIdThreshold) not1Byte |= 1;
-            ++currentBit;
-            if(currentBit == 8) {
-                not0[currentByte] = not0Byte;
-                not1[currentByte] = not1Byte;
-                not0Byte = not1Byte = 0;
-                ++currentByte;
-                currentBit = 0;
-            }
-        }
-    }
-    if (currentBit != 0) {
-        not0[currentByte] = not0Byte;
-        not1[currentByte] = not1Byte;
-    }
-    uint8_t* notXor = not1 + s, * temp0 = notXor + s;
-    // Computing: notXor = not0 ^ not1
-    hal::xor8u(not0, s, not1, s, notXor, s, s, 1, nullptr);
+    CellBitMasks cellBitMasks(onlyCellPixelRatio, markerSize, validBitIdThreshold);
 
     int maxCorrectionRecalculed = int(double(maxCorrectionBits) * maxCorrectionRate);
 
@@ -147,8 +163,7 @@ bool Dictionary::identify(const Mat &onlyCellPixelRatio, CV_OUT int &idx, CV_OUT
     // search closest marker in dict
     for(int m = 0; m < bytesList.rows; m++) {
         int currentRotation = -1;
-        int currentMinDistance = getDistanceToIdImpl(onlyCellPixelRatio, m, true,
-                                                     currentRotation, validBitIdThreshold);
+        int currentMinDistance = cellBitMasks.hammingDistanceToId(bytesList, m, true, currentRotation);
 
         // if maxCorrection is fulfilled, return this one
         if(currentMinDistance <= maxCorrectionRecalculed) {
@@ -195,8 +210,14 @@ int Dictionary::getDistanceToId(InputArray bits, int id, bool allRotations) cons
 
 int Dictionary::getDistanceToId(InputArray onlyCellPixelRatio, int id, bool allRotations, float validBitIdThreshold) const {
 
+    Mat onlyCellPixelRatioMat = onlyCellPixelRatio.getMat();
+    CV_Assert(onlyCellPixelRatioMat.rows == markerSize && onlyCellPixelRatioMat.cols == markerSize);
+    CV_Assert(onlyCellPixelRatioMat.type() == CV_32FC1);
+    CV_Assert(id >= 0 && id < bytesList.rows);
+
     int rotation = -1;
-    return getDistanceToIdImpl(onlyCellPixelRatio.getMat(), id, allRotations, rotation, validBitIdThreshold);
+    CellBitMasks cellBitMasks(onlyCellPixelRatioMat, markerSize, validBitIdThreshold);
+    return cellBitMasks.hammingDistanceToId(bytesList, id, allRotations, rotation);
 }
 
 

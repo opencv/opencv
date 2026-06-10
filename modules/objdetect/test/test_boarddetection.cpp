@@ -507,6 +507,25 @@ TEST(CV_ArucoDictionary, getDistanceToIdCellPixelRatio) {
     EXPECT_EQ(1, dictionary.getDistanceToId(rejectedRatio, markerId, false, validBitIdThreshold));
 }
 
+// 5x5 markers leave one meaningful bit in the final packed byte. Flip only that cell
+// far enough from its expected value and verify that the ratio distance counts it.
+TEST(CV_ArucoDictionary, getDistanceToIdCellPixelRatioPartialByte) {
+    const int markerId = 15;
+    const float validBitIdThreshold = 0.49f;
+    aruco::Dictionary dictionary = aruco::getPredefinedDictionary(aruco::DICT_5X5_50);
+
+    Mat markerRatio = dictionary.getMarkerBits(markerId);
+    EXPECT_EQ(0, dictionary.getDistanceToId(markerRatio, markerId, false, validBitIdThreshold));
+
+    Mat rotatedMarkerRatio = dictionary.getMarkerBits(markerId, 1);
+    EXPECT_EQ(0, dictionary.getDistanceToId(rotatedMarkerRatio, markerId, true, validBitIdThreshold));
+
+    Mat rejectedRatio = markerRatio.clone();
+    float& lastCellRatio = rejectedRatio.ptr<float>(dictionary.markerSize - 1)[dictionary.markerSize - 1];
+    lastCellRatio = lastCellRatio > 0.5f ? 0.4f : 0.6f;
+    EXPECT_EQ(1, dictionary.getDistanceToId(rejectedRatio, markerId, false, validBitIdThreshold));
+}
+
 TEST(CV_ArucoDictionary, identifyBitMask) {
     const int markerId = 7;
     aruco::Dictionary dictionary = aruco::getPredefinedDictionary(aruco::DICT_4X4_50);
