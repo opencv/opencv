@@ -46,18 +46,9 @@
 #define OPENCV_CORE_HAL_BACKEND_HPP
 
 #include "opencv2/core/cvdef.h"
-#include "opencv2/core/types.hpp"
+#include "opencv2/core/mat.hpp"
 
-namespace cv {
-
-// Forward declarations — avoid pulling in the full mat.hpp here.
-class MatAllocator;
-class _InputArray;
-class _OutputArray;
-typedef const _InputArray&  InputArray;
-typedef       _OutputArray& OutputArray;
-
-namespace hal {
+namespace cv { namespace hal {
 
 //! @addtogroup core_hal_backend
 //! @{
