@@ -847,13 +847,14 @@ class ObjectiveCWrapperGenerator(object):
             objc_type = enumType.rsplit(".", 1)[-1]
             if objc_type in enum_ignore_list:
                 return
-            if not constinfo.classname:
+            original_objc_type = objc_type
+            if not constinfo.classname or constinfo.classname == objc_type:
                 module_fix = enum_fix.get(self.Module, {})
                 objc_type = module_fix.get(objc_type, objc_type)
                 objc_type = enum_fix.get(objc_type, objc_type)
             elif constinfo.classname in enum_fix:
                 objc_type = enum_fix[constinfo.classname].get(objc_type, objc_type)
-            import_module = constinfo.classname if constinfo.classname and constinfo.classname != objc_type else self.Module
+            import_module = constinfo.classname if constinfo.classname and constinfo.classname != original_objc_type else self.Module
             type_dict[ctype] = { "cast_from" : "int",
                                  "cast_to" : get_cname(enumType),
                                  "objc_type" : objc_type,
