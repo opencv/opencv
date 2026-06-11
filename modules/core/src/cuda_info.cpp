@@ -158,9 +158,21 @@ namespace
 
     CudaArch::CudaArch()
     {
+#if defined(__HIP_PLATFORM_AMD__) || defined(__HIPCC__)
+        // On AMD ROCm/HIP the per architecture CUDA arch lists are not populated.
+        // The supported AMD targets (CDNA gfx9, RDNA gfx10+) provide the full set
+        // of CUDA compute features the cuda modules query (global/shared atomics,
+        // warp shuffle, fp16, ...), so report a capability level above every
+        // FeatureSet so deviceSupports()/builtWith() answer correctly.
+        const int amd_feature_level = 90;
+        bin.push_back(amd_feature_level);
+        ptx.push_back(amd_feature_level);
+        features.push_back(amd_feature_level);
+#else
         fromStr(CUDA_ARCH_BIN, bin);
         fromStr(CUDA_ARCH_PTX, ptx);
         fromStr(CUDA_ARCH_FEATURES, features);
+#endif
     }
 
     bool CudaArch::builtWith(FeatureSet feature_set) const
@@ -1038,7 +1050,9 @@ void cv::cuda::printShortCudaDeviceInfo(int device)
 ////////////////////////////////////////////////////////////////////////
 // Error handling
 
-#ifdef HAVE_CUDA
+// The NPP and CUDA driver API error tables are NVIDIA specific; there is no NPP
+// on the AMD ROCm/HIP path, so the message lookups return an empty string there.
+#if defined(HAVE_CUDA) && !(defined(__HIP_PLATFORM_AMD__) || defined(__HIPCC__))
 
 namespace
 {
@@ -1215,7 +1229,7 @@ namespace
 
 String cv::cuda::getNppErrorMessage(int code)
 {
-#ifndef HAVE_CUDA
+#if !defined(HAVE_CUDA) || defined(__HIP_PLATFORM_AMD__) || defined(__HIPCC__)
     CV_UNUSED(code);
     return String();
 #else
@@ -1225,7 +1239,7 @@ String cv::cuda::getNppErrorMessage(int code)
 
 String cv::cuda::getCudaDriverApiErrorMessage(int code)
 {
-#ifndef HAVE_CUDA
+#if !defined(HAVE_CUDA) || defined(__HIP_PLATFORM_AMD__) || defined(__HIPCC__)
     CV_UNUSED(code);
     return String();
 #else

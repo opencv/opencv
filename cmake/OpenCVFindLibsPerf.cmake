@@ -68,6 +68,17 @@ To eliminate this warning remove WITH_CUDA=ON CMake configuration option.
   endif()
 endif(WITH_CUDA)
 
+# --- HIP (AMD ROCm) ---
+if(WITH_HIP)
+  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectHIP.cmake")
+  if(NOT HAVE_HIP)
+    message(WARNING "OpenCV is not able to find/configure ROCm/HIP (required by WITH_HIP).
+HIP support will be disabled in OpenCV build.
+To eliminate this warning remove WITH_HIP=ON CMake configuration option.
+")
+  endif()
+endif(WITH_HIP)
+
 # --- Eigen ---
 if(WITH_EIGEN AND NOT HAVE_EIGEN)
   if((OPENCV_FORCE_EIGEN_FIND_PACKAGE_CONFIG
