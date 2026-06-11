@@ -2036,8 +2036,8 @@ BriskScaleSpace::subpixel2D(const int s_0_0, const int s_0_1, const int s_0_2, c
   int tmp4 = tmp3 - 2 * tmp2;
   int coeff3 = -3 * (tmp3 + s_0_1 - s_2_1);
   int coeff4 = -3 * (tmp4 + s_1_0 - s_1_2);
-  int coeff5 = (s_0_0 - s_0_2 - s_2_0 + s_2_2) << 2;
-  int coeff6 = -(s_0_0 + s_0_2 - ((s_1_0 + s_0_1 + s_1_2 + s_2_1) << 1) - 5 * s_1_1 + s_2_0 + s_2_2) << 1;
+  int coeff5 = (s_0_0 - s_0_2 - s_2_0 + s_2_2) * 4;
+  int coeff6 = -(s_0_0 + s_0_2 - ((s_1_0 + s_0_1 + s_1_2 + s_2_1) * 2) - 5 * s_1_1 + s_2_0 + s_2_2) * 2;
 
   // 2nd derivative test:
   int H_det = 4 * coeff1 * coeff2 - coeff5 * coeff5;
