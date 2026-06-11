@@ -71,6 +71,11 @@ Mat _InputArray::getMat_(int i) const
 
     if( k == UMAT )
     {
+        // GPU HAL note: if this UMat carries a GPU backend pointer,
+        // CV_GPU_RUN should have intercepted the call before getMat_()
+        // was ever reached. Arriving here with a GPU-backed UMat means
+        // no registered backend handled this operation — fall back to
+        // CPU by downloading the data. This is correct behaviour, not a bug.
         const UMat* m = (const UMat*)obj;
         if( i < 0 )
             return m->getMat(accessFlags);
