@@ -74,20 +74,10 @@ static inline bool isOpenCLActivated() { return false; }
     }
 #endif
 
-// CV_GPU_RUN — public macro, returns run()'s bool result (true=1 on success).
-// return true; is a valid implicit bool→int conversion so this compiles
-// cleanly in non-void functions with no warnings under -Wall -Wextra.
-// For void functions use CV_GPU_RUN_ directly.
-#define CV_GPU_RUN(op_id, src, dst, ...)                                            \
-    {                                                                               \
-        cv::hal::Backend* _cv_gpu_b_ = cv::hal::findBackend(op_id);                 \
-        if (_cv_gpu_b_)                                                             \
-        {                                                                           \
-            bool _cv_gpu_res_ =                                                     \
-                _cv_gpu_b_->run((op_id), (src), (dst), ##__VA_ARGS__);             \
-            if (_cv_gpu_res_) { return _cv_gpu_res_; }                              \
-        }                                                                           \
-    }
+// CV_GPU_RUN — public macro, mirrors CV_OCL_RUN convention.
+// Delegates to CV_GPU_RUN_ which handles verbose/assert/normal modes.
+// Bare return; inside CV_GPU_RUN_ is void-safe — correct for cv:: functions.
+#define CV_GPU_RUN(op_id, src, dst, ...) CV_GPU_RUN_(op_id, src, dst, ##__VA_ARGS__)
 
 //#define CV_OPENCL_RUN_ASSERT
 
