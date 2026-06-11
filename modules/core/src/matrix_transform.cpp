@@ -557,7 +557,6 @@ void transposeND(InputArray src_, const std::vector<int>& order, OutputArray dst
     {
         CV_CheckEQ(static_cast<size_t>(order_[i]), i, "New order should be a valid permutation of the old one");
     }
-    
     bool isIdentityOrder = true;
     for (size_t i = 0; i < order.size(); ++i)
     {
