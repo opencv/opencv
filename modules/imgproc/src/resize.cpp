@@ -3640,57 +3640,26 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
 #define IPP_RESIZE_PARALLEL 1
 
 #ifdef HAVE_IPP_IW
-class ipp_resizeParallel: public ParallelLoopBody
+// Single parallel body shared by IPP resize (IwiResize) and affine-resize
+// (IwiWarpAffine). The backends differ only in the IPP operation type, in how
+// it is initialised, and in whether the per-tile call takes an explicit border.
+// Templating on the operation type collapses both classes into one definition:
+// the matching Init overload is selected per instantiation (the other is never
+// instantiated), and the border argument is chosen at compile time via
+// if constexpr, so the generated code is identical to the two hand-written
+// classes - no runtime branch and no extra indirection.
+template <typename IwiOp>
+class ipp_resizeParallelT: public ParallelLoopBody
 {
 public:
-    ipp_resizeParallel(::ipp::IwiImage &src, ::ipp::IwiImage &dst, bool &ok):
+    ipp_resizeParallelT(::ipp::IwiImage &src, ::ipp::IwiImage &dst, bool &ok):
         m_src(src), m_dst(dst), m_ok(ok) {}
-    ~ipp_resizeParallel()
-    {
-    }
 
     void Init(IppiInterpolationType inter)
     {
-        iwiResize.InitAlloc(m_src.m_size, m_dst.m_size, m_src.m_dataType, m_src.m_channels, inter, ::ipp::IwiResizeParams(0, 0, 0.75, 4), ippBorderRepl);
+        iwiOp.InitAlloc(m_src.m_size, m_dst.m_size, m_src.m_dataType, m_src.m_channels, inter, ::ipp::IwiResizeParams(0, 0, 0.75, 4), ippBorderRepl);
 
         m_ok = true;
-    }
-
-    virtual void operator() (const Range& range) const CV_OVERRIDE
-    {
-        CV_INSTRUMENT_REGION_IPP();
-
-        if(!m_ok)
-            return;
-
-        try
-        {
-            ::ipp::IwiTile tile = ::ipp::IwiRoi(0, range.start, m_dst.m_size.width, range.end - range.start);
-            CV_INSTRUMENT_FUN_IPP(iwiResize, m_src, m_dst, ippBorderRepl, tile);
-        }
-        catch(const ::ipp::IwException &)
-        {
-            m_ok = false;
-            return;
-        }
-    }
-private:
-    ::ipp::IwiImage &m_src;
-    ::ipp::IwiImage &m_dst;
-
-    mutable ::ipp::IwiResize iwiResize;
-
-    volatile bool &m_ok;
-    const ipp_resizeParallel& operator= (const ipp_resizeParallel&);
-};
-
-class ipp_resizeAffineParallel: public ParallelLoopBody
-{
-public:
-    ipp_resizeAffineParallel(::ipp::IwiImage &src, ::ipp::IwiImage &dst, bool &ok):
-        m_src(src), m_dst(dst), m_ok(ok) {}
-    ~ipp_resizeAffineParallel()
-    {
     }
 
     void Init(IppiInterpolationType inter, double scaleX, double scaleY)
@@ -3701,7 +3670,7 @@ public:
             {0,      scaleY, shift+0.5*scaleY}
         };
 
-        iwiWarpAffine.InitAlloc(m_src.m_size, m_dst.m_size, m_src.m_dataType, m_src.m_channels, coeffs, iwTransForward, inter, ::ipp::IwiWarpAffineParams(0, 0, 0.75), ippBorderRepl);
+        iwiOp.InitAlloc(m_src.m_size, m_dst.m_size, m_src.m_dataType, m_src.m_channels, coeffs, iwTransForward, inter, ::ipp::IwiWarpAffineParams(0, 0, 0.75), ippBorderRepl);
 
         m_ok = true;
     }
@@ -3716,7 +3685,10 @@ public:
         try
         {
             ::ipp::IwiTile tile = ::ipp::IwiRoi(0, range.start, m_dst.m_size.width, range.end - range.start);
-            CV_INSTRUMENT_FUN_IPP(iwiWarpAffine, m_src, m_dst, tile);
+            if constexpr (std::is_same_v<IwiOp, ::ipp::IwiResize>)
+                CV_INSTRUMENT_FUN_IPP(iwiOp, m_src, m_dst, ippBorderRepl, tile);
+            else
+                CV_INSTRUMENT_FUN_IPP(iwiOp, m_src, m_dst, tile);
         }
         catch(const ::ipp::IwException &)
         {
@@ -3728,11 +3700,14 @@ private:
     ::ipp::IwiImage &m_src;
     ::ipp::IwiImage &m_dst;
 
-    mutable ::ipp::IwiWarpAffine iwiWarpAffine;
+    mutable IwiOp iwiOp;
 
     volatile bool &m_ok;
-    const ipp_resizeAffineParallel& operator= (const ipp_resizeAffineParallel&);
+    ipp_resizeParallelT& operator= (const ipp_resizeParallelT&);
 };
+
+typedef ipp_resizeParallelT< ::ipp::IwiResize>     ipp_resizeParallel;
+typedef ipp_resizeParallelT< ::ipp::IwiWarpAffine> ipp_resizeAffineParallel;
 #endif
 
 static bool ipp_resize(const uchar * src_data, size_t src_step, int src_width, int src_height,
