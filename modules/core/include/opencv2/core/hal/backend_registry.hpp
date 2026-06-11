@@ -33,6 +33,14 @@ CV_EXPORTS Backend* findBackend(int op_id);
 //
 CV_EXPORTS void clearBackends();
 
+//
+// loadBackendPlugins()
+// Loads GPU backend plugins via dlopen at startup.
+// Thread-safe — runs exactly once.
+// Called automatically by a static initializer.
+//
+CV_EXPORTS void loadBackendPlugins();
+
 }} // cv::hal
 
 #endif // OPENCV_CORE_HAL_BACKEND_REGISTRY_HPP
