@@ -115,8 +115,8 @@ bool Dictionary::identify(const Mat &onlyCellPixelRatio, CV_OUT int &idx, CV_OUT
         int currentRotation = -1;
         const uchar* bytesRot = bytesList.ptr(m);
         for(int r = 0; r < 4; r++, bytesRot += s) {
-            // We want: if (marker is 0 and input is not 0) or (marker is 1 and input is not 1)
-            // i.e.: (!bytesRot && not0) || (bytesRot && not1)
+            // Error if: (marker is 0 and input is not 0) or (marker is 1 and input is not 1)
+            // i.e. if: (!bytesRot && not0) || (bytesRot && not1)
             // This is actually: not0 ^ ((not0 ^ not1) & bytesRot)
             // Computing: temp0 = (not0 ^ not1) & bytesRot
             hal::and8u(notXor, s, bytesRot, s, temp0, s, s, 1, nullptr);
