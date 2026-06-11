@@ -255,6 +255,10 @@ struct TorchImporter
     void readTorchStorage(int index, int type = -1)
     {
         long size = readLong();
+        // size is read as a 64-bit value but Mat::create() takes int columns, so a
+        // value above INT_MAX is truncated for the allocation while the THFile_read*Raw
+        // calls below still consume the full 64-bit count, overflowing the buffer.
+        CV_Assert(size >= 0 && size <= INT_MAX);
         Mat storageMat;
 
         switch (type)

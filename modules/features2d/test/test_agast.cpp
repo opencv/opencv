@@ -135,4 +135,14 @@ void CV_AgastTest::run( int )
 
 TEST(Features2d_AGAST, regression) { CV_AgastTest test; test.safe_run(); }
 
+TEST(Features2d_AGAST, invalidDetectorType)
+{
+    Mat img = Mat::zeros(16, 16, CV_8UC1);
+    vector<KeyPoint> keypoints;
+
+    EXPECT_THROW(AGAST(img, keypoints, 10, true,
+                       static_cast<AgastFeatureDetector::DetectorType>(-1)),
+                 cv::Exception);
+}
+
 }} // namespace

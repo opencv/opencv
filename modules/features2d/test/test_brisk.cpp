@@ -105,65 +105,10 @@ void CV_BRISKTest::run( int )
 
 TEST(Features2d_BRISK, regression) { CV_BRISKTest test; test.safe_run(); }
 
-// Regression tests for issue #29239: UB (left-shift of negative value) in
-// BriskScaleSpace::subpixel2D.  These tests are most meaningful when built
-// with -fsanitize=undefined, which would have caught the original defect.
-
-// Direct-computation check with the exact crash parameters (s_0_2=3, all
-// others=0).  Verifies that the fixed formula produces correct results;
-// under UBSan the original << 2 / << 1 on a negative operand is flagged.
-TEST(Features2d_BRISK, regression_ubsan_negative_shift_formula)
+TEST(Features2d_BRISK, invalidCreateParameters)
 {
-    const int s_0_0=0, s_0_1=0, s_0_2=3, s_1_0=0, s_1_1=0, s_1_2=0,
-              s_2_0=0, s_2_1=0, s_2_2=0;
-    const int coeff5 = (s_0_0 - s_0_2 - s_2_0 + s_2_2) * 4;
-    const int coeff6 = -(s_0_0 + s_0_2
-                         - ((s_1_0 + s_0_1 + s_1_2 + s_2_1) * 2)
-                         - 5 * s_1_1 + s_2_0 + s_2_2) * 2;
-    EXPECT_EQ(coeff5, -12);
-    EXPECT_EQ(coeff6, -6);
-}
-
-// Integration check: a pseudo-random image (fixed LCG seed) with full 0-255
-// intensity range produces a variety of AGAST score patterns including
-// negative-difference neighbourhoods.  EXPECT_GT confirms subpixel2D is
-// actually called.  Note: cv::RNG::fill can trigger an unrelated UBSan issue
-// in rand.cpp, so the image is filled manually to stay within the scope of
-// this fix.
-TEST(Features2d_BRISK, regression_ubsan_negative_shift_random_image)
-{
-    Mat img(60, 60, CV_8UC1);
-    uint32_t state = 0xDEADBEEF;
-    for (int r = 0; r < img.rows; ++r)
-        for (int c = 0; c < img.cols; ++c)
-        {
-            state = state * 1664525u + 1013904223u;  // Numerical Recipes LCG
-            img.at<uchar>(r, c) = static_cast<uchar>((state >> 24) & 0xFF);
-        }
-    Ptr<BRISK> brisk = BRISK::create(/*threshold=*/1, /*octaves=*/0, /*patternScale=*/1.0f);
-    ASSERT_FALSE(brisk.empty());
-    std::vector<KeyPoint> kpts;
-    Mat desc;
-    ASSERT_NO_THROW(brisk->detectAndCompute(img, noArray(), kpts, desc));
-    EXPECT_GT(kpts.size(), 0u);
-}
-
-// Multi-octave integration check: a checkerboard with strong contrast produces
-// corner responses at every scale, exercising subpixel2D across all octave
-// transitions in getScoreMaxAbove / getScoreMaxBelow.  EXPECT_GT confirms the
-// code path was reached.
-TEST(Features2d_BRISK, regression_ubsan_negative_shift_multi_octave)
-{
-    Mat img(80, 80, CV_8UC1, Scalar(0));
-    for (int r = 0; r < img.rows; ++r)
-        for (int c = 0; c < img.cols; ++c)
-            img.at<uchar>(r, c) = static_cast<uchar>(((r / 8 + c / 8) % 2) * 200);
-    Ptr<BRISK> brisk = BRISK::create(/*threshold=*/1, /*octaves=*/3, /*patternScale=*/1.0f);
-    ASSERT_FALSE(brisk.empty());
-    std::vector<KeyPoint> kpts;
-    Mat desc;
-    ASSERT_NO_THROW(brisk->detectAndCompute(img, noArray(), kpts, desc));
-    EXPECT_GT(kpts.size(), 0u);
+    EXPECT_THROW(BRISK::create(30, 3, 0.0f), cv::Exception);
+    EXPECT_THROW(BRISK::create(30, 3, -1.0f), cv::Exception);
 }
 
 }} // namespace

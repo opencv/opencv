@@ -494,7 +494,8 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
     if( connectivity != 0 && connectivity != 4 && connectivity != 8 )
         CV_Error( cv::Error::StsBadFlag, "Connectivity must be 4, 0(=4) or 8" );
 
-    if( _mask.empty() )
+    bool noUserMask = _mask.empty();
+    if( noUserMask )
     {
         _mask.create( size.height + 2, size.width + 2, CV_8UC1 );
         _mask.setTo(0);
@@ -508,7 +509,7 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
     Mat mask_inner = mask( Rect(1, 1, mask.cols - 2, mask.rows - 2) );
     copyMakeBorder( mask_inner, mask, 1, 1, 1, 1, BORDER_ISOLATED | BORDER_CONSTANT, Scalar(1) );
 
-    bool is_simple = mask.empty() && (flags & FLOODFILL_MASK_ONLY) == 0;
+    bool is_simple = noUserMask && (flags & FLOODFILL_MASK_ONLY) == 0;
 
     for( i = 0; i < cn; i++ )
     {
