@@ -107,6 +107,8 @@ int main(int argc, char *argv[])
     pDefaultBLOB.filterByConvexity = false;
     pDefaultBLOB.minConvexity = 0.95f;
     pDefaultBLOB.maxConvexity = (float)1e37;
+    // Enable contour collection so we can draw blob outlines (see getBlobContours() below).
+    pDefaultBLOB.collectContours = true;
     // Descriptor array for BLOB
     vector<String> typeDesc;
     // Param array for BLOB
@@ -189,6 +191,11 @@ int main(int argc, char *argv[])
                 int i = 0;
                 for (vector<KeyPoint>::iterator k = keyImg.begin(); k != keyImg.end(); ++k, ++i)
                     circle(result, k->pt, (int)k->size, palette[i % 65536]);
+                // Retrieve the per-blob contours collected during detect() and outline each blob.
+                // Requires SimpleBlobDetector::Params::collectContours to be true.
+                const vector<vector<Point> >& blobContours = sbd->getBlobContours();
+                for (size_t c = 0; c < blobContours.size(); ++c)
+                    drawContours(result, blobContours, (int)c, Scalar(0, 255, 0), 1);
             }
             namedWindow(*itDesc + label, WINDOW_AUTOSIZE);
             imshow(*itDesc + label, result);
