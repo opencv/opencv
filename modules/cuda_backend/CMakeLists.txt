@@ -42,13 +42,7 @@ ocv_define_module(cuda_backend
 if(TARGET opencv_cuda_backend)
     set_target_properties(opencv_cuda_backend
         PROPERTIES
-        # output name — what dlopen searches for
         OUTPUT_NAME "opencv_cuda_backend"
-
-        # no version suffix on the .so file
-        # dlopen uses exact filename
-        VERSION ""
-        SOVERSION ""
     )
 endif()
 
