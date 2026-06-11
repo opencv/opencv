@@ -241,13 +241,13 @@ HoughLinesStandard( InputArray src, OutputArray lines, int type,
             for (int n = range.start; n < range.end; n++) {
                 float cos_n = tabCos[n];
                 float sin_n = tabSin[n];
-                
+
                 int* accum_n = accum + (n + 1) * (numrho + 2) + 1 + (numrho - 1) / 2;
 
                 if (use_edgeval) {
                     for (int k = 0; k < num_edges; k++) {
                         int r = cvRound(x_coords[k] * cos_n + y_coords[k] * sin_n);
-                        accum_n[r] += edge_vals[k]; 
+                        accum_n[r] += edge_vals[k];
                     }
                 } else {
                     for (int k = 0; k < num_edges; k++) {
