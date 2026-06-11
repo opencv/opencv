@@ -97,12 +97,30 @@ static void activationSigmoid(const void* input, void* output,
     size_t i = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     const int vlanes = VTraits<v_float32>::vlanes();
-    v_float32 one = vx_setall_f32(1.f), z = vx_setzero_f32();
+    const size_t step2 = (size_t)vlanes * 2;
+
+    v_float32 one = vx_setall_f32(1.f);
+    v_float32 min_val = vx_setall_f32(-80.f), max_val = vx_setall_f32(88.f);
+
+    // Using identity: 1 / (1 + exp(-x)) == 1 - (1 / (1 + exp(x))).
+    // Clamping x to [-80.f, 88.f] prevents v_exp overflow and subnormal underflow.
+    for (; i + step2 <= len; i += step2) {
+        v_float32 x0 = vx_load(inp + i);
+        v_float32 x1 = vx_load(inp + i + vlanes);
+
+        x0 = v_min(v_max(x0, min_val), max_val);
+        x1 = v_min(v_max(x1, min_val), max_val);
+
+        v_float32 y0 = v_sub(one, v_div(one, v_add(one, v_exp(x0))));
+        v_float32 y1 = v_sub(one, v_div(one, v_add(one, v_exp(x1))));
+
+        vx_store(out + i, y0);
+        vx_store(out + i + vlanes, y1);
+    }
     for (; i + vlanes <= len; i += vlanes) {
         v_float32 x = vx_load(inp + i);
-        v_float32 t = v_exp(v_sub(z, x));
-        t = v_div(one, v_add(one, t));
-        vx_store(out + i, t);
+        x = v_min(v_max(x, min_val), max_val);
+        vx_store(out + i, v_sub(one, v_div(one, v_add(one, v_exp(x)))));
     }
 #endif
     for (; i < len; i++) {
