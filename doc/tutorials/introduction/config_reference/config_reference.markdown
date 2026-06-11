@@ -298,7 +298,7 @@ The CUDA-accelerated modules can also be built for AMD GPUs through HIP, AMD's C
 
 The cuBLAS and cuFFT dependencies of the `cudaarithm` module map to the ROCm hipBLAS and hipFFT libraries automatically when present. `WITH_ROCDECODE` (default: _ON_ when `WITH_HIP`) enables the rocDecode video-decode backend used by the `cudacodec` module; when rocDecode or a working AMD video engine is unavailable, hardware decode is reported as not implemented and video I/O falls back to the FFmpeg `videoio` backend (which exposes the AMF h264/hevc/av1 encoders for writing).
 
-A small set of NVIDIA-proprietary entry points have no ROCm analog and report `cv::Error::StsNotImplemented` on the HIP build: the NVIDIA hardware optical-flow classes (`cv::cuda::NvidiaOpticalFlowImpl`), the `cudalegacy` graph-cut stereo, and the few NPP-only paths (`alphaComp`, the 16-bit and 4-channel histogram variants). The corresponding software algorithms (the PyrLK/Brox/Farneback/TV-L1 optical flows, the other stereo and histogram routines) remain available.
+A small set of entry points have no ROCm analog and report `cv::Error::StsNotImplemented` on the HIP build: the NVIDIA hardware optical-flow classes (`cv::cuda::NvidiaOpticalFlowImpl`) and the `cudalegacy` graph-cut stereo (graph-cut was dropped from NPP at CUDA 8.0, so it is already a no-op on a current CUDA build). The PyrLK/Brox/Farneback/TV-L1 software optical flows remain available.
 
 @see https://rocm.docs.amd.com/projects/HIP/
 
