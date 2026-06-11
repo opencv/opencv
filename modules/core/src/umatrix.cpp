@@ -67,6 +67,7 @@ UMatData::UMatData(const MatAllocator* allocator)
     userdata = 0;
     allocatorFlags_ = 0;
     originalUMatData = NULL;
+    gpuBackend = nullptr;            // GPU HAL — no backend by default
 }
 
 UMatData::~UMatData()
