@@ -42,9 +42,6 @@ ocv_define_module(cuda_backend
 if(TARGET opencv_cuda_backend)
     set_target_properties(opencv_cuda_backend
         PROPERTIES
-        # shared library — required for dlopen
-        TYPE SHARED_LIBRARY
-
         # output name — what dlopen searches for
         OUTPUT_NAME "opencv_cuda_backend"
 
