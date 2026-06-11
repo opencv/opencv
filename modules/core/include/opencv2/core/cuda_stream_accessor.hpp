@@ -51,7 +51,11 @@
  * This is only header file that depends on CUDA Runtime API. All other headers are independent.
  */
 
+#if defined(__HIP_PLATFORM_AMD__) || defined(__HIPCC__)
+#include <hip/hip_runtime.h>
+#else
 #include <cuda_runtime.h>
+#endif
 #include "opencv2/core/cuda.hpp"
 
 namespace cv
