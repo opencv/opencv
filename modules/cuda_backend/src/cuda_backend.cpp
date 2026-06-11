@@ -60,29 +60,18 @@ static cuda::GpuMat extractGpuMat(const UMat& u)
 }
 
 // =============================================================
-// Helper — GpuMat result → OutputArray as UMat (zero copy)
+// Helper — GpuMat result → OutputArray
 //
-// Wraps the result GpuMat back into a UMat so the caller
-// receives a UMat they can pass to the next cv:: function.
-// Sets gpuBackend pointer so backend() returns correctly.
+// Downloads the CUDA result into the caller's OutputArray.
+// gpu.download(dst) handles both Mat and UMat destinations.
+// Full zero-copy output requires a CudaAllocator (Phase 4
+// extension) — download is correct behaviour for now.
 // =============================================================
 static void wrapResultIntoUMat(const cuda::GpuMat& gpu,
                                 OutputArray dst,
-                                Backend* backend)
+                                Backend* /*backend*/)
 {
-    // create a UMat that points to the GpuMat's device memory
-    UMat result(gpu.rows, gpu.cols,
-                gpu.type(),
-                gpu.data,
-                gpu.step);
-
-    CV_Assert(result.u != nullptr);
-
-    // mark this UMat as CUDA-backed
-    result.u->gpuBackend = backend;
-
-    // assign to OutputArray
-    result.copyTo(dst);
+    gpu.download(dst);
 }
 
 // =============================================================
@@ -190,8 +179,9 @@ public:
 // Must be extern "C" to prevent C++ name mangling.
 // dlsym looks for exactly: "cv_hal_createCudaBackend"
 // =============================================================
-extern "C"
-CV_EXPORTS
+// Forward declaration suppresses -Wmissing-declarations
+extern "C" CV_EXPORTS cv::hal::Backend* cv_hal_createCudaBackend();
+
 cv::hal::Backend* cv_hal_createCudaBackend()
 {
     return new cv::hal::CudaBackend();
