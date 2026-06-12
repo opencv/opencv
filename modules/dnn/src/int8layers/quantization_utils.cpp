@@ -707,7 +707,7 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        // inputs[0] = INT8 data, inputs[1] = scale (1x1), inputs[2] = zeropoint (1x1)
+        // inputs[0] = INT8 data, inputs[1] = encoded scale (1x4 bytes in CV_8S), inputs[2] = zeropoint (1x1 int8)
         CV_Check(inputs.size(), inputs.size() >= 1 && inputs.size() <= 3,
                  "Number of inputs must be between 1 and 3 inclusive.");
         outputs.assign(1, inputs[0]);
