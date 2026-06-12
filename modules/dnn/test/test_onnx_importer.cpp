@@ -2276,6 +2276,46 @@ TEST_P(Test_ONNX_layers, DynamicQuantizeLinear_MinAdjusted)
     testDynamicQuantizeLinear(X, 3, 4, expected_Y, 12, scale, zp);
 }
 
+// Net-level round trip: QuantizeDynamic -> DequantizeDynamic wired through a Net,
+// mirroring how the importer routes DynamicQuantizeLinear -> DequantizeLinear
+// (the dequantize node consumes the byte-encoded scale/zp output tensors).
+TEST_P(Test_ONNX_layers, DynamicQuantizeLinear_DequantizeRoundTrip)
+{
+    if (backend != DNN_BACKEND_OPENCV || target != DNN_TARGET_CPU)
+        return;
+
+    Net net;
+
+    LayerParams qp;
+    qp.name = "quant";
+    qp.type = "QuantizeDynamic";
+    qp.set("depth", CV_8S);
+    int qid = net.addLayerToPrev(qp.name, qp.type, CV_8S, qp);
+
+    LayerParams dp;
+    dp.name = "dequant";
+    dp.type = "DequantizeDynamic";
+    dp.set("depth", CV_32F);
+    int did = net.addLayer(dp.name, dp.type, CV_32F, dp);
+    net.connect(qid, 0, did, 0);  // INT8 data
+    net.connect(qid, 1, did, 1);  // byte-encoded scale
+    net.connect(qid, 2, did, 2);  // zeropoint
+
+    float X[] = {0.f, 2.f, -3.f, -2.5f, 1.34f, 0.5f};
+    Mat input(1, 6, CV_32F, X);
+    float scale = (2.f - (-3.f)) / 255.f;
+
+    net.setInput(input);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    Mat out = net.forward(dp.name);
+
+    ASSERT_EQ(out.total(), (size_t)6);
+    const float* outData = out.ptr<float>();
+    for (int i = 0; i < 6; i++)
+        EXPECT_NEAR(outData[i], X[i], 0.5f * scale + 1e-6f)
+            << "Round-trip dequantized value mismatch at index " << i;
+}
+
 
 TEST_P(Test_ONNX_layers, OutputRegistration)
 {

@@ -24,6 +24,7 @@
 
 #include <array>
 #include <iostream>
+#include <set>
 #include <fstream>
 #include <string>
 #include <limits>
@@ -118,6 +119,8 @@ protected:
 
     std::map<std::string, Mat> constBlobs;
     std::map<std::string, TensorInfo> constBlobsExtraInfo;
+
+    std::set<std::string> dynamicQuantScaleZpOutputs;  // Byte-encoded scale/zp tensors produced by DynamicQuantizeLinear.
 
     std::map<std::string, MatShape> outShapes;  // List of internal blobs shapes.
     bool hasDynamicShapes;  // Whether the model has inputs with dynamic shapes
@@ -3346,6 +3349,11 @@ void ONNXImporter::parseQuantDequant(LayerParams& layerParams, const opencv_onnx
 
     // If scale is not defined as a constant blob, it is considered an external input.
     if(constBlobs.find(node_proto.input(1)) == constBlobs.end()){
+        // Scale produced by DynamicQuantizeLinear is byte-encoded (1x4 CV_8S); route to
+        // DequantizeDynamic which knows how to decode it.
+        if (layerParams.type == "Dequantize" &&
+            dynamicQuantScaleZpOutputs.count(node_proto.input(1)))
+            layerParams.type = "DequantizeDynamic";
         addLayer(layerParams, node_proto);
         return;
     }
@@ -3409,6 +3417,12 @@ void ONNXImporter::parseDynamicQuantizeLinear(LayerParams& layerParams, const op
     CV_Assert(node_proto.input_size() == 1);
     layerParams.type = "QuantizeDynamic";
     layerParams.set("depth", CV_8S);
+    // Outputs 1 (y_scale) and 2 (y_zero_point) use a byte-encoded convention (see
+    // quantization_utils.cpp); record their names so consumers can be routed properly.
+    if (node_proto.output_size() > 1 && !node_proto.output(1).empty())
+        dynamicQuantScaleZpOutputs.insert(node_proto.output(1));
+    if (node_proto.output_size() > 2 && !node_proto.output(2).empty())
+        dynamicQuantScaleZpOutputs.insert(node_proto.output(2));
     addLayer(layerParams, node_proto);
 }
 
