@@ -725,7 +725,7 @@ public:
         outputs_arr.getMatVector(outputs);
 
         float sc = 1.0f;
-        int zp_int8 = 0;  // zero point in int8 space (i.e., uint8_value - 128)
+        int zp_int8 = -128;  // default corresponds to zp_uint8=0 in stored int8 space (uint8_value - 128)
 
         if (inputs.size() > 1)
         {
