@@ -167,7 +167,7 @@ void CBoundMin::calculate()
         j = (i + 1) % 4;
         Vcart = lines[i].cross(lines[j]);
         if (fabs(Vcart.z) <= 1e-6){
-            continue;
+            return;
         }
         Vhom.x = Vcart.x / Vcart.z;
         Vhom.y = Vcart.y / Vcart.z;
