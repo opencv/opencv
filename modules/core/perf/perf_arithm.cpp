@@ -486,6 +486,7 @@ PERF_TEST_P_(BinaryOpTest, transposeND_2d_swap_order)
     SANITY_CHECK_NOTHING();
 }
 
+
 PERF_TEST_P_(BinaryOpTest, transposeND_generic_keep_tail_order)
 {
     Size sz = get<0>(GetParam());
@@ -494,7 +495,7 @@ PERF_TEST_P_(BinaryOpTest, transposeND_generic_keep_tail_order)
 
     std::vector<int> order{1, 0, 2};
 
-    cv::Mat b;
+    cv::Mat b = makeTransposeNDOutput(a, order);
 
     randu(a, 0, 255);
 
@@ -511,7 +512,7 @@ PERF_TEST_P_(BinaryOpTest, transposeND_generic_move_tail_order)
 
     std::vector<int> order{2, 0, 1};
 
-    cv::Mat b;
+    cv::Mat b = makeTransposeNDOutput(a, order);
 
     randu(a, 0, 255);
 
