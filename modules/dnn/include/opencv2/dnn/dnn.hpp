@@ -523,7 +523,7 @@ CV__DNN_INLINE_NS_BEGIN
         virtual void setOutputs(const std::vector<Arg>& outputs) = 0;
         virtual const std::vector<Ptr<OpData> >& prog() const = 0;
         virtual void setProg(const std::vector<Ptr<OpData> >& newprog) = 0;
-https://github.com/opencv/opencv/pull/29018        virtual int opBackend(int opidx) const = 0;
+        virtual int opBackend(int opidx) const = 0;
     };
 
     /** @brief This class allows to create and manipulate comprehensive artificial neural networks.

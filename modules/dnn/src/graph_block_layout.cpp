@@ -129,7 +129,7 @@ struct BlockLayoutTransformer
             std::string op_name = layer->type;
             std::string name = layer->name;
             vector<PGraph>* subgraphs = layer->subgraphs();
-\            bool deviceOp = g->opBackend((int)opidx) != DNN_BACKEND_OPENCV;
+            bool deviceOp = g->opBackend((int)opidx) != DNN_BACKEND_OPENCV;
             //std::cout << "name: " << name << ", op_name: " << op_name << ", inp0 layout: " << layoutToString(layouts[inputs[0].idx]) << "\n";
 
             if (subgraphs) {
