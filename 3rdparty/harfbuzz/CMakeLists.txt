@@ -49,6 +49,7 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS
     -Wsuggest-override
     -Wcast-function-type
     -Wclass-memaccess            # gcc
+    -Wexpansion-to-defined
 )
 ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4244 /wd4267 /wd4127 /wd4456 /wd4459) # MSVC
 

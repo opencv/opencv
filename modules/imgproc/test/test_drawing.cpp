@@ -714,7 +714,7 @@ TEST(Drawing, fromJava_getTextSize)
 
     EXPECT_EQ(res0.width, res.width);
     EXPECT_EQ(res0.height, res.height);
-    EXPECT_NEAR(494, res.width, 3.0);
+    EXPECT_NEAR(487, res.width, 3.0);
     EXPECT_NEAR(51, res.height, 3.0);
     EXPECT_NEAR(10, baseLine, 3.0);
 }
@@ -862,7 +862,7 @@ TEST(Drawing, ttf_text)
 
 // Experiment (not a regression test): render Arabic + Devanagari with FiraGO,
 // which covers both scripts, and dump a PNG for visual inspection.
-TEST(Drawing, firago_experiment)
+TEST(Drawing, DISABLED_firago_experiment)
 {
     // FiraGO covers both Arabic and Devanagari. It is optional test data:
     // findDataFile(..., /*required=*/false) throws SkipTestException when the

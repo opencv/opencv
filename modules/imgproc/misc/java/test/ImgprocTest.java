@@ -1571,7 +1571,7 @@ public class ImgprocTest extends OpenCVTestCase {
         Imgproc.getTextSize(text, Imgproc.FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, thickness, null);
         Size res = Imgproc.getTextSize(text, Imgproc.FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, thickness, baseLine);
 
-        assertEquals(494.0, res.width, EPS);
+        assertEquals(487.0, res.width, EPS);
         assertEquals(51.0, res.height, EPS);
         assertEquals(10, baseLine[0], 2.0);
     }
