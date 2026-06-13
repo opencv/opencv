@@ -714,7 +714,7 @@ TEST(Drawing, fromJava_getTextSize)
 
     EXPECT_EQ(res0.width, res.width);
     EXPECT_EQ(res0.height, res.height);
-    EXPECT_NEAR(487, res.width, 3.0);
+    EXPECT_NEAR(495, res.width, 3.0);
     EXPECT_NEAR(51, res.height, 3.0);
     EXPECT_NEAR(10, baseLine, 3.0);
 }
@@ -847,7 +847,7 @@ TEST(Drawing, ttf_text)
     waitKey();
 #else
     // Always dump the rendered image for visual inspection (HarfBuzz engine bring-up).
-    imwrite("ttf_text_actual.png", img);
+    //imwrite("ttf_text_actual.png", img);
     Mat refimg = imread(ts_data_path + "../highgui/drawing/text_test.png", IMREAD_UNCHANGED);
     //imshow("ref", refimg);
     //imshow("actual", img);

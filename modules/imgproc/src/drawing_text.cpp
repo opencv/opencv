@@ -911,6 +911,9 @@ static int hbGlyphIndex(hb_font_t* font, unsigned c)
     return font && hb_font_get_nominal_glyph(font, c, &g) ? (int)g : 0;
 }
 
+// Round a 26.6 fixed-point value to the nearest whole pixel.
+static inline int round26_6(int64_t v) { return (int)((v + 32) >> 6); }
+
 Point FontRenderEngine::putText_(
     Mat& img, Size imgsize, const String& str_, Point org,
     const uchar* color, FontFace& fontface, int size,
@@ -1374,8 +1377,14 @@ Point FontRenderEngine::putText_(
             }
 
             const hb_glyph_position_t& pos = glyph.pos;
-            int dx = pos.x_advance >> 6;
-            int dy = pos.y_advance >> 6;
+            // Advances are 26.6 fixed point. Round each advance to the nearest
+            // whole pixel and keep the pen on integer pixels (rather than flooring
+            // with >>6): glyphs are rasterized/cached at integer positions, so a
+            // sub-pixel pen would only add jitter to the inter-glyph gaps, while
+            // flooring every advance systematically tightens the spacing. Rounding
+            // the advance keeps the gaps even and removes that bias.
+            int dx = round26_6(pos.x_advance);
+            int dy = round26_6(pos.y_advance);
             int new_pen_x = pen.x + dx*alignSign;
             nextline_dy = max(nextline_dy, cached->linegap);
             // TODO: this wrapping algorithm is quite dumb,
