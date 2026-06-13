@@ -72,8 +72,8 @@ In order to use the Astra camera's depth sensor with OpenCV you should do the fo
 
     @note The last tried version `2.3.0.86_202210111154_4c8f5aa4_beta6` does not work correctly with
     modern Linux, even after libusb rebuild as recommended by the instruction. The last know good
-    configuration is version 2.3.0.63 (tested with Ubuntu 18.04 amd64). It's not provided officialy
-    with the downloading page, but published by Orbbec technical suport on Orbbec community forum
+    configuration is version 2.3.0.63 (tested with Ubuntu 18.04 amd64). It's not provided officially
+    with the downloading page, but published by Orbbec technical support on Orbbec community forum
     [here](https://3dclub.orbbec3d.com/t/universal-download-thread-for-astra-series-cameras/622).
 
 -#  Now you can configure OpenCV with OpenNI support enabled by setting the `WITH_OPENNI2` flag in CMake.
@@ -109,7 +109,7 @@ In order to use the Astra camera's depth sensor with OpenCV you should do the fo
 
 The Astra Pro camera has two sensors -- a depth sensor and a color sensor. The depth sensor
 can be read using the OpenNI interface with @ref cv::VideoCapture class. The video stream is
-not available through OpenNI API and is only provided via the regular caofficiallymera interface.
+not available through OpenNI API and is only provided via the regular camera interface.
 So, to get both depth and color frames, two @ref cv::VideoCapture objects should be created:
 
 @snippetlineno samples/cpp/tutorial_code/videoio/openni_orbbec_astra/openni_orbbec_astra.cpp Open streams
