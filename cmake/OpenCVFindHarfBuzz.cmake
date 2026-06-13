@@ -70,7 +70,15 @@ if(WITH_HARFBUZZ)
     set(HARFBUZZ_LIBRARIES ${HARFBUZZ_LIBRARY})
     add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/harfbuzz")
     set(HARFBUZZ_INCLUDE_DIR "${${HARFBUZZ_LIBRARY}_SOURCE_DIR}/src" CACHE INTERNAL "")
-    set(HARFBUZZ_VERSION "build (14.2.1)" CACHE INTERNAL "")
+    # Read the bundled version straight from the sources so it stays correct
+    # when HarfBuzz is updated (re-run of hb_extract.py) without touching this file.
+    set(_hb_version "unknown")
+    file(STRINGS "${OpenCV_SOURCE_DIR}/3rdparty/harfbuzz/src/hb-version.h" _hb_version_line
+         REGEX "^#define[ \t]+HB_VERSION_STRING[ \t]+\"[^\"]*\"")
+    if(_hb_version_line MATCHES "\"([^\"]*)\"")
+      set(_hb_version "${CMAKE_MATCH_1}")
+    endif()
+    set(HARFBUZZ_VERSION "build (${_hb_version})" CACHE INTERNAL "")
     set(HARFBUZZ_IS_BUNDLED YES)
     set(HAVE_HARFBUZZ 1)
   endif()
