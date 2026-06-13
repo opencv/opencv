@@ -396,19 +396,16 @@ public:
         hb_buffer_guess_segment_properties(hb_buf);
         hb_uni_funcs = hb_unicode_funcs_get_default();
         max_cache_size = (size_t)MAX_CACHE_SIZE;
-        glyph_buf = 0;
-        glyph_bufsz = 0;
+        raster_draw = 0;
     }
 
     ~FontRenderEngine()
     {
         hb_buffer_destroy(hb_buf);
+        if(raster_draw)
+            hb_raster_draw_destroy(raster_draw);  // also frees its recycled image
         for(int i = 0; i < BUILTIN_FONTS_NUM; i++)
             builtin_ffaces[i] = FontFace();
-        if (glyph_buf)
-            free(glyph_buf);
-        glyph_buf = 0;
-        glyph_bufsz = 0;
     }
 
     void addToCache(const GlyphCacheKey& key, const GlyphCacheVal& val)
@@ -460,12 +457,12 @@ protected:
     size_t max_cache_size;
 
     hb_buffer_t* hb_buf;
+    hb_raster_draw_t* raster_draw;  // reused across glyphs (thread_local engine)
     std::vector<unsigned> u32buf;
     std::vector<TextSegment> segments;
     std::vector<FontGlyph> glyphs;
     std::vector<uchar> pixbuf;
-    uchar* glyph_buf;
-    int glyph_bufsz;
+    std::vector<uchar> glyph_buf;
 };
 
 thread_local FontRenderEngine fontRenderEngine;
@@ -1290,7 +1287,12 @@ Point FontRenderEngine::putText_(
             {
                 cached = &new_cached;
                 int w=0, h=0;
-                hb_raster_draw_t* rd = hb_raster_draw_create_or_fail();
+                // One rasterizer per thread_local engine: its internal scratch
+                // (edges, row buffers, edge buckets) and the output image are
+                // reused across glyphs instead of reallocated per glyph.
+                if(!raster_draw)
+                    raster_draw = hb_raster_draw_create_or_fail();
+                hb_raster_draw_t* rd = raster_draw;
                 if(!rd)
                     continue;
                 // Outline coords come in 26.6 (font scaled to size*64); the
@@ -1320,25 +1322,22 @@ Point FontRenderEngine::putText_(
                 // Copy the A8 mask into the persistent scratch buffer (it must
                 // outlive the raster image) flipping rows: hb-raster buffers are
                 // bottom-up (y-up), drawCharacter expects top-down.
-                bitmap_buf = glyph_buf;
                 bitmap_step = w;
                 if(w > 0 && h > 0 && rbuf)
                 {
-                    int need = w*h;
-                    if(need > glyph_bufsz)
-                    {
-                        glyph_buf = (uchar*)realloc(glyph_buf, need);
-                        glyph_bufsz = need;
-                    }
+                    size_t need = (size_t)w*h;
+                    if(need > glyph_buf.size())
+                        glyph_buf.resize(need);
                     unsigned src_step = rext.stride ? rext.stride : (unsigned)w;
                     for(int yy = 0; yy < h; yy++)
-                        memcpy(glyph_buf + yy*w, rbuf + (size_t)(h-1-yy)*src_step, w);
-                    bitmap_buf = glyph_buf;
+                        memcpy(glyph_buf.data() + yy*w, rbuf + (size_t)(h-1-yy)*src_step, w);
                 }
+                bitmap_buf = glyph_buf.empty() ? 0 : glyph_buf.data();
 
+                // Hand the image back to the rasterizer to reuse next time
+                // instead of freeing it (render() already cleared geometry).
                 if(rimg)
-                    hb_raster_image_destroy(rimg);
-                hb_raster_draw_destroy(rd);
+                    hb_raster_draw_recycle_image(rd, rimg);
 
                 cached->width = w;
                 cached->height = h;

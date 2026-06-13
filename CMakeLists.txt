@@ -150,6 +150,7 @@ OCV_OPTION(BUILD_JASPER             "Build libjasper from source"        (WIN32 
 OCV_OPTION(BUILD_JPEG               "Build libjpeg from source"          (WIN32 OR ANDROID OR APPLE OR OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_PNG                "Build libpng from source"           (WIN32 OR ANDROID OR APPLE OR OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_WEBP               "Build WebP from source"             (((WIN32 OR ANDROID OR APPLE) AND NOT WINRT) OR OPENCV_FORCE_3RDPARTY_BUILD) )
+OCV_OPTION(BUILD_HARFBUZZ           "Build HarfBuzz from source"         (WIN32 OR ANDROID OR APPLE OR OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_TBB                "Download and build TBB from source" (ANDROID OR OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_IPP_IW             "Build IPP IW from source"           (NOT MINGW OR OPENCV_FORCE_3RDPARTY_BUILD) IF (X86_64 OR X86) AND NOT WINRT )
 OCV_OPTION(BUILD_ITT                "Build Intel ITT from source"
@@ -1737,7 +1738,7 @@ endif()
 status("")
 status("  Other third-party libraries:")
 
-status("    HarfBuzz:"   HAVE_HARFBUZZ THEN "build (ver 14.2.1)" ELSE "NO")
+status("    HarfBuzz:"   HAVE_HARFBUZZ THEN "${HARFBUZZ_VERSION}" ELSE "NO")
 
 if(WITH_IPP AND HAVE_IPP)
   status("    Intel IPP:" "${IPP_VERSION_STR} [${IPP_VERSION_MAJOR}.${IPP_VERSION_MINOR}.${IPP_VERSION_BUILD}]")

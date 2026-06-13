@@ -14,14 +14,26 @@ ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src")
 file(GLOB_RECURSE lib_srcs src/*.cc)
 file(GLOB_RECURSE lib_hdrs src/*.h src/*.hh)
 
-# HarfBuzz builds with its default configuration: thread-safety on, no HB_TINY,
-# no platform backends (CoreText/DirectWrite/FreeType/...). No defines needed;
-# internal sources do not consume hb-features.h.
+# HarfBuzz is built with HB_TINY for minimum footprint. Because we request the
+# software rasterizer (HB_HAS_RASTER, defined below), HB_TINY does NOT disable
+# the draw/paint/color APIs nor CFF (PostScript/.otf
+# outlines) -- see hb-config.hh: HB_NO_DRAW/COLOR/PAINT and the TINY->HB_NO_CFF
+# rule only trigger when no HB_HAS_* backend is requested. So CFF (CJK/Indic),
+# COLR/CPAL color and our rasterizer all survive HB_TINY.
+#
+# Two features HB_TINY (via HB_LEAN) would otherwise drop are restored through
+# HarfBuzz's config-override hook (hb-opencv-config.hh): thread-safety (HB_NO_MT)
+# and variable fonts (HB_NO_VAR). No platform backends (CoreText/DirectWrite/...).
 
 add_library(${HARFBUZZ_LIBRARY} STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${lib_srcs} ${lib_hdrs})
 
+target_compile_definitions(${HARFBUZZ_LIBRARY} PRIVATE
+    HB_TINY
+    HB_HAS_RASTER   # request the software rasterizer: keeps draw/paint/color + CFF under HB_TINY
+    "HB_CONFIG_OVERRIDE_H=\"hb-opencv-config.hh\"")
+
 set_target_properties(${HARFBUZZ_LIBRARY} PROPERTIES
-  CXX_STANDARD 11
+  CXX_STANDARD 17
   CXX_STANDARD_REQUIRED ON
 )
 
