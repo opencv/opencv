@@ -1,0 +1,13 @@
+set(HAVE_METAL OFF)
+
+if(APPLE)
+  find_library(METAL_LIBRARY Metal)
+  find_library(FOUNDATION_LIBRARY Foundation)
+
+  if(METAL_LIBRARY AND FOUNDATION_LIBRARY)
+    set(HAVE_METAL ON)
+    set(METAL_LIBRARIES "${METAL_LIBRARY}" "${FOUNDATION_LIBRARY}")
+  endif()
+endif()
+
+mark_as_advanced(METAL_LIBRARY FOUNDATION_LIBRARY)

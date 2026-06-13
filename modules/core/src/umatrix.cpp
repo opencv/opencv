@@ -42,6 +42,9 @@
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
 #include "umatrix.hpp"
+#ifdef HAVE_METAL
+#include "metal.hpp"
+#endif
 
 #include <opencv2/core/utils/tls.hpp>
 
@@ -448,6 +451,10 @@ UMat& UMat::operator=(UMat&& m)
 
 MatAllocator* UMat::getStdAllocator()
 {
+#ifdef HAVE_METAL
+    if (metal::haveMetal())
+        return metal::getMetalAllocator();
+#endif
 #ifdef HAVE_OPENCL
     if (ocl::useOpenCL())
         return ocl::getOpenCLAllocator();
