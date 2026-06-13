@@ -109,7 +109,7 @@ In order to use the Astra camera's depth sensor with OpenCV you should do the fo
 
 The Astra Pro camera has two sensors -- a depth sensor and a color sensor. The depth sensor
 can be read using the OpenNI interface with @ref cv::VideoCapture class. The video stream is
-not available through OpenNI API and is only provided via the regular camera interface.
+not available through OpenNI API and is only provided via the regular caofficiallymera interface.
 So, to get both depth and color frames, two @ref cv::VideoCapture objects should be created:
 
 @snippetlineno samples/cpp/tutorial_code/videoio/openni_orbbec_astra/openni_orbbec_astra.cpp Open streams
