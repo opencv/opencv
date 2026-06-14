@@ -911,8 +911,12 @@ static int hbGlyphIndex(hb_font_t* font, unsigned c)
     return font && hb_font_get_nominal_glyph(font, c, &g) ? (int)g : 0;
 }
 
-// Round a 26.6 fixed-point value to the nearest whole pixel.
-static inline int round26_6(int64_t v) { return (int)((v + 32) >> 6); }
+// Round fixed-point value to the nearest whole pixel.
+static inline int roundFixPt(int64_t v, int n) {
+    int64_t half  = int64_t(1) << (n - 1);
+    int64_t delta = half - 1 + ((v >> n) & 1);
+    return int((v + delta) >> n);
+}
 
 Point FontRenderEngine::putText_(
     Mat& img, Size imgsize, const String& str_, Point org,
@@ -920,6 +924,7 @@ Point FontRenderEngine::putText_(
     int weight_, PutTextFlags flags, Range wrapRange,
     bool render, Rect* bbox_ )
 {
+    constexpr int FRAC_BITS = 6;
     bool bottom_left = (flags & PUT_TEXT_ORIGIN_BL) != 0;
     int weight = weight_*65536;
 
@@ -1346,11 +1351,11 @@ Point FontRenderEngine::putText_(
                 cached->height = h;
                 cached->advance.x = 0;  // advance comes from the shaped position
                 cached->advance.y = 0;
-                cached->ascent = cvRound(ascent/64.0);
-                cached->linegap = cvRound(linegap/64.0);
+                cached->ascent = cvRound(ascent/double(1 << FRAC_BITS));
+                cached->linegap = cvRound(linegap/double(1 << FRAC_BITS));
                 // extents are whole pixels (scale factor 64); bearings are 1/64 px
-                cached->horiBearingX = rext.x_origin * 64;
-                cached->horiBearingY = (rext.y_origin + h) * 64;
+                cached->horiBearingX = rext.x_origin * (1 << FRAC_BITS);
+                cached->horiBearingY = (rext.y_origin + h) * (1 << FRAC_BITS);
 
                 bbox = Rect(0, 0, w, h);
 
@@ -1383,8 +1388,8 @@ Point FontRenderEngine::putText_(
             // sub-pixel pen would only add jitter to the inter-glyph gaps, while
             // flooring every advance systematically tightens the spacing. Rounding
             // the advance keeps the gaps even and removes that bias.
-            int dx = round26_6(pos.x_advance);
-            int dy = round26_6(pos.y_advance);
+            int dx = roundFixPt(pos.x_advance, FRAC_BITS);
+            int dy = roundFixPt(pos.y_advance, FRAC_BITS);
             int new_pen_x = pen.x + dx*alignSign;
             nextline_dy = max(nextline_dy, cached->linegap);
             // TODO: this wrapping algorithm is quite dumb,
@@ -1402,14 +1407,15 @@ Point FontRenderEngine::putText_(
 
             if(!wrapped)
                 max_dy = std::max(max_dy, cached->ascent);
-            int baseline = cached->height - (cached->horiBearingY >> 6);
+            int baseline = cached->height - (cached->horiBearingY >> FRAC_BITS);
             max_baseline = std::max(max_baseline, baseline);
 
             if(alignment == PUT_TEXT_ALIGN_RIGHT)
                 pen.x = new_pen_x;
 
-            int x = pen.x + bbox.x + ((pos.x_offset + cached->horiBearingX) >> 6);
-            int y = pen.y + (bottom_left ? 1 : -1)*(((pos.y_offset + cached->horiBearingY) >> 6) - bbox.y);
+            int x = pen.x + bbox.x + ((pos.x_offset + cached->horiBearingX) >> FRAC_BITS);
+            int y = pen.y + (bottom_left ? 1 : -1)*(((pos.y_offset +
+                                                      cached->horiBearingY) >> FRAC_BITS) - bbox.y);
 
             if( render )
             {

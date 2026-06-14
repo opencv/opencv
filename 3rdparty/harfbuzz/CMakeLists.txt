@@ -51,7 +51,7 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS
     -Wclass-memaccess            # gcc
     -Wexpansion-to-defined
 )
-ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4244 /wd4267 /wd4127 /wd4456 /wd4459) # MSVC
+ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4244 /wd4267 /wd4127 /wd4146 /wd4456 /wd4459) # MSVC
 
 set_target_properties(${HARFBUZZ_LIBRARY}
   PROPERTIES OUTPUT_NAME ${HARFBUZZ_LIBRARY}

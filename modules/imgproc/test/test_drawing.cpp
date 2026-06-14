@@ -714,7 +714,7 @@ TEST(Drawing, fromJava_getTextSize)
 
     EXPECT_EQ(res0.width, res.width);
     EXPECT_EQ(res0.height, res.height);
-    EXPECT_NEAR(495, res.width, 3.0);
+    EXPECT_NEAR(494, res.width, 3.0);
     EXPECT_NEAR(51, res.height, 3.0);
     EXPECT_NEAR(10, baseLine, 3.0);
 }
@@ -842,7 +842,7 @@ TEST(Drawing, ttf_text)
     }
 
 #if 0
-    //imwrite(ts_data_path + "../highgui/drawing/text_test.png", img);
+    //imwrite(ts_data_path + "../highgui/drawing/text_test_new.png", img);
     imshow("test", img);
     waitKey();
 #else
