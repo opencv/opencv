@@ -27,7 +27,7 @@ foreground object (Always try to keep foreground in white). So what it does? The
 through the image (as in 2D convolution). A pixel in the original image (either 1 or 0) will be
 considered 1 only if all the pixels under the kernel is 1, otherwise it is eroded (made to zero).
 
-So what happends is that, all the pixels near boundary will be discarded depending upon the size of
+So what happens is that, all the pixels near boundary will be discarded depending upon the size of
 kernel. So the thickness or size of the foreground object decreases or simply white region decreases
 in the image. It is useful for removing small white noises (as we have seen in colorspace chapter),
 detach two connected objects etc.
