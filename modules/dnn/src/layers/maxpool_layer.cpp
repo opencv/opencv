@@ -50,7 +50,7 @@ static void maxPool32f(const void* inp_, void* out_, const ConvState& cs)
         float* out = (float*)out_ + nc0*planesize;
         const float INITVAL = -FLT_MAX;
 
-    #if CV_SIMD
+    #if CV_SIMD || CV_SIMD_SCALABLE
         int nlanes = VTraits<v_float32>::vlanes();
         v_float32 s_min = vx_setall_f32(INITVAL);
         CV_Assert(C0 == nlanes || C0 == nlanes*2 || C0 % (nlanes*4) == 0);
@@ -65,13 +65,13 @@ static void maxPool32f(const void* inp_, void* out_, const ConvState& cs)
                         y0 >= inner_y0 && y0 < inner_y1 ? inner_x0 : W;
                     int yi_ = y0*SY - padY0;
 
-                #if !(CV_SIMD)
+                #if !(CV_SIMD || CV_SIMD_SCALABLE)
                     for (int c = 0; c < C0*W; c++)
                         out[c] = INITVAL;
                 #endif
 
                     for(;;) {
-                    #if CV_SIMD
+                    #if CV_SIMD || CV_SIMD_SCALABLE
                         if (nlanes == C0) {
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
@@ -136,7 +136,7 @@ static void maxPool32f(const void* inp_, void* out_, const ConvState& cs)
                             break;
                         x1 = inner_x1;
 
-                    #if CV_SIMD
+                    #if CV_SIMD || CV_SIMD_SCALABLE
                         if (nlanes == C0) {
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
