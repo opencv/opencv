@@ -807,6 +807,35 @@ TEST(Core_InputOutput, filestorage_heap_overflow)
     EXPECT_EQ(0, remove(name.c_str()));
 }
 
+TEST(Core_InputOutput, filestorage_nd_matrix_too_many_dims)
+{
+    // A declared dimension count above CV_MAX_DIM used to write the sizes list
+    // past the fixed-size sizes[CV_MAX_DIM] stack buffer in cv::read().
+    std::string sizes;
+    for (int i = 0; i < CV_MAX_DIM + 8; i++)
+        sizes += "2, ";
+    sizes += "2";
+
+    const std::string content =
+        "%YAML:1.0\n---\n"
+        "m: !!opencv-nd-matrix\n"
+        "   sizes: [ " + sizes + " ]\n"
+        "   dt: f\n"
+        "   data: [ 0., 0. ]\n"
+        "sm: !!opencv-sparse-matrix\n"
+        "   sizes: [ " + sizes + " ]\n"
+        "   dt: f\n"
+        "   data: [ ]\n";
+
+    FileStorage fs(content, FileStorage::READ | FileStorage::MEMORY);
+
+    Mat m;
+    EXPECT_ANY_THROW(fs["m"] >> m);
+
+    SparseMat sm;
+    EXPECT_ANY_THROW(fs["sm"] >> sm);
+}
+
 TEST(Core_InputOutput, filestorage_base64_valid_call)
 {
     const ::testing::TestInfo* const test_info = ::testing::UnitTest::GetInstance()->current_test_info();

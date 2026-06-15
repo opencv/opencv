@@ -142,6 +142,7 @@ void read(const FileNode& node, Mat& m, const Mat& default_mat)
         CV_Assert( !sizes_node.empty() );
 
         dims = (int)sizes_node.size();
+        CV_Assert( dims > 0 && dims <= CV_MAX_DIM );
         sizes_node.readRaw("i", sizes, dims*sizeof(sizes[0]));
 
         m.create(dims, sizes, elem_type);
@@ -180,6 +181,7 @@ void read( const FileNode& node, SparseMat& m, const SparseMat& default_mat )
     CV_Assert( !sizes_node.empty() );
 
     int dims = (int)sizes_node.size();
+    CV_Assert( dims > 0 && dims <= CV_MAX_DIM );
     sizes_node.readRaw("i", sizes, dims*sizeof(sizes[0]));
 
     m.create(dims, sizes, elem_type);
