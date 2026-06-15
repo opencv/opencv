@@ -126,6 +126,111 @@ void blitCopy(const std::shared_ptr<MetalContext>& ctx,
     [commandBuffer waitUntilCompleted];
 }
 
+struct CopyToMaskParams
+{
+    uint64_t srcOffset;
+    uint64_t maskOffset;
+    uint64_t dstOffset;
+    uint64_t srcStep;
+    uint64_t maskStep;
+    uint64_t dstStep;
+    int rows;
+    int cols;
+    int elemSize;
+    int depthSize;
+    int channels;
+    int maskChannels;
+    int haveDstUninit;
+};
+
+id<MTLComputePipelineState> getCopyToMaskPipeline(const std::shared_ptr<MetalContext>& ctx)
+{
+    static id<MTLComputePipelineState> pipeline = nil;
+    if (pipeline)
+        return pipeline;
+
+    static const char* source =
+        "#include <metal_stdlib>\n"
+        "using namespace metal;\n"
+        "struct CopyToMaskParams\n"
+        "{\n"
+        "    ulong srcOffset;\n"
+        "    ulong maskOffset;\n"
+        "    ulong dstOffset;\n"
+        "    ulong srcStep;\n"
+        "    ulong maskStep;\n"
+        "    ulong dstStep;\n"
+        "    int rows;\n"
+        "    int cols;\n"
+        "    int elemSize;\n"
+        "    int depthSize;\n"
+        "    int channels;\n"
+        "    int maskChannels;\n"
+        "    int haveDstUninit;\n"
+        "};\n"
+        "kernel void copyToMaskKernel(device const uchar* src [[buffer(0)]],\n"
+        "                             device const uchar* mask [[buffer(1)]],\n"
+        "                             device uchar* dst [[buffer(2)]],\n"
+        "                             constant CopyToMaskParams& p [[buffer(3)]],\n"
+        "                             uint2 gid [[thread_position_in_grid]])\n"
+        "{\n"
+        "    if ((int)gid.x >= p.cols || (int)gid.y >= p.rows)\n"
+        "        return;\n"
+        "    ulong srcBase = p.srcOffset + (ulong)gid.y * p.srcStep + (ulong)gid.x * (ulong)p.elemSize;\n"
+        "    ulong maskBase = p.maskOffset + (ulong)gid.y * p.maskStep + (ulong)gid.x * (ulong)p.maskChannels;\n"
+        "    ulong dstBase = p.dstOffset + (ulong)gid.y * p.dstStep + (ulong)gid.x * (ulong)p.elemSize;\n"
+        "    if (p.maskChannels == 1)\n"
+        "    {\n"
+        "        if (mask[maskBase])\n"
+        "        {\n"
+        "            for (int i = 0; i < p.elemSize; ++i)\n"
+        "                dst[dstBase + i] = src[srcBase + i];\n"
+        "        }\n"
+        "        else if (p.haveDstUninit)\n"
+        "        {\n"
+        "            for (int i = 0; i < p.elemSize; ++i)\n"
+        "                dst[dstBase + i] = 0;\n"
+        "        }\n"
+        "    }\n"
+        "    else\n"
+        "    {\n"
+        "        for (int c = 0; c < p.channels; ++c)\n"
+        "        {\n"
+        "            ulong srcChannel = srcBase + (ulong)c * (ulong)p.depthSize;\n"
+        "            ulong dstChannel = dstBase + (ulong)c * (ulong)p.depthSize;\n"
+        "            if (mask[maskBase + c])\n"
+        "            {\n"
+        "                for (int i = 0; i < p.depthSize; ++i)\n"
+        "                    dst[dstChannel + i] = src[srcChannel + i];\n"
+        "            }\n"
+        "            else if (p.haveDstUninit)\n"
+        "            {\n"
+        "                for (int i = 0; i < p.depthSize; ++i)\n"
+        "                    dst[dstChannel + i] = 0;\n"
+        "            }\n"
+        "        }\n"
+        "    }\n"
+        "}\n";
+
+    NSError* error = nil;
+    NSString* metalSource = [NSString stringWithUTF8String:source];
+    id<MTLLibrary> library = [ctx->device() newLibraryWithSource:metalSource options:nil error:&error];
+    if (!library)
+        return nil;
+
+    id<MTLFunction> function = [library newFunctionWithName:@"copyToMaskKernel"];
+    if (!function)
+    {
+        [library release];
+        return nil;
+    }
+
+    pipeline = [ctx->device() newComputePipelineStateWithFunction:function error:&error];
+    [function release];
+    [library release];
+    return pipeline;
+}
+
 void downloadToHost(UMatData* u, void* dst)
 {
     MetalBuffer* b = getBuffer(u);
@@ -492,6 +597,83 @@ MetalAllocator* getMetalAllocator_()
 }
 
 } // namespace
+
+bool copyToMask(const UMat& src, const UMat& mask, UMat& dst, bool haveDstUninit)
+{
+    if (!haveMetal() || src.dims != 2 || mask.dims != 2 || dst.dims != 2)
+        return false;
+    if (src.rows != mask.rows || src.cols != mask.cols ||
+        src.rows != dst.rows || src.cols != dst.cols || src.type() != dst.type())
+        return false;
+
+    int channels = src.channels();
+    int maskChannels = CV_MAT_CN(mask.type());
+    if (CV_MAT_DEPTH(mask.type()) != CV_8U || (maskChannels != 1 && maskChannels != channels))
+        return false;
+
+    MetalBuffer* srcBuffer = getBuffer(src.u);
+    MetalBuffer* maskBuffer = getBuffer(mask.u);
+    MetalBuffer* dstBuffer = getBuffer(dst.u);
+    if (!srcBuffer || !maskBuffer || !dstBuffer)
+        return false;
+
+    std::shared_ptr<MetalContext> ctx = std::static_pointer_cast<MetalContext>(dst.u->allocatorContext);
+    if (!ctx || !ctx->valid())
+        return false;
+
+    id<MTLComputePipelineState> pipeline = getCopyToMaskPipeline(ctx);
+    if (!pipeline)
+        return false;
+
+    size_t srcOfs[CV_MAX_DIM] = {0};
+    size_t maskOfs[CV_MAX_DIM] = {0};
+    size_t dstOfs[CV_MAX_DIM] = {0};
+    src.ndoffset(srcOfs);
+    mask.ndoffset(maskOfs);
+    dst.ndoffset(dstOfs);
+
+    CopyToMaskParams params;
+    params.srcOffset = srcOfs[0] * src.step.p[0] + srcOfs[1] * CV_ELEM_SIZE(src.type());
+    params.maskOffset = maskOfs[0] * mask.step.p[0] + maskOfs[1] * CV_ELEM_SIZE(mask.type());
+    params.dstOffset = dstOfs[0] * dst.step.p[0] + dstOfs[1] * CV_ELEM_SIZE(dst.type());
+    params.srcStep = src.step.p[0];
+    params.maskStep = mask.step.p[0];
+    params.dstStep = dst.step.p[0];
+    params.rows = src.rows;
+    params.cols = src.cols;
+    params.elemSize = static_cast<int>(CV_ELEM_SIZE(src.type()));
+    params.depthSize = static_cast<int>(CV_ELEM_SIZE1(src.type()));
+    params.channels = channels;
+    params.maskChannels = maskChannels;
+    params.haveDstUninit = haveDstUninit ? 1 : 0;
+
+    id<MTLCommandBuffer> commandBuffer = [ctx->queue() commandBuffer];
+    id<MTLComputeCommandEncoder> encoder = [commandBuffer computeCommandEncoder];
+    if (!commandBuffer || !encoder)
+        return false;
+
+    [encoder setComputePipelineState:pipeline];
+    [encoder setBuffer:srcBuffer->buffer offset:0 atIndex:0];
+    [encoder setBuffer:maskBuffer->buffer offset:0 atIndex:1];
+    [encoder setBuffer:dstBuffer->buffer offset:0 atIndex:2];
+    [encoder setBytes:&params length:sizeof(params) atIndex:3];
+
+    MTLSize threadgroup = MTLSizeMake(16, 16, 1);
+    MTLSize groups = MTLSizeMake((src.cols + threadgroup.width - 1) / threadgroup.width,
+                                 (src.rows + threadgroup.height - 1) / threadgroup.height,
+                                 1);
+    [encoder dispatchThreadgroups:groups threadsPerThreadgroup:threadgroup];
+    [encoder endEncoding];
+    [commandBuffer commit];
+    [commandBuffer waitUntilCompleted];
+
+    if ([commandBuffer status] == MTLCommandBufferStatusError)
+        return false;
+
+    dst.u->markDeviceCopyObsolete(false);
+    dst.u->markHostCopyObsolete(true);
+    return true;
+}
 
 bool haveMetal()
 {

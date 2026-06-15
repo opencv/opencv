@@ -1313,10 +1313,10 @@ void UMat::copyTo(OutputArray _dst, InputArray _mask) const
         copyTo(_dst);
         return;
     }
-#ifdef HAVE_OPENCL
     int cn = channels(), mtype = _mask.type(), mdepth = CV_MAT_DEPTH(mtype), mcn = CV_MAT_CN(mtype);
     CV_Assert( (mdepth == CV_8U || mdepth == CV_8S || mdepth == CV_Bool) && (mcn == 1 || mcn == cn) );
 
+#ifdef HAVE_OPENCL
     if (ocl::useOpenCL() && _dst.isUMat() && dims <= 2)
     {
         UMatData * prevu = _dst.getUMat().u;
@@ -1346,6 +1346,20 @@ void UMat::copyTo(OutputArray _dst, InputArray _mask) const
                 CV_IMPL_ADD(CV_IMPL_OCL);
                 return;
             }
+        }
+    }
+#endif
+#ifdef HAVE_METAL
+    if (metal::haveMetal() && _dst.isUMat() && dims <= 2)
+    {
+        UMatData* prevu = _dst.getUMat().u;
+        _dst.create(size, type());
+
+        UMat dst = _dst.getUMat();
+        bool haveDstUninit = prevu != dst.u;
+        if (metal::copyToMask(*this, _mask.getUMat(), dst, haveDstUninit))
+        {
+            return;
         }
     }
 #endif

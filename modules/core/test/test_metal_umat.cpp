@@ -175,6 +175,115 @@ TEST(Core_Metal_UMat, RoiDeviceCopy)
     EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
 }
 
+TEST(Core_Metal_UMat, MaskedCopyToSingleChannelMask)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src(37, 41, CV_8UC3);
+    Mat mask(src.size(), CV_8UC1);
+    randu(src, 0, 255);
+    randu(mask, 0, 2);
+    mask *= 255;
+
+    Mat expected;
+    src.copyTo(expected, mask);
+
+    UMat usrc, umask, udst;
+    src.copyTo(usrc);
+    mask.copyTo(umask);
+    usrc.copyTo(udst, umask);
+
+    Mat dst;
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
+TEST(Core_Metal_UMat, MaskedCopyToChannelMask)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src(35, 39, CV_8UC3);
+    Mat mask(src.size(), CV_8UC3);
+    randu(src, 0, 255);
+    randu(mask, 0, 2);
+    mask *= 255;
+
+    Mat expected;
+    src.copyTo(expected, mask);
+
+    UMat usrc, umask, udst;
+    src.copyTo(usrc);
+    mask.copyTo(umask);
+    usrc.copyTo(udst, umask);
+
+    Mat dst;
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
+TEST(Core_Metal_UMat, MaskedCopyToRoiPreservesUnmasked)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src(48, 64, CV_8UC3);
+    Mat base(src.size(), src.type());
+    Mat mask(src.size(), CV_8UC1);
+    randu(src, 0, 255);
+    randu(base, 0, 255);
+    randu(mask, 0, 2);
+    mask *= 255;
+
+    Rect roi(7, 9, 31, 23);
+    Mat expected = base.clone();
+    src(roi).copyTo(expected(roi), mask(roi));
+
+    UMat usrc, umask, udst;
+    src.copyTo(usrc);
+    mask.copyTo(umask);
+    base.copyTo(udst);
+    usrc(roi).copyTo(udst(roi), umask(roi));
+
+    Mat dst;
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
+TEST(Core_Metal_UMat, DeviceMemoryUsageMaskedCopyTo)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src(29, 43, CV_8UC4);
+    Mat base(src.size(), src.type());
+    Mat mask(src.size(), CV_8UC1);
+    randu(src, 0, 255);
+    randu(base, 0, 255);
+    randu(mask, 0, 2);
+    mask *= 255;
+
+    Mat expected = base.clone();
+    src.copyTo(expected, mask);
+
+    UMat usrc(src.size(), src.type(), USAGE_ALLOCATE_DEVICE_MEMORY);
+    UMat umask(mask.size(), mask.type(), USAGE_ALLOCATE_DEVICE_MEMORY);
+    UMat udst(base.size(), base.type(), USAGE_ALLOCATE_DEVICE_MEMORY);
+    src.copyTo(usrc);
+    mask.copyTo(umask);
+    base.copyTo(udst);
+    usrc.copyTo(udst, umask);
+
+    Mat dst;
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
 #endif // HAVE_METAL
 
 }} // namespace
