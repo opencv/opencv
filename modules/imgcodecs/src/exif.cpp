@@ -160,6 +160,12 @@ bool ExifReader::processRawProfile(const char* profile, size_t profile_len) {
     }
     ++end;
 
+    // the payload starts with a 6-byte "Exif\0\0" header, so a shorter declared
+    // length underflows the size and pointer handed to parseExif() below
+    if (expected_length < 6) {
+        return false;
+    }
+
     // 'end' now points to the profile payload.
     std::string payload = HexStringToBytes(end, expected_length);
     if (payload.size() == 0) return false;
