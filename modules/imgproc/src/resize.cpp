@@ -3340,11 +3340,17 @@ typedef void (*ResizeAreaFunc)( const Mat& src, Mat& dst,
                                 const int* yofs);
 
 
-static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, DecimateAlpha* tab )
+// Shared resize-area coefficient-table math for the CPU and OpenCL callers; the
+// per-entry emit (struct vs parallel arrays + ofs_tab) is picked via if constexpr.
+template <bool OCL>
+static int computeResizeAreaTabImpl( int ssize, int dsize, int cn, double scale,
+                                     DecimateAlpha* tab, int* map_tab, float* alpha_tab, int* ofs_tab )
 {
-    int k = 0;
-    for(int dx = 0; dx < dsize; dx++ )
+    int k = 0, dx = 0;
+    for( ; dx < dsize; dx++ )
     {
+        if constexpr (OCL) ofs_tab[dx] = k;
+
         double fsx1 = dx * scale;
         double fsx2 = fsx1 + scale;
         double cellWidth = std::min(scale, ssize - fsx1);
@@ -3354,70 +3360,46 @@ static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, Dec
         sx2 = std::min(sx2, ssize - 1);
         sx1 = std::min(sx1, sx2);
 
-        if( sx1 - fsx1 > 1e-3 )
+        auto emit = [&](int si, float alpha)
         {
-            CV_Assert( k < ssize*2 );
-            tab[k].di = dx * cn;
-            tab[k].si = (sx1 - 1) * cn;
-            tab[k++].alpha = (float)((sx1 - fsx1) / cellWidth);
-        }
+            if constexpr (OCL)
+            {
+                map_tab[k] = si;
+                alpha_tab[k] = alpha;
+            }
+            else
+            {
+                CV_Assert( k < ssize*2 );
+                tab[k].di = dx * cn;
+                tab[k].si = si * cn;
+                tab[k].alpha = alpha;
+            }
+            k++;
+        };
 
-        for(int sx = sx1; sx < sx2; sx++ )
-        {
-            CV_Assert( k < ssize*2 );
-            tab[k].di = dx * cn;
-            tab[k].si = sx * cn;
-            tab[k++].alpha = float(1.0 / cellWidth);
-        }
+        if( sx1 - fsx1 > 1e-3 )
+            emit(sx1 - 1, (float)((sx1 - fsx1) / cellWidth));
+
+        for( int sx = sx1; sx < sx2; sx++ )
+            emit(sx, float(1.0 / cellWidth));
 
         if( fsx2 - sx2 > 1e-3 )
-        {
-            CV_Assert( k < ssize*2 );
-            tab[k].di = dx * cn;
-            tab[k].si = sx2 * cn;
-            tab[k++].alpha = (float)(std::min(std::min(fsx2 - sx2, 1.), cellWidth) / cellWidth);
-        }
+            emit(sx2, (float)(std::min(std::min(fsx2 - sx2, 1.), cellWidth) / cellWidth));
     }
+    if constexpr (OCL) ofs_tab[dsize] = k;
     return k;
+}
+
+static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, DecimateAlpha* tab )
+{
+    return computeResizeAreaTabImpl<false>(ssize, dsize, cn, scale, tab, nullptr, nullptr, nullptr);
 }
 
 #ifdef HAVE_OPENCL
 static void ocl_computeResizeAreaTabs(int ssize, int dsize, double scale, int * const map_tab,
                                       float * const alpha_tab, int * const ofs_tab)
 {
-    int k = 0, dx = 0;
-    for ( ; dx < dsize; dx++)
-    {
-        ofs_tab[dx] = k;
-
-        double fsx1 = dx * scale;
-        double fsx2 = fsx1 + scale;
-        double cellWidth = std::min(scale, ssize - fsx1);
-
-        int sx1 = cvCeil(fsx1), sx2 = cvFloor(fsx2);
-
-        sx2 = std::min(sx2, ssize - 1);
-        sx1 = std::min(sx1, sx2);
-
-        if (sx1 - fsx1 > 1e-3)
-        {
-            map_tab[k] = sx1 - 1;
-            alpha_tab[k++] = (float)((sx1 - fsx1) / cellWidth);
-        }
-
-        for (int sx = sx1; sx < sx2; sx++)
-        {
-            map_tab[k] = sx;
-            alpha_tab[k++] = float(1.0 / cellWidth);
-        }
-
-        if (fsx2 - sx2 > 1e-3)
-        {
-            map_tab[k] = sx2;
-            alpha_tab[k++] = (float)(std::min(std::min(fsx2 - sx2, 1.), cellWidth) / cellWidth);
-        }
-    }
-    ofs_tab[dx] = k;
+    computeResizeAreaTabImpl<true>(ssize, dsize, 1, scale, nullptr, map_tab, alpha_tab, ofs_tab);
 }
 
 static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
@@ -3640,14 +3622,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
 #define IPP_RESIZE_PARALLEL 1
 
 #ifdef HAVE_IPP_IW
-// Single parallel body shared by IPP resize (IwiResize) and affine-resize
-// (IwiWarpAffine). The backends differ only in the IPP operation type, in how
-// it is initialised, and in whether the per-tile call takes an explicit border.
-// Templating on the operation type collapses both classes into one definition:
-// the matching Init overload is selected per instantiation (the other is never
-// instantiated), and the border argument is chosen at compile time via
-// if constexpr, so the generated code is identical to the two hand-written
-// classes - no runtime branch and no extra indirection.
+// One body for both IPP resize backends (IwiResize/IwiWarpAffine); if constexpr picks the per-tile border arg so codegen matches the original two classes.
 template <typename IwiOp>
 class ipp_resizeParallelT: public ParallelLoopBody
 {
