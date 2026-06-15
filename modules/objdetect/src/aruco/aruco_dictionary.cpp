@@ -80,7 +80,8 @@ bool Dictionary::identify(const Mat &onlyCellPixelRatio, CV_OUT int &idx, CV_OUT
     const int s = (markerSize * markerSize + 8 - 1) / 8;
     AutoBuffer<uint8_t> temp(4 * s);
     uint8_t* not0 = temp.data(), * not1 = not0 + s;
-    int not0Byte = 0, not1Byte = 0, currentByte = 0, currentBit = 0;
+    uint8_t not0Byte = 0, not1Byte = 0;
+    int currentByte = 0, currentBit = 0;
     for(int j = 0; j < markerSize; j++) {
         const float* cellPixelRatioRow = onlyCellPixelRatio.ptr<float>(j);
         for(int i = 0; i < markerSize; i++) {
