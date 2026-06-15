@@ -116,260 +116,62 @@ template <typename ET, typename FT, int n, bool mulall, int cncnt> struct hline
         hlineResize<ET, FT, n, mulall>(src, cn, ofst, m, dst, dst_min, dst_max, dst_width);
     }
 };
-template <typename ET, typename FT> struct hline<ET, FT, 2, true, 1>
+// Collapses the four hand-unrolled hline<…,2,true,cncnt> specializations into one:
+// the channel loop is bounded by the compile-time cncnt so it unrolls, and the
+// per-output expression m[0]*px[c] + m[1]*px[c+cncnt] is byte-identical to the
+// originals (interior reads from px = src + cncnt*ofst[i]).
+template <typename ET, typename FT, int cncnt> struct hline<ET, FT, 2, true, cncnt>
 {
     static void ResizeCn(ET* src, int, int *ofst, FT* m, FT* dst, int dst_min, int dst_max, int dst_width)
     {
         int i = 0;
-        FT src0(src[0]);
+        FT src0[cncnt];
+        for (int c = 0; c < cncnt; c++) src0[c] = FT(src[c]);
         for (; i < dst_min; i++, m += 2) // Points that fall left from src image so became equal to leftmost src point
-        {
-            *(dst++) = src0;
-        }
+            for (int c = 0; c < cncnt; c++)
+                *(dst++) = src0[c];
         for (; i < dst_max; i++, m += 2)
         {
-            ET* px = src + ofst[i];
-            *(dst++) = m[0] * px[0] + m[1] * px[1];
+            ET* px = src + cncnt*ofst[i];
+            for (int c = 0; c < cncnt; c++)
+                *(dst++) = m[0] * px[c] + m[1] * px[c + cncnt];
         }
         // Avoid reading a potentially unset ofst, leading to a random memory read.
         if (i >= dst_width) {
             return;
         }
-        src0 = (src + ofst[dst_width - 1])[0];
+        ET* px_last = src + cncnt*ofst[dst_width - 1];
+        for (int c = 0; c < cncnt; c++) src0[c] = px_last[c];
         for (; i < dst_width; i++) // Points that fall right from src image so became equal to rightmost src point
-        {
-            *(dst++) = src0;
-        }
+            for (int c = 0; c < cncnt; c++)
+                *(dst++) = src0[c];
     }
 };
-template <typename ET, typename FT> struct hline<ET, FT, 2, true, 2>
+// Merged hline<…,4,true,cncnt>; preserves the original n=4 quirk of reading src (not src+cncnt*ofst[i]) byte-for-byte.
+template <typename ET, typename FT, int cncnt> struct hline<ET, FT, 4, true, cncnt>
 {
     static void ResizeCn(ET* src, int, int *ofst, FT* m, FT* dst, int dst_min, int dst_max, int dst_width)
     {
         int i = 0;
-        FT src0(src[0]), src1(src[1]);
-        for (; i < dst_min; i++, m += 2) // Points that fall left from src image so became equal to leftmost src point
-        {
-            *(dst++) = src0;
-            *(dst++) = src1;
-        }
-        for (; i < dst_max; i++, m += 2)
-        {
-            ET* px = src + 2*ofst[i];
-            *(dst++) = m[0] * px[0] + m[1] * px[2];
-            *(dst++) = m[0] * px[1] + m[1] * px[3];
-        }
-        // Avoid reading a potentially unset ofst, leading to a random memory read.
-        if (i >= dst_width) {
-            return;
-        }
-        src0 = (src + 2*ofst[dst_width - 1])[0];
-        src1 = (src + 2*ofst[dst_width - 1])[1];
-        for (; i < dst_width; i++) // Points that fall right from src image so became equal to rightmost src point
-        {
-            *(dst++) = src0;
-            *(dst++) = src1;
-        }
-    }
-};
-template <typename ET, typename FT> struct hline<ET, FT, 2, true, 3>
-{
-    static void ResizeCn(ET* src, int, int *ofst, FT* m, FT* dst, int dst_min, int dst_max, int dst_width)
-    {
-        int i = 0;
-        FT src0(src[0]), src1(src[1]), src2(src[2]);
-        for (; i < dst_min; i++, m += 2) // Points that fall left from src image so became equal to leftmost src point
-        {
-            *(dst++) = src0;
-            *(dst++) = src1;
-            *(dst++) = src2;
-        }
-        for (; i < dst_max; i++, m += 2)
-        {
-            ET* px = src + 3*ofst[i];
-            *(dst++) = m[0] * px[0] + m[1] * px[3];
-            *(dst++) = m[0] * px[1] + m[1] * px[4];
-            *(dst++) = m[0] * px[2] + m[1] * px[5];
-        }
-        // Avoid reading a potentially unset ofst, leading to a random memory read.
-        if (i >= dst_width) {
-            return;
-        }
-        src0 = (src + 3*ofst[dst_width - 1])[0];
-        src1 = (src + 3*ofst[dst_width - 1])[1];
-        src2 = (src + 3*ofst[dst_width - 1])[2];
-        for (; i < dst_width; i++) // Points that fall right from src image so became equal to rightmost src point
-        {
-            *(dst++) = src0;
-            *(dst++) = src1;
-            *(dst++) = src2;
-        }
-    }
-};
-template <typename ET, typename FT> struct hline<ET, FT, 2, true, 4>
-{
-    static void ResizeCn(ET* src, int, int *ofst, FT* m, FT* dst, int dst_min, int dst_max, int dst_width)
-    {
-        int i = 0;
-        FT src0(src[0]), src1(src[1]), src2(src[2]), src3(src[3]);
-        for (; i < dst_min; i++, m += 2) // Points that fall left from src image so became equal to leftmost src point
-        {
-            *(dst++) = src0;
-            *(dst++) = src1;
-            *(dst++) = src2;
-            *(dst++) = src3;
-        }
-        for (; i < dst_max; i++, m += 2)
-        {
-            ET* px = src + 4*ofst[i];
-            *(dst++) = m[0] * px[0] + m[1] * px[4];
-            *(dst++) = m[0] * px[1] + m[1] * px[5];
-            *(dst++) = m[0] * px[2] + m[1] * px[6];
-            *(dst++) = m[0] * px[3] + m[1] * px[7];
-        }
-        // Avoid reading a potentially unset ofst, leading to a random memory read.
-        if (i >= dst_width) {
-            return;
-        }
-        src0 = (src + 4*ofst[dst_width - 1])[0];
-        src1 = (src + 4*ofst[dst_width - 1])[1];
-        src2 = (src + 4*ofst[dst_width - 1])[2];
-        src3 = (src + 4*ofst[dst_width - 1])[3];
-        for (; i < dst_width; i++) // Points that fall right from src image so became equal to rightmost src point
-        {
-            *(dst++) = src0;
-            *(dst++) = src1;
-            *(dst++) = src2;
-            *(dst++) = src3;
-        }
-    }
-};
-template <typename ET, typename FT> struct hline<ET, FT, 4, true, 1>
-{
-    static void ResizeCn(ET* src, int, int *ofst, FT* m, FT* dst, int dst_min, int dst_max, int dst_width)
-    {
-        int i = 0;
-        FT src0(src[0]);
+        FT src0[cncnt];
+        for (int c = 0; c < cncnt; c++) src0[c] = FT(src[c]);
         for (; i < dst_min; i++, m += 4) // Points that fall left from src image so became equal to leftmost src point
-        {
-            *(dst++) = src0;
-        }
+            for (int c = 0; c < cncnt; c++)
+                *(dst++) = src0[c];
         for (; i < dst_max; i++, m += 4)
         {
-            ET* px = src + ofst[i];
-            *(dst++) = m[0] * src[0] + m[1] * src[1] + m[2] * src[2] + m[3] * src[3];
+            for (int c = 0; c < cncnt; c++)
+                *(dst++) = m[0] * src[c] + m[1] * src[c + cncnt] + m[2] * src[c + 2*cncnt] + m[3] * src[c + 3*cncnt];
         }
         // Avoid reading a potentially unset ofst, leading to a random memory read.
         if (i >= dst_width) {
             return;
         }
-        src0 = (src + ofst[dst_width - 1])[0];
+        ET* px_last = src + cncnt*ofst[dst_width - 1];
+        for (int c = 0; c < cncnt; c++) src0[c] = px_last[c];
         for (; i < dst_width; i++) // Points that fall right from src image so became equal to rightmost src point
-        {
-            *(dst++) = src0;
-        }
-    }
-};
-template <typename ET, typename FT> struct hline<ET, FT, 4, true, 2>
-{
-    static void ResizeCn(ET* src, int, int *ofst, FT* m, FT* dst, int dst_min, int dst_max, int dst_width)
-    {
-        int i = 0;
-        FT src0(src[0]), src1(src[1]);
-        for (; i < dst_min; i++, m += 4) // Points that fall left from src image so became equal to leftmost src point
-        {
-            *(dst++) = src0;
-            *(dst++) = src1;
-        }
-        for (; i < dst_max; i++, m += 4)
-        {
-            ET* px = src + 2*ofst[i];
-            *(dst++) = m[0] * src[0] + m[1] * src[2] + m[2] * src[4] + m[3] * src[6];
-            *(dst++) = m[0] * src[1] + m[1] * src[3] + m[2] * src[5] + m[3] * src[7];
-        }
-        // Avoid reading a potentially unset ofst, leading to a random memory read.
-        if (i >= dst_width) {
-            return;
-        }
-        src0 = (src + 2*ofst[dst_width - 1])[0];
-        src1 = (src + 2*ofst[dst_width - 1])[1];
-        for (; i < dst_width; i++) // Points that fall right from src image so became equal to rightmost src point
-        {
-            *(dst++) = src0;
-            *(dst++) = src1;
-        }
-    }
-};
-template <typename ET, typename FT> struct hline<ET, FT, 4, true, 3>
-{
-    static void ResizeCn(ET* src, int, int *ofst, FT* m, FT* dst, int dst_min, int dst_max, int dst_width)
-    {
-        int i = 0;
-        FT src0(src[0]), src1(src[1]), src2(src[2]);
-        for (; i < dst_min; i++, m += 4) // Points that fall left from src image so became equal to leftmost src point
-        {
-            *(dst++) = src0;
-            *(dst++) = src1;
-            *(dst++) = src2;
-        }
-        for (; i < dst_max; i++, m += 4)
-        {
-            ET* px = src + 3*ofst[i];
-            *(dst++) = m[0] * src[0] + m[1] * src[3] + m[2] * src[6] + m[3] * src[ 9];
-            *(dst++) = m[0] * src[1] + m[1] * src[4] + m[2] * src[7] + m[3] * src[10];
-            *(dst++) = m[0] * src[2] + m[1] * src[5] + m[2] * src[8] + m[3] * src[11];
-        }
-        // Avoid reading a potentially unset ofst, leading to a random memory read.
-        if (i >= dst_width) {
-            return;
-        }
-        src0 = (src + 3*ofst[dst_width - 1])[0];
-        src1 = (src + 3*ofst[dst_width - 1])[1];
-        src2 = (src + 3*ofst[dst_width - 1])[2];
-        for (; i < dst_width; i++) // Points that fall right from src image so became equal to rightmost src point
-        {
-            *(dst++) = src0;
-            *(dst++) = src1;
-            *(dst++) = src2;
-        }
-    }
-};
-template <typename ET, typename FT> struct hline<ET, FT, 4, true, 4>
-{
-    static void ResizeCn(ET* src, int, int *ofst, FT* m, FT* dst, int dst_min, int dst_max, int dst_width)
-    {
-        int i = 0;
-        FT src0(src[0]), src1(src[1]), src2(src[2]), src3(src[3]);
-        for (; i < dst_min; i++, m += 4) // Points that fall left from src image so became equal to leftmost src point
-        {
-            *(dst++) = src0;
-            *(dst++) = src1;
-            *(dst++) = src2;
-            *(dst++) = src3;
-        }
-        for (; i < dst_max; i++, m += 4)
-        {
-            ET* px = src + 4*ofst[i];
-            *(dst++) = m[0] * src[0] + m[1] * src[4] + m[2] * src[ 8] + m[3] * src[12];
-            *(dst++) = m[0] * src[1] + m[1] * src[5] + m[2] * src[ 9] + m[3] * src[13];
-            *(dst++) = m[0] * src[2] + m[1] * src[6] + m[2] * src[10] + m[3] * src[14];
-            *(dst++) = m[0] * src[3] + m[1] * src[7] + m[2] * src[11] + m[3] * src[15];
-        }
-        // Avoid reading a potentially unset ofst, leading to a random memory read.
-        if (i >= dst_width) {
-            return;
-        }
-        src0 = (src + 4*ofst[dst_width - 1])[0];
-        src1 = (src + 4*ofst[dst_width - 1])[1];
-        src2 = (src + 4*ofst[dst_width - 1])[2];
-        src3 = (src + 4*ofst[dst_width - 1])[3];
-        for (; i < dst_width; i++) // Points that fall right from src image so became equal to rightmost src point
-        {
-            *(dst++) = src0;
-            *(dst++) = src1;
-            *(dst++) = src2;
-            *(dst++) = src3;
-        }
+            for (int c = 0; c < cncnt; c++)
+                *(dst++) = src0[c];
     }
 };
 template <typename ET, typename FT, int n, bool mulall, int cncnt>
