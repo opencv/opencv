@@ -13,6 +13,7 @@ namespace metal {
 bool haveMetal();
 MatAllocator* getMetalAllocator();
 bool copyToMask(const UMat& src, const UMat& mask, UMat& dst, bool haveDstUninit);
+bool add(const UMat& src1, const UMat& src2, UMat& dst);
 
 } // namespace metal
 } // namespace cv

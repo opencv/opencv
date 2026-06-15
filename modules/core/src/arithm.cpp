@@ -49,6 +49,9 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
+#ifdef HAVE_METAL
+#include "metal.hpp"
+#endif
 
 namespace cv
 {
@@ -650,6 +653,17 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
             ocl_arithm_op(*psrc1, *psrc2, _dst, _mask,
                           (!usrdata ? type1 : std::max(depth1, CV_32F)),
                           usrdata, oclop, false))
+#ifdef HAVE_METAL
+        if (metal::haveMetal() && kind1 == _InputArray::UMAT && kind2 == _InputArray::UMAT &&
+            _dst.isUMat() && oclop == OCL_OP_ADD && !usrdata)
+        {
+            UMat src1 = psrc1->getUMat();
+            UMat src2 = psrc2->getUMat();
+            UMat dst = _dst.getUMat();
+            if (metal::add(src1, src2, dst))
+                return;
+        }
+#endif
 
         Mat src1 = psrc1->getMat(), src2 = psrc2->getMat(), dst = _dst.getMat();
         Size sz = getContinuousSize2D(src1, src2, dst, src1.channels());
