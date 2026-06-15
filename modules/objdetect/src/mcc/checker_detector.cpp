@@ -1265,6 +1265,18 @@ void CCheckerDetectorImpl::
 void CCheckerDetectorImpl::
     removeTooCloseDetections()
 {
+    // Provide a deterministic output by sorting the checkers by their cost and
+    // then by their center coordinates.
+    std::sort(m_checkers.begin(), m_checkers.end(),
+                [](const Ptr<CChecker> &a, const Ptr<CChecker> &b) {
+                    if (a->getCost() != b->getCost())
+                        return a->getCost() < b->getCost();
+                    Point2f ca = a->getCenter();
+                    Point2f cb = b->getCenter();
+                    if (ca.x != cb.x) return ca.x < cb.x;
+                    return ca.y < cb.y;
+                });
+
     // Remove these elements which corners are too close to each other.
     // Eliminate overlaps!!!
     // First detect candidates for removal:
@@ -1306,8 +1318,10 @@ void CCheckerDetectorImpl::
         size_t removalIndex;
         if (p1 < p2)
             removalIndex = tooNearCandidates[i].second;
-        else
+        else if (p2 < p1)
             removalIndex = tooNearCandidates[i].first;
+        else
+            removalIndex = std::max(tooNearCandidates[i].first, tooNearCandidates[i].second);
 
         removalMask[removalIndex] = true;
     }
@@ -1322,7 +1336,7 @@ void CCheckerDetectorImpl::
         m_checkers.push_back(copy_m_checkers[i]);
     }
 
-    sort( m_checkers.begin(), m_checkers.end(),
+    std::stable_sort( m_checkers.begin(), m_checkers.end(),
           [&](const Ptr<CChecker> &a, const Ptr<CChecker> &b)
           {
               return a->getCost() < b->getCost();
