@@ -1143,79 +1143,87 @@ struct VResizeLinearVec_32s8u
     }
 };
 
-struct VResizeLinearVec_32f16u
+// Unified float vertical-resize kernel collapsing the nine VResize*Vec_32f* structs:
+// an N-tap muladd chain (exact original nesting -> bit-identical) + a pack policy.
+template <int K, int N, bool Aligned>
+static inline v_float32 vresizeVecChain(const float** S, const float* beta, int x)
 {
-    int operator()(const float** src, ushort* dst, const float* beta, int width) const
+    v_float32 s;
+    if constexpr (Aligned)
+        s = vx_load_aligned(S[K] + x);
+    else
+        s = vx_load(S[K] + x);
+    v_float32 bK = vx_setall_f32(beta[K]);
+    if constexpr (K + 1 == N)
+        return v_mul(s, bK);
+    else
+        return v_muladd(s, bK, vresizeVecChain<K + 1, N, Aligned>(S, beta, x));
+}
+
+struct VPackF32
+{
+    typedef float DT;
+    enum { groups = 1 };
+    static int step() { return VTraits<v_float32>::vlanes(); }
+    static void store(DT* dst, const v_float32& a0) { v_store(dst, a0); }
+};
+
+template <typename DT_, bool Unsigned>
+struct VPack16  // 16u (v_pack_u) / 16s (v_pack) - selected at compile time
+{
+    typedef DT_ DT;
+    enum { groups = 2 };
+    static int step() { return VTraits<v_int16>::vlanes(); }
+    static void store(DT* dst, const v_float32& a0, const v_float32& a1) { if constexpr (Unsigned) v_store(dst, v_pack_u(v_round(a0), v_round(a1))); else v_store(dst, v_pack(v_round(a0), v_round(a1))); }
+    static void store_low(DT* dst, const v_int32& t0) { if constexpr (Unsigned) v_store_low(dst, v_pack_u(t0, t0)); else v_store_low(dst, v_pack(t0, t0)); }
+};
+
+template <int N, typename Pack, bool Aligned>
+static inline void vresizeVecStore(typename Pack::DT* dst, const float** src, const float* beta, int x)
+{
+    if constexpr (Pack::groups == 1)
+        Pack::store(dst, vresizeVecChain<0, N, Aligned>(src, beta, x));
+    else
+        Pack::store(dst, vresizeVecChain<0, N, Aligned>(src, beta, x),
+                         vresizeVecChain<0, N, Aligned>(src, beta, x + VTraits<v_float32>::vlanes()));
+}
+
+template <int N, typename Pack>
+struct VResizeVec_32f
+{
+    int operator()(const float** src, typename Pack::DT* dst, const float* beta, int width) const
     {
-        const float *S0 = src[0], *S1 = src[1];
         int x = 0;
-
-        v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]);
-
-        if( (((size_t)S0|(size_t)S1)&(VTraits<v_uint8>::vlanes() - 1)) == 0 )
-            for( ; x <= width - VTraits<v_uint16>::vlanes(); x += VTraits<v_uint16>::vlanes())
-                v_store(dst + x, v_pack_u(v_round(v_muladd(vx_load_aligned(S0 + x                    ), b0, v_mul(vx_load_aligned(S1 + x), b1))),
-                                          v_round(v_muladd(vx_load_aligned(S0 + x + VTraits<v_float32>::vlanes()), b0, v_mul(vx_load_aligned(S1 + x + VTraits<v_float32>::vlanes()), b1)))));
-        else
-            for (; x <= width - VTraits<v_uint16>::vlanes(); x += VTraits<v_uint16>::vlanes())
-                v_store(dst + x, v_pack_u(v_round(v_muladd(vx_load(S0 + x                    ), b0, v_mul(vx_load(S1 + x), b1))),
-                                          v_round(v_muladd(vx_load(S0 + x + VTraits<v_float32>::vlanes()), b0, v_mul(vx_load(S1 + x + VTraits<v_float32>::vlanes()), b1)))));
-        for( ; x <= width - VTraits<v_float32>::vlanes(); x += VTraits<v_float32>::vlanes())
+        const int step = Pack::step();
+        if constexpr (N == 2)
         {
-            v_int32 t0 = v_round(v_muladd(vx_load(S0 + x), b0, v_mul(vx_load(S1 + x), b1)));
-            v_store_low(dst + x, v_pack_u(t0, t0));
+            // Linear-only aligned fast path (matches the original, which only the N=2 kernels had).
+            const float *S0 = src[0], *S1 = src[1];
+            if( (((size_t)S0|(size_t)S1)&(VTraits<v_uint8>::vlanes() - 1)) == 0 )
+                for( ; x <= width - step; x += step )
+                    vresizeVecStore<N, Pack, true>(dst + x, src, beta, x);
+            else
+                for( ; x <= width - step; x += step )
+                    vresizeVecStore<N, Pack, false>(dst + x, src, beta, x);
         }
-
-        return x;
-    }
-};
-
-struct VResizeLinearVec_32f16s
-{
-    int operator()(const float** src, short* dst, const float* beta, int width) const
-    {
-        const float *S0 = src[0], *S1 = src[1];
-        int x = 0;
-
-        v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]);
-
-        if( (((size_t)S0|(size_t)S1)&(VTraits<v_uint8>::vlanes() - 1)) == 0 )
-            for( ; x <= width - VTraits<v_int16>::vlanes(); x += VTraits<v_int16>::vlanes())
-                v_store(dst + x, v_pack(v_round(v_muladd(vx_load_aligned(S0 + x                    ), b0, v_mul(vx_load_aligned(S1 + x), b1))),
-                                        v_round(v_muladd(vx_load_aligned(S0 + x + VTraits<v_float32>::vlanes()), b0, v_mul(vx_load_aligned(S1 + x + VTraits<v_float32>::vlanes()), b1)))));
         else
-            for (; x <= width - VTraits<v_int16>::vlanes(); x += VTraits<v_int16>::vlanes())
-                v_store(dst + x, v_pack(v_round(v_muladd(vx_load(S0 + x                    ), b0, v_mul(vx_load(S1 + x), b1))),
-                                        v_round(v_muladd(vx_load(S0 + x + VTraits<v_float32>::vlanes()), b0, v_mul(vx_load(S1 + x + VTraits<v_float32>::vlanes()), b1)))));
-        for( ; x <= width - VTraits<v_float32>::vlanes(); x += VTraits<v_float32>::vlanes())
         {
-            v_int32 t0 = v_round(v_muladd(vx_load(S0 + x), b0, v_mul(vx_load(S1 + x), b1)));
-            v_store_low(dst + x, v_pack(t0, t0));
+            for( ; x <= width - step; x += step )
+                vresizeVecStore<N, Pack, false>(dst + x, src, beta, x);
         }
-
+        if constexpr (N == 2 && Pack::groups == 2)
+        {
+            // Linear 16u/16s float-width tail (matches the original).
+            for( ; x <= width - VTraits<v_float32>::vlanes(); x += VTraits<v_float32>::vlanes() )
+                Pack::store_low(dst + x, v_round(vresizeVecChain<0, N, false>(src, beta, x)));
+        }
         return x;
     }
 };
 
-struct VResizeLinearVec_32f
-{
-    int operator()(const float** src, float* dst, const float* beta, int width) const
-    {
-        const float *S0 = src[0], *S1 = src[1];
-        int x = 0;
-
-        v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]);
-
-        if( (((size_t)S0|(size_t)S1)&(VTraits<v_uint8>::vlanes() - 1)) == 0 )
-            for( ; x <= width - VTraits<v_float32>::vlanes(); x += VTraits<v_float32>::vlanes())
-                v_store(dst + x, v_muladd(vx_load_aligned(S0 + x), b0, v_mul(vx_load_aligned(S1 + x), b1)));
-        else
-            for( ; x <= width - VTraits<v_float32>::vlanes(); x += VTraits<v_float32>::vlanes())
-                v_store(dst + x, v_muladd(vx_load(S0 + x), b0, v_mul(vx_load(S1 + x), b1)));
-
-        return x;
-    }
-};
+typedef VResizeVec_32f<2, VPack16<ushort, true> > VResizeLinearVec_32f16u;
+typedef VResizeVec_32f<2, VPack16<short, false> > VResizeLinearVec_32f16s;
+typedef VResizeVec_32f<2, VPackF32> VResizeLinearVec_32f;
 
 
 struct VResizeCubicVec_32s8u
@@ -1253,70 +1261,9 @@ struct VResizeCubicVec_32s8u
     }
 };
 
-struct VResizeCubicVec_32f16u
-{
-    int operator()(const float** src, ushort* dst, const float* beta, int width) const
-    {
-        const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3];
-        int x = 0;
-        v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]),
-                  b2 = vx_setall_f32(beta[2]), b3 = vx_setall_f32(beta[3]);
-
-        for (; x <= width - VTraits<v_uint16>::vlanes(); x += VTraits<v_uint16>::vlanes())
-            v_store(dst + x, v_pack_u(v_round(v_muladd(vx_load(S0 + x                    ),  b0,
-                                              v_muladd(vx_load(S1 + x                    ),  b1,
-                                              v_muladd(vx_load(S2 + x                    ),  b2,
-                                                       v_mul(vx_load(S3 + x), b3))))),
-                                      v_round(v_muladd(vx_load(S0 + x + VTraits<v_float32>::vlanes()),  b0,
-                                              v_muladd(vx_load(S1 + x + VTraits<v_float32>::vlanes()),  b1,
-                                              v_muladd(vx_load(S2 + x + VTraits<v_float32>::vlanes()),  b2,
-                                                       v_mul(vx_load(S3 + x + VTraits<v_float32>::vlanes()), b3)))))));
-
-        return x;
-    }
-};
-
-struct VResizeCubicVec_32f16s
-{
-    int operator()(const float** src, short* dst, const float* beta, int width) const
-    {
-        const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3];
-        int x = 0;
-        v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]),
-                  b2 = vx_setall_f32(beta[2]), b3 = vx_setall_f32(beta[3]);
-
-        for (; x <= width - VTraits<v_int16>::vlanes(); x += VTraits<v_int16>::vlanes())
-            v_store(dst + x, v_pack(v_round(v_muladd(vx_load(S0 + x                    ),  b0,
-                                            v_muladd(vx_load(S1 + x                    ),  b1,
-                                            v_muladd(vx_load(S2 + x                    ),  b2,
-                                                     v_mul(vx_load(S3 + x), b3))))),
-                                    v_round(v_muladd(vx_load(S0 + x + VTraits<v_float32>::vlanes()),  b0,
-                                            v_muladd(vx_load(S1 + x + VTraits<v_float32>::vlanes()),  b1,
-                                            v_muladd(vx_load(S2 + x + VTraits<v_float32>::vlanes()),  b2,
-                                                     v_mul(vx_load(S3 + x + VTraits<v_float32>::vlanes()), b3)))))));
-
-        return x;
-    }
-};
-
-struct VResizeCubicVec_32f
-{
-    int operator()(const float** src, float* dst, const float* beta, int width) const
-    {
-        const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3];
-        int x = 0;
-        v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]),
-                  b2 = vx_setall_f32(beta[2]), b3 = vx_setall_f32(beta[3]);
-
-        for( ; x <= width - VTraits<v_float32>::vlanes(); x += VTraits<v_float32>::vlanes())
-            v_store(dst + x, v_muladd(vx_load(S0 + x),  b0,
-                             v_muladd(vx_load(S1 + x),  b1,
-                             v_muladd(vx_load(S2 + x),  b2,
-                                      v_mul(vx_load(S3 + x), b3)))));
-
-        return x;
-    }
-};
+typedef VResizeVec_32f<4, VPack16<ushort, true> > VResizeCubicVec_32f16u;
+typedef VResizeVec_32f<4, VPack16<short, false> > VResizeCubicVec_32f16s;
+typedef VResizeVec_32f<4, VPackF32> VResizeCubicVec_32f;
 
 
 #if CV_TRY_SSE4_1
@@ -1334,102 +1281,12 @@ struct VResizeLanczos4Vec_32f16u
 
 #else
 
-struct VResizeLanczos4Vec_32f16u
-{
-    int operator()(const float** src, ushort* dst, const float* beta, int width ) const
-    {
-        const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3],
-                    *S4 = src[4], *S5 = src[5], *S6 = src[6], *S7 = src[7];
-        int x = 0;
-        v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]),
-                  b2 = vx_setall_f32(beta[2]), b3 = vx_setall_f32(beta[3]),
-                  b4 = vx_setall_f32(beta[4]), b5 = vx_setall_f32(beta[5]),
-                  b6 = vx_setall_f32(beta[6]), b7 = vx_setall_f32(beta[7]);
-
-        for( ; x <= width - VTraits<v_uint16>::vlanes(); x += VTraits<v_uint16>::vlanes())
-            v_store(dst + x, v_pack_u(v_round(v_muladd(vx_load(S0 + x                    ),  b0,
-                                              v_muladd(vx_load(S1 + x                    ),  b1,
-                                              v_muladd(vx_load(S2 + x                    ),  b2,
-                                              v_muladd(vx_load(S3 + x                    ),  b3,
-                                              v_muladd(vx_load(S4 + x                    ),  b4,
-                                              v_muladd(vx_load(S5 + x                    ),  b5,
-                                              v_muladd(vx_load(S6 + x                    ),  b6,
-                                                       v_mul(vx_load(S7 + x                    ), b7))))))))),
-                                      v_round(v_muladd(vx_load(S0 + x + VTraits<v_float32>::vlanes()),  b0,
-                                              v_muladd(vx_load(S1 + x + VTraits<v_float32>::vlanes()),  b1,
-                                              v_muladd(vx_load(S2 + x + VTraits<v_float32>::vlanes()),  b2,
-                                              v_muladd(vx_load(S3 + x + VTraits<v_float32>::vlanes()),  b3,
-                                              v_muladd(vx_load(S4 + x + VTraits<v_float32>::vlanes()),  b4,
-                                              v_muladd(vx_load(S5 + x + VTraits<v_float32>::vlanes()),  b5,
-                                              v_muladd(vx_load(S6 + x + VTraits<v_float32>::vlanes()),  b6,
-                                                       v_mul(vx_load(S7 + x + VTraits<v_float32>::vlanes()), b7)))))))))));
-
-        return x;
-    }
-};
+typedef VResizeVec_32f<8, VPack16<ushort, true> > VResizeLanczos4Vec_32f16u;
 
 #endif
 
-struct VResizeLanczos4Vec_32f16s
-{
-    int operator()(const float** src, short* dst, const float* beta, int width ) const
-    {
-        const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3],
-                    *S4 = src[4], *S5 = src[5], *S6 = src[6], *S7 = src[7];
-        int x = 0;
-        v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]),
-                  b2 = vx_setall_f32(beta[2]), b3 = vx_setall_f32(beta[3]),
-                  b4 = vx_setall_f32(beta[4]), b5 = vx_setall_f32(beta[5]),
-                  b6 = vx_setall_f32(beta[6]), b7 = vx_setall_f32(beta[7]);
-
-        for( ; x <= width - VTraits<v_int16>::vlanes(); x += VTraits<v_int16>::vlanes())
-            v_store(dst + x, v_pack(v_round(v_muladd(vx_load(S0 + x                    ),  b0,
-                                            v_muladd(vx_load(S1 + x                    ),  b1,
-                                            v_muladd(vx_load(S2 + x                    ),  b2,
-                                            v_muladd(vx_load(S3 + x                    ),  b3,
-                                            v_muladd(vx_load(S4 + x                    ),  b4,
-                                            v_muladd(vx_load(S5 + x                    ),  b5,
-                                            v_muladd(vx_load(S6 + x                    ),  b6,
-                                                     v_mul(vx_load(S7 + x), b7))))))))),
-                                    v_round(v_muladd(vx_load(S0 + x + VTraits<v_float32>::vlanes()),  b0,
-                                            v_muladd(vx_load(S1 + x + VTraits<v_float32>::vlanes()),  b1,
-                                            v_muladd(vx_load(S2 + x + VTraits<v_float32>::vlanes()),  b2,
-                                            v_muladd(vx_load(S3 + x + VTraits<v_float32>::vlanes()),  b3,
-                                            v_muladd(vx_load(S4 + x + VTraits<v_float32>::vlanes()),  b4,
-                                            v_muladd(vx_load(S5 + x + VTraits<v_float32>::vlanes()),  b5,
-                                            v_muladd(vx_load(S6 + x + VTraits<v_float32>::vlanes()),  b6,
-                                                     v_mul(vx_load(S7 + x + VTraits<v_float32>::vlanes()), b7)))))))))));
-
-        return x;
-    }
-};
-
-struct VResizeLanczos4Vec_32f
-{
-    int operator()(const float** src, float* dst, const float* beta, int width ) const
-    {
-        const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3],
-                    *S4 = src[4], *S5 = src[5], *S6 = src[6], *S7 = src[7];
-        int x = 0;
-
-        v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]),
-                  b2 = vx_setall_f32(beta[2]), b3 = vx_setall_f32(beta[3]),
-                  b4 = vx_setall_f32(beta[4]), b5 = vx_setall_f32(beta[5]),
-                  b6 = vx_setall_f32(beta[6]), b7 = vx_setall_f32(beta[7]);
-
-        for( ; x <= width - VTraits<v_float32>::vlanes(); x += VTraits<v_float32>::vlanes())
-            v_store(dst + x, v_muladd(vx_load(S0 + x),  b0,
-                             v_muladd(vx_load(S1 + x),  b1,
-                             v_muladd(vx_load(S2 + x),  b2,
-                             v_muladd(vx_load(S3 + x),  b3,
-                             v_muladd(vx_load(S4 + x),  b4,
-                             v_muladd(vx_load(S5 + x),  b5,
-                             v_muladd(vx_load(S6 + x),  b6,
-                                      v_mul(vx_load(S7 + x), b7)))))))));
-
-        return x;
-    }
-};
+typedef VResizeVec_32f<8, VPack16<short, false> > VResizeLanczos4Vec_32f16s;
+typedef VResizeVec_32f<8, VPackF32> VResizeLanczos4Vec_32f;
 
 #else
 
