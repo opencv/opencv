@@ -1377,9 +1377,12 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
     CV_INSTRUMENT_REGION();
 
     bool haveMask = !_mask.empty();
-#ifdef HAVE_OPENCL
-    int tp = type(), cn = CV_MAT_CN(tp), d = CV_MAT_DEPTH(tp);
+#if defined(HAVE_OPENCL) || defined(HAVE_METAL)
+    int tp = type(), cn = CV_MAT_CN(tp);
+#endif
 
+#ifdef HAVE_OPENCL
+    int d = CV_MAT_DEPTH(tp);
     if( dims <= 2 && cn <= 4 && CV_MAT_DEPTH(tp) < CV_64F && ocl::useOpenCL() )
     {
         Mat value = _value.getMat();
@@ -1423,6 +1426,28 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
                 CV_IMPL_ADD(CV_IMPL_OCL);
                 return *this;
             }
+        }
+    }
+#endif
+#ifdef HAVE_METAL
+    if( dims <= 2 && metal::haveMetal() )
+    {
+        Mat value = _value.getMat();
+        CV_Assert( checkScalar(value, type(), _value.kind(), _InputArray::UMAT) );
+        if( haveMask )
+        {
+            UMat mask = _mask.getUMat();
+            int mtype = mask.type(), mcn = CV_MAT_CN(mtype);
+            CV_Assert( mask.size() == size() && (CV_MAT_DEPTH(mtype) == CV_8U ||
+                       CV_MAT_DEPTH(mtype) == CV_8S || CV_MAT_DEPTH(mtype) == CV_Bool) &&
+                       (mcn == 1 || mcn == cn) );
+            if( metal::setTo(*this, value, &mask) )
+                return *this;
+        }
+        else
+        {
+            if( metal::setTo(*this, value, NULL) )
+                return *this;
         }
     }
 #endif

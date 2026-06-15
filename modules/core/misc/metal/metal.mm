@@ -318,6 +318,103 @@ id<MTLComputePipelineState> getAddPipeline(const std::shared_ptr<MetalContext>& 
     return pipeline;
 }
 
+struct SetToParams
+{
+    uint64_t dstOffset;
+    uint64_t maskOffset;
+    uint64_t dstStep;
+    uint64_t maskStep;
+    int rows;
+    int cols;
+    int elemSize;
+    int depthSize;
+    int channels;
+    int maskChannels;
+    int haveMask;
+    uint8_t scalar[16];
+};
+
+id<MTLComputePipelineState> getSetToPipeline(const std::shared_ptr<MetalContext>& ctx)
+{
+    static id<MTLComputePipelineState> pipeline = nil;
+    if (pipeline)
+        return pipeline;
+
+    static const char* source =
+        "#include <metal_stdlib>\n"
+        "using namespace metal;\n"
+        "struct SetToParams\n"
+        "{\n"
+        "    ulong dstOffset;\n"
+        "    ulong maskOffset;\n"
+        "    ulong dstStep;\n"
+        "    ulong maskStep;\n"
+        "    int rows;\n"
+        "    int cols;\n"
+        "    int elemSize;\n"
+        "    int depthSize;\n"
+        "    int channels;\n"
+        "    int maskChannels;\n"
+        "    int haveMask;\n"
+        "    uchar scalar[16];\n"
+        "};\n"
+        "kernel void setToKernel(device uchar* dst [[buffer(0)]],\n"
+        "                        device const uchar* mask [[buffer(1)]],\n"
+        "                        constant SetToParams& p [[buffer(2)]],\n"
+        "                        uint2 gid [[thread_position_in_grid]])\n"
+        "{\n"
+        "    if ((int)gid.x >= p.cols || (int)gid.y >= p.rows)\n"
+        "        return;\n"
+        "    ulong dstBase = p.dstOffset + (ulong)gid.y * p.dstStep + (ulong)gid.x * (ulong)p.elemSize;\n"
+        "    if (!p.haveMask)\n"
+        "    {\n"
+        "        for (int i = 0; i < p.elemSize; ++i)\n"
+        "            dst[dstBase + i] = p.scalar[i];\n"
+        "        return;\n"
+        "    }\n"
+        "    ulong maskBase = p.maskOffset + (ulong)gid.y * p.maskStep + (ulong)gid.x * (ulong)p.maskChannels;\n"
+        "    if (p.maskChannels == 1)\n"
+        "    {\n"
+        "        if (mask[maskBase])\n"
+        "        {\n"
+        "            for (int i = 0; i < p.elemSize; ++i)\n"
+        "                dst[dstBase + i] = p.scalar[i];\n"
+        "        }\n"
+        "    }\n"
+        "    else\n"
+        "    {\n"
+        "        for (int c = 0; c < p.channels; ++c)\n"
+        "        {\n"
+        "            if (mask[maskBase + c])\n"
+        "            {\n"
+        "                ulong dstChannel = dstBase + (ulong)c * (ulong)p.depthSize;\n"
+        "                int scalarChannel = c * p.depthSize;\n"
+        "                for (int i = 0; i < p.depthSize; ++i)\n"
+        "                    dst[dstChannel + i] = p.scalar[scalarChannel + i];\n"
+        "            }\n"
+        "        }\n"
+        "    }\n"
+        "}\n";
+
+    NSError* error = nil;
+    NSString* metalSource = [NSString stringWithUTF8String:source];
+    id<MTLLibrary> library = [ctx->device() newLibraryWithSource:metalSource options:nil error:&error];
+    if (!library)
+        return nil;
+
+    id<MTLFunction> function = [library newFunctionWithName:@"setToKernel"];
+    if (!function)
+    {
+        [library release];
+        return nil;
+    }
+
+    pipeline = [ctx->device() newComputePipelineStateWithFunction:function error:&error];
+    [function release];
+    [library release];
+    return pipeline;
+}
+
 void downloadToHost(UMatData* u, void* dst)
 {
     MetalBuffer* b = getBuffer(u);
@@ -823,6 +920,88 @@ bool add(const UMat& src1, const UMat& src2, UMat& dst)
     MTLSize threadgroup = MTLSizeMake(16, 16, 1);
     MTLSize groups = MTLSizeMake((src1.cols + threadgroup.width - 1) / threadgroup.width,
                                  (src1.rows + threadgroup.height - 1) / threadgroup.height,
+                                 1);
+    [encoder dispatchThreadgroups:groups threadsPerThreadgroup:threadgroup];
+    [encoder endEncoding];
+    [commandBuffer commit];
+    [commandBuffer waitUntilCompleted];
+
+    if ([commandBuffer status] == MTLCommandBufferStatusError)
+        return false;
+
+    dst.u->markDeviceCopyObsolete(false);
+    dst.u->markHostCopyObsolete(true);
+    return true;
+}
+
+bool setTo(UMat& dst, const Mat& value, const UMat* mask)
+{
+    if (!haveMetal() || dst.dims != 2)
+        return false;
+    if (mask && (mask->dims != 2 || mask->rows != dst.rows || mask->cols != dst.cols))
+        return false;
+
+    int depth = CV_MAT_DEPTH(dst.type());
+    int channels = dst.channels();
+    if ((depth != CV_8U && depth != CV_32F) || (channels != 1 && channels != 3 && channels != 4))
+        return false;
+
+    int maskChannels = 0;
+    if (mask)
+    {
+        int maskDepth = CV_MAT_DEPTH(mask->type());
+        maskChannels = CV_MAT_CN(mask->type());
+        if ((maskDepth != CV_8U && maskDepth != CV_8S && maskDepth != CV_Bool) ||
+            (maskChannels != 1 && maskChannels != channels))
+            return false;
+    }
+
+    MetalBuffer* dstBuffer = getBuffer(dst.u);
+    MetalBuffer* maskBuffer = mask ? getBuffer(mask->u) : NULL;
+    if (!dstBuffer || (mask && !maskBuffer))
+        return false;
+
+    std::shared_ptr<MetalContext> ctx = std::static_pointer_cast<MetalContext>(dst.u->allocatorContext);
+    if (!ctx || !ctx->valid())
+        return false;
+
+    id<MTLComputePipelineState> pipeline = getSetToPipeline(ctx);
+    if (!pipeline)
+        return false;
+
+    size_t dstOfs[CV_MAX_DIM] = {0};
+    size_t maskOfs[CV_MAX_DIM] = {0};
+    dst.ndoffset(dstOfs);
+    if (mask)
+        mask->ndoffset(maskOfs);
+
+    SetToParams params = {};
+    params.dstOffset = dstOfs[0] * dst.step.p[0] + dstOfs[1] * CV_ELEM_SIZE(dst.type());
+    params.maskOffset = mask ? maskOfs[0] * mask->step.p[0] + maskOfs[1] * CV_ELEM_SIZE(mask->type()) : 0;
+    params.dstStep = dst.step.p[0];
+    params.maskStep = mask ? mask->step.p[0] : 0;
+    params.rows = dst.rows;
+    params.cols = dst.cols;
+    params.elemSize = static_cast<int>(CV_ELEM_SIZE(dst.type()));
+    params.depthSize = static_cast<int>(CV_ELEM_SIZE1(dst.type()));
+    params.channels = channels;
+    params.maskChannels = maskChannels;
+    params.haveMask = mask ? 1 : 0;
+    convertAndUnrollScalar(value, dst.type(), params.scalar, 1);
+
+    id<MTLCommandBuffer> commandBuffer = [ctx->queue() commandBuffer];
+    id<MTLComputeCommandEncoder> encoder = [commandBuffer computeCommandEncoder];
+    if (!commandBuffer || !encoder)
+        return false;
+
+    [encoder setComputePipelineState:pipeline];
+    [encoder setBuffer:dstBuffer->buffer offset:0 atIndex:0];
+    [encoder setBuffer:maskBuffer ? maskBuffer->buffer : nil offset:0 atIndex:1];
+    [encoder setBytes:&params length:sizeof(params) atIndex:2];
+
+    MTLSize threadgroup = MTLSizeMake(16, 16, 1);
+    MTLSize groups = MTLSizeMake((dst.cols + threadgroup.width - 1) / threadgroup.width,
+                                 (dst.rows + threadgroup.height - 1) / threadgroup.height,
                                  1);
     [encoder dispatchThreadgroups:groups threadsPerThreadgroup:threadgroup];
     [encoder endEncoding];

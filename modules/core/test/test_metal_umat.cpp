@@ -447,6 +447,138 @@ TEST(Core_Metal_UMat, AddUnsupportedTypeFallback)
     EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
 }
 
+TEST(Core_Metal_UMat, SetTo8U)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    UMat u(31, 37, CV_8UC3);
+    u.setTo(Scalar(7, 17, 29));
+
+    Mat dst;
+    u.copyTo(dst);
+
+    Mat expected(dst.size(), dst.type(), Scalar(7, 17, 29));
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
+TEST(Core_Metal_UMat, SetTo32F)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    UMat u(29, 41, CV_32FC4);
+    u.setTo(Scalar(1.25, -2.5, 3.75, -4.5));
+
+    Mat dst;
+    u.copyTo(dst);
+
+    Mat expected(dst.size(), dst.type(), Scalar(1.25, -2.5, 3.75, -4.5));
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
+TEST(Core_Metal_UMat, SetToSingleChannelMask)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat base(35, 39, CV_8UC3);
+    Mat mask(base.size(), CV_8UC1);
+    randu(base, 0, 255);
+    randu(mask, 0, 2);
+    mask *= 255;
+
+    Mat expected = base.clone();
+    expected.setTo(Scalar(3, 5, 7), mask);
+
+    UMat u, umask;
+    base.copyTo(u);
+    mask.copyTo(umask);
+    u.setTo(Scalar(3, 5, 7), umask);
+
+    Mat dst;
+    u.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
+TEST(Core_Metal_UMat, SetToChannelMask)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat base(33, 43, CV_8UC3);
+    Mat mask(base.size(), CV_8UC3);
+    randu(base, 0, 255);
+    randu(mask, 0, 2);
+    mask *= 255;
+
+    Mat expected = base.clone();
+    expected.setTo(Scalar(11, 13, 17), mask);
+
+    UMat u, umask;
+    base.copyTo(u);
+    mask.copyTo(umask);
+    u.setTo(Scalar(11, 13, 17), umask);
+
+    Mat dst;
+    u.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
+TEST(Core_Metal_UMat, SetToRoi)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat base(48, 64, CV_32FC1);
+    randu(base, -10.0f, 10.0f);
+
+    Rect roi(9, 11, 29, 23);
+    Mat expected = base.clone();
+    expected(roi).setTo(Scalar(6.5));
+
+    UMat u;
+    base.copyTo(u);
+    u(roi).setTo(Scalar(6.5));
+
+    Mat dst;
+    u.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
+TEST(Core_Metal_UMat, DeviceMemoryUsageSetTo)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    UMat u(31, 37, CV_8UC4, USAGE_ALLOCATE_DEVICE_MEMORY);
+    u.setTo(Scalar(19, 23, 29, 31));
+
+    Mat dst;
+    u.copyTo(dst);
+
+    Mat expected(dst.size(), dst.type(), Scalar(19, 23, 29, 31));
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
+TEST(Core_Metal_UMat, SetToUnsupportedTypeFallback)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    UMat u(23, 29, CV_16UC1);
+    u.setTo(Scalar(1024));
+
+    Mat dst;
+    u.copyTo(dst);
+
+    Mat expected(dst.size(), dst.type(), Scalar(1024));
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
 #endif // HAVE_METAL
 
 }} // namespace
