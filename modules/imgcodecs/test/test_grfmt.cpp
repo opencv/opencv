@@ -564,6 +564,37 @@ TEST(Imgcodecs_Pam, read_write)
     remove(writefile.c_str());
     remove(writefile_no_param.c_str());
 }
+
+// Regression test: a 2-channel (GRAYSCALE_ALPHA) PAM decoded as single channel
+// used to overflow the output row in basic_conversion() (3 bytes written per
+// source pixel into a 1-channel row). Verify it decodes safely and correctly.
+TEST(Imgcodecs_Pam, decode_graya_as_gray)
+{
+    const int width = 9, height = 3;  // odd width to expose off-by-row overflow
+    std::string header = cv::format(
+        "P7\nWIDTH %d\nHEIGHT %d\nDEPTH 2\nMAXVAL 255\n"
+        "TUPLTYPE GRAYSCALE_ALPHA\nENDHDR\n", width, height);
+
+    std::vector<uchar> buf(header.begin(), header.end());
+    Mat gray_ref(height, width, CV_8UC1);
+    for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++)
+        {
+            uchar gray  = (uchar)((y * width + x) * 7 + 1);
+            uchar alpha = (uchar)(255 - gray);
+            gray_ref.at<uchar>(y, x) = gray;
+            buf.push_back(gray);   // channel 0: gray
+            buf.push_back(alpha);  // channel 1: alpha (must be ignored)
+        }
+
+    Mat decoded;
+    ASSERT_NO_THROW(decoded = imdecode(buf, IMREAD_GRAYSCALE));
+    ASSERT_FALSE(decoded.empty());
+    EXPECT_EQ(width, decoded.cols);
+    EXPECT_EQ(height, decoded.rows);
+    EXPECT_EQ(1, decoded.channels());
+    EXPECT_EQ(0, cvtest::norm(gray_ref, decoded, NORM_INF));
+}
 #endif
 
 #ifdef HAVE_IMGCODEC_PFM
