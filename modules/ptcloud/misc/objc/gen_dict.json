@@ -1,0 +1,7 @@
+{
+  "enum_fix": {
+    "Ptcloud": {
+      "VolumeType": "CV_VolumeType"
+    }
+  }
+}
