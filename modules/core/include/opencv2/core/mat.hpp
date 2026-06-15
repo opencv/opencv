@@ -555,6 +555,7 @@ public:
  Mat_<uchar> m2({2, 3}, {1, 2, 3, 4, 5, 6}); // 2x3 Mat
 
  Mat_<double> R({2, 2}, {a, -b, b, a}); // from example
+ \endcode
 */
 template<typename _Tp> class MatCommaInitializer_
 {
