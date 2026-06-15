@@ -511,17 +511,17 @@ int main(int argc, char* argv[])
 
         for (const auto& res : resolutions)
         {
-            for (const auto shadingPair : shadingTxt)
+            for (const auto& shadingPair : shadingTxt)
             {
                 cv::TriangleShadingType shadingType = shadingPair.first;
                 std::string shadingName = shadingPair.second;
 
-                for (const auto cullingPair : cullingTxt)
+                for (const auto& cullingPair : cullingTxt)
                 {
                     cv::TriangleCullingMode cullingMode = cullingPair.first;
                     std::string cullingName = cullingPair.second;
 
-                    for (const auto modelPair : modelTxt)
+                    for (const auto& modelPair : modelTxt)
                     {
                         ModelType modelType = modelPair.first;
                         std::string modelName = modelPair.second;
