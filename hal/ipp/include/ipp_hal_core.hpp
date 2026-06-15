@@ -74,6 +74,33 @@ int ipp_hal_transpose2d(const uchar* src_data, size_t src_step, uchar* dst_data,
 #undef cv_hal_transpose2d
 #define cv_hal_transpose2d ipp_hal_transpose2d
 
+int ipp_hal_invSqrt32f(const float* src, float* dst, int len);
+int ipp_hal_invSqrt64f(const double* src, double* dst, int len);
+
+#undef cv_hal_invSqrt32f
+#define cv_hal_invSqrt32f ipp_hal_invSqrt32f
+
+#undef cv_hal_invSqrt64f
+#define cv_hal_invSqrt64f ipp_hal_invSqrt64f
+
+int ipp_hal_exp32f(const float* src, float* dst, int len);
+int ipp_hal_exp64f(const double* src, double* dst, int len);
+
+#undef cv_hal_exp32f
+#define cv_hal_exp32f ipp_hal_exp32f
+
+#undef cv_hal_exp64f
+#define cv_hal_exp64f ipp_hal_exp64f
+
+int ipp_hal_log32f(const float* src, float* dst, int len);
+int ipp_hal_log64f(const double* src, double* dst, int len);
+
+#undef cv_hal_log32f
+#define cv_hal_log32f ipp_hal_log32f
+
+#undef cv_hal_log64f
+#define cv_hal_log64f ipp_hal_log64f
+
 //! @endcond
 
 #endif
