@@ -182,7 +182,7 @@ cv::Ptr<cv::FilterEngine> cv::createDerivFilter(int srcType, int dstType,
 }
 
 
-#if 0 //defined HAVE_IPP
+#if defined HAVE_IPP
 namespace cv
 {
 
@@ -238,17 +238,22 @@ static bool ipp_Deriv(InputArray _src, OutputArray _dst, int dx, int dy, int ksi
         if(!ippBorder)
             return false;
 
+        // IPP path for 8u->32f does an extra full-image conversion pass, OpenCV's fused sepFilter2D is better
+        if(srcType == ipp8u && dstType == ipp32f)
+            return false;
+
+        // IPP could optimize more for 16s->32f (extra conversion overhead)
+        if(srcType == ipp16s && dstType == ipp32f)
+            return false;
+
+        // IPP extra iwiScale pass for 32f output with scale/delta could be better than OpenCV's fused approach
+        if(useScale && dstType == ipp32f)
+            return false;
+
         if(srcType == ipp8u && dstType == ipp8u)
         {
             iwDstProc.Alloc(iwDst.m_size, ipp16s, channels);
             useScale = true;
-        }
-        else if(srcType == ipp8u && dstType == ipp32f)
-        {
-            iwSrc -= borderSize;
-            iwSrcProc.Alloc(iwSrc.m_size, ipp32f, channels);
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiScale, iwSrc, iwSrcProc, 1, 0, ::ipp::IwiScaleParams(ippAlgHintFast));
-            iwSrcProc += borderSize;
         }
 
         if(useScharr)
@@ -378,7 +383,7 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     CALL_HAL(sobel, cv_hal_sobel, src.ptr(), src.step, dst.ptr(), dst.step, src.cols, src.rows, sdepth, ddepth, cn,
              ofs.x, ofs.y, wsz.width - src.cols - ofs.x, wsz.height - src.rows - ofs.y, dx, dy, ksize, scale, delta, borderType&~BORDER_ISOLATED);
 
-    //CV_IPP_RUN_FAST(ipp_Deriv(src, dst, dx, dy, ksize, scale, delta, borderType));
+    CV_IPP_RUN_FAST(ipp_Deriv(src, dst, dx, dy, ksize, scale, delta, borderType));
 
     sepFilter2D(src, dst, ddepth, kx, ky, Point(-1, -1), delta, borderType );
 }
@@ -430,7 +435,7 @@ void cv::Scharr( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     CALL_HAL(scharr, cv_hal_scharr, src.ptr(), src.step, dst.ptr(), dst.step, src.cols, src.rows, sdepth, ddepth, cn,
              ofs.x, ofs.y, wsz.width - src.cols - ofs.x, wsz.height - src.rows - ofs.y, dx, dy, scale, delta, borderType&~BORDER_ISOLATED);
 
-    //CV_IPP_RUN_FAST(ipp_Deriv(src, dst, dx, dy, 0, scale, delta, borderType));
+    CV_IPP_RUN_FAST(ipp_Deriv(src, dst, dx, dy, 0, scale, delta, borderType));
 
     sepFilter2D( src, dst, ddepth, kx, ky, Point(-1, -1), delta, borderType );
 }
