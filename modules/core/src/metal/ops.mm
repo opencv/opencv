@@ -128,6 +128,21 @@ struct CompareParams
     int op;
 };
 
+struct ConvertToParams
+{
+    uint64_t srcOffset;
+    uint64_t dstOffset;
+    uint64_t srcStep;
+    uint64_t dstStep;
+    int rows;
+    int cols;
+    int sdepth;
+    int ddepth;
+    int channels;
+    float alpha;
+    float beta;
+};
+
 id<MTLComputePipelineState> getAddPipeline(const std::shared_ptr<MetalContext>& ctx)
 {
     static id<MTLComputePipelineState> pipeline = nil;
@@ -261,6 +276,35 @@ id<MTLComputePipelineState> getComparePipeline(const std::shared_ptr<MetalContex
         return nil;
 
     id<MTLFunction> function = [library newFunctionWithName:@"compareKernel"];
+    if (!function)
+    {
+        [library release];
+        return nil;
+    }
+
+    pipeline = [ctx->device() newComputePipelineStateWithFunction:function error:&error];
+    [function release];
+    [library release];
+    return pipeline;
+}
+
+id<MTLComputePipelineState> getConvertToPipeline(const std::shared_ptr<MetalContext>& ctx)
+{
+    static id<MTLComputePipelineState> pipeline = nil;
+    if (pipeline)
+        return pipeline;
+
+    static const char* source =
+#include "kernels/convert_to.metal"
+        ;
+
+    NSError* error = nil;
+    NSString* metalSource = [NSString stringWithUTF8String:source];
+    id<MTLLibrary> library = [ctx->device() newLibraryWithSource:metalSource options:nil error:&error];
+    if (!library)
+        return nil;
+
+    id<MTLFunction> function = [library newFunctionWithName:@"convertToKernel"];
     if (!function)
     {
         [library release];
@@ -760,6 +804,78 @@ bool compare(const UMat& src1, const UMat& src2, UMat& dst, int op)
     MTLSize threadgroup = MTLSizeMake(16, 16, 1);
     MTLSize groups = MTLSizeMake((src1.cols + threadgroup.width - 1) / threadgroup.width,
                                  (src1.rows + threadgroup.height - 1) / threadgroup.height,
+                                 1);
+    [encoder dispatchThreadgroups:groups threadsPerThreadgroup:threadgroup];
+    [encoder endEncoding];
+    [commandBuffer commit];
+    [commandBuffer waitUntilCompleted];
+
+    if ([commandBuffer status] == MTLCommandBufferStatusError)
+        return false;
+
+    dst.u->markDeviceCopyObsolete(false);
+    dst.u->markHostCopyObsolete(true);
+    return true;
+}
+
+bool convertTo(const UMat& src, UMat& dst, int ddepth, double alpha, double beta)
+{
+    if (!haveMetal() || src.dims != 2 || dst.dims != 2)
+        return false;
+    if (src.rows != dst.rows || src.cols != dst.cols || dst.depth() != ddepth ||
+        src.channels() != dst.channels())
+        return false;
+
+    int sdepth = CV_MAT_DEPTH(src.type());
+    int channels = src.channels();
+    if ((sdepth != CV_8U && sdepth != CV_32F) || (ddepth != CV_8U && ddepth != CV_32F) ||
+        (channels != 1 && channels != 3 && channels != 4))
+        return false;
+
+    MetalBuffer* srcBuffer = getBuffer(src.u);
+    MetalBuffer* dstBuffer = getBuffer(dst.u);
+    if (!srcBuffer || !dstBuffer)
+        return false;
+
+    std::shared_ptr<MetalContext> ctx = std::static_pointer_cast<MetalContext>(dst.u->allocatorContext);
+    if (!ctx || !ctx->valid())
+        return false;
+
+    id<MTLComputePipelineState> pipeline = getConvertToPipeline(ctx);
+    if (!pipeline)
+        return false;
+
+    size_t srcOfs[CV_MAX_DIM] = {0};
+    size_t dstOfs[CV_MAX_DIM] = {0};
+    src.ndoffset(srcOfs);
+    dst.ndoffset(dstOfs);
+
+    ConvertToParams params;
+    params.srcOffset = srcOfs[0] * src.step.p[0] + srcOfs[1] * CV_ELEM_SIZE(src.type());
+    params.dstOffset = dstOfs[0] * dst.step.p[0] + dstOfs[1] * CV_ELEM_SIZE(dst.type());
+    params.srcStep = src.step.p[0];
+    params.dstStep = dst.step.p[0];
+    params.rows = src.rows;
+    params.cols = src.cols;
+    params.sdepth = sdepth;
+    params.ddepth = ddepth;
+    params.channels = channels;
+    params.alpha = static_cast<float>(alpha);
+    params.beta = static_cast<float>(beta);
+
+    id<MTLCommandBuffer> commandBuffer = [ctx->queue() commandBuffer];
+    id<MTLComputeCommandEncoder> encoder = [commandBuffer computeCommandEncoder];
+    if (!commandBuffer || !encoder)
+        return false;
+
+    [encoder setComputePipelineState:pipeline];
+    [encoder setBuffer:srcBuffer->buffer offset:0 atIndex:0];
+    [encoder setBuffer:dstBuffer->buffer offset:0 atIndex:1];
+    [encoder setBytes:&params length:sizeof(params) atIndex:2];
+
+    MTLSize threadgroup = MTLSizeMake(16, 16, 1);
+    MTLSize groups = MTLSizeMake((src.cols + threadgroup.width - 1) / threadgroup.width,
+                                 (src.rows + threadgroup.height - 1) / threadgroup.height,
                                  1);
     [encoder dispatchThreadgroups:groups threadsPerThreadgroup:threadgroup];
     [encoder endEncoding];

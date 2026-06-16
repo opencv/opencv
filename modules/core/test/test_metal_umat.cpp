@@ -1058,6 +1058,137 @@ TEST(Core_Metal_UMat, CompareScalarFallback)
     EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
 }
 
+TEST(Core_Metal_UMat, ConvertTo8UTo32F)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src(37, 41, CV_8UC3);
+    randu(src, 0, 255);
+
+    Mat expected;
+    src.convertTo(expected, CV_32F, 1.25, -7.0);
+
+    UMat usrc, udst;
+    src.copyTo(usrc);
+    usrc.convertTo(udst, CV_32F, 1.25, -7.0);
+
+    Mat dst;
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
+TEST(Core_Metal_UMat, ConvertTo32FTo8U)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src(35, 39, CV_32FC1);
+    randu(src, -100.0f, 300.0f);
+
+    Mat expected;
+    src.convertTo(expected, CV_8U, 0.75, 12.5);
+
+    UMat usrc, udst;
+    src.copyTo(usrc);
+    usrc.convertTo(udst, CV_8U, 0.75, 12.5);
+
+    Mat dst;
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
+TEST(Core_Metal_UMat, ConvertToSameDepthScale)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src(31, 37, CV_32FC4);
+    randu(src, -10.0f, 10.0f);
+
+    Mat expected;
+    src.convertTo(expected, CV_32F, -2.0, 3.5);
+
+    UMat usrc, udst;
+    src.copyTo(usrc);
+    usrc.convertTo(udst, CV_32F, -2.0, 3.5);
+
+    Mat dst;
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 1e-6);
+}
+
+TEST(Core_Metal_UMat, DeviceMemoryUsageConvertTo)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src(31, 37, CV_8UC4);
+    randu(src, 0, 255);
+
+    Mat expected;
+    src.convertTo(expected, CV_32F, 0.5, 9.0);
+
+    UMat usrc(src.size(), src.type(), USAGE_ALLOCATE_DEVICE_MEMORY);
+    UMat udst(src.size(), CV_32FC4, USAGE_ALLOCATE_DEVICE_MEMORY);
+    src.copyTo(usrc);
+    usrc.convertTo(udst, CV_32F, 0.5, 9.0);
+
+    Mat dst;
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
+TEST(Core_Metal_UMat, ConvertToRoi)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src(48, 64, CV_8UC1);
+    Mat base(src.size(), CV_32FC1);
+    randu(src, 0, 255);
+    randu(base, -10.0f, 10.0f);
+
+    Rect roi(9, 7, 31, 23);
+    Mat expected = base.clone();
+    src(roi).convertTo(expected(roi), CV_32F, 2.0, -11.0);
+
+    UMat usrc, udst;
+    src.copyTo(usrc);
+    base.copyTo(udst);
+    usrc(roi).convertTo(udst(roi), CV_32F, 2.0, -11.0);
+
+    Mat dst;
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
+TEST(Core_Metal_UMat, ConvertToUnsupportedFallback)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src(23, 29, CV_16UC1);
+    randu(src, 0, 1000);
+
+    Mat expected;
+    src.convertTo(expected, CV_8U, 0.25, 3.0);
+
+    UMat usrc, udst;
+    src.copyTo(usrc);
+    usrc.convertTo(udst, CV_8U, 0.25, 3.0);
+
+    Mat dst;
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
 TEST(Core_Metal_UMat, SetTo8U)
 {
     if (!cv::metal::haveMetal())

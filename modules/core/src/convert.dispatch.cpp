@@ -4,6 +4,9 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
+#ifdef HAVE_METAL
+#include "metal.hpp"
+#endif
 
 #include "convert.simd.hpp"
 #include "convert.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
@@ -217,7 +220,6 @@ void UMat::convertTo(OutputArray dst, int type_, double alpha, double beta) cons
         return;
     }
 
-#ifdef HAVE_OPENCL
     int stype = type();
     int sdepth = CV_MAT_DEPTH(stype);
 
@@ -234,9 +236,20 @@ void UMat::convertTo(OutputArray dst, int type_, double alpha, double beta) cons
         return;
     }
 
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(dims <= 2,
                ocl_convertTo(*this, dst, ddepth, noScale, alpha, beta))
 #endif // HAVE_OPENCL
+
+#ifdef HAVE_METAL
+    if (metal::haveMetal() && dims <= 2 && dst.isUMat())
+    {
+        dst.createSameSize(*this, CV_MAKETYPE(ddepth, channels()));
+        UMat mdst = dst.getUMat();
+        if (metal::convertTo(*this, mdst, ddepth, alpha, beta))
+            return;
+    }
+#endif
 
     UMat src = *this;  // Fake reference to itself.
                        // Resolves issue 8693 in case of src == dst.
