@@ -153,7 +153,7 @@ static void batchnorm(const Mat& inp, Mat& out, const Mat& scale,
                     scalebuf[c] = biasbuf[c] = 0.f;
                 }
                 v_float32 vsc0, vsc1, vsc2, vsc3;
-                v_float32 vb0, vb1, vb2, vb3, vb4;
+                v_float32 vb0, vb1, vb2, vb3;
                 vsc0 = vx_load(scalebuf);
                 vsc1 = vx_load(scalebuf + vlanes);
                 vsc2 = vx_load(scalebuf + vlanes*2);

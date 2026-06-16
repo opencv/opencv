@@ -570,6 +570,10 @@ static void scatterScalarOut(bool aligned_k, int k_base, int k_count, int K0shif
     }
 #endif
 
+// RVV uses the generic runtime-C0 path below; the C0=8-specialized kernels are
+// unused on scalable backends, so do not compile them there (avoids -Wunused-function).
+#if !CV_SIMD_SCALABLE
+
 // Specialized 1x1 convolution kernel with stride=1.
 static void conv32fC8_1x1(const void* inp__, const void* residual__, void* out__,
                            const ConvState& cs, const void* weights__,
@@ -2018,6 +2022,8 @@ static void conv32fC8_3x3_strided(const void* inp__, const void* residual__, voi
         }
     });
 }
+
+#endif  // !CV_SIMD_SCALABLE
 
 static void conv32fC8(const void* inp__, const void* residual__, void* out__,
                       const ConvState& cs, const void* weights__,
