@@ -432,14 +432,14 @@ static void setupActivation(const ConvState& cs, int K,
 static void fillCoeffBufs(FastActivation fastActivation, const float* activParams, float defaultAlpha,
                            int k_count, int k_base,
                            const float* scaleptr, const float* biasptr,
-                           float* scalebuf, float* biasbuf, float* alphabuf) {
+                           float* scalebuf, float* biasbuf, float* alphabuf, int K0) {
     int kk = 0;
     for (; kk < k_count; kk++) {
         scalebuf[kk] = scaleptr ? scaleptr[k_base + kk] : 1.f;
         biasbuf[kk] = biasptr ? biasptr[k_base + kk] : 0.f;
         alphabuf[kk] = fastActivation == FAST_ACTIV_PRELU ? activParams[k_base + kk] : defaultAlpha;
     }
-    for (; kk < 8; kk++) {
+    for (; kk < K0; kk++) {
         scalebuf[kk] = 0.f;
         biasbuf[kk] = 0.f;
         alphabuf[kk] = 0.f;
@@ -570,6 +570,10 @@ static void scatterScalarOut(bool aligned_k, int k_base, int k_count, int K0shif
     }
 #endif
 
+// RVV uses the generic runtime-C0 path below; the C0=8-specialized kernels are
+// unused on scalable backends, so do not compile them there (avoids -Wunused-function).
+#if !CV_SIMD_SCALABLE
+
 // Specialized 1x1 convolution kernel with stride=1.
 static void conv32fC8_1x1(const void* inp__, const void* residual__, void* out__,
                            const ConvState& cs, const void* weights__,
@@ -655,7 +659,7 @@ static void conv32fC8_1x1(const void* inp__, const void* residual__, void* out__
             const float* inpbaseptr = (float*)inp__ + (n * C1 + c1_start) * iplanesize;
             const float* wbaseptr = (float*)weights__ + (g*Kblk + kblk)*(1*C1Max*C0*K0);
 
-            fillCoeffBufs(fastActivation, activParams, defaultAlpha, k_count, k_base, scaleptr, biasptr, scalebuf, biasbuf, alphabuf);
+            fillCoeffBufs(fastActivation, activParams, defaultAlpha, k_count, k_base, scaleptr, biasptr, scalebuf, biasbuf, alphabuf, K0);
 
             float* outptr = (float*)out__ + n*(K1*planesize) + p0*K0;
             const float* resptr = residual__ ? (float*)residual__ + n*(K1*planesize) + p0*K0 : nullptr;
@@ -824,8 +828,8 @@ static void conv32fC8_1x1_kpair(const void* inp__, const void* residual__, void*
             const float* wbaseptrA = (float*)weights__ + (g*Kblk + kblkA)*(1*C1Max*C0*K0);
             const float* wbaseptrB = (float*)weights__ + (g*Kblk + kblkB)*(1*C1Max*C0*K0);
 
-            fillCoeffBufs(fastActivation, activParams, defaultAlpha, K0, k_baseA, scaleptr, biasptr, scalebufA, biasbufA, alphabufA);
-            fillCoeffBufs(fastActivation, activParams, defaultAlpha, K0, k_baseB, scaleptr, biasptr, scalebufB, biasbufB, alphabufB);
+            fillCoeffBufs(fastActivation, activParams, defaultAlpha, K0, k_baseA, scaleptr, biasptr, scalebufA, biasbufA, alphabufA, K0);
+            fillCoeffBufs(fastActivation, activParams, defaultAlpha, K0, k_baseB, scaleptr, biasptr, scalebufB, biasbufB, alphabufB, K0);
 
             float* outbaseA = (float*)out__ + n*(K1*planesize) + k_baseA*planeblocks;
             float* outbaseB = (float*)out__ + n*(K1*planesize) + k_baseB*planeblocks;
@@ -1050,7 +1054,7 @@ static void conv32fC8_3x3s1(const void* inp__, const void* residual__, void* out
             const float* inpbaseptr = (float*)inp__ + (n * C1 + c1_start) * iplanesize;
             const float* wbaseptr = (float*)weights__ + (g*Kblk + kblk)*(9*C1Max*C0*K0);
 
-            fillCoeffBufs(fastActivation, activParams, defaultAlpha, k_count, k_base, scaleptr, biasptr, scalebuf, biasbuf, alphabuf);
+            fillCoeffBufs(fastActivation, activParams, defaultAlpha, k_count, k_base, scaleptr, biasptr, scalebuf, biasbuf, alphabuf, K0);
 
             float* outptr = (float*)out__ + n*(K1*planesize) + p0*K0;
             const float* resptr = residual__ ? (float*)residual__ + n*(K1*planesize) + p0*K0 : nullptr;
@@ -1329,8 +1333,8 @@ static void conv32fC8_3x3s1_kpair(const void* inp__, const void* residual__, voi
             const float* wbaseptrA = (float*)weights__ + (g*Kblk + kblkA)*(9*C1Max*C0*K0);
             const float* wbaseptrB = (float*)weights__ + (g*Kblk + kblkB)*(9*C1Max*C0*K0);
 
-            fillCoeffBufs(fastActivation, activParams, defaultAlpha, K0, k_baseA, scaleptr, biasptr, scalebufA, biasbufA, alphabufA);
-            fillCoeffBufs(fastActivation, activParams, defaultAlpha, K0, k_baseB, scaleptr, biasptr, scalebufB, biasbufB, alphabufB);
+            fillCoeffBufs(fastActivation, activParams, defaultAlpha, K0, k_baseA, scaleptr, biasptr, scalebufA, biasbufA, alphabufA, K0);
+            fillCoeffBufs(fastActivation, activParams, defaultAlpha, K0, k_baseB, scaleptr, biasptr, scalebufB, biasbufB, alphabufB, K0);
 
             float* outbaseA = (float*)out__ + n*(K1*planesize) + k_baseA*planeblocks;
             float* outbaseB = (float*)out__ + n*(K1*planesize) + k_baseB*planeblocks;
@@ -1635,7 +1639,7 @@ static void conv32fC8_1x1_strided(const void* inp__, const void* residual__, voi
             const float* inpbaseptr = (float*)inp__ + (n * C1 + c1_start) * iplanesize;
             const float* wbaseptr = (float*)weights__ + (g*Kblk + kblk)*(1*C1Max*C0*K0);
 
-            fillCoeffBufs(fastActivation, activParams, defaultAlpha, k_count, k_base, scaleptr, biasptr, scalebuf, biasbuf, alphabuf);
+            fillCoeffBufs(fastActivation, activParams, defaultAlpha, k_count, k_base, scaleptr, biasptr, scalebuf, biasbuf, alphabuf, K0);
 
             float* outptr = (float*)out__ + n*(K1*planesize) + p0*K0;
             const float* resptr = residual__ ? (float*)residual__ + n*(K1*planesize) + p0*K0 : nullptr;
@@ -1831,7 +1835,7 @@ static void conv32fC8_3x3_strided(const void* inp__, const void* residual__, voi
             const float* inpbaseptr = (float*)inp__ + (n * C1 + c1_start) * iplanesize;
             const float* wbaseptr = (float*)weights__ + (g*Kblk + kblk)*(9*C1Max*C0*K0);
 
-            fillCoeffBufs(fastActivation, activParams, defaultAlpha, k_count, k_base, scaleptr, biasptr, scalebuf, biasbuf, alphabuf);
+            fillCoeffBufs(fastActivation, activParams, defaultAlpha, k_count, k_base, scaleptr, biasptr, scalebuf, biasbuf, alphabuf, K0);
 
             float* outptr = (float*)out__ + n*(K1*planesize) + p0*K0;
             const float* resptr = residual__ ? (float*)residual__ + n*(K1*planesize) + p0*K0 : nullptr;
@@ -2019,10 +2023,13 @@ static void conv32fC8_3x3_strided(const void* inp__, const void* residual__, voi
     });
 }
 
+#endif  // !CV_SIMD_SCALABLE
+
 static void conv32fC8(const void* inp__, const void* residual__, void* out__,
                       const ConvState& cs, const void* weights__,
                       const float* scale__, const float* bias__)
 {
+#if !CV_SIMD_SCALABLE  // RVV: skip the C0=8-specialized kernels; use the generic runtime-C0 path
     int ksize = cs.wshape[2];
     if (ksize == 1 && cs.strides[0]*cs.strides[1]*cs.strides[2] == 1) {
     #if CV_SIMD256 && defined(__AVX2__)
@@ -2063,6 +2070,7 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
         cs.outshape.dims <= 5) {
         return conv32fC8_3x3_strided(inp__, residual__, out__, cs, weights__, scale__, bias__);
     }
+#endif  // !CV_SIMD_SCALABLE
 
     const MatShape& inpshape = cs.inpshape;
     const MatShape& outshape = cs.outshape;
@@ -2091,8 +2099,17 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
 
     parallel_for_(Range(0, total_tasks_gen), [&](const Range& range) {
         constexpr int SPAT_BLOCK_SIZE = 10;
+#if CV_SIMD_SCALABLE
+        // RVV: block size follows the runtime vector width (defaultC0 = vlanes(), LMUL=2).
+        const int C0 = (int)inpshape.back();
+        int C0shift = 0; while ((1 << C0shift) < C0) C0shift++;
+        const int K0 = C0, K0shift = C0shift;
+        constexpr int C0BUF = VTraits<v_float32>::max_nlanes;  // compile-time scratch bound
+#else
         constexpr int C0shift = 3, K0shift = C0shift;
         constexpr int C0 = 1 << C0shift, K0 = C0;
+        constexpr int C0BUF = K0;
+#endif
 
         CV_Assert_N(inpshape.back() == C0, outshape.back() == K0);
 
@@ -2122,14 +2139,14 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
         int innerZ0 = cs.inner[0], innerZ1 = cs.inner[MAX_CONV_DIMS];
         int innerY0 = cs.inner[1], innerY1 = cs.inner[MAX_CONV_DIMS+1];
         int innerX0 = cs.inner[2], innerX1 = cs.inner[MAX_CONV_DIMS+2];
-        float zbuf[C0] = {};
+        float zbuf[C0BUF] = {};
     #endif
 
         FastActivation fastActivation;
         const float* activParams;
         ActivationFunc activation;
         float maxval, defaultAlpha;
-        float scalebuf[K0], biasbuf[K0], alphabuf[K0];
+        float scalebuf[C0BUF], biasbuf[C0BUF], alphabuf[C0BUF];
         setupActivation(cs, K, fastActivation, activParams, activation, maxval, defaultAlpha);
 
         // 1x1x1 convolution with (1,1,1) strides:
@@ -2167,11 +2184,11 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
             const float* inpbaseptr = (float*)inp__ + (n * C1 + c1_start) * iplanesize;
             const float* wbaseptr = (float*)weights__ + (g*Kblk + kblk)*(ksize*C1Max*C0*K0);
 
-            fillCoeffBufs(fastActivation, activParams, defaultAlpha, k_count, k_base, scaleptr, biasptr, scalebuf, biasbuf, alphabuf);
+            fillCoeffBufs(fastActivation, activParams, defaultAlpha, k_count, k_base, scaleptr, biasptr, scalebuf, biasbuf, alphabuf, K0);
 
             float* outptr = (float*)out__ + n*(K1*planesize) + p0*K0;
             const float* resptr = residual__ ? (float*)residual__ + n*(K1*planesize) + p0*K0 : nullptr;
-            float tmpbuf[SPAT_BLOCK_SIZE*K0] = {};
+            float tmpbuf[SPAT_BLOCK_SIZE*C0BUF] = {};
             int p = p0;
 
         #ifdef CONV_ENABLE_SIMD
@@ -2343,7 +2360,7 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
             }
         #endif
 
-            float resbuf[K0] = {};
+            float resbuf[C0BUF] = {};
 
             for (; p < p1; p++, outptr += K0, resptr += (resptr ? K0 : 0))
             {
@@ -2425,9 +2442,16 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
 cv::dnn::ConvFunc getConvFunc_(int depth, int C0)
 {
     ConvFunc func = nullptr;
+#if CV_SIMD_SCALABLE
+    // RVV: block size follows the runtime vector width; accept the supported pow2 widths.
+    if (depth == CV_32F && (C0 == 8 || C0 == 16 || C0 == 32 || C0 == 64)) {
+        func = conv32fC8;
+    }
+#else
     if (depth == CV_32F && C0 == 8) {
         func = conv32fC8;
     }
+#endif
     return func;
 }
 
