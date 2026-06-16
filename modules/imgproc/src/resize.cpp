@@ -1657,8 +1657,8 @@ struct VResizeLinear<uchar, int, short, FixedPtCast<int, uchar, INTER_RESIZE_COE
 };
 
 
-template<typename T, typename WT, typename AT>
-struct HResizeCubic
+template<typename T, typename WT, typename AT, int K>
+struct HResizeFilterK
 {
     typedef T value_type;
     typedef WT buf_type;
@@ -1675,11 +1675,11 @@ struct HResizeCubic
             int dx = 0, limit = xmin;
             for(;;)
             {
-                for( ; dx < limit; dx++, alpha += 4 )
+                for( ; dx < limit; dx++, alpha += K )
                 {
-                    int j, sx = xofs[dx] - cn;
+                    int j, sx = xofs[dx] - cn*(K/2 - 1);
                     WT v = 0;
-                    for( j = 0; j < 4; j++ )
+                    for( j = 0; j < K; j++ )
                     {
                         int sxj = sx + j*cn;
                         if( (unsigned)sxj >= (unsigned)swidth )
@@ -1695,18 +1695,22 @@ struct HResizeCubic
                 }
                 if( limit == dwidth )
                     break;
-                for( ; dx < xmax; dx++, alpha += 4 )
+                for( ; dx < xmax; dx++, alpha += K )
                 {
-                    int sx = xofs[dx];
-                    D[dx] = S[sx-cn]*alpha[0] + S[sx]*alpha[1] +
-                        S[sx+cn]*alpha[2] + S[sx+cn*2]*alpha[3];
+                    int sx = xofs[dx] - cn*(K/2 - 1);
+                    WT v = S[sx]*alpha[0];
+                    for( int j = 1; j < K; j++ )
+                        v += S[sx + j*cn]*alpha[j];
+                    D[dx] = v;
                 }
                 limit = dwidth;
             }
-            alpha -= dwidth*4;
+            alpha -= dwidth*K;
         }
     }
 };
+
+template<typename T, typename WT, typename AT> using HResizeCubic = HResizeFilterK<T, WT, AT, 4>;
 
 
 template<typename T, typename WT, typename AT, class CastOp, class VecOp>
@@ -1730,58 +1734,7 @@ struct VResizeCubic
 };
 
 
-template<typename T, typename WT, typename AT>
-struct HResizeLanczos4
-{
-    typedef T value_type;
-    typedef WT buf_type;
-    typedef AT alpha_type;
-
-    void operator()(const T** src, WT** dst, int count,
-                    const int* xofs, const AT* alpha,
-                    int swidth, int dwidth, int cn, int xmin, int xmax ) const
-    {
-        for( int k = 0; k < count; k++ )
-        {
-            const T *S = src[k];
-            WT *D = dst[k];
-            int dx = 0, limit = xmin;
-            for(;;)
-            {
-                for( ; dx < limit; dx++, alpha += 8 )
-                {
-                    int j, sx = xofs[dx] - cn*3;
-                    WT v = 0;
-                    for( j = 0; j < 8; j++ )
-                    {
-                        int sxj = sx + j*cn;
-                        if( (unsigned)sxj >= (unsigned)swidth )
-                        {
-                            while( sxj < 0 )
-                                sxj += cn;
-                            while( sxj >= swidth )
-                                sxj -= cn;
-                        }
-                        v += S[sxj]*alpha[j];
-                    }
-                    D[dx] = v;
-                }
-                if( limit == dwidth )
-                    break;
-                for( ; dx < xmax; dx++, alpha += 8 )
-                {
-                    int sx = xofs[dx];
-                    D[dx] = S[sx-cn*3]*alpha[0] + S[sx-cn*2]*alpha[1] +
-                        S[sx-cn]*alpha[2] + S[sx]*alpha[3] +
-                        S[sx+cn]*alpha[4] + S[sx+cn*2]*alpha[5] +
-                        S[sx+cn*3]*alpha[6] + S[sx+cn*4]*alpha[7];
-                }
-                limit = dwidth;
-            }
-            alpha -= dwidth*8;
-        }
-    }
-};
+template<typename T, typename WT, typename AT> using HResizeLanczos4 = HResizeFilterK<T, WT, AT, 8>;
 
 
 template<typename T, typename WT, typename AT, class CastOp, class VecOp>
