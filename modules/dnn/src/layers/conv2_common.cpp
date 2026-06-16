@@ -91,11 +91,16 @@ MatShape convInferShape(const MatShape& inpShape, const MatShape& wshape,
         int dilation = dilations.empty() ? 1 : dilations[i];
         int outsz;
         if (autoPad == AUTO_PAD_NONE || autoPad == AUTO_PAD_VALID) {
-            int pad = 0;
+            int pad0 = 0, pad = 0;
             if (!pads.empty()) {
+                pad0 = pads[i];
                 pad = pads[i] + pads[i + nspatialdims];
             }
             outsz = (inpsz + pad - 1 - dilation * (k_i - 1) + (ceilMode ? stride - 1 : 0)) / stride + 1;
+            // ONNX: with ceil_mode a sliding window that starts in the right/bottom
+            // padding region is dropped
+            if (ceilMode && (outsz - 1) * stride >= inpsz + pad0)
+                outsz--;
         } else {
             if (ceilMode)
                 outsz = (inpsz + stride - 1)/stride;

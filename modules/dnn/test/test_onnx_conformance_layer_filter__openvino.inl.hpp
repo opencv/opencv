@@ -217,6 +217,10 @@ CASE(test_averagepool_1d_default)
     // no filter
 CASE(test_averagepool_2d_ceil)
     // no filter
+CASE(test_averagepool_2d_ceil_last_window_starts_on_pad)
+    SKIP;
+CASE(test_averagepool_2d_dilations)
+    SKIP;
 CASE(test_averagepool_2d_default)
     // no filter
 CASE(test_averagepool_2d_pads)
@@ -250,6 +254,16 @@ CASE(test_averagepool_2d_strides)
     // no filter
 CASE(test_averagepool_3d_default)
     // no filter
+CASE(test_averagepool_3d_dilations_large_count_include_pad_is_0_ceil_mode_is_False)
+    SKIP;
+CASE(test_averagepool_3d_dilations_large_count_include_pad_is_0_ceil_mode_is_True)
+    SKIP;
+CASE(test_averagepool_3d_dilations_large_count_include_pad_is_1_ceil_mode_is_False)
+    SKIP;
+CASE(test_averagepool_3d_dilations_large_count_include_pad_is_1_ceil_mode_is_True)
+    SKIP;
+CASE(test_averagepool_3d_dilations_small)
+    SKIP;
 CASE(test_basic_conv_with_padding)
 #if SKIP_SET_1
     SKIP_MYRIAD;
@@ -513,7 +527,7 @@ CASE(test_constant_pad)
 CASE(test_constantofshape_float_ones)
     SKIP;
 CASE(test_constantofshape_int_shape_zero)
-    // no filter
+    SKIP;
 CASE(test_constantofshape_int_zeros)
     SKIP;
 CASE(test_conv_with_autopad_same)
@@ -677,7 +691,7 @@ CASE(test_einsum_batch_diagonal)
 CASE(test_einsum_batch_matmul)
     // no filter
 CASE(test_einsum_inner_prod)
-    // no filter
+    SKIP;
 CASE(test_einsum_sum)
     // no filter
 CASE(test_einsum_transpose)
@@ -1203,6 +1217,14 @@ CASE(test_isinf_positive)
 CASE(test_isnan)
     SKIP;
 CASE(test_isnan_float16)
+    SKIP;
+CASE(test_l1normalization_axis_0)
+    SKIP;
+CASE(test_l1normalization_axis_1)
+    SKIP;
+CASE(test_l1normalization_axis_last)
+    SKIP;
+CASE(test_l2normalization_axis_1)
     SKIP;
 CASE(test_layer_normalization_2d_axis0)
     SKIP;
@@ -2258,14 +2280,22 @@ CASE(test_resize_downsample_scales_cubic)
 CASE(test_resize_downsample_scales_cubic_A_n0p5_exclude_outside)
     SKIP;
 CASE(test_resize_downsample_scales_cubic_align_corners)
-    // no filter
+    SKIP;
+CASE(test_resize_downsample_scales_cubic_antialias)
+    SKIP;
 CASE(test_resize_downsample_scales_linear)
     SKIP;
 CASE(test_resize_downsample_scales_linear_align_corners)
-    // no filter
+    SKIP;
+CASE(test_resize_downsample_scales_linear_antialias)
+    SKIP;
 CASE(test_resize_downsample_scales_nearest)
     SKIP;
 CASE(test_resize_downsample_sizes_cubic)
+    SKIP;
+CASE(test_resize_downsample_sizes_cubic_antialias)
+    SKIP;
+CASE(test_resize_downsample_scales_linear_half_pixel_symmetric)
     SKIP;
 CASE(test_resize_downsample_sizes_linear_pytorch_half_pixel)
     SKIP;
@@ -2275,6 +2305,12 @@ CASE(test_resize_downsample_sizes_nearest_tf_half_pixel_for_nn)
     SKIP;
 CASE(test_resize_tf_crop_and_resize)
     SKIP;
+CASE(test_resize_tf_crop_and_resize_axes_2_3)
+    SKIP;
+CASE(test_resize_tf_crop_and_resize_axes_3_2)
+    SKIP;
+CASE(test_resize_tf_crop_and_resize_extrapolation_value)
+    SKIP;
 CASE(test_resize_upsample_scales_cubic)
     SKIP;
 CASE(test_resize_upsample_scales_cubic_A_n0p5_exclude_outside)
@@ -2283,7 +2319,23 @@ CASE(test_resize_upsample_scales_cubic_align_corners)
     SKIP;
 CASE(test_resize_upsample_scales_cubic_asymmetric)
     SKIP;
+CASE(test_resize_upsample_scales_linear_half_pixel_symmetric)
+    SKIP;
+CASE(test_resize_upsample_scales_nearest_axes_3_2)
+    SKIP;
+CASE(test_resize_upsample_sizes_nearest_axes_3_2)
+    SKIP;
+CASE(test_resize_upsample_sizes_nearest_not_larger)
+    SKIP;
+CASE(test_resize_upsample_sizes_nearest_not_smaller)
+    SKIP;
 CASE(test_resize_upsample_scales_linear)
+    SKIP;
+CASE(test_resize_downsample_sizes_linear_antialias)
+    SKIP;
+CASE(test_resize_downsample_sizes_nearest_not_larger)
+    SKIP;
+CASE(test_resize_downsample_sizes_nearest_not_smaller)
     SKIP;
 CASE(test_resize_upsample_scales_linear_align_corners)
     SKIP;
@@ -2317,6 +2369,44 @@ CASE(test_roialign_mode_max)
     SKIP;
 CASE(test_round)
     // no filter
+CASE(test_rms_normalization_2d_axis0_expanded)
+    SKIP;
+CASE(test_rms_normalization_2d_axis1_expanded)
+    SKIP;
+CASE(test_rms_normalization_2d_axis_negative_1_expanded)
+    SKIP;
+CASE(test_rms_normalization_2d_axis_negative_2_expanded)
+    SKIP;
+CASE(test_rms_normalization_3d_axis0_epsilon_expanded)
+    SKIP;
+CASE(test_rms_normalization_3d_axis1_epsilon_expanded)
+    SKIP;
+CASE(test_rms_normalization_3d_axis2_epsilon_expanded)
+    SKIP;
+CASE(test_rms_normalization_3d_axis_negative_1_epsilon_expanded)
+    SKIP;
+CASE(test_rms_normalization_3d_axis_negative_2_epsilon_expanded)
+    SKIP;
+CASE(test_rms_normalization_3d_axis_negative_3_epsilon_expanded)
+    SKIP;
+CASE(test_rms_normalization_4d_axis0_expanded)
+    SKIP;
+CASE(test_rms_normalization_4d_axis1_expanded)
+    SKIP;
+CASE(test_rms_normalization_4d_axis2_expanded)
+    SKIP;
+CASE(test_rms_normalization_4d_axis3_expanded)
+    SKIP;
+CASE(test_rms_normalization_4d_axis_negative_1_expanded)
+    SKIP;
+CASE(test_rms_normalization_4d_axis_negative_2_expanded)
+    SKIP;
+CASE(test_rms_normalization_4d_axis_negative_3_expanded)
+    SKIP;
+CASE(test_rms_normalization_4d_axis_negative_4_expanded)
+    SKIP;
+CASE(test_rms_normalization_default_axis_expanded)
+    SKIP;
 CASE(test_scan9_sum)
     // no filter
 CASE(test_scan_sum)
@@ -2643,6 +2733,24 @@ CASE(test_spacetodepth)
     // no filter
 CASE(test_spacetodepth_example)
     // no filter
+CASE(test_split_1d_uneven_split_opset18)
+    SKIP;
+CASE(test_split_2d_uneven_split_opset18)
+    SKIP;
+CASE(test_split_equal_parts_1d_opset13)
+    SKIP;
+CASE(test_split_equal_parts_1d_opset18)
+    SKIP;
+CASE(test_split_equal_parts_default_axis_opset13)
+    SKIP;
+CASE(test_split_equal_parts_default_axis_opset18)
+    SKIP;
+CASE(test_split_zero_size_splits)
+    SKIP;
+CASE(test_split_zero_size_splits_opset13)
+    SKIP;
+CASE(test_split_zero_size_splits_opset18)
+    SKIP;
 CASE(test_split_equal_parts_1d)
     SKIP;
 CASE(test_split_equal_parts_2d)
@@ -2720,6 +2828,8 @@ CASE(test_sum_one_input)
 CASE(test_sum_two_inputs)
     // no filter
 CASE(test_swish)
+    SKIP;
+CASE(test_swish_expanded)
     SKIP;
 CASE(test_tan)
     // no filter
@@ -2816,7 +2926,7 @@ CASE(test_tril_square)
 CASE(test_tril_square_neg)
     SKIP;
 CASE(test_tril_zero)
-    // no filter
+    SKIP;
 CASE(test_triu)
     SKIP;
 CASE(test_triu_neg)
@@ -2834,7 +2944,7 @@ CASE(test_triu_square)
 CASE(test_triu_square_neg)
     SKIP;
 CASE(test_triu_zero)
-    // no filter
+    SKIP;
 CASE(test_unique_not_sorted_without_axis)
     SKIP;
 CASE(test_unique_sorted_with_axis)

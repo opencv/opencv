@@ -114,13 +114,6 @@
 "test_attention_4d_with_qk_matmul_softcap_expanded",
 "test_attention_4d_with_qk_matmul_softmax",
 "test_attention_4d_with_qk_matmul_softmax_expanded",
-"test_averagepool_2d_ceil_last_window_starts_on_pad",
-"test_averagepool_2d_dilations",
-"test_averagepool_3d_dilations_large_count_include_pad_is_0_ceil_mode_is_False",
-"test_averagepool_3d_dilations_large_count_include_pad_is_0_ceil_mode_is_True",
-"test_averagepool_3d_dilations_large_count_include_pad_is_1_ceil_mode_is_False",
-"test_averagepool_3d_dilations_large_count_include_pad_is_1_ceil_mode_is_True",
-"test_averagepool_3d_dilations_small",
 "test_basic_convinteger",  // Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "ConvInteger" in function 'getLayerInstance'
 "test_basic_deform_conv_with_padding",
 "test_basic_deform_conv_without_padding",
@@ -266,7 +259,6 @@
 "test_compress_negative_axis",  // ---- same as above ---
 "test_constant_pad_axes", //type mismatch
 "test_constant_pad_negative_axes",
-"test_constantofshape_int_shape_zero",  // Issue::Parser::Weights are required as inputs
 "test_convinteger_with_padding",  // Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "ConvInteger" in function 'getLayerInstance'
 "test_convinteger_without_padding",  //Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "ConvInteger" in function 'getLayerInstance'
 "test_convtranspose_autopad_same",
@@ -290,8 +282,6 @@
 "test_dynamicquantizelinear_max_adjusted_expanded",  // ---- same as above ---
 "test_dynamicquantizelinear_min_adjusted",  // ---- same as above ---
 "test_dynamicquantizelinear_min_adjusted_expanded",  // ---- same as above ---
-"test_einsum_inner_prod",  // Issue::Output shape does not match with reference
-"test_einsum_scalar",
 "test_equal_string",
 "test_equal_string_broadcast",
 "test_gridsample_bicubic",  // ---- same as above ---
@@ -312,11 +302,7 @@
 "test_image_decoder_decode_pnm_rgb",
 "test_image_decoder_decode_tiff_rgb",
 "test_image_decoder_decode_webp_rgb",
-"test_l1normalization_axis_0",
-"test_l1normalization_axis_1",
-"test_l1normalization_axis_last",
-"test_l2normalization_axis_0",
-"test_l2normalization_axis_1",
+"test_l2normalization_axis_0", //nan
 "test_loop13_seq",  // Loop with tensor sequences output, not yet supported in OpenCV
 "test_loop16_seq_none",  // Loop with optional tensor sequences, not yet supported in OpenCV
 "test_lppool_1d_default",
@@ -336,8 +322,6 @@
 "test_mvn_expanded",  // Issues::Wrong answer
 "test_mvn_expanded_ver18",
 "test_nesterov_momentum",  // Issues::Layer does not exist (NesterovsAcceleratedGradient) Can't create layer "onnx_node_output_0!X_new" of type "ai.onnx.preview.training.Momentum" in function 'getLayerInstance'
-"test_nllloss_NCd1d2_reduction_sum_expanded",
-"test_nllloss_NCd1d2d3d4d5_mean_weight_expanded",
 "test_optional_get_element",  // Issue::out of memory :: Failed to allocate 1044051907127083008 bytes in function 'OutOfMemoryError'
 "test_optional_get_element_optional_sequence",
 "test_optional_get_element_optional_tensor",
@@ -377,44 +361,8 @@
 "test_regex_full_match_email_domain",
 "test_regex_full_match_empty",
 "test_reshape_allowzero_reordered",  // incompatible type of input tensor #0 'data': CV_8UC1 given, CV_32FC1 expected in function 'setGraphInput'
-"test_resize_downsample_scales_cubic_align_corners",  // ---- same as above ---
-"test_resize_downsample_scales_cubic_antialias",
-"test_resize_downsample_scales_linear_align_corners",  // ---- same as above ---
-"test_resize_downsample_scales_linear_antialias", //incorrect output
-"test_resize_downsample_scales_linear_half_pixel_symmetric",
-"test_resize_downsample_sizes_cubic_antialias",
-"test_resize_downsample_sizes_linear_antialias",
-"test_resize_downsample_sizes_nearest_not_larger",
-"test_resize_downsample_sizes_nearest_not_smaller",
-"test_resize_tf_crop_and_resize_axes_2_3",
-"test_resize_tf_crop_and_resize_axes_3_2",
-"test_resize_tf_crop_and_resize_extrapolation_value",
-"test_resize_upsample_scales_linear_half_pixel_symmetric", //shape mismatch
-"test_resize_upsample_scales_nearest_axes_3_2",
-"test_resize_upsample_sizes_nearest_axes_3_2",
-"test_resize_upsample_sizes_nearest_not_larger",
-"test_resize_upsample_sizes_nearest_not_smaller",
 "test_reversesequence_batch",  // Issue:: Parser: Can't create layer "onnx_node_output_0!y" of type "ReverseSequence" in function 'getLayerInstance'
 "test_reversesequence_time",  // ---- same as above ---
-"test_rms_normalization_2d_axis0_expanded",
-"test_rms_normalization_2d_axis1_expanded",
-"test_rms_normalization_2d_axis_negative_1_expanded",
-"test_rms_normalization_2d_axis_negative_2_expanded",
-"test_rms_normalization_3d_axis0_epsilon_expanded",
-"test_rms_normalization_3d_axis1_epsilon_expanded",
-"test_rms_normalization_3d_axis2_epsilon_expanded",
-"test_rms_normalization_3d_axis_negative_1_epsilon_expanded",
-"test_rms_normalization_3d_axis_negative_2_epsilon_expanded",
-"test_rms_normalization_3d_axis_negative_3_epsilon_expanded",
-"test_rms_normalization_4d_axis0_expanded",
-"test_rms_normalization_4d_axis1_expanded",
-"test_rms_normalization_4d_axis2_expanded",
-"test_rms_normalization_4d_axis3_expanded",
-"test_rms_normalization_4d_axis_negative_1_expanded",
-"test_rms_normalization_4d_axis_negative_2_expanded",
-"test_rms_normalization_4d_axis_negative_3_expanded",
-"test_rms_normalization_4d_axis_negative_4_expanded",
-"test_rms_normalization_default_axis_expanded",
 "test_rnn_seq_length",  // Issue:: Parser:  Can't create layer "onnx_node_output_1!Y_h" of type "RNN" in function 'getLayerInstance'
 "test_scan9_sum",  // Issue:: Parser: 'Graph' is not supported in function 'getLayerParams'
 "test_scan_sum", // ---- same as above ---
@@ -437,18 +385,9 @@
 "test_simple_rnn_defaults",  // ---- same as above ---
 "test_simple_rnn_with_initial_bias",  // ---- same as above ---
 "test_slice_start_out_of_bounds",
-"test_split_1d_uneven_split_opset18", //type mismatch
-"test_split_2d_uneven_split_opset18",
-"test_split_equal_parts_1d_opset13",
-"test_split_equal_parts_1d_opset18",
-"test_split_equal_parts_default_axis_opset13",
-"test_split_equal_parts_default_axis_opset18",
 "test_split_to_sequence_1",
 "test_split_to_sequence_2",
 "test_split_to_sequence_nokeepdims",
-"test_split_zero_size_splits",  // ---- incompatible type of input tensor #0 'input': CV_8UC1 given, CV_32FC1 expected in function 'setGraphInput' ---
-"test_split_zero_size_splits_opset13", // type mismatch
-"test_split_zero_size_splits_opset18", // type mismatch
 "test_stft",
 "test_stft_with_window",
 "test_string_concat",
@@ -468,7 +407,6 @@
 "test_strnormalizer_export_monday_empty_output",  // ---- same as above ---
 "test_strnormalizer_export_monday_insensintive_upper_twodim",  // ---- same as above ---
 "test_strnormalizer_nostopwords_nochangecase",  // Issue:: Parser: Can't create layer "onnx_node_output_0!y" of type "StringNormalizer" in function 'getLayerInstance'
-"test_swish_expanded",
 "test_tensorscatter",
 "test_tensorscatter_3d",
 "test_tensorscatter_circular",
@@ -484,6 +422,4 @@
 "test_training_dropout_default_mask",  // ---- same as above ---
 "test_training_dropout_mask",  // ---- same as above ---
 "test_training_dropout_zero_ratio_mask",  // ---- same as above ---
-"test_tril_zero",  // ---- same as above --- type mismatch
-"test_triu_zero",  // ---- same as above --- type mismatch
 "test_unique_length_1", //incorrect output
