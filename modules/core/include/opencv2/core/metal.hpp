@@ -6,11 +6,13 @@
 #define OPENCV_CORE_METAL_HPP
 
 #include "opencv2/core/cvdef.h"
+#include "opencv2/core/mat.hpp"
 
 namespace cv {
 namespace metal {
 
 CV_EXPORTS bool haveMetal();
+CV_EXPORTS bool threshold(const UMat& src, UMat& dst, double thresh, double maxval, int thresholdType);
 
 } // namespace metal
 } // namespace cv

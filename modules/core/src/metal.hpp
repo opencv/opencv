@@ -19,6 +19,7 @@ bool multiply(const UMat& src1, const UMat& src2, UMat& dst, double scale);
 bool bitwise(const UMat& src1, const UMat& src2, UMat& dst, int op);
 bool compare(const UMat& src1, const UMat& src2, UMat& dst, int op);
 bool convertTo(const UMat& src, UMat& dst, int ddepth, double alpha, double beta);
+bool threshold(const UMat& src, UMat& dst, double thresh, double maxval, int thresholdType);
 bool setTo(UMat& dst, const Mat& value, const UMat* mask);
 
 } // namespace metal
