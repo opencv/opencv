@@ -10,10 +10,6 @@
 #include "backend.hpp"
 #include "factory.hpp"
 
-#ifdef HAVE_CUDA
-#include "cuda4dnn/init.hpp"
-#endif
-
 #ifdef HAVE_ONNXRUNTIME
 #include <onnxruntime_cxx_api.h>
 #endif
@@ -158,31 +154,8 @@ Ptr<BackendWrapper> Net::Impl::wrap(Mat& host)
         }
         else if (preferableBackend == DNN_BACKEND_CUDA)
         {
-            CV_Assert(haveCUDA());
-#ifdef HAVE_CUDA
-            CV_CheckType(host.depth(), host.depth() == CV_32F || host.depth() == CV_8S || host.depth() == CV_8U || host.depth() == CV_32S || host.depth() == CV_64S || host.depth() == CV_Bool, "Unsupported type for CUDA");
-            CV_Assert(IS_DNN_CUDA_TARGET(preferableTarget));
-            switch (host.depth())
-            {
-            case CV_32F:
-                if (preferableTarget == DNN_TARGET_CUDA_FP16)
-                    return CUDABackendWrapperFP16::create(baseBuffer, shape);
-                else
-                    return CUDABackendWrapperFP32::create(baseBuffer, shape);
-            case CV_8S:
-                return CUDABackendWrapperINT8::create(baseBuffer, shape);
-            case CV_8U:
-                return CUDABackendWrapperUINT8::create(baseBuffer, shape);
-            case CV_32S:
-                return CUDABackendWrapperINT32::create(baseBuffer, shape);
-            case CV_64S:
-                return CUDABackendWrapperINT64::create(baseBuffer, shape);
-            case CV_Bool:
-                return CUDABackendWrapperBOOL::create(baseBuffer, shape);
-            default:
-                CV_Error(Error::BadDepth, "Unsupported mat type for CUDA");
-            }
-#endif
+            CV_Assert(isCUDABackendAvailable());
+            return wrapCUDA(baseBuffer, shape, host.depth());
         }
         else if (preferableBackend == DNN_BACKEND_TIMVX)
         {
@@ -198,7 +171,16 @@ Ptr<BackendWrapper> Net::Impl::wrap(Mat& host)
             CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
     }
 
-    Ptr<BackendWrapper> wrapper = wrapMat(preferableBackend, preferableTarget, host);
+    Ptr<BackendWrapper> wrapper;
+    if (preferableBackend == DNN_BACKEND_CUDA)
+    {
+        CV_Assert(isCUDABackendAvailable());
+        wrapper = wrapCUDA(host);
+    }
+    else
+    {
+        wrapper = wrapMat(preferableBackend, preferableTarget, host);
+    }
     backendWrappers[data] = wrapper;
     return wrapper;
 }
@@ -233,11 +215,7 @@ void Net::Impl::initBackend(const std::vector<LayerPin>& blobsToKeep_)
     }
     else if (preferableBackend == DNN_BACKEND_CUDA)
     {
-#ifdef HAVE_CUDA
         initCUDABackend(blobsToKeep_);
-#else
-        CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of CUDA/CUDNN");
-#endif
     }
     else if (preferableBackend == DNN_BACKEND_TIMVX)
     {
@@ -319,6 +297,17 @@ void Net::Impl::setPreferableBackend(Net& net, int backendId)
         CV_Error(Error::StsNotImplemented, "CANN backend is not availlable in the current OpenCV build");
 #endif
     }
+    else if (backendId == DNN_BACKEND_CUDA)
+    {
+#ifdef HAVE_CUDA
+        preferableBackend = backendId;
+#elif defined(ENABLE_PLUGINS) && defined(OPENCV_DNN_CUDA_PLUGIN)
+        auto& networkBackend = dnn_backend::createPluginDNNNetworkBackend("cuda");
+        networkBackend.switchBackend(net);
+#else
+        preferableBackend = backendId;
+#endif
+    }
     else
     {
         preferableBackend = backendId;
@@ -374,13 +363,7 @@ void Net::Impl::setPreferableTarget(int targetId)
 
         if (IS_DNN_CUDA_TARGET(targetId))
         {
-            preferableTarget = DNN_TARGET_CPU;
-#ifdef HAVE_CUDA
-            if (cuda4dnn::doesDeviceSupportFP16() && targetId == DNN_TARGET_CUDA_FP16)
-                preferableTarget = DNN_TARGET_CUDA_FP16;
-            else
-                preferableTarget = DNN_TARGET_CUDA;
-#endif
+            preferableTarget = getEffectiveCUDATarget(targetId);
         }
 #if !defined(__arm64__) || !__arm64__
         if (targetId == DNN_TARGET_CPU_FP16)

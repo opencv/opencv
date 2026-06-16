@@ -96,6 +96,11 @@ struct Net::Impl : public detail::NetImplBase
     std::map<String, int> layerNameToId;
     std::map<std::string, int> outputNameToId;  // use registerOutput() to populate outputs
     BlobManager blobManager;
+    struct CudaInfoBase
+    {
+        virtual ~CudaInfoBase() {}
+    };
+    std::unique_ptr<CudaInfoBase> cudaInfo;
     int preferableBackend;
     int preferableTarget;
     bool hasDynamicShapes;
@@ -247,6 +252,14 @@ struct Net::Impl : public detail::NetImplBase
 
     virtual void initBackend(const std::vector<LayerPin>& blobsToKeep_);
 
+    virtual bool isCUDABackendAvailable() const;
+    virtual int getEffectiveCUDATarget(int targetId) const;
+    virtual Ptr<BackendWrapper> wrapCUDA(Mat& host);
+    virtual Ptr<BackendWrapper> wrapCUDA(const Ptr<BackendWrapper>& baseBuffer, const MatShape& shape, int hostDepth);
+    virtual void initCUDABackend(const std::vector<LayerPin>& blobsToKeep_);
+    virtual void forwardCUDALayer(LayerData& ld);
+    virtual void synchronizeCUDABackend();
+
 #ifdef HAVE_WEBNN
     void addWebnnOutputs(LayerData& ld);
     void initWebnnBackend(const std::vector<LayerPin>& blobsToKeep_);
@@ -263,23 +276,6 @@ struct Net::Impl : public detail::NetImplBase
     void tvUpdateConfictMap(int graphIndex, LayerData& ld, std::vector<std::vector<int> >& graphConflictMap);
     void tvConvertToOutputNode(const LayerData& ld, Ptr<TimVXBackendWrapper>& targetWrap);
     void initTimVXBackend();
-#endif
-
-#ifdef HAVE_CUDA
-    struct CudaInfo_t
-    {
-        CudaInfo_t(cuda4dnn::csl::CSLContext ctxt, cuda4dnn::csl::Stream d2h_stream_)
-            : context(std::move(ctxt))
-            , d2h_stream(std::move(d2h_stream_))
-        {}
-        cuda4dnn::csl::CSLContext context;
-        cuda4dnn::csl::Stream d2h_stream;
-        cuda4dnn::csl::Workspace workspace;
-    };
-
-    std::unique_ptr<CudaInfo_t> cudaInfo;
-
-    void initCUDABackend(const std::vector<LayerPin>& blobsToKeep_);
 #endif
 
     #ifdef HAVE_ONNXRUNTIME
