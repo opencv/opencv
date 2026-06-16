@@ -96,7 +96,12 @@ void Net::Impl::finalizeOrt()
     ort_profile_data.clear();
     if (profilingMode != DNN_PROFILE_NONE) {
         ort_profile_path_prefix = cv::tempfile("opencv_ort_profile_");
+#ifdef _WIN32
+        std::wstring w_ort_profile_path_prefix(ort_profile_path_prefix.begin(), ort_profile_path_prefix.end());
+        opts.EnableProfiling(w_ort_profile_path_prefix.c_str());
+#else
         opts.EnableProfiling(ort_profile_path_prefix.c_str());
+#endif
     }
 
 #ifdef _WIN32
