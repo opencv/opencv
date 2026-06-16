@@ -12,8 +12,7 @@
 
 namespace cv { namespace hal {
 
-// Abstract GPU backend: one typed virtual method per op (CPU-HAL style), each
-// returning false by default so unhandled ops fall through to CPU. No op-id enum.
+// Abstract GPU backend: one typed method per op; default false => CPU fallback.
 class CV_EXPORTS Backend
 {
 public:

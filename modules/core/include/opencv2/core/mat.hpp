@@ -632,7 +632,6 @@ enum UMatUsageFlags
     __UMAT_USAGE_FLAGS_32BIT = 0x7fffffff // Binary compatibility hint
 };
 
-// Forward declaration for GPU HAL backend pointer in UMatData
 namespace hal { class Backend; }
 struct CV_EXPORTS UMatData;
 

@@ -67,7 +67,6 @@ void poolFree(size_t sz, void* d)
 class CudaAllocator CV_FINAL : public MatAllocator
 {
 public:
-    // create() path: data==0, we cudaMalloc fresh VRAM.
     UMatData* allocate(int dims, const int* sizes, int type,
                        void* data, size_t* step,
                        AccessFlag /*flags*/,
@@ -83,20 +82,16 @@ public:
         }
         size_t total = (size_t)rows * (size_t)cols * esz;
 
-        void* dev = nullptr;
-        if (data)
-            dev = data;                      // wrap externally-owned device mem
-        else
-            dev = poolAlloc(total);          // pooled VRAM (reused, not malloc'd)
+        void* dev = data ? data : poolAlloc(total);
 
         UMatData* u = new UMatData(this);
-        u->data      = 0;                    // no host copy yet
+        u->data      = 0;
         u->origdata  = 0;
-        u->handle    = dev;                  // device pointer lives here
+        u->handle    = dev;
         u->size      = total;
         u->flags     = data ? UMatData::USER_ALLOCATED
                             : static_cast<UMatData::MemoryFlag>(0);
-        u->markHostCopyObsolete(true);       // device is the source of truth
+        u->markHostCopyObsolete(true);
         u->gpuBackend = getCudaBackendInstance();
         return u;
     }
@@ -104,25 +99,24 @@ public:
     bool allocate(UMatData* u, AccessFlag /*accessFlags*/,
                   UMatUsageFlags /*usageFlags*/) const CV_OVERRIDE
     {
-        return u != nullptr;                 // header already has device memory
+        return u != nullptr;
     }
 
     void deallocate(UMatData* u) const CV_OVERRIDE
     {
         if (!u) return;
         if (u->handle && !(u->flags & UMatData::USER_ALLOCATED))
-            poolFree(u->size, u->handle);    // return VRAM to pool (no cudaFree)
+            poolFree(u->size, u->handle);
         if (u->data)
             fastFree(u->data);
         delete u;
     }
 
-    // CPU access: make a host copy available (download if device is newer).
     void map(UMatData* u, AccessFlag accessFlags) const CV_OVERRIDE
     {
         if (!u) return;
         if (u->data == 0)
-            u->data = (uchar*)fastMalloc(u->size);   // host shadow
+            u->data = (uchar*)fastMalloc(u->size);
         if ((accessFlags & ACCESS_READ) && u->hostCopyObsolete())
         {
             CV_Assert(cudaMemcpy(u->data, u->handle, u->size,
@@ -159,13 +153,12 @@ static cuda::GpuMat extractGpuMat(const UMat& u)
                         u.u->handle, u.step[0]);
 }
 
-// Allocate a VRAM UMat of the given geometry (returned via 'out') and view it
-// as a GpuMat for the kernel to write into in-place.
+// Allocate a VRAM UMat (returned via 'out') and view it as a GpuMat written in-place.
 static cuda::GpuMat makeResidentOutput(UMat& out, int rows, int cols, int type)
 {
     out.allocator = getCudaAllocator();
-    out.create(rows, cols, type);            // cudaMalloc via our allocator
-    out.u->markHostCopyObsolete(true);       // device will hold the result
+    out.create(rows, cols, type);
+    out.u->markHostCopyObsolete(true);
     return extractGpuMat(out);
 }
 

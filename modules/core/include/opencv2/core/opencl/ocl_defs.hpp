@@ -23,9 +23,8 @@ static inline bool isOpenCLActivated() { return false; }
 }} // namespace
 
 
-// CV_GPU_RUN(src, method, args...): calls src's GPU backend method; returns on
-// success, falls through to CV_OCL_RUN/CPU when src has no backend. Method name
-// is the op selector (no op-id enum). e.g. CV_GPU_RUN(_src, resize, _src, _dst, ...)
+// CV_GPU_RUN(src, method, args...): dispatch to src's GPU backend, else fall through.
+// e.g. CV_GPU_RUN(_src, resize, _src, _dst, dsize, sx, sy, interp)
 
 #ifdef CV_GPU_RUN_VERBOSE
 

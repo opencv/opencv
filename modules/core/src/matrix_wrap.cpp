@@ -71,8 +71,6 @@ Mat _InputArray::getMat_(int i) const
 
     if( k == UMAT )
     {
-        // GPU HAL: reaching here with a GPU-backed UMat just means no backend
-        // handled the op; downloading to CPU here is the correct fallback.
         const UMat* m = (const UMat*)obj;
         if( i < 0 )
             return m->getMat(accessFlags);

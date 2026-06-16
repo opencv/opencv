@@ -39,20 +39,18 @@ void clearBackends() {
 
 namespace {
 
-// Factory symbol that plugins export.
 typedef Backend* (*BackendFactory)();
 
-// dlopen one plugin, find its factory, register the backend. False if absent.
 bool tryLoadPlugin(const std::string& path) {
     // RTLD_GLOBAL so the plugin can see opencv_core symbols.
     void* handle = dlopen(path.c_str(), RTLD_LAZY | RTLD_GLOBAL);
-    if (!handle) return false;                 // not installed here — fine
+    if (!handle) return false;
 
-    dlerror();                                 // clear stale error
+    dlerror();
     BackendFactory factory = reinterpret_cast<BackendFactory>(
         dlsym(handle, "cv_hal_createCudaBackend"));
     if (dlerror() != nullptr || factory == nullptr) {
-        dlclose(handle);                       // wrong plugin
+        dlclose(handle);
         return false;
     }
 
@@ -63,7 +61,6 @@ bool tryLoadPlugin(const std::string& path) {
     return true;
 }
 
-// Try OPENCV_GPU_BACKEND_PATH, then the bare filename; stop at first success.
 void doLoadBackendPlugins() {
     std::vector<std::string> candidates;
     const char* envPath = std::getenv("OPENCV_GPU_BACKEND_PATH");
@@ -71,18 +68,16 @@ void doLoadBackendPlugins() {
     candidates.push_back("libopencv_cuda_backend.so");
     for (const std::string& path : candidates)
         if (tryLoadPlugin(path)) break;
-    // none loaded -> registry empty -> CPU fallback
 }
 
 } // anonymous namespace
 
-// Thread-safe, runs the loader exactly once.
 void loadBackendPlugins() {
     static std::once_flag flag;
     std::call_once(flag, doLoadBackendPlugins);
 }
 
-// Static initializer: runs the loader when libopencv_core loads, before main().
+// Static initializer: loads plugins when libopencv_core loads, before main().
 namespace {
 struct BackendPluginInitializer {
     BackendPluginInitializer() { loadBackendPlugins(); }
