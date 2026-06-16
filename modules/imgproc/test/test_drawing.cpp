@@ -779,6 +779,7 @@ TEST(Drawing, ttf_text)
          "historia, ruégote que no te olvides de mi buen Rocinante,\n"
          "compañero eterno mío en todos mis caminos y carreras!\n", false, 300, false},
         {"Ταχίστη αλώπηξ βαφής ψημένη γη, δρασκελίζει υπέρ νωθρού κυνός.", false, 400, false},
+        {"العربية لغة جميلة، والخط العربي فن.", false, 400, false},
         {"春眠不觉晓，\n处处闻啼鸟。\n夜来风雨声，\n花落知多少。\n"
         " あなたはそれが困難見つけた場合 — あなたは正しい方向に向かっている。\n"
         " 넌 모든 꽃들을 다 꺾어버릴 수는 있겠지만, 봄이 오는 걸 막을 수는 없어。 ", false, 400, false}
@@ -841,10 +842,12 @@ TEST(Drawing, ttf_text)
     }
 
 #if 0
-    //imwrite(ts_data_path + "../highgui/drawing/text_test.png", img);
+    //imwrite(ts_data_path + "../highgui/drawing/text_test_new.png", img);
     imshow("test", img);
     waitKey();
 #else
+    // Always dump the rendered image for visual inspection (HarfBuzz engine bring-up).
+    //imwrite("ttf_text_actual.png", img);
     Mat refimg = imread(ts_data_path + "../highgui/drawing/text_test.png", IMREAD_UNCHANGED);
     //imshow("ref", refimg);
     //imshow("actual", img);
@@ -856,6 +859,32 @@ TEST(Drawing, ttf_text)
 #endif
 }
 #endif
+
+// Experiment (not a regression test): render Arabic + Devanagari with FiraGO,
+// which covers both scripts, and dump a PNG for visual inspection.
+TEST(Drawing, DISABLED_firago_experiment)
+{
+    // FiraGO covers both Arabic and Devanagari. It is optional test data:
+    // findDataFile(..., /*required=*/false) throws SkipTestException when the
+    // font is absent, so the test is reported as skipped rather than failing.
+    string fontpath = findDataFile("../highgui/drawing/FiraGo-Book.ttf", false);
+    FontFace fira(fontpath);
+
+    Mat img(360, 1000, CV_8UC3, Scalar::all(255));
+    Scalar color(40, 40, 40);
+    int x0 = 40, y = 70;
+
+    putText(img, "FiraGO: Arabic + Devanagari", Point(x0, y), color, fira, 30, 500,
+            PUT_TEXT_ALIGN_LEFT, Range());
+    y += 90;
+    putText(img, "العربية لغة جميلة، والخط العربي فن.", Point(x0, y), color, fira, 48, 400,
+            PUT_TEXT_ALIGN_LEFT, Range());
+    y += 100;
+    putText(img, "नमस्ते दुनिया — संस्कृतम् सुन्दरम् अस्ति।", Point(x0, y), color, fira, 48, 400,
+            PUT_TEXT_ALIGN_LEFT, Range());
+
+    imwrite("firago_experiment.png", img);
+}
 
 TEST(Drawing, fillpoly_contours)
 {
