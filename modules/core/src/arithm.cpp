@@ -174,6 +174,18 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
         _dst.createSameSize(*psrc1, type1);
         CV_OCL_RUN(use_opencl,
                    ocl_binary_op(*psrc1, *psrc2, _dst, _mask, bitwise, oclop, false))
+#ifdef HAVE_METAL
+        if (metal::haveMetal() && bitwise && kind1 == _InputArray::UMAT && kind2 == _InputArray::UMAT &&
+            _dst.isUMat() && (oclop == OCL_OP_AND || oclop == OCL_OP_OR ||
+                              oclop == OCL_OP_XOR || oclop == OCL_OP_NOT))
+        {
+            UMat src1 = psrc1->getUMat();
+            UMat src2 = psrc2->getUMat();
+            UMat dst = _dst.getUMat();
+            if (metal::bitwise(src1, src2, dst, oclop))
+                return;
+        }
+#endif
 
         if( bitwise )
         {

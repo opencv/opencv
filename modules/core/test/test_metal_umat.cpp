@@ -773,6 +773,164 @@ TEST(Core_Metal_UMat, MultiplyUnsupportedTypeFallback)
     EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
 }
 
+TEST(Core_Metal_UMat, BitwiseAndOrXor)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src1(37, 41, CV_8UC3);
+    Mat src2(src1.size(), src1.type());
+    randu(src1, 0, 255);
+    randu(src2, 0, 255);
+
+    UMat usrc1, usrc2, udst;
+    src1.copyTo(usrc1);
+    src2.copyTo(usrc2);
+
+    Mat expected, dst;
+    cv::bitwise_and(src1, src2, expected);
+    cv::bitwise_and(usrc1, usrc2, udst);
+    udst.copyTo(dst);
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+
+    cv::bitwise_or(src1, src2, expected);
+    cv::bitwise_or(usrc1, usrc2, udst);
+    udst.copyTo(dst);
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+
+    cv::bitwise_xor(src1, src2, expected);
+    cv::bitwise_xor(usrc1, usrc2, udst);
+    udst.copyTo(dst);
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
+TEST(Core_Metal_UMat, BitwiseNot)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src(35, 39, CV_8UC4);
+    randu(src, 0, 255);
+
+    Mat expected;
+    cv::bitwise_not(src, expected);
+
+    UMat usrc, udst;
+    src.copyTo(usrc);
+    cv::bitwise_not(usrc, udst);
+
+    Mat dst;
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
+TEST(Core_Metal_UMat, BitwiseFloatBytes)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src1(31, 37, CV_32FC2);
+    Mat src2(src1.size(), src1.type());
+    randu(src1, -10.0f, 10.0f);
+    randu(src2, -10.0f, 10.0f);
+
+    Mat expected;
+    cv::bitwise_xor(src1, src2, expected);
+
+    UMat usrc1, usrc2, udst;
+    src1.copyTo(usrc1);
+    src2.copyTo(usrc2);
+    cv::bitwise_xor(usrc1, usrc2, udst);
+
+    Mat dst;
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst.reshape(1), expected.reshape(1), NORM_INF), 0);
+}
+
+TEST(Core_Metal_UMat, DeviceMemoryUsageBitwise)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src1(31, 37, CV_8UC4);
+    Mat src2(src1.size(), src1.type());
+    randu(src1, 0, 255);
+    randu(src2, 0, 255);
+
+    Mat expected;
+    cv::bitwise_and(src1, src2, expected);
+
+    UMat usrc1(src1.size(), src1.type(), USAGE_ALLOCATE_DEVICE_MEMORY);
+    UMat usrc2(src2.size(), src2.type(), USAGE_ALLOCATE_DEVICE_MEMORY);
+    UMat udst(src1.size(), src1.type(), USAGE_ALLOCATE_DEVICE_MEMORY);
+    src1.copyTo(usrc1);
+    src2.copyTo(usrc2);
+    cv::bitwise_and(usrc1, usrc2, udst);
+
+    Mat dst;
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
+TEST(Core_Metal_UMat, BitwiseRoi)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src1(48, 64, CV_8UC4);
+    Mat src2(src1.size(), src1.type());
+    Mat base(src1.size(), src1.type());
+    randu(src1, 0, 255);
+    randu(src2, 0, 255);
+    randu(base, 0, 255);
+
+    Rect roi(9, 7, 31, 23);
+    Mat expected = base.clone();
+    cv::bitwise_or(src1(roi), src2(roi), expected(roi));
+
+    UMat usrc1, usrc2, udst;
+    src1.copyTo(usrc1);
+    src2.copyTo(usrc2);
+    base.copyTo(udst);
+    cv::bitwise_or(usrc1(roi), usrc2(roi), udst(roi));
+
+    Mat dst;
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
+TEST(Core_Metal_UMat, BitwiseMaskFallback)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src1(29, 43, CV_8UC3);
+    Mat src2(src1.size(), src1.type());
+    Mat mask(src1.size(), CV_8UC1);
+    randu(src1, 0, 255);
+    randu(src2, 0, 255);
+    randu(mask, 0, 2);
+    mask *= 255;
+
+    Mat expected;
+    cv::bitwise_xor(src1, src2, expected, mask);
+
+    UMat usrc1, usrc2, umask, udst;
+    src1.copyTo(usrc1);
+    src2.copyTo(usrc2);
+    mask.copyTo(umask);
+    cv::bitwise_xor(usrc1, usrc2, udst, umask);
+
+    Mat dst;
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
 TEST(Core_Metal_UMat, SetTo8U)
 {
     if (!cv::metal::haveMetal())
