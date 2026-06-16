@@ -15,67 +15,41 @@ namespace cv { namespace hal {
 //! @addtogroup core_hal_backend
 //! @{
 
-/** @brief Operation identifiers passed to Backend::support() and Backend::run().
- *
- * Values 100–199 are reserved for built-in image-processing operations.
- * Third-party backends may define additional IDs starting at 1000.
- */
-enum GpuOpId
-{
-    GPU_OP_RESIZE           = 100,
-    GPU_OP_GAUSSIAN_BLUR    = 101,
-    GPU_OP_CVT_COLOR        = 102,
-    GPU_OP_THRESHOLD        = 103,
-    GPU_OP_ADD              = 104,
-    GPU_OP_SUBTRACT         = 105,
-    GPU_OP_MULTIPLY         = 106,
-    GPU_OP_WARP_AFFINE      = 107,
-    GPU_OP_WARP_PERSPECTIVE = 108
-};
-
 /** @brief Abstract GPU backend interface.
  *
  * A backend encapsulates one GPU execution environment (CUDA, Vulkan, HIP, …).
- * Concrete subclasses are registered at run-time; the CV_GPU_RUN macro queries
- * the active backend and delegates execution without any CUDA/Vulkan/HIP
- * dependency in the caller.
+ * Concrete subclasses are registered at run-time; the CV_GPU_RUN macro fetches
+ * the backend attached to the source UMat and calls the matching operation,
+ * with no CUDA/Vulkan/HIP dependency in the caller.
  *
- * Implementors must provide:
- *   - support()  — advertise which operations this backend handles
- *   - run()      — execute one operation
+ * Each operation is a typed virtual method (mirrors the CPU HAL's one-function-
+ * per-op style). A backend overrides only the operations it implements; the
+ * default implementations return false, which makes CV_GPU_RUN fall through to
+ * the existing CPU/OpenCL path. There is no operation-id enum and no generic
+ * run(): the method name *is* the operation selector.
  *
  * Optionally override allocator() to supply a custom MatAllocator so that
  * intermediate UMat buffers stay on the device between operations.
+ *
+ * Each method returns true if it executed the operation (caller returns),
+ * false to fall back to CPU.
  */
 class CV_EXPORTS Backend
 {
 public:
     virtual ~Backend() {}
 
-    /** @brief Returns true if this backend can handle the given operation.
-     *
-     * @param op_id  One of the GpuOpId constants (or a user-defined extension).
-     */
-    virtual bool support(int op_id) const = 0;
+    //! resize: dsize, inv_scale_x, inv_scale_y, interpolation
+    virtual bool resize(InputArray, OutputArray, Size, double, double, int) { return false; }
 
-    /** @brief Execute an operation on the backend.
-     *
-     * @param op_id   Operation identifier; support(op_id) must be true.
-     * @param src     Source array.
-     * @param dst     Destination array.
-     * @param param1  Integer parameter 1 (semantics are op-specific).
-     * @param param2  Integer parameter 2 (semantics are op-specific).
-     * @param fparam1 Floating-point parameter 1 (semantics are op-specific).
-     * @param fparam2 Floating-point parameter 2 (semantics are op-specific).
-     * @return true on success; false signals the caller to fall back to CPU.
-     */
-    virtual bool run(int op_id,
-                     InputArray  src,
-                     OutputArray dst,
-                     int    param1  = 0,
-                     int    param2  = 0,
-                     double fparam1 = 0.0,
-                     double fparam2 = 0.0) = 0;
+    //! Gaussian blur: ksize, sigma1, sigma2
+    virtual bool gaussianBlur(InputArray, OutputArray, Size, double, double) { return false; }
+
+    //! color conversion: code, dst channel count (dcn)
+    virtual bool cvtColor(InputArray, OutputArray, int, int) { return false; }
+
+    //! threshold: thresh, maxval, type
+    virtual bool threshold(InputArray, OutputArray, double, double, int) { return false; }
 
     /** @brief Return a device-aware MatAllocator, or nullptr to use the default.
      *

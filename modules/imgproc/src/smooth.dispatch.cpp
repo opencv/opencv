@@ -539,8 +539,7 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
     // GPU HAL dispatch BEFORE _dst.create() — the GPU path allocates its own
     // resident output, so we must not pay a full-size host/OpenCL allocation
     // here first (that allocation scales with image size and dominates at 4K+).
-    CV_GPU_RUN(cv::hal::GPU_OP_GAUSSIAN_BLUR, _src, _dst,
-               ksize.width, ksize.height, sigma1, sigma2 > 0 ? sigma2 : sigma1)
+    CV_GPU_RUN(_src, gaussianBlur, _src, _dst, ksize, sigma1, sigma2 > 0 ? sigma2 : sigma1)
 
     _dst.create( size, type );
 

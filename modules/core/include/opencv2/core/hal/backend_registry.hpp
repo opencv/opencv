@@ -22,13 +22,12 @@ CV_EXPORTS void registerBackend(Backend* backend);
 
 //
 // findBackend()
-// Find the first registered backend that supports op_id.
-// op_id — one of the GPU_OP_* constants in backend.hpp
-// Returns Backend* if found.
-// Returns nullptr if no backend supports this operation.
-// Called every time CV_GPU_RUN fires inside a cv:: function.
+// Returns the first registered backend, or nullptr if none.
+// Used to obtain a backend for setup (e.g. attaching its allocator
+// to a UMat). Actual op dispatch goes through the backend pointer
+// the UMat already carries (UMat::backend()), not through here.
 //
-CV_EXPORTS Backend* findBackend(int op_id);
+CV_EXPORTS Backend* findBackend();
 
 //
 // clearBackends()

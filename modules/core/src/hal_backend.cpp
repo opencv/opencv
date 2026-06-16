@@ -41,16 +41,11 @@ void registerBackend(Backend* backend) {
 
 //
 // findBackend()
-// Walks the registry in order.
-// Returns first backend where support(op_id) is true.
-// Returns nullptr if no backend supports this operation.
+// Returns the first registered backend, or nullptr if none.
 //
-Backend* findBackend(int op_id) {
-    for (Backend* b : getRegistry()) {
-        if (b->support(op_id))
-            return b;
-    }
-    return nullptr;
+Backend* findBackend() {
+    std::vector<Backend*>& reg = getRegistry();
+    return reg.empty() ? nullptr : reg.front();
 }
 
 //

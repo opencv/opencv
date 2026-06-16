@@ -204,112 +204,103 @@ static cuda::GpuMat makeResidentOutput(UMat& out, int rows, int cols, int type)
 class CudaBackend CV_FINAL : public Backend
 {
 public:
-    bool support(int op_id) const CV_OVERRIDE
+    // Each op is its own typed method. Returns false (fall through to CPU)
+    // when the source isn't a resident CUDA UMat or the contrib module that
+    // provides the kernel isn't built.
+
+    bool resize(InputArray src, OutputArray dst, Size dsize,
+                double inv_scale_x, double inv_scale_y, int interpolation) CV_OVERRIDE
     {
-        switch (op_id)
-        {
 #ifdef HAVE_OPENCV_CUDAWARPING
-            case GPU_OP_RESIZE:        return true;
+        UMat su = src.getUMat();
+        if (!su.u || !su.u->handle) return false;
+        cuda::GpuMat gsrc = extractGpuMat(su);
+        Size ds = dsize;
+        if (ds.empty())
+            ds = Size(saturate_cast<int>(gsrc.cols * inv_scale_x),
+                      saturate_cast<int>(gsrc.rows * inv_scale_y));
+        UMat out;
+        cuda::GpuMat gdst = makeResidentOutput(out, ds.height, ds.width, su.type());
+        cuda::resize(gsrc, gdst, ds, inv_scale_x, inv_scale_y, interpolation);
+        dst.assign(out);
+        return true;
+#else
+        (void)src; (void)dst; (void)dsize;
+        (void)inv_scale_x; (void)inv_scale_y; (void)interpolation;
+        return false;
 #endif
-#ifdef HAVE_OPENCV_CUDAFILTERS
-            case GPU_OP_GAUSSIAN_BLUR: return true;
-#endif
-#ifdef HAVE_OPENCV_CUDAIMGPROC
-            case GPU_OP_CVT_COLOR:     return true;
-#endif
-#ifdef HAVE_OPENCV_CUDAARITHM
-            case GPU_OP_THRESHOLD:     return true;
-#endif
-            default:                   return false;
-        }
     }
 
-    bool run(int op_id, InputArray src, OutputArray dst,
-             int param1 = 0, int param2 = 0,
-             double fparam1 = 0.0, double fparam2 = 0.0) CV_OVERRIDE
+    bool gaussianBlur(InputArray src, OutputArray dst, Size ksize,
+                      double sigma1, double sigma2) CV_OVERRIDE
     {
-        UMat src_umat = src.getUMat();
-        if (!src_umat.u || !src_umat.u->handle)
-            return false;                    // not a resident CUDA UMat
-        cuda::GpuMat gsrc = extractGpuMat(src_umat);
-
-        switch (op_id)
-        {
-#ifdef HAVE_OPENCV_CUDAWARPING
-        case GPU_OP_RESIZE:
-        {
-            Size dsize(param1, param2);
-            if (dsize.empty())
-                dsize = Size(saturate_cast<int>(gsrc.cols * fparam1),
-                             saturate_cast<int>(gsrc.rows * fparam2));
-            UMat out;
-            cuda::GpuMat gdst = makeResidentOutput(out, dsize.height,
-                                                   dsize.width, src_umat.type());
-            cuda::resize(gsrc, gdst, dsize, fparam1, fparam2, INTER_LINEAR);
-            dst.assign(out);
-            return true;
-        }
-#endif
 #ifdef HAVE_OPENCV_CUDAFILTERS
-        case GPU_OP_GAUSSIAN_BLUR:
+        if (ksize.width <= 1 || ksize.height <= 1) return false;  // 1x1 -> CPU
+        UMat su = src.getUMat();
+        if (!su.u || !su.u->handle) return false;
+        cuda::GpuMat gsrc = extractGpuMat(su);
+        UMat out;
+        cuda::GpuMat gdst = makeResidentOutput(out, gsrc.rows, gsrc.cols, su.type());
+        // Cache the filter — createGaussianFilter is expensive and the same
+        // (type, ksize, sigma) recurs across frames.
+        static cv::Ptr<cuda::Filter> cached;
+        static int    cT = -1, cKw = -1, cKh = -1;
+        static double cS1 = -1, cS2 = -1;
+        int t = su.type();
+        if (cached.empty() || cT != t || cKw != ksize.width ||
+            cKh != ksize.height || cS1 != sigma1 || cS2 != sigma2)
         {
-            if (param1 <= 1 || param2 <= 1) return false;   // 1x1 -> CPU copy
-            Size ksize(param1, param2);
-            UMat out;
-            cuda::GpuMat gdst = makeResidentOutput(out, gsrc.rows,
-                                                   gsrc.cols, src_umat.type());
-            // Cache the filter — createGaussianFilter is expensive and the
-            // same (type,ksize,sigma) recurs across frames.
-            static cv::Ptr<cuda::Filter> cached;
-            static int    cT = -1, cKw = -1, cKh = -1;
-            static double cS1 = -1, cS2 = -1;
-            int t = src_umat.type();
-            if (cached.empty() || cT != t || cKw != ksize.width ||
-                cKh != ksize.height || cS1 != fparam1 || cS2 != fparam2)
-            {
-                cached = cuda::createGaussianFilter(t, t, ksize, fparam1, fparam2);
-                cT = t; cKw = ksize.width; cKh = ksize.height;
-                cS1 = fparam1; cS2 = fparam2;
-            }
-            cached->apply(gsrc, gdst);
-            dst.assign(out);
-            return true;
+            cached = cuda::createGaussianFilter(t, t, ksize, sigma1, sigma2);
+            cT = t; cKw = ksize.width; cKh = ksize.height;
+            cS1 = sigma1; cS2 = sigma2;
         }
+        cached->apply(gsrc, gdst);
+        dst.assign(out);
+        return true;
+#else
+        (void)src; (void)dst; (void)ksize; (void)sigma1; (void)sigma2;
+        return false;
 #endif
+    }
+
+    bool cvtColor(InputArray src, OutputArray dst, int code, int dcn) CV_OVERRIDE
+    {
 #ifdef HAVE_OPENCV_CUDAIMGPROC
-        case GPU_OP_CVT_COLOR:
-        {
-            int code = param1;
-            int dcn  = param2;               // dest channel count (0 = auto)
-            // determine output channels: honor dcn, else infer common cases
-            int outcn = dcn;
-            if (outcn <= 0)
-                outcn = (code == COLOR_BGR2GRAY || code == COLOR_RGB2GRAY) ? 1
-                                                                          : gsrc.channels();
-            int outType = CV_MAKETYPE(src_umat.depth(), outcn);
-            UMat out;
-            cuda::GpuMat gdst = makeResidentOutput(out, gsrc.rows, gsrc.cols, outType);
-            cuda::cvtColor(gsrc, gdst, code, outcn);
-            dst.assign(out);
-            return true;
-        }
+        UMat su = src.getUMat();
+        if (!su.u || !su.u->handle) return false;
+        cuda::GpuMat gsrc = extractGpuMat(su);
+        int outcn = dcn;
+        if (outcn <= 0)
+            outcn = (code == COLOR_BGR2GRAY || code == COLOR_RGB2GRAY)
+                        ? 1 : gsrc.channels();
+        int outType = CV_MAKETYPE(su.depth(), outcn);
+        UMat out;
+        cuda::GpuMat gdst = makeResidentOutput(out, gsrc.rows, gsrc.cols, outType);
+        cuda::cvtColor(gsrc, gdst, code, outcn);
+        dst.assign(out);
+        return true;
+#else
+        (void)src; (void)dst; (void)code; (void)dcn;
+        return false;
 #endif
+    }
+
+    bool threshold(InputArray src, OutputArray dst, double thresh,
+                   double maxval, int type) CV_OVERRIDE
+    {
 #ifdef HAVE_OPENCV_CUDAARITHM
-        case GPU_OP_THRESHOLD:
-        {
-            double thresh = fparam1, maxval = fparam2;
-            int    ttype  = param1;
-            UMat out;
-            cuda::GpuMat gdst = makeResidentOutput(out, gsrc.rows,
-                                                   gsrc.cols, src_umat.type());
-            cuda::threshold(gsrc, gdst, thresh, maxval, ttype);
-            dst.assign(out);
-            return true;
-        }
+        UMat su = src.getUMat();
+        if (!su.u || !su.u->handle) return false;
+        cuda::GpuMat gsrc = extractGpuMat(su);
+        UMat out;
+        cuda::GpuMat gdst = makeResidentOutput(out, gsrc.rows, gsrc.cols, su.type());
+        cuda::threshold(gsrc, gdst, thresh, maxval, type);
+        dst.assign(out);
+        return true;
+#else
+        (void)src; (void)dst; (void)thresh; (void)maxval; (void)type;
+        return false;
 #endif
-        default:
-            return false;
-        }
     }
 
     MatAllocator* allocator() const CV_OVERRIDE { return getCudaAllocator(); }

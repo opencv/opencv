@@ -1615,9 +1615,7 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
     if (_src.isUMat() && (type & ~cv::THRESH_MASK) == 0)
     {
         cv::hal::Backend* __gpu_b = _src.getUMat().backend();
-        if (__gpu_b && __gpu_b->support(cv::hal::GPU_OP_THRESHOLD) &&
-            __gpu_b->run(cv::hal::GPU_OP_THRESHOLD, _src, _dst,
-                         type, 0, thresh, maxval))
+        if (__gpu_b && __gpu_b->threshold(_src, _dst, thresh, maxval, type))
             return thresh;
     }
 

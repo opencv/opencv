@@ -24,40 +24,38 @@ static inline bool isOpenCLActivated() { return false; }
 
 
 ////////////////////////////////////////////////////////////////////
-// CV_GPU_RUN — general GPU backend dispatch
+// CV_GPU_RUN — typed GPU backend dispatch (one method per op)
 //
-// Dispatches based on the SOURCE UMat's own backend pointer.
-// Only fires when:
+// Usage:  CV_GPU_RUN(src, method, <args to that method>)
+//   e.g.  CV_GPU_RUN(_src, resize, _src, _dst, dsize, sx, sy, interp)
+//
+// Fetches the backend attached to the SOURCE UMat and calls the named
+// method. Fires only when:
 //   1. src is a UMat
-//   2. that UMat has a non-null GPU backend (CUDA-backed)
-//   3. that backend supports the operation
-//   4. run() succeeds
-// A CPU UMat or OpenCL UMat has backend()==nullptr and
-// correctly falls through to CV_OCL_RUN / CPU.
+//   2. that UMat carries a non-null GPU backend (e.g. CUDA-resident)
+//   3. the backend's method executes and returns true
+// A CPU/OpenCL UMat has backend()==nullptr -> falls through to
+// CV_OCL_RUN / CPU. The method name is the operation selector — there
+// is no op-id enum.
 ////////////////////////////////////////////////////////////////////
 
 #ifdef CV_GPU_RUN_VERBOSE
 
-#define CV_GPU_RUN_(op_id, src, dst, ...)                               \
+#define CV_GPU_RUN_(src, method, ...)                                   \
     {                                                                   \
         cv::hal::Backend* __gpu_b = nullptr;                            \
         if ((src).isUMat())                                             \
             __gpu_b = (src).getUMat().backend();                        \
-        if (__gpu_b && __gpu_b->support(op_id))                         \
+        if (__gpu_b)                                                    \
         {                                                               \
-            bool __gpu_r = __gpu_b->run(op_id, src, dst,               \
-                                        ##__VA_ARGS__);                 \
-            if (__gpu_r)                                                \
+            if (__gpu_b->method(__VA_ARGS__))                           \
             {                                                           \
                 CV_LOG_INFO(NULL, "CV_GPU_RUN: " << CV_Func <<          \
                             " dispatched to GPU backend");              \
                 return;                                                 \
             }                                                           \
-            else                                                        \
-            {                                                           \
-                CV_LOG_INFO(NULL, "CV_GPU_RUN: " << CV_Func <<          \
-                            " backend run() returned false, falling through"); \
-            }                                                           \
+            CV_LOG_INFO(NULL, "CV_GPU_RUN: " << CV_Func <<              \
+                        " backend did not handle op, falling through"); \
         }                                                               \
         else                                                            \
         {                                                               \
@@ -68,34 +66,29 @@ static inline bool isOpenCLActivated() { return false; }
 
 #elif defined CV_GPU_RUN_ASSERT
 
-#define CV_GPU_RUN_(op_id, src, dst, ...)                               \
+#define CV_GPU_RUN_(src, method, ...)                                   \
     {                                                                   \
         cv::hal::Backend* __gpu_b = nullptr;                            \
         if ((src).isUMat())                                             \
             __gpu_b = (src).getUMat().backend();                        \
-        if (__gpu_b && __gpu_b->support(op_id))                         \
+        if (__gpu_b)                                                    \
         {                                                               \
-            bool __gpu_r = __gpu_b->run(op_id, src, dst,               \
-                                        ##__VA_ARGS__);                 \
-            if (__gpu_r)                                                \
+            if (__gpu_b->method(__VA_ARGS__))                           \
                 return;                                                 \
-            else                                                        \
-                CV_Error(cv::Error::StsAssert,                          \
-                    "CV_GPU_RUN: GPU backend run() returned false");    \
+            CV_Error(cv::Error::StsAssert,                              \
+                "CV_GPU_RUN: GPU-backed source but op not handled");    \
         }                                                               \
     }
 
 #else
 
 // Normal mode — silent, dispatch only when source is GPU-backed
-#define CV_GPU_RUN_(op_id, src, dst, ...)                               \
+#define CV_GPU_RUN_(src, method, ...)                                   \
     {                                                                   \
         cv::hal::Backend* __gpu_b = nullptr;                            \
         if ((src).isUMat())                                             \
             __gpu_b = (src).getUMat().backend();                        \
-        if (__gpu_b &&                                                  \
-            __gpu_b->support(op_id) &&                                  \
-            __gpu_b->run(op_id, src, dst, ##__VA_ARGS__))               \
+        if (__gpu_b && __gpu_b->method(__VA_ARGS__))                    \
         {                                                               \
             return;                                                     \
         }                                                               \
@@ -104,8 +97,8 @@ static inline bool isOpenCLActivated() { return false; }
 #endif
 
 // Public macro — use this in cv:: function bodies
-#define CV_GPU_RUN(op_id, src, dst, ...)                                \
-    CV_GPU_RUN_(op_id, src, dst, ##__VA_ARGS__)
+#define CV_GPU_RUN(src, method, ...)                                    \
+    CV_GPU_RUN_(src, method, __VA_ARGS__)
 
 ////////////////////////////////////////////////////////////////////
 // end CV_GPU_RUN
