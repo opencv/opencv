@@ -98,13 +98,22 @@ ocv_source_group("Include" DIRBASE "${CMAKE_CURRENT_LIST_DIR}/include" FILES ${c
 source_group("Src" FILES "${OPENCV_MODULE_opencv_core_BINARY_DIR}/version_string.inc")
 
 set(core_metal_srcs "")
+set(core_metal_hdrs "")
 if(HAVE_METAL)
-  list(APPEND core_metal_srcs "${CMAKE_CURRENT_LIST_DIR}/misc/metal/metal.mm")
+  file(GLOB core_metal_kernels "${CMAKE_CURRENT_LIST_DIR}/src/metal/kernels/*.metal")
+  list(APPEND core_metal_srcs
+      "${CMAKE_CURRENT_LIST_DIR}/src/metal/allocator.mm"
+      "${CMAKE_CURRENT_LIST_DIR}/src/metal/metal.mm"
+      "${CMAKE_CURRENT_LIST_DIR}/src/metal/ops.mm"
+      "${CMAKE_CURRENT_LIST_DIR}/src/metal/runtime.mm")
+  list(APPEND core_metal_hdrs
+      "${CMAKE_CURRENT_LIST_DIR}/src/metal/metal_private.hpp"
+      ${core_metal_kernels})
 endif()
 
 ocv_glob_module_sources(SOURCES "${OPENCV_MODULE_opencv_core_BINARY_DIR}/version_string.inc"
                         ${core_metal_srcs}
-                        HEADERS ${core_parallel_hdrs} ${module_opencl_hdrs} ${lib_cuda_hdrs} ${lib_cuda_hdrs_detail})
+                        HEADERS ${core_metal_hdrs} ${core_parallel_hdrs} ${module_opencl_hdrs} ${lib_cuda_hdrs} ${lib_cuda_hdrs_detail})
 
 ocv_module_include_directories(${the_module} ${ZLIB_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIRS})
 if(HAVE_METAL)
