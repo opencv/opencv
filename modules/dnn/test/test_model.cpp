@@ -750,7 +750,7 @@ TEST_P(Reproducibility_ResNet50_ONNX, Accuracy)
         timeMax = std::max(timeMax, t);
     }
 
-    std::cout << "[ BENCHMARK ] ResNet50 ONNX (backend=" << backendId << ", target=" << targetId << ") over "
+    std::cout << "[ BENCHMARK ] ResNet50 ONNX (backend=" << (int)backendId << ", target=" << (int)targetId << ") over "
               << numRuns << " runs: avg=" << (timeSum / numRuns) << " ms"
               << ", min=" << timeMin << " ms"
               << ", max=" << timeMax << " ms" << std::endl;
