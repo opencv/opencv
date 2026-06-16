@@ -3,19 +3,8 @@
 // of this distribution and at http://opencv.org/license.html.
 // Copyright (C) 2026, BigVision LLC, all rights reserved.
 // Third party copyrights are property of their respective owners.
-// =============================================================
-// cuda_backend.cpp
-// GPU HAL CUDA backend plugin.
-//
-// Implements cv::hal::Backend for CUDA, plus a CudaAllocator so
-// that UMat results stay RESIDENT in GPU VRAM between operations.
-// A chain like resize -> GaussianBlur -> cvtColor crosses the PCIe
-// bus only twice (one upload, one download) — the intermediates
-// never leave the device.
-//
-// Loaded at runtime by hal_backend.cpp via dlopen.
-// User code never calls this file directly.
-// =============================================================
+// GPU HAL CUDA backend plugin: cv::hal::Backend + a CudaAllocator that keeps
+// UMat results resident in VRAM. Loaded at runtime by hal_backend.cpp via dlopen.
 
 #include "opencv2/core.hpp"
 #include "opencv2/core/hal/backend.hpp"
@@ -45,12 +34,8 @@ namespace cv { namespace hal {
 class CudaBackend;                       // fwd
 static Backend* getCudaBackendInstance();
 
-// =============================================================
-// Device memory pool — reuse VRAM blocks by exact size instead of
-// cudaMalloc/cudaFree per call. cudaMalloc/cudaFree are expensive
-// (~100us, implicit device sync); reuse makes per-op alloc ~free.
-// Buffers are kept for the plugin's lifetime (never cudaFree'd).
-// =============================================================
+// Device memory pool: reuse VRAM blocks by size (cudaMalloc/Free are expensive
+// and sync the device). Buffers are kept for the plugin's lifetime.
 namespace {
 struct DevicePool {
     std::mutex mtx;
@@ -77,15 +62,8 @@ void poolFree(size_t sz, void* d)
 }
 } // anonymous namespace
 
-// =============================================================
-// CudaAllocator — a cv::MatAllocator that puts UMat memory in
-// GPU VRAM and downloads to the host only on demand (map()).
-//
-// Field convention on UMatData:
-//   handle = CUDA device pointer (the VRAM)
-//   data   = host shadow pointer (0 until first CPU access)
-//   flags  = HOST/DEVICE_COPY_OBSOLETE track which side is current
-// =============================================================
+// MatAllocator that puts UMat memory in VRAM, host copy on demand via map().
+// UMatData convention: handle = device ptr, data = host shadow (0 until used).
 class CudaAllocator CV_FINAL : public MatAllocator
 {
 public:
@@ -126,8 +104,7 @@ public:
     bool allocate(UMatData* u, AccessFlag /*accessFlags*/,
                   UMatUsageFlags /*usageFlags*/) const CV_OVERRIDE
     {
-        // header already carries our device memory
-        return u != nullptr;
+        return u != nullptr;                 // header already has device memory
     }
 
     void deallocate(UMatData* u) const CV_OVERRIDE
@@ -140,7 +117,7 @@ public:
         delete u;
     }
 
-    // CPU wants to touch the data — make a host copy available.
+    // CPU access: make a host copy available (download if device is newer).
     void map(UMatData* u, AccessFlag accessFlags) const CV_OVERRIDE
     {
         if (!u) return;
@@ -174,10 +151,7 @@ static CudaAllocator* getCudaAllocator()
     return &alloc;
 }
 
-// =============================================================
-// extractGpuMat — view a resident UMat's device memory as a
-// GpuMat (zero copy). Reads the device pointer from u->handle.
-// =============================================================
+// View a resident UMat's device memory as a GpuMat (zero copy).
 static cuda::GpuMat extractGpuMat(const UMat& u)
 {
     CV_Assert(u.u != nullptr && u.u->handle != nullptr);
@@ -185,11 +159,8 @@ static cuda::GpuMat extractGpuMat(const UMat& u)
                         u.u->handle, u.step[0]);
 }
 
-// =============================================================
-// makeResidentOutput — allocate a UMat in VRAM with the given
-// geometry, return a GpuMat view of it for the kernel to write
-// into in-place. The UMat is returned via 'out'.
-// =============================================================
+// Allocate a VRAM UMat of the given geometry (returned via 'out') and view it
+// as a GpuMat for the kernel to write into in-place.
 static cuda::GpuMat makeResidentOutput(UMat& out, int rows, int cols, int type)
 {
     out.allocator = getCudaAllocator();
@@ -198,16 +169,11 @@ static cuda::GpuMat makeResidentOutput(UMat& out, int rows, int cols, int type)
     return extractGpuMat(out);
 }
 
-// =============================================================
-// CudaBackend
-// =============================================================
+// One typed method per op. Returns false (fall through to CPU) when the source
+// isn't a resident CUDA UMat or the needed contrib module isn't built.
 class CudaBackend CV_FINAL : public Backend
 {
 public:
-    // Each op is its own typed method. Returns false (fall through to CPU)
-    // when the source isn't a resident CUDA UMat or the contrib module that
-    // provides the kernel isn't built.
-
     bool resize(InputArray src, OutputArray dst, Size dsize,
                 double inv_scale_x, double inv_scale_y, int interpolation) CV_OVERRIDE
     {
@@ -241,8 +207,7 @@ public:
         cuda::GpuMat gsrc = extractGpuMat(su);
         UMat out;
         cuda::GpuMat gdst = makeResidentOutput(out, gsrc.rows, gsrc.cols, su.type());
-        // Cache the filter — createGaussianFilter is expensive and the same
-        // (type, ksize, sigma) recurs across frames.
+        // Cache the filter — createGaussianFilter is expensive, config recurs.
         static cv::Ptr<cuda::Filter> cached;
         static int    cT = -1, cKw = -1, cKh = -1;
         static double cS1 = -1, cS2 = -1;
@@ -314,9 +279,7 @@ static Backend* getCudaBackendInstance()
 
 }} // cv::hal
 
-// =============================================================
-// Factory — dlopen entry point. extern "C" => no name mangling.
-// =============================================================
+// Factory — dlopen entry point; extern "C" so dlsym finds an unmangled name.
 extern "C" CV_EXPORTS cv::hal::Backend* cv_hal_createCudaBackend();
 
 cv::hal::Backend* cv_hal_createCudaBackend()

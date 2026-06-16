@@ -3,31 +3,15 @@
 # of this distribution and at http://opencv.org/license.html.
 # Copyright (C) 2026, BigVision LLC, all rights reserved.
 # Third party copyrights are property of their respective owners.
-# =============================================================
-# cuda_backend — GPU HAL CUDA backend plugin
-#
-# Implements cv::hal::Backend for CUDA.
-# Loaded at runtime by hal_backend.cpp via dlopen.
-# Wraps existing cv::cuda:: functions internally.
-# User code never calls this module directly.
-# =============================================================
+# cuda_backend — GPU HAL CUDA backend plugin, loaded at runtime via dlopen.
 
-# Only build if CUDA is available
+# Only build if CUDA is available.
 if(NOT HAVE_CUDA)
-  message(STATUS
-    "cuda_backend: CUDA not found — skipping module")
+  message(STATUS "cuda_backend: CUDA not found — skipping module")
   return()
 endif()
 
-# -------------------------------------------------------------
-# Define the module
-# opencv_cudawarping  — for cuda::resize, warpAffine etc.
-# opencv_cudafilters  — for cuda::GaussianBlur etc.
-# opencv_cudaimgproc  — for cuda::cvtColor etc.
-# opencv_cudaarithm   — for cuda::add, subtract etc.
-# All cuda* deps are OPTIONAL — if a contrib module is
-# absent the plugin still builds, just supports fewer ops.
-# -------------------------------------------------------------
+# cuda* deps are OPTIONAL — plugin still builds (fewer ops) if any are absent.
 ocv_define_module(cuda_backend
     opencv_core
     OPTIONAL
@@ -36,14 +20,9 @@ ocv_define_module(cuda_backend
         opencv_cudaimgproc
         opencv_cudaarithm
     WRAP
-        # no Python wrapping needed — internal plugin
+        # no Python wrapping — internal plugin
 )
 
-# -------------------------------------------------------------
-# Must be a SHARED library — dlopen requires .so
-# ocv_define_module builds STATIC by default for most modules.
-# Override to SHARED explicitly.
-# -------------------------------------------------------------
 if(TARGET opencv_cuda_backend)
     set_target_properties(opencv_cuda_backend
         PROPERTIES
@@ -51,10 +30,7 @@ if(TARGET opencv_cuda_backend)
     )
 endif()
 
-# -------------------------------------------------------------
-# Install the plugin .so alongside other OpenCV libraries
-# so dlopen can find it without LD_LIBRARY_PATH
-# -------------------------------------------------------------
+# Install the plugin .so alongside other OpenCV libraries so dlopen finds it.
 install(
     TARGETS opencv_cuda_backend
     LIBRARY DESTINATION ${OpenCV_INSTALL_PATH}/lib

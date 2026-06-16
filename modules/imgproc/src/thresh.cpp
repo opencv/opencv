@@ -1610,8 +1610,7 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
 {
     CV_INSTRUMENT_REGION();
 
-    // GPU HAL dispatch (inline, not CV_GPU_RUN, because threshold returns
-    // a value). Only simple thresholds — no OTSU/TRIANGLE/DRYRUN bits.
+    // GPU HAL dispatch (inline since threshold returns a value); simple types only.
     if (_src.isUMat() && (type & ~cv::THRESH_MASK) == 0)
     {
         cv::hal::Backend* __gpu_b = _src.getUMat().backend();

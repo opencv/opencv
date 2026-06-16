@@ -23,21 +23,9 @@ static inline bool isOpenCLActivated() { return false; }
 }} // namespace
 
 
-////////////////////////////////////////////////////////////////////
-// CV_GPU_RUN — typed GPU backend dispatch (one method per op)
-//
-// Usage:  CV_GPU_RUN(src, method, <args to that method>)
-//   e.g.  CV_GPU_RUN(_src, resize, _src, _dst, dsize, sx, sy, interp)
-//
-// Fetches the backend attached to the SOURCE UMat and calls the named
-// method. Fires only when:
-//   1. src is a UMat
-//   2. that UMat carries a non-null GPU backend (e.g. CUDA-resident)
-//   3. the backend's method executes and returns true
-// A CPU/OpenCL UMat has backend()==nullptr -> falls through to
-// CV_OCL_RUN / CPU. The method name is the operation selector — there
-// is no op-id enum.
-////////////////////////////////////////////////////////////////////
+// CV_GPU_RUN(src, method, args...): calls src's GPU backend method; returns on
+// success, falls through to CV_OCL_RUN/CPU when src has no backend. Method name
+// is the op selector (no op-id enum). e.g. CV_GPU_RUN(_src, resize, _src, _dst, ...)
 
 #ifdef CV_GPU_RUN_VERBOSE
 
@@ -96,13 +84,9 @@ static inline bool isOpenCLActivated() { return false; }
 
 #endif
 
-// Public macro — use this in cv:: function bodies
+// Public macro — use in cv:: function bodies.
 #define CV_GPU_RUN(src, method, ...)                                    \
     CV_GPU_RUN_(src, method, __VA_ARGS__)
-
-////////////////////////////////////////////////////////////////////
-// end CV_GPU_RUN
-////////////////////////////////////////////////////////////////////
 
 //#define CV_OPENCL_RUN_ASSERT
 

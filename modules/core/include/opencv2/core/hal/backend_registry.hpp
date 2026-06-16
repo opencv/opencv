@@ -10,39 +10,16 @@
 
 namespace cv { namespace hal {
 
-//
-// registerBackend()
-// Add a backend to the global registry.
-// Backends are checked in registration order —
-// first registered = first checked by findBackend().
-// Call once at program startup from the plugin loader.
-// Does not take ownership — caller manages lifetime.
-//
+// Add a backend to the global registry (caller keeps ownership).
 CV_EXPORTS void registerBackend(Backend* backend);
 
-//
-// findBackend()
-// Returns the first registered backend, or nullptr if none.
-// Used to obtain a backend for setup (e.g. attaching its allocator
-// to a UMat). Actual op dispatch goes through the backend pointer
-// the UMat already carries (UMat::backend()), not through here.
-//
+// First registered backend, or nullptr; used to grab a backend for setup.
 CV_EXPORTS Backend* findBackend();
 
-//
-// clearBackends()
-// Remove all registered backends from the registry.
-// Used in unit tests to reset state between test cases.
-// Not called in production code.
-//
+// Remove all registered backends (test reset only).
 CV_EXPORTS void clearBackends();
 
-//
-// loadBackendPlugins()
-// Loads GPU backend plugins via dlopen at startup.
-// Thread-safe — runs exactly once.
-// Called automatically by a static initializer.
-//
+// Load GPU backend plugins via dlopen at startup (thread-safe, runs once).
 CV_EXPORTS void loadBackendPlugins();
 
 }} // cv::hal
