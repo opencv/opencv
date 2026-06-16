@@ -931,6 +931,133 @@ TEST(Core_Metal_UMat, BitwiseMaskFallback)
     EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
 }
 
+TEST(Core_Metal_UMat, Compare8UAllOps)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src1(37, 41, CV_8UC1);
+    Mat src2(src1.size(), src1.type());
+    randu(src1, 0, 255);
+    randu(src2, 0, 255);
+
+    UMat usrc1, usrc2, udst;
+    src1.copyTo(usrc1);
+    src2.copyTo(usrc2);
+
+    const int ops[] = { CMP_EQ, CMP_GT, CMP_GE, CMP_LT, CMP_LE, CMP_NE };
+    for (size_t i = 0; i < sizeof(ops) / sizeof(ops[0]); ++i)
+    {
+        Mat expected;
+        cv::compare(src1, src2, expected, ops[i]);
+
+        cv::compare(usrc1, usrc2, udst, ops[i]);
+        Mat dst;
+        udst.copyTo(dst);
+
+        EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+    }
+}
+
+TEST(Core_Metal_UMat, Compare32FChannels)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src1(31, 37, CV_32FC4);
+    Mat src2(src1.size(), src1.type());
+    randu(src1, -10.0f, 10.0f);
+    randu(src2, -10.0f, 10.0f);
+
+    Mat expected;
+    cv::compare(src1, src2, expected, CMP_LE);
+
+    UMat usrc1, usrc2, udst;
+    src1.copyTo(usrc1);
+    src2.copyTo(usrc2);
+    cv::compare(usrc1, usrc2, udst, CMP_LE);
+
+    Mat dst;
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
+TEST(Core_Metal_UMat, DeviceMemoryUsageCompare)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src1(31, 37, CV_8UC4);
+    Mat src2(src1.size(), src1.type());
+    randu(src1, 0, 255);
+    randu(src2, 0, 255);
+
+    Mat expected;
+    cv::compare(src1, src2, expected, CMP_GT);
+
+    UMat usrc1(src1.size(), src1.type(), USAGE_ALLOCATE_DEVICE_MEMORY);
+    UMat usrc2(src2.size(), src2.type(), USAGE_ALLOCATE_DEVICE_MEMORY);
+    UMat udst(src1.size(), CV_8UC4, USAGE_ALLOCATE_DEVICE_MEMORY);
+    src1.copyTo(usrc1);
+    src2.copyTo(usrc2);
+    cv::compare(usrc1, usrc2, udst, CMP_GT);
+
+    Mat dst;
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
+TEST(Core_Metal_UMat, CompareRoi)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src1(48, 64, CV_32FC1);
+    Mat src2(src1.size(), src1.type());
+    Mat base(src1.size(), CV_8UC1);
+    randu(src1, -10.0f, 10.0f);
+    randu(src2, -10.0f, 10.0f);
+    randu(base, 0, 255);
+
+    Rect roi(9, 7, 31, 23);
+    Mat expected = base.clone();
+    cv::compare(src1(roi), src2(roi), expected(roi), CMP_NE);
+
+    UMat usrc1, usrc2, udst;
+    src1.copyTo(usrc1);
+    src2.copyTo(usrc2);
+    base.copyTo(udst);
+    cv::compare(usrc1(roi), usrc2(roi), udst(roi), CMP_NE);
+
+    Mat dst;
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
+TEST(Core_Metal_UMat, CompareScalarFallback)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src(29, 43, CV_8UC3);
+    randu(src, 0, 255);
+
+    Mat expected;
+    cv::compare(src, Scalar(127, 128, 129), expected, CMP_GE);
+
+    UMat usrc, udst;
+    src.copyTo(usrc);
+    cv::compare(usrc, Scalar(127, 128, 129), udst, CMP_GE);
+
+    Mat dst;
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
 TEST(Core_Metal_UMat, SetTo8U)
 {
     if (!cv::metal::haveMetal())

@@ -1650,6 +1650,21 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
     CV_OCL_RUN(_src1.dims() <= 2 && _src2.dims() <= 2 && OCL_PERFORMANCE_CHECK(_dst.isUMat()),
                ocl_compare(_src1, _src2, _dst, op, haveScalar))
 
+#ifdef HAVE_METAL
+    _InputArray::KindFlag rawKind1 = _src1.kind(), rawKind2 = _src2.kind();
+    if (!haveScalar && metal::haveMetal() && rawKind1 == _InputArray::UMAT && rawKind2 == _InputArray::UMAT &&
+        _src1.dims() <= 2 && _src2.dims() <= 2 && _src1.sameSize(_src2) && _src1.type() == _src2.type())
+    {
+        int cn = CV_MAT_CN(_src1.type());
+        _dst.create(_src1.size(), CV_8UC(cn));
+        UMat usrc1 = _src1.getUMat();
+        UMat usrc2 = _src2.getUMat();
+        UMat udst = _dst.getUMat();
+        if (metal::compare(usrc1, usrc2, udst, op))
+            return;
+    }
+#endif
+
     _InputArray::KindFlag kind1 = _src1.kind(), kind2 = _src2.kind();
     Mat src1 = _src1.getMat(), src2 = _src2.getMat();
     int depth1 = src1.depth(), depth2 = src2.depth();
