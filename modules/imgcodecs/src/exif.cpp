@@ -161,8 +161,11 @@ bool ExifReader::processRawProfile(const char* profile, size_t profile_len) {
     ++end;
 
     // the payload starts with a 6-byte "Exif\0\0" header, so a shorter declared
-    // length underflows the size and pointer handed to parseExif() below
-    if (expected_length < 6) {
+    // length underflows the size and pointer handed to parseExif() below.
+    // it also cannot be larger than the profile text that carries it (two hex
+    // characters encode one byte), so reject an over-large declared length to
+    // avoid a huge speculative allocation in HexStringToBytes().
+    if (expected_length < 6 || static_cast<size_t>(expected_length) > profile_len) {
         return false;
     }
 
