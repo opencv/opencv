@@ -432,14 +432,14 @@ static void setupActivation(const ConvState& cs, int K,
 static void fillCoeffBufs(FastActivation fastActivation, const float* activParams, float defaultAlpha,
                            int k_count, int k_base,
                            const float* scaleptr, const float* biasptr,
-                           float* scalebuf, float* biasbuf, float* alphabuf) {
+                           float* scalebuf, float* biasbuf, float* alphabuf, int K0) {
     int kk = 0;
     for (; kk < k_count; kk++) {
         scalebuf[kk] = scaleptr ? scaleptr[k_base + kk] : 1.f;
         biasbuf[kk] = biasptr ? biasptr[k_base + kk] : 0.f;
         alphabuf[kk] = fastActivation == FAST_ACTIV_PRELU ? activParams[k_base + kk] : defaultAlpha;
     }
-    for (; kk < 8; kk++) {
+    for (; kk < K0; kk++) {
         scalebuf[kk] = 0.f;
         biasbuf[kk] = 0.f;
         alphabuf[kk] = 0.f;
@@ -659,7 +659,7 @@ static void conv32fC8_1x1(const void* inp__, const void* residual__, void* out__
             const float* inpbaseptr = (float*)inp__ + (n * C1 + c1_start) * iplanesize;
             const float* wbaseptr = (float*)weights__ + (g*Kblk + kblk)*(1*C1Max*C0*K0);
 
-            fillCoeffBufs(fastActivation, activParams, defaultAlpha, k_count, k_base, scaleptr, biasptr, scalebuf, biasbuf, alphabuf);
+            fillCoeffBufs(fastActivation, activParams, defaultAlpha, k_count, k_base, scaleptr, biasptr, scalebuf, biasbuf, alphabuf, K0);
 
             float* outptr = (float*)out__ + n*(K1*planesize) + p0*K0;
             const float* resptr = residual__ ? (float*)residual__ + n*(K1*planesize) + p0*K0 : nullptr;
@@ -828,8 +828,8 @@ static void conv32fC8_1x1_kpair(const void* inp__, const void* residual__, void*
             const float* wbaseptrA = (float*)weights__ + (g*Kblk + kblkA)*(1*C1Max*C0*K0);
             const float* wbaseptrB = (float*)weights__ + (g*Kblk + kblkB)*(1*C1Max*C0*K0);
 
-            fillCoeffBufs(fastActivation, activParams, defaultAlpha, K0, k_baseA, scaleptr, biasptr, scalebufA, biasbufA, alphabufA);
-            fillCoeffBufs(fastActivation, activParams, defaultAlpha, K0, k_baseB, scaleptr, biasptr, scalebufB, biasbufB, alphabufB);
+            fillCoeffBufs(fastActivation, activParams, defaultAlpha, K0, k_baseA, scaleptr, biasptr, scalebufA, biasbufA, alphabufA, K0);
+            fillCoeffBufs(fastActivation, activParams, defaultAlpha, K0, k_baseB, scaleptr, biasptr, scalebufB, biasbufB, alphabufB, K0);
 
             float* outbaseA = (float*)out__ + n*(K1*planesize) + k_baseA*planeblocks;
             float* outbaseB = (float*)out__ + n*(K1*planesize) + k_baseB*planeblocks;
@@ -1054,7 +1054,7 @@ static void conv32fC8_3x3s1(const void* inp__, const void* residual__, void* out
             const float* inpbaseptr = (float*)inp__ + (n * C1 + c1_start) * iplanesize;
             const float* wbaseptr = (float*)weights__ + (g*Kblk + kblk)*(9*C1Max*C0*K0);
 
-            fillCoeffBufs(fastActivation, activParams, defaultAlpha, k_count, k_base, scaleptr, biasptr, scalebuf, biasbuf, alphabuf);
+            fillCoeffBufs(fastActivation, activParams, defaultAlpha, k_count, k_base, scaleptr, biasptr, scalebuf, biasbuf, alphabuf, K0);
 
             float* outptr = (float*)out__ + n*(K1*planesize) + p0*K0;
             const float* resptr = residual__ ? (float*)residual__ + n*(K1*planesize) + p0*K0 : nullptr;
@@ -1333,8 +1333,8 @@ static void conv32fC8_3x3s1_kpair(const void* inp__, const void* residual__, voi
             const float* wbaseptrA = (float*)weights__ + (g*Kblk + kblkA)*(9*C1Max*C0*K0);
             const float* wbaseptrB = (float*)weights__ + (g*Kblk + kblkB)*(9*C1Max*C0*K0);
 
-            fillCoeffBufs(fastActivation, activParams, defaultAlpha, K0, k_baseA, scaleptr, biasptr, scalebufA, biasbufA, alphabufA);
-            fillCoeffBufs(fastActivation, activParams, defaultAlpha, K0, k_baseB, scaleptr, biasptr, scalebufB, biasbufB, alphabufB);
+            fillCoeffBufs(fastActivation, activParams, defaultAlpha, K0, k_baseA, scaleptr, biasptr, scalebufA, biasbufA, alphabufA, K0);
+            fillCoeffBufs(fastActivation, activParams, defaultAlpha, K0, k_baseB, scaleptr, biasptr, scalebufB, biasbufB, alphabufB, K0);
 
             float* outbaseA = (float*)out__ + n*(K1*planesize) + k_baseA*planeblocks;
             float* outbaseB = (float*)out__ + n*(K1*planesize) + k_baseB*planeblocks;
@@ -1639,7 +1639,7 @@ static void conv32fC8_1x1_strided(const void* inp__, const void* residual__, voi
             const float* inpbaseptr = (float*)inp__ + (n * C1 + c1_start) * iplanesize;
             const float* wbaseptr = (float*)weights__ + (g*Kblk + kblk)*(1*C1Max*C0*K0);
 
-            fillCoeffBufs(fastActivation, activParams, defaultAlpha, k_count, k_base, scaleptr, biasptr, scalebuf, biasbuf, alphabuf);
+            fillCoeffBufs(fastActivation, activParams, defaultAlpha, k_count, k_base, scaleptr, biasptr, scalebuf, biasbuf, alphabuf, K0);
 
             float* outptr = (float*)out__ + n*(K1*planesize) + p0*K0;
             const float* resptr = residual__ ? (float*)residual__ + n*(K1*planesize) + p0*K0 : nullptr;
@@ -1835,7 +1835,7 @@ static void conv32fC8_3x3_strided(const void* inp__, const void* residual__, voi
             const float* inpbaseptr = (float*)inp__ + (n * C1 + c1_start) * iplanesize;
             const float* wbaseptr = (float*)weights__ + (g*Kblk + kblk)*(9*C1Max*C0*K0);
 
-            fillCoeffBufs(fastActivation, activParams, defaultAlpha, k_count, k_base, scaleptr, biasptr, scalebuf, biasbuf, alphabuf);
+            fillCoeffBufs(fastActivation, activParams, defaultAlpha, k_count, k_base, scaleptr, biasptr, scalebuf, biasbuf, alphabuf, K0);
 
             float* outptr = (float*)out__ + n*(K1*planesize) + p0*K0;
             const float* resptr = residual__ ? (float*)residual__ + n*(K1*planesize) + p0*K0 : nullptr;
@@ -2184,7 +2184,7 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
             const float* inpbaseptr = (float*)inp__ + (n * C1 + c1_start) * iplanesize;
             const float* wbaseptr = (float*)weights__ + (g*Kblk + kblk)*(ksize*C1Max*C0*K0);
 
-            fillCoeffBufs(fastActivation, activParams, defaultAlpha, k_count, k_base, scaleptr, biasptr, scalebuf, biasbuf, alphabuf);
+            fillCoeffBufs(fastActivation, activParams, defaultAlpha, k_count, k_base, scaleptr, biasptr, scalebuf, biasbuf, alphabuf, K0);
 
             float* outptr = (float*)out__ + n*(K1*planesize) + p0*K0;
             const float* resptr = residual__ ? (float*)residual__ + n*(K1*planesize) + p0*K0 : nullptr;
