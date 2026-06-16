@@ -574,7 +574,6 @@ ocv_install_used_external_targets(${libs} ${dnn_runtime_libs})
 
 ocv_glob_module_sources(${sources_options} SOURCES ${fw_srcs} ${webnn_srcs} ${MLAS_OBJECTS})
 ocv_create_module(${libs} ${dnn_runtime_libs})
-
 ocv_add_samples()
 ocv_add_accuracy_tests(${dnn_runtime_libs})
 
