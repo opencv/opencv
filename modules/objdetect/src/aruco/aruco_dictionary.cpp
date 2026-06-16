@@ -94,6 +94,7 @@ struct CellBitMasks {
     uint8_t *temp0;  // internal scratch workspace
 };
 
+
 Dictionary::Dictionary(): markerSize(0), maxCorrectionBits(0) {}
 
 
@@ -102,6 +103,7 @@ Dictionary::Dictionary(const Mat &_bytesList, int _markerSize, int _maxcorr) {
     maxCorrectionBits = _maxcorr;
     bytesList = _bytesList;
 }
+
 
 bool Dictionary::readDictionary(const cv::FileNode& fn) {
     int nMarkers = 0, _markerSize = 0;
@@ -123,6 +125,7 @@ bool Dictionary::readDictionary(const cv::FileNode& fn) {
     *this = Dictionary(bytes, _markerSize, _maxCorrectionBits);
     return true;
 }
+
 
 void Dictionary::writeDictionary(FileStorage& fs, const String &name)
 {
@@ -208,6 +211,7 @@ int Dictionary::getDistanceToId(InputArray bits, int id, bool allRotations) cons
     }
     return currentMinDistance;
 }
+
 
 int Dictionary::getDistanceToId(InputArray onlyCellPixelRatio, int id, bool allRotations, float validBitIdThreshold) const {
 
@@ -449,6 +453,7 @@ static Mat _generateRandomMarker(int markerSize, RNG &rng) {
     }
     return marker;
 }
+
 
 /**
  * @brief Calculate selfDistance of the codification of a marker Mat. Self distance is the Hamming
