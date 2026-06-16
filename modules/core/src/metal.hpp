@@ -14,6 +14,8 @@ bool haveMetal();
 MatAllocator* getMetalAllocator();
 bool copyToMask(const UMat& src, const UMat& mask, UMat& dst, bool haveDstUninit);
 bool add(const UMat& src1, const UMat& src2, UMat& dst);
+bool subtract(const UMat& src1, const UMat& src2, UMat& dst);
+bool multiply(const UMat& src1, const UMat& src2, UMat& dst, double scale);
 bool setTo(UMat& dst, const Mat& value, const UMat* mask);
 
 } // namespace metal

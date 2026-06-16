@@ -447,6 +447,332 @@ TEST(Core_Metal_UMat, AddUnsupportedTypeFallback)
     EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
 }
 
+TEST(Core_Metal_UMat, Subtract8USaturates)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src1(37, 41, CV_8UC1);
+    Mat src2(src1.size(), src1.type());
+    randu(src1, 0, 255);
+    randu(src2, 0, 255);
+
+    Mat expected;
+    cv::subtract(src1, src2, expected);
+
+    UMat usrc1, usrc2, udst;
+    src1.copyTo(usrc1);
+    src2.copyTo(usrc2);
+    cv::subtract(usrc1, usrc2, udst);
+
+    Mat dst;
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
+TEST(Core_Metal_UMat, Subtract32F)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src1(35, 39, CV_32FC1);
+    Mat src2(src1.size(), src1.type());
+    randu(src1, -10.0f, 10.0f);
+    randu(src2, -10.0f, 10.0f);
+
+    Mat expected;
+    cv::subtract(src1, src2, expected);
+
+    UMat usrc1, usrc2, udst;
+    src1.copyTo(usrc1);
+    src2.copyTo(usrc2);
+    cv::subtract(usrc1, usrc2, udst);
+
+    Mat dst;
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 1e-6);
+}
+
+TEST(Core_Metal_UMat, SubtractChannels)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src1(29, 43, CV_8UC3);
+    Mat src2(src1.size(), src1.type());
+    randu(src1, 0, 255);
+    randu(src2, 0, 255);
+
+    Mat expected;
+    cv::subtract(src1, src2, expected);
+
+    UMat usrc1, usrc2, udst;
+    src1.copyTo(usrc1);
+    src2.copyTo(usrc2);
+    cv::subtract(usrc1, usrc2, udst);
+
+    Mat dst;
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+
+    src1.create(31, 37, CV_32FC4);
+    src2.create(src1.size(), src1.type());
+    randu(src1, -10.0f, 10.0f);
+    randu(src2, -10.0f, 10.0f);
+    cv::subtract(src1, src2, expected);
+
+    src1.copyTo(usrc1);
+    src2.copyTo(usrc2);
+    cv::subtract(usrc1, usrc2, udst);
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 1e-6);
+}
+
+TEST(Core_Metal_UMat, DeviceMemoryUsageSubtract)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src1(31, 37, CV_32FC4);
+    Mat src2(src1.size(), src1.type());
+    randu(src1, -10.0f, 10.0f);
+    randu(src2, -10.0f, 10.0f);
+
+    Mat expected;
+    cv::subtract(src1, src2, expected);
+
+    UMat usrc1(src1.size(), src1.type(), USAGE_ALLOCATE_DEVICE_MEMORY);
+    UMat usrc2(src2.size(), src2.type(), USAGE_ALLOCATE_DEVICE_MEMORY);
+    UMat udst(src1.size(), src1.type(), USAGE_ALLOCATE_DEVICE_MEMORY);
+    src1.copyTo(usrc1);
+    src2.copyTo(usrc2);
+    cv::subtract(usrc1, usrc2, udst);
+
+    Mat dst;
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 1e-6);
+}
+
+TEST(Core_Metal_UMat, SubtractRoi)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src1(48, 64, CV_8UC4);
+    Mat src2(src1.size(), src1.type());
+    Mat base(src1.size(), src1.type());
+    randu(src1, 0, 255);
+    randu(src2, 0, 255);
+    randu(base, 0, 255);
+
+    Rect roi(9, 7, 31, 23);
+    Mat expected = base.clone();
+    cv::subtract(src1(roi), src2(roi), expected(roi));
+
+    UMat usrc1, usrc2, udst;
+    src1.copyTo(usrc1);
+    src2.copyTo(usrc2);
+    base.copyTo(udst);
+    cv::subtract(usrc1(roi), usrc2(roi), udst(roi));
+
+    Mat dst;
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
+TEST(Core_Metal_UMat, SubtractUnsupportedTypeFallback)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src1(23, 29, CV_16UC1);
+    Mat src2(src1.size(), src1.type());
+    randu(src1, 0, 1000);
+    randu(src2, 0, 1000);
+
+    Mat expected;
+    cv::subtract(src1, src2, expected);
+
+    UMat usrc1, usrc2, udst;
+    src1.copyTo(usrc1);
+    src2.copyTo(usrc2);
+    cv::subtract(usrc1, usrc2, udst);
+
+    Mat dst;
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
+TEST(Core_Metal_UMat, Multiply8USaturates)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src1(37, 41, CV_8UC1);
+    Mat src2(src1.size(), src1.type());
+    randu(src1, 16, 255);
+    randu(src2, 16, 255);
+
+    Mat expected;
+    cv::multiply(src1, src2, expected);
+
+    UMat usrc1, usrc2, udst;
+    src1.copyTo(usrc1);
+    src2.copyTo(usrc2);
+    cv::multiply(usrc1, usrc2, udst);
+
+    Mat dst;
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
+TEST(Core_Metal_UMat, Multiply32FScale)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src1(35, 39, CV_32FC1);
+    Mat src2(src1.size(), src1.type());
+    randu(src1, -10.0f, 10.0f);
+    randu(src2, -10.0f, 10.0f);
+
+    Mat expected;
+    cv::multiply(src1, src2, expected, 0.125);
+
+    UMat usrc1, usrc2, udst;
+    src1.copyTo(usrc1);
+    src2.copyTo(usrc2);
+    cv::multiply(usrc1, usrc2, udst, 0.125);
+
+    Mat dst;
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 1e-5);
+}
+
+TEST(Core_Metal_UMat, MultiplyChannels)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src1(29, 43, CV_8UC3);
+    Mat src2(src1.size(), src1.type());
+    randu(src1, 0, 16);
+    randu(src2, 0, 16);
+
+    Mat expected;
+    cv::multiply(src1, src2, expected);
+
+    UMat usrc1, usrc2, udst;
+    src1.copyTo(usrc1);
+    src2.copyTo(usrc2);
+    cv::multiply(usrc1, usrc2, udst);
+
+    Mat dst;
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+
+    src1.create(31, 37, CV_32FC4);
+    src2.create(src1.size(), src1.type());
+    randu(src1, -10.0f, 10.0f);
+    randu(src2, -10.0f, 10.0f);
+    cv::multiply(src1, src2, expected, 2.0);
+
+    src1.copyTo(usrc1);
+    src2.copyTo(usrc2);
+    cv::multiply(usrc1, usrc2, udst, 2.0);
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 1e-5);
+}
+
+TEST(Core_Metal_UMat, DeviceMemoryUsageMultiply)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src1(31, 37, CV_32FC4);
+    Mat src2(src1.size(), src1.type());
+    randu(src1, -10.0f, 10.0f);
+    randu(src2, -10.0f, 10.0f);
+
+    Mat expected;
+    cv::multiply(src1, src2, expected, 0.25);
+
+    UMat usrc1(src1.size(), src1.type(), USAGE_ALLOCATE_DEVICE_MEMORY);
+    UMat usrc2(src2.size(), src2.type(), USAGE_ALLOCATE_DEVICE_MEMORY);
+    UMat udst(src1.size(), src1.type(), USAGE_ALLOCATE_DEVICE_MEMORY);
+    src1.copyTo(usrc1);
+    src2.copyTo(usrc2);
+    cv::multiply(usrc1, usrc2, udst, 0.25);
+
+    Mat dst;
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 1e-5);
+}
+
+TEST(Core_Metal_UMat, MultiplyRoi)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src1(48, 64, CV_8UC4);
+    Mat src2(src1.size(), src1.type());
+    Mat base(src1.size(), src1.type());
+    randu(src1, 0, 16);
+    randu(src2, 0, 16);
+    randu(base, 0, 255);
+
+    Rect roi(9, 7, 31, 23);
+    Mat expected = base.clone();
+    cv::multiply(src1(roi), src2(roi), expected(roi));
+
+    UMat usrc1, usrc2, udst;
+    src1.copyTo(usrc1);
+    src2.copyTo(usrc2);
+    base.copyTo(udst);
+    cv::multiply(usrc1(roi), usrc2(roi), udst(roi));
+
+    Mat dst;
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
+TEST(Core_Metal_UMat, MultiplyUnsupportedTypeFallback)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src1(23, 29, CV_16UC1);
+    Mat src2(src1.size(), src1.type());
+    randu(src1, 0, 1000);
+    randu(src2, 0, 1000);
+
+    Mat expected;
+    cv::multiply(src1, src2, expected);
+
+    UMat usrc1, usrc2, udst;
+    src1.copyTo(usrc1);
+    src2.copyTo(usrc2);
+    cv::multiply(usrc1, usrc2, udst);
+
+    Mat dst;
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
 TEST(Core_Metal_UMat, SetTo8U)
 {
     if (!cv::metal::haveMetal())

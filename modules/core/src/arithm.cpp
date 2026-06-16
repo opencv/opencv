@@ -655,12 +655,19 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                           usrdata, oclop, false))
 #ifdef HAVE_METAL
         if (metal::haveMetal() && kind1 == _InputArray::UMAT && kind2 == _InputArray::UMAT &&
-            _dst.isUMat() && oclop == OCL_OP_ADD && !usrdata)
+            _dst.isUMat() &&
+            ((oclop == OCL_OP_ADD && !usrdata) || (oclop == OCL_OP_SUB && !usrdata) ||
+             oclop == OCL_OP_MUL || oclop == OCL_OP_MUL_SCALE))
         {
             UMat src1 = psrc1->getUMat();
             UMat src2 = psrc2->getUMat();
             UMat dst = _dst.getUMat();
-            if (metal::add(src1, src2, dst))
+            if (oclop == OCL_OP_ADD && metal::add(src1, src2, dst))
+                return;
+            if (oclop == OCL_OP_SUB && metal::subtract(src1, src2, dst))
+                return;
+            if ((oclop == OCL_OP_MUL || oclop == OCL_OP_MUL_SCALE) &&
+                metal::multiply(src1, src2, dst, *((double*)usrdata)))
                 return;
         }
 #endif

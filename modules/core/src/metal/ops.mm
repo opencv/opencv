@@ -70,6 +70,35 @@ struct AddParams
     int channels;
 };
 
+struct SubtractParams
+{
+    uint64_t src1Offset;
+    uint64_t src2Offset;
+    uint64_t dstOffset;
+    uint64_t src1Step;
+    uint64_t src2Step;
+    uint64_t dstStep;
+    int rows;
+    int cols;
+    int depth;
+    int channels;
+};
+
+struct MultiplyParams
+{
+    uint64_t src1Offset;
+    uint64_t src2Offset;
+    uint64_t dstOffset;
+    uint64_t src1Step;
+    uint64_t src2Step;
+    uint64_t dstStep;
+    int rows;
+    int cols;
+    int depth;
+    int channels;
+    float scale;
+};
+
 id<MTLComputePipelineState> getAddPipeline(const std::shared_ptr<MetalContext>& ctx)
 {
     static id<MTLComputePipelineState> pipeline = nil;
@@ -87,6 +116,64 @@ id<MTLComputePipelineState> getAddPipeline(const std::shared_ptr<MetalContext>& 
         return nil;
 
     id<MTLFunction> function = [library newFunctionWithName:@"addKernel"];
+    if (!function)
+    {
+        [library release];
+        return nil;
+    }
+
+    pipeline = [ctx->device() newComputePipelineStateWithFunction:function error:&error];
+    [function release];
+    [library release];
+    return pipeline;
+}
+
+id<MTLComputePipelineState> getSubtractPipeline(const std::shared_ptr<MetalContext>& ctx)
+{
+    static id<MTLComputePipelineState> pipeline = nil;
+    if (pipeline)
+        return pipeline;
+
+    static const char* source =
+#include "kernels/subtract.metal"
+        ;
+
+    NSError* error = nil;
+    NSString* metalSource = [NSString stringWithUTF8String:source];
+    id<MTLLibrary> library = [ctx->device() newLibraryWithSource:metalSource options:nil error:&error];
+    if (!library)
+        return nil;
+
+    id<MTLFunction> function = [library newFunctionWithName:@"subtractKernel"];
+    if (!function)
+    {
+        [library release];
+        return nil;
+    }
+
+    pipeline = [ctx->device() newComputePipelineStateWithFunction:function error:&error];
+    [function release];
+    [library release];
+    return pipeline;
+}
+
+id<MTLComputePipelineState> getMultiplyPipeline(const std::shared_ptr<MetalContext>& ctx)
+{
+    static id<MTLComputePipelineState> pipeline = nil;
+    if (pipeline)
+        return pipeline;
+
+    static const char* source =
+#include "kernels/multiply.metal"
+        ;
+
+    NSError* error = nil;
+    NSString* metalSource = [NSString stringWithUTF8String:source];
+    id<MTLLibrary> library = [ctx->device() newLibraryWithSource:metalSource options:nil error:&error];
+    if (!library)
+        return nil;
+
+    id<MTLFunction> function = [library newFunctionWithName:@"multiplyKernel"];
     if (!function)
     {
         [library release];
@@ -270,6 +357,157 @@ bool add(const UMat& src1, const UMat& src2, UMat& dst)
     params.cols = src1.cols;
     params.depth = depth;
     params.channels = channels;
+
+    id<MTLCommandBuffer> commandBuffer = [ctx->queue() commandBuffer];
+    id<MTLComputeCommandEncoder> encoder = [commandBuffer computeCommandEncoder];
+    if (!commandBuffer || !encoder)
+        return false;
+
+    [encoder setComputePipelineState:pipeline];
+    [encoder setBuffer:src1Buffer->buffer offset:0 atIndex:0];
+    [encoder setBuffer:src2Buffer->buffer offset:0 atIndex:1];
+    [encoder setBuffer:dstBuffer->buffer offset:0 atIndex:2];
+    [encoder setBytes:&params length:sizeof(params) atIndex:3];
+
+    MTLSize threadgroup = MTLSizeMake(16, 16, 1);
+    MTLSize groups = MTLSizeMake((src1.cols + threadgroup.width - 1) / threadgroup.width,
+                                 (src1.rows + threadgroup.height - 1) / threadgroup.height,
+                                 1);
+    [encoder dispatchThreadgroups:groups threadsPerThreadgroup:threadgroup];
+    [encoder endEncoding];
+    [commandBuffer commit];
+    [commandBuffer waitUntilCompleted];
+
+    if ([commandBuffer status] == MTLCommandBufferStatusError)
+        return false;
+
+    dst.u->markDeviceCopyObsolete(false);
+    dst.u->markHostCopyObsolete(true);
+    return true;
+}
+
+bool subtract(const UMat& src1, const UMat& src2, UMat& dst)
+{
+    if (!haveMetal() || src1.dims != 2 || src2.dims != 2 || dst.dims != 2)
+        return false;
+    if (src1.rows != src2.rows || src1.cols != src2.cols ||
+        src1.rows != dst.rows || src1.cols != dst.cols ||
+        src1.type() != src2.type() || src1.type() != dst.type())
+        return false;
+
+    int depth = CV_MAT_DEPTH(src1.type());
+    int channels = src1.channels();
+    if ((depth != CV_8U && depth != CV_32F) || (channels != 1 && channels != 3 && channels != 4))
+        return false;
+
+    MetalBuffer* src1Buffer = getBuffer(src1.u);
+    MetalBuffer* src2Buffer = getBuffer(src2.u);
+    MetalBuffer* dstBuffer = getBuffer(dst.u);
+    if (!src1Buffer || !src2Buffer || !dstBuffer)
+        return false;
+
+    std::shared_ptr<MetalContext> ctx = std::static_pointer_cast<MetalContext>(dst.u->allocatorContext);
+    if (!ctx || !ctx->valid())
+        return false;
+
+    id<MTLComputePipelineState> pipeline = getSubtractPipeline(ctx);
+    if (!pipeline)
+        return false;
+
+    size_t src1Ofs[CV_MAX_DIM] = {0};
+    size_t src2Ofs[CV_MAX_DIM] = {0};
+    size_t dstOfs[CV_MAX_DIM] = {0};
+    src1.ndoffset(src1Ofs);
+    src2.ndoffset(src2Ofs);
+    dst.ndoffset(dstOfs);
+
+    SubtractParams params;
+    params.src1Offset = src1Ofs[0] * src1.step.p[0] + src1Ofs[1] * CV_ELEM_SIZE(src1.type());
+    params.src2Offset = src2Ofs[0] * src2.step.p[0] + src2Ofs[1] * CV_ELEM_SIZE(src2.type());
+    params.dstOffset = dstOfs[0] * dst.step.p[0] + dstOfs[1] * CV_ELEM_SIZE(dst.type());
+    params.src1Step = src1.step.p[0];
+    params.src2Step = src2.step.p[0];
+    params.dstStep = dst.step.p[0];
+    params.rows = src1.rows;
+    params.cols = src1.cols;
+    params.depth = depth;
+    params.channels = channels;
+
+    id<MTLCommandBuffer> commandBuffer = [ctx->queue() commandBuffer];
+    id<MTLComputeCommandEncoder> encoder = [commandBuffer computeCommandEncoder];
+    if (!commandBuffer || !encoder)
+        return false;
+
+    [encoder setComputePipelineState:pipeline];
+    [encoder setBuffer:src1Buffer->buffer offset:0 atIndex:0];
+    [encoder setBuffer:src2Buffer->buffer offset:0 atIndex:1];
+    [encoder setBuffer:dstBuffer->buffer offset:0 atIndex:2];
+    [encoder setBytes:&params length:sizeof(params) atIndex:3];
+
+    MTLSize threadgroup = MTLSizeMake(16, 16, 1);
+    MTLSize groups = MTLSizeMake((src1.cols + threadgroup.width - 1) / threadgroup.width,
+                                 (src1.rows + threadgroup.height - 1) / threadgroup.height,
+                                 1);
+    [encoder dispatchThreadgroups:groups threadsPerThreadgroup:threadgroup];
+    [encoder endEncoding];
+    [commandBuffer commit];
+    [commandBuffer waitUntilCompleted];
+
+    if ([commandBuffer status] == MTLCommandBufferStatusError)
+        return false;
+
+    dst.u->markDeviceCopyObsolete(false);
+    dst.u->markHostCopyObsolete(true);
+    return true;
+}
+
+bool multiply(const UMat& src1, const UMat& src2, UMat& dst, double scale)
+{
+    if (!haveMetal() || src1.dims != 2 || src2.dims != 2 || dst.dims != 2)
+        return false;
+    if (src1.rows != src2.rows || src1.cols != src2.cols ||
+        src1.rows != dst.rows || src1.cols != dst.cols ||
+        src1.type() != src2.type() || src1.type() != dst.type())
+        return false;
+
+    int depth = CV_MAT_DEPTH(src1.type());
+    int channels = src1.channels();
+    if ((depth != CV_8U && depth != CV_32F) || (channels != 1 && channels != 3 && channels != 4))
+        return false;
+
+    MetalBuffer* src1Buffer = getBuffer(src1.u);
+    MetalBuffer* src2Buffer = getBuffer(src2.u);
+    MetalBuffer* dstBuffer = getBuffer(dst.u);
+    if (!src1Buffer || !src2Buffer || !dstBuffer)
+        return false;
+
+    std::shared_ptr<MetalContext> ctx = std::static_pointer_cast<MetalContext>(dst.u->allocatorContext);
+    if (!ctx || !ctx->valid())
+        return false;
+
+    id<MTLComputePipelineState> pipeline = getMultiplyPipeline(ctx);
+    if (!pipeline)
+        return false;
+
+    size_t src1Ofs[CV_MAX_DIM] = {0};
+    size_t src2Ofs[CV_MAX_DIM] = {0};
+    size_t dstOfs[CV_MAX_DIM] = {0};
+    src1.ndoffset(src1Ofs);
+    src2.ndoffset(src2Ofs);
+    dst.ndoffset(dstOfs);
+
+    MultiplyParams params;
+    params.src1Offset = src1Ofs[0] * src1.step.p[0] + src1Ofs[1] * CV_ELEM_SIZE(src1.type());
+    params.src2Offset = src2Ofs[0] * src2.step.p[0] + src2Ofs[1] * CV_ELEM_SIZE(src2.type());
+    params.dstOffset = dstOfs[0] * dst.step.p[0] + dstOfs[1] * CV_ELEM_SIZE(dst.type());
+    params.src1Step = src1.step.p[0];
+    params.src2Step = src2.step.p[0];
+    params.dstStep = dst.step.p[0];
+    params.rows = src1.rows;
+    params.cols = src1.cols;
+    params.depth = depth;
+    params.channels = channels;
+    params.scale = static_cast<float>(scale);
 
     id<MTLCommandBuffer> commandBuffer = [ctx->queue() commandBuffer];
     id<MTLComputeCommandEncoder> encoder = [commandBuffer computeCommandEncoder];
