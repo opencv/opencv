@@ -3022,7 +3022,90 @@ public:
             return;
         }
 #endif
+#if defined(_M_ARM64)
+        // Fix for CPU cache thrashing on Windows-ARM64 when stride is a power of 2.
+        // Column-wise access with power-of-2 stride maps to very few cache sets,
+        // causing ~97% cache miss rate. Adding one cache line (64 bytes) to the
+        // stride distributes accesses across all cache sets.
+        static const size_t DFT_CACHE_LINE_PAD = 64;
+        static const size_t DFT_PAD_THRESHOLD = 96 * 1024;
 
+        bool needPaddedBuffer = false;
+        size_t padded_step = dst_step;
+        AutoBuffer<uchar> padded_buf;
+
+        if (stages.size() == 2 &&
+            dst_step > 0 && (dst_step & (dst_step - 1)) == 0 &&
+            dst_step * (size_t)height > DFT_PAD_THRESHOLD)
+        {
+            needPaddedBuffer = true;
+            padded_step = dst_step + DFT_CACHE_LINE_PAD;
+            padded_buf.allocate(padded_step * height);
+        }
+
+        for(uint stageIndex = 0; stageIndex < stages.size(); ++stageIndex)
+        {
+            int stage_src_channels = src_channels;
+            int stage_dst_channels = dst_channels;
+
+            if (stageIndex == 1)
+            {
+                if (needPaddedBuffer)
+                {
+                    if (stages[0] == 0)
+                    {
+                        src = padded_buf.data();
+                        src_step = padded_step;
+                    }
+                    else
+                    {
+                        for (int i = 0; i < height; i++)
+                            memcpy(dst + dst_step * i, padded_buf.data() + padded_step * i, dst_step);
+                        src = dst;
+                        src_step = dst_step;
+                    }
+                }
+                else
+                {
+                    src = dst;
+                    src_step = dst_step;
+                }
+                stage_src_channels = stage_dst_channels;
+            }
+
+            int stage = stages[stageIndex];
+            bool isLastStage = (stageIndex + 1 == stages.size());
+            bool isComplex = stage_src_channels != stage_dst_channels;
+
+            if( stage == 0 )
+            {
+                if (needPaddedBuffer && stages[0] == 0)
+                    rowDft(src, src_step, padded_buf.data(), padded_step, isComplex, isLastStage);
+                else
+                    rowDft(src, src_step, dst, dst_step, isComplex, isLastStage);
+            }
+            else
+            {
+                if (needPaddedBuffer)
+                {
+                    if (stages[0] == 1)
+                    {
+                        for (int i = 0; i < height; i++)
+                            memcpy(padded_buf.data() + padded_step * i, src + src_step * i, dst_step);
+                        colDft(padded_buf.data(), padded_step, padded_buf.data(), padded_step, stage_src_channels, stage_dst_channels, isLastStage);
+                    }
+                    else
+                    {
+                        colDft(src, src_step, padded_buf.data(), padded_step, stage_src_channels, stage_dst_channels, isLastStage);
+                        for (int i = 0; i < height; i++)
+                            memcpy(dst + dst_step * i, padded_buf.data() + padded_step * i, dst_step);
+                    }
+                }
+                else
+                    colDft(src, src_step, dst, dst_step, stage_src_channels, stage_dst_channels, isLastStage);
+            }
+        }
+#else
         for(uint stageIndex = 0; stageIndex < stages.size(); ++stageIndex)
         {
             int stage_src_channels = src_channels;
@@ -3044,6 +3127,7 @@ public:
             else
                 colDft(src, src_step, dst, dst_step, stage_src_channels, stage_dst_channels, isLastStage);
         }
+#endif
     }
 
 protected:
