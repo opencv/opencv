@@ -442,6 +442,7 @@ void TFLiteImporter::parseConvolution(const Operator& op, const std::string& opc
         if (filterScales->size() == 1) {
             layerParams.blobs[2].setTo(inpScale * filterScales->Get(0) / outScale);
         } else {
+            CV_CheckEQ((int)filterScales->size(), oc, "TFLite: number of filter quantization scales must match the number of output channels");
             for (size_t i = 0; i < filterScales->size(); ++i) {
                 layerParams.blobs[2].at<float>(i) = inpScale * filterScales->Get(i) / outScale;
             }
@@ -504,6 +505,7 @@ void TFLiteImporter::parseDWConvolution(const Operator& op, const std::string& o
         if (filterScales->size() == 1) {
             layerParams.blobs[2].setTo(inpScale * filterScales->Get(0) / outScale);
         } else {
+            CV_CheckEQ((int)filterScales->size(), oc, "TFLite: number of filter quantization scales must match the number of output channels");
             for (size_t i = 0; i < filterScales->size(); ++i) {
                 layerParams.blobs[2].at<float>(i) = inpScale * filterScales->Get(i) / outScale;
             }
