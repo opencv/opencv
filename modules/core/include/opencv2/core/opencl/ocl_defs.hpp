@@ -11,6 +11,7 @@
 #include "opencv2/core/utility.hpp"
 #include "cvconfig.h"
 #include "opencv2/core/hal/backend_registry.hpp"
+#include "opencv2/core/utils/logger.hpp"
 
 namespace cv { namespace ocl {
 #ifdef HAVE_OPENCL
@@ -48,23 +49,20 @@ static inline bool isOpenCLActivated() { return false; }
                                         ##__VA_ARGS__);                 \
             if (__gpu_r)                                                \
             {                                                           \
-                printf("CV_GPU_RUN: %s dispatched to GPU backend\n",   \
-                       CV_Func);                                        \
-                fflush(stdout);                                         \
+                CV_LOG_INFO(NULL, "CV_GPU_RUN: " << CV_Func <<          \
+                            " dispatched to GPU backend");              \
                 return;                                                 \
             }                                                           \
             else                                                        \
             {                                                           \
-                printf("CV_GPU_RUN: %s backend run() returned "        \
-                       "false, falling through\n", CV_Func);            \
-                fflush(stdout);                                         \
+                CV_LOG_INFO(NULL, "CV_GPU_RUN: " << CV_Func <<          \
+                            " backend run() returned false, falling through"); \
             }                                                           \
         }                                                               \
         else                                                            \
         {                                                               \
-            printf("CV_GPU_RUN: %s no GPU-backed source, "             \
-                   "falling through\n", CV_Func);                       \
-            fflush(stdout);                                             \
+            CV_LOG_INFO(NULL, "CV_GPU_RUN: " << CV_Func <<              \
+                        " no GPU-backed source, falling through");      \
         }                                                               \
     }
 
