@@ -65,7 +65,7 @@ class CV_EXPORTS_W_SIMPLE Dictionary {
      */
     CV_WRAP bool identify(const Mat &onlyBits, CV_OUT int &idx, CV_OUT int &rotation, double maxCorrectionRate) const;
 
-    /** @brief Given a matrix of pixel ratio ranging from 0 to 1. Returns whether if marker is identified or not.
+    /** @brief Given a matrix of pixel ratio ranging from 0 to 1. Returns whether the marker is identified or not.
      *
      * Returns reference to the marker id in the dictionary (if any) and its rotation.
      */

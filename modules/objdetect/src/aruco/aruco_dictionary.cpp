@@ -26,7 +26,8 @@ struct CellBitMasks {
         uint8_t* notXorWritable = not1Writable + s;
 
         // Fill bit masks of cells that are not black (not0) and not white (not1).
-        int not0Byte = 0, not1Byte = 0, currentByte = 0, currentBit = 0;
+        unsigned char not0Byte = 0, not1Byte = 0;
+        int currentByte = 0, currentBit = 0;
         for(int j = 0; j < markerSize; j++) {
             const float* cellPixelRatioRow = onlyCellPixelRatio.ptr<float>(j);
             for(int i = 0; i < markerSize; i++) {
@@ -35,8 +36,8 @@ struct CellBitMasks {
                 if(cellPixelRatioRow[i] < 1 - validBitIdThreshold) not1Byte |= 1;
                 ++currentBit;
                 if(currentBit == 8) {
-                    not0Writable[currentByte] = (uchar)not0Byte;
-                    not1Writable[currentByte] = (uchar)not1Byte;
+                    not0Writable[currentByte] = not0Byte;
+                    not1Writable[currentByte] = not1Byte;
                     not0Byte = not1Byte = 0;
                     ++currentByte;
                     currentBit = 0;
@@ -44,8 +45,8 @@ struct CellBitMasks {
             }
         }
         if(currentBit != 0) {
-            not0Writable[currentByte] = (uchar)not0Byte;
-            not1Writable[currentByte] = (uchar)not1Byte;
+            not0Writable[currentByte] = not0Byte;
+            not1Writable[currentByte] = not1Byte;
         }
 
         // Computing: notXor = not0 ^ not1
