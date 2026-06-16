@@ -568,7 +568,6 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
 {
     const double blockScale = 4.5;
     const int minBlockSize = 256;
-    AutoBuffer<uchar> buf(0);
 
     Mat templ = _templ;
     int depth = img.depth(), cn = img.channels();
@@ -624,7 +623,7 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
     if( (ccn > 1 || cn > 1) && cdepth != maxDepth )
         bufSize = std::max( bufSize, blocksize.width*blocksize.height*CV_ELEM_SIZE(cdepth));
 
-    buf.resize(bufSize);
+    AutoBuffer<uchar> buf(bufSize);
 
     Ptr<hal::DFT2D> c = hal::DFT2D::create(dftsize.width, dftsize.height, dftTempl.depth(), 1, 1, CV_HAL_DFT_IS_INPLACE, templ.rows);
 
