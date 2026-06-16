@@ -65,15 +65,15 @@ public:
     /*
      * a convertor must provide :
      * - `operator >> (uchar * & dst)` for writing current binary data to `dst` and moving to next data.
-     * - `operator bool` for checking if current loaction is valid and not the end.
+     * - `operator bool` for checking if current location is valid and not the end.
      */
     template<typename _to_binary_convertor_t> inline
     Base64ContextEmitter & write(_to_binary_convertor_t & convertor)
     {
-        static const size_t BUFFER_MAX_LEN = 1024U;
+        constexpr size_t BUFFER_MAX_LEN = 1024U;
 
-        std::vector<uchar> buffer(BUFFER_MAX_LEN);
-        uchar * beg = buffer.data();
+        uchar buffer[BUFFER_MAX_LEN];
+        uchar * beg = buffer;
         uchar * end = beg;
 
         while (convertor) {

@@ -75,7 +75,7 @@ void write( FileStorage& fs, const String& name, const SparseMat& m )
     fs << "data" << "[:";
 
     size_t i = 0, n = m.nzcount();
-    std::vector<const SparseMat::Node*> elems(n);
+    AutoBuffer<const SparseMat::Node*> elems(n);
     SparseMatConstIterator it = m.begin(), it_end = m.end();
 
     for( ; it != it_end; ++it )

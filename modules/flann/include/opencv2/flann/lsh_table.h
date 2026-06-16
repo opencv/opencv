@@ -490,7 +490,7 @@ inline LshStats LshTable<unsigned char>::getStats() const
          != end; )
         if (*iterator < bin_end) {
             if (is_new_bin) {
-                stats.size_histogram_.push_back(std::vector<unsigned int>(3, 0));
+                stats.size_histogram_.emplace_back(3, 0);
                 stats.size_histogram_.back()[0] = bin_start;
                 stats.size_histogram_.back()[1] = bin_end - 1;
                 is_new_bin = false;

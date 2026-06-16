@@ -839,7 +839,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
 #endif
 
     int i, nkeypoints, level, nlevels = (int)layerInfo.size();
-    std::vector<int> nfeaturesPerLevel(nlevels);
+    AutoBuffer<int> nfeaturesPerLevel(nlevels);
 
     // fill the extractors and descriptors for the corresponding scales
     float factor = (float)(1.0 / scaleFactor);
@@ -877,7 +877,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
 
     allKeypoints.clear();
     std::vector<KeyPoint> keypoints;
-    std::vector<int> counters(nlevels);
+    AutoBuffer<int> counters(nlevels);
     keypoints.reserve(nfeaturesPerLevel[0]*2);
 
     for( level = 0; level < nlevels; level++ )

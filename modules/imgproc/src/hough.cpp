@@ -359,13 +359,13 @@ HoughLinesSDiv( InputArray image, OutputArray lines, int type,
     lst.push_back(hough_index(threshold, -1.f, 0.f));
 
     // Precalculate sin table
-    std::vector<float> _sinTable( 5 * tn * stn );
+    AutoBuffer<float> _sinTable( 5 * tn * stn );
     float* sinTable = &_sinTable[0];
 
     for( index = 0; index < 5 * tn * stn; index++ )
         sinTable[index] = (float)cos( stheta * index * 0.2f );
 
-    std::vector<uchar> _caccum(rn * tn, (uchar)0);
+    AutoBuffer<uchar> _caccum(rn * tn, (uchar)0);
     uchar* caccum = &_caccum[0];
 
     // Counting all feature pixels
@@ -373,7 +373,7 @@ HoughLinesSDiv( InputArray image, OutputArray lines, int type,
         for( col = 0; col < w; col++ )
             fn += _POINT( row, col ) != 0;
 
-    std::vector<int> _x(fn), _y(fn);
+    AutoBuffer<int> _x(fn), _y(fn);
     int* x = &_x[0], *y = &_y[0];
 
     // Full Hough Transform (it's accumulator update part)
@@ -445,7 +445,7 @@ HoughLinesSDiv( InputArray image, OutputArray lines, int type,
         return;
     }
 
-    std::vector<uchar> _buffer(srn * stn + 2);
+    AutoBuffer<uchar> _buffer(srn * stn + 2);
     uchar* buffer = &_buffer[0];
     uchar* mcaccum = buffer + 1;
 
@@ -586,7 +586,7 @@ HoughLinesProbabilistic( Mat& image,
 
     Mat accum = Mat::zeros( numangle, numrho, CV_32SC1 );
     Mat mask( height, width, CV_8UC1 );
-    std::vector<float> trigtab(numangle*2);
+    AutoBuffer<float> trigtab(numangle*2);
 
     for( int n = 0; n < numangle; n++ )
     {
@@ -2382,7 +2382,7 @@ static void HoughCircles( InputArray _image, OutputArray _circles,
 
             if( type == CV_32FC4 )
             {
-                std::vector<Vec4f> cw(ncircles);
+                AutoBuffer<Vec4f> cw(ncircles);
                 for( i = 0; i < ncircles; i++ )
                     cw[i] = GetCircle4f(circles[i]);
                 if (ncircles > 0)
@@ -2390,7 +2390,7 @@ static void HoughCircles( InputArray _image, OutputArray _circles,
             }
             else if( type == CV_32FC3 )
             {
-                std::vector<Vec3f> cwow(ncircles);
+                AutoBuffer<Vec3f> cwow(ncircles);
                 for( i = 0; i < ncircles; i++ )
                     cwow[i] = GetCircle(circles[i]);
                 if (ncircles > 0)

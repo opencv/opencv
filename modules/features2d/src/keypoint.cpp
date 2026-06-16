@@ -221,8 +221,8 @@ struct KeyPoint_LessThan
 void KeyPointsFilter::removeDuplicated( std::vector<KeyPoint>& keypoints )
 {
     int i, j, n = (int)keypoints.size();
-    std::vector<int> kpidx(n);
-    std::vector<uchar> mask(n, (uchar)1);
+    AutoBuffer<int> kpidx(n);
+    AutoBuffer<uchar> mask(n, (uchar)1);
 
     for( i = 0; i < n; i++ )
         kpidx[i] = i;
