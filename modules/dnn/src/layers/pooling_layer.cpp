@@ -1180,6 +1180,10 @@ public:
     {
         CV_Assert(inputs.size() != 0);
 
+        fprintf(stderr, "DBG Pooling '%s' inp0 dims=%d layout=%d global=%d kernel=%zu pads_begin=%zu shape=[", name.c_str(), (int)inputs[0].size(), (int)inputs[0].layout, (int)globalPooling, kernel_size.size(), pads_begin.size());
+        for (size_t _i=0;_i<inputs[0].size();_i++) fprintf(stderr, "%d,", inputs[0][_i]);
+        fprintf(stderr, "]\n");
+
         bool isPool1D = inputs[0].size() == 3;
         std::vector<int> inpShape(inputs[0].begin() + 2, inputs[0].end());
         std::vector<int> outShape(inputs[0].begin(), inputs[0].begin() + 2);
