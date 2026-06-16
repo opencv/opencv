@@ -975,13 +975,14 @@ static void common_matchTemplate( Mat& img, Mat& templ, Mat& result, int method,
 
     for( i = 0; i < result.rows; i++ )
     {
-        float* rrow = result.ptr<float>(i);
+        float*  rrow  = result.depth() == CV_32F ? result.ptr<float>(i)  : nullptr;
+        double* drow  = result.depth() == CV_64F ? result.ptr<double>(i) : nullptr;
         int idx = i * sumstep;
         int idx2 = i * sqstep;
 
         for( j = 0; j < result.cols; j++, idx += cn, idx2 += cn )
         {
-            double num = rrow[j], t;
+            double num = rrow ? (double)rrow[j] : drow[j], t;
             double wndMean2 = 0, wndSum2 = 0;
 
             if( numType == 1 )
@@ -1027,7 +1028,8 @@ static void common_matchTemplate( Mat& img, Mat& templ, Mat& result, int method,
                     num = method != cv::TM_SQDIFF_NORMED ? 0 : 1;
             }
 
-            rrow[j] = (float)num;
+            if (rrow) rrow[j] = (float)num;
+            else       drow[j] = num;
         }
     }
 }
@@ -1120,6 +1122,11 @@ static bool ipp_matchTemplate( Mat& img, Mat& templ, Mat& result, int method)
     if(templ.size().area()*4 > img.size().area())
         return false;
 
+    // CV_8U SQDIFF/SQDIFF_NORMED suffer from float32 catastrophic cancellation
+    // in IPP's internal accumulators; fall through to the double-precision path instead.
+    if(img.depth() == CV_8U && (method == cv::TM_SQDIFF || method == cv::TM_SQDIFF_NORMED))
+        return false;
+
     if(method == cv::TM_SQDIFF)
     {
         if(ipp_sqrDistance(img, templ, result))
@@ -1192,9 +1199,18 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
 
     CV_IPP_RUN_FAST(ipp_matchTemplate(img, templ, result, method))
 
-    crossCorr( img, templ, result, Point(0,0), 0, 0);
+    bool use64f = (depth == CV_8U) && (method == cv::TM_SQDIFF || method == cv::TM_SQDIFF_NORMED);
+    Mat result64f;
+    Mat& workResult = use64f ? result64f : result;
+    if (use64f)
+        result64f.create(corrSize, CV_64F);
 
-    common_matchTemplate(img, templ, result, method, cn);
+    crossCorr( img, templ, workResult, Point(0,0), 0, 0);
+
+    common_matchTemplate(img, templ, workResult, method, cn);
+
+    if (use64f)
+        result64f.convertTo(result, CV_32F);
 }
 
 CV_IMPL void
