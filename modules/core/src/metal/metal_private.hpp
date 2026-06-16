@@ -12,6 +12,7 @@
 #include "../metal.hpp"
 #include "../umatrix.hpp"
 #include "opencv2/core/metal.hpp"
+#include "opencv2/core/bufferpool.hpp"
 
 #import <Metal/Metal.h>
 
@@ -20,12 +21,13 @@ namespace metal {
 
 struct MetalBuffer
 {
-    MetalBuffer(id<MTLBuffer> buffer_, size_t size_, bool hostVisible_);
+    MetalBuffer(id<MTLBuffer> buffer_, size_t size_, bool hostVisible_, MTLResourceOptions storageOptions_);
     ~MetalBuffer();
 
     id<MTLBuffer> buffer;
     size_t size;
     bool hostVisible;
+    MTLResourceOptions storageOptions;
 };
 
 class MetalContext
@@ -47,6 +49,9 @@ std::shared_ptr<MetalContext> getMetalContext();
 MetalBuffer* getBuffer(UMatData* u);
 uchar* getContents(UMatData* u);
 MTLResourceOptions getStorageOptions(UMatUsageFlags usageFlags, bool& hostVisible);
+MetalBuffer* allocateBuffer(const std::shared_ptr<MetalContext>& ctx, size_t size, MTLResourceOptions storageOptions, bool hostVisible);
+void releaseBuffer(MetalBuffer* buffer);
+BufferPoolController* getMetalBufferPoolController();
 bool isHostVisible(UMatData* u);
 id<MTLBuffer> newSharedBuffer(const std::shared_ptr<MetalContext>& ctx, size_t size);
 void blitCopy(const std::shared_ptr<MetalContext>& ctx,

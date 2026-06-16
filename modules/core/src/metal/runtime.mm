@@ -3,14 +3,154 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "metal_private.hpp"
+#include "opencv2/core/utils/configuration.private.hpp"
+
+#include <list>
 
 #ifdef HAVE_METAL
 
 namespace cv {
 namespace metal {
+namespace {
 
-MetalBuffer::MetalBuffer(id<MTLBuffer> buffer_, size_t size_, bool hostVisible_)
-    : buffer(buffer_), size(size_), hostVisible(hostVisible_)
+size_t allocationGranularity(size_t size)
+{
+    if (size < 1024 * 1024)
+        return 4096;
+    if (size < 16 * 1024 * 1024)
+        return 64 * 1024;
+    return 1024 * 1024;
+}
+
+class MetalBufferPool CV_FINAL : public BufferPoolController
+{
+public:
+    MetalBufferPool()
+        : maxReservedSize_(utils::getConfigurationParameterSizeT("OPENCV_METAL_BUFFERPOOL_LIMIT", 64 * 1024 * 1024))
+    {
+    }
+
+    ~MetalBufferPool()
+    {
+        freeAllReservedBuffers();
+    }
+
+    MetalBuffer* allocate(const std::shared_ptr<MetalContext>& ctx, size_t size,
+                          MTLResourceOptions storageOptions, bool hostVisible)
+    {
+        AutoLock lock(mutex_);
+        size_t capacity = alignSize(size, (int)allocationGranularity(size));
+        for (std::list<MetalBuffer*>::iterator it = reserved_.begin(); it != reserved_.end(); ++it)
+        {
+            MetalBuffer* candidate = *it;
+            if (candidate->storageOptions != storageOptions)
+                continue;
+            if (candidate->size < size)
+                continue;
+
+            size_t diff = candidate->size - size;
+            if (diff >= std::max((size_t)4096, size / 8))
+                continue;
+
+            reservedSize_ -= candidate->size;
+            reserved_.erase(it);
+            return candidate;
+        }
+
+        id<MTLBuffer> buffer = [ctx->device() newBufferWithLength:capacity options:storageOptions];
+        if (!buffer)
+            return NULL;
+        return new MetalBuffer(buffer, capacity, hostVisible, storageOptions);
+    }
+
+    void release(MetalBuffer* buffer)
+    {
+        if (!buffer)
+            return;
+
+        AutoLock lock(mutex_);
+        if (maxReservedSize_ == 0 || buffer->size > maxReservedSize_ / 8)
+        {
+            delete buffer;
+            return;
+        }
+
+        reserved_.push_front(buffer);
+        reservedSize_ += buffer->size;
+        trim();
+    }
+
+    size_t getReservedSize() const CV_OVERRIDE
+    {
+        AutoLock lock(mutex_);
+        return reservedSize_;
+    }
+
+    size_t getMaxReservedSize() const CV_OVERRIDE
+    {
+        AutoLock lock(mutex_);
+        return maxReservedSize_;
+    }
+
+    void setMaxReservedSize(size_t size) CV_OVERRIDE
+    {
+        AutoLock lock(mutex_);
+        maxReservedSize_ = size;
+        trim();
+    }
+
+    void freeAllReservedBuffers() CV_OVERRIDE
+    {
+        AutoLock lock(mutex_);
+        for (MetalBuffer* buffer : reserved_)
+            delete buffer;
+        reserved_.clear();
+        reservedSize_ = 0;
+    }
+
+private:
+    void trim()
+    {
+        for (std::list<MetalBuffer*>::iterator it = reserved_.begin(); it != reserved_.end();)
+        {
+            MetalBuffer* buffer = *it;
+            if (buffer->size > maxReservedSize_ / 8)
+            {
+                reservedSize_ -= buffer->size;
+                delete buffer;
+                it = reserved_.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+
+        while (reservedSize_ > maxReservedSize_ && !reserved_.empty())
+        {
+            MetalBuffer* buffer = reserved_.back();
+            reservedSize_ -= buffer->size;
+            delete buffer;
+            reserved_.pop_back();
+        }
+    }
+
+    mutable Mutex mutex_;
+    size_t reservedSize_ = 0;
+    size_t maxReservedSize_;
+    std::list<MetalBuffer*> reserved_;
+};
+
+MetalBufferPool& getMetalBufferPool()
+{
+    static MetalBufferPool pool;
+    return pool;
+}
+
+} // namespace
+
+MetalBuffer::MetalBuffer(id<MTLBuffer> buffer_, size_t size_, bool hostVisible_, MTLResourceOptions storageOptions_)
+    : buffer(buffer_), size(size_), hostVisible(hostVisible_), storageOptions(storageOptions_)
 {
 }
 
@@ -75,6 +215,22 @@ MTLResourceOptions getStorageOptions(UMatUsageFlags usageFlags, bool& hostVisibl
 
     hostVisible = true;
     return MTLResourceStorageModeShared;
+}
+
+MetalBuffer* allocateBuffer(const std::shared_ptr<MetalContext>& ctx, size_t size,
+                            MTLResourceOptions storageOptions, bool hostVisible)
+{
+    return getMetalBufferPool().allocate(ctx, size, storageOptions, hostVisible);
+}
+
+void releaseBuffer(MetalBuffer* buffer)
+{
+    getMetalBufferPool().release(buffer);
+}
+
+BufferPoolController* getMetalBufferPoolController()
+{
+    return &getMetalBufferPool();
 }
 
 bool isHostVisible(UMatData* u)

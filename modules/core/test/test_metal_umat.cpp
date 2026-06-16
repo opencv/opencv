@@ -579,6 +579,34 @@ TEST(Core_Metal_UMat, SetToUnsupportedTypeFallback)
     EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
 }
 
+TEST(Core_Metal_UMat, BufferPoolGrowing)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    BufferPoolController* controller = UMat::getStdAllocator()->getBufferPoolController("METAL");
+    ASSERT_TRUE(controller != NULL);
+
+    size_t oldMaxReservedSize = controller->getMaxReservedSize();
+    controller->freeAllReservedBuffers();
+    controller->setMaxReservedSize(4 * 1024 * 1024);
+
+    {
+        for (int i = 0; i < 16; ++i)
+        {
+            UMat u(256, 256, CV_8UC4);
+            u.setTo(Scalar::all(i));
+        }
+    }
+
+    EXPECT_GT(controller->getReservedSize(), (size_t)0);
+    EXPECT_LE(controller->getReservedSize(), controller->getMaxReservedSize());
+
+    controller->freeAllReservedBuffers();
+    EXPECT_EQ(controller->getReservedSize(), (size_t)0);
+    controller->setMaxReservedSize(oldMaxReservedSize);
+}
+
 #endif // HAVE_METAL
 
 }} // namespace

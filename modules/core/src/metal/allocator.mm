@@ -32,13 +32,13 @@ public:
         std::shared_ptr<MetalContext> ctx = getMetalContext();
         bool hostVisible = true;
         MTLResourceOptions storageOptions = getStorageOptions(usageFlags, hostVisible);
-        id<MTLBuffer> buffer = [ctx->device() newBufferWithLength:total options:storageOptions];
+        MetalBuffer* buffer = allocateBuffer(ctx, total, storageOptions, hostVisible);
         if (!buffer)
             return Mat::getDefaultAllocator()->allocate(dims, sizes, type, data, step, ACCESS_RW, USAGE_DEFAULT);
 
         UMatData* u = new UMatData(this);
         u->size = total;
-        u->handle = new MetalBuffer(buffer, total, hostVisible);
+        u->handle = buffer;
         u->allocatorContext = ctx;
         u->markHostCopyObsolete(true);
         return u;
@@ -58,11 +58,11 @@ public:
         std::shared_ptr<MetalContext> ctx = getMetalContext();
         bool hostVisible = true;
         MTLResourceOptions storageOptions = getStorageOptions(usageFlags, hostVisible);
-        id<MTLBuffer> buffer = [ctx->device() newBufferWithLength:u->size options:storageOptions];
+        MetalBuffer* buffer = allocateBuffer(ctx, u->size, storageOptions, hostVisible);
         if (!buffer)
             return false;
 
-        u->handle = new MetalBuffer(buffer, u->size, hostVisible);
+        u->handle = buffer;
         u->prevAllocator = u->currAllocator;
         u->currAllocator = this;
         u->allocatorContext = ctx;
@@ -91,7 +91,7 @@ public:
                 u->markHostCopyObsolete(false);
             }
 
-            delete getBuffer(u);
+            releaseBuffer(getBuffer(u));
             u->handle = NULL;
             u->markDeviceCopyObsolete(true);
             u->currAllocator = u->prevAllocator;
@@ -101,7 +101,7 @@ public:
             return;
         }
 
-        delete getBuffer(u);
+        releaseBuffer(getBuffer(u));
         u->handle = NULL;
         u->markDeviceCopyObsolete(true);
         delete u;
@@ -299,6 +299,13 @@ public:
 
         dst->markDeviceCopyObsolete(false);
         dst->markHostCopyObsolete(true);
+    }
+
+    BufferPoolController* getBufferPoolController(const char* id) const CV_OVERRIDE
+    {
+        if (id != NULL && strcmp(id, "METAL") != 0)
+            CV_Error(cv::Error::StsBadArg, "getBufferPoolController(): unknown BufferPool ID\n");
+        return getMetalBufferPoolController();
     }
 };
 
