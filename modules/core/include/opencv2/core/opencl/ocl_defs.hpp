@@ -37,17 +37,8 @@ static inline bool isOpenCLActivated() { return false; }
         {                                                               \
             if (__gpu_b->method(__VA_ARGS__))                           \
             {                                                           \
-                CV_LOG_INFO(NULL, "CV_GPU_RUN: " << CV_Func <<          \
-                            " dispatched to GPU backend");              \
                 return;                                                 \
             }                                                           \
-            CV_LOG_INFO(NULL, "CV_GPU_RUN: " << CV_Func <<              \
-                        " backend did not handle op, falling through"); \
-        }                                                               \
-        else                                                            \
-        {                                                               \
-            CV_LOG_INFO(NULL, "CV_GPU_RUN: " << CV_Func <<              \
-                        " no GPU-backed source, falling through");      \
         }                                                               \
     }
 

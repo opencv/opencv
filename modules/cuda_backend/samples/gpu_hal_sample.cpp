@@ -99,10 +99,8 @@ int main()
     cv::Mat imageGray;
     cv::cvtColor(image, imageGray, cv::COLOR_BGR2GRAY);
     cv::Size newSize(640, 360);
-    printf("Input image: %dx%d\n\n", image.cols, image.rows);
 
     // ---- resize ----------------------------------------------------------
-    printf("resize to %dx%d\n", newSize.width, newSize.height);
     {
         cv::cuda::GpuMat in, out;                       // (1) direct CUDA
         in.upload(image);
@@ -117,7 +115,6 @@ int main()
     }
 
     // ---- GaussianBlur ----------------------------------------------------
-    printf("GaussianBlur 15x15\n");
     {
         cv::cuda::GpuMat in, out;                       // (1) direct CUDA
         in.upload(image);
@@ -134,7 +131,6 @@ int main()
     }
 
     // ---- cvtColor (color to gray) ---------------------------------------
-    printf("cvtColor BGR to GRAY\n");
     {
         cv::cuda::GpuMat in, out;                       // (1) direct CUDA
         in.upload(image);
@@ -149,7 +145,6 @@ int main()
     }
 
     // ---- threshold -------------------------------------------------------
-    printf("threshold (binary, value 128)\n");
     {
         cv::cuda::GpuMat in, out;                       // (1) direct CUDA
         in.upload(imageGray);
@@ -163,7 +158,5 @@ int main()
         report("threshold", viaCuda, viaHal);
     }
 
-    printf("\n(1) direct CUDA = cv::cuda::<op> on a GpuMat (GPU-specific code)\n");
-    printf("(2) GPU HAL     = ordinary cv::<op> on a GPU image (same as CPU code)\n");
     return 0;
 }

@@ -79,8 +79,6 @@ def gpumat():
 def gpu_image():
     return cv2.gpuUpload(image)
 
-print("chain: resize -> GaussianBlur -> cvtColor -> threshold\n")
-
 # check all three produce the same picture
 cpu  = cpu_chain(image)
 cuda = cuda_chain(gpumat())
