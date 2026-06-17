@@ -595,58 +595,12 @@ void sqrt64f(const double* src, double* dst, int len)
 // Workaround for ICE in MSVS 2015 update 3 (issue #7795)
 // CV_AVX is not used here, because generated code is faster in non-AVX mode.
 // (tested with disabled IPP on i5-6300U)
-#if (defined _MSC_VER && _MSC_VER >= 1900) || defined(__EMSCRIPTEN__)
+#if (defined _MSC_VER && _MSC_VER >= 1900 && (defined(_M_IX86) || defined(_M_X64))) || defined(__EMSCRIPTEN__)
 void exp32f(const float *src, float *dst, int n)
 {
     CV_INSTRUMENT_REGION();
 
-    int i = 0;
-#if CV_NEON
-    const float32x4_t v_exp_hi = vdupq_n_f32( 88.3762626647949f);
-    const float32x4_t v_exp_lo = vdupq_n_f32(-88.3762626647949f);
-    const float32x4_t v_log2ef = vdupq_n_f32(1.44269504088896341f);
-    const float32x4_t v_half = vdupq_n_f32(0.5f);
-    const float32x4_t v_one = vdupq_n_f32(1.0f);
-    const float32x4_t v_ln2_hi = vdupq_n_f32(0.693359375f);
-    const float32x4_t v_ln2_lo = vdupq_n_f32(-2.12194440e-4f);
-    const float32x4_t v_c1 = vdupq_n_f32(1.9875691500E-4f);
-    const float32x4_t v_c2 = vdupq_n_f32(1.3981999507E-3f);
-    const float32x4_t v_c3 = vdupq_n_f32(8.3334519073E-3f);
-    const float32x4_t v_c4 = vdupq_n_f32(4.1665795894E-2f);
-    const float32x4_t v_c5 = vdupq_n_f32(1.6666665459E-1f);
-    const float32x4_t v_c6 = vdupq_n_f32(5.0000001201E-1f);
-    const int32x4_t v_127 = vdupq_n_s32(127);
-
-    for (; i <= n - 4; i += 4)
-    {
-        float32x4_t x = vld1q_f32(src + i);
-        x = vminq_f32(x, v_exp_hi);
-        x = vmaxq_f32(x, v_exp_lo);
-        float32x4_t fx = vmlaq_f32(v_half, x, v_log2ef);
-        int32x4_t emm0 = vcvtq_s32_f32(fx);
-        fx = vcvtq_f32_s32(emm0);
-        uint32x4_t mask = vcgtq_f32(fx, vmlaq_f32(v_half, x, v_log2ef));
-        float32x4_t one_masked = vreinterpretq_f32_u32(vandq_u32(mask, vreinterpretq_u32_f32(v_one)));
-        fx = vsubq_f32(fx, one_masked);
-        x = vmlsq_f32(x, fx, v_ln2_hi);
-        x = vmlsq_f32(x, fx, v_ln2_lo);
-        float32x4_t y = v_c1;
-        y = vmlaq_f32(v_c2, y, x);
-        y = vmlaq_f32(v_c3, y, x);
-        y = vmlaq_f32(v_c4, y, x);
-        y = vmlaq_f32(v_c5, y, x);
-        y = vmlaq_f32(v_c6, y, x);
-        float32x4_t x2 = vmulq_f32(x, x);
-        y = vmlaq_f32(v_one, y, x2);
-        y = vaddq_f32(y, x);
-        emm0 = vcvtq_s32_f32(fx);
-        emm0 = vaddq_s32(emm0, v_127);
-        emm0 = vshlq_n_s32(emm0, 23);
-        float32x4_t pow2n = vreinterpretq_f32_s32(emm0);
-        vst1q_f32(dst + i, vmulq_f32(y, pow2n));
-    }
-#endif
-    for (; i < n; i++)
+    for (int i = 0; i < n; i++)
     {
         dst[i] = std::exp(src[i]);
     }
