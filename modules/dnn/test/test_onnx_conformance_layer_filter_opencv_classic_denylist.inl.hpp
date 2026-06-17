@@ -757,6 +757,7 @@
 "test_maxpool_3d_dilations_use_ref_impl",
 "test_maxpool_3d_dilations_use_ref_impl_large",
 "test_einsum_inner_prod",
+"test_einsum_scalar",
 "test_averagepool_2d_ceil_last_window_starts_on_pad",
 "test_averagepool_2d_dilations",
 "test_averagepool_3d_dilations_large_count_include_pad_is_0_ceil_mode_is_False",
