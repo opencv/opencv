@@ -1658,6 +1658,11 @@ void ONNXImporter2::parseCastLike(LayerParams& layerParams, const opencv_onnx::N
 void ONNXImporter2::parseConstantOfShape(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "ConstantOfShape";
+    // ONNX spec: the 'value' attribute is optional; when it is absent the fill value
+    // defaults to a one-element float32 tensor containing 0. The generic attribute
+    // parser only populates blobs when 'value' is present, so supply the default here.
+    if (layerParams.blobs.empty())
+        layerParams.blobs.push_back(Mat(1, 1, CV_32F, Scalar(0)));
     addLayer(layerParams, node_proto);
 }
 

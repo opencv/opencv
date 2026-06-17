@@ -3148,6 +3148,170 @@ CASE(test_attention_4d_attn_mask_bool)
     SKIP;
 CASE(test_attention_4d_attn_mask_bool_4d)
     SKIP;
+CASE(test_attention_3d_expanded)
+    SKIP;
+CASE(test_attention_3d_attn_mask_expanded)
+    SKIP;
+CASE(test_attention_3d_diff_heads_sizes_attn_mask_expanded)
+    SKIP;
+CASE(test_attention_3d_scaled_expanded)
+    SKIP;
+CASE(test_attention_3d_gqa_attn_mask_expanded)
+    SKIP;
+CASE(test_attention_3d_diff_heads_sizes_expanded)
+    SKIP;
+CASE(test_attention_3d_transpose_verification_expanded)
+    SKIP;
+CASE(test_attention_3d_softcap_expanded)
+    SKIP;
+CASE(test_attention_3d_gqa_scaled_expanded)
+    SKIP;
+CASE(test_attention_3d_with_past_and_present_qk_matmul_softmax_expanded)
+    SKIP;
+CASE(test_attention_3d_with_past_and_present_qk_matmul_bias_expanded)
+    SKIP;
+CASE(test_attention_3d_with_past_and_present_qk_matmul_expanded)
+    SKIP;
+CASE(test_attention_3d_with_past_and_present_expanded)
+    SKIP;
+CASE(test_attention_3d_gqa_with_past_and_present_expanded)
+    SKIP;
+CASE(test_attention_3d_causal_expanded)
+    SKIP;
+CASE(test_attention_3d_diff_heads_sizes_causal_expanded)
+    SKIP;
+CASE(test_attention_3d_diff_heads_sizes_scaled_expanded)
+    SKIP;
+CASE(test_attention_3d_diff_heads_sizes_softcap_expanded)
+    SKIP;
+CASE(test_attention_3d_diff_heads_with_past_and_present)
+    SKIP;
+CASE(test_attention_3d_diff_heads_with_past_and_present_expanded)
+    SKIP;
+CASE(test_attention_3d_gqa_causal_expanded)
+    SKIP;
+CASE(test_attention_3d_gqa_expanded)
+    SKIP;
+CASE(test_attention_3d_gqa_softcap_expanded)
+    SKIP;
+CASE(test_attention_4d_attn_mask_3d_causal_expanded)
+    SKIP;
+CASE(test_attention_4d_attn_mask_3d_expanded)
+    SKIP;
+CASE(test_attention_4d_causal_expanded)
+    SKIP;
+CASE(test_attention_4d_diff_heads_sizes_attn_mask_expanded)
+    SKIP;
+CASE(test_attention_4d_diff_heads_mask4d_padded_kv_expanded)
+    SKIP;
+CASE(test_attention_4d_attn_mask_4d_causal_expanded)
+    SKIP;
+CASE(test_attention_4d_attn_mask_4d_expanded)
+    SKIP;
+CASE(test_attention_4d_attn_mask_bool_4d_expanded)
+    SKIP;
+CASE(test_attention_4d_attn_mask_bool_expanded)
+    SKIP;
+CASE(test_attention_4d_attn_mask_expanded)
+    SKIP;
+CASE(test_attention_4d_diff_heads_sizes_causal_expanded)
+    SKIP;
+CASE(test_attention_4d_diff_heads_sizes_expanded)
+    SKIP;
+CASE(test_attention_4d_diff_heads_sizes_scaled_expanded)
+    SKIP;
+CASE(test_attention_4d_diff_heads_sizes_softcap_expanded)
+    SKIP;
+CASE(test_attention_4d_expanded)
+    SKIP;
+CASE(test_attention_3d_gqa_with_past_and_present)
+    SKIP;
+CASE(test_attention_3d_with_past_and_present)
+    SKIP;
+CASE(test_attention_3d_with_past_and_present_qk_matmul)
+    SKIP;
+CASE(test_attention_3d_with_past_and_present_qk_matmul_bias)
+    SKIP;
+CASE(test_attention_4d_diff_heads_with_past_and_present)
+    SKIP;
+CASE(test_attention_4d_diff_heads_with_past_and_present_expanded)
+    SKIP;
+CASE(test_attention_4d_diff_heads_with_past_and_present_mask3d)
+    SKIP;
+CASE(test_attention_4d_diff_heads_with_past_and_present_mask3d_expanded)
+    SKIP;
+CASE(test_attention_4d_diff_heads_with_past_and_present_mask4d)
+    SKIP;
+CASE(test_attention_4d_diff_heads_with_past_and_present_mask4d_expanded)
+    SKIP;
+CASE(test_attention_4d_fp16_expanded)
+    SKIP;
+CASE(test_attention_4d_gqa_attn_mask_expanded)
+    SKIP;
+CASE(test_attention_4d_gqa_causal_expanded)
+    SKIP;
+CASE(test_attention_4d_gqa_expanded)
+    SKIP;
+CASE(test_attention_4d_gqa_scaled_expanded)
+    SKIP;
+CASE(test_attention_4d_gqa_softcap_expanded)
+    SKIP;
+CASE(test_attention_3d_with_past_and_present_qk_matmul_softmax)
+    SKIP;
+CASE(test_attention_4d_fp16)
+    SKIP;
+CASE(test_attention_4d_gqa_with_past_and_present)
+    SKIP;
+CASE(test_attention_4d_gqa_with_past_and_present_expanded)
+    SKIP;
+CASE(test_attention_4d_gqa_with_past_and_present_fp16)
+    SKIP;
+CASE(test_attention_4d_gqa_with_past_and_present_fp16_expanded)
+    SKIP;
+CASE(test_attention_4d_scaled_expanded)
+    SKIP;
+CASE(test_attention_4d_softcap_expanded)
+    SKIP;
+CASE(test_attention_4d_with_past_and_present)
+    SKIP;
+CASE(test_attention_4d_with_past_and_present_expanded)
+    SKIP;
+CASE(test_attention_4d_with_past_and_present_qk_matmul)
+    SKIP;
+CASE(test_attention_4d_with_past_and_present_qk_matmul_bias)
+    SKIP;
+CASE(test_attention_4d_with_past_and_present_qk_matmul_bias_3d_mask)
+    SKIP;
+CASE(test_attention_4d_with_past_and_present_qk_matmul_bias_3d_mask_causal)
+    SKIP;
+CASE(test_attention_4d_with_past_and_present_qk_matmul_bias_3d_mask_causal_expanded)
+    SKIP;
+CASE(test_attention_4d_with_past_and_present_qk_matmul_bias_3d_mask_expanded)
+    SKIP;
+CASE(test_attention_4d_with_past_and_present_qk_matmul_bias_4d_mask)
+    SKIP;
+CASE(test_attention_4d_with_past_and_present_qk_matmul_bias_4d_mask_causal)
+    SKIP;
+CASE(test_attention_4d_with_past_and_present_qk_matmul_bias_4d_mask_causal_expanded)
+    SKIP;
+CASE(test_attention_4d_with_past_and_present_qk_matmul_bias_4d_mask_expanded)
+    SKIP;
+CASE(test_attention_4d_with_past_and_present_qk_matmul_bias_expanded)
+    SKIP;
+CASE(test_attention_4d_with_past_and_present_qk_matmul_expanded)
+    SKIP;
+CASE(test_attention_4d_with_qk_matmul)
+    SKIP;
+CASE(test_attention_4d_with_qk_matmul_bias)
+    SKIP;
+CASE(test_attention_4d_with_qk_matmul_bias_expanded)
+    SKIP;
+CASE(test_attention_4d_with_qk_matmul_expanded)
+    SKIP;
+CASE(test_attention_4d_with_qk_matmul_softmax)
+    SKIP;
+CASE(test_attention_4d_with_qk_matmul_softmax_expanded)
+    SKIP;
 END_SWITCH()
 #undef EOF_LABEL
 #undef BEGIN_SWITCH
