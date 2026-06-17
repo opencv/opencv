@@ -668,7 +668,7 @@ void TFLiteImporter::parsePooling(const Operator& op, const std::string& opcode,
 void TFLiteImporter::parsePoolingWithArgmax(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
     layerParams.type = "Pooling";
 
-    CV_CheckLE(op.custom_options()->size(), sizeof(TfLitePoolParams), "");
+    CV_CheckGE(op.custom_options()->size(), sizeof(TfLitePoolParams), "Truncated custom_options for pooling");
     const auto* params = reinterpret_cast<const TfLitePoolParams*>(op.custom_options()->Data());
     if (params->activation != kTfLiteActNone) {
         CV_Error(Error::StsNotImplemented, "Argmax pooling with fused activation");
@@ -686,7 +686,7 @@ void TFLiteImporter::parsePoolingWithArgmax(const Operator& op, const std::strin
 void TFLiteImporter::parseUnpooling(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
     layerParams.type = "MaxUnpool";
 
-    CV_CheckLE(op.custom_options()->size(), sizeof(TfLitePoolParams), "");
+    CV_CheckGE(op.custom_options()->size(), sizeof(TfLitePoolParams), "Truncated custom_options for pooling");
     const auto* params = reinterpret_cast<const TfLitePoolParams*>(op.custom_options()->Data());
     if (params->activation != kTfLiteActNone) {
         CV_Error(Error::StsNotImplemented, "Unpooling with fused activation");
@@ -950,7 +950,7 @@ int TFLiteImporter::addConstLayer(const Mat& blob, const std::string& name)
 void TFLiteImporter::parseDeconvolution(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
     layerParams.type = "Deconvolution";
 
-    CV_CheckLE(op.custom_options()->size(), sizeof(TfLiteTransposeConvParams), "");
+    CV_CheckGE(op.custom_options()->size(), sizeof(TfLiteTransposeConvParams), "Truncated custom_options for deconvolution");
     const auto* params = reinterpret_cast<const TfLiteTransposeConvParams*>(op.custom_options()->Data());
     if (params->padding != kTfLitePaddingUnknown)
         layerParams.set("pad_mode", params->padding == kTfLitePaddingSame ? "SAME" : "VALID");
