@@ -1,36 +1,63 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
-
+// Copyright (C) 2026, BigVision LLC, all rights reserved.
+// Third party copyrights are property of their respective owners.
 
 #ifndef OPENCV_SLAM_ODOMETRY_PARAMS_HPP
 #define OPENCV_SLAM_ODOMETRY_PARAMS_HPP
 
-#include <opencv2/core.hpp>
+#include "opencv2/core.hpp"
 
-namespace cv { namespace slam {
+namespace cv {
+namespace slam {
 
-/** @brief Tunable parameters for the VisualOdometry pipeline.
+//! @addtogroup slam
+//! @{
 
-    All fields have sensible defaults. Override any subset before
-    passing to VisualOdometry::create().
-
-    @ingroup slam_odometry
-*/
 struct CV_EXPORTS_W_SIMPLE OdometryParams
 {
-    CV_WRAP OdometryParams() = default;
+    CV_WRAP OdometryParams() {}
 
-    // --- Bootstrap (two-view init) -------------------------------------------
+    // Bootstrap
+    CV_PROP_RW int minInitInliers = 40;
+    CV_PROP_RW double minInitParallaxDeg = 1.5;
+    CV_PROP_RW int minInitPoints = 50;
+    CV_PROP_RW double hfRatioThresh = 0.45;
+    CV_PROP_RW double minGrowthParallaxDeg = 0.1;
+    CV_PROP_RW double essentialRansacThresh = 1.0;
+    CV_PROP_RW double essentialRansacConfidence = 0.999;
 
-    CV_PROP_RW int    min_init_inliers            = 80;    //!< Min essential-matrix RANSAC inliers.
-    CV_PROP_RW double min_init_parallax_deg       = 3.0;   //!< Min median parallax to trigger bootstrap.
-    CV_PROP_RW int    min_init_points             = 50;    //!< Min triangulated points to accept init.
-    CV_PROP_RW double hf_ratio_thresh             = 0.45;  //!< H/(H+F) ratio; > thresh uses Homography.
-    CV_PROP_RW double min_growth_parallax_deg     = 1.0;   //!< Min parallax for a new map point to survive.
-    CV_PROP_RW double essential_ransac_thresh     = 1.0;   //!< RANSAC reprojection threshold (px).
-    CV_PROP_RW double essential_ransac_confidence = 0.999; //!< RANSAC confidence for findEssentialMat.
+    // Tracking (PnP)
+    CV_PROP_RW double pnpReprojThresh = 4.0;
+    CV_PROP_RW int pnpMinInliers = 6;
+    CV_PROP_RW int pnpRansacIters = 500;
+    CV_PROP_RW double pnpConfidence = 0.99;
+
+    // Motion model
+    CV_PROP_RW double motionModelRadius = 15.0;
+    CV_PROP_RW double motionModelRadiusWide = 30.0;
+    CV_PROP_RW int motionModelMinMatches = 20;
+    CV_PROP_RW double descProjThresh = 1.0;
+
+    // Optical flow fallback
+    CV_PROP_RW int opticalFlowMinInliers = 10;
+
+    // Keyframe promotion
+    CV_PROP_RW int kfMinFrames = 1;
+    CV_PROP_RW int kfMaxFrames = 30;
+    CV_PROP_RW double kfInlierRatio = 0.70;
+    CV_PROP_RW int kfMinInliers = 40;
+    CV_PROP_RW double kfRotThreshDeg = 5.0;
+    CV_PROP_RW double kfTransThresh = 0.5; 
+
+    // Local map refinement
+    CV_PROP_RW int localMapTopK = 10;
+    CV_PROP_RW int localMapNeighborK = 5;
+    CV_PROP_RW double localMapRadius = 7.0;
 };
+
+//! @}
 
 }} // namespace cv::slam
 

@@ -1,125 +1,150 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
-
+// Copyright (C) 2026, BigVision LLC, all rights reserved.
+// Third party copyrights are property of their respective owners.
 
 #include "precomp.hpp"
 
-namespace cv { namespace slam {
+#include <mutex>
+#include <set>
+#include <unordered_map>
+
+namespace cv {
+namespace slam {
 
 struct Map::Impl
 {
-    std::vector<KeyFrame*>             kf_vec;
-    std::vector<MapPoint*>             mp_vec;
-    std::unordered_map<int, KeyFrame*> kf_map;
-    std::unordered_map<int, MapPoint*> mp_map;
-    std::vector<Matx44d>               trajectory;
-    int next_kf_id = 0;
-    int next_mp_id = 0;
+    std::set<KeyFrame*> keyframes;
+    std::set<MapPoint*> mapPoints;
+    std::unordered_map<int, KeyFrame*> kfIndex;
+    std::unordered_map<int, MapPoint*> mpIndex;
+
+    KeyFrame* refKf = nullptr;
+    KeyFrame* currentKf = nullptr;
+
+    std::vector<Matx44d> trajectory;
+    std::mutex mutex;
+
+    int nextKfId = 0;
+    int nextMpId = 0;
 };
 
-Map::Map()  : impl_(makePtr<Impl>()) {}
+Map::Map() : impl(makePtr<Impl>()) {}
 
 Map::~Map()
 {
-    clear();
+    for (KeyFrame* kf : impl->keyframes) delete kf;
+    for (MapPoint* mp : impl->mapPoints) delete mp;
 }
 
-int Map::addKeyframe(KeyFrame& kf)
+// Keyframes
+
+KeyFrame* Map::addKeyframe(KeyFrame* kf)
 {
-    if (kf.id < 0)
-        kf.id = impl_->next_kf_id++;
-    KeyFrame* ptr = new KeyFrame(kf);
-    impl_->kf_vec.push_back(ptr);
-    impl_->kf_map[ptr->id] = ptr;
-    kf.id = ptr->id;
-    return ptr->id;
+    CV_Assert(kf);
+    if (kf->id < 0)
+        kf->id = impl->nextKfId++;
+    else if (kf->id >= impl->nextKfId)
+        impl->nextKfId = kf->id + 1;
+    impl->keyframes.insert(kf);
+    impl->kfIndex[kf->id] = kf;
+    return kf;
 }
 
-KeyFrame* Map::getKeyframe(int id)
+KeyFrame* Map::getKeyframe(int id) const
 {
-    auto it = impl_->kf_map.find(id);
-    return it != impl_->kf_map.end() ? it->second : nullptr;
+    auto it = impl->kfIndex.find(id);
+    return (it != impl->kfIndex.end()) ? it->second : nullptr;
 }
 
-const std::vector<KeyFrame*>& Map::keyframes() const { return impl_->kf_vec; }
+const std::set<KeyFrame*>& Map::keyframes() const { return impl->keyframes; }
+int Map::numKeyframes() const { return (int)impl->keyframes.size(); }
 
-int Map::numKeyframes() const { return (int)impl_->kf_vec.size(); }
+// Map points
 
-int Map::addMapPoint(MapPoint& mp)
+MapPoint* Map::addMapPoint(MapPoint* mp)
 {
-    if (mp.id < 0)
-        mp.id = impl_->next_mp_id++;
-    MapPoint* ptr = new MapPoint(mp);
-    impl_->mp_vec.push_back(ptr);
-    impl_->mp_map[ptr->id] = ptr;
-    mp.id = ptr->id;
-    return ptr->id;
+    CV_Assert(mp);
+    if (mp->id < 0)
+        mp->id = impl->nextMpId++;
+    else if (mp->id >= impl->nextMpId)
+        impl->nextMpId = mp->id + 1;
+    impl->mapPoints.insert(mp);
+    impl->mpIndex[mp->id] = mp;
+    return mp;
 }
 
-MapPoint* Map::getMapPoint(int id)
+MapPoint* Map::getMapPoint(int id) const
 {
-    auto it = impl_->mp_map.find(id);
-    return it != impl_->mp_map.end() ? it->second : nullptr;
+    auto it = impl->mpIndex.find(id);
+    return (it != impl->mpIndex.end()) ? it->second : nullptr;
 }
 
-std::vector<MapPoint*> Map::mapPoints() const
-{
-    std::vector<MapPoint*> live;
-    live.reserve(impl_->mp_vec.size());
-    for (MapPoint* mp : impl_->mp_vec)
-        if (mp && !mp->bad)
-            live.push_back(mp);
-    return live;
-}
+const std::set<MapPoint*>& Map::mapPoints() const { return impl->mapPoints; }
+int Map::numMapPoints() const { return (int)impl->mapPoints.size(); }
 
-int Map::numMapPoints() const
-{
-    int n = 0;
-    for (const MapPoint* mp : impl_->mp_vec)
-        if (mp && !mp->bad) ++n;
-    return n;
-}
+// Observations
 
-void Map::addObservation(KeyFrame* kf, int kp_idx, MapPoint* mp)
+void Map::addObservation(KeyFrame* kf, size_t kpIdx, MapPoint* mp)
 {
     CV_Assert(kf && mp);
-    mp->observations[kf] = kp_idx;
-    if (kp_idx < (int)kf->mappoints.size())
-        kf->mappoints[kp_idx] = mp;
-    if (kp_idx < (int)kf->kpt_to_mp.size())
-        kf->kpt_to_mp[kp_idx] = mp->id;
+    CV_Assert(kpIdx < kf->mapPoints.size());
+    if (kf->mapPoints[kpIdx] != nullptr) return;
+    kf->mapPoints[kpIdx] = mp;
+    mp->observations[kf] = kpIdx;
 }
 
-void Map::removeMapPoint(int mp_id)
+void Map::removeObservation(KeyFrame* kf, MapPoint* mp)
 {
-    MapPoint* mp = getMapPoint(mp_id);
-    if (!mp || mp->bad) return;
-    for (auto& [obs_kf, kp_idx] : mp->observations)
-    {
-        if (!obs_kf) continue;
-        if (kp_idx < (int)obs_kf->mappoints.size()) obs_kf->mappoints[kp_idx] = nullptr;
-        if (kp_idx < (int)obs_kf->kpt_to_mp.size()) obs_kf->kpt_to_mp[kp_idx] = -1;
-    }
-    mp->observations.clear();
-    mp->bad = true;
+    if (!kf || !mp) return;
+    auto it = mp->observations.find(kf);
+    if (it == mp->observations.end()) return;
+    size_t kpIdx = it->second;
+    if (kpIdx < kf->mapPoints.size())
+        kf->mapPoints[kpIdx] = nullptr;
+    mp->observations.erase(it);
 }
 
-void Map::appendPose(const Matx44d& T_cw) { impl_->trajectory.push_back(T_cw); }
+void Map::removeMapPoint(MapPoint* mp)
+{
+    if (!mp) return;
+    for (auto& [kf, kpIdx] : mp->observations)
+        if (kpIdx < kf->mapPoints.size())
+            kf->mapPoints[kpIdx] = nullptr;
+    impl->mapPoints.erase(mp);
+    impl->mpIndex.erase(mp->id);
+    delete mp;
+}
 
-const std::vector<Matx44d>& Map::trajectory() const { return impl_->trajectory; }
+// Reference / current keyframes
+
+void Map::setRefKeyframe(KeyFrame* kf) { impl->refKf = kf; }
+KeyFrame* Map::getRefKeyframe() const { return impl->refKf; }
+
+void Map::setCurrentKeyframe(KeyFrame* kf) { impl->currentKf = kf; }
+KeyFrame* Map::getCurrentKeyframe() const { return impl->currentKf; }
+
+// Trajectory
+
+void Map::appendPose(const Matx44d& T_cw) { impl->trajectory.push_back(T_cw); }
+const std::vector<Matx44d>& Map::trajectory() const { return impl->trajectory; }
+
+// Lifecycle
 
 void Map::clear()
 {
-    for (KeyFrame* kf : impl_->kf_vec) delete kf;
-    for (MapPoint* mp : impl_->mp_vec) delete mp;
-    impl_->kf_vec.clear();
-    impl_->mp_vec.clear();
-    impl_->kf_map.clear();
-    impl_->mp_map.clear();
-    impl_->trajectory.clear();
-    impl_->next_kf_id = 0;
-    impl_->next_mp_id = 0;
+    for (KeyFrame* kf : impl->keyframes) delete kf;
+    for (MapPoint* mp : impl->mapPoints) delete mp;
+    impl->keyframes.clear();
+    impl->mapPoints.clear();
+    impl->kfIndex.clear();
+    impl->mpIndex.clear();
+    impl->refKf = nullptr;
+    impl->currentKf = nullptr;
+    impl->trajectory.clear();
+    impl->nextKfId = 0;
+    impl->nextMpId = 0;
 }
 
 }} // namespace cv::slam

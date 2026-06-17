@@ -1,70 +1,70 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
-
+// Copyright (C) 2026, BigVision LLC, all rights reserved.
+// Third party copyrights are property of their respective owners.
 
 #ifndef OPENCV_SLAM_TYPES_HPP
 #define OPENCV_SLAM_TYPES_HPP
 
-#include <opencv2/core.hpp>
+#include "opencv2/core.hpp"
+#include "opencv2/core/types.hpp"
+
 #include <map>
 #include <vector>
 
-namespace cv { namespace slam {
+namespace cv {
+namespace slam {
 
-/** @brief Current state of the VisualOdometry pipeline.
-    @ingroup slam_odometry
-*/
+//! @addtogroup slam
+//! @{
+
+// Pipeline lifecycle state
 enum OdometryState
 {
-    NOT_INITIALIZED = 0, //!< No frames processed yet.
-    INITIALIZING    = 1, //!< Reference frame set; waiting for bootstrap.
-    TRACKING        = 2  //!< Map initialised; localising via PnP.
-};
-
-/** @brief Feature data for one image frame.
-    @ingroup slam_odometry
-*/
-struct CV_EXPORTS_W_SIMPLE FrameFeatures
-{
-    std::vector<KeyPoint> keypoints;
-    Mat                   descriptors;
-    Size                  imageSize;
+    NOT_INITIALIZED = 0,
+    INITIALIZING = 1,
+    TRACKING = 2
 };
 
 struct MapPoint;
 struct KeyFrame;
 
-/** @brief A triangulated 3-D landmark owned by Map.
-    @ingroup slam_odometry
-*/
-struct CV_EXPORTS_W_SIMPLE MapPoint
+// 3D landmark, owned by Map
+struct CV_EXPORTS MapPoint
 {
-    int     id  = -1;
-    Point3d pos;
-    bool    bad = false;
+    int id = -1;
+    Point3d pos { 0, 0, 0 };
+    Mat refDesc;
 
-    std::map<KeyFrame*, int> observations; //!< Observing keyframe → keypoint index.
+    std::map<KeyFrame*, size_t> observations; // kf -> keypoint index
+
+    int visibleCount = 0;
+    int foundCount = 0;
+    bool bad = false; // soft-delete; check before use
 };
 
-/** @brief A frame whose pose has been committed to the map.
-    @ingroup slam_odometry
-*/
-struct CV_EXPORTS_W_SIMPLE KeyFrame
+// Keyframe: pose + keypoints + covisibility graph, owned by Map
+struct CV_EXPORTS KeyFrame
 {
-    int     id = -1;
-    Matx44d pose_cw; //!< World-to-camera transform (row-major 4x4).
+    int id = -1;
+    Matx44d poseCw = Matx44d::eye(); // world->camera
 
     std::vector<KeyPoint> keypoints;
-    Mat                   descriptors;
-    std::vector<Point2f>  undist_kpts;
-    Size                  imageSize;
+    Mat descriptors;
+    std::vector<Point2f> undistKpts; // parallel to keypoints
+    Size imageSize;
 
-    std::vector<int>       kpt_to_mp;  //!< Map-point id per keypoint, -1 if unmatched.
-    std::vector<MapPoint*> mappoints;  //!< Direct pointer per keypoint, nullptr if unmatched.
+    std::vector<MapPoint*> mapPoints; // parallel to keypoints; null = unmatched
 
-    std::vector<std::pair<KeyFrame*, int>> ordered_covisibility; //!< Neighbours by shared point count.
+    std::map<KeyFrame*, int> covisibility;
+    std::vector<std::pair<KeyFrame*, int>> orderedCovisibility; // sorted descending by count
+
+    KeyFrame* parent = nullptr;
+    Mat globalDesc;
 };
+
+//! @}
 
 }} // namespace cv::slam
 

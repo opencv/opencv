@@ -4,10 +4,10 @@
 // Copyright (C) 2026, BigVision LLC, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-#ifndef OPENCV_SLAM_PERF_PRECOMP_HPP
-#define OPENCV_SLAM_PERF_PRECOMP_HPP
+// Compatibility shim: prefer #include <opencv2/slam.hpp>.
+#ifndef OPENCV_SLAM_SLAM_HPP
+#define OPENCV_SLAM_SLAM_HPP
 
-#include "opencv2/ts.hpp"
 #include "opencv2/slam.hpp"
 
 #endif
