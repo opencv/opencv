@@ -595,7 +595,7 @@ void sqrt64f(const double* src, double* dst, int len)
 // Workaround for ICE in MSVS 2015 update 3 (issue #7795)
 // CV_AVX is not used here, because generated code is faster in non-AVX mode.
 // (tested with disabled IPP on i5-6300U)
-#if (defined _MSC_VER && _MSC_VER >= 1900) || defined(__EMSCRIPTEN__)
+#if (defined _MSC_VER && _MSC_VER >= 1900 && (defined(_M_IX86) || defined(_M_X64))) || defined(__EMSCRIPTEN__)
 void exp32f(const float *src, float *dst, int n)
 {
     CV_INSTRUMENT_REGION();
