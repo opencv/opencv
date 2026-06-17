@@ -9,6 +9,7 @@
 #include <dlfcn.h>      // dlopen, dlsym, dlclose
 #include <mutex>        // std::once_flag, std::call_once
 #include <string>
+#include <cstring>      // memcpy
 #include <cstdlib>      // getenv
 
 namespace cv { namespace hal {
@@ -86,3 +87,33 @@ static BackendPluginInitializer g_backendPluginInit;
 } // anonymous namespace
 
 }} // cv::hal
+
+// Python-friendly bridge so cv2 can create/read GPU-HAL-resident UMats.
+namespace cv {
+
+UMat gpuUpload(InputArray _src)
+{
+    hal::Backend* b = hal::findBackend();
+    CV_Assert(b && b->allocator() && "no GPU backend / allocator registered");
+    Mat src = _src.getMat();
+    CV_Assert(src.isContinuous());
+    MatAllocator* a = b->allocator();
+    UMat u;
+    u.allocator = a;
+    u.create(src.rows, src.cols, src.type());
+    a->map(u.u, ACCESS_WRITE);
+    std::memcpy(u.u->data, src.data, u.u->size);
+    a->unmap(u.u);                                  // host -> device
+    return u;
+}
+
+void gpuDownload(InputArray _src, OutputArray _dst)
+{
+    UMat u = _src.getUMat();
+    CV_Assert(u.u && u.u->currAllocator);
+    const_cast<MatAllocator*>(u.u->currAllocator)->map(u.u, ACCESS_READ);  // device -> host
+    Mat hdr(u.rows, u.cols, u.type(), u.u->data, u.step[0]);
+    hdr.copyTo(_dst);
+}
+
+} // namespace cv
