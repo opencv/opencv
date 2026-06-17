@@ -116,10 +116,7 @@ template <typename ET, typename FT, int n, bool mulall, int cncnt> struct hline
         hlineResize<ET, FT, n, mulall>(src, cn, ofst, m, dst, dst_min, dst_max, dst_width);
     }
 };
-// Collapses the four hand-unrolled hline<…,2,true,cncnt> specializations into one:
-// the channel loop is bounded by the compile-time cncnt so it unrolls, and the
-// per-output expression m[0]*px[c] + m[1]*px[c+cncnt] is byte-identical to the
-// originals (interior reads from px = src + cncnt*ofst[i]).
+// Merges the four hand-unrolled hline<…,2,true,cncnt> specializations; compile-time cncnt unrolls the channel loop to byte-identical code.
 template <typename ET, typename FT, int cncnt> struct hline<ET, FT, 2, true, cncnt>
 {
     static void ResizeCn(ET* src, int, int *ofst, FT* m, FT* dst, int dst_min, int dst_max, int dst_width)
@@ -3788,3 +3785,4 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
 
     hal::resize(src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows, inv_scale_x, inv_scale_y, interpolation);
 }
+
