@@ -384,9 +384,10 @@ static Mat _extractCellPixelRatio(InputArray _image, const vector<Point2f>& corn
 
 /**
   * @brief Return number of erroneous bits in border.
-  * A border cell is erroneous when:
-  *     (cellPixelRatio > validBitIdThreshold -> borderErrors) for black borders
-  *     (1 - cellPixelRatio > validBitIdThreshold -> invBorderErrors) for white borders (inverted markers)
+  *
+  * Black border error if cellPixelRatio > validBitIdThreshold -> borderErrors
+  * White border error if 1 - cellPixelRatio > validBitIdThreshold
+  * <=>  cellPixelRatio < 1 - validBitIdThreshold) -> invBorderErrors (inverted markers)
   */
 static void _getBorderErrors(const Mat &cellPixelRatio, int markerSize, int borderSize, float validBitIdThreshold,
     int &borderErrors, int &invBorderErrors) {
@@ -396,10 +397,11 @@ static void _getBorderErrors(const Mat &cellPixelRatio, int markerSize, int bord
     CV_Assert(markerSize > 0 && cellPixelRatio.cols == sizeWithBorders && cellPixelRatio.rows == sizeWithBorders);
 
     // Get border error. cellPixelRatio has the opposite color as the borders.
+    const float invThreshold = 1.f - validBitIdThreshold;
     borderErrors = invBorderErrors = 0;
     const auto countCell = [&](float ratio) {
         if(ratio > validBitIdThreshold) borderErrors++;
-        if(1.f - ratio > validBitIdThreshold) invBorderErrors++;
+        if(ratio < invThreshold) invBorderErrors++;
     };
     for(int y = 0; y < sizeWithBorders; y++) {
         const float* row = cellPixelRatio.ptr<float>(y);
