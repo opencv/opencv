@@ -244,10 +244,15 @@ void UMat::convertTo(OutputArray dst, int type_, double alpha, double beta) cons
 #ifdef HAVE_METAL
     if (metal::haveMetal() && dims <= 2 && dst.isUMat())
     {
-        dst.createSameSize(*this, CV_MAKETYPE(ddepth, channels()));
+        UMat src = *this;  // Preserve source data for in-place conversion fallback.
+        dst.createSameSize(src, CV_MAKETYPE(ddepth, channels()));
         UMat mdst = dst.getUMat();
-        if (metal::convertTo(*this, mdst, ddepth, alpha, beta))
+        if (metal::convertTo(src, mdst, ddepth, alpha, beta))
             return;
+
+        Mat m = src.getMat(ACCESS_READ);
+        m.convertTo(dst, type_, alpha, beta);
+        return;
     }
 #endif
 

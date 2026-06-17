@@ -1189,6 +1189,42 @@ TEST(Core_Metal_UMat, ConvertToUnsupportedFallback)
     EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
 }
 
+TEST(Core_Metal_UMat, ConvertToInPlace)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src8u(23, 29, CV_8UC3);
+    randu(src8u, 0, 255);
+
+    Mat expected32f;
+    src8u.convertTo(expected32f, CV_32F, 0.5, -3.0);
+
+    UMat actual32f;
+    src8u.copyTo(actual32f);
+    actual32f.convertTo(actual32f, CV_32F, 0.5, -3.0);
+
+    Mat dst32f;
+    actual32f.copyTo(dst32f);
+
+    EXPECT_LE(cvtest::norm(dst32f, expected32f, NORM_INF), 0);
+
+    Mat src32f(3, 4, CV_32FC1);
+    randu(src32f, -1.0f, 1.0f);
+
+    Mat expected64f;
+    src32f.convertTo(expected64f, CV_64F);
+
+    UMat actual64f;
+    src32f.copyTo(actual64f);
+    actual64f.convertTo(actual64f, CV_64F);
+
+    Mat dst64f;
+    actual64f.copyTo(dst64f);
+
+    EXPECT_LE(cvtest::norm(dst64f, expected64f, NORM_INF), 0);
+}
+
 TEST(Core_Metal_UMat, SetTo8U)
 {
     if (!cv::metal::haveMetal())
