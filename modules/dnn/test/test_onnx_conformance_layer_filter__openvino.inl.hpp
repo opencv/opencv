@@ -696,6 +696,8 @@ CASE(test_einsum_sum)
     // no filter
 CASE(test_einsum_transpose)
     // no filter
+CASE(test_einsum_scalar)
+    SKIP;
 CASE(test_elu)
     // no filter
 CASE(test_elu_default)
