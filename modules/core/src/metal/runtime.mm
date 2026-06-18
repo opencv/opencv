@@ -6,6 +6,7 @@
 #include "opencv2/core/utils/configuration.private.hpp"
 
 #include <list>
+#include <TargetConditionals.h>
 
 #ifdef HAVE_METAL
 
@@ -36,7 +37,7 @@ public:
     }
 
     MetalBuffer* allocate(const std::shared_ptr<MetalContext>& ctx, size_t size,
-                          MTLResourceOptions storageOptions, bool hostVisible)
+                          MTLResourceOptions storageOptions, MetalStorageKind storageKind)
     {
         AutoLock lock(mutex_);
         size_t capacity = alignSize(size, (int)allocationGranularity(size));
@@ -60,7 +61,7 @@ public:
         id<MTLBuffer> buffer = [ctx->device() newBufferWithLength:capacity options:storageOptions];
         if (!buffer)
             return NULL;
-        return new MetalBuffer(buffer, capacity, hostVisible, storageOptions);
+        return new MetalBuffer(buffer, capacity, storageKind, storageOptions);
     }
 
     void release(MetalBuffer* buffer)
@@ -149,8 +150,9 @@ MetalBufferPool& getMetalBufferPool()
 
 } // namespace
 
-MetalBuffer::MetalBuffer(id<MTLBuffer> buffer_, size_t size_, bool hostVisible_, MTLResourceOptions storageOptions_)
-    : buffer(buffer_), size(size_), hostVisible(hostVisible_), storageOptions(storageOptions_)
+MetalBuffer::MetalBuffer(id<MTLBuffer> buffer_, size_t size_, MetalStorageKind storageKind_, MTLResourceOptions storageOptions_)
+    : buffer(buffer_), size(size_), storageKind(storageKind_),
+      hostVisible(storageKind_ != METAL_STORAGE_PRIVATE), storageOptions(storageOptions_)
 {
 }
 
@@ -204,23 +206,51 @@ uchar* getContents(UMatData* u)
     return b && b->hostVisible ? static_cast<uchar*>([b->buffer contents]) : NULL;
 }
 
-MTLResourceOptions getStorageOptions(UMatUsageFlags usageFlags, bool& hostVisible)
+static bool shouldUseManagedStorage(const std::shared_ptr<MetalContext>& ctx, UMatUsageFlags usageFlags)
+{
+#if TARGET_OS_OSX
+    if ((usageFlags & USAGE_ALLOCATE_SHARED_MEMORY) != 0)
+        return false;
+
+    bool hasUnifiedMemory = false;
+    if (@available(macOS 10.15, *))
+    {
+        hasUnifiedMemory = [ctx->device() hasUnifiedMemory];
+    }
+
+    return !hasUnifiedMemory;
+#else
+    CV_UNUSED(ctx);
+    CV_UNUSED(usageFlags);
+    return false;
+#endif
+}
+
+MTLResourceOptions getStorageOptions(const std::shared_ptr<MetalContext>& ctx, UMatUsageFlags usageFlags, MetalStorageKind& storageKind)
 {
     if ((usageFlags & USAGE_ALLOCATE_DEVICE_MEMORY) != 0 &&
         (usageFlags & (USAGE_ALLOCATE_HOST_MEMORY | USAGE_ALLOCATE_SHARED_MEMORY)) == 0)
     {
-        hostVisible = false;
+        storageKind = METAL_STORAGE_PRIVATE;
         return MTLResourceStorageModePrivate;
     }
 
-    hostVisible = true;
+#if TARGET_OS_OSX
+    if (shouldUseManagedStorage(ctx, usageFlags))
+    {
+        storageKind = METAL_STORAGE_MANAGED;
+        return MTLResourceStorageModeManaged;
+    }
+#endif
+
+    storageKind = METAL_STORAGE_SHARED;
     return MTLResourceStorageModeShared;
 }
 
 MetalBuffer* allocateBuffer(const std::shared_ptr<MetalContext>& ctx, size_t size,
-                            MTLResourceOptions storageOptions, bool hostVisible)
+                            MTLResourceOptions storageOptions, MetalStorageKind storageKind)
 {
-    return getMetalBufferPool().allocate(ctx, size, storageOptions, hostVisible);
+    return getMetalBufferPool().allocate(ctx, size, storageOptions, storageKind);
 }
 
 void releaseBuffer(MetalBuffer* buffer)
@@ -237,6 +267,46 @@ bool isHostVisible(UMatData* u)
 {
     MetalBuffer* b = getBuffer(u);
     return b && b->hostVisible;
+}
+
+bool isManagedStorage(UMatData* u)
+{
+    MetalBuffer* b = getBuffer(u);
+    return b && b->storageKind == METAL_STORAGE_MANAGED;
+}
+
+void synchronizeForCpuRead(UMatData* u)
+{
+#if TARGET_OS_OSX
+    MetalBuffer* b = getBuffer(u);
+    if (!b || b->storageKind != METAL_STORAGE_MANAGED)
+        return;
+
+    std::shared_ptr<MetalContext> ctx = std::static_pointer_cast<MetalContext>(u->allocatorContext);
+    CV_Assert(ctx && ctx->valid());
+
+    id<MTLCommandBuffer> commandBuffer = [ctx->queue() commandBuffer];
+    id<MTLBlitCommandEncoder> blit = [commandBuffer blitCommandEncoder];
+    [blit synchronizeResource:b->buffer];
+    [blit endEncoding];
+    [commandBuffer commit];
+    [commandBuffer waitUntilCompleted];
+#else
+    CV_UNUSED(u);
+#endif
+}
+
+void notifyCpuWrite(UMatData* u)
+{
+#if TARGET_OS_OSX
+    MetalBuffer* b = getBuffer(u);
+    if (!b || b->storageKind != METAL_STORAGE_MANAGED)
+        return;
+
+    [b->buffer didModifyRange:NSMakeRange(0, u->size)];
+#else
+    CV_UNUSED(u);
+#endif
 }
 
 id<MTLBuffer> newSharedBuffer(const std::shared_ptr<MetalContext>& ctx, size_t size)
@@ -267,6 +337,7 @@ void downloadToHost(UMatData* u, void* dst)
 
     if (b->hostVisible)
     {
+        synchronizeForCpuRead(u);
         memcpy(dst, [b->buffer contents], u->size);
         return;
     }
@@ -289,6 +360,7 @@ void uploadFromHost(UMatData* u, const void* src)
     if (b->hostVisible)
     {
         memcpy([b->buffer contents], src, u->size);
+        notifyCpuWrite(u);
         return;
     }
 

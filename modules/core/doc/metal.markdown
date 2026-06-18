@@ -39,7 +39,7 @@ a small set of common 2D operations.
 | Area | Supported path | Current limits |
 | ---- | -------------- | -------------- |
 | Allocation | `cv::UMat` allocation through the Metal allocator | Apple Metal device required |
-| Host transfer | `Mat -> UMat`, `UMat -> Mat`, map/unmap | Managed storage is not implemented |
+| Host transfer | `Mat -> UMat`, `UMat -> Mat`, map/unmap | Managed storage follows macOS synchronization rules |
 | Device copy | `UMat -> UMat`, including ROI copies | Non-continuous copies may use staging |
 | `copyTo` | Unmasked blit copy and masked 2D copy | Masked path supports current Metal kernel limits |
 | `setTo` | Scalar fill with optional mask | 2D supported types/channels only |
@@ -52,12 +52,17 @@ a small set of common 2D operations.
 ## Memory Mapping Contract
 
 The Metal allocator keeps the existing `cv::UMat` map/unmap contract while
-selecting Metal storage by `UMatUsageFlags`:
+selecting Metal storage by `UMatUsageFlags` and device memory topology:
 
 - `USAGE_DEFAULT`, `USAGE_ALLOCATE_HOST_MEMORY`, and
-  `USAGE_ALLOCATE_SHARED_MEMORY` allocate host-visible shared Metal buffers.
-  `UMat::getMat()` maps these buffers directly through the Metal buffer
-  contents pointer.
+  `USAGE_ALLOCATE_SHARED_MEMORY` allocate host-visible Metal buffers.
+  `UMat::getMat()` maps these buffers through the Metal buffer contents
+  pointer.
+- On macOS devices without unified memory, default host-visible allocations use
+  `MTLStorageModeManaged`. CPU reads are synchronized with
+  `synchronizeResource:`, and CPU writes are published with `didModifyRange:`.
+- Explicit `USAGE_ALLOCATE_SHARED_MEMORY` requests still use
+  `MTLStorageModeShared`.
 - `USAGE_ALLOCATE_DEVICE_MEMORY` allocates private Metal buffers. Private
   buffers are not CPU-addressable, so `UMat::getMat()` exposes a CPU staging
   buffer instead.
@@ -67,10 +72,8 @@ selecting Metal storage by `UMatUsageFlags`:
   `UMat::unmap()` uploads the staging buffer back to the private Metal buffer
   when the mapped host data was modified.
 
-`MTLStorageModeManaged` is intentionally not used yet. Supporting managed
-storage for discrete-GPU macOS configurations will require explicit
-`didModifyRange:` and `synchronizeResource:` handling around CPU and GPU
-visibility transitions.
+The managed-storage path is selected only where Metal exposes it. Apple
+platforms without managed storage continue to use shared or private storage.
 
 ## Testing
 

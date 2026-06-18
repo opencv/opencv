@@ -30,9 +30,9 @@ public:
         }
 
         std::shared_ptr<MetalContext> ctx = getMetalContext();
-        bool hostVisible = true;
-        MTLResourceOptions storageOptions = getStorageOptions(usageFlags, hostVisible);
-        MetalBuffer* buffer = allocateBuffer(ctx, total, storageOptions, hostVisible);
+        MetalStorageKind storageKind = METAL_STORAGE_SHARED;
+        MTLResourceOptions storageOptions = getStorageOptions(ctx, usageFlags, storageKind);
+        MetalBuffer* buffer = allocateBuffer(ctx, total, storageOptions, storageKind);
         if (!buffer)
             return Mat::getDefaultAllocator()->allocate(dims, sizes, type, data, step, ACCESS_RW, USAGE_DEFAULT);
 
@@ -56,9 +56,9 @@ public:
         CV_Assert(u->origdata != NULL);
 
         std::shared_ptr<MetalContext> ctx = getMetalContext();
-        bool hostVisible = true;
-        MTLResourceOptions storageOptions = getStorageOptions(usageFlags, hostVisible);
-        MetalBuffer* buffer = allocateBuffer(ctx, u->size, storageOptions, hostVisible);
+        MetalStorageKind storageKind = METAL_STORAGE_SHARED;
+        MTLResourceOptions storageOptions = getStorageOptions(ctx, usageFlags, storageKind);
+        MetalBuffer* buffer = allocateBuffer(ctx, u->size, storageOptions, storageKind);
         if (!buffer)
             return false;
 
@@ -119,6 +119,10 @@ public:
             CV_Assert(u->mapcount++ == 0);
             if (isHostVisible(u))
             {
+                if (isManagedStorage(u) && u->hostCopyObsolete())
+                    synchronizeForCpuRead(u);
+                else if (!!(accessFlags & ACCESS_READ) && u->hostCopyObsolete())
+                    synchronizeForCpuRead(u);
                 u->data = getContents(u);
             }
             else
@@ -149,6 +153,10 @@ public:
             if (!isHostVisible(u) && u->deviceCopyObsolete())
             {
                 uploadFromHost(u, u->data);
+            }
+            else if (isManagedStorage(u) && u->deviceCopyObsolete())
+            {
+                notifyCpuWrite(u);
             }
             u->markDeviceMemMapped(false);
             u->markDeviceCopyObsolete(false);
@@ -182,6 +190,7 @@ public:
         id<MTLBuffer> staging = nil;
         if (isHostVisible(u))
         {
+            synchronizeForCpuRead(u);
             u->data = getContents(u);
         }
         else
@@ -211,6 +220,8 @@ public:
         std::shared_ptr<MetalContext> ctx;
         if (isHostVisible(u))
         {
+            if (isManagedStorage(u) && u->hostCopyObsolete())
+                synchronizeForCpuRead(u);
             u->data = getContents(u);
         }
         else
@@ -227,6 +238,10 @@ public:
         {
             blitCopy(ctx, staging, 0, getBuffer(u)->buffer, 0, u->size);
             [staging release];
+        }
+        else if (isManagedStorage(u))
+        {
+            notifyCpuWrite(u);
         }
         u->data = oldData;
         u->markDeviceCopyObsolete(false);
@@ -260,6 +275,7 @@ public:
 
             if (isHostVisible(src))
             {
+                synchronizeForCpuRead(src);
                 src->data = getContents(src);
             }
             else
@@ -274,6 +290,7 @@ public:
 
             if (isHostVisible(dst))
             {
+                synchronizeForCpuRead(dst);
                 dst->data = getContents(dst);
             }
             else
@@ -290,6 +307,10 @@ public:
             {
                 blitCopy(ctx, dstStaging, 0, dstBuffer->buffer, 0, dst->size);
                 [dstStaging release];
+            }
+            else if (isManagedStorage(dst))
+            {
+                notifyCpuWrite(dst);
             }
             if (srcStaging)
                 [srcStaging release];

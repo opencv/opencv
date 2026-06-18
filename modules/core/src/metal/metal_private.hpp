@@ -19,13 +19,21 @@
 namespace cv {
 namespace metal {
 
+enum MetalStorageKind
+{
+    METAL_STORAGE_SHARED,
+    METAL_STORAGE_MANAGED,
+    METAL_STORAGE_PRIVATE
+};
+
 struct MetalBuffer
 {
-    MetalBuffer(id<MTLBuffer> buffer_, size_t size_, bool hostVisible_, MTLResourceOptions storageOptions_);
+    MetalBuffer(id<MTLBuffer> buffer_, size_t size_, MetalStorageKind storageKind_, MTLResourceOptions storageOptions_);
     ~MetalBuffer();
 
     id<MTLBuffer> buffer;
     size_t size;
+    MetalStorageKind storageKind;
     bool hostVisible;
     MTLResourceOptions storageOptions;
 };
@@ -48,11 +56,14 @@ private:
 std::shared_ptr<MetalContext> getMetalContext();
 MetalBuffer* getBuffer(UMatData* u);
 uchar* getContents(UMatData* u);
-MTLResourceOptions getStorageOptions(UMatUsageFlags usageFlags, bool& hostVisible);
-MetalBuffer* allocateBuffer(const std::shared_ptr<MetalContext>& ctx, size_t size, MTLResourceOptions storageOptions, bool hostVisible);
+MTLResourceOptions getStorageOptions(const std::shared_ptr<MetalContext>& ctx, UMatUsageFlags usageFlags, MetalStorageKind& storageKind);
+MetalBuffer* allocateBuffer(const std::shared_ptr<MetalContext>& ctx, size_t size, MTLResourceOptions storageOptions, MetalStorageKind storageKind);
 void releaseBuffer(MetalBuffer* buffer);
 BufferPoolController* getMetalBufferPoolController();
 bool isHostVisible(UMatData* u);
+bool isManagedStorage(UMatData* u);
+void synchronizeForCpuRead(UMatData* u);
+void notifyCpuWrite(UMatData* u);
 id<MTLBuffer> newSharedBuffer(const std::shared_ptr<MetalContext>& ctx, size_t size);
 void blitCopy(const std::shared_ptr<MetalContext>& ctx,
               id<MTLBuffer> src, size_t srcofs,
