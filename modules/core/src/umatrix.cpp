@@ -449,7 +449,9 @@ UMat& UMat::operator=(UMat&& m)
 }
 
 
-MatAllocator* UMat::getStdAllocator()
+namespace umat {
+
+MatAllocator* getAcceleratedAllocator()
 {
 #ifdef HAVE_METAL
     if (metal::haveMetal())
@@ -459,6 +461,26 @@ MatAllocator* UMat::getStdAllocator()
     if (ocl::useOpenCL())
         return ocl::getOpenCLAllocator();
 #endif
+    return NULL;
+}
+
+bool haveAcceleratedAllocator()
+{
+    return getAcceleratedAllocator() != NULL;
+}
+
+bool isAcceleratedAllocator(const MatAllocator* allocator)
+{
+    return allocator != NULL && allocator == getAcceleratedAllocator();
+}
+
+} // namespace umat
+
+MatAllocator* UMat::getStdAllocator()
+{
+    MatAllocator* allocator = umat::getAcceleratedAllocator();
+    if (allocator)
+        return allocator;
     return Mat::getDefaultAllocator();
 }
 
@@ -572,12 +594,8 @@ UMat Mat::getUMat(AccessFlag accessFlags, UMatUsageFlags usageFlags) const
     }
     if (u != NULL)
     {
-#ifdef HAVE_OPENCL
-        if (ocl::useOpenCL() && new_u->currAllocator == ocl::getOpenCLAllocator())
-        {
+        if (umat::isAcceleratedAllocator(new_u->currAllocator))
             CV_Assert(new_u->tempUMat());
-        }
-#endif
         CV_XADD(&(u->refcount), 1);
         CV_XADD(&(u->urefcount), 1);
     }

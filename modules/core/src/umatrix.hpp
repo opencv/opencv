@@ -6,6 +6,8 @@
 
 namespace cv {
 
+class MatAllocator;
+
 struct CV_EXPORTS UMatDataAutoLock
 {
     explicit UMatDataAutoLock(UMatData* u);
@@ -14,6 +16,14 @@ struct CV_EXPORTS UMatDataAutoLock
     UMatData* u1;
     UMatData* u2;
 };
+
+namespace umat {
+
+MatAllocator* getAcceleratedAllocator();
+bool haveAcceleratedAllocator();
+bool isAcceleratedAllocator(const MatAllocator* allocator);
+
+} // namespace umat
 
 }
 
