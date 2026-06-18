@@ -476,6 +476,42 @@ bool isAcceleratedAllocator(const MatAllocator* allocator)
 
 } // namespace umat
 
+#ifdef HAVE_METAL
+static bool metal_copyToMask(const UMat& src, OutputArray _dst, InputArray _mask)
+{
+    if (!metal::haveMetal() || !_dst.isUMat() || src.dims > 2)
+        return false;
+
+    UMatData* prevu = _dst.getUMat().u;
+    _dst.create(src.size, src.type());
+
+    UMat dst = _dst.getUMat();
+    bool haveDstUninit = prevu != dst.u;
+    return metal::copyToMask(src, _mask.getUMat(), dst, haveDstUninit);
+}
+
+static bool metal_setTo(UMat& dst, InputArray _value, InputArray _mask, bool haveMask)
+{
+    if (!metal::haveMetal() || dst.dims > 2)
+        return false;
+
+    int cn = CV_MAT_CN(dst.type());
+    Mat value = _value.getMat();
+    CV_Assert(checkScalar(value, dst.type(), _value.kind(), _InputArray::UMAT));
+    if (haveMask)
+    {
+        UMat mask = _mask.getUMat();
+        int mtype = mask.type(), mcn = CV_MAT_CN(mtype);
+        CV_Assert(mask.size() == dst.size() && (CV_MAT_DEPTH(mtype) == CV_8U ||
+                  CV_MAT_DEPTH(mtype) == CV_8S || CV_MAT_DEPTH(mtype) == CV_Bool) &&
+                  (mcn == 1 || mcn == cn));
+        return metal::setTo(dst, value, &mask);
+    }
+
+    return metal::setTo(dst, value, NULL);
+}
+#endif
+
 MatAllocator* UMat::getStdAllocator()
 {
     MatAllocator* allocator = umat::getAcceleratedAllocator();
@@ -1368,18 +1404,8 @@ void UMat::copyTo(OutputArray _dst, InputArray _mask) const
     }
 #endif
 #ifdef HAVE_METAL
-    if (metal::haveMetal() && _dst.isUMat() && dims <= 2)
-    {
-        UMatData* prevu = _dst.getUMat().u;
-        _dst.create(size, type());
-
-        UMat dst = _dst.getUMat();
-        bool haveDstUninit = prevu != dst.u;
-        if (metal::copyToMask(*this, _mask.getUMat(), dst, haveDstUninit))
-        {
-            return;
-        }
-    }
+    if (metal_copyToMask(*this, _dst, _mask))
+        return;
 #endif
     Mat src = getMat(ACCESS_READ);
     src.copyTo(_dst, _mask);
@@ -1395,7 +1421,7 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
     CV_INSTRUMENT_REGION();
 
     bool haveMask = !_mask.empty();
-#if defined(HAVE_OPENCL) || defined(HAVE_METAL)
+#ifdef HAVE_OPENCL
     int tp = type(), cn = CV_MAT_CN(tp);
 #endif
 
@@ -1448,26 +1474,8 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
     }
 #endif
 #ifdef HAVE_METAL
-    if( dims <= 2 && metal::haveMetal() )
-    {
-        Mat value = _value.getMat();
-        CV_Assert( checkScalar(value, type(), _value.kind(), _InputArray::UMAT) );
-        if( haveMask )
-        {
-            UMat mask = _mask.getUMat();
-            int mtype = mask.type(), mcn = CV_MAT_CN(mtype);
-            CV_Assert( mask.size() == size() && (CV_MAT_DEPTH(mtype) == CV_8U ||
-                       CV_MAT_DEPTH(mtype) == CV_8S || CV_MAT_DEPTH(mtype) == CV_Bool) &&
-                       (mcn == 1 || mcn == cn) );
-            if( metal::setTo(*this, value, &mask) )
-                return *this;
-        }
-        else
-        {
-            if( metal::setTo(*this, value, NULL) )
-                return *this;
-        }
-    }
+    if (metal_setTo(*this, _value, _mask, haveMask))
+        return *this;
 #endif
     Mat m = getMat(haveMask ? ACCESS_RW : ACCESS_WRITE);
     m.setTo(_value, _mask);
