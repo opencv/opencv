@@ -1612,6 +1612,32 @@ inline v_int8x32 v256_lut(const schar* tab, const v_uint8x32& idx)
 inline v_uint8x32 v_lut(const uchar* tab, const v_uint8x32& idx) { return v256_lut(tab, idx); }
 inline v_int8x32 v_lut(const schar* tab, const v_uint8x32& idx) { return v256_lut(tab, idx); }
 
+// Resize-NN: gather ushort pairs from a uchar row using byte offsets.
+// Uses the dual-gather + shuffle technique from the legacy Intel resizeNN2_AVX2 kernel.
+inline __m256i _v256_lut_u16_byteofs_ymm(const uchar* S, const int* byte_ofs)
+{
+    static const __m256i shuffle_mask = _mm256_set_epi8(15,14,11,10,13,12,9,8,7,6,3,2,5,4,1,0,
+                                                        15,14,11,10,13,12,9,8,7,6,3,2,5,4,1,0);
+    static const __m256i permute_mask = _mm256_set_epi32(7, 5, 3, 1, 6, 4, 2, 0);
+    const uchar* S2 = S - 2;
+    __m256i indices = _mm256_loadu_si256((const __m256i*)byte_ofs);
+    __m256i pixels1 = _mm256_i32gather_epi32((const int*)S, indices, 1);
+    __m256i indices2 = _mm256_loadu_si256((const __m256i*)(byte_ofs + 8));
+    __m256i pixels2 = _mm256_i32gather_epi32((const int*)S2, indices2, 1);
+    __m256i unpacked = _mm256_blend_epi16(pixels1, pixels2, 0xaa);
+    __m256i bytes_shuffled = _mm256_shuffle_epi8(unpacked, shuffle_mask);
+    return _mm256_permutevar8x32_epi32(bytes_shuffled, permute_mask);
+}
+inline v_uint16x16 v256_lut_u16_byteofs(const uchar* S, const int* byte_ofs)
+{
+    return v_reinterpret_as_u16(v_int8x32(_v256_lut_u16_byteofs_ymm(S, byte_ofs)));
+}
+inline v_uint32x8 v256_lut_u32_byteofs(const uchar* S, const int* byte_ofs)
+{
+    return v_reinterpret_as_u32(v_int32x8(_mm256_i32gather_epi32((const int*)S, _mm256_loadu_si256((const __m256i*)byte_ofs), 1)));
+}
+
+
 inline v_int16x16 v256_lut(const short* tab, const int* idx)
 {
     return v_int16x16(_mm256_setr_epi16(tab[idx[0]], tab[idx[1]], tab[idx[ 2]], tab[idx[ 3]], tab[idx[ 4]], tab[idx[ 5]], tab[idx[ 6]], tab[idx[ 7]],
