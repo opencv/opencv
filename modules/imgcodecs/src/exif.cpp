@@ -158,33 +158,47 @@ bool ExifReader::processRawProfile(const char* profile, size_t profile_len) {
 
     // skip the profile name up to the next newline
     while (src < profile_end && *src != '\n') ++src;
-    if (src >= profile_end) return false;  // name not terminated within the buffer
+    if (src >= profile_end) {  // name not terminated within the buffer
+        CV_LOG_WARNING(NULL, "Malformed raw profile, profile name is not terminated");
+        return false;
+    }
     ++src;
 
     // the length token runs up to the next newline; parse it from a bounded,
     // NUL-terminated copy (strtol handles the leading spaces of the %8lu field).
     const char* len_begin = src;
     while (src < profile_end && *src != '\n') ++src;
-    if (src >= profile_end) return false;  // length not terminated within the buffer
+    if (src >= profile_end) {  // length not terminated within the buffer
+        CV_LOG_WARNING(NULL, "Malformed raw profile, length field is not terminated");
+        return false;
+    }
     const std::string len_str(len_begin, src);
     ++src;  // 'src' now points to the hex payload
 
     char* parse_end = nullptr;
     const long declared_length = strtol(len_str.c_str(), &parse_end, 10);
-    if (parse_end == len_str.c_str() || *parse_end != '\0')
-        return false;  // not a clean decimal number
+    if (parse_end == len_str.c_str() || *parse_end != '\0') {  // not a clean decimal number
+        CV_LOG_WARNING(NULL, "Malformed raw profile, length field is not a valid number");
+        return false;
+    }
 
     // the payload starts with a 6-byte "Exif\0\0" header, so a shorter declared
     // length underflows the size and pointer handed to parseExif() below. it also
     // cannot be larger than the profile text that carries it (two hex characters
     // encode one byte), so reject an over-large value to avoid a huge speculative
     // allocation in HexStringToBytes().
-    if (declared_length < 6 || static_cast<size_t>(declared_length) > profile_len)
+    if (declared_length < 6 || static_cast<size_t>(declared_length) > profile_len) {
+        CV_LOG_WARNING(NULL, cv::format("Malformed raw profile, declared length %ld is out of range (profile size %llu)",
+            declared_length, (unsigned long long)profile_len));
         return false;
+    }
     const size_t expected_length = static_cast<size_t>(declared_length);
 
     std::string payload = HexStringToBytes(src, (size_t)(profile_end - src), expected_length);
-    if (payload.size() == 0) return false;
+    if (payload.size() == 0) {  // fewer hex bytes than the declared length
+        CV_LOG_WARNING(NULL, "Malformed raw profile, hex payload shorter than declared length");
+        return false;
+    }
 
     return parseExif((unsigned char*)payload.c_str() + 6, expected_length - 6);
 }
