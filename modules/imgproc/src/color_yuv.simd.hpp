@@ -161,9 +161,18 @@ struct RGB2YCrCb_f<float>
         v_float32 vc3 = vx_setall_f32(C3), vc4 = vx_setall_f32(C4);
         v_float32 vdelta = vx_setall_f32(delta);
         const int vsize = VTraits<v_float32>::vlanes();
-        for( ; i <= n-vsize;
+        for( ; i < n;
              i += vsize, src += vsize*scn, dst += vsize*3)
         {
+            if ( i > n - vsize ) {
+                if (i == 0 || src == dst) {
+                    break;
+                }
+                int backup = i - (n - vsize);
+                i = n - vsize;
+                src -= backup * scn;
+                dst -= backup * 3;
+            }
             v_float32 b, g, r, dummy;
             if(scn == 3)
             {
@@ -299,9 +308,18 @@ struct RGB2YCrCb_i<ushort>
         v_int32 vc4 = vx_setall_s32(C4);
         v_int32 vdd = vx_setall_s32(sdelta + descale);
 
-        for(; i <= n-vsize;
+        for(; i < n;
             i += vsize, src += vsize*scn, dst += vsize*3)
         {
+            if ( i > n - vsize ) {
+                if (i == 0 || src == dst) {
+                    break;
+                }
+                int backup = i - (n - vsize);
+                i = n - vsize;
+                src -= backup * scn;
+                dst -= backup * 3;
+            }
             v_uint16 r, g, b, a;
             if(scn == 3)
             {
@@ -437,9 +455,18 @@ struct RGB2YCrCb_i<uchar>
 
         v_int16 vdescale = vx_setall_s16(descaleShift);
 
-        for( ; i <= n-vsize;
+        for( ; i < n;
              i += vsize, src += scn*vsize, dst += 3*vsize)
         {
+            if ( i > n - vsize ) {
+                if (i == 0 || src == dst) {
+                    break;
+                }
+                int backup = i - (n - vsize);
+                i = n - vsize;
+                src -= backup * scn;
+                dst -= backup * 3;
+            }
             v_uint8 r, g, b, a;
             if(scn == 3)
             {
@@ -642,9 +669,18 @@ struct YCrCb2RGB_f<float>
         v_float32 vdelta = vx_setall_f32(delta);
         v_float32 valpha = vx_setall_f32(alpha);
         const int vsize = VTraits<v_float32>::vlanes();
-        for( ; i <= n-vsize;
+        for( ; i < n;
              i += vsize, src += vsize*3, dst += vsize*dcn)
         {
+            if ( i > n - vsize ) {
+                if (i == 0 || src == dst) {
+                    break;
+                }
+                int backup = i - (n - vsize);
+                i = n - vsize;
+                src -= backup * 3;
+                dst -= backup * dcn;
+            }
             v_float32 y, cr, cb;
             if(yuvOrder)
                 v_load_deinterleave(src, y, cb, cr);
@@ -771,9 +807,18 @@ struct YCrCb2RGB_i<uchar>
         // to fit in short by short multiplication
         v_int16 vc3 = vx_setall_s16(yuvOrder ? (short)(C3-(1 << 15)) : (short)C3);
 
-        for( ; i <= n-vsize;
+        for( ; i < n;
              i += vsize, src += 3*vsize, dst += dcn*vsize)
         {
+            if ( i > n - vsize ) {
+                if (i == 0 || src == dst) {
+                    break;
+                }
+                int backup = i - (n - vsize);
+                i = n - vsize;
+                src -= backup * 3;
+                dst -= backup * dcn;
+            }
             v_uint8 y, cr, cb;
             if(yuvOrder)
             {
@@ -920,9 +965,18 @@ struct YCrCb2RGB_i<ushort>
         // to fit in short by short multiplication
         v_int16 vc3 = vx_setall_s16(yuvOrder ? (short)(C3-(1 << 15)) : (short)C3);
         v_int32 vdescale = vx_setall_s32(descaleShift);
-        for(; i <= n-vsize;
+        for(; i < n;
             i += vsize, src += vsize*3, dst += vsize*dcn)
         {
+            if ( i > n - vsize ) {
+                if (i == 0 || src == dst) {
+                    break;
+                }
+                int backup = i - (n - vsize);
+                i = n - vsize;
+                src -= backup * 3;
+                dst -= backup * dcn;
+            }
             v_uint16 y, cr, cb;
             if(yuvOrder)
             {
