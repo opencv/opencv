@@ -3785,4 +3785,3 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
 
     hal::resize(src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows, inv_scale_x, inv_scale_y, interpolation);
 }
-
