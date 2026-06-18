@@ -498,6 +498,7 @@ PERF_TEST_P_(BinaryOpTest, transposeND_generic_keep_tail_order)
     cv::Mat b = makeTransposeNDOutput(a, order);
 
     randu(a, 0, 255);
+    declare.in(a).out(b);
 
     TEST_CYCLE() cv::transposeND(a, order, b);
 
@@ -515,6 +516,7 @@ PERF_TEST_P_(BinaryOpTest, transposeND_generic_move_tail_order)
     cv::Mat b = makeTransposeNDOutput(a, order);
 
     randu(a, 0, 255);
+    declare.in(a).out(b);
 
     TEST_CYCLE() cv::transposeND(a, order, b);
 
