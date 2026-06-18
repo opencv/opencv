@@ -47,6 +47,50 @@ TEST(Core_Metal_UMat, MapWriteDownload)
     EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
 }
 
+TEST(Core_Metal_UMat, TempMatGetUMatWriteBack)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src(17, 19, CV_8UC3, Scalar::all(0));
+
+    {
+        UMat u = src.getUMat(ACCESS_RW);
+        ASSERT_TRUE(u.u != NULL);
+        EXPECT_EQ(UMat::getStdAllocator(), u.u->currAllocator);
+        EXPECT_TRUE(u.u->tempUMat());
+        EXPECT_TRUE(u.u->tempCopiedUMat());
+
+        u.setTo(Scalar(11, 13, 17));
+    }
+
+    Mat expected(src.size(), src.type(), Scalar(11, 13, 17));
+    EXPECT_LE(cvtest::norm(src, expected, NORM_INF), 0);
+}
+
+TEST(Core_Metal_UMat, TempMatRoiGetUMatWriteBack)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat base(29, 31, CV_32FC1, Scalar::all(-1));
+    Rect roi(5, 7, 13, 11);
+
+    {
+        UMat u = base(roi).getUMat(ACCESS_RW);
+        ASSERT_TRUE(u.u != NULL);
+        EXPECT_EQ(UMat::getStdAllocator(), u.u->currAllocator);
+        EXPECT_TRUE(u.u->tempUMat());
+        EXPECT_TRUE(u.u->tempCopiedUMat());
+
+        u.setTo(Scalar(3.5));
+    }
+
+    Mat expected(base.size(), base.type(), Scalar::all(-1));
+    expected(roi).setTo(Scalar(3.5));
+    EXPECT_LE(cvtest::norm(base, expected, NORM_INF), 0);
+}
+
 TEST(Core_Metal_UMat, DeviceCopy)
 {
     if (!cv::metal::haveMetal())
