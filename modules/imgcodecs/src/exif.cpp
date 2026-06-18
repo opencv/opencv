@@ -54,34 +54,37 @@ namespace {
 namespace cv
 {
 
-static std::string HexStringToBytes(const char* hexstring, size_t expected_length);
+static std::string HexStringToBytes(const char* hexstring, size_t hexstring_len, size_t expected_length);
 
-// Converts the NULL terminated 'hexstring' which contains 2-byte character
-// representations of hex values to raw data.
+// Converts the 'hexstring' (of at most 'hexstring_len' bytes) which contains
+// 2-byte character representations of hex values to raw data.
 // 'hexstring' may contain values consisting of [A-F][a-f][0-9] in pairs,
 // e.g., 7af2..., separated by any number of newlines.
 // 'expected_length' is the anticipated processed size.
 // On success the raw buffer is returned with its length equivalent to
-// 'expected_length'. NULL is returned if the processed length is less than
-// 'expected_length' or any character aside from those above is encountered.
-// The returned buffer must be freed by the caller.
+// 'expected_length'. An empty buffer is returned if the processed length is
+// less than 'expected_length' or any character aside from those above is
+// encountered. All reads are bounded by 'hexstring_len'.
 static std::string HexStringToBytes(const char* hexstring,
-    size_t expected_length) {
+    size_t hexstring_len, size_t expected_length) {
     const char* src = hexstring;
+    const char* const src_end = hexstring + hexstring_len;
     size_t actual_length = 0;
     std::string raw_data;
     raw_data.resize(expected_length);
     char* dst = const_cast<char*>(raw_data.data());
 
-    for (; actual_length < expected_length && *src != '\0'; ++src) {
-        char* end;
+    while (actual_length < expected_length && src < src_end) {
+        if (*src == '\n') { ++src; continue; }
+        if (src + 1 >= src_end) break;  // need two characters to form a byte
         char val[3];
-        if (*src == '\n') continue;
-        val[0] = *src++;
-        val[1] = *src;
+        char* end;
+        val[0] = src[0];
+        val[1] = src[1];
         val[2] = '\0';
         *dst++ = static_cast<uint8_t>(strtol(val, &end, 16));
         if (end != val + 2) break;
+        src += 2;
         ++actual_length;
     }
 
@@ -138,37 +141,64 @@ const std::vector<unsigned char>& ExifReader::getData() const
 }
 
 bool ExifReader::processRawProfile(const char* profile, size_t profile_len) {
-    const char* src = profile;
-    char* end;
-    int expected_length;
-
     if (profile == nullptr || profile_len == 0) return false;
 
+    const char* src = profile;
+    const char* const profile_end = profile + profile_len;
+
     // ImageMagick formats 'raw profiles' as
-    // '\n<name>\n<length>(%8lu)\n<hex payload>\n'.
+    // '\n<name>\n<length>(%8lu)\n<hex payload>\n'. Every scan below is bounded by
+    // 'profile_end' so that a malformed (e.g. not NUL-terminated, or missing a
+    // newline) profile can never be read past its buffer.
     if (*src != '\n') {
-        CV_LOG_WARNING(NULL, cv::format("Malformed raw profile, expected '\\n' got '\\x%.2X'", *src));
+        CV_LOG_WARNING(NULL, cv::format("Malformed raw profile, expected '\\n' got '\\x%.2X'", (unsigned char)*src));
         return false;
     }
     ++src;
-    // skip the profile name and extract the length.
-    while (*src != '\0' && *src++ != '\n') {}
-    expected_length = static_cast<int>(strtol(src, &end, 10));
-    if (*end != '\n') {
-        CV_LOG_WARNING(NULL, cv::format("Malformed raw profile, expected '\\n' got '\\x%.2X'", *src));
+
+    // skip the profile name up to the next newline
+    while (src < profile_end && *src != '\n') ++src;
+    if (src >= profile_end) {  // name not terminated within the buffer
+        CV_LOG_WARNING(NULL, "Malformed raw profile, profile name is not terminated");
         return false;
     }
-    ++end;
+    ++src;
+
+    // the length token runs up to the next newline; parse it from a bounded,
+    // NUL-terminated copy (strtol handles the leading spaces of the %8lu field).
+    const char* len_begin = src;
+    while (src < profile_end && *src != '\n') ++src;
+    if (src >= profile_end) {  // length not terminated within the buffer
+        CV_LOG_WARNING(NULL, "Malformed raw profile, length field is not terminated");
+        return false;
+    }
+    const std::string len_str(len_begin, src);
+    ++src;  // 'src' now points to the hex payload
+
+    char* parse_end = nullptr;
+    const long declared_length = strtol(len_str.c_str(), &parse_end, 10);
+    if (parse_end == len_str.c_str() || *parse_end != '\0') {  // not a clean decimal number
+        CV_LOG_WARNING(NULL, "Malformed raw profile, length field is not a valid number");
+        return false;
+    }
 
     // the payload starts with a 6-byte "Exif\0\0" header, so a shorter declared
-    // length underflows the size and pointer handed to parseExif() below
-    if (expected_length < 6) {
+    // length underflows the size and pointer handed to parseExif() below. it also
+    // cannot be larger than the profile text that carries it (two hex characters
+    // encode one byte), so reject an over-large value to avoid a huge speculative
+    // allocation in HexStringToBytes().
+    if (declared_length < 6 || static_cast<size_t>(declared_length) > profile_len) {
+        CV_LOG_WARNING(NULL, cv::format("Malformed raw profile, declared length %ld is out of range (profile size %llu)",
+            declared_length, (unsigned long long)profile_len));
         return false;
     }
+    const size_t expected_length = static_cast<size_t>(declared_length);
 
-    // 'end' now points to the profile payload.
-    std::string payload = HexStringToBytes(end, expected_length);
-    if (payload.size() == 0) return false;
+    std::string payload = HexStringToBytes(src, (size_t)(profile_end - src), expected_length);
+    if (payload.size() == 0) {  // fewer hex bytes than the declared length
+        CV_LOG_WARNING(NULL, "Malformed raw profile, hex payload shorter than declared length");
+        return false;
+    }
 
     return parseExif((unsigned char*)payload.c_str() + 6, expected_length - 6);
 }
