@@ -61,6 +61,29 @@ opencv_test_imgproc --gtest_filter=Imgproc_Metal_Threshold.*
 Regression testing should also cover a build where Metal is disabled and an
 OpenCL-enabled build on systems with OpenCL runtime support.
 
+## Extending Metal UMat Operations
+
+New Metal UMat operations should follow the existing helper-based dispatch
+pattern:
+
+1. Keep the public API unchanged. The operation should be selected by passing
+   `cv::UMat` inputs and outputs to the regular OpenCV function.
+2. Add a private `metal_<operation>()` helper near the existing OpenCL helper or
+   CPU dispatch code. The helper should check Metal availability, UMat input and
+   output kinds, dimensions, type/channel support, mask/scalar restrictions, and
+   dry-run or automatic-mode restrictions before creating outputs.
+3. Try the Metal helper after the OpenCL dispatch point, then fall back to the
+   existing CPU path if the helper returns `false`.
+4. Keep output allocation and in-place handling compatible with the CPU path.
+   Unsupported cases must not leave partially written outputs behind.
+5. Put Metal shader code in `modules/core/src/metal/kernels/` and host-side
+   operation code in the Metal backend implementation files.
+6. Add focused Metal tests that compare the UMat result with the CPU Mat result,
+   include ROI coverage where applicable, and verify fallback behavior for at
+   least one unsupported case.
+7. Re-run the focused Metal tests, an OpenCL-configured compatibility build, and
+   a Metal-disabled build before broadening coverage.
+
 ## Sample
 
 The `samples/tapi/umat_backend.cpp` sample demonstrates the intended user model:
