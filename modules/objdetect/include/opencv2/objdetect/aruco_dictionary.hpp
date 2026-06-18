@@ -82,6 +82,14 @@ class CV_EXPORTS_W_SIMPLE Dictionary {
      * For each cell, the distance is increased when the difference between the detected
      * cell pixel ratio and the dictionary bit value is greater than `validBitIdThreshold`.
      * If `allRotations` is set, the four possible marker rotations are considered.
+     *
+     * @param onlyCellPixelRatio markerSize x markerSize matrix (CV_32FC1) holding, for each cell,
+     * the ratio of white pixels ranging from 0 to 1
+     * @param id marker id in the dictionary to compute the distance to
+     * @param allRotations if set, the four possible marker rotations are considered and the
+     * smallest distance is returned
+     * @param validBitIdThreshold maximum allowed difference between a cell pixel ratio and the
+     * dictionary bit value; cells exceeding it are counted as differing
      */
     CV_WRAP int getDistanceToId(InputArray onlyCellPixelRatio, int id, bool allRotations, float validBitIdThreshold) const;
 
