@@ -19,6 +19,8 @@ struct CV_EXPORTS UMatDataAutoLock
 
 namespace umat {
 
+bool useMetal();
+bool useOpenCL();
 MatAllocator* getAcceleratedAllocator();
 bool haveAcceleratedAllocator();
 bool isAcceleratedAllocator(const MatAllocator* allocator);

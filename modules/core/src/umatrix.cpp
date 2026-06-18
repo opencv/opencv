@@ -451,14 +451,32 @@ UMat& UMat::operator=(UMat&& m)
 
 namespace umat {
 
+bool useMetal()
+{
+#ifdef HAVE_METAL
+    return metal::haveMetal();
+#else
+    return false;
+#endif
+}
+
+bool useOpenCL()
+{
+#ifdef HAVE_OPENCL
+    return ocl::useOpenCL();
+#else
+    return false;
+#endif
+}
+
 MatAllocator* getAcceleratedAllocator()
 {
 #ifdef HAVE_METAL
-    if (metal::haveMetal())
+    if (useMetal())
         return metal::getMetalAllocator();
 #endif
 #ifdef HAVE_OPENCL
-    if (ocl::useOpenCL())
+    if (useOpenCL())
         return ocl::getOpenCLAllocator();
 #endif
     return NULL;
@@ -479,7 +497,7 @@ bool isAcceleratedAllocator(const MatAllocator* allocator)
 #ifdef HAVE_METAL
 static bool metal_copyToMask(const UMat& src, OutputArray _dst, InputArray _mask)
 {
-    if (!metal::haveMetal() || !_dst.isUMat() || src.dims > 2)
+    if (!umat::useMetal() || !_dst.isUMat() || src.dims > 2)
         return false;
 
     UMatData* prevu = _dst.getUMat().u;
@@ -492,7 +510,7 @@ static bool metal_copyToMask(const UMat& src, OutputArray _dst, InputArray _mask
 
 static bool metal_setTo(UMat& dst, InputArray _value, InputArray _mask, bool haveMask)
 {
-    if (!metal::haveMetal() || dst.dims > 2)
+    if (!umat::useMetal() || dst.dims > 2)
         return false;
 
     int cn = CV_MAT_CN(dst.type());
@@ -1127,7 +1145,7 @@ UMat UMat::diag(const UMat& d, UMatUsageFlags usageFlags)
     int len = d.rows + d.cols - 1;
 
 #ifdef HAVE_OPENCL
-    if (ocl::useOpenCL())
+    if (umat::useOpenCL())
     {
         UMat m(len, len, d.type(), usageFlags);
         if (ocl_setDiag(d, m, len))
@@ -1371,7 +1389,7 @@ void UMat::copyTo(OutputArray _dst, InputArray _mask) const
     CV_Assert( (mdepth == CV_8U || mdepth == CV_8S || mdepth == CV_Bool) && (mcn == 1 || mcn == cn) );
 
 #ifdef HAVE_OPENCL
-    if (ocl::useOpenCL() && _dst.isUMat() && dims <= 2)
+    if (umat::useOpenCL() && _dst.isUMat() && dims <= 2)
     {
         UMatData * prevu = _dst.getUMat().u;
         _dst.create( size, type() );
@@ -1427,7 +1445,7 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
 
 #ifdef HAVE_OPENCL
     int d = CV_MAT_DEPTH(tp);
-    if( dims <= 2 && cn <= 4 && CV_MAT_DEPTH(tp) < CV_64F && ocl::useOpenCL() )
+    if( dims <= 2 && cn <= 4 && CV_MAT_DEPTH(tp) < CV_64F && umat::useOpenCL() )
     {
         Mat value = _value.getMat();
         CV_Assert( checkScalar(value, type(), _value.kind(), _InputArray::UMAT) );
