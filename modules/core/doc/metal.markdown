@@ -49,6 +49,29 @@ a small set of common 2D operations.
 | Convert | `UMat::convertTo` | `CV_8U` and `CV_32F`, 1/3/4 channels |
 | Threshold | Simple `threshold` types | No masks, OTSU, TRIANGLE, or dry-run acceleration |
 
+## Memory Mapping Contract
+
+The Metal allocator keeps the existing `cv::UMat` map/unmap contract while
+selecting Metal storage by `UMatUsageFlags`:
+
+- `USAGE_DEFAULT`, `USAGE_ALLOCATE_HOST_MEMORY`, and
+  `USAGE_ALLOCATE_SHARED_MEMORY` allocate host-visible shared Metal buffers.
+  `UMat::getMat()` maps these buffers directly through the Metal buffer
+  contents pointer.
+- `USAGE_ALLOCATE_DEVICE_MEMORY` allocates private Metal buffers. Private
+  buffers are not CPU-addressable, so `UMat::getMat()` exposes a CPU staging
+  buffer instead.
+- `ACCESS_READ` and `ACCESS_RW` on private buffers download the latest device
+  contents to the staging buffer when the host copy is obsolete.
+- `ACCESS_WRITE` and `ACCESS_RW` mark the device copy obsolete while mapped.
+  `UMat::unmap()` uploads the staging buffer back to the private Metal buffer
+  when the mapped host data was modified.
+
+`MTLStorageModeManaged` is intentionally not used yet. Supporting managed
+storage for discrete-GPU macOS configurations will require explicit
+`didModifyRange:` and `synchronizeResource:` handling around CPU and GPU
+visibility transitions.
+
 ## Testing
 
 Focused Metal backend tests can be run with:
