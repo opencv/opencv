@@ -55,13 +55,6 @@ static std::string _tf(TString filename)
 
 TEST(Test_YOLO, read_yolov4_onnx)
 {
-    auto engine_forced = static_cast<cv::dnn::EngineType>(
-            cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
-    if (engine_forced == cv::dnn::ENGINE_CLASSIC)
-    {
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
-        return;
-    }
     Net net = readNet(findDataFile("dnn/yolov4.onnx", false));
     ASSERT_FALSE(net.empty());
 }
@@ -78,14 +71,6 @@ public:
                        float nmsThreshold = 0.4, bool useWinograd = true,
                        int zeroPadW = 0, Size inputSize = Size())
     {
-        auto engine_forced = static_cast<cv::dnn::EngineType>(
-                cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
-        if (engine_forced == cv::dnn::ENGINE_CLASSIC)
-        {
-            applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
-            return;
-        }
-
         checkBackend();
 
         Mat img1 = imread(_tf("dog416.png"));
