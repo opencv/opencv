@@ -1607,6 +1607,38 @@ static bool ocl_threshold( InputArray _src, OutputArray _dst, InputArray _mask, 
 }
 
 #endif
+
+#ifdef HAVE_METAL
+static bool metal_threshold(InputArray _src, OutputArray _dst,
+                            double& thresh, double maxval, int type,
+                            int automatic_thresh, bool isDisabled)
+{
+    if (isDisabled || automatic_thresh != 0 || !metal::haveMetal())
+        return false;
+    if (_src.kind() != _InputArray::UMAT || _src.dims() > 2 || !_dst.isUMat())
+        return false;
+
+    int srcType = _src.type();
+    double metalThresh = thresh;
+    double metalMaxval = maxval;
+    if (CV_MAT_DEPTH(srcType) == CV_8U)
+    {
+        metalThresh = cvFloor(metalThresh);
+        metalMaxval = saturate_cast<uchar>(cvRound(metalMaxval));
+        if (type == THRESH_TRUNC)
+            metalMaxval = metalThresh;
+    }
+
+    _dst.create(_src.size(), srcType);
+    UMat src = _src.getUMat();
+    UMat dst = _dst.getUMat();
+    if (!metal::threshold(src, dst, metalThresh, metalMaxval, type))
+        return false;
+
+    thresh = metalThresh;
+    return true;
+}
+#endif
 }
 
 double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double maxval, int type )
@@ -1625,25 +1657,8 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
     CV_Assert( automatic_thresh != (cv::THRESH_OTSU | cv::THRESH_TRIANGLE) );
 
 #ifdef HAVE_METAL
-    if (!isDisabled && automatic_thresh == 0 && metal::haveMetal() &&
-        _src.kind() == _InputArray::UMAT && _src.dims() <= 2 && _dst.isUMat())
-    {
-        int srcType = _src.type();
-        double metalThresh = thresh;
-        double metalMaxval = maxval;
-        if (CV_MAT_DEPTH(srcType) == CV_8U)
-        {
-            metalThresh = cvFloor(metalThresh);
-            metalMaxval = saturate_cast<uchar>(cvRound(metalMaxval));
-            if (type == THRESH_TRUNC)
-                metalMaxval = metalThresh;
-        }
-        _dst.create(_src.size(), srcType);
-        UMat src = _src.getUMat();
-        UMat dst = _dst.getUMat();
-        if (metal::threshold(src, dst, metalThresh, metalMaxval, type))
-            return metalThresh;
-    }
+    if (metal_threshold(_src, _dst, thresh, maxval, type, automatic_thresh, isDisabled))
+        return thresh;
 #endif
 
     Mat src = _src.getMat();
