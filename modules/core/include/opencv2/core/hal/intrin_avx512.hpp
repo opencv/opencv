@@ -1634,6 +1634,122 @@ inline v_uint8x64 v512_lut(const uchar* tab, const int* idx) { return v_reinterp
 inline v_uint8x64 v512_lut_pairs(const uchar* tab, const int* idx) { return v_reinterpret_as_u8(v512_lut_pairs((const schar *)tab, idx)); }
 inline v_uint8x64 v512_lut_quads(const uchar* tab, const int* idx) { return v_reinterpret_as_u8(v512_lut_quads((const schar *)tab, idx)); }
 
+// Byte-indexed LUT: takes v_uint8x64 byte indices instead of int* indices
+// Table must have at least 256 entries (byte indices cover 0-255)
+// VBMI path uses vpermb (register-to-register), fallback uses gather
+inline v_uint8x64 v512_lut(const uchar* tab, const v_uint8x64& idx)
+{
+#if CV_AVX_512VBMI
+    const __m512i lut0 = _mm512_loadu_si512(tab);
+    const __m512i lut1 = _mm512_loadu_si512(tab + 64);
+    const __m512i lut2 = _mm512_loadu_si512(tab + 128);
+    const __m512i lut3 = _mm512_loadu_si512(tab + 192);
+
+    __m512i idx6 = _mm512_and_si512(idx.val, _mm512_set1_epi8(0x3F));
+
+    __m512i r0 = _mm512_permutexvar_epi8(idx6, lut0);
+    __m512i r1 = _mm512_permutexvar_epi8(idx6, lut1);
+    __m512i r2 = _mm512_permutexvar_epi8(idx6, lut2);
+    __m512i r3 = _mm512_permutexvar_epi8(idx6, lut3);
+
+    __mmask64 k6 = _mm512_test_epi8_mask(idx.val, _mm512_set1_epi8(0x40));
+    __mmask64 k7 = _mm512_test_epi8_mask(idx.val, _mm512_set1_epi8((char)0x80));
+
+    __m512i low  = _mm512_mask_blend_epi8(k6, r0, r1);
+    __m512i high = _mm512_mask_blend_epi8(k6, r2, r3);
+    return v_uint8x64(_mm512_mask_blend_epi8(k7, low, high));
+#else
+    uchar CV_DECL_ALIGNED(64) indices[64], result[64];
+    _mm512_store_si512((__m512i*)indices, idx.val);
+    for (int i = 0; i < 64; i++) result[i] = tab[indices[i]];
+    return v_uint8x64(_mm512_load_si512((const __m512i*)result));
+#endif
+}
+inline v_int8x64 v512_lut(const schar* tab, const v_uint8x64& idx)
+{ return v_reinterpret_as_s8(v512_lut((const uchar *)tab, idx)); }
+
+// Universal v_lut overloads for vector byte indices (aliases to v512_lut)
+inline v_uint8x64 v_lut(const uchar* tab, const v_uint8x64& idx)
+{ return v512_lut(tab, idx); }
+
+inline v_int8x64 v_lut(const schar* tab, const v_uint8x64& idx)
+{ return v512_lut(tab, idx); }
+
+// Byte-indexed pair LUT: 32 byte indices (lower half of idx) → 32 pairs = 64 bytes
+inline v_uint8x64 v512_lut_pairs(const uchar* tab, const v_uint8x64& idx)
+{
+#if CV_AVX_512VBMI
+    const __m512i lut0 = _mm512_loadu_si512(tab);
+    const __m512i lut1 = _mm512_loadu_si512(tab + 64);
+    const __m512i lut2 = _mm512_loadu_si512(tab + 128);
+    const __m512i lut3 = _mm512_loadu_si512(tab + 192);
+
+    // Expand 32 byte indices to interleaved pairs: (i0, i0+1, i1, i1+1, ...)
+    __m512i idx16 = _mm512_cvtepu8_epi16(_mm512_castsi512_si256(idx.val));
+    __m512i idx_dup = _mm512_or_si512(idx16, _mm512_slli_epi16(idx16, 8));
+    __m512i idx_pairs = _mm512_add_epi8(idx_dup, _mm512_set1_epi16(0x0100));
+
+    __m512i idx6 = _mm512_and_si512(idx_pairs, _mm512_set1_epi8(0x3F));
+
+    __m512i r0 = _mm512_permutexvar_epi8(idx6, lut0);
+    __m512i r1 = _mm512_permutexvar_epi8(idx6, lut1);
+    __m512i r2 = _mm512_permutexvar_epi8(idx6, lut2);
+    __m512i r3 = _mm512_permutexvar_epi8(idx6, lut3);
+
+    __mmask64 k6 = _mm512_test_epi8_mask(idx_pairs, _mm512_set1_epi8(0x40));
+    __mmask64 k7 = _mm512_test_epi8_mask(idx_pairs, _mm512_set1_epi8((char)0x80));
+
+    __m512i low  = _mm512_mask_blend_epi8(k6, r0, r1);
+    __m512i high = _mm512_mask_blend_epi8(k6, r2, r3);
+    return v_uint8x64(_mm512_mask_blend_epi8(k7, low, high));
+#else
+    uchar CV_DECL_ALIGNED(64) indices[64], result[64];
+    _mm512_store_si512((__m512i*)indices, idx.val);
+    for (int i = 0; i < 64; i++) result[i] = tab[indices[i]];
+    return v_uint8x64(_mm512_load_si512((const __m512i*)result));
+#endif
+}
+inline v_int8x64 v512_lut_pairs(const schar* tab, const v_uint8x64& idx)
+{ return v_reinterpret_as_s8(v512_lut_pairs((const uchar *)tab, idx)); }
+
+// Byte-indexed quad LUT: 16 byte indices (lower 16 of idx) → 16 quads = 64 bytes
+inline v_uint8x64 v512_lut_quads(const uchar* tab, const v_uint8x64& idx)
+{
+#if CV_AVX_512VBMI
+    const __m512i lut0 = _mm512_loadu_si512(tab);
+    const __m512i lut1 = _mm512_loadu_si512(tab + 64);
+    const __m512i lut2 = _mm512_loadu_si512(tab + 128);
+    const __m512i lut3 = _mm512_loadu_si512(tab + 192);
+
+    // Expand 16 byte indices to quad offsets: (i0, i0+1, i0+2, i0+3, i1, ...)
+    __m512i idx32 = _mm512_cvtepu8_epi32(_mm512_castsi512_si128(idx.val));
+    __m512i t1 = _mm512_or_si512(idx32, _mm512_slli_epi32(idx32, 8));
+    __m512i idx_bcast = _mm512_or_si512(t1, _mm512_slli_epi32(t1, 16));
+    __m512i idx_quads = _mm512_add_epi8(idx_bcast, _mm512_set1_epi32(0x03020100));
+
+    __m512i idx6 = _mm512_and_si512(idx_quads, _mm512_set1_epi8(0x3F));
+
+    __m512i r0 = _mm512_permutexvar_epi8(idx6, lut0);
+    __m512i r1 = _mm512_permutexvar_epi8(idx6, lut1);
+    __m512i r2 = _mm512_permutexvar_epi8(idx6, lut2);
+    __m512i r3 = _mm512_permutexvar_epi8(idx6, lut3);
+
+    __mmask64 k6 = _mm512_test_epi8_mask(idx_quads, _mm512_set1_epi8(0x40));
+    __mmask64 k7 = _mm512_test_epi8_mask(idx_quads, _mm512_set1_epi8((char)0x80));
+
+    __m512i low  = _mm512_mask_blend_epi8(k6, r0, r1);
+    __m512i high = _mm512_mask_blend_epi8(k6, r2, r3);
+    return v_uint8x64(_mm512_mask_blend_epi8(k7, low, high));
+#else
+    uchar CV_DECL_ALIGNED(64) indices[64], result[64];
+    _mm512_store_si512((__m512i*)indices, idx.val);
+    for (int i = 0; i < 64; i++) result[i] = tab[indices[i]];
+    return v_uint8x64(_mm512_load_si512((const __m512i*)result));
+#endif
+}
+inline v_int8x64 v512_lut_quads(const schar* tab, const v_uint8x64& idx)
+{ return v_reinterpret_as_s8(v512_lut_quads((const uchar *)tab, idx)); }
+
 inline v_int16x32 v512_lut(const short* tab, const int* idx)
 {
     __m256i p0 = _mm512_cvtepi32_epi16(_mm512_i32gather_epi32(_mm512_loadu_si512((const __m512i*)idx    ), (const int *)tab, 2));

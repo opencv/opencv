@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html
 
 // Copyright (C) 2015, PingTouGe Semiconductor Co., Ltd., all rights reserved.
+// Copyright (C) 2026, Advanced Micro Devices, Inc., all rights reserved.
 
 #ifndef OPENCV_HAL_INTRIN_RISCVV_HPP
 #define OPENCV_HAL_INTRIN_RISCVV_HPP
@@ -1624,6 +1625,16 @@ inline v_int8x16 v_lut_quads(const schar* tab, const int* idx)
 inline v_uint8x16 v_lut(const uchar* tab, const int* idx) { return v_reinterpret_as_u8(v_lut((schar*)tab, idx)); }
 inline v_uint8x16 v_lut_pairs(const uchar* tab, const int* idx) { return v_reinterpret_as_u8(v_lut_pairs((schar*)tab, idx)); }
 inline v_uint8x16 v_lut_quads(const uchar* tab, const int* idx) { return v_reinterpret_as_u8(v_lut_quads((schar*)tab, idx)); }
+
+inline v_uint8x16 v_lut(const uchar* tab, const v_uint8x16& idx)
+{
+    uchar CV_DECL_ALIGNED(16) indices[16], result[16];
+    vse8_v_u8m1(indices, idx.val, 16);
+    for (int i = 0; i < 16; i++) result[i] = tab[indices[i]];
+    return v_uint8x16(vle8_v_u8m1(result, 16));
+}
+inline v_int8x16 v_lut(const schar* tab, const v_uint8x16& idx)
+{ return v_reinterpret_as_s8(v_lut((const uchar*)tab, idx)); }
 
 inline v_int16x8 v_lut(const short* tab, const int* idx)
 {

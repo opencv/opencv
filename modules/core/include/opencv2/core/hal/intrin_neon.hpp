@@ -14,6 +14,7 @@
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Copyright (C) 2015, Itseez Inc., all rights reserved.
+// Copyright (C) 2026, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -2369,6 +2370,48 @@ inline v_int8x16 v_lut_quads(const schar* tab, const int* idx)
 inline v_uint8x16 v_lut(const uchar* tab, const int* idx) { return v_reinterpret_as_u8(v_lut((schar*)tab, idx)); }
 inline v_uint8x16 v_lut_pairs(const uchar* tab, const int* idx) { return v_reinterpret_as_u8(v_lut_pairs((schar*)tab, idx)); }
 inline v_uint8x16 v_lut_quads(const uchar* tab, const int* idx) { return v_reinterpret_as_u8(v_lut_quads((schar*)tab, idx)); }
+
+inline v_uint8x16 v_lut(const uchar* tab, const v_uint8x16& idx)
+{
+#if CV_NEON_AARCH64
+    uint8x16_t index = idx.val;
+    uint8x16_t idx6 = vandq_u8(index, vdupq_n_u8(0x3F));
+
+    uint8x16x4_t t0, t1, t2, t3;
+    t0.val[0] = vld1q_u8(tab);       t0.val[1] = vld1q_u8(tab + 16);
+    t0.val[2] = vld1q_u8(tab + 32);  t0.val[3] = vld1q_u8(tab + 48);
+    uint8x16_t r0 = vqtbl4q_u8(t0, idx6);
+
+    t1.val[0] = vld1q_u8(tab + 64);  t1.val[1] = vld1q_u8(tab + 80);
+    t1.val[2] = vld1q_u8(tab + 96);  t1.val[3] = vld1q_u8(tab + 112);
+    uint8x16_t r1 = vqtbl4q_u8(t1, idx6);
+
+    t2.val[0] = vld1q_u8(tab + 128); t2.val[1] = vld1q_u8(tab + 144);
+    t2.val[2] = vld1q_u8(tab + 160); t2.val[3] = vld1q_u8(tab + 176);
+    uint8x16_t r2 = vqtbl4q_u8(t2, idx6);
+
+    t3.val[0] = vld1q_u8(tab + 192); t3.val[1] = vld1q_u8(tab + 208);
+    t3.val[2] = vld1q_u8(tab + 224); t3.val[3] = vld1q_u8(tab + 240);
+    uint8x16_t r3 = vqtbl4q_u8(t3, idx6);
+
+    uint8x16_t bit6 = vtstq_u8(index, vdupq_n_u8(0x40));
+    uint8x16_t low  = vbslq_u8(bit6, r1, r0);
+    uint8x16_t high = vbslq_u8(bit6, r3, r2);
+
+    uint8x16_t bit7 = vtstq_u8(index, vdupq_n_u8(0x80));
+    return v_uint8x16(vbslq_u8(bit7, high, low));
+#else
+    uchar CV_DECL_ALIGNED(16) indices[16], result[16];
+    vst1q_u8(indices, idx.val);
+    for (int i = 0; i < 16; i++) result[i] = tab[indices[i]];
+    return v_uint8x16(vld1q_u8(result));
+#endif
+}
+
+inline v_int8x16 v_lut(const schar* tab, const v_uint8x16& idx)
+{
+    return v_reinterpret_as_s8(v_lut((const uchar*)tab, idx));
+}
 
 inline v_int16x8 v_lut(const short* tab, const int* idx)
 {
