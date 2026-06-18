@@ -131,6 +131,20 @@ static bool ocl_convertTo(InputArray src_, OutputArray dst_, int ddepth, bool no
 }
 #endif
 
+#ifdef HAVE_METAL
+static bool metal_convertTo(const UMat& src, OutputArray dst, int ddepth, double alpha, double beta)
+{
+    CV_INSTRUMENT_REGION();
+
+    if (!metal::haveMetal() || src.dims > 2 || !dst.isUMat())
+        return false;
+
+    dst.createSameSize(src, CV_MAKETYPE(ddepth, src.channels()));
+    UMat mdst = dst.getUMat();
+    return metal::convertTo(src, mdst, ddepth, alpha, beta);
+}
+#endif
+
 void Mat::convertTo(OutputArray dst, int type_, double alpha, double beta) const
 {
     CV_INSTRUMENT_REGION();
@@ -241,24 +255,14 @@ void UMat::convertTo(OutputArray dst, int type_, double alpha, double beta) cons
                ocl_convertTo(*this, dst, ddepth, noScale, alpha, beta))
 #endif // HAVE_OPENCL
 
+    UMat src = *this;  // Preserve source data before backend attempts and CPU fallback.
 #ifdef HAVE_METAL
-    if (metal::haveMetal() && dims <= 2 && dst.isUMat())
-    {
-        UMat src = *this;  // Preserve source data for in-place conversion fallback.
-        dst.createSameSize(src, CV_MAKETYPE(ddepth, channels()));
-        UMat mdst = dst.getUMat();
-        if (metal::convertTo(src, mdst, ddepth, alpha, beta))
-            return;
-
-        Mat m = src.getMat(ACCESS_READ);
-        m.convertTo(dst, type_, alpha, beta);
+    if (metal_convertTo(src, dst, ddepth, alpha, beta))
         return;
-    }
 #endif
 
-    UMat src = *this;  // Fake reference to itself.
-                       // Resolves issue 8693 in case of src == dst.
-    Mat m = getMat(ACCESS_READ);
+    // Fake reference to itself. Resolves issue 8693 in case of src == dst.
+    Mat m = src.getMat(ACCESS_READ);
     m.convertTo(dst, type_, alpha, beta);
     (void)src;
 }
