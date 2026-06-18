@@ -1866,6 +1866,34 @@ struct MaskedNormDiffInf_SIMD<uchar, int> {
 };
 
 template<>
+struct MaskedNormDiffInf_SIMD<int, int> {
+    int operator()(const int* s1, const int* s2, const uchar* mask, int len, int cn) const {
+        int result = 0;
+        const int vstep = VTraits<v_int32>::vlanes();
+        if (cn == 1 && len >= vstep) {
+            // Use wrapping int subtraction (v_abs(v_sub)) to match the non-masked
+            // NormDiffInf_SIMD<int,int> kernel. v_absdiff would compute the true
+            // unsigned |a-b| which can exceed INT_MAX and overflow on the cast to int.
+            v_uint32 acc = vx_setzero_u32();
+            int i = 0;
+            for (; i <= len - vstep; i += vstep) {
+                v_uint32 ad = v_abs(v_sub(vx_load(s1 + i), vx_load(s2 + i)));
+                v_uint32 m  = v_gt(vx_load_expand_q(mask + i), vx_setzero_u32());
+                acc = v_max(acc, v_and(ad, m));
+            }
+            result = (int)v_reduce_max(acc);
+            for (; i < len; i++) if (mask[i]) result = std::max(result, (int)std::abs(s1[i] - s2[i]));
+            return result;
+        }
+        for (int i = 0; i < len; i++) if (mask[i]) {
+            const int* e1 = s1 + i*cn; const int* e2 = s2 + i*cn;
+            for (int k = 0; k < cn; k++) result = std::max(result, (int)std::abs(e1[k] - e2[k]));
+        }
+        return result;
+    }
+};
+
+template<>
 struct MaskedNormDiffL1_SIMD<uchar, int> {
     int operator()(const uchar* s1, const uchar* s2, const uchar* mask, int len, int cn) const {
         int result = 0;
@@ -1989,12 +2017,14 @@ struct MaskedNormDiffL1_SIMD<int, double> {
                 acc = v_add(acc, v_cvt_f64_high(adi));
             }
             result = v_reduce_sum(acc);
-            for (; i < len; i++) if (mask[i]) result += std::abs((double)s1[i] - (double)s2[i]);
+            // Use wrapping int subtraction to match the SIMD body (v_abs(v_sub))
+            // and the non-masked NormDiffL1_SIMD<int,double> kernel.
+            for (; i < len; i++) if (mask[i]) result += std::abs(s1[i] - s2[i]);
         }
         else {
             for (int i = 0; i < len; i++) if (mask[i]) {
                 const int* e1 = s1 + i*cn; const int* e2 = s2 + i*cn;
-                for (int k = 0; k < cn; k++) result += std::abs((double)e1[k] - (double)e2[k]);
+                for (int k = 0; k < cn; k++) result += std::abs(e1[k] - e2[k]);
             }
         }
         return result;
