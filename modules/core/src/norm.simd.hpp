@@ -1822,6 +1822,55 @@ struct MaskedNormDiffL2_SIMD {
 };
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
+// Shared scalar cn>1 fallback for masked norm-diff (RT = accumulator type).
+// Used by every SIMD specialization's multi-channel branch.
+template<typename T, typename RT>
+static inline RT maskedNormDiffL1Tail(const T* s1, const T* s2, const uchar* mask, int len, int cn, RT result) {
+    for (int i = 0; i < len; i++) if (mask[i]) {
+        const T* e1 = s1 + i*cn; const T* e2 = s2 + i*cn;
+        for (int k = 0; k < cn; k++) result += (RT)std::abs((RT)e1[k] - (RT)e2[k]);
+    }
+    return result;
+}
+template<typename T, typename RT>
+static inline RT maskedNormDiffL2Tail(const T* s1, const T* s2, const uchar* mask, int len, int cn, RT result) {
+    for (int i = 0; i < len; i++) if (mask[i]) {
+        const T* e1 = s1 + i*cn; const T* e2 = s2 + i*cn;
+        for (int k = 0; k < cn; k++) { RT v = (RT)e1[k] - (RT)e2[k]; result += v*v; }
+    }
+    return result;
+}
+
+// Shared 8-bit cn==1 masked kernels (uchar/schar): v_absdiff() yields v_uint8
+// for both, so a single typename-T body serves both depths.
+template<typename T>
+static inline int maskedNormDiffL1_8(const T* s1, const T* s2, const uchar* mask, int len) {
+    int i = 0; const int vstep = VTraits<v_uint8>::vlanes();
+    const v_uint8 one = vx_setall_u8(1);
+    v_uint32 acc = vx_setzero_u32();
+    for (; i <= len - vstep; i += vstep) {
+        v_uint8 m  = v_gt(vx_load(mask + i), vx_setzero_u8());
+        v_uint8 ad = v_and(v_absdiff(vx_load(s1 + i), vx_load(s2 + i)), m);
+        acc = v_dotprod_expand_fast(ad, one, acc); // sum of masked |diff|
+    }
+    int result = (int)v_reduce_sum(acc);
+    for (; i < len; i++) if (mask[i]) result += std::abs((int)s1[i] - (int)s2[i]);
+    return result;
+}
+template<typename T>
+static inline int maskedNormDiffL2_8(const T* s1, const T* s2, const uchar* mask, int len) {
+    int i = 0; const int vstep = VTraits<v_uint8>::vlanes();
+    v_uint32 acc = vx_setzero_u32();
+    for (; i <= len - vstep; i += vstep) {
+        v_uint8 m  = v_gt(vx_load(mask + i), vx_setzero_u8());
+        v_uint8 ad = v_and(v_absdiff(vx_load(s1 + i), vx_load(s2 + i)), m);
+        acc = v_dotprod_expand_fast(ad, ad, acc); // sum of masked diff^2
+    }
+    int result = (int)v_reduce_sum(acc);
+    for (; i < len; i++) if (mask[i]) { int v = (int)s1[i] - (int)s2[i]; result += v*v; }
+    return result;
+}
+
 template<>
 struct MaskedNormDiffInf_SIMD<uchar, int> {
     int operator()(const uchar* s1, const uchar* s2, const uchar* mask, int len, int cn) const {
@@ -1896,23 +1945,12 @@ struct MaskedNormDiffInf_SIMD<int, int> {
 template<>
 struct MaskedNormDiffL1_SIMD<uchar, int> {
     int operator()(const uchar* s1, const uchar* s2, const uchar* mask, int len, int cn) const {
-        int result = 0;
-        const v_uint8 one = vx_setall_u8(1);
-        if (cn == 1) {
+        if (cn == 1) return maskedNormDiffL1_8(s1, s2, mask, len);
+        if (cn == 4) {
+            int result = 0;
             int i = 0;
             const int vstep = VTraits<v_uint8>::vlanes();
-            v_uint32 acc = vx_setzero_u32();
-            for (; i <= len - vstep; i += vstep) {
-                v_uint8 m  = v_gt(vx_load(mask + i), vx_setzero_u8());
-                v_uint8 ad = v_and(v_absdiff(vx_load(s1 + i), vx_load(s2 + i)), m);
-                acc = v_dotprod_expand_fast(ad, one, acc); // sum of masked |diff|
-            }
-            result = (int)v_reduce_sum(acc);
-            for (; i < len; i++) if (mask[i]) result += std::abs((int)s1[i] - (int)s2[i]);
-        }
-        else if (cn == 4) {
-            int i = 0;
-            const int vstep = VTraits<v_uint8>::vlanes();
+            const v_uint8 one = vx_setall_u8(1);
             v_uint32 acc = vx_setzero_u32();
             for (; i <= len - vstep; i += vstep) {
                 v_uint8 a0,a1,a2,a3,b0,b1,b2,b3;
@@ -1929,34 +1967,18 @@ struct MaskedNormDiffL1_SIMD<uchar, int> {
                 const uchar* e1 = s1 + i*4; const uchar* e2 = s2 + i*4;
                 for (int k = 0; k < 4; k++) result += std::abs((int)e1[k] - (int)e2[k]);
             }
+            return result;
         }
-        else {
-            for (int i = 0; i < len; i++) if (mask[i]) {
-                const uchar* e1 = s1 + i*cn; const uchar* e2 = s2 + i*cn;
-                for (int k = 0; k < cn; k++) result += std::abs((int)e1[k] - (int)e2[k]);
-            }
-        }
-        return result;
+        return maskedNormDiffL1Tail<uchar, int>(s1, s2, mask, len, cn, 0);
     }
 };
 
 template<>
 struct MaskedNormDiffL2_SIMD<uchar, int> {
     int operator()(const uchar* s1, const uchar* s2, const uchar* mask, int len, int cn) const {
-        int result = 0;
-        if (cn == 1) {
-            int i = 0;
-            const int vstep = VTraits<v_uint8>::vlanes();
-            v_uint32 acc = vx_setzero_u32();
-            for (; i <= len - vstep; i += vstep) {
-                v_uint8 m  = v_gt(vx_load(mask + i), vx_setzero_u8());
-                v_uint8 ad = v_and(v_absdiff(vx_load(s1 + i), vx_load(s2 + i)), m);
-                acc = v_dotprod_expand_fast(ad, ad, acc); // sum of masked diff^2
-            }
-            result = (int)v_reduce_sum(acc);
-            for (; i < len; i++) if (mask[i]) { int v = (int)s1[i] - (int)s2[i]; result += v*v; }
-        }
-        else if (cn == 4) {
+        if (cn == 1) return maskedNormDiffL2_8(s1, s2, mask, len);
+        if (cn == 4) {
+            int result = 0;
             int i = 0;
             const int vstep = VTraits<v_uint8>::vlanes();
             v_uint32 acc = vx_setzero_u32();
@@ -1977,14 +1999,9 @@ struct MaskedNormDiffL2_SIMD<uchar, int> {
                 const uchar* e1 = s1 + i*4; const uchar* e2 = s2 + i*4;
                 for (int k = 0; k < 4; k++) { int v = (int)e1[k] - (int)e2[k]; result += v*v; }
             }
+            return result;
         }
-        else {
-            for (int i = 0; i < len; i++) if (mask[i]) {
-                const uchar* e1 = s1 + i*cn; const uchar* e2 = s2 + i*cn;
-                for (int k = 0; k < cn; k++) { int v = (int)e1[k] - (int)e2[k]; result += v*v; }
-            }
-        }
-        return result;
+        return maskedNormDiffL2Tail<uchar, int>(s1, s2, mask, len, cn, 0);
     }
 };
 
@@ -2022,10 +2039,147 @@ struct MaskedNormDiffL1_SIMD<int, double> {
             for (; i < len; i++) if (mask[i]) result += std::abs(s1[i] - s2[i]);
         }
         else {
-            for (int i = 0; i < len; i++) if (mask[i]) {
-                const int* e1 = s1 + i*cn; const int* e2 = s2 + i*cn;
-                for (int k = 0; k < cn; k++) result += std::abs(e1[k] - e2[k]);
+            result = maskedNormDiffL1Tail<int, double>(s1, s2, mask, len, cn, 0.0);
+        }
+        return result;
+    }
+};
+
+// Masked L1/L2 SIMD for the remaining depths (cn==1). Without these the masked
+// norm-diff for 8s/16u/16s/32s/32f fell back to the scalar base template, which
+// the compiler autovectorizes poorly once AVX-512 dispatch is enabled.
+template<> struct MaskedNormDiffL1_SIMD<schar, int> {
+    int operator()(const schar* s1, const schar* s2, const uchar* mask, int len, int cn) const {
+        if (cn == 1) return maskedNormDiffL1_8(s1, s2, mask, len);
+        return maskedNormDiffL1Tail<schar, int>(s1, s2, mask, len, cn, 0);
+    }
+};
+
+// Shared 16-bit masked L1 kernel (ushort/short): v_absdiff() yields v_uint16
+// for both, so a single typename-T body serves both depths.
+template<typename T>
+static inline int maskedNormDiffL1_16(const T* s1, const T* s2, const uchar* mask, int len, int cn) {
+    int result = 0;
+    if (cn == 1) {
+        int i = 0; const int vstep = VTraits<v_uint16>::vlanes();
+        v_uint32 acc = vx_setzero_u32();
+        for (; i <= len - vstep; i += vstep) {
+            v_uint16 m  = v_gt(vx_load_expand(mask + i), vx_setzero_u16());
+            v_uint16 ad = v_and(v_absdiff(vx_load(s1 + i), vx_load(s2 + i)), m);
+            v_uint32 lo, hi; v_expand(ad, lo, hi);
+            acc = v_add(acc, v_add(lo, hi));
+        }
+        result = (int)v_reduce_sum(acc);
+        for (; i < len; i++) if (mask[i]) result += std::abs((int)s1[i] - (int)s2[i]);
+    } else {
+        result = maskedNormDiffL1Tail<T, int>(s1, s2, mask, len, cn, 0);
+    }
+    return result;
+}
+template<> struct MaskedNormDiffL1_SIMD<ushort, int> {
+    int operator()(const ushort* s1, const ushort* s2, const uchar* mask, int len, int cn) const
+    { return maskedNormDiffL1_16(s1, s2, mask, len, cn); } };
+template<> struct MaskedNormDiffL1_SIMD<short, int> {
+    int operator()(const short* s1, const short* s2, const uchar* mask, int len, int cn) const
+    { return maskedNormDiffL1_16(s1, s2, mask, len, cn); } };
+
+template<>
+struct MaskedNormDiffL1_SIMD<float, double> {
+    double operator()(const float* s1, const float* s2, const uchar* mask, int len, int cn) const {
+        double result = 0.0;
+        if (cn == 1) {
+            int i = 0; const int vstep = VTraits<v_float32>::vlanes();
+            v_float64 acc0 = vx_setzero_f64(), acc1 = vx_setzero_f64();
+            for (; i <= len - vstep; i += vstep) {
+                v_float32 m  = v_reinterpret_as_f32(v_gt(vx_load_expand_q(mask + i), vx_setzero_u32()));
+                v_float32 ad = v_and(v_absdiff(vx_load(s1 + i), vx_load(s2 + i)), m);
+                acc0 = v_add(acc0, v_cvt_f64(ad));
+                acc1 = v_add(acc1, v_cvt_f64_high(ad));
             }
+            result = v_reduce_sum(v_add(acc0, acc1));
+            for (; i < len; i++) if (mask[i]) result += std::abs((double)s1[i] - (double)s2[i]);
+        } else {
+            result = maskedNormDiffL1Tail<float, double>(s1, s2, mask, len, cn, 0.0);
+        }
+        return result;
+    }
+};
+
+template<> struct MaskedNormDiffL2_SIMD<schar, int> {
+    int operator()(const schar* s1, const schar* s2, const uchar* mask, int len, int cn) const {
+        if (cn == 1) return maskedNormDiffL2_8(s1, s2, mask, len);
+        return maskedNormDiffL2Tail<schar, int>(s1, s2, mask, len, cn, 0);
+    }
+};
+
+// Shared 16-bit masked L2 kernel (ushort/short): v_absdiff() yields v_uint16
+// for both, so a single typename-T body serves both depths.
+template<typename T>
+static inline double maskedNormDiffL2_16(const T* s1, const T* s2, const uchar* mask, int len, int cn) {
+    double result = 0.0;
+    if (cn == 1) {
+        int i = 0; const int vstep = VTraits<v_uint16>::vlanes();
+        v_float64 acc = vx_setzero_f64();
+        for (; i <= len - vstep; i += vstep) {
+            v_uint16 m  = v_gt(vx_load_expand(mask + i), vx_setzero_u16());
+            v_uint16 ad = v_and(v_absdiff(vx_load(s1 + i), vx_load(s2 + i)), m);
+            v_uint64 u = v_dotprod_expand_fast(ad, ad);
+            acc = v_add(acc, v_cvt_f64(v_reinterpret_as_s64(u)));
+        }
+        result = v_reduce_sum(acc);
+        for (; i < len; i++) if (mask[i]) { double v = (double)s1[i] - (double)s2[i]; result += v*v; }
+    } else {
+        result = maskedNormDiffL2Tail<T, double>(s1, s2, mask, len, cn, 0.0);
+    }
+    return result;
+}
+template<> struct MaskedNormDiffL2_SIMD<ushort, double> {
+    double operator()(const ushort* s1, const ushort* s2, const uchar* mask, int len, int cn) const
+    { return maskedNormDiffL2_16(s1, s2, mask, len, cn); } };
+template<> struct MaskedNormDiffL2_SIMD<short, double> {
+    double operator()(const short* s1, const short* s2, const uchar* mask, int len, int cn) const
+    { return maskedNormDiffL2_16(s1, s2, mask, len, cn); } };
+
+template<>
+struct MaskedNormDiffL2_SIMD<int, double> {
+    double operator()(const int* s1, const int* s2, const uchar* mask, int len, int cn) const {
+        double result = 0.0;
+        if (cn == 1) {
+            int i = 0; const int vstep = VTraits<v_int32>::vlanes();
+            v_float64 r0 = vx_setzero_f64(), r1 = vx_setzero_f64();
+            for (; i <= len - vstep; i += vstep) {
+                v_uint32 m  = v_gt(vx_load_expand_q(mask + i), vx_setzero_u32());
+                v_uint32 ad = v_and(v_absdiff(vx_load(s1 + i), vx_load(s2 + i)), m);
+                v_uint64 e0, e1; v_expand(ad, e0, e1);
+                v_float64 f0 = v_cvt_f64(v_reinterpret_as_s64(e0)), f1 = v_cvt_f64(v_reinterpret_as_s64(e1));
+                r0 = v_fma(f0, f0, r0); r1 = v_fma(f1, f1, r1);
+            }
+            result = v_reduce_sum(v_add(r0, r1));
+            for (; i < len; i++) if (mask[i]) { double v = (double)s1[i] - (double)s2[i]; result += v*v; }
+        } else {
+            result = maskedNormDiffL2Tail<int, double>(s1, s2, mask, len, cn, 0.0);
+        }
+        return result;
+    }
+};
+
+template<>
+struct MaskedNormDiffL2_SIMD<float, double> {
+    double operator()(const float* s1, const float* s2, const uchar* mask, int len, int cn) const {
+        double result = 0.0;
+        if (cn == 1) {
+            int i = 0; const int vstep = VTraits<v_float32>::vlanes();
+            v_float64 r0 = vx_setzero_f64(), r1 = vx_setzero_f64();
+            for (; i <= len - vstep; i += vstep) {
+                v_float32 m  = v_reinterpret_as_f32(v_gt(vx_load_expand_q(mask + i), vx_setzero_u32()));
+                v_float32 ad = v_and(v_absdiff(vx_load(s1 + i), vx_load(s2 + i)), m);
+                v_float64 f0 = v_cvt_f64(ad), f1 = v_cvt_f64_high(ad);
+                r0 = v_fma(f0, f0, r0); r1 = v_fma(f1, f1, r1);
+            }
+            result = v_reduce_sum(v_add(r0, r1));
+            for (; i < len; i++) if (mask[i]) { double v = (double)s1[i] - (double)s2[i]; result += v*v; }
+        } else {
+            result = maskedNormDiffL2Tail<float, double>(s1, s2, mask, len, cn, 0.0);
         }
         return result;
     }
