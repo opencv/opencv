@@ -1784,18 +1784,6 @@ public:
             #include "test_onnx_conformance_layer_filter_opencv_ocl_fp32_denylist.inl.hpp"
         };
 
-        EngineType engine_forced =
-            (EngineType)utils::getConfigurationParameterSizeT(
-                "OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
-
-        if (engine_forced == ENGINE_CLASSIC) {
-            classic_deny_list = {
-#include "test_onnx_conformance_layer_filter_opencv_classic_denylist.inl.hpp"
-            };
-        } else {
-            classic_deny_list = {};
-        }
-
 #ifdef HAVE_HALIDE
         halide_deny_list = {
             #include "test_onnx_conformance_layer_filter__halide_denylist.inl.hpp"

@@ -718,7 +718,7 @@ Net ONNXImporter2::parseModel()
         sstrm << "DNN/ONNX: the model ";
         if (!onnxFilename.empty())
             sstrm << "'"  << onnxFilename << "' ";
-        sstrm << "cannot be loaded with the new parser. Trying the older parser. ";
+        sstrm << "cannot be loaded by the DNN engine.";
         if (!missing_ops.empty()) {
             sstrm << " Unsupported operations:\n";
             auto it = missing_ops.begin();
@@ -768,7 +768,8 @@ bool ONNXImporter2::parseValueInfo(const opencv_onnx::ValueInfoProto& valueInfoP
             // ONNX allows dimensions without dim_value and dim_param.
             // Treat them as unnamed symbolic dimensions.
             // NOTE: LSTM with unnamed dimensions is not ready in the new graph
-            // engine yet, so force fallback to classic parser.
+            // engine yet. The classic parser used to handle it, but it has been
+            // removed, so such models are reported as unsupported.
             if (curr_graph_proto)
             {
                 const int n_nodes = curr_graph_proto->node_size();
