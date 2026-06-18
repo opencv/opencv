@@ -151,6 +151,64 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
 #endif
 
+#ifdef HAVE_METAL
+static bool metal_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
+                            bool bitwise, int oclop)
+{
+    if (!metal::haveMetal() || !bitwise || !_dst.isUMat())
+        return false;
+    if (_src1.kind() != _InputArray::UMAT || _src2.kind() != _InputArray::UMAT)
+        return false;
+    if (oclop != OCL_OP_AND && oclop != OCL_OP_OR &&
+        oclop != OCL_OP_XOR && oclop != OCL_OP_NOT)
+        return false;
+
+    UMat src1 = _src1.getUMat();
+    UMat src2 = _src2.getUMat();
+    UMat dst = _dst.getUMat();
+    return metal::bitwise(src1, src2, dst, oclop);
+}
+
+static bool metal_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
+                            void* usrdata, int oclop)
+{
+    if (!metal::haveMetal() || !_dst.isUMat())
+        return false;
+    if (_src1.kind() != _InputArray::UMAT || _src2.kind() != _InputArray::UMAT)
+        return false;
+
+    UMat src1 = _src1.getUMat();
+    UMat src2 = _src2.getUMat();
+    UMat dst = _dst.getUMat();
+    if (oclop == OCL_OP_ADD && !usrdata)
+        return metal::add(src1, src2, dst);
+    if (oclop == OCL_OP_SUB && !usrdata)
+        return metal::subtract(src1, src2, dst);
+    if ((oclop == OCL_OP_MUL || oclop == OCL_OP_MUL_SCALE) && usrdata)
+        return metal::multiply(src1, src2, dst, *((double*)usrdata));
+    return false;
+}
+
+static bool metal_compare_op(InputArray _src1, InputArray _src2, OutputArray _dst,
+                             int op, bool haveScalar)
+{
+    if (haveScalar || !metal::haveMetal())
+        return false;
+    if (_src1.kind() != _InputArray::UMAT || _src2.kind() != _InputArray::UMAT)
+        return false;
+    if (_src1.dims() > 2 || _src2.dims() > 2 ||
+        !_src1.sameSize(_src2) || _src1.type() != _src2.type())
+        return false;
+
+    int cn = CV_MAT_CN(_src1.type());
+    _dst.create(_src1.size(), CV_8UC(cn));
+    UMat src1 = _src1.getUMat();
+    UMat src2 = _src2.getUMat();
+    UMat dst = _dst.getUMat();
+    return metal::compare(src1, src2, dst, op);
+}
+#endif
+
 static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
                        InputArray _mask, const BinaryFuncC* tab,
                        bool bitwise, int oclop )
@@ -175,16 +233,8 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
         CV_OCL_RUN(use_opencl,
                    ocl_binary_op(*psrc1, *psrc2, _dst, _mask, bitwise, oclop, false))
 #ifdef HAVE_METAL
-        if (metal::haveMetal() && bitwise && kind1 == _InputArray::UMAT && kind2 == _InputArray::UMAT &&
-            _dst.isUMat() && (oclop == OCL_OP_AND || oclop == OCL_OP_OR ||
-                              oclop == OCL_OP_XOR || oclop == OCL_OP_NOT))
-        {
-            UMat src1 = psrc1->getUMat();
-            UMat src2 = psrc2->getUMat();
-            UMat dst = _dst.getUMat();
-            if (metal::bitwise(src1, src2, dst, oclop))
-                return;
-        }
+        if (metal_binary_op(*psrc1, *psrc2, _dst, bitwise, oclop))
+            return;
 #endif
 
         if( bitwise )
@@ -666,22 +716,8 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                           (!usrdata ? type1 : std::max(depth1, CV_32F)),
                           usrdata, oclop, false))
 #ifdef HAVE_METAL
-        if (metal::haveMetal() && kind1 == _InputArray::UMAT && kind2 == _InputArray::UMAT &&
-            _dst.isUMat() &&
-            ((oclop == OCL_OP_ADD && !usrdata) || (oclop == OCL_OP_SUB && !usrdata) ||
-             oclop == OCL_OP_MUL || oclop == OCL_OP_MUL_SCALE))
-        {
-            UMat src1 = psrc1->getUMat();
-            UMat src2 = psrc2->getUMat();
-            UMat dst = _dst.getUMat();
-            if (oclop == OCL_OP_ADD && metal::add(src1, src2, dst))
-                return;
-            if (oclop == OCL_OP_SUB && metal::subtract(src1, src2, dst))
-                return;
-            if ((oclop == OCL_OP_MUL || oclop == OCL_OP_MUL_SCALE) &&
-                metal::multiply(src1, src2, dst, *((double*)usrdata)))
-                return;
-        }
+        if (metal_arithm_op(*psrc1, *psrc2, _dst, usrdata, oclop))
+            return;
 #endif
 
         Mat src1 = psrc1->getMat(), src2 = psrc2->getMat(), dst = _dst.getMat();
@@ -1651,18 +1687,8 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
                ocl_compare(_src1, _src2, _dst, op, haveScalar))
 
 #ifdef HAVE_METAL
-    _InputArray::KindFlag rawKind1 = _src1.kind(), rawKind2 = _src2.kind();
-    if (!haveScalar && metal::haveMetal() && rawKind1 == _InputArray::UMAT && rawKind2 == _InputArray::UMAT &&
-        _src1.dims() <= 2 && _src2.dims() <= 2 && _src1.sameSize(_src2) && _src1.type() == _src2.type())
-    {
-        int cn = CV_MAT_CN(_src1.type());
-        _dst.create(_src1.size(), CV_8UC(cn));
-        UMat usrc1 = _src1.getUMat();
-        UMat usrc2 = _src2.getUMat();
-        UMat udst = _dst.getUMat();
-        if (metal::compare(usrc1, usrc2, udst, op))
-            return;
-    }
+    if (metal_compare_op(_src1, _src2, _dst, op, haveScalar))
+        return;
 #endif
 
     _InputArray::KindFlag kind1 = _src1.kind(), kind2 = _src2.kind();
