@@ -14,17 +14,8 @@
 
 namespace opencv_test { namespace {
 
-static void skipIfClassicDnnEngine()
-{
-    const auto engine = static_cast<cv::dnn::EngineType>(
-        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
-    if (engine == cv::dnn::ENGINE_CLASSIC)
-        throw SkipTestException("DISK ONNX model is not supported by the classic DNN engine");
-}
-
 static void testDiskRegression(const Size& imageSize, const std::string& tag)
 {
-    skipIfClassicDnnEngine();
     applyTestTag(CV_TEST_TAG_MEMORY_2GB);
 
     Mat refKpts = blobFromNPY(cvtest::findDataFile("features/disk/box_in_scene_" + tag + "_kpts.npy"));
@@ -84,7 +75,6 @@ TEST(Features2d_DISK, regression_512x384)
 
 TEST(Features2d_DISK, MaxKeypointsAndThreshold)
 {
-    skipIfClassicDnnEngine();
     applyTestTag(CV_TEST_TAG_MEMORY_2GB);
 
     const std::string modelPath = cvtest::findDataFile("dnn/disk.onnx", false);
@@ -124,7 +114,6 @@ TEST(Features2d_DISK, MaxKeypointsAndThreshold)
 
 TEST(Features2d_DISK, MaskSupport)
 {
-    skipIfClassicDnnEngine();
     applyTestTag(CV_TEST_TAG_MEMORY_2GB);
 
     const std::string modelPath = cvtest::findDataFile("dnn/disk.onnx", false);
@@ -153,7 +142,6 @@ TEST(Features2d_DISK, MaskSupport)
 
 TEST(Features2d_DISK, InvalidImageSize)
 {
-    skipIfClassicDnnEngine();
     const std::string modelPath = cvtest::findDataFile("dnn/disk.onnx", false);
 
     EXPECT_THROW(DISK::create(modelPath, -1, 0.0f, Size(1000, 1024)), cv::Exception);

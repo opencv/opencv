@@ -45,7 +45,7 @@ public class DnnForwardAndRetrieve extends OpenCVTestCase {
     public void testForwardAndRetrieve()
     {
         // Verifies forwardAndRetrieve nested list marshalling using a small ONNX model instead of the removed Caffe importer.
-        Net net = Dnn.readNetFromONNX(modelFileName, Dnn.ENGINE_CLASSIC);
+        Net net = Dnn.readNetFromONNX(modelFileName, Dnn.ENGINE_NEW);
         net.setPreferableBackend(Dnn.DNN_BACKEND_OPENCV);
 
         // split_0.onnx declares a single 4D input named "image" of shape [1, 3, 2, 2].

@@ -269,13 +269,6 @@ TEST_P(DNNTestNetwork, SSD_VGG16)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 
-    auto engine_forced = static_cast<cv::dnn::EngineType>(
-        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
-    if (engine_forced == cv::dnn::ENGINE_CLASSIC)
-    {
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
-        return;
-    }
 
     Mat sample = imread(findDataFile("dnn/street.png"));
     Mat inp = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);

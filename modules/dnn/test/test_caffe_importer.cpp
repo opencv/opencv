@@ -90,17 +90,6 @@ TEST(Reproducibility_SSD, Accuracy)
         CV_TEST_TAG_DEBUG_VERYLONG
     );
 
-    // The classic engine importer no longer carries the Caffe-SSD specific
-    // handling (LpNormalization/DetectionOutput); this model is supported on
-    // the new engine only.
-    auto engine_forced = static_cast<cv::dnn::EngineType>(
-        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
-    if (engine_forced == cv::dnn::ENGINE_CLASSIC)
-    {
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
-        return;
-    }
-
     Net net = readNetFromONNX(findDataFile("dnn/onnx/models/ssd_vgg16.onnx", false));
     ASSERT_FALSE(net.empty());
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
