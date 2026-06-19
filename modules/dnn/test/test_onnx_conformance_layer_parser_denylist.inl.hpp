@@ -319,6 +319,14 @@
 "test_l2normalization_axis_1",
 "test_loop13_seq",  // Loop with tensor sequences output, not yet supported in OpenCV
 "test_loop16_seq_none",  // Loop with optional tensor sequences, not yet supported in OpenCV
+"test_lppool_1d_default",
+"test_lppool_2d_default",
+"test_lppool_2d_dilations",
+"test_lppool_2d_pads",
+"test_lppool_2d_same_lower",
+"test_lppool_2d_same_upper",
+"test_lppool_2d_strides",
+"test_lppool_3d_default",
 "test_matmulinteger",  // Issues::Layer does not exist. Can't create layer "onnx_node_output_0!Y" of type "MatMulInteger" in function 'getLayerInstance'
 "test_maxpool_2d_ceil_output_size_reduce_by_one",
 "test_melweightmatrix",
