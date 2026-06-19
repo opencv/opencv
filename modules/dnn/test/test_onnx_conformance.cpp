@@ -1974,6 +1974,15 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
         if (name == "test_roialign_aligned_false" || name == "test_roialign_aligned_true") {
             default_l1 = 3e-5;
         }
+        // fp16 Attention models retain fp16 accumulation precision (~9e-5 L1, ~2.4e-4 Inf)
+        // even when executed on an fp32 target (the layer falls back to the CPU path).
+        if (name == "test_attention_4d_fp16" ||
+            name == "test_attention_4d_fp16_expanded" ||
+            name == "test_attention_4d_gqa_with_past_and_present_fp16" ||
+            name == "test_attention_4d_gqa_with_past_and_present_fp16_expanded") {
+            default_l1 = std::max(default_l1, 2e-4);
+            default_lInf = std::max(default_lInf, 1e-3);
+        }
     }
 #endif
     else

@@ -116,8 +116,18 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
         } else {
             const int past_k_idx = pastKeyIdx(inputs.size());
             if (past_k_idx >= 0) {
+                const int past_v_idx = pastValueIdx(inputs.size());
+                CV_CheckTrue(past_v_idx >= 0 && past_v_idx < (int)inputs.size(),
+                             "past_key and past_value must be provided as a pair");
+
                 // past_key/past_value are always 4D [batch, nhkv, past_seq, head] (even for 3D Q/K/V).
                 const MatShape& pk = inputs[past_k_idx];
+                const MatShape& pv = inputs[past_v_idx];
+                CV_CheckEQ(pk.dims, 4, "past_key must be 4D [batch, nhkv, past_seq, head]");
+                CV_CheckEQ(pv.dims, 4, "past_value must be 4D [batch, nhkv, past_seq, head]");
+                CV_CheckEQ(pk[0], batch_size, "past_key batch dimension must match query batch");
+                CV_CheckEQ(pv[0], batch_size, "past_value batch dimension must match query batch");
+
                 past_seq_kv = pk[pk.dims - 2];
                 seq_len_k += past_seq_kv;
                 seq_len_v += past_seq_kv;
@@ -265,6 +275,8 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
                 qk_head_size, seq_len_kv,
                 scale, opt
             );
+
+            past_seq_kv = seq_len_kv - seq_len_q;
 
             fused_softmax_softcap_mask(
                 attention_prob, mask_mat,
