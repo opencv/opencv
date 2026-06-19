@@ -500,14 +500,9 @@ static bool ocl_copyToMask(const UMat& src, OutputArray _dst, InputArray _mask, 
     if (!umat::useOpenCL() || !_dst.isUMat() || src.dims > 2)
         return false;
 
-    UMatData * prevu = _dst.getUMat().u;
-    _dst.create( src.size, src.type() );
-
-    UMat dst = _dst.getUMat();
-
-    bool haveDstUninit = false;
-    if( prevu != dst.u ) // do not leave dst uninitialized
-        haveDstUninit = true;
+    UMat prevDst = _dst.getUMat();
+    UMatData * prevu = prevDst.u;
+    bool haveDstUninit = prevu == NULL || prevDst.size != src.size || prevDst.type() != src.type();
 
     String opts = format("-D COPY_TO_MASK -D T1=%s -D scn=%d -D mcn=%d%s",
                          ocl::memopTypeToStr(src.depth()), cn, mcn,
@@ -516,6 +511,11 @@ static bool ocl_copyToMask(const UMat& src, OutputArray _dst, InputArray _mask, 
     ocl::Kernel k("copyToMask", ocl::core::copyset_oclsrc, opts);
     if (k.empty())
         return false;
+
+    _dst.create( src.size, src.type() );
+
+    UMat dst = _dst.getUMat();
+    haveDstUninit = prevu != dst.u; // do not leave dst uninitialized
 
     k.args(ocl::KernelArg::ReadOnlyNoSize(src),
            ocl::KernelArg::ReadOnlyNoSize(_mask.getUMat()),
@@ -588,12 +588,21 @@ static bool metal_copyToMask(const UMat& src, OutputArray _dst, InputArray _mask
     if (!umat::useMetal() || !_dst.isUMat() || src.dims > 2)
         return false;
 
+    UMat mask = _mask.getUMat();
+    if (mask.dims != 2 || mask.rows != src.rows || mask.cols != src.cols)
+        return false;
+
+    int maskDepth = CV_MAT_DEPTH(mask.type());
+    int maskChannels = CV_MAT_CN(mask.type());
+    if (maskDepth != CV_8U || (maskChannels != 1 && maskChannels != src.channels()))
+        return false;
+
     UMatData* prevu = _dst.getUMat().u;
     _dst.create(src.size, src.type());
 
     UMat dst = _dst.getUMat();
     bool haveDstUninit = prevu != dst.u;
-    return metal::copyToMask(src, _mask.getUMat(), dst, haveDstUninit);
+    return metal::copyToMask(src, mask, dst, haveDstUninit);
 }
 
 static bool metal_setTo(UMat& dst, InputArray _value, InputArray _mask, bool haveMask)

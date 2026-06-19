@@ -392,6 +392,33 @@ TEST(Core_Metal_UMat, DeviceMemoryUsageMaskedCopyTo)
     EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
 }
 
+TEST(Core_Metal_UMat, MaskedCopyToSignedMaskFallbackPreservesOutput)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat src(31, 37, CV_8UC3);
+    Mat mask(src.size(), CV_8SC1);
+    Mat base(src.size(), src.type());
+    randu(src, 0, 255);
+    randu(mask, 0, 2);
+    randu(base, 0, 255);
+
+    Mat expected = base.clone();
+    src.copyTo(expected, mask);
+
+    UMat usrc, umask, udst;
+    src.copyTo(usrc);
+    mask.copyTo(umask);
+    base.copyTo(udst);
+    usrc.copyTo(udst, umask);
+
+    Mat dst;
+    udst.copyTo(dst);
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
 TEST(Core_Metal_UMat, Add8USaturates)
 {
     if (!cv::metal::haveMetal())
@@ -1462,6 +1489,31 @@ TEST(Core_Metal_UMat, SetToUnsupportedTypeFallback)
     u.copyTo(dst);
 
     Mat expected(dst.size(), dst.type(), Scalar(1024));
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
+}
+
+TEST(Core_Metal_UMat, SetToUnsupportedTypeMaskFallbackPreservesOutput)
+{
+    if (!cv::metal::haveMetal())
+        return;
+
+    Mat base(23, 29, CV_16UC1);
+    Mat mask(base.size(), CV_8UC1);
+    randu(base, 0, 4096);
+    randu(mask, 0, 2);
+    mask *= 255;
+
+    Mat expected = base.clone();
+    expected.setTo(Scalar(1024), mask);
+
+    UMat u, umask;
+    base.copyTo(u);
+    mask.copyTo(umask);
+    u.setTo(Scalar(1024), umask);
+
+    Mat dst;
+    u.copyTo(dst);
+
     EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 0);
 }
 
