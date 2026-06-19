@@ -992,7 +992,6 @@ namespace cv
 
 template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
 {
-    AutoBuffer<T> buf;
     int n, len;
     bool sortRows = (flags & 1) == SORT_EVERY_ROW;
     bool inplace = src.data == dst.data;
@@ -1001,43 +1000,47 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
     if( sortRows )
         n = src.rows, len = src.cols;
     else
-    {
         n = src.cols, len = src.rows;
-        buf.allocate(len);
-    }
-    T* bptr = buf.data();
-
-    for( int i = 0; i < n; i++ )
+    parallel_for_(Range(0, n), [&](const Range& range)
     {
-        T* ptr = bptr;
-        if( sortRows )
-        {
-            T* dptr = dst.ptr<T>(i);
-            if( !inplace )
-            {
-                const T* sptr = src.ptr<T>(i);
-                memcpy(dptr, sptr, sizeof(T) * len);
-            }
-            ptr = dptr;
-        }
-        else
-        {
-            for( int j = 0; j < len; j++ )
-                ptr[j] = src.ptr<T>(j)[i];
-        }
-
-        std::sort( ptr, ptr + len );
-        if( sortDescending )
-        {
-            for( int j = 0; j < len/2; j++ )
-                std::swap(ptr[j], ptr[len-1-j]);
-        }
-
+        AutoBuffer<T> buf;
         if( !sortRows )
-            for( int j = 0; j < len; j++ )
-                dst.ptr<T>(j)[i] = ptr[j];
-    }
+            buf.allocate(len);
+        T* bptr = buf.data();
+
+        for( int i = range.start; i < range.end; i++ )
+        {
+            T* ptr = bptr;
+            if( sortRows )
+            {
+                T* dptr = dst.ptr<T>(i);
+                if( !inplace )
+                {
+                    const T* sptr = src.ptr<T>(i);
+                    memcpy(dptr, sptr, sizeof(T) * len);
+                }
+                ptr = dptr;
+            }
+            else
+            {
+                for( int j = 0; j < len; j++ )
+                    ptr[j] = src.ptr<T>(j)[i];
+            }
+
+            std::sort( ptr, ptr + len );
+            if( sortDescending )
+            {
+                for( int j = 0; j < len/2; j++ )
+                    std::swap(ptr[j], ptr[len-1-j]);
+            }
+
+            if( !sortRows )
+                for( int j = 0; j < len; j++ )
+                    dst.ptr<T>(j)[i] = ptr[j];
+        }
+    });
 }
+
 
 #ifdef HAVE_IPP
 typedef IppStatus (CV_STDCALL *IppSortFunc)(void  *pSrcDst, int    len, Ipp8u *pBuffer);
