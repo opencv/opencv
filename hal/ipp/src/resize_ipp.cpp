@@ -12,58 +12,23 @@
 #include "iw++/iw.hpp"
 
 #include <cfloat>
+#include <type_traits>
 
 #define IPP_RESIZE_PARALLEL 1
 
-class ipp_resizeParallel: public cv::ParallelLoopBody
+// One body for both IPP resize backends (IwiResize/IwiWarpAffine); if constexpr picks the per-tile border arg so codegen matches the original two classes.
+template <typename IwiOp>
+class ipp_resizeParallelT: public cv::ParallelLoopBody
 {
 public:
-    ipp_resizeParallel(::ipp::IwiImage &src, ::ipp::IwiImage &dst, bool &ok):
+    ipp_resizeParallelT(::ipp::IwiImage &src, ::ipp::IwiImage &dst, bool &ok):
         m_src(src), m_dst(dst), m_ok(ok) {}
-    ~ipp_resizeParallel()
-    {
-    }
 
     void Init(IppiInterpolationType inter)
     {
-        iwiResize.InitAlloc(m_src.m_size, m_dst.m_size, m_src.m_dataType, m_src.m_channels, inter, ::ipp::IwiResizeParams(0, 0, 0.75, 4), ippBorderRepl);
+        iwiOp.InitAlloc(m_src.m_size, m_dst.m_size, m_src.m_dataType, m_src.m_channels, inter, ::ipp::IwiResizeParams(0, 0, 0.75, 4), ippBorderRepl);
 
         m_ok = true;
-    }
-
-    virtual void operator() (const cv::Range& range) const CV_OVERRIDE
-    {
-        if(!m_ok)
-            return;
-
-        try
-        {
-            ::ipp::IwiTile tile = ::ipp::IwiRoi(0, range.start, m_dst.m_size.width, range.end - range.start);
-            CV_INSTRUMENT_FUN_IPP(iwiResize, m_src, m_dst, ippBorderRepl, tile);
-        }
-        catch(const ::ipp::IwException &)
-        {
-            m_ok = false;
-            return;
-        }
-    }
-private:
-    ::ipp::IwiImage &m_src;
-    ::ipp::IwiImage &m_dst;
-
-    mutable ::ipp::IwiResize iwiResize;
-
-    volatile bool &m_ok;
-    const ipp_resizeParallel& operator= (const ipp_resizeParallel&);
-};
-
-class ipp_resizeAffineParallel: public cv::ParallelLoopBody
-{
-public:
-    ipp_resizeAffineParallel(::ipp::IwiImage &src, ::ipp::IwiImage &dst, bool &ok):
-        m_src(src), m_dst(dst), m_ok(ok) {}
-    ~ipp_resizeAffineParallel()
-    {
     }
 
     void Init(IppiInterpolationType inter, double scaleX, double scaleY)
@@ -74,20 +39,25 @@ public:
             {0,      scaleY, shift+0.5*scaleY}
         };
 
-        iwiWarpAffine.InitAlloc(m_src.m_size, m_dst.m_size, m_src.m_dataType, m_src.m_channels, coeffs, iwTransForward, inter, ::ipp::IwiWarpAffineParams(0, 0, 0.75), ippBorderRepl);
+        iwiOp.InitAlloc(m_src.m_size, m_dst.m_size, m_src.m_dataType, m_src.m_channels, coeffs, iwTransForward, inter, ::ipp::IwiWarpAffineParams(0, 0, 0.75), ippBorderRepl);
 
         m_ok = true;
     }
 
     virtual void operator() (const cv::Range& range) const CV_OVERRIDE
     {
+        //CV_INSTRUMENT_REGION_IPP();
+
         if(!m_ok)
             return;
 
         try
         {
             ::ipp::IwiTile tile = ::ipp::IwiRoi(0, range.start, m_dst.m_size.width, range.end - range.start);
-            CV_INSTRUMENT_FUN_IPP(iwiWarpAffine, m_src, m_dst, tile);
+            if constexpr (std::is_same_v<IwiOp, ::ipp::IwiResize>)
+                CV_INSTRUMENT_FUN_IPP(iwiOp, m_src, m_dst, ippBorderRepl, tile);
+            else
+                CV_INSTRUMENT_FUN_IPP(iwiOp, m_src, m_dst, tile);
         }
         catch(const ::ipp::IwException &)
         {
@@ -99,17 +69,24 @@ private:
     ::ipp::IwiImage &m_src;
     ::ipp::IwiImage &m_dst;
 
-    mutable ::ipp::IwiWarpAffine iwiWarpAffine;
+    mutable IwiOp iwiOp;
 
     volatile bool &m_ok;
-    const ipp_resizeAffineParallel& operator= (const ipp_resizeAffineParallel&);
+    ipp_resizeParallelT& operator= (const ipp_resizeParallelT&);
 };
+
+typedef ipp_resizeParallelT< ::ipp::IwiResize>     ipp_resizeParallel;
+typedef ipp_resizeParallelT< ::ipp::IwiWarpAffine> ipp_resizeAffineParallel;
 
 int ipp_hal_resize(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height,
                    uchar *dst_data, size_t dst_step, int dst_width, int dst_height,
                    double inv_scale_x, double inv_scale_y, int interpolation)
 {
-    CV_HAL_CHECK_USE_IPP();
+    //CV_INSTRUMENT_REGION_IPP();
+
+    // Preserves the global IPP enable/disable toggle previously enforced by CV_IPP_RUN_FAST's CV_IPP_CHECK_COND.
+    if (!cv::ipp::useIPP())
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
     int depth = CV_MAT_DEPTH(src_type), channels = CV_MAT_CN(src_type);
 
