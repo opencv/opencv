@@ -494,6 +494,94 @@ bool isAcceleratedAllocator(const MatAllocator* allocator)
 
 } // namespace umat
 
+#ifdef HAVE_OPENCL
+static bool ocl_copyToMask(const UMat& src, OutputArray _dst, InputArray _mask, int cn, int mcn)
+{
+    if (!umat::useOpenCL() || !_dst.isUMat() || src.dims > 2)
+        return false;
+
+    UMatData * prevu = _dst.getUMat().u;
+    _dst.create( src.size, src.type() );
+
+    UMat dst = _dst.getUMat();
+
+    bool haveDstUninit = false;
+    if( prevu != dst.u ) // do not leave dst uninitialized
+        haveDstUninit = true;
+
+    String opts = format("-D COPY_TO_MASK -D T1=%s -D scn=%d -D mcn=%d%s",
+                         ocl::memopTypeToStr(src.depth()), cn, mcn,
+                         haveDstUninit ? " -D HAVE_DST_UNINIT" : "");
+
+    ocl::Kernel k("copyToMask", ocl::core::copyset_oclsrc, opts);
+    if (k.empty())
+        return false;
+
+    k.args(ocl::KernelArg::ReadOnlyNoSize(src),
+           ocl::KernelArg::ReadOnlyNoSize(_mask.getUMat()),
+           haveDstUninit ? ocl::KernelArg::WriteOnly(dst) :
+                           ocl::KernelArg::ReadWrite(dst));
+
+    size_t globalsize[2] = { (size_t)src.cols, (size_t)src.rows };
+    if (!k.run(2, globalsize, NULL, false))
+        return false;
+
+    CV_IMPL_ADD(CV_IMPL_OCL);
+    return true;
+}
+
+static bool ocl_setTo(UMat& dst, InputArray _value, InputArray _mask, bool haveMask)
+{
+    int tp = dst.type(), cn = CV_MAT_CN(tp);
+    int d = CV_MAT_DEPTH(tp);
+    if( dst.dims > 2 || cn > 4 || CV_MAT_DEPTH(tp) >= CV_64F || !umat::useOpenCL() )
+        return false;
+
+    Mat value = _value.getMat();
+    CV_Assert( checkScalar(value, dst.type(), _value.kind(), _InputArray::UMAT) );
+    int kercn = haveMask || cn == 3 ? cn : std::max(cn, ocl::predictOptimalVectorWidth(dst)),
+            kertp = CV_MAKE_TYPE(d, kercn);
+
+    double buf[16] = { 0, 0, 0, 0, 0, 0, 0, 0,
+                       0, 0, 0, 0, 0, 0, 0, 0 };
+    convertAndUnrollScalar(value, tp, (uchar *)buf, kercn / cn);
+
+    int scalarcn = kercn == 3 ? 4 : kercn, rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
+    String opts = format("-D dstT=%s -D rowsPerWI=%d -D dstST=%s -D dstT1=%s -D cn=%d",
+                         ocl::memopTypeToStr(kertp), rowsPerWI,
+                         ocl::memopTypeToStr(CV_MAKETYPE(d, scalarcn)),
+                         ocl::memopTypeToStr(d), kercn);
+
+    ocl::Kernel setK(haveMask ? "setMask" : "set", ocl::core::copyset_oclsrc, opts);
+    if( setK.empty() )
+        return false;
+
+    ocl::KernelArg scalararg(ocl::KernelArg::CONSTANT, 0, 0, 0, buf, CV_ELEM_SIZE(d) * scalarcn);
+    UMat mask;
+
+    if( haveMask )
+    {
+        mask = _mask.getUMat();
+        CV_Assert( mask.size() == dst.size() && (mask.type() == CV_8U || mask.type() == CV_8S || mask.type() == CV_Bool) );
+        ocl::KernelArg maskarg = ocl::KernelArg::ReadOnlyNoSize(mask),
+                dstarg = ocl::KernelArg::ReadWrite(dst);
+        setK.args(maskarg, dstarg, scalararg);
+    }
+    else
+    {
+        ocl::KernelArg dstarg = ocl::KernelArg::WriteOnly(dst, cn, kercn);
+        setK.args(dstarg, scalararg);
+    }
+
+    size_t globalsize[] = { (size_t)dst.cols * cn / kercn, ((size_t)dst.rows + rowsPerWI - 1) / rowsPerWI };
+    if( !setK.run(2, globalsize, NULL, false) )
+        return false;
+
+    CV_IMPL_ADD(CV_IMPL_OCL);
+    return true;
+}
+#endif
+
 #ifdef HAVE_METAL
 static bool metal_copyToMask(const UMat& src, OutputArray _dst, InputArray _mask)
 {
@@ -529,6 +617,47 @@ static bool metal_setTo(UMat& dst, InputArray _value, InputArray _mask, bool hav
     return metal::setTo(dst, value, NULL);
 }
 #endif
+
+static bool tryAcceleratedCopyToMask(const UMat& src, OutputArray _dst, InputArray _mask, int cn, int mcn)
+{
+#if !defined(HAVE_OPENCL) && !defined(HAVE_METAL)
+    CV_UNUSED(src);
+    CV_UNUSED(_dst);
+    CV_UNUSED(_mask);
+#endif
+#ifndef HAVE_OPENCL
+    CV_UNUSED(cn);
+    CV_UNUSED(mcn);
+#endif
+#ifdef HAVE_OPENCL
+    if (ocl_copyToMask(src, _dst, _mask, cn, mcn))
+        return true;
+#endif
+#ifdef HAVE_METAL
+    if (metal_copyToMask(src, _dst, _mask))
+        return true;
+#endif
+    return false;
+}
+
+static bool tryAcceleratedSetTo(UMat& dst, InputArray _value, InputArray _mask, bool haveMask)
+{
+#if !defined(HAVE_OPENCL) && !defined(HAVE_METAL)
+    CV_UNUSED(dst);
+    CV_UNUSED(_value);
+    CV_UNUSED(_mask);
+    CV_UNUSED(haveMask);
+#endif
+#ifdef HAVE_OPENCL
+    if (ocl_setTo(dst, _value, _mask, haveMask))
+        return true;
+#endif
+#ifdef HAVE_METAL
+    if (metal_setTo(dst, _value, _mask, haveMask))
+        return true;
+#endif
+    return false;
+}
 
 MatAllocator* UMat::getStdAllocator()
 {
@@ -1388,43 +1517,9 @@ void UMat::copyTo(OutputArray _dst, InputArray _mask) const
     int cn = channels(), mtype = _mask.type(), mdepth = CV_MAT_DEPTH(mtype), mcn = CV_MAT_CN(mtype);
     CV_Assert( (mdepth == CV_8U || mdepth == CV_8S || mdepth == CV_Bool) && (mcn == 1 || mcn == cn) );
 
-#ifdef HAVE_OPENCL
-    if (umat::useOpenCL() && _dst.isUMat() && dims <= 2)
-    {
-        UMatData * prevu = _dst.getUMat().u;
-        _dst.create( size, type() );
-
-        UMat dst = _dst.getUMat();
-
-        bool haveDstUninit = false;
-        if( prevu != dst.u ) // do not leave dst uninitialized
-            haveDstUninit = true;
-
-        String opts = format("-D COPY_TO_MASK -D T1=%s -D scn=%d -D mcn=%d%s",
-                             ocl::memopTypeToStr(depth()), cn, mcn,
-                             haveDstUninit ? " -D HAVE_DST_UNINIT" : "");
-
-        ocl::Kernel k("copyToMask", ocl::core::copyset_oclsrc, opts);
-        if (!k.empty())
-        {
-            k.args(ocl::KernelArg::ReadOnlyNoSize(*this),
-                   ocl::KernelArg::ReadOnlyNoSize(_mask.getUMat()),
-                   haveDstUninit ? ocl::KernelArg::WriteOnly(dst) :
-                                   ocl::KernelArg::ReadWrite(dst));
-
-            size_t globalsize[2] = { (size_t)cols, (size_t)rows };
-            if (k.run(2, globalsize, NULL, false))
-            {
-                CV_IMPL_ADD(CV_IMPL_OCL);
-                return;
-            }
-        }
-    }
-#endif
-#ifdef HAVE_METAL
-    if (metal_copyToMask(*this, _dst, _mask))
+    if (tryAcceleratedCopyToMask(*this, _dst, _mask, cn, mcn))
         return;
-#endif
+
     Mat src = getMat(ACCESS_READ);
     src.copyTo(_dst, _mask);
 }
@@ -1439,62 +1534,10 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
     CV_INSTRUMENT_REGION();
 
     bool haveMask = !_mask.empty();
-#ifdef HAVE_OPENCL
-    int tp = type(), cn = CV_MAT_CN(tp);
-#endif
 
-#ifdef HAVE_OPENCL
-    int d = CV_MAT_DEPTH(tp);
-    if( dims <= 2 && cn <= 4 && CV_MAT_DEPTH(tp) < CV_64F && umat::useOpenCL() )
-    {
-        Mat value = _value.getMat();
-        CV_Assert( checkScalar(value, type(), _value.kind(), _InputArray::UMAT) );
-        int kercn = haveMask || cn == 3 ? cn : std::max(cn, ocl::predictOptimalVectorWidth(*this)),
-                kertp = CV_MAKE_TYPE(d, kercn);
-
-        double buf[16] = { 0, 0, 0, 0, 0, 0, 0, 0,
-                           0, 0, 0, 0, 0, 0, 0, 0 };
-        convertAndUnrollScalar(value, tp, (uchar *)buf, kercn / cn);
-
-        int scalarcn = kercn == 3 ? 4 : kercn, rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
-        String opts = format("-D dstT=%s -D rowsPerWI=%d -D dstST=%s -D dstT1=%s -D cn=%d",
-                             ocl::memopTypeToStr(kertp), rowsPerWI,
-                             ocl::memopTypeToStr(CV_MAKETYPE(d, scalarcn)),
-                             ocl::memopTypeToStr(d), kercn);
-
-        ocl::Kernel setK(haveMask ? "setMask" : "set", ocl::core::copyset_oclsrc, opts);
-        if( !setK.empty() )
-        {
-            ocl::KernelArg scalararg(ocl::KernelArg::CONSTANT, 0, 0, 0, buf, CV_ELEM_SIZE(d) * scalarcn);
-            UMat mask;
-
-            if( haveMask )
-            {
-                mask = _mask.getUMat();
-                CV_Assert( mask.size() == size() && (mask.type() == CV_8U || mask.type() == CV_8S || mask.type() == CV_Bool) );
-                ocl::KernelArg maskarg = ocl::KernelArg::ReadOnlyNoSize(mask),
-                        dstarg = ocl::KernelArg::ReadWrite(*this);
-                setK.args(maskarg, dstarg, scalararg);
-            }
-            else
-            {
-                ocl::KernelArg dstarg = ocl::KernelArg::WriteOnly(*this, cn, kercn);
-                setK.args(dstarg, scalararg);
-            }
-
-            size_t globalsize[] = { (size_t)cols * cn / kercn, ((size_t)rows + rowsPerWI - 1) / rowsPerWI };
-            if( setK.run(2, globalsize, NULL, false) )
-            {
-                CV_IMPL_ADD(CV_IMPL_OCL);
-                return *this;
-            }
-        }
-    }
-#endif
-#ifdef HAVE_METAL
-    if (metal_setTo(*this, _value, _mask, haveMask))
+    if (tryAcceleratedSetTo(*this, _value, _mask, haveMask))
         return *this;
-#endif
+
     Mat m = getMat(haveMask ? ACCESS_RW : ACCESS_WRITE);
     m.setTo(_value, _mask);
     return *this;
