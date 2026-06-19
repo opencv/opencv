@@ -1073,11 +1073,12 @@ void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
         if ((adata_type == CV_16F || adata_type == CV_16BF) && !enableFP16)
             adata_type = CV_32F;
 
-        if (adata_type != mtype &&
-            !((adata_type == CV_64F || adata_type == CV_32F || adata_type == CV_16F || adata_type == CV_16BF) &&
-              (mtype == CV_64F || mtype == CV_32F || mtype == CV_16F || mtype == CV_16BF)) &&
-            !((adata_type == CV_8U || adata_type == CV_8S || adata_type == CV_16U || adata_type == CV_16S || adata_type == CV_32S || adata_type == CV_32U || adata_type == CV_64S || adata_type == CV_64U) &&
-              (mtype == CV_8U || mtype == CV_8S || mtype == CV_16U || mtype == CV_16S || mtype == CV_32S || mtype == CV_32U || mtype == CV_64S || mtype == CV_64U)) &&
+        // setInput converts the data to the declared input type, so any numeric source
+        // type is acceptable (e.g. a placeholder fed to an unused CastLike "like" donor
+        // whose declared dtype maps to a different family). Reject only non-numeric mismatches.
+        const bool aNumeric = CV_IS_INT_TYPE(adata_type) || CV_IS_FLOAT_TYPE(adata_type);
+        const bool mNumeric = CV_IS_INT_TYPE(mtype) || CV_IS_FLOAT_TYPE(mtype);
+        if (adata_type != mtype && !(aNumeric && mNumeric) &&
             !(adata.type == CV_16BF && mtype == CV_16U) && !(adata.type == CV_16F && mtype == CV_16U) &&
             !m.empty())
         {
@@ -1369,6 +1370,15 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             } else {
                 outputsVec[i].fit(outm.shape(), outm.type());
                 outm.copyTo(outputsVec[i]);
+            }
+            // Honor the model's declared FP16 output dtype: ops compute in FP32 on the CPU
+            // path, so narrow the result back to CV_16F to match the ONNX contract.
+            if (i < mainGraphOutTypes.size() && CV_MAT_DEPTH(mainGraphOutTypes[i]) == CV_16F &&
+                !outputsVec[i].empty() && outputsVec[i].depth() != CV_16F)
+            {
+                Mat tmp;
+                outputsVec[i].convertTo(tmp, CV_16F);
+                outputsVec[i] = tmp;
             }
         } else {
             outputsVec[i] = outm;

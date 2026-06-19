@@ -43,6 +43,7 @@
 #endif
 
 #include "onnx_graph_simplifier.hpp"
+#include "onnx_dtype_convert.hpp"
 #endif
 
 namespace cv {
@@ -79,7 +80,11 @@ static int dataType2cv(int dt)
         dt == opencv_onnx::TensorProto_DataType_BFLOAT16 ? CV_16BF :
         dt == opencv_onnx::TensorProto_DataType_COMPLEX64 ? CV_32FC2 :
         dt == opencv_onnx::TensorProto_DataType_COMPLEX128 ? CV_64FC2 :
-        dt == opencv_onnx::TensorProto_DataType_BOOL ? CV_Bool : -1;
+        dt == opencv_onnx::TensorProto_DataType_BOOL ? CV_Bool :
+        dt == opencv_onnx::TensorProto_DataType_UINT4 ? CV_8U :
+        dt == opencv_onnx::TensorProto_DataType_INT4 ? CV_8S :
+        dt == onnx_dtype::ONNX_FLOAT8E8M0 ? CV_32F :
+        onnx_dtype::isExoticFloat(dt) ? CV_16F : -1;
 }
 
 
@@ -130,6 +135,7 @@ protected:
     Ptr<Graph> parseGraph(opencv_onnx::GraphProto* graph_proto, bool mainGraph);
     void parseNode(const opencv_onnx::NodeProto& node_proto);
     bool parseValueInfo(const opencv_onnx::ValueInfoProto& valueInfoProto, ArgData& data);
+    int findGraphTensorOnnxType(const std::string& name) const;
     Mat parseTensor(const opencv_onnx::TensorProto& tensorProto);
     void rememberMissingOp(const std::string& opname);
 
@@ -708,6 +714,15 @@ Net ONNXImporter2::parseModel()
     parseOperatorSet();
     Ptr<Graph> mainGraph = parseGraph(graph_proto, true);
     netimpl->mainGraph = mainGraph;
+    // Capture declared ONNX output dtypes now, before prepareForInference() overwrites
+    // arg types with computed ones, so outputs can be narrowed to the declared type later.
+    if (mainGraph)
+    {
+        const std::vector<Arg>& outs = mainGraph->outputs();
+        netimpl->mainGraphOutTypes.resize(outs.size());
+        for (size_t i = 0; i < outs.size(); i++)
+            netimpl->mainGraphOutTypes[i] = netimpl->args.at(outs[i].idx).type;
+    }
     netimpl->modelFormat = DNN_MODEL_ONNX;
     netimpl->originalLayout = DATA_LAYOUT_NCHW;
     // netimpl->onnx_opset = onnx_opset;
@@ -1647,10 +1662,37 @@ void ONNXImporter2::parseCast2(LayerParams& layerParams, const opencv_onnx::Node
     addLayer(layerParams, node_proto);
 }
 
+// Returns the ONNX TensorProto.DataType of a graph tensor by name, or -1 if unknown.
+int ONNXImporter2::findGraphTensorOnnxType(const std::string& name) const
+{
+    if (!curr_graph_proto)
+        return -1;
+    const opencv_onnx::GraphProto& g = *curr_graph_proto;
+    for (int i = 0; i < g.input_size(); i++)
+        if (g.input(i).name() == name && g.input(i).has_type() && g.input(i).type().has_tensor_type())
+            return g.input(i).type().tensor_type().elem_type();
+    for (int i = 0; i < g.value_info_size(); i++)
+        if (g.value_info(i).name() == name && g.value_info(i).has_type() && g.value_info(i).type().has_tensor_type())
+            return g.value_info(i).type().tensor_type().elem_type();
+    for (int i = 0; i < g.output_size(); i++)
+        if (g.output(i).name() == name && g.output(i).has_type() && g.output(i).type().has_tensor_type())
+            return g.output(i).type().tensor_type().elem_type();
+    for (int i = 0; i < g.initializer_size(); i++)
+        if (g.initializer(i).name() == name)
+            return g.initializer(i).data_type();
+    return -1;
+}
+
 void ONNXImporter2::parseCastLike(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     CV_CheckEQ(node_proto.input_size(), 2, "CastLike requires two inputs");
     layerParams.type = "Cast2";
+    if (!layerParams.has("to"))
+    {
+        int elemType = findGraphTensorOnnxType(node_proto.input(1));
+        if (elemType > 0)
+            layerParams.set("to", elemType);
+    }
     addLayer(layerParams, node_proto);
 }
 

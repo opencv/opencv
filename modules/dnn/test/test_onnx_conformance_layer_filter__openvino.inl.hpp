@@ -402,6 +402,174 @@ CASE(test_castlike_STRING_to_FLOAT_expanded)
 #if SKIP_SET_1
     SKIP;
 #endif
+CASE(test_castlike_no_saturate_FLOAT16_to_FLOAT8E4M3FN)
+    SKIP;
+CASE(test_castlike_no_saturate_FLOAT16_to_FLOAT8E4M3FNUZ)
+    SKIP;
+CASE(test_castlike_no_saturate_FLOAT16_to_FLOAT8E4M3FNUZ_expanded)
+    SKIP;
+CASE(test_castlike_no_saturate_FLOAT16_to_FLOAT8E4M3FN_expanded)
+    SKIP;
+CASE(test_castlike_no_saturate_FLOAT16_to_FLOAT8E5M2)
+    SKIP;
+CASE(test_castlike_no_saturate_FLOAT16_to_FLOAT8E5M2FNUZ)
+    SKIP;
+CASE(test_castlike_no_saturate_FLOAT16_to_FLOAT8E5M2FNUZ_expanded)
+    SKIP;
+CASE(test_castlike_no_saturate_FLOAT16_to_FLOAT8E5M2_expanded)
+    SKIP;
+CASE(test_castlike_no_saturate_FLOAT_to_FLOAT8E4M3FN)
+    SKIP;
+CASE(test_castlike_no_saturate_FLOAT_to_FLOAT8E4M3FNUZ)
+    SKIP;
+CASE(test_castlike_no_saturate_FLOAT_to_FLOAT8E5M2)
+    SKIP;
+CASE(test_castlike_no_saturate_FLOAT_to_FLOAT8E5M2FNUZ)
+    SKIP;
+CASE(test_castlike_no_saturate_FLOAT_to_FLOAT8E5M2FNUZ_expanded)
+    SKIP;
+CASE(test_castlike_no_saturate_FLOAT_to_FLOAT8E5M2_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT_to_UINT4)
+    SKIP;
+CASE(test_castlike_FLOAT_to_UINT4_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT_to_FLOAT4E2M1)
+    SKIP;
+CASE(test_castlike_FLOAT_to_FLOAT4E2M1_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT_to_FLOAT8E4M3FN)
+    SKIP;
+CASE(test_castlike_FLOAT_to_FLOAT8E4M3FNUZ)
+    SKIP;
+CASE(test_castlike_FLOAT_to_FLOAT8E4M3FNUZ_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT_to_FLOAT8E4M3FN_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT_to_FLOAT8E5M2)
+    SKIP;
+CASE(test_castlike_FLOAT_to_FLOAT8E5M2FNUZ)
+    SKIP;
+CASE(test_castlike_FLOAT_to_FLOAT8E5M2FNUZ_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT_to_FLOAT8E5M2_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT_to_INT4)
+    SKIP;
+CASE(test_castlike_FLOAT_to_INT4_expanded)
+    SKIP;
+CASE(test_cast_FLOAT16_to_FLOAT4E2M1)
+    SKIP;
+CASE(test_cast_FLOAT16_to_FLOAT8E4M3FN)
+    SKIP;
+CASE(test_cast_FLOAT16_to_FLOAT8E4M3FNUZ)
+    SKIP;
+CASE(test_cast_FLOAT16_to_FLOAT8E5M2)
+    SKIP;
+CASE(test_cast_FLOAT16_to_FLOAT8E5M2FNUZ)
+    SKIP;
+CASE(test_cast_FLOAT16_to_INT4)
+    SKIP;
+CASE(test_cast_FLOAT16_to_UINT4)
+    SKIP;
+CASE(test_cast_FLOAT4E2M1_to_FLOAT)
+    SKIP;
+CASE(test_cast_FLOAT4E2M1_to_FLOAT16)
+    SKIP;
+CASE(test_cast_FLOAT8E4M3FNUZ_to_FLOAT)
+    SKIP;
+CASE(test_cast_FLOAT8E4M3FNUZ_to_FLOAT16)
+    SKIP;
+CASE(test_cast_FLOAT8E4M3FN_to_FLOAT)
+    SKIP;
+CASE(test_cast_FLOAT8E4M3FN_to_FLOAT16)
+    SKIP;
+CASE(test_cast_FLOAT8E5M2FNUZ_to_FLOAT)
+    SKIP;
+CASE(test_cast_FLOAT8E5M2FNUZ_to_FLOAT16)
+    SKIP;
+CASE(test_cast_FLOAT8E5M2_to_FLOAT)
+    SKIP;
+CASE(test_cast_FLOAT8E5M2_to_FLOAT16)
+    SKIP;
+CASE(test_cast_FLOAT_to_FLOAT4E2M1)
+    SKIP;
+CASE(test_cast_FLOAT_to_FLOAT8E4M3FN)
+    SKIP;
+CASE(test_cast_FLOAT_to_FLOAT8E4M3FNUZ)
+    SKIP;
+CASE(test_cast_FLOAT_to_FLOAT8E5M2)
+    SKIP;
+CASE(test_cast_FLOAT_to_FLOAT8E5M2FNUZ)
+    SKIP;
+CASE(test_cast_FLOAT_to_INT4)
+    SKIP;
+CASE(test_cast_FLOAT_to_UINT4)
+    SKIP;
+CASE(test_cast_INT4_to_FLOAT)
+    SKIP;
+CASE(test_cast_INT4_to_FLOAT16)
+    SKIP;
+CASE(test_cast_INT4_to_INT8)
+    SKIP;
+CASE(test_cast_UINT4_to_FLOAT)
+    SKIP;
+CASE(test_cast_UINT4_to_FLOAT16)
+    SKIP;
+CASE(test_cast_UINT4_to_UINT8)
+    SKIP;
+CASE(test_cast_e8m0_FLOAT16_to_FLOAT8E8M0)
+    SKIP;
+CASE(test_cast_e8m0_FLOAT8E8M0_to_FLOAT)
+    SKIP;
+CASE(test_cast_e8m0_FLOAT8E8M0_to_FLOAT16)
+    SKIP;
+CASE(test_cast_e8m0_FLOAT_to_FLOAT8E8M0)
+    SKIP;
+CASE(test_cast_no_saturate_FLOAT16_to_FLOAT8E4M3FN)
+    SKIP;
+CASE(test_cast_no_saturate_FLOAT16_to_FLOAT8E4M3FNUZ)
+    SKIP;
+CASE(test_cast_no_saturate_FLOAT16_to_FLOAT8E5M2)
+    SKIP;
+CASE(test_cast_no_saturate_FLOAT16_to_FLOAT8E5M2FNUZ)
+    SKIP;
+CASE(test_cast_no_saturate_FLOAT_to_FLOAT8E4M3FN)
+    SKIP;
+CASE(test_cast_no_saturate_FLOAT_to_FLOAT8E4M3FNUZ)
+    SKIP;
+CASE(test_cast_no_saturate_FLOAT_to_FLOAT8E5M2)
+    SKIP;
+CASE(test_cast_no_saturate_FLOAT_to_FLOAT8E5M2FNUZ)
+    SKIP;
+CASE(test_castlike_FLOAT16_to_FLOAT4E2M1)
+    SKIP;
+CASE(test_castlike_FLOAT16_to_FLOAT4E2M1_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT16_to_FLOAT8E4M3FN)
+    SKIP;
+CASE(test_castlike_FLOAT16_to_FLOAT8E4M3FNUZ)
+    SKIP;
+CASE(test_castlike_FLOAT16_to_FLOAT8E4M3FNUZ_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT16_to_FLOAT8E4M3FN_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT16_to_FLOAT8E5M2)
+    SKIP;
+CASE(test_castlike_FLOAT16_to_FLOAT8E5M2FNUZ)
+    SKIP;
+CASE(test_castlike_FLOAT16_to_FLOAT8E5M2FNUZ_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT16_to_FLOAT8E5M2_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT16_to_INT4)
+    SKIP;
+CASE(test_castlike_FLOAT16_to_INT4_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT16_to_UINT4)
+    SKIP;
+CASE(test_castlike_FLOAT16_to_UINT4_expanded)
+    SKIP;
 CASE(test_ceil)
     // no filter
 CASE(test_ceil_example)

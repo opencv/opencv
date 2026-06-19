@@ -132,6 +132,7 @@ struct Net::Impl : public detail::NetImplBase
     KVCacheManager kvCacheManager;
 
     Ptr<Graph> mainGraph;
+    std::vector<int> mainGraphOutTypes;
     int globGraphIdx;
 
     int accuracy;
