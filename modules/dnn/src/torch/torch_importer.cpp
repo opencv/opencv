@@ -399,6 +399,7 @@ struct TorchImporter
     void readTorchTensor(int indexTensor, int typeTensor)
     {
         int ndims = readInt();
+        CV_Assert(ndims >= 0 && ndims <= CV_MAX_DIM);
         AutoBuffer<int64, 4> sizes(ndims);
         AutoBuffer<int64, 4> steps(ndims);
         THFile_readLongRaw(file, sizes.data(), ndims);
@@ -426,9 +427,29 @@ struct TorchImporter
             readedIndexes.insert(indexStorage);
         }
 
-        //small check
-        size_t requireElems = (size_t)offset + (size_t)steps[0] * (size_t)sizes[0];
-        size_t storageElems = storages[indexStorage].total();
+        // The Tensor is materialized below as a strided view over the storage
+        // using ALL dimensions and steps, so the storage must be large enough to
+        // cover the highest element the view can reach:
+        //     offset + sum_i (sizes[i] - 1) * steps[i].
+        // The previous check only accounted for dimension 0, so a tensor with
+        // e.g. sizes[0]=steps[0]=1 but large higher dimensions/steps passed it and
+        // made convertTo() read past the end of the storage buffer.
+        CV_Assert(offset >= 0);
+        const size_t storageElems = storages[indexStorage].total();
+        size_t requireElems = (size_t)offset + 1;
+        for (int i = 0; i < ndims; i++)
+        {
+            CV_Assert(sizes[i] >= 0 && sizes[i] <= INT_MAX);
+            CV_Assert(steps[i] >= 0 && steps[i] <= INT_MAX);
+            if (sizes[i] == 0)  // empty tensor: nothing is read from the storage
+            {
+                requireElems = 0;
+                break;
+            }
+            requireElems += (size_t)(sizes[i] - 1) * (size_t)steps[i];
+            if (requireElems > storageElems)
+                CV_Error(Error::StsBadSize, "Storage has insufficient number of elements for requested Tensor");
+        }
         if (requireElems > storageElems)
             CV_Error(Error::StsBadSize, "Storage has insufficient number of elements for requested Tensor");
 
