@@ -355,9 +355,7 @@ class DDIMInpainter(object):
         decoder_path = findModel(args.decoder_model, args.decoder_sha1)
         diffusor_path = findModel(args.diffusor_model, args.diffusor_sha1)
 
-        engine = cv.dnn.ENGINE_AUTO
-        if args.backend != "default" or args.target != "cpu":
-            engine = cv.dnn.ENGINE_CLASSIC
+        engine = cv.dnn.ENGINE_NEW
 
         self.encoder = cv.dnn.readNet(encoder_path, "", "", engine)
         self.diffusor = cv.dnn.readNet(diffusor_path, "", "", engine)

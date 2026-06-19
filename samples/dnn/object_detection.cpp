@@ -220,10 +220,7 @@ int main(int argc, char** argv)
         }
     }
     //![read_net]
-    EngineType engine = ENGINE_AUTO;
-    if ((parser.get<String>("backend") != "default") || (parser.get<String>("target") != "cpu")){
-        engine = ENGINE_CLASSIC;
-    }
+    EngineType engine = ENGINE_NEW;
     Net net = readNet(modelPath, configPath, "", engine);
     int backend = getBackendID(parser.get<String>("backend"));
     net.setPreferableBackend(backend);
