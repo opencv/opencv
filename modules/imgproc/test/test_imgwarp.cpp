@@ -1587,6 +1587,24 @@ TEST(Imgproc_Warp, regression_28554)
     ASSERT_EQ(0.0, cvtest::norm(reference, outMat, NORM_INF));
 }
 
+TEST(Imgproc_Warp, regression_28943)
+{
+    Mat inMat(1, 1, CV_16SC1, Scalar(100));
+    Mat coeffs = (Mat_<double>(2, 3) <<
+            -2097152., 0., -2097152.,
+                    0., 1.,        0.);
+
+    Mat outMat;
+    Mat reference = Mat::zeros(Size(2, 1), inMat.type());
+    EXPECT_NO_THROW(warpAffine(inMat, outMat, coeffs, Size(2, 1),
+            INTER_CUBIC | WARP_INVERSE_MAP, BORDER_CONSTANT, 0.0));
+    EXPECT_EQ(0.0, cvtest::norm(reference, outMat, NORM_INF));
+
+    EXPECT_NO_THROW(warpAffine(inMat, outMat, coeffs, Size(2, 1),
+            INTER_NEAREST | WARP_INVERSE_MAP, BORDER_CONSTANT, 0.0));
+    EXPECT_EQ(0.0, cvtest::norm(reference, outMat, NORM_INF));
+}
+
 
 TEST(Imgproc_GetAffineTransform, singularity)
 {

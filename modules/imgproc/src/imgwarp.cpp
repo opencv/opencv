@@ -2300,8 +2300,8 @@ void warpAffineBlocklineNN(int *adelta, int *bdelta, short* xy, int X0, int Y0, 
 #endif
     for (; x1 < bw; x1++)
     {
-        const int X = (X0 + adelta[x1]) >> AB_BITS;
-        const int Y = (Y0 + bdelta[x1]) >> AB_BITS;
+        const int X = (int)(((int64)X0 + adelta[x1]) >> AB_BITS);
+        const int Y = (int)(((int64)Y0 + bdelta[x1]) >> AB_BITS);
         xy[x1 * 2] = saturate_cast<short>(X);
         xy[x1 * 2 + 1] = saturate_cast<short>(Y);
     }
@@ -2350,8 +2350,8 @@ void warpAffineBlockline(int *adelta, int *bdelta, short* xy, short* alpha, int 
         #endif
         for( ; x1 < bw; x1++ )
         {
-            int X = (X0 + adelta[x1]) >> (AB_BITS - INTER_BITS);
-            int Y = (Y0 + bdelta[x1]) >> (AB_BITS - INTER_BITS);
+            int X = (int)(((int64)X0 + adelta[x1]) >> (AB_BITS - INTER_BITS));
+            int Y = (int)(((int64)Y0 + bdelta[x1]) >> (AB_BITS - INTER_BITS));
             xy[x1*2] = saturate_cast<short>(X >> INTER_BITS);
             xy[x1*2+1] = saturate_cast<short>(Y >> INTER_BITS);
             alpha[x1] = (short)((Y & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE +
