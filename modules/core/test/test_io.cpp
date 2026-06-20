@@ -836,6 +836,32 @@ TEST(Core_InputOutput, filestorage_nd_matrix_too_many_dims)
     EXPECT_ANY_THROW(fs["sm"] >> sm);
 }
 
+TEST(Core_InputOutput, filestorage_matrix_dt_too_long)
+{
+    // A "dt" string with many distinct adjacent types makes decodeFormat()
+    // emit more pairs than the caller buffer holds. decodeSimpleFormat() sized
+    // its fmt_pairs buffer as CV_FS_MAX_FMT_PAIRS ints while decodeFormat writes
+    // up to 2*CV_FS_MAX_FMT_PAIRS ints, so a long enough dt wrote past the stack
+    // buffer before the length guard could reject it.
+    // CV_FS_MAX_FMT_PAIRS is 128; well over 2x that many distinct pairs.
+    std::string dt;
+    for (int i = 0; i < 300; i++)
+        dt += (i & 1) ? 'c' : 'u';
+
+    const std::string content =
+        "%YAML:1.0\n---\n"
+        "m: !!opencv-matrix\n"
+        "   rows: 1\n"
+        "   cols: 1\n"
+        "   dt: \"" + dt + "\"\n"
+        "   data: [ 0 ]\n";
+
+    FileStorage fs(content, FileStorage::READ | FileStorage::MEMORY);
+
+    Mat m;
+    EXPECT_ANY_THROW(fs["m"] >> m);
+}
+
 TEST(Core_InputOutput, filestorage_base64_valid_call)
 {
     const ::testing::TestInfo* const test_info = ::testing::UnitTest::GetInstance()->current_test_info();
