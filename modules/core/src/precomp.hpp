@@ -261,8 +261,12 @@ typedef void (*BinaryFuncC)(const uchar* src1, size_t step1,
                        uchar* dst, size_t step, int width, int height,
                        void*);
 
-BinaryFunc getConvertFunc(int sdepth, int ddepth);
-BinaryFunc getConvertScaleFunc(int sdepth, int ddepth);
+// Exported so the new element-wise expression engine can reuse the already-optimized,
+// CPU-dispatched convert / convert-scale kernels through a thin ElemwiseFunc adapter,
+// instead of re-implementing the whole cast matrix. (Prototype: declarations are mirrored
+// engine-side; relocate into a public core header at integration time.)
+CV_EXPORTS BinaryFunc getConvertFunc(int sdepth, int ddepth);
+CV_EXPORTS BinaryFunc getConvertScaleFunc(int sdepth, int ddepth);
 BinaryFunc getCopyMaskFunc(size_t esz);
 
 /* default memory block for sparse array elements */

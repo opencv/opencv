@@ -99,18 +99,54 @@ typedef std::array<size_t, MatShape::MAX_DIMS> EwSteps;
 // excluded and the executor guarantees the invariant (materializing a contiguous copy of any
 // rare non-unit-innermost-stride input). The result is contiguous in x (dst stepx == 1).
 // Returns >= 0 on success, < 0 (a CV_HAL_ERROR_* code) to let the caller fall back.
+//
+// The trailing `ctx` is an optional, per-instruction adapter context built once before the
+// parallel loop (see EwInsn::ctx). Generic kernels ignore it (it is nullptr). "Adapter"
+// kernels reinterpret it to carry precomputed state - e.g. a multi-channel-scalar register
+// pattern (array-op-scalar), a wrapped core BinaryFunc + scale params (convert / convert_scale),
+// or a result mask (compare -> 0/1 vs 0/255). An adapter does no arithmetic itself: it only
+// unpacks ctx and forwards to the real kernel.
 // ---------------------------------------------------------------------------
 typedef int (*ElemwiseFunc)(
     const void* src0, size_t step0y, size_t step0x,
     const void* src1, size_t step1y, size_t step1x,
     const void* src2, size_t step2y, size_t step2x,
     void*       dst,  size_t dstepy,
-    int width, int height);
+    int width, int height, void* ctx);
 
 // Dispatcher: returns the best kernel for (op, operand depths, result depth), or nullptr
 // if the exact combination is not provided (the compiler then inserts OP_CAST nodes and
 // retries with a supported working type). Unused operand depths are EW_DEPTH_NONE.
 ElemwiseFunc getElemwiseFunc(ElemwiseOp op, int depth0, int depth1, int depth2, int rdepth);
+
+// ---------------------------------------------------------------------------
+// Adapter context: the optional trailing void* of ElemwiseFunc. A small fixed-size POD built
+// on the fly by the executor before the parallel loop and discriminated there by op category;
+// each adapter kernel casts the void* to the variant it expects. Large payloads (e.g. an
+// expanded multi-channel-scalar register pattern) live in a separate AutoBuffer and are only
+// pointed to from here, so EwCtx stays small with no heap ownership (no std::shared_ptr).
+// ---------------------------------------------------------------------------
+
+// Mirror of core's internal BinaryFunc. The return type is not part of a function's symbol
+// name, so an engine-side declaration using this type links to cv::getConvertFunc /
+// cv::getConvertScaleFunc even though core declares them returning its own BinaryFunc.
+typedef void (*EwBinaryFunc)(const uchar* src1, size_t step1,
+                             const uchar* src2, size_t step2,
+                             uchar* dst, size_t step, Size sz, void* params);
+
+struct EwCtx
+{
+    union
+    {
+        // CAT_CAST: wrap a core convert / convert-scale BinaryFunc (steps in bytes, Size tile).
+        struct { EwBinaryFunc fn; int sesz1, desz1; double scale[2]; } cvt;
+        // array-op-scalar: the specialized inner kernel + the cyclic C-channel register pattern.
+        // The pattern lives in a separate per-call AutoBuffer; here we only point into it.
+        struct { ElemwiseFunc fn; const void* pattern; } sc;
+        // CAT_COMPARE: result mask AND-ed onto the native compare (1 => 0/1, 0xFF => 0/255).
+        struct { int mask; } cmp;
+    };
+};
 
 // ---------------------------------------------------------------------------
 // Runtime operand descriptor: what a kernel actually receives per slice.

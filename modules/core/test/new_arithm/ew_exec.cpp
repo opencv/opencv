@@ -3,27 +3,32 @@
 // of this distribution and at http://opencv.org/license.html.
 
 // Layer 3 implementation: see ew_exec.hpp.
+//
+// exec() does the per-call prep (result-shape inference + output allocation, const
+// materialization, adapter contexts, temp-buffer sizing) ONCE, then hands the traversal to
+// broadcastOp(): all operands (inputs + consts-as-Mats + outputs) go in one flat list, and the
+// body re-points the program's args at each tile's slices and runs the instruction list. The
+// body is op-agnostic-driven: broadcastOp does geometry + 2D tiling + parallelism.
 
 #include "ew_exec.hpp"
+#include "ew_broadcast.hpp"
 #include <algorithm>
+#include <vector>
+
+// Engine-side mirror declarations of core's exported convert dispatchers (see the CV_EXPORTS in
+// core/src/precomp.hpp). A function's return type is not part of its mangled name, so declaring
+// these to return EwBinaryFunc links to cv::getConvertFunc / getConvertScaleFunc (which return
+// core's identical BinaryFunc) without pulling in the private precomp.hpp.
+namespace cv {
+ew::EwBinaryFunc getConvertFunc(int sdepth, int ddepth);
+ew::EwBinaryFunc getConvertScaleFunc(int sdepth, int ddepth);
+}
 
 namespace cv { namespace ew {
 
-// ---------------------------------------------------------------------------
-// Per-slot execution plan (shape-collapsed, in elemsize1 units).
-// ---------------------------------------------------------------------------
-struct SlotPlan
-{
-    ArgKind kind = ARG_NONE;
-    int depth = EW_DEPTH_NONE;
-    int esz1 = 0;                  // size of one scalar (one channel value), bytes
-    uchar* base = nullptr;         // input/output/const data; temps are per-thread
-    int tempBuf = -1;              // physical temp buffer id (ARG_TEMP only)
-    EwSteps step{};                // collapsed steps (length m); 0 => broadcast
-    std::vector<uchar> constStore; // ARG_CONST backing storage
-};
-
 // Logical shape of a Mat with channels as the innermost dimension; steps in elemsize1 units.
+// Used here only to infer the broadcast RESULT shape (spatial + channels) for output allocation;
+// broadcastOp does its own channel-aware layout for the traversal itself.
 static void matLogical(const Mat& m, MatShape& shp, EwSteps& step, int& esz1)
 {
     esz1 = (int)m.elemSize1();
@@ -58,77 +63,6 @@ static bool broadcastShape(const std::vector<MatShape>& shps, MatShape& out)
     return true;
 }
 
-// Right-align an arg's own (shp,step) to nd dims; broadcast dims get step 0.
-static void alignArg(const MatShape& shp, const EwSteps& step, int nd,
-                     EwSteps& as, MatShape& ash)
-{
-    as.fill(0);
-    ash.assign(nd, 1);
-    int off = nd - (int)shp.size();
-    for (int i = 0; i < (int)shp.size(); i++)
-    {
-        int d = shp[i];
-        ash[off + i] = d;
-        as[off + i] = (d == 1) ? 0 : step[i];
-    }
-}
-
-// Collapse adjacent dims that are contiguous (and broadcast-consistent) across all args.
-// S/H are per-arg step/shape arrays; D is the iteration extent. Returns collapsed ndims.
-static int collapseDims(std::vector<EwSteps>& S,
-                        std::vector<MatShape>& H,
-                        MatShape& D)
-{
-    int K = (int)S.size();
-    int nd = (int)D.size();
-    if (nd <= 1) return nd;
-
-    int j = nd - 1;
-    for (int i = j - 1; i >= 0; i--)
-    {
-        bool contig = true, scalar = true, consist = true;
-        for (int k = 0; k < K; k++)
-        {
-            size_t st = S[k][j] * (size_t)H[k][j];
-            bool prevScalar = H[k][j] == 1;
-            bool curScalar = H[k][i] == 1;
-            contig  = contig  && (st == S[k][i]);
-            scalar  = scalar  && curScalar;
-            consist = consist && (curScalar == prevScalar);
-        }
-        if (contig && (consist || scalar))
-        {
-            for (int k = 0; k < K; k++) H[k][j] *= H[k][i];
-            D[j] *= D[i];
-        }
-        else
-        {
-            j--;
-            if (i < j)
-            {
-                for (int k = 0; k < K; k++) { H[k][j] = H[k][i]; S[k][j] = S[k][i]; }
-                D[j] = D[i];
-            }
-        }
-    }
-
-    int m = nd - j;
-    for (int d = 0; d < m; d++)
-    {
-        D[d] = D[j + d];
-        for (int k = 0; k < K; k++) { S[k][d] = S[k][j + d]; H[k][d] = H[k][j + d]; }
-    }
-    D.resize(m);
-    for (int k = 0; k < K; k++) H[k].resize(m);  // S[k] is fixed-size; only [0..m) is read
-
-    // Zero out steps of broadcast (size-1) dims (numpy step==0 trick).
-    for (int d = 0; d < m; d++)
-        for (int k = 0; k < K; k++)
-            if (H[k][d] == 1) S[k][d] = 0;
-
-    return m;
-}
-
 static void storeScalar(int depth, double v, uchar* p)
 {
     switch (depth)
@@ -144,6 +78,24 @@ static void storeScalar(int depth, double v, uchar* p)
     }
 }
 
+// Rough per-element cost of an op, in "cycle units" (tuning for parallel_for_ stripe count).
+// Unknown ops default to ~division. cv::expression will own this once it drives broadcastOp.
+static int opCost(ElemwiseOp op)
+{
+    switch (op)
+    {
+    case OP_ADD: case OP_SUB: case OP_MUL: case OP_MIN: case OP_MAX:
+    case OP_ABSDIFF: case OP_AND: case OP_OR: case OP_XOR: case OP_NOT:
+    case OP_NEG: case OP_ABS: case OP_CAST: case OP_RELU:
+    case OP_CMP_EQ: case OP_CMP_NE: case OP_CMP_LT:
+    case OP_CMP_LE: case OP_CMP_GT: case OP_CMP_GE: return 1;
+    case OP_DIV: case OP_SQRT: case OP_CONVERT_SCALE: return 10;
+    case OP_SIN: case OP_COS: case OP_TANH: case OP_ERF:
+    case OP_EXP: case OP_LOG: case OP_POW:           return 30;
+    default:                                         return 10;
+    }
+}
+
 void exec(const EwProgram& program,
           const std::vector<Mat>& inputs,
           std::vector<Mat>& outputs)
@@ -152,33 +104,28 @@ void exec(const EwProgram& program,
     const int nslots = (int)program.arginfo.size();
     CV_Assert(nslots >= 1 && program.arginfo[0].kind == ARG_NONE);
 
-    // ---- 1. logical shapes of inputs, broadcast to the full result shape ----
+    // ---- 1. broadcast result shape (inputs + const channel counts), channels innermost ----
     std::vector<MatShape> inShp(program.ninputs);
-    std::vector<EwSteps> inStep(program.ninputs);
-    std::vector<int> inEsz1(program.ninputs);
-    // Local input headers. An input whose only unit-stride axis is a size-1 dim (e.g. a cropped
-    // array adjacent to a dropped channel/size-1 axis) would expose a gapped axis as innermost;
-    // kernels require innermost stride in {0,1}, so such inputs are materialized contiguous.
-    // Row-gapped ROIs (unit-stride innermost) are kept as-is and handled via stepy.
-    std::vector<Mat> ins(inputs.begin(), inputs.end());
+    std::vector<EwSteps>  inStep(program.ninputs);
+    std::vector<int>      inEsz1(program.ninputs);
+    std::vector<MatShape> bshapes;
     for (int i = 0; i < program.ninputs; i++)
     {
-        matLogical(ins[i], inShp[i], inStep[i], inEsz1[i]);
-        bool anyBig = false, hasUnit = false;
-        for (size_t d = 0; d < inShp[i].size(); d++)
-            if (inShp[i][d] > 1) { anyBig = true; if (inStep[i][d] == 1) hasUnit = true; }
-        if (anyBig && !hasUnit)
-        {
-            ins[i] = ins[i].clone();
-            matLogical(ins[i], inShp[i], inStep[i], inEsz1[i]);
-        }
+        matLogical(inputs[i], inShp[i], inStep[i], inEsz1[i]);
+        bshapes.push_back(inShp[i]);
     }
-
+    for (int s = 1; s < nslots; s++)
+    {
+        const EwArgInfo& ai = program.arginfo[s];
+        if (ai.kind != ARG_CONST) continue;
+        MatShape cs; cs.assign(1, std::max(ai.channels, 1));   // just the channel dim
+        bshapes.push_back(cs);
+    }
     MatShape full;
-    CV_Assert(broadcastShape(inShp, full));      // includes the channel dim (last)
+    CV_Assert(broadcastShape(bshapes, full) && "ew: inputs not broadcast-compatible");
     const int ndFull = (int)full.size();
     const int rchannels = full[ndFull - 1];
-    MatShape spatial = full; spatial.resize(ndFull - 1);  // result shape without channels
+    MatShape spatial = full; spatial.resize(ndFull - 1);
 
     // ---- 2. allocate outputs ----
     outputs.resize(program.noutputs);
@@ -190,182 +137,137 @@ void exec(const EwProgram& program,
                                  CV_MAKETYPE(ai.depth, rchannels));
     }
 
-    // ---- 3. build per-slot aligned shape/step; gather collapse set ----
-    std::vector<SlotPlan> plan(nslots);
-    std::vector<EwSteps> S;     // collapse-set steps
-    std::vector<MatShape> H;    // collapse-set shapes
-    std::vector<int> setSlot;   // collapse-set -> slot index
-    MatShape D = full;          // iteration extent (collapsed in place)
-
+    // ---- 3. flat operand list for broadcastOp (inputs + consts-as-Mats + outputs), plus a
+    //         slot -> array-index map and a slot -> temp-buffer map ----
+    std::vector<Mat> arrays;
+    std::vector<Mat> constMats;                 // backing storage for ARG_CONST operands
+    std::vector<int> slotToArray(nslots, -1);
+    std::vector<int> slotToTemp(nslots, -1);
+    constMats.reserve(nslots);
     for (int s = 1; s < nslots; s++)
     {
         const EwArgInfo& ai = program.arginfo[s];
-        SlotPlan& sp = plan[s];
-        sp.kind = ai.kind;
-        sp.depth = ai.depth;
-
-        MatShape shp;
-        EwSteps step{};
-
         if (ai.kind == ARG_INPUT)
         {
-            shp = inShp[ai.index]; step = inStep[ai.index];
-            sp.esz1 = inEsz1[ai.index];
-            sp.base = (uchar*)ins[ai.index].data;
+            slotToArray[s] = (int)arrays.size();
+            arrays.push_back(inputs[ai.index]);
         }
         else if (ai.kind == ARG_OUTPUT)
         {
-            int e; matLogical(outputs[ai.index], shp, step, e);
-            sp.esz1 = e;
-            sp.base = (uchar*)outputs[ai.index].data;
+            slotToArray[s] = (int)arrays.size();
+            arrays.push_back(outputs[ai.index]);
         }
         else if (ai.kind == ARG_CONST)
         {
-            sp.esz1 = (int)CV_ELEM_SIZE1(ai.depth);
-            int c = std::max(ai.channels, 1);
-            CV_Assert(c <= 4);   // per-channel const fits in a cv::Scalar
-            sp.constStore.resize((size_t)c * sp.esz1);
+            const int c = std::max(ai.channels, 1);
+            CV_Assert(c <= 4);
+            Mat cm(1, 1, CV_MAKETYPE(ai.depth, c));
+            const int e = (int)CV_ELEM_SIZE1(ai.depth);
             for (int k = 0; k < c; k++)
-                storeScalar(ai.depth, ai.cval[k], sp.constStore.data() + (size_t)k * sp.esz1);
-            sp.base = sp.constStore.data();
-            // logical shape [1,...,1,C]; channel step 1 if per-channel, else fully broadcast
-            shp.assign(ndFull, 1); shp[ndFull - 1] = c;
-            step.fill(0); step[ndFull - 1] = (c > 1) ? 1 : 0;
+                storeScalar(ai.depth, ai.cval[k], cm.data + (size_t)k * e);
+            constMats.push_back(cm);
+            slotToArray[s] = (int)arrays.size();
+            arrays.push_back(cm);
         }
         else // ARG_TEMP
         {
-            sp.esz1 = (int)CV_ELEM_SIZE1(ai.depth);
-            sp.tempBuf = program.bufferOfTemp.empty() ? ai.index
-                                                      : program.bufferOfTemp[ai.index];
-            continue; // temps are tile-local; not part of broadcast/collapse
+            slotToTemp[s] = program.bufferOfTemp.empty() ? ai.index
+                                                         : program.bufferOfTemp[ai.index];
         }
-
-        EwSteps as{}; MatShape ash;
-        alignArg(shp, step, ndFull, as, ash);
-        S.push_back(as); H.push_back(ash); setSlot.push_back(s);
     }
 
-    // Drop size-1 iteration dims (e.g. the channel dim of single-channel arrays, or any
-    // broadcast axis that ended up size 1) so the innermost dim is a real extent and tiles
-    // aren't degenerate width-1. All operands are size-1 there too, so this is offset-neutral.
-    {
-        const int K = (int)S.size();
-        int w = 0;
-        for (int d = 0; d < ndFull; d++)
-        {
-            if (D[d] == 1) continue;
-            D[w] = D[d];
-            for (int k = 0; k < K; k++) { S[k][w] = S[k][d]; H[k][w] = H[k][d]; }
-            w++;
-        }
-        if (w == 0)   // fully scalar result: keep one trivial dim
-        {
-            D[0] = 1;
-            for (int k = 0; k < K; k++) { S[k][0] = 0; H[k][0] = 1; }
-            w = 1;
-        }
-        D.resize(w);
-        for (int k = 0; k < K; k++) H[k].resize(w);
-    }
-
-    // ---- 4. collapse dims across the whole arg set ----
-    int m = collapseDims(S, H, D);
-    for (size_t t = 0; t < setSlot.size(); t++)
-        plan[setSlot[t]].step = S[t];
-
-    // Kernels handle only innermost stride 0 (broadcast) or 1 (contiguous) - no gather.
-    // The (rare) operand with a non-unit innermost stride must be materialized contiguous;
-    // for now we assert (the copy is a TODO once such an input actually shows up).
-    for (size_t t = 0; t < setSlot.size(); t++)
-        CV_Assert(plan[setSlot[t]].step[m - 1] <= 1 &&
-                  "ew: operand has non-unit innermost stride (materialize a contiguous copy)");
-
-    // ---- 5. tiling parameters ----
-    const int W = D[m - 1];
-    long long nplanes = 1;
-    for (int d = 0; d < m - 1; d++) nplanes *= D[d];
-
-    int maxBufEsz = 1;
-    std::vector<int> bufEsz(program.nbuffers, 1);
-    for (int s = 1; s < nslots; s++)
-        if (plan[s].kind == ARG_TEMP && plan[s].tempBuf >= 0)
-        {
-            bufEsz[plan[s].tempBuf] = std::max(bufEsz[plan[s].tempBuf], plan[s].esz1);
-            maxBufEsz = std::max(maxBufEsz, plan[s].esz1);
-        }
-
-    int tileW;
-    if (program.nbuffers > 0)
-    {
-        const size_t l1budget = 16 * 1024;
-        tileW = (int)std::max<size_t>(256, l1budget / ((size_t)program.nbuffers * maxBufEsz));
-    }
-    else
-        tileW = 1 << 14;
-    tileW = std::max(1, std::min(tileW, W));
-
-    const int ntilesW = (W + tileW - 1) / tileW;
-    const long long ntiles = nplanes * ntilesW;
-    CV_Assert(ntiles <= (long long)INT_MAX);
-
-    // ---- 6. parallel execution; each worker re-points args at its tile ----
+    // ---- 4. per-instruction adapter contexts (frozen; shared read-only across threads) ----
     const EwInsn* prog = program.prog.data();
     const int ninsn = (int)program.prog.size();
-
-    parallel_for_(Range(0, (int)ntiles), [&](const Range& r)
+    AutoBuffer<EwCtx> ctxs(ninsn);
+    AutoBuffer<void*> ctxptr(ninsn);
+    for (int n = 0; n < ninsn; n++)
     {
-        std::vector<EwArg> args(nslots);
-        std::vector<std::vector<uchar> > tbuf(program.nbuffers);
-        for (int b = 0; b < program.nbuffers; b++)
-            tbuf[b].resize((size_t)tileW * bufEsz[b]);
-
-        std::vector<int> idx(m > 1 ? m - 1 : 0);
-
-        for (int t = r.start; t < r.end; t++)
+        const EwInsn& ins = prog[n];
+        void* cx = nullptr;
+        if (ins.op == OP_CAST)
         {
-            int plane = t / ntilesW;
-            int wt = t % ntilesW;
-            int wofs = wt * tileW;
-            int w = std::min(tileW, W - wofs);
+            const int sd = program.arginfo[ins.arg0].depth;
+            const int dd = program.arginfo[ins.result].depth;
+            EwCtx& c = ctxs[n];
+            c.cvt.fn = cv::getConvertFunc(sd, dd);
+            CV_Assert(c.cvt.fn != nullptr);
+            c.cvt.sesz1 = (int)CV_ELEM_SIZE1(sd);
+            c.cvt.desz1 = (int)CV_ELEM_SIZE1(dd);
+            c.cvt.scale[0] = 1.0; c.cvt.scale[1] = 0.0;     // unused by plain convert
+            cx = &c;
+        }
+        ctxptr[n] = cx;
+    }
 
-            // decode plane index into per-dim indices
-            int p = plane;
-            for (int d = m - 2; d >= 0; d--) { idx[d] = p % D[d]; p /= D[d]; }
+    // ---- 5. per-temp-buffer element size ----
+    const int nbuffers = program.nbuffers;
+    AutoBuffer<int> bufEsz(std::max(1, nbuffers));
+    for (int b = 0; b < nbuffers; b++) bufEsz[b] = 1;
+    for (int s = 1; s < nslots; s++)
+        if (program.arginfo[s].kind == ARG_TEMP)
+        {
+            const int b = slotToTemp[s];
+            bufEsz[b] = std::max(bufEsz[b], (int)CV_ELEM_SIZE1(program.arginfo[s].depth));
+        }
 
-            for (int s = 1; s < nslots; s++)
+    // ---- 6. parallel work hint: total output scalars x summed per-element op cost / budget.
+    //         (Without this, broadcastOp's default ~100 cyc/elem over-splits cheap ops.) ----
+    long long otot = 1;
+    for (int d = 0; d < ndFull; d++) otot *= full[d];
+    long long costPerElem = 0;
+    for (int n = 0; n < ninsn; n++) costPerElem += opCost(prog[n].op);
+    const double nstripes = (double)otot * (double)std::max<long long>(costPerElem, 1)
+                            / (double)(1 << 18);
+
+    // ---- 7. drive: broadcastOp does geometry + 2D tiling + parallelism; the body runs the
+    //         frozen program on each tile (temps tile-local, re-pointed from the tile slices).
+    //         expandChannels=true => the body always sees single-channel data. ----
+    broadcastOp(arrays.data(), arrays.size(), [&](const EwTile& tile)
+    {
+        const int w = tile.width, h = tile.height;
+
+        // temp buffers for this tile: contiguous [h x w], stepy=w, stepx=1
+        AutoBuffer<size_t> tofs(std::max(1, nbuffers));
+        size_t tbytes = 0;
+        for (int b = 0; b < nbuffers; b++)
+        {
+            tofs[b] = tbytes;
+            tbytes += (size_t)w * h * bufEsz[b];
+        }
+        AutoBuffer<uchar> tstore(tbytes);
+
+        AutoBuffer<EwArg> args(nslots);                 // slot 0 stays the null operand
+        for (int s = 1; s < nslots; s++)
+        {
+            EwArg& a = args[s];
+            const int ia = slotToArray[s];
+            if (ia >= 0)
             {
-                const SlotPlan& sp = plan[s];
-                EwArg& a = args[s];
-                a.depth = sp.depth; a.channels = 0;
-                if (sp.kind == ARG_TEMP)
-                {
-                    a.ptr = tbuf[sp.tempBuf].data();
-                    a.stepy = 0; a.stepx = 1;
-                    continue;
-                }
-                size_t off = 0;
-                for (int d = 0; d < m - 1; d++) off += (size_t)idx[d] * sp.step[d];
-                off += (size_t)wofs * sp.step[m - 1];
-                a.ptr = sp.base + off * sp.esz1;
-                a.stepy = 0;                  // height==1 for now (no 2D tiling yet)
-                a.stepx = sp.step[m - 1];
+                const EwSlice& sl = tile.slices[ia];
+                a.ptr = sl.ptr; a.stepy = sl.stepy; a.stepx = sl.stepx;
             }
-
-            for (int n = 0; n < ninsn; n++)
+            else                                        // ARG_TEMP
             {
-                const EwInsn& ins = prog[n];
-                const EwArg& a0 = args[ins.arg0];
-                const EwArg& a1 = args[ins.arg1];
-                const EwArg& a2 = args[ins.arg2];
-                const EwArg& rr = args[ins.result];
-                int code = ins.fptr(a0.ptr, a0.stepy, a0.stepx,
-                                    a1.ptr, a1.stepy, a1.stepx,
-                                    a2.ptr, a2.stepy, a2.stepx,
-                                    (void*)rr.ptr, rr.stepy, w, 1);
-                CV_Assert(code >= 0);
+                a.ptr = tstore.data() + tofs[slotToTemp[s]];
+                a.stepy = (size_t)w; a.stepx = 1;
             }
         }
-    });
+
+        for (int n = 0; n < ninsn; n++)
+        {
+            const EwInsn& ins = prog[n];
+            const EwArg& a0 = args[ins.arg0];
+            const EwArg& a1 = args[ins.arg1];
+            const EwArg& a2 = args[ins.arg2];
+            const EwArg& rr = args[ins.result];
+            int code = ins.fptr(a0.ptr, a0.stepy, a0.stepx,
+                                a1.ptr, a1.stepy, a1.stepx,
+                                a2.ptr, a2.stepy, a2.stepx,
+                                (void*)rr.ptr, rr.stepy, w, h, ctxptr[n]);
+            CV_Assert(code >= 0);
+        }
+    }, /*expandChannels*/ true, nstripes);
 }
 
 // ---------------------------------------------------------------------------
@@ -412,6 +314,32 @@ EwProgram makeUnaryProgram(ElemwiseOp op, int depth0, int rdepth)
     p.prog.push_back(ins);
     return p;
 }
+
+// [VP] looks like there is a bug here. rank(8s) < rank(16u),
+// so when we add 8s to 16u, the coercion type will be 16u,
+// however it should be 32s. We need to take into account signness of integer types.
+// also, when we subtract 8u from 8s, the result should have 16s type.
+// the coercion rule should be:
+// * if a == b -> a
+// * else if a == 64f || b == 64f -> 64f
+// * else if flt(a) || flt(b) -> 32f
+// * else if max(a, b) <= 8s -> 16s
+// * else if max(a, b) <= 16s -> 32s
+// * else if a == 32s || a == 32u || b == 32s || b == 32u -> 64s
+// * else 64f
+//
+// or
+//
+// if (a == b) return a;
+// const uint64_t typelut = (0 << CV_8U*3) | (0 << CV_8S*3) | (1 << CV_16U*3) | (1 << 16S*3) |
+//                          (2 << CV_32U*3) | (2 << CV_32S*3) | (3 << CV_16F*3) | (3 << CV_16BF*3) |
+//                          (3 << CV_32F*3) | (4 << CV_64F*3) | (4 << CV_64S*3) | (4 << CV_64U*3);
+// int idxa = int((typelut >> (a*3)) & 7);
+// int idxb = int((typelut >> (b*3)) & 7);
+// int maxab = std::max(idxa, idxb);
+// const int ctypelut = ((CV_16S << 0*5) | (CV_32S << 1*5) | (CV_64S << 2*5) |
+//                       (CV_32F << 3*5) | (CV_64F << 4*5));
+// return (ctypelut >> (maxab*5)) & 31;
 
 // numpy-ish promotion of two known depths (float dominates; wider integer otherwise).
 static int promote2(int a, int b)

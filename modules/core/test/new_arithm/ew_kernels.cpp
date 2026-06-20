@@ -15,175 +15,177 @@
 //  - continuity collapse 2D->1D when every operand+dst is gap-free.
 //  - halide right-edge backoff for the SIMD tail; scalar tail / scalar path for width<VECSZ
 //    and for any broadcast operand (vx_setall vectorization of broadcast is a later step).
+//  - IN-PLACE SAFE: the right-edge backoff re-reads already-written lanes, which corrupts the
+//    result when dst aliases an input; it is suppressed (fall to the scalar tail) when aliased.
+//
+// One template (binary_kernel / cast_kernel) covers the whole matrix: the work-vector type
+// selects the native same-type saturating path (e.g. v_uint8 + v_add) vs the widening f32-hub
+// path (v_float32), and a compile-time use_simd flag drops the SIMD body for the 32/64-bit
+// outputs that have no vector path. Adding a new binary op = add one Op functor.
 
 #include "ew_op.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 // private prototype-only reuse of the typed load/store-as helpers (vx_load_as / v_store_as):
 #include "../../src/convert.hpp"
 #include <cmath>
+#include <cstring>
 
-namespace cv { namespace ew {
+namespace cv {
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+// Native-width identity load/store-as overloads, complementing the f32-hub helpers in
+// convert.hpp (which only target v_float32). These let one binary_kernel<> template serve
+// both the native same-type path (work vector = native, e.g. v_uint8 with saturating v_add)
+// and the widening f32-hub path (work vector = v_float32). The float/f32 variants already
+// live in convert.hpp, so only the integer same-width pairs are added here.
+static inline void vx_load_as(const uchar*    p, v_uint8&  v) { v = vx_load(p); }
+static inline void vx_load_as(const schar*    p, v_int8&   v) { v = vx_load(p); }
+static inline void vx_load_as(const ushort*   p, v_uint16& v) { v = vx_load(p); }
+static inline void vx_load_as(const short*    p, v_int16&  v) { v = vx_load(p); }
+static inline void vx_load_as(const unsigned* p, v_uint32& v) { v = vx_load(p); }
+static inline void vx_load_as(const int*      p, v_int32&  v) { v = vx_load(p); }
+static inline void v_store_as(uchar*    p, const v_uint8&  v) { v_store(p, v); }
+static inline void v_store_as(schar*    p, const v_int8&   v) { v_store(p, v); }
+static inline void v_store_as(ushort*   p, const v_uint16& v) { v_store(p, v); }
+static inline void v_store_as(short*    p, const v_int16&  v) { v_store(p, v); }
+static inline void v_store_as(unsigned* p, const v_uint32& v) { v_store(p, v); }
+static inline void v_store_as(int*      p, const v_int32&  v) { v_store(p, v); }
+#endif
+
+namespace ew {
 
 // ===========================================================================
-// OP_ADD
+// Op functors (vector + scalar). New binary ops slot in here.
 // ===========================================================================
+struct EwAdd {
+    template<typename V> static V vec(const V& a, const V& b) { return v_add(a, b); }
+    template<typename W> static W scl(W a, W b) { return (W)(a + b); }
+};
 
-// Collapse a gap-free 2D tile to 1D (call with the per-operand x-steps and y-steps).
+// Collapse a gap-free 2D tile to 1D (call with the per-operand x/y-steps).
 #define EW_TRY_COLLAPSE(NSRC) \
     if (height > 1 && dsty == (size_t)width && \
         s0y == s0x*(size_t)width && (NSRC < 2 || s1y == s1x*(size_t)width)) \
     { width *= height; height = 1; }
 
-// Same-type add: T x T -> T. Native v_add (saturating for 8/16-bit, wrapping for 32/64-bit).
-template<typename T, typename Tvec, typename WT>
-static int add_same(const void* src0_, size_t s0y, size_t s0x,
-                    const void* src1_, size_t s1y, size_t s1x,
-                    const void*, size_t, size_t,
-                    void* dst_, size_t dsty, int width, int height)
+// Unified binary kernel: T0 x T1 -> Tr (operands same depth for arithmetic; cast is separate).
+//   Wvec     = work vector. Native (v_uint8/...) drives the same-type saturating path
+//              (v_add saturates 8/16-bit, wraps 32-bit); v_float32 drives the widening hub.
+//   WT       = scalar work type for the tail.
+//   Op       = operation functor (vec()/scl()).
+//   use_simd = compile-time switch; false => pure scalar (32/64-bit widened outputs, f64).
+// stepx in {0,1}; dst contiguous. In-place safe (see file header).
+template<typename T0, typename T1, typename Tr, typename Wvec, typename WT, class Op, bool use_simd>
+static int binary_kernel(const void* src0_, size_t s0y, size_t s0x,
+                         const void* src1_, size_t s1y, size_t s1x,
+                         const void*, size_t, size_t,
+                         void* dst_, size_t dsty, int width, int height, void*)
 {
     CV_Assert(s0x <= 1 && s1x <= 1);
-    const T* src0 = (const T*)src0_;
-    const T* src1 = (const T*)src1_;
-    T* dst = (T*)dst_;
+    const T0* src0 = (const T0*)src0_;
+    const T1* src1 = (const T1*)src1_;
+    Tr* dst = (Tr*)dst_;
     EW_TRY_COLLAPSE(2);
-    const bool simd = (s0x == 1 && s1x == 1);
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    // The right-edge backoff re-reads already-written lanes, so it is only valid when there is
+    // a full vector to back off into (width >= VECSZ) and dst aliases no input. Otherwise the
+    // SIMD loop just breaks to the scalar tail (also covers width < VECSZ and in-place).
+    [[maybe_unused]] const int VECSZ = VTraits<Wvec>::vlanes();
+    [[maybe_unused]] const bool use_tail_trick =
+        width >= VECSZ && src0_ != dst_ && src1_ != dst_;
+#endif
     for (int i = 0; i < height; i++, src0 += s0y, src1 += s1y, dst += dsty)
     {
         int x = 0;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-        if (simd)
+        if constexpr (use_simd)
         {
-            const int VECSZ = VTraits<Tvec>::vlanes();
-            for (; x < width; x += VECSZ)
+        #if (CV_SIMD || CV_SIMD_SCALABLE)
+            if (s0x == 1 && s1x == 1)
             {
-                if (x + VECSZ > width) { if (x == 0) break; x = width - VECSZ; }
-                v_store(dst + x, v_add(vx_load(src0 + x), vx_load(src1 + x)));
+                for (; x < width; x += VECSZ)
+                {
+                    if (x + VECSZ > width) { if (!use_tail_trick) break; x = width - VECSZ; }
+                    Wvec a, b;
+                    vx_load_as(src0 + x, a);
+                    vx_load_as(src1 + x, b);
+                    v_store_as(dst + x, Op::vec(a, b));
+                }
             }
+        #endif
         }
-#endif
         for (; x < width; x++)
-            dst[x] = saturate_cast<T>((WT)src0[x*s0x] + (WT)src1[x*s1x]);
+            dst[x] = saturate_cast<Tr>(Op::scl((WT)src0[x*s0x], (WT)src1[x*s1x]));
     }
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-    vx_cleanup();
+    if constexpr (use_simd) vx_cleanup();
 #endif
     return 0;
 }
 
-// Widening add through the f32 hub: Tin x Tin -> Tr (Tin <= 16-bit or half/float; exact in f32).
-template<typename Tin, typename Tr>
-static int add_widen32(const void* src0_, size_t s0y, size_t s0x,
-                       const void* src1_, size_t s1y, size_t s1x,
-                       const void*, size_t, size_t,
-                       void* dst_, size_t dsty, int width, int height)
-{
-    CV_Assert(s0x <= 1 && s1x <= 1);
-    const Tin* src0 = (const Tin*)src0_;
-    const Tin* src1 = (const Tin*)src1_;
-    Tr* dst = (Tr*)dst_;
-    EW_TRY_COLLAPSE(2);
-    const bool simd = (s0x == 1 && s1x == 1);
-    for (int i = 0; i < height; i++, src0 += s0y, src1 += s1y, dst += dsty)
-    {
-        int x = 0;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-        if (simd)
-        {
-            const int VECSZ = VTraits<v_float32>::vlanes();
-            for (; x < width; x += VECSZ)
-            {
-                if (x + VECSZ > width) { if (x == 0) break; x = width - VECSZ; }
-                v_float32 a, b;
-                vx_load_as(src0 + x, a);
-                vx_load_as(src1 + x, b);
-                v_store_as(dst + x, v_add(a, b));
-            }
-        }
-#endif
-        for (; x < width; x++)
-            dst[x] = saturate_cast<Tr>((float)src0[x*s0x] + (float)src1[x*s1x]);
-    }
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    vx_cleanup();
-#endif
-    return 0;
-}
-
-// Scalar add (correct, not vectorized): used for 32/64-bit widened outputs and f64.
-template<typename Tin, typename Tr, typename WT>
-static int add_scalar(const void* src0_, size_t s0y, size_t s0x,
-                      const void* src1_, size_t s1y, size_t s1x,
-                      const void*, size_t, size_t,
-                      void* dst_, size_t dsty, int width, int height)
-{
-    CV_Assert(s0x <= 1 && s1x <= 1);
-    const Tin* src0 = (const Tin*)src0_;
-    const Tin* src1 = (const Tin*)src1_;
-    Tr* dst = (Tr*)dst_;
-    EW_TRY_COLLAPSE(2);
-    for (int i = 0; i < height; i++, src0 += s0y, src1 += s1y, dst += dsty)
-        for (int x = 0; x < width; x++)
-            dst[x] = saturate_cast<Tr>((WT)src0[x*s0x] + (WT)src1[x*s1x]);
-    return 0;
-}
+// ===========================================================================
+// OP_ADD
+// ===========================================================================
 
 // add dispatch: T x T -> R (operands already same depth T).
+//  - native saturating path (Wvec = native, use_simd=true) for T -> T on <=32-bit ints + f32;
+//  - widening f32-hub (Wvec = v_float32, use_simd=true) for the widened/half/float outputs;
+//  - scalar (use_simd=false) for 64-bit results and f64 (no vector path yet).
 static ElemwiseFunc getAddFunc(int T, int R)
 {
     switch (T)
     {
     case CV_8U:
-        if (R == CV_8U)  return add_same<uchar, v_uint8, int>;
-        if (R == CV_16S) return add_widen32<uchar, short>;
-        if (R == CV_32S) return add_widen32<uchar, int>;
-        if (R == CV_32F) return add_widen32<uchar, float>;
+        if (R == CV_8U)  return binary_kernel<uchar, uchar, uchar, v_uint8,   int,   EwAdd, true>;
+        if (R == CV_16S) return binary_kernel<uchar, uchar, short, v_float32, float, EwAdd, true>;
+        if (R == CV_32S) return binary_kernel<uchar, uchar, int,   v_float32, float, EwAdd, true>;
+        if (R == CV_32F) return binary_kernel<uchar, uchar, float, v_float32, float, EwAdd, true>;
         return nullptr;
     case CV_8S:
-        if (R == CV_8S)  return add_same<schar, v_int8, int>;
-        if (R == CV_16S) return add_widen32<schar, short>;
-        if (R == CV_32F) return add_widen32<schar, float>;
+        if (R == CV_8S)  return binary_kernel<schar, schar, schar, v_int8,    int,   EwAdd, true>;
+        if (R == CV_16S) return binary_kernel<schar, schar, short, v_float32, float, EwAdd, true>;
+        if (R == CV_32F) return binary_kernel<schar, schar, float, v_float32, float, EwAdd, true>;
         return nullptr;
     case CV_16U:
-        if (R == CV_16U) return add_same<ushort, v_uint16, int>;
-        if (R == CV_32S) return add_widen32<ushort, int>;
-        if (R == CV_32F) return add_widen32<ushort, float>;
+        if (R == CV_16U) return binary_kernel<ushort, ushort, ushort, v_uint16,  int,   EwAdd, true>;
+        if (R == CV_32S) return binary_kernel<ushort, ushort, int,    v_float32, float, EwAdd, true>;
+        if (R == CV_32F) return binary_kernel<ushort, ushort, float,  v_float32, float, EwAdd, true>;
         return nullptr;
     case CV_16S:
-        if (R == CV_16S) return add_same<short, v_int16, int>;
-        if (R == CV_32S) return add_widen32<short, int>;
-        if (R == CV_32F) return add_widen32<short, float>;
+        if (R == CV_16S) return binary_kernel<short, short, short, v_int16,   int,   EwAdd, true>;
+        if (R == CV_32S) return binary_kernel<short, short, int,   v_float32, float, EwAdd, true>;
+        if (R == CV_32F) return binary_kernel<short, short, float, v_float32, float, EwAdd, true>;
         return nullptr;
     case CV_32U:
-        if (R == CV_32U) return add_same<unsigned, v_uint32, unsigned>;
-        if (R == CV_64S) return add_scalar<unsigned, int64_t, int64_t>;
-        if (R == CV_64F) return add_scalar<unsigned, double, double>;
+        if (R == CV_32U) return binary_kernel<unsigned, unsigned, unsigned, v_uint32, unsigned, EwAdd, true>;
+        if (R == CV_64S) return binary_kernel<unsigned, unsigned, int64_t,  v_int32,  int64_t,  EwAdd, false>;
+        if (R == CV_64F) return binary_kernel<unsigned, unsigned, double,   v_int32,  double,   EwAdd, false>;
         return nullptr;
     case CV_32S:
-        if (R == CV_32S) return add_same<int, v_int32, int>;
-        if (R == CV_64S) return add_scalar<int, int64_t, int64_t>;
-        if (R == CV_64F) return add_scalar<int, double, double>;
+        if (R == CV_32S) return binary_kernel<int, int, int,     v_int32, int,     EwAdd, true>;
+        if (R == CV_64S) return binary_kernel<int, int, int64_t, v_int32, int64_t, EwAdd, false>;
+        if (R == CV_64F) return binary_kernel<int, int, double,  v_int32, double,  EwAdd, false>;
         return nullptr;
     case CV_64U:
-        if (R == CV_64U) return add_scalar<uint64_t, uint64_t, uint64_t>;
-        if (R == CV_64F) return add_scalar<uint64_t, double, double>;
+        if (R == CV_64U) return binary_kernel<uint64_t, uint64_t, uint64_t, v_int32, uint64_t, EwAdd, false>;
+        if (R == CV_64F) return binary_kernel<uint64_t, uint64_t, double,   v_int32, double,   EwAdd, false>;
         return nullptr;
     case CV_64S:
-        if (R == CV_64S) return add_scalar<int64_t, int64_t, int64_t>;
-        if (R == CV_64F) return add_scalar<int64_t, double, double>;
+        if (R == CV_64S) return binary_kernel<int64_t, int64_t, int64_t, v_int32, int64_t, EwAdd, false>;
+        if (R == CV_64F) return binary_kernel<int64_t, int64_t, double,  v_int32, double,  EwAdd, false>;
         return nullptr;
     case CV_16F:
-        if (R == CV_16F) return add_widen32<hfloat, hfloat>;
-        if (R == CV_32F) return add_widen32<hfloat, float>;
+        if (R == CV_16F) return binary_kernel<hfloat, hfloat, hfloat, v_float32, float, EwAdd, true>;
+        if (R == CV_32F) return binary_kernel<hfloat, hfloat, float,  v_float32, float, EwAdd, true>;
         return nullptr;
     case CV_16BF:
-        if (R == CV_16BF) return add_widen32<bfloat, bfloat>;
-        if (R == CV_32F)  return add_widen32<bfloat, float>;
+        if (R == CV_16BF) return binary_kernel<bfloat, bfloat, bfloat, v_float32, float, EwAdd, true>;
+        if (R == CV_32F)  return binary_kernel<bfloat, bfloat, float,  v_float32, float, EwAdd, true>;
         return nullptr;
     case CV_32F:
-        if (R == CV_32F) return add_same<float, v_float32, float>;
+        if (R == CV_32F) return binary_kernel<float, float, float, v_float32, float, EwAdd, true>;
         return nullptr;
     case CV_64F:
-        if (R == CV_64F) return add_scalar<double, double, double>;
+        if (R == CV_64F) return binary_kernel<double, double, double, v_int32, double, EwAdd, false>;
         return nullptr;
     default:
         return nullptr;
@@ -191,151 +193,41 @@ static ElemwiseFunc getAddFunc(int T, int R)
 }
 
 // ===========================================================================
-// OP_CAST
+// OP_CAST / OP_CONVERT_SCALE  ->  adapter over core's getConvertFunc / getConvertScaleFunc.
 // ===========================================================================
-
-template<typename Ts, typename Td>
-static int cast_scalar(const void* src0_, size_t s0y, size_t s0x,
-                       const void*, size_t, size_t, const void*, size_t, size_t,
-                       void* dst_, size_t dsty, int width, int height)
+// A single generic ElemwiseFunc that carries no type info itself: the executor builds an
+// EwCtx.cvt (the type-specialized, CPU-dispatched core BinaryFunc + element sizes + optional
+// scale/shift) before the parallel loop. The adapter does no arithmetic - it only translates
+// element-steps -> byte-steps and the tile extent -> Size, then calls the wrapped BinaryFunc.
+// Reusing the existing convert kernels means we don't re-implement the whole cast matrix.
+static int convertAdapter(const void* src0, size_t s0y, size_t s0x,
+                          const void*, size_t, size_t, const void*, size_t, size_t,
+                          void* dst, size_t dsty, int width, int height, void* ctx_)
 {
-    CV_Assert(s0x <= 1);
-    const Ts* src0 = (const Ts*)src0_;
-    Td* dst = (Td*)dst_;
-    size_t s1x = 0, s1y = 0; (void)s1x; (void)s1y;
-    if (height > 1 && dsty == (size_t)width && s0y == s0x*(size_t)width)
-    { width *= height; height = 1; }
-    for (int i = 0; i < height; i++, src0 += s0y, dst += dsty)
-        for (int x = 0; x < width; x++)
-            dst[x] = saturate_cast<Td>(src0[x*s0x]);
+    CV_Assert(ctx_ != nullptr && s0x <= 1);
+    const EwCtx* c = (const EwCtx*)ctx_;
+    const size_t srowb = s0y * (size_t)c->cvt.sesz1;     // row steps in bytes
+    const size_t drowb = dsty * (size_t)c->cvt.desz1;
+
+    if (s0x == 1)   // contiguous source run: one BinaryFunc call over the whole tile
+    {
+        c->cvt.fn((const uchar*)src0, srowb, nullptr, 0,
+                  (uchar*)dst, drowb, Size(width, height), (void*)c->cvt.scale);
+        return 0;
+    }
+
+    // s0x == 0: broadcast source (a scalar repeated along x). The wrapped BinaryFunc needs a
+    // contiguous source, so cast the single value once per row, then replicate it across the row.
+    const int desz1 = c->cvt.desz1;
+    const uchar* s = (const uchar*)src0;
+    uchar* d = (uchar*)dst;
+    for (int i = 0; i < height; i++, s += srowb, d += drowb)
+    {
+        c->cvt.fn(s, 0, nullptr, 0, d, 0, Size(1, 1), (void*)c->cvt.scale);
+        for (int x = 1; x < width; x++)
+            std::memcpy(d + (size_t)x * desz1, d, (size_t)desz1);
+    }
     return 0;
-}
-
-// SIMD cast through the f32 hub (source exact-in-f32, dst has a v_store_as overload).
-template<typename Ts, typename Td>
-static int cast_f32(const void* src0_, size_t s0y, size_t s0x,
-                    const void*, size_t, size_t, const void*, size_t, size_t,
-                    void* dst_, size_t dsty, int width, int height)
-{
-    CV_Assert(s0x <= 1);
-    const Ts* src0 = (const Ts*)src0_;
-    Td* dst = (Td*)dst_;
-    if (height > 1 && dsty == (size_t)width && s0y == s0x*(size_t)width)
-    { width *= height; height = 1; }
-    const bool simd = (s0x == 1);
-    for (int i = 0; i < height; i++, src0 += s0y, dst += dsty)
-    {
-        int x = 0;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-        if (simd)
-        {
-            const int VECSZ = VTraits<v_float32>::vlanes();
-            for (; x < width; x += VECSZ)
-            {
-                if (x + VECSZ > width) { if (x == 0) break; x = width - VECSZ; }
-                v_float32 a;
-                vx_load_as(src0 + x, a);
-                v_store_as(dst + x, a);
-            }
-        }
-#endif
-        for (; x < width; x++)
-            dst[x] = saturate_cast<Td>(src0[x*s0x]);
-    }
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    vx_cleanup();
-#endif
-    return 0;
-}
-
-template<typename Ts>
-static ElemwiseFunc castScalarDst(int dd)
-{
-    switch (dd)
-    {
-    case CV_8U:   return cast_scalar<Ts, uchar>;
-    case CV_8S:   return cast_scalar<Ts, schar>;
-    case CV_16U:  return cast_scalar<Ts, ushort>;
-    case CV_16S:  return cast_scalar<Ts, short>;
-    case CV_32U:  return cast_scalar<Ts, unsigned>;
-    case CV_32S:  return cast_scalar<Ts, int>;
-    case CV_64U:  return cast_scalar<Ts, uint64_t>;
-    case CV_64S:  return cast_scalar<Ts, int64_t>;
-    case CV_32F:  return cast_scalar<Ts, float>;
-    case CV_64F:  return cast_scalar<Ts, double>;
-    case CV_16F:  return cast_scalar<Ts, hfloat>;
-    case CV_16BF: return cast_scalar<Ts, bfloat>;
-    default:      return nullptr;
-    }
-}
-
-static ElemwiseFunc getCastScalar(int sd, int dd)
-{
-    switch (sd)
-    {
-    case CV_8U:   return castScalarDst<uchar>(dd);
-    case CV_8S:   return castScalarDst<schar>(dd);
-    case CV_16U:  return castScalarDst<ushort>(dd);
-    case CV_16S:  return castScalarDst<short>(dd);
-    case CV_32U:  return castScalarDst<unsigned>(dd);
-    case CV_32S:  return castScalarDst<int>(dd);
-    case CV_64U:  return castScalarDst<uint64_t>(dd);
-    case CV_64S:  return castScalarDst<int64_t>(dd);
-    case CV_32F:  return castScalarDst<float>(dd);
-    case CV_64F:  return castScalarDst<double>(dd);
-    case CV_16F:  return castScalarDst<hfloat>(dd);
-    case CV_16BF: return castScalarDst<bfloat>(dd);
-    default:      return nullptr;
-    }
-}
-
-// Source depths that are represented exactly when widened to f32 (<=16-bit or float).
-static bool srcExactInF32(int sd)
-{
-    return sd == CV_8U || sd == CV_8S || sd == CV_16U || sd == CV_16S ||
-           sd == CV_16F || sd == CV_16BF || sd == CV_32F;
-}
-
-template<typename Ts>
-static ElemwiseFunc castSimdDst(int dd)
-{
-    switch (dd)   // only depths with a v_store_as(.., v_float32) overload
-    {
-    case CV_16U:  return cast_f32<Ts, ushort>;
-    case CV_16S:  return cast_f32<Ts, short>;
-    case CV_32U:  return cast_f32<Ts, unsigned>;
-    case CV_32S:  return cast_f32<Ts, int>;
-    case CV_32F:  return cast_f32<Ts, float>;
-    case CV_16F:  return cast_f32<Ts, hfloat>;
-    case CV_16BF: return cast_f32<Ts, bfloat>;
-    default:      return nullptr;   // u8/s8/64-bit dst -> scalar
-    }
-}
-
-static ElemwiseFunc getCastSimd(int sd, int dd)
-{
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    if (!srcExactInF32(sd)) return nullptr;
-    switch (sd)
-    {
-    case CV_8U:   return castSimdDst<uchar>(dd);
-    case CV_8S:   return castSimdDst<schar>(dd);
-    case CV_16U:  return castSimdDst<ushort>(dd);
-    case CV_16S:  return castSimdDst<short>(dd);
-    case CV_16F:  return castSimdDst<hfloat>(dd);
-    case CV_16BF: return castSimdDst<bfloat>(dd);
-    case CV_32F:  return castSimdDst<float>(dd);
-    default:      return nullptr;
-    }
-#else
-    (void)sd; (void)dd; return nullptr;
-#endif
-}
-
-static ElemwiseFunc getCastFunc(int sd, int dd)
-{
-    ElemwiseFunc f = getCastSimd(sd, dd);
-    return f ? f : getCastScalar(sd, dd);
 }
 
 // ===========================================================================
@@ -350,7 +242,7 @@ template<class Op, typename T0, typename T1, typename Tr>
 static int binaryKernel(const void* src0, size_t s0y, size_t s0x,
                         const void* src1, size_t s1y, size_t s1x,
                         const void*, size_t, size_t,
-                        void* dst, size_t dsty, int width, int height)
+                        void* dst, size_t dsty, int width, int height, void*)
 {
     const T0* p0 = (const T0*)src0;
     const T1* p1 = (const T1*)src1;
@@ -385,8 +277,10 @@ ElemwiseFunc getElemwiseFunc(ElemwiseOp op, int depth0, int depth1, int depth2, 
 {
     (void)depth2;
 
+    // OP_CAST is always served by the adapter over core's convert kernels; the type-specialized
+    // BinaryFunc is selected by the executor when it builds the EwCtx (it has the depths there).
     if (op == OP_CAST)
-        return getCastFunc(depth0, rdepth);
+        return convertAdapter;
 
     if (op == OP_ADD)
     {
@@ -404,4 +298,4 @@ ElemwiseFunc getElemwiseFunc(ElemwiseOp op, int depth0, int depth1, int depth2, 
     return nullptr;
 }
 
-}} // namespace cv::ew
+}} // namespace ew, cv
