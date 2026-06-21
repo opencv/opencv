@@ -46,14 +46,14 @@ static void matLogical(const Mat& m, MatShape& shp, EwSteps& step, int& esz1)
 // numpy-style broadcast of several right-aligned shapes.
 static bool broadcastShape(const MatShape* shps, int K, MatShape& out)
 {
-    size_t nd = 0;
-    for (int k = 0; k < K; k++) nd = std::max(nd, shps[k].size());
+    int nd = 0;
+    for (int k = 0; k < K; k++) nd = std::max(nd, shps[k].dims);
     out.assign(nd, 1);
     for (int k = 0; k < K; k++)
     {
         const MatShape& s = shps[k];
-        size_t off = nd - s.size();
-        for (size_t i = 0; i < s.size(); i++)
+        int off = nd - s.dims;
+        for (int i = 0; i < s.dims; i++)
         {
             int d = s[i], &o = out[off + i];
             if (o == 1) o = d;
@@ -110,8 +110,15 @@ void EwProgram::clear()
 }
 
 struct EwBody {
-    const EwInsn* prog; void** ctxptr;
-    const int* slotMap;       // slot -> array index (>=0) OR temp buffer id encoded as -bufId-1
+    const EwInsn* prog;
+    void** ctxptr;
+    // slot -> a NON-NEGATIVE index whose meaning is given by slotKind[s]:
+    //   ARG_INPUT / ARG_OUTPUT : index into tile.slices (the broadcast operand list)
+    //   ARG_TEMP               : physical temp-buffer id
+    //   ARG_CONST              : index into constSlice[]
+    const int* slotMap;
+    const signed char* slotKind; // [nslots] arginfo[s].kind, for resolving slotMap[s]
+    const EwSlice* constSlice;    // [nconsts] fixed scalar slices {ptr=&value, stepy=0, stepx=0}
     const int* bufEszPrefix;  // [nbuffers+1] prefix sums of temp elem sizes; [nbuffers] = total
     const int* esz1Slot;      // [nslots]   element size of each slot's operand (for column offset)
     int ninsn, nslots, nbuffers, capElems;   // capElems: L1 fragment element cap (0 if no temps)
@@ -125,10 +132,16 @@ void EwProgram::exec(const Mat* inputs, Mat* outputs)
     const int nslots = (int)arginfo.size();
     CV_Assert(nslots >= 1 && arginfo[0].kind == ARG_NONE);
 
+    // Scalars (ARG_CONST) never influence the result shape or channel count - the output geometry
+    // comes from the real array inputs alone (a scalar broadcasts into whatever they produce).
+    int nconsts = 0;
+    for (int s = 1; s < nslots; s++)
+        if (arginfo[s].kind == ARG_CONST) nconsts++;
+
     // ---- 1. result shape (spatial dims + channel count), channels innermost ----
-    // Fast path: every input shares one shape+channels and no const adds channels beyond the inputs
-    // (a const with channels <= input cn broadcasts trivially) => the result IS inputs[0]'s shape.
-    // Skips the matLogical + broadcastShape rebuild/re-broadcast done only to size the output.
+    // Fast path: every input shares one shape+channels => the result IS inputs[0]'s shape. Skips
+    // the matLogical + broadcastShape rebuild/re-broadcast done only to size the output. Consts are
+    // irrelevant here (they don't add dims/channels), so they never break the fast path.
     const int rcn0 = ninputs >= 1 ? inputs[0].channels() : 1;
     bool sameShape = ninputs >= 1;
     for (int i = 1; sameShape && i < ninputs; i++)
@@ -136,13 +149,6 @@ void EwProgram::exec(const Mat* inputs, Mat* outputs)
         const Mat& a = inputs[i];
         if (a.dims != inputs[0].dims || a.channels() != rcn0) sameShape = false;
         else for (int d = 0; d < a.dims; d++) if (a.size[d] != inputs[0].size[d]) { sameShape = false; break; }
-    }
-    int nconsts = 0;
-    for (int s = 1; sameShape && s < nslots; s++) {
-        if (arginfo[s].kind == ARG_CONST) {
-            nconsts++;
-            if (arginfo[s].channels > rcn0) sameShape = false;
-        }
     }
 
     MatShape spatial;
@@ -154,21 +160,11 @@ void EwProgram::exec(const Mat* inputs, Mat* outputs)
     }
     else
     {
-        AutoBuffer<MatShape> bshapes(nslots);          // one per input + per ARG_CONST slot
-        int nb = 0;
-        {
-            MatShape shp; EwSteps step; int esz1;
-            for (int i = 0; i < ninputs; i++) { matLogical(inputs[i], shp, step, esz1); bshapes[nb++] = shp; }
-        }
-        for (int s = 1; s < nslots; s++)
-        {
-            const EwArgInfo& ai = arginfo[s];
-            if (ai.kind != ARG_CONST) continue;
-            bshapes[nb].assign(1, std::max(ai.channels, 1));   // just the channel dim
-            nb++;
-        }
+        AutoBuffer<MatShape, LOCAL_OPS> bshapes(std::max(ninputs, 1));   // one per real input
+        MatShape shp; EwSteps step; int esz1;
+        for (int i = 0; i < ninputs; i++) { matLogical(inputs[i], shp, step, esz1); bshapes[i] = shp; }
         MatShape full;
-        CV_Assert(broadcastShape(bshapes.data(), nb, full) && "ew: inputs not broadcast-compatible");
+        CV_Assert(broadcastShape(bshapes.data(), ninputs, full) && "ew: inputs not broadcast-compatible");
         const int ndFull = (int)full.size();
         rchannels = full[ndFull - 1];
         spatial = full; spatial.resize(ndFull - 1);
@@ -176,16 +172,24 @@ void EwProgram::exec(const Mat* inputs, Mat* outputs)
 
     // ---- 2. ONE pass over slots: allocate outputs, build the operand pointer list + slot map,
     //         per-slot element size, and per-temp-buffer element size. No Mat copies (arr[] holds
-    //         pointers); const scalars live in a stack scratch wrapped by non-owning 1x1 headers
-    //         (no per-const heap). slotMap[s] >= 0 => arr index; < 0 => temp, buf id = -slotMap[s]-1.
+    //         pointers); only real inputs + outputs become broadcast operands. ARG_CONST scalars are
+    //         NOT broadcast operands and get NO Mat header: each is materialized once into a typed
+    //         scratch (constStore) and exposed to the body as a fixed slice {ptr=&value, 0, 0} - a
+    //         scalar the kernels read by broadcast. slotMap[s] stays a plain non-negative index;
+    //         its meaning (arr / temp / const) is recovered from arginfo[s].kind (see EwBody).
     bool inplace = !(inputs + ninputs <= outputs || outputs + noutputs <= inputs);
-    int nhdrs = nconsts + (inplace ? ninputs : 0);
+    int nhdrs = inplace ? ninputs : 0;
 
-    AutoBuffer<const Mat*, LOCAL_OPS> arr(nslots);
-    AutoBuffer<Mat, LOCAL_HDRS> hdrs(nhdrs); // non-owning headers (no heap)
-    Mat* constHdrs = hdrs.data();
-    AutoBuffer<Scalar, LOCAL_CONSTS> constStore(std::max(nconsts, 1));
+    // A const is stored in ITS OWN depth (ai.depth), independent of the array operands: e.g.
+    // multiply(u8, u8, u8, 1./255) carries an FP32 scale even though every matrix is u8. 32 bytes
+    // covers the largest single-channel-scope payload (up to 4 channels x 8-byte elements).
+    constexpr int CONST_STRIDE = 32;
+    AutoBuffer<const Mat*, LOCAL_OPS> arr(ninputs + noutputs);
+    AutoBuffer<Mat, LOCAL_HDRS> hdrs(std::max(nhdrs, 1));   // non-owning input headers (in-place incref)
+    AutoBuffer<uchar, LOCAL_CONSTS * CONST_STRIDE> constStore((size_t)std::max(nconsts, 1) * CONST_STRIDE);
+    AutoBuffer<EwSlice, LOCAL_CONSTS> constSlice(std::max(nconsts, 1));
     AutoBuffer<int, LOCAL_OPS> slotMap(nslots);
+    AutoBuffer<signed char, LOCAL_OPS> slotKind(nslots);
     AutoBuffer<int, LOCAL_OPS> esz1Slot(nslots);
     AutoBuffer<int, LOCAL_OPS> bufEsz(std::max(1, nbuffers));
     for (int b = 0; b < nbuffers; b++) bufEsz[b] = 1;
@@ -193,17 +197,16 @@ void EwProgram::exec(const Mat* inputs, Mat* outputs)
     if (inplace) {
         // save (incref) inputs in the case of in-place operation
         // to protect them from premature deallocation
-        for (int j = 0; j < ninputs; j++) {
-            hdrs[j] = inputs[j];
-        }
+        for (int j = 0; j < ninputs; j++) hdrs[j] = inputs[j];
         inputs = hdrs.data();
-        constHdrs = (Mat*)(inputs + ninputs);
     }
     esz1Slot[0] = 0;
+    slotKind[0] = (signed char)ARG_NONE;
     for (int s = 1; s < nslots; s++)
     {
         const EwArgInfo& ai = arginfo[s];
         const int e = esz1Slot[s] = (int)CV_ELEM_SIZE1(ai.depth);
+        slotKind[s] = (signed char)ai.kind;
         if (ai.kind == ARG_INPUT) {
             slotMap[s] = narr;
             arr[narr++] = &inputs[ai.index];
@@ -214,16 +217,16 @@ void EwProgram::exec(const Mat* inputs, Mat* outputs)
         }
         else if (ai.kind == ARG_CONST) {
             const int c = std::max(ai.channels, 1);
-            CV_Assert(c <= 4);
-            uchar* dst = (uchar*)(constStore.data() + nc);
+            CV_Assert(c <= 4 && (size_t)c * e <= CONST_STRIDE);
+            uchar* dst = constStore.data() + (size_t)nc * CONST_STRIDE;
             for (int k = 0; k < c; k++) storeScalar(ai.depth, ai.cval[k], dst + (size_t)k * e);
-            constHdrs[nc] = Mat(1, 1, CV_MAKETYPE(ai.depth, c), dst);   // non-owning, no alloc
-            slotMap[s] = narr; arr[narr++] = &constHdrs[nc];
+            constSlice[nc].ptr = dst; constSlice[nc].stepy = 0; constSlice[nc].stepx = 0;
+            slotMap[s] = nc;                   // index into constSlice[]
             nc++;
         }
         else { // ARG_TEMP
             const int buf = bufferOfTemp.empty() ? ai.index : bufferOfTemp[ai.index];
-            slotMap[s] = -buf - 1;
+            slotMap[s] = buf;                  // physical temp-buffer id
             bufEsz[buf] = std::max(bufEsz[buf], e);
         }
     }
@@ -294,6 +297,8 @@ void EwProgram::exec(const Mat* inputs, Mat* outputs)
 
     body.bufEszPrefix = bufEszPrefix.data();
     body.esz1Slot = esz1Slot.data();
+    body.slotKind = slotKind.data();
+    body.constSlice = constSlice.data();
     body.nslots = nslots;
     body.nbuffers = nbuffers;
     body.capElems = capElems;
@@ -304,24 +309,31 @@ void EwProgram::exec(const Mat* inputs, Mat* outputs)
         const EwInsn* prog = bc.prog;             // hot fields -> locals (registers/stack)
         void** const     ctxptr      = bc.ctxptr;
         const int* const slotMap     = bc.slotMap;
+        const signed char* const slotKind = bc.slotKind;
         const int* const esz1Slot    = bc.esz1Slot;
+        const EwSlice* const constSlice = bc.constSlice;
         const int ninsn = bc.ninsn, nslots = bc.nslots;
         const int w = tile.width, h = tile.height;
 
         // No temps (single-op add/sub/...): run the whole tile in one pass and pull each operand's
-        // slice straight from the tile - no args array, no scratch, no fragmentation. Every slot is
-        // an array here; slot 0 (ARG_NONE) is the null operand for unused args (e.g. a binary op's
-        // arg2). The dominant fast path stays branch-light.
+        // slice straight from the tile - no args array, no scratch, no fragmentation. Here a slot is
+        // either an array (input/output -> tile.slices) or a const scalar (-> a fixed constSlice);
+        // slot 0 (ARG_NONE) is the null operand for unused args (e.g. a binary op's arg2). The
+        // dominant pure-array path keeps slotKind[s]==ARG_INPUT/OUTPUT => the branch predicts away.
         if (bc.nbuffers == 0)
         {
             const EwSlice nullSlice;
+            auto S = [&](int s) -> const EwSlice& {
+                if (s <= 0) return nullSlice;
+                return slotKind[s] == ARG_CONST ? constSlice[slotMap[s]] : tile.slices[slotMap[s]];
+            };
             for (int n = 0; n < ninsn; n++)
             {
                 const EwInsn& ins = prog[n];
-                const EwSlice& a0 = ins.arg0 > 0 ? tile.slices[slotMap[ins.arg0]] : nullSlice;
-                const EwSlice& a1 = ins.arg1 > 0 ? tile.slices[slotMap[ins.arg1]] : nullSlice;
-                const EwSlice& a2 = ins.arg2 > 0 ? tile.slices[slotMap[ins.arg2]] : nullSlice;
-                const EwSlice& rr = ins.result > 0 ? tile.slices[slotMap[ins.result]] : nullSlice;
+                const EwSlice& a0 = S(ins.arg0);
+                const EwSlice& a1 = S(ins.arg1);
+                const EwSlice& a2 = S(ins.arg2);
+                const EwSlice& rr = S(ins.result);
                 int code = ins.fptr(a0.ptr, a0.stepy, a0.stepx, a1.ptr, a1.stepy, a1.stepx,
                                     a2.ptr, a2.stepy, a2.stepx, (void*)rr.ptr, rr.stepy, w, h, ctxptr[n]);
                 CV_Assert(code >= 0);
@@ -345,17 +357,22 @@ void EwProgram::exec(const Mat* inputs, Mat* outputs)
             for (int s = 1; s < nslots; s++)
             {
                 EwArg& a = args[s];
-                const int v = slotMap[s];
-                if (v >= 0)                             // array operand: this strip of the slice
+                const int k = slotKind[s];
+                if (k == ARG_TEMP)                      // contiguous strip-local buffer
                 {
-                    const EwSlice& sl = tile.slices[v];
+                    a.ptr = tstore.data() + (size_t)bufEszPrefix[slotMap[s]] * region;
+                    a.stepy = (size_t)wf; a.stepx = 1;
+                }
+                else if (k == ARG_CONST)               // fixed scalar slice, no x0 offset (stepx 0)
+                {
+                    const EwSlice& cs = constSlice[slotMap[s]];
+                    a.ptr = (uchar*)cs.ptr; a.stepy = 0; a.stepx = 0;
+                }
+                else                                    // array operand: this strip of the slice
+                {
+                    const EwSlice& sl = tile.slices[slotMap[s]];
                     a.ptr = (uchar*)sl.ptr + (size_t)x0 * sl.stepx * (size_t)esz1Slot[s];
                     a.stepy = sl.stepy; a.stepx = sl.stepx;
-                }
-                else                                    // ARG_TEMP: contiguous strip-local buffer
-                {
-                    a.ptr = tstore.data() + (size_t)bufEszPrefix[-v - 1] * region;
-                    a.stepy = (size_t)wf; a.stepx = 1;
                 }
             }
 

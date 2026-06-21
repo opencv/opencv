@@ -366,137 +366,68 @@ static int binary_kernel(const void* src0_, size_t s0y, size_t s0x,
 //  - native saturating path (Wvec = native, use_simd=true) for T -> T on <=32-bit ints + f32;
 //  - widening f32-hub (Wvec = v_float32, use_simd=true) for the widened/half/float outputs;
 //  - scalar (use_simd=false) for 64-bit results and f64 (no vector path yet).
-ElemwiseFunc getAddFunc(int T, int R)
+template<class Op>
+ElemwiseFunc getAddSubFunc(int T, int R)
 {
     switch (T)
     {
     case CV_8U:
-        if (R == CV_8U)  return binary_kernel<uchar, uchar, v_uint8, short, EwAdd>;
-        if (R == CV_16S) return binary_kernel<uchar, short, v_int16, short, EwAdd>;
-        if (R == CV_32S) return binary_kernel<uchar, int, v_int16, short, EwAdd>;
-        if (R == CV_32F) return binary_kernel<uchar, float, v_int16, short, EwAdd>;
+        if (R == CV_8U)  return binary_kernel<uchar, uchar, v_uint8, short, Op>;
+        if (R == CV_16S) return binary_kernel<uchar, short, v_int16, short, Op>;
+        if (R == CV_32S) return binary_kernel<uchar, int, v_int16, short, Op>;
+        if (R == CV_32F) return binary_kernel<uchar, float, v_int16, short, Op>;
         return nullptr;
     case CV_8S:
-        if (R == CV_8S)  return binary_kernel<schar, schar, v_int8, short, EwAdd>;
-        if (R == CV_16S) return binary_kernel<schar, short, v_int16, short, EwAdd>;
-        if (R == CV_32S) return binary_kernel<schar, int, v_int16, short, EwAdd>;
-        if (R == CV_32F) return binary_kernel<schar, float, v_int16, short, EwAdd>;
+        if (R == CV_8S)  return binary_kernel<schar, schar, v_int8, short, Op>;
+        if (R == CV_16S) return binary_kernel<schar, short, v_int16, short, Op>;
+        if (R == CV_32S) return binary_kernel<schar, int, v_int16, short, Op>;
+        if (R == CV_32F) return binary_kernel<schar, float, v_int16, short, Op>;
         return nullptr;
     case CV_16U:
-        if (R == CV_16U) return binary_kernel<ushort, ushort, v_uint16, int, EwAdd>;
-        if (R == CV_32S) return binary_kernel<ushort, int, v_int32, int, EwAdd>;
-        if (R == CV_32F) return binary_kernel<ushort, float, v_int32, int, EwAdd>;
+        if (R == CV_16U) return binary_kernel<ushort, ushort, v_uint16, int, Op>;
+        if (R == CV_32S) return binary_kernel<ushort, int, v_int32, int, Op>;
+        if (R == CV_32F) return binary_kernel<ushort, float, v_int32, int, Op>;
         return nullptr;
     case CV_16S:
-        if (R == CV_16S) return binary_kernel<short, short, v_int16, int, EwAdd>;
-        if (R == CV_32S) return binary_kernel<short, int,   v_int32, int, EwAdd>;
-        if (R == CV_32F) return binary_kernel<short, float, v_int32, int, EwAdd>;
+        if (R == CV_16S) return binary_kernel<short, short, v_int16, int, Op>;
+        if (R == CV_32S) return binary_kernel<short, int,   v_int32, int, Op>;
+        if (R == CV_32F) return binary_kernel<short, float, v_int32, int, Op>;
         return nullptr;
     case CV_32U:
-        if (R == CV_32U) return binary_kernel<unsigned, unsigned, v_uint32, int64_t, EwAdd>;
-        if (R == CV_64S) return scalar_binary_kernel<unsigned, int64_t, int64_t, EwAdd>;
-        if (R == CV_64F) return scalar_binary_kernel<unsigned, double, int64_t, EwAdd>;
+        if (R == CV_32U) return binary_kernel<unsigned, unsigned, v_uint32, int64_t, Op>;
+        if (R == CV_64S) return scalar_binary_kernel<unsigned, int64_t, int64_t, Op>;
+        if (R == CV_64F) return scalar_binary_kernel<unsigned, double, int64_t, Op>;
         return nullptr;
     case CV_32S:
-        if (R == CV_32S) return binary_kernel<int, int, v_int32, int64_t, EwAdd>;
-        if (R == CV_64S) return scalar_binary_kernel<int, int64_t, int64_t, EwAdd>;
-        if (R == CV_64F) return scalar_binary_kernel<int, double, int64_t, EwAdd>;
+        if (R == CV_32S) return binary_kernel<int, int, v_int32, int64_t, Op>;
+        if (R == CV_64S) return scalar_binary_kernel<int, int64_t, int64_t, Op>;
+        if (R == CV_64F) return scalar_binary_kernel<int, double, int64_t, Op>;
         return nullptr;
     case CV_64U:
-        if (R == CV_64U) return scalar_binary_kernel<uint64_t, uint64_t, uint64_t, EwAdd>;
-        if (R == CV_64F) return scalar_binary_kernel<uint64_t, double, double, EwAdd>;
+        if (R == CV_64U) return scalar_binary_kernel<uint64_t, uint64_t, uint64_t, Op>;
+        if (R == CV_64F) return scalar_binary_kernel<uint64_t, double, double, Op>;
         return nullptr;
     case CV_64S:
-        if (R == CV_64S) return scalar_binary_kernel<int64_t, int64_t, int64_t, EwAdd>;
-        if (R == CV_64F) return scalar_binary_kernel<int64_t, double, double, EwAdd>;
+        if (R == CV_64S) return scalar_binary_kernel<int64_t, int64_t, int64_t, Op>;
+        if (R == CV_64F) return scalar_binary_kernel<int64_t, double, double, Op>;
         return nullptr;
     case CV_16F:
         #if CV_SIMD_16F
-        if (R == CV_16F) return binary_kernel<hfloat, hfloat, v_float16, float, EwAdd>;
+        if (R == CV_16F) return binary_kernel<hfloat, hfloat, v_float16, float, Op>;
         #else
-        if (R == CV_16F) return binary_kernel<hfloat, hfloat, v_float32, float, EwAdd>;
+        if (R == CV_16F) return binary_kernel<hfloat, hfloat, v_float32, float, Op>;
         #endif
-        if (R == CV_32F) return binary_kernel<hfloat, float, v_float32, float, EwAdd>;
+        if (R == CV_32F) return binary_kernel<hfloat, float, v_float32, float, Op>;
         return nullptr;
     case CV_16BF:
-        if (R == CV_16BF) return binary_kernel<bfloat, bfloat, v_float32, float, EwAdd>;
-        if (R == CV_32F)  return binary_kernel<bfloat, float,  v_float32, float, EwAdd>;
+        if (R == CV_16BF) return binary_kernel<bfloat, bfloat, v_float32, float, Op>;
+        if (R == CV_32F)  return binary_kernel<bfloat, float,  v_float32, float, Op>;
         return nullptr;
     case CV_32F:
-        if (R == CV_32F) return binary_kernel<float, float, v_float32, float, EwAdd>;
+        if (R == CV_32F) return binary_kernel<float, float, v_float32, float, Op>;
         return nullptr;
     case CV_64F:
-        if (R == CV_64F) return scalar_binary_kernel<double, double, double, EwAdd>;
-        return nullptr;
-    default:
-        return nullptr;
-    }
-}
-
-// sub dispatch: same T x T -> R matrix as add, EwSub functor. Saturation/wrap policy is identical
-// (native v_sub saturates 8/16-bit incl. the unsigned floor-at-0, wraps 32-bit; widened/float
-// outputs hold the signed difference); the wide output type is signed, matching cv::subtract.
-ElemwiseFunc getSubFunc(int T, int R)
-{
-    switch (T)
-    {
-    case CV_8U:
-        if (R == CV_8U)  return binary_kernel<uchar, uchar, v_uint8, short, EwSub>;
-        if (R == CV_16S) return binary_kernel<uchar, short, v_int16, short, EwSub>;
-        if (R == CV_32S) return binary_kernel<uchar, int, v_int16, short, EwSub>;
-        if (R == CV_32F) return binary_kernel<uchar, float, v_int16, short, EwSub>;
-        return nullptr;
-    case CV_8S:
-        if (R == CV_8S)  return binary_kernel<schar, schar, v_int8, short, EwSub>;
-        if (R == CV_16S) return binary_kernel<schar, short, v_int16, short, EwSub>;
-        if (R == CV_32S) return binary_kernel<schar, int, v_int16, short, EwSub>;
-        if (R == CV_32F) return binary_kernel<schar, float, v_int16, short, EwSub>;
-        return nullptr;
-    case CV_16U:
-        if (R == CV_16U) return binary_kernel<ushort, ushort, v_uint16, int, EwSub>;
-        if (R == CV_32S) return binary_kernel<ushort, int, v_int32, int, EwSub>;
-        if (R == CV_32F) return binary_kernel<ushort, float, v_int32, int, EwSub>;
-        return nullptr;
-    case CV_16S:
-        if (R == CV_16S) return binary_kernel<short, short, v_int16, int, EwSub>;
-        if (R == CV_32S) return binary_kernel<short, int,   v_int32, int, EwSub>;
-        if (R == CV_32F) return binary_kernel<short, float, v_int32, int, EwSub>;
-        return nullptr;
-    case CV_32U:
-        if (R == CV_32U) return binary_kernel<unsigned, unsigned, v_uint32, int64_t, EwSub>;
-        if (R == CV_64S) return scalar_binary_kernel<unsigned, int64_t, int64_t, EwSub>;
-        if (R == CV_64F) return scalar_binary_kernel<unsigned, double, int64_t, EwSub>;
-        return nullptr;
-    case CV_32S:
-        if (R == CV_32S) return binary_kernel<int, int, v_int32, int64_t, EwSub>;
-        if (R == CV_64S) return scalar_binary_kernel<int, int64_t, int64_t, EwSub>;
-        if (R == CV_64F) return scalar_binary_kernel<int, double, int64_t, EwSub>;
-        return nullptr;
-    case CV_64U:
-        if (R == CV_64U) return scalar_binary_kernel<uint64_t, uint64_t, uint64_t, EwSub>;
-        if (R == CV_64F) return scalar_binary_kernel<uint64_t, double, double, EwSub>;
-        return nullptr;
-    case CV_64S:
-        if (R == CV_64S) return scalar_binary_kernel<int64_t, int64_t, int64_t, EwSub>;
-        if (R == CV_64F) return scalar_binary_kernel<int64_t, double, double, EwSub>;
-        return nullptr;
-    case CV_16F:
-        #if CV_SIMD_16F
-        if (R == CV_16F) return binary_kernel<hfloat, hfloat, v_float16, float, EwSub>;
-        #else
-        if (R == CV_16F) return binary_kernel<hfloat, hfloat, v_float32, float, EwSub>;
-        #endif
-        if (R == CV_32F) return binary_kernel<hfloat, float, v_float32, float, EwSub>;
-        return nullptr;
-    case CV_16BF:
-        if (R == CV_16BF) return binary_kernel<bfloat, bfloat, v_float32, float, EwSub>;
-        if (R == CV_32F)  return binary_kernel<bfloat, float,  v_float32, float, EwSub>;
-        return nullptr;
-    case CV_32F:
-        if (R == CV_32F) return binary_kernel<float, float, v_float32, float, EwSub>;
-        return nullptr;
-    case CV_64F:
-        if (R == CV_64F) return scalar_binary_kernel<double, double, double, EwSub>;
+        if (R == CV_64F) return scalar_binary_kernel<double, double, double, Op>;
         return nullptr;
     default:
         return nullptr;
@@ -544,7 +475,6 @@ static int convertAdapter(const void* src0, size_t s0y, size_t s0x,
 // ===========================================================================
 // Other binary ops: keep the simple f32 reference kernels until their matrices land.
 // ===========================================================================
-struct OpSub { static double apply(double a, double b) { return a - b; } };
 struct OpMul { static double apply(double a, double b) { return a * b; } };
 struct OpDiv { static double apply(double a, double b) { return b != 0 ? a / b : 0; } };
 struct OpPow { static double apply(double a, double b) { return std::pow(a, b); } };
@@ -597,7 +527,8 @@ ElemwiseFunc getElemwiseFunc(ElemwiseOp op, int depth0, int depth1, int depth2, 
     if (op == OP_ADD || op == OP_SUB)
     {
         if (depth0 != depth1) return nullptr;   // operands must be the same type
-        return op == OP_ADD ? getAddFunc(depth0, rdepth) : getSubFunc(depth0, rdepth);
+        return op == OP_ADD ? getAddSubFunc<EwAdd>(depth0, rdepth) :
+                              getAddSubFunc<EwSub>(depth0, rdepth);
     }
 
     if (opArity(op) == 2)
