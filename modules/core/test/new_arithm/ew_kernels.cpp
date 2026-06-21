@@ -223,10 +223,10 @@ static int scalar_binary_kernel(const void* src0_, size_t s0y, size_t s0x,
 }
 
 template<typename T, typename WT>
-static void expand_scalar(const T* sc, int n0, WT* scbuf, int n)
+static void expand_scalar(const T* sc, size_t sx, int n0, WT* scbuf, int n)
 {
     int i = 0;
-    for (; i < n0; i++) scbuf[i] = (WT)sc[i];
+    for (; i < n0; i++) scbuf[i] = (WT)sc[i*sx];
     for (; i < n; i++) scbuf[i] = scbuf[i - n0];
 }
 
@@ -262,7 +262,7 @@ static int binary_kernel(const void* src0_, size_t s0y, size_t s0x,
         constexpr int MAXVECSZ = VTraits<Wvec>::max_nlanes;
         Wlane scbuf[MAXVECSZ*3];
         const int ewidth = VECSZ*3;
-        expand_scalar(s0y == 0 ? src0 : src1, width, scbuf, ewidth);
+        expand_scalar(s0y == 0 ? src0 : src1, s0y == 0 ? s0x : s1x, width, scbuf, ewidth);
         int dy = ewidth / width;
         Wvec sc0 = vx_load(scbuf), sc1 = vx_load(scbuf + VECSZ), sc2 = vx_load(scbuf + VECSZ*2);
 

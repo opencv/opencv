@@ -8,6 +8,7 @@
 
 #include "../test_precomp.hpp"
 #include "ew_exec.hpp"
+#include "ew_parser.hpp"
 #include <iostream>
 #include <iomanip>
 
@@ -76,6 +77,7 @@ TEST(Core_EW_Perf, add)
                 // Full per-call path (matches a future cv::add/subtract): build the program every call.
                 double te = minUs([&]{ EwProgram p; makeBinaryArithProgram(p, o.op, c.da, c.db, c.Tr);
                                        p.exec(inps, &out); }, 30, s.ninner);
+                //double te = minUs([&]{ expression("{0} + {1}", inps, outs); }, 30, s.ninner);
 
                 // cv:: reference only for equal input types (its array-op-array path needs that)
                 double tc = -1;
@@ -116,7 +118,7 @@ TEST(Core_EW_Perf, add)
         double tc = minUs([&]{ cv::add(a, sb, ref); }, 30, 4);
         EXPECT_EQ(0.0, cvtest::norm(out, ref, NORM_INF)) << "u8+scalar broadcast";
 
-        std::cout << "  u8 +u8 ->u8   1024x1024x3 + (1x1)x3   "
+        std::cout << "\n[ew-perf] addScalar  u8 +u8 ->u8   1024x1024x3 + (1x1)x3   "
                   << std::fixed << std::setprecision(3) << std::setw(8) << te << "   "
                   << std::setw(8) << tc << "   " << std::setprecision(2) << std::setw(6) << (tc/te) << "x\n";
     }
