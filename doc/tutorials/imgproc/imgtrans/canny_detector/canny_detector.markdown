@@ -28,10 +28,55 @@ The *Canny Edge detector* @cite Canny86 was developed by John F. Canny in 1986. 
     to be minimized.
 -   **Minimal response:** Only one detector response per edge.
 
-### Steps
+### Pipeline Overview
 
--#  Filter out any noise. The Gaussian filter is used for this purpose. An example of a Gaussian
-    kernel of \f$size = 5\f$ that might be used is shown below:
+The Canny algorithm runs through five distinct stages in sequence. Each stage feeds directly into the next:
+
+```
+┌─────────────────┐
+│   Input Image   │  (colour or grayscale)
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────────────────┐
+│  Step 1: Gaussian Blur      │  Remove noise before detecting edges
+│  Kernel size = 5×5          │
+└────────────┬────────────────┘
+             │
+             ▼
+┌─────────────────────────────┐
+│  Step 2: Gradient           │  Sobel kernels in X and Y directions
+│  Magnitude + Direction      │  Direction rounded to 0°/45°/90°/135°
+└────────────┬────────────────┘
+             │
+             ▼
+┌─────────────────────────────┐
+│  Step 3: Non-Maximum        │  Thin edges — keep only local maxima
+│  Suppression                │  along the gradient direction
+└────────────┬────────────────┘
+             │
+             ▼
+┌─────────────────────────────┐
+│  Step 4: Double Threshold   │  Classify pixels as strong, weak, or
+│  (High T + Low T)           │  suppressed using two threshold values
+└────────────┬────────────────┘
+             │
+             ▼
+┌─────────────────────────────┐
+│  Step 5: Hysteresis         │  Keep weak pixels only if connected
+│  Edge Tracking              │  to a strong pixel — discard the rest
+└────────────┬────────────────┘
+             │
+             ▼
+┌─────────────────┐
+│   Edge Map      │  Binary output: edges on black background
+└─────────────────┘
+```
+
+### Steps (in detail)
+
+-#  **Gaussian Blur** — Filter out noise. The Gaussian filter smooths the image so that spurious
+    intensity changes do not get detected as edges. An example 5×5 kernel:
 
     \f[K = \dfrac{1}{159}\begin{bmatrix}
               2 & 4 & 5 & 4 & 2 \\
@@ -41,37 +86,63 @@ The *Canny Edge detector* @cite Canny86 was developed by John F. Canny in 1986. 
               2 & 4 & 5 & 4 & 2
                       \end{bmatrix}\f]
 
--#  Find the intensity gradient of the image. For this, we follow a procedure analogous to Sobel:
-    -#  Apply a pair of convolution masks (in \f$x\f$ and \f$y\f$ directions:
-        \f[G_{x} = \begin{bmatrix}
-        -1 & 0 & +1  \\
-        -2 & 0 & +2  \\
-        -1 & 0 & +1
-        \end{bmatrix}\f]\f[G_{y} = \begin{bmatrix}
-        -1 & -2 & -1  \\
-        0 & 0 & 0  \\
-        +1 & +2 & +1
-        \end{bmatrix}\f]
+-#  **Intensity Gradient** — Find the magnitude and direction of intensity change at every pixel
+    using Sobel convolution masks:
 
-    -#  Find the gradient strength and direction with:
-        \f[\begin{array}{l}
-        G = \sqrt{ G_{x}^{2} + G_{y}^{2} } \\
-        \theta = \arctan(\dfrac{ G_{y} }{ G_{x} })
-        \end{array}\f]
-        The direction is rounded to one of four possible angles (namely 0, 45, 90 or 135)
+    \f[G_{x} = \begin{bmatrix}
+    -1 & 0 & +1  \\
+    -2 & 0 & +2  \\
+    -1 & 0 & +1
+    \end{bmatrix}\f]\f[G_{y} = \begin{bmatrix}
+    -1 & -2 & -1  \\
+    0 & 0 & 0  \\
+    +1 & +2 & +1
+    \end{bmatrix}\f]
 
--#  *Non-maximum* suppression is applied. This removes pixels that are not considered to be part of
-    an edge. Hence, only thin lines (candidate edges) will remain.
--#  *Hysteresis*: The final step. Canny does use two thresholds (upper and lower):
+    \f[\begin{array}{l}
+    G = \sqrt{ G_{x}^{2} + G_{y}^{2} } \\
+    \theta = \arctan(\dfrac{ G_{y} }{ G_{x} })
+    \end{array}\f]
 
-    -#  If a pixel gradient is higher than the *upper* threshold, the pixel is accepted as an edge
-    -#  If a pixel gradient value is below the *lower* threshold, then it is rejected.
-    -#  If the pixel gradient is between the two thresholds, then it will be accepted only if it is
-        connected to a pixel that is above the *upper* threshold.
+    The direction is rounded to one of four possible angles (0°, 45°, 90° or 135°).
 
-    Canny recommended a *upper*:*lower* ratio between 2:1 and 3:1.
+-#  **Non-Maximum Suppression** — Thin the edges. For each pixel, check whether its gradient
+    magnitude is the local maximum along the gradient direction. If it is not, set it to zero.
+    This ensures edges are one pixel wide.
 
--#  For more details, you can always consult your favorite Computer Vision book.
+-#  **Double Threshold** — Classify remaining pixels into three categories:
+
+    | Pixel value vs thresholds       | Classification |
+    | :------------------------------ | :------------- |
+    | gradient > `highThreshold`      | **Strong edge** — definitely an edge |
+    | `lowThreshold` < gradient < `highThreshold` | **Weak edge** — might be an edge |
+    | gradient < `lowThreshold`       | **Suppressed** — discarded |
+
+-#  **Hysteresis Edge Tracking** — Finalise the edge map:
+    -#  If a pixel gradient is higher than the *upper* threshold, it is accepted as an edge.
+    -#  If a pixel gradient is below the *lower* threshold, it is rejected.
+    -#  If the gradient is between the two thresholds, it is accepted **only if** it is connected
+        to a strong-edge pixel.
+
+    Canny recommended an *upper*:*lower* ratio between **2:1** and **3:1**.
+
+### Threshold intuition
+
+```
+gradient
+magnitude
+   ▲
+   │     ████ strong edges (kept)
+   │
+───┼──── highThreshold
+   │
+   │     ████ weak edges (kept only if connected to strong)
+   │
+───┼──── lowThreshold
+   │
+   │     ████ noise (discarded)
+   └──────────────────────────────▶ pixels
+```
 
 Code
 ----
