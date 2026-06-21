@@ -28,7 +28,11 @@ EwProgram makeUnaryProgram(ElemwiseOp op, int depth0, int rdepth);
 //     cast the result down to rdepth.
 // Symmetric binary arith (OP_ADD / OP_SUB) for ANY (depth0, depth1, rdepth): cast operands to a
 // common type, op direct-or-wide-then-cast (see .cpp). makeAddProgram is a thin OP_ADD wrapper.
-void makeBinaryArithProgram(EwProgram& p, ElemwiseOp op, int depth0, int depth1, int rdepth);
+// maskDepth != EW_DEPTH_NONE adds a write-mask input (#2): the result lands in a temp and a final
+// OP_COPY_MASK overwrites only the masked subset of the (pre-existing) output, preserving the rest
+// (dst = mask ? result : dst, matching cv::add/... with a mask).
+void makeBinaryArithProgram(EwProgram& p, ElemwiseOp op, int depth0, int depth1, int rdepth,
+                            int maskDepth = EW_DEPTH_NONE);
 void makeAddProgram(EwProgram& p, int depth0, int depth1, int rdepth);
 
 // addWeighted(a,alpha,b,beta,gamma) = a*alpha + b*beta + gamma, built as two fused convert_scale

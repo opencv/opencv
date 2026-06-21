@@ -42,6 +42,7 @@ const char* opName(ElemwiseOp op)
     case OP_CMP_LE:        return "cmp_le";
     case OP_CMP_GT:        return "cmp_gt";
     case OP_CMP_GE:        return "cmp_ge";
+    case OP_COPY_MASK:     return "copymask";
     case OP_CLAMP:         return "clamp";
     case OP_SELECT:        return "select";
     case OP_CONVERT_SCALE: return "convert_scale";
@@ -64,7 +65,7 @@ ElemwiseCategory opCategory(ElemwiseOp op)
         return CAT_MATH;
     case OP_CAST: case OP_CONVERT_SCALE:
         return CAT_CAST;
-    case OP_SELECT:
+    case OP_SELECT: case OP_COPY_MASK:
         return CAT_SELECT;
     default:
         return CAT_ARITH;   // add/sub/mul/div/pow/min/max/absdiff/neg/abs/clamp

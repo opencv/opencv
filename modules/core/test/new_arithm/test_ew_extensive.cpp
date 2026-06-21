@@ -100,7 +100,8 @@ static std::vector<int> sampleShape(RNG& rng)
 // 16f/16bf/32u/64u/64s directly), values in the per-depth range. ~1/3 of the time the result is
 // a NON-contiguous sub-array: the parent is padded by 1..2 on each edge of each axis and we
 // return the inner view (gapped outer steps), to exercise the engine's non-continuous path.
-static Mat makeRandom(RNG& rng, const std::vector<int>& shape, int cn, int depth)
+static Mat makeRandom(RNG& rng, const std::vector<int>& shape, int cn, int depth,
+                      double rlo = 1, double rhi = 0)
 {
     const bool crop = rng.uniform(0, 3) == 0;
     const int nd = (int)shape.size();
@@ -114,7 +115,8 @@ static Mat makeRandom(RNG& rng, const std::vector<int>& shape, int cn, int depth
         ranges[d] = Range(lo, lo + shape[d]);
     }
     Mat m64(nd, pad.data(), CV_MAKETYPE(CV_64F, cn));
-    double lo, hi; depthRange(depth, lo, hi);
+    double lo = rlo, hi = rhi;
+    if (rlo > rhi) depthRange(depth, lo, hi);     // rlo>rhi (default) => per-depth range
     cvtest::randUni(rng, m64, Scalar::all(lo), Scalar::all(hi));
     Mat big; m64.convertTo(big, CV_MAKETYPE(depth, cn));
     return big(ranges);                          // full range when !crop => contiguous
@@ -225,6 +227,171 @@ TEST_P(EW_Extensive_BinOp, accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(Core_EW, EW_Extensive_BinOp,
+    testing::Combine(testing::Values(0, 1), testing::Range(0, kNumCases)),
+    [](const testing::TestParamInfo<std::tuple<int,int>>& info) {
+        return cv::format("%s_case%04d", std::get<0>(info.param) ? "sub" : "add",
+                          std::get<1>(info.param));
+    });
+
+// ------------------------------------------------------------------------------------- mul / div
+// Parameterized on (op, caseidx): op 0 = MUL, 1 = DIV. Both compute in the float work type (float
+// for <=16-bit, double for 32/64-bit), matching cv::multiply/divide; integer divide-by-zero => 0.
+class EW_Extensive_MulDiv : public ::testing::TestWithParam<std::tuple<int,int>> {};
+
+TEST_P(EW_Extensive_MulDiv, accuracy)
+{
+    const int opSel = std::get<0>(GetParam());
+    const int caseidx = std::get<1>(GetParam());
+    const ElemwiseOp op = opSel ? OP_DIV : OP_MUL;
+    const char* opStr = opSel ? "div" : "mul";
+    RNG rng(mix64(kSuiteSalt ^ 0x3DD17ULL ^ (uint64_t)caseidx));
+
+    std::vector<int> shape = sampleShape(rng);
+    const int da = sampleDepth(rng), db = sampleDepth(rng);
+
+    static const int cncand[] = { 1, 1, 2, 3, 4 };
+    const int rcn = cncand[rng.uniform(0, 5)];
+    const int cn_a = rng.uniform(0, 2) ? rcn : 1;
+    const int cn_b = rng.uniform(0, 2) ? rcn : 1;
+    const int ocn = std::max(cn_a, cn_b);
+
+    std::vector<int> sa(shape.size()), sb(shape.size()), res(shape.size());
+    for (size_t d = 0; d < shape.size(); d++)
+    {
+        sa[d] = rng.uniform(0, 2) ? shape[d] : 1;
+        sb[d] = rng.uniform(0, 2) ? shape[d] : 1;
+        res[d] = std::max(sa[d], sb[d]);
+    }
+
+    int aliasIn = -1;
+    if (rng.uniform(0, 3) == 0)
+    {
+        if      (sa == res && cn_a == ocn) aliasIn = 0;
+        else if (sb == res && cn_b == ocn) aliasIn = 1;
+    }
+    const bool inplace = aliasIn >= 0;
+    const int Tr = aliasIn == 0 ? da : aliasIn == 1 ? db : sampleDepth(rng);
+
+    SCOPED_TRACE(cv::format("%s caseidx=%d da=%d db=%d Tr=%d a=%sC%d b=%sC%d inplace=%d",
+                            opStr, caseidx, da, db, Tr, shapeStr(sa).c_str(), cn_a,
+                            shapeStr(sb).c_str(), cn_b, inplace ? aliasIn : -1));
+
+    // modest magnitudes: mul/div compute in a float work type, so a product/quotient that overflows
+    // the integer output's range hits float->int UB (cv::multiply is UB there too). [-1000,1000]
+    // keeps products <= 1e6 (no overflow), while still exercising saturation for small outputs.
+    Mat a = makeRandom(rng, sa, cn_a, da, -1000, 1000), b = makeRandom(rng, sb, cn_b, db, -1000, 1000);
+
+    const bool bothInt = !isFloat(da) && !isFloat(db);
+    // Integer divide-by-zero is well-defined (=> 0) and IS exercised. Float-involved divide-by-zero
+    // is UB (a/0 -> inf -> int), so avoid it here: make the divisor (b) nonzero for the float path.
+    if (op == OP_DIV && !bothInt)
+    {
+        Mat b64; b.convertTo(b64, CV_64F);
+        b64.setTo(1.0, b64 == 0.0);
+        b64.convertTo(b, db);
+    }
+
+    // reference FIRST (in-place may overwrite an input): mirror the engine's spec - cast both to the
+    // float work type Wf (float for <=16-bit common type, double for 32/64-bit), op in Wf, then cast
+    // to Tr (same final cast the engine uses). For both-integer div, guard divide-by-zero -> 0.
+    const int C = (da == db) ? da : promote2(da, db);
+    const bool wide = (C==CV_32U || C==CV_32S || C==CV_64U || C==CV_64S || C==CV_64F);
+    const int Wf = wide ? CV_64F : CV_32F;
+    std::vector<Mat> ach, bch; cv::split(a, ach); cv::split(b, bch);
+    std::vector<Mat> refch(ocn);
+    for (int c = 0; c < ocn; c++)
+    {
+        Mat aWf, bWf;
+        ach[cn_a == 1 ? 0 : c].convertTo(aWf, Wf);
+        bch[cn_b == 1 ? 0 : c].convertTo(bWf, Wf);
+        Mat aB, bB; cv::broadcast(aWf, res, aB); cv::broadcast(bWf, res, bB);
+        Mat q;
+        if (op == OP_DIV) { cv::divide(aB, bB, q); if (bothInt) q.setTo(0, bB == 0); }
+        else              cv::multiply(aB, bB, q);
+        q.convertTo(refch[c], Tr);
+    }
+    Mat ref; cv::merge(refch, ref);
+
+    EwProgram p;
+    makeBinaryArithProgram(p, op, da, db, Tr);
+    Mat inps[] = {a, b}, outOwn;
+    Mat* outPtr = inplace ? &inps[aliasIn] : &outOwn;
+    p.exec(inps, outPtr);
+
+    checkClose(*outPtr, ref, Tr, true, opStr);   // float work => integer output may differ by <=1
+}
+
+INSTANTIATE_TEST_CASE_P(Core_EW, EW_Extensive_MulDiv,
+    testing::Combine(testing::Values(0, 1), testing::Range(0, kNumCases)),
+    [](const testing::TestParamInfo<std::tuple<int,int>>& info) {
+        return cv::format("%s_case%04d", std::get<0>(info.param) ? "div" : "mul",
+                          std::get<1>(info.param));
+    });
+
+// ------------------------------------------------------------------------------- masked add / sub
+// add/sub with a write-mask. The data inputs share the output shape (a, b, out all `shape`-spatial,
+// cn channels); the mask is single-channel, the output spatial shape, type bool/u8/s8. The output
+// PRE-EXISTS (filled with random content): copyMask overwrites only the masked subset and leaves
+// the rest unchanged (dst = mask ? op : dst). cn==1 exercises the per-element mask (CH_FOLD); cn>1
+// the channel-axis broadcast (CH_DIM, mask stepx 0 => a whole n-channel row copied under one test).
+class EW_Extensive_Mask : public ::testing::TestWithParam<std::tuple<int,int>> {};
+
+TEST_P(EW_Extensive_Mask, accuracy)
+{
+    const int opSel = std::get<0>(GetParam());
+    const int caseidx = std::get<1>(GetParam());
+    const ElemwiseOp op = opSel ? OP_SUB : OP_ADD;
+    const char* opStr = opSel ? "sub" : "add";
+    RNG rng(mix64(kSuiteSalt ^ 0x5A5C0DEULL ^ (uint64_t)caseidx));
+
+    std::vector<int> shape = sampleShape(rng);
+    const int da = sampleDepth(rng), db = sampleDepth(rng), Tr = sampleDepth(rng);
+
+    static const int cncand[] = { 1, 1, 2, 3, 4 };
+    const int cn = cncand[rng.uniform(0, 5)];
+
+    static const int maskDepths[] = { CV_8U, CV_8S, CV_Bool };
+    const int md = maskDepths[rng.uniform(0, 3)];
+
+    SCOPED_TRACE(cv::format("%s caseidx=%d da=%d db=%d Tr=%d cn=%d md=%d shape=%s",
+                            opStr, caseidx, da, db, Tr, cn, md, shapeStr(shape).c_str()));
+
+    Mat a = makeRandom(rng, shape, cn, da), b = makeRandom(rng, shape, cn, db);
+
+    // mask: single-channel, output spatial shape, ~half zero. Build a u8 0/1 master, convert it to
+    // the chosen mask depth for the engine; the u8 master drives the reference copyTo.
+    const int nd = (int)shape.size();
+    Mat m8(nd, shape.data(), CV_8U);
+    cvtest::randUni(rng, m8, Scalar::all(0), Scalar::all(2));   // 0 or 1
+    Mat mask; m8.convertTo(mask, md);
+
+    // pre-existing output content (preserved where mask==0): dst = mask ? op : dst.
+    Mat init = makeRandom(rng, shape, cn, Tr).clone();   // contiguous Tr-typed dst
+
+    // reference: full op per channel (cast to common type C, op to Tr), merge, then overwrite the
+    // masked subset of `init` (the rest stays as the pre-existing content).
+    int C = (da == db) ? da : promote2(da, db);
+    std::vector<Mat> ach, bch; cv::split(a, ach); cv::split(b, bch);
+    std::vector<Mat> refch(cn);
+    for (int c = 0; c < cn; c++)
+    {
+        Mat apC, bpC; ach[c].convertTo(apC, C); bch[c].convertTo(bpC, C);
+        if (op == OP_SUB) cv::subtract(apC, bpC, refch[c], noArray(), Tr);
+        else              cv::add     (apC, bpC, refch[c], noArray(), Tr);
+    }
+    Mat refFull; cv::merge(refch, refFull);
+    Mat ref = init.clone();
+    refFull.copyTo(ref, m8);
+
+    EwProgram p;
+    makeBinaryArithProgram(p, op, da, db, Tr, md);
+    Mat inps[] = {a, b, mask}, out = init.clone();
+    p.exec(inps, &out);
+
+    checkClose(out, ref, Tr, isFloat(da) || isFloat(db), opStr);
+}
+
+INSTANTIATE_TEST_CASE_P(Core_EW, EW_Extensive_Mask,
     testing::Combine(testing::Values(0, 1), testing::Range(0, kNumCases)),
     [](const testing::TestParamInfo<std::tuple<int,int>>& info) {
         return cv::format("%s_case%04d", std::get<0>(info.param) ? "sub" : "add",

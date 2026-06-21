@@ -177,6 +177,22 @@ struct EwSub {
     static uint64_t scl(uint64_t a, uint64_t b) { return uint64_t(a >= b)*(a - b); }
 };
 
+// mul/div compute in a wide FLOAT work type (W = float for <=16-bit/f16/bf/f32, double for
+// 32/64-bit/f64), matching cv::multiply/divide; the executor casts the work-type result down to
+// rdepth. scalar (reference) path only for now - SIMD can follow. (No vec(): never instantiated.)
+struct EwMul {
+    template<typename W> static W scl(W a, W b) { return a * b; }
+};
+// div has two variants by the COMMON INPUT type (matching cv::'s per-type kernel choice): integer
+// inputs guard divide-by-zero -> 0 (cv:: iscalar_div); float inputs do NOT guard (cv:: fscalar_div,
+// a/0 -> inf), which then saturates on the cast to an integer output exactly like cv::divide.
+struct EwDivInt {
+    template<typename W> static W scl(W a, W b) { return b != W(0) ? a / b : W(0); }
+};
+struct EwDivFlt {
+    template<typename W> static W scl(W a, W b) { return a / b; }
+};
+
 // Collapse a gap-free 2D tile to 1D (call with the per-operand x/y-steps).
 #define EW_TRY_COLLAPSE(NSRC) \
     if (height > 1 && dsty == (size_t)width && \
@@ -435,6 +451,97 @@ ElemwiseFunc getAddSubFunc(int T, int R)
 }
 
 // ===========================================================================
+// OP_MUL / OP_DIV  (scalar reference; work type = float for <=16-bit/f16/bf/f32, double otherwise)
+// ===========================================================================
+// One row per input depth T: the kernel computes in the float work type W and outputs W (the
+// executor casts W -> rdepth). So the matrix only provides T x T -> W (R == the work float). The
+// product/quotient holds the same precision cv::multiply/divide use (same W), so results match.
+// Two functors: integer input types use OpI, float input types use OpF (div needs the int/float
+// split for divide-by-zero; mul passes the same functor twice).
+template<class OpI, class OpF>
+static ElemwiseFunc getMulDivFunc(int T, int R)
+{
+    switch (T)
+    {
+    case CV_8U:   return R == CV_32F ? scalar_binary_kernel<uchar,    float,  float,  OpI> : nullptr;
+    case CV_8S:   return R == CV_32F ? scalar_binary_kernel<schar,    float,  float,  OpI> : nullptr;
+    case CV_16U:  return R == CV_32F ? scalar_binary_kernel<ushort,   float,  float,  OpI> : nullptr;
+    case CV_16S:  return R == CV_32F ? scalar_binary_kernel<short,    float,  float,  OpI> : nullptr;
+    case CV_16F:  return R == CV_32F ? scalar_binary_kernel<hfloat,   float,  float,  OpF> : nullptr;
+    case CV_16BF: return R == CV_32F ? scalar_binary_kernel<bfloat,   float,  float,  OpF> : nullptr;
+    case CV_32F:  return R == CV_32F ? scalar_binary_kernel<float,    float,  float,  OpF> : nullptr;
+    case CV_32U:  return R == CV_64F ? scalar_binary_kernel<unsigned, double, double, OpI> : nullptr;
+    case CV_32S:  return R == CV_64F ? scalar_binary_kernel<int,      double, double, OpI> : nullptr;
+    case CV_64U:  return R == CV_64F ? scalar_binary_kernel<uint64_t, double, double, OpI> : nullptr;
+    case CV_64S:  return R == CV_64F ? scalar_binary_kernel<int64_t,  double, double, OpI> : nullptr;
+    case CV_64F:  return R == CV_64F ? scalar_binary_kernel<double,   double, double, OpF> : nullptr;
+    default:      return nullptr;
+    }
+}
+
+// div divide-by-zero policy is the CALLER's call (it knows the original input types): both-integer
+// inputs guard /0 -> 0 (checked); any float input does not (a/0 -> inf, matching cv::divide). This
+// can't be decided from the common type T alone - integer inputs can promote to a float T (e.g.
+// 16U/64S -> 64F work), yet must still guard. T/R as in getMulDivFunc.
+ElemwiseFunc getDivFunc(int T, int R, bool checked)
+{
+    return checked ? getMulDivFunc<EwDivInt, EwDivInt>(T, R)
+                   : getMulDivFunc<EwDivFlt, EwDivFlt>(T, R);
+}
+
+// ===========================================================================
+// OP_COPY_MASK: dst = (mask != 0) ? src : dst   (unmasked elements are PRESERVED)
+// ===========================================================================
+// The masked tail of an op: the op computes its full result into a temp, then copyMask moves the
+// masked subset into the (pre-existing) output, leaving the rest UNCHANGED - matching cv::add/...
+// with a mask (dst = mask ? result : dst). src and dst are the data (same depth, contiguous); the
+// mask is one byte per pixel (bool/u8/s8 - never parameterized by its depth, we just test the byte
+// != 0). Templated only by the element SIZE.
+//
+// The channel handling falls out of the existing broadcast machinery (no special case here): for
+// single-channel data the tile is (width x 1) with the mask aligned per element (s1x == 1); for
+// n-channel data the channel axis is the kernel width and the 1-channel mask broadcasts across it
+// (s1x == 0), so a whole row of n elements is copied (or left untouched) under one mask test.
+// Reference (scalar) implementation for now; a SIMD mask-expand + select can replace it later.
+template<typename T>
+static int copyMaskKernel(const void* src0_, size_t s0y, size_t s0x,
+                          const void* mask_, size_t s1y, size_t s1x,
+                          const void*, size_t, size_t,
+                          void* dst_, size_t dsty, int width, int height, void*)
+{
+    CV_Assert(s0x == 1 && (s1x == 0 || s1x == 1));   // data contiguous; mask per-element or broadcast
+    const T* src = (const T*)src0_;
+    const uchar* mask = (const uchar*)mask_;
+    T* dst = (T*)dst_;
+    for (int y = 0; y < height; y++, src += s0y, mask += s1y, dst += dsty)
+    {
+        if (s1x == 0)                       // one mask value for the whole row (n-channel pixel)
+        {
+            if (mask[0]) for (int x = 0; x < width; x++) dst[x] = src[x];
+            // else: leave the row untouched (preserve the existing output)
+        }
+        else                                // per-element mask (single-channel)
+        {
+            for (int x = 0; x < width; x++)
+                if (mask[x]) dst[x] = src[x];
+        }
+    }
+    return 0;
+}
+
+static ElemwiseFunc getCopyMaskFunc(int depth)
+{
+    switch (CV_ELEM_SIZE1(depth))
+    {
+    case 1: return copyMaskKernel<uchar>;
+    case 2: return copyMaskKernel<ushort>;
+    case 4: return copyMaskKernel<unsigned>;
+    case 8: return copyMaskKernel<uint64_t>;
+    default: return nullptr;
+    }
+}
+
+// ===========================================================================
 // OP_CAST / OP_CONVERT_SCALE  ->  adapter over core's getConvertFunc / getConvertScaleFunc.
 // ===========================================================================
 // A single generic ElemwiseFunc that carries no type info itself: the executor builds an
@@ -503,8 +610,6 @@ static ElemwiseFunc getBinaryArithF32(int op)
 {
     switch (op)
     {
-    case OP_MUL: return binaryKernel<OpMul, float, float, float>;
-    case OP_DIV: return binaryKernel<OpDiv, float, float, float>;
     case OP_POW: return binaryKernel<OpPow, float, float, float>;
     default:     return nullptr;
     }
@@ -530,6 +635,20 @@ ElemwiseFunc getElemwiseFunc(ElemwiseOp op, int depth0, int depth1, int depth2, 
         return op == OP_ADD ? getAddSubFunc<EwAdd>(depth0, rdepth) :
                               getAddSubFunc<EwSub>(depth0, rdepth);
     }
+
+    // OP_MUL / OP_DIV: operands same type T; compute in the float work type, output it (rdepth ==
+    // the work float). The executor casts the work result down to the real output depth.
+    if (op == OP_MUL || op == OP_DIV)
+    {
+        if (depth0 != depth1) return nullptr;
+        return op == OP_MUL ? getMulDivFunc<EwMul, EwMul>(depth0, rdepth)
+                            : getMulDivFunc<EwDivInt, EwDivFlt>(depth0, rdepth);
+    }
+
+    // OP_COPY_MASK: data depth == depth0 == rdepth; depth1 is the mask (any 1-byte type, ignored
+    // for dispatch - the kernel just tests bytes). Selected by element size only.
+    if (op == OP_COPY_MASK)
+        return getCopyMaskFunc(rdepth);
 
     if (opArity(op) == 2)
     {

@@ -59,6 +59,11 @@ enum ElemwiseOp
     OP_AND, OP_OR, OP_XOR,
     // compare -> mask (result depth given explicitly, e.g. CV_Bool/CV_8U)
     OP_CMP_EQ, OP_CMP_NE, OP_CMP_LT, OP_CMP_LE, OP_CMP_GT, OP_CMP_GE,
+    // partial-output write: dst = (mask != 0) ? src : dst (unmasked output PRESERVED). arg0 = src
+    // (data), arg1 = mask (1 byte: bool/u8/s8). Used to apply an op's mask: the op computes into a
+    // temp, copyMask overwrites only the masked subset of the (pre-existing) output - matching
+    // cv::add/... with a mask.
+    OP_COPY_MASK,
 
     // ---------------- ternary (arity 3) ----------------
     OP_CLAMP = OP_TERNARY_BASE,   // clamp(x, lo, hi)
@@ -121,6 +126,10 @@ ElemwiseFunc getElemwiseFunc(ElemwiseOp op, int depth0, int depth1, int depth2, 
 
 // T + T -> R
 ElemwiseFunc getAddFunc(int T, int R);
+
+// T / T -> R (work float). `checked` => guard divide-by-zero -> 0 (both-integer inputs); else a/0
+// -> inf (any float input). The caller decides from the ORIGINAL input types (not the common T).
+ElemwiseFunc getDivFunc(int T, int R, bool checked);
 
 // ---------------------------------------------------------------------------
 // Adapter context: the optional trailing void* of ElemwiseFunc. A small fixed-size POD built

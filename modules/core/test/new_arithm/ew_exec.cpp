@@ -86,7 +86,7 @@ static int opCost(ElemwiseOp op)
     {
     case OP_ADD: case OP_SUB: case OP_MUL: case OP_MIN: case OP_MAX:
     case OP_ABSDIFF: case OP_AND: case OP_OR: case OP_XOR: case OP_NOT:
-    case OP_NEG: case OP_ABS: case OP_CAST: case OP_RELU:
+    case OP_NEG: case OP_ABS: case OP_CAST: case OP_RELU: case OP_COPY_MASK:
     case OP_CMP_EQ: case OP_CMP_NE: case OP_CMP_LT:
     case OP_CMP_LE: case OP_CMP_GT: case OP_CMP_GE: return 1;
     case OP_DIV: case OP_SQRT: case OP_CONVERT_SCALE: return 10;
@@ -488,27 +488,30 @@ static int safeWide(int depth)
     return int((ctypelut >> (pr_depth*dbits)) & dmask);
 }
 
-// Shared composer for the symmetric binary arith ops (ADD, SUB): bring both operands to a common
-// type, apply `op` directly to rdepth if a kernel exists, else compute in a safe wide type and
-// cast down. The wide type is signed for both (a-b may go negative), so safeWide serves both.
-void makeBinaryArithProgram(EwProgram& p, ElemwiseOp op, int depth0, int depth1, int rdepth)
+// Shared composer for the binary arith ops (ADD, SUB, MUL, DIV): bring both operands to a common
+// type. ADD/SUB apply `op` directly to rdepth if a kernel exists, else compute in a safe wide type
+// (signed - a-b may go negative) and cast down. MUL/DIV compute in the float work type (matching
+// cv::multiply/divide) and cast that down to rdepth.
+//
+// maskDepth != EW_DEPTH_NONE adds a write-mask (input #2): the arithmetic result lands in a temp
+// (type rdepth) and a final OP_COPY_MASK overwrites only the masked subset of the (pre-existing)
+// output, leaving the rest UNCHANGED (dst = mask ? result : dst, matching cv::add/... with a mask).
+// copyMask is always the LAST instruction, after all ops and conversions. The mask is a single-
+// channel 1-byte array (bool/u8/s8) the size of the output spatial shape; it rides the normal
+// broadcast machinery (single-channel data => per-element; n-channel => broadcast across the
+// channel axis), so nothing special is needed in the executor.
+void makeBinaryArithProgram(EwProgram& p, ElemwiseOp op, int depth0, int depth1, int rdepth,
+                            int maskDepth)
 {
     p.clear();
-    p.ninputs = 2; p.noutputs = 1;
-    p.arginfo.resize(4);
-    p.arginfo[0] = mkArg(ARG_NONE,  EW_DEPTH_NONE, -1);
-    p.arginfo[1] = mkArg(ARG_INPUT, depth0, 0);
-    p.arginfo[2] = mkArg(ARG_INPUT, depth1, 1);
-    p.arginfo[3] = mkArg(ARG_OUTPUT, rdepth, 0);
-    int sIn0 = 1, sIn1 = 2, sOut = 3;
-    if (depth0 == depth1 && depth0 == rdepth) {
-        p.prog.resize(1);
-        EwInsn& ins = p.prog[0];
-        ins.op = op; ins.arg0 = sIn0; ins.arg1 = sIn1; ins.arg2 = 0; ins.result = sOut;
-        ins.fptr = getElemwiseFunc(op, depth0, depth1, EW_DEPTH_NONE, rdepth);
-        CV_Assert(ins.fptr != nullptr);
-        return;
-    }
+    const bool masked = maskDepth != EW_DEPTH_NONE;
+    p.ninputs = masked ? 3 : 2; p.noutputs = 1;
+    p.arginfo.push_back(mkArg(ARG_NONE,  EW_DEPTH_NONE, -1));               // slot 0
+    int sIn0  = (int)p.arginfo.size(); p.arginfo.push_back(mkArg(ARG_INPUT, depth0, 0));
+    int sIn1  = (int)p.arginfo.size(); p.arginfo.push_back(mkArg(ARG_INPUT, depth1, 1));
+    int sMask = 0;
+    if (masked) { sMask = (int)p.arginfo.size(); p.arginfo.push_back(mkArg(ARG_INPUT, maskDepth, 2)); }
+    int sOut  = (int)p.arginfo.size(); p.arginfo.push_back(mkArg(ARG_OUTPUT, rdepth, 0));
 
     int ntemps = 0;
     auto addTemp = [&](int depth) {
@@ -525,21 +528,65 @@ void makeBinaryArithProgram(EwProgram& p, ElemwiseOp op, int depth0, int depth1,
         p.prog.push_back(ins);
     };
 
-    // 1. bring both operands to a common type.
-    int depth = (depth0 == depth1) ? depth0 : promote2(depth0, depth1);
-    if (depth0 != depth) { int t = addTemp(depth); addInsn(OP_CAST, sIn0, 0, t); sIn0 = t; }
-    if (depth1 != depth) { int t = addTemp(depth); addInsn(OP_CAST, sIn1, 0, t); sIn1 = t; }
+    // The arithmetic result goes to `dst`: the output directly, or a temp when masked (then
+    // copyMask moves it into the output). Fast single-op path stays single-op when unmasked.
+    int dst = masked ? addTemp(rdepth) : sOut;
 
-    // 2. op directly to rdepth if a kernel exists, else compute wide then cast down.
-    if (getElemwiseFunc(op, depth, depth, EW_DEPTH_NONE, rdepth))
-        addInsn(op, sIn0, sIn1, sOut);
+    if (op == OP_MUL || op == OP_DIV)
+    {
+        // cast both operands to a common type C, then mul/div in the float work type Wf (float for
+        // <=16-bit/f16/bf/f32, double for 32/64-bit/f64 - matching cv::multiply/divide), then cast
+        // Wf down to rdepth. For div the divide-by-zero policy is decided from the ORIGINAL input
+        // types: both-integer => guard /0 -> 0; any float => no guard (a/0 -> inf), as cv::divide.
+        auto isFlt = [](int d){ return d==CV_16F || d==CV_16BF || d==CV_32F || d==CV_64F; };
+        const bool bothInt = !isFlt(depth0) && !isFlt(depth1);
+        int C = (depth0 == depth1) ? depth0 : promote2(depth0, depth1);
+        if (depth0 != C) { int t = addTemp(C); addInsn(OP_CAST, sIn0, 0, t); sIn0 = t; }
+        if (depth1 != C) { int t = addTemp(C); addInsn(OP_CAST, sIn1, 0, t); sIn1 = t; }
+        const bool wide = (C==CV_32U || C==CV_32S || C==CV_64U || C==CV_64S || C==CV_64F);
+        int Wf = wide ? CV_64F : CV_32F;
+        // emit the mul/div into slot r (div uses the caller-chosen divide-by-zero policy).
+        auto emit = [&](int r) {
+            if (op == OP_DIV) {
+                EwInsn ins; ins.op = OP_DIV; ins.arg0 = sIn0; ins.arg1 = sIn1; ins.arg2 = 0; ins.result = r;
+                ins.fptr = getDivFunc(p.arginfo[sIn0].depth, p.arginfo[r].depth, bothInt);
+                CV_Assert(ins.fptr != nullptr);
+                p.prog.push_back(ins);
+            } else
+                addInsn(OP_MUL, sIn0, sIn1, r);
+        };
+        if (rdepth == Wf)
+            emit(dst);
+        else
+        {
+            int tW = addTemp(Wf);
+            emit(tW);
+            addInsn(OP_CAST, tW, 0, dst);
+        }
+    }
+    else if (depth0 == depth1 && depth0 == rdepth)
+        addInsn(op, sIn0, sIn1, dst);
     else
     {
-        int W = safeWide(depth);
-        int tW = addTemp(W);
-        addInsn(op, sIn0, sIn1, tW);
-        addInsn(OP_CAST, tW, 0, sOut);
+        // ADD/SUB: 1. bring both operands to a common type.
+        int depth = (depth0 == depth1) ? depth0 : promote2(depth0, depth1);
+        if (depth0 != depth) { int t = addTemp(depth); addInsn(OP_CAST, sIn0, 0, t); sIn0 = t; }
+        if (depth1 != depth) { int t = addTemp(depth); addInsn(OP_CAST, sIn1, 0, t); sIn1 = t; }
+
+        // 2. op directly to rdepth if a kernel exists, else compute wide then cast down.
+        if (getElemwiseFunc(op, depth, depth, EW_DEPTH_NONE, rdepth))
+            addInsn(op, sIn0, sIn1, dst);
+        else
+        {
+            int W = safeWide(depth);
+            int tW = addTemp(W);
+            addInsn(op, sIn0, sIn1, tW);
+            addInsn(OP_CAST, tW, 0, dst);
+        }
     }
+
+    if (masked)
+        addInsn(OP_COPY_MASK, dst, sMask, sOut);   // last: dst = (mask!=0) ? result : 0
 
     p.ntemps = ntemps; p.nbuffers = ntemps;
     p.bufferOfTemp.resize(ntemps);
