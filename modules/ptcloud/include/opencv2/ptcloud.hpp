@@ -11,6 +11,7 @@
 #include "opencv2/ptcloud/odometry.hpp"
 #include "opencv2/ptcloud/odometry_frame.hpp"
 #include "opencv2/ptcloud/odometry_settings.hpp"
+#include "opencv2/ptcloud/slam.hpp"
 
 /**
 @defgroup ptcloud Point Clound Processing

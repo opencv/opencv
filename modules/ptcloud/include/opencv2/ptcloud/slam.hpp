@@ -4,8 +4,8 @@
 // Copyright (C) 2026, BigVision LLC, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-#ifndef OPENCV_SLAM_HPP
-#define OPENCV_SLAM_HPP
+#ifndef OPENCV_PTCLOUD_SLAM_HPP
+#define OPENCV_PTCLOUD_SLAM_HPP
 
 /**
 @defgroup slam SLAM and Visual Odometry
@@ -15,9 +15,9 @@ Bootstraps an initial map from two-view geometry, then tracks subsequent frames
 with PnP, growing the map at keyframe promotions.
 */
 
-#include "opencv2/slam/types.hpp"
-#include "opencv2/slam/map.hpp"
-#include "opencv2/slam/odometry_params.hpp"
-#include "opencv2/slam/visual_odometry.hpp"
+#include "opencv2/ptcloud/slam/types.hpp"
+#include "opencv2/ptcloud/slam/map.hpp"
+#include "opencv2/ptcloud/slam/odometry_params.hpp"
+#include "opencv2/ptcloud/slam/visual_odometry.hpp"
 
-#endif // OPENCV_SLAM_HPP
+#endif // OPENCV_PTCLOUD_SLAM_HPP

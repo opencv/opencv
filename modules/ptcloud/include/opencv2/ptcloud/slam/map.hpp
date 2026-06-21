@@ -7,7 +7,7 @@
 #ifndef OPENCV_SLAM_MAP_HPP
 #define OPENCV_SLAM_MAP_HPP
 
-#include "opencv2/slam/types.hpp"
+#include "opencv2/ptcloud/slam/types.hpp"
 
 #include <set>
 #include <vector>

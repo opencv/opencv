@@ -4,7 +4,7 @@ set(OPENCV_SLAM_SAMPLES_REQUIRED_DEPS
   opencv_core
   opencv_dnn
   opencv_features
-  opencv_slam)
+  opencv_ptcloud)
 ocv_check_dependencies(${OPENCV_SLAM_SAMPLES_REQUIRED_DEPS})
 
 if(NOT BUILD_EXAMPLES OR NOT OCV_DEPENDENCIES_FOUND)

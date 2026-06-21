@@ -7,7 +7,7 @@
 #ifndef OPENCV_SLAM_PRECOMP_HPP
 #define OPENCV_SLAM_PRECOMP_HPP
 
-#include "opencv2/slam.hpp"
+#include "opencv2/ptcloud/slam.hpp"
 
 #include "opencv2/core.hpp"
 #include "opencv2/core/utility.hpp"

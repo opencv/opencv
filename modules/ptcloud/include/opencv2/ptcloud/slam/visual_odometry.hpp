@@ -10,9 +10,9 @@
 #include "opencv2/core.hpp"
 #include "opencv2/features.hpp"
 
-#include "opencv2/slam/types.hpp"
-#include "opencv2/slam/map.hpp"
-#include "opencv2/slam/odometry_params.hpp"
+#include "opencv2/ptcloud/slam/types.hpp"
+#include "opencv2/ptcloud/slam/map.hpp"
+#include "opencv2/ptcloud/slam/odometry_params.hpp"
 
 #include <vector>
 

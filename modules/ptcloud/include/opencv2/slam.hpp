@@ -4,6 +4,11 @@
 // Copyright (C) 2026, BigVision LLC, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-#include "test_precomp.hpp"
+#ifndef OPENCV_SLAM_HPP
+#define OPENCV_SLAM_HPP
 
-CV_TEST_MAIN("cv")
+// Convenience umbrella header so SLAM / visual odometry can be included as
+// <opencv2/slam.hpp>. The implementation currently lives in the ptcloud module.
+#include "opencv2/ptcloud/slam.hpp"
+
+#endif // OPENCV_SLAM_HPP
