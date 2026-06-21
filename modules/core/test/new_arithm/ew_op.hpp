@@ -119,6 +119,9 @@ typedef int (*ElemwiseFunc)(
 // retries with a supported working type). Unused operand depths are EW_DEPTH_NONE.
 ElemwiseFunc getElemwiseFunc(ElemwiseOp op, int depth0, int depth1, int depth2, int rdepth);
 
+// T + T -> R
+ElemwiseFunc getAddFunc(int T, int R);
+
 // ---------------------------------------------------------------------------
 // Adapter context: the optional trailing void* of ElemwiseFunc. A small fixed-size POD built
 // on the fly by the executor before the parallel loop and discriminated there by op category;
@@ -196,15 +199,30 @@ struct EwInsn
 
 // A frozen program: everything that does NOT depend on the concrete shapes of a call.
 // Shapes, strides and the physical tile/output memory are computed per-call in the executor.
+//
+// Heap-free for the common case: to eventually back cv::add() the whole program is (re)built on
+// every call, so its containers must not allocate. AutoBuffer keeps typical element-wise programs
+// (a handful of insns/slots) entirely inline on the stack and only falls back to the heap for
+// unusually large expressions. AutoBuffer is copyable, so EwProgram is still returned by value.
+//
+// NB: a default-constructed AutoBuffer reports size()==fixed_size (it is meant to be sized up
+// front, not grown from empty). The constructor calls allocate(0) on each container to reset the
+// size to 0, after which push_back/resize/size() behave exactly like std::vector.
 struct EwProgram
 {
-    std::vector<EwInsn>    prog;      // resolved instructions, in execution order
-    std::vector<EwArgInfo> arginfo;   // slot 0 is always ARG_NONE
+    AutoBuffer<EwInsn, 16>     prog;          // resolved instructions, in execution order
+    AutoBuffer<EwArgInfo, 16>  arginfo;       // slot 0 is always ARG_NONE
     int ninputs = 0;
     int noutputs = 0;
     int ntemps = 0;
-    int nbuffers = 0;                 // distinct physical temp buffers after liveness
-    std::vector<int> bufferOfTemp;    // temp-id -> physical buffer id
+    int nbuffers = 0;                         // distinct physical temp buffers after liveness
+    AutoBuffer<int, 16>        bufferOfTemp;   // temp-id -> physical buffer id
+
+    EwProgram();
+    void clear();
+
+    // Execute a compiled program.
+    void exec(const Mat* inputs, Mat* outputs);
 };
 
 }} // namespace cv::ew

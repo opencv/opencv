@@ -61,7 +61,7 @@ struct EwGraph
 };
 
 // Compile a graph into a frozen program. inputDepths[i] is the depth of input #i.
-EwProgram compile(const EwGraph& g, const std::vector<int>& inputDepths);
+void compile(const EwGraph& g, EwProgram& p, const int* inputDepths, size_t ninputs);
 
 }} // namespace cv::ew
 

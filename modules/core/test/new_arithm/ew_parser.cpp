@@ -295,24 +295,27 @@ struct Parser
 
 void expression(std::string_view expr, InputArrayOfArrays _inputs, OutputArrayOfArrays _outputs)
 {
-    std::vector<Mat> inputs;
-    _inputs.getMatVector(inputs);
+    CV_Assert(_inputs.kind() == _InputArray::STD_VECTOR_MAT);
+    const std::vector<Mat>& inps = *(const std::vector<Mat>*)_inputs.getObj();
 
     EwGraph g;
-    g.ninputs = (int)inputs.size();
+    g.ninputs = (int)inps.size();
     Parser(expr, g).parse();
 
-    std::vector<int> depths(inputs.size());
-    for (size_t i = 0; i < inputs.size(); i++) depths[i] = inputs[i].depth();
+    AutoBuffer<int> depths(g.ninputs);
+    for (int i = 0; i < g.ninputs; i++) depths[i] = inps[i].depth();
 
-    EwProgram prog = compile(g, depths);
+    EwProgram prog;
+    compile(g, prog, depths.data(), g.ninputs);
 
-    std::vector<Mat> outs;
-    exec(prog, inputs, outs);
-
-    _outputs.create((int)outs.size(), 1, CV_8U, -1);     // size the output container
-    for (size_t i = 0; i < outs.size(); i++)
-        _outputs.getMatRef((int)i) = outs[i];
+    auto kind = _outputs.kind();
+    if (kind == _InputArray::STD_VECTOR_MAT) {
+        std::vector<Mat>& outs = _outputs.getMatVecRef();
+        outs.resize(prog.noutputs);
+        prog.exec(inps.data(), outs.data());
+    } else {
+        CV_Error(Error::StsNotImplemented, "vector<Mat> is expected as output of expression");
+    }
 }
 
 }} // namespace cv::ew

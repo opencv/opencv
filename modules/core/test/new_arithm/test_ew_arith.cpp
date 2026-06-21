@@ -15,19 +15,17 @@ using namespace cv::ew;
 static Mat runBinary(ElemwiseOp op, const Mat& a, const Mat& b, int rdepth)
 {
     EwProgram p = makeBinaryProgram(op, a.depth(), b.depth(), rdepth);
-    std::vector<Mat> in, out;
-    in.push_back(a); in.push_back(b);
-    exec(p, in, out);
-    return out[0];
+    Mat inps[] = {a, b}, out;
+    p.exec(inps, &out);
+    return out;
 }
 
 static Mat runUnary(ElemwiseOp op, const Mat& a, int rdepth)
 {
     EwProgram p = makeUnaryProgram(op, a.depth(), rdepth);
-    std::vector<Mat> in, out;
-    in.push_back(a);
-    exec(p, in, out);
-    return out[0];
+    Mat out;
+    p.exec(&a, &out);
+    return out;
 }
 
 static void cvRef(ElemwiseOp op, const Mat& a, const Mat& b, Mat& dst)
@@ -152,7 +150,7 @@ static Mat runAddWeighted(const Mat& a, double alpha, const Mat& b, double beta,
 {
     EwProgram p;
     p.ninputs = 2; p.noutputs = 1; p.ntemps = 3; p.nbuffers = 3;
-    p.bufferOfTemp.assign(3, 0);
+    p.bufferOfTemp.resize(3);
     p.bufferOfTemp[0] = 0; p.bufferOfTemp[1] = 1; p.bufferOfTemp[2] = 2;
     p.arginfo.resize(10);
 
@@ -183,10 +181,9 @@ static Mat runAddWeighted(const Mat& a, double alpha, const Mat& b, double beta,
     add_insn(OP_ADD, 6, 7, 8);   // t2 = t0 + t1
     add_insn(OP_ADD, 8, 5, 9);   // out = t2 + gamma
 
-    std::vector<Mat> in, out;
-    in.push_back(a); in.push_back(b);
-    exec(p, in, out);
-    return out[0];
+    Mat inps[2] = {a, b}, out;
+    p.exec(inps, &out);
+    return out;
 }
 
 TEST(Core_EW_Slice, addweighted_compound)

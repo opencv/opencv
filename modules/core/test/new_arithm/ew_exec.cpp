@@ -44,12 +44,12 @@ static void matLogical(const Mat& m, MatShape& shp, EwSteps& step, int& esz1)
 }
 
 // numpy-style broadcast of several right-aligned shapes.
-static bool broadcastShape(const std::vector<MatShape>& shps, MatShape& out)
+static bool broadcastShape(const MatShape* shps, int K, MatShape& out)
 {
     size_t nd = 0;
-    for (size_t k = 0; k < shps.size(); k++) nd = std::max(nd, shps[k].size());
+    for (int k = 0; k < K; k++) nd = std::max(nd, shps[k].size());
     out.assign(nd, 1);
-    for (size_t k = 0; k < shps.size(); k++)
+    for (int k = 0; k < K; k++)
     {
         const MatShape& s = shps[k];
         size_t off = nd - s.size();
@@ -96,184 +96,286 @@ static int opCost(ElemwiseOp op)
     }
 }
 
-void exec(const EwProgram& program,
-          const std::vector<Mat>& inputs,
-          std::vector<Mat>& outputs)
+EwProgram::EwProgram()
 {
-    CV_Assert((int)inputs.size() == program.ninputs);
-    const int nslots = (int)program.arginfo.size();
-    CV_Assert(nslots >= 1 && program.arginfo[0].kind == ARG_NONE);
+    clear();
+}
 
-    // ---- 1. broadcast result shape (inputs + const channel counts), channels innermost ----
-    std::vector<MatShape> inShp(program.ninputs);
-    std::vector<EwSteps>  inStep(program.ninputs);
-    std::vector<int>      inEsz1(program.ninputs);
-    std::vector<MatShape> bshapes;
-    for (int i = 0; i < program.ninputs; i++)
-    {
-        matLogical(inputs[i], inShp[i], inStep[i], inEsz1[i]);
-        bshapes.push_back(inShp[i]);
-    }
-    for (int s = 1; s < nslots; s++)
-    {
-        const EwArgInfo& ai = program.arginfo[s];
-        if (ai.kind != ARG_CONST) continue;
-        MatShape cs; cs.assign(1, std::max(ai.channels, 1));   // just the channel dim
-        bshapes.push_back(cs);
-    }
-    MatShape full;
-    CV_Assert(broadcastShape(bshapes, full) && "ew: inputs not broadcast-compatible");
-    const int ndFull = (int)full.size();
-    const int rchannels = full[ndFull - 1];
-    MatShape spatial = full; spatial.resize(ndFull - 1);
+void EwProgram::clear()
+{
+    prog.allocate(0);
+    arginfo.allocate(0);
+    bufferOfTemp.allocate(0);
+    ninputs = noutputs = ntemps = nbuffers = 0;
+}
 
-    // ---- 2. allocate outputs ----
-    outputs.resize(program.noutputs);
-    for (int s = 1; s < nslots; s++)
-    {
-        const EwArgInfo& ai = program.arginfo[s];
-        if (ai.kind != ARG_OUTPUT) continue;
-        outputs[ai.index].create((int)spatial.size(), spatial.data(),
-                                 CV_MAKETYPE(ai.depth, rchannels));
-    }
+struct EwBody {
+    const EwInsn* prog; void** ctxptr;
+    const int* slotMap;       // slot -> array index (>=0) OR temp buffer id encoded as -bufId-1
+    const int* bufEszPrefix;  // [nbuffers+1] prefix sums of temp elem sizes; [nbuffers] = total
+    const int* esz1Slot;      // [nslots]   element size of each slot's operand (for column offset)
+    int ninsn, nslots, nbuffers, capElems;   // capElems: L1 fragment element cap (0 if no temps)
+};
 
-    // ---- 3. flat operand list for broadcastOp (inputs + consts-as-Mats + outputs), plus a
-    //         slot -> array-index map and a slot -> temp-buffer map ----
-    std::vector<Mat> arrays;
-    std::vector<Mat> constMats;                 // backing storage for ARG_CONST operands
-    std::vector<int> slotToArray(nslots, -1);
-    std::vector<int> slotToTemp(nslots, -1);
-    constMats.reserve(nslots);
-    for (int s = 1; s < nslots; s++)
+void EwProgram::exec(const Mat* inputs, Mat* outputs)
+{
+    constexpr int LOCAL_HDRS = 3;
+    constexpr int LOCAL_CONSTS = 4;
+    constexpr int LOCAL_OPS = 16;
+    const int nslots = (int)arginfo.size();
+    CV_Assert(nslots >= 1 && arginfo[0].kind == ARG_NONE);
+
+    // ---- 1. result shape (spatial dims + channel count), channels innermost ----
+    // Fast path: every input shares one shape+channels and no const adds channels beyond the inputs
+    // (a const with channels <= input cn broadcasts trivially) => the result IS inputs[0]'s shape.
+    // Skips the matLogical + broadcastShape rebuild/re-broadcast done only to size the output.
+    const int rcn0 = ninputs >= 1 ? inputs[0].channels() : 1;
+    bool sameShape = ninputs >= 1;
+    for (int i = 1; sameShape && i < ninputs; i++)
     {
-        const EwArgInfo& ai = program.arginfo[s];
-        if (ai.kind == ARG_INPUT)
-        {
-            slotToArray[s] = (int)arrays.size();
-            arrays.push_back(inputs[ai.index]);
+        const Mat& a = inputs[i];
+        if (a.dims != inputs[0].dims || a.channels() != rcn0) sameShape = false;
+        else for (int d = 0; d < a.dims; d++) if (a.size[d] != inputs[0].size[d]) { sameShape = false; break; }
+    }
+    int nconsts = 0;
+    for (int s = 1; sameShape && s < nslots; s++) {
+        if (arginfo[s].kind == ARG_CONST) {
+            nconsts++;
+            if (arginfo[s].channels > rcn0) sameShape = false;
         }
-        else if (ai.kind == ARG_OUTPUT)
+    }
+
+    MatShape spatial;
+    int rchannels;
+    if (sameShape)
+    {
+        spatial = inputs[0].size;
+        rchannels = rcn0;
+    }
+    else
+    {
+        AutoBuffer<MatShape> bshapes(nslots);          // one per input + per ARG_CONST slot
+        int nb = 0;
         {
-            slotToArray[s] = (int)arrays.size();
-            arrays.push_back(outputs[ai.index]);
+            MatShape shp; EwSteps step; int esz1;
+            for (int i = 0; i < ninputs; i++) { matLogical(inputs[i], shp, step, esz1); bshapes[nb++] = shp; }
         }
-        else if (ai.kind == ARG_CONST)
+        for (int s = 1; s < nslots; s++)
         {
+            const EwArgInfo& ai = arginfo[s];
+            if (ai.kind != ARG_CONST) continue;
+            bshapes[nb].assign(1, std::max(ai.channels, 1));   // just the channel dim
+            nb++;
+        }
+        MatShape full;
+        CV_Assert(broadcastShape(bshapes.data(), nb, full) && "ew: inputs not broadcast-compatible");
+        const int ndFull = (int)full.size();
+        rchannels = full[ndFull - 1];
+        spatial = full; spatial.resize(ndFull - 1);
+    }
+
+    // ---- 2. ONE pass over slots: allocate outputs, build the operand pointer list + slot map,
+    //         per-slot element size, and per-temp-buffer element size. No Mat copies (arr[] holds
+    //         pointers); const scalars live in a stack scratch wrapped by non-owning 1x1 headers
+    //         (no per-const heap). slotMap[s] >= 0 => arr index; < 0 => temp, buf id = -slotMap[s]-1.
+    bool inplace = !(inputs + ninputs <= outputs || outputs + noutputs <= inputs);
+    int nhdrs = nconsts + (inplace ? ninputs : 0);
+
+    AutoBuffer<const Mat*, LOCAL_OPS> arr(nslots);
+    AutoBuffer<Mat, LOCAL_HDRS> hdrs(nhdrs); // non-owning headers (no heap)
+    Mat* constHdrs = hdrs.data();
+    AutoBuffer<Scalar, LOCAL_CONSTS> constStore(std::max(nconsts, 1));
+    AutoBuffer<int, LOCAL_OPS> slotMap(nslots);
+    AutoBuffer<int, LOCAL_OPS> esz1Slot(nslots);
+    AutoBuffer<int, LOCAL_OPS> bufEsz(std::max(1, nbuffers));
+    for (int b = 0; b < nbuffers; b++) bufEsz[b] = 1;
+    int narr = 0, nc = 0;
+    if (inplace) {
+        // save (incref) inputs in the case of in-place operation
+        // to protect them from premature deallocation
+        for (int j = 0; j < ninputs; j++) {
+            hdrs[j] = inputs[j];
+        }
+        inputs = hdrs.data();
+        constHdrs = (Mat*)(inputs + ninputs);
+    }
+    esz1Slot[0] = 0;
+    for (int s = 1; s < nslots; s++)
+    {
+        const EwArgInfo& ai = arginfo[s];
+        const int e = esz1Slot[s] = (int)CV_ELEM_SIZE1(ai.depth);
+        if (ai.kind == ARG_INPUT) {
+            slotMap[s] = narr;
+            arr[narr++] = &inputs[ai.index];
+        }
+        else if (ai.kind == ARG_OUTPUT) {
+            outputs[ai.index].create(spatial, CV_MAKETYPE(ai.depth, rchannels));
+            slotMap[s] = narr; arr[narr++] = &outputs[ai.index];
+        }
+        else if (ai.kind == ARG_CONST) {
             const int c = std::max(ai.channels, 1);
             CV_Assert(c <= 4);
-            Mat cm(1, 1, CV_MAKETYPE(ai.depth, c));
-            const int e = (int)CV_ELEM_SIZE1(ai.depth);
-            for (int k = 0; k < c; k++)
-                storeScalar(ai.depth, ai.cval[k], cm.data + (size_t)k * e);
-            constMats.push_back(cm);
-            slotToArray[s] = (int)arrays.size();
-            arrays.push_back(cm);
+            uchar* dst = (uchar*)(constStore.data() + nc);
+            for (int k = 0; k < c; k++) storeScalar(ai.depth, ai.cval[k], dst + (size_t)k * e);
+            constHdrs[nc] = Mat(1, 1, CV_MAKETYPE(ai.depth, c), dst);   // non-owning, no alloc
+            slotMap[s] = narr; arr[narr++] = &constHdrs[nc];
+            nc++;
         }
-        else // ARG_TEMP
-        {
-            slotToTemp[s] = program.bufferOfTemp.empty() ? ai.index
-                                                         : program.bufferOfTemp[ai.index];
+        else { // ARG_TEMP
+            const int buf = bufferOfTemp.empty() ? ai.index : bufferOfTemp[ai.index];
+            slotMap[s] = -buf - 1;
+            bufEsz[buf] = std::max(bufEsz[buf], e);
         }
     }
 
-    // ---- 4. per-instruction adapter contexts (frozen; shared read-only across threads) ----
-    const EwInsn* prog = program.prog.data();
-    const int ninsn = (int)program.prog.size();
-    AutoBuffer<EwCtx> ctxs(ninsn);
-    AutoBuffer<void*> ctxptr(ninsn);
+    // Temp-buffer layout precomputed once (point 3): prefix sums give each buffer's byte offset per
+    // element, so the body never recomputes offsets per tile - it just does prefix[buf]*region.
+    // capElems = how many elements one L1-sized fragment holds (0 when there are no temps at all).
+    AutoBuffer<int, LOCAL_OPS> bufEszPrefix(nbuffers + 1);
+    bufEszPrefix[0] = 0;
+    for (int b = 0; b < nbuffers; b++) bufEszPrefix[b + 1] = bufEszPrefix[b] + bufEsz[b];
+    const int totalEsz = bufEszPrefix[nbuffers];
+    const int capElems = totalEsz > 0 ? std::max(64, (16 * 1024) / totalEsz) : 0;
+
+    // ---- 3. ONE pass over instructions: adapter contexts (frozen, shared read-only) + cost. ----
+    const int ninsn = (int)prog.size();
+    AutoBuffer<EwCtx, LOCAL_OPS> ctxs(ninsn);
+    AutoBuffer<void*, LOCAL_OPS> ctxptr(ninsn);
+    long long costPerElem = 0;
     for (int n = 0; n < ninsn; n++)
     {
         const EwInsn& ins = prog[n];
+        costPerElem += opCost(ins.op);
         void* cx = nullptr;
-        if (ins.op == OP_CAST)
+        if (ins.op == OP_CAST || ins.op == OP_CONVERT_SCALE)
         {
-            const int sd = program.arginfo[ins.arg0].depth;
-            const int dd = program.arginfo[ins.result].depth;
+            const int sd = arginfo[ins.arg0].depth;
+            const int dd = arginfo[ins.result].depth;
             EwCtx& c = ctxs[n];
-            c.cvt.fn = cv::getConvertFunc(sd, dd);
+            if (ins.op == OP_CAST)
+            {
+                c.cvt.fn = cv::getConvertFunc(sd, dd);
+                c.cvt.scale[0] = 1.0; c.cvt.scale[1] = 0.0;   // plain convert ignores params
+            }
+            else                                              // OP_CONVERT_SCALE: cast<dd>(src*a+b)
+            {
+                c.cvt.fn = cv::getConvertScaleFunc(sd, dd);
+                c.cvt.scale[0] = arginfo[ins.arg1].cval[0];                 // alpha (scale)
+                c.cvt.scale[1] = ins.arg2 ? arginfo[ins.arg2].cval[0] : 0; // offset (shift)
+            }
             CV_Assert(c.cvt.fn != nullptr);
             c.cvt.sesz1 = (int)CV_ELEM_SIZE1(sd);
             c.cvt.desz1 = (int)CV_ELEM_SIZE1(dd);
-            c.cvt.scale[0] = 1.0; c.cvt.scale[1] = 0.0;     // unused by plain convert
             cx = &c;
         }
         ctxptr[n] = cx;
     }
 
-    // ---- 5. per-temp-buffer element size ----
-    const int nbuffers = program.nbuffers;
-    AutoBuffer<int> bufEsz(std::max(1, nbuffers));
-    for (int b = 0; b < nbuffers; b++) bufEsz[b] = 1;
-    for (int s = 1; s < nslots; s++)
-        if (program.arginfo[s].kind == ARG_TEMP)
-        {
-            const int b = slotToTemp[s];
-            bufEsz[b] = std::max(bufEsz[b], (int)CV_ELEM_SIZE1(program.arginfo[s].depth));
-        }
+    // ---- 4. parallel work hint: total output scalars x summed per-element op cost / budget. ----
+    long long otot = (long long)rchannels;
+    for (int d = 0; d < (int)spatial.size(); d++) otot *= spatial[d];
+    const double nstripes = (double)otot * (double)std::max<long long>(costPerElem, 1) *
+                            (1./ (double)(1 << 18));
 
-    // ---- 6. parallel work hint: total output scalars x summed per-element op cost / budget.
-    //         (Without this, broadcastOp's default ~100 cyc/elem over-splits cheap ops.) ----
-    long long otot = 1;
-    for (int d = 0; d < ndFull; d++) otot *= full[d];
-    long long costPerElem = 0;
-    for (int n = 0; n < ninsn; n++) costPerElem += opCost(prog[n].op);
-    const double nstripes = (double)otot * (double)std::max<long long>(costPerElem, 1)
-                            / (double)(1 << 18);
+    EwBody body;
+    body.prog = prog.data();
+    body.ninsn = ninsn;
+    body.ctxptr = ctxptr.data();
+    body.slotMap = slotMap.data();
 
     // ---- 7. drive: broadcastOp does geometry + 2D tiling + parallelism; the body runs the
     //         frozen program on each tile (temps tile-local, re-pointed from the tile slices).
-    //         expandChannels=true => the body always sees single-channel data. ----
-    broadcastOp(arrays.data(), arrays.size(), [&](const EwTile& tile)
+    //         expandChannels=true => the body always sees single-channel data.
+    //
+    //         All state the body needs is packed into one POD (EwBody) so the lambda captures a
+    //         SINGLE reference: the closure is then one pointer, fits std::function's small-buffer
+    //         and never heap-allocates. Inside, the hot fields are copied into locals so the
+    //         per-tile/per-insn loops read them from registers, not through the captured pointer. -
+
+    body.bufEszPrefix = bufEszPrefix.data();
+    body.esz1Slot = esz1Slot.data();
+    body.nslots = nslots;
+    body.nbuffers = nbuffers;
+    body.capElems = capElems;
+
+    broadcastOp(arr.data(), narr, [&](const EwTile& tile)
     {
+        EwBody& bc = body;
+        const EwInsn* prog = bc.prog;             // hot fields -> locals (registers/stack)
+        void** const     ctxptr      = bc.ctxptr;
+        const int* const slotMap     = bc.slotMap;
+        const int* const esz1Slot    = bc.esz1Slot;
+        const int ninsn = bc.ninsn, nslots = bc.nslots;
         const int w = tile.width, h = tile.height;
 
-        // temp buffers for this tile: contiguous [h x w], stepy=w, stepx=1
-        AutoBuffer<size_t> tofs(std::max(1, nbuffers));
-        size_t tbytes = 0;
-        for (int b = 0; b < nbuffers; b++)
+        // No temps (single-op add/sub/...): run the whole tile in one pass and pull each operand's
+        // slice straight from the tile - no args array, no scratch, no fragmentation. Every slot is
+        // an array here; slot 0 (ARG_NONE) is the null operand for unused args (e.g. a binary op's
+        // arg2). The dominant fast path stays branch-light.
+        if (bc.nbuffers == 0)
         {
-            tofs[b] = tbytes;
-            tbytes += (size_t)w * h * bufEsz[b];
-        }
-        AutoBuffer<uchar> tstore(tbytes);
-
-        AutoBuffer<EwArg> args(nslots);                 // slot 0 stays the null operand
-        for (int s = 1; s < nslots; s++)
-        {
-            EwArg& a = args[s];
-            const int ia = slotToArray[s];
-            if (ia >= 0)
+            const EwSlice nullSlice;
+            for (int n = 0; n < ninsn; n++)
             {
-                const EwSlice& sl = tile.slices[ia];
-                a.ptr = sl.ptr; a.stepy = sl.stepy; a.stepx = sl.stepx;
+                const EwInsn& ins = prog[n];
+                const EwSlice& a0 = ins.arg0 > 0 ? tile.slices[slotMap[ins.arg0]] : nullSlice;
+                const EwSlice& a1 = ins.arg1 > 0 ? tile.slices[slotMap[ins.arg1]] : nullSlice;
+                const EwSlice& a2 = ins.arg2 > 0 ? tile.slices[slotMap[ins.arg2]] : nullSlice;
+                const EwSlice& rr = ins.result > 0 ? tile.slices[slotMap[ins.result]] : nullSlice;
+                int code = ins.fptr(a0.ptr, a0.stepy, a0.stepx, a1.ptr, a1.stepy, a1.stepx,
+                                    a2.ptr, a2.stepy, a2.stepx, (void*)rr.ptr, rr.stepy, w, h, ctxptr[n]);
+                CV_Assert(code >= 0);
             }
-            else                                        // ARG_TEMP
-            {
-                a.ptr = tstore.data() + tofs[slotToTemp[s]];
-                a.stepy = (size_t)w; a.stepx = 1;
-            }
+            return;
         }
 
-        for (int n = 0; n < ninsn; n++)
+        // Fused temps: run the program over L1-sized column strips so the intermediates stay in
+        // cache. Strip width Wf holds <= capElems elements per buffer; the per-buffer offsets are
+        // precomputed (bufEszPrefix), so the body only scales by `region` = Wf*h - no per-tile
+        // offset loop. Each temp buffer occupies [bufEszPrefix[buf]*region, ...) bytes in tstore.
+        const int* const bufEszPrefix = bc.bufEszPrefix;
+        const int Wf = std::min(w, std::max(1, bc.capElems / std::max(1, h)));
+        const size_t region = alignSize((size_t)Wf * h, 8);
+        AutoBuffer<uchar> tstore((size_t)bufEszPrefix[bc.nbuffers] * region);
+
+        AutoBuffer<EwArg, LOCAL_OPS> args(nslots);
+        for (int x0 = 0; x0 < w; x0 += Wf)
         {
-            const EwInsn& ins = prog[n];
-            const EwArg& a0 = args[ins.arg0];
-            const EwArg& a1 = args[ins.arg1];
-            const EwArg& a2 = args[ins.arg2];
-            const EwArg& rr = args[ins.result];
-            int code = ins.fptr(a0.ptr, a0.stepy, a0.stepx,
-                                a1.ptr, a1.stepy, a1.stepx,
-                                a2.ptr, a2.stepy, a2.stepx,
-                                (void*)rr.ptr, rr.stepy, w, h, ctxptr[n]);
-            CV_Assert(code >= 0);
+            const int wf = std::min(Wf, w - x0);
+            for (int s = 1; s < nslots; s++)
+            {
+                EwArg& a = args[s];
+                const int v = slotMap[s];
+                if (v >= 0)                             // array operand: this strip of the slice
+                {
+                    const EwSlice& sl = tile.slices[v];
+                    a.ptr = (uchar*)sl.ptr + (size_t)x0 * sl.stepx * (size_t)esz1Slot[s];
+                    a.stepy = sl.stepy; a.stepx = sl.stepx;
+                }
+                else                                    // ARG_TEMP: contiguous strip-local buffer
+                {
+                    a.ptr = tstore.data() + (size_t)bufEszPrefix[-v - 1] * region;
+                    a.stepy = (size_t)wf; a.stepx = 1;
+                }
+            }
+
+            for (int n = 0; n < ninsn; n++)
+            {
+                const EwInsn& ins = prog[n];
+                const EwArg& a0 = args[ins.arg0]; const EwArg& a1 = args[ins.arg1];
+                const EwArg& a2 = args[ins.arg2]; const EwArg& rr = args[ins.result];
+                int code = ins.fptr(a0.ptr, a0.stepy, a0.stepx, a1.ptr, a1.stepy, a1.stepx,
+                                    a2.ptr, a2.stepy, a2.stepx, (void*)rr.ptr, rr.stepy, wf, h, ctxptr[n]);
+                CV_Assert(code >= 0);
+            }
         }
-    }, /*expandChannels*/ true, nstripes);
+    }, true, nstripes);
 }
 
 // ---------------------------------------------------------------------------
 // Manual program builders.
 // ---------------------------------------------------------------------------
-static EwArgInfo mkArg(ArgKind kind, int depth, int index)
+static inline EwArgInfo mkArg(ArgKind kind, int depth, int index)
 {
     EwArgInfo a; a.kind = kind; a.depth = depth; a.index = index; return a;
 }
@@ -318,8 +420,9 @@ EwProgram makeUnaryProgram(ElemwiseOp op, int depth0, int rdepth)
 // [VP] looks like there is a bug here. rank(8s) < rank(16u),
 // so when we add 8s to 16u, the coercion type will be 16u,
 // however it should be 32s. We need to take into account signness of integer types.
-// also, when we subtract 8u from 8s, the result should have 16s type.
-// the coercion rule should be:
+// also, when we subtract 8u from 8s, the result should have 16s type, so
+// the coercion result should always be a signed type.
+// so, the coercion rule should be:
 // * if a == b -> a
 // * else if a == 64f || b == 64f -> 64f
 // * else if flt(a) || flt(b) -> 32f
@@ -328,51 +431,67 @@ EwProgram makeUnaryProgram(ElemwiseOp op, int depth0, int rdepth)
 // * else if a == 32s || a == 32u || b == 32s || b == 32u -> 64s
 // * else 64f
 //
-// or
-//
-// if (a == b) return a;
-// const uint64_t typelut = (0 << CV_8U*3) | (0 << CV_8S*3) | (1 << CV_16U*3) | (1 << 16S*3) |
-//                          (2 << CV_32U*3) | (2 << CV_32S*3) | (3 << CV_16F*3) | (3 << CV_16BF*3) |
-//                          (3 << CV_32F*3) | (4 << CV_64F*3) | (4 << CV_64S*3) | (4 << CV_64U*3);
-// int idxa = int((typelut >> (a*3)) & 7);
-// int idxb = int((typelut >> (b*3)) & 7);
-// int maxab = std::max(idxa, idxb);
-// const int ctypelut = ((CV_16S << 0*5) | (CV_32S << 1*5) | (CV_64S << 2*5) |
-//                       (CV_32F << 3*5) | (CV_64F << 4*5));
-// return (ctypelut >> (maxab*5)) & 31;
+// or see below the same rule done with a single 'if'
 
 // numpy-ish promotion of two known depths (float dominates; wider integer otherwise).
 static int promote2(int a, int b)
 {
     if (a == b) return a;
-    auto isF = [](int d){ return d==CV_16F || d==CV_16BF || d==CV_32F || d==CV_64F; };
-    if (isF(a) || isF(b))
-        return (a==CV_64F || b==CV_64F) ? CV_64F : CV_32F;
-    auto rank = [](int d){ switch(d){
-        case CV_8U: case CV_8S: return 1;
-        case CV_16U: case CV_16S: return 2;
-        case CV_32U: case CV_32S: return 3;
-        case CV_64U: case CV_64S: return 4; default: return 0; }; };
-    return rank(a) >= rank(b) ? a : b;
+
+    constexpr unsigned lbits = 3, lmask = (1u << lbits) - 1u;
+    const uint64_t typelut = (uint64_t)((0ULL << CV_8U*lbits) | (0ULL << CV_8S*lbits) |
+                                        (1ULL << CV_16U*lbits) | (1ULL << CV_16S*lbits) |
+                                        (2ULL << CV_32U*lbits) | (2ULL << CV_32S*lbits) |
+                                        (3ULL << CV_16F*lbits) | (3ULL << CV_16BF*lbits) |
+                                        (3ULL << CV_32F*lbits) | (4ULL << CV_64F*lbits) |
+                                        (4ULL << CV_64S*lbits) | (4ULL << CV_64U*lbits));
+    unsigned pr_a = unsigned((typelut >> (a*lbits)) & lmask);
+    unsigned pr_b = unsigned((typelut >> (b*lbits)) & lmask);
+    unsigned max_pr = std::max(pr_a, pr_b);
+    constexpr unsigned dbits = CV_CN_SHIFT, dmask = (1u << dbits) - 1u;
+    const unsigned ctypelut = ((CV_16S << 0*dbits) | (CV_32S << 1*dbits) | (CV_64S << 2*dbits) |
+                            (CV_32F << 3*dbits) | (CV_64F << 4*dbits));
+    return int((ctypelut >> (max_pr*dbits)) & dmask);
 }
 
-// A wide type in which add(C,C->W) exists and the sum is held without a premature clamp.
-static int safeWide(int C)
+// A wide type in which add(depth,depth->wdepth) exists and the sum is held without a premature clamp.
+static int safeWide(int depth)
 {
-    switch (C)
-    {
-    case CV_32U: case CV_32S: case CV_64U: case CV_64S: case CV_64F: return CV_64F;
-    default:                                                         return CV_32F;
-    }
+    constexpr unsigned lbits = 3, lmask = (1u << lbits) - 1u;
+    const uint64_t typelut = (uint64_t)((0ULL << CV_8U*lbits) | (0ULL << CV_8S*lbits) |
+                                        (1ULL << CV_16U*lbits) | (1ULL << CV_16S*lbits) |
+                                        (2ULL << CV_32U*lbits) | (2ULL << CV_32S*lbits) |
+                                        (3ULL << CV_16F*lbits) | (3ULL << CV_16BF*lbits) |
+                                        (3ULL << CV_32F*lbits) | (4ULL << CV_64F*lbits) |
+                                        (4ULL << CV_64S*lbits) | (4ULL << CV_64U*lbits));
+    unsigned pr_depth = unsigned((typelut >> (depth*lbits)) & lmask);
+    constexpr unsigned dbits = CV_CN_SHIFT, dmask = (1u << dbits) - 1u;
+    const unsigned ctypelut = ((CV_16S << 0*dbits) | (CV_32S << 1*dbits) | (CV_64S << 2*dbits) |
+                              (CV_32F << 3*dbits) | (CV_64F << 4*dbits));
+    return int((ctypelut >> (pr_depth*dbits)) & dmask);
 }
 
-EwProgram makeAddProgram(int depth0, int depth1, int rdepth)
+// Shared composer for the symmetric binary arith ops (ADD, SUB): bring both operands to a common
+// type, apply `op` directly to rdepth if a kernel exists, else compute in a safe wide type and
+// cast down. The wide type is signed for both (a-b may go negative), so safeWide serves both.
+void makeBinaryArithProgram(EwProgram& p, ElemwiseOp op, int depth0, int depth1, int rdepth)
 {
-    EwProgram p;
+    p.clear();
     p.ninputs = 2; p.noutputs = 1;
-    p.arginfo.push_back(mkArg(ARG_NONE,  EW_DEPTH_NONE, -1));   // slot 0
-    int sIn0 = (int)p.arginfo.size(); p.arginfo.push_back(mkArg(ARG_INPUT, depth0, 0));
-    int sIn1 = (int)p.arginfo.size(); p.arginfo.push_back(mkArg(ARG_INPUT, depth1, 1));
+    p.arginfo.resize(4);
+    p.arginfo[0] = mkArg(ARG_NONE,  EW_DEPTH_NONE, -1);
+    p.arginfo[1] = mkArg(ARG_INPUT, depth0, 0);
+    p.arginfo[2] = mkArg(ARG_INPUT, depth1, 1);
+    p.arginfo[3] = mkArg(ARG_OUTPUT, rdepth, 0);
+    int sIn0 = 1, sIn1 = 2, sOut = 3;
+    if (depth0 == depth1 && depth0 == rdepth) {
+        p.prog.resize(1);
+        EwInsn& ins = p.prog[0];
+        ins.op = op; ins.arg0 = sIn0; ins.arg1 = sIn1; ins.arg2 = 0; ins.result = sOut;
+        ins.fptr = getElemwiseFunc(op, depth0, depth1, EW_DEPTH_NONE, rdepth);
+        CV_Assert(ins.fptr != nullptr);
+        return;
+    }
 
     int ntemps = 0;
     auto addTemp = [&](int depth) {
@@ -380,37 +499,93 @@ EwProgram makeAddProgram(int depth0, int depth1, int rdepth)
         p.arginfo.push_back(mkArg(ARG_TEMP, depth, ntemps++));
         return s;
     };
-    auto addInsn = [&](ElemwiseOp op, int a0, int a1, int r) {
-        EwInsn ins; ins.op = op; ins.arg0 = a0; ins.arg1 = a1; ins.arg2 = 0; ins.result = r;
-        ins.fptr = getElemwiseFunc(op, p.arginfo[a0].depth,
+    auto addInsn = [&](ElemwiseOp o, int a0, int a1, int r) {
+        EwInsn ins; ins.op = o; ins.arg0 = a0; ins.arg1 = a1; ins.arg2 = 0; ins.result = r;
+        ins.fptr = getElemwiseFunc(o, p.arginfo[a0].depth,
                                    a1 ? p.arginfo[a1].depth : EW_DEPTH_NONE,
                                    EW_DEPTH_NONE, p.arginfo[r].depth);
         CV_Assert(ins.fptr != nullptr);
         p.prog.push_back(ins);
     };
 
-    // 1. bring both operands to a common type C.
-    int C = (depth0 == depth1) ? depth0 : promote2(depth0, depth1);
-    int op0 = sIn0, op1 = sIn1;
-    if (depth0 != C) { int t = addTemp(C); addInsn(OP_CAST, sIn0, 0, t); op0 = t; }
-    if (depth1 != C) { int t = addTemp(C); addInsn(OP_CAST, sIn1, 0, t); op1 = t; }
+    // 1. bring both operands to a common type.
+    int depth = (depth0 == depth1) ? depth0 : promote2(depth0, depth1);
+    if (depth0 != depth) { int t = addTemp(depth); addInsn(OP_CAST, sIn0, 0, t); sIn0 = t; }
+    if (depth1 != depth) { int t = addTemp(depth); addInsn(OP_CAST, sIn1, 0, t); sIn1 = t; }
 
-    // 2. add directly to rdepth if a kernel exists, else add wide then cast down.
-    int sOut = (int)p.arginfo.size(); p.arginfo.push_back(mkArg(ARG_OUTPUT, rdepth, 0));
-    if (getElemwiseFunc(OP_ADD, C, C, EW_DEPTH_NONE, rdepth))
-        addInsn(OP_ADD, op0, op1, sOut);
+    // 2. op directly to rdepth if a kernel exists, else compute wide then cast down.
+    if (getElemwiseFunc(op, depth, depth, EW_DEPTH_NONE, rdepth))
+        addInsn(op, sIn0, sIn1, sOut);
     else
     {
-        int W = safeWide(C);
+        int W = safeWide(depth);
         int tW = addTemp(W);
-        addInsn(OP_ADD, op0, op1, tW);
+        addInsn(op, sIn0, sIn1, tW);
         addInsn(OP_CAST, tW, 0, sOut);
     }
 
     p.ntemps = ntemps; p.nbuffers = ntemps;
     p.bufferOfTemp.resize(ntemps);
     for (int i = 0; i < ntemps; i++) p.bufferOfTemp[i] = i;
-    return p;
+}
+
+void makeAddProgram(EwProgram& p, int depth0, int depth1, int rdepth)
+{ makeBinaryArithProgram(p, OP_ADD, depth0, depth1, rdepth); }
+
+// addWeighted(a, alpha, b, beta, gamma) = a*alpha + b*beta + gamma, as two fused convert_scale
+// MACs + an add (+ a final cast when the output type differs from the working type W):
+//   t0 = cast<W>(a*alpha + gamma) ;  t1 = cast<W>(b*beta) ;  out = cast<rdepth>(t0 + t1)
+// The convert_scale steps ride core's optimized scale kernel; the 2-3 temps exercise the body's
+// L1 column-fragmentation.
+void makeAddWeightedProgram(EwProgram& p, int depth0, int depth1, int rdepth,
+                            double alpha, double beta, double gamma)
+{
+    p.clear();
+    p.ninputs = 2; p.noutputs = 1;
+    const int W = (depth0 == CV_64F || depth1 == CV_64F || rdepth == CV_64F) ? CV_64F : CV_32F;
+
+    p.arginfo.push_back(mkArg(ARG_NONE, EW_DEPTH_NONE, -1));    // slot 0
+    int sA = (int)p.arginfo.size(); p.arginfo.push_back(mkArg(ARG_INPUT, depth0, 0));
+    int sB = (int)p.arginfo.size(); p.arginfo.push_back(mkArg(ARG_INPUT, depth1, 1));
+    auto addConst = [&](double v) {
+        int s = (int)p.arginfo.size();
+        EwArgInfo ai = mkArg(ARG_CONST, W, -1); ai.channels = 1; ai.cval = Scalar(v);
+        p.arginfo.push_back(ai); return s;
+    };
+    int sAlpha = addConst(alpha), sBeta = addConst(beta), sGamma = addConst(gamma);
+
+    int ntemps = 0;
+    auto addTemp = [&](int depth) {
+        int s = (int)p.arginfo.size();
+        p.arginfo.push_back(mkArg(ARG_TEMP, depth, ntemps++));
+        return s;
+    };
+    auto addInsn = [&](ElemwiseOp op, int a0, int a1, int a2, int r) {
+        EwInsn ins; ins.op = op; ins.arg0 = a0; ins.arg1 = a1; ins.arg2 = a2; ins.result = r;
+        ins.fptr = getElemwiseFunc(op, p.arginfo[a0].depth,
+                                   a1 ? p.arginfo[a1].depth : EW_DEPTH_NONE,
+                                   a2 ? p.arginfo[a2].depth : EW_DEPTH_NONE, p.arginfo[r].depth);
+        CV_Assert(ins.fptr != nullptr);
+        p.prog.push_back(ins);
+    };
+
+    int t0 = addTemp(W), t1 = addTemp(W);
+    addInsn(OP_CONVERT_SCALE, sA, sAlpha, sGamma, t0);   // t0 = a*alpha + gamma
+    addInsn(OP_CONVERT_SCALE, sB, sBeta,  0,      t1);   // t1 = b*beta
+
+    int sOut = (int)p.arginfo.size(); p.arginfo.push_back(mkArg(ARG_OUTPUT, rdepth, 0));
+    if (rdepth == W)
+        addInsn(OP_ADD, t0, t1, 0, sOut);
+    else
+    {
+        int t2 = addTemp(W);
+        addInsn(OP_ADD, t0, t1, 0, t2);
+        addInsn(OP_CAST, t2, 0, 0, sOut);
+    }
+
+    p.ntemps = ntemps; p.nbuffers = ntemps;
+    p.bufferOfTemp.resize(ntemps);
+    for (int i = 0; i < ntemps; i++) p.bufferOfTemp[i] = i;
 }
 
 }} // namespace cv::ew

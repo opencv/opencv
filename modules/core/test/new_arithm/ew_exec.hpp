@@ -14,13 +14,6 @@
 
 namespace cv { namespace ew {
 
-// Execute a compiled program.
-//   inputs.size() must equal program.ninputs.
-//   outputs is resized to program.noutputs and (re)allocated to the broadcast result shape.
-void exec(const EwProgram& program,
-          const std::vector<Mat>& inputs,
-          std::vector<Mat>& outputs);
-
 // ----- tiny manual program builders (placeholder until the Layer-2 compiler lands) -----
 
 // Single binary op:  out = op(in0, in1)
@@ -33,7 +26,15 @@ EwProgram makeUnaryProgram(ElemwiseOp op, int depth0, int rdepth);
 //   - cast operands to a common input type C (= depth0 if equal, else numpy-ish promotion);
 //   - if a direct add kernel (C,C,rdepth) exists, use it; else add in a safe wide type and
 //     cast the result down to rdepth.
-EwProgram makeAddProgram(int depth0, int depth1, int rdepth);
+// Symmetric binary arith (OP_ADD / OP_SUB) for ANY (depth0, depth1, rdepth): cast operands to a
+// common type, op direct-or-wide-then-cast (see .cpp). makeAddProgram is a thin OP_ADD wrapper.
+void makeBinaryArithProgram(EwProgram& p, ElemwiseOp op, int depth0, int depth1, int rdepth);
+void makeAddProgram(EwProgram& p, int depth0, int depth1, int rdepth);
+
+// addWeighted(a,alpha,b,beta,gamma) = a*alpha + b*beta + gamma, built as two fused convert_scale
+// MACs + an add (+ a final cast when rdepth != working type). Exercises the L1 fragmentation path.
+void makeAddWeightedProgram(EwProgram& p, int depth0, int depth1, int rdepth,
+                            double alpha, double beta, double gamma);
 
 }} // namespace cv::ew
 

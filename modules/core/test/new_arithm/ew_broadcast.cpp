@@ -65,13 +65,13 @@ static bool isSingleChannelScalar(const Mat& m)
 // CH_FOLD when no channel broadcast is needed, CH_DIM when it is. Single-channel scalars are
 // excluded first; among the rest, multichannel operands must all share the same cn (an (n,m) mix
 // with both > 1 is an error).
-static ChMode decideChannelMode(const Mat* arrays, int K)
+static ChMode decideChannelMode(const Mat* const* arrays, int K)
 {
     int N = 1;                                           // the single multichannel count, if any
     for (int k = 0; k < K; k++)
     {
-        if (isSingleChannelScalar(arrays[k])) continue;
-        int c = arrays[k].channels();
+        if (isSingleChannelScalar(*arrays[k])) continue;
+        int c = arrays[k]->channels();
         if (c > 1) { if (N == 1) N = c; else CV_Assert(N == c && "ew: (n,m) channel mix unsupported"); }
     }
     if (N == 1) return CH_FOLD;                          // all single-channel -> fold (a no-op)
@@ -80,21 +80,22 @@ static ChMode decideChannelMode(const Mat* arrays, int K)
     int back = -1;
     for (int k = 0; k < K; k++)
     {
-        if (isSingleChannelScalar(arrays[k])) continue;
-        if (arrays[k].channels() != N) allMulti = false;
-        int b = arrays[k].size[arrays[k].dims - 1];
+        const Mat& a = *arrays[k];
+        if (isSingleChannelScalar(a)) continue;
+        if (a.channels() != N) allMulti = false;
+        int b = a.size[a.dims - 1];
         if (back < 0) back = b; else if (b != back) sameBack = false;
     }
     return (allMulti && sameBack) ? CH_FOLD : CH_DIM;    // fold only if no channel broadcast
 }
 
 // numpy-style broadcast of several right-aligned shapes.
-static bool broadcastShape(const std::vector<MatShape>& shps, MatShape& out)
+static bool broadcastShape(const MatShape* shps, int K, MatShape& out)
 {
     size_t nd = 0;
-    for (size_t k = 0; k < shps.size(); k++) nd = std::max(nd, shps[k].size());
+    for (int k = 0; k < K; k++) nd = std::max(nd, shps[k].size());
     out.assign(nd, 1);
-    for (size_t k = 0; k < shps.size(); k++)
+    for (int k = 0; k < K; k++)
     {
         const MatShape& s = shps[k];
         size_t off = nd - s.size();
@@ -124,9 +125,8 @@ static void alignArg(const MatShape& shp, const EwSteps& step, int nd,
 }
 
 // Collapse adjacent dims that are contiguous (and broadcast-consistent) across all args.
-static int collapseDims(std::vector<EwSteps>& S, std::vector<MatShape>& H, MatShape& D)
+static int collapseDims(EwSteps* S, MatShape* H, int K, MatShape& D)
 {
-    int K = (int)S.size();
     int nd = (int)D.size();
     if (nd <= 1) return nd;
 
@@ -176,48 +176,90 @@ static int collapseDims(std::vector<EwSteps>& S, std::vector<MatShape>& H, MatSh
     return m;
 }
 
+// Fast geometry for the dominant case: every operand is either (a) an array sharing ONE common
+// shape - same dims, sizes and channel count - and contiguous, or (b) a single-channel scalar
+// (cn==1, total()==1). Then the whole traversal is a single contiguous 1D run of `total` scalars
+// (channels folded in): arrays get stepx 1, scalars stepx 0. This skips decideChannelMode /
+// broadcastShape / alignArg / collapseDims and all their per-operand buffers entirely. Returns
+// false (leaving outputs untouched) when the operands don't fit, so the caller runs general
+// geometry. expandChannels=false (CH_ELEM) keeps channels in the element and is left to general.
+static bool fastSameShape(const Mat* const* arrays, int K, bool expandChannels,
+                          uchar** base, int* esz1, EwSteps* S, MatShape& D, int& m)
+{
+    if (!expandChannels) return false;
+    int ref = -1;
+    for (int k = 0; k < K; k++)
+        if (!isSingleChannelScalar(*arrays[k])) { ref = k; break; }
+    if (ref < 0) return false;                       // all single-channel scalars: let general handle
+    const Mat& R = *arrays[ref];
+    const int rdims = R.dims, rcn = R.channels();
+    for (int k = 0; k < K; k++)
+    {
+        const Mat& a = *arrays[k];
+        if (isSingleChannelScalar(a)) continue;
+        if (a.channels() != rcn || a.dims != rdims || !a.isContinuous()) return false;
+        for (int i = 0; i < rdims; i++) if (a.size[i] != R.size[i]) return false;
+    }
+    const long long total = (long long)R.total() * rcn;   // channels folded into the 1D run
+    CV_Assert(total <= (long long)INT_MAX);
+    for (int k = 0; k < K; k++)
+    {
+        const Mat& a = *arrays[k];
+        base[k] = (uchar*)a.data;
+        esz1[k] = (int)a.elemSize1();
+        S[k][0] = isSingleChannelScalar(a) ? 0 : 1;
+    }
+    D.assign(1, (int)total);
+    m = 1;
+    return true;
+}
+
 // ---------------------------------------------------------------------------
 // broadcastOp
 // ---------------------------------------------------------------------------
-void broadcastOp(Mat* arrays, size_t narrays,
+void broadcastOp(const Mat* const* arrays, int narrays,
                  const std::function<void(const EwTile&)>& body,
                  bool expandChannels,
                  double nstripes)
 {
-    const int K = (int)narrays;
+    constexpr int MAX_DIMS = MatShape::MAX_DIMS;
+    constexpr int LOCAL_OPS = 8;
+    const int K = narrays;
     CV_Assert(K >= 1 && arrays != nullptr);
 
-    // ---- 1. per-operand logical shape/step/esz1 + base pointer ----
-    // Channel handling: expandChannels=true => present single-channel data to the body (fold the
-    // channels into the innermost dim, or make them an explicit dim when channel broadcast is
-    // needed); expandChannels=false => leave channels inside the element for the body to handle.
-    const ChMode mode = expandChannels ? decideChannelMode(arrays, K) : CH_ELEM;
-    std::vector<MatShape> shp(K);
-    std::vector<EwSteps>  stp(K);
-    std::vector<int>      esz1(K);
-    std::vector<uchar*>   base(K);
-    for (int k = 0; k < K; k++)
+    // ---- 1-3. geometry: per-operand collapsed steps S[k], element sizes esz1[k], base
+    //           pointers, and the collapsed iteration shape D (m dims). The fast path handles the
+    //           dominant "all same-shape arrays (+ single-channel scalars)" case in one shot; the
+    //           general path does decideChannelMode + broadcastShape + align + collapse. ----
+    AutoBuffer<EwSteps, LOCAL_OPS>  S(K);
+    AutoBuffer<int, LOCAL_OPS>      esz1(K);
+    AutoBuffer<uchar*, LOCAL_OPS>   base(K);
+    MatShape D;
+    int m;
+
+    if (!fastSameShape(arrays, K, expandChannels, base.data(), esz1.data(), S.data(), D, m))
     {
-        matLayout(arrays[k], mode, shp[k], stp[k], esz1[k]);
-        base[k] = (uchar*)arrays[k].data;
+        const ChMode mode = expandChannels ? decideChannelMode(arrays, K) : CH_ELEM;
+        AutoBuffer<MatShape, LOCAL_OPS> shp(K);
+        AutoBuffer<EwSteps, LOCAL_OPS>  stp(K);
+        for (int k = 0; k < K; k++)
+        {
+            matLayout(*arrays[k], mode, shp[k], stp[k], esz1[k]);
+            base[k] = (uchar*)arrays[k]->data;
+        }
+        MatShape full;
+        CV_Assert(broadcastShape(shp.data(), K, full) && "ew: operands are not broadcast-compatible");
+        const int nd = (int)full.size();
+        AutoBuffer<MatShape, LOCAL_OPS> H(K);
+        for (int k = 0; k < K; k++) alignArg(shp[k], stp[k], nd, S[k], H[k]);
+        D = full;
+        m = collapseDims(S.data(), H.data(), K, D);
+
+        // For a cv::Mat the innermost (channel/last) axis is contiguous, so after collapse the
+        // innermost stride is always in {0,1}. No gather, no materialization.
+        for (int k = 0; k < K; k++)
+            CV_Assert(S[k][m - 1] <= 1 && "ew: unexpected innermost stride > 1");
     }
-
-    // ---- 2. common broadcast shape (channel dim last) ----
-    MatShape full;
-    CV_Assert(broadcastShape(shp, full) && "ew: operands are not broadcast-compatible");
-    const int nd = (int)full.size();
-
-    // ---- 3. right-align + collapse across all operands ----
-    std::vector<EwSteps>  S(K);
-    std::vector<MatShape> H(K);
-    for (int k = 0; k < K; k++) alignArg(shp[k], stp[k], nd, S[k], H[k]);
-    MatShape D = full;
-    const int m = collapseDims(S, H, D);
-
-    // For a cv::Mat the innermost (channel/last) axis is contiguous, so after collapse the
-    // innermost stride is always in {0,1}. No gather, no materialization.
-    for (int k = 0; k < K; k++)
-        CV_Assert(S[k][m - 1] <= 1 && "ew: unexpected innermost stride > 1");
 
     // ---- 4. inner 2D tile axes: width = D[m-1], height = D[m-2] (if any) ----
     const int wAxis = m - 1;
@@ -265,12 +307,38 @@ void broadcastOp(Mat* arrays, size_t narrays,
     const int ntilesW = (W + tw - 1) / tw;
     const int ntilesH = (Hgt + th - 1) / th;
 
-    // ---- 7. parallel execution; O(ndims) decode of tile index -> per-operand slices ----
-    parallel_for_(Range(0, (int)ntiles), [&](const Range& r)
+    // ---- 7. execution; decode tile index -> per-operand slices. stepx/stepy are the same for
+    //         every tile, so they are set ONCE; only the per-tile base pointer is recomputed. ----
+    auto runRange = [&](const Range& r)
     {
-        AutoBuffer<EwSlice> slices(K);
-        AutoBuffer<int> idx(std::max(1, nOuter));
+        AutoBuffer<EwSlice, LOCAL_OPS> slices(K);
 
+        // Fast 1D path (m==1: one contiguous axis after collapse, no outer planes, height 1).
+        // ntilesH==1 and nplanes==1, so the tile index IS the width-tile index - no div/mod, no
+        // plane multi-index decode, no inner step loop. This is the same-shape / fully-contiguous
+        // common case.
+        if (m == 1)
+        {
+            for (int k = 0; k < K; k++) { slices[k].stepy = 0; slices[k].stepx = S[k][0]; }
+            EwTile tile;
+            tile.height = 1; tile.narrays = K; tile.slices = slices.data();
+            for (int t = r.start; t < r.end; t++)
+            {
+                const int wofs = t * tw, ww = std::min(tw, W - wofs);
+                for (int k = 0; k < K; k++)
+                    slices[k].ptr = base[k] + (size_t)wofs * S[k][0] * (size_t)esz1[k];
+                tile.width = ww;
+                body(tile);
+            }
+            return;
+        }
+
+        std::array<int, MAX_DIMS> idx;
+        for (int k = 0; k < K; k++)                     // steps are tile-independent: set once
+        {
+            slices[k].stepy = (hAxis >= 0) ? S[k][hAxis] : 0;
+            slices[k].stepx = S[k][wAxis];
+        }
         for (int t = r.start; t < r.end; t++)
         {
             int wt = t % ntilesW;
@@ -282,26 +350,34 @@ void broadcastOp(Mat* arrays, size_t narrays,
             const int hofs = ht * th, hh = std::min(th, Hgt - hofs);
 
             int p = plane;                              // decode plane -> outer multi-index
-            for (int d = nOuter - 1; d >= 0; d--) { idx[d] = p % D[d]; p /= D[d]; }
+            for (int d = nOuter - 1; d >= 0; d--) {
+                int dd = D[d];
+                int np = p / dd;
+                idx[d] = p - np * dd;
+                p = np;
+            }
 
             for (int k = 0; k < K; k++)
             {
-                size_t off = 0;
+                size_t off = (size_t)wofs * S[k][wAxis];
                 for (int d = 0; d < nOuter; d++) off += (size_t)idx[d] * S[k][d];
                 if (hAxis >= 0) off += (size_t)hofs * S[k][hAxis];
-                off += (size_t)wofs * S[k][wAxis];
-
-                EwSlice& sl = slices[k];
-                sl.ptr   = base[k] + off * (size_t)esz1[k];
-                sl.stepy = (hAxis >= 0) ? S[k][hAxis] : 0;
-                sl.stepx = S[k][wAxis];
+                slices[k].ptr = base[k] + off * (size_t)esz1[k];
             }
 
             EwTile tile;
             tile.width = ww; tile.height = hh; tile.narrays = K; tile.slices = slices.data();
             body(tile);
         }
-    }, stripes);
+    };
+
+    // Single tile (small work, wantTiles==1) => run inline and skip the parallel framework
+    // entirely: its dispatch (std::function wrap + Range machinery + backend hop) is pure
+    // overhead when there is nothing to parallelize, and dominates small-array latency.
+    if (ntiles == 1)
+        runRange(Range(0, 1));
+    else
+        parallel_for_(Range(0, (int)ntiles), runRange, stripes);
 }
 
 }} // namespace cv::ew

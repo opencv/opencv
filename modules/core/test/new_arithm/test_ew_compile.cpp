@@ -14,14 +14,18 @@ namespace opencv_test { namespace {
 
 using namespace cv::ew;
 
-static std::vector<Mat> run(const EwGraph& g, const std::vector<int>& inDepths,
-                            const std::vector<Mat>& inputs, EwProgram* outProg = nullptr)
+static std::vector<Mat> run(const EwGraph& g,
+                            const std::vector<Mat>& inps, EwProgram* outProg = nullptr)
 {
-    EwProgram p = compile(g, inDepths);
-    if (outProg) *outProg = p;
-    std::vector<Mat> outputs;
-    exec(p, inputs, outputs);
-    return outputs;
+    EwProgram buf, &p = outProg ? *outProg : buf;
+    size_t ninputs = inps.size();
+    AutoBuffer<int> depths(ninputs);
+    for (size_t i = 0; i < ninputs; i++)
+        depths[i] = inps[i].depth();
+    compile(g, p, depths.data(), ninputs);
+    std::vector<Mat> outs(p.noutputs);
+    p.exec(inps.data(), outs.data());
+    return outs;
 }
 
 // addWeighted(a,alpha,b,beta,gamma) = a*alpha + b*beta + gamma, built as a graph and compiled
@@ -45,7 +49,7 @@ TEST(Core_EW_Compile, addweighted_f32)
         g.output(g.binary(OP_ADD, t2, g.constant(Scalar(gamma))));
 
         EwProgram prog;
-        std::vector<Mat> out = run(g, { CV_32F, CV_32F }, { a, b }, &prog);
+        std::vector<Mat> out = run(g, { a, b }, &prog);
 
         Mat exp; cv::addWeighted(a, alpha, b, beta, gamma, exp);
         ASSERT_EQ(out[0].type(), exp.type());
@@ -67,7 +71,7 @@ TEST(Core_EW_Compile, mixed_u8_inserts_casts)
     int mul = g.binary(OP_MUL, ia, g.constant(Scalar(2.5)));   // -> u8 (natural)
     g.output(g.binary(OP_ADD, mul, ib));                       // -> u8
 
-    std::vector<Mat> out = run(g, { CV_8U, CV_8U }, { a, b });
+    std::vector<Mat> out = run(g, { a, b });
 
     Mat t0, exp;
     a.convertTo(t0, CV_8U, 2.5);          // saturate_u8(a*2.5)
@@ -89,7 +93,7 @@ TEST(Core_EW_Compile, multi_output_tuple)
     g.output(g.binary(OP_ADD, ia, ib));
     g.output(g.binary(OP_SUB, ia, ib));
 
-    std::vector<Mat> out = run(g, { CV_32F, CV_32F }, { a, b });
+    std::vector<Mat> out = run(g, { a, b });
     ASSERT_EQ(out.size(), 2u);
 
     Mat eadd, esub; cv::add(a, b, eadd); cv::subtract(a, b, esub);
@@ -112,7 +116,7 @@ TEST(Core_EW_Compile, temp_buffer_reuse)
     g.output(x);
 
     EwProgram prog;
-    std::vector<Mat> out = run(g, { CV_32F }, { a }, &prog);
+    std::vector<Mat> out = run(g, { a }, &prog);
 
     EXPECT_EQ(prog.ntemps, 3);       // last add writes straight to the output slot
     EXPECT_EQ(prog.nbuffers, 2);     // disjoint lifetimes => buffer reuse

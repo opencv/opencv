@@ -116,9 +116,9 @@ static int inferNodeDepth(const EwNode& n, int d0, int d1, int d2)
 // ---------------------------------------------------------------------------
 // compile(): lower the graph into a frozen EwProgram.
 // ---------------------------------------------------------------------------
-EwProgram compile(const EwGraph& g, const std::vector<int>& inputDepths)
+void compile(const EwGraph& g, EwProgram& prog, const int* inputDepths, size_t ninputs)
 {
-    CV_Assert((int)inputDepths.size() >= g.ninputs);
+    CV_Assert((int)ninputs >= g.ninputs);
     const int nnodes = (int)g.nodes.size();
 
     // ---- 1. infer each node's natural depth (children before parents) ----
@@ -155,7 +155,7 @@ EwProgram compile(const EwGraph& g, const std::vector<int>& inputDepths)
         outRef[g.outputs[o]]++;
 
     // ---- 3. set up the program & slot table ----
-    EwProgram prog;
+    prog.clear();
     prog.ninputs = g.ninputs;
     prog.noutputs = (int)g.outputs.size();
 
@@ -313,7 +313,8 @@ EwProgram compile(const EwGraph& g, const std::vector<int>& inputDepths)
             if (tempOfSlot[as[k]] >= 0) lastUse[tempOfSlot[as[k]]] = i;
     }
 
-    prog.bufferOfTemp.assign(ntemps, -1);
+    prog.bufferOfTemp.resize(ntemps);
+    for (int t = 0; t < ntemps; t++) prog.bufferOfTemp[t] = -1;
     std::vector<int> freeBufs;
     int nbuffers = 0;
     for (int i = 0; i < ninsn; i++)
@@ -337,7 +338,6 @@ EwProgram compile(const EwGraph& g, const std::vector<int>& inputDepths)
 
     prog.ntemps = ntemps;
     prog.nbuffers = nbuffers;
-    return prog;
 }
 
 }} // namespace cv::ew

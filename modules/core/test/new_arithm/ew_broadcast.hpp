@@ -70,7 +70,9 @@ struct EwTile
 // every operand's innermost stride is inherently in {0,1} - there is no gather case and nothing
 // to materialize. broadcastOp keeps the unit-stride run as the innermost (tile width) and sends
 // any gapped outer axis to stepy (a 2D tile, height>1), so cropped ROIs need no special handling.
-void broadcastOp(Mat* arrays, size_t narrays,
+// arrays is an array of POINTERS to the operand Mats (no Mat copies - a Mat is a heavy header and
+// the driver only reads a few fields). Headers must stay alive for the call.
+void broadcastOp(const Mat* const* arrays, int narrays,
                  const std::function<void(const EwTile&)>& body,
                  bool expandChannels = false,
                  double nstripes = 0.);
