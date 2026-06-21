@@ -105,19 +105,16 @@ typedef std::array<size_t, MatShape::MAX_DIMS> EwSteps;
 // rare non-unit-innermost-stride input). The result is contiguous in x (dst stepx == 1).
 // Returns >= 0 on success, < 0 (a CV_HAL_ERROR_* code) to let the caller fall back.
 //
-// The trailing `ctx` is an optional, per-instruction adapter context built once before the
-// parallel loop (see EwInsn::ctx). Generic kernels ignore it (it is nullptr). "Adapter"
-// kernels reinterpret it to carry precomputed state - e.g. a multi-channel-scalar register
-// pattern (array-op-scalar), a wrapped core BinaryFunc + scale params (convert / convert_scale),
-// or a result mask (compare -> 0/1 vs 0/255). An adapter does no arithmetic itself: it only
-// unpacks ctx and forwards to the real kernel.
+// The trailing `params` points at the instruction's scalar parameter block (EwInsn::params,
+// a cv::Scalar's 4 doubles): mul/div read params[0] as a scale (1.0 = none). Ops with no scalar
+// parameter ignore it. It is never null (the executor always passes the instruction's block).
 // ---------------------------------------------------------------------------
 typedef int (*ElemwiseFunc)(
     const void* src0, size_t step0y, size_t step0x,
     const void* src1, size_t step1y, size_t step1x,
     const void* src2, size_t step2y, size_t step2x,
     void*       dst,  size_t dstepy,
-    int width, int height, void* ctx);
+    int width, int height, const double* params);
 
 // Dispatcher: returns the best kernel for (op, operand depths, result depth), or nullptr
 // if the exact combination is not provided (the compiler then inserts OP_CAST nodes and
@@ -132,33 +129,20 @@ ElemwiseFunc getAddFunc(int T, int R);
 ElemwiseFunc getDivFunc(int T, int R, bool checked);
 
 // ---------------------------------------------------------------------------
-// Adapter context: the optional trailing void* of ElemwiseFunc. A small fixed-size POD built
-// on the fly by the executor before the parallel loop and discriminated there by op category;
-// each adapter kernel casts the void* to the variant it expects. Large payloads (e.g. an
-// expanded multi-channel-scalar register pattern) live in a separate AutoBuffer and are only
-// pointed to from here, so EwCtx stays small with no heap ownership (no std::shared_ptr).
+// Calling convention of an instruction's kernel. Most ops are EW_FN_ELEMWISE (the broadcasting
+// ElemwiseFunc above). Type conversions (OP_CAST / OP_CONVERT_SCALE) reuse core's convert
+// kernels directly as EW_FN_BINARY: no broadcast, byte steps, a Size tile, scale/offset passed
+// through the instruction's params block - so no adapter/context layer is needed.
 // ---------------------------------------------------------------------------
+enum EwFuncKind { EW_FN_ELEMWISE = 0, EW_FN_BINARY = 1 };
 
 // Mirror of core's internal BinaryFunc. The return type is not part of a function's symbol
 // name, so an engine-side declaration using this type links to cv::getConvertFunc /
-// cv::getConvertScaleFunc even though core declares them returning its own BinaryFunc.
+// cv::getConvertScaleFunc even though core declares them returning its own BinaryFunc. For the
+// scale variant `params` is read as a double[2] {scale, offset}; plain convert ignores it.
 typedef void (*EwBinaryFunc)(const uchar* src1, size_t step1,
                              const uchar* src2, size_t step2,
                              uchar* dst, size_t step, Size sz, void* params);
-
-struct EwCtx
-{
-    union
-    {
-        // CAT_CAST: wrap a core convert / convert-scale BinaryFunc (steps in bytes, Size tile).
-        struct { EwBinaryFunc fn; int sesz1, desz1; double scale[2]; } cvt;
-        // array-op-scalar: the specialized inner kernel + the cyclic C-channel register pattern.
-        // The pattern lives in a separate per-call AutoBuffer; here we only point into it.
-        struct { ElemwiseFunc fn; const void* pattern; } sc;
-        // CAT_COMPARE: result mask AND-ed onto the native compare (1 => 0/1, 0xFF => 0/255).
-        struct { int mask; } cmp;
-    };
-};
 
 // ---------------------------------------------------------------------------
 // Runtime operand descriptor: what a kernel actually receives per slice.
@@ -197,14 +181,27 @@ struct EwArgInfo
     Scalar cval;
 };
 
-// One compiled instruction: resolved kernel + the op (kept for sanity checks) + indices
-// into the program's arg table.
+// One compiled instruction: the op + indices into the program's arg table + a resolved kernel.
+// The kernel comes in one of two calling conventions selected by `fnkind`: EW_FN_ELEMWISE uses
+// `fptr` (the broadcasting ElemwiseFunc), EW_FN_BINARY uses `bfptr` (a core convert BinaryFunc,
+// for OP_CAST / OP_CONVERT_SCALE). `params` is the per-instruction scalar block (passed to the
+// kernel by pointer): mul/div scale in params[0]; convert_scale {scale, offset} in params[0..1];
+// it would also hold e.g. addWeighted's alpha/beta/gamma if that ever became one fused op. The
+// default (scale 1, offset 0) is the identity, so ops without scalar parameters need not set it.
 struct EwInsn
 {
-    ElemwiseFunc fptr = nullptr;
+    ElemwiseFunc fptr = nullptr;        // EW_FN_ELEMWISE kernel
+    EwBinaryFunc bfptr = nullptr;       // EW_FN_BINARY  kernel (core convert / convert-scale)
     ElemwiseOp op = OP_NOP;
+    signed char fnkind = EW_FN_ELEMWISE;
     int arg0 = 0, arg1 = 0, arg2 = 0, result = 0;
+    Scalar params = Scalar(1);          // op scalars; params[0]=scale defaults to 1 (identity)
 };
+
+// Resolve the kernel + calling convention for one instruction from its op and operand/result
+// depths: sets ins.fnkind and the matching function pointer (fptr or bfptr). Returns false (and
+// leaves the pointer null) when no kernel exists, so the compiler can fall back to a wider type.
+bool resolveInsnKernel(EwInsn& ins, int depth0, int depth1, int depth2, int rdepth);
 
 // A frozen program: everything that does NOT depend on the concrete shapes of a call.
 // Shapes, strides and the physical tile/output memory are computed per-call in the executor.

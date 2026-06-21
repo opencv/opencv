@@ -6,6 +6,7 @@
 
 #include "ew_compile.hpp"
 #include <algorithm>
+#include <cmath>
 
 namespace cv { namespace ew {
 
@@ -58,6 +59,27 @@ int EwGraph::cast(int a, int depth)
 static bool isFloatDepth(int d)
 {
     return d == CV_16F || d == CV_16BF || d == CV_32F || d == CV_64F;
+}
+
+// Can `depth` hold `v` exactly? Floats: yes (close enough for our promotion). Integers: only if v
+// is integral and in range. Used so a const operand (e.g. 2.5 in a*2.5) is NOT quantized into a
+// narrow-integer direct kernel - such an op must fall back to the float working type instead.
+static bool depthRepresents(double v, int depth)
+{
+    if (isFloatDepth(depth)) return true;
+    if (v != std::floor(v)) return false;
+    switch (depth)
+    {
+    case CV_8U:  return v >= 0            && v <= 255;
+    case CV_8S:  return v >= -128         && v <= 127;
+    case CV_16U: return v >= 0            && v <= 65535;
+    case CV_16S: return v >= -32768       && v <= 32767;
+    case CV_32U: return v >= 0            && v <= 4294967295.0;
+    case CV_32S: return v >= -2147483648.0 && v <= 2147483647.0;
+    case CV_64U: return v >= 0            && v <= 18446744073709551615.0;
+    case CV_64S: return v >= -9223372036854775808.0 && v <= 9223372036854775807.0;
+    default:     return false;
+    }
 }
 
 static int depthRank(int d)
@@ -194,9 +216,16 @@ void compile(const EwGraph& g, EwProgram& prog, const int* inputDepths, size_t n
         int da0 = a0 ? prog.arginfo[a0].depth : EW_DEPTH_NONE;
         int da1 = a1 ? prog.arginfo[a1].depth : EW_DEPTH_NONE;
         int da2 = a2 ? prog.arginfo[a2].depth : EW_DEPTH_NONE;
-        ins.fptr = getElemwiseFunc(op, da0, da1, da2, prog.arginfo[result].depth);
-        CV_Assert(ins.fptr != nullptr);
+        bool ok = resolveInsnKernel(ins, da0, da1, da2, prog.arginfo[result].depth);
+        CV_Assert(ok);
         prog.prog.push_back(ins);
+    };
+
+    // existence probe (cast-aware: OP_CAST binds a core convert BinaryFunc, not getElemwiseFunc).
+    auto kernelExists = [](ElemwiseOp op, int d0, int d1, int d2, int rd)
+    {
+        EwInsn probe; probe.op = op;
+        return resolveInsnKernel(probe, d0, d1, d2, rd);
     };
 
     // cast a value already living in `slot` to depth d (no-op if already there).
@@ -239,8 +268,19 @@ void compile(const EwGraph& g, EwProgram& prog, const int* inputDepths, size_t n
         int td[3] = { EW_DEPTH_NONE, EW_DEPTH_NONE, EW_DEPTH_NONE };
         for (int k = 0; k < n.nargs; k++) td[k] = (cd[k] == EW_DEPTH_NONE) ? rd : cd[k];
 
+        // a direct kernel needs each operand at td[k]; refuse it if a const operand can't be
+        // represented exactly there (e.g. 2.5 lowered into a u8 kernel) - fall to the float path.
+        bool constsFit = true;
+        for (int k = 0; k < n.nargs && constsFit; k++)
+        {
+            int c = n.args[k];
+            if (g.nodes[c].kind != NODE_CONST) continue;
+            for (int ch = 0, nch = std::max(1, g.nodes[c].cchannels); ch < nch; ch++)
+                if (!depthRepresents(g.nodes[c].cval[ch], td[k])) { constsFit = false; break; }
+        }
+
         int op0, op1, op2;
-        if (getElemwiseFunc(n.op, td[0], td[1], td[2], rd))
+        if (constsFit && kernelExists(n.op, td[0], td[1], td[2], rd))
         {
             op0 = n.nargs > 0 ? lowerOperand(n.args[0], td[0]) : 0;
             op1 = n.nargs > 1 ? lowerOperand(n.args[1], td[1]) : 0;
@@ -257,7 +297,7 @@ void compile(const EwGraph& g, EwProgram& prog, const int* inputDepths, size_t n
         int w0 = n.nargs > 0 ? W : EW_DEPTH_NONE;
         int w1 = n.nargs > 1 ? W : EW_DEPTH_NONE;
         int w2 = n.nargs > 2 ? W : EW_DEPTH_NONE;
-        CV_Assert(getElemwiseFunc(n.op, w0, w1, w2, wr) != nullptr);
+        CV_Assert(kernelExists(n.op, w0, w1, w2, wr));
 
         op0 = n.nargs > 0 ? lowerOperand(n.args[0], W) : 0;
         op1 = n.nargs > 1 ? lowerOperand(n.args[1], W) : 0;

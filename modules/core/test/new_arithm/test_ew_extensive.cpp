@@ -9,6 +9,7 @@
 
 #include "../test_precomp.hpp"
 #include "ew_exec.hpp"
+#include "ew_compile.hpp"
 
 namespace opencv_test { namespace {
 
@@ -272,9 +273,15 @@ TEST_P(EW_Extensive_MulDiv, accuracy)
     const bool inplace = aliasIn >= 0;
     const int Tr = aliasIn == 0 ? da : aliasIn == 1 ? db : sampleDepth(rng);
 
-    SCOPED_TRACE(cv::format("%s caseidx=%d da=%d db=%d Tr=%d a=%sC%d b=%sC%d inplace=%d",
+    // half the cases use a non-unit scale (mul: a*b*scale, div: a*scale/b), like cv::multiply/
+    // divide. Kept in [1/256, 2] so it can shrink (e.g. 1/255) or modestly amplify without pushing
+    // a product/quotient past the integer-output range (which would be float->int UB on both sides).
+    double scale = 1.0;
+    if (rng.uniform(0, 2)) scale = rng.uniform(1.0/256, 2.0);
+
+    SCOPED_TRACE(cv::format("%s caseidx=%d da=%d db=%d Tr=%d a=%sC%d b=%sC%d inplace=%d scale=%.4f",
                             opStr, caseidx, da, db, Tr, shapeStr(sa).c_str(), cn_a,
-                            shapeStr(sb).c_str(), cn_b, inplace ? aliasIn : -1));
+                            shapeStr(sb).c_str(), cn_b, inplace ? aliasIn : -1, scale));
 
     // modest magnitudes: mul/div compute in a float work type, so a product/quotient that overflows
     // the integer output's range hits float->int UB (cv::multiply is UB there too). [-1000,1000]
@@ -306,14 +313,14 @@ TEST_P(EW_Extensive_MulDiv, accuracy)
         bch[cn_b == 1 ? 0 : c].convertTo(bWf, Wf);
         Mat aB, bB; cv::broadcast(aWf, res, aB); cv::broadcast(bWf, res, bB);
         Mat q;
-        if (op == OP_DIV) { cv::divide(aB, bB, q); if (bothInt) q.setTo(0, bB == 0); }
-        else              cv::multiply(aB, bB, q);
+        if (op == OP_DIV) { cv::divide(aB, bB, q, scale); if (bothInt) q.setTo(0, bB == 0); }
+        else              cv::multiply(aB, bB, q, scale);
         q.convertTo(refch[c], Tr);
     }
     Mat ref; cv::merge(refch, ref);
 
     EwProgram p;
-    makeBinaryArithProgram(p, op, da, db, Tr);
+    makeBinaryArithProgram(p, op, da, db, Tr, EW_DEPTH_NONE, scale);
     Mat inps[] = {a, b}, outOwn;
     Mat* outPtr = inplace ? &inps[aliasIn] : &outOwn;
     p.exec(inps, outPtr);
@@ -413,7 +420,8 @@ TEST_P(EW_Extensive_Cast, accuracy)
 
     Mat a = makeRandom(rng, shape, 1, sd), out;
 
-    EwProgram p = makeUnaryProgram(OP_CAST, sd, dd);
+    EwGraph g; g.output(g.cast(g.input(0), dd));
+    EwProgram p; compile(g, p, &sd, 1);
     p.exec(&a, &out);
 
     Mat ref; a.convertTo(ref, dd);

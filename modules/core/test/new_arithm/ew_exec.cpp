@@ -13,16 +13,8 @@
 #include "ew_exec.hpp"
 #include "ew_broadcast.hpp"
 #include <algorithm>
+#include <cstring>
 #include <vector>
-
-// Engine-side mirror declarations of core's exported convert dispatchers (see the CV_EXPORTS in
-// core/src/precomp.hpp). A function's return type is not part of its mangled name, so declaring
-// these to return EwBinaryFunc links to cv::getConvertFunc / getConvertScaleFunc (which return
-// core's identical BinaryFunc) without pulling in the private precomp.hpp.
-namespace cv {
-ew::EwBinaryFunc getConvertFunc(int sdepth, int ddepth);
-ew::EwBinaryFunc getConvertScaleFunc(int sdepth, int ddepth);
-}
 
 namespace cv { namespace ew {
 
@@ -109,9 +101,41 @@ void EwProgram::clear()
     ninputs = noutputs = ntemps = nbuffers = 0;
 }
 
+// Run one resolved instruction over a width x height tile. EW_FN_ELEMWISE calls the broadcasting
+// kernel (element steps + the instruction's params block). EW_FN_BINARY calls a core convert
+// BinaryFunc (byte steps, Size tile, params = {scale, offset}); a broadcast source (stepx == 0) is
+// handled by converting one element per row and replicating it - the executor guarantees the dst
+// is contiguous in x. sesz1/desz1 are the source/result element sizes (only used by EW_FN_BINARY).
+static inline void runInsn(const EwInsn& ins,
+                           const void* p0, size_t y0, size_t x0,
+                           const void* p1, size_t y1, size_t x1,
+                           const void* p2, size_t y2, size_t x2,
+                           void* pr, size_t yr, int w, int h, int sesz1, int desz1)
+{
+    if (ins.fnkind == EW_FN_BINARY)
+    {
+        const EwBinaryFunc fn = ins.bfptr;
+        void* params = (void*)ins.params.val;
+        const size_t srowb = y0 * (size_t)sesz1, drowb = yr * (size_t)desz1;
+        if (x0 == 1)                    // contiguous source: one call over the whole tile
+            fn((const uchar*)p0, srowb, nullptr, 0, (uchar*)pr, drowb, Size(w, h), params);
+        else                            // broadcast source: convert one value per row, replicate
+        {
+            const uchar* s = (const uchar*)p0; uchar* d = (uchar*)pr;
+            for (int i = 0; i < h; i++, s += srowb, d += drowb)
+            {
+                fn(s, 0, nullptr, 0, d, 0, Size(1, 1), params);
+                for (int x = 1; x < w; x++) std::memcpy(d + (size_t)x*desz1, d, (size_t)desz1);
+            }
+        }
+        return;
+    }
+    int code = ins.fptr(p0, y0, x0, p1, y1, x1, p2, y2, x2, pr, yr, w, h, ins.params.val);
+    CV_Assert(code >= 0);
+}
+
 struct EwBody {
     const EwInsn* prog;
-    void** ctxptr;
     // slot -> a NON-NEGATIVE index whose meaning is given by slotKind[s]:
     //   ARG_INPUT / ARG_OUTPUT : index into tile.slices (the broadcast operand list)
     //   ARG_TEMP               : physical temp-buffer id
@@ -240,39 +264,12 @@ void EwProgram::exec(const Mat* inputs, Mat* outputs)
     const int totalEsz = bufEszPrefix[nbuffers];
     const int capElems = totalEsz > 0 ? std::max(64, (16 * 1024) / totalEsz) : 0;
 
-    // ---- 3. ONE pass over instructions: adapter contexts (frozen, shared read-only) + cost. ----
+    // ---- 3. ONE pass over instructions: summed per-element cost (kernels are resolved at build
+    //         time; the convert BinaryFunc is reached directly via EwInsn::bfptr - no contexts). ----
     const int ninsn = (int)prog.size();
-    AutoBuffer<EwCtx, LOCAL_OPS> ctxs(ninsn);
-    AutoBuffer<void*, LOCAL_OPS> ctxptr(ninsn);
     long long costPerElem = 0;
     for (int n = 0; n < ninsn; n++)
-    {
-        const EwInsn& ins = prog[n];
-        costPerElem += opCost(ins.op);
-        void* cx = nullptr;
-        if (ins.op == OP_CAST || ins.op == OP_CONVERT_SCALE)
-        {
-            const int sd = arginfo[ins.arg0].depth;
-            const int dd = arginfo[ins.result].depth;
-            EwCtx& c = ctxs[n];
-            if (ins.op == OP_CAST)
-            {
-                c.cvt.fn = cv::getConvertFunc(sd, dd);
-                c.cvt.scale[0] = 1.0; c.cvt.scale[1] = 0.0;   // plain convert ignores params
-            }
-            else                                              // OP_CONVERT_SCALE: cast<dd>(src*a+b)
-            {
-                c.cvt.fn = cv::getConvertScaleFunc(sd, dd);
-                c.cvt.scale[0] = arginfo[ins.arg1].cval[0];                 // alpha (scale)
-                c.cvt.scale[1] = ins.arg2 ? arginfo[ins.arg2].cval[0] : 0; // offset (shift)
-            }
-            CV_Assert(c.cvt.fn != nullptr);
-            c.cvt.sesz1 = (int)CV_ELEM_SIZE1(sd);
-            c.cvt.desz1 = (int)CV_ELEM_SIZE1(dd);
-            cx = &c;
-        }
-        ctxptr[n] = cx;
-    }
+        costPerElem += opCost(prog[n].op);
 
     // ---- 4. parallel work hint: total output scalars x summed per-element op cost / budget. ----
     long long otot = (long long)rchannels;
@@ -283,7 +280,6 @@ void EwProgram::exec(const Mat* inputs, Mat* outputs)
     EwBody body;
     body.prog = prog.data();
     body.ninsn = ninsn;
-    body.ctxptr = ctxptr.data();
     body.slotMap = slotMap.data();
 
     // ---- 7. drive: broadcastOp does geometry + 2D tiling + parallelism; the body runs the
@@ -307,7 +303,6 @@ void EwProgram::exec(const Mat* inputs, Mat* outputs)
     {
         EwBody& bc = body;
         const EwInsn* prog = bc.prog;             // hot fields -> locals (registers/stack)
-        void** const     ctxptr      = bc.ctxptr;
         const int* const slotMap     = bc.slotMap;
         const signed char* const slotKind = bc.slotKind;
         const int* const esz1Slot    = bc.esz1Slot;
@@ -334,9 +329,9 @@ void EwProgram::exec(const Mat* inputs, Mat* outputs)
                 const EwSlice& a1 = S(ins.arg1);
                 const EwSlice& a2 = S(ins.arg2);
                 const EwSlice& rr = S(ins.result);
-                int code = ins.fptr(a0.ptr, a0.stepy, a0.stepx, a1.ptr, a1.stepy, a1.stepx,
-                                    a2.ptr, a2.stepy, a2.stepx, (void*)rr.ptr, rr.stepy, w, h, ctxptr[n]);
-                CV_Assert(code >= 0);
+                runInsn(ins, a0.ptr, a0.stepy, a0.stepx, a1.ptr, a1.stepy, a1.stepx,
+                        a2.ptr, a2.stepy, a2.stepx, (void*)rr.ptr, rr.stepy, w, h,
+                        esz1Slot[ins.arg0], esz1Slot[ins.result]);
             }
             return;
         }
@@ -381,9 +376,9 @@ void EwProgram::exec(const Mat* inputs, Mat* outputs)
                 const EwInsn& ins = prog[n];
                 const EwArg& a0 = args[ins.arg0]; const EwArg& a1 = args[ins.arg1];
                 const EwArg& a2 = args[ins.arg2]; const EwArg& rr = args[ins.result];
-                int code = ins.fptr(a0.ptr, a0.stepy, a0.stepx, a1.ptr, a1.stepy, a1.stepx,
-                                    a2.ptr, a2.stepy, a2.stepx, (void*)rr.ptr, rr.stepy, wf, h, ctxptr[n]);
-                CV_Assert(code >= 0);
+                runInsn(ins, a0.ptr, a0.stepy, a0.stepx, a1.ptr, a1.stepy, a1.stepx,
+                        a2.ptr, a2.stepy, a2.stepx, (void*)rr.ptr, rr.stepy, wf, h,
+                        esz1Slot[ins.arg0], esz1Slot[ins.result]);
             }
         }
     }, true, nstripes);
@@ -395,43 +390,6 @@ void EwProgram::exec(const Mat* inputs, Mat* outputs)
 static inline EwArgInfo mkArg(ArgKind kind, int depth, int index)
 {
     EwArgInfo a; a.kind = kind; a.depth = depth; a.index = index; return a;
-}
-
-EwProgram makeBinaryProgram(ElemwiseOp op, int depth0, int depth1, int rdepth)
-{
-    CV_Assert(opArity(op) == 2);
-    EwProgram p;
-    p.ninputs = 2; p.noutputs = 1; p.ntemps = 0; p.nbuffers = 0;
-    p.arginfo.resize(4);
-    p.arginfo[0] = mkArg(ARG_NONE,   EW_DEPTH_NONE, -1);
-    p.arginfo[1] = mkArg(ARG_INPUT,  depth0, 0);
-    p.arginfo[2] = mkArg(ARG_INPUT,  depth1, 1);
-    p.arginfo[3] = mkArg(ARG_OUTPUT, rdepth, 0);
-
-    EwInsn ins;
-    ins.op = op; ins.arg0 = 1; ins.arg1 = 2; ins.arg2 = 0; ins.result = 3;
-    ins.fptr = getElemwiseFunc(op, depth0, depth1, EW_DEPTH_NONE, rdepth);
-    CV_Assert(ins.fptr != nullptr);
-    p.prog.push_back(ins);
-    return p;
-}
-
-EwProgram makeUnaryProgram(ElemwiseOp op, int depth0, int rdepth)
-{
-    CV_Assert(opArity(op) == 1);
-    EwProgram p;
-    p.ninputs = 1; p.noutputs = 1; p.ntemps = 0; p.nbuffers = 0;
-    p.arginfo.resize(3);
-    p.arginfo[0] = mkArg(ARG_NONE,   EW_DEPTH_NONE, -1);
-    p.arginfo[1] = mkArg(ARG_INPUT,  depth0, 0);
-    p.arginfo[2] = mkArg(ARG_OUTPUT, rdepth, 0);
-
-    EwInsn ins;
-    ins.op = op; ins.arg0 = 1; ins.arg1 = 0; ins.arg2 = 0; ins.result = 2;
-    ins.fptr = getElemwiseFunc(op, depth0, EW_DEPTH_NONE, EW_DEPTH_NONE, rdepth);
-    CV_Assert(ins.fptr != nullptr);
-    p.prog.push_back(ins);
-    return p;
 }
 
 // [VP] looks like there is a bug here. rank(8s) < rank(16u),
@@ -501,7 +459,7 @@ static int safeWide(int depth)
 // broadcast machinery (single-channel data => per-element; n-channel => broadcast across the
 // channel axis), so nothing special is needed in the executor.
 void makeBinaryArithProgram(EwProgram& p, ElemwiseOp op, int depth0, int depth1, int rdepth,
-                            int maskDepth)
+                            int maskDepth, double scale)
 {
     p.clear();
     const bool masked = maskDepth != EW_DEPTH_NONE;
@@ -521,10 +479,10 @@ void makeBinaryArithProgram(EwProgram& p, ElemwiseOp op, int depth0, int depth1,
     };
     auto addInsn = [&](ElemwiseOp o, int a0, int a1, int r) {
         EwInsn ins; ins.op = o; ins.arg0 = a0; ins.arg1 = a1; ins.arg2 = 0; ins.result = r;
-        ins.fptr = getElemwiseFunc(o, p.arginfo[a0].depth,
-                                   a1 ? p.arginfo[a1].depth : EW_DEPTH_NONE,
-                                   EW_DEPTH_NONE, p.arginfo[r].depth);
-        CV_Assert(ins.fptr != nullptr);
+        bool ok = resolveInsnKernel(ins, p.arginfo[a0].depth,
+                                    a1 ? p.arginfo[a1].depth : EW_DEPTH_NONE,
+                                    EW_DEPTH_NONE, p.arginfo[r].depth);
+        CV_Assert(ok);
         p.prog.push_back(ins);
     };
 
@@ -536,8 +494,10 @@ void makeBinaryArithProgram(EwProgram& p, ElemwiseOp op, int depth0, int depth1,
     {
         // cast both operands to a common type C, then mul/div in the float work type Wf (float for
         // <=16-bit/f16/bf/f32, double for 32/64-bit/f64 - matching cv::multiply/divide), then cast
-        // Wf down to rdepth. For div the divide-by-zero policy is decided from the ORIGINAL input
-        // types: both-integer => guard /0 -> 0; any float => no guard (a/0 -> inf), as cv::divide.
+        // Wf down to rdepth. The optional `scale` rides the mul/div instruction's params[0] (mul:
+        // a*b*scale; div: a*scale/b), exactly as cv::multiply/divide's scale argument. For div the
+        // divide-by-zero policy is decided from the ORIGINAL input types: both-integer => guard /0
+        // -> 0; any float => no guard (a/0 -> inf), as cv::divide.
         auto isFlt = [](int d){ return d==CV_16F || d==CV_16BF || d==CV_32F || d==CV_64F; };
         const bool bothInt = !isFlt(depth0) && !isFlt(depth1);
         int C = (depth0 == depth1) ? depth0 : promote2(depth0, depth1);
@@ -545,17 +505,27 @@ void makeBinaryArithProgram(EwProgram& p, ElemwiseOp op, int depth0, int depth1,
         if (depth1 != C) { int t = addTemp(C); addInsn(OP_CAST, sIn1, 0, t); sIn1 = t; }
         const bool wide = (C==CV_32U || C==CV_32S || C==CV_64U || C==CV_64S || C==CV_64F);
         int Wf = wide ? CV_64F : CV_32F;
-        // emit the mul/div into slot r (div uses the caller-chosen divide-by-zero policy).
+        // emit the mul/div into slot r, carrying `scale` in params[0].
         auto emit = [&](int r) {
+            EwInsn ins; ins.op = op; ins.arg0 = sIn0; ins.arg1 = sIn1; ins.arg2 = 0; ins.result = r;
+            ins.params = Scalar(scale);
             if (op == OP_DIV) {
-                EwInsn ins; ins.op = OP_DIV; ins.arg0 = sIn0; ins.arg1 = sIn1; ins.arg2 = 0; ins.result = r;
+                // div with the caller-known /0 policy: bypass resolveInsnKernel (which would
+                // re-derive `checked` from the common type and miss the wide-int->float case).
+                ins.fnkind = EW_FN_ELEMWISE;
                 ins.fptr = getDivFunc(p.arginfo[sIn0].depth, p.arginfo[r].depth, bothInt);
                 CV_Assert(ins.fptr != nullptr);
-                p.prog.push_back(ins);
-            } else
-                addInsn(OP_MUL, sIn0, sIn1, r);
+            } else {
+                bool ok = resolveInsnKernel(ins, p.arginfo[sIn0].depth, p.arginfo[sIn1].depth,
+                                            EW_DEPTH_NONE, p.arginfo[r].depth);
+                CV_Assert(ok);
+            }
+            p.prog.push_back(ins);
         };
-        if (rdepth == Wf)
+        // prefer a direct C x C -> rdepth kernel when one exists (mul now has T x T -> T for all but
+        // 64-bit types => one fused pass); else compute in Wf and cast down. For div no T x T -> T
+        // exists, so this reduces to the old rdepth==Wf test.
+        if (rdepth == Wf || getElemwiseFunc(op, C, C, EW_DEPTH_NONE, rdepth))
             emit(dst);
         else
         {
@@ -586,7 +556,7 @@ void makeBinaryArithProgram(EwProgram& p, ElemwiseOp op, int depth0, int depth1,
     }
 
     if (masked)
-        addInsn(OP_COPY_MASK, dst, sMask, sOut);   // last: dst = (mask!=0) ? result : 0
+        addInsn(OP_COPY_MASK, dst, sMask, sOut);   // last: dst = (mask!=0) ? result : dst
 
     p.ntemps = ntemps; p.nbuffers = ntemps;
     p.bufferOfTemp.resize(ntemps);
@@ -599,7 +569,8 @@ void makeAddProgram(EwProgram& p, int depth0, int depth1, int rdepth)
 // addWeighted(a, alpha, b, beta, gamma) = a*alpha + b*beta + gamma, as two fused convert_scale
 // MACs + an add (+ a final cast when the output type differs from the working type W):
 //   t0 = cast<W>(a*alpha + gamma) ;  t1 = cast<W>(b*beta) ;  out = cast<rdepth>(t0 + t1)
-// The convert_scale steps ride core's optimized scale kernel; the 2-3 temps exercise the body's
+// The convert_scale steps ride core's optimized scale kernel; alpha/beta/gamma travel in each
+// instruction's params block ({scale, offset}), not as operands. The 2-3 temps exercise the body's
 // L1 column-fragmentation.
 void makeAddWeightedProgram(EwProgram& p, int depth0, int depth1, int rdepth,
                             double alpha, double beta, double gamma)
@@ -611,12 +582,6 @@ void makeAddWeightedProgram(EwProgram& p, int depth0, int depth1, int rdepth,
     p.arginfo.push_back(mkArg(ARG_NONE, EW_DEPTH_NONE, -1));    // slot 0
     int sA = (int)p.arginfo.size(); p.arginfo.push_back(mkArg(ARG_INPUT, depth0, 0));
     int sB = (int)p.arginfo.size(); p.arginfo.push_back(mkArg(ARG_INPUT, depth1, 1));
-    auto addConst = [&](double v) {
-        int s = (int)p.arginfo.size();
-        EwArgInfo ai = mkArg(ARG_CONST, W, -1); ai.channels = 1; ai.cval = Scalar(v);
-        p.arginfo.push_back(ai); return s;
-    };
-    int sAlpha = addConst(alpha), sBeta = addConst(beta), sGamma = addConst(gamma);
 
     int ntemps = 0;
     auto addTemp = [&](int depth) {
@@ -624,27 +589,28 @@ void makeAddWeightedProgram(EwProgram& p, int depth0, int depth1, int rdepth,
         p.arginfo.push_back(mkArg(ARG_TEMP, depth, ntemps++));
         return s;
     };
-    auto addInsn = [&](ElemwiseOp op, int a0, int a1, int a2, int r) {
-        EwInsn ins; ins.op = op; ins.arg0 = a0; ins.arg1 = a1; ins.arg2 = a2; ins.result = r;
-        ins.fptr = getElemwiseFunc(op, p.arginfo[a0].depth,
-                                   a1 ? p.arginfo[a1].depth : EW_DEPTH_NONE,
-                                   a2 ? p.arginfo[a2].depth : EW_DEPTH_NONE, p.arginfo[r].depth);
-        CV_Assert(ins.fptr != nullptr);
+    auto addInsn = [&](ElemwiseOp op, int a0, int a1, int r, Scalar params = Scalar(1)) {
+        EwInsn ins; ins.op = op; ins.arg0 = a0; ins.arg1 = a1; ins.arg2 = 0; ins.result = r;
+        ins.params = params;
+        bool ok = resolveInsnKernel(ins, p.arginfo[a0].depth,
+                                    a1 ? p.arginfo[a1].depth : EW_DEPTH_NONE,
+                                    EW_DEPTH_NONE, p.arginfo[r].depth);
+        CV_Assert(ok);
         p.prog.push_back(ins);
     };
 
     int t0 = addTemp(W), t1 = addTemp(W);
-    addInsn(OP_CONVERT_SCALE, sA, sAlpha, sGamma, t0);   // t0 = a*alpha + gamma
-    addInsn(OP_CONVERT_SCALE, sB, sBeta,  0,      t1);   // t1 = b*beta
+    addInsn(OP_CONVERT_SCALE, sA, 0, t0, Scalar(alpha, gamma));   // t0 = a*alpha + gamma
+    addInsn(OP_CONVERT_SCALE, sB, 0, t1, Scalar(beta, 0.0));      // t1 = b*beta
 
     int sOut = (int)p.arginfo.size(); p.arginfo.push_back(mkArg(ARG_OUTPUT, rdepth, 0));
     if (rdepth == W)
-        addInsn(OP_ADD, t0, t1, 0, sOut);
+        addInsn(OP_ADD, t0, t1, sOut);
     else
     {
         int t2 = addTemp(W);
-        addInsn(OP_ADD, t0, t1, 0, t2);
-        addInsn(OP_CAST, t2, 0, 0, sOut);
+        addInsn(OP_ADD, t0, t1, t2);
+        addInsn(OP_CAST, t2, 0, sOut);
     }
 
     p.ntemps = ntemps; p.nbuffers = ntemps;

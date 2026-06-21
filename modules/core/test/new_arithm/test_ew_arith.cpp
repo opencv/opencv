@@ -7,22 +7,27 @@
 
 #include "../test_precomp.hpp"
 #include "ew_exec.hpp"
+#include "ew_compile.hpp"
 
 namespace opencv_test { namespace {
 
 using namespace cv::ew;
 
+// out = op(a, b), composed via the general binary-arith builder (the future engine-backed cv::add).
 static Mat runBinary(ElemwiseOp op, const Mat& a, const Mat& b, int rdepth)
 {
-    EwProgram p = makeBinaryProgram(op, a.depth(), b.depth(), rdepth);
+    EwProgram p; makeBinaryArithProgram(p, op, a.depth(), b.depth(), rdepth);
     Mat inps[] = {a, b}, out;
     p.exec(inps, &out);
     return out;
 }
 
-static Mat runUnary(ElemwiseOp op, const Mat& a, int rdepth)
+// out = cast(a), lowered through the real Layer-2 compiler (a 1-node cast graph).
+static Mat runCast(const Mat& a, int rdepth)
 {
-    EwProgram p = makeUnaryProgram(op, a.depth(), rdepth);
+    EwGraph g; g.output(g.cast(g.input(0), rdepth));
+    EwProgram p; int sd = a.depth();
+    compile(g, p, &sd, 1);
     Mat out;
     p.exec(&a, &out);
     return out;
@@ -125,85 +130,25 @@ TEST(Core_EW_Slice, cast_basic)
     theRNG().fill(a, RNG::UNIFORM, -50.f, 300.f);   // exercise saturation for u8
 
     {
-        Mat got = runUnary(OP_CAST, a, CV_8U);
+        Mat got = runCast(a, CV_8U);
         Mat exp; a.convertTo(exp, CV_8U);
         EXPECT_EQ(0, cvtest::norm(got, exp, NORM_INF)) << "f32->u8";
     }
     {
-        Mat got = runUnary(OP_CAST, a, CV_32S);
+        Mat got = runCast(a, CV_32S);
         Mat exp; a.convertTo(exp, CV_32S);
         EXPECT_EQ(0, cvtest::norm(got, exp, NORM_INF)) << "f32->s32";
     }
     {
         Mat u; a.convertTo(u, CV_8U);
-        Mat got = runUnary(OP_CAST, u, CV_32F);
+        Mat got = runCast(u, CV_32F);
         Mat exp; u.convertTo(exp, CV_32F);
         EXPECT_EQ(0, cvtest::norm(got, exp, NORM_INF)) << "u8->f32";
     }
 }
 
-// ---- compound expression: addWeighted(a,alpha,b,beta,gamma) = a*alpha + b*beta + gamma ----
-// Hand-built multi-instruction program; exercises the temp-buffer + const-arg machinery
-// before the Layer-2 compiler exists.
-static Mat runAddWeighted(const Mat& a, double alpha, const Mat& b, double beta,
-                          double gamma, int rdepth)
-{
-    EwProgram p;
-    p.ninputs = 2; p.noutputs = 1; p.ntemps = 3; p.nbuffers = 3;
-    p.bufferOfTemp.resize(3);
-    p.bufferOfTemp[0] = 0; p.bufferOfTemp[1] = 1; p.bufferOfTemp[2] = 2;
-    p.arginfo.resize(10);
-
-    auto setA = [&](int s, ArgKind k, int depth, int index)
-    { p.arginfo[s].kind = k; p.arginfo[s].depth = depth; p.arginfo[s].index = index; };
-
-    setA(0, ARG_NONE,   EW_DEPTH_NONE, -1);
-    setA(1, ARG_INPUT,  a.depth(), 0);
-    setA(2, ARG_INPUT,  b.depth(), 1);
-    setA(3, ARG_CONST,  CV_32F, -1); p.arginfo[3].cval = Scalar(alpha);
-    setA(4, ARG_CONST,  CV_32F, -1); p.arginfo[4].cval = Scalar(beta);
-    setA(5, ARG_CONST,  CV_32F, -1); p.arginfo[5].cval = Scalar(gamma);
-    setA(6, ARG_TEMP,   CV_32F, 0);
-    setA(7, ARG_TEMP,   CV_32F, 1);
-    setA(8, ARG_TEMP,   CV_32F, 2);
-    setA(9, ARG_OUTPUT, rdepth, 0);
-
-    auto add_insn = [&](ElemwiseOp op, int a0, int a1, int r)
-    {
-        EwInsn ins; ins.op = op; ins.arg0 = a0; ins.arg1 = a1; ins.arg2 = 0; ins.result = r;
-        ins.fptr = getElemwiseFunc(op, p.arginfo[a0].depth, p.arginfo[a1].depth,
-                                   EW_DEPTH_NONE, p.arginfo[r].depth);
-        CV_Assert(ins.fptr != nullptr);
-        p.prog.push_back(ins);
-    };
-    add_insn(OP_MUL, 1, 3, 6);   // t0 = a * alpha
-    add_insn(OP_MUL, 2, 4, 7);   // t1 = b * beta
-    add_insn(OP_ADD, 6, 7, 8);   // t2 = t0 + t1
-    add_insn(OP_ADD, 8, 5, 9);   // out = t2 + gamma
-
-    Mat inps[2] = {a, b}, out;
-    p.exec(inps, &out);
-    return out;
-}
-
-TEST(Core_EW_Slice, addweighted_compound)
-{
-    const int chans[] = { 1, 3 };
-    double alpha = 2.5, beta = -1.5, gamma = 7.0;
-    for (int ci = 0; ci < 2; ci++)
-    {
-        int H = 19, W = 23, cn = chans[ci];
-        Mat a(H, W, CV_32FC(cn)), b(H, W, CV_32FC(cn));
-        theRNG().fill(a, RNG::UNIFORM, 1.f, 10.f);
-        theRNG().fill(b, RNG::UNIFORM, 1.f, 10.f);
-
-        Mat got = runAddWeighted(a, alpha, b, beta, gamma, CV_32F);
-        Mat exp; cv::addWeighted(a, alpha, b, beta, gamma, exp);
-
-        ASSERT_EQ(got.size(), exp.size());
-        ASSERT_EQ(got.type(), exp.type());
-        EXPECT_LE(cvtest::norm(got, exp, NORM_INF), 1e-3) << "cn=" << cn;
-    }
-}
+// NOTE: the compound addWeighted = a*alpha + b*beta + gamma is covered by the Layer-2 compiler
+// test (Core_EW_Compile.addweighted_f32), which builds the same expression as a graph and lowers
+// it through compile() - so the old hand-wired program here was a duplicate and was removed.
 
 }} // namespace
