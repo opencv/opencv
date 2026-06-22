@@ -340,7 +340,7 @@ icvTeleaInpaintFMM(Mat &f, Mat &t, Mat &out, int range, CvPriorityQueueFloat *He
                                     gradI.y=0;
                                  }
                               }
-                              Ia[color] += (float)w * (float)(out.at<PixelT>(k-1,l-1)[color]);
+                              Ia[color] += (float)w * (float)(out.at<PixelT>(km,lm)[color]);
                               Jx[color] -= (float)w * (float)(gradI.x*r.x);
                               Jy[color] -= (float)w * (float)(gradI.y*r.y);
                               s[color]  += w;
