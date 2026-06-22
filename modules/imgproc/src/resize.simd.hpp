@@ -2835,8 +2835,8 @@ public:
                 for (int c = 0; c < 3; ++c)
                 {
                     uint16x8_t row01 = vaddl_u8(row0.val[c], row1.val[c]);
-                    D[dx + c] = (uchar)((vgetq_lane_u16(row01, 0) + vgetq_lane_u16(row01, 1) + 2) >> 2);
-                    D[dx + c + 3] = (uchar)((vgetq_lane_u16(row01, 2) + vgetq_lane_u16(row01, 3) + 2) >> 2);
+                    D[c] = (uchar)((vgetq_lane_u16(row01, 0) + vgetq_lane_u16(row01, 1) + 2) >> 2);
+                    D[c + 3] = (uchar)((vgetq_lane_u16(row01, 2) + vgetq_lane_u16(row01, 3) + 2) >> 2);
                 }
             }
         }
