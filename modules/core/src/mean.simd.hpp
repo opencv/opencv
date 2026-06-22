@@ -513,6 +513,21 @@ static int sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int le
         sum[0] = s0;
         sqsum[0] = sq0;
     }
+    else if( cn == 2 )
+    {
+        ST s0 = sum[0], s1 = sum[1];
+        SQT sq0 = sqsum[0], sq1 = sqsum[1];
+        for( i = 0; i < len; i++, src += 2 )
+            if( mask[i] )
+            {
+                T v0 = src[0], v1 = src[1];
+                s0 += v0; sq0 += (SQT)v0*v0;
+                s1 += v1; sq1 += (SQT)v1*v1;
+                nzm++;
+            }
+        sum[0] = s0; sum[1] = s1;
+        sqsum[0] = sq0; sqsum[1] = sq1;
+    }
     else if( cn == 3 )
     {
         ST s0 = sum[0], s1 = sum[1], s2 = sum[2];
@@ -528,6 +543,23 @@ static int sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int le
             }
         sum[0] = s0; sum[1] = s1; sum[2] = s2;
         sqsum[0] = sq0; sqsum[1] = sq1; sqsum[2] = sq2;
+    }
+    else if( cn == 4 )
+    {
+        ST s0 = sum[0], s1 = sum[1], s2 = sum[2], s3 = sum[3];
+        SQT sq0 = sqsum[0], sq1 = sqsum[1], sq2 = sqsum[2], sq3 = sqsum[3];
+        for( i = 0; i < len; i++, src += 4 )
+            if( mask[i] )
+            {
+                T v0 = src[0], v1 = src[1], v2 = src[2], v3 = src[3];
+                s0 += v0; sq0 += (SQT)v0*v0;
+                s1 += v1; sq1 += (SQT)v1*v1;
+                s2 += v2; sq2 += (SQT)v2*v2;
+                s3 += v3; sq3 += (SQT)v3*v3;
+                nzm++;
+            }
+        sum[0] = s0; sum[1] = s1; sum[2] = s2; sum[3] = s3;
+        sqsum[0] = sq0; sqsum[1] = sq1; sqsum[2] = sq2; sqsum[3] = sq3;
     }
     else
     {
