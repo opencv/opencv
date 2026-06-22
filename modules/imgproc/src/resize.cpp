@@ -14,7 +14,6 @@
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Copyright (C) 2014-2015, Itseez Inc., all rights reserved.
 // Copyright (C) 2026, Advanced Micro Devices, Inc., all rights reserved.
-// Copyright (C) 2026, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -378,9 +377,6 @@ static void hlineResizeCn(ET* src, int cn, int *ofst, FT* m, FT* dst, int dst_mi
 {
     hline<ET, FT, n, mulall, cncnt>::ResizeCn(src, cn, ofst, m, dst, dst_min, dst_max, dst_width);
 }
-#define OFF_SPL 0//to be turned off
-
-#if !OFF_SPL
 template <>
 void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 1>(uint8_t* src, int, int *ofst, ufixedpoint16* m, ufixedpoint16* dst, int dst_min, int dst_max, int dst_width)
 {
@@ -708,7 +704,6 @@ void hlineResizeCn<uint16_t, ufixedpoint32, 2, true, 1>(uint16_t* src, int, int 
         *(dst++) = src_0;
     }
 }
-#endif
 template <typename ET, typename FT>
 void vlineSet(FT* src, ET* dst, int dst_width)
 {
@@ -748,7 +743,6 @@ void vlineResize(FT* src, size_t src_step, FT* m, ET* dst, int dst_width)
         dst[i] = res;
     }
 }
-#if !OFF_SPL
 template <>
 void vlineResize<uint8_t, ufixedpoint16, 2>(ufixedpoint16* src, size_t src_step, ufixedpoint16* m, uint8_t* dst, int dst_width)
 {
@@ -790,7 +784,6 @@ void vlineResize<uint8_t, ufixedpoint16, 2>(ufixedpoint16* src, size_t src_step,
         *(dst++) = (uint8_t)(*(src++) * m[0] + *(src1++) * m[1]);
     }
 }
-#endif
 template <typename ET> class interpolationLinear
 {
 public:
@@ -1048,7 +1041,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
 
     double inv_fx = 1.0 / fx, inv_fy = 1.0 / fy;
     float inv_fxf = (float)inv_fx, inv_fyf = (float)inv_fy;
-    int iscale_x = saturate_cast<int>(inv_fx), iscale_y = saturate_cast<int>(inv_fx);
+    int iscale_x = saturate_cast<int>(inv_fx), iscale_y = saturate_cast<int>(inv_fy);
     bool is_area_fast = std::abs(inv_fx - iscale_x) < DBL_EPSILON &&
         std::abs(inv_fy - iscale_y) < DBL_EPSILON;
 

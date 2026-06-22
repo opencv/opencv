@@ -2283,7 +2283,7 @@ static inline int area_fast_10x10_pix_block()
     return 8;
 }
 
-#if CV_SIMD
+#if CV_SIMD && !CV_NEON
 static inline v_uint32 area_fast_byte_sum_u32(v_uint32 v)
 {
     const v_uint32 mask = vx_setall_u32(0xff);
@@ -2515,7 +2515,6 @@ static int area_fast_u8_cn1_4x4(const uchar* S, uchar* D, int w, int step, int d
 static int area_fast_u8_cn1_10x10(const uchar* S, uchar* D, int w, int step, int dx)
 {
     const int scale = 10;
-    const int area = scale * scale;
     const uchar* rows[10] = { S, S + step, S + 2 * step, S + 3 * step, S + 4 * step,
                               S + 5 * step, S + 6 * step, S + 7 * step, S + 8 * step, S + 9 * step };
     const int pixBlock = area_fast_10x10_pix_block();
@@ -2616,7 +2615,7 @@ static int area_fast_u8_cn4_10x10(const uchar* S, uchar* D, int w, int step, int
     }
     return dx;
 }
-#endif
+#endif // CV_SIMD && !CV_NEON
 
 } // namespace area_fast_detail
 
@@ -5054,7 +5053,6 @@ static void accum_dst_row_r5_3_f32c1(float* D, int dy, const Mat& src, int dst_w
     accum_dst_row_r5_3_f32_period(D, dy, src, dst_width, 5, 3, nrows, vw,
                                   accum_dst_period_r5_3_f32c1_2row, accum_dst_period_r5_3_f32c1_3row);
 
-    const int sy0 = (dy * 5) / 3;
     int k = dst_width / 3;
     for (int dx = k * 3; dx < dst_width; ++dx)
         D[dx] = eval_r5_3_f32_cn1(dx, dy, src);
@@ -5961,7 +5959,7 @@ private:
     Mat& dst;
 };
 
-static void resizeLinear2xUp_8u_fused(const Mat& src, Mat& dst)
+static inline void resizeLinear2xUp_8u_fused(const Mat& src, Mat& dst)
 {
     Range range(0, src.rows);
     resizeLinear2xFused8u_Invoker invoker(src, dst);
@@ -6000,7 +5998,7 @@ static void resizeLinear2xUp_8u(const Mat& src, Mat& dst)
     resizeLinear2xUp_8u_generic(src, dst);
 }
 
-static void resizeLinear2xUp_32f(const Mat& src, Mat& dst)
+static inline void resizeLinear2xUp_32f(const Mat& src, Mat& dst)
 {
     const int cn = src.channels();
     const Size& dsize = dst.size();

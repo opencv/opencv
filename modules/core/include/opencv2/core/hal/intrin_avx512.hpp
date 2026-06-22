@@ -1841,11 +1841,7 @@ inline v_int16x32 v512_lut(const short* tab, const int* idx)
 }
 inline v_int16x32 v512_lut_pairs(const short* tab, const int* idx)
 {
-    __m512i g0 = _mm512_i32gather_epi32(_mm512_loadu_si512((const __m512i*)idx), (const int *)tab, 2);
-    __m512i g1 = _mm512_i32gather_epi32(_mm512_loadu_si512((const __m512i*)(idx + 16)), (const int *)tab, 2);
-    __m256i lo = _mm256_packus_epi32(_mm512_castsi512_si256(g0), _mm512_extracti32x8_epi32(g0, 1));
-    __m256i hi = _mm256_packus_epi32(_mm512_castsi512_si256(g1), _mm512_extracti32x8_epi32(g1, 1));
-    return v_int16x32(_v512_combine(lo, hi));
+    return v_int16x32(_mm512_i32gather_epi32(_mm512_loadu_si512((const __m512i*)idx), (const int *)tab, 2));
 }
 inline v_int16x32 v512_lut_quads(const short* tab, const int* idx)
 {

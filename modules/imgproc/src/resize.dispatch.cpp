@@ -45,6 +45,8 @@ void resize(int src_type,
     Size dsize = Size(saturate_cast<int>(src_width*inv_scale_x),
                         saturate_cast<int>(src_height*inv_scale_y));
     CV_Assert( !dsize.empty() );
+    CV_UNUSED(depth);
+    CV_UNUSED(cn);
 
     if (interpolation == INTER_LINEAR_EXACT)
     {
