@@ -7229,10 +7229,17 @@ int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
 {
     const ocl::Device & d = ocl::Device::getDefault();
 
-    int vectorWidths[] = { d.preferredVectorWidthChar(), d.preferredVectorWidthChar(),
-        d.preferredVectorWidthShort(), d.preferredVectorWidthShort(),
-        d.preferredVectorWidthInt(), d.preferredVectorWidthFloat(),
-        d.preferredVectorWidthDouble(), d.preferredVectorWidthHalf() };
+    // Indexed by depth: must span CV_DEPTH_MAX. bf16 has no OpenCL vector type.
+    int vectorWidths[CV_DEPTH_MAX] = {
+        d.preferredVectorWidthChar(), d.preferredVectorWidthChar(),   // CV_8U,  CV_8S
+        d.preferredVectorWidthShort(), d.preferredVectorWidthShort(), // CV_16U, CV_16S
+        d.preferredVectorWidthInt(), d.preferredVectorWidthFloat(),   // CV_32S, CV_32F
+        d.preferredVectorWidthDouble(), d.preferredVectorWidthHalf(), // CV_64F, CV_16F
+        1,                                                            // CV_16BF
+        d.preferredVectorWidthChar(),                                 // CV_Bool
+        d.preferredVectorWidthLong(), d.preferredVectorWidthLong(),   // CV_64U, CV_64S
+        d.preferredVectorWidthInt()                                   // CV_32U
+    };
 
     // if the device says don't use vectors
     if (vectorWidths[0] == 1)
