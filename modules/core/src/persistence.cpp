@@ -109,6 +109,17 @@ char* doubleToString( char* buf, size_t bufSize, double value, bool explicitZero
                 ;
             if( *ptr == ',' )
                 *ptr = '.';
+            else if( *ptr == '\0' && (size_t)(ptr - buf) + 3 < bufSize )
+            {
+                // "%g" printed a whole number with no '.' or exponent. This happens
+                // for integer-valued doubles above INT_MAX (e.g. 6662329666); left as
+                // a bare integer the value is read back as an overflowed int, so make
+                // it an unambiguous real, mirroring the "%d."/"%d.0" branch above.
+                *ptr++ = '.';
+                if( explicitZero )
+                    *ptr++ = '0';
+                *ptr = '\0';
+            }
         }
     }
     else

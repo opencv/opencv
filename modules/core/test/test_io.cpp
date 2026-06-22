@@ -2152,6 +2152,26 @@ TEST_P(FileStorage_exact_type, long_int)
     }
 }
 
+TEST_P(FileStorage_exact_type, large_real_29363)
+{
+    // Regression #29363: whole-number reals above INT_MAX were serialized without a
+    // decimal point or exponent (e.g. "6662329666") and then read back as an
+    // overflowed 32-bit int. They must round-trip exactly.
+    for (const double expected : std::vector<double>{
+            6662329666.0, 3366945464.0, 45054241452.0,
+            2147483648.0 /* INT_MAX+1 */, 4294967296.0 /* 2^32 */, -9876543210.0, 1.5e20 })
+    {
+        const double value = fsWriteRead(expected, GetParam());
+        EXPECT_EQ(value, expected) << "ext=" << GetParam();
+    }
+    // Scalar floats are written through doubleToString (writeScalar casts to double).
+    for (const float expected : std::vector<float>{ 2147483648.0f, 3000000000.0f, 4000000000.0f })
+    {
+        const float value = fsWriteRead(expected, GetParam());
+        EXPECT_EQ(value, expected) << "ext=" << GetParam();
+    }
+}
+
 INSTANTIATE_TEST_CASE_P(Core_InputOutput,
     FileStorage_exact_type, Values(".yml", ".xml", ".json", ".xml.gz", ".xml.gz0", ".xml.gz9")
 );
