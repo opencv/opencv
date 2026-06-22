@@ -1314,13 +1314,20 @@ protected:
 public:
     virtual ~LightGlueMatcher();
 
+    enum Type
+    {
+        ALIKED = 0,  //!< ALIKED model: keypoints normalized to [-1, 1]
+        DISK = 1      //!< DISK model:  keypoints normalized to [ 0, 1]
+    };
+
     /** @brief Creates LightGlueMatcher from a model file path.
     @param modelPath Path to the ONNX model file.
     @param scoreThreshold Match confidence threshold.
     @param backend DNN backend
     @param target DNN target
+    @param type Model variant: LightGlueMatcher::ALIKED (default) or LightGlueMatcher::DISK.
     */
-    CV_WRAP static Ptr<LightGlueMatcher> create(const String& modelPath, float scoreThreshold = 0.0f, int backend = 0, int target = 0);
+    CV_WRAP static Ptr<LightGlueMatcher> create(const String& modelPath, float scoreThreshold = 0.0f, int backend = 0, int target = 0, Type type = ALIKED);
 
 #ifdef HAVE_OPENCV_DNN
     /** @brief Creates LightGlueMatcher from in-memory model data.
@@ -1328,8 +1335,9 @@ public:
     @param scoreThreshold Match confidence threshold.
     @param backend DNN backend
     @param target DNN target
+    @param type Model variant: LightGlueMatcher::ALIKED (default) or LightGlueMatcher::DISK.
     */
-    CV_WRAP_AS(createFromMemory) static Ptr<LightGlueMatcher> create(const std::vector<uchar>& modelData, float scoreThreshold = 0.0f, int backend = 0, int target = 0);
+    CV_WRAP_AS(createFromMemory) static Ptr<LightGlueMatcher> create(const std::vector<uchar>& modelData, float scoreThreshold = 0.0f, int backend = 0, int target = 0, Type type = ALIKED);
 #endif
 
     /** @brief Sets the keypoint and image size context for the next match() call.
