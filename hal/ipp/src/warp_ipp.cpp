@@ -6,73 +6,12 @@
 
 #if IPP_VERSION_X100 >= 810 // integrated IPP warping/remap ABI is available since IPP v8.1
 
+#include <atomic>
 #include <opencv2/core.hpp>
 #include "precomp_ipp.hpp"
-#include <atomic>
 
 // Uncomment to enforce IPP calls for all supported by IPP configurations
 // #define IPP_CALLS_ENFORCED
-
-#define CV_TYPE(src_type) (src_type & (CV_DEPTH_MAX - 1))
-
-typedef IppStatus (CV_STDCALL* ippiSetFunc)(const void*, void *, int, IppiSize);
-
-template <int channels, typename Type>
-bool IPPSetSimple(const double value[4], void *dataPointer, int step, IppiSize &size, ippiSetFunc func)
-{
-    //CV_INSTRUMENT_REGION_IPP();
-
-    Type values[channels];
-    for( int i = 0; i < channels; i++ )
-        values[i] = cv::saturate_cast<Type>(value[i]);
-    return CV_INSTRUMENT_FUN_IPP(func, values, dataPointer, step, size) >= 0;
-}
-
-static bool IPPSet(const double value[4], void *dataPointer, int step, IppiSize &size, int channels, int depth)
-{
-    //CV_INSTRUMENT_REGION_IPP();
-
-    if( channels == 1 )
-    {
-        switch( depth )
-        {
-        case CV_8U:
-            return CV_INSTRUMENT_FUN_IPP(ippiSet_8u_C1R, cv::saturate_cast<Ipp8u>(value[0]), (Ipp8u *)dataPointer, step, size) >= 0;
-        case CV_16U:
-            return CV_INSTRUMENT_FUN_IPP(ippiSet_16u_C1R, cv::saturate_cast<Ipp16u>(value[0]), (Ipp16u *)dataPointer, step, size) >= 0;
-        case CV_32F:
-            return CV_INSTRUMENT_FUN_IPP(ippiSet_32f_C1R, cv::saturate_cast<Ipp32f>(value[0]), (Ipp32f *)dataPointer, step, size) >= 0;
-        }
-    }
-    else
-    {
-        if( channels == 3 )
-        {
-            switch( depth )
-            {
-            case CV_8U:
-                return IPPSetSimple<3, Ipp8u>(value, dataPointer, step, size, (ippiSetFunc)ippiSet_8u_C3R);
-            case CV_16U:
-                return IPPSetSimple<3, Ipp16u>(value, dataPointer, step, size, (ippiSetFunc)ippiSet_16u_C3R);
-            case CV_32F:
-                return IPPSetSimple<3, Ipp32f>(value, dataPointer, step, size, (ippiSetFunc)ippiSet_32f_C3R);
-            }
-        }
-        else if( channels == 4 )
-        {
-            switch( depth )
-            {
-            case CV_8U:
-                return IPPSetSimple<4, Ipp8u>(value, dataPointer, step, size, (ippiSetFunc)ippiSet_8u_C4R);
-            case CV_16U:
-                return IPPSetSimple<4, Ipp16u>(value, dataPointer, step, size, (ippiSetFunc)ippiSet_16u_C4R);
-            case CV_32F:
-                return IPPSetSimple<4, Ipp32f>(value, dataPointer, step, size, (ippiSetFunc)ippiSet_32f_C4R);
-            }
-        }
-    }
-    return false;
-}
 
 #ifdef HAVE_IPP_IW
 
@@ -81,6 +20,7 @@ static bool IPPSet(const double value[4], void *dataPointer, int step, IppiSize 
 int ipp_hal_warpAffine(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar *dst_data, size_t dst_step,
                        int dst_width, int dst_height, const double M[6], int interpolation, int borderType, const double borderValue[4])
 {
+    CV_HAL_CHECK_USE_IPP();
     //CV_INSTRUMENT_REGION_IPP();
 
     IppiInterpolationType ippInter  = ippiGetInterpolation(interpolation);
@@ -163,7 +103,7 @@ int ipp_hal_warpAffine(int src_type, const uchar *src_data, size_t src_step, int
 
         if (num_threads > 1)
         {
-            parallel_for_(cv_range, IPPWarpAffineInvokerLambda, num_threads);
+            cv::parallel_for_(cv_range, IPPWarpAffineInvokerLambda, num_threads);
         }
         else
         {
@@ -188,6 +128,7 @@ int ipp_hal_warpAffine(int src_type, const uchar *src_data, size_t src_step, int
 int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar * dst_data, size_t dst_step,
                             int dst_width, int dst_height, const double M[9], int interpolation, int borderType, const double borderValue[4])
 {
+    CV_HAL_CHECK_USE_IPP();
     //CV_INSTRUMENT_REGION_IPP();
 
     IppiInterpolationType ippInter = ippiGetInterpolation(interpolation);
@@ -291,7 +232,7 @@ int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step
 
         if (num_threads > 1)
         {
-            parallel_for_(cv_range, IPPWarpPerspectiveInvokerLambda, num_threads);
+            cv::parallel_for_(cv_range, IPPWarpPerspectiveInvokerLambda, num_threads);
         }
         else
         {
@@ -313,145 +254,5 @@ int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step
 #endif // IPP_VERSION_X100 >= 202600
 
 #endif // HAVE_IPP_IW
-
-// Remap section
-typedef IppStatus(CV_STDCALL *ippiRemap)(const void *pSrc, IppiSize srcSize, int srcStep, IppiRect srcRoi,
-                                         const Ipp32f *pxMap, int xMapStep, const Ipp32f *pyMap, int yMapStep,
-                                         void *pDst, int dstStep, IppiSize dstRoiSize, int interpolation);
-
-class IPPRemapInvoker : public cv::ParallelLoopBody
-{
-public:
-    IPPRemapInvoker(int _src_type, const uchar *_src_data, size_t _src_step, int _src_width, int _src_height,
-                    uchar *_dst_data, size_t _dst_step, int _dst_width, float *_mapx, size_t _mapx_step, float *_mapy,
-                    size_t _mapy_step, ippiRemap _ippFunc, int _ippInterpolation, int _borderType, const double _borderValue[4], std::atomic_bool *_ok) :
-        src_type(_src_type), src(_src_data), src_step(_src_step), src_width(_src_width), src_height(_src_height),
-        dst(_dst_data), dst_step(_dst_step), dst_width(_dst_width), mapx(_mapx), mapx_step(_mapx_step), mapy(_mapy),
-        mapy_step(_mapy_step), ippFunc(_ippFunc), ippInterpolation(_ippInterpolation), borderType(_borderType), ok(_ok)
-    {
-        memcpy(this->borderValue, _borderValue, sizeof(this->borderValue));
-    }
-
-    virtual void operator()(const cv::Range &range) const
-    {
-        //CV_INSTRUMENT_REGION_IPP();
-        if(!ok->load(std::memory_order_relaxed))
-            return;
-
-        IppiRect srcRoiRect = {0, 0, src_width, src_height};
-        uchar *dst_roi_data = dst + range.start * dst_step;
-        IppiSize dstRoiSize = ippiSize(dst_width, range.size());
-        int depth = CV_MAT_DEPTH(src_type), cn = CV_MAT_CN(src_type);
-
-        if (borderType == cv::BORDER_CONSTANT &&
-            !IPPSet(borderValue, dst_roi_data, (int)dst_step, dstRoiSize, cn, depth))
-        {
-            ok->store(false, std::memory_order_relaxed);
-            return;
-        }
-
-        if (ippStsNoErr != CV_INSTRUMENT_FUN_IPP(ippFunc, src, {src_width, src_height}, (int)src_step, srcRoiRect,
-                                  mapx, (int)mapx_step, mapy, (int)mapy_step,
-                                  dst_roi_data, (int)dst_step, dstRoiSize, ippInterpolation))
-        {
-            ok->store(false, std::memory_order_relaxed);
-            return;
-        }
-
-        CV_IMPL_ADD(CV_IMPL_IPP | CV_IMPL_MT);
-    }
-
-private:
-    int src_type;
-    const uchar *src;
-    size_t src_step;
-    int src_width, src_height;
-    uchar *dst;
-    size_t dst_step;
-    int dst_width;
-    float *mapx;
-    size_t mapx_step;
-    float *mapy;
-    size_t mapy_step;
-    ippiRemap ippFunc;
-    int ippInterpolation, borderType;
-    double borderValue[4];
-    std::atomic_bool *ok;
-};
-
-int ipp_hal_remap32f(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height,
-                     uchar *dst_data, size_t dst_step, int dst_width, int dst_height,
-                     float *mapx, size_t mapx_step, float *mapy, size_t mapy_step,
-                     int interpolation, int border_type, const double border_value[4])
-{
-    if (!((interpolation == cv::INTER_LINEAR || interpolation == cv::INTER_CUBIC || interpolation == cv::INTER_NEAREST) &&
-        (border_type == cv::BORDER_CONSTANT || border_type == cv::BORDER_TRANSPARENT)))
-    {
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
-    }
-
-    int ippInterpolation = ippiGetInterpolation(interpolation);
-
-#if defined(IPP_CALLS_ENFORCED)
-                                    /* C1         C2         C3         C4 */
-    char impl[CV_DEPTH_MAX][4][3] = {{{1, 1, 1}, {0, 0, 0}, {1, 1, 1}, {1, 1, 1}},   //8U
-                                     {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //8S
-                                     {{1, 1, 1}, {0, 0, 0}, {1, 1, 1}, {1, 1, 1}},   //16U
-                                     {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //16S
-                                     {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //32S
-                                     {{1, 1, 1}, {0, 0, 0}, {1, 1, 1}, {1, 1, 1}},   //32F
-                                     {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}}};  //64F
-#else // IPP_CALLS_ENFORCED is not defined, results are strictly aligned to OpenCV implementation
-                                    /* C1         C2         C3         C4 */
-    char impl[CV_DEPTH_MAX][4][3] = {{{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //8U
-                                     {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //8S
-                                     {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //16U
-                                     {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //16S
-                                     {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //32S
-                                     {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //32F
-                                     {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}}};  //64F
-#endif
-    const char type_size[CV_DEPTH_MAX] = {1,1,2,2,4,4,8};
-
-    if (impl[CV_TYPE(src_type)][CV_MAT_CN(src_type) - 1][interpolation] == 0)
-    {
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
-    }
-
-    ippiRemap ippFunc =
-        src_type == CV_8UC1  ? (ippiRemap)ippiRemap_8u_C1R :
-        src_type == CV_8UC3  ? (ippiRemap)ippiRemap_8u_C3R :
-        src_type == CV_8UC4  ? (ippiRemap)ippiRemap_8u_C4R :
-        src_type == CV_16UC1 ? (ippiRemap)ippiRemap_16u_C1R :
-        src_type == CV_16UC3 ? (ippiRemap)ippiRemap_16u_C3R :
-        src_type == CV_16UC4 ? (ippiRemap)ippiRemap_16u_C4R :
-        src_type == CV_32FC1 ? (ippiRemap)ippiRemap_32f_C1R :
-        src_type == CV_32FC3 ? (ippiRemap)ippiRemap_32f_C3R :
-        src_type == CV_32FC4 ? (ippiRemap)ippiRemap_32f_C4R : 0;
-
-    if (ippFunc)
-    {
-        std::atomic_bool ok{true};
-
-        IPPRemapInvoker invoker(src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width,
-                                mapx, mapx_step, mapy, mapy_step, ippFunc, ippInterpolation, border_type, border_value, &ok);
-        cv::Range range(0, dst_height);
-
-        int min_payload = 1 << 16; // 64KB shall be minimal per thread to maximize scalability for warping functions
-        int num_threads = ippiSuggestRowThreadsNum(dst_width, dst_height, type_size[CV_TYPE(src_type)]*CV_MAT_CN(src_type), min_payload);
-
-        cv::parallel_for_(range, invoker, num_threads);
-
-        if (ok)
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP | CV_IMPL_MT);
-            return CV_HAL_ERROR_OK;
-        }
-    }
-
-    return CV_HAL_ERROR_NOT_IMPLEMENTED;
-}
-
-// End of Remap section
 
 #endif // IPP_VERSION_X100 >= 810
