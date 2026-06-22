@@ -183,8 +183,10 @@ PERF_TEST_P(Size_MatType_OutMatDepth, integral_sqsum_64f,
 
     TEST_CYCLE() integral(src, sum, sqsum, sdepth, CV_64F);
 
-    SANITY_CHECK(sum, 1e-6);
-    SANITY_CHECK(sqsum, 1e-6);
+    // No SANITY_CHECK: the CV_64F sqsum max exceeds INT_MAX, and FileStorage cannot
+    // round-trip such whole-number doubles (written without a decimal point, then read
+    // back as an overflowed int32). Correctness is covered by Imgproc_Integral.accuracy.
+    SANITY_CHECK_NOTHING();
 }
 
 // Enabled coverage for the combinations the widened 8-bit integral sqsum path
