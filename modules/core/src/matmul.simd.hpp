@@ -1438,9 +1438,162 @@ transform_( const T* src, T* dst, const WT* m, int len, int scn, int dcn )
     }
 }
 
+static inline int32x4_t vmlal_low_n_s16(int32x4_t res, int16x8_t v, int16_t c)
+{
+    asm("smlal %0.4s, %1.4h, %2.h[0]" : "+w"(res) : "w"(v), "w"(c));
+    return res;
+}
+
+static inline uint16x8_t vmovl_low_u8(uint8x16_t v)
+{
+    uint16x8_t res;
+    asm("ushll %0.8h, %1.8b, #0" : "=w"(res) : "w"(v));
+    return res;
+}
+
+static inline uint32x4_t vmovl_low_u16(uint16x8_t v)
+{
+    uint32x4_t res;
+    asm("ushll %0.4s, %1.4h, #0" : "=w"(res) : "w"(v));
+    return res;
+}
+
+#if CV_NEON && defined(__aarch64__)
+class ParallelTransform8u : public cv::ParallelLoopBody
+{
+public:
+    ParallelTransform8u(const uchar* src, uchar* dst,
+                        int16_t m0, int16_t m1, int32x4_t vm2, int32x4_t vm3,
+                        int16_t m4, int16_t m5, int32x4_t vm6, int32x4_t vm7,
+                        int16_t m8, int16_t m9, int32x4_t vm10, int32x4_t vm11)
+        : src_(src), dst_(dst),
+          m0_(m0), m1_(m1), vm2_(vm2), vm3_(vm3),
+          m4_(m4), m5_(m5), vm6_(vm6), vm7_(vm7),
+          m8_(m8), m9_(m9), vm10_(vm10), vm11_(vm11) {}
+
+    void operator()(const cv::Range& range) const CV_OVERRIDE
+    {
+        const int BITS = 10;
+        int i = (range.start / 16) * 16;
+        int end = (range.end / 16) * 16;
+        for (; i < end; i += 16)
+        {
+            uint8x16x3_t v_src = vld3q_u8(src_ + i * 3);
+            uint8x16_t vb = v_src.val[0];
+            uint8x16_t vg = v_src.val[1];
+            uint8x16_t vr = v_src.val[2];
+
+            int16x8_t bl = vreinterpretq_s16_u16(vmovl_low_u8(vb));
+            int16x8_t bh = vreinterpretq_s16_u16(vmovl_high_u8(vb));
+            int16x8_t gl = vreinterpretq_s16_u16(vmovl_low_u8(vg));
+            int16x8_t gh = vreinterpretq_s16_u16(vmovl_high_u8(vg));
+            uint16x8_t rl = vmovl_low_u8(vr);
+            uint16x8_t rh = vmovl_high_u8(vr);
+            int32x4_t rl_low = vreinterpretq_s32_u32(vmovl_low_u16(rl));
+            int32x4_t rl_high = vreinterpretq_s32_u32(vmovl_high_u16(rl));
+            int32x4_t rh_low = vreinterpretq_s32_u32(vmovl_low_u16(rh));
+            int32x4_t rh_high = vreinterpretq_s32_u32(vmovl_high_u16(rh));
+
+            auto calc_chn = [&](int16_t c0, int16_t c1, int32x4_t c2, int32x4_t c3_bias) {
+                int32x4_t res_l_0 = c3_bias;
+                int32x4_t res_l_1 = c3_bias;
+                int32x4_t res_h_0 = c3_bias;
+                int32x4_t res_h_1 = c3_bias;
+
+                res_l_0 = vmlal_low_n_s16(res_l_0, bl, c0);
+                res_l_1 = vmlal_high_n_s16(res_l_1, bl, c0);
+                res_h_0 = vmlal_low_n_s16(res_h_0, bh, c0);
+                res_h_1 = vmlal_high_n_s16(res_h_1, bh, c0);
+
+                res_l_0 = vmlal_low_n_s16(res_l_0, gl, c1);
+                res_l_1 = vmlal_high_n_s16(res_l_1, gl, c1);
+                res_h_0 = vmlal_low_n_s16(res_h_0, gh, c1);
+                res_h_1 = vmlal_high_n_s16(res_h_1, gh, c1);
+
+                res_l_0 = vmlaq_s32(res_l_0, rl_low, c2);
+                res_l_1 = vmlaq_s32(res_l_1, rl_high, c2);
+                res_h_0 = vmlaq_s32(res_h_0, rh_low, c2);
+                res_h_1 = vmlaq_s32(res_h_1, rh_high, c2);
+
+                uint16x8_t res_l_u16 = vqrshrun_high_n_s32(vqrshrun_n_s32(res_l_0, BITS), res_l_1, BITS);
+                uint16x8_t res_h_u16 = vqrshrun_high_n_s32(vqrshrun_n_s32(res_h_0, BITS), res_h_1, BITS);
+                return vqmovn_high_u16(vqmovn_u16(res_l_u16), res_h_u16);
+            };
+            uint8x16x3_t v_dst;
+            v_dst.val[0] = calc_chn(m0_, m1_, vm2_, vm3_);
+            v_dst.val[1] = calc_chn(m4_, m5_, vm6_, vm7_);
+            v_dst.val[2] = calc_chn(m8_, m9_, vm10_, vm11_);
+
+            vst3q_u8(dst_ + i * 3, v_dst);
+        }
+    }
+
+private:
+    const uchar* src_;
+    uchar* dst_;
+    int16_t m0_, m1_;
+    int32x4_t vm2_, vm3_;
+    int16_t m4_, m5_;
+    int32x4_t vm6_, vm7_;
+    int16_t m8_, m9_;
+    int32x4_t vm10_, vm11_;
+};
+#endif
+
 static void
 transform_8u( const uchar* src, uchar* dst, const float* m, int len, int scn, int dcn )
 {
+#if CV_NEON && defined(__aarch64__)
+    const int neon_len_threshold = 4000;
+    if (len > neon_len_threshold) {
+        const int BITS = 10, SCALE = 1 << BITS;
+        const float MAX_M = (float)(1 << (15 - BITS));
+
+        if( scn == 3 && dcn == 3 &&
+            std::abs(m[0]) < MAX_M && std::abs(m[1]) < MAX_M && std::abs(m[2]) < MAX_M*256 && std::abs(m[3]) < MAX_M*256 &&
+            std::abs(m[4]) < MAX_M && std::abs(m[5]) < MAX_M && std::abs(m[6]) < MAX_M*256 && std::abs(m[7]) < MAX_M*256 &&
+            std::abs(m[8]) < MAX_M && std::abs(m[9]) < MAX_M && std::abs(m[10]) < MAX_M*256 && std::abs(m[11]) < MAX_M*256 )
+        {
+            int16_t m0 = saturate_cast<short>(m[0] * SCALE);
+            int16_t m1 = saturate_cast<short>(m[1] * SCALE);
+            int32x4_t vm2 = vdupq_n_s32(saturate_cast<int>(m[2] * SCALE));
+            int32x4_t vm3 = vdupq_n_s32(saturate_cast<int>(m[3] * SCALE));
+
+            int16_t m4 = saturate_cast<short>(m[4] * SCALE);
+            int16_t m5 = saturate_cast<short>(m[5] * SCALE);
+            int32x4_t vm6 = vdupq_n_s32(saturate_cast<int>(m[6] * SCALE));
+            int32x4_t vm7 = vdupq_n_s32(saturate_cast<int>(m[7] * SCALE));
+
+            int16_t m8 = saturate_cast<short>(m[8] * SCALE);
+            int16_t m9 = saturate_cast<short>(m[9] * SCALE);
+            int32x4_t vm10 = vdupq_n_s32(saturate_cast<int>(m[10] * SCALE));
+            int32x4_t vm11 = vdupq_n_s32(saturate_cast<int>(m[11] * SCALE));
+
+            int aligned_len = (len / 16) * 16;
+            ParallelTransform8u body(src, dst, m0, m1, vm2, vm3, m4, m5, vm6, vm7, m8, m9, vm10, vm11);
+            int oldNumThreads = cv::getNumThreads();
+            int nstripes = std::min(oldNumThreads, 8);
+            cv::setNumThreads(nstripes);
+            parallel_for_(cv::Range(0, aligned_len), body, nstripes);
+            cv::setNumThreads(oldNumThreads);
+
+            int x = aligned_len;
+            const int ROUND_DELTA = 512;
+            for(; x < len; x++)
+            {
+                int b = src[x * 3];
+                int g = src[x * 3 + 1];
+                int r = src[x * 3 + 2];
+
+                dst[x * 3]     = saturate_cast<uchar>((m0 * b + m1 * g + saturate_cast<int>(m[2] * SCALE) * r + saturate_cast<int>(m[3] * SCALE) + ROUND_DELTA) >> BITS);
+                dst[x * 3 + 1] = saturate_cast<uchar>((m4 * b + m5 * g + saturate_cast<int>(m[6] * SCALE) * r + saturate_cast<int>(m[7] * SCALE) + ROUND_DELTA) >> BITS);
+                dst[x * 3 + 2] = saturate_cast<uchar>((m8 * b + m9 * g + saturate_cast<int>(m[10] * SCALE) * r + saturate_cast<int>(m[11] * SCALE) + ROUND_DELTA) >> BITS);
+            }
+            return ;
+        }
+    }
+#endif
+
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     const int BITS = 10, SCALE = 1 << BITS;
     const float MAX_M = (float)(1 << (15 - BITS));
@@ -1907,16 +2060,443 @@ perspectiveTransform_( const T* src, T* dst, const double* m, int len, int scn, 
     }
 }
 
+#if CV_NEON && defined(__aarch64__)
+static void perspectiveTransform_f32(const float *src, float *dst, const double *m, int len, int scn, int dcn)
+{
+    const double eps = FLT_EPSILON;
+    int i = 0;
+
+    if (scn == 2 && dcn == 2) {
+        float64x2_t m0 = vdupq_n_f64(m[0]);
+        float64x2_t m1 = vdupq_n_f64(m[1]);
+        float64x2_t m2 = vdupq_n_f64(m[2]);
+        float64x2_t m3 = vdupq_n_f64(m[3]);
+        float64x2_t m4 = vdupq_n_f64(m[4]);
+        float64x2_t m5 = vdupq_n_f64(m[5]);
+        float64x2_t m6 = vdupq_n_f64(m[6]);
+        float64x2_t m7 = vdupq_n_f64(m[7]);
+        float64x2_t m8 = vdupq_n_f64(m[8]);
+        float64x2_t eps_vec = vdupq_n_f64(eps);
+        float64x2_t one_vec = vdupq_n_f64(1.0);
+
+        for (i = 0; i < len * 2 - 4; i += 4) {
+            float32x2x2_t points = vld2_f32(src + i);
+            float64x2_t x_vec = vcvt_f64_f32(points.val[0]);
+            float64x2_t y_vec = vcvt_f64_f32(points.val[1]);
+
+            float64x2_t w = vmulq_f64(x_vec, m6);
+            w = vmlaq_f64(w, y_vec, m7);
+            w = vaddq_f64(w, m8);
+            float64x2_t abs_w = vabsq_f64(w);
+            uint64x2_t mask = vcgtq_f64(abs_w, eps_vec);
+            float64x2_t w_inv = vdivq_f64(one_vec, w);
+            w_inv = vreinterpretq_f64_u64(vandq_u64(vreinterpretq_u64_f64(w_inv), mask));
+
+            float64x2_t x_transformed = vmulq_f64(x_vec, m0);
+            float64x2_t y_transformed = vmulq_f64(x_vec, m3);
+            x_transformed = vmlaq_f64(x_transformed, y_vec, m1);
+            y_transformed = vmlaq_f64(y_transformed, y_vec, m4);
+            x_transformed = vaddq_f64(x_transformed, m2);
+            y_transformed = vaddq_f64(y_transformed, m5);
+            x_transformed = vmulq_f64(x_transformed, w_inv);
+            y_transformed = vmulq_f64(y_transformed, w_inv);
+
+            float32x2_t x_transformed_f32 = vcvt_f32_f64(x_transformed);
+            float32x2_t y_transformed_f32 = vcvt_f32_f64(y_transformed);
+            float32x2x2_t result = {x_transformed_f32, y_transformed_f32};
+            vst2_f32(dst + i, result);
+        }
+
+        for (; i < len * 2; i += 2) {
+            float x = src[i], y = src[i + 1];
+            double w = x * m[6] + y * m[7] + m[8];
+
+            if (fabs(w) > eps) {
+                w = 1. / w;
+                dst[i] = (float)((x * m[0] + y * m[1] + m[2]) * w);
+                dst[i + 1] = (float)((x * m[3] + y * m[4] + m[5]) * w);
+            } else
+                dst[i] = dst[i + 1] = (float)0;
+        }
+
+    } else if (scn == 3 && dcn == 3) {
+        float64x2_t m0 = vdupq_n_f64(m[0]);
+        float64x2_t m1 = vdupq_n_f64(m[1]);
+        float64x2_t m2 = vdupq_n_f64(m[2]);
+        float64x2_t m3 = vdupq_n_f64(m[3]);
+        float64x2_t m4 = vdupq_n_f64(m[4]);
+        float64x2_t m5 = vdupq_n_f64(m[5]);
+        float64x2_t m6 = vdupq_n_f64(m[6]);
+        float64x2_t m7 = vdupq_n_f64(m[7]);
+        float64x2_t m8 = vdupq_n_f64(m[8]);
+        float64x2_t m9 = vdupq_n_f64(m[9]);
+        float64x2_t m10 = vdupq_n_f64(m[10]);
+        float64x2_t m11 = vdupq_n_f64(m[11]);
+        float64x2_t m12 = vdupq_n_f64(m[12]);
+        float64x2_t m13 = vdupq_n_f64(m[13]);
+        float64x2_t m14 = vdupq_n_f64(m[14]);
+        float64x2_t m15 = vdupq_n_f64(m[15]);
+        float64x2_t eps_vec = vdupq_n_f64(eps);
+        float64x2_t one_vec = vdupq_n_f64(1.0);
+
+        for (i = 0; i < len * 3 - 6; i += 6) {
+            float32x2x3_t points = vld3_f32(src + i);
+            float64x2_t x_vec = vcvt_f64_f32(points.val[0]);
+            float64x2_t y_vec = vcvt_f64_f32(points.val[1]);
+            float64x2_t z_vec = vcvt_f64_f32(points.val[2]);
+
+            float64x2_t w = vmulq_f64(x_vec, m12);
+            w = vmlaq_f64(w, y_vec, m13);
+            w = vmlaq_f64(w, z_vec, m14);
+            w = vaddq_f64(w, m15);
+            float64x2_t abs_w = vabsq_f64(w);
+            uint64x2_t mask = vcgtq_f64(abs_w, eps_vec);
+            float64x2_t w_inv = vdivq_f64(one_vec, w);
+            w_inv = vreinterpretq_f64_u64(vandq_u64(vreinterpretq_u64_f64(w_inv), mask));
+
+            float64x2_t x_transformed = vmulq_f64(x_vec, m0);
+            float64x2_t y_transformed = vmulq_f64(x_vec, m4);
+            float64x2_t z_transformed = vmulq_f64(x_vec, m8);
+            x_transformed = vmlaq_f64(x_transformed, y_vec, m1);
+            y_transformed = vmlaq_f64(y_transformed, y_vec, m5);
+            z_transformed = vmlaq_f64(z_transformed, y_vec, m9);
+            x_transformed = vmlaq_f64(x_transformed, z_vec, m2);
+            y_transformed = vmlaq_f64(y_transformed, z_vec, m6);
+            z_transformed = vmlaq_f64(z_transformed, z_vec, m10);
+            x_transformed = vaddq_f64(x_transformed, m3);
+            y_transformed = vaddq_f64(y_transformed, m7);
+            z_transformed = vaddq_f64(z_transformed, m11);
+            x_transformed = vmulq_f64(x_transformed, w_inv);
+            y_transformed = vmulq_f64(y_transformed, w_inv);
+            z_transformed = vmulq_f64(z_transformed, w_inv);
+
+            float32x2_t x_transformed_f32 = vcvt_f32_f64(x_transformed);
+            float32x2_t y_transformed_f32 = vcvt_f32_f64(y_transformed);
+            float32x2_t z_transformed_f32 = vcvt_f32_f64(z_transformed);
+            float32x2x3_t result = {x_transformed_f32, y_transformed_f32, z_transformed_f32};
+            vst3_f32(dst + i, result);
+        }
+
+        for (; i < len * 3; i += 3) {
+            float x = src[i], y = src[i + 1], z = src[i + 2];
+            double w = x * m[12] + y * m[13] + z * m[14] + m[15];
+
+            if (fabs(w) > eps) {
+                w = 1. / w;
+                dst[i] = (float)((x * m[0] + y * m[1] + z * m[2] + m[3]) * w);
+                dst[i + 1] = (float)((x * m[4] + y * m[5] + z * m[6] + m[7]) * w);
+                dst[i + 2] = (float)((x * m[8] + y * m[9] + z * m[10] + m[11]) * w);
+            } else
+                dst[i] = dst[i + 1] = dst[i + 2] = (float)0;
+        }
+
+    } else if (scn == 3 && dcn == 2) {
+        float64x2_t m0 = vdupq_n_f64(m[0]);
+        float64x2_t m1 = vdupq_n_f64(m[1]);
+        float64x2_t m2 = vdupq_n_f64(m[2]);
+        float64x2_t m3 = vdupq_n_f64(m[3]);
+        float64x2_t m4 = vdupq_n_f64(m[4]);
+        float64x2_t m5 = vdupq_n_f64(m[5]);
+        float64x2_t m6 = vdupq_n_f64(m[6]);
+        float64x2_t m7 = vdupq_n_f64(m[7]);
+        float64x2_t m8 = vdupq_n_f64(m[8]);
+        float64x2_t m9 = vdupq_n_f64(m[9]);
+        float64x2_t m10 = vdupq_n_f64(m[10]);
+        float64x2_t m11 = vdupq_n_f64(m[11]);
+        float64x2_t eps_vec = vdupq_n_f64(eps);
+        float64x2_t one_vec = vdupq_n_f64(1.0);
+
+        for (i = 0; i < len - 2; i += 2) {
+            float32x2x3_t points = vld3_f32(src + i * 3);
+            float64x2_t x_vec = vcvt_f64_f32(points.val[0]);
+            float64x2_t y_vec = vcvt_f64_f32(points.val[1]);
+            float64x2_t z_vec = vcvt_f64_f32(points.val[2]);
+
+            float64x2_t w = vmulq_f64(x_vec, m8);
+            w = vmlaq_f64(w, y_vec, m9);
+            w = vmlaq_f64(w, z_vec, m10);
+            w = vaddq_f64(w, m11);
+
+            float64x2_t abs_w = vabsq_f64(w);
+            uint64x2_t mask = vcgtq_f64(abs_w, eps_vec);
+            float64x2_t w_inv = vdivq_f64(one_vec, w);
+            w_inv = vreinterpretq_f64_u64(vandq_u64(vreinterpretq_u64_f64(w_inv), mask));
+
+            float64x2_t x_transformed = vmulq_f64(x_vec, m0);
+            float64x2_t y_transformed = vmulq_f64(x_vec, m4);
+            x_transformed = vmlaq_f64(x_transformed, y_vec, m1);
+            y_transformed = vmlaq_f64(y_transformed, y_vec, m5);
+            x_transformed = vmlaq_f64(x_transformed, z_vec, m2);
+            y_transformed = vmlaq_f64(y_transformed, z_vec, m6);
+            x_transformed = vaddq_f64(x_transformed, m3);
+            y_transformed = vaddq_f64(y_transformed, m7);
+            x_transformed = vmulq_f64(x_transformed, w_inv);
+            y_transformed = vmulq_f64(y_transformed, w_inv);
+
+            float32x2_t x_transformed_f32 = vcvt_f32_f64(x_transformed);
+            float32x2_t y_transformed_f32 = vcvt_f32_f64(y_transformed);
+            float32x2x2_t result = {x_transformed_f32, y_transformed_f32};
+            vst2_f32(dst + i * 2, result);
+        }
+
+        for (; i < len; ++i) {
+            float x = src[i * 3], y = src[i * 3 + 1], z = src[i * 3 + 2];
+            double w = x * m[8] + y * m[9] + z * m[10] + m[11];
+
+            if (fabs(w) > eps) {
+                w = 1. / w;
+                dst[i * 2] = (float)((x * m[0] + y * m[1] + z * m[2] + m[3]) * w);
+                dst[i * 2 + 1] = (float)((x * m[4] + y * m[5] + z * m[6] + m[7]) * w);
+            } else
+                dst[i * 2] = dst[i * 2 + 1] = (float)0;
+        }
+
+    } else {
+        for (i = 0; i < len; i++, src += scn, dst += dcn) {
+            const double *_m = m + dcn * (scn + 1);
+            double w = _m[scn];
+            int j, k;
+            for (k = 0; k < scn; k++)
+                w += _m[k] * src[k];
+            if (fabs(w) > eps) {
+                _m = m;
+                for (j = 0; j < dcn; j++, _m += scn + 1) {
+                    double s = _m[scn];
+                    for (k = 0; k < scn; k++)
+                        s += _m[k] * src[k];
+                    dst[j] = (float)(s * w);
+                }
+            } else
+                for (j = 0; j < dcn; j++)
+                    dst[j] = 0;
+        }
+    }
+}
+
+static void perspectiveTransform_f64(const double *src, double *dst, const double *m, int len, int scn, int dcn)
+{
+    const double eps = FLT_EPSILON;
+    int i = 0;
+
+    if (scn == 2 && dcn == 2) {
+        float64x2_t m0 = vdupq_n_f64(m[0]);
+        float64x2_t m1 = vdupq_n_f64(m[1]);
+        float64x2_t m2 = vdupq_n_f64(m[2]);
+        float64x2_t m3 = vdupq_n_f64(m[3]);
+        float64x2_t m4 = vdupq_n_f64(m[4]);
+        float64x2_t m5 = vdupq_n_f64(m[5]);
+        float64x2_t m6 = vdupq_n_f64(m[6]);
+        float64x2_t m7 = vdupq_n_f64(m[7]);
+        float64x2_t m8 = vdupq_n_f64(m[8]);
+        float64x2_t eps_vec = vdupq_n_f64(eps);
+        float64x2_t one_vec = vdupq_n_f64(1.0);
+
+        for (i = 0; i < len * 2 - 4; i += 4) {
+            float64x2x2_t points = vld2q_f64(src + i);
+            float64x2_t x_vec = points.val[0];
+            float64x2_t y_vec = points.val[1];
+
+            float64x2_t w = vmulq_f64(x_vec, m6);
+            w = vmlaq_f64(w, y_vec, m7);
+            w = vaddq_f64(w, m8);
+            float64x2_t abs_w = vabsq_f64(w);
+            uint64x2_t mask = vcgtq_f64(abs_w, eps_vec);
+            float64x2_t w_inv = vdivq_f64(one_vec, w);
+            w_inv = vreinterpretq_f64_u64(vandq_u64(vreinterpretq_u64_f64(w_inv), mask));
+
+            float64x2_t x_transformed = vmulq_f64(x_vec, m0);
+            float64x2_t y_transformed = vmulq_f64(x_vec, m3);
+            x_transformed = vmlaq_f64(x_transformed, y_vec, m1);
+            y_transformed = vmlaq_f64(y_transformed, y_vec, m4);
+            x_transformed = vaddq_f64(x_transformed, m2);
+            y_transformed = vaddq_f64(y_transformed, m5);
+            x_transformed = vmulq_f64(x_transformed, w_inv);
+            y_transformed = vmulq_f64(y_transformed, w_inv);
+
+            float64x2x2_t result = {x_transformed, y_transformed};
+            vst2q_f64(dst + i, result);
+        }
+
+        for (; i < len * 2; i += 2) {
+            double x = src[i], y = src[i + 1];
+            double w = x * m[6] + y * m[7] + m[8];
+
+            if (fabs(w) > eps) {
+                w = 1. / w;
+                dst[i] = (double)((x * m[0] + y * m[1] + m[2]) * w);
+                dst[i + 1] = (double)((x * m[3] + y * m[4] + m[5]) * w);
+            } else
+                dst[i] = dst[i + 1] = (double)0;
+        }
+
+    } else if (scn == 3 && dcn == 3) {
+        float64x2_t m0 = vdupq_n_f64(m[0]);
+        float64x2_t m1 = vdupq_n_f64(m[1]);
+        float64x2_t m2 = vdupq_n_f64(m[2]);
+        float64x2_t m3 = vdupq_n_f64(m[3]);
+        float64x2_t m4 = vdupq_n_f64(m[4]);
+        float64x2_t m5 = vdupq_n_f64(m[5]);
+        float64x2_t m6 = vdupq_n_f64(m[6]);
+        float64x2_t m7 = vdupq_n_f64(m[7]);
+        float64x2_t m8 = vdupq_n_f64(m[8]);
+        float64x2_t m9 = vdupq_n_f64(m[9]);
+        float64x2_t m10 = vdupq_n_f64(m[10]);
+        float64x2_t m11 = vdupq_n_f64(m[11]);
+        float64x2_t m12 = vdupq_n_f64(m[12]);
+        float64x2_t m13 = vdupq_n_f64(m[13]);
+        float64x2_t m14 = vdupq_n_f64(m[14]);
+        float64x2_t m15 = vdupq_n_f64(m[15]);
+        float64x2_t eps_vec = vdupq_n_f64(eps);
+        float64x2_t one_vec = vdupq_n_f64(1.0);
+
+        for (i = 0; i < len * 3 - 6; i += 6) {
+            float64x2x3_t points = vld3q_f64(src + i);
+            float64x2_t x_vec = points.val[0];
+            float64x2_t y_vec = points.val[1];
+            float64x2_t z_vec = points.val[2];
+
+            float64x2_t w = vmulq_f64(x_vec, m12);
+            w = vmlaq_f64(w, y_vec, m13);
+            w = vmlaq_f64(w, z_vec, m14);
+            w = vaddq_f64(w, m15);
+            float64x2_t abs_w = vabsq_f64(w);
+            uint64x2_t mask = vcgtq_f64(abs_w, eps_vec);
+            float64x2_t w_inv = vdivq_f64(one_vec, w);
+            w_inv = vreinterpretq_f64_u64(vandq_u64(vreinterpretq_u64_f64(w_inv), mask));
+
+            float64x2_t x_transformed = vmulq_f64(x_vec, m0);
+            float64x2_t y_transformed = vmulq_f64(x_vec, m4);
+            float64x2_t z_transformed = vmulq_f64(x_vec, m8);
+            x_transformed = vmlaq_f64(x_transformed, y_vec, m1);
+            y_transformed = vmlaq_f64(y_transformed, y_vec, m5);
+            z_transformed = vmlaq_f64(z_transformed, y_vec, m9);
+            x_transformed = vmlaq_f64(x_transformed, z_vec, m2);
+            y_transformed = vmlaq_f64(y_transformed, z_vec, m6);
+            z_transformed = vmlaq_f64(z_transformed, z_vec, m10);
+            x_transformed = vaddq_f64(x_transformed, m3);
+            y_transformed = vaddq_f64(y_transformed, m7);
+            z_transformed = vaddq_f64(z_transformed, m11);
+            x_transformed = vmulq_f64(x_transformed, w_inv);
+            y_transformed = vmulq_f64(y_transformed, w_inv);
+            z_transformed = vmulq_f64(z_transformed, w_inv);
+
+            float64x2x3_t result = {x_transformed, y_transformed, z_transformed};
+            vst3q_f64(dst + i, result);
+        }
+
+        for (; i < len * 3; i += 3) {
+            double x = src[i], y = src[i + 1], z = src[i + 2];
+            double w = x * m[12] + y * m[13] + z * m[14] + m[15];
+
+            if (fabs(w) > eps) {
+                w = 1. / w;
+                dst[i] = (double)((x * m[0] + y * m[1] + z * m[2] + m[3]) * w);
+                dst[i + 1] = (double)((x * m[4] + y * m[5] + z * m[6] + m[7]) * w);
+                dst[i + 2] = (double)((x * m[8] + y * m[9] + z * m[10] + m[11]) * w);
+            } else
+                dst[i] = dst[i + 1] = dst[i + 2] = (double)0;
+        }
+
+    } else if (scn == 3 && dcn == 2) {
+        float64x2_t m0 = vdupq_n_f64(m[0]);
+        float64x2_t m1 = vdupq_n_f64(m[1]);
+        float64x2_t m2 = vdupq_n_f64(m[2]);
+        float64x2_t m3 = vdupq_n_f64(m[3]);
+        float64x2_t m4 = vdupq_n_f64(m[4]);
+        float64x2_t m5 = vdupq_n_f64(m[5]);
+        float64x2_t m6 = vdupq_n_f64(m[6]);
+        float64x2_t m7 = vdupq_n_f64(m[7]);
+        float64x2_t m8 = vdupq_n_f64(m[8]);
+        float64x2_t m9 = vdupq_n_f64(m[9]);
+        float64x2_t m10 = vdupq_n_f64(m[10]);
+        float64x2_t m11 = vdupq_n_f64(m[11]);
+        float64x2_t eps_vec = vdupq_n_f64(eps);
+        float64x2_t one_vec = vdupq_n_f64(1.0);
+
+        for (i = 0; i < len - 2; i += 2) {
+            float64x2x3_t points = vld3q_f64(src + i * 3);
+            float64x2_t x_vec = points.val[0];
+            float64x2_t y_vec = points.val[1];
+            float64x2_t z_vec = points.val[2];
+
+            float64x2_t w = vmulq_f64(x_vec, m8);
+            w = vmlaq_f64(w, y_vec, m9);
+            w = vmlaq_f64(w, z_vec, m10);
+            w = vaddq_f64(w, m11);
+
+            float64x2_t abs_w = vabsq_f64(w);
+            uint64x2_t mask = vcgtq_f64(abs_w, eps_vec);
+            float64x2_t w_inv = vdivq_f64(one_vec, w);
+            w_inv = vreinterpretq_f64_u64(vandq_u64(vreinterpretq_u64_f64(w_inv), mask));
+
+            float64x2_t x_transformed = vmulq_f64(x_vec, m0);
+            float64x2_t y_transformed = vmulq_f64(x_vec, m4);
+            x_transformed = vmlaq_f64(x_transformed, y_vec, m1);
+            y_transformed = vmlaq_f64(y_transformed, y_vec, m5);
+            x_transformed = vmlaq_f64(x_transformed, z_vec, m2);
+            y_transformed = vmlaq_f64(y_transformed, z_vec, m6);
+            x_transformed = vaddq_f64(x_transformed, m3);
+            y_transformed = vaddq_f64(y_transformed, m7);
+            x_transformed = vmulq_f64(x_transformed, w_inv);
+            y_transformed = vmulq_f64(y_transformed, w_inv);
+
+            float64x2x2_t result = {x_transformed, y_transformed};
+            vst2q_f64(dst + i * 2, result);
+        }
+
+        for (; i < len; ++i) {
+            double x = src[i * 3], y = src[i * 3 + 1], z = src[i * 3 + 2];
+            double w = x * m[8] + y * m[9] + z * m[10] + m[11];
+
+            if (fabs(w) > eps) {
+                w = 1. / w;
+                dst[i * 2] = (double)((x * m[0] + y * m[1] + z * m[2] + m[3]) * w);
+                dst[i * 2 + 1] = (double)((x * m[4] + y * m[5] + z * m[6] + m[7]) * w);
+            } else
+                dst[i * 2] = dst[i * 2 + 1] = (double)0;
+        }
+
+    } else {
+        for (i = 0; i < len; i++, src += scn, dst += dcn) {
+            const double *_m = m + dcn * (scn + 1);
+            double w = _m[scn];
+            int j, k;
+            for (k = 0; k < scn; k++)
+                w += _m[k] * src[k];
+            if (fabs(w) > eps) {
+                _m = m;
+                for (j = 0; j < dcn; j++, _m += scn + 1) {
+                    double s = _m[scn];
+                    for (k = 0; k < scn; k++)
+                        s += _m[k] * src[k];
+                    dst[j] = (double)(s * w);
+                }
+            } else
+                for (j = 0; j < dcn; j++)
+                    dst[j] = 0;
+        }
+    }
+}
+#endif
+
 static void
 perspectiveTransform_32f(const float* src, float* dst, const double* m, int len, int scn, int dcn)
 {
-    perspectiveTransform_(src, dst, m, len, scn, dcn);
+#if CV_NEON && defined(__aarch64__)
+    perspectiveTransform_f32(src, dst, m, len, scn, dcn);
+#else
+    perspectiveTransform_<float>(src, dst, m, len, scn, dcn);
+#endif
 }
 
 static void
 perspectiveTransform_64f(const double* src, double* dst, const double* m, int len, int scn, int dcn)
 {
-    perspectiveTransform_(src, dst, m, len, scn, dcn);
+#if CV_NEON && defined(__aarch64__)
+    perspectiveTransform_f64(src, dst, m, len, scn, dcn);
+#else
+    perspectiveTransform_<double>(src, dst, m, len, scn, dcn);
+#endif
 }
 
 TransformFunc getPerspectiveTransform(int depth)
