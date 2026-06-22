@@ -1787,11 +1787,15 @@ struct HResizeLinearVecU8_X4
         }
         else if(cn == 3)
         {
-            /* Peek at the last x offset to find the maximal s offset.  We know the loop
-               will terminate prior to value which may be 1 or more elements prior to the
-               final valid offset. xofs[] is constucted to be an array of increasingly
-               large offsets (i.e xofs[x] <= xofs[x+1] for x < xmax). */
-            int smax = xofs[dmax-cn];
+            // Fix #28495:
+            // 1. Process 4 pixels at a time (step=4) to match SIMD width.
+            // 2. Perform a manual gather to load pairs: (R, R_next), (G, G_next), etc.
+            //    This is required because 'xofs' may skip pixels (scaling), so we cannot
+            //    assume contiguous memory (which v_load/v_extract would require).
+
+            const int step = 4;
+            const int len0 = xmax & -step;
+            CV_UNUSED(dmax);
 
             for( ; k <= (count - 2); k+=2 )
             {
@@ -1800,25 +1804,46 @@ struct HResizeLinearVecU8_X4
                 const uchar *S1 = src[k+1];
                 int *D1 = dst[k+1];
 
-                for( dx = 0; (xofs[dx] + cn) < smax; dx += cn )
+                for( dx = 0; dx < len0; dx += step )
                 {
                     v_int16x8 a = v_load(alpha+dx*2);
-                    v_store(&D0[dx], v_dotprod(v_reinterpret_as_s16(v_or(v_load_expand_q(S0 + xofs[dx]), v_shl<16>(v_load_expand_q(S0 + xofs[dx] + cn)))), a));
-                    v_store(&D1[dx], v_dotprod(v_reinterpret_as_s16(v_or(v_load_expand_q(S1 + xofs[dx]), v_shl<16>(v_load_expand_q(S1 + xofs[dx] + cn)))), a));
+
+                    int o0 = xofs[dx];
+                    int o1 = xofs[dx+1];
+                    int o2 = xofs[dx+2];
+                    int o3 = xofs[dx+3];
+
+                    // Gather Row 0
+                    // We cast to ushort to ensure the v_uint16x8 constructor handles the promotion correctly
+                    // before v_reinterpret_as_s16 is used by v_dotprod.
+                    v_uint16x8 v_src0((ushort)S0[o0], (ushort)S0[o0+3], (ushort)S0[o1], (ushort)S0[o1+3],
+                                      (ushort)S0[o2], (ushort)S0[o2+3], (ushort)S0[o3], (ushort)S0[o3+3]);
+                    v_store(&D0[dx], v_dotprod(v_reinterpret_as_s16(v_src0), a));
+
+                    // Gather Row 1
+                    v_uint16x8 v_src1((ushort)S1[o0], (ushort)S1[o0+3], (ushort)S1[o1], (ushort)S1[o1+3],
+                                      (ushort)S1[o2], (ushort)S1[o2+3], (ushort)S1[o3], (ushort)S1[o3+3]);
+                    v_store(&D1[dx], v_dotprod(v_reinterpret_as_s16(v_src1), a));
                 }
             }
             for( ; k < count; k++ )
             {
                 const uchar *S = src[k];
                 int *D = dst[k];
-                for( dx = 0; (xofs[dx] + cn) < smax; dx += cn )
+                for( dx = 0; dx < len0; dx += step )
                 {
                     v_int16x8 a = v_load(alpha+dx*2);
-                    v_store(&D[dx], v_dotprod(v_reinterpret_as_s16(v_or(v_load_expand_q(S + xofs[dx]), v_shl<16>(v_load_expand_q(S + xofs[dx] + cn)))), a));
+
+                    int o0 = xofs[dx];
+                    int o1 = xofs[dx+1];
+                    int o2 = xofs[dx+2];
+                    int o3 = xofs[dx+3];
+
+                    v_uint16x8 v_src((ushort)S[o0], (ushort)S[o0+3], (ushort)S[o1], (ushort)S[o1+3],
+                                     (ushort)S[o2], (ushort)S[o2+3], (ushort)S[o3], (ushort)S[o3+3]);
+                    v_store(&D[dx], v_dotprod(v_reinterpret_as_s16(v_src), a));
                 }
             }
-            /* Debug check to ensure truthiness that we never vector the final value. */
-            CV_DbgAssert(dx < dmax);
         }
         else if(cn == 4)
         {

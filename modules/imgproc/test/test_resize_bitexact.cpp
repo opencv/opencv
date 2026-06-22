@@ -240,4 +240,32 @@ TEST(Resize_Bitexact, Nearest8U)
     }
 }
 
+TEST(Resize_Bitexact, Regression_28495)
+{
+    // 1. Setup Data: Large enough to trigger SIMD paths
+    Mat rgb(4160, 3120, CV_8UC3);
+    randu(rgb, Scalar::all(0), Scalar::all(255));
+
+    Mat rgba;
+    cvtColor(rgb, rgba, COLOR_RGB2RGBA);
+
+    // 2. Define Resize Parameters (from issue reproducer)
+    const double scale = std::min(640.0 / rgb.cols, 640.0 / rgb.rows);
+    const int newWidth = static_cast<int>(std::round(scale * rgb.cols));
+    const int newHeight = static_cast<int>(std::round(scale * rgb.rows));
+
+    Mat rgbResized, rgbaResized;
+
+    // 3. Perform Resize using INTER_LINEAR (the path that was broken)
+    cv::resize(rgb, rgbResized, Size(newWidth, newHeight), 0, 0, INTER_LINEAR);
+    cv::resize(rgba, rgbaResized, Size(newWidth, newHeight), 0, 0, INTER_LINEAR);
+
+    // 4. Convert back to compare
+    Mat rgba2rgbResized;
+    cvtColor(rgbaResized, rgba2rgbResized, COLOR_RGBA2RGB);
+
+    // 5. Compare using L-infinity norm. We expect 0 difference (bit-exact).
+    EXPECT_EQ(cv::norm(rgbResized, rgba2rgbResized, NORM_INF), 0.0);
+}
+
 }} // namespace
