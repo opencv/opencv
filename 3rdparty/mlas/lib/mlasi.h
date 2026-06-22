@@ -48,6 +48,7 @@ Abstract:
 #endif
 #include <windows.h>
 #include <intrin.h>
+#include <malloc.h>
 #else
 #if defined(__arm__) || defined(__aarch64__)
 #include <arm_neon.h>
@@ -3014,7 +3015,7 @@ MlasReadTimeStampCounter(void)
 
 constexpr size_t ThreadedBufAlignment = 64;
 extern thread_local size_t ThreadedBufSize;
-#ifdef _MSC_VER
+#ifdef _WIN32
 extern thread_local std::unique_ptr<uint8_t, decltype(&_aligned_free)> ThreadedBufHolder;
 #else
 extern thread_local std::unique_ptr<uint8_t, decltype(&free)> ThreadedBufHolder;
@@ -3034,7 +3035,7 @@ void
 MlasThreadedBufAlloc(size_t size)
 {
     if (size > ThreadedBufSize) {
-#ifdef _MSC_VER
+#ifdef _WIN32
         ThreadedBufHolder.reset(
             reinterpret_cast<uint8_t*>(_aligned_malloc(size, ThreadedBufAlignment)));
 #elif (__STDC_VERSION__ >= 201112L) && !defined(__APPLE__)
