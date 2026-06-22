@@ -928,6 +928,17 @@ REGISTER_TYPED_TEST_CASE_P(Rect_Test, Overflows, OnTheEdge);
 typedef ::testing::Types<int, float, double> RectTypes;
 INSTANTIATE_TYPED_TEST_CASE_P(Negative_Test, Rect_Test, RectTypes);
 
+TEST(Core_Rect, test_unsigned_overflow)
+{
+    typedef Rect_<unsigned> R;
+    R r1(0, 0, 1u, 1u);
+    R r2(2u, 2u, 1u, 1u);
+    auto inter = r1 & r2;
+    EXPECT_EQ(R(), inter);
+    EXPECT_EQ(0u, inter.area());
+    EXPECT_TRUE(inter.empty());
+}
+
 // Expected that SkipTestException thrown in the constructor should skip test but not fail
 struct TestFixtureSkip: public ::testing::Test {
     TestFixtureSkip(bool throwEx = true) {
