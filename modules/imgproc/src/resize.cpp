@@ -990,8 +990,10 @@ bool resizeLinearExact(int src_type,
     return true;
 }
 
+#ifdef HAVE_OPENCL
 const int INTER_RESIZE_COEF_BITS=11;
 const int INTER_RESIZE_COEF_SCALE=1 << INTER_RESIZE_COEF_BITS;
+#endif
 
 /************** interpolation formulas and tables ***************/
 

@@ -1341,7 +1341,7 @@ typedef VResizeNoVec VResizeLanczos4Vec_32f;
 
 #endif
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if CV_SIMD  // fixed-width 128-bit kernels; not valid for scalable backends (RVV)
 
 static int hresize_linear_u8_cn1(const uchar** src, int** dst, int count,
                                  const int* xofs, const short* alpha, int xmax)
@@ -1617,7 +1617,7 @@ typedef HResizeLinearVecU8 HResizeLinearVec_8u32s;
 
 #endif // CV_SIMD
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if CV_SIMD  // fixed-width 128-bit kernels; not valid for scalable backends (RVV)
 
 struct HResizeLinearVec_32f
 {
@@ -1654,7 +1654,7 @@ typedef HResizeNoVec HResizeLinearVec_32f;
 
 #endif
 
-#if !(CV_SIMD || CV_SIMD_SCALABLE)
+#if !CV_SIMD
 
 typedef HResizeNoVec HResizeLinearVec_8u32s;
 
