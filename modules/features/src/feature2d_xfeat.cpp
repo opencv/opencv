@@ -127,17 +127,22 @@ public:
         CV_Assert(descMap.dims == 4);
         CV_Assert(scoreMap.dims == 4);
         CV_Assert(scoreMap.size[1] == 1);
-        CV_Assert(descMap.size[2] == scoreMap.size[2]);
-        CV_Assert(descMap.size[3] == scoreMap.size[3]);
 
         if (!descMap.isContinuous())
             descMap = descMap.clone();
         if (!scoreMap.isContinuous())
             scoreMap = scoreMap.clone();
 
-        const int descChannels = descMap.size[1];
         const int scoreH = scoreMap.size[2];
         const int scoreW = scoreMap.size[3];
+        const bool descNCHW = descMap.size[1] == kXFeatDescriptorSize &&
+                              descMap.size[2] == scoreH &&
+                              descMap.size[3] == scoreW;
+        const bool descNHWC = descMap.size[1] == scoreH &&
+                              descMap.size[2] == scoreW &&
+                              descMap.size[3] == kXFeatDescriptorSize;
+        CV_Assert(descNCHW || descNHWC);
+        const int descChannels = kXFeatDescriptorSize;
         const float strideX = static_cast<float>(inputSize_) / static_cast<float>(scoreW);
         const float strideY = static_cast<float>(inputSize_) / static_cast<float>(scoreH);
 
@@ -191,15 +196,24 @@ public:
             _descriptors.create(static_cast<int>(candidates.size()), descChannels, CV_32F);
             Mat descriptors = _descriptors.getMat();
             const float* descData = descMap.ptr<float>();
-            const int channelStep = scoreH * scoreW;
 
             for (int i = 0; i < static_cast<int>(candidates.size()); ++i)
             {
                 float* dst = descriptors.ptr<float>(i);
                 const XFeatCandidate& c = candidates[i];
                 const int offset = c.y * scoreW + c.x;
-                for (int ch = 0; ch < descChannels; ++ch)
-                    dst[ch] = descData[ch * channelStep + offset];
+                if (descNCHW)
+                {
+                    const int channelStep = scoreH * scoreW;
+                    for (int ch = 0; ch < descChannels; ++ch)
+                        dst[ch] = descData[ch * channelStep + offset];
+                }
+                else
+                {
+                    const int base = offset * descChannels;
+                    for (int ch = 0; ch < descChannels; ++ch)
+                        dst[ch] = descData[base + ch];
+                }
                 normalizeDescriptorRow(descriptors.row(i));
             }
         }

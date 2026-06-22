@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "test_precomp.hpp"
+#include "npy_blob.hpp"
 
 #ifdef HAVE_OPENCV_DNN
 
@@ -21,12 +22,59 @@ static void skipIfClassicDnnEngine()
 
 static std::string xfeatModelPath()
 {
-    return cvtest::findDataFile("dnn/xfeat.onnx", false);
+    return cvtest::findDataFile("dnn/onnx/models/xfeat.onnx", false);
+}
+
+TEST(Features2d_XFeat, Regression)
+{
+    //skipIfClassicDnnEngine();
+
+    Mat refKpts = blobFromNPY(cvtest::findDataFile("dnn/xfeat_lena_640_kpts.npy"));
+    Mat refDesc = blobFromNPY(cvtest::findDataFile("dnn/xfeat_lena_640_desc.npy"));
+    if (refKpts.type() != CV_32F)
+        refKpts.convertTo(refKpts, CV_32F);
+    ASSERT_EQ(refKpts.cols, 3);
+    const int n = refKpts.rows;
+
+    Ptr<XFeat> detector;
+    ASSERT_NO_THROW(detector = XFeat::create(xfeatModelPath(), n, 0.5f, 640));
+    ASSERT_TRUE(detector);
+    EXPECT_FALSE(detector->empty());
+    EXPECT_EQ(detector->descriptorSize(), 64);
+    EXPECT_EQ(detector->descriptorType(), CV_32F);
+    EXPECT_EQ(detector->defaultNorm(), NORM_L2);
+
+    Mat img = imread(cvtest::findDataFile("shared/lena.png"));
+    ASSERT_FALSE(img.empty());
+
+    std::vector<KeyPoint> keypoints;
+    Mat descriptors;
+    detector->detectAndCompute(img, noArray(), keypoints, descriptors);
+
+    ASSERT_EQ(static_cast<int>(keypoints.size()), n);
+    ASSERT_EQ(descriptors.rows, n);
+    ASSERT_EQ(descriptors.cols, refDesc.cols);
+    ASSERT_EQ(descriptors.type(), CV_32F);
+
+    Mat pos(n, 2, CV_32F), resp(n, 1, CV_32F);
+    for (int i = 0; i < n; ++i)
+    {
+        pos.at<float>(i, 0) = keypoints[i].pt.x;
+        pos.at<float>(i, 1) = keypoints[i].pt.y;
+        resp.at<float>(i, 0) = keypoints[i].response;
+    }
+
+    EXPECT_LE(cvtest::norm(pos, refKpts.colRange(0, 2), NORM_INF), 1e-4)
+        << "keypoint positions differ";
+    EXPECT_LE(cvtest::norm(resp, refKpts.col(2), NORM_INF), 1e-5)
+        << "keypoint responses differ";
+    EXPECT_LE(cvtest::norm(descriptors, refDesc, NORM_INF), 1e-5)
+        << "descriptors differ";
 }
 
 TEST(Features2d_XFeat, Basic)
 {
-    skipIfClassicDnnEngine();
+    //skipIfClassicDnnEngine();
 
     Ptr<XFeat> detector = XFeat::create(xfeatModelPath(), 200, 0.5f, 640);
     ASSERT_TRUE(detector);
@@ -60,7 +108,7 @@ TEST(Features2d_XFeat, Basic)
 
 TEST(Features2d_XFeat, ParametersAndMask)
 {
-    skipIfClassicDnnEngine();
+    //skipIfClassicDnnEngine();
 
     Ptr<XFeat> detector = XFeat::create(xfeatModelPath());
     ASSERT_TRUE(detector);
@@ -92,7 +140,7 @@ TEST(Features2d_XFeat, ParametersAndMask)
 
 TEST(Features2d_XFeat, InvalidInputSize)
 {
-    skipIfClassicDnnEngine();
+    //skipIfClassicDnnEngine();
 
     EXPECT_THROW(XFeat::create(xfeatModelPath(), -1, 0.5f, 0), cv::Exception);
     Ptr<XFeat> detector = XFeat::create(xfeatModelPath());
