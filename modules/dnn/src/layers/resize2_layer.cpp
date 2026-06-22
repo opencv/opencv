@@ -131,7 +131,7 @@ static inline void buildNearestIndexMap(std::vector<int>& map,
     map.resize(outLen);
     for (int i = 0; i < outLen; ++i)
     {
-        float src = computeSrcGeneric(i, scale, inLen - 1, len,
+        float src = computeSrcGeneric(i, scale, inLen, len,
                                       coordTransMode, halfPixelCenters, start_coord, end_coord);
         if (coordTransMode == CoordTransMode::TF_CROP_AND_RESIZE) {
             if (src < 0.f || src >= float(inLen)) {
@@ -948,14 +948,17 @@ public:
     // sizes/scales vector, honoring the ONNX "axes" attribute order.
     void spatialIndices(size_t nelems, int& hIdx, int& wIdx) const
     {
-        if (nelems == 4) { hIdx = 2; wIdx = 3; return; }
-        hIdx = 0; wIdx = 1;  // default axes {2,3}
-        if (axesAttr.size() == 2) {
-            for (int k = 0; k < 2; k++) {
+        if (nelems == 4) { hIdx = 2; wIdx = 3; }
+        else { hIdx = 0; wIdx = 1; }
+
+        if (axesAttr.size() == nelems) {
+            int foundH = -1, foundW = -1;
+            for (size_t k = 0; k < nelems; k++) {
                 int ax = axesAttr[k] < 0 ? axesAttr[k] + 4 : axesAttr[k];
-                if (ax == 2) hIdx = k;
-                else if (ax == 3) wIdx = k;
+                if (ax == 2) foundH = (int)k;
+                else if (ax == 3) foundW = (int)k;
             }
+            if (foundH >= 0 && foundW >= 0) { hIdx = foundH; wIdx = foundW; }
         }
     }
 
