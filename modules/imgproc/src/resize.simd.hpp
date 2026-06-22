@@ -218,8 +218,8 @@ public:
 
             if( pix_size == 2 )
             {
-#if (CV_SIMD || CV_SIMD_SCALABLE)
                 const ushort* S16 = (const ushort*)S;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                 for( ; x <= width - VTraits<v_uint16>::vlanes(); x += VTraits<v_uint16>::vlanes() )
                     v_store((ushort*)D + x, vx_lut_pairs(S16, sx_ofs + x));
 #endif
@@ -562,8 +562,8 @@ public:
             }
             else if (pix_size == 2)
             {
-#if (CV_SIMD || CV_SIMD_SCALABLE)
                 const ushort* S16 = (const ushort*)S;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                 for (; x <= width - VTraits<v_uint16>::vlanes(); x += VTraits<v_uint16>::vlanes())
                     v_store((ushort*)D + x, vx_lut_pairs(S16, sx_ofs + x));
 #endif
@@ -576,8 +576,8 @@ public:
             }
             else if (pix_size == 4)
             {
-#if (CV_SIMD || CV_SIMD_SCALABLE)
                 const uint32_t* S32 = (const uint32_t*)S;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                 for (; x <= width - VTraits<v_uint32>::vlanes(); x += VTraits<v_uint32>::vlanes())
                     v_store((uint32_t*)D + x, vx_lut_pairs(S32, sx_ofs + x));
 #endif
@@ -2186,7 +2186,7 @@ static int area_fast_tail_2x2(const float* S, float* D, int w, int dx, int cn, i
     return dx;
 }
 
-static int area_fast_f32_cn3_2x2(const float* S0, const float* S1, float* D, int w, int dx)
+static inline int area_fast_f32_cn3_2x2(const float* S0, const float* S1, float* D, int w, int dx)
 {
     const float q = 0.25f;
     for (; dx <= w - 12; dx += 12, S0 += 24, S1 += 24, D += 12)
