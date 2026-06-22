@@ -82,15 +82,24 @@ struct Integral_SIMD
 // here it is converted to the sqsum output type and added to the integral row above.
 // Overloaded on the output element type so the same int32 prefix feeds CV_64F /
 // CV_32F / CV_32S sqsum outputs (Integral_SIMD<uchar,int,QT> below).
+#if CV_SIMD_64F
 static inline void v_store_sqsum_block(double* dst, const double* prev,
                                        const v_int32& lo, const v_int32& hi)
 {
     const int vl = VTraits<v_float64>::vlanes();
-    v_store(dst,            v_add(v_cvt_f64(lo),      vx_load(prev)));
-    v_store(dst +     vl,   v_add(v_cvt_f64_high(lo), vx_load(prev +     vl)));
-    v_store(dst + 2 * vl,   v_add(v_cvt_f64(hi),      vx_load(prev + 2 * vl)));
-    v_store(dst + 3 * vl,   v_add(v_cvt_f64_high(hi), vx_load(prev + 3 * vl)));
+    // Convert the int32 squared prefix to f64 via int64. v_cvt_f64(v_int32) goes
+    // through float32 on AArch64 NEON (vcvt_f64_f32(vcvt_f32_s32(...))) and loses
+    // precision once the prefix exceeds 2^24 (~16.7M, reached well within one HD
+    // row of squares); the int64 round-trip keeps it exact on every backend.
+    v_int64 lo0, lo1, hi0, hi1;
+    v_expand(lo, lo0, lo1);
+    v_expand(hi, hi0, hi1);
+    v_store(dst,            v_add(v_cvt_f64(lo0), vx_load(prev)));
+    v_store(dst +     vl,   v_add(v_cvt_f64(lo1), vx_load(prev +     vl)));
+    v_store(dst + 2 * vl,   v_add(v_cvt_f64(hi0), vx_load(prev + 2 * vl)));
+    v_store(dst + 3 * vl,   v_add(v_cvt_f64(hi1), vx_load(prev + 3 * vl)));
 }
+#endif // CV_SIMD_64F
 static inline void v_store_sqsum_block(float* dst, const float* prev,
                                        const v_int32& lo, const v_int32& hi)
 {
@@ -1632,13 +1641,21 @@ bool integral_SIMD(
     return Integral_SIMD<T, ST, QT>()((const T*)src, srcstep, (ST*)sum, sumstep, (QT*)sqsum, sqsumstep, (ST*)tilted, tstep, width, height, cn)
 
     if( depth == CV_8U && sdepth == CV_32S && sqdepth == CV_64F )
-        ONE_CALL(uchar, int, double);
+#if CV_SIMD_64F
+        ONE_CALL(uchar, int, double);   // f64 sqsum: needs 64-bit-float SIMD
+#else
+        return false;                   // e.g. 32-bit ARMv7 NEON -> scalar path
+#endif
     else if( depth == CV_8U && sdepth == CV_32S && sqdepth == CV_32F )
         ONE_CALL(uchar, int, float);
     else if( depth == CV_8U && sdepth == CV_32S && sqdepth == CV_32S )
         ONE_CALL(uchar, int, int);
     else if( depth == CV_8U && sdepth == CV_32F && sqdepth == CV_64F )
+#if CV_SIMD_64F
         ONE_CALL(uchar, float, double);
+#else
+        return false;
+#endif
     else if( depth == CV_8U && sdepth == CV_32F && sqdepth == CV_32F )
         ONE_CALL(uchar, float, float);
     else if( depth == CV_8U && sdepth == CV_64F && sqdepth == CV_64F )
