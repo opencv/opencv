@@ -1,0 +1,14 @@
+homepage: "https://opencv.org/"
+main_repo: "https://github.com/opencv/opencv"
+language: c++
+primary_contact: "admin@opencv.org" # Placeholder, ideally a real email
+auto_ccs:
+  - "security@opencv.org"
+sanitizers:
+  - address
+  - undefined
+  - memory
+fuzzing_engines:
+  - libfuzzer
+  - afl
+  - honggfuzz

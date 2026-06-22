@@ -1,0 +1,78 @@
+name: Fuzzing Build Check
+
+on:
+  push:
+    branches: [ master, 4.x ]
+    paths:
+      - 'fuzz/**'
+      - 'modules/**'
+  pull_request:
+    branches: [ master, 4.x ]
+    paths:
+      - 'fuzz/**'
+      - 'modules/**'
+
+jobs:
+  build-fuzzers:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev
+
+    - name: Configure OpenCV
+      run: |
+        mkdir build
+        cd build
+        cmake .. \
+          -DBUILD_SHARED_LIBS=OFF \
+          -DBUILD_TESTS=OFF \
+          -DBUILD_PERF_TESTS=OFF \
+          -DBUILD_EXAMPLES=OFF \
+          -DBUILD_DOCS=OFF \
+          -DBUILD_JAVA=OFF \
+          -DBUILD_PYTHON3=OFF
+
+    - name: Build OpenCV (Minimal)
+      run: |
+        cd build
+        make -j$(nproc) opencv_core opencv_imgcodecs opencv_dnn opencv_imgproc opencv_videoio opencv_highgui opencv_objdetect
+
+    - name: Build Fuzzers
+      run: |
+        # Simple compilation check using clang++ (if available) or g++
+        # We mock the libFuzzer main by linking a dummy one or just compiling object files if -fsanitize=fuzzer is not available.
+        # Ubuntu latest usually has clang.
+        
+        # Determine include paths
+        INCLUDES="-Iinclude -Imodules/core/include -Imodules/imgcodecs/include -Imodules/imgproc/include -Imodules/videoio/include -Imodules/highgui/include -Imodules/dnn/include -Imodules/objdetect/include -Ibuild"
+        
+        # Find static libs
+        LIBS="-Wl,--start-group $(find build/lib build/3rdparty/lib -name '*.a') -Wl,--end-group -lpthread -ldl -lz"
+        
+        # Compile imdecode_fuzzer
+        clang++ -fsanitize=fuzzer,address -g $INCLUDES fuzz/imdecode_fuzzer.cc -o imdecode_fuzzer $LIBS
+        
+        # Compile dnn_fuzzer
+        clang++ -fsanitize=fuzzer,address -g $INCLUDES fuzz/dnn_fuzzer.cc -o dnn_fuzzer $LIBS
+        
+        # Compile filestorage_fuzzer
+        clang++ -fsanitize=fuzzer,address -g $INCLUDES fuzz/filestorage_fuzzer.cc -o filestorage_fuzzer $LIBS
+        
+        # Compile objdetect_fuzzer
+        clang++ -fsanitize=fuzzer,address -g $INCLUDES fuzz/objdetect_fuzzer.cc -o objdetect_fuzzer $LIBS
+        
+        # Compile videoio_fuzzer
+        clang++ -fsanitize=fuzzer,address -g $INCLUDES fuzz/videoio_fuzzer.cc -o videoio_fuzzer $LIBS
+
+    - name: Quick Run Fuzzers
+      run: |
+        # Run for a few seconds/iterations to ensure no immediate crash
+        ./imdecode_fuzzer -max_total_time=10
+        ./dnn_fuzzer -max_total_time=10
+        ./filestorage_fuzzer -max_total_time=10
+        ./objdetect_fuzzer -max_total_time=10
+        ./videoio_fuzzer -max_total_time=10
