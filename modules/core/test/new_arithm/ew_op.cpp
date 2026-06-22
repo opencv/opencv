@@ -8,7 +8,7 @@
 
 namespace cv { namespace ew {
 
-const char* opName(ElemwiseOp op)
+const char* opName(TOp op)
 {
     switch (op)
     {
@@ -51,7 +51,7 @@ const char* opName(ElemwiseOp op)
 }
 
 // --- op category (declared in ew_op.hpp) --------------------------------------------------
-ElemwiseCategory opCategory(ElemwiseOp op)
+ElemwiseCategory opCategory(TOp op)
 {
     switch (op)
     {

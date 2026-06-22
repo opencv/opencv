@@ -72,7 +72,7 @@ static void storeScalar(int depth, double v, uchar* p)
 
 // Rough per-element cost of an op, in "cycle units" (tuning for parallel_for_ stripe count).
 // Unknown ops default to ~division. cv::expression will own this once it drives broadcastOp.
-static int opCost(ElemwiseOp op)
+static int opCost(TOp op)
 {
     switch (op)
     {
@@ -88,17 +88,56 @@ static int opCost(ElemwiseOp op)
     }
 }
 
-EwProgram::EwProgram()
+TExpr::TExpr()
 {
     clear();
 }
 
-void EwProgram::clear()
+// Reset to an empty program: drop all instructions/slots and re-seat slot 0 = NONE.
+void TExpr::clear()
 {
     prog.allocate(0);
     arginfo.allocate(0);
     bufferOfTemp.allocate(0);
     ninputs = noutputs = ntemps = nbuffers = 0;
+    Arg none;                       // slot 0: the reserved empty operand (kind == NONE)
+    arginfo.push_back(none);
+}
+
+// ---- program builders: append a slot / instruction, return its index ----
+int TExpr::addInput(int depth)
+{
+    Arg a; a.kind = INPUT; a.depth = depth; a.index = ninputs++;
+    arginfo.push_back(a); return (int)arginfo.size() - 1;
+}
+
+int TExpr::addOutput(int depth)
+{
+    Arg a; a.kind = OUTPUT; a.depth = depth; a.index = noutputs++;
+    arginfo.push_back(a); return (int)arginfo.size() - 1;
+}
+
+int TExpr::addTemp(int depth)
+{
+    Arg a; a.kind = TEMP; a.depth = depth; a.index = ntemps++;
+    arginfo.push_back(a); return (int)arginfo.size() - 1;
+}
+
+int TExpr::addConst(int depth, const Scalar& v, int channels)
+{
+    Arg a; a.kind = CONST; a.depth = depth; a.channels = channels; a.cval = v;
+    arginfo.push_back(a); return (int)arginfo.size() - 1;
+}
+
+// Append one instruction. The kernel is left unbound (fptr/bfptr == null); compile() binds it from
+// the operand/result depths. A builder that needs a specific kernel (e.g. div's caller-known /0
+// policy) may pre-set ins.fptr and push directly - compile() then leaves that instruction alone.
+int TExpr::addInsn(TOp op, int a0, int a1, int a2, int result, const Scalar& params)
+{
+    TExpr::Insn ins; ins.op = op; ins.arg0 = a0; ins.arg1 = a1; ins.arg2 = a2; ins.result = result;
+    ins.params = params;
+    prog.push_back(ins);
+    return (int)prog.size() - 1;
 }
 
 // Run one resolved instruction over a width x height tile. EW_FN_ELEMWISE calls the broadcasting
@@ -106,7 +145,7 @@ void EwProgram::clear()
 // BinaryFunc (byte steps, Size tile, params = {scale, offset}); a broadcast source (stepx == 0) is
 // handled by converting one element per row and replicating it - the executor guarantees the dst
 // is contiguous in x. sesz1/desz1 are the source/result element sizes (only used by EW_FN_BINARY).
-static inline void runInsn(const EwInsn& ins,
+static inline void runInsn(const TExpr::Insn& ins,
                            const void* p0, size_t y0, size_t x0,
                            const void* p1, size_t y1, size_t x1,
                            const void* p2, size_t y2, size_t x2,
@@ -135,11 +174,11 @@ static inline void runInsn(const EwInsn& ins,
 }
 
 struct EwBody {
-    const EwInsn* prog;
+    const TExpr::Insn* prog;
     // slot -> a NON-NEGATIVE index whose meaning is given by slotKind[s]:
-    //   ARG_INPUT / ARG_OUTPUT : index into tile.slices (the broadcast operand list)
-    //   ARG_TEMP               : physical temp-buffer id
-    //   ARG_CONST              : index into constSlice[]
+    //   TExpr::INPUT / TExpr::OUTPUT : index into tile.slices (the broadcast operand list)
+    //   TExpr::TEMP               : physical temp-buffer id
+    //   TExpr::CONST              : index into constSlice[]
     const int* slotMap;
     const signed char* slotKind; // [nslots] arginfo[s].kind, for resolving slotMap[s]
     const EwSlice* constSlice;    // [nconsts] fixed scalar slices {ptr=&value, stepy=0, stepx=0}
@@ -148,19 +187,21 @@ struct EwBody {
     int ninsn, nslots, nbuffers, capElems;   // capElems: L1 fragment element cap (0 if no temps)
 };
 
-void EwProgram::exec(const Mat* inputs, Mat* outputs)
+void TExpr::exec(const Mat* inputs, Mat* outputs)
 {
     constexpr int LOCAL_HDRS = 3;
     constexpr int LOCAL_CONSTS = 4;
     constexpr int LOCAL_OPS = 16;
     const int nslots = (int)arginfo.size();
-    CV_Assert(nslots >= 1 && arginfo[0].kind == ARG_NONE);
+    CV_Assert(nslots >= 1 && arginfo[0].kind == TExpr::NONE);
 
-    // Scalars (ARG_CONST) never influence the result shape or channel count - the output geometry
+    // Scalars (TExpr::CONST) never influence the result shape or channel count - the output geometry
     // comes from the real array inputs alone (a scalar broadcasts into whatever they produce).
+    // A flexible CONST (depth == EW_DEPTH_NONE) is a leftover literal: emit() materializes a typed
+    // copy at each use, so the original is dead - it is skipped entirely (no slice, no storeScalar).
     int nconsts = 0;
     for (int s = 1; s < nslots; s++)
-        if (arginfo[s].kind == ARG_CONST) nconsts++;
+        if (arginfo[s].kind == TExpr::CONST && arginfo[s].depth != EW_DEPTH_NONE) nconsts++;
 
     // ---- 1. result shape (spatial dims + channel count), channels innermost ----
     // Fast path: every input shares one shape+channels => the result IS inputs[0]'s shape. Skips
@@ -196,7 +237,7 @@ void EwProgram::exec(const Mat* inputs, Mat* outputs)
 
     // ---- 2. ONE pass over slots: allocate outputs, build the operand pointer list + slot map,
     //         per-slot element size, and per-temp-buffer element size. No Mat copies (arr[] holds
-    //         pointers); only real inputs + outputs become broadcast operands. ARG_CONST scalars are
+    //         pointers); only real inputs + outputs become broadcast operands. TExpr::CONST scalars are
     //         NOT broadcast operands and get NO Mat header: each is materialized once into a typed
     //         scratch (constStore) and exposed to the body as a fixed slice {ptr=&value, 0, 0} - a
     //         scalar the kernels read by broadcast. slotMap[s] stays a plain non-negative index;
@@ -225,21 +266,25 @@ void EwProgram::exec(const Mat* inputs, Mat* outputs)
         inputs = hdrs.data();
     }
     esz1Slot[0] = 0;
-    slotKind[0] = (signed char)ARG_NONE;
+    slotKind[0] = (signed char)TExpr::NONE;
     for (int s = 1; s < nslots; s++)
     {
-        const EwArgInfo& ai = arginfo[s];
+        const TExpr::Arg& ai = arginfo[s];
         const int e = esz1Slot[s] = (int)CV_ELEM_SIZE1(ai.depth);
         slotKind[s] = (signed char)ai.kind;
-        if (ai.kind == ARG_INPUT) {
+        if (ai.kind == TExpr::INPUT) {
             slotMap[s] = narr;
             arr[narr++] = &inputs[ai.index];
         }
-        else if (ai.kind == ARG_OUTPUT) {
+        else if (ai.kind == TExpr::OUTPUT) {
             outputs[ai.index].create(spatial, CV_MAKETYPE(ai.depth, rchannels));
             slotMap[s] = narr; arr[narr++] = &outputs[ai.index];
         }
-        else if (ai.kind == ARG_CONST) {
+        else if (ai.kind == TExpr::CONST && ai.depth == EW_DEPTH_NONE) {
+            slotKind[s] = (signed char)TExpr::NONE;   // dead flexible literal: never referenced
+            slotMap[s] = 0;
+        }
+        else if (ai.kind == TExpr::CONST) {
             const int c = std::max(ai.channels, 1);
             CV_Assert(c <= 4 && (size_t)c * e <= CONST_STRIDE);
             uchar* dst = constStore.data() + (size_t)nc * CONST_STRIDE;
@@ -248,7 +293,7 @@ void EwProgram::exec(const Mat* inputs, Mat* outputs)
             slotMap[s] = nc;                   // index into constSlice[]
             nc++;
         }
-        else { // ARG_TEMP
+        else { // TExpr::TEMP
             const int buf = bufferOfTemp.empty() ? ai.index : bufferOfTemp[ai.index];
             slotMap[s] = buf;                  // physical temp-buffer id
             bufEsz[buf] = std::max(bufEsz[buf], e);
@@ -265,7 +310,7 @@ void EwProgram::exec(const Mat* inputs, Mat* outputs)
     const int capElems = totalEsz > 0 ? std::max(64, (16 * 1024) / totalEsz) : 0;
 
     // ---- 3. ONE pass over instructions: summed per-element cost (kernels are resolved at build
-    //         time; the convert BinaryFunc is reached directly via EwInsn::bfptr - no contexts). ----
+    //         time; the convert BinaryFunc is reached directly via TExpr::Insn::bfptr - no contexts). ----
     const int ninsn = (int)prog.size();
     long long costPerElem = 0;
     for (int n = 0; n < ninsn; n++)
@@ -302,7 +347,7 @@ void EwProgram::exec(const Mat* inputs, Mat* outputs)
     broadcastOp(arr.data(), narr, [&](const EwTile& tile)
     {
         EwBody& bc = body;
-        const EwInsn* prog = bc.prog;             // hot fields -> locals (registers/stack)
+        const TExpr::Insn* prog = bc.prog;             // hot fields -> locals (registers/stack)
         const int* const slotMap     = bc.slotMap;
         const signed char* const slotKind = bc.slotKind;
         const int* const esz1Slot    = bc.esz1Slot;
@@ -313,18 +358,18 @@ void EwProgram::exec(const Mat* inputs, Mat* outputs)
         // No temps (single-op add/sub/...): run the whole tile in one pass and pull each operand's
         // slice straight from the tile - no args array, no scratch, no fragmentation. Here a slot is
         // either an array (input/output -> tile.slices) or a const scalar (-> a fixed constSlice);
-        // slot 0 (ARG_NONE) is the null operand for unused args (e.g. a binary op's arg2). The
-        // dominant pure-array path keeps slotKind[s]==ARG_INPUT/OUTPUT => the branch predicts away.
+        // slot 0 (TExpr::NONE) is the null operand for unused args (e.g. a binary op's arg2). The
+        // dominant pure-array path keeps slotKind[s]==TExpr::INPUT/OUTPUT => the branch predicts away.
         if (bc.nbuffers == 0)
         {
             const EwSlice nullSlice;
             auto S = [&](int s) -> const EwSlice& {
                 if (s <= 0) return nullSlice;
-                return slotKind[s] == ARG_CONST ? constSlice[slotMap[s]] : tile.slices[slotMap[s]];
+                return slotKind[s] == TExpr::CONST ? constSlice[slotMap[s]] : tile.slices[slotMap[s]];
             };
             for (int n = 0; n < ninsn; n++)
             {
-                const EwInsn& ins = prog[n];
+                const TExpr::Insn& ins = prog[n];
                 const EwSlice& a0 = S(ins.arg0);
                 const EwSlice& a1 = S(ins.arg1);
                 const EwSlice& a2 = S(ins.arg2);
@@ -345,20 +390,20 @@ void EwProgram::exec(const Mat* inputs, Mat* outputs)
         const size_t region = alignSize((size_t)Wf * h, 8);
         AutoBuffer<uchar> tstore((size_t)bufEszPrefix[bc.nbuffers] * region);
 
-        AutoBuffer<EwArg, LOCAL_OPS> args(nslots);
+        AutoBuffer<EwSlice, LOCAL_OPS> args(nslots);
         for (int x0 = 0; x0 < w; x0 += Wf)
         {
             const int wf = std::min(Wf, w - x0);
             for (int s = 1; s < nslots; s++)
             {
-                EwArg& a = args[s];
+                EwSlice& a = args[s];
                 const int k = slotKind[s];
-                if (k == ARG_TEMP)                      // contiguous strip-local buffer
+                if (k == TExpr::TEMP)                      // contiguous strip-local buffer
                 {
                     a.ptr = tstore.data() + (size_t)bufEszPrefix[slotMap[s]] * region;
                     a.stepy = (size_t)wf; a.stepx = 1;
                 }
-                else if (k == ARG_CONST)               // fixed scalar slice, no x0 offset (stepx 0)
+                else if (k == TExpr::CONST)               // fixed scalar slice, no x0 offset (stepx 0)
                 {
                     const EwSlice& cs = constSlice[slotMap[s]];
                     a.ptr = (uchar*)cs.ptr; a.stepy = 0; a.stepx = 0;
@@ -373,9 +418,9 @@ void EwProgram::exec(const Mat* inputs, Mat* outputs)
 
             for (int n = 0; n < ninsn; n++)
             {
-                const EwInsn& ins = prog[n];
-                const EwArg& a0 = args[ins.arg0]; const EwArg& a1 = args[ins.arg1];
-                const EwArg& a2 = args[ins.arg2]; const EwArg& rr = args[ins.result];
+                const TExpr::Insn& ins = prog[n];
+                const EwSlice& a0 = args[ins.arg0]; const EwSlice& a1 = args[ins.arg1];
+                const EwSlice& a2 = args[ins.arg2]; const EwSlice& rr = args[ins.result];
                 runInsn(ins, a0.ptr, a0.stepy, a0.stepx, a1.ptr, a1.stepy, a1.stepx,
                         a2.ptr, a2.stepy, a2.stepx, (void*)rr.ptr, rr.stepy, wf, h,
                         esz1Slot[ins.arg0], esz1Slot[ins.result]);
@@ -385,28 +430,9 @@ void EwProgram::exec(const Mat* inputs, Mat* outputs)
 }
 
 // ---------------------------------------------------------------------------
-// Manual program builders.
+// Manual program builders (stand-ins for the future engine-backed cv::add etc.): they skip the
+// source graph and emit the program directly through TExpr's addInput/addTemp/addOutput/addInsn.
 // ---------------------------------------------------------------------------
-static inline EwArgInfo mkArg(ArgKind kind, int depth, int index)
-{
-    EwArgInfo a; a.kind = kind; a.depth = depth; a.index = index; return a;
-}
-
-// [VP] looks like there is a bug here. rank(8s) < rank(16u),
-// so when we add 8s to 16u, the coercion type will be 16u,
-// however it should be 32s. We need to take into account signness of integer types.
-// also, when we subtract 8u from 8s, the result should have 16s type, so
-// the coercion result should always be a signed type.
-// so, the coercion rule should be:
-// * if a == b -> a
-// * else if a == 64f || b == 64f -> 64f
-// * else if flt(a) || flt(b) -> 32f
-// * else if max(a, b) <= 8s -> 16s
-// * else if max(a, b) <= 16s -> 32s
-// * else if a == 32s || a == 32u || b == 32s || b == 32u -> 64s
-// * else 64f
-//
-// or see below the same rule done with a single 'if'
 
 // numpy-ish promotion of two known depths (float dominates; wider integer otherwise).
 static int promote2(int a, int b)
@@ -458,37 +484,20 @@ static int safeWide(int depth)
 // channel 1-byte array (bool/u8/s8) the size of the output spatial shape; it rides the normal
 // broadcast machinery (single-channel data => per-element; n-channel => broadcast across the
 // channel axis), so nothing special is needed in the executor.
-void makeBinaryArithProgram(EwProgram& p, ElemwiseOp op, int depth0, int depth1, int rdepth,
+void makeBinaryArithProgram(TExpr& p, TOp op, int depth0, int depth1, int rdepth,
                             int maskDepth, double scale)
 {
     p.clear();
+    if (rdepth < 0) rdepth = promoteArith(depth0, depth1);   // rdepth == -1 => auto (like cv::'s dtype=-1)
     const bool masked = maskDepth != EW_DEPTH_NONE;
-    p.ninputs = masked ? 3 : 2; p.noutputs = 1;
-    p.arginfo.push_back(mkArg(ARG_NONE,  EW_DEPTH_NONE, -1));               // slot 0
-    int sIn0  = (int)p.arginfo.size(); p.arginfo.push_back(mkArg(ARG_INPUT, depth0, 0));
-    int sIn1  = (int)p.arginfo.size(); p.arginfo.push_back(mkArg(ARG_INPUT, depth1, 1));
-    int sMask = 0;
-    if (masked) { sMask = (int)p.arginfo.size(); p.arginfo.push_back(mkArg(ARG_INPUT, maskDepth, 2)); }
-    int sOut  = (int)p.arginfo.size(); p.arginfo.push_back(mkArg(ARG_OUTPUT, rdepth, 0));
-
-    int ntemps = 0;
-    auto addTemp = [&](int depth) {
-        int s = (int)p.arginfo.size();
-        p.arginfo.push_back(mkArg(ARG_TEMP, depth, ntemps++));
-        return s;
-    };
-    auto addInsn = [&](ElemwiseOp o, int a0, int a1, int r) {
-        EwInsn ins; ins.op = o; ins.arg0 = a0; ins.arg1 = a1; ins.arg2 = 0; ins.result = r;
-        bool ok = resolveInsnKernel(ins, p.arginfo[a0].depth,
-                                    a1 ? p.arginfo[a1].depth : EW_DEPTH_NONE,
-                                    EW_DEPTH_NONE, p.arginfo[r].depth);
-        CV_Assert(ok);
-        p.prog.push_back(ins);
-    };
+    int sIn0  = p.addInput(depth0);
+    int sIn1  = p.addInput(depth1);
+    int sMask = masked ? p.addInput(maskDepth) : 0;
+    int sOut  = p.addOutput(rdepth);
 
     // The arithmetic result goes to `dst`: the output directly, or a temp when masked (then
     // copyMask moves it into the output). Fast single-op path stays single-op when unmasked.
-    int dst = masked ? addTemp(rdepth) : sOut;
+    int dst = masked ? p.addTemp(rdepth) : sOut;
 
     if (op == OP_MUL || op == OP_DIV)
     {
@@ -501,13 +510,13 @@ void makeBinaryArithProgram(EwProgram& p, ElemwiseOp op, int depth0, int depth1,
         auto isFlt = [](int d){ return d==CV_16F || d==CV_16BF || d==CV_32F || d==CV_64F; };
         const bool bothInt = !isFlt(depth0) && !isFlt(depth1);
         int C = (depth0 == depth1) ? depth0 : promote2(depth0, depth1);
-        if (depth0 != C) { int t = addTemp(C); addInsn(OP_CAST, sIn0, 0, t); sIn0 = t; }
-        if (depth1 != C) { int t = addTemp(C); addInsn(OP_CAST, sIn1, 0, t); sIn1 = t; }
+        if (depth0 != C) { int t = p.addTemp(C); p.addInsn(OP_CAST, sIn0, 0, 0, t); sIn0 = t; }
+        if (depth1 != C) { int t = p.addTemp(C); p.addInsn(OP_CAST, sIn1, 0, 0, t); sIn1 = t; }
         const bool wide = (C==CV_32U || C==CV_32S || C==CV_64U || C==CV_64S || C==CV_64F);
         int Wf = wide ? CV_64F : CV_32F;
         // emit the mul/div into slot r, carrying `scale` in params[0].
         auto emit = [&](int r) {
-            EwInsn ins; ins.op = op; ins.arg0 = sIn0; ins.arg1 = sIn1; ins.arg2 = 0; ins.result = r;
+            TExpr::Insn ins; ins.op = op; ins.arg0 = sIn0; ins.arg1 = sIn1; ins.arg2 = 0; ins.result = r;
             ins.params = Scalar(scale);
             if (op == OP_DIV) {
                 // div with the caller-known /0 policy: bypass resolveInsnKernel (which would
@@ -515,12 +524,10 @@ void makeBinaryArithProgram(EwProgram& p, ElemwiseOp op, int depth0, int depth1,
                 ins.fnkind = EW_FN_ELEMWISE;
                 ins.fptr = getDivFunc(p.arginfo[sIn0].depth, p.arginfo[r].depth, bothInt);
                 CV_Assert(ins.fptr != nullptr);
+                p.prog.push_back(ins);
             } else {
-                bool ok = resolveInsnKernel(ins, p.arginfo[sIn0].depth, p.arginfo[sIn1].depth,
-                                            EW_DEPTH_NONE, p.arginfo[r].depth);
-                CV_Assert(ok);
+                p.addInsn(op, sIn0, sIn1, 0, r, Scalar(scale));
             }
-            p.prog.push_back(ins);
         };
         // prefer a direct C x C -> rdepth kernel when one exists (mul now has T x T -> T for all but
         // 64-bit types => one fused pass); else compute in Wf and cast down. For div no T x T -> T
@@ -529,41 +536,47 @@ void makeBinaryArithProgram(EwProgram& p, ElemwiseOp op, int depth0, int depth1,
             emit(dst);
         else
         {
-            int tW = addTemp(Wf);
+            int tW = p.addTemp(Wf);
             emit(tW);
-            addInsn(OP_CAST, tW, 0, dst);
+            p.addInsn(OP_CAST, tW, 0, 0, dst);
         }
     }
+    else if (op == OP_MIN || op == OP_MAX || op == OP_ABSDIFF)
+    {
+        // T x T -> T at the requested rdepth: bring both operands to rdepth, then the same-type
+        // kernel. min/max/absdiff never widen, so there is no wide-then-cast path.
+        if (depth0 != rdepth) { int t = p.addTemp(rdepth); p.addInsn(OP_CAST, sIn0, 0, 0, t); sIn0 = t; }
+        if (depth1 != rdepth) { int t = p.addTemp(rdepth); p.addInsn(OP_CAST, sIn1, 0, 0, t); sIn1 = t; }
+        p.addInsn(op, sIn0, sIn1, 0, dst);
+    }
     else if (depth0 == depth1 && depth0 == rdepth)
-        addInsn(op, sIn0, sIn1, dst);
+        p.addInsn(op, sIn0, sIn1, 0, dst);
     else
     {
         // ADD/SUB: 1. bring both operands to a common type.
         int depth = (depth0 == depth1) ? depth0 : promote2(depth0, depth1);
-        if (depth0 != depth) { int t = addTemp(depth); addInsn(OP_CAST, sIn0, 0, t); sIn0 = t; }
-        if (depth1 != depth) { int t = addTemp(depth); addInsn(OP_CAST, sIn1, 0, t); sIn1 = t; }
+        if (depth0 != depth) { int t = p.addTemp(depth); p.addInsn(OP_CAST, sIn0, 0, 0, t); sIn0 = t; }
+        if (depth1 != depth) { int t = p.addTemp(depth); p.addInsn(OP_CAST, sIn1, 0, 0, t); sIn1 = t; }
 
         // 2. op directly to rdepth if a kernel exists, else compute wide then cast down.
         if (getElemwiseFunc(op, depth, depth, EW_DEPTH_NONE, rdepth))
-            addInsn(op, sIn0, sIn1, dst);
+            p.addInsn(op, sIn0, sIn1, 0, dst);
         else
         {
             int W = safeWide(depth);
-            int tW = addTemp(W);
-            addInsn(op, sIn0, sIn1, tW);
-            addInsn(OP_CAST, tW, 0, dst);
+            int tW = p.addTemp(W);
+            p.addInsn(op, sIn0, sIn1, 0, tW);
+            p.addInsn(OP_CAST, tW, 0, 0, dst);
         }
     }
 
     if (masked)
-        addInsn(OP_COPY_MASK, dst, sMask, sOut);   // last: dst = (mask!=0) ? result : dst
+        p.addInsn(OP_COPY_MASK, dst, sMask, 0, sOut);   // last: dst = (mask!=0) ? result : dst
 
-    p.ntemps = ntemps; p.nbuffers = ntemps;
-    p.bufferOfTemp.resize(ntemps);
-    for (int i = 0; i < ntemps; i++) p.bufferOfTemp[i] = i;
+    p.compile();    // bind kernels (leaving the pre-set div kernel alone) + pack temp buffers
 }
 
-void makeAddProgram(EwProgram& p, int depth0, int depth1, int rdepth)
+void makeAddProgram(TExpr& p, int depth0, int depth1, int rdepth)
 { makeBinaryArithProgram(p, OP_ADD, depth0, depth1, rdepth); }
 
 // addWeighted(a, alpha, b, beta, gamma) = a*alpha + b*beta + gamma, as two fused convert_scale
@@ -572,50 +585,30 @@ void makeAddProgram(EwProgram& p, int depth0, int depth1, int rdepth)
 // The convert_scale steps ride core's optimized scale kernel; alpha/beta/gamma travel in each
 // instruction's params block ({scale, offset}), not as operands. The 2-3 temps exercise the body's
 // L1 column-fragmentation.
-void makeAddWeightedProgram(EwProgram& p, int depth0, int depth1, int rdepth,
+void makeAddWeightedProgram(TExpr& p, int depth0, int depth1, int rdepth,
                             double alpha, double beta, double gamma)
 {
     p.clear();
-    p.ninputs = 2; p.noutputs = 1;
     const int W = (depth0 == CV_64F || depth1 == CV_64F || rdepth == CV_64F) ? CV_64F : CV_32F;
 
-    p.arginfo.push_back(mkArg(ARG_NONE, EW_DEPTH_NONE, -1));    // slot 0
-    int sA = (int)p.arginfo.size(); p.arginfo.push_back(mkArg(ARG_INPUT, depth0, 0));
-    int sB = (int)p.arginfo.size(); p.arginfo.push_back(mkArg(ARG_INPUT, depth1, 1));
+    int sA = p.addInput(depth0);
+    int sB = p.addInput(depth1);
 
-    int ntemps = 0;
-    auto addTemp = [&](int depth) {
-        int s = (int)p.arginfo.size();
-        p.arginfo.push_back(mkArg(ARG_TEMP, depth, ntemps++));
-        return s;
-    };
-    auto addInsn = [&](ElemwiseOp op, int a0, int a1, int r, Scalar params = Scalar(1)) {
-        EwInsn ins; ins.op = op; ins.arg0 = a0; ins.arg1 = a1; ins.arg2 = 0; ins.result = r;
-        ins.params = params;
-        bool ok = resolveInsnKernel(ins, p.arginfo[a0].depth,
-                                    a1 ? p.arginfo[a1].depth : EW_DEPTH_NONE,
-                                    EW_DEPTH_NONE, p.arginfo[r].depth);
-        CV_Assert(ok);
-        p.prog.push_back(ins);
-    };
+    int t0 = p.addTemp(W), t1 = p.addTemp(W);
+    p.addInsn(OP_CONVERT_SCALE, sA, 0, 0, t0, Scalar(alpha, gamma));   // t0 = a*alpha + gamma
+    p.addInsn(OP_CONVERT_SCALE, sB, 0, 0, t1, Scalar(beta, 0.0));      // t1 = b*beta
 
-    int t0 = addTemp(W), t1 = addTemp(W);
-    addInsn(OP_CONVERT_SCALE, sA, 0, t0, Scalar(alpha, gamma));   // t0 = a*alpha + gamma
-    addInsn(OP_CONVERT_SCALE, sB, 0, t1, Scalar(beta, 0.0));      // t1 = b*beta
-
-    int sOut = (int)p.arginfo.size(); p.arginfo.push_back(mkArg(ARG_OUTPUT, rdepth, 0));
+    int sOut = p.addOutput(rdepth);
     if (rdepth == W)
-        addInsn(OP_ADD, t0, t1, sOut);
+        p.addInsn(OP_ADD, t0, t1, 0, sOut);
     else
     {
-        int t2 = addTemp(W);
-        addInsn(OP_ADD, t0, t1, t2);
-        addInsn(OP_CAST, t2, 0, sOut);
+        int t2 = p.addTemp(W);
+        p.addInsn(OP_ADD, t0, t1, 0, t2);
+        p.addInsn(OP_CAST, t2, 0, 0, sOut);
     }
 
-    p.ntemps = ntemps; p.nbuffers = ntemps;
-    p.bufferOfTemp.resize(ntemps);
-    for (int i = 0; i < ntemps; i++) p.bufferOfTemp[i] = i;
+    p.compile();    // bind kernels + pack temp buffers
 }
 
 }} // namespace cv::ew

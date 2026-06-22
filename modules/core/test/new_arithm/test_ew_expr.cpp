@@ -29,6 +29,24 @@ TEST(Core_EW_Expr, add)
     EXPECT_LE(cvtest::norm(got, exp, NORM_INF), 1e-3);
 }
 
+// Built-in binary functions min/max/absdiff parsed and dispatched through emit().
+TEST(Core_EW_Expr, minmax_absdiff)
+{
+    Mat a(18, 21, CV_8U), b(18, 21, CV_8U);
+    theRNG().fill(a, RNG::UNIFORM, 0, 255);
+    theRNG().fill(b, RNG::UNIFORM, 0, 255);
+
+    Mat gmin = expr1("min({0}, {1})", { a, b });
+    Mat gmax = expr1("max({0}, {1})", { a, b });
+    Mat gabs = expr1("absdiff({0}, {1})", { a, b });
+
+    Mat emin, emax, eabs;
+    cv::min(a, b, emin); cv::max(a, b, emax); cv::absdiff(a, b, eabs);
+    EXPECT_EQ(0, cvtest::norm(gmin, emin, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(gmax, emax, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(gabs, eabs, NORM_INF));
+}
+
 // Operator precedence: '*' binds tighter than '+', unary minus on a literal.
 TEST(Core_EW_Expr, addweighted_precedence)
 {

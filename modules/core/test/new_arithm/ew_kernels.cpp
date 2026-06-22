@@ -27,6 +27,7 @@
 #include "opencv2/core/hal/intrin.hpp"
 // private prototype-only reuse of the typed load/store-as helpers (vx_load_as / v_store_as):
 #include "../../src/convert.hpp"
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 
@@ -205,6 +206,26 @@ struct EwDivFlt {
     template<typename V> static V vec(const V& a, const V& b) { return v_div(a, b); }
     template<typename V> static V preproc(const V& a, const V& s) { return v_mul(a, s); }
     template<typename W, typename ST> static W scl(W a, W b, ST s) { return a * s / b; }
+};
+
+// min / max / absdiff: T x T -> T (same depth in and out, no scale). v_min/v_max exist for every
+// vector lane type (64-bit ints fall back to scalar). absdiff uses v_absdiff (defined for the
+// UNSIGNED and float lane types - signed/wide depths go through the scalar path), and the scalar
+// |a-b| is computed branch-wise so it never underflows an unsigned work type.
+struct EwMin {
+    template<typename V> static V vec(const V& a, const V& b) { return v_min(a, b); }
+    template<typename V> static V preproc(const V& a, const V&) { return a; }
+    template<typename W, typename ST> static W scl(W a, W b, ST) { return std::min(a, b); }
+};
+struct EwMax {
+    template<typename V> static V vec(const V& a, const V& b) { return v_max(a, b); }
+    template<typename V> static V preproc(const V& a, const V&) { return a; }
+    template<typename W, typename ST> static W scl(W a, W b, ST) { return std::max(a, b); }
+};
+struct EwAbsdiff {
+    template<typename V> static V vec(const V& a, const V& b) { return v_absdiff(a, b); }
+    template<typename V> static V preproc(const V& a, const V&) { return a; }
+    template<typename W, typename ST> static W scl(W a, W b, ST) { return a > b ? W(a - b) : W(b - a); }
 };
 
 // Collapse a gap-free 2D tile to 1D (call with the per-operand x/y-steps).
@@ -624,6 +645,60 @@ ElemwiseFunc getDivFunc(int T, int R, bool checked)
     #undef EW_DIV
 }
 
+// min / max: T x T -> T for every depth. Native v_min/v_max on the matching lane type (8/16/32-bit
+// ints, f16/bf16/f32); 64-bit ints and f64 use the scalar path. Op = EwMin or EwMax.
+template<class Op>
+static ElemwiseFunc getMinMaxFunc(int T)
+{
+    switch (T)
+    {
+    case CV_8U:   return binary_kernel<uchar,    uchar,    v_uint8,   short,   Op, uchar>;
+    case CV_8S:   return binary_kernel<schar,    schar,    v_int8,    short,   Op, schar>;
+    case CV_16U:  return binary_kernel<ushort,   ushort,   v_uint16,  int,     Op, ushort>;
+    case CV_16S:  return binary_kernel<short,    short,    v_int16,   int,     Op, short>;
+    case CV_32U:  return binary_kernel<unsigned, unsigned, v_uint32,  int64_t, Op, unsigned>;
+    case CV_32S:  return binary_kernel<int,      int,      v_int32,   int64_t, Op, int>;
+    #if CV_SIMD_16F
+    case CV_16F:  return binary_kernel<hfloat,   hfloat,   v_float16, float,   Op, hfloat>;
+    #else
+    case CV_16F:  return binary_kernel<hfloat,   hfloat,   v_float32, float,   Op, float>;
+    #endif
+    case CV_16BF: return binary_kernel<bfloat,   bfloat,   v_float32, float,   Op, float>;
+    case CV_32F:  return binary_kernel<float,    float,    v_float32, float,   Op, float>;
+    case CV_64U:  return scalar_binary_kernel<uint64_t, uint64_t, uint64_t, Op>;
+    case CV_64S:  return scalar_binary_kernel<int64_t,  int64_t,  int64_t,  Op>;
+    case CV_64F:  return scalar_binary_kernel<double,   double,   double,   Op>;
+    default:      return nullptr;
+    }
+}
+
+// absdiff: |a-b|, T x T -> T. v_absdiff is defined for the UNSIGNED and float lane types only
+// (signed v_absdiff would change the lane type), so u8/u16/f16/bf16/f32 take the SIMD path and the
+// signed / wide / f64 depths use the scalar kernel (|a-b| with the widened work type).
+static ElemwiseFunc getAbsdiffFunc(int T)
+{
+    switch (T)
+    {
+    case CV_8U:   return binary_kernel<uchar,  uchar,  v_uint8,  short, EwAbsdiff, uchar>;
+    case CV_16U:  return binary_kernel<ushort, ushort, v_uint16, int,   EwAbsdiff, ushort>;
+    #if CV_SIMD_16F
+    case CV_16F:  return binary_kernel<hfloat, hfloat, v_float16, float, EwAbsdiff, hfloat>;
+    #else
+    case CV_16F:  return binary_kernel<hfloat, hfloat, v_float32, float, EwAbsdiff, float>;
+    #endif
+    case CV_16BF: return binary_kernel<bfloat, bfloat, v_float32, float, EwAbsdiff, float>;
+    case CV_32F:  return binary_kernel<float,  float,  v_float32, float, EwAbsdiff, float>;
+    case CV_8S:   return scalar_binary_kernel<schar,    schar,    short,   EwAbsdiff>;
+    case CV_16S:  return scalar_binary_kernel<short,    short,    int,     EwAbsdiff>;
+    case CV_32U:  return scalar_binary_kernel<unsigned, unsigned, int64_t, EwAbsdiff>;
+    case CV_32S:  return scalar_binary_kernel<int,      int,      int64_t, EwAbsdiff>;
+    case CV_64U:  return scalar_binary_kernel<uint64_t, uint64_t, uint64_t, EwAbsdiff>;
+    case CV_64S:  return scalar_binary_kernel<int64_t,  int64_t,  int64_t,  EwAbsdiff>;
+    case CV_64F:  return scalar_binary_kernel<double,   double,   double,   EwAbsdiff>;
+    default:      return nullptr;
+    }
+}
+
 // ===========================================================================
 // OP_COPY_MASK: dst = (mask != 0) ? src : dst   (unmasked elements are PRESERVED)
 // ===========================================================================
@@ -713,7 +788,7 @@ static ElemwiseFunc getBinaryArithF32(int op)
 // ===========================================================================
 // Public dispatcher.
 // ===========================================================================
-ElemwiseFunc getElemwiseFunc(ElemwiseOp op, int depth0, int depth1, int depth2, int rdepth)
+ElemwiseFunc getElemwiseFunc(TOp op, int depth0, int depth1, int depth2, int rdepth)
 {
     (void)depth2;
 
@@ -740,6 +815,15 @@ ElemwiseFunc getElemwiseFunc(ElemwiseOp op, int depth0, int depth1, int depth2, 
         // directly when wide integers promote to a float work type (see makeBinaryArithProgram).
         const bool isflt = depth0==CV_16F || depth0==CV_16BF || depth0==CV_32F || depth0==CV_64F;
         return getDivFunc(depth0, rdepth, !isflt);
+    }
+
+    // OP_MIN / OP_MAX / OP_ABSDIFF: operands same type T, result the same type (T x T -> T).
+    if (op == OP_MIN || op == OP_MAX || op == OP_ABSDIFF)
+    {
+        if (depth0 != depth1 || rdepth != depth0) return nullptr;
+        if (op == OP_MIN)     return getMinMaxFunc<EwMin>(depth0);
+        if (op == OP_MAX)     return getMinMaxFunc<EwMax>(depth0);
+        return getAbsdiffFunc(depth0);
     }
 
     // OP_COPY_MASK: data depth == depth0 == rdepth; depth1 is the mask (any 1-byte type, ignored
@@ -771,7 +855,7 @@ namespace ew {
 // Single resolution point for an instruction's kernel + calling convention (see ew_op.hpp).
 // OP_CAST / OP_CONVERT_SCALE bind a core convert BinaryFunc (EW_FN_BINARY); every other op binds
 // the element-wise kernel from getElemwiseFunc (EW_FN_ELEMWISE).
-bool resolveInsnKernel(EwInsn& ins, int depth0, int depth1, int depth2, int rdepth)
+bool resolveInsnKernel(TExpr::Insn& ins, int depth0, int depth1, int depth2, int rdepth)
 {
     if (ins.op == OP_CAST)
     {

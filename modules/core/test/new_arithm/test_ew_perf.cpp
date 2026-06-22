@@ -57,7 +57,7 @@ struct Sz    { std::vector<int> shape; int cn; int ninner; const char* name; };
 // engine builds the op-into-temp + copyMask program; the cv:: reference times cv::add/subtract with
 // the mask (only for same-type combos - mixed-type + mask isn't compared). Engine correctness is
 // always checked against a deterministic zero + copyTo(mask) reference.
-static void perfBinOp(ElemwiseOp op, const char* title, bool masked)
+static void perfBinOp(TOp op, const char* title, bool masked)
 {
     const Combo combos[] = {
         { CV_8U,  CV_8U,  CV_8U,  "u8 +u8 ->u8 " },
@@ -90,7 +90,7 @@ static void perfBinOp(ElemwiseOp op, const char* title, bool masked)
 
             // Full per-call path (matches a future cv:: op): build the program every call.
             // (masked preserves the pre-filled `out` where mask==0, so repeated calls are idempotent.)
-            double te = minUs([&]{ EwProgram p; makeBinaryArithProgram(p, op, c.da, c.db, c.Tr, mdepth);
+            double te = minUs([&]{ TExpr p; makeBinaryArithProgram(p, op, c.da, c.db, c.Tr, mdepth);
                                    p.exec(inps, &out); }, 30, s.ninner);
 
             // engine correctness sanity: add/sub vs cv:: directly; mul/div vs a double reference (the
@@ -99,6 +99,11 @@ static void perfBinOp(ElemwiseOp op, const char* title, bool masked)
             Mat ref;
             if (op == OP_ADD)      cv::add     (a, b, ref, noArray(), c.Tr);
             else if (op == OP_SUB) cv::subtract(a, b, ref, noArray(), c.Tr);
+            else if (op == OP_MIN || op == OP_MAX || op == OP_ABSDIFF) {
+                   Mat aT, bT; a.convertTo(aT, c.Tr); b.convertTo(bT, c.Tr);
+                   if (op == OP_MIN) cv::min(aT, bT, ref);
+                   else if (op == OP_MAX) cv::max(aT, bT, ref);
+                   else cv::absdiff(aT, bT, ref); }
             else { Mat aD, bD, q; a.convertTo(aD, CV_64F); b.convertTo(bD, CV_64F);
                    if (op == OP_MUL) cv::multiply(aD, bD, q); else cv::divide(aD, bD, q);
                    q.convertTo(ref, c.Tr); }
@@ -111,15 +116,20 @@ static void perfBinOp(ElemwiseOp op, const char* title, bool masked)
             EXPECT_LE(n, tol) << title << " " << c.name << " " << s.name;
 
             // cv:: timing reference (skip for mixed-type masked / mul / div, where the cv:: array op
-            // needs same-type inputs).
+            // needs same-type inputs). min/max/absdiff have no dtype arg and require identical input
+            // types, so they are only timed against cv:: when da == db.
+            const bool mm = (op == OP_MIN || op == OP_MAX || op == OP_ABSDIFF);
             double tc = -1;
-            if (c.da == c.db || (!masked && !fp))
+            if (c.da == c.db || (!masked && !fp && !mm))
             {
                 Mat tmp;
                 InputArray m = masked ? InputArray(mask) : noArray();
                 if      (op == OP_ADD) tc = minUs([&]{ cv::add     (a, b, tmp, m, c.Tr); }, 30, s.ninner);
                 else if (op == OP_SUB) tc = minUs([&]{ cv::subtract(a, b, tmp, m, c.Tr); }, 30, s.ninner);
                 else if (op == OP_MUL) tc = minUs([&]{ cv::multiply(a, b, tmp, 1.0, c.Tr); }, 30, s.ninner);
+                else if (op == OP_MIN) tc = minUs([&]{ cv::min     (a, b, tmp); }, 30, s.ninner);
+                else if (op == OP_MAX) tc = minUs([&]{ cv::max     (a, b, tmp); }, 30, s.ninner);
+                else if (op == OP_ABSDIFF) tc = minUs([&]{ cv::absdiff(a, b, tmp); }, 30, s.ninner);
                 else                   tc = minUs([&]{ cv::divide  (a, b, tmp, 1.0, c.Tr); }, 30, s.ninner);
             }
 
@@ -142,7 +152,7 @@ TEST(Core_EW_Perf, add)
     Mat b = randMat({1,1},      3, CV_8U, 0, 100);
     Mat inps[] = {a, b}, out;
 
-    double te = minUs([&]{ EwProgram p; makeAddProgram(p, CV_8U, CV_8U, CV_8U);
+    double te = minUs([&]{ TExpr p; makeAddProgram(p, CV_8U, CV_8U, CV_8U);
                            p.exec(inps, &out); }, 30, 4);
 
     Vec3b bv = b.at<Vec3b>(0, 0);
@@ -172,6 +182,24 @@ TEST(Core_EW_Perf, mul)
 TEST(Core_EW_Perf, div)
 {
     perfBinOp(OP_DIV, "div", false);
+    std::cout << std::endl;
+}
+
+TEST(Core_EW_Perf, min)
+{
+    perfBinOp(OP_MIN, "min", false);
+    std::cout << std::endl;
+}
+
+TEST(Core_EW_Perf, max)
+{
+    perfBinOp(OP_MAX, "max", false);
+    std::cout << std::endl;
+}
+
+TEST(Core_EW_Perf, absdiff)
+{
+    perfBinOp(OP_ABSDIFF, "absdiff", false);
     std::cout << std::endl;
 }
 
@@ -206,7 +234,7 @@ TEST(Core_EW_Perf, addWeighted)
         Mat a = randMat(s.shape, s.cn, CV_32F, -100, 100);
         Mat b = randMat(s.shape, s.cn, CV_32F, -100, 100);
         Mat inps[] = {a, b}, out;
-        double te = minUs([&]{ EwProgram p; makeAddWeightedProgram(p, CV_32F, CV_32F, CV_32F, alpha, beta, gamma);
+        double te = minUs([&]{ TExpr p; makeAddWeightedProgram(p, CV_32F, CV_32F, CV_32F, alpha, beta, gamma);
                                p.exec(inps, &out); }, 30, s.ninner);
         Mat ref;
         double tc = minUs([&]{ cv::addWeighted(a, alpha, b, beta, gamma, ref); }, 30, s.ninner);

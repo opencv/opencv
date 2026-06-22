@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-// Layer 4: the cv::expression() frontend. Parses a std::format-like string into an EwGraph,
+// Layer 4: the cv::expression() frontend. Parses a std::format-like string into an TExpr,
 // compiles it and runs it over the given inputs, producing one or more output tensors.
 //
 // Grammar (informal):

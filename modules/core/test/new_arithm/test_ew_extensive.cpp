@@ -158,7 +158,7 @@ TEST_P(EW_Extensive_BinOp, accuracy)
 {
     const int opSel = std::get<0>(GetParam());
     const int caseidx = std::get<1>(GetParam());
-    const ElemwiseOp op = opSel ? OP_SUB : OP_ADD;
+    const TOp op = opSel ? OP_SUB : OP_ADD;
     const char* opStr = opSel ? "sub" : "add";
     RNG rng(mix64(kSuiteSalt ^ (uint64_t)caseidx));
 
@@ -218,7 +218,7 @@ TEST_P(EW_Extensive_BinOp, accuracy)
     Mat ref; cv::merge(refch, ref);
 
     // engine (output aliases input #aliasIn for the in-place case, else a fresh Mat)
-    EwProgram p;
+    TExpr p;
     makeBinaryArithProgram(p, op, da, db, Tr);
     Mat inps[] = {a, b}, outOwn;
     Mat* outPtr = inplace ? &inps[aliasIn] : &outOwn;
@@ -234,6 +234,75 @@ INSTANTIATE_TEST_CASE_P(Core_EW, EW_Extensive_BinOp,
                           std::get<1>(info.param));
     });
 
+// ------------------------------------------------------------------- min / max / absdiff
+// op 0 = MIN, 1 = MAX, 2 = ABSDIFF: T x T -> T (operands promoted to a common type C, result C).
+// Built through emit() (the same type-inference path the parser/compiler use), not the hand arith
+// builder, so this also exercises emit's promotion + cast insertion for a fresh family of ops.
+class EW_Extensive_MinMax : public ::testing::TestWithParam<std::tuple<int,int>> {};
+
+TEST_P(EW_Extensive_MinMax, accuracy)
+{
+    const int opSel = std::get<0>(GetParam());
+    const int caseidx = std::get<1>(GetParam());
+    const TOp op = opSel == 0 ? OP_MIN : opSel == 1 ? OP_MAX : OP_ABSDIFF;
+    const char* opStr = opSel == 0 ? "min" : opSel == 1 ? "max" : "absdiff";
+    RNG rng(mix64(kSuiteSalt ^ (uint64_t)(caseidx * 3 + opSel)));   // distinct stream per op
+
+    std::vector<int> shape = sampleShape(rng);
+    const int da = sampleDepth(rng), db = sampleDepth(rng);
+    const int C = promoteArith(da, db);   // auto result depth (rdepth == -1), shared with the reference
+
+    static const int cncand[] = { 1, 1, 2, 3, 4 };
+    const int rcn = cncand[rng.uniform(0, 5)];
+    const int cn_a = rng.uniform(0, 2) ? rcn : 1;
+    const int cn_b = rng.uniform(0, 2) ? rcn : 1;
+    const int ocn = std::max(cn_a, cn_b);
+
+    std::vector<int> sa(shape.size()), sb(shape.size()), res(shape.size());
+    for (size_t d = 0; d < shape.size(); d++)
+    {
+        sa[d] = rng.uniform(0, 2) ? shape[d] : 1;
+        sb[d] = rng.uniform(0, 2) ? shape[d] : 1;
+        res[d] = std::max(sa[d], sb[d]);
+    }
+
+    SCOPED_TRACE(cv::format("%s caseidx=%d da=%d db=%d C=%d a=%sC%d b=%sC%d",
+                            opStr, caseidx, da, db, C, shapeStr(sa).c_str(), cn_a,
+                            shapeStr(sb).c_str(), cn_b));
+
+    Mat a = makeRandom(rng, sa, cn_a, da), b = makeRandom(rng, sb, cn_b, db);
+
+    // reference: per output channel pick a's/b's channel (C1->Cn), spatial-broadcast, cast to C, op.
+    std::vector<Mat> ach, bch; cv::split(a, ach); cv::split(b, bch);
+    std::vector<Mat> refch(ocn);
+    for (int c = 0; c < ocn; c++)
+    {
+        Mat apC, bpC;
+        ach[cn_a == 1 ? 0 : c].convertTo(apC, C);
+        bch[cn_b == 1 ? 0 : c].convertTo(bpC, C);
+        Mat aB, bB; cv::broadcast(apC, res, aB); cv::broadcast(bpC, res, bB);
+        if (op == OP_MIN)      cv::min(aB, bB, refch[c]);
+        else if (op == OP_MAX) cv::max(aB, bB, refch[c]);
+        else                   cv::absdiff(aB, bB, refch[c]);
+    }
+    Mat ref; cv::merge(refch, ref);
+
+    TExpr p;
+    makeBinaryArithProgram(p, op, da, db, -1);   // -1 => auto rdepth (= promoteArith(da,db) = C)
+    Mat inps[] = { a, b }, out;
+    p.exec(inps, &out);
+
+    checkClose(out, ref, C, isFloat(da) || isFloat(db), opStr);
+}
+
+INSTANTIATE_TEST_CASE_P(Core_EW, EW_Extensive_MinMax,
+    testing::Combine(testing::Values(0, 1, 2), testing::Range(0, kNumCases)),
+    [](const testing::TestParamInfo<std::tuple<int,int>>& info) {
+        const int o = std::get<0>(info.param);
+        return cv::format("%s_case%04d", o == 0 ? "min" : o == 1 ? "max" : "absdiff",
+                          std::get<1>(info.param));
+    });
+
 // ------------------------------------------------------------------------------------- mul / div
 // Parameterized on (op, caseidx): op 0 = MUL, 1 = DIV. Both compute in the float work type (float
 // for <=16-bit, double for 32/64-bit), matching cv::multiply/divide; integer divide-by-zero => 0.
@@ -243,7 +312,7 @@ TEST_P(EW_Extensive_MulDiv, accuracy)
 {
     const int opSel = std::get<0>(GetParam());
     const int caseidx = std::get<1>(GetParam());
-    const ElemwiseOp op = opSel ? OP_DIV : OP_MUL;
+    const TOp op = opSel ? OP_DIV : OP_MUL;
     const char* opStr = opSel ? "div" : "mul";
     RNG rng(mix64(kSuiteSalt ^ 0x3DD17ULL ^ (uint64_t)caseidx));
 
@@ -319,7 +388,7 @@ TEST_P(EW_Extensive_MulDiv, accuracy)
     }
     Mat ref; cv::merge(refch, ref);
 
-    EwProgram p;
+    TExpr p;
     makeBinaryArithProgram(p, op, da, db, Tr, EW_DEPTH_NONE, scale);
     Mat inps[] = {a, b}, outOwn;
     Mat* outPtr = inplace ? &inps[aliasIn] : &outOwn;
@@ -347,7 +416,7 @@ TEST_P(EW_Extensive_Mask, accuracy)
 {
     const int opSel = std::get<0>(GetParam());
     const int caseidx = std::get<1>(GetParam());
-    const ElemwiseOp op = opSel ? OP_SUB : OP_ADD;
+    const TOp op = opSel ? OP_SUB : OP_ADD;
     const char* opStr = opSel ? "sub" : "add";
     RNG rng(mix64(kSuiteSalt ^ 0x5A5C0DEULL ^ (uint64_t)caseidx));
 
@@ -390,7 +459,7 @@ TEST_P(EW_Extensive_Mask, accuracy)
     Mat ref = init.clone();
     refFull.copyTo(ref, m8);
 
-    EwProgram p;
+    TExpr p;
     makeBinaryArithProgram(p, op, da, db, Tr, md);
     Mat inps[] = {a, b, mask}, out = init.clone();
     p.exec(inps, &out);
@@ -420,9 +489,11 @@ TEST_P(EW_Extensive_Cast, accuracy)
 
     Mat a = makeRandom(rng, shape, 1, sd), out;
 
-    EwGraph g; g.output(g.cast(g.input(0), dd));
-    EwProgram p; compile(g, p, &sd, 1);
-    p.exec(&a, &out);
+    TExpr e;
+    int s = e.addInput(sd);
+    e.output(e.emit(OP_CAST, &s, 1, dd));
+    e.compile();
+    e.exec(&a, &out);
 
     Mat ref; a.convertTo(ref, dd);
     checkClose(out, ref, dd, isFloat(sd), "cast");

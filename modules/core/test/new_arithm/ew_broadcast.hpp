@@ -8,7 +8,7 @@
 // the numpy-broadcast iteration space over all of them (channels = innermost dim), partitions it
 // into tasks, runs them with parallel_for_, and for each tile passes the per-operand slices
 // THROUGH to a body lambda. Everything semantic - which array is the output, which kernels run,
-// temp buffers - lives in `body`, which typically runs a prepared EwProgram.
+// temp buffers - lives in `body`, which typically runs a prepared TExpr.
 //
 // Hierarchy:  cv::expression()  ->  broadcastOp()  ->  body lambda (runs the frozen program).
 //   - cv::expression: parse + compile + prep (shapes, ctx, buffer sizes, nstripes via opCost).

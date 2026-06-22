@@ -14,26 +14,27 @@ namespace opencv_test { namespace {
 using namespace cv::ew;
 
 // out = op(a, b), composed via the general binary-arith builder (the future engine-backed cv::add).
-static Mat runBinary(ElemwiseOp op, const Mat& a, const Mat& b, int rdepth)
+static Mat runBinary(TOp op, const Mat& a, const Mat& b, int rdepth)
 {
-    EwProgram p; makeBinaryArithProgram(p, op, a.depth(), b.depth(), rdepth);
+    TExpr p; makeBinaryArithProgram(p, op, a.depth(), b.depth(), rdepth);
     Mat inps[] = {a, b}, out;
     p.exec(inps, &out);
     return out;
 }
 
-// out = cast(a), lowered through the real Layer-2 compiler (a 1-node cast graph).
+// out = cast(a), built through emit() (a single OP_CAST) and compiled.
 static Mat runCast(const Mat& a, int rdepth)
 {
-    EwGraph g; g.output(g.cast(g.input(0), rdepth));
-    EwProgram p; int sd = a.depth();
-    compile(g, p, &sd, 1);
+    TExpr e;
+    int s = e.addInput(a.depth());
+    e.output(e.emit(OP_CAST, &s, 1, rdepth));
+    e.compile();
     Mat out;
-    p.exec(&a, &out);
+    e.exec(&a, &out);
     return out;
 }
 
-static void cvRef(ElemwiseOp op, const Mat& a, const Mat& b, Mat& dst)
+static void cvRef(TOp op, const Mat& a, const Mat& b, Mat& dst)
 {
     switch (op)
     {
@@ -48,7 +49,7 @@ static void cvRef(ElemwiseOp op, const Mat& a, const Mat& b, Mat& dst)
 // ADD/SUB/MUL/DIV on f32, single- and multi-channel, same shape.
 TEST(Core_EW_Slice, binary_f32_same_shape)
 {
-    const ElemwiseOp ops[] = { OP_ADD, OP_SUB, OP_MUL, OP_DIV };
+    const TOp ops[] = { OP_ADD, OP_SUB, OP_MUL, OP_DIV };
     const int chans[] = { 1, 3, 4 };
     RNG& rng = theRNG();
     for (int oi = 0; oi < 4; oi++)

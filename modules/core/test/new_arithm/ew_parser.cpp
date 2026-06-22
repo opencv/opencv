@@ -108,7 +108,7 @@ static int binPrec(const std::string& op)
     return -1;
 }
 
-static ElemwiseOp binOp(const std::string& op)
+static TOp binOp(const std::string& op)
 {
     if (op == "+")  return OP_ADD;
     if (op == "-")  return OP_SUB;
@@ -145,9 +145,9 @@ static int typeDepth(const std::string& name)
 }
 
 // element-wise op function name -> (op, arity), or arity 0 if unknown
-static ElemwiseOp fnOp(const std::string& name, int& arity)
+static TOp fnOp(const std::string& name, int& arity)
 {
-    struct E { const char* n; ElemwiseOp op; };
+    struct E { const char* n; TOp op; };
     static const E unary[]  = { {"abs",OP_ABS},{"sqrt",OP_SQRT},{"exp",OP_EXP},{"log",OP_LOG},
                                 {"sin",OP_SIN},{"cos",OP_COS},{"tanh",OP_TANH},{"erf",OP_ERF},
                                 {"relu",OP_RELU} };
@@ -160,14 +160,21 @@ static ElemwiseOp fnOp(const std::string& name, int& arity)
 }
 
 // --- parser ------------------------------------------------------------------------------
+// Builds the program DIRECTLY into the TExpr (no intermediate graph), exactly like the hand
+// builders: each parse step calls e.emit()/e.addConst()/e.output() and returns the arg SLOT
+// holding its value. Input depths are known up front (from the input Mats), so every operand is
+// typed as it is parsed - emit() infers result depths and inserts casts on the spot.
 struct Parser
 {
     Lexer lex;
     Token cur;
-    EwGraph& g;
-    std::map<std::string, int> env;       // named temporaries
+    TExpr& e;
+    const int* inputSlot;                 // slot id of each external input (precreated)
+    int ninputs;
+    std::map<std::string, int> env;       // named temporaries -> slot
 
-    Parser(std::string_view src, EwGraph& graph) : lex(src), g(graph) { cur = lex.next(); }
+    Parser(std::string_view src, TExpr& expr, const int* islot, int nin)
+        : lex(src), e(expr), inputSlot(islot), ninputs(nin) { cur = lex.next(); }
 
     void advance() { cur = lex.next(); }
     bool isOp(const char* op) const { return cur.type == T_OP && cur.text == op; }
@@ -178,11 +185,19 @@ struct Parser
         advance();
     }
 
+    // A flexible CONST slot holds a literal whose depth emit() picks per use.
+    bool isFlexConst(int slot) const
+    {
+        return e.arginfo[slot].kind == TExpr::CONST && e.arginfo[slot].depth == EW_DEPTH_NONE;
+    }
+
     int parsePrimary()
     {
-        if (cur.type == T_NUM)   { int n = g.constant(Scalar(cur.num)); advance(); return n; }
-        if (cur.type == T_INPUT) { int n = g.input(cur.input); advance(); return n; }
-        if (cur.type == T_LPAREN){ advance(); int e = parseExpr(0); expect(T_RPAREN, "expected ')'"); return e; }
+        if (cur.type == T_NUM)   { int s = e.addConst(EW_DEPTH_NONE, Scalar(cur.num), 1); advance(); return s; }
+        if (cur.type == T_INPUT) { int idx = cur.input; advance();
+                                   CV_Assert(idx >= 0 && idx < ninputs && "ew::expression: input index out of range");
+                                   return inputSlot[idx]; }
+        if (cur.type == T_LPAREN){ advance(); int x = parseExpr(0); expect(T_RPAREN, "expected ')'"); return x; }
         if (cur.type == T_IDENT)
         {
             std::string name = cur.text; advance();
@@ -202,14 +217,12 @@ struct Parser
             expect(T_RPAREN, "expected ')'");
 
             int td = typeDepth(name);
-            if (td >= 0) { CV_Assert(args.size() == 1); return g.cast(args[0], td); }
+            if (td >= 0) { CV_Assert(args.size() == 1); return e.emit(OP_CAST, args.data(), 1, td); }
 
-            int arity = 0; ElemwiseOp op = fnOp(name, arity);
+            int arity = 0; TOp op = fnOp(name, arity);
             CV_Assert(arity != 0 && "ew::expression: unknown function");
             CV_Assert((int)args.size() == arity && "ew::expression: wrong number of arguments");
-            if (arity == 1) return g.unary(op, args[0]);
-            if (arity == 2) return g.binary(op, args[0], args[1]);
-            return g.ternary(op, args[0], args[1], args[2]);
+            return e.emit(op, args.data(), arity);
         }
         CV_Error(Error::StsParseError, "ew::expression: expected a primary expression");
     }
@@ -221,12 +234,13 @@ struct Parser
             std::string op = cur.text; advance();
             int operand = parseUnary();
             // constant-fold a leading sign so that "-1.5" does not need an OP_NEG kernel
-            if (op == "-" && g.nodes[operand].kind == NODE_CONST)
+            if (op == "-" && isFlexConst(operand))
             {
-                Scalar v = g.nodes[operand].cval;
-                return g.constant(Scalar(-v[0], -v[1], -v[2], -v[3]), g.nodes[operand].cchannels);
+                const TExpr::Arg& a = e.arginfo[operand];
+                return e.addConst(EW_DEPTH_NONE, Scalar(-a.cval[0], -a.cval[1], -a.cval[2], -a.cval[3]), a.channels);
             }
-            return g.unary(op == "-" ? OP_NEG : OP_NOT, operand);
+            int x = operand;
+            return e.emit(op == "-" ? OP_NEG : OP_NOT, &x, 1);
         }
         return parsePrimary();
     }
@@ -240,7 +254,8 @@ struct Parser
             if (p < minPrec) break;
             std::string op = cur.text; advance();
             int right = parseExpr(p + 1);         // left-associative
-            left = g.binary(binOp(op), left, right);
+            int args[2] = { left, right };
+            left = e.emit(binOp(op), args, 2);
         }
         return left;
     }
@@ -250,19 +265,23 @@ struct Parser
     {
         if (cur.type == T_LPAREN)
         {
-            Lexer save = lex; Token savedCur = cur;       // backtrack point
+            // backtrack point: save the lexer AND the program length, since the trial parse below
+            // emits instructions/slots that must be rolled back if this turns out NOT to be a tuple.
+            Lexer save = lex; Token savedCur = cur;
+            size_t nInsn = e.prog.size(), nArg = e.arginfo.size(); int nTemp = e.ntemps;
             advance();
             int e0 = parseExpr(0);
             if (cur.type == T_COMMA)
             {
-                g.output(e0);
-                while (cur.type == T_COMMA) { advance(); g.output(parseExpr(0)); }
+                e.output(e0);
+                while (cur.type == T_COMMA) { advance(); e.output(parseExpr(0)); }
                 expect(T_RPAREN, "expected ')'");
                 return;
             }
-            lex = save; cur = savedCur;                   // not a tuple -> reparse as expr
+            lex = save; cur = savedCur;                   // not a tuple -> undo the trial parse
+            e.prog.resize(nInsn); e.arginfo.resize(nArg); e.ntemps = nTemp;
         }
-        g.output(parseExpr(0));
+        e.output(parseExpr(0));
     }
 
     void parse()
@@ -271,7 +290,7 @@ struct Parser
         {
             if (cur.type == T_IDENT)
             {
-                Lexer save = lex; Token savedCur = cur;
+                Lexer save = lex; Token savedCur = cur;   // lexer-only backtrack (nothing emitted yet)
                 std::string name = cur.text; advance();
                 if (cur.type == T_ASSIGN)
                 {
@@ -287,7 +306,7 @@ struct Parser
             break;
         }
         CV_Assert(cur.type == T_END && "ew::expression: trailing tokens");
-        CV_Assert(!g.outputs.empty() && "ew::expression: no result");
+        CV_Assert(e.noutputs > 0 && "ew::expression: no result");
     }
 };
 
@@ -297,22 +316,22 @@ void expression(std::string_view expr, InputArrayOfArrays _inputs, OutputArrayOf
 {
     CV_Assert(_inputs.kind() == _InputArray::STD_VECTOR_MAT);
     const std::vector<Mat>& inps = *(const std::vector<Mat>*)_inputs.getObj();
+    const int ninputs = (int)inps.size();
 
-    EwGraph g;
-    g.ninputs = (int)inps.size();
-    Parser(expr, g).parse();
+    // Input depths are known now, so build a fully-typed program straight away: one INPUT slot per
+    // input (slot index i carries input i's depth), then parse the expression into instructions.
+    TExpr e;
+    AutoBuffer<int> islot(std::max(ninputs, 1));
+    for (int i = 0; i < ninputs; i++) islot[i] = e.addInput(inps[i].depth());
 
-    AutoBuffer<int> depths(g.ninputs);
-    for (int i = 0; i < g.ninputs; i++) depths[i] = inps[i].depth();
-
-    EwProgram prog;
-    compile(g, prog, depths.data(), g.ninputs);
+    Parser(expr, e, islot.data(), ninputs).parse();
+    e.compile();
 
     auto kind = _outputs.kind();
     if (kind == _InputArray::STD_VECTOR_MAT) {
         std::vector<Mat>& outs = _outputs.getMatVecRef();
-        outs.resize(prog.noutputs);
-        prog.exec(inps.data(), outs.data());
+        outs.resize(e.noutputs);
+        e.exec(inps.data(), outs.data());
     } else {
         CV_Error(Error::StsNotImplemented, "vector<Mat> is expected as output of expression");
     }

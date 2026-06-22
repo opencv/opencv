@@ -43,7 +43,7 @@ enum
 
 // The single enumeration of element-wise operations, used both in the IR and by the
 // kernel dispatcher.
-enum ElemwiseOp
+enum TOp
 {
     OP_NOP = 0,
 
@@ -72,7 +72,7 @@ enum ElemwiseOp
 };
 
 // Arity from the encoding above (0 for OP_NOP). No table to keep in lock-step with the enum.
-inline int opArity(ElemwiseOp op) { return ((int)op >> OP_ARITY_SHIFT) & 7; }
+inline int opArity(TOp op) { return ((int)op >> OP_ARITY_SHIFT) & 7; }
 
 // Operation category — the graph compiler's type-inference rules differ per category.
 enum ElemwiseCategory
@@ -86,8 +86,13 @@ enum ElemwiseCategory
 };
 
 // Op metadata (implemented in ew_op.cpp).
-const char*      opName(ElemwiseOp op);
-ElemwiseCategory opCategory(ElemwiseOp op);
+const char*      opName(TOp op);
+ElemwiseCategory opCategory(TOp op);
+
+// numpy-ish arithmetic promotion of two depths, OpenCV same-type preference and INTEGER-PRESERVING
+// (mixing two integers stays integer; a float operand pulls it to f32/f64). EW_DEPTH_NONE on one
+// side returns the other. Used both by emit() for type inference and as the rdepth == -1 auto rule.
+int promoteArith(int a, int b);
 
 // ---------------------------------------------------------------------------
 // Steps for one operand, in elemsize1 units, one entry per shape dim (parallel to a
@@ -119,7 +124,7 @@ typedef int (*ElemwiseFunc)(
 // Dispatcher: returns the best kernel for (op, operand depths, result depth), or nullptr
 // if the exact combination is not provided (the compiler then inserts OP_CAST nodes and
 // retries with a supported working type). Unused operand depths are EW_DEPTH_NONE.
-ElemwiseFunc getElemwiseFunc(ElemwiseOp op, int depth0, int depth1, int depth2, int rdepth);
+ElemwiseFunc getElemwiseFunc(TOp op, int depth0, int depth1, int depth2, int rdepth);
 
 // T + T -> R
 ElemwiseFunc getAddFunc(int T, int R);
@@ -144,92 +149,107 @@ typedef void (*EwBinaryFunc)(const uchar* src1, size_t step1,
                              const uchar* src2, size_t step2,
                              uchar* dst, size_t step, Size sz, void* params);
 
-// ---------------------------------------------------------------------------
-// Runtime operand descriptor: what a kernel actually receives per slice.
-// depth/channels are carried for assertions/debugging only; the kernel itself is already
-// type-specialized via the function pointer.
-// ---------------------------------------------------------------------------
-struct EwArg
+// An element-wise expression as ONE flat program (the analogue of cv::MatExpr for element-wise
+// ops): an arg table (`arginfo`, the typed operands) + an instruction list (`prog`). There is no
+// separate high-level graph - the program IS the representation. It is built directly, exactly the
+// way the hand builders (makeXxx in ew_exec) and the cv::expression parser do it:
+//   - declare operands with addInput()/addConst()/addOutput() (and addTemp() for intermediates);
+//   - append operations with addInsn() (a single op, you pick the operand/result slots) or, when
+//     you want automatic type inference + cast insertion, with emit() (it derives the result depth,
+//     inserts OP_CAST where an exact kernel is missing, allocates the result temp, returns its slot).
+// The operand types are known at build time (inputs carry their depth), so the whole program is
+// typed as it is built. compile() is then a cheap finalize pass: bind each instruction's kernel
+// (resolveInsnKernel) and pack the temps into a minimal set of physical buffers (liveness). Any
+// info compile() needs PER ARG (e.g. liveness intervals) is transient - it lives in local arrays
+// inside compile() and is gone when it returns; `Arg` stays the small permanent operand record.
+//
+// Heap-free for the common case: to eventually back cv::add() the program is (re)built on every
+// call, so its containers must not allocate for typical (small) expressions. AutoBuffer keeps a
+// handful of insns/slots inline on the stack and only spills to the heap for large expressions; it
+// is copyable, so TExpr is still returned/passed by value.
+//
+// NB: a default-constructed AutoBuffer reports size()==fixed_size (meant to be sized up front, not
+// grown from empty). clear() calls allocate(0) on each container to reset the size to 0, after
+// which push_back/resize/size() behave exactly like std::vector.
+struct TExpr
 {
-    const void* ptr = nullptr;
-    size_t stepy = 0;
-    size_t stepx = 0;
-    int depth = EW_DEPTH_NONE;   // debug
-    int channels = 0;            // debug
-};
+    // Static (shape-independent) classification of an arg slot.
+    enum ArgKind
+    {
+        NONE = 0,   // the reserved empty operand (slot 0)
+        INPUT,
+        CONST,
+        TEMP,
+        OUTPUT
+    };
 
-// ---------------------------------------------------------------------------
-// Static (shape-independent) description of an arg slot in a compiled program.
-// ---------------------------------------------------------------------------
-enum ArgKind
-{
-    ARG_NONE = 0,   // the reserved empty operand (slot 0)
-    ARG_INPUT,
-    ARG_CONST,
-    ARG_TEMP,
-    ARG_OUTPUT
-};
+    struct Arg
+    {
+        ArgKind kind = NONE;
+        int depth = EW_DEPTH_NONE;  // EW_DEPTH_NONE on a CONST = "flexible" (emit() types it per use)
+        int channels = 0;           // for CONST: # of meaningful channels in cval (0/1 => single broadcast value)
+        int index = -1;             // input#/output#/temp-id depending on kind
+        // Constant value(s), CONST only: a per-channel cv::Scalar (up to 4 channels). That covers
+        // ~all real constants; anything larger/per-element is passed as a real input tensor.
+        Scalar cval;
+    };
 
-struct EwArgInfo
-{
-    ArgKind kind = ARG_NONE;
-    int depth = EW_DEPTH_NONE;
-    int channels = 0;               // for ARG_CONST: # of meaningful channels in cval (0/1 => single broadcast value)
-    int index = -1;                 // input#/output#/temp-id depending on kind
-    // Constant value(s), ARG_CONST only: a per-channel cv::Scalar (up to 4 channels). That
-    // covers ~all real constants; anything larger/per-element is passed as a real input tensor.
-    Scalar cval;
-};
+    // One compiled instruction: the op + arg-table indices + a resolved kernel. The kernel uses one
+    // of two calling conventions selected by `fnkind`: EW_FN_ELEMWISE uses `fptr` (the broadcasting
+    // ElemwiseFunc), EW_FN_BINARY uses `bfptr` (a core convert BinaryFunc, for OP_CAST/CONVERT_SCALE).
+    // `params` is the per-instruction scalar block (passed to the kernel by pointer): mul/div scale
+    // in params[0]; convert_scale {scale, offset} in params[0..1]. Default (scale 1, offset 0) is the
+    // identity, so ops with no scalar parameter need not set it. fptr/bfptr are null until compile().
+    struct Insn
+    {
+        ElemwiseFunc fptr = nullptr;        // EW_FN_ELEMWISE kernel
+        EwBinaryFunc bfptr = nullptr;       // EW_FN_BINARY  kernel (core convert / convert-scale)
+        TOp op = OP_NOP;
+        signed char fnkind = EW_FN_ELEMWISE;
+        int arg0 = 0, arg1 = 0, arg2 = 0, result = 0;
+        Scalar params = Scalar(1);          // op scalars; params[0]=scale defaults to 1 (identity)
+    };
 
-// One compiled instruction: the op + indices into the program's arg table + a resolved kernel.
-// The kernel comes in one of two calling conventions selected by `fnkind`: EW_FN_ELEMWISE uses
-// `fptr` (the broadcasting ElemwiseFunc), EW_FN_BINARY uses `bfptr` (a core convert BinaryFunc,
-// for OP_CAST / OP_CONVERT_SCALE). `params` is the per-instruction scalar block (passed to the
-// kernel by pointer): mul/div scale in params[0]; convert_scale {scale, offset} in params[0..1];
-// it would also hold e.g. addWeighted's alpha/beta/gamma if that ever became one fused op. The
-// default (scale 1, offset 0) is the identity, so ops without scalar parameters need not set it.
-struct EwInsn
-{
-    ElemwiseFunc fptr = nullptr;        // EW_FN_ELEMWISE kernel
-    EwBinaryFunc bfptr = nullptr;       // EW_FN_BINARY  kernel (core convert / convert-scale)
-    ElemwiseOp op = OP_NOP;
-    signed char fnkind = EW_FN_ELEMWISE;
-    int arg0 = 0, arg1 = 0, arg2 = 0, result = 0;
-    Scalar params = Scalar(1);          // op scalars; params[0]=scale defaults to 1 (identity)
+    AutoBuffer<Insn, 16>   prog;             // instructions, in execution order (kernels bound by compile())
+    AutoBuffer<Arg, 16>    arginfo;          // slot 0 is always NONE
+    int ninputs = 0;
+    int noutputs = 0;
+    int ntemps = 0;
+    int nbuffers = 0;                        // distinct physical temp buffers after liveness
+    AutoBuffer<int, 16>    bufferOfTemp;     // temp-id -> physical buffer id
+
+    TExpr();
+    void clear();                            // reset to an empty program (slot 0 = NONE)
+
+    // ---- operand / instruction builders (return the new slot / instruction index) ----
+    int  addInput(int depth);
+    int  addConst(int depth, const Scalar& v, int channels = 1);   // depth EW_DEPTH_NONE => flexible
+    int  addTemp(int depth);
+    int  addOutput(int depth);
+    int  addInsn(TOp op, int a0, int a1, int a2, int result, const Scalar& params = Scalar(1));
+
+    // Append `op` over the given operand slots with automatic type inference: derive the result
+    // depth (promotion / castDepth), pick a direct kernel if one exists else compute in a working
+    // type and cast, materializing flexible CONST operands at the chosen type. Returns the slot
+    // holding the result. `castDepth` forces the result depth (OP_CAST / explicitly-typed ops).
+    int  emit(TOp op, const int* args, int nargs, int castDepth = EW_DEPTH_NONE);
+
+    // Declare a result tensor fed by `rootSlot`. If `rootSlot` is a TEMP produced by one
+    // instruction and used nowhere else, that instruction is redirected to write the new OUTPUT
+    // slot directly (no copy); otherwise an identity OP_CAST copies it. Returns the OUTPUT slot.
+    int  output(int rootSlot);
+
+    // Finalize: bind every instruction's kernel and pack temps into physical buffers (liveness).
+    void compile();
+
+    // Execute the compiled program over a set of input Mats, producing the broadcast result(s).
+    void exec(const Mat* inputs, Mat* outputs);
 };
 
 // Resolve the kernel + calling convention for one instruction from its op and operand/result
 // depths: sets ins.fnkind and the matching function pointer (fptr or bfptr). Returns false (and
-// leaves the pointer null) when no kernel exists, so the compiler can fall back to a wider type.
-bool resolveInsnKernel(EwInsn& ins, int depth0, int depth1, int depth2, int rdepth);
-
-// A frozen program: everything that does NOT depend on the concrete shapes of a call.
-// Shapes, strides and the physical tile/output memory are computed per-call in the executor.
-//
-// Heap-free for the common case: to eventually back cv::add() the whole program is (re)built on
-// every call, so its containers must not allocate. AutoBuffer keeps typical element-wise programs
-// (a handful of insns/slots) entirely inline on the stack and only falls back to the heap for
-// unusually large expressions. AutoBuffer is copyable, so EwProgram is still returned by value.
-//
-// NB: a default-constructed AutoBuffer reports size()==fixed_size (it is meant to be sized up
-// front, not grown from empty). The constructor calls allocate(0) on each container to reset the
-// size to 0, after which push_back/resize/size() behave exactly like std::vector.
-struct EwProgram
-{
-    AutoBuffer<EwInsn, 16>     prog;          // resolved instructions, in execution order
-    AutoBuffer<EwArgInfo, 16>  arginfo;       // slot 0 is always ARG_NONE
-    int ninputs = 0;
-    int noutputs = 0;
-    int ntemps = 0;
-    int nbuffers = 0;                         // distinct physical temp buffers after liveness
-    AutoBuffer<int, 16>        bufferOfTemp;   // temp-id -> physical buffer id
-
-    EwProgram();
-    void clear();
-
-    // Execute a compiled program.
-    void exec(const Mat* inputs, Mat* outputs);
-};
+// leaves the pointers null) when no kernel exists, so the builder can fall back to a wider type.
+bool resolveInsnKernel(TExpr::Insn& ins, int depth0, int depth1, int depth2, int rdepth);
 
 }} // namespace cv::ew
 

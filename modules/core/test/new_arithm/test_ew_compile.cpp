@@ -2,9 +2,9 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-// Tests for Layer 2: the graph compiler. Builds expression graphs by hand, compiles them to
-// EwProgram (type inference + auto OP_CAST insertion + temp-buffer liveness) and runs them
-// through the executor, checking against the classic cv:: ops.
+// Tests for Layer 2: type inference + cast insertion. Builds programs directly with emit() (the
+// same helper the cv::expression parser and the hand builders use), compiles them (bind kernels +
+// temp-buffer liveness) and runs them through the executor, checking against the classic cv:: ops.
 
 #include "../test_precomp.hpp"
 #include "ew_compile.hpp"
@@ -14,22 +14,22 @@ namespace opencv_test { namespace {
 
 using namespace cv::ew;
 
-static std::vector<Mat> run(const EwGraph& g,
-                            const std::vector<Mat>& inps, EwProgram* outProg = nullptr)
+// emit shortcuts: a flexible literal, and a binary op over two slots.
+static int K(TExpr& e, double v)              { return e.addConst(EW_DEPTH_NONE, Scalar(v), 1); }
+static int bin(TExpr& e, TOp op, int a, int b){ int ar[2] = { a, b }; return e.emit(op, ar, 2); }
+
+// Compile `e` and run it over the given inputs. The operands were already typed at build time
+// (addInput carries each input's depth), so compile() just binds kernels + packs temp buffers.
+static std::vector<Mat> run(TExpr& e, const std::vector<Mat>& inps)
 {
-    EwProgram buf, &p = outProg ? *outProg : buf;
-    size_t ninputs = inps.size();
-    AutoBuffer<int> depths(ninputs);
-    for (size_t i = 0; i < ninputs; i++)
-        depths[i] = inps[i].depth();
-    compile(g, p, depths.data(), ninputs);
-    std::vector<Mat> outs(p.noutputs);
-    p.exec(inps.data(), outs.data());
+    e.compile();
+    std::vector<Mat> outs(e.noutputs);
+    e.exec(inps.data(), outs.data());
     return outs;
 }
 
-// addWeighted(a,alpha,b,beta,gamma) = a*alpha + b*beta + gamma, built as a graph and compiled
-// (the temp buffers that the previous test wired by hand are now allocated automatically).
+// addWeighted(a,alpha,b,beta,gamma) = a*alpha + b*beta + gamma, built op-by-op via emit()
+// (the temp buffers are allocated automatically by compile()'s liveness pass).
 TEST(Core_EW_Compile, addweighted_f32)
 {
     const int chans[] = { 1, 3 };
@@ -41,15 +41,14 @@ TEST(Core_EW_Compile, addweighted_f32)
         theRNG().fill(a, RNG::UNIFORM, 1.f, 10.f);
         theRNG().fill(b, RNG::UNIFORM, 1.f, 10.f);
 
-        EwGraph g;
-        int ia = g.input(0), ib = g.input(1);
-        int t0 = g.binary(OP_MUL, ia, g.constant(Scalar(alpha)));
-        int t1 = g.binary(OP_MUL, ib, g.constant(Scalar(beta)));
-        int t2 = g.binary(OP_ADD, t0, t1);
-        g.output(g.binary(OP_ADD, t2, g.constant(Scalar(gamma))));
+        TExpr g;
+        int ia = g.addInput(CV_32F), ib = g.addInput(CV_32F);
+        int t0 = bin(g, OP_MUL, ia, K(g, alpha));
+        int t1 = bin(g, OP_MUL, ib, K(g, beta));
+        int t2 = bin(g, OP_ADD, t0, t1);
+        g.output(bin(g, OP_ADD, t2, K(g, gamma)));
 
-        EwProgram prog;
-        std::vector<Mat> out = run(g, { a, b }, &prog);
+        std::vector<Mat> out = run(g, { a, b });
 
         Mat exp; cv::addWeighted(a, alpha, b, beta, gamma, exp);
         ASSERT_EQ(out[0].type(), exp.type());
@@ -58,7 +57,8 @@ TEST(Core_EW_Compile, addweighted_f32)
 }
 
 // Mixed integer types: out = saturate_u8( saturate_u8(a*2.5) + b ), a,b are u8.
-// The compiler must insert u8->f32 input casts and f32->u8 result casts around each op.
+// emit() must insert u8->f32 input casts and f32->u8 result casts around each op (2.5 does not fit
+// u8, so the direct u8 kernel is refused and the float working path is taken).
 TEST(Core_EW_Compile, mixed_u8_inserts_casts)
 {
     int H = 16, W = 24;
@@ -66,10 +66,10 @@ TEST(Core_EW_Compile, mixed_u8_inserts_casts)
     theRNG().fill(a, RNG::UNIFORM, 0, 60);
     theRNG().fill(b, RNG::UNIFORM, 0, 60);
 
-    EwGraph g;
-    int ia = g.input(0), ib = g.input(1);
-    int mul = g.binary(OP_MUL, ia, g.constant(Scalar(2.5)));   // -> u8 (natural)
-    g.output(g.binary(OP_ADD, mul, ib));                       // -> u8
+    TExpr g;
+    int ia = g.addInput(CV_8U), ib = g.addInput(CV_8U);
+    int mul = bin(g, OP_MUL, ia, K(g, 2.5));   // -> u8 (natural)
+    g.output(bin(g, OP_ADD, mul, ib));         // -> u8
 
     std::vector<Mat> out = run(g, { a, b });
 
@@ -88,10 +88,10 @@ TEST(Core_EW_Compile, multi_output_tuple)
     theRNG().fill(a, RNG::UNIFORM, 1.f, 10.f);
     theRNG().fill(b, RNG::UNIFORM, 1.f, 10.f);
 
-    EwGraph g;
-    int ia = g.input(0), ib = g.input(1);
-    g.output(g.binary(OP_ADD, ia, ib));
-    g.output(g.binary(OP_SUB, ia, ib));
+    TExpr g;
+    int ia = g.addInput(CV_32F), ib = g.addInput(CV_32F);
+    g.output(bin(g, OP_ADD, ia, ib));
+    g.output(bin(g, OP_SUB, ia, ib));
 
     std::vector<Mat> out = run(g, { a, b });
     ASSERT_EQ(out.size(), 2u);
@@ -102,24 +102,25 @@ TEST(Core_EW_Compile, multi_output_tuple)
 }
 
 // Liveness: a linear chain of temps with disjoint lifetimes must share physical buffers.
-// out = (((a+1)+1)+1)+1  == a+4 : 3 temps but only 2 buffers needed.
+// out = (((a+1)+1)+1)+1 == a+4 : the last add is redirected straight into the output slot, the
+// three live temps share just 2 physical buffers.
 TEST(Core_EW_Compile, temp_buffer_reuse)
 {
     int H = 10, W = 13;
     Mat a(H, W, CV_32F);
     theRNG().fill(a, RNG::UNIFORM, 1.f, 10.f);
 
-    EwGraph g;
-    int x = g.input(0);
+    TExpr g;
+    int x = g.addInput(CV_32F);
     for (int k = 0; k < 4; k++)
-        x = g.binary(OP_ADD, x, g.constant(Scalar(1.0)));
+        x = bin(g, OP_ADD, x, K(g, 1.0));
     g.output(x);
 
-    EwProgram prog;
-    std::vector<Mat> out = run(g, { a }, &prog);
+    std::vector<Mat> out = run(g, { a });
 
-    EXPECT_EQ(prog.ntemps, 3);       // last add writes straight to the output slot
-    EXPECT_EQ(prog.nbuffers, 2);     // disjoint lifetimes => buffer reuse
+    // last instruction writes straight into the OUTPUT slot (its producing temp was redirected)
+    EXPECT_EQ(g.arginfo[g.prog[g.prog.size() - 1].result].kind, TExpr::OUTPUT);
+    EXPECT_EQ(g.nbuffers, 2);        // disjoint lifetimes => only 2 physical buffers
 
     Mat exp; cv::add(a, Scalar(4.0), exp);
     EXPECT_LE(cvtest::norm(out[0], exp, NORM_INF), 1e-4);

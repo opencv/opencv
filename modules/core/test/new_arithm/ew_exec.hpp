@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-// Layer 3: the executor. Runs a frozen EwProgram over a set of input Mats, producing the
+// Layer 3: the executor. Runs a frozen TExpr over a set of input Mats, producing the
 // broadcast result(s). Shape inference, broadcast preparation, dim collapsing and all
 // allocation happen once per call, OUTSIDE the parallel loop; the parallel workers only
 // re-point args at their tile and run the instruction list.
@@ -24,13 +24,13 @@ namespace cv { namespace ew {
 // (dst = mask ? result : dst, matching cv::add/... with a mask).
 // scale != 1 (MUL/DIV only) rides the mul/div instruction's params[0] - mul: a*b*scale, div:
 // a*scale/b - exactly like cv::multiply/divide's scale argument.
-void makeBinaryArithProgram(EwProgram& p, ElemwiseOp op, int depth0, int depth1, int rdepth,
+void makeBinaryArithProgram(TExpr& p, TOp op, int depth0, int depth1, int rdepth,
                             int maskDepth = EW_DEPTH_NONE, double scale = 1.0);
-void makeAddProgram(EwProgram& p, int depth0, int depth1, int rdepth);
+void makeAddProgram(TExpr& p, int depth0, int depth1, int rdepth);
 
 // addWeighted(a,alpha,b,beta,gamma) = a*alpha + b*beta + gamma, built as two fused convert_scale
 // MACs + an add (+ a final cast when rdepth != working type). Exercises the L1 fragmentation path.
-void makeAddWeightedProgram(EwProgram& p, int depth0, int depth1, int rdepth,
+void makeAddWeightedProgram(TExpr& p, int depth0, int depth1, int rdepth,
                             double alpha, double beta, double gamma);
 
 }} // namespace cv::ew
