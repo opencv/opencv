@@ -36,7 +36,7 @@ inline Fp8Fmt fp8FmtFor(int onnxType)
 }
 
 inline bool isFp8(int onnxType)  { return onnxType >= 17 && onnxType <= 20; }
-// FP8/FP4/E8M0 decode to CV_32F; INT4->CV_8S, UINT4->CV_8U.
+// FP8/FP4 decode to CV_16F values; E8M0 decodes to CV_32F; INT4->CV_8S, UINT4->CV_8U.
 inline bool isExoticFloat(int t) { return isFp8(t) || t == 23 /*FP4*/ || t == ONNX_FLOAT8E8M0; }
 inline bool isInt4(int t)        { return t == 22; }
 inline bool isUint4(int t)       { return t == 21; }
