@@ -254,6 +254,14 @@ struct SumSqr_SIMD<ushort, int, double>
         const int vl32 = VTraits<v_uint32>::vlanes();
         const int vl64 = VTraits<v_float64>::vlanes();
 
+        // The lane->channel scatter below (i % cn) and the returned pixel count
+        // (x / cn) require the lane counts to be a multiple of cn. This always holds
+        // for fixed-width SIMD (vlanes is a power of two >= cn for cn in {1,2,4}),
+        // but scalable backends (e.g. RVV) may report a non-multiple; fall back to
+        // scalar there. vl16 == 2*vl32, so checking vl32 covers both scatter loops.
+        if (vl32 % cn != 0)
+            return 0;
+
         v_uint32 v_sum = vx_setzero_u32();
         v_float64 v_sq0 = vx_setzero_f64(), v_sq1 = vx_setzero_f64();
         v_float64 v_sq2 = vx_setzero_f64(), v_sq3 = vx_setzero_f64();
@@ -335,6 +343,11 @@ struct SumSqr_SIMD<short, int, double>
         const int vl32 = VTraits<v_int32>::vlanes();
         const int vl64 = VTraits<v_float64>::vlanes();
 
+        // See note in the ushort specialization: guard scalable backends whose
+        // lane counts may not divide cn. vl16 == 2*vl32, so vl32 covers both loops.
+        if (vl32 % cn != 0)
+            return 0;
+
         v_int32 v_sum = vx_setzero_s32();
         v_float64 v_sq0 = vx_setzero_f64(), v_sq1 = vx_setzero_f64();
         v_float64 v_sq2 = vx_setzero_f64(), v_sq3 = vx_setzero_f64();
@@ -414,6 +427,9 @@ struct SumSqr_SIMD<int, double, double>
         const int vl32 = VTraits<v_int32>::vlanes();
         const int vl64 = VTraits<v_float64>::vlanes();
 
+        if (vl32 % cn != 0)
+            return 0;
+
         v_float64 vs0 = vx_setzero_f64(), vs1 = vx_setzero_f64();
         v_float64 vq0 = vx_setzero_f64(), vq1 = vx_setzero_f64();
 
@@ -480,6 +496,9 @@ struct SumSqr_SIMD<float, double, double>
 
         const int vl32 = VTraits<v_float32>::vlanes();
         const int vl64 = VTraits<v_float64>::vlanes();
+
+        if (vl32 % cn != 0)
+            return 0;
 
         v_float64 vs0 = vx_setzero_f64(), vs1 = vx_setzero_f64();
         v_float64 vq0 = vx_setzero_f64(), vq1 = vx_setzero_f64();
