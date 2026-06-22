@@ -169,6 +169,9 @@ void blobFromImagesNCHWImpl(const std::vector<Mat>& images, Mat& blob_, const Im
             {
                 const Tinp* p_src = images[k].ptr<Tinp>();
                 size_t i = 0;
+// NOTE: Visual Studio compiler is not able to vectorize the following loop on ARM64 CPU.
+// GCC and Clang does it efficiently.
+// TODO: Drop NEON block when MSVC is able to vectorize it too.
 #if CV_NEON
                 if (sizeof(Tinp) == 4 && sizeof(Tout) == 4)
                 {
