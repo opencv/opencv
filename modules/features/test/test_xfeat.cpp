@@ -12,39 +12,24 @@
 
 namespace opencv_test { namespace {
 
-static void skipIfClassicDnnEngine()
+static void testXFeatRegression(const std::string& imageName, const std::string& tag)
 {
-    const auto engine = static_cast<cv::dnn::EngineType>(
-        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
-    if (engine == cv::dnn::ENGINE_CLASSIC)
-        throw SkipTestException("XFeat ONNX model is not supported by the classic DNN engine");
-}
-
-static std::string xfeatModelPath()
-{
-    return cvtest::findDataFile("dnn/onnx/models/xfeat.onnx", false);
-}
-
-TEST(Features2d_XFeat, Regression)
-{
-    //skipIfClassicDnnEngine();
-
-    Mat refKpts = blobFromNPY(cvtest::findDataFile("dnn/xfeat_lena_640_kpts.npy"));
-    Mat refDesc = blobFromNPY(cvtest::findDataFile("dnn/xfeat_lena_640_desc.npy"));
+    Mat refKpts = blobFromNPY(cvtest::findDataFile("dnn/xfeat_" + tag + "_640_kpts.npy"));
+    Mat refDesc = blobFromNPY(cvtest::findDataFile("dnn/xfeat_" + tag + "_640_desc.npy"));
     if (refKpts.type() != CV_32F)
         refKpts.convertTo(refKpts, CV_32F);
     ASSERT_EQ(refKpts.cols, 3);
     const int n = refKpts.rows;
 
     Ptr<XFeat> detector;
-    ASSERT_NO_THROW(detector = XFeat::create(xfeatModelPath(), n, 0.5f, 640));
+    ASSERT_NO_THROW(detector = XFeat::create(cvtest::findDataFile("dnn/onnx/models/xfeat.onnx"), n, 0.5f, 640));
     ASSERT_TRUE(detector);
     EXPECT_FALSE(detector->empty());
     EXPECT_EQ(detector->descriptorSize(), 64);
     EXPECT_EQ(detector->descriptorType(), CV_32F);
     EXPECT_EQ(detector->defaultNorm(), NORM_L2);
 
-    Mat img = imread(cvtest::findDataFile("shared/lena.png"));
+    Mat img = imread(cvtest::findDataFile("shared/" + imageName));
     ASSERT_FALSE(img.empty());
 
     std::vector<KeyPoint> keypoints;
@@ -65,18 +50,26 @@ TEST(Features2d_XFeat, Regression)
     }
 
     EXPECT_LE(cvtest::norm(pos, refKpts.colRange(0, 2), NORM_INF), 1e-4)
-        << "keypoint positions differ";
+        << "keypoint positions differ (" << tag << ")";
     EXPECT_LE(cvtest::norm(resp, refKpts.col(2), NORM_INF), 1e-5)
-        << "keypoint responses differ";
+        << "keypoint responses differ (" << tag << ")";
     EXPECT_LE(cvtest::norm(descriptors, refDesc, NORM_INF), 1e-5)
-        << "descriptors differ";
+        << "descriptors differ (" << tag << ")";
+}
+
+TEST(Features2d_XFeat, regression_box)
+{
+    testXFeatRegression("box.png", "box");
+}
+
+TEST(Features2d_XFeat, regression_box_in_scene)
+{
+    testXFeatRegression("box_in_scene.png", "box_in_scene");
 }
 
 TEST(Features2d_XFeat, Basic)
 {
-    //skipIfClassicDnnEngine();
-
-    Ptr<XFeat> detector = XFeat::create(xfeatModelPath(), 200, 0.5f, 640);
+    Ptr<XFeat> detector = XFeat::create(cvtest::findDataFile("dnn/onnx/models/xfeat.onnx"), 200, 0.5f, 640);
     ASSERT_TRUE(detector);
     EXPECT_FALSE(detector->empty());
     EXPECT_EQ(detector->descriptorSize(), 64);
@@ -108,9 +101,7 @@ TEST(Features2d_XFeat, Basic)
 
 TEST(Features2d_XFeat, ParametersAndMask)
 {
-    //skipIfClassicDnnEngine();
-
-    Ptr<XFeat> detector = XFeat::create(xfeatModelPath());
+    Ptr<XFeat> detector = XFeat::create(cvtest::findDataFile("dnn/onnx/models/xfeat.onnx"));
     ASSERT_TRUE(detector);
 
     detector->setMaxKeypoints(50);
@@ -120,8 +111,11 @@ TEST(Features2d_XFeat, ParametersAndMask)
     EXPECT_EQ(detector->getScoreThreshold(), 0.25f);
     EXPECT_EQ(detector->getInputSize(), 640);
 
-    Mat img = imread(cvtest::findDataFile("shared/lena.png"));
+    Mat img = imread(cvtest::findDataFile("shared/box_in_scene.png"));
     ASSERT_FALSE(img.empty());
+
+    Mat img2 = imread(cvtest::findDataFile("shared/box.png"));
+    ASSERT_FALSE(img2.empty());
 
     Mat mask = Mat::zeros(img.size(), CV_8UC1);
     const Rect roi(img.cols / 4, img.rows / 4, img.cols / 2, img.rows / 2);
@@ -140,10 +134,8 @@ TEST(Features2d_XFeat, ParametersAndMask)
 
 TEST(Features2d_XFeat, InvalidInputSize)
 {
-    //skipIfClassicDnnEngine();
-
-    EXPECT_THROW(XFeat::create(xfeatModelPath(), -1, 0.5f, 0), cv::Exception);
-    Ptr<XFeat> detector = XFeat::create(xfeatModelPath());
+    EXPECT_THROW(XFeat::create(cvtest::findDataFile("dnn/onnx/models/xfeat.onnx"), -1, 0.5f, 0), cv::Exception);
+    Ptr<XFeat> detector = XFeat::create(cvtest::findDataFile("dnn/onnx/models/xfeat.onnx"));
     ASSERT_TRUE(detector);
     EXPECT_THROW(detector->setInputSize(0), cv::Exception);
     EXPECT_NO_THROW(detector->setInputSize(320));
