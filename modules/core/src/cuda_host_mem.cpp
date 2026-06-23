@@ -47,7 +47,7 @@
 using namespace cv;
 using namespace cv::cuda;
 
-#ifdef HAVE_CUDA
+#if defined(HAVE_CUDA) && !defined(HAVE_HIP_STANDALONE)
 
 namespace {
 
@@ -135,7 +135,7 @@ private:
 
 MatAllocator* cv::cuda::HostMem::getAllocator(AllocType alloc_type)
 {
-#ifndef HAVE_CUDA
+#if !defined(HAVE_CUDA) || defined(HAVE_HIP_STANDALONE)
     CV_UNUSED(alloc_type);
     throw_no_cuda();
 #else
@@ -162,7 +162,7 @@ MatAllocator* cv::cuda::HostMem::getAllocator(AllocType alloc_type)
 #endif
 }
 
-#ifdef HAVE_CUDA
+#if defined(HAVE_CUDA) && !defined(HAVE_HIP_STANDALONE)
 namespace
 {
     size_t alignUpStep(size_t what, size_t alignment)
@@ -177,7 +177,7 @@ namespace
 
 void cv::cuda::HostMem::create(int rows_, int cols_, int type_)
 {
-#ifndef HAVE_CUDA
+#if !defined(HAVE_CUDA) || defined(HAVE_HIP_STANDALONE)
     CV_UNUSED(rows_);
     CV_UNUSED(cols_);
     CV_UNUSED(type_);
@@ -287,7 +287,7 @@ HostMem cv::cuda::HostMem::reshape(int new_cn, int new_rows) const
 
 void cv::cuda::HostMem::release()
 {
-#ifdef HAVE_CUDA
+#if defined(HAVE_CUDA) && !defined(HAVE_HIP_STANDALONE)
     if (refcount && CV_XADD(refcount, -1) == 1)
     {
         cudaFreeHost(datastart);
@@ -302,7 +302,7 @@ void cv::cuda::HostMem::release()
 
 GpuMat cv::cuda::HostMem::createGpuMatHeader() const
 {
-#ifndef HAVE_CUDA
+#if !defined(HAVE_CUDA) || defined(HAVE_HIP_STANDALONE)
     throw_no_cuda();
 #else
     CV_Assert( alloc_type == SHARED );
@@ -316,7 +316,7 @@ GpuMat cv::cuda::HostMem::createGpuMatHeader() const
 
 void cv::cuda::registerPageLocked(Mat& m)
 {
-#ifndef HAVE_CUDA
+#if !defined(HAVE_CUDA) || defined(HAVE_HIP_STANDALONE)
     CV_UNUSED(m);
     throw_no_cuda();
 #else
@@ -327,7 +327,7 @@ void cv::cuda::registerPageLocked(Mat& m)
 
 void cv::cuda::unregisterPageLocked(Mat& m)
 {
-#ifndef HAVE_CUDA
+#if !defined(HAVE_CUDA) || defined(HAVE_HIP_STANDALONE)
     CV_UNUSED(m);
 #else
     cudaSafeCall( cudaHostUnregister(m.data) );
