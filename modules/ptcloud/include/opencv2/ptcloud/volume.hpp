@@ -13,6 +13,9 @@
 namespace cv
 {
 
+//! @addtogroup ptcloud_rgbd
+//! @{
+
 class CV_EXPORTS_W Volume
 {
 public:
@@ -167,6 +170,8 @@ public:
 private:
     Ptr<Impl> impl;
 };
+
+//! @}
 
 }  // namespace cv
 #endif // include guard

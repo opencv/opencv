@@ -67,6 +67,17 @@ html[data-theme="dark"] .bd-article-container li > a:hover {
 }
 .bd-content a > code, .bd-content code > a { color: inherit; }
 
+/* Cross-reference links inside code — inline chips (`code > a`) and highlighted
+   blocks (`pre a`) — should read as links. The `color: inherit` above otherwise
+   renders them in the plain code colour; re-assert just the link colour (no
+   underline) and force the inner Pygments span to inherit so the token is blue. */
+.bd-content code > a.reference,
+.bd-content pre a.reference {
+    color: var(--pst-color-link, #0969da) !important;
+}
+.bd-content code > a.reference span,
+.bd-content pre a.reference span { color: inherit !important; }
+
 .bd-content a.opencv-enum-link,
 .bd-content code.opencv-enum-sig > a,
 .bd-content .opencv-enum-clickable a,
@@ -384,8 +395,14 @@ html[data-theme="dark"] .opencv-version-switcher #opencv-version-select option {
    the content and the (often wide) diagrams get more room. Desktop only; the
    mobile off-canvas drawer keeps the theme's own sizing. */
 @media (min-width: 960px) {
-    .bd-sidebar-primary { width: 16rem; flex: 0 0 16rem; }
+    /* flex:0 0 auto (not a rigid 16rem basis) so the theme's collapse rule
+       (.pst-squeeze{width:4rem}) can still shrink it when collapsed. */
+    .bd-sidebar-primary { width: 16rem; flex: 0 0 auto; }
 }
+
+/* Collapsed: drop the divider line so the content reflows cleanly with no
+   leftover vertical border. */
+.bd-sidebar-primary.pst-squeeze { border-right: none; }
 
 .bd-sidebar-primary nav.bd-links { margin-right: 0 !important; }
 .bd-sidebar-primary nav.bd-docs-nav p.bd-links__title {
@@ -421,6 +438,10 @@ html[data-theme="dark"] .opencv-version-switcher #opencv-version-select option {
     font-weight: 600 !important;
 }
 html[data-theme="dark"] .bd-sidebar-primary nav.bd-links .current > a { color: #539bf5 !important; }
+
+/* Hide the site footer (Sphinx/PyData credit) and its divider line sitewide;
+   the prev/next nav (.prev-next-footer) is separate and stays. */
+.bd-footer { display: none !important; }
 
 /* --- Code blocks ------------------------------------------------------- */
 div.highlight {

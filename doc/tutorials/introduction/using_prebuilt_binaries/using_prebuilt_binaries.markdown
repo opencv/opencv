@@ -3,6 +3,7 @@ Using OpenCV pre-built binaries in your own projects {#tutorial_using_prebuilt_b
 
 |    |    |
 | -: | :- |
+| Original authors | Abhishek Gola & Kirti Jindal |
 | Compatibility | OpenCV >= 5.0, C++17, Python >= 3.6 |
 
 @tableofcontents
@@ -108,29 +109,6 @@ g++ -std=c++17 main.cpp -o opencv_test_app \
 `calib`, `stereo`, and `ptcloud`. Link the specific one(s) you need, e.g. `-lopencv_geometry`,
 `-lopencv_calib`, `-lopencv_stereo`, or `-lopencv_ptcloud`, instead of `-lopencv_calib3d`.
 
-### Source application
-
-Save the following as `main.cpp`:
-
-@code{.cpp}
-#include <opencv2/opencv.hpp>
-#include <iostream>
-
-int main(int argc, char** argv) {
-    cv::Mat image = cv::imread("lena.jpg", cv::IMREAD_COLOR);
-    if (image.empty()) {
-        std::cerr << "Error: Could not open or find the image." << std::endl;
-        return -1;
-    }
-    cv::Mat processed_image;
-    cv::GaussianBlur(image, processed_image, cv::Size(7, 7), 1.5, 1.5);
-    cv::imshow("Original", image);
-    cv::imshow("Processed", processed_image);
-    cv::waitKey(0);
-    return 0;
-}
-@endcode
-
 Python Project Configuration
 ----------------------------
 
@@ -144,22 +122,7 @@ python3 -c "import cv2; print('OpenCV version:', cv2.__version__)"
 
 #### 2. Test script
 
-Save the following as `app.py`:
-
-@code{.python}
-import cv2
-import sys
-
-img = cv2.imread('lena.jpg')
-if img is None:
-    sys.exit("Error: image file missing or path invalid.")
-
-gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-cv2.imshow('Color', img)
-cv2.imshow('Grayscale', gray_img)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
-@endcode
+Write a short `app.py` that imports `cv2`, loads an image, and displays it to confirm the bindings work.
 
 Troubleshooting
 ---------------
