@@ -46,8 +46,6 @@ public:
 
     virtual void operator() (const cv::Range& range) const CV_OVERRIDE
     {
-        //CV_INSTRUMENT_REGION_IPP();
-
         if(!m_ok)
             return;
 
@@ -82,11 +80,7 @@ int ipp_hal_resize(int src_type, const uchar *src_data, size_t src_step, int src
                    uchar *dst_data, size_t dst_step, int dst_width, int dst_height,
                    double inv_scale_x, double inv_scale_y, int interpolation)
 {
-    //CV_INSTRUMENT_REGION_IPP();
-
-    // Preserves the global IPP enable/disable toggle previously enforced by CV_IPP_RUN_FAST's CV_IPP_CHECK_COND.
-    if (!cv::ipp::useIPP())
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    CV_HAL_CHECK_USE_IPP();
 
     int depth = CV_MAT_DEPTH(src_type), channels = CV_MAT_CN(src_type);
 
