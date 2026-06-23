@@ -100,6 +100,33 @@ source_group("Src" FILES "${OPENCV_MODULE_opencv_core_BINARY_DIR}/version_string
 ocv_glob_module_sources(SOURCES "${OPENCV_MODULE_opencv_core_BINARY_DIR}/version_string.inc"
                         HEADERS ${core_parallel_hdrs} ${module_opencl_hdrs} ${lib_cuda_hdrs} ${lib_cuda_hdrs_detail})
 
+if(HAVE_HIP_STANDALONE)
+  # ROCm-only build: CUDA GPU kernels can't compile without CUDA toolkit headers.
+  # The .cpp files use #if !defined(HAVE_CUDA)||defined(HAVE_HIP_STANDALONE) stubs instead.
+  set_source_files_properties(
+    "${CMAKE_CURRENT_LIST_DIR}/src/cuda/gpu_mat.cu"
+    "${CMAKE_CURRENT_LIST_DIR}/src/cuda/gpu_mat_nd.cu"
+    PROPERTIES HEADER_FILE_ONLY TRUE
+  )
+endif()
+
+# src/hip/kernels.cpp holds HIP device kernels. It's a .cpp (not .hip), so the
+# generic src/*.cpp glob picks it up and would otherwise feed it to the C++
+# compiler. Force the HIP toolchain when ROCm is present; with no ROCm the file
+# can't compile as plain C++ (it has __global__/hipLaunchKernelGGL), so drop it.
+if(HAVE_HIP)
+  set_source_files_properties(
+    "${CMAKE_CURRENT_LIST_DIR}/src/hip/kernels.cpp"
+    PROPERTIES LANGUAGE HIP)
+else()
+  set_source_files_properties(
+    "${CMAKE_CURRENT_LIST_DIR}/src/hip/kernels.cpp"
+    PROPERTIES HEADER_FILE_ONLY TRUE)
+endif()
+
+if(HAVE_HIP)
+  ocv_module_include_directories(${the_module} ${hip_INCLUDE_DIRS})
+endif()
 ocv_module_include_directories(${the_module} ${ZLIB_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIRS})
 if(ANDROID AND HAVE_CPUFEATURES)
   ocv_append_source_file_compile_definitions(${CMAKE_CURRENT_SOURCE_DIR}/src/system.cpp "HAVE_CPUFEATURES=1")
@@ -164,17 +191,29 @@ if(PARALLEL_ENABLE_PLUGINS)
   endif()
 endif()
 
+if(HAVE_HIP)
+  list(APPEND extra_libs hip::host)
+endif()
 if(HAVE_CUDA)
-  if(NOT HAVE_opencv_cudev)
-    message(FATAL_ERROR "CUDA: OpenCV requires enabled 'cudev' module from 'opencv_contrib' repository: https://github.com/opencv/opencv_contrib")
+  if(NOT HAVE_HIP_STANDALONE)
+    # Real CUDA installation present — cudev module required.
+    if(NOT HAVE_opencv_cudev)
+      message(FATAL_ERROR "CUDA: OpenCV requires enabled 'cudev' module from 'opencv_contrib' repository: https://github.com/opencv/opencv_contrib")
+    endif()
+    ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wenum-compare -Wunused-function -Wshadow)
   endif()
   if(ENABLE_CUDA_FIRST_CLASS_LANGUAGE)
-   list(APPEND extra_libs CUDA::cudart${CUDA_LIB_EXT})
+    list(APPEND extra_libs CUDA::cudart${CUDA_LIB_EXT})
   endif()
-  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wenum-compare -Wunused-function -Wshadow)
 endif()
 
 ocv_create_module(${extra_libs})
+
+if(HAVE_HIP AND NOT HAVE_HIP_STANDALONE AND OPENCV_HIP_CUDA_THRUST_INCLUDE)
+  # Put NVIDIA's CCCL/thrust -isystem ahead of ROCm's by adding it as this target's
+  # own system include (emitted before hip::device's interface includes in the RSP).
+  target_include_directories(${the_module} SYSTEM BEFORE PRIVATE ${OPENCV_HIP_CUDA_THRUST_INCLUDE})
+endif()
 
 ocv_target_link_libraries(${the_module} PRIVATE
     "${ZLIB_LIBRARIES}" "${OPENCL_LIBRARIES}" "${VA_LIBRARIES}"

@@ -4,6 +4,15 @@ if(HAVE_CUDA)
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wmissing-declarations -Wshadow -Wstrict-aliasing)
 endif()
 
+if(HAVE_HIP_STANDALONE)
+  set_source_files_properties(
+    "${CMAKE_CURRENT_LIST_DIR}/src/warpers_cuda.cpp"
+    "${CMAKE_CURRENT_LIST_DIR}/src/cuda/build_warp_maps.cu"
+    "${CMAKE_CURRENT_LIST_DIR}/src/cuda/multiband_blend.cu"
+    PROPERTIES HEADER_FILE_ONLY TRUE
+  )
+endif()
+
 set(STITCHING_CONTRIB_DEPS "opencv_xfeatures2d")
 if(BUILD_SHARED_LIBS AND BUILD_opencv_world AND OPENCV_WORLD_EXCLUDE_EXTRA_MODULES)
   set(STITCHING_CONTRIB_DEPS "")

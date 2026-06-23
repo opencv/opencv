@@ -49,6 +49,9 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
+#ifdef HAVE_HIP
+#  include "opencv2/core/hip.hpp"
+#endif
 
 namespace cv
 {
