@@ -79,8 +79,12 @@ PERF_TEST_P(Size_MatType_OutMatDepth, integral_sqsum,
 
     TEST_CYCLE() integral(src, sum, sqsum, sdepth);
 
-    SANITY_CHECK(sum, 1e-6);
-    SANITY_CHECK(sqsum, 1e-6);
+    // A CV_32F sum/sqsum above 2^24 carries a float32 ULP that depends on the SIMD
+    // width and accumulation order (the SIMD path now runs here where it used to fall
+    // back to scalar), so compare those relatively; CV_32S/CV_64F outputs stay exact.
+    // Mirrors the tilted check below.
+    SANITY_CHECK(sum,   1e-6, sum.depth()   > CV_32S ? ERROR_RELATIVE : ERROR_ABSOLUTE);
+    SANITY_CHECK(sqsum, 1e-6, sqsum.depth() > CV_32S ? ERROR_RELATIVE : ERROR_ABSOLUTE);
 }
 
 static std::vector<std::tuple<MatType, IntegralOutputDepths>> GetFullSqsumDepthPairs() {
