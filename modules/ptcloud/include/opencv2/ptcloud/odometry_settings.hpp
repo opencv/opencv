@@ -10,6 +10,9 @@
 namespace cv
 {
 
+//! @addtogroup ptcloud_rgbd
+//! @{
+
 class CV_EXPORTS_W_SIMPLE OdometrySettings
 {
 public:
@@ -60,6 +63,8 @@ public:
 private:
     Ptr<Impl> impl;
 };
+
+//! @}
 
 }
 #endif //OPENCV_3D_ODOMETRY_SETTINGS_HPP

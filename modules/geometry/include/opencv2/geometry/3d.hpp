@@ -12,6 +12,7 @@
 
 /**
   @defgroup 3d_projection 3D vision functionality
+  @ingroup geometry
 
 Most of the functions in this section use a so-called pinhole camera model. The view of a scene
 is obtained by projecting a scene's 3D point \f$P_w\f$ into the image plane using a perspective

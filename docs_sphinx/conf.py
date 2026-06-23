@@ -169,7 +169,11 @@ html_theme_options = {
     "show_toc_level": 2,
     "navigation_with_keys": True,
     "show_prev_next": True,
-    "show_nav_level": 2,
+    # 1, not 2: the theme force-opens every <details> up to this level, and
+    # modules render at toctree-l1 — so 2 expands all modules. At 1 only the
+    # current module's branch (carrying `current`) stays open. Render depth is
+    # unaffected (see navigation_depth).
+    "show_nav_level": 1,
     "navigation_depth": 4,
     "secondary_sidebar_items": {"**": ["page-toc"], "index": []},
     "back_to_top_button": True,

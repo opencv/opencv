@@ -13,7 +13,15 @@
 #include "opencv2/ptcloud/odometry_settings.hpp"
 
 /**
-@defgroup ptcloud Point Clound Processing
+@defgroup ptcloud Point Cloud Processing
+
+Point-cloud and mesh processing: reading/writing point clouds and meshes,
+triangle rasterization, octree partitioning, and RGB-D / volumetric 3D
+reconstruction (odometry, TSDF volumes).
+
+@{
+    @defgroup ptcloud_rgbd RGB-D and Volumetric Reconstruction
+@}
 */
 
 //! @addtogroup ptcloud

@@ -13,6 +13,9 @@
 namespace cv
 {
 
+//! @addtogroup ptcloud_rgbd
+//! @{
+
 /** These constants are used to set a type of data which odometry will use
 * @param DEPTH     only depth data
 * @param RGB       only rgb image
@@ -107,6 +110,8 @@ public:
 private:
     Ptr<Impl> impl;
 };
+
+//! @}
 
 }
 #endif //OPENCV_3D_ODOMETRY_HPP
