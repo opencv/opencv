@@ -24,11 +24,6 @@ struct XFeatCandidate
     int y;
 };
 
-static void validateInputSize(int inputSize)
-{
-    CV_Assert(inputSize > 0);
-}
-
 static Mat toGray(InputArray _image)
 {
     Mat image = _image.getMat();
@@ -45,13 +40,6 @@ static Mat toGray(InputArray _image)
     return gray;
 }
 
-static void normalizeDescriptorRow(Mat row)
-{
-    const double n = norm(row, NORM_L2);
-    if (n > 0.0)
-        row *= 1.0 / n;
-}
-
 } // namespace
 
 class XFeat_Impl CV_FINAL : public XFeat
@@ -63,7 +51,7 @@ public:
           scoreThreshold_(scoreThreshold),
           inputSize_(inputSize)
     {
-        validateInputSize(inputSize_);
+        CV_Assert(inputSize_ > 0);
         initNet(readNetFromONNX(modelPath), backendId, targetId);
     }
 
@@ -73,7 +61,7 @@ public:
           scoreThreshold_(scoreThreshold),
           inputSize_(inputSize)
     {
-        validateInputSize(inputSize_);
+        CV_Assert(inputSize_ > 0);
         initNet(readNetFromONNX(bufferModel), backendId, targetId);
     }
 
@@ -118,9 +106,10 @@ public:
                       Scalar(), false, false);
         net_.setInput(blob);
 
+        const std::vector<String> outNames = {"output_feats", "output_keypoints", "output_heatmap"};
         std::vector<Mat> outs;
-        net_.forward(outs, net_.getUnconnectedOutLayersNames());
-        CV_Assert(outs.size() >= 3);
+        net_.forward(outs, outNames);
+        CV_Assert(outs.size() == 3);
 
         Mat descMap = outs[0];
         Mat scoreMap = outs[2];
@@ -214,7 +203,7 @@ public:
                     for (int ch = 0; ch < descChannels; ++ch)
                         dst[ch] = descData[base + ch];
                 }
-                normalizeDescriptorRow(descriptors.row(i));
+                normalize(descriptors.row(i), descriptors.row(i), 1.0, 0.0, NORM_L2);
             }
         }
     }
@@ -233,7 +222,7 @@ public:
 
     void setInputSize(int inputSize) CV_OVERRIDE
     {
-        validateInputSize(inputSize);
+        CV_Assert(inputSize > 0);
         inputSize_ = inputSize;
     }
     int getInputSize() const CV_OVERRIDE { return inputSize_; }
