@@ -2376,7 +2376,7 @@ FileNode::operator float() const
 
     if( type == INT )
     {
-        return (float)readInt(p);
+        return (float)readLong(p);
     }
     else if( type == REAL )
     {
@@ -2397,7 +2397,7 @@ FileNode::operator double() const
 
     if( type == INT )
     {
-        return (double)readInt(p);
+        return (double)readLong(p);
     }
     else if( type == REAL )
     {
