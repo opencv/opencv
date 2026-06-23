@@ -64,12 +64,17 @@ typedef int16_t cv_hal_bf16;
 #define CV_64U  10
 #define CV_64S  11
 #define CV_32U  12
-#define CV_DEPTH_CURR_MAX 13
+#define CV_8F_E4M3FN   13  // OCP/ONNX FLOAT8E4M3FN  (1-4-3, bias 7, no inf, max 448)
+#define CV_8F_E4M3FNUZ 14  // FLOAT8E4M3FNUZ         (1-4-3, bias 8, no inf, single NaN, no -0)
+#define CV_8F_E5M2     15  // FLOAT8E5M2             (1-5-2, bias 15, IEEE-like, inf/NaN)
+#define CV_8F_E5M2FNUZ 16  // FLOAT8E5M2FNUZ         (1-5-2, bias 16, no inf, single NaN, no -0)
+#define CV_DEPTH_CURR_MAX 17
 
 #define CV_MAT_DEPTH_MASK       (CV_DEPTH_MAX - 1)
 #define CV_MAT_DEPTH(flags)     ((flags) & CV_MAT_DEPTH_MASK)
 #define CV_IS_INT_TYPE(flags)   (((1 << CV_MAT_DEPTH(flags)) & 0x1e1f) != 0)
-#define CV_IS_FLOAT_TYPE(flags) (((1 << CV_MAT_DEPTH(flags)) & 0x1e0) != 0)
+// float family: 32F,64F,16F,16BF (bits 5-8) + the four FP8 depths (bits 13-16)
+#define CV_IS_FLOAT_TYPE(flags) (((1 << CV_MAT_DEPTH(flags)) & 0x1e1e0) != 0)
 
 #define CV_MAKETYPE(depth,cn) (CV_MAT_DEPTH(depth) + (((cn)-1) << CV_CN_SHIFT))
 #define CV_MAKE_TYPE CV_MAKETYPE
@@ -151,6 +156,15 @@ typedef int16_t cv_hal_bf16;
 #define CV_16BFC3 CV_MAKETYPE(CV_16BF,3)
 #define CV_16BFC4 CV_MAKETYPE(CV_16BF,4)
 #define CV_16BFC(n) CV_MAKETYPE(CV_16BF,(n))
+
+#define CV_8F_E4M3FNC1 CV_MAKETYPE(CV_8F_E4M3FN,1)
+#define CV_8F_E4M3FNC(n) CV_MAKETYPE(CV_8F_E4M3FN,(n))
+#define CV_8F_E4M3FNUZC1 CV_MAKETYPE(CV_8F_E4M3FNUZ,1)
+#define CV_8F_E4M3FNUZC(n) CV_MAKETYPE(CV_8F_E4M3FNUZ,(n))
+#define CV_8F_E5M2C1 CV_MAKETYPE(CV_8F_E5M2,1)
+#define CV_8F_E5M2C(n) CV_MAKETYPE(CV_8F_E5M2,(n))
+#define CV_8F_E5M2FNUZC1 CV_MAKETYPE(CV_8F_E5M2FNUZ,1)
+#define CV_8F_E5M2FNUZC(n) CV_MAKETYPE(CV_8F_E5M2FNUZ,(n))
 
 //! @name Comparison operation
 //! @sa cv::CmpTypes

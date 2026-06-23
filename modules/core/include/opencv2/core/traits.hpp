@@ -336,6 +336,50 @@ public:
          };
 };
 
+template<> class DataType<float8_e4m3fn>
+{
+public:
+    typedef float8_e4m3fn value_type;
+    typedef float         work_type;
+    typedef value_type    channel_type;
+    typedef value_type    vec_type;
+    enum { generic_type = 0, depth = CV_8F_E4M3FN, channels = 1,
+           fmt = (int)'e', type = CV_MAKETYPE(depth, channels) };
+};
+
+template<> class DataType<float8_e4m3fnuz>
+{
+public:
+    typedef float8_e4m3fnuz value_type;
+    typedef float           work_type;
+    typedef value_type      channel_type;
+    typedef value_type      vec_type;
+    enum { generic_type = 0, depth = CV_8F_E4M3FNUZ, channels = 1,
+           fmt = (int)'E', type = CV_MAKETYPE(depth, channels) };
+};
+
+template<> class DataType<float8_e5m2>
+{
+public:
+    typedef float8_e5m2 value_type;
+    typedef float       work_type;
+    typedef value_type  channel_type;
+    typedef value_type  vec_type;
+    enum { generic_type = 0, depth = CV_8F_E5M2, channels = 1,
+           fmt = (int)'g', type = CV_MAKETYPE(depth, channels) };
+};
+
+template<> class DataType<float8_e5m2fnuz>
+{
+public:
+    typedef float8_e5m2fnuz value_type;
+    typedef float           work_type;
+    typedef value_type      channel_type;
+    typedef value_type      vec_type;
+    enum { generic_type = 0, depth = CV_8F_E5M2FNUZ, channels = 1,
+           fmt = (int)'G', type = CV_MAKETYPE(depth, channels) };
+};
+
 /** @brief A helper class for cv::DataType
 
 The class is specialized for each fundamental numerical data type supported by OpenCV. It provides
@@ -432,6 +476,30 @@ template<> class TypeDepth<CV_16BF>
 {
     enum { depth = CV_16BF };
     typedef bfloat value_type;
+};
+
+template<> class TypeDepth<CV_8F_E4M3FN>
+{
+    enum { depth = CV_8F_E4M3FN };
+    typedef float8_e4m3fn value_type;
+};
+
+template<> class TypeDepth<CV_8F_E4M3FNUZ>
+{
+    enum { depth = CV_8F_E4M3FNUZ };
+    typedef float8_e4m3fnuz value_type;
+};
+
+template<> class TypeDepth<CV_8F_E5M2>
+{
+    enum { depth = CV_8F_E5M2 };
+    typedef float8_e5m2 value_type;
+};
+
+template<> class TypeDepth<CV_8F_E5M2FNUZ>
+{
+    enum { depth = CV_8F_E5M2FNUZ };
+    typedef float8_e5m2fnuz value_type;
 };
 
 template<> class TypeDepth<CV_Bool>

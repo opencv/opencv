@@ -508,6 +508,42 @@ static void cvt32s(const uchar* src, size_t sstep, const uchar*, size_t, uchar* 
 static void cvt64s(const uchar* src, size_t sstep, const uchar*, size_t, uchar* dst, size_t dstep, Size size, void*)
 { CV_INSTRUMENT_REGION(); cvtCopy((const uchar*)src, sstep, (uchar*)dst, dstep, size, 8); }
 
+//////////////////// FP8 (1-byte float) conversions — scalar via saturate_cast ////////////////////
+// Suffixes: 8fe4m3 (E4M3FN), 8fe4m3u (E4M3FNUZ), 8fe5m2 (E5M2), 8fe5m2u (E5M2FNUZ).
+#define DEF_CVT_FP8(S, T) \
+    DEF_CVT_SCALAR_FUNC(S##8u,   T, uchar)     DEF_CVT_SCALAR_FUNC(8u##S,   uchar, T) \
+    DEF_CVT_SCALAR_FUNC(S##8s,   T, schar)     DEF_CVT_SCALAR_FUNC(8s##S,   schar, T) \
+    DEF_CVT_SCALAR_FUNC(S##16u,  T, ushort)    DEF_CVT_SCALAR_FUNC(16u##S,  ushort, T) \
+    DEF_CVT_SCALAR_FUNC(S##16s,  T, short)     DEF_CVT_SCALAR_FUNC(16s##S,  short, T) \
+    DEF_CVT_SCALAR_FUNC(S##32u,  T, unsigned)  DEF_CVT_SCALAR_FUNC(32u##S,  unsigned, T) \
+    DEF_CVT_SCALAR_FUNC(S##32s,  T, int)       DEF_CVT_SCALAR_FUNC(32s##S,  int, T) \
+    DEF_CVT_SCALAR_FUNC(S##32f,  T, float)     DEF_CVT_SCALAR_FUNC(32f##S,  float, T) \
+    DEF_CVT_SCALAR_FUNC(S##64f,  T, double)    DEF_CVT_SCALAR_FUNC(64f##S,  double, T) \
+    DEF_CVT_SCALAR_FUNC(S##16f,  T, hfloat)    DEF_CVT_SCALAR_FUNC(16f##S,  hfloat, T) \
+    DEF_CVT_SCALAR_FUNC(S##16bf, T, bfloat)    DEF_CVT_SCALAR_FUNC(16bf##S, bfloat, T) \
+    DEF_CVT_SCALAR_FUNC(S##64u,  T, uint64_t)  DEF_CVT_SCALAR_FUNC(64u##S,  uint64_t, T) \
+    DEF_CVT_SCALAR_FUNC(S##64s,  T, int64_t)   DEF_CVT_SCALAR_FUNC(64s##S,  int64_t, T) \
+    DEF_CVT_SCALAR_FUNC(S##8b,   T, bool)
+
+DEF_CVT_FP8(8fe4m3,  float8_e4m3fn)
+DEF_CVT_FP8(8fe4m3u, float8_e4m3fnuz)
+DEF_CVT_FP8(8fe5m2,  float8_e5m2)
+DEF_CVT_FP8(8fe5m2u, float8_e5m2fnuz)
+
+// FP8 -> FP8, cross-format only (identity uses the 1-byte copy cvt8u, like 16f->16f uses cvt16u)
+DEF_CVT_SCALAR_FUNC(8fe4m38fe4m3u, float8_e4m3fn,   float8_e4m3fnuz)
+DEF_CVT_SCALAR_FUNC(8fe4m38fe5m2,  float8_e4m3fn,   float8_e5m2)
+DEF_CVT_SCALAR_FUNC(8fe4m38fe5m2u, float8_e4m3fn,   float8_e5m2fnuz)
+DEF_CVT_SCALAR_FUNC(8fe4m3u8fe4m3, float8_e4m3fnuz, float8_e4m3fn)
+DEF_CVT_SCALAR_FUNC(8fe4m3u8fe5m2, float8_e4m3fnuz, float8_e5m2)
+DEF_CVT_SCALAR_FUNC(8fe4m3u8fe5m2u,float8_e4m3fnuz, float8_e5m2fnuz)
+DEF_CVT_SCALAR_FUNC(8fe5m28fe4m3,  float8_e5m2,     float8_e4m3fn)
+DEF_CVT_SCALAR_FUNC(8fe5m28fe4m3u, float8_e5m2,     float8_e4m3fnuz)
+DEF_CVT_SCALAR_FUNC(8fe5m28fe5m2u, float8_e5m2,     float8_e5m2fnuz)
+DEF_CVT_SCALAR_FUNC(8fe5m2u8fe4m3, float8_e5m2fnuz, float8_e4m3fn)
+DEF_CVT_SCALAR_FUNC(8fe5m2u8fe4m3u,float8_e5m2fnuz, float8_e4m3fnuz)
+DEF_CVT_SCALAR_FUNC(8fe5m2u8fe5m2, float8_e5m2fnuz, float8_e5m2)
+
 BinaryFunc getConvertFunc(int sdepth_, int ddepth_)
 {
     int sdepth = CV_MAT_DEPTH(sdepth_);
@@ -527,6 +563,10 @@ BinaryFunc getConvertFunc(int sdepth_, int ddepth_)
             sdepth == CV_Bool ? cvt8b8u :
             sdepth == CV_64U ? cvt64u8u :
             sdepth == CV_64S ? cvt64s8u :
+            sdepth == CV_8F_E4M3FN ? cvt8fe4m38u :
+            sdepth == CV_8F_E4M3FNUZ ? cvt8fe4m3u8u :
+            sdepth == CV_8F_E5M2 ? cvt8fe5m28u :
+            sdepth == CV_8F_E5M2FNUZ ? cvt8fe5m2u8u :
             0) :
         ddepth == CV_8S ? (
             sdepth == CV_8U ? cvt8u8s :
@@ -542,6 +582,10 @@ BinaryFunc getConvertFunc(int sdepth_, int ddepth_)
             sdepth == CV_Bool ? cvt8b8u :
             sdepth == CV_64U ? cvt64u8s :
             sdepth == CV_64S ? cvt64s8s :
+            sdepth == CV_8F_E4M3FN ? cvt8fe4m38s :
+            sdepth == CV_8F_E4M3FNUZ ? cvt8fe4m3u8s :
+            sdepth == CV_8F_E5M2 ? cvt8fe5m28s :
+            sdepth == CV_8F_E5M2FNUZ ? cvt8fe5m2u8s :
             0) :
         ddepth == CV_16U ? (
             sdepth == CV_8U ? cvt8u16s : // same as cvt8u16u
@@ -557,6 +601,10 @@ BinaryFunc getConvertFunc(int sdepth_, int ddepth_)
             sdepth == CV_Bool ? cvt8b16s :
             sdepth == CV_64U ? cvt64u16u :
             sdepth == CV_64S ? cvt64s16u :
+            sdepth == CV_8F_E4M3FN ? cvt8fe4m316u :
+            sdepth == CV_8F_E4M3FNUZ ? cvt8fe4m3u16u :
+            sdepth == CV_8F_E5M2 ? cvt8fe5m216u :
+            sdepth == CV_8F_E5M2FNUZ ? cvt8fe5m2u16u :
             0) :
         ddepth == CV_16S ? (
             sdepth == CV_8U ? cvt8u16s :
@@ -572,6 +620,10 @@ BinaryFunc getConvertFunc(int sdepth_, int ddepth_)
             sdepth == CV_Bool ? cvt8b16s :
             sdepth == CV_64U ? cvt64u16s :
             sdepth == CV_64S ? cvt64s16s :
+            sdepth == CV_8F_E4M3FN ? cvt8fe4m316s :
+            sdepth == CV_8F_E4M3FNUZ ? cvt8fe4m3u16s :
+            sdepth == CV_8F_E5M2 ? cvt8fe5m216s :
+            sdepth == CV_8F_E5M2FNUZ ? cvt8fe5m2u16s :
             0) :
         ddepth == CV_32U ? (
             sdepth == CV_8U ? cvt8u32s : // same as cvt8u32u
@@ -587,7 +639,10 @@ BinaryFunc getConvertFunc(int sdepth_, int ddepth_)
             sdepth == CV_Bool ? cvt8b32s :
             sdepth == CV_64U ? cvt64u32u :
             sdepth == CV_64S ? cvt64s32u :
-
+            sdepth == CV_8F_E4M3FN ? cvt8fe4m332u :
+            sdepth == CV_8F_E4M3FNUZ ? cvt8fe4m3u32u :
+            sdepth == CV_8F_E5M2 ? cvt8fe5m232u :
+            sdepth == CV_8F_E5M2FNUZ ? cvt8fe5m2u32u :
             0) :
         ddepth == CV_32S ? (
             sdepth == CV_8U ? cvt8u32s :
@@ -603,6 +658,10 @@ BinaryFunc getConvertFunc(int sdepth_, int ddepth_)
             sdepth == CV_Bool ? cvt8b32s :
             sdepth == CV_64U ? cvt64u32s :
             sdepth == CV_64S ? cvt64s32s :
+            sdepth == CV_8F_E4M3FN ? cvt8fe4m332s :
+            sdepth == CV_8F_E4M3FNUZ ? cvt8fe4m3u32s :
+            sdepth == CV_8F_E5M2 ? cvt8fe5m232s :
+            sdepth == CV_8F_E5M2FNUZ ? cvt8fe5m2u32s :
             0) :
         ddepth == CV_32F ? (
             sdepth == CV_8U ? cvt8u32f :
@@ -618,6 +677,10 @@ BinaryFunc getConvertFunc(int sdepth_, int ddepth_)
             sdepth == CV_Bool ? cvt8b32f :
             sdepth == CV_64U ? cvt64u32f :
             sdepth == CV_64S ? cvt64s32f :
+            sdepth == CV_8F_E4M3FN ? cvt8fe4m332f :
+            sdepth == CV_8F_E4M3FNUZ ? cvt8fe4m3u32f :
+            sdepth == CV_8F_E5M2 ? cvt8fe5m232f :
+            sdepth == CV_8F_E5M2FNUZ ? cvt8fe5m2u32f :
             0) :
         ddepth == CV_64F ? (
             sdepth == CV_8U ? cvt8u64f :
@@ -633,6 +696,10 @@ BinaryFunc getConvertFunc(int sdepth_, int ddepth_)
             sdepth == CV_Bool ? cvt8b64f :
             sdepth == CV_64U ? cvt64u64f :
             sdepth == CV_64S ? cvt64s64f :
+            sdepth == CV_8F_E4M3FN ? cvt8fe4m364f :
+            sdepth == CV_8F_E4M3FNUZ ? cvt8fe4m3u64f :
+            sdepth == CV_8F_E5M2 ? cvt8fe5m264f :
+            sdepth == CV_8F_E5M2FNUZ ? cvt8fe5m2u64f :
             0) :
         ddepth == CV_16F ? (
             sdepth == CV_8U ? cvt8u16f :
@@ -648,6 +715,10 @@ BinaryFunc getConvertFunc(int sdepth_, int ddepth_)
             sdepth == CV_Bool ? cvt8b16f :
             sdepth == CV_64U ? cvt64u16f :
             sdepth == CV_64S ? cvt64s16f :
+            sdepth == CV_8F_E4M3FN ? cvt8fe4m316f :
+            sdepth == CV_8F_E4M3FNUZ ? cvt8fe4m3u16f :
+            sdepth == CV_8F_E5M2 ? cvt8fe5m216f :
+            sdepth == CV_8F_E5M2FNUZ ? cvt8fe5m2u16f :
             0) :
         ddepth == CV_16BF ? (
             sdepth == CV_8U ? cvt8u16bf :
@@ -663,6 +734,10 @@ BinaryFunc getConvertFunc(int sdepth_, int ddepth_)
             sdepth == CV_Bool ? cvt8b16bf :
             sdepth == CV_64U ? cvt64u16bf :
             sdepth == CV_64S ? cvt64s16bf :
+            sdepth == CV_8F_E4M3FN ? cvt8fe4m316bf :
+            sdepth == CV_8F_E4M3FNUZ ? cvt8fe4m3u16bf :
+            sdepth == CV_8F_E5M2 ? cvt8fe5m216bf :
+            sdepth == CV_8F_E5M2FNUZ ? cvt8fe5m2u16bf :
             0) :
         ddepth == CV_Bool ? (
             sdepth == CV_8U ? cvt8u8b :
@@ -678,6 +753,10 @@ BinaryFunc getConvertFunc(int sdepth_, int ddepth_)
             sdepth == CV_Bool ? cvt8u :
             sdepth == CV_64U ? cvt64s8b :
             sdepth == CV_64S ? cvt64s8b :
+            sdepth == CV_8F_E4M3FN ? cvt8fe4m38b :
+            sdepth == CV_8F_E4M3FNUZ ? cvt8fe4m3u8b :
+            sdepth == CV_8F_E5M2 ? cvt8fe5m28b :
+            sdepth == CV_8F_E5M2FNUZ ? cvt8fe5m2u8b :
             0) :
         ddepth == CV_64U ? (
             sdepth == CV_8U ? cvt8u64s : // same as cvt8u64u
@@ -693,6 +772,10 @@ BinaryFunc getConvertFunc(int sdepth_, int ddepth_)
             sdepth == CV_Bool ? cvt8b64s :
             sdepth == CV_64U ? cvt64s :
             sdepth == CV_64S ? cvt64s64u :
+            sdepth == CV_8F_E4M3FN ? cvt8fe4m364u :
+            sdepth == CV_8F_E4M3FNUZ ? cvt8fe4m3u64u :
+            sdepth == CV_8F_E5M2 ? cvt8fe5m264u :
+            sdepth == CV_8F_E5M2FNUZ ? cvt8fe5m2u64u :
             0) :
         ddepth == CV_64S ? (
             sdepth == CV_8U ? cvt8u64s :
@@ -708,6 +791,86 @@ BinaryFunc getConvertFunc(int sdepth_, int ddepth_)
             sdepth == CV_Bool ? cvt8b64s :
             sdepth == CV_64U ? cvt64s :
             sdepth == CV_64S ? cvt64s :
+            sdepth == CV_8F_E4M3FN ? cvt8fe4m364s :
+            sdepth == CV_8F_E4M3FNUZ ? cvt8fe4m3u64s :
+            sdepth == CV_8F_E5M2 ? cvt8fe5m264s :
+            sdepth == CV_8F_E5M2FNUZ ? cvt8fe5m2u64s :
+            0) :
+        ddepth == CV_8F_E4M3FN ? (
+            sdepth == CV_8U ? cvt8u8fe4m3 :
+            sdepth == CV_8S ? cvt8s8fe4m3 :
+            sdepth == CV_16U ? cvt16u8fe4m3 :
+            sdepth == CV_16S ? cvt16s8fe4m3 :
+            sdepth == CV_32U ? cvt32u8fe4m3 :
+            sdepth == CV_32S ? cvt32s8fe4m3 :
+            sdepth == CV_32F ? cvt32f8fe4m3 :
+            sdepth == CV_64F ? cvt64f8fe4m3 :
+            sdepth == CV_16F ? cvt16f8fe4m3 :
+            sdepth == CV_16BF ? cvt16bf8fe4m3 :
+            sdepth == CV_Bool ? cvt8u8fe4m3 : // bool stored as 0/1 byte -> reuse uchar path
+            sdepth == CV_64U ? cvt64u8fe4m3 :
+            sdepth == CV_64S ? cvt64s8fe4m3 :
+            sdepth == CV_8F_E4M3FN ? cvt8u : // identity: 1-byte copy
+            sdepth == CV_8F_E4M3FNUZ ? cvt8fe4m3u8fe4m3 :
+            sdepth == CV_8F_E5M2 ? cvt8fe5m28fe4m3 :
+            sdepth == CV_8F_E5M2FNUZ ? cvt8fe5m2u8fe4m3 :
+            0) :
+        ddepth == CV_8F_E4M3FNUZ ? (
+            sdepth == CV_8U ? cvt8u8fe4m3u :
+            sdepth == CV_8S ? cvt8s8fe4m3u :
+            sdepth == CV_16U ? cvt16u8fe4m3u :
+            sdepth == CV_16S ? cvt16s8fe4m3u :
+            sdepth == CV_32U ? cvt32u8fe4m3u :
+            sdepth == CV_32S ? cvt32s8fe4m3u :
+            sdepth == CV_32F ? cvt32f8fe4m3u :
+            sdepth == CV_64F ? cvt64f8fe4m3u :
+            sdepth == CV_16F ? cvt16f8fe4m3u :
+            sdepth == CV_16BF ? cvt16bf8fe4m3u :
+            sdepth == CV_Bool ? cvt8u8fe4m3u : // bool stored as 0/1 byte -> reuse uchar path
+            sdepth == CV_64U ? cvt64u8fe4m3u :
+            sdepth == CV_64S ? cvt64s8fe4m3u :
+            sdepth == CV_8F_E4M3FN ? cvt8fe4m38fe4m3u :
+            sdepth == CV_8F_E4M3FNUZ ? cvt8u : // identity: 1-byte copy
+            sdepth == CV_8F_E5M2 ? cvt8fe5m28fe4m3u :
+            sdepth == CV_8F_E5M2FNUZ ? cvt8fe5m2u8fe4m3u :
+            0) :
+        ddepth == CV_8F_E5M2 ? (
+            sdepth == CV_8U ? cvt8u8fe5m2 :
+            sdepth == CV_8S ? cvt8s8fe5m2 :
+            sdepth == CV_16U ? cvt16u8fe5m2 :
+            sdepth == CV_16S ? cvt16s8fe5m2 :
+            sdepth == CV_32U ? cvt32u8fe5m2 :
+            sdepth == CV_32S ? cvt32s8fe5m2 :
+            sdepth == CV_32F ? cvt32f8fe5m2 :
+            sdepth == CV_64F ? cvt64f8fe5m2 :
+            sdepth == CV_16F ? cvt16f8fe5m2 :
+            sdepth == CV_16BF ? cvt16bf8fe5m2 :
+            sdepth == CV_Bool ? cvt8u8fe5m2 : // bool stored as 0/1 byte -> reuse uchar path
+            sdepth == CV_64U ? cvt64u8fe5m2 :
+            sdepth == CV_64S ? cvt64s8fe5m2 :
+            sdepth == CV_8F_E4M3FN ? cvt8fe4m38fe5m2 :
+            sdepth == CV_8F_E4M3FNUZ ? cvt8fe4m3u8fe5m2 :
+            sdepth == CV_8F_E5M2 ? cvt8u : // identity: 1-byte copy
+            sdepth == CV_8F_E5M2FNUZ ? cvt8fe5m2u8fe5m2 :
+            0) :
+        ddepth == CV_8F_E5M2FNUZ ? (
+            sdepth == CV_8U ? cvt8u8fe5m2u :
+            sdepth == CV_8S ? cvt8s8fe5m2u :
+            sdepth == CV_16U ? cvt16u8fe5m2u :
+            sdepth == CV_16S ? cvt16s8fe5m2u :
+            sdepth == CV_32U ? cvt32u8fe5m2u :
+            sdepth == CV_32S ? cvt32s8fe5m2u :
+            sdepth == CV_32F ? cvt32f8fe5m2u :
+            sdepth == CV_64F ? cvt64f8fe5m2u :
+            sdepth == CV_16F ? cvt16f8fe5m2u :
+            sdepth == CV_16BF ? cvt16bf8fe5m2u :
+            sdepth == CV_Bool ? cvt8u8fe5m2u : // bool stored as 0/1 byte -> reuse uchar path
+            sdepth == CV_64U ? cvt64u8fe5m2u :
+            sdepth == CV_64S ? cvt64s8fe5m2u :
+            sdepth == CV_8F_E4M3FN ? cvt8fe4m38fe5m2u :
+            sdepth == CV_8F_E4M3FNUZ ? cvt8fe4m3u8fe5m2u :
+            sdepth == CV_8F_E5M2 ? cvt8fe5m28fe5m2u :
+            sdepth == CV_8F_E5M2FNUZ ? cvt8u : // identity: 1-byte copy
             0) :
         0;
     CV_Assert(func != 0);
