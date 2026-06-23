@@ -10,6 +10,7 @@
 #ifdef HAVE_PROTOBUF
 #include "../graph_simplifier.hpp"
 #include "onnx_graph_simplifier.hpp"
+#include "onnx_dtype_convert.hpp"
 #include <opencv2/core/utils/filesystem.hpp>
 #include "opencv2/core/utils/filesystem.private.hpp"
 
@@ -2051,31 +2052,20 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
     }
     else if (datatype == opencv_onnx::TensorProto_DataType_FLOAT16)
     {
-        // FIXME, for now, we only load FP16 Tensor as FP32 Mat, full support for FP16 is required in the future.
-        CV_LOG_ONCE_INFO(NULL, "DNN: load FP16 model as FP32 model, and it takes twice the FP16 RAM requirement.");
-
-        // ONNX saves float 16 data in two format: int32 and raw_data.
-        // Link: https://github.com/onnx/onnx/issues/4460#issuecomment-1224373746
+        // Load FP16 natively as CV_16F. ONNX saves float16 either in int32_data (low 16 bits)
+        // or in raw_data. Link: https://github.com/onnx/onnx/issues/4460#issuecomment-1224373746
         if (!tensor_proto.int32_data().empty())
         {
             size_t sz = tensor_proto.int32_data().size();
-            std::vector<int16_t> halfvec(sz);
+            blob.create((int)sizes.size(), sizes.data(), CV_16FC1);
             const int32_t* intdata = (const int32_t*)tensor_proto.int32_data().data();
+            uint16_t* dst = (uint16_t*)blob.data;
             for (size_t i = 0; i < sz; i++)
-            {
-                union
-                {
-                    int16_t h;
-                    int32_t i;
-                } u;
-                u.i = intdata[i];
-                halfvec[i] = u.h;
-            }
-            Mat(sizes, CV_16FC1, halfvec.data()).convertTo(blob, CV_32FC1);
+                dst[i] = (uint16_t)(intdata[i] & 0xFFFF);
         }
         else
         {
-            Mat(sizes, CV_16FC1, rawdata).convertTo(blob, CV_32FC1);
+            Mat(sizes, CV_16FC1, rawdata).copyTo(blob);
         }
     }
     else if (datatype == opencv_onnx::TensorProto_DataType_BFLOAT16)
@@ -2201,6 +2191,50 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
             Mat(sizes, CV_64SC1, (void*)tensor_proto.int64_data().data()).convertTo(blob, CV_64UC1);
         else
             Mat(sizes, CV_64UC1, rawdata).copyTo(blob);
+    }
+    else if (datatype == opencv_onnx::TensorProto_DataType_FLOAT8E4M3FN ||
+             datatype == opencv_onnx::TensorProto_DataType_FLOAT8E4M3FNUZ ||
+             datatype == opencv_onnx::TensorProto_DataType_FLOAT8E5M2 ||
+             datatype == opencv_onnx::TensorProto_DataType_FLOAT8E5M2FNUZ)
+    {
+        const onnx_dtype::Fp8Fmt fmt = onnx_dtype::fp8FmtFor(datatype);
+        blob.create((int)sizes.size(), sizes.data(), CV_16FC1);
+        const uchar* src = (const uchar*)rawdata;
+        hfloat* dst = blob.ptr<hfloat>();
+        for (size_t i = 0, total = blob.total(); i < total; i++)
+            dst[i] = hfloat(onnx_dtype::fp8ToF32(src[i], fmt));
+    }
+    else if (datatype == onnx_dtype::ONNX_FLOAT8E8M0)
+    {
+        blob.create((int)sizes.size(), sizes.data(), CV_32FC1);
+        const uchar* src = (const uchar*)rawdata;
+        float* dst = blob.ptr<float>();
+        for (size_t i = 0, total = blob.total(); i < total; i++)
+            dst[i] = onnx_dtype::e8m0ToF32(src[i]);
+    }
+    else if (datatype == opencv_onnx::TensorProto_DataType_FLOAT4E2M1)
+    {
+        blob.create((int)sizes.size(), sizes.data(), CV_16FC1);
+        const uchar* src = (const uchar*)rawdata;
+        hfloat* dst = blob.ptr<hfloat>();
+        for (size_t i = 0, total = blob.total(); i < total; i++)
+            dst[i] = hfloat(onnx_dtype::fp4ToF32(onnx_dtype::unpackNibble(src, i)));
+    }
+    else if (datatype == opencv_onnx::TensorProto_DataType_INT4)
+    {
+        blob.create((int)sizes.size(), sizes.data(), CV_8SC1);
+        const uchar* src = (const uchar*)rawdata;
+        schar* dst = blob.ptr<schar>();
+        for (size_t i = 0, total = blob.total(); i < total; i++)
+            dst[i] = onnx_dtype::int4SignExtend(onnx_dtype::unpackNibble(src, i));
+    }
+    else if (datatype == opencv_onnx::TensorProto_DataType_UINT4)
+    {
+        blob.create((int)sizes.size(), sizes.data(), CV_8UC1);
+        const uchar* src = (const uchar*)rawdata;
+        uchar* dst = blob.ptr<uchar>();
+        for (size_t i = 0, total = blob.total(); i < total; i++)
+            dst[i] = onnx_dtype::unpackNibble(src, i);
     }
     else
     {
