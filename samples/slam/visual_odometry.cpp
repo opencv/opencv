@@ -2,7 +2,6 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 // Copyright (C) 2026, BigVision LLC, all rights reserved.
-// Third party copyrights are property of their respective owners.
 
 #include <opencv2/slam.hpp>
 #include <opencv2/features.hpp>
@@ -12,52 +11,73 @@
 
 using namespace cv;
 
-static const char* ALIKED_MODEL    = "/media/user/path/to/models/aliked-n16rot-top1k-640.onnx";
-static const char* LIGHTGLUE_MODEL = "/media/user/path/to/models/aliked_lightglue.onnx";
-static const char* IMAGES_DIR      = "/media/user/path/to/dataset";
-static const char* OUTPUT_DIR      = "vo_out";
+static const char* keys =
+    "{ help h           |        | Print help message }"
+    "{ aliked           | <none> | Path to ALIKED ONNX model }"
+    "{ lightglue        | <none> | Path to LightGlue ONNX model }"
+    "{ images           | <none> | Path to directory with input images }"
+    "{ output           | vo_out | Output directory for trajectory and map }"
+    "{ fx               | 718.856  | Camera focal length X }"
+    "{ fy               | 718.856  | Camera focal length Y }"
+    "{ cx               | 607.1928 | Camera principal point X }"
+    "{ cy               | 185.2157 | Camera principal point Y }"
+    "{ min-parallax     | 1.5    | Minimum initialisation parallax in degrees }"
+    "{ min-points       | 50     | Minimum initialisation map points }";
 
-// KITTI-00: fx, fy, cx, cy
-static const Matx33d K(718.856, 0., 607.1928,
-                        0., 718.856, 185.2157,
-                        0., 0.,      1.);
-
-// k1, k2, p1, p2, k3
-static const std::vector<double> DIST = { -0.2811, 0.0723, -0.0003, 0.0001, 0.0 };
-
-static Ptr<Feature2D> makeDetector()
+int main(int argc, char** argv)
 {
-    ALIKED::Params p;
-    p.inputSize = Size(640, 640);
-    p.engine    = dnn::ENGINE_NEW;
-    return ALIKED::create(ALIKED_MODEL, p);
-}
+    CommandLineParser parser(argc, argv, keys);
+    parser.about("Monocular visual odometry using ALIKED + LightGlue\n"
+                 "  Example: visual_odometry --aliked=aliked.onnx --lightglue=lg.onnx --images=./seq\n");
 
-static Ptr<DescriptorMatcher> makeMatcher()
-{
-    return LightGlueMatcher::create(LIGHTGLUE_MODEL, 0.0f,
-                                    dnn::DNN_BACKEND_DEFAULT,
-                                    dnn::DNN_TARGET_CPU);
-}
+    if (parser.has("help"))
+    {
+        parser.printMessage();
+        return 0;
+    }
 
-int main()
-{
-    slam::OdometryParams params;
-    params.minInitParallaxDeg = 1.5;
-    params.minInitPoints      = 50;
+    const String alikedPath    = parser.get<String>("aliked");
+    const String lightgluePath = parser.get<String>("lightglue");
+    const String imagesDir     = parser.get<String>("images");
+
+    if (!parser.check() || alikedPath == "<none>" || lightgluePath == "<none>" || imagesDir == "<none>")
+    {
+        parser.printErrors();
+        parser.printMessage();
+        return 1;
+    }
+
+    const String outputDir = parser.get<String>("output");
+
+    const Matx33d K(parser.get<double>("fx"), 0., parser.get<double>("cx"),
+                    0., parser.get<double>("fy"), parser.get<double>("cy"),
+                    0., 0., 1.);
+
+    ALIKED::Params detParams;
+    detParams.inputSize = Size(640, 640);
+    detParams.engine    = dnn::ENGINE_NEW;
+    auto detector = ALIKED::create(alikedPath, detParams);
+
+    auto matcher = LightGlueMatcher::create(lightgluePath, 0.0f,
+                                            dnn::DNN_BACKEND_DEFAULT,
+                                            dnn::DNN_TARGET_CPU);
+
+    slam::OdometryParams voParams;
+    voParams.minInitParallaxDeg = parser.get<double>("min-parallax");
+    voParams.minInitPoints      = parser.get<int>("min-points");
 
     auto vo = slam::VisualOdometry::create(
-        makeDetector(), makeMatcher(),
-        IMAGES_DIR, OUTPUT_DIR,
-        Mat(K), Mat(DIST), params);
+        detector, matcher,
+        imagesDir, outputDir,
+        Mat(K), Mat(), voParams);
 
-    const int64 t0      = getTickCount();
-    const bool  ok      = vo->run();
+    const int64  t0      = getTickCount();
+    const bool   ok      = vo->run();
     const double elapsed = (getTickCount() - t0) / getTickFrequency();
 
-    std::cout << "run=" << (ok ? "ok" : "FAILED")
+    std::cout << "run="      << (ok ? "ok" : "FAILED")
               << "  frames=" << vo->getTrajectory().size()
               << "  elapsed=" << elapsed << "s\n"
-              << "output -> " << OUTPUT_DIR << "\n";
+              << "output -> " << outputDir << "\n";
     return ok ? 0 : 1;
 }
