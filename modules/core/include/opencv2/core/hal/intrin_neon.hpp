@@ -2252,14 +2252,7 @@ inline v_int32x4 v_round(const v_float32x4& a)
 {
     float32x4_t a_ = a.val;
     int32x4_t result;
-#if defined _MSC_VER
     result = vcvtnq_s32_f32(a_);
-#else
-    __asm__ ("fcvtns %0.4s, %1.4s"
-             : "=w"(result)
-             : "w"(a_)
-             : /* No clobbers */);
-#endif
     return v_int32x4(result);
 }
 #else
