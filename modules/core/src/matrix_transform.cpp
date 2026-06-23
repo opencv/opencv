@@ -551,12 +551,6 @@ void transposeND(InputArray src_, const std::vector<int>& order, OutputArray dst
     CV_CheckEQ(inp.channels(), 1, "Input array should be single-channel");
     CV_CheckEQ(order.size(), static_cast<size_t>(inp.dims), "Number of dimensions shouldn't change");
 
-    auto order_ = order;
-    std::sort(order_.begin(), order_.end());
-    for (size_t i = 0; i < order_.size(); ++i)
-    {
-        CV_CheckEQ(static_cast<size_t>(order_[i]), i, "New order should be a valid permutation of the old one");
-    }
     bool isIdentityOrder = true;
     for (size_t i = 0; i < order.size(); ++i)
     {
@@ -566,8 +560,30 @@ void transposeND(InputArray src_, const std::vector<int>& order, OutputArray dst
             break;
         }
     }
+    if (isIdentityOrder)
+    {
+        dst_.create(inp.dims, inp.size.p, inp.type());
+        Mat out = dst_.getMat();
+        CV_Assert(out.isContinuous());
+
+        if (inp.data != out.data)
+            inp.copyTo(out);
+        return;
+    }
 
     const bool is2DSwap = inp.dims == 2 && order.size() == 2 && order[0] == 1 && order[1] == 0;
+    if (is2DSwap)
+    {
+        transpose(inp, dst_);
+        return;
+    }
+
+    auto order_ = order;
+    std::sort(order_.begin(), order_.end());
+    for (size_t i = 0; i < order_.size(); ++i)
+    {
+        CV_CheckEQ(static_cast<size_t>(order_[i]), i, "New order should be a valid permutation of the old one");
+    }
 
     std::vector<int> newShape(order.size());
     for (size_t i = 0; i < order.size(); ++i)
@@ -578,20 +594,6 @@ void transposeND(InputArray src_, const std::vector<int>& order, OutputArray dst
     dst_.create(static_cast<int>(newShape.size()), newShape.data(), inp.type());
     Mat out = dst_.getMat();
     CV_Assert(out.isContinuous());
-
-    if (isIdentityOrder)
-    {
-        if (inp.data != out.data)
-            inp.copyTo(out);
-        return;
-    }
-
-    if (is2DSwap)
-    {
-        transpose(inp, out);
-        return;
-    }
-
     CV_Assert(inp.data != out.data);
 
     int continuous_idx = 0;
