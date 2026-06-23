@@ -529,16 +529,19 @@ void TFLiteImporter::parsePadding(const Operator& op, const std::string& opcode,
     Mat paddings = allTensors[op.inputs()->Get(1)].clone();
 
     CV_CheckTypeEQ(paddings.type(), CV_32S, "");
-    //  N    H    W    C
-    // 0 1  2 3  4 5  6 7
-    std::swap(paddings.at<int32_t>(2), paddings.at<int32_t>(6));
-    std::swap(paddings.at<int32_t>(3), paddings.at<int32_t>(7));
-    //  N    C    W    H
-    // 0 1  2 3  4 5  6 7
-    std::swap(paddings.at<int32_t>(4), paddings.at<int32_t>(6));
-    std::swap(paddings.at<int32_t>(5), paddings.at<int32_t>(7));
-    //  N    C    H    W
-    // 0 1  2 3  4 5  6 7
+    if (paddings.total() == 8)
+    {
+        //  N    H    W    C
+        // 0 1  2 3  4 5  6 7
+        std::swap(paddings.at<int32_t>(2), paddings.at<int32_t>(6));
+        std::swap(paddings.at<int32_t>(3), paddings.at<int32_t>(7));
+        //  N    C    W    H
+        // 0 1  2 3  4 5  6 7
+        std::swap(paddings.at<int32_t>(4), paddings.at<int32_t>(6));
+        std::swap(paddings.at<int32_t>(5), paddings.at<int32_t>(7));
+        //  N    C    H    W
+        // 0 1  2 3  4 5  6 7
+    }
 
     layerParams.set("paddings", DictValue::arrayInt<int32_t*>((int32_t*)paddings.data, paddings.total()));
     addLayer(layerParams, op);
@@ -828,6 +831,7 @@ void TFLiteImporter::parseResize(const Operator& op, const std::string& opcode, 
         layerParams.set("half_pixel_centers", options->half_pixel_centers());
     }
     Mat shape = allTensors[op.inputs()->Get(1)].reshape(1, 1);
+    CV_CheckGE(shape.total(), (size_t)2, "TFLite Resize: size tensor must hold height and width");
     layerParams.set("height", shape.at<int>(0, 0));
     layerParams.set("width", shape.at<int>(0, 1));
     addLayer(layerParams, op);
