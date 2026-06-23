@@ -479,7 +479,7 @@ PERF_TEST_P_(BinaryOpTest, transposeND_2d_swap_order)
 
     cv::Mat b = makeTransposeNDOutput(a, order);
 
-    declare.in(a,WARMUP_RNG).out(b);
+    declare.in(a, WARMUP_RNG).out(b);
 
     TEST_CYCLE() cv::transposeND(a, order, b);
 
