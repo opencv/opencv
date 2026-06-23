@@ -34,6 +34,7 @@ enum class CoordTransMode {
     PYTORCH_HALF_PIXEL,
     TF_HALF_PIXEL_FOR_NN,
     TF_CROP_AND_RESIZE,
+    HALF_PIXEL_SYMMETRIC,
     ASYMMETRIC
 };
 
@@ -43,6 +44,7 @@ static inline CoordTransMode parseCoordTransMode(const String& s)
     if (s == "pytorch_half_pixel") return CoordTransMode::PYTORCH_HALF_PIXEL;
     if (s == "tf_half_pixel_for_nn") return CoordTransMode::TF_HALF_PIXEL_FOR_NN;
     if (s == "tf_crop_and_resize") return CoordTransMode::TF_CROP_AND_RESIZE;
+    if (s == "half_pixel_symmetric") return CoordTransMode::HALF_PIXEL_SYMMETRIC;
     return CoordTransMode::ASYMMETRIC;
 }
 
@@ -90,6 +92,13 @@ inline float computeSrcGeneric(int dst, float scale, int limit, int len,
         return (dst + 0.5f)*scale - 0.5f;
     if (coordTransMode == CoordTransMode::TF_HALF_PIXEL_FOR_NN)
         return (dst + 0.5f)*scale;
+    if (coordTransMode == CoordTransMode::HALF_PIXEL_SYMMETRIC)
+    {
+        // ONNX half_pixel_symmetric: offset = center*(1 - len_resized/(len_orig*x_scale)),
+        // with scale == 1/x_scale and limit == input length.
+        const float offset = limit*0.5f - len*scale*0.5f;
+        return offset + (dst + 0.5f)*scale - 0.5f;
+    }
     return dst*scale;
 }
 
@@ -122,7 +131,7 @@ static inline void buildNearestIndexMap(std::vector<int>& map,
     map.resize(outLen);
     for (int i = 0; i < outLen; ++i)
     {
-        float src = computeSrcGeneric(i, scale, inLen - 1, len,
+        float src = computeSrcGeneric(i, scale, inLen, len,
                                       coordTransMode, halfPixelCenters, start_coord, end_coord);
         if (coordTransMode == CoordTransMode::TF_CROP_AND_RESIZE) {
             if (src < 0.f || src >= float(inLen)) {
@@ -175,9 +184,9 @@ static inline void buildBilinearIndexAndLerp(std::vector<int>& i0,
         }
         else
         {
-            src = std::min(std::max(src, 0.f), float(inLen - 1) - 1e-6f);
+            src = std::min(std::max(src, 0.f), std::max(0.f, float(inLen - 1) - 1e-6f));
             int base = int(std::floor(src));
-            i0[o] = base;
+            i0[o] = clamp(base, 0, inLen - 1);
             i1[o] = clamp(base + 1, 0, inLen - 1);
             frac[o] = src - float(base);
         }
@@ -773,6 +782,119 @@ void resizeCubic(const Mat &inp, Mat &out,
         }
     }, nstripes);
 }
+
+// ---- ONNX antialias (PIL-style) resampling ----------------------------------
+static inline float aaTriangle(float x)
+{
+    x = std::abs(x);
+    return x < 1.f ? 1.f - x : 0.f;
+}
+
+static inline float aaCubic(float x, float a)
+{
+    x = std::abs(x);
+    if (x < 1.f) return ((a + 2.f)*x - (a + 3.f))*x*x + 1.f;
+    if (x < 2.f) return a*(((x - 5.f)*x + 8.f)*x - 4.f);
+    return 0.f;
+}
+
+// Per-output filter taps for one axis. After clamping out-of-bound samples to
+// the edge (exclude_outside == false), the contributing indices are contiguous,
+// so each output stores a start index 'lo', a 'cnt' and an offset into 'w'.
+struct AAWeights
+{
+    std::vector<int> lo, cnt, ofs;
+    std::vector<float> w;
+};
+
+static void buildAAWeights(AAWeights& p, int inS, int outS, float xscale,
+                           bool cubic, float cubicA, CoordTransMode coordMode)
+{
+    const float scaleC = 1.f / xscale;                  // input/output direction
+    const float radius = cubic ? 2.f : 1.f;
+    const float support = scaleC >= 1.f ? radius*scaleC : radius;
+    const float inv = scaleC >= 1.f ? 1.f/scaleC : 1.f;
+
+    p.lo.resize(outS); p.cnt.resize(outS); p.ofs.resize(outS);
+    p.w.clear();
+    std::vector<float> tmp;
+    for (int y = 0; y < outS; y++)
+    {
+        const float center = computeSrcGeneric(y, scaleC, inS, outS, coordMode, true);
+        const int xmin = (int)std::floor(center - support + 0.5f);
+        const int xmax = (int)std::floor(center + support + 0.5f);  // inclusive
+        const int lo = std::min(std::max(xmin, 0), inS - 1);
+        const int hi = std::min(std::max(xmax, 0), inS - 1);
+        const int cnt = hi - lo + 1;
+        tmp.assign(cnt, 0.f);
+        float tot = 0.f;
+        for (int x = xmin; x <= xmax; x++)
+        {
+            const float wt = cubic ? aaCubic((x - center)*inv, cubicA)
+                                   : aaTriangle((x - center)*inv);
+            const int idx = std::min(std::max(x, 0), inS - 1);
+            tmp[idx - lo] += wt;
+            tot += wt;
+        }
+        p.lo[y] = lo; p.cnt[y] = cnt; p.ofs[y] = (int)p.w.size();
+        for (int k = 0; k < cnt; k++)
+            p.w.push_back(tot != 0.f ? tmp[k] / tot : 0.f);
+    }
+}
+
+template<typename T>
+void resizeAntialias(const Mat& inp, Mat& out,
+                     float xscaleH, float xscaleW,
+                     bool cubic, float cubicA, CoordTransMode coordMode)
+{
+    CV_Assert(inp.dims == 4 && out.dims == 4 && inp.isContinuous() && out.isContinuous());
+    const int N = inp.size[0], C = inp.size[1];
+    const int inH = inp.size[2], inW = inp.size[3];
+    const int outH = out.size[2], outW = out.size[3];
+
+    AAWeights px, py;
+    buildAAWeights(px, inW, outW, xscaleW, cubic, cubicA, coordMode);
+    buildAAWeights(py, inH, outH, xscaleH, cubic, cubicA, coordMode);
+
+    const int planes = N * C;
+    parallel_for_(Range(0, planes), [&](const Range& r) {
+        std::vector<float> buf((size_t)inH * outW);
+        for (int pl = r.start; pl < r.end; pl++)
+        {
+            const T* inPlane = inp.ptr<T>(0) + (size_t)pl * inH * inW;
+            T* outPlane = out.ptr<T>(0) + (size_t)pl * outH * outW;
+            // Horizontal pass: inp[inH x inW] -> buf[inH x outW].
+            for (int y = 0; y < inH; y++)
+            {
+                const T* inRow = inPlane + (size_t)y * inW;
+                float* bufRow = buf.data() + (size_t)y * outW;
+                for (int ox = 0; ox < outW; ox++)
+                {
+                    const float* w = px.w.data() + px.ofs[ox];
+                    const int lo = px.lo[ox], cnt = px.cnt[ox];
+                    float acc = 0.f;
+                    for (int k = 0; k < cnt; k++)
+                        acc += w[k] * (float)inRow[lo + k];
+                    bufRow[ox] = acc;
+                }
+            }
+            // Vertical pass: buf[inH x outW] -> out[outH x outW].
+            for (int oy = 0; oy < outH; oy++)
+            {
+                const float* w = py.w.data() + py.ofs[oy];
+                const int lo = py.lo[oy], cnt = py.cnt[oy];
+                T* outRow = outPlane + (size_t)oy * outW;
+                for (int ox = 0; ox < outW; ox++)
+                {
+                    float acc = 0.f;
+                    for (int k = 0; k < cnt; k++)
+                        acc += w[k] * buf[(size_t)(lo + k) * outW + ox];
+                    outRow[ox] = saturate_cast<T>(acc);
+                }
+            }
+        }
+    });
+}
 }
 
 class Resize2LayerImpl : public Resize2Layer
@@ -811,6 +933,33 @@ public:
 
         if (interpolation == "opencv_linear")
             halfPixelCenters = true;
+
+        keepAspectPolicy = params.get<String>("keep_aspect_ratio_policy", "stretch");
+        antialias = params.get<int>("antialias", 0) != 0;
+        if (params.has("axes")) {
+            const DictValue& a = params.get("axes");
+            axesAttr.resize(a.size());
+            for (int i = 0; i < a.size(); i++)
+                axesAttr[i] = a.get<int>(i);
+        }
+    }
+
+    // Map the H (axis 2) and W (axis 3) entries within a 2- or 4-element
+    // sizes/scales vector, honoring the ONNX "axes" attribute order.
+    void spatialIndices(size_t nelems, int& hIdx, int& wIdx) const
+    {
+        if (nelems == 4) { hIdx = 2; wIdx = 3; }
+        else { hIdx = 0; wIdx = 1; }
+
+        if (axesAttr.size() == nelems) {
+            int foundH = -1, foundW = -1;
+            for (size_t k = 0; k < nelems; k++) {
+                int ax = axesAttr[k] < 0 ? axesAttr[k] + 4 : axesAttr[k];
+                if (ax == 2) foundH = (int)k;
+                else if (ax == 3) foundW = (int)k;
+            }
+            if (foundH >= 0 && foundW >= 0) { hIdx = foundH; wIdx = foundW; }
+        }
     }
 
     bool dynamicOutputShapes() const CV_OVERRIDE
@@ -868,22 +1017,26 @@ public:
                                  : (sizes.size() == 4 || sizes.size() == 2)));
 
         MatShape outShape = inpShape;
+        const int inH = inpShape[2], inW = inpShape[3];
         if (!sizes.empty()) {
-            if (sizes.size() == 4) {
-                outShape[2] = sizes[2];
-                outShape[3] = sizes[3];
-            } else /* sizes.size() == 2 */ {
-                outShape[2] = sizes[0];
-                outShape[3] = sizes[1];
+            int hIdx, wIdx;
+            spatialIndices(sizes.size(), hIdx, wIdx);
+            int szH = sizes[hIdx], szW = sizes[wIdx];
+            if (keepAspectPolicy == "not_larger" || keepAspectPolicy == "not_smaller") {
+                float scH = float(szH) / inH, scW = float(szW) / inW;
+                float sc = keepAspectPolicy == "not_larger" ? std::min(scH, scW)
+                                                            : std::max(scH, scW);
+                outShape[2] = int(std::round(sc * inH));
+                outShape[3] = int(std::round(sc * inW));
+            } else {
+                outShape[2] = szH;
+                outShape[3] = szW;
             }
         } else {
-            if (scales.size() == 4) {
-                outShape[2] = cvFloor(inpShape[2] * scales[2]);
-                outShape[3] = cvFloor(inpShape[3] * scales[3]);
-            } else /* scales.size() == 2 */ {
-                outShape[2] = cvFloor(inpShape[2] * scales[0]);
-                outShape[3] = cvFloor(inpShape[3] * scales[1]);
-            }
+            int hIdx, wIdx;
+            spatialIndices(scales.size(), hIdx, wIdx);
+            outShape[2] = cvFloor(inH * scales[hIdx]);
+            outShape[3] = cvFloor(inW * scales[wIdx]);
         }
         return outShape;
     }
@@ -1016,7 +1169,20 @@ public:
             Mat roiTensor = inputs[1];
             std::vector<float> roi;
             tensorToFloatVec(roiTensor, roi);
-            if (roi.size() >= 4)
+            if (axesAttr.size() == 2 && roi.size() == 4)
+            {
+                // ROI given per "axes": [start_axes[0], start_axes[1], end_axes[0], end_axes[1]]
+                float start[4] = {0.f, 0.f, 0.f, 0.f};
+                float end[4]   = {1.f, 1.f, 1.f, 1.f};
+                for (int k = 0; k < 2; k++) {
+                    int ax = axesAttr[k] < 0 ? axesAttr[k] + 4 : axesAttr[k];
+                    start[ax] = roi[k];
+                    end[ax]   = roi[2 + k];
+                }
+                roi_start_y = start[2]; roi_start_x = start[3];
+                roi_end_y   = end[2];   roi_end_x   = end[3];
+            }
+            else if (roi.size() >= 4)
             {
                 if (roi.size() == 4) {
                     roi_start_y = roi[0];
@@ -1039,10 +1205,19 @@ public:
 
         if (sizes.empty() && !scales.empty() && halfPixelCenters)
         {
-            float sH = (scales.size() == 4) ? scales[2] : scales[0];
-            float sW = (scales.size() == 4) ? scales[3] : scales[1];
-            scaleHeight = 1.f / sH;
-            scaleWidth  = 1.f / sW;
+            int hIdx, wIdx;
+            spatialIndices(scales.size(), hIdx, wIdx);
+            scaleHeight = 1.f / scales[hIdx];
+            scaleWidth  = 1.f / scales[wIdx];
+        }
+        else if (sizes.empty() && !scales.empty() && alignCorners)
+        {
+            int hIdx, wIdx;
+            spatialIndices(scales.size(), hIdx, wIdx);
+            float lenH = inpShape[2] * scales[hIdx];
+            float lenW = inpShape[3] * scales[wIdx];
+            if (lenH > 1.f) scaleHeight = float(inpShape[2] - 1) / (lenH - 1.f);
+            if (lenW > 1.f) scaleWidth  = float(inpShape[3] - 1) / (lenW - 1.f);
         }
 
         auto kind = outputs_arr.kind();
@@ -1084,7 +1259,29 @@ public:
             out = out_;
         }
 
-        if(interpolation=="nearest"){
+        if (antialias && inp.dims == 4 &&
+            (interpolation == "bilinear" || interpolation == "opencv_linear" || interpolation == "cubic"))
+        {
+            const bool cubic = (interpolation == "cubic");
+            float xsH, xsW;
+            if (!scales.empty()) {
+                int hIdx, wIdx;
+                spatialIndices(scales.size(), hIdx, wIdx);
+                xsH = scales[hIdx]; xsW = scales[wIdx];
+            } else {
+                xsH = float(outShape[2]) / inpShape[2];
+                xsW = float(outShape[3]) / inpShape[3];
+            }
+            switch (depth) {
+            case CV_8S:  resizeAntialias<int8_t>(inp, out, xsH, xsW, cubic, cubicCoeffA, coordTransModeE); break;
+            case CV_8U:  resizeAntialias<uint8_t>(inp, out, xsH, xsW, cubic, cubicCoeffA, coordTransModeE); break;
+            case CV_16F: resizeAntialias<hfloat>(inp, out, xsH, xsW, cubic, cubicCoeffA, coordTransModeE); break;
+            case CV_16BF: resizeAntialias<bfloat>(inp, out, xsH, xsW, cubic, cubicCoeffA, coordTransModeE); break;
+            case CV_32F: resizeAntialias<float>(inp, out, xsH, xsW, cubic, cubicCoeffA, coordTransModeE); break;
+            default: CV_Error(Error::StsUnsupportedFormat, "Unsupported depth");
+            }
+        }
+        else if(interpolation=="nearest"){
             switch(depth){
             case CV_8S:
                 resizeNearest<int8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
@@ -1311,6 +1508,9 @@ protected:
     float cubicCoeffA;
     float roi_start_y, roi_end_y, roi_start_x, roi_end_x;
     float extrapolation_value; // Extrapolation value for tf_crop_and_resize mode
+    std::vector<int> axesAttr;  // ONNX "axes" attribute (subset of dims that sizes/scales refer to)
+    String keepAspectPolicy;    // ONNX "keep_aspect_ratio_policy": stretch|not_larger|not_smaller
+    bool antialias;             // ONNX "antialias" attribute (filter stretching when downsampling)
 };
 
 Ptr<Resize2Layer> Resize2Layer::create(const LayerParams& params)
