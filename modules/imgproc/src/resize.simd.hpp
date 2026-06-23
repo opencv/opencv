@@ -2873,14 +2873,15 @@ class ResizeAreaFastVec_SIMD_16u
 {
 public:
     ResizeAreaFastVec_SIMD_16u(int _scale_x, int _scale_y, int _cn, int _step) :
-        cn(_cn), step(_step)
+        scale_x(_scale_x), scale_y(_scale_y), cn(_cn), step(_step)
     {
-        CV_UNUSED(_scale_x);
-        CV_UNUSED(_scale_y);
     }
 
     int operator() (const ushort * S, ushort * D, int w) const
     {
+        if (scale_x != 2 || scale_y != 2)
+            return 0;
+
         int dx = 0;
         const ushort * S0 = S, * S1 = (const ushort *)((const uchar *)(S0) + step);
 
@@ -2918,6 +2919,7 @@ public:
     }
 
 private:
+    int scale_x, scale_y;
     int cn, step;
 };
 
@@ -2925,14 +2927,15 @@ class ResizeAreaFastVec_SIMD_16s
 {
 public:
     ResizeAreaFastVec_SIMD_16s(int _scale_x, int _scale_y, int _cn, int _step) :
-        cn(_cn), step(_step)
+        scale_x(_scale_x), scale_y(_scale_y), cn(_cn), step(_step)
     {
-        CV_UNUSED(_scale_x);
-        CV_UNUSED(_scale_y);
     }
 
     int operator() (const short * S, short * D, int w) const
     {
+        if (scale_x != 2 || scale_y != 2)
+            return 0;
+
         int dx = 0;
         const short * S0 = S, * S1 = (const short *)((const uchar *)(S0) + step);
 
@@ -2970,6 +2973,7 @@ public:
     }
 
 private:
+    int scale_x, scale_y;
     int cn, step;
 };
 
@@ -3183,10 +3187,13 @@ class ResizeAreaFastVec_SIMD_16u
 {
 public:
     ResizeAreaFastVec_SIMD_16u(int _scale_x, int _scale_y, int _cn, int _step) :
-        cn(_cn), step(_step) { CV_UNUSED(_scale_x); CV_UNUSED(_scale_y); }
+        scale_x(_scale_x), scale_y(_scale_y), cn(_cn), step(_step) {}
 
     int operator() (const ushort* S, ushort* D, int w) const
     {
+        if (scale_x != 2 || scale_y != 2)
+            return 0;
+
         int dx = 0;
         const ushort* S0 = (const ushort*)S;
         const ushort* S1 = (const ushort*)((const uchar*)(S) + step);
@@ -3315,6 +3322,7 @@ public:
     }
 
 private:
+    int scale_x, scale_y;
     int cn;
     int step;
 };
@@ -3323,10 +3331,13 @@ class ResizeAreaFastVec_SIMD_16s
 {
 public:
     ResizeAreaFastVec_SIMD_16s(int _scale_x, int _scale_y, int _cn, int _step) :
-        cn(_cn), step(_step) { CV_UNUSED(_scale_x); CV_UNUSED(_scale_y); }
+        scale_x(_scale_x), scale_y(_scale_y), cn(_cn), step(_step) {}
 
     int operator() (const short* S, short* D, int w) const
     {
+        if (scale_x != 2 || scale_y != 2)
+            return 0;
+
         int dx = 0;
         const short* S0 = (const short*)S;
         const short* S1 = (const short*)((const uchar*)(S) + step);
@@ -3442,6 +3453,7 @@ public:
     }
 
 private:
+    int scale_x, scale_y;
     int cn;
     int step;
 };
