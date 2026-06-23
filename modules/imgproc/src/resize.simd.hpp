@@ -320,7 +320,7 @@ public:
 #else
                 for( ; x <= width - VTraits<v_uint32>::vlanes(); x += VTraits<v_uint32>::vlanes() )
                 {
-                    int CV_DECL_ALIGNED(CV_SIMD_WIDTH) sx_idx[VTraits<v_uint32>::vlanes()];
+                    int CV_DECL_ALIGNED(CV_SIMD_WIDTH) sx_idx[VTraits<v_uint32>::max_nlanes];
                     for( int i = 0; i < VTraits<v_uint32>::vlanes(); i++ )
                         sx_idx[i] = x_ofs[x + i] >> 2;
                     v_store((uint32_t*)D + x, vx_lut((const uint32_t*)S, sx_idx));
@@ -342,7 +342,7 @@ public:
 #if (CV_SIMD || CV_SIMD_SCALABLE)
                 for( ; x <= width - VTraits<v_uint64>::vlanes(); x += VTraits<v_uint64>::vlanes() )
                 {
-                    int CV_DECL_ALIGNED(64) sx_idx[VTraits<v_uint64>::vlanes()];
+                    int CV_DECL_ALIGNED(64) sx_idx[VTraits<v_uint64>::max_nlanes];
                     for( int i = 0; i < VTraits<v_uint64>::vlanes(); i++ )
                         sx_idx[i] = x_ofs[x + i] >> 3;
                     v_store((uint64_t*)D + x, vx_lut((const uint64_t*)S, sx_idx));
@@ -653,7 +653,7 @@ public:
 #else
                 for (; x <= dsize.width - VTraits<v_uint32>::vlanes(); x += VTraits<v_uint32>::vlanes())
                 {
-                    int CV_DECL_ALIGNED(CV_SIMD_WIDTH) sx_idx[VTraits<v_uint32>::vlanes()];
+                    int CV_DECL_ALIGNED(CV_SIMD_WIDTH) sx_idx[VTraits<v_uint32>::max_nlanes];
                     for (int i = 0; i < VTraits<v_uint32>::vlanes(); i++)
                         sx_idx[i] = x_ofs[x + i] >> 2;
                     v_store((uint32_t*)D + x, vx_lut((const uint32_t*)S, sx_idx));
@@ -774,7 +774,7 @@ public:
 #else
                 for( ; x <= dsize.width - VTraits<v_uint32>::vlanes(); x += VTraits<v_uint32>::vlanes() )
                 {
-                    int CV_DECL_ALIGNED(CV_SIMD_WIDTH) sx_idx[VTraits<v_uint32>::vlanes()];
+                    int CV_DECL_ALIGNED(CV_SIMD_WIDTH) sx_idx[VTraits<v_uint32>::max_nlanes];
                     for( int i = 0; i < VTraits<v_uint32>::vlanes(); i++ )
                         sx_idx[i] = x_ofs[x + i] >> 2;
                     v_store((uint32_t*)D + x, vx_lut((const uint32_t*)S, sx_idx));
@@ -796,7 +796,7 @@ public:
 #if (CV_SIMD || CV_SIMD_SCALABLE)
                 for( ; x <= dsize.width - VTraits<v_uint64>::vlanes(); x += VTraits<v_uint64>::vlanes() )
                 {
-                    int CV_DECL_ALIGNED(CV_SIMD_WIDTH) sx_idx[VTraits<v_uint64>::vlanes()];
+                    int CV_DECL_ALIGNED(CV_SIMD_WIDTH) sx_idx[VTraits<v_uint64>::max_nlanes];
                     for( int i = 0; i < VTraits<v_uint64>::vlanes(); i++ )
                         sx_idx[i] = x_ofs[x + i] >> 3;
                     v_store((uint64_t*)D + x, vx_lut((const uint64_t*)S, sx_idx));
@@ -3183,7 +3183,7 @@ class ResizeAreaFastVec_SIMD_16u
 {
 public:
     ResizeAreaFastVec_SIMD_16u(int _scale_x, int _scale_y, int _cn, int _step) :
-        cn(_cn), step(_step) {}
+        cn(_cn), step(_step) { CV_UNUSED(_scale_x); CV_UNUSED(_scale_y); }
 
     int operator() (const ushort* S, ushort* D, int w) const
     {
@@ -3323,7 +3323,7 @@ class ResizeAreaFastVec_SIMD_16s
 {
 public:
     ResizeAreaFastVec_SIMD_16s(int _scale_x, int _scale_y, int _cn, int _step) :
-        cn(_cn), step(_step) {}
+        cn(_cn), step(_step) { CV_UNUSED(_scale_x); CV_UNUSED(_scale_y); }
 
     int operator() (const short* S, short* D, int w) const
     {
