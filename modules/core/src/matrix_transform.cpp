@@ -578,11 +578,11 @@ void transposeND(InputArray src_, const std::vector<int>& order, OutputArray dst
     dst_.create(static_cast<int>(newShape.size()), newShape.data(), inp.type());
     Mat out = dst_.getMat();
     CV_Assert(out.isContinuous());
-    CV_Assert(inp.data != out.data);
 
     if (isIdentityOrder)
     {
-        inp.copyTo(out);
+        if (inp.data != out.data)
+            inp.copyTo(out);
         return;
     }
 
@@ -591,6 +591,8 @@ void transposeND(InputArray src_, const std::vector<int>& order, OutputArray dst
         transpose(inp, out);
         return;
     }
+
+    CV_Assert(inp.data != out.data);
 
     int continuous_idx = 0;
     for (int i = static_cast<int>(order.size()) - 1; i >= 0; --i)
