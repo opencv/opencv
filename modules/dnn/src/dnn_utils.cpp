@@ -152,29 +152,69 @@ void blobFromImagesNCHWImpl(const std::vector<Mat>& images, Mat& blob_, const Im
         if (param.swapRB)
             std::swap(p_blob_r, p_blob_b);
 
-        for (size_t i = 0; i < h; ++i)
+        if (nch == 1)
         {
-            const Tinp* p_img_row = images[k].ptr<Tinp>(i);
-
-            if (nch == 1)
+            for (size_t i = 0; i < (size_t)h; ++i)
             {
-                for (size_t j = 0; j < w; ++j)
+                const Tinp* p_img_row = images[k].ptr<Tinp>(i);
+                for (size_t j = 0; j < (size_t)w; ++j)
                 {
                     p_blob[i * w + j] = p_img_row[j];
                 }
             }
-            else if (nch == 3)
+        }
+        else if (nch == 3)
+        {
+            if (images[k].isContinuous())
             {
-                for (size_t j = 0; j < w; ++j)
+                const Tinp* p_src = images[k].ptr<Tinp>();
+                size_t i = 0;
+// NOTE: Visual Studio compiler is not able to vectorize the following loop on ARM64 CPU.
+// GCC and Clang does it efficiently.
+// TODO: Drop NEON block when MSVC is able to vectorize it too.
+#if CV_NEON
+                if (sizeof(Tinp) == 4 && sizeof(Tout) == 4)
                 {
-                    p_blob_r[i * w + j] = p_img_row[j * 3    ];
-                    p_blob_g[i * w + j] = p_img_row[j * 3 + 1];
-                    p_blob_b[i * w + j] = p_img_row[j * 3 + 2];
+                    const float* src_f = reinterpret_cast<const float*>(p_src);
+                    float* dst_r = reinterpret_cast<float*>(p_blob_r);
+                    float* dst_g = reinterpret_cast<float*>(p_blob_g);
+                    float* dst_b = reinterpret_cast<float*>(p_blob_b);
+                    for (; i + 4 <= (size_t)wh; i += 4)
+                    {
+                        float32x4x3_t rgb = vld3q_f32(src_f + i * 3);
+                        vst1q_f32(dst_r + i, rgb.val[0]);
+                        vst1q_f32(dst_g + i, rgb.val[1]);
+                        vst1q_f32(dst_b + i, rgb.val[2]);
+                    }
+                }
+#endif
+                for (; i < (size_t)wh; ++i)
+                {
+                    p_blob_r[i] = p_src[i * 3    ];
+                    p_blob_g[i] = p_src[i * 3 + 1];
+                    p_blob_b[i] = p_src[i * 3 + 2];
                 }
             }
-            else // if (nch == 4)
+            else
             {
-                for (size_t j = 0; j < w; ++j)
+                for (size_t i = 0; i < (size_t)h; ++i)
+                {
+                    const Tinp* p_img_row = images[k].ptr<Tinp>(i);
+                    for (size_t j = 0; j < (size_t)w; ++j)
+                    {
+                        p_blob_r[i * w + j] = p_img_row[j * 3    ];
+                        p_blob_g[i * w + j] = p_img_row[j * 3 + 1];
+                        p_blob_b[i * w + j] = p_img_row[j * 3 + 2];
+                    }
+                }
+            }
+        }
+        else // if (nch == 4)
+        {
+            for (size_t i = 0; i < (size_t)h; ++i)
+            {
+                const Tinp* p_img_row = images[k].ptr<Tinp>(i);
+                for (size_t j = 0; j < (size_t)w; ++j)
                 {
                     p_blob_r[i * w + j] = p_img_row[j * 4    ];
                     p_blob_g[i * w + j] = p_img_row[j * 4 + 1];
