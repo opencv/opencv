@@ -2154,6 +2154,24 @@ TEST(Core_InputOutput, FileStorage_int64_26829)
     }
 }
 
+TEST(Core_InputOutput, FileStorage_read_bigint_as_real_29363)
+{
+    // An integer above INT_MAX (e.g. from externally-produced json/yaml/xml) must
+    // convert to float/double without truncating to int32. Regression for #29363.
+    String content =
+        "%YAML:1.0\n"
+        "a: 6662329666\n"   // ~6.6e9, exact in double
+        "b: -9876543210\n"
+        "c: 4294967296\n";  // 2^32, exact in double and float
+    FileStorage fs(content, FileStorage::READ | FileStorage::MEMORY);
+
+    EXPECT_EQ(6662329666.0,  (double)fs["a"]);
+    EXPECT_EQ(-9876543210.0, (double)fs["b"]);
+    EXPECT_EQ(4294967296.0,  (double)fs["c"]);
+    EXPECT_EQ(4294967296.0f, (float)fs["c"]);
+    EXPECT_EQ((int64_t)6662329666LL, (int64_t)fs["a"]);  // int64 path unchanged
+}
+
 template <typename T>
 T fsWriteRead(const T& expectedValue, const char* ext)
 {
