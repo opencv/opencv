@@ -2119,6 +2119,14 @@ static void conv32fC8_3x3_strided(const void* inp__, const void* residual__, voi
 
 #endif  // !CV_SIMD_SCALABLE
 
+// GCC 14.x miscompiles the scalable (RVV) blocked path of conv32fC8 at -O3 via the
+// -funswitch-loops pass: it produces grossly wrong output (correct at -O1/-O2, and with
+// GCC 15+). Disable that single pass for this one function on RISC-V GCC builds as a
+// targeted workaround. No effect on x86/ARM or clang (the pragmas are skipped there).
+#if defined(__GNUC__) && !defined(__clang__) && defined(__riscv)
+#pragma GCC push_options
+#pragma GCC optimize("no-unswitch-loops")
+#endif
 static void conv32fC8(const void* inp__, const void* residual__, void* out__,
                       const ConvState& cs, const void* weights__,
                       const float* scale__, const float* bias__)
@@ -2541,6 +2549,9 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
         }
     });
 }
+#if defined(__GNUC__) && !defined(__clang__) && defined(__riscv)
+#pragma GCC pop_options
+#endif
 
 cv::dnn::ConvFunc getConvFunc_(int depth, int C0)
 {
