@@ -535,12 +535,8 @@ class JSWrapperGenerator(object):
 
             # Return type
             ret_type = 'void' if variant.rettype.strip() == '' else variant.rettype
-            # FIX: Ensure namespaced smart-pointer return types in factory methods, e.g.:
-            #      Ptr<EdgeDrawing> → Ptr<cv::ximgproc::EdgeDrawing>
             if factory and class_info is not None and ret_type.startswith('Ptr<'):
-                inner = ret_type[len('Ptr<'):-1].strip()
-                if '::' not in inner and inner == class_info.name:
-                    ret_type = 'Ptr<%s>' % class_info.cname
+                ret_type = self._qualify_factory_ptr_return_type(ret_type, class_info)
 
             if ret_type.startswith('Ptr'):  # smart pointer
                 ptr_type = ret_type.replace('Ptr<', '').replace('>', '')
