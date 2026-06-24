@@ -440,4 +440,77 @@ protected:
 
 TEST(Imgproc_ContourMoment, small) { CV_SmallContourMomentTest test; test.safe_run(); }
 
+namespace {
+static cv::Moments scalarMomentsUchar(const cv::Mat& src, bool binary)
+{
+    double m00 = 0, m10 = 0, m01 = 0, m20 = 0, m11 = 0, m02 = 0,
+           m30 = 0, m21 = 0, m12 = 0, m03 = 0;
+    for (int y = 0; y < src.rows; y++)
+    {
+        const uchar* row = src.ptr<uchar>(y);
+        double dy = y, dy2 = dy * dy, dy3 = dy2 * dy;
+        for (int x = 0; x < src.cols; x++)
+        {
+            double p = binary ? (row[x] ? 1.0 : 0.0) : (double)row[x];
+            double dx = x;
+            m00 += p;
+            m10 += p * dx;
+            m01 += p * dy;
+            m20 += p * dx * dx;
+            m11 += p * dx * dy;
+            m02 += p * dy2;
+            m30 += p * dx * dx * dx;
+            m21 += p * dx * dx * dy;
+            m12 += p * dx * dy2;
+            m03 += p * dy3;
+        }
+    }
+    return cv::Moments(m00, m10, m01, m20, m11, m02, m30, m21, m12, m03);
+}
+}
+
+typedef testing::TestWithParam<tuple<Size, bool>> Imgproc_MomentsUcharSIMD;
+
+TEST_P(Imgproc_MomentsUcharSIMD, random)
+{
+    cv::RNG& rng = cv::theRNG();
+    Size sz    = get<0>(GetParam());
+    bool binary = get<1>(GetParam());
+
+    Mat src(sz, CV_8U);
+    rng.fill(src, RNG::UNIFORM, 0, 256);
+
+    cv::Moments m   = cv::moments(src, binary);
+    cv::Moments ref = scalarMomentsUchar(src, binary);
+
+    Mat mMat  (1, 10, CV_64F, (void*)&m);
+    Mat refMat(1, 10, CV_64F, (void*)&ref);
+    EXPECT_LE(cv::norm(mMat, refMat, NORM_INF) /
+              (cv::norm(refMat, NORM_INF) + 1e-10), 1e-6);
+}
+
+TEST_P(Imgproc_MomentsUcharSIMD, all_max)
+{
+    Size sz    = get<0>(GetParam());
+    bool binary = get<1>(GetParam());
+
+    Mat src(sz, CV_8U, Scalar(255));
+
+    cv::Moments m   = cv::moments(src, binary);
+    cv::Moments ref = scalarMomentsUchar(src, binary);
+
+    Mat mMat  (1, 10, CV_64F, (void*)&m);
+    Mat refMat(1, 10, CV_64F, (void*)&ref);
+    EXPECT_LE(cv::norm(mMat, refMat, NORM_INF) /
+              (cv::norm(refMat, NORM_INF) + 1e-10), 1e-6);
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc_Moments, Imgproc_MomentsUcharSIMD,
+    testing::Combine(
+        testing::Values(Size(1, 1), Size(3, 32), Size(4, 32), Size(5, 32),
+                        Size(15, 32), Size(16, 32), Size(17, 32),
+                        Size(31, 32), Size(32, 32), Size(33, 1),
+                        Size(64, 48), Size(320, 240)),
+        testing::Bool()));
+
 }} // namespace

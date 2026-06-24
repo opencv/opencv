@@ -213,50 +213,6 @@ struct MomentsInTile_SIMD
     }
 };
 
-#if CV_SIMD128
-
-template <>
-struct MomentsInTile_SIMD<uchar, int, int>
-{
-    MomentsInTile_SIMD()
-    {
-        // nothing
-    }
-
-    int operator() (const uchar * ptr, int len, int & x0, int & x1, int & x2, int & x3)
-    {
-        int x = 0;
-
-        {
-            v_int16x8 dx = v_setall_s16(8), qx = v_int16x8(0, 1, 2, 3, 4, 5, 6, 7);
-            v_uint32x4 z = v_setzero_u32(), qx0 = z, qx1 = z, qx2 = z, qx3 = z;
-
-            for( ; x <= len - 8; x += 8 )
-            {
-                v_int16x8 p = v_reinterpret_as_s16(v_load_expand(ptr + x));
-                v_int16x8 sx = v_mul_wrap(qx, qx);
-
-                qx0 = v_add(qx0, v_reinterpret_as_u32(p));
-                qx1 = v_reinterpret_as_u32(v_dotprod(p, qx, v_reinterpret_as_s32(qx1)));
-                qx2 = v_reinterpret_as_u32(v_dotprod(p, sx, v_reinterpret_as_s32(qx2)));
-                qx3 = v_reinterpret_as_u32(v_dotprod(v_mul_wrap(p, qx), sx, v_reinterpret_as_s32(qx3)));
-
-                qx = v_add(qx, dx);
-            }
-
-            x0 = v_reduce_sum(qx0);
-            x0 = (x0 & 0xffff) + (x0 >> 16);
-            x1 = v_reduce_sum(qx1);
-            x2 = v_reduce_sum(qx2);
-            x3 = v_reduce_sum(qx3);
-        }
-
-        return x;
-    }
-};
-
-#endif // CV_SIMD128
-
 #if (CV_SIMD || CV_SIMD_SCALABLE)
 
 namespace {
@@ -265,8 +221,48 @@ struct IotaInit {
     T CV_DECL_ALIGNED(CV_SIMD_WIDTH) data[N];
     IotaInit() { for (int i = 0; i < N; i++) data[i] = (T)i; }
 };
-static const IotaInit<int, VTraits<v_int32>::max_nlanes> g_ix0_init;
+static const IotaInit<int,   VTraits<v_int32>::max_nlanes> g_ix0_init;
 }
+
+template <>
+struct MomentsInTile_SIMD<uchar, int, int>
+{
+    MomentsInTile_SIMD() {}
+
+    int operator() (const uchar * ptr, int len, int & x0, int & x1, int & x2, int & x3)
+    {
+        int x = 0;
+        const int vlanes32 = VTraits<v_int32>::vlanes();
+
+        v_int32 v_delta = vx_setall_s32(vlanes32);
+        v_int32 v_ix0   = vx_load(g_ix0_init.data);
+        v_int32 v_x0 = vx_setzero_s32();
+        v_int32 v_x1 = vx_setzero_s32();
+        v_int32 v_x2 = vx_setzero_s32();
+        v_int32 v_x3 = vx_setzero_s32();
+
+        for ( ; x <= len - vlanes32; x += vlanes32 )
+        {
+            v_int32 v_src = v_reinterpret_as_s32(vx_load_expand_q(ptr + x));
+            v_int32 v_ix1 = v_mul(v_ix0, v_ix0);
+
+            v_x0 = v_add(v_x0, v_src);
+            v_x1 = v_add(v_x1, v_mul(v_src, v_ix0));
+            v_x2 = v_add(v_x2, v_mul(v_src, v_ix1));
+            v_x3 = v_add(v_x3, v_mul(v_mul(v_src, v_ix0), v_ix1));
+
+            v_ix0 = v_add(v_ix0, v_delta);
+        }
+
+        x0 = v_reduce_sum(v_x0);
+        x1 = v_reduce_sum(v_x1);
+        x2 = v_reduce_sum(v_x2);
+        x3 = v_reduce_sum(v_x3);
+
+        vx_cleanup();
+        return x;
+    }
+};
 
 template <>
 struct MomentsInTile_SIMD<ushort, int, int64>
