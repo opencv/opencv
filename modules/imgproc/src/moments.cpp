@@ -255,56 +255,65 @@ struct MomentsInTile_SIMD<uchar, int, int>
     }
 };
 
+#endif // CV_SIMD128
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+
+namespace {
+template <typename T, int N>
+struct IotaInit {
+    T CV_DECL_ALIGNED(CV_SIMD_WIDTH) data[N];
+    IotaInit() { for (int i = 0; i < N; i++) data[i] = (T)i; }
+};
+static const IotaInit<int, VTraits<v_int32>::max_nlanes> g_ix0_init;
+}
+
 template <>
 struct MomentsInTile_SIMD<ushort, int, int64>
 {
-    MomentsInTile_SIMD()
-    {
-        // nothing
-    }
+    MomentsInTile_SIMD() {}
 
     int operator() (const ushort * ptr, int len, int & x0, int & x1, int & x2, int64 & x3)
     {
         int x = 0;
+        const int vlanes32 = VTraits<v_int32>::vlanes();
 
+        v_int32  v_delta = vx_setall_s32(vlanes32);
+        v_int32  v_ix0   = vx_load(g_ix0_init.data);
+        v_uint32 z       = vx_setzero_u32();
+        v_uint32 v_x0 = z, v_x1 = z, v_x2 = z;
+        v_uint64 v_x3    = vx_setzero_u64();
+
+        for ( ; x <= len - vlanes32; x += vlanes32 )
         {
-            v_int32x4 v_delta = v_setall_s32(4), v_ix0 = v_int32x4(0, 1, 2, 3);
-            v_uint32x4 z = v_setzero_u32(), v_x0 = z, v_x1 = z, v_x2 = z;
-            v_uint64x2 v_x3 = v_reinterpret_as_u64(z);
+            v_int32 v_src = v_reinterpret_as_s32(vx_load_expand(ptr + x));
 
-            for( ; x <= len - 4; x += 4 )
-            {
-                v_int32x4 v_src = v_reinterpret_as_s32(v_load_expand(ptr + x));
+            v_x0 = v_add(v_x0, v_reinterpret_as_u32(v_src));
+            v_x1 = v_add(v_x1, v_reinterpret_as_u32(v_mul(v_src, v_ix0)));
 
-                v_x0 = v_add(v_x0, v_reinterpret_as_u32(v_src));
-                v_x1 = v_add(v_x1, v_reinterpret_as_u32(v_mul(v_src, v_ix0)));
+            v_int32 v_ix1 = v_mul(v_ix0, v_ix0);
+            v_x2 = v_add(v_x2, v_reinterpret_as_u32(v_mul(v_src, v_ix1)));
 
-                v_int32x4 v_ix1 = v_mul(v_ix0, v_ix0);
-                v_x2 = v_add(v_x2, v_reinterpret_as_u32(v_mul(v_src, v_ix1)));
+            v_ix1 = v_mul(v_ix0, v_ix1);
+            v_src = v_mul(v_src, v_ix1);
+            v_uint64 v_lo, v_hi;
+            v_expand(v_reinterpret_as_u32(v_src), v_lo, v_hi);
+            v_x3 = v_add(v_x3, v_add(v_lo, v_hi));
 
-                v_ix1 = v_mul(v_ix0, v_ix1);
-                v_src = v_mul(v_src, v_ix1);
-                v_uint64x2 v_lo, v_hi;
-                v_expand(v_reinterpret_as_u32(v_src), v_lo, v_hi);
-                v_x3 = v_add(v_x3, v_add(v_lo, v_hi));
-
-                v_ix0 = v_add(v_ix0, v_delta);
-            }
-
-            x0 = v_reduce_sum(v_x0);
-            x1 = v_reduce_sum(v_x1);
-            x2 = v_reduce_sum(v_x2);
-            v_store_aligned(buf64, v_reinterpret_as_s64(v_x3));
-            x3 = buf64[0] + buf64[1];
+            v_ix0 = v_add(v_ix0, v_delta);
         }
 
+        x0 = v_reduce_sum(v_x0);
+        x1 = v_reduce_sum(v_x1);
+        x2 = v_reduce_sum(v_x2);
+        x3 = (int64)v_reduce_sum(v_x3);
+
+        vx_cleanup();
         return x;
     }
-
-    int64 CV_DECL_ALIGNED(16) buf64[2];
 };
 
-#endif
+#endif // CV_SIMD || CV_SIMD_SCALABLE
 
 template<typename T, typename WT, typename MT>
 #if defined __GNUC__ && __GNUC__ == 4 && __GNUC_MINOR__ >= 5 && __GNUC_MINOR__ < 9
