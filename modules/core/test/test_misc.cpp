@@ -218,6 +218,20 @@ TEST(Core_Copy, repeat_regression_8972)
                      });
 }
 
+TEST(Core_Copy, borderInterpolate_overflow_wrap)
+{
+    EXPECT_NO_THROW({
+        int val = cv::borderInterpolate(INT_MIN, 10, cv::BORDER_WRAP);
+        EXPECT_GE(val, 0);
+        EXPECT_LT(val, 10);
+    });
+    EXPECT_NO_THROW({
+        int val = cv::borderInterpolate(INT_MIN + 1, 10, cv::BORDER_WRAP);
+        EXPECT_GE(val, 0);
+        EXPECT_LT(val, 10);
+    });
+}
+
 
 class ThrowErrorParallelLoopBody : public cv::ParallelLoopBody
 {
