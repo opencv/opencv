@@ -1798,11 +1798,13 @@ void QRCodeDecoderImpl::decodeAlpha(String& result) {
     int num = bitstream.next(version <= 9 ? 9 : (version <= 26 ? 11 : 13));
     for (int i = 0; i < num / 2; ++i) {
         int tuple = bitstream.next(11);
+        CV_CheckLT(tuple, 45 * 45, "Invalid alphanumeric pair value");
         result += map[tuple / 45];
         result += map[tuple % 45];
     }
     if (num % 2) {
         int value = bitstream.next(6);
+        CV_CheckLT(value, 45, "Invalid alphanumeric value");
         result += map[value];
     }
 }
