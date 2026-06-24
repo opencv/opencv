@@ -360,7 +360,7 @@ int finiteMaskSIMD_<double, 4>(const double *dsrc, uchar *dst, size_t utotal)
     int total = (int)utotal;
     for(; i < total - npixels + 1; i += npixels )
     {
-        v_uint16 vexpb0, vexpb1, vexpb2, vexpb3, vexpb4, vexpb5, vexpb6, vexpb7;
+        v_uint16 vexpb0, vexpb1, vexpb2, vexpb3;
         v_uint16 dummy;
         v_load_deinterleave((uint16_t*)(src + 0*4*ndoubles), dummy, dummy, dummy, vexpb0);
         v_load_deinterleave((uint16_t*)(src + 1*4*ndoubles), dummy, dummy, dummy, vexpb1);
