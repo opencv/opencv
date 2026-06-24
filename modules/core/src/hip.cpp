@@ -286,6 +286,8 @@ CV_EXPORTS MatAllocator* getHipAllocator()
 #ifndef HAVE_HIP
 namespace cv { namespace hip {
 bool isHipUMat(InputArray) { return false; }
+bool useHip() { return false; }
+MatAllocator* getHipAllocator() { return nullptr; }
 }} // cv::hip
 #endif
 
@@ -434,11 +436,16 @@ const char* cv::hip::DeviceInfo::name() const
 #endif
 }
 
+#ifdef HAVE_HIP
 #define DEVINFO_PROP(rettype, method, field) \
 rettype cv::hip::DeviceInfo::method() const { \
     if (getHipEnabledDeviceCount() <= 0) throw_no_hip(); \
     return (rettype)getDeviceProp(device_id_).field; \
 }
+#else
+#define DEVINFO_PROP(rettype, method, field) \
+rettype cv::hip::DeviceInfo::method() const { throw_no_hip(); }
+#endif
 
 DEVINFO_PROP(size_t, totalGlobalMem,           totalGlobalMem)
 DEVINFO_PROP(size_t, sharedMemPerBlock,        sharedMemPerBlock)
@@ -466,43 +473,75 @@ DEVINFO_PROP(int,    asicRevision,             asicRevision)
 
 bool cv::hip::DeviceInfo::kernelExecTimeoutEnabled() const
 {
+#ifndef HAVE_HIP
+    throw_no_hip();
+#else
     if (getHipEnabledDeviceCount() <= 0) throw_no_hip();
     return getDeviceProp(device_id_).kernelExecTimeoutEnabled != 0;
+#endif
 }
 bool cv::hip::DeviceInfo::integrated() const
 {
+#ifndef HAVE_HIP
+    throw_no_hip();
+#else
     if (getHipEnabledDeviceCount() <= 0) throw_no_hip();
     return getDeviceProp(device_id_).integrated != 0;
+#endif
 }
 bool cv::hip::DeviceInfo::canMapHostMemory() const
 {
+#ifndef HAVE_HIP
+    throw_no_hip();
+#else
     if (getHipEnabledDeviceCount() <= 0) throw_no_hip();
     return getDeviceProp(device_id_).canMapHostMemory != 0;
+#endif
 }
 bool cv::hip::DeviceInfo::concurrentKernels() const
 {
+#ifndef HAVE_HIP
+    throw_no_hip();
+#else
     if (getHipEnabledDeviceCount() <= 0) throw_no_hip();
     return getDeviceProp(device_id_).concurrentKernels != 0;
+#endif
 }
 bool cv::hip::DeviceInfo::ECCEnabled() const
 {
+#ifndef HAVE_HIP
+    throw_no_hip();
+#else
     if (getHipEnabledDeviceCount() <= 0) throw_no_hip();
     return getDeviceProp(device_id_).ECCEnabled != 0;
+#endif
 }
 bool cv::hip::DeviceInfo::tccDriver() const
 {
+#ifndef HAVE_HIP
+    throw_no_hip();
+#else
     if (getHipEnabledDeviceCount() <= 0) throw_no_hip();
     return getDeviceProp(device_id_).tccDriver != 0;
+#endif
 }
 bool cv::hip::DeviceInfo::cooperativeLaunch() const
 {
+#ifndef HAVE_HIP
+    throw_no_hip();
+#else
     if (getHipEnabledDeviceCount() <= 0) throw_no_hip();
     return getDeviceProp(device_id_).cooperativeLaunch != 0;
+#endif
 }
 bool cv::hip::DeviceInfo::isLargeBar() const
 {
+#ifndef HAVE_HIP
+    throw_no_hip();
+#else
     if (getHipEnabledDeviceCount() <= 0) throw_no_hip();
     return getDeviceProp(device_id_).isLargeBar != 0;
+#endif
 }
 
 DeviceInfo::ComputeMode cv::hip::DeviceInfo::computeMode() const
