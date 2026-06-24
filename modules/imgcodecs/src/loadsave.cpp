@@ -258,7 +258,7 @@ ImageCodecInitializer& getCodecs()
  *
  * @return Image decoder to parse image file.
 */
-static ImageDecoder findDecoder( const String& filename ) {
+static ImageDecoder findDecoder( const String& filename, int& result_code ) {
 
     size_t i, maxlen = 0;
 
@@ -275,7 +275,8 @@ static ImageDecoder findDecoder( const String& filename ) {
 
     /// in the event of a failure, return an empty image decoder
     if( !f ) {
-        CV_LOG_WARNING(NULL, "imread_('" << filename << "'): can't open/read file: check file path/integrity");
+        result_code = DECODER_SOURCE_NOT_OPENED;
+        CV_LOG_WARNING(NULL, "findDecoder('" << filename << "'): can't open/read file: check file path/integrity");
         return ImageDecoder();
     }
 
@@ -288,18 +289,21 @@ static ImageDecoder findDecoder( const String& filename ) {
     /// compare signature against all decoders
     for( i = 0; i < codecs.decoders.size(); i++ )
     {
+        result_code = DECODER_OK;
         if( codecs.decoders[i]->checkSignature(signature) )
             return codecs.decoders[i]->newDecoder();
     }
 
     /// If no decoder was found, return base type
+    result_code = DECODER_UNKNOWN_SOURCE_FORMAT;
     return ImageDecoder();
 }
 
-static ImageDecoder findDecoder( const Mat& buf )
+static ImageDecoder findDecoder( const Mat& buf, int& result_code )
 {
     size_t i, maxlen = 0;
 
+    result_code = DECODER_SOURCE_NOT_OPENED;
     if( buf.rows*buf.cols < 1 || !buf.isContinuous() )
         return ImageDecoder();
 
@@ -317,10 +321,12 @@ static ImageDecoder findDecoder( const Mat& buf )
 
     for( i = 0; i < codecs.decoders.size(); i++ )
     {
+        result_code = DECODER_OK;
         if( codecs.decoders[i]->checkSignature(signature) )
             return codecs.decoders[i]->newDecoder();
     }
 
+    result_code = DECODER_UNKNOWN_SOURCE_FORMAT;
     return ImageDecoder();
 }
 
@@ -427,12 +433,12 @@ static void ApplyExifOrientation(ExifEntry_t orientationTag, OutputArray img)
     }
 }
 
-static void readMetadata(ImageDecoder& decoder,
+static int readMetadata(ImageDecoder& decoder,
                          std::vector<int>* metadata_types,
                          OutputArrayOfArrays metadata)
 {
-    if (!metadata_types)
-        return;
+    if (!decoder || !metadata_types)
+        return 0;
     int kind = metadata.kind();
     void* obj = metadata.getObj();
     std::vector<Mat>* matvector = nullptr;
@@ -470,6 +476,7 @@ static void readMetadata(ImageDecoder& decoder,
             vecvector->at(m).assign(data, data + mm.total());
         }
     }
+    return (int)metadata_types->size();
 }
 
 static const char* metadataTypeToString(ImageMetadataType type)
@@ -516,12 +523,12 @@ imread_( const String& filename, int flags, OutputArray mat,
 #ifdef HAVE_GDAL
     if(flags != IMREAD_UNCHANGED && (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL ){
         decoder = GdalDecoder().newDecoder();
-    }else{
+    }else
 #endif
-        decoder = findDecoder( filename );
-#ifdef HAVE_GDAL
+    {
+        int result_code = 0;
+        decoder = findDecoder( filename, result_code );
     }
-#endif
 
     /// if no decoder was found, return nothing.
     if( !decoder ){
@@ -648,12 +655,12 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats, int star
     if (flags != IMREAD_UNCHANGED && (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL) {
         decoder = GdalDecoder().newDecoder();
     }
-    else {
+    else
 #endif
-        decoder = findDecoder(filename);
-#ifdef HAVE_GDAL
+    {
+        int result_code = 0;
+        decoder = findDecoder(filename, result_code);
     }
-#endif
 
     /// if no decoder was found, return nothing.
     if (!decoder) {
@@ -816,7 +823,7 @@ bool imreadmulti(const String& filename, std::vector<Mat>& mats, int start, int 
 }
 
 static bool
-imreadanimation_(const String& filename, int flags, int start, int count, Animation& animation)
+imreadanimation_(const String& filename, int flags, int start, int count, Animation* animation)
 {
     bool success = false;
     if (start < 0) {
@@ -827,14 +834,16 @@ imreadanimation_(const String& filename, int flags, int start, int count, Animat
     }
 
     /// Search for the relevant decoder to handle the imagery
-    ImageDecoder decoder;
-    decoder = findDecoder(filename);
+    int result_code = 0;
+    ImageDecoder decoder = findDecoder(filename, result_code);
 
     /// if no decoder was found, return false.
     if (!decoder) {
         CV_LOG_WARNING(NULL, "Decoder for " << filename << " not found!\n");
         return false;
     }
+
+    decoder->setAnimation(animation);
 
     /// set the filename in the driver
     decoder->setSource(filename);
@@ -901,11 +910,9 @@ imreadanimation_(const String& filename, int flags, int start, int count, Animat
         }
 
         if (current >= start)
-        {
-            int duration = decoder->animation().durations.size() > 0 ? decoder->animation().durations.back() : 1000;
-            animation.durations.push_back(duration);
-            animation.frames.push_back(mat);
-        }
+            animation->frames.push_back(mat);
+        else
+            animation->durations.pop_back();
 
         if (!decoder->nextPage())
         {
@@ -913,9 +920,6 @@ imreadanimation_(const String& filename, int flags, int start, int count, Animat
         }
         ++current;
     }
-    animation.bgcolor = decoder->animation().bgcolor;
-    animation.loop_count = decoder->animation().loop_count;
-    animation.still_image = decoder->animation().still_image;
 
     return success;
 }
@@ -924,10 +928,10 @@ bool imreadanimation(const String& filename, CV_OUT Animation& animation, int st
 {
     CV_TRACE_FUNCTION();
 
-    return imreadanimation_(filename, IMREAD_UNCHANGED, start, count, animation);
+    return imreadanimation_(filename, IMREAD_UNCHANGED, start, count, &animation);
 }
 
-static bool imdecodeanimation_(InputArray buf, int flags, int start, int count, Animation& animation)
+static bool imdecodeanimation_(InputArray buf, int flags, int start, int count, Animation* animation)
 {
     bool success = false;
     if (start < 0) {
@@ -939,13 +943,16 @@ static bool imdecodeanimation_(InputArray buf, int flags, int start, int count, 
 
     /// Search for the relevant decoder to handle the imagery
     ImageDecoder decoder;
-    decoder = findDecoder(buf.getMat());
+    int result_code = 0;
+    decoder = findDecoder(buf.getMat(), result_code);
 
     /// if no decoder was found, return false.
     if (!decoder) {
         CV_LOG_WARNING(NULL, "Decoder for buffer not found!\n");
         return false;
     }
+
+    decoder->setAnimation(animation);
 
     /// set the filename in the driver
     decoder->setSource(buf.getMat());
@@ -1012,11 +1019,9 @@ static bool imdecodeanimation_(InputArray buf, int flags, int start, int count, 
         }
 
         if (current >= start)
-        {
-            int duration = decoder->animation().durations.size() > 0 ? decoder->animation().durations.back() : 1000;
-            animation.durations.push_back(duration);
-            animation.frames.push_back(mat);
-        }
+            animation->frames.push_back(mat);
+        else
+            animation->durations.pop_back();
 
         if (!decoder->nextPage())
         {
@@ -1024,9 +1029,6 @@ static bool imdecodeanimation_(InputArray buf, int flags, int start, int count, 
         }
         ++current;
     }
-    animation.bgcolor = decoder->animation().bgcolor;
-    animation.loop_count = decoder->animation().loop_count;
-    animation.still_image = decoder->animation().still_image;
 
     return success;
 }
@@ -1035,7 +1037,7 @@ bool imdecodeanimation(InputArray buf, Animation& animation, int start, int coun
 {
     CV_TRACE_FUNCTION();
 
-    return imdecodeanimation_(buf, IMREAD_UNCHANGED, start, count, animation);
+    return imdecodeanimation_(buf, IMREAD_UNCHANGED, start, count, &animation);
 }
 
 static
@@ -1314,7 +1316,8 @@ imdecode_( const Mat& buf, int flags, Mat& mat,
 
     String filename;
 
-    ImageDecoder decoder = findDecoder(buf_row);
+    int result_code = 0;
+    ImageDecoder decoder = findDecoder(buf_row, result_code);
     if( !decoder )
         return false;
 
@@ -1486,7 +1489,8 @@ imdecodemulti_(const Mat& buf, int flags, std::vector<Mat>& mats, int start, int
 
     String filename;
 
-    ImageDecoder decoder = findDecoder(buf_row);
+    int result_code = 0;
+    ImageDecoder decoder = findDecoder(buf_row, result_code);
     if (!decoder)
         return false;
 
@@ -1778,7 +1782,8 @@ bool imencodemulti( const String& ext, InputArrayOfArrays imgs,
 
 bool haveImageReader( const String& filename )
 {
-    ImageDecoder decoder = cv::findDecoder(filename);
+    int result_code;
+    ImageDecoder decoder = cv::findDecoder(filename, result_code);
     return !decoder.empty();
 }
 
@@ -1791,8 +1796,11 @@ bool haveImageWriter( const String& filename )
 class ImageCollection::Impl {
 public:
     Impl() = default;
-    Impl(const std::string&  filename, int flags);
+    Impl(const std::string& filename, int flags);
+    Impl(InputArray buffer, int flags);
     void init(String const& filename, int flags);
+    void initFromMemory(InputArray buffer, int flags);
+    void close();
     size_t size() const;
     Mat& at(int index);
     Mat& operator[](int index);
@@ -1802,25 +1810,35 @@ public:
     Mat read();
     int width() const;
     int height() const;
+    int type() const;
+    int status() const;
+    void setAnimation(Animation& animation);
+    int getMetadata(std::vector<int>& metadata_types, OutputArrayOfArrays metadata);
     bool readHeader();
+    bool readFrames(int start, int count);
     Mat readData();
     bool advance();
     int currentIndex() const;
     void reset();
 
 private:
-    String m_filename;
+    std::string m_filename;
+    Mat m_data;
     int m_flags{};
+    int m_status = DECODER_UNINITIALIZED;
     std::size_t m_size{};
-    int m_width{};
-    int m_height{};
     int m_current{};
-    std::vector<cv::Mat> m_pages;
     ImageDecoder m_decoder;
+    Animation* m_animationRef = nullptr;
+    Animation m_animation;
 };
 
 ImageCollection::Impl::Impl(std::string const& filename, int flags) {
     this->init(filename, flags);
+}
+
+ImageCollection::Impl::Impl(InputArray buffer, int flags) {
+    this->initFromMemory(buffer, flags);
 }
 
 void ImageCollection::Impl::init(String const& filename, int flags) {
@@ -1831,44 +1849,125 @@ void ImageCollection::Impl::init(String const& filename, int flags) {
     if (m_flags != IMREAD_UNCHANGED && (m_flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL) {
         m_decoder = GdalDecoder().newDecoder();
     }
-    else {
+    else
 #endif
-    m_decoder = findDecoder(filename);
-#ifdef HAVE_GDAL
+    {
+        m_decoder = findDecoder(filename, m_status);
     }
-#endif
 
+    if (!m_decoder)
+    {
+        return;
+    }
 
-    CV_Assert(m_decoder);
     m_decoder->setSource(filename);
-    CV_Assert(m_decoder->readHeader());
+
+    if (!m_animationRef)
+    {
+        m_animationRef = &m_animation;
+    }
+    m_decoder->setAnimation(m_animationRef);
+
+    if (!m_decoder->readHeader())
+    {
+        m_status = DECODER_READ_HEADER_FAILED;
+        return;
+    }
 
     m_size = m_decoder->getFrameCount();
-    m_pages.resize(m_size);
+    if (!m_animationRef->frames.size())
+        m_animationRef->frames.resize(m_size);
+    m_status = DECODER_OK;
+}
+
+void ImageCollection::Impl::initFromMemory(InputArray buffer, int flags) {
+    m_data = buffer.getMat();
+    m_flags = flags;
+
+#ifdef HAVE_GDAL
+    if (m_flags != IMREAD_UNCHANGED && (m_flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL) {
+        m_decoder = GdalDecoder().newDecoder();
+    }
+    else
+#endif
+    {
+        m_decoder = findDecoder(m_data, m_status);
+    }
+
+    if (!m_decoder)
+    {
+        return;
+    }
+
+    m_decoder->setSource(buffer.getMat());
+
+    if (!m_animationRef)
+    {
+        m_animationRef = &m_animation;
+    }
+    m_decoder->setAnimation(m_animationRef);
+
+    try
+    {
+        // read the header to make sure it succeeds
+        if (!m_decoder->readHeader())
+        {
+            m_status = DECODER_READ_HEADER_FAILED;
+            return;
+        }
+    }
+    catch (const cv::Exception& e)
+    {
+        CV_LOG_ERROR(NULL, "ImageCollection can't read header: " << e.what());
+        return;
+    }
+    catch (...)
+    {
+        CV_LOG_ERROR(NULL, "ImageCollection can't read header: unknown exception");
+        return;
+    }
+
+    m_size = m_decoder->getFrameCount();
+    if (!m_animationRef->frames.size())
+        m_animationRef->frames.resize(m_size);
+    m_status = DECODER_OK;
+}
+
+void ImageCollection::Impl::close() {
+    m_status = DECODER_UNINITIALIZED;
+    m_decoder.release();
+}
+
+Mat ImageCollection::Impl::read() {
+    if(!this->readHeader()) {
+        return {};
+    }
+
+    return this->readData();
 }
 
 size_t ImageCollection::Impl::size() const { return m_size; }
 
-Mat ImageCollection::Impl::read() {
-    auto result = this->readHeader();
-    if(!result) {
-        return {};
-    }
-    return this->readData();
+int ImageCollection::Impl::width() const { return m_decoder ? m_decoder->width() : 0; }
+
+int ImageCollection::Impl::height() const { return m_decoder ? m_decoder->height() : 0; }
+
+int ImageCollection::Impl::type() const { return m_decoder ? m_decoder->type() : 0; }
+
+int ImageCollection::Impl::status() const { return m_status; }
+
+int ImageCollection::Impl::getMetadata(std::vector<int>& metadata_types, OutputArrayOfArrays metadata) {
+    return readMetadata(m_decoder, &metadata_types, metadata);
 }
 
-int ImageCollection::Impl::width() const {
-    return m_width;
-}
-
-int ImageCollection::Impl::height() const {
-    return m_height;
+void ImageCollection::Impl::setAnimation(Animation& animation)
+{
+    m_animationRef = &animation;
 }
 
 bool ImageCollection::Impl::readHeader() {
     bool status = m_decoder->readHeader();
-    m_width = m_decoder->width();
-    m_height = m_decoder->height();
+    m_status = status ? DECODER_OK : DECODER_READ_HEADER_FAILED;
     return status;
 }
 
@@ -1876,28 +1975,53 @@ bool ImageCollection::Impl::readHeader() {
 Mat ImageCollection::Impl::readData() {
     const int type = calcType(m_decoder->type(), m_flags);
 
+    int scale_denom = 1;
+    if (m_flags > IMREAD_LOAD_GDAL)
+    {
+        if (m_flags & IMREAD_REDUCED_GRAYSCALE_2)
+            scale_denom = 2;
+        else if (m_flags & IMREAD_REDUCED_GRAYSCALE_4)
+            scale_denom = 4;
+        else if (m_flags & IMREAD_REDUCED_GRAYSCALE_8)
+            scale_denom = 8;
+    }
+
+    /// set the scale_denom in the driver
+    m_decoder->setScale( scale_denom );
+
+    // Try to decode image by RGB instead of BGR.
+    if (m_flags & IMREAD_COLOR_RGB && m_flags != IMREAD_UNCHANGED)
+        m_decoder->setRGB(true);
+
     // established the required input image size
-    Size size = validateInputImageSize(Size(m_width, m_height));
+    Size size = validateInputImageSize(Size(m_decoder->width(), m_decoder->height()));
 
     Mat mat(size.height, size.width, type);
     bool success = false;
+
     try {
         if (m_decoder->readData(mat))
             success = true;
     }
-    catch (const cv::Exception &e) {
+    catch (const cv::Exception& e) {
         CV_LOG_ERROR(NULL, "ImageCollection class: can't read data: " << e.what());
     }
     catch (...) {
         CV_LOG_ERROR(NULL, "ImageCollection class:: can't read data: unknown exception");
     }
+
     if (!success)
         return cv::Mat();
 
-    if ((m_flags & IMREAD_IGNORE_ORIENTATION) == 0 && m_flags != IMREAD_UNCHANGED) {
-        ApplyExifOrientation(m_decoder->getExifTag(ORIENTATION), mat);
+    if (m_decoder->setScale(scale_denom) > 1) // if decoder is JpegDecoder then decoder->setScale always returns 1
+    {
+        resize(mat, mat, Size(size.width / scale_denom, size.height / scale_denom), 0, 0, INTER_LINEAR_EXACT);
     }
 
+    if ((m_flags & IMREAD_IGNORE_ORIENTATION) == 0 && m_flags != IMREAD_UNCHANGED)
+        ApplyExifOrientation(m_decoder->getExifTag(ORIENTATION), mat);
+
+    m_status = DECODER_OK;
     return mat;
 }
 
@@ -1911,19 +2035,10 @@ ImageCollection::iterator ImageCollection::Impl::end(ImageCollection* ptr) { ret
 
 void ImageCollection::Impl::reset() {
     m_current = 0;
-#ifdef HAVE_GDAL
-    if (m_flags != IMREAD_UNCHANGED && (m_flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL) {
-        m_decoder = GdalDecoder().newDecoder();
-    }
-    else {
-#endif
-    m_decoder = findDecoder(m_filename);
-#ifdef HAVE_GDAL
-    }
-#endif
-
-    m_decoder->setSource(m_filename);
-    m_decoder->readHeader();
+    if (m_data.empty())
+        init(m_filename, m_flags);
+    else
+        initFromMemory(m_data, m_flags);
 }
 
 Mat& ImageCollection::Impl::at(int index) {
@@ -1932,21 +2047,33 @@ Mat& ImageCollection::Impl::at(int index) {
 }
 
 Mat& ImageCollection::Impl::operator[](int index) {
-    if(m_pages.at(index).empty()) {
-        // We can't go backward in multi images. If the page is not in vector yet,
-        // go back to first page and advance until the desired page and read it into memory
-        if(m_current != index) {
-            reset();
-            for(int i = 0; i != index && advance(); ++i) {}
+    if (m_animationRef->frames.at(index).empty()) {
+        // If the requested page hasn't been read yet, and we’re not at the correct page
+        if (m_current != index) {
+            reset();  // Go back to the first frame
+            for (int i = 0; i <= index; ++i) {
+                m_animationRef->frames[i] = read();  // read current frame
+                if (i != index)
+                    advance();              // advance until the desired page
+            }
+            m_current = index; // update current page
         }
-        m_pages[index] = read();
+        else {
+            m_animationRef->frames[index] = read();  // just read current page if already positioned
+            advance();
+        }
     }
-    return m_pages[index];
+    return m_animationRef->frames[index];
+}
+
+bool ImageCollection::Impl::readFrames(int start, int count) {
+    Mat frame = this->at(start + count - 1);
+    return true;
 }
 
 void ImageCollection::Impl::releaseCache(int index) {
     CV_Assert(index >= 0 && size_t(index) < m_size);
-    m_pages[index].release();
+    m_animationRef->frames[index].release();
 }
 
 /* ImageCollection API*/
@@ -1955,15 +2082,35 @@ ImageCollection::ImageCollection() : pImpl(new Impl()) {}
 
 ImageCollection::ImageCollection(const std::string& filename, int flags) : pImpl(new Impl(filename, flags)) {}
 
-void ImageCollection::init(const String& img, int flags) { pImpl->init(img, flags); }
+ImageCollection::ImageCollection(InputArray buffer, int flags) : pImpl(new Impl(buffer, flags)) {}
+
+void ImageCollection::init(const String& filename, int flags) { pImpl->init(filename, flags); }
+
+void ImageCollection::init(InputArray buffer, int flags) { pImpl->initFromMemory(buffer, flags); }
+
+void ImageCollection::close() { pImpl->close(); }
 
 size_t ImageCollection::size() const { return pImpl->size(); }
+
+int ImageCollection::getWidth() const { return pImpl->width(); }
+
+int ImageCollection::getHeight() const { return pImpl->height(); }
+
+int ImageCollection::getType() const { return pImpl->type(); }
+
+int ImageCollection::getStatus() const { return pImpl->status(); }
+
+int ImageCollection::getMetadata(std::vector<int>& metadata_types, OutputArrayOfArrays metadata) { return pImpl->getMetadata(metadata_types, metadata); }
+
+bool ImageCollection::readFrames(int start, int count) { return pImpl->readFrames(start, count); }
 
 const Mat& ImageCollection::at(int index) { return pImpl->at(index); }
 
 const Mat& ImageCollection::operator[](int index) { return pImpl->operator[](index); }
 
 void ImageCollection::releaseCache(int index) { pImpl->releaseCache(index); }
+
+void ImageCollection::setAnimation(Animation& animation) { pImpl->setAnimation(animation); }
 
 Ptr<ImageCollection::Impl> ImageCollection::getImpl() { return pImpl; }
 

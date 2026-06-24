@@ -543,7 +543,7 @@ TEST(Imgcodecs_APNG, imencode_rgba)
     EXPECT_EQ(read_frames.size(), s_animation.frames.size() - 2);
 }
 
-typedef testing::TestWithParam<string> Imgcodecs_ImageCollection;
+typedef testing::TestWithParam<string> Imgcodecs_ImageCollection_WithParam;
 
 const string exts_multi[] = {
 #ifdef HAVE_AVIF
@@ -561,7 +561,7 @@ const string exts_multi[] = {
 #endif
 };
 
-TEST_P(Imgcodecs_ImageCollection, animations)
+TEST_P(Imgcodecs_ImageCollection_WithParam, animations)
 {
     Animation s_animation;
     EXPECT_TRUE(fillFrames(s_animation, false));
@@ -571,22 +571,69 @@ TEST_P(Imgcodecs_ImageCollection, animations)
     vector<Mat> read_frames;
     ASSERT_TRUE(imreadmulti(output, read_frames, IMREAD_UNCHANGED));
 
+    ImageCollection collection(output, IMREAD_UNCHANGED);
+    EXPECT_EQ(read_frames.size(), collection.size());
+    EXPECT_EQ(read_frames[0].rows, collection.getWidth());
+    EXPECT_EQ(read_frames[0].cols, collection.getHeight());
+    EXPECT_EQ(read_frames[0].type(), collection.getType());
+
+    int i = 0;
+    for (auto&& frame : collection)
     {
-        ImageCollection collection(output, IMREAD_UNCHANGED);
-        EXPECT_EQ(read_frames.size(), collection.size());
-        int i = 0;
-        for (auto&& frame : collection)
-        {
-            EXPECT_EQ(0, cvtest::norm(frame, read_frames[i], NORM_INF));
-            ++i;
-        }
+        EXPECT_EQ(0, cvtest::norm(frame, read_frames[i], NORM_INF));
+        ++i;
     }
+
+    collection.close();
     EXPECT_EQ(0, remove(output.c_str()));
 }
 
 INSTANTIATE_TEST_CASE_P(/**/,
-    Imgcodecs_ImageCollection,
+    Imgcodecs_ImageCollection_WithParam,
     testing::ValuesIn(exts_multi));
+
+TEST(Imgcodecs_ImageCollection, Metadata)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "readwrite/testExifOrientation_5.png";
+
+    ImageCollection collection;
+    EXPECT_EQ(DECODER_UNINITIALIZED, collection.getStatus());
+
+    std::vector<int> metadata_types;
+    std::vector<Mat> metadata;
+    collection.getMetadata(metadata_types, metadata);
+    EXPECT_TRUE(metadata.empty());
+    EXPECT_EQ(DECODER_UNINITIALIZED, collection.getStatus());
+
+    collection.init(filename, IMREAD_UNCHANGED);
+    EXPECT_EQ(DECODER_OK, collection.getStatus());
+
+    Mat dummy = collection.at(0);
+
+    collection.getMetadata(metadata_types, metadata);
+    EXPECT_FALSE(metadata.empty());
+    EXPECT_EQ(DECODER_OK, collection.getStatus());
+
+    collection.init("non_exist_filename.ext");
+    EXPECT_EQ(DECODER_SOURCE_NOT_OPENED, collection.getStatus() );
+
+    std::vector<unsigned char> buffer;
+
+    collection.init(buffer);
+    EXPECT_EQ(DECODER_SOURCE_NOT_OPENED, collection.getStatus());
+
+    readFileBytes(filename, buffer);
+
+    buffer[12] = 255; // Corrupt header
+    collection.init(buffer);
+    EXPECT_EQ(DECODER_READ_HEADER_FAILED, collection.getStatus());
+
+    buffer[2] = 0;
+    collection.init(buffer);
+    EXPECT_EQ(DECODER_UNKNOWN_SOURCE_FORMAT, collection.getStatus());
+
+}
 
 TEST(Imgcodecs_APNG, imdecode_animation)
 {
