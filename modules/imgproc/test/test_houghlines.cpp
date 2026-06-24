@@ -329,6 +329,25 @@ TEST(HoughLinesPointSet, regression_21029)
     EXPECT_TRUE(lines.empty());
 }
 
+TEST(HoughLines, minMaxTheta)
+{
+    Mat img(200, 200, CV_8UC1, Scalar(0));
+    line(img, Point(0, 100), Point(199, 100), Scalar(255));
+
+    const double min_theta = CV_PI / 2 - 0.2;
+    const double max_theta = CV_PI / 2 + 0.2;
+
+    std::vector<Vec2f> lines;
+    HoughLines(img, lines, 1, CV_PI / 180, 100, 0, 0, min_theta, max_theta);
+
+    ASSERT_FALSE(lines.empty());
+    for (const auto& l : lines)
+    {
+        EXPECT_GE(l[1], (float)min_theta);
+        EXPECT_LE(l[1], (float)max_theta);
+    }
+}
+
 TEST(HoughLines, regression_21983)
 {
     Mat img(200, 200, CV_8UC1, Scalar(0));
