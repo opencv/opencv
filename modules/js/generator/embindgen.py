@@ -343,9 +343,7 @@ class JSWrapperGenerator(object):
         return tp in string_types
 
     def _qualify_factory_ptr_return_type(self, ret_type, class_info):
-        if class_info is None:
-            return ret_type
-        if not ret_type.startswith('Ptr<') or not ret_type.endswith('>'):
+        if class_info is None or not ret_type.startswith('Ptr<') or not ret_type.endswith('>'):
             return ret_type
         inner = ret_type[len('Ptr<'):-1].strip()
         if '::' in inner:
