@@ -93,8 +93,8 @@ void Sobel5x5f(const uchar* src, size_t src_step, int srcRows, int srcCols,
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
-void Sobel2D( InputArray _src, OutputArray _dx, OutputArray _dy,
-              int ksize, int ddepth, double scale, int borderType )
+void Sobel2D_impl( InputArray _src, OutputArray _dx, OutputArray _dy,
+                   int ksize, int ddepth, double scale, int borderType )
 {
     CV_INSTRUMENT_REGION();
 

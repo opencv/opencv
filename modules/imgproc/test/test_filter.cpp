@@ -602,8 +602,10 @@ void CV_SpatialGradientTest::get_test_array_types_and_sizes( int test_case_idx,
 
 void CV_SpatialGradientTest::run_func()
 {
-    spatialGradient( test_mat[INPUT][0], test_mat[OUTPUT][0],
-                     test_mat[OUTPUT][1], ksize, border );
+    Mat dx, dy;
+    spatialGradient( test_mat[INPUT][0], dx, dy, ksize, border );
+    dx.copyTo( test_mat[OUTPUT][0] );
+    dy.copyTo( test_mat[OUTPUT][1] );
 }
 
 void CV_SpatialGradientTest::prepare_to_validation( int /*test_case_idx*/ )
@@ -1870,9 +1872,9 @@ TEST(Imgproc_Filter2D, accuracy) { CV_FilterTest test; test.safe_run(); }
 TEST(Imgproc_Sobel, accuracy) { CV_SobelTest test; test.safe_run(); }
 TEST(Imgproc_SpatialGradient, accuracy) { CV_SpatialGradientTest test; test.safe_run(); }
 
-// Sobel2D must match the two separate cv::Sobel calls it fuses: bit-exact for
-// ddepth=CV_16S/scale=1 and ddepth=CV_32F (scale folded into kernels like cv::Sobel).
-TEST(Imgproc_Sobel2D, accuracy)
+// spatialGradient (fused dx+dy) must match the two separate cv::Sobel calls it fuses:
+// bit-exact for ddepth=CV_16S/scale=1 and ddepth=CV_32F (scale folded into kernels like cv::Sobel).
+TEST(Imgproc_SpatialGradient, fused_accuracy)
 {
     RNG& rng = TS::ptr()->get_rng();
     const int ksizes[]  = { 3, 5 };
@@ -1893,7 +1895,7 @@ TEST(Imgproc_Sobel2D, accuracy)
                         if (ddepth == CV_16S && scale != 1.0)
                             continue; // int16 + non-unit scale is the fallback only
                         Mat dx, dy, dxRef, dyRef;
-                        Sobel2D(src, dx, dy, ksize, ddepth, scale, border);
+                        spatialGradient(src, dx, dy, ksize, border, ddepth, scale);
                         Sobel(src, dxRef, ddepth, 1, 0, ksize, scale, 0, border);
                         Sobel(src, dyRef, ddepth, 0, 1, ksize, scale, 0, border);
 
@@ -1916,7 +1918,7 @@ TEST(Imgproc_Sobel2D, accuracy)
         for (int ks : {3, 5})
         {
             Mat dx, dy, dxRef, dyRef;
-            Sobel2D(src, dx, dy, ks, CV_32F, 1, BORDER_DEFAULT);
+            spatialGradient(src, dx, dy, ks, BORDER_DEFAULT, CV_32F);
             Sobel(src, dxRef, CV_32F, 1, 0, ks, 1, 0, BORDER_DEFAULT);
             Sobel(src, dyRef, CV_32F, 0, 1, ks, 1, 0, BORDER_DEFAULT);
             EXPECT_LE(cvtest::norm(dx, dxRef, NORM_INF), 1e-4) << "float-src dx ksize=" << ks;
@@ -1934,7 +1936,7 @@ TEST(Imgproc_Sobel2D, accuracy)
                 {
                     Mat roi = parent.rowRange(40, 120);
                     Mat dx, dy, dxRef, dyRef;
-                    Sobel2D(roi, dx, dy, ks, ddepth, 1, b);
+                    spatialGradient(roi, dx, dy, ks, b, ddepth);
                     Sobel(roi, dxRef, ddepth, 1, 0, ks, 1, 0, b);
                     Sobel(roi, dyRef, ddepth, 0, 1, ks, 1, 0, b);
                     EXPECT_LE(cvtest::norm(dx, dxRef, NORM_INF), 0.0) << "ROI dx ksize=" << ks << " border=" << b << " ddepth=" << ddepth;
@@ -1944,13 +1946,13 @@ TEST(Imgproc_Sobel2D, accuracy)
 
     // invalid aperture sizes must be rejected
     Mat src(16, 16, CV_8UC1), dx, dy;
-    EXPECT_ANY_THROW(Sobel2D(src, dx, dy, 7));
-    EXPECT_ANY_THROW(Sobel2D(src, dx, dy, 1));
+    EXPECT_ANY_THROW(spatialGradient(src, dx, dy, 7));
+    EXPECT_ANY_THROW(spatialGradient(src, dx, dy, 1));
 }
 
 // Reproduces parallelCanny's per-slice row splitting and checks each slice's
-// Sobel2D output matches the whole-image gradient (i.e. multi-threaded == single).
-TEST(Imgproc_Sobel2D, slice_equivalence)
+// spatialGradient output matches the whole-image gradient (i.e. multi-threaded == single).
+TEST(Imgproc_SpatialGradient, slice_equivalence)
 {
     RNG& rng = TS::ptr()->get_rng();
 
@@ -1961,7 +1963,7 @@ TEST(Imgproc_Sobel2D, slice_equivalence)
             rng.fill(src, RNG::UNIFORM, 0, 256);
 
             Mat dxRef, dyRef;
-            Sobel2D(src, dxRef, dyRef, ksize, CV_16S, 1, border);
+            spatialGradient(src, dxRef, dyRef, ksize, border);
 
             for (int nThreads : {2, 3, 4, 7, 16})
             {
@@ -1976,7 +1978,7 @@ TEST(Imgproc_Sobel2D, slice_equivalence)
                     int rowEnd   = std::min(src.rows, end + 1);
 
                     Mat dx, dy;
-                    Sobel2D(src.rowRange(rowStart, rowEnd), dx, dy, ksize, CV_16S, 1, border);
+                    spatialGradient(src.rowRange(rowStart, rowEnd), dx, dy, ksize, border);
 
                     // rows [start, end) live at offset (start - rowStart) in the slice output
                     int off = start - rowStart;

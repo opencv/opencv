@@ -116,7 +116,7 @@ namespace
         CV_Assert( cannyLowThresh_ > 0 && cannyLowThresh_ < cannyHighThresh_ );
 
         Canny(src, edges, cannyLowThresh_, cannyHighThresh_);
-        Sobel2D(src, dx, dy, 3, CV_32F);
+        spatialGradient(src, dx, dy, 3, BORDER_DEFAULT, CV_32F);
     }
 
     void GeneralizedHoughBase::setTemplateImpl(InputArray templ, Point templCenter)

@@ -134,12 +134,12 @@ PERF_TEST_P(Size_MatType_dx_dy_Border5x5ROI, sobelFilter,
     SANITY_CHECK(dst);
 }
 
-/**************** Sobel2D (fused dx+dy) ********************/
+/**************** spatialGradient (fused dx+dy) ********************/
 
 typedef tuple<Size, int, int> Size_Aperture_Border_t;
 typedef perf::TestBaseWithParam<Size_Aperture_Border_t> Size_Aperture_Border;
 
-PERF_TEST_P(Size_Aperture_Border, sobel2D,
+PERF_TEST_P(Size_Aperture_Border, spatialGradient_fused,
             testing::Combine(
                 testing::Values(FILTER_SRC_SIZES),
                 testing::Values(3, 5),
@@ -156,13 +156,13 @@ PERF_TEST_P(Size_Aperture_Border, sobel2D,
 
     declare.in(src, WARMUP_RNG).out(dx, dy);
 
-    TEST_CYCLE() Sobel2D(src, dx, dy, ksize, CV_16S, 1, border);
+    TEST_CYCLE() spatialGradient(src, dx, dy, ksize, border);
 
     SANITY_CHECK_NOTHING();
 }
 
 // Float output variant (CV_8U source -> CV_32F dx/dy), as used by corner detectors.
-PERF_TEST_P(Size_Aperture_Border, sobel2D_32f,
+PERF_TEST_P(Size_Aperture_Border, spatialGradient_fused_32f,
             testing::Combine(
                 testing::Values(FILTER_SRC_SIZES),
                 testing::Values(3, 5),
@@ -179,13 +179,13 @@ PERF_TEST_P(Size_Aperture_Border, sobel2D_32f,
 
     declare.in(src, WARMUP_RNG).out(dx, dy);
 
-    TEST_CYCLE() Sobel2D(src, dx, dy, ksize, CV_32F, 1, border);
+    TEST_CYCLE() spatialGradient(src, dx, dy, ksize, border, CV_32F);
 
     SANITY_CHECK_NOTHING();
 }
 
 // Float baseline: the two cv::Sobel CV_32F calls (corner-detector gradient stage).
-PERF_TEST_P(Size_Aperture_Border, sobel2D_32f_baseline,
+PERF_TEST_P(Size_Aperture_Border, spatialGradient_32f_baseline,
             testing::Combine(
                 testing::Values(FILTER_SRC_SIZES),
                 testing::Values(3, 5),
@@ -211,8 +211,8 @@ PERF_TEST_P(Size_Aperture_Border, sobel2D_32f_baseline,
     SANITY_CHECK_NOTHING();
 }
 
-// Baseline: the two separate cv::Sobel calls that Sobel2D fuses (same params).
-PERF_TEST_P(Size_Aperture_Border, sobel2D_baseline,
+// Baseline: the two separate cv::Sobel calls that spatialGradient fuses (same params).
+PERF_TEST_P(Size_Aperture_Border, spatialGradient_baseline,
             testing::Combine(
                 testing::Values(FILTER_SRC_SIZES),
                 testing::Values(3, 5),

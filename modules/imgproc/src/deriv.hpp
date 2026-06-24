@@ -8,6 +8,9 @@
 
 namespace cv {
 
+void Sobel2D_impl(InputArray src, OutputArray dx, OutputArray dy,
+                  int ksize, int ddepth, double scale, int borderType);
+
 void Sobel3x3(const uchar* src, size_t src_step, int srcRows, int srcCols,
               int rowStart, int rowEnd,
               short* dx, short* dy, size_t dst_step, int borderType);

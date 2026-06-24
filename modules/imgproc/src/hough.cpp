@@ -1713,7 +1713,7 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles,
 
     if (kernelSize == 3 || kernelSize == 5)
     {
-        Sobel2D(_image, dx, dy, kernelSize, CV_16S, 1, BORDER_REPLICATE);
+        spatialGradient(_image, dx, dy, kernelSize, BORDER_REPLICATE);
     }
     else
     {

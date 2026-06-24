@@ -147,7 +147,7 @@ struct IntelligentScissorsMB::Impl
         initGrayscale_(image);
         if (sobelKernelSize == 3 || sobelKernelSize == 5)
         {
-            Sobel2D(grayscale_, Ix_, Iy_, sobelKernelSize, CV_32FC1);
+            spatialGradient(grayscale_, Ix_, Iy_, sobelKernelSize, BORDER_DEFAULT, CV_32F);
         }
         else
         {

@@ -1810,59 +1810,39 @@ CV_EXPORTS_W void Sobel( InputArray src, OutputArray dst, int ddepth,
                          double scale = 1, double delta = 0,
                          int borderType = BORDER_DEFAULT );
 
-/** @brief Calculates the first order image derivative in both x and y using a Sobel operator
-
-Equivalent to calling:
-
-@code
-Sobel( src, dx, CV_16SC1, 1, 0, 3 );
-Sobel( src, dy, CV_16SC1, 0, 1, 3 );
-@endcode
-
-@param src input image.
-@param dx output image with first-order derivative in x.
-@param dy output image with first-order derivative in y.
-@param ksize size of Sobel kernel. It must be 3.
-@param borderType pixel extrapolation method, see #BorderTypes.
-                  Only #BORDER_DEFAULT=#BORDER_REFLECT_101 and #BORDER_REPLICATE are supported.
-
-@sa Sobel
- */
-
-CV_EXPORTS_W void spatialGradient( InputArray src, OutputArray dx,
-                                   OutputArray dy, int ksize = 3,
-                                   int borderType = BORDER_DEFAULT );
-
 /** @brief Calculates the first order image derivatives in both x and y using a Sobel operator,
 computing them together in a single pass.
 
-This is a fused, two-dimensional variant of #Sobel: instead of two separate calls
+This is a fused variant of #Sobel: instead of two separate calls
 @code
 Sobel( src, dx, ddepth, 1, 0, ksize, scale );
 Sobel( src, dy, ddepth, 0, 1, ksize, scale );
 @endcode
 it produces both first-order derivatives in one traversal of the source. For an 8-bit single-channel
-source and the reflect/replicate border family (#BORDER_REPLICATE, #BORDER_REFLECT,
-#BORDER_REFLECT_101 / #BORDER_DEFAULT) it uses an optimized single-pass kernel (each source sample is
-read once and shared between the dx and dy computations); other cases (floating-point source, other
-border types, isolated/column-offset ROIs) fall back to two #Sobel passes. With @p ddepth = CV_16S
-and @p scale = 1 the result is bit-identical to the two #Sobel calls above; with @p ddepth = CV_32F
-it is numerically equivalent (within floating-point rounding).
+source, @p ksize = 3, @p ddepth = CV_16S, @p scale = 1, and #BORDER_DEFAULT (#BORDER_REFLECT_101)
+or #BORDER_REPLICATE, a dedicated 3x3 stencil kernel is used (including a HAL fast path). For
+@p ksize = 3 or 5 with the reflect/replicate border family on an 8-bit source, a separable fused
+kernel reads each source sample once and shares it between the dx and dy computations. Other cases
+(floating-point source, other border types, isolated/column-offset ROIs, scaled int16 output) fall
+back to two #Sobel passes. With @p ddepth = CV_16S and @p scale = 1 the result is bit-identical to
+the two #Sobel calls above; with @p ddepth = CV_32F it is numerically equivalent (within
+floating-point rounding).
 
-@param src input image; single-channel, 8-bit (CV_8UC1) for the fused fast path (CV_32FC1 is accepted
-            via the fallback).
+@param src input image; single-channel, 8-bit (CV_8UC1) for the fused fast paths (CV_32FC1 is
+            accepted via the fallback).
 @param dx output image with the first-order derivative in x (depth @p ddepth, same size as src).
 @param dy output image with the first-order derivative in y (depth @p ddepth, same size as src).
 @param ksize size of the Sobel kernel; must be 3 or 5.
+@param borderType pixel extrapolation method, see #BorderTypes. #BORDER_WRAP is not supported.
 @param ddepth output image depth; CV_16S or CV_32F.
 @param scale optional scale factor applied to the computed derivatives.
-@param borderType pixel extrapolation method, see #BorderTypes. #BORDER_WRAP is not supported.
 
-@sa Sobel, spatialGradient
+@sa Sobel
  */
-CV_EXPORTS_W void Sobel2D( InputArray src, OutputArray dx, OutputArray dy,
-                           int ksize = 3, int ddepth = CV_16S, double scale = 1,
-                           int borderType = BORDER_DEFAULT );
+CV_EXPORTS_W void spatialGradient( InputArray src, OutputArray dx,
+                                   OutputArray dy, int ksize = 3,
+                                   int borderType = BORDER_DEFAULT,
+                                   int ddepth = CV_16S, double scale = 1 );
 
 /** @brief Calculates the first x- or y- image derivative using Scharr operator.
 

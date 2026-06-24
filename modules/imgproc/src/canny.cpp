@@ -355,7 +355,7 @@ public:
             if ((aperture_size == 3 || aperture_size == 5) && cn == 1)
             {
                 // Fused single-pass dx/dy, bit-identical to the two Sobel() calls below.
-                Sobel2D(src.rowRange(rowStart, rowEnd), dx, dy, aperture_size, CV_16S, 1, BORDER_REPLICATE);
+                spatialGradient(src.rowRange(rowStart, rowEnd), dx, dy, aperture_size, BORDER_REPLICATE);
             }
             else
             {

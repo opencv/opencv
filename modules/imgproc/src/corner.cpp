@@ -257,7 +257,7 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
     Mat Dx, Dy;
     if( aperture_size == 3 || aperture_size == 5 )
     {
-        Sobel2D( src, Dx, Dy, aperture_size, CV_32F, scale, borderType );
+        spatialGradient( src, Dx, Dy, aperture_size, borderType, CV_32F, scale );
     }
     else if( aperture_size > 0 )
     {
