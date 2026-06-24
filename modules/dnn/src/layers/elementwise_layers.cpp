@@ -1016,6 +1016,28 @@ struct TanHFunctor : public BaseDefaultFunctor<TanHFunctor>
         return tanh(x);
     }
 
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize)
+        {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            const int vlanes = VTraits<v_float32>::vlanes();
+            v_float32 one = vx_setall_f32(1.f), two = vx_setall_f32(2.f);
+            v_float32 lo = vx_setall_f32(-88.f), hi = vx_setall_f32(88.f);
+            for (; i <= len - vlanes; i += vlanes)
+            {
+                v_float32 x = vx_load(srcptr + i);
+                v_float32 e = v_exp(v_min(v_max(v_add(x, x), lo), hi));   // e^{2x}, clamped
+                vx_store(dstptr + i, v_sub(one, v_div(two, v_add(e, one)))); // 1 - 2/(e+1)
+            }
+#endif
+            for (; i < len; i++)
+                dstptr[i] = calculate(srcptr[i]);
+        }
+    }
+
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
@@ -1779,6 +1801,22 @@ struct LogFunctor : public BaseDefaultFunctor<LogFunctor>
         return log(x);
     }
 
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize)
+        {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            const int vlanes = VTraits<v_float32>::vlanes();
+            for (; i <= len - vlanes; i += vlanes)
+                vx_store(dstptr + i, v_log(vx_load(srcptr + i)));
+#endif
+            for (; i < len; i++)
+                dstptr[i] = calculate(srcptr[i]);
+        }
+    }
+
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
@@ -2169,6 +2207,22 @@ struct ErfFunctor : public BaseDefaultFunctor<ErfFunctor>
     inline float calculate(float x) const
     {
         return erf(x);
+    }
+
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize)
+        {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            const int vlanes = VTraits<v_float32>::vlanes();
+            for (; i <= len - vlanes; i += vlanes)
+                vx_store(dstptr + i, v_erf(vx_load(srcptr + i)));
+#endif
+            for (; i < len; i++)
+                dstptr[i] = calculate(srcptr[i]);
+        }
     }
 
 #ifdef HAVE_CUDA
