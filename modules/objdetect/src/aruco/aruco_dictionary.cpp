@@ -89,7 +89,7 @@ struct CellBitMasks {
 
     const int s; // bytes per rotation
     const int totalCells;
-    AutoBuffer<uint8_t> temp;
+    std::vector<uint8_t> temp;
     const uint8_t *not0, *not1, *notXor;
     uint8_t *temp0;  // internal scratch workspace
 };
