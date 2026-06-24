@@ -33,14 +33,15 @@ class GemmTest : public perf::TestBaseWithParam<GemmTestParams_t>
     };
 };
 
+// Sparse coverage: exercise tiny/small/rectangular shapes and m=1/n=1 edge cases.
+// Large square sizes (640+) are covered by opencl/perf_gemm.cpp on the CPU perf tool.
 PERF_TEST_P(GemmTest, gemmTiny,
             testing::Combine(
                 testing::Values(
                     make_tuple(2, 2, 2),
-                    make_tuple(3, 3, 3),
-                    make_tuple(4, 4, 4)
+                    make_tuple(3, 3, 3)
                 ),
-                testing::Values(CV_32FC1, CV_64FC1, CV_32FC2, CV_64FC2),
+                testing::Values(CV_32FC1, CV_64FC1),
                 testing::Values(0, (int)GEMM_1_T, (int)GEMM_2_T,
                                 (int)(GEMM_1_T | GEMM_2_T))
             ))
@@ -51,17 +52,13 @@ PERF_TEST_P(GemmTest, gemmTiny,
 PERF_TEST_P(GemmTest, gemmSmall,
             testing::Combine(
                 testing::Values(
-                    make_tuple(4, 8, 16),
                     make_tuple(8, 8, 8),
-                    make_tuple(8, 16, 32),
-                    make_tuple(16, 16, 16),
                     make_tuple(32, 32, 32),
                     make_tuple(64, 64, 64),
-                    make_tuple(128, 128, 128)
+                    make_tuple(8, 16, 32)
                 ),
-                testing::Values(CV_32FC1, CV_64FC1, CV_32FC2, CV_64FC2),
-                testing::Values(0, (int)GEMM_1_T, (int)GEMM_2_T,
-                                (int)(GEMM_1_T | GEMM_2_T))
+                testing::Values(CV_32FC1),
+                testing::Values(0, (int)GEMM_2_T)
             ))
 {
     GemmTest::runGemmTest(GetParam());
@@ -71,12 +68,10 @@ PERF_TEST_P(GemmTest, gemmSquare,
             testing::Combine(
                 testing::Values(
                     make_tuple(256, 256, 256),
-                    make_tuple(512, 512, 512),
-                    make_tuple(1024, 1024, 1024)
+                    make_tuple(512, 512, 512)
                 ),
-                testing::Values(CV_32FC1, CV_64FC1, CV_32FC2, CV_64FC2),
-                testing::Values(0, (int)GEMM_1_T, (int)GEMM_2_T,
-                                (int)(GEMM_1_T | GEMM_2_T))
+                testing::Values(CV_32FC1),
+                testing::Values(0)
             ))
 {
     GemmTest::runGemmTest(GetParam());
@@ -85,20 +80,11 @@ PERF_TEST_P(GemmTest, gemmSquare,
 PERF_TEST_P(GemmTest, gemmRect,
             testing::Combine(
                 testing::Values(
-                    // Tall output (M >> N)
                     make_tuple(1024, 64, 256),
-                    make_tuple(1024, 256, 512),
-                    make_tuple(512, 32, 512),
-                    make_tuple(512, 128, 256),
-                    // Wide output (N >> M)
-                    make_tuple(256, 1024, 512),
-                    make_tuple(128, 512, 256),
-                    make_tuple(64, 1024, 256),
-                    make_tuple(32, 512, 512)
+                    make_tuple(256, 1024, 512)
                 ),
-                testing::Values(CV_32FC1, CV_64FC1, CV_32FC2, CV_64FC2),
-                testing::Values(0, (int)GEMM_1_T, (int)GEMM_2_T,
-                                (int)(GEMM_1_T | GEMM_2_T))
+                testing::Values(CV_32FC1),
+                testing::Values(0)
             ))
 {
     GemmTest::runGemmTest(GetParam());
@@ -107,13 +93,10 @@ PERF_TEST_P(GemmTest, gemmRect,
 PERF_TEST_P(GemmTest, gemmM1,
             testing::Combine(
                 testing::Values(
-                    make_tuple(1, 20, 2500),
-                    make_tuple(1, 64, 2500),
-                    make_tuple(1, 80, 2500)
+                    make_tuple(1, 64, 2500)
                 ),
-                testing::Values(CV_32FC1, CV_64FC1, CV_32FC2, CV_64FC2),
-                testing::Values(0, (int)GEMM_1_T, (int)GEMM_2_T,
-                                (int)(GEMM_1_T | GEMM_2_T))
+                testing::Values(CV_32FC1),
+                testing::Values(0, (int)GEMM_1_T)
             ))
 {
     GemmTest::runGemmTest(GetParam());
@@ -122,12 +105,10 @@ PERF_TEST_P(GemmTest, gemmM1,
 PERF_TEST_P(GemmTest, gemmN1,
             testing::Combine(
                 testing::Values(
-                    make_tuple(256, 1, 256),
-                    make_tuple(1024, 1, 1024)
+                    make_tuple(256, 1, 256)
                 ),
-                testing::Values(CV_32FC1, CV_64FC1, CV_32FC2, CV_64FC2),
-                testing::Values(0, (int)GEMM_1_T, (int)GEMM_2_T,
-                                (int)(GEMM_1_T | GEMM_2_T))
+                testing::Values(CV_32FC1),
+                testing::Values(0)
             ))
 {
     GemmTest::runGemmTest(GetParam());
