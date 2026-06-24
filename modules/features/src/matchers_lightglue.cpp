@@ -411,9 +411,9 @@ void DISKLightGlueMatcherImpl::lightglueMatch(const Mat& queryDesc, const Mat& t
 
 Ptr<LightGlueMatcher> LightGlueMatcher::create(const String& modelPath,
                                                  float scoreThreshold, int backend, int target,
-                                                 Type type)
+                                                 int type)
 {
-    if (type == DISK)
+    if (type == LG_DISK)
         return makePtr<DISKLightGlueMatcherImpl>(modelPath, scoreThreshold, backend, target);
     else
         return makePtr<ALIKEDLightGlueMatcherImpl>(modelPath, scoreThreshold, backend, target);
@@ -421,9 +421,9 @@ Ptr<LightGlueMatcher> LightGlueMatcher::create(const String& modelPath,
 
 Ptr<LightGlueMatcher> LightGlueMatcher::create(const std::vector<uchar>& modelData,
                                                  float scoreThreshold, int backend, int target,
-                                                 Type type)
+                                                 int type)
 {
-    if (type == DISK)
+    if (type == LG_DISK)
         return makePtr<DISKLightGlueMatcherImpl>(modelData, scoreThreshold, backend, target);
     else
         return makePtr<ALIKEDLightGlueMatcherImpl>(modelData, scoreThreshold, backend, target);
@@ -433,7 +433,7 @@ Ptr<LightGlueMatcher> LightGlueMatcher::create(const std::vector<uchar>& modelDa
 
 Ptr<LightGlueMatcher> LightGlueMatcher::create(const String& modelPath,
                                                  float scoreThreshold, int backend, int target,
-                                                 Type type)
+                                                 int type)
 {
     CV_UNUSED(modelPath);
     CV_UNUSED(scoreThreshold);
