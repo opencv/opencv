@@ -273,7 +273,7 @@ static void minMaxIdx_simd_(const T* src, const uchar* mask, WT* minval, WT* max
             const IT none = mm_set<IT>((IST)~(IST)0);
             // Reduce before the per-lane index could reach the 'none' sentinel.
             // For >= 32-bit indices (len <= INT_MAX) one block covers everything.
-            const int64_t idxcap = (sizeof(IST) <= 2) ? (((int64_t)1 << (8 * (int)sizeof(IST))) - 1) : (int64_t)INT_MAX;
+            const int64_t idxcap = (sizeof(IST) <= 2) ? (int64_t)std::numeric_limits<IST>::max() : (int64_t)INT_MAX;
             const int blockStep = (int)((idxcap / nlanes) * nlanes);
 
             const IT inc2 = mm_set<IT>((IST)(nlanes * 2));
