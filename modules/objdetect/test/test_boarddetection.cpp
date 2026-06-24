@@ -318,44 +318,41 @@ TEST(CV_Aruco3Refine, accuracy) {
 }
 
 // refineDetectedMarkers() must use detectorParams.validBitIdThreshold when matching a rejected
-// candidate's cell ratios against the expected marker code. We draw a marker whose first black
-// cell is brightened to a 0.6 white ratio and refine the very same image twice: with the strict
-// default (0.49) that cell counts as a bit error and the marker stays rejected, while with a
-// relaxed 0.7 the deviation is tolerated and the marker is recovered.
-TEST(CV_ArucoRefine, validBitIdThreshold) {
-    const int markerId = 0;
-    const int markerBorderBits = 1;
-    const int markerSidePixels = 300;
-    const aruco::Dictionary dictionary = aruco::getPredefinedDictionary(aruco::DICT_4X4_50);
-    const aruco::GridBoard board(Size(2, 2), 1.f, 0.2f, dictionary);
+// candidate's cell ratios against the expected marker code. Both cases below refine the very same
+// image: a board whose dropped marker 0 is redrawn with one black cell brightened to a 0.6 white
+// ratio and differ only in the threshold: the strict default (0.49) treats that cell as a bit
+// error and leaves the marker rejected, while a relaxed 0.7 tolerates the deviation and recovers it.
+class CV_ArucoRefineValidBitIdThreshold : public testing::Test {
+protected:
+    void SetUp() override {
+        const int markerBorderBits = 1;
+        const int markerSidePixels = 300;
 
-    aruco::DetectorParameters detectorParameters;
-    detectorParameters.markerBorderBits = markerBorderBits;
-    detectorParameters.perspectiveRemovePixelPerCell = 20;
-    detectorParameters.perspectiveRemoveIgnoredMarginPerCell = 0.;
+        dictionary = aruco::getPredefinedDictionary(aruco::DICT_4X4_50);
+        board = aruco::GridBoard(Size(2, 2), 1.f, 0.2f, dictionary);
 
-    const aruco::RefineParameters refineParameters(10.f, 1.f, true);
-    const aruco::ArucoDetector detector(dictionary, detectorParameters, refineParameters);
+        detectorParameters.markerBorderBits = markerBorderBits;
+        detectorParameters.perspectiveRemovePixelPerCell = 20;
+        detectorParameters.perspectiveRemoveIgnoredMarginPerCell = 0.;
 
-    // Start from a fully detected board (clean markers, so the threshold is irrelevant here).
-    Mat image;
-    vector<vector<Point2f>> corners;
-    vector<int> ids;
-    ASSERT_TRUE(generateBoardForRefine(board, markerBorderBits, image, detector, corners, ids));
+        const aruco::ArucoDetector detector(dictionary, detectorParameters, refineParameters);
 
-    // Drop marker 0 so it becomes a rejected candidate for refinement.
-    vector<vector<Point2f>> rejected;
-    ASSERT_TRUE(removeMarkerAndMakeRejected(markerId, corners, ids, rejected));
+        // Start from a fully detected board (clean markers, so the threshold is irrelevant here).
+        ASSERT_TRUE(generateBoardForRefine(board, markerBorderBits, image, detector, corners, ids));
 
-    // Draw a degraded version of marker 0 (one black cell at 0.6 white ratio) at its location.
-    Mat marker;
-    dictionary.generateImageMarker(markerId, markerSidePixels, marker, markerBorderBits);
-    ASSERT_TRUE(setFirstBlackInnerCellWhiteRatio(marker, dictionary, markerId, markerBorderBits, 0.6f));
-    drawMarkerAtCorners(image, marker, rejected[0]);
+        // Drop marker 0 so it becomes a rejected candidate for refinement.
+        ASSERT_TRUE(removeMarkerAndMakeRejected(markerId, corners, ids, rejected));
 
-    // Refine the same image with a given threshold and report whether marker 0 was recovered.
+        // Draw a degraded version of marker 0 (one black cell at 0.6 white ratio) at its location.
+        Mat marker;
+        dictionary.generateImageMarker(markerId, markerSidePixels, marker, markerBorderBits);
+        ASSERT_TRUE(setFirstBlackInnerCellWhiteRatio(marker, dictionary, markerId, markerBorderBits, 0.6f));
+        drawMarkerAtCorners(image, marker, rejected[0]);
+    }
+
+    // Refine the shared image with a given threshold and report whether marker 0 was recovered.
     // refineDetectedMarkers() mutates its inputs, so each attempt runs on its own copy.
-    auto isMarkerRecovered = [&](float validBitIdThreshold) {
+    bool isMarkerRecovered(float validBitIdThreshold) const {
         aruco::DetectorParameters attemptParameters = detectorParameters;
         attemptParameters.validBitIdThreshold = validBitIdThreshold;
         const aruco::ArucoDetector attemptDetector(dictionary, attemptParameters, refineParameters);
@@ -365,11 +362,27 @@ TEST(CV_ArucoRefine, validBitIdThreshold) {
         vector<vector<Point2f>> attemptRejected = rejected;
         attemptDetector.refineDetectedMarkers(image, board, attemptCorners, attemptIds, attemptRejected);
         return findMarkerIndex(attemptIds, markerId) >= 0;
-    };
+    }
 
-    // Strict threshold: the 0.6 white cell is treated as a bit error, so the marker is not recovered.
+    const int markerId = 0;
+    aruco::Dictionary dictionary;
+    aruco::GridBoard board;
+    aruco::DetectorParameters detectorParameters;
+    aruco::RefineParameters refineParameters{10.f, 1.f, true};
+
+    Mat image;
+    vector<vector<Point2f>> corners;
+    vector<int> ids;
+    vector<vector<Point2f>> rejected;
+};
+
+// Strict threshold: the 0.6 white cell is treated as a bit error, so the marker is not recovered.
+TEST_F(CV_ArucoRefineValidBitIdThreshold, strictThresholdKeepsMarkerRejected) {
     EXPECT_FALSE(isMarkerRecovered(0.49f));
-    // Relaxed threshold: the deviation is tolerated, so the marker is recovered.
+}
+
+// Relaxed threshold: the deviation is tolerated, so the marker is recovered.
+TEST_F(CV_ArucoRefineValidBitIdThreshold, relaxedThresholdRecoversMarker) {
     EXPECT_TRUE(isMarkerRecovered(0.7f));
 }
 
