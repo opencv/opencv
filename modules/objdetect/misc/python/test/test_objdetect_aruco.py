@@ -144,6 +144,32 @@ class aruco_objdetect_test(NewOpenCVTests):
 
         self.assertEqual(dist, 0)
 
+    def test_getDistanceToId_cell_pixel_ratio(self):
+        aruco_dict = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_4X4_50)
+        idx = 7
+        valid_bit_id_threshold = 0.49
+        bit_marker = np.array([[0, 1, 0, 1], [0, 1, 1, 1], [1, 1, 0, 0], [0, 1, 0, 0]], dtype=np.uint8)
+        ratio_marker = bit_marker.astype(np.float32)
+
+        # Same marker as test_getDistanceToId, but passed as float cell ratios.
+        dist = aruco_dict.getDistanceToId(ratio_marker, idx, True, valid_bit_id_threshold)
+        self.assertEqual(dist, 0)
+
+        # A small drift stays within the threshold.
+        accepted_ratio = ratio_marker.copy()
+        accepted_ratio[0, 0] = 0.4
+        dist = aruco_dict.getDistanceToId(accepted_ratio, idx, True, valid_bit_id_threshold)
+        self.assertEqual(dist, 0)
+
+        # A full flip crosses the threshold and counts as one bad cell.
+        erroneous_ratio = ratio_marker.copy()
+        erroneous_ratio[0, 0] = 1.0 - erroneous_ratio[0, 0]
+        dist = aruco_dict.getDistanceToId(onlyCellPixelRatio=erroneous_ratio,
+                                          id=idx,
+                                          allRotations=True,
+                                          validBitIdThreshold=valid_bit_id_threshold)
+        self.assertEqual(dist, 1)
+
     def test_aruco_detector(self):
         aruco_params = cv.aruco.DetectorParameters()
         aruco_dict = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_4X4_250)
