@@ -811,6 +811,85 @@ TEST_P(CharucoBoard, testWrongSizeDetection)
 }
 
 
+// Regression test for issue #25850: CharucoDetector::detectBoard() must not drop a valid board
+// seen under strong perspective. The regression is triggered specifically when a cameraMatrix and
+// distortion coefficients are supplied (the reporter's case): pose-based corner refinement then
+// shifts corners enough that the nearest-marker heuristic in checkBoard() false-rejects the board
+// and detectBoard() returns no charuco corners. The homography-consistency rescue keeps it.
+// (Mirrors the issue's exact reproducer: large image, low-focal camera matrix, small distortion,
+// and the same 4-point homography warp; without the camera matrix the bug does NOT reproduce.)
+TEST(CharucoDetection, toughPerspectiveIssue25850)
+{
+    aruco::CharucoBoard board(Size(17, 11), 8.f, 4.f, aruco::getPredefinedDictionary(aruco::DICT_5X5_100));
+    const Size imgSize(6560, 4160);
+    Mat boardImage;
+    board.generateImage(imgSize, boardImage);
+    cvtColor(boardImage, boardImage, COLOR_GRAY2BGR);
+
+    // Reporter's warp: nudge the four board-extent corners by a few pixels and warp.
+    const float bw = 136.f, bh = 88.f;
+    vector<Point2f> oldPts = { {-bw, -bh}, {bw, -bh}, {-bw, bh}, {bw, bh} };
+    vector<Point2f> newPts = { oldPts[0] + Point2f(-2.f, -2.f), oldPts[1] + Point2f(0.f, -1.f),
+                               oldPts[2] + Point2f(3.f, -0.4f), oldPts[3] };
+    Mat H = findHomography(newPts, oldPts);
+    Mat warped;
+    warpPerspective(boardImage, warped, H, imgSize, INTER_LINEAR, BORDER_CONSTANT, Scalar::all(255));
+
+    Matx33d cameraMatrix(300, 0, imgSize.width / 2.0,
+                         0, 300, imgSize.height / 2.0,
+                         0, 0, 1);
+    Matx<double, 1, 5> distCoeffs(-5.7e-7, 1.7e-8, -2e-7, -3.8e-7, -1.4e-10);
+
+    aruco::CharucoParameters params;  // defaults: checkMarkers == true
+    params.cameraMatrix = Mat(cameraMatrix);
+    params.distCoeffs = Mat(distCoeffs);
+    params.tryRefineMarkers = true;
+    aruco::CharucoDetector detector(board, params);
+    vector<int> charucoIds;
+    vector<Point2f> charucoCorners;
+    detector.detectBoard(warped, charucoCorners, charucoIds);
+
+    EXPECT_FALSE(charucoCorners.empty());
+    EXPECT_GT(charucoCorners.size(), 4u);
+    EXPECT_EQ(charucoCorners.size(), charucoIds.size());
+}
+
+// The marker-based rescue (issue #25850) must NOT resurrect genuinely wrong boards. On the
+// cameraMatrix path the interpolated charuco corners are a single-pose plane projection, so a
+// check built from them is near-tautological; checkBoardWithMarkers() instead verifies the
+// detected markers (their ids and image positions). A wrong-size board leaves markers whose ids
+// are outside its layout, and/or its markers do not fit one homography, so it is still rejected.
+TEST(CharucoDetection, markerCheckRejectsWrongBoard)
+{
+    aruco::Dictionary dict = aruco::getPredefinedDictionary(aruco::DICT_7X7_250);
+    aruco::CharucoBoard trueBoard(Size(8, 5), 1.f, 0.7f, dict);
+    Mat boardImage;
+    trueBoard.generateImage(Size(8 * 80, 5 * 80), boardImage);
+    cvtColor(boardImage, boardImage, COLOR_GRAY2BGR);
+
+    Matx33d cameraMatrix(300, 0, boardImage.cols / 2.0,
+                         0, 300, boardImage.rows / 2.0,
+                         0, 0, 1);
+    Matx<double, 1, 5> distCoeffs(-5.7e-7, 1.7e-8, -2e-7, -3.8e-7, -1.4e-10);
+
+    // Wrong-size (7x5) and transposed (5x8) layouts: both must yield NO charuco corners.
+    for (Size wrongSize : {Size(7, 5), Size(5, 8)}) {
+        aruco::CharucoBoard wrongBoard(wrongSize, 1.f, 0.7f, dict);
+        aruco::CharucoParameters params;  // checkMarkers == true
+        params.cameraMatrix = Mat(cameraMatrix);
+        params.distCoeffs = Mat(distCoeffs);
+        params.tryRefineMarkers = true;
+        aruco::CharucoDetector detector(wrongBoard, params);
+        vector<int> charucoIds;
+        vector<Point2f> charucoCorners;
+        detector.detectBoard(boardImage, charucoCorners, charucoIds);
+        EXPECT_TRUE(charucoCorners.empty())
+            << "wrong board " << wrongSize << " produced " << charucoCorners.size() << " corners";
+        EXPECT_TRUE(charucoIds.empty());
+    }
+}
+
+
 typedef testing::TestWithParam<std::tuple<cv::Size, float, cv::Size, int>> CharucoBoardGenerate;
 INSTANTIATE_TEST_CASE_P(/**/, CharucoBoardGenerate, testing::Values(make_tuple(Size(7, 4), 13.f, Size(400, 300), 24),
                                                                     make_tuple(Size(12, 2), 13.f, Size(200, 150), 1),

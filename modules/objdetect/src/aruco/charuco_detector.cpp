@@ -80,6 +80,82 @@ struct CharucoDetector::CharucoDetectorImpl {
         return true;
     }
 
+    /** Verify the detected board against the MARKERS (not the interpolated chessboard corners).
+     *
+     * checkBoard() compares raw pixel distances of interpolated charuco corners, which assumes a
+     * near-orthographic view and false-rejects valid boards under strong perspective (issue #25850).
+     * Re-deriving a geometric test from the charuco corners is circular: those corners are produced
+     * from the board model, so under a camera pose they are a single-plane projection that fits any
+     * homography. The markers, in contrast, carry absolute identity (their ArUco ids) and image
+     * positions independent of the board layout, so they discriminate a wrong board where corner
+     * geometry cannot.
+     *
+     * Two signals, both required to keep:
+     *  - Completeness: every detected board-dictionary marker must belong to the configured board.
+     *    A wrong-size/transposed board leaves "orphan" markers whose ids are outside its layout.
+     *  - Planar consistency: the configured object positions of the matched markers must fit one
+     *    homography to their detected image corners with small reprojection error. A wrong board
+     *    that happens to have no orphans (e.g. a strict sub-grid sharing an id range) still fails
+     *    this because its object<->image marker correspondences are inconsistent.
+     *
+     * Additive rescue: returns true only on a confident match; abstains (false) on too few markers
+     * or a failed fit, leaving checkBoard()'s verdict in place. */
+    bool checkBoardWithMarkers(InputArrayOfArrays markerCorners, InputArray markerIds) {
+        const float reprojThreshold = 0.10f;    // scale-relative MEAN marker-corner reprojection error
+        const float maxReprojThreshold = 0.30f; // scale-relative MAX single-corner error (anti-averaging)
+        // A homography has 8 DOF and fits any 4 generic points exactly, so very few markers can
+        // overfit. Require enough markers that the fit is over-determined and a wrong board cannot
+        // hide behind a degenerate solution.
+        const int minMarkers = 6;
+
+        vector<Mat> mCorners;
+        markerCorners.getMatVector(mCorners);
+        const Mat mIds = markerIds.getMat();
+        if (mIds.total() < (size_t)minMarkers)
+            return false;
+
+        const vector<int>& boardIds = board.getIds();
+        const vector<vector<Point3f> >& objPts3d = board.getObjPoints();
+
+        vector<Point2f> objPts, imgPts;
+        for (size_t i = 0; i < mIds.total(); i++) {
+            int id = mIds.ptr<int>(0)[i];
+            auto it = find(boardIds.begin(), boardIds.end(), id);
+            if (it == boardIds.end())
+                return false;   // orphan marker: detected id not part of this board -> wrong board
+            size_t bi = (size_t)(it - boardIds.begin());
+            for (int c = 0; c < 4; c++) {
+                objPts.push_back(Point2f(objPts3d[bi][c].x, objPts3d[bi][c].y));
+                imgPts.push_back(mCorners[i].ptr<Point2f>(0)[c]);
+            }
+        }
+        if (imgPts.size() < (size_t)minMarkers * 4)
+            return false;
+
+        Mat H = findHomography(objPts, imgPts, 0);
+        if (H.empty())
+            return false;
+        vector<Point2f> proj;
+        perspectiveTransform(objPts, proj, H);
+        Point2f centroid(0.f, 0.f);
+        for (const Point2f& p : imgPts) centroid += p;
+        centroid *= 1.f / imgPts.size();
+        double err = 0.0, maxErr = 0.0, scaleSq = 0.0;
+        for (size_t i = 0; i < imgPts.size(); i++) {
+            double e = sqrt(normL2Sqr<float>(proj[i] - imgPts[i]));
+            err += e;
+            maxErr = max(maxErr, e);
+            scaleSq += normL2Sqr<float>(imgPts[i] - centroid);
+        }
+        double scale = sqrt(scaleSq / imgPts.size());
+        if (scale < 1e-6)
+            return false;
+        // Both the mean error and the worst single-corner error must be small. The max-error cap
+        // stops a wrong board from passing by averaging one badly-placed marker corner away.
+        return (err / imgPts.size()) / scale <= reprojThreshold
+            && maxErr / scale <= maxReprojThreshold;
+    }
+
     /** Calculate the maximum window sizes for corner refinement for each charuco corner based on the distance
      * to their closest markers */
     vector<Size> getMaximumSubPixWindowSizes(InputArrayOfArrays markerCorners, InputArray markerIds,
@@ -344,7 +420,15 @@ struct CharucoDetector::CharucoDetectorImpl {
         InputOutputArrayOfArrays _markerCorners = markerCorners.needed() ? markerCorners : _InputOutputArray(tmpMarkerCorners);
         InputOutputArray _markerIds = markerIds.needed() ? markerIds : _InputOutputArray(tmpMarkerIds);
         detectBoard(image, charucoCorners, charucoIds, _markerCorners, _markerIds);
-        if (charucoParameters.checkMarkers && checkBoard(_markerCorners, _markerIds, charucoCorners, charucoIds) == false) {
+        // checkBoard()'s nearest-marker heuristic false-rejects valid boards under strong perspective
+        // (issue #25850). Rescue such a detection only if the MARKERS confirm the board: all detected
+        // markers belong to it and their object positions fit one homography. This uses marker identity
+        // (not the interpolated charuco corners, which are circular on the camera-pose path), so it
+        // still rejects wrong-size/transposed boards. checkBoardWithMarkers() abstains on weak input,
+        // so the verdict can only change from reject to keep, never the reverse.
+        if (charucoParameters.checkMarkers
+                && checkBoard(_markerCorners, _markerIds, charucoCorners, charucoIds) == false
+                && checkBoardWithMarkers(_markerCorners, _markerIds) == false) {
             CV_LOG_DEBUG(NULL, "ChArUco board is built incorrectly");
             charucoCorners.release();
             charucoIds.release();
