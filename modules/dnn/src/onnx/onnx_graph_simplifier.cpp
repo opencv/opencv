@@ -2117,9 +2117,10 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
         else if (!tensor_proto.int32_data().empty())
         {
             const auto& v = tensor_proto.int32_data();
+            checkPayloadSize(v.size());
             blob.create((int)sizes.size(), sizes.data(), CV_16BFC1);
             uint16_t* dst = reinterpret_cast<uint16_t*>(blob.data);
-            for (size_t i = 0; i < v.size(); ++i)
+            for (size_t i = 0; i < total_elems; ++i)
             {
                 dst[i] = static_cast<uint16_t>(v[i] & 0xFFFF);
             }
