@@ -248,6 +248,10 @@ static inline void mm_fold_max(const VT& valMax, const IT& idxMax, const IT& non
     }
 }
 
+template<typename IST> struct mm_idxcap { static const int64_t value = (int64_t)INT_MAX; };
+template<> struct mm_idxcap<uchar>  { static const int64_t value = (int64_t)UCHAR_MAX; };
+template<> struct mm_idxcap<ushort> { static const int64_t value = (int64_t)USHRT_MAX; };
+
 // IST = unsigned index lane type (uchar / ushort / uint / uint64_t).
 template<typename T, typename VT, typename IT, typename IST, typename WT>
 static void minMaxIdx_simd_(const T* src, const uchar* mask, WT* minval, WT* maxval,
@@ -273,7 +277,7 @@ static void minMaxIdx_simd_(const T* src, const uchar* mask, WT* minval, WT* max
             const IT none = mm_set<IT>((IST)~(IST)0);
             // Reduce before the per-lane index could reach the 'none' sentinel.
             // For >= 32-bit indices (len <= INT_MAX) one block covers everything.
-            const int64_t idxcap = (sizeof(IST) <= 2) ? (int64_t)std::numeric_limits<IST>::max() : (int64_t)INT_MAX;
+            const int64_t idxcap = mm_idxcap<IST>::value;
             const int blockStep = (int)((idxcap / nlanes) * nlanes);
 
             const IT inc2 = mm_set<IT>((IST)(nlanes * 2));
