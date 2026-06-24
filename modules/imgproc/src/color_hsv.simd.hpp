@@ -5,19 +5,6 @@
 #include "precomp.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
-#if CV_SIMD_SCALABLE
-/* FIX IT:
-// std::swap(a, b) is not available for RVV vector types,
-// and CV_SWAP needs another "t" as input,
-// For compatibility, we swap RVV vector manually by using this macro.
-
-// If others scalable types (e.g. type in ARM SVE) can use std::swap,
-// then replace CV_SIMD_SCALABLE with CV_RVV.
-// If std::swap is available for RVV vector types in future, remove this macro.
-*/
-#define swap(a, b) {auto t = a; a = b; b = t;}
-#endif
-
 namespace cv {
 namespace hal {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
@@ -115,7 +102,7 @@ struct RGB2HSV_b
             }
 
             if(bidx)
-                swap(b, r);
+                v_swap(b, r);
 
             v_uint8 h, s, v;
             v_uint8 vmin;
@@ -323,7 +310,7 @@ struct RGB2HSV_f
             }
 
             if(bidx)
-                swap(b, r);
+                v_swap(b, r);
 
             v_float32 h, s, v;
             process(b, g, r, h, s, v, hscale);
@@ -484,7 +471,7 @@ struct HSV2RGB_f
             HSV2RGB_simd(h, s, v, b, g, r, hs);
 
             if(bidx)
-                swap(b, r);
+                v_swap(b, r);
 
             if(dcn == 4)
             {
@@ -738,7 +725,7 @@ struct RGB2HLS_f
             }
 
             if(bidx)
-                swap(r, b);
+                v_swap(r, b);
 
             process(r, g, b, vhscale, h, l, s);
 
@@ -1026,7 +1013,7 @@ struct HLS2RGB_f
             process(h, l, s, b, g, r);
 
             if(bidx)
-                swap(b, r);
+                v_swap(b, r);
 
             if(dcn == 3)
             {

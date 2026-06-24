@@ -95,6 +95,20 @@ template<typename _Tp> static inline cv::v_float32 splineInterpolate(const cv::v
 namespace cv
 {
 
+// swap R<->B in a row-major 3x3 coeff matrix when blueIdx==0
+template<typename CT> static inline void swapBlueCoeffsCols(CT* coeffs)
+{
+    std::swap(coeffs[0], coeffs[2]);
+    std::swap(coeffs[3], coeffs[5]);
+    std::swap(coeffs[6], coeffs[8]);
+}
+template<typename CT> static inline void swapBlueCoeffsRows(CT* coeffs)
+{
+    std::swap(coeffs[0], coeffs[6]);
+    std::swap(coeffs[1], coeffs[7]);
+    std::swap(coeffs[2], coeffs[8]);
+}
+
 ////////////////////////////////////// RGB <-> XYZ ///////////////////////////////////////
 
 // 0.412453, 0.357580, 0.180423,
@@ -152,11 +166,7 @@ template<typename _Tp> struct RGB2XYZ_f
         for(int i = 0; i < 9; i++)
             coeffs[i] = _coeffs ? _coeffs[i] : (float)sRGB2XYZ_D65[i];
         if(blueIdx == 0)
-        {
-            std::swap(coeffs[0], coeffs[2]);
-            std::swap(coeffs[3], coeffs[5]);
-            std::swap(coeffs[6], coeffs[8]);
-        }
+            swapBlueCoeffsCols(coeffs);
     }
     void operator()(const _Tp* src, _Tp* dst, int n) const
     {
@@ -189,11 +199,7 @@ struct RGB2XYZ_f<float>
         for(int i = 0; i < 9; i++)
             coeffs[i] = _coeffs ? _coeffs[i] : (float)sRGB2XYZ_D65[i];
         if(blueIdx == 0)
-        {
-            std::swap(coeffs[0], coeffs[2]);
-            std::swap(coeffs[3], coeffs[5]);
-            std::swap(coeffs[6], coeffs[8]);
-        }
+            swapBlueCoeffsCols(coeffs);
     }
 
     void operator()(const float* src, float* dst, int n) const
@@ -257,11 +263,7 @@ template<typename _Tp> struct RGB2XYZ_i
         for( int i = 0; i < 9; i++ )
             coeffs[i] = _coeffs ? cvRound(_coeffs[i]*(1 << xyz_shift)) : sRGB2XYZ_D65_i[i];
         if(blueIdx == 0)
-        {
-            std::swap(coeffs[0], coeffs[2]);
-            std::swap(coeffs[3], coeffs[5]);
-            std::swap(coeffs[6], coeffs[8]);
-        }
+            swapBlueCoeffsCols(coeffs);
     }
     void operator()(const _Tp* src, _Tp* dst, int n) const
     {
@@ -296,11 +298,7 @@ struct RGB2XYZ_i<uchar>
         for( int i = 0; i < 9; i++ )
             coeffs[i] = _coeffs ? cvRound(_coeffs[i]*(1 << shift)) : sRGB2XYZ_D65_i[i];
         if(blueIdx == 0)
-        {
-            std::swap(coeffs[0], coeffs[2]);
-            std::swap(coeffs[3], coeffs[5]);
-            std::swap(coeffs[6], coeffs[8]);
-        }
+            swapBlueCoeffsCols(coeffs);
     }
     void operator()(const uchar * src, uchar * dst, int n) const
     {
@@ -416,11 +414,7 @@ struct RGB2XYZ_i<ushort>
         for( int i = 0; i < 9; i++ )
             coeffs[i] = _coeffs ? cvRound(_coeffs[i]*(1 << shift)) : sRGB2XYZ_D65_i[i];
         if(blueIdx == 0)
-        {
-            std::swap(coeffs[0], coeffs[2]);
-            std::swap(coeffs[3], coeffs[5]);
-            std::swap(coeffs[6], coeffs[8]);
-        }
+            swapBlueCoeffsCols(coeffs);
     }
 
     void operator()(const ushort * src, ushort * dst, int n) const
@@ -542,11 +536,7 @@ template<typename _Tp> struct XYZ2RGB_f
         for(int i = 0; i < 9; i++)
             coeffs[i] = _coeffs ? _coeffs[i] : (float)XYZ2sRGB_D65[i];
         if(blueIdx == 0)
-        {
-            std::swap(coeffs[0], coeffs[6]);
-            std::swap(coeffs[1], coeffs[7]);
-            std::swap(coeffs[2], coeffs[8]);
-        }
+            swapBlueCoeffsRows(coeffs);
     }
 
     void operator()(const _Tp* src, _Tp* dst, int n) const
@@ -583,11 +573,7 @@ struct XYZ2RGB_f<float>
         for(int i = 0; i < 9; i++)
             coeffs[i] = _coeffs ? _coeffs[i] : (float)XYZ2sRGB_D65[i];
         if(blueIdx == 0)
-        {
-            std::swap(coeffs[0], coeffs[6]);
-            std::swap(coeffs[1], coeffs[7]);
-            std::swap(coeffs[2], coeffs[8]);
-        }
+            swapBlueCoeffsRows(coeffs);
     }
 
     void operator()(const float* src, float* dst, int n) const
@@ -655,11 +641,7 @@ template<typename _Tp> struct XYZ2RGB_i
             coeffs[i] = _coeffs ? cvRound(_coeffs[i]*(1 << xyz_shift)) : XYZ2sRGB_D65_i[i];
 
         if(blueIdx == 0)
-        {
-            std::swap(coeffs[0], coeffs[6]);
-            std::swap(coeffs[1], coeffs[7]);
-            std::swap(coeffs[2], coeffs[8]);
-        }
+            swapBlueCoeffsRows(coeffs);
     }
     void operator()(const _Tp* src, _Tp* dst, int n) const
     {
@@ -698,11 +680,7 @@ struct XYZ2RGB_i<uchar>
             coeffs[i] = _coeffs ? cvRound(_coeffs[i]*(1 << shift)) : XYZ2sRGB_D65_i[i];
 
         if(blueIdx == 0)
-        {
-            std::swap(coeffs[0], coeffs[6]);
-            std::swap(coeffs[1], coeffs[7]);
-            std::swap(coeffs[2], coeffs[8]);
-        }
+            swapBlueCoeffsRows(coeffs);
     }
 
     void operator()(const uchar* src, uchar* dst, int n) const
@@ -821,11 +799,7 @@ struct XYZ2RGB_i<ushort>
             coeffs[i] = _coeffs ? cvRound(_coeffs[i]*(1 << shift)) : XYZ2sRGB_D65_i[i];
 
         if(blueIdx == 0)
-        {
-            std::swap(coeffs[0], coeffs[6]);
-            std::swap(coeffs[1], coeffs[7]);
-            std::swap(coeffs[2], coeffs[8]);
-        }
+            swapBlueCoeffsRows(coeffs);
     }
 
     void operator()(const ushort* src, ushort* dst, int n) const
@@ -4714,11 +4688,7 @@ bool oclCvtColorBGR2XYZ( InputArray _src, OutputArray _dst, int bidx )
         for(int i = 0; i < 9; i++)
             coeffs[i] = (float)sRGB2XYZ_D65[i];
         if (bidx == 0)
-        {
-            std::swap(coeffs[0], coeffs[2]);
-            std::swap(coeffs[3], coeffs[5]);
-            std::swap(coeffs[6], coeffs[8]);
-        }
+            swapBlueCoeffsCols(coeffs);
         Mat(1, 9, CV_32FC1, &coeffs[0]).copyTo(c);
     }
     else
@@ -4727,11 +4697,7 @@ bool oclCvtColorBGR2XYZ( InputArray _src, OutputArray _dst, int bidx )
         for(int i = 0; i < 9; i++)
             coeffs[i] = sRGB2XYZ_D65_i[i];
         if (bidx == 0)
-        {
-            std::swap(coeffs[0], coeffs[2]);
-            std::swap(coeffs[3], coeffs[5]);
-            std::swap(coeffs[6], coeffs[8]);
-        }
+            swapBlueCoeffsCols(coeffs);
         Mat(1, 9, CV_32SC1, &coeffs[0]).copyTo(c);
     }
 
@@ -4762,11 +4728,7 @@ bool oclCvtColorXYZ2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx )
         for(int i = 0; i < 9; i++)
             coeffs[i] = (float)XYZ2sRGB_D65[i];
         if (bidx == 0)
-        {
-            std::swap(coeffs[0], coeffs[6]);
-            std::swap(coeffs[1], coeffs[7]);
-            std::swap(coeffs[2], coeffs[8]);
-        }
+            swapBlueCoeffsRows(coeffs);
         Mat(1, 9, CV_32FC1, &coeffs[0]).copyTo(c);
     }
     else
@@ -4775,11 +4737,7 @@ bool oclCvtColorXYZ2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx )
         for(int i = 0; i < 9; i++)
             coeffs[i] = XYZ2sRGB_D65_i[i];
         if (bidx == 0)
-        {
-            std::swap(coeffs[0], coeffs[6]);
-            std::swap(coeffs[1], coeffs[7]);
-            std::swap(coeffs[2], coeffs[8]);
-        }
+            swapBlueCoeffsRows(coeffs);
         Mat(1, 9, CV_32SC1, &coeffs[0]).copyTo(c);
     }
 
