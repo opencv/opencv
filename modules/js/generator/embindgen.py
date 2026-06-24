@@ -348,8 +348,7 @@ class JSWrapperGenerator(object):
         inner = ret_type[len('Ptr<'):-1].strip()
         if '::' in inner:
             return ret_type
-        class_basename = class_info.cname.split('::')[-1]
-        if inner == class_info.name or inner == class_basename:
+        if inner == class_info.name or inner == class_info.cname.split('::')[-1]:
             return 'Ptr<%s>' % class_info.cname
         return ret_type
 
