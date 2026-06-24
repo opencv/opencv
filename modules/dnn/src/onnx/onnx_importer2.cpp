@@ -287,6 +287,7 @@ protected:
     void parseSDPA                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDequantizeLinear     (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseQuantizeLinear       (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseDynamicQuantizeLinear(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseCustomLayer          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseQConv                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseQMatMul              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -2217,6 +2218,11 @@ void ONNXImporter2::parseQuantizeLinear(LayerParams& layerParams, const opencv_o
     addLayer(layerParams, node_proto);
 }
 
+void ONNXImporter2::parseDynamicQuantizeLinear(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter2::parseRMSNormalization(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     addLayer(layerParams, node_proto);
@@ -2743,6 +2749,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     // ai.onnx: opset 10+
     dispatch["DequantizeLinear"] = &ONNXImporter2::parseDequantizeLinear;
     dispatch["QuantizeLinear"] = &ONNXImporter2::parseQuantizeLinear;
+    dispatch["DynamicQuantizeLinear"] = &ONNXImporter2::parseDynamicQuantizeLinear;
     dispatch["QLinearConv"] = &ONNXImporter2::parseQConv;
     dispatch["QLinearMatMul"] = &ONNXImporter2::parseQMatMul;
 

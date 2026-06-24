@@ -791,6 +791,12 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<QuantizeLinearLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS DynamicQuantizeLinearLayer : public Layer
+    {
+    public:
+        static Ptr<DynamicQuantizeLinearLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS DequantizeLayer : public Layer
     {
     public:

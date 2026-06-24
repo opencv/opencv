@@ -276,12 +276,6 @@
 "test_dft_axis",
 "test_dropout_default_mask",  // Issue::cvtest::norm::wrong data type
 "test_dropout_default_mask_ratio",  // ---- same as above ---
-"test_dynamicquantizelinear",  // Issue:: Unkonwn error
-"test_dynamicquantizelinear_expanded",  // ---- same as above ---
-"test_dynamicquantizelinear_max_adjusted",  // ---- same as above ---
-"test_dynamicquantizelinear_max_adjusted_expanded",  // ---- same as above ---
-"test_dynamicquantizelinear_min_adjusted",  // ---- same as above ---
-"test_dynamicquantizelinear_min_adjusted_expanded",  // ---- same as above ---
 "test_equal_string",
 "test_equal_string_broadcast",
 "test_gridsample_bicubic",  // ---- same as above ---
