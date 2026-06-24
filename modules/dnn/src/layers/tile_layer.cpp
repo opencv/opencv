@@ -80,8 +80,10 @@ public:
             {
                 tmp = tmp.reshape(0, dims);
                 tmp = cv::repeat(tmp, 1, rep_i);
-                dims *= out_shape[i];
             }
+            // accumulate for every axis so a repeated non-leading axis tiles
+            // per-axis blocks instead of repeating the whole flattened tensor
+            dims *= out_shape[i];
         }
         tmp = tmp.reshape(0, out_shape);
 
