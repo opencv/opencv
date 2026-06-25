@@ -451,10 +451,6 @@ public:
         internals.clear();
     }
 
-    virtual void finalize(InputArrayOfArrays, OutputArrayOfArrays) CV_OVERRIDE
-    {
-    }
-
     void forward(InputArrayOfArrays inputs_arr,
                  OutputArrayOfArrays outputs_arr,
                  OutputArrayOfArrays) CV_OVERRIDE
