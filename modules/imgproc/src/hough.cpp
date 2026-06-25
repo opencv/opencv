@@ -13,6 +13,7 @@
 // Copyright (C) 2000, Intel Corporation, all rights reserved.
 // Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Copyright (C) 2014, Itseez, Inc, all rights reserved.
+// Copyright (C) 2026, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -1710,8 +1711,15 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles,
 
     Mat edges, dx, dy;
 
-    Sobel(_image, dx, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REPLICATE);
-    Sobel(_image, dy, CV_16S, 0, 1, kernelSize, 1, 0, BORDER_REPLICATE);
+    if (kernelSize == 3 || kernelSize == 5)
+    {
+        spatialGradient(_image, dx, dy, kernelSize, BORDER_REPLICATE);
+    }
+    else
+    {
+        Sobel(_image, dx, CV_16S, 1, 0, kernelSize, 1, 0, BORDER_REPLICATE);
+        Sobel(_image, dy, CV_16S, 0, 1, kernelSize, 1, 0, BORDER_REPLICATE);
+    }
     Canny(dx, dy, edges, std::max(1, cannyThreshold / 2), cannyThreshold, false);
 
     Mutex mtx;

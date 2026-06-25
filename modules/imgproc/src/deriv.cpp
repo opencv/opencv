@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2000, Intel Corporation, all rights reserved.
 // Copyright (C) 2014, Itseez, Inc, all rights reserved.
+// Copyright (C) 2026, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -44,6 +45,10 @@
 #include "opencl_kernels_imgproc.hpp"
 
 #include "filter.hpp"
+#include "deriv.hpp"
+
+#include "deriv.simd.hpp"
+#include "deriv.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL based on CMakeLists.txt content
 
 /****************************************************************************************\
                              Sobel & Scharr Derivative Filters
@@ -51,6 +56,112 @@
 
 namespace cv
 {
+
+void Sobel3x3(const uchar* src, size_t src_step, int srcRows, int srcCols,
+              int rowStart, int rowEnd,
+              short* dx, short* dy, size_t dst_step, int borderType)
+{
+    CV_INSTRUMENT_REGION();
+    CV_CPU_DISPATCH(Sobel3x3, (src, src_step, srcRows, srcCols, rowStart, rowEnd, dx, dy, dst_step, borderType),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
+
+void Sobel5x5(const uchar* src, size_t src_step, int srcRows, int srcCols,
+              int rowStart, int rowEnd,
+              short* dx, short* dy, size_t dst_step, int borderType)
+{
+    CV_INSTRUMENT_REGION();
+    CV_CPU_DISPATCH(Sobel5x5, (src, src_step, srcRows, srcCols, rowStart, rowEnd, dx, dy, dst_step, borderType),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
+
+void Sobel3x3f(const uchar* src, size_t src_step, int srcRows, int srcCols,
+               int rowStart, int rowEnd,
+               float* dx, float* dy, size_t dst_step, float scale, int borderType)
+{
+    CV_INSTRUMENT_REGION();
+    CV_CPU_DISPATCH(Sobel3x3f, (src, src_step, srcRows, srcCols, rowStart, rowEnd, dx, dy, dst_step, scale, borderType),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
+
+void Sobel5x5f(const uchar* src, size_t src_step, int srcRows, int srcCols,
+               int rowStart, int rowEnd,
+               float* dx, float* dy, size_t dst_step, float scale, int borderType)
+{
+    CV_INSTRUMENT_REGION();
+    CV_CPU_DISPATCH(Sobel5x5f, (src, src_step, srcRows, srcCols, rowStart, rowEnd, dx, dy, dst_step, scale, borderType),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
+
+void Sobel2D_impl( InputArray _src, OutputArray _dx, OutputArray _dy,
+                   int ksize, int ddepth, double scale, int borderType )
+{
+    CV_INSTRUMENT_REGION();
+
+    CV_Assert( ksize == 3 || ksize == 5 );
+    CV_Assert( ddepth == CV_16S || ddepth == CV_32F );
+
+    Mat src = _src.getMat();
+    CV_Assert( !src.empty() );
+    CV_Assert( src.type() == CV_8UC1 || src.type() == CV_32FC1 );
+
+    _dx.create( src.size(), CV_MAKETYPE(ddepth, 1) );
+    _dy.create( src.size(), CV_MAKETYPE(ddepth, 1) );
+    Mat dx = _dx.getMat(), dy = _dy.getMat();
+
+    // The fused kernels resolve out-of-range samples with borderInterpolate, so they
+    // support the reflect/replicate border family on an 8-bit source. For a full-width,
+    // non-isolated ROI we feed the parent buffer with absolute row bounds so the ROI edge
+    // rows read the real neighbouring rows (matching cv::Sobel). CV_16S output is written
+    // directly (bit-exact); CV_32F uses float intermediates matching sepFilter2D (bit-exact).
+    // Anything
+    // else (float source, constant/wrap border, isolated/column-offset ROI) falls back to
+    // two separable Sobel passes.
+    const int bt = borderType & ~BORDER_ISOLATED;
+    const bool fusableBorder = (bt == BORDER_REPLICATE || bt == BORDER_REFLECT || bt == BORDER_REFLECT_101);
+
+    Size wholeSize;
+    Point ofs;
+    src.locateROI( wholeSize, ofs );
+    const bool fullWidthRoi = (ofs.x == 0 && src.cols == wholeSize.width);
+    const bool isolated = (borderType & BORDER_ISOLATED) != 0;
+    // CV_16S only fuses at unit scale (the kernel emits the unscaled int16 result);
+    // a scaled int16 request falls back to keep cv::Sobel's rounding.
+    const bool scaleOk = (ddepth == CV_32F) || (scale == 1.0);
+
+    if ( src.type() == CV_8UC1 && fusableBorder && fullWidthRoi && !isolated && scaleOk )
+    {
+        const uchar* base = src.ptr<uchar>(0) - (size_t)ofs.y * src.step;
+        const int parentRows = wholeSize.height;
+        const int rowStart = ofs.y;
+        const int rowEnd = ofs.y + src.rows;
+
+        if ( ddepth == CV_32F )
+        {
+            const float fscale = (float)scale;
+            if ( ksize == 3 )
+                Sobel3x3f( base, src.step, parentRows, src.cols, rowStart, rowEnd,
+                           dx.ptr<float>(), dy.ptr<float>(), dx.step1(), fscale, bt );
+            else
+                Sobel5x5f( base, src.step, parentRows, src.cols, rowStart, rowEnd,
+                           dx.ptr<float>(), dy.ptr<float>(), dx.step1(), fscale, bt );
+        }
+        else
+        {
+            if ( ksize == 3 )
+                Sobel3x3( base, src.step, parentRows, src.cols, rowStart, rowEnd,
+                          dx.ptr<short>(), dy.ptr<short>(), dx.step1(), bt );
+            else
+                Sobel5x5( base, src.step, parentRows, src.cols, rowStart, rowEnd,
+                          dx.ptr<short>(), dy.ptr<short>(), dx.step1(), bt );
+        }
+    }
+    else
+    {
+        Sobel( src, dx, ddepth, 1, 0, ksize, scale, 0, borderType );
+        Sobel( src, dy, ddepth, 0, 1, ksize, scale, 0, borderType );
+    }
+}
 
 static void getScharrKernels( OutputArray _kx, OutputArray _ky,
                               int dx, int dy, bool normalize, int ktype )
