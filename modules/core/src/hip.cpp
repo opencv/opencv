@@ -599,14 +599,14 @@ Vec3i cv::hip::DeviceInfo::maxTexture3D() const
 #endif
 }
 
-const char* cv::hip::DeviceInfo::gcnArchName() const
+cv::String cv::hip::DeviceInfo::gcnArchName() const
 {
 #ifndef HAVE_HIP
     throw_no_hip();
 #else
     static thread_local char buf[256];
     std::strncpy(buf, getDeviceProp(device_id_).gcnArchName, 255);
-    return buf;
+    return String(buf);
 #endif
 }
 

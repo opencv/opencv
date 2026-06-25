@@ -139,7 +139,7 @@ namespace cv{
         CV_WRAP size_t freeMemory() const;
         CV_WRAP size_t totalMemory() const;
 
-        CV_WRAP const char* gcnArchName() const;
+        CV_WRAP String gcnArchName() const;
         CV_WRAP bool cooperativeLaunch() const;
         CV_WRAP bool isLargeBar() const;
         CV_WRAP int asicRevision() const;
