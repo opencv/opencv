@@ -116,6 +116,19 @@ If your device already has the pre-compiled Python bindings (`cv2`), you can use
 
 #### 1. Verify the binding
 
+If you are using a local or custom build, ensure your system can locate the generated `cv2`
+binary by setting the `PYTHONPATH` environment variable:
+
+@code{.bash}
+export PYTHONPATH=/path/to/opencv/build/lib:$PYTHONPATH
+@endcode
+
+@note Replace `/path/to/opencv/build/lib` with the actual path to the directory containing your
+compiled `cv2` module (usually inside your local `build/lib` or `build/lib/python3` folder).
+
+Once the path is set, run the following command to verify that the module imports cleanly and
+prints the correct version:
+
 @code{.bash}
 python3 -c "import cv2; print('OpenCV version:', cv2.__version__)"
 @endcode
