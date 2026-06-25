@@ -140,10 +140,10 @@ void Mat::convertTo(OutputArray dst, int type_, double alpha, double beta) const
         const int dtype = CV_MAKETYPE(ddepth, channels());
 
         dst.release();
-        if (dims <= 2)
-            dst.create(size(), dtype);
-        else
-            dst.create(dims, size.p, dtype);
+        bool allowTransposed = dims == 1 ||
+            dst.kind() == _InputArray::STD_VECTOR ||
+            (dst.fixedSize() && dst.dims() == 1);
+        dst.create(size, dtype, -1, allowTransposed);
         return;
     }
 

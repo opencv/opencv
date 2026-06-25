@@ -2,83 +2,59 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
+//
+// Unicode text rendering (cv::putText / cv::getTextSize for TrueType/OpenType
+// fonts), implemented on top of HarfBuzz.
+//
+// Pipeline (FontRenderEngine::putText_):
+//   1. Decode the UTF-8 string to UTF-32 code points.
+//   2. Segment the code points into runs of uniform script, direction and font.
+//      Script/category come from HarfBuzz's Unicode functions; direction is a
+//      lightweight RTL heuristic (full UAX#9 BiDi is a TODO). For each code point
+//      the engine picks the first font that covers it: the user font first, then
+//      the built-in fallbacks (sans/italic/unifont); uncovered -> '?'. Adjacent
+//      compatible runs are then merged.
+//   3. Shape each run with hb_shape(), yielding glyph ids and positions
+//      (advances include GPOS kerning); RTL runs come out already reordered.
+//   4. Lay out and render the glyphs. Each glyph is rasterized once by HarfBuzz's
+//      built-in rasterizer (hb-raster) into a grayscale A8 coverage mask and
+//      cached; the layout walks the pen, applies offsets/advances, handles line
+//      wrapping/alignment, and alpha-blends the masks onto the image.
+//
+// Conventions:
+//   * Positions/advances are HarfBuzz 26.6 fixed point (1/64 px); the layout
+//     shifts right by 6 to get pixels.
+//   * Each font is scaled so the ascender maps to the requested pixel size
+//     (matching the historical stb sizing): scale = size*64*upem/ascent.
+//   * The weight argument is 16.16 fixed point; it drives the 'wght' variable
+//     axis (design value = weight/65536).
+//   * The whole engine (cache, scratch buffers, shaping buffer) lives in a
+//     thread_local FontRenderEngine, so it is lock-free across threads.
+//
+// Built without HarfBuzz (WITH_HARFBUZZ=OFF) the public API still links but
+// throws cv::Error::StsNotImplemented (see the #else stub block at end of file).
+//
+
 #include "precomp.hpp"
 
 #include <list>
 #include <tuple>
 #include <unordered_map>
 #include "zlib.h"
-#include "stb_truetype.hpp"
 
 namespace cv
 {
+
+#ifdef HAVE_HARFBUZZ
+
+#include <hb.h>
+#include <hb-ot.h>
+#include <hb-raster.h>
 
 #include "builtin_font_sans.h"
 #include "builtin_font_italic.h"
 #ifdef HAVE_UNIFONT
 #include "builtin_font_uni.h"
-#endif
-
-typedef stbtt_fontinfo font_t;
-
-/////////////////////// Some temporary stub for Harfbuzz API /////////////////////////
-
-#ifndef HAVE_HARFBUZZ
-
-typedef struct hb_glyph_position_t
-{
-    int x_advance;
-    int y_advance;
-    int x_offset;
-    int y_offset;
-} hb_glyph_position_t;
-
-typedef struct hb_font_t
-{
-    int font_data;
-} hb_font_t;
-
-typedef struct hb_buffer_t
-{
-    int buf_data;
-} hb_buffer_t;
-
-typedef enum hb_direction_t
-{
-    HB_DIRECTION_INVALID = 0,
-    HB_DIRECTION_LTR = 1,
-    HB_DIRECTION_RTL = 2
-} hb_direction_t;
-
-typedef enum hb_script_t
-{
-    HB_SCRIPT_INVALID = -1,
-    HB_SCRIPT_UNKNOWN = 0,
-    HB_SCRIPT_COMMON = 1,
-    HB_SCRIPT_INHERITED,
-    HB_SCRIPT_LATIN,
-    HB_SCRIPT_CYRILLIC,
-    HB_SCRIPT_GREEK,
-
-    HB_SCRIPT_HAN,
-    HB_SCRIPT_HIRAGANA,
-
-    HB_SCRIPT_ARABIC,
-    HB_SCRIPT_HEBREW,
-    HB_SCRIPT_SYRIAC,
-    HB_SCRIPT_THAANA
-} hb_script_t;
-
-typedef struct hb_unicode_funcs_t
-{
-    int funcs_data;
-} hb_unicode_funcs_t;
-
-static hb_buffer_t* hb_buffer_create() { return 0; }
-static void hb_buffer_destroy(hb_buffer_t*) {}
-static void hb_buffer_guess_segment_properties(hb_buffer_t *) {}
-static hb_unicode_funcs_t* hb_unicode_funcs_get_default() { return 0; }
-
 #endif
 
 //////////////////////////////////////////////////////////////////////////////////////
@@ -148,8 +124,9 @@ struct FontFace::Impl {
     Impl()
     {
         initParams();
-        ttface = 0;
         hb_font = 0;
+        hb_upem = 0;
+        hb_ascent = 0;
         scalefactor = 1.0;
         italic = false;
     }
@@ -161,29 +138,54 @@ struct FontFace::Impl {
 
     void deleteFont()
     {
-        stbtt_ReleaseFont(&ttface);
+        if (hb_font)
+            hb_font_destroy(hb_font);
+        hb_font = 0;
         currname.clear();
         initParams();
+    }
+
+    // hb_font references fontbuf read-only, so fontbuf must outlive it;
+    // deleteFont() always runs before fontbuf changes.
+    void createHbFont()
+    {
+        if (hb_font)
+        {
+            hb_font_destroy(hb_font);
+            hb_font = 0;
+        }
+        if (fontbuf.empty())
+            return;
+        hb_blob_t* blob = hb_blob_create((const char*)&fontbuf[0], (unsigned)fontbuf.size(),
+                                         HB_MEMORY_MODE_READONLY, 0, 0);
+        hb_face_t* face = hb_face_create(blob, 0);
+        hb_blob_destroy(blob);
+        hb_upem = hb_face_get_upem(face);
+        hb_font = hb_font_create(face);
+        hb_face_destroy(face);
+        // A fresh hb_font has scale == upem, so extents come back in font units.
+        hb_font_extents_t fe;
+        hb_ascent = hb_font_get_h_extents(hb_font, &fe) && fe.ascender > 0 ?
+                    (int)fe.ascender : (int)hb_upem;
     }
 
     void initParams()
     {
         currweight = -1;
         currsize = -1;
-        scale = 1;
     }
 
     bool setStd(const BuiltinFontData& fontdata)
     {
         if(fontdata.size <= 1)
             return false;
-        if(ttface == 0 || currname != fontdata.name)
+        if(hb_font == 0 || currname != fontdata.name)
         {
             deleteFont();
             if(!inflate(fontdata.gzdata, fontdata.size, fontbuf))
                 return false;
-            ttface = stbtt_CreateFont(&fontbuf[0], (unsigned)fontbuf.size(), stbtt_GetFontOffsetForIndex(&fontbuf[0],0));
-            if (!ttface)
+            createHbFont();
+            if (!hb_font)
                 return false;
         }
         currname = fontdata.name;
@@ -197,7 +199,7 @@ struct FontFace::Impl {
     {
         CV_Assert(!fontname.empty());
 
-        if(ttface != 0 && fontname == currname)
+        if(hb_font != 0 && fontname == currname)
             return true;
 
         deleteFont();
@@ -228,8 +230,8 @@ struct FontFace::Impl {
             fontbuf.resize(srcdata.size());
             std::copy(srcdata.begin(), srcdata.end(), fontbuf.begin());
         }
-        ttface = stbtt_CreateFont(&fontbuf[0], (unsigned)fontbuf.size(), stbtt_GetFontOffsetForIndex(&fontbuf[0],0));
-        if (!ttface)
+        createHbFont();
+        if (!hb_font)
             return false;
         currname = fontname;
         initParams();
@@ -238,22 +240,21 @@ struct FontFace::Impl {
 
     bool setParams(int size, int weight)
     {
-        if (ttface == 0)
+        if (!hb_font)
             return false;
         if (std::abs(size - currsize) < 1e-3 &&
             (weight == currweight || weight == 0))
             return true;
-
-        if (weight != currweight && weight != 0) {
-            int params[] = {STBTT_FOURCC('w','g','h','t'), weight};
-            if (!stbtt_SetInstance(ttface, params, 1, 0))
-                return false;
+        int hbscale = (hb_ascent > 0)
+                    ? cvRound((double)size * 64.0 * hb_upem / hb_ascent)
+                    : size*64;
+        hb_font_set_scale(hb_font, hbscale, hbscale);
+        if (weight != 0)
+        {
+            hb_variation_t var = { HB_TAG('w','g','h','t'), weight / 65536.0f };
+            hb_font_set_variations(hb_font, &var, 1);
             currweight = weight;
         }
-
-        if(size != currsize)
-            scale = stbtt_ScaleForPixelHeightNoDesc(ttface, (float)size);
-
         currsize = size;
         return true;
     }
@@ -263,9 +264,9 @@ struct FontFace::Impl {
     bool italic;
     int currsize;
     int currweight;
-    float scale;
-    stbtt_fontinfo* ttface;
     hb_font_t* hb_font;
+    unsigned hb_upem;   // units per em (HarfBuzz)
+    int hb_ascent;      // unscaled hhea ascender, for stb-compatible text sizing
     std::vector<uchar> fontbuf;
 };
 
@@ -273,20 +274,24 @@ struct GlyphCacheKey
 {
     GlyphCacheKey()
     {
-        ttface = 0;
+        face = 0;
+        glyph_index = 0;
         size = 0;
         weight = 0;
+        scale = 1.f;
     }
-    GlyphCacheKey(font_t* ttface_, int index_, double size_, int weight_, float scale_)
+    // 'face' is an opaque per-font identity: the stb font in the stb path,
+    // the hb_font in the HarfBuzz path.
+    GlyphCacheKey(const void* face_, int index_, double size_, int weight_, float scale_ = 1.f)
     {
-        ttface = ttface_;
+        face = face_;
         glyph_index = index_;
         size = cvRound(size_*256);
         weight = weight_;
         scale = scale_;
     }
 
-    font_t* ttface;
+    const void* face;
     int glyph_index;
     int size;
     int weight;
@@ -295,7 +300,7 @@ struct GlyphCacheKey
 
 static bool operator == (const GlyphCacheKey& k1, const GlyphCacheKey& k2)
 {
-    return k1.ttface == k2.ttface && k1.glyph_index == k2.glyph_index &&
+    return k1.face == k2.face && k1.glyph_index == k2.glyph_index &&
            k1.size == k2.size && k1.weight == k2.weight && k1.scale == k2.scale;
 }
 
@@ -314,7 +319,7 @@ struct GlyphCacheHash
 {
     size_t operator()(const GlyphCacheKey& key) const noexcept
     {
-        size_t hs[] = {(size_t)(void*)key.ttface, (size_t)key.glyph_index,
+        size_t hs[] = {(size_t)key.face, (size_t)key.glyph_index,
             (size_t)key.size, (size_t)key.weight}; // do not include scale, because it's completely defined by size
         return hash_seq(hs, sizeof(hs)/sizeof(hs[0]));
     }
@@ -346,22 +351,19 @@ struct TextSegment
 {
     TextSegment()
     {
-        ttface = 0;
         fontidx = 0;
         start = end = 0;
         script = HB_SCRIPT_UNKNOWN;
         dir = HB_DIRECTION_LTR;
     }
-    TextSegment(font_t* ttface_, int fontidx_, int start_, int end_, hb_script_t script_, hb_direction_t dir_)
+    TextSegment(int fontidx_, int start_, int end_, hb_script_t script_, hb_direction_t dir_)
     {
-        ttface = ttface_;
         fontidx = fontidx_;
         start = start_;
         end = end_;
         script = script_;
         dir = dir_;
     }
-    font_t* ttface;
     int fontidx;
     int start, end;
     hb_script_t script;
@@ -370,17 +372,16 @@ struct TextSegment
 
 struct FontGlyph
 {
-    FontGlyph() { ttface = 0; index = -1; scale = 1.f; }
-    FontGlyph(font_t* ttface_, int glyph_index_, const hb_glyph_position_t& pos_, float scale_)
+    FontGlyph() { hb_font = 0; index = -1; }
+    FontGlyph(hb_font_t* hb_font_, int glyph_index_,
+              const hb_glyph_position_t& pos_)
     {
-        ttface = ttface_;
+        hb_font = hb_font_;
         index = glyph_index_;
         pos = pos_;
-        scale = scale_;
     }
-    font_t* ttface;
+    hb_font_t* hb_font;
     int index;
-    float scale;
     hb_glyph_position_t pos;
 };
 
@@ -395,19 +396,16 @@ public:
         hb_buffer_guess_segment_properties(hb_buf);
         hb_uni_funcs = hb_unicode_funcs_get_default();
         max_cache_size = (size_t)MAX_CACHE_SIZE;
-        glyph_buf = 0;
-        glyph_bufsz = 0;
+        raster_draw = 0;
     }
 
     ~FontRenderEngine()
     {
         hb_buffer_destroy(hb_buf);
+        if(raster_draw)
+            hb_raster_draw_destroy(raster_draw);  // also frees its recycled image
         for(int i = 0; i < BUILTIN_FONTS_NUM; i++)
             builtin_ffaces[i] = FontFace();
-        if (glyph_buf)
-            free(glyph_buf);
-        glyph_buf = 0;
-        glyph_bufsz = 0;
     }
 
     void addToCache(const GlyphCacheKey& key, const GlyphCacheVal& val)
@@ -459,12 +457,12 @@ protected:
     size_t max_cache_size;
 
     hb_buffer_t* hb_buf;
+    hb_raster_draw_t* raster_draw;  // reused across glyphs (thread_local engine)
     std::vector<unsigned> u32buf;
     std::vector<TextSegment> segments;
     std::vector<FontGlyph> glyphs;
     std::vector<uchar> pixbuf;
-    uchar* glyph_buf;
-    int glyph_bufsz;
+    std::vector<uchar> glyph_buf;
 };
 
 thread_local FontRenderEngine fontRenderEngine;
@@ -481,7 +479,7 @@ bool FontFace::set(const String& fontname_)
     String fontname = fontname_;
     if(fontname.empty())
         fontname = "sans";
-    if(impl->ttface != 0 && impl->currname == fontname)
+    if(impl->hb_font != 0 && impl->currname == fontname)
         return true;
     int i = 0;
     for( ; i < BUILTIN_FONTS_NUM; i++ )
@@ -498,7 +496,7 @@ bool FontFace::set(const String& fontname_)
     if( i >= 0 )
     {
         FontFace& builtin_fface = engine.getStdFontFace(i);
-        if(builtin_fface.impl->ttface)
+        if(builtin_fface.impl->hb_font)
         {
             impl = builtin_fface.impl;
             ok = true;
@@ -506,7 +504,7 @@ bool FontFace::set(const String& fontname_)
     }
     else
     {
-        if(impl->ttface != 0)
+        if(impl->hb_font != 0)
             impl = makePtr<Impl>();
         ok = impl->set(fontname);
     }
@@ -526,7 +524,7 @@ bool FontFace::getBuiltinFontData(const String& fontname_,
         if(builtinFontData[i].name == fontname && builtinFontData[i].size > 1)
         {
             FontFace& builtin_fface = fontRenderEngine.getStdFontFace(i);
-            if( builtin_fface.impl->ttface )
+            if( builtin_fface.impl->hb_font )
             {
                 std::vector<uchar>& fbuf = builtin_fface.impl->fontbuf;
                 size = fbuf.size();
@@ -547,28 +545,53 @@ bool FontFace::setInstance(const std::vector<int>& params)
 {
     if (params.empty())
         return true;
-    if (!impl->ttface)
-        return false;
     CV_Assert(params.size() % 2 == 0);
-    return stbtt_SetInstance(impl->ttface, &params[0], (int)(params.size()/2), 1) > 0;
+    if (!impl->hb_font)
+        return false;
+    int n = (int)(params.size()/2);
+    std::vector<hb_variation_t> vars((size_t)n);
+    for (int i = 0; i < n; i++)
+    {
+        unsigned t = (unsigned)params[i*2];
+        // params hold CV_FOURCC tags (LSB-first); HarfBuzz wants MSB-first tags.
+        vars[i].tag = ((t & 0xFF) << 24) | (((t >> 8) & 0xFF) << 16) |
+                      (((t >> 16) & 0xFF) << 8) | ((t >> 24) & 0xFF);
+        // axis values arrive in 16.16 fixed point.
+        vars[i].value = params[i*2+1] / 65536.0f;
+    }
+    hb_font_set_variations(impl->hb_font, vars.data(), n);
+    // Force the next setParams() to re-apply weight (an explicit weight should
+    // override this instance).
+    impl->currweight = -1;
+    return true;
 }
 
 bool FontFace::getInstance(std::vector<int>& params) const
 {
-    if (!impl->ttface)
+    if (!impl->hb_font)
         return false;
 
-    stbtt_axisinfo axes[STBTT_MAX_AXES];
-    int i, naxes = stbtt_GetInstance(impl->ttface, axes, STBTT_MAX_AXES);
-    params.resize(naxes*2);
+    hb_face_t* face = hb_font_get_face(impl->hb_font);
+    unsigned naxes = hb_ot_var_get_axis_count(face);
+    if (naxes == 0)
+        return false;
 
-    for( i = 0; i < naxes; i++ )
+    std::vector<hb_ot_var_axis_info_t> axes(naxes);
+    unsigned n = naxes;
+    hb_ot_var_get_axis_infos(face, 0, &n, &axes[0]);
+
+    unsigned ncoords = 0;
+    const float* coords = hb_font_get_var_coords_design(impl->hb_font, &ncoords);
+
+    params.resize(naxes*2);
+    for( unsigned i = 0; i < naxes; i++ )
     {
-        int tag = axes[i].tag;
+        unsigned tag = axes[i].tag;  // HarfBuzz tag is MSB-first
         params[i*2] = CV_FOURCC((char)(tag >> 24), (char)(tag >> 16), (char)(tag >> 8), (char)tag);
-        params[i*2+1] = axes[i].currval;
+        float v = (i < ncoords && coords) ? coords[i] : axes[i].default_value;
+        params[i*2+1] = cvRound(v * 65536.0);
     }
-    return naxes > 0;
+    return true;
 }
 
 static unsigned calccrc(const std::vector<uchar>& buf)
@@ -844,7 +867,6 @@ static void drawCharacter(
     }
 }
 
-#ifdef HAVE_HARFBUZZ
 //by amarullz from https://stackoverflow.com/questions/5423960/how-can-i-recognize-rtl-strings-in-c
 static bool isRightToLeft(unsigned c)
 {
@@ -881,7 +903,20 @@ static bool isRightToLeft(unsigned c)
     ((c>=0x10B40)&&(c<=0x10C48))||
     ((c>=0x1EE00)&&(c<=0x1EEBB)));
 }
-#endif
+
+// Glyph id for a code point, or 0 if the font has no glyph for it.
+static int hbGlyphIndex(hb_font_t* font, unsigned c)
+{
+    hb_codepoint_t g = 0;
+    return font && hb_font_get_nominal_glyph(font, c, &g) ? (int)g : 0;
+}
+
+// Round fixed-point value to the nearest whole pixel.
+static inline int roundFixPt(int64_t v, int n) {
+    int64_t half  = int64_t(1) << (n - 1);
+    int64_t delta = half - 1 + ((v >> n) & 1);
+    return int((v + delta) >> n);
+}
 
 Point FontRenderEngine::putText_(
     Mat& img, Size imgsize, const String& str_, Point org,
@@ -889,13 +924,13 @@ Point FontRenderEngine::putText_(
     int weight_, PutTextFlags flags, Range wrapRange,
     bool render, Rect* bbox_ )
 {
+    constexpr int FRAC_BITS = 6;
     bool bottom_left = (flags & PUT_TEXT_ORIGIN_BL) != 0;
-    int saved_weights[BUILTIN_FONTS_NUM+1]={0};
     int weight = weight_*65536;
 
     if(fontface.getName().empty())
         fontface.set("sans");
-    if(!fontface->ttface)
+    if(!fontface->hb_font)
         CV_Error(Error::StsError, "No available fonts for putText()");
 
     Point pen = org;
@@ -926,7 +961,6 @@ Point FontRenderEngine::putText_(
         return org;
     }
 
-    saved_weights[BUILTIN_FONTS_NUM] = stbtt_GetWeight(fontface->ttface);
     fontface->setParams(size, weight);
 
     for(j = 0; j < BUILTIN_FONTS_NUM; j++)
@@ -934,11 +968,8 @@ Point FontRenderEngine::putText_(
         FontFace& fface = builtin_ffaces[j];
         if(!builtin_ffaces_initialized)
             fface.set(builtinFontData[j].name);
-
-        if (fface->ttface) {
-            saved_weights[j] = stbtt_GetWeight(fface->ttface);
+        if (fface->hb_font)
             fface->setParams(size, weight);
-        }
     }
     builtin_ffaces_initialized = true;
 
@@ -989,24 +1020,20 @@ Point FontRenderEngine::putText_(
     unsigned* chars = &u32buf[0];
     int prev_dy = 0;
 
-#ifdef HAVE_HARFBUZZ
     hb_direction_t glob_dir = HB_DIRECTION_INVALID;
-#endif
 
     while(len > 0)
     {
         int nextline_dy = 0;
-        font_t* ttface0 = fontface->ttface;
-        float scale0 = fontface->scale;
-        font_t* curr_ttface = ttface0;
 
         segments.clear();
         glyphs.clear();
 
-    #ifdef HAVE_HARFBUZZ
         hb_script_t curr_script = HB_SCRIPT_UNKNOWN;
         hb_direction_t curr_dir = HB_DIRECTION_INVALID;
         int curr_fontidx = -1;
+        hb_font_t* hb_font0 = fontface->hb_font;
+        hb_font_t* curr_hb_font = hb_font0;
 
         int k, segstart = 0, punctstart = -1;
         // TODO: possibly implement https://unicode.org/reports/tr9/ or find compact implementation of it
@@ -1017,7 +1044,7 @@ Point FontRenderEngine::putText_(
                 break;
             hb_unicode_general_category_t cat = hb_unicode_general_category(hb_uni_funcs, c);
             hb_script_t script = hb_unicode_script(hb_uni_funcs, c);
-            int glyph_index = stbtt_FindGlyphIndex(curr_ttface, c);
+            int glyph_index = hbGlyphIndex(curr_hb_font, c);
             bool is_rtl = isRightToLeft(c);
             hb_direction_t dir = HB_DIRECTION_INVALID;
 
@@ -1088,11 +1115,11 @@ Point FontRenderEngine::putText_(
                     glob_dir = dir;
             }
 
-            font_t* ttface = 0;
+            hb_font_t* cand_hb = hb_font0;
             for(j = -1; j < BUILTIN_FONTS_NUM; j++)
             {
-                ttface = j < 0 ? ttface0 : builtin_ffaces[j]->ttface;
-                glyph_index = stbtt_FindGlyphIndex(ttface, c);
+                cand_hb = j < 0 ? hb_font0 : builtin_ffaces[j]->hb_font;
+                glyph_index = hbGlyphIndex(cand_hb, c);
                 if(glyph_index != 0)
                     break;
                 if(j+1 == BUILTIN_FONTS_NUM)
@@ -1117,7 +1144,7 @@ Point FontRenderEngine::putText_(
             {
                 for(k = i; k > punctstart; k--)
                 {
-                    if(stbtt_FindGlyphIndex(ttface, chars[k-1]) == 0)
+                    if(hbGlyphIndex(cand_hb, chars[k-1]) == 0)
                         break;
                 }
                 seglen = k - segstart;
@@ -1126,12 +1153,12 @@ Point FontRenderEngine::putText_(
             if(seglen > 0)
             {
                 //printf("segment of %d characters pushed\n", seglen);
-                segments.push_back(TextSegment(curr_ttface, curr_fontidx,
+                segments.push_back(TextSegment(curr_fontidx,
                     segstart, segstart + seglen, curr_script, curr_dir));
             }
             segstart += seglen;
             punctstart = punctstart >= 0 && is_punct ? segstart : -1;
-            curr_ttface = ttface;
+            curr_hb_font = cand_hb;
             curr_fontidx = fontidx;
             curr_script = script;
             curr_dir = dir;
@@ -1139,7 +1166,7 @@ Point FontRenderEngine::putText_(
 
         if(i > segstart)
         {
-            segments.push_back(TextSegment(curr_ttface, curr_fontidx,
+            segments.push_back(TextSegment(curr_fontidx,
                 segstart, i, curr_script, curr_dir));
         }
 
@@ -1147,7 +1174,6 @@ Point FontRenderEngine::putText_(
             glob_dir = HB_DIRECTION_LTR;
 
         int nsegments = (int)segments.size();
-        ttface0 = segments[0].ttface;
 
         if(nsegments > 0)
         {
@@ -1168,7 +1194,7 @@ Point FontRenderEngine::putText_(
             if(script == HB_SCRIPT_INVALID)
                 seg.script = script = HB_SCRIPT_COMMON;
             TextSegment& prev = segments[k];
-            if(seg.ttface == prev.ttface && seg.dir == prev.dir &&
+            if(seg.fontidx == prev.fontidx && seg.dir == prev.dir &&
                (script == prev.script ||
                 ((script == HB_SCRIPT_COMMON || script == HB_SCRIPT_LATIN ||
                   script == HB_SCRIPT_CYRILLIC || script == HB_SCRIPT_GREEK ||
@@ -1207,7 +1233,6 @@ Point FontRenderEngine::putText_(
             const TextSegment& seg = segments[j];
             int fontidx = seg.fontidx;
             FontFace& fface = fontidx < 0 ? fontface : builtin_ffaces[fontidx];
-            font_t* ttface = fface->ttface;
             hb_font_t* hb_font = fface->hb_font;
             hb_buffer_reset(hb_buf);
             hb_buffer_add_utf32(hb_buf, chars, len, seg.start, seg.end - seg.start);
@@ -1221,45 +1246,10 @@ Point FontRenderEngine::putText_(
 
             for(k = 0; k < (int)nglyphs; k++)
             {
-                FontGlyph glyph(ttface, ginfo[k].codepoint, gpos[k], fface->scale);
+                FontGlyph glyph(hb_font, ginfo[k].codepoint, gpos[k]);
                 glyphs.push_back(glyph);
             }
         }
-    #else
-        for(i = 0; i < len; i++)
-        {
-            int c = chars[i];
-            if(c == '\n')
-                break;
-            font_t* ttface = ttface0;
-            float scale = scale0;
-            int q_glyph_index = stbtt_FindGlyphIndex(ttface0, '?');
-            for(j = -1; j < BUILTIN_FONTS_NUM; j++)
-            {
-                if (j >= 0)
-                {
-                    ttface = builtin_ffaces[j]->ttface;
-                    scale = builtin_ffaces[j]->scale;
-                }
-                int glyph_index = ttface ? stbtt_FindGlyphIndex(ttface, c) : 0;
-                if(glyph_index == 0)
-                {
-                    if (j+1 < BUILTIN_FONTS_NUM)
-                        continue;
-                    ttface = ttface0;
-                    scale = scale0;
-                    glyph_index = q_glyph_index;
-                }
-                hb_glyph_position_t pos;
-                pos.x_advance = pos.y_advance = 0;
-                pos.x_offset = pos.y_offset = 0;
-                glyphs.push_back(FontGlyph(ttface, glyph_index, pos, scale));
-                break;
-            }
-        }
-        if (i == 0)
-            nextline_dy = prev_dy;
-    #endif
 
         chars += i;
         len -= i;
@@ -1274,26 +1264,28 @@ Point FontRenderEngine::putText_(
         // (TODO: in the case of right alignment we need to render it from the right-most character)
         int nglyphs = (int)glyphs.size();
         int space_glyph = -1;
-        curr_ttface = 0;
         min_x = std::min(min_x, pen.x);
         max_x = std::max(max_x, pen.x);
 
-        curr_ttface = 0;
+        curr_hb_font = 0;
         int ascent = 0, descent = 0, linegap = 0;
         for(j = 0; j < nglyphs; j++)
         {
             const FontGlyph& glyph = glyphs[alignment == PUT_TEXT_ALIGN_RIGHT ? nglyphs - j - 1 : j];
-            font_t* ttface = glyph.ttface;
-            if(ttface != curr_ttface)
+            hb_font_t* hbf = glyph.hb_font;
+            if(hbf != curr_hb_font)
             {
-                curr_ttface = ttface;
-                space_glyph = stbtt_FindGlyphIndex(ttface, ' ');
-                stbtt_GetFontVMetrics(ttface, &ascent, &descent, &linegap);
+                curr_hb_font = hbf;
+                hb_codepoint_t sp = 0;
+                space_glyph = hb_font_get_nominal_glyph(hbf, ' ', &sp) ? (int)sp : -1;
+                hb_font_extents_t fext;
+                hb_font_get_h_extents(hbf, &fext);
+                ascent  = fext.ascender;
+                descent = fext.descender;
+                linegap = fext.line_gap;
                 if (linegap == 0) linegap = ascent - descent;
             }
-
-            float scale = glyph.scale;
-            GlyphCacheKey key(curr_ttface, glyph.index, size, weight, scale);
+            GlyphCacheKey key(hbf, glyph.index, size, weight);
             GlyphCacheVal* cached = findCachedGlyph(key);
             const uchar* bitmap_buf = 0;
             int bitmap_step = 0;
@@ -1302,22 +1294,68 @@ Point FontRenderEngine::putText_(
             if(!cached)
             {
                 cached = &new_cached;
-                int w=0, h=0, xoff=0, yoff=0;
-                float advx = 0.f;
-                bitmap_buf = stbtt_GetGlyphBitmapSubpixelRealloc(ttface, scale, scale, 0.f, 0.f,
-                                glyph.index, &w, &h, &bitmap_step, &xoff, &yoff, &advx, &glyph_buf, &glyph_bufsz);
-                if(!bitmap_buf)
+                int w=0, h=0;
+                // One rasterizer per thread_local engine: its internal scratch
+                // (edges, row buffers, edge buckets) and the output image are
+                // reused across glyphs instead of reallocated per glyph.
+                if(!raster_draw)
+                    raster_draw = hb_raster_draw_create_or_fail();
+                hb_raster_draw_t* rd = raster_draw;
+                if(!rd)
                     continue;
-                //printf("j=%d. bw=%d, bh=%d, step=%d, xoff=%d, yoff=%d, advx=%.1f, glyph_bufsz=%d\n", j, w, h, bitmap_step, xoff, yoff, advx, glyph_bufsz);
+                // Outline coords come in 26.6 (font scaled to size*64); the
+                // rasterizer divides by the scale factor, so 64 -> device pixels
+                // and the output extents are whole pixels.
+                hb_raster_draw_set_scale_factor(rd, 64.f, 64.f);
+                hb_raster_extents_t zext;
+                memset(&zext, 0, sizeof(zext));
+                hb_raster_draw_set_extents(rd, &zext);
+                hb_glyph_extents_t gext;
+                if(hb_font_get_glyph_extents(hbf, glyph.index, &gext))
+                    hb_raster_draw_set_glyph_extents(rd, &gext);
+                hb_raster_draw_glyph(rd, hbf, glyph.index);
+                hb_raster_image_t* rimg = hb_raster_draw_render(rd);
+
+                hb_raster_extents_t rext;
+                memset(&rext, 0, sizeof(rext));
+                const uint8_t* rbuf = 0;
+                if(rimg)
+                {
+                    hb_raster_image_get_extents(rimg, &rext);
+                    rbuf = hb_raster_image_get_buffer(rimg);
+                }
+                w = (int)rext.width;
+                h = (int)rext.height;
+
+                // Copy the A8 mask into the persistent scratch buffer (it must
+                // outlive the raster image) flipping rows: hb-raster buffers are
+                // bottom-up (y-up), drawCharacter expects top-down.
+                bitmap_step = w;
+                if(w > 0 && h > 0 && rbuf)
+                {
+                    size_t need = (size_t)w*h;
+                    if(need > glyph_buf.size())
+                        glyph_buf.resize(need);
+                    unsigned src_step = rext.stride ? rext.stride : (unsigned)w;
+                    for(int yy = 0; yy < h; yy++)
+                        memcpy(glyph_buf.data() + yy*w, rbuf + (size_t)(h-1-yy)*src_step, w);
+                }
+                bitmap_buf = glyph_buf.empty() ? 0 : glyph_buf.data();
+
+                // Hand the image back to the rasterizer to reuse next time
+                // instead of freeing it (render() already cleared geometry).
+                if(rimg)
+                    hb_raster_draw_recycle_image(rd, rimg);
 
                 cached->width = w;
                 cached->height = h;
-                cached->advance.x = cvRound(advx*64);
+                cached->advance.x = 0;  // advance comes from the shaped position
                 cached->advance.y = 0;
-                cached->ascent = cvRound(ascent*glyph.scale);
-                cached->linegap = cvRound(linegap*glyph.scale);
-                cached->horiBearingX = (int)(xoff*64);
-                cached->horiBearingY = (int)(-yoff*64);
+                cached->ascent = cvRound(ascent/double(1 << FRAC_BITS));
+                cached->linegap = cvRound(linegap/double(1 << FRAC_BITS));
+                // extents are whole pixels (scale factor 64); bearings are 1/64 px
+                cached->horiBearingX = rext.x_origin * (1 << FRAC_BITS);
+                cached->horiBearingY = (rext.y_origin + h) * (1 << FRAC_BITS);
 
                 bbox = Rect(0, 0, w, h);
 
@@ -1344,8 +1382,14 @@ Point FontRenderEngine::putText_(
             }
 
             const hb_glyph_position_t& pos = glyph.pos;
-            int dx = cached->advance.x >> 6;
-            int dy = cached->advance.y >> 6;
+            // Advances are 26.6 fixed point. Round each advance to the nearest
+            // whole pixel and keep the pen on integer pixels (rather than flooring
+            // with >>6): glyphs are rasterized/cached at integer positions, so a
+            // sub-pixel pen would only add jitter to the inter-glyph gaps, while
+            // flooring every advance systematically tightens the spacing. Rounding
+            // the advance keeps the gaps even and removes that bias.
+            int dx = roundFixPt(pos.x_advance, FRAC_BITS);
+            int dy = roundFixPt(pos.y_advance, FRAC_BITS);
             int new_pen_x = pen.x + dx*alignSign;
             nextline_dy = max(nextline_dy, cached->linegap);
             // TODO: this wrapping algorithm is quite dumb,
@@ -1363,14 +1407,15 @@ Point FontRenderEngine::putText_(
 
             if(!wrapped)
                 max_dy = std::max(max_dy, cached->ascent);
-            int baseline = cached->height - (cached->horiBearingY >> 6);
+            int baseline = cached->height - (cached->horiBearingY >> FRAC_BITS);
             max_baseline = std::max(max_baseline, baseline);
 
             if(alignment == PUT_TEXT_ALIGN_RIGHT)
                 pen.x = new_pen_x;
 
-            int x = pen.x + bbox.x + ((pos.x_offset + cached->horiBearingX) >> 6);
-            int y = pen.y + (bottom_left ? 1 : -1)*(((pos.y_offset + cached->horiBearingY) >> 6) - bbox.y);
+            int x = pen.x + bbox.x + ((pos.x_offset + cached->horiBearingX) >> FRAC_BITS);
+            int y = pen.y + (bottom_left ? 1 : -1)*(((pos.y_offset +
+                                                      cached->horiBearingY) >> FRAC_BITS) - bbox.y);
 
             if( render )
             {
@@ -1399,17 +1444,6 @@ Point FontRenderEngine::putText_(
         else
             *bbox_ = Rect(min_x, org.y - max_dy, max_x - min_x + 1, pen.y - org.y + max_dy + max_baseline);
     }
-
-    // restore the weights
-    if (weight != 0)
-        for(j = 0; j <= BUILTIN_FONTS_NUM; j++)
-        {
-            font_t* ttface = (j < BUILTIN_FONTS_NUM ? builtin_ffaces[j] : fontface)->ttface;
-            if (!ttface || stbtt_GetWeight(ttface) == saved_weights[j])
-                continue;
-            int params[] = {STBTT_FOURCC('w', 'g', 'h', 't'), saved_weights[j]};
-            stbtt_SetInstance(ttface, params, 1, 0);
-        }
 
     return pen;
 }
@@ -1445,6 +1479,38 @@ Rect getTextSize(Size imgsize, const String& str, Point org,
                               weight, flags, wrap, false, &bbox);
     return bbox;
 }
+
+#else // HAVE_HARFBUZZ
+
+// Text rendering is implemented entirely on top of HarfBuzz. When OpenCV is
+// built without it, the public text API is present but throws.
+struct FontFace::Impl {};
+
+FontFace::FontFace() {}
+FontFace::FontFace(const String&) {}
+bool FontFace::set(const String&) { return false; }
+String FontFace::getName() const { return String(); }
+FontFace::Impl* FontFace::operator -> () { return impl.get(); }
+FontFace::~FontFace() {}
+bool FontFace::setInstance(const std::vector<int>&) { return false; }
+bool FontFace::getInstance(std::vector<int>&) const { return false; }
+bool FontFace::getBuiltinFontData(const String&, const uchar*&, size_t&) { return false; }
+
+#define OPENCV_NO_TEXT_RENDERING_MSG \
+    "Text rendering is not supported. Compile OpenCV with WITH_HARFBUZZ=ON."
+
+Point putText(InputOutputArray, const String&, Point, Scalar,
+              FontFace&, int, int, PutTextFlags, Range)
+{
+    CV_Error(Error::StsNotImplemented, OPENCV_NO_TEXT_RENDERING_MSG);
+}
+
+Rect getTextSize(Size, const String&, Point, FontFace&, int, int, PutTextFlags, Range)
+{
+    CV_Error(Error::StsNotImplemented, OPENCV_NO_TEXT_RENDERING_MSG);
+}
+
+#endif // HAVE_HARFBUZZ
 
 }
 

@@ -682,13 +682,14 @@ void LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
 
         // variable to hold processed version of the original input
         MatShape input_dims = shape(input);
-        if (input_dims.empty()){
+        const auto& currSubscriptIndices = inputSubscriptIndices[inputIter];
+
+        if (input_dims.empty() || currSubscriptIndices.empty()){
+            CV_CheckEQ(total(input_dims), (size_t)1, "Einsum: input with no subscript labels must be a scalar");
             homogenizedInputDims[inputIter] = MatShape(numLetterIndices, 1);
             ++inputIter;
             continue;
         }
-
-        const auto& currSubscriptIndices = inputSubscriptIndices[inputIter];
 
         // There should be subscript index (subscript label) for each dim of the input
         CV_CheckEQ(input_dims.size(), currSubscriptIndices.size(),

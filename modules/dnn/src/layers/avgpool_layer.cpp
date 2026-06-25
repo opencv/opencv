@@ -41,6 +41,7 @@ static void avgPool32f(const void* inp_, void* out_,
         int planesize = D*H*W*C0;
         int SZ = cs.strides[0], SY = cs.strides[1], SX = cs.strides[2];
         int padZ0 = cs.pads[0], padY0 = cs.pads[1], padX0 = cs.pads[2];
+        int padZ1 = cs.pads[MAX_POOL_DIMS], padY1 = cs.pads[MAX_POOL_DIMS+1], padX1 = cs.pads[MAX_POOL_DIMS+2];
         int inner_z0 = cs.inner[0], inner_z1 = cs.inner[MAX_POOL_DIMS];
         int inner_y0 = cs.inner[1], inner_y1 = cs.inner[MAX_POOL_DIMS + 1];
         int inner_x0 = cs.inner[2], inner_x1 = cs.inner[MAX_POOL_DIMS + 2];
@@ -52,7 +53,7 @@ static void avgPool32f(const void* inp_, void* out_,
         float* out = (float*)out_ + nc0*planesize;
         float iksize = 1.f/ksize;
 
-#if CV_SIMD
+#if CV_SIMD || CV_SIMD_SCALABLE
         int nlanes = VTraits<v_float32>::vlanes();
         CV_Assert(C0 == nlanes || C0 == nlanes*2 || C0 % (nlanes*4) == 0);
         v_float32 z = vx_setzero_f32();
@@ -68,22 +69,25 @@ static void avgPool32f(const void* inp_, void* out_,
                         y0 >= inner_y0 && y0 < inner_y1 ? inner_x0 : W;
                     int yi_ = y0*SY - padY0;
 
-                #if !(CV_SIMD)
+                #if !(CV_SIMD || CV_SIMD_SCALABLE)
                     memset(out, 0, W*C0*sizeof(out[0]));
                 #endif
 
                     for(;;) {
-                    #if CV_SIMD
+                    #if CV_SIMD || CV_SIMD_SCALABLE
                         if (nlanes == C0) {
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
                                 v_float32 s0 = z;
-                                int nitems = 0;
+                                int nitems = 0, npadded = 0;
                                 for (int k = 0; k < ksize; k++) {
                                     int zi = zi_ + zyxtab[k*MAX_POOL_DIMS];
                                     int yi = yi_ + zyxtab[k*MAX_POOL_DIMS+1];
                                     int xi = xi_ + zyxtab[k*MAX_POOL_DIMS+2];
                                     v_float32 v0;
+                                    npadded += (zi >= -padZ0 && zi < Di + padZ1 &&
+                                                yi >= -padY0 && yi < Hi + padY1 &&
+                                                xi >= -padX0 && xi < Wi + padX1);
                                     if ((unsigned)zi >= (unsigned)Di ||
                                         (unsigned)yi >= (unsigned)Hi ||
                                         (unsigned)xi >= (unsigned)Wi)
@@ -92,7 +96,7 @@ static void avgPool32f(const void* inp_, void* out_,
                                     s0 = v_add(s0, v0);
                                     nitems++;
                                 }
-                                s0 = v_mul(s0, count_include_pad ? vscale0 : vx_setall_f32(1.f/nitems));
+                                s0 = v_mul(s0, vx_setall_f32(1.f/(count_include_pad ? npadded : nitems)));
                                 vx_store(out + x0*C0, s0);
                             }
                         } else {
@@ -100,12 +104,15 @@ static void avgPool32f(const void* inp_, void* out_,
                                 int xi_ = x0*SX - padX0;
                                 for (int c = 0; c < C0; c += nlanes*2) {
                                     v_float32 s0 = z, s1 = z;
-                                    int nitems = 0;
+                                    int nitems = 0, npadded = 0;
                                     for (int k = 0; k < ksize; k++) {
                                         int zi = zi_ + zyxtab[k*MAX_POOL_DIMS];
                                         int yi = yi_ + zyxtab[k*MAX_POOL_DIMS+1];
                                         int xi = xi_ + zyxtab[k*MAX_POOL_DIMS+2];
                                         v_float32 v0, v1;
+                                        npadded += (zi >= -padZ0 && zi < Di + padZ1 &&
+                                                    yi >= -padY0 && yi < Hi + padY1 &&
+                                                    xi >= -padX0 && xi < Wi + padX1);
                                         if ((unsigned)zi >= (unsigned)Di ||
                                             (unsigned)yi >= (unsigned)Hi ||
                                             (unsigned)xi >= (unsigned)Wi)
@@ -117,7 +124,7 @@ static void avgPool32f(const void* inp_, void* out_,
                                         s1 = v_add(s1, v1);
                                         nitems++;
                                     }
-                                    v_float32 vscale = count_include_pad ? vscale0 : vx_setall_f32(1.f/nitems);
+                                    v_float32 vscale = vx_setall_f32(1.f/(count_include_pad ? npadded : nitems));
                                     s0 = v_mul(s0, vscale);
                                     s1 = v_mul(s1, vscale);
                                     vx_store(out + x0*C0 + c, s0);
@@ -128,11 +135,14 @@ static void avgPool32f(const void* inp_, void* out_,
                     #else
                         for (; x0 < x1; x0++) {
                             int xi_ = x0*SX - padX0;
-                            int nitems = 0;
+                            int nitems = 0, npadded = 0;
                             for (int k = 0; k < ksize; k++) {
                                 int zi = zi_ + zyxtab[k*MAX_POOL_DIMS];
                                 int yi = yi_ + zyxtab[k*MAX_POOL_DIMS+1];
                                 int xi = xi_ + zyxtab[k*MAX_POOL_DIMS+2];
+                                npadded += (zi >= -padZ0 && zi < Di + padZ1 &&
+                                            yi >= -padY0 && yi < Hi + padY1 &&
+                                            xi >= -padX0 && xi < Wi + padX1);
                                 if ((unsigned)zi >= (unsigned)Di ||
                                     (unsigned)yi >= (unsigned)Hi ||
                                     (unsigned)xi >= (unsigned)Wi)
@@ -142,7 +152,7 @@ static void avgPool32f(const void* inp_, void* out_,
                                     out[x0*C0 + c] += inptr[c];
                                 nitems++;
                             }
-                            float scale = count_include_pad ? iksize : 1.f/nitems;
+                            float scale = count_include_pad ? 1.f/npadded : 1.f/nitems;
                             for (int c = 0; c < C0; c++)
                                 out[x0*C0 + c] *= scale;
                         }
@@ -152,7 +162,7 @@ static void avgPool32f(const void* inp_, void* out_,
                             break;
                         x1 = inner_x1;
 
-                    #if CV_SIMD
+                    #if CV_SIMD || CV_SIMD_SCALABLE
                         if (nlanes == C0) {
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
@@ -264,6 +274,7 @@ static void avgPool16xf(const _Tp* inp_, _Tp* out_,
         int planesize = D*H*W*C0;
         int SZ = cs.strides[0], SY = cs.strides[1], SX = cs.strides[2];
         int padZ0 = cs.pads[0], padY0 = cs.pads[1], padX0 = cs.pads[2];
+        int padZ1 = cs.pads[MAX_POOL_DIMS], padY1 = cs.pads[MAX_POOL_DIMS+1], padX1 = cs.pads[MAX_POOL_DIMS+2];
         int inner_z0 = cs.inner[0], inner_z1 = cs.inner[MAX_POOL_DIMS];
         int inner_y0 = cs.inner[1], inner_y1 = cs.inner[MAX_POOL_DIMS + 1];
         int inner_x0 = cs.inner[2], inner_x1 = cs.inner[MAX_POOL_DIMS + 2];

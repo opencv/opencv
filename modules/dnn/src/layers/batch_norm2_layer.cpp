@@ -19,7 +19,7 @@ namespace dnn {
 */
 
 #undef CV_SIMD_ONLY
-#if CV_SIMD
+#if CV_SIMD || CV_SIMD_SCALABLE
 #define CV_SIMD_ONLY(expr) expr
 #else
 #define CV_SIMD_ONLY(expr)
@@ -135,7 +135,7 @@ static void batchnorm(const Mat& inp, Mat& out, const Mat& scale,
                     }
                 }
             }
-        #if CV_SIMD
+        #if CV_SIMD || CV_SIMD_SCALABLE
             /*
                 [TODO] support C0 == vlanes/2, maybe C0 == vlanes/4.
                 in this case, load everything into vsc0 and vb0, process
@@ -153,7 +153,7 @@ static void batchnorm(const Mat& inp, Mat& out, const Mat& scale,
                     scalebuf[c] = biasbuf[c] = 0.f;
                 }
                 v_float32 vsc0, vsc1, vsc2, vsc3;
-                v_float32 vb0, vb1, vb2, vb3, vb4;
+                v_float32 vb0, vb1, vb2, vb3;
                 vsc0 = vx_load(scalebuf);
                 vsc1 = vx_load(scalebuf + vlanes);
                 vsc2 = vx_load(scalebuf + vlanes*2);

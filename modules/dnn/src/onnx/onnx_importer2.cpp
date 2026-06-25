@@ -1740,7 +1740,7 @@ void ONNXImporter2::parseResize2(LayerParams& layerParams, const opencv_onnx::No
     layerParams.type = "Resize2";
     String interp_mode = layerParams.get<String>("coordinate_transformation_mode", "half_pixel");
 
-    bool halfPixel = interp_mode == "tf_half_pixel_for_nn" || interp_mode == "half_pixel" || interp_mode == "pytorch_half_pixel";
+    bool halfPixel = interp_mode == "tf_half_pixel_for_nn" || interp_mode == "half_pixel" || interp_mode == "pytorch_half_pixel" || interp_mode == "half_pixel_symmetric";
 
     layerParams.set("align_corners", interp_mode == "align_corners");
     layerParams.set("half_pixel_centers", halfPixel);
