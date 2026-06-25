@@ -22,32 +22,32 @@ namespace dnn
 __attribute__((target("avx2")))
 #endif
 static void quantizeLinearChunk_f32_u8_avx2(const float* src, uint8_t* dst,
-                                             float inv_scale, float zp_f,
+                                             float scale, float zp_f,
                                              int64_t len)
 {
-    __m256 vscale = _mm256_set1_ps(inv_scale);
-    __m256 vzp = _mm256_set1_ps(zp_f);
-    __m256 vmin = _mm256_setzero_ps();
-    __m256 vmax = _mm256_set1_ps(255.f);
+    __m256 vscale = _mm256_set1_ps(scale);
+    // The zero-point is integral. Round x/scale FIRST, then add the integer zp;
+    // adding an odd zp before rounding would flip round-half-to-even ties
+    int zp_i = cvRound(zp_f);
+    __m256i vzp = _mm256_set1_epi32(zp_i);
 
     int64_t j = 0;
     for (; j <= len - 8; j += 8) {
         __m256 v = _mm256_loadu_ps(src + j);
-        v = _mm256_add_ps(_mm256_mul_ps(v, vscale), vzp);
-        v = _mm256_min_ps(_mm256_max_ps(v, vmin), vmax);
-        __m256i vi = _mm256_cvtps_epi32(v);
+        __m256i vi = _mm256_cvtps_epi32(_mm256_div_ps(v, vscale)); // round half-to-even
+        vi = _mm256_add_epi32(vi, vzp);                            // + integer zero-point
         __m128i lo = _mm256_castsi256_si128(vi);
         __m128i hi = _mm256_extracti128_si256(vi, 1);
         __m128i packed16 = _mm_packs_epi32(lo, hi);
-        __m128i packed8 = _mm_packus_epi16(packed16, packed16);
+        __m128i packed8 = _mm_packus_epi16(packed16, packed16);    // saturates to [0,255]
         _mm_storel_epi64((__m128i*)(dst + j), packed8);
     }
     for (; j < len; j++)
-        dst[j] = saturate_cast<uint8_t>(src[j] * inv_scale + zp_f);
+        dst[j] = saturate_cast<uint8_t>(cvRound(src[j] / scale) + zp_i);
 }
 
 static void quantizeLinearFast_f32_u8_avx2(const float* inp, uint8_t* out,
-                                            float inv_scale, float zp_f,
+                                            float scale, float zp_f,
                                             int64_t total)
 {
     const int64_t block = 1024;
@@ -57,7 +57,7 @@ static void quantizeLinearFast_f32_u8_avx2(const float* inp, uint8_t* out,
         for (int i = r.start; i < r.end; i++) {
             int64_t ofs = i * block;
             int64_t len = std::min(block, total - ofs);
-            quantizeLinearChunk_f32_u8_avx2(inp + ofs, out + ofs, inv_scale, zp_f, len);
+            quantizeLinearChunk_f32_u8_avx2(inp + ofs, out + ofs, scale, zp_f, len);
         }
     });
 }
@@ -112,36 +112,36 @@ static void quantizeLinear(const _InpTp* inp_, const _ScaleTp* scale_,
             if (slice_size > 1) {
                 for (int k = 0; k < delta; k++, inp += slice_size, out += slice_size,
                                                 sc += scale_step, zp += zp_step) {
-                    float scval = 1.f/(float)(*sc);
+                    float scval = (float)(*sc);
                     _OutTp zpval = zp ? *zp : (_InpTp)0;
 
                     for (int64_t j = 0; j < slice_size; j++)
-                        out[j] = saturate_cast<_OutTp>(inp[j]*scval + zpval);
+                        out[j] = saturate_cast<_OutTp>(cvRound((float)inp[j] / scval) + (int)zpval);
                 }
             } else if (block_size > 0 ) {
                 int bsz = block_size;
                 for (int k = 0; k < delta; k++, inp += bsz, out += bsz) {
                     bsz = std::min(bsz, sz_a - (block_idx + k)*block_size);
-                    float scval = 1.f/(float)sc[k];
+                    float scval = (float)sc[k];
                     _OutTp zpval = zp ? zp[k] : (_InpTp)0;
 
                     for (int j = 0; j < bsz; j++)
-                        out[j] = saturate_cast<_OutTp>(inp[j]*scval + zpval);
+                        out[j] = saturate_cast<_OutTp>(cvRound((float)inp[j] / scval) + (int)zpval);
                 }
                 sc += delta;
                 zp += zp ? delta : 0;
             } else {
-                // here we assume that scale's have been inversed in advance in the parent function
+                // scale values have been pre-converted to float32 in the parent function
                 if (zp) {
                     for (int j = 0; j < delta; j++) {
                         float scval = (float)sc[j];
                         _OutTp zpval = zp[j];
-                        out[j] = saturate_cast<_OutTp>(inp[j]*scval + zpval);
+                        out[j] = saturate_cast<_OutTp>(cvRound((float)inp[j] / scval) + (int)zpval);
                     }
                 } else {
                     for (int j = 0; j < delta; j++) {
                         float scval = (float)sc[j];
-                        out[j] = saturate_cast<_OutTp>(inp[j]*scval);
+                        out[j] = saturate_cast<_OutTp>((float)inp[j] / scval);
                     }
                 }
                 inp += delta;
@@ -209,7 +209,7 @@ static void quantizeLinear(const Mat& inp, const Mat& scale_, const Mat& zp,
             float* tempdata = temp.ptr<float>();
 
             for (size_t i = 0; i < sc_total; i++)
-                tempdata[i] = 1.f/(sctype == CV_32F ? scdata_32f[i] : (float)scdata_16f[i]);
+                tempdata[i] = (sctype == CV_32F ? scdata_32f[i] : (float)scdata_16f[i]);
             scale = temp;
             sctype = CV_32F;
         }
@@ -231,12 +231,12 @@ static void quantizeLinear(const Mat& inp, const Mat& scale_, const Mat& zp,
 #if defined(__x86_64__) || defined(_M_X64)
     if (block_size == 0 && sz_a == 1 && inptype == CV_32F && outtype == CV_8U && sctype == CV_32F
         && checkHardwareSupport(CV_CPU_AVX2)) {
-        float inv_scale = 1.f / reinterpret_cast<const float*>(scale.data)[0];
+        float scale_f32 = reinterpret_cast<const float*>(scale.data)[0];
         float zp_f = zp.empty() ? 0.f : (float)reinterpret_cast<const uint8_t*>(zp.data)[0];
         int64_t total = nslices * slice_size;
         quantizeLinearFast_f32_u8_avx2(reinterpret_cast<const float*>(inp.data),
                                         reinterpret_cast<uint8_t*>(out.data),
-                                        inv_scale, zp_f, total);
+                                        scale_f32, zp_f, total);
         return;
     }
 #endif
@@ -400,6 +400,131 @@ public:
 Ptr<QuantizeLinearLayer> QuantizeLinearLayer::create(const LayerParams& params)
 {
     return Ptr<QuantizeLinearLayer>(new QuantizeLinearLayerImpl(params));
+}
+
+/*
+    DynamicQuantizeLinear layer, as defined in ONNX specification:
+    https://onnx.ai/onnx/operators/onnx__DynamicQuantizeLinear.html
+
+    Opset 11 to 26 are covered.
+*/
+
+class DynamicQuantizeLinearLayerImpl CV_FINAL : public DynamicQuantizeLinearLayer
+{
+public:
+    DynamicQuantizeLinearLayerImpl(const LayerParams& params)
+    {
+        setParamsFrom(params);
+    }
+
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
+    {
+        return backendId == DNN_BACKEND_OPENCV;
+    }
+
+    bool getMemoryShapes(const std::vector<MatShape> &inputs,
+                         const int requiredOutputs,
+                         std::vector<MatShape> &outputs,
+                         std::vector<MatShape> &internals) const CV_OVERRIDE
+    {
+        CV_Assert(inputs.size() == 1);
+        outputs.resize(3);
+        outputs[0] = inputs[0];           // y         : same shape as x
+        outputs[1] = MatShape::scalar();  // y_scale
+        outputs[2] = MatShape::scalar();  // y_zero_point
+        internals.clear();
+        return true;
+    }
+
+    void getTypes(const std::vector<MatType>& inputs,
+                  const int requiredOutputs,
+                  const int requiredInternals,
+                  std::vector<MatType>& outputs,
+                  std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        CV_Assert(inputs.size() == 1);
+        CV_Assert(inputs[0] == CV_32F);
+        outputs.resize(3);
+        outputs[0] = CV_8U;   // y
+        outputs[1] = CV_32F;  // y_scale
+        outputs[2] = CV_8U;   // y_zero_point
+        internals.clear();
+    }
+
+    void forward(InputArrayOfArrays inputs_arr,
+                 OutputArrayOfArrays outputs_arr,
+                 OutputArrayOfArrays) CV_OVERRIDE
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        Mat inp = inputs_arr.getMat(0);
+        CV_Assert(inp.type() == CV_32F);
+        CV_Assert(inp.isContinuous());
+
+        // Data range, forced to include zero (qmin = 0, qmax = 255 for uint8).
+        const float qmin = 0.f, qmax = 255.f;
+        double minVal = 0.0, maxVal = 0.0;
+        minMaxIdx(inp, &minVal, &maxVal);
+        float xmin = std::min(0.f, (float)minVal);
+        float xmax = std::max(0.f, (float)maxVal);
+
+        float y_scale = (xmax - xmin) / (qmax - qmin);
+        if (y_scale == 0.f)
+            y_scale = 1.f; // degenerate all-zero input: avoid divide-by-zero
+
+        // round-half-to-even + clamp to [0, 255], same as the ONNX reference.
+        float intermediate_zp = qmin - xmin / y_scale;
+        uint8_t y_zero_point = saturate_cast<uint8_t>(intermediate_zp);
+
+        MatShape inpshape = inp.shape();
+        Mat outY, outScale, outZp;
+        auto kind = outputs_arr.kind();
+        if (kind == _InputArray::STD_VECTOR_MAT) {
+            std::vector<Mat>& outs = outputs_arr.getMatVecRef();
+            outs.resize(3);
+            outs[0].fit(inpshape, CV_8U);
+            outs[1].fit(MatShape::scalar(), CV_32F);
+            outs[2].fit(MatShape::scalar(), CV_8U);
+            outY = outs[0]; outScale = outs[1]; outZp = outs[2];
+        } else if (kind == _InputArray::STD_VECTOR_UMAT) {
+            std::vector<UMat>& outs = outputs_arr.getUMatVecRef();
+            outs.resize(3);
+            outs[0].fit(inpshape, CV_8U);
+            outs[1].fit(MatShape::scalar(), CV_32F);
+            outs[2].fit(MatShape::scalar(), CV_8U);
+            outY = outs[0].getMat(ACCESS_WRITE);
+            outScale = outs[1].getMat(ACCESS_WRITE);
+            outZp = outs[2].getMat(ACCESS_WRITE);
+        } else {
+            CV_Error(Error::StsNotImplemented, "");
+        }
+
+        // y = saturate(round(x / y_scale) + y_zero_point). Round first, then add the
+        // integer zero-point: folding an odd zp in before rounding flips half-to-even ties.
+        const float* src = inp.ptr<float>();
+        uint8_t* dst = outY.ptr<uint8_t>();
+        int64_t total = (int64_t)inp.total();
+        int zp_i = (int)y_zero_point;
+        const int64_t block = 1024;
+        int64_t nblocks = (total + block - 1) / block;
+        parallel_for_(Range(0, (int)nblocks), [&](const Range& r) {
+            for (int i = r.start; i < r.end; i++) {
+                int64_t ofs = i * block;
+                int64_t len = std::min(block, total - ofs);
+                for (int64_t j = 0; j < len; j++)
+                    dst[ofs + j] = saturate_cast<uint8_t>(cvRound(src[ofs + j] / y_scale) + zp_i);
+            }
+        });
+
+        outScale.ptr<float>()[0] = y_scale;
+        outZp.ptr<uint8_t>()[0] = y_zero_point;
+    }
+};
+
+Ptr<DynamicQuantizeLinearLayer> DynamicQuantizeLinearLayer::create(const LayerParams& params)
+{
+    return Ptr<DynamicQuantizeLinearLayer>(new DynamicQuantizeLinearLayerImpl(params));
 }
 
 }}

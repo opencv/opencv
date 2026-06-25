@@ -820,3 +820,9 @@
 "test_resize_upsample_sizes_nearest_axes_3_2",
 "test_resize_upsample_sizes_nearest_not_larger",
 "test_resize_upsample_sizes_nearest_not_smaller",
+"test_dynamicquantizelinear",
+"test_dynamicquantizelinear_expanded",
+"test_dynamicquantizelinear_max_adjusted",
+"test_dynamicquantizelinear_max_adjusted_expanded",
+"test_dynamicquantizelinear_min_adjusted",
+"test_dynamicquantizelinear_min_adjusted_expanded"
