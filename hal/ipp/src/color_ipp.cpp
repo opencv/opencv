@@ -64,7 +64,9 @@ public:
         if( !cvt(yS, static_cast<int>(src_step), yD, static_cast<int>(dst_step), width, range.end - range.start) )
             *ok = false;
         else
+        {
             CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
+        }
     }
 
 private:
@@ -655,6 +657,7 @@ int ipp_hal_cvtRGBAtoMultipliedRGBA(const uchar * src_data, size_t src_step, uch
 int ipp_hal_cvtBGRtoYUV(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step,
                         int width, int height, int depth, int scn, bool swapBlue, bool isCbCr)
 {
+    CV_UNUSED(src_data); CV_UNUSED(src_step); CV_UNUSED(dst_data); CV_UNUSED(dst_step); CV_UNUSED(width); CV_UNUSED(height); CV_UNUSED(depth); CV_UNUSED(scn); CV_UNUSED(swapBlue); CV_UNUSED(isCbCr);
     CV_HAL_CHECK_USE_IPP();
 
 #if !IPP_DISABLE_RGB_YUV
@@ -693,6 +696,7 @@ int ipp_hal_cvtBGRtoYUV(const uchar * src_data, size_t src_step, uchar * dst_dat
 int ipp_hal_cvtYUVtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step,
                         int width, int height, int depth, int dcn, bool swapBlue, bool isCbCr)
 {
+    CV_UNUSED(src_data); CV_UNUSED(src_step); CV_UNUSED(dst_data); CV_UNUSED(dst_step); CV_UNUSED(width); CV_UNUSED(height); CV_UNUSED(depth); CV_UNUSED(dcn); CV_UNUSED(swapBlue); CV_UNUSED(isCbCr);
     CV_HAL_CHECK_USE_IPP();
 
 #if !IPP_DISABLE_YUV_RGB
@@ -731,6 +735,7 @@ int ipp_hal_cvtYUVtoBGR(const uchar * src_data, size_t src_step, uchar * dst_dat
 int ipp_hal_cvtBGRtoXYZ(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step,
                         int width, int height, int depth, int scn, bool swapBlue)
 {
+    CV_UNUSED(src_data); CV_UNUSED(src_step); CV_UNUSED(dst_data); CV_UNUSED(dst_step); CV_UNUSED(width); CV_UNUSED(height); CV_UNUSED(depth); CV_UNUSED(scn); CV_UNUSED(swapBlue);
     CV_HAL_CHECK_USE_IPP();
 
 #if !IPP_DISABLE_RGB_XYZ
@@ -766,6 +771,7 @@ int ipp_hal_cvtBGRtoXYZ(const uchar * src_data, size_t src_step, uchar * dst_dat
 int ipp_hal_cvtXYZtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step,
                         int width, int height, int depth, int dcn, bool swapBlue)
 {
+    CV_UNUSED(src_data); CV_UNUSED(src_step); CV_UNUSED(dst_data); CV_UNUSED(dst_step); CV_UNUSED(width); CV_UNUSED(height); CV_UNUSED(depth); CV_UNUSED(dcn); CV_UNUSED(swapBlue);
     CV_HAL_CHECK_USE_IPP();
 
 #if !IPP_DISABLE_XYZ_RGB
@@ -801,6 +807,7 @@ int ipp_hal_cvtXYZtoBGR(const uchar * src_data, size_t src_step, uchar * dst_dat
 int ipp_hal_cvtBGRtoLab(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step,
                         int width, int height, int depth, int scn, bool swapBlue, bool isLab, bool srgb)
 {
+    CV_UNUSED(src_data); CV_UNUSED(src_step); CV_UNUSED(dst_data); CV_UNUSED(dst_step); CV_UNUSED(width); CV_UNUSED(height); CV_UNUSED(depth); CV_UNUSED(scn); CV_UNUSED(swapBlue); CV_UNUSED(isLab); CV_UNUSED(srgb);
     CV_HAL_CHECK_USE_IPP();
 
 #if !IPP_DISABLE_RGB_LAB
@@ -875,6 +882,7 @@ int ipp_hal_cvtBGRtoLab(const uchar * src_data, size_t src_step, uchar * dst_dat
 int ipp_hal_cvtLabtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step,
                         int width, int height, int depth, int dcn, bool swapBlue, bool isLab, bool srgb)
 {
+    CV_UNUSED(src_data); CV_UNUSED(src_step); CV_UNUSED(dst_data); CV_UNUSED(dst_step); CV_UNUSED(width); CV_UNUSED(height); CV_UNUSED(depth); CV_UNUSED(dcn); CV_UNUSED(swapBlue); CV_UNUSED(isLab); CV_UNUSED(srgb);
     CV_HAL_CHECK_USE_IPP();
 
 #if !IPP_DISABLE_LAB_RGB
