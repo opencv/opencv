@@ -1513,6 +1513,10 @@ def _code_regions(src: str) -> list[tuple[int, int]]:
         # per CommonMark, so `info=""` falls into is_code=True.)
         is_code = (not info) or (not info.startswith("{"))
         stack.append((fc, fw, is_code, line_start))
+        # Shield a breathe directive's opener line: its argument (e.g.
+        # `{doxygenstruct} cv::MSTEdge`) must reach breathe unlinkified.
+        if info.startswith("{doxygen"):
+            out.append((line_start, next_pos))
         pos = next_pos
     # Unclosed code fences: extend protection to EOF so we don't mangle
     # the tail of a pathologically-truncated document.
