@@ -222,8 +222,53 @@ struct IotaInit {
     IotaInit() { for (int i = 0; i < N; i++) data[i] = (T)i; }
 };
 static const IotaInit<int,   VTraits<v_int32>::max_nlanes> g_ix0_init;
+#if CV_SIMD && !CV_SIMD_SCALABLE
+static const IotaInit<short, VTraits<v_int16>::max_nlanes> g_ix0_init_s16;
+#endif
 }
 
+#if CV_SIMD && !CV_SIMD_SCALABLE
+template <>
+struct MomentsInTile_SIMD<uchar, int, int>
+{
+    MomentsInTile_SIMD() {}
+
+    int operator() (const uchar * ptr, int len, int & x0, int & x1, int & x2, int & x3)
+    {
+        int x = 0;
+        const int vlanes16 = VTraits<v_int16>::vlanes();
+
+        v_int16  v_delta = vx_setall_s16((short)vlanes16);
+        v_int16  v_ix0   = vx_load(g_ix0_init_s16.data);
+        v_uint32 v_x0    = vx_setzero_u32();
+        v_int32  v_x1    = vx_setzero_s32();
+        v_int32  v_x2    = vx_setzero_s32();
+        v_int32  v_x3    = vx_setzero_s32();
+
+        for ( ; x <= len - vlanes16; x += vlanes16 )
+        {
+            v_int16 v_src = v_reinterpret_as_s16(vx_load_expand(ptr + x));
+            v_int16 v_ix1 = v_mul_wrap(v_ix0, v_ix0);
+
+            v_x0 = v_add(v_x0, v_reinterpret_as_u32(v_src));
+            v_x1 = v_dotprod(v_src, v_ix0, v_x1);
+            v_x2 = v_dotprod(v_src, v_ix1, v_x2);
+            v_x3 = v_dotprod(v_mul_wrap(v_src, v_ix0), v_ix1, v_x3);
+
+            v_ix0 = v_add(v_ix0, v_delta);
+        }
+
+        x0 = v_reduce_sum(v_x0);
+        x0 = (x0 & 0xffff) + (x0 >> 16);
+        x1 = v_reduce_sum(v_x1);
+        x2 = v_reduce_sum(v_x2);
+        x3 = v_reduce_sum(v_x3);
+
+        vx_cleanup();
+        return x;
+    }
+};
+#else
 template <>
 struct MomentsInTile_SIMD<uchar, int, int>
 {
@@ -263,6 +308,7 @@ struct MomentsInTile_SIMD<uchar, int, int>
         return x;
     }
 };
+#endif
 
 template <>
 struct MomentsInTile_SIMD<ushort, int, int64>
