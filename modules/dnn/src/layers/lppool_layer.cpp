@@ -40,6 +40,53 @@ struct LpPoolL2
     static inline v_float32 finalize(const v_float32& acc) { return v_sqrt(acc); }
 };
 
+// One output column for NVEC*nlanes channels on the boundary path: every tap is
+// range-checked because the window may stick out of the padded volume. zi_/yi_/xi_
+// are the (already strided, pad-shifted) top-left source coords; inp_c is the input
+// base advanced to the current channel block, out_xc the matching output slot.
+template<class Op, int NVEC>
+static inline void poolBoundaryTile(const float* inp_c, float* out_xc,
+                                    int zi_, int yi_, int xi_,
+                                    int Di, int Hi, int Wi, int C0,
+                                    const int* zyxtab, int ksize, int nlanes, const v_float32& z)
+{
+    constexpr int MAX_POOL_DIMS = ConvState::MAX_CONV_DIMS;
+    v_float32 s[NVEC];
+    for (int j = 0; j < NVEC; j++) s[j] = z;
+    for (int k = 0; k < ksize; k++) {
+        int zi = zi_ + zyxtab[k*MAX_POOL_DIMS];
+        int yi = yi_ + zyxtab[k*MAX_POOL_DIMS + 1];
+        int xi = xi_ + zyxtab[k*MAX_POOL_DIMS + 2];
+        if ((unsigned)zi >= (unsigned)Di ||
+            (unsigned)yi >= (unsigned)Hi ||
+            (unsigned)xi >= (unsigned)Wi)
+            continue;
+        const float* inp_k = inp_c + ((zi*Hi + yi)*Wi + xi)*C0;
+        for (int j = 0; j < NVEC; j++)
+            s[j] = Op::accum(s[j], vx_load(inp_k + j*nlanes));
+    }
+    for (int j = 0; j < NVEC; j++)
+        vx_store(out_xc + j*nlanes, Op::finalize(s[j]));
+}
+
+// Same accumulate-and-store skeleton for the inner path, where the window is fully
+// inside the volume so taps are addressed through the precomputed flat ofstab and
+// no bounds check is needed. inp_xi already points at the column's channel block.
+template<class Op, int NVEC>
+static inline void poolInnerTile(const float* inp_xi, float* out_xc,
+                                 const int* ofstab, int ksize, int nlanes, const v_float32& z)
+{
+    v_float32 s[NVEC];
+    for (int j = 0; j < NVEC; j++) s[j] = z;
+    for (int k = 0; k < ksize; k++) {
+        int ofs_k = ofstab[k];
+        for (int j = 0; j < NVEC; j++)
+            s[j] = Op::accum(s[j], vx_load(inp_xi + ofs_k + j*nlanes));
+    }
+    for (int j = 0; j < NVEC; j++)
+        vx_store(out_xc + j*nlanes, Op::finalize(s[j]));
+}
+
 template<class Op>
 static void lpPoolSIMD(const float* inp_, float* out_, const ConvState& cs)
 {
@@ -95,39 +142,15 @@ static void lpPoolSIMD(const float* inp_, float* out_, const ConvState& cs)
                         if (nlanes == C0) {
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
-                                v_float32 s0 = z;
-                                for (int k = 0; k < ksize; k++) {
-                                    int zi = zi_ + zyxtab[k*MAX_POOL_DIMS];
-                                    int yi = yi_ + zyxtab[k*MAX_POOL_DIMS+1];
-                                    int xi = xi_ + zyxtab[k*MAX_POOL_DIMS+2];
-                                    if ((unsigned)zi >= (unsigned)Di ||
-                                        (unsigned)yi >= (unsigned)Hi ||
-                                        (unsigned)xi >= (unsigned)Wi)
-                                        continue;
-                                    s0 = Op::accum(s0, vx_load(inp + ((zi*Hi + yi)*Wi + xi)*C0));
-                                }
-                                vx_store(out + x0*C0, Op::finalize(s0));
+                                poolBoundaryTile<Op, 1>(inp, out + x0*C0, zi_, yi_, xi_,
+                                                        Di, Hi, Wi, C0, zyxtab, ksize, nlanes, z);
                             }
                         } else {
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
-                                for (int c = 0; c < C0; c += nlanes*2) {
-                                    v_float32 s0 = z, s1 = z;
-                                    for (int k = 0; k < ksize; k++) {
-                                        int zi = zi_ + zyxtab[k*MAX_POOL_DIMS];
-                                        int yi = yi_ + zyxtab[k*MAX_POOL_DIMS+1];
-                                        int xi = xi_ + zyxtab[k*MAX_POOL_DIMS+2];
-                                        if ((unsigned)zi >= (unsigned)Di ||
-                                            (unsigned)yi >= (unsigned)Hi ||
-                                            (unsigned)xi >= (unsigned)Wi)
-                                            continue;
-                                        int ofs_k = ((zi*Hi + yi)*Wi + xi)*C0 + c;
-                                        s0 = Op::accum(s0, vx_load(inp + ofs_k));
-                                        s1 = Op::accum(s1, vx_load(inp + ofs_k + nlanes));
-                                    }
-                                    vx_store(out + x0*C0 + c, Op::finalize(s0));
-                                    vx_store(out + x0*C0 + c + nlanes, Op::finalize(s1));
-                                }
+                                for (int c = 0; c < C0; c += nlanes*2)
+                                    poolBoundaryTile<Op, 2>(inp + c, out + x0*C0 + c, zi_, yi_, xi_,
+                                                            Di, Hi, Wi, C0, zyxtab, ksize, nlanes, z);
                             }
                         }
 
@@ -140,44 +163,20 @@ static void lpPoolSIMD(const float* inp_, float* out_, const ConvState& cs)
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
                                 const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
-
-                                v_float32 s0 = z;
-                                for (int k = 0; k < ksize; k++)
-                                    s0 = Op::accum(s0, vx_load(inp_xi + ofstab[k]));
-                                vx_store(out + x0*C0, Op::finalize(s0));
+                                poolInnerTile<Op, 1>(inp_xi, out + x0*C0, ofstab, ksize, nlanes, z);
                             }
                         } else if (nlanes*2 == C0) {
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
                                 const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0;
-
-                                v_float32 s0 = z, s1 = z;
-                                for (int k = 0; k < ksize; k++) {
-                                    int ofs_k = ofstab[k];
-                                    s0 = Op::accum(s0, vx_load(inp_xi + ofs_k));
-                                    s1 = Op::accum(s1, vx_load(inp_xi + ofs_k + nlanes));
-                                }
-                                vx_store(out + x0*C0, Op::finalize(s0));
-                                vx_store(out + x0*C0 + nlanes, Op::finalize(s1));
+                                poolInnerTile<Op, 2>(inp_xi, out + x0*C0, ofstab, ksize, nlanes, z);
                             }
                         } else {
                             for (; x0 < x1; x0++) {
                                 int xi_ = x0*SX - padX0;
                                 for (int c = 0; c < C0; c += nlanes*4) {
                                     const float* inp_xi = inp + ((Hi*zi_ + yi_)*Wi + xi_)*C0 + c;
-
-                                    v_float32 s0 = z, s1 = z, s2 = z, s3 = z;
-                                    for (int k = 0; k < ksize; k++) {
-                                        int ofs_k = ofstab[k];
-                                        s0 = Op::accum(s0, vx_load(inp_xi + ofs_k));
-                                        s1 = Op::accum(s1, vx_load(inp_xi + ofs_k + nlanes));
-                                        s2 = Op::accum(s2, vx_load(inp_xi + ofs_k + nlanes*2));
-                                        s3 = Op::accum(s3, vx_load(inp_xi + ofs_k + nlanes*3));
-                                    }
-                                    vx_store(out + x0*C0 + c, Op::finalize(s0));
-                                    vx_store(out + x0*C0 + c + nlanes, Op::finalize(s1));
-                                    vx_store(out + x0*C0 + c + nlanes*2, Op::finalize(s2));
-                                    vx_store(out + x0*C0 + c + nlanes*3, Op::finalize(s3));
+                                    poolInnerTile<Op, 4>(inp_xi, out + x0*C0 + c, ofstab, ksize, nlanes, z);
                                 }
                             }
                         }
