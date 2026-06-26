@@ -234,3 +234,25 @@ def _patch_sidebar_section_root():
 
 
 _patch_sidebar_section_root()
+
+
+def register_global_sidebar(app):
+    """Make the left sidebar list ALL top-level sections (startdepth=0) with the
+    current one auto-expanded, instead of only the active section's subtree.
+
+    The theme injects `generate_toctree_html` -- the sole sidebar nav generator,
+    used only by its sidebar-nav-bs.html -- into each page's context via an
+    html-page-context handler. We connect after it (higher priority) and wrap
+    that one function to force startdepth=0, so the theme keeps its own template
+    (and any future args) while we flip just this argument.
+
+    Note: this makes `_patch_sidebar_section_root` above a no-op (its ancestor
+    lookup only runs when startdepth != 0)."""
+    def _globalize(app, pagename, templatename, context, doctree):
+        gen = context.get("generate_toctree_html")
+        if not callable(gen):
+            return
+        def wrapped(kind, startdepth=0, show_nav_level=0, **kwargs):
+            return gen(kind, startdepth=0, show_nav_level=0, **kwargs)
+        context["generate_toctree_html"] = wrapped
+    app.connect("html-page-context", _globalize, priority=900)

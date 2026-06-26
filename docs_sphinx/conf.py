@@ -204,4 +204,5 @@ if not _in_source_tree(SPHINX_INPUT_ROOT):
 def setup(app):
     app.connect("source-read", _source_read)
     app.connect("build-finished", _inline_coll_graphs_on_finish)
+    conf_helpers.patches.register_global_sidebar(app)
     return {"parallel_read_safe": True, "parallel_write_safe": True}
