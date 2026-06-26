@@ -76,10 +76,8 @@ public:
 
     // --- IO helpers (visual_odometry.cpp) ------------------------------------
 
-    void writeTrajectoryText(const String& path) const;
-    void writeTrajectoryBin(const String& path) const;
+    void writeCameraIntrinsics(const String& path) const;
     void writeMapPoints(const String& path) const;
-    void writeKeypoints(const String& path) const;
     void writeImagesTxt(const String& path) const;
 
     // --- Owned state ---------------------------------------------------------

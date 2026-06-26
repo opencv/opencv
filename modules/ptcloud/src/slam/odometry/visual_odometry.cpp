@@ -221,13 +221,9 @@ bool VisualOdometryImpl::run()
         return false;
     }
 
-    std::ofstream log;
     if (!outputFolder.empty())
-    {
         cv::utils::fs::createDirectories(outputFolder);
-        log.open(joinPath(outputFolder, "vo.log").c_str());
-    }
-    auto logln = [&](const String& s) { if (log.is_open()) log << s << "\n"; };
+    auto logln = [](const String&) {};
 
     logln("[INFO] optimizer = reprojection inlier check");
     logln(String("[INFO] images_folder = ") + imagesFolder);
@@ -292,20 +288,9 @@ bool VisualOdometryImpl::run()
 
     if (!outputFolder.empty())
     {
-        writeTrajectoryText(joinPath(outputFolder, "trajectory.txt"));
-        writeTrajectoryBin (joinPath(outputFolder, "trajectory.bin"));
-        writeMapPoints     (joinPath(outputFolder, "map_points.txt"));
-        writeKeypoints     (joinPath(outputFolder, "keypoints.txt"));
-        writeImagesTxt     (joinPath(outputFolder, "images.txt"));
-
-        std::ostringstream ss;
-        ss << "[INFO] run complete: frames=" << imgFiles.size()
-           << " emitted=" << nEmitted
-           << " keyframes=" << map.numKeyframes()
-           << " map_points=" << map.numMapPoints();
-        logln(ss.str());
-        logln("[INFO] wrote trajectory.txt, trajectory.bin, map_points.txt, "
-              "keypoints.txt, images.txt");
+        writeCameraIntrinsics(joinPath(outputFolder, "camera.txt"));
+        writeMapPoints       (joinPath(outputFolder, "point3d.txt"));
+        writeImagesTxt       (joinPath(outputFolder, "images.txt"));
     }
 
     return nEmitted > 0;
@@ -313,36 +298,31 @@ bool VisualOdometryImpl::run()
 
 // IO helpers
 
-void VisualOdometryImpl::writeTrajectoryText(const String& path) const
+void VisualOdometryImpl::writeCameraIntrinsics(const String& path) const
 {
     std::ofstream f(path.c_str());
-    if (!f.is_open()) { CV_LOG_WARNING(NULL, "writeTrajectoryText: cannot open " << path); return; }
-    f << "# Per-frame camera center in world coordinates.\n# Columns: Cx Cy Cz\n";
-    f.setf(std::ios::scientific); f.precision(9);
-    for (const auto& T : map.trajectory())
-    {
-        Point3d C = detail::cameraCenterWorld(T);
-        f << C.x << " " << C.y << " " << C.z << "\n";
-    }
-}
+    if (!f.is_open()) { CV_LOG_WARNING(NULL, "writeCameraIntrinsics: cannot open " << path); return; }
 
-void VisualOdometryImpl::writeTrajectoryBin(const String& path) const
-{
-    std::ofstream f(path.c_str(), std::ios::binary);
-    if (!f.is_open()) { CV_LOG_WARNING(NULL, "writeTrajectoryBin: cannot open " << path); return; }
-    const char magic[4] = {'V','O','T','R'};
-    f.write(magic, 4);
-    int32_t version = 1;
-    f.write(reinterpret_cast<const char*>(&version), sizeof(int32_t));
-    int32_t n = (int32_t)map.trajectory().size();
-    f.write(reinterpret_cast<const char*>(&n), sizeof(int32_t));
-    for (const auto& T : map.trajectory())
+    const double fx = K.at<double>(0, 0);
+    const double fy = K.at<double>(1, 1);
+    const double cx = K.at<double>(0, 2);
+    const double cy = K.at<double>(1, 2);
+
+    int width = 0, height = 0;
+    if (!map.keyframes().empty())
     {
-        double buf[16];
-        for (int r = 0; r < 4; ++r)
-            for (int c = 0; c < 4; ++c) buf[r*4+c] = T(r,c);
-        f.write(reinterpret_cast<const char*>(buf), sizeof(buf));
+        const KeyFrame* kf = *map.keyframes().begin();
+        width  = kf->imageSize.width;
+        height = kf->imageSize.height;
     }
+
+    f.setf(std::ios::fixed); f.precision(4);
+    f << "fx " << fx << "\n"
+      << "fy " << fy << "\n"
+      << "cx " << cx << "\n"
+      << "cy " << cy << "\n"
+      << "width "  << width  << "\n"
+      << "height " << height << "\n";
 }
 
 void VisualOdometryImpl::writeMapPoints(const String& path) const
@@ -357,35 +337,6 @@ void VisualOdometryImpl::writeMapPoints(const String& path) const
         f << mp->id << " "
           << mp->pos.x << " " << mp->pos.y << " " << mp->pos.z << " "
           << mp->observations.size() << "\n";
-    }
-}
-
-void VisualOdometryImpl::writeKeypoints(const String& path) const
-{
-    std::ofstream f(path.c_str());
-    if (!f.is_open()) { CV_LOG_WARNING(NULL, "writeKeypoints: cannot open " << path); return; }
-    f << "# Per-keyframe keypoints.\n"
-      << "# Block header: KF kf_id Cx Cy Cz n_keypoints\n"
-      << "# Followed by n_keypoints rows: kpIdx x y size angle response octave mpId\n"
-      << "# mpId = -1 if the keypoint has no map point.\n";
-    f.setf(std::ios::fixed); f.precision(6);
-
-    for (KeyFrame* kf : map.keyframes())
-    {
-        if (!kf) continue;
-        Point3d C = detail::cameraCenterWorld(kf->poseCw);
-        f << "KF " << kf->id << " " << C.x << " " << C.y << " " << C.z
-          << " " << kf->keypoints.size() << "\n";
-        for (size_t i = 0; i < kf->keypoints.size(); ++i)
-        {
-            const KeyPoint& kp = kf->keypoints[i];
-            int mpId = -1;
-            if (i < kf->mapPoints.size() && kf->mapPoints[i])
-                mpId = kf->mapPoints[i]->id;
-            f << i << " " << kp.pt.x << " " << kp.pt.y << " "
-              << kp.size << " " << kp.angle << " " << kp.response << " "
-              << kp.octave << " " << mpId << "\n";
-        }
     }
 }
 
@@ -454,7 +405,7 @@ void VisualOdometryImpl::writeImagesTxt(const String& path) const
             : (String("pose_") + std::to_string(i));
 
         f << i << " " << qw << " " << qx << " " << qy << " " << qz << " "
-          << T(0,3) << " " << T(1,3) << " " << T(2,3) << " " << 1 << " " << name << "\n\n";
+          << T(0,3) << " " << T(1,3) << " " << T(2,3) << " " << 1 << " " << name << "\n";
     }
 }
 
