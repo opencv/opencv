@@ -843,6 +843,43 @@ PERF_TEST_P_(Layer_GroupNorm, GroupNorm)
 }
 
 
+struct Layer_Activation : public TestBaseWithParam<tuple<Backend, Target> >
+{
+    void test_activation(const std::vector<int>& shape, const String& type)
+    {
+        int backendId = get<0>(GetParam());
+        int targetId = get<1>(GetParam());
+        Mat a(shape, CV_32FC1);
+        randn(a, 0.f, 1.f);
+        Net net;
+        LayerParams lp; lp.type = type; lp.name = "testLayer";
+        net.addLayerToPrev(lp.name, lp.type, lp);
+        net.setInput(a);
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
+        Mat out = net.forward();    // warmup
+        TEST_CYCLE() { Mat res = net.forward(); }
+        SANITY_CHECK_NOTHING();
+    }
+    int N = 8, C = 256, H = 128, W = 100;
+};
+PERF_TEST_P_(Layer_Activation, Exp)      { test_activation({N,C,H,W}, "Exp");  }
+PERF_TEST_P_(Layer_Activation, TanH)     { test_activation({N,C,H,W}, "TanH"); }
+PERF_TEST_P_(Layer_Activation, Log)      { test_activation({N,C,H,W}, "Log");  }
+PERF_TEST_P_(Layer_Activation, Erf)      { test_activation({N,C,H,W}, "Erf");  }
+PERF_TEST_P_(Layer_Activation, Sin)      { test_activation({N,C,H,W}, "Sin");  }
+PERF_TEST_P_(Layer_Activation, Cos)      { test_activation({N,C,H,W}, "Cos");  }
+PERF_TEST_P_(Layer_Activation, Sinh)     { test_activation({N,C,H,W}, "Sinh"); }
+PERF_TEST_P_(Layer_Activation, Cosh)     { test_activation({N,C,H,W}, "Cosh"); }
+PERF_TEST_P_(Layer_Activation, Tan)      { test_activation({N,C,H,W}, "Tan");  }
+PERF_TEST_P_(Layer_Activation, Softplus) { test_activation({N,C,H,W}, "Softplus"); }
+PERF_TEST_P_(Layer_Activation, BNLL)     { test_activation({N,C,H,W}, "BNLL"); }
+PERF_TEST_P_(Layer_Activation, Gelu)     { test_activation({N,C,H,W}, "GeluApproximation"); }
+PERF_TEST_P_(Layer_Activation, Asinh)    { test_activation({N,C,H,W}, "Asinh"); }
+PERF_TEST_P_(Layer_Activation, Acosh)    { test_activation({N,C,H,W}, "Acosh"); }
+PERF_TEST_P_(Layer_Activation, Atanh)    { test_activation({N,C,H,W}, "Atanh"); }
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Activation, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
+
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Slice, dnnBackendsAndTargets(false, false));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_NaryEltwise, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 #ifdef HAVE_CUDA
