@@ -938,7 +938,7 @@ int cv::borderInterpolate( int p, int len, int borderType )
     {
         CV_Assert(len > 0);
         if( p < 0 )
-            p -= ((p-len+1)/len)*len;
+            p = (int)((long long)p - (((long long)p - len + 1)/len)*len);
         if( p >= len )
             p %= len;
     }
