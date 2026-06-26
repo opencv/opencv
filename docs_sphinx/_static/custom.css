@@ -331,6 +331,31 @@ html[data-theme="dark"] table.opencv-meta-table td:last-child { border-right: no
 .bd-header button.theme-switch-button:hover,
 .bd-header .navbar-icon-links a.nav-link:hover { color: var(--opencv-accent); }
 
+/* Single constant-height row: theme pins __start to col-lg-3 (25%), wrapping
+   the version switcher below the logo. Let it size to content, no wrapping. */
+.bd-header .navbar-header-items__start { width: auto; }
+.bd-header .navbar-header-items__start,
+.bd-header .navbar-header-items__end,
+.bd-header .navbar-header-items__center,
+.bd-header .navbar-nav { flex-wrap: nowrap; }
+
+/* Below 1200px: collapse only the nav links into the drawer; keep search,
+   theme toggle and GitHub icon in the header (search shrinks to its icon). */
+@media (max-width: 1199.98px) {
+    .bd-header .navbar-header-items { display: flex !important; flex-grow: 1; }
+    .bd-header .navbar-header-items__center { display: none !important; }
+    .bd-header .navbar-header-items__end { margin-left: auto; }
+    .bd-header button.primary-toggle { display: flex !important; }
+    .bd-sidebar-primary .sidebar-header-items { display: flex !important; }
+    .bd-sidebar-primary .sidebar-header-items__end { display: none !important; }
+    .search-button-field > :not(svg) { display: none !important; }
+}
+
+/* On small screens drop the wordmark + subtitle, keep just the logo mark. */
+@media (max-width: 768px) {
+    .bd-header .navbar-brand.logo .logo__textwrap { display: none; }
+}
+
 /* --- Version switcher dropdown (navbar) -------------------------------- *
  * Sits in the `navbar_start` slot right after `navbar-logo`. The custom
  * template `_templates/opencv-version-switcher.html` renders a plain
