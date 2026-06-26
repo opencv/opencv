@@ -1067,6 +1067,16 @@ inline int hal_ni_cvtRGBAtoMultipliedRGBA(const uchar * src_data, size_t src_ste
  */
 inline int hal_ni_cvtMultipliedRGBAtoRGBA(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
+/** @brief Extract Y-plane from YUV 4:2:0 image.
+   @param src_data Source image data pointer (points to Y plane).
+   @param src_step Source step.
+   @param dst_data Destination data pointer.
+   @param dst_step Destination step.
+   @param width Image width.
+   @param height Image height (of the Y plane, not the full YUV image).
+ */
+inline int hal_ni_cvtColorYUV2Gray(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
 //! @cond IGNORED
 #define cv_hal_cvtBGRtoBGR hal_ni_cvtBGRtoBGR
 #define cv_hal_cvtBGRtoBGR5x5 hal_ni_cvtBGRtoBGR5x5
@@ -1100,6 +1110,7 @@ inline int hal_ni_cvtMultipliedRGBAtoRGBA(const uchar * src_data, size_t src_ste
 #define cv_hal_cvtOnePlaneBGRtoYUVApprox hal_ni_cvtOnePlaneBGRtoYUVApprox
 #define cv_hal_cvtRGBAtoMultipliedRGBA hal_ni_cvtRGBAtoMultipliedRGBA
 #define cv_hal_cvtMultipliedRGBAtoRGBA hal_ni_cvtMultipliedRGBAtoRGBA
+#define cv_hal_cvtColorYUV2Gray hal_ni_cvtColorYUV2Gray
 //! @endcond
 
 /**
