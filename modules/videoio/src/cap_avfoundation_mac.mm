@@ -1224,6 +1224,7 @@ CvVideoWriter_AVFoundation::~CvVideoWriter_AVFoundation() {
             dispatch_semaphore_signal(sem);
         }];
         dispatch_semaphore_wait(sem, DISPATCH_TIME_FOREVER);
+        dispatch_release(sem);
 
         [mMovieWriter release];
         [mMovieWriterInput release];
