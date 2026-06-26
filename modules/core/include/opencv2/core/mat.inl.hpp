@@ -747,7 +747,7 @@ Mat Mat::roi_weak(const Range* ranges) const
 inline
 Mat Mat::roi_weak(const std::vector<Range>& ranges) const
 {
-    CV_Assert( ranges.size() == dims );
+    CV_Assert( (int)ranges.size() == dims );
     return roi_weak(ranges.data());
 }
 
