@@ -1,0 +1,135 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html
+// Copyright (C) 2026, BigVision LLC, all rights reserved.
+// Third party copyrights are property of their respective owners.
+
+#include "ipp_hal_imgproc.hpp"
+
+#if IPP_VERSION_X100 >= 810 && defined(HAVE_IPP_IW)
+
+#include "precomp_ipp.hpp"
+
+#define IPP_BILATERAL_PARALLEL 1
+
+namespace {
+
+class ipp_bilateralFilterParallel : public cv::ParallelLoopBody
+{
+public:
+    ipp_bilateralFilterParallel(::ipp::IwiImage &_src, ::ipp::IwiImage &_dst, int _radius, Ipp32f _valSquareSigma, Ipp32f _posSquareSigma, ::ipp::IwiBorderType _borderType, bool *_ok):
+        src(_src), dst(_dst)
+    {
+        pOk = _ok;
+
+        radius          = _radius;
+        valSquareSigma  = _valSquareSigma;
+        posSquareSigma  = _posSquareSigma;
+        borderType      = _borderType;
+
+        *pOk = true;
+    }
+    ~ipp_bilateralFilterParallel() {}
+
+    virtual void operator() (const cv::Range& range) const CV_OVERRIDE
+    {
+        if(*pOk == false)
+            return;
+
+        try
+        {
+            ::ipp::IwiTile tile = ::ipp::IwiRoi(0, range.start, dst.m_size.width, range.end - range.start);
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterBilateral, src, dst, radius, valSquareSigma, posSquareSigma, ::ipp::IwDefault(), borderType, tile);
+        }
+        catch(const ::ipp::IwException &)
+        {
+            *pOk = false;
+            return;
+        }
+    }
+private:
+    ::ipp::IwiImage &src;
+    ::ipp::IwiImage &dst;
+
+    int                  radius;
+    Ipp32f               valSquareSigma;
+    Ipp32f               posSquareSigma;
+    ::ipp::IwiBorderType borderType;
+
+    bool  *pOk;
+    const ipp_bilateralFilterParallel& operator= (const ipp_bilateralFilterParallel&);
+};
+
+} // namespace
+
+int ipp_hal_bilateralFilter(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                            int width, int height, int depth, int cn, int d,
+                            double sigma_color, double sigma_space, int border_type)
+{
+    CV_HAL_CHECK_USE_IPP();
+
+    if(!((depth == CV_8U || depth == CV_32F) && (cn == 1 || cn == 3)))
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    // Map cv border to IPP; include BORDER_REFLECT_101 (the default) which the shared
+    // plugin ippiGetBorderType does not cover.
+    int bt = border_type & ~cv::BORDER_ISOLATED;
+    IppiBorderType ippBorderType = bt == cv::BORDER_CONSTANT    ? ippBorderConst  :
+                                   bt == cv::BORDER_REPLICATE   ? ippBorderRepl   :
+                                   bt == cv::BORDER_REFLECT_101 ? ippBorderMirror :
+                                   bt == cv::BORDER_TRANSPARENT ? ippBorderTransp :
+                                   (IppiBorderType)-1;
+    if((int)ippBorderType == -1)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    int    radius         = std::max((d <= 0) ? cvRound(sigma_space*1.5) : d/2, 1);
+    Ipp32f valSquareSigma = (Ipp32f)(sigma_color*sigma_color);
+    Ipp32f posSquareSigma = (Ipp32f)(sigma_space*sigma_space);
+
+    try
+    {
+        ::ipp::IwiImage iwSrc;
+        iwSrc.Init(IwiSize{width, height}, ippiGetDataType(depth), cn, ::ipp::IwiBorderSize(), (void*)src_data, IwSize(src_step));
+        ::ipp::IwiImage iwDst;
+        iwDst.Init(IwiSize{width, height}, ippiGetDataType(depth), cn, ::ipp::IwiBorderSize(), dst_data, IwSize(dst_step));
+
+        ::ipp::IwiBorderType ippBorder(ippBorderType);
+
+        const int threads = ippiSuggestThreadsNum(iwDst, 2);
+        if(IPP_BILATERAL_PARALLEL && threads > 1)
+        {
+            bool       ok    = true;
+            cv::Range  range(0, (int)iwDst.m_size.height);
+            ipp_bilateralFilterParallel invoker(iwSrc, iwDst, radius, valSquareSigma, posSquareSigma, ippBorder, &ok);
+            if(!ok)
+                return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+            // Tile height can't be smaller than the radius.
+            // Otherwise, the second tile has mixed top border (pixels from both
+            // inmem and outside should be used), which is not supported in IPP.
+            int maxTiles = (int)iwDst.m_size.height / radius;
+            int numTiles = threads * 4;
+            if(numTiles > maxTiles)
+            {
+                // Keep the tiles number as multiple of threads for the better workload balance.
+                numTiles = (maxTiles / threads) * threads;
+            }
+            cv::parallel_for_(range, invoker, numTiles);
+
+            if(!ok)
+                return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        }
+        else
+        {
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterBilateral, iwSrc, iwDst, radius, valSquareSigma, posSquareSigma, ::ipp::IwDefault(), ippBorder);
+        }
+    }
+    catch(const ::ipp::IwException &)
+    {
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    }
+
+    return CV_HAL_ERROR_OK;
+}
+
+#endif // IPP_VERSION_X100 >= 810 && HAVE_IPP_IW
