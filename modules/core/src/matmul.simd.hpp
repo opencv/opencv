@@ -311,10 +311,11 @@ static inline void simdGEMM_kj_f32f64(
             j = 0;
             if( !_c_data )
             {
-                for( ; j <= m - vlanes_f64; j += vlanes_f64 )
+                for( ; j <= m - vlanes_f32; j += vlanes_f32 )
                 {
-                    v_float64 vs = v_mul(vx_load(s_buf + j), valpha);
-                    v_store(d_data + j, v_cvt_f32(vs, vs));
+                    v_float64 vs_lo = v_mul(vx_load(s_buf + j), valpha);
+                    v_float64 vs_hi = v_mul(vx_load(s_buf + j + vlanes_f64), valpha);
+                    v_store(d_data + j, v_cvt_f32(vs_lo, vs_hi));
                 }
                 for( ; j < m; j++ )
                     d_data[j] = (float)(s_buf[j] * alpha);
