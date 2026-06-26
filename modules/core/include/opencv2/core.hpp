@@ -356,8 +356,7 @@ overflow.
 @param dst output array of the same size and type as src1.
 @param scale optional scale factor.
 @param dtype optional depth of the output array
-@sa add, subtract, divide, scaleAdd, addWeighted, accumulate, accumulateProduct, accumulateSquare,
-Mat::convertTo
+@sa add, subtract, divide, scaleAdd, addWeighted, Mat::convertTo
 */
 CV_EXPORTS_W void multiply(InputArray src1, InputArray src2,
                            OutputArray dst, double scale = 1, int dtype = -1);
