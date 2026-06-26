@@ -342,6 +342,16 @@ class JSWrapperGenerator(object):
         }
         return tp in string_types
 
+    def _qualify_factory_ptr_return_type(self, ret_type, class_info):
+        if class_info is None or not ret_type.startswith('Ptr<') or not ret_type.endswith('>'):
+            return ret_type
+        inner = ret_type[len('Ptr<'):-1].strip()
+        if '::' in inner:
+            return ret_type
+        if inner == class_info.name or inner == class_info.cname.split('::')[-1]:
+            return 'Ptr<%s>' % class_info.cname
+        return ret_type
+
     def _generate_class_properties(self, class_info, class_bindings):
         # Generate bindings for properties
         for prop in class_info.props:
@@ -523,12 +533,8 @@ class JSWrapperGenerator(object):
 
             # Return type
             ret_type = 'void' if variant.rettype.strip() == '' else variant.rettype
-            # FIX: Ensure namespaced smart-pointer return types in factory methods, e.g.:
-            #      Ptr<EdgeDrawing> → Ptr<cv::ximgproc::EdgeDrawing>
             if factory and class_info is not None and ret_type.startswith('Ptr<'):
-                inner = ret_type[len('Ptr<'):-1].strip()
-                if '::' not in inner and inner == class_info.name:
-                    ret_type = 'Ptr<%s>' % class_info.cname
+                ret_type = self._qualify_factory_ptr_return_type(ret_type, class_info)
 
             if ret_type.startswith('Ptr'):  # smart pointer
                 ptr_type = ret_type.replace('Ptr<', '').replace('>', '')
@@ -715,11 +721,8 @@ class JSWrapperGenerator(object):
             ret_type = 'void' if variant.rettype.strip() == '' else variant.rettype
 
             ret_type = ret_type.strip()
-            # Same namespace fix for factory methods: Ptr<EdgeDrawing> -> Ptr<cv::ximgproc::EdgeDrawing>
             if factory and class_info is not None and ret_type.startswith('Ptr<'):
-                inner = ret_type[len('Ptr<'):-1].strip()
-                if '::' not in inner and inner == class_info.name:
-                    ret_type = 'Ptr<%s>' % class_info.cname
+                ret_type = self._qualify_factory_ptr_return_type(ret_type, class_info)
 
             if ret_type.startswith('Ptr'): #smart pointer
                 ptr_type = ret_type.replace('Ptr<', '').replace('>', '')
