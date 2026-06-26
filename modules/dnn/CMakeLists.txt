@@ -407,13 +407,12 @@ if(HAVE_PROTOBUF)
   ocv_target_compile_definitions(${the_module} PRIVATE "HAVE_PROTOBUF=1")
 
   if(PROTOBUF_UPDATE_FILES)
-    file(GLOB proto_files "${CMAKE_CURRENT_LIST_DIR}/src/tensorflow/*.proto" "${CMAKE_CURRENT_LIST_DIR}/src/onnx/opencv-onnx.proto")
+    file(GLOB proto_files "${CMAKE_CURRENT_LIST_DIR}/src/onnx/opencv-onnx.proto")
     if(CMAKE_VERSION VERSION_LESS "3.13.0")
-      set(PROTOBUF_GENERATE_CPP_APPEND_PATH ON) # required for tensorflow
       protobuf_generate_cpp(fw_srcs fw_hdrs ${proto_files})
     else()
       protobuf_generate(
-        APPEND_PATH # required for tensorflow
+        APPEND_PATH
         LANGUAGE cpp
         IMPORT_DIRS ${Protobuf_IMPORT_DIRS}
         OUT_VAR fw_srcs
@@ -425,9 +424,9 @@ if(HAVE_PROTOBUF)
       list(FILTER fw_hdrs INCLUDE REGEX ".+\.h$")
     endif()
   else()
-    file(GLOB fw_srcs "${CMAKE_CURRENT_LIST_DIR}/misc/tensorflow/*.cc" "${CMAKE_CURRENT_LIST_DIR}/misc/caffe/opencv-caffe.pb.cc" "${CMAKE_CURRENT_LIST_DIR}/misc/onnx/opencv-onnx.pb.cc")
-    file(GLOB fw_hdrs "${CMAKE_CURRENT_LIST_DIR}/misc/tensorflow/*.h" "${CMAKE_CURRENT_LIST_DIR}/misc/caffe/opencv-caffe.pb.h" "${CMAKE_CURRENT_LIST_DIR}/misc/onnx/opencv-onnx.pb.h")
-    set(fw_inc "${CMAKE_CURRENT_LIST_DIR}/misc/caffe" "${CMAKE_CURRENT_LIST_DIR}/misc/tensorflow" "${CMAKE_CURRENT_LIST_DIR}/misc/onnx")
+    file(GLOB fw_srcs "${CMAKE_CURRENT_LIST_DIR}/misc/onnx/opencv-onnx.pb.cc")
+    file(GLOB fw_hdrs "${CMAKE_CURRENT_LIST_DIR}/misc/onnx/opencv-onnx.pb.h")
+    set(fw_inc "${CMAKE_CURRENT_LIST_DIR}/misc/onnx")
   endif()
 endif()
 
@@ -546,7 +545,7 @@ set(dnn_plugin_srcs ${dnn_srcs} ${dnn_int_hdrs})
 ocv_list_filterout_ex(dnn_plugin_srcs
     "/src/dnn.cpp$|/src/dnn_utils.cpp$|/src/dnn_read.cpp$|/src/registry.cpp$|/src/backend.cpp$"
     # importers
-    "/src/(caffe|onnx|tensorflow)/"
+    "/src/onnx/"
     # executors
     "/src/(cuda|cuda4dnn|ocl4dnn|vkcom|webnn)/"
 )

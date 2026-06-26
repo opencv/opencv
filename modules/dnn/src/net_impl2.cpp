@@ -263,7 +263,6 @@ std::string modelFormatToString(ModelFormat modelFormat)
 {
     return
         modelFormat == DNN_MODEL_ONNX ? "ONNX" :
-        modelFormat == DNN_MODEL_TF ? "TF" :
         modelFormat == DNN_MODEL_TFLITE ? "TFLite" : "Unknown/Generic";
 }
 

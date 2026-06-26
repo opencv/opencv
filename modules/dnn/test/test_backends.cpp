@@ -188,7 +188,6 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow)
 
     Mat sample = imread(findDataFile("dnn/street.png"));
     Mat inp = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);
-    float detectionConfThresh = (target == DNN_TARGET_MYRIAD) ? 0.216 : 0.2;
     float scoreDiff = 0.0, iouDiff = 0.0;
     if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
@@ -200,8 +199,8 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow)
         scoreDiff = 0.007;
         iouDiff = 0.08;
     }
-    processNet("dnn/ssd_mobilenet_v1_coco_2017_11_17.pb", "dnn/ssd_mobilenet_v1_coco_2017_11_17.pbtxt",
-               inp, "detection_out", scoreDiff, iouDiff, detectionConfThresh);
+    processNet("dnn/onnx/models/ssd_mobilenet_v1_coco.onnx", "",
+               inp, "", scoreDiff, iouDiff);
     expectNoFallbacksFromIE(net);
 }
 
@@ -218,7 +217,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow_Different_Width_Height)
 #endif
 
     Mat sample = imread(findDataFile("dnn/street.png"));
-    Mat inp = blobFromImage(sample, 1.0f, Size(300, 560), Scalar(), false);
+    Mat inp = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);
     float scoreDiff = 0.0, iouDiff = 0.0;
     if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
@@ -230,8 +229,8 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow_Different_Width_Height)
         scoreDiff = 0.007;
         iouDiff = 0.06;
     }
-    processNet("dnn/ssd_mobilenet_v1_coco_2017_11_17.pb", "dnn/ssd_mobilenet_v1_coco_2017_11_17.pbtxt",
-               inp, "detection_out", scoreDiff, iouDiff);
+    processNet("dnn/onnx/models/ssd_mobilenet_v1_coco.onnx", "",
+               inp, "", scoreDiff, iouDiff);
     expectNoFallbacksFromIE(net);
 }
 

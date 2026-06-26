@@ -612,11 +612,11 @@ TEST_P(Test_Model, TextDetectionByEAST)
     applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
 
     std::string imgPath = _tf("text_det_test2.jpg");
-    std::string weightPath = _tf("frozen_east_text_detection.pb", false);
+    std::string weightPath = _tf("onnx/models/east_text_detection.onnx", false);
 
-    // GroundTruth
+    // GroundTruth (calibrated against east_text_detection.onnx)
     std::vector<RotatedRect> gt = {
-        RotatedRect(Point2f(657.55f, 409.5f), Size2f(316.84f, 62.45f), -4.79)
+        RotatedRect(Point2f(666.85f, 414.38f), Size2f(313.18f, 58.31f), -3.79f)
     };
 
     // Model parameters

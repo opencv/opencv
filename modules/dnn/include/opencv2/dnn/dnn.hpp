@@ -124,7 +124,6 @@ CV__DNN_INLINE_NS_BEGIN
     enum ModelFormat {
         DNN_MODEL_GENERIC = 0, //!< Some generic model format
         DNN_MODEL_ONNX = 1, //!< ONNX model
-        DNN_MODEL_TF = 2, //!< TF model
         DNN_MODEL_TFLITE = 3, //!< TFLite model
     };
 
@@ -1089,50 +1088,6 @@ CV__DNN_INLINE_NS_BEGIN
         ENGINE_ORT=4      //!< Try to use ONNX Runtime wrapper (ONNX only, requires build with WITH_ONNXRUNTIME=ON).
     };
 
-    /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/">TensorFlow</a> framework's format.
-      * @param model  path to the .pb file with binary protobuf description of the network architecture
-      * @param config path to the .pbtxt file that contains text graph definition in protobuf format.
-      *               Resulting Net object is built by text graph using weights from a binary one that
-      *               let us make it more flexible.
-      * @param engine select DNN engine to be used. With auto selection the new engine is used.
-      * @param extraOutputs specify model outputs explicitly, in addition to the outputs the graph analyzer finds.
-      * Please pay attention that the new DNN does not support non-CPU back-ends for now.
-      * @returns Net object.
-      */
-    CV_EXPORTS_W Net readNetFromTensorflow(CV_WRAP_FILE_PATH const String &model,
-                                           CV_WRAP_FILE_PATH const String &config = String(),
-                                           int engine=ENGINE_AUTO,
-                                           const std::vector<String>& extraOutputs = std::vector<String>());
-
-    /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/">TensorFlow</a> framework's format.
-      * @param bufferModel buffer containing the content of the pb file
-      * @param bufferConfig buffer containing the content of the pbtxt file
-      * @param engine select DNN engine to be used. With auto selection the new engine is used.
-      * @param extraOutputs specify model outputs explicitly, in addition to the outputs the graph analyzer finds.
-      * Please pay attention that the new DNN does not support non-CPU back-ends for now.
-      * @returns Net object.
-      */
-    CV_EXPORTS_W Net readNetFromTensorflow(const std::vector<uchar>& bufferModel,
-                                           const std::vector<uchar>& bufferConfig = std::vector<uchar>(),
-                                           int engine=ENGINE_AUTO,
-                                           const std::vector<String>& extraOutputs = std::vector<String>());
-
-    /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/">TensorFlow</a> framework's format.
-      * @details This is an overloaded member function, provided for convenience.
-      * It differs from the above function only in what argument(s) it accepts.
-      * @param bufferModel buffer containing the content of the pb file
-      * @param lenModel length of bufferModel
-      * @param bufferConfig buffer containing the content of the pbtxt file
-      * @param lenConfig length of bufferConfig
-      * @param engine select DNN engine to be used. With auto selection the new engine is used.
-      * @param extraOutputs specify model outputs explicitly, in addition to the outputs the graph analyzer finds.
-      * Please pay attention that the new DNN does not support non-CPU back-ends for now.
-      */
-    CV_EXPORTS Net readNetFromTensorflow(const char *bufferModel, size_t lenModel,
-                                         const char *bufferConfig = NULL, size_t lenConfig = 0,
-                                         int engine=ENGINE_AUTO,
-                                         const std::vector<String>& extraOutputs = std::vector<String>());
-
     /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/lite">TFLite</a> framework's format.
       * @param model  path to the .tflite file with binary flatbuffers description of the network architecture
       * @param engine select DNN engine to be used. With auto selection the new engine is used first and falls back to classic.
@@ -1163,12 +1118,10 @@ CV__DNN_INLINE_NS_BEGIN
       * @brief Read deep learning network represented in one of the supported formats.
       * @param[in] model Binary file contains trained weights. The following file
       *                  extensions are expected for models from different frameworks:
-      *                  * `*.pb` (TensorFlow, https://www.tensorflow.org/)
       *                  * `*.bin` | `*.onnx` (OpenVINO, https://software.intel.com/openvino-toolkit)
       *                  * `*.onnx` (ONNX, https://onnx.ai/)
       * @param[in] config Text file contains network configuration. It could be a
       *                   file with the following extensions:
-      *                  * `*.pbtxt` (TensorFlow, https://www.tensorflow.org/)
       *                  * `*.xml` (OpenVINO, https://software.intel.com/openvino-toolkit)
       * @param[in] framework Explicit framework name tag to determine a format.
       * @param[in] engine select DNN engine to be used. With auto selection the new engine is used first and falls back to classic.
@@ -1177,7 +1130,7 @@ CV__DNN_INLINE_NS_BEGIN
       * @returns Net object.
       *
       * This function automatically detects an origin framework of trained model
-      * and calls an appropriate function such @ref readNetFromTensorflow, @ref readNetFromONNX.
+      * and calls an appropriate function such @ref readNetFromONNX.
       * An order of @p model and @p config arguments does not matter.
       */
      CV_EXPORTS_W Net readNet(CV_WRAP_FILE_PATH const String& model,
@@ -1426,14 +1379,6 @@ CV__DNN_INLINE_NS_BEGIN
      *  of the blob (batch size). Every image has a number of channels equals to the second dimension of the blob (depth).
      */
     CV_EXPORTS_W void imagesFromBlob(const cv::Mat& blob_, OutputArrayOfArrays images_);
-
-    /** @brief Create a text representation for a binary network stored in protocol buffer format.
-     *  @param[in] model  A path to binary network.
-     *  @param[in] output A path to output text file to be created.
-     *
-     *  @note To reduce output file size, trained weights are not included.
-     */
-    CV_EXPORTS_W void writeTextGraph(CV_WRAP_FILE_PATH const String& model, CV_WRAP_FILE_PATH const String& output);
 
     /** @brief Performs non maximum suppression given boxes and corresponding scores.
 

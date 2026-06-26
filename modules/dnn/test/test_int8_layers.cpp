@@ -116,13 +116,8 @@ TEST_P(Test_Int8_layers, Convolution1D)
 TEST_P(Test_Int8_layers, Convolution2D)
 {
     if(backend == DNN_BACKEND_TIMVX)
-        testLayer("single_conv", "TensorFlow", 0.00424, 0.02201);
     else
-        testLayer("single_conv", "TensorFlow", 0.00413, 0.02201);
 
-    testLayer("atrous_conv2d_valid", "TensorFlow", 0.0193, 0.0633);
-    testLayer("atrous_conv2d_same", "TensorFlow", 0.0185, 0.1322);
-    testLayer("keras_atrous_conv2d_same", "TensorFlow", 0.0056, 0.0244);
 
     if(backend == DNN_BACKEND_TIMVX)
         testLayer("convolution", "ONNX", 0.00534, 0.01516);
@@ -136,38 +131,25 @@ TEST_P(Test_Int8_layers, Convolution2D)
 
     if(backend == DNN_BACKEND_TIMVX)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_TIMVX);
-    testLayer("layer_convolution", "Caffe", 0.0174, 0.0758, 1, 1, true);
-    testLayer("depthwise_conv2d", "TensorFlow", 0.0388, 0.169);
 
     {
         SCOPED_TRACE("Per-tensor quantize");
-        testLayer("single_conv", "TensorFlow", 0.00413, 0.02301, 1, 1, false, true, false, false);
-        testLayer("atrous_conv2d_valid", "TensorFlow", 0.027967, 0.07808, 1, 1, false, true, false, false);
-        testLayer("atrous_conv2d_same", "TensorFlow", 0.01945, 0.1322, 1, 1, false, true, false, false);
-        testLayer("keras_atrous_conv2d_same", "TensorFlow", 0.005677, 0.03327, 1, 1, false, true, false, false);
         testLayer("convolution", "ONNX", 0.00538, 0.01517, 1, 1, false, true, false, false);
         testLayer("two_convolution", "ONNX", 0.00295, 0.00926, 1, 1, false, true, false, false);
-        testLayer("layer_convolution", "Caffe", 0.0175, 0.0759, 1, 1, true, true, false, false);
-        testLayer("depthwise_conv2d", "TensorFlow", 0.041847, 0.18744, 1, 1, false, true, false, false);
     }
 }
 
 TEST_P(Test_Int8_layers, Convolution3D)
 {
-    testLayer("conv3d", "TensorFlow", 0.00734, 0.02434);
     testLayer("conv3d", "ONNX", 0.00353, 0.00941);
     testLayer("conv3d_bias", "ONNX", 0.00129, 0.00249);
 }
 
 TEST_P(Test_Int8_layers, Flatten)
 {
-    testLayer("flatten", "TensorFlow", 0.0036, 0.0069, 1, 1, false, true, true);
-    testLayer("unfused_flatten", "TensorFlow", 0.0014, 0.0028);
-    testLayer("unfused_flatten_unknown_batch", "TensorFlow", 0.0043, 0.0051);
 
     {
         SCOPED_TRACE("Per-tensor quantize");
-        testLayer("conv3d", "TensorFlow", 0.00734, 0.02434, 1, 1, false, true, false, false);
         testLayer("conv3d", "ONNX", 0.00377, 0.01362, 1, 1, false, true, false, false);
         testLayer("conv3d_bias", "ONNX", 0.00201, 0.0039, 1, 1, false, true, false, false);
     }
@@ -176,22 +158,14 @@ TEST_P(Test_Int8_layers, Flatten)
 TEST_P(Test_Int8_layers, Padding)
 {
     if (backend == DNN_BACKEND_TIMVX)
-        testLayer("padding_valid", "TensorFlow", 0.0292, 0.0105);
     else
-        testLayer("padding_valid", "TensorFlow", 0.0026, 0.0064);
 
     if (backend == DNN_BACKEND_TIMVX)
-        testLayer("padding_same", "TensorFlow", 0.0085, 0.032);
     else
-        testLayer("padding_same", "TensorFlow", 0.0081, 0.032);
 
     if (backend == DNN_BACKEND_TIMVX)
-        testLayer("spatial_padding", "TensorFlow", 0.0079, 0.028);
     else
-        testLayer("spatial_padding", "TensorFlow", 0.0078, 0.028);
 
-    testLayer("mirror_pad", "TensorFlow", 0.0064, 0.013);
-    testLayer("pad_and_concat", "TensorFlow", 0.0021, 0.0098);
     testLayer("padding", "ONNX", 0.0005, 0.0069);
     testLayer("ReflectionPad2d", "ONNX", 0.00062, 0.0018);
     testLayer("ZeroPad2d", "ONNX", 0.00037, 0.0018);
@@ -201,8 +175,6 @@ TEST_P(Test_Int8_layers, AvePooling)
 {
     // Some tests failed with OpenVINO due to wrong padded area calculation
     if (backend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        testLayer("layer_pooling_ave", "Caffe", 0.0021, 0.0075);
-    testLayer("ave_pool_same", "TensorFlow", 0.00153, 0.0041);
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2025030000)
     if (backend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
 #endif
@@ -213,7 +185,6 @@ TEST_P(Test_Int8_layers, AvePooling)
 
     if (target != DNN_TARGET_CPU)
         throw SkipTestException("Only CPU is supported");
-    testLayer("ave_pool3d", "TensorFlow", 0.00175, 0.0047);
     testLayer("ave_pool3d", "ONNX", 0.00063, 0.0016);
 }
 
@@ -224,11 +195,6 @@ TEST_P(Test_Int8_layers, MaxPooling)
         throw SkipTestException("Only CPU is supported");
     testLayer("pool_conv_3d", "ONNX", 0.0033, 0.0124);
 
-    testLayer("layer_pooling_max", "Caffe", 0.0021, 0.004);
-    testLayer("max_pool_even", "TensorFlow", 0.0048, 0.0139);
-    testLayer("max_pool_odd_valid", "TensorFlow", 0.0043, 0.012);
-    testLayer("conv_pool_nchw", "TensorFlow", 0.007, 0.025);
-    testLayer("max_pool3d", "TensorFlow", 0.0025, 0.0058);
     testLayer("maxpooling_1d", "ONNX", 0.0018, 0.0037);
     testLayer("two_maxpooling_1d", "ONNX", 0.0037, 0.0052);
     testLayer("maxpooling", "ONNX", 0.0034, 0.0065);
@@ -238,14 +204,10 @@ TEST_P(Test_Int8_layers, MaxPooling)
 
 TEST_P(Test_Int8_layers, Reduce)
 {
-    testLayer("reduce_mean", "TensorFlow", 0.0005, 0.0014);
     testLayer("reduce_mean", "ONNX", 0.00062, 0.0014);
     testLayer("reduce_mean_axis1", "ONNX", 0.00032, 0.0007);
     testLayer("reduce_mean_axis2", "ONNX", 0.00033, 0.001);
 
-    testLayer("reduce_sum", "TensorFlow", 0.015, 0.031);
-    testLayer("reduce_sum_channel", "TensorFlow", 0.008, 0.019);
-    testLayer("sum_pool_by_axis", "TensorFlow", 0.012, 0.032);
     testLayer("reduce_sum", "ONNX", 0.0025, 0.0048);
 
     testLayer("reduce_max", "ONNX", 0, 0);
@@ -259,20 +221,15 @@ TEST_P(Test_Int8_layers, Reduce)
 
 TEST_P(Test_Int8_layers, ReLU)
 {
-    testLayer("layer_relu", "Caffe", 0.0005, 0.002);
     testLayer("ReLU", "ONNX", 0.0012, 0.0047);
 }
 
 TEST_P(Test_Int8_layers, LeakyReLU)
 {
-    testLayer("leaky_relu", "TensorFlow", 0.0002, 0.0004);
 }
 
 TEST_P(Test_Int8_layers, ReLU6)
 {
-    testLayer("keras_relu6", "TensorFlow", 0.0018, 0.0062);
-    testLayer("keras_relu6", "TensorFlow", 0.0018, 0.0062, 1, 1, false, true, true);
-    testLayer("clip_by_value", "TensorFlow", 0.0009, 0.002);
     testLayer("clip", "ONNX", 0.00006, 0.00037);
 }
 
@@ -298,19 +255,15 @@ TEST_P(Test_Int8_layers, Mish)
 
 TEST_P(Test_Int8_layers, Softmax_Caffe)
 {
-    testLayer("layer_softmax", "Caffe", 0.0011, 0.0036);
 }
 TEST_P(Test_Int8_layers, Softmax_keras_TF)
 {
-    testLayer("keras_softmax", "TensorFlow", 0.00093, 0.0027);
 }
 TEST_P(Test_Int8_layers, Softmax_slim_TF)
 {
-    testLayer("slim_softmax", "TensorFlow", 0.0016, 0.0034);
 }
 TEST_P(Test_Int8_layers, Softmax_slim_v2_TF)
 {
-    testLayer("slim_softmax_v2", "TensorFlow", 0.0029, 0.017);
 }
 TEST_P(Test_Int8_layers, Softmax_ONNX)
 {
@@ -327,26 +280,14 @@ TEST_P(Test_Int8_layers, DISABLED_Softmax_unfused_ONNX)  // FIXIT Support 'Ident
 
 TEST_P(Test_Int8_layers, Concat)
 {
-    testLayer("layer_concat_shared_input", "Caffe", 0.0076, 0.029, 1, 1, true, false);
     if (backend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) {
         // Crashes with segfault
-        testLayer("concat_axis_1", "TensorFlow", 0.0056, 0.017);
     }
-    testLayer("keras_pad_concat", "TensorFlow", 0.0032, 0.0089);
-    testLayer("concat_3d", "TensorFlow", 0.005, 0.014);
     testLayer("concatenation", "ONNX", 0.0032, 0.009);
 }
 
 TEST_P(Test_Int8_layers, BatchNorm)
 {
-    testLayer("layer_batch_norm", "Caffe", 0.0061, 0.019, 1, 1, true);
-    testLayer("fused_batch_norm", "TensorFlow", 0.0063, 0.02);
-    testLayer("batch_norm_text", "TensorFlow", 0.0048, 0.013, 1, 1, false, true, true);
-    testLayer("unfused_batch_norm", "TensorFlow", 0.0076, 0.019);
-    testLayer("fused_batch_norm_no_gamma", "TensorFlow", 0.0067, 0.015);
-    testLayer("unfused_batch_norm_no_gamma", "TensorFlow", 0.0123, 0.044);
-    testLayer("switch_identity", "TensorFlow", 0.0035, 0.011);
-    testLayer("batch_norm3d", "TensorFlow", 0.0077, 0.02);
     testLayer("batch_norm", "ONNX", 0.0012, 0.0049);
     testLayer("batch_norm_3d", "ONNX", 0.0039, 0.012);
     testLayer("frozenBatchNorm2d", "ONNX", 0.001, 0.0018);
@@ -355,7 +296,6 @@ TEST_P(Test_Int8_layers, BatchNorm)
 
 TEST_P(Test_Int8_layers, Scale)
 {
-    testLayer("batch_norm", "TensorFlow", 0.0028, 0.0098);
     testLayer("scale", "ONNX", 0.0025, 0.0071);
     testLayer("expand_hw", "ONNX", 0.0012, 0.0012);
     testLayer("flatten_const", "ONNX", 0.0024, 0.0048);
@@ -363,17 +303,10 @@ TEST_P(Test_Int8_layers, Scale)
 
 TEST_P(Test_Int8_layers, InnerProduct)
 {
-    testLayer("layer_inner_product", "Caffe", 0.005, 0.02, 1, 1, true);
-    testLayer("matmul", "TensorFlow", 0.0061, 0.019);
 
     if (backend == DNN_BACKEND_TIMVX)
-        testLayer("nhwc_transpose_reshape_matmul", "TensorFlow", 0.0018, 0.0175);
     else
-        testLayer("nhwc_transpose_reshape_matmul", "TensorFlow", 0.0009, 0.0091);
 
-    testLayer("nhwc_reshape_matmul", "TensorFlow", 0.03, 0.071);
-    testLayer("matmul_layout", "TensorFlow", 0.035, 0.06);
-    testLayer("tf2_dense", "TensorFlow", 0, 0);
     testLayer("matmul_add", "ONNX", 0.041, 0.082);
     testLayer("linear", "ONNX", 0.0027, 0.0046);
 
@@ -386,12 +319,6 @@ TEST_P(Test_Int8_layers, InnerProduct)
 
     {
         SCOPED_TRACE("Per-tensor quantize");
-        testLayer("layer_inner_product", "Caffe", 0.0055, 0.02, 1, 1, true, true, false, false);
-        testLayer("matmul", "TensorFlow", 0.0075, 0.019, 1, 1, false, true, false, false);
-        testLayer("nhwc_transpose_reshape_matmul", "TensorFlow", 0.0009, 0.0091, 1, 1, false, true, false, false);
-        testLayer("nhwc_reshape_matmul", "TensorFlow", 0.037, 0.071, 1, 1, false, true, false, false);
-        testLayer("matmul_layout", "TensorFlow", 0.035, 0.095, 1, 1, false, true, false, false);
-        testLayer("tf2_dense", "TensorFlow", 0, 0, 1, 1, false, true, false, false);
         testLayer("matmul_add", "ONNX", 0.041, 0.082, 1, 1, false, true, false, false);
         testLayer("linear", "ONNX", 0.0027, 0.005, 1, 1, false, true, false, false);
         testLayer("constant", "ONNX", 0.00038, 0.0012, 1, 1, false, true, false, false);
@@ -401,21 +328,12 @@ TEST_P(Test_Int8_layers, InnerProduct)
 
 TEST_P(Test_Int8_layers, Reshape)
 {
-    testLayer("reshape_layer", "TensorFlow", 0.0032, 0.0082);
 
     if (backend == DNN_BACKEND_TIMVX)
-        testLayer("reshape_nchw", "TensorFlow", 0.0092, 0.0495);
     else
-        testLayer("reshape_nchw", "TensorFlow", 0.0089, 0.029);
 
-    testLayer("reshape_conv", "TensorFlow", 0.035, 0.054);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        testLayer("reshape_reduce", "TensorFlow", 0.0053, 0.011);
     else
-        testLayer("reshape_reduce", "TensorFlow", 0.0042, 0.0078);
-    testLayer("reshape_as_shape", "TensorFlow", 0.0014, 0.0028);
-    testLayer("reshape_no_reorder", "TensorFlow", 0.0014, 0.0028);
-    testLayer("shift_reshape_no_reorder", "TensorFlow", 0.0063, backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ? 0.016 : 0.014);
     testLayer("dynamic_reshape", "ONNX", 0.0047, 0.0079);
     testLayer("dynamic_reshape_opset_11", "ONNX", 0.0048, 0.0081);
     testLayer("flatten_by_prod", "ONNX", 0.0048, 0.0081);
@@ -432,7 +350,6 @@ TEST_P(Test_Int8_layers, Reshape)
 
 TEST_P(Test_Int8_layers, Permute)
 {
-    testLayer("tf2_permute_nhwc_ncwh", "TensorFlow", 0.0028, 0.006);
     testLayer("transpose", "ONNX", 0.0015, 0.0046);
 }
 
@@ -445,17 +362,14 @@ TEST_P(Test_Int8_layers, Identity)
 
 TEST_P(Test_Int8_layers, Slice_split_tf)
 {
-    testLayer("split", "TensorFlow", 0.0033, 0.0056);
 }
 
 TEST_P(Test_Int8_layers, Slice_4d_tf)
 {
-    testLayer("slice_4d", "TensorFlow", 0.003, 0.0073);
 }
 
 TEST_P(Test_Int8_layers, Slice_strided_tf)
 {
-    testLayer("strided_slice", "TensorFlow", 0.008, 0.0142);
 }
 
 TEST_P(Test_Int8_layers, DISABLED_Slice_onnx)  // FIXIT Support 'Identity' layer for outputs (#22022)
@@ -490,23 +404,15 @@ TEST_P(Test_Int8_layers, Slice_steps_5d_onnx11)
 
 TEST_P(Test_Int8_layers, Dropout)
 {
-    testLayer("layer_dropout", "Caffe", 0.0021, 0.004);
     testLayer("dropout", "ONNX", 0.0029, 0.004);
 }
 
 TEST_P(Test_Int8_layers, Eltwise)
 {
-    testLayer("layer_eltwise", "Caffe", 0.062, 0.15);
 
     if (backend == DNN_BACKEND_TIMVX)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_TIMVX);
 
-    testLayer("conv_2_inps", "Caffe", 0.0086, 0.0232, 2, 1, true, false);
-    testLayer("eltwise_sub", "TensorFlow", 0.015, 0.047);
-    testLayer("eltwise_add_vec", "TensorFlow", 0.037, backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ? 0.24 : 0.21); // tflite 0.0095, 0.0365
-    testLayer("eltwise_mul_vec", "TensorFlow", 0.173, 1.14); // tflite 0.0028, 0.017
-    testLayer("channel_broadcast", "TensorFlow", 0.0025, 0.0063);
-    testLayer("split_equals", "TensorFlow", backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ? 0.021 : 0.02, 0.065);
     testLayer("mul", "ONNX", 0.0039, 0.014);
     testLayer("split_max", "ONNX", 0.004, 0.012);
 }
