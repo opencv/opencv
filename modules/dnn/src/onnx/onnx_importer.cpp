@@ -3132,13 +3132,14 @@ void ONNXImporter::parseTile(LayerParams& layerParams, const opencv_onnx::NodePr
         // input2 in tile-1: axis, 1d tensor of shape [1]
         Mat input2_blob = getBlob(node_proto, 2);
         CV_CheckEQ(input2_blob.total(), 1ull, "ONNX/Tile: axis must be a 0D tensor or 1D tensor of shape [1].");
-        int axis = input2_blob.at<int>(0);
+        int axis = normalize_axis(input2_blob.at<int>(0), input0_dims);
         repeats_vec[axis] = tiles;
     }
     else
     {
         // input1 in tile>1: repeats
         CV_CheckEQ(input1_blob.dims, 2, "ONNX/Tile: repeats must be a 1D tensor."); // 1D tensor is represented as a 2D Mat
+        CV_CheckEQ((int)input1_blob.total(), input0_dims, "ONNX/Tile: repeats length must match the input rank.");
         for (int i = 0; i < input1_blob.total(); i++)
             repeats_vec[i] = input1_blob.at<int>(i);
     }
