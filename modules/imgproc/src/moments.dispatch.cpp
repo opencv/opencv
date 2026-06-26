@@ -10,6 +10,8 @@
 
 namespace cv {
 
+MomentsInTileFunc getMomentsInTileFunc(int depth);
+
 MomentsInTileFunc getMomentsInTileFunc(int depth)
 {
     CV_CPU_DISPATCH(getMomentsInTileFunc, (depth),
