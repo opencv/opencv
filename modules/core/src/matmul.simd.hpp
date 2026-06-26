@@ -816,6 +816,7 @@ GEMMSingleMul( const T* a_data, size_t a_step,
         }
     }
 }
+#if CV_SIMD_64F
 template<typename WT>
 static inline void setDoubleDataZero(WT* d_data, int m, int vlanes)
 {
@@ -904,6 +905,7 @@ static inline void simdBlockMul_kj(
     for( int k = 0; k < n; k++, b_data += b_step )
         simdMulAdd(b_data, d_data, m, (double)a_data[k]);
 }
+#endif // CV_SIMD_64F
 
 template<typename T, typename WT> static void
 GEMMBlockMul( const T* a_data, size_t a_step,
