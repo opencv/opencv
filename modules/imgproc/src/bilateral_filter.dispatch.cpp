@@ -325,120 +325,6 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
-#ifdef HAVE_IPP
-#define IPP_BILATERAL_PARALLEL 1
-
-#ifdef HAVE_IPP_IW
-class ipp_bilateralFilterParallel: public ParallelLoopBody
-{
-public:
-    ipp_bilateralFilterParallel(::ipp::IwiImage &_src, ::ipp::IwiImage &_dst, int _radius, Ipp32f _valSquareSigma, Ipp32f _posSquareSigma, ::ipp::IwiBorderType _borderType, bool *_ok):
-        src(_src), dst(_dst)
-    {
-        pOk = _ok;
-
-        radius          = _radius;
-        valSquareSigma  = _valSquareSigma;
-        posSquareSigma  = _posSquareSigma;
-        borderType      = _borderType;
-
-        *pOk = true;
-    }
-    ~ipp_bilateralFilterParallel() {}
-
-    virtual void operator() (const Range& range) const CV_OVERRIDE
-    {
-        if(*pOk == false)
-            return;
-
-        try
-        {
-            ::ipp::IwiTile tile = ::ipp::IwiRoi(0, range.start, dst.m_size.width, range.end - range.start);
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterBilateral, src, dst, radius, valSquareSigma, posSquareSigma, ::ipp::IwDefault(), borderType, tile);
-        }
-        catch(const ::ipp::IwException &)
-        {
-            *pOk = false;
-            return;
-        }
-    }
-private:
-    ::ipp::IwiImage &src;
-    ::ipp::IwiImage &dst;
-
-    int                  radius;
-    Ipp32f               valSquareSigma;
-    Ipp32f               posSquareSigma;
-    ::ipp::IwiBorderType borderType;
-
-    bool  *pOk;
-    const ipp_bilateralFilterParallel& operator= (const ipp_bilateralFilterParallel&);
-};
-#endif
-
-static bool ipp_bilateralFilter(Mat &src, Mat &dst, int d, double sigmaColor, double sigmaSpace, int borderType)
-{
-#ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP();
-
-    constexpr double eps = 1e-6;
-    if( sigmaColor <= eps || sigmaSpace <= eps )
-    {
-        src.copyTo(dst);
-        return true;
-    }
-
-    int         radius         = IPP_MAX(((d <= 0)?cvRound(sigmaSpace*1.5):d/2), 1);
-    Ipp32f      valSquareSigma = (Ipp32f)(sigmaColor*sigmaColor);
-    Ipp32f      posSquareSigma = (Ipp32f)(sigmaSpace*sigmaSpace);
-
-    // Acquire data and begin processing
-    try
-    {
-        ::ipp::IwiImage      iwSrc = ippiGetImage(src);
-        ::ipp::IwiImage      iwDst = ippiGetImage(dst);
-        ::ipp::IwiBorderSize borderSize(radius);
-        ::ipp::IwiBorderType ippBorder(ippiGetBorder(iwSrc, borderType, borderSize));
-        if(!ippBorder)
-            return false;
-
-        const int threads = ippiSuggestThreadsNum(iwDst, 2);
-        if(IPP_BILATERAL_PARALLEL && threads > 1) {
-            bool  ok      = true;
-            Range range(0, (int)iwDst.m_size.height);
-            ipp_bilateralFilterParallel invoker(iwSrc, iwDst, radius, valSquareSigma, posSquareSigma, ippBorder, &ok);
-            if(!ok)
-                return false;
-
-            // Tile height can't be smaller than the radius.
-            // Otherwise, the second tile has mixed top border (pixels from both
-            // inmem and outside should be used), which is not supported in IPP.
-            int maxTiles = (int)iwDst.m_size.height / radius;
-            int numTiles = threads * 4;
-            if (numTiles > maxTiles) {
-                // Keep the tiles number as multiple of threads for the better workload balance.
-                numTiles = (maxTiles / threads) * threads;
-            }
-            parallel_for_(range, invoker, numTiles);
-
-            if(!ok)
-                return false;
-        } else {
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterBilateral, iwSrc, iwDst, radius, valSquareSigma, posSquareSigma, ::ipp::IwDefault(), ippBorder);
-        }
-    }
-    catch (const ::ipp::IwException &)
-    {
-        return false;
-    }
-    return true;
-#else
-    CV_UNUSED(src); CV_UNUSED(dst); CV_UNUSED(d); CV_UNUSED(sigmaColor); CV_UNUSED(sigmaSpace); CV_UNUSED(borderType);
-    return false;
-#endif
-}
-#endif
-
 void bilateralFilter( InputArray _src, OutputArray _dst, int d,
                       double sigmaColor, double sigmaSpace,
                       int borderType )
@@ -454,10 +340,11 @@ void bilateralFilter( InputArray _src, OutputArray _dst, int d,
 
     Mat src = _src.getMat(), dst = _dst.getMat();
 
-    CALL_HAL(bilateralFilter, cv_hal_bilateralFilter, src.data, src.step, dst.data, dst.step, src.cols, src.rows, src.depth(),
-             src.channels(), d, sigmaColor, sigmaSpace, borderType);
-
-    CV_IPP_RUN_FAST(ipp_bilateralFilter(src, dst, d, sigmaColor, sigmaSpace, borderType));
+    if (!src.isSubmatrix() || (borderType & BORDER_ISOLATED))
+    {
+        CALL_HAL(bilateralFilter, cv_hal_bilateralFilter, src.data, src.step, dst.data, dst.step, src.cols, src.rows, src.depth(),
+                 src.channels(), d, sigmaColor, sigmaSpace, borderType);
+    }
 
     if( src.depth() == CV_8U )
         bilateralFilter_8u( src, dst, d, sigmaColor, sigmaSpace, borderType );
