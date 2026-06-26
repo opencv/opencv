@@ -10483,6 +10483,8 @@ class CapturedStream {
         }
         // Create file and get fd for redirect
         captured_fd = _open(temp_file_path.c_str(), _O_CREAT | _O_WRONLY | _O_TRUNC, _S_IREAD | _S_IWRITE);
+        GTEST_CHECK_(captured_fd != -1) << "Unable to open temporary file "
+        << temp_file_path;
         filename_ = temp_file_path;
     }
 # else
