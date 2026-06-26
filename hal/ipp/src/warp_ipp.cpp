@@ -81,6 +81,8 @@ static bool IPPSet(const double value[4], void *dataPointer, int step, IppiSize 
 int ipp_hal_warpAffine(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar *dst_data, size_t dst_step,
                        int dst_width, int dst_height, const double M[6], int interpolation, int borderType, const double borderValue[4])
 {
+    CV_HAL_CHECK_USE_IPP();
+
     //CV_INSTRUMENT_REGION_IPP();
 
     IppiInterpolationType ippInter  = ippiGetInterpolation(interpolation);
@@ -188,6 +190,8 @@ int ipp_hal_warpAffine(int src_type, const uchar *src_data, size_t src_step, int
 int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar * dst_data, size_t dst_step,
                             int dst_width, int dst_height, const double M[9], int interpolation, int borderType, const double borderValue[4])
 {
+    CV_HAL_CHECK_USE_IPP();
+
     //CV_INSTRUMENT_REGION_IPP();
 
     IppiInterpolationType ippInter = ippiGetInterpolation(interpolation);
@@ -384,6 +388,8 @@ int ipp_hal_remap32f(int src_type, const uchar *src_data, size_t src_step, int s
                      float *mapx, size_t mapx_step, float *mapy, size_t mapy_step,
                      int interpolation, int border_type, const double border_value[4])
 {
+    CV_HAL_CHECK_USE_IPP();
+
     if (!((interpolation == cv::INTER_LINEAR || interpolation == cv::INTER_CUBIC || interpolation == cv::INTER_NEAREST) &&
         (border_type == cv::BORDER_CONSTANT || border_type == cv::BORDER_TRANSPARENT)))
     {
