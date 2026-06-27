@@ -215,17 +215,33 @@ struct MomentsInTile_SIMD
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
 
-namespace {
-template <typename T, int N>
-struct IotaInit {
-    T CV_DECL_ALIGNED(CV_SIMD_WIDTH) data[N];
-    IotaInit() { for (int i = 0; i < N; i++) data[i] = (T)i; }
-};
-static const IotaInit<int,   VTraits<v_int32>::max_nlanes> g_ix0_init;
-#if CV_SIMD && !CV_SIMD_SCALABLE
-static const IotaInit<short, VTraits<v_int16>::max_nlanes> g_ix0_init_s16;
-#endif
+static inline v_int32 vx_load_iota_s32()
+{
+    static int CV_DECL_ALIGNED(CV_SIMD_WIDTH) data[VTraits<v_int32>::max_nlanes];
+    static bool initialized = false;
+    if (!initialized)
+    {
+        for (int i = 0; i < VTraits<v_int32>::max_nlanes; ++i)
+            data[i] = i;
+        initialized = true;
+    }
+    return vx_load(data);
 }
+
+#if CV_SIMD && !CV_SIMD_SCALABLE
+static inline v_int16 vx_load_iota_s16()
+{
+    static short CV_DECL_ALIGNED(CV_SIMD_WIDTH) data[VTraits<v_int16>::max_nlanes];
+    static bool initialized = false;
+    if (!initialized)
+    {
+        for (int i = 0; i < VTraits<v_int16>::max_nlanes; ++i)
+            data[i] = (short)i;
+        initialized = true;
+    }
+    return vx_load(data);
+}
+#endif
 
 #if CV_SIMD && !CV_SIMD_SCALABLE
 template <>
@@ -239,7 +255,7 @@ struct MomentsInTile_SIMD<uchar, int, int>
         const int vlanes16 = VTraits<v_int16>::vlanes();
 
         v_int16  v_delta = vx_setall_s16((short)vlanes16);
-        v_int16  v_ix0   = vx_load(g_ix0_init_s16.data);
+        v_int16  v_ix0   = vx_load_iota_s16();
         v_uint32 v_x0    = vx_setzero_u32();
         v_int32  v_x1    = vx_setzero_s32();
         v_int32  v_x2    = vx_setzero_s32();
@@ -280,7 +296,7 @@ struct MomentsInTile_SIMD<uchar, int, int>
         const int vlanes32 = VTraits<v_int32>::vlanes();
 
         v_int32 v_delta = vx_setall_s32(vlanes32);
-        v_int32 v_ix0   = vx_load(g_ix0_init.data);
+        v_int32 v_ix0   = vx_load_iota_s32();
         v_int32 v_x0 = vx_setzero_s32();
         v_int32 v_x1 = vx_setzero_s32();
         v_int32 v_x2 = vx_setzero_s32();
@@ -321,7 +337,7 @@ struct MomentsInTile_SIMD<ushort, int, int64>
         const int vlanes32 = VTraits<v_int32>::vlanes();
 
         v_int32  v_delta = vx_setall_s32(vlanes32);
-        v_int32  v_ix0   = vx_load(g_ix0_init.data);
+        v_int32  v_ix0   = vx_load_iota_s32();
         v_uint32 z       = vx_setzero_u32();
         v_uint32 v_x0 = z, v_x1 = z, v_x2 = z;
         v_uint64 v_x3    = vx_setzero_u64();
