@@ -32,41 +32,6 @@ void cvtBGRtoYUV(const uchar * src_data, size_t src_step,
 
     CALL_HAL(cvtBGRtoYUV, cv_hal_cvtBGRtoYUV, src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue, isCbCr);
 
-#if defined(HAVE_IPP)
-#if !IPP_DISABLE_RGB_YUV
-    CV_IPP_CHECK()
-    {
-        if (scn == 3 && depth == CV_8U && swapBlue && !isCbCr)
-        {
-            if (CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
-                                IPPGeneralFunctor((ippiGeneralFunc)ippiRGBToYUV_8u_C3R)))
-                return;
-        }
-        else if (scn == 3 && depth == CV_8U && !swapBlue && !isCbCr)
-        {
-            if (CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
-                                IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth],
-                                                         (ippiGeneralFunc)ippiRGBToYUV_8u_C3R, 2, 1, 0, depth)))
-                return;
-        }
-        else if (scn == 4 && depth == CV_8U && swapBlue && !isCbCr)
-        {
-            if (CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
-                                IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
-                                                         (ippiGeneralFunc)ippiRGBToYUV_8u_C3R, 0, 1, 2, depth)))
-                return;
-        }
-        else if (scn == 4 && depth == CV_8U && !swapBlue && !isCbCr)
-        {
-            if (CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
-                                IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth],
-                                                         (ippiGeneralFunc)ippiRGBToYUV_8u_C3R, 2, 1, 0, depth)))
-                return;
-        }
-    }
-#endif
-#endif
-
     CV_CPU_DISPATCH(cvtBGRtoYUV, (src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue, isCbCr),
         CV_CPU_DISPATCH_MODES_ALL);
 }
@@ -84,42 +49,6 @@ void cvtYUVtoBGR(const uchar * src_data, size_t src_step,
     }
 
     CALL_HAL(cvtYUVtoBGR, cv_hal_cvtYUVtoBGR, src_data, src_step, dst_data, dst_step, width, height, depth, dcn, swapBlue, isCbCr);
-
-
-#if defined(HAVE_IPP)
-#if !IPP_DISABLE_YUV_RGB
-    CV_IPP_CHECK()
-    {
-        if (dcn == 3 && depth == CV_8U && swapBlue && !isCbCr)
-        {
-            if (CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
-                                IPPGeneralFunctor((ippiGeneralFunc)ippiYUVToRGB_8u_C3R)))
-                return;
-        }
-        else if (dcn == 3 && depth == CV_8U && !swapBlue && !isCbCr)
-        {
-            if (CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
-                                IPPGeneralReorderFunctor((ippiGeneralFunc)ippiYUVToRGB_8u_C3R,
-                                                                   ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)))
-                return;
-        }
-        else if (dcn == 4 && depth == CV_8U && swapBlue && !isCbCr)
-        {
-            if (CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
-                                IPPGeneralReorderFunctor((ippiGeneralFunc)ippiYUVToRGB_8u_C3R,
-                                                                   ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)))
-                return;
-        }
-        else if (dcn == 4 && depth == CV_8U && !swapBlue && !isCbCr)
-        {
-            if (CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
-                                IPPGeneralReorderFunctor((ippiGeneralFunc)ippiYUVToRGB_8u_C3R,
-                                                                   ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)))
-                return;
-        }
-    }
-#endif
-#endif
 
     CV_CPU_DISPATCH(cvtYUVtoBGR, (src_data, src_step, dst_data, dst_step, width, height, depth, dcn, swapBlue, isCbCr),
         CV_CPU_DISPATCH_MODES_ALL);
@@ -488,13 +417,7 @@ void cvtColorYUV2Gray_420( InputArray _src, OutputArray _dst )
 {
     CvtHelper< Set<1>, Set<1>, Set<CV_8U>, FROM_YUV > h(_src, _dst, 1);
 
-#ifdef HAVE_IPP
-#if IPP_VERSION_X100 >= 201700
-    if (CV_INSTRUMENT_FUN_IPP(ippiCopy_8u_C1R_L, h.src.data, (IppSizeL)h.src.step, h.dst.data, (IppSizeL)h.dst.step,
-                              ippiSizeL(h.dstSz.width, h.dstSz.height)) >= 0)
-        return;
-#endif
-#endif
+    CALL_HAL(cvtColorYUV2Gray, cv_hal_cvtColorYUV2Gray, h.src.data, h.src.step, h.dst.data, h.dst.step, h.dstSz.width, h.dstSz.height);
     h.src(Range(0, h.dstSz.height), Range::all()).copyTo(h.dst);
 }
 

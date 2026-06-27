@@ -10,168 +10,7 @@
 #include "color_rgb.simd.hpp"
 #include "color_rgb.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
 
-#define IPP_DISABLE_CVTCOLOR_GRAY2BGR_8UC3 1
-
 namespace cv {
-
-//
-// IPP functions
-//
-
-#if NEED_IPP
-
-static const ippiColor2GrayFunc ippiColor2GrayC3Tab[] =
-{
-    (ippiColor2GrayFunc)ippiColorToGray_8u_C3C1R, 0, (ippiColor2GrayFunc)ippiColorToGray_16u_C3C1R, 0,
-    0, (ippiColor2GrayFunc)ippiColorToGray_32f_C3C1R, 0, 0
-};
-
-static const ippiColor2GrayFunc ippiColor2GrayC4Tab[] =
-{
-    (ippiColor2GrayFunc)ippiColorToGray_8u_AC4C1R, 0, (ippiColor2GrayFunc)ippiColorToGray_16u_AC4C1R, 0,
-    0, (ippiColor2GrayFunc)ippiColorToGray_32f_AC4C1R, 0, 0
-};
-
-static const ippiGeneralFunc ippiRGB2GrayC3Tab[] =
-{
-    (ippiGeneralFunc)ippiRGBToGray_8u_C3C1R, 0, (ippiGeneralFunc)ippiRGBToGray_16u_C3C1R, 0,
-    0, (ippiGeneralFunc)ippiRGBToGray_32f_C3C1R, 0, 0
-};
-
-static const ippiGeneralFunc ippiRGB2GrayC4Tab[] =
-{
-    (ippiGeneralFunc)ippiRGBToGray_8u_AC4C1R, 0, (ippiGeneralFunc)ippiRGBToGray_16u_AC4C1R, 0,
-    0, (ippiGeneralFunc)ippiRGBToGray_32f_AC4C1R, 0, 0
-};
-
-
-#if !IPP_DISABLE_CVTCOLOR_GRAY2BGR_8UC3
-static IppStatus ippiGrayToRGB_C1C3R(const Ipp8u*  pSrc, int srcStep, Ipp8u*  pDst, int dstStep, IppiSize roiSize)
-{
-    return CV_INSTRUMENT_FUN_IPP(ippiGrayToRGB_8u_C1C3R, pSrc, srcStep, pDst, dstStep, roiSize);
-}
-#endif
-static IppStatus ippiGrayToRGB_C1C3R(const Ipp16u* pSrc, int srcStep, Ipp16u* pDst, int dstStep, IppiSize roiSize)
-{
-    return CV_INSTRUMENT_FUN_IPP(ippiGrayToRGB_16u_C1C3R, pSrc, srcStep, pDst, dstStep, roiSize);
-}
-static IppStatus ippiGrayToRGB_C1C3R(const Ipp32f* pSrc, int srcStep, Ipp32f* pDst, int dstStep, IppiSize roiSize)
-{
-    return CV_INSTRUMENT_FUN_IPP(ippiGrayToRGB_32f_C1C3R, pSrc, srcStep, pDst, dstStep, roiSize);
-}
-
-static IppStatus ippiGrayToRGB_C1C4R(const Ipp8u*  pSrc, int srcStep, Ipp8u*  pDst, int dstStep, IppiSize roiSize, Ipp8u  aval)
-{
-    return CV_INSTRUMENT_FUN_IPP(ippiGrayToRGB_8u_C1C4R, pSrc, srcStep, pDst, dstStep, roiSize, aval);
-}
-static IppStatus ippiGrayToRGB_C1C4R(const Ipp16u* pSrc, int srcStep, Ipp16u* pDst, int dstStep, IppiSize roiSize, Ipp16u aval)
-{
-    return CV_INSTRUMENT_FUN_IPP(ippiGrayToRGB_16u_C1C4R, pSrc, srcStep, pDst, dstStep, roiSize, aval);
-}
-static IppStatus ippiGrayToRGB_C1C4R(const Ipp32f* pSrc, int srcStep, Ipp32f* pDst, int dstStep, IppiSize roiSize, Ipp32f aval)
-{
-    return CV_INSTRUMENT_FUN_IPP(ippiGrayToRGB_32f_C1C4R, pSrc, srcStep, pDst, dstStep, roiSize, aval);
-}
-
-struct IPPColor2GrayFunctor
-{
-    IPPColor2GrayFunctor(ippiColor2GrayFunc _func) :
-        ippiColorToGray(_func)
-    {
-        coeffs[0] = B2YF;
-        coeffs[1] = G2YF;
-        coeffs[2] = R2YF;
-    }
-    bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
-    {
-        return ippiColorToGray ? CV_INSTRUMENT_FUN_IPP(ippiColorToGray, src, srcStep, dst, dstStep, ippiSize(cols, rows), coeffs) >= 0 : false;
-    }
-private:
-    ippiColor2GrayFunc ippiColorToGray;
-    Ipp32f coeffs[3];
-};
-
-template <typename T>
-struct IPPGray2BGRFunctor
-{
-    IPPGray2BGRFunctor(){}
-
-    bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
-    {
-        return ippiGrayToRGB_C1C3R((T*)src, srcStep, (T*)dst, dstStep, ippiSize(cols, rows)) >= 0;
-    }
-};
-
-template <typename T>
-struct IPPGray2BGRAFunctor
-{
-    IPPGray2BGRAFunctor()
-    {
-        alpha = ColorChannel<T>::max();
-    }
-
-    bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
-    {
-        return ippiGrayToRGB_C1C4R((T*)src, srcStep, (T*)dst, dstStep, ippiSize(cols, rows), alpha) >= 0;
-    }
-
-    T alpha;
-};
-
-static IppStatus CV_STDCALL ippiSwapChannels_8u_C3C4Rf(const Ipp8u* pSrc, int srcStep, Ipp8u* pDst, int dstStep,
-         IppiSize roiSize, const int *dstOrder)
-{
-    return CV_INSTRUMENT_FUN_IPP(ippiSwapChannels_8u_C3C4R, pSrc, srcStep, pDst, dstStep, roiSize, dstOrder, MAX_IPP8u);
-}
-
-static IppStatus CV_STDCALL ippiSwapChannels_16u_C3C4Rf(const Ipp16u* pSrc, int srcStep, Ipp16u* pDst, int dstStep,
-         IppiSize roiSize, const int *dstOrder)
-{
-    return CV_INSTRUMENT_FUN_IPP(ippiSwapChannels_16u_C3C4R, pSrc, srcStep, pDst, dstStep, roiSize, dstOrder, MAX_IPP16u);
-}
-
-static IppStatus CV_STDCALL ippiSwapChannels_32f_C3C4Rf(const Ipp32f* pSrc, int srcStep, Ipp32f* pDst, int dstStep,
-         IppiSize roiSize, const int *dstOrder)
-{
-    return CV_INSTRUMENT_FUN_IPP(ippiSwapChannels_32f_C3C4R, pSrc, srcStep, pDst, dstStep, roiSize, dstOrder, MAX_IPP32f);
-}
-
-// shared
-ippiReorderFunc ippiSwapChannelsC3C4RTab[] =
-{
-    (ippiReorderFunc)ippiSwapChannels_8u_C3C4Rf, 0, (ippiReorderFunc)ippiSwapChannels_16u_C3C4Rf, 0,
-    0, (ippiReorderFunc)ippiSwapChannels_32f_C3C4Rf, 0, 0
-};
-
-static ippiGeneralFunc ippiCopyAC4C3RTab[] =
-{
-    (ippiGeneralFunc)ippiCopy_8u_AC4C3R, 0, (ippiGeneralFunc)ippiCopy_16u_AC4C3R, 0,
-    0, (ippiGeneralFunc)ippiCopy_32f_AC4C3R, 0, 0
-};
-
-// shared
-ippiReorderFunc ippiSwapChannelsC4C3RTab[] =
-{
-    (ippiReorderFunc)ippiSwapChannels_8u_C4C3R, 0, (ippiReorderFunc)ippiSwapChannels_16u_C4C3R, 0,
-    0, (ippiReorderFunc)ippiSwapChannels_32f_C4C3R, 0, 0
-};
-
-// shared
-ippiReorderFunc ippiSwapChannelsC3RTab[] =
-{
-    (ippiReorderFunc)ippiSwapChannels_8u_C3R, 0, (ippiReorderFunc)ippiSwapChannels_16u_C3R, 0,
-    0, (ippiReorderFunc)ippiSwapChannels_32f_C3R, 0, 0
-};
-
-#if IPP_VERSION_X100 >= 810
-static ippiReorderFunc ippiSwapChannelsC4RTab[] =
-{
-    (ippiReorderFunc)ippiSwapChannels_8u_C4R, 0, (ippiReorderFunc)ippiSwapChannels_16u_C4R, 0,
-    0, (ippiReorderFunc)ippiSwapChannels_32f_C4R, 0, 0
-};
-#endif
-
-#endif
 
 //
 // HAL functions
@@ -188,50 +27,6 @@ void cvtBGRtoBGR(const uchar * src_data, size_t src_step,
     CV_INSTRUMENT_REGION();
 
     CALL_HAL(cvtBGRtoBGR, cv_hal_cvtBGRtoBGR, src_data, src_step, dst_data, dst_step, width, height, depth, scn, dcn, swapBlue);
-
-#if defined(HAVE_IPP) && IPP_VERSION_X100 >= 700
-    CV_IPP_CHECK()
-    {
-    if(scn == 3 && dcn == 4 && !swapBlue)
-    {
-        if ( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
-                             IPPReorderFunctor(ippiSwapChannelsC3C4RTab[depth], 0, 1, 2)) )
-            return;
-    }
-    else if(scn == 4 && dcn == 3 && !swapBlue)
-    {
-        if ( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
-                             IPPGeneralFunctor(ippiCopyAC4C3RTab[depth])) )
-            return;
-    }
-    else if(scn == 3 && dcn == 4 && swapBlue)
-    {
-        if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
-                            IPPReorderFunctor(ippiSwapChannelsC3C4RTab[depth], 2, 1, 0)) )
-            return;
-    }
-    else if(scn == 4 && dcn == 3 && swapBlue)
-    {
-        if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
-                            IPPReorderFunctor(ippiSwapChannelsC4C3RTab[depth], 2, 1, 0)) )
-            return;
-    }
-    else if(scn == 3 && dcn == 3 && swapBlue)
-    {
-        if( CvtColorIPPLoopCopy(src_data, src_step, CV_MAKETYPE(depth, scn), dst_data, dst_step, width, height,
-                                IPPReorderFunctor(ippiSwapChannelsC3RTab[depth], 2, 1, 0)) )
-            return;
-    }
-#if IPP_VERSION_X100 >= 810
-    else if(scn == 4 && dcn == 4 && swapBlue)
-    {
-        if( CvtColorIPPLoopCopy(src_data, src_step, CV_MAKETYPE(depth, scn), dst_data, dst_step, width, height,
-                                IPPReorderFunctor(ippiSwapChannelsC4RTab[depth], 2, 1, 0)) )
-            return;
-    }
-    }
-#endif
-#endif
 
     CV_CPU_DISPATCH(cvtBGRtoBGR, (src_data, src_step, dst_data, dst_step, width, height, depth, scn, dcn, swapBlue),
         CV_CPU_DISPATCH_MODES_ALL);
@@ -275,36 +70,6 @@ void cvtBGRtoGray(const uchar * src_data, size_t src_step,
 
     CALL_HAL(cvtBGRtoGray, cv_hal_cvtBGRtoGray, src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue);
 
-#if defined(HAVE_IPP) && IPP_VERSION_X100 >= 700
-    CV_IPP_CHECK()
-    {
-        if(depth == CV_32F && scn == 3 && !swapBlue)
-        {
-            if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
-                                IPPColor2GrayFunctor(ippiColor2GrayC3Tab[depth])) )
-                return;
-        }
-        else if(depth == CV_32F && scn == 3 && swapBlue)
-        {
-            if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
-                                IPPGeneralFunctor(ippiRGB2GrayC3Tab[depth])) )
-                return;
-        }
-        else if(depth == CV_32F && scn == 4 && !swapBlue)
-        {
-            if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
-                                IPPColor2GrayFunctor(ippiColor2GrayC4Tab[depth])) )
-                return;
-        }
-        else if(depth == CV_32F && scn == 4 && swapBlue)
-        {
-            if( CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
-                                IPPGeneralFunctor(ippiRGB2GrayC4Tab[depth])) )
-                return;
-        }
-    }
-#endif
-
     CV_CPU_DISPATCH(cvtBGRtoGray, (src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue),
         CV_CPU_DISPATCH_MODES_ALL);
 }
@@ -318,37 +83,6 @@ void cvtGraytoBGR(const uchar * src_data, size_t src_step,
     CV_INSTRUMENT_REGION();
 
     CALL_HAL(cvtGraytoBGR, cv_hal_cvtGraytoBGR, src_data, src_step, dst_data, dst_step, width, height, depth, dcn);
-
-#if defined(HAVE_IPP) && IPP_VERSION_X100 >= 700
-    CV_IPP_CHECK()
-    {
-        bool ippres = false;
-        if(dcn == 3)
-        {
-            if( depth == CV_8U )
-            {
-#if !IPP_DISABLE_CVTCOLOR_GRAY2BGR_8UC3
-                ippres = CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height, IPPGray2BGRFunctor<Ipp8u>());
-#endif
-            }
-            else if( depth == CV_16U )
-                ippres = CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height, IPPGray2BGRFunctor<Ipp16u>());
-            else
-                ippres = CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height, IPPGray2BGRFunctor<Ipp32f>());
-        }
-        else if(dcn == 4)
-        {
-            if( depth == CV_8U )
-                ippres = CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height, IPPGray2BGRAFunctor<Ipp8u>());
-            else if( depth == CV_16U )
-                ippres = CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height, IPPGray2BGRAFunctor<Ipp16u>());
-            else
-                ippres = CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height, IPPGray2BGRAFunctor<Ipp32f>());
-        }
-        if(ippres)
-            return;
-    }
-#endif
 
     CV_CPU_DISPATCH(cvtGraytoBGR, (src_data, src_step, dst_data, dst_step, width, height, depth, dcn),
         CV_CPU_DISPATCH_MODES_ALL);
@@ -389,15 +123,6 @@ void cvtRGBAtoMultipliedRGBA(const uchar * src_data, size_t src_step,
     CV_INSTRUMENT_REGION();
 
     CALL_HAL(cvtRGBAtoMultipliedRGBA, cv_hal_cvtRGBAtoMultipliedRGBA, src_data, src_step, dst_data, dst_step, width, height);
-
-#ifdef HAVE_IPP
-    CV_IPP_CHECK()
-    {
-    if (CvtColorIPPLoop(src_data, src_step, dst_data, dst_step, width, height,
-                        IPPGeneralFunctor((ippiGeneralFunc)ippiAlphaPremul_8u_AC4R)))
-        return;
-    }
-#endif
 
     CV_CPU_DISPATCH(cvtRGBAtoMultipliedRGBA, (src_data, src_step, dst_data, dst_step, width, height),
         CV_CPU_DISPATCH_MODES_ALL);
