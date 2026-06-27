@@ -576,7 +576,8 @@ TEST(Objdetect_QRCode_decode, decode_alphanumeric_out_of_range)
     // Version 1 QR with a valid Reed-Solomon block whose alphanumeric segment
     // carries an 11-bit pair value of 2047. decodeAlpha computes 2047 / 45 == 45
     // and used to read map[45], one past the 45-entry table, leaking an adjacent
-    // byte into the decoded string. The decoder must reject it instead.
+    // byte into the decoded string. The decoder must reject it and return an
+    // empty string instead.
     static const char* modules[21] = {
         "000000011011010000000",
         "011111010011010111110",
@@ -613,7 +614,9 @@ TEST(Objdetect_QRCode_decode, decode_alphanumeric_out_of_range)
     std::vector<Point> corners;
     ASSERT_TRUE(qrcode.detect(src, corners));
     Mat straight_barcode;
-    EXPECT_ANY_THROW(qrcode.decode(src, corners, straight_barcode));
+    std::string decoded_info;
+    EXPECT_NO_THROW(decoded_info = qrcode.decode(src, corners, straight_barcode));
+    EXPECT_TRUE(decoded_info.empty());
 }
 
 TEST_P(Objdetect_QRCode_detectAndDecodeMulti, decode_9_qrcodes_version7)
