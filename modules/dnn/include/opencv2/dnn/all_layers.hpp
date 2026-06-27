@@ -1027,7 +1027,20 @@ CV__DNN_INLINE_NS_BEGIN
         ACTIV_GELU,
         ACTIV_GELU_APPROX,
         ACTIV_RELU,
-        ACTIV_CLIP
+        ACTIV_CLIP,
+        ACTIV_LOG,
+        ACTIV_ERF,
+        ACTIV_EXP,
+        ACTIV_SIN,
+        ACTIV_COS,
+        ACTIV_SINH,
+        ACTIV_COSH,
+        ACTIV_TAN,
+        ACTIV_SOFTPLUS,
+        ACTIV_BNLL,
+        ACTIV_ASINH,
+        ACTIV_ACOSH,
+        ACTIV_ATANH
     };
 
     /** Returns a platform-optimized activation function pointer for the given type.
