@@ -1059,6 +1059,21 @@ size_t imcount(const String& filename, int flags)
 }
 
 
+static void normalizeBoolImageForEncoding(Mat& image, Mat& temp)
+{
+#ifdef CV_Bool
+    if (image.depth() == CV_Bool)
+    {
+        image.convertTo(temp, CV_8U, 255);
+        image = temp;
+    }
+#else
+    CV_UNUSED(image);
+    CV_UNUSED(temp);
+#endif
+}
+
+
 static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
                       const std::vector<int>& metadata_types,
                       InputArrayOfArrays metadata,
@@ -1084,6 +1099,7 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
 
 
         Mat temp;
+        normalizeBoolImageForEncoding(image, temp);
         if( !encoder->isFormatSupported(image.depth()) )
         {
             CV_LOG_ONCE_WARNING(NULL, "Unsupported depth image for selected encoder is fallbacked to CV_8U.");
@@ -1666,6 +1682,7 @@ bool imencodeWithMetadata( const String& ext, InputArray _img,
 #endif
 
         Mat temp;
+        normalizeBoolImageForEncoding(image, temp);
         if( !encoder->isFormatSupported(image.depth()) )
         {
             CV_LOG_ONCE_WARNING(NULL, "Unsupported depth image for selected encoder is fallbacked to CV_8U.");
