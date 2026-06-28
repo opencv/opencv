@@ -50,7 +50,7 @@ static double minUs(F&& f, int iters, int ninner)
     return best;
 }
 
-struct Combo { int da, db, Tr; const char* name; };
+struct Combo { int da, db, Tr; std::string name; };
 struct Sz    { std::vector<int> shape; int cn; int ninner; const char* name; };
 
 // Shared add/sub sweep over (type-combo x size). `masked` adds a single-channel write-mask: the
@@ -59,20 +59,22 @@ struct Sz    { std::vector<int> shape; int cn; int ninner; const char* name; };
 // always checked against a deterministic zero + copyTo(mask) reference.
 static void perfBinOp(TOp op, const char* title, bool masked)
 {
+    const std::string opname = opName(op);
     const Combo combos[] = {
-        { CV_8U,  CV_8U,  CV_8U,  "u8 +u8 ->u8 " },
-        { CV_16F, CV_16F, CV_16F, "f16+f16->f16" },
-        { CV_32F, CV_32F, CV_32F, "f32+f32->f32" },
-        { CV_8U,  CV_16F, CV_16F, "u8 +f16->f16" },
+        { CV_8U,  CV_8U,  CV_8U,  opname + "(u8,  u8)->u8   " },
+        { CV_16F, CV_16F, CV_16F, opname + "(f16, f16)->f16 " },
+        { CV_32F, CV_32F, CV_32F, opname + "(f32, f32)->f32 " },
+        { CV_8U,  CV_16F, CV_16F, opname + "(u8,  f16)->f16 " },
     };
     const Sz sizes[] = {
-        { {10,10,10},   1, 5000, "10x10x10    " },
-        { {165,121},    1, 2000, "165x121     " },
+        //{ {10,10,10},   1, 5000, "10x10x10    " },
+        //{ {165,121},    1, 2000, "165x121     " },
         { {1024,1024},  3,    4, "1024x1024x3 " },
     };
 
     std::cout << "\n[ew-perf] " << title << "  (min us per call over 30 trials)\n";
-    std::cout << "  combo         size           engine    cv::op     speedup\n";
+    std::cout << "  combo                size           engine     cv::op     speedup\n";
+    std::cout << "  -----------------------------------------------------------------\n";
 
     for (const Combo& c : combos)
         for (const Sz& s : sizes)
