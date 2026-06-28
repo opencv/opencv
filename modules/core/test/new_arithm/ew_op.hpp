@@ -216,7 +216,12 @@ struct TExpr
     int noutputs = 0;
     int ntemps = 0;
     int nbuffers = 0;                        // distinct physical temp buffers after liveness
+    int nconsts = 0;                         // # materialized CONST slots (set by compile()) - sizes
+                                             // the const store; nconsts==0 enables exec()'s fast path
     AutoBuffer<int, 16>    bufferOfTemp;     // temp-id -> physical buffer id
+    AutoBuffer<int, 8>     bufEszPrefix;     // [nbuffers+1] prefix sums of each physical temp buffer's
+                                             // elem size (set by compile()); [nbuffers] = temp bytes
+                                             // per output element. Lets exec() skip per-call recompute.
 
     TExpr();
     void clear();                            // reset to an empty program (slot 0 = NONE)

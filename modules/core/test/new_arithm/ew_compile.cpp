@@ -233,13 +233,29 @@ void TExpr::compile()
         CV_Assert(ok);
     }
 
-    // ---- liveness: pack temps into a minimal set of reusable physical buffers ----
+    // count materialized CONST slots (flexible literals, depth==NONE, are dead - emit() replaced
+    // them with typed copies); sizes the const store and gates exec()'s fast path. Cheap scan, no
+    // allocation - kept separate from liveness so the no-temp path can skip out below.
     const int nslots = (int)arginfo.size();
-    std::vector<int> tempOfSlot(nslots, -1);
+    nconsts = 0;
+    for (int s = 1; s < nslots; s++)
+        if (arginfo[s].kind == CONST && arginfo[s].depth != EW_DEPTH_NONE) nconsts++;
+
+    // ---- liveness: pack temps into a minimal set of reusable physical buffers. A program with no
+    //      temps (single-op add/sub/mul/...) needs none of this - early out with ZERO heap traffic,
+    //      so building such a program (the dominant cv::add-style call) allocates nothing. The temp
+    //      case uses stack-backed AutoBuffers (inline for typical small expressions). ----
+    nbuffers = 0;
+    bufEszPrefix.resize(1); bufEszPrefix[0] = 0;
+    if (ntemps == 0) return;
+
+    AutoBuffer<int, 32> tempOfSlot(nslots);
+    for (int s = 0; s < nslots; s++) tempOfSlot[s] = -1;
     for (int s = 1; s < nslots; s++)
         if (arginfo[s].kind == TEMP) tempOfSlot[s] = arginfo[s].index;
 
-    std::vector<int> lastUse(ntemps, -1);
+    AutoBuffer<int, 16> lastUse(ntemps);
+    for (int t = 0; t < ntemps; t++) lastUse[t] = -1;
     for (int i = 0; i < ninsn; i++)
     {
         const TExpr::Insn& ins = prog[i];
@@ -250,28 +266,37 @@ void TExpr::compile()
 
     bufferOfTemp.resize(ntemps);
     for (int t = 0; t < ntemps; t++) bufferOfTemp[t] = -1;
-    std::vector<int> freeBufs;
-    int nbuf = 0;
+    AutoBuffer<int, 16> freeBufs(ntemps);
+    int nfree = 0, nbuf = 0;
     for (int i = 0; i < ninsn; i++)
     {
         const TExpr::Insn& ins = prog[i];
         int rt = tempOfSlot[ins.result];
         if (rt >= 0 && bufferOfTemp[rt] < 0)
-        {
-            int b;
-            if (!freeBufs.empty()) { b = freeBufs.back(); freeBufs.pop_back(); }
-            else b = nbuf++;
-            bufferOfTemp[rt] = b;
-        }
+            bufferOfTemp[rt] = nfree > 0 ? freeBufs[--nfree] : nbuf++;
         int as[3] = { ins.arg0, ins.arg1, ins.arg2 };
         for (int k = 0; k < 3; k++)
         {
             int t = tempOfSlot[as[k]];
-            if (t >= 0 && lastUse[t] == i) freeBufs.push_back(bufferOfTemp[t]);
+            if (t >= 0 && lastUse[t] == i) freeBufs[nfree++] = bufferOfTemp[t];
         }
     }
 
     nbuffers = nbuf;
+
+    // Byte layout of the physical temp buffers, per output element: prefix sums of each buffer's
+    // max element size. bufEszPrefix[b]*region = buffer b's byte offset in the scratch; [nbuffers] =
+    // total temp bytes/element. Precomputed here (depths are build-time) so exec()/its fast path
+    // never recompute it per call, and the fast path can size its scratch in O(1).
+    bufEszPrefix.resize(nbuffers + 1);
+    for (int b = 0; b <= nbuffers; b++) bufEszPrefix[b] = 0;
+    for (int s = 1; s < nslots; s++)
+        if (arginfo[s].kind == TEMP)
+        {
+            int b = bufferOfTemp[arginfo[s].index], e = (int)CV_ELEM_SIZE1(arginfo[s].depth);
+            if (e > bufEszPrefix[b + 1]) bufEszPrefix[b + 1] = e;     // max elem size in buffer b
+        }
+    for (int b = 0; b < nbuffers; b++) bufEszPrefix[b + 1] += bufEszPrefix[b];   // -> prefix sums
 }
 
 }} // namespace cv::ew

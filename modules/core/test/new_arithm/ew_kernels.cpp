@@ -227,6 +227,9 @@ struct EwSub {
 // rdepth. scalar (reference) path only for now - SIMD can follow. (No vec(): never instantiated.)
 struct EwMul {
     template<typename V> static V vec(const V& a, const V& b) { return v_mul(a, b); }
+#ifdef __ARM_NEON
+    static v_uint16 vec(const v_uint16& a, const v_uint16& b) { return v_uint16x8(vmulq_u16(a.val, b.val)); }
+#endif
     template<typename V> static V preproc(const V& a, const V& s) { return v_mul(a, s); }
     template<typename W, typename ST> static W scl(W a, W b, ST s) { return a * b * s; }
 };
@@ -325,12 +328,14 @@ static void expand_scalar(const T* sc, size_t sx, int n0, WT* scbuf, int n)
 //   Op       = operation functor (vec()/scl()).
 //   use_simd = compile-time switch; false => pure scalar (32/64-bit widened outputs, f64).
 // stepx in {0,1}; dst contiguous. In-place safe (see file header).
-template<typename T, typename Tr, typename Wvec, typename WT, class Op, typename ST=WT>
+template<typename T, typename Tr, typename Wvec, typename WT, class Op, typename ST=WT, typename Wvec1=Wvec>
 static int binary_kernel(const void* src0_, size_t s0y, size_t s0x,
                          const void* src1_, size_t s1y, size_t s1x,
                          const void*, size_t, size_t,
                          void* dst_, size_t dsty, int width, int height, const double* params)
 {
+    //return 0;
+#if 1
     CV_Assert((s0x|s1x) == 1u || (s0x|s1x) + (size_t)width == 1u);
 
     const T* src0 = (const T*)src0_;
@@ -405,18 +410,36 @@ static int binary_kernel(const void* src0_, size_t s0y, size_t s0x,
     #if (CV_SIMD || CV_SIMD_SCALABLE)
         Wvec a0, a1, a2, a3, b0, b1, b2, b3;
         if (s0x == s1x) {
-            for (; x < width; x += VECSZ*4) {
-                if (x + VECSZ*4 > width) { if (!use_tail_trick) break; x = width - VECSZ*4; }
-                vx_load_pair_as(src0 + x, a0, a1);
-                vx_load_pair_as(src0 + x + VECSZ*2, a2, a3);
-                vx_load_pair_as(src1 + x, b0, b1);
-                vx_load_pair_as(src1 + x + VECSZ*2, b2, b3);
-                a0 = Op::vec(Op::preproc(a0, vscalar), b0);
-                a1 = Op::vec(Op::preproc(a1, vscalar), b1);
-                a2 = Op::vec(Op::preproc(a2, vscalar), b2);
-                a3 = Op::vec(Op::preproc(a3, vscalar), b3);
-                v_store_pair_as(dst + x, a0, a1);
-                v_store_pair_as(dst + x + VECSZ*2, a2, a3);
+            if (scalar == ST(1)) {
+                for (; x < width; x += VECSZ*4) {
+                    Wvec1 a0_, a1_, a2_, a3_, b0_, b1_, b2_, b3_;
+                    if (x + VECSZ*4 > width) { if (!use_tail_trick) break; x = width - VECSZ*4; }
+                    vx_load_pair_as(src0 + x, a0_, a1_);
+                    vx_load_pair_as(src0 + x + VECSZ*2, a2_, a3_);
+                    vx_load_pair_as(src1 + x, b0_, b1_);
+                    vx_load_pair_as(src1 + x + VECSZ*2, b2_, b3_);
+                    a0_ = Op::vec(a0_, b0_);
+                    a1_ = Op::vec(a1_, b1_);
+                    a2_ = Op::vec(a2_, b2_);
+                    a3_ = Op::vec(a3_, b3_);
+                    v_store_pair_as(dst + x, a0_, a1_);
+                    v_store_pair_as(dst + x + VECSZ*2, a2_, a3_);
+                }
+            }
+            else {
+                for (; x < width; x += VECSZ*4) {
+                    if (x + VECSZ*4 > width) { if (!use_tail_trick) break; x = width - VECSZ*4; }
+                    vx_load_pair_as(src0 + x, a0, a1);
+                    vx_load_pair_as(src0 + x + VECSZ*2, a2, a3);
+                    vx_load_pair_as(src1 + x, b0, b1);
+                    vx_load_pair_as(src1 + x + VECSZ*2, b2, b3);
+                    a0 = Op::vec(Op::preproc(a0, vscalar), b0);
+                    a1 = Op::vec(Op::preproc(a1, vscalar), b1);
+                    a2 = Op::vec(Op::preproc(a2, vscalar), b2);
+                    a3 = Op::vec(Op::preproc(a3, vscalar), b3);
+                    v_store_pair_as(dst + x, a0, a1);
+                    v_store_pair_as(dst + x + VECSZ*2, a2, a3);
+                }
             }
         }
         else if (s1x == 0) {
@@ -457,6 +480,7 @@ static int binary_kernel(const void* src0_, size_t s0y, size_t s0x,
     vx_cleanup();
 #endif
     return 0;
+#endif
 }
 
 // ===========================================================================
@@ -541,7 +565,7 @@ static ElemwiseFunc getMulFunc(int T, int R)
     {
     case CV_8U:
         #if CV_SIMD_16F
-        if (R == CV_8U)  return binary_kernel<uchar, uchar, v_float16, float, EwMul>;
+        if (R == CV_8U)  return binary_kernel<uchar, uchar, v_float16, float, EwMul, float, v_uint16>;
         #else
         if (R == CV_8U)  return binary_kernel<uchar, uchar, v_float32, float, EwMul>;
         #endif
@@ -549,7 +573,7 @@ static ElemwiseFunc getMulFunc(int T, int R)
         return nullptr;
     case CV_8S:
         #if CV_SIMD_16F
-        if (R == CV_8S)  return binary_kernel<schar, schar, v_float16, float, EwMul>;
+        if (R == CV_8S)  return binary_kernel<schar, schar, v_float16, float, EwMul, float, v_int16>;
         #else
         if (R == CV_8S)  return binary_kernel<schar, schar, v_float32, float, EwMul>;
         #endif

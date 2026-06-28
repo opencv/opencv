@@ -195,13 +195,86 @@ void TExpr::exec(const Mat* inputs, Mat* outputs)
     const int nslots = (int)arginfo.size();
     CV_Assert(nslots >= 1 && arginfo[0].kind == TExpr::NONE);
 
+    // ---- cheap fast path: a const-free program over small, same-shape, continuous arrays. Channels
+    //      fold into one flat contiguous run, so the whole job is a flat (total x 1) strip - run the
+    //      program directly here and skip the per-call prep loop, broadcastOp's geometry, 2D tiling
+    //      and the parallel framework (all pure overhead at this size). Temps are allowed: their
+    //      byte layout (bufEszPrefix) is known from compile(), so we size an L1 scratch in O(1) and
+    //      walk the strip in L1-sized fragments (the intermediates stay hot). nconsts/nbuffers/
+    //      bufEszPrefix come from compile(); the rest is a quick check of the args. ----
+    if (nconsts == 0 && ninputs >= 1)
+    {
+        constexpr size_t EW_FASTPATH_MAX = 1u << 17;   // above this the tiled/parallel path wins
+        const Mat& r = inputs[0];
+        const int rcn = r.channels();
+        bool ok = r.isContinuous();
+        for (int i = 1; ok && i < ninputs; i++)
+        {
+            const Mat& a = inputs[i];
+            ok = a.isContinuous() && a.channels() == rcn && a.size == r.size;
+        }
+        const size_t total = ok ? r.total() * rcn : 0;
+        if (ok && total <= EW_FASTPATH_MAX)
+        {
+            for (int s = 1; s < nslots; s++)
+                if (arginfo[s].kind == OUTPUT)
+                    outputs[arginfo[s].index].create(r.dims, r.size.p, CV_MAKETYPE(arginfo[s].depth, rcn));
+            const int ninsn = (int)prog.size();
+
+            if (nbuffers == 0)
+            {
+                // No temps (single-op add/sub/mul/...): one flat (total x 1) pass, operands point
+                // straight at the Mat data - no scratch, no fragment loop. Slots are only INPUT/OUTPUT.
+                auto ptrOf = [&](int s) -> void* {
+                    if (s <= 0) return nullptr;
+                    const Arg& ai = arginfo[s];
+                    return ai.kind == INPUT ? (void*)inputs[ai.index].data : (void*)outputs[ai.index].data;
+                };
+                const int w = (int)total;
+                for (int n = 0; n < ninsn; n++)
+                {
+                    const Insn& ins = prog[n];
+                    runInsn(ins, ptrOf(ins.arg0), 0, 1, ptrOf(ins.arg1), 0, 1,
+                            ptrOf(ins.arg2), 0, 1, ptrOf(ins.result), 0, w, 1,
+                            (int)CV_ELEM_SIZE1(arginfo[ins.arg0].depth),
+                            (int)CV_ELEM_SIZE1(arginfo[ins.result].depth));
+                }
+                return;
+            }
+
+            // Temps present: walk the strip in L1-sized fragments so the intermediates stay hot.
+            // The byte layout (bufEszPrefix) is from compile(); scratch is totalEsz*wf0 (<= ~16KB).
+            const int totalEsz = bufEszPrefix[nbuffers];
+            const int wf0 = std::min((int)total, std::max(64, (16 * 1024) / std::max(1, totalEsz)));
+            AutoBuffer<uchar> scratch((size_t)totalEsz * (size_t)wf0);
+            for (int x0 = 0; x0 < (int)total; x0 += wf0)
+            {
+                const int wf = std::min(wf0, (int)total - x0);
+                auto ptrOf = [&](int s) -> void* {
+                    if (s <= 0) return nullptr;
+                    const Arg& ai = arginfo[s];
+                    if (ai.kind == INPUT)  return (uchar*)inputs[ai.index].data  + (size_t)x0 * CV_ELEM_SIZE1(ai.depth);
+                    if (ai.kind == OUTPUT) return (uchar*)outputs[ai.index].data + (size_t)x0 * CV_ELEM_SIZE1(ai.depth);
+                    const int b = bufferOfTemp.empty() ? ai.index : bufferOfTemp[ai.index];  // TEMP
+                    return scratch.data() + (size_t)bufEszPrefix[b] * (size_t)wf0;            // fragment-local
+                };
+                for (int n = 0; n < ninsn; n++)
+                {
+                    const Insn& ins = prog[n];
+                    runInsn(ins, ptrOf(ins.arg0), wf, 1, ptrOf(ins.arg1), wf, 1,
+                            ptrOf(ins.arg2), wf, 1, ptrOf(ins.result), wf, wf, 1,
+                            (int)CV_ELEM_SIZE1(arginfo[ins.arg0].depth),
+                            (int)CV_ELEM_SIZE1(arginfo[ins.result].depth));
+                }
+            }
+            return;
+        }
+    }
+
     // Scalars (TExpr::CONST) never influence the result shape or channel count - the output geometry
     // comes from the real array inputs alone (a scalar broadcasts into whatever they produce).
     // A flexible CONST (depth == EW_DEPTH_NONE) is a leftover literal: emit() materializes a typed
     // copy at each use, so the original is dead - it is skipped entirely (no slice, no storeScalar).
-    int nconsts = 0;
-    for (int s = 1; s < nslots; s++)
-        if (arginfo[s].kind == TExpr::CONST && arginfo[s].depth != EW_DEPTH_NONE) nconsts++;
 
     // ---- 1. result shape (spatial dims + channel count), channels innermost ----
     // Fast path: every input shares one shape+channels => the result IS inputs[0]'s shape. Skips
@@ -256,8 +329,6 @@ void TExpr::exec(const Mat* inputs, Mat* outputs)
     AutoBuffer<int, LOCAL_OPS> slotMap(nslots);
     AutoBuffer<signed char, LOCAL_OPS> slotKind(nslots);
     AutoBuffer<int, LOCAL_OPS> esz1Slot(nslots);
-    AutoBuffer<int, LOCAL_OPS> bufEsz(std::max(1, nbuffers));
-    for (int b = 0; b < nbuffers; b++) bufEsz[b] = 1;
     int narr = 0, nc = 0;
     if (inplace) {
         // save (incref) inputs in the case of in-place operation
@@ -294,18 +365,13 @@ void TExpr::exec(const Mat* inputs, Mat* outputs)
             nc++;
         }
         else { // TExpr::TEMP
-            const int buf = bufferOfTemp.empty() ? ai.index : bufferOfTemp[ai.index];
-            slotMap[s] = buf;                  // physical temp-buffer id
-            bufEsz[buf] = std::max(bufEsz[buf], e);
+            slotMap[s] = bufferOfTemp.empty() ? ai.index : bufferOfTemp[ai.index];  // physical buffer id
         }
     }
 
-    // Temp-buffer layout precomputed once (point 3): prefix sums give each buffer's byte offset per
-    // element, so the body never recomputes offsets per tile - it just does prefix[buf]*region.
-    // capElems = how many elements one L1-sized fragment holds (0 when there are no temps at all).
-    AutoBuffer<int, LOCAL_OPS> bufEszPrefix(nbuffers + 1);
-    bufEszPrefix[0] = 0;
-    for (int b = 0; b < nbuffers; b++) bufEszPrefix[b + 1] = bufEszPrefix[b] + bufEsz[b];
+    // Temp-buffer byte layout (prefix sums) was precomputed by compile() into `bufEszPrefix`; the
+    // body uses it directly (prefix[buf]*region = a buffer's byte offset). capElems = how many
+    // elements one L1-sized fragment holds (0 when there are no temps at all).
     const int totalEsz = bufEszPrefix[nbuffers];
     const int capElems = totalEsz > 0 ? std::max(64, (16 * 1024) / totalEsz) : 0;
 
@@ -381,49 +447,58 @@ void TExpr::exec(const Mat* inputs, Mat* outputs)
             return;
         }
 
-        // Fused temps: run the program over L1-sized column strips so the intermediates stay in
-        // cache. Strip width Wf holds <= capElems elements per buffer; the per-buffer offsets are
-        // precomputed (bufEszPrefix), so the body only scales by `region` = Wf*h - no per-tile
-        // offset loop. Each temp buffer occupies [bufEszPrefix[buf]*region, ...) bytes in tstore.
+        // Fused temps: run the program over L1-sized 2D blocks so the intermediates stay in cache.
+        // ONE rule covers both tile shapes: keep the strip as WIDE as fits L1 (long inner loop =>
+        // good SIMD + hits the kernels' width-specific branches), then add as many rows as still fit
+        // (bw*bh <= capElems). For the dominant 1D tile (w huge, h==1) this is the old column strip;
+        // for a tall-thin tile (w==channels, h huge - e.g. a masked op) it instead splits the LONG
+        // axis (height), so the temp block stays contiguous and the kernels keep full width. Each
+        // temp buffer occupies [bufEszPrefix[buf]*region, ...) bytes in tstore; region = bw*bh.
         const int* const bufEszPrefix = bc.bufEszPrefix;
-        const int Wf = std::min(w, std::max(1, bc.capElems / std::max(1, h)));
-        const size_t region = alignSize((size_t)Wf * h, 8);
+        const int bw = std::min(w, bc.capElems);
+        const int bh = std::min(h, std::max(1, bc.capElems / std::max(1, bw)));
+        const size_t region = alignSize((size_t)bw * bh, 8);
         AutoBuffer<uchar> tstore((size_t)bufEszPrefix[bc.nbuffers] * region);
 
         AutoBuffer<EwSlice, LOCAL_OPS> args(nslots);
-        for (int x0 = 0; x0 < w; x0 += Wf)
+        for (int y0 = 0; y0 < h; y0 += bh)
         {
-            const int wf = std::min(Wf, w - x0);
-            for (int s = 1; s < nslots; s++)
+            const int hf = std::min(bh, h - y0);
+            for (int x0 = 0; x0 < w; x0 += bw)
             {
-                EwSlice& a = args[s];
-                const int k = slotKind[s];
-                if (k == TExpr::TEMP)                      // contiguous strip-local buffer
+                const int wf = std::min(bw, w - x0);
+                for (int s = 1; s < nslots; s++)
                 {
-                    a.ptr = tstore.data() + (size_t)bufEszPrefix[slotMap[s]] * region;
-                    a.stepy = (size_t)wf; a.stepx = 1;
+                    EwSlice& a = args[s];
+                    const int k = slotKind[s];
+                    if (k == TExpr::TEMP)                      // contiguous block-local buffer
+                    {
+                        a.ptr = tstore.data() + (size_t)bufEszPrefix[slotMap[s]] * region;
+                        a.stepy = (size_t)wf; a.stepx = 1;
+                    }
+                    else if (k == TExpr::CONST)               // fixed scalar slice (stepx/stepy 0)
+                    {
+                        const EwSlice& cs = constSlice[slotMap[s]];
+                        a.ptr = (uchar*)cs.ptr; a.stepy = 0; a.stepx = 0;
+                    }
+                    else                                    // array operand: this block of the slice
+                    {
+                        const EwSlice& sl = tile.slices[slotMap[s]];
+                        a.ptr = (uchar*)sl.ptr +
+                            ((size_t)y0 * sl.stepy + (size_t)x0 * sl.stepx) * (size_t)esz1Slot[s];
+                        a.stepy = sl.stepy; a.stepx = sl.stepx;
+                    }
                 }
-                else if (k == TExpr::CONST)               // fixed scalar slice, no x0 offset (stepx 0)
-                {
-                    const EwSlice& cs = constSlice[slotMap[s]];
-                    a.ptr = (uchar*)cs.ptr; a.stepy = 0; a.stepx = 0;
-                }
-                else                                    // array operand: this strip of the slice
-                {
-                    const EwSlice& sl = tile.slices[slotMap[s]];
-                    a.ptr = (uchar*)sl.ptr + (size_t)x0 * sl.stepx * (size_t)esz1Slot[s];
-                    a.stepy = sl.stepy; a.stepx = sl.stepx;
-                }
-            }
 
-            for (int n = 0; n < ninsn; n++)
-            {
-                const TExpr::Insn& ins = prog[n];
-                const EwSlice& a0 = args[ins.arg0]; const EwSlice& a1 = args[ins.arg1];
-                const EwSlice& a2 = args[ins.arg2]; const EwSlice& rr = args[ins.result];
-                runInsn(ins, a0.ptr, a0.stepy, a0.stepx, a1.ptr, a1.stepy, a1.stepx,
-                        a2.ptr, a2.stepy, a2.stepx, (void*)rr.ptr, rr.stepy, wf, h,
-                        esz1Slot[ins.arg0], esz1Slot[ins.result]);
+                for (int n = 0; n < ninsn; n++)
+                {
+                    const TExpr::Insn& ins = prog[n];
+                    const EwSlice& a0 = args[ins.arg0]; const EwSlice& a1 = args[ins.arg1];
+                    const EwSlice& a2 = args[ins.arg2]; const EwSlice& rr = args[ins.result];
+                    runInsn(ins, a0.ptr, a0.stepy, a0.stepx, a1.ptr, a1.stepy, a1.stepx,
+                            a2.ptr, a2.stepy, a2.stepx, (void*)rr.ptr, rr.stepy, wf, hf,
+                            esz1Slot[ins.arg0], esz1Slot[ins.result]);
+                }
             }
         }
     }, true, nstripes);
