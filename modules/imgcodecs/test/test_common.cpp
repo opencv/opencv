@@ -65,4 +65,134 @@ void readFileBytes(const std::string& fname, std::vector<unsigned char>& buf)
     }
 }
 
+TEST(Imgcodecs_Image, imwrite_png_invalid_two_channel)
+{
+    const Mat src(2, 2, CV_8UC2, Scalar::all(0));
+    const string filename = cv::tempfile(".png");
+    EXPECT_THROW(imwrite(filename, src), cv::Exception);
+    remove(filename.c_str());
+}
+
+#ifdef CV_Bool
+
+static Mat makeBoolImage(int rows, int cols, int channels, bool value)
+{
+    Mat image(rows, cols, CV_MAKETYPE(CV_Bool, channels));
+    for (int y = 0; y < image.rows; ++y)
+    {
+        bool* row = image.ptr<bool>(y);
+        for (int x = 0; x < image.cols * image.channels(); ++x)
+        {
+            row[x] = value;
+        }
+    }
+    return image;
+}
+
+static Mat imwriteReadUnchanged(const Mat& src, const string& ext)
+{
+    const string filename = cv::tempfile(ext.c_str());
+    bool ret = false;
+    EXPECT_NO_THROW(ret = imwrite(filename, src));
+    EXPECT_TRUE(ret);
+
+    Mat dst;
+    if (ret)
+    {
+        EXPECT_NO_THROW(dst = imread(filename, IMREAD_UNCHANGED));
+    }
+    remove(filename.c_str());
+    return dst;
+}
+
+static Mat imencodeDecodeUnchanged(const Mat& src, const string& ext)
+{
+    vector<uchar> buf;
+    bool ret = false;
+    EXPECT_NO_THROW(ret = imencode(ext, src, buf));
+    EXPECT_TRUE(ret);
+
+    Mat dst;
+    if (ret)
+    {
+        EXPECT_NO_THROW(dst = imdecode(buf, IMREAD_UNCHANGED));
+    }
+    return dst;
+}
+
+TEST(Imgcodecs_Bool, imwrite_png_mixed_grayscale)
+{
+    Mat src = makeBoolImage(2, 3, 1, false);
+    src.ptr<bool>(0)[1] = true;
+    src.ptr<bool>(1)[0] = true;
+    src.ptr<bool>(1)[2] = true;
+
+    Mat dst = imwriteReadUnchanged(src, ".png");
+    ASSERT_FALSE(dst.empty());
+    ASSERT_EQ(CV_8UC1, dst.type());
+
+    Mat expected = (Mat_<uchar>(2, 3) << 0, 255, 0, 255, 0, 255);
+    EXPECT_EQ(0, cv::norm(dst, expected, NORM_INF));
+}
+
+TEST(Imgcodecs_Bool, imencode_png_mixed_grayscale)
+{
+    Mat src = makeBoolImage(2, 3, 1, false);
+    src.ptr<bool>(0)[0] = true;
+    src.ptr<bool>(0)[2] = true;
+    src.ptr<bool>(1)[1] = true;
+
+    Mat dst = imencodeDecodeUnchanged(src, ".png");
+    ASSERT_FALSE(dst.empty());
+    ASSERT_EQ(CV_8UC1, dst.type());
+
+    Mat expected = (Mat_<uchar>(2, 3) << 255, 0, 255, 0, 255, 0);
+    EXPECT_EQ(0, cv::norm(dst, expected, NORM_INF));
+}
+
+TEST(Imgcodecs_Bool, imwrite_png_three_channel)
+{
+    Mat src = makeBoolImage(2, 2, 3, false);
+    bool* row0 = src.ptr<bool>(0);
+    row0[0] = true;
+    row0[2] = true;
+    row0[4] = true;
+    bool* row1 = src.ptr<bool>(1);
+    row1[1] = true;
+    row1[3] = true;
+    row1[5] = true;
+
+    Mat dst = imwriteReadUnchanged(src, ".png");
+    ASSERT_FALSE(dst.empty());
+    ASSERT_EQ(CV_8UC3, dst.type());
+
+    EXPECT_EQ(Vec3b(255, 0, 255), dst.at<Vec3b>(0, 0));
+    EXPECT_EQ(Vec3b(0, 255, 0), dst.at<Vec3b>(0, 1));
+    EXPECT_EQ(Vec3b(0, 255, 0), dst.at<Vec3b>(1, 0));
+    EXPECT_EQ(Vec3b(255, 0, 255), dst.at<Vec3b>(1, 1));
+}
+
+TEST(Imgcodecs_Bool, imwrite_png_all_false_all_true)
+{
+    Mat all_false = imwriteReadUnchanged(makeBoolImage(3, 4, 1, false), ".png");
+    ASSERT_FALSE(all_false.empty());
+    ASSERT_EQ(CV_8UC1, all_false.type());
+    EXPECT_EQ(0, countNonZero(all_false));
+
+    Mat all_true = imwriteReadUnchanged(makeBoolImage(3, 4, 1, true), ".png");
+    ASSERT_FALSE(all_true.empty());
+    ASSERT_EQ(CV_8UC1, all_true.type());
+    EXPECT_EQ(0, cv::norm(all_true, Mat(all_true.size(), CV_8UC1, Scalar::all(255)), NORM_INF));
+}
+
+TEST(Imgcodecs_Bool, imwrite_png_invalid_two_channel_bool)
+{
+    const Mat src = makeBoolImage(2, 2, 2, false);
+    const string filename = cv::tempfile(".png");
+    EXPECT_THROW(imwrite(filename, src), cv::Exception);
+    remove(filename.c_str());
+}
+
+#endif
+
 }  // namespace
