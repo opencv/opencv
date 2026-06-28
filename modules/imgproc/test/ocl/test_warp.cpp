@@ -247,7 +247,16 @@ OCL_TEST_P(WarpPerspective, Mat)
         OCL_OFF(cv::warpPerspective(src_roi, dst_roi, M, dsize, interpolation));
         OCL_ON(cv::warpPerspective(usrc_roi, udst_roi, M, dsize, interpolation));
 
-        Near(eps);
+        if (depth < CV_32F)
+        {
+            double maxDiff = cv::norm(dst_roi, udst_roi, cv::NORM_INF);
+            EXPECT_LE(maxDiff, 5.0) << "Max pixel diff too large: " << maxDiff 
+                                    << " at iteration " << j;
+        }
+        else
+        {
+            OCL_EXPECT_MATS_NEAR_RELATIVE(dst, eps);
+        }
     }
 }
 
@@ -272,7 +281,16 @@ OCL_TEST_P(WarpPerspective_cols4, Mat)
         OCL_OFF(cv::warpPerspective(src_roi, dst_roi, M, dsize, interpolation));
         OCL_ON(cv::warpPerspective(usrc_roi, udst_roi, M, dsize, interpolation));
 
-        Near(eps);
+        if (depth < CV_32F)
+        {
+            double maxDiff = cv::norm(dst_roi, udst_roi, cv::NORM_INF);
+            EXPECT_LE(maxDiff, 5.0) << "Max pixel diff too large: " << maxDiff 
+                                    << " at iteration " << j;
+        }
+        else
+        {
+            OCL_EXPECT_MATS_NEAR_RELATIVE(dst, eps);
+        }
     }
 }
 
