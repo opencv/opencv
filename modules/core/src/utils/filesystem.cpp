@@ -438,11 +438,18 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
     {
         cv::String default_cache_path;
 #ifdef _WIN32
-        char tmp_path_buf[MAX_PATH+1] = {0};
-        DWORD res = GetTempPath(MAX_PATH, tmp_path_buf);
+        wchar_t tmp_path_buf_w[MAX_PATH+1] = {0};
+        DWORD res = GetTempPathW(MAX_PATH, tmp_path_buf_w);
         if (res > 0 && res <= MAX_PATH)
         {
-            default_cache_path = tmp_path_buf;
+            // Convert from UTF-16 to UTF-8 to support Unicode paths
+            int len = WideCharToMultiByte(CP_UTF8, 0, tmp_path_buf_w, -1, NULL, 0, NULL, NULL);
+            if (len > 0)
+            {
+                std::vector<char> utf8_buf(len);
+                WideCharToMultiByte(CP_UTF8, 0, tmp_path_buf_w, -1, utf8_buf.data(), len, NULL, NULL);
+                default_cache_path = std::string(utf8_buf.data());
+            }
         }
 #elif defined __ANDROID__
         // no defaults
