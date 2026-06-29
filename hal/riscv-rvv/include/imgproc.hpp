@@ -165,6 +165,16 @@ int cvtBGRtoLab(const uchar * src_data, size_t src_step, uchar * dst_data, size_
 #undef cv_hal_cvtBGRtoLab
 #define cv_hal_cvtBGRtoLab cv::rvv_hal::imgproc::cvtBGRtoLab
 
+/* ############ demosaicing ############ */
+
+int demosaicing(const uchar* src_data, size_t src_step, int src_type,
+                int src_width, int src_height,
+                uchar* dst_data, size_t dst_step, int dst_type,
+                int dcn, int blue, int start_with_green, int bcoeff, int rcoeff);
+
+#undef cv_hal_demosaicing
+#define cv_hal_demosaicing cv::rvv_hal::imgproc::demosaicing
+
 /* ############ warp ############ */
 
 int remap32f(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height,
