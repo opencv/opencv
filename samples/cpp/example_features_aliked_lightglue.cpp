@@ -280,16 +280,11 @@ static int runXFeatExample(const String& imgPath, const String& xfeatModel, cons
 
     vector<KeyPoint> keypoints;
     Mat descriptors;
-    detectAndComputeXFeatPostprocess(img, noArray(), net, keypoints, descriptors,
+    Mat mask(img.size(), CV_8UC1, Scalar::all(255));
+    detectAndComputeXFeatPostprocess(img, mask, net, keypoints, descriptors,
                                      /*maxKeypoints=*/2000,
                                      /*detectionThreshold=*/0.05f,
                                      /*inputSize=*/640);
-
-    cout << "XFeat descriptor size: " << 64 << endl;
-    cout << "XFeat descriptor type: " << CV_32F << endl;
-    cout << "XFeat default norm: " << NORM_L2 << endl;
-    cout << "Image: " << keypoints.size() << " keypoints, descriptors "
-         << descriptors.rows << "x" << descriptors.cols << endl;
 
     Mat canvas;
     drawKeypoints(img, keypoints, canvas, Scalar(0, 255, 0),
