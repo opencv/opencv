@@ -1496,6 +1496,14 @@ struct BNLLFunctor : public BaseDefaultFunctor<BNLLFunctor>
 {
     typedef BNLLLayer Layer;
 
+    ActivationFunc getActivationFunc(int depth, std::vector<float>& activParams) const
+    {
+        if (depth != CV_32F)
+            return nullptr;
+        activParams.clear();
+        return cv::dnn::getActivationFunc(ACTIV_BNLL);
+    }
+
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV ||
@@ -1645,6 +1653,14 @@ struct LogFunctor : public BaseDefaultFunctor<LogFunctor>
 {
     typedef LogLayer Layer;
 
+    ActivationFunc getActivationFunc(int depth, std::vector<float>& activParams) const
+    {
+        if (depth != CV_32F)
+            return nullptr;
+        activParams.clear();
+        return cv::dnn::getActivationFunc(ACTIV_LOG);
+    }
+
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
@@ -1767,6 +1783,14 @@ struct AcoshFunctor : public BaseDefaultFunctor<AcoshFunctor>
 {
     typedef AcoshLayer Layer;
 
+    ActivationFunc getActivationFunc(int depth, std::vector<float>& activParams) const
+    {
+        if (depth != CV_32F)
+            return nullptr;
+        activParams.clear();
+        return cv::dnn::getActivationFunc(ACTIV_ACOSH);
+    }
+
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
@@ -1820,6 +1844,14 @@ const char* const BaseDefaultFunctor<AsinFunctor>::ocl_kernel_name = "AsinForwar
 struct AsinhFunctor : public BaseDefaultFunctor<AsinhFunctor>
 {
     typedef AsinhLayer Layer;
+
+    ActivationFunc getActivationFunc(int depth, std::vector<float>& activParams) const
+    {
+        if (depth != CV_32F)
+            return nullptr;
+        activParams.clear();
+        return cv::dnn::getActivationFunc(ACTIV_ASINH);
+    }
 
     bool supportBackend(int backendId, int)
     {
@@ -1875,6 +1907,14 @@ struct AtanhFunctor : public BaseDefaultFunctor<AtanhFunctor>
 {
     typedef AtanhLayer Layer;
 
+    ActivationFunc getActivationFunc(int depth, std::vector<float>& activParams) const
+    {
+        if (depth != CV_32F)
+            return nullptr;
+        activParams.clear();
+        return cv::dnn::getActivationFunc(ACTIV_ATANH);
+    }
+
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
@@ -1901,6 +1941,14 @@ const char* const BaseDefaultFunctor<AtanhFunctor>::ocl_kernel_name = "AtanhForw
 struct CosFunctor : public BaseDefaultFunctor<CosFunctor>
 {
     typedef CosLayer Layer;
+
+    ActivationFunc getActivationFunc(int depth, std::vector<float>& activParams) const
+    {
+        if (depth != CV_32F)
+            return nullptr;
+        activParams.clear();
+        return cv::dnn::getActivationFunc(ACTIV_COS);
+    }
 
     bool supportBackend(int backendId, int)
     {
@@ -1929,6 +1977,14 @@ struct CoshFunctor : public BaseDefaultFunctor<CoshFunctor>
 {
     typedef CoshLayer Layer;
 
+    ActivationFunc getActivationFunc(int depth, std::vector<float>& activParams) const
+    {
+        if (depth != CV_32F)
+            return nullptr;
+        activParams.clear();
+        return cv::dnn::getActivationFunc(ACTIV_COSH);
+    }
+
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
@@ -1955,6 +2011,14 @@ const char* const BaseDefaultFunctor<CoshFunctor>::ocl_kernel_name = "CoshForwar
 struct ErfFunctor : public BaseDefaultFunctor<ErfFunctor>
 {
     typedef ErfLayer Layer;
+
+    ActivationFunc getActivationFunc(int depth, std::vector<float>& activParams) const
+    {
+        if (depth != CV_32F)
+            return nullptr;
+        activParams.clear();
+        return cv::dnn::getActivationFunc(ACTIV_ERF);
+    }
 
     bool supportBackend(int backendId, int)
     {
@@ -2074,6 +2138,14 @@ struct SinFunctor : public BaseDefaultFunctor<SinFunctor>
 {
     typedef SinLayer Layer;
 
+    ActivationFunc getActivationFunc(int depth, std::vector<float>& activParams) const
+    {
+        if (depth != CV_32F)
+            return nullptr;
+        activParams.clear();
+        return cv::dnn::getActivationFunc(ACTIV_SIN);
+    }
+
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
@@ -2101,6 +2173,14 @@ struct SinhFunctor : public BaseDefaultFunctor<SinhFunctor>
 {
     typedef SinhLayer Layer;
 
+    ActivationFunc getActivationFunc(int depth, std::vector<float>& activParams) const
+    {
+        if (depth != CV_32F)
+            return nullptr;
+        activParams.clear();
+        return cv::dnn::getActivationFunc(ACTIV_SINH);
+    }
+
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
@@ -2127,6 +2207,14 @@ const char* const BaseDefaultFunctor<SinhFunctor>::ocl_kernel_name = "SinhForwar
 struct SoftplusFunctor : public BaseDefaultFunctor<SoftplusFunctor>
 {
     typedef SoftplusLayer Layer;
+
+    ActivationFunc getActivationFunc(int depth, std::vector<float>& activParams) const
+    {
+        if (depth != CV_32F)
+            return nullptr;
+        activParams.clear();
+        return cv::dnn::getActivationFunc(ACTIV_SOFTPLUS);
+    }
 
     bool supportBackend(int backendId, int)
     {
@@ -2181,6 +2269,14 @@ const char* const BaseDefaultFunctor<SoftsignFunctor>::ocl_kernel_name = "Softsi
 struct TanFunctor : public BaseDefaultFunctor<TanFunctor>
 {
     typedef TanLayer Layer;
+
+    ActivationFunc getActivationFunc(int depth, std::vector<float>& activParams) const
+    {
+        if (depth != CV_32F)
+            return nullptr;
+        activParams.clear();
+        return cv::dnn::getActivationFunc(ACTIV_TAN);
+    }
 
     bool supportBackend(int backendId, int)
     {
@@ -2633,6 +2729,14 @@ struct ElementWiseIntDispatch<PowerFunctor>
 struct ExpFunctor : public BaseDefaultFunctor<ExpFunctor>
 {
     typedef ExpLayer Layer;
+
+    ActivationFunc getActivationFunc(int depth, std::vector<float>& activParams) const
+    {
+        if (depth != CV_32F)
+            return nullptr;
+        activParams = {normScale, normShift};
+        return cv::dnn::getActivationFunc(ACTIV_EXP);
+    }
     float base, scale, shift;
     float normScale, normShift;
 

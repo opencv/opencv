@@ -454,6 +454,159 @@ void softmax_(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep, fl
     }, nstripes);
 }
 
+static void activationLog(const void* input, void* output, size_t len, const float*)
+{
+    const float* inp = (const float*)input; float* out = (float*)output; size_t i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int vlanes = VTraits<v_float32>::vlanes();
+    for (; i + vlanes <= len; i += vlanes) vx_store(out + i, v_log(vx_load(inp + i)));
+#endif
+    for (; i < len; i++) out[i] = logf(inp[i]);
+}
+static void activationErf(const void* input, void* output, size_t len, const float*)
+{
+    const float* inp = (const float*)input; float* out = (float*)output; size_t i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int vlanes = VTraits<v_float32>::vlanes();
+    for (; i + vlanes <= len; i += vlanes) vx_store(out + i, v_erf(vx_load(inp + i)));
+#endif
+    for (; i < len; i++) out[i] = erff(inp[i]);
+}
+static void activationExp(const void* input, void* output, size_t len, const float* params)
+{
+    const float* inp = (const float*)input; float* out = (float*)output; size_t i = 0;
+    const float nscale = params[0], nshift = params[1];
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int vlanes = VTraits<v_float32>::vlanes();
+    v_float32 vsc = vx_setall_f32(nscale), vsh = vx_setall_f32(nshift);
+    for (; i + vlanes <= len; i += vlanes) vx_store(out + i, v_exp(v_fma(vx_load(inp + i), vsc, vsh)));
+#endif
+    for (; i < len; i++) out[i] = expf(inp[i] * nscale + nshift);
+}
+static void activationSin(const void* input, void* output, size_t len, const float*)
+{
+    const float* inp = (const float*)input; float* out = (float*)output; size_t i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int vlanes = VTraits<v_float32>::vlanes();
+    for (; i + vlanes <= len; i += vlanes) vx_store(out + i, v_sin(vx_load(inp + i)));
+#endif
+    for (; i < len; i++) out[i] = sinf(inp[i]);
+}
+static void activationCos(const void* input, void* output, size_t len, const float*)
+{
+    const float* inp = (const float*)input; float* out = (float*)output; size_t i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int vlanes = VTraits<v_float32>::vlanes();
+    for (; i + vlanes <= len; i += vlanes) vx_store(out + i, v_cos(vx_load(inp + i)));
+#endif
+    for (; i < len; i++) out[i] = cosf(inp[i]);
+}
+static void activationSinh(const void* input, void* output, size_t len, const float*)
+{
+    const float* inp = (const float*)input; float* out = (float*)output; size_t i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int vlanes = VTraits<v_float32>::vlanes();
+    v_float32 half = vx_setall_f32(0.5f), z = vx_setzero_f32();
+    for (; i + vlanes <= len; i += vlanes) {
+        v_float32 x = vx_load(inp + i);
+        vx_store(out + i, v_mul(half, v_sub(v_exp(x), v_exp(v_sub(z, x)))));
+    }
+#endif
+    for (; i < len; i++) out[i] = sinhf(inp[i]);
+}
+static void activationCosh(const void* input, void* output, size_t len, const float*)
+{
+    const float* inp = (const float*)input; float* out = (float*)output; size_t i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int vlanes = VTraits<v_float32>::vlanes();
+    v_float32 half = vx_setall_f32(0.5f), z = vx_setzero_f32();
+    for (; i + vlanes <= len; i += vlanes) {
+        v_float32 x = vx_load(inp + i);
+        vx_store(out + i, v_mul(half, v_add(v_exp(x), v_exp(v_sub(z, x)))));
+    }
+#endif
+    for (; i < len; i++) out[i] = coshf(inp[i]);
+}
+static void activationTan(const void* input, void* output, size_t len, const float*)
+{
+    const float* inp = (const float*)input; float* out = (float*)output; size_t i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int vlanes = VTraits<v_float32>::vlanes();
+    for (; i + vlanes <= len; i += vlanes) {
+        v_float32 x = vx_load(inp + i);
+        vx_store(out + i, v_div(v_sin(x), v_cos(x)));
+    }
+#endif
+    for (; i < len; i++) out[i] = tanf(inp[i]);
+}
+static void activationSoftplus(const void* input, void* output, size_t len, const float*)
+{
+    const float* inp = (const float*)input; float* out = (float*)output; size_t i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int vlanes = VTraits<v_float32>::vlanes();
+    v_float32 one = vx_setall_f32(1.f);
+    for (; i + vlanes <= len; i += vlanes) {
+        v_float32 x = vx_load(inp + i);
+        vx_store(out + i, v_log(v_add(one, v_exp(x))));
+    }
+#endif
+    for (; i < len; i++) out[i] = logf(1.f + expf(inp[i]));
+}
+static void activationBNLL(const void* input, void* output, size_t len, const float*)
+{
+    const float* inp = (const float*)input; float* out = (float*)output; size_t i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int vlanes = VTraits<v_float32>::vlanes();
+    v_float32 one = vx_setall_f32(1.f), z = vx_setzero_f32();
+    for (; i + vlanes <= len; i += vlanes) {
+        v_float32 x = vx_load(inp + i);
+        vx_store(out + i, v_add(v_max(x, z), v_log(v_add(one, v_exp(v_sub(z, v_abs(x)))))));
+    }
+#endif
+    for (; i < len; i++) { float a = inp[i]; out[i] = std::max(a, 0.f) + logf(1.f + expf(-std::abs(a))); }
+}
+static void activationAsinh(const void* input, void* output, size_t len, const float*)
+{
+    const float* inp = (const float*)input; float* out = (float*)output; size_t i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int vlanes = VTraits<v_float32>::vlanes();
+    v_float32 one = vx_setall_f32(1.f), z = vx_setzero_f32();
+    for (; i + vlanes <= len; i += vlanes) {
+        v_float32 x = vx_load(inp + i), ax = v_abs(x);
+        v_float32 t = v_log(v_add(ax, v_sqrt(v_add(v_mul(x, x), one))));
+        vx_store(out + i, v_select(v_lt(x, z), v_sub(z, t), t));
+    }
+#endif
+    for (; i < len; i++) out[i] = asinhf(inp[i]);
+}
+static void activationAcosh(const void* input, void* output, size_t len, const float*)
+{
+    const float* inp = (const float*)input; float* out = (float*)output; size_t i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int vlanes = VTraits<v_float32>::vlanes();
+    v_float32 one = vx_setall_f32(1.f);
+    for (; i + vlanes <= len; i += vlanes) {
+        v_float32 x = vx_load(inp + i);
+        vx_store(out + i, v_log(v_add(x, v_sqrt(v_sub(v_mul(x, x), one)))));
+    }
+#endif
+    for (; i < len; i++) out[i] = acoshf(inp[i]);
+}
+static void activationAtanh(const void* input, void* output, size_t len, const float*)
+{
+    const float* inp = (const float*)input; float* out = (float*)output; size_t i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int vlanes = VTraits<v_float32>::vlanes();
+    v_float32 one = vx_setall_f32(1.f), half = vx_setall_f32(0.5f);
+    for (; i + vlanes <= len; i += vlanes) {
+        v_float32 x = vx_load(inp + i);
+        vx_store(out + i, v_mul(half, v_log(v_div(v_add(one, x), v_sub(one, x)))));
+    }
+#endif
+    for (; i < len; i++) out[i] = atanhf(inp[i]);
+}
+
+
 ActivationFunc getActivationFunc_(int type)
 {
     switch (type) {
@@ -468,6 +621,19 @@ ActivationFunc getActivationFunc_(int type)
     case ACTIV_GELU_APPROX: return activationGELUApprox;
     case ACTIV_RELU: return activationReLU;
     case ACTIV_CLIP: return activationClip;
+    case ACTIV_LOG: return activationLog;
+    case ACTIV_ERF: return activationErf;
+    case ACTIV_EXP: return activationExp;
+    case ACTIV_SIN: return activationSin;
+    case ACTIV_COS: return activationCos;
+    case ACTIV_SINH: return activationSinh;
+    case ACTIV_COSH: return activationCosh;
+    case ACTIV_TAN: return activationTan;
+    case ACTIV_SOFTPLUS: return activationSoftplus;
+    case ACTIV_BNLL: return activationBNLL;
+    case ACTIV_ASINH: return activationAsinh;
+    case ACTIV_ACOSH: return activationAcosh;
+    case ACTIV_ATANH: return activationAtanh;
     default: return nullptr;
     }
 }
