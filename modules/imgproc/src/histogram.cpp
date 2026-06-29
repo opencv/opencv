@@ -265,7 +265,7 @@ calcHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                     if( d0 == 1 && sizeof(T) == 2 )
                     {
                         const ushort* p  = (const ushort*)p0;
-                        const int nlanes = VTraits<v_uint16>::nlanes;
+                        const int nlanes = VTraits<v_uint16x8>::nlanes;
 
                         const v_float32x4 va   = v_setall_f32((float)a);
                         const v_float32x4 vb   = v_setall_f32((float)b);
@@ -277,7 +277,7 @@ calcHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                         x = 0;
                         for( ; x <= imsize.width - nlanes; x += nlanes )
                         {
-                            v_uint16x8 pix = vx_load(&p[x]);
+                            v_uint16x8 pix = v_load(&p[x]);
                             v_uint32x4 lo32, hi32;
                             v_expand(pix, lo32, hi32);
                             v_float32x4 flo = v_cvt_f32(v_reinterpret_as_s32(lo32));
