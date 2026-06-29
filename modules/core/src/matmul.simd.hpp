@@ -1162,9 +1162,6 @@ static void GEMMSingleMul_64f( const double* a_data, size_t a_step,
 }
 
 
-#if defined(__GNUC__) && !defined(__clang__)
-__attribute__((noinline, noclone))
-#endif
 static void GEMMSingleMul_32fc( const Complexf* a_data, size_t a_step,
                               const Complexf* b_data, size_t b_step,
                               const Complexf* c_data, size_t c_step,
@@ -1177,9 +1174,6 @@ static void GEMMSingleMul_32fc( const Complexf* a_data, size_t a_step,
                                 alpha, beta, flags);
 }
 
-#if defined(__GNUC__) && !defined(__clang__)
-__attribute__((noinline, noclone))
-#endif
 static void GEMMSingleMul_64fc( const Complexd* a_data, size_t a_step,
                               const Complexd* b_data, size_t b_step,
                               const Complexd* c_data, size_t c_step,
@@ -1210,9 +1204,6 @@ static void GEMMBlockMul_64f( const double* a_data, size_t a_step,
 }
 
 
-#if defined(__GNUC__) && !defined(__clang__)
-__attribute__((noinline, noclone))
-#endif
 static void GEMMBlockMul_32fc( const Complexf* a_data, size_t a_step,
                              const Complexf* b_data, size_t b_step,
                              Complexd* d_data, size_t d_step,
@@ -1222,9 +1213,6 @@ static void GEMMBlockMul_32fc( const Complexf* a_data, size_t a_step,
 }
 
 
-#if defined(__GNUC__) && !defined(__clang__)
-__attribute__((noinline, noclone))
-#endif
 static void GEMMBlockMul_64fc( const Complexd* a_data, size_t a_step,
                              const Complexd* b_data, size_t b_step,
                              Complexd* d_data, size_t d_step,
