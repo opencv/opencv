@@ -300,27 +300,38 @@ def _write_root_index() -> None:
     toctree = "\n".join(
         f"{heading} <{docname}>" for heading, _link, docname in entries)
 
-    # Body: raw HTML so links resolve correctly relative to index.html.
-    html_lines = ['<div class="ocv-landing">']
+    # Body: Markdown H2 section headings so each appears in the "On this page"
+    # TOC; links stay raw HTML so they resolve relative to index.html (Markdown
+    # headings can't live inside a raw <div>, so there is no wrapper).
+    body_lines: list[str] = []
     for heading, link_text, docname in entries:
-        if link_text is None:
-            html_lines.append(
-                f'<h2><a href="{docname}.html">{heading}</a></h2>')
-        else:
-            html_lines.append(f'<h2>{heading}</h2>')
-            html_lines.append(f'<p><a href="{docname}.html">{link_text}</a></p>')
-    html_lines.append("</div>")
-    body = "\n".join(html_lines)
+        body_lines.append(f"## {heading}\n")
+        body_lines.append(
+            f'<ul><li><a href="{docname}.html">{link_text or heading}</a></li></ul>\n')
+    body = "\n".join(body_lines).rstrip()
+
+    intro = (
+        "OpenCV (Open Source Computer Vision Library) is an open-source library "
+        "of more than 2,500 optimised algorithms for real-time computer vision. "
+        "It supports C++, Python, and JavaScript and runs on CPU, CUDA, OpenCL, "
+        "and Vulkan.\n\n"
+        "OpenCV 5.0 is a major release built on OpenCV 4.x. C++17 is now the "
+        "minimum required standard, the legacy C API has been fully removed, and 0D/1D "
+        "Mat support has been added alongside Universal Intrinsics 2.0 "
+        "(SSE/AVX/NEON/SVE/RISC-V), a next-generation DNN engine with ONNX "
+        "Runtime backend, and Vulkan compute support."
+    )
 
     text = (
-        "OpenCV modules\n"
-        "==============\n\n"
+        "OpenCV documentation\n"
+        "====================\n\n"
         "```{toctree}\n"
         ":hidden:\n"
         ":maxdepth: 1\n"
         ":titlesonly:\n\n"
         f"{toctree}\n"
         "```\n\n"
+        f"{intro}\n\n"
         f"{body}\n"
     )
     try:

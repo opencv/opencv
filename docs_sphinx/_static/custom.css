@@ -708,6 +708,18 @@ html[data-theme="dark"] section[id$="-documentation"] > section:hover {
     border-color: #58a6ff;
     box-shadow: none;
 }
+/* Landing page: its title id "opencv-documentation" collides with the module
+   card styling above. Keep the landing's sections flat (no boxes). */
+#opencv-documentation > section,
+html[data-theme="dark"] #opencv-documentation > section {
+    border: none;
+    background: none;
+    box-shadow: none;
+    margin: 0;
+}
+/* Tighten the gap between each landing heading and its bulleted link. */
+#opencv-documentation > section > h2 { margin-bottom: 0.25rem; }
+#opencv-documentation > section > ul { margin-top: 0; }
 
 section[id$="-documentation"] > section > h3 {
     display: flex;

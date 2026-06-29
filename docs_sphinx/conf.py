@@ -175,7 +175,7 @@ html_theme_options = {
     # unaffected (see navigation_depth).
     "show_nav_level": 1,
     "navigation_depth": 4,
-    "secondary_sidebar_items": {"**": ["page-toc"], "index": []},
+    "secondary_sidebar_items": {"**": ["page-toc"], "index": ["page-toc", "resources"]},
     "back_to_top_button": True,
     "show_version_warning_banner": False,
     "icon_links": [{"name": "GitHub",

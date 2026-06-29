@@ -253,6 +253,9 @@ def register_global_sidebar(app):
         if not callable(gen):
             return
         def wrapped(kind, startdepth=0, show_nav_level=0, **kwargs):
+            # collapse=True: expand only the current branch. Without it,
+            # startdepth=0 renders the whole tree on every page (slow + bloated).
+            kwargs["collapse"] = True
             return gen(kind, startdepth=0, show_nav_level=0, **kwargs)
         context["generate_toctree_html"] = wrapped
     app.connect("html-page-context", _globalize, priority=900)
