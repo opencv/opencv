@@ -37,6 +37,16 @@ int ipp_hal_remap32f(int src_type, const uchar *src_data, size_t src_step, int s
 #undef cv_hal_remap32f
 #define cv_hal_remap32f ipp_hal_remap32f
 
+#if defined(HAVE_IPP_IW)
+int ipp_hal_boxFilter(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                      int width, int height, int src_depth, int dst_depth, int cn,
+                      int margin_left, int margin_top, int margin_right, int margin_bottom,
+                      size_t ksize_width, size_t ksize_height, int anchor_x, int anchor_y,
+                      bool normalize, int border_type);
+#undef  cv_hal_boxFilter
+#define cv_hal_boxFilter ipp_hal_boxFilter
+#endif // HAVE_IPP_IW
+
 #endif //IPP_VERSION_X100 >= 810
 
 #endif //__IPP_HAL_IMGPROC_HPP__
