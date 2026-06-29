@@ -3030,6 +3030,12 @@ void accW_simd_(const ushort* src, float* dst, const uchar* mask, int len, int c
 void accW_simd_(const float* src, float* dst, const uchar* mask, int len, int cn, double alpha)
 {
     int x = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(CV_ACCUM_FP_USE_YMM)
+    const v_float32 v_alpha = vx_setall_f32((float)alpha);
+    const v_float32 v_beta = vx_setall_f32((float)(1.0f - alpha));
+    const int cVectorWidth = VTraits<v_uint16>::vlanes();
+    const int step = VTraits<v_float32>::vlanes();
+#endif
 #if defined(CV_ACCUM_FP_USE_YMM)
     {
     const __m256 v_alpha = _mm256_set1_ps((float)alpha);
@@ -3069,11 +3075,6 @@ void accW_simd_(const float* src, float* dst, const uchar* mask, int len, int cn
     }
     }
 #elif (CV_SIMD || CV_SIMD_SCALABLE)
-    const v_float32 v_alpha = vx_setall_f32((float)alpha);
-    const v_float32 v_beta = vx_setall_f32((float)(1.0f - alpha));
-    const int cVectorWidth = VTraits<v_uint16>::vlanes();
-    const int step = VTraits<v_float32>::vlanes();
-
     if (!mask)
     {
         int size = len * cn;
@@ -3110,14 +3111,16 @@ void accW_simd_(const float* src, float* dst, const uchar* mask, int len, int cn
             v_store(dst + x + step, v_dst1);
         }
     }
-#endif // CV_SIMD
+#endif // CV_SIMD || CV_SIMD_SCALABLE
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     if (mask && cn == 3)
     {
+#if defined(CV_ACCUM_FP_USE_YMM)
         const v_float32 v_alpha = vx_setall_f32((float)alpha);
         const v_float32 v_beta = vx_setall_f32((float)(1.0f - alpha));
         const int cVectorWidth = VTraits<v_uint16>::vlanes();
         const int step = VTraits<v_float32>::vlanes();
+#endif
         v_uint32 v_0 = vx_setzero_u32();
 
         for ( ; x <= len - cVectorWidth; x += cVectorWidth)
