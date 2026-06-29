@@ -2193,7 +2193,7 @@ rho/srn. If both srn=0 and stn=0, the classical Hough transform is used. Otherwi
 parameters should be positive.
 @param stn For the multi-scale Hough transform, it is a divisor for the distance resolution theta.
 @param min_theta For standard and multi-scale Hough transform, minimum angle to check for lines.
-Must fall between 0 and max_theta.
+Must fall between -CV_PI and max_theta. (max_theta-min_theta) must be less or equals to CV_PI.
 @param max_theta For standard and multi-scale Hough transform, an upper bound for the angle.
 Must fall between min_theta and CV_PI. The actual maximum angle in the accumulator may be slightly
 less than max_theta, depending on the parameters min_theta and theta.
