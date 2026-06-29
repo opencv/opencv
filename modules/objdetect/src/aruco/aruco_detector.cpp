@@ -466,7 +466,6 @@ static float _getMarkerConfidence(const Mat& groundTruthbits, const Mat &cellPix
     return std::max(0.f, std::min(1.f, normalizedMarkerConfidence));
 }
 
-
 /**
  * @brief Tries to identify one candidate given the dictionary
  * @return candidate typ. zero if the candidate is not valid,
@@ -510,10 +509,10 @@ static uint8_t _identifyOneCandidate(const Dictionary& dictionary, const Mat& _i
     if(borderErrors > maximumErrorsInBorder) return 0; // border is wrong
 
     // take only inner bits
-    Mat onlyCellPixelRatio =
-        cellPixelRatio.rowRange(params.markerBorderBits,
-                                cellPixelRatio.rows - params.markerBorderBits)
-            .colRange(params.markerBorderBits, cellPixelRatio.cols - params.markerBorderBits);
+    Mat onlyCellPixelRatio = cellPixelRatio(
+        Rect(params.markerBorderBits, params.markerBorderBits,
+             cellPixelRatio.cols - 2 * params.markerBorderBits,
+             cellPixelRatio.rows - 2 * params.markerBorderBits));
 
     // try to identify the marker
     if(!dictionary.identify(onlyCellPixelRatio, idx, rotation, params.errorCorrectionRate, params.validBitIdThreshold))
@@ -1405,15 +1404,13 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Board& _board
                     detectorParams.perspectiveRemovePixelPerCell,
                     detectorParams.perspectiveRemoveIgnoredMarginPerCell, detectorParams.minOtsuStdDev);
 
-                Mat bits;
-                cellPixelRatio.convertTo(bits, CV_8UC1);
+                Mat onlyCellPixelRatio = cellPixelRatio(
+                    Rect(detectorParams.markerBorderBits, detectorParams.markerBorderBits,
+                         cellPixelRatio.cols - 2 * detectorParams.markerBorderBits,
+                         cellPixelRatio.rows - 2 * detectorParams.markerBorderBits));
 
-                Mat onlyBits =
-                    bits.rowRange(detectorParams.markerBorderBits, bits.rows - detectorParams.markerBorderBits)
-                        .colRange(detectorParams.markerBorderBits, bits.rows - detectorParams.markerBorderBits);
-
-                codeDistance =
-                    dictionary.getDistanceToId(onlyBits, undetectedMarkersIds[i], false);
+                codeDistance = dictionary.getDistanceToId(onlyCellPixelRatio, undetectedMarkersIds[i],
+                                                          false, detectorParams.validBitIdThreshold);
             }
 
             // if everythin is ok, assign values to current best match
