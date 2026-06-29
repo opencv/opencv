@@ -4,6 +4,9 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
+#ifdef HAVE_METAL
+#include "metal.hpp"
+#endif
 
 #include "convert.simd.hpp"
 #include "convert.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
@@ -128,6 +131,20 @@ static bool ocl_convertTo(InputArray src_, OutputArray dst_, int ddepth, bool no
 }
 #endif
 
+#ifdef HAVE_METAL
+static bool metal_convertTo(const UMat& src, OutputArray dst, int ddepth, double alpha, double beta)
+{
+    CV_INSTRUMENT_REGION();
+
+    if (!metal::haveMetal() || src.dims > 2 || !dst.isUMat())
+        return false;
+
+    dst.createSameSize(src, CV_MAKETYPE(ddepth, src.channels()));
+    UMat mdst = dst.getUMat();
+    return metal::convertTo(src, mdst, ddepth, alpha, beta);
+}
+#endif
+
 void Mat::convertTo(OutputArray dst, int type_, double alpha, double beta) const
 {
     CV_INSTRUMENT_REGION();
@@ -217,7 +234,6 @@ void UMat::convertTo(OutputArray dst, int type_, double alpha, double beta) cons
         return;
     }
 
-#ifdef HAVE_OPENCL
     int stype = type();
     int sdepth = CV_MAT_DEPTH(stype);
 
@@ -234,13 +250,19 @@ void UMat::convertTo(OutputArray dst, int type_, double alpha, double beta) cons
         return;
     }
 
+#ifdef HAVE_OPENCL
     CV_OCL_RUN(dims <= 2,
                ocl_convertTo(*this, dst, ddepth, noScale, alpha, beta))
 #endif // HAVE_OPENCL
 
-    UMat src = *this;  // Fake reference to itself.
-                       // Resolves issue 8693 in case of src == dst.
-    Mat m = getMat(ACCESS_READ);
+    UMat src = *this;  // Preserve source data before backend attempts and CPU fallback.
+#ifdef HAVE_METAL
+    if (metal_convertTo(src, dst, ddepth, alpha, beta))
+        return;
+#endif
+
+    // Fake reference to itself. Resolves issue 8693 in case of src == dst.
+    Mat m = src.getMat(ACCESS_READ);
     m.convertTo(dst, type_, alpha, beta);
     (void)src;
 }
