@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 #include <opencv2/core/utils/logger.hpp>
 
 #include <stdarg.h>
@@ -173,9 +174,19 @@ public:
         {
             const float* sample = &vecs[j*var_count];
             double s = 0;
-            for( k = 0; k <= var_count - 4; k += 4 )
-                s += sample[k]*another[k] + sample[k+1]*another[k+1] +
-                sample[k+2]*another[k+2] + sample[k+3]*another[k+3];
+            k = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            {
+                const int vl = VTraits<v_float32>::vlanes();
+                v_float32 a0 = vx_setzero_f32(), a1 = vx_setzero_f32();
+                for( ; k <= var_count - 2*vl; k += 2*vl )
+                {
+                    a0 = v_fma(vx_load(sample + k), vx_load(another + k), a0);
+                    a1 = v_fma(vx_load(sample + k + vl), vx_load(another + k + vl), a1);
+                }
+                s = (double)v_reduce_sum(v_add(a0, a1));
+            }
+#endif
             for( ; k < var_count; k++ )
                 s += sample[k]*another[k];
             results[j] = (Qfloat)(s*alpha + beta);
@@ -228,20 +239,21 @@ public:
         {
             const float* sample = &vecs[j*var_count];
             double s = 0;
-
-            for( k = 0; k <= var_count - 4; k += 4 )
+            k = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
             {
-                double t0 = sample[k] - another[k];
-                double t1 = sample[k+1] - another[k+1];
-
-                s += t0*t0 + t1*t1;
-
-                t0 = sample[k+2] - another[k+2];
-                t1 = sample[k+3] - another[k+3];
-
-                s += t0*t0 + t1*t1;
+                const int vl = VTraits<v_float32>::vlanes();
+                v_float32 a0 = vx_setzero_f32(), a1 = vx_setzero_f32();
+                for( ; k <= var_count - 2*vl; k += 2*vl )
+                {
+                    v_float32 d0 = v_sub(vx_load(sample + k), vx_load(another + k));
+                    a0 = v_fma(d0, d0, a0);
+                    v_float32 d1 = v_sub(vx_load(sample + k + vl), vx_load(another + k + vl));
+                    a1 = v_fma(d1, d1, a1);
+                }
+                s = (double)v_reduce_sum(v_add(a0, a1));
             }
-
+#endif
             for( ; k < var_count; k++ )
             {
                 double t0 = sample[k] - another[k];
@@ -266,9 +278,19 @@ public:
         {
             const float* sample = &vecs[j*var_count];
             double s = 0;
-            for( k = 0; k <= var_count - 4; k += 4 )
-                s += std::min(sample[k],another[k]) + std::min(sample[k+1],another[k+1]) +
-                std::min(sample[k+2],another[k+2]) + std::min(sample[k+3],another[k+3]);
+            k = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            {
+                const int vl = VTraits<v_float32>::vlanes();
+                v_float32 a0 = vx_setzero_f32(), a1 = vx_setzero_f32();
+                for( ; k <= var_count - 2*vl; k += 2*vl )
+                {
+                    a0 = v_add(a0, v_min(vx_load(sample + k), vx_load(another + k)));
+                    a1 = v_add(a1, v_min(vx_load(sample + k + vl), vx_load(another + k + vl)));
+                }
+                s = (double)v_reduce_sum(v_add(a0, a1));
+            }
+#endif
             for( ; k < var_count; k++ )
                 s += std::min(sample[k],another[k]);
             results[j] = (Qfloat)(s);
@@ -286,7 +308,23 @@ public:
         {
             const float* sample = &vecs[j*var_count];
             double chi2 = 0;
-            for(k = 0 ; k < var_count; k++ )
+            k = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            {
+                const int vl = VTraits<v_float32>::vlanes();
+                v_float32 acc = vx_setzero_f32(), z = vx_setzero_f32();
+                for( ; k <= var_count - vl; k += vl )
+                {
+                    v_float32 a = vx_load(sample + k), b = vx_load(another + k);
+                    v_float32 d = v_sub(a, b), dv = v_add(a, b);
+                    v_float32 term = v_div(v_mul(d, d), dv);
+                    term = v_select(v_eq(dv, z), z, term);  // divisor==0 -> add 0 (skip)
+                    acc = v_add(acc, term);
+                }
+                chi2 = (double)v_reduce_sum(acc);
+            }
+#endif
+            for( ; k < var_count; k++ )
             {
                 double d = sample[k]-another[k];
                 double devisor = sample[k]+another[k];
