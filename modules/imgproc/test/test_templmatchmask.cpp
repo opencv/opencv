@@ -287,4 +287,38 @@ TEST(Imgproc_MatchTemplateWithMask, bug_26389) {
     }
 }
 
+static void testConstantTemplateWithMask(const string& testName, int type, int maskType, const Scalar& templValue)
+{
+    SCOPED_TRACE(testName);
+
+    Mat image(Size(8, 8), type);
+    randu(image, 0, 255);
+
+    const Mat templ(Size(3, 3), type, templValue);
+    Mat mask = Mat::ones(templ.size(), maskType);
+    mask(Rect(1, 0, 1, 3)) = Scalar::all(0);
+
+    Mat result;
+    matchTemplate(image, templ, result, TM_CCOEFF_NORMED, mask);
+
+    for (int y = 0; y < result.rows; ++y)
+    {
+        for (int x = 0; x < result.cols; ++x)
+        {
+            const float value = result.at<float>(y, x);
+            EXPECT_FALSE(cvIsNaN(value));
+            EXPECT_FALSE(cvIsInf(value));
+            EXPECT_EQ(1.0f, value);
+        }
+    }
+}
+
+TEST(Imgproc_MatchTemplateWithMask, regression_23257_constant_template)
+{
+    testConstantTemplateWithMask("8UC1 template, 8UC1 mask", CV_8UC1, CV_8UC1, Scalar::all(1));
+    testConstantTemplateWithMask("32FC1 template, 32FC1 mask", CV_32FC1, CV_32FC1, Scalar::all(3.5));
+    testConstantTemplateWithMask("8UC3 template, 8UC1 mask", CV_8UC3, CV_8UC1, Scalar(1, 2, 3));
+    testConstantTemplateWithMask("32FC3 template, 32FC3 mask", CV_32FC3, CV_32FC3, Scalar(1.5, 2.5, 3.5));
+}
+
 }} // namespace
