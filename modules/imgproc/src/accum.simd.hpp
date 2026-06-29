@@ -3034,7 +3034,9 @@ void accW_simd_(const float* src, float* dst, const uchar* mask, int len, int cn
     {
     const __m256 v_alpha = _mm256_set1_ps((float)alpha);
     const __m256 v_beta = _mm256_set1_ps((float)(1.0f - alpha));
+#if CV_AVX2
     const __m256 v_zero = _mm256_setzero_ps();
+#endif
     const int ymmWidth = 16;
 
     if (!mask)
@@ -3051,7 +3053,14 @@ void accW_simd_(const float* src, float* dst, const uchar* mask, int len, int cn
         for ( ; x <= len - 8; x += 8)
         {
             __m128i mb = _mm_loadl_epi64((const __m128i*)(mask + x));
+#if CV_AVX2
             __m256 mf = _mm256_cmp_ps(_mm256_cvtepi32_ps(_mm256_cvtepi8_epi32(mb)), v_zero, _CMP_NEQ_OQ);
+#else
+            // SSE4.1 expand: AVX-only TUs lack _mm256_cvtepi8_epi32 (AVX2).
+            __m128 mf0 = _mm_cmpneq_ps(_mm_cvtepi32_ps(_mm_cvtepi8_epi32(mb)), _mm_setzero_ps());
+            __m128 mf1 = _mm_cmpneq_ps(_mm_cvtepi32_ps(_mm_cvtepi8_epi32(_mm_srli_si128(mb, 4))), _mm_setzero_ps());
+            __m256 mf = _mm256_insertf128_ps(_mm256_castps128_ps256(mf0), mf1, 1);
+#endif
             __m256 v_src = _mm256_loadu_ps(src + x);
             __m256 v_dst = _mm256_loadu_ps(dst + x);
             __m256 v_new = _mm256_add_ps(_mm256_mul_ps(v_dst, v_beta), _mm256_mul_ps(v_src, v_alpha));
@@ -3383,7 +3392,12 @@ void accW_simd_(const double* src, double* dst, const uchar* mask, int len, int 
         for ( ; x <= len - 4; x += 4)
         {
             __m128i mb = _mm_loadl_epi64((const __m128i*)(mask + x));
+#if CV_AVX2
             __m256d mf = _mm256_castsi256_pd(_mm256_cmpgt_epi32(_mm256_cvtepi8_epi32(mb), _mm256_setzero_si256()));
+#else
+            // SSE4.1 expand: AVX-only TUs lack _mm256_cvtepi8_epi32 / _mm256_cmpgt_epi32 (AVX2).
+            __m256d mf = _mm256_castpd128_pd256(_mm_castsi128_pd(_mm_cmpgt_epi32(_mm_cvtepi8_epi32(mb), _mm_setzero_si128())));
+#endif
             __m256d v_src = _mm256_loadu_pd(src + x);
             __m256d v_dst = _mm256_loadu_pd(dst + x);
             __m256d v_new = _mm256_add_pd(_mm256_mul_pd(v_dst, v_beta), _mm256_mul_pd(v_src, v_alpha));
