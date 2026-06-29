@@ -2690,6 +2690,62 @@ static void complementComplex(T * ptr, size_t step, int n, int len, int dft_dims
     }
 }
 
+#if CV_NEON
+static void complementComplex(float * ptr, size_t step, int n, int len, int dft_dims)
+{
+    float* p0 = ptr;
+    size_t dstep = step / sizeof(float);
+    static const float sign_data[4] = { 1.0f, -1.0f, 1.0f, -1.0f };
+    const float32x4_t sign_mask = vld1q_f32(sign_data);
+    for (int i = 0; i < len; i++)
+    {
+        float* p = p0 + dstep * i;
+        float* q = dft_dims == 1 || i == 0 || i * 2 == len ? p : p0 + dstep * (len - i);
+
+        int j = 1;
+        for (; j + 1 < (n + 1) / 2; j += 2)
+        {
+            float32x4_t src = vld1q_f32(q + j * 2);
+            float32x4_t swapped = vcombine_f32(vget_high_f32(src), vget_low_f32(src));
+            float32x4_t result = vmulq_f32(swapped, sign_mask);
+            vst1q_f32(p + (n - j - 1) * 2, result);
+        }
+        for (; j < (n + 1) / 2; j++)
+        {
+            p[(n - j) * 2] =  q[j * 2];
+            p[(n - j) * 2 + 1] = -q[j * 2 + 1];
+        }
+    }
+}
+
+static void complementComplex(double * ptr, size_t step, int n, int len, int dft_dims)
+{
+    double* p0 = ptr;
+    size_t dstep = step / sizeof(double);
+    static const double sign_data[2] = { 1.0, -1.0 };
+    const float64x2_t sign_mask = vld1q_f64(sign_data);
+    for (int i = 0; i < len; i++)
+    {
+        double* p = p0 + dstep * i;
+        double* q = dft_dims == 1 || i == 0 || i * 2 == len ? p : p0 + dstep * (len - i);
+
+        int j = 1;
+        for (; j + 1 < (n + 1) / 2; j += 2)
+        {
+            float64x2_t src0 = vld1q_f64(q + j * 2);
+            float64x2_t src1 = vld1q_f64(q + (j + 1) * 2);
+            vst1q_f64(p + (n - j) * 2, vmulq_f64(src0, sign_mask));
+            vst1q_f64(p + (n - j - 1) * 2, vmulq_f64(src1, sign_mask));
+        }
+        for (; j < (n + 1) / 2; j++)
+        {
+            p[(n - j) * 2] =  q[j * 2];
+            p[(n - j) * 2 + 1] = -q[j * 2 + 1];
+        }
+    }
+}
+#endif // CV_NEON
+
 static void complementComplexOutput(int depth, uchar * ptr, size_t step, int count, int len, int dft_dims)
 {
     if( depth == CV_32F )
