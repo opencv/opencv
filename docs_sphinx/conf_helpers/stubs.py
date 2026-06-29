@@ -114,6 +114,12 @@ def _enhance_xphoto_member(m: dict, class_name: str = "") -> dict:
 # Drives write-if-changed and the stale-file sweep.
 _stub_written: set[pathlib.Path] = set()
 
+# Single-class "shell" groups merged with their one class (see _write_api_stub):
+#   _MERGED_GROUPS        -> [(group_out_path, group_title_lines, class_dict)]
+#   _MERGED_CLASS_TO_GROUP-> {class_refid: group_docname}  (cross-refs/redirect)
+_MERGED_GROUPS: list = []
+_MERGED_CLASS_TO_GROUP: dict[str, str] = {}
+
 
 def _stub_write(path: pathlib.Path, content: str) -> None:
     """Write only if changed; mark path live for this run."""
@@ -752,44 +758,15 @@ def _write_namespace_stub(ns: dict, out_dir: pathlib.Path,
         items = ns_sections.get(section_title, [])
         if not items:
             continue
+        # Drop the summary (it just indexes the detail block below) only when the
+        # detail fully covers it; keep it otherwise. Enumerations always kept.
+        # The detail loop renders every member except template specializations.
+        if section_title != "Enumerations" and all(
+                "<" not in (m.get("name") or "") for m in items):
+            continue
         lines.append(f"## {section_title}")
         lines.append("")
-        if section_title == "Functions":
-            lines += ["{.api-reference-table .api-function-table}",
-                      "| Return | Name |", "|---|---|"]
-            from html import escape as _esc_html_ns
-            def _ns_func_row(m: dict) -> str:
-                target = f"#{m['id']}"
-                qual = (m.get("qualified") or m["name"])
-                name_text = qual.replace("::", "&#58;&#58;")
-                name_html = (f'<a class="reference internal" '
-                             f'href="{target}">{name_text}</a>')
-                params_sig = m.get("params_sig") or []
-                def _esc(s: str) -> str:
-                    return _esc_html_ns(s).replace("|", "&#124;")
-                if not params_sig:
-                    inner = f"{name_html}()"
-                elif len(params_sig) == 1:
-                    t, nm, dv = params_sig[0]
-                    decl = nm + (f" = {dv}" if dv else "")
-                    inner = f"{name_html}({_esc(t)} {_esc(decl)})"
-                else:
-                    last_i = len(params_sig) - 1
-                    parts = [f"{name_html}("]
-                    for i, (t, nm, dv) in enumerate(params_sig):
-                        tail = " )" if i == last_i else ","
-                        decl = nm + (f" = {dv}" if dv else "")
-                        parts.append(f"    {_esc(t)} {_esc(decl)}{tail}")
-                    inner = "<br>".join(parts)
-                return f'<code class="docutils literal notranslate">{inner}</code>'
-            for m in items:
-                ret_md = _type_to_md(m.get("type_elem"))
-                if not ret_md:
-                    ret_md = _md_escape_cell(m["type"]) or "\u00a0"
-                if m.get("static"):
-                    ret_md = "static " + ret_md
-                lines.append(f"| {ret_md} | {_ns_func_row(m)} |")
-        elif section_title in ("Typedefs", "Variables"):
+        if section_title in ("Typedefs", "Variables"):
             for m in items:
                 lines.append("```cpp")
                 if section_title == "Typedefs":
@@ -993,6 +970,23 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
         _stub_write(out, "\n".join(lines) + "\n")
         for _cn, _md in node.get("child_pages", []):
             _stub_write(out_dir / f"{_cn}.md", _md + "\n")
+        return
+
+    # Classes-only shell group (<=2 classes, no own members/subgroups): host the
+    # class content here (deferred to the seeded pass) and redirect the standalone
+    # class pages. See _generate_api_stubs.
+    if (1 <= len(node["innerclasses"]) <= 2 and not node["sections"]
+            and not node["children"]):
+        _intro = list(lines)
+        _txt = "\n\n".join(x for x in (
+            (node.get("brief") or "").strip(),
+            (node.get("detailed") or "").strip()) if x)
+        if _txt:
+            _intro += [_txt, ""]
+        for c in node["innerclasses"]:
+            classes_seen.setdefault(c["refid"], c)
+            _MERGED_CLASS_TO_GROUP[c["refid"]] = f"{out_dir.name}/{name}"
+        _MERGED_GROUPS.append((out, _intro, node["innerclasses"]))
         return
 
     # Brief + "View details" under the title (mirrors the Doxygen group page).
@@ -1297,7 +1291,16 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
         return out
 
     _named_groups: list[tuple[str, str, list]] = []   # (header, section_title, members)
-    for _, section_title in _MEMBERDEF_SECTIONS:
+    def _grp_detail_covers(m, kind_key):
+        # Mirror the detail loop's skips below: a summary member also gets a
+        # detail block unless it's a class member (rendered on the class page)
+        # or a template specialization (listed in summary, but no detail block).
+        if kind_key in ("function", "variable") and _is_class_member(m):
+            return False
+        if _is_template_spec(m):
+            return False
+        return True
+    for kind_key, section_title in _MEMBERDEF_SECTIONS:
         items = node["sections"].get(section_title, [])
         if not items:
             continue
@@ -1305,11 +1308,17 @@ def _write_api_stub(node: dict, out_dir: pathlib.Path,
         for _hdr, _members in _group_by_section_header(
                 [m for m in items if (m.get("section_header") or "")]):
             _named_groups.append((_hdr, section_title, _members))
+        # Drop the summary (it just indexes the detail block below) only when the
+        # detail fully covers every member; keep it otherwise so nothing is lost.
+        # Enumerations are always kept.
         if ungrouped:
-            lines.append(f"## {section_title}")
-            lines.append("")
-            lines += _summary_block(section_title, ungrouped)
-            lines.append("")
+            _covered = section_title != "Enumerations" and all(
+                _grp_detail_covers(m, kind_key) for m in ungrouped)
+            if not _covered:
+                lines.append(f"## {section_title}")
+                lines.append("")
+                lines += _summary_block(section_title, ungrouped)
+                lines.append("")
     for _hdr, section_title, _members in _named_groups:
         lines.append(f"## {_hdr}")
         lines.append("")
@@ -1786,17 +1795,19 @@ def _render_core_basic_func(m: dict, idx: int, total: int,
 
 
 def _write_class_stub(cls: dict, out_dir: pathlib.Path,
-                      xml_dir: pathlib.Path) -> None:
+                      xml_dir: pathlib.Path, inline: bool = False):
     """One .md per inner class, mirroring Doxygen's class-page layout.
 
-    Falls back to `{doxygenclass}`/`{doxygenstruct}` if class XML can't be read."""
+    Falls back to `{doxygenclass}`/`{doxygenstruct}` if class XML can't be read.
+    When `inline=True`, the body lines are returned (no title, not written) so a
+    single-class "shell" group page can host the class content directly."""
     page = _class_page_name(cls["refid"])
     out = out_dir / f"{page}.md"
     qualified = cls["qualified"] or cls["name"]
     kind_label = cls["kind"].title()
     title = f"{kind_label} {qualified}"
     # No `{#refid}` anchor; `_generate_api_stubs` seeds `_ANCHOR_TO_DOC` instead.
-    lines = [f"# {title}", ""]
+    lines = [] if inline else [f"# {title}", ""]
 
     # Class-page header: brief + `View details` + `#include` line.
     _header_data = _read_class_data(cls["refid"], xml_dir)
@@ -1804,10 +1815,12 @@ def _write_class_stub(cls: dict, out_dir: pathlib.Path,
         import html as _html_pkg
         _brief = (_header_data.get("brief") or "").strip()
         if _brief:
-            # Link only when there's a detailed description to jump to.
+            # Link only when there's a detailed description to jump to. Inlined
+            # onto a group page (possibly with a sibling class) the #detailed-
+            # description anchor would collide, and the detail is right below.
             _more = (
                 ' <a class="opencv-class-more" href="#detailed-description">View details</a>'
-                if _header_data.get("detailed") else ""
+                if _header_data.get("detailed") and not inline else ""
             )
             lines.append(
                 f'<p class="opencv-class-brief">'
@@ -1870,16 +1883,21 @@ def _write_class_stub(cls: dict, out_dir: pathlib.Path,
             inline_inherited = []
             _additional += [(summary_title, rid, qual, bi)
                             for rid, qual, bi in inherited]
-        if not items and not inline_inherited:
+        non_enum_items = [m for m in items if m["kind"] != "enum"]
+        enum_items = [m for m in items if m["kind"] == "enum"]
+        # Drop summary rows already documented in a per-member detail block below
+        # (every own typedef/function/variable is); keep kinds with no detail
+        # block (e.g. friends) and enums (always shown as a synopsis).
+        kept_rows = [m for m in non_enum_items
+                     if m["kind"] not in ("typedef", "function", "variable")]
+        if not kept_rows and not enum_items and not inline_inherited:
             continue
         lines.append(f"## {summary_title}")
         lines.append("")
-        non_enum_items = [m for m in items if m["kind"] != "enum"]
-        enum_items = [m for m in items if m["kind"] == "enum"]
-        if non_enum_items:
+        if kept_rows:
             lines += ["{.api-reference-table .api-function-table}",
                       "| Return | Name | Description |", "|---|---|---|"]
-            for m in non_enum_items:
+            for m in kept_rows:
                 ret = _md_escape_cell(m["type"])
                 if ret and m["static"]:
                     ret = "static " + ret
@@ -2030,6 +2048,8 @@ def _write_class_stub(cls: dict, out_dir: pathlib.Path,
             "",
         ]
 
+    if inline:
+        return lines
     _stub_write(out, "\n".join(lines))
 
 
@@ -2497,8 +2517,10 @@ def _generate_api_stubs(modules, xml_dir, out_dir,
     if out_dir.exists():
         shutil.rmtree(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    global _stub_written
+    global _stub_written, _MERGED_GROUPS, _MERGED_CLASS_TO_GROUP
     _stub_written = set()
+    _MERGED_GROUPS = []
+    _MERGED_CLASS_TO_GROUP = {}
     _desc = root_desc or (
         "Sphinx-rendered API reference. Each entry below is a module's "
         "umbrella `@defgroup`; sub-pages mirror the Doxygen subgroup hierarchy.")
@@ -2602,8 +2624,50 @@ def _generate_api_stubs(modules, xml_dir, out_dir,
     for _cls in classes_seen.values():
         _ANCHOR_TO_DOC.setdefault(
             _cls["refid"], f"{_doc_prefix}/{_class_page_name(_cls['refid'])}")
+    # Merged shell groups: a Classes box per class, then each class's content
+    # inline (bases are seeded now, so "inherited from" links resolve).
+    for _mout, _mlines, _mclasses in _MERGED_GROUPS:
+        _lines = list(_mlines)
+        # Section heading per class + the same-page anchor its box links to.
+        def _cls_slug(_c):
+            _h = f"{_c['kind'].title()} {_c.get('qualified') or _c['name']}"
+            return re.sub(r"[^a-z0-9]+", "-", _h.lower()).strip("-")
+        _lines += ["## Classes", "", "{.api-reference-table}",
+                   "| Name | Description |", "|---|---|"]
+        for _c in _mclasses:
+            # Encode "::" so the cv-linkifier doesn't nest an <a> in our link.
+            _nm = _c["name"].replace("::", "&#58;&#58;")
+            _lines.append(
+                f'| <a href="#{_cls_slug(_c)}"><code>{_c["kind"]} '
+                f'{_nm}</code></a> '
+                f"| {_md_escape_cell(_c.get('brief', ''))} |")
+        _lines.append("")
+        for _c in _mclasses:
+            _q = _c.get("qualified") or _c["name"]
+            _lines += [f"## {_c['kind'].title()} {_q}", ""]
+            _lines += _write_class_stub(_c, out_dir, xml_dir, inline=True) or []
+        _stub_write(_mout, "\n".join(_lines) + "\n")
     # Per-class pages; seed `_ANCHOR_TO_DOC` refid→docname for `@ref`.
     for cls in classes_seen.values():
+        _grp = _MERGED_CLASS_TO_GROUP.get(cls["refid"])
+        if _grp:
+            # Inlined into its group page: redirect this page + point xrefs there.
+            _rel = _grp.split("/", 1)[-1]
+            _stub_write(
+                out_dir / f"{_class_page_name(cls['refid'])}.md",
+                f"# {cls.get('qualified') or cls['name']}\n\n"
+                f'<script>window.location.replace("{_rel}.html"'
+                f' + window.location.hash);</script>\n\n'
+                f'<p>This page has moved to '
+                f'<a href="{_rel}.html">{_rel}</a>.</p>\n')
+            _ANCHOR_TO_DOC[cls["refid"]] = _grp
+            _ALL_CLASSES[cls["refid"]] = {
+                "qualified": cls.get("qualified") or cls.get("name", ""),
+                "kind": cls.get("kind", "class"),
+                "brief": cls.get("brief", ""),
+                "docname": _grp,
+            }
+            continue
         _write_class_stub(cls, out_dir, xml_dir)
         _docname = f"{_doc_prefix}/{_class_page_name(cls['refid'])}"
         _ANCHOR_TO_DOC[cls["refid"]] = _docname

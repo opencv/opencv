@@ -1839,3 +1839,21 @@ html[data-theme="dark"] section[id$="-documentation"] code.opencv-param-name {
     border: 1px solid #444c56 !important;
     color: #adbac7 !important;
 }
+/* Breathe (namespace pages) renders param names as plain <strong>; box them
+   like the code.opencv-param-name chips used on every other function page. */
+dl.field-list dd ul.simple > li > p > strong:first-child {
+    font-family: var(--pst-font-family-monospace, monospace);
+    font-weight: 400;
+    background-color: #eff1f3;
+    border: 1px solid #d0d7de;
+    border-radius: 4px;
+    padding: 0.1em 0.4em;
+    font-size: 0.85em;
+    color: #24292f;
+    white-space: nowrap;
+}
+html[data-theme="dark"] dl.field-list dd ul.simple > li > p > strong:first-child {
+    background-color: #2d333b;
+    border: 1px solid #444c56;
+    color: #adbac7;
+}
