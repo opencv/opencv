@@ -235,12 +235,10 @@ DEF_RANDI_FUNC(64s, int64_t)
 // Narrow an f32 buffer into one of the 1-byte FP8 destinations.
 static inline void cvt32fToFP8(const float* src, void* dst, int len, int depth)
 {
-    if (depth == CV_8F_E4M3FN)        { float8_e4m3fn*   d = (float8_e4m3fn*)dst;   for (int i = 0; i < len; i++) d[i] = float8_e4m3fn(src[i]); }
-    else if (depth == CV_8F_E4M3FNUZ) { float8_e4m3fnuz* d = (float8_e4m3fnuz*)dst; for (int i = 0; i < len; i++) d[i] = float8_e4m3fnuz(src[i]); }
-    else if (depth == CV_8F_E5M2)     { float8_e5m2*     d = (float8_e5m2*)dst;     for (int i = 0; i < len; i++) d[i] = float8_e5m2(src[i]); }
-    else                              { float8_e5m2fnuz* d = (float8_e5m2fnuz*)dst; for (int i = 0; i < len; i++) d[i] = float8_e5m2fnuz(src[i]); }
+    if (depth == CV_8F_E4M3FN)        { fp8_t*   d = (fp8_t*)dst;   for (int i = 0; i < len; i++) d[i] = fp8_t(src[i]); }
+    else                              { fp8a_t* d = (fp8a_t*)dst; for (int i = 0; i < len; i++) d[i] = fp8a_t(src[i]); }
 }
-static inline bool isFP8Depth(int d) { return d >= CV_8F_E4M3FN && d <= CV_8F_E5M2FNUZ; }
+static inline bool isFP8Depth(int d) { return d >= CV_8F_E4M3FN && d <= CV_8F_E4M3FNUZ; }
 
 static void randf_16_or_32f( void* dst, int len_, int cn, uint64* state, const Vec2f* p, float* fbuf, int flags )
 {
@@ -293,8 +291,7 @@ static RandFunc randTab[CV_DEPTH_MAX][CV_DEPTH_MAX] =
         (RandFunc)randf_64f, (RandFunc)randf_16_or_32f, (RandFunc)randf_16_or_32f,
         (RandFunc)randi_8b, (RandFunc)randi_64u, (RandFunc)randi_64s,
         (RandFunc)randi_32u,
-        (RandFunc)randf_16_or_32f, (RandFunc)randf_16_or_32f,   // CV_8F_E4M3FN, E4M3FNUZ
-        (RandFunc)randf_16_or_32f, (RandFunc)randf_16_or_32f    // CV_8F_E5M2, E5M2FNUZ
+        (RandFunc)randf_16_or_32f, (RandFunc)randf_16_or_32f    // CV_8F_E4M3FN, E4M3FNUZ
     },
     {
         (RandFunc)randBits_8u, (RandFunc)randBits_8s, (RandFunc)randBits_16u,
@@ -527,8 +524,7 @@ static RandnScaleFunc randnScaleTab[CV_DEPTH_MAX] =
     (RandnScaleFunc)randnScale_64f, (RandnScaleFunc)randnScale_16_or_32f, (RandnScaleFunc)randnScale_16_or_32f,
     (RandnScaleFunc)randnScale_8b, (RandnScaleFunc)randnScale_64u, (RandnScaleFunc)randnScale_64s,
     (RandnScaleFunc)randnScale_32u,
-    (RandnScaleFunc)randnScale_16_or_32f, (RandnScaleFunc)randnScale_16_or_32f,  // CV_8F_E4M3FN, E4M3FNUZ
-    (RandnScaleFunc)randnScale_16_or_32f, (RandnScaleFunc)randnScale_16_or_32f   // CV_8F_E5M2, E5M2FNUZ
+    (RandnScaleFunc)randnScale_16_or_32f, (RandnScaleFunc)randnScale_16_or_32f   // CV_8F_E4M3FN, E4M3FNUZ
 };
 
 void RNG::fill( InputOutputArray _mat, int disttype,

@@ -64,8 +64,8 @@ static bool ocl_convertTo(InputArray src_, OutputArray dst_, int ddepth, bool no
     int cn = CV_MAT_CN(stype);
 
     // FP8 types are not supported by the OpenCL kernels yet; fall back to CPU.
-    if ((sdepth >= CV_8F_E4M3FN && sdepth <= CV_8F_E5M2FNUZ) ||
-        (ddepth >= CV_8F_E4M3FN && ddepth <= CV_8F_E5M2FNUZ))
+    if ((sdepth >= CV_8F_E4M3FN && sdepth <= CV_8F_E4M3FNUZ) ||
+        (ddepth >= CV_8F_E4M3FN && ddepth <= CV_8F_E4M3FNUZ))
         return false;
 
     int dtype = CV_MAKETYPE(ddepth, cn);

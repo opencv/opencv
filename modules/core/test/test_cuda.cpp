@@ -21,9 +21,9 @@ TEST_P(GpuMat, convertTo)
 {
     int sdepth = get<0>(GetParam());
     int ddepth = get<1>(GetParam());
-    if (sdepth == CV_16F || sdepth == CV_Bool || sdepth == CV_16BF || (sdepth >= CV_8F_E4M3FN && sdepth <= CV_8F_E5M2FNUZ))
+    if (sdepth == CV_16F || sdepth == CV_Bool || sdepth == CV_16BF || (sdepth >= CV_8F_E4M3FN && sdepth <= CV_8F_E4M3FNUZ))
         throw SkipTestException("Unsupported src type");
-    if (ddepth == CV_16F || ddepth == CV_Bool || ddepth == CV_16BF || (ddepth >= CV_8F_E4M3FN && ddepth <= CV_8F_E5M2FNUZ))
+    if (ddepth == CV_16F || ddepth == CV_Bool || ddepth == CV_16BF || (ddepth >= CV_8F_E4M3FN && ddepth <= CV_8F_E4M3FNUZ))
         throw SkipTestException("Unsupported dst type");
 
     Mat ref(16, 20, CV_8U), testMat;
@@ -47,9 +47,9 @@ TEST_P(GpuMat, convertToScale)
 {
     int sdepth = get<0>(GetParam());
     int ddepth = get<1>(GetParam());
-    if (sdepth == CV_16F || sdepth == CV_Bool || sdepth == CV_16BF || (sdepth >= CV_8F_E4M3FN && sdepth <= CV_8F_E5M2FNUZ))
+    if (sdepth == CV_16F || sdepth == CV_Bool || sdepth == CV_16BF || (sdepth >= CV_8F_E4M3FN && sdepth <= CV_8F_E4M3FNUZ))
         throw SkipTestException("Unsupported src type");
-    if (ddepth == CV_16F || ddepth == CV_Bool || ddepth == CV_16BF || (ddepth >= CV_8F_E4M3FN && ddepth <= CV_8F_E5M2FNUZ))
+    if (ddepth == CV_16F || ddepth == CV_Bool || ddepth == CV_16BF || (ddepth >= CV_8F_E4M3FN && ddepth <= CV_8F_E4M3FNUZ))
         throw SkipTestException("Unsupported dst type");
 
     Mat ref(16, 20, CV_8U), testMat;

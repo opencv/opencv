@@ -225,10 +225,8 @@ template<> inline T saturate_cast<T>(bfloat v)   { return T((float)v); } \
 template<> inline T saturate_cast<T>(T v)        { return v; } \
 template<> inline bool saturate_cast<bool>(T v)  { return (float)v != 0; }
 
-CV_FP8_SATURATE_CAST(float8_e4m3fn)
-CV_FP8_SATURATE_CAST(float8_e4m3fnuz)
-CV_FP8_SATURATE_CAST(float8_e5m2)
-CV_FP8_SATURATE_CAST(float8_e5m2fnuz)
+CV_FP8_SATURATE_CAST(fp8_t)
+CV_FP8_SATURATE_CAST(fp8a_t)
 #undef CV_FP8_SATURATE_CAST
 
 //! @}

@@ -986,7 +986,7 @@ template<int ebits, int mbits, int bias, bool has_inf, bool fnuz>
 class float8_t
 {
 public:
-    float8_t() : w(0) {}
+    float8_t() : b(0) {}
 
     explicit float8_t(float x)
     {
@@ -996,16 +996,16 @@ public:
         const unsigned sbit = sign << W, maxe = (1u << ebits) - 1;
         const unsigned nanc = fnuz ? 0x80u : (sbit | (maxe << mbits) | ((1u << mbits) - 1));
         const unsigned infc = sbit | (maxe << mbits);
-        if (e == 0xFF && m != 0) { w = (uchar)nanc; return; }                       // NaN
-        if (e == 0xFF) { w = (uchar)((has_inf && !fnuz) ? infc : nanc); return; }   // Inf
-        if (e == 0 && m == 0) { w = (uchar)(fnuz ? 0u : sbit); return; }            // zero
+        if (e == 0xFF && m != 0) { b = (uchar)nanc; return; }                       // NaN
+        if (e == 0xFF) { b = (uchar)((has_inf && !fnuz) ? infc : nanc); return; }   // Inf
+        if (e == 0 && m == 0) { b = (uchar)(fnuz ? 0u : sbit); return; }            // zero
         int newexp = (int)e - 127 + bias;
         const unsigned full = (1u << 23) | m;
         if (newexp <= 0)                                                            // subnormal/underflow
         {
             const int shift = (23 - mbits) + (1 - newexp);
             unsigned mant = (shift >= 32) ? 0u : roundRNE(full, shift);
-            w = (uchar)(mant == 0 ? (fnuz ? 0u : sbit) : (sbit | mant));
+            b = (uchar)(mant == 0 ? (fnuz ? 0u : sbit) : (sbit | mant));
             return;
         }
         unsigned rounded = roundRNE(full, 23 - mbits);
@@ -1014,20 +1014,20 @@ public:
         const bool ov = has_inf ? ((unsigned)newexp >= maxe)
                       : fnuz    ? ((unsigned)newexp > maxe)
                                 : ((unsigned)newexp > maxe || ((unsigned)newexp == maxe && mant == (1u << mbits) - 1));
-        if (ov) { w = (uchar)((has_inf && !fnuz) ? infc : nanc); return; }
-        w = (uchar)(sbit | ((unsigned)newexp << mbits) | mant);
+        if (ov) { b = (uchar)((has_inf && !fnuz) ? infc : nanc); return; }
+        b = (uchar)(sbit | ((unsigned)newexp << mbits) | mant);
     }
 
     operator float() const
     {
         const int W = ebits + mbits;
-        const unsigned sign = ((unsigned)w >> W) & 1;
-        const unsigned exp = ((unsigned)w >> mbits) & ((1u << ebits) - 1);
-        const unsigned man = (unsigned)w & ((1u << mbits) - 1);
+        const unsigned sign = ((unsigned)b >> W) & 1;
+        const unsigned exp = ((unsigned)b >> mbits) & ((1u << ebits) - 1);
+        const unsigned man = (unsigned)b & ((1u << mbits) - 1);
         const unsigned maxe = (1u << ebits) - 1;
         const float s = sign ? -1.f : 1.f;
         Cv32suf qn; qn.u = sign ? 0xFFC00000u : 0x7FC00000u;                        // sign-matched quiet NaN
-        if (fnuz) { if ((unsigned)w == (1u << W)) return qn.f; }
+        if (fnuz) { if ((unsigned)b == (1u << W)) return qn.f; }
         else if (exp == maxe)
         {
             if (has_inf) { Cv32suf inf; inf.u = sign ? 0xFF800000u : 0x7F800000u; return man == 0 ? inf.f : qn.f; }
@@ -1038,7 +1038,7 @@ public:
     }
 
 protected:
-    uchar w;
+    uchar b;
 
 private:
     static unsigned roundRNE(unsigned full, int shift)
@@ -1051,10 +1051,8 @@ private:
     static float pow2(int n) { Cv32suf s; s.u = (unsigned)((n + 127) << 23); return s.f; } // 2^n, n in [-126,127]
 };
 
-typedef float8_t<4, 3, 7,  false, false> float8_e4m3fn;   // no inf, max 448
-typedef float8_t<4, 3, 8,  false, true>  float8_e4m3fnuz; // no inf, single NaN, no -0
-typedef float8_t<5, 2, 15, true,  false> float8_e5m2;     // IEEE-like, inf/NaN
-typedef float8_t<5, 2, 16, false, true>  float8_e5m2fnuz; // no inf, single NaN, no -0
+typedef float8_t<4, 3, 7,  false, false> fp8_t;   // no inf, max 448
+typedef float8_t<4, 3, 8,  false, true>  fp8a_t; // no inf, single NaN, no -0
 
 }
 #endif

@@ -333,16 +333,10 @@ convertTo(const _Tp* src, void* dst, int dtype,
         convert_(src, (cv::bfloat*)dst, total, alpha, beta);
         break;
     case CV_8F_E4M3FN:
-        convert_(src, (cv::float8_e4m3fn*)dst, total, alpha, beta);
+        convert_(src, (cv::fp8_t*)dst, total, alpha, beta);
         break;
     case CV_8F_E4M3FNUZ:
-        convert_(src, (cv::float8_e4m3fnuz*)dst, total, alpha, beta);
-        break;
-    case CV_8F_E5M2:
-        convert_(src, (cv::float8_e5m2*)dst, total, alpha, beta);
-        break;
-    case CV_8F_E5M2FNUZ:
-        convert_(src, (cv::float8_e5m2fnuz*)dst, total, alpha, beta);
+        convert_(src, (cv::fp8a_t*)dst, total, alpha, beta);
         break;
     case CV_Bool:
         convert_to_bool(src, (bool*)dst, total, alpha, beta);
@@ -428,16 +422,10 @@ void convert(const Mat& src, cv::OutputArray _dst,
             convertTo((const cv::bfloat*)sptr, dptr, dtype, total, alpha, beta);
             break;
         case CV_8F_E4M3FN:
-            convertTo((const cv::float8_e4m3fn*)sptr, dptr, dtype, total, alpha, beta);
+            convertTo((const cv::fp8_t*)sptr, dptr, dtype, total, alpha, beta);
             break;
         case CV_8F_E4M3FNUZ:
-            convertTo((const cv::float8_e4m3fnuz*)sptr, dptr, dtype, total, alpha, beta);
-            break;
-        case CV_8F_E5M2:
-            convertTo((const cv::float8_e5m2*)sptr, dptr, dtype, total, alpha, beta);
-            break;
-        case CV_8F_E5M2FNUZ:
-            convertTo((const cv::float8_e5m2fnuz*)sptr, dptr, dtype, total, alpha, beta);
+            convertTo((const cv::fp8a_t*)sptr, dptr, dtype, total, alpha, beta);
             break;
         default:
             CV_Error(cv::Error::StsNotImplemented, "unknown/unsupported depth");
@@ -2279,10 +2267,8 @@ static inline double decodeFP8(const uchar* p, int depth)
 {
     switch (depth)
     {
-    case CV_8F_E4M3FN:   return (double)(float)*reinterpret_cast<const cv::float8_e4m3fn*>(p);
-    case CV_8F_E4M3FNUZ: return (double)(float)*reinterpret_cast<const cv::float8_e4m3fnuz*>(p);
-    case CV_8F_E5M2:     return (double)(float)*reinterpret_cast<const cv::float8_e5m2*>(p);
-    default:             return (double)(float)*reinterpret_cast<const cv::float8_e5m2fnuz*>(p);
+    case CV_8F_E4M3FN:   return (double)(float)*reinterpret_cast<const cv::fp8_t*>(p);
+    default:             return (double)(float)*reinterpret_cast<const cv::fp8a_t*>(p);
     }
 }
 
@@ -2412,8 +2398,6 @@ int cmpEps( const Mat& arr_, const Mat& refarr_, double* _realmaxdiff,
             break;
         case CV_8F_E4M3FN:
         case CV_8F_E4M3FNUZ:
-        case CV_8F_E5M2:
-        case CV_8F_E5M2FNUZ:
             for( j = 0; j < total; j++ )
             {
                 if( ((uchar*)sptr1)[j] == ((uchar*)sptr2)[j] )
@@ -3473,15 +3457,12 @@ static void writeElems(std::ostream& out, const void* data, int nelems, int dept
         writeElems<cv::bfloat, float>(out, data, nelems, starpos);
         out.precision(pp);
     }
-    else if(depth == CV_8F_E4M3FN || depth == CV_8F_E4M3FNUZ ||
-            depth == CV_8F_E5M2 || depth == CV_8F_E5M2FNUZ)
+    else if(depth == CV_8F_E4M3FN || depth == CV_8F_E4M3FNUZ)
     {
         std::streamsize pp = out.precision();
         out.precision(4);
-        if(depth == CV_8F_E4M3FN)        writeElems<cv::float8_e4m3fn, float>(out, data, nelems, starpos);
-        else if(depth == CV_8F_E4M3FNUZ) writeElems<cv::float8_e4m3fnuz, float>(out, data, nelems, starpos);
-        else if(depth == CV_8F_E5M2)     writeElems<cv::float8_e5m2, float>(out, data, nelems, starpos);
-        else                             writeElems<cv::float8_e5m2fnuz, float>(out, data, nelems, starpos);
+        if(depth == CV_8F_E4M3FN)        writeElems<cv::fp8_t, float>(out, data, nelems, starpos);
+        else                             writeElems<cv::fp8a_t, float>(out, data, nelems, starpos);
         out.precision(pp);
     }
     else if(depth == CV_32F)

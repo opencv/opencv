@@ -93,16 +93,10 @@ void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
         scalarToRawData_(s, (bfloat*)_buf, cn, unroll_to);
         break;
     case CV_8F_E4M3FN:
-        scalarToRawData_(s, (float8_e4m3fn*)_buf, cn, unroll_to);
+        scalarToRawData_(s, (fp8_t*)_buf, cn, unroll_to);
         break;
     case CV_8F_E4M3FNUZ:
-        scalarToRawData_(s, (float8_e4m3fnuz*)_buf, cn, unroll_to);
-        break;
-    case CV_8F_E5M2:
-        scalarToRawData_(s, (float8_e5m2*)_buf, cn, unroll_to);
-        break;
-    case CV_8F_E5M2FNUZ:
-        scalarToRawData_(s, (float8_e5m2fnuz*)_buf, cn, unroll_to);
+        scalarToRawData_(s, (fp8a_t*)_buf, cn, unroll_to);
         break;
     case CV_32U:
         scalarToRawData_(s, (unsigned*)_buf, cn, unroll_to);
