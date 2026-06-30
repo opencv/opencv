@@ -55,7 +55,7 @@
 #include "opencl_kernels_dnn.hpp"
 #endif
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
 #include "../cuda4dnn/primitives/slice.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
@@ -230,7 +230,7 @@ public:
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             return sliceRanges.size() == 1 && neg_step_dims.empty();
 #endif
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
         if (backendId == DNN_BACKEND_CUDA)
             return !hasSteps && neg_step_dims.empty();
 #endif
@@ -807,7 +807,7 @@ public:
 #endif  // HAVE_DNN_NGRAPH
 
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(
         void *context_,
         const std::vector<Ptr<BackendWrapper>>& inputs,

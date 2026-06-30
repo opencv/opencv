@@ -18,7 +18,7 @@ Implementation of padding layer, which adds paddings to input blob.
 
 #include <vector>
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
 #include "../cuda4dnn/primitives/padding.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
@@ -182,7 +182,7 @@ public:
             CV_Error(Error::StsNotImplemented, "Unknown padding type: " + paddingType);
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(
         void *context_,
         const std::vector<Ptr<BackendWrapper>>& inputs,

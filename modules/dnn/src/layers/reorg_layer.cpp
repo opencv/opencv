@@ -56,7 +56,7 @@
 #endif
 
 #include "../op_cuda.hpp"
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
 #include "../cuda4dnn/primitives/reorg.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
@@ -225,7 +225,7 @@ public:
 #endif  // HAVE_DNN_NGRAPH
 
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(
         void *context_,
         const std::vector<Ptr<BackendWrapper>>& inputs,

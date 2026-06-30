@@ -53,7 +53,7 @@
 #include "opencl_kernels_dnn.hpp"
 #endif
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
 #include "../cuda4dnn/primitives/eltwise.hpp"
 #include "../cuda4dnn/primitives/shortcut.hpp"
 using namespace cv::dnn::cuda4dnn;
@@ -751,7 +751,7 @@ public:
                             nstripes);
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(
         void *context_,
         const std::vector<Ptr<BackendWrapper>>& inputs,

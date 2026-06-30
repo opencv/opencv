@@ -58,7 +58,7 @@
 using namespace cv::dnn::ocl4dnn;
 #endif
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
 #include "../cuda4dnn/primitives/lrn.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
@@ -319,7 +319,7 @@ public:
         }
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(
         void *context_,
         const std::vector<Ptr<BackendWrapper>>& inputs,
