@@ -185,26 +185,30 @@ public:
             _descriptors.create(static_cast<int>(candidates.size()), descChannels, CV_32F);
             Mat descriptors = _descriptors.getMat();
             const float* descData = descMap.ptr<float>();
+            const int channelStep = scoreH * scoreW;
 
-            for (int i = 0; i < static_cast<int>(candidates.size()); ++i)
+            parallel_for_(Range(0, static_cast<int>(candidates.size())),
+                          [&](const Range& range)
             {
-                float* dst = descriptors.ptr<float>(i);
-                const XFeatCandidate& c = candidates[i];
-                const int offset = c.y * scoreW + c.x;
-                if (descNCHW)
+                for (int i = range.start; i < range.end; ++i)
                 {
-                    const int channelStep = scoreH * scoreW;
-                    for (int ch = 0; ch < descChannels; ++ch)
-                        dst[ch] = descData[ch * channelStep + offset];
+                    float* dst = descriptors.ptr<float>(i);
+                    const XFeatCandidate& c = candidates[i];
+                    const int offset = c.y * scoreW + c.x;
+                    if (descNCHW)
+                    {
+                        for (int ch = 0; ch < descChannels; ++ch)
+                            dst[ch] = descData[ch * channelStep + offset];
+                    }
+                    else
+                    {
+                        const int base = offset * descChannels;
+                        for (int ch = 0; ch < descChannels; ++ch)
+                            dst[ch] = descData[base + ch];
+                    }
+                    normalize(descriptors.row(i), descriptors.row(i), 1.0, 0.0, NORM_L2);
                 }
-                else
-                {
-                    const int base = offset * descChannels;
-                    for (int ch = 0; ch < descChannels; ++ch)
-                        dst[ch] = descData[base + ch];
-                }
-                normalize(descriptors.row(i), descriptors.row(i), 1.0, 0.0, NORM_L2);
-            }
+            });
         }
     }
 
