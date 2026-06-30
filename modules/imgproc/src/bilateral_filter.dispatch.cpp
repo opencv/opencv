@@ -340,11 +340,16 @@ void bilateralFilter( InputArray _src, OutputArray _dst, int d,
 
     Mat src = _src.getMat(), dst = _dst.getMat();
 
-    if (!src.isSubmatrix() || (borderType & BORDER_ISOLATED))
-    {
-        CALL_HAL(bilateralFilter, cv_hal_bilateralFilter, src.data, src.step, dst.data, dst.step, src.cols, src.rows, src.depth(),
-                 src.channels(), d, sigmaColor, sigmaSpace, borderType);
-    }
+#ifdef HAVE_IPP_IW
+    Size wsz; Point ofs;
+    src.locateROI(wsz, ofs);
+    CALL_HAL(bilateralFilter, cv_hal_bilateralFilter, src.data, src.step, dst.data, dst.step, src.cols, src.rows,
+             wsz.width, wsz.height, ofs.x, ofs.y, src.depth(),
+             src.channels(), d, sigmaColor, sigmaSpace, borderType);
+#else
+    CALL_HAL(bilateralFilter, cv_hal_bilateralFilter, src.data, src.step, dst.data, dst.step, src.cols, src.rows, src.depth(),
+             src.channels(), d, sigmaColor, sigmaSpace, borderType);
+#endif
 
     if( src.depth() == CV_8U )
         bilateralFilter_8u( src, dst, d, sigmaColor, sigmaSpace, borderType );
