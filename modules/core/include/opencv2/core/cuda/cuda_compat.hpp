@@ -5,7 +5,11 @@
 #ifndef OPENCV_CUDA_CUDA_COMPAT_HPP
 #define OPENCV_CUDA_CUDA_COMPAT_HPP
 
+#if defined(__HIP_PLATFORM_AMD__) || defined(__HIPCC__)
+#include <hip/hip_runtime.h>
+#else
 #include <cuda.h>
+#endif
 
 namespace cv { namespace cuda { namespace device { namespace compat
 {
