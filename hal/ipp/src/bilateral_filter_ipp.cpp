@@ -6,7 +6,7 @@
 
 #include "ipp_hal_imgproc.hpp"
 
-#if IPP_VERSION_X100 >= 810 && defined(HAVE_IPP_IW)
+#ifdef HAVE_IPP_IW
 
 #include "precomp_ipp.hpp"
 
@@ -63,7 +63,8 @@ private:
 } // namespace
 
 int ipp_hal_bilateralFilter(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
-                            int width, int height, int depth, int cn, int d,
+                            int width, int height, int full_width, int full_height, int offset_x, int offset_y,
+                            int depth, int cn, int d,
                             double sigma_color, double sigma_space, int border_type)
 {
     CV_HAL_CHECK_USE_IPP();
@@ -86,14 +87,47 @@ int ipp_hal_bilateralFilter(const uchar* src_data, size_t src_step, uchar* dst_d
     Ipp32f valSquareSigma = (Ipp32f)(sigma_color*sigma_color);
     Ipp32f posSquareSigma = (Ipp32f)(sigma_space*sigma_space);
 
+    IwSize marginLeft   = offset_x;
+    IwSize marginTop    = offset_y;
+    IwSize marginRight  = full_width  - width  - offset_x;
+    IwSize marginBottom = full_height - height - offset_y;
+
     try
     {
+        ::ipp::IwiBorderSize inMemBorder(marginLeft, marginTop, marginRight, marginBottom);
+
         ::ipp::IwiImage iwSrc;
-        iwSrc.Init(IwiSize{width, height}, ippiGetDataType(depth), cn, ::ipp::IwiBorderSize(), (void*)src_data, IwSize(src_step));
+        iwSrc.Init(IwiSize{width, height}, ippiGetDataType(depth), cn, inMemBorder, (void*)src_data, IwSize(src_step));
         ::ipp::IwiImage iwDst;
         iwDst.Init(IwiSize{width, height}, ippiGetDataType(depth), cn, ::ipp::IwiBorderSize(), dst_data, IwSize(dst_step));
 
-        ::ipp::IwiBorderType ippBorder(ippBorderType);
+        // already have physical border
+        int inMemFlags = 0;
+        if(!(border_type & cv::BORDER_ISOLATED))
+        {
+            if(marginLeft)
+            {
+                if(marginLeft >= radius) inMemFlags |= ippBorderInMemLeft;
+                else return CV_HAL_ERROR_NOT_IMPLEMENTED;
+            }
+            if(marginTop)
+            {
+                if(marginTop >= radius) inMemFlags |= ippBorderInMemTop;
+                else return CV_HAL_ERROR_NOT_IMPLEMENTED;
+            }
+            if(marginRight)
+            {
+                if(marginRight >= radius) inMemFlags |= ippBorderInMemRight;
+                else return CV_HAL_ERROR_NOT_IMPLEMENTED;
+            }
+            if(marginBottom)
+            {
+                if(marginBottom >= radius) inMemFlags |= ippBorderInMemBottom;
+                else return CV_HAL_ERROR_NOT_IMPLEMENTED;
+            }
+        }
+
+        ::ipp::IwiBorderType ippBorder((IppiBorderType)(ippBorderType | inMemFlags));
 
         const int threads = ippiSuggestThreadsNum(iwDst, 2);
         if(IPP_BILATERAL_PARALLEL && threads > 1)
@@ -132,4 +166,4 @@ int ipp_hal_bilateralFilter(const uchar* src_data, size_t src_step, uchar* dst_d
     return CV_HAL_ERROR_OK;
 }
 
-#endif // IPP_VERSION_X100 >= 810 && HAVE_IPP_IW
+#endif
