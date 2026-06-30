@@ -195,8 +195,8 @@ TEST_P(EW_Extensive_BinOp, accuracy)
     const bool inplace = aliasIn >= 0;
     const int Tr = aliasIn == 0 ? da : aliasIn == 1 ? db : sampleDepth(rng);
 
-    SCOPED_TRACE(cv::format("%s caseidx=%d da=%d db=%d Tr=%d a=%sC%d b=%sC%d inplace=%d",
-                            opStr, caseidx, da, db, Tr, shapeStr(sa).c_str(), cn_a,
+    SCOPED_TRACE(cv::format("%s caseidx=%d da=%s db=%s Tr=%s a=%sC%d b=%sC%d inplace=%d",
+                            opStr, caseidx, depthToString(da), depthToString(db), depthToString(Tr), shapeStr(sa).c_str(), cn_a,
                             shapeStr(sb).c_str(), cn_b, inplace ? aliasIn : -1));
 
     Mat a = makeRandom(rng, sa, cn_a, da), b = makeRandom(rng, sb, cn_b, db);

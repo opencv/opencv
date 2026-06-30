@@ -21,6 +21,7 @@
 
 #include "opencv2/core.hpp"
 #include <array>
+#include <utility>
 #include <vector>
 
 namespace cv { namespace ew {
@@ -114,40 +115,29 @@ typedef std::array<size_t, MatShape::MAX_DIMS> EwSteps;
 // a cv::Scalar's 4 doubles): mul/div read params[0] as a scale (1.0 = none). Ops with no scalar
 // parameter ignore it. It is never null (the executor always passes the instruction's block).
 // ---------------------------------------------------------------------------
-typedef int (*ElemwiseFunc)(
+typedef int (*KernelFunc)(
     const void* src0, size_t step0y, size_t step0x,
     const void* src1, size_t step1y, size_t step1x,
     const void* src2, size_t step2y, size_t step2x,
     void*       dst,  size_t dstepy,
-    int width, int height, const double* params);
+    int width, int height, const double* params,
+    int flags, void* userdata);
+
+struct TKernel
+{
+    KernelFunc fptr = nullptr;
+    void* userdata = nullptr;
+    int flags = 0;
+};
 
 // Dispatcher: returns the best kernel for (op, operand depths, result depth), or nullptr
 // if the exact combination is not provided (the compiler then inserts OP_CAST nodes and
 // retries with a supported working type). Unused operand depths are EW_DEPTH_NONE.
-ElemwiseFunc getElemwiseFunc(TOp op, int depth0, int depth1, int depth2, int rdepth);
+TKernel getElemwiseFunc(TOp op, int depth0, int depth1, int depth2, int rdepth);
 
-// T + T -> R
-ElemwiseFunc getAddFunc(int T, int R);
-
-// T / T -> R (work float). `checked` => guard divide-by-zero -> 0 (both-integer inputs); else a/0
-// -> inf (any float input). The caller decides from the ORIGINAL input types (not the common T).
-ElemwiseFunc getDivFunc(int T, int R, bool checked);
-
-// ---------------------------------------------------------------------------
-// Calling convention of an instruction's kernel. Most ops are EW_FN_ELEMWISE (the broadcasting
-// ElemwiseFunc above). Type conversions (OP_CAST / OP_CONVERT_SCALE) reuse core's convert
-// kernels directly as EW_FN_BINARY: no broadcast, byte steps, a Size tile, scale/offset passed
-// through the instruction's params block - so no adapter/context layer is needed.
-// ---------------------------------------------------------------------------
-enum EwFuncKind { EW_FN_ELEMWISE = 0, EW_FN_BINARY = 1 };
-
-// Mirror of core's internal BinaryFunc. The return type is not part of a function's symbol
-// name, so an engine-side declaration using this type links to cv::getConvertFunc /
-// cv::getConvertScaleFunc even though core declares them returning its own BinaryFunc. For the
-// scale variant `params` is read as a double[2] {scale, offset}; plain convert ignores it.
-typedef void (*EwBinaryFunc)(const uchar* src1, size_t step1,
-                             const uchar* src2, size_t step2,
-                             uchar* dst, size_t step, Size sz, void* params);
+// returns division kernel in two different flavors:
+// with division-by-zero check or without.
+TKernel getDivFunc(int T, int R, bool checked);
 
 // An element-wise expression as ONE flat program (the analogue of cv::MatExpr for element-wise
 // ops): an arg table (`arginfo`, the typed operands) + an instruction list (`prog`). There is no
@@ -158,8 +148,8 @@ typedef void (*EwBinaryFunc)(const uchar* src1, size_t step1,
 //     you want automatic type inference + cast insertion, with emit() (it derives the result depth,
 //     inserts OP_CAST where an exact kernel is missing, allocates the result temp, returns its slot).
 // The operand types are known at build time (inputs carry their depth), so the whole program is
-// typed as it is built. compile() is then a cheap finalize pass: bind each instruction's kernel
-// (resolveInsnKernel) and pack the temps into a minimal set of physical buffers (liveness). Any
+// typed as it is built - addInsn even resolves each instruction's kernel on the spot. compile() is
+// then a cheap finalize pass: pack the temps into a minimal set of physical buffers (liveness). Any
 // info compile() needs PER ARG (e.g. liveness intervals) is transient - it lives in local arrays
 // inside compile() and is gone when it returns; `Arg` stays the small permanent operand record.
 //
@@ -194,18 +184,17 @@ struct TExpr
         Scalar cval;
     };
 
-    // One compiled instruction: the op + arg-table indices + a resolved kernel. The kernel uses one
-    // of two calling conventions selected by `fnkind`: EW_FN_ELEMWISE uses `fptr` (the broadcasting
-    // ElemwiseFunc), EW_FN_BINARY uses `bfptr` (a core convert BinaryFunc, for OP_CAST/CONVERT_SCALE).
-    // `params` is the per-instruction scalar block (passed to the kernel by pointer): mul/div scale
-    // in params[0]; convert_scale {scale, offset} in params[0..1]. Default (scale 1, offset 0) is the
-    // identity, so ops with no scalar parameter need not set it. fptr/bfptr are null until compile().
+    // One compiled instruction: the op + arg-table indices + a resolved kernel (TKernel: fptr +
+    // userdata + flags). Every kernel uses the SAME calling convention (the universal KernelFunc);
+    // OP_CAST / OP_CONVERT_SCALE bind castKernel, which carries the core convert BinaryFunc in
+    // kernel.userdata. `params` is the per-instruction scalar block (passed to the kernel by
+    // pointer): mul/div scale in params[0]; convert_scale {scale, offset} in params[0..1]. Default
+    // (scale 1, offset 0) is the identity, so ops with no scalar parameter need not set it. The
+    // kernel is null until compile() (or until a builder pre-sets it, e.g. div's /0 policy).
     struct Insn
     {
-        ElemwiseFunc fptr = nullptr;        // EW_FN_ELEMWISE kernel
-        EwBinaryFunc bfptr = nullptr;       // EW_FN_BINARY  kernel (core convert / convert-scale)
+        TKernel kernel;
         TOp op = OP_NOP;
-        signed char fnkind = EW_FN_ELEMWISE;
         int arg0 = 0, arg1 = 0, arg2 = 0, result = 0;
         Scalar params = Scalar(1);          // op scalars; params[0]=scale defaults to 1 (identity)
     };
@@ -218,6 +207,9 @@ struct TExpr
     int nbuffers = 0;                        // distinct physical temp buffers after liveness
     int nconsts = 0;                         // # materialized CONST slots (set by compile()) - sizes
                                              // the const store; nconsts==0 enables exec()'s fast path
+    int capElems = 0;                        // # elements one ~16KB L1 scratch fragment holds (set by
+                                             // compile()); INT_MAX when there are no temps (exec runs
+                                             // each tile in a single block, no scratch).
     AutoBuffer<int, 16>    bufferOfTemp;     // temp-id -> physical buffer id
     AutoBuffer<int, 8>     bufEszPrefix;     // [nbuffers+1] prefix sums of each physical temp buffer's
                                              // elem size (set by compile()); [nbuffers] = temp bytes
@@ -231,7 +223,26 @@ struct TExpr
     int  addConst(int depth, const Scalar& v, int channels = 1);   // depth EW_DEPTH_NONE => flexible
     int  addTemp(int depth);
     int  addOutput(int depth);
+    // addInsn resolves the instruction's kernel NOW from the operand/result depths (final at build
+    // time), so compile() needs no separate binding pass. The 2nd form takes a pre-resolved kernel,
+    // for callers that already probed getElemwiseFunc (emit) or know the kernel (div's /0 policy).
     int  addInsn(TOp op, int a0, int a1, int a2, int result, const Scalar& params = Scalar(1));
+    int  addInsn(TOp op, int a0, int a1, int a2, int result, const TKernel& kernel,
+                 const Scalar& params = Scalar(1));
+
+    // Return `arg` unchanged if it is already of depth `depth`; otherwise append an OP_CAST into a
+    // fresh temp of that depth and return the temp's slot. The one place type-narrowing/widening
+    // casts are inserted by the hand builders.
+    int  maybeAddCast(int arg, int depth);
+
+    // Shared "cast operands, emit op, narrow result" core for both emit() and the hand builders:
+    // cast each of `slots[0..nargs)` to `computeType`, then emit `op` producing `resultType` -
+    // directly if a (op, computeType.. -> resultType) kernel exists, else compute in `wideType` and
+    // cast down. `params` rides the op (mul/div scale, convert offset). `dstSlot` >= 0 makes the
+    // result land in that existing slot (e.g. the OUTPUT, so no dead temp); -1 allocates a fresh
+    // temp (composable, for expression trees). Returns the result slot.
+    int  emitTyped(TOp op, const int* slots, int nargs, int computeType, int resultType,
+                   int wideType, const Scalar& params = Scalar(1), int dstSlot = -1);
 
     // Append `op` over the given operand slots with automatic type inference: derive the result
     // depth (promotion / castDepth), pick a direct kernel if one exists else compute in a working
@@ -244,17 +255,13 @@ struct TExpr
     // slot directly (no copy); otherwise an identity OP_CAST copies it. Returns the OUTPUT slot.
     int  output(int rootSlot);
 
-    // Finalize: bind every instruction's kernel and pack temps into physical buffers (liveness).
+    // Finalize: pack temps into physical buffers (liveness), count consts, size the L1 fragment cap.
+    // Kernels are already bound (addInsn resolves them at build time).
     void compile();
 
     // Execute the compiled program over a set of input Mats, producing the broadcast result(s).
     void exec(const Mat* inputs, Mat* outputs);
 };
-
-// Resolve the kernel + calling convention for one instruction from its op and operand/result
-// depths: sets ins.fnkind and the matching function pointer (fptr or bfptr). Returns false (and
-// leaves the pointers null) when no kernel exists, so the builder can fall back to a wider type.
-bool resolveInsnKernel(TExpr::Insn& ins, int depth0, int depth1, int depth2, int rdepth);
 
 }} // namespace cv::ew
 

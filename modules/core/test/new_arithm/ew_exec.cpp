@@ -5,16 +5,16 @@
 // Layer 3 implementation: see ew_exec.hpp.
 //
 // exec() does the per-call prep (result-shape inference + output allocation, const
-// materialization, adapter contexts, temp-buffer sizing) ONCE, then hands the traversal to
-// broadcastOp(): all operands (inputs + consts-as-Mats + outputs) go in one flat list, and the
-// body re-points the program's args at each tile's slices and runs the instruction list. The
-// body is op-agnostic-driven: broadcastOp does geometry + 2D tiling + parallelism.
+// materialization, temp-buffer sizing) ONCE, then hands the traversal to broadcastOp(): all
+// operands (inputs + consts + outputs) go in one flat list, and the body re-points the program's
+// args at each tile's slices and runs the instruction list. The body is op-agnostic-driven:
+// broadcastOp does geometry + 2D tiling + parallelism. A cheap fast path up front handles small
+// const-free same-shape continuous arrays directly, skipping geometry/tiling/parallelism.
 
 #include "ew_exec.hpp"
 #include "ew_broadcast.hpp"
 #include <algorithm>
 #include <cstring>
-#include <vector>
 
 namespace cv { namespace ew {
 
@@ -129,47 +129,88 @@ int TExpr::addConst(int depth, const Scalar& v, int channels)
     arginfo.push_back(a); return (int)arginfo.size() - 1;
 }
 
-// Append one instruction. The kernel is left unbound (fptr/bfptr == null); compile() binds it from
-// the operand/result depths. A builder that needs a specific kernel (e.g. div's caller-known /0
-// policy) may pre-set ins.fptr and push directly - compile() then leaves that instruction alone.
-int TExpr::addInsn(TOp op, int a0, int a1, int a2, int result, const Scalar& params)
+// Append one instruction with a pre-resolved kernel (the caller probed getElemwiseFunc, or knows
+// the kernel - e.g. div's /0-aware kernel). No re-resolution.
+int TExpr::addInsn(TOp op, int a0, int a1, int a2, int result, const TKernel& kernel, const Scalar& params)
 {
     TExpr::Insn ins; ins.op = op; ins.arg0 = a0; ins.arg1 = a1; ins.arg2 = a2; ins.result = result;
-    ins.params = params;
+    ins.params = params; ins.kernel = kernel;
     prog.push_back(ins);
     return (int)prog.size() - 1;
 }
 
-// Run one resolved instruction over a width x height tile. EW_FN_ELEMWISE calls the broadcasting
-// kernel (element steps + the instruction's params block). EW_FN_BINARY calls a core convert
-// BinaryFunc (byte steps, Size tile, params = {scale, offset}); a broadcast source (stepx == 0) is
-// handled by converting one element per row and replicating it - the executor guarantees the dst
-// is contiguous in x. sesz1/desz1 are the source/result element sizes (only used by EW_FN_BINARY).
+// Append one instruction, resolving its kernel NOW from the operand/result depths (final at build
+// time). compile() therefore never re-resolves. A builder that needs a specific kernel (div's /0
+// policy) pushes a pre-bound Insn directly instead.
+int TExpr::addInsn(TOp op, int a0, int a1, int a2, int result, const Scalar& params)
+{
+    int d0 = a0 ? arginfo[a0].depth : EW_DEPTH_NONE;
+    int d1 = a1 ? arginfo[a1].depth : EW_DEPTH_NONE;
+    int d2 = a2 ? arginfo[a2].depth : EW_DEPTH_NONE;
+    TKernel k = getElemwiseFunc(op, d0, d1, d2, arginfo[result].depth);
+    CV_Assert(k.fptr && "ew: no kernel for this op/type combination");
+    return addInsn(op, a0, a1, a2, result, k, params);
+}
+
+// Cast `arg` to `depth` only if it is not already that depth (the sole cast-insertion helper for
+// the hand builders and emit()'s `place`); returns the slot holding the value at `depth`.
+int TExpr::maybeAddCast(int arg, int depth)
+{
+    if (arginfo[arg].depth == depth) return arg;
+    int t = addTemp(depth);
+    addInsn(OP_CAST, arg, 0, 0, t);
+    return t;
+}
+
+// Shared cast-and-emit core (see ew_op.hpp). Casts operands to `computeType`, emits `op` to
+// `resultType` directly when a kernel exists, else computes in `wideType` and casts the result down.
+int TExpr::emitTyped(TOp op, const int* slots, int nargs, int computeType, int resultType,
+                     int wideType, const Scalar& params, int dstSlot)
+{
+    int s[3] = { 0, 0, 0 };
+    for (int k = 0; k < nargs; k++) s[k] = maybeAddCast(slots[k], computeType);
+    const int d0 = nargs > 0 ? computeType : EW_DEPTH_NONE;
+    const int d1 = nargs > 1 ? computeType : EW_DEPTH_NONE;
+    const int d2 = nargs > 2 ? computeType : EW_DEPTH_NONE;
+
+    // div's /0 guard follows the ORIGINAL operand int-ness, NOT computeType: promote2 floats two
+    // WIDE integers (e.g. 16U/64S -> 64F), but cv::divide still guards (b==0 -> 0) when both inputs
+    // are integer. So resolve div's kernel via getDivFunc with that guard; every other op via
+    // getElemwiseFunc (which reads computeType, correct for them).
+    auto isFlt = [](int d){ return d==CV_16F || d==CV_16BF || d==CV_32F || d==CV_64F; };
+    const bool divGuard = op == OP_DIV && !isFlt(arginfo[slots[0]].depth) && !isFlt(arginfo[slots[1]].depth);
+    auto resolve = [&](int rd) {
+        return op == OP_DIV ? getDivFunc(computeType, rd, divGuard) : getElemwiseFunc(op, d0, d1, d2, rd);
+    };
+
+    TKernel k = resolve(resultType);                           // direct computeType -> resultType?
+    if (k.fptr)
+    {
+        int res = dstSlot >= 0 ? dstSlot : addTemp(resultType);
+        addInsn(op, s[0], s[1], s[2], res, k, params);
+        return res;
+    }
+    k = resolve(wideType);                                     // else compute wide, then narrow
+    CV_Assert(k.fptr && "ew: no kernel for this op/type combination");
+    int wSlot = addTemp(wideType);
+    addInsn(op, s[0], s[1], s[2], wSlot, k, params);
+    if (dstSlot >= 0) { addInsn(OP_CAST, wSlot, 0, 0, dstSlot); return dstSlot; }
+    return maybeAddCast(wSlot, resultType);
+}
+
+// Run one resolved instruction over a width x height tile. Every kernel uses ONE calling
+// convention - the universal KernelFunc (element steps, the instruction's params block, plus
+// kernel.flags/kernel.userdata). OP_CAST / OP_CONVERT_SCALE bind castKernel, which forwards to a
+// core convert BinaryFunc (carried in kernel.userdata) over the distinct sub-region and then
+// expands it across any broadcast axis (see castKernel/expandKernel in ew_kernels.cpp).
 static inline void runInsn(const TExpr::Insn& ins,
                            const void* p0, size_t y0, size_t x0,
                            const void* p1, size_t y1, size_t x1,
                            const void* p2, size_t y2, size_t x2,
-                           void* pr, size_t yr, int w, int h, int sesz1, int desz1)
+                           void* pr, size_t yr, int w, int h)
 {
-    if (ins.fnkind == EW_FN_BINARY)
-    {
-        const EwBinaryFunc fn = ins.bfptr;
-        void* params = (void*)ins.params.val;
-        const size_t srowb = y0 * (size_t)sesz1, drowb = yr * (size_t)desz1;
-        if (x0 == 1)                    // contiguous source: one call over the whole tile
-            fn((const uchar*)p0, srowb, nullptr, 0, (uchar*)pr, drowb, Size(w, h), params);
-        else                            // broadcast source: convert one value per row, replicate
-        {
-            const uchar* s = (const uchar*)p0; uchar* d = (uchar*)pr;
-            for (int i = 0; i < h; i++, s += srowb, d += drowb)
-            {
-                fn(s, 0, nullptr, 0, d, 0, Size(1, 1), params);
-                for (int x = 1; x < w; x++) std::memcpy(d + (size_t)x*desz1, d, (size_t)desz1);
-            }
-        }
-        return;
-    }
-    int code = ins.fptr(p0, y0, x0, p1, y1, x1, p2, y2, x2, pr, yr, w, h, ins.params.val);
+    int code = ins.kernel.fptr(p0, y0, x0, p1, y1, x1, p2, y2, x2, pr, yr, w, h,
+                                ins.params.val, ins.kernel.flags, ins.kernel.userdata);
     CV_Assert(code >= 0);
 }
 
@@ -183,7 +224,6 @@ struct EwBody {
     const signed char* slotKind; // [nslots] arginfo[s].kind, for resolving slotMap[s]
     const EwSlice* constSlice;    // [nconsts] fixed scalar slices {ptr=&value, stepy=0, stepx=0}
     const int* bufEszPrefix;  // [nbuffers+1] prefix sums of temp elem sizes; [nbuffers] = total
-    const int* esz1Slot;      // [nslots]   element size of each slot's operand (for column offset)
     int ninsn, nslots, nbuffers, capElems;   // capElems: L1 fragment element cap (0 if no temps)
 };
 
@@ -235,17 +275,16 @@ void TExpr::exec(const Mat* inputs, Mat* outputs)
                 {
                     const Insn& ins = prog[n];
                     runInsn(ins, ptrOf(ins.arg0), 0, 1, ptrOf(ins.arg1), 0, 1,
-                            ptrOf(ins.arg2), 0, 1, ptrOf(ins.result), 0, w, 1,
-                            (int)CV_ELEM_SIZE1(arginfo[ins.arg0].depth),
-                            (int)CV_ELEM_SIZE1(arginfo[ins.result].depth));
+                            ptrOf(ins.arg2), 0, 1, ptrOf(ins.result), 0, w, 1);
                 }
                 return;
             }
 
             // Temps present: walk the strip in L1-sized fragments so the intermediates stay hot.
-            // The byte layout (bufEszPrefix) is from compile(); scratch is totalEsz*wf0 (<= ~16KB).
+            // Byte layout (bufEszPrefix) and the fragment cap (capElems) both come from compile();
+            // scratch is totalEsz*wf0 (<= ~16KB).
             const int totalEsz = bufEszPrefix[nbuffers];
-            const int wf0 = std::min((int)total, std::max(64, (16 * 1024) / std::max(1, totalEsz)));
+            const int wf0 = std::min((int)total, capElems);
             AutoBuffer<uchar> scratch((size_t)totalEsz * (size_t)wf0);
             for (int x0 = 0; x0 < (int)total; x0 += wf0)
             {
@@ -253,18 +292,17 @@ void TExpr::exec(const Mat* inputs, Mat* outputs)
                 auto ptrOf = [&](int s) -> void* {
                     if (s <= 0) return nullptr;
                     const Arg& ai = arginfo[s];
-                    if (ai.kind == INPUT)  return (uchar*)inputs[ai.index].data  + (size_t)x0 * CV_ELEM_SIZE1(ai.depth);
-                    if (ai.kind == OUTPUT) return (uchar*)outputs[ai.index].data + (size_t)x0 * CV_ELEM_SIZE1(ai.depth);
+                    size_t esz = CV_ELEM_SIZE1(ai.depth);
+                    if (ai.kind == INPUT)  return (uchar*)inputs[ai.index].data  + (size_t)x0 * esz;
+                    if (ai.kind == OUTPUT) return (uchar*)outputs[ai.index].data + (size_t)x0 * esz;
                     const int b = bufferOfTemp.empty() ? ai.index : bufferOfTemp[ai.index];  // TEMP
                     return scratch.data() + (size_t)bufEszPrefix[b] * (size_t)wf0;            // fragment-local
                 };
                 for (int n = 0; n < ninsn; n++)
                 {
                     const Insn& ins = prog[n];
-                    runInsn(ins, ptrOf(ins.arg0), wf, 1, ptrOf(ins.arg1), wf, 1,
-                            ptrOf(ins.arg2), wf, 1, ptrOf(ins.result), wf, wf, 1,
-                            (int)CV_ELEM_SIZE1(arginfo[ins.arg0].depth),
-                            (int)CV_ELEM_SIZE1(arginfo[ins.result].depth));
+                    runInsn(ins, ptrOf(ins.arg0), 0, 1, ptrOf(ins.arg1), 0, 1,
+                            ptrOf(ins.arg2), 0, 1, ptrOf(ins.result), 0, wf, 1);
                 }
             }
             return;
@@ -328,7 +366,6 @@ void TExpr::exec(const Mat* inputs, Mat* outputs)
     AutoBuffer<EwSlice, LOCAL_CONSTS> constSlice(std::max(nconsts, 1));
     AutoBuffer<int, LOCAL_OPS> slotMap(nslots);
     AutoBuffer<signed char, LOCAL_OPS> slotKind(nslots);
-    AutoBuffer<int, LOCAL_OPS> esz1Slot(nslots);
     int narr = 0, nc = 0;
     if (inplace) {
         // save (incref) inputs in the case of in-place operation
@@ -336,12 +373,11 @@ void TExpr::exec(const Mat* inputs, Mat* outputs)
         for (int j = 0; j < ninputs; j++) hdrs[j] = inputs[j];
         inputs = hdrs.data();
     }
-    esz1Slot[0] = 0;
     slotKind[0] = (signed char)TExpr::NONE;
     for (int s = 1; s < nslots; s++)
     {
         const TExpr::Arg& ai = arginfo[s];
-        const int e = esz1Slot[s] = (int)CV_ELEM_SIZE1(ai.depth);
+        const size_t esz = CV_ELEM_SIZE1(ai.depth);
         slotKind[s] = (signed char)ai.kind;
         if (ai.kind == TExpr::INPUT) {
             slotMap[s] = narr;
@@ -357,9 +393,9 @@ void TExpr::exec(const Mat* inputs, Mat* outputs)
         }
         else if (ai.kind == TExpr::CONST) {
             const int c = std::max(ai.channels, 1);
-            CV_Assert(c <= 4 && (size_t)c * e <= CONST_STRIDE);
+            CV_Assert(c <= 4 && (size_t)c * esz <= CONST_STRIDE);
             uchar* dst = constStore.data() + (size_t)nc * CONST_STRIDE;
-            for (int k = 0; k < c; k++) storeScalar(ai.depth, ai.cval[k], dst + (size_t)k * e);
+            for (int k = 0; k < c; k++) storeScalar(ai.depth, ai.cval[k], dst + (size_t)k * esz);
             constSlice[nc].ptr = dst; constSlice[nc].stepy = 0; constSlice[nc].stepx = 0;
             slotMap[s] = nc;                   // index into constSlice[]
             nc++;
@@ -369,14 +405,12 @@ void TExpr::exec(const Mat* inputs, Mat* outputs)
         }
     }
 
-    // Temp-buffer byte layout (prefix sums) was precomputed by compile() into `bufEszPrefix`; the
-    // body uses it directly (prefix[buf]*region = a buffer's byte offset). capElems = how many
-    // elements one L1-sized fragment holds (0 when there are no temps at all).
-    const int totalEsz = bufEszPrefix[nbuffers];
-    const int capElems = totalEsz > 0 ? std::max(64, (16 * 1024) / totalEsz) : 0;
+    // Temp-buffer byte layout (prefix sums, bufEszPrefix) and the L1 fragment cap (capElems) were
+    // both precomputed by compile(); the body uses them directly (prefix[buf]*region = a buffer's
+    // byte offset). capElems == INT_MAX when there are no temps => the body runs each tile in a
+    // single block (no scratch).
 
-    // ---- 3. ONE pass over instructions: summed per-element cost (kernels are resolved at build
-    //         time; the convert BinaryFunc is reached directly via TExpr::Insn::bfptr - no contexts). ----
+    // ---- 3. ONE pass over instructions: summed per-element cost (kernels were bound at compile()). ----
     const int ninsn = (int)prog.size();
     long long costPerElem = 0;
     for (int n = 0; n < ninsn; n++)
@@ -393,7 +427,7 @@ void TExpr::exec(const Mat* inputs, Mat* outputs)
     body.ninsn = ninsn;
     body.slotMap = slotMap.data();
 
-    // ---- 7. drive: broadcastOp does geometry + 2D tiling + parallelism; the body runs the
+    // ---- 5. drive: broadcastOp does geometry + 2D tiling + parallelism; the body runs the
     //         frozen program on each tile (temps tile-local, re-pointed from the tile slices).
     //         expandChannels=true => the body always sees single-channel data.
     //
@@ -403,7 +437,6 @@ void TExpr::exec(const Mat* inputs, Mat* outputs)
     //         per-tile/per-insn loops read them from registers, not through the captured pointer. -
 
     body.bufEszPrefix = bufEszPrefix.data();
-    body.esz1Slot = esz1Slot.data();
     body.slotKind = slotKind.data();
     body.constSlice = constSlice.data();
     body.nslots = nslots;
@@ -416,44 +449,19 @@ void TExpr::exec(const Mat* inputs, Mat* outputs)
         const TExpr::Insn* prog = bc.prog;             // hot fields -> locals (registers/stack)
         const int* const slotMap     = bc.slotMap;
         const signed char* const slotKind = bc.slotKind;
-        const int* const esz1Slot    = bc.esz1Slot;
         const EwSlice* const constSlice = bc.constSlice;
         const int ninsn = bc.ninsn, nslots = bc.nslots;
         const int w = tile.width, h = tile.height;
 
-        // No temps (single-op add/sub/...): run the whole tile in one pass and pull each operand's
-        // slice straight from the tile - no args array, no scratch, no fragmentation. Here a slot is
-        // either an array (input/output -> tile.slices) or a const scalar (-> a fixed constSlice);
-        // slot 0 (TExpr::NONE) is the null operand for unused args (e.g. a binary op's arg2). The
-        // dominant pure-array path keeps slotKind[s]==TExpr::INPUT/OUTPUT => the branch predicts away.
-        if (bc.nbuffers == 0)
-        {
-            const EwSlice nullSlice;
-            auto S = [&](int s) -> const EwSlice& {
-                if (s <= 0) return nullSlice;
-                return slotKind[s] == TExpr::CONST ? constSlice[slotMap[s]] : tile.slices[slotMap[s]];
-            };
-            for (int n = 0; n < ninsn; n++)
-            {
-                const TExpr::Insn& ins = prog[n];
-                const EwSlice& a0 = S(ins.arg0);
-                const EwSlice& a1 = S(ins.arg1);
-                const EwSlice& a2 = S(ins.arg2);
-                const EwSlice& rr = S(ins.result);
-                runInsn(ins, a0.ptr, a0.stepy, a0.stepx, a1.ptr, a1.stepy, a1.stepx,
-                        a2.ptr, a2.stepy, a2.stepx, (void*)rr.ptr, rr.stepy, w, h,
-                        esz1Slot[ins.arg0], esz1Slot[ins.result]);
-            }
-            return;
-        }
-
-        // Fused temps: run the program over L1-sized 2D blocks so the intermediates stay in cache.
-        // ONE rule covers both tile shapes: keep the strip as WIDE as fits L1 (long inner loop =>
-        // good SIMD + hits the kernels' width-specific branches), then add as many rows as still fit
-        // (bw*bh <= capElems). For the dominant 1D tile (w huge, h==1) this is the old column strip;
-        // for a tall-thin tile (w==channels, h huge - e.g. a masked op) it instead splits the LONG
-        // axis (height), so the temp block stays contiguous and the kernels keep full width. Each
-        // temp buffer occupies [bufEszPrefix[buf]*region, ...) bytes in tstore; region = bw*bh.
+        // Run the program over L1-sized 2D blocks so the intermediates stay in cache. ONE rule covers
+        // every tile shape: keep the strip as WIDE as fits L1 (long inner loop => good SIMD + hits the
+        // kernels' width-specific branches), then add as many rows as still fit (bw*bh <= capElems).
+        // For the dominant 1D tile (w huge, h==1) this is a column strip; for a tall-thin tile
+        // (w==channels, h huge - e.g. a masked op) it instead splits the LONG axis (height), so the
+        // temp block stays contiguous and the kernels keep full width. With NO temps capElems==INT_MAX
+        // => bw=w, bh=h: one block over the whole tile, region temp store is empty (zero bytes), and
+        // each operand slot is re-pointed once straight at its tile slice. Each temp buffer occupies
+        // [bufEszPrefix[buf]*region, ...) bytes in tstore; region = bw*bh.
         const int* const bufEszPrefix = bc.bufEszPrefix;
         const int bw = std::min(w, bc.capElems);
         const int bh = std::min(h, std::max(1, bc.capElems / std::max(1, bw)));
@@ -471,10 +479,11 @@ void TExpr::exec(const Mat* inputs, Mat* outputs)
                 {
                     EwSlice& a = args[s];
                     const int k = slotKind[s];
+                    size_t esz = CV_ELEM_SIZE1(arginfo[s].depth);
                     if (k == TExpr::TEMP)                      // contiguous block-local buffer
                     {
                         a.ptr = tstore.data() + (size_t)bufEszPrefix[slotMap[s]] * region;
-                        a.stepy = (size_t)wf; a.stepx = 1;
+                        a.stepy = (size_t)wf*esz; a.stepx = 1;
                     }
                     else if (k == TExpr::CONST)               // fixed scalar slice (stepx/stepy 0)
                     {
@@ -485,8 +494,8 @@ void TExpr::exec(const Mat* inputs, Mat* outputs)
                     {
                         const EwSlice& sl = tile.slices[slotMap[s]];
                         a.ptr = (uchar*)sl.ptr +
-                            ((size_t)y0 * sl.stepy + (size_t)x0 * sl.stepx) * (size_t)esz1Slot[s];
-                        a.stepy = sl.stepy; a.stepx = sl.stepx;
+                            ((size_t)y0 * sl.stepy + (size_t)x0 * sl.stepx) * esz;
+                        a.stepy = sl.stepy*esz; a.stepx = sl.stepx;
                     }
                 }
 
@@ -496,8 +505,7 @@ void TExpr::exec(const Mat* inputs, Mat* outputs)
                     const EwSlice& a0 = args[ins.arg0]; const EwSlice& a1 = args[ins.arg1];
                     const EwSlice& a2 = args[ins.arg2]; const EwSlice& rr = args[ins.result];
                     runInsn(ins, a0.ptr, a0.stepy, a0.stepx, a1.ptr, a1.stepy, a1.stepx,
-                            a2.ptr, a2.stepy, a2.stepx, (void*)rr.ptr, rr.stepy, wf, hf,
-                            esz1Slot[ins.arg0], esz1Slot[ins.result]);
+                            a2.ptr, a2.stepy, a2.stepx, (void*)rr.ptr, rr.stepy, wf, hf);
                 }
             }
         }
@@ -570,89 +578,40 @@ void makeBinaryArithProgram(TExpr& p, TOp op, int depth0, int depth1, int rdepth
     int sMask = masked ? p.addInput(maskDepth) : 0;
     int sOut  = p.addOutput(rdepth);
 
-    // The arithmetic result goes to `dst`: the output directly, or a temp when masked (then
-    // copyMask moves it into the output). Fast single-op path stays single-op when unmasked.
-    int dst = masked ? p.addTemp(rdepth) : sOut;
-
-    if (op == OP_MUL || op == OP_DIV)
-    {
-        // cast both operands to a common type C, then mul/div in the float work type Wf (float for
-        // <=16-bit/f16/bf/f32, double for 32/64-bit/f64 - matching cv::multiply/divide), then cast
-        // Wf down to rdepth. The optional `scale` rides the mul/div instruction's params[0] (mul:
-        // a*b*scale; div: a*scale/b), exactly as cv::multiply/divide's scale argument. For div the
-        // divide-by-zero policy is decided from the ORIGINAL input types: both-integer => guard /0
-        // -> 0; any float => no guard (a/0 -> inf), as cv::divide.
-        auto isFlt = [](int d){ return d==CV_16F || d==CV_16BF || d==CV_32F || d==CV_64F; };
-        const bool bothInt = !isFlt(depth0) && !isFlt(depth1);
-        int C = (depth0 == depth1) ? depth0 : promote2(depth0, depth1);
-        if (depth0 != C) { int t = p.addTemp(C); p.addInsn(OP_CAST, sIn0, 0, 0, t); sIn0 = t; }
-        if (depth1 != C) { int t = p.addTemp(C); p.addInsn(OP_CAST, sIn1, 0, 0, t); sIn1 = t; }
-        const bool wide = (C==CV_32U || C==CV_32S || C==CV_64U || C==CV_64S || C==CV_64F);
-        int Wf = wide ? CV_64F : CV_32F;
-        // emit the mul/div into slot r, carrying `scale` in params[0].
-        auto emit = [&](int r) {
-            TExpr::Insn ins; ins.op = op; ins.arg0 = sIn0; ins.arg1 = sIn1; ins.arg2 = 0; ins.result = r;
-            ins.params = Scalar(scale);
-            if (op == OP_DIV) {
-                // div with the caller-known /0 policy: bypass resolveInsnKernel (which would
-                // re-derive `checked` from the common type and miss the wide-int->float case).
-                ins.fnkind = EW_FN_ELEMWISE;
-                ins.fptr = getDivFunc(p.arginfo[sIn0].depth, p.arginfo[r].depth, bothInt);
-                CV_Assert(ins.fptr != nullptr);
-                p.prog.push_back(ins);
-            } else {
-                p.addInsn(op, sIn0, sIn1, 0, r, Scalar(scale));
-            }
-        };
-        // prefer a direct C x C -> rdepth kernel when one exists (mul now has T x T -> T for all but
-        // 64-bit types => one fused pass); else compute in Wf and cast down. For div no T x T -> T
-        // exists, so this reduces to the old rdepth==Wf test.
-        if (rdepth == Wf || getElemwiseFunc(op, C, C, EW_DEPTH_NONE, rdepth))
-            emit(dst);
-        else
-        {
-            int tW = p.addTemp(Wf);
-            emit(tW);
-            p.addInsn(OP_CAST, tW, 0, 0, dst);
-        }
-    }
-    else if (op == OP_MIN || op == OP_MAX || op == OP_ABSDIFF)
-    {
-        // T x T -> T at the requested rdepth: bring both operands to rdepth, then the same-type
-        // kernel. min/max/absdiff never widen, so there is no wide-then-cast path.
-        if (depth0 != rdepth) { int t = p.addTemp(rdepth); p.addInsn(OP_CAST, sIn0, 0, 0, t); sIn0 = t; }
-        if (depth1 != rdepth) { int t = p.addTemp(rdepth); p.addInsn(OP_CAST, sIn1, 0, 0, t); sIn1 = t; }
-        p.addInsn(op, sIn0, sIn1, 0, dst);
-    }
-    else if (depth0 == depth1 && depth0 == rdepth)
-        p.addInsn(op, sIn0, sIn1, 0, dst);
+    // Op-family type policy feeding the shared emitTyped core: the compute type C (both operands cast
+    // to it) and the wide fallback W (used only if no direct C x C -> rdepth kernel exists):
+    //   MIN/MAX/ABSDIFF: C = rdepth, never widen (the same-type T x T -> T kernel always exists).
+    //   MUL/DIV:         C = promote2, W = float/double (matches cv::multiply/divide); `scale` rides
+    //                    params[0] (mul: a*b*scale; div: a*scale/b). div's /0 guard is implied by C:
+    //                    promote2 is integer iff both inputs are, so getElemwiseFunc picks it right.
+    //   ADD/SUB:         C = promote2, W = safeWide(C), signed (the difference may go negative).
+    int C, W;
+    if (op == OP_MIN || op == OP_MAX || op == OP_ABSDIFF) { C = rdepth; W = rdepth; }
     else
     {
-        // ADD/SUB: 1. bring both operands to a common type.
-        int depth = (depth0 == depth1) ? depth0 : promote2(depth0, depth1);
-        if (depth0 != depth) { int t = p.addTemp(depth); p.addInsn(OP_CAST, sIn0, 0, 0, t); sIn0 = t; }
-        if (depth1 != depth) { int t = p.addTemp(depth); p.addInsn(OP_CAST, sIn1, 0, 0, t); sIn1 = t; }
-
-        // 2. op directly to rdepth if a kernel exists, else compute wide then cast down.
-        if (getElemwiseFunc(op, depth, depth, EW_DEPTH_NONE, rdepth))
-            p.addInsn(op, sIn0, sIn1, 0, dst);
-        else
+        C = (depth0 == depth1) ? depth0 : promote2(depth0, depth1);
+        if (op == OP_MUL || op == OP_DIV)
         {
-            int W = safeWide(depth);
-            int tW = p.addTemp(W);
-            p.addInsn(op, sIn0, sIn1, 0, tW);
-            p.addInsn(OP_CAST, tW, 0, 0, dst);
+            const bool wide = (C==CV_32U || C==CV_32S || C==CV_64U || C==CV_64S || C==CV_64F);
+            W = wide ? CV_64F : CV_32F;
         }
+        else
+            W = safeWide(C);
     }
 
+    int args[2] = { sIn0, sIn1 };
     if (masked)
-        p.addInsn(OP_COPY_MASK, dst, sMask, 0, sOut);   // last: dst = (mask!=0) ? result : dst
+    {
+        // result into a temp, then copyMask writes the masked subset into the (pre-existing) output:
+        // dst = (mask!=0) ? r : dst, matching cv::add/... with a mask.
+        int r = p.emitTyped(op, args, 2, C, rdepth, W, Scalar(scale));
+        p.addInsn(OP_COPY_MASK, r, sMask, 0, sOut);
+    }
+    else
+        p.emitTyped(op, args, 2, C, rdepth, W, Scalar(scale), sOut);  // straight into the output
 
-    p.compile();    // bind kernels (leaving the pre-set div kernel alone) + pack temp buffers
+    p.compile();    // pack temp buffers + count consts (kernels already bound by addInsn)
 }
-
-void makeAddProgram(TExpr& p, int depth0, int depth1, int rdepth)
-{ makeBinaryArithProgram(p, OP_ADD, depth0, depth1, rdepth); }
 
 // addWeighted(a, alpha, b, beta, gamma) = a*alpha + b*beta + gamma, as two fused convert_scale
 // MACs + an add (+ a final cast when the output type differs from the working type W):
@@ -683,7 +642,7 @@ void makeAddWeightedProgram(TExpr& p, int depth0, int depth1, int rdepth,
         p.addInsn(OP_CAST, t2, 0, 0, sOut);
     }
 
-    p.compile();    // bind kernels + pack temp buffers
+    p.compile();    // pack temp buffers + count consts (kernels already bound by addInsn)
 }
 
 }} // namespace cv::ew

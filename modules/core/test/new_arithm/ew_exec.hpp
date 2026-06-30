@@ -18,7 +18,7 @@ namespace cv { namespace ew {
 
 // Compose a binary arith op (OP_ADD / OP_SUB / OP_MUL / OP_DIV) for ANY (depth0, depth1, rdepth):
 // cast operands to a common type, op direct-or-wide-then-cast (see .cpp). MUL/DIV compute in the
-// float work type and cast down. makeAddProgram is a thin OP_ADD wrapper.
+// float work type and cast down.
 // maskDepth != EW_DEPTH_NONE adds a write-mask input (#2): the result lands in a temp and a final
 // OP_COPY_MASK overwrites only the masked subset of the (pre-existing) output, preserving the rest
 // (dst = mask ? result : dst, matching cv::add/... with a mask).
@@ -26,7 +26,6 @@ namespace cv { namespace ew {
 // a*scale/b - exactly like cv::multiply/divide's scale argument.
 void makeBinaryArithProgram(TExpr& p, TOp op, int depth0, int depth1, int rdepth,
                             int maskDepth = EW_DEPTH_NONE, double scale = 1.0);
-void makeAddProgram(TExpr& p, int depth0, int depth1, int rdepth);
 
 // addWeighted(a,alpha,b,beta,gamma) = a*alpha + b*beta + gamma, built as two fused convert_scale
 // MACs + an add (+ a final cast when rdepth != working type). Exercises the L1 fragmentation path.

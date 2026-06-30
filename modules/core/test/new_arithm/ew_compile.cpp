@@ -9,6 +9,7 @@
 
 #include "ew_compile.hpp"
 #include <algorithm>
+#include <climits>
 #include <cmath>
 
 namespace cv { namespace ew {
@@ -93,13 +94,6 @@ static int inferDepth(TOp op, int d0, int d1, int d2, int nargs, int castDepth)
     return r;
 }
 
-// Kernel-existence probe (cast-aware: OP_CAST binds a core convert BinaryFunc, not getElemwiseFunc).
-static bool kernelExists(TOp op, int d0, int d1, int d2, int rd)
-{
-    TExpr::Insn probe; probe.op = op;
-    return resolveInsnKernel(probe, d0, d1, d2, rd);
-}
-
 // ---------------------------------------------------------------------------
 // TExpr::emit(): append `op` over the given operand slots with type inference + cast insertion.
 // Operand slots may be INPUT/TEMP/OUTPUT (typed) or a flexible CONST (depth == EW_DEPTH_NONE),
@@ -122,10 +116,7 @@ int TExpr::emit(TOp op, const int* args, int nargs, int castDepth)
     {
         if (isFlexConst(s))
             return addConst(d, arginfo[s].cval, arginfo[s].channels);
-        if (arginfo[s].depth == d) return s;
-        int t = addTemp(d);
-        addInsn(OP_CAST, s, 0, 0, t);
-        return t;
+        return maybeAddCast(s, d);
     };
 
     // 1) try a direct kernel with every operand at their COMMON type (the promotion of the non-const
@@ -151,13 +142,14 @@ int TExpr::emit(TOp op, const int* args, int nargs, int castDepth)
             if (!depthRepresents(a.cval[ch], tdc)) { constsFit = false; break; }
     }
 
-    if (constsFit && kernelExists(op, td[0], td[1], td[2], rd))
+    TKernel kdirect = getElemwiseFunc(op, td[0], td[1], td[2], rd);
+    if (constsFit && kdirect.fptr)
     {
         int op0 = nargs > 0 ? place(args[0], td[0]) : 0;
         int op1 = nargs > 1 ? place(args[1], td[1]) : 0;
         int op2 = nargs > 2 ? place(args[2], td[2]) : 0;
         int res = addTemp(rd);
-        addInsn(op, op0, op1, op2, res);
+        addInsn(op, op0, op1, op2, res, kdirect);
         return res;
     }
 
@@ -167,7 +159,8 @@ int TExpr::emit(TOp op, const int* args, int nargs, int castDepth)
     int w0 = nargs > 0 ? W : EW_DEPTH_NONE;
     int w1 = nargs > 1 ? W : EW_DEPTH_NONE;
     int w2 = nargs > 2 ? W : EW_DEPTH_NONE;
-    CV_Assert(kernelExists(op, w0, w1, w2, wr));
+    TKernel kwork = getElemwiseFunc(op, w0, w1, w2, wr);
+    CV_Assert(kwork.fptr);
 
     int op0 = nargs > 0 ? place(args[0], W) : 0;
     int op1 = nargs > 1 ? place(args[1], W) : 0;
@@ -176,11 +169,11 @@ int TExpr::emit(TOp op, const int* args, int nargs, int castDepth)
     if (wr == rd)
     {
         int res = addTemp(rd);
-        addInsn(op, op0, op1, op2, res);
+        addInsn(op, op0, op1, op2, res, kwork);
         return res;
     }
     int wSlot = addTemp(wr);
-    addInsn(op, op0, op1, op2, wSlot);
+    addInsn(op, op0, op1, op2, wSlot, kwork);
     int res = addTemp(rd);
     addInsn(OP_CAST, wSlot, 0, 0, res);
     return res;
@@ -221,17 +214,8 @@ void TExpr::compile()
 {
     const int ninsn = (int)prog.size();
 
-    // ---- bind kernels ----
-    for (int i = 0; i < ninsn; i++)
-    {
-        TExpr::Insn& ins = prog[i];
-        if (ins.fptr || ins.bfptr) continue;            // kernel already bound by the builder
-        int d0 = ins.arg0 ? arginfo[ins.arg0].depth : EW_DEPTH_NONE;
-        int d1 = ins.arg1 ? arginfo[ins.arg1].depth : EW_DEPTH_NONE;
-        int d2 = ins.arg2 ? arginfo[ins.arg2].depth : EW_DEPTH_NONE;
-        bool ok = resolveInsnKernel(ins, d0, d1, d2, arginfo[ins.result].depth);
-        CV_Assert(ok);
-    }
+    // Kernels are bound eagerly by addInsn at build time, so there is no binding pass here - compile()
+    // only counts consts and packs temp buffers.
 
     // count materialized CONST slots (flexible literals, depth==NONE, are dead - emit() replaced
     // them with typed copies); sizes the const store and gates exec()'s fast path. Cheap scan, no
@@ -247,6 +231,7 @@ void TExpr::compile()
     //      case uses stack-backed AutoBuffers (inline for typical small expressions). ----
     nbuffers = 0;
     bufEszPrefix.resize(1); bufEszPrefix[0] = 0;
+    capElems = INT_MAX;                       // no temps => exec runs each tile in one block, no scratch
     if (ntemps == 0) return;
 
     AutoBuffer<int, 32> tempOfSlot(nslots);
@@ -297,6 +282,11 @@ void TExpr::compile()
             if (e > bufEszPrefix[b + 1]) bufEszPrefix[b + 1] = e;     // max elem size in buffer b
         }
     for (int b = 0; b < nbuffers; b++) bufEszPrefix[b + 1] += bufEszPrefix[b];   // -> prefix sums
+
+    // L1 fragment cap: # elements one ~16KB scratch fragment holds (exec fragments the strip so the
+    // intermediates stay hot). Pure function of the temp byte layout, hence computed here once.
+    const int totalEsz = bufEszPrefix[nbuffers];
+    capElems = totalEsz > 0 ? std::max(64, (16 * 1024) / totalEsz) : INT_MAX;
 }
 
 }} // namespace cv::ew

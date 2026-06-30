@@ -157,7 +157,7 @@ TEST(Core_EW_Perf, add)
     Mat b = randMat({1,1},      3, CV_8U, 0, 100);
     Mat inps[] = {a, b}, out;
 
-    double te = minUs([&]{ TExpr p; makeAddProgram(p, CV_8U, CV_8U, CV_8U);
+    double te = minUs([&]{ TExpr p; makeBinaryArithProgram(p, OP_ADD, CV_8U, CV_8U, CV_8U, EW_DEPTH_NONE, 1.);
                            p.exec(inps, &out); }, 30, 4);
 
     Vec3b bv = b.at<Vec3b>(0, 0);
