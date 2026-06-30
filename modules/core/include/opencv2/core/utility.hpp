@@ -129,8 +129,12 @@ public:
     void deallocate();
     //! resizes the buffer and preserves the content
     void resize(size_t _size);
+    //! grows the capacity to at least _cap (preserving the content); never shrinks
+    void reserve(size_t _cap);
     //! returns the current buffer size
     size_t size() const;
+    //! returns the current capacity (allocated element count; always >= size())
+    size_t capacity() const;
     //! returns pointer to the real buffer, stack-allocated or heap-allocated
     inline _Tp* data() { return ptr; }
     //! returns read-only pointer to the real buffer, stack-allocated or heap-allocated
@@ -162,8 +166,10 @@ public:
     inline const_reference back() const { CV_DbgCheckGT(sz, (size_t)0, "out of range"); return (*this)[size()-1] ;}
     inline reference back() { CV_DbgCheckGT(sz, (size_t)0, "out of range"); return (*this)[size()-1] ;}
 public:
-    inline void push_back( const _Tp& value ) {resize(size()+1); back() = value;}
-    inline void push_back( _Tp&& value ) {resize(size()+1); back() = std::move(value);}
+    inline void push_back( const _Tp& value )
+    { if (sz >= cap) reserve(cap + cap/2 > sz ? cap + cap/2 : sz + 1); ptr[sz++] = value; }
+    inline void push_back( _Tp&& value )
+    { if (sz >= cap) reserve(cap + cap/2 > sz ? cap + cap/2 : sz + 1); ptr[sz++] = std::move(value); }
     inline void emplace_back( _Tp&& value ) {push_back(value);}
     inline void pop_back() {CV_DbgCheckGT(sz, (size_t)0, "out of range"); resize(size()-1);}
 protected:
@@ -171,6 +177,8 @@ protected:
     _Tp* ptr;
     //! size of the real buffer
     size_t sz;
+    //! capacity - allocated element count (>= sz). Starts at fixed_size (the local buf), grows on demand.
+    size_t cap;
     //! pre-allocated buffer. At least 1 element to confirm C++ standard requirements
     _Tp buf[(fixed_size > 0) ? fixed_size : 1];
 };
@@ -1068,14 +1076,16 @@ template<typename _Tp, size_t fixed_size> inline
 AutoBuffer<_Tp, fixed_size>::AutoBuffer()
 {
     ptr = buf;
-    sz = fixed_size;
+    sz = 0;
+    cap = fixed_size;
 }
 
 template<typename _Tp, size_t fixed_size> inline
 AutoBuffer<_Tp, fixed_size>::AutoBuffer(size_t _size)
 {
     ptr = buf;
-    sz = fixed_size;
+    sz = 0;
+    cap = fixed_size;
     allocate(_size);
 }
 
@@ -1090,7 +1100,8 @@ template<typename _Tp, size_t fixed_size> inline
 AutoBuffer<_Tp, fixed_size>::AutoBuffer(const AutoBuffer<_Tp, fixed_size>& abuf )
 {
     ptr = buf;
-    sz = fixed_size;
+    sz = 0;
+    cap = fixed_size;
     allocate(abuf.size());
     for( size_t i = 0; i < sz; i++ )
         ptr[i] = abuf.ptr[i];
@@ -1116,17 +1127,8 @@ AutoBuffer<_Tp, fixed_size>::~AutoBuffer()
 template<typename _Tp, size_t fixed_size> inline void
 AutoBuffer<_Tp, fixed_size>::allocate(size_t _size)
 {
-    if(_size <= sz)
-    {
-        sz = _size;
-        return;
-    }
-    deallocate();
-    sz = _size;
-    if(_size > fixed_size)
-    {
-        ptr = new _Tp[_size];
-    }
+    resize(_size);      // set the size (resize grows capacity as needed, preserves content and
+                        // value-inits the new tail) - matches the historical allocate-then-fill usage
 }
 
 template<typename _Tp, size_t fixed_size> inline void
@@ -1136,37 +1138,46 @@ AutoBuffer<_Tp, fixed_size>::deallocate()
     {
         delete[] ptr;
         ptr = buf;
-        sz = fixed_size;
     }
+    sz = 0;
+    cap = fixed_size;
+}
+
+template<typename _Tp, size_t fixed_size> inline void
+AutoBuffer<_Tp, fixed_size>::reserve(size_t _cap)
+{
+    if( _cap <= cap )       // never shrink; _cap > cap implies _cap > fixed_size, so always heap
+        return;
+    _Tp* prevptr = ptr;
+    ptr = new _Tp[_cap];
+    for( size_t i = 0; i < sz; i++ )    // preserve the live elements
+        ptr[i] = prevptr[i];
+    if( prevptr != buf )
+        delete[] prevptr;
+    cap = _cap;
 }
 
 template<typename _Tp, size_t fixed_size> inline void
 AutoBuffer<_Tp, fixed_size>::resize(size_t _size)
 {
-    if(_size <= sz)
+    if(_size <= sz)         // shrink: keep the capacity and the surviving content
     {
         sz = _size;
         return;
     }
-    size_t i, prevsize = sz, minsize = MIN(prevsize, _size);
-    _Tp* prevptr = ptr;
-
-    ptr = _size > fixed_size ? new _Tp[_size] : buf;
-    sz = _size;
-
-    if( ptr != prevptr )
-        for( i = 0; i < minsize; i++ )
-            ptr[i] = prevptr[i];
-    for( i = prevsize; i < _size; i++ )
+    reserve(_size);         // grow the capacity if needed (preserving content)
+    for( size_t i = sz; i < _size; i++ )    // value-initialize the newly exposed tail
         ptr[i] = _Tp();
-
-    if( prevptr != buf )
-        delete[] prevptr;
+    sz = _size;
 }
 
 template<typename _Tp, size_t fixed_size> inline size_t
 AutoBuffer<_Tp, fixed_size>::size() const
 { return sz; }
+
+template<typename _Tp, size_t fixed_size> inline size_t
+AutoBuffer<_Tp, fixed_size>::capacity() const
+{ return cap; }
 
 //! @endcond
 

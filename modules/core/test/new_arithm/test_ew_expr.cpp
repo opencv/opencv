@@ -29,7 +29,7 @@ TEST(Core_EW_Expr, add)
     EXPECT_LE(cvtest::norm(got, exp, NORM_INF), 1e-3);
 }
 
-// Built-in binary functions min/max/absdiff parsed and dispatched through emit().
+// Built-in binary functions min/max/absdiff parsed and dispatched through emitBinary.
 TEST(Core_EW_Expr, minmax_absdiff)
 {
     Mat a(18, 21, CV_8U), b(18, 21, CV_8U);

@@ -22,12 +22,12 @@ static Mat runBinary(TOp op, const Mat& a, const Mat& b, int rdepth)
     return out;
 }
 
-// out = cast(a), built through emit() (a single OP_CAST) and compiled.
+// out = cast(a), built through maybeAddCast (a single OP_CAST) and compiled.
 static Mat runCast(const Mat& a, int rdepth)
 {
     TExpr e;
     int s = e.addInput(a.depth());
-    e.output(e.emit(OP_CAST, &s, 1, rdepth));
+    e.output(e.maybeAddCast(s, rdepth));
     e.compile();
     Mat out;
     e.exec(&a, &out);

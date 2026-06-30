@@ -2,9 +2,9 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-// Tests for Layer 2: type inference + cast insertion. Builds programs directly with emit() (the
-// same helper the cv::expression parser and the hand builders use), compiles them (bind kernels +
-// temp-buffer liveness) and runs them through the executor, checking against the classic cv:: ops.
+// Tests for Layer 2: type inference + cast insertion. Builds programs directly with emitBinary (the
+// same policy layer the cv::expression parser and the hand builders use), compiles them (bind kernels
+// + temp-buffer liveness) and runs them through the executor, checking against the classic cv:: ops.
 
 #include "../test_precomp.hpp"
 #include "ew_compile.hpp"
@@ -16,7 +16,7 @@ using namespace cv::ew;
 
 // emit shortcuts: a flexible literal, and a binary op over two slots.
 static int K(TExpr& e, double v)              { return e.addConst(EW_DEPTH_NONE, Scalar(v), 1); }
-static int bin(TExpr& e, TOp op, int a, int b){ int ar[2] = { a, b }; return e.emit(op, ar, 2); }
+static int bin(TExpr& e, TOp op, int a, int b){ return e.emitBinary(op, a, b); }
 
 // Compile `e` and run it over the given inputs. The operands were already typed at build time
 // (addInput carries each input's depth), so compile() just binds kernels + packs temp buffers.
@@ -28,7 +28,7 @@ static std::vector<Mat> run(TExpr& e, const std::vector<Mat>& inps)
     return outs;
 }
 
-// addWeighted(a,alpha,b,beta,gamma) = a*alpha + b*beta + gamma, built op-by-op via emit()
+// addWeighted(a,alpha,b,beta,gamma) = a*alpha + b*beta + gamma, built op-by-op via emitBinary
 // (the temp buffers are allocated automatically by compile()'s liveness pass).
 TEST(Core_EW_Compile, addweighted_f32)
 {
@@ -57,8 +57,8 @@ TEST(Core_EW_Compile, addweighted_f32)
 }
 
 // Mixed integer types: out = saturate_u8( saturate_u8(a*2.5) + b ), a,b are u8.
-// emit() must insert u8->f32 input casts and f32->u8 result casts around each op (2.5 does not fit
-// u8, so the direct u8 kernel is refused and the float working path is taken).
+// emitBinary must insert u8->f32 input casts and f32->u8 result casts around each op (2.5 does not
+// fit u8, so the direct u8 kernel is refused and the float working path is taken).
 TEST(Core_EW_Compile, mixed_u8_inserts_casts)
 {
     int H = 16, W = 24;
@@ -124,6 +124,44 @@ TEST(Core_EW_Compile, temp_buffer_reuse)
 
     Mat exp; cv::add(a, Scalar(4.0), exp);
     EXPECT_LE(cvtest::norm(out[0], exp, NORM_INF), 1e-4);
+}
+
+// promoteArith is the auto result-depth rule (rdepth == -1). Checked against an INDEPENDENT hardcoded
+// table (NOT computed from the engine): the extensive tests feed promoteArith to BOTH the engine and
+// their own reference, so a wrong-but-consistent rule slips through there - this catches it. Also
+// asserts commutativity, which a max-rank scheme silently breaks for mixed-sign / same-width floats.
+TEST(Core_EW_Compile, promoteArith_rules)
+{
+    struct { int a, b, want; } cases[] = {
+        // same signedness -> the wider one, sign kept
+        { CV_8U, CV_8U, CV_8U }, { CV_8U, CV_16U, CV_16U }, { CV_8U, CV_64U, CV_64U },
+        { CV_16S, CV_64S, CV_64S }, { CV_8S, CV_32S, CV_32S },
+        // mixed sign, same width -> next-wider signed (64-bit has no wider int -> f64)
+        { CV_8U, CV_8S, CV_16S }, { CV_16U, CV_16S, CV_32S },
+        { CV_32U, CV_32S, CV_64S }, { CV_64U, CV_64S, CV_64F },
+        // mixed sign, different width
+        { CV_8S, CV_16U, CV_32S }, { CV_8U, CV_16S, CV_16S }, { CV_32S, CV_64U, CV_64F },
+        // float + int -> smallest covering float
+        { CV_16F, CV_8U, CV_16F }, { CV_16BF, CV_8U, CV_16BF }, { CV_16F, CV_16U, CV_32F },
+        { CV_16F, CV_32S, CV_64F }, { CV_32F, CV_32S, CV_64F }, { CV_32F, CV_16S, CV_32F },
+        // float + float
+        { CV_16F, CV_32F, CV_32F }, { CV_16F, CV_16BF, CV_32F }, { CV_64F, CV_8U, CV_64F },
+        // flexible operand (EW_DEPTH_NONE) does not force promotion
+        { EW_DEPTH_NONE, CV_16U, CV_16U }, { CV_16U, EW_DEPTH_NONE, CV_16U },
+        { EW_DEPTH_NONE, EW_DEPTH_NONE, EW_DEPTH_NONE },
+    };
+    for (auto& c : cases)
+    {
+        int got = promoteArith(c.a, c.b);
+        EXPECT_EQ(got, c.want) << "promoteArith(" << c.a << "," << c.b << ")";
+        EXPECT_EQ(promoteArith(c.b, c.a), got) << "not commutative at " << c.a << "," << c.b;
+    }
+
+    // exhaustive commutativity over all real depths
+    const int depths[] = { CV_8U, CV_8S, CV_16U, CV_16S, CV_32U, CV_32S, CV_64U, CV_64S,
+                           CV_16F, CV_16BF, CV_32F, CV_64F };
+    for (int a : depths) for (int b : depths)
+        EXPECT_EQ(promoteArith(a, b), promoteArith(b, a)) << "noncommutative at " << a << "," << b;
 }
 
 }} // namespace

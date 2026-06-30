@@ -148,6 +148,81 @@ static void perfBinOp(TOp op, const char* title, bool masked)
         }
 }
 
+// Compare sweep over the same (type-combo x size) grid as perfBinOp, but the result is a u8 boolean
+// mask with the SAME shape and channel count as the inputs (a per-element compare, not a reduction).
+// The engine builds the compare program (auto rdepth = u8 mask). cv::compare is timed for context only
+// on the same-type single-channel combos (it needs identical input types). Correctness is checked
+// per channel against a compare in f64 (exact for the small [0,16] data).
+static void perfCompare(TOp op, const char* title)
+{
+    const std::string opname = opName(op);
+    const int cmpop = (op == OP_CMP_EQ) ? cv::CMP_EQ : cv::CMP_GT;
+    const Combo combos[] = {
+        { CV_8U,  CV_8U,  CV_8U, opname + "(u8,  u8) ->u8 " },
+        { CV_16F, CV_16F, CV_8U, opname + "(f16, f16)->u8 " },
+        { CV_32F, CV_32F, CV_8U, opname + "(f32, f32)->u8 " },
+        { CV_8U,  CV_16F, CV_8U, opname + "(u8,  f16)->u8 " },
+    };
+    const Sz sizes[] = {
+        { {10,10,10},   1, 5000, "10x10x10    " },
+        { {165,121},    1, 2000, "165x121     " },
+        { {1024,1024},  3,    4, "1024x1024x3 " },
+    };
+
+    std::cout << "\n[ew-perf] " << title << "  (min us per call over 30 trials)\n";
+    std::cout << "  combo                size           engine     cv::cmp    speedup\n";
+    std::cout << "  -----------------------------------------------------------------\n";
+
+    for (const Combo& c : combos)
+        for (const Sz& s : sizes)
+        {
+            Mat a = randMat(s.shape, s.cn, c.da, 0, 16);   // small range so EQ fires often
+            Mat b = randMat(s.shape, s.cn, c.db, 0, 16);
+            Mat in2[] = {a, b}, out;
+
+            double te = minUs([&]{ TExpr p; makeBinaryArithProgram(p, op, c.da, c.db, -1);
+                                   p.exec(in2, &out); }, 30, s.ninner);
+
+            // correctness: per-channel compare in f64 -> 0/255 (engine's default mask value)
+            std::vector<Mat> ach, bch; cv::split(a, ach); cv::split(b, bch);
+            std::vector<Mat> refch(s.cn);
+            for (int ch = 0; ch < s.cn; ch++) {
+                Mat af, bf; ach[ch].convertTo(af, CV_64F); bch[ch].convertTo(bf, CV_64F);
+                cv::compare(af, bf, refch[ch], cmpop);
+            }
+            Mat ref; cv::merge(refch, ref);
+            ASSERT_EQ(out.type(), CV_8UC(s.cn)) << title << " " << c.name;
+            EXPECT_EQ(0, cvtest::norm(out, ref, NORM_INF)) << title << " " << c.name << " " << s.name;
+
+            double tc = -1;
+            if (c.da == c.db)   // cv::compare needs identical input types (it handles multi-channel)
+            {
+                Mat tmp;
+                tc = minUs([&]{ cv::compare(a, b, tmp, cmpop); }, 30, s.ninner);
+            }
+
+            std::cout << "  " << c.name << "  " << s.name << "  "
+                      << std::fixed << std::setprecision(3) << std::setw(8) << te << "   ";
+            if (tc >= 0)
+                std::cout << std::setw(8) << tc << "   " << std::setprecision(2) << std::setw(6) << (tc/te) << "x";
+            else
+                std::cout << "      -          -  ";
+            std::cout << "\n";
+        }
+}
+
+TEST(Core_EW_Perf, cmpEQ)
+{
+    perfCompare(OP_CMP_EQ, "cmpEQ");
+    std::cout << std::endl;
+}
+
+TEST(Core_EW_Perf, cmpGT)
+{
+    perfCompare(OP_CMP_GT, "cmpGT");
+    std::cout << std::endl;
+}
+
 TEST(Core_EW_Perf, add)
 {
     perfBinOp(OP_ADD, "add", false);

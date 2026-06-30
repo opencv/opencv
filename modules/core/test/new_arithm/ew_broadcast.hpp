@@ -22,61 +22,9 @@
 #include "ew_op.hpp"
 #include <functional>
 
-namespace cv { namespace ew {
-
-// One operand's slice for the current tile: base pointer + steps in ELEMENTS.
-//   stepx in {0,1}: 1 = contiguous along width, 0 = broadcast-scalar along width.
-//   stepy: step between the `height` rows (0 = broadcast along height).
-// ptr is non-const so the body can write the operand(s) it treats as outputs.
-struct EwSlice
-{
-    void*  ptr   = nullptr;
-    size_t stepy = 0;
-    size_t stepx = 0;
-};
-
-// One 2D tile, built by broadcastOp and handed to the body. `slices[k]` corresponds to
-// arrays[k] (same order). The body reads `width`/`height` and the per-operand slices; it owns
-// all interpretation (which array is the output, what kernels to run).
-struct EwTile
-{
-    int width  = 0;          // innermost tile extent (elements)
-    int height = 0;          // 2nd-innermost extent (1 unless a 2D tile is handed out)
-    int narrays = 0;
-    const EwSlice* slices = nullptr;   // [narrays], valid for the duration of the body call
-};
-
-// Drive a broadcasting element-wise traversal.
-//   arrays[0 .. narrays-1] : uniform operands (inputs AND outputs, undistinguished). The
-//       iteration space is the numpy-broadcast of all their shapes (channels innermost).
-//   body  : invoked once per tile with the per-operand slices for that tile; it runs the prepared
-//       program. broadcastOp drives parallel_for_ internally and decodes each tile's addresses in
-//       O(ndims), so the body never deals with iteration/threading - just one tile at a time.
-//       (Per-thread scratch, e.g. temp buffers or a scalar register pattern, are locals in the
-//       body; declared per call they are inherently thread-safe.)
-//   expandChannels : how channel counts are presented to the body.
-//       true  => channels are an explicit innermost iteration dim, so the body always sees
-//                single-channel (scalar-wise) data. Channel 1<->N broadcast is then handled
-//                geometrically (stepx 0 on the channel axis). Simple and always correct; the
-//                channel dim folds into width automatically when all operands share it. This is
-//                what cv::expression uses initially.
-//       false => channels stay folded into the element (esz = full elemSize); the body is
-//                responsible for them (e.g. deinterleave tricks for the efficient C1<->CN path).
-//                Only (n,n)/(n,1)/(1,n) channel combinations ever occur - never (n,m).
-//   nstripes : parallel_for_ work hint. 0 => derive from the shapes assuming ~100 cycles/element
-//       (broadcastOp can't see the body's cost; cv::expression passes a real value via opCost).
-//
-// For a cv::Mat the innermost axis (channels / last dim) is always contiguous, so after collapse
-// every operand's innermost stride is inherently in {0,1} - there is no gather case and nothing
-// to materialize. broadcastOp keeps the unit-stride run as the innermost (tile width) and sends
-// any gapped outer axis to stepy (a 2D tile, height>1), so cropped ROIs need no special handling.
-// arrays is an array of POINTERS to the operand Mats (no Mat copies - a Mat is a heavy header and
-// the driver only reads a few fields). Headers must stay alive for the call.
-void broadcastOp(const Mat* const* arrays, int narrays,
-                 const std::function<void(const EwTile&)>& body,
-                 bool expandChannels = false,
-                 double nstripes = 0.);
-
-}} // namespace cv::ew
+// NOTE: `cv::BroadcastOp` (struct + the `broadcastOp()` shorthand) now lives in core's public
+// mat.hpp (included via opencv2/core.hpp from ew_op.hpp) as part of integrating the engine into core.
+// Its implementation BroadcastOp::run still lives in ew_broadcast.cpp for now. This header remains so
+// existing `#include "ew_broadcast.hpp"` sites keep working; it adds nothing beyond the core header.
 
 #endif // OPENCV_EW_BROADCAST_HPP

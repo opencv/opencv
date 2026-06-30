@@ -48,6 +48,7 @@
 // */
 
 #include "precomp.hpp"
+#include "arithm_expr.hpp"   // the new element-wise engine (cv::ew)
 #include "opencl_kernels_core.hpp"
 
 namespace cv
@@ -1170,6 +1171,57 @@ void cv::add( InputArray src1, InputArray src2, OutputArray dst,
             dst.create(0, 0, dtype);
         }
         return;
+    }
+
+    // New element-wise engine (CPU only; UMat/OpenCL and write-mask fall through to arithm_op below).
+    if (!src1.isUMat() && !src2.isUMat() && mask.empty())
+    {
+        const bool s1 = checkScalar(src1, src1.type(), src1.kind(), _InputArray::MATX);
+        const bool s2 = checkScalar(src2, src2.type(), src2.kind(), _InputArray::MATX);
+        if (!s1 && !s2)                                   // array + array
+        {
+            Mat a = src1.getMat(), b = src2.getMat();
+            if (a.type() == b.type() && a.size == b.size)
+            {
+                int rdepth = dtype < 0 ? a.depth() : CV_MAT_DEPTH(dtype);
+                ew::TExpr p;
+                ew::makeBinaryArithProgram(p, ew::OP_ADD, a.depth(), b.depth(), rdepth);
+                Mat inputs[2] = { a, b };
+                // Pre-create the output at the broadcast shape (no realloc on repeat-shape calls; a
+                // UMat dst gets the result uploaded back on release), then run straight into it -
+                // exec reuses a Mat that already has the right shape/type.
+                MatShape oshape; int ocn;
+                p.outputShape(inputs, oshape, ocn);
+                dst.create(oshape, CV_MAKETYPE(rdepth, ocn));
+                Mat dstmat = dst.getMat();
+                p.exec(inputs, &dstmat);
+                return;
+            }
+        }
+        else if (s1 != s2)                                // array + scalar (add is commutative)
+        {
+            Mat a = (s1 ? src2 : src1).getMat();
+            // Multi-channel scalars need a PER-CHANNEL const (the executor currently broadcasts a const
+            // as one value); until that lands, only single-channel scalars take the engine path.
+            if (a.channels() == 1)
+            {
+                Mat sm; (s1 ? src1 : src2).getMat().reshape(1).convertTo(sm, CV_64F);
+                double sval = sm.empty() ? 0.0 : sm.ptr<double>()[0];
+
+                int rdepth = dtype < 0 ? a.depth() : CV_MAT_DEPTH(dtype);
+                ew::TExpr p;
+                int ia = p.addInput(a.depth());
+                int ic = p.addConst(ew::EW_DEPTH_NONE, Scalar(sval), 1);   // flexible const
+                p.output(p.emitBinary(ew::OP_ADD, ia, ic, rdepth));
+                p.compile();
+                MatShape oshape; int ocn;
+                p.outputShape(&a, oshape, ocn);
+                dst.create(oshape, CV_MAKETYPE(rdepth, ocn));
+                Mat dstmat = dst.getMat();
+                p.exec(&a, &dstmat);
+                return;
+            }
+        }
     }
 
     int sdepth = src1.depth();

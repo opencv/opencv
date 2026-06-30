@@ -235,9 +235,10 @@ INSTANTIATE_TEST_CASE_P(Core_EW, EW_Extensive_BinOp,
     });
 
 // ------------------------------------------------------------------- min / max / absdiff
-// op 0 = MIN, 1 = MAX, 2 = ABSDIFF: T x T -> T (operands promoted to a common type C, result C).
-// Built through emit() (the same type-inference path the parser/compiler use), not the hand arith
-// builder, so this also exercises emit's promotion + cast insertion for a fresh family of ops.
+// op 0 = MIN, 1 = MAX, 2 = ABSDIFF: operands promoted to a common type C; MIN/MAX result C, ABSDIFF
+// result Cr = absdiffResultDepth(C) (unsigned same width for signed ints, since |a-b| can hit 2^w-1).
+// Built via makeBinaryArithProgram -> emitBinary (the same type-inference path the parser uses), so
+// this also exercises emitBinary's promotion + cast insertion for a fresh family of ops.
 class EW_Extensive_MinMax : public ::testing::TestWithParam<std::tuple<int,int>> {};
 
 TEST_P(EW_Extensive_MinMax, accuracy)
@@ -250,7 +251,8 @@ TEST_P(EW_Extensive_MinMax, accuracy)
 
     std::vector<int> shape = sampleShape(rng);
     const int da = sampleDepth(rng), db = sampleDepth(rng);
-    const int C = promoteArith(da, db);   // auto result depth (rdepth == -1), shared with the reference
+    const int C = promoteArith(da, db);   // common compute type (rdepth == -1 auto), shared with ref
+    const int Cr = (op == OP_ABSDIFF) ? absdiffResultDepth(C) : C;   // engine's actual result depth
 
     static const int cncand[] = { 1, 1, 2, 3, 4 };
     const int rcn = cncand[rng.uniform(0, 5)];
@@ -283,7 +285,15 @@ TEST_P(EW_Extensive_MinMax, accuracy)
         Mat aB, bB; cv::broadcast(apC, res, aB); cv::broadcast(bpC, res, bB);
         if (op == OP_MIN)      cv::min(aB, bB, refch[c]);
         else if (op == OP_MAX) cv::max(aB, bB, refch[c]);
-        else                   cv::absdiff(aB, bB, refch[c]);
+        else if (isFloat(C))   cv::absdiff(aB, bB, refch[c]);   // float |a-b| (Cr == C)
+        else
+        {   // absdiff of an integer: |a-b| = max-min, computed exactly in f64 (no integer overflow
+            // for the moderate ranges sampled), stored at the result depth Cr (unsigned same width).
+            Mat hi, lo, d;
+            cv::max(aB, bB, hi); cv::min(aB, bB, lo);
+            cv::subtract(hi, lo, d, noArray(), CV_64F);
+            d.convertTo(refch[c], Cr);
+        }
     }
     Mat ref; cv::merge(refch, ref);
 
@@ -292,7 +302,7 @@ TEST_P(EW_Extensive_MinMax, accuracy)
     Mat inps[] = { a, b }, out;
     p.exec(inps, &out);
 
-    checkClose(out, ref, C, isFloat(da) || isFloat(db), opStr);
+    checkClose(out, ref, Cr, isFloat(da) || isFloat(db), opStr);
 }
 
 INSTANTIATE_TEST_CASE_P(Core_EW, EW_Extensive_MinMax,
@@ -300,6 +310,84 @@ INSTANTIATE_TEST_CASE_P(Core_EW, EW_Extensive_MinMax,
     [](const testing::TestParamInfo<std::tuple<int,int>>& info) {
         const int o = std::get<0>(info.param);
         return cv::format("%s_case%04d", o == 0 ? "min" : o == 1 ? "max" : "absdiff",
+                          std::get<1>(info.param));
+    });
+
+// ----------------------------------------------------------------------------------- compare
+// op 0 = CMP_EQ, 1 = CMP_GT: operands promoted to a common type C, result a u8 mask. Exercises
+// emitBinary's compare branch (result forced to u8) and the optional mask value (0/255 default, or
+// 0/1 set through TKernel::flags). Inputs are drawn from a small shared range so equality fires.
+class EW_Extensive_Compare : public ::testing::TestWithParam<std::tuple<int,int>> {};
+
+TEST_P(EW_Extensive_Compare, accuracy)
+{
+    const int opSel = std::get<0>(GetParam());   // 0 = EQ, 1 = GT
+    const int caseidx = std::get<1>(GetParam());
+    const TOp op = opSel == 0 ? OP_CMP_EQ : OP_CMP_GT;
+    const int cmpop = opSel == 0 ? cv::CMP_EQ : cv::CMP_GT;
+    const char* opStr = opSel == 0 ? "cmpEQ" : "cmpGT";
+    RNG rng(mix64(kSuiteSalt ^ 0xC0FFEEULL ^ (uint64_t)(caseidx * 2 + opSel)));
+
+    std::vector<int> shape = sampleShape(rng);
+    const int da = sampleDepth(rng), db = sampleDepth(rng);
+    const int C = (da == db) ? da : promote2(da, db);
+
+    static const int cncand[] = { 1, 1, 2, 3, 4 };
+    const int rcn = cncand[rng.uniform(0, 5)];
+    const int cn_a = rng.uniform(0, 2) ? rcn : 1;
+    const int cn_b = rng.uniform(0, 2) ? rcn : 1;
+    const int ocn = std::max(cn_a, cn_b);
+
+    std::vector<int> sa(shape.size()), sb(shape.size()), res(shape.size());
+    for (size_t d = 0; d < shape.size(); d++)
+    {
+        sa[d] = rng.uniform(0, 2) ? shape[d] : 1;
+        sb[d] = rng.uniform(0, 2) ? shape[d] : 1;
+        res[d] = std::max(sa[d], sb[d]);
+    }
+
+    SCOPED_TRACE(cv::format("%s caseidx=%d da=%d db=%d C=%d a=%sC%d b=%sC%d",
+                            opStr, caseidx, da, db, C, shapeStr(sa).c_str(), cn_a,
+                            shapeStr(sb).c_str(), cn_b));
+
+    // small shared range [0,12] (well within every depth) so EQ is hit on a healthy fraction
+    Mat a = makeRandom(rng, sa, cn_a, da, 0, 12), b = makeRandom(rng, sb, cn_b, db, 0, 12);
+
+    // reference: per channel, cast to C, compare in f64 (exact for these ranges) -> 0/255 mask
+    std::vector<Mat> ach, bch; cv::split(a, ach); cv::split(b, bch);
+    std::vector<Mat> refch(ocn);
+    for (int c = 0; c < ocn; c++)
+    {
+        Mat apC, bpC;
+        ach[cn_a == 1 ? 0 : c].convertTo(apC, C);
+        bch[cn_b == 1 ? 0 : c].convertTo(bpC, C);
+        Mat aB, bB; cv::broadcast(apC, res, aB); cv::broadcast(bpC, res, bB);
+        Mat af, bf; aB.convertTo(af, CV_64F); bB.convertTo(bf, CV_64F);
+        cv::compare(af, bf, refch[c], cmpop);          // 0 / 255
+    }
+    Mat ref255; cv::merge(refch, ref255);
+
+    Mat inps[] = { a, b };
+    {   // engine, default 255 mask
+        TExpr p; makeBinaryArithProgram(p, op, da, db, -1);
+        Mat out; p.exec(inps, &out);
+        ASSERT_EQ(out.type(), CV_8UC(ocn)) << opStr;
+        EXPECT_EQ(0, cvtest::norm(out, ref255, NORM_INF)) << opStr << " (255 mask)";
+    }
+    {   // engine, 0/1 mask selected through TKernel::flags
+        TExpr p; makeBinaryArithProgram(p, op, da, db, -1);
+        for (size_t i = 0; i < p.prog.size(); i++)
+            if (opCategory(p.prog[i].op) == CAT_COMPARE) p.prog[i].kernel.flags = 1;
+        Mat out; p.exec(inps, &out);
+        Mat ref1; ref255.convertTo(ref1, CV_8U, 1.0 / 255.0);   // 255 -> 1, 0 -> 0
+        EXPECT_EQ(0, cvtest::norm(out, ref1, NORM_INF)) << opStr << " (0/1 mask)";
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Core_EW, EW_Extensive_Compare,
+    testing::Combine(testing::Values(0, 1), testing::Range(0, kNumCases)),
+    [](const testing::TestParamInfo<std::tuple<int,int>>& info) {
+        return cv::format("%s_case%04d", std::get<0>(info.param) == 0 ? "cmpEQ" : "cmpGT",
                           std::get<1>(info.param));
     });
 
@@ -491,7 +579,7 @@ TEST_P(EW_Extensive_Cast, accuracy)
 
     TExpr e;
     int s = e.addInput(sd);
-    e.output(e.emit(OP_CAST, &s, 1, dd));
+    e.output(e.maybeAddCast(s, dd));
     e.compile();
     e.exec(&a, &out);
 
