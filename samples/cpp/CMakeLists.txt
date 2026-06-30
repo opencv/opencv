@@ -68,6 +68,11 @@ foreach(sample_filename ${cpp_samples})
   endif()
 endforeach()
 
+if(TARGET example_cpp_aliked_lightglue AND NOT TARGET example_cpp_example_features_aliked_lightglue)
+  add_custom_target(example_cpp_example_features_aliked_lightglue
+    DEPENDS example_cpp_aliked_lightglue)
+endif()
+
 include("tutorial_code/calib3d/real_time_pose_estimation/CMakeLists.txt" OPTIONAL)
 
 # Standalone samples only
