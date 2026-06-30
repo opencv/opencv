@@ -825,7 +825,7 @@
 "test_dynamicquantizelinear_max_adjusted",
 "test_dynamicquantizelinear_max_adjusted_expanded",
 "test_dynamicquantizelinear_min_adjusted",
-"test_dynamicquantizelinear_min_adjusted_expanded"
+"test_dynamicquantizelinear_min_adjusted_expanded",
 "test_attention_3d_expanded",
 "test_attention_3d_attn_mask_expanded",
 "test_attention_3d_diff_heads_sizes_attn_mask_expanded",
