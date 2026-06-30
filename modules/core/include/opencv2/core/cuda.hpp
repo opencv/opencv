@@ -1335,6 +1335,16 @@ private:
 CV_EXPORTS_W void printCudaDeviceInfo(int device);
 CV_EXPORTS_W void printShortCudaDeviceInfo(int device);
 
+/** @brief Returns the MatAllocator that backs cv::UMat with CUDA device memory.
+
+Bind it to a UMat before allocation to place the buffer on the current CUDA device:
+@code
+    UMat u; u.allocator = cv::cuda::getCudaAllocator(); u.create(rows, cols, CV_32F);
+@endcode
+Returns NULL when OpenCV is built without CUDA. Mirrors cv::ocl::getOpenCLAllocator().
+*/
+CV_EXPORTS MatAllocator* getCudaAllocator();
+
 //! @} cudacore_init
 
 }} // namespace cv { namespace cuda {
