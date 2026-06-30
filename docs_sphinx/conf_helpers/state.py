@@ -748,7 +748,7 @@ def _bib_fields(body: str) -> dict[str, str]:
     return fields
 
 # LaTeX accent + special-char cleanup
-_LATEX_ACCENT_RE = re.compile(r"\\([\"'`^~.])\s*\{?\s*([A-Za-z])\s*\}?")
+_LATEX_ACCENT_RE = re.compile(r"\\([\"'`^~.])\s*\{?\s*\\?([A-Za-z])\s*\}?")
 _LATEX_ACCENT_MAP = {
     ('"', 'a'): 'ä', ('"', 'e'): 'ë', ('"', 'i'): 'ï', ('"', 'o'): 'ö',
     ('"', 'u'): 'ü', ('"', 'A'): 'Ä', ('"', 'O'): 'Ö', ('"', 'U'): 'Ü',
@@ -762,10 +762,26 @@ _LATEX_ACCENT_MAP = {
     ('~', 'a'): 'ã', ('~', 'n'): 'ñ', ('~', 'o'): 'õ',
     ('.', 'c'): 'ċ', ('.', 'e'): 'ė',
 }
+# Letter-command accents: \c c (cedilla), \v s (caron), \u g (breve), \H o
+# (double acute), \k a (ogonek), \r u (ring). Form is "\c{c}" or "\c c".
+_LATEX_CMD_ACCENT_RE = re.compile(r"\\([cvuHkr])(?:\s+|\{)\s*\\?([A-Za-z])\s*\}?")
+_LATEX_CMD_ACCENT_MAP = {
+    ('c', 'c'): 'ç', ('c', 'C'): 'Ç', ('c', 's'): 'ş', ('c', 'S'): 'Ş',
+    ('c', 'g'): 'ģ', ('c', 'e'): 'ȩ',
+    ('v', 'c'): 'č', ('v', 'C'): 'Č', ('v', 's'): 'š', ('v', 'S'): 'Š',
+    ('v', 'z'): 'ž', ('v', 'Z'): 'Ž', ('v', 'r'): 'ř', ('v', 'n'): 'ň',
+    ('v', 'e'): 'ě', ('v', 'd'): 'ď', ('v', 't'): 'ť', ('v', 'g'): 'ǧ',
+    ('u', 'g'): 'ğ', ('u', 'a'): 'ă',
+    ('H', 'o'): 'ő', ('H', 'u'): 'ű', ('H', 'O'): 'Ő', ('H', 'U'): 'Ű',
+    ('k', 'a'): 'ą', ('k', 'e'): 'ę', ('k', 'A'): 'Ą', ('k', 'E'): 'Ę',
+    ('r', 'u'): 'ů', ('r', 'a'): 'å', ('r', 'U'): 'Ů', ('r', 'A'): 'Å',
+}
 _LATEX_SPECIAL = {
     r"\&": "&", r"\%": "%", r"\#": "#", r"\$": "$",
     r"\_": "_", r"\{": "{", r"\}": "}",
     r"\textendash": "–", r"\textemdash": "—",
+    r"\textregistered": "®", r"\texttrademark": "™",
+    r"\textcopyright": "©", r"\copyright": "©",
     r"\ldots": "…", r"\dots": "…",
     r"\o": "ø", r"\O": "Ø", r"\ss": "ß",
     r"\aa": "å", r"\AA": "Å", r"\ae": "æ", r"\AE": "Æ",
@@ -774,8 +790,13 @@ _LATEX_SPECIAL = {
 
 def _bib_clean(s: str) -> str:
     s = re.sub(r"\s+", " ", s or "").strip()
+    s = re.sub(r"\\url\s*\{([^}]*)\}", r"\1", s)            # \url{X} -> X
+    s = re.sub(r"\\([lL])(?![A-Za-z])",                     # \l -> ł, \L -> Ł
+               lambda m: "ł" if m.group(1) == "l" else "Ł", s)
     s = _LATEX_ACCENT_RE.sub(
         lambda m: _LATEX_ACCENT_MAP.get((m.group(1), m.group(2)), m.group(2)), s)
+    s = _LATEX_CMD_ACCENT_RE.sub(
+        lambda m: _LATEX_CMD_ACCENT_MAP.get((m.group(1), m.group(2)), m.group(2)), s)
     for k, v in _LATEX_SPECIAL.items():
         s = s.replace(k, v)
     return s.replace("{", "").replace("}", "").strip()

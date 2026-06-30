@@ -1166,13 +1166,19 @@ def _translate(text: str, docname: str | None = None) -> str:
         else:
             href = f"{DOXYGEN_BASE_URL}citelist.html#CITEREF_{key}"
         return f'<a href="{href}">{label}</a>'
+    # Keys may contain ':'/'.' segments (Ma:2003:IVI, BT.709, Wulff:CVPR:2015);
+    # match those without swallowing a trailing sentence period.
     text = _apply_outside_code(text, lambda chunk: re.sub(
-        r"@cite\s+(?P<key>[\w-]+)", _cite_repl, chunk))
+        r"@cite\s+(?P<key>[\w-]+(?:[.:][\w-]+)*)", _cite_repl, chunk))
 
-    if _CITE_NUMBER and docname != "citelist":
+    # Skip plain-lowercase keys (e.g. "pattern", "eigenfaces") in the bare pass:
+    # they collide with ordinary words and mis-cite prose. Mixed-case/digit keys
+    # (Zhang2000, BT2017, LBP) still link bare; explicit @cite always works.
+    _bare_keys = [k for k in _CITE_NUMBER if not re.fullmatch(r"[a-z]+", k)]
+    if _bare_keys and docname != "citelist":
         _CITE_KEY_RE = re.compile(
             r"(?<![\[\w])(?P<key>"
-            + "|".join(re.escape(k) for k in _CITE_NUMBER)
+            + "|".join(re.escape(k) for k in _bare_keys)
             + r")(?![\w\]])"
         )
         def _bare_cite_repl(m: re.Match) -> str:
