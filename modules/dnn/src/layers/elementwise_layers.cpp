@@ -58,7 +58,7 @@
 #include "opencl_kernels_dnn.hpp"
 #endif
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
 #include "../cuda4dnn/primitives/activation.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
@@ -307,7 +307,7 @@ public:
         return func.getActivationFunc(depth, activParams);
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(
         void *context_,
         const std::vector<Ptr<BackendWrapper>>& inputs,
@@ -425,7 +425,7 @@ struct ReLUFunctor : public BaseFunctor
         }
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::ReLUOp>(target, stream, slope);
@@ -627,7 +627,7 @@ struct ReLU6Functor : public BaseFunctor
     }
 #endif
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::ClippedReLUOp>(target, stream, minValue, maxValue);
@@ -736,7 +736,7 @@ struct BaseDefaultFunctor : public BaseFunctor
 
     inline void setKernelParams(ocl::Kernel& kernel) const {}
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         CV_Error(Error::StsNotImplemented, "");
@@ -853,7 +853,7 @@ struct GeluFunctor : public BaseFunctor {
         }
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::GeluOp>(target, stream);
@@ -993,7 +993,7 @@ struct TanHFunctor : public BaseDefaultFunctor<TanHFunctor>
         return tanh(x);
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::TanHOp>(target, stream);
@@ -1094,7 +1094,7 @@ struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
         }
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::SwishOp>(target, stream);
@@ -1207,7 +1207,7 @@ struct MishFunctor : public BaseDefaultFunctor<MishFunctor>
         }
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::MishOp>(target, stream);
@@ -1282,7 +1282,7 @@ struct SigmoidFunctor : public BaseDefaultFunctor<SigmoidFunctor>
         return y;
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::SigmoidOp>(target, stream);
@@ -1388,7 +1388,7 @@ struct ELUFunctor : public BaseDefaultFunctor<ELUFunctor>
         kernel.set(3, alpha);
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::ELUOp>(target, stream, alpha);
@@ -1451,7 +1451,7 @@ struct AbsValFunctor : public BaseDefaultFunctor<AbsValFunctor>
         return abs(x);
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::AbsValOp>(target, stream);
@@ -1509,7 +1509,7 @@ struct BNLLFunctor : public BaseDefaultFunctor<BNLLFunctor>
         return x > 0 ? x + log(1.f + exp(-x)) : log(1.f + exp(x));
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::BNLLOp>(target, stream);
@@ -1557,7 +1557,7 @@ struct CeilFunctor : public BaseDefaultFunctor<CeilFunctor>
         return ceil(x);
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::CeilOp>(target, stream);
@@ -1607,7 +1607,7 @@ struct FloorFunctor : public BaseDefaultFunctor<FloorFunctor>
         return floor(x);
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::FloorOp>(target, stream);
@@ -1655,7 +1655,7 @@ struct LogFunctor : public BaseDefaultFunctor<LogFunctor>
         return log(x);
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::LogOp>(target, stream);
@@ -1687,7 +1687,7 @@ struct RoundFunctor : public BaseDefaultFunctor<RoundFunctor>
         return y;
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::RoundOp>(target, stream);
@@ -1716,7 +1716,7 @@ struct SqrtFunctor : public BaseDefaultFunctor<SqrtFunctor>
         return sqrt(x);
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::SqrtOp>(target, stream);
@@ -1750,7 +1750,7 @@ struct AcosFunctor : public BaseDefaultFunctor<AcosFunctor>
         return acos(x);
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::AcosOp>(target, stream);
@@ -1777,7 +1777,7 @@ struct AcoshFunctor : public BaseDefaultFunctor<AcoshFunctor>
         return acosh(x);
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::AcoshOp>(target, stream);
@@ -1804,7 +1804,7 @@ struct AsinFunctor : public BaseDefaultFunctor<AsinFunctor>
         return asin(x);
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::AsinOp>(target, stream);
@@ -1831,7 +1831,7 @@ struct AsinhFunctor : public BaseDefaultFunctor<AsinhFunctor>
         return asinh(x);
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::AsinhOp>(target, stream);
@@ -1858,7 +1858,7 @@ struct AtanFunctor : public BaseDefaultFunctor<AtanFunctor>
         return atan(x);
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::AtanOp>(target, stream);
@@ -1885,7 +1885,7 @@ struct AtanhFunctor : public BaseDefaultFunctor<AtanhFunctor>
         return atanh(x);
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::AtanhOp>(target, stream);
@@ -1912,7 +1912,7 @@ struct CosFunctor : public BaseDefaultFunctor<CosFunctor>
         return cos(x);
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::CosOp>(target, stream);
@@ -1939,7 +1939,7 @@ struct CoshFunctor : public BaseDefaultFunctor<CoshFunctor>
         return cosh(x);
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::CoshOp>(target, stream);
@@ -1966,7 +1966,7 @@ struct ErfFunctor : public BaseDefaultFunctor<ErfFunctor>
         return erf(x);
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::ErfOp>(target, stream);
@@ -2036,7 +2036,7 @@ struct HardSwishFunctor : public BaseDefaultFunctor<HardSwishFunctor>
         }
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::HardSwishOp>(target, stream);
@@ -2084,7 +2084,7 @@ struct SinFunctor : public BaseDefaultFunctor<SinFunctor>
         return sin(x);
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
         Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
         {
             return make_cuda_node<cuda4dnn::SinOp>(target, stream);
@@ -2111,7 +2111,7 @@ struct SinhFunctor : public BaseDefaultFunctor<SinhFunctor>
         return sinh(x);
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::SinhOp>(target, stream);
@@ -2138,7 +2138,7 @@ struct SoftplusFunctor : public BaseDefaultFunctor<SoftplusFunctor>
         return log1p(exp(x));
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::SoftplusOp>(target, stream);
@@ -2165,7 +2165,7 @@ struct SoftsignFunctor : public BaseDefaultFunctor<SoftsignFunctor>
         return x / (1.f + abs(x));
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::SoftsignOp>(target, stream);
@@ -2192,7 +2192,7 @@ struct TanFunctor : public BaseDefaultFunctor<TanFunctor>
         return tan(x);
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::TanOp>(target, stream);
@@ -2258,7 +2258,7 @@ struct CeluFunctor : public BaseDefaultFunctor<CeluFunctor>
         kernel.set(3, alpha);
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::CeluOp>(target, stream, alpha);
@@ -2303,7 +2303,7 @@ struct HardSigmoidFunctor : public BaseDefaultFunctor<HardSigmoidFunctor>
         kernel.set(4, beta);
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::HardSigmoidOp>(target, stream, alpha, beta);
@@ -2374,7 +2374,7 @@ struct SeluFunctor : public BaseDefaultFunctor<SeluFunctor>
         kernel.set(4, gamma);
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::SeluOp>(target, stream, alpha, gamma);
@@ -2411,7 +2411,7 @@ struct ThresholdedReluFunctor : public BaseDefaultFunctor<ThresholdedReluFunctor
         kernel.set(3, alpha);
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::ThresholdedReluOp>(target, stream, alpha);
@@ -2513,7 +2513,7 @@ struct PowerFunctor : public BaseFunctor
     }
 #endif
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::PowerOp>(target, stream, power, scale, shift);
@@ -2667,7 +2667,7 @@ struct ExpFunctor : public BaseDefaultFunctor<ExpFunctor>
         kernel.set(4, normShift);
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::ExpOp>(target, stream, normScale, normShift);
@@ -2789,7 +2789,7 @@ struct ChannelsPReLUFunctor : public BaseFunctor
     }
 #endif
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::ChannelwiseReLUOp>(target, stream, scale);
@@ -2928,7 +2928,7 @@ struct SignFunctor : public BaseDefaultFunctor<SignFunctor>
         return x > 0.f ? 1.f : (x < 0.f ? -1.f : 0.f);
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::SignOp>(target, stream);
@@ -2961,7 +2961,7 @@ struct ShrinkFunctor : public BaseDefaultFunctor<ShrinkFunctor>
         return x > lambd ? x - bias : (x < -lambd ? x + bias : 0.f);
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::ShrinkOp>(target, stream, bias, lambd);
@@ -2989,7 +2989,7 @@ struct ReciprocalFunctor : public BaseDefaultFunctor<ReciprocalFunctor>
         return 1.f/x;
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::ReciprocalOp>(target, stream);

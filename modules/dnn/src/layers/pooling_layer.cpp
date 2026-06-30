@@ -67,7 +67,7 @@ using std::min;
 using namespace cv::dnn::ocl4dnn;
 #endif
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
 #include "../cuda4dnn/primitives/pooling.hpp"
 #include "../cuda4dnn/primitives/roi_pooling.hpp"
 #include "../cuda4dnn/primitives/max_unpooling.hpp"
@@ -370,7 +370,7 @@ public:
         }
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(
         void *context_,
         const std::vector<Ptr<BackendWrapper>>& inputs,

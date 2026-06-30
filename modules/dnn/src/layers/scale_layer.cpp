@@ -19,7 +19,7 @@ Implementation of Scale layer.
 #include <opencv2/imgproc.hpp>
 #include <opencv2/dnn/shape_utils.hpp>
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
 #include "../cuda4dnn/primitives/scale_shift.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
@@ -211,7 +211,7 @@ public:
         }
     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(
         void *context_,
         const std::vector<Ptr<BackendWrapper>>& inputs,

@@ -77,7 +77,7 @@ public:
 
     bool allocate(UMatData* u, AccessFlag accessFlags, UMatUsageFlags usageFlags) const CV_OVERRIDE
     {
-        CV_UNUSED(usageFlags); CV_UNUSED(accessFlags);
+        CV_UNUSED(usageFlags);
         if (!u) return false;
 
         UMatDataAutoLock lock(u);
@@ -101,6 +101,14 @@ public:
                 u->markDeviceCopyObsolete(false);
             }
         }
+        // Claim the UMatData (e.g. from Mat::getUMat) as HIP-resident, mirroring the
+        // OpenCL allocator so isHipUMat() holds; deallocate() restores prevAllocator.
+        if (u->currAllocator != this) {
+            u->prevAllocator = u->currAllocator;
+            u->currAllocator = this;
+        }
+        if (!!(accessFlags & ACCESS_WRITE))
+            u->markHostCopyObsolete(true);
         return true;
     }
 
@@ -108,6 +116,24 @@ public:
     {
         if (!u) return;
         CV_Assert(u->urefcount == 0 && u->refcount == 0);
+
+        // Borrowed from another allocator (Mat::getUMat): free the device handle,
+        // restore the original allocator + host buffer, and let it finish cleanup.
+        if (u->prevAllocator) {
+            if (u->handle) {
+                hipSafeCall(hipFree(u->handle));
+                u->handle = nullptr;
+            }
+            u->markDeviceCopyObsolete(true);
+            u->currAllocator = u->prevAllocator;
+            u->prevAllocator = nullptr;
+            if (u->data && u->copyOnMap() && u->data != u->origdata)
+                fastFree(u->data);
+            u->data = u->origdata;
+            u->currAllocator->deallocate(u);
+            return;
+        }
+
         if (u->handle) {
             hipSafeCall(hipFree(u->handle));
             u->handle = nullptr;

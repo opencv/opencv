@@ -15,7 +15,7 @@
 #include "backend.hpp"
 #include "factory.hpp"
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
 #include "cuda4dnn/init.hpp"
 #endif
 
@@ -110,7 +110,7 @@ private:
             backends.push_back(std::make_pair(DNN_BACKEND_VKCOM, DNN_TARGET_VULKAN));
 #endif
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
         cuda4dnn::checkVersions();
 
         bool hasCudaCompatible = false;

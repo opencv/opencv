@@ -236,7 +236,7 @@ void Net::Impl::setUpNet(const std::vector<LayerPin>& blobsToKeep_)
 
         if (preferableBackend == DNN_BACKEND_CUDA && !haveCUDA())
         {
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
             CV_LOG_WARNING(NULL, "unable to use CUDA backend; switching to CPU");
 #else
             CV_LOG_WARNING(NULL, "DNN module was not built with CUDA backend; switching to CPU");
@@ -885,7 +885,7 @@ void Net::Impl::forwardLayer(LayerData& ld)
             {
                 CV_Assert(haveCUDA());
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
                 Ptr<CUDABackendNode> cudaNode = node.dynamicCast<CUDABackendNode>();
                 CV_Assert(!cudaNode.empty());
 
@@ -993,7 +993,7 @@ void Net::Impl::forwardToLayer(LayerData& ld, bool clearFlags)
     // forward itself
     forwardLayer(ld);
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     if (preferableBackend == DNN_BACKEND_CUDA)
         cudaInfo->context.stream.synchronize();
 #endif

@@ -16,7 +16,7 @@ Implementation of Batch Normalization layer.
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/core/utils/logger.hpp>
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
 #include "../cuda4dnn/primitives/max_unpooling.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
@@ -172,7 +172,7 @@ public:
     }
 
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     Ptr<BackendNode> initCUDA(
         void *context_,
         const std::vector<Ptr<BackendWrapper>>& inputs,
