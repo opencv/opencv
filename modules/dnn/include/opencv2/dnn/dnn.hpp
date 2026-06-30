@@ -264,22 +264,22 @@ CV__DNN_INLINE_NS_BEGIN
 
     /** @brief Backend-independent description of a graph operation (node).
      *
-     * %OpData carries everything needed to reason about an operation *without* executing it:
+     * %LayerInfo carries everything needed to reason about an operation *without* executing it:
      * its parameters (#blobs and type-specific fields of derived classes), graph wiring
      * (#inputs / #outputs as Arg indices) and shape/type/layout inference. The new DNN graph
-     * engine stores a topologically sorted sequence of %OpData nodes (see Graph::prog());
+     * engine stores a topologically sorted sequence of %LayerInfo nodes (see Graph::prog());
      * executable, backend-specific instances (Layer subclasses) are constructed from an
-     * %OpData during Net::finalizeNet().
+     * %LayerInfo during Net::finalizeNet().
      *
-     * Each operation type registers a `static Ptr<OpData> create(const LayerParams&)` factory
+     * Each operation type registers a `static Ptr<LayerInfo> create(const LayerParams&)` factory
      * via @ref CV_DNN_REGISTER_OP_CLASS_STATIC.
      */
-    class CV_EXPORTS_W OpData : public Algorithm
+    class CV_EXPORTS_W LayerInfo : public Algorithm
     {
     public:
-        OpData();
-        explicit OpData(const LayerParams& params);
-        virtual ~OpData();
+        LayerInfo();
+        explicit LayerInfo(const LayerParams& params);
+        virtual ~LayerInfo();
 
         void setParamsFrom(const LayerParams& params);
 
@@ -335,19 +335,19 @@ CV__DNN_INLINE_NS_BEGIN
 
     /** @brief This interface class allows to build new Layers - are building blocks of networks.
      *
-     * A %Layer is the *executable*, backend-specific counterpart of an OpData node: it
+     * A %Layer is the *executable*, backend-specific counterpart of an LayerInfo node: it
      * implements forward() (and finalize()) for a particular backend/target. In the new graph
-     * engine a %Layer is created from an OpData (held in #data) by Net::finalizeNet(); its
-     * inference methods (getMemoryShapes() etc., inherited from OpData) delegate to #data.
+     * engine a %Layer is created from an LayerInfo (held in #data) by Net::finalizeNet(); its
+     * inference methods (getMemoryShapes() etc., inherited from LayerInfo) delegate to #data.
      *
      * Each class, derived from Layer, must implement forward() method to compute outputs.
      * Also before using the new layer into networks you must register your layer by using one of @ref dnnLayerFactory "LayerFactory" macros.
      */
-    class CV_EXPORTS_W Layer : public OpData
+    class CV_EXPORTS_W Layer : public LayerInfo
     {
     public:
 
-        Ptr<OpData> data;
+        Ptr<LayerInfo> data;
 
         /** @brief Computes and sets internal parameters according to inputs, outputs and blobs.
          *  @deprecated Use Layer::finalize(InputArrayOfArrays, OutputArrayOfArrays) instead
@@ -514,15 +514,15 @@ CV__DNN_INLINE_NS_BEGIN
         virtual bool empty() const = 0;
         virtual void clear() = 0;
         virtual std::string name() const = 0;
-        virtual const std::vector<Arg>& append(Ptr<OpData>& op,
+        virtual const std::vector<Arg>& append(Ptr<LayerInfo>& op,
                     const std::vector<std::string>& outnames=std::vector<std::string>()) = 0;
-        virtual Arg append(Ptr<OpData>& op, const std::string& outname=std::string()) = 0;
+        virtual Arg append(Ptr<LayerInfo>& op, const std::string& outname=std::string()) = 0;
         virtual std::ostream& dump(std::ostream& strm, int indent, bool comma) = 0;
         virtual const std::vector<Arg>& inputs() const = 0;
         virtual const std::vector<Arg>& outputs() const = 0;
         virtual void setOutputs(const std::vector<Arg>& outputs) = 0;
-        virtual const std::vector<Ptr<OpData> >& prog() const = 0;
-        virtual void setProg(const std::vector<Ptr<OpData> >& newprog) = 0;
+        virtual const std::vector<Ptr<LayerInfo> >& prog() const = 0;
+        virtual void setProg(const std::vector<Ptr<LayerInfo> >& newprog) = 0;
         virtual int opBackend(int opidx) const = 0;
     };
 

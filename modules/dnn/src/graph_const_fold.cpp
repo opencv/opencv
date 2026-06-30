@@ -30,7 +30,7 @@ struct ConstFolding
         netimpl->scratchBufs.clear();
     }
 
-    OpData* getLayer(std::vector<Ptr<OpData> >& newprog, int op_idx) const
+    LayerInfo* getLayer(std::vector<Ptr<LayerInfo> >& newprog, int op_idx) const
     {
         return op_idx >= 0 ? newprog.at(op_idx).get() : 0;
     }
@@ -47,16 +47,16 @@ struct ConstFolding
     {
         netimpl->scratchBufs.clear();
         bool modified = false;
-        const std::vector<Ptr<OpData> >& prog = graph->prog();
+        const std::vector<Ptr<LayerInfo> >& prog = graph->prog();
         size_t i, nops = prog.size();
-        std::vector<Ptr<OpData> > newprog;
+        std::vector<Ptr<LayerInfo> > newprog;
         std::vector<Arg> removed_args;
         std::vector<Mat> inpMats, tempMats;
         std::vector<int> inpTypes, outTypes, tempTypes;
         std::vector<MatShape> inpShapes, outShapes, tempShapes;
 
         for (i = 0; i < nops; i++) {
-            const Ptr<OpData>& layer = prog[i];
+            const Ptr<LayerInfo>& layer = prog[i];
             std::vector<Ptr<Graph> >* subgraphs = layer->subgraphs();
             if (subgraphs) {
                 for (Ptr<Graph>& g: *subgraphs) {

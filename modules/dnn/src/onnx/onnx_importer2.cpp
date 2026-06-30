@@ -167,7 +167,7 @@ protected:
     std::string onnxBasePath;
     Ptr<Graph> curr_graph;
     opencv_onnx::GraphProto* curr_graph_proto;
-    std::vector<Ptr<OpData> > curr_prog;
+    std::vector<Ptr<LayerInfo> > curr_prog;
     std::vector<Arg> node_inputs, node_outputs;
 
     std::string framework_name;
@@ -896,7 +896,7 @@ Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool 
 
     opencv_onnx::GraphProto* saved_graph_proto = curr_graph_proto;
     Ptr<Graph> saved_graph = curr_graph;
-    std::vector<Ptr<OpData> > saved_prog;
+    std::vector<Ptr<LayerInfo> > saved_prog;
 
     curr_graph_proto = graph_proto;
     std::vector<Arg> inputs, outputs;
@@ -1707,7 +1707,7 @@ void ONNXImporter2::parseLoop(LayerParams& layerParams,
 
     CV_Assert(!subgraphs[0].empty());
 
-    Ptr<OpData>& loopLayer = curr_prog.back();
+    Ptr<LayerInfo>& loopLayer = curr_prog.back();
     *loopLayer->subgraphs() = subgraphs;
 }
 
@@ -1732,7 +1732,7 @@ void ONNXImporter2::parseIf(LayerParams& layerParams,
 
     CV_Assert_N(!thenelse[0].empty(), !thenelse[1].empty());
 
-    Ptr<OpData>& ifLayer = curr_prog.back();
+    Ptr<LayerInfo>& ifLayer = curr_prog.back();
     *ifLayer->subgraphs() = thenelse;
 }
 

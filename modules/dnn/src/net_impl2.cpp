@@ -316,7 +316,7 @@ public:
         return g;
     }*/
 
-    virtual const std::vector<Arg>& append(Ptr<OpData>& op,
+    virtual const std::vector<Arg>& append(Ptr<LayerInfo>& op,
                 const std::vector<std::string>& outnames) override
     {
         CV_Assert(op);
@@ -335,7 +335,7 @@ public:
         return op->outputs;
     }
 
-    virtual Arg append(Ptr<OpData>& op,
+    virtual Arg append(Ptr<LayerInfo>& op,
                const std::string& outname) override
     {
         std::vector<std::string> outnames = {outname};
@@ -378,7 +378,7 @@ public:
         for (size_t i = 0; i < nlayers; i++) {
             prindent(strm, argindent);
             strm << "// op #" << i << "\n";
-            const Ptr<OpData>& op = prog_[i];
+            const Ptr<LayerInfo>& op = prog_[i];
             op->dump(strm, argindent, i+1 < nlayers);
         }
         prindent(strm, subindent);
@@ -400,13 +400,13 @@ public:
         netimpl_->checkArgs(outputs);
         outputs_ = outputs;
     }
-    virtual const std::vector<Ptr<OpData> >& prog() const override { return prog_; }
+    virtual const std::vector<Ptr<LayerInfo> >& prog() const override { return prog_; }
     virtual int opBackend(int opidx) const override
     {
         return (opidx >= 0 && opidx < (int)execBackend_.size()) ? execBackend_[opidx]
                                                                 : DNN_BACKEND_OPENCV;
     }
-    virtual void setProg(const std::vector<Ptr<OpData> >& newprog) override
+    virtual void setProg(const std::vector<Ptr<LayerInfo> >& newprog) override
     {
         prog_ = newprog;
         exec_.clear();
@@ -419,7 +419,7 @@ public:
     std::string name_;
     std::vector<Arg> inputs_;
     std::vector<Arg> outputs_;
-    std::vector<Ptr<OpData> > prog_;
+    std::vector<Ptr<LayerInfo> > prog_;
     std::vector<Ptr<Layer> > exec_;
     std::vector<int> execBackend_;
     std::vector<std::vector<uchar> > inH2D_;
@@ -580,13 +580,13 @@ void Net::Impl::prepareForInference()
 void Net::Impl::finalizeGraph(const Ptr<Graph>& graph, bool useCUDA)
 {
     GraphImpl* g = static_cast<GraphImpl*>(graph.get());
-    const std::vector<Ptr<OpData> >& prog = g->prog_;
+    const std::vector<Ptr<LayerInfo> >& prog = g->prog_;
     size_t i, nops = prog.size();
     g->exec_.assign(nops, Ptr<Layer>());
     g->execBackend_.assign(nops, DNN_BACKEND_OPENCV);
 
     for (i = 0; i < nops; i++) {
-        const Ptr<OpData>& op = prog[i];
+        const Ptr<LayerInfo>& op = prog[i];
         if (!op)
             continue;
 
@@ -670,7 +670,7 @@ void Net::Impl::finalize()
 }
 
 void Net::Impl::allocateLayerOutputs(
-                          const Ptr<OpData>& layer,
+                          const Ptr<LayerInfo>& layer,
                           const std::vector<int>& inpTypes,
                           const std::vector<MatShape>& inpShapes,
                           std::vector<int>& outTypes,
@@ -1265,7 +1265,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
     }
     std::ostream& strm_ = dump_strm ? *dump_strm : std::cout;
     GraphImpl* gimpl = static_cast<GraphImpl*>(graph.get());
-    const std::vector<Ptr<OpData> >& prog = graph->prog();
+    const std::vector<Ptr<LayerInfo> >& prog = graph->prog();
     size_t i, nops = prog.size();
     const std::vector<Arg>& gr_inputs = graph->inputs();
     const std::vector<Arg>& gr_outputs = graph->outputs();
@@ -1298,7 +1298,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
     }
 
     for (size_t opidx = 0; opidx < nops; opidx++) {
-        const Ptr<OpData>& op = prog.at(opidx);
+        const Ptr<LayerInfo>& op = prog.at(opidx);
         if (!op) // in theory we shouldn't have any 'nops' at this stage, but just in case we skip them.
             continue;
         Ptr<Layer> layer = (opidx < gimpl->exec_.size()) ? gimpl->exec_[opidx] : Ptr<Layer>();
@@ -1575,8 +1575,8 @@ void Net::Impl::updateUseCounts(const Ptr<Graph>& graph, std::vector<int>& useco
         CV_Assert(output.idx < (int)usecounts.size());
         usecounts[output.idx]++;
     }
-    const std::vector<Ptr<OpData> >& prog = graph->prog();
-    for (const Ptr<OpData>& layer: prog) {
+    const std::vector<Ptr<LayerInfo> >& prog = graph->prog();
+    for (const Ptr<LayerInfo>& layer: prog) {
         const std::vector<Arg>& inputs = layer->inputs;
         for (const Arg& input: inputs) {
             CV_Assert(input.idx < (int)usecounts.size());
@@ -1607,14 +1607,14 @@ int Net::Impl::updateGraphOfs(const Ptr<Graph>& graph, int currofs, bool ismain)
         allgraphs.clear();
         layerNameToId.clear();
     }
-    const std::vector<Ptr<OpData> >& prog = graph->prog();
+    const std::vector<Ptr<LayerInfo> >& prog = graph->prog();
     size_t i, nops = prog.size();
     int subgraph_ofs = currofs + (int)nops;
     std::string name = graph->name();
     graphofs.insert(std::make_pair(name, currofs));
     allgraphs.push_back(graph);
     for (i = 0; i < nops; i++) {
-        const Ptr<OpData>& layer = prog[i];
+        const Ptr<LayerInfo>& layer = prog[i];
         layerNameToId.insert(std::make_pair(layer->name, currofs + (int)i));
         const std::vector<Ptr<Graph> >* subgraphs = layer->subgraphs();
         if (subgraphs) {
@@ -1761,12 +1761,12 @@ bool Net::Impl::tryInferGraphShapes(const Ptr<Graph>& graph,
     if (!graph)
         return true;
 
-    const std::vector<Ptr<OpData> >& prog = graph->prog();
+    const std::vector<Ptr<LayerInfo> >& prog = graph->prog();
 
     std::vector<MatShape> inpShapes, outShapes, tempShapes;
     std::vector<int> inpTypes, outTypes, tempTypes;
 
-    for (const Ptr<OpData>& layer: prog) {
+    for (const Ptr<LayerInfo>& layer: prog) {
         if (!layer)
             continue;
 

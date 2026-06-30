@@ -32,7 +32,7 @@ struct ModelFusionQDQ
     }
 
     template<typename _LayerType> _LayerType*
-    getLayer(std::vector<Ptr<OpData> >& newprog, int op_idx) const
+    getLayer(std::vector<Ptr<LayerInfo> >& newprog, int op_idx) const
     {
         return op_idx >= 0 ? dynamic_cast<_LayerType*>(newprog.at(op_idx).get()) : 0;
     }
@@ -48,10 +48,10 @@ struct ModelFusionQDQ
         return params;
     }
 
-    Ptr<OpData> createFusedLayer(const LayerParams& src) const
+    Ptr<LayerInfo> createFusedLayer(const LayerParams& src) const
     {
         LayerParams params = src;
-        Ptr<OpData> layer = LayerFactory::createLayerInstance(params.type, params);
+        Ptr<LayerInfo> layer = LayerFactory::createLayerInstance(params.type, params);
         if (!layer.empty())
             layer->netimpl = netimpl;
         return layer;
@@ -94,7 +94,7 @@ struct ModelFusionQDQ
                               size_t ninputs,
                               const std::vector<Arg>& inputs,
                               const std::vector<int>& producer_of,
-                              std::vector<Ptr<OpData> >& newprog,
+                              std::vector<Ptr<LayerInfo> >& newprog,
                               Arg& q_data_in,
                               Arg& out_scale,
                               Arg& out_zp,
@@ -118,10 +118,10 @@ struct ModelFusionQDQ
     {
         vector<Arg> removed_args;
         bool modified = false;
-        const std::vector<Ptr<OpData> >& prog = graph->prog();
+        const std::vector<Ptr<LayerInfo> >& prog = graph->prog();
         size_t i, nargs = netimpl->args.size(), nops = prog.size();
         std::vector<int> producer_of(nargs, -1);
-        std::vector<Ptr<OpData> > newprog;
+        std::vector<Ptr<LayerInfo> > newprog;
         std::vector<Arg> fused_inputs;
         std::set<int> skip_indices;
         std::vector<Arg> override_outputs;
@@ -129,7 +129,7 @@ struct ModelFusionQDQ
 
         for (i = 0; i < nops; i++) {
             if (skip_indices.count((int)i)) continue;
-            const Ptr<OpData>& layer = prog[i];
+            const Ptr<LayerInfo>& layer = prog[i];
             Layer* layer_ptr = (Layer*)layer.get();
             int fused_layer_idx = -1;
             std::vector<Ptr<Graph> >* subgraphs = layer->subgraphs();
@@ -219,7 +219,7 @@ struct ModelFusionQDQ
                                 removed_args.push_back(add_inp);
 
                             for (int dq_prog_idx : dq_prog_indices)
-                                newprog[dq_prog_idx] = Ptr<OpData>();
+                                newprog[dq_prog_idx] = Ptr<LayerInfo>();
 
                             break;
                         }
@@ -289,7 +289,7 @@ struct ModelFusionQDQ
                             fused_inputs.assign(1, dq->inputs[0]);
                             removed_args.push_back(q_data_in);
                             removed_args.push_back(relu_in);
-                            newprog[dq_idx] = Ptr<OpData>();
+                            newprog[dq_idx] = Ptr<LayerInfo>();
                             break;
                         }
                     }
@@ -363,7 +363,7 @@ struct ModelFusionQDQ
                             fused_inputs.assign(1, dq->inputs[0]);
                             removed_args.push_back(q_data_in);
                             removed_args.push_back(sig_in);
-                            newprog[dq_idx] = Ptr<OpData>();
+                            newprog[dq_idx] = Ptr<LayerInfo>();
                             break;
                         }
                     }
@@ -479,7 +479,7 @@ struct ModelFusionQDQ
                                         if (relu_out_uc <= 1) {
                                             fused_layer_idx = add_idx2;
                                             newprog[add_idx2] = eltInt8;
-                                            newprog[relu_layer_idx2] = Ptr<OpData>();
+                                            newprog[relu_layer_idx2] = Ptr<LayerInfo>();
                                             removed_args.push_back(q_inp);   // relu_out
                                             removed_args.push_back(relu_in2); // add_out
                                             for (size_t dk = 0; dk < add2->inputs.size(); dk++) {
@@ -487,7 +487,7 @@ struct ModelFusionQDQ
                                             }
                                             for (int dq_prog_idx : dq_prog_indices2) {
                                                 if (dq_prog_idx >= 0)
-                                                    newprog[dq_prog_idx] = Ptr<OpData>();
+                                                    newprog[dq_prog_idx] = Ptr<LayerInfo>();
                                             }
                                         } else {
                                             int new_idx = (int)newprog.size();
@@ -665,13 +665,13 @@ struct ModelFusionQDQ
                                     if (conv->inputs.size() == 3) {
                                         removed_args.push_back(conv->inputs[2]);
                                         if (dq_bias_idx >= 0)
-                                            newprog[dq_bias_idx] = Ptr<OpData>();
+                                            newprog[dq_bias_idx] = Ptr<LayerInfo>();
                                     }
                                     if (usecounts.at(conv_x.idx) == 1) {
                                         removed_args.push_back(conv_x);
-                                        newprog[dq_x_idx] = Ptr<OpData>();
+                                        newprog[dq_x_idx] = Ptr<LayerInfo>();
                                     }
-                                    newprog[dq_w_idx] = Ptr<OpData>();
+                                    newprog[dq_w_idx] = Ptr<LayerInfo>();
                                     break;
                                 }
                             }
@@ -770,8 +770,8 @@ struct ModelFusionQDQ
                                     removed_args.push_back(q_data_in);
                                     removed_args.push_back(mm_x);
                                     removed_args.push_back(mm_w);
-                                    newprog[dq_x_idx] = Ptr<OpData>();
-                                    newprog[dq_w_idx] = Ptr<OpData>();
+                                    newprog[dq_x_idx] = Ptr<LayerInfo>();
+                                    newprog[dq_w_idx] = Ptr<LayerInfo>();
                                     break;
                                 }
                             }
@@ -896,9 +896,9 @@ struct ModelFusionQDQ
                                             removed_args.push_back(add_bias->inputs[mm_inp_k]); // matmul out
                                             removed_args.push_back(mm_x);
                                             removed_args.push_back(mm_w);
-                                            newprog[mm2_idx] = Ptr<OpData>();
-                                            newprog[dq_x_idx] = Ptr<OpData>();
-                                            newprog[dq_w_idx] = Ptr<OpData>();
+                                            newprog[mm2_idx] = Ptr<LayerInfo>();
+                                            newprog[dq_x_idx] = Ptr<LayerInfo>();
+                                            newprog[dq_w_idx] = Ptr<LayerInfo>();
                                             break;
                                         }
                                     }
@@ -1026,8 +1026,8 @@ struct ModelFusionQDQ
                                             removed_args.push_back(q_data_in);
                                             removed_args.push_back(gemm_a);
                                             removed_args.push_back(gemm_b);
-                                            newprog[dq_a_idx] = Ptr<OpData>();
-                                            newprog[dq_b_idx] = Ptr<OpData>();
+                                            newprog[dq_a_idx] = Ptr<LayerInfo>();
+                                            newprog[dq_b_idx] = Ptr<LayerInfo>();
                                             break;
                                         }
                                     }
@@ -1089,7 +1089,7 @@ struct ModelFusionQDQ
                                 fused_inputs.assign(1, dq->inputs[0]);
                                 removed_args.push_back(q_data_in);
                                 removed_args.push_back(pool_in);
-                                newprog[dq_idx] = Ptr<OpData>();
+                                newprog[dq_idx] = Ptr<LayerInfo>();
                                 break;
                             }
                         }
@@ -1142,7 +1142,7 @@ struct ModelFusionQDQ
                                         fused_inputs.push_back(shuffle_layer->inputs[si]);
                                     removed_args.push_back(ql_data);
                                     removed_args.push_back(shuffle_inp);
-                                    newprog[dq_idx] = Ptr<OpData>();
+                                    newprog[dq_idx] = Ptr<LayerInfo>();
                                     break;
                                 }
                             }
@@ -1304,7 +1304,7 @@ struct ModelFusionQDQ
 
             conv->float_input = true;
             conv->inputs[0] = ql_data;
-            newprog[ql_idx] = Ptr<OpData>();
+            newprog[ql_idx] = Ptr<LayerInfo>();
             modified = true;
         }
 
@@ -1339,7 +1339,7 @@ struct ModelFusionQDQ
                             if (inp.idx >= 0 && inp.idx < (int)nargs)
                                 uc[inp.idx]--;
                         }
-                        layer = Ptr<OpData>();
+                        layer = Ptr<LayerInfo>();
                         changed = true;
                     }
                 }

@@ -788,7 +788,7 @@ class CUDAConv2Layer : public Layer
 public:
     CUDAConv2Layer(const Ptr<Conv2LayerImpl>& conv_, void* ctx_) : conv(conv_), ctx(ctx_) {}
 
-    static Ptr<Layer> create(const Ptr<OpData>& data, void* backendCtx)
+    static Ptr<Layer> create(const Ptr<LayerInfo>& data, void* backendCtx)
     {
         Ptr<Conv2LayerImpl> conv = data.dynamicCast<Conv2LayerImpl>();
         if (!conv || !backendCtx || !conv->cudaSupported())

@@ -10,11 +10,11 @@ namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
 
-OpData::OpData() {
+LayerInfo::LayerInfo() {
     netimpl = nullptr;
 }
 
-OpData::OpData(const LayerParams& params)
+LayerInfo::LayerInfo(const LayerParams& params)
     : blobs(params.blobs)
     , name(params.name)
     , type(params.type)
@@ -22,21 +22,21 @@ OpData::OpData(const LayerParams& params)
     netimpl = nullptr;
 }
 
-OpData::~OpData() {}
+LayerInfo::~LayerInfo() {}
 
-void OpData::setParamsFrom(const LayerParams& params)
+void LayerInfo::setParamsFrom(const LayerParams& params)
 {
     blobs = params.blobs;
     name = params.name;
     type = params.type;
 }
 
-int OpData::inputNameToIndex(String)
+int LayerInfo::inputNameToIndex(String)
 {
     return -1;
 }
 
-int OpData::outputNameToIndex(const String&)
+int LayerInfo::outputNameToIndex(const String&)
 {
     return 0;
 }
@@ -47,7 +47,7 @@ Layer::Layer() {
 }
 
 Layer::Layer(const LayerParams& params)
-    : OpData(params)
+    : LayerInfo(params)
 {
     preferableTarget = DNN_TARGET_CPU;
 }
@@ -113,13 +113,13 @@ void Layer::forwardCUDA(const std::vector<Ptr<BackendWrapper> >&,
     CV_Error(Error::StsNotImplemented, "CUDA forward of " + type + " layers is not defined.");
 }
 
-void OpData::getScaleShift(Mat& scale, Mat& shift) const
+void LayerInfo::getScaleShift(Mat& scale, Mat& shift) const
 {
     scale = Mat();
     shift = Mat();
 }
 
-void OpData::getScaleZeropoint(float& scale, int& zeropoint) const
+void LayerInfo::getScaleZeropoint(float& scale, int& zeropoint) const
 {
     scale = 1.f;
     zeropoint = 0;
@@ -266,7 +266,7 @@ void Layer::run(const std::vector<Mat>& inputs, std::vector<Mat>& outputs, std::
 
 Layer::~Layer() {}
 
-bool OpData::getMemoryShapes(const std::vector<MatShape>& inputs,
+bool LayerInfo::getMemoryShapes(const std::vector<MatShape>& inputs,
         const int requiredOutputs,
         std::vector<MatShape>& outputs,
         std::vector<MatShape>& internals) const
@@ -276,7 +276,7 @@ bool OpData::getMemoryShapes(const std::vector<MatShape>& inputs,
     return false;
 }
 
-void OpData::getTypes(const std::vector<MatType>&inputs,
+void LayerInfo::getTypes(const std::vector<MatType>&inputs,
                      const int requiredOutputs,
                      const int requiredInternals,
                      std::vector<MatType>&outputs,
@@ -290,7 +290,7 @@ void OpData::getTypes(const std::vector<MatType>&inputs,
     internals.assign(requiredInternals, inputs[0]);
 }
 
-int OpData::getLayouts(const std::vector<DataLayout>& actualInputs,
+int LayerInfo::getLayouts(const std::vector<DataLayout>& actualInputs,
                        std::vector<DataLayout>& desiredInputs,
                        const int requiredOutputs,
                        std::vector<DataLayout>& outputs) const
@@ -300,43 +300,43 @@ int OpData::getLayouts(const std::vector<DataLayout>& actualInputs,
     return 0;
 }
 
-int64 OpData::getFLOPS(const std::vector<MatShape>&,
+int64 LayerInfo::getFLOPS(const std::vector<MatShape>&,
                       const std::vector<MatShape>&) const
 {
     return 0;
 }
 
-bool OpData::updateMemoryShapes(const std::vector<MatShape>& inputs)
+bool LayerInfo::updateMemoryShapes(const std::vector<MatShape>& inputs)
 {
     return true;
 }
 
-std::vector<Ptr<Graph> >* OpData::subgraphs() const
+std::vector<Ptr<Graph> >* LayerInfo::subgraphs() const
 {
     return nullptr;
 }
 
-bool OpData::alwaysSupportInplace() const
+bool LayerInfo::alwaysSupportInplace() const
 {
     return false;
 }
 
-bool OpData::dynamicOutputShapes() const
+bool LayerInfo::dynamicOutputShapes() const
 {
     return false;
 }
 
-bool OpData::isDataShuffling() const
+bool LayerInfo::isDataShuffling() const
 {
     return false;
 }
 
-std::ostream& OpData::dumpAttrs(std::ostream& strm, int) const
+std::ostream& LayerInfo::dumpAttrs(std::ostream& strm, int) const
 {
     return strm;
 }
 
-std::ostream& OpData::dump(std::ostream& strm, int indent, bool comma) const
+std::ostream& LayerInfo::dump(std::ostream& strm, int indent, bool comma) const
 {
     CV_Assert(netimpl);
     size_t ninputs = inputs.size();

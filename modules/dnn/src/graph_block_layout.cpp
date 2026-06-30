@@ -11,7 +11,7 @@ CV__DNN_INLINE_NS_BEGIN
 using std::vector;
 using std::string;
 
-using PLayer = Ptr<OpData>;
+using PLayer = Ptr<LayerInfo>;
 using PGraph = Ptr<Graph>;
 
 /* Inserts layout conversion operations (if needed) into the model graph and subgraphs.

@@ -128,7 +128,7 @@ void LayerFactory::registerOp(const String& type, OpConstructor constructor)
     getOpFactoryImpl()[type] = constructor;  // last registration wins
 }
 
-Ptr<OpData> LayerFactory::createOp(const String& type, const LayerParams& params)
+Ptr<LayerInfo> LayerFactory::createOp(const String& type, const LayerParams& params)
 {
     CV_TRACE_FUNCTION();
     CV_TRACE_ARG_VALUE(type, "type", type.c_str());
@@ -137,7 +137,7 @@ Ptr<OpData> LayerFactory::createOp(const String& type, const LayerParams& params
     OpFactory_Impl::const_iterator it = impl.find(type);
     if (it != impl.end())
         return it->second(params);
-    return Ptr<OpData>();  // NULL: no OpData constructor for this type yet
+    return Ptr<LayerInfo>();  // NULL: no LayerInfo constructor for this type yet
 }
 
 void LayerFactory::registerExec(const String& type, int backendId, ExecConstructor constructor)
@@ -150,7 +150,7 @@ void LayerFactory::registerExec(const String& type, int backendId, ExecConstruct
 }
 
 Ptr<Layer> LayerFactory::createExec(const String& type, int backendId,
-                                    const Ptr<OpData>& data, void* backendCtx)
+                                    const Ptr<LayerInfo>& data, void* backendCtx)
 {
     CV_TRACE_FUNCTION();
     CV_TRACE_ARG_VALUE(type, "type", type.c_str());
