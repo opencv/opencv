@@ -18,7 +18,7 @@ class CUDALegacyExec : public Layer
 public:
     CUDALegacyExec(const Ptr<Layer>& impl_, void* ctx_) : impl(impl_), ctx(ctx_) {}
 
-    static Ptr<Layer> create(const Ptr<OpData>& data, void* backendCtx)
+    static Ptr<Layer> create(const Ptr<LayerInfo>& data, void* backendCtx)
     {
         Ptr<Layer> impl = data.dynamicCast<Layer>();
         if (!impl || !backendCtx || !impl->supportBackend(DNN_BACKEND_CUDA))

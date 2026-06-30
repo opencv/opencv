@@ -434,7 +434,7 @@ struct Net::Impl : public detail::NetImplBase
     // if useBufferPool==true, the method uses 'buffers'
     // for outputs (according to bufidxs)
     // instead of allocating fresh outputs
-    void allocateLayerOutputs(const Ptr<OpData>& layer,
+    void allocateLayerOutputs(const Ptr<LayerInfo>& layer,
                               const std::vector<int>& inpTypes,
                               const std::vector<MatShape>& inpShapes,
                               std::vector<int>& outTypes,
@@ -532,7 +532,7 @@ struct Net::Impl : public detail::NetImplBase
 
 };  // Net::Impl
 
-inline Net::Impl* getNetImpl(const OpData* op)
+inline Net::Impl* getNetImpl(const LayerInfo* op)
 {
     return reinterpret_cast<Net::Impl*>(op->netimpl);
 }
