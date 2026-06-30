@@ -274,7 +274,7 @@ Ptr<Layer> Net::Impl::getLayer(int layerId) const
         CV_Assert(0 <= layerId && layerId < totalLayers);
         int graph_ofs = 0;
         for (const Ptr<Graph>& graph : allgraphs) {
-            const std::vector<Ptr<OpData> >& prog = graph->prog();
+            const std::vector<Ptr<LayerInfo> >& prog = graph->prog();
             int nops = (int)prog.size();
             CV_Assert(layerId >= graph_ofs);
             if (layerId < graph_ofs + nops)
@@ -1679,7 +1679,7 @@ void Net::Impl::setParam(const std::string& outputTensorName, int numParam, cons
         }
 
         int targetIdx = (int)it->second;
-        const std::vector<Ptr<OpData>>& prog = mainGraph->prog();
+        const std::vector<Ptr<LayerInfo>>& prog = mainGraph->prog();
         for (const auto& layer : prog) {
             bool produces = false;
             for (const Arg& out : layer->outputs)
@@ -2385,8 +2385,8 @@ std::vector<String> Net::Impl::getLayerNames() const
     if (mainGraph) {
         res.reserve(totalLayers);
         for (const Ptr<Graph>& graph: allgraphs) {
-            const std::vector<Ptr<OpData> >& prog = graph->prog();
-            for (const Ptr<OpData>& layer: prog)
+            const std::vector<Ptr<LayerInfo> >& prog = graph->prog();
+            for (const Ptr<LayerInfo>& layer: prog)
                 res.push_back(layer->name);
         }
     } else {
@@ -2416,7 +2416,7 @@ std::vector<int> Net::Impl::getUnconnectedOutLayers() const
 
         int graph_ofs = 0;
         for (const auto& graph : allgraphs) {
-            const std::vector<Ptr<OpData>>& prog = graph->prog();
+            const std::vector<Ptr<LayerInfo>>& prog = graph->prog();
             for (int i = 0; i < (int)prog.size(); i++) {
                 for (const auto& layerOut : prog[i]->outputs) {
                     if (outArgIdxs.count(layerOut.idx)) {
@@ -2501,9 +2501,9 @@ int64 Net::Impl::getFLOPSGraph(const Ptr<Graph>& graph,
         return 0;
 
     int64 flops = 0;
-    const std::vector<Ptr<OpData>>& prog = graph->prog();
+    const std::vector<Ptr<LayerInfo>>& prog = graph->prog();
 
-    for (const Ptr<OpData>& layer : prog) {
+    for (const Ptr<LayerInfo>& layer : prog) {
         if (!layer)
             continue;
 
@@ -2595,7 +2595,7 @@ int64 Net::Impl::getFLOPS(
         for (const Ptr<Graph>& graph : allgraphs) {
             int progSize = (int)graph->prog().size();
             if (localIdx < progSize) {
-                const Ptr<OpData>& layer = graph->prog()[localIdx];
+                const Ptr<LayerInfo>& layer = graph->prog()[localIdx];
                 if (!layer)
                     return 0;
 
@@ -2694,8 +2694,8 @@ void Net::Impl::collectLayerInfo(std::vector<String>& names, std::vector<String>
         names.reserve(totalLayers);
         types.reserve(totalLayers);
         for (const Ptr<Graph>& graph : allgraphs) {
-            const std::vector<Ptr<OpData>>& prog = graph->prog();
-            for (const Ptr<OpData>& layer : prog) {
+            const std::vector<Ptr<LayerInfo>>& prog = graph->prog();
+            for (const Ptr<LayerInfo>& layer : prog) {
                 names.push_back(layer ? layer->name : "null");
                 types.push_back(layer ? layer->type : "null");
             }
@@ -3009,8 +3009,8 @@ void Net::Impl::getLayerTypes(std::vector<String>& layersTypes) const
     if (mainGraph) {
         std::set<std::string> layersTypesSet;
         for (const Ptr<Graph>& g: allgraphs) {
-            const std::vector<Ptr<OpData> >& prog = g->prog();
-            for (const Ptr<OpData>& layer: prog) {
+            const std::vector<Ptr<LayerInfo> >& prog = g->prog();
+            for (const Ptr<LayerInfo>& layer: prog) {
                 if (!layer)
                     continue;
                 layersTypesSet.insert(layer->type);
@@ -3042,8 +3042,8 @@ int Net::Impl::getLayersCount(const String& layerType) const
     if (mainGraph) {
         int count = 0;
         for (const Ptr<Graph>& g: allgraphs) {
-            const std::vector<Ptr<OpData> >& prog = g->prog();
-            for (const Ptr<OpData>& layer: prog) {
+            const std::vector<Ptr<LayerInfo> >& prog = g->prog();
+            for (const Ptr<LayerInfo>& layer: prog) {
                 if (!layer)
                     continue;
                 if (layer->type == layerType)

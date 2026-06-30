@@ -226,7 +226,7 @@ struct BufferAllocator
                 }
             }
         }
-        const std::vector<Ptr<OpData> >& prog = graph->prog();
+        const std::vector<Ptr<LayerInfo> >& prog = graph->prog();
         for (const auto& layer: prog) {
             bool inplace = false;
             Arg reuseArg;
