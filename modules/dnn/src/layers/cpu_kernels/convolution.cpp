@@ -164,13 +164,18 @@ Ptr<FastConv> initFastConv(
     }
 
     conv->conv_type = ifRunDepthWise && conv_dim != CONV_3D ? CONV_TYPE_DEPTHWISE :
-            useWinograd && (conv_dim == CONV_2D && (conv->useSIMD128 || conv->useAVX || conv->useAVX2 || conv->useNEON) &&
+            useWinograd && (conv_dim == CONV_2D && (conv->useSIMD128 || conv->useAVX || conv->useAVX2 || conv->useNEON || conv->useRVV) &&
             Hk == 3 && Wk == 3 && dilation_h == 1 && dilation_w == 1 && stride_h == 1 && stride_w == 1) ?
             CONV_TYPE_WINOGRAD3X3 :
             (ifRunDepthWiseRemain ? CONV_TYPE_DEPTHWISE_REMAIN : CONV_TYPE_GENERIC);
 
-#if !(CV_NEON || CV_SIMD128 || CV_TRY_AVX || CV_TRY_AVX2)
-    if (conv->conv_type == CONV_TYPE_WINOGRAD3X3) // Disabel Winograd when CV_NEON, CV_SIMD128 ,CV_TRY_AVX and CV_TRY_AVX2 are not available.
+#if !(CV_NEON || CV_SIMD128 || CV_TRY_AVX || CV_TRY_AVX2 || CV_RVV)
+    if (conv->conv_type == CONV_TYPE_WINOGRAD3X3) // Disabel Winograd when CV_NEON, CV_SIMD128, CV_TRY_AVX, CV_TRY_AVX2 and CV_RVV are not available.
+        conv->conv_type = CONV_TYPE_GENERIC;
+#endif
+#if CV_RVV
+    // Winograd RVV requires vsetvlmax_e32m1() >= 8 (i.e. VLEN >= 256). Fall back to generic on narrower implementations.
+    if (conv->conv_type == CONV_TYPE_WINOGRAD3X3 && conv->useRVV && (int)__riscv_vsetvlmax_e32m1() < 8)
         conv->conv_type = CONV_TYPE_GENERIC;
 #endif
 
@@ -244,6 +249,8 @@ Ptr<FastConv> initFastConv(
 
 #if CV_TRY_AVX || CV_TRY_AVX2
         const int CONV_WINO_ATOM_F32 = (conv->useAVX || conv->useAVX2) ? 8 : 4;
+#elif CV_RVV
+        const int CONV_WINO_ATOM_F32 = (conv->useRVV && (int)__riscv_vsetvlmax_e32m1() >= 8) ? 8 : 4;
 #else
         const int CONV_WINO_ATOM_F32 = 4;
 #endif

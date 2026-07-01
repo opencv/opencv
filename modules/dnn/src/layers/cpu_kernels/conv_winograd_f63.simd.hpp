@@ -900,6 +900,236 @@ cv::dnn::Winofunc getWinofunc_F32()
 
 
 // end of NEON/AArch64
+#elif CV_RVV
+
+void impl_accum_F32(const uchar* inwptr_, const uchar* wptr_, uchar* outbuf_, int Cg, int iblock,
+                    const int winoIblock, const int winoKblock, const int winoAtomF32, const int winoNatomF32)
+{
+    const float* inwptr = (const float*)inwptr_;
+    const float* wptr   = (const float*)wptr_;
+    float*       outbuf = (float*)outbuf_;
+    CV_Assert(winoIblock == 6 && winoKblock == 4 && winoAtomF32 == 8);
+    const size_t vl = __riscv_vsetvlmax_e32m1(); // 8 on VLEN=256
+
+    if (iblock > 3) {
+        for (int atom_id = 0; atom_id < winoNatomF32; atom_id++,
+             outbuf += winoAtomF32,
+             inwptr += Cg * winoIblock * winoAtomF32,
+             wptr   += Cg * winoKblock * winoAtomF32)
+        {
+            vfloat32m1_t z = __riscv_vfmv_v_f_f32m1(0.f, vl);
+            vfloat32m1_t s00=z,s01=z,s02=z,s03=z,s04=z,s05=z;
+            vfloat32m1_t s10=z,s11=z,s12=z,s13=z,s14=z,s15=z;
+            vfloat32m1_t s20=z,s21=z,s22=z,s23=z,s24=z,s25=z;
+            vfloat32m1_t s30=z,s31=z,s32=z,s33=z,s34=z,s35=z;
+            const float* iw = inwptr;
+            const float* pw = wptr;
+            for (int c = 0; c < Cg; c++,
+                 iw += winoIblock * winoAtomF32,
+                 pw += winoKblock * winoAtomF32)
+            {
+                vfloat32m1_t w0 = __riscv_vle32_v_f32m1(pw,    vl);
+                vfloat32m1_t w1 = __riscv_vle32_v_f32m1(pw+8,  vl);
+                vfloat32m1_t w2 = __riscv_vle32_v_f32m1(pw+16, vl);
+                vfloat32m1_t w3 = __riscv_vle32_v_f32m1(pw+24, vl);
+                vfloat32m1_t x0, x1;
+                x0 = __riscv_vle32_v_f32m1(iw,    vl); x1 = __riscv_vle32_v_f32m1(iw+8,  vl);
+                s00 = __riscv_vfmacc_vv_f32m1(s00, w0, x0, vl); s01 = __riscv_vfmacc_vv_f32m1(s01, w0, x1, vl);
+                s10 = __riscv_vfmacc_vv_f32m1(s10, w1, x0, vl); s11 = __riscv_vfmacc_vv_f32m1(s11, w1, x1, vl);
+                s20 = __riscv_vfmacc_vv_f32m1(s20, w2, x0, vl); s21 = __riscv_vfmacc_vv_f32m1(s21, w2, x1, vl);
+                s30 = __riscv_vfmacc_vv_f32m1(s30, w3, x0, vl); s31 = __riscv_vfmacc_vv_f32m1(s31, w3, x1, vl);
+                x0 = __riscv_vle32_v_f32m1(iw+16, vl); x1 = __riscv_vle32_v_f32m1(iw+24, vl);
+                s02 = __riscv_vfmacc_vv_f32m1(s02, w0, x0, vl); s03 = __riscv_vfmacc_vv_f32m1(s03, w0, x1, vl);
+                s12 = __riscv_vfmacc_vv_f32m1(s12, w1, x0, vl); s13 = __riscv_vfmacc_vv_f32m1(s13, w1, x1, vl);
+                s22 = __riscv_vfmacc_vv_f32m1(s22, w2, x0, vl); s23 = __riscv_vfmacc_vv_f32m1(s23, w2, x1, vl);
+                s32 = __riscv_vfmacc_vv_f32m1(s32, w3, x0, vl); s33 = __riscv_vfmacc_vv_f32m1(s33, w3, x1, vl);
+                x0 = __riscv_vle32_v_f32m1(iw+32, vl); x1 = __riscv_vle32_v_f32m1(iw+40, vl);
+                s04 = __riscv_vfmacc_vv_f32m1(s04, w0, x0, vl); s05 = __riscv_vfmacc_vv_f32m1(s05, w0, x1, vl);
+                s14 = __riscv_vfmacc_vv_f32m1(s14, w1, x0, vl); s15 = __riscv_vfmacc_vv_f32m1(s15, w1, x1, vl);
+                s24 = __riscv_vfmacc_vv_f32m1(s24, w2, x0, vl); s25 = __riscv_vfmacc_vv_f32m1(s25, w2, x1, vl);
+                s34 = __riscv_vfmacc_vv_f32m1(s34, w3, x0, vl); s35 = __riscv_vfmacc_vv_f32m1(s35, w3, x1, vl);
+            }
+            __riscv_vse32_v_f32m1(outbuf,        s00, vl); __riscv_vse32_v_f32m1(outbuf+1*64,  s01, vl);
+            __riscv_vse32_v_f32m1(outbuf+2*64,   s02, vl); __riscv_vse32_v_f32m1(outbuf+3*64,  s03, vl);
+            __riscv_vse32_v_f32m1(outbuf+4*64,   s04, vl); __riscv_vse32_v_f32m1(outbuf+5*64,  s05, vl);
+            __riscv_vse32_v_f32m1(outbuf+6*64,   s10, vl); __riscv_vse32_v_f32m1(outbuf+7*64,  s11, vl);
+            __riscv_vse32_v_f32m1(outbuf+8*64,   s12, vl); __riscv_vse32_v_f32m1(outbuf+9*64,  s13, vl);
+            __riscv_vse32_v_f32m1(outbuf+10*64,  s14, vl); __riscv_vse32_v_f32m1(outbuf+11*64, s15, vl);
+            __riscv_vse32_v_f32m1(outbuf+12*64,  s20, vl); __riscv_vse32_v_f32m1(outbuf+13*64, s21, vl);
+            __riscv_vse32_v_f32m1(outbuf+14*64,  s22, vl); __riscv_vse32_v_f32m1(outbuf+15*64, s23, vl);
+            __riscv_vse32_v_f32m1(outbuf+16*64,  s24, vl); __riscv_vse32_v_f32m1(outbuf+17*64, s25, vl);
+            __riscv_vse32_v_f32m1(outbuf+18*64,  s30, vl); __riscv_vse32_v_f32m1(outbuf+19*64, s31, vl);
+            __riscv_vse32_v_f32m1(outbuf+20*64,  s32, vl); __riscv_vse32_v_f32m1(outbuf+21*64, s33, vl);
+            __riscv_vse32_v_f32m1(outbuf+22*64,  s34, vl); __riscv_vse32_v_f32m1(outbuf+23*64, s35, vl);
+        }
+    } else {
+        for (int atom_id = 0; atom_id < winoNatomF32; atom_id++,
+             outbuf += winoAtomF32,
+             inwptr += Cg * winoIblock * winoAtomF32,
+             wptr   += Cg * winoKblock * winoAtomF32)
+        {
+            vfloat32m1_t z = __riscv_vfmv_v_f_f32m1(0.f, vl);
+            vfloat32m1_t s00=z,s01=z,s02=z;
+            vfloat32m1_t s10=z,s11=z,s12=z;
+            vfloat32m1_t s20=z,s21=z,s22=z;
+            vfloat32m1_t s30=z,s31=z,s32=z;
+            const float* iw = inwptr;
+            const float* pw = wptr;
+            for (int c = 0; c < Cg; c++,
+                 iw += winoIblock * winoAtomF32,
+                 pw += winoKblock * winoAtomF32)
+            {
+                vfloat32m1_t w0 = __riscv_vle32_v_f32m1(pw,    vl);
+                vfloat32m1_t w1 = __riscv_vle32_v_f32m1(pw+8,  vl);
+                vfloat32m1_t w2 = __riscv_vle32_v_f32m1(pw+16, vl);
+                vfloat32m1_t w3 = __riscv_vle32_v_f32m1(pw+24, vl);
+                vfloat32m1_t x0 = __riscv_vle32_v_f32m1(iw,    vl);
+                vfloat32m1_t x1 = __riscv_vle32_v_f32m1(iw+8,  vl);
+                vfloat32m1_t x2 = __riscv_vle32_v_f32m1(iw+16, vl);
+                s00 = __riscv_vfmacc_vv_f32m1(s00, w0, x0, vl); s01 = __riscv_vfmacc_vv_f32m1(s01, w0, x1, vl); s02 = __riscv_vfmacc_vv_f32m1(s02, w0, x2, vl);
+                s10 = __riscv_vfmacc_vv_f32m1(s10, w1, x0, vl); s11 = __riscv_vfmacc_vv_f32m1(s11, w1, x1, vl); s12 = __riscv_vfmacc_vv_f32m1(s12, w1, x2, vl);
+                s20 = __riscv_vfmacc_vv_f32m1(s20, w2, x0, vl); s21 = __riscv_vfmacc_vv_f32m1(s21, w2, x1, vl); s22 = __riscv_vfmacc_vv_f32m1(s22, w2, x2, vl);
+                s30 = __riscv_vfmacc_vv_f32m1(s30, w3, x0, vl); s31 = __riscv_vfmacc_vv_f32m1(s31, w3, x1, vl); s32 = __riscv_vfmacc_vv_f32m1(s32, w3, x2, vl);
+            }
+            __riscv_vse32_v_f32m1(outbuf,        s00, vl); __riscv_vse32_v_f32m1(outbuf+1*64,  s01, vl); __riscv_vse32_v_f32m1(outbuf+2*64,  s02, vl);
+            __riscv_vse32_v_f32m1(outbuf+6*64,   s10, vl); __riscv_vse32_v_f32m1(outbuf+7*64,  s11, vl); __riscv_vse32_v_f32m1(outbuf+8*64,  s12, vl);
+            __riscv_vse32_v_f32m1(outbuf+12*64,  s20, vl); __riscv_vse32_v_f32m1(outbuf+13*64, s21, vl); __riscv_vse32_v_f32m1(outbuf+14*64, s22, vl);
+            __riscv_vse32_v_f32m1(outbuf+18*64,  s30, vl); __riscv_vse32_v_f32m1(outbuf+19*64, s31, vl); __riscv_vse32_v_f32m1(outbuf+20*64, s32, vl);
+        }
+    }
+}
+
+static void wino_bt8x8_rvv(const float* x0, const float* x1, const float* x2,
+                            const float* x3, const float* x4, const float* x5,
+                            const float* x6, const float* x7, float tmp[8][8], size_t vl)
+{
+    vfloat32m1_t r0,r1,r2,r3,r4,r5,r6,r7,t0,t1;
+    r0=__riscv_vle32_v_f32m1(x0,vl); r1=__riscv_vle32_v_f32m1(x1,vl);
+    r2=__riscv_vle32_v_f32m1(x2,vl); r3=__riscv_vle32_v_f32m1(x3,vl);
+    r4=__riscv_vle32_v_f32m1(x4,vl); r5=__riscv_vle32_v_f32m1(x5,vl);
+    r6=__riscv_vle32_v_f32m1(x6,vl); r7=__riscv_vle32_v_f32m1(x7,vl);
+
+    t0 = __riscv_vfsub_vv_f32m1(r4, r2, vl);
+    vfloat32m1_t y0 = __riscv_vfmacc_vf_f32m1(__riscv_vfsub_vv_f32m1(r0, r6, vl), 5.25f, t0, vl);
+    t1 = __riscv_vfsub_vv_f32m1(r3, r5, vl);
+    vfloat32m1_t y7 = __riscv_vfmacc_vf_f32m1(__riscv_vfsub_vv_f32m1(r7, r1, vl), 5.25f, t1, vl);
+
+    t0 = __riscv_vfmacc_vf_f32m1(__riscv_vfadd_vv_f32m1(r1, r5, vl), -4.25f, r3, vl);
+    t1 = __riscv_vfmacc_vf_f32m1(__riscv_vfadd_vv_f32m1(r2, r6, vl), -4.25f, r4, vl);
+    vfloat32m1_t y1 = __riscv_vfadd_vv_f32m1(t0, t1, vl);
+    vfloat32m1_t y2 = __riscv_vfsub_vv_f32m1(t1, t0, vl);
+
+    t0 = __riscv_vfmacc_vf_f32m1(__riscv_vfmacc_vf_f32m1(__riscv_vfadd_vv_f32m1(r5,r5,vl),  0.5f, r1, vl), -2.5f, r3, vl);
+    t1 = __riscv_vfmacc_vf_f32m1(__riscv_vfmacc_vf_f32m1(r6, 0.25f, r2, vl), -1.25f, r4, vl);
+    vfloat32m1_t y3 = __riscv_vfadd_vv_f32m1(t0, t1, vl);
+    vfloat32m1_t y4 = __riscv_vfsub_vv_f32m1(t1, t0, vl);
+
+    t0 = __riscv_vfmacc_vf_f32m1(__riscv_vfmacc_vf_f32m1(__riscv_vfadd_vv_f32m1(r1,r1,vl),  0.5f, r5, vl), -2.5f, r3, vl);
+    t1 = __riscv_vfmacc_vf_f32m1(__riscv_vfmacc_vf_f32m1(r6, 4.f, r2, vl), -5.f, r4, vl);
+    vfloat32m1_t y5 = __riscv_vfadd_vv_f32m1(t0, t1, vl);
+    vfloat32m1_t y6 = __riscv_vfsub_vv_f32m1(t1, t0, vl);
+
+    __riscv_vse32_v_f32m1(tmp[0], y0, vl); __riscv_vse32_v_f32m1(tmp[1], y1, vl);
+    __riscv_vse32_v_f32m1(tmp[2], y2, vl); __riscv_vse32_v_f32m1(tmp[3], y3, vl);
+    __riscv_vse32_v_f32m1(tmp[4], y4, vl); __riscv_vse32_v_f32m1(tmp[5], y5, vl);
+    __riscv_vse32_v_f32m1(tmp[6], y6, vl); __riscv_vse32_v_f32m1(tmp[7], y7, vl);
+}
+
+void impl_BtXB_8x8_F32(const float* inptr, int inpstep, uchar* outptr_, int Cg,
+                        const int winoIblock, const int winoAtomF32)
+{
+    float* outptr = (float*)outptr_;
+    const size_t vl = __riscv_vsetvlmax_e32m1();
+    float tmp[8][8], tmp2[8][8];
+
+    wino_bt8x8_rvv(inptr,           inptr+inpstep,   inptr+inpstep*2, inptr+inpstep*3,
+                   inptr+inpstep*4, inptr+inpstep*5, inptr+inpstep*6, inptr+inpstep*7,
+                   tmp, vl);
+
+    for (int i = 0; i < 8; i++)
+        for (int j = i+1; j < 8; j++) {
+            float t = tmp[i][j]; tmp[i][j] = tmp[j][i]; tmp[j][i] = t;
+        }
+
+    wino_bt8x8_rvv(tmp[0], tmp[1], tmp[2], tmp[3], tmp[4], tmp[5], tmp[6], tmp[7], tmp2, vl);
+
+    const int outstep = winoIblock * winoAtomF32 * Cg;
+    for (int i = 0; i < 8; i++)
+        __riscv_vse32_v_f32m1(outptr + outstep*i, __riscv_vle32_v_f32m1(tmp2[i], vl), vl);
+}
+
+static void wino_at8x6_rvv(const float* x0, const float* x1, const float* x2,
+                            const float* x3, const float* x4, const float* x5,
+                            const float* x6, const float* x7, float tmp[8][8], size_t vl)
+{
+    vfloat32m1_t r0,r1,r2,r3,r4,r5,r6,r7,s12,s34,s56;
+    r0=__riscv_vle32_v_f32m1(x0,vl); r1=__riscv_vle32_v_f32m1(x1,vl);
+    r2=__riscv_vle32_v_f32m1(x2,vl); r3=__riscv_vle32_v_f32m1(x3,vl);
+    r4=__riscv_vle32_v_f32m1(x4,vl); r5=__riscv_vle32_v_f32m1(x5,vl);
+    r6=__riscv_vle32_v_f32m1(x6,vl); r7=__riscv_vle32_v_f32m1(x7,vl);
+
+    s12 = __riscv_vfadd_vv_f32m1(r1, r2, vl);
+    s34 = __riscv_vfadd_vv_f32m1(r3, r4, vl);
+    s56 = __riscv_vfadd_vv_f32m1(r5, r6, vl);
+    vfloat32m1_t y0 = __riscv_vfadd_vv_f32m1(__riscv_vfadd_vv_f32m1(__riscv_vfadd_vv_f32m1(r0, s12, vl), s34, vl), s56, vl);
+    vfloat32m1_t y2 = __riscv_vfmacc_vf_f32m1(__riscv_vfmacc_vf_f32m1(s12,  4.f,    s34, vl), 0.25f,   s56, vl);
+    vfloat32m1_t y4 = __riscv_vfmacc_vf_f32m1(__riscv_vfmacc_vf_f32m1(s12, 16.f,    s34, vl), 1.f/16,  s56, vl);
+
+    s12 = __riscv_vfsub_vv_f32m1(r1, r2, vl);
+    s34 = __riscv_vfsub_vv_f32m1(r3, r4, vl);
+    s56 = __riscv_vfsub_vv_f32m1(r5, r6, vl);
+    vfloat32m1_t y1 = __riscv_vfmacc_vf_f32m1(__riscv_vfmacc_vf_f32m1(s12,  2.f,    s34, vl), 0.5f,    s56, vl);
+    vfloat32m1_t y3 = __riscv_vfmacc_vf_f32m1(__riscv_vfmacc_vf_f32m1(s12,  8.f,    s34, vl), 0.125f,  s56, vl);
+    vfloat32m1_t y5 = __riscv_vfmacc_vf_f32m1(__riscv_vfmacc_vf_f32m1(__riscv_vfadd_vv_f32m1(r7, s12, vl), 32.f, s34, vl), 1.f/32, s56, vl);
+
+    __riscv_vse32_v_f32m1(tmp[0], y0, vl); __riscv_vse32_v_f32m1(tmp[1], y1, vl);
+    __riscv_vse32_v_f32m1(tmp[2], y2, vl); __riscv_vse32_v_f32m1(tmp[3], y3, vl);
+    __riscv_vse32_v_f32m1(tmp[4], y4, vl); __riscv_vse32_v_f32m1(tmp[5], y5, vl);
+    memset(tmp[6], 0, 8*sizeof(float));
+    memset(tmp[7], 0, 8*sizeof(float));
+}
+
+void impl_AtXA_8x8_F32(const uchar* inptr_, int inpstep,
+                        float* bpptr, int bpstep, float* outptr, int outstep,
+                        float bias, float minval, float maxval, bool ifMinMaxAct)
+{
+    const float* inptr = (const float*)inptr_;
+    const size_t vl  = __riscv_vsetvlmax_e32m1();
+    const size_t vl6 = __riscv_vsetvl_e32m1(6);
+    float tmp[8][8], tmp2[8][8];
+
+    wino_at8x6_rvv(inptr,           inptr+inpstep,   inptr+inpstep*2, inptr+inpstep*3,
+                   inptr+inpstep*4, inptr+inpstep*5, inptr+inpstep*6, inptr+inpstep*7,
+                   tmp, vl);
+
+    for (int i = 0; i < 8; i++)
+        for (int j = i+1; j < 8; j++) {
+            float t = tmp[i][j]; tmp[i][j] = tmp[j][i]; tmp[j][i] = t;
+        }
+
+    wino_at8x6_rvv(tmp[0], tmp[1], tmp[2], tmp[3], tmp[4], tmp[5], tmp[6], tmp[7], tmp2, vl);
+
+    vfloat32m1_t vbias = __riscv_vfmv_v_f_f32m1(bias, vl6);
+    for (int i = 0; i < 6; i++) {
+        vfloat32m1_t y = __riscv_vfadd_vv_f32m1(__riscv_vle32_v_f32m1(tmp2[i], vl6), vbias, vl6);
+        if (bpptr)
+            y = __riscv_vfadd_vv_f32m1(y, __riscv_vle32_v_f32m1(bpptr + bpstep*i, vl6), vl6);
+        if (ifMinMaxAct) {
+            y = __riscv_vfmax_vf_f32m1(y, minval, vl6);
+            y = __riscv_vfmin_vf_f32m1(y, maxval, vl6);
+        }
+        __riscv_vse32_v_f32m1(outptr + outstep*i, y, vl6);
+    }
+}
+
+cv::dnn::Winofunc getWinofunc_F32()
+{
+    if ((int)__riscv_vsetvlmax_e32m1() >= 8)
+        return {&impl_accum_F32, &impl_BtXB_8x8_F32, &impl_AtXA_8x8_F32, 6, 8, 4};
+    return cv::dnn::Winofunc::empty();
+}
+
+// end of RVV
 #elif CV_SIMD128
 
 
