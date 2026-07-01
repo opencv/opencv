@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2025, Advanced Micro Devices, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -127,7 +128,7 @@ Ptr<FilterEngine> createMorphologyFilter(
                                        depth == CV_32F ? (double)-FLT_MAX : -DBL_MAX);
     }
 
-    return makePtr<FilterEngine>(filter2D, rowFilter, columnFilter,
+    return makePtr<FilterEngine>(filter2D, rowFilter, columnFilter, Ptr<BaseRowColumnFilter>(),
                                  type, type, type, _rowBorderType, _columnBorderType, borderValue );
 }
 
