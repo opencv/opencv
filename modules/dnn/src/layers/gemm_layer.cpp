@@ -265,7 +265,7 @@ public:
 #ifdef HAVE_MLAS
             packed_B_mlas.release();
             packed_B_mlas_M = packed_B_mlas_N = packed_B_mlas_K = 0;
-            if (mlasAvailable()) {
+            if (mlasAvailable() && !opt.use_rvv) {
                 std::vector<Mat> outputs;
                 outputs_arr.getMatVector(outputs);
                 const auto shape_A = shape(inputs[0]);
@@ -448,7 +448,7 @@ public:
 
         if (constB(mode)) {
 #ifdef HAVE_MLAS
-            if (!packed_B_mlas.empty() &&
+            if (!opt.use_rvv && !packed_B_mlas.empty() &&
                 packed_B_mlas_N == N && packed_B_mlas_K == K)
             {
                 if (mlasSgemmPacked(trans_a, trans_b, rows, N, K,

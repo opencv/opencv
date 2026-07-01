@@ -2446,7 +2446,9 @@ public:
         Net netWithoutKVCache = readNetFromONNX(findDataFile(model_path, true), cv::dnn::ENGINE_NEW);
 
         int T = 523, Nq = 8, Nkv = 4, D = 256;
-        int T_pref = T;
+        // Keep the prefill larger than one cache page, then exercise generation
+        // across the partially filled last page.
+        int T_pref = T - 7;
 
         std::vector<int> q_sz, k_sz, v_sz;
         if (layout == "3d") {
@@ -2606,6 +2608,142 @@ TEST(Layer_Test_Softmax, NoNaN_AllNegInf)
         EXPECT_FALSE(cvIsInf(val)) << "Inf at index " << i;
         EXPECT_EQ(val, 0.f) << "Expected 0 at index " << i;
     }
+}
+
+TEST(Test_Gemm, FastGemmBlockedTails)
+{
+    struct TestCase
+    {
+        int M, N, K;
+        bool transB;
+    };
+    const TestCase cases[] = {
+        {7, 15, 129, false},  // partial M/N and K tail
+        {8, 16, 128, false}, // one full RVV micro-tile
+        {9, 17, 65, false},  // full tile plus M/N/K tails
+        {31, 33, 129, true}  // multiple tiles and transposed B
+    };
+
+    for (const TestCase& tc : cases)
+    {
+        Mat A(tc.M, tc.K, CV_32F);
+        Mat B(tc.transB ? tc.N : tc.K, tc.transB ? tc.K : tc.N, CV_32F);
+        randu(A, -1.f, 1.f);
+        randu(B, -1.f, 1.f);
+
+        LayerParams lp;
+        lp.type = "Gemm";
+        lp.name = "fast_gemm_blocked_tails";
+        lp.set("transA", false);
+        lp.set("transB", tc.transB);
+        lp.set("alpha", 0.75f);
+        lp.set("beta", 0.f);
+        lp.set("real_ndims_C", 0);
+        lp.set("constB", true);
+        lp.blobs.push_back(B);
+
+        Net net;
+        net.addLayerToPrev(lp.name, lp.type, lp);
+        net.setPreferableBackend(DNN_BACKEND_OPENCV);
+        net.setPreferableTarget(DNN_TARGET_CPU);
+        net.setInput(A);
+        Mat actual = net.forward();
+
+        Mat expected;
+        gemm(A, B, 0.75, noArray(), 0., expected, tc.transB ? GEMM_2_T : 0);
+        normAssert(actual, expected, "fastGemm blocked/tail mismatch", 1e-4, 1e-4);
+    }
+}
+
+TEST(Test_Gemm, FastGemmDynamicTransposeAlphaBeta)
+{
+    const int M = 11, N = 19, K = 67;
+    const float alpha = 0.75f, beta = -0.25f;
+
+    for (int flags = 0; flags < 4; flags++)
+    {
+        const bool transA = (flags & 1) != 0;
+        const bool transB = (flags & 2) != 0;
+        Mat A(transA ? K : M, transA ? M : K, CV_32F);
+        Mat B(transB ? N : K, transB ? K : N, CV_32F);
+        Mat C(M, N, CV_32F);
+        randu(A, -1.f, 1.f);
+        randu(B, -1.f, 1.f);
+        randu(C, -1.f, 1.f);
+
+        LayerParams lp;
+        lp.type = "Gemm";
+        lp.name = "fast_gemm_dynamic";
+        lp.set("transA", transA);
+        lp.set("transB", transB);
+        lp.set("alpha", alpha);
+        lp.set("beta", beta);
+        lp.set("have_bias", true);
+        lp.set("real_ndims_C", 2);
+
+        Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+        ASSERT_TRUE(layer);
+        std::vector<Mat> inputs = {A, B, C}, outputs;
+        runLayer(layer, inputs, outputs);
+        ASSERT_EQ(outputs.size(), (size_t)1);
+
+        Mat expected;
+        int gemmFlags = (transA ? GEMM_1_T : 0) | (transB ? GEMM_2_T : 0);
+        gemm(A, B, alpha, C, beta, expected, gemmFlags);
+        normAssert(outputs[0], expected, "fastGemm dynamic transpose/alpha/beta mismatch", 1e-4, 1e-4);
+    }
+}
+
+TEST(Test_MatMul, FastGemmBatchDynamicAndPackedBroadcast)
+{
+    const int batch = 3, M = 11, N = 19, K = 67;
+    Mat A({batch, M, K}, CV_32F);
+    Mat dynamicB({batch, N, K}, CV_32F);  // transposed B
+    Mat packedB(K, N, CV_32F);            // shared constant B
+    randu(A, -1.f, 1.f);
+    randu(dynamicB, -1.f, 1.f);
+    randu(packedB, -1.f, 1.f);
+
+    auto reference = [&](const Mat& B, bool transB, bool broadcastB)
+    {
+        Mat expected({batch, M, N}, CV_32F);
+        for (int b = 0; b < batch; b++)
+        {
+            Mat a2d(M, K, CV_32F, A.ptr<float>(b));
+            Mat b2d(transB ? N : K, transB ? K : N, CV_32F,
+                    broadcastB ? const_cast<float*>(B.ptr<float>()) : const_cast<float*>(B.ptr<float>(b)));
+            Mat out2d(M, N, CV_32F, expected.ptr<float>(b));
+            gemm(a2d, b2d, 1., noArray(), 0., out2d, transB ? GEMM_2_T : 0);
+        }
+        return expected;
+    };
+
+    LayerParams dynamicParams;
+    dynamicParams.type = "MatMul";
+    dynamicParams.name = "fast_gemm_batch_dynamic";
+    dynamicParams.set("transA", false);
+    dynamicParams.set("transB", true);
+    Ptr<Layer> dynamicLayer = LayerFactory::createLayerInstance(dynamicParams.type, dynamicParams);
+    ASSERT_TRUE(dynamicLayer);
+    std::vector<Mat> dynamicInputs = {A, dynamicB}, dynamicOutputs;
+    runLayer(dynamicLayer, dynamicInputs, dynamicOutputs);
+    ASSERT_EQ(dynamicOutputs.size(), (size_t)1);
+    Mat dynamicExpected = reference(dynamicB, true, false);
+    normAssert(dynamicOutputs[0], dynamicExpected, "fastGemm dynamic batch mismatch", 1e-4, 1e-4);
+
+    LayerParams packedParams;
+    packedParams.type = "MatMul";
+    packedParams.name = "fast_gemm_batch_packed";
+    packedParams.set("transA", false);
+    packedParams.set("transB", false);
+    packedParams.blobs.push_back(packedB);
+    Ptr<Layer> packedLayer = LayerFactory::createLayerInstance(packedParams.type, packedParams);
+    ASSERT_TRUE(packedLayer);
+    std::vector<Mat> packedInputs = {A}, packedOutputs;
+    runLayer(packedLayer, packedInputs, packedOutputs);
+    ASSERT_EQ(packedOutputs.size(), (size_t)1);
+    Mat packedExpected = reference(packedB, false, true);
+    normAssert(packedOutputs[0], packedExpected, "fastGemm packed broadcast batch mismatch", 1e-4, 1e-4);
 }
 
 }} // namespace
