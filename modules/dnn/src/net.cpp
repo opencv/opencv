@@ -103,7 +103,7 @@ void Net::forward(OutputArrayOfArrays outputBlobs,
     CV_TRACE_FUNCTION();
     CV_Assert(impl);
     CV_Assert(!empty());
-    return impl->forward(outputBlobs, outBlobNames);
+    impl->forward(outputBlobs, outBlobNames);
 }
 
 void Net::forward(std::vector<std::vector<Mat>>& outputBlobs,

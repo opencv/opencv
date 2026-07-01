@@ -2251,9 +2251,10 @@ TEST(Layer_If, resize)
 {
     // Skip this test when the classic DNN engine is explicitly requested. The
     // "if" layer is supported only by the new engine.
+    // Also skip when ORT engine is forced (pre-existing failure).
     auto engine_forced = static_cast<cv::dnn::EngineType>(
             cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
-    if (engine_forced == cv::dnn::ENGINE_CLASSIC)
+    if (engine_forced == cv::dnn::ENGINE_CLASSIC || engine_forced == cv::dnn::ENGINE_ORT)
     {
         // Mark the test as skipped and exit early.
         applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);

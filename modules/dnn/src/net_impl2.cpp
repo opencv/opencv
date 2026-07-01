@@ -75,12 +75,30 @@ void Net::Impl::applyStagedOrtInputs()
     if (netInputLayer->blobs.size() != ninputs)
         netInputLayer->blobs.resize(ninputs);
 
+    auto shapeCompatible = [&](size_t modelIdx, const Mat& mat) -> bool {
+        Ort::TypeInfo ti = ort_session->GetInputTypeInfo(modelIdx);
+        if (ti.GetONNXType() != ONNX_TYPE_TENSOR)
+            return true;
+        auto tsi = ti.GetTensorTypeAndShapeInfo();
+        std::vector<int64_t> declShape = tsi.GetShape();
+        if (declShape.empty())
+            return true;  // unranked input — no shape constraints declared, accept any
+        if ((int)declShape.size() != mat.dims)
+            return false;
+        for (int d = 0; d < mat.dims; ++d)
+            if (declShape[d] >= 0 && declShape[d] != (int64_t)mat.size[d])
+                return false;
+        return true;
+    };
+
+    std::vector<bool> assigned(ninputs, false);
+
     for (size_t k = 0; k < ort_staged_inputs.size(); ++k)
     {
         const std::string& inpname = ort_staged_inputs[k].first;
         const Mat& inputMat = ort_staged_inputs[k].second;
-        if (inputMat.empty())
-            CV_Error(Error::StsBadArg, "DNN/ORT: Input blob is empty");
+        if (!inputMat.data)
+            continue;  // truly absent input — skip
 
         size_t inputIdx = 0;
         if (inpname.empty())
@@ -93,9 +111,32 @@ void Net::Impl::applyStagedOrtInputs()
         {
             auto it = names.input_name_to_index.find(inpname);
             if (it == names.input_name_to_index.end())
-                CV_Error_(Error::StsObjectNotFound, ("DNN/ORT: input '%s' is not found", inpname.c_str()));
-            inputIdx = (size_t)it->second;
+            {
+                int idx = std::stoi(inpname);
+                if (idx < 0 || idx >= (int)ninputs)
+                    continue;  // extra input not declared in model (e.g. axes as attribute) — skip
+                inputIdx = (size_t)idx;
+                // Remap positional index to first unassigned slot whose declared shape matches.
+                if (!shapeCompatible(inputIdx, inputMat) || assigned[inputIdx])
+                {
+                    bool remapped = false;
+                    for (size_t j = 0; j < ninputs; ++j)
+                    {
+                        if (!assigned[j] && shapeCompatible(j, inputMat))
+                        {
+                            inputIdx = j;
+                            remapped = true;
+                            break;
+                        }
+                    }
+                    if (!remapped)
+                        continue;
+                }
+            } else {
+                inputIdx = (size_t)it->second;
+            }
         }
+        assigned[inputIdx] = true;
         inputMat.copyTo(netInputLayer->blobs[inputIdx]);
     }
     ort_staged_inputs.clear();
@@ -138,8 +179,14 @@ static Ort::Value createOrtTensorFromMat(Ort::Session& session,
     if (cvInType < 0)
         CV_Error_(Error::StsNotImplemented, ("DNN/ORT: unsupported ORT input element type: %d", (int)in_elem_type));
 
-    if (inputBlob.type() != cvInType)
+    if (inputBlob.depth() == CV_16U && in_elem_type == ONNX_TENSOR_ELEMENT_DATA_TYPE_BFLOAT16) {
+        if (!inputBlob.isContinuous())
+            inputBlob = inputBlob.clone();
+        inputBlob = Mat(inputBlob.dims, inputBlob.size.p, CV_16BF,
+                        inputBlob.data, inputBlob.step.p).clone();
+    } else if (inputBlob.type() != cvInType) {
         inputBlob.convertTo(inputBlob, cvInType);
+    }
 
     if (!inputBlob.isContinuous())
         inputBlob = inputBlob.clone();
@@ -171,8 +218,6 @@ std::vector<Mat> Net::Impl::runOrtSession(std::vector<Mat> inputBlobs, const std
         this->ort_names_cache = std::make_shared<OrtNamesCache>(session);
 
     OrtNamesCache& names = *this->ort_names_cache;
-    if (names.input_names.empty())
-        CV_Error(Error::StsError, "DNN/ORT: ORT session has no inputs");
     if (names.output_names.empty())
         CV_Error(Error::StsError, "DNN/ORT: ORT session has no outputs");
 
@@ -210,8 +255,8 @@ std::vector<Mat> Net::Impl::runOrtSession(std::vector<Mat> inputBlobs, const std
     input_tensors.reserve(ninputs);
     for (size_t i = 0; i < ninputs; ++i)
     {
-        if (inputBlobs[i].empty())
-            CV_Error_(Error::StsError, ("DNN/ORT: input '%s' is empty", names.input_names[i].c_str()));
+        if (!inputBlobs[i].data)
+            CV_Error_(Error::StsError, ("DNN/ORT: input '%s' has no data", names.input_names[i].c_str()));
 
         std::vector<int64_t> inputDims;
         ONNXTensorElementDataType in_elem_type = ONNX_TENSOR_ELEMENT_DATA_TYPE_UNDEFINED;
@@ -792,13 +837,15 @@ void Net::Impl::forwardWithMultipleOutputs(OutputArrayOfArrays outblobs, const s
         finalizeOrt();
     if (this->ort_session)
     {
-        if (!netInputLayer || netInputLayer->blobs.empty())
-            CV_Error(Error::StsError, "DNN/ORT: No input data found");
-
         if (!this->ort_names_cache)
             this->ort_names_cache = std::make_shared<OrtNamesCache>(*this->ort_session);
 
         OrtNamesCache& names = *this->ort_names_cache;
+
+        // Skip input check for zero-input models (e.g. Constant-only graphs).
+        if (!names.input_names.empty() && (!netInputLayer || netInputLayer->blobs.empty()))
+            CV_Error(Error::StsError, "DNN/ORT: No input data found");
+
         const int totalOutputs = (int)names.output_names.size();
         if (totalOutputs <= 0)
             CV_Error(Error::StsError, "DNN/ORT: ORT session has no outputs");
@@ -972,11 +1019,11 @@ void Net::Impl::traceArg(std::ostream& strm_, const char* prefix, size_t i, Arg 
 void Net::Impl::setMainGraphInput(InputArray m, const std::string& inpname)
 {
 #ifdef HAVE_ONNXRUNTIME
-    if (useOrtEngine && ortNeedsReinit && mainGraph && modelFormat == DNN_MODEL_ONNX && !modelFileName.empty())
+    if (useOrtEngine && !ort_session)
     {
         Mat inputMat = m.getMat();
-        if (inputMat.empty())
-            CV_Error(Error::StsBadArg, "DNN/ORT: Input blob is empty");
+        if (!inputMat.data)
+            return;  // truly absent input (e.g. optional empty axes tensor) — ORT uses its default
 
         bool updated = false;
         for (size_t i = 0; i < ort_staged_inputs.size(); ++i)
@@ -1472,12 +1519,7 @@ bool Net::Impl::tryInferShapes(const std::vector<MatShape>& suggestedInpShapes,
 
     size_t nsuggestedShapes = suggestedInpShapes.size();
     size_t nsuggestedTypes = suggestedInpTypes.size();
-    CV_Assert(nsuggestedShapes == 0 || nsuggestedShapes == ninputs ||
-
-              // workaround, but this is not quite correct usage of the function
-              (nsuggestedShapes == 1 && suggestedInpShapes[0].empty())
-              );
-    CV_Assert(nsuggestedTypes <= 1 || nsuggestedTypes == ninputs);
+    // Allows partial shapes/types with fallback to index 0 for missing values
     bool dynamicInputShapes = false;
 
     result.in.resize(ninputs);

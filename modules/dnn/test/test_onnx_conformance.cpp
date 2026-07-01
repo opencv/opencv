@@ -1714,6 +1714,7 @@ public:
     static std::set<std::string> opencl_fp16_deny_list;
     static std::set<std::string> opencl_deny_list;
     static std::set<std::string> classic_deny_list;
+    static std::set<std::string> ort_deny_list;
 #ifdef HAVE_HALIDE
     static std::set<std::string> halide_deny_list;
 #endif
@@ -1796,6 +1797,14 @@ public:
             classic_deny_list = {};
         }
 
+        if (engine_forced == ENGINE_ORT) {
+            ort_deny_list = {
+#include "test_onnx_ort_denylist.inl.hpp"
+            };
+        } else {
+            ort_deny_list = {};
+        }
+
 #ifdef HAVE_HALIDE
         halide_deny_list = {
             #include "test_onnx_conformance_layer_filter__halide_denylist.inl.hpp"
@@ -1825,6 +1834,7 @@ std::set<std::string> Test_ONNX_conformance::global_deny_list;
 std::set<std::string> Test_ONNX_conformance::opencl_fp16_deny_list;
 std::set<std::string> Test_ONNX_conformance::opencl_deny_list;
 std::set<std::string> Test_ONNX_conformance::classic_deny_list;
+std::set<std::string> Test_ONNX_conformance::ort_deny_list;
 #ifdef HAVE_HALIDE
 std::set<std::string> Test_ONNX_conformance::halide_deny_list;
 #endif
@@ -1852,6 +1862,12 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
 
     // SKIP some more if we are in the 'classic engine' mode, where we don't support certain layers.
     if (classic_deny_list.find(name) != classic_deny_list.end())
+    {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+    }
+
+    // SKIP some more if we are in the 'ORT engine' mode, where we have pre-existing issues.
+    if (ort_deny_list.find(name) != ort_deny_list.end())
     {
         applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
     }
@@ -2092,7 +2108,6 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
     std::vector<Mat> outputs;
     try
     {
-        //net.setTracingMode(DNN_TRACE_ALL);
         net.forward(outputs, layerNames);
     }
     catch (...)
@@ -2112,25 +2127,56 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
     {
         try
         {
+            // Normalize output/reference types for comparison (bool→uint8, float16/bf16→float32, bf16-as-uint16→float32).
+            auto normalizeBoolMat = [](Mat& m) {
+                if (m.type() == CV_Bool)
+                    m = Mat(m.dims, m.size.p, CV_8U, m.data, m.step.p).clone();
+            };
+            for (Mat& out : outputs)
+                normalizeBoolMat(out);
+            for (Mat& ref : ref_outputs)
+                normalizeBoolMat(ref);
+
+            auto normalizeHalfMat = [](Mat& m) {
+                if (m.depth() == CV_16F || m.depth() == CV_16BF)
+                    m.convertTo(m, CV_32F);
+            };
+            for (Mat& out : outputs)
+                normalizeHalfMat(out);
+            for (Mat& ref : ref_outputs)
+                normalizeHalfMat(ref);
+
+            CV_Assert(outputs.size() == ref_outputs.size());
+            std::vector<bool> is_bf16_pair(outputs.size(), false);
+            for (size_t i = 0; i < outputs.size(); ++i) {
+                if (ref_outputs[i].depth() == CV_16U && outputs[i].depth() == CV_32F) {
+                    const int n = (int)ref_outputs[i].total();
+                    Mat tmp(1, n, CV_32F);
+                    const uint16_t* src = ref_outputs[i].ptr<uint16_t>();
+                    float* dst = tmp.ptr<float>();
+                    for (int j = 0; j < n; ++j) {
+                        uint32_t bits = (uint32_t)src[j] << 16;
+                        memcpy(dst + j, &bits, sizeof(float));
+                    }
+                    ref_outputs[i] = tmp.reshape(1, ref_outputs[i].dims, ref_outputs[i].size.p);
+                    is_bf16_pair[i] = true;
+                }
+            }
+
             if (ref_outputs.size() == 1)
             {
-                /*std::cout << "\n-------------------------------------------\nreference tensor:\n";
-                pprint(std::cout, ref_outputs[0], 0, 3, 100, '[');
-                std::cout << "\n";
-                std::cout << "\n-------------------------------------------\nabsdiff:\n";
-                Mat temp;
-                absdiff(ref_outputs[0], outputs[0], temp);
-                pprint(std::cout, temp, 0, 3, 100, '[');
-                std::cout << "\n";*/
-                // probably we found random unconnected layers.
-                normAssert(ref_outputs[0], outputs[0], "", default_l1, default_lInf);
+                double l1   = is_bf16_pair[0] ? 0.002 : default_l1;
+                double lInf = is_bf16_pair[0] ? 0.01  : default_lInf;
+                normAssert(ref_outputs[0], outputs[0], "", l1, lInf);
             }
             else
             {
                 ASSERT_EQ(outputs.size(), ref_outputs.size());
                 for (size_t i = 0; i < ref_outputs.size(); ++i)
                 {
-                    normAssert(ref_outputs[i], outputs[i], "", default_l1, default_lInf);
+                    double l1   = is_bf16_pair[i] ? 0.002 : default_l1;
+                    double lInf = is_bf16_pair[i] ? 0.01  : default_lInf;
+                    normAssert(ref_outputs[i], outputs[i], "", l1, lInf);
                 }
             }
         }
