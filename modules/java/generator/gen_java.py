@@ -297,8 +297,10 @@ class ClassInfo(GeneralInfo):
             base_class = re.sub(r"^cv::", "", base_class)
             base_class = base_class.replace('::', '.')
             base_info = ClassInfo(('class {}'.format(base_class), '', [], [], None, None), [self.namespace])
-            # Use resolved base name; don't strip this class's own name.
             base_type_name = base_info.name
+            if not base_type_name in type_dict:
+                # Take the base's last name segment; don't strip this class's own name.
+                base_type_name = re.sub(r"^.*:", "", decl[1].split(",")[0]).strip()
             self.base = base_type_name
             self.addImports(self.base)
 
