@@ -953,6 +953,8 @@ void LayerEinsumImpl::processEquation(const std::vector<MatShape>& inputs)
                 CV_CheckNE(letterIdx, -1,
                     "The only permissible subscript labels are lowercase letters (a-z) and uppercase letters (A-Z).");
 
+                CV_CheckLT(dim_count, rank,
+                    "The Einsum subscripts string has an excessive number of subscript labels compared to the rank of the input.");
                 int dimValue = shape[dim_count];
 
                 // The subscript label was not found in the global subscript label array
@@ -980,8 +982,7 @@ void LayerEinsumImpl::processEquation(const std::vector<MatShape>& inputs)
                 ++letter2count[letterIdx];
                 currTokenIndices.push_back(letter2index[letterIdx]);
 
-                CV_CheckLE(++dim_count, rank,
-                    "The Einsum subscripts string has an excessive number of subscript labels compared to the rank of the input.");
+                ++dim_count;
             }
         }
 
