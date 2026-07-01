@@ -15,6 +15,21 @@ int ipp_hal_warpAffine(int src_type, const uchar *src_data, size_t src_step, int
                        int dst_height, const double M[6], int interpolation, int borderType, const double borderValue[4]);
 #undef cv_hal_warpAffine
 #define cv_hal_warpAffine ipp_hal_warpAffine
+
+int ipp_hal_sobel(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                  int width, int height, int src_depth, int dst_depth, int cn,
+                  int margin_left, int margin_top, int margin_right, int margin_bottom,
+                  int dx, int dy, int ksize, double scale, double delta, int border_type);
+#undef cv_hal_sobel
+#define cv_hal_sobel ipp_hal_sobel
+
+int ipp_hal_scharr(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                   int width, int height, int src_depth, int dst_depth, int cn,
+                   int margin_left, int margin_top, int margin_right, int margin_bottom,
+                   int dx, int dy, double scale, double delta, int border_type);
+#undef cv_hal_scharr
+#define cv_hal_scharr ipp_hal_scharr
+
 #endif
 
 #if IPP_VERSION_X100 >= 202600
