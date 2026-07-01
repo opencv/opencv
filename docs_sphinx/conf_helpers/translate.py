@@ -15,6 +15,73 @@ def _normalize_lang(lang: str) -> str:
     return _LANG_ALIASES.get(lang, lang)
 
 
+# Snippet boundary markers across the languages OpenCV samples use —
+# one self-contained comment line each. Stripped from `_read_snippet`
+# output so they don't show as visible code in the rendered block
+# (mirrors docs.opencv.org's behaviour). Matched at line start with
+# optional leading whitespace; anything other than the bare comment-
+# marker + `[name]` on the line leaves it alone so we never drop real
+# code that happens to embed a `[token]`.
+_SNIPPET_MARKER_RE = re.compile(
+    r"^[ \t]*(?://!|//|##|#)[ \t]*\[[\w\- ]+\][ \t]*$"
+    r"|^[ \t]*<!--[ \t]*\[[\w\- ]+\][ \t]*-->[ \t]*$"
+)
+
+# Doxygen-style block comments — `/** … */` and `/*! … */` — appear
+# throughout OpenCV's C/C++/Java sample files as decorative chrome:
+# file-level banners at the top (`/** @file foo.cpp … */`), mid-file
+# function/class headers (`/** @function main */`,
+# `/** * @function update_map * @brief Fill … */`), and brief inline
+# notes (`/** Global Variables */`). docs.opencv.org strips all of
+# these before rendering the code block, regardless of position or
+# whether the body carries any `@tag` directive. We mirror that.
+#
+# Single-asterisk `/* … */` C block comments, `//` line comments, and
+# `///` line-doc comments are NOT touched — those are meant to stay
+# as visible inline code commentary.
+#
+# Two passes: first removes blocks that occupy whole lines (consuming
+# leading whitespace + the block + trailing whitespace + one
+# terminating newline, so the line doesn't leave a hollow blank
+# behind); second sweeps any remaining inline blocks (rare — a block
+# starting in the middle of a code line) without eating the
+# surrounding code.
+_DOXY_LINE_BLOCK_RE = re.compile(
+    r"^[ \t]*/\*[*!].*?\*/[ \t]*\n?",
+    re.DOTALL | re.MULTILINE,
+)
+_DOXY_INLINE_BLOCK_RE = re.compile(
+    r"/\*[*!].*?\*/",
+    re.DOTALL,
+)
+
+
+def _strip_snippet_markers(text: str) -> str:
+    """Drop `## [name]` / `//! [name]` / `// [name]` / `# [name]` /
+    `<!-- [name] -->` snippet-boundary marker lines from a code body.
+    The whole line (including its newline) is removed so the strip
+    doesn't leave hollow blank lines where the markers used to be.
+    Runs of three or more consecutive blank lines that result from
+    densely-marked files are collapsed back to two — matches the
+    rendering on docs.opencv.org."""
+    out = [ln for ln in text.split("\n")
+           if not _SNIPPET_MARKER_RE.match(ln)]
+    joined = "\n".join(out)
+    return re.sub(r"\n{3,}", "\n\n", joined)
+
+
+def _strip_doxygen_block_comments(text: str) -> str:
+    """Drop every `/** … */` and `/*! … */` Doxygen block comment from
+    a code snippet, anywhere in the file, regardless of whether the
+    body contains `@tag` directives. Subsumes file-level banners,
+    mid-file function/class doc-headers, and short notes like
+    `/** Global Variables */`. Plain `/* … */`, `//`, and `///`
+    comments stay intact."""
+    text = _DOXY_LINE_BLOCK_RE.sub("", text)
+    text = _DOXY_INLINE_BLOCK_RE.sub("", text)
+    return text
+
+
 def _read_snippet(rel_path: str, label: str | None) -> tuple[str, str]:
     """Return (code_text, language) for an @include / @snippet directive."""
     rel_norm = rel_path.lstrip("/")
@@ -34,7 +101,14 @@ def _read_snippet(rel_path: str, label: str | None) -> tuple[str, str]:
             ".xml": "xml", ".html": "html",
             ".sh": "bash", ".bash": "bash"}.get(ext, "text")
     if label is None:
-        return text, lang
+        # `@include`: whole file. Drop every Doxygen `/** … */` /
+        # `/*! … */` block comment AND any `## [name]` / `//! [name]`
+        # snippet boundary marker so the rendered code block matches
+        # docs.opencv.org's output (which starts straight at the first
+        # `#include` / `import`, with no banner and no decorative
+        # mid-file doc-headers littering the body).
+        return _strip_snippet_markers(
+            _strip_doxygen_block_comments(text)), lang
     # Match `[label]` after any comment marker.
     pat = re.compile(r"^[^\[\n]*(?://!|//|##|#|<!--)[^\[\n]*\[" + re.escape(label)
                      + r"\][^\n]*$", re.MULTILINE)
@@ -42,6 +116,11 @@ def _read_snippet(rel_path: str, label: str | None) -> tuple[str, str]:
     if len(matches) < 2:
         return f"// snippet not found: {rel_path} [{label}]\n", lang
     body = text[matches[0].end():matches[1].start()].strip("\n")
+    # Strip NESTED marker lines AND any mid-snippet Doxygen blocks
+    # (samples often place a `/** @function bar */` doc-header inside
+    # a labelled range).
+    body = _strip_doxygen_block_comments(body)
+    body = _strip_snippet_markers(body)
     lines = body.split("\n")
     indents = [len(l) - len(l.lstrip(" ")) for l in lines if l.strip()]
     if indents:
@@ -50,7 +129,201 @@ def _read_snippet(rel_path: str, label: str | None) -> tuple[str, str]:
     return "\n".join(lines), lang
 
 
+# Patterns used by `_dedent_dash_hash_indent` to skip code regions.
+_DEDENT_AT_CODE_OPEN_RE = re.compile(r"^[ \t]*@code(?:\{[^}]*\})?\s*$")
+_DEDENT_AT_CODE_CLOSE_RE = re.compile(r"^[ \t]*@endcode\s*$")
+_DEDENT_FENCE_OPEN_RE = re.compile(r"^[ \t]*(`{3,}|~{3,})")
+_DEDENT_FENCE_CLOSE_RE = re.compile(r"^[ \t]*([`~]{3,})[ \t]*$")
+# Matches both kinds of ordered-list markers used in OpenCV tutorial
+# sources: `-#` (Doxygen flavour, rewritten to `1.` later by step 0b)
+# and `\d+\.` (CommonMark flavour). Both conventions put body content
+# at +4 spaces of indent per level, so both trigger the same dedent.
+_DEDENT_DASH_HASH_RE = re.compile(r"^[ \t]*(?:-#|\d+\.)[ \t]")
+# `@snippet`/`@include`/`@includelineno` — directives that step 4/5 turn into
+# fenced code blocks; their stray-indent handling matches `@code` (see 0a).
+_SNIPPET_DIRECTIVE_RE = re.compile(r"^[ \t]*@(?:snippet|include(?:lineno)?)\b")
+
+
+def _map_list_indent(n: int) -> int:
+    """Map 4-space-per-level list indent to 3-space-per-level. The
+    remainder within a level (0-3 spaces) is preserved as-is. Shared by
+    `_dedent_dash_hash_indent` (which dedents list *prose*) and `_fenced`
+    (which must place a code fence at the same dedented baseline)."""
+    return (n // 4) * 3 + (n % 4)
+
+
+def _dedent_keep_blanks(s: str) -> str:
+    """Strip the common leading-whitespace prefix from `s`, but leave
+    whitespace-only lines exactly as they are. Unlike `textwrap.dedent`,
+    this does NOT normalise interior blank lines to empty — preserving
+    them keeps snippet bodies byte-for-byte stable through the
+    re-indent / re-base round-trip done for list and tab-set fences."""
+    widths = [len(l) - len(l.lstrip(" \t")) for l in s.split("\n") if l.strip()]
+    n = min(widths) if widths else 0
+    return "\n".join(l[n:] if l.strip() else l for l in s.split("\n"))
+
+
+def _fenced(base: str, lang: str, body: str) -> str:
+    """Emit a fenced code block at `base` indentation.
+
+    When the originating `@code` / `@snippet` / `@include` sits inside a
+    `-#` / numbered list item, the fence must land at the list item's
+    *content baseline* (relative-0 of the item). A column-0 fence
+    terminates the list — dropping the rest of the item's content (prose,
+    images, further code) to top level, where its 4+-space indent is then
+    re-classified by CommonMark as stray indented code blocks. An
+    *over*-indented fence (relative +4) is read as an indented code block
+    too, showing the literal ``` backticks. Only relative-0 keeps the
+    fence recognised AND the list open. `base=""` => column 0 (top-level
+    code, unchanged)."""
+    body = _dedent_keep_blanks(body).strip("\n")
+    if base:
+        body = "\n".join(base + ln if ln.strip() else ln
+                         for ln in body.split("\n"))
+    return f"\n{base}```{lang}\n{body}\n{base}```\n"
+
+
+_LIST_MARKER_RE = re.compile(
+    r"^(?P<ind> *)(?P<mk>-#|\d+\.|[-*+])(?P<gap> +)(?P<rest>.*)$")
+
+
+def _dedent_dash_hash_indent(src: str) -> str:
+    """Re-indent every list (ordered `-#` / `\\d+\\.` and bullet
+    `-`/`*`/`+`) to a canonical, alignment-preserving shape so deep
+    nesting stays out of CommonMark's 4-space indented-code trap.
+
+    OpenCV's tutorial sources indent list bodies 4 spaces per nesting
+    level — exactly the threshold at which CommonMark / MyST classifies a
+    line as an *indented code block*. The collision shows up three ways:
+      * fence lines (` ``` cpp`) inside a list body rendering as literal
+        `highlight-none` text;
+      * prose-continuation paragraphs / nested bullets inside a list body
+        wrapped in `highlight-none` code-block frames;
+      * inline-image markdown (`![](path)`) rendering as literal text.
+
+    The fix normalises the gap after every marker to a single space and
+    nests each level directly under its parent's *content* column, then
+    re-bases every body line to its governing marker's new content column
+    (preserving any extra hanging indent). Because the marker width is
+    normalised — not just the leading indent scaled — a `-   ` bullet's
+    content baseline and the fence/prose beneath it stay aligned, which
+    the older proportional 4->3 scaling broke for fixed-width bullet
+    markers (the fence landed one space below the item and leaked).
+
+    `@code…@endcode` and pre-existing fenced bodies pass through with
+    their native indentation; only their *marker* lines (and ordinary
+    list content) are re-based. Lines outside any list are untouched."""
+    lines = src.split("\n")
+    out: list[str] = []
+    # Stack of open list ancestors. Each frame records the ORIGINAL marker
+    # column and content column (to locate which lines still belong to it)
+    # plus the NEW content column it was re-based to.
+    stack: list[tuple[int, int, int]] = []   # (orig_col, orig_cont, new_cont)
+    in_at_code = False
+    in_fence = False
+    fence_char = ""
+
+    def rebase_content(line: str, code_marker: bool = False) -> str:
+        # Re-base a non-marker line (prose, image, @code/@endcode marker,
+        # snippet) to its governing marker's new content column, preserving
+        # any hanging indent past that column. Mutates `stack`.
+        ind = len(line) - len(line.lstrip(" "))
+        while stack and stack[-1][0] >= ind:
+            stack.pop()
+        if not stack:
+            # Outside any list: keep intended indented content as-is (e.g.
+            # a raw 4-space indented code block that is NOT a list body) —
+            # but strip stray indent off a code DIRECTIVE / fence marker so a
+            # 4+-space `@code`/`@snippet`/fence loosely attached to a
+            # top-level `@note` (which the note regex doesn't capture past
+            # its blank line) doesn't become a root-level indented-code
+            # fence. Mirrors the old always-column-0 fence emission.
+            return line.lstrip(" ") if code_marker else line
+        _oc, ocont, ncont = stack[-1]
+        # Code directives/fences are clamped to the item's content baseline
+        # (relative-0): any extra source offset (irregular over-indentation,
+        # e.g. `@code` indented past the prose it follows) would put the
+        # fence at relative +N and, at +4, make MyST show literal backticks.
+        # Prose keeps its hanging indent past the baseline.
+        new = ncont if code_marker else max(0, ncont + (ind - ocont))
+        return " " * new + line[ind:]
+
+    for line in lines:
+        # @code…@endcode BODY passes through unchanged (native code
+        # indentation preserved); the @code/@endcode MARKER lines are
+        # re-based like ordinary list content so `_code_repl` later emits
+        # the fence at the list-content column. See `_fenced`.
+        if in_at_code:
+            if _DEDENT_AT_CODE_CLOSE_RE.match(line):
+                in_at_code = False
+                out.append(rebase_content(line, code_marker=True))
+            else:
+                out.append(line)
+            continue
+        if in_fence:
+            out.append(line)
+            cm = _DEDENT_FENCE_CLOSE_RE.match(line)
+            if cm and cm.group(1)[0] == fence_char:
+                in_fence = False
+            continue
+        if _DEDENT_AT_CODE_OPEN_RE.match(line):
+            in_at_code = True
+            out.append(rebase_content(line, code_marker=True))
+            continue
+        fm = _DEDENT_FENCE_OPEN_RE.match(line)
+        if fm:
+            fence_char = fm.group(1)[0]
+            in_fence = True
+            # Leave a pre-existing ``` fence exactly as authored: only its
+            # opener is seen here (body+closer are skipped via `in_fence`),
+            # so re-basing the opener alone would misalign the block. These
+            # raw fences are rare; matching the original pass-through avoids
+            # regressing them. (`@code`/`@snippet` go through `_fenced`,
+            # which re-indents the whole block consistently.)
+            out.append(line)
+            continue
+
+        if not line.strip():
+            out.append(line)            # blank: keep, list stays open
+            continue
+
+        mm = _LIST_MARKER_RE.match(line)
+        if mm:
+            oc = len(mm.group("ind"))
+            mk = mm.group("mk")
+            ocont = oc + len(mk) + len(mm.group("gap"))
+            # Pop siblings / deeper levels this marker closes.
+            while stack and stack[-1][0] >= oc:
+                stack.pop()
+            # Nested marker sits at its parent's content column; a top-level
+            # marker is dedented 4->3-per-level so a list that is merely
+            # indented in the source (e.g. `    1. step` under a paragraph)
+            # starts at 0-3 spaces and is recognised, not read as an
+            # indented code block at >=4 spaces.
+            new_mk = stack[-1][2] if stack else _map_list_indent(oc)
+            new_cont = new_mk + len(mk) + 1
+            out.append(" " * new_mk + mk + " " + mm.group("rest"))
+            stack.append((oc, ocont, new_cont))
+            continue
+
+        # `@snippet`/`@include` emit fenced code later (via `_emit_codeblock`),
+        # so treat them as code markers — a stray-indented one must not keep a
+        # 4+-space indent that would render as a root-level indented fence.
+        out.append(rebase_content(
+            line, code_marker=bool(_SNIPPET_DIRECTIVE_RE.match(line))))
+
+    return "\n".join(out)
+
+
 def _emit_toggles(tabs: list[tuple[str, str]]) -> str:
+    # The tab body is re-based to column 0: the `tab-item` container is
+    # always emitted at column 0, so its content baseline is 0. A snippet
+    # inside an indented `@add_toggle` now arrives as a baseline-indented
+    # fence (see `_fenced`) — left as-is it would sit at relative +N
+    # inside the col-0 tab-item and read as a literal-backtick code block.
+    # Dedenting restores the col-0 fence the tab-item expects. For the
+    # pre-existing column-0 snippet form this is a no-op.
+    tabs = [(lang, _dedent_keep_blanks(body)) for lang, body in tabs]
     if HAVE_SPHINX_DESIGN:
         out = ["", "``````{tab-set}"]
         for lang, body in tabs:
@@ -114,6 +387,30 @@ def _translate(text: str, docname: str | None = None) -> str:
     if docname and (docname.startswith("py_tutorials/py_video/")
                     or docname.startswith("py_tutorials/py_objdetect/")):
         text = "---\norphan: true\n---\n\n" + text
+
+    # 0a-dedent. Reduce 4-space-per-level `-#` nesting indent to 3 so
+    # continuation prose and nested markers stay below CommonMark's
+    # 4-space-indented-code threshold — see `_dedent_dash_hash_indent`
+    # for the rationale and the two bugs this addresses.
+    text = _dedent_dash_hash_indent(text)
+
+    # 0a2. Explanatory prose wedged directly between an `@endcode` and the
+    # next `@code` (no list, no blank line — a Doxygen authoring habit of
+    # indenting the sentence that introduces the next snippet) is text, not
+    # code; left at its 4-space source indent CommonMark renders it as a
+    # stray indented code block. Re-align those lines to the surrounding
+    # directives' own column. Anchored on `@endcode … @code`, so it is inert
+    # on pages that use raw indented code blocks (no `@code` to match).
+    def _dedent_interblock(m: re.Match) -> str:
+        base = m.group("ind")
+        mid = "\n".join((base + l.lstrip(" ")) if l.strip() else l
+                        for l in m.group("mid").split("\n"))
+        return m.group("pre") + mid
+    text = re.sub(
+        r"(?m)^(?P<pre>(?P<ind>[ \t]*)@endcode[ \t]*\n)"
+        r"(?P<mid>(?:[ \t]+\S[^\n]*\n)+?)"
+        r"(?=(?P=ind)@code(?:\{[^}]*\})?[ \t]*$)",
+        _dedent_interblock, text)
 
     # 0b. "-# foo" -> "1. foo".
     text = re.sub(r"^(?P<indent>[ \t]*)-#[ \t]+",
@@ -198,11 +495,42 @@ def _translate(text: str, docname: str | None = None) -> str:
     def _admon_repl(m: re.Match) -> str:
         kind = _ADMON_KIND[m.group("dir")]
         raw = m.group("body")
+        # Whether the body started on the SAME line as `@note` (vs. on the
+        # following line). `head` is the matched prefix before the body —
+        # `@note `, possibly indented and possibly ending in the newline the
+        # `\n?` in the pattern consumed (the latter only in the next-line form).
+        head = m.group(0)[: len(m.group(0)) - len(raw)]
+        same_line = not head.endswith("\n")
+        # Leading indent of the directive (already the list-content baseline
+        # — step 0a dedented the `@note` line). The whole admonition is
+        # re-indented back to it so an indented note stays *inside* its list
+        # item instead of breaking the list at column 0. Safe now that code
+        # fences inside the note are emitted at the same baseline (see
+        # `_fenced`) rather than at column 0.
+        indent = head[: len(head) - len(head.lstrip(" \t"))]
         lines = raw.split("\n")
-        min_ind = min(
-            (len(l) - len(l.lstrip()) for l in lines if l.strip()), default=0)
-        body = "\n".join(l[min_ind:] for l in lines).strip()
-        return f"\n:::{{{kind}}}\n{body}\n:::\n"
+        # Common indent to strip from the body. When the text rides on the
+        # SAME line as the directive, that first line has zero leading indent
+        # and must be excluded from the min — otherwise min_ind collapses to 0
+        # and the continuation lines keep their full source indent, which MyST
+        # then renders as a spurious indented code block inside the note box.
+        ind_src = lines[1:] if same_line else lines
+        cand = [len(l) - len(l.lstrip()) for l in ind_src if l.strip()]
+        min_ind = min(cand) if cand else 0
+        def _dedent(l: str) -> str:
+            # Strip up to min_ind *leading whitespace* chars only — never
+            # slice into a less-indented line's actual text (e.g. the
+            # same-line first line, which has no leading whitespace).
+            i = 0
+            while i < min_ind and i < len(l) and l[i] in " \t":
+                i += 1
+            return l[i:]
+        body = "\n".join(_dedent(l) for l in lines).strip()
+        block = f":::{{{kind}}}\n{body}\n:::"
+        if indent:
+            block = "\n".join((indent + ln) if ln.strip() else ln
+                              for ln in block.split("\n"))
+        return f"\n{block}\n"
     _ac_stash: dict[str, str] = {}
     def _ac_hide(m: re.Match) -> str:
         k = f"\x00AC{len(_ac_stash)}\x00"; _ac_stash[k] = m.group(0); return k
@@ -252,11 +580,18 @@ def _translate(text: str, docname: str | None = None) -> str:
                   _split_adj_math, text, flags=re.MULTILINE)
     def _fblock(m: re.Match) -> str:
         ind = m.group("indent")
-        body = m.group("body").strip()
+        # Dedent the math body and re-indent every line to the fence
+        # baseline `ind`, so the block sits at relative-0 of its list item
+        # (matching `_fenced`). Leaving body lines at their deeper source
+        # offset put them at relative +4 inside list items, which breaks
+        # block recognition.
+        body = _dedent_keep_blanks(m.group("body")).strip("\n").strip()
+        reindent = lambda b: "\n".join((ind + ln) if ln.strip() else ln
+                                       for ln in b.split("\n"))
         if "\\\\" in body:
             body = re.sub(r"\n\s*\n", "\n", body)
-            return f"\n{ind}```{{math}}\n{ind}{body}\n{ind}```\n"
-        return f"\n{ind}$$\n{body}\n{ind}$$\n"
+            return f"\n{ind}```{{math}}\n{reindent(body)}\n{ind}```\n"
+        return f"\n{ind}$$\n{reindent(body)}\n{ind}$$\n"
     text = re.sub(r"^(?P<indent>[ \t]*)\\f\[(?P<body>.+?)\\f\]",
                   _fblock, text, flags=re.DOTALL | re.MULTILINE)
     text = re.sub(r"\\f\[(.+?)\\f\]",
@@ -272,17 +607,14 @@ def _translate(text: str, docname: str | None = None) -> str:
                   + r"\end{matrix}",
         text)
 
-    # 3. @code{.lang} ... @endcode -> fenced block (indent preserved).
+    # 3. @code{.lang} ... @endcode -> fenced block at the list-content
+    # baseline (see `_fenced`). `_dedent_dash_hash_indent` (step 0a) now
+    # dedents the @code/@endcode MARKER lines to that baseline, so the
+    # captured `indent` here is already the right column — same as the
+    # `@snippet`/`@include` path. Top-level @code (indent 0) -> column 0.
     def _code_repl(m: re.Match) -> str:
-        indent = m.group("indent") or ""
         lang = _normalize_lang(m.group("lang") or "")
-        body = m.group("body")
-        if indent:
-            body = _textwrap.dedent(body).strip("\n")
-            body = "\n".join((indent + line) if line else line
-                             for line in body.split("\n"))
-            return f"\n{indent}```{lang}\n{body}\n{indent}```\n"
-        return f"\n```{lang}\n{body.strip()}\n```\n"
+        return _fenced(m.group("indent") or "", lang, m.group("body"))
     text = re.sub(
         r"^(?P<indent>[ \t]*)@code(?:\{(?P<lang>[^}]*)\})?\s*\n(?P<body>.*?)\n[ \t]*@endcode",
         _code_repl, text, flags=re.DOTALL | re.MULTILINE)
@@ -323,11 +655,17 @@ def _translate(text: str, docname: str | None = None) -> str:
         lambda m: f"{m.group('fence')}{_normalize_lang(m.group('lang'))}",
         text, flags=re.MULTILINE)
 
-    # Backtick fence with per-line indent (other fence forms break in tab-items).
+    # Backtick fence emitted at the list-content baseline (see `_fenced`).
+    # Unlike `@code`, `@include`/`@snippet` lines ARE processed by
+    # `_dedent_dash_hash_indent` (step 0a) — so the captured `indent` is
+    # already the dedented baseline, the same column 0a placed the item's
+    # prose at. Emitting the fence there keeps it at relative-0 of the list
+    # item: recognised as a fence AND the list stays open. A bare snippet
+    # at top level has indent "" => column 0 (unchanged). A snippet inside
+    # an `@add_toggle` is re-based to column 0 by `_emit_toggles`, so the
+    # tab-item still receives a column-0 fence.
     def _emit_codeblock(indent: str, lang: str, body: str) -> str:
-        body_lines = body.rstrip().splitlines()
-        body_indented = "\n".join(indent + line for line in body_lines)
-        return f"\n{indent}```{lang}\n{body_indented}\n{indent}```\n"
+        return _fenced(indent, lang, body)
 
     # 4. @include path / @includelineno path.
     def _include_repl(m: re.Match) -> str:
@@ -394,6 +732,21 @@ def _translate(text: str, docname: str | None = None) -> str:
                 j += m2.end()
                 k = re.match(r"\s*", src[j:])
                 if not k or not re.match(r"@add_toggle_", src[j + k.end():]):
+                    break
+                # A repeated language starts a NEW logical tab-set rather than
+                # adding a duplicate tab: sources sometimes place
+                # `cpp / python / cpp` consecutively (e.g. an inside+outside
+                # pair followed by a C++-only block) — that must render as
+                # [C++|Python] then [C++], not one C++/Python/C++ widget.
+                # Genuinely distinct languages (cpp/java/python) still merge.
+                _nxt = re.match(r"@add_toggle_(\w+)", src[j + k.end():])
+                if _nxt and _nxt.group(1) in {t[0] for t in tabs}:
+                    # Rewind to the next toggle's LINE START so the outer
+                    # loop's `^`-anchored opener re-matches it: the inner
+                    # `@end_toggle\s*\n?` above may have eaten the next line's
+                    # leading indent, which would otherwise leave the toggle
+                    # stranded mid-line and uncollapsed.
+                    j = src.rfind("\n", 0, j + k.end()) + 1
                     break
                 j += k.end()
             if not tabs:
@@ -722,7 +1075,14 @@ def _translate(text: str, docname: str | None = None) -> str:
                     resolved.append((kind, "external", _doxygen_url(lookup),
                                      disp or title, description, prefix, inline))
             if not resolved:
-                return ""
+                # No item resolved to a known page — this isn't really a
+                # subpage/toctree list (e.g. a bullet whose `@ref` is an
+                # inline cross-reference like `@ref cv::Mat::Mat`, followed
+                # by an example). Leave it untouched so its body (now
+                # baseline-indented code/images — see `_fenced`) is NOT
+                # swallowed as a bullet "description" and dropped. Step 7
+                # still turns the bare `@ref` into a link.
+                return m.group(1)
 
             # toctree gets only @subpage (internal @ref would create cycles).
             tt_lines = []
@@ -776,16 +1136,24 @@ def _translate(text: str, docname: str | None = None) -> str:
     text = re.sub(r'@ref\s+(?P<name>[\w:-]+)(?:\s+"(?P<disp>[^"]+)")?',
                   _ref_repl, text)
 
-    # 7c. cv.Name -> Markdown link using _CV_SYMBOL_URL; skips code spans.
+    # 7c. cv.Name -> Markdown link using _CV_SYMBOL_URL; skips fenced
+    # code blocks (including nested in tab-sets) and inline code
+    # spans. Previous implementation used `re.split` on a brittle
+    # ` ``` … ``` ` regex that mis-paired fence widths inside
+    # tab-set > tab-item > ` ```python` hierarchies, so the cv-linkifier
+    # rewrote every `cv.foo` token inside Python/C++/Java tutorial
+    # snippets as `[cv.foo](#anchor)` — visible as literal markdown
+    # syntax in the Pygments-rendered code block. Routing through
+    # `_apply_outside_code` (which now uses `_code_regions`) protects
+    # all code-block bodies across every tutorial language.
     if _CV_SYMBOL_URL:
+        _cv_dot_re = re.compile(
+            r'(?<!\[)(?<!\()cv\.([A-Za-z][A-Za-z0-9_]*)')
         def _cvlink_repl(m: re.Match) -> str:
             url = _CV_SYMBOL_URL.get(m.group(1))
             return f'[cv.{m.group(1)}]({url})' if url else m.group(0)
-        _parts = re.split(r'(```.*?```|`[^`\n]+`)', text, flags=re.DOTALL)
-        text = ''.join(
-            p if i % 2 else re.sub(
-                r'(?<!\[)(?<!\()cv\.([A-Za-z][A-Za-z0-9_]*)', _cvlink_repl, p)
-            for i, p in enumerate(_parts))
+        text = _apply_outside_code(
+            text, lambda chunk: _cv_dot_re.sub(_cvlink_repl, chunk))
 
     # 8. @cite KEY -> `[N]` HTML anchor to citelist (N from opencv.bib order).
     def _cite_repl(m: re.Match) -> str:
@@ -798,13 +1166,19 @@ def _translate(text: str, docname: str | None = None) -> str:
         else:
             href = f"{DOXYGEN_BASE_URL}citelist.html#CITEREF_{key}"
         return f'<a href="{href}">{label}</a>'
+    # Keys may contain ':'/'.' segments (Ma:2003:IVI, BT.709, Wulff:CVPR:2015);
+    # match those without swallowing a trailing sentence period.
     text = _apply_outside_code(text, lambda chunk: re.sub(
-        r"@cite\s+(?P<key>[\w-]+)", _cite_repl, chunk))
+        r"@cite\s+(?P<key>[\w-]+(?:[.:][\w-]+)*)", _cite_repl, chunk))
 
-    if _CITE_NUMBER and docname != "citelist":
+    # Skip plain-lowercase keys (e.g. "pattern", "eigenfaces") in the bare pass:
+    # they collide with ordinary words and mis-cite prose. Mixed-case/digit keys
+    # (Zhang2000, BT2017, LBP) still link bare; explicit @cite always works.
+    _bare_keys = [k for k in _CITE_NUMBER if not re.fullmatch(r"[a-z]+", k)]
+    if _bare_keys and docname != "citelist":
         _CITE_KEY_RE = re.compile(
             r"(?<![\[\w])(?P<key>"
-            + "|".join(re.escape(k) for k in _CITE_NUMBER)
+            + "|".join(re.escape(k) for k in _bare_keys)
             + r")(?![\w\]])"
         )
         def _bare_cite_repl(m: re.Match) -> str:
@@ -1043,7 +1417,17 @@ def _translate(text: str, docname: str | None = None) -> str:
 
 
 _BARE_URL_RE = re.compile(
-    r"(?<![<\[(\w\"'=])"
+    # Block the URL part of a markdown link `[text](url)` /
+    # `![alt](url)` via a 2-char lookbehind on `](`. Plain `(` in
+    # prose — e.g. `- PyPI (https://pypi.org/search/?q=opencv)` —
+    # used to fall under the old single-char `(` exclusion, leaving
+    # those URLs un-clickable on every tutorial page that lists
+    # parenthesised resource URLs (install pages, "see also" lists,
+    # third-party-package indexes). The split lookbehind keeps the
+    # markdown-link / autolink / HTML-attribute exclusions intact
+    # while letting bare URLs in parens get autolinkified.
+    r"(?<!\]\()"
+    r"(?<![<\[\w\"'=])"
     r"(?P<url>https?://[^\s<>()`\"']+[^\s<>()`\"'.,;:!?])"
 )
 # `cv.X`/`cv::X`; lookbehind blocks `frame.cv.X`-style false positives.
@@ -1059,10 +1443,106 @@ _FENCED_BLOCK_RE = re.compile(
 _INLINE_CODE_RE = re.compile(r"`+[^`\n]*?`+")
 # ATX heading line; exempted from the auto-linkifier.
 _ATX_HEADING_RE = re.compile(r"^[ \t]{0,3}#{1,6}[ \t]")
+# Per-line fence detector used by `_code_regions`. Allows ANY leading
+# whitespace — not just CommonMark's ≤3 spaces. This is deliberate:
+# `_emit_codeblock` preserves the indent of the originating
+# `@include` / `@snippet` directive (typically 4 spaces, because the
+# directive sits inside an `@add_toggle_LANG` block in the tutorial
+# markdown), so the fences our pipeline emits are routinely indented
+# 4+ spaces. With the strict CommonMark limit, those fences slipped
+# past the detector and the cv-linkifier (step 7c) leaked
+# `[cv.foo](#anchor)` markdown syntax into every affected Python /
+# C++ / Java code block. Worst-case downside of the relaxation is
+# that an unrelated 4+ space-indented line beginning with three
+# backticks would be classified as a fence — that just means MORE
+# text gets protected from the linkifiers, not less.
+_FENCE_LINE_RE = re.compile(
+    r"^(?P<indent>[ \t]*)(?P<fence>`{3,}|~{3,})(?P<info>.*)$"
+)
+
+
+def _code_regions(src: str) -> list[tuple[int, int]]:
+    """Return sorted `[(start, end), ...]` byte ranges spanning every
+    fenced code block (including the fence lines themselves) in `src`.
+
+    Correctly handles MyST/Sphinx nested fences where the outer
+    container is wider than the inner code fence — e.g.
+    ` ``````{tab-set}` (6) > ` `````{tab-item} Python` (5) >
+    ` ```python` (3) > body > ` ``` ` > ` ````` ` > ` `````` `. The
+    previous regex-based detector (`_FENCED_BLOCK_RE`) anchored at
+    line start AND required exact fence-width pairing, so it missed
+    indented fences and mis-paired the inner code fence with one half
+    of the outer container — leaking code-block bodies to the
+    downstream linkifiers.
+
+    A fence with a non-empty info string is treated as an opener; the
+    info determines whether the block is *code* (typed language like
+    `python`, or empty) or a *container* (MyST `{directive}` form,
+    e.g. `{tab-set}`, `{note}`). Only code-block ranges are returned —
+    container bodies are still walked by the caller so their nested
+    prose stays linkifiable. Inside a code fence further fence-shaped
+    lines are inert per CommonMark §4.5."""
+    out: list[tuple[int, int]] = []
+    # Each stack entry: (fence_char, fence_width, is_code, opener_offset).
+    stack: list[tuple[str, int, bool, int]] = []
+    pos = 0
+    for line in src.splitlines(keepends=True):
+        line_start = pos
+        next_pos = pos + len(line)
+        ln = line.rstrip("\n").rstrip("\r")
+        m = _FENCE_LINE_RE.match(ln)
+        if m is None:
+            pos = next_pos
+            continue
+        fc = m.group("fence")[0]
+        fw = len(m.group("fence"))
+        info = m.group("info").strip()
+        # Inside a code fence nothing matters except the matching closer.
+        if stack and stack[-1][2]:
+            top_char, top_width, _, opener_start = stack[-1]
+            if fc == top_char and fw >= top_width and not info:
+                out.append((opener_start, next_pos))
+                stack.pop()
+            pos = next_pos
+            continue
+        # Outside code: an info-less fence of the same char & ≥ width
+        # closes the nearest open fence (which must be a container, per
+        # the branch above). A fence with info opens a new block.
+        if stack and not info:
+            top_char, top_width, _, _ = stack[-1]
+            if fc == top_char and fw >= top_width:
+                stack.pop()
+                pos = next_pos
+                continue
+        # Opener. Empty info or a language tag → code block; `{…}` info
+        # → container. (Plain text after a fence is also a code block
+        # per CommonMark, so `info=""` falls into is_code=True.)
+        is_code = (not info) or (not info.startswith("{"))
+        stack.append((fc, fw, is_code, line_start))
+        # Shield a breathe directive's opener line: its argument (e.g.
+        # `{doxygenstruct} cv::MSTEdge`) must reach breathe unlinkified.
+        if info.startswith("{doxygen"):
+            out.append((line_start, next_pos))
+        pos = next_pos
+    # Unclosed code fences: extend protection to EOF so we don't mangle
+    # the tail of a pathologically-truncated document.
+    while stack:
+        char, width, is_code, opener_start = stack.pop()
+        if is_code:
+            out.append((opener_start, len(src)))
+    out.sort()
+    return out
 
 
 def _apply_outside_code(src: str, transform) -> str:
-    """Apply `transform` to regions outside fenced/inline code."""
+    """Apply `transform` to regions outside fenced and inline code.
+
+    Uses `_code_regions` for fence detection so nested container >
+    code fences (tab-set > tab-item > ` ```python`) are handled
+    correctly — the previous `_FENCED_BLOCK_RE` regex anchored at
+    column 0 only and back-referenced an exact fence width, which
+    let the cv-linkifier write `[cv.foo](#anchor)` markdown link
+    syntax inside tab-set code bodies."""
     def _segment(text: str) -> str:
         out, last = [], 0
         for cm in _INLINE_CODE_RE.finditer(text):
@@ -1072,10 +1552,10 @@ def _apply_outside_code(src: str, transform) -> str:
         out.append(transform(text[last:]))
         return "".join(out)
     out, last = [], 0
-    for fm in _FENCED_BLOCK_RE.finditer(src):
-        out.append(_segment(src[last:fm.start()]))
-        out.append(fm.group(0))
-        last = fm.end()
+    for s, e in _code_regions(src):
+        out.append(_segment(src[last:s]))
+        out.append(src[s:e])
+        last = e
     out.append(_segment(src[last:]))
     return "".join(out)
 

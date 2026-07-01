@@ -109,6 +109,105 @@ for _m in CONTRIB_MODULES:
                     _IMAGE_INDEX.setdefault(_img.name,
                                             f"contrib_modules/{_rel}")
 
+# Doxygen's IMAGE_PATH also spans opencv/samples (+ apps), so a tutorial can
+# reference an image that lives only under samples — e.g. the Clojure tutorial's
+# `![](images/lena.png)`, whose file is opencv/samples/java/clojure/.../lena.png.
+# Those resolve to nothing in the tutorial-only index and render broken. Mirror
+# Doxygen, but bounded: index+stage ONLY sample images that a tutorial actually
+# references and that aren't already provided by a tutorial `images/` dir, so we
+# don't copy the whole samples image set. Staged under sample_pics/ like the
+# api_pics mechanism above.
+_referenced_images: set[str] = set()
+for _md in (DOC_ROOT / "tutorials").rglob("*.markdown"):
+    try:
+        _txt = _md.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        continue
+    for _m in re.finditer(r'!\[[^\]]*\]\((?:[^)\s]*?/)?images/([^)\s]+)\)', _txt):
+        _referenced_images.add(pathlib.Path(_m.group(1)).name)
+_missing_images = {n for n in _referenced_images if n not in _IMAGE_INDEX}
+if _missing_images:
+    _sample_pics = SPHINX_INPUT_ROOT / "sample_pics"
+    _stage_samples = SPHINX_INPUT_ROOT != DOC_ROOT
+    for _base in (OPENCV_ROOT / "samples", OPENCV_ROOT / "apps"):
+        if not _base.is_dir() or not _missing_images:
+            continue
+        for _img in _base.rglob("*"):
+            if (_img.name in _missing_images and _img.is_file()
+                    and _img.suffix.lower() in _IMAGE_EXTS):
+                _IMAGE_INDEX[_img.name] = f"sample_pics/{_img.name}"
+                _missing_images.discard(_img.name)   # first match wins; stop looking
+                if _stage_samples:
+                    _sample_pics.mkdir(parents=True, exist_ok=True)
+                    _link = _sample_pics / _img.name
+                    if not _link.exists():
+                        try:
+                            _os.symlink(_img, _link)
+                        except (OSError, NotImplementedError):
+                            try:
+                                _shutil.copy2(_img, _link)
+                            except OSError:
+                                pass
+            if not _missing_images:
+                break
+
+
+# Hand-authored topic injected into the dnn module's Topics; content lives in the
+# dnn module's own doc dir (modules/dnn/doc) so it sits in its natural home.
+_DNN_ENGINE_SELECTION_MD = (
+    OPENCV_ROOT / "modules" / "dnn" / "doc" / "dnn_engine.markdown").read_text(
+    encoding="utf-8")
+
+
+def _add_dnn_engine_selection_topic(out_dir: pathlib.Path) -> None:
+    """Add the hand-authored 'DNN Engine Selection' page as a dnn-module topic.
+    Call after stub generation (so its stale-file sweep has run) and before the
+    anchor scan, so the new {#anchor} + @subpage get picked up."""
+    dnn = out_dir / "dnn.md"
+    if not dnn.is_file():
+        return
+    (out_dir / "dnn_engine_selection.md").write_text(
+        _DNN_ENGINE_SELECTION_MD, encoding="utf-8")
+    text = dnn.read_text(encoding="utf-8")
+    if "api_dnn_engine_selection" in text:
+        return
+    new = re.sub(
+        r"(## Topics\n\n(?:- @subpage [^\n]*\n)+)",
+        lambda m: m.group(1) + "- @subpage api_dnn_engine_selection\n",
+        text, count=1)
+    if new != text:
+        dnn.write_text(new, encoding="utf-8")
+
+
+# Hand-authored standalone HAL page; content lives in core's own doc dir
+# (modules/core/doc, HAL's home) alongside intro.markdown / cuda.markdown.
+_HAL_MD = (
+    OPENCV_ROOT / "modules" / "core" / "doc" / "hal.markdown").read_text(
+    encoding="utf-8")
+
+
+def _add_hal_page(out_dir: pathlib.Path) -> None:
+    """Write the HAL page and add a 'Learn about HAL' link on the api_root page.
+    Call after stub generation and before the anchor scan."""
+    api_root = out_dir / "api_root.markdown"
+    if not api_root.is_file():
+        return
+    (out_dir / "hal.md").write_text(_HAL_MD, encoding="utf-8")
+    text = api_root.read_text(encoding="utf-8")
+    if "](hal.md)" in text:
+        return
+    # Register the page in the section toctree (as the last entry).
+    text = re.sub(r"(```\{toctree\}\n.*?\n)(```\n)", r"\1hal\n\2",
+                  text, count=1, flags=re.S)
+    # Visible "Learn about HAL" section at the end of the page.
+    text = text.rstrip() + (
+        "\n\n## Learn about HAL\n\n"
+        "OpenCV ships a Hardware Acceleration Layer that lets hardware vendors "
+        "inject tuned, silicon-specific implementations behind a stable C "
+        "interface. See [OpenCV Hardware Acceleration Layer (HAL)](hal.md).\n")
+    api_root.write_text(text, encoding="utf-8")
+
+
 if API_MODULES:
     _api_pics = SPHINX_INPUT_ROOT / "api_pics"
     _stage_pics = SPHINX_INPUT_ROOT != DOC_ROOT
@@ -146,6 +245,8 @@ if API_MODULES:
     _generate_api_stubs(_main_api, _API_XML_DIR, SPHINX_INPUT_ROOT / "main_modules",
                         root_anchor="api_root", root_title="Main modules",
                         extra_groups=_main_orphans)
+    _add_dnn_engine_selection_topic(SPHINX_INPUT_ROOT / "main_modules")
+    _add_hal_page(SPHINX_INPUT_ROOT / "main_modules")
     _scan_internal(SPHINX_INPUT_ROOT / "main_modules")
     if _extra_api or _extra_orphans:
         _generate_api_stubs(_extra_api, _API_XML_DIR, SPHINX_INPUT_ROOT / "extra_modules",
@@ -176,6 +277,11 @@ def _write_root_index() -> None:
             entries.append((heading, link_text, docname))
 
     add("Introduction", "Introduction", "intro", "intro" in _ANCHOR_TO_DOC)
+    # Own landing section, instead of a bullet in the intro "Usage basics" list.
+    _prebuilt = _ANCHOR_TO_DOC.get("tutorial_using_prebuilt_binaries")
+    add("How to use pre-built OpenCV binaries",
+        "Using OpenCV pre-built binaries in your own projects",
+        _prebuilt or "", bool(_prebuilt))
     add("OpenCV Tutorials", "OpenCV tutorials", "tutorials/tutorials")
     add("Python Tutorials", "OpenCV-Python tutorials",
         "py_tutorials/py_tutorials", bool(PY_DOC_MODULES))
@@ -194,27 +300,51 @@ def _write_root_index() -> None:
     toctree = "\n".join(
         f"{heading} <{docname}>" for heading, _link, docname in entries)
 
-    # Body: raw HTML so links resolve correctly relative to index.html.
-    html_lines = ['<div class="ocv-landing">']
+    # Body: Markdown H2 section headings so each appears in the "On this page"
+    # TOC; links stay raw HTML so they resolve relative to index.html (Markdown
+    # headings can't live inside a raw <div>, so there is no wrapper).
+    body_lines: list[str] = []
     for heading, link_text, docname in entries:
-        if link_text is None:
-            html_lines.append(
-                f'<h2><a href="{docname}.html">{heading}</a></h2>')
-        else:
-            html_lines.append(f'<h2>{heading}</h2>')
-            html_lines.append(f'<p><a href="{docname}.html">{link_text}</a></p>')
-    html_lines.append("</div>")
-    body = "\n".join(html_lines)
+        body_lines.append(f"## {heading}\n")
+        body_lines.append(
+            f'<ul><li><a href="{docname}.html">{link_text or heading}</a></li></ul>\n')
+    body = "\n".join(body_lines).rstrip()
+
+    intro = (
+        "OpenCV (Open Source Computer Vision Library) is an open-source computer "
+        "vision and machine learning software library. It has more than 2,500 "
+        "optimised algorithms, a comprehensive mix of both classic and "
+        "state-of-the-art computer vision and machine learning methods. These "
+        "can be used to detect and recognise faces, identify objects, classify "
+        "human actions in video, track camera and object motion, extract 3D "
+        "models, stitch images together to produce high-resolution panoramas, "
+        "and much more. The library has interfaces for C++, Python, Java, and "
+        "JavaScript, runs on Windows, Linux, macOS, Android, and iOS, and "
+        "accelerates work on CPU (SIMD), CUDA, OpenCL, and Vulkan.\n\n"
+        "OpenCV 5.0 is a major release built on OpenCV 4.x. C++17 is now the "
+        "minimum required standard, Python 2 support has been dropped (Python "
+        "3.6+ is required), and the legacy C API has been fully removed. New "
+        "data types (CV_16BF, CV_32U, CV_64U, CV_64S, CV_Bool) and proper 0D/1D "
+        "array support extend the core, while the former calib3d module is split "
+        "into the geometry, calib, stereo, and ptcloud modules. A "
+        "next-generation DNN engine now covers over 80% of the ONNX "
+        "specification (up from under 23%), with ONNX Runtime integration and "
+        "models hosted on Hugging Face. Performance gains include Universal "
+        "Intrinsics 2.0 (SSE/AVX/NEON/SVE/RISC-V), Vulkan compute support, "
+        "image-warping speed-ups of 10% to over 300%, and USAC as the default "
+        "framework for robust estimation."
+    )
 
     text = (
-        "OpenCV modules\n"
-        "==============\n\n"
+        "OpenCV documentation\n"
+        "====================\n\n"
         "```{toctree}\n"
         ":hidden:\n"
         ":maxdepth: 1\n"
         ":titlesonly:\n\n"
         f"{toctree}\n"
         "```\n\n"
+        f"{intro}\n\n"
         f"{body}\n"
     )
     try:

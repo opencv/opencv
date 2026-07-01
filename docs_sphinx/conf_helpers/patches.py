@@ -7,6 +7,8 @@
 """Runtime patches for Sphinx C++ domain and breathe; applied at import."""
 from __future__ import annotations
 
+import re
+
 def _patch_cpp_xref_resolver():
     """Work around Sphinx 8.1.x parentSymbol assert in _resolve_xref_inner."""
     try:
@@ -169,3 +171,131 @@ def _silence_orphan_toctree_warning():
 
 
 _silence_orphan_toctree_warning()
+
+
+def _patch_sidebar_section_root():
+    """Root the left sidebar at a page's own top-level section.
+
+    A page listed in two toctrees (e.g. a `cuda*` extra module, also grouped
+    under the main `cuda` module) gets a last-wins parent from Sphinx's
+    `_get_toctree_ancestors`, so its sidebar wrongly roots at the foreign
+    section and shows only its own children. Re-pick the parent that shares
+    the longest path prefix (same section) so the full sibling list shows."""
+    try:
+        import pydata_sphinx_theme.toctree as _pt
+        from sphinx.environment.adapters.toctree import TocTree
+    except ImportError:
+        return
+
+    def _section_aware_ancestor(app, pagename, startdepth):
+        ti = app.env.toctree_includes
+        cand: dict[str, list[str]] = {}
+        for _p, _children in ti.items():
+            for _c in _children:
+                cand.setdefault(_c, []).append(_p)
+
+        def _shared(parent: str, child: str) -> int:
+            a, b, i = parent.split("/"), child.split("/"), 0
+            while i < len(a) and i < len(b) and a[i] == b[i]:
+                i += 1
+            return i
+
+        ancestors: list[str] = []
+        d = pagename
+        while d not in ancestors:
+            ps = cand.get(d)
+            if not ps:
+                break
+            ancestors.append(d)
+            d = max(ps, key=lambda p: _shared(p, d))
+        try:
+            out = ancestors[-startdepth]
+        except IndexError:
+            out = None
+        # Childless root => empty sidebar (e.g. a class under an orphaned module
+        # page). `d` is the dead-end ancestor: prefer it when it's a same-section
+        # page with children, so the current page is listed and highlighted;
+        # otherwise fall back to the section's api_root.
+        if out is None or not ti.get(out):
+            _sec = pagename.split("/", 1)[0]
+            _base = pagename.rsplit("/", 1)[-1]
+            # Doxygen file/dir-reference pages (#include graphs) are orphan
+            # utilities, not module content: leave None so the sidebar is
+            # suppressed rather than rooting at the section's api_root.
+            if re.search(r"_8\w+$", _base) or _base.startswith("dir_"):
+                out = None
+            elif d != pagename and ti.get(d) and d.split("/", 1)[0] == _sec:
+                out = d
+            elif ti.get(_sec + "/api_root"):
+                out = _sec + "/api_root"
+        return out, TocTree(app.env)
+
+    _pt._get_ancestor_pagename = _section_aware_ancestor
+
+
+_patch_sidebar_section_root()
+
+
+def _patch_sphinx_toctree_ancestors():
+    """The startdepth=0 sidebar renders the root toctree with `collapse=True`,
+    which keeps only the 'current' branch expanded. Sphinx decides that branch
+    via `_get_toctree_ancestors`, whose last-wins parent map picks the wrong
+    parent for a page listed in two toctrees (e.g. a `cuda*` extra module also
+    grouped under main `cuda`) -> the page's own section doesn't expand. Prefer
+    the parent sharing the longest path prefix (same section)."""
+    try:
+        import sphinx.environment.adapters.toctree as _st
+    except ImportError:
+        return
+
+    def _section_aware(toctree_includes, docname):
+        cand: dict[str, list[str]] = {}
+        for _p, _children in toctree_includes.items():
+            for _c in _children:
+                cand.setdefault(_c, []).append(_p)
+
+        def _shared(parent: str, child: str) -> int:
+            a, b, i = parent.split("/"), child.split("/"), 0
+            while i < len(a) and i < len(b) and a[i] == b[i]:
+                i += 1
+            return i
+
+        ancestors: list[str] = []
+        d = docname
+        while d not in ancestors:
+            ps = cand.get(d)
+            if not ps:
+                break
+            ancestors.append(d)
+            d = max(ps, key=lambda p: _shared(p, d))
+        return dict.fromkeys(ancestors).keys()
+
+    _st._get_toctree_ancestors = _section_aware
+
+
+_patch_sphinx_toctree_ancestors()
+
+
+def register_global_sidebar(app):
+    """Make the left sidebar list ALL top-level sections (startdepth=0) with the
+    current one auto-expanded, instead of only the active section's subtree.
+
+    The theme injects `generate_toctree_html` -- the sole sidebar nav generator,
+    used only by its sidebar-nav-bs.html -- into each page's context via an
+    html-page-context handler. We connect after it (higher priority) and wrap
+    that one function to force startdepth=0, so the theme keeps its own template
+    (and any future args) while we flip just this argument.
+
+    Note: this makes `_patch_sidebar_section_root` above a no-op (its ancestor
+    lookup only runs when startdepth != 0)."""
+    def _globalize(app, pagename, templatename, context, doctree):
+        gen = context.get("generate_toctree_html")
+        if not callable(gen):
+            return
+        def wrapped(kind, startdepth=0, show_nav_level=0, **kwargs):
+            # collapse=True: expand only the current branch. Without it,
+            # startdepth=0 renders the whole tree on every page (slow + bloated).
+            kwargs["collapse"] = True
+            return gen(kind, startdepth=0, show_nav_level=0, **kwargs)
+        context["generate_toctree_html"] = wrapped
+    app.connect("html-page-context", _globalize, priority=900)

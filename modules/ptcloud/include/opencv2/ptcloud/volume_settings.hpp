@@ -12,6 +12,9 @@
 namespace cv
 {
 
+//! @addtogroup ptcloud_rgbd
+//! @{
+
 enum class VolumeType
 {
     TSDF = 0,
@@ -202,6 +205,8 @@ public:
 private:
     Ptr<Impl> impl;
 };
+
+//! @}
 
 }
 
