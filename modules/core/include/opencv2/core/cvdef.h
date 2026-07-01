@@ -982,77 +982,80 @@ protected:
     ushort w;
 };
 
-template<int ebits, int mbits, int bias, bool has_inf, bool fnuz>
-class float8_t
+namespace fp8_detail {
+
+// round-half-up (ties away from zero) — deliberately NOT round-to-nearest-even / OCP-ONNX spec
+inline unsigned roundHalfUp(unsigned full, int shift)
 {
-public:
-    float8_t() : b(0) {}
+    if (shift <= 0) return full << (-shift);
+    unsigned q = full >> shift, rem = full & ((1u << shift) - 1), half = 1u << (shift - 1);
+    if (rem >= half) q++;
+    return q;
+}
+inline float pow2(int n) { Cv32suf s; s.u = (unsigned)((n + 127) << 23); return s.f; }
 
-    explicit float8_t(float x)
+// E4M3 encode; no inf, bias/fnuz select E4M3FN vs E4M3FNUZ
+inline uchar encodeE4M3(float x, int bias, bool fnuz)
+{
+    Cv32suf in; in.f = x;
+    unsigned u = in.u, sign = (u >> 31) & 1, e = (u >> 23) & 0xFF, m = u & 0x7FFFFF;
+    const unsigned sbit = sign << 7;
+    const unsigned nanc = fnuz ? 0x80u : (sbit | 0x7Fu);
+    if (e == 0xFF) return (uchar)nanc;
+    if (e == 0 && m == 0) return (uchar)(fnuz ? 0u : sbit);
+    int newexp = (int)e - 127 + bias;
+    const unsigned full = (1u << 23) | m;
+    if (newexp <= 0)                                                    // subnormal
     {
-        Cv32suf in; in.f = x;
-        unsigned u = in.u, sign = (u >> 31) & 1, e = (u >> 23) & 0xFF, m = u & 0x7FFFFF;
-        const int W = ebits + mbits;
-        const unsigned sbit = sign << W, maxe = (1u << ebits) - 1;
-        const unsigned nanc = fnuz ? 0x80u : (sbit | (maxe << mbits) | ((1u << mbits) - 1));
-        const unsigned infc = sbit | (maxe << mbits);
-        if (e == 0xFF && m != 0) { b = (uchar)nanc; return; }                       // NaN
-        if (e == 0xFF) { b = (uchar)((has_inf && !fnuz) ? infc : nanc); return; }   // Inf
-        if (e == 0 && m == 0) { b = (uchar)(fnuz ? 0u : sbit); return; }            // zero
-        int newexp = (int)e - 127 + bias;
-        const unsigned full = (1u << 23) | m;
-        if (newexp <= 0)                                                            // subnormal/underflow
-        {
-            const int shift = (23 - mbits) + (1 - newexp);
-            unsigned mant = (shift >= 32) ? 0u : roundRNE(full, shift);
-            b = (uchar)(mant == 0 ? (fnuz ? 0u : sbit) : (sbit | mant));
-            return;
-        }
-        unsigned rounded = roundRNE(full, 23 - mbits);
-        if (rounded & (1u << (mbits + 1))) { rounded >>= 1; newexp++; }             // rounding carried into exponent
-        const unsigned mant = rounded & ((1u << mbits) - 1);
-        const bool ov = has_inf ? ((unsigned)newexp >= maxe)
-                      : fnuz    ? ((unsigned)newexp > maxe)
-                                : ((unsigned)newexp > maxe || ((unsigned)newexp == maxe && mant == (1u << mbits) - 1));
-        if (ov) { b = (uchar)((has_inf && !fnuz) ? infc : nanc); return; }
-        b = (uchar)(sbit | ((unsigned)newexp << mbits) | mant);
+        const int shift = 20 + (1 - newexp);
+        unsigned mant = (shift >= 32) ? 0u : roundHalfUp(full, shift);
+        return (uchar)(mant == 0 ? (fnuz ? 0u : sbit) : (sbit | mant));
     }
+    unsigned rounded = roundHalfUp(full, 20);
+    if (rounded & 16u) { rounded >>= 1; newexp++; }                     // carry into exponent
+    const unsigned mant = rounded & 7u;
+    const bool ov = fnuz ? ((unsigned)newexp > 15)
+                         : ((unsigned)newexp > 15 || ((unsigned)newexp == 15 && mant == 7));
+    if (ov) return (uchar)nanc;
+    return (uchar)(sbit | ((unsigned)newexp << 3) | mant);
+}
 
-    operator float() const
-    {
-        const int W = ebits + mbits;
-        const unsigned sign = ((unsigned)b >> W) & 1;
-        const unsigned exp = ((unsigned)b >> mbits) & ((1u << ebits) - 1);
-        const unsigned man = (unsigned)b & ((1u << mbits) - 1);
-        const unsigned maxe = (1u << ebits) - 1;
-        const float s = sign ? -1.f : 1.f;
-        Cv32suf qn; qn.u = sign ? 0xFFC00000u : 0x7FC00000u;                        // sign-matched quiet NaN
-        if (fnuz) { if ((unsigned)b == (1u << W)) return qn.f; }
-        else if (exp == maxe)
-        {
-            if (has_inf) { Cv32suf inf; inf.u = sign ? 0xFF800000u : 0x7F800000u; return man == 0 ? inf.f : qn.f; }
-            if (man == (1u << mbits) - 1) return qn.f;
-        }
-        if (exp == 0) return s * (float)man * pow2(1 - bias - mbits);               // subnormal
-        return s * (1.0f + (float)man / (float)(1u << mbits)) * pow2((int)exp - bias);
-    }
+inline float decodeE4M3(uchar b, int bias, bool fnuz)
+{
+    const unsigned sign = ((unsigned)b >> 7) & 1, exp = ((unsigned)b >> 3) & 15, man = (unsigned)b & 7;
+    const float s = sign ? -1.f : 1.f;
+    Cv32suf qn; qn.u = sign ? 0xFFC00000u : 0x7FC00000u;
+    if (fnuz) { if ((unsigned)b == 0x80u) return qn.f; }
+    else if (exp == 15) { if (man == 7) return qn.f; }
+    if (exp == 0) return s * (float)man * pow2(1 - bias - 3);
+    return s * (1.0f + (float)man / 8.0f) * pow2((int)exp - bias);
+}
 
+} // namespace fp8_detail
+
+struct fp8_t     // E4M3FN: bias 7, no inf, max 448
+{
+    fp8_t() : b(0) {}
+    explicit fp8_t(float x) : b(fp8_detail::encodeE4M3(x, 7, false)) {}
+    operator float() const { return table()[b]; }
 protected:
     uchar b;
-
 private:
-    static unsigned roundRNE(unsigned full, int shift)
-    {
-        if (shift <= 0) return full << (-shift);
-        unsigned q = full >> shift, rem = full & ((1u << shift) - 1), half = 1u << (shift - 1);
-        if (rem > half || (rem == half && (q & 1))) q++;
-        return q;
-    }
-    static float pow2(int n) { Cv32suf s; s.u = (unsigned)((n + 127) << 23); return s.f; } // 2^n, n in [-126,127]
+    static const float* table()
+    { static const struct T { float v[256]; T() { for (int i = 0; i < 256; i++) v[i] = fp8_detail::decodeE4M3((uchar)i, 7, false); } } t; return t.v; }
 };
 
-typedef float8_t<4, 3, 7,  false, false> fp8_t;   // no inf, max 448
-typedef float8_t<4, 3, 8,  false, true>  fp8a_t; // no inf, single NaN, no -0
+struct fp8a_t    // E4M3FNUZ: bias 8, no inf, single NaN, no -0, max 240
+{
+    fp8a_t() : b(0) {}
+    explicit fp8a_t(float x) : b(fp8_detail::encodeE4M3(x, 8, true)) {}
+    operator float() const { return table()[b]; }
+protected:
+    uchar b;
+private:
+    static const float* table()
+    { static const struct T { float v[256]; T() { for (int i = 0; i < 256; i++) v[i] = fp8_detail::decodeE4M3((uchar)i, 8, true); } } t; return t.v; }
+};
 
 }
 #endif
