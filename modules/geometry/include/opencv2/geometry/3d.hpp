@@ -7,7 +7,6 @@
 
 #include "opencv2/core.hpp"
 #include "opencv2/core/affine.hpp"
-#include "opencv2/core/utils/logger.hpp"
 #include "opencv2/geometry/segment.hpp"
 
 /**
