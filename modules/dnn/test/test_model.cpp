@@ -664,18 +664,6 @@ static void topK(const Mat& probs, std::vector<std::pair<int, float> >& result, 
     }
 }
 
-// Returns the CPU (OpenCV backend) and CUDA backend/target pairs for benchmarking.
-static std::vector<tuple<Backend, Target> > resnet50BackendsAndTargets()
-{
-    std::vector<tuple<Backend, Target> > targets;
-    targets.push_back(make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU));
-#ifdef HAVE_CUDA
-    for (auto target : getAvailableTargets(DNN_BACKEND_CUDA))
-        targets.push_back(make_tuple(DNN_BACKEND_CUDA, target));
-#endif
-    return targets;
-}
-
 typedef testing::TestWithParam<tuple<Backend, Target> > Reproducibility_ResNet50_ONNX;
 TEST_P(Reproducibility_ResNet50_ONNX, Accuracy)
 {
@@ -728,7 +716,7 @@ TEST_P(Reproducibility_ResNet50_ONNX, Accuracy)
     }
 }
 INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_ResNet50_ONNX,
-                        testing::ValuesIn(resnet50BackendsAndTargets()));
+                        dnnBackendsAndTargets(false, false, true, false, true, false, false, false));
 
 typedef testing::TestWithParam<Target> Reproducibility_ResNet50_QDQ_ONNX;
 TEST_P(Reproducibility_ResNet50_QDQ_ONNX, Accuracy)
