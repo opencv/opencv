@@ -142,4 +142,27 @@ TEST(Core_FP8, set_scalar)
     EXPECT_EQ(countNonZero(zf), 0);
 }
 
+// both fp8 flavors <-> every other depth, both directions; values exact in all types
+TEST(Core_FP8, convert_all_depths)
+{
+    const int fp8[]    = { CV_8F, CV_8F_E4M3FNUZ };
+    const int others[] = { CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F,
+                           CV_64F, CV_16F, CV_16BF, CV_64U, CV_64S, CV_32U };
+    float vals[] = { 0.f, 1.f, 2.f, 3.f, 4.f, 6.f };
+    Mat f(1, 6, CV_32F, vals);
+    for (int d : fp8)
+        for (int o : others)
+        {
+            Mat q, viaO, back;
+            f.convertTo(q, d); q.convertTo(viaO, o); viaO.convertTo(back, CV_32F);
+            Mat so, q2, back2;
+            f.convertTo(so, o); so.convertTo(q2, d); q2.convertTo(back2, CV_32F);
+            for (int i = 0; i < 6; i++)
+            {
+                EXPECT_EQ(back.at<float>(i),  vals[i]) << "fp8 " << d << " -> " << o << " idx " << i;
+                EXPECT_EQ(back2.at<float>(i), vals[i]) << o << " -> fp8 " << d << " idx " << i;
+            }
+        }
+}
+
 }} // namespace
