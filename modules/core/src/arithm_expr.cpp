@@ -222,6 +222,38 @@ static int safeWide(int depth)
     return int((ctypelut >> (pr_depth*dbits)) & dmask);
 }
 
+// Inline capacity for the small per-const double scratch used during type inference; larger
+// channel counts (e.g. Vec<_,16>) just spill the AutoBuffer to the heap.
+enum { MAX_LOCAL_CN = 16 };
+
+// Append `channels` values of depth `srcdepth` (raw bytes at `data`, or zero-filled if null) to
+// constbuf, padded to a whole number of uint64_t slots. Returns the offset (in uint64_t units).
+static size_t appendConstBuf(AutoBuffer<uint64_t, 16>& constbuf, int srcdepth, const void* data, int channels)
+{
+    const int cn = std::max(1, channels);
+    const size_t nbytes = (size_t)cn * CV_ELEM_SIZE1(srcdepth);
+    const size_t nu64 = (nbytes + sizeof(uint64_t) - 1) / sizeof(uint64_t);
+    const size_t ofs = constbuf.size();
+    constbuf.resize(ofs + nu64);
+    uchar* dst = (uchar*)(constbuf.data() + ofs);
+    if (data) memcpy(dst, data, nbytes); else memset(dst, 0, nbytes);
+    return ofs;
+}
+
+// Read a CONST slot's source values (constbuf, `srcdepth`) as doubles into `buf`. Returns channels.
+static int constDoubles(const TExpr& e, int s, AutoBuffer<double, MAX_LOCAL_CN>& buf)
+{
+    const TExpr::Arg& a = e.arginfo[s];
+    const int cn = std::max(1, a.channels);
+    buf.resize(cn);
+    const uchar* src = (const uchar*)(e.constbuf.data() + a.constofs);
+    if (a.srcdepth == CV_64F)
+        memcpy(buf.data(), src, (size_t)cn * sizeof(double));   // common (Scalar / parsed literal)
+    else
+        getConvertFunc(a.srcdepth, CV_64F)(src, 0, nullptr, 0, (uchar*)buf.data(), 0, Size(cn, 1), nullptr);
+    return cn;
+}
+
 // Materialize a flexible CONST `s` at depth `d`, or return `s` unchanged for a typed operand
 // (the emit* layer then casts it to the compute depth). Used by the emit* policy layers.
 static inline bool isFlexConst(const TExpr& e, int s)
@@ -233,9 +265,10 @@ static inline bool isFlexConst(const TExpr& e, int s)
 static bool constFits(const TExpr& e, int s, int d)
 {
     if (!isFlexConst(e, s)) return true;
-    const TExpr::Arg& a = e.arginfo[s];
-    for (int ch = 0, nch = std::max(1, a.channels); ch < nch; ch++)
-        if (!depthRepresents(a.cval[ch], d)) return false;
+    AutoBuffer<double, MAX_LOCAL_CN> v;
+    int cn = constDoubles(e, s, v);
+    for (int ch = 0; ch < cn; ch++)
+        if (!depthRepresents(v[ch], d)) return false;
     return true;
 }
 
@@ -246,6 +279,25 @@ static bool constFits(const TExpr& e, int s, int d)
 // ---------------------------------------------------------------------------
 int TExpr::emitBinary(TOp op, int a, int b, int rdepth, const Scalar& params)
 {
+    // addWeighted a*alpha + b*beta + gamma (params = {alpha, beta, gamma}) is a fused composite, not a
+    // single kernel: two convert_scale MACs into a float work type W, then add (+ a final cast when the
+    // result type differs). Same shape as makeAddWeightedProgram, but returns the result slot.
+    if (op == OP_ADDW)
+    {
+        const int da = arginfo[a].depth, db = arginfo[b].depth;
+        const int W = (da == CV_64F || db == CV_64F || rdepth == CV_64F) ? CV_64F : CV_32F;
+        const int t0 = addTemp(W), t1 = addTemp(W);
+        addInsn(OP_CONVERT_SCALE, a, 0, 0, t0, Scalar(params[0], params[2]));   // a*alpha + gamma
+        addInsn(OP_CONVERT_SCALE, b, 0, 0, t1, Scalar(params[1], 0.0));         // b*beta
+        const int t2 = addTemp(W);
+        addInsn(OP_ADD, t0, t1, 0, t2);
+        if (rdepth == W)
+            return t2;
+        const int t3 = addTemp(rdepth);
+        addInsn(OP_CAST, t2, 0, 0, t3);
+        return t3;
+    }
+
     const int nd0 = isFlexConst(*this, a) ? EW_DEPTH_NONE : arginfo[a].depth;
     const int nd1 = isFlexConst(*this, b) ? EW_DEPTH_NONE : arginfo[b].depth;
     const ElemwiseCategory cat = opCategory(op);
@@ -306,8 +358,9 @@ int TExpr::emitBinary(TOp op, int a, int b, int rdepth, const Scalar& params)
             // counts as integer iff its value is integral. promote2 can float two wide ints, so this
             // must read the ORIGINAL operands, not `depth`.
             auto intOperand = [&](int s, int nd) {
-                return nd != EW_DEPTH_NONE ? !isFloatDepth(nd)
-                                           : arginfo[s].cval[0] == std::floor(arginfo[s].cval[0]); };
+                if (nd != EW_DEPTH_NONE) return !isFloatDepth(nd);
+                AutoBuffer<double, MAX_LOCAL_CN> v; constDoubles(*this, s, v);
+                return v[0] == std::floor(v[0]); };
             divGuard = intOperand(a, nd0) && intOperand(b, nd1);
         }
         break;
@@ -323,19 +376,25 @@ int TExpr::emitBinary(TOp op, int a, int b, int rdepth, const Scalar& params)
     // would quantize the fraction - e.g. add(u8, 1.7) must not round 1.7 to 2).
     auto fracConst = [&](int s) {
         if (!isFlexConst(*this, s)) return false;
-        for (int ch = 0, n = std::max(1, arginfo[s].channels); ch < n; ch++)
-            if (arginfo[s].cval[ch] != std::floor(arginfo[s].cval[ch])) return true;
+        AutoBuffer<double, MAX_LOCAL_CN> v; int n = constDoubles(*this, s, v);
+        for (int ch = 0; ch < n; ch++)
+            if (v[ch] != std::floor(v[ch])) return true;
         return false;
     };
     if (!constFits(*this, a, depth) || !constFits(*this, b, depth))
     {
         depth = wide;
-        if ((fracConst(a) || fracConst(b)) && !isFloatDepth(depth))
+        const bool frac = fracConst(a) || fracConst(b);
+        if (frac && !isFloatDepth(depth))
             depth = wide = (result == CV_64F || base == CV_64F) ? CV_64F : CV_32F;
+        // mul/div carry a scale-like float const at full f64 precision (cv::multiply/divide compute in
+        // f64), so don't settle for f32 - e.g. 110 * 147.2863... must round to 16201, not 16202.
+        if (frac && (op == OP_MUL || op == OP_DIV) && depth == CV_32F)
+            depth = wide = CV_64F;
     }
 
-    int s0 = isFlexConst(*this, a) ? addConst(depth, arginfo[a].cval, arginfo[a].channels) : a;
-    int s1 = isFlexConst(*this, b) ? addConst(depth, arginfo[b].cval, arginfo[b].channels) : b;
+    int s0 = isFlexConst(*this, a) ? typedConstFrom(a, depth) : a;
+    int s1 = isFlexConst(*this, b) ? typedConstFrom(b, depth) : b;
     int c0 = maybeAddCast(s0, depth), c1 = maybeAddCast(s1, depth);
 
     // emit `depth -> result` directly when a kernel exists, else compute in `wide` and cast down.
@@ -388,7 +447,7 @@ int TExpr::emitUnary(TOp op, int a, int rdepth, const Scalar& params)
     }
 
     if (!constFits(*this, a, depth)) depth = (cat == CAT_MATH) ? depth : CV_32F;
-    int s0 = isFlexConst(*this, a) ? addConst(depth, arginfo[a].cval, arginfo[a].channels) : a;
+    int s0 = isFlexConst(*this, a) ? typedConstFrom(a, depth) : a;
     int c0 = maybeAddCast(s0, depth);
 
     TKernel k = getElemwiseFunc(op, depth, EW_DEPTH_NONE, EW_DEPTH_NONE, result);
@@ -488,13 +547,29 @@ void TExpr::compile()
     // Kernels are bound eagerly by addInsn at build time, so there is no binding pass here - compile()
     // only counts consts and packs temp buffers.
 
-    // count materialized CONST slots (flexible literals, depth==NONE, are dead - the emit* layers
-    // replaced them with typed copies); sizes the const store and gates exec()'s fast path. Cheap scan, no
-    // allocation - kept separate from liveness so the no-temp path can skip out below.
+    // Materialize consts: convert each live CONST's source values (still in `srcdepth` at constofs)
+    // to its resolved `depth`, appending the result to constbuf; constofs then points at the converted
+    // values and srcdepth becomes the resolved depth. Flexible literals (depth==NONE) are dead - the
+    // emit* layers replaced them with typed copies - and are skipped. nconsts sizes exec's per-const
+    // header buffer and gates the fast path. (getConvertFunc may reallocate constbuf, so snapshot the
+    // source bytes first.)
     const int nslots = (int)arginfo.size();
     nconsts = 0;
     for (int s = 1; s < nslots; s++)
-        if (arginfo[s].kind == CONST && arginfo[s].depth != EW_DEPTH_NONE) nconsts++;
+    {
+        Arg& a = arginfo[s];
+        if (a.kind != CONST || a.depth == EW_DEPTH_NONE) continue;
+        const int cn = std::max(1, a.channels), sd = a.srcdepth, dd = a.depth;
+        const size_t sesz = CV_ELEM_SIZE1(sd), desz = CV_ELEM_SIZE1(dd);
+        AutoBuffer<uchar, 64> srcbytes((size_t)cn * sesz);
+        memcpy(srcbytes.data(), (const uchar*)(constbuf.data() + a.constofs), (size_t)cn * sesz);
+        const size_t ofs = appendConstBuf(constbuf, dd, nullptr, cn);   // reserve converted region
+        uchar* dst = (uchar*)(constbuf.data() + ofs);
+        if (sd == dd) memcpy(dst, srcbytes.data(), (size_t)cn * desz);
+        else getConvertFunc(sd, dd)(srcbytes.data(), 0, nullptr, 0, dst, 0, Size(cn, 1), nullptr);
+        a.constofs = ofs; a.srcdepth = dd;
+        nconsts++;
+    }
 
     // ---- liveness: pack temps into a minimal set of reusable physical buffers. A program with no
     //      temps (single-op add/sub/mul/...) needs none of this - early out with ZERO heap traffic,
@@ -600,26 +675,6 @@ static bool broadcastShape(const MatShape* shps, int K, MatShape& out)
     return true;
 }
 
-static void storeScalar(int depth, double v, uchar* p)
-{
-    switch (depth)
-    {
-    case CV_8U:  *(uchar*)   p = saturate_cast<uchar>(v);    break;
-    case CV_8S:  *(schar*)   p = saturate_cast<schar>(v);    break;
-    case CV_16U: *(ushort*)  p = saturate_cast<ushort>(v);   break;
-    case CV_16S: *(short*)   p = saturate_cast<short>(v);    break;
-    case CV_32U: *(unsigned*)p = saturate_cast<unsigned>(v); break;
-    case CV_32S: *(int*)     p = saturate_cast<int>(v);      break;
-    case CV_64U: *(uint64_t*)p = saturate_cast<uint64_t>(v); break;
-    case CV_64S: *(int64_t*) p = saturate_cast<int64_t>(v);  break;
-    case CV_16F: *(hfloat*)  p = saturate_cast<hfloat>(v);   break;
-    case CV_16BF:*(bfloat*)  p = saturate_cast<bfloat>(v);   break;
-    case CV_32F: *(float*)   p = saturate_cast<float>(v);    break;
-    case CV_64F: *(double*)  p = v;                          break;
-    default: CV_Error(Error::StsNotImplemented, "ew: unsupported const depth");
-    }
-}
-
 // Rough per-element cost of an op, in "cycle units" (tuning for parallel_for_ stripe count).
 // Unknown ops default to ~division. cv::expression will own this once it drives broadcastOp.
 static int opCost(TOp op)
@@ -649,6 +704,7 @@ void TExpr::clear()
     prog.allocate(0);
     arginfo.allocate(0);
     bufferOfTemp.allocate(0);
+    constbuf.allocate(0);
     ninputs = noutputs = ntemps = nbuffers = 0;
     Arg none;                       // slot 0: the reserved empty operand (kind == NONE)
     arginfo.push_back(none);
@@ -673,9 +729,30 @@ int TExpr::addTemp(int depth)
     arginfo.push_back(a); return (int)arginfo.size() - 1;
 }
 
+// Source = a cv::Scalar (f64, up to 4 channels): stored as CV_64F in constbuf.
 int TExpr::addConst(int depth, const Scalar& v, int channels)
 {
-    Arg a; a.kind = CONST; a.depth = depth; a.channels = channels; a.cval = v;
+    CV_Assert(channels <= 4);
+    Arg a; a.kind = CONST; a.depth = depth; a.channels = channels; a.srcdepth = CV_64F;
+    a.constofs = appendConstBuf(constbuf, CV_64F, v.val, channels);
+    arginfo.push_back(a); return (int)arginfo.size() - 1;
+}
+
+// Source = native bytes of any depth/channel-count (e.g. a Vec<_,N> scalar): stored as-is.
+int TExpr::addConst(int depth, int srcdepth, const void* data, int channels)
+{
+    Arg a; a.kind = CONST; a.depth = depth; a.channels = channels; a.srcdepth = srcdepth;
+    a.constofs = appendConstBuf(constbuf, srcdepth, data, channels);
+    arginfo.push_back(a); return (int)arginfo.size() - 1;
+}
+
+// A typed copy of flexible CONST `srcSlot` at the resolved `depth`, sharing its (still-source)
+// values in constbuf; compile() converts each such slot's values to its `depth`.
+int TExpr::typedConstFrom(int srcSlot, int depth)
+{
+    const Arg& src = arginfo[srcSlot];
+    Arg a; a.kind = CONST; a.depth = depth; a.channels = src.channels;
+    a.srcdepth = src.srcdepth; a.constofs = src.constofs;    // shares the source region
     arginfo.push_back(a); return (int)arginfo.size() - 1;
 }
 
@@ -731,33 +808,32 @@ static inline void runInsn(const TExpr::Insn& ins,
 struct EwBody {
     const TExpr::Insn* prog;
     // slot -> a NON-NEGATIVE index whose meaning is given by slotKind[s]:
-    //   TExpr::INPUT / TExpr::OUTPUT : index into tile.slices (the broadcast operand list)
+    //   TExpr::INPUT / TExpr::OUTPUT : index into tile.slices (the broadcast operand list; consts,
+    //                                 now 0-dim broadcast operands, are relabeled INPUT and live here)
     //   TExpr::TEMP               : physical temp-buffer id
-    //   TExpr::CONST              : index into constSlice[]
     const int* slotMap;
     const signed char* slotKind; // [nslots] arginfo[s].kind, for resolving slotMap[s]
-    const BroadcastOp::Slice* constSlice;    // [nconsts] fixed scalar slices {ptr=&value, stepy=0, stepx=0}
     const int* bufEszPrefix;  // [nbuffers+1] prefix sums of temp elem sizes; [nbuffers] = total
     int ninsn, nslots, nbuffers, capElems;   // capElems: L1 fragment element cap (0 if no temps)
 };
 
-void TExpr::outputShape(const Mat* inputs, MatShape& spatial, int& channels) const
+void TExpr::outputShape(const Mat* const* inputs, MatShape& spatial, int& channels) const
 {
     // Fast path: every real input shares one shape + channel count => the result IS inputs[0]'s
     // (consts add no dims/channels). Otherwise re-broadcast the logical (spatial + channel) shapes.
-    const int rcn0 = ninputs >= 1 ? inputs[0].channels() : 1;
+    const int rcn0 = ninputs >= 1 ? inputs[0]->channels() : 1;
     bool sameShape = ninputs >= 1;
     for (int i = 1; sameShape && i < ninputs; i++)
     {
-        const Mat& a = inputs[i];
-        if (a.dims != inputs[0].dims || a.channels() != rcn0) sameShape = false;
-        else for (int d = 0; d < a.dims; d++) if (a.size[d] != inputs[0].size[d]) { sameShape = false; break; }
+        const Mat& a = *inputs[i];
+        if (a.dims != inputs[0]->dims || a.channels() != rcn0) sameShape = false;
+        else for (int d = 0; d < a.dims; d++) if (a.size[d] != inputs[0]->size[d]) { sameShape = false; break; }
     }
-    if (sameShape) { spatial = inputs[0].size; channels = rcn0; return; }
+    if (sameShape) { spatial = inputs[0]->size; channels = rcn0; return; }
 
     AutoBuffer<MatShape, 16> bshapes(std::max(ninputs, 1));
     MatShape shp; EwSteps step; int esz1;
-    for (int i = 0; i < ninputs; i++) { matLogical(inputs[i], shp, step, esz1); bshapes[i] = shp; }
+    for (int i = 0; i < ninputs; i++) { matLogical(*inputs[i], shp, step, esz1); bshapes[i] = shp; }
     MatShape full;
     CV_Assert(broadcastShape(bshapes.data(), ninputs, full) && "ew: inputs not broadcast-compatible");
     const int ndFull = (int)full.size();
@@ -765,7 +841,15 @@ void TExpr::outputShape(const Mat* inputs, MatShape& spatial, int& channels) con
     spatial = full; spatial.resize(ndFull - 1);
 }
 
-void TExpr::exec(const Mat* inputs, Mat* outputs)
+// Convenience overload: inputs as a contiguous Mat array -> build the pointer array + forward.
+void TExpr::outputShape(const Mat* inputs, MatShape& spatial, int& channels) const
+{
+    AutoBuffer<const Mat*, 16> ptrs(std::max(ninputs, 1));
+    for (int i = 0; i < ninputs; i++) ptrs[i] = &inputs[i];
+    outputShape(ptrs.data(), spatial, channels);
+}
+
+void TExpr::exec(const Mat* const* inputs, Mat* outputs)
 {
     using BrTile = BroadcastOp::Tile;
     using BrSlice = BroadcastOp::Slice;
@@ -786,12 +870,12 @@ void TExpr::exec(const Mat* inputs, Mat* outputs)
     if (nconsts == 0 && ninputs >= 1)
     {
         constexpr size_t EW_FASTPATH_MAX = 1u << 17;   // above this the tiled/parallel path wins
-        const Mat& r = inputs[0];
+        const Mat& r = *inputs[0];
         const int rcn = r.channels();
         bool ok = r.isContinuous();
         for (int i = 1; ok && i < ninputs; i++)
         {
-            const Mat& a = inputs[i];
+            const Mat& a = *inputs[i];
             ok = ok && a.isContinuous() && a.channels() == rcn && a.size == r.size;
         }
         // the flat strip writes the output(s) contiguously too, so it can't serve a non-contiguous
@@ -815,7 +899,7 @@ void TExpr::exec(const Mat* inputs, Mat* outputs)
                 auto ptrOf = [&](int s) -> void* {
                     if (s <= 0) return nullptr;
                     const Arg& ai = arginfo[s];
-                    return ai.kind == INPUT ? (void*)inputs[ai.index].data : (void*)outputs[ai.index].data;
+                    return ai.kind == INPUT ? (void*)inputs[ai.index]->data : (void*)outputs[ai.index].data;
                 };
                 const int w = (int)total;
                 for (int n = 0; n < ninsn; n++)
@@ -840,7 +924,7 @@ void TExpr::exec(const Mat* inputs, Mat* outputs)
                     if (s <= 0) return nullptr;
                     const Arg& ai = arginfo[s];
                     size_t esz = CV_ELEM_SIZE1(ai.depth);
-                    if (ai.kind == INPUT)  return (uchar*)inputs[ai.index].data  + (size_t)x0 * esz;
+                    if (ai.kind == INPUT)  return (uchar*)inputs[ai.index]->data  + (size_t)x0 * esz;
                     if (ai.kind == OUTPUT) return (uchar*)outputs[ai.index].data + (size_t)x0 * esz;
                     const int b = bufferOfTemp.empty() ? ai.index : bufferOfTemp[ai.index];  // TEMP
                     return scratch.data() + (size_t)bufEszPrefix[b] * (size_t)wf0;            // fragment-local
@@ -859,7 +943,7 @@ void TExpr::exec(const Mat* inputs, Mat* outputs)
     // Scalars (TExpr::CONST) never influence the result shape or channel count - the output geometry
     // comes from the real array inputs alone (a scalar broadcasts into whatever they produce).
     // A flexible CONST (depth == EW_DEPTH_NONE) is a leftover literal: the emit* layers materialize a
-    // typed copy at each use, so the original is dead - skipped entirely (no slice, no storeScalar).
+    // typed copy at each use, so the original is dead - skipped entirely (no header built for it).
 
     // ---- 1. result shape (spatial dims + channel count), channels innermost ----
     // Fast path: every input shares one shape+channels => the result IS inputs[0]'s shape. Skips
@@ -876,35 +960,36 @@ void TExpr::exec(const Mat* inputs, Mat* outputs)
     //         scratch (constStore) and exposed to the body as a fixed slice {ptr=&value, 0, 0} - a
     //         scalar the kernels read by broadcast. slotMap[s] stays a plain non-negative index;
     //         its meaning (arr / temp / const) is recovered from arginfo[s].kind (see EwBody).
-    bool inplace = !(inputs + ninputs <= outputs || outputs + noutputs <= inputs);
+    // In-place: an input shares its data buffer with an output. An output create() may realloc that
+    // buffer while an input still needs the old contents, so we incref (header-copy) every input and
+    // read through the copies. Cheap data-pointer aliasing test (nullptr data => never matches).
+    bool inplace = false;
+    for (int i = 0; i < ninputs && !inplace; i++)
+        for (int j = 0; j < noutputs; j++)
+            if (inputs[i]->data && inputs[i]->data == outputs[j].data) { inplace = true; break; }
     int nhdrs = inplace ? ninputs : 0;
 
-    // A const is stored in ITS OWN depth (ai.depth), independent of the array operands: e.g.
-    // multiply(u8, u8, u8, 1./255) carries an FP32 scale even though every matrix is u8. 32 bytes
-    // covers the largest single-channel-scope payload (up to 4 channels x 8-byte elements).
-    constexpr int CONST_STRIDE = 32;
-    AutoBuffer<const Mat*, LOCAL_OPS> arr(ninputs + noutputs);
+    AutoBuffer<const Mat*, LOCAL_OPS> arr(ninputs + noutputs + nconsts);
     AutoBuffer<Mat, LOCAL_HDRS> hdrs(std::max(nhdrs, 1));   // non-owning input headers (in-place incref)
-    AutoBuffer<uchar, LOCAL_CONSTS * CONST_STRIDE> constStore((size_t)std::max(nconsts, 1) * CONST_STRIDE);
-    AutoBuffer<BrSlice, LOCAL_CONSTS> constSlice(std::max(nconsts, 1));
+    AutoBuffer<const Mat*, LOCAL_HDRS> inptr(std::max(nhdrs, 1));  // repointed input list (in-place only)
+    AutoBuffer<Mat, LOCAL_CONSTS> constHdrBuf(std::max(nconsts, 1));  // 0-dim headers over constbuf
     AutoBuffer<int, LOCAL_OPS> slotMap(nslots);
     AutoBuffer<signed char, LOCAL_OPS> slotKind(nslots);
     int narr = 0, nc = 0;
     if (inplace) {
         // save (incref) inputs in the case of in-place operation
         // to protect them from premature deallocation
-        for (int j = 0; j < ninputs; j++) hdrs[j] = inputs[j];
-        inputs = hdrs.data();
+        for (int j = 0; j < ninputs; j++) { hdrs[j] = *inputs[j]; inptr[j] = &hdrs[j]; }
+        inputs = inptr.data();
     }
     slotKind[0] = (signed char)TExpr::NONE;
     for (int s = 1; s < nslots; s++)
     {
         const TExpr::Arg& ai = arginfo[s];
-        const size_t esz = CV_ELEM_SIZE1(ai.depth);
         slotKind[s] = (signed char)ai.kind;
         if (ai.kind == TExpr::INPUT) {
             slotMap[s] = narr;
-            arr[narr++] = &inputs[ai.index];
+            arr[narr++] = inputs[ai.index];
         }
         else if (ai.kind == TExpr::OUTPUT) {
             outputs[ai.index].create(spatial, CV_MAKETYPE(ai.depth, rchannels));
@@ -915,12 +1000,14 @@ void TExpr::exec(const Mat* inputs, Mat* outputs)
             slotMap[s] = 0;
         }
         else if (ai.kind == TExpr::CONST) {
-            const int c = std::max(ai.channels, 1);
-            CV_Assert(c <= 4 && (size_t)c * esz <= CONST_STRIDE);
-            uchar* dst = constStore.data() + (size_t)nc * CONST_STRIDE;
-            for (int k = 0; k < c; k++) storeScalar(ai.depth, ai.cval[k], dst + (size_t)k * esz);
-            constSlice[nc].ptr = dst; constSlice[nc].stepy = 0; constSlice[nc].stepx = 0;
-            slotMap[s] = nc;                   // index into constSlice[]
+            // a materialized const rides the broadcast machinery as a 0-dim, per-channel operand: a
+            // multichannel const forces CH_DIM (per-channel scalars); a single value broadcasts
+            // everywhere. compile() already converted its values (in constbuf) to ai.depth.
+            const int c = std::max(1, ai.channels);
+            constHdrBuf[nc] = Mat(MatShape::scalar(), CV_MAKETYPE(ai.depth, c),
+                                  (void*)(constbuf.data() + ai.constofs));
+            slotKind[s] = (signed char)TExpr::INPUT;   // to the body it is just an array operand
+            slotMap[s] = narr; arr[narr++] = &constHdrBuf[nc];
             nc++;
         }
         else { // TExpr::TEMP
@@ -961,7 +1048,6 @@ void TExpr::exec(const Mat* inputs, Mat* outputs)
 
     body.bufEszPrefix = bufEszPrefix.data();
     body.slotKind = slotKind.data();
-    body.constSlice = constSlice.data();
     body.nslots = nslots;
     body.nbuffers = nbuffers;
     body.capElems = capElems;
@@ -972,7 +1058,6 @@ void TExpr::exec(const Mat* inputs, Mat* outputs)
         const TExpr::Insn* prog = bc.prog;             // hot fields -> locals (registers/stack)
         const int* const slotMap     = bc.slotMap;
         const signed char* const slotKind = bc.slotKind;
-        const BrSlice* const constSlice = bc.constSlice;
         const int ninsn = bc.ninsn, nslots = bc.nslots;
         const int w = tile.width, h = tile.height;
 
@@ -1008,12 +1093,8 @@ void TExpr::exec(const Mat* inputs, Mat* outputs)
                         a.ptr = tstore.data() + (size_t)bufEszPrefix[slotMap[s]] * region;
                         a.stepy = (size_t)wf*esz; a.stepx = 1;
                     }
-                    else if (k == TExpr::CONST)               // fixed scalar slice (stepx/stepy 0)
-                    {
-                        const BrSlice& cs = constSlice[slotMap[s]];
-                        a.ptr = (uchar*)cs.ptr; a.stepy = 0; a.stepx = 0;
-                    }
-                    else                                    // array operand: this block of the slice
+                    else                                    // array operand (incl. 0-dim consts): this
+                                                            // block of the broadcast slice
                     {
                         const BrSlice& sl = tile.slices[slotMap[s]];
                         a.ptr = (uchar*)sl.ptr +
@@ -1033,6 +1114,14 @@ void TExpr::exec(const Mat* inputs, Mat* outputs)
             }
         }
     }, true, nstripes);
+}
+
+// Convenience overload: inputs as a contiguous Mat array -> build the pointer array + forward.
+void TExpr::exec(const Mat* inputs, Mat* outputs)
+{
+    AutoBuffer<const Mat*, 16> ptrs(std::max(ninputs, 1));
+    for (int i = 0; i < ninputs; i++) ptrs[i] = &inputs[i];
+    exec(ptrs.data(), outputs);
 }
 
 // ---------------------------------------------------------------------------
@@ -1321,7 +1410,7 @@ struct Parser
             {
                 CV_Assert(args.size() == 1);                 // type cast: just convert the operand
                 int s = args[0];
-                return isFlexConst(s) ? e.addConst(td, e.arginfo[s].cval, e.arginfo[s].channels)
+                return isFlexConst(s) ? e.typedConstFrom(s, td)
                                       : e.maybeAddCast(s, td);
             }
 
@@ -1344,8 +1433,9 @@ struct Parser
             // constant-fold a leading sign so that "-1.5" does not need an OP_NEG kernel
             if (op == "-" && isFlexConst(operand))
             {
-                const TExpr::Arg& a = e.arginfo[operand];
-                return e.addConst(EW_DEPTH_NONE, Scalar(-a.cval[0], -a.cval[1], -a.cval[2], -a.cval[3]), a.channels);
+                AutoBuffer<double, MAX_LOCAL_CN> v; int cn = constDoubles(e, operand, v);
+                Scalar neg; for (int i = 0; i < cn && i < 4; i++) neg[i] = -v[i];
+                return e.addConst(EW_DEPTH_NONE, neg, std::min(cn, 4));
             }
             return e.emitUnary(op == "-" ? OP_NEG : OP_NOT, operand);
         }

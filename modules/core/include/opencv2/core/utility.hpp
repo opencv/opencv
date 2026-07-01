@@ -1165,7 +1165,8 @@ AutoBuffer<_Tp, fixed_size>::resize(size_t _size)
         sz = _size;
         return;
     }
-    reserve(_size);         // grow the capacity if needed (preserving content)
+    if(_size > cap)         // grow with geometric slack (like push_back) so incremental
+        reserve(cap + cap/2 > _size ? cap + cap/2 : _size);   // resize(size()+delta) loops don't realloc every step
     for( size_t i = sz; i < _size; i++ )    // value-initialize the newly exposed tail
         ptr[i] = _Tp();
     sz = _size;

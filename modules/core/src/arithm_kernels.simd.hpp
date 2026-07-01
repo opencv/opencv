@@ -672,12 +672,12 @@ TKernel getAddSubFunc(int T, int R)
                R == CV_32F ? vecBinaryKernel<short, float, v_int32, int, Op, int> : nullptr;
         break;
     case CV_32U:
-        fptr = R == CV_32U ? vecBinaryKernel<unsigned, unsigned, v_uint32, int64_t, Op, unsigned> :
+        fptr = R == CV_32U ? scalarBinaryKernel<unsigned, unsigned, int64_t, Op> :
                 R == CV_64S ? scalarBinaryKernel<unsigned, int64_t, int64_t, Op> :
                 R == CV_64F ? scalarBinaryKernel<unsigned, double, int64_t, Op> : nullptr;
         break;
     case CV_32S:
-        fptr = R == CV_32S ? vecBinaryKernel<int, int, v_int32, int64_t, Op, int> :
+        fptr = R == CV_32S ? scalarBinaryKernel<int, int, int64_t, Op> :
                R == CV_64S ? scalarBinaryKernel<int, int64_t, int64_t, Op> :
                R == CV_64F ? scalarBinaryKernel<int, double, int64_t, Op> : nullptr;
         break;

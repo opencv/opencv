@@ -65,6 +65,10 @@ enum TOp
     // temp, copyMask overwrites only the masked subset of the (pre-existing) output - matching
     // cv::add/... with a mask.
     OP_COPY_MASK,
+    // addWeighted: a*alpha + b*beta + gamma (params = {alpha, beta, gamma}). A fused composite, not a
+    // kernel - emitBinary expands it. Placed last in the binary group so it doesn't renumber the ops
+    // above it (some dispatch is by enum value).
+    OP_ADDW,
 
     // ---------------- ternary (arity 3) ----------------
     OP_CLAMP = OP_TERNARY_BASE,   // clamp(x, lo, hi)
@@ -185,11 +189,13 @@ struct CV_EXPORTS TExpr
     {
         ArgKind kind = NONE;
         int depth = EW_DEPTH_NONE;  // EW_DEPTH_NONE on a CONST = "flexible" (the emit* layers type it per use)
-        int channels = 0;           // for CONST: # of meaningful channels in cval (0/1 => single broadcast value)
+        int channels = 0;           // for CONST: # of per-channel values (0/1 => single broadcast value)
         int index = -1;             // input#/output#/temp-id depending on kind
-        // Constant value(s), CONST only: a per-channel cv::Scalar (up to 4 channels). That covers
-        // ~all real constants; anything larger/per-element is passed as a real input tensor.
-        Scalar cval;
+        // CONST only: the constant's values live in TExpr::constbuf (in `srcdepth` until compile(),
+        // which converts them to the resolved `depth`). constofs = offset into constbuf, in uint64_t
+        // units. A per-channel scalar of any width is carried this way (no 4-channel Scalar limit).
+        int srcdepth = EW_DEPTH_NONE;
+        size_t constofs = 0;
     };
 
     // One compiled instruction: the op + arg-table indices + a resolved kernel (TKernel: fptr +
@@ -207,6 +213,8 @@ struct CV_EXPORTS TExpr
 
     AutoBuffer<Insn, 16>   prog;             // instructions, in execution order (kernels bound by addInsn)
     AutoBuffer<Arg, 16>    arginfo;          // slot 0 is always NONE
+    AutoBuffer<uint64_t, 16> constbuf;       // CONST value store (uint64-aligned slots); Arg::constofs
+                                             // indexes it. Source values on build, resolved-type after compile()
     int ninputs = 0;
     int noutputs = 0;
     int ntemps = 0;
@@ -225,7 +233,11 @@ struct CV_EXPORTS TExpr
 
     // ---- operand / instruction builders (return the new slot / instruction index) ----
     int  addInput(int depth);
-    int  addConst(int depth, const Scalar& v, int channels = 1);   // depth EW_DEPTH_NONE => flexible
+    int  addConst(int depth, const Scalar& v, int channels = 1);   // source = Scalar (f64); depth NONE => flexible
+    int  addConst(int depth, int srcdepth, const void* data, int channels);   // source = native bytes
+    // A typed copy of a flexible CONST `srcSlot` at the resolved `depth` (shares its source values;
+    // compile() converts them). Used by the emit* layers / parser cast where addConst(depth, cval) was.
+    int  typedConstFrom(int srcSlot, int depth);
     int  addTemp(int depth);
     int  addOutput(int depth);
     // addInsn resolves the instruction's kernel NOW from the operand/result depths (final at build
@@ -260,10 +272,17 @@ struct CV_EXPORTS TExpr
     // The broadcast output geometry for the given inputs (spatial dims + channel count, channels
     // innermost). All outputs share it; their depth comes from arginfo. Lets a caller pre-create the
     // destination (dst.create(spatial, CV_MAKETYPE(depth, channels))) before exec writes into it.
-    void outputShape(const Mat* inputs, MatShape& spatial, int& channels) const;
+    // Inputs are passed as an array of pointers (no Mat-header copies in the hot path).
+    void outputShape(const Mat* const* inputs, MatShape& spatial, int& channels) const;
 
     // Execute the compiled program over a set of input Mats, producing the broadcast result(s). If an
-    // output Mat already has the right shape/type it is reused (not reallocated).
+    // output Mat already has the right shape/type it is reused (not reallocated). Inputs are passed as
+    // an array of pointers.
+    void exec(const Mat* const* inputs, Mat* outputs);
+
+    // Convenience overloads: inputs as a contiguous array of Mats (builds the pointer array + forwards).
+    // Handy for callers holding a Mat[]/vector<Mat>; the hot path should pass pointers directly.
+    void outputShape(const Mat* inputs, MatShape& spatial, int& channels) const;
     void exec(const Mat* inputs, Mat* outputs);
 };
 

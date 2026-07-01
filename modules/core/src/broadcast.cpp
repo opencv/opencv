@@ -53,10 +53,18 @@ static void matLayout(const Mat& m, ChMode mode, MatShape& shp, MatStep& step, i
     }
     else // CH_FOLD
     {
-        shp.resize(nd);
-        for (int i = 0; i < nd; i++) { shp[i] = m.size[i]; step[i] = m.step[i] / esz1; }
-        shp[nd - 1] *= cn;                               // fold channels into the innermost dim
-        step[nd - 1] = 1;                                // scalars are contiguous there
+        if (nd == 0)                                     // 0-dim scalar: channels are the only dim
+        {
+            shp.assign(1, cn);
+            step[0] = 1;
+        }
+        else
+        {
+            shp.resize(nd);
+            for (int i = 0; i < nd; i++) { shp[i] = m.size[i]; step[i] = m.step[i] / esz1; }
+            shp[nd - 1] *= cn;                           // fold channels into the innermost dim
+            step[nd - 1] = 1;                            // scalars are contiguous there
+        }
     }
 }
 
@@ -90,7 +98,7 @@ static ChMode decideChannelMode(const Mat* const* arrays, int K)
         const Mat& a = *arrays[k];
         if (isSingleChannelScalar(a)) continue;
         if (a.channels() != N) allMulti = false;
-        int b = a.size[a.dims - 1];
+        int b = a.dims > 0 ? a.size[a.dims - 1] : 1;   // 0-dim scalar has no spatial back (=1)
         if (back < 0) back = b; else if (b != back) sameBack = false;
     }
     return (allMulti && sameBack) ? CH_FOLD : CH_DIM;    // fold only if no channel broadcast

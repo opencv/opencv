@@ -332,6 +332,63 @@ inline bool checkScalar(InputArray sc, int atype, _InputArray::KindFlag sckind, 
            (sz == Size(1, 4) && sc.type() == CV_64F && cn <= 4);
 }
 
+// New element-wise engine scalar handling. A genuine number / Scalar / Vec / Matx operand to an
+// arithmetic op always arrives via _InputArray::MATX (its data is inline in the caller's object;
+// getObj() points straight at it). Real Mats/UMats - even a 1xN one - ride normal broadcasting and
+// are NOT scalars here. So a scalar operand is simply a MATX with 1, cn, or 4 elements (cn = the
+// channel count of the OTHER, array operand).
+inline bool isScalarArg(const _InputArray& sc, int cn)
+{
+    if (sc.kind() != _InputArray::MATX)
+        return false;
+    Size sz = sc.getSz();
+    int scn0 = sz.width * sz.height;
+    // A genuine scalar is a 1D MATX (a Vec/Scalar/number: one of width/height is 1). A 2D MATX
+    // (e.g. a Matx33) is a real matrix operand and rides broadcasting - never a scalar.
+    if (scn0 != sz.width + sz.height - 1)
+        return false;
+    // Per-channel match (incl. Vec<_,N> for an N-channel array), a 4-elem Scalar on a <4-channel
+    // array, or a single broadcast value. No 4-channel cap: a multichannel scalar rides as a 0-dim
+    // per-channel CONST over the caller's data (not squeezed into a 4-slot Scalar).
+    return scn0 == cn || (cn < 4 && scn0 == 4) || scn0 == 1;
+}
+
+// Read one element of depth `d` at p as a double (no Mat, no convertTo, no dispatcher).
+inline double elemToDouble(int d, const uchar* p)
+{
+    switch (d)
+    {
+    case CV_8U:   return *(const uchar*)p;
+    case CV_8S:   return *(const schar*)p;
+    case CV_16U:  return *(const ushort*)p;
+    case CV_16S:  return *(const short*)p;
+    case CV_32U:  return *(const unsigned*)p;
+    case CV_32S:  return *(const int*)p;
+    case CV_64U:  return (double)*(const uint64_t*)p;
+    case CV_64S:  return (double)*(const int64_t*)p;
+    case CV_16F:  return (float)*(const hfloat*)p;
+    case CV_16BF: return (float)*(const bfloat*)p;
+    case CV_32F:  return *(const float*)p;
+    case CV_64F:  return *(const double*)p;
+    default:      CV_Error(Error::StsUnsupportedFormat, "unsupported scalar depth");
+    }
+}
+
+// Extract a MATX scalar operand's values as up to 4 doubles, straight from the inline storage
+// (obj = data pointer, getSz()/depth() give layout + type). Returns the element count.
+inline int readScalarArg(const _InputArray& sc, Scalar& out)
+{
+    out = Scalar();                      // unused channels stay 0 (independent of the caller's Scalar)
+    const uchar* p = (const uchar*)sc.getObj();
+    Size sz = sc.getSz();
+    int n = sz.width * sz.height, d = sc.depth();
+    CV_Assert(n <= 4);                   // Scalar holds 4 slots; isScalarArg never admits more
+    size_t esz = CV_ELEM_SIZE1(d);
+    for (int i = 0; i < n; i++)
+        out[i] = elemToDouble(d, p + (size_t)i * esz);
+    return n;
+}
+
 void convertAndUnrollScalar( const Mat& sc, int buftype, uchar* scbuf, size_t blocksize );
 
 #ifdef CV_COLLECT_IMPL_DATA

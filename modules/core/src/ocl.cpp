@@ -7253,12 +7253,21 @@ int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
     return checkOptimalVectorWidth(vectorWidths, src1, src2, src3, src4, src5, src6, src7, src8, src9, strat);
 }
 
-int checkOptimalVectorWidth(const int *vectorWidths,
-                            InputArray src1, InputArray src2, InputArray src3,
-                            InputArray src4, InputArray src5, InputArray src6,
-                            InputArray src7, InputArray src8, InputArray src9,
-                            OclVectorStrategy strat)
+int checkOptimalVectorWidth([[maybe_unused]] const int *vectorWidths,
+                            [[maybe_unused]] InputArray src1,
+                            [[maybe_unused]] InputArray src2,
+                            [[maybe_unused]] InputArray src3,
+                            [[maybe_unused]] InputArray src4,
+                            [[maybe_unused]] InputArray src5,
+                            [[maybe_unused]] InputArray src6,
+                            [[maybe_unused]] InputArray src7,
+                            [[maybe_unused]] InputArray src8,
+                            [[maybe_unused]] InputArray src9,
+                            [[maybe_unused]] OclVectorStrategy strat)
 {
+#ifdef __APPLE__
+    return 1;
+#else
     CV_Assert(vectorWidths);
 
     int ref_type = src1.type();
@@ -7285,6 +7294,7 @@ int checkOptimalVectorWidth(const int *vectorWidths,
     int kercn = *std::min_element(kercns.begin(), kercns.end());
 
     return kercn;
+#endif
 }
 
 int predictOptimalVectorWidthMax(InputArray src1, InputArray src2, InputArray src3,
