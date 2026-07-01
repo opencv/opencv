@@ -349,6 +349,22 @@ html[data-theme="dark"] table.opencv-meta-table td:last-child { border-right: no
     .bd-sidebar-primary .sidebar-header-items { display: flex !important; }
     .bd-sidebar-primary .sidebar-header-items__end { display: none !important; }
     .search-button-field > :not(svg) { display: none !important; }
+    /* Hide the desktop "Collapse Sidebar" toggle here (kept on wide screens);
+       this also keeps it out of the mobile drawer, which reuses this content. */
+    .bd-sidebar-primary .pst-sidebar-collapse { display: none !important; }
+}
+
+/* 960-1200px: the header has folded into the hamburger, so use the SAME
+   off-canvas drawer as the real small screen instead of a persistent column
+   (which otherwise mixes header links + nav + collapse toggle). Content goes
+   full width; the hamburger opens the sidebar dialog. Mirrors the theme's own
+   <960px rule, just extended up to the header breakpoint. */
+@media (min-width: 960px) and (max-width: 1199.98px) {
+    .bd-sidebar-primary {
+        position: fixed; top: 0; left: 0; z-index: 1055;
+        height: 100vh; max-height: 100vh; width: 75%; max-width: 350px;
+        margin-left: -75%; visibility: hidden; border: 0; flex-grow: 0.75;
+    }
 }
 
 /* On small screens drop the wordmark + subtitle, keep just the logo mark. */

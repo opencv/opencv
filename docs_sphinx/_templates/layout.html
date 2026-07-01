@@ -45,6 +45,23 @@
   }, true);
 
   document.addEventListener("DOMContentLoaded", function () {
+    // Relabel the left sidebar heading "Section Navigation" -> "Navigation Bar".
+    document.querySelectorAll(".bd-links__title").forEach(function (el) {
+      if (/section navigation/i.test(el.textContent)) el.textContent = "Navigation Bar";
+    });
+
+    // Sidebar drawer: the theme's hamburger only OPENS the dialog. Make it also
+    // close when tapped while open (toggle), and close on an outside/backdrop click.
+    (function () {
+      var dlg = document.getElementById("pst-primary-sidebar-modal");
+      var tog = document.querySelector(".primary-toggle");
+      if (!dlg || !tog) return;
+      tog.addEventListener("click", function (e) {
+        if (dlg.open) { e.preventDefault(); e.stopImmediatePropagation(); dlg.close(); }
+      }, true);  // capture: pre-empt the theme's open-only handler when already open
+      dlg.addEventListener("click", function (e) { if (e.target === dlg) dlg.close(); });
+    })();
+
     // The theme renders navbar_end twice (desktop header + mobile drawer), so
     // the search component appears twice → duplicate #opencvSearchTrigger /
     // #opencvSearchOverlay IDs. Keep ONE overlay; wire EVERY trigger to it
