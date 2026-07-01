@@ -34,6 +34,16 @@ int ipp_hal_resize(int src_type, const uchar *src_data, size_t src_step, int src
 #define cv_hal_resize ipp_hal_resize
 #endif // HAVE_IPP_IW
 
+#if defined(HAVE_IPP_IW)
+int ipp_hal_boxFilter(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                      int width, int height, int src_depth, int dst_depth, int cn,
+                      int margin_left, int margin_top, int margin_right, int margin_bottom,
+                      size_t ksize_width, size_t ksize_height, int anchor_x, int anchor_y,
+                      bool normalize, int border_type);
+#undef cv_hal_boxFilter
+#define cv_hal_boxFilter ipp_hal_boxFilter
+#endif // HAVE_IPP_IW
+
 int ipp_hal_remap32f(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height,
     uchar *dst_data, size_t dst_step, int dst_width, int dst_height,
     float* mapx, size_t mapx_step, float* mapy, size_t mapy_step,

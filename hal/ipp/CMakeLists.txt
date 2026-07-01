@@ -17,6 +17,7 @@ add_library(ipphal STATIC
     "${CMAKE_CURRENT_SOURCE_DIR}/src/transforms_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/warp_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/resize_ipp.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/box_filter_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/sum_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/color_ipp.cpp"
 )
