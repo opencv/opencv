@@ -726,34 +726,6 @@ TEST_P(Reproducibility_ResNet50_ONNX, Accuracy)
     for (int i = 0; i < K; i++) {
         EXPECT_NEAR(ref[i].second, res[i].second, eps);
     }
-
-    // Benchmark: warmup runs followed by timed runs, reporting avg/min/max forward time.
-    const int numWarmup = 5;
-    const int numRuns = 30;
-    for (int i = 0; i < numWarmup; i++)
-    {
-        net.setInput(input);
-        net.forward();
-    }
-
-    double timeMin = DBL_MAX, timeMax = 0.0, timeSum = 0.0;
-    for (int i = 0; i < numRuns; i++)
-    {
-        net.setInput(input);
-        TickMeter tm;
-        tm.start();
-        net.forward();
-        tm.stop();
-        double t = tm.getTimeMilli();
-        timeSum += t;
-        timeMin = std::min(timeMin, t);
-        timeMax = std::max(timeMax, t);
-    }
-
-    std::cout << "[ BENCHMARK ] ResNet50 ONNX (backend=" << (int)backendId << ", target=" << (int)targetId << ") over "
-              << numRuns << " runs: avg=" << (timeSum / numRuns) << " ms"
-              << ", min=" << timeMin << " ms"
-              << ", max=" << timeMax << " ms" << std::endl;
 }
 INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_ResNet50_ONNX,
                         testing::ValuesIn(resnet50BackendsAndTargets()));

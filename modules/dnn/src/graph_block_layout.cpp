@@ -166,17 +166,6 @@ struct BlockLayoutTransformer
             CV_Assert(inputLayoutsNew.size() == ninputs);
             CV_Assert(outputLayouts.size() == noutputs);
 
-            fprintf(stderr, "BLKALL op=%s name=%s\n", op_name.c_str(), name.c_str());
-            if (op_name == "Pooling" || op_name == "DequantizeLinear" || op_name == "QuantizeLinear") {
-                fprintf(stderr, "BLKDBG op=%s name=%s deviceOp=%d defaultLayout=%d orig=[", op_name.c_str(), name.c_str(), (int)deviceOp, (int)defaultLayout);
-                for (auto l : inputLayoutsOrig) fprintf(stderr, "%d,", (int)l);
-                fprintf(stderr, "] new=[");
-                for (auto l : inputLayoutsNew) fprintf(stderr, "%d,", (int)l);
-                fprintf(stderr, "] out=[");
-                for (auto l : outputLayouts) fprintf(stderr, "%d,", (int)l);
-                fprintf(stderr, "]\n");
-            }
-
             if (deviceOp) {
                 for (size_t i = 0; i < ninputs; i++)
                     inputLayoutsNew[i] = defaultLayout;
