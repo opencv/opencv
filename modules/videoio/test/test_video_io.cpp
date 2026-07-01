@@ -591,6 +591,26 @@ TEST(Videoio, exceptions)
     EXPECT_THROW(cap.open("this_does_not_exist.avi", CAP_OPENCV_MJPEG), Exception);
 }
 
+TEST(Videoio, opencv_mjpeg_1x1_gray_write_nocrash)
+{
+    if (!cv::videoio_registry::hasBackend(CAP_OPENCV_MJPEG))
+        throw SkipTestException("Backend is not available/disabled: CAP_OPENCV_MJPEG");
+
+    const String filename = cv::tempfile("opencv_mjpeg_1x1_gray.avi");
+    VideoWriter writer;
+    const Mat frame(1, 1, CV_8UC1, Scalar::all(255));
+
+    ASSERT_NO_THROW(writer.open(filename, CAP_OPENCV_MJPEG,
+                                VideoWriter::fourcc('M', 'J', 'P', 'G'),
+                                25.0, Size(1, 1), false));
+    ASSERT_TRUE(writer.isOpened());
+
+    EXPECT_NO_THROW(writer.write(frame));
+    EXPECT_NO_THROW(writer.release());
+
+    (void)remove(filename.c_str());
+}
+
 
 typedef Videoio_Writer Videoio_Writer_bad_fourcc;
 
