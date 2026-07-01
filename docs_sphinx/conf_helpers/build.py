@@ -310,30 +310,13 @@ def _write_root_index() -> None:
             f'<ul><li><a href="{docname}.html">{link_text or heading}</a></li></ul>\n')
     body = "\n".join(body_lines).rstrip()
 
-    intro = (
-        "OpenCV (Open Source Computer Vision Library) is an open-source computer "
-        "vision and machine learning software library. It has more than 2,500 "
-        "optimised algorithms, a comprehensive mix of both classic and "
-        "state-of-the-art computer vision and machine learning methods. These "
-        "can be used to detect and recognise faces, identify objects, classify "
-        "human actions in video, track camera and object motion, extract 3D "
-        "models, stitch images together to produce high-resolution panoramas, "
-        "and much more. The library has interfaces for C++, Python, Java, and "
-        "JavaScript, runs on Windows, Linux, macOS, Android, and iOS, and "
-        "accelerates work on CPU (SIMD), CUDA, OpenCL, and Vulkan.\n\n"
-        "OpenCV 5.0 is a major release built on OpenCV 4.x. C++17 is now the "
-        "minimum required standard, Python 2 support has been dropped (Python "
-        "3.6+ is required), and the legacy C API has been fully removed. New "
-        "data types (CV_16BF, CV_32U, CV_64U, CV_64S, CV_Bool) and proper 0D/1D "
-        "array support extend the core, while the former calib3d module is split "
-        "into the geometry, calib, stereo, and ptcloud modules. A "
-        "next-generation DNN engine now covers over 80% of the ONNX "
-        "specification (up from under 23%), with ONNX Runtime integration and "
-        "models hosted on Hugging Face. Performance gains include Universal "
-        "Intrinsics 2.0 (SSE/AVX/NEON/SVE/RISC-V), Vulkan compute support, "
-        "image-warping speed-ups of 10% to over 300%, and USAC as the default "
-        "framework for robust estimation."
-    )
+    # Landing-page intro prose lives in a hand-editable Markdown file next to
+    # conf.py (docs_sphinx/index_intro.md), not inline here.
+    _intro_md = pathlib.Path(__file__).resolve().parent.parent / "index_intro.md"
+    try:
+        intro = _intro_md.read_text(encoding="utf-8").strip()
+    except OSError:
+        intro = ""
 
     text = (
         "OpenCV documentation\n"
