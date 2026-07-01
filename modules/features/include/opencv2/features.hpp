@@ -753,6 +753,55 @@ public:
     CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 };
 
+/** @brief XFeat feature detector and descriptor, based on a DNN model.
+
+XFeat is a compact learned local-feature extractor. This class wraps an ONNX export through
+cv::dnn::Net and exposes score-map detections with 64-D float descriptors under the standard
+cv::Feature2D interface.
+
+The class assumes the ONNX model has a single grayscale input tensor N×1×H×W in [0, 1] and
+returns descriptor and score maps. Images are resized with preserved aspect ratio and padded
+to the configured square input size.
+ */
+class CV_EXPORTS_W XFeat : public Feature2D
+{
+public:
+    /** @brief Creates an XFeat detector.
+    @param modelPath Path to the XFeat ONNX model.
+    @param maxKeypoints Maximum number of keypoints to return per image. The strongest
+                        responses are kept; -1 keeps all detections.
+    @param scoreThreshold Discard keypoints with network score not greater than this value.
+    @param inputSize Square input size fed to the network, default 640.
+    @param backendId DNN backend identifier (see cv::dnn::Backend); 0 = DNN_BACKEND_DEFAULT.
+    @param targetId  DNN target identifier (see cv::dnn::Target);  0 = DNN_TARGET_CPU.
+    */
+    CV_WRAP static Ptr<XFeat> create(const String& modelPath,
+                                     int maxKeypoints = -1,
+                                     float scoreThreshold = 0.5f,
+                                     int inputSize = 640,
+                                     int backendId = 0,
+                                     int targetId = 0);
+
+    /** @brief Creates an XFeat detector from an in-memory model buffer. */
+    CV_WRAP_AS(createFromMemory) static Ptr<XFeat> create(const std::vector<uchar>& bufferModel,
+                                     int maxKeypoints = -1,
+                                     float scoreThreshold = 0.5f,
+                                     int inputSize = 640,
+                                     int backendId = 0,
+                                     int targetId = 0);
+
+    CV_WRAP virtual void setMaxKeypoints(int maxKeypoints) = 0;
+    CV_WRAP virtual int  getMaxKeypoints() const = 0;
+
+    CV_WRAP virtual void  setScoreThreshold(float threshold) = 0;
+    CV_WRAP virtual float getScoreThreshold() const = 0;
+
+    CV_WRAP virtual void setInputSize(int inputSize) = 0;
+    CV_WRAP virtual int  getInputSize() const = 0;
+
+    CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
+};
+
 #endif // HAVE_OPENCV_DNN || CV_DOXYGEN
 
 /** @brief Class for extracting blobs from an image. :
