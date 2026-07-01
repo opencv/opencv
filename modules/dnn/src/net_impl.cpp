@@ -234,7 +234,7 @@ void Net::Impl::setUpNet(const std::vector<LayerPin>& blobsToKeep_)
             preferableTarget = DNN_TARGET_CPU;
         }
 
-        if (preferableBackend == DNN_BACKEND_CUDA && !haveCUDA())
+        if (preferableBackend == DNN_BACKEND_CUDA && !isCUDABackendAvailable())
         {
 #ifdef HAVE_CUDA
             CV_LOG_WARNING(NULL, "unable to use CUDA backend; switching to CPU");
@@ -883,20 +883,8 @@ void Net::Impl::forwardLayer(LayerData& ld)
             CV_Assert(!node.empty());
             if (preferableBackend == DNN_BACKEND_CUDA)
             {
-                CV_Assert(haveCUDA());
-
-#ifdef HAVE_CUDA
-                Ptr<CUDABackendNode> cudaNode = node.dynamicCast<CUDABackendNode>();
-                CV_Assert(!cudaNode.empty());
-
-                cudaNode->forward(ld.inputBlobsWrappers, ld.outputBlobsWrappers, cudaInfo->workspace);
-
-                for (auto id : ld.cudaD2HBackgroundTransfers)
-                {
-                    auto wrapper = ld.outputBlobsWrappers[id].dynamicCast<CUDABackendWrapper>();
-                    wrapper->copyToHostInBackground();
-                }
-#endif
+                CV_Assert(isCUDABackendAvailable());
+                forwardCUDALayer(ld);
             }
             else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             {
@@ -993,10 +981,8 @@ void Net::Impl::forwardToLayer(LayerData& ld, bool clearFlags)
     // forward itself
     forwardLayer(ld);
 
-#ifdef HAVE_CUDA
     if (preferableBackend == DNN_BACKEND_CUDA)
-        cudaInfo->context.stream.synchronize();
-#endif
+        synchronizeCUDABackend();
 }
 
 

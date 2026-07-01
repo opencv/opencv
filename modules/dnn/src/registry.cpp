@@ -110,7 +110,7 @@ private:
             backends.push_back(std::make_pair(DNN_BACKEND_VKCOM, DNN_TARGET_VULKAN));
 #endif
 
-#ifdef HAVE_CUDA
+#if defined(HAVE_CUDA)
         cuda4dnn::checkVersions();
 
         bool hasCudaCompatible = false;
@@ -133,6 +133,20 @@ private:
             backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA));
             if (hasCudaFP16)
                 backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA_FP16));
+        }
+#elif defined(ENABLE_PLUGINS) && defined(OPENCV_DNN_CUDA_PLUGIN)
+        {
+            auto factory = dnn_backend::createPluginDNNBackendFactory("cuda");
+            if (factory)
+            {
+                auto backend = factory->createNetworkBackend();
+                if (backend && backend->checkTarget(DNN_TARGET_CUDA))
+                {
+                    backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA));
+                    if (backend->checkTarget(DNN_TARGET_CUDA_FP16))
+                        backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA_FP16));
+                }
+            }
         }
 #endif
 
