@@ -141,6 +141,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Pooling,        PoolingLayer);
     CV_DNN_REGISTER_LAYER_CLASS(MaxPool,        MaxPoolLayer);
     CV_DNN_REGISTER_LAYER_CLASS(AveragePool,    AveragePoolLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(LpPool,         LpPoolLayer);
     CV_DNN_REGISTER_LAYER_CLASS(ROIPooling,     PoolingLayer);
     CV_DNN_REGISTER_LAYER_CLASS(PSROIPooling,   PoolingLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Reduce,         ReduceLayer);

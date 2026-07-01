@@ -1470,6 +1470,20 @@ CASE(test_loop13_seq)
     // no filter
 CASE(test_loop16_seq_none)
     // no filter
+CASE(test_lppool_1d_default)
+    SKIP; // no nGraph/OpenVINO backend for LpPool, fallback to CPU
+CASE(test_lppool_2d_default)
+    SKIP;
+CASE(test_lppool_2d_dilations)
+    SKIP;
+CASE(test_lppool_2d_pads)
+    SKIP;
+CASE(test_lppool_2d_same_upper)
+    SKIP;
+CASE(test_lppool_2d_strides)
+    SKIP;
+CASE(test_lppool_3d_default)
+    SKIP;
 CASE(test_lrn)
     // no filter
 CASE(test_lrn_default)
