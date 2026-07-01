@@ -1038,6 +1038,7 @@ struct fp8_t     // E4M3FN: bias 7, no inf, max 448
     fp8_t() : b(0) {}
     explicit fp8_t(float x) : b(fp8_detail::encodeE4M3(x, 7, false)) {}
     operator float() const { return table()[b]; }
+    static const float* decodeLUT() { return table(); }
 protected:
     uchar b;
 private:
@@ -1050,6 +1051,7 @@ struct fp8a_t    // E4M3FNUZ: bias 8, no inf, single NaN, no -0, max 240
     fp8a_t() : b(0) {}
     explicit fp8a_t(float x) : b(fp8_detail::encodeE4M3(x, 8, true)) {}
     operator float() const { return table()[b]; }
+    static const float* decodeLUT() { return table(); }
 protected:
     uchar b;
 private:

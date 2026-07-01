@@ -517,7 +517,7 @@ static void cvt64s(const uchar* src, size_t sstep, const uchar*, size_t, uchar* 
     DEF_CVT_SCALAR_FUNC(S##16s,  T, short)     DEF_CVT_SCALAR_FUNC(16s##S,  short, T) \
     DEF_CVT_SCALAR_FUNC(S##32u,  T, unsigned)  DEF_CVT_SCALAR_FUNC(32u##S,  unsigned, T) \
     DEF_CVT_SCALAR_FUNC(S##32s,  T, int)       DEF_CVT_SCALAR_FUNC(32s##S,  int, T) \
-    DEF_CVT_SCALAR_FUNC(S##32f,  T, float)     DEF_CVT_SCALAR_FUNC(32f##S,  float, T) \
+    DEF_CVT_SCALAR_FUNC(32f##S,  float, T) \
     DEF_CVT_SCALAR_FUNC(S##64f,  T, double)    DEF_CVT_SCALAR_FUNC(64f##S,  double, T) \
     DEF_CVT_SCALAR_FUNC(S##16f,  T, hfloat)    DEF_CVT_SCALAR_FUNC(16f##S,  hfloat, T) \
     DEF_CVT_SCALAR_FUNC(S##16bf, T, bfloat)    DEF_CVT_SCALAR_FUNC(16bf##S, bfloat, T) \
@@ -531,6 +531,31 @@ DEF_CVT_FP8(8fe4m3u, fp8a_t)
 // FP8 -> FP8, cross-format only (identity uses the 1-byte copy cvt8u, like 16f->16f uses cvt16u)
 DEF_CVT_SCALAR_FUNC(8fe4m38fe4m3u, fp8_t,   fp8a_t)
 DEF_CVT_SCALAR_FUNC(8fe4m3u8fe4m3, fp8a_t, fp8_t)
+
+// FP8 -> float32: 256-entry decode table gathered via universal intrinsics (same table as scalar)
+template<typename FP8>
+static void cvtFp8ToF32(const uchar* src, size_t sstep, const uchar*, size_t,
+                        uchar* dst_, size_t dstep, Size size, void*)
+{
+    CV_INSTRUMENT_REGION();
+    float* dst = (float*)dst_;
+    const float* tab = FP8::decodeLUT();
+    dstep /= sizeof(dst[0]);
+    for (int i = 0; i < size.height; i++, src += sstep, dst += dstep)
+    {
+        int j = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int VECSZ = VTraits<v_float32>::vlanes();
+        for (; j <= size.width - VECSZ; j += VECSZ)
+            v_store(dst + j, v_lut(tab, v_reinterpret_as_s32(vx_load_expand_q(src + j))));
+#endif
+        for (; j < size.width; j++) dst[j] = tab[src[j]];
+    }
+}
+static void cvt8fe4m332f(const uchar* s, size_t ss, const uchar* p, size_t ps, uchar* d, size_t ds, Size sz, void* x)
+{ cvtFp8ToF32<fp8_t>(s, ss, p, ps, d, ds, sz, x); }
+static void cvt8fe4m3u32f(const uchar* s, size_t ss, const uchar* p, size_t ps, uchar* d, size_t ds, Size sz, void* x)
+{ cvtFp8ToF32<fp8a_t>(s, ss, p, ps, d, ds, sz, x); }
 
 BinaryFunc getConvertFunc(int sdepth_, int ddepth_)
 {
