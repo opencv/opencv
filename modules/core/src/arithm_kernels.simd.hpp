@@ -228,6 +228,8 @@ TKernel getMinFunc_(int T, int R);
 TKernel getMaxFunc_(int T, int R);
 TKernel getAbsdiffFunc_(int T, int R);
 TKernel getCmpFunc_(TOp op, int T);
+TKernel getBitwiseFunc_(TOp op, int esz);                    // OP_AND / OP_OR / OP_XOR, by element size
+TKernel getNotFunc_(int esz);                                // OP_NOT, by element size
 TKernel getCopyMaskFunc_(int depth);
 TKernel getCastFunc_(int sdepth, int ddepth, bool scaled);   // OP_CAST / OP_CONVERT_SCALE
 
@@ -306,14 +308,31 @@ struct EwCmpEq { template<typename W> static bool cmp(W a, W b) { return a == b;
                  template<typename V> static V vec(const V& a, const V& b) { return v_eq(a, b); } };
 struct EwCmpNe { template<typename W> static bool cmp(W a, W b) { return a != b; }
                  template<typename V> static V vec(const V& a, const V& b) { return v_ne(a, b); } };
-struct EwCmpLt { template<typename W> static bool cmp(W a, W b) { return a <  b; }
-                 template<typename V> static V vec(const V& a, const V& b) { return v_lt(a, b); } };
-struct EwCmpLe { template<typename W> static bool cmp(W a, W b) { return a <= b; }
-                 template<typename V> static V vec(const V& a, const V& b) { return v_le(a, b); } };
-struct EwCmpGt { template<typename W> static bool cmp(W a, W b) { return a >  b; }
+// LT/LE are synthesized from GT/GE via the EW_KERNEL_SWAP01 flag (a<b == b>a), so no Lt/Le kernels.
+struct EwCmpGt { template<typename W> static bool cmp(W a, W b) { return a > b; }
                  template<typename V> static V vec(const V& a, const V& b) { return v_gt(a, b); } };
 struct EwCmpGe { template<typename W> static bool cmp(W a, W b) { return a >= b; }
                  template<typename V> static V vec(const V& a, const V& b) { return v_ge(a, b); } };
+
+// bitwise AND/OR/XOR: bit-pattern op, type-agnostic. Run on the UNSIGNED integer whose width matches
+// the element (u8/u16/u32/u64), so one functor set covers every depth. No scale, no widening (T x T ->
+// T, exactly like min/max); preproc is the identity (min/max share this shape). 64-bit uses the scalar
+// path (no widening vector helpers), the rest ride vecBinaryKernel's native same-type path.
+struct EwAnd {
+    template<typename V> static V vec(const V& a, const V& b) { return v_and(a, b); }
+    template<typename V> static V preproc(const V& a, const V&) { return a; }
+    template<typename W, typename ST> static W scl(W a, W b, ST) { return W(a & b); }
+};
+struct EwOr {
+    template<typename V> static V vec(const V& a, const V& b) { return v_or(a, b); }
+    template<typename V> static V preproc(const V& a, const V&) { return a; }
+    template<typename W, typename ST> static W scl(W a, W b, ST) { return W(a | b); }
+};
+struct EwXor {
+    template<typename V> static V vec(const V& a, const V& b) { return v_xor(a, b); }
+    template<typename V> static V preproc(const V& a, const V&) { return a; }
+    template<typename W, typename ST> static W scl(W a, W b, ST) { return W(a ^ b); }
+};
 
 // Collapse a gap-free 2D tile to 1D (call with the per-operand x/y-steps).
 #define EW_TRY_COLLAPSE(NSRC) \
@@ -384,6 +403,8 @@ static int scalarCompareKernel(const void* src0_, size_t s0y, size_t s0x,
                          void* dst_, size_t dsty, int width, int height,
                          const double*, int flags, void*)
 {
+    // LT/LE reuse the GT/GE kernel with the operands swapped (a<b == b>a, a<=b == b>=a).
+    if (flags & EW_KERNEL_SWAP01) { std::swap(src0_, src1_); std::swap(s0y, s1y); std::swap(s0x, s1x); }
     s0y /= sizeof(T);
     s1y /= sizeof(T);
     CV_Assert((s0x|s1x) == 1u || (s0x|s1x) + (size_t)width == 1u);
@@ -391,7 +412,7 @@ static int scalarCompareKernel(const void* src0_, size_t s0y, size_t s0x,
     const T* src0 = (const T*)src0_;
     const T* src1 = (const T*)src1_;
     uchar* dst = (uchar*)dst_;
-    const uchar trueVal = flags ? (uchar)flags : 255;
+    const uchar trueVal = (flags & EW_KERNEL_MASK1) ? 1 : 255;
 
     EW_TRY_COLLAPSE(2);
     for (int y = 0; y < height; y++, src0 += s0y, src1 += s1y, dst += dsty)
@@ -426,6 +447,8 @@ static int vecCompareKernel(const void* src0_, size_t s0y, size_t s0x,
                             void* dst_, size_t dsty, int width, int height,
                             const double*, int flags, void*)
 {
+    // LT/LE reuse the GT/GE kernel with the operands swapped (a<b == b>a, a<=b == b>=a).
+    if (flags & EW_KERNEL_SWAP01) { std::swap(src0_, src1_); std::swap(s0y, s1y); std::swap(s0x, s1x); }
     s0y /= sizeof(T);
     s1y /= sizeof(T);
     CV_Assert((s0x|s1x) == 1u || (s0x|s1x) + (size_t)width == 1u);
@@ -433,17 +456,64 @@ static int vecCompareKernel(const void* src0_, size_t s0y, size_t s0x,
     const T* src0 = (const T*)src0_;
     const T* src1 = (const T*)src1_;
     uchar* dst = (uchar*)dst_;
-    const uchar trueVal = flags ? (uchar)flags : 255;
+    const uchar trueVal = (flags & EW_KERNEL_MASK1) ? 1 : 255;
 
     EW_TRY_COLLAPSE(2);
-    for (int y = 0; y < height; y++, src0 += s0y, src1 += s1y, dst += dsty)
+    int y = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    // Short rows (2/3/4 elements): a per-channel scalar over a multi-channel image arrives as a
+    // (width=cn) x (height=pixels) tile with the scalar broadcast over rows (s?y==0). The per-row SIMD
+    // below never triggers at such a tiny width, so - like vecBinaryKernel - expand the width<=4
+    // broadcast operand across VECSZ*6 lanes and compare many rows at once.
+    if (height > 1 && width <= 4 &&
+        ((s0y == 0 && s1y == (size_t)width*s1x) || (s1y == 0 && s0y == (size_t)width*s0x)) &&
+        dsty == (size_t)width)
+    {
+        const int VECSZ = VTraits<Vvec>::vlanes();
+        constexpr int MAXVECSZ = VTraits<Vvec>::max_nlanes;
+        Uvec vTrue; v_setall_mask(vTrue, trueVal);
+        T scbuf[MAXVECSZ*6];
+        const int ewidth = VECSZ*6;
+        const bool bc0 = (s0y == 0);                         // src0 is the broadcast (short) operand
+        expandScalar(bc0 ? src0 : src1, bc0 ? s0x : s1x, width, scbuf, ewidth);
+        const int dy = ewidth / width;
+        Vvec sc0 = vx_load(scbuf),           sc1 = vx_load(scbuf + VECSZ),
+             sc2 = vx_load(scbuf + VECSZ*2), sc3 = vx_load(scbuf + VECSZ*3),
+             sc4 = vx_load(scbuf + VECSZ*4), sc5 = vx_load(scbuf + VECSZ*5);
+        const T*& src = bc0 ? src1 : src0;                   // the row-stepping operand (advanced below)
+        const size_t sy = bc0 ? s1y : s0y;
+        for (; y + dy <= height; y += dy, src += sy*dy, dst += dsty*dy)
+        {
+            Vvec v0 = vx_load(src),           v1 = vx_load(src + VECSZ),
+                 v2 = vx_load(src + VECSZ*2), v3 = vx_load(src + VECSZ*3),
+                 v4 = vx_load(src + VECSZ*4), v5 = vx_load(src + VECSZ*5);
+            Uvec m0, m1, m2, m3, m4, m5;
+            if (bc0) {   // src0 (broadcast) REL src1: Cmp::vec(sc, v)
+                v_reinterpret_as(Cmp::vec(sc0, v0), m0); v_reinterpret_as(Cmp::vec(sc1, v1), m1);
+                v_reinterpret_as(Cmp::vec(sc2, v2), m2); v_reinterpret_as(Cmp::vec(sc3, v3), m3);
+                v_reinterpret_as(Cmp::vec(sc4, v4), m4); v_reinterpret_as(Cmp::vec(sc5, v5), m5);
+            } else {     // src0 REL src1 (broadcast): Cmp::vec(v, sc)
+                v_reinterpret_as(Cmp::vec(v0, sc0), m0); v_reinterpret_as(Cmp::vec(v1, sc1), m1);
+                v_reinterpret_as(Cmp::vec(v2, sc2), m2); v_reinterpret_as(Cmp::vec(v3, sc3), m3);
+                v_reinterpret_as(Cmp::vec(v4, sc4), m4); v_reinterpret_as(Cmp::vec(v5, sc5), m5);
+            }
+            v_store_pair_as(dst,           v_and(m0, vTrue), v_and(m1, vTrue));
+            v_store_pair_as(dst + VECSZ*2, v_and(m2, vTrue), v_and(m3, vTrue));
+            v_store_pair_as(dst + VECSZ*4, v_and(m4, vTrue), v_and(m5, vTrue));
+        }
+    }
+#endif
+    for (; y < height; y++, src0 += s0y, src1 += s1y, dst += dsty)
     {
         int x = 0;
     #if (CV_SIMD || CV_SIMD_SCALABLE)
+        // SIMD for BOTH the contiguous case AND a broadcast operand (a per-channel scalar const has
+        // step 0 - without this the scalar-vs-array compare, incl. every multi-channel scalar compare,
+        // fell to the scalar tail below, ~5x slower). vx_setall broadcasts the step-0 operand once.
+        const int VECSZ = VTraits<Vvec>::vlanes();
+        Uvec vTrue; v_setall_mask(vTrue, trueVal);
         if (s0x == 1u && s1x == 1u)
         {
-            const int VECSZ = VTraits<Vvec>::vlanes();
-            Uvec vTrue; v_setall_mask(vTrue, trueVal);
             for (; x <= width - 2*VECSZ; x += 2*VECSZ)
             {
                 Vvec a0 = vx_load(src0 + x), a1 = vx_load(src0 + x + VECSZ);
@@ -451,6 +521,30 @@ static int vecCompareKernel(const void* src0_, size_t s0y, size_t s0x,
                 Uvec m0, m1;
                 v_reinterpret_as(Cmp::vec(a0, b0), m0);
                 v_reinterpret_as(Cmp::vec(a1, b1), m1);
+                v_store_pair_as(dst + x, v_and(m0, vTrue), v_and(m1, vTrue));
+            }
+        }
+        else if (s1x == 0u)                       // src1 (e.g. the scalar) broadcast
+        {
+            Vvec b0; vx_setall_as(src1, b0);
+            for (; x <= width - 2*VECSZ; x += 2*VECSZ)
+            {
+                Vvec a0 = vx_load(src0 + x), a1 = vx_load(src0 + x + VECSZ);
+                Uvec m0, m1;
+                v_reinterpret_as(Cmp::vec(a0, b0), m0);
+                v_reinterpret_as(Cmp::vec(a1, b0), m1);
+                v_store_pair_as(dst + x, v_and(m0, vTrue), v_and(m1, vTrue));
+            }
+        }
+        else if (s0x == 0u)                       // src0 broadcast
+        {
+            Vvec a0; vx_setall_as(src0, a0);
+            for (; x <= width - 2*VECSZ; x += 2*VECSZ)
+            {
+                Vvec b0 = vx_load(src1 + x), b1 = vx_load(src1 + x + VECSZ);
+                Uvec m0, m1;
+                v_reinterpret_as(Cmp::vec(a0, b0), m0);
+                v_reinterpret_as(Cmp::vec(a0, b1), m1);
                 v_store_pair_as(dst + x, v_and(m0, vTrue), v_and(m1, vTrue));
             }
         }
@@ -725,7 +819,7 @@ TKernel getMulFunc_(int T, int R)
         #if CV_SIMD_16F
             R == CV_8U ? vecBinaryKernel<uchar, uchar, v_float16, float, EwMul, float, v_uint16> :
         #else
-            R == CV_8U ? return vecBinaryKernel<uchar, uchar, v_float32, float, EwMul> :
+            R == CV_8U ? vecBinaryKernel<uchar, uchar, v_float32, float, EwMul> :
         #endif
             R == CV_32F ? vecBinaryKernel<uchar, float, v_float32, float, EwMul> : nullptr;
         break;
@@ -935,18 +1029,99 @@ static KernelFunc compareByType(int T)
 
 TKernel getCmpFunc_(TOp op, int T)
 {
+    // Only 4 physical kernels (eq/ne/gt/ge): LT/LE reuse GT/GE with the operands swapped
+    // (a<b == b>a, a<=b == b>=a) via the EW_KERNEL_SWAP01 flag, honored by the executor.
     KernelFunc f = nullptr;
+    int flags = 0;              // mask value: 0 flag bits => 0/255 (cv::compare); EW_KERNEL_MASK1 => 0/1
     switch (op)
     {
     case OP_CMP_EQ: f = compareByType<EwCmpEq>(T); break;
     case OP_CMP_NE: f = compareByType<EwCmpNe>(T); break;
-    case OP_CMP_LT: f = compareByType<EwCmpLt>(T); break;
-    case OP_CMP_LE: f = compareByType<EwCmpLe>(T); break;
     case OP_CMP_GT: f = compareByType<EwCmpGt>(T); break;
     case OP_CMP_GE: f = compareByType<EwCmpGe>(T); break;
+    case OP_CMP_LT: f = compareByType<EwCmpGt>(T); flags = EW_KERNEL_SWAP01; break;
+    case OP_CMP_LE: f = compareByType<EwCmpGe>(T); flags = EW_KERNEL_SWAP01; break;
     default:        ;
     }
-    return {f, nullptr, 255};   // default mask value 255 (cv::compare); kernel.flags=1 => a 0/1 mask
+    return {f, nullptr, flags};
+}
+
+// ===========================================================================
+// OP_AND / OP_OR / OP_XOR / OP_NOT: bitwise, type-agnostic (by element size)
+// ===========================================================================
+// A bit-pattern op ignores the operand's semantic type, so we run it on the UNSIGNED integer whose
+// width matches the element (1/2/4/8 bytes). One functor set (EwAnd/EwOr/EwXor) times four widths
+// covers every depth; the dispatchers below pick by element size. AND/OR/XOR reuse vecBinaryKernel's
+// native same-type path (as min/max do); 64-bit falls to the scalar kernel. NOT is unary.
+
+// bitwise NOT: ~x. Single operand -> always a full contiguous array (no broadcast), so just a flat
+// per-row complement. SIMD for 1/2/4-byte elements; 8-byte uses the scalar tail (Vvec unused there).
+template<typename T, typename Vvec>
+static int notKernel(const void* src0_, size_t s0y, size_t s0x,
+                     const void*, size_t, size_t, const void*, size_t, size_t,
+                     void* dst_, size_t dsty, int width, int height,
+                     const double*, int, void*)
+{
+    s0y /= sizeof(T);
+    dsty /= sizeof(T);
+    CV_Assert(s0x == 1u || width == 1);
+    const T* src0 = (const T*)src0_;
+    T* dst = (T*)dst_;
+    if (height > 1 && dsty == (size_t)width && s0y == (size_t)width) { width *= height; height = 1; }
+    for (int y = 0; y < height; y++, src0 += s0y, dst += dsty)
+    {
+        int x = 0;
+    #if (CV_SIMD || CV_SIMD_SCALABLE)
+        if constexpr (sizeof(T) <= 4)
+        {
+            const int VECSZ = VTraits<Vvec>::vlanes();
+            for (; x <= width - VECSZ; x += VECSZ)
+                v_store(dst + x, v_not(vx_load(src0 + x)));
+        }
+    #endif
+        for (; x < width; x++) dst[x] = (T)~src0[x];
+    }
+    return 0;
+}
+
+template<class Op>
+static KernelFunc bitwiseByEsz(int esz)
+{
+    switch (esz)
+    {
+    case 1: return vecBinaryKernel<uint8_t,  uint8_t,  v_uint8,  uint8_t,  Op, uint8_t>;
+    case 2: return vecBinaryKernel<uint16_t, uint16_t, v_uint16, uint16_t, Op, uint16_t>;
+    case 4: return vecBinaryKernel<uint32_t, uint32_t, v_uint32, uint32_t, Op, uint32_t>;
+    case 8: return scalarBinaryKernel<uint64_t, uint64_t, uint64_t, Op>;
+    default: return nullptr;
+    }
+}
+
+TKernel getBitwiseFunc_(TOp op, int esz)
+{
+    KernelFunc f = nullptr;
+    switch (op)
+    {
+    case OP_AND: f = bitwiseByEsz<EwAnd>(esz); break;
+    case OP_OR:  f = bitwiseByEsz<EwOr >(esz); break;
+    case OP_XOR: f = bitwiseByEsz<EwXor>(esz); break;
+    default:     ;
+    }
+    return {f, nullptr, 0};
+}
+
+TKernel getNotFunc_(int esz)
+{
+    KernelFunc f = nullptr;
+    switch (esz)
+    {
+    case 1: f = notKernel<uint8_t,  v_uint8 >; break;
+    case 2: f = notKernel<uint16_t, v_uint16>; break;
+    case 4: f = notKernel<uint32_t, v_uint32>; break;
+    case 8: f = notKernel<uint64_t, v_uint32>; break;   // SIMD path compiled out for 8-byte -> scalar ~
+    default: ;
+    }
+    return {f, nullptr, 0};
 }
 
 // ===========================================================================

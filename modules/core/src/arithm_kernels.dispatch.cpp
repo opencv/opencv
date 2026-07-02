@@ -25,6 +25,8 @@ TKernel getMinFunc(int T, int R)            { CV_CPU_DISPATCH(getMinFunc_,     (
 TKernel getMaxFunc(int T, int R)            { CV_CPU_DISPATCH(getMaxFunc_,     (T, R),          CV_CPU_DISPATCH_MODES_ALL); }
 TKernel getAbsdiffFunc(int T, int R)        { CV_CPU_DISPATCH(getAbsdiffFunc_, (T, R),          CV_CPU_DISPATCH_MODES_ALL); }
 TKernel getCmpFunc(TOp op, int T)           { CV_CPU_DISPATCH(getCmpFunc_,     (op, T),         CV_CPU_DISPATCH_MODES_ALL); }
+TKernel getBitwiseFunc(TOp op, int esz)     { CV_CPU_DISPATCH(getBitwiseFunc_, (op, esz),       CV_CPU_DISPATCH_MODES_ALL); }
+TKernel getNotFunc(int esz)                 { CV_CPU_DISPATCH(getNotFunc_,     (esz),           CV_CPU_DISPATCH_MODES_ALL); }
 TKernel getCopyMaskFunc(int depth)          { CV_CPU_DISPATCH(getCopyMaskFunc_,(depth),         CV_CPU_DISPATCH_MODES_ALL); }
 static TKernel getCastFunc(int sd, int dd, bool scaled)
                                             { CV_CPU_DISPATCH(getCastFunc_,    (sd, dd, scaled),CV_CPU_DISPATCH_MODES_ALL); }
@@ -73,6 +75,20 @@ TKernel getElemwiseFunc(TOp op, int depth0, int depth1, int depth2, int rdepth)
     {
         if (depth0 != depth1 || rdepth != CV_8U) return {};
         return getCmpFunc(op, depth0);
+    }
+
+    // OP_AND / OP_OR / OP_XOR: bit-pattern op, T x T -> T (same depth), dispatched by element size.
+    if (op == OP_AND || op == OP_OR || op == OP_XOR)
+    {
+        if (depth0 != depth1 || rdepth != depth0) return {};
+        return getBitwiseFunc(op, CV_ELEM_SIZE1(depth0));
+    }
+
+    // OP_NOT: ~x, one input, T -> T (same depth), dispatched by element size.
+    if (op == OP_NOT)
+    {
+        if (rdepth != depth0) return {};
+        return getNotFunc(CV_ELEM_SIZE1(depth0));
     }
 
     // OP_COPY_MASK: data depth == depth0 == rdepth; depth1 is the (1-byte) mask. By element size.

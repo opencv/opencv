@@ -2514,10 +2514,14 @@ TEST(Compare, empty)
 
 TEST(Compare, regression_8999)
 {
+    // Issue #8999 predates broadcasting element-wise ops: comparing a 4x1 array against a 1x1 operand
+    // used to throw (both look like a Scalar). It now broadcasts the 1x1 operand across the 4x1 array.
     Mat_<double> A(4,1); A << 1, 3, 2, 4;
     Mat_<double> B(1,1); B << 2;
     Mat C;
-    EXPECT_THROW(cv::compare(A, B, C, CMP_LT), cv::Exception);
+    cv::compare(A, B, C, CMP_LT);
+    Mat expected = (Mat_<uchar>(4,1) << 255, 0, 0, 0);   // A < 2
+    EXPECT_EQ(0, cvtest::norm(C, expected, NORM_INF));
 }
 
 TEST(Compare, regression_16F_do_not_crash)

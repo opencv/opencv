@@ -2,23 +2,22 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-// Tests for Layer 4: the cv::expression() string frontend. Exercises placeholders, operator
-// precedence, function calls, type casts, assignments and tuple (multi-) outputs. Limited to
-// ops with kernels today (arithmetic / cast / pow); math funcs land with the #7 kernel matrix.
+// Tests for the public cv::texpr() string frontend. Exercises placeholders, operator precedence,
+// function calls, type casts, assignments and tuple (multi-) outputs. Limited to ops with kernels
+// today (arithmetic / cast / pow / min / max / absdiff).
 
-#include "../test_precomp.hpp"
-#include "ew_parser.hpp"
+#include "test_precomp.hpp"
 
 namespace opencv_test { namespace {
 
 static Mat expr1(const String& e, const std::vector<Mat>& in)
 {
     std::vector<Mat> out;
-    cv::ew::expression(e, in, out);
+    cv::texpr(e, in, out);
     return out[0];
 }
 
-TEST(Core_EW_Expr, add)
+TEST(Core_TExpr, add)
 {
     Mat a(12, 15, CV_32F), b(12, 15, CV_32F);
     theRNG().fill(a, RNG::UNIFORM, 1.f, 10.f);
@@ -30,7 +29,7 @@ TEST(Core_EW_Expr, add)
 }
 
 // Built-in binary functions min/max/absdiff parsed and dispatched through emitBinary.
-TEST(Core_EW_Expr, minmax_absdiff)
+TEST(Core_TExpr, minmax_absdiff)
 {
     Mat a(18, 21, CV_8U), b(18, 21, CV_8U);
     theRNG().fill(a, RNG::UNIFORM, 0, 255);
@@ -48,7 +47,7 @@ TEST(Core_EW_Expr, minmax_absdiff)
 }
 
 // Operator precedence: '*' binds tighter than '+', unary minus on a literal.
-TEST(Core_EW_Expr, addweighted_precedence)
+TEST(Core_TExpr, addweighted_precedence)
 {
     Mat a(20, 16, CV_32F), b(20, 16, CV_32F);
     theRNG().fill(a, RNG::UNIFORM, 1.f, 10.f);
@@ -60,7 +59,7 @@ TEST(Core_EW_Expr, addweighted_precedence)
 }
 
 // Named temporary via ';' assignment.
-TEST(Core_EW_Expr, assignment)
+TEST(Core_TExpr, assignment)
 {
     Mat a(18, 22, CV_32F), b(18, 22, CV_32F);
     theRNG().fill(a, RNG::UNIFORM, 1.f, 10.f);
@@ -72,14 +71,14 @@ TEST(Core_EW_Expr, assignment)
 }
 
 // Tuple -> several outputs.
-TEST(Core_EW_Expr, tuple_outputs)
+TEST(Core_TExpr, tuple_outputs)
 {
     Mat a(14, 19, CV_32F), b(14, 19, CV_32F);
     theRNG().fill(a, RNG::UNIFORM, 1.f, 10.f);
     theRNG().fill(b, RNG::UNIFORM, 1.f, 10.f);
 
     std::vector<Mat> out;
-    cv::ew::expression("({0} + {1}, {0} - {1})", std::vector<Mat>{ a, b }, out);
+    cv::texpr("({0} + {1}, {0} - {1})", std::vector<Mat>{ a, b }, out);
     ASSERT_EQ(out.size(), 2u);
     Mat eadd, esub; cv::add(a, b, eadd); cv::subtract(a, b, esub);
     EXPECT_LE(cvtest::norm(out[0], eadd, NORM_INF), 1e-3) << "sum";
@@ -87,7 +86,7 @@ TEST(Core_EW_Expr, tuple_outputs)
 }
 
 // Grouping parens (NOT a tuple) inside a larger expression.
-TEST(Core_EW_Expr, grouping_parens)
+TEST(Core_TExpr, grouping_parens)
 {
     Mat a(11, 13, CV_32F), b(11, 13, CV_32F);
     theRNG().fill(a, RNG::UNIFORM, 1.f, 10.f);
@@ -99,7 +98,7 @@ TEST(Core_EW_Expr, grouping_parens)
 }
 
 // Type-cast function: float -> uint8 (saturating).
-TEST(Core_EW_Expr, cast_uint8)
+TEST(Core_TExpr, cast_uint8)
 {
     Mat a(23, 17, CV_32F);
     theRNG().fill(a, RNG::UNIFORM, -50.f, 300.f);
@@ -111,7 +110,7 @@ TEST(Core_EW_Expr, cast_uint8)
 }
 
 // pow() function call with a scalar exponent.
-TEST(Core_EW_Expr, pow_call)
+TEST(Core_TExpr, pow_call)
 {
     Mat a(16, 16, CV_32F);
     theRNG().fill(a, RNG::UNIFORM, 1.f, 5.f);

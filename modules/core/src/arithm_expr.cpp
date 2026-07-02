@@ -16,6 +16,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <map>
+#include <ostream>
 #include <string>
 
 namespace cv { namespace ew {
@@ -118,6 +119,24 @@ static bool depthRepresents(double v, int depth)
     }
 }
 
+// [min, max] representable value of an integer depth, as doubles (exact for <=32-bit; the 64-bit
+// endpoints round to the nearest double). Used by the compare-with-const boundary rewrite.
+static void intRange(int depth, double& lo, double& hi)
+{
+    switch (depth)
+    {
+    case CV_8U:  lo = 0;                     hi = 255; break;
+    case CV_8S:  lo = -128;                  hi = 127; break;
+    case CV_16U: lo = 0;                     hi = 65535; break;
+    case CV_16S: lo = -32768;                hi = 32767; break;
+    case CV_32U: lo = 0;                     hi = 4294967295.0; break;
+    case CV_32S: lo = -2147483648.0;         hi = 2147483647.0; break;
+    case CV_64U: lo = 0;                     hi = 18446744073709551615.0; break;
+    case CV_64S: lo = -9223372036854775808.0; hi = 9223372036854775807.0; break;
+    default:     lo = 0;                     hi = 0; break;
+    }
+}
+
 // numpy-style arithmetic promotion - INTEGER-PRESERVING and COMMUTATIVE. Same signedness -> the wider
 // integer (keeps the sign). Mixed sign -> a SIGNED result wide enough to hold the unsigned operand's
 // range (8u+8s -> 16s, 16u+16s -> 32s, 32u+32s -> 64s; 64-bit mixed -> 64F, no 128-bit int exists).
@@ -202,6 +221,19 @@ static int promote2(int a, int b)
     const unsigned ctypelut = ((CV_16S << 0*dbits) | (CV_32S << 1*dbits) | (CV_64S << 2*dbits) |
                             (CV_32F << 3*dbits) | (CV_64F << 4*dbits));
     return int((ctypelut >> (max_pr*dbits)) & dmask);
+}
+
+// Common type for a bit-pattern op (AND/OR/XOR). Unlike promoteArith there is NO numeric promotion:
+// a bitwise op keeps the operand's own type, and a scalar operand simply takes the array's type and
+// is reinterpreted by its bits. A flexible CONST (EW_DEPTH_NONE) yields to the concrete operand; two
+// concrete depths must share the element WIDTH (cv::bitwise requires equal types) - if they differ we
+// keep the wider one (the kernel dispatches by element size). NONE x NONE stays NONE (caller defaults).
+static int promoteBitwise(int a, int b)
+{
+    if (a == EW_DEPTH_NONE) return b;
+    if (b == EW_DEPTH_NONE) return a;
+    if (a == b) return a;
+    return CV_ELEM_SIZE1(a) >= CV_ELEM_SIZE1(b) ? a : b;
 }
 
 // A wide type in which add(depth,depth->wide) exists and the sum is held without a premature clamp
@@ -306,7 +338,9 @@ int TExpr::emitBinary(TOp op, int a, int b, int rdepth, const Scalar& params)
     int result = rdepth;
     if (result == EW_DEPTH_NONE)
     {
-        result = (cat == CAT_COMPARE) ? CV_8U : promoteArith(nd0, nd1);
+        result = (cat == CAT_COMPARE) ? CV_8U
+               : (cat == CAT_BITWISE) ? promoteBitwise(nd0, nd1)   // no numeric promotion for bit ops
+               : promoteArith(nd0, nd1);
         if (result == EW_DEPTH_NONE) result = CV_32F;          // const (op) const
     }
 
@@ -316,6 +350,52 @@ int TExpr::emitBinary(TOp op, int a, int b, int rdepth, const Scalar& params)
     else if (nd0 == EW_DEPTH_NONE) base = nd1;
     else if (nd1 == EW_DEPTH_NONE) base = nd0;
     else base = promote2(nd0, nd1);
+
+    // COMPARE of an INTEGER array against a threshold that does not fit that type as-is (fractional,
+    // out-of-range, or EQ/NE of a non-representable value): rewrite to a NATIVE integer compare instead
+    // of widening both sides to f64. Per channel the relation reduces to a representable integer
+    // boundary  a >= B / a <= B , or a CONSTANT result via the type's min:  always-false == "a < min",
+    // always-true == "a >= min".  Boundaries:  a>t == a>=floor(t)+1 ;  a>=t == a>=ceil(t) ;
+    // a<t == a<=ceil(t)-1 ;  a<=t == a<=floor(t) ;  a==(non-rep) is never true ;  a!=(non-rep) is always
+    // true. Emitted only if all channels agree on ONE op (a scalar-broadcast or all-in-range threshold
+    // does); a per-channel op split (e.g. Scalar(0.5, 300)) falls through to the f64 path below.
+    if (cat == CAT_COMPARE && nd0 != EW_DEPTH_NONE && !isFloatDepth(nd0) &&
+        isFlexConst(*this, b) && !constFits(*this, b, base))
+    {
+        double lo, hi; intRange(nd0, lo, hi);
+        AutoBuffer<double, MAX_LOCAL_CN> v; int cn = constDoubles(*this, b, v);
+        AutoBuffer<double, MAX_LOCAL_CN> thr(cn);
+        // hi <= lo => a depth intRange does not model (e.g. CV_Bool): skip, leave it to the f64 path.
+        int uop = OP_NOP; bool ok = (hi > lo);
+        for (int c = 0; c < cn && ok; c++)
+        {
+            const double t = v[c]; int co; double th;
+            switch (op)
+            {
+            case OP_CMP_GT: { double B = std::floor(t) + 1; if (B > hi) { co = OP_CMP_LT; th = lo; }
+                              else { co = OP_CMP_GE; th = std::max(B, lo); } } break;   // a>=lo == always true
+            case OP_CMP_GE: { double B = std::ceil(t);      if (B > hi) { co = OP_CMP_LT; th = lo; }
+                              else { co = OP_CMP_GE; th = std::max(B, lo); } } break;
+            case OP_CMP_LT: { double B = std::ceil(t) - 1;  if (B < lo) { co = OP_CMP_LT; th = lo; }
+                              else if (B >= hi) { co = OP_CMP_GE; th = lo; } else { co = OP_CMP_LE; th = B; } } break;
+            case OP_CMP_LE: { double B = std::floor(t);     if (B < lo) { co = OP_CMP_LT; th = lo; }
+                              else if (B >= hi) { co = OP_CMP_GE; th = lo; } else { co = OP_CMP_LE; th = B; } } break;
+            // a representable integer keeps a real EQ/NE; a non-representable value is never equal
+            // (EQ -> all false "a<min") / always unequal (NE -> all true "a>=min").
+            case OP_CMP_EQ: if (depthRepresents(t, nd0)) { co = OP_CMP_EQ; th = t; } else { co = OP_CMP_LT; th = lo; } break;
+            case OP_CMP_NE: if (depthRepresents(t, nd0)) { co = OP_CMP_NE; th = t; } else { co = OP_CMP_GE; th = lo; } break;
+            default:          ok = false; co = OP_NOP; th = 0; break;
+            }
+            if (uop == OP_NOP) uop = co; else if (uop != co) ok = false;
+            thr[c] = th;
+        }
+        if (ok && uop != OP_NOP)
+        {
+            Scalar s; for (int c = 0; c < cn; c++) s[c] = thr[c];
+            b = addConst(EW_DEPTH_NONE, s, cn);          // native integer threshold (still flexible)
+            op = (TOp)uop;
+        }
+    }
 
     // compute depth + wide fallback per family:
     //   MIN/MAX, AND/OR/XOR         : T x T -> T, never widen   (depth = result)
@@ -345,7 +425,12 @@ int TExpr::emitBinary(TOp op, int a, int b, int rdepth, const Scalar& params)
     }
     case OP_CMP_EQ: case OP_CMP_NE: case OP_CMP_LT:
     case OP_CMP_LE: case OP_CMP_GT: case OP_CMP_GE:
-        depth = base; wide = base; break;
+        // compare in the common operand type; if a flexible-const threshold does not FIT that type
+        // (out of range, e.g. u8 > -10, or fractional, e.g. u8 > 2.5) fall back to f64 so it is NOT
+        // saturated into the operand type (which would move the boundary). f64 is exact for every
+        // integer array up to 32-bit; only a 64-bit-int array vs an out-of-range threshold stays
+        // approximate (a pathological case). array-vs-array never has a const, so it stays integer.
+        depth = base; wide = CV_64F; break;
     case OP_MUL: case OP_DIV:
     {
         depth = base;
@@ -381,11 +466,17 @@ int TExpr::emitBinary(TOp op, int a, int b, int rdepth, const Scalar& params)
             if (v[ch] != std::floor(v[ch])) return true;
         return false;
     };
-    if (!constFits(*this, a, depth) || !constFits(*this, b, depth))
+    // BITWISE never widens or floats: a bit-pattern op keeps the array's own integer type, and an
+    // out-of-range/fractional scalar is just saturate/round-cast into it (matching scalarToRawData /
+    // cv::bitwise's classic convertAndUnrollScalar). Skipping the widening below leaves depth == result.
+    if (cat != CAT_BITWISE && (!constFits(*this, a, depth) || !constFits(*this, b, depth)))
     {
         depth = wide;
         const bool frac = fracConst(a) || fracConst(b);
-        if (frac && !isFloatDepth(depth))
+        // MIN/MAX just SELECT an operand, so a fractional scalar threshold is round-cast into the
+        // array type (min(u8, 3.7) == min(u8, 4)) - matching the classic cv::min/max - instead of
+        // promoting the whole op to float (add/sub/absdiff DO need the float path to keep the fraction).
+        if (frac && !isFloatDepth(depth) && op != OP_MIN && op != OP_MAX)
             depth = wide = (result == CV_64F || base == CV_64F) ? CV_64F : CV_32F;
         // mul/div carry a scale-like float const at full f64 precision (cv::multiply/divide compute in
         // f64), so don't settle for f32 - e.g. 110 * 147.2863... must round to 16201, not 16202.
@@ -708,6 +799,60 @@ void TExpr::clear()
     ninputs = noutputs = ntemps = nbuffers = 0;
     Arg none;                       // slot 0: the reserved empty operand (kind == NONE)
     arginfo.push_back(none);
+}
+
+// Human-readable dump of the program (slot table + instruction list). Const values are shown in f64.
+void TExpr::dump(std::ostream& os) const
+{
+    auto dn = [](int d) -> const char* {
+        switch (d) {
+        case EW_DEPTH_NONE: return "flex";
+        case CV_8U:  return "u8";  case CV_8S:  return "s8";
+        case CV_16U: return "u16"; case CV_16S: return "s16";
+        case CV_32U: return "u32"; case CV_32S: return "s32";
+        case CV_64U: return "u64"; case CV_64S: return "s64";
+        case CV_16F: return "f16"; case CV_16BF:return "bf16";
+        case CV_32F: return "f32"; case CV_64F: return "f64";
+        case CV_Bool:return "bool";
+        default:     return "?"; }
+    };
+    auto kn = [](ArgKind k) -> const char* {
+        switch (k) { case NONE: return "none"; case INPUT: return "in"; case CONST: return "const";
+                     case TEMP: return "temp"; case OUTPUT: return "out"; } return "?";
+    };
+    os << "TExpr: inputs=" << ninputs << " outputs=" << noutputs << " temps=" << ntemps
+       << " buffers=" << nbuffers << " consts=" << nconsts << " insns=" << (int)prog.size() << "\n";
+    os << "  slots:\n";
+    for (int s = 0; s < (int)arginfo.size(); s++) {
+        const Arg& a = arginfo[s];
+        os << "    [" << s << "] " << kn(a.kind);
+        if (a.kind != NONE) os << " " << dn(a.depth);
+        if (a.kind == INPUT || a.kind == OUTPUT || a.kind == TEMP) os << " idx=" << a.index;
+        if (a.kind == CONST) {
+            const int cn = std::max(1, a.channels);
+            AutoBuffer<double, MAX_LOCAL_CN> v(cn);
+            const uchar* src = (const uchar*)(constbuf.data() + a.constofs);
+            if (a.srcdepth == CV_64F) memcpy(v.data(), src, (size_t)cn * sizeof(double));
+            else getConvertFunc(a.srcdepth, CV_64F)(src, 0, nullptr, 0, (uchar*)v.data(), 0, Size(cn, 1), nullptr);
+            os << " cn=" << cn << " src=" << dn(a.srcdepth) << " {";
+            for (int c = 0; c < cn; c++) os << (c ? "," : "") << v[c];
+            os << "}";
+        }
+        os << "\n";
+    }
+    os << "  prog:\n";
+    for (int i = 0; i < (int)prog.size(); i++) {
+        const Insn& ins = prog[i];
+        os << "    " << i << ": " << opName(ins.op) << "(" << ins.arg0;
+        if (ins.arg1) os << ", " << ins.arg1;
+        if (ins.arg2) os << ", " << ins.arg2;
+        os << ") -> " << ins.result;
+        if (ins.kernel.flags) os << " kflags=" << ins.kernel.flags;
+        if (ins.params[0] != 1.0 || ins.params[1] != 0.0)
+            os << " params=[" << ins.params[0] << "," << ins.params[1] << "," << ins.params[2] << "]";
+        if (!ins.kernel.fptr) os << " [UNBOUND]";
+        os << "\n";
+    }
 }
 
 // ---- program builders: append a slot / instruction, return its index ----
@@ -1508,8 +1653,17 @@ struct Parser
 
 } // anonymous namespace
 
-void expression(std::string_view expr, InputArrayOfArrays _inputs, OutputArrayOfArrays _outputs)
+}} // namespace cv::ew
+
+namespace cv {
+
+// Public entry point (declared in opencv2/core.hpp): parse a broadcasting element-wise expression,
+// compile it and run it over the inputs. This IS the engine's string front-end - there is no
+// separate cv::ew::expression indirection.
+void texpr(std::string_view expr, InputArrayOfArrays _inputs, OutputArrayOfArrays _outputs)
 {
+    using namespace cv::ew;
+    CV_INSTRUMENT_REGION();
     CV_Assert(_inputs.kind() == _InputArray::STD_VECTOR_MAT);
     const std::vector<Mat>& inps = *(const std::vector<Mat>*)_inputs.getObj();
     const int ninputs = (int)inps.size();
@@ -1529,9 +1683,8 @@ void expression(std::string_view expr, InputArrayOfArrays _inputs, OutputArrayOf
         outs.resize(e.noutputs);
         e.exec(inps.data(), outs.data());
     } else {
-        CV_Error(Error::StsNotImplemented, "vector<Mat> is expected as output of expression");
+        CV_Error(Error::StsNotImplemented, "vector<Mat> is expected as output of texpr");
     }
 }
 
-
-}} // namespace cv::ew
+}

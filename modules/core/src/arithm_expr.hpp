@@ -20,6 +20,7 @@
 #define OPENCV_CORE_ARITHM_EXPR_HPP
 
 #include <array>
+#include <iosfwd>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -131,6 +132,15 @@ typedef int (*KernelFunc)(
     int width, int height, const double* params,
     int flags, void* userdata);
 
+// TKernel::flags - small per-kernel options, interpreted by the kernel itself (so the meaning is
+// per-kernel: the cast kernels read it as the dst element size, the compare kernels as the bits below).
+enum TKernelFlags
+{
+    EW_KERNEL_MASK1  = 1,   // compare: emit a 0/1 mask instead of the default 0/255 (cv::compare)
+    EW_KERNEL_SWAP01 = 2,   // compare: the kernel swaps its own src0<->src1 (with their steps), so
+                            // LT/LE reuse the GT/GE kernels (a<b == b>a, a<=b == b>=a)
+};
+
 struct TKernel
 {
     KernelFunc fptr = nullptr;
@@ -230,6 +240,7 @@ struct CV_EXPORTS TExpr
 
     TExpr();
     void clear();                            // reset to an empty program (slot 0 = NONE)
+    void dump(std::ostream& os) const;       // human-readable slot table + instruction list (debug)
 
     // ---- operand / instruction builders (return the new slot / instruction index) ----
     int  addInput(int depth);
@@ -297,8 +308,8 @@ CV_EXPORTS void makeBinaryArithProgram(TExpr& p, TOp op, int depth0, int depth1,
 CV_EXPORTS void makeAddWeightedProgram(TExpr& p, int depth0, int depth1, int rdepth,
                                        double alpha, double beta, double gamma);
 
-// Parse a std::format-like element-wise expression, compile + run it over `inputs` into `outputs`.
-CV_EXPORTS void expression(std::string_view expr, InputArrayOfArrays inputs, OutputArrayOfArrays outputs);
+// NOTE: the string front-end is the PUBLIC cv::texpr() (declared in opencv2/core.hpp, defined in
+// arithm_expr.cpp) - there is no cv::ew::expression() indirection.
 
 }} // namespace cv::ew
 

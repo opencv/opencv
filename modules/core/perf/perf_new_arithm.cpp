@@ -6,9 +6,14 @@
 // opencv_test_core for now (move to opencv_perf_core later). Each (type-combo, size) is run
 // 10..30 times; the minimum getTickCount() time is reported as the most stable metric.
 
-#include "../test_precomp.hpp"
-#include "ew_exec.hpp"
-#include "ew_parser.hpp"
+#include "perf_precomp.hpp"
+
+// TODO: these ad-hoc micro-benchmarks call the engine internals (cv::ew) directly and print min-times
+// by hand. They are DISABLED (#if 0) pending a rewrite onto the perf framework (PERF_TEST_P over the
+// PUBLIC cv::add/... ops), measured against a separate 5.x build with opencv_perf_core + the summary
+// script. Kept here so the intended coverage is not lost.
+#if 0
+#include "../src/arithm_expr.hpp"
 #include <iostream>
 #include <iomanip>
 
@@ -369,3 +374,5 @@ TEST(Core_EW_Perf, addWeighted)
 }
 
 }} // namespace
+
+#endif

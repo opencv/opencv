@@ -2,13 +2,15 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-// Tests for Layer 2: type inference + cast insertion. Builds programs directly with emitBinary (the
-// same policy layer the cv::expression parser and the hand builders use), compiles them (bind kernels
-// + temp-buffer liveness) and runs them through the executor, checking against the classic cv:: ops.
+// White-box tests for the element-wise engine internals (cv::ew, declared in the module-internal
+// src/arithm_expr.hpp - NOT part of the public API; the public surface is cv::add/... and cv::texpr,
+// covered by test_new_arithm_extensive.cpp / test_arithm_expr.cpp). Two groups:
+//   - the type-inference + cast-insertion policy (emitBinary) compiled and run through the executor;
+//   - the single-op vertical slice (makeBinaryArithProgram / maybeAddCast) end-to-end.
+// Both check against the classic cv:: ops.
 
-#include "../test_precomp.hpp"
-#include "ew_compile.hpp"
-#include "ew_exec.hpp"
+#include "test_precomp.hpp"
+#include "../src/arithm_expr.hpp"
 
 namespace opencv_test { namespace {
 
@@ -162,6 +164,146 @@ TEST(Core_EW_Compile, promoteArith_rules)
                            CV_16F, CV_16BF, CV_32F, CV_64F };
     for (int a : depths) for (int b : depths)
         EXPECT_EQ(promoteArith(a, b), promoteArith(b, a)) << "noncommutative at " << a << "," << b;
+}
+
+// ---------------------------------------------------------------------------
+// Vertical slice: single-op programs (ADD/SUB/MUL/DIV/POW f32 and CAST) built via the hand builders
+// (makeBinaryArithProgram / maybeAddCast) and run through the executor, checked against classic cv::.
+// ---------------------------------------------------------------------------
+
+// out = op(a, b), composed via the general binary-arith builder (the engine backing cv::add).
+static Mat runBinary(TOp op, const Mat& a, const Mat& b, int rdepth)
+{
+    TExpr p; makeBinaryArithProgram(p, op, a.depth(), b.depth(), rdepth);
+    Mat inps[] = {a, b}, out;
+    p.exec(inps, &out);
+    return out;
+}
+
+// out = cast(a), built through maybeAddCast (a single OP_CAST) and compiled.
+static Mat runCast(const Mat& a, int rdepth)
+{
+    TExpr e;
+    int s = e.addInput(a.depth());
+    e.output(e.maybeAddCast(s, rdepth));
+    e.compile();
+    Mat out;
+    e.exec(&a, &out);
+    return out;
+}
+
+static void cvRef(TOp op, const Mat& a, const Mat& b, Mat& dst)
+{
+    switch (op)
+    {
+    case OP_ADD: cv::add(a, b, dst); break;
+    case OP_SUB: cv::subtract(a, b, dst); break;
+    case OP_MUL: cv::multiply(a, b, dst); break;
+    case OP_DIV: cv::divide(a, b, dst); break;
+    default: CV_Error(Error::StsBadArg, "unexpected op");
+    }
+}
+
+// ADD/SUB/MUL/DIV on f32, single- and multi-channel, same shape.
+TEST(Core_EW_Slice, binary_f32_same_shape)
+{
+    const TOp ops[] = { OP_ADD, OP_SUB, OP_MUL, OP_DIV };
+    const int chans[] = { 1, 3, 4 };
+    RNG& rng = theRNG();
+    for (int oi = 0; oi < 4; oi++)
+        for (int ci = 0; ci < 3; ci++)
+        {
+            int H = 17, W = 33, cn = chans[ci];
+            Mat a(H, W, CV_32FC(cn)), b(H, W, CV_32FC(cn));
+            rng.fill(a, RNG::UNIFORM, 1.f, 10.f);
+            rng.fill(b, RNG::UNIFORM, 1.f, 10.f);
+
+            Mat got = runBinary(ops[oi], a, b, CV_32F);
+            Mat exp; cvRef(ops[oi], a, b, exp);
+
+            ASSERT_EQ(got.size(), exp.size());
+            ASSERT_EQ(got.type(), exp.type());
+            EXPECT_LE(cvtest::norm(got, exp, NORM_INF), 1e-3)
+                << "op=" << opName(ops[oi]) << " cn=" << cn;
+        }
+}
+
+// POW with a 1x1 (broadcast) exponent vs cv::pow(a, scalar).
+TEST(Core_EW_Slice, pow_f32_scalar_exp)
+{
+    Mat a(20, 25, CV_32F);
+    theRNG().fill(a, RNG::UNIFORM, 1.f, 5.f);
+    Mat e(1, 1, CV_32F, Scalar(2.0));
+
+    Mat got = runBinary(OP_POW, a, e, CV_32F);
+    Mat exp; cv::pow(a, 2.0, exp);
+
+    EXPECT_LE(cvtest::norm(got, exp, NORM_INF), 1e-3);
+}
+
+// Row / column broadcasting (single channel) checked against repeat()+cv::add.
+TEST(Core_EW_Slice, broadcast_row_col)
+{
+    int H = 12, W = 19;
+    Mat a(H, W, CV_32F);
+    theRNG().fill(a, RNG::UNIFORM, 1.f, 10.f);
+
+    {   // row vector broadcast over rows
+        Mat brow(1, W, CV_32F);
+        theRNG().fill(brow, RNG::UNIFORM, 1.f, 10.f);
+        Mat got = runBinary(OP_ADD, a, brow, CV_32F);
+        Mat bb, exp; cv::repeat(brow, H, 1, bb); cv::add(a, bb, exp);
+        EXPECT_LE(cvtest::norm(got, exp, NORM_INF), 1e-3) << "row";
+    }
+    {   // column vector broadcast over columns
+        Mat bcol(H, 1, CV_32F);
+        theRNG().fill(bcol, RNG::UNIFORM, 1.f, 10.f);
+        Mat got = runBinary(OP_ADD, a, bcol, CV_32F);
+        Mat bb, exp; cv::repeat(bcol, 1, W, bb); cv::add(a, bb, exp);
+        EXPECT_LE(cvtest::norm(got, exp, NORM_INF), 1e-3) << "col";
+    }
+}
+
+// Channel broadcasting: HxWx3 * HxWx1 -> HxWx3.
+TEST(Core_EW_Slice, broadcast_channel)
+{
+    int H = 15, W = 21;
+    Mat a(H, W, CV_32FC3), b(H, W, CV_32FC1);
+    theRNG().fill(a, RNG::UNIFORM, 1.f, 10.f);
+    theRNG().fill(b, RNG::UNIFORM, 1.f, 10.f);
+
+    Mat got = runBinary(OP_MUL, a, b, CV_32F);
+
+    std::vector<Mat> ach; cv::split(a, ach);
+    for (size_t c = 0; c < ach.size(); c++) cv::multiply(ach[c], b, ach[c]);
+    Mat exp; cv::merge(ach, exp);
+
+    ASSERT_EQ(got.type(), exp.type());
+    EXPECT_LE(cvtest::norm(got, exp, NORM_INF), 1e-3);
+}
+
+// Saturating cast f32 <-> {u8, s32}.
+TEST(Core_EW_Slice, cast_basic)
+{
+    Mat a(23, 31, CV_32F);
+    theRNG().fill(a, RNG::UNIFORM, -50.f, 300.f);   // exercise saturation for u8
+
+    {
+        Mat got = runCast(a, CV_8U);
+        Mat exp; a.convertTo(exp, CV_8U);
+        EXPECT_EQ(0, cvtest::norm(got, exp, NORM_INF)) << "f32->u8";
+    }
+    {
+        Mat got = runCast(a, CV_32S);
+        Mat exp; a.convertTo(exp, CV_32S);
+        EXPECT_EQ(0, cvtest::norm(got, exp, NORM_INF)) << "f32->s32";
+    }
+    {
+        Mat u; a.convertTo(u, CV_8U);
+        Mat got = runCast(u, CV_32F);
+        Mat exp; u.convertTo(exp, CV_32F);
+        EXPECT_EQ(0, cvtest::norm(got, exp, NORM_INF)) << "u8->f32";
+    }
 }
 
 }} // namespace

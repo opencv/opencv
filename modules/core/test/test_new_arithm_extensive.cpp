@@ -2,14 +2,17 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-// Randomized property-based accuracy tests for the element-wise engine (OP_ADD, OP_CAST).
-// For each caseidx a deterministic splitmix64 seed picks random depths and broadcast-compatible
-// shapes (ndims<=4, total elements<=100000), runs the engine, and compares with a cv:: reference
-// (cv::broadcast + cv::add / convertTo). See ~/Downloads/extensive_test_harness_spec.md.
+// Randomized property-based accuracy tests for the broadcasting element-wise ops, exercised through
+// the PUBLIC cv:: entry points (add/subtract/multiply/divide/min/max/absdiff/compare with a mask,
+// dtype, in-place aliasing and mixed input types). For each caseidx a deterministic splitmix64 seed
+// picks random depths and broadcast-compatible shapes (ndims<=4, total<=100000) and every axis of each
+// operand independently keeps its size or drops to 1, so full/row/col/channel broadcast are all hit.
+// The reference decomposes each op into per-channel cv::broadcast + convertTo + the same op on aligned
+// same-shape single-channel arrays. The module-internal header is included only for the promotion rule
+// (promoteArith / absdiffResultDepth) the reference needs to predict each op's auto result depth.
 
-#include "../test_precomp.hpp"
-#include "ew_exec.hpp"
-#include "ew_compile.hpp"
+#include "test_precomp.hpp"
+#include "../src/arithm_expr.hpp"
 
 namespace opencv_test { namespace {
 
@@ -209,22 +212,20 @@ TEST_P(EW_Extensive_BinOp, accuracy)
     for (int c = 0; c < ocn; c++)
     {
         Mat apC, bpC;
-        ach[cn_a == 1 ? 0 : c].convertTo(apC, C);
-        bch[cn_b == 1 ? 0 : c].convertTo(bpC, C);
+        cvtest::convert(ach[cn_a == 1 ? 0 : c], apC, C);
+        cvtest::convert(bch[cn_b == 1 ? 0 : c], bpC, C);
         Mat aB, bB; cv::broadcast(apC, res, aB); cv::broadcast(bpC, res, bB);
-        if (op == OP_SUB) cv::subtract(aB, bB, refch[c], noArray(), Tr);
-        else              cv::add     (aB, bB, refch[c], noArray(), Tr);
+        cvtest::add(aB, 1, bB, op == OP_SUB ? -1 : 1, Scalar(), refch[c], Tr);
     }
     Mat ref; cv::merge(refch, ref);
 
-    // engine (output aliases input #aliasIn for the in-place case, else a fresh Mat)
-    TExpr p;
-    makeBinaryArithProgram(p, op, da, db, Tr);
-    Mat inps[] = {a, b}, outOwn;
-    Mat* outPtr = inplace ? &inps[aliasIn] : &outOwn;
-    p.exec(inps, outPtr);
+    // public op: dst aliases input #aliasIn for the in-place case, else a fresh Mat.
+    Mat outOwn;
+    Mat& out = inplace ? (aliasIn == 0 ? a : b) : outOwn;
+    if (op == OP_SUB) cv::subtract(a, b, out, noArray(), Tr);
+    else              cv::add     (a, b, out, noArray(), Tr);
 
-    checkClose(*outPtr, ref, Tr, isFloat(da) || isFloat(db), opStr);
+    checkClose(out, ref, Tr, isFloat(da) || isFloat(db), opStr);
 }
 
 INSTANTIATE_TEST_CASE_P(Core_EW, EW_Extensive_BinOp,
@@ -237,8 +238,8 @@ INSTANTIATE_TEST_CASE_P(Core_EW, EW_Extensive_BinOp,
 // ------------------------------------------------------------------- min / max / absdiff
 // op 0 = MIN, 1 = MAX, 2 = ABSDIFF: operands promoted to a common type C; MIN/MAX result C, ABSDIFF
 // result Cr = absdiffResultDepth(C) (unsigned same width for signed ints, since |a-b| can hit 2^w-1).
-// Built via makeBinaryArithProgram -> emitBinary (the same type-inference path the parser uses), so
-// this also exercises emitBinary's promotion + cast insertion for a fresh family of ops.
+// cv::min/max/absdiff auto-promote mixed input types (no dtype arg), so this exercises the engine's
+// promotion + cast insertion for a fresh family of ops through the public entry points.
 class EW_Extensive_MinMax : public ::testing::TestWithParam<std::tuple<int,int>> {};
 
 TEST_P(EW_Extensive_MinMax, accuracy)
@@ -251,8 +252,8 @@ TEST_P(EW_Extensive_MinMax, accuracy)
 
     std::vector<int> shape = sampleShape(rng);
     const int da = sampleDepth(rng), db = sampleDepth(rng);
-    const int C = promoteArith(da, db);   // common compute type (rdepth == -1 auto), shared with ref
-    const int Cr = (op == OP_ABSDIFF) ? absdiffResultDepth(C) : C;   // engine's actual result depth
+    const int C = promoteArith(da, db);   // common compute/result type (auto), shared with the ref.
+    const int Cr = C;   // min/max/absdiff all resolve to C (absdiff saturates its wide |a-b| back to C)
 
     static const int cncand[] = { 1, 1, 2, 3, 4 };
     const int rcn = cncand[rng.uniform(0, 5)];
@@ -280,27 +281,21 @@ TEST_P(EW_Extensive_MinMax, accuracy)
     for (int c = 0; c < ocn; c++)
     {
         Mat apC, bpC;
-        ach[cn_a == 1 ? 0 : c].convertTo(apC, C);
-        bch[cn_b == 1 ? 0 : c].convertTo(bpC, C);
+        cvtest::convert(ach[cn_a == 1 ? 0 : c], apC, C);
+        cvtest::convert(bch[cn_b == 1 ? 0 : c], bpC, C);
         Mat aB, bB; cv::broadcast(apC, res, aB); cv::broadcast(bpC, res, bB);
-        if (op == OP_MIN)      cv::min(aB, bB, refch[c]);
-        else if (op == OP_MAX) cv::max(aB, bB, refch[c]);
-        else if (isFloat(C))   cv::absdiff(aB, bB, refch[c]);   // float |a-b| (Cr == C)
-        else
-        {   // absdiff of an integer: |a-b| = max-min, computed exactly in f64 (no integer overflow
-            // for the moderate ranges sampled), stored at the result depth Cr (unsigned same width).
-            Mat hi, lo, d;
-            cv::max(aB, bB, hi); cv::min(aB, bB, lo);
-            cv::subtract(hi, lo, d, noArray(), CV_64F);
-            d.convertTo(refch[c], Cr);
-        }
+        if (op == OP_MIN)      cvtest::min(aB, bB, refch[c]);
+        else if (op == OP_MAX) cvtest::max(aB, bB, refch[c]);
+        else                   cvtest::add(aB, 1, bB, -1, Scalar(), refch[c], Cr, /*calcAbs=*/true);
     }
     Mat ref; cv::merge(refch, ref);
 
-    TExpr p;
-    makeBinaryArithProgram(p, op, da, db, -1);   // -1 => auto rdepth (= promoteArith(da,db) = C)
-    Mat inps[] = { a, b }, out;
-    p.exec(inps, &out);
+    // public op: min/max/absdiff auto-promote mixed input types to C (= promoteArith(da,db)) and
+    // broadcast, exactly like the reference; absdiff's result is the unsigned same-width Cr.
+    Mat out;
+    if (op == OP_MIN)      cv::min(a, b, out);
+    else if (op == OP_MAX) cv::max(a, b, out);
+    else                   cv::absdiff(a, b, out);
 
     checkClose(out, ref, Cr, isFloat(da) || isFloat(db), opStr);
 }
@@ -359,29 +354,19 @@ TEST_P(EW_Extensive_Compare, accuracy)
     for (int c = 0; c < ocn; c++)
     {
         Mat apC, bpC;
-        ach[cn_a == 1 ? 0 : c].convertTo(apC, C);
-        bch[cn_b == 1 ? 0 : c].convertTo(bpC, C);
+        cvtest::convert(ach[cn_a == 1 ? 0 : c], apC, C);
+        cvtest::convert(bch[cn_b == 1 ? 0 : c], bpC, C);
         Mat aB, bB; cv::broadcast(apC, res, aB); cv::broadcast(bpC, res, bB);
-        Mat af, bf; aB.convertTo(af, CV_64F); bB.convertTo(bf, CV_64F);
-        cv::compare(af, bf, refch[c], cmpop);          // 0 / 255
+        Mat af, bf; cvtest::convert(aB, af, CV_64F); cvtest::convert(bB, bf, CV_64F);
+        cvtest::compare(af, bf, refch[c], cmpop);      // 0 / 255
     }
     Mat ref255; cv::merge(refch, ref255);
 
-    Mat inps[] = { a, b };
-    {   // engine, default 255 mask
-        TExpr p; makeBinaryArithProgram(p, op, da, db, -1);
-        Mat out; p.exec(inps, &out);
-        ASSERT_EQ(out.type(), CV_8UC(ocn)) << opStr;
-        EXPECT_EQ(0, cvtest::norm(out, ref255, NORM_INF)) << opStr << " (255 mask)";
-    }
-    {   // engine, 0/1 mask selected through TKernel::flags
-        TExpr p; makeBinaryArithProgram(p, op, da, db, -1);
-        for (size_t i = 0; i < p.prog.size(); i++)
-            if (opCategory(p.prog[i].op) == CAT_COMPARE) p.prog[i].kernel.flags = 1;
-        Mat out; p.exec(inps, &out);
-        Mat ref1; ref255.convertTo(ref1, CV_8U, 1.0 / 255.0);   // 255 -> 1, 0 -> 0
-        EXPECT_EQ(0, cvtest::norm(out, ref1, NORM_INF)) << opStr << " (0/1 mask)";
-    }
+    // public op: cv::compare auto-promotes mixed input types to the common type, broadcasts, and
+    // yields a u8 0/255 mask per channel. (The engine's optional 0/1 mask is not exposed here.)
+    Mat out; cv::compare(a, b, out, cmpop);
+    ASSERT_EQ(out.type(), CV_8UC(ocn)) << opStr;
+    EXPECT_EQ(0, cvtest::norm(out, ref255, NORM_INF)) << opStr;
 }
 
 INSTANTIATE_TEST_CASE_P(Core_EW, EW_Extensive_Compare,
@@ -466,23 +451,23 @@ TEST_P(EW_Extensive_MulDiv, accuracy)
     for (int c = 0; c < ocn; c++)
     {
         Mat aWf, bWf;
-        ach[cn_a == 1 ? 0 : c].convertTo(aWf, Wf);
-        bch[cn_b == 1 ? 0 : c].convertTo(bWf, Wf);
+        cvtest::convert(ach[cn_a == 1 ? 0 : c], aWf, Wf);
+        cvtest::convert(bch[cn_b == 1 ? 0 : c], bWf, Wf);
         Mat aB, bB; cv::broadcast(aWf, res, aB); cv::broadcast(bWf, res, bB);
         Mat q;
-        if (op == OP_DIV) { cv::divide(aB, bB, q, scale); if (bothInt) q.setTo(0, bB == 0); }
-        else              cv::multiply(aB, bB, q, scale);
-        q.convertTo(refch[c], Tr);
+        if (op == OP_DIV) { cvtest::divide(aB, bB, q, scale); if (bothInt) q.setTo(0, bB == 0); }
+        else              cvtest::multiply(aB, bB, q, scale);
+        cvtest::convert(q, refch[c], Tr);
     }
     Mat ref; cv::merge(refch, ref);
 
-    TExpr p;
-    makeBinaryArithProgram(p, op, da, db, Tr, EW_DEPTH_NONE, scale);
-    Mat inps[] = {a, b}, outOwn;
-    Mat* outPtr = inplace ? &inps[aliasIn] : &outOwn;
-    p.exec(inps, outPtr);
+    // public op: dst aliases input #aliasIn for the in-place case, else a fresh Mat.
+    Mat outOwn;
+    Mat& out = inplace ? (aliasIn == 0 ? a : b) : outOwn;
+    if (op == OP_DIV) cv::divide  (a, b, out, scale, Tr);
+    else              cv::multiply(a, b, out, scale, Tr);
 
-    checkClose(*outPtr, ref, Tr, true, opStr);   // float work => integer output may differ by <=1
+    checkClose(out, ref, Tr, true, opStr);   // float work => integer output may differ by <=1
 }
 
 INSTANTIATE_TEST_CASE_P(Core_EW, EW_Extensive_MulDiv,
@@ -539,18 +524,17 @@ TEST_P(EW_Extensive_Mask, accuracy)
     std::vector<Mat> refch(cn);
     for (int c = 0; c < cn; c++)
     {
-        Mat apC, bpC; ach[c].convertTo(apC, C); bch[c].convertTo(bpC, C);
-        if (op == OP_SUB) cv::subtract(apC, bpC, refch[c], noArray(), Tr);
-        else              cv::add     (apC, bpC, refch[c], noArray(), Tr);
+        Mat apC, bpC; cvtest::convert(ach[c], apC, C); cvtest::convert(bch[c], bpC, C);
+        cvtest::add(apC, 1, bpC, op == OP_SUB ? -1 : 1, Scalar(), refch[c], Tr);
     }
     Mat refFull; cv::merge(refch, refFull);
     Mat ref = init.clone();
-    refFull.copyTo(ref, m8);
+    cvtest::copy(refFull, ref, m8);
 
-    TExpr p;
-    makeBinaryArithProgram(p, op, da, db, Tr, md);
-    Mat inps[] = {a, b, mask}, out = init.clone();
-    p.exec(inps, &out);
+    // public op with a write-mask: the pre-existing output is preserved where mask==0.
+    Mat out = init.clone();
+    if (op == OP_SUB) cv::subtract(a, b, out, mask, Tr);
+    else              cv::add     (a, b, out, mask, Tr);
 
     checkClose(out, ref, Tr, isFloat(da) || isFloat(db), opStr);
 }
@@ -562,32 +546,7 @@ INSTANTIATE_TEST_CASE_P(Core_EW, EW_Extensive_Mask,
                           std::get<1>(info.param));
     });
 
-// ---------------------------------------------------------------------------------- cast
-class EW_Extensive_Cast : public ::testing::TestWithParam<int> {};
-
-TEST_P(EW_Extensive_Cast, accuracy)
-{
-    const int caseidx = GetParam();
-    RNG rng(mix64(kSuiteSalt ^ 0xCA57ULL ^ (uint64_t)caseidx));
-
-    std::vector<int> shape = sampleShape(rng);
-    const int sd = sampleDepth(rng), dd = sampleDepth(rng);
-
-    SCOPED_TRACE(cv::format("caseidx=%d sd=%d dd=%d shape=%s", caseidx, sd, dd, shapeStr(shape).c_str()));
-
-    Mat a = makeRandom(rng, shape, 1, sd), out;
-
-    TExpr e;
-    int s = e.addInput(sd);
-    e.output(e.maybeAddCast(s, dd));
-    e.compile();
-    e.exec(&a, &out);
-
-    Mat ref; a.convertTo(ref, dd);
-    checkClose(out, ref, dd, isFloat(sd), "cast");
-}
-
-INSTANTIATE_TEST_CASE_P(Core_EW, EW_Extensive_Cast, testing::Range(0, kNumCases),
-    [](const testing::TestParamInfo<int>& info){ return cv::format("case%04d", info.param); });
+// NOTE: a standalone cast group was dropped - the engine cast == cv::convertTo (comparing them would
+// be a tautology), and mixed-type casts are already exercised inside the add/sub/mul/div groups above.
 
 }} // namespace
