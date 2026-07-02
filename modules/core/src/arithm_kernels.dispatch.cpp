@@ -27,6 +27,7 @@ TKernel getAbsdiffFunc(int T, int R)        { CV_CPU_DISPATCH(getAbsdiffFunc_, (
 TKernel getCmpFunc(TOp op, int T)           { CV_CPU_DISPATCH(getCmpFunc_,     (op, T),         CV_CPU_DISPATCH_MODES_ALL); }
 TKernel getBitwiseFunc(TOp op, int esz)     { CV_CPU_DISPATCH(getBitwiseFunc_, (op, esz),       CV_CPU_DISPATCH_MODES_ALL); }
 TKernel getNotFunc(int esz)                 { CV_CPU_DISPATCH(getNotFunc_,     (esz),           CV_CPU_DISPATCH_MODES_ALL); }
+TKernel getAddWeightedFunc(int T, int R)    { CV_CPU_DISPATCH(getAddWeightedFunc_, (T, R),      CV_CPU_DISPATCH_MODES_ALL); }
 TKernel getCopyMaskFunc(int depth)          { CV_CPU_DISPATCH(getCopyMaskFunc_,(depth),         CV_CPU_DISPATCH_MODES_ALL); }
 static TKernel getCastFunc(int sd, int dd, bool scaled)
                                             { CV_CPU_DISPATCH(getCastFunc_,    (sd, dd, scaled),CV_CPU_DISPATCH_MODES_ALL); }
@@ -43,6 +44,14 @@ TKernel getElemwiseFunc(TOp op, int depth0, int depth1, int depth2, int rdepth)
     {
         if (depth0 != depth1) return {};   // operands must be the same type
         return op == OP_ADD ? getAddFunc(depth0, rdepth) : getSubFunc(depth0, rdepth);
+    }
+
+    // OP_ADDW (addWeighted): a*alpha+b*beta+gamma; operands same type T, result R (T/f32 for small ints
+    // + f16/bf16/f32, f64 otherwise). alpha/beta/gamma travel in the instruction's params.
+    if (op == OP_ADDW)
+    {
+        if (depth0 != depth1) return {};
+        return getAddWeightedFunc(depth0, rdepth);
     }
 
     // OP_MUL / OP_DIV / OP_POW: operands same type T; compute in the float work type (rdepth).

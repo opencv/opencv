@@ -139,7 +139,17 @@ enum TKernelFlags
     EW_KERNEL_MASK1  = 1,   // compare: emit a 0/1 mask instead of the default 0/255 (cv::compare)
     EW_KERNEL_SWAP01 = 2,   // compare: the kernel swaps its own src0<->src1 (with their steps), so
                             // LT/LE reuse the GT/GE kernels (a<b == b>a, a<=b == b>=a)
+    // compare fuses its post-op fix-up: the u8 result is (rawmask & M) | V per channel. Uniform (this
+    // bit clear): M = trueVal (MASK1 ? 1 : 255), V = 0 - an ordinary compare. Per-channel (this bit
+    // set, only the divergent multi-channel scalar case): M/V come from the 4-bit fields below. This
+    // folds the former separate patch pass into the compare kernel (one pass, no extra kernel).
+    EW_CMP_PATCH     = 4,
+    EW_CMP_PATCH_SHIFT = 8, // per channel c in [0,4): bits [SHIFT+c*4 .. +4) = 2 bits M then 2 bits V;
+                            // each 2-bit field decodes 0->0x00, 1->0x01, 2|3->0xFF.
 };
+
+// Decode a 2-bit patch field (0->0, 1->1, else 255) - shared by the compare kernel and its builder.
+inline int cmpPatchByte(int twoBits) { return twoBits == 0 ? 0 : twoBits == 1 ? 1 : 255; }
 
 struct TKernel
 {

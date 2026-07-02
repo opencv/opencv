@@ -69,6 +69,13 @@ static inline void vx_setall_as(const short* p, v_float32& a)
 { a = vx_setall_f32(float(*p)); }
 static inline void vx_setall_as(const float* p, v_float32& a)
 { a = vx_setall_f32(*p); }
+#if CV_SIMD_64F
+static inline void vx_setall_as(const double*   p, v_float64& a) { a = vx_setall_f64(*p); }
+static inline void vx_setall_as(const int*      p, v_float64& a) { a = vx_setall_f64((double)*p); }
+static inline void vx_setall_as(const unsigned* p, v_float64& a) { a = vx_setall_f64((double)*p); }
+static inline void vx_setall_as(const int64_t*  p, v_float64& a) { a = vx_setall_f64((double)*p); }
+static inline void vx_setall_as(const uint64_t* p, v_float64& a) { a = vx_setall_f64((double)*p); }
+#endif
 static inline void vx_setall_as(const bfloat* p, v_float32& a)
 { a = vx_setall_f32(float(*p)); }
 static inline void vx_setall_as(const hfloat* p, v_float32& a)
@@ -230,6 +237,7 @@ TKernel getAbsdiffFunc_(int T, int R);
 TKernel getCmpFunc_(TOp op, int T);
 TKernel getBitwiseFunc_(TOp op, int esz);                    // OP_AND / OP_OR / OP_XOR, by element size
 TKernel getNotFunc_(int esz);                                // OP_NOT, by element size
+TKernel getAddWeightedFunc_(int T, int R);                   // OP_ADDW, a*alpha+b*beta+gamma (T x T -> R)
 TKernel getCopyMaskFunc_(int depth);
 TKernel getCastFunc_(int sdepth, int ddepth, bool scaled);   // OP_CAST / OP_CONVERT_SCALE
 
@@ -238,6 +246,7 @@ TKernel getCastFunc_(int sdepth, int ddepth, bool scaled);   // OP_CAST / OP_CON
 // ===========================================================================
 struct EwAdd {
     template<typename V> static V vec(const V& a, const V& b) { return v_add(a, b); }
+    template<typename V, typename S> static V vec(const V& a, const V& b, const S&) { return vec(a, b); }
     template<typename V> static V preproc(const V& a, const V&) { return a; }
     // Accumulate in the promoted type, NOT in W: for the native saturating path W is the narrow
     // lane type (schar/short/...), and (W)(a+b) would wrap in 8/16 bits before saturate_cast<Tr>
@@ -248,6 +257,7 @@ struct EwAdd {
 
 struct EwSub {
     template<typename V> static V vec(const V& a, const V& b) { return v_sub(a, b); }
+    template<typename V, typename S> static V vec(const V& a, const V& b, const S&) { return vec(a, b); }
     template<typename V> static V preproc(const V& a, const V&) { return a; }
     template<typename W, typename ST> static W scl(W a, W b, ST) { return W(a - b); }   // see EwAdd::scl
     // 64-bit unsigned has no wider WT to hold a-b, so the generic path would wrap on underflow.
@@ -258,10 +268,16 @@ struct EwSub {
 // mul/div compute in a wide FLOAT work type (W = float for <=16-bit/f16/bf/f32, double for
 // 32/64-bit/f64), matching cv::multiply/divide; the executor casts the work-type result down to
 // rdepth. scalar (reference) path only for now - SIMD can follow. (No vec(): never instantiated.)
+// vec(a, b, scale): the 3rd arg is the scale vector. COMMUTATIVE ops (mul, absdiff) ignore it - their
+// scale is folded into the (cheaper) preproc of one operand. DIVISION is NOT commutative, so its scale
+// MUST stick to the numerator; it takes the scale in vec (numerator*scale/denominator) and leaves
+// preproc as identity. vecBinaryKernel always passes vscalar to vec, so every branch (incl. a broadcast
+// denominator) divides correctly. The 2-arg vec (scale==1) is the both-contiguous fast path.
 struct EwMul {
     template<typename V> static V vec(const V& a, const V& b) { return v_mul(a, b); }
     static v_uint16 vec(const v_uint16& a, const v_uint16& b) { return v_mul_wrap(a, b); }
     static v_int16 vec(const v_int16& a, const v_int16& b) { return v_mul_wrap(a, b); }
+    template<typename V, typename S> static V vec(const V& a, const V& b, const S&) { return vec(a, b); }
     template<typename V> static V preproc(const V& a, const V& s) { return v_mul(a, s); }
     template<typename W, typename ST> static W scl(W a, W b, ST s) { return a * b * s; }
 };
@@ -269,11 +285,22 @@ struct EwMul {
 // inputs guard divide-by-zero -> 0 (cv:: iscalar_div); float inputs do NOT guard (cv:: fscalar_div,
 // a/0 -> inf), which then saturates on the cast to an integer output exactly like cv::divide.
 struct EwDivInt {
+    // integer inputs computed in the float work type: guard b==0 -> 0. Scale rides the numerator (vec).
+    template<typename V> static V vec(const V& a, const V& b) {
+        const V z = v_setzero_<V>();
+        return v_select(v_eq(b, z), z, v_div(a, b));
+    }
+    template<typename V> static V vec(const V& a, const V& b, const V& s) {
+        const V z = v_setzero_<V>();
+        return v_select(v_eq(b, z), z, v_div(v_mul(a, s), b));
+    }
+    template<typename V> static V preproc(const V& a, const V&) { return a; }   // identity: scale is in vec
     template<typename W, typename ST> static W scl(W a, W b, ST s) { return b != W(0) ? a * s / b : W(0); }
 };
 struct EwDivFlt {
     template<typename V> static V vec(const V& a, const V& b) { return v_div(a, b); }
-    template<typename V> static V preproc(const V& a, const V& s) { return v_mul(a, s); }
+    template<typename V> static V vec(const V& a, const V& b, const V& s) { return v_div(v_mul(a, s), b); }
+    template<typename V> static V preproc(const V& a, const V&) { return a; }   // identity: scale is in vec
     template<typename W, typename ST> static W scl(W a, W b, ST s) { return a * s / b; }
 };
 
@@ -287,16 +314,19 @@ struct EwPow {
 // |a-b| is computed branch-wise so it never underflows an unsigned work type.
 struct EwMin {
     template<typename V> static V vec(const V& a, const V& b) { return v_min(a, b); }
+    template<typename V, typename S> static V vec(const V& a, const V& b, const S&) { return vec(a, b); }
     template<typename V> static V preproc(const V& a, const V&) { return a; }
     template<typename W, typename ST> static W scl(W a, W b, ST) { return std::min(a, b); }
 };
 struct EwMax {
     template<typename V> static V vec(const V& a, const V& b) { return v_max(a, b); }
+    template<typename V, typename S> static V vec(const V& a, const V& b, const S&) { return vec(a, b); }
     template<typename V> static V preproc(const V& a, const V&) { return a; }
     template<typename W, typename ST> static W scl(W a, W b, ST) { return std::max(a, b); }
 };
 struct EwAbsdiff {
     template<typename V> static V vec(const V& a, const V& b) { return v_absdiff(a, b); }
+    template<typename V, typename S> static V vec(const V& a, const V& b, const S&) { return vec(a, b); }
     template<typename V> static V preproc(const V& a, const V&) { return a; }
     template<typename W, typename ST> static W scl(W a, W b, ST) { return a > b ? W(a - b) : W(b - a); }
 };
@@ -320,16 +350,19 @@ struct EwCmpGe { template<typename W> static bool cmp(W a, W b) { return a >= b;
 // path (no widening vector helpers), the rest ride vecBinaryKernel's native same-type path.
 struct EwAnd {
     template<typename V> static V vec(const V& a, const V& b) { return v_and(a, b); }
+    template<typename V, typename S> static V vec(const V& a, const V& b, const S&) { return vec(a, b); }
     template<typename V> static V preproc(const V& a, const V&) { return a; }
     template<typename W, typename ST> static W scl(W a, W b, ST) { return W(a & b); }
 };
 struct EwOr {
     template<typename V> static V vec(const V& a, const V& b) { return v_or(a, b); }
+    template<typename V, typename S> static V vec(const V& a, const V& b, const S&) { return vec(a, b); }
     template<typename V> static V preproc(const V& a, const V&) { return a; }
     template<typename W, typename ST> static W scl(W a, W b, ST) { return W(a | b); }
 };
 struct EwXor {
     template<typename V> static V vec(const V& a, const V& b) { return v_xor(a, b); }
+    template<typename V, typename S> static V vec(const V& a, const V& b, const S&) { return vec(a, b); }
     template<typename V> static V preproc(const V& a, const V&) { return a; }
     template<typename W, typename ST> static W scl(W a, W b, ST) { return W(a ^ b); }
 };
@@ -392,6 +425,23 @@ static void expandScalar(const T* sc, size_t sx, int n0, WT* scbuf, int n)
     for (; i < n; i++) scbuf[i] = scbuf[i - n0];
 }
 
+// Decode the per-channel patch bytes (mask + value) from the kernel flags into small arrays. Uniform
+// (no EW_CMP_PATCH): mask = trueVal, value = 0 (an ordinary compare). Per-channel: from the 4-bit
+// fields. The compare kernels apply  result = (rawmask & mask) | value  per channel - folding the
+// former separate patch pass into the compare (one pass).
+static inline void cmpUnpackPatch(int flags, uchar trueVal, uchar mvals[4], uchar vvals[4])
+{
+    if (flags & EW_CMP_PATCH)
+        for (int c = 0; c < 4; c++)
+        {
+            const int f = (flags >> (EW_CMP_PATCH_SHIFT + c*4)) & 0xF;
+            mvals[c] = (uchar)cmpPatchByte(f & 3);
+            vvals[c] = (uchar)cmpPatchByte((f >> 2) & 3);
+        }
+    else
+        for (int c = 0; c < 4; c++) { mvals[c] = trueVal; vvals[c] = 0; }
+}
+
 // Scalar comparison kernel: T x T -> u8 mask. Result is 0 (false) or `trueVal` (true), trueVal read
 // from TKernel::flags - 255 (default, matching cv::compare) or 1 (a numpy-style 0/1 mask). Integers
 // compare directly (WT == T); f16/bf16 compare through a float WT. This is the fallback for the depths
@@ -413,33 +463,37 @@ static int scalarCompareKernel(const void* src0_, size_t s0y, size_t s0x,
     const T* src1 = (const T*)src1_;
     uchar* dst = (uchar*)dst_;
     const uchar trueVal = (flags & EW_KERNEL_MASK1) ? 1 : 255;
+    uchar mvals[4], vvals[4];
+    cmpUnpackPatch(flags, trueVal, mvals, vvals);
+    const bool perch = (flags & EW_CMP_PATCH) != 0;          // per-channel fix-up (width=cn<=4)
+    CV_Assert(!perch || width <= 4);                         // a per-channel patch is a short-row tile
+    #define EW_CMP_APPLY(cond, x) (perch ? (uchar)(((cond) ? mvals[x] : 0) | vvals[x]) \
+                                         : (uchar)((cond) ? trueVal : 0))
 
     EW_TRY_COLLAPSE(2);
     for (int y = 0; y < height; y++, src0 += s0y, src1 += s1y, dst += dsty)
     {
         if (s0x == s1x) {
-            for (int x = 0; x < width; x++)
-                dst[x] = Cmp::cmp((WT)src0[x], (WT)src1[x]) ? trueVal : 0;
+            for (int x = 0; x < width; x++) dst[x] = EW_CMP_APPLY(Cmp::cmp((WT)src0[x], (WT)src1[x]), x);
         }
         else if (s0x == 0) {
             WT a = (WT)src0[0];
-            for (int x = 0; x < width; x++)
-                dst[x] = Cmp::cmp(a, (WT)src1[x]) ? trueVal : 0;
+            for (int x = 0; x < width; x++) dst[x] = EW_CMP_APPLY(Cmp::cmp(a, (WT)src1[x]), x);
         }
         else {
             WT b = (WT)src1[0];
-            for (int x = 0; x < width; x++)
-                dst[x] = Cmp::cmp((WT)src0[x], b) ? trueVal : 0;
+            for (int x = 0; x < width; x++) dst[x] = EW_CMP_APPLY(Cmp::cmp((WT)src0[x], b), x);
         }
     }
+    #undef EW_CMP_APPLY
     return 0;
 }
 
 // SIMD comparison kernel: T x T -> u8 mask, for the directly-comparable depths (u8/s8/u16/s16/u32/
 // s32/f32). vec(a,b) gives an all-ones/zero mask in the operand's lane type; v_reinterpret_as turns it
-// into the unsigned int of the same width, v_and with the broadcast mask value yields 0/trueVal, and
-// v_store_pair_as narrows the pair of work vectors down to u8. The SIMD body runs only when both
-// operands are contiguous (s0x==s1x==1); broadcast operands and the tail use the scalar relation.
+// into the unsigned int of the same width; cmpFuse packs to u8 and applies (rawmask & M) | V. The
+// per-row SIMD body runs when an operand is contiguous or broadcast; a per-channel patch (M/V differ
+// by channel) only ever arrives as a short-row (width=cn) tile and is handled there.
 template<typename T, typename Vvec, typename Uvec, class Cmp>
 static int vecCompareKernel(const void* src0_, size_t s0y, size_t s0x,
                             const void* src1_, size_t s1y, size_t s1x,
@@ -457,50 +511,102 @@ static int vecCompareKernel(const void* src0_, size_t s0y, size_t s0x,
     const T* src1 = (const T*)src1_;
     uchar* dst = (uchar*)dst_;
     const uchar trueVal = (flags & EW_KERNEL_MASK1) ? 1 : 255;
+    uchar mvals[4], vvals[4];                                 // per-channel fix-up: (rawmask & m) | v
+    cmpUnpackPatch(flags, trueVal, mvals, vvals);
+    const bool perch = (flags & EW_CMP_PATCH) != 0;
+    CV_Assert(!perch || width <= 4);                          // a per-channel patch is a short-row tile
 
     EW_TRY_COLLAPSE(2);
     int y = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     // Short rows (2/3/4 elements): a per-channel scalar over a multi-channel image arrives as a
     // (width=cn) x (height=pixels) tile with the scalar broadcast over rows (s?y==0). The per-row SIMD
-    // below never triggers at such a tiny width, so - like vecBinaryKernel - expand the width<=4
-    // broadcast operand across VECSZ*6 lanes and compare many rows at once.
+    // below never triggers at such a tiny width, so expand the width<=4 broadcast operand (threshold
+    // AND the interleaved per-channel mask/value bytes) across the lanes and compare many rows at once.
+    // This is also the ONLY path a per-channel patch (M/V differ by channel) reaches.
     if (height > 1 && width <= 4 &&
         ((s0y == 0 && s1y == (size_t)width*s1x) || (s1y == 0 && s0y == (size_t)width*s0x)) &&
         dsty == (size_t)width)
     {
-        const int VECSZ = VTraits<Vvec>::vlanes();
-        constexpr int MAXVECSZ = VTraits<Vvec>::max_nlanes;
-        Uvec vTrue; v_setall_mask(vTrue, trueVal);
-        T scbuf[MAXVECSZ*6];
-        const int ewidth = VECSZ*6;
+        const int VECSZ  = VTraits<Vvec>::vlanes();          // sizeof(T)-type lanes
+        const int VECSZ8 = VTraits<v_uint8>::vlanes();       // u8 output lanes
+        constexpr int MAXV8 = VTraits<v_uint8>::max_nlanes;
+        T scbuf[MAXV8 * 3];                                  // interleaved threshold (elements)
+        uchar mbuf[MAXV8 * 3], vbuf[MAXV8 * 3];              // interleaved mask / value (bytes)
         const bool bc0 = (s0y == 0);                         // src0 is the broadcast (short) operand
-        expandScalar(bc0 ? src0 : src1, bc0 ? s0x : s1x, width, scbuf, ewidth);
-        const int dy = ewidth / width;
-        Vvec sc0 = vx_load(scbuf),           sc1 = vx_load(scbuf + VECSZ),
-             sc2 = vx_load(scbuf + VECSZ*2), sc3 = vx_load(scbuf + VECSZ*3),
-             sc4 = vx_load(scbuf + VECSZ*4), sc5 = vx_load(scbuf + VECSZ*5);
+        const T* bsrc = bc0 ? src0 : src1; const size_t bsx = bc0 ? s0x : s1x;
         const T*& src = bc0 ? src1 : src0;                   // the row-stepping operand (advanced below)
         const size_t sy = bc0 ? s1y : s0y;
-        for (; y + dy <= height; y += dy, src += sy*dy, dst += dsty*dy)
+        // The compare direction (scalar-first when bc0, array-first otherwise) is hoisted OUT of the row
+        // loop with an explicit if(bc0) - the loop is written twice so no per-iteration branch remains.
+        // Per branch: own unroll, threshold + interleaved M/V loaded ONCE. sizeof==1 keeps 12 vectors.
+        #define EW_CMPR(r, a, b) v_reinterpret_as(Cmp::vec(a, b), r)   // rawmask -> sizeof(T)-byte uint
+        if constexpr (sizeof(T) == 1)                        // 3 u8 masks -> 3 u8 stores
         {
-            Vvec v0 = vx_load(src),           v1 = vx_load(src + VECSZ),
-                 v2 = vx_load(src + VECSZ*2), v3 = vx_load(src + VECSZ*3),
-                 v4 = vx_load(src + VECSZ*4), v5 = vx_load(src + VECSZ*5);
-            Uvec m0, m1, m2, m3, m4, m5;
-            if (bc0) {   // src0 (broadcast) REL src1: Cmp::vec(sc, v)
-                v_reinterpret_as(Cmp::vec(sc0, v0), m0); v_reinterpret_as(Cmp::vec(sc1, v1), m1);
-                v_reinterpret_as(Cmp::vec(sc2, v2), m2); v_reinterpret_as(Cmp::vec(sc3, v3), m3);
-                v_reinterpret_as(Cmp::vec(sc4, v4), m4); v_reinterpret_as(Cmp::vec(sc5, v5), m5);
-            } else {     // src0 REL src1 (broadcast): Cmp::vec(v, sc)
-                v_reinterpret_as(Cmp::vec(v0, sc0), m0); v_reinterpret_as(Cmp::vec(v1, sc1), m1);
-                v_reinterpret_as(Cmp::vec(v2, sc2), m2); v_reinterpret_as(Cmp::vec(v3, sc3), m3);
-                v_reinterpret_as(Cmp::vec(v4, sc4), m4); v_reinterpret_as(Cmp::vec(v5, sc5), m5);
-            }
-            v_store_pair_as(dst,           v_and(m0, vTrue), v_and(m1, vTrue));
-            v_store_pair_as(dst + VECSZ*2, v_and(m2, vTrue), v_and(m3, vTrue));
-            v_store_pair_as(dst + VECSZ*4, v_and(m4, vTrue), v_and(m5, vTrue));
+            const int ewidth = VECSZ8 * 3;
+            expandScalar(bsrc, bsx, width, scbuf, ewidth);
+            expandScalar(mvals, (size_t)1, width, mbuf, ewidth);
+            expandScalar(vvals, (size_t)1, width, vbuf, ewidth);
+            const int dy = ewidth / width;
+            Vvec  sc0=vx_load(scbuf),  sc1=vx_load(scbuf+VECSZ),   sc2=vx_load(scbuf+VECSZ*2);
+            v_uint8 M0=vx_load(mbuf),  M1=vx_load(mbuf+VECSZ8),    M2=vx_load(mbuf+VECSZ8*2);
+            v_uint8 V0=vx_load(vbuf),  V1=vx_load(vbuf+VECSZ8),    V2=vx_load(vbuf+VECSZ8*2);
+            #define EW_ROW1(A0,B0,A1,B1,A2,B2) \
+                for (; y + dy <= height; y += dy, src += sy*dy, dst += dsty*dy) { \
+                    Uvec r0,r1,r2; EW_CMPR(r0,A0,B0); EW_CMPR(r1,A1,B1); EW_CMPR(r2,A2,B2); \
+                    v_uint8 o0=v_or(v_and(r0,M0),V0),o1=v_or(v_and(r1,M1),V1),o2=v_or(v_and(r2,M2),V2); \
+                    v_store(dst, o0); v_store(dst+VECSZ8, o1); v_store(dst+VECSZ8*2, o2); }
+            if (bc0) EW_ROW1(sc0,vx_load(src), sc1,vx_load(src+VECSZ), sc2,vx_load(src+VECSZ*2))
+            else     EW_ROW1(vx_load(src),sc0, vx_load(src+VECSZ),sc1, vx_load(src+VECSZ*2),sc2)
+            #undef EW_ROW1
         }
+        else if constexpr (sizeof(T) == 2)                   // 3 u16 masks -> 1 full + 1 half u8 store
+        {
+            const int ewidth = VECSZ * 3;
+            expandScalar(bsrc, bsx, width, scbuf, ewidth);
+            expandScalar(mvals, (size_t)1, width, mbuf, ewidth);
+            expandScalar(vvals, (size_t)1, width, vbuf, ewidth);
+            const int dy = ewidth / width;
+            Vvec  sc0=vx_load(scbuf), sc1=vx_load(scbuf+VECSZ), sc2=vx_load(scbuf+VECSZ*2);
+            v_uint8 M0=vx_load(mbuf), M1=vx_load(mbuf+VECSZ8);
+            v_uint8 V0=vx_load(vbuf), V1=vx_load(vbuf+VECSZ8);
+            #define EW_ROW2(A0,B0,A1,B1,A2,B2) \
+                for (; y + dy <= height; y += dy, src += sy*dy, dst += dsty*dy) { \
+                    Uvec r0,r1,r2; EW_CMPR(r0,A0,B0); EW_CMPR(r1,A1,B1); EW_CMPR(r2,A2,B2); \
+                    v_uint8 b0=v_pack(r0,r1), b1=v_pack(r2,r2); \
+                    v_uint8 o0=v_or(v_and(b0,M0),V0), o1=v_or(v_and(b1,M1),V1); \
+                    v_store(dst, o0); v_store_low(dst+VECSZ8, o1); }
+            if (bc0) EW_ROW2(sc0,vx_load(src), sc1,vx_load(src+VECSZ), sc2,vx_load(src+VECSZ*2))
+            else     EW_ROW2(vx_load(src),sc0, vx_load(src+VECSZ),sc1, vx_load(src+VECSZ*2),sc2)
+            #undef EW_ROW2
+        }
+        else                                                 // sizeof==4: 6 u32 -> 3 u16 -> 1 full + 1 half u8
+        {
+            const int ewidth = VECSZ * 6;
+            expandScalar(bsrc, bsx, width, scbuf, ewidth);
+            expandScalar(mvals, (size_t)1, width, mbuf, ewidth);
+            expandScalar(vvals, (size_t)1, width, vbuf, ewidth);
+            const int dy = ewidth / width;
+            Vvec sc0=vx_load(scbuf),sc1=vx_load(scbuf+VECSZ),sc2=vx_load(scbuf+VECSZ*2),
+                 sc3=vx_load(scbuf+VECSZ*3),sc4=vx_load(scbuf+VECSZ*4),sc5=vx_load(scbuf+VECSZ*5);
+            v_uint8 M0=vx_load(mbuf), M1=vx_load(mbuf+VECSZ8);
+            v_uint8 V0=vx_load(vbuf), V1=vx_load(vbuf+VECSZ8);
+            #define EW_ROW4(A0,B0,A1,B1,A2,B2,A3,B3,A4,B4,A5,B5) \
+                for (; y + dy <= height; y += dy, src += sy*dy, dst += dsty*dy) { \
+                    Uvec r0,r1,r2,r3,r4,r5; \
+                    EW_CMPR(r0,A0,B0); EW_CMPR(r1,A1,B1); EW_CMPR(r2,A2,B2); \
+                    EW_CMPR(r3,A3,B3); EW_CMPR(r4,A4,B4); EW_CMPR(r5,A5,B5); \
+                    v_uint16 p0=v_pack(r0,r1), p1=v_pack(r2,r3), p2=v_pack(r4,r5); \
+                    v_uint8 q0=v_pack(p0,p1), q1=v_pack(p2,p2); \
+                    v_uint8 o0=v_or(v_and(q0,M0),V0), o1=v_or(v_and(q1,M1),V1); \
+                    v_store(dst, o0); v_store_low(dst+VECSZ8, o1); }
+            if (bc0) EW_ROW4(sc0,vx_load(src),sc1,vx_load(src+VECSZ),sc2,vx_load(src+VECSZ*2),
+                             sc3,vx_load(src+VECSZ*3),sc4,vx_load(src+VECSZ*4),sc5,vx_load(src+VECSZ*5))
+            else     EW_ROW4(vx_load(src),sc0,vx_load(src+VECSZ),sc1,vx_load(src+VECSZ*2),sc2,
+                             vx_load(src+VECSZ*3),sc3,vx_load(src+VECSZ*4),sc4,vx_load(src+VECSZ*5),sc5)
+            #undef EW_ROW4
+        }
+        #undef EW_CMPR
     }
 #endif
     for (; y < height; y++, src0 += s0y, src1 += s1y, dst += dsty)
@@ -510,56 +616,86 @@ static int vecCompareKernel(const void* src0_, size_t s0y, size_t s0x,
         // SIMD for BOTH the contiguous case AND a broadcast operand (a per-channel scalar const has
         // step 0 - without this the scalar-vs-array compare, incl. every multi-channel scalar compare,
         // fell to the scalar tail below, ~5x slower). vx_setall broadcasts the step-0 operand once.
+        // 4-vector unroll + halide right-edge backoff (reprocess the last 4*VECSZ when width is not a
+        // multiple); dst is a separate mask buffer so the overlap is a harmless idempotent rewrite.
         const int VECSZ = VTraits<Vvec>::vlanes();
-        Uvec vTrue; v_setall_mask(vTrue, trueVal);
+        const int VECSZ8 = VTraits<v_uint8>::vlanes();
+        v_uint8 vT; v_setall_mask(vT, trueVal);              // uniform mask (per-channel patch is short-row)
+        const bool tailTrick = width >= 4*VECSZ && src0_ != dst_ && src1_ != dst_;
+        // Narrow the 4 masks to u8 FIRST, then apply trueVal on the u8 result (1 and per u8 vector, not
+        // per wide lane-group). One block per sizeof(T); a 4-vector unroll spans exactly 4*VECSZ elements.
+        #define PACK_STORE_CMP_RESULT(m0,m1,m2,m3, D) do { \
+            if constexpr (sizeof(T) == 1u) { \
+                v_uint8 o0=v_and(m0,vT),o1=v_and(m1,vT),o2=v_and(m2,vT),o3=v_and(m3,vT); \
+                v_store((D),o0); v_store((D)+VECSZ8,o1); v_store((D)+VECSZ8*2,o2); v_store((D)+VECSZ8*3,o3); \
+            } else if constexpr (sizeof(T) == 2u) { \
+                v_uint8 o0=v_and(v_pack(m0,m1),vT), o1=v_and(v_pack(m2,m3),vT); \
+                v_store((D),o0); v_store((D)+VECSZ8,o1); \
+            } else { \
+                v_uint8 o0=v_and(v_pack(v_pack(m0,m1),v_pack(m2,m3)),vT); \
+                v_store((D),o0); \
+            } } while(0)
         if (s0x == 1u && s1x == 1u)
         {
-            for (; x <= width - 2*VECSZ; x += 2*VECSZ)
+            for (; x < width; x += 4*VECSZ)
             {
-                Vvec a0 = vx_load(src0 + x), a1 = vx_load(src0 + x + VECSZ);
-                Vvec b0 = vx_load(src1 + x), b1 = vx_load(src1 + x + VECSZ);
-                Uvec m0, m1;
-                v_reinterpret_as(Cmp::vec(a0, b0), m0);
-                v_reinterpret_as(Cmp::vec(a1, b1), m1);
-                v_store_pair_as(dst + x, v_and(m0, vTrue), v_and(m1, vTrue));
+                if (x + 4*VECSZ > width) { if (!tailTrick) break; x = width - 4*VECSZ; }
+                Vvec a0 = vx_load(src0+x), a1 = vx_load(src0+x+VECSZ),
+                     a2 = vx_load(src0+x+2*VECSZ), a3 = vx_load(src0+x+3*VECSZ);
+                Vvec b0 = vx_load(src1+x), b1 = vx_load(src1+x+VECSZ),
+                     b2 = vx_load(src1+x+2*VECSZ), b3 = vx_load(src1+x+3*VECSZ);
+                Uvec m0, m1, m2, m3;
+                v_reinterpret_as(Cmp::vec(a0, b0), m0); v_reinterpret_as(Cmp::vec(a1, b1), m1);
+                v_reinterpret_as(Cmp::vec(a2, b2), m2); v_reinterpret_as(Cmp::vec(a3, b3), m3);
+                PACK_STORE_CMP_RESULT(m0, m1, m2, m3, dst+x);
             }
         }
         else if (s1x == 0u)                       // src1 (e.g. the scalar) broadcast
         {
             Vvec b0; vx_setall_as(src1, b0);
-            for (; x <= width - 2*VECSZ; x += 2*VECSZ)
+            for (; x < width; x += 4*VECSZ)
             {
-                Vvec a0 = vx_load(src0 + x), a1 = vx_load(src0 + x + VECSZ);
-                Uvec m0, m1;
-                v_reinterpret_as(Cmp::vec(a0, b0), m0);
-                v_reinterpret_as(Cmp::vec(a1, b0), m1);
-                v_store_pair_as(dst + x, v_and(m0, vTrue), v_and(m1, vTrue));
+                if (x + 4*VECSZ > width) { if (!tailTrick) break; x = width - 4*VECSZ; }
+                Vvec a0 = vx_load(src0+x), a1 = vx_load(src0+x+VECSZ),
+                     a2 = vx_load(src0+x+2*VECSZ), a3 = vx_load(src0+x+3*VECSZ);
+                Uvec m0, m1, m2, m3;
+                v_reinterpret_as(Cmp::vec(a0, b0), m0); v_reinterpret_as(Cmp::vec(a1, b0), m1);
+                v_reinterpret_as(Cmp::vec(a2, b0), m2); v_reinterpret_as(Cmp::vec(a3, b0), m3);
+                PACK_STORE_CMP_RESULT(m0, m1, m2, m3, dst+x);
             }
         }
         else if (s0x == 0u)                       // src0 broadcast
         {
             Vvec a0; vx_setall_as(src0, a0);
-            for (; x <= width - 2*VECSZ; x += 2*VECSZ)
+            for (; x < width; x += 4*VECSZ)
             {
-                Vvec b0 = vx_load(src1 + x), b1 = vx_load(src1 + x + VECSZ);
-                Uvec m0, m1;
-                v_reinterpret_as(Cmp::vec(a0, b0), m0);
-                v_reinterpret_as(Cmp::vec(a0, b1), m1);
-                v_store_pair_as(dst + x, v_and(m0, vTrue), v_and(m1, vTrue));
+                if (x + 4*VECSZ > width) { if (!tailTrick) break; x = width - 4*VECSZ; }
+                Vvec b0 = vx_load(src1+x), b1 = vx_load(src1+x+VECSZ),
+                     b2 = vx_load(src1+x+2*VECSZ), b3 = vx_load(src1+x+3*VECSZ);
+                Uvec m0, m1, m2, m3;
+                v_reinterpret_as(Cmp::vec(a0, b0), m0); v_reinterpret_as(Cmp::vec(a0, b1), m1);
+                v_reinterpret_as(Cmp::vec(a0, b2), m2); v_reinterpret_as(Cmp::vec(a0, b3), m3);
+                PACK_STORE_CMP_RESULT(m0, m1, m2, m3, dst+x);
             }
         }
+        #undef PACK_STORE_CMP_RESULT
     #endif
+        // Fold the fix-up: raw all-ones/zero mask -> (raw & M) | V. Uniform => raw & trueVal (V=0); a
+        // per-channel patch (width=cn<=4 here) indexes M/V by the channel x.
+        #define EW_CMP_APPLY(cond, x) (perch ? (uchar)(((cond) ? mvals[x] : 0) | vvals[x]) \
+                                             : (uchar)((cond) ? trueVal : 0))
         if (s0x == s1x) {
-            for (; x < width; x++) dst[x] = Cmp::cmp(src0[x], src1[x]) ? trueVal : 0;
+            for (; x < width; x++) dst[x] = EW_CMP_APPLY(Cmp::cmp(src0[x], src1[x]), x);
         }
         else if (s0x == 0) {
             T a = src0[0];
-            for (; x < width; x++) dst[x] = Cmp::cmp(a, src1[x]) ? trueVal : 0;
+            for (; x < width; x++) dst[x] = EW_CMP_APPLY(Cmp::cmp(a, src1[x]), x);
         }
         else {
             T b = src1[0];
-            for (; x < width; x++) dst[x] = Cmp::cmp(src0[x], b) ? trueVal : 0;
+            for (; x < width; x++) dst[x] = EW_CMP_APPLY(Cmp::cmp(src0[x], b), x);
         }
+        #undef EW_CMP_APPLY
     }
     return 0;
 }
@@ -620,12 +756,12 @@ static int vecBinaryKernel(const void* src0_, size_t s0y, size_t s0x,
                 vx_load_pair_as(src1, v0, v1);
                 vx_load_pair_as(src1 + VECSZ*2, v2, v3);
                 vx_load_pair_as(src1 + VECSZ*4, v4, v5);
-                v0 = Op::vec(sc0, v0);
-                v1 = Op::vec(sc1, v1);
-                v2 = Op::vec(sc2, v2);
-                v3 = Op::vec(sc3, v3);
-                v4 = Op::vec(sc4, v4);
-                v5 = Op::vec(sc5, v5);
+                v0 = Op::vec(sc0, v0, vscalar);
+                v1 = Op::vec(sc1, v1, vscalar);
+                v2 = Op::vec(sc2, v2, vscalar);
+                v3 = Op::vec(sc3, v3, vscalar);
+                v4 = Op::vec(sc4, v4, vscalar);
+                v5 = Op::vec(sc5, v5, vscalar);
                 v_store_pair_as(dst, v0, v1);
                 v_store_pair_as(dst + VECSZ*2, v2, v3);
                 v_store_pair_as(dst + VECSZ*4, v4, v5);
@@ -637,12 +773,12 @@ static int vecBinaryKernel(const void* src0_, size_t s0y, size_t s0x,
                 vx_load_pair_as(src0, v0, v1);
                 vx_load_pair_as(src0 + VECSZ*2, v2, v3);
                 vx_load_pair_as(src0 + VECSZ*4, v4, v5);
-                v0 = Op::vec(v0, sc0);
-                v1 = Op::vec(v1, sc1);
-                v2 = Op::vec(v2, sc2);
-                v3 = Op::vec(v3, sc3);
-                v4 = Op::vec(v4, sc4);
-                v5 = Op::vec(v5, sc5);
+                v0 = Op::vec(v0, sc0, vscalar);
+                v1 = Op::vec(v1, sc1, vscalar);
+                v2 = Op::vec(v2, sc2, vscalar);
+                v3 = Op::vec(v3, sc3, vscalar);
+                v4 = Op::vec(v4, sc4, vscalar);
+                v5 = Op::vec(v5, sc5, vscalar);
                 v_store_pair_as(dst, v0, v1);
                 v_store_pair_as(dst + VECSZ*2, v2, v3);
                 v_store_pair_as(dst + VECSZ*4, v4, v5);
@@ -679,10 +815,10 @@ static int vecBinaryKernel(const void* src0_, size_t s0y, size_t s0x,
                     vx_load_pair_as(src0 + x + VECSZ*2, a2, a3);
                     vx_load_pair_as(src1 + x, b0, b1);
                     vx_load_pair_as(src1 + x + VECSZ*2, b2, b3);
-                    a0 = Op::vec(Op::preproc(a0, vscalar), b0);
-                    a1 = Op::vec(Op::preproc(a1, vscalar), b1);
-                    a2 = Op::vec(Op::preproc(a2, vscalar), b2);
-                    a3 = Op::vec(Op::preproc(a3, vscalar), b3);
+                    a0 = Op::vec(Op::preproc(a0, vscalar), b0, vscalar);
+                    a1 = Op::vec(Op::preproc(a1, vscalar), b1, vscalar);
+                    a2 = Op::vec(Op::preproc(a2, vscalar), b2, vscalar);
+                    a3 = Op::vec(Op::preproc(a3, vscalar), b3, vscalar);
                     v_store_pair_as(dst + x, a0, a1);
                     v_store_pair_as(dst + x + VECSZ*2, a2, a3);
                 }
@@ -695,10 +831,10 @@ static int vecBinaryKernel(const void* src0_, size_t s0y, size_t s0x,
                 if (x + VECSZ*4 > width) { if (!use_tail_trick) break; x = width - VECSZ*4; }
                 vx_load_pair_as(src0 + x, a0, a1);
                 vx_load_pair_as(src0 + x + VECSZ*2, a2, a3);
-                a0 = Op::vec(a0, b0);
-                a1 = Op::vec(a1, b0);
-                a2 = Op::vec(a2, b0);
-                a3 = Op::vec(a3, b0);
+                a0 = Op::vec(a0, b0, vscalar);
+                a1 = Op::vec(a1, b0, vscalar);
+                a2 = Op::vec(a2, b0, vscalar);
+                a3 = Op::vec(a3, b0, vscalar);
                 v_store_pair_as(dst + x, a0, a1);
                 v_store_pair_as(dst + x + VECSZ*2, a2, a3);
             }
@@ -710,10 +846,10 @@ static int vecBinaryKernel(const void* src0_, size_t s0y, size_t s0x,
                 if (x + VECSZ*4 > width) { if (!use_tail_trick) break; x = width - VECSZ*4; }
                 vx_load_pair_as(src1 + x, a0, a1);
                 vx_load_pair_as(src1 + x + VECSZ*2, a2, a3);
-                a0 = Op::vec(b0, a0);
-                a1 = Op::vec(b0, a1);
-                a2 = Op::vec(b0, a2);
-                a3 = Op::vec(b0, a3);
+                a0 = Op::vec(b0, a0, vscalar);
+                a1 = Op::vec(b0, a1, vscalar);
+                a2 = Op::vec(b0, a2, vscalar);
+                a3 = Op::vec(b0, a3, vscalar);
                 v_store_pair_as(dst + x, a0, a1);
                 v_store_pair_as(dst + x + VECSZ*2, a2, a3);
             }
@@ -888,25 +1024,35 @@ TKernel getMulFunc_(int T, int R)
 TKernel getDivFunc_(int T, int R, bool checked)
 {
     KernelFunc fptr = nullptr;
-    #define EW_DIV(T_, W_) (checked ? scalarBinaryKernel<T_, W_, W_, EwDivInt> \
-                                    : scalarBinaryKernel<T_, W_, W_, EwDivFlt>)
+    // SIMD via vecBinaryKernel: preproc scales the dividend (a*scale), vec is v_div (EwDivFlt: float a/0
+    // -> inf, saturates on cast; EwDivInt: v_select guards b==0 -> 0 post-facto). Work type f32 (small)
+    // or f64. The f64 group needs v_float64 (CV_SIMD_64F); without it, the scalar kernel.
+    #define EW_DIVF(T_, W_, Wv_) (checked ? vecBinaryKernel<T_, W_, Wv_, W_, EwDivInt> \
+                                          : vecBinaryKernel<T_, W_, Wv_, W_, EwDivFlt>)
+#if CV_SIMD_64F
+    #define EW_DIVD(T_) EW_DIVF(T_, double, v_float64)
+#else
+    #define EW_DIVD(T_) (checked ? scalarBinaryKernel<T_, double, double, EwDivInt> \
+                                 : scalarBinaryKernel<T_, double, double, EwDivFlt>)
+#endif
     switch (T)
     {
-    case CV_8U:   fptr = R == CV_32F ? EW_DIV(uchar,    float)  : nullptr; break;
-    case CV_8S:   fptr = R == CV_32F ? EW_DIV(schar,    float)  : nullptr; break;
-    case CV_16U:  fptr = R == CV_32F ? EW_DIV(ushort,   float)  : nullptr; break;
-    case CV_16S:  fptr = R == CV_32F ? EW_DIV(short,    float)  : nullptr; break;
-    case CV_16F:  fptr = R == CV_32F ? EW_DIV(hfloat,   float)  : nullptr; break;
-    case CV_16BF: fptr = R == CV_32F ? EW_DIV(bfloat,   float)  : nullptr; break;
-    case CV_32F:  fptr = R == CV_32F ? EW_DIV(float,    float)  : nullptr; break;
-    case CV_32U:  fptr = R == CV_64F ? EW_DIV(unsigned, double) : nullptr; break;
-    case CV_32S:  fptr = R == CV_64F ? EW_DIV(int,      double) : nullptr; break;
-    case CV_64U:  fptr = R == CV_64F ? EW_DIV(uint64_t, double) : nullptr; break;
-    case CV_64S:  fptr = R == CV_64F ? EW_DIV(int64_t,  double) : nullptr; break;
-    case CV_64F:  fptr = R == CV_64F ? EW_DIV(double,   double) : nullptr; break;
+    case CV_8U:   fptr = R == CV_32F ? EW_DIVF(uchar,  float, v_float32) : nullptr; break;
+    case CV_8S:   fptr = R == CV_32F ? EW_DIVF(schar,  float, v_float32) : nullptr; break;
+    case CV_16U:  fptr = R == CV_32F ? EW_DIVF(ushort, float, v_float32) : nullptr; break;
+    case CV_16S:  fptr = R == CV_32F ? EW_DIVF(short,  float, v_float32) : nullptr; break;
+    case CV_16F:  fptr = R == CV_32F ? EW_DIVF(hfloat, float, v_float32) : nullptr; break;
+    case CV_16BF: fptr = R == CV_32F ? EW_DIVF(bfloat, float, v_float32) : nullptr; break;
+    case CV_32F:  fptr = R == CV_32F ? EW_DIVF(float,  float, v_float32) : nullptr; break;
+    case CV_32U:  fptr = R == CV_64F ? EW_DIVD(unsigned) : nullptr; break;
+    case CV_32S:  fptr = R == CV_64F ? EW_DIVD(int)      : nullptr; break;
+    case CV_64U:  fptr = R == CV_64F ? EW_DIVD(uint64_t) : nullptr; break;
+    case CV_64S:  fptr = R == CV_64F ? EW_DIVD(int64_t)  : nullptr; break;
+    case CV_64F:  fptr = R == CV_64F ? EW_DIVD(double)   : nullptr; break;
     default:      ;
     }
-    #undef EW_DIV
+    #undef EW_DIVF
+    #undef EW_DIVD
     return {fptr, nullptr, 0};
 }
 
@@ -1121,6 +1267,123 @@ TKernel getNotFunc_(int esz)
     case 8: f = notKernel<uint64_t, v_uint32>; break;   // SIMD path compiled out for 8-byte -> scalar ~
     default: ;
     }
+    return {f, nullptr, 0};
+}
+
+// ===========================================================================
+// OP_ADDW (addWeighted): dst = a*alpha + b*beta + gamma, params[0..2] = {alpha, beta, gamma}. Two fused
+// v_fma in the work type Wvec - f32 SIMD for u8/s8/u16/s16/f16/bf16/f32; the 32-bit-int/64-bit group
+// works in f64 (v_float64 SIMD under CV_SIMD_64F, else use_simd=false scalar). Like vecBinaryKernel but
+// WITHOUT its multi-channel short-row
+// branch: addWeighted takes plain scalar coefficients (a multi-channel scalar is not optimized, matching
+// the classic function). The broadcast branches fold the constant operand's contribution once.
+// ===========================================================================
+template<typename T, typename Tr, typename Wvec, typename WT, bool use_simd>
+static int addWeightedKernel(const void* src0_, size_t s0y, size_t s0x,
+                             const void* src1_, size_t s1y, size_t s1x,
+                             const void*, size_t, size_t,
+                             void* dst_, size_t dsty, int width, int height,
+                             const double* params, int, void*)
+{
+    s0y /= sizeof(T); s1y /= sizeof(T); dsty /= sizeof(Tr);
+    CV_Assert((s0x|s1x) == 1u || (s0x|s1x) + (size_t)width == 1u);
+    const T* src0 = (const T*)src0_;
+    const T* src1 = (const T*)src1_;
+    Tr* dst = (Tr*)dst_;
+    const WT alpha = (WT)params[0], beta = (WT)params[1], gamma = (WT)params[2];
+    EW_TRY_COLLAPSE(2);
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    Wvec va{}, vb{}, vg{};
+    const int VECSZ = VTraits<Wvec>::vlanes();
+    const bool tail = width >= VECSZ*4 && src0_ != dst_ && src1_ != dst_;
+    if constexpr (use_simd) {
+        WT fa=alpha, fb=beta, fg=gamma;
+        vx_setall_as(&fa, va); vx_setall_as(&fb, vb); vx_setall_as(&fg, vg);
+    }
+#endif
+    for (int y = 0; y < height; y++, src0 += s0y, src1 += s1y, dst += dsty)
+    {
+        int x = 0;
+    #if (CV_SIMD || CV_SIMD_SCALABLE)
+        if constexpr (use_simd)
+        {
+            Wvec a0,a1,a2,a3,b0,b1,b2,b3;
+            if (s0x == s1x) {                                // both arrays contiguous
+                for (; x < width; x += VECSZ*4) {
+                    if (x+VECSZ*4 > width) { if (!tail) break; x = width-VECSZ*4; }
+                    vx_load_pair_as(src0+x, a0, a1); vx_load_pair_as(src0+x+VECSZ*2, a2, a3);
+                    vx_load_pair_as(src1+x, b0, b1); vx_load_pair_as(src1+x+VECSZ*2, b2, b3);
+                    a0=v_fma(a0,va,v_fma(b0,vb,vg)); a1=v_fma(a1,va,v_fma(b1,vb,vg));
+                    a2=v_fma(a2,va,v_fma(b2,vb,vg)); a3=v_fma(a3,va,v_fma(b3,vb,vg));
+                    v_store_pair_as(dst+x, a0, a1); v_store_pair_as(dst+x+VECSZ*2, a2, a3);
+                }
+            }
+            else if (s1x == 0) {                             // src1 broadcast: b*beta+gamma is constant
+                Wvec bb; vx_setall_as(src1, bb); Wvec bc = v_fma(bb, vb, vg);
+                for (; x < width; x += VECSZ*4) {
+                    if (x+VECSZ*4 > width) { if (!tail) break; x = width-VECSZ*4; }
+                    vx_load_pair_as(src0+x, a0, a1); vx_load_pair_as(src0+x+VECSZ*2, a2, a3);
+                    a0=v_fma(a0,va,bc); a1=v_fma(a1,va,bc); a2=v_fma(a2,va,bc); a3=v_fma(a3,va,bc);
+                    v_store_pair_as(dst+x, a0, a1); v_store_pair_as(dst+x+VECSZ*2, a2, a3);
+                }
+            }
+            else {                                           // src0 broadcast: a*alpha+gamma is constant
+                Wvec aa; vx_setall_as(src0, aa); Wvec acg = v_fma(aa, va, vg);
+                for (; x < width; x += VECSZ*4) {
+                    if (x+VECSZ*4 > width) { if (!tail) break; x = width-VECSZ*4; }
+                    vx_load_pair_as(src1+x, b0, b1); vx_load_pair_as(src1+x+VECSZ*2, b2, b3);
+                    b0=v_fma(b0,vb,acg); b1=v_fma(b1,vb,acg); b2=v_fma(b2,vb,acg); b3=v_fma(b3,vb,acg);
+                    v_store_pair_as(dst+x, b0, b1); v_store_pair_as(dst+x+VECSZ*2, b2, b3);
+                }
+            }
+        }
+    #endif
+        if (s0x == s1x) {
+            for (; x < width; x++) dst[x] = saturate_cast<Tr>((WT)src0[x]*alpha + (WT)src1[x]*beta + gamma);
+        } else if (s0x == 0) {
+            const WT ac = (WT)src0[0]*alpha + gamma;
+            for (; x < width; x++) dst[x] = saturate_cast<Tr>((WT)src1[x]*beta + ac);
+        } else {
+            const WT bc = (WT)src1[0]*beta + gamma;
+            for (; x < width; x++) dst[x] = saturate_cast<Tr>((WT)src0[x]*alpha + bc);
+        }
+    }
+    return 0;
+}
+
+TKernel getAddWeightedFunc_(int T, int R)
+{
+    KernelFunc f = nullptr;
+    #define AWS(Tt, Rr) addWeightedKernel<Tt, Rr, v_float32, float, true>
+#if CV_SIMD_16F
+    #define AWH(Tt)     addWeightedKernel<Tt, Tt, v_float16, float, true>            // u8/s8 -> same, f16 work
+#else
+    #define AWH(Tt)     AWS(Tt, Tt)                                                  // no f16: f32 work
+#endif
+#if CV_SIMD_64F
+    #define AWD(Tt, Rr) addWeightedKernel<Tt, Rr, v_float64, double, true>       // f64 SIMD
+#else
+    #define AWD(Tt, Rr) addWeightedKernel<Tt, Rr, v_float32, double, false>      // scalar (v_float32 unused)
+#endif
+    switch (T)
+    {
+    case CV_8U:  f = R==CV_8U  ? AWH(uint8_t)            : R==CV_32F ? AWS(uint8_t,  float) : nullptr; break;
+    case CV_8S:  f = R==CV_8S  ? AWH(int8_t)             : R==CV_32F ? AWS(int8_t,   float) : nullptr; break;
+    case CV_16U: f = R==CV_16U ? AWS(uint16_t, uint16_t) : R==CV_32F ? AWS(uint16_t, float) : nullptr; break;
+    case CV_16S: f = R==CV_16S ? AWS(int16_t,  int16_t)  : R==CV_32F ? AWS(int16_t,  float) : nullptr; break;
+    case CV_16F: f = R==CV_16F ? AWS(hfloat,   hfloat)   : R==CV_32F ? AWS(hfloat,   float) : nullptr; break;
+    case CV_16BF:f = R==CV_32F ? AWS(bfloat,   float) : nullptr; break;
+    case CV_32F: f = R==CV_32F ? AWS(float,    float) : nullptr; break;
+    case CV_32U: f = R==CV_32U ? AWD(unsigned, unsigned) : R==CV_64F ? AWD(unsigned, double) : nullptr; break;
+    case CV_32S: f = R==CV_32S ? AWD(int,      int)      : R==CV_64F ? AWD(int,      double) : nullptr; break;
+    case CV_64U: f = R==CV_64F ? AWD(uint64_t, double) : nullptr; break;
+    case CV_64S: f = R==CV_64F ? AWD(int64_t,  double) : nullptr; break;
+    case CV_64F: f = R==CV_64F ? AWD(double,   double) : nullptr; break;
+    default: ;
+    }
+    #undef AWS
+    #undef AWH
+    #undef AWD
     return {f, nullptr, 0};
 }
 

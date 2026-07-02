@@ -849,13 +849,15 @@ void divide(double scale, InputArray src2,
         return;
     }
 
-    // scale / src2 == scale * 1 / src2: feed a 0-dim integer `1` as the numerator so the CPU engine
-    // reuses the normal divide (scale*a/b). Integer (not f64) so div-by-zero on an integer src still
-    // yields 0 (the div guard triggers only when BOTH operands are integer). The result depth follows
-    // src2 (not the numerator): pass it explicitly for dtype<0 (a fixed-type dst still wins). The UMat
-    // path uses the dedicated reciprocal kernel (OCL_OP_RECIP_SCALE).
-    int one = 1;
-    Mat numerator(MatShape::scalar(), CV_32S, &one);
+    // scale / src2 == scale * 1 / src2: feed a 0-dim `1` as the numerator so the CPU engine reuses the
+    // normal divide (scale*a/b). Give the numerator src2's OWN depth: then OP_DIV(T, T) is same-type and
+    // takes the fast per-type kernel (f32 work for <=16-bit / f16 / bf16, not the s32->f64 path a CV_32S
+    // numerator would force). An integer src2 keeps its div-by-zero->0 guard (both operands integer); a
+    // float src2 divides as float (1/0->inf), both matching cv::divide. dtype<0 follows src2's depth (a
+    // fixed-type dst still wins). The UMat path uses the dedicated reciprocal kernel (OCL_OP_RECIP_SCALE).
+    double one = 1;
+    Mat numerator(MatShape::scalar(), src2.depth(), &one);
+    scalarToRawData(Scalar(1), &one, src2.depth(), 1);       // write `1` in src2's depth (no allocation)
     const int rtype = (dtype < 0 && !dst.fixedType()) ? src2.depth() : dtype;
     arithm_op(ew::OP_DIV, numerator, src2, dst, noArray(), rtype, OCL_OP_RECIP_SCALE, /*muldiv*/ true, Scalar(scale));
 }

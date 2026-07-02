@@ -311,23 +311,33 @@ static bool constFits(const TExpr& e, int s, int d)
 // ---------------------------------------------------------------------------
 int TExpr::emitBinary(TOp op, int a, int b, int rdepth, const Scalar& params)
 {
-    // addWeighted a*alpha + b*beta + gamma (params = {alpha, beta, gamma}) is a fused composite, not a
-    // single kernel: two convert_scale MACs into a float work type W, then add (+ a final cast when the
-    // result type differs). Same shape as makeAddWeightedProgram, but returns the result slot.
+    // addWeighted a*alpha + b*beta + gamma (params = {alpha, beta, gamma}): ONE fused kernel (two v_fma).
+    // Inputs are the same type T (cast to a common type if not). The kernel outputs T/f32 (small ints,
+    // f16/bf16, f32) or f64 directly; for any other requested rdepth it computes in the work type W and a
+    // final cast narrows it.
     if (op == OP_ADDW)
     {
-        const int da = arginfo[a].depth, db = arginfo[b].depth;
-        const int W = (da == CV_64F || db == CV_64F || rdepth == CV_64F) ? CV_64F : CV_32F;
-        const int t0 = addTemp(W), t1 = addTemp(W);
-        addInsn(OP_CONVERT_SCALE, a, 0, 0, t0, Scalar(params[0], params[2]));   // a*alpha + gamma
-        addInsn(OP_CONVERT_SCALE, b, 0, 0, t1, Scalar(params[1], 0.0));         // b*beta
-        const int t2 = addTemp(W);
-        addInsn(OP_ADD, t0, t1, 0, t2);
-        if (rdepth == W)
-            return t2;
-        const int t3 = addTemp(rdepth);
-        addInsn(OP_CAST, t2, 0, 0, t3);
-        return t3;
+        int Tt = arginfo[a].depth;
+        if (arginfo[a].depth != arginfo[b].depth)
+        {
+            Tt = promoteArith(arginfo[a].depth, arginfo[b].depth);
+            a = maybeAddCast(a, Tt); b = maybeAddCast(b, Tt);
+        }
+        if (rdepth == EW_DEPTH_NONE) rdepth = Tt;              // default dtype = input depth
+        TKernel k = getElemwiseFunc(OP_ADDW, Tt, Tt, EW_DEPTH_NONE, rdepth);
+        int outD = rdepth;
+        if (!k.fptr)                                          // no direct T->rdepth kernel: compute in W, cast
+        {
+            outD = (Tt==CV_32U || Tt==CV_32S || Tt==CV_64U || Tt==CV_64S || Tt==CV_64F || rdepth==CV_64F)
+                 ? CV_64F : CV_32F;
+            k = getElemwiseFunc(OP_ADDW, Tt, Tt, EW_DEPTH_NONE, outD);
+        }
+        const int out = addTemp(outD);
+        addInsn(OP_ADDW, a, b, 0, out, k, Scalar(params[0], params[1], params[2]));
+        if (outD == rdepth) return out;
+        const int out2 = addTemp(rdepth);
+        addInsn(OP_CAST, out, 0, 0, out2);
+        return out2;
     }
 
     const int nd0 = isFlexConst(*this, a) ? EW_DEPTH_NONE : arginfo[a].depth;
@@ -351,49 +361,76 @@ int TExpr::emitBinary(TOp op, int a, int b, int rdepth, const Scalar& params)
     else if (nd1 == EW_DEPTH_NONE) base = nd0;
     else base = promote2(nd0, nd1);
 
-    // COMPARE of an INTEGER array against a threshold that does not fit that type as-is (fractional,
-    // out-of-range, or EQ/NE of a non-representable value): rewrite to a NATIVE integer compare instead
-    // of widening both sides to f64. Per channel the relation reduces to a representable integer
-    // boundary  a >= B / a <= B , or a CONSTANT result via the type's min:  always-false == "a < min",
-    // always-true == "a >= min".  Boundaries:  a>t == a>=floor(t)+1 ;  a>=t == a>=ceil(t) ;
-    // a<t == a<=ceil(t)-1 ;  a<=t == a<=floor(t) ;  a==(non-rep) is never true ;  a!=(non-rep) is always
-    // true. Emitted only if all channels agree on ONE op (a scalar-broadcast or all-in-range threshold
-    // does); a per-channel op split (e.g. Scalar(0.5, 300)) falls through to the f64 path below.
+    // COMPARE of an INTEGER array against a threshold that doesn't fit that type as-is (fractional,
+    // out-of-range, or EQ/NE of a non-representable value): emit a SINGLE NATIVE integer compare instead
+    // of widening both sides to f64. Per channel the relation is either a REAL boundary (a>=B / a<=B) or
+    // a CONSTANT (always-false / always-true). Boundaries: a>t==a>=floor(t)+1; a>=t==a>=ceil(t);
+    // a<t==a<=ceil(t)-1; a<=t==a<=floor(t); a==(non-rep) never true; a!=(non-rep) always true. One family
+    // op (GE for GT/GE, LE for LT/LE, else EQ/NE) runs with a placeholder threshold on const channels;
+    // the per-channel fix-up  result = (rawmask & M) | V  is FOLDED into the compare kernel via its flags
+    // (M=255 real / 0 const, V=255 always-true / 0 else) - no extra pass, no separate patch kernel.
     if (cat == CAT_COMPARE && nd0 != EW_DEPTH_NONE && !isFloatDepth(nd0) &&
         isFlexConst(*this, b) && !constFits(*this, b, base))
     {
         double lo, hi; intRange(nd0, lo, hi);
-        AutoBuffer<double, MAX_LOCAL_CN> v; int cn = constDoubles(*this, b, v);
-        AutoBuffer<double, MAX_LOCAL_CN> thr(cn);
-        // hi <= lo => a depth intRange does not model (e.g. CV_Bool): skip, leave it to the f64 path.
-        int uop = OP_NOP; bool ok = (hi > lo);
-        for (int c = 0; c < cn && ok; c++)
+        if (hi > lo)   // hi<=lo => a depth intRange doesn't model (CV_Bool ...): leave to the f64 path
         {
-            const double t = v[c]; int co; double th;
-            switch (op)
+            enum { REAL, CFALSE, CTRUE };
+            AutoBuffer<double, MAX_LOCAL_CN> tv; int cn = constDoubles(*this, b, tv);
+            AutoBuffer<int, MAX_LOCAL_CN> kind(cn);
+            AutoBuffer<double, MAX_LOCAL_CN> bound(cn);
+            const TOp fam = (op == OP_CMP_GT || op == OP_CMP_GE) ? OP_CMP_GE
+                          : (op == OP_CMP_LT || op == OP_CMP_LE) ? OP_CMP_LE : op;   // EQ/NE unchanged
+            for (int c = 0; c < cn; c++)
             {
-            case OP_CMP_GT: { double B = std::floor(t) + 1; if (B > hi) { co = OP_CMP_LT; th = lo; }
-                              else { co = OP_CMP_GE; th = std::max(B, lo); } } break;   // a>=lo == always true
-            case OP_CMP_GE: { double B = std::ceil(t);      if (B > hi) { co = OP_CMP_LT; th = lo; }
-                              else { co = OP_CMP_GE; th = std::max(B, lo); } } break;
-            case OP_CMP_LT: { double B = std::ceil(t) - 1;  if (B < lo) { co = OP_CMP_LT; th = lo; }
-                              else if (B >= hi) { co = OP_CMP_GE; th = lo; } else { co = OP_CMP_LE; th = B; } } break;
-            case OP_CMP_LE: { double B = std::floor(t);     if (B < lo) { co = OP_CMP_LT; th = lo; }
-                              else if (B >= hi) { co = OP_CMP_GE; th = lo; } else { co = OP_CMP_LE; th = B; } } break;
-            // a representable integer keeps a real EQ/NE; a non-representable value is never equal
-            // (EQ -> all false "a<min") / always unequal (NE -> all true "a>=min").
-            case OP_CMP_EQ: if (depthRepresents(t, nd0)) { co = OP_CMP_EQ; th = t; } else { co = OP_CMP_LT; th = lo; } break;
-            case OP_CMP_NE: if (depthRepresents(t, nd0)) { co = OP_CMP_NE; th = t; } else { co = OP_CMP_GE; th = lo; } break;
-            default:          ok = false; co = OP_NOP; th = 0; break;
+                const double t = tv[c]; int k; double B = t;
+                switch (op)
+                {
+                case OP_CMP_GT: B = std::floor(t)+1; k = B > hi ? CFALSE : B <= lo ? CTRUE : REAL; break;
+                case OP_CMP_GE: B = std::ceil(t);    k = B > hi ? CFALSE : B <= lo ? CTRUE : REAL; break;
+                case OP_CMP_LT: B = std::ceil(t)-1;  k = B < lo ? CFALSE : B >= hi ? CTRUE : REAL; break;
+                case OP_CMP_LE: B = std::floor(t);   k = B < lo ? CFALSE : B >= hi ? CTRUE : REAL; break;
+                case OP_CMP_EQ: k = depthRepresents(t, nd0) ? REAL : CFALSE; break;   // a==non-rep -> false
+                default:        k = depthRepresents(t, nd0) ? REAL : CTRUE;  break;   // NE: a!=non-rep -> true
+                }
+                kind[c] = k; bound[c] = B;
             }
-            if (uop == OP_NOP) uop = co; else if (uop != co) ok = false;
-            thr[c] = th;
-        }
-        if (ok && uop != OP_NOP)
-        {
-            Scalar s; for (int c = 0; c < cn; c++) s[c] = thr[c];
-            b = addConst(EW_DEPTH_NONE, s, cn);          // native integer threshold (still flexible)
-            op = (TOp)uop;
+            // If every channel lands on ONE op (single-channel, all-real, all-false, all-true, or
+            // real+true for a GE/LE family) the compare ALONE yields the result - a plain native compare,
+            // no fix-up. REAL -> fam(bound); forced-TRUE -> the family's always-true form (GE lo / LE hi);
+            // forced-FALSE -> "a < lo".
+            auto ucOp  = [&](int c){ return kind[c]==REAL ? fam : kind[c]==CFALSE ? OP_CMP_LT
+                                          : (fam == OP_CMP_LE ? OP_CMP_LE : OP_CMP_GE); };
+            auto ucThr = [&](int c){ return kind[c]==REAL ? bound[c]
+                                          : (kind[c]==CTRUE && fam==OP_CMP_LE) ? hi : lo; };
+            const TOp u0 = ucOp(0);
+            bool uniform = true;
+            for (int c = 1; c < cn && uniform; c++) uniform = (ucOp(c) == u0);
+            if (uniform)
+            {
+                Scalar s; for (int c = 0; c < cn; c++) s[c] = ucThr(c);
+                b = addConst(EW_DEPTH_NONE, s, cn); op = u0;   // rewrite threshold + op -> fall through
+            }
+            else
+            {
+                // genuine per-channel op split (only a multi-channel scalar can cause it -> the executor
+                // lays it out as a short-row tile). One family compare with a placeholder threshold on
+                // const channels; the per-channel fix-up (rawmask & M) | V is FOLDED into the kernel via
+                // its flags (M=255 real / 0 const, V=255 always-true / 0 else) - no extra pass.
+                Scalar ts; int patchFlags = 0;
+                for (int c = 0; c < cn; c++)
+                {
+                    ts[c] = kind[c]==REAL ? bound[c] : lo;     // in-range placeholder for a const channel
+                    const int mbits = kind[c]==REAL  ? 3 : 0;  // M: real -> 255 (keep), const -> 0
+                    const int vbits = kind[c]==CTRUE ? 3 : 0;  // V: always-true -> 255, else 0
+                    patchFlags |= (mbits | (vbits << 2)) << (EW_CMP_PATCH_SHIFT + c*4);
+                }
+                TKernel kern = getElemwiseFunc(fam, base, base, EW_DEPTH_NONE, result);
+                kern.flags |= EW_CMP_PATCH | patchFlags;
+                const int out = addTemp(result);
+                addInsn(fam, a, addConst(base, ts, cn), 0, out, kern);
+                return out;
+            }
         }
     }
 
@@ -886,6 +923,9 @@ int TExpr::addConst(int depth, const Scalar& v, int channels)
 // Source = native bytes of any depth/channel-count (e.g. a Vec<_,N> scalar): stored as-is.
 int TExpr::addConst(int depth, int srcdepth, const void* data, int channels)
 {
+    // A CONST is a broadcast scalar - capped at 4 channels (a Scalar). Need more? Pass a 0-D Mat with
+    // the desired channel count as an INPUT: broadcasting handles it, and it isn't limited to 4.
+    CV_Assert(channels <= 4);
     Arg a; a.kind = CONST; a.depth = depth; a.channels = channels; a.srcdepth = srcdepth;
     a.constofs = appendConstBuf(constbuf, srcdepth, data, channels);
     arginfo.push_back(a); return (int)arginfo.size() - 1;
@@ -1313,35 +1353,18 @@ void makeBinaryArithProgram(TExpr& p, TOp op, int depth0, int depth1, int rdepth
     p.compile();    // pack temp buffers + count consts (kernels already bound by addInsn)
 }
 
-// addWeighted(a, alpha, b, beta, gamma) = a*alpha + b*beta + gamma, as two fused convert_scale
-// MACs + an add (+ a final cast when the output type differs from the working type W):
-//   t0 = cast<W>(a*alpha + gamma) ;  t1 = cast<W>(b*beta) ;  out = cast<rdepth>(t0 + t1)
-// The convert_scale steps ride core's optimized scale kernel; alpha/beta/gamma travel in each
-// instruction's params block ({scale, offset}), not as operands. The 2-3 temps exercise the body's
-// L1 column-fragmentation.
+// addWeighted(a, alpha, b, beta, gamma) = a*alpha + b*beta + gamma. One fused kernel (two v_fma) via
+// emitBinary(OP_ADDW); a final cast is appended only when the requested rdepth isn't a type the kernel
+// emits directly. alpha/beta/gamma travel in the instruction's params block, not as operands.
 void makeAddWeightedProgram(TExpr& p, int depth0, int depth1, int rdepth,
                             double alpha, double beta, double gamma)
 {
     p.clear();
-    const int W = (depth0 == CV_64F || depth1 == CV_64F || rdepth == CV_64F) ? CV_64F : CV_32F;
-
-    int sA = p.addInput(depth0);
-    int sB = p.addInput(depth1);
-
-    int t0 = p.addTemp(W), t1 = p.addTemp(W);
-    p.addInsn(OP_CONVERT_SCALE, sA, 0, 0, t0, Scalar(alpha, gamma));   // t0 = a*alpha + gamma
-    p.addInsn(OP_CONVERT_SCALE, sB, 0, 0, t1, Scalar(beta, 0.0));      // t1 = b*beta
-
+    int sA   = p.addInput(depth0);
+    int sB   = p.addInput(depth1);
     int sOut = p.addOutput(rdepth);
-    if (rdepth == W)
-        p.addInsn(OP_ADD, t0, t1, 0, sOut);
-    else
-    {
-        int t2 = p.addTemp(W);
-        p.addInsn(OP_ADD, t0, t1, 0, t2);
-        p.addInsn(OP_CAST, t2, 0, 0, sOut);
-    }
-
+    int r = p.emitBinary(OP_ADDW, sA, sB, rdepth, Scalar(alpha, beta, gamma));
+    p.moveToOutput(r, sOut);
     p.compile();    // pack temp buffers + count consts (kernels already bound by addInsn)
 }
 
