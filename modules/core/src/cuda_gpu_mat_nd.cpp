@@ -129,7 +129,7 @@ void GpuMatND::setFields(MatShape _size, int _type, StepArray _step)
     CV_Assert(step.back() == elemSize());
 }
 
-#ifndef HAVE_CUDA
+#if !defined(HAVE_CUDA) || defined(HAVE_HIP_STANDALONE)
 
 GpuData::GpuData(const size_t _size)
     : data(nullptr), size(0)

@@ -265,7 +265,7 @@ struct Net::Impl : public detail::NetImplBase
     void initTimVXBackend();
 #endif
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     struct CudaInfo_t
     {
         CudaInfo_t(cuda4dnn::csl::CSLContext ctxt, cuda4dnn::csl::Stream d2h_stream_)

@@ -344,7 +344,7 @@ void cv::cuda::ensureSizeIsEnough(int rows, int cols, int type, OutputArray arr)
 
 GpuMat cv::cuda::getInputMat(InputArray _src, Stream& stream)
 {
-#ifndef HAVE_CUDA
+#if !defined(HAVE_CUDA) || defined(HAVE_HIP_STANDALONE)
     CV_UNUSED(_src);
     CV_UNUSED(stream);
     throw_no_cuda();
@@ -366,7 +366,7 @@ GpuMat cv::cuda::getInputMat(InputArray _src, Stream& stream)
 
 GpuMat cv::cuda::getOutputMat(OutputArray _dst, int rows, int cols, int type, Stream& stream)
 {
-#ifndef HAVE_CUDA
+#if !defined(HAVE_CUDA) || defined(HAVE_HIP_STANDALONE)
     CV_UNUSED(_dst);
     CV_UNUSED(rows);
     CV_UNUSED(cols);
@@ -391,7 +391,7 @@ GpuMat cv::cuda::getOutputMat(OutputArray _dst, int rows, int cols, int type, St
 
 void cv::cuda::syncOutput(const GpuMat& dst, OutputArray _dst, Stream& stream)
 {
-#ifndef HAVE_CUDA
+#if !defined(HAVE_CUDA) || defined(HAVE_HIP_STANDALONE)
     CV_UNUSED(dst);
     CV_UNUSED(_dst);
     CV_UNUSED(stream);
@@ -407,7 +407,7 @@ void cv::cuda::syncOutput(const GpuMat& dst, OutputArray _dst, Stream& stream)
 #endif
 }
 
-#ifndef HAVE_CUDA
+#if !defined(HAVE_CUDA) || defined(HAVE_HIP_STANDALONE)
 
 GpuMat::Allocator* cv::cuda::GpuMat::defaultAllocator()
 {

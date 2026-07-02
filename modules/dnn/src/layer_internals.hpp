@@ -78,7 +78,7 @@ struct LayerData
     std::vector<Ptr<BackendWrapper>> inputBlobsWrappers;
     std::vector<Ptr<BackendWrapper>> internalBlobsWrappers;
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     /* output ids which must be transferred to the host in the background
      * after the completion of the forward pass of the layer
      */
@@ -116,7 +116,7 @@ struct LayerData
         skip = false;
         flag = 0;
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
         cudaD2HBackgroundTransfers.clear();
 #endif
     }

@@ -5,7 +5,7 @@
 #ifndef OPENCV_DNN_SRC_OP_CUDA_HPP
 #define OPENCV_DNN_SRC_OP_CUDA_HPP
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
 #include "cuda4dnn/csl/stream.hpp"
 #include "cuda4dnn/csl/event.hpp"
 #include "cuda4dnn/csl/cublas.hpp"
@@ -31,7 +31,7 @@ namespace cv { namespace dnn {
 
     bool haveCUDA();
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
     namespace cuda4dnn { namespace csl {
         struct CSLContext {
             Stream stream;

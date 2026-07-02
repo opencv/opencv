@@ -56,7 +56,7 @@
 #include "opencv2/core/cuda.hpp"
 #include "opencv2/core/private/cuda_stubs.hpp"
 
-#ifdef HAVE_CUDA
+#if defined(HAVE_CUDA) && !defined(HAVE_HIP_STANDALONE) && !defined(__HIPCC__) && !defined(OPENCV_CORE_HIP_IMPL)
 #  include <cuda.h>
 #  include <cuda_runtime.h>
 #  if defined(__CUDACC_VER_MAJOR__) && (8 <= __CUDACC_VER_MAJOR__)
@@ -102,7 +102,7 @@ namespace cv { namespace cuda {
     CV_EXPORTS void syncOutput(const GpuMat& dst, OutputArray _dst, Stream& stream);
 }}
 
-#ifdef HAVE_CUDA
+#if defined(HAVE_CUDA) && !defined(HAVE_HIP_STANDALONE) && !defined(__HIPCC__) && !defined(OPENCV_CORE_HIP_IMPL)
 
 #define nppSafeSetStream(oldStream, newStream) { if(oldStream != newStream) { cudaStreamSynchronize(oldStream); nppSetStream(newStream); } }
 

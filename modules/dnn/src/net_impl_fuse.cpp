@@ -6,7 +6,7 @@
 
 #include "net_impl.hpp"
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
 #include "cuda4dnn/primitives/eltwise.hpp"  // required by fuseLayers
 #endif
 
@@ -376,7 +376,7 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                 if (IS_DNN_OPENCL_TARGET(preferableTarget) && nextNaryEltwiseLayer)
                     break;
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
                 // CUDA backend supports fusion with eltwise sum (without variable channels)
                 if (IS_DNN_CUDA_TARGET(preferableTarget) && (!nextEltwiseLayer.empty() || !nextNaryEltwiseLayer.empty()))
                 {
@@ -732,7 +732,7 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
 
                     if(inp_i_data->skip || inp_i_data->consumers.size() != 1)
                         break;
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
                     /* Risk: Not every operation in "NaryEltwise" is supported in the CUDA backend. There is a chance
                              that Concat's output is filled with data in both host and device, leading to data missing.
                              See https://github.com/opencv/opencv/issues/24721 for more details.
@@ -771,7 +771,7 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                     }
 #endif
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
                     if (preferableBackend == DNN_BACKEND_CUDA)
                         ld.outputBlobsWrappers[0] = wrap(output);
 #endif
@@ -799,7 +799,7 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                             OpenCLBackendWrapper::update(inp_i_data->outputBlobsWrappers, umats);
                         }
 #endif
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
                         if (preferableBackend == DNN_BACKEND_CUDA)
                         {
                             auto cuda_wrapper = wrap(output).dynamicCast<CUDABackendWrapper>();
@@ -814,7 +814,7 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                         CV_Assert_N(curr_output.data == output_slice.data, oldPtr == &curr_output);
                     }
 
-#ifdef HAVE_CUDA
+#if CV_CUDA4DNN
                     if (preferableBackend == DNN_BACKEND_CUDA)
                     {
                         for (int i = 0; i < ld.consumers.size(); i++)

@@ -46,7 +46,7 @@
 using namespace cv;
 using namespace cv::cuda;
 
-#ifdef HAVE_CUDA
+#if defined(HAVE_CUDA) && !defined(HAVE_HIP_STANDALONE)
 
 namespace cv { namespace cuda { namespace device
 {
@@ -155,7 +155,7 @@ Rect cv::detail::PlaneWarperGpu::buildMaps(Size src_size, InputArray K, InputArr
 Rect cv::detail::PlaneWarperGpu::buildMaps(Size src_size, InputArray K, InputArray R, InputArray T,
                                            cuda::GpuMat & xmap, cuda::GpuMat & ymap)
 {
-#ifndef HAVE_CUDA
+#if !defined(HAVE_CUDA) || defined(HAVE_HIP_STANDALONE)
     CV_UNUSED(src_size);
     CV_UNUSED(K);
     CV_UNUSED(R);
@@ -207,7 +207,7 @@ Point cv::detail::PlaneWarperGpu::warp(const cuda::GpuMat & src, InputArray K, I
 
 Rect cv::detail::SphericalWarperGpu::buildMaps(Size src_size, InputArray K, InputArray R, cuda::GpuMat & xmap, cuda::GpuMat & ymap)
 {
-#ifndef HAVE_CUDA
+#if !defined(HAVE_CUDA) || defined(HAVE_HIP_STANDALONE)
     CV_UNUSED(src_size);
     CV_UNUSED(K);
     CV_UNUSED(R);
@@ -251,7 +251,7 @@ Point cv::detail::SphericalWarperGpu::warp(const cuda::GpuMat & src, InputArray 
 Rect cv::detail::CylindricalWarperGpu::buildMaps(Size src_size, InputArray K, InputArray R,
                                                  cuda::GpuMat & xmap, cuda::GpuMat & ymap)
 {
-#ifndef HAVE_CUDA
+#if !defined(HAVE_CUDA) || defined(HAVE_HIP_STANDALONE)
     CV_UNUSED(src_size);
     CV_UNUSED(K);
     CV_UNUSED(R);

@@ -43,6 +43,8 @@
 #ifndef OPENCV_CUDA_COMMON_HPP
 #define OPENCV_CUDA_COMMON_HPP
 
+#if !defined(HAVE_HIP_STANDALONE)
+
 #include <cuda_runtime.h>
 #include "opencv2/core/cuda_types.hpp"
 #include "opencv2/core/cvdef.h"
@@ -102,4 +104,5 @@ namespace cv { namespace cuda
 
 //! @endcond
 
+#endif // !defined(HAVE_HIP_STANDALONE)
 #endif // OPENCV_CUDA_COMMON_HPP

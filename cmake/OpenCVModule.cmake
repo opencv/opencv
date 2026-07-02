@@ -861,6 +861,14 @@ macro(ocv_glob_module_sources)
     source_group("Src\\Cuda"      FILES ${lib_cuda_srcs} ${lib_cuda_hdrs})
   endif()
 
+  set(lib_hip_srcs "")
+  if(HAVE_HIP AND exclude_cuda EQUAL -1)
+    file(GLOB lib_hip_srcs
+         "${CMAKE_CURRENT_LIST_DIR}/src/hip/*.hip"
+    )
+    source_group("Src\\HIP" FILES ${lib_hip_srcs})
+  endif()
+
   file(GLOB cl_kernels
        "${CMAKE_CURRENT_LIST_DIR}/src/opencl/*.cl"
   )
@@ -881,7 +889,7 @@ macro(ocv_glob_module_sources)
   endif()
 
   ocv_set_module_sources(${_argn} HEADERS ${lib_hdrs} ${lib_hdrs_detail}
-                         SOURCES ${lib_srcs} ${lib_int_hdrs} ${lib_cuda_srcs} ${lib_cuda_hdrs})
+                         SOURCES ${lib_srcs} ${lib_int_hdrs} ${lib_cuda_srcs} ${lib_cuda_hdrs} ${lib_hip_srcs})
 endmacro()
 
 # creates OpenCV module in current folder
