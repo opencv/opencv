@@ -6,12 +6,10 @@
 
 #include "ipp_hal_imgproc.hpp"
 
-#ifdef HAVE_IPP_IW
-
 #include <opencv2/core.hpp>
 #include "precomp_ipp.hpp"
 
-#if 0 //defined(HAVE_IPP)
+#if defined(HAVE_IPP_IW) && !DISABLE_IPP_BOX_FILTER
 
 namespace cv { namespace ipp { unsigned long long getIppTopFeatures(); } }
 
@@ -82,7 +80,6 @@ static inline IppiBorderType ippiGetBorder(::ipp::IwiImage &image, int ocvBorder
 
     return (IppiBorderType)(border | inMemFlags);
 }
-#endif
 
 int ipp_hal_boxFilter(const uchar* src_data, size_t src_step,
                       uchar* dst_data, size_t dst_step,
@@ -92,7 +89,6 @@ int ipp_hal_boxFilter(const uchar* src_data, size_t src_step,
                       int anchor_x, int anchor_y,
                       bool normalize, int border_type)
 {
-#if 0 //defined(HAVE_IPP)
     CV_HAL_CHECK_USE_IPP();
 
 #if IPP_VERSION_X100 < 201801
@@ -143,14 +139,6 @@ int ipp_hal_boxFilter(const uchar* src_data, size_t src_step,
     }
 
     return CV_HAL_ERROR_OK;
-#else
-    CV_UNUSED(src_data); CV_UNUSED(src_step); CV_UNUSED(dst_data); CV_UNUSED(dst_step);
-    CV_UNUSED(width); CV_UNUSED(height); CV_UNUSED(src_depth); CV_UNUSED(dst_depth); CV_UNUSED(cn);
-    CV_UNUSED(margin_left); CV_UNUSED(margin_top); CV_UNUSED(margin_right); CV_UNUSED(margin_bottom);
-    CV_UNUSED(ksize_width); CV_UNUSED(ksize_height); CV_UNUSED(anchor_x); CV_UNUSED(anchor_y);
-    CV_UNUSED(normalize); CV_UNUSED(border_type);
-    return CV_HAL_ERROR_NOT_IMPLEMENTED;
-#endif
 }
 
-#endif
+#endif // defined(HAVE_IPP_IW) && !DISABLE_IPP_BOX_FILTER

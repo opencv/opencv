@@ -8,8 +8,10 @@
 #include <opencv2/core/base.hpp>
 #include "ipp_utils.hpp"
 
-#if IPP_VERSION_X100 >= 810
+// Disabled in https://github.com/opencv/opencv/pull/13085 due large binary size
+#define DISABLE_IPP_BOX_FILTER 1
 
+#if IPP_VERSION_X100 >= 810
 #if defined(HAVE_IPP_IW)
 int ipp_hal_warpAffine(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar *dst_data, size_t dst_step, int dst_width,
                        int dst_height, const double M[6], int interpolation, int borderType, const double borderValue[4]);
@@ -34,7 +36,7 @@ int ipp_hal_resize(int src_type, const uchar *src_data, size_t src_step, int src
 #define cv_hal_resize ipp_hal_resize
 #endif // HAVE_IPP_IW
 
-#if defined(HAVE_IPP_IW)
+#if defined(HAVE_IPP_IW) && !DISABLE_IPP_BOX_FILTER
 int ipp_hal_boxFilter(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
                       int width, int height, int src_depth, int dst_depth, int cn,
                       int margin_left, int margin_top, int margin_right, int margin_bottom,
@@ -42,7 +44,7 @@ int ipp_hal_boxFilter(const uchar* src_data, size_t src_step, uchar* dst_data, s
                       bool normalize, int border_type);
 #undef cv_hal_boxFilter
 #define cv_hal_boxFilter ipp_hal_boxFilter
-#endif // HAVE_IPP_IW
+#endif // defined(HAVE_IPP_IW) && !DISABLE_IPP_BOX_FILTER
 
 int ipp_hal_remap32f(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height,
     uchar *dst_data, size_t dst_step, int dst_width, int dst_height,
