@@ -7,6 +7,7 @@
 
 #include "aruco_utils.hpp"
 #include "predefined_dictionaries.hpp"
+#include "predefined_dictionaries_nested.hpp"
 #include "apriltag/predefined_dictionaries_apriltag.hpp"
 #include <opencv2/objdetect/aruco_dictionary.hpp>
 
@@ -468,6 +469,30 @@ Mat Dictionary::getCellRatiosFromRatioList(const Mat &ratioList, int markerSize,
 }
 
 
+Mat Dictionary::getCellRatiosFromImage(InputArray markerImage, int markerSize, int borderBits) {
+    Mat img = markerImage.getMat();
+    CV_Assert(!img.empty() && img.channels() == 1 && img.depth() == CV_8U);
+    CV_Assert(markerSize > 0 && borderBits > 0);
+
+    const int totalCells = markerSize + 2 * borderBits;
+    CV_Assert(img.rows == img.cols && img.rows >= totalCells);
+
+    Mat cellRatios(markerSize, markerSize, CV_8UC1);
+    for(int y = 0; y < markerSize; y++) {
+        const int y0 = (borderBits + y) * img.rows / totalCells;
+        const int y1 = (borderBits + y + 1) * img.rows / totalCells;
+        for(int x = 0; x < markerSize; x++) {
+            const int x0 = (borderBits + x) * img.cols / totalCells;
+            const int x1 = (borderBits + x + 1) * img.cols / totalCells;
+            Mat cell = img(Range(y0, y1), Range(x0, x1));
+            const int white = countNonZero(cell > 127);
+            cellRatios.at<uchar>(y, x) = (uchar)cvRound(100.0 * white / (double)cell.total());
+        }
+    }
+    return cellRatios;
+}
+
+
 Dictionary Dictionary::convertToCellRatioDictionary() const {
     CV_Assert(dictEncoding == DICT_ENCODING_BINARY);
 
@@ -557,6 +582,11 @@ Dictionary getPredefinedDictionary(PredefinedDictionaryType name) {
 
     static const Dictionary DICT_ARUCO_MIP_36h12_DATA = Dictionary(Mat(250, (6 * 6 + 7) / 8, CV_8UC4, (uchar*)DICT_ARUCO_MIP_36h12_BYTES), 6, (12-1)/2);
 
+    // nested marker pair dictionaries store one byte per cell (DICT_ENCODING_CELL_RATIO)
+    static const Dictionary DICT_4X4_NESTED_5_DATA = Dictionary(Mat(10, 4 * 4, CV_8UC4, (uchar*)DICT_4X4_NESTED_5_BYTES), 4, (4-1)/2, DICT_ENCODING_CELL_RATIO);
+    static const Dictionary DICT_4X4_NESTED_10_DATA = Dictionary(Mat(20, 4 * 4, CV_8UC4, (uchar*)DICT_4X4_NESTED_10_BYTES), 4, (3-1)/2, DICT_ENCODING_CELL_RATIO);
+    static const Dictionary DICT_4X4_NESTED_24_DATA = Dictionary(Mat(48, 4 * 4, CV_8UC4, (uchar*)DICT_4X4_NESTED_24_BYTES), 4, (2-1)/2, DICT_ENCODING_CELL_RATIO);
+
     switch(name) {
 
     case DICT_ARUCO_ORIGINAL:
@@ -609,6 +639,13 @@ Dictionary getPredefinedDictionary(PredefinedDictionaryType name) {
 
     case DICT_ARUCO_MIP_36h12:
         return Dictionary(DICT_ARUCO_MIP_36h12_DATA);
+
+    case DICT_4X4_NESTED_5:
+        return Dictionary(DICT_4X4_NESTED_5_DATA);
+    case DICT_4X4_NESTED_10:
+        return Dictionary(DICT_4X4_NESTED_10_DATA);
+    case DICT_4X4_NESTED_24:
+        return Dictionary(DICT_4X4_NESTED_24_DATA);
     }
     return Dictionary(DICT_4X4_50_DATA);
 }
@@ -741,6 +778,285 @@ Dictionary extendDictionary(int nMarkers, int markerSize, const Dictionary &base
     out.maxCorrectionBits = (tau - 1) / 2;
 
     return out;
+}
+
+
+// A candidate cell matches a dictionary entry when |observedRatio - expectedRatio| is at most
+// validBitIdThreshold. Two entries A and B are "separating" at a cell when their expected
+// ratios differ by more than 2 * validBitIdThreshold: an observation matching A is
+// always more than validBitIdThreshold away from B, so no observation can match both entries
+// at that cell. Ratios are stored in percent, hence the factor 200.
+static const int SEPARATING_PERCENT = (int)(200 * DEFAULT_VALID_BIT_ID_THRESHOLD);
+
+static int _countSeparatingCells(const uchar* a, const uchar* b, int totalCells) {
+    int count = 0;
+    for(int i = 0; i < totalCells; i++)
+        if(std::abs((int)a[i] - (int)b[i]) > SEPARATING_PERCENT) count++;
+    return count;
+}
+
+/**
+ * @brief Separation distance between a candidate (rotation 0) and an entry, minimum over the 4
+ * relative rotations. cellRatios is markerSize x markerSize CV_8UC1 in percent, ratioList one
+ * bytesList row as built by Dictionary::getRatioListFromCellRatios()
+ */
+static int _ratioDistance(const Mat &cellRatios, const Mat &ratioList) {
+    const int totalCells = (int)cellRatios.total();
+    Mat candidate = cellRatios.isContinuous() ? cellRatios : cellRatios.clone();
+    int minDist = totalCells + 1;
+    for(int r = 0; r < 4; r++)
+        minDist = min(minDist, _countSeparatingCells(candidate.ptr(), ratioList.ptr() + r * totalCells, totalCells));
+    return minDist;
+}
+
+static int _ratioSelfDistance(const Mat &ratioList, int totalCells) {
+    int minDist = totalCells + 1;
+    for(int r = 1; r < 4; r++)
+        minDist = min(minDist, _countSeparatingCells(ratioList.ptr(), ratioList.ptr() + r * totalCells, totalCells));
+    return minDist;
+}
+
+/**
+ * @brief Find the uniform 2x2 cell block of a binary marker. Returns true only when the marker
+ * has exactly one uniform block and it is white, the layout rule of nested marker pairs.
+ */
+static bool _findSingleWhiteBlock(const Mat &bits, Point &block) {
+    int count = 0;
+    bool white = false;
+    for(int y = 0; y + 1 < bits.rows; y++) {
+        for(int x = 0; x + 1 < bits.cols; x++) {
+            const uchar v = bits.at<uchar>(y, x);
+            if(bits.at<uchar>(y, x + 1) == v && bits.at<uchar>(y + 1, x) == v &&
+               bits.at<uchar>(y + 1, x + 1) == v) {
+                count++;
+                block = Point(x, y);
+                white = v != 0;
+            }
+        }
+    }
+    return count == 1 && white;
+}
+
+/**
+ * @brief Expected cell ratios in percent of an outer marker hosting its rotated inner marker.
+ * The 4 host cells are rasterized at a fixed resolution with integer arithmetic only, so the
+ * ratios are identical on every platform. innerHalfDiagonal is the half diagonal of the inner
+ * marker square in outer cell units. The diagonals align with the outer cell grid because the
+ * inner marker was rotated 45 degrees.
+ */
+static Mat _nestedCellRatios(const Mat &outerBits, const Mat &innerBits, Point block,
+                             float innerHalfDiagonal) {
+    const int K = 120;                                   // rasterization pixels per cell
+    const int R2 = 2 * cvRound(innerHalfDiagonal * K);   // doubled half diagonal in pixels
+    const int innerTotal = innerBits.rows + 2;    // inner marker plus its 1 cell border
+    const bool hostWhite = outerBits.at<uchar>(block.y, block.x) != 0;
+
+    Mat ratios(outerBits.rows, outerBits.cols, CV_8UC1);
+    for(int y = 0; y < outerBits.rows; y++)
+        for(int x = 0; x < outerBits.cols; x++)
+            ratios.at<uchar>(y, x) = outerBits.at<uchar>(y, x) ? 100 : 0;
+
+    int white[2][2] = {{0, 0}, {0, 0}};
+    for(int y = 0; y < 2 * K; y++) {
+        for(int x = 0; x < 2 * K; x++) {
+            // doubled pixel center coordinates relative to the block center
+            const int du = 2 * (x - K) + 1;
+            const int dv = 2 * (y - K) + 1;
+            bool isWhite = hostWhite;
+            if(std::abs(du) + std::abs(dv) <= R2) {
+                // rotate 45 degrees into the inner marker frame; the sqrt(2) factors cancel
+                const int col = min(innerTotal * (du - dv + R2) / (2 * R2), innerTotal - 1);
+                const int row = min(innerTotal * (du + dv + R2) / (2 * R2), innerTotal - 1);
+                const bool border = row == 0 || col == 0 || row == innerTotal - 1 || col == innerTotal - 1;
+                isWhite = !border && innerBits.at<uchar>(row - 1, col - 1) != 0;
+                if(!hostWhite) isWhite = !isWhite;  // inverted inner marker in a black block
+            }
+            if(isWhite) white[y / K][x / K]++;
+        }
+    }
+    for(int cy = 0; cy < 2; cy++)
+        for(int cx = 0; cx < 2; cx++)
+            ratios.at<uchar>(block.y + cy, block.x + cx) = (uchar)((200 * white[cy][cx] + K * K) / (2 * K * K));
+    return ratios;
+}
+
+/**
+ * @brief Locate the host block of an outer entry: the 2x2 group of cells with a non binary
+ * expected ratio. Returns the cell ratios of the entry through `ratios`.
+ */
+static Point _findHostBlock(const Dictionary &dictionary, int outerId, Mat &ratios) {
+    const int markerSize = dictionary.markerSize;
+    ratios = Dictionary::getCellRatiosFromRatioList(
+        dictionary.bytesList.rowRange(outerId, outerId + 1), markerSize);
+
+    Point block(markerSize, markerSize);
+    int bandCells = 0;
+    for(int y = 0; y < markerSize; y++) {
+        for(int x = 0; x < markerSize; x++) {
+            const uchar v = ratios.at<uchar>(y, x);
+            if(v != 0 && v != 100) {
+                bandCells++;
+                block.x = min(block.x, x);
+                block.y = min(block.y, y);
+            }
+        }
+    }
+    bool valid = bandCells == 4 && block.x + 1 < markerSize && block.y + 1 < markerSize;
+    for(int cy = 0; valid && cy < 2; cy++)
+        for(int cx = 0; valid && cx < 2; cx++) {
+            const uchar v = ratios.at<uchar>(block.y + cy, block.x + cx);
+            valid = v != 0 && v != 100;
+        }
+    if(!valid)
+        CV_Error(Error::StsBadArg, "the dictionary entry is not the outer marker of a nested pair");
+    return block;
+}
+
+
+Dictionary generateNestedDictionary(int nPairs, int markerSize, int minDistance,
+                                    float innerHalfDiagonal, int randomSeed) {
+    CV_Assert(nPairs > 0 && markerSize >= 3 && minDistance >= 1);
+    // the inner marker covers a triangle of area innerHalfDiagonal^2 / 2 in each host cell.
+    // upper bound sqrt(0.5): that triangle may cover at most a quarter of the cell, so host
+    // ratios stay within 25 percent of their color.
+    // lower bound 0.2: keep the host ratios non binary after rounding to percent
+    CV_Assert(innerHalfDiagonal >= 0.2f &&
+              innerHalfDiagonal * innerHalfDiagonal <= 0.5f + FLT_EPSILON);
+
+    RNG rng((uint64)randomSeed);
+    const int totalCells = markerSize * markerSize;
+    const int minColorCells = 4;
+    const int maxAttempts = 2000000;
+
+    Mat bytesList(0, totalCells, CV_8UC4);
+    std::vector<Mat> accepted;  // ratio list of every accepted entry, host cells as 50 percent
+    int attempts = 0;
+    while(bytesList.rows < 2 * nPairs) {
+        if(++attempts > maxAttempts)
+            CV_Error(Error::StsError,
+                     "generateNestedDictionary: cannot generate the requested number of pairs, "
+                     "reduce nPairs or minDistance");
+
+        Mat outer = _generateRandomMarker(markerSize, rng);
+        Point block;
+        if(!_findSingleWhiteBlock(outer, block)) continue;
+        int whiteCells = countNonZero(outer);
+        if(min(whiteCells, totalCells - whiteCells) < minColorCells) continue;
+
+        // search on a proxy where the 4 host cells are set to 50 percent. The exact host
+        // ratios are not known before rasterization, but any of their possible values keeps
+        // the cell at least as separating as 50 percent does, so distances measured on the
+        // proxy are a lower bound of the exact ones and the minDistance guarantee holds
+        Mat outerProxy(markerSize, markerSize, CV_8UC1);
+        for(int y = 0; y < markerSize; y++)
+            for(int x = 0; x < markerSize; x++)
+                outerProxy.at<uchar>(y, x) = outer.at<uchar>(y, x) ? 100 : 0;
+        outerProxy(Rect(block.x, block.y, 2, 2)).setTo(50);
+        Mat outerProxyList = Dictionary::getRatioListFromCellRatios(outerProxy);
+        if(_ratioSelfDistance(outerProxyList, totalCells) < minDistance) continue;
+
+        Mat inner = _generateRandomMarker(markerSize, rng);
+        whiteCells = countNonZero(inner);
+        if(min(whiteCells, totalCells - whiteCells) < minColorCells) continue;
+        Mat innerRatios;
+        inner.convertTo(innerRatios, CV_8U, 100.0);
+        Mat innerList = Dictionary::getRatioListFromCellRatios(innerRatios);
+        if(_ratioSelfDistance(innerList, totalCells) < minDistance) continue;
+        if(_ratioDistance(outerProxy, innerList) < minDistance) continue;
+
+        bool farEnough = true;
+        for(size_t i = 0; farEnough && i < accepted.size(); i++)
+            farEnough = _ratioDistance(outerProxy, accepted[i]) >= minDistance &&
+                        _ratioDistance(innerRatios, accepted[i]) >= minDistance;
+        if(!farEnough) continue;
+
+        bytesList.push_back(Dictionary::getRatioListFromCellRatios(
+            _nestedCellRatios(outer, inner, block, innerHalfDiagonal)));
+        bytesList.push_back(innerList);
+        accepted.push_back(outerProxyList);
+        accepted.push_back(innerList);
+    }
+    return Dictionary(bytesList, markerSize, (minDistance - 1) / 2, DICT_ENCODING_CELL_RATIO);
+}
+
+
+void generateImageMarkerNested(const Dictionary &dictionary, int outerId, int sidePixels,
+                               OutputArray _img, int borderBits, float innerHalfDiagonal) {
+    CV_Assert(dictionary.dictEncoding == DICT_ENCODING_CELL_RATIO);
+    CV_Assert(outerId >= 0 && outerId % 2 == 0 && outerId + 1 < dictionary.bytesList.rows);
+    CV_Assert(borderBits > 0);
+    CV_Assert(innerHalfDiagonal >= 0.2f &&
+              innerHalfDiagonal * innerHalfDiagonal <= 0.5f + FLT_EPSILON);
+
+    const int markerSize = dictionary.markerSize;
+    const int totalCells = markerSize + 2 * borderBits;
+    CV_Assert(sidePixels >= totalCells);
+
+    Mat outerRatios;
+    const Point block = _findHostBlock(dictionary, outerId, outerRatios);
+    const bool hostWhite = outerRatios.at<uchar>(block.y, block.x) >= 50;
+    Mat innerRatios = Dictionary::getCellRatiosFromRatioList(
+        dictionary.bytesList.rowRange(outerId + 1, outerId + 2), markerSize);
+
+    const double cellPixels = sidePixels / (double)totalCells;
+    const double centerX = (borderBits + block.x + 1) * cellPixels;
+    const double centerY = (borderBits + block.y + 1) * cellPixels;
+    const double halfDiag = innerHalfDiagonal * cellPixels;
+    const int innerTotal = markerSize + 2;  // inner marker plus its 1 cell border
+
+    _img.create(sidePixels, sidePixels, CV_8UC1);
+    Mat img = _img.getMat();
+    for(int y = 0; y < sidePixels; y++) {
+        for(int x = 0; x < sidePixels; x++) {
+            const int cellX = x * totalCells / sidePixels;
+            const int cellY = y * totalCells / sidePixels;
+            bool isWhite = false;
+            if(cellX >= borderBits && cellX < totalCells - borderBits &&
+               cellY >= borderBits && cellY < totalCells - borderBits)
+                isWhite = outerRatios.at<uchar>(cellY - borderBits, cellX - borderBits) >= 50;
+
+            const double u = x + 0.5 - centerX;
+            const double v = y + 0.5 - centerY;
+            if(std::abs(u) + std::abs(v) <= halfDiag) {
+                // rotate 45 degrees into the inner marker frame; the sqrt(2) factors cancel
+                const int col = min((int)(innerTotal * (u - v + halfDiag) / (2 * halfDiag)), innerTotal - 1);
+                const int row = min((int)(innerTotal * (u + v + halfDiag) / (2 * halfDiag)), innerTotal - 1);
+                const bool border = row == 0 || col == 0 || row == innerTotal - 1 || col == innerTotal - 1;
+                isWhite = !border && innerRatios.at<uchar>(row - 1, col - 1) >= 50;
+                if(!hostWhite) isWhite = !isWhite;
+            }
+            img.at<uchar>(y, x) = isWhite ? 255 : 0;
+        }
+    }
+}
+
+
+void getNestedMarkerObjectPoints(const Dictionary &dictionary, int outerId, float outerSideLength,
+                                 OutputArray outerCorners, OutputArray innerCorners, int borderBits,
+                                 float innerHalfDiagonal) {
+    CV_Assert(dictionary.dictEncoding == DICT_ENCODING_CELL_RATIO);
+    CV_Assert(outerId >= 0 && outerId % 2 == 0 && outerId + 1 < dictionary.bytesList.rows);
+    CV_Assert(outerSideLength > 0.f && borderBits > 0);
+
+    Mat outerRatios;
+    const Point block = _findHostBlock(dictionary, outerId, outerRatios);
+
+    const float side = outerSideLength;
+    Mat(Matx43f(0.f, 0.f, 0.f,
+                side, 0.f, 0.f,
+                side, side, 0.f,
+                0.f, side, 0.f)).copyTo(outerCorners);
+
+    // the inner marker is centered on the corner shared by the 4 host cells; its canonical
+    // corners map to the left, top, right and bottom vertices of the rotated square
+    const float cell = side / (float)(dictionary.markerSize + 2 * borderBits);
+    const float cx = (borderBits + block.x + 1) * cell;
+    const float cy = (borderBits + block.y + 1) * cell;
+    const float r = innerHalfDiagonal * cell;
+    Mat(Matx43f(cx - r, cy, 0.f,
+                cx, cy - r, 0.f,
+                cx + r, cy, 0.f,
+                cx, cy + r, 0.f)).copyTo(innerCorners);
 }
 
 }
