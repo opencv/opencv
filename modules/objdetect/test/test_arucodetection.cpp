@@ -1085,6 +1085,268 @@ TEST(CV_ArucoDetectionNestedMarkers, algorithmic) {
     }
 }
 
+
+/**
+ * @brief Minimum separation distance of a marker to its own non-identity rotations
+ */
+static int getNestedSelfDistance(const aruco::Dictionary &dict, int id) {
+    int minDist = dict.markerSize * dict.markerSize + 1;
+    for(int rot = 1; rot < 4; rot++)
+        minDist = min(minDist, dict.getDistanceToId(dict.getMarkerBits(id, rot), id, false, 0.49f));
+    return minDist;
+}
+
+TEST(CV_ArucoNestedDictionary, generation) {
+    const aruco::Dictionary dict = aruco::generateNestedDictionary(6, 4, 3, 0.7f, 43);
+    ASSERT_EQ(12, dict.bytesList.rows);
+    EXPECT_EQ((int)aruco::DICT_ENCODING_CELL_RATIO, dict.dictEncoding);
+    EXPECT_EQ(1, dict.maxCorrectionBits);
+
+    // deterministic for a given seed
+    const aruco::Dictionary again = aruco::generateNestedDictionary(6, 4, 3, 0.7f, 43);
+    EXPECT_EQ(0., cvtest::norm(dict.bytesList, again.bytesList, NORM_INF));
+
+    for(int pair = 0; pair < 6; pair++) {
+        // outer entries host exactly 4 non-binary cells forming a white 2x2 block
+        Mat outer = aruco::Dictionary::getCellRatiosFromRatioList(
+            dict.bytesList.rowRange(2 * pair, 2 * pair + 1), dict.markerSize);
+        int bandCells = 0, blackCells = 0;
+        Point block(4, 4);
+        for(int y = 0; y < 4; y++) {
+            for(int x = 0; x < 4; x++) {
+                const uchar v = outer.at<uchar>(y, x);
+                if(v == 0) blackCells++;
+                if(v != 0 && v != 100) {
+                    // host cells stay close to their color
+                    EXPECT_GE(v, 75) << "pair " << pair;
+                    EXPECT_LE(v, 99) << "pair " << pair;
+                    bandCells++;
+                    block.x = min(block.x, x);
+                    block.y = min(block.y, y);
+                }
+            }
+        }
+        EXPECT_EQ(4, bandCells);
+        EXPECT_LE(block.x, 2);
+        EXPECT_LE(block.y, 2);
+        EXPECT_GE(blackCells, 4);
+
+        // inner entries are plain binary patterns with at least 4 cells of each color
+        Mat inner = aruco::Dictionary::getCellRatiosFromRatioList(
+            dict.bytesList.rowRange(2 * pair + 1, 2 * pair + 2), dict.markerSize);
+        int whiteCells = 0;
+        blackCells = 0;
+        for(int c = 0; c < 16; c++) {
+            const uchar v = inner.at<uchar>(c);
+            EXPECT_TRUE(v == 0 || v == 100);
+            (v == 0 ? blackCells : whiteCells)++;
+        }
+        EXPECT_GE(blackCells, 4);
+        EXPECT_GE(whiteCells, 4);
+    }
+
+    // minimum separation distance between all entries and against their own rotations
+    for(int i = 0; i < dict.bytesList.rows; i++) {
+        EXPECT_GE(getNestedSelfDistance(dict, i), 3) << "id " << i;
+        for(int j = i + 1; j < dict.bytesList.rows; j++)
+            EXPECT_GE(dict.getDistanceToId(dict.getMarkerBits(i), j, true, 0.49f), 3)
+                << "ids " << i << " " << j;
+    }
+}
+
+TEST(CV_ArucoNestedDictionary, predefined) {
+    const struct {
+        aruco::PredefinedDictionaryType type;
+        int nPairs, minDistance, seed;
+    } dicts[] = {{aruco::DICT_4X4_NESTED_5, 5, 4, 1},
+                 {aruco::DICT_4X4_NESTED_10, 10, 3, 0},
+                 {aruco::DICT_4X4_NESTED_24, 24, 2, 0}};
+
+    for(const auto &cfg : dicts) {
+        SCOPED_TRACE(cv::format("nPairs=%d", cfg.nPairs));
+        const aruco::Dictionary dict = aruco::getPredefinedDictionary(cfg.type);
+        ASSERT_EQ(2 * cfg.nPairs, dict.bytesList.rows);
+        EXPECT_EQ((int)aruco::DICT_ENCODING_CELL_RATIO, dict.dictEncoding);
+        EXPECT_EQ((cfg.minDistance - 1) / 2, dict.maxCorrectionBits);
+
+        for(int i = 0; i < dict.bytesList.rows; i++) {
+            EXPECT_GE(getNestedSelfDistance(dict, i), cfg.minDistance) << "id " << i;
+            for(int j = i + 1; j < dict.bytesList.rows; j++)
+                EXPECT_GE(dict.getDistanceToId(dict.getMarkerBits(i), j, true, 0.49f),
+                          cfg.minDistance) << "ids " << i << " " << j;
+        }
+
+        // the predefined dicts must stay in sync with the generator
+        const aruco::Dictionary regenerated =
+            aruco::generateNestedDictionary(cfg.nPairs, 4, cfg.minDistance, 0.7f, cfg.seed);
+        EXPECT_EQ(0., cvtest::norm(dict.bytesList, regenerated.bytesList, NORM_INF));
+    }
+}
+
+TEST(CV_ArucoNestedDictionary, detectPairs) {
+    const aruco::Dictionary dict = aruco::getPredefinedDictionary(aruco::DICT_4X4_NESTED_10);
+    const int sidePixels = 480, margin = 80;
+
+    aruco::DetectorParameters params;
+    params.detectNestedMarkers = true;
+    aruco::ArucoDetector detector(dict, params);
+    // check that the dictionaries also work with a tighter threshold, which rejects more false positives
+    params.validBitIdThreshold = 0.4f;
+    aruco::ArucoDetector tightDetector(dict, params);
+
+    for(int pair = 0; pair < 10; pair++) {
+        SCOPED_TRACE(cv::format("pair=%d", pair));
+        Mat marker;
+        aruco::generateImageMarkerNested(dict, 2 * pair, sidePixels, marker);
+        Mat img(sidePixels + 2 * margin, sidePixels + 2 * margin, CV_8UC1, Scalar(255));
+        placeMarker(img, marker, Point2f((float)margin, (float)margin));
+
+        // at full resolution both markers of the pair are detected
+        vector<int> ids;
+        vector<vector<Point2f>> corners, rejected;
+        detector.detectMarkers(img, corners, ids, rejected);
+        std::sort(ids.begin(), ids.end());
+        ASSERT_EQ(2u, ids.size());
+        EXPECT_EQ(2 * pair, ids[0]);
+        EXPECT_EQ(2 * pair + 1, ids[1]);
+
+        tightDetector.detectMarkers(img, corners, ids, rejected);
+        std::sort(ids.begin(), ids.end());
+        ASSERT_EQ(2u, ids.size());
+        EXPECT_EQ(2 * pair, ids[0]);
+        EXPECT_EQ(2 * pair + 1, ids[1]);
+
+        // far away, on a constant size frame, the outer marker is found
+        Mat small, far(480, 640, CV_8UC1, Scalar(255));
+        resize(marker, small, Size(120, 120), 0, 0, INTER_AREA);
+        placeMarker(far, small, Point2f(260.f, 180.f));
+        detector.detectMarkers(far, corners, ids, rejected);
+        EXPECT_TRUE(std::find(ids.begin(), ids.end(), 2 * pair) != ids.end());
+        for(int id : ids)
+            EXPECT_TRUE(id == 2 * pair || id == 2 * pair + 1) << "foreign id " << id;
+
+        // close up, only the inner marker is in view
+        Mat outerPts, innerPts;
+        aruco::getNestedMarkerObjectPoints(dict, 2 * pair, (float)sidePixels, outerPts, innerPts);
+        Point center(margin + cvRound((innerPts.at<float>(0, 0) + innerPts.at<float>(2, 0)) / 2.f),
+                     margin + cvRound((innerPts.at<float>(0, 1) + innerPts.at<float>(2, 1)) / 2.f));
+        const int half = cvRound(1.2 * sidePixels / 6.);
+        Mat close = img(Rect(center.x - half, center.y - half, 2 * half, 2 * half));
+        detector.detectMarkers(close, corners, ids, rejected);
+        ASSERT_EQ(1u, ids.size());
+        EXPECT_EQ(2 * pair + 1, ids[0]);
+    }
+}
+
+TEST(CV_ArucoNestedDictionary, detectDistorted) {
+    const aruco::Dictionary dict = aruco::getPredefinedDictionary(aruco::DICT_4X4_NESTED_10);
+    const int sidePixels = 480;
+    Mat cameraMatrix = Mat::eye(3, 3, CV_64FC1);
+    cameraMatrix.at<double>(0, 0) = cameraMatrix.at<double>(1, 1) = 650;
+    cameraMatrix.at<double>(0, 2) = 320;
+    cameraMatrix.at<double>(1, 2) = 240;
+
+    Mat marker;
+    aruco::generateImageMarkerNested(dict, 0, sidePixels, marker);
+    vector<Point2f> src = {Point2f(0, 0), Point2f((float)sidePixels, 0),
+                           Point2f((float)sidePixels, (float)sidePixels),
+                           Point2f(0, (float)sidePixels)};
+    const float markerLength = 0.05f;
+    vector<Point3f> objPts = {Point3f(-markerLength / 2, markerLength / 2, 0),
+                              Point3f(markerLength / 2, markerLength / 2, 0),
+                              Point3f(markerLength / 2, -markerLength / 2, 0),
+                              Point3f(-markerLength / 2, -markerLength / 2, 0)};
+
+    aruco::DetectorParameters params;
+    params.detectNestedMarkers = true;
+    aruco::ArucoDetector detector(dict, params);
+
+    // getSyntheticRT convention: yaw 90 degrees is parallel to front, pitch spins in plane
+    for(double yaw = 70; yaw <= 110; yaw += 20) {
+        for(double pitch = 0; pitch <= 120; pitch += 60) {
+            SCOPED_TRACE(cv::format("yaw=%.0f pitch=%.0f", yaw, pitch));
+            Mat rvec, tvec;
+            getSyntheticRT(yaw * CV_PI / 180., pitch * CV_PI / 180., 0.15, rvec, tvec);
+            vector<Point2f> dst;
+            projectPoints(objPts, rvec, tvec, cameraMatrix, noArray(), dst);
+
+            Mat img(480, 640, CV_8UC1, Scalar(255));
+            warpPerspective(marker, img, getPerspectiveTransform(src, dst), img.size(),
+                            INTER_LINEAR, BORDER_TRANSPARENT);
+            GaussianBlur(img, img, Size(3, 3), 0);
+
+            vector<int> ids;
+            vector<vector<Point2f>> corners, rejected;
+            detector.detectMarkers(img, corners, ids, rejected);
+            std::sort(ids.begin(), ids.end());
+            ASSERT_EQ(2u, ids.size());
+            EXPECT_EQ(0, ids[0]);
+            EXPECT_EQ(1, ids[1]);
+        }
+    }
+}
+
+TEST(CV_ArucoNestedDictionary, objectPoints) {
+    const aruco::Dictionary dict = aruco::getPredefinedDictionary(aruco::DICT_4X4_NESTED_10);
+    const int sidePixels = 600, margin = 100;
+    Mat marker;
+    aruco::generateImageMarkerNested(dict, 0, sidePixels, marker);
+    Mat img(sidePixels + 2 * margin, sidePixels + 2 * margin, CV_8UC1, Scalar(255));
+    placeMarker(img, marker, Point2f((float)margin, (float)margin));
+
+    aruco::DetectorParameters params;
+    params.detectNestedMarkers = true;
+    aruco::ArucoDetector detector(dict, params);
+    vector<int> ids;
+    vector<vector<Point2f>> corners, rejected;
+    detector.detectMarkers(img, corners, ids, rejected);
+    ASSERT_EQ(2u, ids.size());
+
+    // object points expressed in pixels must match the detected corners of both markers
+    Mat outerPts, innerPts;
+    aruco::getNestedMarkerObjectPoints(dict, 0, (float)sidePixels, outerPts, innerPts);
+    for(size_t m = 0; m < ids.size(); m++) {
+        const Mat &pts = ids[m] == 0 ? outerPts : innerPts;
+        for(int c = 0; c < 4; c++) {
+            EXPECT_NEAR(corners[m][c].x, margin + pts.at<float>(c, 0), 3.) << "id " << ids[m];
+            EXPECT_NEAR(corners[m][c].y, margin + pts.at<float>(c, 1), 3.) << "id " << ids[m];
+        }
+    }
+}
+
+TEST(CV_ArucoNestedDictionary, serialization) {
+    aruco::Dictionary dict = aruco::getPredefinedDictionary(aruco::DICT_4X4_NESTED_10);
+    FileStorage fs(".yml", FileStorage::WRITE + FileStorage::MEMORY);
+    dict.writeDictionary(fs);
+    const String serialized = fs.releaseAndGetString();
+
+    FileStorage fsIn(serialized, FileStorage::READ + FileStorage::MEMORY);
+    aruco::Dictionary readDict;
+    ASSERT_TRUE(readDict.readDictionary(fsIn.root()));
+    EXPECT_EQ(dict.markerSize, readDict.markerSize);
+    EXPECT_EQ(dict.dictEncoding, readDict.dictEncoding);
+    EXPECT_EQ(dict.maxCorrectionBits, readDict.maxCorrectionBits);
+    EXPECT_EQ(0., cvtest::norm(dict.bytesList, readDict.bytesList, NORM_INF));
+}
+
+TEST(CV_ArucoNestedDictionary, cellRatiosFromImage) {
+    // on a binary marker image the ratios are exactly the marker bits
+    const aruco::Dictionary binaryDict = aruco::getPredefinedDictionary(aruco::DICT_4X4_50);
+    Mat binaryImg, expected;
+    aruco::generateImageMarker(binaryDict, 0, 300, binaryImg);
+    binaryDict.getMarkerBits(0).convertTo(expected, CV_8U, 100.0);
+    EXPECT_EQ(0., cvtest::norm(aruco::Dictionary::getCellRatiosFromImage(binaryImg, 4), expected,
+                               NORM_INF));
+
+    // on a nested image the ratios match the stored dictionary entry
+    const aruco::Dictionary dict = aruco::getPredefinedDictionary(aruco::DICT_4X4_NESTED_10);
+    Mat marker;
+    aruco::generateImageMarkerNested(dict, 0, 720, marker);
+    Mat measured = aruco::Dictionary::getCellRatiosFromImage(marker, 4);
+    Mat stored = aruco::Dictionary::getCellRatiosFromRatioList(dict.bytesList.rowRange(0, 1), 4);
+    EXPECT_LE(cvtest::norm(measured, stored, NORM_INF), 2.);
+}
+
 /**
  * @brief Check max and min size in marker detection parameters
  */
