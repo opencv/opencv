@@ -103,7 +103,7 @@ struct RowSum :
         else if( cn == 1 )
         {
         #if CV_NEON
-            if constexpr (std::is_same<T, float>::value && std::is_same<ST, double>::value)
+            if (std::is_same<T, float>::value && std::is_same<ST, double>::value)
             {
                 ST s = 0;
                 i = 0;
