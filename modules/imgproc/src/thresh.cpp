@@ -1610,6 +1610,14 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
 {
     CV_INSTRUMENT_REGION();
 
+    // Inline (not CV_GPU_RUN) because threshold returns a value; simple types only.
+    if (_src.isUMat() && (type & ~cv::THRESH_MASK) == 0)
+    {
+        cv::hal::Backend* __gpu_b = _src.getUMat().backend();
+        if (__gpu_b && __gpu_b->threshold(_src, _dst, thresh, maxval, type))
+            return thresh;
+    }
+
     CV_OCL_RUN_(_src.dims() <= 2 && _dst.isUMat(),
                 ocl_threshold(_src, _dst, cv::noArray(), thresh, maxval, type), thresh)
 

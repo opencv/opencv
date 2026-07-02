@@ -535,6 +535,10 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 
     int type = _src.type();
     Size size = _src.size();
+
+    // Must precede _dst.create(): the GPU path allocates its own output.
+    CV_GPU_RUN(_src, gaussianBlur, _src, _dst, ksize, sigma1, sigma2 > 0 ? sigma2 : sigma1)
+
     _dst.create( size, type );
 
     if( (borderType & ~BORDER_ISOLATED) != BORDER_CONSTANT &&

@@ -10,6 +10,8 @@
 
 #include "opencv2/core/utility.hpp"
 #include "cvconfig.h"
+#include "opencv2/core/hal/backend_registry.hpp"
+#include "opencv2/core/utils/logger.hpp"
 
 namespace cv { namespace ocl {
 #ifdef HAVE_OPENCL
@@ -20,6 +22,61 @@ static inline bool isOpenCLActivated() { return false; }
 #endif
 }} // namespace
 
+
+// CV_GPU_RUN(src, method, args...): dispatch to src's GPU backend, else fall through.
+// e.g. CV_GPU_RUN(_src, resize, _src, _dst, dsize, sx, sy, interp)
+
+#ifdef CV_GPU_RUN_VERBOSE
+
+#define CV_GPU_RUN_(src, method, ...)                                   \
+    {                                                                   \
+        cv::hal::Backend* __gpu_b = nullptr;                            \
+        if ((src).isUMat())                                             \
+            __gpu_b = (src).getUMat().backend();                        \
+        if (__gpu_b)                                                    \
+        {                                                               \
+            if (__gpu_b->method(__VA_ARGS__))                           \
+            {                                                           \
+                return;                                                 \
+            }                                                           \
+        }                                                               \
+    }
+
+#elif defined CV_GPU_RUN_ASSERT
+
+#define CV_GPU_RUN_(src, method, ...)                                   \
+    {                                                                   \
+        cv::hal::Backend* __gpu_b = nullptr;                            \
+        if ((src).isUMat())                                             \
+            __gpu_b = (src).getUMat().backend();                        \
+        if (__gpu_b)                                                    \
+        {                                                               \
+            if (__gpu_b->method(__VA_ARGS__))                           \
+                return;                                                 \
+            CV_Error(cv::Error::StsAssert,                              \
+                "CV_GPU_RUN: GPU-backed source but op not handled");    \
+        }                                                               \
+    }
+
+#else
+
+// Normal mode — silent, dispatch only when source is GPU-backed
+#define CV_GPU_RUN_(src, method, ...)                                   \
+    {                                                                   \
+        cv::hal::Backend* __gpu_b = nullptr;                            \
+        if ((src).isUMat())                                             \
+            __gpu_b = (src).getUMat().backend();                        \
+        if (__gpu_b && __gpu_b->method(__VA_ARGS__))                    \
+        {                                                               \
+            return;                                                     \
+        }                                                               \
+    }
+
+#endif
+
+// Public macro — use in cv:: function bodies.
+#define CV_GPU_RUN(src, method, ...)                                    \
+    CV_GPU_RUN_(src, method, __VA_ARGS__)
 
 //#define CV_OPENCL_RUN_ASSERT
 

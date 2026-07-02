@@ -235,6 +235,14 @@ The default value is `false`.
  */
 CV_EXPORTS void glob(String pattern, std::vector<String>& result, bool recursive = false);
 
+/** @brief Upload a host array to a GPU-HAL-resident UMat (Python bridge for the GPU backend).
+Returns a UMat whose memory lives on the registered GPU backend, so subsequent cv:: calls
+(resize, GaussianBlur, ...) dispatch to that backend. Requires a loaded backend plugin. */
+CV_EXPORTS_W UMat gpuUpload(InputArray src);
+
+/** @brief Download a GPU-HAL-resident UMat back to a host array. */
+CV_EXPORTS_W void gpuDownload(InputArray src, OutputArray dst);
+
 /** @brief OpenCV will try to set the number of threads for subsequent parallel regions.
 
 If threads == 1, OpenCV will disable threading optimizations and run all it's functions
