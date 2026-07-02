@@ -664,17 +664,19 @@ static void topK(const Mat& probs, std::vector<std::pair<int, float> >& result, 
     }
 }
 
-typedef testing::TestWithParam<Target> Reproducibility_ResNet50_ONNX;
+typedef testing::TestWithParam<tuple<Backend, Target> > Reproducibility_ResNet50_ONNX;
 TEST_P(Reproducibility_ResNet50_ONNX, Accuracy)
 {
-    Target targetId = GetParam();
+    Backend backendId = get<0>(GetParam());
+    Target targetId = get<1>(GetParam());
     applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
-    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
+    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16
+                || backendId == DNN_BACKEND_CUDA);
 
     std::string modelname = _tf("onnx/models/resnet50v1.onnx", false);
     Net net = readNetFromONNX(modelname);
 
-    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableBackend(backendId);
     net.setPreferableTarget(targetId);
 
     if (targetId == DNN_TARGET_CPU_FP16)
@@ -714,7 +716,7 @@ TEST_P(Reproducibility_ResNet50_ONNX, Accuracy)
     }
 }
 INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_ResNet50_ONNX,
-                        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
+                        dnnBackendsAndTargets(false, false, true, false, true, false, false, false));
 
 typedef testing::TestWithParam<Target> Reproducibility_ResNet50_QDQ_ONNX;
 TEST_P(Reproducibility_ResNet50_QDQ_ONNX, Accuracy)

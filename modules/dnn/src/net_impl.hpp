@@ -143,6 +143,9 @@ struct Net::Impl : public detail::NetImplBase
     bool enableFP16, haveFP16;
     bool prepared; // need to rerun graph transformations/optimizations
     bool finalizeLayers; // need to initialize each layer
+    bool finalized = false; // executors have been selected for the current backend/target
+    std::vector<Ptr<BackendWrapper> > argWrappers;
+    std::vector<const void*> argWrapperData;
     TracingMode tracingMode;
     ProfilingMode profilingMode;
     std::vector<int64_t> dimvalues;
@@ -420,12 +423,18 @@ struct Net::Impl : public detail::NetImplBase
     int findDim(const std::string& name, bool insert=false);
 
     void prepareForInference();
+    void finalize();
+    // Selects executors for a single graph (recursing into subgraphs).
+    void finalizeGraph(const Ptr<Graph>& graph, bool useCUDA);
+#ifdef HAVE_CUDA
+    Ptr<BackendWrapper> getCudaArgWrapper(Arg arg, Mat& hostMat);
+#endif
 
     // pre-allocates memory for output tensors.
     // if useBufferPool==true, the method uses 'buffers'
     // for outputs (according to bufidxs)
     // instead of allocating fresh outputs
-    void allocateLayerOutputs(const Ptr<Layer>& layer,
+    void allocateLayerOutputs(const Ptr<LayerInfo>& layer,
                               const std::vector<int>& inpTypes,
                               const std::vector<MatShape>& inpShapes,
                               std::vector<int>& outTypes,
@@ -523,9 +532,9 @@ struct Net::Impl : public detail::NetImplBase
 
 };  // Net::Impl
 
-inline Net::Impl* getNetImpl(const Layer* layer)
+inline Net::Impl* getNetImpl(const LayerInfo* op)
 {
-    return reinterpret_cast<Net::Impl*>(layer->netimpl);
+    return reinterpret_cast<Net::Impl*>(op->netimpl);
 }
 
 Net readNetFromONNX2(const String&);

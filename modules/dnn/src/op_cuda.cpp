@@ -8,9 +8,69 @@
 #include "op_cuda.hpp"
 #include "cuda4dnn/init.hpp"
 #include "net_impl.hpp"
+#include <opencv2/dnn/layer.details.hpp>
 
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
+
+class CUDALegacyExec : public Layer
+{
+public:
+    CUDALegacyExec(const Ptr<Layer>& impl_, void* ctx_) : impl(impl_), ctx(ctx_) {}
+
+    static Ptr<Layer> create(const Ptr<LayerInfo>& data, void* backendCtx)
+    {
+        Ptr<Layer> impl = data.dynamicCast<Layer>();
+        if (!impl || !backendCtx || !impl->supportBackend(DNN_BACKEND_CUDA))
+            return Ptr<Layer>();  // unsupported -> CPU fallback
+        Ptr<CUDALegacyExec> e(new CUDALegacyExec(impl, backendCtx));
+        e->data = data;
+        e->name = impl->name;
+        e->type = impl->type;
+        e->inputs = impl->inputs;
+        e->outputs = impl->outputs;
+        return e;
+    }
+
+    void finalize(InputArrayOfArrays inputs, OutputArrayOfArrays outputs) CV_OVERRIDE
+    {
+        impl->finalize(inputs, outputs);
+    }
+
+    void forwardCUDA(const std::vector<Ptr<BackendWrapper> >& inputs,
+                     const std::vector<Ptr<BackendWrapper> >& outputs,
+                     void* workspace) CV_OVERRIDE
+    {
+        cuda4dnn::csl::Workspace& ws = *reinterpret_cast<cuda4dnn::csl::Workspace*>(workspace);
+        if (!node) {
+            impl->preferableTarget = preferableTarget;  // initCUDA may pick FP16/FP32 by target
+            cuda4dnn::csl::CSLContext context = *reinterpret_cast<cuda4dnn::csl::CSLContext*>(ctx);
+            node = impl->initCUDA(&context, inputs, outputs);
+            CV_Assert(node);
+            cudaNode = node.dynamicCast<CUDABackendNode>();
+            CV_Assert(cudaNode);
+            ws.require(cudaNode->get_workspace_memory_in_bytes());
+        }
+        cudaNode->forward(inputs, outputs, ws);
+    }
+
+    Ptr<Layer> impl;
+    void* ctx;
+    Ptr<BackendNode> node;
+    Ptr<CUDABackendNode> cudaNode;
+};
+
+void registerCudaCommonExecs()
+{
+    CV_DNN_REGISTER_EXEC_CLASS(ReLU,        DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(ReLU6,       DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(NaryEltwise, DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Flatten,     DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(BatchNorm2,  DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(MaxPool,     DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Gemm,        DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Pooling,     DNN_BACKEND_CUDA, CUDALegacyExec);  // GlobalAveragePool/GlobalMaxPool
+}
 
 
 void Net::Impl::initCUDABackend(const std::vector<LayerPin>& blobsToKeep_)

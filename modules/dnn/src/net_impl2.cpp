@@ -317,30 +317,30 @@ public:
         return g;
     }*/
 
-    virtual const std::vector<Arg>& append(Ptr<Layer>& layer,
+    virtual const std::vector<Arg>& append(Ptr<LayerInfo>& op,
                 const std::vector<std::string>& outnames) override
     {
-        CV_Assert(layer);
+        CV_Assert(op);
         int i, noutputs = (int)outnames.size();
-        //CV_Assert(layer->minNumOutputs() <= noutputs && noutputs <= layer->maxNumOutputs());
+        //CV_Assert(op->minNumOutputs() <= noutputs && noutputs <= op->maxNumOutputs());
 
-        layer->outputs.resize(noutputs);
+        op->outputs.resize(noutputs);
         for (i = 0; i < noutputs; i++) {
             Arg outarg = netimpl_->getArg(outnames[i]);
             ArgKind kind = netimpl_->argKind(outarg);
             CV_Assert(kind == DNN_ARG_TEMP || kind == DNN_ARG_OUTPUT);
-            layer->outputs[i] = outarg;
+            op->outputs[i] = outarg;
         }
 
-        prog_.push_back(layer);
-        return layer->outputs;
+        prog_.push_back(op);
+        return op->outputs;
     }
 
-    virtual Arg append(Ptr<Layer>& layer,
+    virtual Arg append(Ptr<LayerInfo>& op,
                const std::string& outname) override
     {
         std::vector<std::string> outnames = {outname};
-        const std::vector<Arg>& outputs = append(layer, outnames);
+        const std::vector<Arg>& outputs = append(op, outnames);
         CV_Assert(outputs.size() == 1);
         return outputs[0];
     }
@@ -379,8 +379,8 @@ public:
         for (size_t i = 0; i < nlayers; i++) {
             prindent(strm, argindent);
             strm << "// op #" << i << "\n";
-            const Ptr<Layer>& layer = prog_[i];
-            layer->dump(strm, argindent, i+1 < nlayers);
+            const Ptr<LayerInfo>& op = prog_[i];
+            op->dump(strm, argindent, i+1 < nlayers);
         }
         prindent(strm, subindent);
         strm << "]\n";
@@ -401,15 +401,30 @@ public:
         netimpl_->checkArgs(outputs);
         outputs_ = outputs;
     }
-    virtual const std::vector<Ptr<Layer> >& prog() const override { return prog_; }
-    virtual void setProg(const std::vector<Ptr<Layer> >& newprog) override { prog_ = newprog; }
+    virtual const std::vector<Ptr<LayerInfo> >& prog() const override { return prog_; }
+    virtual int opBackend(int opidx) const override
+    {
+        return (opidx >= 0 && opidx < (int)execBackend_.size()) ? execBackend_[opidx]
+                                                                : DNN_BACKEND_OPENCV;
+    }
+    virtual void setProg(const std::vector<Ptr<LayerInfo> >& newprog) override
+    {
+        prog_ = newprog;
+        exec_.clear();
+        execBackend_.clear();
+        inH2D_.clear();
+        outD2H_.clear();
+    }
 
-protected:
     Net::Impl* netimpl_;
     std::string name_;
     std::vector<Arg> inputs_;
     std::vector<Arg> outputs_;
-    std::vector<Ptr<Layer> > prog_;
+    std::vector<Ptr<LayerInfo> > prog_;
+    std::vector<Ptr<Layer> > exec_;
+    std::vector<int> execBackend_;
+    std::vector<std::vector<uchar> > inH2D_;
+    std::vector<std::vector<uchar> > outD2H_;
 };
 
 Ptr<Graph> Graph::create(void* netimpl, const std::string& name,
@@ -567,16 +582,106 @@ void Net::Impl::prepareForInference()
         fuseTransposeMatMul();
         fuseScaleSoftmax();
         fuseBasic();
-        useBlockLayout();
-        assignBuffers();
         totalLayers = updateGraphOfs(mainGraph, 0, true);
         prepared = true;
         finalizeLayers = true;
     }
 }
 
+void Net::Impl::finalizeGraph(const Ptr<Graph>& graph, bool useCUDA)
+{
+    GraphImpl* g = static_cast<GraphImpl*>(graph.get());
+    const std::vector<Ptr<LayerInfo> >& prog = g->prog_;
+    size_t i, nops = prog.size();
+    g->exec_.assign(nops, Ptr<Layer>());
+    g->execBackend_.assign(nops, DNN_BACKEND_OPENCV);
+
+    for (i = 0; i < nops; i++) {
+        const Ptr<LayerInfo>& op = prog[i];
+        if (!op)
+            continue;
+
+        // recurse into subgraphs (If/Loop bodies) first
+        const std::vector<Ptr<Graph> >* subs = op->subgraphs();
+        if (subs) {
+            for (const Ptr<Graph>& sub : *subs)
+                finalizeGraph(sub, useCUDA);
+        }
+
+        Ptr<Layer> exec;
+        int backend = DNN_BACKEND_OPENCV;
+#ifdef HAVE_CUDA
+        // Try the optimized backend first; its create() returns null if the op is unsupported.
+        if (useCUDA && cudaInfo && !subs) {
+            exec = LayerFactory::createExec(op->type, DNN_BACKEND_CUDA, op, &cudaInfo->context);
+            if (exec) {
+                exec->preferableTarget = preferableTarget;
+                backend = DNN_BACKEND_CUDA;
+            }
+        }
+#endif
+        if (!exec) {
+            exec = LayerFactory::createExec(op->type, DNN_BACKEND_OPENCV, op, nullptr);
+            if (!exec)
+                exec = op.dynamicCast<Layer>();
+            backend = DNN_BACKEND_OPENCV;
+        }
+        CV_Assert(exec);
+        g->exec_[i] = exec;
+        g->execBackend_[i] = backend;
+        CV_LOG_INFO(NULL, cv::format("DNN/NewEngine: finalize op #%zu '%s' (%s) -> %s",
+                    i, op->name.c_str(), op->type.c_str(),
+                    backend == DNN_BACKEND_CUDA ? "CUDA" : "CPU"));
+    }
+}
+
+void Net::Impl::finalize()
+{
+#ifdef HAVE_ONNXRUNTIME
+    if (ort_session)
+        return;  // ONNX Runtime manages its own execution session
+#endif
+    if (!mainGraph)
+        return;
+    if (!prepared)
+        prepareForInference();
+    if (finalized)
+        return;
+
+    bool useCUDA = false;
+#ifdef HAVE_CUDA
+    argWrappers.clear();
+    argWrapperData.clear();
+    if (preferableBackend == DNN_BACKEND_CUDA && haveCUDA()) {
+        useCUDA = true;
+        if (!cudaInfo) {
+            cuda4dnn::csl::CSLContext context;
+            context.stream = cuda4dnn::csl::Stream(true);
+            context.cublas_handle = cuda4dnn::csl::cublas::Handle(context.stream);
+            context.cudnn_handle = cuda4dnn::csl::cudnn::Handle(context.stream);
+            auto d2h_stream = cuda4dnn::csl::Stream(true);
+            cudaInfo = std::unique_ptr<CudaInfo_t>(new CudaInfo_t(std::move(context), std::move(d2h_stream)));
+        }
+    }
+#endif
+
+    CV_LOG_INFO(NULL, cv::format("DNN/NewEngine: finalize() backend=%d target=%d useCUDA=%d over %zu graph(s)",
+                preferableBackend, preferableTarget, (int)useCUDA, allgraphs.size()));
+
+    for (const Ptr<Graph>& g : allgraphs)
+        finalizeGraph(g, useCUDA);
+    useBlockLayout();
+    assignBuffers();
+    totalLayers = updateGraphOfs(mainGraph, 0, true);
+
+    for (const Ptr<Graph>& g : allgraphs)
+        finalizeGraph(g, useCUDA);
+
+    finalized = true;
+}
+
 void Net::Impl::allocateLayerOutputs(
-                          const Ptr<Layer>& layer,
+                          const Ptr<LayerInfo>& layer,
                           const std::vector<int>& inpTypes,
                           const std::vector<MatShape>& inpShapes,
                           std::vector<int>& outTypes,
@@ -680,6 +785,7 @@ void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays 
     if (!mainGraph) {
         CV_Error(Error::StsNullPtr, "the model was not loaded");
     }
+    finalize();  // select per-op executors for the chosen backend/target (idempotent)
     // ************ uncomment one of the lines below for debugging **********
     //tracingMode = DNN_TRACE_OP;
     //tracingMode = DNN_TRACE_ALL;
@@ -1127,6 +1233,40 @@ void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
     }
 }
 
+#ifdef HAVE_CUDA
+Ptr<BackendWrapper> Net::Impl::getCudaArgWrapper(Arg arg, Mat& hostMat)
+{
+    int idx = arg.idx;
+    if ((int)argWrappers.size() != (int)args.size()) {
+        argWrappers.assign(args.size(), Ptr<BackendWrapper>());
+        argWrapperData.assign(args.size(), nullptr);
+    }
+    Ptr<CUDABackendWrapper> cw = argWrappers[idx].dynamicCast<CUDABackendWrapper>();
+    if (!cw || argWrapperData[idx] != (const void*)hostMat.data) {
+        Ptr<BackendWrapper> w = wrapMat(DNN_BACKEND_CUDA, preferableTarget, hostMat);
+        cw = w.dynamicCast<CUDABackendWrapper>();
+        cw->setStream(cudaInfo->context.stream, cudaInfo->d2h_stream);
+        argWrappers[idx] = w;
+        argWrapperData[idx] = (const void*)hostMat.data;
+    }
+    return argWrappers[idx];
+}
+
+static void forwardOpCUDA(Net::Impl* netimpl, GraphImpl* gimpl, size_t opidx,
+                          const std::vector<Arg>& inputs, const std::vector<Arg>& outputs,
+                          std::vector<Mat>& inpMats, std::vector<Mat>& outMats)
+{
+    Ptr<Layer> exec = gimpl->exec_[opidx];
+    CV_Assert(exec && netimpl->cudaInfo);
+    std::vector<Ptr<BackendWrapper> > inpWrappers(inputs.size()), outWrappers(outputs.size());
+    for (size_t i = 0; i < inputs.size(); i++)
+        inpWrappers[i] = netimpl->getCudaArgWrapper(inputs[i], inpMats[i]);
+    for (size_t i = 0; i < outputs.size(); i++)
+        outWrappers[i] = netimpl->getCudaArgWrapper(outputs[i], outMats[i]);
+    exec->forwardCUDA(inpWrappers, outWrappers, &netimpl->cudaInfo->workspace);
+}
+#endif
+
 void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                              OutputArrayOfArrays outputs_, bool isMainGraph)
 {
@@ -1135,7 +1275,8 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         CV_Error_(Error::StsObjectNotFound, ("graph '%s' does not belong to the model", graph->name().c_str()));
     }
     std::ostream& strm_ = dump_strm ? *dump_strm : std::cout;
-    const std::vector<Ptr<Layer> >& prog = graph->prog();
+    GraphImpl* gimpl = static_cast<GraphImpl*>(graph.get());
+    const std::vector<Ptr<LayerInfo> >& prog = graph->prog();
     size_t i, nops = prog.size();
     const std::vector<Arg>& gr_inputs = graph->inputs();
     const std::vector<Arg>& gr_outputs = graph->outputs();
@@ -1157,15 +1298,29 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         for (i = 0; i < n_gr_inputs; i++) {
             Mat m = inputs_.getMat((int)i);
             setGraphInput(graph, i, m);
+#ifdef HAVE_CUDA
+            Arg ginp = gr_inputs[i];
+            if (ginp.idx < (int)argWrappers.size()) {
+                Ptr<CUDABackendWrapper> cw = argWrappers[ginp.idx].dynamicCast<CUDABackendWrapper>();
+                if (cw) cw->setHostDirty();
+            }
+#endif
         }
     }
 
     for (size_t opidx = 0; opidx < nops; opidx++) {
-        const Ptr<Layer>& layer = prog.at(opidx);
-        if (!layer) // in theory we shouldn't have any 'nops' at this stage, but just in case we skip them.
+        const Ptr<LayerInfo>& op = prog.at(opidx);
+        if (!op) // in theory we shouldn't have any 'nops' at this stage, but just in case we skip them.
             continue;
-        const std::vector<Arg>& inputs = layer->inputs;
-        const std::vector<Arg>& outputs = layer->outputs;
+        Ptr<Layer> layer = (opidx < gimpl->exec_.size()) ? gimpl->exec_[opidx] : Ptr<Layer>();
+        if (!layer)
+            layer = op.dynamicCast<Layer>();
+        CV_Assert(layer);
+        int opBackend = (opidx < gimpl->execBackend_.size()) ? gimpl->execBackend_[opidx]
+                                                             : DNN_BACKEND_OPENCV;
+        CV_UNUSED(opBackend);  // only consumed by the HAVE_CUDA dispatch below
+        const std::vector<Arg>& inputs = op->inputs;
+        const std::vector<Arg>& outputs = op->outputs;
         size_t ninputs = inputs.size(), noutputs = outputs.size();
 
         inpMats.resize(ninputs);
@@ -1184,15 +1339,15 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
 
         if (tracingMode != DNN_TRACE_NONE) {
             strm_ << "-----------\n";
-            strm_ << "'" << graph->name() << "' [" << opidx << "/" << nops << "]. " << layer->type << " node: " << layer->name << "\n";
+            strm_ << "'" << graph->name() << "' [" << opidx << "/" << nops << "]. " << op->type << " node: " << op->name << "\n";
             for (i = 0; i < ninputs; i++) {
                 Arg inp = inputs[i];
                 traceArg(strm_, "Input", i, inp, false);
             }
         }
-        bool dynamicOutShapes = layer->dynamicOutputShapes();
+        bool dynamicOutShapes = op->dynamicOutputShapes();
         if (!dynamicOutShapes) {
-            allocateLayerOutputs(layer, inpTypes, inpShapes, outTypes, outShapes, outOrigData, outMats,
+            allocateLayerOutputs(op, inpTypes, inpShapes, outTypes, outShapes, outOrigData, outMats,
                                  tempTypes, tempShapes, tempMats, scratchBufs, true);
         } else {
             outMats.resize(noutputs);
@@ -1205,11 +1360,38 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
 
         timestamp = getTickCount();
 
-        std::vector<Ptr<Graph> >* subgraphs = layer->subgraphs();
+        std::vector<Ptr<Graph> >* subgraphs = op->subgraphs();
         if (!subgraphs) {
-            if (finalizeLayers)
-                layer->finalize(inpMats, outMats);
-            layer->forward(inpMats, outMats, tempMats);
+#ifdef HAVE_CUDA
+            if (opBackend == DNN_BACKEND_CUDA) {
+                if (finalizeLayers)
+                    layer->finalize(inpMats, outMats);
+                forwardOpCUDA(this, gimpl, opidx, inputs, outputs, inpMats, outMats);
+            } else
+#endif
+            {
+#ifdef HAVE_CUDA
+                // CPU op: bring any device-resident inputs back to host before reading them.
+                for (size_t k = 0; k < ninputs; k++) {
+                    if (inputs[k].idx < (int)argWrappers.size()) {
+                        Ptr<CUDABackendWrapper> cw = argWrappers[inputs[k].idx].dynamicCast<CUDABackendWrapper>();
+                        if (cw) { cw->copyToHost(); inpMats[k] = argTensor(inputs[k]); }
+                    }
+                }
+#endif
+                if (finalizeLayers)
+                    layer->finalize(inpMats, outMats);
+                layer->forward(inpMats, outMats, tempMats);
+#ifdef HAVE_CUDA
+                // CPU produced fresh host data; invalidate any stale device copy of its outputs.
+                for (size_t k = 0; k < noutputs; k++) {
+                    if (outputs[k].idx < (int)argWrappers.size()) {
+                        Ptr<CUDABackendWrapper> cw = argWrappers[outputs[k].idx].dynamicCast<CUDABackendWrapper>();
+                        if (cw) cw->setHostDirty();
+                    }
+                }
+#endif
+            }
         }
         else {
             Ptr<IfLayer> iflayer = layer.dynamicCast<IfLayer>();
@@ -1308,7 +1490,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             }
             else {
                 CV_Error_(Error::StsNotImplemented,
-                          ("unknown layer type '%s' with subgraphs", layer->type.c_str()));
+                          ("unknown layer type '%s' with subgraphs", op->type.c_str()));
             }
         }
         CV_Assert(outMats.size() == noutputs);
@@ -1373,6 +1555,13 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
     outputsVec.resize(n_gr_outputs);
     for (i = 0; i < n_gr_outputs; i++) {
         Arg out = gr_outputs[i];
+#ifdef HAVE_CUDA
+        // A graph output produced on the device must be brought back to host before it is read.
+        if (out.idx < (int)argWrappers.size()) {
+            Ptr<CUDABackendWrapper> cw = argWrappers[out.idx].dynamicCast<CUDABackendWrapper>();
+            if (cw) cw->copyToHost();
+        }
+#endif
         const Mat& outm = argTensor(out);
         if (isMainGraph) {
             if (outm.size.layout == DATA_LAYOUT_BLOCK) {
@@ -1397,8 +1586,8 @@ void Net::Impl::updateUseCounts(const Ptr<Graph>& graph, std::vector<int>& useco
         CV_Assert(output.idx < (int)usecounts.size());
         usecounts[output.idx]++;
     }
-    const std::vector<Ptr<Layer> >& prog = graph->prog();
-    for (const Ptr<Layer>& layer: prog) {
+    const std::vector<Ptr<LayerInfo> >& prog = graph->prog();
+    for (const Ptr<LayerInfo>& layer: prog) {
         const std::vector<Arg>& inputs = layer->inputs;
         for (const Arg& input: inputs) {
             CV_Assert(input.idx < (int)usecounts.size());
@@ -1429,14 +1618,14 @@ int Net::Impl::updateGraphOfs(const Ptr<Graph>& graph, int currofs, bool ismain)
         allgraphs.clear();
         layerNameToId.clear();
     }
-    const std::vector<Ptr<Layer> >& prog = graph->prog();
+    const std::vector<Ptr<LayerInfo> >& prog = graph->prog();
     size_t i, nops = prog.size();
     int subgraph_ofs = currofs + (int)nops;
     std::string name = graph->name();
     graphofs.insert(std::make_pair(name, currofs));
     allgraphs.push_back(graph);
     for (i = 0; i < nops; i++) {
-        const Ptr<Layer>& layer = prog[i];
+        const Ptr<LayerInfo>& layer = prog[i];
         layerNameToId.insert(std::make_pair(layer->name, currofs + (int)i));
         const std::vector<Ptr<Graph> >* subgraphs = layer->subgraphs();
         if (subgraphs) {
@@ -1583,12 +1772,12 @@ bool Net::Impl::tryInferGraphShapes(const Ptr<Graph>& graph,
     if (!graph)
         return true;
 
-    const std::vector<Ptr<Layer> >& prog = graph->prog();
+    const std::vector<Ptr<LayerInfo> >& prog = graph->prog();
 
     std::vector<MatShape> inpShapes, outShapes, tempShapes;
     std::vector<int> inpTypes, outTypes, tempTypes;
 
-    for (const Ptr<Layer>& layer: prog) {
+    for (const Ptr<LayerInfo>& layer: prog) {
         if (!layer)
             continue;
 

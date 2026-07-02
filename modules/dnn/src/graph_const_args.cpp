@@ -36,14 +36,14 @@ struct ConstArgs
 
     void processGraph(Ptr<Graph>& graph)
     {
-        const std::vector<Ptr<Layer> >& prog = graph->prog();
+        const std::vector<Ptr<LayerInfo> >& prog = graph->prog();
         size_t i, nops = prog.size();
         std::vector<Arg> removed_args;
         std::vector<Arg> saved_tail_inputs;
 
         for (i = 0; i < nops; i++) {
-            const Ptr<Layer>& layer = prog[i];
-            Layer* layer_ptr = const_cast<Layer*>(layer.get());
+            const Ptr<LayerInfo>& layer = prog[i];
+            LayerInfo* layer_ptr = const_cast<LayerInfo*>(layer.get());
             std::vector<Ptr<Graph> >* subgraphs = layer->subgraphs();
             if (subgraphs) {
                 for (Ptr<Graph>& g: *subgraphs) {

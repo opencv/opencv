@@ -76,6 +76,19 @@ public:
      */
     static Ptr<Layer> createLayerInstance(const String &type, LayerParams& params);
 
+
+    // Builds the abstract (metadata) node for an operation type.
+    typedef Ptr<LayerInfo>(*OpConstructor)(const LayerParams& params);
+    //! Builds a backend-specific executor from an LayerInfo; returns null Ptr if unsupported.
+    typedef Ptr<Layer>(*ExecConstructor)(const Ptr<LayerInfo>& data, void* backendCtx);
+
+    static void registerOp(const String& type, OpConstructor constructor);
+    static Ptr<LayerInfo> createOp(const String& type, const LayerParams& params);
+
+    static void registerExec(const String& type, int backendId, ExecConstructor constructor);
+    static Ptr<Layer> createExec(const String& type, int backendId,
+                                 const Ptr<LayerInfo>& data, void* backendCtx);
+
 private:
     LayerFactory();
 };

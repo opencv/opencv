@@ -227,11 +227,11 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
                 CUDA4DNN_CHECK_CUDNN(cudnnSetConvolutionGroupCount(descriptor, group_count));
 
 #if CUDNN_MAJOR >= 8
-                /* cuDNN 7 and below use FMA math by default. cuDNN 8 includes TF32 Tensor Ops
-                 * in the default setting. TF32 convolutions have lower precision than FP32.
-                 * Hence, we set the math type to CUDNN_FMA_MATH to reproduce old behavior.
+                /* cuDNN 8 default math includes TF32 Tensor Ops for FP32 convolutions (Ampere+),
+                 * giving near-FP16 throughput at slightly reduced precision. ONNXRuntime enables
+                 * this by default; we follow suit. (Was CUDNN_FMA_MATH to force exact FP32.)
                  */
-                CUDA4DNN_CHECK_CUDNN(cudnnSetConvolutionMathType(descriptor, CUDNN_FMA_MATH));
+                CUDA4DNN_CHECK_CUDNN(cudnnSetConvolutionMathType(descriptor, CUDNN_DEFAULT_MATH));
 #endif
 
                 if (std::is_same<T, half>::value)

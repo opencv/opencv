@@ -30,7 +30,7 @@ struct ConstFolding
         netimpl->scratchBufs.clear();
     }
 
-    Layer* getLayer(std::vector<Ptr<Layer> >& newprog, int op_idx) const
+    LayerInfo* getLayer(std::vector<Ptr<LayerInfo> >& newprog, int op_idx) const
     {
         return op_idx >= 0 ? newprog.at(op_idx).get() : 0;
     }
@@ -47,16 +47,16 @@ struct ConstFolding
     {
         netimpl->scratchBufs.clear();
         bool modified = false;
-        const std::vector<Ptr<Layer> >& prog = graph->prog();
+        const std::vector<Ptr<LayerInfo> >& prog = graph->prog();
         size_t i, nops = prog.size();
-        std::vector<Ptr<Layer> > newprog;
+        std::vector<Ptr<LayerInfo> > newprog;
         std::vector<Arg> removed_args;
         std::vector<Mat> inpMats, tempMats;
         std::vector<int> inpTypes, outTypes, tempTypes;
         std::vector<MatShape> inpShapes, outShapes, tempShapes;
 
         for (i = 0; i < nops; i++) {
-            const Ptr<Layer>& layer = prog[i];
+            const Ptr<LayerInfo>& layer = prog[i];
             std::vector<Ptr<Graph> >* subgraphs = layer->subgraphs();
             if (subgraphs) {
                 for (Ptr<Graph>& g: *subgraphs) {
@@ -98,8 +98,10 @@ struct ConstFolding
                     netimpl->allocateLayerOutputs(layer, inpTypes, inpShapes, outTypes,
                                                   outShapes, outOrigData, outMats, tempTypes, tempShapes, tempMats,
                                                   netimpl->scratchBufs, false);
-                layer->finalize(inpMats, outMats);
-                layer->forward(inpMats, outMats, tempMats);
+                Ptr<Layer> execLayer = layer.dynamicCast<Layer>();
+                CV_Assert(execLayer);  // const-folded ops are CPU-executable (monolithic) layers
+                execLayer->finalize(inpMats, outMats);
+                execLayer->forward(inpMats, outMats, tempMats);
                 CV_Assert(outMats.size() == noutputs);
                 for (j = 0; j < noutputs; j++) {
                     Arg out = outputs[j];

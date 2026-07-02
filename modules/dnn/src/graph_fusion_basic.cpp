@@ -30,7 +30,7 @@ struct ModelFusionBasic
     }
 
     template<typename _LayerType> _LayerType*
-    getLayer(std::vector<Ptr<Layer> >& newprog, int op_idx) const
+    getLayer(std::vector<Ptr<LayerInfo> >& newprog, int op_idx) const
     {
         return op_idx >= 0 ? dynamic_cast<_LayerType*>(newprog.at(op_idx).get()) : 0;
     }
@@ -39,14 +39,14 @@ struct ModelFusionBasic
     {
         vector<Arg> removed_args;
         bool modified = false;
-        const std::vector<Ptr<Layer> >& prog = graph->prog();
+        const std::vector<Ptr<LayerInfo> >& prog = graph->prog();
         size_t i, nargs = netimpl->args.size(), nops = prog.size();
         std::vector<int> producer_of(nargs, -1);
-        std::vector<Ptr<Layer> > newprog;
+        std::vector<Ptr<LayerInfo> > newprog;
         std::vector<Arg> fused_inputs;
 
         for (i = 0; i < nops; i++) {
-            const Ptr<Layer>& layer = prog[i];
+            const Ptr<LayerInfo>& layer = prog[i];
             Layer* layer_ptr = (Layer*)layer.get();
             int fused_layer_idx = -1;
             std::vector<Ptr<Graph> >* subgraphs = layer->subgraphs();
@@ -74,7 +74,7 @@ struct ModelFusionBasic
                     int conv_layer_idx = producer_of.at(bn_inp.idx);
                     Conv2Layer* conv = getLayer<Conv2Layer>(newprog, conv_layer_idx);
                     if (conv) {
-                        bool ok = conv->fuseBatchNorm(layer);
+                        bool ok = conv->fuseBatchNorm(layer.dynamicCast<Layer>());
                         if (ok) {
                             fused_layer_idx = conv_layer_idx;
                             removed_args.push_back(bn_inp);
@@ -122,7 +122,7 @@ struct ModelFusionBasic
                     int conv_layer_idx = producer_of.at(activ_inp.idx);
                     Conv2Layer* conv = getLayer<Conv2Layer>(newprog, conv_layer_idx);
                     if (conv) {
-                        bool ok = conv->fuseActivation(layer);
+                        bool ok = conv->fuseActivation(layer.dynamicCast<Layer>());
                         if (ok) {
                             fused_layer_idx = conv_layer_idx;
                             removed_args.push_back(activ_inp);
@@ -209,7 +209,7 @@ struct ModelFusionBasic
                                                         gnparams.type = "GroupNormalization";
                                                         gnparams.set("epsilon", instnorm->epsilon);
                                                         gnparams.set("num_groups", num_groups);
-                                                        Ptr<Layer> gnlayer = GroupNormLayer::create(gnparams);
+                                                        Ptr<LayerInfo> gnlayer = GroupNormLayer::create(gnparams);
                                                         gnlayer->netimpl = netimpl;
                                                         gnlayer->inputs = {orig_inp, mul_scale_arg, add_bias_arg};
                                                         newprog[instnorm_idx] = gnlayer;
@@ -219,9 +219,9 @@ struct ModelFusionBasic
                                                     removed_args.push_back(reshape2_inp);
                                                     removed_args.push_back(reshape2_out);
                                                     removed_args.push_back(mul_out);
-                                                    newprog[reshape1_idx] = Ptr<Layer>();
-                                                    newprog[reshape2_idx] = Ptr<Layer>();
-                                                    newprog[mul_idx] = Ptr<Layer>();
+                                                    newprog[reshape1_idx] = Ptr<LayerInfo>();
+                                                    newprog[reshape2_idx] = Ptr<LayerInfo>();
+                                                    newprog[mul_idx] = Ptr<LayerInfo>();
                                                     break;
                                                 }
                                             }
@@ -237,7 +237,7 @@ struct ModelFusionBasic
 
             if (fused_layer_idx >= 0) {
                 modified = true;
-                Layer* fused_layer = newprog[fused_layer_idx];
+                Layer* fused_layer = (Layer*)newprog[fused_layer_idx].get();
                 fused_layer->outputs = outputs;
                 for (Arg new_out: outputs)
                     producer_of[new_out.idx] = fused_layer_idx;
@@ -293,16 +293,16 @@ struct FuseBNPass
 
     void fuseGraph(Ptr<Graph>& graph)
     {
-        const std::vector<Ptr<Layer> >& prog = graph->prog();
+        const std::vector<Ptr<LayerInfo> >& prog = graph->prog();
         size_t nops = prog.size(), nargs = netimpl->args.size();
-        std::vector<Ptr<Layer> > newprog;
+        std::vector<Ptr<LayerInfo> > newprog;
         newprog.reserve(nops);
         std::vector<int> producer_of((int)nargs, -1);
         bool modified = false;
 
         for (size_t i = 0; i < nops; i++) {
-            const Ptr<Layer>& layer = prog[i];
-            Layer* layer_ptr = const_cast<Layer*>(layer.get());
+            const Ptr<LayerInfo>& layer = prog[i];
+            Layer* layer_ptr = (Layer*)layer.get();
 
             std::vector<Ptr<Graph> >* subgraphs = layer->subgraphs();
             if (subgraphs)
@@ -324,7 +324,7 @@ struct FuseBNPass
                         usecounts[conv_inp0.idx] = 0;
                         if (bn_inp0.idx >= 0)
                             usecounts[bn_inp0.idx]++;
-                        newprog[bn_idx] = Ptr<Layer>();
+                        newprog[bn_idx] = Ptr<LayerInfo>();
                         modified = true;
                     }
                 }

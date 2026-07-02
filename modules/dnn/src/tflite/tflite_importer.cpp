@@ -34,7 +34,7 @@ private:
     const flatbuffers::Vector<flatbuffers::Offset<opencv_tflite::Tensor> >* modelTensors;
     std::map<int, Mat> allTensors;
     Net& dstNet;
-    std::vector<Ptr<Layer>> curProg;
+    std::vector<Ptr<LayerInfo>> curProg;
 
     // This is a vector of pairs (layerId, outputId) where we iterate over
     // indices from TFLite notation and get created OpenCV layers.

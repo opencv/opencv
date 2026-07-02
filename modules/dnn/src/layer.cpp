@@ -10,35 +10,46 @@ namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
 
-Layer::Layer() {
+LayerInfo::LayerInfo() {
     netimpl = nullptr;
-    preferableTarget = DNN_TARGET_CPU;
 }
 
-Layer::Layer(const LayerParams& params)
+LayerInfo::LayerInfo(const LayerParams& params)
     : blobs(params.blobs)
     , name(params.name)
     , type(params.type)
 {
     netimpl = nullptr;
-    preferableTarget = DNN_TARGET_CPU;
 }
 
-void Layer::setParamsFrom(const LayerParams& params)
+LayerInfo::~LayerInfo() {}
+
+void LayerInfo::setParamsFrom(const LayerParams& params)
 {
     blobs = params.blobs;
     name = params.name;
     type = params.type;
 }
 
-int Layer::inputNameToIndex(String)
+int LayerInfo::inputNameToIndex(String)
 {
     return -1;
 }
 
-int Layer::outputNameToIndex(const String&)
+int LayerInfo::outputNameToIndex(const String&)
 {
     return 0;
+}
+
+Layer::Layer() {
+    netimpl = nullptr;
+    preferableTarget = DNN_TARGET_CPU;
+}
+
+Layer::Layer(const LayerParams& params)
+    : LayerInfo(params)
+{
+    preferableTarget = DNN_TARGET_CPU;
 }
 
 bool Layer::supportBackend(int backendId)
@@ -94,13 +105,21 @@ Ptr<BackendNode> Layer::initCann(const std::vector<Ptr<BackendWrapper> > &inputs
 
 bool Layer::setActivation(const Ptr<ActivationLayer>&) { return false; }
 bool Layer::tryFuse(Ptr<Layer>&) { return false; }
-void Layer::getScaleShift(Mat& scale, Mat& shift) const
+
+void Layer::forwardCUDA(const std::vector<Ptr<BackendWrapper> >&,
+                        const std::vector<Ptr<BackendWrapper> >&,
+                        void*)
+{
+    CV_Error(Error::StsNotImplemented, "CUDA forward of " + type + " layers is not defined.");
+}
+
+void LayerInfo::getScaleShift(Mat& scale, Mat& shift) const
 {
     scale = Mat();
     shift = Mat();
 }
 
-void Layer::getScaleZeropoint(float& scale, int& zeropoint) const
+void LayerInfo::getScaleZeropoint(float& scale, int& zeropoint) const
 {
     scale = 1.f;
     zeropoint = 0;
@@ -247,7 +266,7 @@ void Layer::run(const std::vector<Mat>& inputs, std::vector<Mat>& outputs, std::
 
 Layer::~Layer() {}
 
-bool Layer::getMemoryShapes(const std::vector<MatShape>& inputs,
+bool LayerInfo::getMemoryShapes(const std::vector<MatShape>& inputs,
         const int requiredOutputs,
         std::vector<MatShape>& outputs,
         std::vector<MatShape>& internals) const
@@ -257,7 +276,7 @@ bool Layer::getMemoryShapes(const std::vector<MatShape>& inputs,
     return false;
 }
 
-void Layer::getTypes(const std::vector<MatType>&inputs,
+void LayerInfo::getTypes(const std::vector<MatType>&inputs,
                      const int requiredOutputs,
                      const int requiredInternals,
                      std::vector<MatType>&outputs,
@@ -265,20 +284,13 @@ void Layer::getTypes(const std::vector<MatType>&inputs,
 {
     CV_Assert(inputs.size());
     for (auto input : inputs)
-    {
-        if (preferableTarget == DNN_TARGET_CUDA_FP16 || preferableTarget == DNN_TARGET_CUDA)
-            CV_CheckTypeEQ(input, CV_32F, "");
-        else if (preferableTarget == DNN_TARGET_OPENCL_FP16)
-            CV_CheckType(input, input == CV_16F || input == CV_8S || input == CV_8U || input == CV_64F || input == CV_64S, "");
-        else
-            CV_CheckType(input, input == CV_32F || input == CV_64F || input == CV_8S || input == CV_8U || input == CV_64S, "");
-    }
+        CV_CheckType(input, input == CV_32F || input == CV_64F || input == CV_8S || input == CV_8U || input == CV_64S, "");
 
     outputs.assign(requiredOutputs, inputs[0]);
     internals.assign(requiredInternals, inputs[0]);
 }
 
-int Layer::getLayouts(const std::vector<DataLayout>& actualInputs,
+int LayerInfo::getLayouts(const std::vector<DataLayout>& actualInputs,
                        std::vector<DataLayout>& desiredInputs,
                        const int requiredOutputs,
                        std::vector<DataLayout>& outputs) const
@@ -288,43 +300,43 @@ int Layer::getLayouts(const std::vector<DataLayout>& actualInputs,
     return 0;
 }
 
-int64 Layer::getFLOPS(const std::vector<MatShape>&,
+int64 LayerInfo::getFLOPS(const std::vector<MatShape>&,
                       const std::vector<MatShape>&) const
 {
     return 0;
 }
 
-bool Layer::updateMemoryShapes(const std::vector<MatShape>& inputs)
+bool LayerInfo::updateMemoryShapes(const std::vector<MatShape>& inputs)
 {
     return true;
 }
 
-std::vector<Ptr<Graph> >* Layer::subgraphs() const
+std::vector<Ptr<Graph> >* LayerInfo::subgraphs() const
 {
     return nullptr;
 }
 
-bool Layer::alwaysSupportInplace() const
+bool LayerInfo::alwaysSupportInplace() const
 {
     return false;
 }
 
-bool Layer::dynamicOutputShapes() const
+bool LayerInfo::dynamicOutputShapes() const
 {
     return false;
 }
 
-bool Layer::isDataShuffling() const
+bool LayerInfo::isDataShuffling() const
 {
     return false;
 }
 
-std::ostream& Layer::dumpAttrs(std::ostream& strm, int) const
+std::ostream& LayerInfo::dumpAttrs(std::ostream& strm, int) const
 {
     return strm;
 }
 
-std::ostream& Layer::dump(std::ostream& strm, int indent, bool comma) const
+std::ostream& LayerInfo::dump(std::ostream& strm, int indent, bool comma) const
 {
     CV_Assert(netimpl);
     size_t ninputs = inputs.size();

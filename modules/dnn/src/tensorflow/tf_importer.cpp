@@ -576,7 +576,7 @@ protected:
     std::map<String, int> layer_id;
 
     bool newEngine;
-    std::vector<Ptr<Layer>> curProg;
+    std::vector<Ptr<LayerInfo>> curProg;
     std::vector<std::vector<std::string>> layersOutputs;
     std::vector<Arg> modelInputs;
     std::unordered_map<std::string, MatShape> tensorsShape;

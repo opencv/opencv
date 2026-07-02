@@ -11,6 +11,13 @@
 #include <algorithm>
 #include <cstring>
 
+#include "../op_cuda.hpp"
+#include <opencv2/dnn/layer.details.hpp>  // CV_DNN_REGISTER_EXEC_CLASS
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/convolution.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
+
 namespace cv
 {
 namespace dnn
@@ -115,6 +122,10 @@ public:
         int wtype = accuracy < 0 ? CV_32F : accuracy;
 
         wshape0 = weights_.shape();
+#ifdef HAVE_CUDA
+        // Retain the original NCHW filter for the CUDA (cuDNN) path.
+        weights_.convertTo(origWeights, CV_32F);
+#endif
         bool depthwise = ngroups == wshape0[0] && wshape0[1] == 1;
 
         if (depthwise) {
@@ -660,9 +671,96 @@ public:
         }
     }
 
+#ifdef HAVE_CUDA
+    bool cudaSupported() const
+    {
+        if (origWeights.empty() || wshape0.dims != 4)  // [Cout, Cin/group, kh, kw] (2D conv)
+            return false;
+        if (auto_pad != AUTO_PAD_NONE && auto_pad != AUTO_PAD_VALID)
+            return false;
+        if (activationFunc != nullptr || !activ.empty())
+            return false;
+        if (fastActivation != FAST_ACTIV_NONE && fastActivation != FAST_ACTIV_RELU &&
+            fastActivation != FAST_ACTIV_LEAKY_RELU && fastActivation != FAST_ACTIV_CLIP)
+            return false;
+        return true;
+    }
+
+    Ptr<BackendNode> initCudaConvNode(void* context_, const MatShape& inpShape,
+                                      const MatShape& outShape, int targetId)
+    {
+        csl::CSLContext context = *reinterpret_cast<csl::CSLContext*>(context_);
+        const int nspatial = wshape0.dims - 2;
+
+        ConvolutionConfiguration config;
+        for (int i = 0; i < nspatial; i++) {
+            config.kernel_size.push_back((size_t)wshape0[2 + i]);
+            config.strides.push_back(strides.empty() ? 1 : (size_t)strides[i]);
+            config.dilations.push_back(dilations.empty() ? 1 : (size_t)dilations[i]);
+        }
+        if (auto_pad == AUTO_PAD_VALID) {
+            config.padMode = ConvolutionConfiguration::PaddingMode::VALID;
+        } else {
+            config.padMode = ConvolutionConfiguration::PaddingMode::MANUAL;
+            for (int i = 0; i < nspatial; i++) {
+                config.pads_begin.push_back(pads.empty() ? 0 : (size_t)pads[i]);
+                config.pads_end.push_back(pads.empty() ? 0 : (size_t)pads[i + nspatial]);
+            }
+        }
+        config.input_shape.assign(inpShape.begin(), inpShape.end());
+        config.output_shape.assign(outShape.begin(), outShape.end());
+        config.groups = (size_t)ngroups;
+
+        Mat filters = origWeights, biasMat = bias;
+        if (fusedBatchNorm) {
+            filters = origWeights.clone();
+            const int Cout = wshape0[0];
+            const size_t inner = filters.total() / (size_t)Cout;
+            const float* sc = fusedScale.ptr<float>();
+            float* wp = filters.ptr<float>();
+            for (int co = 0; co < Cout; co++) {
+                float s = sc[co];
+                for (size_t k = 0; k < inner; k++)
+                    wp[co * inner + k] *= s;
+            }
+            biasMat = fusedBias;  // already b*scale + bn_bias
+        }
+
+        config.activation_type = ConvolutionConfiguration::ActivationType::IDENTITY;
+        config.relu_negative_slope = 0.f;
+        config.crelu_floor = 0.f; config.crelu_ceil = 0.f;
+        config.power_exp = 1.f; config.power_scale = 1.f; config.power_shift = 0.f;
+        bool hasAct = fastActivation != FAST_ACTIV_NONE;
+        if (fastActivation == FAST_ACTIV_RELU) {
+            config.activation_type = ConvolutionConfiguration::ActivationType::RELU;
+        } else if (fastActivation == FAST_ACTIV_LEAKY_RELU) {
+            config.activation_type = ConvolutionConfiguration::ActivationType::RELU;
+            config.relu_negative_slope = activParams.empty() ? 0.f : activParams[0];
+        } else if (fastActivation == FAST_ACTIV_CLIP) {
+            config.activation_type = ConvolutionConfiguration::ActivationType::CLIPPED_RELU;
+            config.crelu_floor = activParams.size() > 0 ? activParams[0] : 0.f;
+            config.crelu_ceil  = activParams.size() > 1 ? activParams[1] : 6.f;
+        }
+
+        if (addResidual && hasAct)
+            config.fusion_mode = ConvolutionConfiguration::FusionMode::ELTWISE_SUM_THEN_ACTIVATION;
+        else if (addResidual)
+            config.fusion_mode = ConvolutionConfiguration::FusionMode::ELTWISE_SUM;
+        else if (hasAct)
+            config.fusion_mode = ConvolutionConfiguration::FusionMode::ACTIVATION;
+        else
+            config.fusion_mode = ConvolutionConfiguration::FusionMode::NONE;
+
+        return make_cuda_node<cuda4dnn::ConvolutionOp>(
+            targetId, std::move(context.stream), std::move(context.cudnn_handle),
+            config, filters, biasMat);
+    }
+#endif
+
     std::vector<int> emptyKernelShape;
     Ptr<Layer> activ, batchNorm;
     Mat weights, bias, fusedScale, fusedBias;
+    Mat origWeights;  // original NCHW filter (FP32), kept for the CUDA path
     MatShape wshape0, prevInpshape;
     ConvState cs;
     bool fusedBatchNorm;
@@ -683,5 +781,54 @@ Ptr<Conv2Layer> Conv2Layer::create(const LayerParams& params)
 {
     return Ptr<Conv2Layer>(new Conv2LayerImpl(params));
 }
+
+#ifdef HAVE_CUDA
+class CUDAConv2Layer : public Layer
+{
+public:
+    CUDAConv2Layer(const Ptr<Conv2LayerImpl>& conv_, void* ctx_) : conv(conv_), ctx(ctx_) {}
+
+    static Ptr<Layer> create(const Ptr<LayerInfo>& data, void* backendCtx)
+    {
+        Ptr<Conv2LayerImpl> conv = data.dynamicCast<Conv2LayerImpl>();
+        if (!conv || !backendCtx || !conv->cudaSupported())
+            return Ptr<Layer>();
+        Ptr<CUDAConv2Layer> layer(new CUDAConv2Layer(conv, backendCtx));
+        layer->data = data;
+        layer->name = conv->name;
+        layer->type = conv->type;
+        layer->inputs = conv->inputs;
+        layer->outputs = conv->outputs;
+        return layer;
+    }
+
+    void forwardCUDA(const std::vector<Ptr<BackendWrapper> >& inputs,
+                     const std::vector<Ptr<BackendWrapper> >& outputs,
+                     void* workspace) CV_OVERRIDE
+    {
+        CV_Assert(!inputs.empty() && !outputs.empty());
+        auto& ws = *reinterpret_cast<cuda4dnn::csl::Workspace*>(workspace);
+        if (!node) {
+            auto inW = inputs[0].dynamicCast<CUDABackendWrapper>();
+            auto outW = outputs[0].dynamicCast<CUDABackendWrapper>();
+            node = conv->initCudaConvNode(ctx, inW->getShape(), outW->getShape(), preferableTarget);
+            cudaNode = node.dynamicCast<CUDABackendNode>();
+            CV_Assert(cudaNode);
+            ws.require(cudaNode->get_workspace_memory_in_bytes());
+        }
+        cudaNode->forward(inputs, outputs, ws);
+    }
+
+    Ptr<Conv2LayerImpl> conv;
+    void* ctx;
+    Ptr<BackendNode> node;
+    Ptr<CUDABackendNode> cudaNode;
+};
+
+void registerConv2CudaBackend()
+{
+    CV_DNN_REGISTER_EXEC_CLASS(Conv2, DNN_BACKEND_CUDA, CUDAConv2Layer);
+}
+#endif
 
 }}

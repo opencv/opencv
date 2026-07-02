@@ -396,7 +396,7 @@ MatShape deconvInferShape(const MatShape& inpShape, const MatShape& wshape,
                           const std::vector<int>& adjustPads,
                           AutoPadding autoPad)
 {
-    bool blockLayout = true;
+    bool blockLayout = (inpShape.layout == DATA_LAYOUT_BLOCK);
     int ndims = inpShape.dims;
     int nspatialdims = ndims - 2 - int(blockLayout);
     CV_Assert(nspatialdims >= 1);
@@ -413,9 +413,13 @@ MatShape deconvInferShape(const MatShape& inpShape, const MatShape& wshape,
             kshape_[i] = wshape[i + 2];
     }
 
-    int C0 = inpShape[ndims - 1];
     int K_out = ngroups * wshape[1];
-    outshape[1] = (K_out + C0 - 1) / C0;
+    if (blockLayout) {
+        int C0 = inpShape[ndims - 1];
+        outshape[1] = (K_out + C0 - 1) / C0;
+    } else {
+        outshape[1] = K_out;
+    }
 
     CV_Assert(strides.empty() || (int)strides.size() == nspatialdims);
     CV_Assert(dilations.empty() || (int)dilations.size() == nspatialdims);
@@ -439,7 +443,7 @@ MatShape deconvInferShape(const MatShape& inpShape, const MatShape& wshape,
         }
         outshape[i + 2] = outsz;
     }
-    outshape.C = K_out;
+    outshape.C = blockLayout ? K_out : 0;
     return outshape;
 }
 

@@ -11,7 +11,7 @@ CV__DNN_INLINE_NS_BEGIN
 using std::vector;
 using std::string;
 
-using PLayer = Ptr<Layer>;
+using PLayer = Ptr<LayerInfo>;
 using PGraph = Ptr<Graph>;
 
 /* Inserts layout conversion operations (if needed) into the model graph and subgraphs.
@@ -121,13 +121,15 @@ struct BlockLayoutTransformer
         std::vector<DataLayout> inputLayoutsOrig, inputLayoutsNew, outputLayouts;
         size_t nchanges = 0;
 
-        for (const PLayer& layer: currProg) {
+        for (size_t opidx = 0; opidx < currProg.size(); opidx++) {
+            const PLayer& layer = currProg[opidx];
             const vector<Arg>& inputs = layer->inputs;
             const vector<Arg>& outputs = layer->outputs;
             size_t ninputs = inputs.size(), noutputs = outputs.size();
             std::string op_name = layer->type;
             std::string name = layer->name;
             vector<PGraph>* subgraphs = layer->subgraphs();
+            bool deviceOp = g->opBackend((int)opidx) != DNN_BACKEND_OPENCV;
             //std::cout << "name: " << name << ", op_name: " << op_name << ", inp0 layout: " << layoutToString(layouts[inputs[0].idx]) << "\n";
 
             if (subgraphs) {
@@ -163,6 +165,13 @@ struct BlockLayoutTransformer
             layer->getLayouts(inputLayoutsOrig, inputLayoutsNew, int(noutputs), outputLayouts);
             CV_Assert(inputLayoutsNew.size() == ninputs);
             CV_Assert(outputLayouts.size() == noutputs);
+
+            if (deviceOp) {
+                for (size_t i = 0; i < ninputs; i++)
+                    inputLayoutsNew[i] = defaultLayout;
+                for (size_t i = 0; i < noutputs; i++)
+                    outputLayouts[i] = defaultLayout;
+            }
 
             newInputs.clear();
             bool changedInputs = false;

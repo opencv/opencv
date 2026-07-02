@@ -183,7 +183,7 @@ struct BufferAllocator
                 }
             }
         }
-        const std::vector<Ptr<Layer> >& prog = graph->prog();
+        const std::vector<Ptr<LayerInfo> >& prog = graph->prog();
         for (const auto& layer: prog) {
             bool inplace = false;
             Arg reuseArg;
@@ -362,13 +362,13 @@ struct BufferAllocator
                 std::unordered_set<int> bodyDefined;
                 for (Arg ba : body->inputs())
                     bodyDefined.insert(ba.idx);
-                for (const Ptr<Layer>& blayer : body->prog()) {
+                for (const Ptr<LayerInfo>& blayer : body->prog()) {
                     if (!blayer) continue;
                     for (Arg bo : blayer->outputs)
                         bodyDefined.insert(bo.idx);
                 }
                 std::unordered_set<int> closureBumped;
-                for (const Ptr<Layer>& blayer : body->prog()) {
+                for (const Ptr<LayerInfo>& blayer : body->prog()) {
                     if (!blayer) continue;
                     for (Arg bi : blayer->inputs) {
                         if (bi.idx <= 0) continue;

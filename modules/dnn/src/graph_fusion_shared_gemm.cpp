@@ -35,7 +35,7 @@ using std::string;
 
 namespace {
 
-static bool readGemmWeight(const Ptr<Layer>& l, bool trans_b, Mat& W_out)
+static bool readGemmWeight(const Ptr<LayerInfo>& l, bool trans_b, Mat& W_out)
 {
     if (l->blobs.empty()) return false;
     const Mat& W = l->blobs[0];
@@ -48,7 +48,7 @@ static bool readGemmWeight(const Ptr<Layer>& l, bool trans_b, Mat& W_out)
     return true;
 }
 
-static bool readGemmBias(const Ptr<Layer>& l, Mat& b_out)
+static bool readGemmBias(const Ptr<LayerInfo>& l, Mat& b_out)
 {
     if (l->blobs.size() < 2) { b_out.release(); return true; }
     const Mat& b = l->blobs[1];
@@ -76,10 +76,10 @@ struct ModelFusionSharedGemm
         bool   flatten_a = true;
     };
 
-    bool inspectGemm(const vector<Ptr<Layer>>& prog, int idx, GemmInfo& info) const
+    bool inspectGemm(const vector<Ptr<LayerInfo>>& prog, int idx, GemmInfo& info) const
     {
         if (idx < 0 || idx >= (int)prog.size() || !prog[idx]) return false;
-        const Ptr<Layer>& l = prog[idx];
+        const Ptr<LayerInfo>& l = prog[idx];
         GemmLayer* g = dynamic_cast<GemmLayer*>(l.get());
         if (!g) return false;
 
@@ -125,7 +125,7 @@ struct ModelFusionSharedGemm
 
     bool fuseGraph(Ptr<Graph>& graph)
     {
-        const vector<Ptr<Layer>>& prog = graph->prog();
+        const vector<Ptr<LayerInfo>>& prog = graph->prog();
         size_t nops = prog.size();
 
         struct Key { int input_idx; int trans_b; int K; };
@@ -145,7 +145,7 @@ struct ModelFusionSharedGemm
 
         bool modified = false;
         std::set<int> removed_ops;
-        vector<std::pair<int, vector<Ptr<Layer>>>> insertions;  // (insert_pos, fused-and-slice layers)
+        vector<std::pair<int, vector<Ptr<LayerInfo>>>> insertions;  // (insert_pos, fused-and-slice layers)
 
         for (auto& group : groups) {
             auto infos = group.second;
@@ -226,7 +226,7 @@ struct ModelFusionSharedGemm
             fp.blobs.push_back(W_concat);
             if (all_have_bias) fp.blobs.push_back(b_concat);
 
-            Ptr<Layer> fused = LayerFactory::createLayerInstance("Gemm", fp);
+            Ptr<LayerInfo> fused = LayerFactory::createLayerInstance("Gemm", fp);
             if (!fused) continue;
 
             string fused_out_name = fp.name + "_out";
@@ -235,7 +235,7 @@ struct ModelFusionSharedGemm
             fused->outputs = { fused_out_arg };
             fused->netimpl = netimpl;
 
-            vector<Ptr<Layer>> slices;
+            vector<Ptr<LayerInfo>> slices;
             int col_cursor = 0;
             for (size_t s = 0; s < infos.size(); s++) {
                 int N_s = infos[s].N;
@@ -257,7 +257,7 @@ struct ModelFusionSharedGemm
                 Arg axes_arg   = netimpl->newConstArg(sp.name + "_axes",   axes);
                 Arg steps_arg  = netimpl->newConstArg(sp.name + "_steps",  steps);
 
-                Ptr<Layer> slice = LayerFactory::createLayerInstance("Slice2", sp);
+                Ptr<LayerInfo> slice = LayerFactory::createLayerInstance("Slice2", sp);
                 if (!slice) { uniform = false; break; }
                 slice->inputs  = { fused_out_arg, starts_arg, ends_arg, axes_arg, steps_arg };
                 slice->outputs = prog[infos[s].layer_idx]->outputs;
@@ -267,7 +267,7 @@ struct ModelFusionSharedGemm
             if (!uniform) continue;
 
             for (auto& info : infos) removed_ops.insert(info.layer_idx);
-            vector<Ptr<Layer>> bundle;
+            vector<Ptr<LayerInfo>> bundle;
             bundle.push_back(fused);
             for (auto& s : slices) bundle.push_back(s);
             insertions.emplace_back(insert_pos, std::move(bundle));
@@ -279,7 +279,7 @@ struct ModelFusionSharedGemm
         std::sort(insertions.begin(), insertions.end(),
                   [](auto& a, auto& b) { return a.first < b.first; });
 
-        vector<Ptr<Layer>> newprog;
+        vector<Ptr<LayerInfo>> newprog;
         size_t ins_idx = 0;
         for (size_t i = 0; i < nops; i++) {
             while (ins_idx < insertions.size() &&

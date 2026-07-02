@@ -262,22 +262,92 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS Graph;
     class CV_EXPORTS ActivationLayer;
 
-    /** @brief This interface class allows to build new Layers - are building blocks of networks.
+    /** @brief Backend-independent description of a graph operation (node).
      *
-     * Each class, derived from Layer, must implement forward() method to compute outputs.
-     * Also before using the new layer into networks you must register your layer by using one of @ref dnnLayerFactory "LayerFactory" macros.
+     * %LayerInfo carries everything needed to reason about an operation *without* executing it:
+     * its parameters (#blobs and type-specific fields of derived classes), graph wiring
+     * (#inputs / #outputs as Arg indices) and shape/type/layout inference. The new DNN graph
+     * engine stores a topologically sorted sequence of %LayerInfo nodes (see Graph::prog());
+     * executable, backend-specific instances (Layer subclasses) are constructed from an
+     * %LayerInfo during Net::finalizeNet().
+     *
+     * Each operation type registers a `static Ptr<LayerInfo> create(const LayerParams&)` factory
+     * via @ref CV_DNN_REGISTER_OP_CLASS_STATIC.
      */
-    class CV_EXPORTS_W Layer : public Algorithm
+    class CV_EXPORTS_W LayerInfo : public Algorithm
     {
     public:
+        LayerInfo();
+        explicit LayerInfo(const LayerParams& params);
+        virtual ~LayerInfo();
+
+        void setParamsFrom(const LayerParams& params);
 
         //! List of learned parameters must be stored here to allow read them by using Net::getParam().
         CV_PROP_RW std::vector<Mat> blobs;
         std::vector<Arg> inputs;
         std::vector<Arg> outputs;
-        void* netimpl;
+        void* netimpl = nullptr;
+
+        CV_PROP String name;
+        CV_PROP String type;
 
         virtual std::vector<Ptr<Graph> >* subgraphs() const;
+
+        virtual int inputNameToIndex(String inputName);  // FIXIT const
+        CV_WRAP virtual int outputNameToIndex(const String& outputName);  // FIXIT const
+
+        virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
+                                     const int requiredOutputs,
+                                     std::vector<MatShape> &outputs,
+                                     std::vector<MatShape> &internals) const;
+
+        virtual void getTypes(const std::vector<MatType>& inputs,
+                              const int requiredOutputs,
+                              const int requiredInternals,
+                              std::vector<MatType>&outputs,
+                              std::vector<MatType>&internals) const;
+
+        virtual int getLayouts(const std::vector<DataLayout>& actualInputs,
+                               std::vector<DataLayout>& desiredInputs,
+                               const int requiredOutputs,
+                               std::vector<DataLayout>& outputs) const;
+
+        virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
+                               const std::vector<MatShape> &outputs) const;
+
+        virtual bool updateMemoryShapes(const std::vector<MatShape> &inputs);
+
+        virtual bool alwaysSupportInplace() const;
+
+        virtual bool dynamicOutputShapes() const;
+
+        virtual bool isDataShuffling() const;
+
+        virtual void getScaleShift(Mat& scale, Mat& shift) const;
+
+        virtual void getScaleZeropoint(float& scale, int& zeropoint) const;
+
+        virtual std::ostream& dumpAttrs(std::ostream& strm, int indent) const;
+
+        virtual std::ostream& dump(std::ostream& strm, int indent, bool comma) const;
+    };
+
+    /** @brief This interface class allows to build new Layers - are building blocks of networks.
+     *
+     * A %Layer is the *executable*, backend-specific counterpart of an LayerInfo node: it
+     * implements forward() (and finalize()) for a particular backend/target. In the new graph
+     * engine a %Layer is created from an LayerInfo (held in #data) by Net::finalizeNet(); its
+     * inference methods (getMemoryShapes() etc., inherited from LayerInfo) delegate to #data.
+     *
+     * Each class, derived from Layer, must implement forward() method to compute outputs.
+     * Also before using the new layer into networks you must register your layer by using one of @ref dnnLayerFactory "LayerFactory" macros.
+     */
+    class CV_EXPORTS_W Layer : public LayerInfo
+    {
+    public:
+
+        Ptr<LayerInfo> data;
 
         /** @brief Computes and sets internal parameters according to inputs, outputs and blobs.
          *  @deprecated Use Layer::finalize(InputArrayOfArrays, OutputArrayOfArrays) instead
@@ -340,18 +410,6 @@ CV__DNN_INLINE_NS_BEGIN
          */
         CV_DEPRECATED CV_WRAP void run(const std::vector<Mat> &inputs, CV_OUT std::vector<Mat> &outputs,
                                        CV_IN_OUT std::vector<Mat> &internals);
-
-        /** @brief Returns index of input blob into the input array.
-         *  @param inputName label of input blob
-         *
-         * Each layer input and output can be labeled to easily identify them using "%<layer_name%>[.output_name]" notation.
-         * This method maps label of input blob to its index into input vector.
-         */
-        virtual int inputNameToIndex(String inputName);  // FIXIT const
-        /** @brief Returns index of output blob in output array.
-         *  @see inputNameToIndex()
-         */
-        CV_WRAP virtual int outputNameToIndex(const String& outputName);  // FIXIT const
 
         /**
          * @brief Ask layer if it support specific backend for doing computations.
@@ -419,102 +477,25 @@ CV__DNN_INLINE_NS_BEGIN
         virtual bool tryFuse(Ptr<Layer>& top);
 
         /**
-         * @brief Returns parameters of layers with channel-wise multiplication and addition.
-         * @param[out] scale Channel-wise multipliers. Total number of values should
-         *                   be equal to number of channels.
-         * @param[out] shift Channel-wise offsets. Total number of values should
-         *                   be equal to number of channels.
+         * @brief Executes the operation on the CUDA backend (new graph engine).
          *
-         * Some layers can fuse their transformations with further layers.
-         * In example, convolution + batch normalization. This way base layer
-         * use weights from layer after it. Fused layer is skipped.
-         * By default, @p scale and @p shift are empty that means layer has no
-         * element-wise multiplications or additions.
+         * Called by the engine for nodes assigned to DNN_BACKEND_CUDA. The default
+         * implementation raises an error. @p workspace is an opaque pointer to a
+         * cuda4dnn::csl::Workspace (kept void* to avoid leaking internal CUDA types).
          */
-        virtual void getScaleShift(Mat& scale, Mat& shift) const;
-
-        /**
-         * @brief Returns scale and zeropoint of layers
-         * @param[out] scale Output scale
-         * @param[out] zeropoint Output zeropoint
-         *
-         * By default, @p scale is 1 and @p zeropoint is 0.
-         */
-        virtual void getScaleZeropoint(float& scale, int& zeropoint) const;
-
+        virtual void forwardCUDA(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                 const std::vector<Ptr<BackendWrapper> >& outputs,
+                                 void* workspace);
 
         /**
          * @brief "Detaches" all the layers, attached to particular layer.
          */
         virtual void unsetAttached();
 
-        virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
-                                     const int requiredOutputs,
-                                     std::vector<MatShape> &outputs,
-                                     std::vector<MatShape> &internals) const;
-
-        virtual void getTypes(const std::vector<MatType>& inputs,
-                              const int requiredOutputs,
-                              const int requiredInternals,
-                              std::vector<MatType>&outputs,
-                              std::vector<MatType>&internals) const;
-
-        // this is the method for Layer to express its attitude to the block layout
-        // or any other special form of layout. It takes
-        // layouts of the inputs and should return the desired layouts of
-        // inputs, as well as layouts of the outputs.
-        // By default, no mater what the actual inputs' layouts are,
-        // the desired inputs as well as outputs will get 'Unknown' layout values.
-        // It means that the layer can only handle non-block layout
-        // (depending on the model format, e.g. NCHW for ONNX or NHWC for TFLite)
-        // and will return tensors with non-block layout as well.
-        // Some layers could override this default behaviour:
-        // a) if they _can_ process block-layout data, like element-wise operations, or
-        // b) if they _need_ block-layout data, like convolution
-        virtual int getLayouts(const std::vector<DataLayout>& actualInputs,
-                                std::vector<DataLayout>& desiredInputs,
-                                const int requiredOutputs,
-                                std::vector<DataLayout>& outputs) const;
-
-        virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
-                               const std::vector<MatShape> &outputs) const;
-
-        virtual bool updateMemoryShapes(const std::vector<MatShape> &inputs);
-
-        // returns true if the operation takes a single input and can always be performed in-place,
-        // assuming that the input is contiguous.
-        // Examples of such operations are: Reshape, Flatten, Squeeze, Unsqueeze,
-        // as well many unary element-wise operations (ReLU, Tanh, ...)
-        virtual bool alwaysSupportInplace() const;
-
-        // returns false if the shape of Layer outputs is defined only by the shapes of inputs.
-        // Sometimes the shape depends on the content of the input(s), then the method should return true.
-        // In such a rare case forward() method should take care of proper allocation of the output tensors.
-        // On the other hand, when this method returns false, the engine takes care of proper allocation of the outputs,
-        // so that forward() can assume that the outputs are already allocated.
-        virtual bool dynamicOutputShapes() const;
-
-        // returns true if the layer only rearranges data without changing values.
-        // Examples: Flatten, Reshape, Transpose, Permute, Squeeze, Unsqueeze,
-        // Concat, Split, Slice, Tile, MaxPool.
-        // Used by QDQ fusion to elide redundant dequantize-quantize pairs
-        // when the scale and zero point are the same.
-        virtual bool isDataShuffling() const;
-
-        // dumps attributes of the layer (e.g. strides, dilations in Convolution, MaxPool)
-        virtual std::ostream& dumpAttrs(std::ostream& strm, int indent) const;
-
-        // dumps information about the layer. The default implementation is usually good enough,
-        // just override dumpAttrs().
-        virtual std::ostream& dump(std::ostream& strm, int indent, bool comma) const;
-
-        CV_PROP String name; //!< Name of the layer instance, can be used for logging or other internal purposes.
-        CV_PROP String type; //!< Type name which was used for creating layer by layer factory.
         CV_PROP int preferableTarget; //!< prefer target for layer forwarding
 
         Layer();
         explicit Layer(const LayerParams &params);      //!< Initializes only #name, #type and #blobs fields.
-        void setParamsFrom(const LayerParams &params);  //!< Initializes only #name, #type and #blobs fields.
         virtual ~Layer();
     };
 
@@ -533,15 +514,16 @@ CV__DNN_INLINE_NS_BEGIN
         virtual bool empty() const = 0;
         virtual void clear() = 0;
         virtual std::string name() const = 0;
-        virtual const std::vector<Arg>& append(Ptr<Layer>& layer,
+        virtual const std::vector<Arg>& append(Ptr<LayerInfo>& op,
                     const std::vector<std::string>& outnames=std::vector<std::string>()) = 0;
-        virtual Arg append(Ptr<Layer>& layer, const std::string& outname=std::string()) = 0;
+        virtual Arg append(Ptr<LayerInfo>& op, const std::string& outname=std::string()) = 0;
         virtual std::ostream& dump(std::ostream& strm, int indent, bool comma) = 0;
         virtual const std::vector<Arg>& inputs() const = 0;
         virtual const std::vector<Arg>& outputs() const = 0;
         virtual void setOutputs(const std::vector<Arg>& outputs) = 0;
-        virtual const std::vector<Ptr<Layer> >& prog() const = 0;
-        virtual void setProg(const std::vector<Ptr<Layer> >& newprog) = 0;
+        virtual const std::vector<Ptr<LayerInfo> >& prog() const = 0;
+        virtual void setProg(const std::vector<Ptr<LayerInfo> >& newprog) = 0;
+        virtual int opBackend(int opidx) const = 0;
     };
 
     /** @brief This class allows to create and manipulate comprehensive artificial neural networks.
